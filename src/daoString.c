@@ -263,6 +263,8 @@ wchar_t* DString_GetWCS( DString *self )
   DString_ToWCS( self );
   return self->wcs;
 }
+static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n );
+static void DWCString_AppendMBS( DString *self, const char *chs, size_t n );
 void DString_SetMBS( DString *self, const char *chs )
 {
   size_t n;
@@ -272,8 +274,16 @@ void DString_SetMBS( DString *self, const char *chs )
     return;
   }
   n = strlen( chs );
-  DString_Resize( self, n );
-  memcpy( self->mbs, chs, n*sizeof(char) );
+  if (self->mbs)
+  {
+    DString_Resize( self, n );
+    memcpy( self->mbs, chs, n*sizeof(char) );
+  }
+  else
+  {
+    DString_Clear(self);
+    DWCString_AppendMBS(self,chs,n);
+  }
 }
 void DString_SetWCS( DString *self, const wchar_t *chs )
 {
@@ -284,8 +294,15 @@ void DString_SetWCS( DString *self, const wchar_t *chs )
     return;
   }
   n = wcslen( chs );
-  DString_Resize( self, n );
-  memcpy( self->wcs, chs, n*sizeof(wchar_t) );
+  if (self->wcs)
+  {
+    DString_Resize( self, n );
+    memcpy( self->wcs, chs, n*sizeof(wchar_t) );
+  }else
+  {
+    DString_Clear(self);
+    DMBString_AppendWCS(self,chs,n);
+  }
 }
 void DString_Reserve( DString *self, size_t size )
 {

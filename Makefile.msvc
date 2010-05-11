@@ -156,7 +156,7 @@ $(TARGET): $(TARGETDLL) $O/daoMaindl.obj
 #	#-$(DEL_FILE) $O\*.obj
 	
 $(TARGETDLL):  $(OBJECTS)
-	$(CC) $(LFLAGSDLL) $(OBJECTS) $(LIBS) /link /DEF:dao.def /IMPLIB:dao.lib /OUT:$(TARGETDLL) 
+	$(CC) $(LFLAGSDLL) $(OBJECTS) $(LIBS) /link /IMPLIB:dao.lib /OUT:$(TARGETDLL) 
 
 $(ARCHIVE):  $(OBJECTS)
 	$(AR) /OUT:$(ARCHIVE) $(OBJECTS)

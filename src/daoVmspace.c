@@ -1426,7 +1426,7 @@ DaoNameSpace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 
 static void* DaoOpenDLL( const char *name );
 static void* DaoGetSymbolAddress( void *handle, const char *name );
-void DaoInitAPI( DaoAPI *api );
+DAO_DLL void DaoInitAPI( DaoAPI *api );
 
 DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArray *reqns )
 {

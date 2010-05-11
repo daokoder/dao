@@ -1219,7 +1219,7 @@ static int DaoInitLibrary( const char *bin )
      * find the library and module locations properly. */
     k = strlen( bin );
     if( strcmp( bin + k - 4, "/dao" ) ==0 ){
-      daodir = (char*) dao_malloc( k + 10 );
+      daodir = (char*) malloc( k + 10 );
       strncpy( daodir, "DAO_DIR=", 9 );
       strncat( daodir, bin, k - 4 );
       putenv( daodir );
@@ -1234,6 +1234,7 @@ static int DaoInitLibrary( const char *bin )
     strcat( daolib, "/dao" DAO_DLL_SUFFIX );
     handle = DaoLoadLibrary( daolib );
     free( daolib );
+    free( daodir );
   }
   if( handle == NULL ) handle = DaoLoadLibrary( "~/dao/dao" DAO_DLL_SUFFIX );
   if( handle == NULL ) handle = DaoLoadLibrary( DAO_LIB_DEFAULT );
