@@ -14,6 +14,7 @@
 #include"time.h"
 #include"math.h"
 #include"string.h"
+#include"locale.h"
 #ifdef UNIX
 #include"unistd.h"
 #include <sys/time.h>
@@ -738,6 +739,16 @@ static void STD_DisableFE( DaoContext *ctx, DValue *p[], int N )
   DaoContext_PutInteger( ctx, res );
 }
 
+static void STD_SetLocale( DaoContext *ctx, DValue *p[], int N )
+{
+  int res = 1;
+  int category = p[0]->v.i;
+  const char *locale = DString_GetMBS(p[1]->v.s);
+  char* old = setlocale(category,locale);
+  if (old)
+    DaoContext_PutMBString(ctx,old);
+}
+
 static DaoFuncItem stdMeths[]=
 {
   { STD_Compile,   "compile( source :string, replace=0 )" },
@@ -769,6 +780,7 @@ static DaoFuncItem stdMeths[]=
   { STD_Unpack,    "unpack( string :string )=>list<int>" },
   { STD_Warn,      "warn( info :string )" },
   { STD_Version,   "version()=>string" },
+  { STD_SetLocale, "setlocale(category:int=0,locale:string='')=>string" },
   { NULL, NULL }
 };
 static DaoNumItem stdConsts[] =
@@ -778,6 +790,12 @@ static DaoNumItem stdConsts[] =
   { "FE_OVERFLOW", DAO_INTEGER, DAO_FE_OVERFLOW } ,
   { "FE_INVALID", DAO_INTEGER, DAO_FE_INVALID } ,
   { "FE_ALL", DAO_INTEGER, DAO_FE_ALL } ,
+  { "LC_ALL", DAO_INTEGER, LC_ALL } ,
+  { "LC_COLLATE", DAO_INTEGER, LC_COLLATE } ,
+  { "LC_CTYPE", DAO_INTEGER, LC_CTYPE } ,
+  { "LC_MONETARY", DAO_INTEGER, LC_MONETARY } ,
+  { "LC_NUMERIC", DAO_INTEGER, LC_NUMERIC } ,
+  { "LC_TIME", DAO_INTEGER, LC_TIME } ,
   { NULL, 0, 0 }
 };
 
