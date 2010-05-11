@@ -1,0 +1,45 @@
+
+class Integer
+{
+  var value = 0;
+
+  routine Integer( v = 0 ){ value = v }
+
+  operator +( A : Integer, B : int ){
+    io.writeln( 'Integer + int' );
+    return Integer{ A.value + B };
+  }
+  operator +( A : int, B : Integer ){
+    io.writeln( 'int + Integer' );
+    return Integer{ A + B.value };
+  }
+  operator +( A : Integer, B : Integer ){
+    io.writeln( 'Integer + Integer' );
+    return Integer{ A.value + B.value };
+  }
+  operator -( A : Integer ){
+    io.writeln( '- Integer' );
+    return Integer{ - A.value };
+  }
+  operator -( A : Integer, B : Integer ){
+    io.writeln( 'Integer - Integer' );
+    return Integer{ A.value - B.value };
+  }
+  operator >( A : Integer, B : Integer ){
+    io.writeln( 'Integer > Integer' );
+    return Integer{ A.value > B.value };
+  }
+  routine _PRINT( s : stream ){ s.write( value ) }
+}
+
+n1 = Integer(10);
+n2 = Integer(20);
+n3 =  1 + n2;
+n4 = n1 +  2;
+n5 = n1 + n2;
+n6 = - n5;
+n7 = n5 - n4;
+n8 = n5 < n4;
+n9 = n5 > n4;
+
+io.writeln( n3, n4, n5, n6, n7, n8, n9 );

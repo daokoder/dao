@@ -1,0 +1,61 @@
+
+#{
+Indentation mark:
+  @x: where x=1,2,...,9, 
+  tokens followed with the same indentation mark
+  must be aligned with the same indentation;
+
+Indented code block:
+  $IBL prefixed variable matches a block of indented codes;
+
+String literal from tokens:
+  Tokens expanded for patterns between a pair of \" or \',
+  are concatenated into a string literal enclosed in the
+  corresponding quotation mark. A space is inserted between
+  to consecutive identifer tokens.
+#}
+
+syntax{ # if : elif : else :
+  if @1 $EXP_1 : \[ $IBL_1 \]
+  \{ elif @1 $EXP_2 : \[ $IBL_2 \] \} 
+  \[ else @1 : \[ $IBL_3 \] \]
+
+}as{ # if(){}elif(){}else{}
+  if( 1 ){ # extra nesting to avoid the inside messing up with the outside
+    if( $EXP_1 ){ \[ $IBL_1 \] }
+    \{ elif( $EXP_2 ){ \[ $IBL_2 \] } \}
+    \[ else{ \[ $IBL_3 \] } \]
+  }
+}
+syntax{ # for in :
+  for $ID_1 in $EXP_1 \{ , $ID_2 in $EXP_2 \} : \[ $IBL_1 \]
+}as{ # for( in ){}
+  for( $ID_1 in $EXP_1 \{ ; $ID_2 in $EXP_2 \} ){ \[ $IBL_1 \] }
+  io.writeln( \" \[ $IBL_1 \] \" ) 
+}
+
+a = 1
+b = 0
+
+if a == 0 :
+  io.writeln( 'python "if" works!' )
+  if b == 1 :
+    io.writeln( 'b =', b )
+elif a == 1 :
+  io.writeln( 'python "if-elif" works!' )
+  if b == 0 :
+    io.writeln( 'b =', b )
+
+list1 = { 1, 2, 3 }
+list2 = { 'a', 'b', 'c' }
+
+for x in list1:
+  io.writeln( x )
+  for y in list2:
+    io.writeln( y )
+    if y == 'b':
+      io.writeln( y )
+
+for x in list1 , y in list2 :
+  io.writeln( x, y )
+

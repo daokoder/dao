@@ -1,0 +1,4385 @@
+#!/usr/bin/dao
+
+#{
+author: Fu Limin (phoolimin@gmail.com)
+
+TODO:
+
+self->params = ...;
+virtual void test( void *self0, int *id ) return by parameters: gsl_function_fdf_fdf
+#}
+
+###########################
+# Data types:
+###########################
+
+# Supported C type IDs:
+global enum{
+	CT_USER = -1,
+	CT_CHAR ,
+	CT_SCHAR ,
+	CT_UCHAR ,
+	CT_WCHAR ,
+	CT_SHORT ,
+	CT_SSHORT ,
+	CT_USHORT ,
+	CT_INT ,
+	CT_SINT ,
+	CT_UINT ,
+	CT_LONG ,
+	CT_SLONG ,
+	CT_ULONG ,
+	CT_FLOAT ,
+	CT_DOUBLE ,
+  CT_COMPLEX8, 
+  CT_COMPLEX16,
+	CT_VOID ,
+	CT_FILE ,
+
+	DAO_NIL_101 = 101,
+	DAO_STRING ,
+	DAO_LIST ,
+	DAO_MAP ,
+	DAO_TUPLE ,
+	DAO_ARRAY ,
+	DAO_ROUTINE ,
+	DAO_OBJECT ,
+}
+
+# Supported C type names, with mapping to IDs:
+const CT_MAP_BASIC =
+{
+	"char" => CT_CHAR ,
+	"signed char" => CT_SCHAR ,
+	"unsigned char" => CT_UCHAR ,
+	"wchar_t" => CT_WCHAR ,
+	"short" => CT_SHORT ,
+	"signed short" => CT_SSHORT ,
+	"unsigned short" => CT_USHORT ,
+	"bool" => CT_INT ,
+	"int" => CT_INT ,
+	"signed int" => CT_SINT ,
+	"ptrdiff_t" => CT_SINT , # XXX
+	"unsigned" => CT_UINT ,
+	"unsigned int" => CT_UINT ,
+	"size_t" => CT_UINT ,
+	"int8_t" => CT_INT ,
+	"uint8_t" => CT_UINT ,
+	"int16_t" => CT_INT ,
+	"uint16_t" => CT_UINT ,
+	"int32_t" => CT_INT ,
+	"uint32_t" => CT_UINT ,
+	"int64_t" => CT_INT ,
+	"uint64_t" => CT_UINT ,
+	"long" => CT_LONG ,
+	"signed long" => CT_SLONG ,
+	"unsigned long" => CT_ULONG ,
+	"long long" => CT_DOUBLE ,
+	"long double" => CT_DOUBLE ,
+	"signed long int" => CT_INT ,
+	"unsigned long int" => CT_UINT ,
+	"signed long long" => CT_DOUBLE ,
+	"unsigned long long" => CT_DOUBLE ,
+	"__int64" => CT_DOUBLE ,
+	"signed __int64" => CT_DOUBLE ,
+	"unsigned __int64" => CT_DOUBLE ,
+	"float" => CT_FLOAT ,
+	"double" => CT_DOUBLE ,
+	"complex8" => CT_COMPLEX8 ,
+	"complex16" => CT_COMPLEX16 ,
+	"void" => CT_VOID, 
+	"FILE" => CT_FILE 
+};
+const DT_MAP = 
+{
+	"DaoBase" => DAO_NIL_101 ,
+	"DString" => DAO_STRING ,
+	"DaoList" => DAO_LIST ,
+	"DaoMap" => DAO_MAP ,
+	"DaoTuple" => DAO_TUPLE ,
+	"DaoArray" => DAO_ARRAY ,
+	"DaoRoutine" => DAO_ROUTINE ,
+	"DaoObject" => DAO_OBJECT
+};
+const DAO_TYPES0 =
+{
+	"any" , "int" , "float" , "double" , "complex" ,
+	"string" , "list" , "map" , "array" , "routine" , "any" 
+}
+# The corresponding Dao scalar types:
+const DAO_TYPES = 
+{
+	"int" , "int" , "int" , "int" , "int" ,
+	"int" , "int" , "int" , "int" , "int" ,
+	"int" , "int" , "int" , "float" , "double" ,
+  "complex", "complex",
+	"cdata" , "stream"
+}
+
+global enum{ LIB_NONE, LIB_QT }
+
+global lib_name = LIB_NONE;
+
+const CT_TYPE_NORMAL = 0; # type var
+const CT_TYPE_REFER = 1; # type *var
+const CT_TYPE_REFER_CXX = 2; # type &var,
+const CT_TYPE_REFER2 = 4; # type **var
+const CT_TYPE_ARRAY = 8; # type var[]
+const CT_TYPE_ARRAY2 = 16; # type var[][]
+
+global log_file;
+global on_load = '';
+global basic_typedefs = {};
+global CT_MAP = CT_MAP_BASIC;
+global CT_MAP_TYPE_ATTRIB : map<string,int> = { => };
+global pointer_types : map<string,string> = { => };
+global otherClassTypedef : map<string,int> = {=>};
+
+global proxy_functions : map<string,tuple<used:int,name:string,codes:string>> = {=>};
+global dao_callbacks_proto = {};
+global dao_callbacks = {};
+global dao_callbacks2 = {=>};
+
+global enumMap = {=>};
+global constNumbers = {};
+
+global constCData = {};
+global constCDataPtr = {};
+
+const INDEX_RETURN = -1;
+const INDEX_FIELD = -2;
+
+class Variable
+{
+	var index = 0;
+	var source = '';
+	var source2 = '';
+	var name = '';
+	var type = '';
+  var type_trans = '';
+	var typeid = -1;
+	var isconst = 0;
+	var refer = ''; # *, **, &
+	var square = ''; # [...], [...][...]
+	var sqsizes = {};
+	var vdefault = '';
+	var cxxdefault = '';
+	var host = '';
+
+	var daotype = '';
+	var cxxtype = '';
+  var cxxtype2 = '';
+	var cxxcall = '';
+	var daopar = ''; # name : type [ = default ]
+	var cxxpar = ''; # type [*] name [ \[\] ]
+	var cxxpar_enum_virt = ''; # int [*] name [ \[\] ]
+	var dao2cxx = ''; # type var = (type) _p[i]->v.i; or type var = DaoXyz_Get...
+	var cxx2dao = ''; # _dpar[i] = DValue_New...
+	var ctxput = ''; # DaoContext_PutXyz(...);
+	var parset = ''; # _p[i]->v.i = var; or DString_SetMBS( _p[i]->v.s, ...
+	var getres = ''; # for virtual function: if( _res. == .. ) ...
+	var getter = '';
+	var setter = '';
+	var unsupport = 0;
+  var isCallback = 0;
+
+  routine Variable( src : string, id = 0, src2 = '' ){
+  index = id;
+  source = src;
+  source2 = src2;
+  }
+  routine Parse( fname = '' );
+	routine Generate( cxx_no_self=0);
+	routine Clean(){
+		daotype.clear();
+		cxxtype.clear();
+		cxxcall.clear();
+		daopar.clear();
+		cxxpar.clear();
+		cxxpar_enum_virt.clear();
+		dao2cxx.clear();
+		cxx2dao.clear();
+		ctxput.clear();
+		parset.clear();
+		getres.clear();
+		getter.clear();
+		setter.clear();
+	}
+	routine _PRINT( s : stream ){ stdio.println( name, typeid, type ); }
+}
+
+global enum
+{
+	FUNC_CPP = 1,
+	FUNC_VIRTUAL = 2,
+	FUNC_PURE_VIRTUAL = 4,
+	FUNC_PROTECTED = 8,
+	FUNC_PRIVATE = 16,
+	FUNC_STATIC = 32 ,
+	FUNC_CONST = 64 ,
+	QT_SIGNAL = 128 ,
+	QT_SLOT = 256
+}
+
+class Function
+{
+	var generated = 0;
+	var inputFile = '';
+	var defProto = '';
+	var hostType = '';
+	var daoName = '';
+	var cxxName = '';
+  var snamespace = '';
+	var nameSuffix = ''; # name suffix to distinguish overloaded functions
+	var tilde = ''; # destructor tilde symbol: hostType::~hostType()
+	var attribs = 0;
+	var input_file = '';
+	var source = '';
+
+	var retype : Variable;
+	var parlist : list<Variable> = {};
+
+	var extraCodes = {};
+
+	var excluded = 0;
+	var nowrap = 0;
+  var isCallback = 0;
+  var reimplemented = '';
+	var overload = '';
+	var signature = '';
+	var signature2 = '';
+  var cppSelf = '';
+	var cxxWrapName = ''; # dao_host_meth
+	var cxxWrapper = '';
+	var cxxWrapperVirt = '';
+	var cxxWrapperVirt2 = '';
+	var cxxWrapperVirt3 = '';
+	var cxxWrapperVirtProto = '';
+	var qtSlotSignalDecl = '';
+	var qtSignalSignalDecl = '';
+	var qtSlotSlotDecl = '';
+	var qtSlotSlotCode = '';
+	var qtSignalSlotDecl = '';
+	var qtSignalSlotCode = '';
+
+# Dao routine prototype for the wrapping function:
+# { dao_func_wrapping, "func( vec : array<int>, N : int )" },
+	var daoProtoCodes = '';
+
+# C prototype for the wrapping function:
+# void dao_func_wrapping( DaoContext *_ctx, DValue *_p[], int N )
+	var cxxProtoCodes = '';
+
+	var cxxCallCodes = '';
+	var cxxProtoParam = '';
+	var cxxProtoParamDecl = '';
+	var cxxProtoParamVirt = '';
+	var cxxCallParam = '';
+	var cxxCallParamV = '';
+
+	var codes = '';
+	var comments = '';
+	
+	routine Generate();
+	routine Clean(){
+		for( vo in parlist ) vo.Clean();
+		parlist.clear();
+	}
+}
+class UserType
+{
+	var name = '';
+	var name2 = '';
+# 0: nested as private;
+# 1: nested as protected;
+# 2: not nested, or nested as public;
+	var nested = 2;
+	var source = '';
+  var snamespace = '';
+	var isNameSpace = 0;
+	var isCallback = 0;
+	var isCppClass = 0;
+	var isDefined = 0;
+	var isPureVirt = 0;
+	var hasVirtual = 0;
+	var noWrapping = 0;
+	var hasPrivConstr = 0;
+	var hasProtConstr = 0;
+	var noConstructor = 0;
+	var noDestructor = 0;
+	var copyConstructor = 0; # explicit copy constructor
+	var noCopyConstructor = 0; # copy constructor made private explicitly or from parents
+	var hasMember = 0;
+	var isAlias = 0;
+	var isStruct = 0;
+	var isQObject = 0;
+	var isQWidget = 0;
+	var unsupport = 0;
+
+	var fields : list<Variable> = {};
+	var methods : list<Function> = {};
+	var allocators : list<Function> = {};
+	var privameths : list<Function> = {};
+	var protslots : list<Function> = {};
+	var pubslots : list<Function> = {};
+	var protsignals : list<Function> = {};
+	var declmeths : map<string,Function> = {=>};
+	var declvirts : map<string,Function> = {=>};
+	var supers : list<UserType> = {};
+	var selfields : map<string,int> = {=>};
+	var classEnum : map<string,tuple<string,int>> = {=>}; # XXX not work without type decl
+	var classTypedef : map<string,int> = {=>}; # XXX not work without type decl
+	var intConsts = {};
+
+	var restPureVirts = {};
+	var pureVirts = {};
+  var lastVirts : map<string,string> = {=>};
+	var virtNonSupport : list<Function> = {};
+
+	var input_file = '';
+
+	var type_decls = '';
+	var type_codes = '';
+	var meth_decls = '';
+	var meth_codes = '';
+	var dao_meths = '';
+	var alloc_default = 'NULL';
+	var cxxWrapperVirt = '';
+
+	routine Parse( source = '', inExtFile=0 );
+	routine Generate();
+	routine GenerateMeth();
+	routine GenerateType();
+	routine CheckVirtual();
+	routine CheckPureVirtual();
+	routine Clean(){
+		for( meth in methods ) meth.Clean();
+		for( meth in allocators ) meth.Clean();
+		for( vo in fields ) vo.Clean();
+		fields.clear();
+		methods.clear();
+		allocators.clear();
+	}
+	routine SortType( lo, mo ){
+		if( lib_name == LIB_QT ){
+			if( name == 'QObject' ) isQObject = 1;
+			elif( name == 'QWidget' ) isQWidget = 1;
+		}
+		if( mo.has( self ) ) return;
+		for( sup in supers ){
+			sup.SortType( lo, mo );
+			if( sup.isQObject ) isQObject = 1;
+			if( sup.isQWidget ) isQWidget = 1;
+		}
+		mo[ self ] = self;
+		lo.append( self );
+	}
+}
+global map_user_types : map<string,UserType> = {=>};
+global map_ns_types : map<string,UserType> = {=>};
+global typedef_ns_types : map<string,UserType> = {=>};
+
+class Functions
+{
+	var funcs : list<Function> = {};
+	var overload = {=>}; # count of overloaded Dao functions
+	var overwrap = {=>}; # count of wrapping of the same C/C++ function
+	var funcDeclCodes = '';
+	var funcList = '';
+	var funcDef = '';
+	var codes = '';
+	routine Generate();
+}
+global functions = Functions();
+
+const pat_type = '<1>(static %s+|) <2>((const %s+|)) '
+'<3>( ( ((signed|unsigned|enum|struct)%s+) |)'
+		'( [%w:]+ (%b<> [%w:]* |) | long%s+ (((int|long|double))) ) )'
+		' %s* <4>(| %s | %*{1,2} | %& ) %s*'
+		'(|const %s*) <5>( %w* ) %s* <6>( %b[]{0,2} )'
+    '<7>(%s* = %s* ( [%+%-\'\"%w%.:%|]+ | [:%w]* %s* %b() ) |)';
+
+const pat_type2 = '<1>(static %s+|) <2>((const %s+|)) '
+'<3>( ( ((signed|unsigned|enum|struct)%s+) |)'
+		'( [%w:]+ (%b<> [%w:]* |) |long%s+ (((int|long|double))) ) )'
+		' %s* <4>(| %s | %*{1,2} | %& ) %s*'
+		'(|const %s*) <5>( %w+ ) %s* <6>( %b[]{0,2} )'
+    '<7>(%s* = %s* ([%+%-\'\"%w%.:%|]+) |);';
+# virtual void bar() const : alias =0;
+const pat_funct = 
+'(|template %s* %b<> %s*)'
+'<1>( ((static|virtual) %s+|) (%w+::|) ( [^\n:;%(%)%{%}]* (%b<>|) ) (%s*|) ([%*%&] %s*|) )'
+	'( <2>(%w+) :: | ) <3>((( %w+ | operator %W+ ))) %s* <4>( %b() ) [%s%w]* (: %s* %w+ |)'
+	'<5>(%s* = %s* 0 |) %s* ( ; | %b{} )';
+# callback function pointer
+const pat_callback = 
+'([^\n%(%)%{%};]*) %( (%s*%*%s*(%w+)) %s* (%b[] |) %s* %)%s* (%b())%s* ;';
+
+const pat_constru = '((%w+) %s* %b()) %s* : [^%{%}]* %b{}';
+
+const pat_struct = '(class|struct|union|namespace|callback) %s+ (( %w+ )) (%s*) '
+'( : %s* %w [%w%s,]+ |) ( %b{} ) %s* (;|)';
+
+routine ParseFunction( funcs : list<Function>, source='', host='', input='', 
+    attribs=0, snamespace='' )
+{
+	excluded = 0;
+	if( source.pfind( '(^|%W) operator %W' ) ) return;
+	if( source.pfind( '(%w+) :: %~ %1 %s* %b()' ) ) excluded = 1;
+	if( source.pfind( '%w+ %s* %< %s* [%s%w%*,:]+ %s* %>' ) ) exclude = 1; # template function
+	if( source.pfind( '%b() %s* const' ) ) attribs |= FUNC_CONST;
+	source.change( '%s+', ' ' );
+	pat2 = '%s* ((virtual|)) ((%s+)) ( [^%(%)]* %b() [%s%w]* )';
+	tks = source.capture( pat2 );
+	source2 = source;
+	if( tks.size() ) source2 = tks[5];
+	tks = source.capture( pat_funct );
+	ret = tks[1];
+	name = tks[3];
+	pars = tks[4];
+  #pars.change( '= %s* ( %w+ ) %s* %b()', '=%1' );
+	if( name.find( 'EXCLUDE_' ) >= 0 ) excluded = 1;
+	if( name.find( 'operator' ) >= 0 ) excluded = 1;
+	if( tks[2] ) return; # skip class::method()
+	if( pars.pfind( '%] %s* %[' ) ) excluded = 1; # XXX skip a[][]
+	if( pars.pfind( '%* %s* %w+ %s* %[' ) ){
+    pts = pars.extract( '(%w+) %* %s* %w+ %s* %[' );
+    for( pt in pts ) if( not pt.pfind( '(short|int|float|double)' ) ) excluded = 1;
+    #return; # XXX skip *a[]
+  }
+	if( pars.pfind( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) ) excluded = 1;
+	#if( pars.pfind( '(char|wchar_t) %s* %*%* %s* %w+' ) ) excluded = 1;
+	if( pars.pfind( '%) %s* %(' ).size() || pars.pfind( '%W ((%s*)) %(' ).size()
+			|| ret.pfind( 'template' ).size() ){
+		log_file.println( source );
+    excluded = 1;
+	}
+	if( name != host && ret.pfind( '%w' ).size()==0 ){
+		log_file.println( source );
+    excluded = 1;
+	}
+	if( source.pfind( '(short|int|long|float|double) %s* %* %s* %*' ) ){
+		log_file.println( source );
+    excluded = 1;
+	}
+  #pars.change( '= %s* ([:%w]+) %s* %b()', '' );
+  if( pars.pfind( '= %s* ([:%w]+) %s* %b()' ) ) excluded = 1;
+	parts = pars.extract( pat_type );
+	pars.change( pat_type, '' );
+	if( pars.pfind( '%( [,%s]* %)' ).size() ==0 ){
+		log_file.println( source );
+    excluded = 1;
+	}
+	if( source.pfind( 'typedef %s' ) ){
+		log_file.println( source );
+		return;
+	}
+	for( part in parts ){
+		if( part.pfind( '%* %s* %*' ) ){
+			#log_file.println( source );
+			#return;
+		}
+	}
+	func = Function();
+	func.cxxName = name;
+	func.daoName = name;
+	func.input_file = input;
+	func.attribs |= attribs;
+	func.source = source2;
+	func.excluded = excluded;
+  func.snamespace = snamespace;
+
+
+	if( ret.pfind( '^ %s* virtual %s+' ) ){
+		func.attribs |= FUNC_VIRTUAL;
+		if( tks[5] ) func.attribs |= FUNC_PURE_VIRTUAL;
+		ret.change( '^ %s* virtual %s+', '' );
+	}elif( ret.pfind( '^ %s* static %s+' ) ){
+		func.attribs |= FUNC_STATIC;
+		ret.change( '^ %s* static %s+', '' );
+	}elif( host == name ){
+		ret = name;
+	}
+	func.retype = Variable( ret + ' _' + name, INDEX_RETURN, source );
+	func.retype.host = host;
+	func.retype.Parse( input );
+  if( excluded ){
+    funcs.append( func );
+    return;
+  }
+	for( i = 0 : parts.size()-1 ){
+		vo = Variable( parts[i], i, source );
+		vo.host = host;
+		vo.Parse( input );
+		#if( host == 'QCoreApplication' and func.cxxName == 'processEvents' ) stdio.println( parts[i], var );
+		if( vo.type == 'void' && vo.refer == '' ) skip; # int func(void);
+		func.parlist.append( vo );
+	}
+	for( i = 0 : func.parlist.size()-2 ){
+		vo = func.parlist[i];
+		var2 = func.parlist[i+1];
+		if( var2.typeid >= CT_SHORT && var2.typeid <= CT_ULONG
+				&& var2.refer =='' && var2.square =='' ){
+			if( vo.refer == '*' && vo.square == ''
+					&& vo.typeid >= CT_SHORT && vo.typeid <= CT_COMPLEX16){
+				vo.refer = '';
+				vo.square = '[]';
+				vo.sqsizes.append( '0' );
+			}
+			hint = var2.name.pfind( '<I>^ (n|m|size|count|length) $' ).size();
+			if( vo.refer == '' && vo.square == '[]' && hint ){
+				vo.sqsizes[0] = var2.name;
+			}
+		}
+	}
+	tpname = tks[2];
+	if( tpname.size() ){
+		if( not map_user_types.has( tpname ) ){
+			utp = UserType{ name => tpname, input_file => input };
+			map_user_types[ tpname ] = utp;
+		}
+		utp = map_user_types[ tpname ];
+		if( not utp.isCppClass ){
+			utp.methods.append( func );
+			func.hostType = tpname;
+		}
+	}else{
+		funcs.append( func );
+	}
+}
+
+routine UserType::Parse( source='', inExtFile=0 )
+{
+	source.change( pat_struct, 'typedef %1 %2 %2;' ); # nested class/struct...
+	oldsource = source;
+	isDefined = 1;
+	psources = { '', '', '', '', '', '' };
+	parts = source.extract( '(private|protected|public|Q_SIGNALS)%s*(Q_SLOTS|)%s*:', 0 );
+	perm = isStruct==0 ? 0 : 2;
+	for( part in parts ){
+		if( part.pfind( ' ^ private %s* : $' ) ){
+			perm = 0;
+			skip;
+		}elif( part.pfind( ' ^ protected %s* : $' ) ){
+			perm = 1;
+			skip;
+		}elif( part.pfind( ' ^ public %s* : $' ) ){
+			perm = 2;
+			skip;
+		}elif( part.pfind( ' ^ private %s+ Q_SLOTS %s* : $' ) ){
+			perm = 0;
+			skip;
+		}elif( part.pfind( ' ^ protected %s+ Q_SLOTS %s* : $' ) ){
+			perm = 3;
+			skip;
+		}elif( part.pfind( ' ^ public %s+ Q_SLOTS %s* : $' ) ){
+			perm = 4;
+			skip;
+		}elif( part.pfind( ' ^ Q_SIGNALS %s* : $' ) ){
+			perm = 5;
+			skip;
+		}
+		psources[ perm ] += part;
+	}
+	source = '';
+	for( i = 0 : 5 ){ # protected methods, public fields and methods
+		funclist = i ==0 ? privameths : methods;
+		src = psources[i];
+		const pat_enum = 'enum %s+ (%w*) %s* (%b{}) %s* ;';
+		parts = src.extract( pat_enum );
+		src.change( pat_enum, '' );
+		for( part in parts ){
+			tks = part.capture( pat_enum );
+			ename = tks[1];
+			enums = tks[2];
+			classEnum[ ename ] = ( name, i==2 );
+			if( ename ){
+				ename2 = name + '::' + ename;
+				enumMap[ ename ] = 1;
+				if( not CT_MAP.has( ename2 ) ){
+					CT_MAP[ ename2 ] = CT_INT;
+					basic_typedefs.append( ( '', 'int', ename ) );
+				}
+			}
+			enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>]*', '' );
+			names = enums.extract( '%w+' );
+			if( i == 2 or isNameSpace ){
+				for( ename in names ) intConsts.append( ( ename, ename, inExtFile ) );
+			}
+		}
+		src.change( 'enum %s * (%w+|) %s* %b{}', '' );
+		pat_typedef = 'typedef ((%s+)) (<1>(class|struct|union) ((%s*)) |) <2>([^;]*) ((%s*)) <3>((%w+));';
+		parts = src.extract( pat_typedef );
+		for( part in parts ){
+			tks = part.capture( pat_typedef );
+			old = tks[2];
+			new = tks[3];
+			scoped = name + '::' + new;
+			old.change( '%s+', ' ' );
+			if( CT_MAP.has( old ) ){
+				classTypedef[ new ] = CT_MAP[ old ];
+			}elif( classEnum.has( old ) ){
+				classTypedef[ new ] = 1;
+			}else{
+				classTypedef[ new ] = -1;
+				typer = name + '_' + new;
+				if( map_user_types.has( old ) ){
+					map_user_types[ scoped ] = map_user_types[ old ];
+				}else{
+					utp = UserType{ name => typer, input_file => input_file };
+					if( tks[1] == 'class' ) utp.isCppClass = 1;
+					utp.name2 = scoped;
+					utp.nested = i;
+					map_user_types[ scoped ] = utp;
+				}
+			}
+			otherClassTypedef[ scoped ] = classTypedef[ new ];
+		}
+		src.change( pat_typedef, '' );
+		if( isCppClass ){
+			src.change( pat_callback, '' );
+			parts = src.extract( pat_constru );
+			for( part in parts ){
+				tks = part.capture( pat_constru );
+				attribs = i==1 ? FUNC_PROTECTED : 0;
+				ParseFunction( funclist, tks[1] + ';', name, input_file, attribs );
+			}
+			src.change( pat_constru, '' );
+		}
+		pat = isCppClass or isCallback ? pat_funct : pat_callback;
+		# take only virtual function if it is protected:
+		parts = src.extract( pat );
+		if( parts.size() ){
+			if( not isCppClass ) hasVirtual = 1;
+			hasMember = 1;
+		}
+		for( part in parts ){
+      ispure = 0;
+			if( part.pfind( '= %s* 0 %s*;' ) ){
+        ispure = 1;
+        isPureVirt = 1;
+        hasVirtual = 1;
+        if( i == 0 ) noWrapping = 1;
+      }
+			if( part.pfind( 'virtual ? %s* %~ %s* %w+' ).size() ){
+				noDestructor = (i != 2);
+        if( ispure ) noWrapping = 1;
+				skip; # XXX
+			}
+			tks = part.capture( pat );
+			#attribs = (i==1||i==3||i==5) ? FUNC_PROTECTED : 0;
+			attribs = (i==1||i==3) ? FUNC_PROTECTED : 0;
+      if( i==5 ) attribs = FUNC_PRIVATE;
+			if( not isCppClass and not isCallback ){
+				if( tks[4] ) skip; # struct x{ void (*func[10])(int i); }
+				part = tks[1] + tks[3] + tks[5] + ';';
+				attribs |= FUNC_VIRTUAL;
+			}
+			m = funclist.size();
+			ParseFunction( funclist, part, name, input_file, attribs );
+			if( m == funclist.size() ){
+				pat2 = 'virtual ((%s+)) ( [^%(%)]* %b() [%s%w]* ) = %s* 0';
+				tks = part.capture( pat2 );
+				if( tks ){
+          restPureVirts.append( { name, tks[3] } );
+        }
+			}else{
+				func = funclist.back();
+				switch(i){
+				case 3: func.attribs |= QT_SLOT; protslots.append( func );
+				case 4: func.attribs |= QT_SLOT; pubslots.append( func );
+				case 5: func.attribs |= QT_SIGNAL; protsignals.append( func );
+				}
+			}
+		}
+		src.change( pat, '' );
+		src.change( 'virtual? %* %~ %s*' + name + '%s* %b() %s* (; | %b{})', '' );
+		pat = name + '%s* ( %b() ) %s* (; | %b{})';
+		parts = src.extract( pat );
+		for( part in parts ){
+			tks = part.capture( pat );
+			ParseFunction( funclist, name+'* '+ name + tks[1] +';', name, input_file );
+		}
+		src.change( pat, '' );
+		pat = isCppClass or isCallback ? pat_funct : pat_callback;
+		src.change( pat, '' );
+		if( isCppClass ){
+			for( meth in methods ){
+				meth.hostType = name;
+				meth.attribs |= FUNC_CPP;
+				if( meth.attribs & FUNC_VIRTUAL ) hasVirtual = 1;
+			}
+		}else{
+			for( meth in methods ){
+				meth.hostType = name;
+				meth.attribs |= FUNC_VIRTUAL;
+			}
+		}
+    rep = '(%w[%w%s]*) ((%s*)) ([^,;%w]* %w+ [^;]*) , ((%s*)) ([%s%*]* %w+ [^,;]* ;)';
+    while( src.change( rep, '%1 %4;\n%1 %7' ) );
+		parts = src.extract( pat_type2 );
+		src.change( '%s+', '' );
+#{
+		if( name == 'mglGraphAB' ) stdio.println( src, parts );
+		if( src.pfind( 'std' ) ) stdio.println( src ); # DEBUG
+		stdio.println( parts ); # DEBUG
+#}
+		if( i == 2 ){ # public fields only
+			selfield = '';
+			prevar = '';
+			for( part in parts ){
+				hasMember = 1; # XXX
+				varname = '';
+				if( part.pfind( '%b<>' ) ) skip; # template class
+				if( part.pfind( ': %s* %d+' ) ) skip; # bit field
+				if( part.pfind( '%* %s* %*' ) ) skip; # type **name;
+				if( part.pfind( '%] %s* %[' ) ) skip; # type name[][];
+				if( part.pfind( '(class|struct|union|typedef) %s+ %w+ %s* %{' ) ) skip; #
+				tks = part.capture( '^ %s* ( %w+ ) %s* $' ); # int x, y;
+				if( tks.size() && prevar.size() ){
+					varname = tks[1];
+					part = prevar;
+				}
+				prevar = part;
+				vo = Variable( part, INDEX_FIELD, src );
+				vo.host = name;
+				vo.Parse( input_file );
+				if( vo.type.pfind( 'struct %s+' ).size() and not map_user_types.has( vo.type ) ) skip;
+				if( vo.refer == '*' && vo.square.size() ) skip;
+				if( varname ) vo.name = varname;
+				fields.append( vo );
+			}
+			if( not isCppClass and not isCallback ){
+				for( j=0; j<methods.size(); j++ ){
+					meth = methods[j];
+					haself = 0;
+					for( vo in meth.parlist ){
+						if( vo.type == 'void' && vo.refer =='*' ){
+							for( f in fields ){
+								if( f.type == 'void' && f.refer =='*' && vo.name == f.name ){
+									vo.name = 'self0';
+									haself = 1;
+									selfields[ f.name ] = 1;
+									break;
+								}
+							}
+						}elif( vo.type == name && vo.refer == '*' ){
+							vo.name = 'self0';
+							haself = 1;
+						}elif( vo.name == 'self0' ){
+							haself = 1;
+						}
+					}
+					if( not haself ){
+						# prevent code generation
+						methods.erase(j);
+						j --;
+					}
+				}
+				if( methods.size() ==0 ) hasVirtual = 0;
+			}
+		}
+		src.change( pat_type, '' );
+		source += src;
+	}
+  tt = '%W' + name + '%s* %( %s* %)';
+# private constructor:
+	if( psources[0].pfind( tt ) ) hasPrivConstr = 1;
+# protected constructor:
+	if( psources[1].pfind( tt ) ) hasProtConstr = 1;
+	if( hasPrivConstr and psources[2].pfind( tt ).size() ==0 ) noWrapping = 1;
+# private/protected constructor:
+	temp = name + '%s* %( %s* (const %s+|)' + name + '%s* %& %s* %w* %)';
+	if( psources[0].pfind( temp ) ) noCopyConstructor = 1;
+	if( psources[1].pfind( temp ) ) noCopyConstructor = 1;
+	if( psources[2].pfind( temp ) ) copyConstructor = 1;
+
+	source.change( '[%{%}%;]', '' );
+	source.simplify();
+	if( source.size() ){
+		log_file.println( '----------- UNPARSED FIELD FOR TYPE:', name, '---------' );
+		log_file.println( source );
+	}
+}
+
+routine ParseCode( source : string, snamespace='', lang='', fname : string='', inExtFile=0  )
+{
+	parts = source.extract( pat_struct );
+	source.change( pat_struct, '' );
+	for( part in parts ){
+		tks = part.capture( pat_struct );
+		type = tks[1];
+		name = tks[3];
+		if( not map_user_types.has( name ) ){
+			utp = UserType{ name => name, input_file => fname };
+			map_user_types[ name ] = utp;
+		}
+		utp = map_user_types[ name ];
+    utp.snamespace = snamespace;
+    utp.input_file = fname;
+    if( snamespace ) map_ns_types[ snamespace + '::' + name ] = utp;
+		if( type == 'namespace' ) utp.isNameSpace = 1;
+		if( type == 'callback' ) utp.isCallback = 1;
+		if( type == 'class' || (type == 'struct' && lang != 'c') ) utp.isCppClass = 1;
+		if( type == 'struct' || type == 'union' ) utp.isStruct = 1;
+		if( utp.isCppClass ==0 and not utp.isNameSpace and not utp.isCallback ){
+			map_user_types[ 'struct ' + name ] = utp;
+			map_user_types[ 'union ' + name ] = utp;
+		}
+    body = tks[6];
+    if( utp.isNameSpace ) body = ParseCode( body, utp.name, lang, fname, inExtFile );
+    utp.Parse( body, inExtFile );
+		supers = tks[5].extract( '(private|protected|public) %s+ (%w+)' );
+		for( sup in supers ){
+			tks2 = sup.capture( '(private|protected|public) %s+ (%w+)' );
+			name2 = tks2[2];
+			if( not map_user_types.has( name2 ) ){
+				utp2 = UserType{ name => name2, input_file => fname };
+				map_user_types[ name2 ] = utp2;
+			}
+			utp2 = map_user_types[ name2 ];
+			utp.supers.append( utp2 );
+			for( k in utp2.classEnum.keys(); v in utp2.classEnum.values() )
+				if( not utp.classEnum.has( k ) ) utp.classEnum[k] = v;
+			for( k in utp2.classTypedef.keys(); v2 in utp2.classTypedef.values() )
+				if( not utp.classTypedef.has( k ) ) utp.classTypedef[k] = v2;
+		}
+	}
+		
+	const pat_struct2 = 'typedef %s+ (const %s+ |) (struct|union) %s+ (%w+) %s+ (%w+) %s*;';
+	parts = source.extract( pat_struct2 );
+	source.change( pat_struct2, '' );
+	for( part in parts ){
+		tks = part.capture( pat_struct2 );
+		alias = tks[3];
+		name = tks[4];
+		if( not map_user_types.has( alias ) ){
+			utp = UserType{ name => name, input_file => fname };
+			map_user_types[ alias ] = utp;
+		}
+		utp = map_user_types[ alias ];
+    utp.input_file = fname;
+		utp.name = name;
+		map_user_types[ name ] = utp;
+		map_user_types[ 'struct ' + name ] = utp; # XXX better handle struct typedef
+		map_user_types[ 'struct ' + alias ] = utp;
+		map_user_types[ 'union ' + name ] = utp;
+		map_user_types[ 'union ' + alias ] = utp;
+	}
+
+  ns_utp : UserType;
+  if( snamespace ) ns_utp = map_user_types[ snamespace ];
+
+	const pat_enum = 'enum %s+ (%w*) %s* (%b{}) %s* ;';
+	parts = source.extract( pat_enum );
+	source.change( pat_enum, '' );
+	for( part in parts ){
+		tks = part.capture( pat_enum );
+		ename = tks[1];
+		enums = tks[2];
+    if( snamespace ) ns_utp.classEnum[ ename ] = ( snamespace, 1 );
+    if( ename ){
+      ename2 = ename;
+      if( snamespace ) ename2 = snamespace + '::' + ename;
+      enumMap[ ename ] = 1;
+      if( not CT_MAP.has( ename2 ) ){
+        CT_MAP[ ename2 ] = CT_INT;
+        basic_typedefs.append( ( snamespace, 'int', ename ) );
+      }
+    }
+    enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>]*', '' );
+		names = enums.extract( '%w+' );
+		for( name in names ) constNumbers.append( ( snamespace, 'DAO_INTEGER', name, name, inExtFile ) );
+	}
+
+	const pat_typedef = 'typedef %s* ( %s+ const |) (( %s+ ))'
+		'<1>( [%w:%s] + ) ((%s+) | (%s*) <2>(%*) (%s*) ) <3>(%w+) %s*;';
+	parts = source.extract( pat_typedef );
+	source.change( pat_typedef, '' );
+	for( part in parts ){
+		tks = part.capture( pat_typedef );
+		name = tks[1];
+		alias = tks[3];
+		if( alias.find( 'Fl_Callback_p' ) >=0 ) stdio.print( alias, ',', name, '\n' );
+    scoped = '';
+    if( snamespace ) scoped = snamespace + '::' + alias;
+# be sure that file order does not matter here
+# type alias may has been used before this file is parsed
+#
+		if( alias != name and map_user_types.has( alias ) and map_user_types.has( name ) ){
+			map_user_types[ alias ].isAlias = 1;
+			map_user_types[ alias ] = map_user_types[ name ];
+			map_user_types[ 'struct ' + alias ] = map_user_types[ name ];
+			map_user_types[ 'union ' + alias ] = map_user_types[ name ];
+		}
+    if( snamespace ) ns_utp.classTypedef[ alias ] = -1;
+		if( CT_MAP.has( name ) ){
+      if( snamespace ) ns_utp.classTypedef[ alias ] = CT_MAP[ name ];
+			if( not CT_MAP.has( alias ) ) CT_MAP[ alias ] = CT_MAP[ name ];
+			basic_typedefs.append( ( snamespace, DAO_TYPES[ CT_MAP[ name ] ], alias ) );
+    }elif( snamespace != '' and ns_utp.classEnum.has( name ) ){
+      ns_utp.classTypedef[ alias ] = 1;
+		}elif( map_user_types.has( name ) ){
+			map_user_types[ alias ] = map_user_types[ name ];
+			if( snamespace ) map_user_types[ scoped ] = map_user_types[ name ];
+    }elif( map_ns_types.has( name ) ){
+      typedef_ns_types[alias] = map_ns_types[name];
+    }elif( snamespace ){
+      typer = snamespace + '_' + alias;
+      utp = UserType{ name => typer, input_file => fname };
+      if( tks[1] == 'class' ) utp.isCppClass = 1;
+      utp.name2 = scoped;
+      utp.nested = 2;
+      map_user_types[ scoped ] = utp;
+    }
+    if( snamespace ) otherClassTypedef[ scoped ] = ns_utp.classTypedef[ alias ];
+		if( tks[2] == '*' ) pointer_types[ alias ] = name;
+		if( pointer_types.has( name ) ) pointer_types[ alias ] = pointer_types[name];
+		if( name.pfind( '(struct|union)' ) ){
+			map_user_types[ name ] = UserType{ name => alias, input_file => fname };;
+			map_user_types[ alias ] = map_user_types[ name ];
+			if( tks[2] == '*' ) pointer_types[ alias ] = alias;
+		}
+		source.change( pat_typedef, '', 1 );
+	}
+	
+	const pat_enum2 = 'typedef %s+ enum %s+ ( %w+ ) %s+ ( %w+ )';
+	parts = source.extract( pat_enum2 );
+	source.change( pat_enum2, '' );
+	for( part in parts ){
+		tks = part.capture( pat_enum2 );
+		tk1 = tks[1];  tk2 = tks[2];
+		basic_typedefs.append( ( snamespace, 'int', tk1 ) );
+		basic_typedefs.append( ( snamespace, tk1, tk2 ) );
+	}
+
+	const pat_usercst = '%s* const %s+ (%w+) (%s+ | %s* (%*) %s*) (%w+) %s* ;';
+	parts = source.extract( pat_usercst );
+	source.change( pat_usercst, '' );
+	for( part in parts ){
+		tks = part.capture( pat_usercst );
+		if( not map_user_types.has( tks[1] ) ) skip;
+		utp = map_user_types[ tks[1] ];
+		if( tks[3] ){
+			constCDataPtr.append( ( snamespace, utp, tks[4], inExtFile ) );
+		}else{
+			constCData.append( ( snamespace, utp, tks[4], inExtFile ) );
+		}
+	}
+
+	parts = source.extract( pat_funct );
+	source.change( pat_funct, '' );
+	for( part in parts ){
+    ParseFunction( functions.funcs, part, snamespace, fname, 0, snamespace );
+  }
+  return source;
+}
+routine ParseFile( file : string, dir = '', subdir='',
+		fixing : list<list<string>>={}, lang='', inExtFile=0 )
+{
+	subdirs = subdir.split( ',' );
+	utp : UserType;
+
+  file2 = file;
+	source = stdio.read( file, 1 );
+	if( source =='' ){
+    source = stdio.read( dir + file, 1 );
+    file2 = dir + file;
+  }
+	if( source =='' ){
+		for( sb in subdirs ){
+			source = stdio.read( dir + sb + '/' + file, 1 );
+      file2 = dir + sb + '/' + file;
+			if( source ) break;
+		}
+	}
+  if( source == '' ) return 0;
+
+	stdio.println( 'parsing file: ', file2 );
+
+# remove comments
+	source.change( '%B{ / %* }{ %* / }', '' );
+	#source.change( '[^\n]*// %s* <I>Not %s+ implement [^\n]*', '' );
+	source.change( '//[^\n]*', '' );
+	const patder = '%B{ # %s* if }{ # %s* endif }';
+	for( pat in fixing ){
+		k = 1;
+		while( k ){
+			if( pat[0][:11] == '%B{ # %s* if' and pat[1] == '' ){
+				sb = source.match( pat[0] );
+				while( sb.start >=0 ){
+					sb2 = source.match( patder, sb.start + 3, sb.end );
+					if( sb2.start <0 ) break;
+					sb = sb2;
+				};
+				k = 0;
+				if( sb.start >=0 ){
+					k = 1;
+					source[ sb.start : sb.end ] = '';
+				}
+			}else{
+				k = source.change( pat[0], pat[1] );
+			}
+		}
+		#do{ k = source.change( pat[0], pat[1] ); } until( k==0 );
+	}
+
+	fname = file;
+	#fname.change( '%..*$', '' );
+
+# multi-line macro, concatenate lines
+	source.change( '\\ %s* [\n]', '' );
+# preprocessers
+	source.change( '%B{ #%s* if %s* (%!|) %s* defined }{ #%s*endif}', '' );
+	source.change( '%B{ #%s* if %s+ 0 }{ #%s*endif}', '' );
+	source.change('(^|[\n])%s* #%s*(if|ifdef|ifndef|else|elif|endif)[^\n]*([\n]|$)','\n');
+	source.change('(^|[\n])%s* #%s*(undef | define %s+ __) [^\n]*([\n]|$)','\n');
+	source.change('(^|[\n])%s* #%s*if %s+ defined [^\n]*([\n]|$)','\n');
+	source.change('(^|[\n])#[^\n]* PRAGMA [^\n]*([\n]|$)','\n');
+	source.change('(^|[\n])#%s* include [^\n]*([\n]|$)','\n');
+
+	source.change('(^|%s) (extern|inline|explicit) (%s|$)',' ');
+
+	source.change('template %s* %b<> %s* %w+ %s* (: [%s%w,:%<%>]* |) %b{}', '' );
+	source.change('friend %s+ %w+ [^;]* ;', '' );
+	source.change('using %s+ [%w:]+ %s* ;', '' );
+
+	source.change('(%W) unsigned %s+ short %s+ int (%W)', '%1 unsigned short %2' );
+
+	source.change('const %s+ char %s* %* %s* const %s+ (%w+ %s* %b[])', 'const char *%1' );
+
+	source.change( 'typedef %s+ enum %s+ ( %w+ ) ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
+			'enum %3%2;\ntypedef %3 %1;\n' );
+	source.change( 'typedef %s+ enum %s* ( %b{} ) %s* ( %w+ )', 'enum %2 %1' );
+
+	source.change( 'typedef %s+ struct ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
+			'struct %2%1;\n' );
+	source.change( 'typedef %s+ struct %s+ ( %w+ ) ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
+			'struct %3%2;\ntypedef %3 %1;\n' );
+	source.change( 'typedef %s+ union %s+ ( %w+ ) ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
+			'union %3%2;\ntypedef %3 %1;\n' );
+	source.change( 'typedef %s+ union ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
+			'union %2%1;\n' );
+
+	source.change( '%) %s* : ([^%{%}]*) %b{}', ');' ); # nested constructors
+	source.change( '%) %s* (%w*) %s* %b{}', ')%1;' ); # nested/inline functions
+
+  cbfrom1 = 'typedef %s+ <1>(%w [^;]*) %( %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
+  cbfrom2 = 'typedef %s+ <1>(%w [^;]*) %( %s* %* %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
+  cbto1 = 'callback %2 {public:\n\t%1 callback %3;\n};';
+  cbto2 = 'callback %2_x {public:\n\t%1 callback %3;\n};\ntypedef %2_x * %2;';
+  source.change( cbfrom1, cbto1 );
+  source.change( cbfrom2, cbto2 );
+  #if( file == 'Fl_Widget.H' ) io.writeln( source );
+
+#{
+	source.change( 'struct %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ struct %s+ %1 %s+ ( %w+ ) %s* ; )', 'struct %5%2\ntypedef %5 %1;\n%3' );
+	source.change( 'typedef %s+ struct %s+ ( %w+ ) %s+ ( %w+ ) %s* ; (.*) struct %s* %1 ( %s* %b{} %s*; )', 'struct %2%4\ntypedef %2 %1;\n%3' );
+
+	source.change( 'union %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ union %s+ %1 %s+ ( %w+ ) %s* ; )', 'union %5%2\ntypedef %5 %1;\n%3' );
+#}
+
+	#if( file.find( 'columnCount' ) >=0 ) stdio.println( source );
+
+	#const pat_defcst = '#%s* define %s+ (%w+) %s*'
+	#	'(%s %d [%x%.]* | %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %) ) %s*';
+	const pat_defcst = '#%s* define %s+ (%w+)'
+		'(%s+ %d [%x%.]* | %s* %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %s* %) ) %s*';
+	parts = source.extract( pat_defcst );
+	source.change( pat_defcst, '' );
+	for( part in parts ){
+		tks = part.capture( pat_defcst );
+		name = tks[1];
+		if( tks[2].pfind( '(%. | %/)' ) ){
+			constNumbers.append( ( '', 'DAO_DOUBLE', name, name, inExtFile ) );
+		}else{
+			constNumbers.append( ( '', 'DAO_INTEGER', name, name, inExtFile ) );
+		}
+	}
+  source.change( '#%s* define [^\n]*', '' ); # other macros
+
+  #if( file.find( 'vtkInformationInformationKey' ) >=0 ) stdio.println( source ); # DEBUG
+  source = ParseCode( source, '', lang, fname, inExtFile );
+
+	source.change( '[\n]{2,}', '\n\n' );
+	source.change( '%s+[\n]', '\n' );
+	source = source.chop();
+	source = source + '\n';
+	if( source ){
+		log_file.println( '========= UNPARSED CODES FROM FILE:', file, '=========' );
+		log_file.println( source );
+	}
+  return 1;
+}
+
+
+global daopar_int = '$(name) : int$(default)';
+global daopar_float = '$(name) : float$(default)';
+global daopar_double = '$(name) : double$(default)';
+global daopar_complex = '$(name) : complex$(default)';
+global daopar_string = '$(name) : string$(default)';
+global daopar_ints = '$(name) : array<int>';
+global daopar_floats = '$(name) : array<float>';
+global daopar_doubles = '$(name) : array<double>';
+global daopar_complexs = '$(name) : array<complex>$(default)';
+global daopar_buffer = '$(name) : cdata$(default)';
+global daopar_stream = '$(name) : stream$(default)';
+global daopar_user = '$(name) : $(namespace2)$(type)$(default)';
+global daopar_userdata = '$(name) : any$(default)'; # for callback data
+global daopar_callback = '$(name) : any'; # for callback, no precise type yet! XXX
+
+const dao2cxx = '  $(namespace)$(type) $(name)= ($(namespace)$(type)) ';
+const dao2cxx2 = '  $(namespace)$(type)* $(name)= ($(namespace)$(type)*) ';
+const dao2cxx3 = '  $(namespace)$(type)** $(name)= ($(namespace)$(type)**) ';
+
+global dao2cxx_char = dao2cxx + 'DString_GetMBS( _p[$(index)]->v.s )[0];\n';
+global dao2cxx_wchar = dao2cxx + 'DString_GetWCS( _p[$(index)]->v.s )[0];\n';
+global dao2cxx_int  = dao2cxx + '_p[$(index)]->v.i;\n';
+global dao2cxx_float = dao2cxx + '_p[$(index)]->v.f;\n';
+global dao2cxx_double = dao2cxx + '_p[$(index)]->v.d;\n';
+global dao2cxx_complex = dao2cxx + '{_p[$(index)]->v.c->real, _p[$(index)]->v.c->imag};\n';
+global dao2cxx_mbs = dao2cxx2 + 'DString_GetMBS( _p[$(index)]->v.s );\n';
+global dao2cxx_wcs = dao2cxx2 + 'DString_GetWCS( _p[$(index)]->v.s );\n';
+global dao2cxx_bytes = dao2cxx2 + 'DaoArray_ToByte( _p[$(index)]->v.array );\n';
+global dao2cxx_ubytes = dao2cxx2 + 'DaoArray_ToUByte( _p[$(index)]->v.array );\n';
+global dao2cxx_shorts = dao2cxx2 + 'DaoArray_ToShort( _p[$(index)]->v.array );\n';
+global dao2cxx_ushorts = dao2cxx2 + 'DaoArray_ToUShort( _p[$(index)]->v.array );\n';
+global dao2cxx_ints = dao2cxx2 + 'DaoArray_ToInt( _p[$(index)]->v.array );\n';
+global dao2cxx_uints = dao2cxx2 + 'DaoArray_ToUInt( _p[$(index)]->v.array );\n';
+global dao2cxx_floats = dao2cxx2 + 'DaoArray_ToFloat( _p[$(index)]->v.array );\n';
+global dao2cxx_doubles = dao2cxx2 + 'DaoArray_ToDouble( _p[$(index)]->v.array );\n';
+global dao2cxx_complexs8 = dao2cxx2 + '(complex8*) DaoArray_ToFloat( _p[$(index)]->v.array );\n';
+global dao2cxx_complexs16 = dao2cxx2 + '(complex16*) DaoArray_ToDouble( _p[$(index)]->v.array );\n';
+
+global dao2cxx_bmat = dao2cxx3 + 'DaoArray_GetMatrixB( _p[$(index)]->v.array, $(size) );\n';
+global dao2cxx_smat = dao2cxx3 + 'DaoArray_GetMatrixS( _p[$(index)]->v.array, $(size) );\n';
+global dao2cxx_imat = dao2cxx3 + 'DaoArray_GetMatrixI( _p[$(index)]->v.array, $(size) );\n';
+global dao2cxx_fmat = dao2cxx3 + 'DaoArray_GetMatrixF( _p[$(index)]->v.array, $(size) );\n';
+global dao2cxx_dmat = dao2cxx3 + 'DaoArray_GetMatrixD( _p[$(index)]->v.array, $(size) );\n';
+global dao2cxx_c8mat = dao2cxx3 + '(complex8*) DaoArray_GetMatrixF( _p[$(index)]->v.array, $(size) );\n';
+global dao2cxx_c16mat = dao2cxx3 + '(complex16*) DaoArray_GetMatrixD( _p[$(index)]->v.array, $(size) );\n';
+
+global dao2cxx_stream = dao2cxx2 + 'DaoStream_GetFile( _p[$(index)]->v.stream );\n';
+
+global dao2cxx_user = dao2cxx2 + 'DaoCData_GetData( _p[$(index)]->v.cdata );\n';
+global dao2cxx_user2 = '  $(namespace)$(type) $(name)= ($(namespace)$(type)) '
+'DaoCData_GetData( _p[$(index)]->v.cdata );\n';
+global dao2cxx_user3 = '  $(namespace)$(type)** $(name)= ($(namespace)$(type)**) '
+'DaoCData_GetData2( _p[$(index)]->v.cdata );\n';
+global dao2cxx_user4 = '  $(namespace)$(type)* $(name)= ($(namespace)$(type)*) '
+'DaoCData_GetData2( _p[$(index)]->v.cdata );\n';
+
+global dao2cxx_callback =
+'  DaoRoutine *_ro = _p[$(index)]->v.routine;
+  $(type) *$(name) = Dao_$(type);\n';
+global dao2cxx_userdata =
+'  DValue *_ud = _p[$(index)];
+  DaoCallbackData *$(name) = DaoCallbackData_New( _ro, _ud );\n';
+
+
+const cxx2dao = '  _dp[$(index)] = DValue_New';
+
+global cxx2dao_int = cxx2dao + 'Integer( (int) $(name) );\n';
+global cxx2dao_float = cxx2dao + 'Float( (float) $(name) );\n';
+global cxx2dao_double = cxx2dao + 'Double( (double) $(name) );\n';
+global cxx2dao_int2 = cxx2dao + 'Integer( (int) *$(name) );\n';
+global cxx2dao_float2 = cxx2dao + 'Float( (float) *$(name) );\n';
+global cxx2dao_double2 = cxx2dao + 'Double( (double) *$(name) );\n';
+global cxx2dao_mbs = cxx2dao+'MBString( (char*) $(name), strlen( (char*)$(name) ) );\n'; # XXX for char**
+global cxx2dao_wcs = cxx2dao + 'WCString( (wchar_t*) $(name), wcslen( (wchar_t*)$(name) ) );\n'; # XXX for wchar_t**
+global cxx2dao_bytes = cxx2dao + 'VectorB( (char*) $(name), $(size) );\n';
+global cxx2dao_ubytes = cxx2dao + 'VectorUB( (unsigned char*) $(name), $(size) );\n';
+global cxx2dao_shorts = cxx2dao + 'VectorS( (short*) $(name), $(size) );\n';
+global cxx2dao_ushorts = cxx2dao + 'VectorUS( (unsigned short*) $(name), $(size) );\n';
+global cxx2dao_ints = cxx2dao + 'VectorI( (int*) $(name), $(size) );\n';
+global cxx2dao_uints = cxx2dao + 'VectorUI( (unsigned int*) $(name), $(size) );\n';
+global cxx2dao_floats = cxx2dao + 'VectorF( (float*) $(name), $(size) );\n';
+global cxx2dao_doubles = cxx2dao + 'VectorD( (double*) $(name), $(size) );\n';
+
+global cxx2dao_stream = cxx2dao + 'Stream( (FILE*) $(refer) );\n';
+global cxx2dao_voidp = cxx2dao + 'CData( NULL, (void*) $(refer) );\n';
+global cxx2dao_user = cxx2dao + 'CData( dao_$(type2)_Typer, (void*) $(refer) );\n';
+
+global cxx2dao_userdata = '  DValue_Copy( _dp2[$(index)], $(name) );\n';
+
+global cxx2dao_qchar = cxx2dao+'Integer( $(name).digitValue() );\n';
+global cxx2dao_qchar2 = cxx2dao+'Integer( $(name)->digitValue() );\n';
+global cxx2dao_qbytearray = cxx2dao+'MBString( (char*) $(name).data(), 0 );\n';
+global cxx2dao_qstring = cxx2dao+'MBString( (char*) $(name).toLocal8Bit().data(), 0 );\n';
+
+const ctxput = '  DaoContext_Put';
+
+global ctxput_int = ctxput + 'Integer( _ctx, (int) $(name) );\n';
+global ctxput_float = ctxput + 'Float( _ctx, (float) $(name) );\n';
+global ctxput_double = ctxput + 'Double( _ctx, (double) $(name) );\n';
+global ctxput_mbs = ctxput + 'MBString( _ctx, (char*) $(name) );\n';
+global ctxput_wcs = ctxput + 'WCString( _ctx, (wchar_t*) $(name) );\n';
+global ctxput_bytes = ctxput + 'Bytes( _ctx, (char*) $(name), $(size) );\n'; # XXX array?
+global ctxput_shorts = ctxput + 'ArrayShort( _ctx, (short*) $(name), $(size) );\n';
+global ctxput_ints = ctxput + 'ArrayInteger( _ctx, (int*) $(name), $(size) );\n';
+global ctxput_floats = ctxput + 'ArrayFloat( _ctx, (float*) $(name), $(size) );\n';
+global ctxput_doubles = ctxput + 'ArrayDouble( _ctx, (double*) $(name), $(size) );\n';
+
+global ctxput_stream = ctxput + 'File( _ctx, (FILE*) $(name) );\n'; #XXX PutFile
+global ctxput_voidp = ctxput + 'CPointer( _ctx, (void*) $(name), 0 );\n';
+global ctxput_user = '  DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(type2)_Typer );\n';
+global qt_ctxput = '  Dao_$(type2)_InitSS( ($(type)*) $(name) );\n';
+global qt_put_qobject =
+'  DaoBase *dbase = DaoQt_Get_Wrapper( $(name) );
+  if( dbase ){
+    DaoContext_PutResult( _ctx, dbase );
+  }else{
+    Dao_$(type2)_InitSS( ($(type)*) $(name) );
+    DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(type2)_Typer );
+  }
+';
+
+global ctxput_copycdata =
+'  DaoContext_CopyCData( _ctx, (void*)& $(name), sizeof($(type)), dao_$(type2)_Typer );\n';
+global ctxput_newcdata =
+'  DaoContext_PutCData( _ctx, (void*)new $(type)( $(name) ), dao_$(type2)_Typer );\n';
+global ctxput_refcdata =
+'  DaoContext_WrapCData( _ctx, (void*)& $(name), dao_$(type2)_Typer );\n';
+
+global qt_qlist_decl = 
+'typedef $(qtype)<$(item)> $(qtype)_$(item);
+void Dao_Put$(qtype)_$(item)( DaoContext *ctx, const $(qtype)_$(item) & qlist );
+void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist );
+';
+global qt_qlist_decl2 = 
+'typedef $(qtype)<$(item)*> $(qtype)P_$(item);
+void Dao_Put$(qtype)P_$(item)( DaoContext *ctx, const $(qtype)P_$(item) & qlist );
+void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist );
+';
+global qt_daolist_func =
+'void Dao_Put$(qtype)_$(item)( DaoContext *ctx, const $(qtype)_$(item) & qlist )
+{
+	DaoList *dlist = DaoContext_PutList( ctx );
+	DValue it = { DAO_CDATA, 0, 0, 0, {0} };
+	int i, m = qlist.size();
+	for(i=0; i<m; i++){
+		it.v.cdata = DaoCData_New( dao_$(item)_Typer, new $(item)( qlist[i] ) );
+		DaoList_PushBack( dlist, it );
+	}
+}
+void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist )
+{
+	int i, m = DaoList_Size( dlist );
+	for(i=0; i<m; i++){
+		DValue it = DaoList_GetItem( dlist, i );
+		if( it.t != DAO_CDATA ) continue;
+		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( *($(item)*) DaoCData_GetData( it.v.cdata ) );
+	}
+}
+';
+global qt_daolist_func_virt =
+'void Dao_Put$(qtype)_$(item)( DaoContext *ctx, const $(qtype)_$(item) & qlist )
+{
+	DaoList *dlist = DaoContext_PutList( ctx );
+	DValue it = { DAO_CDATA, 0, 0, 0, {0} };
+	int i, m = qlist.size();
+	for(i=0; i<m; i++){
+		it.v.cdata = DaoCData_New( dao_$(item)_Typer, new $(item)( qlist[i] ) );
+		DaoList_PushBack( dlist, it );
+	}
+}
+void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist )
+{
+	int i, m = DaoList_Size( dlist );
+	for(i=0; i<m; i++){
+		DValue it = DaoList_GetItem( dlist, i );
+		if( it.t != DAO_CDATA ) continue;
+		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( * ($(item)*) DaoCData_GetData( it.v.cdata ) );
+	}
+}
+';
+global qt_daolist_func2 =
+'void Dao_Put$(qtype)P_$(item)( DaoContext *ctx, const $(qtype)P_$(item) & qlist )
+{
+	DaoList *dlist = DaoContext_PutList( ctx );
+	DValue it = { DAO_CDATA, 0, 0, 0, {0} };
+	int i, m = qlist.size();
+	for(i=0; i<m; i++){
+		it.v.cdata = DaoCData_Wrap( dao_$(item)_Typer, qlist[i] );
+		DaoList_PushBack( dlist, it );
+	}
+}
+void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist )
+{
+	int i, m = DaoList_Size( dlist );
+	for(i=0; i<m; i++){
+		DValue it = DaoList_GetItem( dlist, i );
+		if( it.t != DAO_CDATA ) continue;
+		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( ($(item)*) DaoCData_GetData( it.v.cdata ) );
+	}
+}
+';
+global qt_daolist_func_virt2 =
+'void Dao_Put$(qtype)P_$(item)( DaoContext *ctx, const $(qtype)P_$(item) & qlist )
+{
+	DaoList *dlist = DaoContext_PutList( ctx );
+	DValue it = { DAO_CDATA, 0, 0, 0, {0} };
+	int i, m = qlist.size();
+	for(i=0; i<m; i++){
+		it.v.cdata = DaoCData_Wrap( dao_$(item)_Typer, qlist[i] );
+		DaoList_PushBack( dlist, it );
+	}
+}
+void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist )
+{
+	int i, m = DaoList_Size( dlist );
+	for(i=0; i<m; i++){
+		DValue it = DaoList_GetItem( dlist, i );
+		if( it.t != DAO_CDATA ) continue;
+		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( ($(item)*) DaoCData_GetData( it.v.cdata ) );
+	}
+}
+';
+global qt_dao2cxx_list =
+'  $(type) $(name);
+  Dao_Get$(qtype)_$(item)( _p[$(index)]->v.list, $(name) );
+';
+global qt_dao2cxx_list2 =
+'  $(type) $(name);
+  Dao_Get$(qtype)P_$(item)( _p[$(index)]->v.list, $(name) );
+';
+global qt_daolist_codes = '  Dao_Put$(qtype)_$(item)( _ctx, $(name) );\n';
+global qt_daolist_codes2 = '  Dao_Put$(qtype)P_$(item)( _ctx, $(name) );\n';
+
+global parset_int = '  _p[$(index)]->v.i = (int) $(name);\n';
+global parset_float = '  _p[$(index)]->v.f = (float) $(name);\n';
+global parset_double = '  _p[$(index)]->v.d = (double) $(name);\n';
+global parset_mbs = '  DString_SetMBS( _p[$(index)]->v.s, (char*) $(name) );\n';
+global parset_wcs = '  DString_SetWCS( _p[$(index)]->v.s, (wchar_t*) $(name) );\n';
+global parset_bytes = '  DaoArray_FromByte( _p[$(index)]->v.array );\n';
+global parset_ubytes = '  DaoArray_FromUByte( _p[$(index)]->v.array );\n';
+global parset_shorts = '  DaoArray_FromShort( _p[$(index)]->v.array );\n';
+global parset_ushorts = '  DaoArray_FromUShort( _p[$(index)]->v.array );\n';
+global parset_ints = '  DaoArray_FromInt( _p[$(index)]->v.array );\n';
+global parset_uints = '  DaoArray_FromUInt( _p[$(index)]->v.array );\n';
+global parset_floats = '  DaoArray_FromFloat( _p[$(index)]->v.array );\n';
+global parset_doubles = '  DaoArray_FromDouble( _p[$(index)]->v.array );\n';
+
+global dao2cxx2cst = '  const $(type)* $(name)= (const $(type)*) ';
+global dao2cxx_mbs_cst = dao2cxx2cst + 'DString_GetMBS( _p[$(index)]->v.s );\n';
+global dao2cxx_wcs_cst = dao2cxx2cst + 'DString_GetWCS( _p[$(index)]->v.s );\n';
+
+global dao2cxx_mbs2 = '  $(type)* $(name)_old = ($(type)*)'
+'DString_GetMBS( _p[$(index)]->v.s );\n'
+'  size_t $(name)_len = strlen( $(name)_old );\n'
+'  $(type)* $(name) = ($(type)*) malloc( $(name)_len + 1 );\n'
+'  void* $(name)_p = strncpy( $(name), $(name)_old, $(name)_len );\n';
+global dao2cxx_wcs2 = '  $(type)* $(name)_old = ($(type)*)'
+'DString_GetWCS( _p[$(index)]->v.s );\n'
+'  size_t $(name)_len = wcslen( $(name)_old ) * sizeof(wchar_t);\n'
+'  $(type)* $(name) = ($(type)*) malloc( $(name)_len + sizeof(wchar_t) );\n'
+'  void* $(name)_p = memcpy( $(name), $(name)_old, $(name)_len );\n';
+global parset_mbs2 = '  DString_SetMBS( _p[$(index)]->v.s, (char*) $(name) );\n'
+'  free( $(name) );\n';
+global parset_wcs2 = '  DString_SetWCS( _p[$(index)]->v.s, (wchar_t*) $(name) );\n'
+'  free( $(name) );\n';
+
+global dao2cxx_qchar = '  QChar $(name)( (int)_p[$(index)]->v.i );\n';
+global dao2cxx_qchar2 =
+'  QChar $(name)( (int)_p[$(index)]->v.i )
+  QChar *$(name) = & _$(name);
+';
+global parset_qchar = '  _p[$(index)]->v.i = $(name).digitValue();\n';
+global parset_qchar2 = '  _p[$(index)]->v.i = $(name)->digitValue();\n';
+global ctxput_qchar = '  DaoContext_PutInteger( _ctx, $(name).digitValue() );\n';
+global ctxput_qchar2 = '  DaoContext_PutInteger( _ctx, $(name)->digitValue() );\n';
+
+global dao2cxx_qbytearray =
+'  char *_mbs$(index) = DString_GetMBS( _p[$(index)]->v.s );
+  QByteArray $(name)( _mbs$(index) );
+';
+global dao2cxx_qbytearray2 =
+'  char *_mbs$(index) = DString_GetMBS( _p[$(index)]->v.s );
+  QByteArray _$(name)( _mbs$(index) );
+  QByteArray *$(name) = & _$(name);
+';
+global parset_qbytearray =
+'  DString_SetMBS( _p[$(index)]->v.s, (char*) $(name).data() );
+';
+global parset_qbytearray2 =
+'  DString_SetMBS( _p[$(index)]->v.s, (char*) $(name)->data() );
+';
+global ctxput_qbytearray = 
+'  DaoContext_PutMBString( _ctx, $(name).data() );\n';
+
+global dao2cxx_qstring =
+'  char *_mbs$(index) = DString_GetMBS( _p[$(index)]->v.s );
+  QString $(name)( _mbs$(index) );
+';
+global dao2cxx_qstring2 =
+'  char *_mbs$(index) = DString_GetMBS( _p[$(index)]->v.s );
+  QString _$(name)( _mbs$(index) );
+  QString *$(name) = & _$(name);
+';
+global parset_qstring =
+'  DString_SetMBS( _p[$(index)]->v.s, (char*) $(name).toLocal8Bit().data() );
+';
+global parset_qstring2 =
+'  DString_SetMBS( _p[$(index)]->v.s, (char*) $(name)->toLocal8Bit().data() );
+';
+global ctxput_qstring = 
+'  DaoContext_PutMBString( _ctx, $(name).toLocal8Bit().data() );\n';
+
+const getres_i = '  if( _res.t == DAO_INTEGER ) $(name)= ($(type)) ';
+const getres_f = '  if( _res.t == DAO_FLOAT ) $(name)= ($(type)) ';
+const getres_d = '  if( _res.t == DAO_DOUBLE ) $(name)= ($(type)) ';
+const getres_s = '  if( _res.t == DAO_STRING ) $(name)= ($(type)*) ';
+const getres_a = '  if( _res.t == DAO_ARRAY )\n    $(name)= ($(type)*) ';
+const getres_p = '  if( _res.t == DAO_CDATA ) $(name)= ($(type)) ';
+const getres_io = '  if( _res.t == DAO_STREAM ) $(name)= ($(type)) ';
+
+global getres_int  = getres_i + '_res.v.i;\n';
+global getres_float = getres_f + '_res.v.f;\n';
+global getres_double = getres_d + '_res.v.d;\n';
+global getres_mbs = getres_s + 'DString_GetMBS( _res.v.s );\n';
+global getres_wcs = getres_s + 'DString_GetWCS( _res.v.s );\n';
+global getres_bytes = getres_a + 'DaoArray_ToByte( _res.v.array );\n';
+global getres_ubytes = getres_a + 'DaoArray_ToUByte( _res.v.array );\n';
+global getres_shorts = getres_a + 'DaoArray_ToShort( _res.v.array );\n';
+global getres_ushorts = getres_a + 'DaoArray_ToUShort( _res.v.array );\n';
+global getres_ints = getres_a + 'DaoArray_ToInt( _res.v.array );\n';
+global getres_uints = getres_a + 'DaoArray_ToUInt( _res.v.array );\n';
+global getres_floats = getres_a + 'DaoArray_ToFloat( _res.v.array );\n';
+global getres_doubles = getres_a + 'DaoArray_ToDouble( _res.v.array );\n';
+global getres_stream = getres_io + 'DaoStream_GetFile( _res.v.stream );\n';
+global getres_buffer = getres_p + 'DaoCData_GetData( _res.v.cdata );\n';
+
+global getres_qchar =
+'  if( _res.t == DAO_INTEGER ) $(name)= QChar( (int)_res.v.i );\n';
+global getres_qbytearray =
+'  if( _res.t == DAO_STRING ) $(name)= DString_GetMBS( _res.v.s );\n';
+global getres_qstring =
+'  if( _res.t == DAO_STRING ) $(name)= DString_GetMBS( _res.v.s );\n';
+
+const getres_cdata = 
+'  if( _res.t == DAO_OBJECT && (_cd = DaoObject_MapCData( _res.v.object, dao_$(type2)_Typer ) ) ){
+    _res.t = DAO_CDATA;
+    _res.v.cdata = _cd;
+  }
+  if( _res.t == DAO_CDATA && DaoCData_IsType( _res.v.cdata, dao_$(type2)_Typer ) ){
+';
+
+global getres_user = getres_cdata +
+'    $(name) = ($(namespace)$(type)*) DaoCData_GetData( _res.v.cdata );\n  }\n';
+
+global getres_user2 = getres_cdata +
+'    $(name) = *($(namespace)$(type)*) DaoCData_GetData( _res.v.cdata );\n  }\n';
+
+global setter_int = '  self->$(name) = ($(type)) _p[1]->v.i;\n';
+global setter_float = '  self->$(name) = ($(type)) _p[1]->v.f;\n';
+global setter_double = '  self->$(name) = ($(type)) _p[1]->v.d;\n';
+global setter_string = # XXX array?
+'  int size = DString_Size( _p[1]->v.s );\n'
+'  if( size > $(size) ) size = $(size);\n'
+'  memmove( self->$(name), DString_GetMBS( _p[1]->v.s ), size );\n';
+global setter_shorts =
+'  int size = DaoArray_Size( _p[1]->v.array );\n'
+'  if( size > $(size) ) size = $(size);\n'
+'  memmove( self->$(name), DaoArray_ToShort( _p[1]->v.array ), size*sizeof(short) );\n';
+global setter_ints =
+'  int size = DaoArray_Size( _p[1]->v.array );\n'
+'  if( size > $(size) ) size = $(size);\n'
+'  memmove( self->$(name), DaoArray_ToInt( _p[1]->v.array ), size*sizeof(int) );\n';
+global setter_floats =
+'  int size = DaoArray_Size( _p[1]->v.array );\n'
+'  if( size > $(size) ) size = $(size);\n'
+'  memmove( self->$(name), DaoArray_ToFloat( _p[1]->v.array ), size*sizeof(float) );\n';
+global setter_doubles =
+'  int size = DaoArray_Size( _p[1]->v.array );\n'
+'  if( size > $(size) ) size = $(size);\n'
+'  memmove( self->$(name), DaoArray_ToDouble( _p[1]->v.array ), size*sizeof(double) );\n';
+
+routine Variable::Parse( fname = '' )
+{
+	if( index == INDEX_RETURN && source.pfind( '^ %s* (%w+) %s* $' ).size() ){
+		name = source;
+		name.simplify();
+		type = '';
+    type_trans = '';
+		return;
+	}
+	if( source.size() ==0 ) return;
+	tks = source.capture( pat_type );
+	name = tks[5];
+	#if( name.size() ==0 ) name = '_cp' + (index >=0) ? ((string) index) : '_ret';
+	if( name.size() ==0 ){
+		if( index >= 0 )
+			name = '_cp' + (string) index;
+		else
+			name = '_cp_ret';
+	}
+	isconst = ( tks[2].size() !=0 );
+	type = tks[3];
+	refer = tks[4];
+	square = tks[6];
+	cxxdefault = tks[7];
+	vdefault = tks[7];
+	vdefault.replace( '\"', '\\\"' );
+	vdefault.change( '%b()', '' );
+	refer.simplify();
+	type.change( '%s%s+', ' ' );
+	square.change( '%s+', '' );
+	sqsizes = square.extract( '%[ [^%[%]]* %]' );
+	for( i = 0 : sqsizes.size()-1 ){
+		sqsizes[i].change( '( ^ %[ | %] $ | %s+ )', '' );
+		if( sqsizes[i].size() == 0 ) sqsizes[i] = '0';
+	}
+	if( CT_MAP.has( type ) ){
+		typeid = CT_MAP[ type ];
+	}elif( type.pfind( 'enum %s' ) ){
+		tks = type.capture( 'enum %s+ ( %w+ )' );
+		typeid = CT_INT;
+		tpname = tks[1];
+		enumMap[ tpname ] = 1;
+		if( not CT_MAP.has( tpname ) ){
+			CT_MAP[ tpname ] = CT_INT;
+			basic_typedefs.append( ( '', 'int', tpname ) );
+		}
+	}elif( type.find('::') >= 0 and otherClassTypedef.has( type ) ){
+		typeid = otherClassTypedef[ type ];
+	}elif( type.pfind( '^ %w+ $' ).size() and not map_user_types.has( type ) ){
+		user = 1;
+		if( map_user_types.has( host ) ){
+			utp = map_user_types[ host ];
+			if( utp.classTypedef.has( type ) ){
+				if( utp.classTypedef[type] >=0 ){
+					user = 0;
+				}else{
+					type = utp.name + '::' + type;
+				}
+			}
+		}
+		if( user and not map_user_types.has( type ) ){
+			utp = UserType{ name => type, input_file => fname, source=>source2 };
+			map_user_types[ type ] = utp;
+			map_user_types[ 'struct ' + type ] = utp;
+			if( utp.name[0:0] == '_' ){
+				stdio.println( 'debug:', utp.name, ',', source );
+        std.sleep(10);
+            #reflect.trace();
+			}
+		}
+	}
+  #io.writeln( name, type, refer, square, sqsizes );
+	if( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
+			&& refer == '*' && square == '' ){
+		refer = '';
+		square = '[]';
+		sqsizes.append( '0' );
+	}elif( typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
+			&& refer == '*' && square == '[]' ){
+		refer = '';
+		square = '[][]';
+		sqsizes.append( '0' );
+	}elif( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
+			&& refer == '**' && square == '' ){
+		refer = '';
+		square = '[][]';
+		sqsizes.append( '0' );
+		sqsizes.append( '0' );
+	}
+  type_trans = type;
+	#stdio.println( name, type, refer, sqsizes.size() );
+}
+
+global qt_container = '^ (QList|QVector)(P|)_(%w+) $';
+
+routine Variable::Generate( cxx_no_self =0 )
+{
+  if( type == 'unsigned' ){
+    type = 'unsigned';
+    typeid = CT_UINT;
+  }elif( type.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
+    tks = type.capture( '^ unsigned %s (%w+) $' );
+    if( tks.size() ){
+      type = 'unsigned';
+      typeid = CT_UINT;
+      name = tks[1];
+    }
+  }
+  type_trans = type;
+	#if( type == 'SectionFlags' ) 
+	#if( type.pfind( 'PaintDeviceMetric' ) ) stdio.println( type, map_user_types.has( type ) );
+	list_item = type.capture( qt_container );
+	isClassEnum = 0;
+	if( typeid <0 && map_user_types.has( host ) ){
+		utp = map_user_types[ host ];
+		if( utp.classEnum.has( type ) ){
+      v = utp.classEnum[type];
+			type = v[0] + '::' + type;
+      type_trans = type;
+      if( not v[1] ) type_trans = 'int';
+			isClassEnum = 1;
+			typeid = 1;
+		}elif( utp.classTypedef.has( type ) ){
+      old = type;
+			id = utp.classTypedef[ type ];
+			type = utp.name + '::' + type;
+      type_trans = type;
+			if( id >=0 ){
+				typeid = id;
+				#isClassEnum = 1;
+			}
+      if( map_user_types.has(old) ) map_user_types[type] = map_user_types[old];
+		}
+	}
+  if( map_user_types.has( host ) ){
+    m = type.capture( 'enum %s+ ( %w+ )' );
+# XXX: enum in parent class
+    if( m.size() and map_user_types[ host ].classEnum.has( m[1] ) ){
+      type.change( 'enum %s+ ( %w+ )', 'enum ' + host + '::%1' );
+      type_trans = type;
+    }
+  }
+	ispointer = pointer_types.has( type );
+	sindex = (string) index;
+	kvmap = { 'type'=>type_trans, 'type2'=>type, 'name'=>name, 'refer'=>name,
+		'index'=>sindex, 'default'=>vdefault, 'namespace'=>'', 'namespace2'=>'' };
+	kvmap[ 'size' ] = sqsizes.size() ? sqsizes[0] : '0';
+	kvmap[ 'size2' ] = sqsizes.size() >1 ? sqsizes[1] : '0';
+	if( kvmap[ 'size' ][0:0] == '.' )
+		kvmap[ 'size' ] = 'self->' + kvmap[ 'size' ][1:];
+	if( kvmap[ 'size2' ][0:0] == '.' )
+		kvmap[ 'size2' ] = 'self->' + kvmap[ 'size2' ][1:];
+	cxxtype = type;
+	cxxcall = name;
+	rescheck = '';
+	tpl_daopar = '';
+	tpl_dao2cxx = '';
+	tpl_cxx2dao = '';
+	tpl_ctxput = '';
+	tpl_parset = '';
+	tpl_getres = '';
+	tpl_setter = '';
+  cxxtype2 = '';
+	if( typeid >=0 ){
+		if( refer == '' && square == '' && not ispointer ){
+			daotype = 'int';
+			cxxpar = type + ' ' + name;
+			cxxpar_enum_virt = cxxpar;
+			if( isClassEnum ){
+        cxxpar_enum_virt = 'int ' + name;
+        cxxtype2 = 'int';
+      }
+			tpl_daopar = daopar_int;
+			tpl_dao2cxx = dao2cxx_int;
+			tpl_cxx2dao = cxx2dao_int;
+			tpl_ctxput = ctxput_int;
+			tpl_getres = getres_int;
+			tpl_setter = setter_int;
+      if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
+			switch( typeid ){
+#{
+				case CT_CHAR :
+					daotype = 'string';
+					tpl_daopar = daopar_string;
+					tpl_dao2cxx = dao2cxx_char;
+					if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\'\\\'';
+				case CT_WCHAR :
+					daotype = 'string';
+					tpl_daopar = daopar_string;
+					tpl_dao2cxx = dao2cxx_wchar;
+					if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\"\\\"';
+#}
+				case CT_FLOAT :
+					daotype = 'float';
+					tpl_daopar = daopar_float;
+					tpl_dao2cxx = dao2cxx_float;
+					tpl_cxx2dao = cxx2dao_float;
+					tpl_ctxput = ctxput_float;
+					tpl_getres = getres_float;
+					tpl_setter = setter_float;
+					if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
+				case CT_DOUBLE :
+					daotype = 'double';
+					tpl_daopar = daopar_double;
+					tpl_dao2cxx = dao2cxx_double;
+					tpl_cxx2dao = cxx2dao_double;
+					tpl_ctxput = ctxput_double;
+					tpl_getres = getres_double;
+					tpl_setter = setter_double;
+				case CT_COMPLEX8 , CT_COMPLEX16 :
+					daotype = 'complex';
+					tpl_daopar = daopar_complex;
+					tpl_dao2cxx = dao2cxx_complex;
+				case CT_VOID, CT_FILE :
+					daotype = '';
+			}
+		}elif( (refer == '*' || refer =='&' || ispointer) && square == '' ){
+      if( typeid <= CT_WCHAR and refer == '&' ) typeid = CT_INT;
+			cxxtype += refer;
+			cxxpar = type + refer + ' ' + name;
+			cxxpar_enum_virt = cxxpar;
+			if( isClassEnum ){
+        cxxpar_enum_virt = 'int ' + refer + name;
+        cxxtype2 = 'int*';
+      }
+			if( refer == '*' && typeid >= CT_SHORT && typeid <=CT_COMPLEX16 )
+				cxxcall = '& ' + name;
+			elif( refer == '&' && typeid > CT_VOID )
+				cxxcall = '*' + name;
+			switch( typeid ){
+				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
+					daotype = 'string';
+					tpl_daopar = daopar_string;
+					tpl_dao2cxx = dao2cxx_mbs;
+					tpl_cxx2dao = cxx2dao_mbs;
+					tpl_ctxput = ctxput_mbs;
+					tpl_parset = parset_mbs;
+					tpl_getres = getres_mbs;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
+				case CT_WCHAR :
+					daotype = 'string';
+					tpl_daopar = daopar_string;
+					tpl_dao2cxx = dao2cxx_wcs;
+					tpl_cxx2dao = cxx2dao_wcs;
+					tpl_ctxput = ctxput_wcs;
+					tpl_parset = parset_wcs;
+					tpl_getres = getres_wcs;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+				case CT_SHORT, CT_SSHORT, CT_USHORT, 
+             CT_INT, CT_SINT, CT_UINT, 
+             CT_LONG, CT_SLONG, CT_ULONG :
+					daotype = 'int';
+					tpl_daopar = daopar_int;
+					tpl_dao2cxx = dao2cxx_int;
+					tpl_cxx2dao = cxx2dao_int;
+					tpl_ctxput = ctxput_int;
+					tpl_parset = parset_int;
+					tpl_getres = getres_int;
+					if( refer == '*' ){
+						tpl_ctxput = ctxput_ints;
+						tpl_getres = getres_ints;
+						tpl_cxx2dao = cxx2dao_int2;
+					}
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+				case CT_FLOAT :
+					daotype = 'float';
+					tpl_daopar = daopar_float;
+					tpl_dao2cxx = dao2cxx_float;
+					tpl_cxx2dao = cxx2dao_float;
+					tpl_ctxput = ctxput_float;
+					tpl_parset = parset_float;
+					tpl_getres = getres_float;
+					if( refer == '*' ){
+						tpl_ctxput = ctxput_floats;
+						tpl_getres = getres_floats;
+						tpl_cxx2dao = cxx2dao_float2;
+					}
+					if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
+				case CT_DOUBLE :
+					daotype = 'double';
+					tpl_daopar = daopar_double;
+					tpl_dao2cxx = dao2cxx_double;
+					tpl_ctxput = ctxput_double;
+					tpl_cxx2dao = cxx2dao_double;
+					tpl_parset = parset_double;
+					tpl_getres = getres_double;
+					if( refer == '*' ){
+						tpl_ctxput = ctxput_doubles;
+						tpl_getres = getres_doubles;
+						tpl_cxx2dao = cxx2dao_double2;
+					}
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0D';
+				case CT_COMPLEX8 , CT_COMPLEX16 :
+					daotype = 'complex';
+					tpl_daopar = daopar_complex;
+					tpl_dao2cxx = dao2cxx_complex;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0$';
+				case CT_VOID :
+					daotype = 'cdata';
+					tpl_daopar = daopar_buffer;
+					tpl_dao2cxx = dao2cxx_user;
+					tpl_ctxput = ctxput_voidp;
+					tpl_cxx2dao = cxx2dao_voidp;
+          if( ispointer ){
+            tpl_dao2cxx = dao2cxx_user2;
+            tpl_cxx2dao = cxx2dao_user;
+          }
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+          if( name == 'userdata' and refer == '*' ){
+            daotype = 'any';
+            cxxtype = 'DValue';
+            cxxpar = 'DValue ' + name;
+            cxxcall = name;
+            tpl_daopar = daopar_userdata;
+            tpl_dao2cxx = dao2cxx_userdata;
+            tpl_cxx2dao = cxx2dao_userdata;
+            if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=null';
+          }
+				case CT_FILE :
+					daotype = 'stream';
+					tpl_daopar = daopar_stream;
+					tpl_dao2cxx = dao2cxx_stream;
+					tpl_ctxput = ctxput_stream;
+					tpl_cxx2dao = cxx2dao_stream;
+					if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=0';
+			}
+			if( index == INDEX_RETURN ){
+				if( refer == '*' && typeid >= CT_SHORT && typeid <=CT_DOUBLE ){
+					daotype = 'array<' + daotype + '>';
+				}
+			}
+		}elif( refer == '' && sqsizes.size() == 1 ){
+			cxxtype += '*';
+			cxxpar = type + ' ' + name + '[]';
+			cxxpar_enum_virt = cxxpar;
+			if( isClassEnum ){
+        cxxpar_enum_virt = 'int ' + name + '[]';
+        cxxtype2 = 'int[]';
+      }
+			daotype = 'array<int>';
+			tpl_daopar = daopar_ints;
+			tpl_ctxput = ctxput_ints;
+			tpl_parset = parset_ints;
+			tpl_getres = getres_ints;
+			tpl_setter = setter_ints;
+			switch( typeid ){
+				case CT_CHAR, CT_SCHAR : 
+					tpl_dao2cxx = dao2cxx_bytes;
+					tpl_cxx2dao = cxx2dao_bytes;
+					tpl_ctxput = ctxput_bytes;
+					tpl_parset = parset_bytes;
+					tpl_getres = getres_bytes;
+					tpl_setter = setter_string;
+				case CT_UCHAR : 
+					tpl_dao2cxx = dao2cxx_ubytes;
+					tpl_cxx2dao = cxx2dao_ubytes;
+					tpl_ctxput = ctxput_bytes;
+					tpl_parset = parset_ubytes;
+					tpl_getres = getres_ubytes;
+					tpl_setter = setter_string;
+				case CT_WCHAR :
+					tpl_dao2cxx = dao2cxx_uints;
+					tpl_cxx2dao = cxx2dao_uints;
+				case CT_SHORT, CT_SSHORT : 
+					tpl_dao2cxx = dao2cxx_shorts;
+					tpl_cxx2dao = cxx2dao_shorts;
+					tpl_ctxput = ctxput_shorts;
+					tpl_parset = parset_shorts;
+					tpl_getres = getres_shorts;
+					tpl_setter = setter_shorts;
+				case CT_USHORT :
+					tpl_dao2cxx = dao2cxx_ushorts;
+					tpl_cxx2dao = cxx2dao_ushorts;
+					tpl_ctxput = ctxput_shorts;
+					tpl_parset = parset_ushorts;
+					tpl_getres = getres_ushorts;
+					tpl_setter = setter_shorts;
+				case CT_INT, CT_SINT, CT_LONG, CT_SLONG : 
+					tpl_dao2cxx = dao2cxx_ints;
+					tpl_cxx2dao = cxx2dao_ints;
+				case CT_UINT, CT_ULONG :
+					tpl_dao2cxx = dao2cxx_uints;
+					tpl_cxx2dao = cxx2dao_uints;
+					tpl_dao2cxx = dao2cxx_uints;
+					tpl_cxx2dao = cxx2dao_uints;
+					tpl_parset = parset_uints;
+					tpl_getres = getres_uints;
+				case CT_FLOAT :
+					daotype = 'array<float>';
+					tpl_daopar = daopar_floats;
+					tpl_dao2cxx = dao2cxx_floats;
+					tpl_cxx2dao = cxx2dao_floats;
+					tpl_ctxput = ctxput_floats;
+					tpl_parset = parset_floats;
+					tpl_getres = getres_floats;
+					tpl_setter = setter_floats;
+				case CT_DOUBLE :
+					daotype = 'array<double>';
+					tpl_daopar = daopar_doubles;
+					tpl_dao2cxx = dao2cxx_doubles;
+					tpl_cxx2dao = cxx2dao_doubles;
+					tpl_ctxput = ctxput_doubles;
+					tpl_parset = parset_doubles;
+					tpl_getres = getres_doubles;
+					tpl_setter = setter_doubles;
+				case CT_COMPLEX8 :
+					daotype = 'array<complex>';
+					tpl_daopar = daopar_complexs;
+					tpl_dao2cxx = dao2cxx_complexs8;
+				case CT_COMPLEX16 :
+					daotype = 'array<complex>';
+					tpl_daopar = daopar_complexs;
+					tpl_dao2cxx = dao2cxx_complexs16;
+			}
+		}elif( refer == '' && sqsizes.size() == 2 ){
+			cxxtype += '**';
+			cxxpar = type + ' *' + name + '[]';
+			cxxpar_enum_virt = cxxpar;
+			if( isClassEnum ){
+        cxxpar_enum_virt = 'int *' + name + '[]';
+        cxxtype2 = 'int*[]';
+      }
+			daotype = 'array<int>';
+			tpl_daopar = daopar_ints;
+			tpl_ctxput = ctxput_ints;
+			tpl_parset = parset_ints;
+			tpl_getres = getres_ints;
+			tpl_setter = setter_ints;
+			switch( typeid ){
+				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
+					tpl_dao2cxx = dao2cxx_bmat;
+					tpl_cxx2dao = cxx2dao_bytes;
+					tpl_ctxput = ctxput_bytes;
+					tpl_parset = parset_bytes;
+					tpl_getres = getres_bytes;
+					tpl_setter = setter_string;
+				case CT_WCHAR :
+					tpl_dao2cxx = dao2cxx_imat;
+					tpl_cxx2dao = cxx2dao_uints;
+				case CT_SHORT, CT_SSHORT, CT_USHORT :
+					tpl_dao2cxx = dao2cxx_smat;
+					tpl_cxx2dao = cxx2dao_shorts;
+					tpl_ctxput = ctxput_shorts;
+					tpl_parset = parset_shorts;
+					tpl_getres = getres_shorts;
+					tpl_setter = setter_shorts;
+				case CT_INT, CT_SINT, CT_LONG, CT_SLONG, CT_UINT, CT_ULONG :
+					tpl_dao2cxx = dao2cxx_imat;
+					tpl_cxx2dao = cxx2dao_uints;
+					tpl_dao2cxx = dao2cxx_uints;
+					tpl_cxx2dao = cxx2dao_uints;
+					tpl_parset = parset_uints;
+					tpl_getres = getres_uints;
+				case CT_FLOAT :
+					daotype = 'array<float>';
+					tpl_daopar = daopar_floats;
+					tpl_dao2cxx = dao2cxx_fmat;
+					tpl_cxx2dao = cxx2dao_floats;
+					tpl_ctxput = ctxput_floats;
+					tpl_parset = parset_floats;
+					tpl_getres = getres_floats;
+					tpl_setter = setter_floats;
+				case CT_DOUBLE :
+					daotype = 'array<double>';
+					tpl_daopar = daopar_doubles;
+					tpl_dao2cxx = dao2cxx_dmat;
+					tpl_cxx2dao = cxx2dao_doubles;
+					tpl_ctxput = ctxput_doubles;
+					tpl_parset = parset_doubles;
+					tpl_getres = getres_doubles;
+					tpl_setter = setter_doubles;
+				case CT_COMPLEX8 :
+					daotype = 'array<complex>';
+					tpl_daopar = daopar_complexs;
+					tpl_dao2cxx = dao2cxx_c8mat;
+				case CT_COMPLEX16 :
+					daotype = 'array<complex>';
+					tpl_daopar = daopar_complexs;
+					tpl_dao2cxx = dao2cxx_c16mat;
+			}
+		}elif( refer == '**' ){
+			cxxcall = '& ' + name;
+			cxxtype += refer;
+			cxxpar = type + refer + ' ' + name;
+			cxxpar_enum_virt = cxxpar;
+			if( isClassEnum ){
+        cxxpar_enum_virt = 'int ' + refer + name;
+        cxxtype2 = 'int';
+      }
+			switch( typeid ){
+				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
+					daotype = 'string';
+					tpl_daopar = daopar_string;
+					tpl_dao2cxx = isconst ? dao2cxx_mbs_cst : dao2cxx_mbs2;
+					tpl_cxx2dao = cxx2dao_mbs;
+					tpl_ctxput = ctxput_mbs;
+					tpl_parset = parset_mbs2;
+					tpl_getres = getres_mbs;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
+				case CT_WCHAR :
+					daotype = 'string';
+					tpl_daopar = daopar_string;
+					tpl_dao2cxx = isconst ? dao2cxx_wcs_cst : dao2cxx_wcs2;
+					tpl_cxx2dao = cxx2dao_wcs;
+					tpl_ctxput = ctxput_wcs;
+					tpl_parset = parset_wcs2;
+					tpl_getres = getres_wcs;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+				case CT_VOID :
+					daotype = 'cdata';
+					cxxcall = name;
+					tpl_daopar = daopar_buffer;
+					tpl_dao2cxx = dao2cxx_user3;
+					tpl_ctxput = ctxput_voidp;
+					tpl_cxx2dao = cxx2dao_voidp;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+			}
+		}else{
+		}
+	}elif( map_user_types.has( type ) or map_ns_types.has( type ) ){
+    utp: UserType;
+    if( map_user_types.has( type ) ){
+      utp = map_user_types[ type ];
+      daotype = utp.name;
+    }else{
+      daotype = type;
+      utp = map_ns_types[ type ];
+      type = utp.name;
+      kvmap[ 'namespace2' ] = utp.snamespace + '::';
+    }
+    if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
+		if( not ispointer ){
+			kvmap[ 'type' ] = type;
+			kvmap[ 'type2' ] = utp.name;
+		}
+		if( refer == '*' ){
+			cxxtype = type + '*';
+			cxxpar = type + '* ' + name;
+			if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+		}elif( refer == '**' ){
+			cxxtype = type + '**';
+			cxxpar = type + '** ' + name;
+		}else{
+			cxxtype = type + refer;
+			cxxpar = type + ' ' + refer  + name;
+			cxxcall = '*' + name;
+			if( ispointer ) cxxcall = name;
+		}
+    if( utp.snamespace ){
+      cxxtype = utp.snamespace + '::' + cxxtype;
+      cxxpar = utp.snamespace + '::' + cxxpar;
+    }
+		if( refer != '*' && square =='' ) kvmap[ 'refer' ] = '& ' + name;
+		tpl_daopar = daopar_user;
+		tpl_ctxput = ctxput_user;
+		tpl_getres = getres_user;
+		if( utp.isQObject and not utp.noWrapping ) tpl_ctxput = qt_put_qobject;
+		if( refer != '*' && square =='' && not ispointer ){
+			tpl_getres = getres_user2;
+			if( index == INDEX_RETURN ){
+				if( utp.isCppClass ){
+					tpl_ctxput = ctxput_newcdata;
+				}else{
+					tpl_ctxput = ctxput_copycdata;
+				}
+			}else{
+				tpl_ctxput = ctxput_refcdata;
+			}
+		}
+		if( refer == '**' ){
+			tpl_dao2cxx = dao2cxx_user3;
+			tpl_cxx2dao = cxx2dao_user;
+		}elif( refer =='*' && ispointer ){
+			tpl_dao2cxx = dao2cxx_user4;
+			tpl_cxx2dao = cxx2dao_user;
+		}elif( ispointer ){
+			tpl_dao2cxx = dao2cxx_user2;
+			tpl_cxx2dao = cxx2dao_user;
+		}else{
+			tpl_dao2cxx = dao2cxx_user;
+			tpl_cxx2dao = cxx2dao_user;
+		}
+		cxxpar_enum_virt = cxxpar;
+		if( list_item ){
+			item = list_item[3];
+			daotype = 'list<' + item + '>';
+			tpl_daopar = '$(name) : ' + daotype;
+			kvmap[ 'item' ] = item;
+			kvmap[ 'qtype' ] = list_item[1];
+			if( list_item[2] == 'P' ){
+				tpl_dao2cxx = qt_dao2cxx_list2;
+				tpl_ctxput = qt_daolist_codes2;
+			}else{
+				tpl_dao2cxx = qt_dao2cxx_list;
+				tpl_ctxput = qt_daolist_codes;
+			}
+			cxxcall = name;
+			if( refer == '*' ) cxxcall = '&' + name;
+		}elif(type == 'QChar' ){
+			if(host != type or index >=1 or (index == INDEX_RETURN and host != type) ){
+				daotype = 'int';
+				tpl_daopar = daopar_int;
+				tpl_dao2cxx = dao2cxx_qchar;
+				tpl_cxx2dao = cxx2dao_qchar;
+				tpl_ctxput = ctxput_qchar;
+				tpl_parset = parset_qchar;
+				tpl_getres = getres_qchar;
+				if( index == INDEX_RETURN and refer == '*' ){
+					tpl_ctxput = ctxput_qchar2;
+				}elif( refer == '*' ){
+					tpl_cxx2dao = cxx2dao_qchar2;
+				}
+				cxxcall = name;
+				if( refer == '*' ) cxxcall = '&' + name;
+			}
+		}elif(type == 'QByteArray' and refer != '*'  ){
+			if(host != type or index >=1 or (index == INDEX_RETURN and host != type) ){
+				daotype = 'string';
+				tpl_daopar = daopar_string;
+				tpl_dao2cxx = dao2cxx_qbytearray;
+				tpl_cxx2dao = cxx2dao_qbytearray;
+				tpl_ctxput = ctxput_qbytearray;
+				tpl_parset = parset_qbytearray;
+				tpl_getres = getres_qbytearray;
+				cxxcall = name;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
+			}
+		}elif( type == 'QString' and refer != '*' ){
+			if(host != type or index >=1 or (index == INDEX_RETURN and host != type) ){
+				daotype = 'string';
+				tpl_daopar = daopar_string;
+				tpl_dao2cxx = dao2cxx_qstring;
+				tpl_cxx2dao = cxx2dao_qstring;
+				tpl_ctxput = ctxput_qstring;
+				tpl_parset = parset_qstring;
+				tpl_getres = getres_qstring;
+				cxxcall = name;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
+			}
+		}elif( type == 'QVariant' and vdefault.pfind( '=%s*0' ).size() ){
+			tpl_dao2cxx += '  QVariant _$(name);\n';
+			tpl_dao2cxx += '  if( $(name) == NULL ) $(name) = & _$(name);\n';
+		}
+    if( utp.isCallback ){
+      daotype = 'any';
+      tpl_daopar = daopar_callback;
+      tpl_dao2cxx = dao2cxx_callback;
+      unsupport = utp.unsupport;
+      isCallback = 1;
+    }
+  }else{
+    io.writef( 'warning: unsupported type "%s" in "%s"\n', type, source );
+    unsupport = 1;
+	}
+  if( cxxtype2 == '' ) cxxtype2 = cxxtype;
+	if( isconst ){
+		cxxpar_enum_virt = 'const ' + cxxpar_enum_virt;
+		cxxpar = 'const ' + cxxpar;
+		cxxtype = 'const ' + cxxtype;
+		cxxtype2 = 'const ' + cxxtype2;
+	}
+	kvmap[ 'default' ] = vdefault;
+	daopar = tpl_daopar.expand( kvmap );
+	dao2cxx = tpl_dao2cxx.expand( kvmap );
+	if( index >=0 and isconst ==0 and refer !='' ) parset = tpl_parset.expand( kvmap );
+	kvmap[ 'index' ] = (string)(index-cxx_no_self);
+	cxx2dao = tpl_cxx2dao.expand( kvmap );
+	if( index == INDEX_RETURN ){
+		ctxput = tpl_ctxput.expand( kvmap );
+		getres = tpl_getres.expand( kvmap );
+	}elif( index == INDEX_FIELD ){
+		if( not isconst ) setter = tpl_setter.expand( kvmap );
+		kvmap[ 'name' ] = 'self->' + name;
+		getter = tpl_ctxput.expand( kvmap );
+	}
+}
+
+const cxx_wrap_proto 
+= 'static void dao_$(host)_$(cxxname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )';
+const cxx_call_proto 
+= '  $(retype) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n';
+const cxx_call_proto2 
+= '  $(self)$(func_ns)$(cxxname)( $(parlist) );\n';
+const cxx_call_static 
+= '  $(retype) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n';
+const cxx_call_static2 
+= '  $(host_ns)$(host)::$(cxxname)( $(parlist) );\n';
+const cxx_call_new = 
+'	$(namespace)$(host) *_self = $(namespace)Dao_$(host)_New( $(parlist) );
+	DaoContext_PutCData( _ctx, _self, dao_$(host)_Typer );\n';
+const cxx_call_new2 = 
+'	$(namespace)DaoCxx_$(host) *_self = $(namespace)DaoCxx_$(host)_New( $(parlist) );
+	DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );\n';
+
+const dao_proto
+= '  { dao_$(host)_$(cxxname)$(overload), "$(daoname)( $(parlist) )$(retype)" },\n';
+
+const cxx_wrap = 
+'/* $(file) */
+$(proto)\n{\n$(dao2cxx)\n$(cxxcall)$(parset)$(return)}\n';
+
+const cxx_virt_proto =
+'static $(retype) Dao_$(type)_$(cxxname)( $(parlist) );\n';
+
+const cxx_virt_struct =
+'static $(retype) Dao_$(type)_$(cxxname)( $(parlist) )
+{
+  Dao_$(type) *self = (Dao_$(type)*) self0;
+  $(type) *self2 = self->object;
+  DaoCData *cdata = self->cdata;
+  DaoVmProcess *vmproc = self->vmproc;\n';
+  
+const cxx_virt_class =
+'$(retype) DaoCxxVirt_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n';
+
+const cxx_get_object_method = 
+'void Dao_Get_Object_Method( DaoCData *cd, DaoObject **ob, DaoRoutine **ro, const char *name )
+{
+  DValue va;
+  if( cd == NULL ) return;
+  *ob = DaoCData_GetObject( cd );
+  if( *ob == NULL ) return;
+  va = DaoObject_GetField( *ob, name );
+  if( va.t == DAO_ROUTINE ) *ro = va.v.routine;
+}
+';
+const qt_get_wrapper1 =
+'DaoBase* DaoQt_Get_Wrapper( const QObject *object );\n';
+const qt_get_wrapper2 =
+'DaoBase* DaoQt_Get_Wrapper( const QObject *object )
+{
+  DaoQtObject *user_data = (DaoQtObject*) ((QObject*)object)->userData(0);
+  DaoBase *dbase = NULL;
+  // no need to map to DaoObject, because it will always be mapped back to
+  // DaoCData when passed to Dao codes.
+  if( user_data ) dbase = (DaoBase*) user_data->cdata;
+  return dbase;
+}
+';
+
+const cxx_virt_call_00 =
+'  DaoObject *_ob = NULL;
+  DaoRoutine *_ro = NULL;
+  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
+  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
+  DaoVmProcess_Call( vmproc, _ro, _ob, NULL, 0 );
+}\n';
+
+const cxx_virt_call_01 =
+'  DaoObject *_ob = NULL;
+  DaoRoutine *_ro = NULL;
+  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
+  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
+  $(proxy_name)( vmproc, _ro, _ob, $(parcall) );
+}\n';
+
+const cxx_virt_call_10 =
+'  DaoObject *_ob = NULL;
+  DaoRoutine *_ro = NULL;
+  $(vareturn)
+  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
+  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return $(return);
+  return ($(retype))$(proxy_name)( vmproc, _ro, _ob );
+}\n';
+
+const cxx_virt_call_11 =
+'  DaoObject *_ob = NULL;
+  DaoRoutine *_ro = NULL;
+  $(vareturn)
+  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
+  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return $(return);
+  return ($(retype))$(proxy_name)( vmproc, _ro, _ob, $(parcall) );
+}\n';
+
+const cxx_proxy_body00 =
+'void $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob )\n{
+  if( _ro ==NULL || _vmp ==NULL ) return;
+  DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
+}\n';
+const cxx_proxy_body01 =
+'void $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+  const DValue _dao_nil = {0,0,0,0,{0}};
+  DValue _dp[$(count)] = { $(nils) };
+  DValue *_dp2[$(count)] = { $(refs) };
+  if( _ro ==NULL || _vmp ==NULL ) return;
+$(cxx2dao)
+  DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) );
+  DValue_ClearAll( _dp, $(count) );
+}\n';
+const cxx_proxy_body10 =
+'$(retype) $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob )\n{
+  DValue _res;
+  DaoCData *_cd;
+  $(vareturn)
+  if( _ro ==NULL || _vmp ==NULL ) goto EndCall;
+  if( DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 ) ==0 ) goto EndCall;
+  _res = DaoVmProcess_GetReturned( _vmp );
+$(getreturn)
+EndCall:
+  return $(return);
+}\n';
+const cxx_proxy_body11 =
+'$(retype) $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+  const DValue _dao_nil = {0,0,0,0,{0}};
+  DValue _dp[$(count)] = { $(nils) };
+  DValue *_dp2[$(count)] = { $(refs) };
+  DValue _res;
+  DaoCData *_cd;
+  $(vareturn)
+  if( _ro ==NULL || _vmp ==NULL ) goto EndCall;
+$(cxx2dao)
+  if( DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) ) ==0 ) goto EndCall;
+  _res = DaoVmProcess_GetReturned( _vmp );
+$(getreturn)
+EndCall:
+  DValue_ClearAll( _dp, $(count) );
+  return $(return);
+}\n';
+
+const cxx_virt_class2 =
+'$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
+  return DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
+}\n';
+const cxx_virt_class3 =
+'$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
+  DaoObject *_o = DaoCData_GetObject( cdata );
+  if( _o && vmproc && DaoObject_GetField( _o, "$(cxxname)" ).t ==DAO_ROUTINE ){
+    $(return) DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
+  }else{
+    $(return) $(type)::$(cxxname)( $(parcall) );
+  }
+}\n';
+const cxx_virt_class4 =
+'$(retype) DaoCxxVirt_$(sub)::$(cxxname)( $(parlist) )$(const)\n{
+  $(return) DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
+}\n';
+
+global dao_callback_proto =
+'$(retype) Dao_$(type)( $(parlist) );';
+
+global dao_callback_def =
+'$(retype) Dao_$(type)( $(parlist) )
+{
+  static DaoVmProcess *_vmp = NULL;
+  DaoCallbackData *_daocallbackdata = (DaoCallbackData*) _ud;
+  DaoRoutine *_ro = _daocallbackdata->callback;
+  DValueX userdata = _daocallbackdata->userdata;
+  if( _ro ==NULL ) return;
+  if( _vmp ==NULL ) _vmp = DaoVmProcess_New( __daoVmSpace );
+  $(proxy_name)( _vmp, _ro, NULL, $(parcall) );
+}
+';
+
+global daoqt_slot_slot_decl =
+'   void slot_$(ssname)( void*, void*, const DaoQtMessage& );\n';
+global daoqt_slot_slot_code =
+'void DaoSS_$(host)::slot_$(ssname)( void*, void*, const DaoQtMessage &_msg )
+{
+  DValue **_p = (DValue**) _msg.p2;
+\n';
+global daoqt_sig_slot_decl =
+'   void slot_$(ssname)( $(parlist) );\n';
+global daoqt_sig_slot_code =
+'void DaoSS_$(host)::slot_$(ssname)( $(parlist) )
+{
+  DaoQtMessage _message( $(count) );
+  assert( $(count) <= DAOQT_MAX_VALUE );
+  DValue *_dp = _message.p1;
+';
+global daoqt_sig_slot_emit = 
+'  emit signal_$(ssname)( this, "$(signature)", _message );\n}\n';
+
+routine Function::Generate()
+{
+	#if( cxxName == 'processEvents' ) stdio.println( source, parlist );
+	if( map_user_types.has( hostType ) ) hostType = map_user_types[ hostType ].name;
+	cxx_no_self = not(attribs & FUNC_STATIC) and (attribs & FUNC_CPP) != 0;
+	cxx_no_self = cxx_no_self && (hostType != cxxName);
+	retype.Generate();
+	if( retype.unsupport or retype.isCallback ) excluded = 1;
+  pcount = parlist.size();
+	for( i = 0 : pcount-2 ){
+		vo = parlist[i];
+    sq = vo.sqsizes.size();
+    if( sq ){
+      pi1 = parlist[i+1];
+      tid = pi1.typeid;
+      if( tid >=CT_SHORT and tid <= CT_COMPLEX16 
+          and pi1.refer == '' and pi1.square == '' ){
+        vo.sqsizes[0] = pi1.name;
+        if( sq >1 ) vo.sqsizes[1] = pi1.name;
+        if( sq >1 and i+2<pcount ){
+          pi2 = parlist[i+2];
+          tid = pi2.typeid;
+          if( tid >=CT_SHORT and tid <= CT_COMPLEX16
+            and pi2.refer == '' and pi2.square == '' )
+            vo.sqsizes[1] = pi2.name;
+        }
+      }
+    }
+  }
+  hasCallback = 0;
+	for( vo in parlist ){
+    vo.Generate( cxx_no_self );
+    if( vo.isCallback ) hasCallback = 1;
+  }
+	daoprotpars  = ''; cxxprotpars  = ''; cxxcallpars = '';
+	dao2cxxcodes = ''; cxx2daocodes = ''; parsetcodes = '';
+	slot_dao2cxxcodes = ''; cxxprotpars_decl = '';
+	nils = '';
+	refs = '';
+	signature = cxxName + '('; # exclude return type from signature
+  signature2 = retype.cxxtype2 + '(';
+	cxxCallParamV = '';
+	cxxProtoParamVirt = '';
+  hasUserData = 0;
+	for( i = 0 : pcount-1 ){
+		vo = parlist[i];
+		if( vo.unsupport ){
+			excluded = 1;
+			return;
+		}
+    if( vo.name == 'userdata' ) hasUserData = 1;
+		if( i ) daoprotpars += ', ';
+		daoprotpars += vo.daopar;
+		if( vo.sqsizes.size() <2 ) dao2cxxcodes += vo.dao2cxx;
+		parsetcodes += vo.parset;
+		if( i < cxx_no_self ) skip;
+		if( i > cxx_no_self ){
+			nils += ', ';
+			refs += ', ';
+			cxxProtoParamVirt += ', ';
+			cxxprotpars += ', ';
+			cxxprotpars_decl += ', ';
+			cxxcallpars += ', ';
+			signature += ',';
+			signature2 += ',';
+			cxxCallParamV += ', ';
+		}
+		signature += vo.cxxtype;
+		signature2 += vo.cxxtype2;
+		cxxProtoParamVirt += vo.cxxpar_enum_virt;
+		cxxprotpars += vo.cxxpar;
+		cxxprotpars_decl += vo.cxxpar + vo.cxxdefault;
+		cxxcallpars += vo.cxxcall;
+		cxx2daocodes += vo.cxx2dao;
+		cxxCallParamV += vo.name;
+		nils += '_dao_nil';
+		refs += '_dp+' + (string)(i-cxx_no_self);
+		if( attribs & QT_SLOT ){
+			vo.index --;
+			vo.Generate( cxx_no_self );
+			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
+		}
+	}
+  if( retype.unsupport ) excluded = 1;
+  if( hasCallback and not hasUserData ) excluded = 1;
+	for( i = 0 : pcount-1 ){
+		vo = parlist[i];
+		if( vo.sqsizes.size() >=2 ){
+      dao2cxxcodes += vo.dao2cxx;
+    }
+  }
+  nowrap = excluded;
+  if( not nowrap and (attribs & FUNC_PROTECTED) ){
+    nowrap = attribs & (FUNC_STATIC|FUNC_PURE_VIRTUAL);
+    if( retype.type != retype.type_trans ) nowrap = 1;
+    for( vo in parlist ){
+      if( vo.type != vo.type_trans ) nowrap = 1;
+    }
+  }
+	signature += ')';
+	signature2 += ')';
+	if( attribs & FUNC_CONST ){
+    signature += 'const';
+    signature2 += 'const';
+  }
+  # if( excluded ) return; # can not return here, 
+  # because C/C++ parameter list is need for constructors!
+	cxxProtoParam = cxxprotpars;
+	cxxProtoParamDecl = cxxprotpars_decl;
+	cxxCallParam = cxxcallpars;
+
+	cxxWrapName = 'dao_' + hostType + '_' + cxxName + nameSuffix;
+	kvmap = { 'host'=>hostType, 'cxxname'=>cxxName + nameSuffix,
+		'daoname'=>daoName, 'parlist'=>daoprotpars, 'retype'=>'', 'namespace'=>'',
+		'self'=>'', 'overload'=>overload, 'count'=>(string)(parlist.size()-1), 
+		'nils'=>nils, 'refs'=>refs, 'signature'=>signature, 'file'=>input_file,
+    'func_ns'=>'', 'host_ns'=>'' };
+	if( retype.daotype ) kvmap[ 'retype' ] = '=>' + retype.daotype;
+  if( snamespace ) kvmap[ 'func_ns' ] = snamespace + '::';
+	daoProtoCodes = dao_proto.expand( kvmap );
+	cxxProtoCodes = cxx_wrap_proto.expand( kvmap );
+	kvmap[ 'retype' ] = retype.cxxtype;
+	kvmap[ 'name' ] = retype.name;
+
+	if( attribs & FUNC_CPP ){
+    ss = 'self->';
+    if( not (attribs & (FUNC_PROTECTED|FUNC_PURE_VIRTUAL)) ) ss += hostType + '::';
+		kvmap[ 'self' ] = ss;
+		kvmap[ 'parlist' ] = cxxCallParamV;
+	}
+	kvmap[ 'parlist' ] = cxxCallParam;
+  if( map_user_types.has( hostType ) ){
+		utp = map_user_types[ hostType ];
+    if( utp.snamespace ) kvmap[ 'host_ns' ] = utp.snamespace + '::';
+  }
+	if( hostType == cxxName and not excluded ){
+		#kvmap[ 'parlist' ] = ''; # XXX disable parameters at the moment
+		utp = map_user_types[ hostType ];
+    if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
+		if( not utp.noConstructor ){
+			if( utp.hasVirtual ){
+				cxxCallCodes = cxx_call_new2.expand( kvmap );
+			}else{
+				cxxCallCodes = cxx_call_new.expand( kvmap );
+			}
+		}
+		#if( parlist.size() ) cxxCallCodes = ''; # XXX maybe there is no default constru
+	}elif( retype.daotype ){
+		if( attribs & FUNC_STATIC )
+			cxxCallCodes = cxx_call_static.expand( kvmap );
+		else
+			cxxCallCodes = cxx_call_proto.expand( kvmap );
+	}else{
+		if( attribs & FUNC_STATIC )
+			cxxCallCodes = cxx_call_static2.expand( kvmap );
+		else
+			cxxCallCodes = cxx_call_proto2.expand( kvmap );
+	}
+	if( lib_name == LIB_QT ){
+		size = (string)signature.size();
+		ssname = cxxName + size;
+		sig = '   void signal_' + signature + ';\n'
+		sig.replace( cxxName+'(', cxxName+size+'(' );
+		kvmap['ssname'] = ssname;
+		if( attribs & QT_SLOT ){
+			qtSlotSignalDecl = sig;
+			qtSlotSlotDecl = daoqt_slot_slot_decl.expand( kvmap );
+			qtSlotSlotCode = daoqt_slot_slot_code.expand( kvmap );
+			qtSlotSlotCode += slot_dao2cxxcodes;
+			qtSlotSlotCode += '  emit signal_' + ssname + '( ' + cxxCallParam + ' );\n}\n';
+		}elif( attribs & QT_SIGNAL ){
+			qtSignalSignalDecl = '   void signal_' + ssname + '(void*,const QString&,const DaoQtMessage&);\n'
+			kvmap['parlist'] = cxxprotpars_decl;
+			qtSignalSlotDecl = daoqt_sig_slot_decl.expand( kvmap );
+			kvmap['parlist'] = cxxProtoParam;
+			qtSignalSlotCode = daoqt_sig_slot_code.expand( kvmap );
+			qtSignalSlotCode += cxx2daocodes;
+			qtSignalSlotCode += daoqt_sig_slot_emit.expand( kvmap );
+#{
+			stdio.println( signature );
+			stdio.println( qtSignalSlotDecl );
+			stdio.println( qtSignalSlotCode );
+#}
+		}
+	}
+
+	kvmap2 = { 'file'=>input_file, 'proto'=>cxxProtoCodes, 'dao2cxx'=>dao2cxxcodes,
+		'cxxcall'=>cxxCallCodes, 'parset'=>parsetcodes, 'return'=>retype.ctxput };
+	if( retype.daotype.size() ==0 || hostType == cxxName ) kvmap2[ 'return' ] ='';
+	#if( hostType == cxxName ) kvmap2[ 'dao2cxx' ] =''; # XXX 
+	cxxWrapper = cxx_wrap.expand( kvmap2 );
+
+	kvmap3 = { 'retype'=>retype.cxxtype, 'type'=>hostType, 'cxxname'=>cxxName,
+		'parlist'=>cxxProtoParam, 'count'=>(string)parlist.size(), 'nils'=>nils, 
+    'refs'=>refs, 'cxx2dao'=>cxx2daocodes, 'vareturn'=>retype.cxxpar + ' = 0;',
+		'return'=>retype.name, 'getreturn'=>retype.getres, 'const'=>'' };
+	vareturn = retype.cxxpar + ' = 0;';
+  if( retype.refer == '' and retype.typeid >=0 ){
+    tks = retype.dao2cxx.capture( '= %s* %b()' );
+    if( tks ) vareturn = retype.cxxpar + tks[0] + '0;';
+  }
+	if( retype.type.capture( qt_container ) ) vareturn = retype.cxxpar + ';';
+	kvmap3[ 'vareturn' ] = vareturn;
+	if( retype.daotype.size() ==0 ){
+		kvmap3[ 'vareturn' ] = '';
+		kvmap3[ 'getreturn' ] = '';
+		kvmap3[ 'return' ] = '';
+	}elif( map_user_types.has( retype.type ) ){
+		utp = map_user_types[ retype.type ];
+		if( utp.isCppClass ){
+			if( retype.refer == '*' )
+				kvmap3[ 'vareturn' ] = retype.cxxpar + ' = NULL;';
+			else
+				kvmap3[ 'vareturn' ] = retype.cxxpar + ';';
+		}
+	}
+	if( attribs & FUNC_CONST ) kvmap3[ 'const' ] = 'const';
+
+	#if( attribs & FUNC_VIRTUAL ){
+
+		if( attribs & FUNC_CPP ){
+			kvmap3[ 'count' ] = (string)(parlist.size() - cxx_no_self);
+			kvmap3[ 'parlist' ] = cxxProtoParamVirt;
+			cxxWrapperVirt = cxx_virt_class.expand( kvmap3 );
+		}else{
+			cxxWrapperVirtProto = cxx_virt_proto.expand( kvmap3 );
+			cxxWrapperVirt = cxx_virt_struct.expand( kvmap3 );
+		}
+    has_return = retype.daotype.size();
+    has_param = parlist.size() - cxx_no_self;
+#{
+    signature2 = signature;
+    signature2.change( '^%w+', '' );
+    signature2 = retype.cxxtype + signature2;
+#}
+    #io.writeln( signature2 );
+    proxy_name = '';
+    if( not proxy_functions.has( signature2 ) ){
+      ss = io.sstream();
+      ss.write( Function() );
+      proxy_name = ss.getstring();
+      proxy_name.change( '%[', '_' )
+      proxy_name.change( '%]', '' )
+      kvmap3[ 'proxy_name' ] = proxy_name;
+      proxy_codes = '';
+      if( has_return and has_param ){
+        proxy_codes = cxx_proxy_body11.expand( kvmap3 );
+      }else if( has_return ){
+        proxy_codes = cxx_proxy_body10.expand( kvmap3 );
+      }else if( has_param ){
+        proxy_codes = cxx_proxy_body01.expand( kvmap3 );
+      }else{
+        proxy_codes = cxx_proxy_body00.expand( kvmap3 );
+      }
+      proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes );
+      #io.writeln( proxy_name, proxy_codes );
+    }
+    if( has_return or has_param ) proxy_name = proxy_functions[ signature2 ].name;
+    kvmap3[ 'proxy_name' ] = proxy_name;
+    kvmap3[ 'parcall' ] = cxxCallParamV;
+
+    if( isCallback and not dao_callbacks2.has( self ) ){
+      cbproto = dao_callback_proto.expand( kvmap3 );
+      callback = dao_callback_def.expand( kvmap3 );
+      cbproto.replace( 'DValue userdata', 'void *_ud' );
+      callback.replace( 'DValue userdata', 'void *_ud' );
+      callback.replace( 'DValueX userdata', 'DValue userdata' );
+      proxy_functions[ signature2 ].used += 1;
+      dao_callbacks.append( callback );
+      dao_callbacks_proto.append( cbproto );
+      dao_callbacks2[ self ] = 1;
+    }
+
+    if( has_return ==0 and has_param ==0 ){
+      cxxWrapperVirt += cxx_virt_call_00.expand( kvmap3 );
+    }else if( has_return ==0 and has_param ){
+      cxxWrapperVirt += cxx_virt_call_01.expand( kvmap3 );
+    }else if( has_return and has_param ==0 ){
+      cxxWrapperVirt += cxx_virt_call_10.expand( kvmap3 );
+    }else{
+      cxxWrapperVirt += cxx_virt_call_11.expand( kvmap3 );
+    }
+    if( attribs & FUNC_CPP ){
+			kvmap3[ 'return' ] = 'return';
+			if( retype.type == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
+			kvmap3[ 'parlist' ] = cxxProtoParam;
+			if( attribs & FUNC_PURE_VIRTUAL ){
+				cxxWrapperVirt2 = cxx_virt_class2.expand( kvmap3 );
+			}else{
+				cxxWrapperVirt2 = cxx_virt_class3.expand( kvmap3 );
+      }
+			kvmap3[ 'parlist' ] = cxxProtoParamVirt;
+			cxxWrapperVirt3 = cxx_virt_class4.expand( kvmap3 );
+		}
+	# }
+	Clean();
+#{
+	stdio.println( daoProtoCodes );
+	stdio.println( cxx2daocodes );
+	stdio.println( cxxWrapper );
+	stdio.println( cxxWrapperVirt );
+#}
+}
+
+
+global daoqt_object_class =
+'#include<QHash>
+
+#define DAOQT_MAX_VALUE 16
+
+class DaoQtMessage
+{
+  void Init( int n ){
+    count = n;
+    memset( p1, 0, DAOQT_MAX_VALUE * sizeof(DValue) );
+    for(int i=0; i<DAOQT_MAX_VALUE; i++) p2[i] = p1 + i;
+  }
+
+  public:
+
+  int     count;
+  DValue  p1[DAOQT_MAX_VALUE];
+  DValue *p2[DAOQT_MAX_VALUE];
+
+  DaoQtMessage( int n=0 ){ Init( n ); }
+  DaoQtMessage( const DaoQtMessage & other ){
+    Init( other.count );
+    for(int i=0; i<count; i++) DValue_Copy( p2[i], other.p1[i] );
+  }
+  ~DaoQtMessage(){ DValue_ClearAll( p1, count ); }
+};
+Q_DECLARE_METATYPE( DaoQtMessage )
+
+class DaoQtObject : public QObjectUserData
+{
+	public:
+
+	QHash<void*,QHash<void*,DValue> > mapRefers;
+	QHash<QString,QHash<void*,DValue> > mapNames;
+
+	DaoVmProcess *vmproc;
+	DaoCData     *cdata;
+
+	void Init( DaoVmProcess *p, DaoCData *d )
+	{
+		vmproc = p;
+		cdata = d;
+	}
+	void Connect( void *sender, const QString & signal, DValue receiver )
+	{
+		if( mapNames.find( signal ) == mapNames.end() )
+			mapNames[ signal ] = QHash<void*,DValue>();
+		mapNames[ signal ][ sender ] = receiver;
+	}
+	void Connect( void *sender, void *signal, DValue receiver )
+	{
+		if( mapRefers.find( signal ) == mapRefers.end() )
+			mapRefers[ signal ] = QHash<void*,DValue>();
+		mapRefers[ signal ][ sender ] = receiver;
+	}
+	void Dispatch( void *sender, const QString &signal, const DaoQtMessage & msg )
+	{
+		if( mapNames.find( signal ) == mapNames.end() ) return;
+		QHash<void*,DValue> & mp = mapNames[signal];
+		if( mp.find( sender ) == mp.end() ) return;
+		if( cdata == NULL ) return;
+		DaoObject *daobj = DaoCData_GetObject( cdata );
+		DValue receiver = mp[sender];
+		if( receiver.t == DAO_ROUTINE ){
+			DaoVmProcess_Call( vmproc, receiver.v.routine, daobj, (DValue**)msg.p2, msg.count );
+		}else if( receiver.t == DAO_FUNCTION ){
+			DaoFunction_Call( receiver.v.func, cdata, (DValue**)msg.p2, msg.count );
+		}
+	}
+	void Dispatch( void *sender, void *signal, const DaoQtMessage & msg )
+	{
+		if( mapRefers.find( signal ) == mapRefers.end() ) return;
+		QHash<void*,DValue> & mp = mapRefers[signal];
+		if( mp.find( sender ) == mp.end() ) return;
+		if( cdata == NULL ) return;
+		DaoObject *daobj = DaoCData_GetObject( cdata );
+		DValue receiver = mp[sender];
+		if( receiver.t == DAO_ROUTINE ){
+			DaoVmProcess_Call( vmproc, receiver.v.routine, daobj, (DValue**)msg.p2, msg.count );
+		}else if( receiver.t == DAO_FUNCTION ){
+			DaoFunction_Call( receiver.v.func, cdata, (DValue**)msg.p2, msg.count );
+		}
+	}
+};
+';
+
+#{
+	virtual void Connect( QObject *sender, const char *signal, const char *slot ){
+		QObject::connect( sender, signal, this, slot );
+	}
+	virtual void Connect( const char *signal, QObject *receiver, const char *slot ){
+		QObject::connect( this, signal, receiver, slot );
+	}
+
+#}
+
+global daoss_class =
+'
+class DAO_DLL_$(module) DaoSS_$(class) : $(parents)
+{ Q_OBJECT
+public:
+	DaoSS_$(class)() $(init_parents) {}
+
+$(Emit)
+
+public slots:
+$(slotDaoQt)
+$(slots)
+
+signals:
+$(signalDao)
+$(signals)
+};
+';
+
+global qt_Emit =
+'	void Emit( void *o, void *s, const DaoQtMessage &m ){ emit signalDao( o, s, m ); }\n';
+
+global qt_slotDaoQt =
+'	void slotDaoQt( void*o, const QString&s, const DaoQtMessage &m ){ Dispatch(o,s,m); }
+	void slotDao( void *o, void *s, const DaoQtMessage &m ){ Dispatch( o, s, m ); }\n';
+
+global qt_signalDao =
+'	void signalDao( void *o, void *s, const DaoQtMessage &m );
+	void signalDaoQt( void*, const QString&, const DaoQtMessage &m );\n';
+
+global qt_init = '';
+
+global qt_make_linker =
+'   DaoSS_$(class) *linker = new DaoSS_$(class)();
+   setUserData( 0, linker );
+   linker->Init( vmproc, cdata );
+';
+global qt_make_linker3 =
+'  DaoSS_$(class) *linker = new DaoSS_$(class)();
+  object->setUserData( 0, linker );
+  linker->Init( NULL, NULL );
+';
+
+global qt_virt_emit =
+'	virtual void Emit( void *o, void *s, const DaoQtMessage &m ){}\n';
+
+global qt_signal_slot =
+'
+	void Emit( void *o, void *s, const DaoQtMessage &m ){ emit signalDao( o, s, m ); }
+public slots:
+	void slotDaoQt( void*o, const QString&s, const DaoQtMessage &m ){ Dispatch(o,s,m); }
+	void slotDao( void *o, void *s, const DaoQtMessage &m ){ Dispatch( o, s, m ); }
+signals:
+	void signalDao( void *o, void *s, const DaoQtMessage &m );
+';
+
+global qt_connect_decl =
+'static void dao_QObject_emit( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_QObject_connect( DaoContext *_ctx, DValue *_p[], int _n );\n'
+global qt_connect_dao =
+'  { dao_QObject_emit, "emit( self : QObject, signal : any, ... )" },
+  { dao_QObject_connect, "connect( sender : QObject, signal : any, receiver : QObject, slot : any )" },\n';
+
+global qt_connect_func =
+'static void dao_QObject_emit( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	QObject* self = (QObject*) DaoCData_GetData(_p[0]->v.cdata);
+	DaoSS_QObject *linker = (DaoSS_QObject*) self->userData(0);
+	DValue *signal = _p[1];
+	if( self == NULL || linker == NULL ) return;
+  DaoQtMessage msg( _n-2 );
+  for(int i=0; i<_n-2; i++) DValue_Copy( msg.p2[i], *_p[i+2] );
+	linker->Emit( linker, signal->v.p, msg );
+}
+static void dao_QObject_connect( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	QObject *sender = (QObject*) DaoCData_GetData(_p[0]->v.cdata);
+	QObject *receiver = (QObject*) DaoCData_GetData(_p[2]->v.cdata);
+	DaoSS_QObject *senderSS = (DaoSS_QObject*) sender->userData(0);
+	DaoSS_QObject *receiverSS = (DaoSS_QObject*) receiver->userData(0);
+	DValue signal = *_p[1];
+	DValue slot = *_p[3];
+	QByteArray s1( "1" );
+	QByteArray s2( "2" );
+	QByteArray s3;
+	if( sender == NULL || receiver == NULL ) return;
+	if( signal.t != DAO_STRING || slot.t != DAO_STRING ){
+		if( senderSS == NULL || receiverSS == NULL ) return;
+	}
+	if( signal.t == DAO_STRING && slot.t == DAO_STRING ){ /* Qt -> Qt */
+		s1 += DString_GetMBS(slot.v.s);
+		s2 += DString_GetMBS(signal.v.s);
+		QObject::connect( sender, s2.data(), receiver, s1.data() );
+	}else if( signal.t == DAO_STRING ){ /* Qt -> Dao */
+		QByteArray name( DString_GetMBS(signal.v.s) );
+		QByteArray size = QString::number( name.size() ).toLocal8Bit();
+		QByteArray ssname( name ); 
+		int i = name.indexOf( \'(\' );
+		if( i>=0 ) ssname = name.mid( 0, i ) + size;
+		s2 += name;
+		s1 += "slot_" + ssname + name.mid(i);
+		s3 += "2signal_" + ssname + "(void*,const QString&,const DaoQtMessage&)";
+		/* signal -> daoqt_signal -> slotDaoQt -> dao */
+		QObject::connect( sender, s2.data(), senderSS, s1.data() );
+		QObject::connect( senderSS, s3.data(),
+				receiverSS, SLOT( slotDaoQt(void*,const QString&,const DaoQtMessage&) ) );
+		receiverSS->Connect( senderSS, name, slot );
+
+	}else if( slot.t == DAO_STRING ){ /* Dao -> Qt */
+		QByteArray name( DString_GetMBS(slot.v.s) );
+		QByteArray size = QString::number( name.size() ).toLocal8Bit();
+		QByteArray ssname( name ); 
+		int i = name.indexOf( \'(\' );
+		if( i>=0 ) ssname = name.mid( 0, i ) + size;
+		s1 += name;
+		s2 += "signal_" + ssname + name.mid(i);
+		s3 += "1slot_" + ssname + "(void*,void*,const DaoQtMessage&)";
+		/* signalDaoQt -> daoqt_slot -> slot */
+		QObject::connect( senderSS, SIGNAL( signalDao(void*,void*,const DaoQtMessage&) ),
+				receiverSS, s3.data() );
+		QObject::connect( receiverSS, s2.data(), receiver, s1.data() );
+	}else{ /* Dao -> Dao */
+		receiverSS->Connect( senderSS, signal.v.p, slot );
+		/* avoid multiple connection */
+		QObject::disconnect( senderSS, SIGNAL( signalDao(void*,void*,const DaoQtMessage&) ),
+				receiverSS, SLOT( slotDao(void*,void*,const DaoQtMessage&) ) );
+		QObject::connect( senderSS, SIGNAL( signalDao(void*,void*,const DaoQtMessage&) ),
+				receiverSS, SLOT( slotDao(void*,void*,const DaoQtMessage&) ) );
+	}
+}
+';
+
+global qt_qstringlist_decl =
+'static void dao_QStringList_fromDaoList( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_QStringList_toDaoList( DaoContext *_ctx, DValue *_p[], int _n );
+';
+global qt_qstringlist_dao =
+'  { dao_QStringList_fromDaoList, "QStringList( dslist : list<string> )=>QStringList" },
+  { dao_QStringList_toDaoList, "toDaoList( self : QStringList )=>list<string>" },
+';
+global qt_qstringlist_func =
+'static void dao_QStringList_fromDaoList( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	QStringList *_self = new QStringList();
+	DaoList *dlist = _p[0]->v.list;
+	int i, m = DaoList_Size( dlist );
+	DaoContext_PutCData( _ctx, _self, dao_QStringList_Typer );
+	for(i=0; i<m; i++){
+		DValue it = DaoList_GetItem( dlist, i );
+		if( it.t != DAO_STRING ) continue;
+		_self->append( QString( DString_GetMBS( it.v.s ) ) );
+	}
+}
+static void dao_QStringList_toDaoList( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	QStringList* self= (QStringList*) DaoCData_GetData( _p[0]->v.cdata );
+	DaoList *dlist = DaoContext_PutList( _ctx );
+	DValue it = DValue_NewMBString( "", 0 );
+	int i, m = self->size();
+	for(i=0; i<m; i++){
+		DString_SetMBS( it.v.s, (*self)[i].toLocal8Bit().data() );
+		DaoList_PushBack( dlist, it );
+	}
+	DValue_Clear( & it );
+}
+';
+global qt_qobject_cast_decl =
+'static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n );\n';
+global qt_qobject_cast_dao =
+'  { dao_$(host)_qobject_cast, "qobject_cast( object : QObject )=>$(host)" },\n';
+global qt_qobject_cast_func =
+'static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QObject *from = (QObject*)DaoCData_GetData(_p[0]->v.cdata);
+  $(host) *to = qobject_cast<$(host)*>( from );
+	DaoContext_PutCData( _ctx, to, dao_$(host)_Typer );
+}
+';
+global qt_qobject_cast_func2 =
+'static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QObject *from = (QObject*)DaoCData_GetData(_p[0]->v.cdata);
+  DaoBase *to = DaoQt_Get_Wrapper( from );
+  if( to ){
+    DaoContext_PutResult( _ctx, to );
+    return;
+  }
+  $(host) *to2 = qobject_cast<$(host)*>( from );
+	DaoContext_PutCData( _ctx, to2, dao_$(host)_Typer );
+}
+';
+global qt_application_decl =
+'static void dao_QApplication_DaoApp( DaoContext *_ctx, DValue *_p[], int _n );\n';
+global qt_application_dao =
+'  { dao_QApplication_DaoApp, "QApplication( name : string )=>QApplication" },\n';
+
+global qt_application_func =
+'static void dao_QApplication_DaoApp( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  static int argc = 1;
+  static DString *str = DString_New(1);
+  static char* argv = (char*)DString_GetMBS( _p[0]->v.s );
+  DString_SetMBS( str, argv );
+  argv = DString_GetMBS( str );
+  DaoCxx_QApplication *_self = DaoCxx_QApplication_New( argc, & argv, QT_VERSION );
+  DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );
+}
+';
+global qt_qstream_decl =
+'static void dao_QTextStream_Write1( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_QTextStream_Write2( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_QTextStream_Write3( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_QTextStream_Write4( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_QTextStream_Write5( DaoContext *_ctx, DValue *_p[], int _n );
+';
+global qt_qstream_dao =
+'  { dao_QTextStream_Write1, "write( self : QTextStream, data : int )=>QTextStream" },
+  { dao_QTextStream_Write2, "write( self : QTextStream, data : float )=>QTextStream" },
+  { dao_QTextStream_Write3, "write( self : QTextStream, data : double )=>QTextStream" },
+  { dao_QTextStream_Write4, "write( self : QTextStream, data : string )=>QTextStream" },
+  { dao_QTextStream_Write5, "write( self : QTextStream, data : any )=>QTextStream" },
+';
+global qt_qstream_func =
+'static void dao_QTextStream_Write1( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  *self << _p[1]->v.i;
+  DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
+}
+static void dao_QTextStream_Write2( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  *self << _p[1]->v.f;
+  DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
+}
+static void dao_QTextStream_Write3( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  *self << _p[1]->v.d;
+  DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
+}
+static void dao_QTextStream_Write4( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  *self << DString_GetMBS( _p[1]->v.s );
+  DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
+}
+static void dao_QTextStream_Write5( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  *self << _p[1]->v.p;
+  DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
+}
+';
+
+global tpl_struct = '$(name)* DAO_DLL_$(module) Dao_$(name)_New();\n';
+
+global tpl_struct_alloc =
+'$(name)* Dao_$(name)_New()\n{
+	$(name) *self = calloc( 1, sizeof($(name)) );
+	return self;
+}\n';
+global tpl_struct_alloc2 =
+'$(name)* Dao_$(name)_New()\n{
+	$(name) *self = new $(name)();
+	return self;
+}\n';
+
+global tpl_struct_daoc = 
+'typedef struct Dao_$(name) Dao_$(name);
+struct DAO_DLL_$(module) Dao_$(name)
+{
+	$(name)  nested;
+	$(name) *object;
+	DaoCData *cdata;
+	DaoVmProcess *vmproc;
+};
+Dao_$(name)* DAO_DLL_$(module) Dao_$(name)_New();
+//Dao_$(name)* DAO_DLL_$(module) Dao_$(name)_Wrap( $(name) *p );
+//Dao_$(name)* DAO_DLL_$(module) Dao_$(name)_Copy( const $(name) p );\n';
+
+global tpl_struct_daoc_alloc =
+'Dao_$(name)* Dao_$(name)_New()
+{
+	Dao_$(name) *wrap = calloc( 1, sizeof(Dao_$(name)) );
+	$(name) *self = ($(name)*) wrap;
+	wrap->cdata = DaoCData_New( dao_$(name)_Typer, wrap );
+	wrap->vmproc = DaoVmProcess_New( __daoVmSpace );
+	wrap->object = self;
+$(callbacks)$(selfields)\treturn wrap;
+}
+/*
+$(name)* Dao_$(name)_Wrap( $(name) *p )
+{
+	return p;
+}
+$(name)* Dao_$(name)_Copy( const $(name) p )
+{
+	$(name) *copy = malloc( sizeof( $(name) ) );
+	memcpy( copy, & p, sizeof( $(name) ) );
+	return copy;
+}*/
+';
+#{
+#}
+
+global tpl_set_callback = '\tself->$(callback) = Dao_$(name)_$(callback);\n';
+global tpl_set_selfield = '\tself->$(field) = wrap;\n';
+
+global c_wrap_new = 
+'static void dao_$(host)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	$(namespace)Dao_$(host) *self = $(namespace)Dao_$(host)_New();
+	DaoContext_PutResult( _ctx, (DaoBase*) self->cdata );
+}\n';
+global cxx_wrap_new = 
+'static void dao_$(host)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	$(namespace)DaoCxx_$(host) *self = $(namespace)DaoCxx_$(host)_New();
+	DaoContext_PutResult( _ctx, (DaoBase*) self->cdata );
+}\n';
+global cxx_wrap_alloc2 = 
+'static void dao_$(host)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	$(namespace)$(host) *self = $(namespace)Dao_$(host)_New();
+	DaoContext_PutCData( _ctx, self, dao_$(host)_Typer );
+}\n';
+#{
+#}
+
+global tpl_class_def = 
+'class DAO_DLL_$(module) DaoCxxVirt_$(class) $(virt_supers)\n{
+	public:
+	DaoCxxVirt_$(class)(){ self = 0; cdata = 0; vmproc = 0; }
+	~DaoCxxVirt_$(class)(){
+		DaoGC_DecRC( (DaoBase*) vmproc );
+		DaoGC_DecRC( (DaoBase*) cdata );
+	}
+	void Init( $(class) *self, DaoCData *d, DaoVmProcess *p );\n
+	$(class) *self;
+	DaoCData *cdata;
+	DaoVmProcess *vmproc;
+\n$(virtuals)
+$(qt_virt_emit)
+};
+class DAO_DLL_$(module) DaoCxx_$(class) : public $(class), public DaoCxxVirt_$(class)
+{ $(Q_OBJECT)\n
+\tpublic:
+$(constructors)
+	void Init();\n
+$(methods)
+};\n';
+
+#{
+#}
+global tpl_class2 = tpl_class_def + '$(class)* Dao_$(class)_Copy( const $(class) &p );\n';
+
+global tpl_class_init =
+'void DaoCxxVirt_$(class)::Init( $(class) *s, DaoCData *d, DaoVmProcess *p )
+{
+	self = s;
+	cdata = d;
+	vmproc = p;
+$(init_supers)
+$(qt_init)
+}
+void DaoCxx_$(class)::Init()
+{
+	cdata = DaoCData_New( dao_$(class)_Typer, this );
+	vmproc = DaoVmProcess_New( __daoVmSpace );
+	DaoGC_IncRC( (DaoBase*) vmproc );
+	DaoGC_IncRC( (DaoBase*) cdata );
+	DaoCxxVirt_$(class)::Init( this, cdata, vmproc );
+$(qt_make_linker)
+}
+';
+global tpl_class_init_qtss = 
+'void DAO_DLL_$(module) Dao_$(class)_InitSS( $(class) *p )
+{
+   if( p->userData(0) == NULL ){
+		DaoSS_$(class) *linker = new DaoSS_$(class)();
+		p->setUserData( 0, linker );
+		linker->Init( NULL, NULL );
+	}
+}\n';
+global tpl_class_copy = tpl_class_init +
+'$(class)* DAO_DLL_$(module) Dao_$(class)_Copy( const $(class) &p )
+{
+	$(class) *object = new $(class)( p );
+$(qt_make_linker3)
+	return object;
+}\n';
+global tpl_class_decl_constru = 
+'   DaoCxx_$(class)( $(parlist) ) : $(class)( $(parcall) ){}\n';
+
+global tpl_class_new = '
+DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) );
+';
+global tpl_class_new_novirt = '
+$(class)* DAO_DLL_$(module) Dao_$(class)_New( $(parlist) );
+';
+global tpl_class_init_qtss_decl = '
+void DAO_DLL_$(module) Dao_$(class)_InitSS( $(class) *p );
+';
+
+global tpl_class_noderive =
+'
+$(class)* DAO_DLL_$(module) Dao_$(class)_New( $(parlist) )
+{
+	$(class) *object = new $(class)( $(parcall) );
+$(qt_make_linker3)
+	return object;
+}
+';
+global tpl_class_init2 =
+'
+DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) )
+{
+	DaoCxx_$(class) *self = new DaoCxx_$(class)( $(parcall) );
+	self->Init();
+	return self;
+}\n';
+
+global tpl_init_super = '\tDaoCxxVirt_$(super)::Init( s, d, p );\n';
+
+global tpl_meth_decl =
+'\t$(retype) $(name)( $(parlist) )$(extra);\n';
+
+global tpl_meth_decl2 =
+'\t$(retype) $(name)( $(parlist) )$(extra)';
+
+global tpl_meth_decl3 =
+'\t$(retype) DaoWrap_$(name)( $(parlist) )$(extra)';
+
+#{
+#}
+routine UserType::CheckVirtual()
+{
+	if( lib_name == LIB_QT and name == 'QXmlDefaultHandler' ){
+		for( meth in methods ) meth.attribs |= FUNC_VIRTUAL;
+	}
+	if( noWrapping ){
+		hasVirtual = 0;
+		noConstructor = 1;
+		return;
+	}
+	for( sup in supers ){
+		sup.CheckVirtual();
+		if( sup.hasVirtual ) hasVirtual = 1;
+		if( copyConstructor ==0 and sup.noCopyConstructor ) noCopyConstructor = 1;
+	}
+	for( meth in methods ){
+		if( meth.attribs & FUNC_VIRTUAL ){
+      hasVirtual = 1;
+      break;
+    }
+	}
+}
+routine UserType::CheckPureVirtual()
+{
+	if( pureVirts.size() or lastVirts.size() ) return;
+	implemented = {=>};
+	for( meth in methods ){
+		if( meth.attribs & FUNC_VIRTUAL ){
+      hasVirtual = 1;
+      lastVirts[ meth.signature ] = name;
+    }
+		if( meth.attribs & FUNC_PURE_VIRTUAL ){
+      hasVirtual = 1;
+      isPureVirt = 1;
+			pureVirts.append( meth );
+		}else{
+			implemented[ meth.signature ] = 1;
+		}
+	}
+	for( sup in supers ){
+		sup.CheckPureVirtual();
+		if( not sup.isPureVirt ) skip;
+		for( meth in sup.pureVirts ){
+			if( not implemented.has( meth.signature ) ){
+				pureVirts.append( meth );
+				isPureVirt = 1;
+			}
+		}
+	}
+	for( meth in methods ){
+		if( meth.attribs & FUNC_VIRTUAL ) skip;
+    for( sup in supers ){
+      if( sup.lastVirts.has( meth.signature ) ){
+        hasVirtual = 1;
+        meth.reimplemented = sup.lastVirts[ meth.signature ];
+        break;
+      }
+    }
+    for( sup in supers ){
+      for( k in sup.lastVirts.keys(); v in sup.lastVirts.values() ){
+        if( not lastVirts.has( k ) ) lastVirts[k] = v;
+      }
+    }
+  }
+	#stdio.println( name, isPureVirt, pureVirts, implemented );
+}
+routine UserType::GenerateMeth()
+{
+	if( name2 == '' ) name2 = name;
+	if( isCppClass ){
+		for( meth in methods ){
+			if( meth.attribs & FUNC_STATIC ) skip;
+			if( meth.hostType == meth.cxxName ) skip;
+			vo = Variable( name + '*self', 0 );
+			vo.host = name;
+			vo.Parse( input_file );
+			meth.parlist.pushfront( vo );
+			for( i = 0 : meth.parlist.size() -1 ) meth.parlist[i].index = i;
+		}
+	}
+	methmap = {=>};
+	for( meth in methods ) methmap[ meth.cxxName ] = 1;
+	overloads = {=>};
+	for( meth in methods ){
+		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
+		overloads[ meth.cxxName ] ++;
+		n = overloads[ meth.cxxName ];
+		if( n >1 ){
+			meth.overload += '_dao_' + (string) n;
+			while( methmap.has( meth.cxxName + meth.overload ) ) meth.overload += '_';
+		}
+	}
+  if( isCallback and methods.size() ){
+    for( par in meth.parlist ){
+      if( par.name == 'userdata' ) methods[0].isCallback = 1;
+    }
+    if( not methods[0].isCallback ){
+      methods[0].excluded = 1;
+      unsupport = 1;
+    }
+  }
+	for( meth in methods ) meth.Generate();
+	for( meth in privameths ) meth.Generate();
+}
+routine UserType::GenerateType()
+{
+	isQObjectBase = ( isQObject and name == 'QObject' );
+	cxxWrapperVirt = '';
+	type_decls = '';
+	type_codes = '';
+	kvmap2 = { 'host'=>name, 'cxxname'=>name, 'daoname'=>name,
+		'retype'=>'=>' + name, 'parlist'=> '', 'overload'=>'', 'namespace'=>''};
+  if( snamespace ) kvmap2[ 'namespace' ] = snamespace + '::';
+	for( meth in methods ) if( meth.attribs & FUNC_PURE_VIRTUAL ){
+		isPureVirt = 1;
+		noConstructor = 1;
+	}
+	#if( isPureVirt ) noConstructor = 1;
+	if( isNameSpace or isCallback ) noConstructor = 1;
+	number_item = '  { "$(name)", $(type), $(host)::$(value) },\n';
+	meth_decls += 'static DaoNumItem ';
+	meth_decls += 'dao_' + name + '_Nums[] =\n{\n';
+	kvmap = { 'host' => name, 'type' => 'DAO_INTEGER' };
+	for( it in intConsts ){
+		if( it[2] ) skip;
+		kvmap[ 'name' ] = (string) it[0];
+		kvmap[ 'value' ] = (string) it[1];
+		meth_decls += number_item.expand( kvmap );
+	}
+	meth_decls += '  { NULL, 0, 0 }\n};\n';
+	if( isQObjectBase ){
+		dao_meths += qt_connect_dao;
+		meth_decls += qt_connect_decl;
+		meth_codes += qt_connect_func;
+	}else if( isQObject and name == 'QApplication' ){
+		dao_meths += qt_application_dao;
+		meth_decls += qt_application_decl;
+		meth_codes += qt_application_func;
+	}else if( lib_name == LIB_QT and name == 'QTextStream' ){
+		dao_meths += qt_qstream_dao;
+		meth_decls += qt_qstream_decl;
+		meth_codes += qt_qstream_func;
+	}else if( lib_name == LIB_QT and name == 'QStringList' ){
+		dao_meths += qt_qstringlist_dao;
+    meth_decls += qt_qstringlist_decl;
+    meth_codes += qt_qstringlist_func;
+  }
+  if( isQObject ){
+    dao_meths += qt_qobject_cast_dao.expand( kvmap );
+    meth_decls += qt_qobject_cast_decl.expand( kvmap );
+    if( noWrapping ){
+      meth_codes += qt_qobject_cast_func.expand( kvmap );
+    }else{
+      meth_codes += qt_qobject_cast_func2.expand( kvmap );
+    }
+  }
+
+  private_default = 0;
+  imp_default = allocators.size() == 0;
+  exp_default = 0;
+	if( allocators.size() ){
+    noConstructor = 1;
+		if( isCppClass ){
+			for( meth in allocators ){
+        if( meth.parlist.size() ==0 ) exp_default = 1;
+				if( meth.attribs & FUNC_PRIVATE ){
+          private_default = meth.parlist.size() ==0;
+          skip;
+        }
+				if( (meth.attribs & FUNC_PROTECTED) and not hasVirtual ) skip;
+				dao_meths += meth.daoProtoCodes;
+				meth_decls += meth.cxxProtoCodes + ';\n';
+				meth_codes += meth.cxxWrapper;
+			}
+		}
+	}
+  #if( name == 'Fl_Free' ) io.writeln( name, allocators, private_default );
+  if( imp_default and not exp_default and not private_default and not noWrapping 
+      and (not noConstructor or hasVirtual) ){
+		if( hasVirtual ){
+#			if( not isPureVirt ){
+				dao_meths += dao_proto.expand( kvmap2 );
+				meth_decls += cxx_wrap_proto.expand( kvmap2 ) + ';\n';
+        if( isCppClass ){
+          meth_codes += cxx_wrap_new.expand( kvmap2 );
+        }else{
+          meth_codes += c_wrap_new.expand( kvmap2 );
+        }
+#			}
+		}elif( isDefined and not hasProtConstr ){
+			dao_meths += dao_proto.expand( kvmap2 );
+			meth_decls += cxx_wrap_proto.expand( kvmap2 ) + ';\n';
+			meth_codes += cxx_wrap_alloc2.expand( kvmap2 );
+		}
+	}
+	#stdio.println( name, hasVirtual, noConstructor, isDefined, allocators, isCppClass );
+	if( isQObject and not noWrapping ){
+		kvmap = { 'name'=>name, 'class'=>name, 'qt_make_linker3'=>'' };
+		type_decls += tpl_class_init_qtss_decl.expand( kvmap );
+		type_codes += tpl_class_init_qtss.expand( kvmap );
+	}
+	if( not hasVirtual ){
+		if( isDefined and not hasProtConstr and not noWrapping ){
+			kvmap = { 'name'=>name, 'class'=>name, 'qt_make_linker3'=>'' };
+			if( isQObject ) kvmap['qt_make_linker3'] = qt_make_linker3.expand( kvmap );
+			if( isCppClass ){
+				if( allocators.size() ){
+					for( alloc in allocators ){
+            if( alloc.excluded ) skip;
+						if( alloc.attribs & (FUNC_PRIVATE|FUNC_PROTECTED) ) skip;
+						kvmap['parlist'] = alloc.cxxProtoParam;
+						kvmap['parcall'] = alloc.cxxCallParamV;
+						type_codes += tpl_class_noderive.expand( kvmap );
+						type_decls += tpl_class_new_novirt.expand( kvmap );
+					}
+				}else{
+          type_decls = tpl_struct.expand( kvmap );
+					type_codes = tpl_struct_alloc2.expand( kvmap );
+				}
+			}else{
+        type_decls = tpl_struct.expand( kvmap );
+				type_codes = tpl_struct_alloc.expand( kvmap );
+			}
+		}
+		return;
+	}
+	mapnonvirt = {=>};
+	mapprivate = {=>};
+  implemented_meth_names = {=>};
+	for( meth in privameths ) mapprivate[ meth.signature ] = 1;
+	class_new = '';
+	class_decl = '';
+	if( isCppClass ){
+		declmeths.clear();
+		declvirts.clear();
+		for( meth in methods ){
+      implemented_meth_names[ meth.cxxName ] = 1;
+			if( (meth.attribs & FUNC_VIRTUAL) ){
+				declmeths[ meth.signature ] = meth;
+				declvirts[ meth.signature ] = meth;
+			}
+			if( not ( meth.attribs & FUNC_VIRTUAL ) ) mapnonvirt[ meth.signature ] = 1;
+		}
+		for( meth in virtNonSupport ){
+			if( meth.attribs & FUNC_VIRTUAL ){
+				declmeths[ meth.signature ] = meth;
+				declvirts[ meth.signature ] = meth;
+			}
+			if( not ( meth.attribs & FUNC_VIRTUAL ) ) mapnonvirt[ meth.signature ] = 1;
+		}
+		#stdio.println( name, mapnonvirt, methods );
+		for( sup in supers ){
+			for( meth in sup.declmeths.values() ){
+				if( mapprivate.has( meth.signature ) ) skip;
+				if( mapnonvirt.has( meth.signature ) ) skip;
+				if( meth.hostType != sup.name && not (meth.attribs & FUNC_PURE_VIRTUAL) ) skip; # from parents of parents
+				if( not declmeths.has( meth.signature ) ){
+					declmeths[ meth.signature ] = meth;
+				}
+			}
+			for( meth in sup.declvirts.values() ){
+				if( mapprivate.has( meth.signature ) ) skip;
+				if( mapnonvirt.has( meth.signature ) ) skip;
+				if( meth.hostType != sup.name && not (meth.attribs & FUNC_PURE_VIRTUAL) ) skip; # from parents of parents
+				if( not declvirts.has( meth.signature ) ){
+					declvirts[ meth.signature ] = meth;
+					kvmap = { 'sub' => name };
+					if( meth.excluded ==0 ) cxxWrapperVirt += meth.cxxWrapperVirt3.expand( kvmap );
+				}
+			}
+			for( s in sup.restPureVirts ){
+				#if( s[0] == sup.name ) 
+					restPureVirts.append( s );
+			}
+		}
+		#stdio.println( declmeths, declvirts, '\n' );
+		kmethods = '';
+		for( meth in declmeths.values() ){
+			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
+				'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
+			if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+			if( meth.excluded ){
+				kmethods += '  ' + meth.source + '{/*XXX 1*/}\n';
+			}else{
+				kmethods += tpl_meth_decl.expand( kvmap );
+			}
+		}
+    tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
+    kvm = { 'type'=>name };
+		kvirtuals = '';
+		for( meth in declvirts.values() ){
+			if( meth.excluded ) skip;
+#{
+      cxxProtoParamVirt for DaoCxxVirt_XXX:
+      where the virtual functions may use XXX::YYY as default value,
+      which should be stripped from the method declaration in DaoCxxVirt_XXX.
+#}
+			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
+				'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
+			if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+      kvirtuals += tpl_meth_decl.expand( kvmap );
+			if( meth.attribs & FUNC_VIRTUAL ){
+				tmp = meth.cxxWrapperVirt2;
+# for virtual function from parent class:
+				#tmp.change( meth.hostType + '::', name + '::' ); 2010-03-20
+#{
+        if( implemented_meth_names.has( meth.cxxName ) ){
+          tmp.change( '_' + meth.hostType + '::', '_' + name + '::' );
+        }else{
+          tmp.change( meth.hostType + '::', name + '::' );
+        }
+#}
+        tmp.change( '_' + meth.hostType + '::', '_' + name + '::' );
+				cxxWrapperVirt += tmp;
+			}
+		}
+		for( pvirt in restPureVirts ){
+      #kvm[ 'cxxname' ] = pvirt.cxxName;
+      #kvm[ 'parcall' ] = pvirt.cxxCallParamV;
+      #cd = pvirt.retype.typeid == CT_VOID ? '{}\n' : tmp.expand( kvm );
+      # 2010-01-19, 03:04
+      kmethods += '\t' + pvirt[1] + '{ /*XXX 2*/ }\n';
+    }
+    tmp = '{ $(return)DaoCxxVirt_$(type)::$(cxxname)( $(parcall) ); }\n';
+    tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
+    for( meth in methods ){
+      if( meth.reimplemented != '' and not meth.nowrap ){
+        kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
+          'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
+        if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+        kmethods += tpl_meth_decl.expand( kvmap );
+        tmp2 = meth.cxxWrapperVirt2;
+				tmp2.change( meth.hostType + '::(%w+ %b() %s* ; %s* %} %s* else )', meth.reimplemented + '::%1' );
+				cxxWrapperVirt += tmp2;
+      }
+      if( not noWrapping && not meth.excluded && (meth.attribs & FUNC_PROTECTED) ){
+        kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
+          'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
+        if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+        rc = meth.retype.typeid == CT_VOID ? '' : 'return ';
+        kvm[ 'cxxname' ] = meth.cxxName;
+        kvm[ 'parcall' ] = meth.cxxCallParamV;
+        kvm[ 'return' ] = rc;
+        kmethods += tpl_meth_decl3.expand( kvmap ) + tmp.expand( kvm );
+      }
+    }
+		kvmap = { 'class'=>name };
+		daoc_supers = '';
+		virt_supers = '';
+		get_supers = '';
+		init_supers = '';
+		ss_supers = '';
+		ss_init_sup = '';
+		for( sup in supers ){
+			if( sup.noWrapping or not sup.hasVirtual ) skip;
+			kvmap[ 'super' ] = sup.name;
+			if( virt_supers ){
+				daoc_supers += ',';
+				virt_supers += ',';
+			}
+			daoc_supers += ' public DaoCxx_' + sup.name;
+			virt_supers += ' public DaoCxxVirt_' + sup.name;
+			init_supers += tpl_init_super.expand( kvmap );
+			if( sup.isQObject ){
+				if( ss_supers ){
+					ss_supers += ',';
+					ss_init_sup += ',';
+				}
+				ss_supers += ' public DaoSS_' + sup.name;
+				ss_init_sup += ' DaoSS_' + sup.name + '()';
+			}
+		}
+		if( isQObjectBase ){
+			ss_supers += 'public QObject, public DaoQtObject';
+		}
+		if( daoc_supers ) daoc_supers = ' :' + daoc_supers;
+		if( virt_supers ) virt_supers = ' :' + virt_supers;
+		if( init_supers ) init_supers += '\n';
+		kvmap = { 'class'=>name, 'virt_supers'=>virt_supers,
+			'supers'=>daoc_supers, 'get_supers'=>get_supers,
+			'virtuals'=>kvirtuals, 'methods'=>kmethods,
+			'init_supers'=>init_supers, 'parlist'=>'', 'parcall'=>'', 
+			'Q_OBJECT'=>'', 'qt_signal_slot'=>'', 
+			'qt_init'=>'', 'parents'=>'public QObject',
+			'init_parents'=>'', 'qt_make_linker'=>'', 'qt_virt_emit'=>'',
+			'qt_make_linker3'=>''};
+		if( isQObject ){
+			kvmap['Q_OBJECT'] = 'Q_OBJECT';
+			kvmap['qt_init'] = qt_init;
+			kvmap['qt_make_linker'] = qt_make_linker.expand( kvmap );
+			kvmap['qt_make_linker3'] = qt_make_linker3.expand( kvmap );
+			kvmap['qt_virt_emit'] = qt_virt_emit;
+		}
+		if( not noWrapping and allocators.size() ){
+			for( alloc in allocators ){
+				if( alloc.attribs & FUNC_PRIVATE ) skip;
+				if( (alloc.attribs & FUNC_PROTECTED) and noWrapping ) skip;
+				kvmap['parlist'] = alloc.cxxProtoParamDecl;
+				kvmap['parcall'] = alloc.cxxCallParamV;
+				class_decl += tpl_class_decl_constru.expand( kvmap );
+				kvmap['parlist'] = alloc.cxxProtoParam;
+				class_new += tpl_class_new.expand( kvmap );
+				type_codes += tpl_class_init2.expand( kvmap );
+			}
+    }elif( not noWrapping and (not noConstructor or hasVirtual) ){
+# class has no virtual methods but has protected constructor
+# should also be wrapped, so that it can be derived by Dao class:
+			class_new += tpl_class_new.expand( kvmap );
+			type_codes += tpl_class_init2.expand( kvmap );
+		}elif( not hasVirtual ){
+			type_codes += tpl_class_noderive.expand( kvmap );
+		}
+		if( isQObject ){
+			qt_signals = '';
+			qt_slots = '';
+			for( meth in pubslots ){
+				qt_signals += meth.qtSlotSignalDecl;
+				qt_slots += meth.qtSlotSlotDecl;
+				type_codes += meth.qtSlotSlotCode;
+			}
+			for( meth in protsignals ){
+				qt_signals += meth.qtSignalSignalDecl;
+				qt_slots += meth.qtSignalSlotDecl;
+				type_codes += meth.qtSignalSlotCode;
+			}
+			kvmap['signals'] = qt_signals;
+			kvmap['slots'] = qt_slots;
+			if( ss_init_sup ) kvmap['init_parents'] = ':'+ ss_init_sup;
+			kvmap['parents'] = ss_supers;
+			kvmap['member_wrap'] = '';
+			kvmap['set_wrap'] = '';
+			kvmap['Emit'] = '';
+			kvmap['slotDaoQt'] = '';
+			kvmap['signalDao'] = '';
+			if( isQObjectBase ){
+				kvmap['member_wrap'] = '   ' + name + ' *wrap;\n';
+				kvmap['set_wrap'] = 'wrap = w;';
+				kvmap['Emit'] = qt_Emit;
+				kvmap['slotDaoQt'] = qt_slotDaoQt.expand( kvmap );
+				kvmap['signalDao'] = qt_signalDao;
+			}
+			type_decls += daoss_class.expand( kvmap );
+		} # isQObject
+		kvmap['constructors'] = class_decl;
+    if( not noWrapping ){
+      if( isPureVirt || noCopyConstructor ){
+        type_decls += tpl_class_def.expand( kvmap ) + class_new;
+        type_codes += tpl_class_init.expand( kvmap );
+      }else{
+        type_decls += tpl_class2.expand( kvmap ) + class_new;
+        type_codes += tpl_class_copy.expand( kvmap );
+      }
+    }
+  }else{
+    callbacks = '';
+    setfields = '';
+		kvmap = { 'name'=>name, 'callback' => '' };
+		for( meth in methods ){
+			kvmap[ 'callback' ] = meth.cxxName;
+			callbacks += tpl_set_callback.expand( kvmap );
+		}
+		kvmap = { 'field'=>'' };
+		for( f in selfields.keys() ){
+			kvmap[ 'field' ] = f;
+			setfields += tpl_set_selfield.expand( kvmap );
+		}
+		if( allocators.size() ){
+      io.writeln( name, '!!!!!!!' );
+		}else{
+			kvmap = { 'name'=>name, 'callbacks'=>callbacks, 'selfields'=>setfields };
+			type_decls = tpl_struct_daoc.expand( kvmap );
+			type_codes = tpl_struct_daoc_alloc.expand( kvmap );
+		}
+	}
+	if( isQObjectBase ) type_decls = daoqt_object_class + type_decls;
+}
+global cxx_getter_proto = 
+'static void dao_$(type)_GETF_$(name)( DaoContext *_ctx, DValue *_p[], int _n )';
+global cxx_setter_proto = 
+'static void dao_$(type)_SETF_$(name)( DaoContext *_ctx, DValue *_p[], int _n )';
+
+global cxx_gs_user =
+'  $(namespace)$(type) *self = ($(namespace)$(type)*)DaoCData_GetData(_p[0]->v.cdata);\n';
+
+global dao_getter_proto = 
+'  { dao_$(type)_GETF_$(name), ".$(name)( self : $(type) )=>$(ftype)" },\n';
+global dao_setter_proto = 
+'  { dao_$(type)_SETF_$(name), ".$(name)=( self : $(type), $(name) : $(ftype) )" },\n';
+
+routine UserType::Generate()
+{
+	meth_decls = '';
+	meth_codes = '';
+	dao_meths = '';
+	tpl_gs = cxx_gs_user;
+  ns = snamespace ? snamespace + '::' : '';
+	kvmap = { 'type'=>name, 'name'=>'', 'namespace'=>ns };
+	for( field in fields ){
+		field.Generate();
+    if( field.unsupport ) skip;
+    if( field.isCallback ) skip;
+		kvmap[ 'name' ] = field.name;
+		kvmap[ 'ftype' ] = field.daotype;
+		decl = cxx_getter_proto.expand( kvmap );
+		dao_meths += dao_getter_proto.expand( kvmap );
+		meth_decls += decl + ';\n';
+		meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.getter +'}\n';
+		if( field.setter ){
+			decl = cxx_setter_proto.expand( kvmap );
+			dao_meths += dao_setter_proto.expand( kvmap );
+			meth_decls += decl + ';\n';
+			meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.setter +'}\n';
+		}
+	}
+	tmp = {=>};
+	for( meth in methods ) tmp[ meth.signature ] = meth;
+  if( not isCallback ){
+    methods.clear();
+    allocators.clear();
+    for( meth in tmp.values() ){
+      if( meth.cxxName == name ){
+        if( meth.excluded ) meth.attribs |= FUNC_PRIVATE;
+        allocators.append( meth );
+      }elif( not meth.excluded ){
+        methods.append( meth );
+      }
+      if( (meth.attribs & FUNC_VIRTUAL) && meth.excluded ){
+        virtNonSupport.append( meth );
+      }
+    }
+  }
+	GenerateType();
+	if( isCppClass ){
+		for( meth in methods ){
+			if( meth.excluded ) skip;
+			if( not ( meth.attribs & (FUNC_PRIVATE|FUNC_PROTECTED) ) ){
+				dao_meths += meth.daoProtoCodes;
+				meth_decls += meth.cxxProtoCodes + ';\n';
+				meth_codes += meth.cxxWrapper;
+			}elif( hasVirtual && not noWrapping && not meth.nowrap && (meth.attribs & FUNC_PROTECTED) ){
+				dao_meths += meth.daoProtoCodes;
+				meth_decls += meth.cxxProtoCodes + ';\n';
+        wrapper = meth.cxxWrapper;
+        name2 = 'DaoCxx_' + name;
+        subst = name2 + ' *self = (' + name2 + '*)';
+        wrapper.change( name + '%s* %* %s* self %s* = %s* %b()', subst );
+        wrapper.change( 'self%-%>(%w+)%(', 'self->DaoWrap_%1(' );
+				meth_codes += wrapper;
+      }
+			if( not noWrapping && (meth.attribs & FUNC_VIRTUAL) ){
+				type_decls += meth.cxxWrapperVirtProto;
+				type_codes += meth.cxxWrapperVirt;
+        if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
+			}
+		}
+		if( not noWrapping ) type_codes += cxxWrapperVirt;
+	}else{
+		for( meth in methods ){
+			if( meth.excluded ) skip;
+			if( meth.attribs & FUNC_VIRTUAL ){
+				type_decls += meth.cxxWrapperVirtProto;
+				type_codes += meth.cxxWrapperVirt;
+        if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
+			}else{
+				meth_decls += meth.cxxProtoCodes + ';\n';
+				meth_codes += meth.cxxWrapper;
+			}
+		}
+	}
+	type_decls.change( '%n%n+', '\n' );
+	type_codes.change( '%n%n+', '\n' );
+	meth_decls.change( '%n%n+', '\n' );
+	meth_codes.change( '%n%n+', '\n' );
+	Clean();
+}
+
+#{
+file
+'pattern_from'	'pattern_to'
+#}
+
+global ifdef_cpp_open = '#ifdef __cplusplus\nextern "C"{\n#endif\n';
+global ifdef_cpp_close = '#ifdef __cplusplus\n}\n#endif\n'
+global add_number = '  { "$(name)", $(type), $(namespace)$(value) },\n';
+global tpl_typedef = '  DaoNameSpace_TypeDefine( $(ns), "$(old)", "$(new)" );\n';
+global add_ccdata = '  DaoNameSpace_AddConstData( $(ns), "$(name)", '
+		'(DaoBase*)DaoCData_New( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n'
+
+global ext_typer = 'extern DaoTypeBase *dao_$(type)_Typer;\n';
+global alias_typer = 'DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n';
+
+global methlist_code = 
+'\n\n$(decls)
+static DaoFuncItem dao_$(type)_Meths[] = 
+{\n$(meths)  { NULL, NULL }\n};
+';
+global methlist_code2 = 
+'\n\n$(decls)
+';
+
+global delete_struct 
+= 'static void Dao_$(type)_Delete( void *self ){ free( self ); }\n';
+global delete_class
+= 'static void Dao_$(type)_Delete( void *self ){ $(if_parent) delete ($(namespace)$(type2)*)self; }\n';
+
+global usertype_code =
+'static DaoTypeBase $(type)_Typer = 
+{ NULL, "$(type)", dao_$(type)_Nums, dao_$(type)_Meths, { $(parents) 0 }, 
+$(alloc), $(delete) };
+DaoTypeBase DAO_DLL_$(module) *dao_$(type)_Typer = & $(type)_Typer;';
+
+global usertype_code_none = methlist_code + usertype_code;
+global usertype_code_struct = methlist_code + delete_struct + usertype_code;
+global usertype_code_class = methlist_code + delete_class + usertype_code;
+
+routine WriteUserTypeDecl( utp : UserType, fout : stream )
+{
+}
+routine WriteUserTypeCode( utp : UserType )
+{
+	#if( utp.isNameSpace ) return '';
+	if( utp.isAlias ) return '';
+	parents = '';
+	for( sup in utp.supers ){
+		parents += 'dao_' + sup.name + '_Typer, ';
+	}
+	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 
+		'meths'=>utp.dao_meths, 'parents'=>parents, 'alloc'=>utp.alloc_default,
+		'delete'=>'', 'if_parent'=>'', 'namespace'=>''};
+  if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
+	if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );
+	kvmap['delete'] = 'Dao_' + utp.name + '_Delete';
+	if( utp.isQWidget )
+		kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
+	if( utp.isCppClass ) return usertype_code_class.expand( kvmap );
+	return usertype_code_struct.expand( kvmap );
+}
+
+const define_DaoCallbackData =
+'struct DaoCallbackData
+{
+  DaoRoutine *callback;
+  DValue      userdata;
+};
+DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue *userdata );
+';
+const c_DaoCallbackData =
+'DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue *userdata )
+{
+  DaoCallbackData *self = (DaoCallbackData*) malloc( sizeof(DaoCallbackData) );
+  self->callback = callback;
+  memset( & self->userdata, 0, sizeof(DValue) );
+  DValue_Copy( & self->userdata, *userdata );
+  return self;
+}
+';
+const cpp_DaoCallbackData =
+'DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue *userdata )
+{
+  DaoCallbackData *self = new DaoCallbackData;
+  self->callback = callback;
+  memset( & self->userdata, 0, sizeof(DValue) );
+  DValue_Copy( & self->userdata, *userdata );
+  return self;
+}
+';
+
+routine main( inputfiles : string, wrap_name='', lang='c', fixing='', 
+		dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
+{
+	if( lang == 'cpp' ){
+		constNumbers.append( ('', 'DAO_INTEGER', 'false', '0', 0) );
+		constNumbers.append( ('', 'DAO_INTEGER', 'true', '1', 0) );
+	}
+	suffix = '.' + lang;
+	inputfiles.change( '%s+', '' );
+	cate = inputfiles.split(':');
+	extfiles = {=>};
+	files = {};
+	# XXX order of files
+	if( cate.size() ==1 ){
+		tmps = {=>};
+		for( f in cate[0].split( ',' ) ){
+			f.simplify();
+			if( tmps.has( f ) ) skip;
+			tmps[f] = 1;
+			if( f ) files.append( f );
+		}
+	}elif( cate.size() ==2 ){
+		tmps = {=>};
+		for( f in cate[0].split( ',' ) ){
+			f.simplify();
+			if( tmps.has( f ) ) skip;
+			tmps[f] = 1;
+			if( f ){
+				files.append( f );
+				extfiles[ f ] = 1;
+			}
+		}
+		tmps = {=>};
+		for( f in cate[1].split( ',' ) ){
+			f.simplify();
+			if( tmps.has( f ) ) skip;
+			tmps[f] = 1;
+			if( f ) files.append( f );
+		}
+	}
+	stdio.println( extfiles );
+	if( files.size() ==0 ){
+		stdio.println( 'no input, quit...' );
+		return;
+	}
+	main_fname = wrap_name ? wrap_name : files[0];
+	main_fname.change( '%..*$', '' );
+	log_file = stdio.open( main_fname + '.log', 'w' );
+
+	io.writeln( dir_input, dir_output );
+#{
+#}
+	size = dir_input.size();
+	if( size && dir_input[ size-1 ] != '/'[0] ) dir_input += '/';
+	size = dir_output.size();
+	if( size && dir_output[ size-1 ] != '/'[0] ) dir_output += '/';
+	size = dir_inc.size();
+	if( size && dir_inc[ size-1 ] != '/'[0] ) dir_inc += '/';
+
+	file2fixing : map<string,list<list<string>>> = {=>};
+	for( file in files ) file2fixing[file] = {};
+	source = '';
+	dft_fixing = {};
+  unused_fixing = {};
+	if( fixing ){
+		source = stdio.read( fixing );
+		lines = source.split( '\n' );
+		pat_fixing = dft_fixing;
+		file = '';
+		for( line in lines ){
+			line.change( '\\n', '\n' );
+			line.change( '\\t', '\t' );
+			line.simplify();
+			pats = line.split( '\t', '\'' );
+      if( pats.size() ==0 ) pats = line.split( ' ', '\'' );
+			if( pats.size() ==2 ){
+				pat_fixing.append( pats );
+			}elif( file2fixing.has( line ) ){
+				#if( file == '' ) dft_fixing = pat_fixing;
+				#file = line;
+				pat_fixing = file2fixing[ line ];
+      }elif( line != '' ){
+        io.writeln( 'unused fixings for', line );
+        pat_fixing = unused_fixing;
+			}
+		}
+		#if( file == '' ) dft_fixing = pat_fixing;
+	}
+	file_names = {};
+	for( file in files ){
+		pat_fixing = file2fixing[ file ];
+		for( pts in dft_fixing ) pat_fixing.append( pts );
+		if( ParseFile( file, dir_input, subdir_input, pat_fixing, lang, extfiles.has( file ) ) ==0 ) skip;
+		file.change( '%..*$', '' );
+		file_names.append( file );
+	}
+	overloads : map<string,int> = {=>};
+	for( meth in functions.funcs ){
+		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
+		overloads[ meth.cxxName ] ++;
+		n = overloads[ meth.cxxName ];
+		if( n >1 ) meth.overload += '_dao_' + (string) n;
+	}
+	count = 0;
+	for( utp in map_user_types.values() )
+		if( utp.name[0] == 'Q'[0] ) count ++;
+	if( count > map_user_types.size() / 2 ) lib_name = LIB_QT;
+
+  io.writeln( 'sorting classes ...' );
+	tmp = {=>};
+	user_types = {};
+  namespaces = {};
+  callbacks = {};
+  ns_types :map<string,list<UserType>> = {=>} # bug without type name XXX
+  ns_funcs :map<string,list<Function>> = {=>}
+#{
+	for( name in map_user_types.keys(); utp in map_user_types.values() ){
+    if( utp.isNameSpace ) io.writeln( utp, utp.name, name );
+  }
+#}
+	for( utp in map_user_types.values() ){
+    if( utp.isNameSpace ){
+      namespaces.append( utp );
+    }elif( utp.isCallback ){
+      callbacks.append( utp );
+    }else{
+      utp.SortType( user_types, tmp );
+    }
+  }
+	for( utp in callbacks ) utp.GenerateMeth();
+
+  io.writeln( 'generating methods ...' );
+	for( utp in user_types ) utp.CheckVirtual();
+	for( utp in user_types ) utp.GenerateMeth();
+  io.writeln( 'checking ...' );
+	for( utp in user_types ) utp.CheckPureVirtual();
+  io.writeln( 'generating classes /structs ...' );
+	for( utp in user_types ) utp.Generate();
+	for( utp in namespaces ) utp.Generate();
+  io.writeln( 'generating functions ...' );
+	for( func in functions.funcs ) func.Generate();
+
+  for( utp in user_types ){
+    if( utp.snamespace ){
+      if( not ns_types.has( utp.snamespace ) ) ns_types[ utp.snamespace ] = {};
+      ns_types[ utp.snamespace ].append( utp );
+    }
+  }
+	for( func in functions.funcs ){
+    if( func.snamespace ){
+      if( not ns_funcs.has( func.snamespace ) ) ns_funcs[ func.snamespace ] = {};
+      ns_funcs[ func.snamespace ].append( func );
+    }
+  }
+
+	fname = main_fname + '.h';
+	fout_header = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_header.print( '#include<stdlib.h>\n' );
+	fout_header.print( '#include<assert.h>\n' );
+	fout_header.print( '#include<string.h>\n' );
+	fout_header.print( '#include<dao.h>\n' );
+	if( lib_name == LIB_QT ) fout_header.print( '#include<QVector>\n#include<QList>\n' );
+	for( file in file_names ){
+		if( not extfiles.has( file + '.h' ) ){
+      if( dir_input ){
+        fout_header.print( '#include<' + dir_inc + file + '.h>\n' );
+      }else{
+        fout_header.print( '#include"' + dir_inc + file + '.h"\n' );
+      }
+    }
+  }
+	if( include ){
+    wrap_name2 = include[].toupper();
+		fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
+		fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_IMPORT' );
+		fout_header.println( '#include"dao_' + include + '.h"' );
+    fout_header.println( '#else' );
+		fout_header.println( '#define DAO_DLL_' + wrap_name2 );
+    fout_header.println( '#endif' );
+  }
+  wrap_name2 = wrap_name[].toupper();
+  fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
+	fout_header.println( '#ifndef DAO_DLL_' + wrap_name2 );
+	fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_EXPORT' );
+	fout_header.println( '#endif' );
+  fout_header.println( '#else' );
+  fout_header.println( '#define DAO_DLL_' + wrap_name2 );
+  fout_header.println( '#endif' );
+	fout_header.println();
+
+	fname = main_fname + suffix;
+	fout_source = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_source.println( '#include"dao_' + main_fname + '.h"\n' );
+	fout_source.println( 'DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n' );
+
+	fname = main_fname + '2' + suffix;
+	fout_source2 = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_source2.println( '#include"dao_' + main_fname + '.h"\n' );
+	fout_source2.println( 'extern DaoVmSpace *__daoVmSpace;\n' );
+	fname = main_fname + '3' + suffix;
+	fout_source3 = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_source3.println( '#include"dao_' + main_fname + '.h"\n' );
+	fout_source3.println( 'extern DaoVmSpace *__daoVmSpace;\n\n' );
+	kvmap = { 'type' => '', 'module'=>wrap_name2 };
+	codes = {=>};
+	for( file in file_names ) codes[ file ] = ifdef_cpp_open;
+	fout_header.println( ifdef_cpp_open );
+
+	for( utp in user_types ){
+		kvmap[ 'type' ] = utp.name;
+		#fout_header.print( '// ', utp.input_file, '.h : ', utp.source, '\n' );
+		fout_header.print( ext_typer.expand( kvmap ) );
+		list_item = utp.name.capture( qt_container );
+		if( list_item ){
+			item = list_item[3];
+			kvmap = { 'qtype'=>list_item[1], 'item' => item, 'module'=>wrap_name2  }; # XXX
+			if( list_item[2] ){
+				fout_header.println( qt_qlist_decl2.expand( kvmap ) );
+				if( map_user_types.has( item ) ){
+					itp = map_user_types[ item ];
+					if( itp.hasVirtual ){
+						fout_source2.println( qt_daolist_func_virt2.expand( kvmap ) );
+					}else{
+						fout_source2.println( qt_daolist_func2.expand( kvmap ) );
+					}
+				}else{ # XXX
+				}
+			}else{
+				fout_header.println( qt_qlist_decl.expand( kvmap ) );
+				if( map_user_types.has( item ) ){
+					itp = map_user_types[ item ];
+					if( itp.hasVirtual ){
+						fout_source2.println( qt_daolist_func_virt.expand( kvmap ) );
+					}else{
+						fout_source2.println( qt_daolist_func.expand( kvmap ) );
+					}
+				}else{ # XXX
+				}
+			}
+		}
+	}
+	for( ptype in pointer_types.keys() ){
+		kvmap[ 'type' ] = ptype;
+    if( map_user_types.has( ptype ) and map_user_types[ptype].isCallback ) skip;
+		fout_header.print( ext_typer.expand( kvmap ) );
+	}
+  for( callback in dao_callbacks_proto ) fout_header.writeln( callback );
+	fout_header.println( ifdef_cpp_close );
+
+  if( include == '' ){
+    if( lang == 'c' ) fout_header.writeln( 'typedef struct DaoCallbackData DaoCallbackData;' );
+    fout_header.writeln( define_DaoCallbackData );
+    if( lang == 'cpp' ){
+      fout_source.writeln( cpp_DaoCallbackData );
+    }else{
+      fout_source.writeln( c_DaoCallbackData );
+    }
+  }
+
+	fout_source2.println( ifdef_cpp_open );
+	for( utp in user_types ){
+		if( not extfiles.has( utp.input_file ) ){
+      open_ns = 'namespace ' + utp.snamespace + '{\n';
+      close_ns = '}\n';
+			if( utp.type_decls ){
+        if( utp.snamespace ) fout_header.print( open_ns );
+        fout_header.print( '\n', utp.type_decls.expand( kvmap ) );
+        if( utp.snamespace ) fout_header.print( close_ns );
+      }
+      fout_source2.println( '/* ', utp.input_file, '*/' );
+      fout_source2.println( WriteUserTypeCode( utp ).expand( kvmap ) );
+      fout_source2.println( utp.meth_codes.expand( kvmap ) );
+    }
+	}
+	for( utp in namespaces ){
+		if( not extfiles.has( utp.input_file ) ){
+      fout_source2.println( '/* ', utp.input_file, '*/' );
+      fout_source2.println( utp.meth_codes.expand( kvmap ) );
+    }
+	}
+	fout_source2.println( ifdef_cpp_close );
+
+  if( lib_name == LIB_QT ){
+    fout_header.writeln( qt_get_wrapper1 );
+    fout_source3.writeln( qt_get_wrapper2 );
+  }
+  fout_source3.writeln( cxx_get_object_method );
+  for( proxy in proxy_functions.values() ){
+    if( proxy.used ) fout_source3.writeln( proxy.codes );
+    #if( proxy.used ) io.writeln( proxy.name, proxy.used );
+  }
+  for( callback in dao_callbacks ) fout_source3.writeln( callback );
+	for( utp in user_types ){
+		if( not extfiles.has( utp.input_file ) ){
+      open_ns = 'namespace ' + utp.snamespace + '{\n';
+      close_ns = '}\n';
+      if( utp.snamespace ) fout_source3.print( open_ns );
+			fout_source3.println( utp.type_codes.expand( kvmap ) );
+      if( utp.snamespace ) fout_source3.print( close_ns );
+    }
+	}
+	func_decl = '';
+	rout_entry = '';
+	func_codes = '';
+	if( lang == 'c' ){
+		tmp2 : map<string,Function> = {=>};
+		tmp3 = functions.funcs;
+		functions.funcs = (list<Function>){};
+		for( func in tmp3 ){
+			if( tmp2.has( func.cxxName ) ) skip;
+			tmp2[ func.cxxName ] = func;
+			functions.funcs.append( func );
+		}
+	}
+	for( func in functions.funcs ){
+    if( func.excluded ) skip;
+		if( extfiles.has( func.input_file ) ) skip;
+		func_decl += func.cxxProtoCodes + ';\n';
+		func_codes += func.cxxWrapper;
+		if( func.snamespace =='' ) rout_entry += func.daoProtoCodes;
+	}
+	fout_source.println( ifdef_cpp_open );
+
+
+	fout_source.println( 'static DaoNumItem constNumbers[] =\n{\n' );
+	kvmap[ 'namespace' ] = '';
+  lastns = '';
+  #sort( constNumbers )->{ x[0]<=y[0] and x[1]<=y[1] and x[2]<=y[2] };
+  constNumbers.sorta();
+  ns_numbers = {=>};
+	for( it in constNumbers ){
+		if( it[4] ) skip;
+    if( it[0] != lastns ){
+      lastns = it[0];
+      kvmap[ 'namespace' ] = lastns + '::';
+      fout_source.println( '  { NULL, 0, 0 }\n};' );
+      fout_source.printf( 'static DaoNumItem dao_%s_Nums[] =\n{\n', lastns );
+      ns_numbers[ lastns ] = 1;
+    }
+    kvmap[ 'type' ] = (string) it[1];
+		kvmap[ 'name' ] = (string) it[2];
+		kvmap[ 'value' ] = (string) it[3];
+		fout_source.print( add_number.expand( kvmap ) );
+	}
+	fout_source.println( '  { NULL, 0, 0 }\n};' );
+	fout_source.println( func_decl );
+	fout_source.print( 'static DaoFuncItem dao_Funcs[] =\n{\n', rout_entry );
+	fout_source.print( '  { NULL, NULL }\n};\n' );
+	fout_source.println( func_codes );
+	hasNameSpace = 0;
+	for( utp in namespaces ){
+		#kvmap = { 'type'=>utp.name, 'decls'=>utp.meth_decls, 'meths'=>utp.dao_meths, 'module'=>wrap_name2 };
+    #fout_source.printf( '/* %s */\n', utp.input_file );
+		#fout_source.print( methlist_code2.expand( kvmap ) );
+		#fout_source.print( utp.meth_codes.expand( kvmap ) );
+		hasNameSpace = 1;
+	}
+  for( ns in ns_funcs.keys(); funcs in ns_funcs.values() ){
+    fout_source.printf( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
+    for( func in funcs ) fout_source.print( func.daoProtoCodes );
+    fout_source.printf( '\t{ NULL, NULL }\n};\n' );
+  }
+  for( ns in ns_types.keys(); utps in ns_types.values() ){
+    fout_source.printf( 'static DaoTypeBase *dao_%s_Types[%i] = \n{\n', ns, utps.size()+1 );
+    for( utp in utps ) fout_source.printf( '\tdao_%s_Typer,\n', utp.name );
+    fout_source.printf( '\tNULL\n};\n' );
+  }
+	kvmap2 = {'old'=>'', 'new'=>''};
+  nalias = 0;
+  aliases = '';
+  ns_aliases : map<string,list<string>> = {=>};
+	for( name in map_user_types.keys(); utp in map_user_types.values() ){
+    if( utp.isNameSpace or utp.isCallback ) skip;
+		if( name != utp.name && name.pfind( '(%s|:)' ).size()==0 ){
+      ns = utp.snamespace;
+      if( ns ){
+        if( not ns_aliases.has( ns ) ) ns_aliases[ ns ] = {};
+        ns_aliases[ ns ].append( utp.name );
+        ns_aliases[ ns ].append( name );
+        skip;
+      }
+			kvmap2[ 'old' ] = utp.name;
+			kvmap2[ 'new' ] = name;
+      aliases += '  aliases[' + (string)(nalias) + '] = \"' + utp.name + '\";\n';
+      aliases += '  aliases[' + (string)(nalias+1) + '] = \"' + name + '\";\n';
+      nalias += 2;
+			#fout_source.print( tpl_typedef.expand( kvmap2 ) );
+			fout_source2.print( alias_typer.expand( kvmap2 ) );
+		}
+	}
+  aliases += '  aliases[' + (string)(nalias) + '] = NULL;';
+  nalias += 1;
+
+  ns_has_aliases = {=>};
+  for( ns in ns_types.keys() ){
+    if( not ns_aliases.has( ns ) ) skip;
+    ns_has_aliases[ ns ] = 'dao_' + ns + '_Aliases';
+    names = ns_aliases[ns];
+    fout_source.printf( 'const char *dao_%s_Aliases[%i] = \n{\n', ns, names.size()+1 );
+    for( name in names ) fout_source.print( '\t\"' + name + '\",\n' );
+    fout_source.println( '\tNULL\n}\n;' );
+  }
+
+	fout_source.println( 'int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )\n{' );
+	if( hasNameSpace ) fout_source.println( '  DaoNameSpace *ns2;' );
+  fout_source.print( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
+  fout_source.print( '  const char *aliases[', nalias, '];\n' );
+	fout_source.println( '  __daoVmSpace = vms;' );
+  if( lib_name == LIB_QT ){
+    fout_source.print( '   qRegisterMetaType<DaoQtMessage>("DaoQtMessage");\n' );
+  }
+  count = 0;
+	for( utp in user_types ){
+    if( utp.snamespace ) skip;
+		fout_source.print( '  typers[', count, '] = dao_' + utp.name + '_Typer,\n' );
+    count = count + 1; # XXX bug with ++count;
+    #++ count;
+	}
+  fout_source.print( '  typers[', count, '] = NULL;\n' );
+  fout_source.println( aliases );
+  kvmap2[ 'ns' ] = 'ns';
+  lastns = '';
+  basic_typedefs.sorta();
+	for( td in basic_typedefs ){
+    if( td[0] != lastns ){
+      lastns = td[0];
+      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+      kvmap2[ 'ns' ] = 'ns2';
+    }
+		kvmap2[ 'old' ] = (string)td[1];
+		kvmap2[ 'new' ] = (string)td[2];
+		fout_source.print( tpl_typedef.expand( kvmap2 ) );
+	}
+	fout_source.println( '  DaoNameSpace_AddConstNumbers( ns, constNumbers );' );
+  fout_source.println( '  DaoNameSpace_AddTypes( ns, typers, 0 );' );
+  if( nalias >1 ) fout_source.println( '  DaoNameSpace_TypeDefines( ns, aliases );' );
+	for( utp in namespaces ){
+		s = utp.name;
+		fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+		if( ns_numbers.has( s ) )
+      fout_source.println( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
+		if( ns_types.has( s ) )
+      fout_source.println( '  DaoNameSpace_AddTypes( ns2, dao_' +s+ '_Types, 0 );' );
+    if( ns_has_aliases.has( s ) )
+      fout_source.println( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
+  }
+	for( utp in namespaces ){
+		s = utp.name;
+		if( ns_funcs.has( s ) ){
+      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+      fout_source.println( '  DaoNameSpace_AddFunctions( ns2, dao_' +s+ '_Funcs );' );
+    }
+	}
+	kvmap[ 'refer' ] = '&';
+  #sort( constCData )->{ x[0]<=y[0] and x[1].name<=y[1].name };
+  constCData.sorta();
+  kvmap[ 'ns' ] = 'ns';
+  lastns = '';
+	for( p in constCData ){
+		if( p[3] ) skip;
+    if( p[0] != lastns ){
+      lastns = p[0];
+      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+      kvmap[ 'ns' ] = 'ns2';
+    }
+		kvmap[ 'type' ] = (string) p[1].name;
+		kvmap[ 'name' ] = (string) p[2];
+		fout_source.print( add_ccdata.expand( kvmap ) );
+	}
+	kvmap[ 'refer' ] = '';
+  #sort( constCDataPtr )->{ x[0]<=y[0] and x[1].name<=y[1].name };
+  constCDataPtr.sorta();
+  kvmap[ 'ns' ] = 'ns';
+  lastns = '';
+	for( p in constCDataPtr ){
+		if( p[3] ) skip;
+    if( p[0] != lastns ){
+      lastns = p[0];
+      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+      kvmap[ 'ns' ] = 'ns2';
+    }
+		kvmap[ 'type' ] = (string) p[1].name;
+		kvmap[ 'name' ] = (string) p[2];
+		fout_source.print( add_ccdata.expand( kvmap ) );
+	}
+	fout_source.println( '  DaoNameSpace_AddFunctions( ns, dao_Funcs );' );
+  kvmap2[ 'ns' ] = 'ns';
+	for( alias in typedef_ns_types.keys(); utp in typedef_ns_types.values() ){
+		kvmap2[ 'old' ] = utp.snamespace + '::' + utp.name;
+		kvmap2[ 'new' ] = alias;
+		fout_source.print( tpl_typedef.expand( kvmap2 ) );
+	}
+	for( utp in namespaces ){
+		s = utp.name;
+		if( ns_types.has( s ) ){
+      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+      fout_source.println( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
+    }
+  }
+  fout_source.println( '  DaoNameSpace_SetupTypes( ns, typers );' );
+	fout_source.println( '  return 0;\n}' );
+	fout_source.println( ifdef_cpp_close );
+
+	fout_header.close();
+	fout_source.close();
+	fout_source2.close();
+	fout_source3.close();
+}
+
