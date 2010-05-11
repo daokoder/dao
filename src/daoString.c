@@ -664,9 +664,8 @@ void DString_AppendWChar( DString *self, const wchar_t ch )
     DWCString_Append( self, & ch, 1 );
   }
 }
-void DString_AppendMBS( DString *self, const char *chs )
+void DString_AppendMBSWithLength( DString *self, const char *chs, size_t n )
 {
-  size_t n = strlen( chs );
   if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
   DString_Detach( self );
   if( self->mbs ){
@@ -675,9 +674,14 @@ void DString_AppendMBS( DString *self, const char *chs )
     DWCString_AppendMBS( self, chs, n );
   }
 }
-void DString_AppendWCS( DString *self, const wchar_t *chs )
+
+void DString_AppendMBS( DString *self, const char *chs )
 {
-  size_t n = wcslen( chs );
+  return DString_AppendMBSWithLength(self, chs, strlen( chs ));
+}
+
+void DString_AppendWCSWithLength( DString *self, const wchar_t *chs,size_t n )
+{
   DString_Detach( self );
   if( self->wcs ){
     DWCString_Append( self, chs, n );
@@ -685,6 +689,12 @@ void DString_AppendWCS( DString *self, const wchar_t *chs )
     DMBString_AppendWCS( self, chs, n );
   }
 }
+
+void DString_AppendWCS( DString *self, const wchar_t *chs,size_t n )
+{
+  return DString_AppendWCSWithLength(self,chs,wcslen( chs ));
+}
+
 void DString_AppendBytes( DString *self, const char *bytes, size_t count )
 {
   if( bytes ==NULL || count == 0 ) return;

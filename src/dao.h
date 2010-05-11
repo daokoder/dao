@@ -413,6 +413,9 @@ struct DaoAPI
   void (*DString_AppendWChar)( DString *self, const wchar_t ch );
   void (*DString_AppendMBS)( DString *self, const char *chs );
   void (*DString_AppendWCS)( DString *self, const wchar_t *chs );
+  void (*DString_AppendMBSWithLength)( DString *self, const char *chs, size_t n );
+  void (*DString_AppendWCSWithLength)( DString *self, const wchar_t *chs,size_t n );
+
   void (*DString_Substr)( DString *self, DString *sub, size_t from, size_t n );
 
   size_t (*DString_Find)( DString *self, DString *chs, size_t start );
@@ -694,6 +697,8 @@ DAO_DLL void DString_AppendChar( DString *self, const char ch );
 DAO_DLL void DString_AppendWChar( DString *self, const wchar_t ch );
 DAO_DLL void DString_AppendMBS( DString *self, const char *chs );
 DAO_DLL void DString_AppendWCS( DString *self, const wchar_t *chs );
+DAO_DLL void DString_AppendMBSWithLength( DString *self, const char *chs, size_t n );
+DAO_DLL void DString_AppendWCSWithLength( DString *self, const wchar_t *chs,size_t n );
 DAO_DLL void DString_Substr( DString *self, DString *sub, size_t from, size_t n );
 
 DAO_DLL size_t DString_Find( DString *self, DString *chs, size_t start );

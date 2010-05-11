@@ -1833,6 +1833,9 @@ void DaoInitAPI( DaoAPI *api )
   api->DString_AppendWChar = DString_AppendWChar;
   api->DString_AppendMBS = DString_AppendMBS;
   api->DString_AppendWCS = DString_AppendWCS;
+  api->DString_AppendMBSWithLength = DString_AppendMBSWithLength;
+  api->DString_AppendWCSWithLength = DString_AppendWCSWithLength;
+
   api->DString_Substr = DString_Substr;
 
   api->DString_Find = DString_Find;
