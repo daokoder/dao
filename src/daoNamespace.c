@@ -493,7 +493,7 @@ int DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *ty
   DString_SetMBS( name, old );
   tp = DaoNameSpace_FindAbsType( self, name );
   if( tp == NULL && (i=DString_FindMBS( name, "::", 0 )) != MAXSIZE ){
-    DString_SetBytes( name, old, i );
+    DString_SetDataMBS( name, old, i );
     ns = DaoNameSpace_FindNameSpace( self, name );
     if( ns ){
       DString_SetMBS( name, old + i + 2 );
@@ -840,7 +840,7 @@ void DaoNameSpace_SetName( DaoNameSpace *self, const char *name )
   i = DString_RFindChar( self->name, '/', -1 );
   if( i != MAXSIZE ){
     DString_SetMBS( self->file, name + i + 1 );
-    DString_SetBytes( self->path, name, i );
+    DString_SetDataMBS( self->path, name, i );
   }else{
     DString_Clear( self->file );
     DString_Clear( self->path );

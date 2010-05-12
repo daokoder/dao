@@ -274,13 +274,10 @@ void DString_SetMBS( DString *self, const char *chs )
     return;
   }
   n = strlen( chs );
-  if (self->mbs)
-  {
+  if( self->mbs ){
     DString_Resize( self, n );
     memcpy( self->mbs, chs, n*sizeof(char) );
-  }
-  else
-  {
+  }else{
     DString_Clear(self);
     DWCString_AppendMBS(self,chs,n);
   }
@@ -294,12 +291,10 @@ void DString_SetWCS( DString *self, const wchar_t *chs )
     return;
   }
   n = wcslen( chs );
-  if (self->wcs)
-  {
+  if( self->wcs ){
     DString_Resize( self, n );
     memcpy( self->wcs, chs, n*sizeof(wchar_t) );
-  }else
-  {
+  }else{
     DString_Clear(self);
     DMBString_AppendWCS(self,chs,n);
   }
@@ -357,6 +352,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
     size_t smin, len;
     const wchar_t *wcs = chs + i;
     len = wcslen( wcs );
+    if( (i + len) > n ) len = n - i;
     DString_Reserve( self, self->size + 7*len );
     /* under windows using MinGW, passing null output buffer,
      * will NOT cause the function to perform conversion and 
@@ -387,6 +383,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
     size_t smin, len;
     const char *mbs = chs + i;
     len = strlen( mbs );
+    if( (i + len) > n ) len = n - i;
     DString_Reserve( self, self->size + len );
     /* under windows using MinGW, passing null output buffer,
      * will NOT cause the function to perform conversion and 
@@ -504,6 +501,7 @@ void DString_Clear( DString *self )
   size_t *data = self->data;
   int share = data != (size_t*)self->mbs && data != (size_t*)self->wcs;
   int mbs = self->mbs != NULL;
+  DString_Detach( self );
   DString_DeleteData( self );
   DString_Init( self, mbs );
   DString_SetSharing( self, share );
@@ -579,28 +577,29 @@ static void DWCString_Insert( DString *self, const wchar_t* chs, size_t at, size
   self->size += cp-rm;
   self->wcs[self->size] = 0;
 }
-void DString_Insert( DString *self, DString *chs, size_t at, size_t rm )
+void DString_Insert( DString *self, DString *chs, size_t at, size_t rm, size_t cp )
 {
+  if( cp ==0 ) cp = chs->size;
   DString_Detach( self );
   if( self->mbs && chs->mbs ){
-    DMBString_Insert( self, chs->mbs, at, rm, chs->size );
+    DMBString_Insert( self, chs->mbs, at, rm, cp );
   }else if( self->wcs && chs->wcs ){
-    DWCString_Insert( self, chs->wcs, at, rm, chs->size );
+    DWCString_Insert( self, chs->wcs, at, rm, cp );
   }else if( self->mbs ){
     DString *str = DString_New(1);
-    DMBString_AppendWCS( str, chs->wcs, chs->size );
+    DMBString_AppendWCS( str, chs->wcs, cp );
     DMBString_Insert( self, str->mbs, at, rm, str->size );
     DString_Delete( str );
   }else{
     DString *str = DString_New(0);
-    DWCString_AppendMBS( str, chs->mbs, chs->size );
+    DWCString_AppendMBS( str, chs->mbs, cp );
     DWCString_Insert( self, str->wcs, at, rm, str->size );
     DString_Delete( str );
   }
 }
-void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm )
+void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm, size_t n )
 {
-  size_t n = strlen( chs );
+  if( n ==0 ) n = strlen( chs );
   DString_Detach( self );
   if( self->mbs ){
     DMBString_Insert( self, chs, at, rm, n );
@@ -616,11 +615,11 @@ void DString_InsertChar( DString *self, const char ch, size_t at )
   char chs[2];
   chs[0] = ch;
   chs[1] = '\0';
-  DString_InsertMBS( self, chs, at, 0 );
+  DString_InsertMBS( self, chs, at, 0, 1 );
 }
-void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm )
+void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm, size_t n )
 {
-  size_t n = wcslen( chs );
+  if( n ==0 ) n = wcslen( chs );
   DString_Detach( self );
   if( self->wcs ){
     DWCString_Insert( self, chs, at, rm, n );
@@ -664,7 +663,7 @@ void DString_AppendWChar( DString *self, const wchar_t ch )
     DWCString_Append( self, & ch, 1 );
   }
 }
-void DString_AppendMBSWithLength( DString *self, const char *chs, size_t n )
+void DString_AppendDataMBS( DString *self, const char *chs, size_t n )
 {
   if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
   DString_Detach( self );
@@ -677,10 +676,10 @@ void DString_AppendMBSWithLength( DString *self, const char *chs, size_t n )
 
 void DString_AppendMBS( DString *self, const char *chs )
 {
-  return DString_AppendMBSWithLength(self, chs, strlen( chs ));
+  DString_AppendDataMBS(self, chs, strlen( chs ));
 }
 
-void DString_AppendWCSWithLength( DString *self, const wchar_t *chs,size_t n )
+void DString_AppendDataWCS( DString *self, const wchar_t *chs,size_t n )
 {
   DString_Detach( self );
   if( self->wcs ){
@@ -690,26 +689,24 @@ void DString_AppendWCSWithLength( DString *self, const wchar_t *chs,size_t n )
   }
 }
 
-void DString_AppendWCS( DString *self, const wchar_t *chs,size_t n )
+void DString_AppendWCS( DString *self, const wchar_t *chs )
 {
-  return DString_AppendWCSWithLength(self,chs,wcslen( chs ));
+  DString_AppendDataWCS(self,chs,wcslen( chs ));
 }
 
-void DString_AppendBytes( DString *self, const char *bytes, size_t count )
-{
-  if( bytes ==NULL || count == 0 ) return;
-  DString_ToMBS( self );
-  DString_Detach( self );
-  DMBString_Append( self, bytes, count );
-}
-void DString_SetBytes( DString *self, const char *bytes, size_t count )
+void DString_SetDataMBS( DString *self, const char *bytes, size_t count )
 {
   DString_Clear( self );
-  DString_AppendBytes( self, bytes, count );
+  DString_AppendDataMBS( self, bytes, count );
+}
+void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count )
+{
+  DString_Clear( self );
+  DString_AppendDataWCS( self, data, count );
 }
 void DString_Replace( DString *self, DString *chs, size_t start, size_t rm )
 {
-  DString_Insert( self, chs, start, rm );
+  DString_Insert( self, chs, start, rm, chs->size );
 }
 void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm )
 {
@@ -719,7 +716,7 @@ void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm
     DMBString_Insert( self, chs, start, rm, strlen( chs ) );
   }
 }
-void DString_Substr( DString *self, DString *sub, size_t from, size_t n )
+void DString_SubString( DString *self, DString *sub, size_t from, size_t n )
 {
   size_t i, size = self->size;
   if( self->wcs ) DString_ToWCS( sub );

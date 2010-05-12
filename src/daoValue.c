@@ -700,7 +700,7 @@ DValue DValue_NewMBString( char *s, int n )
   DValue res = daoNilString;
   res.v.s = DString_New(1);
   if( n )
-    DString_SetBytes( res.v.s, s, n );
+    DString_SetDataMBS( res.v.s, s, n );
   else
     DString_SetMBS( res.v.s, s );
   return res;

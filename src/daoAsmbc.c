@@ -112,14 +112,14 @@ static void AppendSectVar( DString *bc, DString *mbs )
   buf[0] = s[0];
   buf[1] = i & 0xff;
   buf[2] = (i & 0xff00)>>8;
-  DString_AppendBytes( bc, buf, 3 );
+  DString_AppendDataMBS( bc, buf, 3 );
 }
 static void AppendSectShort( DString *bc, short v )
 {
   char buf[2];
   buf[0] = v & 0xff;
   buf[1] = (v & 0xff00)>>8;
-  DString_AppendBytes( bc, buf, 2 );
+  DString_AppendDataMBS( bc, buf, 2 );
 }
 static char* NextToken( char *P, DString *t, char mark, DString *bc )
 {
@@ -163,7 +163,7 @@ static void AppendSectHead( DString *bc, char sect )
   char buf[3];
   buf[0] = buf[1] = 0;
   buf[2] = sect;
-  DString_AppendBytes( bc, buf, 3 );
+  DString_AppendDataMBS( bc, buf, 3 );
 }
 extern void print_number( char *buf, double value );
 extern double parse_number( char *buf );

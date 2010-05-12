@@ -826,7 +826,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
     if( name ){
       pk = 0;
       while( name->mbs[pk]=='-' ) pk ++;
-      DString_Substr( name, str, pk, -1 );
+      DString_SubString( name, str, pk, -1 );
       if( value == NULL ){
         value = name;
         while( value->mbs[0] == '-' ) DString_Erase( value, 0, 1 );
@@ -848,7 +848,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
     DaoMap_Insert( cmdarg, nkey, sval );
     pk = 0;
     while( name->mbs[pk]=='-' ) pk ++;
-    DString_Substr( name, key, pk, -1 );
+    DString_SubString( name, key, pk, -1 );
     DaoMap_Insert( cmdarg, skey, sval );
   }
   DString_SetMBS( str, "ARGV" );
@@ -1025,7 +1025,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
     }else if( DString_MatchMBS( input, sysRegex, NULL, NULL ) ){
       if( system( input->mbs+1 ) ==-1) printf( "shell command failed\n" );
     }else if( DString_MatchMBS( input, srcRegex, NULL, NULL ) ){
-      DString_InsertMBS( input, "stdlib.load(", 0, 0 );
+      DString_InsertMBS( input, "stdlib.load(", 0, 0, 0 );
       DString_AppendMBS( input, ")" );
       if( callback ){
         (*callback)( input->mbs );
@@ -1033,7 +1033,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
       }
       DaoVmProcess_Eval( self->mainProcess, self->mainNamespace, input, 1 );
     }else if( DString_MatchMBS( input, varRegex, NULL, NULL ) ){
-      DString_InsertMBS( input, "stdio.println(", 0, 0 );
+      DString_InsertMBS( input, "stdio.println(", 0, 0, 0 );
       DString_AppendMBS( input, ")" );
       if( callback ){
         (*callback)( input->mbs );
@@ -1555,7 +1555,7 @@ void Dao_MakePath( DString *base, DString *path )
   if( base->size && path->size ){
     if( base->mbs[ base->size-1 ] != '/' && path->mbs[0] != '/' )
       DString_InsertChar( path, '/', 0 );
-    DString_Insert( path, base, 0, 0 );
+    DString_Insert( path, base, 0, 0, 0 );
   }
   DString_ChangeMBS( path, "/ %. /", "/", 0, NULL, NULL );
 }
@@ -1818,6 +1818,8 @@ void DaoInitAPI( DaoAPI *api )
   api->DString_IsMBS = DString_IsMBS;
   api->DString_SetMBS = DString_SetMBS;
   api->DString_SetWCS = DString_SetWCS;
+  api->DString_SetDataMBS = DString_SetDataMBS;
+  api->DString_SetDataWCS = DString_SetDataWCS;
   api->DString_ToWCS = DString_ToWCS;
   api->DString_ToMBS = DString_ToMBS;
   api->DString_GetMBS = DString_GetMBS;
@@ -1833,10 +1835,10 @@ void DaoInitAPI( DaoAPI *api )
   api->DString_AppendWChar = DString_AppendWChar;
   api->DString_AppendMBS = DString_AppendMBS;
   api->DString_AppendWCS = DString_AppendWCS;
-  api->DString_AppendMBSWithLength = DString_AppendMBSWithLength;
-  api->DString_AppendWCSWithLength = DString_AppendWCSWithLength;
+  api->DString_AppendDataMBS = DString_AppendDataMBS;
+  api->DString_AppendDataWCS = DString_AppendDataWCS;
 
-  api->DString_Substr = DString_Substr;
+  api->DString_SubString = DString_SubString;
 
   api->DString_Find = DString_Find;
   api->DString_RFind = DString_RFind;

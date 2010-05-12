@@ -54,7 +54,7 @@ int main( int argc, char **argv )
   }
   if( k ==0 ) return 1;
   DString_InsertChar( args, ' ', 0 );
-  DString_InsertMBS( args, dao_virtual_files[0][0], 0, 0 );
+  DString_InsertMBS( args, dao_virtual_files[0][0], 0, 0, 0 );
   DaoVmSpace_SetPath( vmSpace, "/@/" ); // path for the virtual files
 
   /* Start execution. */

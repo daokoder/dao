@@ -599,10 +599,10 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
         for(i=0; i<val->size; i++) fprintf( self->file->fd, format, data[i] );
       }
     }else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-      DString_SetBytes( self->streamString, data, val->size );
+      DString_SetDataMBS( self->streamString, data, val->size );
       vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
     }else if( self->attribs & DAO_IO_STRING ){
-      DString_AppendBytes( self->streamString, data, val->size );
+      DString_AppendDataMBS( self->streamString, data, val->size );
     }else{
       if( self->format ){
         printf( self->format, data );
@@ -712,7 +712,7 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
       DString_Assign( line, self->streamString );
       DString_Clear( self->streamString );
     }else{
-      DString_Substr( self->streamString, line, 0, pos+1 );
+      DString_SubString( self->streamString, line, 0, pos+1 );
       DString_Erase( self->streamString, 0, pos+1 );
     }
   }else if( vms && vms->userHandler && vms->userHandler->StdioRead ){

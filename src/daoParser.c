@@ -203,7 +203,7 @@ static void DString_AppendToken( DString *self, DaoToken *token )
   if( self == NULL ) return;
   if( token->type == DTOK_MBS || token->type == DTOK_WCS ){
     if( token->string->size > 10 ){
-      DString_AppendBytes( self, token->string->mbs, 6 );
+      DString_AppendDataMBS( self, token->string->mbs, 6 );
       DString_AppendMBS( self, "..." );
       DString_AppendChar( self, token->string->mbs[0] );
     }else{
@@ -698,7 +698,7 @@ static void DaoParser_ExtractComments( DaoParser *self, DString *docString,
     if( node->key.pInt < lnstart ) continue;
     if( node->key.pInt > lnend ) break;
     if( s->mbs[1] == '{' ){
-      DString_AppendBytes( docString, s->mbs+2, s->size-4 );
+      DString_AppendDataMBS( docString, s->mbs+2, s->size-4 );
     }else{
       DString_AppendMBS( docString, s->mbs+1 );
     }
@@ -755,8 +755,8 @@ static void DaoParser_InheritConstructor( DaoParser *self, int line )
       if( rout->parTokens == NULL ) continue;
       DArray_Clear( self->tokens );
       lb = DString_FindChar( it->key.pString, '(', 0 );
-      DString_Substr( it->key.pString, sig, lb, -1 );
-      DString_Insert( sig, klass->className, 0, 0 );
+      DString_SubString( it->key.pString, sig, lb, -1 );
+      DString_Insert( sig, klass->className, 0, 0, 0 );
 #if 0
       //printf( "signature: %s\n", sig->mbs );
 #endif
@@ -3915,7 +3915,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end, int permi
   DString_Clear( self->mbs );
 
   if( tki == DTOK_MBS || tki == DTOK_WCS ){
-    DString_Substr( tokens[i]->string, self->mbs, 1, tokens[i]->string->size-2 );
+    DString_SubString( tokens[i]->string, self->mbs, 1, tokens[i]->string->size-2 );
     i ++;
   }else if( tki == DKEY_AS ){
     code = DAO_CTW_LOAD_INVALID;
@@ -3956,7 +3956,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end, int permi
         goto ErrorLoad;
       }
       if( tokens[i]->type == DTOK_MBS || tokens[i]->type == DTOK_WCS ){
-        DString_Substr( tokens[i]->string, self->str, 1, tokens[i]->string->size-2 );
+        DString_SubString( tokens[i]->string, self->str, 1, tokens[i]->string->size-2 );
       }else{
         DString_Assign( self->str, tokens[i]->string );
       }
@@ -5394,7 +5394,7 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
     if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
       value.t = DAO_STRING;
       value.v.s = self->str;
-      DString_SetBytes( self->str, tok + 1, str->size-2 );
+      DString_SetDataMBS( self->str, tok + 1, str->size-2 );
       if( ! ( self->vmSpace->options & DAO_EXEC_MBS_ONLY ) ){
         if( tok[0] == '"' ) DString_ToWCS( self->str );
       }

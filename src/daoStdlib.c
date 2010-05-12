@@ -949,13 +949,13 @@ void MPI_Send( DaoContext *ctx, DValue *p[], int N )
     }else if( pos2 == MAXSIZE ){
       DString_SetMBS( sender, getenv( "PROC_NAME" ) );
       DString_InsertChar( sender, '@', 0 );
-      DString_Insert( sender, ctx->process->mpiData->name, 0, 0 );
+      DString_Insert( sender, ctx->process->mpiData->name, 0, 0, 0 );
       if( pos1 == 0 ){
         /* send( "@os_proc", ... ) */
         rtc = DaoProxy_Send( sender, host, node->value.pInt, NULL, array );
       }else{
         /* send( "vm_proc@os_proc", ... ) */
-        DString_Substr( pid, mbs, 0, pos1 );
+        DString_SubString( pid, mbs, 0, pos1 );
         rtc = DaoProxy_Send( sender, host, node->value.pInt, mbs, array );
       }
     }else{
@@ -966,36 +966,36 @@ void MPI_Send( DaoContext *ctx, DValue *p[], int N )
       }
       DString_SetMBS( sender, getenv( "LOCALHOST" ) );
       //printf( "localhost====================%s %s\n", sender->mbs, pid->mbs );
-      DString_InsertMBS( sender, "@@", 0, 0 );
+      DString_InsertMBS( sender, "@@", 0, 0, 0 );
       if( pos1 == pos2 ){
         if( pos1 == 0 ){
           /* send( "@@host", ... ) */
           /* warn? */
         }else{
           /* send( "vm_proc@@host", ... ) */
-          DString_Substr( pid, mbs, 0, pos1 );
-          DString_Substr( pid, host, pos1+2, pid->size );
-          DString_Insert( sender, ctx->process->mpiData->name, 0, 0 );
+          DString_SubString( pid, mbs, 0, pos1 );
+          DString_SubString( pid, host, pos1+2, pid->size );
+          DString_Insert( sender, ctx->process->mpiData->name, 0, 0, 0 );
           rtc = DaoProxy_Send( sender, host, node->value.pInt, mbs, array );
         }
       }else if( pos1 < pos2 ){
-        DString_InsertMBS( sender, getenv( "PROC_NAME" ), 0, 0 );
+        DString_InsertMBS( sender, getenv( "PROC_NAME" ), 0, 0, 0 );
         DString_InsertChar( sender, '@', 0 );
-        DString_Insert( sender, ctx->process->mpiData->name, 0, 0 );
+        DString_Insert( sender, ctx->process->mpiData->name, 0, 0, 0 );
         if( pos1 == 0 ){
           /* send( "@os_proc@@host", ... ) */
-          DString_Substr( pid, host, pos2+2, pid->size );
+          DString_SubString( pid, host, pos2+2, pid->size );
           rtc = DaoProxy_Send( sender, host, node->value.pInt, NULL, array );
         }else{
           /* send( "vm_proc@os_proc@@host", ... ) */
-          DString_Substr( pid, mbs, 0, pos1 );
-          DString_Substr( pid, host, pos2+2, pid->size );
+          DString_SubString( pid, mbs, 0, pos1 );
+          DString_SubString( pid, host, pos2+2, pid->size );
           //printf( "host = %s; pid = %s\n", host->mbs, pid->mbs );
           rtc = DaoProxy_Send( sender, host, node->value.pInt, mbs, array );
         }
       }else{
         /* error */
-        DString_InsertMBS( pid, "process identifier: ", 0, 0 );
+        DString_InsertMBS( pid, "process identifier: ", 0, 0, 0 );
         DaoContext_RaiseException( ctx, DAO_ERROR, pid->mbs );
       }
     }
@@ -1131,18 +1131,18 @@ static void MPI_Spawn( DaoContext *ctx, DValue *p[], int N )
   }else if( pos2 == MAXSIZE ){
     DString_SetMBS( sender, getenv( "PROC_NAME" ) );
     DString_InsertChar( sender, '@', 0 );
-    DString_Insert( sender, ctx->process->mpiData->name, 0, 0 );
+    DString_Insert( sender, ctx->process->mpiData->name, 0, 0, 0 );
     if( pos1 == 0 ){
       /* spawn( "@os_proc", "script.dao" ) */
       pos2 = DString_FindChar( pid, '@', pos1 +1 );
       if( pos2 != MAXSIZE ) goto SpawnFailed;
-      DString_Substr( pid, mbs1, 1, pid->size );
+      DString_SubString( pid, mbs1, 1, pid->size );
       port = DaoSpawn_OsProc( mbs1, proc, timeout );
       if( port > 0 ) MAP_Insert( ctx->vmSpace->friendPids, pid, port );
     }else{
       /* spawn( "vm_proc@os_proc", "routine" ) */
-      DString_Substr( pid, mbs1, 0, pos1 );
-      DString_Substr( pid, mbs2, pos1, pid->size );
+      DString_SubString( pid, mbs1, 0, pos1 );
+      DString_SubString( pid, mbs2, pos1, pid->size );
       node = MAP_Find( ctx->vmSpace->friendPids, mbs2 );
       if( node == NULL ){
         DString_SetMBS( error, "unknown OS process identifier: " );
@@ -1160,46 +1160,46 @@ static void MPI_Spawn( DaoContext *ctx, DValue *p[], int N )
       if( pos1 == MAXSIZE ) pos1 = pos2;
     }
     DString_SetMBS( sender, getenv( "LOCALHOST" ) );
-    DString_InsertMBS( sender, "@@", 0, 0 );
+    DString_InsertMBS( sender, "@@", 0, 0, 0 );
     if( pos1 == pos2 ){
       if( pos1 == 0 ){
         /* spawn( "@@host", "script.dao" ) */
         /* warn? */
       }else{
         /* spawn( "vm_proc@@host", "routine" ) */
-        DString_Insert( sender, ctx->process->mpiData->name, 0, 0 );
-        DString_Substr( pid, mbs1, 0, pos1 );
-        DString_Substr( pid, mbs2, pos1+2, pid->size );
+        DString_Insert( sender, ctx->process->mpiData->name, 0, 0, 0 );
+        DString_SubString( pid, mbs1, 0, pos1 );
+        DString_SubString( pid, mbs2, pos1+2, pid->size );
         port = DaoSpawn_VmProcHost( mbs2, mbs1, proc, timeout );
         if( port > 0 ) MAP_Insert( ctx->vmSpace->friendPids, pid, port );
       }
     }else if( pos1 < pos2 ){
-      DString_InsertMBS( sender, getenv( "PROC_NAME" ), 0, 0 );
+      DString_InsertMBS( sender, getenv( "PROC_NAME" ), 0, 0, 0 );
       DString_InsertChar( sender, '@', 0 );
-      DString_Insert( sender, ctx->process->mpiData->name, 0, 0 );
+      DString_Insert( sender, ctx->process->mpiData->name, 0, 0, 0 );
       if( pos1 == 0 ){
         /* spawn( "@os_proc@@host", "script.dao" ) */
-        DString_Substr( pid, mbs1, 1, pos2-1 );
-        DString_Substr( pid, mbs2, pos2+2, pid->size );
+        DString_SubString( pid, mbs1, 1, pos2-1 );
+        DString_SubString( pid, mbs2, pos2+2, pid->size );
         port = DaoSpawn_OsProcHost( mbs2, mbs1, proc, timeout );
         if( port > 0 ) MAP_Insert( ctx->vmSpace->friendPids, pid, port );
       }else{
         /* spawn( "vm_proc@os_proc@@host", "routine" ) */
-        DString_Substr( pid, mbs2, pos1, pid->size );
+        DString_SubString( pid, mbs2, pos1, pid->size );
         node = MAP_Find( ctx->vmSpace->friendPids, mbs2 );
         if( node == NULL ){
           DString_SetMBS( error, "unknown OS process identifier: " );
           DString_Append( error, mbs2 );
           goto SpawnFailed;
         }
-        DString_Substr( pid, mbs1, 0, pos1 );
-        DString_Substr( pid, mbs2, pos2+2, pid->size );
+        DString_SubString( pid, mbs1, 0, pos1 );
+        DString_SubString( pid, mbs2, pos2+2, pid->size );
         port = DaoSpawn_VmProcOsProcHost( mbs2, node->value.pInt, mbs1, proc, timeout);
         if( port > 0 ) MAP_Insert( ctx->vmSpace->friendPids, pid, port );
       }
     }else{
       /* error */
-      DString_InsertMBS( pid, "process identifier: ", 0, 0 );
+      DString_InsertMBS( pid, "process identifier: ", 0, 0, 0 );
       DaoContext_RaiseException( ctx, DAO_ERROR, pid->mbs );
     }
   }
@@ -1253,7 +1253,7 @@ static void MPI_FindPID( DaoContext *ctx, DValue *p[], int N )
         *res = DaoProxy_FindPID( ctx, host, DAO_PROXY_PORT, pid, suffix );
     }else{
       /* locate( "vm_proc@os_proc", ... ) */
-      DString_Substr( pid, mbs, pos1, pid->size );
+      DString_SubString( pid, mbs, pos1, pid->size );
       node = DMap_Find( ctx->vmSpace->friendPids, (void*)mbs );
       if( node == NULL && daoProxyPort != DAO_PROXY_PORT ){
         /* look for "@os_proc" first, and update "node" if found */
@@ -1261,8 +1261,8 @@ static void MPI_FindPID( DaoContext *ctx, DValue *p[], int N )
           node = DMap_Find( ctx->vmSpace->friendPids, (void*)mbs );
       }
       if( node ){
-        DString_Substr( pid, mbs, 0, pos1 );
-        DString_Substr( pid, suffix, pos1, pid->size );
+        DString_SubString( pid, mbs, 0, pos1 );
+        DString_SubString( pid, suffix, pos1, pid->size );
         *res = DaoProxy_FindPID( ctx, host, node->value.pInt, mbs, suffix );
       }
     }
@@ -1278,33 +1278,33 @@ static void MPI_FindPID( DaoContext *ctx, DValue *p[], int N )
         /* warn? */
       }else{
         /* locate( "vm_proc@@host", ... ) */
-        DString_Substr( pid, mbs, 0, pos1 );
-        DString_Substr( pid, host, pos1+2, pid->size );
-        DString_Substr( pid, suffix, pos1, pid->size );
+        DString_SubString( pid, mbs, 0, pos1 );
+        DString_SubString( pid, host, pos1+2, pid->size );
+        DString_SubString( pid, suffix, pos1, pid->size );
         *res = DaoProxy_FindPID( ctx, host, DAO_PROXY_PORT, mbs, suffix );
       }
     }else if( pos1 < pos2 ){
       if( pos1 == 0 ){
         /* locate( "@os_proc@@host", ... ) */
-        DString_Substr( pid, mbs, 0, pos2 );
-        DString_Substr( pid, host, pos2+2, pid->size );
-        DString_Substr( pid, suffix, pos1, pid->size );
+        DString_SubString( pid, mbs, 0, pos2 );
+        DString_SubString( pid, host, pos2+2, pid->size );
+        DString_SubString( pid, suffix, pos1, pid->size );
         *res = DaoProxy_FindPID( ctx, host, DAO_PROXY_PORT, mbs, suffix );
       }else{
         /* locate( "vm_proc@os_proc@@host", ... ) */
-        DString_Substr( pid, mbs, pos1, pid->size );
-        DString_Substr( pid, host, pos2+2, pid->size );
+        DString_SubString( pid, mbs, pos1, pid->size );
+        DString_SubString( pid, host, pos2+2, pid->size );
         node = DMap_Find( ctx->vmSpace->friendPids, (void*)mbs );
         if( node == NULL ){
           /* look for "@os_proc@@host" first, and update "node" if found */
-          DString_Substr( pid, mbs, pos1, pos2-pos1 );
-          DString_Substr( pid, suffix, pos2, pid->size );
+          DString_SubString( pid, mbs, pos1, pos2-pos1 );
+          DString_SubString( pid, suffix, pos2, pid->size );
           if( DaoProxy_FindPID( ctx, host, DAO_PROXY_PORT, mbs, suffix ) )
             node = DMap_Find( ctx->vmSpace->friendPids, (void*)mbs );
         }
         if( node ){
-          DString_Substr( pid, mbs, 0, pos1 );
-          DString_Substr( pid, suffix, pos1, pid->size );
+          DString_SubString( pid, mbs, 0, pos1 );
+          DString_SubString( pid, suffix, pos1, pid->size );
           *res = DaoProxy_FindPID( ctx, host, node->value.pInt, mbs, suffix );
         }
       }

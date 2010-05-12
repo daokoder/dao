@@ -499,16 +499,16 @@ static void DaoString_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
       break;
     }
   case IDX_FROM :
-    DString_Substr( self, res, start, -1 );
+    DString_SubString( self, res, start, -1 );
     break;
   case IDX_TO :
-    DString_Substr( self, res, 0, end+1 );
+    DString_SubString( self, res, 0, end+1 );
     break;
   case IDX_PAIR :
-    DString_Substr( self, res, start, end-start+1 );
+    DString_SubString( self, res, start, end-start+1 );
     break;
   case IDX_ALL :
-    DString_Substr( self, res, 0, -1 );
+    DString_SubString( self, res, 0, -1 );
     break;
   case IDX_MULTIPLE :
     {
@@ -607,8 +607,10 @@ static void DaoSTR_Insert( DaoContext *ctx, DValue *p[], int N )
 {
   DString *self = p[0]->v.s;
   DString *str = p[1]->v.s;
-  int at = (int)p[2]->v.i;
-  DString_Insert( self, str, at, 0 );
+  size_t at = (size_t)p[2]->v.i;
+  size_t rm = (size_t)p[3]->v.i;
+  size_t cp = (size_t)p[4]->v.i;
+  DString_Insert( self, str, at, rm, cp );
 }
 static void DaoSTR_Clear( DaoContext *ctx, DValue *p[], int N )
 {
@@ -690,7 +692,7 @@ static void DaoSTR_Replace( DaoContext *ctx, DValue *p[], int N )
     pos = DString_Find( self, str1, from );
     while( pos != MAXSIZE ){
       count ++;
-      DString_Insert( self, str2, pos, DString_Size( str1 ) );
+      DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
       from = pos + DString_Size( str2 );
       pos = DString_Find( self, str1, from );
     }
@@ -699,7 +701,7 @@ static void DaoSTR_Replace( DaoContext *ctx, DValue *p[], int N )
     while( pos != MAXSIZE ){
       count ++;
       if( count == index ){
-        DString_Insert( self, str2, pos, DString_Size( str1 ) );
+        DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
         break;
       }
       from = pos + DString_Size( str1 );
@@ -712,7 +714,7 @@ static void DaoSTR_Replace( DaoContext *ctx, DValue *p[], int N )
     while( pos != MAXSIZE ){
       count --;
       if( count == index ){
-        DString_Insert( self, str2, pos-DString_Size( str1 )+1, DString_Size( str1 ) );
+        DString_Insert( self, str2, pos-DString_Size( str1 )+1, DString_Size( str1 ), 0 );
         break;
       }
       from = pos - DString_Size( str1 );
@@ -752,7 +754,7 @@ static void DaoSTR_Replace2( DaoContext *ctx, DValue *p[], int N )
       for(j=0; j<sizes->size; j++){
         k = sizes->items.pInt[j];
         if( i+k > n ) break;
-        DString_Substr( self, key, i, k );
+        DString_SubString( self, key, i, k );
         node = DMap_FindMG( words, key );
         if( node == NULL ) break;
         if( DString_EQ( node->key.pString, key ) ){
@@ -785,7 +787,7 @@ static void DaoSTR_Replace2( DaoContext *ctx, DValue *p[], int N )
       for(j=0; j<sizes->size; j++){
         k = sizes->items.pInt[j];
         if( i+k > n ) break;
-        DString_Substr( self, key, i, k );
+        DString_SubString( self, key, i, k );
         node = DMap_FindMG( words, key );
         if( node == NULL ) break;
         if( DString_EQ( node->key.pString, key ) ){
@@ -861,7 +863,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DValue *p[], int N )
           }
         }
         if( replace ){
-          DString_Substr( self, key, pos1+2, pos2-pos1-2 );
+          DString_SubString( self, key, pos1+2, pos2-pos1-2 );
           if( tup ){
             node = DMap_Find( keys, key );
           }else{
@@ -883,7 +885,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DValue *p[], int N )
           }
         }
       }
-      DString_Substr( self, sub, prev, pos1 - prev );
+      DString_SubString( self, sub, prev, pos1 - prev );
       DString_Append( res, sub );
       prev = pos1 + 1;
       if( replace ){
@@ -914,7 +916,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DValue *p[], int N )
           }
         }
         if( replace ){
-          DString_Substr( self, key, pos1+2, pos2-pos1-2 );
+          DString_SubString( self, key, pos1+2, pos2-pos1-2 );
           if( tup ){
             node = DMap_Find( keys, key );
           }else{
@@ -936,7 +938,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DValue *p[], int N )
           }
         }
       }
-      DString_Substr( self, sub, prev, pos1 - prev );
+      DString_SubString( self, sub, prev, pos1 - prev );
       DString_Append( res, sub );
       prev = pos1 + 1;
       if( replace ){
@@ -948,7 +950,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DValue *p[], int N )
       pos1 = DString_FindWChar( self, spec1, prev );
     }
   }
-  DString_Substr( self, sub, prev, DString_Size( self ) - prev );
+  DString_SubString( self, sub, prev, DString_Size( self ) - prev );
   DString_Append( res, sub );
   DString_Delete( key );
   DString_Delete( sub );
@@ -978,20 +980,20 @@ static void DaoSTR_Split( DaoContext *ctx, DValue *p[], int N )
       while( i < size ){
         k = utf8_markers[ mbs[i] ];
         if( k ==0 || k ==7 ){
-          DString_SetBytes( str, (char*)mbs + i, 1 );
+          DString_SetDataMBS( str, (char*)mbs + i, 1 );
           DVarray_Append( list->items, value );
           i ++;
         }else if( k ==1 ){
           k = i;
           while( i < size && utf8_markers[ mbs[i] ] ==1 ) i ++;
-          DString_SetBytes( str, (char*)mbs + k, i-k );
+          DString_SetDataMBS( str, (char*)mbs + k, i-k );
           DVarray_Append( list->items, value );
         }else{
           for( j=1; j<k; j++ ){
             if( i + j >= size ) break;
             if( utf8_markers[ mbs[i+j] ] != 1 ) break;
           }
-          DString_SetBytes( str, (char*)mbs + i, j );
+          DString_SetDataMBS( str, (char*)mbs + i, j );
           DVarray_Append( list->items, value );
           i += j;
         }
@@ -1016,9 +1018,9 @@ static void DaoSTR_Split( DaoContext *ctx, DValue *p[], int N )
   }
   while( posDelm != MAXSIZE ){
     if( rm && posQuote == last && posQuote2 == posDelm-qlen )
-      DString_Substr( self, str, last+qlen, posDelm-last-2*qlen );
+      DString_SubString( self, str, last+qlen, posDelm-last-2*qlen );
     else
-      DString_Substr( self, str, last, posDelm-last );
+      DString_SubString( self, str, last, posDelm-last );
     if( last !=0 || posDelm !=0 ) DVarray_Append( list->items, value );
 
     last = posDelm + dlen;
@@ -1034,9 +1036,9 @@ static void DaoSTR_Split( DaoContext *ctx, DValue *p[], int N )
   if( posQuote != MAXSIZE && posQuote < size )
     posQuote2 = DString_Find( self, quote, posQuote+qlen );
   if( rm && posQuote == last && posQuote2 == size-qlen )
-    DString_Substr( self, str, last+qlen, size-last-2*qlen );
+    DString_SubString( self, str, last+qlen, size-last-2*qlen );
   else
-    DString_Substr( self, str, last, size-last );
+    DString_SubString( self, str, last, size-last );
   DVarray_Append( list->items, value );
   DString_Delete( str );
 }
@@ -1300,7 +1302,7 @@ static void DaoSTR_Match0( DaoContext *ctx, DValue *p[], int N, int subm )
   DValue_Copy( tuple->items->data, value );
   value.v.i = p2;
   DValue_Copy( tuple->items->data + 1, value );
-  if( p1 >=0 && ( subm || capt ) ) DString_Substr( self, pt, p1, p2-p1+1 );
+  if( p1 >=0 && ( subm || capt ) ) DString_SubString( self, pt, p1, p2-p1+1 );
   DValue_Copy( tuple->items->data + 2, matched );
   if( subm ==0 ){
     p[2]->v.i = p1;
@@ -1377,7 +1379,7 @@ static void DaoSTR_Extract( DaoContext *ctx, DValue *p[], int N )
     printf( "p1 = %i, p2 = %i\n", p1, p2 );
     */
     if( (p1 >0 && p1 <size) || p2 > p1 ){
-      DString_Substr( self, pt, p1, p2-p1 );
+      DString_SubString( self, pt, p1, p2-p1 );
       DVarray_Append( list->items, subs );
     }
   }
@@ -1405,7 +1407,7 @@ static void DaoSTR_Capture( DaoContext *ctx, DValue *p[], int N )
   for( gid=0; gid<=patt->group; gid++ ){
     DString_Clear( pt );
     if( DaoRegex_SubMatch( patt, gid, & p1, & p2 ) ){
-      DString_Substr( self, pt, p1, p2-p1+1 );
+      DString_SubString( self, pt, p1, p2-p1+1 );
     }
     DVarray_Append( list->items, subs );
   }
@@ -1447,7 +1449,7 @@ static DaoFuncItem stringMeths[] =
 {
   { DaoSTR_Size,    "size( self :string )const=>int" },
   { DaoSTR_Resize,  "resize( self :string, size :int )" },
-  { DaoSTR_Insert,  "insert( self :string, str :string, index=0 )" },
+  { DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
   { DaoSTR_Clear,   "clear( self :string )" },
   { DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
   { DaoSTR_Chop,    "chop( self :string, utf8=0 ) =>string" },
@@ -3185,43 +3187,47 @@ void DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value )
 }
 void DaoMap_EraseMBS ( DaoMap *self, const char *key )
 {
-  DString *str = DString_New(1);
+  DString str = { 0, 0, NULL, NULL, NULL };
   DValue vkey = daoNilString;
-  vkey.v.s = str;
-  DString_SetMBS( str, key );
+  vkey.v.s = & str;
+  str.size = str.bufSize = strlen( key );
+  str.data = (size_t*) key;
+  str.mbs = (char*) key;
   DaoMap_Erase( self, vkey );
-  DString_Delete( str );
 }
 void DaoMap_EraseWCS ( DaoMap *self, const wchar_t *key )
 {
-  DString *str = DString_New(0);
+  DString str = { 0, 0, NULL, NULL, NULL };
   DValue vkey = daoNilString;
-  vkey.v.s = str;
-  DString_SetWCS( str, key );
+  vkey.v.s = & str;
+  str.size = str.bufSize = wcslen( key );
+  str.data = (size_t*) key;
+  str.wcs = (wchar_t*) key;
   DaoMap_Erase( self, vkey );
-  DString_Delete( str );
 }
 DValue DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 {
   DNode *node;
-  DString *str = DString_New(1);
+  DString str = { 0, 0, NULL, NULL, NULL };
   DValue vkey = daoNilString;
-  vkey.v.s = str;
-  DString_SetMBS( str, key );
+  vkey.v.s = & str;
+  str.size = str.bufSize = strlen( key );
+  str.data = (size_t*) key;
+  str.mbs = (char*) key;
   node = MAP_Find( self->items, & vkey );
-  DString_Delete( str );
   if( node ) return node->value.pValue[0];
   return daoNilValue;
 }
 DValue DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 {
   DNode *node;
-  DString *str = DString_New(0);
+  DString str = { 0, 0, NULL, NULL, NULL };
   DValue vkey = daoNilString;
-  vkey.v.s = str;
-  DString_SetWCS( str, key );
+  vkey.v.s = & str;
+  str.size = str.bufSize = wcslen( key );
+  str.data = (size_t*) key;
+  str.wcs = (wchar_t*) key;
   node = MAP_Find( self->items, & vkey );
-  DString_Delete( str );
   if( node ) return node->value.pValue[0];
   return daoNilValue;
 }

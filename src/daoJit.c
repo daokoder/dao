@@ -526,7 +526,7 @@ static const char *const instrNames[] =
 
 static void DString_AppendUBytes( DString *self, const uchar_t *bytes, size_t n )
 {
-  DString_AppendBytes( self, (const char*) bytes, n );
+  DString_AppendDataMBS( self, (const char*) bytes, n );
 }
 
 static const uchar_t ZeroByte4[] = { 0x00, 0x00, 0x00, 0x00 };

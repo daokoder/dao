@@ -1008,7 +1008,7 @@ void DaoProxy_Receive( DaoContext *ctx, DValue *par[], int N )
         if( DMap_Find( ctx->vmSpace->friendPids, (void*)mbs ) == NULL )
           DMap_Insert( ctx->vmSpace->friendPids, (void*)mbs, (void*) max_port );
 
-        DString_InsertMBS( mbs, "main", 0, 0 );
+        DString_InsertMBS( mbs, "main", 0, 0, 0 );
         if( DMap_Find( ctx->vmSpace->friendPids, (void*)mbs ) == NULL )
           DMap_Insert( ctx->vmSpace->friendPids, (void*)mbs, (void*) max_port );
         /*

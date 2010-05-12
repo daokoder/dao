@@ -48,7 +48,8 @@ wchar_t* DString_GetWCS( DString *self );
 
 void DString_SetMBS( DString *self, const char *chs );
 void DString_SetWCS( DString *self, const wchar_t *chs );
-void DString_SetBytes( DString *self, const char *bytes, size_t count );
+void DString_SetDataMBS( DString *self, const char *bytes, size_t count );
+void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count );
 
 void DString_ToWCS( DString *self );
 void DString_ToMBS( DString *self );
@@ -60,10 +61,10 @@ void DString_Resize( DString *self, size_t size );
 void DString_Clear( DString *self );
 
 void DString_Erase( DString *self, size_t start, size_t n );
-void DString_Insert( DString *self, DString *chs, size_t at, size_t rm );
-void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm );
+void DString_Insert( DString *self, DString *chs, size_t at, size_t rm, size_t cp );
+void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm, size_t cp );
 void DString_InsertChar( DString *self, const char ch, size_t at );
-void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm );
+void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm, size_t cp );
 void DString_Append( DString *self, DString *chs );
 void DString_AppendChar( DString *self, const char ch );
 void DString_AppendWChar( DString *self, const wchar_t ch );
@@ -72,7 +73,7 @@ void DString_AppendWCS( DString *self, const wchar_t *chs );
 void DString_AppendBytes( DString *self, const char *bytes, size_t count );
 void DString_Replace( DString *self, DString *chs, size_t start, size_t rm );
 void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm );
-void DString_Substr( DString *self, DString *sub, size_t from, size_t n );
+void DString_SubString( DString *self, DString *sub, size_t from, size_t n );
 
 size_t DString_Find( DString *self, DString *chs, size_t start );
 size_t DString_RFind( DString *self, DString *chs, size_t start );

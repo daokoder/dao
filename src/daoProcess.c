@@ -1780,7 +1780,7 @@ OPCASE( ADD_SS ){
   if( vmc->a == vmc->c ){
     DString_Append( vA->v.s, vB->v.s );
   }else if( vmc->b == vmc->c ){
-    DString_Insert( vB->v.s, vA->v.s, 0, 0 );
+    DString_Insert( vB->v.s, vA->v.s, 0, 0, 0 );
   }else{
     if( vC->v.s == NULL ) vC->v.s = DString_Copy( vA->v.s );
     DString_Assign( vC->v.s, vA->v.s );

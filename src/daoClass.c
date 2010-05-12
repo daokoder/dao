@@ -157,7 +157,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
   DArray_Append( ns->definedRoutines, rout );
   self->clsType = DaoAbsType_New( name->mbs, DAO_CLASS, (DaoBase*) self, NULL );
   GC_IncRC( self->clsType );
-  DString_InsertMBS( self->clsType->name, "class<", 0, 0 );
+  DString_InsertMBS( self->clsType->name, "class<", 0, 0, 0 );
   DString_AppendChar( self->clsType->name, '>' );
   self->objType = DaoAbsType_New( name->mbs, DAO_OBJECT, (DaoBase*)self, NULL );
   DString_SetMBS( self->className, "self" );

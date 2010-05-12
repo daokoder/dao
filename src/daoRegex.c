@@ -1183,14 +1183,14 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
   target = DString_Copy( target );
   while( DaoRegex_Match( self, source, & p1, & p2 ) ){
     if( index ==0 || (++i) == index ){
-      DString_Substr( source, target, last, p1 - last );
+      DString_SubString( source, target, last, p1 - last );
       DString_Append( replace, target );
       DString_Clear( tmp );
       for(i=0; i<array->size; i++){
         value = array->data[i];
         if( value.t == DAO_INTEGER ){
           if( DaoRegex_SubMatch( self, value.v.i, & p1, & p3 ) ){
-            DString_Substr( source, target, p1, p3-p1 + 1 );
+            DString_SubString( source, target, p1, p3-p1 + 1 );
             DString_Append( tmp, target );
           }
         }else{
@@ -1206,7 +1206,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
     p2 = end;
     if( index ) break;
   }
-  DString_Substr( source, target, last, p2 - last );
+  DString_SubString( source, target, last, p2 - last );
   DString_Append( replace, target );
   DString_Assign( source, replace );
   DString_Delete( target );

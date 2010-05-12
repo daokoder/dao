@@ -388,7 +388,7 @@ void DaoJIT_AddString( DaoContext *self, int id )
   if( vmc->a == vmc->c ){
     DString_Append( dA->v.s, dB->v.s );
   }else if( vmc->b == vmc->c ){
-    DString_Insert( dB->v.s, dA->v.s, 0, 0 );
+    DString_Insert( dB->v.s, dA->v.s, 0, 0, 0 );
   }else{
     if( dC->v.s == NULL ) dC->v.s = DString_Copy( dA->v.s );
     DString_Assign( dC->v.s, dA->v.s );
@@ -536,7 +536,7 @@ DString* DaoContext_PutBytes( DaoContext *self, const char *bytes, int N )
   res = DaoContext_SetValue( self, self->vmc->c, val );
   DString_Delete( str );
   if( res ==NULL ) return NULL;
-  DString_SetBytes( res->v.s, bytes, N );
+  DString_SetDataMBS( res->v.s, bytes, N );
   return res->v.s;
 }
 #ifdef DAO_WITH_NUMARRAY
@@ -2240,7 +2240,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     if( vmc->a == vmc->c ){
       DString_Append( dA.v.s, dB.v.s );
     }else if( vmc->b == vmc->c ){
-      DString_Insert( dB.v.s, dA.v.s, 0, 0 );
+      DString_Insert( dB.v.s, dA.v.s, 0, 0, 0 );
     }else{
       dA.v.s = DString_Copy( dA.v.s );
       DString_Append( dA.v.s, dB.v.s );

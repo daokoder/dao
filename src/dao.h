@@ -398,25 +398,27 @@ struct DaoAPI
   int (*DString_IsMBS)( DString *self );
   void (*DString_SetMBS)( DString *self, const char *chs );
   void (*DString_SetWCS)( DString *self, const wchar_t *chs );
+  void (*DString_SetDataMBS)( DString *self, const char *data, size_t n );
+  void (*DString_SetDataWCS)( DString *self, const wchar_t *data, size_t n );
   void (*DString_ToWCS)( DString *self );
   void (*DString_ToMBS)( DString *self );
   char* (*DString_GetMBS)( DString *self );
   wchar_t* (*DString_GetWCS)( DString *self );
 
   void (*DString_Erase)( DString *self, size_t start, size_t n );
-  void (*DString_Insert)( DString *self, DString *chs, size_t at, size_t rm );
-  void (*DString_InsertMBS)( DString *self, const char *chs, size_t at, size_t rm );
+  void (*DString_Insert)( DString *self, DString *s, size_t i, size_t m, size_t n );
+  void (*DString_InsertMBS)( DString *self, const char *s, size_t i, size_t m, size_t n );
   void (*DString_InsertChar)( DString *self, const char ch, size_t at );
-  void (*DString_InsertWCS)( DString *self, const wchar_t *chs, size_t at, size_t rm );
+  void (*DString_InsertWCS)( DString *self, const wchar_t *s, size_t i, size_t m, size_t n );
   void (*DString_Append)( DString *self, DString *chs );
   void (*DString_AppendChar)( DString *self, const char ch );
   void (*DString_AppendWChar)( DString *self, const wchar_t ch );
   void (*DString_AppendMBS)( DString *self, const char *chs );
   void (*DString_AppendWCS)( DString *self, const wchar_t *chs );
-  void (*DString_AppendMBSWithLength)( DString *self, const char *chs, size_t n );
-  void (*DString_AppendWCSWithLength)( DString *self, const wchar_t *chs,size_t n );
+  void (*DString_AppendDataMBS)( DString *self, const char *data, size_t n );
+  void (*DString_AppendDataWCS)( DString *self, const wchar_t *data,size_t n );
 
-  void (*DString_Substr)( DString *self, DString *sub, size_t from, size_t n );
+  void (*DString_SubString)( DString *self, DString *sub, size_t from, size_t n );
 
   size_t (*DString_Find)( DString *self, DString *chs, size_t start );
   size_t (*DString_RFind)( DString *self, DString *chs, size_t start );
@@ -682,24 +684,30 @@ DAO_DLL void DString_Resize( DString *self, size_t size );
 DAO_DLL int DString_IsMBS( DString *self );
 DAO_DLL void DString_SetMBS( DString *self, const char *chs );
 DAO_DLL void DString_SetWCS( DString *self, const wchar_t *chs );
+DAO_DLL void DString_SetDataMBS( DString *self, const char *data, size_t n );
+DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, size_t n );
 DAO_DLL void DString_ToWCS( DString *self );
 DAO_DLL void DString_ToMBS( DString *self );
 DAO_DLL char* DString_GetMBS( DString *self );
 DAO_DLL wchar_t* DString_GetWCS( DString *self );
 
 DAO_DLL void DString_Erase( DString *self, size_t start, size_t n );
-DAO_DLL void DString_Insert( DString *self, DString *chs, size_t at, size_t rm );
+/* insert "s" at "i" with "m" characters removed and "n" copied,
+   if "n" is zero, copy all characters of "s" */
+DAO_DLL void DString_Insert( DString *self, DString *s, size_t i, size_t m, size_t n );
 DAO_DLL void DString_InsertChar( DString *self, const char ch, size_t at );
-DAO_DLL void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm );
-DAO_DLL void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm );
+/* insert "s" at "i" with "m" characters removed and "n" copied,
+   if "n" is zero, consider "s" as null-terminated string. */
+DAO_DLL void DString_InsertMBS( DString *self, const char *s, size_t i, size_t m, size_t n );
+DAO_DLL void DString_InsertWCS( DString *self, const wchar_t *s, size_t i, size_t m, size_t n );
 DAO_DLL void DString_Append( DString *self, DString *chs );
 DAO_DLL void DString_AppendChar( DString *self, const char ch );
 DAO_DLL void DString_AppendWChar( DString *self, const wchar_t ch );
 DAO_DLL void DString_AppendMBS( DString *self, const char *chs );
 DAO_DLL void DString_AppendWCS( DString *self, const wchar_t *chs );
-DAO_DLL void DString_AppendMBSWithLength( DString *self, const char *chs, size_t n );
-DAO_DLL void DString_AppendWCSWithLength( DString *self, const wchar_t *chs,size_t n );
-DAO_DLL void DString_Substr( DString *self, DString *sub, size_t from, size_t n );
+DAO_DLL void DString_AppendDataMBS( DString *self, const char *data, size_t n );
+DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *data,size_t n );
+DAO_DLL void DString_SubString( DString *self, DString *sub, size_t from, size_t n );
 
 DAO_DLL size_t DString_Find( DString *self, DString *chs, size_t start );
 DAO_DLL size_t DString_RFind( DString *self, DString *chs, size_t start );
@@ -969,22 +977,26 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DString_IsMBS( self )  __dao.DString_IsMBS( self )
 #define DString_SetMBS( self, chs )  __dao.DString_SetMBS( self, chs )
 #define DString_SetWCS( self, chs )  __dao.DString_SetWCS( self, chs )
+#define DString_SetDataMBS( self, s, n )  __dao.DString_SetDataMBS( self, s, n )
+#define DString_SetDataWCS( self, s, n )  __dao.DString_SetDataWCS( self, s, n )
 #define DString_ToWCS( self )  __dao.DString_ToWCS( self )
 #define DString_ToMBS( self )  __dao.DString_ToMBS( self )
 #define DString_GetMBS( self )  __dao.DString_GetMBS( self )
 #define DString_GetWCS( self )  __dao.DString_GetWCS( self )
 
 #define DString_Erase( self, tart, n )  __dao.DString_Erase( self, tart, n )
-#define DString_Insert( self, chs, at, rm )  __dao.DString_Insert( self, chs, at, rm )
-#define DString_InsertMBS( self, chs, at, rm )  __dao.DString_InsertMBS( self, chs, at, rm )
+#define DString_Insert( self, s, i, m, n )  __dao.DString_Insert( self, s, i, m, n )
+#define DString_InsertMBS( self, s, i, m, n )  __dao.DString_InsertMBS( self, s, i, m, n )
 #define DString_InsertChar( self, ch, at )  __dao.DString_InsertChar( self, ch, at )
-#define DString_InsertWCS( self, chs, at, rm )  __dao.DString_InsertWCS( self, chs, at, rm )
+#define DString_InsertWCS( self, s, i, m, n )  __dao.DString_InsertWCS( self, s, i, m, n )
 #define DString_Append( self, chs )  __dao.DString_Append( self, chs )
 #define DString_AppendChar( self, ch )  __dao.DString_AppendChar( self, ch )
 #define DString_AppendWChar( self, ch )  __dao.DString_AppendWChar( self, ch )
 #define DString_AppendMBS( self, chs )  __dao.DString_AppendMBS( self, chs )
 #define DString_AppendWCS( self, chs )  __dao.DString_AppendWCS( self, chs )
-#define DString_Substr( self, sub, from, n )  __dao.DString_Substr( self, sub, from, n )
+#define DString_AppendDataMBS( self, s, n )  __dao.DString_AppendDataMBS( self, s, n )
+#define DString_AppendDataWCS( self, s, n )  __dao.DString_AppendDataWCS( self, s, n )
+#define DString_SubString( self, sub, i, n )  __dao.DString_SubString( self, sub, i, n )
 
 #define DString_Find( self, chs, start )  __dao.DString_Find( self, chs, start )
 #define DString_RFind( self, chs, start )  __dao.DString_RFind( self, chs, start )
@@ -1239,7 +1251,6 @@ static int DaoInitLibrary( const char *bin )
     strcat( daolib, "/dao" DAO_DLL_SUFFIX );
     handle = DaoLoadLibrary( daolib );
     free( daolib );
-    free( daodir );
   }
   if( handle == NULL ) handle = DaoLoadLibrary( "~/dao/dao" DAO_DLL_SUFFIX );
   if( handle == NULL ) handle = DaoLoadLibrary( DAO_LIB_DEFAULT );
