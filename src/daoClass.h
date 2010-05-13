@@ -2,12 +2,12 @@
    This file is a part of a virtual machine for the Dao programming language.
    Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
+   This software is free software; you can redistribute it and/or modify it under the terms
+   of the GNU Lesser General Public License as published by the Free Software Foundation;
    either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
    See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -76,6 +76,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns );
 void DaoClass_DeriveClassData( DaoClass *self );
+void DaoClass_ResetAttributes( DaoClass *self );
 
 int  DaoClass_FindSuper( DaoClass *self, DaoBase *super );
 int  DaoClass_ChildOf( DaoClass *self, DaoBase *super );
@@ -85,7 +86,7 @@ int  DaoClass_FindConst( DaoClass *self, DString *name );
 void DaoClass_SetConst( DaoClass *self, int id, DValue value );
 int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *thisClass/*=0*/, DValue **d2 );
 
-DaoAbsType** DaoClass_GetDataType( DaoClass *self, DString *name, 
+DaoAbsType** DaoClass_GetDataType( DaoClass *self, DString *name,
     int *res, DaoClass *thisClass );
 int DaoClass_GetDataIndex( DaoClass *self, DString *name, int *type );
 

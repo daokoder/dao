@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -29,10 +29,10 @@
 
 static const char* const daoScriptRaise[] =
 {
-  "raise", "Error", "(", "\"Compiling failed.\"", ")", ";", 
+  "raise", "Error", "(", "\"Compiling failed.\"", ")", ";",
   NULL
 };
-static const unsigned char daoScriptRaise2[] = 
+static const unsigned char daoScriptRaise2[] =
 {
   DKEY_RAISE, DTOK_IDENTIFIER, DTOK_LB, DTOK_MBS, DTOK_RB, DTOK_SEMCO
 };
@@ -108,7 +108,7 @@ void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout )
   }
 }
 static int DRoutine_CheckType( DaoAbsType *routType, DaoNameSpace *ns, DaoAbsType *selftype,
-    DValue *csts, DaoAbsType *ts[], int np, int code, int def, 
+    DValue *csts, DaoAbsType *ts[], int np, int code, int def,
     int *min, int *norm, int *spec )
 {
   int ndef = 0;
@@ -144,11 +144,11 @@ static int DRoutine_CheckType( DaoAbsType *routType, DaoNameSpace *ns, DaoAbsTyp
   *min = DAO_MT_EQ;
   *spec = 0;
   *norm = 1;
-  if( (code == DVM_MCALL  || code == DVM_MCALL_TC) 
+  if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
       && ! ( routType->attrib & DAO_TYPE_SELF ) ){
     npar --;
     tps ++;
-  }else if( selftype && ( routType->attrib & DAO_TYPE_SELF) 
+  }else if( selftype && ( routType->attrib & DAO_TYPE_SELF)
       && code != DVM_MCALL && code != DVM_MCALL_TC ){
     /* class DaoClass : CppClass{ cppmethod(); } */
     abtp = partypes[0]->X.abtype;
@@ -258,7 +258,7 @@ DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoAbsType *type )
   return NULL;
 }
 DRoutine* DRoutine_GetOverLoadByParamType( DRoutine *self, DaoAbsType *selftype,
-    DValue *csts, DaoAbsType *ts[], int np, int code, int *min, int *norm, 
+    DValue *csts, DaoAbsType *ts[], int np, int code, int *min, int *norm,
     int *spec, int *worst )
 {
   int i, match;
@@ -318,11 +318,11 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoAbsType *selftype,
 
   if( npar == ndef && ndef == 0 ) return;
   defs = DMap_New(0,0);
-  if( (code == DVM_MCALL  || code == DVM_MCALL_TC) 
+  if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
       && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
     npar --;
     tps ++;
-  }else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF) 
+  }else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF)
       && code != DVM_MCALL && code != DVM_MCALL_TC ){
     /* class DaoClass : CppClass{ cppmethod(); } */
     abtp = self->routType->nested->items.pAbtp[0]->X.abtype;
@@ -390,11 +390,11 @@ DaoAbsType* DRoutine_PassParamTypes2( DRoutine *self, DaoAbsType *selftype,
   if( self->routType->X.abtype == NULL || self->routType->X.abtype->tid < DAO_ARRAY )
     return self->routType->X.abtype;
   defs = DMap_New(0,0);
-  if( (code == DVM_MCALL  || code == DVM_MCALL_TC) 
+  if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
       && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
     npar --;
     tps ++;
-  }else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF) 
+  }else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF)
       && code != DVM_MCALL && code != DVM_MCALL_TC ){
     /* class DaoClass : CppClass{ cppmethod(); } */
     abtp = self->routType->nested->items.pAbtp[0]->X.abtype;
@@ -435,7 +435,7 @@ DaoAbsType* DRoutine_PassParamTypes2( DRoutine *self, DaoAbsType *selftype,
   DMap_Delete( defs );
   return abtp2;
 }
-static DRoutine* DRoutine_GetOverLoadExt( 
+static DRoutine* DRoutine_GetOverLoadExt(
     DRoutine *self, DaoVmProcess *vmp, DaoClass *filter, DValue *obj, DValue *p[], int n, int code )
 {
   float match, max = 0;
@@ -520,11 +520,11 @@ static DRoutine* DRoutine_GetOverLoadExt(
      * obj.func();
      * obj::func();
      */
-    if( (code == DVM_MCALL  || code == DVM_MCALL_TC) 
+    if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
         && ! ( rout->routType->attrib & DAO_TYPE_SELF ) ){
       npar --;
       dpar ++;
-    }else if( obj && obj->t && ( rout->routType->attrib & DAO_TYPE_SELF) 
+    }else if( obj && obj->t && ( rout->routType->attrib & DAO_TYPE_SELF)
         && code != DVM_MCALL && code != DVM_MCALL_TC ){
       /* class DaoClass : CppClass{ cppmethod(); }
        * use stdio;
@@ -634,7 +634,7 @@ DRoutine* DRoutine_GetOverLoad( DRoutine *self, DaoVmProcess *vmp, DValue *obj, 
   return self;
 }
 extern int DValue_Pass( DValue from, DValue *to, DaoAbsType *tp );
-static int DRoutine_PassParam( DRoutine *routine, DValue *recv[], 
+static int DRoutine_PassParam( DRoutine *routine, DValue *recv[],
     DValue *val, DValue *base, int ip, int it, ullong_t *passed )
 {
   DMap *mapNames = routine->routType->mapNames;
@@ -663,7 +663,7 @@ static int DRoutine_PassParam( DRoutine *routine, DValue *recv[],
 #if 0
   //if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->X.abtype;
 #endif
-  
+
   if( ip >= routine->parCount ) return 0;
   if( norc ){
     if( DValue_Pass( *val, *recv, tp ) ==0 ) return 0;
@@ -722,7 +722,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
   }
 #endif
 
-  if( (code == DVM_MCALL || code == DVM_MCALL_TC) 
+  if( (code == DVM_MCALL || code == DVM_MCALL_TC)
     && ! (routype->attrib & DAO_TYPE_SELF) ){
     npar --;
     p ++;
@@ -769,7 +769,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
       for( j=it; j<npar; j++ ){
         DValue_Move( *p[j], recv[j], NULL );
         passed |= 1<<j;
-      }  
+      }
       return DRoutine_PassDefault( routine, recv, passed );
     }else if( parType[it]->tid == DAO_PAR_GROUP && p[it]->t == DAO_TUPLE ){
       tp = parType[it];
@@ -1064,7 +1064,7 @@ extern DaoClass *daoClassFutureValue;
 
 enum OprandType
 {
-  OT_OOO = 0, 
+  OT_OOO = 0,
   OT_AOO , /* SETVX */
   OT_OOC , /* GETCX GETVX */
   OT_AOC , /* LOAD, MOVE, CAST, unary operations... */
@@ -1074,91 +1074,91 @@ enum OprandType
   OT_END
 };
 
-static const char mapTyping[26] = { 
+static const char mapTyping[26] = {
   'A','B',DAO_COMPLEX, DAO_DOUBLE,'E',DAO_FLOAT,'G','H',DAO_INTEGER,
   'J','K','L','M','N','O','P','Q','R',DAO_STRING,'T','U','V','W','X','Y','Z'
 };
 
-static const char vmcTyping[][7] = 
+static const char vmcTyping[][7] =
 {
   /*  ,  A,  B,  C,    */
-  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_NOP */   
-  { OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_DATA */ 
-  { OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETC */ 
-  { OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETV */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETI */  
-  { OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF */  
-  { OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETV */ 
-  { OT_ABC,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETI */ 
-  { OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETF */ 
+  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_NOP */
+  { OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_DATA */
+  { OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETC */
+  { OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETV */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETI */
+  { OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF */
+  { OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETV */
+  { OT_ABC,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETI */
+  { OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETF */
   { OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_LOAD */
-  { OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_CAST */ 
-  { OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_MOVE */ 
-  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_NOT */  
-  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_UNMS */ 
-  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_BITREV */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_ADD */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_SUB */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MUL */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_DIV */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MOD */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_POW */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_AND */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_OR */   
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LT */   
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LE */   
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_EQ */   
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_NE */   
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITAND */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITOR */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITXOR */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITLFT */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITRIT */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_CHECK */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_PAIR */ 
+  { OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_CAST */
+  { OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_MOVE */
+  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_NOT */
+  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_UNMS */
+  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_BITREV */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_ADD */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_SUB */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MUL */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_DIV */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MOD */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_POW */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_AND */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_OR */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LT */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LE */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_EQ */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_NE */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITAND */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITOR */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITXOR */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITLFT */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITRIT */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_CHECK */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_PAIR */
   { OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_TUPLE */
-  { OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_LIST */ 
-  { OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MAP */ 
-  { OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_HASH */ 
-  { OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_ARRAY */ 
-  { OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MATRIX */ 
-  { OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_CURRY */ 
-  { OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_MCURRY */ 
-  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_GOTO */ 
-  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SWITCH */ 
-  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_CASE */ 
-  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_ASSERT */ 
-  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_ITER */ 
-  { OT_OOO,  0, -1, -1, -1, -1,  -1 } , /* DVM_TEST */ 
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MATH */  
-  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_FUNCT */  
-  { OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_CALL */ 
-  { OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_MCALL */ 
-  { OT_EXP, 'A',   0, -1, -1, -1,  -1 } , /* DVM_CLOSE */ 
-  { OT_EXP,   0, 'B', -1, -1, -1,  -1 } , /* DVM_CRRE */ 
-  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JITC */ 
-  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JOINT */ 
-  { OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_RETURN */ 
-  { OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_YIELD */ 
-  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_DEBUG */   
-  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_SECT */   
-  
-  { OT_OOC, -1, -1, 'I', 'L', -1,  -1 } , /* DVM_GETC_I */ 
-  { OT_OOC, -1, -1, 'F', 'L', -1,  -1 } , /* DVM_GETC_F */ 
-  { OT_OOC, -1, -1, 'D', 'L', -1,  -1 } , /* DVM_GETC_D */ 
-  { OT_OOC, -1, -1, 'I', 'G', -1,  -1 } , /* DVM_GETV_I */ 
-  { OT_OOC, -1, -1, 'F', 'G', -1,  -1 } , /* DVM_GETV_F */ 
-  { OT_OOC, -1, -1, 'D', 'G', -1,  -1 } , /* DVM_GETV_D */ 
+  { OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_LIST */
+  { OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MAP */
+  { OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_HASH */
+  { OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_ARRAY */
+  { OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MATRIX */
+  { OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_CURRY */
+  { OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_MCURRY */
+  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_GOTO */
+  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SWITCH */
+  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_CASE */
+  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_ASSERT */
+  { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_ITER */
+  { OT_OOO,  0, -1, -1, -1, -1,  -1 } , /* DVM_TEST */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MATH */
+  { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_FUNCT */
+  { OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_CALL */
+  { OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_MCALL */
+  { OT_EXP, 'A',   0, -1, -1, -1,  -1 } , /* DVM_CLOSE */
+  { OT_EXP,   0, 'B', -1, -1, -1,  -1 } , /* DVM_CRRE */
+  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JITC */
+  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JOINT */
+  { OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_RETURN */
+  { OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_YIELD */
+  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_DEBUG */
+  { OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_SECT */
 
-  { OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_II */ 
-  { OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_IF */ 
-  { OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_ID */ 
-  { OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FI */ 
-  { OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FF */ 
-  { OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FD */ 
-  { OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DI */ 
-  { OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DF */ 
-  { OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DD */ 
+  { OT_OOC, -1, -1, 'I', 'L', -1,  -1 } , /* DVM_GETC_I */
+  { OT_OOC, -1, -1, 'F', 'L', -1,  -1 } , /* DVM_GETC_F */
+  { OT_OOC, -1, -1, 'D', 'L', -1,  -1 } , /* DVM_GETC_D */
+  { OT_OOC, -1, -1, 'I', 'G', -1,  -1 } , /* DVM_GETV_I */
+  { OT_OOC, -1, -1, 'F', 'G', -1,  -1 } , /* DVM_GETV_F */
+  { OT_OOC, -1, -1, 'D', 'G', -1,  -1 } , /* DVM_GETV_D */
+
+  { OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_II */
+  { OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_IF */
+  { OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_ID */
+  { OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FI */
+  { OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FF */
+  { OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FD */
+  { OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DI */
+  { OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DF */
+  { OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DD */
 
   { OT_AOC, 'I', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_II */
   { OT_AOC, 'F', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_IF */
@@ -1169,9 +1169,9 @@ static const char vmcTyping[][7] =
   { OT_AOC, 'I', -1, 'D', -1, 'V', -1 } , /* DVM_MOVE_DI */
   { OT_AOC, 'F', -1, 'D', -1, 'V', -1 } , /* DVM_MOVE_DF */
   { OT_AOC, 'D', -1, 'D', -1, 'V', -1 } , /* DVM_MOVE_DD */
-  { OT_AOC, 'C', -1, 'C', -1, 'V', -1 } , /* DVM_MOVE_CC */ 
-  { OT_AOC, 'S', -1, 'S', -1, 'V', -1 } , /* DVM_MOVE_SS */ 
-  { OT_AOC, 'P', -1, 'P', -1, 'V', -1 } , /* DVM_MOVE_PP */ 
+  { OT_AOC, 'C', -1, 'C', -1, 'V', -1 } , /* DVM_MOVE_CC */
+  { OT_AOC, 'S', -1, 'S', -1, 'V', -1 } , /* DVM_MOVE_SS */
+  { OT_AOC, 'P', -1, 'P', -1, 'V', -1 } , /* DVM_MOVE_PP */
 
   { OT_AOC, 'I', -1, 'I', -1, -1, -1 } , /* DVM_NOT_I */
   { OT_AOC, 'F', -1, 'F', -1, -1, -1 } , /* DVM_NOT_F */
@@ -1183,7 +1183,7 @@ static const char vmcTyping[][7] =
   { OT_AOC, 'F', -1, 'F', -1, -1, -1 } , /* DVM_BITREV_F */
   { OT_AOC, 'D', -1, 'D', -1, -1, -1 } , /* DVM_BITREV_D */
   { OT_AOC, 'C', -1, 'C', -1, -1, -1 } , /* DVM_UNMS_C */
-   
+
   { OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_ADD_III */
   { OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_SUB_III */
   { OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_MUL_III */
@@ -1201,7 +1201,7 @@ static const char vmcTyping[][7] =
   { OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITXOR_III */
   { OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITLFT_III */
   { OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITRIT_III */
-  
+
   { OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_ADD_FFF */
   { OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_SUB_FFF */
   { OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_MUL_FFF */
@@ -1219,7 +1219,7 @@ static const char vmcTyping[][7] =
   { OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITXOR_FFF */
   { OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITLFT_FFF */
   { OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITRIT_FFF */
-  
+
   { OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_ADD_DDD */
   { OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_SUB_DDD */
   { OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_MUL_DDD */
@@ -1237,7 +1237,7 @@ static const char vmcTyping[][7] =
   { OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITXOR_DDD */
   { OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITLFT_DDD */
   { OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITRIT_DDD */
-  
+
   { OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_ADD_FNN */
   { OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_SUB_FNN */
   { OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_MUL_FNN */
@@ -1252,7 +1252,7 @@ static const char vmcTyping[][7] =
   { OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_NE_FNN */
   { OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_BITLFT_FNN */
   { OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_BITRIT_FNN */
-  
+
   { OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_ADD_DNN */
   { OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_SUB_DNN */
   { OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_MUL_DNN */
@@ -1273,40 +1273,40 @@ static const char vmcTyping[][7] =
   { OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_LE_SS */
   { OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_EQ_SS */
   { OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_NE_SS */
-  
-  { OT_ABC,   0, 'I',   0, -1,  -1, DAO_LIST } , /* DVM_GETI_LI */ 
-  { OT_ABC,   0, 'I',   0, -1, 'S', DAO_LIST } , /* DVM_SETI_LI */ 
-  { OT_ABC,   0, 'I', 'I', -1,  -1, DAO_STRING } , /* DVM_GETI_SI */ 
-  { OT_ABC, 'I', 'I',   0, -1, 'S', DAO_STRING } , /* DVM_SETI_SII */ 
-  { OT_ABC, 'I', 'I', 'I', -1,  -1, DAO_LIST } , /* DVM_GETI_LII */ 
-  { OT_ABC, 'F', 'I', 'F', -1,  -1, DAO_LIST } , /* DVM_GETI_LFI */ 
-  { OT_ABC, 'D', 'I', 'D', -1,  -1, DAO_LIST } , /* DVM_GETI_LDI */ 
-  { OT_ABC, 'S', 'I', 'S', -1,  -1, DAO_LIST } , /* DVM_GETI_LSI */ 
 
-  { OT_ABC, 'I', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIII */ 
-  { OT_ABC, 'F', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIIF */ 
-  { OT_ABC, 'D', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIID */ 
-  { OT_ABC, 'I', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFII */ 
-  { OT_ABC, 'F', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFIF */ 
-  { OT_ABC, 'D', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFID */ 
-  { OT_ABC, 'I', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDII */ 
-  { OT_ABC, 'F', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDIF */ 
-  { OT_ABC, 'D', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDID */ 
-  { OT_ABC, 'S', 'I', 'S', -1, 'S', DAO_LIST } , /* DVM_SETI_LSIS */ 
+  { OT_ABC,   0, 'I',   0, -1,  -1, DAO_LIST } , /* DVM_GETI_LI */
+  { OT_ABC,   0, 'I',   0, -1, 'S', DAO_LIST } , /* DVM_SETI_LI */
+  { OT_ABC,   0, 'I', 'I', -1,  -1, DAO_STRING } , /* DVM_GETI_SI */
+  { OT_ABC, 'I', 'I',   0, -1, 'S', DAO_STRING } , /* DVM_SETI_SII */
+  { OT_ABC, 'I', 'I', 'I', -1,  -1, DAO_LIST } , /* DVM_GETI_LII */
+  { OT_ABC, 'F', 'I', 'F', -1,  -1, DAO_LIST } , /* DVM_GETI_LFI */
+  { OT_ABC, 'D', 'I', 'D', -1,  -1, DAO_LIST } , /* DVM_GETI_LDI */
+  { OT_ABC, 'S', 'I', 'S', -1,  -1, DAO_LIST } , /* DVM_GETI_LSI */
 
-  { OT_ABC, 'I', 'I', 'I', -1,  -1, DAO_ARRAY } , /* DVM_GETI_AII */ 
-  { OT_ABC, 'F', 'I', 'F', -1,  -1, DAO_ARRAY } , /* DVM_GETI_AFI */ 
-  { OT_ABC, 'D', 'I', 'D', -1,  -1, DAO_ARRAY } , /* DVM_GETI_ADI */ 
+  { OT_ABC, 'I', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIII */
+  { OT_ABC, 'F', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIIF */
+  { OT_ABC, 'D', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIID */
+  { OT_ABC, 'I', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFII */
+  { OT_ABC, 'F', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFIF */
+  { OT_ABC, 'D', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFID */
+  { OT_ABC, 'I', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDII */
+  { OT_ABC, 'F', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDIF */
+  { OT_ABC, 'D', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDID */
+  { OT_ABC, 'S', 'I', 'S', -1, 'S', DAO_LIST } , /* DVM_SETI_LSIS */
 
-  { OT_ABC, 'I', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIII */ 
-  { OT_ABC, 'F', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIIF */ 
-  { OT_ABC, 'D', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIID */ 
-  { OT_ABC, 'I', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFII */ 
-  { OT_ABC, 'F', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFIF */ 
-  { OT_ABC, 'D', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFID */ 
-  { OT_ABC, 'I', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADII */ 
-  { OT_ABC, 'F', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADIF */ 
-  { OT_ABC, 'D', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADID */ 
+  { OT_ABC, 'I', 'I', 'I', -1,  -1, DAO_ARRAY } , /* DVM_GETI_AII */
+  { OT_ABC, 'F', 'I', 'F', -1,  -1, DAO_ARRAY } , /* DVM_GETI_AFI */
+  { OT_ABC, 'D', 'I', 'D', -1,  -1, DAO_ARRAY } , /* DVM_GETI_ADI */
+
+  { OT_ABC, 'I', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIII */
+  { OT_ABC, 'F', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIIF */
+  { OT_ABC, 'D', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIID */
+  { OT_ABC, 'I', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFII */
+  { OT_ABC, 'F', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFIF */
+  { OT_ABC, 'D', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFID */
+  { OT_ABC, 'I', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADII */
+  { OT_ABC, 'F', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADIF */
+  { OT_ABC, 'D', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADID */
 
   { OT_ABC,   0, 'I',   0, -1,  -1, DAO_TUPLE } , /* DVM_GETI_TI */
   { OT_ABC,   0, 'I',   0, -1, 'S', DAO_TUPLE } , /* DVM_SETI_TI */
@@ -1332,39 +1332,39 @@ static const char vmcTyping[][7] =
   { OT_ABC, 'C', 'C', 'C', -1, -1,        -1 } , /* DVM_MUL_CC */
   { OT_ABC, 'C', 'C', 'C', -1, -1,        -1 } , /* DVM_DIV_CC */
 
-  { OT_ABC, 'C', 'I', 'C', -1,  -1, DAO_ARRAY } , /* DVM_GETI_ACI */ 
-  { OT_ABC, 'C', 'I', 'C', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ACI */ 
-  
-  { OT_ABC,  0,  0,  0, -1,  -1,           -1 } , /* DVM_GETI_AM */ 
-  { OT_ABC,  0,  0,  0, -1, 'S',           -1 } , /* DVM_SETI_AM */ 
-  
+  { OT_ABC, 'C', 'I', 'C', -1,  -1, DAO_ARRAY } , /* DVM_GETI_ACI */
+  { OT_ABC, 'C', 'I', 'C', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ACI */
+
+  { OT_ABC,  0,  0,  0, -1,  -1,           -1 } , /* DVM_GETI_AM */
+  { OT_ABC,  0,  0,  0, -1, 'S',           -1 } , /* DVM_SETI_AM */
+
   { OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF_M */
-  
-  { OT_AIC,  0, -1,  0, 'C',  -1,  DAO_CLASS  } , /* DVM_GETF_KC */ 
-  { OT_AIC,  0, -1,  0, 'G',  -1,  DAO_CLASS  } , /* DVM_GETF_KG */ 
-  { OT_AIC,  0, -1,  0, 'C',  -1,  DAO_OBJECT } , /* DVM_GETF_OC */ 
-  { OT_AIC,  0, -1,  0, 'G',  -1,  DAO_OBJECT } , /* DVM_GETF_OG */ 
-  { OT_AIC,  0, -1,  0, 'V',  -1,  DAO_OBJECT } , /* DVM_GETF_OV */ 
+
+  { OT_AIC,  0, -1,  0, 'C',  -1,  DAO_CLASS  } , /* DVM_GETF_KC */
+  { OT_AIC,  0, -1,  0, 'G',  -1,  DAO_CLASS  } , /* DVM_GETF_KG */
+  { OT_AIC,  0, -1,  0, 'C',  -1,  DAO_OBJECT } , /* DVM_GETF_OC */
+  { OT_AIC,  0, -1,  0, 'G',  -1,  DAO_OBJECT } , /* DVM_GETF_OG */
+  { OT_AIC,  0, -1,  0, 'V',  -1,  DAO_OBJECT } , /* DVM_GETF_OV */
   { OT_AIC,  0, -1,  0, 'C', 'S',  DAO_CLASS  } , /* DVM_SETF_KG */
   { OT_AIC,  0, -1,  0, 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OG */
   { OT_AIC,  0, -1,  0, 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OV */
-  
-  { OT_AIC,  0, -1, 'I', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCI */ 
+
+  { OT_AIC,  0, -1, 'I', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCI */
   { OT_AIC,  0, -1, 'I', 'G', -1,  DAO_CLASS  } , /* DVM_GETF_KGI */
-  { OT_AIC,  0, -1, 'I', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCI */ 
+  { OT_AIC,  0, -1, 'I', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCI */
   { OT_AIC,  0, -1, 'I', 'G', -1,  DAO_OBJECT } , /* DVM_GETF_OGI */
   { OT_AIC,  0, -1, 'I', 'V', -1,  DAO_OBJECT } , /* DVM_GETF_OVI */
-  { OT_AIC,  0, -1, 'F', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCF */ 
+  { OT_AIC,  0, -1, 'F', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCF */
   { OT_AIC,  0, -1, 'F', 'G', -1,  DAO_CLASS  } , /* DVM_GETF_KGF */
-  { OT_AIC,  0, -1, 'F', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCF */ 
+  { OT_AIC,  0, -1, 'F', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCF */
   { OT_AIC,  0, -1, 'F', 'G', -1,  DAO_OBJECT } , /* DVM_GETF_OGF */
   { OT_AIC,  0, -1, 'F', 'V', -1,  DAO_OBJECT } , /* DVM_GETF_OVF */
-  { OT_AIC,  0, -1, 'D', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCD */ 
+  { OT_AIC,  0, -1, 'D', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCD */
   { OT_AIC,  0, -1, 'D', 'G', -1,  DAO_CLASS  } , /* DVM_GETF_KGD */
-  { OT_AIC,  0, -1, 'D', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCD */ 
+  { OT_AIC,  0, -1, 'D', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCD */
   { OT_AIC,  0, -1, 'D', 'G', -1,  DAO_OBJECT } , /* DVM_GETF_OGD */
   { OT_AIC,  0, -1, 'D', 'V', -1,  DAO_OBJECT } , /* DVM_GETF_OVD */
-  
+
   { OT_AIC, 'I', -1, 'I', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGII */
   { OT_AIC, 'I', -1, 'I', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGII */
   { OT_AIC, 'I', -1, 'I', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVII */
@@ -1397,12 +1397,12 @@ static const char vmcTyping[][7] =
   { OT_AOO, 'F', -1, -1, -1, -1,  -1 } , /* DVM_TEST_F */
   { OT_AOO, 'D', -1, -1, -1, -1,  -1 } , /* DVM_TEST_D */
 
-  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_CF */ 
-  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_CMF */ 
-  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_TC */ 
-  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_MCALL_TC */ 
+  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_CF */
+  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_CMF */
+  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_TC */
+  { OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_MCALL_TC */
 
-  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SAFE_GOTO */ 
+  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SAFE_GOTO */
 
   { OT_OOO, -1, -1, -1, -1, -1, -1 } /* NULL */
 };
@@ -1422,7 +1422,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
   vmc2.code = opcode; \
   vmc2.c = opABC; \
   DArray_Append( addCode, & vmc2 ); \
-  DArray_Append( addRegType, inumt ); 
+  DArray_Append( addRegType, inumt );
 
   int typed_code = daoConfig.typedcode;
   int i, j, k, cid=0, ec = 0, retinf = 0;
@@ -1468,7 +1468,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
   /* To support Edit&Continue in DaoStudio, some of the features
    * have to be switched off:
    * (1) function specialization based on parameter types;
-   * (2) instruction specialization requiring 
+   * (2) instruction specialization requiring
    *     additional instructions and vm registers; */
 
   if( self->vmCodes->size ==0 ) return 1;
@@ -1762,7 +1762,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         }else if( at->tid == DAO_LIST ){
           /*
            */
-          if( bt->tid == DAO_INTEGER || bt->tid == DAO_FLOAT 
+          if( bt->tid == DAO_INTEGER || bt->tid == DAO_FLOAT
               || bt->tid == DAO_DOUBLE ){
             ct = at->nested->items.pAbtp[0];
             if( typed_code && notide ){
@@ -1826,7 +1826,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             ct = at->nested->items.pAbtp[1];
           }
         }else if( at->tid == DAO_ARRAY ){
-          if( bt->tid == DAO_INTEGER || bt->tid == DAO_FLOAT 
+          if( bt->tid == DAO_INTEGER || bt->tid == DAO_FLOAT
               || bt->tid == DAO_DOUBLE ){
             /* array[i] */
             ct = at->nested->items.pAbtp[0];
@@ -1907,7 +1907,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           }
         }else if( at->tid == DAO_OBJECT && DaoClass_FindOperator( at->X.klass, "[]", self->hostClass ) ){
           ct = any; /* XXX */
-        }else if( at->tid == DAO_UDF || at->tid == DAO_ANY 
+        }else if( at->tid == DAO_UDF || at->tid == DAO_ANY
             || at->tid == DAO_INITYPE || at->tid == DAO_CDATA /* XXX */ ){
           ct = any;
         }
@@ -2183,7 +2183,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
               if( DaoAbsType_MatchTo( bt, t0, defs ) ==0) goto InvKey;
               if( DaoAbsType_MatchTo( at, t1, defs )==0 ) goto NotMatch;
               /* define types for: h={=>}; h["A"]=1; */
-              if( t0->tid ==DAO_UDF || t0->tid ==DAO_INITYPE 
+              if( t0->tid ==DAO_UDF || t0->tid ==DAO_INITYPE
                   || t1->tid ==DAO_UDF || t1->tid ==DAO_INITYPE )
                 type[opc] = DaoAbsType_DefineTypes( ct, ns, defs );
             }
@@ -2315,7 +2315,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
                 setter = 1;
                 ts[0] = type[opc];
                 ts[1] = at;
-                rout = DRoutine_GetOverLoadByParamType( rout, ct, 
+                rout = DRoutine_GetOverLoadByParamType( rout, ct,
                     NULL, ts, 2, DVM_MCALL, &min, &norm, &spec, & worst );
                 if( rout == NULL ) goto NotMatch;
               }
@@ -2392,7 +2392,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             if( rout == NULL ) goto NotMatch; /* XXX */
             ts[0] = ct;
             ts[1] = at;
-            rout = DRoutine_GetOverLoadByParamType( rout, ct, NULL, 
+            rout = DRoutine_GetOverLoadByParamType( rout, ct, NULL,
                 ts, 2, DVM_MCALL, &min, &norm, &spec, & worst );
             if( rout == NULL ) goto NotMatch;
             break;
@@ -2442,7 +2442,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
            printf( "%i  %i\n", DAO_MT_SUB, k );
          */
 
-        if( csts[opa].t == DAO_ROUTINE && type[opc] 
+        if( csts[opa].t == DAO_ROUTINE && type[opc]
             && ( type[opc]->tid ==DAO_ROUTINE || type[opc]->tid ==DAO_FUNCTION ) ){
           /* a : routine<a:number,...> = overloaded_function; */
           rout = DRoutine_GetOverLoadByType( (DRoutine*)csts[opa].v.routine, type[opc] );
@@ -2476,7 +2476,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             vmc->code = DVM_MOVE_CC;
           }else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
             vmc->code = DVM_MOVE_SS;
-          }else if( at->tid >= DAO_ARRAY && at->tid < DAO_ANY 
+          }else if( at->tid >= DAO_ARRAY && at->tid < DAO_ANY
               && at->tid != DAO_ROUTINE && at->tid != DAO_CLASS ){
             if( DString_EQ( at->name, ct->name ) ){
               if( DString_FindChar( at->name, '?', 0 ) == MAXSIZE ){
@@ -2492,7 +2492,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         }
         break;
       }
-    case DVM_ADD : case DVM_SUB : case DVM_MUL : 
+    case DVM_ADD : case DVM_SUB : case DVM_MUL :
     case DVM_DIV : case DVM_MOD : case DVM_POW :
       {
         init[opc] = 1;
@@ -2511,7 +2511,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           ct = udf;
         }else if( at->tid ==DAO_ANY || bt->tid ==DAO_ANY
             || at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
-            || at->tid == DAO_CDATA || bt->tid == DAO_CDATA 
+            || at->tid == DAO_CDATA || bt->tid == DAO_CDATA
             /* XXX more strict checking */
             ){
           ct = any;
@@ -2538,10 +2538,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             && bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE ){
           ct = at->tid > bt->tid ? at : bt;
         }else if( ( at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE )
-            && (bt->tid ==DAO_COMPLEX || bt->tid == DAO_LONG 
+            && (bt->tid ==DAO_COMPLEX || bt->tid == DAO_LONG
               || bt->tid ==DAO_ARRAY) ){
           ct = bt;
-        }else if( (at->tid ==DAO_COMPLEX || at->tid == DAO_LONG 
+        }else if( (at->tid ==DAO_COMPLEX || at->tid == DAO_LONG
               || at->tid ==DAO_ARRAY)
             && ( bt->tid >= DAO_INTEGER && bt->tid <=DAO_DOUBLE ) ){
           ct = at;
@@ -2594,10 +2594,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         if( at == NULL || bt == NULL ) goto ErrorTyping;
         if( init[opa] ==0 || init[opb] == 0 ) goto NotInit;
         ct = inumt;
-        if( at->tid == DAO_ANY || bt->tid == DAO_ANY 
+        if( at->tid == DAO_ANY || bt->tid == DAO_ANY
             || at->tid == DAO_UDF || bt->tid == DAO_UDF
             || at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
-            || at->tid == DAO_CDATA || bt->tid == DAO_CDATA 
+            || at->tid == DAO_CDATA || bt->tid == DAO_CDATA
             /* XXX more strict checking */
           ){
           ct = any;
@@ -2626,7 +2626,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
               if( DaoAbsType_MatchTo( at, bt, defs ) != DAO_MT_EQ ) ct = any;
             }
             break;
-          default : 
+          default :
             ct = inumt;
             if( code != DVM_EQ && code != DVM_NE ) goto InvOper;
           }
@@ -2682,7 +2682,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
            printf( "c: %s\n", type[opc]->name->mbs );
          */
         if( typed_code ){
-          if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE 
+          if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE
               && at->tid == type[opc]->tid ){
             vmc->code = 3 * ( vmc->code - DVM_NOT ) + DVM_NOT_I
               + at->tid - DAO_INTEGER;
@@ -2709,16 +2709,16 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             at = DaoNameSpace_MakeAbsType( ns, "list", DAO_LIST, NULL, & bt, at!=NULL );
             type[opa] = at;
           }
-        }else if( at->tid == DAO_ANY || bt->tid == DAO_ANY 
+        }else if( at->tid == DAO_ANY || bt->tid == DAO_ANY
             || at->tid == DAO_UDF || bt->tid == DAO_UDF
             || at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT ){
           ct = any;
         }else if( at->tid == bt->tid ){
           ct = at;
           if( at->tid > DAO_DOUBLE && at->tid != DAO_LONG ) goto InvOper;
-        }else if( ((at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE) 
+        }else if( ((at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE)
               || at->tid == DAO_LONG )
-            && ((bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE) 
+            && ((bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE)
               || bt->tid == DAO_LONG) ){
           ct = at->tid > bt->tid ? at : bt;
         }else{
@@ -2772,7 +2772,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         ts[1] = type[opb];
         if( csts[opa].sub == DAO_PARNAME ){
           csts[opc] = csts[opa];
-          ct = DaoNameSpace_MakeAbsType( ns, csts[opa].v.s->mbs, 
+          ct = DaoNameSpace_MakeAbsType( ns, csts[opa].v.s->mbs,
               DAO_PAR_NAMED, (DaoBase*) type[opb], 0, 0 );
         }else{
           ct = DaoNameSpace_MakeAbsType( ns, "pair", DAO_PAIR, NULL, ts, 2 );
@@ -2848,10 +2848,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           }else if( opb == 3 ){
             at = type[opa];
             if( at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE ){
-              if( type[opa+1]->tid < DAO_INTEGER 
+              if( type[opa+1]->tid < DAO_INTEGER
                   || type[opa+1]->tid > DAO_DOUBLE ) goto ErrorTyping;
             }else if( at->tid ==DAO_COMPLEX ){
-              if( type[opa+1]->tid < DAO_INTEGER 
+              if( type[opa+1]->tid < DAO_INTEGER
                   || type[opa+1]->tid > DAO_COMPLEX ) goto ErrorTyping;
             }else if( at->tid == DAO_STRING ){
               if( type[opa+1]->tid != DAO_STRING ) goto ErrorTyping;
@@ -2860,7 +2860,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             }else{
               goto ErrorTyping;
             }
-            if( type[opa+2]->tid < DAO_INTEGER 
+            if( type[opa+2]->tid < DAO_INTEGER
                 || type[opa+2]->tid > DAO_DOUBLE ) goto ErrorTyping;
             if( vmc->code ==DVM_ARRAY && at->tid ==DAO_STRING ) goto ErrorTyping;
           }else{
@@ -3180,7 +3180,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 
           /* if the minimum match is less than DAO_MT_SUB, take the
            * worst compatible routine.
-           * 
+           *
            * consider the following example:
            * 1: A = { "abc" => "123" };
            * 2: I = A.has( "xyz" );
@@ -3263,7 +3263,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         }
         if( ! ctchecked && ! (opb & DAO_CALL_COROUT) ){
           ct = ct->X.abtype;
-          if( vmc->code == DVM_CALL_CF && opb ==1 
+          if( vmc->code == DVM_CALL_CF && opb ==1
               && type[opa+1]->tid == DAO_DOUBLE
               && ct && ct->tid == DAO_DOUBLE ){
 #if 0
@@ -3367,7 +3367,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           at = type[opa];
           if( at ==NULL ) goto ErrorTyping;
           if( vmc->b >1 )
-            at = DaoNameSpace_MakeAbsType( ns, "tuple", DAO_TUPLE, 
+            at = DaoNameSpace_MakeAbsType( ns, "tuple", DAO_TUPLE,
                 NULL, type+opa, vmc->b);
 
           if( retinf && ct->tid != DAO_UDF ){
@@ -3433,10 +3433,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
       tp = type+opa+1;
       j = vmc->b & 0xff;
       rout = (DRoutine*) csts[opa].v.routine;
-      rout = DRoutine_GetOverLoadByParamType( rout, NULL, 
+      rout = DRoutine_GetOverLoadByParamType( rout, NULL,
           pp, tp, j, code, &min, &norm, &spec, &worst );
       if( rout ==NULL ) goto InvParam;
-      if( min != DAO_MT_EQ || norm ==0 || (opb & 0xff00) !=0 
+      if( min != DAO_MT_EQ || norm ==0 || (opb & 0xff00) !=0
           || rout->parCount == DAO_MAX_PARAM )
         goto ErrorTyping;
       if( rout->type != DAO_FUNCTION ) goto ErrorTyping;
@@ -3469,7 +3469,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         type[opa] = rout->routType;
         ct = rout->routType->X.abtype;
       }else if( at->tid == DAO_ROUTINE ){
-        j = DRoutine_CheckType( at, ns, NULL, pp, tp, 
+        j = DRoutine_CheckType( at, ns, NULL, pp, tp,
             vmc->b, code,1,&min, &norm, &spec );
         if( j <=0 ) goto ErrorTyping;
         ct = at->X.abtype;
@@ -3507,9 +3507,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         init[opc] = 1;
         break;
       }
-    case DVM_SETV_II : case DVM_SETV_IF : case DVM_SETV_ID : 
-    case DVM_SETV_FI : case DVM_SETV_FF : case DVM_SETV_FD : 
-    case DVM_SETV_DI : case DVM_SETV_DF : case DVM_SETV_DD : 
+    case DVM_SETV_II : case DVM_SETV_IF : case DVM_SETV_ID :
+    case DVM_SETV_FI : case DVM_SETV_FF : case DVM_SETV_FD :
+    case DVM_SETV_DI : case DVM_SETV_DF : case DVM_SETV_DD :
       {
         tp = NULL;
         if( opc != DAO_G && self->hostClass == NULL ) goto ErrorTyping;
@@ -3540,7 +3540,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
       break;
     case DVM_MOVE_PP :
       if( init[opa] ==0 ) goto NotInit;
-      if( at ==NULL || at->tid < DAO_ARRAY || at->tid >= DAO_ANY ) 
+      if( at ==NULL || at->tid < DAO_ARRAY || at->tid >= DAO_ANY )
         goto NotMatch;
       if( ct ==NULL || ct->tid ==DAO_UDF ) type[opc] = at;
       if( type[opc]->tid != at->tid ) goto NotMatch;
@@ -3563,7 +3563,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
     case DVM_BITAND_DDD  : case DVM_BITOR_DDD  : case DVM_BITXOR_DDD :
     case DVM_BITLFT_DDD  : case DVM_BITRIT_DDD  :
     case DVM_ADD_CC : case DVM_SUB_CC : case DVM_MUL_CC : case DVM_DIV_CC :
-    case DVM_ADD_SS : case DVM_LT_SS : case DVM_LE_SS : 
+    case DVM_ADD_SS : case DVM_LT_SS : case DVM_LE_SS :
     case DVM_EQ_SS : case DVM_NE_SS :
       {
         if( csts[opc].cst ) goto ModifyConstant;
@@ -3697,7 +3697,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         break;
       }
     case DVM_GETF_T :
-    case DVM_GETF_TI : case DVM_GETF_TF : 
+    case DVM_GETF_TI : case DVM_GETF_TF :
     case DVM_GETF_TD : case DVM_GETF_TS :
       {
         init[opc] = 1;
@@ -3846,7 +3846,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
       DArray_Append( vmCodeNew, addCode->items.pVmc[0] );
       DArray_PopFront( addCode );
     }
-    if( c ==DVM_GOTO || c ==DVM_TEST || c ==DVM_SWITCH || c == DVM_CASE 
+    if( c ==DVM_GOTO || c ==DVM_TEST || c ==DVM_SWITCH || c == DVM_CASE
         || c == DVM_ASSERT || ( c >=DVM_TEST_I && c <=DVM_TEST_D ) ){
       if( vmc->b >0 ) vmc->b += addCount[vmc->b-1];
     }else if( c ==DVM_CRRE && vmc->c >0 ){
@@ -3939,7 +3939,7 @@ ErrorTyping:
 
 
 static const char *const sep1 = "==========================================\n";
-static const char *const sep2 = 
+static const char *const sep2 =
 "-------------------------------------------------------------------------\n";
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
@@ -3957,7 +3957,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
   DaoStream_WriteMBS( stream, "\n" );
   DaoStream_WriteMBS( stream, sep1 );
   DaoStream_WriteMBS( stream, "Virtual Machine Code:\n\n" );
-  DaoStream_WriteMBS( stream, 
+  DaoStream_WriteMBS( stream,
       "   ID  :    OPCODE    :      A ,      B ,      C ;  [ LINE ],  NOTES\n" );
 
   DaoStream_WriteMBS( stream, sep2 );
@@ -4027,7 +4027,7 @@ void DaoFunction_SimpleCall( DaoFunction *self, DaoContext *ctx, DValue *p[], in
     }
   }
   for(i=N; i<ndef; i++) param[i] = & buffer[i];
-  DRoutine_PassDefault( self, param, passed );
+  DRoutine_PassDefault( (DRoutine*)self, param, passed );
   ctx->thisFunction = self;
   self->pFunc( ctx, param, N );
 }
