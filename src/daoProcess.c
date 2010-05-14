@@ -28,7 +28,7 @@
 #include"daoRoutine.h"
 #include"daoVmspace.h"
 #include"daoNamespace.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoRegex.h"
 #include"daoStream.h"
 #include"daoParser.h"
@@ -385,7 +385,7 @@ void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DValue *its[], int
 int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *ret )
 {
   DaoContext *ctx = self->topFrame->context;
-  DaoAbsType *tp;
+  DaoType *tp;
   DaoVmCode *vmc;
   DaoTuple *tuple;
   if( self->status != DAO_VMPROC_SUSPENDED ) return 0;
@@ -516,7 +516,7 @@ typedef int (*DaoJitFunc)( DValue *locVars, DaoExtraParam *extra );
 
 void DaoArray_SetItem( DValue *va, DaoContext *ctx, DValue pid, DValue value, int op );
 void DaoContext_AdjustCodes( DaoContext *self, int options );
-int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoAbsType *t );
+int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t );
 void DValue_SimpleMove2( DValue from, DValue *to );
 
 static void DaoVM_EnsureConst( DValue **locVars, DValue *locBuf, DaoVmCode *vmc )
@@ -532,7 +532,7 @@ static void DaoVM_EnsureConst( DValue **locVars, DValue *locBuf, DaoVmCode *vmc 
   }
 }
 static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts, 
-    DValue **values, DaoAbsType ***types )
+    DValue **values, DaoType ***types )
 {
   DaoNameSpace *ns = ctx->nameSpace;
   DaoObject *object = ctx->object;
@@ -582,9 +582,9 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
   DValue **locVars;
   DValue *cstValues[ DAO_G+1 ];
   DValue *varValues[ DAO_G+1 ];
-  DaoAbsType **varTypes[ DAO_G+1 ];
-  DaoAbsType  **locTypes;
-  DaoAbsType *abtp;
+  DaoType **varTypes[ DAO_G+1 ];
+  DaoType  **locTypes;
+  DaoType *abtp;
   DaoFunction *func;
   DaoTuple *tuple;
   DaoList *list;
@@ -1142,7 +1142,7 @@ OPCASE( SETF ){
 }OPNEXT()
 OPCASE( LOAD ){
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, *locVars[ vmc->a ], NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, *locVars[ vmc->a ], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = locVars[ vmc->a ];
 }OPNEXT()
 OPCASE( CAST ){
@@ -1907,7 +1907,7 @@ OPCASE( GETI_LI ){
   id = locVars[ vmc->b ]->v.i;
   abtp = locTypes[ vmc->c ];
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-  if( abtp && DaoAbsType_MatchValue( abtp, list->items->data[id], NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, list->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = list->items->data + id;
   DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
 }OPNEXT()
@@ -2159,7 +2159,7 @@ OPCASE( GETI_TI ){
   id = locVars[ vmc->b ]->v.i;
   abtp = locTypes[ vmc->c ];
   if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
-  if( abtp && DaoAbsType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = tuple->items->data + id;
   DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
 }OPNEXT()
@@ -2178,7 +2178,7 @@ OPCASE( GETF_T ){
   tuple = locVars[ vmc->a ]->v.tuple;
   id = vmc->b;
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = tuple->items->data + id;
   DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
 }OPNEXT()
@@ -2263,31 +2263,31 @@ OPCASE( GETF_M ){
 OPCASE( GETF_KC ){
   value = locVars[ vmc->a ]->v.klass->cstData->data + vmc->b;
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = value;
 }OPNEXT()
 OPCASE( GETF_KG ){
   value = locVars[ vmc->a ]->v.klass->glbData->data + vmc->b;
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = value;
 }OPNEXT()
 OPCASE( GETF_OC ){
   value = locVars[ vmc->a ]->v.object->myClass->cstData->data + vmc->b;
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = value;
 }OPNEXT()
 OPCASE( GETF_OG ){
   value = locVars[ vmc->a ]->v.object->myClass->glbData->data + vmc->b;
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = value;
 }OPNEXT()
 OPCASE( GETF_OV ){
   value = locVars[ vmc->a ]->v.object->objData->data + vmc->b;
   abtp = locTypes[ vmc->c ];
-  if( abtp && DaoAbsType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
+  if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = value;
   DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
 }OPNEXT()
@@ -2660,7 +2660,7 @@ static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int en
   DValue res = daoNilValue, param = *self->regValues[ vmc->b ];
   DaoTuple *tuple = param.v.tuple;
   DaoList *list = param.v.list;
-  DaoAbsType *type = self->regTypes[ index + 2 ];
+  DaoType *type = self->regTypes[ index + 2 ];
   DValue *item = self->regValues[ index + 2 ];
   int i, noinit=1;
   if( param.t == DAO_TUPLE ){
@@ -2688,7 +2688,7 @@ static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int e
   DValue res = daoNilValue, param = *self->regValues[ vmc->b ];
   DaoTuple *tuple = param.v.tuple;
   DaoArray *array = param.v.array;
-  DaoAbsType *type = self->regTypes[ index + 2 ];
+  DaoType *type = self->regTypes[ index + 2 ];
   DValue *item = self->regValues[ index + 2 ];
   complex16 com = {0.0,0.0};
   int i, noinit=1;
@@ -2716,7 +2716,7 @@ static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int 
 {
   DValue param = *self->regValues[ vmc->b ];
   DaoList *result = DaoContext_PutList( self );
-  DaoAbsType *type = self->regTypes[ index + 1 ];
+  DaoType *type = self->regTypes[ index + 1 ];
   DValue *init = self->regValues[ index + 1 ];
   DValue *test = self->regValues[ index ];
   DValue_Move( param, init, type );
@@ -2727,7 +2727,7 @@ static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int 
     DaoVmProcess_ExecuteSection( self->process, entry );
   }
 }
-static void DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoAbsType *type )
+static void DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
 {
   DArray *dims = DArray_Copy( array->dims );
   int j, k, t, m = 1;
@@ -2913,7 +2913,7 @@ static void DaoContext_MapSIC( DaoContext *self, DaoVmCode *vmc, int index, int 
 InvalidParam:
   DaoContext_RaiseException( self, DAO_ERROR, "invalid parameter" );
 }
-int DaoArray_FromList( DaoArray *self, DaoList *list, DaoAbsType *tp );
+int DaoArray_FromList( DaoArray *self, DaoList *list, DaoType *tp );
 static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int index, int entry, int last )
 {
   int i, stype=1, count = DValue_GetInteger( *self->regValues[ vmc->b ] );

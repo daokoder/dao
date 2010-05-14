@@ -4308,7 +4308,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		fout_source.print( tpl_typedef.expand( kvmap2 ) );
 	}
 	fout_source.println( '  DaoNameSpace_AddConstNumbers( ns, constNumbers );' );
-  fout_source.println( '  DaoNameSpace_AddTypes( ns, typers, 0 );' );
+  fout_source.println( '  DaoNameSpace_CreateTypes( ns, typers, 0 );' );
   if( nalias >1 ) fout_source.println( '  DaoNameSpace_TypeDefines( ns, aliases );' );
 	for( utp in namespaces ){
 		s = utp.name;
@@ -4316,7 +4316,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		if( ns_numbers.has( s ) )
       fout_source.println( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
 		if( ns_types.has( s ) )
-      fout_source.println( '  DaoNameSpace_AddTypes( ns2, dao_' +s+ '_Types, 0 );' );
+      fout_source.println( '  DaoNameSpace_CreateTypes( ns2, dao_' +s+ '_Types, 0 );' );
     if( ns_has_aliases.has( s ) )
       fout_source.println( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
   }
@@ -4324,7 +4324,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		s = utp.name;
 		if( ns_funcs.has( s ) ){
       fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
-      fout_source.println( '  DaoNameSpace_AddFunctions( ns2, dao_' +s+ '_Funcs );' );
+      fout_source.println( '  DaoNameSpace_CreateFunctions( ns2, dao_' +s+ '_Funcs );' );
     }
 	}
 	kvmap[ 'refer' ] = '&';
@@ -4359,7 +4359,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		kvmap[ 'name' ] = (string) p[2];
 		fout_source.print( add_ccdata.expand( kvmap ) );
 	}
-	fout_source.println( '  DaoNameSpace_AddFunctions( ns, dao_Funcs );' );
+	fout_source.println( '  DaoNameSpace_CreateFunctions( ns, dao_Funcs );' );
   kvmap2[ 'ns' ] = 'ns';
 	for( alias in typedef_ns_types.keys(); utp in typedef_ns_types.values() ){
 		kvmap2[ 'old' ] = utp.snamespace + '::' + utp.name;

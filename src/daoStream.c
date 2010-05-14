@@ -17,7 +17,7 @@
 #include"daoRoutine.h"
 #include"daoContext.h"
 #include"daoProcess.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoNamespace.h"
 
 static void DaoIO_Print0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )

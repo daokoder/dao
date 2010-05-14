@@ -19,7 +19,7 @@
 #include"daoMap.h"
 #include"daoArray.h"
 #include"daoString.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 
 #define RB_RED    0
 #define RB_BLACK  1

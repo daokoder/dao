@@ -18,7 +18,7 @@
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoObject.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoThread.h"
 #include"daoJit.h"
 #include"stdlib.h"
@@ -885,7 +885,7 @@ static void DaoJIT_X87Load( DaoJIT *self, int code, int rmsti, int modsib, int g
 static void DaoJIT_X87Load2( DaoJIT *self, int get, int put, int reg )
 {
   int t = 0;
-  DaoAbsType *abtp = NULL;
+  DaoType *abtp = NULL;
   if( self->routine ){
     abtp = self->routine->regType->items.pAbtp[get];
     if( abtp ) t = abtp->tid;
@@ -942,7 +942,7 @@ static void DaoJIT_X87StoreAndPop( DaoJIT *self )
 {
   //printf( "DaoJIT_X87StoreAndPop()\n" );
   int j, tp, mem, index;
-  DaoAbsType *abtp = NULL;
+  DaoType *abtp = NULL;
   if( self->x87Top <0 ) return;
   mem = self->x87Stack[self->x87Top].store;
   index = self->x87Stack[self->x87Top].index;
@@ -1118,7 +1118,7 @@ static int DaoJIT_Encode( DaoJIT *self, DaoVmcArray *vmCodes, int id, int min, i
 {
   DaoVmCode *vmc = vmCodes->codes + id;
   DaoVmCode *vmc2;
-  DaoAbsType **type = self->routine->regType->items.pAbtp;
+  DaoType **type = self->routine->regType->items.pAbtp;
   DNode *node;
   ushort_t code = vmc->code;
   ushort_t opa = vmc->a;

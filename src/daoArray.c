@@ -17,7 +17,7 @@
 
 #include"daoArray.h"
 #include"daoType.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoContext.h"
 #include"daoParser.h"
 

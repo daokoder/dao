@@ -20,7 +20,7 @@
 #include"daoStream.h"
 #include"daoRoutine.h"
 #include"daoObject.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 
 #if 1
 const DValue daoNilValue = { 0, 0, 0, 0, {0}};
@@ -298,9 +298,9 @@ void DValue_Copy( DValue *self, DValue from )
 {
   DValue_CopyExt( self, from, 1 );
 }
-void DValue_SetAbsType( DValue *to, DaoAbsType *tp )
+void DValue_SetType( DValue *to, DaoType *tp )
 {
-  DaoAbsType *tp2;
+  DaoType *tp2;
   DNode *it;
   if( to->t != tp->tid && tp->tid != DAO_ANY ) return;
   /* XXX compatible types? list<int> list<float> */
@@ -354,8 +354,8 @@ void DValue_SimpleMove( DValue from, DValue *to )
   DValue_CopyExt( to, from, 0 );
 }
 #if 0
-int DValue_Move2( DValue from, DValue *to, DaoAbsType *tp );
-int DValue_Move( DValue from, DValue *to, DaoAbsType *tp )
+int DValue_Move2( DValue from, DValue *to, DaoType *tp );
+int DValue_Move( DValue from, DValue *to, DaoType *tp )
 {
   //DaoBase *dA = NULL;
   //int i = 1;
@@ -413,13 +413,13 @@ int DValue_Move( DValue from, DValue *to, DaoAbsType *tp )
     return 1;
   }else if( tp->tid == DAO_ANY ){
     DValue_Copy( to, from );
-    DValue_SetAbsType( to, tp );
+    DValue_SetType( to, tp );
     return 1;
   }
   return DValue_Move2( from, to, tp );
 }
 #endif
-int DValue_Move( DValue from, DValue *to, DaoAbsType *tp )
+int DValue_Move( DValue from, DValue *to, DaoType *tp )
 {
   DaoBase *dA = NULL;
   int i = 1;
@@ -428,7 +428,7 @@ int DValue_Move( DValue from, DValue *to, DaoAbsType *tp )
     return 1;
   }else if( tp->tid == DAO_ANY ){
     DValue_Copy( to, from );
-    DValue_SetAbsType( to, tp );
+    DValue_SetType( to, tp );
     return 1;
   }
   to->sub = from.sub;
@@ -455,7 +455,7 @@ int DValue_Move( DValue from, DValue *to, DaoAbsType *tp )
         i = (dA != NULL);
       }
     }else{
-      i = DaoAbsType_MatchValue( tp, from, NULL );
+      i = DaoType_MatchValue( tp, from, NULL );
     }
     /*
        if( i ==0 ){
@@ -552,12 +552,12 @@ int DValue_Move( DValue from, DValue *to, DaoAbsType *tp )
     //int defed = DString_FindChar( tp->name, '@', 0 ) == MAXSIZE;
     //defed &= DString_FindChar( tp->name, '?', 0 ) == MAXSIZE;
 #endif
-    DValue_SetAbsType( to, tp );
+    DValue_SetType( to, tp );
   }
   return 1;
 }
 /* to should be a null value */
-int DValue_Pass( DValue from, DValue *to, DaoAbsType *tp )
+int DValue_Pass( DValue from, DValue *to, DaoType *tp )
 {
   DaoBase *dA = NULL;
   int i = 1;
@@ -571,7 +571,7 @@ int DValue_Pass( DValue from, DValue *to, DaoAbsType *tp )
   }else if( tp->tid == DAO_ANY ){
     *to = from;
     to->cst = to->ndef = 0;
-    DValue_SetAbsType( to, tp );
+    DValue_SetType( to, tp );
     return 1;
   }
   if( from.v.p ==NULL && tp->tid == DAO_OBJECT ){
@@ -592,7 +592,7 @@ int DValue_Pass( DValue from, DValue *to, DaoAbsType *tp )
         i = (dA != NULL);
       }
     }else{
-      i = DaoAbsType_MatchValue( tp, from, NULL );
+      i = DaoType_MatchValue( tp, from, NULL );
     }
     /*
        if( i ==0 ){
@@ -672,7 +672,7 @@ int DValue_Pass( DValue from, DValue *to, DaoAbsType *tp )
     //int defed = DString_FindChar( tp->name, '@', 0 ) == MAXSIZE;
     //defed &= DString_FindChar( tp->name, '?', 0 ) == MAXSIZE;
 #endif
-    DValue_SetAbsType( to, tp );
+    DValue_SetType( to, tp );
   }
   return 1;
 }

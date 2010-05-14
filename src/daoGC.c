@@ -15,7 +15,7 @@
 #include"daoMap.h"
 #include"daoClass.h"
 #include"daoObject.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoContext.h"
 #include"daoProcess.h"
 #include"daoRoutine.h"
@@ -227,7 +227,7 @@ static int DValue_Size( DValue *self, int depth )
 }
 static void DaoGC_DecRC2( DaoBase *p, int change )
 {
-  DaoAbsType *tp, *tp2;
+  DaoType *tp, *tp2;
   DNode *node;
   const short idle = gcWorker.idle;
   int i, n;
@@ -616,7 +616,7 @@ void cycRefCountDecreScan()
         }
       case DAO_ABSTYPE :
         {
-          DaoAbsType *abtp = (DaoAbsType*) dbase;
+          DaoType *abtp = (DaoType*) dbase;
           cycRefCountDecrement( abtp->X.extra );
           cycRefCountDecrements( abtp->nested );
           break;
@@ -748,7 +748,7 @@ void markAliveObjects( DaoBase *root )
         }
       case DAO_ABSTYPE :
         {
-          DaoAbsType *abtp = (DaoAbsType*) dbase;
+          DaoType *abtp = (DaoType*) dbase;
           cycRefCountIncrement( abtp->X.extra );
           cycRefCountIncrements( abtp->nested );
           break;
@@ -903,7 +903,7 @@ void freeGarbage()
           }
         case DAO_ABSTYPE :
           {
-            DaoAbsType *abtp = (DaoAbsType*) dbase;
+            DaoType *abtp = (DaoType*) dbase;
             directRefCountDecrement( abtp->nested );
             if( abtp->X.extra ){
               abtp->X.extra->refCount --;
@@ -1059,7 +1059,7 @@ void DaoGC_DecRC( DaoBase *p )
 
 #if 0
   if( p->type == DAO_ABSTYPE ){
-    DaoAbsType *abtp = (DaoAbsType*) p;
+    DaoType *abtp = (DaoType*) p;
     if( abtp->tid == DAO_LIST )
     return;
   }
@@ -1280,7 +1280,7 @@ void cycRefCountDecreScan()
         }
       case DAO_ABSTYPE :
         {
-          DaoAbsType *abtp = (DaoAbsType*) dbase;
+          DaoType *abtp = (DaoType*) dbase;
           cycRefCountDecrement( abtp->X.extra );
           cycRefCountDecrements( abtp->nested );
           break;
@@ -1417,7 +1417,7 @@ void cycRefCountIncreScan()
           }
         case DAO_ABSTYPE :
           {
-            DaoAbsType *abtp = (DaoAbsType*) dbase;
+            DaoType *abtp = (DaoType*) dbase;
             cycRefCountIncrement( abtp->X.extra );
             cycRefCountIncrements( abtp->nested );
             break;
@@ -1592,7 +1592,7 @@ void directDecRC()
           }
         case DAO_ABSTYPE :
           {
-            DaoAbsType *abtp = (DaoAbsType*) dbase;
+            DaoType *abtp = (DaoType*) dbase;
             directRefCountDecrement( abtp->nested );
             if( abtp->X.extra ){
               abtp->X.extra->refCount --;

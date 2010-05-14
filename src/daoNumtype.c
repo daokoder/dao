@@ -17,7 +17,7 @@
 #include"daoGC.h"
 #include"daoVmspace.h"
 #include"daoRoutine.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"assert.h"
 #include"math.h"
 #include"stdlib.h"

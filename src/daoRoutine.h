@@ -26,7 +26,7 @@ uchar_t        attribs; \
 uchar_t        parCount; \
 ushort_t       distance; \
 DVarray       *routConsts; \
-DaoAbsType    *routType; \
+DaoType    *routType; \
 DString       *routName; \
 DArray        *parTokens; \
 DArray        *routOverLoad; \
@@ -46,7 +46,7 @@ struct DRoutine
      char           parCount;
      short          distance;  inheritance distance to the self->hostClass
      DVarray       *routConsts;
-     DaoAbsType    *routType;
+     DaoType    *routType;
      DString       *routName;
      DArray        *routOverLoad; <DRoutine*>
      DRoutine      *firstRoutine;
@@ -59,7 +59,7 @@ void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout );
 int  DRoutine_AddConst( DRoutine *self, DaoBase *data );
 int  DRoutine_AddConstValue( DRoutine *self, DValue value );
 
-DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoAbsType *type );
+DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoType *type );
 DRoutine* DRoutine_GetOverLoad( DRoutine *self, DaoVmProcess *vmp, DValue *obj, DValue *p[], int n, int code );
   
 int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
@@ -85,7 +85,7 @@ struct DaoRoutine
   DaoVmcArray *vmCodes;
 
   /* data type for local registers: */
-  DArray *regType; /* <DaoAbsType*> */
+  DArray *regType; /* <DaoType*> */
 
   /* VM codes with annotations */
   DArray *annotCodes; /* <DaoVmCodeX*> */

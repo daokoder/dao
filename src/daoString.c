@@ -889,7 +889,8 @@ void DString_Assign( DString *self, DString *chs )
   share2 = data2 != (size_t*)chs->mbs && data2 != (size_t*)chs->wcs;
 
   if( share1 && share2 ){
-    DString_DeleteData( self );
+    data1[0] -= 1;
+    if( data1[0] ==0 ) dao_free( data1 );
     *self = *chs;
     self->data[0] += 1;
     assigned = 1;

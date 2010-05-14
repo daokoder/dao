@@ -31,7 +31,7 @@
 #include"daoRoutine.h"
 #include"daoVmspace.h"
 #include"daoNamespace.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoParser.h"
 #include"daoGC.h"
 #include"daoSched.h"
@@ -93,7 +93,7 @@ static void STD_Load( DaoContext *ctx, DValue *p[], int N )
 }
 static void Dao_AboutVar( DaoNameSpace *ns, DValue var, DString *str )
 {
-  DaoAbsType *abtp = DaoNameSpace_GetAbsTypeV( ns, var );
+  DaoType *abtp = DaoNameSpace_GetTypeV( ns, var );
   void *p = var.v.p;
   char buf[50];
   if( var.t >= DAO_INTEGER && var.t <= DAO_DOUBLE ) p = & var.v;
@@ -422,7 +422,7 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
     }else if( strcmp( cmd, "a" ) == 0 || strcmp( cmd, "about" ) == 0 ){
       if( tokens->size > 1 ){
         ushort_t reg = (ushort_t)strtod( tokens->items.pString[1]->mbs, 0 );
-        DaoAbsType *tp = ctx->routine->regType->items.pAbtp[ reg ];
+        DaoType *tp = ctx->routine->regType->items.pAbtp[ reg ];
         DString_Clear( input );
         Dao_AboutVar( ctx->nameSpace, *ctx->regValues[reg], input );
         DaoStream_WriteMBS( stream, "type: " );
@@ -686,9 +686,9 @@ static void STD_Tokenize( DaoContext *ctx, DValue *p[], int N )
 }
 static void STD_SubType( DaoContext *ctx, DValue *p[], int N )
 {
-  DaoAbsType *tp1 = DaoNameSpace_GetAbsTypeV( ctx->nameSpace, *p[0] );
-  DaoAbsType *tp2 = DaoNameSpace_GetAbsTypeV( ctx->nameSpace, *p[1] );
-  DaoContext_PutInteger( ctx, DaoAbsType_MatchTo( tp1, tp2, NULL ) );
+  DaoType *tp1 = DaoNameSpace_GetTypeV( ctx->nameSpace, *p[0] );
+  DaoType *tp2 = DaoNameSpace_GetTypeV( ctx->nameSpace, *p[1] );
+  DaoContext_PutInteger( ctx, DaoType_MatchTo( tp1, tp2, NULL ) );
 }
 static void STD_Unpack( DaoContext *ctx, DValue *p[], int N )
 {
@@ -1395,7 +1395,7 @@ static void REFL_Name( DaoContext *ctx, DValue *p[], int N )
     DString_Assign( str, p[0]->v.klass->className );
     break;
   case DAO_ABSTYPE :
-    DString_Assign( str, ((DaoAbsType*)p[0]->v.p)->name );
+    DString_Assign( str, ((DaoType*)p[0]->v.p)->name );
     break;
   default : break;
   }
@@ -1422,7 +1422,7 @@ static void REFL_Base( DaoContext *ctx, DValue *p[], int N )
 }
 static void REFL_Type( DaoContext *ctx, DValue *p[], int N )
 {
-  DaoAbsType *tp = DaoNameSpace_GetAbsTypeV( ctx->nameSpace, *p[0] );
+  DaoType *tp = DaoNameSpace_GetTypeV( ctx->nameSpace, *p[0] );
   DaoContext_PutResult( ctx, (DaoBase*) tp );
 }
 
@@ -1432,7 +1432,7 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
   DaoTuple *tuple;
   DaoClass *klass;
   DaoObject *object;
-  DaoAbsType *tp = map->unitype->nested->items.pAbtp[1];
+  DaoType *tp = map->unitype->nested->items.pAbtp[1];
   DaoNameSpace *ns, *here = ctx->nameSpace;
   DMap *index, *lookup = NULL;
   DVarray *data;
@@ -1472,7 +1472,7 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
     GC_IncRC( tp );
     value = data->data[ id ];
     vabtp.t = DAO_ABSTYPE;
-    vabtp.v.p = (DaoBase*) DaoNameSpace_GetAbsTypeV( here, value );
+    vabtp.v.p = (DaoBase*) DaoNameSpace_GetTypeV( here, value );
     if( vabtp.v.p == NULL ) vabtp.t = 0;
     DValue_Copy( tuple->items->data, value );
     DValue_Copy( tuple->items->data + 1, vabtp );
@@ -1488,7 +1488,7 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
   DaoTuple *tuple;
   DaoClass *klass = NULL;
   DaoObject *object = NULL;
-  DaoAbsType *tp = map->unitype->nested->items.pAbtp[1];
+  DaoType *tp = map->unitype->nested->items.pAbtp[1];
   DaoNameSpace *ns = NULL;
   DMap *index, *lookup = NULL;
   DNode *node;
@@ -1566,14 +1566,14 @@ static void REFL_Cst2( DaoContext *ctx, DValue *p[], int N )
     node = DMap_Find( klass->lookupTable, name );
     if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_CONST ){
       value = klass->cstData->data + LOOKUP_ID( node->value.pInt );
-      type.v.p = (DaoBase*) DaoNameSpace_GetAbsTypeV( ns, *value );
+      type.v.p = (DaoBase*) DaoNameSpace_GetTypeV( ns, *value );
     }
   }else if( p[0]->t == DAO_NAMESPACE ){
     DaoNameSpace *ns2 = p[0]->v.ns;
     node = DMap_Find( ns2->cstIndex, name );
     if( node ){
       value = ns2->cstData->data + node->value.pInt;
-      type.v.p = (DaoBase*) DaoNameSpace_GetAbsTypeV( ns, *value );
+      type.v.p = (DaoBase*) DaoNameSpace_GetTypeV( ns, *value );
     }
   }else{
     DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
@@ -1583,13 +1583,13 @@ static void REFL_Cst2( DaoContext *ctx, DValue *p[], int N )
   DValue_Copy( tuple->items->data + 1, type );
   DaoContext_PutResult( ctx, (DaoBase*) tuple );
   if( N >2 ){
-    DaoAbsType *tp = DaoNameSpace_GetAbsTypeV( ns, *p[2] );
+    DaoType *tp = DaoNameSpace_GetTypeV( ns, *p[2] );
     if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
       DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
       return;
     }
     if( type.v.p ){
-      if( DaoAbsType_MatchTo( tp, (DaoAbsType*) type.v.p, NULL ) ==0 ){
+      if( DaoType_MatchTo( tp, (DaoType*) type.v.p, NULL ) ==0 ){
         DaoContext_RaiseException( ctx, DAO_ERROR, "type not matched" );
         return;
       }
@@ -1633,13 +1633,13 @@ static void REFL_Var2( DaoContext *ctx, DValue *p[], int N )
   DValue_Copy( tuple->items->data + 1, type );
   DaoContext_PutResult( ctx, (DaoBase*) tuple );
   if( N >2 ){
-    DaoAbsType *tp = DaoNameSpace_GetAbsTypeV( ns, *p[2] );
+    DaoType *tp = DaoNameSpace_GetTypeV( ns, *p[2] );
     if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
       DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
       return;
     }
     if( type.v.p ){
-      if( DaoAbsType_MatchTo( tp, (DaoAbsType*) type.v.p, NULL ) ==0 ){
+      if( DaoType_MatchTo( tp, (DaoType*) type.v.p, NULL ) ==0 ){
         DaoContext_RaiseException( ctx, DAO_ERROR, "type not matched" );
         return;
       }
@@ -1683,8 +1683,8 @@ static void REFL_Isa( DaoContext *ctx, DValue *p[], int N )
   DaoNameSpace *ns = ctx->nameSpace;
   dint *res = DaoContext_PutInteger( ctx, 0 );
   if( p[1]->t == DAO_ABSTYPE ){
-    DaoAbsType *tp = (DaoAbsType*) p[1]->v.p;
-    if( tp && DaoAbsType_MatchValue( tp, *p[0], NULL ) ) *res = 1;
+    DaoType *tp = (DaoType*) p[1]->v.p;
+    if( tp && DaoType_MatchValue( tp, *p[0], NULL ) ) *res = 1;
   }else if( p[1]->t == DAO_CLASS ){
     if( p[0]->t != DAO_OBJECT ) return;
     *res = DaoClass_ChildOf( p[0]->v.object->that->myClass, p[1]->v.p );
@@ -1715,8 +1715,8 @@ static void REFL_Isa( DaoContext *ctx, DValue *p[], int N )
     }else if( strcmp( tname->mbs, "array" ) ==0 ){
       if( p[0]->t == DAO_ARRAY && p[0]->v.p ) *res = 1;
     }else{
-      DaoAbsType *tp = DaoParser_ParseTypeName( tname->mbs, ns, 0,0 );
-      if( tp && DaoAbsType_MatchValue( tp, *p[0], NULL ) ) *res = 1;
+      DaoType *tp = DaoParser_ParseTypeName( tname->mbs, ns, 0,0 );
+      if( tp && DaoType_MatchValue( tp, *p[0], NULL ) ) *res = 1;
     }
   }else{
     DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
@@ -1734,9 +1734,9 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
   DRoutine *routine = (DRoutine*) p[0]->v.p;
   DaoList *list = DaoContext_PutList( ctx );
   DaoTuple *tuple;
-  DaoAbsType *routype = routine->routType;
-  DaoAbsType *itp = list->unitype->nested->items.pAbtp[0];
-  DaoAbsType **nested = routype->nested->items.pAbtp;
+  DaoType *routype = routine->routType;
+  DaoType *itp = list->unitype->nested->items.pAbtp[0];
+  DaoType **nested = routype->nested->items.pAbtp;
   DString *mbs = DString_New(1);
   DNode *node;
   DValue num = daoZeroInt;

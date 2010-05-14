@@ -597,10 +597,10 @@ struct DaoAPI
 
   int (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
   int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
-  int (*DaoNameSpace_AddType)( DaoNameSpace *self, DaoTypeBase *typer, int setup );
-  int (*DaoNameSpace_AddTypes)( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
-  int (*DaoNameSpace_AddFunction)( DaoNameSpace *self, DaoFuncPtr fptr, const char *proto );
-  int (*DaoNameSpace_AddFunctions)( DaoNameSpace *self, DaoFuncItem *items );
+  int (*DaoNameSpace_CreateType)( DaoNameSpace *self, DaoTypeBase *typer, int setup );
+  int (*DaoNameSpace_CreateTypes)( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
+  int (*DaoNameSpace_CreateFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
+  int (*DaoNameSpace_CreateFunctions)( DaoNameSpace *self, DaoFuncItem *items );
   int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
   int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
   int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
@@ -892,19 +892,19 @@ used as typedefs like: typedef alias[2*i] alias[2*i+1];
 the last item in alias[] should also be NULL.
 */
 DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
-/* add c type */
-DAO_DLL int DaoNameSpace_AddType( DaoNameSpace *self, DaoTypeBase *typer, int setup );
-/* add c types, the last item in typer[] should be NULL;
+/* create c type */
+DAO_DLL int DaoNameSpace_CreateType( DaoNameSpace *self, DaoTypeBase *typer, int setup );
+/* create c types, the last item in typer[] should be NULL;
 types that are cross-used in parameter lists
 (e.g. type A appears in the parameter list of B's methods,
 and type B appears in the parameter list of A's methods), 
-should be added using this function.
+should be created using this function.
 */
-DAO_DLL int DaoNameSpace_AddTypes( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
-/* add c function */
-DAO_DLL int DaoNameSpace_AddFunction( DaoNameSpace *self, DaoFuncPtr fptr, const char *proto );
-/* add c functions */
-DAO_DLL int DaoNameSpace_AddFunctions( DaoNameSpace *self, DaoFuncItem *items );
+DAO_DLL int DaoNameSpace_CreateTypes( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
+/* create c function */
+DAO_DLL int DaoNameSpace_CreateFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *prot );
+/* create c functions */
+DAO_DLL int DaoNameSpace_CreateFunctions( DaoNameSpace *self, DaoFuncItem *items );
 DAO_DLL int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
 DAO_DLL int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 /* load the scripts in "file" to the namespace */
@@ -1167,12 +1167,12 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DaoNameSpace_AddValue( o, s, d, t)  __dao.DaoNameSpace_AddValue( o, s, d, t)
 #define DaoNameSpace_FindData( self, name )  __dao.DaoNameSpace_FindData( self, name )
 
-#define DaoNameSpace_TypeDefine( self, old, type ) __dao.DaoNameSpace_TypeDefine( self, old, type )
+#define DaoNameSpace_TypeDefine( self, o, n ) __dao.DaoNameSpace_TypeDefine( self, o, n )
 #define DaoNameSpace_TypeDefines( self, alias ) __dao.DaoNameSpace_TypeDefines( self, alias )
-#define DaoNameSpace_AddType( self, typer, setup ) __dao.DaoNameSpace_AddType( self, typer, setup )
-#define DaoNameSpace_AddTypes( self, types, setup ) __dao.DaoNameSpace_AddTypes( self, types, setup )
-#define DaoNameSpace_AddFunction( self, func, pro ) __dao.DaoNameSpace_AddFunction( self, func, pro )
-#define DaoNameSpace_AddFunctions( self, items ) __dao.DaoNameSpace_AddFunctions( self, items )
+#define DaoNameSpace_CreateType( self, t, s ) __dao.DaoNameSpace_CreateType( self, t, s )
+#define DaoNameSpace_CreateTypes( self, ts, s ) __dao.DaoNameSpace_CreateTypes( self, ts, s )
+#define DaoNameSpace_CreateFunction( ns, f, p ) __dao.DaoNameSpace_CreateFunction( ns, f, p )
+#define DaoNameSpace_CreateFunctions( ns, fs ) __dao.DaoNameSpace_CreateFunctions( ns, fs )
 #define DaoNameSpace_SetupType( self, typer ) __dao.DaoNameSpace_SetupType( self, typer )
 #define DaoNameSpace_SetupTypes( self, types ) __dao.DaoNameSpace_SetupTypes( self, types )
 #define DaoNameSpace_Load( self, file ) __dao.DaoNameSpace_Load( self, file )

@@ -152,7 +152,7 @@ struct DaoArray
     complex16  *c;
   } data;
 
-  DaoAbsType *unitype;
+  DaoType *unitype;
 
   DArray  *dims;
   DArray  *dimAccum;

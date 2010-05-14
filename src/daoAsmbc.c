@@ -175,7 +175,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
   DaoString  *daostr;
   DaoNumber  *num;
   DaoVmCode  *vmc = DaoVmCode_New();
-  DaoAbsType *abtp, *abtp2;
+  DaoType *abtp, *abtp2;
   DaoBase    *dbase;
   DaoNameSpace *module, *modas;
   DArray  *consts[26];
@@ -291,7 +291,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
         DString_SetMBS( str, "routine<" );
         if( *P == 'T' ){
           P = NextToken( P, tok, '$', bc );
-          abtp2 = (DaoAbsType*)AsmGetConst( consts, tok, 'T' );
+          abtp2 = (DaoType*)AsmGetConst( consts, tok, 'T' );
           if( abtp2 ==NULL ) goto InvalidFormat;
         }
         while( *P == 'P' ){
@@ -302,16 +302,16 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
           dbase = NULL;
           if( *P == 'T' ){
             P = NextToken( P, tok, '$', bc );
-            abtp = (DaoAbsType*)AsmGetConst( consts, tok, 'T' );
+            abtp = (DaoType*)AsmGetConst( consts, tok, 'T' );
             if( abtp ==NULL ) goto InvalidFormat;
           }
           if( *P != 'P' && *P != '\n' ){
             P = NextToken( P, tok, '$', bc );
             dbase = AsmGetConst( consts, tok, 0 );
             if( dbase ==NULL ) goto InvalidFormat;
-            if( abtp ==NULL ) abtp = DaoNameSpace_GetAbsType( ns, dbase );
+            if( abtp ==NULL ) abtp = DaoNameSpace_GetType( ns, dbase );
           }
-          if( abtp ==NULL ) abtp = DaoAbsType_New( "?", DAO_UDF, 0,0 );
+          if( abtp ==NULL ) abtp = DaoType_New( "?", DAO_UDF, 0,0 );
           sp = STRV( daostr );
           DString_Append( str, sp );
           DArray_Append( nested, abtp );
@@ -329,11 +329,11 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
         if( eclass )
           abtp2 = klass->objType;
         else if( abtp2 ==NULL )
-          abtp2 = DaoAbsType_New( "?", DAO_UDF, 0,0 );
+          abtp2 = DaoType_New( "?", DAO_UDF, 0,0 );
         DString_Append( str, abtp2->name );
         DString_AppendChar( str, '>' );
         DArray_Append( nested, abtp2 );
-        routine->routType = DaoAbsType_New( str->mbs, DAO_ROUTINE, 0, nested );
+        routine->routType = DaoType_New( str->mbs, DAO_ROUTINE, 0, nested );
         routine->routType->mapNames = DMap_Copy( mapNames );
         routine->routType->parCount = routine->parCount;
         printf( "%s %i\n", str->mbs, routine->parCount );
@@ -380,7 +380,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
         abtp = NULL;
         if( *P == 'T' ){
           P = NextToken( P, tok, '$', bc );
-          abtp = (DaoAbsType*) AsmGetConst( consts, tok, 'T' );;
+          abtp = (DaoType*) AsmGetConst( consts, tok, 'T' );;
           if( abtp == NULL ) goto InvalidFormat;
         }
         if( klass && routine ==NULL ){
@@ -401,7 +401,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
         dbase = NULL;
         if( *P == 'T' ){
           P = NextToken( P, tok, '$', bc );
-          abtp = (DaoAbsType*) AsmGetConst( consts, tok, 'T' );;
+          abtp = (DaoType*) AsmGetConst( consts, tok, 'T' );;
           if( abtp == NULL ) goto InvalidFormat;
         }
         if( *P !='\n' ){
@@ -657,7 +657,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
   DaoString  *daostr;
   DaoNumber  *num;
   DaoVmCode  *vmc = DaoVmCode_New();
-  DaoAbsType *abtp, *abtp2;
+  DaoType *abtp, *abtp2;
   DaoBase    *dbase;
   DaoNameSpace *module, *modas;
   DArray  *consts[26];
@@ -776,7 +776,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
           DMap_Clear( mapNames );
           DString_SetMBS( str, "routine<" );
           if( *P == 'T' ){
-            abtp2 = (DaoAbsType*)BcGetConst( consts, P, 'T', asmc );
+            abtp2 = (DaoType*)BcGetConst( consts, P, 'T', asmc );
             P += 3;
             if( abtp2 ==NULL ) goto InvalidFormat;
           }
@@ -787,7 +787,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
             abtp = NULL;
             dbase = NULL;
             if( *P == 'T' ){
-              abtp = (DaoAbsType*)BcGetConst( consts, P, 'T', asmc );
+              abtp = (DaoType*)BcGetConst( consts, P, 'T', asmc );
               P += 3;
               if( abtp ==NULL ) goto InvalidFormat;
             }
@@ -795,9 +795,9 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
               dbase = BcGetConst( consts, P, 0, asmc );
               P += 3;
               if( dbase ==NULL ) goto InvalidFormat;
-              if( abtp ==NULL ) abtp = DaoNameSpace_GetAbsType( ns, dbase );
+              if( abtp ==NULL ) abtp = DaoNameSpace_GetType( ns, dbase );
             }
-            if( abtp ==NULL ) abtp = DaoAbsType_New( "?", DAO_UDF, 0,0 );
+            if( abtp ==NULL ) abtp = DaoType_New( "?", DAO_UDF, 0,0 );
             sp = STRV( daostr );
             DString_Append( str, sp );
             DArray_Append( nested, abtp );
@@ -815,11 +815,11 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
           if( sect == SECT_CLASS )
             abtp2 = klass->objType;
           else if( abtp2 ==NULL )
-            abtp2 = DaoAbsType_New( "?", DAO_UDF, 0,0 );
+            abtp2 = DaoType_New( "?", DAO_UDF, 0,0 );
           DString_Append( str, abtp2->name );
           DString_AppendChar( str, '>' );
           DArray_Append( nested, abtp2 );
-          routine->routType = DaoAbsType_New( str->mbs, DAO_ROUTINE, 0, nested );
+          routine->routType = DaoType_New( str->mbs, DAO_ROUTINE, 0, nested );
           routine->routType->mapNames = DMap_Copy( mapNames );
           routine->routType->parCount = routine->parCount;
           printf( "BC routine: %s %i\n", str->mbs, routine->parCount );
@@ -865,7 +865,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
           if( daostr ==NULL ) goto InvalidFormat;
           abtp = NULL;
           if( *P == 'T' ){
-            abtp = (DaoAbsType*) BcGetConst( consts, P, 'T', asmc );;
+            abtp = (DaoType*) BcGetConst( consts, P, 'T', asmc );;
             P += 3;
             if( abtp == NULL ) goto InvalidFormat;
           }
@@ -886,7 +886,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
           abtp = NULL;
           dbase = NULL;
           if( *P == 'T' ){
-            abtp = (DaoAbsType*) BcGetConst( consts, P, 'T', asmc );;
+            abtp = (DaoType*) BcGetConst( consts, P, 'T', asmc );;
             P += 3;
             if( abtp == NULL ) goto InvalidFormat;
           }

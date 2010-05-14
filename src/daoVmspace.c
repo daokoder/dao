@@ -21,7 +21,7 @@
 #include"daoParser.h"
 #include"daoStream.h"
 #include"daoRoutine.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoClass.h"
 #include"daoObject.h"
 #include"daoRoutine.h"
@@ -295,19 +295,19 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 
 void DaoVmSpace_TypeDef( DaoVmSpace *self, const char *old, const char *type )
 {
-  DaoAbsType *tp, *tp2;
+  DaoType *tp, *tp2;
   DString *name = DString_New(1);
   DString_SetMBS( name, old );
   if( self->nsWorking == NULL ) self->nsWorking = self->mainNamespace;
-  tp = DaoNameSpace_FindAbsType( self->nsWorking, name );
+  tp = DaoNameSpace_FindType( self->nsWorking, name );
   DString_SetMBS( name, type );
-  tp2 = DaoNameSpace_FindAbsType( self->nsWorking, name );
+  tp2 = DaoNameSpace_FindType( self->nsWorking, name );
   DString_Delete( name );
   if( tp == NULL ) return;
   if( tp2 == NULL ){
-    tp = DaoAbsType_Copy( tp );
+    tp = DaoType_Copy( tp );
     DString_SetMBS( tp->name, type );
-    DaoNameSpace_AddAbsType( self->nsWorking, tp->name, tp );
+    DaoNameSpace_AddType( self->nsWorking, tp->name, tp );
   }
 }
 
@@ -749,7 +749,7 @@ int proxy_started = 0;
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
     DArray *argNames, DArray *argValues )
 {
-  DaoAbsType *nested[2];
+  DaoType *nested[2];
   DaoNameSpace *ns = self->nsInternal;
   DaoList *argv = DaoList_New();
   DaoMap *cmdarg = DaoMap_New(0);
@@ -763,10 +763,10 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
   size_t i, pk;
   skey.v.s = key;
   sval.v.s = val;
-  nested[0] = DaoNameSpace_MakeAbsType( ns, "any", DAO_ANY, NULL,NULL,0 );
-  nested[1] = DaoNameSpace_MakeAbsType( ns, "string",DAO_STRING, NULL,NULL,0 );
-  cmdarg->unitype = DaoNameSpace_MakeAbsType( ns, "map",DAO_MAP,NULL,nested,2);
-  argv->unitype = DaoNameSpace_MakeAbsType( ns, "list",DAO_LIST,NULL,nested+1,1);
+  nested[0] = DaoNameSpace_MakeType( ns, "any", DAO_ANY, NULL,NULL,0 );
+  nested[1] = DaoNameSpace_MakeType( ns, "string",DAO_STRING, NULL,NULL,0 );
+  cmdarg->unitype = DaoNameSpace_MakeType( ns, "map",DAO_MAP,NULL,nested,2);
+  argv->unitype = DaoNameSpace_MakeType( ns, "list",DAO_LIST,NULL,nested+1,1);
   GC_IncRC( cmdarg->unitype );
   GC_IncRC( argv->unitype );
   DString_SetMBS( str, file );
@@ -868,7 +868,7 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
     DArray *argNames, DArray *argValues )
 {
   DaoRoutine *rout = ns->mainRoutine;
-  DaoAbsType *abtp = rout->routType;
+  DaoType *abtp = rout->routType;
   DString *key = DString_New(1);
   DString *val = DString_New(1);
   DString *str;
@@ -1714,9 +1714,9 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 }
 
 int IsValidName( const char *chs );
-static void DaoRoutine_GetSignature( DaoAbsType *rt, DString *sig )
+static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 {
-  DaoAbsType *it;
+  DaoType *it;
   int i;
   DString_Clear( sig );
   DString_ToMBS( sig );
@@ -2011,10 +2011,10 @@ void DaoInitAPI( DaoAPI *api )
 
   api->DaoNameSpace_TypeDefine = DaoNameSpace_TypeDefine;
   api->DaoNameSpace_TypeDefines = DaoNameSpace_TypeDefines;
-  api->DaoNameSpace_AddType = DaoNameSpace_AddType;
-  api->DaoNameSpace_AddTypes = DaoNameSpace_AddTypes;
-  api->DaoNameSpace_AddFunction = DaoNameSpace_AddFunction;
-  api->DaoNameSpace_AddFunctions = DaoNameSpace_AddFunctions;
+  api->DaoNameSpace_CreateType = DaoNameSpace_CreateType;
+  api->DaoNameSpace_CreateTypes = DaoNameSpace_CreateTypes;
+  api->DaoNameSpace_CreateFunction = DaoNameSpace_CreateFunction;
+  api->DaoNameSpace_CreateFunctions = DaoNameSpace_CreateFunctions;
   api->DaoNameSpace_SetupType = DaoNameSpace_SetupType;
   api->DaoNameSpace_SetupTypes = DaoNameSpace_SetupTypes;
   api->DaoNameSpace_Load = DaoNameSpace_Load;
@@ -2147,15 +2147,15 @@ static void DaoConfigure()
 }
 
 extern void DaoJitMapper_Init();
-extern void DaoAbsType_Init();
+extern void DaoType_Init();
 
-DaoAbsType *dao_type_udf = NULL;
-DaoAbsType *dao_array_bit = NULL;
-DaoAbsType *dao_array_any = NULL;
-DaoAbsType *dao_list_any = NULL;
-DaoAbsType *dao_map_any = NULL;
-DaoAbsType *dao_routine = NULL;
-DaoAbsType *dao_type_for_iterator = NULL;
+DaoType *dao_type_udf = NULL;
+DaoType *dao_array_bit = NULL;
+DaoType *dao_array_any = NULL;
+DaoType *dao_list_any = NULL;
+DaoType *dao_map_any = NULL;
+DaoType *dao_routine = NULL;
+DaoType *dao_type_for_iterator = NULL;
 
 #ifdef DAO_WITH_THREAD
 extern DMutex  mutex_string_sharing;
@@ -2191,7 +2191,7 @@ DaoVmSpace* DaoInit()
   mbs = DString_New(1);
   setlocale( LC_CTYPE, "" );
   DaoConfigure();
-  DaoAbsType_Init();
+  DaoType_Init();
   /*
   printf( "number of VM instructions: %i\n", DVM_NULL );
   */
@@ -2211,9 +2211,9 @@ DaoVmSpace* DaoInit()
   DaoStartGC();
 
   nested = DArray_New(0);
-  dao_type_udf = DaoAbsType_New( "?", DAO_UDF, NULL, NULL );
+  dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
   DArray_Append( nested, dao_type_udf );
-  dao_routine = DaoAbsType_New( "routine<=>?>", DAO_ROUTINE, NULL, nested );
+  dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, NULL, nested );
   DArray_Delete( nested );
 
   mainVmSpace = vms = DaoVmSpace_New();
@@ -2222,15 +2222,15 @@ DaoVmSpace* DaoInit()
 
   dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, 0,0 );
   DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
-  DaoNameSpace_AddAbsType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
+  DaoNameSpace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
 
   dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
   dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
   dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
   dao_array_bit = DaoParser_ParseTypeName( "long", ns, 0,0 );
-  dao_array_bit = DaoAbsType_Copy( dao_array_bit );
+  dao_array_bit = DaoType_Copy( dao_array_bit );
   DString_SetMBS( dao_array_bit->name, "bitarray" );
-  DaoNameSpace_AddAbsType( ns, dao_array_bit->name, dao_array_bit );
+  DaoNameSpace_AddType( ns, dao_array_bit->name, dao_array_bit );
   
 #if 1
   /*
@@ -2277,14 +2277,14 @@ DaoVmSpace* DaoInit()
   DaoNameSpace_PrepareType( vms->nsWorking, & mapTyper );
 
   DaoNameSpace_PrepareType( vms->nsWorking, & streamTyper );
-  DaoNameSpace_AddType( vms->nsInternal, & cdataTyper, 1 );
+  DaoNameSpace_CreateType( vms->nsInternal, & cdataTyper, 1 );
 
 #ifdef DAO_WITH_THREAD
-  DaoNameSpace_MakeAbsType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
-  DaoNameSpace_MakeAbsType( ns, "mtlib", DAO_THDMASTER, NULL, NULL, 0 );
-  DaoNameSpace_MakeAbsType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
-  DaoNameSpace_MakeAbsType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
-  DaoNameSpace_MakeAbsType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
+  DaoNameSpace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
+  DaoNameSpace_MakeType( ns, "mtlib", DAO_THDMASTER, NULL, NULL, 0 );
+  DaoNameSpace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
+  DaoNameSpace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
+  DaoNameSpace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
   DaoNameSpace_PrepareType( ns, & threadTyper );
   DaoNameSpace_PrepareType( ns, & thdMasterTyper );
   DaoNameSpace_PrepareType( ns, & mutexTyper );
@@ -2305,7 +2305,7 @@ DaoVmSpace* DaoInit()
 #endif
 
 #ifdef DAO_WITH_NETWORK
-  DaoNameSpace_AddType( vms->nsWorking, & DaoFdSet_Typer, 1 );
+  DaoNameSpace_CreateType( vms->nsWorking, & DaoFdSet_Typer, 1 );
   DaoNameSpace_PrepareType( vms->nsWorking, & libNetTyper );
   DaoNetwork_Init( vms, vms->nsWorking );
 #endif
@@ -2320,7 +2320,7 @@ DaoVmSpace* DaoInit()
   vms->safeTag = 1;
   return vms;
 }
-extern DaoAbsType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout );
+extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout );
 void DaoQuit()
 {
   int i;

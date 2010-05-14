@@ -45,7 +45,7 @@ void DValue_CopyExt( DValue *self, DValue from, int copy );
 void DValue_Copy( DValue *self, DValue from );
 int DValue_Compare( DValue left, DValue right );
 
-int DValue_Move( DValue from, DValue *to, DaoAbsType *totype );
+int DValue_Move( DValue from, DValue *to, DaoType *totype );
 void DValue_SimpleMove( DValue from, DValue *to );
 
 void DValue_MarkConst( DValue *self );

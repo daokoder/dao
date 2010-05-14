@@ -34,7 +34,7 @@ typedef struct DRoutine        DRoutine;
 
 typedef struct DaoThdMaster    DaoThdMaster;
 typedef struct DaoLibrary      DaoLibrary;
-typedef struct DaoAbsType      DaoAbsType;
+typedef struct DaoType      DaoType;
 
 typedef struct DaoFunCurry     DaoFunCurry;
 
@@ -167,7 +167,7 @@ void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DValue value );
 DValue DaoNameSpace_GetConst( DaoNameSpace *self, int i );
 
 int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoAbsType *tp );
+void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
 int DaoNameSpace_SetVariable( DaoNameSpace *self, int index, DValue var );
 DValue DaoNameSpace_GetVariable( DaoNameSpace *self, int i );
 

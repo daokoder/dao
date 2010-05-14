@@ -38,7 +38,7 @@ struct DaoNameSpace
 
   /* global data in the name space: */
   DVarray  *varData;
-  DArray   *varType;   /* <DaoAbsType*> */
+  DArray   *varType;   /* <DaoType*> */
   DMap     *varIndex;  /* <DString*,size_t> */
   DMap     *varStatic;  /* <DString*,size_t> */
 
@@ -53,10 +53,10 @@ struct DaoNameSpace
    * used for the purpose of GC. */
   DArray *cmethods; /* <DaoFunction*> */
   DMap   *macros; /* <DString*,DaoMacro*> */
-  DMap   *abstypes; /* <DString*,DaoAbsType*> */
+  DMap   *abstypes; /* <DString*,DaoType*> */
 
-  DaoAbsType *udfType1;
-  DaoAbsType *udfType2;
+  DaoType *udfType1;
+  DaoType *udfType2;
 
   void   *libHandle;
   DString *file;
@@ -80,7 +80,7 @@ void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DValue value );
 DValue DaoNameSpace_GetConst( DaoNameSpace *self, int i );
 
 int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoAbsType *tp );
+void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
 int DaoNameSpace_SetVariable( DaoNameSpace *self, int index, DValue var );
 DValue DaoNameSpace_GetVariable( DaoNameSpace *self, int i );
 
@@ -96,14 +96,14 @@ void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );
 
 void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro );
 
-DaoAbsType* DaoNameSpace_FindAbsType( DaoNameSpace *self, DString *name );
-int DaoNameSpace_AddAbsType( DaoNameSpace *self, DString *name, DaoAbsType *tp );
-DaoAbsType* DaoNameSpace_GetAbsType( DaoNameSpace *self, DaoBase *p );
-DaoAbsType* DaoNameSpace_MakeAbsType( DaoNameSpace *self, const char *name, 
-    uchar_t basic, DaoBase *pb, DaoAbsType *nest[], int N );
-DaoAbsType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoAbsType *routype,
-    DValue *vals, DaoAbsType *types[], DaoAbsType *retp );
-DaoAbsType* DaoNameSpace_GetAbsTypeV( DaoNameSpace *self, DValue val );
+DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name );
+int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );
+DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p );
+DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name, 
+    uchar_t basic, DaoBase *pb, DaoType *nest[], int N );
+DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
+    DValue *vals, DaoType *types[], DaoType *retp );
+DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val );
 
 int DaoNameSpace_PrepareType( DaoNameSpace *self, DaoTypeBase *typer );
 #if 0

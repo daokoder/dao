@@ -22,7 +22,7 @@
 #include"daoVmspace.h"
 #include"daoGC.h"
 #include"daoStream.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
     DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue par[], int N, int ret )
@@ -238,7 +238,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
   GC_IncRC( self );
   if( self->objData == NULL ) return self;
   for(i=1; i<klass->objDataDefault->size; i++){
-    DaoAbsType *type = klass->objDataType->items.pAbtp[i];
+    DaoType *type = klass->objDataType->items.pAbtp[i];
     DValue *value = self->objValues + i;
     /* for data type such as list/map/array, 
      * its .unitype may need to be set properaly */
@@ -331,7 +331,7 @@ void DaoObject_AddData( DaoObject *self, DString *name, DaoBase  *data )
 }
 int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *objThis )
 {
-  DaoAbsType *type;
+  DaoType *type;
   DValue *value ;
   DNode *node;
   int id, sto, perm;

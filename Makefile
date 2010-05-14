@@ -71,9 +71,10 @@ OBJECTS_DIR = objs/
 ####### Files
 
 SOURCES = src/daoType.c \
+    src/daoStdtype.c \
 		src/daoNamespace.c \
 		src/daoGC.c \
-		src/daoNumeric.c \
+		src/daoNumtype.c \
 		src/daoMaindl.c \
 		src/daoClass.c \
 		src/daoLexer.c \
@@ -104,6 +105,7 @@ OBJECTS = \
 			 objs/daoContext.o \
 			 objs/daoProcess.o \
 		objs/daoType.o \
+		objs/daoStdtype.o \
 		objs/daoNamespace.o \
 		objs/daoGC.o \
 		objs/daoRoutine.o \
@@ -115,7 +117,7 @@ OBJECTS = \
 		objs/daoLexer.o \
 		objs/daoParser.o \
 		objs/daoThread.o \
-		objs/daoNumeric.o \
+		objs/daoNumtype.o \
 		objs/daoClass.o \
 		objs/daoConst.o \
 		objs/daoObject.o \
@@ -189,11 +191,14 @@ objs/daoMainv.o: src/daoMainv.c
 objs/daoType.o: src/daoType.c src/daoType.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoType.o src/daoType.c
 
+objs/daoStdtype.o: src/daoStdtype.c src/daoStdtype.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStdtype.o src/daoStdtype.c
+
 objs/daoNamespace.o: src/daoNamespace.c src/daoNamespace.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNamespace.o src/daoNamespace.c
 
-objs/daoNumeric.o: src/daoNumeric.c src/daoNumeric.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNumeric.o src/daoNumeric.c
+objs/daoNumtype.o: src/daoNumtype.c src/daoNumtype.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNumtype.o src/daoNumtype.c
 
 objs/daoClass.o: src/daoClass.c src/daoClass.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoClass.o src/daoClass.c

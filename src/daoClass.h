@@ -37,7 +37,7 @@ struct DaoClass
   DMap *lookupTable; /* <DString*,size_t>: (storage<<24)|(permission<<16)|index */
 
   DArray   *objDataName;  /* <DString*>: keep tracking field declaration order: */
-  DArray   *objDataType;  /* <DaoAbsType*> */
+  DArray   *objDataType;  /* <DaoType*> */
   DVarray  *objDataDefault; /* <DValue>, NULL: no default, not for parent classes */
 
   DArray   *cstDataName;  /* <DString*>: keep track field declaration order: */
@@ -46,7 +46,7 @@ struct DaoClass
   DVarray  *cstData;
 
   DArray   *glbDataName;  /* <DString*>: keep track field declaration order: */
-  DArray   *glbDataType;  /* <DaoAbsType*> */
+  DArray   *glbDataType;  /* <DaoType*> */
   DVarray  *glbData;      /* <DValue> */
 
   DArray *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
@@ -61,8 +61,8 @@ struct DaoClass
   DString *className;
   DString *docString;
 
-  DaoAbsType *clsType;
-  DaoAbsType *objType;
+  DaoType *clsType;
+  DaoType *objType;
   DMap       *abstypes;
 
   int       derived;
@@ -86,15 +86,15 @@ int  DaoClass_FindConst( DaoClass *self, DString *name );
 void DaoClass_SetConst( DaoClass *self, int id, DValue value );
 int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *thisClass/*=0*/, DValue **d2 );
 
-DaoAbsType** DaoClass_GetDataType( DaoClass *self, DString *name,
+DaoType** DaoClass_GetDataType( DaoClass *self, DString *name,
     int *res, DaoClass *thisClass );
 int DaoClass_GetDataIndex( DaoClass *self, DString *name, int *type );
 
 int DaoClass_AddConst( DaoClass *self, DString *name, DValue value, int s );
-int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue value, int s, DaoAbsType *t );
-int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, int s, DaoAbsType *t );
+int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue value, int s, DaoType *t );
+int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, int s, DaoType *t );
 
-int DaoClass_AddAbsType( DaoClass *self, DString *name, DaoAbsType *tp );
+int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 
 void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
 DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );

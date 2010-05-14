@@ -38,7 +38,7 @@ struct DaoContext
   
   DVaTuple     *regArray; /* virtual registers for the call */
   DValue      **regValues;
-  DaoAbsType  **regTypes; /* = routine->regType->items.pAbtp; */
+  DaoType  **regTypes; /* = routine->regType->items.pAbtp; */
 
   ushort_t  entryCode;
   ushort_t  idClearFE;

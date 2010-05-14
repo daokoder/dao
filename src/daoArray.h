@@ -35,7 +35,7 @@ struct DArray
     struct DaoObject    **pObject;
     struct DaoRoutine   **pRout;
     struct DaoCData     **pCData;
-    struct DaoAbsType   **pAbtp;
+    struct DaoType   **pAbtp;
     struct DaoNameSpace **pNS;
 
     struct DValue       **pValue;
@@ -106,7 +106,7 @@ struct DPtrTuple
     struct DaoBase     **pBase;
     struct DaoClass    **pClass;
     struct DaoObject   **pObject;
-    struct DaoAbsType  **pAbtp;
+    struct DaoType  **pAbtp;
   } items;
 
   size_t size;

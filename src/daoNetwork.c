@@ -41,7 +41,7 @@ typedef size_t socklen_t;
 #include"daoMap.h"
 #include"daoArray.h"
 #include"daoType.h"
-#include"daoNumeric.h"
+#include"daoNumtype.h"
 #include"daoThread.h"
 #include"daoStdlib.h"
 #include"daoContext.h"
