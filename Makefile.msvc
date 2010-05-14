@@ -58,9 +58,10 @@ OBJECTS_DIR = $O/
 ####### Files
 
 SOURCES = $S/daoType.c \
+		$S/daoStdtype.c \
 		$S/daoNamespace.c \
 		$S/daoGC.c \
-		$S/daoNumeric.c \
+		$S/daoNumtype.c \
 		$S/daoClass.c \
 		$S/daoLexer.c \
 		$S/daoParser.c \
@@ -90,6 +91,7 @@ OBJECTS = \
 		$O/daoContext.obj \
 		$O/daoProcess.obj \
 		$O/daoType.obj \
+		$O/daoStdtype.obj \
 		$O/daoNamespace.obj \
 		$O/daoGC.obj \
 		$O/daoRoutine.obj \
@@ -101,7 +103,7 @@ OBJECTS = \
 		$O/daoLexer.obj \
 		$O/daoParser.obj \
 		$O/daoThread.obj \
-		$O/daoNumeric.obj \
+		$O/daoNumtype.obj \
 		$O/daoClass.obj \
 		$O/daoConst.obj \
 		$O/daoObject.obj \
