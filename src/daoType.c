@@ -1773,7 +1773,7 @@ short DaoAbsType_MatchTo( DaoAbsType *self, DaoAbsType *type, DMap *defs )
   DNode *node;
   void *pvoid[2];
   size_t mt;
-  return DaoAbsType_MatchToX( self, type, defs );
+  //return DaoAbsType_MatchToX( self, type, defs );
 
   if( self ==NULL || type ==NULL ) return DAO_MT_NOT;
   if( self == type ) return DAO_MT_EQ;

@@ -439,7 +439,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
     DRoutine *self, DaoVmProcess *vmp, DaoClass *filter, DValue *obj, DValue *p[], int n, int code )
 {
   float match, max = 0;
-  int i, j, m, ip, it;
+  int i, j, m, ip, it, sum;
   int best = -1;
   int dist = 0;
   int mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
@@ -464,7 +464,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
   }
 #endif
 
-#define TYPING_CACHE 0
+#define TYPING_CACHE 1
 #if TYPING_CACHE
   signature->size = 0;
   if( obj ){
@@ -479,13 +479,11 @@ static DRoutine* DRoutine_GetOverLoadExt(
     if( pvoid == NULL ) nocache = 1;
   }
   node = DMap_Find( vmp->callsigs, signature );
-  pvoid = NULL;
-  if( node ){
-    pvoid = node->key.pVoid;
-    pvoid2[0] = pvoid;
-  }else{
+  if( node == NULL ){
     DMap_Insert( vmp->callsigs, signature, NULL );
+    node = DMap_Find( vmp->callsigs, signature );
   }
+  pvoid2[0] = node->key.pVoid;
 #endif
   i = 0;
   while( i<self->routOverLoad->size ){
@@ -501,12 +499,13 @@ static DRoutine* DRoutine_GetOverLoadExt(
       if( DaoClass_ChildOf( obj->v.object->myClass, filter2 ) ==0 ) goto NextRoutine;
     }
 #if TYPING_CACHE
-    if( pvoid && nocache ==0 ){
+    if( nocache ==0 ){
       pvoid2[1] = rout;
       node = DMap_Find( vmp->matching, pvoid2 );
       if( node ){
-        match = node->value.pInt;
-        if( match > max || (match == max && rout->distance <= dist) ){
+        sum = node->value.pInt;
+        match = sum / (ndef + 1.0);
+        if( sum && (match > max || (match == max && rout->distance <= dist)) ){
           max = match;
           best = i;
           dist = rout->distance;
@@ -538,6 +537,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
     if( strcmp( rout->routName->mbs, "expand" ) ==0 )
     printf( "%i, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout->routType->name->mbs, npar, ndef, best );
     */
+    sum = 0;
     if( (npar | ndef) ==0 ){
       if( max <1 || (max ==1 && rout->distance <= dist) ){
         max = 1;
@@ -545,9 +545,10 @@ static DRoutine* DRoutine_GetOverLoadExt(
         dist = rout->distance;
         if( nocache ==0 ) MAP_Insert( vmp->matching, pvoid2, max );
       }
-      goto NextRoutine;
+      sum = 1;
+      goto CacheThenNext;
     }
-    if( npar > ndef ) goto NextRoutine;
+    if( npar > ndef ) goto CacheThenNext;
     for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
     for( ip=selfChecked; ip<ndef; ip++){
       it = ip;
@@ -557,15 +558,15 @@ static DRoutine* DRoutine_GetOverLoadExt(
           DaoPair *pair = val.v.pair;
           val = pair->second;
           node = DMap_Find( mapNames, pair->first.v.s );
-          if( node == NULL ) goto NextRoutine;
+          if( node == NULL ) goto CacheThenNext;
           it = node->value.pInt & MAPF_MASK;
         }
-        if( it > ndef )  goto NextRoutine;
+        if( it > ndef )  goto CacheThenNext;
         abtp = parType[it];
         if( abtp->tid != DAO_PAR_VALIST ){
           if( abtp->tid != DAO_PAR_GROUP ) abtp = abtp->X.abtype; /* must be named */
           parpass[it] = DaoAbsType_MatchValue( abtp, val, defs );
-          if( parpass[it] ==0 ) goto NextRoutine;
+          if( parpass[it] ==0 ) goto CacheThenNext;
           if( abtp->tid == DAO_PAR_GROUP ) ip += abtp->nested->size -1;
         }else{
           for( m=it; m<npar; m++ ) parpass[m] = 1;
@@ -574,22 +575,23 @@ static DRoutine* DRoutine_GetOverLoadExt(
       }else if( parType[it]->tid == DAO_PAR_VALIST ){
         break;
       }else if( parpass[it] == 0 && parType[it]->tid != DAO_PAR_DEFAULT ){
-        goto NextRoutine;
+        goto CacheThenNext;
       }else{
         parpass[it] = 1;
       }
     }
-    match = selfMatch;
-    for( j=selfChecked; j<ndef; j++ ) match += parpass[j];
-    if( npar ==0 && ( ndef==0 || parType[0]->tid == DAO_PAR_VALIST ) ) match = 1;
-    match /= ndef;
+    sum = selfMatch;
+    for( j=selfChecked; j<ndef; j++ ) sum += parpass[j];
+    if( npar ==0 && ( ndef==0 || parType[0]->tid == DAO_PAR_VALIST ) ) sum = 1;
+    match = sum / (ndef + 1.0);
     if( match > max || (match == max && rout->distance <= dist) ){
       max = match;
       best = i;
       dist = rout->distance;
     }
 #if TYPING_CACHE
-    if( nocache ==0 ) MAP_Insert( vmp->matching, pvoid2, match );
+CacheThenNext:
+    if( nocache ==0 ) MAP_Insert( vmp->matching, pvoid2, sum );
 #endif
 NextRoutine:
     i ++;

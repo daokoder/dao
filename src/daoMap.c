@@ -203,34 +203,44 @@ static int DValue_Hash( DValue self, unsigned int buf[], int id, int max )
 static int DHash_HashIndex( DMap *self, void *key )
 {
 #define HASH_MAX  32
+  DString *s;
+  DArray *array;
   unsigned int buf[HASH_MAX];
-  int T = self->tsize;
-  size_t id = ((size_t)key) % T;
-  if( self->keytype == D_STRING ){
-    DString *s = (DString*)key;
-    void *data = NULL;
-    int len = 0;
+  unsigned int T = self->tsize;
+  unsigned id = 0;
+  void *data;
+  int m;
+
+  switch( self->keytype ){
+  case D_STRING :
+    s = (DString*)key;
+    m = s->size;
+    data = NULL;
     if( s->mbs ){
       data = s->mbs;
-      len = s->size;
     }else{
       data = s->wcs;
-      len = s->size * sizeof(wchar_t);
+      m *= sizeof(wchar_t);
     }
-    id = MurmurHash2( data, len, HASH_SEED) % T;
-  }else if( self->keytype == D_VALUE ){
-    int m = DValue_Hash( *(DValue*) key, buf, 0, HASH_MAX );
+    id = MurmurHash2( data, m, HASH_SEED) % T;
+    break;
+  case D_VALUE :
+    m = DValue_Hash( *(DValue*) key, buf, 0, HASH_MAX );
     if( m ==1 ){
       id = buf[0] % T;
     }else{
       id = MurmurHash2( buf, m*sizeof(unsigned int), HASH_SEED) % T;
     }
-  }else if( self->keytype == D_ARRAY ){
-    DArray *array = (DArray*)key;
-    id = array->size * sizeof(void*);
-    id = MurmurHash2( array->items.pVoid, id, HASH_SEED) % T;
-  }else if( self->keytype == D_VOID2 ){
+    break;
+  case D_ARRAY :
+    array = (DArray*)key;
+    m = array->size * sizeof(void*);
+    id = MurmurHash2( array->items.pVoid, m, HASH_SEED) % T;
+    break;
+  case D_VOID2 :
     id = MurmurHash2( key, 2*sizeof(void*), HASH_SEED) % T;
+    break;
+  default : id = ((size_t)key) % T; break;
   }
   return (int)id;
 }
@@ -290,18 +300,6 @@ void DMap_Delete( DMap *self )
   DMap_Clear( self );
   if( self->table ) dao_free( self->table );
   dao_free( self );
-}
-static void DNode_Swap( DNode *node, DNode *extreme )
-{
-  void* key = extreme->key.pVoid;
-  void* value = extreme->value.pVoid;
-  int hash = extreme->hash;
-  extreme->hash = node->hash;
-  extreme->key.pVoid = node->key.pVoid;
-  extreme->value.pVoid = node->value.pVoid;
-  node->hash = hash;
-  node->key.pVoid = key;
-  node->value.pVoid = value;
 }
 static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )
 {

@@ -1400,6 +1400,7 @@ static DaoAbsType* DaoAbsType_MakeType( short tid, DString *name, DaoBase *extra
   GC_IncRC( extra );
   MAP_Insert( ns->abstypes, name, self );
   GC_IncRC( self );
+  DaoAbsType_CheckName( self );
   return self;
 }
 static DaoAbsType* DaoAbsType_Parse( DaoToken **tokens, int start, int end, int *newpos, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout )
