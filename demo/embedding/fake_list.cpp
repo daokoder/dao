@@ -93,16 +93,8 @@ int main( int argc, char *argv[] )
   src = DString_New(1);
   DString_SetMBS( src, dao_source );
 
-  // Call the entry function to import the type wrapping FakeList
-  // into the namespace ns.
-  //
-  // Calling to this function is not necessary, if and only if
-  // the wrapping codes are compiled as dynamic loading library,
-  // and there is a proper load statement in the Dao codes.
-  //
-  // Here the wrapping codes are compiled together with this
-  // example, so this entry function must be called:
-  DaoNameSpace_AddType( ns, dao_FakeList_Typer, 1 );
+  // Wrap and setup a C/C++ type:
+  DaoNameSpace_WrapType( ns, dao_FakeList_Typer, 1 );
 
   // Execute the Dao scripts:
   // Since the wrapped functions and types are imported into

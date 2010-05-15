@@ -74,6 +74,9 @@ static void recycleGarbage( void * );
 static void tryInvoke();
 #endif
 
+static void DaoLateDeleter_Init();
+static void DaoLateDeleter_Finish();
+static void DaoLateDeleter_Update();
 
 struct DaoGarbageCollector
 {
@@ -121,6 +124,7 @@ int DaoGC_Max( int n /*=-1*/ )
 void InitGC()
 {
   if( gcWorker.objAlive != NULL ) return;
+  DaoLateDeleter_Init();
 
   gcWorker.pool[0] = DArray_New(0);
   gcWorker.pool[1] = DArray_New(0);
@@ -418,6 +422,7 @@ void DaoFinishGC()
   DArray_Delete( gcWorker.pool[0] );
   DArray_Delete( gcWorker.pool[1] );
   DArray_Delete( gcWorker.objAlive );
+  DaoLateDeleter_Finish();
 }
 void DaoGC_IncRC( DaoBase *p )
 {
@@ -508,6 +513,7 @@ void recycleGarbage( void *p )
       DMutex_Unlock( & gcWorker.mutex_start_gc );
       if( gcWorker.count < gcWorker.gcMin ) continue;
     }
+    DaoLateDeleter_Update();
 
     DMutex_Lock( & gcWorker.mutex_switch_heap );
     gcWorker.count = 0;
@@ -1126,6 +1132,7 @@ void ContinueGC()
   gcWorker.busy = 1;
   switch( gcWorker.workType ){
     case GC_INIT_RC :
+      DaoLateDeleter_Update();
       InitRC();
       break;
     case GC_DEC_RC :
@@ -1158,6 +1165,7 @@ void DaoFinishGC()
   DArray_Delete( gcWorker.pool[0] );
   DArray_Delete( gcWorker.pool[1] );
   DArray_Delete( gcWorker.objAlive );
+  DaoLateDeleter_Finish();
 }
 void InitRC()
 {
@@ -1845,3 +1853,65 @@ void directRefCountDecrementVT( DVaTuple *list )
   DVaTuple_Clear( list );
 }
 
+DaoLateDeleter dao_late_deleter;
+#ifdef DAO_WITH_THREAD
+DMutex dao_late_deleter_mutex;
+#endif
+
+void DaoLateDeleter_Init()
+{
+  dao_late_deleter.lock = 0;
+  dao_late_deleter.safe = 1;
+  dao_late_deleter.version = 0;
+  dao_late_deleter.buffer = DArray_New(0);
+#ifdef DAO_WITH_THREAD
+  DMutex_Init( & dao_late_deleter_mutex );
+#endif
+}
+void DaoLateDeleter_Finish()
+{
+  dao_late_deleter.safe = 0;
+  dao_late_deleter.lock = 0;
+  DaoLateDeleter_Update();
+  DArray_Delete( dao_late_deleter.buffer );
+}
+void DaoLateDeleter_Push( void *p )
+{
+#ifdef DAO_WITH_THREAD
+    DMutex_Lock( & dao_late_deleter_mutex );
+#endif
+    DArray_Append( dao_late_deleter.buffer, p );
+#ifdef DAO_WITH_THREAD
+    DMutex_Unlock( & dao_late_deleter_mutex );
+#endif
+}
+void DaoLateDeleter_Update()
+{
+  DaoLateDeleter *self = & dao_late_deleter;
+  DArray *buffer = self->buffer;
+  int i;
+  switch( (self->safe<<1)|self->lock ){
+  case 2 : /* safe=1, lock=0 */
+    if( self->buffer->size < 10000 ) break;
+    self->safe = 0;
+    self->lock = 0;
+    self->version += 1;
+    break;
+  case 0 : /* safe=0, lock=0 */
+    self->lock = 1;
+#ifdef DAO_WITH_THREAD
+    DMutex_Lock( & dao_late_deleter_mutex );
+#endif
+    for(i=0; i<buffer->size; i++) dao_free( buffer->items.pVoid[i] );
+    buffer->size = 0;
+#ifdef DAO_WITH_THREAD
+    DMutex_Unlock( & dao_late_deleter_mutex );
+#endif
+    break;
+  case 1 : /* safe=0, lock=1 */
+    self->safe = 1;
+    self->lock = 0;
+    break;
+  default : break;
+  }
+}

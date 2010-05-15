@@ -513,7 +513,7 @@ int DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *ty
 DaoCDataCore* DaoCDataCore_New();
 extern void DaoTypeCData_SetMethods( DaoTypeBase *self );
 
-static int DaoNameSpace_CreateType2( DaoNameSpace *self, DaoTypeBase *typer )
+static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
 {
   DaoType *abstype;
   DaoCDataCore *plgCore;
@@ -541,9 +541,9 @@ static int DaoNameSpace_CreateType2( DaoNameSpace *self, DaoTypeBase *typer )
   DaoTypeCData_SetMethods( typer );
   return 1;
 }
-int DaoNameSpace_CreateType( DaoNameSpace *self, DaoTypeBase *typer, int setup )
+int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer, int setup )
 {
-  DaoNameSpace_CreateType2( self, typer );
+  DaoNameSpace_WrapType2( self, typer );
   DArray_Append( self->ctypers, typer );
   if( DaoPrepareNumber( self, typer ) == 0 ) return 0;
   if( setup ) return DaoNameSpace_SetupType( self, typer );
@@ -558,11 +558,11 @@ int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer )
   for(j=0; j<core->methCount; j++) DArray_Append( self->cmethods, core->methods[j] );
   return 1;
 }
-int DaoNameSpace_CreateTypes( DaoNameSpace *self, DaoTypeBase *typers[], int setup )
+int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typers[], int setup )
 {
   int i, e = 0;
   for(i=0; typers[i]; i++ ){
-    DaoNameSpace_CreateType2( self, typers[i] );
+    DaoNameSpace_WrapType2( self, typers[i] );
     DArray_Append( self->ctypers, typers[i] );
     e |= ( DaoPrepareNumber( self, typers[i] ) == 0 );
   }
@@ -609,7 +609,7 @@ DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self,
   }
   return func;
 }
-int DaoNameSpace_CreateFunction( DaoNameSpace *self, DaoFuncPtr fptr, const char *proto )
+int DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fptr, const char *proto )
 {
   DaoFunction *func;
   func = DaoNameSpace_MakeFunction( self, proto, NULL );
@@ -618,7 +618,7 @@ int DaoNameSpace_CreateFunction( DaoNameSpace *self, DaoFuncPtr fptr, const char
   return 1;
 }
 
-int DaoNameSpace_CreateFunctions( DaoNameSpace *self, DaoFuncItem *items )
+int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items )
 {
   DaoParser *parser = DaoParser_New();
   DaoFunction *func;

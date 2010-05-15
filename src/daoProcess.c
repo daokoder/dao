@@ -165,6 +165,7 @@ DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms )
   self->signature = DArray_New(0);
   self->callsigs = DHash_New(D_ARRAY,0);
   self->matching = DHash_New(D_VOID2,0);
+  self->version = 0;
   return self;
 }
 

@@ -116,4 +116,5 @@ void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 
 #define NESTYPE(t,i) ((t)->nested->items.pAbtp[i])
 
+
 #endif

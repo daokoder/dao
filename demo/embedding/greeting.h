@@ -40,6 +40,8 @@ namespace CxxNS
   enum Bool { FALSE, TRUE };
   enum Enum2 { AA, BB, CC };
 
+  typedef Bool Bool2;
+
   class Test
   {
     public:
@@ -51,7 +53,7 @@ namespace CxxNS
   };
   /* reference a class from global scope */
   void Testing( Greeting *greeting, Bool bl=FALSE );
-  void Testing( int a, Bool bl=FALSE );
+  void Testing( int a, Bool2 bl=FALSE );
 }
 
 typedef CxxNS::Test Test2;

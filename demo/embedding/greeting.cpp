@@ -47,7 +47,7 @@ void Testing( Greeting *greeting, Bool bl )
 {
   printf( "CxxNS::Testing(): %i\n", bl );
 }
-void Testing( int a, Bool bl )
+void Testing( int a, Bool2 bl )
 {
   printf( "CxxNS::Testing(): %i\n", bl );
 }

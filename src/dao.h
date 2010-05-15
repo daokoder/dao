@@ -597,10 +597,10 @@ struct DaoAPI
 
   int (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
   int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
-  int (*DaoNameSpace_CreateType)( DaoNameSpace *self, DaoTypeBase *typer, int setup );
-  int (*DaoNameSpace_CreateTypes)( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
-  int (*DaoNameSpace_CreateFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
-  int (*DaoNameSpace_CreateFunctions)( DaoNameSpace *self, DaoFuncItem *items );
+  int (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer, int setup );
+  int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
+  int (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
+  int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
   int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
   int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
   int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
@@ -892,19 +892,19 @@ used as typedefs like: typedef alias[2*i] alias[2*i+1];
 the last item in alias[] should also be NULL.
 */
 DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
-/* create c type */
-DAO_DLL int DaoNameSpace_CreateType( DaoNameSpace *self, DaoTypeBase *typer, int setup );
-/* create c types, the last item in typer[] should be NULL;
+/* wrap c type */
+DAO_DLL int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer, int setup );
+/* wrap c types, the last item in typer[] should be NULL;
 types that are cross-used in parameter lists
 (e.g. type A appears in the parameter list of B's methods,
 and type B appears in the parameter list of A's methods), 
-should be created using this function.
+should be wrapd using this function.
 */
-DAO_DLL int DaoNameSpace_CreateTypes( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
-/* create c function */
-DAO_DLL int DaoNameSpace_CreateFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *prot );
-/* create c functions */
-DAO_DLL int DaoNameSpace_CreateFunctions( DaoNameSpace *self, DaoFuncItem *items );
+DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
+/* wrap c function */
+DAO_DLL int DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
+/* wrap c functions */
+DAO_DLL int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items );
 DAO_DLL int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
 DAO_DLL int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 /* load the scripts in "file" to the namespace */
@@ -1169,10 +1169,10 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 
 #define DaoNameSpace_TypeDefine( self, o, n ) __dao.DaoNameSpace_TypeDefine( self, o, n )
 #define DaoNameSpace_TypeDefines( self, alias ) __dao.DaoNameSpace_TypeDefines( self, alias )
-#define DaoNameSpace_CreateType( self, t, s ) __dao.DaoNameSpace_CreateType( self, t, s )
-#define DaoNameSpace_CreateTypes( self, ts, s ) __dao.DaoNameSpace_CreateTypes( self, ts, s )
-#define DaoNameSpace_CreateFunction( ns, f, p ) __dao.DaoNameSpace_CreateFunction( ns, f, p )
-#define DaoNameSpace_CreateFunctions( ns, fs ) __dao.DaoNameSpace_CreateFunctions( ns, fs )
+#define DaoNameSpace_WrapType( self, t, s ) __dao.DaoNameSpace_WrapType( self, t, s )
+#define DaoNameSpace_WrapTypes( self, ts, s ) __dao.DaoNameSpace_WrapTypes( self, ts, s )
+#define DaoNameSpace_WrapFunction( ns, f, p ) __dao.DaoNameSpace_WrapFunction( ns, f, p )
+#define DaoNameSpace_WrapFunctions( ns, fs ) __dao.DaoNameSpace_WrapFunctions( ns, fs )
 #define DaoNameSpace_SetupType( self, typer ) __dao.DaoNameSpace_SetupType( self, typer )
 #define DaoNameSpace_SetupTypes( self, types ) __dao.DaoNameSpace_SetupTypes( self, types )
 #define DaoNameSpace_Load( self, file ) __dao.DaoNameSpace_Load( self, file )

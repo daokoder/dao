@@ -9,6 +9,8 @@
 
 static void dao_FakeNumber_FakeNumber( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_FakeNumber_AddSubMulDiv( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeNumber_AddSubMulDiv2( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeNumber_Compare( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_FakeNumber_Meths[] = 
 {
@@ -17,6 +19,14 @@ static DaoFuncItem dao_FakeNumber_Meths[] =
   { dao_FakeNumber_AddSubMulDiv, "-( a : FakeNumber, b : FakeNumber, op=1 )" },
   { dao_FakeNumber_AddSubMulDiv, "*( a : FakeNumber, b : FakeNumber, op=2 )" },
   { dao_FakeNumber_AddSubMulDiv, "/( a : FakeNumber, b : FakeNumber, op=3 )" },
+  { dao_FakeNumber_AddSubMulDiv2, "+( c : FakeNumber, a : FakeNumber, b : FakeNumber, op=0 )" },
+  { dao_FakeNumber_AddSubMulDiv2, "-( c : FakeNumber, a : FakeNumber, b : FakeNumber, op=1 )" },
+  { dao_FakeNumber_AddSubMulDiv2, "*( c : FakeNumber, a : FakeNumber, b : FakeNumber, op=2 )" },
+  { dao_FakeNumber_AddSubMulDiv2, "/( c : FakeNumber, a : FakeNumber, b : FakeNumber, op=3 )" },
+  { dao_FakeNumber_Compare, "<( a : FakeNumber, b : FakeNumber, op=0 )" },
+  { dao_FakeNumber_Compare, "<=( a : FakeNumber, b : FakeNumber, op=1 )" },
+  { dao_FakeNumber_Compare, "==( a : FakeNumber, b : FakeNumber, op=2 )" },
+  { dao_FakeNumber_Compare, "!=( a : FakeNumber, b : FakeNumber, op=3 )" },
   { NULL, NULL }
 };
 static void Dao_FakeNumber_Delete( void *self ){}
@@ -33,14 +43,27 @@ static void dao_FakeNumber_AddSubMulDiv( DaoContext *_ctx, DValue *_p[], int _n 
   DaoContext_PutCData( _ctx, NULL, dao_FakeNumber_Typer );
   printf( "Arithmetic on two numbers (a fake). opcode: %i\n", _p[2]->v.i );
 }
+static void dao_FakeNumber_AddSubMulDiv2( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  DaoContext_PutValue( _ctx, *_p[0] );
+  printf( "Arithmetic on two numbers (a fake), with C. opcode: %i\n", _p[3]->v.i );
+}
+static void dao_FakeNumber_Compare( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  DaoContext_PutCData( _ctx, NULL, dao_FakeNumber_Typer );
+  printf( "Compare on two numbers (a fake). opcode: %i\n", _p[2]->v.i );
+}
 
 const char* dao_source = 
 "f1 = FakeNumber()\n"
 "f2 = FakeNumber()\n"
+"for( i = 1 : 2 )\n"
 "f3 = f1 + f2\n"
+"for( i = 1 : 2 )\n"
 "f3 = f1 - f2\n"
 "f3 = f1 * f2\n"
 "f3 = f1 / f2\n"
+"f3 = f1 < f2\n"
 "class FakeNumber2 : FakeNumber{ routine FakeNumber2() : FakeNumber(){} }"
 "ff1 = FakeNumber2()\n"
 "ff2 = FakeNumber2()\n"
@@ -86,16 +109,8 @@ int main( int argc, char *argv[] )
   src = DString_New(1);
   DString_SetMBS( src, dao_source );
 
-  // Call the entry function to import the type wrapping FakeNumber
-  // into the namespace ns.
-  //
-  // Calling to this function is not necessary, if and only if
-  // the wrapping codes are compiled as dynamic loading library,
-  // and there is a proper load statement in the Dao codes.
-  //
-  // Here the wrapping codes are compiled together with this
-  // example, so this entry function must be called:
-  DaoNameSpace_AddType( ns, dao_FakeNumber_Typer, 1 );
+  // Wrap and setup a C/C++ type:
+  DaoNameSpace_WrapType( ns, dao_FakeNumber_Typer, 1 );
 
   // Execute the Dao scripts:
   // Since the wrapped functions and types are imported into

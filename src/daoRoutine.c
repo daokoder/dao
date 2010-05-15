@@ -466,24 +466,32 @@ static DRoutine* DRoutine_GetOverLoadExt(
 
 #define TYPING_CACHE 1
 #if TYPING_CACHE
-  signature->size = 0;
-  if( obj ){
-    pvoid = DValue_GetTypeID( *obj );
-    DArray_Append( signature, pvoid );
+  if( dao_late_deleter.safe ==0 || dao_late_deleter.version != vmp->version ){
+    if( vmp->callsigs->size ) DMap_Clear( vmp->callsigs );
+    if( vmp->matching->size ) DMap_Clear( vmp->matching );
   }
-  if( mcall ) DArray_Append( signature, (void*)1 );
-  DArray_Append( signature, (void*)2 );
-  for(i=0; i<n; i++){
-    pvoid = DValue_GetTypeID( *p[i] );
-    DArray_Append( signature, pvoid );
-    if( pvoid == NULL ) nocache = 1;
-  }
-  node = DMap_Find( vmp->callsigs, signature );
-  if( node == NULL ){
-    DMap_Insert( vmp->callsigs, signature, NULL );
+  if( dao_late_deleter.safe ){
+    signature->size = 0;
+    if( obj ){
+      pvoid = DValue_GetTypeID( *obj );
+      DArray_Append( signature, pvoid );
+    }
+    if( mcall ) DArray_Append( signature, (void*)1 );
+    DArray_Append( signature, (void*)2 );
+    for(i=0; i<n; i++){
+      pvoid = DValue_GetTypeID( *p[i] );
+      DArray_Append( signature, pvoid );
+      if( pvoid == NULL ) nocache = 1;
+    }
     node = DMap_Find( vmp->callsigs, signature );
+    if( node == NULL ){
+      DMap_Insert( vmp->callsigs, signature, NULL );
+      node = DMap_Find( vmp->callsigs, signature );
+    }
+    pvoid2[0] = node->key.pVoid;
+  }else{
+    nocache = 1;
   }
-  pvoid2[0] = node->key.pVoid;
 #endif
   i = 0;
   while( i<self->routOverLoad->size ){
@@ -913,7 +921,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
   DaoVmcArray_Delete( self->preJit );
   if( self->jitMemory ) GC_DecRC( self->jitMemory );
 #endif
-  dao_free( self );
+  DaoLateDeleter_Push( self );
 }
 void DaoParser_ClearCodes( DaoParser *self );
 void DaoRoutine_Compile( DaoRoutine *self )
@@ -3975,7 +3983,7 @@ void DaoFunction_Delete( DaoFunction *self )
 {
   DRoutine_DeleteFields( (DRoutine*) self );
   GC_DecRC( self->hostCData );
-  dao_free( self );
+  DaoLateDeleter_Push( self );
 }
 
 DaoTypeBase funcTyper =

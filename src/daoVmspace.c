@@ -2011,10 +2011,10 @@ void DaoInitAPI( DaoAPI *api )
 
   api->DaoNameSpace_TypeDefine = DaoNameSpace_TypeDefine;
   api->DaoNameSpace_TypeDefines = DaoNameSpace_TypeDefines;
-  api->DaoNameSpace_CreateType = DaoNameSpace_CreateType;
-  api->DaoNameSpace_CreateTypes = DaoNameSpace_CreateTypes;
-  api->DaoNameSpace_CreateFunction = DaoNameSpace_CreateFunction;
-  api->DaoNameSpace_CreateFunctions = DaoNameSpace_CreateFunctions;
+  api->DaoNameSpace_WrapType = DaoNameSpace_WrapType;
+  api->DaoNameSpace_WrapTypes = DaoNameSpace_WrapTypes;
+  api->DaoNameSpace_WrapFunction = DaoNameSpace_WrapFunction;
+  api->DaoNameSpace_WrapFunctions = DaoNameSpace_WrapFunctions;
   api->DaoNameSpace_SetupType = DaoNameSpace_SetupType;
   api->DaoNameSpace_SetupTypes = DaoNameSpace_SetupTypes;
   api->DaoNameSpace_Load = DaoNameSpace_Load;
@@ -2277,7 +2277,7 @@ DaoVmSpace* DaoInit()
   DaoNameSpace_PrepareType( vms->nsWorking, & mapTyper );
 
   DaoNameSpace_PrepareType( vms->nsWorking, & streamTyper );
-  DaoNameSpace_CreateType( vms->nsInternal, & cdataTyper, 1 );
+  DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper, 1 );
 
 #ifdef DAO_WITH_THREAD
   DaoNameSpace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
@@ -2305,7 +2305,7 @@ DaoVmSpace* DaoInit()
 #endif
 
 #ifdef DAO_WITH_NETWORK
-  DaoNameSpace_CreateType( vms->nsWorking, & DaoFdSet_Typer, 1 );
+  DaoNameSpace_WrapType( vms->nsWorking, & DaoFdSet_Typer, 1 );
   DaoNameSpace_PrepareType( vms->nsWorking, & libNetTyper );
   DaoNetwork_Init( vms, vms->nsWorking );
 #endif

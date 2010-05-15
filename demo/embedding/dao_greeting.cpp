@@ -59,7 +59,7 @@ static void dao__Testing( DaoContext *_ctx, DValue *_p[], int _n )
 static void dao__Testing_dao_2( DaoContext *_ctx, DValue *_p[], int _n )
 {
   int a= (int) _p[0]->v.i;
-  CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
+  CxxNS::Bool2 bl= (CxxNS::Bool2) _p[1]->v.i;
 
   CxxNS::Testing( a, bl );
 }
@@ -117,16 +117,16 @@ int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
   DaoNameSpace_TypeDefine( ns2, "int", "Bool" );
   DaoNameSpace_TypeDefine( ns2, "int", "Enum2" );
   DaoNameSpace_AddConstNumbers( ns, constNumbers );
-  DaoNameSpace_AddTypes( ns, typers, 0 );
+  DaoNameSpace_WrapTypes( ns, typers, 0 );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
   DaoNameSpace_AddConstNumbers( ns2, dao_CxxNS_Nums );
-  DaoNameSpace_AddTypes( ns2, dao_CxxNS_Types, 0 );
+  DaoNameSpace_WrapTypes( ns2, dao_CxxNS_Types, 0 );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS2" );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
-  DaoNameSpace_AddFunctions( ns2, dao_CxxNS_Funcs );
+  DaoNameSpace_WrapFunctions( ns2, dao_CxxNS_Funcs );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS2" );
-  DaoNameSpace_AddFunctions( ns2, dao_CxxNS2_Funcs );
-  DaoNameSpace_AddFunctions( ns, dao_Funcs );
+  DaoNameSpace_WrapFunctions( ns2, dao_CxxNS2_Funcs );
+  DaoNameSpace_WrapFunctions( ns, dao_Funcs );
   DaoNameSpace_TypeDefine( ns, "CxxNS::Test", "Test2" );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
   DaoNameSpace_SetupTypes( ns2, dao_CxxNS_Types );
