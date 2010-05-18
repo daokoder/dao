@@ -153,7 +153,8 @@ enum DaoRoutineAttrib
   DAO_ROUT_ISCONST = (1<<3), /* constant routine  */
   DAO_ROUT_EXTFUNC = (1<<4), /* external C function */
   DAO_ROUT_VIRTUAL = (1<<5),
-  DAO_ROUT_MAIN = (1<<6)
+  DAO_ROUT_STATIC = (1<<6),
+  DAO_ROUT_MAIN = (1<<7)
 };
 
 #define DAO_OPER_OVERLOADED  (DAO_ROUT_MAIN<<1)
@@ -314,6 +315,7 @@ enum DaoCtInfoId
   DAO_CTW_DERIVE_FINAL ,
   DAO_CTW_NO_PERMIT ,
   DAO_CTW_TYPE_NOMATCH ,
+  DAO_CTW_FAIL_BINDING ,
   DAO_CTW_FEATURE_DISABLED ,
   DAO_CTW_OBSOLETE_SYNTAX ,
   DAO_CTW_END 

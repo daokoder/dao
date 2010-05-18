@@ -31,7 +31,7 @@
 #define dao_cond_t     pthread_cond_t
 #define dao_sema_t     sem_t
 #define dao_thread_t   pthread_t
-#define dao_thdspec_t  unsigned int
+#define dao_thdspec_t  pthread_key_t
 #define dao_retcode_t  int
 
 #elif WIN32

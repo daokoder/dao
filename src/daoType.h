@@ -85,12 +85,14 @@ struct DaoType
   DString      *fname; /* field name, or parameter name */
   DArray       *nested;
   DMap         *mapNames;
+  DMap         *interfaces;
   DaoTypeBase  *typer; /* TYPER of the represented type: built-in or C types */
   union {
-    DaoBase    *extra;
-    DaoClass   *klass;
-    DaoCData   *cdata;
-    DaoType *abtype;
+    DaoBase      *extra;
+    DaoType      *abtype;
+    DaoClass     *klass;
+    DaoCData     *cdata;
+    DaoInterface *inter;
   }X; /* DaoClass, DaoCData or DaoType for returned/named... */
 };
 extern DaoType *dao_type_udf;
@@ -116,5 +118,21 @@ void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 
 #define NESTYPE(t,i) ((t)->nested->items.pAbtp[i])
 
+struct DaoInterface
+{
+  DAO_DATA_COMMON
+
+  DArray  *supers; /* parent interfaces */
+  DMap    *methods; /* DHash<DString*,DRoutine*> */
+  DaoType *abtype;
+  DMap    *ovldRoutMap; /* <DString*,DaoRoutine*> */
+};
+
+DaoInterface* DaoInterface_New( const char *name );
+
+int  DaoInterface_Bind( DArray *pairs, DArray *fails );
+void DaoInterface_DeriveMethods( DaoInterface *self );
+
+void DMap_SortMethods( DMap *hash, DArray *methods );
 
 #endif

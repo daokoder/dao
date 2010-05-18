@@ -107,4 +107,7 @@ int DString_Decrypt( DString *self, DString *key, int hex );
 size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
     uint_t esc0, size_t start, size_t end, int countonly );
 
+DString DString_WrapMBS( const char *mbs );
+DString DString_WrapWCS( const wchar_t *wcs );
+
 #endif

@@ -21,14 +21,14 @@ typedef enum{ KEY_EQ=0, KEY_ML/*Max Less*/, KEY_MG/*Min Great*/ } KeySearchType;
 
 typedef union
 {
-    dint         pInt;
-    void        *pVoid;
-    DValue      *pValue;
-    DString     *pString;
-    DArray      *pArray;
-    DaoBase     *pBase;
-    DaoType  *pAbtp;
-    DaoInode    *pInode;
+  dint       pInt;
+  void      *pVoid;
+  DValue    *pValue;
+  DString   *pString;
+  DArray    *pArray;
+  DaoBase   *pBase;
+  DaoType   *pAbtp;
+  DaoInode  *pInode;
 }DNodeData;
 
 struct DNode

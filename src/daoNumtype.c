@@ -38,11 +38,7 @@ static DValue DaoComplex_Copy( DValue *self, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore comCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -185,10 +181,53 @@ complex16 floor_c( const complex16 com )
 
 #define PI2 6.283185307179586
 
-#define complex_mul(z,x,y) { z.real=x.real*y.real-x.imag*y.imag; z.imag=x.real*y.imag+x.imag*y.real; }
+#define complex8_mul(z,x,y) { complex8 tmp; \
+  tmp.real=x.real*y.real-x.imag*y.imag; \
+  tmp.imag=x.real*y.imag+x.imag*y.real; z = tmp; }
+#define complex16_mul(z,x,y) { complex16 tmp; \
+  tmp.real=x.real*y.real-x.imag*y.imag; \
+  tmp.imag=x.real*y.imag+x.imag*y.real; z = tmp; }
 #define complex_init(c,r,i) { c.real=r; c.imag=i; }
 
-void dao_fft( complex16 data[], int M, int inv )
+void dao_fft8( complex8 data[], int M, int inv )
+{
+  int d, i, j, k, m, S, B, D, N = 1<<M;
+  double expo = PI2 / (double) N;
+  complex8 wn = { 0.0, 0.0 };
+  complex8 wi, wj, ws, tmp;
+
+  wn.real = cos( 0.5 * PI2 );  wn.imag = inv * sin( 0.5 * PI2 );
+  assert( abs(inv) == 1 );
+  D = N >> 1;
+  for(i=0; i<N; i++){ /* even/odd permutation */
+    k = 0; j = i; m = D;
+    while( j ){
+      if( j & 0x1 ) k += m;
+      j >>= 1; m >>= 1;
+    }
+    if( i < k ) tmp = data[k], data[k] = data[i], data[i] = tmp;
+  }
+  for(m=0; m<M; m++){ /* levels */
+    B = 1<<m;     /* butterfly size */
+    S = 1<<(m+1); /* DFT size */
+    D = N>>(m+1); /* number of DFTs */
+    complex_init( ws, cos( expo * D ), inv * sin( expo * D ) );
+    complex_init( wi, 1.0, 0.0 );
+    for(k=0; k<B; k++){ /* for k-th butterfly */
+      complex8_mul( wj, wi, wn );
+      for(d=0; d<D; d++){ /* in each DFT */
+        i = d * S + k;  j = i + B;
+        tmp = data[i];
+        complex8_mul( data[i], data[j], wi );
+        complex8_mul( data[j], data[j], wj );
+        data[i].real += tmp.real; data[i].imag += tmp.imag;
+        data[j].real += tmp.real; data[j].imag += tmp.imag;
+      }
+      complex8_mul( wi, wi, ws );
+    }
+  }
+}
+void dao_fft16( complex16 data[], int M, int inv )
 {
   int d, i, j, k, m, S, B, D, N = 1<<M;
   double expo = PI2 / (double) N;
@@ -213,16 +252,16 @@ void dao_fft( complex16 data[], int M, int inv )
     complex_init( ws, cos( expo * D ), inv * sin( expo * D ) );
     complex_init( wi, 1.0, 0.0 );
     for(k=0; k<B; k++){ /* for k-th butterfly */
-      complex_mul( wj, wi, wn );
+      complex16_mul( wj, wi, wn );
       for(d=0; d<D; d++){ /* in each DFT */
         i = d * S + k;  j = i + B;
         tmp = data[i];
-        complex_mul( data[i], data[j], wi );
-        complex_mul( data[j], data[j], wj );
+        complex16_mul( data[i], data[j], wi );
+        complex16_mul( data[j], data[j], wj );
         data[i].real += tmp.real; data[i].imag += tmp.imag;
         data[j].real += tmp.real; data[j].imag += tmp.imag;
       }
-      complex_mul( wi, wi, ws );
+      complex16_mul( wi, wi, ws );
     }
   }
 }
@@ -465,6 +504,7 @@ void DLong_Sub( DLong *z, DLong *x, DLong *y )
   }
 }
 static void DLong_MulAdd( DLong *z, DLong *x, ushort_t y, short m );
+void DLong_UMulDigitX( DLong *z, DLong *x, ushort_t digit );
 static void DLong_UMulSimple( DLong *z, DLong *x, DLong *y )
 {
   int i, n = x->size + y->size;
@@ -480,6 +520,195 @@ static void DLong_UMulSimple( DLong *z, DLong *x, DLong *y )
   memset( z->data, 0, z->size * sizeof(short) );
   for(i=0; i<x->size; i++) DLong_MulAdd( z, y, x->data[i], i );
 }
+typedef struct DLongBuffer DLongBuffer;
+struct DLongBuffer
+{
+  DLong *x0, *x1;
+  DLong *y0, *y1;
+  DLong *z0, *z1, *z2;
+};
+static DLongBuffer* DLongBuffer_New( int max )
+{
+  DLongBuffer *self = dao_malloc( sizeof(DLongBuffer) );
+  self->x0 = DLong_New();
+  self->x1 = DLong_New();
+  self->y0 = DLong_New();
+  self->y1 = DLong_New();
+  self->z0 = DLong_New();
+  self->z1 = DLong_New();
+  self->z2 = DLong_New();
+  DLong_Resize( self->x0, max );
+  DLong_Resize( self->x1, max );
+  DLong_Resize( self->y0, max );
+  DLong_Resize( self->y1, max );
+  DLong_Resize( self->z0, max );
+  DLong_Resize( self->z1, max );
+  DLong_Resize( self->z2, max );
+  return self;
+}
+static void DLong_Split( DLong *x, DLong *x1, DLong *x0, size_t m )
+{
+  int size = x->size;
+  memmove( x0->data, x->data, m * sizeof(ushort_t) );
+  memmove( x1->data, x->data + m, (size-m) * sizeof(ushort_t) );
+  x0->size = m;
+  x1->size = size - m;
+}
+static void DLongBuffer_Delete( DLongBuffer *self )
+{
+  DLong_Delete( self->x0 );
+  DLong_Delete( self->x1 );
+  DLong_Delete( self->y0 );
+  DLong_Delete( self->y1 );
+  DLong_Delete( self->z0 );
+  DLong_Delete( self->z1 );
+  DLong_Delete( self->z2 );
+  dao_free( self );
+}
+static void LongCat( DLong *z, DLong *x1, size_t m, DLong *x0 )
+{
+  /* z might be the same object as x1: */
+  int i, n = x1->size;
+  if( z->bufSize < n + m + 1 ) DLong_Reserve( z, n + m + 1 );
+  memmove( z->data + m, x1->data, n * sizeof(ushort_t) );
+  memset( z->data, 0, m * sizeof(ushort_t) );
+  z->size = m + n;
+  DLong_UAdd( z, z, x0 );
+}
+static void LongMulSum( DLong *z, DLong *z2, DLong *z1, DLong *z0, int m )
+{
+  int n = m + z1->size;
+  if( z2 ) n = z2->size + m + m;
+  if( z->bufSize <= n ) DLong_Reserve( z, n );
+  memmove( z->data, z0->data, z0->size * sizeof(short) );
+  if( z2 ) memmove( z->data + (m+m), z2->data, z2->size *sizeof(short) );
+  if( z1->bufSize <= z1->size+m ) DLong_Reserve( z1, z1->size + m );
+  memmove( z1->data+m, z1->data, z1->size*sizeof(short) );
+  z->size = n;
+  z1->size += m;
+  DLong_UAdd( z, z, z1 );
+}
+static void LongZ1( DLong *z1, DLong *z0, DLong *z2 )
+{
+  int i, sub=2;
+  int nz1 = z1->size;
+  int nz0 = z0->size;
+  int nz2 = z2->size;
+  ushort_t *dz1 = z1->data;
+  ushort_t *dz0 = z0->data;
+  ushort_t *dz2 = z2->data;
+  if( nz0 < nz2 ){
+    nz0 = z2->size;
+    nz2 = z0->size;
+    dz0 = z2->data;
+    dz2 = z0->data;
+  }
+  for(i=0; i<nz2; i++){
+    sub += (2*LONG_BASE -2) + dz1[i] - (dz0[i] + dz2[i]);
+    dz1[i] = sub & LONG_MASK;
+    sub = sub >> LONG_BITS;
+  }
+  for(i=nz2; i<nz0; i++){
+    sub += (2*LONG_BASE -2) + dz1[i] - dz0[i];
+    dz1[i] = sub & LONG_MASK;
+    sub = sub >> LONG_BITS;
+  }
+  for(i=nz0; i<nz1; i++){
+    sub += (2*LONG_BASE -2) + dz1[i];
+    dz1[i] = sub & LONG_MASK;
+    sub = sub >> LONG_BITS;
+  }
+  while( nz1 && dz1[ nz1-1 ] ==0 ) nz1 --;
+  z1->size = nz1;
+}
+/* Karatsuba's algorithm */
+static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int dep )
+{
+  DLongBuffer **inbufs = bufs;
+  DLongBuffer  *buf;
+  DLong *x0, *x1, *y0, *y1;
+  DLong *z0, *z1, *z2;
+  ushort_t *dx = x->data;
+  ushort_t *dy = y->data;
+  size_t nx = x->size;
+  size_t ny = y->size;
+  size_t m = 0;
+  /*
+     printf( "nx = %i,  ny = %i,  dep = %i\n", nx, ny, dep );
+     DLong_Print( x, NULL );
+     DLong_Print( y, NULL );
+   */
+  if( (nx|ny) <= 1 ){
+    if( (nx&ny) == 1 ){
+      int prod = dx[0] * dy[0];
+      if( z->bufSize < 2 ) DLong_Reserve( z, 2 );
+      z->data[0] = prod & LONG_MASK;
+      z->data[1] = prod >> LONG_BITS;
+      z->size = prod >> LONG_BITS ? 2 : (prod ? 1 : 0);
+    }else{
+      z->size = 0;
+    }
+    return;
+  }else if( nx == 1 ){
+    DLong_UMulDigitX( z, y, dx[0] );
+    return;
+  }else if( ny == 1 ){
+    DLong_UMulDigitX( z, x, dy[0] );
+    return;
+  }else if( nx <= 4 ){
+    DLong_UMulSimple( z, x, y );
+    return;
+  }else if( ny <= 4 ){
+    DLong_UMulSimple( z, y, x );
+    return;
+  }else if( nx <= 20 && ny <= 20 ){
+    DLong_UMulSimple( z, x, y );
+    return;
+  }
+  if( nx > ny ){
+    DLong *tmp = x;
+    m = nx;  nx = ny;  ny = m;
+    x = y;  y = tmp;
+  }
+  if( bufs == NULL ){
+    int maxdep = 2 * (1 + log( ny ) / log(2));
+    //printf( ">>>>>>>>>>>>>>>>>> maxdep = %i,  %i\n", maxdep, ny );
+    bufs = dao_calloc( maxdep, sizeof(DLongBuffer*) );
+  }
+  if( bufs[dep] ==NULL ) bufs[dep] = DLongBuffer_New( ny+1 );
+  buf = bufs[ dep ++ ];
+  x0 = buf->x0; x1 = buf->x1;
+  y0 = buf->y0; y1 = buf->y1;
+  z0 = buf->z0; z1 = buf->z1; z2 = buf->z2;
+  m = ny>>1;
+  DLong_Split( y, y1, y0, m ); /* y := y1 * B^m + y0; */
+  if( nx + nx < ny ){
+    DLong_UMulK( y1, x, y1, bufs, dep ); /* y1 = x * y1; */
+    DLong_UMulK( y0, x, y0, bufs, dep ); /* y0 = x * y1; */
+    LongCat( z, y1, m, y0 ); /* z = y1 * B^m + y0; */
+  }else if( x == y ){
+    DLong_UMulK( z1, y0, y1, bufs, dep ); /* z1 = y0 * y1; */
+    DLong_UMulK( z2, y1, y1, bufs, dep ); /* y1 = y1 * y1; */
+    DLong_UMulK( z0, y0, y0, bufs, dep ); /* y0 = y0 * y0; */
+    DLong_UAdd( z1, z1, z1 ); /* z1 = 2 * z1; */
+    LongMulSum( z, z2, z1, z0, m );
+  }else{
+    DLong_Split( x, x1, x0, m ); /* x := x1 * B^m + x0; */
+    DLong_UMulK( z2, x1, y1, bufs, dep ); /* z2 = x1 * y1; */
+    DLong_UMulK( z0, x0, y0, bufs, dep ); /* z0 = x0 * y0; */
+    DLong_UAdd( x1, x1, x0 ); /* x1 = x1 + x0 */
+    DLong_UAdd( y1, y1, y0 ); /* y1 = y1 + y0 */
+    DLong_UMulK( z1, x1, y1, bufs, dep ); /* z1 = x1 * y1; */
+    LongZ1( z1, z0, z2 ); /* (x1+x0)*(y1+y0)-z0-z2; */
+    LongMulSum( z, z2, z1, z0, m ); /* z2 * B^2m + z1 * B^m + z0; */
+  }
+  if( bufs != inbufs ){
+    int i, maxdep = 2*(1 + log( ny ) / log(2));
+    for(i=0; i<maxdep; i++) if( bufs[i] ) DLongBuffer_Delete( bufs[i] );
+    free( bufs );
+  }
+  z->sign = x->sign * y->sign;
+}
 void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 {
   complex16 *cx, *cy;
@@ -492,14 +721,16 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
   llong_t c = 0; 
   int mc = 0;
   while( (nc>>1) < max ) nc <<= 1, mc ++;
+  /* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
   cx = dao_calloc( nc, sizeof(complex16) );
   cy = dao_calloc( nc, sizeof(complex16) );
   for(i=0; i<nx; i++) cx[i].real = dx[i];
   for(i=0; i<ny; i++) cy[i].real = dy[i];
-  dao_fft( cx, mc, -1 );
-  dao_fft( cy, mc, -1 );
-  for(i=0; i<nc; i++) complex_mul( cx[i], cx[i], cy[i] );
-  dao_fft( cx, mc, 1 );
+  dao_fft16( cx, mc, -1 );
+  dao_fft16( cy, mc, -1 );
+  for(i=0; i<nc; i++) complex16_mul( cx[i], cx[i], cy[i] );
+  dao_free( cy );
+  dao_fft16( cx, mc, 1 );
   DLong_Resize( z, nc );
   memset( z->data, nc, sizeof(short) );
   for(i=0; i<nc; i++){
@@ -510,9 +741,7 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
   while( nc && z->data[nc-1] ==0 ) nc --;
   DLong_Resize( z, nc );
   dao_free( cx );
-  dao_free( cy );
 }
-void DLong_UMulDigitX( DLong *z, DLong *x, ushort_t digit );
 void DLong_UMul( DLong *z, DLong *x, DLong *y )
 {
   ushort_t *dx = x->data;
@@ -552,10 +781,10 @@ void DLong_UMul( DLong *z, DLong *x, DLong *y )
     return;
 #if 0
   }else if( nx < 64 && nx < 64 ){
-    DLong_UMulK( z, x, y, NULL, 0 );
     return;
 #endif
   }
+  //DLong_UMulK( z, x, y, NULL, 0 );
   DLong_UMulFFT( z, x, y );
 }
 void DLong_Mul( DLong *z, DLong *x, DLong *y )
@@ -1094,11 +1323,7 @@ static void DaoLong_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue 
 }
 static DaoTypeCore longCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoLong_GetItem,
@@ -1879,11 +2104,7 @@ static DValue DaoNA_Copy( DValue *dbase, DaoContext *ctx, DMap *cycData )
 
 static DaoTypeCore numarrCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoArray_GetItem,
@@ -2338,7 +2559,7 @@ static void DaoArray_Lib_FFT( DaoContext *ctx, DValue *par[], int npar )
   if( m == 0 ) return;
   if( size % (1<<m) !=0 ) return;
   if( abs(inv) != 1 ) return;
-  dao_fft( (complex16*) self->data.c, m, inv );
+  dao_fft16( (complex16*) self->data.c, m, inv );
 }
 static DaoFuncItem numarMeths[] =
 {

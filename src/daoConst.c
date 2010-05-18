@@ -210,6 +210,7 @@ static const char* const daoCtInfo[] =
   "deriving from a finalized class",
   "not permited in the safe running mode",
   "type not matched",
+  "interface binding failed",
   "is not enabled",
   "obsolete syntax",
   ""

@@ -1224,3 +1224,20 @@ int DString_Decrypt( DString *self, DString *key, int hex )
 {
   return STR_Cipher( self, key, hex, 0 );
 }
+
+DString DString_WrapMBS( const char *mbs )
+{
+  DString str = { 0, 0, NULL, NULL, NULL };
+  str.mbs = (char*) mbs;
+  str.data = (size_t*) mbs;
+  str.size = str.bufSize = strlen( mbs );
+  return str;
+}
+DString DString_WrapWCS( const wchar_t *wcs )
+{
+  DString str = { 0, 0, NULL, NULL, NULL };
+  str.wcs = (wchar_t*) wcs;
+  str.data = (size_t*) wcs;
+  str.size = str.bufSize = wcslen( wcs );
+  return str;
+}

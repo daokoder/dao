@@ -27,33 +27,19 @@
 
 void DaoBase_Delete( void *obj );
 
-DValue DaoFindValue( DaoTypeBase *typer, const char *name );
-DaoFunction* DaoFindFunction( DaoTypeBase *typer, const char *name );
-DValue DaoFindValue2( DaoTypeBase *typer, DString *name );
-DaoFunction* DaoFindFunction2( DaoTypeBase *typer, DString *name );
+DValue DaoFindValue( DaoTypeBase *typer, DString *name );
+DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name );
+DaoFunction* DaoFindFunction( DaoTypeBase *typer, DString *name );
+DaoFunction* DaoFindFunction2( DaoTypeBase *typer, const char *name );
+
 DaoTypeBase* DValue_GetTyper( DValue self );
 
-typedef struct DaoNamedValue DaoNamedValue;
-
-struct DaoNamedValue
-{
-  DString  *name;
-  DValue    value;
-};
-
-#define DEV_HASH_LOOKUP
 struct DaoTypeCore
 {
-  uint_t           attribs;
-  DaoCData        *host;
-#ifdef DEV_HASH_LOOKUP
-  DMap            *mapValues;
-  DMap            *mapMethods;
-#endif
-  DaoNamedValue  **values;
-  DaoFunction    **methods;
-  unsigned short   valCount;
-  unsigned short   methCount;
+  uint_t     attribs;
+  DaoCData  *host;
+  DMap      *mapValues;
+  DMap      *mapMethods;
   
   void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
   void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
@@ -131,16 +117,10 @@ void DaoMap_Erase( DaoMap *self, DValue key );
 
 struct DaoCDataCore
 {
-  uint_t           attribs;
-  DaoCData        *host;
-#ifdef DEV_HASH_LOOKUP
-  DMap            *mapValues;
-  DMap            *mapMethods;
-#endif
-  DaoNamedValue  **values;
-  DaoFunction    **methods;
-  unsigned short   valCount;
-  unsigned short   methCount;
+  uint_t     attribs;
+  DaoCData  *host;
+  DMap      *mapValues;
+  DMap      *mapMethods;
 
   void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
   void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );

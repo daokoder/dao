@@ -392,11 +392,7 @@ static DaoNumItem streamConsts[] =
 };
 static DaoTypeCore streamCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,

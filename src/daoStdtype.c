@@ -37,7 +37,7 @@ DMap *dao_typing_cache; /* HASH<void*[2],int> */
 DMutex dao_typing_mutex;
 #endif
 
-DaoFunction* DaoFindFunction2( DaoTypeBase *typer, DString *name )
+DaoFunction* DaoFindFunction( DaoTypeBase *typer, DString *name )
 {
   DNode *node;
   if( typer->priv->mapMethods == NULL ) return NULL;
@@ -45,91 +45,31 @@ DaoFunction* DaoFindFunction2( DaoTypeBase *typer, DString *name )
   if( node ) return (DaoFunction*)node->value.pVoid;
   return NULL;
 }
-DValue DaoFindValue2( DaoTypeBase *typer, DString *name )
+DaoFunction* DaoFindFunction2( DaoTypeBase *typer, const char *name )
 {
-  DaoFunction *func = DaoFindFunction2( typer, name );
+  DString mbs = DString_WrapMBS( name );
+  return DaoFindFunction( typer, & mbs );
+}
+DValue DaoFindValue( DaoTypeBase *typer, DString *name )
+{
+  DaoFunction *func = DaoFindFunction( typer, name );
   DValue value = daoNilFunction;
   DNode *node;
   value.v.func = func;
   if( func ) return value;
   if( typer->priv->mapValues == NULL ) return daoNilValue;
   node = DMap_Find( typer->priv->mapValues, name );
-  if( node ) return ((DaoNamedValue*)node->value.pVoid)->value;
+  if( node ) return *node->value.pValue;
   return daoNilValue;
 }
-DValue DaoFindValue( DaoTypeBase *typer, const char *name )
+DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name )
 {
-  DaoNamedValue **nums = typer->priv->values;
-  DaoFunction *func = DaoFindFunction( typer, name );
-  DValue value = daoNilFunction;
-  int left = 0;
-  int right = (int)typer->priv->valCount -1;
-  int mid, res;
-  char *pc, *pt;
-  value.v.func = func;
-  if( func ) return value;
-  while( left <= right ){
-    mid = ( left + right ) / 2;
-    /* res = strcmp( quads[ mid ].name, name ); */
-    pc = (char*)nums[ mid ]->name->mbs;
-    pt = (char*)name;
-    res = 0;
-    while( *pc || *pt ){
-      if( *pc < *pt ){
-        res = -1;
-        break;
-      }else if( *pc > *pt ){
-        res = 1;
-        break;
-      }
-      pc ++;
-      pt ++;
-    }
-    if( res == 0 ){
-      return nums[ mid ]->value;
-    }else if( res > 0){
-      right = mid - 1;
-    }else{
-      left = mid + 1;
-    }
-  }
+  DNode *node;
+  if( typer->priv->mapValues == NULL ) return daoNilValue;
+  node = DMap_Find( typer->priv->mapValues, name );
+  if( node ) return *node->value.pValue;
   return daoNilValue;
 }
-DaoFunction* DaoFindFunction( DaoTypeBase *typer, const char *name )
-{
-  DaoFunction **funcs = typer->priv->methods;
-  int left = 0;
-  int right = (int)typer->priv->methCount -1;
-  int mid, res;
-  char *pc, *pt;
-  while( left <= right ){
-    mid = ( left + right ) / 2;
-    /* res = strcmp( quads[ mid ].name, name ); */
-    pc = (char*)funcs[ mid ]->routName->mbs;
-    pt = (char*)name;
-    res = 0;
-    while( *pc || *pt ){
-      if( *pc < *pt ){
-        res = -1;
-        break;
-      }else if( *pc > *pt ){
-        res = 1;
-        break;
-      }
-      pc ++;
-      pt ++;
-    }
-    if( res == 0 ){
-      return funcs[ mid ];
-    }else if( res > 0){
-      right = mid - 1;
-    }else{
-      left = mid + 1;
-    }
-  }
-  return NULL;
-}
-
 
 enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE };
 
@@ -237,11 +177,7 @@ DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData )
 
 DaoTypeCore baseCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -358,7 +294,7 @@ DaoTypeBase* DValue_GetTyper( DValue self )
 void DaoBase_GetField( DValue *self, DaoContext *ctx, DString *name )
 {
   DaoTypeBase *typer = DValue_GetTyper( *self );
-  DValue p = DaoFindValue2( typer, name );
+  DValue p = DaoFindValue( typer, name );
   if( p.t ==0 ){
     DString *mbs = DString_New(1);
     DString_Append( mbs, name );
@@ -452,11 +388,7 @@ static void DaoNumber_SetItem( DValue *self, DaoContext *ctx, DValue pid, DValue
 
 static DaoTypeCore numberCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoNumber_GetItem,
@@ -577,11 +509,7 @@ static void DaoString_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValu
 }
 static DaoTypeCore stringCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoString_GetItem,
@@ -1682,11 +1610,7 @@ DaoList* DaoList_Copy( DaoList *self, DMap *cycData )
 }
 static DaoTypeCore listCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoListCore_GetItem,
@@ -2438,11 +2362,7 @@ static DValue DaoMap_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore mapCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoMap_GetItem,
@@ -2645,33 +2565,24 @@ void DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value )
 }
 void DaoMap_EraseMBS ( DaoMap *self, const char *key )
 {
-  DString str = { 0, 0, NULL, NULL, NULL };
+  DString str = DString_WrapMBS( key );
   DValue vkey = daoNilString;
   vkey.v.s = & str;
-  str.size = str.bufSize = strlen( key );
-  str.data = (size_t*) key;
-  str.mbs = (char*) key;
   DaoMap_Erase( self, vkey );
 }
 void DaoMap_EraseWCS ( DaoMap *self, const wchar_t *key )
 {
-  DString str = { 0, 0, NULL, NULL, NULL };
+  DString str = DString_WrapWCS( key );
   DValue vkey = daoNilString;
   vkey.v.s = & str;
-  str.size = str.bufSize = wcslen( key );
-  str.data = (size_t*) key;
-  str.wcs = (wchar_t*) key;
   DaoMap_Erase( self, vkey );
 }
 DValue DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 {
   DNode *node;
-  DString str = { 0, 0, NULL, NULL, NULL };
+  DString str = DString_WrapMBS( key );
   DValue vkey = daoNilString;
   vkey.v.s = & str;
-  str.size = str.bufSize = strlen( key );
-  str.data = (size_t*) key;
-  str.mbs = (char*) key;
   node = MAP_Find( self->items, & vkey );
   if( node ) return node->value.pValue[0];
   return daoNilValue;
@@ -2679,12 +2590,9 @@ DValue DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 DValue DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 {
   DNode *node;
-  DString str = { 0, 0, NULL, NULL, NULL };
+  DString str = DString_WrapWCS( key );
   DValue vkey = daoNilString;
   vkey.v.s = & str;
-  str.size = str.bufSize = wcslen( key );
-  str.data = (size_t*) key;
-  str.wcs = (wchar_t*) key;
   node = MAP_Find( self->items, & vkey );
   if( node ) return node->value.pValue[0];
   return daoNilValue;
@@ -2850,7 +2758,7 @@ DaoTypeBase* DaoCData_GetTyper(DaoCData *self )
 static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
 {
   DaoTypeBase *typer = DValue_GetTyper( *self );
-  DValue p = DaoFindValue2( typer, name );
+  DValue p = DaoFindValue( typer, name );
   if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
     DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
     return;
@@ -2859,7 +2767,7 @@ static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
     DaoFunction *func = NULL;
     DString_SetMBS( ctx->process->mbstring, "." );
     DString_Append( ctx->process->mbstring, name );
-    p = DaoFindValue2( typer, ctx->process->mbstring );
+    p = DaoFindValue( typer, ctx->process->mbstring );
     if( p.t == DAO_FUNCTION ) 
       func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, ctx->process, NULL, & self, 1, 0 );
     if( func == NULL ){
@@ -2886,7 +2794,7 @@ static void DaoCData_SetField( DValue *self, DaoContext *ctx, DString *name, DVa
     DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
     return;
   }
-  val = DaoFindValue2( typer, ctx->process->mbstring );
+  val = DaoFindValue( typer, ctx->process->mbstring );
   if( val.t == DAO_FUNCTION )
     func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, ctx->process, self, p+1, 1, 0 );
   if( func == NULL ){
@@ -2930,7 +2838,7 @@ static void DaoCData_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
       p[1] = & pid;
     }
     DString_SetMBS( ctx->process->mbstring, "[]" );
-    val = DaoFindValue2( typer, ctx->process->mbstring );
+    val = DaoFindValue( typer, ctx->process->mbstring );
     if( val.t == DAO_FUNCTION )
       func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, ctx->process, self0, p, N, 0 );
     if( func == NULL ){
@@ -2953,7 +2861,7 @@ static void DaoCData_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue
     DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
     return;
   }
-  val = DaoFindValue2( typer, ctx->process->mbstring );
+  val = DaoFindValue( typer, ctx->process->mbstring );
   if( val.t == DAO_FUNCTION ){
     p[0] = self0;
     p[1] = & value;
@@ -3296,11 +3204,7 @@ static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore pairCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -3429,11 +3333,7 @@ static DValue DaoTupleCore_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore tupleCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoTupleCore_GetField,
   DaoTupleCore_SetField,
   DaoTupleCore_GetItem,

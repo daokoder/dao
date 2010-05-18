@@ -25,8 +25,9 @@
 uchar_t        attribs; \
 uchar_t        parCount; \
 ushort_t       distance; \
+DValue         routHost; \
 DVarray       *routConsts; \
-DaoType    *routType; \
+DaoType       *routType; \
 DString       *routName; \
 DArray        *parTokens; \
 DArray        *routOverLoad; \
@@ -34,26 +35,27 @@ DRoutine      *firstRoutine; \
 DaoNameSpace  *nameSpace;
 
 
-struct DaoCacheABC;
-
 struct DRoutine
 {
   DAO_DATA_COMMON
-
   DAO_ROUT_COMMON
   /*
      char           attribs;
      char           parCount;
      short          distance;  inheritance distance to the self->hostClass
+     DValue         routHost;
      DVarray       *routConsts;
-     DaoType    *routType;
+     DaoType       *routType;
      DString       *routName;
+     DArray        *parTokens; 
      DArray        *routOverLoad; <DRoutine*>
      DRoutine      *firstRoutine;
      DaoNameSpace  *nameSpace;
      */
+  DString *docString;
 };
 
+DRoutine* DRoutine_New();
 void DRoutine_CopyFields( DRoutine *self, DRoutine *from );
 void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout );
 int  DRoutine_AddConst( DRoutine *self, DaoBase *data );
@@ -78,8 +80,9 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 struct DaoRoutine
 {
   DAO_DATA_COMMON
-
   DAO_ROUT_COMMON
+
+  DString *docString;
 
   /* virtual machine codes: */
   DaoVmcArray *vmCodes;
@@ -98,14 +101,13 @@ struct DaoRoutine
   int constParam;
   int mode;
 
-  DString *docString;
   int defLine; /* definition line number; */
   int bodyStart;
   int bodyEnd;
 
   DMap *abstypes;
 
-  DaoClass   *hostClass;
+  //DaoClass   *hostClass;
   DaoParser  *parser;
   DaoRoutine *revised; /* to support edit & continue */
 
@@ -136,7 +138,7 @@ struct DaoFunction
   DAO_ROUT_COMMON
 
   DaoFuncPtr   pFunc;
-  DaoCData    *hostCData;
+  //DaoCData    *hostCData;
 
   void  *ffiData; /* Data for Forign Function Interface, for DaoCLoader module */
 };

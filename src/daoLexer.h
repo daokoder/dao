@@ -112,14 +112,16 @@ enum DaoKeyNames
   DKEY_REQUIRE ,
   DKEY_BY ,
   DKEY_AS ,
+  DKEY_TO ,
+  DKEY_BIND ,
   DKEY_SYNTAX ,
   DKEY_TYPEDEF ,
-  DKEY_NAMESPACE ,
   DKEY_FINAL ,
   DKEY_CLASS ,
   DKEY_SUB ,
   DKEY_ROUTINE ,
   DKEY_FUNCTION ,
+  DKEY_INTERFACE ,
   DKEY_OPERATOR ,
   DKEY_SELF ,
   DKEY_INT ,
@@ -136,16 +138,6 @@ enum DaoKeyNames
   DKEY_PAIR ,
   DKEY_CDATA ,
   DKEY_STREAM ,
-  DKEY_IO ,
-  DKEY_STD ,
-  DKEY_STDIO ,
-  DKEY_STDLIB ,
-  DKEY_MATH ,
-  DKEY_REFLECT ,
-  DKEY_COROUTINE ,
-  DKEY_NETWORK ,
-  DKEY_MPI ,
-  DKEY_MTLIB ,
   DKEY_AND ,
   DKEY_OR ,
   DKEY_NOT ,
@@ -180,10 +172,6 @@ enum DaoKeyNames
   DKEY_CATCH ,
   DKEY_RESCUE ,
   DKEY_RAISE ,
-  DKEY_ASYNC ,
-  DKEY_HURRY ,
-  DKEY_JOIN ,
-  DKEY_EXTERN ,
   DKEY_EACH ,
   DKEY_REPEAT ,
   DKEY_APPLY ,
@@ -214,9 +202,7 @@ enum DaoKeyNames
   DKEY_SQRT ,
   DKEY_TAN ,
   DKEY_TANH ,
-  DAO_NOKEY2 ,
-  DKEY_HERE ,
-  DKEY_A
+  DAO_NOKEY2
 };
 int dao_key_hash( const char *str, int len );
 
@@ -253,6 +239,7 @@ struct DaoToken
 DaoToken* DaoToken_New();
 void DaoToken_Delete( DaoToken *self );
 int DaoToken_Tokenize( DArray *tokens, const char *src, int repl, int comment, int space );
+void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
 
 void DaoTokens_Append( DArray *self, int name, int line, const char *data );
 

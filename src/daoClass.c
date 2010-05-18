@@ -35,7 +35,7 @@ static void DaoClass_GetField( DValue *self0, DaoContext *ctx, DString *name )
   DString *mbs = DString_New(1);
   DValue *d2 = NULL;
   DValue value = daoNilValue;
-  int rc = DaoClass_GetData( self, name, & value, ctx->routine->hostClass, & d2 );
+  int rc = DaoClass_GetData( self, name, & value, ctx->routine->routHost.v.klass, & d2 );
   DaoContext_PutReference( ctx, d2 );
   if( rc ){
     DString_SetMBS( mbs, DString_GetMBS( self->className ) );
@@ -71,11 +71,7 @@ static DValue DaoClass_Copy(  DValue *self, DaoContext *ctx, DMap *cycData )
 
 static DaoTypeCore classCore=
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoClass_GetField,
   DaoClass_SetField,
   DaoClass_GetItem,
@@ -165,7 +161,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
   DString_Assign( self->className, name );
   DaoClass_AddType( self, name, self->objType );
 
-  rout->hostClass = self;
+  rout->routHost.v.klass = self;
   rout->attribs |= DAO_ROUT_INITOR;
   value.v.klass = self;
   DaoClass_AddConst( self, name, value, DAO_CLS_PUBLIC );
@@ -203,6 +199,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
       /* For class data: */
       for( id=0; id<klass->cstDataName->size; id++ ){
         DString *name = klass->cstDataName->items.pString[id];;
+        DValue value2 = klass->cstData->data[ id ];
         search = MAP_Find( self->lookupTable, name );
         /* To overide data and routine: */
         if( search == NULL ){
@@ -223,14 +220,13 @@ void DaoClass_DeriveClassData( DaoClass *self )
             DaoClass_AddConst( self, name, value, perm );
           }
         }else{
-          DValue v1 = self->cstData->data[ LOOKUP_ID( search->value.pInt ) ];
-          DValue v2 = klass->cstData->data[ id ];
-          if( v1.t == DAO_ROUTINE && v2.t == DAO_ROUTINE ){
-            DRoutine *r1 = (DRoutine*) v1.v.p;
-            DRoutine *r2 = (DRoutine*) v2.v.p;
-            for( k=0; k<r2->routOverLoad->size; k++)
-              DRoutine_AddOverLoad( r1, (DRoutine*)r2->routOverLoad->items.pBase[k] );
-          }
+          value = self->cstData->data[ LOOKUP_ID( search->value.pInt ) ];
+        }
+        if( value.t == DAO_ROUTINE && value2.t == DAO_ROUTINE ){
+          DRoutine *r1 = (DRoutine*) value.v.p;
+          DRoutine *r2 = (DRoutine*) value2.v.p;
+          for( k=0; k<r2->routOverLoad->size; k++)
+            DRoutine_AddOverLoad( r1, (DRoutine*)r2->routOverLoad->items.pBase[k] );
         }
       }
       /* class global data */
@@ -278,8 +274,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
     }else if( self->superClass->items.pBase[i]->type == DAO_CDATA ){
       DaoCData *cdata = self->superClass->items.pCData[i];
       DaoTypeCore *core = cdata->typer->priv;
-      DaoNamedValue **vals = core->values;
-      DaoFunction **meths = core->methods;
+      DMap *mapValues = core->mapValues;
+      DMap *mapMethods = core->mapMethods;
+      DNode *it;
+
       DString_SetMBS( mbs, cdata->typer->name );
       value.t = DAO_CDATA;
       value.v.cdata = cdata;
@@ -287,17 +285,17 @@ void DaoClass_DeriveClassData( DaoClass *self )
       if( strcmp( cdata->typer->name, self->superAlias->items.pString[i]->mbs ) ){
         DaoClass_AddConst( self, self->superAlias->items.pString[i], value, DAO_CLS_PRIVATE );
       }
-      for(j=0; j<core->valCount; j++){
-        search = MAP_Find( self->lookupTable, vals[j]->name );
+      for(it=DMap_First( mapValues ); it; it=DMap_Next( mapValues, it )){
+        search = MAP_Find( self->lookupTable, it->key.pVoid );
         if( search ==NULL )
-          DaoClass_AddConst( self, vals[j]->name, vals[j]->value, DAO_CLS_PUBLIC );
+          DaoClass_AddConst( self, it->key.pString, *it->value.pValue, DAO_CLS_PUBLIC );
       }
       value.t = DAO_FUNCTION;
-      for(j=0; j<core->methCount; j++){
-        search = MAP_Find( self->lookupTable, meths[j]->routName );
-        value.v.func = meths[j];
+      for(it=DMap_First( mapMethods ); it; it=DMap_Next( mapMethods, it )){
+        search = MAP_Find( self->lookupTable, it->key.pVoid );
+        value.v.func = (DaoFunction*) it->value.pVoid;
         if( search ==NULL )
-          DaoClass_AddConst( self, meths[j]->routName, value, DAO_CLS_PUBLIC );
+          DaoClass_AddConst( self, it->key.pString, value, DAO_CLS_PUBLIC );
       }
       /* XXX
       DString_SetMBS( mbs, "_" );
@@ -513,7 +511,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
     val = self->cstData->data[ LOOKUP_ID( node->value.pInt ) ];
     if( val.t == DAO_ROUTINE ){
       DaoRoutine *rout = val.v.routine;
-      if( rout->hostClass == self ){
+      if( rout->routHost.v.klass == self ){
         DaoRoutine_Compile( rout );
         DaoRoutine_PrintCode( rout, stream );
       }
@@ -522,20 +520,9 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 }
 DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped )
 {
-  int len = strlen( oper );
   DValue value = daoNilValue;
-  DString name = { 0, 0, NULL, NULL, NULL };
-  name.size = name.bufSize = len;
-  name.mbs = (char*) oper;
-  name.data = (size_t*) oper;
-#if 0
-  DString *name = DString_New(1);
-  DString_SetMBS( name, oper );
-  DaoClass_GetData( self, name, & value, scoped, NULL );
-  DString_Delete( name );
-#else
+  DString name = DString_WrapMBS( oper );
   DaoClass_GetData( self, & name, & value, scoped, NULL );
-#endif
   if( value.t != DAO_ROUTINE ) return NULL;;
   return value.v.routine;
 }

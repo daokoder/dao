@@ -191,8 +191,8 @@ int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DValue *pars
   GC_ShiftRC( rout, self->routine );
   self->routine = rout;
   self->nameSpace = rout->nameSpace;
-  if( othis && othis->myClass != rout->hostClass ){
-    othis = (DaoObject*) DaoObject_MapThisObject( othis, rout->hostClass, NULL );
+  if( othis && othis->myClass != rout->routHost.v.klass ){
+    othis = (DaoObject*) DaoObject_MapThisObject( othis, rout->routHost.v.klass, NULL );
     GC_ShiftRC( othis, self->object );
     self->object = othis;
   }
@@ -733,7 +733,7 @@ void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
   if( va->t == DAO_OBJECT ){
     rc = DaoObject_InvokeMethod( va->v.object, NULL, self->process, name, self, vc, 1, vmc->c );
   }else{
-    val = DaoFindValue2( typer, name );
+    val = DaoFindValue( typer, name );
     if( val.t == DAO_FUNCTION )
       func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, self->process, va, p+1, 1, 0 );
     if( func ){
@@ -1501,7 +1501,7 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
       /* here it is not convenient to check attribute for DAO_ROUT_NEEDSELF,
        * because the routine may have not been compiled, 
        * worse it may have overloaded routine, some may NEEDSELF, some may not. */
-      if( p->v.routine->hostClass ) selfobj = self->regValues[opA+1];
+      if( p->v.routine->routHost.v.klass ) selfobj = self->regValues[opA+1];
     }else if( p->t == DAO_ROUTINE || p->t == DAO_FUNCTION ){
       DRoutine *rout = (DRoutine*) p->v.p;
       if( rout->attribs & DAO_ROUT_PARSELF ) selfobj = self->regValues[opA+1];
@@ -2005,7 +2005,7 @@ TryAgain:
 
   cdata = A->t == DAO_CDATA ? A->v.cdata : B->v.cdata;
   overloaded = cdata->typer->priv->attribs & DAO_OPER_OVERLOADED;
-  func = DaoFindFunction2( (DaoTypeBase*) cdata->typer, name );
+  func = DaoFindFunction( (DaoTypeBase*) cdata->typer, name );
   if( func ==NULL && (code == DVM_LT || code == DVM_LE) ){
     if( code == DVM_LT ){
       DString_SetMBS( name, ">" );
@@ -2014,7 +2014,7 @@ TryAgain:
     }
     par[1] = B;
     par[2] = A;
-    func = DaoFindFunction2( (DaoTypeBase*) cdata->typer, name );
+    func = DaoFindFunction( (DaoTypeBase*) cdata->typer, name );
   }
   if( func == NULL ){
     if( bothobj && boolres ) return 0;
@@ -3458,7 +3458,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
   int i, sup = 0, code = vmc->code;
   int mode = vmc->b & 0xff00;
   int npar = vmc->b & 0xff;
-  int locOffset = 0, bufOffset = 0;
   DValue  *base = self->regArray->data + vmc->a + 1;
   DValue **params = self->regValues + vmc->a + 1;
   DValue parbuf[DAO_MAX_PARAM+1];
@@ -3534,13 +3533,13 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
   if( caller.t == DAO_ROUTINE || caller.t == DAO_FUNCTION ){
     rout = (DRoutine*) caller.v.p;
   }
-  if( vmc->code == DVM_MCALL ) selfpar = params[0];
+  //if( vmc->code == DVM_MCALL ) selfpar = params[0];
 
-  if( selfpar->t ==0 && self->object ){
+  if( self->object && (vmc->code == DVM_CALL || vmc->code == DVM_CALL_TC) ){
     selfpar->t = DAO_OBJECT;
     selfpar->v.object = self->object;
   }
-  if( selfpar->v.object == self->object && self->object ){
+  if( npar && params[0]->v.object == self->object && self->object ){
     DaoClass *klass = self->object->myClass;
     if( DString_EQ( self->routine->routName, klass->className )
         || self->routine == klass->classRoutine ){
@@ -3561,7 +3560,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
       DaoCData *plugin = caller.v.cdata;
       DaoFunction *func = NULL;
       if( plugin->data == NULL && plugin->subType & DAO_DATA_CONST ){
-        func = DaoFindFunction( plugin->typer, plugin->typer->name );
+        func = DaoFindFunction2( plugin->typer, plugin->typer->name );
         if( func == NULL ){
           DaoCDataCore *c = (DaoCDataCore*)plugin->typer->priv;
           DaoCData *p = NULL;
@@ -3577,6 +3576,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
           p = DaoCData_New( plugin->typer, c->NewData() );
           DaoContext_SetData( self, vmc->c, (DaoBase*)p );
           if( initbase ){
+            printf( "initbase: %s\n", plugin->typer->name );
             GC_ShiftRC( p, self->object->superObject->items.pBase[sup] );
             self->object->superObject->items.pBase[sup] = (DaoBase*) p;
             p->daoObject = self->object->that;
@@ -3588,7 +3588,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
           return;
         }
       }else{
-        func = DaoFindFunction( plugin->typer, "()" );
+        func = DaoFindFunction2( plugin->typer, "()" );
         if( func == NULL ){
           DaoContext_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
           return;
@@ -3628,15 +3628,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
        *   bar(1); # pass Dao class instances as self 
        */
       DaoFunction *func = (DaoFunction*)rout;
-      if( vmc->code == DVM_CALL && (func->attribs & DAO_ROUT_PARSELF) ){
-        if( selfpar->t ){
-          npar ++;
-          bufOffset = 1; /* buf[1] ~ opA+1 */
-        }
-      }else if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF) ){
-        npar --;
-        locOffset = 1; /* buf[0] ~ opA+2 */
-      }
+      if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
       if( !(rout->attribs & DAO_ROUT_ISCONST) ){
         for(i=0; i<npar; i++){
           if( parbuf2[i]->cst ){
@@ -3710,15 +3702,15 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
         return;
       }
       ctx = DaoVmProcess_MakeContext( self->process, rout );
-      if( rout->hostClass ){
+      if( rout->routHost.v.klass ){
         if( selfpar->t == DAO_OBJECT ){
-          obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object->that, rout->hostClass, NULL );
+          obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object->that, rout->routHost.v.klass, NULL );
           GC_ShiftRC( obj, ctx->object );
           ctx->object = obj;
           if( selfpar->v.object == self->object && obj ) inclass = 1;
-#if 0
-        }else if( self->object ){ /* included in selfpar */
-          obj = (DaoObject*) DaoObject_MapThisObject( self->object->that, rout->hostClass, NULL );
+#if 1
+        }else if( params[0]->t == DAO_OBJECT ){ /* included in selfpar */
+          obj = (DaoObject*) DaoObject_MapThisObject( params[0]->v.object, rout->routHost.v.klass, NULL );
           GC_ShiftRC( obj, ctx->object );
           ctx->object = obj;
 #endif
@@ -3736,7 +3728,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
       if( rout != NULL ){
         ctx = DaoVmProcess_MakeContext( self->process, rout );
         if( initbase ){
-          obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object, rout->hostClass, NULL );
+          obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object, rout->routHost.v.klass, NULL );
           GC_ShiftRC( obj, ctx->object );
           ctx->object = obj;
         }else{
@@ -3831,7 +3823,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 {
   int i, npar = vmc->b;
-  int locOffset = 0, bufOffset = 0;
   int tail = 0;
   DaoVmCode *vmc2 = vmc + 1;
   DValue  *base = self->regArray->data + vmc->a + 1;
@@ -3853,9 +3844,9 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
     return;
   }
 
-  if( vmc->code == DVM_MCALL_TC ) selfpar = params[0];
+  //if( vmc->code == DVM_MCALL_TC ) selfpar = params[0];
 
-  if( selfpar->t ==0 && self->object ){
+  if( self->object && (vmc->code == DVM_CALL || vmc->code == DVM_CALL_TC) ){
     selfpar->t = DAO_OBJECT;
     selfpar->v.object = self->object;
   }
@@ -3889,15 +3880,7 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
      * inside: Dao class member method:
      *   bar(1); # pass Dao class instances as self 
      */
-    if( vmc->code == DVM_CALL_TC && (func->attribs & DAO_ROUT_PARSELF) ){
-      if( selfpar->t ){
-        npar ++;
-        bufOffset = 1; /* buf[1] ~ opA+1 */
-      }
-    }else if( vmc->code == DVM_MCALL_TC && ! (func->attribs & DAO_ROUT_PARSELF) ){
-      npar --;
-      locOffset = 1; /* buf[0] ~ opA+2 */
-    }
+    if( vmc->code == DVM_MCALL_TC && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
     if( !(func->attribs & DAO_ROUT_ISCONST) ){
       for(i=0; i<npar; i++){
         if( parbuf2[i]->cst ){
@@ -3923,15 +3906,15 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
     /* rout itself could be a dummy routine */
     rout = rout->routOverLoad->items.pRout[0];
     ctx = DaoVmProcess_MakeContext( self->process, rout );
-    if( rout->hostClass ){
+    if( rout->routHost.v.klass ){
       if( selfpar->t == DAO_OBJECT ){
-        obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object->that, rout->hostClass, NULL );
+        obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object->that, rout->routHost.v.klass, NULL );
         GC_ShiftRC( obj, ctx->object );
         ctx->object = obj;
         if( selfpar->v.object == self->object && obj ) inclass = 1;
-#if 0
-      }else if( self->object ){
-        obj = (DaoObject*) DaoObject_MapThisObject( self->object->that, rout->hostClass, NULL );
+#if 1
+      }else if( params[0]->t == DAO_OBJECT ){ /* included in selfpar */
+        obj = (DaoObject*) DaoObject_MapThisObject( params[0]->v.object, rout->routHost.v.klass, NULL );
         GC_ShiftRC( obj, ctx->object );
         ctx->object = obj;
 #endif

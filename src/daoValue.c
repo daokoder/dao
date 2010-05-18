@@ -463,7 +463,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
        printf( "tp: %s %i\n", tp->name->mbs, tp->tid );
        if( from.t == DAO_TUPLE ) printf( "%p\n", from.v.tuple->unitype );
        }
-       printf( "tp2: %s %i\n", tp2->name->mbs, tp2->tid );
        printf( "dA->type = %p\n", dA );
      */
     if( i==0 ) return 0;

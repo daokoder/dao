@@ -537,7 +537,7 @@ static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts,
 {
   DaoNameSpace *ns = ctx->nameSpace;
   DaoObject *object = ctx->object;
-  DaoClass *klass = ctx->routine->hostClass;
+  DaoClass *klass = ctx->routine->routHost.v.klass;
   consts[ DAO_G ] = ns->cstData->data;
   values[ DAO_G ] = ns->varData->data;
   types[ DAO_G ] = ns->varType->items.pAbtp;
@@ -990,8 +990,8 @@ CallEntry:
   topCtx->idClearFE = self->topFrame->entry;
 
   /*
-  if( topCtx->routine->hostClass )
-    printf("class name = %s\n", topCtx->routine->hostClass->className->mbs);
+  if( topCtx->routine->routHost.v.klass )
+    printf("class name = %s\n", topCtx->routine->routHost.v.klass->className->mbs);
   printf("routine name = %s\n", topCtx->routine->routName->mbs);
   //printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
   printf("number of instruction: %i\n", topCtx->routine->vmCodes->size );
@@ -1057,7 +1057,7 @@ CallEntry:
   self->status = DAO_VMPROC_RUNNING;
   self->pauseType = DAO_VMP_NOPAUSE;
   here = topCtx->routine->nameSpace;
-  host = topCtx->routine->hostClass;
+  host = topCtx->routine->routHost.v.klass;
   this = topCtx->object;
   locVars = topCtx->regValues;
   locTypes = topCtx->routine->regType->items.pAbtp;

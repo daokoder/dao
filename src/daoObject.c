@@ -59,7 +59,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
     DValue p[ DAO_MAX_PARAM+1 ];
     p[0] = daoNilValue;
     memcpy( p+1, par, N*sizeof(DValue) );
-    p[0].v.object = (DaoObject*) DaoObject_MapThisObject( self, NULL, func->hostCData->typer );
+    p[0].v.object = (DaoObject*) DaoObject_MapThisObject( self, NULL, func->routHost.v.cdata->typer );
     p[0].t = p[0].v.object ? p[0].v.object->type : 0;
     for(i=0; i<=N; i++) ps[i] = p + i;
     func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, vmp, &selfpar, ps, N+1, DVM_MCALL );
@@ -182,11 +182,7 @@ static DValue DaoObject_Copy(  DValue *value, DaoContext *ctx, DMap *cycData )
 
 static DaoTypeCore objCore = 
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoObject_Core_GetField,
   DaoObject_Core_SetField,
   DaoObject_GetItem,
@@ -390,19 +386,8 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
 
 DValue DaoObject_GetField( DaoObject *self, const char *name )
 {
-  int len = strlen( name );
   DValue res = daoNilValue;
-  DString str = { 0, 0, NULL, NULL, NULL };
-  str.size = str.bufSize = len;
-  str.mbs = (char*) name;
-  str.data = (size_t*) name;
-#if 0
-  DString *s = DString_New(1);
-  DString_SetMBS( s, name );
-  DaoObject_GetData( self, s, & res, self, NULL );
-  DString_Delete( s );
-#else
+  DString str = DString_WrapMBS( name );
   DaoObject_GetData( self, & str, & res, self, NULL );
-#endif
   return res;
 }

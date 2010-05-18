@@ -61,9 +61,9 @@ struct DaoClass
   DString *className;
   DString *docString;
 
-  DaoType *clsType;
-  DaoType *objType;
-  DMap       *abstypes;
+  DaoType  *clsType;
+  DaoType  *objType;
+  DMap     *abstypes;
 
   int       derived;
   uint_t    attribs;

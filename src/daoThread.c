@@ -488,11 +488,7 @@ static void DaoMutex_Delete( DaoMutex *self )
 
 static DaoTypeCore mutexCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_SafeGetField,
   DaoBase_SafeSetField,
   DaoBase_GetItem,
@@ -601,11 +597,7 @@ static void* DaoCondVar_New2(){ return DaoCondVar_New(NULL); }
 
 static DaoTypeCore condvCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_SafeGetField,
   DaoBase_SafeSetField,
   DaoBase_GetItem,
@@ -684,11 +676,7 @@ static DaoFuncItem semaMeths[] =
 };
 static DaoTypeCore semaCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_SafeGetField,
   DaoBase_SafeSetField,
   DaoBase_GetItem,
@@ -786,11 +774,7 @@ static void DaoThread_Delete( DaoThread *self );
   
 static DaoTypeCore threadCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_SafeGetField,
   DaoBase_SafeSetField,
   DaoBase_GetItem,
@@ -919,7 +903,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
     if( rout->attribs & DAO_ROUT_NEEDSELF ){
       if( selfobj.t != DAO_OBJECT ) goto ErrorParam;
       obj = selfobj.v.object;
-      if( ! DaoClass_ChildOf( obj->myClass, (DaoBase*)drout->hostClass ) ) goto ErrorParam;
+      if( ! DaoClass_ChildOf( obj->myClass, (DaoBase*)drout->routHost.v.klass ) ) goto ErrorParam;
     }
   }
   thread = DaoThread_New( self );
@@ -1027,11 +1011,7 @@ static void DaoThdMaster_Delete( DaoThdMaster *self );
 
 static DaoTypeCore thdMasterCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_SafeGetField,
   DaoBase_SafeSetField,
   DaoBase_GetItem,

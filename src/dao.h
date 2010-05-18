@@ -154,6 +154,7 @@ enum DaoTypes
   DAO_OBJECT ,
   DAO_CDATA  ,
   DAO_REGEX     ,
+  DAO_INTERFACE ,
   DAO_CLASS     ,
   DAO_FUNCTION  ,
   DAO_ROUTINE   ,
@@ -251,6 +252,7 @@ typedef struct DaoPair         DaoPair;
 typedef struct DaoTuple        DaoTuple;
 typedef struct DaoRoutine      DaoRoutine;
 typedef struct DaoFunction     DaoFunction;
+typedef struct DaoInterface    DaoInterface;
 typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;
@@ -291,6 +293,7 @@ struct DValue
     DaoCData      *cdata;
     DaoContext    *context;
     DaoStream     *stream;
+    DaoInterface  *inter;
     DaoNameSpace  *ns;
     DaoVmProcess  *vmp;
   } v ;

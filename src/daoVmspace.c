@@ -1730,21 +1730,14 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
     }
   }
 }
-static void DaoTypeBase_Free( DaoTypeBase *t )
+static void DaoTypeBase_Free( DaoTypeBase *typer )
 {
-  DaoTypeCore *core = t->priv;
-  int i;
-  for(i=0; i<core->valCount; i++){
-    DString_Delete( core->values[i]->name );
-    DValue_Clear( & core->values[i]->value );
-    dao_free( core->values[i] );
-  }
-  for(i=0; i<core->methCount; i++){
-    /* printf( "%3i: %s\n", core->methods[i]->refCount, core->methods[i]->routName->mbs ); */
-    GC_DecRC( core->methods[i] );
-  }
-  dao_free( core->values );
-  dao_free( core->methods );
+  DMap *hash = typer->priv->mapMethods;
+  DNode *it;
+  for(it=DMap_First(hash); it; it=DMap_Next(hash,it))
+    GC_DecRC( it->value.pBase );
+  DMap_Delete( typer->priv->mapMethods );
+  DMap_Delete( typer->priv->mapValues );
 }
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libMathTyper;

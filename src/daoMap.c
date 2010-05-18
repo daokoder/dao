@@ -59,6 +59,8 @@ static DNode* DNode_New( int keytype, int valtype )
   struct DNodeV2 *nodev2;
   struct DNodeV1 *nodev1;
   DNode *self;
+  if( keytype != D_VALUE ) keytype = 0;
+  if( valtype != D_VALUE ) valtype = 0;
   switch( (keytype<<8) | valtype ){
   case (D_VALUE<<8)|D_VALUE :
     nodev2 = (struct DNodeV2*) dao_calloc( 1, sizeof(struct DNodeV2) );
@@ -310,6 +312,10 @@ static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )
   struct DNodeV1 *extremev1 = (struct DNodeV1*) extreme;
   struct DNodeV2 *extremev2 = (struct DNodeV2*) extreme;
   int hash = extreme->hash;
+  int keytype = self->keytype;
+  int valtype = self->valtype;
+  if( keytype != D_VALUE ) keytype = 0;
+  if( valtype != D_VALUE ) valtype = 0;
   extreme->hash = node->hash;
   node->hash = hash;
   switch( (self->keytype<<8) | self->valtype ){

@@ -96,13 +96,17 @@ struct DaoParser
   /* if 1, variables not nested in any scope are declared as global */
   char topAsGlobal;
   char isClassBody;
+  char isInterBody;
   char warnAssn;
   char pairLtGt; /* <> */
 
-  DaoClass  *hostClass;
-  DaoCData  *hostCData;
-  DaoParser *outParser;
-  DArray    *uplocs;
+  DaoInterface *interface;
+  DaoClass     *hostClass;
+  DaoCData     *hostCData;
+  DaoParser    *outParser;
+  DArray       *uplocs;
+
+  DArray *bindtos;
 
   int curLine;
   int lineCount;

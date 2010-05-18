@@ -34,6 +34,7 @@ struct DArray
     struct DaoClass     **pClass;
     struct DaoObject    **pObject;
     struct DaoRoutine   **pRout;
+    struct DRoutine     **pRout2;
     struct DaoCData     **pCData;
     struct DaoType   **pAbtp;
     struct DaoNameSpace **pNS;

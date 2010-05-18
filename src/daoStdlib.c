@@ -150,12 +150,12 @@ static void STD_Callable( DaoContext *ctx, DValue *p[], int N )
       DaoTypeBase *tp = plugin->typer;
       DaoFunction *func;
       if( plugin->data == NULL && plugin->subType & DAO_DATA_CONST ){
-        func = DaoFindFunction( tp, tp->name );
+        func = DaoFindFunction2( tp, tp->name );
         *res = 1;
         if( func ==NULL && ((DaoCDataCore*)tp->priv)->NewData ==NULL )
           *res = 0;
       }else{
-        func = DaoFindFunction( tp, "_CALL" );
+        func = DaoFindFunction2( tp, "()" );
         if( func ) *res = 1;
       }
       break;
@@ -533,22 +533,29 @@ static void STD_Gcmin( DaoContext *ctx, DValue *p[], int N )
 static void STD_ListMeth( DaoContext *ctx, DValue *p[], int N )
 {
   DaoTypeBase *typer = DValue_GetTyper( *p[0] );
-  DaoFunction **meths = typer->priv->methods;
-  int i, j;
+  DaoFunction **meths;
+  DArray *array = DArray_New(0);
+  DMap *hash = typer->priv->mapValues;
+  DNode *it;
+  int i, j, methCount;
+  DMap_SortMethods( typer->priv->mapMethods, array );
+  meths = (DaoFunction**) array->items.pVoid;
+  methCount = array->size;
   DaoContext_Print( ctx, "======================\nConsts / Methods of " );
   DaoContext_Print( ctx, typer->name );
   DaoContext_Print( ctx, ":\n======================\n" );
-  for(i=0; i<typer->priv->valCount; i++ ){
-    DaoContext_Print( ctx, typer->priv->values[i]->name->mbs );
+  for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
+    DaoContext_Print( ctx, it->key.pString->mbs );
     DaoContext_Print( ctx, "\n" );
   }
-  for(i=0; i<typer->priv->methCount; i++ ){
+  for(i=0; i<methCount; i++ ){
     DaoContext_Print( ctx, meths[i]->routName->mbs );
     DaoContext_Print( ctx, ": " );
     for(j=meths[i]->routName->size; j<20; j++) DaoContext_Print( ctx, " " );
     DaoContext_Print( ctx, meths[i]->routType->name->mbs );
     DaoContext_Print( ctx, "\n" );
   }
+  DArray_Delete( array );
 }
 static void STD_Pack1( DaoContext *ctx, DValue *p[], int N )
 {
@@ -801,11 +808,7 @@ static DaoNumItem stdConsts[] =
 
 static DaoTypeCore stdlibCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1343,11 +1346,7 @@ static DaoFuncItem mpiMeths[]=
 
 static DaoTypeCore mpiCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1672,7 +1671,7 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 static void REFL_Class( DaoContext *ctx, DValue *p[], int N )
 {
   if( p[0]->t == DAO_ROUTINE ){
-    DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->hostClass );
+    DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->routHost.v.klass );
   }else if( p[0]->t == DAO_OBJECT ){
     DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.object->myClass );
   }
@@ -1864,11 +1863,7 @@ static DaoFuncItem reflMeths[]=
 
 static DaoTypeCore librefCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1946,11 +1941,7 @@ static DaoFuncItem coroutMeths[]=
 
 static DaoTypeCore coroutCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -2229,11 +2220,7 @@ static DaoFuncItem mathMeths[]=
 
 static DaoTypeCore mathCore =
 {
-  0,
-#ifdef DEV_HASH_LOOKUP
-  NULL, NULL,
-#endif
-  NULL, NULL, NULL, 0, 0,
+  0, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
