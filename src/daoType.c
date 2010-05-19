@@ -58,13 +58,18 @@ DaoTypeBase abstypeTyper=
 };
 
 void DaoType_MapNames( DaoType *self );
-void DaoType_CheckName( DaoType *self )
+void DaoType_CheckAttributes( DaoType *self )
 {
   if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE 
       || DString_FindChar( self->name, '@', 0 ) != MAXSIZE )
     self->attrib |= DAO_TYPE_NOTDEF;
   else
     self->attrib &= ~DAO_TYPE_NOTDEF;
+
+  if( self->tid == DAO_INTERFACE )
+    self->attrib |= DAO_TYPE_INTER;
+  else
+    self->attrib &= ~DAO_TYPE_INTER;
 }
 DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest )
 {
@@ -82,7 +87,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
   self->interfaces = NULL;
   if( tid == DAO_OBJECT || tid == DAO_CDATA ) self->interfaces = DHash_New(0,0);
   DString_SetMBS( self->name, name );
-  DaoType_CheckName( self );
+  DaoType_CheckAttributes( self );
   if( nest ){
     self->nested = DArray_New(0);
     DArray_Assign( self->nested, nest );
@@ -106,6 +111,7 @@ DaoType* DaoType_Copy( DaoType *other )
     GC_IncRCs( self->nested );
   }
   if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
+  if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
   GC_IncRC( self->X.extra );
   return self;
 }
@@ -194,6 +200,9 @@ void DaoType_Init()
   dao_type_matrix[DAO_VMPROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
 }
 static short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
+static int DaoInterface_TryBindTo
+( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
+
 static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int host )
 {
   DaoType *ext1 = self;
@@ -206,6 +215,9 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
   if( p2 ) ext2 = type->X.abtype;
   
   m = DaoType_Match( ext1, ext2, defs, binds );
+  /*
+  printf( "m = %i:  %s  %s\n", m, ext1->name->mbs, ext2->name->mbs );
+  */
   /* when a tuple matchs to a parameter group, 
    * the field name and default does not matter,
    * in other case it matters, but now, use less strict checking,
@@ -305,8 +317,12 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
   case DAO_CLASS :
   case DAO_OBJECT :
     if( self->X.extra == type->X.extra ) return DAO_MT_EQ;
-    inters = self->X.klass->objType->interfaces;
+    it1 = self->X.klass->objType;
+    inters = it1->interfaces;
     if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB; /* TODO for cdata */
+    if( type->tid == DAO_INTERFACE ){
+      if( DaoInterface_TryBindTo( type->X.inter, it1, binds, NULL ) ) return DAO_MT_SUB;
+    }
     if( DaoClass_ChildOf( self->X.klass, type->X.extra ) ) return DAO_MT_SUB;
     return DAO_MT_NOT;
     break;
@@ -359,7 +375,7 @@ short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
   if( node ) return node->value.pInt;
 
   mt = DaoType_MatchToX( self, type, defs, binds );
-  if( ((self->attrib|type->attrib) & DAO_TYPE_NOTDEF) ==0 ){
+  if( ((self->attrib|type->attrib) & (DAO_TYPE_NOTDEF|DAO_TYPE_INTER)) ==0 ){
 #ifdef DAO_WITH_THREAD
     DMutex_Lock( & dao_typing_mutex );
 #endif
@@ -369,6 +385,12 @@ short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
     DMutex_Unlock( & dao_typing_mutex );
 #endif
   }
+#if 0
+  if( mt ==0 && binds ){
+    printf( "%p  %p\n", pvoid[0], pvoid[1] );
+    printf( "%i %p\n", binds->size, DMap_Find( binds, pvoid ) );
+  }
+#endif
   if( mt ==0 && binds && DMap_Find( binds, pvoid ) ) return DAO_MT_INIT;
   return mt;
 }
@@ -475,8 +497,12 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
     break;
   case DAO_OBJECT :
     if( self->X.klass == value.v.object->myClass ) return DAO_MT_EQ;
-    inters = value.v.object->myClass->objType->interfaces;
+    tp = value.v.object->myClass->objType;
+    inters = tp->interfaces;
     if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB; /* TODO for cdata */
+    if( self->tid == DAO_INTERFACE ){
+      if( DaoInterface_TryBindTo( self->X.inter, tp, NULL, NULL ) ) return DAO_MT_SUB;
+    }
     if( DaoClass_ChildOf( value.v.object->myClass, self->X.extra ) ) return DAO_MT_SUB;
     break;
   case DAO_CDATA :
@@ -583,7 +609,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
       DString_Assign( copy->name, self->name );
     }
   }
-  DaoType_CheckName( copy );
+  DaoType_CheckAttributes( copy );
   GC_IncRC( copy->X.abtype );
   node = DMap_Find( ns->abstypes, copy->name );
   if( node ){
@@ -620,6 +646,7 @@ DaoInterface* DaoInterface_New( const char *name )
 {
   DaoInterface *self = (DaoInterface*) dao_malloc( sizeof(DaoInterface) );
   DaoBase_Init( self, DAO_INTERFACE );
+  self->bindany = 0;
   self->supers = DArray_New(0);
   self->methods = DHash_New(D_STRING,0);
   self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoBase*)self, NULL );
@@ -636,6 +663,9 @@ static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
   for(i=0; i<self->routOverLoad->size; i++){
     rout = (DRoutine*) self->routOverLoad->items.pBase[i];
     j = DaoType_Match( rout->routType, type, NULL, binds );
+    /*
+    printf( "%3i: %3i  %s  %s\n",i,j,rout->routType->name->mbs,type->name->mbs );
+    */
     if( j && j >= max ){
       max = j;
       k = i;
@@ -643,10 +673,11 @@ static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
   }
   return (k >= 0);
 }
-int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds, DArray *fails )
+int DaoInterface_CheckBind
+( DArray *methods, DaoType *type, DMap *binds, DArray *fails )
 {
   DValue value;
-  int i, id, size = fails->size;
+  int i, id, fcount = 0;
   if( type->tid == DAO_OBJECT ){
     DaoClass *klass = type->X.klass;
     for(i=0; i<methods->size; i++){
@@ -659,16 +690,20 @@ int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds, DArray 
         goto RecordFail;
       continue;
 RecordFail:
-      DArray_Append( fails, rout );
+      if( fails ) DArray_Append( fails, rout );
+      fcount += 1;
     }
   }else if( type->tid == DAO_CDATA ){
   }else{
-    for(i=0; i<methods->size; i++){
-      DRoutine *rout = methods->items.pRout2[i];
-      DArray_Append( fails, rout );
+    fcount += methods->size;
+    if( fails ){
+      for(i=0; i<methods->size; i++){
+        DRoutine *rout = methods->items.pRout2[i];
+        DArray_Append( fails, rout );
+      }
     }
   }
-  return fails->size == size;
+  return fcount ==0;
 }
 static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *binds )
 {
@@ -676,6 +711,7 @@ static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *bind
   void *pvoid[2];
   pvoid[0] = type;
   pvoid[1] = self->abtype;
+  if( DMap_Find( binds, pvoid ) ) return;
   DMap_Insert( binds, pvoid, NULL );
   for(i=0; i<N; i++){
     DaoInterface *super = (DaoInterface*) self->supers->items.pBase[i];
@@ -692,6 +728,9 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
   for(i=0; i<N; i+=2){
     inter = (DaoInterface*) pairs->items.pBase[i];
     type = (DaoType*) pairs->items.pBase[i+1];
+    /*
+    printf( "%s  %s\n", inter->abtype->name->mbs, type->name->mbs );
+    */
     DaoInterface_TempBind( inter, type, binds );
   }
   for(i=0; i<N; i+=2){
@@ -714,6 +753,47 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
   DMap_Delete( binds );
   DArray_Delete( methods );
   return fails->size ==0;
+}
+int DaoInterface_BindTo
+( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails )
+{
+  DMap *newbinds = NULL;
+  DArray *methods;
+  void *pvoid[2];
+  int i, bl;
+  pvoid[0] = type;
+  pvoid[1] = self->abtype;
+  if( DMap_Find( type->interfaces, self ) ) return 1;
+  if( binds && DMap_Find( binds, pvoid ) ) return 1;
+  if( binds ==NULL ) newbinds = binds = DHash_New(D_VOID2,0);
+  DaoInterface_TempBind( self, type, binds );
+  methods = DArray_New(0);
+  DMap_SortMethods( self->methods, methods );
+  bl = DaoInterface_CheckBind( methods, type, binds, fails );
+  DArray_Delete( methods );
+  if( newbinds ) DMap_Delete( newbinds );
+  if( bl ==0 ) return 0;
+  GC_IncRC( self );
+  DMap_Insert( type->interfaces, self, NULL );
+  for(i=0; i<self->supers->size; i++){
+    DaoInterface *super = (DaoInterface*) self->supers->items.pBase[i];
+    if( DMap_Find( type->interfaces, super ) ) continue;
+    GC_IncRC( super );
+    DMap_Insert( type->interfaces, super, NULL );
+  }
+  return 1;
+}
+static int DaoInterface_TryBindTo
+( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails )
+{
+  DNode *it;
+  if( DMap_Find( type->interfaces, self ) ) return 1;
+  for(it=DMap_First(type->interfaces); it; it=DMap_Next(type->interfaces,it)){
+    DaoInterface *iter = (DaoInterface*) it->key.pVoid;
+    if( DString_EQ( iter->abtype->name, self->abtype->name ) ) break;
+  }
+  if( self->bindany ==0 && it == NULL ) return 0;
+  return DaoInterface_BindTo( self, type, binds, fails );
 }
 void DaoInterface_DeriveMethods( DaoInterface *self )
 {

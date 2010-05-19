@@ -1644,7 +1644,7 @@ void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
       DaoType_Delete( ct );
       ct = tp;
     }else{
-      DaoType_CheckName( ct );
+      DaoType_CheckAttributes( ct );
       DaoNameSpace_AddType( ns, ct->name, ct );
     }
     tuple->unitype = ct;
@@ -3533,7 +3533,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
   if( caller.t == DAO_ROUTINE || caller.t == DAO_FUNCTION ){
     rout = (DRoutine*) caller.v.p;
   }
-  //if( vmc->code == DVM_MCALL ) selfpar = params[0];
 
   if( self->object && (vmc->code == DVM_CALL || vmc->code == DVM_CALL_TC) ){
     selfpar->t = DAO_OBJECT;
@@ -3843,8 +3842,6 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
     DaoContext_RaiseException( self, DAO_ERROR_TYPE, "null object not callable" );
     return;
   }
-
-  //if( vmc->code == DVM_MCALL_TC ) selfpar = params[0];
 
   if( self->object && (vmc->code == DVM_CALL || vmc->code == DVM_CALL_TC) ){
     selfpar->t = DAO_OBJECT;

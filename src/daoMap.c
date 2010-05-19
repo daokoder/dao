@@ -769,7 +769,7 @@ DNode* DMap_First( DMap *self )
   int i = 0;
   if( self->hashing ){
     while( i < self->tsize && self->table[i] == NULL ) i += 1;
-    if( i < self->tsize ) node = self->table[i];
+    if( i < self->tsize ) node = DNode_First( self->table[i] );
   }
   if( node == NULL && self->root ) node = DNode_First( self->root );
   return node;

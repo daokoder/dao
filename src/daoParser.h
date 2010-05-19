@@ -100,9 +100,10 @@ struct DaoParser
   char warnAssn;
   char pairLtGt; /* <> */
 
-  DaoInterface *interface;
+  DaoInterface *hostInter;
   DaoClass     *hostClass;
   DaoCData     *hostCData;
+  DaoType      *selfParam; /* type "self:host" */
   DaoParser    *outParser;
   DArray       *uplocs;
 

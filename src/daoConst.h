@@ -114,7 +114,8 @@ enum DaoTypeAttribs
 {
   DAO_TYPE_EMPTY = (1<<0),
   DAO_TYPE_SELF = (1<<1),
-  DAO_TYPE_NOTDEF = (1<<3)
+  DAO_TYPE_NOTDEF = (1<<3),
+  DAO_TYPE_INTER = (1<<4)
   /* DAO_TYPE_CONST = (1<<2) */
 };
 

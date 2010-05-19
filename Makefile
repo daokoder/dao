@@ -8,7 +8,7 @@ DAO_TOOL_DIR = $(DAO_DIR)/tools
 #DAO_AFC = -DDAO_WITH_AFC
 #DAO_MPI = -DDAO_WITH_MPI
 DAO_MACRO = -DDAO_WITH_MACRO
-DAO_THREAD = -DDAO_WITH_THREAD
+#DAO_THREAD = -DDAO_WITH_THREAD
 DAO_NETWORK = -DDAO_WITH_NETWORK
 DAO_NUMARRAY = -DDAO_WITH_NUMARRAY
 
@@ -20,7 +20,7 @@ LIB_READLINE = -lreadline
 
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_NETWORK) $(DAO_MPI) $(DAO_AFC) $(DAO_ASMBC) $(DAO_JIT) $(USE_READLINE)
 
-CC        = gcc -ggdb
+CC        = gcc
 CFLAGS    = -Wall -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
 INCPATH   = -I. -Isrc
 LFLAGS    = -fPIC #-s
@@ -52,6 +52,17 @@ ifeq ($(UNAME), Darwin)
   LFLAGSDLL += -dynamiclib -install_name libdao.dylib
   LIBS += -L/opt/local/lib
 endif
+
+ifeq ($(CC), gcc)
+  ifeq ($(debug),yes)
+    CFLAGS += -ggdb -DDEBUG
+  endif
+endif
+
+ifeq ($(std),C90)
+  CFLAGS += -ansi -pedantic
+endif
+
 
 AR = ar rcs
 

@@ -1174,6 +1174,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
     abtp = tuple->unitype; break;
   case DAO_VMPROCESS :
     abtp = vmp->abtype; break;
+  case DAO_INTERFACE :
+    abtp = ((DaoInterface*)p)->abtype; break;
   default : break;
   }
   if( abtp ){
@@ -1471,7 +1473,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
     return node->value.pAbtp;
   }
   GC_IncRC( abtp );
-  DaoType_CheckName( abtp );
+  DaoType_CheckAttributes( abtp );
   DaoNameSpace_AddType( self, abtp->name, abtp );
   return abtp;
 }

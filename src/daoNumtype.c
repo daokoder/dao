@@ -672,7 +672,6 @@ static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int d
   }
   if( bufs == NULL ){
     int maxdep = 2 * (1 + log( ny ) / log(2));
-    //printf( ">>>>>>>>>>>>>>>>>> maxdep = %i,  %i\n", maxdep, ny );
     bufs = dao_calloc( maxdep, sizeof(DLongBuffer*) );
   }
   if( bufs[dep] ==NULL ) bufs[dep] = DLongBuffer_New( ny+1 );
@@ -784,8 +783,11 @@ void DLong_UMul( DLong *z, DLong *x, DLong *y )
     return;
 #endif
   }
-  //DLong_UMulK( z, x, y, NULL, 0 );
+#if 0
+  DLong_UMulK( z, x, y, NULL, 0 );
+#else
   DLong_UMulFFT( z, x, y );
+#endif
 }
 void DLong_Mul( DLong *z, DLong *x, DLong *y )
 {

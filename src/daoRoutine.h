@@ -107,7 +107,6 @@ struct DaoRoutine
 
   DMap *abstypes;
 
-  //DaoClass   *hostClass;
   DaoParser  *parser;
   DaoRoutine *revised; /* to support edit & continue */
 
@@ -138,7 +137,6 @@ struct DaoFunction
   DAO_ROUT_COMMON
 
   DaoFuncPtr   pFunc;
-  //DaoCData    *hostCData;
 
   void  *ffiData; /* Data for Forign Function Interface, for DaoCLoader module */
 };

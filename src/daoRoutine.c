@@ -775,7 +775,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
       }
       recv[0]->cst = obj->cst;
     }
-    //if( selfChecked && code == DVM_MCALL && code == DVM_MCALL_TC ) it = 1;
   }
   /*
   printf( "%s, rout = %s; ndef = %i; npar = %i, %i\n", routine->routName->mbs, routine->routType->name->mbs, ndef, npar, selfChecked );
@@ -844,7 +843,6 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
       }
       recv[0]->cst = obj->cst;
     }
-    //if( code == DVM_MCALL_TC ) it = 1;
   }
   /*
   printf( "rout = %s; ndef = %i; npar = %i, %i\n", routine->routType->name->mbs, ndef, npar, selfChecked );
@@ -2842,7 +2840,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           DaoType_Delete( ct );
           ct = bt;
         }else{
-          DaoType_CheckName( ct );
+          DaoType_CheckAttributes( ct );
           DaoNameSpace_AddType( ns, ct->name, ct );
         }
         if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) type[opc] = ct;
@@ -3107,7 +3105,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             GC_IncRC( ct );
           }
           DString_AppendChar( at->name, '>' ); /* functional XXX gc */
-          DaoType_CheckName( at );
+          DaoType_CheckAttributes( at );
           ct = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & at, 1 );
         }else{
           ct = bt;

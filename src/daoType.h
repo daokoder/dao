@@ -107,7 +107,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *pb, DArray *nest );
 DaoType* DaoType_Copy( DaoType *self );
 void DaoType_Delete( DaoType *self );
 
-void DaoType_CheckName( DaoType *self );
+void DaoType_CheckAttributes( DaoType *self );
 
 /* if "self" match to "type": */
 short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
@@ -121,6 +121,8 @@ void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 struct DaoInterface
 {
   DAO_DATA_COMMON
+
+  int bindany;
 
   DArray  *supers; /* parent interfaces */
   DMap    *methods; /* DHash<DString*,DRoutine*> */
