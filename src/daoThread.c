@@ -876,7 +876,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
   DValue *buffer[DAO_MAX_PARAM];
   DValue **params = par + 2;
   DValue rov = *par[1];
-  DValue selfobj = daoNilValue;
+  DValue selfobj = daoNullValue;
   int i;
 
   if( rov.t == DAO_PAIR ){

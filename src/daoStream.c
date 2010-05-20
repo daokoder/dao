@@ -371,7 +371,7 @@ static DaoFuncItem streamMeths[] =
 
 static DValue DaoStream_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {
-  DValue val = daoNilStream;
+  DValue val = daoNullStream;
   DaoStream *self = self0->v.stream;
   DaoStream *stream = DaoStream_New();
   stream->vmSpace = self->vmSpace;
@@ -403,7 +403,7 @@ static DaoTypeCore streamCore =
 
 void DaoStream_SetFile( DaoStream *self, FILE *fd )
 {
-  DValue p = daoNilStream;
+  DValue p = daoNullStream;
   DValue *p2 = & p;
   p.v.stream = self;
   DaoIO_Close( NULL, & p2, 1 );

@@ -23,23 +23,24 @@
 #include"daoNumtype.h"
 
 #if 1
-const DValue daoNilValue = { 0, 0, 0, 0, {0}};
+const DValue daoNullValue = { 0, 0, 0, 0, {0}};
 const DValue daoZeroInt = { DAO_INTEGER, 0, 0, 0, {0}};
 const DValue daoZeroFloat = { DAO_FLOAT, 0, 0, 0, {0}};
 const DValue daoZeroDouble = { DAO_DOUBLE, 0, 0, 0, {0}};
-const DValue daoNilComplex = { DAO_COMPLEX, 0, 0, 0, {0}};
-const DValue daoNilString = { DAO_STRING, 0, 0, 0, {0}};
-const DValue daoNilArray = { DAO_ARRAY, 0, 0, 0, {0}};
-const DValue daoNilList = { DAO_LIST, 0, 0, 0, {0}};
-const DValue daoNilMap = { DAO_MAP, 0, 0, 0, {0}};
-const DValue daoNilPair = { DAO_PAIR, 0, 0, 0, {0}};
-const DValue daoNilTuple = { DAO_TUPLE, 0, 0, 0, {0}};
-const DValue daoNilClass = { DAO_CLASS, 0, 0, 0, {0}};
-const DValue daoNilObject = { DAO_OBJECT, 0, 0, 0, {0}};
-const DValue daoNilRoutine = { DAO_ROUTINE, 0, 0, 0, {0}};
-const DValue daoNilFunction = { DAO_FUNCTION, 0, 0, 0, {0}};
-const DValue daoNilCData = { DAO_CDATA, 0, 0, 0, {0}};
-const DValue daoNilStream = { DAO_STREAM, 0, 0, 0, {0}};
+const DValue daoNullComplex = { DAO_COMPLEX, 0, 0, 0, {0}};
+const DValue daoNullString = { DAO_STRING, 0, 0, 0, {0}};
+const DValue daoNullArray = { DAO_ARRAY, 0, 0, 0, {0}};
+const DValue daoNullList = { DAO_LIST, 0, 0, 0, {0}};
+const DValue daoNullMap = { DAO_MAP, 0, 0, 0, {0}};
+const DValue daoNullPair = { DAO_PAIR, 0, 0, 0, {0}};
+const DValue daoNullTuple = { DAO_TUPLE, 0, 0, 0, {0}};
+const DValue daoNullClass = { DAO_CLASS, 0, 0, 0, {0}};
+const DValue daoNullObject = { DAO_OBJECT, 0, 0, 0, {0}};
+const DValue daoNullRoutine = { DAO_ROUTINE, 0, 0, 0, {0}};
+const DValue daoNullFunction = { DAO_FUNCTION, 0, 0, 0, {0}};
+const DValue daoNullCData = { DAO_CDATA, 0, 0, 0, {0}};
+const DValue daoNullStream = { DAO_STREAM, 0, 0, 0, {0}};
+const DValue daoNullType = { DAO_TYPE, 0, 0, 0, {0}};
 #endif
 
 
@@ -451,7 +452,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
       /* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
     }else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
       if( ((DaoObject*)dA)->myClass != tp->X.klass ){
-        dA = DaoObject_MapThisObject( (DaoObject*)dA, tp->X.klass, tp->typer );
+        dA = DaoObject_MapThisObject( (DaoObject*)dA, tp );
         i = (dA != NULL);
       }
     }else{
@@ -587,7 +588,7 @@ int DValue_Pass( DValue from, DValue *to, DaoType *tp )
     }else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA)
         && dA->type == DAO_OBJECT){
       if( ((DaoObject*)dA)->myClass != tp->X.klass ){
-        dA = DaoObject_MapThisObject( (DaoObject*)dA, tp->X.klass, tp->typer );
+        dA = DaoObject_MapThisObject( (DaoObject*)dA, tp );
         i = (dA != NULL);
       }
     }else{
@@ -696,7 +697,7 @@ DValue DValue_NewDouble( double v )
 }
 DValue DValue_NewMBString( char *s, int n )
 {
-  DValue res = daoNilString;
+  DValue res = daoNullString;
   res.v.s = DString_New(1);
   if( n )
     DString_SetDataMBS( res.v.s, s, n );
@@ -706,7 +707,7 @@ DValue DValue_NewMBString( char *s, int n )
 }
 DValue DValue_NewWCString( wchar_t *s, int n )
 {
-  DValue res = daoNilValue;
+  DValue res = daoNullValue;
   res.v.s = DString_New(0);
   if( n ){
     DString_Resize( res.v.s, n );
@@ -719,7 +720,7 @@ DValue DValue_NewWCString( wchar_t *s, int n )
 #ifdef DAO_WITH_NUMARRAY
 DValue DValue_NewVectorB( char *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetVectorB( res.v.array, s, n );
   GC_IncRC( res.v.p );
@@ -727,7 +728,7 @@ DValue DValue_NewVectorB( char *s, int n )
 }
 DValue DValue_NewVectorUB( unsigned char *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetVectorUB( res.v.array, s, n );
   GC_IncRC( res.v.p );
@@ -735,7 +736,7 @@ DValue DValue_NewVectorUB( unsigned char *s, int n )
 }
 DValue DValue_NewVectorS( short *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetVectorS( res.v.array, s, n );
   GC_IncRC( res.v.p );
@@ -743,7 +744,7 @@ DValue DValue_NewVectorS( short *s, int n )
 }
 DValue DValue_NewVectorUS( unsigned short *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetVectorUS( res.v.array, s, n );
   GC_IncRC( res.v.p );
@@ -751,7 +752,7 @@ DValue DValue_NewVectorUS( unsigned short *s, int n )
 }
 DValue DValue_NewVectorI( int *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   if( n == 0 ){
     DaoArray_UseData( res.v.array, s );
@@ -762,7 +763,7 @@ DValue DValue_NewVectorI( int *s, int n )
 }
 DValue DValue_NewVectorUI( unsigned int *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   if( n == 0 ){
     DaoArray_UseData( res.v.array, s );
@@ -774,7 +775,7 @@ DValue DValue_NewVectorUI( unsigned int *s, int n )
 }
 DValue DValue_NewVectorF( float *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_FLOAT );
   if( n == 0 ){
     DaoArray_UseData( res.v.array, s );
@@ -786,7 +787,7 @@ DValue DValue_NewVectorF( float *s, int n )
 }
 DValue DValue_NewVectorD( double *s, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_DOUBLE );
   if( n == 0 ){
     DaoArray_UseData( res.v.array, s );
@@ -798,7 +799,7 @@ DValue DValue_NewVectorD( double *s, int n )
 }
 DValue DValue_NewMatrixB( signed char **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetMatrixB( res.v.array, s, n, m );
   GC_IncRC( res.v.p );
@@ -809,7 +810,7 @@ extern void DaoArray_SetMatrixUS( DaoArray *self, unsigned short **mat, int N, i
 extern void DaoArray_SetMatrixUI( DaoArray *self, unsigned int **mat, int N, int M );
 DValue DValue_NewMatrixUB( unsigned char **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   GC_IncRC( res.v.p );
   DaoArray_SetMatrixUB( res.v.array, s, n, m );
@@ -817,7 +818,7 @@ DValue DValue_NewMatrixUB( unsigned char **s, int n, int m )
 }
 DValue DValue_NewMatrixS( short **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetMatrixS( res.v.array, s, n, m );
   GC_IncRC( res.v.p );
@@ -825,7 +826,7 @@ DValue DValue_NewMatrixS( short **s, int n, int m )
 }
 DValue DValue_NewMatrixUS( unsigned short **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   GC_IncRC( res.v.p );
   DaoArray_SetMatrixUS( res.v.array, s, n, m );
@@ -833,7 +834,7 @@ DValue DValue_NewMatrixUS( unsigned short **s, int n, int m )
 }
 DValue DValue_NewMatrixI( int **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   DaoArray_SetMatrixI( res.v.array, s, n, m );
   GC_IncRC( res.v.p );
@@ -841,7 +842,7 @@ DValue DValue_NewMatrixI( int **s, int n, int m )
 }
 DValue DValue_NewMatrixUI( unsigned int **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_INTEGER );
   GC_IncRC( res.v.p );
   DaoArray_SetMatrixUI( res.v.array, s, n, m );
@@ -849,7 +850,7 @@ DValue DValue_NewMatrixUI( unsigned int **s, int n, int m )
 }
 DValue DValue_NewMatrixF( float **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_FLOAT );
   DaoArray_SetMatrixF( res.v.array, s, n, m );
   GC_IncRC( res.v.p );
@@ -857,7 +858,7 @@ DValue DValue_NewMatrixF( float **s, int n, int m )
 }
 DValue DValue_NewMatrixD( double **s, int n, int m )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New( DAO_DOUBLE );
   DaoArray_SetMatrixD( res.v.array, s, n, m );
   GC_IncRC( res.v.p );
@@ -865,7 +866,7 @@ DValue DValue_NewMatrixD( double **s, int n, int m )
 }
 DValue DValue_NewBuffer( void *p, int n )
 {
-  DValue res = daoNilArray;
+  DValue res = daoNullArray;
   res.v.array = DaoArray_New(0);
   DaoArray_SetBuffer( res.v.array, p, n );
   GC_IncRC( res.v.p );
@@ -875,7 +876,7 @@ DValue DValue_NewBuffer( void *p, int n )
 static DValue NumArrayDisabled()
 {
   printf( "Error: numeric array is disabled!\n" );
-  return daoNilValue;
+  return daoNullValue;
 }
 DValue DValue_NewVectorB( char *s, int n )
 {
@@ -948,7 +949,7 @@ DValue DValue_NewBuffer( void *s, int n )
 #endif
 DValue DValue_NewStream( FILE *f )
 {
-  DValue res = daoNilStream;
+  DValue res = daoNullStream;
   res.v.stream = DaoStream_New();
   DaoStream_SetFile( res.v.stream, f );
   GC_IncRC( res.v.p );
@@ -956,7 +957,7 @@ DValue DValue_NewStream( FILE *f )
 }
 DValue DValue_NewCData( DaoTypeBase *typer, void *data )
 {
-  DValue res = daoNilCData;
+  DValue res = daoNullCData;
   res.v.cdata = DaoCData_New( typer, data );
   res.v.cdata->attribs = 0;
   GC_IncRC( res.v.p );

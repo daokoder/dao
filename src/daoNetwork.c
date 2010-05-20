@@ -421,7 +421,7 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
   char *buf2 = buf;
   short numtype;
   complex16  com;
-  DValue item = daoNilValue;
+  DValue item = daoNullValue;
   DString  *str = DString_New(1);
   DaoArray *arr = NULL;
   float *fv = NULL;
@@ -609,7 +609,7 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
   const char *host = DString_GetMBS( par[0]->v.s );
   DaoMap *res = DaoContext_PutMap( ctx );
   DString *str;
-  DValue value = daoNilString;
+  DValue value = daoNullString;
   if( DString_Size( par[0]->v.s ) ==0 ) return;
   if( host[0] >= '0' && host[0] <= '9' ){
     struct in_addr id;
@@ -705,9 +705,6 @@ DaoTypeBase libNetTyper = {
   {0},
   NULL, NULL
 };
-
-DaoCData libNetwork = 
-{ DAO_CDATA, DAO_DATA_CONST, {0,0}, 1,0, NULL,NULL, NULL, & libNetTyper, 0,0,0,0 };
 
 #ifdef DAO_WITH_MPI
 int DaoSpawn_OsProc( DString *pid, DString *src, float timeout )
@@ -1105,7 +1102,7 @@ void DaoProxy_Receive( DaoContext *ctx, DValue *par[], int N )
          */
         if( node != NULL ){
           DVarray *array = DVarray_New();
-          DValue value = daoNilValue;
+          DValue value = daoNullValue;
           if( node->value.pBase ) value.t = node->value.pBase->type;
           value.v.p = node->value.pBase;
           DaoList_PopFront( res );

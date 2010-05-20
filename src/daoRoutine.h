@@ -23,12 +23,13 @@
 #define \
   DAO_ROUT_COMMON \
 uchar_t        attribs; \
+uchar_t        distance; \
 uchar_t        parCount; \
-ushort_t       distance; \
-DValue         routHost; \
-DVarray       *routConsts; \
+uchar_t        tidHost; \
+DaoType       *routHost; \
 DaoType       *routType; \
 DString       *routName; \
+DVarray       *routConsts; \
 DArray        *parTokens; \
 DArray        *routOverLoad; \
 DRoutine      *firstRoutine; \

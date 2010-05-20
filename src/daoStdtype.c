@@ -53,22 +53,22 @@ DaoFunction* DaoFindFunction2( DaoTypeBase *typer, const char *name )
 DValue DaoFindValue( DaoTypeBase *typer, DString *name )
 {
   DaoFunction *func = DaoFindFunction( typer, name );
-  DValue value = daoNilFunction;
+  DValue value = daoNullFunction;
   DNode *node;
   value.v.func = func;
   if( func ) return value;
-  if( typer->priv->mapValues == NULL ) return daoNilValue;
+  if( typer->priv->mapValues == NULL ) return daoNullValue;
   node = DMap_Find( typer->priv->mapValues, name );
   if( node ) return *node->value.pValue;
-  return daoNilValue;
+  return daoNullValue;
 }
 DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name )
 {
   DNode *node;
-  if( typer->priv->mapValues == NULL ) return daoNilValue;
+  if( typer->priv->mapValues == NULL ) return daoNullValue;
   node = DMap_Find( typer->priv->mapValues, name );
   if( node ) return *node->value.pValue;
-  return daoNilValue;
+  return daoNullValue;
 }
 
 enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE };
@@ -224,7 +224,7 @@ DaoBase* DaoBase_Duplicate( void *dbase )
       DaoList *list = (DaoList*) self;
       DaoList *copy = DaoList_New();
       copy->subType = SUB_TYPE( list ); /* remove const state */
-      DVarray_Resize( copy->items, list->items->size, daoNilValue );
+      DVarray_Resize( copy->items, list->items->size, daoNullValue );
       for(i=0; i<list->items->size; i++)
         DaoList_SetItem( copy, list->items->data[i], i );
       copy->unitype = list->unitype;
@@ -747,7 +747,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DValue *p[], int N )
   DString *spec = p[2]->v.s;
   DString *res = NULL, *key = NULL, *val = NULL, *sub = NULL;
   DNode *node = NULL;
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   int keep = p[3]->v.i;
   size_t i, pos1, pos2, prev = 0;
   wchar_t spec1;
@@ -891,7 +891,7 @@ static void DaoSTR_Split( DaoContext *ctx, DValue *p[], int N )
   int rm = (int)p[3]->v.i;
   DaoList *list = DaoContext_PutList( ctx );
   DString *str = DString_New(1);
-  DValue value = daoNilString;
+  DValue value = daoNullString;
   size_t dlen = DString_Size( delm );
   size_t qlen = DString_Size( quote );
   size_t size = DString_Size( self );
@@ -979,7 +979,7 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
   int simplify = (int)p[4]->v.i;
   DaoList *list = DaoContext_PutList( ctx );
   DString *str = DString_New(1);
-  DValue value = daoNilString;
+  DValue value = daoNullString;
   value.v.s = str;
   if( self->mbs ){
     char *s = self->mbs;
@@ -1175,7 +1175,7 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
   size_t end = (size_t)p[4]->v.i;
   size_t i, p1=start, p2=end;
   DValue value = daoZeroInt;
-  DValue vtup = daoNilTuple;
+  DValue vtup = daoNullTuple;
   DaoTuple *tuple = NULL; 
   DaoList *list = DaoContext_PutList( ctx );
   DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
@@ -1208,7 +1208,7 @@ static void DaoSTR_Match0( DaoContext *ctx, DValue *p[], int N, int subm )
   size_t p1=start, p2=end;
   int gid = p[2]->v.i;
   DValue value = daoZeroInt;
-  DValue matched = daoNilString;
+  DValue matched = daoNullString;
   DaoTuple *tuple = DaoTuple_New( 3 );
   DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
   DaoContext_SetResult( ctx, (DaoBase*) tuple );
@@ -1255,7 +1255,7 @@ static void DaoSTR_Extract( DaoContext *ctx, DValue *p[], int N )
   int rev = p[4]->v.i;
   size_t size = DString_Size( self );
   size_t end=size, p1=0, p2=size;
-  DValue subs = daoNilString;
+  DValue subs = daoNullString;
   DArray *masks = DArray_New(0);
   DArray *matchs = DArray_New(0);
   DaoList *list = DaoContext_PutList( ctx );
@@ -1324,7 +1324,7 @@ static void DaoSTR_Capture( DaoContext *ctx, DValue *p[], int N )
   size_t end = (size_t)p[3]->v.i;
   size_t p1=start, p2=end;
   int gid;
-  DValue subs = daoNilString;
+  DValue subs = daoNullString;
   DaoList *list = DaoContext_PutList( ctx );
   DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
   if( patt ==NULL ) return;
@@ -1477,7 +1477,7 @@ static void DaoListCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
   case IDX_FROM :
     res = DaoContext_PutList( ctx );
     if( start >= self->items->size ) break;
-    DVarray_Resize( res->items, self->items->size - start, daoNilValue );
+    DVarray_Resize( res->items, self->items->size - start, daoNullValue );
     for(i=start; i<self->items->size; i++)
       DaoList_SetItem( res, self->items->data[i], i-start );
     break;
@@ -1485,14 +1485,14 @@ static void DaoListCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
     res = DaoContext_PutList( ctx );
     if( end + 1 <0 ) break;
     if( end + 1 >= self->items->size ) end = self->items->size-1;
-    DVarray_Resize( res->items, end +1, daoNilValue );
+    DVarray_Resize( res->items, end +1, daoNullValue );
     for(i=0; i<=end; i++) DaoList_SetItem( res, self->items->data[i], i );
     break;
   case IDX_PAIR :
     res = DaoContext_PutList( ctx );
     if( end < start ) break;
     if( end + 1 >= self->items->size ) end = self->items->size-1;
-    DVarray_Resize( res->items, end - start + 1, daoNilValue );
+    DVarray_Resize( res->items, end - start + 1, daoNullValue );
     for(i=start; i<=end; i++)
       DaoList_SetItem( res, self->items->data[i], i-start );
     break;
@@ -1502,7 +1502,7 @@ static void DaoListCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
     break;
   case IDX_MULTIPLE :
     res = DaoContext_PutList( ctx );
-    DVarray_Resize( res->items, ids->size, daoNilValue );
+    DVarray_Resize( res->items, ids->size, daoNullValue );
     for(i=0; i<ids->size; i++ )
       DaoList_SetItem( res, self->items->data[ ids->items.pInt[i] ], i );
     DArray_Delete( ids );
@@ -1580,7 +1580,7 @@ static DValue DaoListCore_Copy( DValue *dbase, DaoContext *ctx, DMap *cycData )
 {
   DaoList *copy, *self = dbase->v.list;
   DValue *data = self->items->data;
-  DValue res = daoNilList;
+  DValue res = daoNullList;
 
   if( cycData ){
     DNode *node = MAP_Find( cycData, self );
@@ -1597,13 +1597,13 @@ static DValue DaoListCore_Copy( DValue *dbase, DaoContext *ctx, DMap *cycData )
   GC_IncRC( copy->unitype );
   if( cycData ) MAP_Insert( cycData, self, copy );
 
-  DVarray_Resize( copy->items, self->items->size, daoNilValue );
+  DVarray_Resize( copy->items, self->items->size, daoNullValue );
   DaoCopyValues( copy->items->data, data, self->items->size, ctx, cycData );
   return res;
 }
 DaoList* DaoList_Copy( DaoList *self, DMap *cycData )
 {
-  DValue val = daoNilList;
+  DValue val = daoNullList;
   val.v.list = self;
   val = DaoListCore_Copy( & val, NULL, cycData );
   return val.v.list;
@@ -1660,7 +1660,7 @@ static void DaoLIST_Resize( DaoContext *ctx, DValue *p[], int N )
     return;
   }
   for(i=size; i<oldSize; i++ ) DaoList_Erase( self, size );
-  DVarray_Resize( self->items, size, daoNilValue );
+  DVarray_Resize( self->items, size, daoNullValue );
 }
 static int DaoList_CheckType( DaoList *self, DaoContext *ctx )
 {
@@ -1788,7 +1788,7 @@ static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
     }
   case DAO_STRING :
     {
-      DValue value = daoNilString;
+      DValue value = daoNullString;
       DString *m = DString_Copy( data[0].v.s );
       value.v.s = m;
       for(i=1; i<size; i++) DString_Append( m, data[i].v.s );
@@ -2068,17 +2068,17 @@ int DaoList_Size( DaoList *self )
 }
 DValue DaoList_Front( DaoList *self )
 {
-  if( self->items->size == 0 ) return daoNilValue;
+  if( self->items->size == 0 ) return daoNullValue;
   return self->items->data[0];
 }
 DValue DaoList_Back( DaoList *self )
 {
-  if( self->items->size == 0 ) return daoNilValue;
+  if( self->items->size == 0 ) return daoNullValue;
   return self->items->data[ self->items->size-1 ];
 }
 DValue DaoList_GetItem( DaoList *self, int pos )
 {
-  if( pos <0 || pos >= self->items->size ) return daoNilValue;
+  if( pos <0 || pos >= self->items->size ) return daoNullValue;
   return self->items->data[pos];
 }
 DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
@@ -2118,21 +2118,21 @@ void DaoList_Insert( DaoList *self, DValue item, int pos )
 {
   DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
   if( DaoList_CheckItemType( self, item ) ==0 ) return;
-  DVarray_Insert( self->items, daoNilValue, pos );
+  DVarray_Insert( self->items, daoNullValue, pos );
   DValue_Move( item, self->items->data + pos, tp );
 }
 void DaoList_PushFront( DaoList *self, DValue item )
 {
   DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
   if( DaoList_CheckItemType( self, item ) ==0 ) return;
-  DVarray_PushFront( self->items, daoNilValue );
+  DVarray_PushFront( self->items, daoNullValue );
   DValue_Move( item, self->items->data, tp );
 }
 void DaoList_PushBack( DaoList *self, DValue item )
 {
   DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
   if( DaoList_CheckItemType( self, item ) ==0 ) return;
-  DVarray_PushBack( self->items, daoNilValue );
+  DVarray_PushBack( self->items, daoNullValue );
   DValue_Move( item, self->items->data + self->items->size - 1, tp );
 }
 void DaoList_ClearItem( DaoList *self, int i )
@@ -2328,7 +2328,7 @@ static void DaoMap_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue v
 static DValue DaoMap_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {
   DaoMap *copy, *self = self0->v.map;
-  DValue value = daoNilMap;
+  DValue value = daoNullMap;
   DNode *node;
 
   if( cycData ){
@@ -2543,12 +2543,12 @@ DValue DaoMap_GetValue( DaoMap *self, DValue key  )
 {
   DNode *node = MAP_Find( self->items, & key );
   if( node ) return node->value.pValue[0];
-  return daoNilValue;
+  return daoNullValue;
 }
 void DaoMap_InsertMBS( DaoMap *self, const char *key, DValue value )
 {
   DString *str = DString_New(1);
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   vkey.v.s = str;
   DString_SetMBS( str, key );
   DaoMap_Insert( self, vkey, value );
@@ -2557,7 +2557,7 @@ void DaoMap_InsertMBS( DaoMap *self, const char *key, DValue value )
 void DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value )
 {
   DString *str = DString_New(0);
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   vkey.v.s = str;
   DString_SetWCS( str, key );
   DaoMap_Insert( self, vkey, value );
@@ -2566,14 +2566,14 @@ void DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value )
 void DaoMap_EraseMBS ( DaoMap *self, const char *key )
 {
   DString str = DString_WrapMBS( key );
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   vkey.v.s = & str;
   DaoMap_Erase( self, vkey );
 }
 void DaoMap_EraseWCS ( DaoMap *self, const wchar_t *key )
 {
   DString str = DString_WrapWCS( key );
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   vkey.v.s = & str;
   DaoMap_Erase( self, vkey );
 }
@@ -2581,21 +2581,21 @@ DValue DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 {
   DNode *node;
   DString str = DString_WrapMBS( key );
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   vkey.v.s = & str;
   node = MAP_Find( self->items, & vkey );
   if( node ) return node->value.pValue[0];
-  return daoNilValue;
+  return daoNullValue;
 }
 DValue DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 {
   DNode *node;
   DString str = DString_WrapWCS( key );
-  DValue vkey = daoNilString;
+  DValue vkey = daoNullString;
   vkey.v.s = & str;
   node = MAP_Find( self->items, & vkey );
   if( node ) return node->value.pValue[0];
-  return daoNilValue;
+  return daoNullValue;
 }
 DaoMap* DaoMap_New2(){ return DaoMap_New(0); }
 
@@ -3196,8 +3196,8 @@ static void DaoPair_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DM
 static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {
   DaoPair *self = self0->v.pair;
-  DValue copy = daoNilPair;
-  copy.v.pair = DaoPair_New( daoNilValue, daoNilValue );
+  DValue copy = daoNullPair;
+  copy.v.pair = DaoPair_New( daoNullValue, daoNullValue );
   DValue_Copy( & copy.v.pair->first, self->first );
   DValue_Copy( & copy.v.pair->second, self->second );
   return copy;
@@ -3226,7 +3226,7 @@ DaoPair* DaoPair_New( DValue p1, DValue p2 )
   DaoPair *self = (DaoPair*)dao_malloc( sizeof(DaoPair) );
   DaoBase_Init( self, DAO_PAIR );
   self->unitype = NULL;
-  self->first = self->second = daoNilValue;
+  self->first = self->second = daoNullValue;
   DValue_Copy( & self->first, p1 );
   DValue_Copy( & self->second, p2 );
   return self;
@@ -3311,7 +3311,7 @@ static DValue DaoTupleCore_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {
   DaoTuple *copy, *self = self0->v.tuple;
   DValue *data = self->items->data;
-  DValue res = daoNilTuple;
+  DValue res = daoNullTuple;
 
   if( cycData ){
     DNode *node = MAP_Find( cycData, self );
@@ -3355,7 +3355,7 @@ DaoTuple* DaoTuple_New( int size )
 {
   DaoTuple *self = (DaoTuple*) dao_malloc( sizeof(DaoTuple) );
   DaoBase_Init( self, DAO_TUPLE );
-  self->items = DVaTuple_New( size, daoNilValue );
+  self->items = DVaTuple_New( size, daoNullValue );
   self->unitype = NULL;
   return self;
 }
@@ -3393,6 +3393,6 @@ void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos )
 }
 DValue DaoTuple_GetItem( DaoTuple *self, int pos )
 {
-  if( pos <0 || pos >= self->items->size ) return daoNilValue;
+  if( pos <0 || pos >= self->items->size ) return daoNullValue;
   return self->items->data[pos];
 }

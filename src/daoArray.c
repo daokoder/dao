@@ -435,7 +435,7 @@ void DVarray_Delete( DVarray *self )
 
 void DVarray_Resize( DVarray *self, size_t size, DValue val )
 {
-  DValue nil = daoNilValue;
+  DValue nil = daoNullValue;
   size_t i;
   if( size == self->size && self->bufsize>0 ) return;
 
@@ -486,7 +486,7 @@ void DVarray_Assign( DVarray *left, DVarray *right )
     DVarray_Clear( left );
     return;
   }
-  DVarray_Resize( left, right->size, daoNilValue );
+  DVarray_Resize( left, right->size, daoNullValue );
   for( i=0; i<right->size; i++ ) DValue_CopyExt( left->data + i, right->data[i], 0 );
 }
 DVarray* DVarray_Copy( DVarray *self )
@@ -530,7 +530,7 @@ void DVarray_Insert( DVarray *self, DValue val, size_t id )
     self->data = self->buf;
   }
   for( i=self->size; i>id; i-- ) self->data[i] = self->data[i-1];
-  self->data[id] = daoNilValue;
+  self->data[id] = daoNullValue;
   DValue_Copy( self->data + id, val );
   self->size++;
 }
@@ -573,7 +573,7 @@ void DVarray_PushFront( DVarray *self, DValue val )
     memmove( self->buf + from, self->buf, self->size*sizeof(DValue) );
     self->data = self->buf + from - 1;
   }
-  self->data[0] = daoNilValue;
+  self->data[0] = daoNullValue;
   DValue_Copy( self->data, val );
   self->size ++;
 }
@@ -604,7 +604,7 @@ void DVarray_PushBack( DVarray *self, DValue val )
     self->buf = dao_realloc( self->buf, (self->bufsize+1)*sizeof(DValue) );
     self->data = self->buf + from;
   }
-  self->data[ self->size ] = daoNilValue;
+  self->data[ self->size ] = daoNullValue;
   DValue_Copy( self->data + self->size, val );
   self->size++;
 }
@@ -628,13 +628,13 @@ void DVarray_PopBack( DVarray *self )
 }
 DValue DVarray_Front( DVarray *self )
 {
-  DValue v = daoNilValue;
+  DValue v = daoNullValue;
   if( self->size ==0 || self->data ==NULL ) return v;
   return self->data[0];
 }
 DValue DVarray_Back( DVarray *self )
 {
-  DValue v = daoNilValue;
+  DValue v = daoNullValue;
   if( self->size ==0 || self->data ==NULL ) return v;
   return self->data[ self->size -1 ];
 }
@@ -867,7 +867,7 @@ void DVaTuple_Delete( DVaTuple *self )
 }
 void DVaTuple_Resize( DVaTuple *self, size_t size, DValue val )
 {
-  DValue nil = daoNilValue;
+  DValue nil = daoNullValue;
   size_t i;
   if( size == self->size ) return;
 

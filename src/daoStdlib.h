@@ -16,13 +16,5 @@
 
 #include"daoType.h"
 
-extern DaoCData libStandard;
-extern DaoCData libReflect;
-extern DaoCData libMath;
-extern DaoCData libCoroutine;
-#ifdef DAO_WITH_NETWORK
-extern DaoCData libNetwork;
-#endif
-extern DaoCData libMPI;
 
 #endif

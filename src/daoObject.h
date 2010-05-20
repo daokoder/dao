@@ -32,7 +32,7 @@ void DaoObject_Delete( DaoObject *self );
 
 int DaoObject_ChildOf( DaoObject *self, DaoObject *obj );
 
-DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoClass *host, DaoTypeBase *typer );
+DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
 
 void DaoObject_AddData( DaoObject *self, DString *name, DaoBase  *data );
 

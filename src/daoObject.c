@@ -28,8 +28,8 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
     DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue par[], int N, int ret )
 {
   DValue *ps[ DAO_MAX_PARAM+1 ];
-  DValue value = daoNilValue;
-  DValue selfpar = daoNilObject;
+  DValue value = daoNullValue;
+  DValue selfpar = daoNullObject;
   int i, errcode = DaoObject_GetData( self, name, & value, thisObject, NULL );
   if( errcode ) return errcode;
   selfpar.v.object = self;
@@ -57,9 +57,9 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
   }else if( value.t == DAO_FUNCTION ){
     DaoFunction *func = value.v.func;
     DValue p[ DAO_MAX_PARAM+1 ];
-    p[0] = daoNilValue;
+    p[0] = daoNullValue;
     memcpy( p+1, par, N*sizeof(DValue) );
-    p[0].v.object = (DaoObject*) DaoObject_MapThisObject( self, NULL, func->routHost.v.cdata->typer );
+    p[0].v.object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
     p[0].t = p[0].v.object ? p[0].v.object->type : 0;
     for(i=0; i<=N; i++) ps[i] = p + i;
     func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, vmp, &selfpar, ps, N+1, DVM_MCALL );
@@ -70,7 +70,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 static void DaoObject_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
   DaoObject *self = self0->v.object;
-  DValue pars = daoNilStream;
+  DValue pars = daoNullStream;
   int ec;
   pars.v.stream = stream;
   DString_SetMBS( ctx->process->mbstring, "_PRINT" );
@@ -89,7 +89,7 @@ static void DaoObject_Core_GetField( DValue *self0, DaoContext *ctx, DString *na
 {
   DaoObject *self = self0->v.object;
   DValue *d2 = NULL;
-  DValue value = daoNilValue;
+  DValue value = daoNullValue;
   int rc = DaoObject_GetData( self, name, & value, ctx->object, & d2 );
   if( rc ){
     DString_SetMBS( ctx->process->mbstring, "." );
@@ -165,7 +165,7 @@ static void DaoObject_CopyData(  DaoObject *self, DaoObject *from, DaoContext *c
 static DValue DaoObject_Copy(  DValue *value, DaoContext *ctx, DMap *cycData )
 {
   DaoObject *pnew, *self = value->v.object;
-  DValue res = daoNilObject;
+  DValue res = daoNullObject;
   DNode *node = DMap_Find( cycData, self );
   if( node ){
     res.v.p = node->value.pBase;
@@ -213,7 +213,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
     self->objValues = that->objData->data + offset;
   }else{
     self->that = self;
-    self->objData = DVaTuple_New( klass->objDataName->size, daoNilValue );
+    self->objData = DVaTuple_New( klass->objDataName->size, daoNullValue );
     self->objValues = self->objData->data;
   }
   offset += 1;
@@ -296,28 +296,28 @@ int DaoObject_ChildOf( DaoObject *self, DaoObject *obj )
 }
 extern int DaoCData_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
-DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoClass *host, DaoTypeBase *typer )
+DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 {
-  DaoObject *obj;
   int i;
-  if( self->myClass == host ) return (DaoBase*) self;
+  if( host == NULL ) return NULL;
+  if( self->myClass->objType == host ) return (DaoBase*) self;
   if( self->superObject ==NULL ) return NULL;
   for( i=0; i<self->superObject->size; i++ ){
-    if( self->myClass->superClass->items.pBase[i]->type == DAO_CLASS ){
-      obj = (DaoObject*) DaoObject_MapThisObject ( 
-          self->superObject->items.pObject[i], host, typer );
-      if( obj && host == obj->myClass ) return (DaoBase*) obj;
-    }else{
-      if( DaoCData_ChildOf( self->myClass->superClass->items.pCData[i]->typer, typer ) ){
-        return self->superObject->items.pBase[i];
-      }
+    DaoBase *sup = self->superObject->items.pBase[i];
+    if( sup == NULL ) return NULL;
+    if( sup->type == DAO_OBJECT ){
+      return DaoObject_MapThisObject( (DaoObject*)sup, host );
+    }else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
+      if( DaoCData_ChildOf( ((DaoCData*)sup)->typer, host->typer ) ) return sup;
     }
   }
   return NULL;
 }
 DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer )
 {
-  DaoBase *p = DaoObject_MapThisObject( self, NULL, typer );
+  DaoBase *p = NULL;
+  if( typer && typer->priv && typer->priv->abtype )
+    p = DaoObject_MapThisObject( self, typer->priv->abtype );
   if( p && p->type == DAO_CDATA ) return (DaoCData*) p;
   return NULL;
 }
@@ -361,7 +361,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
   DNode *node;
   int id, sto, perm;
 
-  *data = daoNilValue;
+  *data = daoNullValue;
   node = DMap_Find( self->myClass->lookupTable, name );
   if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
   
@@ -386,7 +386,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
 
 DValue DaoObject_GetField( DaoObject *self, const char *name )
 {
-  DValue res = daoNilValue;
+  DValue res = daoNullValue;
   DString str = DString_WrapMBS( name );
   DaoObject_GetData( self, & str, & res, self, NULL );
   return res;

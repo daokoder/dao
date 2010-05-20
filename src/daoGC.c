@@ -238,7 +238,7 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
   p->refCount += change;
 
   if( p->refCount == 0 ){
-    DValue value = daoNilValue;
+    DValue value = daoNullValue;
     value.t = p->type;
     value.v.p = p;
     /* free some memory, but do not delete it here,
@@ -620,7 +620,7 @@ void cycRefCountDecreScan()
           cycRefCountDecrements( ns->cmethods );
           break;
         }
-      case DAO_ABSTYPE :
+      case DAO_TYPE :
         {
           DaoType *abtp = (DaoType*) dbase;
           cycRefCountDecrement( abtp->X.extra );
@@ -752,7 +752,7 @@ void markAliveObjects( DaoBase *root )
           cycRefCountIncrements( ns->cmethods );
           break;
         }
-      case DAO_ABSTYPE :
+      case DAO_TYPE :
         {
           DaoType *abtp = (DaoType*) dbase;
           cycRefCountIncrement( abtp->X.extra );
@@ -907,7 +907,7 @@ void freeGarbage()
             directRefCountDecrement( ns->cmethods );
             break;
           }
-        case DAO_ABSTYPE :
+        case DAO_TYPE :
           {
             DaoType *abtp = (DaoType*) dbase;
             directRefCountDecrement( abtp->nested );
@@ -1064,7 +1064,7 @@ void DaoGC_DecRC( DaoBase *p )
   if( ! p ) return;
 
 #if 0
-  if( p->type == DAO_ABSTYPE ){
+  if( p->type == DAO_TYPE ){
     DaoType *abtp = (DaoType*) p;
     if( abtp->tid == DAO_LIST )
     return;
@@ -1286,7 +1286,7 @@ void cycRefCountDecreScan()
           j += ns->cstData->size + ns->varData->size;
           break;
         }
-      case DAO_ABSTYPE :
+      case DAO_TYPE :
         {
           DaoType *abtp = (DaoType*) dbase;
           cycRefCountDecrement( abtp->X.extra );
@@ -1423,7 +1423,7 @@ void cycRefCountIncreScan()
             j += ns->cstData->size + ns->varData->size;
             break;
           }
-        case DAO_ABSTYPE :
+        case DAO_TYPE :
           {
             DaoType *abtp = (DaoType*) dbase;
             cycRefCountIncrement( abtp->X.extra );
@@ -1598,7 +1598,7 @@ void directDecRC()
             directRefCountDecrement( ns->cmethods );
             break;
           }
-        case DAO_ABSTYPE :
+        case DAO_TYPE :
           {
             DaoType *abtp = (DaoType*) dbase;
             directRefCountDecrement( abtp->nested );

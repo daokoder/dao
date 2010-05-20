@@ -21,23 +21,24 @@
  * t2 should be set to the type of the data.
  */
 
-const extern DValue daoNilValue;
+const extern DValue daoNullValue;
 const extern DValue daoZeroInt;
 const extern DValue daoZeroFloat;
 const extern DValue daoZeroDouble;
-const extern DValue daoNilComplex;
-const extern DValue daoNilString;
-const extern DValue daoNilArray;
-const extern DValue daoNilList;
-const extern DValue daoNilMap;
-const extern DValue daoNilPair;
-const extern DValue daoNilTuple;
-const extern DValue daoNilClass;
-const extern DValue daoNilObject;
-const extern DValue daoNilRoutine;
-const extern DValue daoNilFunction;
-const extern DValue daoNilCData;
-const extern DValue daoNilStream;
+const extern DValue daoNullComplex;
+const extern DValue daoNullString;
+const extern DValue daoNullArray;
+const extern DValue daoNullList;
+const extern DValue daoNullMap;
+const extern DValue daoNullPair;
+const extern DValue daoNullTuple;
+const extern DValue daoNullClass;
+const extern DValue daoNullObject;
+const extern DValue daoNullRoutine;
+const extern DValue daoNullFunction;
+const extern DValue daoNullCData;
+const extern DValue daoNullStream;
+const extern DValue daoNullType;
 
 void DValue_Clear( DValue *self );
 void DValue_Init( DValue *self, DaoBase *p );

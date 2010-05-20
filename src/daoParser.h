@@ -102,7 +102,7 @@ struct DaoParser
 
   DaoInterface *hostInter;
   DaoClass     *hostClass;
-  DaoCData     *hostCData;
+  DaoType      *hostCData;
   DaoType      *selfParam; /* type "self:host" */
   DaoParser    *outParser;
   DArray       *uplocs;

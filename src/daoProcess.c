@@ -157,7 +157,7 @@ DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms )
   self->mbstring = DString_New(1);
   self->mbsRegex = NULL;
   self->wcsRegex = NULL;
-  self->returned = daoNilValue;
+  self->returned = daoNullValue;
   self->pauseType = 0;
   self->mpiData = NULL;
   self->array = NULL;
@@ -325,7 +325,7 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
   values = self->topFrame->context->regArray->data;
   for(i=0; i<N; i++){
     if( values[i].t > DAO_DOUBLE ) DValue_Clear( & values[i] );
-    values[i] = daoNilValue;
+    values[i] = daoNullValue;
   }
   self->topFrame->depth = 0;
   self->topFrame = self->topFrame->prev;
@@ -479,7 +479,7 @@ int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *source, in
 int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n )
 {
   DaoContext *ctx = DaoVmProcess_MakeContext( self, r );
-  DValue value = daoNilObject;
+  DValue value = daoNullObject;
   int call = o ? DVM_MCALL : DVM_CALL;
   value.v.object = o;
   ctx->object = o;
@@ -537,11 +537,11 @@ static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts,
 {
   DaoNameSpace *ns = ctx->nameSpace;
   DaoObject *object = ctx->object;
-  DaoClass *klass = ctx->routine->routHost.v.klass;
   consts[ DAO_G ] = ns->cstData->data;
   values[ DAO_G ] = ns->varData->data;
   types[ DAO_G ] = ns->varType->items.pAbtp;
-  if( klass ){
+  if( ctx->routine->tidHost == DAO_OBJECT ){
+    DaoClass *klass = ctx->routine->routHost->X.klass;
     consts[ DAO_K ] = klass->cstData->data;
     values[ DAO_K ] = klass->glbData->data;
     types[ DAO_K ] = klass->glbDataType->items.pAbtp;
@@ -1056,8 +1056,10 @@ CallEntry:
   }
   self->status = DAO_VMPROC_RUNNING;
   self->pauseType = DAO_VMP_NOPAUSE;
+  host = NULL;
+  if( topCtx->routine->tidHost == DAO_OBJECT )
+    host = topCtx->routine->routHost->X.klass;
   here = topCtx->routine->nameSpace;
-  host = topCtx->routine->routHost.v.klass;
   this = topCtx->object;
   locVars = topCtx->regValues;
   locTypes = topCtx->routine->regType->items.pAbtp;
@@ -1075,7 +1077,7 @@ OPCASE( NOP ){
 }OPNEXT()
 OPCASE( DATA ){
   switch( vmc->a ){
-  case DAO_NIL : *locVars[ vmc->c ] = daoNilValue; break;
+  case DAO_NIL : *locVars[ vmc->c ] = daoNullValue; break;
   case DAO_INTEGER : locVars[ vmc->c ]->v.i = vmc->b; break;
   case DAO_FLOAT : locVars[ vmc->c ]->v.f = vmc->b; break;
   case DAO_DOUBLE : locVars[ vmc->c ]->v.d = vmc->b; break;
@@ -2658,7 +2660,7 @@ static void DaoArray_SetValues( DaoArray *self, int i, DaoTuple *tuple )
 }
 static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int entry, int last )
 {
-  DValue res = daoNilValue, param = *self->regValues[ vmc->b ];
+  DValue res = daoNullValue, param = *self->regValues[ vmc->b ];
   DaoTuple *tuple = param.v.tuple;
   DaoList *list = param.v.list;
   DaoType *type = self->regTypes[ index + 2 ];
@@ -2686,7 +2688,7 @@ static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int en
 }
 static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int entry, int last )
 {
-  DValue res = daoNilValue, param = *self->regValues[ vmc->b ];
+  DValue res = daoNullValue, param = *self->regValues[ vmc->b ];
   DaoTuple *tuple = param.v.tuple;
   DaoArray *array = param.v.array;
   DaoType *type = self->regTypes[ index + 2 ];
@@ -2757,7 +2759,7 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
   DaoTuple *tuple = NULL;
   DaoList *list = param.v.list;
   DaoList *result = NULL;
-  DValue res = daoNilValue;
+  DValue res = daoNullValue;
   int i, j, count = 0;
   int size = 0;
   if( param.t == DAO_TUPLE ){
@@ -2782,7 +2784,7 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
       if( DValue_GetInteger( res ) ){
         if( tuple ){
           DaoTuple *tup = DaoTuple_New( tuple->items->size );
-          DValue val = daoNilTuple;
+          DValue val = daoNullTuple;
           val.v.tuple = tup;
           for( j=0; j<tuple->items->size; j++ ){
             list = tuple->items->data[j].v.list;
@@ -2819,8 +2821,8 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
   DaoArray *result = NULL;
   DaoTuple *tuple = NULL;
   DaoList *list = NULL;
-  DValue nval = daoNilValue;
-  DValue res = daoNilValue;
+  DValue nval = daoNullValue;
+  DValue res = daoNullValue;
   complex16 com = {0.0,0.0};
   int i, j, count = 0;
   int size = 0;
@@ -2856,7 +2858,7 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
       if( DValue_GetInteger( res ) ){
         if( tuple ){
           DaoTuple *tup = DaoTuple_New( tuple->items->size );
-          DValue val = daoNilTuple;
+          DValue val = daoNullTuple;
           val.v.tuple = tup;
           for( j=0; j<tuple->items->size; j++ ){
             array = tuple->items->data[j].v.array;
@@ -2922,7 +2924,7 @@ static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int ind
   DaoArray *array = NULL;
   DaoList *list = NULL;
   DString *string = NULL;
-  DValue res = daoNilValue;
+  DValue res = daoNullValue;
   if( self->codes + (entry+3) == vmc ){
     int c = self->codes[entry+1].code;
     isconst = ( c == DVM_MOVE || (c >= DVM_MOVE_II && c <= DVM_MOVE_PP ) );
@@ -3040,7 +3042,7 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 void DaoPrintException( DaoObject *except, DaoStream *stream, char *header )
 {
   DValue *data;
-  except = (DaoObject*) DaoObject_MapThisObject( except, daoClassException, NULL );
+  except = (DaoObject*) DaoObject_MapThisObject( except, daoClassException->objType );
   data = except->objValues;
   DaoStream_WriteMBS( stream, header );
   DaoStream_WriteString( stream, data[1].v.s );
@@ -3136,7 +3138,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
   if( self->exceptions->size >0 ){
     DaoVmProcess_PrintException( self, 1 );
     DVaTuple_Clear( ctx->regArray );
-    return daoNilValue;
+    return daoNullValue;
   }
 
   value = *dC;
@@ -3162,10 +3164,10 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
   /* no need GC */
   DVaTuple_Clear( ctx->regArray );
 #if 0
-  DVaTuple_Resize( ctx->regArray, 3, daoNilValue );
+  DVaTuple_Resize( ctx->regArray, 3, daoNullValue );
   ctx->regValues = ctx->regArray->data;
 #endif
-  DVaTuple_Resize( ctx->regArray, 3, daoNilValue );
+  DVaTuple_Resize( ctx->regArray, 3, daoNullValue );
   ctx->regValues = dao_realloc( ctx->regValues, 3 * sizeof(DValue*) );
   for(i=0; i<3; i++) ctx->regValues[i] = ctx->regArray->data + i;
 

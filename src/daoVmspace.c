@@ -277,7 +277,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
   case DAO_CONTEXT   :  return & ctxTyper;
   case DAO_VMPROCESS :  return & vmpTyper;
   case DAO_VMSPACE   :  return & vmsTyper;
-  case DAO_ABSTYPE   :  return & abstypeTyper;
+  case DAO_TYPE      :  return & abstypeTyper;
 #ifdef DAO_WITH_MACRO
   case DAO_MACRO     :  return & macroTyper;
 #endif
@@ -710,7 +710,7 @@ extern int IsNumber( const char *chs );
 
 static DValue DaoParseNumber( const char *s )
 {
-  DValue value = daoNilValue;
+  DValue value = daoNullValue;
   if( strchr( s, 'e' ) != NULL ){
     value.t = DAO_FLOAT;
     value.v.f = strtod( s, 0 );
@@ -758,8 +758,8 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
   DString *key = DString_New(1);
   DString *val = DString_New(1);
   DValue nkey = daoZeroInt;
-  DValue skey = daoNilString;
-  DValue sval = daoNilString;
+  DValue skey = daoNullString;
+  DValue sval = daoNullString;
   size_t i, pk;
   skey.v.s = key;
   sval.v.s = val;
@@ -873,8 +873,8 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
   DString *val = DString_New(1);
   DString *str;
   DValue nkey = daoZeroInt;
-  DValue skey = daoNilString;
-  DValue sval = daoNilString;
+  DValue skey = daoNullString;
+  DValue sval = daoNullString;
   int i;
   skey.v.s = key;
   sval.v.s = val;
@@ -926,7 +926,7 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
       }
     }
     if( argNames->items.pString[i]->size ){
-      DValue vp = daoNilPair;
+      DValue vp = daoNullPair;
       DString_Assign( key, argNames->items.pString[i] );
       vp.v.pair = DaoPair_New( skey, nkey );
       vp.v.pair->subType |= DAO_DATA_CONST;
@@ -1025,7 +1025,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
     }else if( DString_MatchMBS( input, sysRegex, NULL, NULL ) ){
       if( system( input->mbs+1 ) ==-1) printf( "shell command failed\n" );
     }else if( DString_MatchMBS( input, srcRegex, NULL, NULL ) ){
-      DString_InsertMBS( input, "stdlib.load(", 0, 0, 0 );
+      DString_InsertMBS( input, "std.load(", 0, 0, 0 );
       DString_AppendMBS( input, ")" );
       if( callback ){
         (*callback)( input->mbs );
@@ -1033,7 +1033,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
       }
       DaoVmProcess_Eval( self->mainProcess, self->mainNamespace, input, 1 );
     }else if( DString_MatchMBS( input, varRegex, NULL, NULL ) ){
-      DString_InsertMBS( input, "stdio.println(", 0, 0, 0 );
+      DString_InsertMBS( input, "io.println(", 0, 0, 0 );
       DString_AppendMBS( input, ")" );
       if( callback ){
         (*callback)( input->mbs );
@@ -2285,12 +2285,11 @@ DaoVmSpace* DaoInit()
   DaoNameSpace_PrepareType( ns, & semaTyper );
 #endif
   DaoNameSpace_PrepareType( vms->nsWorking, & vmpTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & coroutTyper );
-
-  DaoNameSpace_PrepareType( vms->nsWorking, & libStandardTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & libMathTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & libMpiTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & libReflectTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & coroutTyper, 1 );
+  DaoNameSpace_WrapType( vms->nsWorking, & libStandardTyper, 1 );
+  DaoNameSpace_WrapType( vms->nsWorking, & libMathTyper, 1 );
+  DaoNameSpace_WrapType( vms->nsWorking, & libMpiTyper, 1 );
+  DaoNameSpace_WrapType( vms->nsWorking, & libReflectTyper, 1 );
 #endif
 
 #if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
@@ -2299,7 +2298,7 @@ DaoVmSpace* DaoInit()
 
 #ifdef DAO_WITH_NETWORK
   DaoNameSpace_WrapType( vms->nsWorking, & DaoFdSet_Typer, 1 );
-  DaoNameSpace_PrepareType( vms->nsWorking, & libNetTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & libNetTyper, 1 );
   DaoNetwork_Init( vms, vms->nsWorking );
 #endif
   DaoNameSpace_Import( vms->mainNamespace, vms->nsInternal, NULL );

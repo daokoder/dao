@@ -36,10 +36,10 @@ DaoTypeBase* DValue_GetTyper( DValue self );
 
 struct DaoTypeCore
 {
-  uint_t     attribs;
-  DaoCData  *host;
-  DMap      *mapValues;
-  DMap      *mapMethods;
+  uint_t    attribs;
+  DaoType  *abtype;
+  DMap     *mapValues;
+  DMap     *mapMethods;
   
   void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
   void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
@@ -117,10 +117,10 @@ void DaoMap_Erase( DaoMap *self, DValue key );
 
 struct DaoCDataCore
 {
-  uint_t     attribs;
-  DaoCData  *host;
-  DMap      *mapValues;
-  DMap      *mapMethods;
+  uint_t    attribs;
+  DaoType  *abtype;
+  DMap     *mapValues;
+  DMap     *mapMethods;
 
   void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
   void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
@@ -176,7 +176,7 @@ struct DaoCData
 
   void *data;
   void *buffer;
-  DaoObject *daoObject;
+  DaoObject   *daoObject;
   DaoTypeBase *typer;
 
   int attribs;

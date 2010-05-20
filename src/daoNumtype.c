@@ -2099,7 +2099,7 @@ static void DaoArray_Print( DValue *dbase, DaoContext *ctx, DaoStream *stream, D
 }
 static DValue DaoNA_Copy( DValue *dbase, DaoContext *ctx, DMap *cycData )
 {
-  DValue val = daoNilArray;
+  DValue val = daoNullArray;
   val.v.array = DaoArray_Copy( dbase->v.array );
   return val;
 }

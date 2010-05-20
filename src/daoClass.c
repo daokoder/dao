@@ -31,11 +31,14 @@ static void DaoClass_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DM
 
 static void DaoClass_GetField( DValue *self0, DaoContext *ctx, DString *name )
 {
+  int tid = ctx->routine->tidHost;
+  DaoType *type = ctx->routine->routHost;
+  DaoClass *host = tid == DAO_OBJECT ? type->X.klass : NULL;
   DaoClass *self = self0->v.klass;
   DString *mbs = DString_New(1);
   DValue *d2 = NULL;
-  DValue value = daoNilValue;
-  int rc = DaoClass_GetData( self, name, & value, ctx->routine->routHost.v.klass, & d2 );
+  DValue value = daoNullValue;
+  int rc = DaoClass_GetData( self, name, & value, host, & d2 );
   DaoContext_PutReference( ctx, d2 );
   if( rc ){
     DString_SetMBS( mbs, DString_GetMBS( self->className ) );
@@ -144,7 +147,7 @@ void DaoClass_Delete( DaoClass *self )
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 {
   DaoRoutine *rout = DaoRoutine_New();
-  DValue value = daoNilClass;
+  DValue value = daoNullClass;
 
   DString_Assign( rout->routName, name );
   DString_AppendMBS( rout->routName, "::" );
@@ -157,17 +160,19 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
   DString_AppendChar( self->clsType->name, '>' );
   self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoBase*)self, NULL );
   DString_SetMBS( self->className, "self" );
-  DaoClass_AddObjectVar( self, self->className, daoNilValue, DAO_CLS_PRIVATE, self->objType );
+  DaoClass_AddObjectVar( self, self->className, daoNullValue, DAO_CLS_PRIVATE, self->objType );
   DString_Assign( self->className, name );
   DaoClass_AddType( self, name, self->objType );
 
-  rout->routHost.v.klass = self;
+  rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, self->objType, NULL );
+  DString_Append( rout->routType->name, name );
+  DString_AppendMBS( rout->routType->name, ">" );
+  GC_IncRC( rout->routType );
+  rout->tidHost = DAO_OBJECT;
+  rout->routHost = self->objType;
   rout->attribs |= DAO_ROUT_INITOR;
   value.v.klass = self;
   DaoClass_AddConst( self, name, value, DAO_CLS_PUBLIC );
-  DString_Assign( rout->routName, name );
-  DString_AppendMBS( rout->routName, "::" );
-  DString_Append( rout->routName, name );
   value.t = DAO_ROUTINE;
   value.v.routine = rout;
   DaoClass_AddConst( self, rout->routName, value, DAO_CLS_PRIVATE );
@@ -177,7 +182,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
   DaoType *type;
   DNode *search;
   DString *mbs;
-  DValue value = daoNilValue;
+  DValue value = daoNullValue;
   int i, j, k, id, perm, index;
   int offset = 0;
 
@@ -191,14 +196,14 @@ void DaoClass_DeriveClassData( DaoClass *self )
       DaoClass *klass = self->superClass->items.pClass[i];
       DaoClass_DeriveClassData( klass );
       if( DString_EQ( klass->className, self->superAlias->items.pString[i] ) ==0 ){
-        value = daoNilClass;
+        value = daoNullClass;
         value.v.klass = klass;
         DaoClass_AddConst( self, self->superAlias->items.pString[i], value, DAO_CLS_PRIVATE );
       }
 
       /* For class data: */
       for( id=0; id<klass->cstDataName->size; id++ ){
-        DString *name = klass->cstDataName->items.pString[id];;
+        DString *name = klass->cstDataName->items.pString[id];
         DValue value2 = klass->cstData->data[ id ];
         search = MAP_Find( self->lookupTable, name );
         /* To overide data and routine: */
@@ -231,7 +236,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
       }
       /* class global data */
       for( id=0; id<klass->glbDataName->size; id ++ ){
-        DString *name = klass->glbDataName->items.pString[id];;
+        DString *name = klass->glbDataName->items.pString[id];
         type = klass->glbDataType->items.pAbtp[id];
         search = MAP_Find( self->lookupTable, name );
         /* To overide data: */
@@ -246,12 +251,12 @@ void DaoClass_DeriveClassData( DaoClass *self )
       }
       /* For object data: */
       for( id=0; id<klass->objDataName->size; id ++ ){
-        DString *name = klass->objDataName->items.pString[id];;
+        DString *name = klass->objDataName->items.pString[id];
         type = klass->objDataType->items.pAbtp[id];
         value = klass->objDataDefault->data[id];
         DArray_Append( self->objDataName, name );
         DArray_Append( self->objDataType, type );
-        DVarray_Append( self->objDataDefault, daoNilValue );
+        DVarray_Append( self->objDataDefault, daoNullValue );
         DValue_SimpleMove( value, self->objDataDefault->data + self->objDataDefault->size-1 );
         DValue_MarkConst( self->objDataDefault->data + self->objDataDefault->size-1 );
         search = MAP_Find( klass->lookupTable, name );
@@ -385,7 +390,7 @@ int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *th
   DValue *p = NULL;
   int sto, perm, id;
   DNode *node = MAP_Find( self->lookupTable, name );
-  *value = daoNilValue;
+  *value = daoNullValue;
   if( ! node ) return DAO_ERROR_FIELD_NOTEXIST;
   perm = LOOKUP_PM( node->value.pInt );
   sto = LOOKUP_ST( node->value.pInt );
@@ -446,7 +451,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, int s, Da
   MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_VARIABLE, s, id ) );
   DArray_Append( self->objDataType, (void*)t );
   DArray_Append( self->objDataName, (void*)name );
-  DVarray_Append( self->objDataDefault, daoNilValue );
+  DVarray_Append( self->objDataDefault, daoNullValue );
   DValue_SimpleMove( deft, self->objDataDefault->data + self->objDataDefault->size-1 );
   DValue_MarkConst( self->objDataDefault->data + self->objDataDefault->size-1 );
   return 0;
@@ -460,7 +465,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DValue data, int s )
 
   MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_CONST, s, self->cstData->size ) );
   DArray_Append( self->cstDataName, (void*)name );
-  DVarray_Append( self->cstData, daoNilValue );
+  DVarray_Append( self->cstData, daoNullValue );
   DValue_SimpleMove( data, self->cstData->data + self->cstData->size-1 );
   DValue_MarkConst( & self->cstData->data[self->cstData->size-1] );
   return node ? DAO_CTW_WAS_DEFINED : 0;
@@ -471,7 +476,7 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue data, int s, Da
   if( node ) return DAO_CTW_WAS_DEFINED;
   GC_IncRC( t );
   MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_GLOBAL, s, self->glbData->size ) );
-  DVarray_Append( self->glbData, daoNilValue );
+  DVarray_Append( self->glbData, daoNullValue );
   DArray_Append( self->glbDataType, (void*)t );
   DArray_Append( self->glbDataName, (void*)name );
   if( data.t && DValue_Move( data, self->glbData->data + self->glbData->size -1, t ) ==0 )
@@ -511,7 +516,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
     val = self->cstData->data[ LOOKUP_ID( node->value.pInt ) ];
     if( val.t == DAO_ROUTINE ){
       DaoRoutine *rout = val.v.routine;
-      if( rout->routHost.v.klass == self ){
+      if( rout->routHost == self->objType ){
         DaoRoutine_Compile( rout );
         DaoRoutine_PrintCode( rout, stream );
       }
@@ -520,9 +525,9 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 }
 DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped )
 {
-  DValue value = daoNilValue;
+  DValue value = daoNullValue;
   DString name = DString_WrapMBS( oper );
   DaoClass_GetData( self, & name, & value, scoped, NULL );
-  if( value.t != DAO_ROUTINE ) return NULL;;
+  if( value.t != DAO_ROUTINE ) return NULL;
   return value.v.routine;
 }

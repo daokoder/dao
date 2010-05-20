@@ -138,7 +138,7 @@ static void STD_Callable( DaoContext *ctx, DValue *p[], int N )
     {
       DaoObject *object = p0.v.object;
       DString *mbs = DString_New(1);
-      DString_SetMBS( mbs, "_CALL" );
+      DString_SetMBS( mbs, "()" );
       DaoObject_GetData( object, mbs, & p0, ctx->object, NULL );
       DString_Delete( mbs );
       if( p0.t == DAO_ROUTINE ) *res = 1;
@@ -226,7 +226,7 @@ static void STD_Ctimef( DaoContext *ctx, DValue *p[], int N )
   DaoMap *sym = NULL;
   DString *ds;
   DString *S;
-  DValue key = daoNilString;
+  DValue key = daoNullString;
 
   struct tm *ctime;
   time_t t = (time_t)p[0]->v.i;
@@ -680,7 +680,7 @@ static void STD_Tokenize( DaoContext *ctx, DValue *p[], int N )
   rc = DaoToken_Tokenize( tokens, source->mbs, 0, 1, 1 );
   if( rc ){
     DString *str = DString_New(1);
-    DValue value = daoNilString;
+    DValue value = daoNullString;
     int i;
     value.v.s = str;
     for(i=0; i<tokens->size; i++){
@@ -704,14 +704,14 @@ static void STD_Unpack( DaoContext *ctx, DValue *p[], int N )
   int i;
   DValue *data;
   if( str->mbs ){
-    DVarray_Resize( list->items, str->size, daoNilValue );
+    DVarray_Resize( list->items, str->size, daoNullValue );
     data = list->items->data;
     for( i=0; i<str->size; i++ ){
       data[i].t = DAO_INTEGER;
       data[i].v.i = (uchar_t)str->mbs[i];
     }
   }else{
-    DVarray_Resize( list->items, str->size, daoNilValue );
+    DVarray_Resize( list->items, str->size, daoNullValue );
     data = list->items->data;
     for( i=0; i<str->size; i++ ){
       data[i].t = DAO_INTEGER;
@@ -759,7 +759,7 @@ static void STD_SetLocale( DaoContext *ctx, DValue *p[], int N )
 static DaoFuncItem stdMeths[]=
 {
   { STD_Compile,   "compile( source :string, replace=0 )" },
-  { STD_Eval,      "eval( source :string, replace=0, stream=stdio, safe=0 )" },
+  { STD_Eval,      "eval( source :string, replace=0, stream=io, safe=0 )" },
   { STD_Load,      "load( file :string, import=1, safe=0 )" },
   { STD_About,     "about( ... )=>string" },
   { STD_Callable,  "callable( object )=>int" },
@@ -824,9 +824,6 @@ DaoTypeBase libStandardTyper = {
   {0},
   NULL, NULL 
 };
-
-DaoCData libStandard = 
-{ DAO_CDATA, DAO_DATA_CONST, {0,0}, 1,0, NULL,NULL,NULL, & libStandardTyper, 0,0,0,0 };
 
 DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DValue *par[], int N )
 {
@@ -1356,15 +1353,12 @@ static DaoTypeCore mpiCore =
 };
 DaoTypeBase libMpiTyper = {
   & mpiCore,
-  "MPILIB",
+  "mpi",
   NULL,
   mpiMeths, 
   {0},
   NULL, NULL 
 };
-
-DaoCData libMPI = 
-{ DAO_CDATA, DAO_DATA_CONST, {0,0}, 1,0, NULL,NULL,NULL,& libMpiTyper, 0,0,0,0 };
 
 /**/
 static void REFL_NS( DaoContext *ctx, DValue *p[], int N )
@@ -1393,7 +1387,7 @@ static void REFL_Name( DaoContext *ctx, DValue *p[], int N )
   case DAO_CLASS :
     DString_Assign( str, p[0]->v.klass->className );
     break;
-  case DAO_ABSTYPE :
+  case DAO_TYPE :
     DString_Assign( str, ((DaoType*)p[0]->v.p)->name );
     break;
   default : break;
@@ -1402,7 +1396,7 @@ static void REFL_Name( DaoContext *ctx, DValue *p[], int N )
 static void REFL_Base( DaoContext *ctx, DValue *p[], int N )
 {
   DaoList *ls = DaoContext_PutList( ctx );
-  DValue value = daoNilValue;
+  DValue value = daoNullValue;
   int i;
   value.t = p[0]->t;
   if( p[0]->t == DAO_CLASS ){
@@ -1437,12 +1431,12 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
   DVarray *data;
   DNode *node, *node2;
   DValue value;
-  DValue name = daoNilString;
-  DValue vtup = daoNilTuple;
-  DValue vabtp = daoNilValue;
+  DValue name = daoNullString;
+  DValue vtup = daoNullTuple;
+  DValue vabtp = daoNullValue;
   int restri = p[1]->v.i;
   name.v.s = DString_New(1);
-  vabtp.t = DAO_ABSTYPE;
+  vabtp.t = DAO_TYPE;
   if( p[0]->t == DAO_CLASS || p[0]->t == DAO_OBJECT ){
     klass = p[0]->v.klass;
     if( p[0]->t == DAO_OBJECT ){
@@ -1470,7 +1464,7 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
     tuple->unitype = tp;
     GC_IncRC( tp );
     value = data->data[ id ];
-    vabtp.t = DAO_ABSTYPE;
+    vabtp.t = DAO_TYPE;
     vabtp.v.p = (DaoBase*) DaoNameSpace_GetTypeV( here, value );
     if( vabtp.v.p == NULL ) vabtp.t = 0;
     DValue_Copy( tuple->items->data, value );
@@ -1492,12 +1486,12 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
   DMap *index, *lookup = NULL;
   DNode *node;
   DValue value;
-  DValue name = daoNilString;
-  DValue vtup = daoNilTuple;
-  DValue vabtp = daoNilValue;
+  DValue name = daoNullString;
+  DValue vtup = daoNullTuple;
+  DValue vabtp = daoNullValue;
   int restri = p[1]->v.i;
   name.v.s = DString_New(1);
-  vabtp.t = DAO_ABSTYPE;
+  vabtp.t = DAO_TYPE;
   if( p[0]->t == DAO_CLASS || p[0]->t == DAO_OBJECT ){
     klass = p[0]->v.klass;
     if( p[0]->t == DAO_OBJECT ){
@@ -1526,8 +1520,8 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
     tuple = DaoTuple_New( 2 );
     tuple->unitype = tp;
     GC_IncRC( tp );
-    value = daoNilValue;
-    vabtp.t = DAO_ABSTYPE;
+    value = daoNullValue;
+    vabtp.t = DAO_TYPE;
     if( lookup ){
       if( st == DAO_CLASS_VARIABLE && object ){
         value = object->objValues[id];
@@ -1556,8 +1550,8 @@ static void REFL_Cst2( DaoContext *ctx, DValue *p[], int N )
   DaoClass *klass = NULL;
   DNode *node;
   DString *name = p[1]->v.s;
-  DValue temp = daoNilValue;
-  DValue type = daoNilValue;
+  DValue temp = daoNullValue;
+  DValue type = daoNullValue;
   DValue *value = & temp;
   if( p[0]->t == DAO_CLASS || p[0]->t == DAO_OBJECT ){
     klass = p[0]->v.klass;
@@ -1577,7 +1571,7 @@ static void REFL_Cst2( DaoContext *ctx, DValue *p[], int N )
   }else{
     DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
   }
-  if( type.v.p ) type.t = DAO_ABSTYPE;
+  if( type.v.p ) type.t = DAO_TYPE;
   DValue_Copy( tuple->items->data, *value );
   DValue_Copy( tuple->items->data + 1, type );
   DaoContext_PutResult( ctx, (DaoBase*) tuple );
@@ -1603,8 +1597,8 @@ static void REFL_Var2( DaoContext *ctx, DValue *p[], int N )
   DaoClass *klass = NULL;
   DNode *node;
   DString *name = p[1]->v.s;
-  DValue temp = daoNilValue;
-  DValue type = daoNilValue;
+  DValue temp = daoNullValue;
+  DValue type = daoNullValue;
   DValue *value = & temp;
   if( p[0]->t == DAO_CLASS || p[0]->t == DAO_OBJECT ){
     klass = p[0]->v.klass;
@@ -1627,7 +1621,7 @@ static void REFL_Var2( DaoContext *ctx, DValue *p[], int N )
   }else{
     DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
   }
-  if( type.v.p ) type.t = DAO_ABSTYPE;
+  if( type.v.p ) type.t = DAO_TYPE;
   DValue_Copy( tuple->items->data, *value );
   DValue_Copy( tuple->items->data + 1, type );
   DaoContext_PutResult( ctx, (DaoBase*) tuple );
@@ -1649,7 +1643,7 @@ static void REFL_Var2( DaoContext *ctx, DValue *p[], int N )
 static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 {
   DaoList *list;
-  DValue item = daoNilValue;
+  DValue item = daoNullValue;
   int i;
   if( N ==1 ){
     DRoutine *rout = (DRoutine*) p[0]->v.p;
@@ -1670,18 +1664,18 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 }
 static void REFL_Class( DaoContext *ctx, DValue *p[], int N )
 {
-  if( p[0]->t == DAO_ROUTINE ){
-    DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->routHost.v.klass );
+  if( p[0]->t == DAO_ROUTINE && p[0]->v.routine->tidHost == DAO_OBJECT ){
+    DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->routHost->X.klass );
   }else if( p[0]->t == DAO_OBJECT ){
     DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.object->myClass );
   }
-  DaoContext_PutValue( ctx, daoNilValue );
+  DaoContext_PutValue( ctx, daoNullValue );
 }
 static void REFL_Isa( DaoContext *ctx, DValue *p[], int N )
 {
   DaoNameSpace *ns = ctx->nameSpace;
   dint *res = DaoContext_PutInteger( ctx, 0 );
-  if( p[1]->t == DAO_ABSTYPE ){
+  if( p[1]->t == DAO_TYPE ){
     DaoType *tp = (DaoType*) p[1]->v.p;
     if( tp && DaoType_MatchValue( tp, *p[0], NULL ) ) *res = 1;
   }else if( p[1]->t == DAO_CLASS ){
@@ -1726,7 +1720,7 @@ static void REFL_Self( DaoContext *ctx, DValue *p[], int N )
   if( p[0]->t == DAO_OBJECT )
     DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.object->that );
   else
-    DaoContext_PutValue( ctx, daoNilValue );
+    DaoContext_PutValue( ctx, daoNullValue );
 }
 static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
 {
@@ -1739,9 +1733,9 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
   DString *mbs = DString_New(1);
   DNode *node;
   DValue num = daoZeroInt;
-  DValue str = daoNilString;
-  DValue vtp = daoNilValue;
-  DValue vtup = daoNilTuple;
+  DValue str = daoNullString;
+  DValue vtp = daoNullValue;
+  DValue vtup = daoNullTuple;
   DValue cst;
   int i;
   str.v.s = mbs;
@@ -1753,9 +1747,9 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
     vtup.v.tuple = tuple;
     vtp.t = 0;
     num.v.i = 0;
-    cst = daoNilValue;
+    cst = daoNullValue;
     vtp.v.p = (DaoBase*) nested[i];
-    if( nested[i] ) vtp.t = DAO_ABSTYPE;
+    if( nested[i] ) vtp.t = DAO_TYPE;
     cst = routine->routConsts->data[i];
     if( cst.t || cst.ndef == 0 ) num.v.i = 1;
     DValue_Copy( tuple->items->data, str );
@@ -1785,7 +1779,7 @@ static void REFL_Argv( DaoContext *ctx, DValue *p[], int N )
     DaoList *list = DaoContext_PutList( ctx );
     for(i=0; i<ctx->parCount; i++) DaoList_Append( list, *ctx->regValues[i] );
   }else{
-    DValue val = daoNilValue;
+    DValue val = daoNullValue;
     if( p[0]->v.i < ctx->parCount ) val = *ctx->regValues[ p[0]->v.i ];
     DaoContext_PutValue( ctx, val );
   }
@@ -1873,15 +1867,12 @@ static DaoTypeCore librefCore =
 };
 DaoTypeBase libReflectTyper = { 
   & librefCore, 
-  "REFLECT", 
+  "reflect", 
   NULL,
   reflMeths, 
   {0},
   NULL, NULL
 };
-
-DaoCData libReflect = 
-{ DAO_CDATA, DAO_DATA_CONST, {0,0}, 1,0, NULL,NULL,NULL, & libReflectTyper, 0,0,0,0 };
 
 static void Corout_Create( DaoContext *ctx, DValue *p[], int N )
 {
@@ -1951,15 +1942,12 @@ static DaoTypeCore coroutCore =
 };
 DaoTypeBase coroutTyper = {
   & coroutCore,
-  "COROUTINE", 
+  "coroutine", 
   NULL,
   coroutMeths, 
   {0},
   NULL, NULL
 };
-
-DaoCData libCoroutine = 
-{ DAO_CDATA, DAO_DATA_CONST, {0,0}, 1,0, NULL,NULL,NULL, & coroutTyper, 0,0,0,0 };
 
 /**/
 static void MATH_abs( DaoContext *ctx, DValue *p[], int N )
@@ -2230,13 +2218,11 @@ static DaoTypeCore mathCore =
 };
 DaoTypeBase libMathTyper = {
   & mathCore,
-  "MATHLIB",
+  "math",
   NULL,
   mathMeths, 
   {0},
   NULL, NULL 
 };
 
-DaoCData libMath = 
-{ DAO_CDATA, DAO_DATA_CONST, {0,0}, 1,0, NULL,NULL,NULL, & libMathTyper, 0,0,0,0 };
 

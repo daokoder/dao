@@ -41,7 +41,7 @@ enum DaoRTTI
   DAO_INITYPE ,  /* a : @t */
   DAO_PARNAME ,    /* sub-type of string */
   DAO_MACRO ,
-  DAO_ABSTYPE ,
+  DAO_TYPE ,
   DAO_FUNCURRY ,
   DAO_LIBRARY ,
   DAO_THDMASTER ,

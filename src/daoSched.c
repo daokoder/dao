@@ -159,8 +159,8 @@ void DaoTaskThread_Run( DaoTaskThread *self )
   DVarray  *msg;
   DVarray  *message = DVarray_New();
   DValue *pars;
-  DValue  p = daoNilValue, value = daoNilValue;
-  DValue  actor = daoNilValue;
+  DValue  p = daoNullValue, value = daoNullValue;
+  DValue  actor = daoNullValue;
   struct timeval now;
   double wt = 0.001;
   double curtime;
@@ -223,7 +223,7 @@ void DaoTaskThread_Run( DaoTaskThread *self )
     hurry = (sched->hurryCount --) > 0;
     DMutex_Unlock( & sched->mutex );
 
-    actor = daoNilValue;
+    actor = daoNullValue;
     pactor = NULL;
     future = NULL;
     sender = NULL;

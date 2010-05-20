@@ -1138,7 +1138,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
   size_t i, n=0, p1=start, p2=end, p3, last;
   wchar_t ch, ch2;
   DValue value = daoZeroInt;
-  DValue matched = daoNilString;
+  DValue matched = daoNullString;
   DString *tmp = DString_New( source->mbs != NULL );
   DString *replace = DString_New( source->mbs != NULL );
   DVarray *array = DVarray_New();

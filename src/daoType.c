@@ -74,7 +74,7 @@ void DaoType_CheckAttributes( DaoType *self )
 DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest )
 {
   DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
-  DaoBase_Init( self, DAO_ABSTYPE );
+  DaoBase_Init( self, DAO_TYPE );
   self->tid = tid;
   self->X.extra = extra;
   self->typer = (DaoTypeBase*) DaoVmSpace_GetTyper( tid );
@@ -319,8 +319,9 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
     if( self->X.extra == type->X.extra ) return DAO_MT_EQ;
     it1 = self->X.klass->objType;
     inters = it1->interfaces;
-    if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB; /* TODO for cdata */
     if( type->tid == DAO_INTERFACE ){
+      /* TODO for cdata */
+      if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( type->X.inter, it1, binds, NULL ) ) return DAO_MT_SUB;
     }
     if( DaoClass_ChildOf( self->X.klass, type->X.extra ) ) return DAO_MT_SUB;
@@ -499,8 +500,9 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
     if( self->X.klass == value.v.object->myClass ) return DAO_MT_EQ;
     tp = value.v.object->myClass->objType;
     inters = tp->interfaces;
-    if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB; /* TODO for cdata */
     if( self->tid == DAO_INTERFACE ){
+      /* TODO for cdata */
+      if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( self->X.inter, tp, NULL, NULL ) ) return DAO_MT_SUB;
     }
     if( DaoClass_ChildOf( value.v.object->myClass, self->X.extra ) ) return DAO_MT_SUB;
@@ -514,7 +516,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
       return DAO_MT_NOT;
     }
     break;
-  case DAO_ABSTYPE :
+  case DAO_TYPE :
     if( (DaoType*)value.v.p == self ) return DAO_MT_EQ;
     return DaoType_MatchTo( (DaoType*)value.v.p, self, defs );
   case DAO_PAR_NAMED :
@@ -584,7 +586,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
       if( i+1 <self->nested->size ) DString_AppendMBS( copy->name, "," );
     }
     GC_IncRCs( copy->nested );
-    if( self->X.abtype && self->X.abtype->type == DAO_ABSTYPE ){
+    if( self->X.abtype && self->X.abtype->type == DAO_TYPE ){
       DString_AppendMBS( copy->name, "=>" );
       copy->X.abtype = DaoType_DefineTypes( self->X.abtype, ns, defs );
       if( copy->X.abtype ==NULL ) goto DefFailed;
@@ -592,7 +594,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
     }
     DString_AppendChar( copy->name, self->tid == DAO_PAR_GROUP ? ')' : '>' );
   }else{
-    if( self->X.abtype && self->X.abtype->type == DAO_ABSTYPE ){
+    if( self->X.abtype && self->X.abtype->type == DAO_TYPE ){
       copy->X.abtype = DaoType_DefineTypes( self->X.abtype, ns, defs );
     }else{
       copy->X.abtype = self->X.abtype;
