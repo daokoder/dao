@@ -1732,12 +1732,13 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 }
 static void DaoTypeBase_Free( DaoTypeBase *typer )
 {
-  DMap *hash = typer->priv->mapMethods;
+  DMap *hash = typer->priv->methods;
   DNode *it;
+  if( hash == NULL ) return;
   for(it=DMap_First(hash); it; it=DMap_Next(hash,it))
     GC_DecRC( it->value.pBase );
-  DMap_Delete( typer->priv->mapMethods );
-  DMap_Delete( typer->priv->mapValues );
+  DMap_Delete( typer->priv->methods );
+  if( typer->priv->values ) DMap_Delete( typer->priv->values );
 }
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libMathTyper;
@@ -2151,7 +2152,9 @@ DaoType *dao_routine = NULL;
 DaoType *dao_type_for_iterator = NULL;
 
 #ifdef DAO_WITH_THREAD
-extern DMutex  mutex_string_sharing;
+extern DMutex mutex_string_sharing;
+extern DMutex dao_typing_mutex;
+extern DMutex dao_setup_mutex;
 #endif
 
 DaoVmSpace* DaoInit()
@@ -2179,6 +2182,8 @@ DaoVmSpace* DaoInit()
 
 #ifdef DAO_WITH_THREAD
   DMutex_Init( & mutex_string_sharing );
+  DMutex_Init( & dao_typing_mutex );
+  DMutex_Init( & dao_setup_mutex );
 #endif
   
   mbs = DString_New(1);
@@ -2259,18 +2264,18 @@ DaoVmSpace* DaoInit()
 #if 1
 
 #ifdef DAO_WITH_NUMARRAY
-  DaoNameSpace_PrepareType( vms->nsWorking, & numarTyper );
+  DaoNameSpace_SetupType( vms->nsWorking, & numarTyper );
 #endif
 
 
-  DaoNameSpace_PrepareType( vms->nsWorking, & stringTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & longTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & comTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & listTyper );
-  DaoNameSpace_PrepareType( vms->nsWorking, & mapTyper );
+  DaoNameSpace_SetupType( vms->nsWorking, & stringTyper );
+  DaoNameSpace_SetupType( vms->nsWorking, & longTyper );
+  DaoNameSpace_SetupType( vms->nsWorking, & comTyper );
+  DaoNameSpace_SetupType( vms->nsWorking, & listTyper );
+  DaoNameSpace_SetupType( vms->nsWorking, & mapTyper );
 
-  DaoNameSpace_PrepareType( vms->nsWorking, & streamTyper );
-  DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper, 1 );
+  DaoNameSpace_SetupType( vms->nsWorking, & streamTyper );
+  DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper );
 
 #ifdef DAO_WITH_THREAD
   DaoNameSpace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
@@ -2278,18 +2283,18 @@ DaoVmSpace* DaoInit()
   DaoNameSpace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
   DaoNameSpace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
   DaoNameSpace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
-  DaoNameSpace_PrepareType( ns, & threadTyper );
-  DaoNameSpace_PrepareType( ns, & thdMasterTyper );
-  DaoNameSpace_PrepareType( ns, & mutexTyper );
-  DaoNameSpace_PrepareType( ns, & condvTyper );
-  DaoNameSpace_PrepareType( ns, & semaTyper );
+  DaoNameSpace_SetupType( ns, & threadTyper );
+  DaoNameSpace_SetupType( ns, & thdMasterTyper );
+  DaoNameSpace_SetupType( ns, & mutexTyper );
+  DaoNameSpace_SetupType( ns, & condvTyper );
+  DaoNameSpace_SetupType( ns, & semaTyper );
 #endif
-  DaoNameSpace_PrepareType( vms->nsWorking, & vmpTyper );
-  DaoNameSpace_WrapType( vms->nsWorking, & coroutTyper, 1 );
-  DaoNameSpace_WrapType( vms->nsWorking, & libStandardTyper, 1 );
-  DaoNameSpace_WrapType( vms->nsWorking, & libMathTyper, 1 );
-  DaoNameSpace_WrapType( vms->nsWorking, & libMpiTyper, 1 );
-  DaoNameSpace_WrapType( vms->nsWorking, & libReflectTyper, 1 );
+  DaoNameSpace_SetupType( vms->nsWorking, & vmpTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & coroutTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & libStandardTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & libMathTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & libMpiTyper );
+  DaoNameSpace_WrapType( vms->nsWorking, & libReflectTyper );
 #endif
 
 #if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
@@ -2297,8 +2302,8 @@ DaoVmSpace* DaoInit()
 #endif
 
 #ifdef DAO_WITH_NETWORK
-  DaoNameSpace_WrapType( vms->nsWorking, & DaoFdSet_Typer, 1 );
-  DaoNameSpace_WrapType( vms->nsWorking, & libNetTyper, 1 );
+  DaoNameSpace_WrapType( vms->nsWorking, & DaoFdSet_Typer );
+  DaoNameSpace_WrapType( vms->nsWorking, & libNetTyper );
   DaoNetwork_Init( vms, vms->nsWorking );
 #endif
   DaoNameSpace_Import( vms->mainNamespace, vms->nsInternal, NULL );

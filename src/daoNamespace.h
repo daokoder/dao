@@ -105,10 +105,8 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
     DValue *vals, DaoType *types[], DaoType *retp );
 DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val );
 
-int DaoNameSpace_PrepareType( DaoNameSpace *self, DaoTypeBase *typer );
-#if 0
-int DaoNameSpace_PrepareTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
-#endif
+int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer );
+int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer );
 
 DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto, DaoParser *parser );
 DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self, const char *proto, DaoParser *parser );

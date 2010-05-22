@@ -40,8 +40,11 @@ DMutex dao_typing_mutex;
 DaoFunction* DaoFindFunction( DaoTypeBase *typer, DString *name )
 {
   DNode *node;
-  if( typer->priv->mapMethods == NULL ) return NULL;
-  node = DMap_Find( typer->priv->mapMethods, name );
+  if( typer->priv->methods == NULL ){
+    DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
+    if( typer->priv->methods == NULL ) return NULL;
+  }
+  node = DMap_Find( typer->priv->methods, name );
   if( node ) return (DaoFunction*)node->value.pVoid;
   return NULL;
 }
@@ -57,16 +60,22 @@ DValue DaoFindValue( DaoTypeBase *typer, DString *name )
   DNode *node;
   value.v.func = func;
   if( func ) return value;
-  if( typer->priv->mapValues == NULL ) return daoNullValue;
-  node = DMap_Find( typer->priv->mapValues, name );
+  if( typer->priv->values == NULL ){
+    DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+    if( typer->priv->values == NULL ) return daoNullValue;
+  }
+  node = DMap_Find( typer->priv->values, name );
   if( node ) return *node->value.pValue;
   return daoNullValue;
 }
 DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name )
 {
   DNode *node;
-  if( typer->priv->mapValues == NULL ) return daoNullValue;
-  node = DMap_Find( typer->priv->mapValues, name );
+  if( typer->priv->values == NULL ){
+    DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+    if( typer->priv->values == NULL ) return daoNullValue;
+  }
+  node = DMap_Find( typer->priv->values, name );
   if( node ) return *node->value.pValue;
   return daoNullValue;
 }
@@ -177,7 +186,7 @@ DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData )
 
 DaoTypeCore baseCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -388,7 +397,7 @@ static void DaoNumber_SetItem( DValue *self, DaoContext *ctx, DValue pid, DValue
 
 static DaoTypeCore numberCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoNumber_GetItem,
@@ -509,7 +518,7 @@ static void DaoString_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValu
 }
 static DaoTypeCore stringCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoString_GetItem,
@@ -1610,7 +1619,7 @@ DaoList* DaoList_Copy( DaoList *self, DMap *cycData )
 }
 static DaoTypeCore listCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoListCore_GetItem,
@@ -2362,7 +2371,7 @@ static DValue DaoMap_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore mapCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoMap_GetItem,
@@ -2698,7 +2707,7 @@ static void DaoCData_Delete( DaoCData *self )
     if( self->buffer ){
       dao_free( self->buffer );
     }else if( self->data ){
-      if( c->DelData )
+      if( c->DelData && c->DelData != DaoCData_Delete )
         c->DelData( self->data );
       else if( self->bufsize > 0 )
         dao_free( self->data );
@@ -3204,7 +3213,7 @@ static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore pairCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -3333,7 +3342,7 @@ static DValue DaoTupleCore_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore tupleCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoTupleCore_GetField,
   DaoTupleCore_SetField,
   DaoTupleCore_GetItem,

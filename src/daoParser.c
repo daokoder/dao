@@ -762,10 +762,14 @@ static void DaoParser_InheritConstructor( DaoParser *self, int line )
   }else if( klass->superClass->items.pClass[0]->type == DAO_CDATA ){
     DaoCData *sup = klass->superClass->items.pCData[0];
     DaoParser *searcher = DaoParser_New();
-    DMap *mapMethods = sup->typer->priv->mapMethods;
+    DMap *methods = sup->typer->priv->methods;
     DNode *it;
     int rb = 0;
-    for(it=DMap_First(mapMethods); it; it=DMap_Next(mapMethods,it)){
+    if( sup->typer->priv->methods == NULL ){
+      DaoNameSpace_SetupMethods( sup->typer->priv->nspace, sup->typer );
+      methods = sup->typer->priv->methods;
+    }
+    for(it=DMap_First(methods); it; it=DMap_Next(methods,it)){
       DaoFunction *func = (DaoFunction*) it->value.pVoid;
       if( func->parTokens == NULL ) continue;
       DString_Clear( sig );
@@ -2421,9 +2425,13 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
           if( tokens[start]->line > prev ) break;
         }
       }else{
-        DMap *hash = typer->priv->mapMethods;
+        DMap *hash = typer->priv->methods;
         DNode *it;
         char *prev = "???";
+        if( typer->priv->methods == NULL ){
+          DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
+          hash = typer->priv->methods;
+        }
         value.t = DAO_FUNCTION;
         for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
           value.v.func = (DaoFunction*) it->value.pVoid;
@@ -2431,7 +2439,9 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
           prev = value.v.func->routName->mbs;
           DaoNameSpace_AddConst( myNS, value.v.func->routName, value );
         }
-        hash = typer->priv->mapValues;
+        if( typer->priv->values )
+          DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+        hash = typer->priv->values;
         for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
           DaoNameSpace_AddConst( myNS, it->key.pString, *it->value.pValue );
         }
@@ -5887,8 +5897,10 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
   parser->vmSpace = self->vmSpace;
   parser->outParser = self;
   DString_Assign( parser->srcFName, self->srcFName );
-  rout->routHost = self->hostClass->objType;
-  if( self->hostClass ) rout->tidHost = DAO_OBJECT;
+  if( self->hostClass ){
+    rout->tidHost = DAO_OBJECT;
+    rout->routHost = self->hostClass->objType;
+  }
   DArray_Append( myNS->definedRoutines, rout );
 
   self->curLine = tokPos;
@@ -6649,7 +6661,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
       DArray_Resize( self->regLines, regcount, 0 );
       /* Execute the instruction to get the const result: */
       DaoVmCode_Set( & vmcValue, code, 1, opB, 0, tokPos, self->lexLevel );
-      value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, (DaoVmCode*) & vmcValue, N+1 );
+      value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, (DaoVmCode*)(DaoVmCodeX*) & vmcValue, N+1 );
       *cst = DRoutine_AddConstValue( (DRoutine*)self->routine, value ) + DVR_LOC_CST;
       DArray_Delete( cid );
       return DaoParser_GetNormRegister( self, *cst );

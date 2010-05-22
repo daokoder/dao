@@ -74,7 +74,7 @@ static DValue DaoClass_Copy(  DValue *self, DaoContext *ctx, DMap *cycData )
 
 static DaoTypeCore classCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoClass_GetField,
   DaoClass_SetField,
   DaoClass_GetItem,
@@ -278,25 +278,35 @@ void DaoClass_DeriveClassData( DaoClass *self )
       */
     }else if( self->superClass->items.pBase[i]->type == DAO_CDATA ){
       DaoCData *cdata = self->superClass->items.pCData[i];
-      DaoTypeCore *core = cdata->typer->priv;
-      DMap *mapValues = core->mapValues;
-      DMap *mapMethods = core->mapMethods;
+      DaoTypeBase *typer = cdata->typer;
+      DaoTypeCore *core = typer->priv;
+      DMap *values = core->values;
+      DMap *methods = core->methods;
       DNode *it;
 
-      DString_SetMBS( mbs, cdata->typer->name );
+      if( values == NULL ){
+        DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+        values = core->values;
+      }
+      if( methods == NULL ){
+        DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
+        methods = core->methods;
+      }
+
+      DString_SetMBS( mbs, typer->name );
       value.t = DAO_CDATA;
       value.v.cdata = cdata;
       DaoClass_AddConst( self, mbs, value, DAO_CLS_PRIVATE );
-      if( strcmp( cdata->typer->name, self->superAlias->items.pString[i]->mbs ) ){
+      if( strcmp( typer->name, self->superAlias->items.pString[i]->mbs ) ){
         DaoClass_AddConst( self, self->superAlias->items.pString[i], value, DAO_CLS_PRIVATE );
       }
-      for(it=DMap_First( mapValues ); it; it=DMap_Next( mapValues, it )){
+      for(it=DMap_First( values ); it; it=DMap_Next( values, it )){
         search = MAP_Find( self->lookupTable, it->key.pVoid );
         if( search ==NULL )
           DaoClass_AddConst( self, it->key.pString, *it->value.pValue, DAO_CLS_PUBLIC );
       }
       value.t = DAO_FUNCTION;
-      for(it=DMap_First( mapMethods ); it; it=DMap_Next( mapMethods, it )){
+      for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
         search = MAP_Find( self->lookupTable, it->key.pVoid );
         value.v.func = (DaoFunction*) it->value.pVoid;
         if( search ==NULL )

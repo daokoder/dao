@@ -689,7 +689,7 @@ static DaoFuncItem netMeths[] =
 
 static DaoTypeCore netCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,

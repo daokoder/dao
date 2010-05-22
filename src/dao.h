@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20100511
+#define DAO_H_VERSION 20100522
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -600,8 +600,8 @@ struct DaoAPI
 
   int (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
   int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
-  int (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer, int setup );
-  int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
+  int (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer );
+  int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
   int (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
   int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
   int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
@@ -896,14 +896,14 @@ the last item in alias[] should also be NULL.
 */
 DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
 /* wrap c type */
-DAO_DLL int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer, int setup );
+DAO_DLL int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
 /* wrap c types, the last item in typer[] should be NULL;
 types that are cross-used in parameter lists
 (e.g. type A appears in the parameter list of B's methods,
 and type B appears in the parameter list of A's methods), 
 should be wrapd using this function.
 */
-DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[], int setup );
+DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 /* wrap c function */
 DAO_DLL int DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
 /* wrap c functions */
@@ -1172,8 +1172,8 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 
 #define DaoNameSpace_TypeDefine( self, o, n ) __dao.DaoNameSpace_TypeDefine( self, o, n )
 #define DaoNameSpace_TypeDefines( self, alias ) __dao.DaoNameSpace_TypeDefines( self, alias )
-#define DaoNameSpace_WrapType( self, t, s ) __dao.DaoNameSpace_WrapType( self, t, s )
-#define DaoNameSpace_WrapTypes( self, ts, s ) __dao.DaoNameSpace_WrapTypes( self, ts, s )
+#define DaoNameSpace_WrapType( self, t ) __dao.DaoNameSpace_WrapType( self, t )
+#define DaoNameSpace_WrapTypes( self, ts ) __dao.DaoNameSpace_WrapTypes( self, ts )
 #define DaoNameSpace_WrapFunction( ns, f, p ) __dao.DaoNameSpace_WrapFunction( ns, f, p )
 #define DaoNameSpace_WrapFunctions( ns, fs ) __dao.DaoNameSpace_WrapFunctions( ns, fs )
 #define DaoNameSpace_SetupType( self, typer ) __dao.DaoNameSpace_SetupType( self, typer )

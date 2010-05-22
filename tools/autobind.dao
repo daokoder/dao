@@ -205,7 +205,7 @@ class Variable
 		getter.clear();
 		setter.clear();
 	}
-	routine _PRINT( s : stream ){ stdio.println( name, typeid, type ); }
+	routine _PRINT( s : stream ){ io.println( name, typeid, type ); }
 }
 
 global enum
@@ -511,7 +511,7 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 		vo = Variable( parts[i], i, source );
 		vo.host = host;
 		vo.Parse( input );
-		#if( host == 'QCoreApplication' and func.cxxName == 'processEvents' ) stdio.println( parts[i], var );
+		#if( host == 'QCoreApplication' and func.cxxName == 'processEvents' ) io.println( parts[i], var );
 		if( vo.type == 'void' && vo.refer == '' ) skip; # int func(void);
 		func.parlist.append( vo );
 	}
@@ -720,9 +720,9 @@ routine UserType::Parse( source='', inExtFile=0 )
 		parts = src.extract( pat_type2 );
 		src.change( '%s+', '' );
 #{
-		if( name == 'mglGraphAB' ) stdio.println( src, parts );
-		if( src.pfind( 'std' ) ) stdio.println( src ); # DEBUG
-		stdio.println( parts ); # DEBUG
+		if( name == 'mglGraphAB' ) io.println( src, parts );
+		if( src.pfind( 'std' ) ) io.println( src ); # DEBUG
+		io.println( parts ); # DEBUG
 #}
 		if( i == 2 ){ # public fields only
 			selfield = '';
@@ -900,7 +900,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 		tks = part.capture( pat_typedef );
 		name = tks[1];
 		alias = tks[3];
-		if( alias.find( 'Fl_Callback_p' ) >=0 ) stdio.print( alias, ',', name, '\n' );
+		if( alias.find( 'Fl_Callback_p' ) >=0 ) io.print( alias, ',', name, '\n' );
     scoped = '';
     if( snamespace ) scoped = snamespace + '::' + alias;
 # be sure that file order does not matter here
@@ -981,21 +981,21 @@ routine ParseFile( file : string, dir = '', subdir='',
 	utp : UserType;
 
   file2 = file;
-	source = stdio.read( file, 1 );
+	source = io.read( file, 1 );
 	if( source =='' ){
-    source = stdio.read( dir + file, 1 );
+    source = io.read( dir + file, 1 );
     file2 = dir + file;
   }
 	if( source =='' ){
 		for( sb in subdirs ){
-			source = stdio.read( dir + sb + '/' + file, 1 );
+			source = io.read( dir + sb + '/' + file, 1 );
       file2 = dir + sb + '/' + file;
 			if( source ) break;
 		}
 	}
   if( source == '' ) return 0;
 
-	stdio.println( 'parsing file: ', file2 );
+	io.println( 'parsing file: ', file2 );
 
 # remove comments
 	source.change( '%B{ / %* }{ %* / }', '' );
@@ -1079,7 +1079,7 @@ routine ParseFile( file : string, dir = '', subdir='',
 	source.change( 'union %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ union %s+ %1 %s+ ( %w+ ) %s* ; )', 'union %5%2\ntypedef %5 %1;\n%3' );
 #}
 
-	#if( file.find( 'columnCount' ) >=0 ) stdio.println( source );
+	#if( file.find( 'columnCount' ) >=0 ) io.println( source );
 
 	#const pat_defcst = '#%s* define %s+ (%w+) %s*'
 	#	'(%s %d [%x%.]* | %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %) ) %s*';
@@ -1098,7 +1098,7 @@ routine ParseFile( file : string, dir = '', subdir='',
 	}
   source.change( '#%s* define [^\n]*', '' ); # other macros
 
-  #if( file.find( 'vtkInformationInformationKey' ) >=0 ) stdio.println( source ); # DEBUG
+  #if( file.find( 'vtkInformationInformationKey' ) >=0 ) io.println( source ); # DEBUG
   source = ParseCode( source, '', lang, fname, inExtFile );
 
 	source.change( '[\n]{2,}', '\n\n' );
@@ -1563,7 +1563,7 @@ routine Variable::Parse( fname = '' )
 			map_user_types[ type ] = utp;
 			map_user_types[ 'struct ' + type ] = utp;
 			if( utp.name[0:0] == '_' ){
-				stdio.println( 'debug:', utp.name, ',', source );
+				io.println( 'debug:', utp.name, ',', source );
         std.sleep(10);
             #reflect.trace();
 			}
@@ -1588,7 +1588,7 @@ routine Variable::Parse( fname = '' )
 		sqsizes.append( '0' );
 	}
   type_trans = type;
-	#stdio.println( name, type, refer, sqsizes.size() );
+	#io.println( name, type, refer, sqsizes.size() );
 }
 
 global qt_container = '^ (QList|QVector)(P|)_(%w+) $';
@@ -1608,7 +1608,7 @@ routine Variable::Generate( cxx_no_self =0 )
   }
   type_trans = type;
 	#if( type == 'SectionFlags' ) 
-	#if( type.pfind( 'PaintDeviceMetric' ) ) stdio.println( type, map_user_types.has( type ) );
+	#if( type.pfind( 'PaintDeviceMetric' ) ) io.println( type, map_user_types.has( type ) );
 	list_item = type.capture( qt_container );
 	isClassEnum = 0;
 	if( typeid <0 && map_user_types.has( host ) ){
@@ -2372,7 +2372,7 @@ global daoqt_sig_slot_emit =
 
 routine Function::Generate()
 {
-	#if( cxxName == 'processEvents' ) stdio.println( source, parlist );
+	#if( cxxName == 'processEvents' ) io.println( source, parlist );
 	if( map_user_types.has( hostType ) ) hostType = map_user_types[ hostType ].name;
 	cxx_no_self = not(attribs & FUNC_STATIC) and (attribs & FUNC_CPP) != 0;
 	cxx_no_self = cxx_no_self && (hostType != cxxName);
@@ -2549,9 +2549,9 @@ routine Function::Generate()
 			qtSignalSlotCode += cxx2daocodes;
 			qtSignalSlotCode += daoqt_sig_slot_emit.expand( kvmap );
 #{
-			stdio.println( signature );
-			stdio.println( qtSignalSlotDecl );
-			stdio.println( qtSignalSlotCode );
+			io.println( signature );
+			io.println( qtSignalSlotDecl );
+			io.println( qtSignalSlotCode );
 #}
 		}
 	}
@@ -2667,10 +2667,10 @@ routine Function::Generate()
 	# }
 	Clean();
 #{
-	stdio.println( daoProtoCodes );
-	stdio.println( cxx2daocodes );
-	stdio.println( cxxWrapper );
-	stdio.println( cxxWrapperVirt );
+	io.println( daoProtoCodes );
+	io.println( cxx2daocodes );
+	io.println( cxxWrapper );
+	io.println( cxxWrapperVirt );
 #}
 }
 
@@ -3271,7 +3271,7 @@ routine UserType::CheckPureVirtual()
       }
     }
   }
-	#stdio.println( name, isPureVirt, pureVirts, implemented );
+	#io.println( name, isPureVirt, pureVirts, implemented );
 }
 routine UserType::GenerateMeth()
 {
@@ -3402,7 +3402,7 @@ routine UserType::GenerateType()
 			meth_codes += cxx_wrap_alloc2.expand( kvmap2 );
 		}
 	}
-	#stdio.println( name, hasVirtual, noConstructor, isDefined, allocators, isCppClass );
+	#io.println( name, hasVirtual, noConstructor, isDefined, allocators, isCppClass );
 	if( isQObject and not noWrapping ){
 		kvmap = { 'name'=>name, 'class'=>name, 'qt_make_linker3'=>'' };
 		type_decls += tpl_class_init_qtss_decl.expand( kvmap );
@@ -3457,7 +3457,7 @@ routine UserType::GenerateType()
 			}
 			if( not ( meth.attribs & FUNC_VIRTUAL ) ) mapnonvirt[ meth.signature ] = 1;
 		}
-		#stdio.println( name, mapnonvirt, methods );
+		#io.println( name, mapnonvirt, methods );
 		for( sup in supers ){
 			for( meth in sup.declmeths.values() ){
 				if( mapprivate.has( meth.signature ) ) skip;
@@ -3482,7 +3482,7 @@ routine UserType::GenerateType()
 					restPureVirts.append( s );
 			}
 		}
-		#stdio.println( declmeths, declvirts, '\n' );
+		#io.println( declmeths, declvirts, '\n' );
 		kmethods = '';
 		for( meth in declmeths.values() ){
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
@@ -3914,14 +3914,14 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 			if( f ) files.append( f );
 		}
 	}
-	stdio.println( extfiles );
+	io.println( extfiles );
 	if( files.size() ==0 ){
-		stdio.println( 'no input, quit...' );
+		io.println( 'no input, quit...' );
 		return;
 	}
 	main_fname = wrap_name ? wrap_name : files[0];
 	main_fname.change( '%..*$', '' );
-	log_file = stdio.open( main_fname + '.log', 'w' );
+	log_file = io.open( main_fname + '.log', 'w' );
 
 	io.writeln( dir_input, dir_output );
 #{
@@ -3939,7 +3939,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	dft_fixing = {};
   unused_fixing = {};
 	if( fixing ){
-		source = stdio.read( fixing );
+		source = io.read( fixing );
 		lines = source.split( '\n' );
 		pat_fixing = dft_fixing;
 		file = '';
@@ -4030,7 +4030,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
   }
 
 	fname = main_fname + '.h';
-	fout_header = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_header = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_header.print( '#include<stdlib.h>\n' );
 	fout_header.print( '#include<assert.h>\n' );
 	fout_header.print( '#include<string.h>\n' );
@@ -4065,16 +4065,16 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	fout_header.println();
 
 	fname = main_fname + suffix;
-	fout_source = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_source = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source.println( '#include"dao_' + main_fname + '.h"\n' );
 	fout_source.println( 'DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n' );
 
 	fname = main_fname + '2' + suffix;
-	fout_source2 = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_source2 = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source2.println( '#include"dao_' + main_fname + '.h"\n' );
 	fout_source2.println( 'extern DaoVmSpace *__daoVmSpace;\n' );
 	fname = main_fname + '3' + suffix;
-	fout_source3 = stdio.open( dir_output + 'dao_' + fname, 'w' );
+	fout_source3 = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source3.println( '#include"dao_' + main_fname + '.h"\n' );
 	fout_source3.println( 'extern DaoVmSpace *__daoVmSpace;\n\n' );
 	kvmap = { 'type' => '', 'module'=>wrap_name2 };
@@ -4308,7 +4308,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		fout_source.print( tpl_typedef.expand( kvmap2 ) );
 	}
 	fout_source.println( '  DaoNameSpace_AddConstNumbers( ns, constNumbers );' );
-  fout_source.println( '  DaoNameSpace_WrapTypes( ns, typers, 0 );' );
+  fout_source.println( '  DaoNameSpace_WrapTypes( ns, typers );' );
   if( nalias >1 ) fout_source.println( '  DaoNameSpace_TypeDefines( ns, aliases );' );
 	for( utp in namespaces ){
 		s = utp.name;
@@ -4316,7 +4316,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		if( ns_numbers.has( s ) )
       fout_source.println( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
 		if( ns_types.has( s ) )
-      fout_source.println( '  DaoNameSpace_WrapTypes( ns2, dao_' +s+ '_Types, 0 );' );
+      fout_source.println( '  DaoNameSpace_WrapTypes( ns2, dao_' +s+ '_Types );' );
     if( ns_has_aliases.has( s ) )
       fout_source.println( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
   }
@@ -4370,10 +4370,10 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		s = utp.name;
 		if( ns_types.has( s ) ){
       fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
-      fout_source.println( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
+      #fout_source.println( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
     }
   }
-  fout_source.println( '  DaoNameSpace_SetupTypes( ns, typers );' );
+  #fout_source.println( '  DaoNameSpace_SetupTypes( ns, typers );' );
 	fout_source.println( '  return 0;\n}' );
 	fout_source.println( ifdef_cpp_close );
 

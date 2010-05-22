@@ -36,17 +36,18 @@ DaoTypeBase* DValue_GetTyper( DValue self );
 
 struct DaoTypeCore
 {
-  uint_t    attribs;
-  DaoType  *abtype;
-  DMap     *mapValues;
-  DMap     *mapMethods;
+  uint_t         attribs;
+  DMap          *values;
+  DMap          *methods;
+  DaoType       *abtype;
+  DaoNameSpace  *nspace;
   
   void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
   void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
   void (*GetItem) ( DValue *self, DaoContext *ctx, DValue pid );
   void (*SetItem) ( DValue *self, DaoContext *ctx, DValue pid, DValue value );
   
-  void   (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+  void (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
   DValue (*Copy)(  DValue *self, DaoContext *ctx, DMap *cycData );
 };
 
@@ -117,10 +118,11 @@ void DaoMap_Erase( DaoMap *self, DValue key );
 
 struct DaoCDataCore
 {
-  uint_t    attribs;
-  DaoType  *abtype;
-  DMap     *mapValues;
-  DMap     *mapMethods;
+  uint_t         attribs;
+  DMap          *values;
+  DMap          *methods;
+  DaoType       *abtype;
+  DaoNameSpace  *nspace;
 
   void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
   void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );

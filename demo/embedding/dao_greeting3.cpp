@@ -13,7 +13,7 @@ void Dao_Get_Object_Method( DaoCData *cd, DaoObject **ob, DaoRoutine **ro, const
   if( va.t == DAO_ROUTINE ) *ro = va.v.routine;
 }
 
-void Function_0x1cdb80( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, const char* msg )
+void Function_0x1c3eb0( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, const char* msg )
 {
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[1] = { _dao_nil };
@@ -59,7 +59,7 @@ void DaoCxxVirt_Greeting::DoGreeting( const char* name )
   DaoRoutine *_ro = NULL;
   Dao_Get_Object_Method( cdata, & _ob, & _ro, "DoGreeting" );
   if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
-  Function_0x1cdb80( vmproc, _ro, _ob, name );
+  Function_0x1c3eb0( vmproc, _ro, _ob, name );
 }
 void DaoCxx_Greeting::DoGreeting( const char* name )
 {

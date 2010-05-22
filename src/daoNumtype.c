@@ -38,7 +38,7 @@ static DValue DaoComplex_Copy( DValue *self, DaoContext *ctx, DMap *cycData )
 }
 static DaoTypeCore comCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1325,7 +1325,7 @@ static void DaoLong_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue 
 }
 static DaoTypeCore longCore=
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoLong_GetItem,
@@ -2106,7 +2106,7 @@ static DValue DaoNA_Copy( DValue *dbase, DaoContext *ctx, DMap *cycData )
 
 static DaoTypeCore numarrCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoArray_GetItem,

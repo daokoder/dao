@@ -117,10 +117,10 @@ int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
   DaoNameSpace_TypeDefine( ns2, "int", "Bool" );
   DaoNameSpace_TypeDefine( ns2, "int", "Enum2" );
   DaoNameSpace_AddConstNumbers( ns, constNumbers );
-  DaoNameSpace_WrapTypes( ns, typers, 0 );
+  DaoNameSpace_WrapTypes( ns, typers );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
   DaoNameSpace_AddConstNumbers( ns2, dao_CxxNS_Nums );
-  DaoNameSpace_WrapTypes( ns2, dao_CxxNS_Types, 0 );
+  DaoNameSpace_WrapTypes( ns2, dao_CxxNS_Types );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS2" );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
   DaoNameSpace_WrapFunctions( ns2, dao_CxxNS_Funcs );
@@ -129,8 +129,6 @@ int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
   DaoNameSpace_WrapFunctions( ns, dao_Funcs );
   DaoNameSpace_TypeDefine( ns, "CxxNS::Test", "Test2" );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
-  DaoNameSpace_SetupTypes( ns2, dao_CxxNS_Types );
-  DaoNameSpace_SetupTypes( ns, typers );
   return 0;
 }
 #ifdef __cplusplus

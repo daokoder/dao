@@ -110,7 +110,7 @@ int main( int argc, char *argv[] )
   DString_SetMBS( src, dao_source );
 
   // Wrap and setup a C/C++ type:
-  DaoNameSpace_WrapType( ns, dao_FakeNumber_Typer, 1 );
+  DaoNameSpace_WrapType( ns, dao_FakeNumber_Typer );
 
   // Execute the Dao scripts:
   // Since the wrapped functions and types are imported into

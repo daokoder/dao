@@ -33,6 +33,10 @@
 #include"daoMacro.h"
 #include"daoRegex.h"
 
+#ifdef DAO_WITH_THREAD
+DMutex dao_setup_mutex;
+#endif
+
 static void DNS_GetField( DValue *self0, DaoContext *ctx, DString *name )
 {
   DaoNameSpace *self = self0->v.ns;
@@ -62,7 +66,7 @@ static void DNS_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue valu
 }
 static DaoTypeCore nsCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DNS_GetField,
   DNS_SetField,
   DNS_GetItem,
@@ -253,165 +257,181 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
     }
   }
 }
-static int DaoPrepareNumber( DaoNameSpace *self, DaoTypeBase *typer )
+int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 {
   int i, valCount;
-  DMap *mapValues;
+  DMap *values;
   DMap *supValues;
   DNode *it;
   DValue value = daoNullValue;
   DString name = { 0, 0, NULL, NULL, NULL };
 
   if( typer->priv == NULL ) return 0;
-  if( typer->priv->mapValues != NULL ) return 1;
-  mapValues = DHash_New( D_STRING, D_VALUE );
-  typer->priv->mapValues = mapValues;
+  if( typer->priv->values != NULL ) return 1;
   for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
     if( typer->supers[i] == NULL ) break;
-    DaoPrepareNumber( self, typer->supers[i] );
+    DaoNameSpace_SetupValues( self, typer->supers[i] );
   }
   valCount = 0;
   if( typer->numItems != NULL ){
     while( typer->numItems[ valCount ].name != NULL ) valCount ++;
   }
 
-  for(i=0; i<valCount; i++){
-    double dv = typer->numItems[i].value;
-    name.mbs = (char*) typer->numItems[i].name;
-    name.data = (size_t*) name.mbs;
-    name.size = name.bufSize = strlen( name.mbs );
-    value = daoNullValue;
-    value.t = typer->numItems[i].type;
-    switch( typer->numItems[i].type ){
-    case DAO_INTEGER : value.v.i = (int) dv; break;
-    case DAO_FLOAT : value.v.f = (float) dv; break;
-    case DAO_DOUBLE : value.v.d = dv; break;
-    default : break;
+#ifdef DAO_WITH_THREAD
+  DMutex_Lock( & dao_setup_mutex );
+#endif
+  if( typer->priv->values == NULL ){
+    values = DHash_New( D_STRING, D_VALUE );
+    typer->priv->values = values;
+    for(i=0; i<valCount; i++){
+      double dv = typer->numItems[i].value;
+      name.mbs = (char*) typer->numItems[i].name;
+      name.data = (size_t*) name.mbs;
+      name.size = name.bufSize = strlen( name.mbs );
+      value = daoNullValue;
+      value.t = typer->numItems[i].type;
+      switch( typer->numItems[i].type ){
+      case DAO_INTEGER : value.v.i = (int) dv; break;
+      case DAO_FLOAT : value.v.f = (float) dv; break;
+      case DAO_DOUBLE : value.v.d = dv; break;
+      default : break;
+      }
+      DMap_Insert( values, & name, & value );
     }
-    DMap_Insert( mapValues, & name, & value );
-  }
-  for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-    if( typer->supers[i] == NULL ) break;
-    supValues = typer->supers[i]->priv->mapValues;
-    for(it=DMap_First(supValues); it; it=DMap_Next(supValues, it)){
-      DMap_Insert( mapValues, it->key.pVoid, it->value.pVoid );
+    for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+      if( typer->supers[i] == NULL ) break;
+      supValues = typer->supers[i]->priv->values;
+      for(it=DMap_First(supValues); it; it=DMap_Next(supValues, it)){
+        DMap_Insert( values, it->key.pVoid, it->value.pVoid );
+      }
     }
   }
+#ifdef DAO_WITH_THREAD
+  DMutex_Unlock( & dao_setup_mutex );
+#endif
   return 1;
 }
-static int DaoPrepareMethod( DaoNameSpace *self, DaoTypeBase *typer )
+int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 {
   DaoParser *parser;
   DaoFunction *cur;
   DString *name1, *name2;
-  DMap *mapMethods;
+  DMap *methods;
   DMap *supMethods;
   DNode *node;
   DNode *it;
   int i, size;
-  if( typer->priv->mapMethods != NULL ) return 1;
+  if( typer->priv->methods != NULL ) return 1;
   for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
     if( typer->supers[i] == NULL ) break;
-    DaoPrepareMethod( self, typer->supers[i] );
+    DaoNameSpace_SetupMethods( self, typer->supers[i] );
   }
-  mapMethods = DHash_New( D_STRING, 0 );
-  typer->priv->mapMethods = mapMethods;
-  size = 0;
-  name1 = DString_New(1);
-  name2 = DString_New(1);
-  parser = DaoParser_New();
-  parser->vmSpace = self->vmSpace;
-  parser->nameSpace = self;
-  parser->hostCData = typer->priv->abtype;
+#ifdef DAO_WITH_THREAD
+  DMutex_Lock( & dao_setup_mutex );
+#endif
+  if( typer->priv->methods == NULL ){
+    methods = DHash_New( D_STRING, 0 );
+    typer->priv->methods = methods;
+    size = 0;
+    name1 = DString_New(1);
+    name2 = DString_New(1);
+    parser = DaoParser_New();
+    parser->vmSpace = self->vmSpace;
+    parser->nameSpace = self;
+    parser->hostCData = typer->priv->abtype;
 
-  if( typer->funcItems != NULL ){
-    while( typer->funcItems[ size ].proto != NULL ) size ++;
-  }
-
-  for( i=0; i<size; i++ ){
-    cur = DaoNameSpace_ParsePrototype( self, typer->funcItems[i].proto, parser );
-    if( cur == NULL ){
-      printf( "  In function: %s::%s\n", typer->name, typer->funcItems[i].proto );
-      continue;
+    if( typer->funcItems != NULL ){
+      while( typer->funcItems[ size ].proto != NULL ) size ++;
     }
-    cur->pFunc = typer->funcItems[i].fpter;
-    cur->tidHost = DAO_CDATA;
-    cur->routHost = typer->priv->abtype;
-    if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
 
-    node = MAP_Find( mapMethods, cur->routName );
-    if( node !=NULL ){
-      DRoutine_AddOverLoad( (DRoutine*) node->value.pVoid, (DRoutine*) cur );
-    }else{
-      GC_IncRC( cur ); /* there is an entry in the structure */
-      MAP_Insert( mapMethods, cur->routName, cur );
-    }
-  }
-  for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-    if( typer->supers[i] == NULL ) break;
-    supMethods = typer->supers[i]->priv->mapMethods;
-    for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
-      cur = (DaoFunction*) it->value.pVoid;
-      if( STRCMP( cur->routName, typer->supers[i]->name ) ==0 ) continue;
-      node = MAP_Find( mapMethods, cur->routName );
-      if( node == NULL ){
-        /*
-        cur = DaoFunction_Copy( cur, 0 );
-        cur->firstRoutine = (DRoutine*) cur;
-        */
-        GC_IncRC( cur );
-        MAP_Insert( mapMethods, cur->routName, cur );
+    for( i=0; i<size; i++ ){
+      cur = DaoNameSpace_ParsePrototype( self, typer->funcItems[i].proto, parser );
+      if( cur == NULL ){
+        printf( "  In function: %s::%s\n", typer->name, typer->funcItems[i].proto );
+        continue;
+      }
+      cur->pFunc = typer->funcItems[i].fpter;
+      cur->tidHost = DAO_CDATA;
+      cur->routHost = typer->priv->abtype;
+      if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
+
+      node = MAP_Find( methods, cur->routName );
+      if( node !=NULL ){
+        DRoutine_AddOverLoad( (DRoutine*) node->value.pVoid, (DRoutine*) cur );
       }else{
-        DRoutine *drt = (DRoutine*) node->value.pVoid;
-        DaoFunction *func = (DaoFunction*) drt->firstRoutine;
-        DaoFunction **fs = (DaoFunction**) func->routOverLoad->items.pBase;
-        int k, matched = 0;
-        DaoRoutine_GetSignature( cur->routType, name1 );
-        for(k=0; k<func->routOverLoad->size; k++){
-          if( (func->routType->attrib & DAO_ROUT_PARSELF) 
-            == (fs[k]->routType->attrib & DAO_ROUT_PARSELF) ){
-            DaoRoutine_GetSignature( fs[k]->routType, name2 );
-            if( DString_EQ( name1, name2 ) ){
-              matched = 1;
-              break;
+        GC_IncRC( cur ); /* there is an entry in the structure */
+        MAP_Insert( methods, cur->routName, cur );
+      }
+    }
+    for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+      if( typer->supers[i] == NULL ) break;
+      supMethods = typer->supers[i]->priv->methods;
+      for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
+        cur = (DaoFunction*) it->value.pVoid;
+        if( STRCMP( cur->routName, typer->supers[i]->name ) ==0 ) continue;
+        node = MAP_Find( methods, cur->routName );
+        if( node == NULL ){
+          /*
+             cur = DaoFunction_Copy( cur, 0 );
+             cur->firstRoutine = (DRoutine*) cur;
+           */
+          GC_IncRC( cur );
+          MAP_Insert( methods, cur->routName, cur );
+        }else{
+          DRoutine *drt = (DRoutine*) node->value.pVoid;
+          DaoFunction *func = (DaoFunction*) drt->firstRoutine;
+          DaoFunction **fs = (DaoFunction**) func->routOverLoad->items.pBase;
+          int k, matched = 0;
+          DaoRoutine_GetSignature( cur->routType, name1 );
+          for(k=0; k<func->routOverLoad->size; k++){
+            if( (func->routType->attrib & DAO_ROUT_PARSELF) 
+                == (fs[k]->routType->attrib & DAO_ROUT_PARSELF) ){
+              DaoRoutine_GetSignature( fs[k]->routType, name2 );
+              if( DString_EQ( name1, name2 ) ){
+                matched = 1;
+                break;
+              }
             }
           }
-        }
-        if( matched ==0 ){
-          int dist = cur->distance + 1;
-          cur = DaoFunction_Copy( cur, 0 ); /* there is no entry in the structure */
-          cur->tidHost = DAO_CDATA;
-          cur->routHost = typer->priv->abtype;
-          cur->distance = dist; /* XXX distance , also for class */
-          if( func->routHost != typer->priv->abtype ){
-            /* there is only an entry from parent types,
-               duplicate it before adding overloaed function: */
-            drt = (DRoutine*) DaoFunction_Copy( func, 0 );
-            drt->firstRoutine = drt;
-            drt->distance = func->distance + 1;
-            DRoutine_AddOverLoad( drt, drt );
-            GC_IncRC( drt );
-            GC_DecRC( func );
-            node->value.pVoid = drt;
-            func = (DaoFunction*) drt;
-            func->tidHost = DAO_CDATA;
-            func->routHost = typer->priv->abtype;
+          if( matched ==0 ){
+            int dist = cur->distance + 1;
+            cur = DaoFunction_Copy( cur, 0 ); /* there is no entry in the structure */
+            cur->tidHost = DAO_CDATA;
+            cur->routHost = typer->priv->abtype;
+            cur->distance = dist; /* XXX distance , also for class */
+            if( func->routHost != typer->priv->abtype ){
+              /* there is only an entry from parent types,
+                 duplicate it before adding overloaed function: */
+              drt = (DRoutine*) DaoFunction_Copy( func, 0 );
+              drt->firstRoutine = drt;
+              drt->distance = func->distance + 1;
+              DRoutine_AddOverLoad( drt, drt );
+              GC_IncRC( drt );
+              GC_DecRC( func );
+              node->value.pVoid = drt;
+              func = (DaoFunction*) drt;
+              func->tidHost = DAO_CDATA;
+              func->routHost = typer->priv->abtype;
+            }
+            DRoutine_AddOverLoad( drt, (DRoutine*) cur );
           }
-          DRoutine_AddOverLoad( drt, (DRoutine*) cur );
         }
       }
     }
-  }
-  DaoParser_Delete( parser );
+    DaoParser_Delete( parser );
 
-  assert( DAO_ROUT_MAIN < (1<<DVM_MOVE) );
-  for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
-    DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_MOVE] );
-    if( DMap_Find( mapMethods, name1 ) == NULL ) continue;
-    typer->priv->attribs |= DAO_OPER_OVERLOADED | (1<<i);
+    assert( DAO_ROUT_MAIN < (1<<DVM_MOVE) );
+    for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
+      DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_MOVE] );
+      if( DMap_Find( methods, name1 ) == NULL ) continue;
+      typer->priv->attribs |= DAO_OPER_OVERLOADED | (1<<i);
+    }
+    DString_Delete( name1 );
+    DString_Delete( name2 );
   }
-  DString_Delete( name1 );
-  DString_Delete( name2 );
+#ifdef DAO_WITH_THREAD
+  DMutex_Unlock( & dao_setup_mutex );
+#endif
   return 1;
 }
 
@@ -451,7 +471,7 @@ static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
   DString *s;
   DValue value = daoNullCData;
 
-  if( typer->priv && typer->priv->mapMethods ) return 1;
+  if( typer->priv && typer->priv->methods ) return 1;
   plgCore = DaoCDataCore_New();
   s = DString_New(1);
 
@@ -464,41 +484,45 @@ static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
   DString_Delete( s );
 
   plgCore->abtype = abtype;
+  plgCore->nspace = self;
   plgCore->NewData = typer->New;
   plgCore->DelData = typer->Delete;
   typer->priv = (DaoTypeCore*)plgCore;
   DaoTypeCData_SetMethods( typer );
   return 1;
 }
-int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer, int setup )
+int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer )
 {
   DaoNameSpace_WrapType2( self, typer );
   DArray_Append( self->ctypers, typer );
-  if( DaoPrepareNumber( self, typer ) == 0 ) return 0;
+  /*
+  if( DaoNameSpace_SetupValues( self, typer ) == 0 ) return 0;
   if( setup ) return DaoNameSpace_SetupType( self, typer );
+  */
   return 1;
 }
 int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer )
 {
-  DMap *mapMethods;
+  DMap *methods;
   DNode *it;
-  if( DaoPrepareMethod( self, typer ) == 0 ) return 0;
-  mapMethods = typer->priv->mapMethods;
-  for(it=DMap_First(mapMethods); it; it=DMap_Next(mapMethods, it)){
+  if( DaoNameSpace_SetupValues( self, typer ) == 0 ) return 0;
+  if( DaoNameSpace_SetupMethods( self, typer ) == 0 ) return 0;
+  methods = typer->priv->methods;
+  for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
     DArray_Append( self->cmethods, it->value.pVoid );
   }
   return 1;
 }
-int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typers[], int setup )
+int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typers[] )
 {
   int i, e = 0;
   for(i=0; typers[i]; i++ ){
     DaoNameSpace_WrapType2( self, typers[i] );
     DArray_Append( self->ctypers, typers[i] );
-    e |= ( DaoPrepareNumber( self, typers[i] ) == 0 );
+    /* e |= ( DaoNameSpace_SetupValues( self, typers[i] ) == 0 ); */
   }
-  if( setup ) return DaoNameSpace_SetupTypes( self, typers );
-  return e;
+  /* if( setup ) return DaoNameSpace_SetupTypes( self, typers ); */
+  return e = 0;
 }
 int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] )
 {
@@ -514,13 +538,13 @@ int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] )
 }
 int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typers[] )
 {
-  DMap *mapMethods;
+  DMap *methods;
   DNode *it;
   int i, e = 0;
   for(i=0; typers[i]; i++ ){
-    e |= ( DaoPrepareMethod( self, typers[i] ) == 0 );
-    mapMethods = typers[i]->priv->mapMethods;
-    for(it=DMap_First(mapMethods); it; it=DMap_Next(mapMethods, it)){
+    e |= ( DaoNameSpace_SetupMethods( self, typers[i] ) == 0 );
+    methods = typers[i]->priv->methods;
+    for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
       DArray_Append( self->cmethods, it->value.pVoid );
     }
   }
@@ -587,15 +611,11 @@ int DaoNameSpace_Load( DaoNameSpace *self, const char *fname )
   DString_Delete( src );
   return ch;
 }
-int DaoNameSpace_PrepareType( DaoNameSpace *self, DaoTypeBase *typer )
-{
-  return DaoPrepareNumber( self, typer ) && DaoPrepareMethod( self, typer );
-}
 
 DaoTypeBase nsTyper=
 {
   & nsCore,
-  "NAMESPACE",
+  "namespace",
   NULL, NULL, {0}, NULL,
   (FuncPtrDel) DaoNameSpace_Delete
 };
@@ -680,7 +700,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 void DaoNameSpace_Delete( DaoNameSpace *self )
 {
   DaoTypeCore *core;
-  DMap *mapValues;
+  DMap *values;
   DNode *it;
   int i;
   it = DMap_First( self->macros );
@@ -691,9 +711,9 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
     core = ((DaoTypeBase*)self->ctypers->items.pBase[i])->priv;
 #if 0
     TODO
-    supValues = core->mapValues;
+    supValues = core->values;
     for(it=DMap_First(supValues); it; it=DMap_Next(supValues, it)){
-      DMap_Insert( mapValues, it->key.pVoid, it->value.pVoid );
+      DMap_Insert( values, it->key.pVoid, it->value.pVoid );
     }
     for(j=0; j<core->valCount; j++){
       val = core->values[j];

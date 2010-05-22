@@ -392,7 +392,7 @@ static DaoNumItem streamConsts[] =
 };
 static DaoTypeCore streamCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -722,11 +722,17 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
   }
 }
 
-#ifdef UNIX
 
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#ifdef WIN32
+#include <windows.h>
+#ifdef _MSC_VER
+#define _stat stat
+#endif
+#endif
 
 ullong_t FileChangedTime( const char *file )
 {
@@ -734,18 +740,3 @@ ullong_t FileChangedTime( const char *file )
   if( stat( file, &st ) ==0 ) return (ullong_t) st.st_mtime;
   return 0;
 }
-
-#elif WIN32
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <windows.h>
-
-ullong_t FileChangedTime( const char *file )
-{
-  struct _stat st;
-  if( _stat( file, &st ) ==0 ) return (ullong_t) st.st_mtime;
-  return 0;
-}
-
-#endif

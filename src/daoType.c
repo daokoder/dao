@@ -143,9 +143,6 @@ void DaoType_Init()
   int i, j;
   dao_typing_cache = DHash_New(D_VOID2,0);
   dao_typing_version = 0;
-#ifdef DAO_WITH_THREAD
-  DMutex_Init( & dao_typing_mutex );
-#endif
   memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
   for(i=DAO_INTEGER; i<=DAO_DOUBLE; i++){
     for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)

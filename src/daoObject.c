@@ -182,7 +182,7 @@ static DValue DaoObject_Copy(  DValue *value, DaoContext *ctx, DMap *cycData )
 
 static DaoTypeCore objCore = 
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoObject_Core_GetField,
   DaoObject_Core_SetField,
   DaoObject_GetItem,

@@ -535,10 +535,17 @@ static void STD_ListMeth( DaoContext *ctx, DValue *p[], int N )
   DaoTypeBase *typer = DValue_GetTyper( *p[0] );
   DaoFunction **meths;
   DArray *array = DArray_New(0);
-  DMap *hash = typer->priv->mapValues;
+  DMap *hash = typer->priv->values;
   DNode *it;
   int i, j, methCount;
-  DMap_SortMethods( typer->priv->mapMethods, array );
+  if( hash == NULL ){
+    DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+    hash = typer->priv->values;
+  }
+  if( typer->priv->methods == NULL ){
+    DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
+  }
+  DMap_SortMethods( typer->priv->methods, array );
   meths = (DaoFunction**) array->items.pVoid;
   methCount = array->size;
   DaoContext_Print( ctx, "======================\nConsts / Methods of " );
@@ -808,7 +815,7 @@ static DaoNumItem stdConsts[] =
 
 static DaoTypeCore stdlibCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1343,7 +1350,7 @@ static DaoFuncItem mpiMeths[]=
 
 static DaoTypeCore mpiCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1857,7 +1864,7 @@ static DaoFuncItem reflMeths[]=
 
 static DaoTypeCore librefCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -1932,7 +1939,7 @@ static DaoFuncItem coroutMeths[]=
 
 static DaoTypeCore coroutCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
@@ -2208,7 +2215,7 @@ static DaoFuncItem mathMeths[]=
 
 static DaoTypeCore mathCore =
 {
-  0, NULL, NULL, NULL,
+  0, NULL, NULL, NULL, NULL,
   DaoBase_GetField,
   DaoBase_SetField,
   DaoBase_GetItem,
