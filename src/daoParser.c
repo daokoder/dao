@@ -2471,11 +2471,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
         DArray_Append( self->bindtos, inter );
         DArray_Append( self->bindtos, value.v.klass->objType );
       }else if( value.t == DAO_CDATA ){
-#if 0
-        //DArray_Append( self->bindtos, inter );
-        //DArray_Append( self->bindtos,  );
-#endif
-        /* TODO */
+        DArray_Append( self->bindtos, inter );
+        DArray_Append( self->bindtos, value.v.cdata->typer->priv->abtype );
       }else{
         DString_SetMBS( self->mbs, "need class or c type" );
         DaoParser_Error( self, DAO_CTW_DEF_INVALID, self->mbs );

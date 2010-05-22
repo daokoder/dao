@@ -2154,7 +2154,8 @@ DaoType *dao_type_for_iterator = NULL;
 #ifdef DAO_WITH_THREAD
 extern DMutex mutex_string_sharing;
 extern DMutex dao_typing_mutex;
-extern DMutex dao_setup_mutex;
+extern DMutex dao_vsetup_mutex;
+extern DMutex dao_msetup_mutex;
 #endif
 
 DaoVmSpace* DaoInit()
@@ -2183,7 +2184,8 @@ DaoVmSpace* DaoInit()
 #ifdef DAO_WITH_THREAD
   DMutex_Init( & mutex_string_sharing );
   DMutex_Init( & dao_typing_mutex );
-  DMutex_Init( & dao_setup_mutex );
+  DMutex_Init( & dao_vsetup_mutex );
+  DMutex_Init( & dao_msetup_mutex );
 #endif
   
   mbs = DString_New(1);

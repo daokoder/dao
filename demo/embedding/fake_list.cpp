@@ -9,11 +9,13 @@
 
 static void dao_FakeList_FakeList( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_FakeList_Iter( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeList_Size( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_FakeList_GetItem( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_FakeList_Meths[] = 
 {
   { dao_FakeList_FakeList, "FakeList( size=0 )=>FakeList" },
+  { dao_FakeList_Size, "size( self : FakeList )=>int" },
   { dao_FakeList_Iter, "__for_iterator__( self : FakeList, iter : for_iterator )" },
   { dao_FakeList_GetItem, "[]( self : FakeList, iter : for_iterator )=>int" },
   { NULL, NULL }
@@ -27,6 +29,11 @@ static void dao_FakeList_FakeList( DaoContext *_ctx, DValue *_p[], int _n )
 {
   int size = _p[0]->v.i;
   DaoContext_PutCData( _ctx, (void*)(size_t)size, dao_FakeList_Typer );
+}
+static void dao_FakeList_Size( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  int size = (int) DaoCData_GetData( _p[0]->v.cdata );
+  DaoContext_PutInteger( _ctx, size );
 }
 static void dao_FakeList_Iter( DaoContext *_ctx, DValue *_p[], int _n )
 {
@@ -52,6 +59,10 @@ static void dao_FakeList_GetItem( DaoContext *_ctx, DValue *_p[], int _n )
 const char* dao_source = 
 "fl = FakeList(5)\n"
 "for( it in fl ) io.writeln( it )\n"
+"interface Interface{ routine size() }\n"
+"bind Interface to FakeList\n"
+"routine Test( a : Interface ){ io.writeln( a.size() ) }\n"
+"Test( fl );"
 ;
 
 int main( int argc, char *argv[] )

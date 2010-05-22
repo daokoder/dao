@@ -317,7 +317,6 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
     it1 = self->X.klass->objType;
     inters = it1->interfaces;
     if( type->tid == DAO_INTERFACE ){
-      /* TODO for cdata */
       if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( type->X.inter, it1, binds, NULL ) ) return DAO_MT_SUB;
     }
@@ -329,6 +328,10 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
       return DAO_MT_EQ;
     }else if( DaoCData_ChildOf( self->typer, type->typer ) ){
       return DAO_MT_SUB;
+    }else if( type->tid == DAO_INTERFACE ){
+      inters = self->interfaces;
+      if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB;
+      if( DaoInterface_TryBindTo( type->X.inter, self, binds, NULL ) ) return DAO_MT_SUB;
     }else{
       return DAO_MT_NOT;
     }
@@ -498,7 +501,6 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
     tp = value.v.object->myClass->objType;
     inters = tp->interfaces;
     if( self->tid == DAO_INTERFACE ){
-      /* TODO for cdata */
       if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( self->X.inter, tp, NULL, NULL ) ) return DAO_MT_SUB;
     }
@@ -509,6 +511,11 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
       return DAO_MT_EQ;
     }else if( DaoCData_ChildOf( value.v.cdata->typer, self->typer ) ){
       return DAO_MT_SUB;
+    }else if( self->tid == DAO_INTERFACE ){
+      tp = value.v.cdata->typer->priv->abtype;
+      inters = tp->interfaces;
+      if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB;
+      if( DaoInterface_TryBindTo( self->X.inter, tp, NULL, NULL ) ) return DAO_MT_SUB;
     }else{
       return DAO_MT_NOT;
     }
@@ -682,17 +689,28 @@ int DaoInterface_CheckBind
     for(i=0; i<methods->size; i++){
       DRoutine *rout = methods->items.pRout2[i];
       id = DaoClass_FindConst( klass, rout->routName );
-      if( id <0 ) goto RecordFail;
+      if( id <0 ) goto RecordFailA;
       value = klass->cstData->data[id];
-      if( value.t != DAO_ROUTINE && value.t != DAO_FUNCTION ) goto RecordFail;
+      if( value.t != DAO_ROUTINE && value.t != DAO_FUNCTION ) goto RecordFailA;
       if( DRoutine_IsCompatible( value.v.routine, rout->routType, binds ) ==0 )
-        goto RecordFail;
+        goto RecordFailA;
       continue;
-RecordFail:
+RecordFailA:
       if( fails ) DArray_Append( fails, rout );
       fcount += 1;
     }
   }else if( type->tid == DAO_CDATA ){
+    for(i=0; i<methods->size; i++){
+      DRoutine *rout = methods->items.pRout2[i];
+      DaoFunction *func = DaoFindFunction( type->typer, rout->routName );
+      if( func == NULL ) goto RecordFailB;
+      if( DRoutine_IsCompatible( (DRoutine*) func, rout->routType, binds ) ==0 )
+        goto RecordFailB;
+      continue;
+RecordFailB:
+      if( fails ) DArray_Append( fails, rout );
+      fcount += 1;
+    }
   }else{
     fcount += methods->size;
     if( fails ){

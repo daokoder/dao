@@ -34,7 +34,8 @@
 #include"daoRegex.h"
 
 #ifdef DAO_WITH_THREAD
-DMutex dao_setup_mutex;
+DMutex dao_vsetup_mutex;
+DMutex dao_msetup_mutex;
 #endif
 
 static void DNS_GetField( DValue *self0, DaoContext *ctx, DString *name )
@@ -278,7 +279,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
   }
 
 #ifdef DAO_WITH_THREAD
-  DMutex_Lock( & dao_setup_mutex );
+  DMutex_Lock( & dao_vsetup_mutex );
 #endif
   if( typer->priv->values == NULL ){
     values = DHash_New( D_STRING, D_VALUE );
@@ -307,7 +308,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
     }
   }
 #ifdef DAO_WITH_THREAD
-  DMutex_Unlock( & dao_setup_mutex );
+  DMutex_Unlock( & dao_vsetup_mutex );
 #endif
   return 1;
 }
@@ -327,7 +328,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
     DaoNameSpace_SetupMethods( self, typer->supers[i] );
   }
 #ifdef DAO_WITH_THREAD
-  DMutex_Lock( & dao_setup_mutex );
+  DMutex_Lock( & dao_msetup_mutex );
 #endif
   if( typer->priv->methods == NULL ){
     methods = DHash_New( D_STRING, 0 );
@@ -430,7 +431,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
     DString_Delete( name2 );
   }
 #ifdef DAO_WITH_THREAD
-  DMutex_Unlock( & dao_setup_mutex );
+  DMutex_Unlock( & dao_msetup_mutex );
 #endif
   return 1;
 }
