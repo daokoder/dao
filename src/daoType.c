@@ -85,6 +85,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
   self->nested = NULL;
   self->mapNames = NULL;
   self->interfaces = NULL;
+  if( tid == DAO_CDATA ) self->typer = self->X.cdata->typer;
   if( tid == DAO_OBJECT || tid == DAO_CDATA ) self->interfaces = DHash_New(0,0);
   DString_SetMBS( self->name, name );
   DaoType_CheckAttributes( self );

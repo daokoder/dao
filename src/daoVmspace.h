@@ -116,10 +116,4 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DaoVmSpace* DaoInit();
 
-DaoObject* DaoException_GetObject( int id );
-
-extern DaoClass *daoClassException;
-extern DaoClass *daoClassExceptionNone;
-extern DaoClass *daoClassExceptionAny;
-
 #endif

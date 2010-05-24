@@ -70,14 +70,21 @@ DValue DaoFindValue( DaoTypeBase *typer, DString *name )
 }
 DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name )
 {
+  DValue value = daoNullValue;
   DNode *node;
+  if( typer->priv->abtype && typer->priv->abtype->X.extra ){
+    if( DString_EQ( name, typer->priv->abtype->name ) ){
+      value.v.p = typer->priv->abtype->X.extra;
+      if( value.v.p ) value.t = value.v.p->type;
+    }
+  }
   if( typer->priv->values == NULL ){
     DaoNameSpace_SetupValues( typer->priv->nspace, typer );
-    if( typer->priv->values == NULL ) return daoNullValue;
+    if( typer->priv->values == NULL ) return value;
   }
   node = DMap_Find( typer->priv->values, name );
   if( node ) return *node->value.pValue;
-  return daoNullValue;
+  return value;
 }
 
 enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE };
@@ -3096,95 +3103,6 @@ DaoTypeBase cdataTyper =
   (FuncPtrDel)DaoCData_Delete
 };
 DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, NULL,NULL,NULL, & cdataTyper, 0,0,0,0 };
-/*
-DaoException* DaoException_New()
-{
-  DaoException *self = dao_malloc( sizeof(DaoException) );
-  self->fromLine = 0;
-  self->toLine = 0;
-  self->routName = DString_New(1);
-  self->fileName = DString_New(1);
-
-  self->name = DString_New(1);
-  self->content = NULL;
-
-  return self;
-}
-DaoException* DaoException_New2( DaoBase *p )
-{
-  DaoException *self = DaoException_New();
-  self->content = p;
-  GC_IncRC( self->content );
-  return self;
-}
-void DaoException_Delete( DaoException *self )
-{
-  GC_DecRC( self->content );
-  dao_free( self->name );
-  DString_Delete( self->routName );
-  DString_Delete( self->fileName );
-  dao_free( self );
-}
-
-static void dao_DaoException_GETF_name( Dao_Context *ctx, Dao_Base *p[], int n );
-static void dao_DaoException_SETF_name( Dao_Context *ctx, Dao_Base *p[], int n );
-static void dao_DaoException_GETF_content( Dao_Context *ctx, Dao_Base *p[], int n );
-static void dao_DaoException_SETF_content( Dao_Context *ctx, Dao_Base *p[], int n );
-static void dao_DaoException_New( Dao_Context *ctx, Dao_Base *p[], int n );
-static void dao_DaoException_New22( Dao_Context *ctx, Dao_Base *p[], int n );
-
-static Dao_FuncItem dao_DaoException_Meths[] =
-{
-  { dao_DaoException_GETF_name, "_GETF_name( self : DaoException )" },
-  { dao_DaoException_SETF_name, "_SETF_name( self : DaoException, name : string)" },
-  { dao_DaoException_GETF_content, "_GETF_content( self : DaoException )" },
-  { dao_DaoException_SETF_content, "_SETF_content( self : DaoException, content : any)" },
-  { dao_DaoException_New, "DaoException(  )" },
-  { dao_DaoException_New22, "DaoException( content : any )" },
-  { NULL, NULL }
-};
-
-DTypeCData dao_DaoException_Typer = 
-{ NULL, 0, "DaoException", NULL, dao_DaoException_Meths, 
-  { 0 }, NULL, DaoException_Delete, NULL };
-
-static void dao_DaoException_GETF_name( Dao_Context *ctx, Dao_Base *p[], int n )
-{
-  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
-  if( self->name->mbs )
-    DaoContext_PutMBString( ctx, self->name->mbs );
-  else
-    DaoContext_PutWCString( ctx, self->name->wcs );
-}
-static void dao_DaoException_SETF_name( Dao_Context *ctx, Dao_Base *p[], int n )
-{
-  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
-  DString *name = p[1]->v.s;
-  DString_Assign( self->name, name );
-}
-static void dao_DaoException_GETF_content( Dao_Context *ctx, Dao_Base *p[], int n )
-{
-  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
-  DaoContext_SetResult( ctx, self->content );
-}
-static void dao_DaoException_SETF_content( Dao_Context *ctx, Dao_Base *p[], int n )
-{
-  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
-  GC_DecRC( self->content );
-  self->content = p[1];
-  GC_IncRC( self->content );
-}
-static void dao_DaoException_New( Dao_Context *ctx, Dao_Base *p[], int n )
-{
-  DaoException *self = (DaoException*)DaoException_New(  );
-  DaoContext_PutCData( ctx, self, & dao_DaoException_Typer );
-}
-static void dao_DaoException_New22( Dao_Context *ctx, Dao_Base *p[], int n )
-{
-  DaoException *self = (DaoException*)DaoException_New2( p[0] );
-  DaoContext_PutCData( ctx, self, & dao_DaoException_Typer );
-}
-*/
 
 void DaoPair_Delete( DaoPair *self )
 {
@@ -3404,4 +3322,661 @@ DValue DaoTuple_GetItem( DaoTuple *self, int pos )
 {
   if( pos <0 || pos >= self->items->size ) return daoNullValue;
   return self->items->data[pos];
+}
+
+static void DaoException_Init( DaoException *self, DaoTypeBase *typer );
+
+DaoException* DaoException_New( DaoTypeBase *typer )
+{
+  DaoException *self = dao_malloc( sizeof(DaoException) );
+  self->fromLine = 0;
+  self->toLine = 0;
+  self->routName = DString_New(1);
+  self->fileName = DString_New(1);
+
+  self->name = DString_New(1);
+  self->info = DString_New(1);
+  self->data = daoNullValue;
+
+  DaoException_Init( self, typer );
+  return self;
+}
+DaoException* DaoException_New2( DaoTypeBase *typer, DValue v )
+{
+  DaoException *self = DaoException_New( typer );
+  DValue_Move( v, & self->data, NULL );
+  return self;
+}
+void DaoException_Delete( DaoException *self )
+{
+  DValue_Clear( & self->data );
+  DString_Delete( self->name );
+  DString_Delete( self->routName );
+  DString_Delete( self->fileName );
+  dao_free( self );
+}
+
+static void Dao_Exception_Get_name( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_Set_name( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_Get_info( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_Set_info( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_Get_data( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_Set_data( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_New( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_New22( DaoContext *ctx, DValue *p[], int n );
+
+static DaoFuncItem dao_Exception_Meths[] =
+{
+  { Dao_Exception_Get_name, ".name( self : Exception )=>string" },
+  { Dao_Exception_Set_name, ".name=( self : Exception, name : string)" },
+  { Dao_Exception_Get_info, ".info( self : Exception )=>string" },
+  { Dao_Exception_Set_info, ".info=( self : Exception, info : string)" },
+  { Dao_Exception_Get_data, ".data( self : Exception )=>any" },
+  { Dao_Exception_Set_data, ".data=( self : Exception, data : any)" },
+  { Dao_Exception_New, "Exception( info = '' )=>Exception" },
+  { Dao_Exception_New22, "Exception( data : any )=>Exception" },
+  { NULL, NULL }
+};
+
+DaoTypeBase dao_Exception_Typer = 
+{ NULL, "Exception", NULL, dao_Exception_Meths, 
+  { 0 }, NULL, (FuncPtrDel) DaoException_Delete };
+
+static void Dao_Exception_Get_name( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+  DaoContext_PutString( ctx, self->name );
+}
+static void Dao_Exception_Set_name( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+  DString *name = p[1]->v.s;
+  DString_Assign( self->name, name );
+}
+static void Dao_Exception_Get_info( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+  DaoContext_PutString( ctx, self->info );
+}
+static void Dao_Exception_Set_info( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+  DString_Assign( self->info, p[1]->v.s );
+}
+static void Dao_Exception_Get_data( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+  DaoContext_PutValue( ctx, self->data );
+}
+static void Dao_Exception_Set_data( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+  DValue_Move( *p[1], & self->data, NULL );
+}
+static void Dao_Exception_New( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoTypeBase *typer = ctx->regTypes[ ctx->vmc->c ]->typer;
+  DaoException *self = (DaoException*)DaoException_New( typer );
+  if( n ) DString_Assign( self->info, p[0]->v.s );
+  DaoContext_PutCData( ctx, self, typer );
+}
+static void Dao_Exception_New22( DaoContext *ctx, DValue *p[], int n )
+{
+  DaoTypeBase *typer = ctx->regTypes[ ctx->vmc->c ]->typer;
+  DaoException *self = (DaoException*)DaoException_New2( typer, *p[0] );
+  DaoContext_PutCData( ctx, self, typer );
+}
+
+static DaoFuncItem dao_ExceptionNone_Meths[] =
+{
+  { Dao_Exception_New, "None( info = '' )=>None" },
+  { Dao_Exception_New22, "None( data : any )=>None" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ExceptionNone_Typer = 
+{
+  NULL, "None",
+  NULL, dao_ExceptionNone_Meths, 
+  { & dao_Exception_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ExceptionAny_Meths[] =
+{
+  { Dao_Exception_New, "Any( info = '' )=>Any" },
+  { Dao_Exception_New22, "Any( data : any )=>Any" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ExceptionAny_Typer = 
+{
+  NULL, "Any",
+  NULL, dao_ExceptionAny_Meths, 
+  { & dao_Exception_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ExceptionWarning_Meths[] =
+{
+  { Dao_Exception_New, "Warning( info = '' )=>Warning" },
+  { Dao_Exception_New22, "Warning( data : any )=>Warning" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ExceptionWarning_Typer = 
+{
+  NULL, "Warning",
+  NULL, dao_ExceptionWarning_Meths, 
+  { & dao_Exception_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ExceptionError_Meths[] =
+{
+  { Dao_Exception_New, "Error( info = '' )=>Error" },
+  { Dao_Exception_New22, "Error( data : any )=>Error" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ExceptionError_Typer = 
+{
+  NULL, "Error",
+  NULL, dao_ExceptionError_Meths, 
+  { & dao_Exception_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ErrorField_Meths[] =
+{
+  { Dao_Exception_New, "Field( info = '' )=>Field" },
+  { Dao_Exception_New22, "Field( data : any )=>Field" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ErrorField_Typer = 
+{
+  NULL, "Field",
+  NULL, dao_ErrorField_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_NotExist_Meths[] =
+{
+  { Dao_Exception_New, "NotExist( info = '' )=>NotExist" },
+  { Dao_Exception_New22, "NotExist( data : any )=>NotExist" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_FieldNotExist_Typer = 
+{
+  NULL, "NotExist",
+  NULL, dao_NotExist_Meths, 
+  { & dao_ErrorField_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_FieldNotPermit_Meths[] =
+{
+  { Dao_Exception_New, "NotPermit( info = '' )=>NotPermit" },
+  { Dao_Exception_New22, "NotPermit( data : any )=>NotPermit" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_FieldNotPermit_Typer = 
+{
+  NULL, "NotPermit",
+  NULL, dao_FieldNotPermit_Meths, 
+  { & dao_ErrorField_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ErrorFloat_Meths[] =
+{
+  { Dao_Exception_New, "Float( info = '' )=>Float" },
+  { Dao_Exception_New22, "Float( data : any )=>Float" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ErrorFloat_Typer = 
+{
+  NULL, "Float",
+  NULL, dao_ErrorFloat_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_FloatDivByZero_Meths[] =
+{
+  { Dao_Exception_New, "DivByZero( info = '' )=>DivByZero" },
+  { Dao_Exception_New22, "DivByZero( data : any )=>DivByZero" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_FloatDivByZero_Typer = 
+{
+  NULL, "DivByZero",
+  NULL, dao_FloatDivByZero_Meths, 
+  { & dao_ErrorFloat_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_FloatOverFlow_Meths[] =
+{
+  { Dao_Exception_New, "OverFlow( info = '' )=>OverFlow" },
+  { Dao_Exception_New22, "OverFlow( data : any )=>OverFlow" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_FloatOverFlow_Typer = 
+{
+  NULL, "OverFlow",
+  NULL, dao_FloatOverFlow_Meths, 
+  { & dao_ErrorFloat_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_FloatUnderFlow_Meths[] =
+{
+  { Dao_Exception_New, "UnderFlow( info = '' )=>UnderFlow" },
+  { Dao_Exception_New22, "UnderFlow( data : any )=>UnderFlow" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_FloatUnderFlow_Typer = 
+{
+  NULL, "UnderFlow",
+  NULL, dao_FloatUnderFlow_Meths, 
+  { & dao_ErrorFloat_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ErrorIndex_Meths[] =
+{
+  { Dao_Exception_New, "Index( info = '' )=>Index" },
+  { Dao_Exception_New22, "Index( data : any )=>Index" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ErrorIndex_Typer = 
+{
+  NULL, "Index",
+  NULL, dao_ErrorIndex_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_IndexOutOfRange_Meths[] =
+{
+  { Dao_Exception_New, "OutOfRange( info = '' )=>OutOfRange" },
+  { Dao_Exception_New22, "OutOfRange( data : any )=>OutOfRange" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_IndexOutOfRange_Typer = 
+{
+  NULL, "OutOfRange",
+  NULL, dao_IndexOutOfRange_Meths, 
+  { & dao_ErrorIndex_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ErrorKey_Meths[] =
+{
+  { Dao_Exception_New, "Key( info = '' )=>Key" },
+  { Dao_Exception_New22, "Key( data : any )=>Key" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ErrorKey_Typer = 
+{
+  NULL, "Key",
+  NULL, dao_ErrorKey_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+DaoTypeBase dao_KeyNotExist_Typer = 
+{
+  NULL, "NotExist",
+  NULL, dao_NotExist_Meths, 
+  { & dao_ErrorKey_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ErrorParam_Meths[] =
+{
+  { Dao_Exception_New, "Param( info = '' )=>Param" },
+  { Dao_Exception_New22, "Param( data : any )=>Param" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ErrorParam_Typer = 
+{
+  NULL, "Param",
+  NULL, dao_ErrorParam_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_Syntax_Meths[] =
+{
+  { Dao_Exception_New, "Syntax( info = '' )=>Syntax" },
+  { Dao_Exception_New22, "Syntax( data : any )=>Syntax" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_WarningSyntax_Typer = 
+{
+  NULL, "Syntax",
+  NULL, dao_Syntax_Meths, 
+  { & dao_ExceptionWarning_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+DaoTypeBase dao_ErrorSyntax_Typer = 
+{
+  NULL, "Syntax",
+  NULL, dao_Syntax_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_ErrorType_Meths[] =
+{
+  { Dao_Exception_New, "Type( info = '' )=>Type" },
+  { Dao_Exception_New22, "Type( data : any )=>Type" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_ErrorType_Typer = 
+{
+  NULL, "Type",
+  NULL, dao_ErrorType_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoFuncItem dao_Value_Meths[] =
+{
+  { Dao_Exception_New, "Value( info = '' )=>Value" },
+  { Dao_Exception_New22, "Value( data : any )=>Value" },
+  { NULL, NULL }
+};
+DaoTypeBase dao_WarningValue_Typer = 
+{
+  NULL, "Value",
+  NULL, dao_Value_Meths, 
+  { & dao_ExceptionWarning_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+DaoTypeBase dao_ErrorValue_Typer = 
+{
+  NULL, "Value",
+  NULL, dao_Value_Meths, 
+  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, (FuncPtrDel) DaoException_Delete
+};
+
+static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
+{
+  DaoCDataCore *plgCore;
+  DaoCData *cdata;
+  DaoType *abtype;
+
+  /* cdata = DaoCData_New( typer, DaoException_New( typer ) ); */
+  cdata = DaoCData_New( typer, NULL );
+  abtype = DaoType_New( typer->name, DAO_CDATA, (DaoBase*)cdata, NULL );
+  plgCore = DaoCDataCore_New();
+  plgCore->abtype = abtype;
+  plgCore->nspace = ns;
+  plgCore->NewData = typer->New;
+  plgCore->DelData = typer->Delete;
+  typer->priv = (DaoTypeCore*)plgCore;
+  DaoTypeCData_SetMethods( typer );
+  return abtype;
+}
+void DaoException_Setup( DaoNameSpace *ns )
+{
+  DaoType *exception = DaoException_WrapType( ns, & dao_Exception_Typer );
+  DaoType *none = DaoException_WrapType( ns, & dao_ExceptionNone_Typer );
+  DaoType *any = DaoException_WrapType( ns, & dao_ExceptionAny_Typer );
+  DaoType *warning = DaoException_WrapType( ns, & dao_ExceptionWarning_Typer );
+  DaoType *error = DaoException_WrapType( ns, & dao_ExceptionError_Typer );
+  DaoType *field = DaoException_WrapType( ns, & dao_ErrorField_Typer );
+  DaoType *fdnotexist = DaoException_WrapType( ns, & dao_FieldNotExist_Typer );
+  DaoType *fdnotperm = DaoException_WrapType( ns, & dao_FieldNotPermit_Typer );
+  DaoType *tfloat = DaoException_WrapType( ns, & dao_ErrorFloat_Typer );
+  DaoType *fltzero = DaoException_WrapType( ns, & dao_FloatDivByZero_Typer );
+  DaoType *fltoflow = DaoException_WrapType( ns, & dao_FloatOverFlow_Typer );
+  DaoType *fltuflow = DaoException_WrapType( ns, & dao_FloatUnderFlow_Typer );
+  DaoType *index = DaoException_WrapType( ns, & dao_ErrorIndex_Typer );
+  DaoType *idorange = DaoException_WrapType( ns, & dao_IndexOutOfRange_Typer );
+  DaoType *key = DaoException_WrapType( ns, & dao_ErrorKey_Typer );
+  DaoType *keynotexist = DaoException_WrapType( ns, & dao_KeyNotExist_Typer );
+  DaoType *param = DaoException_WrapType( ns, & dao_ErrorParam_Typer );
+  DaoType *wsyntax = DaoException_WrapType( ns, & dao_WarningSyntax_Typer );
+  DaoType *esyntax = DaoException_WrapType( ns, & dao_ErrorSyntax_Typer );
+  DaoType *wvalue = DaoException_WrapType( ns, & dao_WarningValue_Typer );
+  DaoType *evalue = DaoException_WrapType( ns, & dao_ErrorValue_Typer );
+  DaoType *type = DaoException_WrapType( ns, & dao_ErrorType_Typer );
+  DValue value = daoNullCData;
+
+  value.v.cdata = exception->X.cdata;
+  DaoNameSpace_AddConst( ns, exception->name, value );
+  DaoNameSpace_AddType( ns, exception->name, exception );
+
+  DaoNameSpace_SetupValues( ns, & dao_Exception_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ExceptionNone_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ExceptionAny_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ExceptionWarning_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ExceptionError_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorField_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_FieldNotExist_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_FieldNotPermit_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorFloat_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_FloatDivByZero_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_FloatOverFlow_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_FloatUnderFlow_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorIndex_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_IndexOutOfRange_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorKey_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_KeyNotExist_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorParam_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorSyntax_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorValue_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_ErrorType_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_WarningSyntax_Typer );
+  DaoNameSpace_SetupValues( ns, & dao_WarningValue_Typer );
+
+  /* setup hierarchicy of exception types: */
+  value.v.cdata = none->X.cdata;
+  DMap_Insert( exception->typer->priv->values, none->name, & value );
+  value.v.cdata = any->X.cdata;
+  DMap_Insert( exception->typer->priv->values, any->name, & value );
+  value.v.cdata = warning->X.cdata;
+  DMap_Insert( exception->typer->priv->values, warning->name, & value );
+  value.v.cdata = error->X.cdata;
+  DMap_Insert( exception->typer->priv->values, error->name, & value );
+  value.v.cdata = field->X.cdata;
+  DMap_Insert( error->typer->priv->values, field->name, & value );
+  value.v.cdata = fdnotexist->X.cdata;
+  DMap_Insert( field->typer->priv->values, fdnotexist->name, & value );
+  value.v.cdata = fdnotperm->X.cdata;
+  DMap_Insert( field->typer->priv->values, fdnotperm->name, & value );
+  value.v.cdata = tfloat->X.cdata;
+  DMap_Insert( error->typer->priv->values, tfloat->name, & value );
+  value.v.cdata = fltzero->X.cdata;
+  DMap_Insert( tfloat->typer->priv->values, fltzero->name, & value );
+  value.v.cdata = fltoflow->X.cdata;
+  DMap_Insert( tfloat->typer->priv->values, fltoflow->name, & value );
+  value.v.cdata = fltuflow->X.cdata;
+  DMap_Insert( tfloat->typer->priv->values, fltuflow->name, & value );
+  value.v.cdata = index->X.cdata;
+  DMap_Insert( error->typer->priv->values, index->name, & value );
+  value.v.cdata = idorange->X.cdata;
+  DMap_Insert( index->typer->priv->values, idorange->name, & value );
+  value.v.cdata = key->X.cdata;
+  DMap_Insert( error->typer->priv->values, key->name, & value );
+  value.v.cdata = keynotexist->X.cdata;
+  DMap_Insert( key->typer->priv->values, keynotexist->name, & value );
+  value.v.cdata = param->X.cdata;
+  DMap_Insert( error->typer->priv->values, param->name, & value );
+  value.v.cdata = esyntax->X.cdata;
+  DMap_Insert( error->typer->priv->values, esyntax->name, & value );
+  value.v.cdata = evalue->X.cdata;
+  DMap_Insert( error->typer->priv->values, evalue->name, & value );
+  value.v.cdata = type->X.cdata;
+  DMap_Insert( error->typer->priv->values, type->name, & value );
+  value.v.cdata = wsyntax->X.cdata;
+  DMap_Insert( warning->typer->priv->values, wsyntax->name, & value );
+  value.v.cdata = wvalue->X.cdata;
+  DMap_Insert( warning->typer->priv->values, wvalue->name, & value );
+
+  DaoNameSpace_SetupMethods( ns, & dao_Exception_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ExceptionNone_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ExceptionAny_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ExceptionWarning_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ExceptionError_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorField_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_FieldNotExist_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_FieldNotPermit_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorFloat_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_FloatDivByZero_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_FloatOverFlow_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_FloatUnderFlow_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorIndex_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_IndexOutOfRange_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorKey_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_KeyNotExist_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorParam_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorSyntax_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorValue_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_ErrorType_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_WarningSyntax_Typer );
+  DaoNameSpace_SetupMethods( ns, & dao_WarningValue_Typer );
+}
+DaoTypeBase* DaoException_GetType( int type )
+{
+  switch( type ){
+  case DAO_EXCEPT_NONE : return & dao_ExceptionNone_Typer;
+  case DAO_EXCEPT_ANY : return & dao_ExceptionAny_Typer;
+  case DAO_WARNING : return & dao_ExceptionWarning_Typer;
+  case DAO_ERROR : return & dao_ExceptionError_Typer;
+  case DAO_ERROR_FIELD : return & dao_ErrorField_Typer;
+  case DAO_ERROR_FIELD_NOTEXIST : return & dao_FieldNotExist_Typer;
+  case DAO_ERROR_FIELD_NOTPERMIT : return & dao_FieldNotPermit_Typer;
+  case DAO_ERROR_FLOAT : return & dao_ErrorFloat_Typer;
+  case DAO_ERROR_FLOAT_DIVBYZERO : return & dao_FloatDivByZero_Typer;
+  case DAO_ERROR_FLOAT_OVERFLOW : return & dao_FloatOverFlow_Typer;
+  case DAO_ERROR_FLOAT_UNDERFLOW : return & dao_FloatUnderFlow_Typer;
+  case DAO_ERROR_INDEX : return & dao_ErrorIndex_Typer;
+  case DAO_ERROR_INDEX_OUTOFRANGE : return & dao_IndexOutOfRange_Typer;
+  case DAO_ERROR_KEY : return & dao_ErrorKey_Typer;
+  case DAO_ERROR_KEY_NOTEXIST : return & dao_KeyNotExist_Typer;
+  case DAO_ERROR_PARAM : return & dao_ErrorParam_Typer;
+  case DAO_ERROR_SYNTAX : return & dao_ErrorSyntax_Typer;
+  case DAO_ERROR_TYPE : return & dao_ErrorType_Typer;
+  case DAO_ERROR_VALUE : return & dao_ErrorValue_Typer;
+  case DAO_WARNING_SYNTAX : return & dao_WarningSyntax_Typer;
+  case DAO_WARNING_VALUE : return & dao_WarningValue_Typer;
+  default : break;
+  }
+  return & dao_Exception_Typer;
+}
+void DaoException_Init( DaoException *self, DaoTypeBase *typer )
+{
+  if( typer == & dao_Exception_Typer ){
+    DString_SetMBS( self->name, "Exception" );
+    DString_SetMBS( self->info, "undefined exception" );
+    return;
+  }
+  if( typer == & dao_ExceptionNone_Typer ){
+    DString_SetMBS( self->name, "Exception.None" );
+    DString_SetMBS( self->info, "none exception" );
+    return;
+  }
+  if( typer == & dao_ExceptionAny_Typer ){
+    DString_SetMBS( self->name, "Exception.Any" );
+    DString_SetMBS( self->info, "any or none exception" );
+    return;
+  }
+  if( typer == & dao_ExceptionWarning_Typer ){
+    DString_SetMBS( self->name, "Exception.Warning" );
+    DString_SetMBS( self->info, "undefined error" );
+    return;
+  }
+  if( typer == & dao_ExceptionError_Typer ){
+    DString_SetMBS( self->name, "Exception.Error" );
+    DString_SetMBS( self->info, "undefined error" );
+    return;
+  }
+  if( typer == & dao_ErrorField_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Field" );
+    DString_SetMBS( self->info, "invalid field accessing" );
+    return;
+  }
+  if( typer == & dao_FieldNotExist_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Field.NotExist" );
+    DString_SetMBS( self->info, "field not exist" );
+    return;
+  }
+  if( typer == & dao_FieldNotPermit_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Field.NotPermit" );
+    DString_SetMBS( self->info, "field not permit" );
+    return;
+  }
+  if( typer == & dao_ErrorFloat_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Float" );
+    DString_SetMBS( self->info, "invalid floating point operation" );
+    return;
+  }
+  if( typer == & dao_FloatDivByZero_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Float" );
+    DString_SetMBS( self->info, "division by zero" );
+    return;
+  }
+  if( typer == & dao_FloatOverFlow_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Float" );
+    DString_SetMBS( self->info, "floating point overflow" );
+    return;
+  }
+  if( typer == & dao_FloatUnderFlow_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Float" );
+    DString_SetMBS( self->info, "floating point underflow" );
+    return;
+  }
+  if( typer == & dao_ErrorIndex_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Index" );
+    DString_SetMBS( self->info, "invalid index" );
+    return;
+  }
+  if( typer == & dao_IndexOutOfRange_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Index.OutOfRange" );
+    DString_SetMBS( self->info, "index out of range" );
+    return;
+  }
+  if( typer == & dao_ErrorKey_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Key" );
+    DString_SetMBS( self->info, "invalid key" );
+    return;
+  }
+  if( typer == & dao_KeyNotExist_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Key.NotExist" );
+    DString_SetMBS( self->info, "key not exist" );
+    return;
+  }
+  if( typer == & dao_ErrorParam_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Param" );
+    DString_SetMBS( self->info, "invalid parameter list for the call" );
+    return;
+  }
+  if( typer == & dao_ErrorSyntax_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Syntax" );
+    DString_SetMBS( self->info, "invalid syntax" );
+    return;
+  }
+  if( typer == & dao_ErrorValue_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Value" );
+    DString_SetMBS( self->info, "invalid variable value for the operation" );
+    return;
+  }
+  if( typer == & dao_ErrorType_Typer ){
+    DString_SetMBS( self->name, "Exception.Error.Type" );
+    DString_SetMBS( self->info, "invalid variable type for the operation" );
+    return;
+  }
+  if( typer == & dao_WarningSyntax_Typer ){
+    DString_SetMBS( self->name, "Exception.Warning.Syntax" );
+    DString_SetMBS( self->info, "invalid syntax" );
+    return;
+  }
+  if( typer == & dao_WarningValue_Typer ){
+    DString_SetMBS( self->name, "Exception.Warning.Value" );
+    DString_SetMBS( self->info, "invalid value for the operation" );
+    return;
+  }
 }

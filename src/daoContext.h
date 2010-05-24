@@ -36,8 +36,8 @@ struct DaoContext
   DaoVmCode  *vmc; /* current virtual machine code */
   DaoVmFrame *frame;
   
-  DVaTuple     *regArray; /* virtual registers for the call */
-  DValue      **regValues;
+  DVaTuple  *regArray; /* virtual registers for the call */
+  DValue   **regValues;
   DaoType  **regTypes; /* = routine->regType->items.pAbtp; */
 
   ushort_t  entryCode;

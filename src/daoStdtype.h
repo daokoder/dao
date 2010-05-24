@@ -193,26 +193,6 @@ extern DaoTypeBase cdataTyper;
 extern DaoCData cptrCData;
 
 
-/*
-struct DaoException
-{
-  int    fromLine;
-  int    toLine;
-
-  DString  *routName;
-  DString  *fileName;
-
-  DString *name;
-  DaoBase *content;
-};
-
-DaoException* DaoException_New();
-DaoException* DaoException_New2( DaoBase *p );
-void DaoException_Delete( DaoException *self );
-
-extern DaoTypeCData dao_DaoException_Typer;
-*/
-
 /* DaoPair is not data type for general use, it is mainly used for index pair,
  * and object-method pair.
  *
@@ -250,5 +230,26 @@ struct IndexValue
   DValue  value;
 };
 void QuickSort( IndexValue *data, int first, int last, int part, int asc );
+
+struct DaoException
+{
+	int    fromLine;
+	int    toLine;
+
+	DString  *routName;
+	DString  *fileName;
+	DString  *name;
+  DString  *info;
+	DValue    data;
+};
+
+DaoException* DaoException_New( DaoTypeBase *typer );
+DaoException* DaoException_New2( DaoTypeBase *typer, DValue v );
+void DaoException_Delete( DaoException *self );
+void DaoException_Setup( DaoNameSpace *ns );
+
+DaoTypeBase* DaoException_GetType( int type );
+
+extern DaoTypeBase dao_Exception_Typer;
 
 #endif

@@ -1138,6 +1138,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
     abtp = ((DaoObject*)p)->myClass->objType; break;
   case DAO_CLASS :
     abtp = ((DaoClass*)p)->clsType; break;
+  case DAO_CDATA :
+    abtp = ((DaoCData*)p)->typer->priv->abtype; break;
   case DAO_ROUTINE :
   case DAO_FUNCTION :
     rout = (DRoutine*) p;

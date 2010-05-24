@@ -3039,29 +3039,27 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
   }
   self->process->status = DAO_VMPROC_RUNNING;
 }
-void DaoPrintException( DaoObject *except, DaoStream *stream, char *header )
+void DaoPrintException( DaoCData *except, DaoStream *stream, char *header )
 {
-  DValue *data;
-  except = (DaoObject*) DaoObject_MapThisObject( except, daoClassException->objType );
-  data = except->objValues;
+  DaoException *ex = (DaoException*) except->data;
   DaoStream_WriteMBS( stream, header );
-  DaoStream_WriteString( stream, data[1].v.s );
+  DaoStream_WriteString( stream, ex->routName );
   DaoStream_WriteMBS( stream, "():" );
   DaoStream_WriteNewLine( stream );
   DaoStream_WriteMBS( stream, "  At line #" );
-  DaoStream_WriteInt( stream, data[3].v.i );
-  if( data[3].v.i != data[4].v.i ){
+  DaoStream_WriteInt( stream, ex->fromLine );
+  if( ex->fromLine != ex->toLine ){
     DaoStream_WriteMBS( stream, " - #" );
-    DaoStream_WriteInt( stream, data[4].v.i );
+    DaoStream_WriteInt( stream, ex->toLine );
   }
   DaoStream_WriteMBS( stream, ", in file \"" );
-  DaoStream_WriteString( stream, data[2].v.s );
+  DaoStream_WriteString( stream, ex->fileName );
   DaoStream_WriteMBS( stream, "\";" );
   DaoStream_WriteNewLine( stream );
   DaoStream_WriteMBS( stream, "  " );
-  DaoStream_WriteString( stream, data[5].v.s );
+  DaoStream_WriteString( stream, ex->name );
   DaoStream_WriteMBS( stream, ": " );
-  DaoStream_WriteString( stream, data[6].v.s );
+  DaoStream_WriteString( stream, ex->info );
   DaoStream_WriteNewLine( stream );
 }
 void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
@@ -3070,7 +3068,7 @@ void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
   DValue *excobjs = self->exceptions->data;
   int i;
   for(i=0; i<self->exceptions->size; i++)
-    DaoPrintException( excobjs[i].v.object, stdio, "Un-rescued exception raised by " );
+    DaoPrintException( excobjs[i].v.cdata, stdio, "Un-rescued exception raised by " );
   if( clear ){
     DVarray_Clear( self->exceptions );
   }

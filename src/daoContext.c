@@ -66,7 +66,7 @@ extern void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p,
 
 extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
 int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *ret );
-void DaoPrintException( DaoObject *except, DaoStream *stream, char *header );
+void DaoPrintException( DaoCData *except, DaoStream *stream, char *header );
 
 void DaoVmCode_Print( DaoVmCode self, char *buffer )
 {
@@ -4027,11 +4027,13 @@ int DaoContext_DoCheckExcept( DaoContext *self, DaoVmCode *vmc )
   if( DaoContext_CheckFE( self ) ) return 1;
   return ( self->process->exceptions->size > 0 );
 }
-static void DaoInitException( DaoObject *except, DaoContext *ctx, DaoVmCode *vmc, 
-    int fe, const char *value )
+static void DaoInitException
+( DaoCData *except, DaoContext *ctx, DaoVmCode *vmc, 
+  int fe, const char *value )
 {
   DaoRoutine *rout = ctx->routine;
-  DaoBase *feClass = (DaoBase*)DaoException_GetObject( DAO_ERROR_FLOAT )->myClass;
+  DaoTypeBase *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
+  DaoException *exdat = (DaoException*) except->data;
   DaoVmCodeX **annotCodes = rout->annotCodes->items.pVmc;
   DValue *objData;
   int line, line2;
@@ -4039,24 +4041,21 @@ static void DaoInitException( DaoObject *except, DaoContext *ctx, DaoVmCode *vmc
   line = line2 = rout->defLine;
   if( vmc && rout->vmCodes->size ) line = annotCodes[id]->line;
   line2 = line;
-  except = (DaoObject*) DaoObject_MapThisObject( except, daoClassException->objType );
-  printf( "except = %p\n", except );
-  objData = except->objValues;
-  DString_Assign( objData[1].v.s, rout->routName );
-  DString_Assign( objData[2].v.s, rout->nameSpace->name );
-  objData[3].v.i = line;
-  if( DaoClass_ChildOf( except->myClass, (DaoBase*) feClass ) && fe >=0 )
+  DString_Assign( exdat->routName, rout->routName );
+  DString_Assign( exdat->fileName, rout->nameSpace->name );
+  exdat->fromLine = line;
+  if( DaoCData_ChildOf( except->typer, efloat ) && fe >=0 )
     line2 = (vmc && rout->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
-  objData[4].v.i = line2;
-  if( value && value[0] != 0 ) DString_SetMBS( objData[6].v.s, value );
+  exdat->toLine = line2;
+  if( value && value[0] != 0 ) DString_SetMBS( exdat->info, value );
 }
 extern void STD_Debug( DaoContext *ctx, DaoBase *p[], int N );
 void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc )
 {
   DaoStream *stdio = self->vmSpace->stdStream;
-  DaoClass  *q;
-  DaoObject *p;
-  DaoBase *warnClass = (DaoBase*)DaoException_GetObject( DAO_WARNING )->myClass;
+  DaoCData *cdata = NULL;
+  DaoTypeBase *except = & dao_Exception_Typer;
+  DaoTypeBase *warning = DaoException_GetType( DAO_WARNING );
   DaoList *list = self->nameSpace->varData->data[DVR_NSV_EXCEPTIONS].v.list;
   DValue *excepts = self->regArray->data + vmc->a;
   DValue val;
@@ -4069,25 +4068,24 @@ void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc )
   }
   for(i=0; i<N; i++){
     val = excepts[i];
-    if( val.t == DAO_OBJECT || val.t == DAO_CLASS ){
-      if( val.t == DAO_CLASS ){
-        q = val.v.klass;
-        p = DaoObject_New( val.v.klass, NULL, 0 );
-        val.t = DAO_OBJECT;
-        val.v.object = p;
+    if( val.t == DAO_OBJECT || val.t == DAO_CDATA ){
+      cdata = NULL;
+      if( val.t == DAO_OBJECT ){
+        DaoType *type = except->priv->abtype;
+        cdata = (DaoCData*) DaoObject_MapThisObject( val.v.object, type );
       }else{
-        p = val.v.object;
-        q = val.v.object->myClass;
+        if( DaoCData_ChildOf( val.v.cdata->typer, except ) )
+          cdata = val.v.cdata;
       }
-      if( DaoClass_ChildOf( q, (DaoBase*) daoClassException ) ==0 ){
-        DaoContext_RaiseException( self, DAO_ERROR, "invalid exception class" );
-        break;
-      }
-      DaoInitException( p, self, vmc, self->idClearFE, NULL );
-      if( DaoClass_ChildOf( q, warnClass ) )
-        DaoPrintException( p, stdio, "Un-suppressed warning raised by " );
+      if( cdata == NULL || cdata->data == NULL ) goto InvalidException;
+      DaoInitException( cdata, self, vmc, self->idClearFE, NULL );
+      if( DaoCData_ChildOf( cdata->typer, warning ) )
+        DaoPrintException( cdata, stdio, "Un-suppressed warning raised by " );
       DVarray_Append( self->process->exceptions, val );
     }
+InvalidException:
+    DaoContext_RaiseException( self, DAO_ERROR, "invalid exception object" );
+    break;
   }
   DaoList_Clear( list );
   if( self->vmSpace->options & DAO_EXEC_DEBUG ){
@@ -4098,7 +4096,11 @@ void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc )
 int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 {
   DaoList *list = self->nameSpace->varData->data[DVR_NSV_EXCEPTIONS].v.list;
-  DaoClass  *p, *q;
+  DaoTypeBase *ext = & dao_Exception_Typer;
+  DaoTypeBase *any = DaoException_GetType( DAO_EXCEPT_ANY );
+  DaoTypeBase *none = DaoException_GetType( DAO_EXCEPT_NONE );
+  DaoClass *p, *q;
+  DaoCData *cdata;
   DValue **excepts = self->regValues + vmc->a;
   DValue val, val2;
   ushort_t i, j;
@@ -4114,19 +4116,31 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
   }
   for(i=0; i<N; i++){
     val = *excepts[i];
-    if( val.t == DAO_OBJECT || val.t == DAO_CLASS ){
-      p = val.t == DAO_CLASS ? val.v.klass : val.v.object->myClass;
-      if( DaoClass_ChildOf( p, (DaoBase*)daoClassExceptionAny ) ){
+    if( val.t == DAO_OBJECT || val.t == DAO_CDATA ){
+      cdata = val.v.cdata;
+      if( val.t == DAO_OBJECT ){
+        DaoType *type = ext->priv->abtype;
+        cdata = (DaoCData*) DaoObject_MapThisObject( val.v.object, type );
+      }
+      if( cdata && DaoCData_ChildOf( cdata->typer, any ) ){
         DVarray_Swap( self->process->exceptions, list->items );
         return 1;
-      }else if( DaoClass_ChildOf( p, (DaoBase*)daoClassExceptionNone ) && M == 0 ){
+      }else if( cdata && DaoCData_ChildOf( cdata->typer, none ) && M ==0 ){
         return 1;
-      }else{
+      }else if( cdata ){
         for(j=0; j<self->process->exceptions->size; j++){
           val2 = self->process->exceptions->data[j];
-          if( val2.t == DAO_OBJECT || val2.t == DAO_CLASS ){
-            q = val2.t == DAO_CLASS ? val2.v.klass : val2.v.object->myClass;
-            if( DaoClass_ChildOf( q, (DaoBase*)p ) ){
+          if( val2.t == DAO_OBJECT || val2.t == DAO_CDATA ){
+            DaoCData *cdata2 = val2.v.cdata;
+            if( val2.t == DAO_OBJECT ){
+              DaoType *type = ext->priv->abtype;
+              cdata2 = (DaoCData*) DaoObject_MapThisObject( val2.v.object, type );
+            }
+            if( cdata2 == NULL ){
+              /* XXX */
+              continue;
+            }
+            if( DaoCData_ChildOf( cdata2->typer, cdata->typer ) ){
               canRescue = 1;
               DVarray_Append( list->items, val2 );
               DVarray_Erase( self->process->exceptions, j, 1 );
@@ -4134,6 +4148,7 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
             }
           }
         }
+      }else{
       }
     }
   }
@@ -4141,21 +4156,24 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 }
 void DaoContext_RaiseException( DaoContext *self, int type, const char *value )
 {
-  DaoBase *warnClass = (DaoBase*)DaoException_GetObject( DAO_WARNING )->myClass;
+  DaoTypeBase *typer;
+  DaoTypeBase *warning = DaoException_GetType( DAO_WARNING );
   DaoStream *stdio = self->vmSpace->stdStream;
-  DaoObject *object;
-  DValue val = daoNullObject;
+  DaoCData *cdata;
+  DValue val = daoNullCData;
   if( type <= 1 ) return;
   if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
 
-  object = DaoException_GetObject( type );
-  if( DaoClass_ChildOf( object->myClass, warnClass ) ){
+  typer = DaoException_GetType( type );
+  if( DaoCData_ChildOf( typer, warning ) ){
     /* XXX support warning suppression */
-    DaoPrintException( object, stdio, "Un-suppressed warning raised by " );
+    DaoPrintException( typer->priv->abtype->X.cdata, stdio, 
+        "Un-suppressed warning raised by " );
     return;
   }
-  val.v.object = DaoObject_New( object->myClass, NULL, 0 );
-  DaoInitException( val.v.object, self, self->vmc, self->idClearFE, value );
+  cdata = DaoCData_New( typer, DaoException_New( typer ) );
+  val.v.cdata = cdata;
+  DaoInitException( cdata, self, self->vmc, self->idClearFE, value );
   DVarray_Append( self->process->exceptions, val );
   if( (self->vmSpace->options & DAO_EXEC_DEBUG) ){
     if( self->process->stopit ==0 && self->vmSpace->stopit ==0 ){

@@ -104,108 +104,7 @@ static const char* daoScripts =
 "class FutureValue {\n"
 "    var Value;\n"
 "    routine FutureValue( value ){ Value = value; }\n"
-"}\n"
-"\n"
-"class Exception {\n"
-"  routine Exception( content='' ){ Content = content }\n"
-"  protected\n"
-"    var Rout = '';\n"
-"    var File = '';\n"
-"    var FromLine = 0;\n"
-"    var ToLine = 0;\n"
-"  public\n"
-"    var Name  = 'Exception';\n"
-"    var Content : any = 'undefined exception';\n"
-"}\n"
-"\n"
-"class Exception::None : Exception {\n"
-"  Name := 'ExceptionNone';\n"
-"  Content := 'none exception' }\n"
-"class Exception::Any : Exception {\n"
-"  Name := 'ExceptionAny';\n"
-"  Content := 'any or none exception' }\n"
-"class Error : Exception {\n"
-"  Name := 'Error';\n"
-"  Content := 'undefined error' }\n"
-"class Warning : Exception {\n"
-"  Name := 'Warning';\n"
-"  Content := 'undefined error' }\n"
-"\n"
-"global ExceptionNone = Exception::None{};\n"
-"global ExceptionAny = Exception::Any{};\n"
-"global ExceptionError = Error{};\n"
-"global ExceptionWarning = Warning{};\n"
-"\n"
-"class Error::Field : Error {\n"
-"  Name := 'ErrorField';\n"
-"  Content := 'invalid field accessing' }\n"
-"class Error::Field::NotExist : Error::Field {\n"
-"  Name := 'ErrorFieldNotExist';\n"
-"  Content := 'field not exist' }\n"
-"class Error::Field::NotPermit : Error::Field {\n"
-"  Name := 'ErrorFieldNotPermit';\n"
-"  Content := 'field not permit' }\n"
-"class Error::Float : Error {\n"
-"  Name := 'ErrorFloat';\n"
-"  Content := 'invalid floating point operation' }\n"
-"class Error::Float::DivByZero : Error::Float {\n"
-"  Name := 'ErrorFloatDivByZero';\n"
-"  Content := 'division by zero' }\n"
-"class Error::Float::OverFlow : Error::Float {\n"
-"  Name := 'ErrorFloatOverFlow';\n"
-"  Content := 'floating point overflow' }\n"
-"class Error::Float::UnderFlow : Error::Float {\n"
-"  Name := 'ErrorFloatUnderFlow';\n"
-"  Content := 'floating point underflow' }\n"
-"class Error::Index : Error {\n"
-"  Name := 'ErrorIndex';\n"
-"  Content := 'invalid index' }\n"
-"class Error::Index::OutOfRange : Error::Index {\n"
-"  Name := 'ErrorIndexOutOfRange';\n"
-"  Content := 'index out of range' }\n"
-"class Error::Key : Error {\n"
-"  Name := 'ErrorKey';\n"
-"  Content := 'invalid key' }\n"
-"class Error::Key::NotExist : Error::Key {\n"
-"  Name := 'ErrorKeyNotExist';\n"
-"  Content := 'key not exist' }\n"
-"class Error::Param : Error {\n"
-"  Name := 'ErrorParam';\n"
-"  Content := 'invalid parameter list for the call' }\n"
-"class Error::Syntax : Error {\n"
-"  Name := 'ErrorSyntax';\n"
-"  Content := 'invalid syntax' }\n"
-"class Error::Type : Error {\n"
-"  Name := 'ErrorType';\n"
-"  Content := 'invalid variable type for the operation' }\n"
-"class Error::Value : Error {\n"
-"  Name := 'ErrorValue';\n"
-"  Content := 'invalid variable value for the operation' }\n"
-"\n"
-"global ErrorField = Error::Field{};\n"
-"global ErrorFieldNotExist = Error::Field::NotExist{};\n"
-"global ErrorFieldNotPermit = Error::Field::NotPermit{};\n"
-"global ErrorFloat = Error::Float{};\n"
-"global ErrorFloatDivByZero = Error::Float::DivByZero{};\n"
-"global ErrorFloatOverFlow = Error::Float::OverFlow{};\n"
-"global ErrorFloatUnderFlow = Error::Float::UnderFlow{};\n"
-"global ErrorIndex = Error::Index{};\n"
-"global ErrorIndexOutOfRange = Error::Index::OutOfRange{};\n"
-"global ErrorKey = Error::Key{};\n"
-"global ErrorKeyNotExist = Error::Key::NotExist{};\n"
-"global ErrorParam = Error::Param{};\n"
-"global ErrorSyntax = Error::Syntax{};\n"
-"global ErrorType = Error::Type{};\n"
-"global ErrorValue = Error::Value{};\n"
-"\n"
-"class Warning::Syntax : Warning {\n"
-"  Name := 'WarningSyntax';\n"
-"  Content := 'invalid syntax' }\n"
-"class Warning::Value : Warning {\n"
-"  Name := 'WarningValue';\n"
-"  Content := 'invalid value for the operation' }\n"
-"global WarningSyntax = Warning::Syntax{};\n"
-"global WarningValue = Warning::Value{};";
+"}\n";
 
 /* TODO: modify proxy_receive() so that it can be run in native thread: */
 static const char* daoProxyScripts =
@@ -1748,14 +1647,6 @@ extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase coroutTyper;
 
-/* extern DaoTypeBase dao_DaoException_Typer; */
-
-DaoObject* daoExceptionObjects[50];
-
-DaoClass *daoClassException = NULL;
-DaoClass *daoClassExceptionNone = NULL;
-DaoClass *daoClassExceptionAny = NULL;
-
 DaoClass *daoClassFutureValue = NULL;
 
 extern DaoTypeBase DaoFdSet_Typer;
@@ -2165,19 +2056,6 @@ DaoVmSpace* DaoInit()
   DaoNameSpace *ns;
   DString *mbs;
   DArray *nested;
-#if 0
-  DaoTypeBase *typers[] = { 
-    & stringTyper, & comTyper, & longTyper, & listTyper, & mapTyper,
-    & streamTyper, & vmpTyper, & coroutTyper, & libStandardTyper, 
-    & libMathTyper, & libMpiTyper, & libReflectTyper
-#ifdef DAO_WITH_NUMARRAY
-    & numarTyper,
-#endif
-#ifdef DAO_WITH_THREAD
-    & mutexTyper, & condvTyper, & semaTyper, & threadTyper, & thdMasterTyper, 
-#endif
-    NULL };
-#endif
 
   if( mainVmSpace ) return mainVmSpace;
 
@@ -2232,7 +2110,7 @@ DaoVmSpace* DaoInit()
   DString_SetMBS( dao_array_bit->name, "bitarray" );
   DaoNameSpace_AddType( ns, dao_array_bit->name, dao_array_bit );
   
-#if 1
+#if 0
   /*
   DaoVmSpace_AddType( vms, & dao_DaoException_Typer );
   */
@@ -2241,29 +2119,12 @@ DaoVmSpace* DaoInit()
   DString_SetMBS( vms->srcFName, "internal scripts" );
   DaoVmProcess_Eval( vms->mainProcess, vms->nsInternal, vms->source, 0 );
 
-  DString_SetMBS( mbs, "Exception" );
-  daoClassException = DaoNameSpace_GetData( vms->nsInternal, mbs ).v.klass;
-  for(i=0; i<ENDOF_BASIC_EXCEPT; i++ ){
-    DString_SetMBS( mbs, daoExceptionName[i] );
-    daoExceptionObjects[i] = DaoNameSpace_GetData( vms->nsInternal, mbs ).v.object;
-    GC_IncRC( daoExceptionObjects[i] );
-  }
-  daoClassExceptionNone = daoExceptionObjects[ DAO_EXCEPT_NONE ]->myClass;
-  daoClassExceptionAny = daoExceptionObjects[ DAO_EXCEPT_ANY ]->myClass;
-  GC_IncRC( daoClassException );
-  GC_IncRC( daoClassExceptionNone );
-  GC_IncRC( daoClassExceptionAny );
   DString_SetMBS( mbs, "FutureValue" );
   daoClassFutureValue = DaoNameSpace_GetData( vms->nsInternal, mbs ).v.klass;
   GC_IncRC( daoClassFutureValue );
-
-#else
-  for(i=0; i<ENDOF_BASIC_EXCEPT; i++ ) daoExceptionObjects[i] = NULL;
 #endif
+
   vms->nsWorking = vms->nsInternal;
-
-
-#if 1
 
 #ifdef DAO_WITH_NUMARRAY
   DaoNameSpace_SetupType( vms->nsWorking, & numarTyper );
@@ -2278,6 +2139,8 @@ DaoVmSpace* DaoInit()
 
   DaoNameSpace_SetupType( vms->nsWorking, & streamTyper );
   DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper );
+
+  DaoException_Setup( vms->nsInternal );
 
 #ifdef DAO_WITH_THREAD
   DaoNameSpace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
@@ -2297,7 +2160,6 @@ DaoVmSpace* DaoInit()
   DaoNameSpace_WrapType( vms->nsWorking, & libMathTyper );
   DaoNameSpace_WrapType( vms->nsWorking, & libMpiTyper );
   DaoNameSpace_WrapType( vms->nsWorking, & libReflectTyper );
-#endif
 
 #if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
   DaoSched_Init( vms );
@@ -2366,10 +2228,6 @@ void DaoQuit()
   DaoTypeBase_Free( & libNetTyper );
 #endif
 
-  for(i=0; i<ENDOF_BASIC_EXCEPT; i++ ) GC_DecRC( daoExceptionObjects[i] );
-  GC_DecRC( daoClassException );
-  GC_DecRC( daoClassExceptionNone );
-  GC_DecRC( daoClassExceptionAny );
   GC_DecRC( daoClassFutureValue );
 
   /* printf( "%i\n", mainVmSpace->nsWorking->refCount ); */
@@ -2444,10 +2302,4 @@ void* DaoGetSymbolAddress( void *handle, const char *name )
   void *sym = (void*)GetProcAddress( (HMODULE)handle, name );
 #endif
   return sym;
-}
-
-DaoObject* DaoException_GetObject( int type )
-{
-  if( type < 0 || type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
-  return daoExceptionObjects[type];
 }
