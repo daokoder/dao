@@ -1388,6 +1388,15 @@ static void DaoSTR_Decrypt( DaoContext *ctx, DValue *p[], int N )
   if( rc ) DaoContext_RaiseException( ctx, DAO_ERROR, errmsg[rc-1] );
   DaoContext_PutReference( ctx, p[0] );
 }
+static void DaoSTR_Iter( DaoContext *ctx, DValue *p[], int N )
+{
+  DString *self = p[0]->v.s;
+  DaoTuple *tuple = p[1]->v.tuple;
+  DValue *data = tuple->items->data;
+  DValue iter = DValue_NewInteger(0);
+  data[0].v.i = self->size >0;
+  DValue_Copy( & data[1], iter );
+}
 
 static DaoFuncItem stringMeths[] =
 {
@@ -1421,6 +1430,7 @@ static DaoFuncItem stringMeths[] =
   { DaoSTR_Toupper,   "toupper( self :string ) =>string" },
   { DaoSTR_Encrypt,   "encrypt( self :string, key :string, hex=0 ) => string" },
   { DaoSTR_Decrypt,   "decrypt( self :string, key :string, hex=0 ) => string" },
+  { DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
   { NULL, NULL }
 };
 

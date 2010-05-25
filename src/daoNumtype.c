@@ -1492,7 +1492,7 @@ static void DaoArray_UpdateDimAccum( DaoArray *self )
 
 static void MakeIndex( DaoContext *ctx, DValue pid, int N, DArray *ids )
 {
-  int j;
+  int j, id, from, to;
   if( pid.t == 0 ){
     DArray_Resize( ids, N, 0 );
     for(j=0; j<N; j++) ids->items.pSize[j] = j;
@@ -1503,7 +1503,7 @@ static void MakeIndex( DaoContext *ctx, DValue pid, int N, DArray *ids )
   case DAO_FLOAT :
   case DAO_DOUBLE :
     {
-      int id = DValue_GetInteger( pid );
+      id = DValue_GetInteger( pid );
       if( id < 0 ) id += N;
       DArray_Clear( ids );
       DArray_Append( ids, id );
@@ -1514,8 +1514,8 @@ static void MakeIndex( DaoContext *ctx, DValue pid, int N, DArray *ids )
       DaoPair *pair = pid.v.pair;
       DValue first = pair->first;
       DValue second = pair->second;
-      int from = 0;
-      int to = N-1;
+      from = 0;
+      to = N-1;
       if( first.t > DAO_DOUBLE || second.t > DAO_DOUBLE )
         DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
       if( first.t ) from = DValue_GetInteger( first );
@@ -1527,6 +1527,24 @@ static void MakeIndex( DaoContext *ctx, DValue pid, int N, DArray *ids )
       }else{
         DArray_Resize( ids, to-from+1, 0 );
         for(j=from; j<=to; j++) ids->items.pSize[ j-from ]=j;
+      }
+      break;
+    }
+  case DAO_TUPLE :
+    {
+      DValue *data = pid.v.tuple->items->data;
+      DArray_Clear( ids );
+      if( data[0].t == data[1].t && data[0].t == DAO_INTEGER ){
+        if( pid.v.tuple->unitype == dao_type_for_iterator ){
+          DArray_Append( ids, data[1].v.i );
+          data[1].v.i += 1;
+          data[0].v.i = data[1].v.i < N;
+        }else{
+          from = data[0].v.i;
+          to   = data[1].v.i;
+          DArray_Resize( ids, to-from+1, 0 );
+          for(j=from; j<=to; j++) ids->items.pSize[ j-from ]=j;
+        }
       }
       break;
     }
@@ -1709,15 +1727,30 @@ static void DaoArray_GetItem( DValue *dbase, DaoContext *ctx, DValue pid )
       DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
       return;
     }
-    if( self->numType == DAO_INTEGER ){
-      DaoContext_PutInteger( ctx, DaoArray_GetInteger( self, id ) );
-    }else if( self->numType == DAO_FLOAT ){
-      DaoContext_PutFloat( ctx, DaoArray_GetFloat( self, id ) );
-    }else if( self->numType == DAO_DOUBLE ){
-      DaoContext_PutDouble( ctx, DaoArray_GetDouble( self, id ) );
-    }else{
-      DaoContext_PutComplex( ctx, DaoArray_GetComplex( self, id ) );
+    switch( self->numType ){
+    case DAO_INTEGER : DaoContext_PutInteger( ctx, self->data.i[id] ); break;
+    case DAO_FLOAT : DaoContext_PutFloat( ctx, self->data.f[id] ); break;
+    case DAO_DOUBLE : DaoContext_PutDouble( ctx, self->data.d[id] ); break;
+    case DAO_COMPLEX : DaoContext_PutComplex( ctx, self->data.c[id] ); break;
+    default : break;
     }
+    return;
+  }else if( pid.t == DAO_TUPLE && pid.v.tuple->unitype == dao_type_for_iterator ){
+    DValue *data = pid.v.tuple->items->data;
+    int id = data[1].v.i;
+    if( data[1].t != DAO_INTEGER || id < 0 || id >= self->size ){
+      DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "index out of range" );
+      return;
+    }
+    switch( self->numType ){
+    case DAO_INTEGER : DaoContext_PutInteger( ctx, self->data.i[id] ); break;
+    case DAO_FLOAT : DaoContext_PutFloat( ctx, self->data.f[id] ); break;
+    case DAO_DOUBLE : DaoContext_PutDouble( ctx, self->data.d[id] ); break;
+    case DAO_COMPLEX : DaoContext_PutComplex( ctx, self->data.c[id] ); break;
+    default : break;
+    }
+    data[1].v.i += 1;
+    data[0].v.i = data[1].v.i < self->size;
     return;
   }else if( pid.t == DAO_TUPLE && N == self->dims->size ){
     int allNumbers = 1;
@@ -1962,11 +1995,11 @@ void DaoArray_SetItem( DValue *va, DaoContext *ctx, DValue pid, DValue value, in
       unsigned int bit = DValue_GetInteger( value ) ? 0xffffffff : 0;
       for(i=0; i<self->size; i++) bits[i] = bit;
     }else if( value.t >= DAO_INTEGER && value.t <= DAO_DOUBLE ){
-      DaoArray_SetReal( self, DValue_GetDouble( value ) );
+      DaoArray_ScalarAssign( self, value, NULL, op );
     }else if( value.t == DAO_COMPLEX ){
-      DaoArray_SetComplex( self, * value.v.c );
+      DaoArray_ScalarAssign( self, value, NULL, op );
     }else if( value.t == DAO_ARRAY ){
-      DaoArray_CopyArray( self, value.v.array );
+      DaoArray_ArrayAssign( ctx, self, value.v.array, NULL, op );
     }else{
       DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "" );
     }
@@ -2563,6 +2596,15 @@ static void DaoArray_Lib_FFT( DaoContext *ctx, DValue *par[], int npar )
   if( abs(inv) != 1 ) return;
   dao_fft16( (complex16*) self->data.c, m, inv );
 }
+static void DaoArray_Lib_Iter( DaoContext *ctx, DValue *p[], int N )
+{
+  DaoArray *self = p[0]->v.array;
+  DaoTuple *tuple = p[1]->v.tuple;
+  DValue *data = tuple->items->data;
+  DValue iter = DValue_NewInteger(0);
+  data[0].v.i = self->size >0;
+  DValue_Copy( & data[1], iter );
+}
 static DaoFuncItem numarMeths[] =
 {
   { DaoArray_Lib_Dim,       "dim( self :array, i : int )=>int" },
@@ -2583,7 +2625,8 @@ static DaoFuncItem numarMeths[] =
   { DaoArray_Lib_sorta,     "sorta( self :array, k=0 )" },
   { DaoArray_Lib_sortd,     "sortd( self :array, k=0 )" },
 
-  { DaoArray_Lib_FFT,       "fft( self :array<complex>, inv=-1 )" },
+  { DaoArray_Lib_FFT,  "fft( self :array<complex>, inv=-1 )" },
+  { DaoArray_Lib_Iter, "__for_iterator__( self :array<any>, iter : for_iterator )" },
   { NULL, NULL }
 };
 

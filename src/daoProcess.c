@@ -600,6 +600,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
   dint inum=0;
   float fnum=0;
   double dnum=0;
+  llong_t lnum = 0;
   complex16 acom, bcom;
   DaoVmFrame *base;
 
@@ -984,9 +985,7 @@ CallEntry:
   }
 #endif
 
-#if 0
-//  feclearexcept( FE_ALL_EXCEPT ); // not available in Visual C++ 2005 express edition
-#endif
+  dao_fe_clear();
   topCtx->idClearFE = self->topFrame->entry;
 
   /*
@@ -1121,7 +1120,7 @@ OPCASE( GETI ){
     DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
   }
   goto CheckException;
-  }OPNEXT()
+}OPNEXT()
 OPCASE( GETF ){
   DaoContext_DoGetField( topCtx, vmc );
   DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
@@ -1486,10 +1485,14 @@ OPCASE( MUL_III ){
   locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i * locVars[ vmc->b ]->v.i;
 }OPNEXT()
 OPCASE( DIV_III ){
-  locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i / locVars[ vmc->b ]->v.i;
+  inum = locVars[ vmc->b ]->v.i;
+  if( inum ==0 ) goto RaiseErrorDivByZero;
+  locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i / inum;
 }OPNEXT()
 OPCASE( MOD_III ){
-  locVars[ vmc->c ]->v.i=(dint)locVars[ vmc->a ]->v.i%(dint)locVars[ vmc->b ]->v.i;
+  inum = locVars[ vmc->b ]->v.i;
+  if( inum ==0 ) goto RaiseErrorDivByZero;
+  locVars[ vmc->c ]->v.i=(dint)locVars[ vmc->a ]->v.i % inum;
 }OPNEXT()
 OPCASE( POW_III ){
   locVars[ vmc->c ]->v.i = pow( locVars[ vmc->a ]->v.i, locVars[ vmc->b ]->v.i );
@@ -1554,7 +1557,9 @@ OPCASE( DIV_FFF ){
   locVars[ vmc->c ]->v.f = locVars[ vmc->a ]->v.f / locVars[ vmc->b ]->v.f;
 }OPNEXT()
 OPCASE( MOD_FFF ){
-  locVars[ vmc->c ]->v.f = (long)locVars[ vmc->a ]->v.f%(long)locVars[ vmc->b ]->v.f;
+  inum = (dint) locVars[ vmc->b ]->v.f;
+  if( inum ==0 ) goto RaiseErrorDivByZero;
+  locVars[ vmc->c ]->v.f = (dint)locVars[ vmc->a ]->v.f % inum;
 }OPNEXT()
 OPCASE( POW_FFF ){
   locVars[ vmc->c ]->v.f = powf( locVars[ vmc->a ]->v.f, locVars[ vmc->b ]->v.f );
@@ -1617,7 +1622,9 @@ OPCASE( DIV_DDD ){
   locVars[ vmc->c ]->v.d = locVars[ vmc->a ]->v.d / locVars[ vmc->b ]->v.d;
 }OPNEXT()
 OPCASE( MOD_DDD ){
-  locVars[ vmc->c ]->v.d=(ullong_t)locVars[ vmc->a ]->v.d%(ullong_t)locVars[ vmc->b ]->v.d;
+  lnum = (llong_t) locVars[ vmc->b ]->v.d;
+  if( lnum ==0 ) goto RaiseErrorDivByZero;
+  locVars[ vmc->c ]->v.d=(llong_t)locVars[ vmc->a ]->v.d % lnum;
 }OPNEXT()
 OPCASE( POW_DDD ){
   locVars[ vmc->c ]->v.d = pow( locVars[ vmc->a ]->v.d, locVars[ vmc->b ]->v.d );
@@ -2471,6 +2478,11 @@ RaiseErrorIndexOutOfRange:
   topCtx->vmc = vmc;
   DaoContext_RaiseException( topCtx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
   goto CheckException;
+RaiseErrorDivByZero:
+  topCtx->vmc = vmc;
+  topCtx->idClearFE = vmc - vmcBase;
+  DaoContext_RaiseException( topCtx, DAO_ERROR_FLOAT_DIVBYZERO, "" );
+  goto CheckException;
 RaiseErrorInvalidOperation:
   topCtx->vmc = vmc;
   DaoContext_RaiseException( topCtx, DAO_ERROR, "invalid operation" );
@@ -3081,7 +3093,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
   DValue *dC = ctx->regValues[ vmc->c ];
   DValue value;
 
-/* feclearexcept( FE_ALL_EXCEPT ); */
+  dao_fe_clear();
   ctx->idClearFE = -1;
 
   switch( vmc->code ){

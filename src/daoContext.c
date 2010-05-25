@@ -14,9 +14,6 @@
 #include"stdio.h"
 #include"string.h"
 #include"math.h"
-#ifdef UNIX
-#include"fenv.h"
-#endif
 
 #include"daoContext.h"
 #include"daoProcess.h"
@@ -2046,7 +2043,16 @@ ArithError:
   DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
   return 0;
 }
-
+static void DaoContext_LongDiv
+( DaoContext *self, DLong *z, DLong *x, DLong *y, DLong *r )
+{
+  if( y->size ==0 || (y->size ==1 && y->data[0] ==0) ){
+    self->idClearFE = self->vmc - self->codes;
+    DaoContext_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
+    return;
+  }
+  DLong_Div( z, x, y, r );
+}
 void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 {
   DValue *A = self->regValues[ vmc->a ];
@@ -2073,12 +2079,20 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     int type = dA.t > dB.t ? dA.t : dB.t;
     DValue val = daoNullValue;
     double res = 0;
+    llong_t ib;
     switch( vmc->code ){
+    case DVM_MOD:
+      ib = DValue_GetLongLong( dB );
+      if( ib ==0 ){
+        self->idClearFE = self->vmc - self->codes;
+        DaoContext_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
+      }
+      res = DValue_GetLongLong( dA ) % ib;
+      break;
     case DVM_ADD: res = DValue_GetDouble( dA ) + DValue_GetDouble( dB ); break;
     case DVM_SUB: res = DValue_GetDouble( dA ) - DValue_GetDouble( dB ); break;
     case DVM_MUL: res = DValue_GetDouble( dA ) * DValue_GetDouble( dB ); break;
     case DVM_DIV: res = DValue_GetDouble( dA ) / DValue_GetDouble( dB ); break;
-    case DVM_MOD: res = DValue_GetInteger( dA ) % DValue_GetInteger( dB ); break;
     case DVM_POW: res = powf( DValue_GetDouble( dA ), DValue_GetDouble( dB ) ); break;
     default : break;
     }
@@ -2163,8 +2177,8 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     case DVM_ADD : DLong_Add( c, dA.v.l, dB.v.l ); break;
     case DVM_SUB : DLong_Sub( c, dA.v.l, dB.v.l ); break;
     case DVM_MUL : DLong_Mul( c, dA.v.l, dB.v.l ); break;
-    case DVM_DIV : DLong_Div( dA.v.l, dB.v.l, c, b ); break;
-    case DVM_MOD : DLong_Div( dA.v.l, dB.v.l, b, c ); break;
+    case DVM_DIV : DaoContext_LongDiv( self, dA.v.l, dB.v.l, c, b ); break;
+    case DVM_MOD : DaoContext_LongDiv( self, dA.v.l, dB.v.l, b, c ); break;
     default : break;
     }
     DLong_Delete( b );
@@ -2178,8 +2192,8 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     case DVM_ADD : DLong_Add( c, dA.v.l, b ); break;
     case DVM_SUB : DLong_Sub( c, dA.v.l, b ); break;
     case DVM_MUL : DLong_Mul( c, dA.v.l, b ); break;
-    case DVM_DIV : DLong_Div( dA.v.l, b, c, b2 ); break;
-    case DVM_MOD : DLong_Div( dA.v.l, b, b2, c ); break;
+    case DVM_DIV : DaoContext_LongDiv( self, dA.v.l, b, c, b2 ); break;
+    case DVM_MOD : DaoContext_LongDiv( self, dA.v.l, b, b2, c ); break;
     default: break;
     }
     DLong_Delete( b );
@@ -2194,8 +2208,8 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     case DVM_ADD : DLong_Add( c, a, dB.v.l ); break;
     case DVM_SUB : DLong_Sub( c, a, dB.v.l ); break;
     case DVM_MUL : DLong_MulInt( c, dB.v.l, i ); break;
-    case DVM_DIV : DLong_Div( a, dB.v.l, c, b2 ); break;
-    case DVM_MOD : DLong_Div( a, dB.v.l, b2, c ); break;
+    case DVM_DIV : DaoContext_LongDiv( self, a, dB.v.l, c, b2 ); break;
+    case DVM_MOD : DaoContext_LongDiv( self, a, dB.v.l, b2, c ); break;
     default: break;
     }
     DLong_Delete( a );
@@ -3424,32 +3438,23 @@ int DaoContext_CheckFE( DaoContext *self )
   int res = 0;
   int mask = self->vmSpace->feMask;
   if( mask ==0 ) return 0;
-#ifdef FE_DIVBYZERO
-  if( ( mask & DAO_FE_DIVBYZERO ) && fetestexcept( FE_DIVBYZERO ) ){
+  if( (mask & DAO_FE_DIVBYZERO) && dao_fe_divbyzero() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
     res = 1;
   }
-#endif
-#ifdef FE_UNDERFLOW
-  if( ( mask & DAO_FE_UNDERFLOW ) && fetestexcept( FE_UNDERFLOW ) ){
+  if( (mask & DAO_FE_UNDERFLOW) && dao_fe_underflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_UNDERFLOW, "" );
     res = 1;
   }
-#endif
-#ifdef FE_OVERFLOW
-  if( ( mask & DAO_FE_OVERFLOW ) && fetestexcept( FE_OVERFLOW ) ){
+  if( (mask & DAO_FE_OVERFLOW) && dao_fe_overflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_OVERFLOW, "" );
     res = 1;
   }
-#endif
-#ifdef FE_INVALID
-  if( ( mask & DAO_FE_INVALID ) && fetestexcept( FE_INVALID ) ){
+  if( (mask & DAO_FE_INVALID) && dao_fe_invalid() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT, "" );
     res = 1;
   }
-#endif
-/*  feclearexcept( FE_ALL_EXCEPT ); */
-  self->idClearFE = self->vmc - self->codes;
+  dao_fe_clear();
   return res;
 }
 extern DaoClass *daoClassFutureValue;
@@ -4043,10 +4048,10 @@ static void DaoInitException
   line2 = line;
   DString_Assign( exdat->routName, rout->routName );
   DString_Assign( exdat->fileName, rout->nameSpace->name );
-  exdat->fromLine = line;
+  exdat->toLine = line;
   if( DaoCData_ChildOf( except->typer, efloat ) && fe >=0 )
     line2 = (vmc && rout->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
-  exdat->toLine = line2;
+  exdat->fromLine = line2;
   if( value && value[0] != 0 ) DString_SetMBS( exdat->info, value );
 }
 extern void STD_Debug( DaoContext *ctx, DaoBase *p[], int N );
@@ -4167,8 +4172,10 @@ void DaoContext_RaiseException( DaoContext *self, int type, const char *value )
   typer = DaoException_GetType( type );
   if( DaoCData_ChildOf( typer, warning ) ){
     /* XXX support warning suppression */
-    DaoPrintException( typer->priv->abtype->X.cdata, stdio, 
+    cdata = DaoCData_New( typer, DaoException_New( typer ) );
+    DaoPrintException( cdata, stdio, 
         "Un-suppressed warning raised by " );
+    typer->Delete( cdata );
     return;
   }
   cdata = DaoCData_New( typer, DaoException_New( typer ) );

@@ -68,9 +68,9 @@ static void DaoIO_Printf0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
 {
   DString *mbs;
   DMap *cycData;
+  const char *convs = "diouxXfeEgGaAcCsSpm";
   char *s, *fmt, *format = DString_GetMBS( p[0]->v.s );
   char ch;
-  static const char *convs = "diouxXfeEgGaAcCsSpm";
   int i, j;
   if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
     DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not open!" );
@@ -94,6 +94,7 @@ static void DaoIO_Printf0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
         if( ( *s >= 'a' && *s <= 'z' ) || (  *s >= 'A' && *s <= 'Z' ) ) break;
         s ++;
       }
+      if( *s == 'l' ) s ++;
       if( strchr( convs, *s ) ==NULL ){
         DaoContext_RaiseException( ctx, DAO_WARNING, "invalid format conversion" );
       }else{

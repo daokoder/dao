@@ -109,6 +109,10 @@ int DValue_Compare( DValue left, DValue right )
   }
   return 0;
 }
+llong_t DValue_GetLongLong( DValue self )
+{
+  return (llong_t) DValue_GetDouble( self );
+}
 dint DValue_GetInteger( DValue self )
 {
   return (dint) DValue_GetDouble( self );

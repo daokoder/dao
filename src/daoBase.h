@@ -16,7 +16,47 @@
 
 #include"daolib.h"
 
-#if defined(WIN32) && !defined(__GNUC__)
+#if defined (UNIX) || (_MSC_VER >= 1600) /* MS Visual Studio 2010 ?? XXX */
+
+#include"fenv.h"
+#define dao_fe_clear()  feclearexcept( FE_ALL_EXCEPT )
+
+#ifdef FE_DIVBYZERO
+#define dao_fe_divbyzero()  fetestexcept( FE_DIVBYZERO )
+#else
+#define dao_fe_divbyzero()  0
+#endif
+
+#ifdef FE_UNDERFLOW
+#define dao_fe_underflow()  fetestexcept( FE_UNDERFLOW )
+#else
+#define dao_fe_underflow()  0
+#endif
+
+#ifdef FE_OVERFLOW
+#define dao_fe_overflow()  fetestexcept( FE_OVERFLOW )
+#else
+#define dao_fe_overflow()  0
+#endif
+
+#ifdef FE_INVALID
+#define dao_fe_invalid()  fetestexcept( FE_INVALID )
+#else
+#define dao_fe_invalid()  0
+#endif
+
+
+#elif (_MSC_VER <= 1500)
+
+#define dao_feclear()  _clearfp()
+#define dao_fe_divbyzero()  (_clearfp() & _SW_ZERODIVIDE)
+#define dao_fe_underflow()  (_clearfp() & _SW_UNDERFLOW)
+#define dao_fe_overflow()  0
+#define dao_fe_invalid()  _clearfp()
+
+#endif
+
+#if defined (WIN32) && !defined (__GNUC__)
 #define snprintf _snprintf
 #define popen _popen
 #define pclose _pclose

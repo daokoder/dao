@@ -1770,6 +1770,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
                 ADD_MOVE_XI( vmc->b, DVM_MOVE_ID );
               }
             }
+          }else if( bt == dao_type_for_iterator ){
+            ct = inumt;
           }else if( bt->tid ==DAO_PAIR ){
             ct = at;
             CHECK_PAIR_NUMBER( bt );
@@ -1872,6 +1874,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           }else if( bt->tid ==DAO_PAIR ){
             ct = at;
             CHECK_PAIR_NUMBER( bt );
+          }else if( bt == dao_type_for_iterator ){
+            ct = at->nested->items.pAbtp[0];
           }else if( bt->tid ==DAO_TUPLE ){
             ct = at->nested->items.pAbtp[0];
             for(j=0; j<bt->nested->size; j++){
