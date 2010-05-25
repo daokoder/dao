@@ -23,8 +23,8 @@ struct DaoVmcArray
 {
   DaoVmCode *codes;
   DaoVmCode *buf;
-  int        size;
-  int        bufsize;
+  ushort_t   size;
+  ushort_t   bufsize;
 };
 
 /* running time context for dao routine. */

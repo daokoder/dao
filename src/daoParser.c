@@ -735,7 +735,8 @@ static void DaoParser_InheritConstructor( DaoParser *self, int line )
 {
   DaoClass *klass = self->hostClass;
   DString *sig = NULL;
-  int i, j, dist = self->inherit;
+  int dist = self->inherit;
+  size_t j;
   if( self->isClassBody ==0 || klass->superAlias->size !=1 ){
     if( self->isClassBody ){
       DaoTokens_AppendInitSuper( self->tokens, klass, line, 0 );
@@ -821,8 +822,8 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
   DaoToken **tokens = self->tokens->items.pToken;
   DString *name = NULL;
   DArray *init = NULL;
+  size_t i, size = self->tokens->size;
   int isconstru = klass && DString_EQ( routine->routName, klass->className );
-  int i, size = self->tokens->size;
   int line = 0, flags = 0; /* XXX number of super classes */
   int dlm = start;
   int rb = 0;

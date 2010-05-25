@@ -183,8 +183,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
   DNode *search;
   DString *mbs;
   DValue value = daoNullValue;
-  int i, j, k, id, perm, index;
-  int offset = 0;
+  size_t i, k, id, perm, index, offset = 0;
 
   if( self->derived ) return;
   offset = self->objDataName->size;

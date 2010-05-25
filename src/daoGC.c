@@ -457,7 +457,7 @@ void DaoGC_ShiftRC( DaoBase *up, DaoBase *down )
 
 void DaoGC_IncRCs( DArray *list )
 {
-  int i;
+  size_t i;
   DaoBase **dbases;
 
   if( list->size == 0 ) return;
@@ -473,7 +473,7 @@ void DaoGC_IncRCs( DArray *list )
 }
 void DaoGC_DecRCs( DArray *list )
 {
-  int i;
+  size_t i;
   DaoBase **dbases;
   const short idle = gcWorker.idle;
   if( list==NULL || list->size == 0 ) return;
@@ -533,7 +533,7 @@ void cycRefCountDecreScan()
 {
   DArray *pool = gcWorker.pool[ gcWorker.work ];
   DNode *node;
-  int i;
+  size_t i;
   for( i=0; i<pool->size; i++ )
     pool->items.pBase[i]->cycRefCount = pool->items.pBase[i]->refCount;
 
@@ -649,7 +649,7 @@ void cycRefCountIncreScan()
 {
   const short work = gcWorker.work;
   DArray *pool = gcWorker.pool[ gcWorker.work ];
-  int i, j;
+  size_t i, j;
 
   for(j=0; j<2; j++){
     for( i=0; i<pool->size; i++ ){
@@ -663,7 +663,7 @@ void markAliveObjects( DaoBase *root )
 {
   const short work = gcWorker.work;
   DNode *node;
-  int i;
+  size_t i;
   DArray *objAlive = gcWorker.objAlive;
   DArray_Clear( objAlive );
   root->gcState[work] |= GC_MARKED;
@@ -783,7 +783,7 @@ void freeGarbage()
   DaoTypeBase *typer;
   DArray *pool = gcWorker.pool[ gcWorker.work ];
   DNode *node;
-  int i;
+  size_t i;
   const short work = gcWorker.work;
   const short idle = gcWorker.idle;
 
@@ -1095,7 +1095,7 @@ void DaoGC_DecRC( DaoBase *p )
 }
 void DaoGC_IncRCs( DArray *list )
 {
-  int i;
+  size_t i;
   DaoBase **data;
   if( list->size == 0 ) return;
   data = list->items.pBase;
@@ -1103,7 +1103,7 @@ void DaoGC_IncRCs( DArray *list )
 }
 void DaoGC_DecRCs( DArray *list )
 {
-  int i;
+  size_t i;
   DaoBase **data;
   if( list == NULL || list->size == 0 ) return;
   data = list->items.pBase;
@@ -1170,8 +1170,8 @@ void DaoFinishGC()
 void InitRC()
 {
   DArray *pool = gcWorker.pool[ gcWorker.work ];
-  int i = gcWorker.ii;
-  int k = gcWorker.ii + gcWorker.gcMin / 2;
+  size_t i = gcWorker.ii;
+  size_t k = gcWorker.ii + gcWorker.gcMin / 2;
   for( ; i<pool->size; i++ ){
     pool->items.pBase[i]->cycRefCount = pool->items.pBase[i]->refCount;
     if( i > k ) break;
@@ -1187,8 +1187,8 @@ void cycRefCountDecreScan()
 {
   DArray *pool = gcWorker.pool[ gcWorker.work ];
   DNode *node;
-  int i = gcWorker.ii;
-  int j = 0;
+  size_t i = gcWorker.ii;
+  size_t j = 0;
 
   for( ; i<pool->size; i++ ){
     DaoBase *dbase = pool->items.pBase[i];
@@ -1323,8 +1323,8 @@ void cycRefCountIncreScan()
   const short work = gcWorker.work;
   DArray *pool = gcWorker.pool[ gcWorker.work ];
   DNode *node;
-  int i = gcWorker.ii;
-  int j = 0;
+  size_t i = gcWorker.ii;
+  size_t j = 0;
 
   for( ; i<pool->size; i++ ){
     DaoBase *dbase = pool->items.pBase[i];
@@ -1462,9 +1462,9 @@ void directDecRC()
   DArray *pool = gcWorker.pool[ gcWorker.work ];
   DNode *node;
   const short work = gcWorker.work;
-  int boundary = gcWorker.boundary;
-  int i = gcWorker.ii;
-  int j = 0;
+  size_t boundary = gcWorker.boundary;
+  size_t i = gcWorker.ii;
+  size_t j = 0;
 
   for( ; i<boundary; i++ ){
     DaoBase *dbase = pool->items.pBase[i];
@@ -1643,9 +1643,9 @@ void freeGarbage()
   DaoTypeBase *typer;
   const short work = gcWorker.work;
   const short idle = gcWorker.idle;
-  int boundary = gcWorker.boundary;
-  int i = gcWorker.ii;
-  int j = 0;
+  size_t boundary = gcWorker.boundary;
+  size_t i = gcWorker.ii;
+  size_t j = 0;
 
   for( ; i<boundary; i++ ){
     DaoBase *dbase = pool->items.pBase[i];
@@ -1735,7 +1735,7 @@ void cycRefCountIncrement( DaoBase *dbase )
 void cycRefCountDecrements( DArray *list )
 {
   DaoBase **dbases;
-  int i;
+  size_t i;
   if( list == NULL ) return;
   dbases = list->items.pBase;
   for( i=0; i<list->size; i++ ) cycRefCountDecrement( dbases[i] );
@@ -1743,7 +1743,7 @@ void cycRefCountDecrements( DArray *list )
 void cycRefCountIncrements( DArray *list )
 {
   DaoBase **dbases;
-  int i;
+  size_t i;
   if( list == NULL ) return;
   dbases = list->items.pBase;
   for( i=0; i<list->size; i++ ) cycRefCountIncrement( dbases[i] );
@@ -1751,7 +1751,7 @@ void cycRefCountIncrements( DArray *list )
 void directRefCountDecrement( DArray *list )
 {
   DaoBase **dbases;
-  int i;
+  size_t i;
   if( list == NULL ) return;
   dbases = list->items.pBase;
   for( i=0; i<list->size; i++ ) if( dbases[i] ) dbases[i]->refCount --;
@@ -1769,7 +1769,7 @@ void cycRefCountIncrementV( DValue value )
 }
 void cycRefCountDecrementsV( DVarray *list )
 {
-  int i;
+  size_t i;
   DValue *data;
   if( list == NULL ) return;
   data = list->data;
@@ -1777,7 +1777,7 @@ void cycRefCountDecrementsV( DVarray *list )
 }
 void cycRefCountIncrementsV( DVarray *list )
 {
-  int i;
+  size_t i;
   DValue *data;
   if( list == NULL ) return;
   data = list->data;
@@ -1785,7 +1785,7 @@ void cycRefCountIncrementsV( DVarray *list )
 }
 void directRefCountDecrementV( DVarray *list )
 {
-  int i;
+  size_t i;
   DValue *data;
   if( list == NULL ) return;
   data = list->data;
@@ -1799,7 +1799,7 @@ void directRefCountDecrementV( DVarray *list )
 }
 void cycRefCountDecrementsT( DPtrTuple *list )
 {
-  int i;
+  size_t i;
   DaoBase **dbases;
   if( list ==NULL ) return;
   dbases = list->items.pBase;
@@ -1807,7 +1807,7 @@ void cycRefCountDecrementsT( DPtrTuple *list )
 }
 void cycRefCountIncrementsT( DPtrTuple *list )
 {
-  int i;
+  size_t i;
   DaoBase **dbases;
   if( list ==NULL ) return;
   dbases = list->items.pBase;
@@ -1815,7 +1815,7 @@ void cycRefCountIncrementsT( DPtrTuple *list )
 }
 void directRefCountDecrementT( DPtrTuple *list )
 {
-  int i;
+  size_t i;
   DaoBase **dbases;
   if( list ==NULL ) return;
   dbases = list->items.pBase;
@@ -1824,7 +1824,7 @@ void directRefCountDecrementT( DPtrTuple *list )
 }
 void cycRefCountDecrementsVT( DVaTuple *list )
 {
-  int i;
+  size_t i;
   DValue *data;
   if( list ==NULL ) return;
   data = list->data;
@@ -1832,7 +1832,7 @@ void cycRefCountDecrementsVT( DVaTuple *list )
 }
 void cycRefCountIncrementsVT( DVaTuple *list )
 {
-  int i;
+  size_t i;
   DValue *data;
   if( list ==NULL ) return;
   data = list->data;
@@ -1840,7 +1840,7 @@ void cycRefCountIncrementsVT( DVaTuple *list )
 }
 void directRefCountDecrementVT( DVaTuple *list )
 {
-  int i;
+  size_t i;
   DValue *data;
   if( list ==NULL ) return;
   data = list->data;
@@ -1889,7 +1889,7 @@ void DaoLateDeleter_Update()
 {
   DaoLateDeleter *self = & dao_late_deleter;
   DArray *buffer = self->buffer;
-  int i;
+  size_t i;
   switch( (self->safe<<1)|self->lock ){
   case 2 : /* safe=1, lock=0 */
     if( self->buffer->size < 10000 ) break;

@@ -876,7 +876,7 @@ void DaoContext_DoArray( DaoContext *self, DaoVmCode *vmc )
   const ushort_t opA = vmc->a;
   const ushort_t bval = vmc->b - 10;
   int numtype = DAO_INTEGER;
-  int i, j, k = 0;
+  size_t i, j, k = 0;
   DaoArray *array = NULL;
   DVarray *tmpArray;
   DArray *dim;
@@ -907,7 +907,7 @@ void DaoContext_DoArray( DaoContext *self, DaoVmCode *vmc )
       if( j == 0 ){
         DArray_Assign( dim, na->dims );
       }else{
-        int m;
+        size_t m;
         if( dim->size == na->dims->size ){
           for(m=0; m<dim->size; m++){
             if( dim->items.pSize[m] != na->dims->items.pSize[m] ){
@@ -1144,9 +1144,9 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
   const ushort_t bval = vmc->b;
   DValue **regValues = self->regValues;
   DValue *dn = bval==3 ? regValues[opA+2] : regValues[opA+1];
-  const dint num = DValue_GetInteger( *dn );
+  const size_t num = DValue_GetInteger( *dn );
   char type = regValues[ opA ]->t;
-  int i, j;
+  size_t i, j;
   DaoArray *array = NULL;
   DaoArray *a0, *a1;
   DArray *dims;
@@ -2265,7 +2265,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     DaoList *lA = dA.v.list;
     DaoList *lB = dB.v.list;
     DaoList *list;
-    int i=0;
+    size_t i=0;
     if( vmc->a == vmc->c ){
       list = lA;
       for( i=0; i<lB->items->size; i++)
@@ -2492,7 +2492,7 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
   }else if( ta==DAO_ARRAY ){
     DaoArray *array = dA.v.array;
-    int i;
+    size_t i;
     if( NUMAR_IS_FLOAT( array ) ){
       if( vmc->code == DVM_NOT || vmc->code == DVM_UNMS ){
         DaoArray *res = DaoContext_GetArray( self, vmc );
@@ -2677,13 +2677,13 @@ void DaoContext_DoBitFlip( DaoContext *self, DaoVmCode *vmc )
 }
 
 static int DaoBase_CheckTypeShape( DValue self, int type, 
-    DArray *shape, int depth, int check_size )
+    DArray *shape, unsigned int depth, int check_size )
 {
   DaoTuple *tuple;
   DaoArray *array;
   DaoList *list;
   DValue  *data;
-  int i, j;
+  size_t i, j;
   if( self.t ==0 ) return -1;
   switch( self.t ){
   case DAO_INTEGER :
@@ -2751,7 +2751,7 @@ static int DaoBase_ExportValue( DValue self, DaoArray *array, int k )
   DaoTuple *tup;
   DaoArray *sub;
   DaoList *list;
-  int i;
+  size_t i;
   if( k >= array->size ) return k;
   switch( self.t ){
   case DAO_INTEGER :
@@ -2809,7 +2809,7 @@ static int DaoBase_ExportValue( DValue self, DaoArray *array, int k )
 }
 static void DaoArray_ToWCString( DaoArray *self, DString *str, int offset, int size )
 {
-  int i;
+  size_t i;
   int type = 1; /*MBS*/
   DString_ToWCS( str );
   DString_Resize( str, size * ( (self->numType == DAO_COMPLEX) +1 ) );
@@ -2845,7 +2845,7 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
   DValue it;
   DaoList *ls;
   size_t *ds = self->dims->items.pSize;
-  int i, size, isvector = self->dims->size==2 && (ds[0] ==1 || ds[1] ==1);
+  size_t i, size, isvector = self->dims->size==2 && (ds[0] ==1 || ds[1] ==1);
 
   if( abtp == NULL ) return 0;
   abtp = abtp->nested->items.pAbtp[0];
@@ -3438,19 +3438,17 @@ int DaoContext_CheckFE( DaoContext *self )
   int res = 0;
   int mask = self->vmSpace->feMask;
   if( mask ==0 ) return 0;
+  if( dao_fe_status() ==0 ) return 0;
   if( (mask & DAO_FE_DIVBYZERO) && dao_fe_divbyzero() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
     res = 1;
-  }
-  if( (mask & DAO_FE_UNDERFLOW) && dao_fe_underflow() ){
+  }else if( (mask & DAO_FE_UNDERFLOW) && dao_fe_underflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_UNDERFLOW, "" );
     res = 1;
-  }
-  if( (mask & DAO_FE_OVERFLOW) && dao_fe_overflow() ){
+  }else if( (mask & DAO_FE_OVERFLOW) && dao_fe_overflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_OVERFLOW, "" );
     res = 1;
-  }
-  if( (mask & DAO_FE_INVALID) && dao_fe_invalid() ){
+  }else if( (mask & DAO_FE_INVALID) && dao_fe_invalid() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT, "" );
     res = 1;
   }
