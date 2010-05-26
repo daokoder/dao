@@ -58,7 +58,6 @@ struct DaoVmSpace
   DString *source;
   int options;
   int state;
-  int feMask;
   int stopit;
   int safeTag;
 

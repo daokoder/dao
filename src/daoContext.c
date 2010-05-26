@@ -3436,19 +3436,17 @@ void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc )
 int DaoContext_CheckFE( DaoContext *self )
 {
   int res = 0;
-  int mask = self->vmSpace->feMask;
-  if( mask ==0 ) return 0;
   if( dao_fe_status() ==0 ) return 0;
-  if( (mask & DAO_FE_DIVBYZERO) && dao_fe_divbyzero() ){
+  if( dao_fe_divbyzero() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
     res = 1;
-  }else if( (mask & DAO_FE_UNDERFLOW) && dao_fe_underflow() ){
+  }else if( dao_fe_underflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_UNDERFLOW, "" );
     res = 1;
-  }else if( (mask & DAO_FE_OVERFLOW) && dao_fe_overflow() ){
+  }else if( dao_fe_overflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_OVERFLOW, "" );
     res = 1;
-  }else if( (mask & DAO_FE_INVALID) && dao_fe_invalid() ){
+  }else if( dao_fe_invalid() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT, "" );
     res = 1;
   }

@@ -734,25 +734,6 @@ static void STD_Version( DaoContext *ctx, DValue *p[], int N )
 {
   DaoContext_PutMBString( ctx, DAO_VERSION );
 }
-static void STD_EnableFE( DaoContext *ctx, DValue *p[], int N )
-{
-  int res = 1;
-  int flags = p[0]->v.i;
-  if( flags & ~ DAO_FE_ALL )
-    res = 0;
-  ctx->vmSpace->feMask = ctx->vmSpace->feMask | flags;
-  DaoContext_PutInteger( ctx, res );
-}
-static void STD_DisableFE( DaoContext *ctx, DValue *p[], int N )
-{
-  int res = 1;
-  int flags = p[0]->v.i;
-  if( flags & ~ DAO_FE_ALL )
-    res = 0;
-  ctx->vmSpace->feMask = ctx->vmSpace->feMask & ~ flags;
-  DaoContext_PutInteger( ctx, res );
-}
-
 static void STD_SetLocale( DaoContext *ctx, DValue *p[], int N )
 {
   int res = 1;
@@ -781,8 +762,6 @@ static DaoFuncItem stdMeths[]=
   { STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
   { STD_Gcmin,     "gcmin( limit=0 )=>int" },
   { STD_ListMeth,  "listmeth( object )" },
-  { STD_EnableFE,  "enable_fe( flags : int )=>int" },
-  { STD_DisableFE, "disable_fe( flags : int )=>int" },
   { STD_Pack1,     "pack( i :int )=>string" },
   { STD_Pack2,     "pack( ls :list<int> )=>string" },
   { STD_Sleep,     "sleep( seconds :float )" },
@@ -799,11 +778,6 @@ static DaoFuncItem stdMeths[]=
 };
 static DaoNumItem stdConsts[] =
 {
-  { "FE_DIVBYZERO", DAO_INTEGER, DAO_FE_DIVBYZERO } ,
-  { "FE_UNDERFLOW", DAO_INTEGER, DAO_FE_UNDERFLOW } ,
-  { "FE_OVERFLOW", DAO_INTEGER, DAO_FE_OVERFLOW } ,
-  { "FE_INVALID", DAO_INTEGER, DAO_FE_INVALID } ,
-  { "FE_ALL", DAO_INTEGER, DAO_FE_ALL } ,
   { "LC_ALL", DAO_INTEGER, LC_ALL } ,
   { "LC_COLLATE", DAO_INTEGER, LC_COLLATE } ,
   { "LC_CTYPE", DAO_INTEGER, LC_CTYPE } ,

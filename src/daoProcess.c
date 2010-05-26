@@ -1334,6 +1334,7 @@ OPCASE( CLOSE ){
   DaoContext_DoClose( topCtx, vmc );
 }OPNEXT()
 OPCASE( CRRE ){
+  DaoContext_CheckFE( topCtx );
   exceptCount = self->exceptions->size;
   topCtx->vmc = vmc;
   size = (size_t)(vmc - vmcBase);
@@ -1400,6 +1401,7 @@ OPCASE( JOINT ){
 OPCASE( RETURN ){
   topCtx->vmc = vmc;
   DaoContext_DoReturn( topCtx, vmc );
+  DaoContext_CheckFE( topCtx );
   if( self->stopit | vmSpace->stopit ) goto FinishProc;
   goto FinishCall;
 }OPNEXT()

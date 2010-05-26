@@ -271,7 +271,6 @@ DaoVmSpace* DaoVmSpace_New()
   self->source = DString_New(1);
   self->options = 0;
   self->state = 0;
-  self->feMask = DAO_FE_ALL;
   self->stopit = 0;
   self->safeTag = 1;
   self->userHandler = NULL;

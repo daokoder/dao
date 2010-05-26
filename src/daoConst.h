@@ -183,14 +183,6 @@ enum DaoGlbVarShift
 {
   DVR_NSV_EXCEPTIONS 
 };
-enum DaoFeMasks
-{
-  DAO_FE_DIVBYZERO = 1,
-  DAO_FE_UNDERFLOW = 1<<1,
-  DAO_FE_OVERFLOW = 1<<2,
-  DAO_FE_INVALID = 1<<3,
-  DAO_FE_ALL = 0xf
-};
 
 enum DaoArithOperType{
   
