@@ -234,7 +234,6 @@ DaoParser* DaoParser_New()
   self->hostCData = NULL;
   self->selfParam = NULL;
   self->outParser = NULL;
-  self->uplocs = DArray_New(0);
   self->routCompilable = DArray_New(0);
 
   self->routName = DString_New(1);
@@ -274,7 +273,6 @@ void DaoParser_Delete( DaoParser *self )
   DArray_Delete( self->scoping );
   DArray_Delete( self->regLines );
   DArray_Delete( self->regRefers );
-  DArray_Delete( self->uplocs );
   DArray_Delete( self->vmCodes );
   DMap_Delete( self->comments );
   if( self->bindtos ) DArray_Delete( self->bindtos );
@@ -387,6 +385,7 @@ void DaoParser_Suggest( DaoParser *self, const char *suggestion )
 {
   DaoStream_WriteMBS( self->vmSpace->stdStream, "suggestion:\n" );
   DaoStream_WriteMBS( self->vmSpace->stdStream, suggestion );
+  DaoStream_WriteChar( self->vmSpace->stdStream, '\n' );
 }
 
 #define MAX_INDENT_STEP 16
@@ -3970,15 +3969,21 @@ int DaoParser_GetRegister( DaoParser *self, DString *name )
 
   if( self->outParser ){
     i = DaoParser_GetRegister( self->outParser, name );
+    if( i >= DVR_GLB_CST ){
+      DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, name );
+      DaoParser_Suggest( self, 
+          "only can access up-level local constants or variables" );
+      return -1;
+    }
     if( i >=0 ){
-      i = DaoParser_GetNormRegister( self->outParser, i );
       MAP_Insert( self->regForLocVar, self->locRegCount, NULL );
       MAP_Insert( DArray_Top( self->localVarMap ), name, self->locRegCount );
+      if( i < DVR_LOC_CST ){
+        DaoParser_AddCode( self, DVM_GETV, DAO_U, i, self->locRegCount, self->curLine);
+      }else{
+        DaoParser_AddCode( self, DVM_GETC, DAO_U, i-DVR_LOC_CST, self->locRegCount, self->curLine);
+      }
       DaoParser_PushRegister( self );
-      DArray_Append( self->uplocs, i) ;
-      i = DRoutine_AddConstValue( (DRoutine*) routine, daoNullValue );
-      DaoParser_AddCode( self, DVM_GETC, 0, i, self->locRegCount-1, self->curLine);
-      DArray_Append( self->uplocs, i) ;
       return self->locRegCount -1;
     }
   }
@@ -5924,6 +5929,8 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
   }
   parser = DaoParser_New();
   rout = DaoRoutine_New();
+  rout->upRoutine = self->routine;
+  GC_IncRC( rout->upRoutine );
   parser->routine = rout;
   parser->levelBase = self->levelBase + self->lexLevel + 1;
   GC_ShiftRC( self->nameSpace, rout->nameSpace );
@@ -6104,7 +6111,6 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
 
   regCall = self->locRegCount;
   DaoParser_PushRegister( self );
-  DArray_InsertArray( uplocs, uplocs->size, parser->uplocs, 0, -1 );
   for( i=0; i<uplocs->size; i+=2 ){
     int up = uplocs->items.pInt[i];
     int loc = uplocs->items.pInt[i+1];

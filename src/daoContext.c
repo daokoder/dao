@@ -4008,6 +4008,10 @@ void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc )
   int i;
 
   closure = DaoRoutine_Copy( proto, 0 );
+  closure->upRoutine = self->routine;
+  closure->upContext = self;
+  GC_IncRC( self );
+  GC_IncRC( self->routine );
   pp2 = closure->routConsts->data;
   for(i=0; i<vmc->b; i+=2) DValue_Copy( pp2 + pp[i+2]->v.i, *pp[i+1] );
   closure->routType = DaoNameSpace_MakeRoutType( self->nameSpace,

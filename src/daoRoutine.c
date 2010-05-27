@@ -908,6 +908,8 @@ DaoRoutine* DaoRoutine_New()
   self->regForLocVar = DMap_New(0,0);
   self->abstypes = DMap_New(D_STRING,0);
   self->locRegCount = 0;
+  self->upRoutine = NULL;
+  self->upContext = NULL;
   self->parser = NULL;
 #ifdef DAO_WITH_JIT
   self->binCodes = DArray_New(D_STRING);
@@ -922,6 +924,8 @@ void DaoRoutine_Delete( DaoRoutine *self )
   DRoutine_DeleteFields( (DRoutine*)self );
   DaoLateDeleter_Push( self );
   if( self->tidHost == DAO_INTERFACE ) return;
+  if( self->upRoutine ) GC_DecRC( self->upRoutine );
+  if( self->upContext ) GC_DecRC( self->upContext );
   GC_DecRCs( self->regType );
   DString_Delete( self->docString );
   DaoVmcArray_Delete( self->vmCodes );
@@ -1466,7 +1470,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
   DaoType *simtps[DAO_ARRAY], *listps[DAO_ARRAY], *arrtps[DAO_ARRAY];
   DaoType *inumt, *fnumt, *dnumt, *comt, *strt;
   DaoType *ilst, *flst, *dlst, *slst, *iart, *fart, *dart, *cart, *any, *udf;
-  DaoType **varTypes[ DAO_G+1 ];
+  DaoType **varTypes[ DAO_U+1 ];
   DaoVmCodeX **vmcs = self->annotCodes->items.pVmc;
   DaoVmCodeX *vmc;
   DaoVmCodeX  vmc2;
@@ -1484,7 +1488,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
   DArray   *vmCodeNew, *addCode;
   DArray   *addRegType;
   DVarray  *regConst;
-  DValue   *cstValues[ DAO_G+1 ];
+  DValue   *cstValues[ DAO_U+1 ];
   DValue   *locConsts = self->routConsts->data;
   DValue    empty = daoNullValue;
   DValue    val;
@@ -1587,6 +1591,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
   cstValues[ DAO_LC ] = self->routConsts->data;
   cstValues[ DAO_G ] = self->nameSpace->cstData->data;
   varTypes[ DAO_G ] = self->nameSpace->varType->items.pAbtp;
+  if( self->upRoutine ){
+    cstValues[ DAO_U ] = self->upRoutine->routConsts->data;
+    varTypes[ DAO_U ] = self->upRoutine->regType->items.pAbtp;
+  }
 
   /*
   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->locRegCount );

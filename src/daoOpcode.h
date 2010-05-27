@@ -14,10 +14,11 @@
 #ifndef DAO_OPCODE_H
 #define DAO_OPCODE_H
 
-#define DAO_LC 0
-#define DAO_OV 0
-#define DAO_K 1
-#define DAO_G 2
+#define DAO_LC 0 /* local */
+#define DAO_OV 0 /* object */
+#define DAO_K 1 /* class */
+#define DAO_G 2 /* global */
+#define DAO_U 3 /* up values */
 
 enum DaoOpcode
 {

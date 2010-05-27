@@ -321,24 +321,24 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
   int i, N;
   if( self->topFrame == self->firstFrame ) return;
   if( self->topFrame->context == NULL ) return;
-  N = self->topFrame->context->routine->locRegCount;
-  values = self->topFrame->context->regArray->data;
-  for(i=0; i<N; i++){
-    if( values[i].t > DAO_DOUBLE ) DValue_Clear( & values[i] );
-    values[i] = daoNullValue;
-  }
-  self->topFrame->depth = 0;
-  self->topFrame = self->topFrame->prev;
   if( ctx->refCount >1 ){
-    /* this should never happen in the current implementation.
-     * it is added just in case if something may change in the future. */
     GC_DecRC( ctx );
+    self->topFrame->context = NULL;
     if( frame ){
       DaoVmFrame_Delete( self->topFrame->next );
       self->topFrame->next = frame;
       frame->prev = self->topFrame;
     }
+  }else{
+    N = self->topFrame->context->routine->locRegCount;
+    values = self->topFrame->context->regArray->data;
+    for(i=0; i<N; i++){
+      if( values[i].t > DAO_DOUBLE ) DValue_Clear( & values[i] );
+      values[i] = daoNullValue;
+    }
   }
+  self->topFrame->depth = 0;
+  self->topFrame = self->topFrame->prev;
 }
 void DaoVmProcess_CacheContext( DaoVmProcess *self, DaoContext *ctx )
 {
@@ -549,6 +549,12 @@ static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts,
     types[ DAO_OV ] = klass->objDataType->items.pAbtp;
     if( object ) values[ DAO_OV ] = object->objValues;
   }
+  if( ctx->routine->upContext ){
+    ctx = ctx->routine->upContext;
+    consts[ DAO_U ] = ctx->routine->routConsts->data;
+    values[ DAO_U ] = ctx->regArray->data;
+    types[ DAO_U ] = ctx->regTypes;
+  }
 }
 
 static void DValue_InitComplex( DValue *value )
@@ -582,9 +588,9 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
   DValue *value, *vA, *vB, *vC = NULL;
   DValue vA2;
   DValue **locVars;
-  DValue *cstValues[ DAO_G+1 ];
-  DValue *varValues[ DAO_G+1 ];
-  DaoType **varTypes[ DAO_G+1 ];
+  DValue *cstValues[ DAO_U+1 ];
+  DValue *varValues[ DAO_U+1 ];
+  DaoType **varTypes[ DAO_U+1 ];
   DaoType  **locTypes;
   DaoType *abtp;
   DaoFunction *func;
@@ -990,8 +996,8 @@ CallEntry:
   topCtx->idClearFE = self->topFrame->entry;
 
   /*
-  if( topCtx->routine->routHost.v.klass )
-    printf("class name = %s\n", topCtx->routine->routHost.v.klass->className->mbs);
+  if( topCtx->routine->tidHost == DAO_OBJECT )
+    printf("class name = %s\n", topCtx->routine->routHost->X.klass->className->mbs);
   printf("routine name = %s\n", topCtx->routine->routName->mbs);
   //printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
   printf("number of instruction: %i\n", topCtx->routine->vmCodes->size );

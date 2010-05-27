@@ -108,6 +108,8 @@ struct DaoRoutine
 
   DMap *abstypes;
 
+  DaoRoutine *upRoutine;
+  DaoContext *upContext;
   DaoParser  *parser;
   DaoRoutine *revised; /* to support edit & continue */
 

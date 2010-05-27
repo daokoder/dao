@@ -105,7 +105,6 @@ struct DaoParser
   DaoType      *hostCData;
   DaoType      *selfParam; /* type "self:host" */
   DaoParser    *outParser;
-  DArray       *uplocs;
 
   DArray *bindtos;
 
