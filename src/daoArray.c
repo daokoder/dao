@@ -845,6 +845,107 @@ void DaoVmcArray_Insert( DaoVmcArray *self, DaoVmCode code, size_t pos )
     }
   }
 }
+void DaoVmcArray_Cleanup( DaoVmcArray *self )
+{
+  DaoVmCode *vmc;
+  DArray *dels = DArray_New(0);
+  int i, j, k, M = 0, N = self->size;
+  for(i=0; i<N; i++){
+    vmc = self->codes + i;
+    if( vmc->code == DVM_UNUSED ) DArray_Append( dels, i );
+  }
+  if( dels->size ==0 ){
+    DArray_Delete( dels );
+    return;
+  }
+  for(i=0; i<N; i++){
+    vmc = self->codes + i;
+    switch( vmc->code ){
+    case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
+    case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
+    case DVM_SWITCH : case DVM_CASE : case DVM_ASSERT :
+    case DVM_JITC :
+    case DVM_CRRE :
+      j = vmc->b;
+      if( vmc->code == DVM_CRRE ){
+        j = vmc->c;
+      }else if( vmc->code == DVM_JITC ){
+        j = vmc->b + i;
+      }
+      for(k=0; k<dels->size; k++){
+        if( dels->items.pInt[k] > j ) break; 
+      }
+      if( vmc->code == DVM_CRRE ){
+        if( vmc->c ) vmc->c -= k;
+      }else if( vmc->code == DVM_JITC ){
+        vmc->b = (vmc->b + i - k) - M;
+      }else{
+        vmc->b -= k;
+      }
+      break;
+    default : break;
+    }
+    if( vmc->code != DVM_UNUSED ){
+      self->codes[M] = *vmc;
+      M += 1;
+    }
+  }
+  self->size = M;
+  DArray_Delete( dels );
+}
+void DArray_CleanupCodes( DArray *self )
+{
+  DaoVmCodeX *vmc;
+  DArray *dels;
+  int i, j, k, M = 0, N = self->size;
+
+  if( self->type != D_VMCODE ) return;
+  dels = DArray_New(0);
+  for(i=0; i<N; i++){
+    vmc = self->items.pVmc[i];
+    if( vmc->code == DVM_UNUSED ) DArray_Append( dels, i );
+  }
+  if( dels->size ==0 ){
+    DArray_Delete( dels );
+    return;
+  }
+  for(i=0; i<N; i++){
+    vmc = self->items.pVmc[i];
+    switch( vmc->code ){
+    case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
+    case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
+    case DVM_SWITCH : case DVM_CASE : case DVM_ASSERT :
+    case DVM_JITC :
+    case DVM_CRRE :
+      j = vmc->b;
+      if( vmc->code == DVM_CRRE ){
+        j = vmc->c;
+      }else if( vmc->code == DVM_JITC ){
+        j = vmc->b + i;
+      }
+      for(k=0; k<dels->size; k++){
+        if( dels->items.pInt[k] > j ) break; 
+      }
+      if( vmc->code == DVM_CRRE ){
+        if( vmc->c ) vmc->c -= k;
+      }else if( vmc->code == DVM_JITC ){
+        vmc->b = (vmc->b + i - k) - M;
+      }else{
+        vmc->b -= k;
+      }
+      break;
+    default : break;
+    }
+    if( vmc->code != DVM_UNUSED ){
+      self->items.pVmc[M] = vmc;
+      M += 1;
+    }else{
+      DaoVmCodeX_Delete( vmc );
+    }
+  }
+  self->size = M;
+  DArray_Delete( dels );
+}
 
 DVaTuple* DVaTuple_New( size_t size, DValue val )
 {

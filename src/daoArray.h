@@ -95,6 +95,9 @@ void DaoVmcArray_Swap( DaoVmcArray *left, DaoVmcArray *right );
 
 /* Insert code and update jumps */
 void DaoVmcArray_Insert( DaoVmcArray *self, DaoVmCode code, size_t pos );
+/* Cleanup unused codes and update jumps */
+void DaoVmcArray_Cleanup( DaoVmcArray *self );
+void DArray_CleanupCodes( DArray *self );
 
 #define DaoVmcArray_Append( self, code )  DaoVmcArray_PushBack( self, code )
 #define DaoVmcArray_Pop( self )  DaoVmcArray_PopBack( self )

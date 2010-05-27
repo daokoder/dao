@@ -1803,6 +1803,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
                 /* for skipping type checking */
                 vmc->code = DVM_GETI_LI;
               }
+              if( vmc->code != DVM_GETI && vmcs[i+1]->code == DVM_JOINT ){
+                vmcs[i+1]->code = DVM_UNUSED;
+                vmcs[i+3]->code = DVM_UNUSED;
+              }
 
               if( bt->tid == DAO_FLOAT ){
                 ADD_MOVE_XI( vmc->b, DVM_MOVE_IF );
@@ -1917,6 +1921,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
                   vmc->b = k;
                   vmc->code = DVM_GETF_T;
                 }
+                if( vmc->code != DVM_GETI && vmcs[i+1]->code == DVM_JOINT ){
+                  vmcs[i+1]->code = DVM_UNUSED;
+                  vmcs[i+3]->code = DVM_UNUSED;
+                }
               }
             }
           }else if( bt->tid >= DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
@@ -1932,6 +1940,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
               DArray_Append( addCode, & vmc2 );
               DArray_Append( addRegType, inumt );
               vmc->b = vmc2.c;
+            }
+            if( vmc->code != DVM_GETI && vmcs[i+1]->code == DVM_JOINT ){
+              vmcs[i+1]->code = DVM_UNUSED;
+              vmcs[i+3]->code = DVM_UNUSED;
             }
           }else if( bt->tid != DAO_UDF && bt->tid != DAO_ANY ){
             goto InvIndex;
@@ -2024,6 +2036,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
               else if( k == DAO_CLASS_VARIABLE )
                 vmc->code = DVM_GETF_OV;
             }
+            if( vmc->code != DVM_GETF && vmcs[i+1]->code == DVM_JOINT ){
+              vmcs[i+1]->code = DVM_UNUSED;
+              vmcs[i+3]->code = DVM_UNUSED;
+            }
           }
         }else if( at->tid == DAO_TUPLE ){
           if( at->mapNames == NULL ) goto NotExist;
@@ -2042,6 +2058,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
                 /* for skipping type checking */
                 vmc->code = DVM_GETF_T;
                 vmc->b = k;
+              }
+              if( vmc->code != DVM_GETF && vmcs[i+1]->code == DVM_JOINT ){
+                vmcs[i+1]->code = DVM_UNUSED;
+                vmcs[i+3]->code = DVM_UNUSED;
               }
             }
           }
@@ -3892,6 +3912,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
     }
     DArray_Append( vmCodeNew, self->annotCodes->items.pVmc[i] );
   }
+  DArray_CleanupCodes( vmCodeNew );
   DaoVmcArray_Resize( self->vmCodes, vmCodeNew->size );
   for(i=0; i<vmCodeNew->size; i++){
     self->vmCodes->codes[i] = * (DaoVmCode*) vmCodeNew->items.pVmc[i];

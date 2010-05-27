@@ -52,7 +52,7 @@ void DaoType_Delete( DaoType *self )
 DaoTypeBase abstypeTyper=
 {
   & baseCore,
-  "ABSTYPE",
+  "type",
   NULL, NULL, {0}, NULL,
   (FuncPtrDel) DaoType_Delete
 };

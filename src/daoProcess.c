@@ -520,10 +520,11 @@ void DaoContext_AdjustCodes( DaoContext *self, int options );
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t );
 void DValue_SimpleMove2( DValue from, DValue *to );
 
-static void DaoVM_EnsureConst( DValue **locVars, DValue *locBuf, DaoVmCode *vmc )
+static void DaoVM_EnsureConst( DaoContext *ctx, DaoVmCode *vmc, DValue **locVars )
 {
+  DValue *locBuf = ctx->regArray->data + vmc->c;
   locBuf->cst = 0;
-  if( (locVars[ vmc->a ]->cst) && ! (locVars[ vmc->c ]->cst) ){
+  if( ! locVars[ vmc->c ]->cst ){
     /* a data structure maybe marked as constant in const call,
        but its items are not marked, so use context buffer to store the retrieved item, 
        and mark it as constant */
@@ -1117,13 +1118,13 @@ OPCASE( GETI ){
   {
 #endif
     DaoContext_DoGetItem( topCtx, vmc );
-    DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+    if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
   }
   goto CheckException;
 }OPNEXT()
 OPCASE( GETF ){
   DaoContext_DoGetField( topCtx, vmc );
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
   goto CheckException;
 }OPNEXT()
 OPCASE( SETV ){
@@ -1921,7 +1922,7 @@ OPCASE( GETI_LI ){
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   if( abtp && DaoType_MatchValue( abtp, list->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = list->items->data + id;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( SETI_LI ){
   if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -1942,7 +1943,7 @@ OPCASE( GETI_LSI ){
   id = locVars[ vmc->b ]->v.i;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   locVars[ vmc->c ] = list->items->data + id;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( SETI_LIII )
 OPCASE( SETI_LIIF )
@@ -2173,7 +2174,7 @@ OPCASE( GETI_TI ){
   if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
   if( abtp && DaoType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = tuple->items->data + id;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( SETI_TI ){
   if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -2192,7 +2193,7 @@ OPCASE( GETF_T ){
   abtp = locTypes[ vmc->c ];
   if( abtp && DaoType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = tuple->items->data + id;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( SETF_T ){
   if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -2209,7 +2210,7 @@ OPCASE( GETF_TD )
 OPCASE( GETF_TS ){
   tuple = locVars[ vmc->a ]->v.tuple;
   locVars[ vmc->c ] = tuple->items->data + vmc->b;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( SETF_TII ){
   if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -2301,7 +2302,7 @@ OPCASE( GETF_OV ){
   abtp = locTypes[ vmc->c ];
   if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = value;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( GETF_KCI )
 OPCASE( GETF_KCF )
@@ -2314,6 +2315,7 @@ OPCASE( GETF_KGF )
 OPCASE( GETF_KGD ){
   value = locVars[ vmc->a ]->v.klass->glbData->data + vmc->b;
   locVars[ vmc->c ] = value;
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( GETF_OCI )
 OPCASE( GETF_OCF )
@@ -2326,13 +2328,14 @@ OPCASE( GETF_OGF )
 OPCASE( GETF_OGD ){
   value = locVars[ vmc->a ]->v.object->myClass->glbData->data + vmc->b;
   locVars[ vmc->c ] = value;
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( GETF_OVI )
 OPCASE( GETF_OVF )
 OPCASE( GETF_OVD ){
   value = locVars[ vmc->a ]->v.object->objData->data + vmc->b;
   locVars[ vmc->c ] = value;
-  DaoVM_EnsureConst( locVars, topCtx->regArray->data + vmc->c, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 }OPNEXT()
 OPCASE( SETF_KG ){
   klass = locVars[ vmc->c ]->v.klass;

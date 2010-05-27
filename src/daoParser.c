@@ -118,25 +118,6 @@ enum
 {
   EXP_IN_CALL = 1
 };
-/*
-void KeyValueSort( DStringIntPair pairs[], int size )
-{
-  int i, j;
-  for( i=0; i<size-1; i++ ){
-    for( j=size-1; j>i; j-- ){
-      if( strcmp( pairs[j].key, pairs[j-1].key ) <0 ){
-        const char *key = pairs[j].key;
-        int val = pairs[j].value;
-        pairs[j].key = pairs[j-1].key;
-        pairs[j].value = pairs[j-1].value;
-        pairs[j-1].key = key;
-        pairs[j-1].value = val;
-      }
-    }
-  }
-  for( i=0; i<size; i++ ) printf( "key = %s; value = %i\n", pairs[i].key, pairs[i].value );printf("\n");
-}
-*/
 
 /* Binary searching:
  * pairs is assumed to be sorted by keys:
@@ -401,6 +382,11 @@ void DaoParser_Error( DaoParser *self, int code, DString *ext )
   DaoStream_PrintInfo( self->vmSpace->stdStream, "ERROR", self->srcFName, 
       self->curLine, getCtInfo( code ), ext );
   self->error = code;
+}
+void DaoParser_Suggest( DaoParser *self, const char *suggestion )
+{
+  DaoStream_WriteMBS( self->vmSpace->stdStream, "suggestion:\n" );
+  DaoStream_WriteMBS( self->vmSpace->stdStream, suggestion );
 }
 
 #define MAX_INDENT_STEP 16
@@ -3284,7 +3270,16 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
     decl = decl2 = 0;
     colon = DaoParser_FindOpenToken( self, DTOK_COLON, start, end, 0 );
     eq = DaoParser_FindOpenToken( self, DTOK_ASSN, start, end, 0 );
-    if( eq < 0 ) eq = DaoParser_FindOpenToken( self, DTOK_CASSN, start, end, 0 );
+    if( eq < 0 ){
+      eq = DaoParser_FindOpenToken( self, DTOK_CASSN, start, end, 0 );
+      if( eq >=0 && colon >=0 ){
+        DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, tokens[eq]->string );
+        DaoParser_Suggest( self, "variable := expression\n"
+            "variable : type = expression\n" );
+        return 0;
+      }
+      if( eq >=0 ) abtp = DaoNameSpace_MakeType( myNS, "any", DAO_ANY, 0,0,0 );
+    }
 
     /* POSITIVE:
      * var;
@@ -5796,7 +5791,7 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
     regB = DaoParser_IntegerOne( self, pos );
     DaoParser_AddCode( self, opc, reg, regB, reg, pos );
     if( reg != regLast ) DaoParser_AddCode( self, DVM_MOVE, reg, 2, regLast, pos );
-    if( vmc->code == DVM_GETV || vmc->code == DVM_GETI || vmc->code == DVM_GETF ){
+    if( vmc->code == DVM_GETI || vmc->code == DVM_GETF ){
       DaoParser_PushBackCode( self, (DaoVmCodeX*) vmc );
       vmc = self->vmcLast;
       regB = vmc->a;
@@ -6166,6 +6161,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
   DArray *cid = NULL;
   DValue value;
   unsigned char tki, tki2;
+  unsigned char typed_data_enum = 0;
 
   *cst = 0;
   if( start > end ){
@@ -6191,6 +6187,12 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
   }
 
   tki = tokens[start]->name;
+  tki2 = tokens[start+1]->name;
+  if( tki >= DKEY_ARRAY && tki <= DKEY_LIST && tki2 == DTOK_LCB ){
+    typed_data_enum = tki;
+    tki = tki2;
+    start += 1;
+  }
   if( tki == DTOK_AT || tki == DKEY_ROUTINE || tki == DKEY_FUNCTION || tki == DKEY_SUB ){
     /* closure expression */
     tki = tokens[start+1]->name;
@@ -6386,7 +6388,8 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
         if( regFix >= 0 ) regC = regFix;
         DaoParser_AddCode( self, get, opc, opb, regC, tokPos );
         DaoParser_AddCode( self, -code, regC, reg2, regC, tokPos );
-        DaoParser_AddCode( self, set, regC, opb, opc, tokPos );
+        if( set != DVM_SETV ) /* no need SETV, since GETV get reference */
+          DaoParser_AddCode( self, set, regC, opb, opc, tokPos );
         if( regC == self->locRegCount ) DaoParser_PushRegister( self );
       }
       if( start+1 == pos ){
@@ -6617,6 +6620,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
     int N = 0;
     ushort_t opB = 0;
     if( tki == DTOK_LSB ) enumcode = DVM_ARRAY;
+    if( typed_data_enum == DKEY_ARRAY ) enumcode = DVM_ARRAY;
     tokPos = tokens[ lb ]->line;
     cid = DArray_New(0);
 
@@ -6627,7 +6631,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
     }
 #endif
 
-    if( tki == DTOK_LB ){
+    if( typed_data_enum == DKEY_TUPLE || tki == DTOK_LB ){
       /* ( a, b ) */
       int reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst, 
           DTOK_COMMA, 0, cid, 0 );
@@ -6635,11 +6639,12 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
       regC = self->locRegCount;
       if( regFix >= 0 ) regC = regFix;
       DaoParser_AddCode( self, DVM_TUPLE, reg, N, regC, tokPos );
-    }else if( pto >= 0 || (colon >= 0 && tki == DTOK_LCB) ){
+    }else if( (typed_data_enum ==0  && (pto >= 0 || (colon >= 0 && tki == DTOK_LCB)) ) || typed_data_enum == DKEY_MAP ){
       /* { a=>1, b=>[] }; {=>}; */
       /* { a: 1, b: [] }; {:}; */
       int mh = pto >= 0 ? DVM_MAP : DVM_HASH;
-      if( lb == rb ){
+      if( typed_data_enum == DKEY_MAP && colon <0 ) mh = DVM_MAP;
+      if( lb >= rb ){
         regC = DRoutine_AddConst( (DRoutine*) self->routine, (DaoBase*) DaoMap_New(colon>=0) );
         *cst = regC + DVR_LOC_CST;
         regC = DaoParser_GetNormRegister( self, regC + DVR_LOC_CST );
@@ -6666,9 +6671,11 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
       regC = self->locRegCount;
       if( regFix >= 0 ) regC = regFix;
       DaoParser_AddCode( self, enumcode, reg, N+10, regC, tokPos );
-    }else{
+    }else if( typed_data_enum == 0 || typed_data_enum == DKEY_ARRAY ){
       /* [1,2; 3,4] */
       regC = DaoParser_MakeEnumMatrix( self, lb, rb, & N, cst, regFix, cid );
+    }else{
+      regC = -1;
     }
     if( regC < 0 ){
       DaoParser_Error( self, DAO_CTW_ENUM_INVALID, NULL );
@@ -6716,6 +6723,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 
 ParsingError:
   printf( "pasing error:\n" );
+  if( typed_data_enum ) printf( "%s  ", tokens[start-1]->string->mbs );
   for( i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs); printf("\n");
   if( cid ) DArray_Delete( cid );
   return -1;

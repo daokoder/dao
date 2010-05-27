@@ -1510,6 +1510,8 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
       }else if( st == DAO_CLASS_GLOBAL ){
         value = klass->glbData->data[id];
         vabtp.v.p = klass->glbDataType->items.pBase[ id ];
+      }else if( st == DAO_CLASS_VARIABLE ){
+        vabtp.v.p = klass->objDataType->items.pBase[ id ];
       }
     }else{
       value = ns->varData->data[id];

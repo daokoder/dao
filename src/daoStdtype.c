@@ -181,6 +181,11 @@ void DaoBase_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycD
   else
     DaoStream_WriteMBS( stream, DValue_GetTyper( * self )->name );
   if( self->t == DAO_NIL ) return;
+  if( self->t == DAO_TYPE ){
+    DaoStream_WriteMBS( stream, "<" );
+    DaoStream_WriteMBS( stream, ((DaoType*)self->v.p)->name->mbs );
+    DaoStream_WriteMBS( stream, ">" );
+  }
   DaoStream_WriteMBS( stream, "_" );
   DaoStream_WriteInt( stream, self->t );
   DaoStream_WriteMBS( stream, "_" );
