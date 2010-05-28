@@ -3454,6 +3454,7 @@ int DaoContext_CheckFE( DaoContext *self )
     res = 1;
 #endif
   }
+  self->idClearFE = self->vmc - self->codes;
   dao_fe_clear();
   return res;
 }
@@ -3731,7 +3732,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
       if( rout != NULL ){
         ctx = DaoVmProcess_MakeContext( self->process, rout );
         if( initbase ){
-          obj = (DaoObject*) DaoObject_MapThisObject( selfpar->v.object, rout->routHost );
+          obj = params[0]->v.object;
+          obj = (DaoObject*) DaoObject_MapThisObject( obj, rout->routHost );
           GC_ShiftRC( obj, ctx->object );
           ctx->object = obj;
         }else{

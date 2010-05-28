@@ -137,4 +137,6 @@ void DaoInterface_DeriveMethods( DaoInterface *self );
 
 void DMap_SortMethods( DMap *hash, DArray *methods );
 
+int DaoType_HasInterface( DaoType *self, DaoInterface *inter );
+
 #endif

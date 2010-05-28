@@ -316,9 +316,8 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
   case DAO_OBJECT :
     if( self->X.extra == type->X.extra ) return DAO_MT_EQ;
     it1 = self->X.klass->objType;
-    inters = it1->interfaces;
     if( type->tid == DAO_INTERFACE ){
-      if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB;
+      if( DaoType_HasInterface( it1, type->X.inter ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( type->X.inter, it1, binds, NULL ) ) return DAO_MT_SUB;
     }
     if( DaoClass_ChildOf( self->X.klass, type->X.extra ) ) return DAO_MT_SUB;
@@ -330,8 +329,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
     }else if( DaoCData_ChildOf( self->typer, type->typer ) ){
       return DAO_MT_SUB;
     }else if( type->tid == DAO_INTERFACE ){
-      inters = self->interfaces;
-      if( DMap_Find( inters, type->X.extra ) ) return DAO_MT_SUB;
+      if( DaoType_HasInterface( self, type->X.inter ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( type->X.inter, self, binds, NULL ) ) return DAO_MT_SUB;
     }else{
       return DAO_MT_NOT;
@@ -500,9 +498,8 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
   case DAO_OBJECT :
     if( self->X.klass == value.v.object->myClass ) return DAO_MT_EQ;
     tp = value.v.object->myClass->objType;
-    inters = tp->interfaces;
     if( self->tid == DAO_INTERFACE ){
-      if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB;
+      if( DaoType_HasInterface( tp, self->X.inter ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( self->X.inter, tp, NULL, NULL ) ) return DAO_MT_SUB;
     }
     if( DaoClass_ChildOf( value.v.object->myClass, self->X.extra ) ) return DAO_MT_SUB;
@@ -514,8 +511,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
       return DAO_MT_SUB;
     }else if( self->tid == DAO_INTERFACE ){
       tp = value.v.cdata->typer->priv->abtype;
-      inters = tp->interfaces;
-      if( DMap_Find( inters, self->X.extra ) ) return DAO_MT_SUB;
+      if( DaoType_HasInterface( tp, self->X.inter ) ) return DAO_MT_SUB;
       if( DaoInterface_TryBindTo( self->X.inter, tp, NULL, NULL ) ) return DAO_MT_SUB;
     }else{
       return DAO_MT_NOT;
@@ -862,4 +858,32 @@ void DMap_SortMethods( DMap *hash, DArray *methods )
     DArray_Append( methods, it->value.pVoid );
   DMap_Delete( map );
   DString_Delete( name );
+}
+int DaoType_HasInterface( DaoType *self, DaoInterface *inter )
+{
+  DMap *inters = self->interfaces;
+  size_t i;
+  if( self == NULL || inter == NULL ) return 0;
+  if( DMap_Find( inters, inter ) ) return DAO_MT_SUB;
+  if( self->tid == DAO_OBJECT ){
+    DaoClass *klass = self->X.klass;
+    for(i=0; i<klass->superClass->size; i++){
+      DaoBase *super = klass->superClass->items.pBase[i];
+      DaoType *type = NULL;
+      if( super->type == DAO_CLASS ){
+        type = ((DaoClass*)super)->objType;
+      }else if( super->type == DAO_CDATA ){
+        type = ((DaoCData*)super)->typer->priv->abtype;
+      }
+      if( DaoType_HasInterface( type, inter ) ) return DAO_MT_SUB;
+    }
+  }else if( self->tid == DAO_CDATA ){
+    i = 0;
+    while( self->typer->supers[i] ){
+      DaoType *type = self->typer->supers[i]->priv->abtype;
+      if( DaoType_HasInterface( type, inter ) ) return DAO_MT_SUB;
+      i += 1;
+    }
+  }
+  return 0;
 }
