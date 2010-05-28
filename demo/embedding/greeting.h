@@ -31,6 +31,9 @@ class Greeting
   void TestGreeting( Greeting *g, const char *name );
 
   virtual void VirtWithDefault( const Greeting & g = Greeting() ){}
+
+  class Null{};
+  Null TestNull( const Null & ){}
 };
 
 Greeting* GetGreetingObject();

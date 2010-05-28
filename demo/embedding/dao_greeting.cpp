@@ -120,8 +120,8 @@ static DaoFuncItem dao_CxxNS_Funcs[] =
 {
   { dao__Testing, "Testing( greeting : Greeting, bl : int=FALSE )" },
   { dao__Testing_dao_2, "Testing( a : int, bl : int=FALSE )" },
-  { dao__Testing_dao_3, "Testing( t : Test, b : int=0, o : Test = Test, g : Test=Test, c : int=0 )" },
-  { dao__Testing2, "Testing2( t : Test, b : int=0, o : Test = Test, g : Test=Test, c : int=0 )=>int" },
+  { dao__Testing_dao_3, "Testing( t : Test, b : int=0, o : Test =0, g : Test=0, c : int=0 )" },
+  { dao__Testing2, "Testing2( t : Test, b : int=0, o : Test =0, g : Test=0, c : int=0 )=>int" },
 	{ NULL, NULL }
 };
 static DaoFuncItem dao_CxxNS2_Funcs[] = 
@@ -137,12 +137,13 @@ static DaoTypeBase *dao_CxxNS_Types[2] =
 int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
 {
   DaoNameSpace *ns2;
-  DaoTypeBase *typers[4];
+  DaoTypeBase *typers[5];
   const char *aliases[1];
   __daoVmSpace = vms;
   typers[0] = dao_Bool_Typer,
   typers[1] = dao_Greeting_Typer,
-  typers[2] = NULL;
+  typers[2] = dao_Greeting_Null_Typer,
+  typers[3] = NULL;
   aliases[0] = NULL;
   DaoNameSpace_TypeDefine( ns, "int", "Enum1" );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );

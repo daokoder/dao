@@ -36,6 +36,7 @@ static void dao_Greeting_DoGreeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_PrintMessage( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_SetMessage( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_Greeting_TestNull( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting_Meths[] = 
@@ -45,7 +46,8 @@ static DaoFuncItem dao_Greeting_Meths[] =
   { dao_Greeting_PrintMessage, "PrintMessage( self : Greeting )" },
   { dao_Greeting_SetMessage, "SetMessage( self : Greeting, msg : string )" },
   { dao_Greeting_TestGreeting, "TestGreeting( self : Greeting, g : Greeting, name : string )" },
-  { dao_Greeting_VirtWithDefault, "VirtWithDefault( self : Greeting, g : Greeting = Greeting )" },
+  { dao_Greeting_TestNull, "TestNull( self : Greeting, _cp0 : Greeting_Null )=>Greeting_Null" },
+  { dao_Greeting_VirtWithDefault, "VirtWithDefault( self : Greeting, g : Greeting =0 )" },
   { NULL, NULL }
 };
 static void Dao_Greeting_Delete( void *self ){  delete (Greeting*)self; }
@@ -89,6 +91,14 @@ static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n )
   self->Greeting::TestGreeting( g, name );
 }
 /* greeting.h */
+static void dao_Greeting_TestNull( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  Greeting* self= (Greeting*) DaoCData_GetData( _p[0]->v.cdata );
+  Greeting::Null* _cp0= (Greeting::Null*) DaoCData_GetData( _p[1]->v.cdata );
+  Greeting::Null _TestNull = self->Greeting::TestNull( *_cp0 );
+  DaoContext_PutCData( _ctx, (void*)new Greeting::Null( _TestNull ), dao_Greeting_Null_Typer );
+}
+/* greeting.h */
 static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n )
 {
   Greeting* self= (Greeting*) DaoCData_GetData( _p[0]->v.cdata );
@@ -96,6 +106,24 @@ static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n
   if(_n<=1) self->Greeting::VirtWithDefault(  );
   else self->Greeting::VirtWithDefault( *g );
 }
+
+/*  greeting.h */
+
+
+static DaoNumItem dao_Greeting_Null_Nums[] =
+{
+  { NULL, 0, 0 }
+};
+
+static DaoFuncItem dao_Greeting_Null_Meths[] = 
+{
+  { NULL, NULL }
+};
+static void Dao_Greeting_Null_Delete( void *self ){  delete (Greeting::Null*)self; }
+static DaoTypeBase Greeting_Null_Typer = 
+{ NULL, "Greeting_Null", dao_Greeting_Null_Nums, dao_Greeting_Null_Meths, {  0 }, 
+NULL, Dao_Greeting_Null_Delete };
+DaoTypeBase DAO_DLL_GREETING *dao_Greeting_Null_Typer = & Greeting_Null_Typer;
 
 /*  greeting.h */
 

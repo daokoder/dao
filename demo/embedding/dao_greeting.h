@@ -17,6 +17,7 @@ extern "C"{
 
 extern DaoTypeBase *dao_Bool_Typer;
 extern DaoTypeBase *dao_Greeting_Typer;
+extern DaoTypeBase *dao_Greeting_Null_Typer;
 extern DaoTypeBase *dao_Test_Typer;
 #ifdef __cplusplus
 }

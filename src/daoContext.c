@@ -3446,9 +3446,13 @@ int DaoContext_CheckFE( DaoContext *self )
   }else if( dao_fe_overflow() ){
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_OVERFLOW, "" );
     res = 1;
+#if 0
   }else if( dao_fe_invalid() ){
+    /* disabled, because some extending modules may easily produce 
+       harmless float point errors */
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT, "" );
     res = 1;
+#endif
   }
   dao_fe_clear();
   return res;

@@ -1125,7 +1125,7 @@ global daopar_doubles = '$(name) : array<double>';
 global daopar_complexs = '$(name) : array<complex>$(default)';
 global daopar_buffer = '$(name) : cdata$(default)';
 global daopar_stream = '$(name) : stream$(default)';
-global daopar_user = '$(name) : $(namespace2)$(type)$(default)';
+global daopar_user = '$(name) : $(namespace2)$(type2)$(default)';
 global daopar_userdata = '$(name) : any$(default)'; # for callback data
 global daopar_callback = '$(name) : any'; # for callback, no precise type yet! XXX
 
