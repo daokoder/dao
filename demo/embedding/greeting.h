@@ -8,7 +8,7 @@ class Greeting
 
   public:
 
-  Greeting( const char * msg );
+  Greeting( const char * msg=NULL );
   void SetMessage( const char * msg );
   void PrintMessage();
 
@@ -29,6 +29,8 @@ class Greeting
   // a call to g->DoGreeting( name ) will execute the
   // virtual method re-implemented in Dao.
   void TestGreeting( Greeting *g, const char *name );
+
+  virtual void VirtWithDefault( const Greeting & g = Greeting() ){}
 };
 
 Greeting* GetGreetingObject();
@@ -54,6 +56,8 @@ namespace CxxNS
   /* reference a class from global scope */
   void Testing( Greeting *greeting, Bool bl=FALSE );
   void Testing( int a, Bool2 bl=FALSE );
+  void Testing( Test *t, int b=0, const Test & o = Test(), const Test & g=Test(), int c=0 );
+  int Testing2( Test *t, int b=0, const Test & o = Test(), const Test & g=Test(), int c=0 );
 }
 
 typedef CxxNS::Test Test2;

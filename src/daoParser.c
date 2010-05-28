@@ -1868,7 +1868,9 @@ int DaoParser_ParseParams( DaoParser *self )
       rb2 = -1;
       i += 2;
       continue;
-    }else if( i+1<rb && (tokens[i+1]->name==DTOK_COLON||tokens[i+1]->name==DTOK_ASSN)){
+    }else if( i+1<rb && (tokens[i+1]->name == DTOK_COLON
+          || tokens[i+1]->name == DTOK_ASSN 
+          || tokens[i+1]->name == DTOK_CASSN)){
       i ++;
       if( tokens[i]->name == DTOK_COLON ){
         if( tokens[i+1]->name == DKEY_CONST ){
@@ -1878,7 +1880,11 @@ int DaoParser_ParseParams( DaoParser *self )
         abstype = DaoType_Parse( tokens, i+1, rb-1, &i, myNS, klass, cdata, routine );
         if( abstype == NULL ) goto ErrorParamParsing;
       }
-      if( tokens[i]->name == DTOK_ASSN ){
+      if( tokens[i]->name == DTOK_CASSN ){
+        if( abstype ) goto ErrorParamParsing;
+        abstype = DaoNameSpace_MakeType( myNS, "any", DAO_ANY, 0,0,0 );
+      }
+      if( tokens[i]->name == DTOK_ASSN || tokens[i]->name == DTOK_CASSN ){
         int reg=1, cst = 0;
         comma = DaoParser_FindOpenToken( self, DTOK_COMMA, i, -1, 0 );
         if( comma < 0 ) comma = group <0 ? rb : rb2;
@@ -5077,6 +5083,10 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
           && tokens[start+1]->name == DTOK_LB ){
         DString_SetMBS( self->mbs, tokens[start]->string->mbs + 1 );
         regLast = DaoParser_GetRegister( self, self->mbs );
+        if( regLast < 0 ){
+          DaoParser_Error( self, DAO_CTW_UN_DEFINED, self->mbs );
+          return -1;
+        }
         regLast = DaoParser_GetNormRegister( self, regLast );
       }else{
         regLast = DaoParser_MakeArithLeaf( self, start, cst );
@@ -5679,6 +5689,7 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
     if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
       value.t = DAO_STRING;
       value.v.s = self->str;
+      DString_ToMBS( self->str );
       DString_SetDataMBS( self->str, tok + 1, str->size-2 );
       if( ! ( self->vmSpace->options & DAO_EXEC_MBS_ONLY ) ){
         if( tok[0] == '"' ) DString_ToWCS( self->str );
@@ -6107,7 +6118,10 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
     tok.string = mbs;
     DArray_Append( parser->tokens, & tok );
   }
-  if( ! DaoParser_ParseRoutine( parser ) ) goto ErrorParamParsing;
+  if( ! DaoParser_ParseRoutine( parser ) ){
+    DString_SetMBS( mbs, "invalid anonymous function" );
+    goto ErrorParamParsing;
+  }
 
   regCall = self->locRegCount;
   DaoParser_PushRegister( self );

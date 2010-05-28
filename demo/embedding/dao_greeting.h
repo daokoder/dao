@@ -43,14 +43,16 @@ class DAO_DLL_GREETING DaoCxxVirt_Greeting
 	DaoCData *cdata;
 	DaoVmProcess *vmproc;
 	void DoGreeting( const char* name );
+	void VirtWithDefault( const Greeting &g );
 
 };
 class DAO_DLL_GREETING DaoCxx_Greeting : public Greeting, public DaoCxxVirt_Greeting
 { 
 	public:
-   DaoCxx_Greeting( const char* msg ) : Greeting( msg ){}
+   DaoCxx_Greeting( const char* msg=NULL ) : Greeting( msg ){}
 	void Init();
 	void DoGreeting( const char* name );
+	void VirtWithDefault( const Greeting &g = Greeting() );
 };
 Greeting* Dao_Greeting_Copy( const Greeting &p );
 DaoCxx_Greeting* DAO_DLL_GREETING DaoCxx_Greeting_New( const char* msg );

@@ -58,6 +58,7 @@ const char* dao_source2 =
 "Testing();\n"
 "Testing( CxxNS::TRUE );\n"
 "CxxNS::Testing(0);\n"
+"CxxNS::Testing(obj);\n"
 "CxxNS2::Testing(obj);\n"
 ;
 
@@ -96,10 +97,6 @@ int main( int argc, char *argv[] )
   // You can also call DaoVmProcess_New( vms ) to create one.
   vmp = DaoVmSpace_MainVmProcess( vms );
 
-  // Prepare the Dao source codes:
-  src = DString_New(1);
-  DString_SetMBS( src, dao_source );
-
   // Call the entry function to import the type wrapping Greeting
   // into the namespace ns.
   //
@@ -110,6 +107,10 @@ int main( int argc, char *argv[] )
   // Here the wrapping codes are compiled together with this
   // example, so this entry function must be called:
   DaoOnLoad( vms, ns );
+
+  // Prepare the Dao source codes:
+  src = DString_New(1);
+  DString_SetMBS( src, dao_source );
 
   // Execute the Dao scripts:
   // Since the wrapped functions and types are imported into

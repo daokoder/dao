@@ -13,7 +13,19 @@ void Dao_Get_Object_Method( DaoCData *cd, DaoObject **ob, DaoRoutine **ro, const
   if( va.t == DAO_ROUTINE ) *ro = va.v.routine;
 }
 
-void Function_0x1c3eb0( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, const char* msg )
+void Function_0x1884b0( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, const Greeting &g )
+{
+  const DValue _dao_nil = {0,0,0,0,{0}};
+  DValue _dp[1] = { _dao_nil };
+  DValue *_dp2[1] = { _dp+0 };
+  if( _ro ==NULL || _vmp ==NULL ) return;
+  _dp[0] = DValue_NewCData( dao_Greeting_Typer, (void*) & g );
+
+  DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, 1 );
+  DValue_ClearAll( _dp, 1 );
+}
+
+void Function_0x357de0( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, const char* msg )
 {
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[1] = { _dao_nil };
@@ -59,7 +71,15 @@ void DaoCxxVirt_Greeting::DoGreeting( const char* name )
   DaoRoutine *_ro = NULL;
   Dao_Get_Object_Method( cdata, & _ob, & _ro, "DoGreeting" );
   if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
-  Function_0x1c3eb0( vmproc, _ro, _ob, name );
+  Function_0x357de0( vmproc, _ro, _ob, name );
+}
+void DaoCxxVirt_Greeting::VirtWithDefault( const Greeting &g )
+{
+  DaoObject *_ob = NULL;
+  DaoRoutine *_ro = NULL;
+  Dao_Get_Object_Method( cdata, & _ob, & _ro, "VirtWithDefault" );
+  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
+  Function_0x1884b0( vmproc, _ro, _ob, g );
 }
 void DaoCxx_Greeting::DoGreeting( const char* name )
 {
@@ -68,6 +88,15 @@ void DaoCxx_Greeting::DoGreeting( const char* name )
      DaoCxxVirt_Greeting::DoGreeting( name );
   }else{
      Greeting::DoGreeting( name );
+  }
+}
+void DaoCxx_Greeting::VirtWithDefault( const Greeting &g )
+{
+  DaoObject *_o = DaoCData_GetObject( cdata );
+  if( _o && vmproc && DaoObject_GetField( _o, "VirtWithDefault" ).t ==DAO_ROUTINE ){
+     DaoCxxVirt_Greeting::VirtWithDefault( g );
+  }else{
+     Greeting::VirtWithDefault( g );
   }
 }
 

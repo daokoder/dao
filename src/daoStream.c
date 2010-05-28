@@ -662,15 +662,15 @@ void DaoStream_PrintInfo( DaoStream *self,const char *t, DString *s, int i, cons
   DaoStream_WriteMBS( stream, t );
   DaoStream_WriteMBS( stream, "( " );
   DaoStream_WriteString( stream, s );
-  DaoStream_WriteMBS( stream, " : " );
+  DaoStream_WriteMBS( stream, ", line " );
   DaoStream_WriteInt( stream, i );
-  DaoStream_WriteMBS( stream, ") " );
+  DaoStream_WriteMBS( stream, "):\n" );
   if( x ){
     DaoStream_WriteString( stream, x );
     DaoStream_WriteMBS( stream, ", " );
   }
   DaoStream_WriteMBS( stream, e );
-  DaoStream_WriteMBS( stream, ";\n" );
+  DaoStream_WriteMBS( stream, ";\n\n" );
 }
 void DaoStream_ReadLine( DaoStream *self, DString *line )
 {

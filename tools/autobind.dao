@@ -261,6 +261,7 @@ class Function
 	var qtSlotSlotCode = '';
 	var qtSignalSlotDecl = '';
 	var qtSignalSlotCode = '';
+  var calls_with_defaults : list<tuple<int,string>> = {};
 
 # Dao routine prototype for the wrapping function:
 # { dao_func_wrapping, "func( vec : array<int>, N : int )" },
@@ -462,8 +463,8 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 		log_file.println( source );
     excluded = 1;
 	}
-  #pars.change( '= %s* ([:%w]+) %s* %b()', '' );
-  if( pars.pfind( '= %s* ([:%w]+) %s* %b()' ) ) excluded = 1;
+  #pars.change( '= %s* ([:%w]+) %s* %b()', '=0' );
+  #if( pars.pfind( '= %s* ([:%w]+) %s* %b()' ) ) excluded = 1;
 	parts = pars.extract( pat_type );
 	pars.change( pat_type, '' );
 	if( pars.pfind( '%( [,%s]* %)' ).size() ==0 ){
@@ -1524,7 +1525,8 @@ routine Variable::Parse( fname = '' )
 	cxxdefault = tks[7];
 	vdefault = tks[7];
 	vdefault.replace( '\"', '\\\"' );
-	vdefault.change( '%b()', '' );
+	#vdefault.change( '%b()', '' );
+  vdefault.change( '= %s* ([:%w]+) %s* %b()', '=0' );
 	refer.simplify();
 	type.change( '%s%s+', ' ' );
 	square.change( '%s+', '' );
@@ -2177,14 +2179,152 @@ routine Variable::Generate( cxx_no_self =0 )
 
 const cxx_wrap_proto 
 = 'static void dao_$(host)_$(cxxname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )';
-const cxx_call_proto 
-= '  $(retype) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n';
-const cxx_call_proto2 
-= '  $(self)$(func_ns)$(cxxname)( $(parlist) );\n';
-const cxx_call_static 
-= '  $(retype) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n';
-const cxx_call_static2 
-= '  $(host_ns)$(host)::$(cxxname)( $(parlist) );\n';
+
+const cxx_call_proto = 
+'  $(retype) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n';
+
+const cxx_call_proto_d1 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto_d2 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n'
+'  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto_d3 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n'
+'  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto_d4 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n'
+'  else if(_n<=$(n4)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist4) );\n'
+'  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto_list = 
+{
+  cxx_call_proto,
+  cxx_call_proto_d1,
+  cxx_call_proto_d2,
+  cxx_call_proto_d3,
+  cxx_call_proto_d4
+}
+
+const cxx_call_proto2 = 
+'  $(self)$(func_ns)$(cxxname)( $(parlist) );\n';
+
+const cxx_call_proto2_d1 = 
+'  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto2_d2 = 
+'  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n'
+'  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto2_d3 = 
+'  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n'
+'  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_proto2_d4 = 
+'  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n'
+'  else if(_n<=$(n4)) $(self)$(func_ns)$(cxxname)( $(parlist4) );\n'
+'  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n'
+;
+
+const cxx_call_proto2_list = 
+{
+  cxx_call_proto2,
+  cxx_call_proto2_d1,
+  cxx_call_proto2_d2,
+  cxx_call_proto2_d3,
+  cxx_call_proto2_d4
+}
+
+const cxx_call_static = 
+'  $(retype) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n';
+
+const cxx_call_static_d1 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static_d2 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist2) );\n'
+'  else $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static_d3 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist3) );\n'
+'  else $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static_d4 = 
+'  $(retype) $(name);\n'
+'  if(_n<=$(n1)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist3) );\n'
+'  else if(_n<=$(n4)) $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist4) );\n'
+'  else $(name) = $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static_list = 
+{
+  cxx_call_static,
+  cxx_call_static_d1,
+  cxx_call_static_d2,
+  cxx_call_static_d3,
+  cxx_call_static_d4
+}
+
+const cxx_call_static2 = 
+'  $(host_ns)$(host)::$(cxxname)( $(parlist) );\n';
+
+const cxx_call_static2_d1 = 
+'  if(_n<=$(n1)) $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static2_d2 = 
+'  if(_n<=$(n1)) $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(host_ns)$(host)::$(cxxname)( $(parlist2) );\n'
+'  else $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static2_d3 = 
+'  if(_n<=$(n1)) $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(host_ns)$(host)::$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(host_ns)$(host)::$(cxxname)( $(parlist3) );\n'
+'  else $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static2_d4 = 
+'  if(_n<=$(n1)) $(host_ns)$(host)::$(cxxname)( $(parlist1) );\n'
+'  else if(_n<=$(n2)) $(host_ns)$(host)::$(cxxname)( $(parlist2) );\n'
+'  else if(_n<=$(n3)) $(host_ns)$(host)::$(cxxname)( $(parlist3) );\n'
+'  else if(_n<=$(n4)) $(host_ns)$(host)::$(cxxname)( $(parlist4) );\n'
+'  else $(host_ns)$(host)::$(cxxname)( $(parlist) );\n'
+;
+const cxx_call_static2_list = 
+{
+  cxx_call_static2,
+  cxx_call_static2_d1,
+  cxx_call_static2_d2,
+  cxx_call_static2_d3,
+  cxx_call_static2_d4
+}
+
 const cxx_call_new = 
 '	$(namespace)$(host) *_self = $(namespace)Dao_$(host)_New( $(parlist) );
 	DaoContext_PutCData( _ctx, _self, dao_$(host)_Typer );\n';
@@ -2414,6 +2554,7 @@ routine Function::Generate()
 	cxxCallParamV = '';
 	cxxProtoParamVirt = '';
   hasUserData = 0;
+  calls_with_defaults.clear();
 	for( i = 0 : pcount-1 ){
 		vo = parlist[i];
 		if( vo.unsupport ){
@@ -2425,6 +2566,9 @@ routine Function::Generate()
 		daoprotpars += vo.daopar;
 		if( vo.sqsizes.size() <2 ) dao2cxxcodes += vo.dao2cxx;
 		parsetcodes += vo.parset;
+    if( vo.isconst and vo.refer == '&' and vo.vdefault != '' ){
+      calls_with_defaults.append( (i, cxxcallpars) );
+    }
 		if( i < cxx_no_self ) skip;
 		if( i > cxx_no_self ){
 			nils += ', ';
@@ -2453,6 +2597,7 @@ routine Function::Generate()
 			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
 		}
 	}
+  #io.writeln( calls_with_defaults );
   if( retype.unsupport ) excluded = 1;
   if( hasCallback and not hasUserData ) excluded = 1;
 	for( i = 0 : pcount-1 ){
@@ -2505,6 +2650,13 @@ routine Function::Generate()
 		utp = map_user_types[ hostType ];
     if( utp.snamespace ) kvmap[ 'host_ns' ] = utp.snamespace + '::';
   }
+  dd = calls_with_defaults.size();
+  if( dd > 4 ) io.writeln( source );
+  for( i = 1 : dd ){
+    tup2 = calls_with_defaults[i-1];
+    kvmap[ 'n' + (string)i ] = (string) tup2[0];
+    kvmap[ 'parlist' + (string)i ] = tup2[1];
+  }
 	if( hostType == cxxName and not excluded ){
 		#kvmap[ 'parlist' ] = ''; # XXX disable parameters at the moment
 		utp = map_user_types[ hostType ];
@@ -2519,14 +2671,14 @@ routine Function::Generate()
 		#if( parlist.size() ) cxxCallCodes = ''; # XXX maybe there is no default constru
 	}elif( retype.daotype ){
 		if( attribs & FUNC_STATIC )
-			cxxCallCodes = cxx_call_static.expand( kvmap );
+			cxxCallCodes = cxx_call_static_list[dd].expand( kvmap );
 		else
-			cxxCallCodes = cxx_call_proto.expand( kvmap );
+			cxxCallCodes = cxx_call_proto_list[dd].expand( kvmap );
 	}else{
 		if( attribs & FUNC_STATIC )
-			cxxCallCodes = cxx_call_static2.expand( kvmap );
+			cxxCallCodes = cxx_call_static2_list[dd].expand( kvmap );
 		else
-			cxxCallCodes = cxx_call_proto2.expand( kvmap );
+			cxxCallCodes = cxx_call_proto2_list[ dd ].expand( kvmap );
 	}
 	if( lib_name == LIB_QT ){
 		size = (string)signature.size();
@@ -3544,7 +3696,7 @@ routine UserType::GenerateType()
       }
       if( not noWrapping && not meth.excluded && (meth.attribs & FUNC_PROTECTED) ){
         kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
-          'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
+          'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
         if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
         rc = meth.retype.typeid == CT_VOID ? '' : 'return ';
         kvm[ 'cxxname' ] = meth.cxxName;

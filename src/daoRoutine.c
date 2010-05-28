@@ -29,12 +29,12 @@
 
 static const char* const daoScriptRaise[] =
 {
-  "raise", "Error", "(", "\"Compiling failed.\"", ")", ";",
+  "raise", "Exception","::","Error","(","'Compiling failed.'",")",";",
   NULL
 };
 static const unsigned char daoScriptRaise2[] =
 {
-  DKEY_RAISE, DTOK_IDENTIFIER, DTOK_LB, DTOK_MBS, DTOK_RB, DTOK_SEMCO
+  DKEY_RAISE, DTOK_IDENTIFIER, DTOK_COLON2, DTOK_IDENTIFIER, DTOK_LB, DTOK_MBS, DTOK_RB, DTOK_SEMCO
 };
 
 static void DRoutine_Init( DRoutine *self )
@@ -3969,9 +3969,9 @@ ErrorTyping:
   if( stdio ==NULL ) stdio = DaoStream_New();
   DaoStream_WriteMBS( stdio, "ERROR( " );
   DaoStream_WriteString( stdio, self->nameSpace->name );
-  DaoStream_WriteMBS( stdio, " : " );
+  DaoStream_WriteMBS( stdio, ", line " );
   DaoStream_WriteInt( stdio, self->annotCodes->items.pVmc[cid]->line );
-  DaoStream_WriteMBS( stdio, " ): " );
+  DaoStream_WriteMBS( stdio, " ):\n" );
   if( error ){
     DaoStream_WriteString( stdio, error );
     DaoStream_WriteMBS( stdio, ", " );
@@ -3981,6 +3981,7 @@ ErrorTyping:
   init = dao_realloc( init, 200*sizeof(char) );
   DaoVmCodeX_Print( *vmc, init );
   DaoStream_WriteMBS( stdio, init );
+  DaoStream_WriteMBS( stdio, "\n" );
   if( stdio != ns->vmSpace->stdStream ) DaoStream_Delete( stdio );
   dao_free( init );
   dao_free( addCount );

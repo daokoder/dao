@@ -36,14 +36,16 @@ static void dao_Greeting_DoGreeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_PrintMessage( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_SetMessage( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting_Meths[] = 
 {
-  { dao_Greeting_Greeting, "Greeting( msg : string )=>Greeting" },
+  { dao_Greeting_Greeting, "Greeting( msg : string=\'\' )=>Greeting" },
   { dao_Greeting_DoGreeting, "DoGreeting( self : Greeting, name : string )" },
   { dao_Greeting_PrintMessage, "PrintMessage( self : Greeting )" },
   { dao_Greeting_SetMessage, "SetMessage( self : Greeting, msg : string )" },
   { dao_Greeting_TestGreeting, "TestGreeting( self : Greeting, g : Greeting, name : string )" },
+  { dao_Greeting_VirtWithDefault, "VirtWithDefault( self : Greeting, g : Greeting = Greeting )" },
   { NULL, NULL }
 };
 static void Dao_Greeting_Delete( void *self ){  delete (Greeting*)self; }
@@ -85,6 +87,14 @@ static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n )
   Greeting* g= (Greeting*) DaoCData_GetData( _p[1]->v.cdata );
   char* name= (char*) DString_GetMBS( _p[2]->v.s );
   self->Greeting::TestGreeting( g, name );
+}
+/* greeting.h */
+static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  Greeting* self= (Greeting*) DaoCData_GetData( _p[0]->v.cdata );
+  Greeting* g= (Greeting*) DaoCData_GetData( _p[1]->v.cdata );
+  if(_n<=1) self->Greeting::VirtWithDefault(  );
+  else self->Greeting::VirtWithDefault( *g );
 }
 
 /*  greeting.h */

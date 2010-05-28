@@ -8,7 +8,7 @@ Greeting::Greeting( const char * msg )
 {
   size = 0;
   message = NULL;
-  SetMessage( msg );
+  if( msg ) SetMessage( msg );
 }
 void Greeting::SetMessage( const char * msg )
 {
@@ -50,6 +50,15 @@ void Testing( Greeting *greeting, Bool bl )
 void Testing( int a, Bool2 bl )
 {
   printf( "CxxNS::Testing(): %i\n", bl );
+}
+void Testing( Test *t, int b, const Test & o, const Test &g, int c )
+{
+  printf( "CxxNS::Testing(): %p\n", o );
+}
+int Testing2( Test *t, int b, const Test & o, const Test &g, int c )
+{
+  printf( "CxxNS::Testing(): %p\n", o );
+  return 1;
 }
 }
 
