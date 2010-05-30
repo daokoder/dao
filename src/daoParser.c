@@ -1744,6 +1744,7 @@ int DaoParser_ParseParams( DaoParser *self )
   int i, j, k, rb, rb2=-1, m1=0, m2=self->partoks->size;
   int ec = 0, line = tokens[0]->line;
   int group = -1;
+  int hasdeft = 0;
   unsigned char tki;
 
   self->error = 0;
@@ -1839,35 +1840,10 @@ int DaoParser_ParseParams( DaoParser *self )
       self->locRegCount = DAO_MAX_PARAM;
       DArray_Resize( self->regLines, DAO_MAX_PARAM, (void*)(size_t)-1 );
       abstype = DaoNameSpace_MakeType( myNS, "...", DAO_PAR_VALIST, 0,0,0 );
-    }else if( tki == DTOK_LB ){
-      rb2 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, i, rb );/* must be >0*/
-      if( DaoParser_FindOpenToken( self, DTOK_LB, i+1, rb2, 0 ) >0 ){
+      if( i+1 != rb ){
         m1 = i;  m2 = rb;
         goto ErrorParamParsing2;
       }
-      i ++;
-      group = nested->size;
-      if( pname->size >0 && pname->mbs[pname->size-1] !='<' )
-        DString_AppendChar( pname, ',' );
-      DString_AppendChar( pname, '(' );
-      continue;
-    }else if( tki == DTOK_RB ){
-      if( group <0 ){
-        DString_SetMBS( mbs, "unpaired parameter group" );
-        goto ErrorParamParsing;
-      }else if( nested->size < group + 2 ){
-        DString_SetMBS( mbs, "() must enclose at leat two parameters" );
-        goto ErrorParamParsing;
-      }
-      abstype = DaoNameSpace_MakeType( myNS, "", DAO_PAR_GROUP, 0,
-          nested->items.pAbtp+group, nested->size - group );
-      DArray_Erase( nested, group+1, -1 );
-      nested->items.pAbtp[ group ] = abstype;
-      DString_AppendChar( pname, ')' );
-      group = -1;
-      rb2 = -1;
-      i += 2;
-      continue;
     }else if( i+1<rb && (tokens[i+1]->name == DTOK_COLON
           || tokens[i+1]->name == DTOK_ASSN 
           || tokens[i+1]->name == DTOK_CASSN)){
@@ -1886,6 +1862,11 @@ int DaoParser_ParseParams( DaoParser *self )
       }
       if( tokens[i]->name == DTOK_ASSN || tokens[i]->name == DTOK_CASSN ){
         int reg=1, cst = 0;
+        hasdeft = i;
+        if( i+1 == rb ){
+          m1 = i;  m2 = rb;
+          goto ErrorParamParsing2;
+        }
         comma = DaoParser_FindOpenToken( self, DTOK_COMMA, i, -1, 0 );
         if( comma < 0 ) comma = group <0 ? rb : rb2;
         m1 = i + 1;
@@ -1927,6 +1908,10 @@ int DaoParser_ParseParams( DaoParser *self )
     }else{
       ec = DAO_CTW_PAR_INVALID;
       goto ErrorParamParsing;
+    }
+    if( hasdeft && dft.t ==0 && dft.ndef ){
+      m1 = hasdeft;  m2 = rb;
+      goto ErrorParamParsing2;
     }
     i ++;
 
@@ -2035,7 +2020,7 @@ Finalizing:
   return 1;
 ErrorParamParsing2:
   DString_Clear( mbs );
-  for(k=m1; k<m2; k++ ) DString_Append( mbs, tokens[k]->string );
+  for(k=m1; k<=m2; k++ ) DString_Append( mbs, tokens[k]->string );
 ErrorParamParsing:
   DaoParser_Error( self, DAO_CTW_PAR_INVALID, mbs );
   GC_DecRCs( nested );
@@ -5498,6 +5483,8 @@ int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *N,
 {
   DaoToken **tokens = self->tokens->items.pToken;
   int i, pos, regFix = self->locRegCount;
+  int field = 0;
+  int tok1, tok2;
   uchar_t nsep = 1 + (sep2 != 0);
   uchar_t seps[2];
 
@@ -5533,6 +5520,18 @@ int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *N,
       if( com >= 0 && com<comma ) comma = com;
     }
     while( comma < right ){
+      tok1 = tokens[last]->type;
+      tok2 = last+1 <= right ? tokens[last+1]->type : 0;
+      if( field && (tok1 != DTOK_IDENTIFIER || tok2 != DTOK_FIELD) ){
+        DString_Clear( self->mbs );
+        for(i=last; i<comma; i++) DString_Append( self->mbs, tokens[i]->string );
+        DString_AppendMBS( self->mbs, ", name=>expression" );
+        DaoParser_Error( self, DAO_CTW_IS_EXPECTED, self->mbs );
+        return -1;
+      }
+      if( state == EXP_IN_CALL && tok1 == DTOK_IDENTIFIER && tok2 == DTOK_FIELD ){
+        field = 1;
+      }
       c0 = 0;
       reg = DaoParser_MakeArithTree( self, last, comma-1, & c0, regFix, state );
       if( last > comma-1 || reg <0 ) return -1;
@@ -5553,6 +5552,15 @@ int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *N,
         if( com >= 0 && com<comma ) comma = com;
       }
       regFix ++;
+    }
+    tok1 = tokens[last]->type;
+    tok2 = last+1 <= right ? tokens[last+1]->type : 0;
+    if( field && (tok1 != DTOK_IDENTIFIER || tok2 != DTOK_FIELD) ){
+      DString_Clear( self->mbs );
+      for(i=last; i<=right; i++) DString_Append( self->mbs, tokens[i]->string );
+      DString_AppendMBS( self->mbs, ", name=>expression" );
+      DaoParser_Error( self, DAO_CTW_IS_EXPECTED, self->mbs );
+      return -1;
     }
     c0 = 0;
     reg = DaoParser_MakeArithTree( self, last, right, & c0, regFix, state );
@@ -5988,35 +5996,6 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
       parser->locRegCount = DAO_MAX_PARAM;
       DArray_Resize( parser->regLines, DAO_MAX_PARAM, (void*)(size_t)-1 );
       abstype = DaoNameSpace_MakeType( myNS, "...", DAO_PAR_VALIST, 0,0,0 );
-    }else if( tki == DTOK_LB ){
-      rb3 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, i, rb );/* must be >0*/
-      if( DaoParser_FindOpenToken( self, DTOK_LB, i+1, rb3, 0 ) >0 ){
-        m1 = i;  m2 = rb;
-        goto ErrorParamParsing;
-      }
-      i ++;
-      group = nested->size;
-      if( pname->size >0 && pname->mbs[pname->size-1] !='<' )
-        DString_AppendMBS( pname, "," );
-      DString_AppendMBS( pname, "(" );
-      continue;
-    }else if( tki == DTOK_RB ){
-      if( group <0 ){
-        DString_SetMBS( mbs, "unpaired parameter group" );
-        goto ErrorParamParsing;
-      }else if( nested->size < group + 2 ){
-        DString_SetMBS( mbs, "() must enclose at leat two parameters" );
-        goto ErrorParamParsing;
-      }
-      abstype = DaoNameSpace_MakeType( myNS, "", DAO_PAR_GROUP, 0,
-          nested->items.pAbtp+group, nested->size - group );
-      DArray_Erase( nested, group+1, -1 );
-      nested->items.pAbtp[ group ] = abstype;
-      DString_AppendMBS( pname, ")" );
-      group = -1;
-      rb3 = -1;
-      i += 2;
-      continue;
     }else if( i+1<rb && (tokens[i+1]->name==DTOK_COLON||tokens[i+1]->name==DTOK_ASSN)){
       i ++;
       if( tokens[i]->name == DTOK_COLON ){

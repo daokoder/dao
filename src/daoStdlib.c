@@ -736,12 +736,10 @@ static void STD_Version( DaoContext *ctx, DValue *p[], int N )
 }
 static void STD_SetLocale( DaoContext *ctx, DValue *p[], int N )
 {
-  int res = 1;
   int category = p[0]->v.i;
   const char *locale = DString_GetMBS(p[1]->v.s);
   char* old = setlocale(category,locale);
-  if (old)
-    DaoContext_PutMBString(ctx,old);
+  if (old) DaoContext_PutMBString(ctx,old);
 }
 
 static DaoFuncItem stdMeths[]=
@@ -1745,7 +1743,7 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
   if( routype->mapNames ){
     node = DMap_First( routype->mapNames );
     for( ; node !=NULL; node = DMap_Next( routype->mapNames, node ) ){
-      i = node->value.pInt & MAPF_MASK;
+      i = node->value.pInt;
       mbs = list->items->data[i].v.tuple->items->data[0].v.s;
       DString_Assign( mbs, node->key.pString );
     }

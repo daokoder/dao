@@ -11,6 +11,10 @@ static void dao_FakeList_FakeList( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_FakeList_Iter( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_FakeList_Size( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_FakeList_GetItem( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeList_GetItem2( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeList_SetItem( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeList_GetName( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeList_SetName( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_FakeList_Meths[] = 
 {
@@ -18,6 +22,10 @@ static DaoFuncItem dao_FakeList_Meths[] =
   { dao_FakeList_Size, "size( self : FakeList )=>int" },
   { dao_FakeList_Iter, "__for_iterator__( self : FakeList, iter : for_iterator )" },
   { dao_FakeList_GetItem, "[]( self : FakeList, iter : for_iterator )=>int" },
+  { dao_FakeList_GetItem2, "[]( self : FakeList, index : int )=>int" },
+  { dao_FakeList_SetItem, "[]=( self : FakeList, index : int, value : int )=>int" },
+  { dao_FakeList_GetName, ".name( self : FakeList )=>string" },
+  { dao_FakeList_SetName, ".name=( self : FakeList, name : string )" },
   { NULL, NULL }
 };
 static void Dao_FakeList_Delete( void *self ){}
@@ -55,6 +63,25 @@ static void dao_FakeList_GetItem( DaoContext *_ctx, DValue *_p[], int _n )
   DaoTuple_SetItem( it, index, 1 );
   DaoContext_PutInteger( _ctx, index.v.i * 100 );
 }
+static void dao_FakeList_GetItem2( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  DaoContext_PutInteger( _ctx, 123 );
+}
+static void dao_FakeList_SetItem( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  int index = _p[1]->v.i;
+  int value = _p[2]->v.i;
+  printf( "set %i to %i\n", index, value );
+}
+static void dao_FakeList_GetName( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  DaoContext_PutMBString( _ctx, "FakeList" );
+}
+static void dao_FakeList_SetName( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  const char *name = DString_GetMBS( _p[1]->v.s );
+  printf( "new name: %s\n", name );
+}
 
 const char* dao_source = 
 "fl = FakeList(5)\n"
@@ -62,7 +89,11 @@ const char* dao_source =
 "interface Interface{ routine size() }\n"
 "bind Interface to FakeList\n"
 "routine Test( a : Interface ){ io.writeln( a.size() ) }\n"
-"Test( fl );"
+"Test( fl );\n"
+"io.writeln( fl[1] )\n"
+"fl[2] = 456\n"
+"io.writeln( fl.name )\n"
+"fl.name = 'FAKELIST'"
 ;
 
 int main( int argc, char *argv[] )

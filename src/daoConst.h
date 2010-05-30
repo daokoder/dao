@@ -56,7 +56,6 @@ enum DaoRTTI
   DAO_MAP_ANY ,
   DAO_PAR_NAMED ,   /* name:type */
   DAO_PAR_DEFAULT , /* name=type */
-  DAO_PAR_GROUP , /* (p1,p2:int) */
   DAO_PAR_VALIST , /* ... */
   END_EXTRA_TYPES ,
 

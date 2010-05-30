@@ -812,7 +812,7 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
         if( str->size && abtp->mapNames ){
           DNode *node = MAP_Find( abtp->mapNames, str );
           if( node ){
-            int id = node->value.pInt & MAPF_MASK;
+            int id = node->value.pInt;
             k = abtp->nested->items.pAbtp[id]->tid;
             if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
               k = abtp->nested->items.pAbtp[id]->X.abtype->tid;

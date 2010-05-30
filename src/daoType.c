@@ -125,11 +125,7 @@ void DaoType_MapNames( DaoType *self )
   if( self->mapNames == NULL ) self->mapNames = DMap_New(D_STRING,0);
   for(i=0; i<self->nested->size; i++){
     tp = self->nested->items.pAbtp[i];
-    if( tp->fname ){
-      j = self->tid == DAO_ROUTINE ? i|(k<<MAPF_OFFSET) : i;
-      MAP_Insert( self->mapNames, tp->fname, j );
-    }
-    k += (tp->tid == DAO_PAR_GROUP) ? tp->nested->size : 1;
+    if( tp->fname ) MAP_Insert( self->mapNames, tp->fname, i );
   }
 }
 
@@ -180,8 +176,6 @@ void DaoType_Init()
   dao_type_matrix[DAO_LIST][DAO_LIST_ANY] = DAO_MT_EQ+1;
   dao_type_matrix[DAO_ARRAY][DAO_ARRAY_ANY] = DAO_MT_EQ+1;
   dao_type_matrix[DAO_MAP][DAO_MAP_ANY] = DAO_MT_EQ+1;
-  dao_type_matrix[DAO_TUPLE][DAO_PAR_GROUP] = DAO_MT_EQ+1;
-  dao_type_matrix[DAO_PAR_GROUP][DAO_PAR_GROUP] = DAO_MT_EQ+1;
 
   dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EQ+1;
   dao_type_matrix[DAO_CLASS][DAO_CDATA] = DAO_MT_EQ+1;
@@ -216,12 +210,6 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
   /*
   printf( "m = %i:  %s  %s\n", m, ext1->name->mbs, ext2->name->mbs );
   */
-  /* when a tuple matchs to a parameter group, 
-   * the field name and default does not matter,
-   * in other case it matters, but now, use less strict checking,
-   * to allow tuple without field names to be casted to 
-   * tuple with name automatically */
-  if( host != DAO_PAR_GROUP && p1 == 0 && p2 && m == DAO_MT_EQ ) m = DAO_MT_SUB;
   if( host == DAO_ROUTINE ){
     if( self->tid != DAO_PAR_DEFAULT && type->tid == DAO_PAR_DEFAULT ) return 0;
     return m;
@@ -276,8 +264,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
   }
   switch( self->tid ){
   case DAO_ARRAY : case DAO_LIST :
-  case DAO_MAP : case DAO_TUPLE : case DAO_PAR_GROUP :
-    /* for PAR_GROUP, nested always has size >=2 */
+  case DAO_MAP : case DAO_TUPLE : 
     /* tuple<...> to tuple */
     if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
     if( self->nested->size > type->nested->size ) return DAO_MT_NOT;
@@ -578,7 +565,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
       if( ch < 'a' || ch > 'z' ) break;
       DString_AppendChar( copy->name, self->name->mbs[i] );
     }
-    DString_AppendChar( copy->name, self->tid == DAO_PAR_GROUP ? '(' : '<' );
+    DString_AppendChar( copy->name, '<' );
     for(i=0; i<self->nested->size; i++){
       nest = DaoType_DefineTypes( self->nested->items.pAbtp[i], ns, defs );
       if( nest ==NULL ) goto DefFailed;
@@ -593,7 +580,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
       if( copy->X.abtype ==NULL ) goto DefFailed;
       DString_Append( copy->name, copy->X.abtype->name );
     }
-    DString_AppendChar( copy->name, self->tid == DAO_PAR_GROUP ? ')' : '>' );
+    DString_AppendChar( copy->name, '>' );
   }else{
     if( self->X.abtype && self->X.abtype->type == DAO_TYPE ){
       copy->X.abtype = DaoType_DefineTypes( self->X.abtype, ns, defs );

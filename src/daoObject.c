@@ -118,7 +118,7 @@ static void DaoObject_Core_SetField( DValue *self0, DaoContext *ctx, DString *na
 static void DaoObject_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 {
   DaoObject *self = self0->v.object;
-  int rc;
+  int rc = 0;
   DString_SetMBS( ctx->process->mbstring, "[]" );
   if( pid.t == DAO_TUPLE && pid.v.tuple->unitype != dao_type_for_iterator ){
     rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
@@ -135,13 +135,9 @@ static void DaoObject_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValu
   DaoObject *self = self0->v.object;
   DValue par[ DAO_MAX_PARAM ];
   int rc, N = 1;
-  par[0] = value;
-  par[1] = pid;
+  par[0] = pid;
+  par[1] = value;
   DString_SetMBS( ctx->process->mbstring, "[]=" );
-  if( pid.t == DAO_TUPLE ){
-    N = pid.v.tuple->items->size;
-    memcpy( par + 1, pid.v.tuple->items->data,  N*sizeof(DValue) );
-  }
   rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
       ctx->process->mbstring, ctx, par, N+1, -1 );
   if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( ctx->process->mbstring ) );

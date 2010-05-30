@@ -1340,7 +1340,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 
   DString_SetMBS( mbs, name );
   if( N > 0 ){
-    DString_AppendChar( mbs, tid == DAO_PAR_GROUP ? '(' : '<' );
+    DString_AppendChar( mbs, '<' );
     DString_Append( mbs, nest[0]->name );
     DArray_Append( nstd, nest[0] );
     for(i=1; i<N; i++){
@@ -1348,7 +1348,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
       DString_Append( mbs, nest[i]->name );
       DArray_Append( nstd, nest[i] );
     }
-    DString_AppendChar( mbs, tid == DAO_PAR_GROUP ? ')' : '>' );
+    DString_AppendChar( mbs, '>' );
   }else if( tid == DAO_LIST || tid == DAO_ARRAY ){
     DString_AppendMBS( mbs, "<any>" );
     DArray_Append( nstd, any );
@@ -1399,7 +1399,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
   DaoType *tp, *tp2, *abtp;
   DString *fname = NULL;
   DNode *node;
-  int i, ip, ch = 0;
+  int i, ch = 0;
 
   abtp = DaoType_New( "", DAO_ROUTINE, NULL, NULL );
   abtp->attrib = routype->attrib;
@@ -1409,7 +1409,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
   }
   
   DString_AppendMBS( abtp->name, "routine<" );
-  for(i=0, ip=0; i<routype->nested->size; i++, ip++){
+  for(i=0; i<routype->nested->size; i++){
     if( i >0 ) DString_AppendMBS( abtp->name, "," );
     tp = tp2 = routype->nested->items.pAbtp[i];
     if( tp && (tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT) ){
@@ -1418,7 +1418,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
     }
     if( tp2 && tp2->tid ==DAO_UDF ){
       if( vals ){
-        tp2 = DaoNameSpace_GetTypeV( self, vals[ip] );
+        tp2 = DaoNameSpace_GetTypeV( self, vals[i] );
       }else if( types && types[i] ){
         tp2 = types[i];
       }
@@ -1433,7 +1433,6 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
     }
     DString_Append( abtp->name, tp->name );
     DArray_Append( abtp->nested, tp );
-    if( tp->tid == DAO_PAR_GROUP ) ip += tp->nested->size-1;
   }
   tp = retp ? retp : routype->X.abtype;
   if( tp ){

@@ -72,8 +72,6 @@
  *    DaoType.count = 2
  *    DaoType.nested[] = X, Y
  */
-#define MAPF_OFFSET  12
-#define MAPF_MASK    0xfff
 struct DaoType
 {
   DAO_DATA_COMMON

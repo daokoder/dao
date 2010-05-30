@@ -173,10 +173,14 @@ void DaoContext_Init( DaoContext *self, DaoRoutine *routine )
 }
 int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DValue *pars[], int npar )
 { 
+  DValue *selfpar = NULL;
+  DValue value = daoNullObject;
   DaoObject *othis = self->object;
   DaoRoutine *rout = self->routine;
+  value.v.object = self->object;
+  if( self->object ) selfpar = & value;
   if( ! self->routine ) return 0;
-  rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, vmp, NULL, pars, npar, 0 );
+  rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, vmp, selfpar, pars, npar, 0 );
   if( rout==NULL ){
     DaoContext_RaiseException( self, DAO_ERROR_PARAM, "" );
     return 0;
@@ -730,9 +734,9 @@ void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
   if( va->t == DAO_OBJECT ){
     rc = DaoObject_InvokeMethod( va->v.object, NULL, self->process, name, self, vc, 1, vmc->c );
   }else{
-    val = DaoFindValue( typer, name );
-    if( val.t == DAO_FUNCTION )
-      func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, self->process, va, p+1, 1, 0 );
+    func = DaoFindFunction( typer, name );
+    if( func )
+      func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self->process, va, p+1, 1, 0 );
     if( func ){
       DaoFunction_SimpleCall( func, self, p, 2 );
     }else{
@@ -2046,7 +2050,7 @@ ArithError:
 static void DaoContext_LongDiv
 ( DaoContext *self, DLong *z, DLong *x, DLong *y, DLong *r )
 {
-  if( y->size ==0 || (y->size ==1 && y->data[0] ==0) ){
+  if( x->size ==0 || (x->size ==1 && x->data[0] ==0) ){
     self->idClearFE = self->vmc - self->codes;
     DaoContext_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
     return;

@@ -2859,24 +2859,17 @@ static void DaoCData_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
   }else{
     DaoFunction *func = NULL;
     DValue *p[ DAO_MAX_PARAM ];
-    DValue val;
-    int i, N = 1;
     p[0] = self0;
-    if( pid.t == DAO_TUPLE && pid.v.tuple->unitype != dao_type_for_iterator ){
-      N = pid.v.tuple->items->size;
-      for(i=0; i<N; i++) p[i+1] = pid.v.tuple->items->data + i;
-    }else{
-      p[1] = & pid;
-    }
+    p[1] = & pid;
     DString_SetMBS( ctx->process->mbstring, "[]" );
-    val = DaoFindValue( typer, ctx->process->mbstring );
-    if( val.t == DAO_FUNCTION )
-      func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, ctx->process, self0, p, N, 0 );
+    func = DaoFindFunction( typer, ctx->process->mbstring );
+    if( func )
+      func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, ctx->process, self0, p+1, 1, 0 );
     if( func == NULL ){
       DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
       return;
     }
-    DaoFunction_SimpleCall( func, ctx, p, N+1 );
+    DaoFunction_SimpleCall( func, ctx, p, 2 );
   }
 }
 static void DaoCData_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
@@ -2884,31 +2877,24 @@ static void DaoCData_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue
   DaoTypeBase *typer = DValue_GetTyper( *self0 );
   DaoFunction *func = NULL;
   DValue *p[ DAO_MAX_PARAM+2 ];
-  DValue val;
-  int i, N = 1;
 
   DString_SetMBS( ctx->process->mbstring, "[]=" );
   if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
     DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
     return;
   }
-  val = DaoFindValue( typer, ctx->process->mbstring );
-  if( val.t == DAO_FUNCTION ){
+  func = DaoFindFunction( typer, ctx->process->mbstring );
+  if( func ){
     p[0] = self0;
-    p[1] = & value;
-    if( pid.t == DAO_TUPLE ){
-      N = pid.v.tuple->items->size;
-      for(i=0; i<N; i++) p[i+2] = pid.v.tuple->items->data + i;
-    }else{
-      p[2] = & pid;
-    }
-    func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, ctx->process, self0, p, N+1, 0 );
+    p[1] = & pid;
+    p[2] = & value;
+    func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, ctx->process, self0, p+1, 2, 0 );
   }
   if( func == NULL ){
     DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
     return;
   }
-  DaoFunction_SimpleCall( func, ctx, p, N+2 );
+  DaoFunction_SimpleCall( func, ctx, p, 3 );
 }
 
 DaoCDataCore* DaoCDataCore_New()
