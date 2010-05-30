@@ -172,6 +172,7 @@ static int DRoutine_CheckType
     selfMatch = DaoType_MatchTo( selftype, abtp, defs );
     if( selfMatch ){
       selfChecked = 1;
+      parpass[0] = selfMatch;
       if( selfMatch >= DAO_MT_ANYUDF && selfMatch <= DAO_MT_UDF ) *spec = 1;
       if( *min > selfMatch ) *min = selfMatch;
     }
@@ -211,7 +212,7 @@ static int DRoutine_CheckType
 
     /*
        printf( "%p %s %p %s\n", tp->X.extra, tp->name->mbs, abtp->X.extra, abtp->name->mbs );
-       printf( "%i\n", parpass[ito] );
+       printf( "%i:  %i\n", ito, parpass[ito] );
      */
 
     /* less strict */

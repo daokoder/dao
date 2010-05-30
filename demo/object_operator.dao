@@ -12,49 +12,47 @@ class Integer
 
   routine Integer( v = 0 ){ value = v }
 
-  operator +( A : Integer, B : int ){
+  static operator +( A : Integer, B : int ){
     io.writeln( 'Integer + int' );
     return Integer{ A.value + B };
   }
-  operator +( A : int, B : Integer ){
+  static operator +( A : int, B : Integer ){
     io.writeln( 'int + Integer' );
     return Integer{ A + B.value };
   }
-  operator +( A : Integer, B : Integer ){
+  static operator +( A : Integer, B : Integer ){
     io.writeln( 'Integer + Integer' );
     return Integer{ A.value + B.value };
   }
-  operator +( C : Integer, A : Integer, B : Integer ){
+  static operator +( C : Integer, A : Integer, B : Integer ){
     io.writeln( 'Integer = Integer + Integer' );
     C.value = A.value + B.value;
     return C;
   }
-  operator +=( C : Integer, B : Integer ){
+  static operator +=( C : Integer, B : Integer ){
     io.writeln( 'Integer += Integer' );
-    io.writeln( C.value, B.value );
     C.value += B.value;
-    io.writeln( C.value, B.value );
     return C;
   }
-  operator -( A : Integer ){
+  static operator -( A : Integer ){
     io.writeln( '- Integer' );
     return Integer{ - A.value };
   }
-  operator -( A : Integer, B : Integer ){
+  static operator -( A : Integer, B : Integer ){
     io.writeln( 'Integer - Integer' );
     return Integer{ A.value - B.value };
   }
-  operator >( A : Integer, B : Integer ){
+  static operator >( A : Integer, B : Integer ){
     io.writeln( 'Integer > Integer' );
     b = A > B;
     return Integer{ A.value > B.value };
   }
-  operator !( C : Integer, A : Integer ){
+  static operator !( C : Integer, A : Integer ){
     io.writeln( 'operator !( C : Integer, A : Integer )' );
     C.value = ! A.value;
     return C;
   }
-  operator !( A : Integer ){
+  static operator !( A : Integer ){
     io.writeln( 'operator !( A : Integer )' );
     return Integer{ ! A.value };
   }
