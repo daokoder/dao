@@ -1210,7 +1210,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
     if( end2 ) *end2 = p2;
     p1 = last = p2 + 1;
     p2 = end;
-    if( index ) break;
+    if( index && n == index ) break;
   }
   DString_SubString( source, target, last, p2 - last );
   DString_Append( replace, target );
@@ -1226,7 +1226,7 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
     int index, int count, DVarray *packs )
 {
   size_t start = 0, end = 0;
-  size_t i, n=0, p1=start, p2=end, p3, last;
+  size_t i, n=0, p1=start, p2=end, p3;
   wchar_t ch, ch2;
   DValue value = daoZeroInt;
   DValue matched = daoNullString;
@@ -1237,7 +1237,7 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
   matched.v.s = tmp;
   Dao_ParseTarget( target, array, matched );
   if( end == 0 ) p2 = end = DString_Size( source );
-  n = last = 0;
+  n = 0;
   while( DaoRegex_Match( self, source, & p1, & p2 ) ){
     if( index ==0 || (++n) == index ){
       DString_Clear( tmp );
@@ -1254,13 +1254,14 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
       }
       DVarray_Append( packs, matched );
     }
-    p1 = last = p2 + 1;
+    p1 = p2 + 1;
     p2 = end;
-    if( index ) break;
+    if( index && n == index ) break;
     if( count && packs->size >= count ) break;
   }
 DoNothing:
   DString_Delete( tmp );
+  DString_Delete( tmp2 );
   DVarray_Delete( array );
   return n;
 }
