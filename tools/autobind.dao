@@ -490,7 +490,6 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 	func.excluded = excluded;
   func.snamespace = snamespace;
 
-
 	if( ret.pfind( '^ %s* virtual %s+' ) ){
 		func.attribs |= FUNC_VIRTUAL;
 		if( tks[5] ) func.attribs |= FUNC_PURE_VIRTUAL;
@@ -2619,6 +2618,12 @@ routine Function::Generate()
 	if( attribs & FUNC_CONST ){
     signature += 'const';
     signature2 += 'const';
+  }
+  if( excluded ){
+    source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' );
+    while( source.replace( '>>', '> >' ) );
+    signature = source;
+    signature2 = source;
   }
   # if( excluded ) return; # can not return here, 
   # because C/C++ parameter list is need for constructors!

@@ -1376,6 +1376,27 @@ static void DaoSTR_Change( DaoContext *ctx, DValue *p[], int N )
   n = DaoRegex_Change( patt, self, str, index, & start, & end );
   DaoContext_PutInteger( ctx, n );
 }
+static void DaoSTR_Mpack( DaoContext *ctx, DValue *p[], int N )
+{
+  DString *self = p[0]->v.s;
+  DString *pt = p[1]->v.s;
+  DString *str = p[2]->v.s;
+  dint index = p[3]->v.i;
+  DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
+  if( N == 5 ){
+    DaoList *res = DaoContext_PutList( ctx );
+    dint count = p[4]->v.i;
+    DaoRegex_MatchAndPack( patt, self, str, index, count, res->items );
+  }else{
+    DVarray *packs = DVarray_New();
+    DaoRegex_MatchAndPack( patt, self, str, index, 1, packs );
+    if( packs->size ){
+      DaoContext_PutValue( ctx, packs->data[0] );
+    }else{
+      DaoContext_PutMBString( ctx, "" );
+    }
+  }
+}
 static const char *errmsg[2] =
 {
   "invalid key",
@@ -1416,7 +1437,7 @@ static DaoFuncItem stringMeths[] =
   { DaoSTR_Find,    "find( self :string, str :string, from=0, reverse=0 )const=>int" },
   /* replace index-th occurrence: =0: replace all; >0: from begin; <0: from end. */
   /* return int of occurrence replaced. */
-  { DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )" },
+  { DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )=>int" },
   { DaoSTR_Replace2, "replace( self :string, table : map<string,string>, max=0 )" },
   { DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )const=>string" },
   { DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )const=>string" },
@@ -1430,11 +1451,13 @@ static DaoFuncItem stringMeths[] =
   { DaoSTR_Extract, "extract( self :string, pt :string, matched=1, mask='', rev=0 )const=>list<string>" },
   { DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )const=>list<string>" },
   { DaoSTR_Change,  "change( self :string, pt :string, s:string, index=0, start=0, end=0 )=>int" },
-  { DaoSTR_Tonumber,  "tonumber( self :string, base=10 )const=>double" },
-  { DaoSTR_Tolower,   "tolower( self :string ) =>string" },
-  { DaoSTR_Toupper,   "toupper( self :string ) =>string" },
-  { DaoSTR_Encrypt,   "encrypt( self :string, key :string, hex=0 ) => string" },
-  { DaoSTR_Decrypt,   "decrypt( self :string, key :string, hex=0 ) => string" },
+  { DaoSTR_Mpack,  "mpack( self :string, pt :string, s:string, index=0 )=>string" },
+  { DaoSTR_Mpack,  "mpack( self :string, pt :string, s:string, index : int, count : int )=>list<string>" },
+  { DaoSTR_Tonumber, "tonumber( self :string, base=10 )const=>double" },
+  { DaoSTR_Tolower, "tolower( self :string ) =>string" },
+  { DaoSTR_Toupper, "toupper( self :string ) =>string" },
+  { DaoSTR_Encrypt, "encrypt( self :string, key :string, hex=0 ) => string" },
+  { DaoSTR_Decrypt, "decrypt( self :string, key :string, hex=0 ) => string" },
   { DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
   { NULL, NULL }
 };

@@ -1130,22 +1130,13 @@ int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end )
   return 1;
 }
 #include"daoValue.h"
-int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, 
-    int index, size_t *start2, size_t *end2 )
+static void Dao_ParseTarget( DString *target, DVarray *parts, DValue sval )
 {
-  size_t start = start2 ? (size_t) *start2 : 0;
-  size_t end = end2 ? (size_t) *end2 : 0;
-  size_t i, n=0, p1=start, p2=end, p3, last;
-  wchar_t ch, ch2;
-  DValue value = daoZeroInt;
-  DValue matched = daoNullString;
-  DString *tmp = DString_New( source->mbs != NULL );
-  DString *replace = DString_New( source->mbs != NULL );
-  DVarray *array = DVarray_New();
-  if( self ==NULL ) goto DoNothing;
-  matched.v.s = tmp;
+  DString *tmp = sval.v.s;
+  DValue ival = daoZeroInt;
+  size_t i, n = DString_Size( target );
+  int ch, ch2;
   DString_Clear( tmp );
-  n = DString_Size( target );
   for(i=0; i<n; i++){
     if( target->mbs ){
       ch = target->mbs[i];
@@ -1155,10 +1146,10 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
       ch2 = target->wcs[i+1];
     }
     if( ch == L'%' && iswdigit( ch2 ) ){
-      DVarray_PushBack( array, matched );
+      DVarray_PushBack( parts, sval );
       DString_Clear( tmp );
-      value.v.i = ch2 - L'0';
-      DVarray_PushBack( array, value );
+      ival.v.i = ch2 - L'0';
+      DVarray_PushBack( parts, ival );
       i ++;
     }else if( ch == L'%' ){
       if( i+1 < n ){
@@ -1177,12 +1168,28 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
       }
     }
   }
-  DVarray_PushBack( array, matched );
+  DVarray_PushBack( parts, sval );
+}
+int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, 
+    int index, size_t *start2, size_t *end2 )
+{
+  size_t start = start2 ? (size_t) *start2 : 0;
+  size_t end = end2 ? (size_t) *end2 : 0;
+  size_t i, n=0, p1=start, p2=end, p3, last;
+  wchar_t ch, ch2;
+  DValue value = daoZeroInt;
+  DValue matched = daoNullString;
+  DString *tmp = DString_New( source->mbs != NULL );
+  DString *replace = DString_New( source->mbs != NULL );
+  DVarray *array = DVarray_New();
+  if( self ==NULL ) goto DoNothing;
+  matched.v.s = tmp;
+  Dao_ParseTarget( target, array, matched );
   if( end == 0 ) p2 = end = DString_Size( source );
-  i = n = last = 0;
+  n = last = 0;
   target = DString_Copy( target );
   while( DaoRegex_Match( self, source, & p1, & p2 ) ){
-    if( index ==0 || (++i) == index ){
+    if( index ==0 || (++n) == index ){
       DString_SubString( source, target, last, p1 - last );
       DString_Append( replace, target );
       DString_Clear( tmp );
@@ -1198,7 +1205,6 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
         }
       }
       DString_Append( replace, tmp );
-      n ++;
     }
     if( start2 ) *start2 = p1;
     if( end2 ) *end2 = p2;
@@ -1213,6 +1219,48 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
 DoNothing:
   DString_Delete( tmp );
   DString_Delete( replace );
+  DVarray_Delete( array );
+  return n;
+}
+int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
+    int index, int count, DVarray *packs )
+{
+  size_t start = 0, end = 0;
+  size_t i, n=0, p1=start, p2=end, p3, last;
+  wchar_t ch, ch2;
+  DValue value = daoZeroInt;
+  DValue matched = daoNullString;
+  DString *tmp = DString_New( source->mbs != NULL );
+  DString *tmp2 = DString_New( source->mbs != NULL );
+  DVarray *array = DVarray_New();
+  if( self ==NULL ) goto DoNothing;
+  matched.v.s = tmp;
+  Dao_ParseTarget( target, array, matched );
+  if( end == 0 ) p2 = end = DString_Size( source );
+  n = last = 0;
+  while( DaoRegex_Match( self, source, & p1, & p2 ) ){
+    if( index ==0 || (++n) == index ){
+      DString_Clear( tmp );
+      for(i=0; i<array->size; i++){
+        value = array->data[i];
+        if( value.t == DAO_INTEGER ){
+          if( DaoRegex_SubMatch( self, value.v.i, & p1, & p3 ) ){
+            DString_SubString( source, tmp2, p1, p3-p1 + 1 );
+            DString_Append( tmp, tmp2 );
+          }
+        }else{
+          DString_Append( tmp, value.v.s );
+        }
+      }
+      DVarray_Append( packs, matched );
+    }
+    p1 = last = p2 + 1;
+    p2 = end;
+    if( index ) break;
+    if( count && packs->size >= count ) break;
+  }
+DoNothing:
+  DString_Delete( tmp );
   DVarray_Delete( array );
   return n;
 }
