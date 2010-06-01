@@ -1395,6 +1395,7 @@ static void DaoSTR_Mpack( DaoContext *ctx, DValue *p[], int N )
     }else{
       DaoContext_PutMBString( ctx, "" );
     }
+    DVarray_Delete( packs );
   }
 }
 static const char *errmsg[2] =
