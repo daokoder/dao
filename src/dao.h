@@ -2,12 +2,12 @@
    This file is a part of a virtual machine for the Dao programming language.
    Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
+   This software is free software; you can redistribute it and/or modify it under the terms
+   of the GNU Lesser General Public License as published by the Free Software Foundation;
    either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
    See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -31,9 +31,13 @@
 #ifdef WIN32
 
 #if defined( _MSC_VER ) && defined( _M_X64 )
+#define PRI_DINT "%lli"
+#define PRI_UINT "%llu"
 typedef long long           dint;
 typedef unsigned long long  uint_t;
 #else
+#define PRI_DINT "%li"
+#define PRI_UINT "%lu"
 typedef long dint;
 typedef unsigned long uint_t;
 #endif /* defined() */
@@ -68,6 +72,8 @@ typedef unsigned long uint_t;
 #define DaoFindSymbol( handle, name ) dlsym( handle, name )
 #define DaoCloseLibrary( handle ) dlclose( handle )
 
+#define PRI_DINT "%li"
+#define PRI_UINT "%lu"
 typedef long dint;
 typedef unsigned long uint_t;
 
@@ -89,6 +95,8 @@ typedef unsigned long uint_t;
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
+#define PRI_DINT "%li"
+#define PRI_UINT "%lu"
 typedef long dint;
 typedef unsigned long uint_t;
 
@@ -131,7 +139,7 @@ DAO_EXTC_CLOSE
 
 
 #ifdef __cplusplus
-extern "C"{ 
+extern "C"{
 #endif
 
 extern int daoProxyPort;
@@ -223,7 +231,7 @@ enum DaoExceptionType
 
   DAO_WARNING_SYNTAX ,
   DAO_WARNING_VALUE ,
-  
+
   ENDOF_BASIC_EXCEPT
 };
 
@@ -328,11 +336,11 @@ struct DaoTypeBase
   const char    *name; /* type name; */
   DaoNumItem    *numItems; /* constant number list */
   DaoFuncItem   *funcItems; /* method list: should end with a null item */
-  
+
   /* typers for super types, to create c type hierarchy;
    * mainly useful for wrapping c++ libraries. */
   DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
-  
+
   void*        (*New)();  /* function to allocate structure; */
   void         (*Delete)( void *self ); /* function to free structure; */
 };
@@ -440,7 +448,7 @@ struct DaoAPI
   DValue (*DaoList_Front)( DaoList *self );
   DValue (*DaoList_Back)( DaoList *self );
   DValue (*DaoList_GetItem)( DaoList *self, int pos );
-  
+
   void (*DaoList_SetItem)( DaoList *self, DValue item, int pos );
   void (*DaoList_Insert) ( DaoList *self, DValue item, int pos );
   void (*DaoList_Erase)( DaoList *self, int pos );
@@ -581,7 +589,7 @@ struct DaoAPI
   DaoCData*  (*DaoContext_WrapCData)( DaoContext *self, void *data, DaoTypeBase *t );
   DaoCData* (*DaoContext_CopyCData)( DaoContext *self, void *d, int n, DaoTypeBase *t );
 
-  void (*DaoContext_RaiseException)( DaoContext *self, int type, const char *value ); 
+  void (*DaoContext_RaiseException)( DaoContext *self, int type, const char *value );
 
   DaoVmProcess* (*DaoVmProcess_New)( DaoVmSpace *vms );
   int (*DaoVmProcess_Compile)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
@@ -869,7 +877,7 @@ DAO_DLL DaoBase*   DaoContext_PutResult( DaoContext *self, DaoBase *data );
 DAO_DLL DaoCData*  DaoContext_WrapCData( DaoContext *self, void *data, DaoTypeBase *typer );
 DAO_DLL DaoCData*  DaoContext_CopyCData( DaoContext *self, void *d, int n, DaoTypeBase *t );
 
-DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *value ); 
+DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 
 DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
@@ -900,7 +908,7 @@ DAO_DLL int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
 /* wrap c types, the last item in typer[] should be NULL;
 types that are cross-used in parameter lists
 (e.g. type A appears in the parameter list of B's methods,
-and type B appears in the parameter list of A's methods), 
+and type B appears in the parameter list of A's methods),
 should be wrapd using this function.
 */
 DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
@@ -1153,7 +1161,7 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DaoContext_WrapCData( s, data, typer ) __dao.DaoContext_WrapCData( s, data, typer )
 #define DaoContext_CopyCData( s, d, n, t )  __dao.DaoContext_CopyCData( s, d, n, t )
 
-#define DaoContext_RaiseException( s, t, v ) __dao.DaoContext_RaiseException( s, t, v ) ; 
+#define DaoContext_RaiseException( s, t, v ) __dao.DaoContext_RaiseException( s, t, v ) ;
 
 #define DaoVmProcess_New( vms )  __dao.DaoVmProcess_New( vms )
 #define DaoVmProcess_Compile( self, ns, s, r ) __dao.DaoVmProcess_Compile( self, ns, s, r )
@@ -1228,14 +1236,14 @@ static int DaoInitLibrary( const char *bin )
   handle = DaoLoadLibrary( "./dao" DAO_DLL_SUFFIX );
   if( daodir == NULL && bin && bin[0] == '/' && strstr( bin, "/bin/" ) ==NULL ){
     /* set the DAO_DIR environment variable if the command is
-     * started from a customized directory. 
+     * started from a customized directory.
      * for example, in web scripts, it may have:
      *
      * #!/home/some_user/some_dir/dao
      *
      * some_scripts();
      *
-     * in such cases, setting DAO_DIR will allow the interpreter to 
+     * in such cases, setting DAO_DIR will allow the interpreter to
      * find the library and module locations properly. */
     k = strlen( bin );
     if( strcmp( bin + k - 4, "/dao" ) ==0 ){

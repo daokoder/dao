@@ -1406,7 +1406,7 @@ static DaoType* DaoCheckBinArith
       node = DMap_Find( at->X.inter->methods, mbs );
       rout = (DRoutine*) node->value.pBase;
     }else if( at->tid == DAO_OBJECT ){
-      rout = DaoClass_FindOperator( at->X.klass, mbs->mbs, hostClass );
+      rout = (DRoutine*) DaoClass_FindOperator( at->X.klass, mbs->mbs, hostClass );
     }else if( at->tid == DAO_CDATA ){
       rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
     }
@@ -1421,7 +1421,7 @@ static DaoType* DaoCheckBinArith
     node = DMap_Find( at->X.inter->methods, mbs );
     rout = (DRoutine*) node->value.pBase;
   }else if( at->tid == DAO_OBJECT ){
-    rout = DaoClass_FindOperator( at->X.klass, mbs->mbs, hostClass );
+    rout = (DRoutine*) DaoClass_FindOperator( at->X.klass, mbs->mbs, hostClass );
   }else if( at->tid == DAO_CDATA ){
     rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
   }
@@ -1439,7 +1439,7 @@ static DaoType* DaoCheckBinArith
       node = DMap_Find( bt->X.inter->methods, mbs );
       rout = (DRoutine*) node->value.pBase;
     }else if( bt->tid == DAO_OBJECT ){
-      rout = DaoClass_FindOperator( bt->X.klass, mbs->mbs, hostClass );
+      rout = (DRoutine*) DaoClass_FindOperator( bt->X.klass, mbs->mbs, hostClass );
     }else if( bt->tid == DAO_CDATA ){
       rout = (DRoutine*) DaoFindFunction( bt->typer, mbs );
     }
@@ -1966,7 +1966,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           }else if( bt->tid != DAO_UDF && bt->tid != DAO_ANY ){
             goto InvIndex;
           }
-        }else if( at->tid == DAO_OBJECT && (rout = DaoClass_FindOperator( at->X.klass, "[]", hostClass )) ){
+        }else if( at->tid == DAO_OBJECT && (rout = (DRoutine*) DaoClass_FindOperator( at->X.klass, "[]", hostClass )) ){
           rout = DRoutine_GetOverLoadByParamType( rout, at, NULL,
               & bt, 1, DVM_CALL, &min, &norm, &spec, & worst );
           if( rout == NULL ) goto InvIndex;
@@ -2365,7 +2365,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           }
           break;
         case DAO_OBJECT :
-          if( (rout=DaoClass_FindOperator( ct->X.klass, "[]=", hostClass )) == NULL)
+          if( (rout=(DRoutine*) DaoClass_FindOperator( ct->X.klass, "[]=", hostClass )) == NULL)
             goto InvIndex;
           ts[0] = bt;
           ts[1] = at;
@@ -3161,7 +3161,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           if( node == NULL ) goto NotExist;
           rout = (DRoutine*)node->value.pBase;
           break;
-        default : 
+        default :
           if( at->typer ) rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
           break;
         }

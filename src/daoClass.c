@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -164,7 +164,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
   DString_Assign( self->className, name );
   DaoClass_AddType( self, name, self->objType );
 
-  rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, self->objType, NULL );
+  rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, (DaoBase*) self->objType, NULL );
   DString_Append( rout->routType->name, name );
   DString_AppendMBS( rout->routType->name, ">" );
   GC_IncRC( rout->routType );
@@ -365,7 +365,7 @@ int  DaoClass_ChildOf( DaoClass *self, DaoBase *klass )
   if( klass == (DaoBase*) self ) return 1;
   for( i=0; i<self->superClass->size; i++ ){
     if( klass == self->superClass->items.pBase[i] ) return 1;
-    if( self->superClass->items.pClass[i]->type == DAO_CLASS 
+    if( self->superClass->items.pClass[i]->type == DAO_CLASS
         && DaoClass_ChildOf( self->superClass->items.pClass[i],  klass ) ){
       return 1;
     }else if( self->superClass->items.pClass[i]->type == DAO_CDATA
@@ -404,8 +404,8 @@ int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *th
   perm = LOOKUP_PM( node->value.pInt );
   sto = LOOKUP_ST( node->value.pInt );
   id = LOOKUP_ID( node->value.pInt );
-  if( self == thisClass || perm == DAO_CLS_PUBLIC 
-      || ( thisClass && DaoClass_ChildOf( thisClass, (DaoBase*)self ) 
+  if( self == thisClass || perm == DAO_CLS_PUBLIC
+      || ( thisClass && DaoClass_ChildOf( thisClass, (DaoBase*)self )
       && perm >= DAO_CLS_PROTECTED ) ){
     switch( sto ){
     case DAO_CLASS_GLOBAL : p = self->glbData->data + id; break;
@@ -431,7 +431,7 @@ DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClas
   sto = LOOKUP_ST( node->value.pInt );
   id = LOOKUP_ID( node->value.pInt );
   if( self == thisClass || perm == DAO_CLS_PUBLIC
-      || ( thisClass && DaoClass_ChildOf( thisClass, (DaoBase*)self ) 
+      || ( thisClass && DaoClass_ChildOf( thisClass, (DaoBase*)self )
       && perm >=DAO_CLS_PROTECTED ) ){
     switch( sto ){
     case DAO_CLASS_VARIABLE : return self->objDataType->items.pAbtp + id;

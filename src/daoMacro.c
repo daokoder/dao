@@ -2,12 +2,12 @@
    This file is a part of a virtual machine for the Dao programming language.
    Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
+   This software is free software; you can redistribute it and/or modify it under the terms
+   of the GNU Lesser General Public License as published by the Free Software Foundation;
    either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
    See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -52,7 +52,7 @@ static int DaoParser_FindOpenToken2( DaoParser *self, DaoToken *tok, int start, 
 {
   int i, n1, n2, n3, n4;
   DaoToken **tokens = self->tokens->items.pToken;
-  
+
   if( start < 0 ) return -10000;
   if( end == -1 || end >= self->tokens->size ) end = self->tokens->size-1;
   n1 = n2 = n3 = n4 = 0;
@@ -168,7 +168,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
   int i, sep, rb, prev;
   DMacroUnit *unit;
   DMacroGroup *grp, *group2; /* mingw don't like grp2 ?! */
-  
+
   /*
   for( i=from; i<to; i++ ) printf( "%s  ", toks[i]->mbs ); printf("\n");
   */
@@ -190,7 +190,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
       case DTOK_ESC_LB :
         rb = DaoParser_FindPairToken( self, DTOK_ESC_LB, DTOK_ESC_RB, i, to );
         break;
-      case DTOK_ESC_LSB : 
+      case DTOK_ESC_LSB :
         rb = DaoParser_FindPairToken( self, DTOK_ESC_LSB, DTOK_ESC_RSB, i, to );
         grp->repeat = DMACRO_ZERO_OR_ONE;
         break;
@@ -206,7 +206,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
         }
       }
       if( rb <0 ) return 0;
-      
+
       prev = i+1;
       sep = DaoParser_FindOpenToken( self, DTOK_ESC_PIPE, i+1, rb, 0 );
       if( sep >=0 ){
@@ -242,7 +242,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
       }
       continue;
     }
-    
+
     self->curLine = toks[i]->line;
     unit  = DMacroUnit_New();
     DaoToken_Assign( unit->marker, toks[i] );
@@ -282,7 +282,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
       default : rb = -1;
       }
       if( rb <0 ) return 0;
-        
+
       grp = DMacroGroup_New();
       grp->parent = group;
       grp->repeat = DMACRO_AUTO;
@@ -454,7 +454,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
   */
 
   macro = DaoMacro_New();
-  
+
   if( DaoParser_MakeMacroGroup( self, macro->macroMatch, macro->macroMatch, start+2, rb1 ) ==0 ){
     DaoMacro_Delete( macro );
     return -1;
@@ -539,7 +539,7 @@ void DMacroNode_Delete( DMacroNode *self )
 static void DMacroNode_Print( DMacroNode *self )
 {
   int i;
-  printf( "{ %i lev=%i nodes=%i: ", self->isLeaf, self->level, self->nodes->size );
+  printf( "{ %i lev=%i nodes=%llu: ", self->isLeaf, self->level, (unsigned long long)self->nodes->size );
   for(i=0; i<self->leaves->size; i++)
     printf( "%s, ", self->leaves->items.pToken[i]->string->mbs );
   for(i=0; i<self->nodes->size; i++){
@@ -553,14 +553,14 @@ static void DMacroNode_Print( DMacroNode *self )
 
 /* Matching a macro to source tokens.
  * For each macro variable such as $EXP and $VAR etc.
- * the matched tokens are stored in a tree, in which the leaves 
- * are corresponding to the matched tokens and the branches 
+ * the matched tokens are stored in a tree, in which the leaves
+ * are corresponding to the matched tokens and the branches
  * corresponding to the repetition of the matchings.
- * 
+ *
  * For example,
  * key1 { \( key2 ( \( key3 $EXPR , \) \+ ) ; \) \* }
  * key1 { key2 ( key3 A+1 , key3 B-2, ); key2 ( key3 C*3, key3 D/4, key3 E+5, ); }
- * 
+ *
  * the matching will generate such tree:
  *
  * key1:                                |
@@ -712,7 +712,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
         */
         break;
       }
-      
+
       /* key1 { \( key2 ( \( key3 $EXPR , \) \+ ) ; \) \* }
        * key1 { key2 ( key3 A , key3 B, ) ; key2 ( key3 C, key3 D, ) ; }
        * { level_1: { level_2, isLeaf: { A, B } }, { level_2, isLeaf: { C, D } } }
@@ -834,8 +834,8 @@ static void DMacroNode_RemoveEmptyLeftBranch( DMacroNode *self, int level )
     if( node->parent ) DArray_PopFront( node->parent->nodes );
   }
 }
-static int DaoParser_MacroApply( DaoParser *self, DArray *tokens, 
-    DMacroGroup *group, DMap *tokMap, DMap *used, 
+static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
+    DMacroGroup *group, DMap *tokMap, DMap *used,
     int level, DString *tag, int pos0, int adjust )
 {
   DMacroUnit **units = (DMacroUnit**) group->units->items.pVoid;
@@ -917,7 +917,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
     case DMACRO_OP :
     case DMACRO_BL :
     case DMACRO_IBL :
-      
+
       kwnode = MAP_Find( tokMap, unit->marker->string );
       if( kwnode ==NULL ){
         DaoParser_Error( self, DAO_CTW_UNDEF_MAC_MARKER, unit->marker->string );
@@ -995,7 +995,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
         if( j >=0 ){
           DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
         }
-        
+
         while( j >0 ){
           gid = i;
           DArray_Clear( toks );
@@ -1042,13 +1042,13 @@ int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int t
   printf( "MacroTransform %i\n", j );
   */
   if( j <0 ) goto Failed;
-  
+
   for( it = DMap_First( tokMap ); it != NULL; it = DMap_Next( tokMap, it ) ){
     DMacroNode *node = (DMacroNode*) it->value.pVoid;
     while( node->parent ) node = node->parent;
     it->value.pVoid = node;
   }
-  
+
   lev = 0;
   p0 = self->tokens->items.pToken[start]->line;
   adjust = self->tokens->items.pToken[start]->cpos - macro->macroApply->cpos;

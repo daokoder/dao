@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -60,7 +60,7 @@ DaoTypeBase abstypeTyper=
 void DaoType_MapNames( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self )
 {
-  if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE 
+  if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE
       || DString_FindChar( self->name, '@', 0 ) != MAXSIZE )
     self->attrib |= DAO_TYPE_NOTDEF;
   else
@@ -205,7 +205,7 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
   if( p1 && p2 && ! DString_EQ( self->fname, type->fname ) ) return DAO_MT_NOT;
   if( p1 ) ext1 = self->X.abtype;
   if( p2 ) ext2 = type->X.abtype;
-  
+
   m = DaoType_Match( ext1, ext2, defs, binds );
   /*
   printf( "m = %i:  %s  %s\n", m, ext1->name->mbs, ext2->name->mbs );
@@ -264,7 +264,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
   }
   switch( self->tid ){
   case DAO_ARRAY : case DAO_LIST :
-  case DAO_MAP : case DAO_TUPLE : 
+  case DAO_MAP : case DAO_TUPLE :
     /* tuple<...> to tuple */
     if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
     if( self->nested->size > type->nested->size ) return DAO_MT_NOT;
@@ -274,7 +274,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
       k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
       if( k == DAO_MT_NOT ) return k;
       if( k < mt ) mt = k;
-    } 
+    }
     break;
   case DAO_ROUTINE :
     if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
@@ -293,7 +293,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
       */
       if( k == DAO_MT_NOT ) return k;
       if( k < mt ) mt = k;
-    } 
+    }
     if( self->X.extra && type->X.extra ){
       k = DaoType_Match( self->X.abtype, type->X.abtype, defs, binds );
       if( k < mt ) mt = k;
@@ -413,7 +413,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
     if( self->nested->size >1 ) it2 = self->nested->items.pAbtp[1]->tid;
   }
   switch( value.t ){
-  case DAO_ARRAY : 
+  case DAO_ARRAY :
     if( value.v.array->size == 0 ) return DAO_MT_EQ;
     tp = value.v.array->unitype;
     if( tp == self ) return DAO_MT_EQ;
@@ -431,7 +431,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
     if( it1 == DAO_ANY ) return DAO_MT_ANY;
     if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
     break;
-  case DAO_MAP : 
+  case DAO_MAP :
     if( value.v.map->items->size == 0 ) return DAO_MT_EQ;
     tp = value.v.map->unitype;
     if( tp == self ) return DAO_MT_EQ;
@@ -524,7 +524,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
   DNode *node;
 
   if( self == NULL ) return NULL;
-  if( DString_FindChar( self->name, '?', 0 ) == MAXSIZE 
+  if( DString_FindChar( self->name, '?', 0 ) == MAXSIZE
       && DString_FindChar( self->name, '@', 0 ) == MAXSIZE ) return self;
 
   node = MAP_Find( defs, self );
@@ -676,7 +676,7 @@ int DaoInterface_CheckBind
       if( id <0 ) goto RecordFailA;
       value = klass->cstData->data[id];
       if( value.t != DAO_ROUTINE && value.t != DAO_FUNCTION ) goto RecordFailA;
-      if( DRoutine_IsCompatible( value.v.routine, rout->routType, binds ) ==0 )
+      if( DRoutine_IsCompatible( (DRoutine*) value.v.routine, rout->routType, binds ) ==0 )
         goto RecordFailA;
       continue;
 RecordFailA:

@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
 =========================================================================================*/
 
@@ -222,7 +222,7 @@ int ObjectProfile[100];
 
 void DaoBase_Init( void *dbase, char type )
 {
-  DaoBase *self = (DaoBase*) dbase; 
+  DaoBase *self = (DaoBase*) dbase;
   self->type = self->subType = type;
   self->gcState[0] = self->gcState[1]  = 0;
   self->refCount = 0;
@@ -546,7 +546,7 @@ static void DaoSTR_Size( DaoContext *ctx, DValue *p[], int N )
 static void DaoSTR_Resize( DaoContext *ctx, DValue *p[], int N )
 {
   if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && p[1]->v.i > 1E5 ){
-    DaoContext_RaiseException( ctx, DAO_ERROR, 
+    DaoContext_RaiseException( ctx, DAO_ERROR,
         "not permitted to create long string in safe running mode" );
     return;
   }
@@ -597,7 +597,7 @@ static void DaoSTR_Chop( DaoContext *ctx, DValue *p[], int N )
         }
       }
     }else if( k !=0 ){
-      chs[i] = 0; 
+      chs[i] = 0;
       self->size --;
     }
   }
@@ -1014,7 +1014,7 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
         s += 2;
         continue;
       }
-      if( ( bkslash == 0 || s == self->mbs || *(s-1) !='\\' ) 
+      if( ( bkslash == 0 || s == self->mbs || *(s-1) !='\\' )
           && DString_FindChar( quotes, *s, 0 ) != MAXSIZE ){
         DString_AppendChar( str, *s );
         s ++;
@@ -1024,7 +1024,7 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
             DString_AppendChar( str, *(s+1) );
             s += 2;
           }
-          if( ( bkslash == 0 || *(s-1) !='\\' ) 
+          if( ( bkslash == 0 || *(s-1) !='\\' )
               && DString_FindChar( quotes, *s, 0 ) != MAXSIZE )
             break;
           DString_AppendChar( str, *s );
@@ -1064,7 +1064,7 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
     DString_ToWCS( delms );
     DString_ToWCS( quotes );
     while( *s ){
-      if( ( s == self->wcs || bkslash ==0 || *(s-1)!=L'\\' ) 
+      if( ( s == self->wcs || bkslash ==0 || *(s-1)!=L'\\' )
         && DString_FindWChar( quotes, *s, 0 ) != MAXSIZE ){
         DString_AppendChar( str, *s );
         s ++;
@@ -1115,7 +1115,7 @@ int xBaseInteger( char *first, char *last, int xbase, DaoContext *ctx )
   first --;
   while( p != first ){
     c = ( (*p) | 0x20 );
-    d = ( c>='0' && c<='9' ) ? ( c -'0' ) : c - ('a' - 10); 
+    d = ( c>='0' && c<='9' ) ? ( c -'0' ) : c - ('a' - 10);
     if( d >= xbase || d < 0 ){
       DaoContext_RaiseException( ctx, DAO_ERROR, "invalid digit" );
       return 0;
@@ -1136,7 +1136,7 @@ static double xBaseDecimal( char *first, char *last, int xbase, DaoContext *ctx 
   register char c;
   while( p != last ){
     c = ( (*p) | 0x20 );
-    d = ( c>='0' && c<='9' ) ? ( c -'0' ) : c - ('a' - 10); 
+    d = ( c>='0' && c<='9' ) ? ( c -'0' ) : c - ('a' - 10);
     if( d >= xbase || d < 0 ){
       DaoContext_RaiseException( ctx, DAO_ERROR, "invalid digit" );
       return 0;
@@ -1197,7 +1197,7 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
   size_t i, p1=start, p2=end;
   DValue value = daoZeroInt;
   DValue vtup = daoNullTuple;
-  DaoTuple *tuple = NULL; 
+  DaoTuple *tuple = NULL;
   DaoList *list = DaoContext_PutList( ctx );
   DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
   if( patt ==NULL ) return;
@@ -1710,7 +1710,7 @@ static void DaoLIST_Resize( DaoContext *ctx, DValue *p[], int N )
   size_t oldSize = self->items->size;
   size_t i;
   if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
-    DaoContext_RaiseException( ctx, DAO_ERROR, 
+    DaoContext_RaiseException( ctx, DAO_ERROR,
         "not permitted to create large list in safe running mode" );
     return;
   }
@@ -1911,7 +1911,7 @@ static void DaoLIST_Top( DaoContext *ctx, DValue *p[], int N )
 /* Quick Sort.
  * Adam Drozdek: Data Structures and Algorithms in C++, 2nd Edition.
  */
-static int 
+static int
 Compare( DaoContext *ctx, int entry, int reg0, int reg1, int res, DValue v0, DValue v1 )
 {
   DValue **locs = ctx->regValues;
@@ -1921,7 +1921,7 @@ Compare( DaoContext *ctx, int entry, int reg0, int reg1, int res, DValue v0, DVa
   DaoVmProcess_ExecuteSection( ctx->process, entry );
   return DValue_GetInteger( * ctx->regValues[ res ] );
 }
-static void 
+static void
 PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1, int rr,
     DValue *data, int first, int last, int part )
 {
@@ -2087,7 +2087,7 @@ static void DaoLIST_Iter( DaoContext *ctx, DValue *p[], int N )
   data[0].v.i = self->items->size >0;
   DValue_Copy( & data[1], iter );
 }
-static DaoFuncItem listMeths[] = 
+static DaoFuncItem listMeths[] =
 {
   { DaoLIST_Insert,     "insert( self :list<@T>, item : @T, pos=0 )" },
   { DaoLIST_Erase,      "erase( self :list<any>, start=0, n=1 )" },
@@ -2571,7 +2571,7 @@ static void DaoMAP_Iter( DaoContext *ctx, DValue *p[], int N )
   data[1].t = 0;
   data[1].v.p = (DaoBase*) DMap_First( self->items );
 }
-static DaoFuncItem mapMeths[] = 
+static DaoFuncItem mapMeths[] =
 {
   { DaoMAP_Clear,  "clear( self :map<any,any> )" },
   { DaoMAP_Erase,  "erase( self :map<any,any> )" },
@@ -2591,7 +2591,7 @@ static DaoFuncItem mapMeths[] =
   { DaoMAP_Iter,   "__for_iterator__( self :map<any,any>, iter : for_iterator )" },
   { NULL, NULL }
 };
-  
+
 int DaoMap_Size( DaoMap *self )
 {
   return self->items->size;
@@ -2759,7 +2759,7 @@ static void DaoCData_Delete( DaoCData *self )
     if( self->buffer ){
       dao_free( self->buffer );
     }else if( self->data ){
-      if( c->DelData && c->DelData != DaoCData_Delete )
+      if( c->DelData && c->DelData != (void (*)(void *))DaoCData_Delete )
         c->DelData( self->data );
       else if( self->bufsize > 0 )
         dao_free( self->data );
@@ -2829,7 +2829,7 @@ static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
     DString_SetMBS( ctx->process->mbstring, "." );
     DString_Append( ctx->process->mbstring, name );
     p = DaoFindValue( typer, ctx->process->mbstring );
-    if( p.t == DAO_FUNCTION ) 
+    if( p.t == DAO_FUNCTION )
       func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, ctx->process, NULL, & self, 1, 0 );
     if( func == NULL ){
       DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
@@ -2942,7 +2942,7 @@ void DaoTypeCData_SetMethods( DaoTypeBase *self )
 {
   self->New = (FuncPtrNew)DaoCData_New;
   self->Delete = (FuncPtrDel)DaoCData_Delete;
-}        
+}
 
 void DaoBuffer_Resize( DaoCData *self, int size )
 {
@@ -2963,7 +2963,7 @@ static void DaoBuf_New( DaoContext *ctx, DValue *p[], int N )
   self->attribs |= DAO_CDATA_FREE;
   DaoContext_SetResult( ctx, (DaoBase*) self );
   if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
-    DaoContext_RaiseException( ctx, DAO_ERROR, 
+    DaoContext_RaiseException( ctx, DAO_ERROR,
         "not permitted to create large buffer object in safe running mode" );
     return;
   }
@@ -2978,7 +2978,7 @@ static void DaoBuf_Resize( DaoContext *ctx, DValue *p[], int N )
 {
   DaoCData *self = p[0]->v.cdata;
   if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && p[1]->v.i > 1000 ){
-    DaoContext_RaiseException( ctx, DAO_ERROR, 
+    DaoContext_RaiseException( ctx, DAO_ERROR,
         "not permitted to create large buffer object in safe running mode" );
     return;
   }
@@ -3123,7 +3123,7 @@ static DaoFuncItem cptrMeths[]=
   { NULL, NULL },
 };
 
-DaoTypeBase cdataTyper = 
+DaoTypeBase cdataTyper =
 {
   NULL,
   "cdata",
@@ -3133,7 +3133,7 @@ DaoTypeBase cdataTyper =
   (FuncPtrNew)DaoCData_New,
   (FuncPtrDel)DaoCData_Delete
 };
-DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, NULL,NULL,NULL, & cdataTyper, 0,0,0,0 };
+DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, NULL,NULL,NULL,NULL, & cdataTyper, 0,0,0,0 };
 
 void DaoPair_Delete( DaoPair *self )
 {
@@ -3191,7 +3191,7 @@ DaoPair* DaoPair_New( DValue p1, DValue p2 )
 }
 
 /* ---------------------
- * Dao Tuple 
+ * Dao Tuple
  * ---------------------*/
 static int DaoTuple_GetIndex( DaoTuple *self, DaoContext *ctx, DString *name )
 {
@@ -3411,8 +3411,8 @@ static DaoFuncItem dao_Exception_Meths[] =
   { NULL, NULL }
 };
 
-DaoTypeBase dao_Exception_Typer = 
-{ NULL, "Exception", NULL, dao_Exception_Meths, 
+DaoTypeBase dao_Exception_Typer =
+{ NULL, "Exception", NULL, dao_Exception_Meths,
   { 0 }, NULL, (FuncPtrDel) DaoException_Delete };
 
 static void Dao_Exception_Get_name( DaoContext *ctx, DValue *p[], int n )
@@ -3466,11 +3466,11 @@ static DaoFuncItem dao_ExceptionNone_Meths[] =
   { Dao_Exception_New22, "None( data : any )=>None" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ExceptionNone_Typer = 
+DaoTypeBase dao_ExceptionNone_Typer =
 {
   NULL, "None",
-  NULL, dao_ExceptionNone_Meths, 
-  { & dao_Exception_Typer, NULL }, 
+  NULL, dao_ExceptionNone_Meths,
+  { & dao_Exception_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3480,11 +3480,11 @@ static DaoFuncItem dao_ExceptionAny_Meths[] =
   { Dao_Exception_New22, "Any( data : any )=>Any" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ExceptionAny_Typer = 
+DaoTypeBase dao_ExceptionAny_Typer =
 {
   NULL, "Any",
-  NULL, dao_ExceptionAny_Meths, 
-  { & dao_Exception_Typer, NULL }, 
+  NULL, dao_ExceptionAny_Meths,
+  { & dao_Exception_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3494,11 +3494,11 @@ static DaoFuncItem dao_ExceptionWarning_Meths[] =
   { Dao_Exception_New22, "Warning( data : any )=>Warning" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ExceptionWarning_Typer = 
+DaoTypeBase dao_ExceptionWarning_Typer =
 {
   NULL, "Warning",
-  NULL, dao_ExceptionWarning_Meths, 
-  { & dao_Exception_Typer, NULL }, 
+  NULL, dao_ExceptionWarning_Meths,
+  { & dao_Exception_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3508,11 +3508,11 @@ static DaoFuncItem dao_ExceptionError_Meths[] =
   { Dao_Exception_New22, "Error( data : any )=>Error" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ExceptionError_Typer = 
+DaoTypeBase dao_ExceptionError_Typer =
 {
   NULL, "Error",
-  NULL, dao_ExceptionError_Meths, 
-  { & dao_Exception_Typer, NULL }, 
+  NULL, dao_ExceptionError_Meths,
+  { & dao_Exception_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3522,11 +3522,11 @@ static DaoFuncItem dao_ErrorField_Meths[] =
   { Dao_Exception_New22, "Field( data : any )=>Field" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ErrorField_Typer = 
+DaoTypeBase dao_ErrorField_Typer =
 {
   NULL, "Field",
-  NULL, dao_ErrorField_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_ErrorField_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3536,11 +3536,11 @@ static DaoFuncItem dao_NotExist_Meths[] =
   { Dao_Exception_New22, "NotExist( data : any )=>NotExist" },
   { NULL, NULL }
 };
-DaoTypeBase dao_FieldNotExist_Typer = 
+DaoTypeBase dao_FieldNotExist_Typer =
 {
   NULL, "NotExist",
-  NULL, dao_NotExist_Meths, 
-  { & dao_ErrorField_Typer, NULL }, 
+  NULL, dao_NotExist_Meths,
+  { & dao_ErrorField_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3550,11 +3550,11 @@ static DaoFuncItem dao_FieldNotPermit_Meths[] =
   { Dao_Exception_New22, "NotPermit( data : any )=>NotPermit" },
   { NULL, NULL }
 };
-DaoTypeBase dao_FieldNotPermit_Typer = 
+DaoTypeBase dao_FieldNotPermit_Typer =
 {
   NULL, "NotPermit",
-  NULL, dao_FieldNotPermit_Meths, 
-  { & dao_ErrorField_Typer, NULL }, 
+  NULL, dao_FieldNotPermit_Meths,
+  { & dao_ErrorField_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3564,11 +3564,11 @@ static DaoFuncItem dao_ErrorFloat_Meths[] =
   { Dao_Exception_New22, "Float( data : any )=>Float" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ErrorFloat_Typer = 
+DaoTypeBase dao_ErrorFloat_Typer =
 {
   NULL, "Float",
-  NULL, dao_ErrorFloat_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_ErrorFloat_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3578,11 +3578,11 @@ static DaoFuncItem dao_FloatDivByZero_Meths[] =
   { Dao_Exception_New22, "DivByZero( data : any )=>DivByZero" },
   { NULL, NULL }
 };
-DaoTypeBase dao_FloatDivByZero_Typer = 
+DaoTypeBase dao_FloatDivByZero_Typer =
 {
   NULL, "DivByZero",
-  NULL, dao_FloatDivByZero_Meths, 
-  { & dao_ErrorFloat_Typer, NULL }, 
+  NULL, dao_FloatDivByZero_Meths,
+  { & dao_ErrorFloat_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3592,11 +3592,11 @@ static DaoFuncItem dao_FloatOverFlow_Meths[] =
   { Dao_Exception_New22, "OverFlow( data : any )=>OverFlow" },
   { NULL, NULL }
 };
-DaoTypeBase dao_FloatOverFlow_Typer = 
+DaoTypeBase dao_FloatOverFlow_Typer =
 {
   NULL, "OverFlow",
-  NULL, dao_FloatOverFlow_Meths, 
-  { & dao_ErrorFloat_Typer, NULL }, 
+  NULL, dao_FloatOverFlow_Meths,
+  { & dao_ErrorFloat_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3606,11 +3606,11 @@ static DaoFuncItem dao_FloatUnderFlow_Meths[] =
   { Dao_Exception_New22, "UnderFlow( data : any )=>UnderFlow" },
   { NULL, NULL }
 };
-DaoTypeBase dao_FloatUnderFlow_Typer = 
+DaoTypeBase dao_FloatUnderFlow_Typer =
 {
   NULL, "UnderFlow",
-  NULL, dao_FloatUnderFlow_Meths, 
-  { & dao_ErrorFloat_Typer, NULL }, 
+  NULL, dao_FloatUnderFlow_Meths,
+  { & dao_ErrorFloat_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3620,11 +3620,11 @@ static DaoFuncItem dao_ErrorIndex_Meths[] =
   { Dao_Exception_New22, "Index( data : any )=>Index" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ErrorIndex_Typer = 
+DaoTypeBase dao_ErrorIndex_Typer =
 {
   NULL, "Index",
-  NULL, dao_ErrorIndex_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_ErrorIndex_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3634,11 +3634,11 @@ static DaoFuncItem dao_IndexOutOfRange_Meths[] =
   { Dao_Exception_New22, "OutOfRange( data : any )=>OutOfRange" },
   { NULL, NULL }
 };
-DaoTypeBase dao_IndexOutOfRange_Typer = 
+DaoTypeBase dao_IndexOutOfRange_Typer =
 {
   NULL, "OutOfRange",
-  NULL, dao_IndexOutOfRange_Meths, 
-  { & dao_ErrorIndex_Typer, NULL }, 
+  NULL, dao_IndexOutOfRange_Meths,
+  { & dao_ErrorIndex_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3648,19 +3648,19 @@ static DaoFuncItem dao_ErrorKey_Meths[] =
   { Dao_Exception_New22, "Key( data : any )=>Key" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ErrorKey_Typer = 
+DaoTypeBase dao_ErrorKey_Typer =
 {
   NULL, "Key",
-  NULL, dao_ErrorKey_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_ErrorKey_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
-DaoTypeBase dao_KeyNotExist_Typer = 
+DaoTypeBase dao_KeyNotExist_Typer =
 {
   NULL, "NotExist",
-  NULL, dao_NotExist_Meths, 
-  { & dao_ErrorKey_Typer, NULL }, 
+  NULL, dao_NotExist_Meths,
+  { & dao_ErrorKey_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3670,11 +3670,11 @@ static DaoFuncItem dao_ErrorParam_Meths[] =
   { Dao_Exception_New22, "Param( data : any )=>Param" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ErrorParam_Typer = 
+DaoTypeBase dao_ErrorParam_Typer =
 {
   NULL, "Param",
-  NULL, dao_ErrorParam_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_ErrorParam_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3684,18 +3684,18 @@ static DaoFuncItem dao_Syntax_Meths[] =
   { Dao_Exception_New22, "Syntax( data : any )=>Syntax" },
   { NULL, NULL }
 };
-DaoTypeBase dao_WarningSyntax_Typer = 
+DaoTypeBase dao_WarningSyntax_Typer =
 {
   NULL, "Syntax",
-  NULL, dao_Syntax_Meths, 
-  { & dao_ExceptionWarning_Typer, NULL }, 
+  NULL, dao_Syntax_Meths,
+  { & dao_ExceptionWarning_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
-DaoTypeBase dao_ErrorSyntax_Typer = 
+DaoTypeBase dao_ErrorSyntax_Typer =
 {
   NULL, "Syntax",
-  NULL, dao_Syntax_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_Syntax_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3705,11 +3705,11 @@ static DaoFuncItem dao_ErrorType_Meths[] =
   { Dao_Exception_New22, "Type( data : any )=>Type" },
   { NULL, NULL }
 };
-DaoTypeBase dao_ErrorType_Typer = 
+DaoTypeBase dao_ErrorType_Typer =
 {
   NULL, "Type",
-  NULL, dao_ErrorType_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_ErrorType_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 
@@ -3719,18 +3719,18 @@ static DaoFuncItem dao_Value_Meths[] =
   { Dao_Exception_New22, "Value( data : any )=>Value" },
   { NULL, NULL }
 };
-DaoTypeBase dao_WarningValue_Typer = 
+DaoTypeBase dao_WarningValue_Typer =
 {
   NULL, "Value",
-  NULL, dao_Value_Meths, 
-  { & dao_ExceptionWarning_Typer, NULL }, 
+  NULL, dao_Value_Meths,
+  { & dao_ExceptionWarning_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
-DaoTypeBase dao_ErrorValue_Typer = 
+DaoTypeBase dao_ErrorValue_Typer =
 {
   NULL, "Value",
-  NULL, dao_Value_Meths, 
-  { & dao_ExceptionError_Typer, NULL }, 
+  NULL, dao_Value_Meths,
+  { & dao_ExceptionError_Typer, NULL },
   NULL, (FuncPtrDel) DaoException_Delete
 };
 

@@ -21,7 +21,7 @@ LIB_READLINE = -lreadline
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_NETWORK) $(DAO_MPI) $(DAO_AFC) $(DAO_ASMBC) $(DAO_JIT) $(USE_READLINE)
 
 CC        = gcc
-CFLAGS    = -Wall -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
+CFLAGS    = -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
 INCPATH   = -I. -Isrc
 LFLAGS    = -fPIC #-s
 LFLAGSDLL = -fPIC #-s
@@ -136,7 +136,7 @@ OBJECTS = \
 		objs/daoSched.o \
 		objs/daoStream.o \
 		objs/daoVmspace.o \
-		objs/daoRegex.o 
+		objs/daoRegex.o
 
 first: all
 ####### Implicit rules
@@ -167,10 +167,10 @@ static:  $(OBJECTS) objs/daoMain.o
 
 one:  $(OBJECTS) objs/daoMainv.o
 	$(CC) $(LFLAGS) -o daov $(OBJECTS) objs/daoMainv.o $(LIBS)
-	
+
 $(TARGET):  objs/daoMaindl.o
 	$(CC) $(LFLAGS) -o $(TARGET) objs/daoMaindl.o $(LIBS) $(LIB_READLINE)
-	
+
 $(TARGETDLL):  $(OBJECTS)
 	$(CC) $(LFLAGSDLL) -o $(TARGETDLL) $(OBJECTS) $(LIBS)
 
@@ -189,13 +189,13 @@ FORCE:
 ####### Compile
 
 #main
-objs/daoMaindl.o: src/daoMaindl.c 
+objs/daoMaindl.o: src/daoMaindl.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMaindl.o src/daoMaindl.c
-	
-objs/daoMain.o: src/daoMain.c 
+
+objs/daoMain.o: src/daoMain.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMain.o src/daoMain.c
 
-objs/daoMainv.o: src/daoMainv.c 
+objs/daoMainv.o: src/daoMainv.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMainv.o src/daoMainv.c
 
 #dll
@@ -214,7 +214,7 @@ objs/daoNumtype.o: src/daoNumtype.c src/daoNumtype.h
 objs/daoClass.o: src/daoClass.c src/daoClass.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoClass.o src/daoClass.c
 
-objs/daoRegex.o: src/daoRegex.c src/daoRegex.h 
+objs/daoRegex.o: src/daoRegex.c src/daoRegex.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoRegex.o src/daoRegex.c
 
 objs/daoContext.o: src/daoContext.c src/daoType.h src/daoContext.h
@@ -226,19 +226,19 @@ objs/daoProcess.o: src/daoProcess.c src/daoType.h src/daoProcess.h
 objs/daoValue.o: src/daoValue.c src/daoValue.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoValue.o src/daoValue.c
 
-objs/daoArray.o: src/daoArray.c src/daoArray.h 
+objs/daoArray.o: src/daoArray.c src/daoArray.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoArray.o src/daoArray.c
 
-objs/daoMap.o: src/daoMap.c src/daoMap.h 
+objs/daoMap.o: src/daoMap.c src/daoMap.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMap.o src/daoMap.c
-	
+
 objs/daoConst.o: src/daoConst.c
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoConst.o src/daoConst.c
-	
-objs/daoRoutine.o: src/daoRoutine.c src/daoRoutine.h 
+
+objs/daoRoutine.o: src/daoRoutine.c src/daoRoutine.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoRoutine.o src/daoRoutine.c
 
-objs/daoObject.o: src/daoObject.c src/daoObject.h 
+objs/daoObject.o: src/daoObject.c src/daoObject.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoObject.o src/daoObject.c
 
 objs/daoNetwork.o: src/daoNetwork.c
@@ -253,25 +253,25 @@ objs/daoStream.o: src/daoStream.c src/daoStream.h
 objs/daoString.o: src/daoString.c src/daoString.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoString.o src/daoString.c
 
-objs/daoVmspace.o: src/daoVmspace.c src/daoVmspace.h 
+objs/daoVmspace.o: src/daoVmspace.c src/daoVmspace.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoVmspace.o src/daoVmspace.c
 
-objs/daoGC.o: src/daoGC.c src/daoGC.h 
+objs/daoGC.o: src/daoGC.c src/daoGC.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoGC.o src/daoGC.c
 
-objs/daoStdlib.o: src/daoStdlib.c src/daoStdlib.h 
+objs/daoStdlib.o: src/daoStdlib.c src/daoStdlib.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStdlib.o src/daoStdlib.c
 
-objs/daoMacro.o: src/daoMacro.c src/daoMacro.h 
+objs/daoMacro.o: src/daoMacro.c src/daoMacro.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMacro.o src/daoMacro.c
 
-objs/daoLexer.o: src/daoLexer.c src/daoLexer.h 
+objs/daoLexer.o: src/daoLexer.c src/daoLexer.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoLexer.o src/daoLexer.c
 
-objs/daoParser.o: src/daoParser.c src/daoParser.h 
+objs/daoParser.o: src/daoParser.c src/daoParser.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoParser.o src/daoParser.c
 
-objs/daoAsmbc.o: src/daoAsmbc.c src/daoAsmbc.h 
+objs/daoAsmbc.o: src/daoAsmbc.c src/daoAsmbc.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoAsmbc.o src/daoAsmbc.c
 
 objs/daoThread.o: src/daoThread.c src/daoThread.h
@@ -282,7 +282,7 @@ objs/daoJit.o: src/daoJit.c
 
 ####### Install
 
-install:  
+install:
 	@$(HAS_DIR) $(DAO_DIR) || $(MKDIR) $(DAO_DIR)
 	@$(HAS_DIR) $(DAO_LIB_DIR) || $(MKDIR) $(DAO_LIB_DIR)
 	@$(HAS_DIR) $(DAO_INC_DIR) || $(MKDIR) $(DAO_INC_DIR)
