@@ -82,7 +82,8 @@ struct DaoList
   DAO_DATA_COMMON
 
   DVarray  *items;
-  DaoType *unitype;
+  DaoMap   *meta;
+  DaoType  *unitype;
 };
 
 DaoList* DaoList_New();
@@ -104,9 +105,9 @@ struct DaoMap
 {
   DAO_DATA_COMMON
   
-  DMap *items;
-
-  DaoType *unitype;
+  DMap     *items;
+  DaoMap   *meta;
+  DaoType  *unitype;
 };
 
 DaoMap* DaoMap_New( int hashing );
@@ -178,6 +179,8 @@ struct DaoCData
 
   void *data;
   void *buffer;
+
+  DaoMap      *meta;
   DaoObject   *daoObject;
   DaoTypeBase *typer;
 
@@ -218,8 +221,9 @@ struct DaoTuple
 {
   DAO_DATA_COMMON
 
-  DVaTuple   *items;
-  DaoType *unitype;
+  DVaTuple  *items;
+  DaoMap    *meta;
+  DaoType   *unitype;
 };
 void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );
 

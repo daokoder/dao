@@ -54,6 +54,8 @@ extern void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoGetField( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoSetField( DaoContext *self, DaoVmCode *vmc );
+extern void DaoContext_DoGetMetaField( DaoContext *self, DaoVmCode *vmc );
+extern void DaoContext_DoSetMetaField( DaoContext *self, DaoVmCode *vmc );
 
 extern DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc );
@@ -619,9 +621,11 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
     && LAB_GETV , 
     && LAB_GETI ,  
     && LAB_GETF ,  
+    && LAB_GETMF ,  
     && LAB_SETV , 
     && LAB_SETI , 
     && LAB_SETF , 
+    && LAB_SETMF , 
     && LAB_LOAD ,
     && LAB_CAST , 
     && LAB_MOVE , 
@@ -1133,6 +1137,11 @@ OPCASE( GETF ){
   if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
   goto CheckException;
 }OPNEXT()
+OPCASE( GETMF ){
+  DaoContext_DoGetMetaField( topCtx, vmc );
+  if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
+  goto CheckException;
+}OPNEXT()
 OPCASE( SETV ){
   abtp = varTypes[ vmc->c ][ vmc->b ];
   if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
@@ -1147,6 +1156,11 @@ OPCASE( SETI ){
 OPCASE( SETF ){
   if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
   DaoContext_DoSetField( topCtx, vmc );
+  goto CheckException;
+}OPNEXT()
+OPCASE( SETMF ){
+  if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
+  DaoContext_DoSetMetaField( topCtx, vmc );
   goto CheckException;
 }OPNEXT()
 OPCASE( LOAD ){

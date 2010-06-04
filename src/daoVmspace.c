@@ -2038,6 +2038,7 @@ DaoType *dao_array_bit = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
+DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
 DaoType *dao_type_for_iterator = NULL;
 
@@ -2104,6 +2105,7 @@ DaoVmSpace* DaoInit()
   dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
   dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
   dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
+  dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, 0,0 );
   dao_array_bit = DaoParser_ParseTypeName( "long", ns, 0,0 );
   dao_array_bit = DaoType_Copy( dao_array_bit );
   DString_SetMBS( dao_array_bit->name, "bitarray" );

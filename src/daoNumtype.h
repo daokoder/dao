@@ -152,6 +152,7 @@ struct DaoArray
     complex16  *c;
   } data;
 
+  DaoMap  *meta;
   DaoType *unitype;
 
   DArray  *dims;

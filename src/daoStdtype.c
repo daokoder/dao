@@ -2239,11 +2239,13 @@ DaoList* DaoList_New()
   DaoList *self = (DaoList*) dao_malloc( sizeof(DaoList) );
   DaoBase_Init( self, DAO_LIST );
   self->items = DVarray_New();
+  self->meta = NULL;
   self->unitype = NULL;
   return self;
 }
 void DaoList_Delete( DaoList *self )
 {
+  if( self->meta ) GC_DecRC( self->meta );
   GC_DecRC( self->unitype );
   DaoList_Clear( self );
   DVarray_Delete( self->items );
@@ -2669,12 +2671,14 @@ DaoMap* DaoMap_New( int hashing )
 {
   DaoMap *self = (DaoMap*) dao_malloc( sizeof( DaoMap ) );
   DaoBase_Init( self, DAO_MAP );
-  self->items = hashing ? DHash_New( D_VALUE , D_VALUE ) : DMap_New( D_VALUE , D_VALUE );
+  self->items = hashing ? DHash_New( D_VALUE, D_VALUE ) : DMap_New( D_VALUE, D_VALUE );
+  self->meta = NULL;
   self->unitype = NULL;
   return self;
 }
 void DaoMap_Delete( DaoMap *self )
 {
+  if( self->meta ) GC_DecRC( self->meta );
   GC_DecRC( self->unitype );
   DaoMap_Clear( self );
   DMap_Delete( self->items );
@@ -2731,6 +2735,7 @@ DaoCData* DaoCData_New( DaoTypeBase *typer, void *data )
   self->data = data;
   self->buffer = NULL;
   self->memsize = 0;
+  self->meta = NULL;
   self->daoObject = NULL;
   self->size = 0;
   self->bufsize = 0;
@@ -2749,6 +2754,7 @@ DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data )
 static void DaoCData_Delete( DaoCData *self )
 {
   DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
+  if( self->meta ) GC_DecRC( self->meta );
   if( self->attribs & DAO_CDATA_FREE ){
     if( self->buffer ){
       dao_free( self->buffer );
@@ -3308,11 +3314,13 @@ DaoTuple* DaoTuple_New( int size )
   DaoTuple *self = (DaoTuple*) dao_malloc( sizeof(DaoTuple) );
   DaoBase_Init( self, DAO_TUPLE );
   self->items = DVaTuple_New( size, daoNullValue );
+  self->meta = NULL;
   self->unitype = NULL;
   return self;
 }
 void DaoTuple_Delete( DaoTuple *self )
 {
+  if( self->meta ) GC_DecRC( self->meta );
   DVaTuple_Delete( self->items );
   GC_DecRC( self->unitype );
   dao_free( self );

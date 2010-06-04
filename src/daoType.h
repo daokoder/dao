@@ -98,6 +98,7 @@ extern DaoType *dao_array_bit;
 extern DaoType *dao_array_any;
 extern DaoType *dao_list_any;
 extern DaoType *dao_map_any;
+extern DaoType *dao_map_meta;
 extern DaoType *dao_routine;
 extern DaoType *dao_type_for_iterator;
 

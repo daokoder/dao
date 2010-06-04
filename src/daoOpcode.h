@@ -28,9 +28,11 @@ enum DaoOpcode
   DVM_GETV , /* get non-local variables: C = A::B, object A=0, the rest as DVM_GETC */
   DVM_GETI ,  /* GET Item(s) : C = A[B]; */
   DVM_GETF ,  /* GET Field : C = A.B */
+  DVM_GETMF , /* GET Meta Field: C = A->B */
   DVM_SETV , /* set non-local variables: C::B = A, C the same as A in DVM_GETV */
   DVM_SETI , /* SET Item(s) : C[B] = A;  */
   DVM_SETF , /* SET Field : C.B = A */
+  DVM_SETMF , /* SET Meta Field : C->B = A */
   DVM_LOAD ,
   DVM_CAST , /* convert A to C if they have different types; */
   DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */

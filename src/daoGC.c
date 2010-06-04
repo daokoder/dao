@@ -545,6 +545,7 @@ void cycRefCountDecreScan()
         {
           DaoArray *array = (DaoArray*) dbase;
           cycRefCountDecrement( (DaoBase*) array->unitype );
+          cycRefCountDecrement( (DaoBase*) array->meta );
           break;
         }
 #endif
@@ -552,6 +553,7 @@ void cycRefCountDecreScan()
         {
           DaoTuple *tuple = (DaoTuple*) dbase;
           cycRefCountDecrement( (DaoBase*) tuple->unitype );
+          cycRefCountDecrement( (DaoBase*) tuple->meta );
           cycRefCountDecrementsVT( tuple->items );
           break;
         }
@@ -559,6 +561,7 @@ void cycRefCountDecreScan()
         {
           DaoList *list = (DaoList*) dbase;
           cycRefCountDecrement( (DaoBase*) list->unitype );
+          cycRefCountDecrement( (DaoBase*) list->meta );
           cycRefCountDecrementsV( list->items );
           break;
         }
@@ -566,6 +569,7 @@ void cycRefCountDecreScan()
         {
           DaoMap *map = (DaoMap*) dbase;
           cycRefCountDecrement( (DaoBase*) map->unitype );
+          cycRefCountDecrement( (DaoBase*) map->meta );
           node = DMap_First( map->items );
           for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
             cycRefCountDecrementV( node->key.pValue[0] );
@@ -677,6 +681,7 @@ void markAliveObjects( DaoBase *root )
         {
           DaoArray *array = (DaoArray*) dbase;
           cycRefCountIncrement( (DaoBase*) array->unitype );
+          cycRefCountIncrement( (DaoBase*) array->meta );
           break;
         }
 #endif
@@ -684,6 +689,7 @@ void markAliveObjects( DaoBase *root )
         {
           DaoTuple *tuple= (DaoTuple*) dbase;
           cycRefCountIncrement( (DaoBase*) tuple->unitype );
+          cycRefCountIncrement( (DaoBase*) tuple->meta );
           cycRefCountIncrementsVT( tuple->items );
           break;
         }
@@ -691,6 +697,7 @@ void markAliveObjects( DaoBase *root )
         {
           DaoList *list= (DaoList*) dbase;
           cycRefCountIncrement( (DaoBase*) list->unitype );
+          cycRefCountIncrement( (DaoBase*) list->meta );
           cycRefCountIncrementsV( list->items );
           break;
         }
@@ -698,6 +705,7 @@ void markAliveObjects( DaoBase *root )
         {
           DaoMap *map = (DaoMap*)dbase;
           cycRefCountIncrement( (DaoBase*) map->unitype );
+          cycRefCountIncrement( (DaoBase*) map->meta );
           node = DMap_First( map->items );
           for( ; node != NULL; node = DMap_Next( map->items, node ) ){
             cycRefCountIncrementV( node->key.pValue[0] );
@@ -804,6 +812,10 @@ void freeGarbage()
               array->unitype->refCount --;
               array->unitype = NULL;
             }
+            if( array->meta ){
+              array->meta->refCount --;
+              array->meta = NULL;
+            }
             break;
           }
 #endif
@@ -815,6 +827,10 @@ void freeGarbage()
               tuple->unitype->refCount --;
               tuple->unitype = NULL;
             }
+            if( tuple->meta ){
+              tuple->meta->refCount --;
+              tuple->meta = NULL;
+            }
             break;
           }
         case DAO_LIST :
@@ -824,6 +840,10 @@ void freeGarbage()
             if( list->unitype ){
               list->unitype->refCount --;
               list->unitype = NULL;
+            }
+            if( list->meta ){
+              list->meta->refCount --;
+              list->meta = NULL;
             }
             break;
           }
@@ -850,6 +870,10 @@ void freeGarbage()
               map->unitype->refCount --;
               map->unitype = NULL;
             }
+            if( map->meta ){
+              map->meta->refCount --;
+              map->meta = NULL;
+            }
             break;
           }
         case DAO_OBJECT :
@@ -857,6 +881,10 @@ void freeGarbage()
             DaoObject *obj = (DaoObject*) dbase;
             directRefCountDecrementT( obj->superObject );
             directRefCountDecrementVT( obj->objData );
+            if( obj->meta ){
+              obj->meta->refCount --;
+              obj->meta = NULL;
+            }
             break;
           }
         case DAO_ROUTINE :
@@ -1198,6 +1226,7 @@ void cycRefCountDecreScan()
         {
           DaoArray *array = (DaoArray*) dbase;
           cycRefCountDecrement( (DaoBase*) array->unitype );
+          cycRefCountDecrement( (DaoBase*) array->meta );
           j ++;
           break;
         }
@@ -1206,6 +1235,7 @@ void cycRefCountDecreScan()
         {
           DaoTuple *tuple = (DaoTuple*) dbase;
           cycRefCountDecrement( (DaoBase*) tuple->unitype );
+          cycRefCountDecrement( (DaoBase*) tuple->meta );
           cycRefCountDecrementsVT( tuple->items );
           j += tuple->items->size;
           break;
@@ -1214,6 +1244,7 @@ void cycRefCountDecreScan()
         {
           DaoList *list = (DaoList*) dbase;
           cycRefCountDecrement( (DaoBase*) list->unitype );
+          cycRefCountDecrement( (DaoBase*) list->meta );
           cycRefCountDecrementsV( list->items );
           j += list->items->size;
           break;
@@ -1222,6 +1253,7 @@ void cycRefCountDecreScan()
         {
           DaoMap *map = (DaoMap*) dbase;
           cycRefCountDecrement( (DaoBase*) map->unitype );
+          cycRefCountDecrement( (DaoBase*) map->meta );
           node = DMap_First( map->items );
           for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
             cycRefCountDecrementV( node->key.pValue[0] );
@@ -1337,6 +1369,7 @@ void cycRefCountIncreScan()
           {
             DaoArray *array = (DaoArray*) dbase;
             cycRefCountIncrement( (DaoBase*) array->unitype );
+            cycRefCountIncrement( (DaoBase*) array->meta );
             break;
           }
 #endif
@@ -1344,6 +1377,7 @@ void cycRefCountIncreScan()
           {
             DaoTuple *tuple= (DaoTuple*) dbase;
             cycRefCountIncrement( (DaoBase*) tuple->unitype );
+            cycRefCountIncrement( (DaoBase*) tuple->meta );
             cycRefCountIncrementsVT( tuple->items );
             j += tuple->items->size;
             break;
@@ -1352,6 +1386,7 @@ void cycRefCountIncreScan()
           {
             DaoList *list= (DaoList*) dbase;
             cycRefCountIncrement( (DaoBase*) list->unitype );
+            cycRefCountIncrement( (DaoBase*) list->meta );
             cycRefCountIncrementsV( list->items );
             j += list->items->size;
             break;
@@ -1360,6 +1395,7 @@ void cycRefCountIncreScan()
           {
             DaoMap *map = (DaoMap*)dbase;
             cycRefCountIncrement( (DaoBase*) map->unitype );
+            cycRefCountIncrement( (DaoBase*) map->meta );
             node = DMap_First( map->items );
             for( ; node != NULL; node = DMap_Next( map->items, node ) ){
               cycRefCountIncrementV( node->key.pValue[0] );
@@ -1482,6 +1518,10 @@ void directDecRC()
               array->unitype->refCount --;
               array->unitype = NULL;
             }
+            if( array->meta ){
+              array->meta->refCount --;
+              array->meta = NULL;
+            }
             break;
           }
 #endif
@@ -1494,6 +1534,10 @@ void directDecRC()
               tuple->unitype->refCount --;
               tuple->unitype = NULL;
             }
+            if( tuple->meta ){
+              tuple->meta->refCount --;
+              tuple->meta = NULL;
+            }
             break;
           }
         case DAO_LIST :
@@ -1504,6 +1548,10 @@ void directDecRC()
             if( list->unitype ){
               list->unitype->refCount --;
               list->unitype = NULL;
+            }
+            if( list->meta ){
+              list->meta->refCount --;
+              list->meta = NULL;
             }
             break;
           }
@@ -1531,6 +1579,10 @@ void directDecRC()
               map->unitype->refCount --;
               map->unitype = NULL;
             }
+            if( map->meta ){
+              map->meta->refCount --;
+              map->meta = NULL;
+            }
             break;
           }
         case DAO_OBJECT :
@@ -1540,6 +1592,10 @@ void directDecRC()
             if( obj->objData ) j += obj->objData->size;
             directRefCountDecrementT( obj->superObject );
             directRefCountDecrementVT( obj->objData );
+            if( obj->meta ){
+              obj->meta->refCount --;
+              obj->meta = NULL;
+            }
             break;
           }
         case DAO_ROUTINE :

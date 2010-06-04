@@ -204,6 +204,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
   self->myClass = klass;
   self->objData = NULL;
   self->superObject = NULL;
+  self->meta = NULL;
   if( that ){
     self->that = that;
     self->objValues = that->objData->data + offset;
@@ -257,6 +258,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 }
 void DaoObject_Delete( DaoObject *self )
 {
+  if( self->meta ) GC_DecRC( self->meta );
   if( self->objData ) DVaTuple_Delete( self->objData );
   if( self->superObject ){
     int i;

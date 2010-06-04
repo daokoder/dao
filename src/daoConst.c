@@ -15,8 +15,8 @@
 #include"daoOpcode.h"
 
 static const char *const vmOperNames[] = {
-  "NOP", "DATA", "GETC", "GETV", "GETI", "GETF",
-  "SETV", "SETI", "SETF",
+  "NOP", "DATA", "GETC", "GETV", "GETI", "GETF", "GETMF",
+  "SETV", "SETI", "SETF", "SETMF",
   "LOAD", "CAST", "MOVE",
   "NOT", "UNMS", "BITREV",
   "ADD", "SUB", "MUL", "DIV", "MOD", "POW",

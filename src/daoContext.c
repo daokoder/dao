@@ -1752,6 +1752,60 @@ void DaoContext_DoGetField( DaoContext *self, DaoVmCode *vmc )
   }
   tc->GetField( p, self, self->routine->routConsts->data[ vmc->b].v.s );
 }
+static DaoMap* DaoGetMetaMap( DValue *self, int create )
+{
+  DaoMap *meta = NULL;
+  switch( self->t ){
+  case DAO_ARRAY : meta = self->v.array->meta; break;
+  case DAO_LIST  : meta = self->v.list->meta; break;
+  case DAO_TUPLE : meta = self->v.tuple->meta; break;
+  case DAO_MAP   : meta = self->v.map->meta; break;
+  case DAO_CDATA : meta = self->v.cdata->meta; break;
+  case DAO_OBJECT : meta = self->v.object->meta; break;
+  default : break;
+  }
+  if( meta || create ==0 ) return meta;
+  switch( self->t ){
+  case DAO_ARRAY : meta = self->v.array->meta = DaoMap_New(1); break;
+  case DAO_LIST  : meta = self->v.list->meta = DaoMap_New(1); break;
+  case DAO_TUPLE : meta = self->v.tuple->meta = DaoMap_New(1); break;
+  case DAO_MAP   : meta = self->v.map->meta = DaoMap_New(1); break;
+  case DAO_CDATA : meta = self->v.cdata->meta = DaoMap_New(1); break;
+  case DAO_OBJECT : meta = self->v.object->meta = DaoMap_New(1); break;
+  default : break;
+  }
+  if( meta ){
+    meta->unitype = dao_map_meta;
+    GC_IncRC( dao_map_meta );
+  }
+  return meta;
+}
+static DValue* DaoMap_GetMetaField( DaoMap *self, DValue key )
+{
+  DNode *node = DMap_Find( self->items, & key );
+  if( node ) return node->value.pValue;
+  if( self->meta ) return DaoMap_GetMetaField( self->meta, key );
+  return NULL;
+}
+void DaoContext_DoGetMetaField( DaoContext *self, DaoVmCode *vmc )
+{
+  DValue *p = self->regValues[ vmc->a ];
+  DaoMap *meta = p->t == DAO_MAP ? p->v.map : DaoGetMetaMap( p, 0 );
+  DValue *value;
+
+  self->vmc = vmc;
+  if( meta == NULL ){
+    DaoContext_RaiseException( self, DAO_ERROR_VALUE, "object has no meta fields" );
+    return;
+  }
+  value = DaoMap_GetMetaField( meta, self->routine->routConsts->data[ vmc->b] );
+  if( value == NULL ){
+    DaoContext_RaiseException( self, DAO_ERROR_VALUE, "meta field not exists" );
+    return;
+  }
+  self->vmc = vmc;
+  DaoContext_PutValue( self, *value );
+}
 void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 {
   DValue q, v;
@@ -1809,6 +1863,27 @@ void DaoContext_DoSetField( DaoContext *self, DaoVmCode *vmc )
     return;
   }
   tc->SetField( p, self, self->routine->routConsts->data[ vmc->b ].v.s, v );
+}
+void DaoContext_DoSetMetaField( DaoContext *self, DaoVmCode *vmc )
+{
+  DValue *p = self->regValues[ vmc->c ];
+  DaoMap *meta = DaoGetMetaMap( p, 1 );
+  DValue fname = self->routine->routConsts->data[ vmc->b ];
+  DValue v = *self->regValues[ vmc->a ];
+  DValue *value;
+  int c = 1;
+
+  self->vmc = vmc;
+  if( meta == NULL ){
+    DaoContext_RaiseException( self, DAO_ERROR_VALUE, "object can not have meta fields" );
+    return;
+  }
+  if( p->t == DAO_MAP ) c = DaoMap_Insert( p->v.map, fname, v );
+  if( c ) DaoMap_Insert( meta, fname, v );
+  if( v.t == DAO_MAP && strcmp( fname.v.s->mbs, "__proto__" ) ==0 ){
+    GC_ShiftRC( v.v.map, meta->meta );
+    meta->meta = v.v.map;
+  }
 }
 
 /* Operator (in daoBitBoolArithOpers) validity rules,

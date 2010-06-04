@@ -25,6 +25,7 @@ struct DaoObject
   DaoClass   *myClass;
   DPtrTuple  *superObject; /*DPtrTuple<DaoObject/DaoCData*>*/
   DaoObject  *that;
+  DaoMap     *meta;
 };
 
 DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset );

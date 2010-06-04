@@ -1,0 +1,24 @@
+a = { 'name' : 'Test' }
+b = a->name;
+a->name = 'New';
+io.writeln( b, a, std.about(a) );
+
+a->meth = routine( self : map<string,string> )
+{
+  for( it in self ) io.writeln( it )
+}
+a->meth();
+
+c = { 'index' : 123 }
+c->__proto__ = a;
+io.writeln( c->name, c );
+
+class Test{}
+t = Test();
+
+t->value = 123;
+io.writeln( t->value );
+
+t->__proto__ = c;
+
+io.writeln( t->name, t->index );

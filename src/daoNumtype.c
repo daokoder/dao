@@ -3470,6 +3470,7 @@ DaoArray* DaoArray_New( int numType )
   self->data.p = NULL;
   DaoBase_Init( self, DAO_ARRAY );
   self->numType = numType;
+  self->meta = NULL;
   self->unitype = NULL;
   self->size = 0;
   self->owner = 1;
@@ -3487,6 +3488,7 @@ void DaoArray_Delete( DaoArray *self )
 {
   DArray_Delete( self->dims );
   DArray_Delete( self->dimAccum );
+  if( self->meta ) GC_DecRC( self->meta );
   if( self->unitype ) GC_DecRC( self->unitype );
   if( self->owner && self->data.p ) dao_free( self->data.p );
   if( self->matrix ) dao_free( self->matrix );
