@@ -339,12 +339,14 @@ static void DMBString_AppendChar( DString *self, const char ch )
 }
 static void DMBString_AppendWChar( DString *self, const wchar_t ch )
 {
-  wchar_t chs[2] = { ch, 0 };
+  wchar_t chs[2] = { 0, 0 };
+  chs[0] = ch;
   DMBString_AppendWCS( self, chs, 1 );
 }
 static void DWCString_AppendChar( DString *self, const char ch )
 {
-  char chs[2] = { ch, 0 };
+  char chs[2] = { 0, 0 };
+  chs[0] = ch;
   DWCString_AppendMBS( self, chs, 1 );
 }
 static void DWCString_AppendWChar( DString *self, const wchar_t ch )
