@@ -94,12 +94,40 @@ typedef struct DaoDataPacket
 
 static int offset = (char*) ( & ((DaoDataPacket*)0)->data ) - (char*) ( & ((DaoDataPacket*)0)->type );
 
-typedef struct DaoFdSet { fd_set set; } DaoFdSet;
-static void* DaoFdSet_New(){ return dao_malloc( sizeof(DaoFdSet) ); }
+#define GET_FDSET( p )  ((fd_set*) p->v.cdata->data)
+static void DaoFdSet_Zero( DaoContext *ctx, DValue *par[], int N  )
+{
+  FD_ZERO( GET_FDSET( par[0] ) );
+}
+static void DaoFdSet_Set( DaoContext *ctx, DValue *par[], int N  )
+{
+  FD_SET( par[1]->v.i, GET_FDSET( par[0] ) );
+}
+static void DaoFdSet_Clear( DaoContext *ctx, DValue *par[], int N  )
+{
+  FD_CLR( par[1]->v.i, GET_FDSET( par[0] ) );
+}
+static void DaoFdSet_IsSet( DaoContext *ctx, DValue *par[], int N  )
+{
+  DaoContext_PutInteger( ctx, FD_ISSET( par[1]->v.i, GET_FDSET( par[0] ) ) );
+}
+static DaoFuncItem fdsetMeths[] =
+{
+  {  DaoFdSet_Zero,       "zero( self : fd_set )" },
+  {  DaoFdSet_Set,        "set( self : fd_set, fd : int )" },
+  {  DaoFdSet_Clear,      "clear( self : fd_set, fd : int )" },
+  {  DaoFdSet_IsSet,      "isset( self : fd_set, fd : int )=>int" },
+  { NULL, NULL }
+};
+static void* DaoFdSet_New()
+{
+  fd_set *set = dao_malloc( sizeof(fd_set) );
+  FD_ZERO( set );
+  return set;
+}
 DaoTypeBase DaoFdSet_Typer = 
-{ NULL, "fd_set", NULL, NULL, {0}, (FuncPtrNew)DaoFdSet_New, (FuncPtrDel)free };
-
-#define GET_FDSET( p )  ( & ( (DaoFdSet*) p->v.cdata->data )->set )
+{ NULL, "fd_set", NULL, fdsetMeths, 
+  {0}, (FuncPtrNew)DaoFdSet_New, (FuncPtrDel)free };
 
 void DaoNetwork_Close( int sockfd );
 int DaoNetwork_Bind( int port )
@@ -640,29 +668,13 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
   }
   DString_Delete( str );
 }
-static void DaoNetLib_FD_ZERO( DaoContext *ctx, DValue *par[], int N  )
-{
-  FD_ZERO( GET_FDSET( par[0] ) );
-}
-static void DaoNetLib_FD_SET( DaoContext *ctx, DValue *par[], int N  )
-{
-  FD_SET( par[0]->v.i, GET_FDSET( par[1] ) );
-}
-static void DaoNetLib_FD_CLR( DaoContext *ctx, DValue *par[], int N  )
-{
-  FD_CLR( par[0]->v.i, GET_FDSET( par[1] ) );
-}
-static void DaoNetLib_FD_ISSET( DaoContext *ctx, DValue *par[], int N  )
-{
-  DaoContext_PutInteger( ctx, FD_ISSET( par[0]->v.i, GET_FDSET( par[1] ) ) );
-}
 static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 {
   struct timeval tv;
   tv.tv_sec = (int)par[4]->v.f;
   tv.tv_usec = ( par[4]->v.f - tv.tv_sec ) * 1E6;
   DaoContext_PutInteger( ctx, select( par[0]->v.i, GET_FDSET( par[1] ),
-         GET_FDSET( par[2] ), GET_FDSET( par[3] ), & tv ) );
+        GET_FDSET( par[2] ), GET_FDSET( par[3] ), & tv ) );
 }
 
 static DaoFuncItem netMeths[] =
@@ -678,10 +690,6 @@ static DaoFuncItem netMeths[] =
   {  DaoNetLib_GetPeerName,   "getpeername( socket :int )=>string" },
   {  DaoNetLib_Close,         "close( socket :int )" },
   {  DaoNetLib_GetHost,       "gethost( host :string )=>map<string,string>" },
-  {  DaoNetLib_FD_ZERO,       "FD_ZERO( set :fd_set )" },
-  {  DaoNetLib_FD_SET,        "FD_SET( fd :int, set :fd_set )" },
-  {  DaoNetLib_FD_CLR,        "FD_CLR( fd :int, set :fd_set )" },
-  {  DaoNetLib_FD_ISSET,      "FD_ISSET( fd :int, set :fd_set )" },
   {  DaoNetLib_Select,
     "select( nfd :int, setr :fd_set, setw :fd_set, sete :fd_set, tv :float )=>int" },
   { NULL, NULL }

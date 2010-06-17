@@ -920,6 +920,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
         DString_AppendChar( input, (char)ch );
         ch = getchar();
       }
+      if( ch == EOF ) clearerr( stdin );
       DString_Simplify( input );
     }
     if( input->size == 0 ) continue;

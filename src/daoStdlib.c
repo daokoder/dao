@@ -346,7 +346,7 @@ void DaoVmProcess_Trace( DaoVmProcess *self, int depth )
   DaoStream *stream = ctx->vmSpace->stdStream;
   DaoVmFrame *frame = self->topFrame;
   int k, i = 0;
-  while( frame ){
+  while( frame && frame->context ){
     if( ++i > depth ) break;
     k = (i==1) ? (int)( ctx->vmc - ctx->codes ) : frame->entry;
     ctx2 = frame->context;

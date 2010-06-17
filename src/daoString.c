@@ -337,6 +337,16 @@ static void DMBString_AppendChar( DString *self, const char ch )
   self->size += 1;
   self->mbs[ self->size ] = 0;
 }
+static void DMBString_AppendWChar( DString *self, const wchar_t ch )
+{
+  wchar_t chs[2] = { ch, 0 };
+  DMBString_AppendWCS( self, chs, 1 );
+}
+static void DWCString_AppendChar( DString *self, const char ch )
+{
+  char chs[2] = { ch, 0 };
+  DWCString_AppendMBS( self, chs, 1 );
+}
 static void DWCString_AppendWChar( DString *self, const wchar_t ch )
 {
   DString_Reserve( self, self->size + 1 );
@@ -649,18 +659,18 @@ void DString_AppendChar( DString *self, const char ch )
   if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
   DString_Detach( self );
   if( self->mbs ){
-    DMBString_Append( self, & ch, 1 );
+    DMBString_AppendChar( self, ch );
   }else{
-    DWCString_AppendMBS( self, & ch, 1 );
+    DWCString_AppendChar( self, ch );
   }
 }
 void DString_AppendWChar( DString *self, const wchar_t ch )
 {
   DString_Detach( self );
   if( self->mbs ){
-    DMBString_AppendWCS( self, & ch, 1 );
+    DMBString_AppendWChar( self, ch );
   }else{
-    DWCString_Append( self, & ch, 1 );
+    DWCString_AppendWChar( self, ch );
   }
 }
 void DString_AppendDataMBS( DString *self, const char *chs, size_t n )
@@ -841,7 +851,7 @@ size_t DString_FindWChar( DString *self, wchar_t ch, size_t start )
       if( self->wcs[i] == ch ) return i;
   }else{
     DString *s = DString_New(1);
-    DMBString_AppendWCS( s, & ch, 1 );
+    DMBString_AppendWChar( s, ch );
     i = DString_Find( self, s, start );
     DString_Delete( s );
     return i;

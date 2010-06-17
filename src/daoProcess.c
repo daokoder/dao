@@ -602,7 +602,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
   complex16 com = {0,0};
   DaoExtraParam extra = { NULL, NULL, NULL, NULL };
   int gotoCount = 0;
-  int id;
+  dint id;
   size_t size;
   ushort_t *range;
   size_t *dims, *dmac;
@@ -1683,7 +1683,7 @@ OPCASE( BITOR_DDD ){
   locVars[ vmc->c ]->v.d = (ullong_t)locVars[ vmc->a ]->v.d | (ullong_t)locVars[ vmc->b ]->v.d;
 }OPNEXT()
 OPCASE( BITXOR_DDD ){
-  locVars[ vmc->c ]->v.d = (ullong_t)locVars[ vmc->a ]->v.d ^ (ullong_t)locVars[ vmc->b ]->v.d;
+  locVars[ vmc->c ]->v.d = ((ullong_t)locVars[ vmc->a ]->v.d) ^ (ullong_t)locVars[ vmc->b ]->v.d;
 }OPNEXT()
 OPCASE( BITLFT_DDD ){
   locVars[ vmc->c ]->v.d = (ullong_t)locVars[ vmc->a ]->v.d << (ullong_t)locVars[ vmc->b ]->v.d;
@@ -1712,7 +1712,7 @@ OPCASE( DIV_FNN ){
 }OPNEXT()
 OPCASE( MOD_FNN ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
-  locVars[ vmc->c ]->v.f = (long)NUMOP( vA ) % (long)NUMOP( vB );
+  locVars[ vmc->c ]->v.f = (llong_t)NUMOP( vA ) % (llong_t)NUMOP( vB );
 }OPNEXT()
 OPCASE( POW_FNN ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
@@ -1768,7 +1768,7 @@ OPCASE( DIV_DNN ){
 }OPNEXT()
 OPCASE( MOD_DNN ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
-  locVars[ vmc->c ]->v.d = (long)NUMOP( vA ) % (long)NUMOP( vB );
+  locVars[ vmc->c ]->v.d = (llong_t)NUMOP( vA ) % (llong_t)NUMOP( vB );
 }OPNEXT()
 OPCASE( POW_DNN ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
@@ -1800,11 +1800,11 @@ OPCASE( NE_DNN ){
 }OPNEXT()
 OPCASE( BITLFT_DNN ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
-  locVars[ vmc->c ]->v.d = (ullong_t)NUMOP( vA ) << (ullong_t)NUMOP( vB );
+  locVars[ vmc->c ]->v.d = ((ullong_t)NUMOP( vA )) << (ullong_t)NUMOP( vB );
 }OPNEXT()
 OPCASE( BITRIT_DNN ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
-  locVars[ vmc->c ]->v.d = (ullong_t)NUMOP( vA ) >> (ullong_t)NUMOP( vB );
+  locVars[ vmc->c ]->v.d = ((ullong_t)NUMOP( vA )) >> (ullong_t)NUMOP( vB );
 }OPNEXT()
 OPCASE( ADD_SS ){
   vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
@@ -1914,11 +1914,11 @@ OPCASE( DIV_CC ){
 OPCASE( GETI_SI ){
   str = locVars[ vmc->a ]->v.s;
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += str->size;
+  if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
   if( str->mbs ){
-    if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
     locVars[ vmc->c ]->v.i = str->mbs[id];
   }else{
-    if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
     locVars[ vmc->c ]->v.i = str->wcs[id];
   }
 }OPNEXT()
@@ -1927,11 +1927,11 @@ OPCASE( SETI_SII ){
   str = locVars[ vmc->c ]->v.s;
   id = locVars[ vmc->b ]->v.i;
   inum = locVars[ vmc->a ]->v.i;
+  if( id <0 ) id += str->size;
+  if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
   if( str->mbs ){
-    if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
     str->mbs[id] = inum;
   }else{
-    if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
     str->wcs[id] = inum;
   }
 }OPNEXT()
@@ -1939,6 +1939,7 @@ OPCASE( GETI_LI ){
   list = locVars[ vmc->a ]->v.list;
   id = locVars[ vmc->b ]->v.i;
   abtp = locTypes[ vmc->c ];
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   if( abtp && DaoType_MatchValue( abtp, list->items->data[id], NULL ) ==0 ) goto CheckException;
   locVars[ vmc->c ] = list->items->data + id;
@@ -1951,6 +1952,7 @@ OPCASE( SETI_LI ){
   abtp = NULL;
   if( list->unitype && list->unitype->nested->size )
     abtp = list->unitype->nested->items.pAbtp[0];
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   if( DaoMoveAC( topCtx, *locVars[vmc->a], list->items->data + id, abtp ) ==0 )
     goto CheckException;
@@ -1961,6 +1963,7 @@ OPCASE( GETI_LDI )
 OPCASE( GETI_LSI ){
   list = locVars[ vmc->a ]->v.list;
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   locVars[ vmc->c ] = list->items->data + id;
   if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
@@ -1978,6 +1981,7 @@ OPCASE( SETI_LIID ){
   case DAO_DOUBLE  : inum = (int) vA->v.d; break;
   default : inum = 0; break;
   }
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   list->items->data[id].v.i = inum;
 }OPNEXT()
@@ -1994,6 +1998,7 @@ OPCASE( SETI_LFID ){
   case DAO_DOUBLE  : fnum = vA->v.d; break;
   default : fnum = 0; break;
   }
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   list->items->data[id].v.f = fnum;
 }OPNEXT()
@@ -2010,6 +2015,7 @@ OPCASE( SETI_LDID ){
   case DAO_DOUBLE  : dnum = vA->v.d; break;
   default : dnum = 0; break;
   }
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   list->items->data[id].v.d = dnum;
 }OPNEXT()
@@ -2018,6 +2024,7 @@ OPCASE( SETI_LSIS ){
   list = locVars[ vmc->c ]->v.list;
   vA = locVars[ vmc->a ];
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += list->items->size;
   if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
   DString_Assign( list->items->data[id].v.s, vA->v.s );
 }OPNEXT()
@@ -2025,18 +2032,21 @@ OPCASE( SETI_LSIS ){
 OPCASE( GETI_AII ){
   array = locVars[ vmc->a ]->v.array;
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   locVars[ vmc->c ]->v.i = array->data.i[id];
 }OPNEXT()
 OPCASE( GETI_AFI ){
   array = locVars[ vmc->a ]->v.array;
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   locVars[ vmc->c ]->v.f = array->data.f[id];
 }OPNEXT()
 OPCASE( GETI_ADI ){
   array = locVars[ vmc->a ]->v.array;
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   locVars[ vmc->c ]->v.d = array->data.d[id];
 }OPNEXT()
@@ -2053,6 +2063,7 @@ OPCASE( SETI_AIID ){
   case DAO_DOUBLE  : inum = (int) vA->v.d; break;
   default : inum = 0; break;
   }
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   array->data.i[id] = inum;
 }OPNEXT()
@@ -2069,6 +2080,7 @@ OPCASE( SETI_AFID ){
   case DAO_DOUBLE  : fnum = (float) vA->v.d; break;
   default : fnum = 0; break;
   }
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   array->data.f[id] = fnum;
 }OPNEXT()
@@ -2085,6 +2097,7 @@ OPCASE( SETI_ADID ){
   case DAO_DOUBLE  : dnum = vA->v.d; break;
   default : dnum = 0; break;
   }
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   array->data.d[id] = dnum;
 }OPNEXT()
@@ -2093,6 +2106,7 @@ OPCASE( GETI_ACI ){
   vC = locVars[ vmc->c ];
   if( vC->t ==0 ) DValue_InitComplex( vC );
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   vC->v.c[0] = array->data.c[ id ];
 }OPNEXT()
@@ -2101,6 +2115,7 @@ OPCASE( SETI_ACI ){
   array = locVars[ vmc->c ]->v.array;
   vA = locVars[ vmc->a ];
   id = locVars[ vmc->b ]->v.i;
+  if( id <0 ) id += array->size;
   if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
   array->data.c[ id ] = vC->v.c[0];
 }OPNEXT()
@@ -2114,6 +2129,7 @@ OPCASE( GETI_AM ){
     id = 0;
     for(i=0; i<array->dims->size; i++){
       j = DValue_GetInteger( tuple->items->data[i] );
+      if( j <0 ) j += dims[i];
       if( j <0 || j >= dims[i] ) goto RaiseErrorIndexOutOfRange;
       id += j * dmac[i];
     }
@@ -2141,6 +2157,7 @@ OPCASE( SETI_AM ){
     id = 0;
     for(i=0; i<array->dims->size; i++){
       j = DValue_GetInteger( list->items->data[i] );
+      if( j <0 ) j += dims[i];
       if( j <0 || j >= dims[i] ) goto RaiseErrorIndexOutOfRange;
       id += j * dmac[i];
     }

@@ -1991,6 +1991,14 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         }else if( at->tid == DAO_UDF || at->tid == DAO_ANY
             || at->tid == DAO_INITYPE ){
           ct = any;
+        }else if( at->typer ){
+          DString_SetMBS( mbs, "[]" );
+          rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
+          if( rout == NULL ) goto InvIndex;
+          rout = DRoutine_GetOverLoadByParamType( rout, at, NULL,
+              & bt, 1, DVM_CALL, &min, &norm, &spec, & worst );
+          if( rout == NULL ) goto InvIndex;
+          ct = rout->routType->X.abtype;
         }
         if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) type[opc] = ct;
         /*
@@ -3332,6 +3340,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           ct = at->X.klass->objType;
         }else if( at->tid == DAO_CDATA ){
           val = DaoFindValue( at->typer, at->name );
+          if( val.t == NULL && at->typer->New && (vmc->b & 0xff) ==0 ){
+            if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) type[opc] = at;
+            if( DaoType_MatchTo( ct, type[opc], defs )==0 ) goto ErrorTyping;
+            continue;
+          }
           if( val.t != DAO_FUNCTION ) goto ErrorTyping;
           rout = (DRoutine*) val.v.routine;
         }else if( csts[opa].t == DAO_ROUTINE || csts[opa].t == DAO_FUNCTION ){

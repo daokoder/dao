@@ -139,10 +139,8 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
   DaoStream *self = ctx->vmSpace->stdStream;
   DString *ds = DaoContext_PutMBString( ctx, "" );
   int ch, count = 0;
-  if( N >0 ){
-    self = p[0]->v.stream;
-    count = p[1]->v.i;
-  }
+  if( N >0 ) self = p[0]->v.stream;
+  if( N >1 ) count = p[1]->v.i;
   if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
     DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not open!" );
     return;
@@ -156,6 +154,7 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
         DString_AppendChar( ds, ch );
     }else{
       while( (ch = getc(fd) ) !=EOF ) DString_AppendChar( ds, ch );
+      if( fd == stdin ) clearerr( stdin );
     }
   }else{
     DaoStream_ReadLine( self, ds );
@@ -250,7 +249,7 @@ static void DaoIO_Close( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Eof( DaoContext *ctx, DValue *p[], int N )
 {
   DaoStream *self = p[0]->v.stream;
-  long *num = DaoContext_PutInteger( ctx, 0 );
+  dint *num = DaoContext_PutInteger( ctx, 0 );
   *num = 1;
   if( self->file ) *num = feof( self->file->fd );
 }
@@ -267,9 +266,16 @@ static void DaoIO_Seek( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Tell( DaoContext *ctx, DValue *p[], int N )
 {
   DaoStream *self = p[0]->v.stream;
-  long *num = DaoContext_PutInteger( ctx, 0 );
+  dint *num = DaoContext_PutInteger( ctx, 0 );
   if( ! self->file ) return;
   *num = ftell( self->file->fd );
+}
+static void DaoIO_FileNO( DaoContext *ctx, DValue *p[], int N )
+{
+  DaoStream *self = p[0]->v.stream;
+  dint *num = DaoContext_PutInteger( ctx, 0 );
+  if( ! self->file ) return;
+  *num = fileno( self->file->fd );
 }
 static void DaoIO_Name( DaoContext *ctx, DValue *p[], int N )
 {
@@ -332,7 +338,7 @@ static void DaoIO_GetItem( DaoContext *ctx, DValue *p[], int N )
   DaoStream *self = p[0]->v.stream;
   DValue *tuple = p[1]->v.tuple->items->data;
   DaoIO_Read( ctx, p, 1 );
-  tuple[0].v.i = 1;
+  tuple[0].v.i = 0;
   if( self->file && self->file->fd ) tuple[0].v.i = ! feof( self->file->fd );
 }
 
@@ -364,6 +370,7 @@ static DaoFuncItem streamMeths[] =
   {  DaoIO_Isopen,    "isopen( self :stream )=>int" },
   {  DaoIO_Seek,      "seek( self :stream, pos :int, from : int )=>int" },
   {  DaoIO_Tell,      "tell( self :stream )=>int" },
+  {  DaoIO_FileNO,    "fileno( self :stream )=>int" },
   {  DaoIO_Name,      "name( self :stream )=>string" },
   {  DaoIO_Iter,      "__for_iterator__( self :stream, iter : for_iterator )" },
   {  DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
@@ -678,16 +685,17 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
   int ch, delim = '\n';
 
   DString_Clear( line );
+  DString_ToMBS( line );
   if( self->file ){
     FILE *fd = self->file->fd;
     if( feof( fd ) ) return;
     ch = getc( fd );
-    DString_AppendChar( line, ch );
+    if( ch != EOF ) DString_AppendChar( line, ch );
     while( ch != '\n' && ch != '\r' && ch != EOF ){ /* LF or CR */
       ch = getc( fd );
       DString_AppendChar( line, ch );
     }
-    if( line->data[ line->size-1 ] == '\r' ){
+    if( line->mbs[ line->size-1 ] == '\r' ){
       /* some programs may write consecutive 2 \r under Windows */
       if( feof( fd ) ) return;
       ch = getc( fd );
@@ -699,7 +707,7 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
     }
     /* the last line may be ended with newline, but followed with no line: */
     if( feof( fd ) ) return;
-    if( line->data[ line->size-1 ] == '\n' ){
+    if( line->mbs[ line->size-1 ] == '\n' ){
       ch = getc( fd );
       if( ch != EOF ) ungetc( ch, fd );
     }

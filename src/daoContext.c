@@ -2640,18 +2640,29 @@ void DaoContext_DoBitLogic( DaoContext *self, DaoVmCode *vmc )
   DValue vA = *self->regValues[ vmc->a ];
   DValue vB = *self->regValues[ vmc->b ];
   DValue value = daoNullValue;
-  dint inum = 0;
+  ullong_t inum = 0;
   value.t = DAO_LONG;
   value.v.l = bigint;
+#define NUMOP( x ) ( (x).t == DAO_INTEGER ? (x).v.i \
+                  : (x).t == DAO_FLOAT ? (x).v.f \
+                  : (x).t == DAO_DOUBLE ? (x).v.d : 0.0 )
   if( vA.t && vB.t && vA.t <= DAO_DOUBLE && vB.t <= DAO_DOUBLE ){
     switch( vmc->code ){
     case DVM_BITAND: inum =DValue_GetInteger(vA) & DValue_GetInteger(vB);break;
     case DVM_BITOR: inum =DValue_GetInteger(vA) | DValue_GetInteger(vB);break;
-    case DVM_BITXOR: inum =DValue_GetInteger(vA) ^ DValue_GetInteger(vB);break;
+    case DVM_BITXOR: inum =(ullong_t)NUMOP(vA) ^ (ullong_t)NUMOP(vB);break;
     default : break;
     }
-    value.t = DAO_INTEGER;
-    value.v.i = inum;
+    if( vA.t == DAO_DOUBLE || vB.t == DAO_DOUBLE ){
+      value.t = DAO_DOUBLE;
+      value.v.d = inum;
+    }else if( vA.t == DAO_FLOAT || vB.t == DAO_FLOAT ){
+      value.t = DAO_FLOAT;
+      value.v.f = inum;
+    }else{
+      value.t = DAO_INTEGER;
+      value.v.i = inum;
+    }
   }else if( vA.t == DAO_LONG && vB.t >= DAO_INTEGER && vB.t <= DAO_DOUBLE ){
     DLong_FromInteger( bigint, DValue_GetInteger( vB ) );
     switch( vmc->code ){
@@ -2688,10 +2699,21 @@ void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc )
   DValue vB = *self->regValues[ vmc->b ];
   DValue value = daoZeroInt;
   if( vA.t && vB.t && vA.t <= DAO_DOUBLE && vB.t <= DAO_DOUBLE ){
+    llong_t inum = 0;
     if( vmc->code == DVM_BITLFT ){
-      value.v.i = DValue_GetInteger(vA) << DValue_GetInteger(vB);
+      inum = DValue_GetInteger(vA) << DValue_GetInteger(vB);
     }else{
-      value.v.i = DValue_GetInteger(vA) >> DValue_GetInteger(vB);
+      inum = DValue_GetInteger(vA) >> DValue_GetInteger(vB);
+    }
+    if( vA.t == DAO_DOUBLE || vB.t == DAO_DOUBLE ){
+      value.t = DAO_DOUBLE;
+      value.v.d = inum;
+    }else if( vA.t == DAO_FLOAT || vB.t == DAO_FLOAT ){
+      value.t = DAO_FLOAT;
+      value.v.f = inum;
+    }else{
+      value.t = DAO_INTEGER;
+      value.v.i = inum;
     }
     DaoContext_SetValue( self, vmc->c, value );
   }else if( vA.t ==DAO_LONG && vB.t >=DAO_INTEGER && vB.t <= DAO_DOUBLE ){

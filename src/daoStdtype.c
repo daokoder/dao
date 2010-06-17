@@ -100,6 +100,7 @@ static DValue DValue_MakeCopy( DValue self, DaoContext *ctx, DMap *cycData )
 static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start, size_t *end, int *idtype )
 {
   size_t i;
+  llong_t n1, n2;
   DValue *items;
   DValue first, second;
   DArray *array;
@@ -110,15 +111,21 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
   switch( index.t ){
   case DAO_INTEGER :
     *idtype = IDX_SINGLE;
-    *start = index.v.i;
+    n1 = index.v.i;
+    if( n1 <0 ) n1 += N;
+    *start = n1;
     break;
   case DAO_FLOAT :
     *idtype = IDX_SINGLE;
-    *start = (int)(index.v.f);
+    n1 = (llong_t)(index.v.f);
+    if( n1 <0 ) n1 += N;
+    *start = n1;
     break;
   case DAO_DOUBLE :
     *idtype = IDX_SINGLE;
-    *start = (int)(index.v.d);
+    n1 = (llong_t)(index.v.d);
+    if( n1 <0 ) n1 += N;
+    *start = n1;
     break;
   case DAO_PAIR :
   case DAO_TUPLE:
@@ -143,14 +150,19 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
     /* a[ : 1 ] ==> pair(nil,int) */
     if( first.t > DAO_DOUBLE || second.t > DAO_DOUBLE )
       DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
-    *start = (size_t) DValue_GetInteger( first );
-    *end = (size_t) DValue_GetInteger( second );
-    if( first.t ==DAO_NIL && second.t ==DAO_NIL )
+    n1 = DValue_GetInteger( first );
+    n2 = DValue_GetInteger( second );
+    if( n1 <0 ) n1 += N;
+    if( n2 <0 ) n2 += N;
+    *start = n1;
+    *end = n2;
+    if( first.t ==DAO_NIL && second.t ==DAO_NIL ){
       *idtype = IDX_ALL;
-    else if( first.t ==DAO_NIL )
+    }else if( first.t ==DAO_NIL ){
       *idtype = IDX_TO;
-    else if( second.t ==DAO_NIL )
+    }else if( second.t ==DAO_NIL ){
       *idtype = IDX_FROM;
+    }
     break;
   case DAO_LIST:
     *idtype = IDX_MULTIPLE;
@@ -344,8 +356,22 @@ void DaoBase_SafeSetField( DValue *dbase, DaoContext *ctx, DString *name, DValue
   }
   DaoBase_SetField( dbase, ctx, name, value );
 }
-void DaoBase_GetItem( DValue *dbase, DaoContext *ctx, DValue pid )
+void DaoBase_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 {
+  DaoTypeBase *typer = DValue_GetTyper( *self0 );
+  DaoFunction *func = NULL;
+  DValue *p[ DAO_MAX_PARAM ];
+  p[0] = self0;
+  p[1] = & pid;
+  DString_SetMBS( ctx->process->mbstring, "[]" );
+  func = DaoFindFunction( typer, ctx->process->mbstring );
+  if( func )
+    func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, ctx->process, self0, p+1, 1, 0 );
+  if( func == NULL ){
+    DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
+    return;
+  }
+  DaoFunction_SimpleCall( func, ctx, p, 2 );
 }
 void DaoBase_SetItem( DValue *dbase, DaoContext *ctx, DValue pid, DValue value )
 {

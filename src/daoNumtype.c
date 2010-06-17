@@ -2160,7 +2160,7 @@ static void DaoArray_Lib_Dim( DaoContext *ctx, DValue *par[], int N )
     v = na->data.i;
     for(i=0; i<self->dims->size; i++ ) v[i] = self->dims->items.pSize[i];
   }else{
-    long *num = DaoContext_PutInteger( ctx, 0 );
+    dint *num = DaoContext_PutInteger( ctx, 0 );
     i = par[1]->v.i;
     if( i <0 || i >= self->dims->size ){
       *num = -1;

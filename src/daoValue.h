@@ -52,7 +52,7 @@ void DValue_SimpleMove( DValue from, DValue *to );
 void DValue_MarkConst( DValue *self );
 
 llong_t DValue_GetLongLong( DValue val );
-dint   DValue_GetInteger( DValue val );
+llong_t DValue_GetInteger( DValue val );
 float  DValue_GetFloat( DValue val );
 double DValue_GetDouble( DValue val );
 complex16 DValue_GetComplex( DValue val );

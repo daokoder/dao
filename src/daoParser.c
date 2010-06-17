@@ -458,8 +458,8 @@ int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
     }
     for(i=0; i<indents->size; i++){
       if( indents->items.pInt[i] % self->indent ){
-        printf( "Warning: improper indentation of " PRI_DINT " spaces at line: " PRI_DINT "\n",
-            indents->items.pInt[i], lines->items.pInt[i] );
+        printf( "Warning: improper indentation of %i spaces at line: %i.\n",
+            (int)indents->items.pInt[i], (int)lines->items.pInt[i] );
       }
     }
     DArray_Delete( indstack );
@@ -6728,7 +6728,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
       DArray_Resize( self->regLines, regcount, 0 );
       /* Execute the instruction to get the const result: */
       DaoVmCode_Set( & vmcValue, code, 1, opB, 0, tokPos, self->lexLevel );
-      value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, (DaoVmCode*)(DaoVmCodeX*) & vmcValue, N+1 );
+      value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, (DaoVmCode*)(void*) & vmcValue, N+1 );
       *cst = DRoutine_AddConstValue( (DRoutine*)self->routine, value ) + DVR_LOC_CST;
       DArray_Delete( cid );
       return DaoParser_GetNormRegister( self, *cst );

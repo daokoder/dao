@@ -31,13 +31,9 @@
 #ifdef WIN32
 
 #if defined( _MSC_VER ) && defined( _M_X64 )
-#define PRI_DINT "%lli"
-#define PRI_UINT "%llu"
 typedef long long           dint;
 typedef unsigned long long  uint_t;
 #else
-#define PRI_DINT "%li"
-#define PRI_UINT "%lu"
 typedef long dint;
 typedef unsigned long uint_t;
 #endif /* defined() */
@@ -72,8 +68,6 @@ typedef unsigned long uint_t;
 #define DaoFindSymbol( handle, name ) dlsym( handle, name )
 #define DaoCloseLibrary( handle ) dlclose( handle )
 
-#define PRI_DINT "%li"
-#define PRI_UINT "%lu"
 typedef long dint;
 typedef unsigned long uint_t;
 
@@ -95,8 +89,6 @@ typedef unsigned long uint_t;
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
-#define PRI_DINT "%li"
-#define PRI_UINT "%lu"
 typedef long dint;
 typedef unsigned long uint_t;
 

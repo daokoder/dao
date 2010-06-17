@@ -113,9 +113,9 @@ llong_t DValue_GetLongLong( DValue self )
 {
   return (llong_t) DValue_GetDouble( self );
 }
-dint DValue_GetInteger( DValue self )
+llong_t DValue_GetInteger( DValue self )
 {
-  return (dint) DValue_GetDouble( self );
+  return (llong_t) DValue_GetDouble( self );
 }
 float DValue_GetFloat( DValue self )
 {
@@ -141,8 +141,9 @@ double DValue_GetDouble( DValue self )
     return self.v.c->real;
   case DAO_LONG :
     return DLong_ToInteger( self.v.l );
-  default : return 0;
+  default : break;
   }
+  return 0.0;
 }
 int DValue_IsNumber( DValue self )
 {

@@ -41,6 +41,7 @@ UNAME = $(shell uname)
 
 ifeq ($(UNAME), Linux)
   CFLAGS += -DUNIX
+  LFLAGS  += -s
   LFLAGLIB = -s -fPIC -shared
   LFLAGSDLL += -shared -Wl,-soname,libdao.so
 endif
