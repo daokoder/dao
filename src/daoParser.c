@@ -5356,7 +5356,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
           break;
         default :
           typer = DValue_GetTyper( ov );
-          it = DaoFindValue( typer, name );
+          it = DaoFindValueOnly( typer, name );
           /*
           if( it.t ==0 ) printf( "%s  %i: in %s\n", name->mbs, it.t, typer->name );
           */
