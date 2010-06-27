@@ -3374,7 +3374,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
         if( tsize ){
           tp2 = ct->nested->items.pAbtp[i];
           if( tp2->tid == DAO_PAR_NAMED ) tp2 = tp2->X.abtype;
-          if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion;
+          /* if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion; */
           value = DaoTypeCast( ctx, tp2, value, cb, lb, sb );
         }
         if( value.t == 0 ) goto FailConversion;

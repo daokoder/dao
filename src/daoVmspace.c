@@ -1131,7 +1131,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
       /* skip the current file: reason, example, in gsl_vector.dao:
            load gsl_vector require gsl_complex, gsl_block;
          which will allow searching for gsl_vector.so, gsl_vector.dylib or gsl_vector.dll. */
-      if( DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
+      if( self->nameLoading->size && DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
       if( TestPath( self, fn ) ){
         modtype = i+1;
         DString_Assign( fname, fn );
