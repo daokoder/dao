@@ -119,6 +119,7 @@ void DLong_Add( DLong *z, DLong *x, DLong *y );
 void DLong_Sub( DLong *z, DLong *x, DLong *y );
 void DLong_Mul( DLong *z, DLong *x, DLong *y );
 void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r );
+void DLong_Pow( DLong *z, DLong *x, dint n );
 void DLong_AddInt( DLong *z, DLong *x, dint y, DLong *buf );
 void DLong_MulInt( DLong *z, DLong *x, dint y );
 void DLong_Flip( DLong *self );

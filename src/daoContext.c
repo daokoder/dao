@@ -2132,6 +2132,20 @@ static void DaoContext_LongDiv
   }
   DLong_Div( z, x, y, r );
 }
+static int DaoContext_CheckLong2Integer( DaoContext *self, DLong *x )
+{
+  short d = 8*sizeof(dint);
+  if( x->size * LONG_BITS < d ) return 1;
+  if( (x->size - 1) * LONG_BITS >= d ) goto RaiseInexact;
+  d -= (x->size - 1) * LONG_BITS + 1; /* one bit for sign */
+  if( (x->data[ x->size - 1 ] >> d) > 0 ) goto RaiseInexact;
+  return 1;
+RaiseInexact:
+  self->idClearFE = self->vmc - self->codes;
+  DaoContext_RaiseException( self, DAO_ERROR_VALUE,
+      "long integer value is too big for the operation" );
+  return 0;
+}
 void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 {
   DValue *A = self->regValues[ vmc->a ];
@@ -2250,14 +2264,16 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     }
     DaoContext_SetValue( self, vmc->c, val );
   }else if( dA.t == DAO_LONG && dB.t == DAO_LONG ){
-    DLong *c = DaoContext_GetLong( self, vmc );
-    DLong *b = DLong_New();
+    DLong *b, *c = DaoContext_GetLong( self, vmc );
+    if( DaoContext_CheckLong2Integer( self, dB.v.l ) == 0 ) return;
+    b = DLong_New();
     switch( vmc->code ){
     case DVM_ADD : DLong_Add( c, dA.v.l, dB.v.l ); break;
     case DVM_SUB : DLong_Sub( c, dA.v.l, dB.v.l ); break;
     case DVM_MUL : DLong_Mul( c, dA.v.l, dB.v.l ); break;
     case DVM_DIV : DaoContext_LongDiv( self, dA.v.l, dB.v.l, c, b ); break;
     case DVM_MOD : DaoContext_LongDiv( self, dA.v.l, dB.v.l, b, c ); break;
+    case DVM_POW : DLong_Pow( c, dA.v.l, DLong_ToInteger( dB.v.l ) ); break;
     default : break;
     }
     DLong_Delete( b );
@@ -2273,15 +2289,17 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     case DVM_MUL : DLong_Mul( c, dA.v.l, b ); break;
     case DVM_DIV : DaoContext_LongDiv( self, dA.v.l, b, c, b2 ); break;
     case DVM_MOD : DaoContext_LongDiv( self, dA.v.l, b, b2, c ); break;
+    case DVM_POW : DLong_Pow( c, dA.v.l, i ); break;
     default: break;
     }
     DLong_Delete( b );
     DLong_Delete( b2 );
   }else if( dB.t == DAO_LONG && dA.t >= DAO_INTEGER && dA.t <= DAO_DOUBLE ){
-    DLong *c = DaoContext_GetLong( self, vmc );
-    DLong *a = DLong_New();
-    DLong *b2 = DLong_New();
+    DLong *a, *b2, *c = DaoContext_GetLong( self, vmc );
     dint i = DValue_GetInteger( dA );
+    if( DaoContext_CheckLong2Integer( self, dB.v.l ) == 0 ) return;
+    a = DLong_New();
+    b2 = DLong_New();
     DLong_FromInteger( a, i );
     switch( vmc->code ){
     case DVM_ADD : DLong_Add( c, a, dB.v.l ); break;
@@ -2289,6 +2307,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     case DVM_MUL : DLong_MulInt( c, dB.v.l, i ); break;
     case DVM_DIV : DaoContext_LongDiv( self, a, dB.v.l, c, b2 ); break;
     case DVM_MOD : DaoContext_LongDiv( self, a, dB.v.l, b2, c ); break;
+    case DVM_POW : DLong_Pow( c, a, DLong_ToInteger( dB.v.l ) ); break;
     default: break;
     }
     DLong_Delete( a );

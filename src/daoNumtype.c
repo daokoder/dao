@@ -710,7 +710,7 @@ static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int d
 }
 void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 {
-  complex16 *cx, *cy;
+  complex16 *cx, *cy = NULL;
   ushort_t *dx = x->data;
   ushort_t *dy = y->data;
   size_t nx = x->size;
@@ -722,13 +722,17 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
   while( (nc>>1) < max ) nc <<= 1, mc ++;
   /* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
   cx = dao_calloc( nc, sizeof(complex16) );
-  cy = dao_calloc( nc, sizeof(complex16) );
   for(i=0; i<nx; i++) cx[i].real = dx[i];
-  for(i=0; i<ny; i++) cy[i].real = dy[i];
   dao_fft16( cx, mc, -1 );
-  dao_fft16( cy, mc, -1 );
+  if( x == y ){
+    cy = cx;
+  }else{
+    cy = dao_calloc( nc, sizeof(complex16) );
+    for(i=0; i<ny; i++) cy[i].real = dy[i];
+    dao_fft16( cy, mc, -1 );
+  }
   for(i=0; i<nc; i++) complex16_mul( cx[i], cx[i], cy[i] );
-  dao_free( cy );
+  if( x != y ) dao_free( cy );
   dao_fft16( cx, mc, 1 );
   DLong_Resize( z, nc );
   memset( z->data, nc, sizeof(short) );
@@ -919,6 +923,40 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
   DLong_Delete( r2 );
   DLong_Normalize2( y );
   DLong_Normalize2( r );
+}
+void DLong_Pow( DLong *z, DLong *x, dint n )
+{
+  dint m = 1;
+  if( n == 1 ){
+    DLong_Move( z, x );
+    return;
+  }else if( n == 0 ){
+    DLong_Resize( z, 1 );
+    z->data[0] = 1;
+    return;
+  }else if( x->size == 0 ){
+    DLong_Resize( z, 0 );
+    return;
+  }else if( x->size == 1 && x->data[0] ==1 ){
+    DLong_Resize( z, 1 );
+    z->data[0] = 1;
+    z->sign = n%2 ? 1 : x->sign;
+    return;
+  }else if( n == 2 ){
+    DLong_Mul( z, x, x );
+    return;
+  }
+  DLong_Move( z, x );
+  while( 2*m <= n ){
+    DLong_Mul( z, z, z );
+    m *= 2;
+  }
+  if( m < n ){
+    DLong *tmp = DLong_New();
+    DLong_Pow( tmp, x, n-m );
+    DLong_Mul( z, z, tmp );
+    DLong_Delete( tmp );
+  }
 }
 /* z = x * x + r */
 /* binary searching */

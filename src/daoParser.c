@@ -189,17 +189,13 @@ static void DString_AppendToken( DString *self, DaoToken *token )
 
 DaoParser* DaoParser_New()
 {
-  DaoParser *self = (DaoParser*) dao_malloc( sizeof(DaoParser) );
-
-  self->vmSpace = NULL;
-  self->nameSpace = NULL;
+  DaoParser *self = (DaoParser*) dao_calloc( 1, sizeof(DaoParser) );
 
   self->srcFName = DString_New(1);
   self->tokens = DArray_New(D_TOKEN);
   self->partoks = DArray_New(D_TOKEN);
   self->comments = DMap_New(0,D_STRING);
 
-  self->vmcCount = 0;
   self->vmCodes = DArray_New(D_VMCODE);
   self->vmcBase = DaoInode_New( self );
   self->vmcFirst = self->vmcLast = self->vmcTop = self->vmcBase;
@@ -213,13 +209,7 @@ DaoParser* DaoParser_New()
   self->varFunctional = DHash_New(D_STRING,0);
   self->varStatic = DHash_New(D_STRING,0);
 
-  self->locRegCount = 0;
-  self->topAsGlobal = 0;
-  self->isClassBody = 0;
-  self->isInterBody = 0;
-  self->pairLtGt = 0;
   self->scoping = DArray_New(0);
-  self->bindtos = NULL;
 
   self->nullValue = -1;
   self->integerZero = -1;
@@ -228,19 +218,11 @@ DaoParser* DaoParser_New()
   self->imgone.real = 0.0;
   self->imgone.imag = 1.0;
 
-  self->routine = NULL;
-  self->hostInter = NULL;
-  self->hostClass = NULL;
-  self->hostCData = NULL;
-  self->selfParam = NULL;
-  self->outParser = NULL;
   self->routCompilable = DArray_New(0);
 
   self->routName = DString_New(1);
   self->mbs = DString_New(1);
   self->str = DString_New(1);
-  self->levelBase = 0;
-  self->lexLevel = 0;
   self->bigint = DLong_New();
 
   self->toks = DArray_New(D_STRING);
@@ -251,8 +233,6 @@ DaoParser* DaoParser_New()
   DArray_Append( self->localVarMap, self->lvm );
   DArray_Append( self->localCstMap, self->lvm );
 
-  self->cmpOptions = self->exeOptions = 0;
-  self->defined = self->inherit = self->error = self->parsed = 0;
   self->indent = 1;
   return self;
 }
@@ -792,11 +772,6 @@ static void DaoParser_InheritConstructor( DaoParser *self, int line )
   DString_Delete( sig );
   DaoTokens_AppendInitSuper( self->tokens, klass, line, 0 );
   DaoParser_ParseRoutine( self );
-#if 0
-  int m;
-  for(m=0; m<self->size; m++) printf( "%s ", self->items.pToken[m]->string->mbs );
-  printf( "\n" );
-#endif
 }
 static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
     DValue *nested, int local, DString *fullname );
@@ -1700,7 +1675,8 @@ static void DaoParser_PushRegister( DaoParser *self )
 {
   int line;
   self->locRegCount ++;
-  if( self->routine->type != DAO_ROUTINE ) return;
+  if( self->routine == NULL || self->routine->type != DAO_ROUTINE ) return;
+  if( self->routine->tidHost == DAO_INTERFACE ) return;
   line = self->curLine - self->routine->bodyStart - 1;
   DArray_Append( self->regLines, line );
 }
@@ -1709,7 +1685,8 @@ static void DaoParser_PushRegisters( DaoParser *self, int n )
   int i, line;
   if( n <0 ) return;
   self->locRegCount += n;
-  if( self->routine->type != DAO_ROUTINE ) return;
+  if( self->routine == NULL || self->routine->type != DAO_ROUTINE ) return;
+  if( self->routine->tidHost == DAO_INTERFACE ) return;
   line = self->curLine - self->routine->bodyStart - 1;
   for(i=0; i<n; i++) DArray_Append( self->regLines, line );
 }
@@ -2776,6 +2753,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
       if( tokens[right]->name == DTOK_RCB ){ /* with body */
         DArray_Append( self->routCompilable, rout );
         rout->parser = parser;
+      }else if( rout->tidHost == DAO_INTERFACE ){
+        DaoParser_Delete( parser );
       }else{
         rout->parser = parser;
       }
@@ -3374,7 +3353,9 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
       DArray_Append( self->toks, str );
       if( storeType & DAO_DATA_LOCAL )
         DaoParser_DeclareVariable( self, vtok, storeType, permiType, abtp );
+      if( self->error ) return 0;
       var = DaoParser_GetRegister( self, str );
+      if( self->error ) return 0;
       if( var < 0 ){
         DaoParser_DeclareVariable( self, vtok, storeType, permiType, abtp );
       }else if( ( storeType & DAO_DATA_MEMBER ) && self->hostClass ){
@@ -3424,7 +3405,9 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
           }
           id = MAP_Find( self->allConsts, mbs )->value.pInt;
           id = DaoParser_GetNormRegister( self, id+DVR_LOC_CST );
-          /* printf( "name = %s,  %i\n", str->mbs, id ); */
+          /* 
+          printf( "name = %s,  %i\n", str->mbs, id );
+           */
           if( expStart == comma ){
             DaoParser_Error( self, DAO_CTW_EXPR_INVALID, str );
             return 0;
@@ -3830,6 +3813,12 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok,
   DString *name = tok->string;
   int found;
 
+  if( self->isInterBody ){
+    DString_SetMBS( self->mbs, "interface body cannot declare variables" );
+    DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->mbs );
+    return;
+  }
+
   if( storeType & DAO_DATA_LOCAL ){
     if( MAP_Find( DArray_Top( self->localVarMap ), name ) == NULL ){
       int id = self->locRegCount;
@@ -3905,6 +3894,12 @@ int DaoParser_GetRegister( DaoParser *self, DString *name )
   DaoRoutine *routine = self->routine;
   DNode *node = NULL;
   int i;
+
+  if( self->isInterBody ){
+    DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, NULL );
+    DaoParser_Suggest( self, "interface body cannot contain statements" );
+    return -1;
+  }
 
   if( routine->type == DAO_FUNCTION && self->hostCData ){
     /* QStyleOption( version : int = QStyleOption::Version, ... ) */
@@ -6181,6 +6176,12 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
   DValue value;
   unsigned char tki, tki2;
   unsigned char typed_data_enum = 0;
+
+  if( self->isInterBody ){
+    DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, NULL );
+    DaoParser_Suggest( self, "interface body cannot contain statements" );
+    return -1;
+  }
 
   *cst = 0;
   if( start > end ){

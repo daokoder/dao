@@ -45,7 +45,6 @@ static void DRoutine_Init( DRoutine *self )
   self->tidHost = 0;
   self->routHost = NULL;
   self->routName   = DString_New(1);
-  self->docString  = DString_New(1);
   self->routConsts = DVarray_New();
   self->routOverLoad = DArray_New(0);
   self->nameSpace = NULL;
@@ -58,6 +57,7 @@ DRoutine* DRoutine_New()
   DRoutine *self = (DRoutine*) dao_malloc( sizeof(DRoutine) );
   DaoBase_Init( self, DAO_ROUTINE );
   DRoutine_Init( self );
+  self->docString  = DString_New(1);
   return self;
 }
 void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
@@ -836,15 +836,9 @@ DaoTypeBase routTyper=
 
 DaoRoutine* DaoRoutine_New()
 {
-  DaoRoutine *self = (DaoRoutine*) dao_malloc( sizeof( DaoRoutine ) );
+  DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof( DaoRoutine ) );
   DaoBase_Init( self, DAO_ROUTINE );
   DRoutine_Init( (DRoutine*)self );
-  self->mode = 0;
-  self->constParam = 0;
-  self->defLine = 0;
-  self->bodyStart = 0;
-  self->bodyEnd = 0;
-  self->revised = NULL;
   self->vmCodes = DaoVmcArray_New();
   self->regType = DArray_New(0);
   self->defLocals = DArray_New(D_TOKEN);
@@ -852,15 +846,10 @@ DaoRoutine* DaoRoutine_New()
   self->docString = DString_New(1);
   self->regForLocVar = DMap_New(0,0);
   self->abstypes = DMap_New(D_STRING,0);
-  self->locRegCount = 0;
-  self->upRoutine = NULL;
-  self->upContext = NULL;
-  self->parser = NULL;
 #ifdef DAO_WITH_JIT
   self->binCodes = DArray_New(D_STRING);
   self->jitFuncs = DArray_New(0);
   self->preJit = DaoVmcArray_New();
-  self->jitMemory = NULL;
 #endif
   return self;
 }
@@ -2674,13 +2663,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           ct = at;
           switch( at->tid ){
           case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
+          case DAO_LONG :
             break;
           case DAO_STRING :
             if( code != DVM_ADD ) goto InvOper; break;
           case DAO_COMPLEX :
             if( code == DVM_MOD ) goto InvOper; break;
-          case DAO_LONG :
-            if( code == DVM_POW ) goto InvOper; break;
           case DAO_LIST :
             if( code != DVM_ADD ) goto InvOper;
             if( DaoType_MatchTo( bt, at, defs )==0 ) goto NotMatch;

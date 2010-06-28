@@ -592,7 +592,7 @@ void cycRefCountDecreScan()
           cycRefCountDecrement( (DaoBase*) rout->nameSpace );
           cycRefCountDecrementsV( rout->routConsts );
           cycRefCountDecrements( rout->routOverLoad );
-          if( dbase->type == DAO_ROUTINE )
+          if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE )
             cycRefCountDecrements( rout->regType );
           break;
         }
@@ -728,7 +728,7 @@ void markAliveObjects( DaoBase *root )
           cycRefCountIncrement( (DaoBase*) rout->nameSpace );
           cycRefCountIncrementsV( rout->routConsts );
           cycRefCountIncrements( rout->routOverLoad );
-          if( dbase->type == DAO_ROUTINE )
+          if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE )
             cycRefCountIncrements( rout->regType );
           break;
         }
@@ -899,7 +899,7 @@ void freeGarbage()
             }
             directRefCountDecrementV( rout->routConsts );
             directRefCountDecrement( rout->routOverLoad );
-            if( dbase->type == DAO_ROUTINE )
+            if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE )
               directRefCountDecrement( rout->regType );
             break;
           }
@@ -1280,7 +1280,7 @@ void cycRefCountDecreScan()
           cycRefCountDecrementsV( rout->routConsts );
           cycRefCountDecrements( rout->routOverLoad );
           j += rout->routConsts->size + rout->routOverLoad->size;
-          if( dbase->type == DAO_ROUTINE ){
+          if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE ){
             j += rout->regType->size;
             cycRefCountDecrements( rout->regType );
           }
@@ -1421,9 +1421,9 @@ void cycRefCountIncreScan()
             cycRefCountIncrement( (DaoBase*) rout->nameSpace );
             cycRefCountIncrementsV( rout->routConsts );
             cycRefCountIncrements( rout->routOverLoad );
-          if( dbase->type == DAO_ROUTINE ){
-            cycRefCountIncrements( rout->regType );
-          }
+            if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE ){
+              cycRefCountIncrements( rout->regType );
+            }
             j += rout->routConsts->size + rout->routOverLoad->size;
             break;
           }
@@ -1613,7 +1613,7 @@ void directDecRC()
             j += rout->routConsts->size + rout->routOverLoad->size;
             directRefCountDecrementV( rout->routConsts );
             directRefCountDecrement( rout->routOverLoad );
-            if( dbase->type == DAO_ROUTINE ){
+            if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE ){
               directRefCountDecrement( rout->regType );
             }
             break;
