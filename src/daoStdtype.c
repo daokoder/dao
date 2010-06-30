@@ -996,7 +996,8 @@ static void DaoSTR_Split( DaoContext *ctx, DValue *p[], int N )
       DString_SubString( self, str, last+qlen, posDelm-last-2*qlen );
     else
       DString_SubString( self, str, last, posDelm-last );
-    if( last !=0 || posDelm !=0 ) DVarray_Append( list->items, value );
+    /* if( last !=0 || posDelm !=0 ) */
+    DVarray_Append( list->items, value );
 
     last = posDelm + dlen;
     posDelm = DString_Find( self, delm, last );
@@ -3780,6 +3781,7 @@ static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 }
 void DaoException_Setup( DaoNameSpace *ns )
 {
+  DValue value = daoNullCData;
   DaoType *exception = DaoException_WrapType( ns, & dao_Exception_Typer );
   DaoType *none = DaoException_WrapType( ns, & dao_ExceptionNone_Typer );
   DaoType *any = DaoException_WrapType( ns, & dao_ExceptionAny_Typer );
@@ -3802,7 +3804,6 @@ void DaoException_Setup( DaoNameSpace *ns )
   DaoType *wvalue = DaoException_WrapType( ns, & dao_WarningValue_Typer );
   DaoType *evalue = DaoException_WrapType( ns, & dao_ErrorValue_Typer );
   DaoType *type = DaoException_WrapType( ns, & dao_ErrorType_Typer );
-  DValue value = daoNullCData;
 
   value.v.cdata = exception->X.cdata;
   DaoNameSpace_AddConst( ns, exception->name, value );
@@ -3897,6 +3898,32 @@ void DaoException_Setup( DaoNameSpace *ns )
   DaoNameSpace_SetupMethods( ns, & dao_ErrorType_Typer );
   DaoNameSpace_SetupMethods( ns, & dao_WarningSyntax_Typer );
   DaoNameSpace_SetupMethods( ns, & dao_WarningValue_Typer );
+}
+extern void DaoTypeBase_Free( DaoTypeBase *typer );
+void DaoException_CleanUp()
+{
+  DaoTypeBase_Free( & dao_Exception_Typer );
+  DaoTypeBase_Free( & dao_ExceptionNone_Typer );
+  DaoTypeBase_Free( & dao_ExceptionAny_Typer );
+  DaoTypeBase_Free( & dao_ExceptionWarning_Typer );
+  DaoTypeBase_Free( & dao_ExceptionError_Typer );
+  DaoTypeBase_Free( & dao_ErrorField_Typer );
+  DaoTypeBase_Free( & dao_FieldNotExist_Typer );
+  DaoTypeBase_Free( & dao_FieldNotPermit_Typer );
+  DaoTypeBase_Free( & dao_ErrorFloat_Typer );
+  DaoTypeBase_Free( & dao_FloatDivByZero_Typer );
+  DaoTypeBase_Free( & dao_FloatOverFlow_Typer );
+  DaoTypeBase_Free( & dao_FloatUnderFlow_Typer );
+  DaoTypeBase_Free( & dao_ErrorIndex_Typer );
+  DaoTypeBase_Free( & dao_IndexOutOfRange_Typer );
+  DaoTypeBase_Free( & dao_ErrorKey_Typer );
+  DaoTypeBase_Free( & dao_KeyNotExist_Typer );
+  DaoTypeBase_Free( & dao_ErrorParam_Typer );
+  DaoTypeBase_Free( & dao_WarningSyntax_Typer );
+  DaoTypeBase_Free( & dao_ErrorSyntax_Typer );
+  DaoTypeBase_Free( & dao_WarningValue_Typer );
+  DaoTypeBase_Free( & dao_ErrorValue_Typer );
+  DaoTypeBase_Free( & dao_ErrorType_Typer );
 }
 DaoTypeBase* DaoException_GetType( int type )
 {

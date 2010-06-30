@@ -26,8 +26,10 @@
 #define GC_IN_POOL 1
 #define GC_MARKED  2
 
+#if DEBUG
 #if 0
 #define DEBUG_TRACE
+#endif
 #endif
 
 #ifdef DEBUG_TRACE
@@ -404,6 +406,9 @@ void DaoGC_DecRC( DaoBase *p )
   DaoTypeBase *typer;
   if( ! p ) return;
 
+#ifdef DEBUG_TRACE
+  if( p == 0x1011a0 ) print_trace();
+#endif
   DMutex_Lock( & gcWorker.mutex_switch_heap );
 
   DaoGC_DecRC2( p, -1 );
@@ -427,6 +432,9 @@ void DaoFinishGC()
 void DaoGC_IncRC( DaoBase *p )
 {
   if( ! p ) return;
+#ifdef DEBUG_TRACE
+  if( p == 0x1011a0 ) print_trace();
+#endif
   if( p->refCount == 0 ){
     p->refCount ++;
     return;
@@ -589,6 +597,7 @@ void cycRefCountDecreScan()
         {
           DaoRoutine *rout = (DaoRoutine*)dbase;
           cycRefCountDecrement( (DaoBase*) rout->routType );
+          cycRefCountDecrement( (DaoBase*) rout->routHost );
           cycRefCountDecrement( (DaoBase*) rout->nameSpace );
           cycRefCountDecrementsV( rout->routConsts );
           cycRefCountDecrements( rout->routOverLoad );
@@ -622,6 +631,7 @@ void cycRefCountDecreScan()
           cycRefCountDecrementsV( ns->cstData );
           cycRefCountDecrementsV( ns->varData );
           cycRefCountDecrements( ns->cmethods );
+          cycRefCountDecrements( ns->mainRoutines );
           break;
         }
       case DAO_TYPE :
@@ -725,6 +735,7 @@ void markAliveObjects( DaoBase *root )
         {
           DaoRoutine *rout = (DaoRoutine*) dbase;
           cycRefCountIncrement( (DaoBase*) rout->routType );
+          cycRefCountIncrement( (DaoBase*) rout->routHost );
           cycRefCountIncrement( (DaoBase*) rout->nameSpace );
           cycRefCountIncrementsV( rout->routConsts );
           cycRefCountIncrements( rout->routOverLoad );
@@ -758,6 +769,7 @@ void markAliveObjects( DaoBase *root )
           cycRefCountIncrementsV( ns->cstData );
           cycRefCountIncrementsV( ns->varData );
           cycRefCountIncrements( ns->cmethods );
+          cycRefCountIncrements( ns->mainRoutines );
           break;
         }
       case DAO_TYPE :
@@ -897,6 +909,10 @@ void freeGarbage()
               rout->routType->refCount --;
               rout->routType = NULL;
             }
+            if( rout->routHost ){
+              rout->routHost->refCount --;
+              rout->routHost = NULL;
+            }
             directRefCountDecrementV( rout->routConsts );
             directRefCountDecrement( rout->routOverLoad );
             if( rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE )
@@ -933,6 +949,7 @@ void freeGarbage()
             directRefCountDecrementV( ns->cstData );
             directRefCountDecrementV( ns->varData );
             directRefCountDecrement( ns->cmethods );
+            directRefCountDecrement( ns->mainRoutines );
             break;
           }
         case DAO_TYPE :
@@ -1071,7 +1088,7 @@ void DaoGC_IncRC( DaoBase *p )
   const short work = gcWorker.work;
   if( ! p ) return;
 #ifdef DEBUG_TRACE
-  //if( p == 0x15b5910 ) print_trace();
+  if( p == 0x1011a0 ) print_trace();
 #endif
   if( p->refCount == 0 ){
     p->refCount ++;
@@ -1091,6 +1108,9 @@ void DaoGC_DecRC( DaoBase *p )
   const short idle = gcWorker.idle;
   if( ! p ) return;
 
+#ifdef DEBUG_TRACE
+  if( p == 0x1011a0 ) print_trace();
+#endif
 #if 0
   if( p->type == DAO_TYPE ){
     DaoType *abtp = (DaoType*) p;
@@ -1276,6 +1296,7 @@ void cycRefCountDecreScan()
         {
           DaoRoutine *rout = (DaoRoutine*)dbase;
           cycRefCountDecrement( (DaoBase*) rout->routType );
+          cycRefCountDecrement( (DaoBase*) rout->routHost );
           cycRefCountDecrement( (DaoBase*) rout->nameSpace );
           cycRefCountDecrementsV( rout->routConsts );
           cycRefCountDecrements( rout->routOverLoad );
@@ -1315,6 +1336,7 @@ void cycRefCountDecreScan()
           cycRefCountDecrementsV( ns->cstData );
           cycRefCountDecrementsV( ns->varData );
           cycRefCountDecrements( ns->cmethods );
+          cycRefCountDecrements( ns->mainRoutines );
           j += ns->cstData->size + ns->varData->size;
           break;
         }
@@ -1418,6 +1440,7 @@ void cycRefCountIncreScan()
           {
             DaoRoutine *rout = (DaoRoutine*) dbase;
             cycRefCountIncrement( (DaoBase*) rout->routType );
+            cycRefCountIncrement( (DaoBase*) rout->routHost );
             cycRefCountIncrement( (DaoBase*) rout->nameSpace );
             cycRefCountIncrementsV( rout->routConsts );
             cycRefCountIncrements( rout->routOverLoad );
@@ -1456,6 +1479,7 @@ void cycRefCountIncreScan()
             cycRefCountIncrementsV( ns->cstData );
             cycRefCountIncrementsV( ns->varData );
             cycRefCountIncrements( ns->cmethods );
+            cycRefCountIncrements( ns->mainRoutines );
             j += ns->cstData->size + ns->varData->size;
             break;
           }
@@ -1610,6 +1634,12 @@ void directDecRC()
               rout->routType->refCount --;
               rout->routType = NULL;
             }
+            if( rout->routHost ){
+              /* may become NULL, if it has already become garbage 
+               * in the last cycle */
+              rout->routHost->refCount --;
+              rout->routHost = NULL;
+            }
             j += rout->routConsts->size + rout->routOverLoad->size;
             directRefCountDecrementV( rout->routConsts );
             directRefCountDecrement( rout->routOverLoad );
@@ -1652,6 +1682,7 @@ void directDecRC()
             directRefCountDecrementV( ns->cstData );
             directRefCountDecrementV( ns->varData );
             directRefCountDecrement( ns->cmethods );
+            directRefCountDecrement( ns->mainRoutines );
             break;
           }
         case DAO_TYPE :
@@ -1710,6 +1741,13 @@ void freeGarbage()
     if( dbase->cycRefCount==0 ){
       if( dbase->refCount !=0 ){
         printf(" refCount not zero %p %i: %i, %i\n", dbase, dbase->type, dbase->refCount, dbase->subType );
+        if( dbase->type == DAO_FUNCTION ){
+          DaoFunction *func = (DaoFunction*)dbase;
+          printf( "%s\n", func->routName->mbs );
+        }else if( dbase->type == DAO_TYPE ){
+          DaoType *func = (DaoType*)dbase;
+          printf( "%s\n", func->name->mbs );
+        }
         if( ! ( dbase->gcState[ idle ] & GC_IN_POOL ) ){
           dbase->gcState[ idle ] = GC_IN_POOL;
           DArray_Append( gcWorker.pool[idle], dbase );
@@ -1731,6 +1769,7 @@ void freeGarbage()
             printf( "delete wcstring!!! %i\n", s->chars->wcs->refCount );
           }
         }
+        if( dbase->type == DAO_FUNCTION ) printf( "here\n" );
         if( dbase->type < DAO_STRING )
         */
         typer = DaoBase_GetTyper( dbase );
@@ -1781,6 +1820,7 @@ void cycRefCountIncrement( DaoBase *dbase )
 {
   const short work = gcWorker.work;
   if( dbase ){
+    if( dbase == 0x112550 ) printf( "++++++++++++++++++ 0x112550\n" );
     dbase->cycRefCount++;
     if( ! ( dbase->gcState[work] & GC_MARKED ) ){
       DArray_Append( gcWorker.pool[work], dbase );
@@ -1821,6 +1861,7 @@ void cycRefCountDecrementV( DValue value )
 void cycRefCountIncrementV( DValue value )
 {
   if( value.t < DAO_ARRAY ) return;
+  if( value.v.p == 0x112550 ) printf( "++++ 0x112550\n" );
   cycRefCountIncrement( value.v.p );
 }
 void cycRefCountDecrementsV( DVarray *list )

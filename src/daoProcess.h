@@ -65,7 +65,7 @@ struct DaoVmProcess
   DaoVmFrame *topFrame; /* top call frame */
 
   DaoVmSpace *vmSpace;
-  DaoType *abtype; /* for coroutine */
+  DaoType    *abtype; /* for coroutine */
 
   DValue    returned;
   DVarray  *parResume;/* for coroutine */

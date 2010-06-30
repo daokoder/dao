@@ -86,6 +86,7 @@ static void DRoutine_DeleteFields( DRoutine *self )
   DString_Delete( self->routName );
   DVarray_Delete( self->routConsts );
   DArray_Delete( self->routOverLoad );
+  if( self->parTokens ) DArray_Delete( self->parTokens );
 }
 int DRoutine_AddConst( DRoutine *self, DaoBase *dbase )
 {

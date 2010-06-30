@@ -354,6 +354,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
       cur->pFunc = typer->funcItems[i].fpter;
       cur->tidHost = DAO_CDATA;
       cur->routHost = typer->priv->abtype;
+      GC_IncRC( cur->routHost );
       if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
 
       node = MAP_Find( methods, cur->routName );
@@ -400,6 +401,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
             cur->tidHost = DAO_CDATA;
             cur->routHost = typer->priv->abtype;
             cur->distance = dist; /* XXX distance , also for class */
+            GC_IncRC( cur->routHost );
             if( func->routHost != typer->priv->abtype ){
               /* there is only an entry from parent types,
                  duplicate it before adding overloaed function: */
@@ -412,6 +414,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
               node->value.pVoid = drt;
               func = (DaoFunction*) drt;
               func->tidHost = DAO_CDATA;
+              GC_ShiftRC( typer->priv->abtype, func->routHost );
               func->routHost = typer->priv->abtype;
             }
             DRoutine_AddOverLoad( drt, (DRoutine*) cur );
@@ -510,6 +513,7 @@ int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer )
   if( DaoNameSpace_SetupMethods( self, typer ) == 0 ) return 0;
   methods = typer->priv->methods;
   for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
+    GC_IncRC( it->value.pBase );
     DArray_Append( self->cmethods, it->value.pVoid );
   }
   return 1;
@@ -546,6 +550,7 @@ int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typers[] )
     e |= ( DaoNameSpace_SetupMethods( self, typers[i] ) == 0 );
     methods = typers[i]->priv->methods;
     for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
+      GC_IncRC( it->value.pBase );
       DArray_Append( self->cmethods, it->value.pVoid );
     }
   }
@@ -727,8 +732,6 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
   
   GC_DecRC( self->udfType1 );
   GC_DecRC( self->udfType2 );
-  GC_DecRC( self->vmpEvalConst );
-  GC_DecRC( self->routEvalConst );
   DVarray_Delete( self->cstData );
   DVarray_Delete( self->varData );
   DArray_Delete( self->varType );
@@ -1010,8 +1013,7 @@ void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImpor
 DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name )
 {
   DNode *node;
-  if( DString_FindChar( name, '?', 0 ) != MAXSIZE
-      || DString_FindChar( name, '@', 0 ) != MAXSIZE ) return NULL;
+  if( DString_FindChar( name, '?', 0 ) != MAXSIZE ) return NULL;
   node = MAP_Find( self->abstypes, name );
   if( node == NULL && self->parent ){
     node = DMap_Find( self->parent->abstypes, name );

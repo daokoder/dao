@@ -37,14 +37,8 @@ struct DaoVmSpace
    * or scripts from an interactive console. */
   DaoNameSpace  *mainNamespace;
 
-  /* namespace for exception class and the default instances */
-  DaoNameSpace  *nsException;
   /* for some internal scripts and predefined objects or types */
   DaoNameSpace  *nsInternal;
-
-  /* current namespace:
-   * must be set for module loading only */
-  DaoNameSpace  *nsWorking;
 
   DaoThdMaster  *thdMaster;
   DaoStream     *stdStream;

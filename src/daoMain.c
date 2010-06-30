@@ -77,6 +77,7 @@ int main( int argc, char **argv )
 
   /* Start execution. */
   if( ! DaoVmSpace_RunMain( vmSpace, DString_GetMBS( args ) ) ) return 1;
+  DString_Delete( args );
   DString_Delete( opts );
   DaoQuit();
   /* printf( "FINISHED %s\n", getenv( "PROC_NAME" ) ); */

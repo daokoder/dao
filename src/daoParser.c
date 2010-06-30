@@ -1380,12 +1380,18 @@ static DaoType* DaoType_MakeType( short tid, DString *name, DaoBase *extra,
   MAP_Insert( ns->abstypes, name, self );
   GC_IncRC( self );
   DaoType_CheckAttributes( self );
+#if 0
+  if( strstr( self->name->mbs, "map<" ) ){
+    printf( "%s  %p\n", self->name->mbs, self );
+    print_trace();
+  }
+#endif
   return self;
 }
 static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpos, DaoNameSpace *ns, DaoClass *cls, DaoType *ctype, DaoRoutine *rout )
 {
   DQuadUByte state = {NULL}; /* a:type, b:retype, c:stackpos, d: */
-  DArray *stateStack, *typeStack, *nameStack;
+  DArray *stateStack, *typeStack, *nameStack, *typeArray;
   DString *name = NULL;
   DValue value;
   DaoToken *tok;
@@ -1464,6 +1470,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
   name = DString_New(1);
   stateStack = DArray_New(0);
   typeStack = DArray_New(0);
+  typeArray = DArray_New(0);
   nameStack = DArray_New(D_STRING);
   DArray_PushFront( stateStack, state.p );
   DArray_PushFront( nameStack, name );
@@ -1498,6 +1505,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
         abtype = DaoType_ScalarType( tok, ns, cls, rout );
       }
       DArray_Append( typeStack, abtype );
+      DArray_Append( typeArray, abtype );
       newtype = 1;
       break;
     case DTOK_FIELD :
@@ -1556,6 +1564,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
       DArray_PopFront( stateStack );
       DArray_PopFront( nameStack );
       DArray_Append( typeStack, abtype );
+      DArray_Append( typeArray, abtype );
       DString_Append( nameStack->items.pString[0], name );
       newtype = 1;
       break;
@@ -1599,6 +1608,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
       if( tokens[i]->type == DTOK_IDENTIFIER ){
         abtype = DaoType_ScalarType( tokens[i], ns, cls, rout );
         DArray_Append( typeStack, abtype );
+        DArray_Append( typeArray, abtype );
       }
       if( abtype == NULL ) goto WrongForm;
       DString_Append( nameStack->items.pString[0], abtype->name );
@@ -1630,6 +1640,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
         DString_Assign( abtype->fname, name );
         DArray_PopBack( typeStack );
         DArray_Append( typeStack, abtype );
+        DArray_Append( typeArray, abtype );
         DString_Append( nameStack->items.pString[1], nameStack->items.pString[0] );
         DArray_PopFront( nameStack );
         DArray_PopFront( stateStack );
@@ -1640,16 +1651,23 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
   printf( "%p %s\n", abtype, name->mbs );
   if( abtype ) printf( "type name : %s\n\n\n", abtype->name->mbs );
 #endif
+  DArray_Pop( typeArray );
+  GC_IncRCs( typeArray );
+  GC_DecRCs( typeArray );
   DString_Delete( name );
   DArray_Delete( stateStack );
   DArray_Delete( typeStack );
+  DArray_Delete( typeArray );
   DArray_Delete( nameStack );
   return abtype;
 WrongForm:
+  GC_IncRCs( typeArray );
+  GC_DecRCs( typeArray );
   printf( "ERROR: %p %s\n", abtype, name->mbs );
   DString_Delete( name );
   DArray_Delete( stateStack );
   DArray_Delete( typeStack );
+  DArray_Delete( typeArray );
   DArray_Delete( nameStack );
   return NULL;
 }
@@ -1916,8 +1934,6 @@ int DaoParser_ParseParams( DaoParser *self )
     if( routine->routConsts->size < routine->parCount ){
       DRoutine_AddConstValue( (DRoutine*) routine, dft );
     }else if( routine->routConsts->size > routine->parCount ){
-      for( j=routine->parCount; j<routine->routConsts->size; j++ )
-        DValue_Clear( routine->routConsts->data+j );
       DVarray_Erase( routine->routConsts, routine->parCount-1, routine->routConsts->size );
       DRoutine_AddConstValue( (DRoutine*) routine, dft );
     }

@@ -205,6 +205,7 @@ void DaoVmProcess_Delete( DaoVmProcess *self )
   if( self->parResume ) DVarray_Delete( self->parResume );
   if( self->parYield ) DVarray_Delete( self->parYield );
   if( self->abtype ) GC_DecRC( self->abtype );
+  if( self->mpiData ) DaoMpiData_Delete( self->mpiData );
   dao_free( self );
 }
 

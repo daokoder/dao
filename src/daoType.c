@@ -98,6 +98,12 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
   }
   GC_IncRC( extra );
   if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
+#if 0
+  if( strstr( self->name->mbs, "map<" ) ){
+    printf( "%s  %p\n", self->name->mbs, self );
+    print_trace();
+  }
+#endif
   return self;
 }
 DaoType* DaoType_Copy( DaoType *other )
@@ -602,10 +608,17 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
   DaoType_CheckAttributes( copy );
   GC_IncRC( copy->X.abtype );
   node = DMap_Find( ns->abstypes, copy->name );
+#if 0
+  if( strstr( copy->name->mbs, "map<" ) == copy->name->mbs ){
+    printf( "%s  %p  %p\n", copy->name->mbs, copy, node );
+    print_trace();
+  }
+#endif
   if( node ){
     DaoType_Delete( copy );
     return node->value.pAbtp;
   }else{
+    GC_IncRC( copy );
     DMap_Insert( ns->abstypes, copy->name, copy );
   }
   return copy;
