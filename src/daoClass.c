@@ -126,6 +126,8 @@ void DaoClass_Delete( DaoClass *self )
   for( ; n != NULL; n = DMap_Next( self->abstypes, n ) ) GC_DecRC( n->value.pBase );
   GC_DecRC( self->clsType );
   GC_DecRCs( self->superClass );
+  GC_DecRCs( self->glbDataType );
+  GC_DecRCs( self->objDataType );
   DMap_Delete( self->abstypes );
   DMap_Delete( self->lookupTable     );
   DMap_Delete( self->ovldRoutMap  );
@@ -168,6 +170,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
   DString_Append( rout->routType->name, name );
   DString_AppendMBS( rout->routType->name, ">" );
   GC_IncRC( rout->routType );
+  GC_IncRC( self->objType );
   rout->tidHost = DAO_OBJECT;
   rout->routHost = self->objType;
   rout->attribs |= DAO_ROUT_INITOR;
@@ -219,7 +222,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
               value.v.routine->routOverLoad->items.pBase[0] = tmp.v.p;
               value.v.routine->routType = tmp.v.routine->routType;
               GC_IncRC( value.v.routine->routType );
-              GC_IncRC( value.v.p );
+              GC_IncRC( tmp.v.p );
             }
             DaoClass_AddConst( self, name, value, perm );
           }
@@ -253,6 +256,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
         DString *name = klass->objDataName->items.pString[id];
         type = klass->objDataType->items.pAbtp[id];
         value = klass->objDataDefault->data[id];
+        GC_IncRC( type );
         DArray_Append( self->objDataName, name );
         DArray_Append( self->objDataType, type );
         DVarray_Append( self->objDataDefault, daoNullValue );
@@ -456,6 +460,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, int s, Da
   DNode *node = MAP_Find( self->lookupTable, name );
   if( node ) return DAO_CTW_WAS_DEFINED;
 
+  GC_IncRC( t );
   id = self->objDataName->size;
   MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_VARIABLE, s, id ) );
   DArray_Append( self->objDataType, (void*)t );
@@ -495,6 +500,7 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue data, int s, Da
 int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp )
 {
   DNode *node = MAP_Find( self->abstypes, name );
+  /* remove this following two lines? XXX */
   if( DString_FindChar( name, '?', 0 ) != MAXSIZE
       || DString_FindChar( name, '@', 0 ) != MAXSIZE ) return 0;
   if( node == NULL ){

@@ -47,7 +47,8 @@ void DaoType_Delete( DaoType *self )
   if( self->nested ) DArray_Delete( self->nested );
   if( self->mapNames ) DMap_Delete( self->mapNames );
   if( self->interfaces ) DMap_Delete( self->interfaces );
-  DaoLateDeleter_Push( self );
+  //DaoLateDeleter_Push( self );
+  free( self );
 }
 DaoTypeBase abstypeTyper=
 {
@@ -108,6 +109,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 }
 DaoType* DaoType_Copy( DaoType *other )
 {
+  DNode *it;
   DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
   memcpy( self, other, sizeof(DaoType) );
   self->name = DString_Copy( other->name );
@@ -118,7 +120,11 @@ DaoType* DaoType_Copy( DaoType *other )
     GC_IncRCs( self->nested );
   }
   if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
-  if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
+  if( other->interfaces ){
+    self->interfaces = DMap_Copy( other->interfaces );
+    it = DMap_First( other->interfaces );
+    for(; it!=NULL; it=DMap_Next(other->interfaces,it)) GC_IncRC( it->key.pBase );
+  }
   GC_IncRC( self->X.extra );
   return self;
 }
@@ -629,21 +635,30 @@ DefFailed:
 void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 {
   DaoType *tp = DaoType_DefineTypes( self, ns, defs );
-  DaoTypeBase *t;
-  DaoBase *p;
-  DString *s;
-  DArray *a;
-  DMap *m;
-  int i;
+  DaoType tmp = *self;
   if( tp == self || tp == NULL ) return;
-  i = self->tid; self->tid = tp->tid; tp->tid = i;
-  s = self->name; self->name = tp->name; tp->name = s;
-  p = self->X.extra; self->X.extra = tp->X.extra; tp->X.extra = p;
-  t = self->typer;  self->typer = tp->typer;   tp->typer = t;
-  a = self->nested; self->nested = tp->nested; tp->nested = a;
-  m = self->mapNames; self->mapNames = tp->mapNames; tp->mapNames = m;
+  *self = *tp;
+  *tp = tmp;
   DaoType_Delete( tp );
 }
+
+void DaoInterface_Delete( DaoInterface *self )
+{
+  DNode *it = DMap_First(self->methods);
+  GC_DecRCs( self->supers );
+  GC_DecRC( self->abtype );
+  for(; it!=NULL; it=DMap_Next(self->methods,it)) GC_DecRC( it->value.pBase );
+  DArray_Delete( self->supers );
+  DMap_Delete( self->methods );
+  dao_free( self );
+}
+DaoTypeBase interTyper=
+{
+  & baseCore,
+  "interface",
+  NULL, NULL, {0}, NULL,
+  (FuncPtrDel) DaoInterface_Delete
+};
 
 DaoInterface* DaoInterface_New( const char *name )
 {
@@ -653,6 +668,7 @@ DaoInterface* DaoInterface_New( const char *name )
   self->supers = DArray_New(0);
   self->methods = DHash_New(D_STRING,0);
   self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoBase*)self, NULL );
+  GC_IncRC( self->abtype );
   return self;
 }
 static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
@@ -826,6 +842,7 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
         rout->routType = ((DRoutine*)it->value.pVoid)->routType;
         GC_IncRC( rout->routType );
         GC_IncRC( it->value.pBase );
+        /* reference count of "rout" is already increased by DRoutine_New() */
         DMap_Insert( self->methods, it->key.pVoid, rout );
       }else{
         rout = (DRoutine*) node->value.pVoid;

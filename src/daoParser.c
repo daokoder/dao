@@ -264,7 +264,7 @@ void DaoParser_Delete( DaoParser *self )
   DLong_Delete( self->bigint );
   DaoParser_ClearCodes( self );
   DaoInode_Delete( self->vmcBase );
-  if( self->isClassBody || self->isInterBody ) GC_IncRC( self->selfParam );
+  if( self->isClassBody || self->isInterBody ) GC_DecRC( self->selfParam );
   dao_free( self );
 }
 
@@ -1377,8 +1377,8 @@ static DaoType* DaoType_MakeType( short tid, DString *name, DaoBase *extra,
   }
   if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
   GC_IncRC( extra );
-  MAP_Insert( ns->abstypes, name, self );
   GC_IncRC( self );
+  MAP_Insert( ns->abstypes, name, self );
   DaoType_CheckAttributes( self );
 #if 0
   if( strstr( self->name->mbs, "map<" ) ){
@@ -1968,6 +1968,8 @@ int DaoParser_ParseParams( DaoParser *self )
     DString_AppendMBS( pname, "=>?" );
   }
   DString_AppendMBS( pname, ">" );
+  GC_IncRCs( nested );
+  GC_IncRC( abstype );
   tp = DaoType_New( pname->mbs, DAO_ROUTINE, (DaoBase*) abstype, nested );
   routine->routType = DaoNameSpace_FindType( self->nameSpace, pname );
   if( DaoType_MatchTo( tp, routine->routType, NULL ) == DAO_MT_EQ ){
@@ -1985,7 +1987,6 @@ int DaoParser_ParseParams( DaoParser *self )
   if( routine->attribs & DAO_ROUT_PARSELF ) routine->routType->attrib |= DAO_ROUT_PARSELF;
   GC_IncRC( routine->routType );
   DArray_Append( nested, (void*) abstype );
-  GC_IncRCs( nested );
   DArray_Swap( self->partoks, self->tokens );
   /*  remove vmcode for consts */
   DaoParser_ClearCodes( self );
@@ -2243,13 +2244,14 @@ static void DaoParser_AddToScope( DaoParser *self, DValue scope,
     DaoNameSpace_AddConst( scope.v.ns, name, value );
   }else{
     if( routine == myNS->mainRoutine ){
-      DaoNameSpace_AddType( myNS, name, abtype );
       DaoNameSpace_AddConst( myNS, name, value );
+      DaoNameSpace_AddType( myNS, name, abtype );
       if( store & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, name, 0 );
     }else if( self->isClassBody && self->hostClass ){
       DaoClass_AddType( self->hostClass, name, abtype );
       DaoClass_AddConst( self->hostClass, name, value, DAO_CLS_PUBLIC );
     }
+    GC_IncRC( abtype );
     MAP_Insert( routine->abstypes, name, abtype );
     MAP_Insert( DArray_Top( self->localCstMap ), name, routine->routConsts->size );
     DRoutine_AddConstValue( (DRoutine*)routine, value );
@@ -2667,12 +2669,14 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
         if( rout == NULL ){
           if( self->isInterBody ){
             rout = (DaoRoutine*) DRoutine_New();
+            GC_ShiftRC( self->hostInter->abtype, rout->routHost );
             rout->routHost = self->hostInter->abtype;
             if( rout->routHost ) rout->attribs |= stat;
           }else{
             rout = DaoRoutine_New();
             rout->defLine = tokens[start]->line;
             if( self->isClassBody ){
+              GC_ShiftRC( self->hostClass->objType, rout->routHost );
               rout->tidHost = DAO_OBJECT;
               rout->attribs |= virt | stat;
               rout->routHost = self->hostClass->objType;
@@ -2691,6 +2695,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
         if( self->isClassBody ){
           DValue *ref = NULL;
+          GC_ShiftRC( klass->objType, rout->routHost );
           parser->hostClass = klass;
           rout->tidHost = DAO_OBJECT;
           rout->routHost = klass->objType;
@@ -2725,6 +2730,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
           }
         }else if( self->isInterBody ){
           DNode *node;
+          GC_ShiftRC( self->hostInter->abtype, rout->routHost );
           parser->hostInter = self->hostInter;
           rout->routHost = self->hostInter->abtype;
           node = DMap_Find( self->hostInter->methods, self->str );
@@ -2732,12 +2738,13 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
           if( node ){
             DRoutine *existing = (DRoutine*) node->value.pVoid;
             DRoutine_AddOverLoad( (DRoutine*) existing, (DRoutine*)rout );
-            if( value.v.routine->routHost != self->hostInter->abtype ){
+            if( existing->routHost != self->hostInter->abtype ){
               /* value.v.routine a dummy routine derived from parent class */
               DArray *atmp = rout->routOverLoad;
-              rout->routOverLoad = value.v.routine->routOverLoad;
-              value.v.routine->routOverLoad = atmp;
-              GC_ShiftRC( rout, value.v.routine );
+              rout->routOverLoad = existing->routOverLoad;
+              existing->routOverLoad = atmp;
+              GC_ShiftRC( rout, existing );
+              node->value.pVoid = rout;
             }
           }else{
             DMap_Insert( self->hostInter->methods, self->str, rout );
@@ -5947,7 +5954,7 @@ static int DaoParser_StripParenthesis( DaoParser *self, int *start, int *end )
  *        of rout_copy.
  *     c. update the parameter information of rout_copy;
  */
-static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regFix )
+static int DaoParser_ExpClosure( DaoParser *self, int start, int end, int regFix )
 {
   int i, up, loc, tki, m1, m2, ec=0, group = -1;
   int rb, lb2 = -1, rb2 = -1, rb3 = -1, npar = 0, regCall;
@@ -5989,6 +5996,7 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
   parser->outParser = self;
   DString_Assign( parser->srcFName, self->srcFName );
   if( self->hostClass ){
+    GC_ShiftRC( self->hostClass->objType, rout->routHost );
     rout->tidHost = DAO_OBJECT;
     rout->routHost = self->hostClass->objType;
   }
@@ -6107,9 +6115,14 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
     DString_AppendMBS( pname, "=>?" );
   }
   DString_AppendMBS( pname, ">" );
-  rout->routType = DaoNameSpace_FindType( myNS, pname );
-  if( rout->routType == NULL ){
-    rout->routType = DaoType_New( pname->mbs, DAO_ROUTINE, (DaoBase*) abstype, nested );
+  GC_IncRCs( nested );
+  GC_IncRC( abstype );
+  tp = DaoType_New( pname->mbs, DAO_ROUTINE, (DaoBase*) abstype, nested );
+  rout->routType = DaoNameSpace_FindType( self->nameSpace, pname );
+  if( DaoType_MatchTo( tp, rout->routType, NULL ) == DAO_MT_EQ ){
+    DaoType_Delete( tp );
+  }else{
+    rout->routType = tp;
     DaoType_MapNames( rout->routType );
     DaoNameSpace_AddType( myNS, pname, rout->routType );
     DString_SetMBS( pname, "self" );
@@ -6118,8 +6131,7 @@ static int DaoParser_MakeEnclosed( DaoParser *self, int start, int end, int regF
   }
   GC_IncRC( rout->routType );
   npar = rout->parCount;
-  DArray_Append( nested, (void*) abstype );
-  GC_IncRCs( nested );
+  DArray_Append( nested, abstype ); /* for GC */
 
   for( i=lb2+1; i<rb2; i++ ) DArray_Append( parser->tokens, tokens[i] );
   if( tokens[rb2-1]->name != DTOK_SEMCO ){
@@ -6233,7 +6245,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
     /* closure expression */
     tki = tokens[start+1]->name;
     if( tki == DTOK_LB ){
-      return DaoParser_MakeEnclosed( self, start, end, regFix );
+      return DaoParser_ExpClosure( self, start, end, regFix );
     }else{
       DString_SetMBS( self->mbs, "using removed feature" );
       DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->mbs );

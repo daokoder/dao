@@ -121,7 +121,6 @@ DaoContext* DaoContext_New()
   self->entryCode = 0;
   self->ctxState = 0;
   self->constCall = 0;
-
   return self;
 }
 
@@ -724,6 +723,7 @@ void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
 
   if( vc->t != DAO_TUPLE || vc->v.tuple->unitype != dao_type_for_iterator )
     DaoContext_PutTuple( self );
+
   iter = vc->v.tuple;
   iter->items->data[0].t = DAO_INTEGER;
   iter->items->data[0].v.i = 0;
@@ -794,8 +794,8 @@ DaoMap* DaoContext_GetMap( DaoContext *self,  DaoVmCode *vmc )
       tp = DaoType_DefineTypes( tp, self->nameSpace, map );
       DMap_Delete( map );
     }
+    GC_ShiftRC( tp, map->unitype );
     map->unitype = tp;
-    GC_IncRC( tp );
   }
   return map;
 }
@@ -1776,6 +1776,7 @@ static DaoMap* DaoGetMetaMap( DValue *self, int create )
   }
   if( meta ){
     meta->unitype = dao_map_meta;
+    GC_IncRC( meta );
     GC_IncRC( dao_map_meta );
   }
   return meta;
@@ -2265,7 +2266,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
     DaoContext_SetValue( self, vmc->c, val );
   }else if( dA.t == DAO_LONG && dB.t == DAO_LONG ){
     DLong *b, *c = DaoContext_GetLong( self, vmc );
-    if( DaoContext_CheckLong2Integer( self, dB.v.l ) == 0 ) return;
+    if( vmc->code == DVM_POW && DaoContext_CheckLong2Integer( self, dB.v.l ) == 0 ) return;
     b = DLong_New();
     switch( vmc->code ){
     case DVM_ADD : DLong_Add( c, dA.v.l, dB.v.l ); break;
@@ -2297,7 +2298,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
   }else if( dB.t == DAO_LONG && dA.t >= DAO_INTEGER && dA.t <= DAO_DOUBLE ){
     DLong *a, *b2, *c = DaoContext_GetLong( self, vmc );
     dint i = DValue_GetInteger( dA );
-    if( DaoContext_CheckLong2Integer( self, dB.v.l ) == 0 ) return;
+    if( vmc->code == DVM_POW && DaoContext_CheckLong2Integer( self, dB.v.l ) == 0 ) return;
     a = DLong_New();
     b2 = DLong_New();
     DLong_FromInteger( a, i );
@@ -3614,8 +3615,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
   if( mode & DAO_CALL_COROUT ){
     vmp = DaoVmProcess_Create( self, self->regValues + vmc->a, npar+1 );
     if( vmp == NULL ) return;
+    GC_ShiftRC( self->regTypes[ vmc->c ], vmp->abtype );
     vmp->abtype = self->regTypes[ vmc->c ];
-    /* XXX GC_IncRC(  ); */
     DaoContext_SetResult( self, (DaoBase*) vmp );
     return;
   }else if( mode || caller.t == DAO_FUNCURRY ){
@@ -4129,6 +4130,7 @@ void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc )
 {
   DValue **pp = self->regValues + vmc->a;
   DValue *pp2;
+  DaoType *tp;
   DaoRoutine *closure;
   DaoRoutine *proto = pp[0]->v.routine;
   int i;
@@ -4140,8 +4142,9 @@ void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc )
   GC_IncRC( self->routine );
   pp2 = closure->routConsts->data;
   for(i=0; i<vmc->b; i+=2) DValue_Copy( pp2 + pp[i+2]->v.i, *pp[i+1] );
-  closure->routType = DaoNameSpace_MakeRoutType( self->nameSpace,
-      closure->routType, pp2, NULL, NULL );
+  tp = DaoNameSpace_MakeRoutType( self->nameSpace, closure->routType, pp2, NULL, NULL );
+  GC_ShiftRC( tp, closure->routType );
+  closure->routType = tp;
   DArray_Assign( closure->annotCodes, proto->annotCodes );
   DaoRoutine_SetVmCodes2( closure, proto->vmCodes );
   DaoContext_SetData( self, vmc->c, (DaoBase*) closure );

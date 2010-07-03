@@ -118,6 +118,7 @@ void DMacroGroup_Delete( DMacroGroup *self )
   }
   DArray_Delete( self->stops );
   DArray_Delete( self->units );
+  DArray_Delete( self->variables );
   dao_free( self );
 }
 

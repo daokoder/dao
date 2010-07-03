@@ -732,6 +732,7 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
   
   GC_DecRC( self->udfType1 );
   GC_DecRC( self->udfType2 );
+  GC_DecRCs( self->varType );
   DVarray_Delete( self->cstData );
   DVarray_Delete( self->varData );
   DArray_Delete( self->varType );
@@ -834,7 +835,7 @@ void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, 
   if( tp && tp->tid <= DAO_DOUBLE ) value.t = tp->tid;
   if( abtp && tp && DaoType_MatchTo( abtp, tp, 0 ) == 0 ){
     printf( "unmatched type: %s %s\n", abtp->name->mbs, tp->name->mbs );
-    return; /*XXX*/
+    return; /*XXX better way to handle */
   }
   if( tp == NULL ) tp = abtp;
 
@@ -844,7 +845,7 @@ void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, 
     DaoType *type = self->varType->items.pAbtp[ id ];
     if( type && tp && DaoType_MatchTo( tp, type, 0 ) == 0 ){
       printf( "unmatched type2\n" );
-      return;
+      return; /*XXX better way to handle */
     }
     DValue_Move( value, self->varData->data + id, type );
   }else{
@@ -858,10 +859,18 @@ void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, 
   }
   if( abtp->attrib & DAO_TYPE_EMPTY ){
     switch( value.t ){
-    case DAO_LIST : value.v.list->unitype = tp; break;
-    case DAO_MAP :  value.v.map->unitype = tp; break;
-    case DAO_ARRAY : value.v.array->unitype = tp; break;
-    case DAO_TUPLE : value.v.tuple->unitype = tp; break;
+    case DAO_LIST :
+      GC_ShiftRC( tp, value.v.list->unitype );
+      value.v.list->unitype = tp; break;
+    case DAO_MAP :  
+      GC_ShiftRC( tp, value.v.map->unitype );
+      value.v.map->unitype = tp; break;
+    case DAO_ARRAY : 
+      GC_ShiftRC( tp, value.v.array->unitype );
+      value.v.array->unitype = tp; break;
+    case DAO_TUPLE : 
+      GC_ShiftRC( tp, value.v.tuple->unitype );
+      value.v.tuple->unitype = tp; break;
     default : break;
     }
   }
@@ -1380,11 +1389,8 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
     tp = DaoType_New( mbs->mbs, tid, pb, nstd );
     if( pb && pb->type == DAO_CDATA ) tp->typer = ((DaoCData*)pb)->typer;
     if( tid == DAO_PAR_NAMED ){
-      tp->X.extra = pb;
       tp->fname = DString_New(1);
       DString_SetMBS( tp->fname, name );
-    }else if( tid == DAO_ROUTINE ){
-      tp->X.extra = pb;
     }
     DaoNameSpace_AddType( self, tp->name, tp );
   }else{
@@ -1448,10 +1454,8 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
   node = MAP_Find( self->abstypes, abtp->name );
   if( node ){
     DaoType_Delete( abtp );
-    GC_IncRC( node->value.pAbtp );
     return node->value.pAbtp;
   }
-  GC_IncRC( abtp );
   DaoType_CheckAttributes( abtp );
   DaoNameSpace_AddType( self, abtp->name, abtp );
   return abtp;

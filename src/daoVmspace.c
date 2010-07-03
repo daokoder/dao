@@ -128,6 +128,7 @@ extern DaoTypeBase  pairTyper;
 extern DaoTypeBase  streamTyper;
 extern DaoTypeBase  routTyper;
 extern DaoTypeBase  funcTyper;
+extern DaoTypeBase  interTyper;
 extern DaoTypeBase  classTyper;
 extern DaoTypeBase  objTyper;
 extern DaoTypeBase  nsTyper;
@@ -175,6 +176,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
   case DAO_CDATA   :  return & cdataTyper;
   case DAO_ROUTINE   :  return & routTyper;
   case DAO_FUNCTION  :  return & funcTyper;
+  case DAO_INTERFACE :  return & interTyper;
   case DAO_CLASS     :  return & classTyper;
   case DAO_OBJECT    :  return & objTyper;
   case DAO_STREAM    :  return & streamTyper;
@@ -996,8 +998,10 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
   DaoVmSpace_AddPath( self, ns->path->mbs );
   DArray_PushFront( self->nameLoading, ns->name );
   DArray_PushFront( self->pathLoading, ns->path );
-  MAP_Insert( self->nsModules, ns->name, ns );
-  GC_IncRC( ns );
+  if( DMap_Find( self->nsModules, ns->name ) == NULL ){
+    MAP_Insert( self->nsModules, ns->name, ns );
+    GC_IncRC( ns );
+  }
 
   /* self->srcFName may has been changed */
   res = DaoVmSpace_ReadSource( self, ns->name );
@@ -1856,8 +1860,8 @@ void DaoInitAPI( DaoAPI *api )
   api->DaoContext_PutResult = DaoContext_PutResult;
   api->DaoContext_WrapCData = DaoContext_WrapCData;
   api->DaoContext_CopyCData = DaoContext_CopyCData;
-    api->DaoContext_PutValue = DaoContext_PutValue;
-    api->DaoContext_RaiseException = DaoContext_RaiseException;
+  api->DaoContext_PutValue = DaoContext_PutValue;
+  api->DaoContext_RaiseException = DaoContext_RaiseException;
 
   api->DaoVmProcess_New = DaoVmProcess_New;
   api->DaoVmProcess_Compile = DaoVmProcess_Compile;

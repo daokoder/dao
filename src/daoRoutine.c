@@ -856,13 +856,18 @@ DaoRoutine* DaoRoutine_New()
 }
 void DaoRoutine_Delete( DaoRoutine *self )
 {
+  DNode *n;
   DRoutine_DeleteFields( (DRoutine*)self );
-  DaoLateDeleter_Push( self );
-  if( self->tidHost == DAO_INTERFACE ) return;
+  DString_Delete( self->docString );
+  if( self->tidHost == DAO_INTERFACE ){
+    DaoLateDeleter_Push( self );
+    return;
+  }
+  n = DMap_First( self->abstypes );
+  for( ; n != NULL; n = DMap_Next( self->abstypes, n ) ) GC_DecRC( n->value.pBase );
   if( self->upRoutine ) GC_DecRC( self->upRoutine );
   if( self->upContext ) GC_DecRC( self->upContext );
   GC_DecRCs( self->regType );
-  DString_Delete( self->docString );
   DaoVmcArray_Delete( self->vmCodes );
   DArray_Delete( self->regType );
   DArray_Delete( self->defLocals );
@@ -877,6 +882,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
   DaoVmcArray_Delete( self->preJit );
   if( self->jitMemory ) GC_DecRC( self->jitMemory );
 #endif
+  DaoLateDeleter_Push( self );
 }
 void DaoParser_ClearCodes( DaoParser *self );
 void DaoRoutine_Compile( DaoRoutine *self )
@@ -903,7 +909,7 @@ void DaoRoutine_Compile( DaoRoutine *self )
           DaoTokens_Append( tokens, daoScriptRaise2[i], k, daoScriptRaise[i] );
           i ++;
         }
-        if( routp ){
+        if( routp ){ /* XXX */
           /* to avoid type checking for RETURN */
           retp = routp->X.abtype;
           routp->X.abtype = NULL;
@@ -1559,6 +1565,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
   ts[4] = comt;
   ts[5] = DaoNameSpace_MakeType( ns, "string", DAO_STRING, NULL, NULL, 0 );
 
+  GC_DecRCs( self->regType );
   regConst = DVarray_New();
   DVarray_Resize( regConst, self->locRegCount, daoNullValue );
   DArray_Resize( self->regType, self->locRegCount, 0 );
@@ -1708,7 +1715,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
           goto NotMatch;/* XXX */
         }
         at = type[opa];
-        if( tp && ( *tp==NULL || (*tp)->tid ==DAO_UDF ) ) *tp = at;
+        if( tp && ( *tp==NULL || (*tp)->tid ==DAO_UDF ) ){
+          GC_ShiftRC( at, *tp );
+          *tp = at;
+        }
         if( tp && (*tp)->tid <= DAO_DOUBLE ){
           if( opc == DAO_OV && opb < hostClass->objDataDefault->size ){
             hostClass->objDataDefault->data[ opb ].t = at->tid;
@@ -3571,9 +3581,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             if( mac==0 && mca==0 ){
               goto ErrorTyping;
             }else if( mac==0 ){
-              /* RC increased in DaoNameSpace_MakeRoutType() */
-              self->routType = DaoNameSpace_MakeRoutType( ns,
-                  self->routType, NULL, NULL, at );
+              tt = DaoNameSpace_MakeRoutType( ns, self->routType, NULL, NULL, at );
+              GC_ShiftRC( tt, self->routType );
+              self->routType = tt;
             }
           }else if( ct && ct->tid != DAO_UDF ){
             if( notide && DaoType_MatchTo( at, ct, defs )== DAO_MT_SUB ){
@@ -3594,8 +3604,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
             }
           }else{
             retinf = 1;
-            self->routType = DaoNameSpace_MakeRoutType( ns,
-                self->routType, NULL, NULL, at );
+            tt = DaoNameSpace_MakeRoutType( ns, self->routType, NULL, NULL, at );
+            GC_ShiftRC( tt, self->routType );
+            self->routType = tt;
           }
         }
         if( code == DVM_YIELD ){
@@ -4225,6 +4236,7 @@ void DaoFunction_SimpleCall( DaoFunction *self, DaoContext *ctx, DValue *p[], in
   DRoutine_PassDefault( (DRoutine*)self, param, passed );
   ctx->thisFunction = self;
   self->pFunc( ctx, param, N );
+  for(i=0; i<ndef; i++) DValue_Clear( param[i] );
 }
 int DaoFunction_Call( DaoFunction *func, DaoCData *self, DValue *p[], int n )
 {

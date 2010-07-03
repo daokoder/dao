@@ -291,9 +291,9 @@ void DaoVmProcess_PushContext( DaoVmProcess *self, DaoContext *ctx )
     /* this should never happen in the current implementation.
      * it is added just in case if something may change in the future. */
      DaoVmFrame *next = frame;
-     self->topFrame->next = NULL;
+     self->topFrame->next = NULL; /* cause to add a new empty frame */
      frame = DaoVmProcess_NextFrame( self );
-     next->prev = frame;
+     next->prev = frame; /* append frames from "next" to the new frame */
      frame->next = next;
      frame->context = ctx;
      GC_IncRC( ctx );
@@ -324,15 +324,7 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
   int i, N;
   if( self->topFrame == self->firstFrame ) return;
   if( self->topFrame->context == NULL ) return;
-  if( ctx->refCount >1 ){
-    GC_DecRC( ctx );
-    self->topFrame->context = NULL;
-    if( frame ){
-      DaoVmFrame_Delete( self->topFrame->next );
-      self->topFrame->next = frame;
-      frame->prev = self->topFrame;
-    }
-  }else{
+  if( ctx->refCount == 1 ){ /* only referenced once, and by the stack */
     N = self->topFrame->context->routine->locRegCount;
     values = self->topFrame->context->regArray->data;
     for(i=0; i<N; i++){
@@ -3021,7 +3013,9 @@ static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int ind
     DaoList_Delete( list );
   }
 #else
-  DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+  if( vmc->a == DVM_FUNCT_ARRAY ){
+    DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+  }
 #endif
 }
 void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
