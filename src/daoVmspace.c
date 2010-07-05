@@ -216,6 +216,34 @@ DaoVmProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self )
 {
   return self->mainProcess;
 }
+DaoVmProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
+{
+  DaoVmProcess *proc = NULL;
+#ifdef DAO_WITH_THREAD
+  DMutex_Lock( & self->mutexProc );
+#endif
+  if( self->processes->size ){
+    proc = DArray_Back( self->processes );
+    DArray_PopBack( self->processes );
+  }else{
+    proc = DaoVmProcess_New( self );
+    GC_IncRC( proc );
+  }
+#ifdef DAO_WITH_THREAD
+  DMutex_Unlock( & self->mutexProc );
+#endif
+  return proc;
+}
+void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoVmProcess *proc )
+{
+#ifdef DAO_WITH_THREAD
+  DMutex_Lock( & self->mutexProc );
+#endif
+  DArray_PushBack( self->processes, proc );
+#ifdef DAO_WITH_THREAD
+  DMutex_Unlock( & self->mutexProc );
+#endif
+}
 void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
 {
   self->userHandler = handler;
@@ -273,6 +301,7 @@ DaoVmSpace* DaoVmSpace_New()
   self->nameLoading = DArray_New(D_STRING);
   self->pathLoading = DArray_New(D_STRING);
   self->pathSearching = DArray_New(D_STRING);
+  self->processes = DArray_New(0);
 
   if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
@@ -283,6 +312,7 @@ DaoVmSpace* DaoVmSpace_New()
   self->thdMaster = DaoThdMaster_New();
   self->thdMaster->refCount ++;
   DMutex_Init( & self->mutexLoad );
+  DMutex_Init( & self->mutexProc );
   self->locked = 0;
 #endif
 
@@ -297,8 +327,6 @@ DaoVmSpace* DaoVmSpace_New()
   self->mainNamespace->refCount ++;
 
   DString_SetMBS( self->mainNamespace->name, "MainNameSpace" );
-
-  self->pluginTypers = DArray_New(0);
 
   self->ReadLine = NULL;
   self->AddHistory = NULL;
@@ -341,19 +369,25 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
   GC_DecRC( self->mainNamespace );
   GC_DecRC( self->stdStream );
   GC_DecRC( self->thdMaster );
+  GC_DecRCs( self->processes );
   DString_Delete( self->source );
   DString_Delete( self->srcFName );
   DString_Delete( self->pathWorking );
   DArray_Delete( self->nameLoading );
   DArray_Delete( self->pathLoading );
   DArray_Delete( self->pathSearching );
-  DArray_Delete( self->pluginTypers );
+  DArray_Delete( self->processes );
   DMap_Delete( self->vfiles );
   DMap_Delete( self->allTokens );
   DMap_Delete( self->nsModules );
   DMap_Delete( self->modRequire );
   DaoList_Delete( self->argParams );
   GC_DecRC( self->mainProcess );
+#ifdef DAO_WITH_THREAD
+  DMutex_Destroy( & self->mutexLoad );
+  DMutex_Destroy( & self->mutexProc );
+#endif
+
 #if( defined DAO_WITH_NETWORK && defined DAO_WITH_MPI )
   DMap_Delete( self->friendPids );
 #endif
@@ -1475,9 +1509,9 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check )
   }
 
   for( i=0; i<self->pathLoading->size; i++){
-    int m = path->size;
     DString_Assign( path, self->pathLoading->items.pString[i] );
-    if( m > 0 && path->mbs[ m-1 ] != '/' ) DString_AppendMBS( path, "/" );
+    if( path->size > 0 && path->mbs[ path->size-1 ] != '/' )
+      DString_AppendMBS( path, "/" );
     DString_Append( path, fname );
     /*
     printf( "%s %s\n", self->pathLoading->items.pString[i]->mbs, path->mbs );
@@ -1613,15 +1647,19 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 }
 void DaoTypeBase_Free( DaoTypeBase *typer )
 {
-  DMap *hs = typer->priv->methods;
+  DMap *hs;
   DNode *it;
-  if( hs == NULL ) return;
-  for(it=DMap_First(hs); it; it=DMap_Next(hs,it)){
-    DRoutine *rout = (DRoutine*) it->value.pBase;
-    GC_DecRC( it->value.pBase );
+  if( typer->priv == NULL ) return;
+  hs = typer->priv->methods;
+  if( hs ){
+    for( it=DMap_First(hs); it; it=DMap_Next(hs,it)){
+      GC_DecRC( it->value.pBase );
+    }
+    DMap_Delete( hs );
   }
-  DMap_Delete( typer->priv->methods );
   if( typer->priv->values ) DMap_Delete( typer->priv->values );
+  typer->priv->values = NULL;
+  typer->priv->methods = NULL;
 }
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libMathTyper;
@@ -1897,6 +1935,8 @@ void DaoInitAPI( DaoAPI *api )
   api->DaoVmSpace_Load = DaoVmSpace_Load;
   api->DaoVmSpace_MainNameSpace = DaoVmSpace_MainNameSpace;
   api->DaoVmSpace_MainVmProcess = DaoVmSpace_MainVmProcess;
+  api->DaoVmSpace_AcquireProcess = DaoVmSpace_AcquireProcess;
+  api->DaoVmSpace_ReleaseProcess = DaoVmSpace_ReleaseProcess;
 
   api->DaoVmSpace_SetUserHandler = DaoVmSpace_SetUserHandler;
   api->DaoVmSpace_ReadLine = DaoVmSpace_ReadLine;

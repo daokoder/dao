@@ -766,6 +766,7 @@ static void DaoParser_InheritConstructor( DaoParser *self, int line )
       self->inherit = func->distance + 1;
       DaoParser_ParseRoutine( self );
     }
+    DaoParser_Delete( searcher );
   }
   self->inherit = dist;
   DArray_Clear( self->tokens );

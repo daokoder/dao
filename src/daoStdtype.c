@@ -2782,6 +2782,7 @@ static void DaoCData_Delete( DaoCData *self )
 {
   DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
   if( self->meta ) GC_DecRC( self->meta );
+  if( self->daoObject ) GC_DecRC( self->daoObject );
   if( self->attribs & DAO_CDATA_FREE ){
     if( self->buffer ){
       dao_free( self->buffer );

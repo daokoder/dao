@@ -3779,8 +3779,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
         if( cdata && cdata->type == DAO_CDATA ){
           GC_ShiftRC( cdata, self->object->superObject->items.pBase[sup] );
           self->object->superObject->items.pBase[sup] = (DaoBase*) cdata;
+          GC_ShiftRC( self->object->that, cdata->daoObject );
           cdata->daoObject = self->object->that;
-          GC_IncRC( cdata->daoObject );
         }
       }
     }else{

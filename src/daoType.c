@@ -112,6 +112,7 @@ DaoType* DaoType_Copy( DaoType *other )
   DNode *it;
   DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
   memcpy( self, other, sizeof(DaoType) );
+  DaoBase_Init( self, DAO_TYPE ); /* to reset gc fields */
   self->name = DString_Copy( other->name );
   self->nested = NULL;
   if( other->fname ) self->fname = DString_Copy( other->fname );

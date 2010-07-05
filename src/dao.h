@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20100522
+#define DAO_H_VERSION 20100704
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -618,6 +618,8 @@ struct DaoAPI
   DaoNameSpace* (*DaoVmSpace_Load)( DaoVmSpace *self, const char *file );
   DaoNameSpace* (*DaoVmSpace_MainNameSpace)( DaoVmSpace *self );
   DaoVmProcess* (*DaoVmSpace_MainVmProcess)( DaoVmSpace *self );
+  DaoVmProcess* (*DaoVmSpace_AcquireProcess)( DaoVmSpace *self );
+  void (*DaoVmSpace_ReleaseProcess)( DaoVmSpace *self, DaoVmProcess *proc );
 
   void (*DaoVmSpace_SetUserHandler)( DaoVmSpace *self, DaoUserHandler *handler );
   void (*DaoVmSpace_ReadLine)( DaoVmSpace *self, ReadLine fptr );
@@ -922,6 +924,10 @@ DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNameSpace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
 DAO_DLL DaoVmProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
+/* get a process object from a pool */
+DAO_DLL DaoVmProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
+/* return a process object from a pool */
+DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoVmProcess *proc );
 
 DAO_DLL void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
@@ -1189,6 +1195,8 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DaoVmSpace_Load( self, file )  __dao.DaoVmSpace_Load( self, file )
 #define DaoVmSpace_MainNameSpace( self )  __dao.DaoVmSpace_MainNameSpace( self )
 #define DaoVmSpace_MainVmProcess( self )  __dao.DaoVmSpace_MainVmProcess( self )
+#define DaoVmSpace_AcquireProcess( self )  __dao.DaoVmSpace_AcquireProcess( self )
+#define DaoVmSpace_ReleaseProcess( self, p )  __dao.DaoVmSpace_ReleaseProcess( self, p )
 
 #define DaoVmSpace_SetUserHandler(self, hd)  __dao.DaoVmSpace_SetUserHandler(self, hd)
 #define DaoVmSpace_ReadLine( self, fptr )  __dao.DaoVmSpace_ReadLine( self, fptr )

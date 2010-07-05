@@ -101,7 +101,6 @@ DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name )
     value.v.ns = ns;
     DaoNameSpace_AddConst( self, mbs, value );
     value.v.ns = self;
-    GC_IncRC( self );
     DVarray_Append( ns->cstData, value ); /* for GC */
     DValue_MarkConst( & ns->cstData->data[ns->cstData->size-1] );
   }
@@ -703,6 +702,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
   if( vms && vms->nsInternal ) DaoNameSpace_Import( self, vms->nsInternal, 0 );
   return self;
 }
+extern void DaoTypeBase_Free( DaoTypeBase *typer );
 void DaoNameSpace_Delete( DaoNameSpace *self )
 {
   DaoTypeCore *core;
@@ -714,20 +714,10 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
   it = DMap_First( self->abstypes );
   for( ; it !=NULL; it = DMap_Next(self->abstypes, it) ) GC_DecRC( it->value.pBase );
   for(i=0; i<self->ctypers->size; i++){
-    core = ((DaoTypeBase*)self->ctypers->items.pBase[i])->priv;
-#if 0
-    TODO
-    supValues = core->values;
-    for(it=DMap_First(supValues); it; it=DMap_Next(supValues, it)){
-      DMap_Insert( values, it->key.pVoid, it->value.pVoid );
-    }
-    for(j=0; j<core->valCount; j++){
-      val = core->values[j];
-      DString_Delete( val->name );
-      dao_free( val );
-    }
-#endif
-    dao_free( core );
+    DaoTypeBase *typer = (DaoTypeBase*)self->ctypers->items.pBase[i];
+    DaoTypeBase_Free( typer );
+    dao_free( typer->priv );
+    typer->priv = NULL;
   }
   
   GC_DecRC( self->udfType1 );

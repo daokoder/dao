@@ -3,11 +3,21 @@
 #{
 author: Fu Limin (phoolimin@gmail.com)
 
-TODO:
-
-self->params = ...;
-virtual void test( void *self0, int *id ) return by parameters: gsl_function_fdf_fdf
 #}
+
+routine BernsteinHash( key : string )
+{
+  hash = 0;
+  for( i = 0 : key.size()-1 ) hash = 33*hash + key[i];
+  return hash;
+}
+routine RotatingHash( key : string )
+{
+  n = key.size();
+  hash = (double) n;
+  for( i = 0 : n-1 ) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
+  return hash % 997;
+}
 
 ###########################
 # Data types:
@@ -2347,7 +2357,7 @@ const cxx_virt_struct =
   Dao_$(type) *self = (Dao_$(type)*) self0;
   $(type) *self2 = self->object;
   DaoCData *cdata = self->cdata;
-  DaoVmProcess *vmproc = self->vmproc;\n';
+  DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n';
   
 const cxx_virt_class =
 '$(retype) DaoCxxVirt_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n';
@@ -2381,16 +2391,18 @@ const cxx_virt_call_00 =
 '  DaoObject *_ob = NULL;
   DaoRoutine *_ro = NULL;
   Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
-  DaoVmProcess_Call( vmproc, _ro, _ob, NULL, 0 );
+  if( _ro ==NULL || _ob ==NULL ) return;
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
+  DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }\n';
 
 const cxx_virt_call_01 =
 '  DaoObject *_ob = NULL;
   DaoRoutine *_ro = NULL;
   Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return;
-  $(proxy_name)( vmproc, _ro, _ob, $(parcall) );
+  if( _ro ==NULL || _ob ==NULL ) return;
+  $(proxy_name)( _ro, _ob, $(parcall) );
 }\n';
 
 const cxx_virt_call_10 =
@@ -2398,8 +2410,8 @@ const cxx_virt_call_10 =
   DaoRoutine *_ro = NULL;
   $(vareturn)
   Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return $(return);
-  return ($(retype))$(proxy_name)( vmproc, _ro, _ob );
+  if( _ro ==NULL || _ob ==NULL ) return $(return);
+  return ($(retype))$(proxy_name)( _ro, _ob );
 }\n';
 
 const cxx_virt_call_11 =
@@ -2407,49 +2419,57 @@ const cxx_virt_call_11 =
   DaoRoutine *_ro = NULL;
   $(vareturn)
   Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL || vmproc ==NULL ) return $(return);
-  return ($(retype))$(proxy_name)( vmproc, _ro, _ob, $(parcall) );
+  if( _ro ==NULL || _ob ==NULL ) return $(return);
+  return ($(retype))$(proxy_name)( _ro, _ob, $(parcall) );
 }\n';
 
 const cxx_proxy_body00 =
-'void $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob )\n{
-  if( _ro ==NULL || _vmp ==NULL ) return;
+'void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
+  if( _ro == NULL ) return;
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }\n';
 const cxx_proxy_body01 =
-'void $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+'void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
-  if( _ro ==NULL || _vmp ==NULL ) return;
+  if( _ro == NULL ) return;
 $(cxx2dao)
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) );
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
   DValue_ClearAll( _dp, $(count) );
 }\n';
 const cxx_proxy_body10 =
-'$(retype) $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob )\n{
+'$(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
   DValue _res;
   DaoCData *_cd;
   $(vareturn)
-  if( _ro ==NULL || _vmp ==NULL ) goto EndCall;
+  if( _ro == NULL ) goto EndCall;
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   if( DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 ) ==0 ) goto EndCall;
   _res = DaoVmProcess_GetReturned( _vmp );
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 $(getreturn)
 EndCall:
   return $(return);
 }\n';
 const cxx_proxy_body11 =
-'$(retype) $(proxy_name)( DaoVmProcess *_vmp, DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+'$(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
   DValue _res;
   DaoCData *_cd;
   $(vareturn)
-  if( _ro ==NULL || _vmp ==NULL ) goto EndCall;
+  if( _ro == NULL ) goto EndCall;
 $(cxx2dao)
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   if( DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) ) ==0 ) goto EndCall;
   _res = DaoVmProcess_GetReturned( _vmp );
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 $(getreturn)
 EndCall:
   DValue_ClearAll( _dp, $(count) );
@@ -2463,7 +2483,7 @@ const cxx_virt_class2 =
 const cxx_virt_class3 =
 '$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
   DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && vmproc && DaoObject_GetField( _o, "$(cxxname)" ).t ==DAO_ROUTINE ){
+  if( _o && DaoObject_GetField( _o, "$(cxxname)" ).t ==DAO_ROUTINE ){
     $(return) DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
   }else{
     $(return) $(type)::$(cxxname)( $(parcall) );
@@ -2480,13 +2500,11 @@ global dao_callback_proto =
 global dao_callback_def =
 '$(retype) Dao_$(type)( $(parlist) )
 {
-  static DaoVmProcess *_vmp = NULL;
   DaoCallbackData *_daocallbackdata = (DaoCallbackData*) _ud;
   DaoRoutine *_ro = _daocallbackdata->callback;
   DValueX userdata = _daocallbackdata->userdata;
   if( _ro ==NULL ) return;
-  if( _vmp ==NULL ) _vmp = DaoVmProcess_New( __daoVmSpace );
-  $(proxy_name)( _vmp, _ro, NULL, $(parcall) );
+  $(proxy_name)( _ro, NULL, $(parcall) );
 }
 ';
 
@@ -2686,7 +2704,7 @@ routine Function::Generate()
 			cxxCallCodes = cxx_call_proto2_list[ dd ].expand( kvmap );
 	}
 	if( lib_name == LIB_QT ){
-		size = (string)signature.size();
+		size = (string)RotatingHash( signature );
 		ssname = cxxName + size;
 		sig = '   void signal_' + signature + ';\n'
 		sig.replace( cxxName+'(', cxxName+size+'(' );
@@ -2867,15 +2885,16 @@ class DaoQtObject : public QObjectUserData
 	QHash<void*,QHash<void*,DValue> > mapRefers;
 	QHash<QString,QHash<void*,DValue> > mapNames;
 
-	DaoVmProcess *vmproc;
-	DaoCData     *cdata;
+	DaoCData  *cdata;
 
-	void Init( DaoVmProcess *p, DaoCData *d )
-	{
-		vmproc = p;
-		cdata = d;
-	}
-	void Connect( void *sender, const QString & signal, DValue receiver )
+	void Init( DaoCData *d ){ cdata = d; }
+  static unsigned int RotatingHash( const QByteArray & key ){
+    int i, n = key.size();
+    unsigned long long hash = n;
+    for(i=0; i<n; i++) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
+    return hash % 997;
+  }
+  void Connect( void *sender, const QString & signal, DValue receiver )
 	{
 		if( mapNames.find( signal ) == mapNames.end() )
 			mapNames[ signal ] = QHash<void*,DValue>();
@@ -2896,7 +2915,9 @@ class DaoQtObject : public QObjectUserData
 		DaoObject *daobj = DaoCData_GetObject( cdata );
 		DValue receiver = mp[sender];
 		if( receiver.t == DAO_ROUTINE ){
+      DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
 			DaoVmProcess_Call( vmproc, receiver.v.routine, daobj, (DValue**)msg.p2, msg.count );
+      DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
 		}else if( receiver.t == DAO_FUNCTION ){
 			DaoFunction_Call( receiver.v.func, cdata, (DValue**)msg.p2, msg.count );
 		}
@@ -2910,7 +2931,9 @@ class DaoQtObject : public QObjectUserData
 		DaoObject *daobj = DaoCData_GetObject( cdata );
 		DValue receiver = mp[sender];
 		if( receiver.t == DAO_ROUTINE ){
+      DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
 			DaoVmProcess_Call( vmproc, receiver.v.routine, daobj, (DValue**)msg.p2, msg.count );
+      DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
 		}else if( receiver.t == DAO_FUNCTION ){
 			DaoFunction_Call( receiver.v.func, cdata, (DValue**)msg.p2, msg.count );
 		}
@@ -2963,12 +2986,12 @@ global qt_init = '';
 global qt_make_linker =
 '   DaoSS_$(class) *linker = new DaoSS_$(class)();
    setUserData( 0, linker );
-   linker->Init( vmproc, cdata );
+   linker->Init( cdata );
 ';
 global qt_make_linker3 =
 '  DaoSS_$(class) *linker = new DaoSS_$(class)();
   object->setUserData( 0, linker );
-  linker->Init( NULL, NULL );
+  linker->Init( NULL );
 ';
 
 global qt_virt_emit =
@@ -3023,7 +3046,7 @@ static void dao_QObject_connect( DaoContext *_ctx, DValue *_p[], int _n )
 		QObject::connect( sender, s2.data(), receiver, s1.data() );
 	}else if( signal.t == DAO_STRING ){ /* Qt -> Dao */
 		QByteArray name( DString_GetMBS(signal.v.s) );
-		QByteArray size = QString::number( name.size() ).toLocal8Bit();
+		QByteArray size = QString::number( DaoQtObject::RotatingHash( name ) ).toLocal8Bit();
 		QByteArray ssname( name ); 
 		int i = name.indexOf( \'(\' );
 		if( i>=0 ) ssname = name.mid( 0, i ) + size;
@@ -3038,7 +3061,7 @@ static void dao_QObject_connect( DaoContext *_ctx, DValue *_p[], int _n )
 
 	}else if( slot.t == DAO_STRING ){ /* Dao -> Qt */
 		QByteArray name( DString_GetMBS(slot.v.s) );
-		QByteArray size = QString::number( name.size() ).toLocal8Bit();
+		QByteArray size = QString::number( DaoQtObject::RotatingHash( name ) ).toLocal8Bit();
 		QByteArray ssname( name ); 
 		int i = name.indexOf( \'(\' );
 		if( i>=0 ) ssname = name.mid( 0, i ) + size;
@@ -3203,7 +3226,6 @@ struct DAO_DLL_$(module) Dao_$(name)
 	$(name)  nested;
 	$(name) *object;
 	DaoCData *cdata;
-	DaoVmProcess *vmproc;
 };
 Dao_$(name)* DAO_DLL_$(module) Dao_$(name)_New();
 //Dao_$(name)* DAO_DLL_$(module) Dao_$(name)_Wrap( $(name) *p );
@@ -3215,7 +3237,6 @@ global tpl_struct_daoc_alloc =
 	Dao_$(name) *wrap = calloc( 1, sizeof(Dao_$(name)) );
 	$(name) *self = ($(name)*) wrap;
 	wrap->cdata = DaoCData_New( dao_$(name)_Typer, wrap );
-	wrap->vmproc = DaoVmProcess_New( __daoVmSpace );
 	wrap->object = self;
 $(callbacks)$(selfields)\treturn wrap;
 }
@@ -3261,15 +3282,11 @@ global cxx_wrap_alloc2 =
 global tpl_class_def = 
 'class DAO_DLL_$(module) DaoCxxVirt_$(class) $(virt_supers)\n{
 	public:
-	DaoCxxVirt_$(class)(){ self = 0; cdata = 0; vmproc = 0; }
-	~DaoCxxVirt_$(class)(){
-		DaoGC_DecRC( (DaoBase*) vmproc );
-		DaoGC_DecRC( (DaoBase*) cdata );
-	}
-	void Init( $(class) *self, DaoCData *d, DaoVmProcess *p );\n
+	DaoCxxVirt_$(class)(){ self = 0; cdata = 0; }
+	~DaoCxxVirt_$(class)(){ if( cdata ) DaoCData_SetData( cdata, NULL ); }
+	void Init( $(class) *self, DaoCData *d );\n
 	$(class) *self;
 	DaoCData *cdata;
-	DaoVmProcess *vmproc;
 \n$(virtuals)
 $(qt_virt_emit)
 };
@@ -3286,21 +3303,17 @@ $(methods)
 global tpl_class2 = tpl_class_def + '$(class)* Dao_$(class)_Copy( const $(class) &p );\n';
 
 global tpl_class_init =
-'void DaoCxxVirt_$(class)::Init( $(class) *s, DaoCData *d, DaoVmProcess *p )
+'void DaoCxxVirt_$(class)::Init( $(class) *s, DaoCData *d )
 {
 	self = s;
 	cdata = d;
-	vmproc = p;
 $(init_supers)
 $(qt_init)
 }
 void DaoCxx_$(class)::Init()
 {
 	cdata = DaoCData_New( dao_$(class)_Typer, this );
-	vmproc = DaoVmProcess_New( __daoVmSpace );
-	DaoGC_IncRC( (DaoBase*) vmproc );
-	DaoGC_IncRC( (DaoBase*) cdata );
-	DaoCxxVirt_$(class)::Init( this, cdata, vmproc );
+	DaoCxxVirt_$(class)::Init( this, cdata );
 $(qt_make_linker)
 }
 ';
@@ -3310,7 +3323,7 @@ global tpl_class_init_qtss =
    if( p->userData(0) == NULL ){
 		DaoSS_$(class) *linker = new DaoSS_$(class)();
 		p->setUserData( 0, linker );
-		linker->Init( NULL, NULL );
+		linker->Init( NULL );
 	}
 }\n';
 global tpl_class_copy = tpl_class_init +
@@ -3351,7 +3364,7 @@ DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) )
 	return self;
 }\n';
 
-global tpl_init_super = '\tDaoCxxVirt_$(super)::Init( s, d, p );\n';
+global tpl_init_super = '\tDaoCxxVirt_$(super)::Init( s, d );\n';
 
 global tpl_meth_decl =
 '\t$(retype) $(name)( $(parlist) )$(extra);\n';
@@ -4220,6 +4233,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
   fout_header.println( '#define DAO_DLL_' + wrap_name2 );
   fout_header.println( '#endif' );
 	fout_header.println();
+	fout_header.println( 'extern DaoVmSpace *__daoVmSpace;\n' );
 
 	fname = main_fname + suffix;
 	fout_source = io.open( dir_output + 'dao_' + fname, 'w' );
@@ -4229,11 +4243,9 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	fname = main_fname + '2' + suffix;
 	fout_source2 = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source2.println( '#include"dao_' + main_fname + '.h"\n' );
-	fout_source2.println( 'extern DaoVmSpace *__daoVmSpace;\n' );
 	fname = main_fname + '3' + suffix;
 	fout_source3 = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source3.println( '#include"dao_' + main_fname + '.h"\n' );
-	fout_source3.println( 'extern DaoVmSpace *__daoVmSpace;\n\n' );
 	kvmap = { 'type' => '', 'module'=>wrap_name2 };
 	codes = {=>};
 	for( file in file_names ) codes[ file ] = ifdef_cpp_open;

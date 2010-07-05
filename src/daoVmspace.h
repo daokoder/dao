@@ -43,6 +43,8 @@ struct DaoVmSpace
   DaoThdMaster  *thdMaster;
   DaoStream     *stdStream;
 
+  DArray *processes;
+
   DString *pathWorking;
   DArray  *nameLoading;
   DArray  *pathLoading;
@@ -71,12 +73,11 @@ struct DaoVmSpace
   char* (*ReadLine)( const char *prompt );
   void  (*AddHistory)( const char *cmd );
 
-  DArray *pluginTypers;
-
   DMap *friendPids;
 
 #ifdef DAO_WITH_THREAD
   DMutex  mutexLoad;
+  DMutex  mutexProc;
   int locked;
 #endif
 };

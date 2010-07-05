@@ -563,10 +563,12 @@ static void DMBString_Insert( DString *self, const char* chs, size_t at, size_t 
   if( chs == NULL ) return;
   if( at > self->size ) at = self->size;
   if( rm + at > self->size ) rm = self->size - at;
-  DString_Reserve( self, self->size + cp - rm );
+  DString_Detach( self );
   if( cp < rm ){
     for( i=at+cp; i<self->size+cp-rm; i++) self->mbs[i] = self->mbs[i+rm-cp];
+    DString_Reserve( self, self->size + cp - rm );
   }else if( cp > rm ){
+    DString_Reserve( self, self->size + cp - rm );
     for( i=self->size+cp-rm-1; i>=at+cp; i--) self->mbs[i] = self->mbs[i+rm-cp];
   }
   for( i=0; i<cp; i++ ) self->mbs[i+at] = chs[i];
@@ -579,10 +581,12 @@ static void DWCString_Insert( DString *self, const wchar_t* chs, size_t at, size
   if( chs == NULL ) return;
   if( at > self->size ) at = self->size;
   if( rm + at > self->size ) rm = self->size - at;
-  DString_Reserve( self, self->size + cp - rm );
+  DString_Detach( self );
   if( cp < rm ){
     for( i=at+cp; i<self->size+cp-rm; i++) self->wcs[i] = self->wcs[i+rm-cp];
+    DString_Reserve( self, self->size + cp - rm );
   }else if( cp > rm ){
+    DString_Reserve( self, self->size + cp - rm );
     for( i=self->size+cp-rm-1; i>=at+cp; i--) self->wcs[i] = self->wcs[i+rm-cp];
   }
   for( i=0; i<cp; i++ ) self->wcs[i+at] = chs[i];

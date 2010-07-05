@@ -477,6 +477,7 @@ int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *
   DValue value = daoNullObject;
   int call = o ? DVM_MCALL : DVM_CALL;
   value.v.object = o;
+  GC_ShiftRC( o, ctx->object );
   ctx->object = o;
   if( p && DRoutine_FastPassParams( (DRoutine*)r, & value, ctx->regValues, p, NULL, n, call ) ==0 )
     return 0;
