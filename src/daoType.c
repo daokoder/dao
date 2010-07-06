@@ -47,8 +47,7 @@ void DaoType_Delete( DaoType *self )
   if( self->nested ) DArray_Delete( self->nested );
   if( self->mapNames ) DMap_Delete( self->mapNames );
   if( self->interfaces ) DMap_Delete( self->interfaces );
-  //DaoLateDeleter_Push( self );
-  free( self );
+  DaoLateDeleter_Push( self );
 }
 DaoTypeBase abstypeTyper=
 {

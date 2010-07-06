@@ -721,7 +721,7 @@ void markAliveObjects( DaoBase *root )
   DNode *node;
   size_t i, k;
   DArray *objAlive = gcWorker.objAlive;
-  DArray_Clear( objAlive );
+  objAlive->size = 0;
   root->gcState[work] |= GC_MARKED;
   DArray_Append( objAlive, root );
 
@@ -1166,7 +1166,7 @@ void DaoGC_IncRC( DaoBase *p )
   const short work = gcWorker.work;
   if( ! p ) return;
 #ifdef DEBUG_TRACE
-  if( p == 0x27aed90 ){
+  if( p == 0x736d010 ){
     print_trace();
   }
   //if( p == 0x452840 && p->refCount >= 35 ) print_trace();

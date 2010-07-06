@@ -397,10 +397,10 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
           if( matched ==0 ){
             int dist = cur->distance + 1;
             cur = DaoFunction_Copy( cur, 0 ); /* there is no entry in the structure */
+            GC_ShiftRC( typer->priv->abtype, cur->routHost );
             cur->tidHost = DAO_CDATA;
             cur->routHost = typer->priv->abtype;
             cur->distance = dist; /* XXX distance , also for class */
-            GC_IncRC( cur->routHost );
             if( func->routHost != typer->priv->abtype ){
               /* there is only an entry from parent types,
                  duplicate it before adding overloaed function: */
@@ -474,7 +474,7 @@ static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
   DString *s;
   DValue value = daoNullCData;
 
-  if( typer->priv && typer->priv->methods ) return 1;
+  if( typer->priv ) return 1;
   plgCore = DaoCDataCore_New();
   s = DString_New(1);
 
@@ -496,8 +496,8 @@ static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
 }
 int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer )
 {
+  if( typer->priv == NULL ) DArray_Append( self->ctypers, typer );
   DaoNameSpace_WrapType2( self, typer );
-  DArray_Append( self->ctypers, typer );
   /*
   if( DaoNameSpace_SetupValues( self, typer ) == 0 ) return 0;
   if( setup ) return DaoNameSpace_SetupType( self, typer );
@@ -521,8 +521,8 @@ int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typers[] )
 {
   int i, e = 0;
   for(i=0; typers[i]; i++ ){
+    if( typers[i]->priv == NULL ) DArray_Append( self->ctypers, typers[i] );
     DaoNameSpace_WrapType2( self, typers[i] );
-    DArray_Append( self->ctypers, typers[i] );
     /* e |= ( DaoNameSpace_SetupValues( self, typers[i] ) == 0 ); */
   }
   /* if( setup ) return DaoNameSpace_SetupTypes( self, typers ); */
@@ -640,7 +640,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
   self->cstData  = DVarray_New();
   self->varData  = DVarray_New();
   self->varType  = DArray_New(0);
-  self->mainRoutines  = DArray_New(0); /* XXX GC delete */
+  self->mainRoutines  = DArray_New(0);
   self->definedRoutines  = DArray_New(0);
   self->nsLoaded  = DArray_New(0);
   self->ctypers  = DArray_New(0);
@@ -716,7 +716,7 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
   for(i=0; i<self->ctypers->size; i++){
     DaoTypeBase *typer = (DaoTypeBase*)self->ctypers->items.pBase[i];
     DaoTypeBase_Free( typer );
-    dao_free( typer->priv );
+    if( typer->priv ) dao_free( typer->priv );
     typer->priv = NULL;
   }
   
@@ -743,6 +743,7 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
   DString_Delete( self->path );
   DString_Delete( self->name );
   DString_Delete( self->source );
+  /* XXX if( self->libHandle ) DaoCloseLibrary( self->libHandle ); */
   dao_free( self );
 }
 void DaoNameSpace_SetName( DaoNameSpace *self, const char *name )

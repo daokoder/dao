@@ -1375,6 +1375,7 @@ DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
     if( handle == ns->libHandle ) return ns;
   }else{
     ns = DaoNameSpace_New( self );
+    DString_Assign( ns->name, libpath );
     GC_IncRC( ns );
     MAP_Insert( self->nsModules, libpath, ns );
     i = DString_RFindChar( libpath, '/', -1 );
