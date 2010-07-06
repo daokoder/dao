@@ -95,7 +95,7 @@ static const int mapAithOpcode[]=
   -DVM_LE , /* DAO_OPER_GE */
   DVM_CHECK ,
   DVM_CHECK ,
-  DVM_ASSERT ,
+  200 , /* padding for assertion operator */
 
   DVM_ADD , /* DAO_OPER_ADD */
   DVM_SUB , /* DAO_OPER_SUB */
@@ -3619,7 +3619,9 @@ int DaoParser_ParseRoutine( DaoParser *self )
     it = it->next;
   }
   it = self->vmcFirst;
-  /* DaoParser_PrintCodes( self ); */
+  /*
+  DaoParser_PrintCodes( self );
+  */
   while( it ){
     if( it->code == DVM_SKIP ){
       int code = it->jumpTrue->code;
@@ -3735,12 +3737,6 @@ int DaoParser_ParseRoutine( DaoParser *self )
       it->b = 0;
       it->c = 1;
       break;
-    case DVM_ASSERT :
-      if( it->b == 0 ) break;
-      it->b = it->next->jumpTrue->id + 1;
-      it->next->jumpTrue->code = DVM_UNUSED;
-      it->next->code = DVM_UNUSED;
-      break;
     case DVM_LBRA :
     case DVM_LBRA2 :
       /* NOP for checking cancellation */
@@ -3771,10 +3767,6 @@ int DaoParser_ParseRoutine( DaoParser *self )
     case DVM_GOTO : case DVM_TEST :
     case DVM_SWITCH : case DVM_CASE :
       it->b -= it->jumpTrue->extra;
-      break;
-    case DVM_ASSERT :
-      if( it->b ==0 ) break;
-      it->b -= it->next->jumpTrue->extra;
       break;
     case DVM_CRRE :
       if( it->c ) it->c -= it->jumpTrue->extra;
@@ -5829,7 +5821,7 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
   case DAO_OPER_BIT_AND :
     break;
   case DAO_OPER_ASSERT :
-    opc = DVM_ASSERT; break;
+    return -1;
   default :
     DaoParser_Error( self, DAO_CTW_EXPR_INVALID, str );
     return -1;
@@ -6512,11 +6504,12 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
       if( regC == self->locRegCount ) DaoParser_PushRegister( self );
       return regC;
     }else if( optype == DAO_OPER_ASSERT ){
+      DaoParser_AddCode( self, DVM_TRY, 0, self->vmcCount, DVM_TRY, tokPos );
+      DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, tokPos );
       reg1 = DaoParser_MakeArithTree( self, start, end2, & c1, -1, state );
       if( reg1 <0 ) goto ParsingError;
-      reg3 = self->locRegCount;
-      DaoParser_PushRegister( self );
-      DaoParser_AddCode( self, DVM_ASSERT, 0, 1, reg3, tokPos );
+      DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, tokPos );
+      DaoParser_AddCode( self, DVM_RESCUE, 0, 1, 0, tokPos );
       DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, tokPos );
       reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
       if( reg2 <0 ) goto ParsingError;
@@ -6641,6 +6634,22 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
     }
   }else if( daoArithOper[ tokens[end]->name ].right ){
     i = daoArithOper[ tokens[end]->name ].oper;
+    if( i == DAO_OPER_ASSERT ){
+      regC = self->locRegCount;
+      if( regFix >= 0 ) regC = regFix;
+      if( regC == self->locRegCount ) DaoParser_PushRegister( self );
+      DaoParser_AddCode( self, DVM_TRY, 0, self->vmcCount, DVM_TRY, tokPos );
+      DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, tokPos );
+      reg1 = DaoParser_MakeArithTree( self, start, end-1, cst, -1, state );
+      if( reg1 <0 ) goto ParsingError;
+      DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 1, regC, tokPos );
+      DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, tokPos );
+      DaoParser_AddCode( self, DVM_RESCUE, 0, 1, 0, tokPos );
+      DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, tokPos );
+      DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 0, regC, tokPos );
+      DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, tokPos );
+      return regC;
+    }
     regC = DaoParser_MakeArithUnary( self, i, start, end-1, cst, regFix, state );
     if( start == end-1 ){
       DString_Assign( self->vmcLast->annot, tokens[start]->string );

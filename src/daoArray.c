@@ -832,7 +832,7 @@ void DaoVmcArray_Insert( DaoVmcArray *self, DaoVmCode code, size_t pos )
     switch( vmc->code ){
     case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
     case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
-    case DVM_SWITCH : case DVM_CASE : case DVM_ASSERT :
+    case DVM_SWITCH : case DVM_CASE :
       if( vmc->b >= pos ) vmc->b ++;
       break;
     case DVM_JITC :
@@ -863,7 +863,7 @@ void DaoVmcArray_Cleanup( DaoVmcArray *self )
     switch( vmc->code ){
     case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
     case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
-    case DVM_SWITCH : case DVM_CASE : case DVM_ASSERT :
+    case DVM_SWITCH : case DVM_CASE :
     case DVM_JITC :
     case DVM_CRRE :
       j = vmc->b;
@@ -914,7 +914,7 @@ void DArray_CleanupCodes( DArray *self )
     switch( vmc->code ){
     case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
     case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
-    case DVM_SWITCH : case DVM_CASE : case DVM_ASSERT :
+    case DVM_SWITCH : case DVM_CASE : 
     case DVM_JITC :
     case DVM_CRRE :
       j = vmc->b;

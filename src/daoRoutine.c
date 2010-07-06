@@ -1100,7 +1100,6 @@ static const char vmcTyping[][7] =
   { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_GOTO */
   { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SWITCH */
   { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_CASE */
-  { OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_ASSERT */
   { OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_ITER */
   { OT_OOO,  0, -1, -1, -1, -1,  -1 } , /* DVM_TEST */
   { OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MATH */
@@ -3136,12 +3135,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
         if( DaoType_MatchTo( ct, type[opc], defs )==0 ) goto NotMatch;
         break;
       }
-    case DVM_ASSERT :
-      init[opc] = 1;
-      ct = inumt;
-      if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) type[opc] = ct;
-      if( DaoType_MatchTo( ct, type[opc], defs )==0 ) goto NotMatch;
-      break;
     case DVM_ITER :
       {
         init[opc] = 1;
@@ -4055,7 +4048,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
       DArray_PopFront( addCode );
     }
     if( c ==DVM_GOTO || c ==DVM_TEST || c ==DVM_SWITCH || c == DVM_CASE
-        || c == DVM_ASSERT || ( c >=DVM_TEST_I && c <=DVM_TEST_D ) ){
+        || ( c >=DVM_TEST_I && c <=DVM_TEST_D ) ){
       if( vmc->b >0 ) vmc->b += addCount[vmc->b-1];
     }else if( c ==DVM_CRRE && vmc->c >0 ){
       vmc->c += addCount[vmc->c-1];

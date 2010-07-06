@@ -656,7 +656,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
     && LAB_GOTO , 
     && LAB_SWITCH , 
     && LAB_CASE , 
-    && LAB_ASSERT , 
     && LAB_ITER , 
     && LAB_TEST , 
     && LAB_MATH , 
@@ -1262,17 +1261,6 @@ OPCASE( GOTO ){
 OPCASE( SWITCH ){
   vmc = DaoContext_DoSwitch( topCtx, vmc );
 }OPJUMP()
-OPCASE( ASSERT ){
-  locVars[ vmc->c ]->v.i = 1;
-  if( self->exceptions->size > exceptCount ){
-    while( self->exceptions->size > exceptCount )
-      DVarray_PopBack( self->exceptions );
-    locVars[ vmc->c ]->v.i = 0;
-  }else if( vmc->b ){
-    vmc = vmcBase + vmc->b;
-    OPJUMP();
-  }
-}OPNEXT()
 OPCASE( ITER ){
   topCtx->vmc = vmc;
   DaoContext_DoIter( topCtx, vmc );
@@ -2546,7 +2534,6 @@ CheckException:
     varTypes[ DAO_OV ] = host->objDataType->items.pAbtp;
     if( this ) varValues[ DAO_OV ] = this->objValues;
   }
-  if( vmc[1].code == DVM_ASSERT ) OPNEXT();
 
   if( self->stopit | vmSpace->stopit ) goto FinishProc;
   if( self->exceptions->size > exceptCount ){

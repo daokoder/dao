@@ -24,7 +24,7 @@ static const char *const vmOperNames[] = {
   "BITAND", "BITOR", "BITXOR", "BITLFT", "BITRIT",
   "CHECK", "PAIR", "TUPLE",
   "LIST", "MAP", "HASH", "ARRAY", "MATRIX", "CURRY", "MCURRY",
-  "GOTO", "SWITCH", "CASE", "ASSERT", "ITER", "TEST", 
+  "GOTO", "SWITCH", "CASE", "ITER", "TEST", 
   "MATH", "FUNCT", "CALL", "MCALL", 
   "CLOSE", "CRRE", "JITC", "JOINT", "RETURN", "YIELD", "DEBUG", "SECT",
   "GETC_I", "GETC_F", "GETC_D",

@@ -69,7 +69,6 @@ enum DaoOpcode
   DVM_GOTO , /* go to B; */
   DVM_SWITCH , /* A: variable, B: location of default codes, C: number of cases */
   DVM_CASE , /* A: constant of the case, B: location of the case codes */
-  DVM_ASSERT , /* assert if last instruction is executed successfully */
   DVM_ITER , /* create or reset an iterator at C for A; */
   DVM_TEST , /* if A, go to the next one; else, goto B-th instruction; */
   DVM_MATH , /* C = A( B ); A: sin,cos,...; B: double,complex */
