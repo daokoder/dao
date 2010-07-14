@@ -2781,14 +2781,18 @@ DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data )
 static void DaoCData_Delete( DaoCData *self )
 {
   DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
+  void (*fdel)(void*) = (void (*)(void *))DaoCData_Delete;
   if( self->meta ) GC_DecRC( self->meta );
   if( self->daoObject ) GC_DecRC( self->daoObject );
   if( self->attribs & DAO_CDATA_FREE ){
     if( self->buffer ){
       dao_free( self->buffer );
     }else if( self->data ){
-      if( c->DelData && c->DelData != (void (*)(void *))DaoCData_Delete )
+      if( c && c->DelData && c->DelData != fdel )
         c->DelData( self->data );
+      else if( c ==0 && self->typer->Delete && self->typer->Delete != fdel )
+        /* if the methods of typer has not been setup, typer->priv would be NULL */
+        self->typer->Delete( self->data );
       else if( self->bufsize > 0 )
         dao_free( self->data );
     }

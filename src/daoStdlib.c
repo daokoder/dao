@@ -785,18 +785,8 @@ static DaoNumItem stdConsts[] =
   { NULL, 0, 0 }
 };
 
-static DaoTypeCore stdlibCore =
-{
-  0, NULL, NULL, NULL, NULL,
-  DaoBase_GetField,
-  DaoBase_SetField,
-  DaoBase_GetItem,
-  DaoBase_SetItem,
-  DaoBase_Print,
-  DaoBase_Copy,
-};
 DaoTypeBase libStandardTyper = {
-  & stdlibCore,
+  NULL,
   "std",
   stdConsts,
   stdMeths, 
@@ -1320,18 +1310,8 @@ static DaoFuncItem mpiMeths[]=
   { NULL, NULL }
 };
 
-static DaoTypeCore mpiCore =
-{
-  0, NULL, NULL, NULL, NULL,
-  DaoBase_GetField,
-  DaoBase_SetField,
-  DaoBase_GetItem,
-  DaoBase_SetItem,
-  DaoBase_Print,
-  DaoBase_Copy,
-};
 DaoTypeBase libMpiTyper = {
-  & mpiCore,
+  NULL,
   "mpi",
   NULL,
   mpiMeths, 
@@ -1836,18 +1816,8 @@ static DaoFuncItem reflMeths[]=
   { NULL, NULL }
 };
 
-static DaoTypeCore librefCore =
-{
-  0, NULL, NULL, NULL, NULL,
-  DaoBase_GetField,
-  DaoBase_SetField,
-  DaoBase_GetItem,
-  DaoBase_SetItem,
-  DaoBase_Print,
-  DaoBase_Copy,
-};
 DaoTypeBase libReflectTyper = { 
-  & librefCore, 
+  NULL,
   "reflect", 
   NULL,
   reflMeths, 
@@ -1911,18 +1881,8 @@ static DaoFuncItem coroutMeths[]=
   { NULL, NULL }
 };
 
-static DaoTypeCore coroutCore =
-{
-  0, NULL, NULL, NULL, NULL,
-  DaoBase_GetField,
-  DaoBase_SetField,
-  DaoBase_GetItem,
-  DaoBase_SetItem,
-  DaoBase_Print,
-  DaoBase_Copy,
-};
 DaoTypeBase coroutTyper = {
-  & coroutCore,
+  NULL,
   "coroutine", 
   NULL,
   coroutMeths, 
@@ -2187,18 +2147,8 @@ static DaoFuncItem mathMeths[]=
   { NULL, NULL }
 };
 
-static DaoTypeCore mathCore =
-{
-  0, NULL, NULL, NULL, NULL,
-  DaoBase_GetField,
-  DaoBase_SetField,
-  DaoBase_GetItem,
-  DaoBase_SetItem,
-  DaoBase_Print,
-  DaoBase_Copy,
-};
 DaoTypeBase libMathTyper = {
-  & mathCore,
+  NULL,
   "math",
   NULL,
   mathMeths, 
