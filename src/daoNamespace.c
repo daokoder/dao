@@ -454,6 +454,7 @@ int DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *ty
       tp = DaoNameSpace_FindType( ns, name );
     }
   }
+  if( tp == NULL ) tp = DaoParser_ParseTypeName( old, self, 0, 0 );
   /* printf( "ns = %p  tp = %p  name = %s\n", self, tp, type ); */
   DString_SetMBS( name, type );
   tp2 = DaoNameSpace_FindType( self, name );
@@ -1042,6 +1043,11 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
     val.t = tp->tid;
     val.v.p = tp->X.extra;
     DaoNameSpace_AddConst( self, name, val );
+  }else{
+    DValue val = daoNullClass;
+    val.t = DAO_TYPE;
+    val.v.p = tp;
+    DaoNameSpace_AddConst( self, name, val );
   }
   /*
   node = DMap_First( self->abstypes );
@@ -1092,7 +1098,8 @@ DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val )
   case DAO_COMPLEX : case DAO_STRING : case DAO_LONG :
     abtp = simpleTypes[ val.t ];
     if( abtp ) break;
-    abtp = DaoType_New( coreTypeNames[val.t], val.t, NULL, NULL );
+    abtp = DaoNameSpace_MakeType( self, coreTypeNames[val.t], val.t, NULL, NULL, 0 );
+    /* abtp = DaoType_New( coreTypeNames[val.t], val.t, NULL, NULL ); */
     simpleTypes[ val.t ] = abtp;
     GC_IncRC( abtp );
     break;

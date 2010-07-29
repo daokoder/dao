@@ -79,6 +79,7 @@ static void STD_Load( DaoContext *ctx, DValue *p[], int N )
   ns = DaoVmSpace_Load( vms, name->mbs );
   DaoContext_SetResult( ctx, (DaoBase*) ns );
   if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
+#if 0
   if( ns ){ /* in the case that it is cancelled from console */
     DArray_PushFront( vms->pathLoading, ns->path );
     res = DaoVmProcess_Call( ctx->process, ns->mainRoutine, NULL, NULL, 0 );
@@ -88,6 +89,7 @@ static void STD_Load( DaoContext *ctx, DValue *p[], int N )
       DaoContext_RaiseException( ctx, DAO_ERROR, "loading failed" );
     DArray_PopFront( vms->pathLoading );
   }
+#endif
   DArray_PopFront( vms->pathLoading );
   if( import && ns ) DaoNameSpace_Import( ctx->nameSpace, ns, NULL );
 }

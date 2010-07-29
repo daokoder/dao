@@ -39,7 +39,7 @@ struct DaoStream
   DFile      *file;
   DString    *streamString;
   char        attribs;
-  int      useQuote;
+  int         useQuote;
   char       *format;
   DaoVmSpace *vmSpace;
   DString    *fname;

@@ -32,22 +32,27 @@
 #endif
 #endif
 
-#ifdef DEBUG_TRACE
 #include <execinfo.h>
-
 void print_trace()
 {
   void  *array[100];
   size_t i, size = backtrace (array, 100);
   char **strings = backtrace_symbols (array, size);
+  FILE *debug = fopen( "debug.txt", "a" );
+  fprintf (debug, "===========================================\n");
+  fprintf (debug, "Obtained %zd stack frames.\n", size);
   printf ("===========================================\n");
   printf ("Obtained %zd stack frames.\n", size);
-  for (i = 0; i < size; i++) printf ("%s\n", strings[i]);
+  for (i = 0; i < size; i++){
+    printf ("%s\n", strings[i]);
+    fprintf (debug,"%s\n", strings[i]);
+  }
   /* comment this to cause leaking, so that valgrind will print the trace with line numbers */
   free (strings);
+  fflush( debug );
+  fclose( debug );
+  fflush( stdout );
 }
-
-#endif
 
 #define GC_BREAK_REF( p ) { if( p ){ (p)->refCount --; (p) = NULL; } }
 

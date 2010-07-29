@@ -130,7 +130,7 @@ void DaoList_PopBack( DaoList *self );
 void DaoList_Erase( DaoList *self, int index );
 
 /* Dao Map*/
-DaoMap* DaoMap_New();
+DaoMap* DaoMap_New( int hashing );
 void DaoMap_Delete( DaoMap *self );
 void DaoMap_Clear( DaoMap *self );
 

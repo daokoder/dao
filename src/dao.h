@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20100704
+#define DAO_H_VERSION 20100728
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -342,7 +342,8 @@ struct DaoTypeBase
  * behaviour. */
 struct DaoUserHandler
 {
-  void (*StdioRead)( DaoUserHandler *self, DString *input );
+  /* count>0: read count bytes; count=0: one line; count<0: until EOF */
+  void (*StdioRead)( DaoUserHandler *self, DString *input, int count );
   void (*StdioWrite)( DaoUserHandler *self, DString *output );
   void (*StdioFlush)( DaoUserHandler *self );
   void (*StdlibDebug)( DaoUserHandler *self, DaoContext *context );
@@ -351,6 +352,8 @@ struct DaoUserHandler
   /* profiling hooks, for future use */
   void (*Called)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
   void (*Returned)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
+  /* yield execution to the host program */
+  void (*Yield)( DaoUserHandler *self );
 };
 typedef char* (*ReadLine)( const char *prompt );
 typedef void  (*AddHistory)( const char *cmd );

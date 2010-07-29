@@ -868,11 +868,12 @@ DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file )
 {
   DArray *argNames = DArray_New(D_STRING);
   DArray *argValues = DArray_New(D_STRING);
+  DString name;
   DaoNameSpace *ns = NULL;
-  int mtp;
+  int m;
   DaoVmSpace_ParseArguments( self, file, argNames, argValues );
-  mtp = DaoVmSpace_CompleteModuleName( self, self->srcFName );
-  switch( mtp ){
+  m = DaoVmSpace_CompleteModuleName( self, self->srcFName );
+  switch( m ){
   case DAO_MODULE_DAO_O :
     ns = DaoVmSpace_LoadDaoByteCode( self, self->srcFName, 0 );
     break;
@@ -891,6 +892,46 @@ DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file )
   DArray_Delete( argNames );
   DArray_Delete( argValues );
   if( ns == NULL ) return 0;
+
+  DArray_PushFront( self->pathLoading, ns->path );
+  m = DaoVmProcess_Call( self->mainProcess, ns->mainRoutine, NULL, NULL, 0 );
+  DArray_PopFront( self->pathLoading );
+  if( m ==0 ) return 0;
+
+  name = DString_WrapMBS( "main" );
+  m = DaoNameSpace_FindConst( ns, & name );
+  if( m >=0 ){
+    DValue value = DaoNameSpace_GetConst( ns, m );
+    DValue *ps = self->argParams->items->data;
+    int j, N = self->argParams->items->size;
+    if( value.t == DAO_ROUTINE ){
+      DaoVmProcess *vmp = self->mainProcess;
+      DaoRoutine *mainRoutine = value.v.routine;
+      DaoContext *ctx = DaoVmProcess_MakeContext( vmp, mainRoutine );
+      DArray *array = DArray_New(0);
+      DArray_Resize( array, N, NULL );
+      for(j=0; j<N; j++) array->items.pValue[j] = ps + j;
+      ctx->vmSpace = self;
+      DaoContext_Init( ctx, mainRoutine );
+      if( DaoContext_InitWithParams( ctx, vmp, array->items.pValue, N ) == 0 ){
+        DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
+        DaoStream_WriteString( self->stdStream, mainRoutine->docString );
+        DArray_Delete( array );
+        return 0;
+      }
+      DaoVmProcess_PushContext( vmp, ctx );
+      if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
+            array->items.pValue, NULL, N, 0 ) ){
+        DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
+        DaoStream_WriteString( self->stdStream, ctx->routine->docString );
+        DaoVmProcess_CacheContext( vmp, ctx );
+        DArray_Delete( array );
+        return 0;
+      }
+      DaoVmProcess_Execute( vmp );
+      DArray_Delete( array );
+    }
+  }
 
 #ifdef DAO_WITH_NETWORK
 #if 0
@@ -2075,6 +2116,9 @@ extern DMutex dao_vsetup_mutex;
 extern DMutex dao_msetup_mutex;
 #endif
 
+#include<signal.h>
+void print_trace();
+
 DaoVmSpace* DaoInit()
 {
   int i;
@@ -2084,6 +2128,9 @@ DaoVmSpace* DaoInit()
   DArray *nested;
 
   if( mainVmSpace ) return mainVmSpace;
+
+  //signal( SIGSEGV, print_trace );
+  //signal( SIGABRT, print_trace );
 
 #ifdef DAO_WITH_THREAD
   DMutex_Init( & mutex_string_sharing );

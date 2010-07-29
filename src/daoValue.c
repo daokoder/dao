@@ -973,3 +973,39 @@ void DValue_ClearAll( DValue *v, int n )
   int i;
   for(i=0; i<n; i++) DValue_Clear( v + i );
 }
+
+enum DaoNumberSymbols
+{
+  N_SPACE ,
+  N_SIGN , /* +, - */
+  N_DOT , /* . */
+  N_E_S , /* e: single precision */
+  N_E_D , /* E: double precision */
+  N_DIGIT , /* 0-9 */
+  N_HEX , /* a-f, A-F */
+  N_IMAG  /* $ */
+};
+
+const unsigned char numletter[128] = 
+{
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1, N_SPACE,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+  N_SPACE,      -1,      -1,      -1,  N_IMAG,      -1,      -1,      -1,
+       -1,      -1,      -1,  N_SIGN,      -1,  N_SIGN,   N_DOT,      -1,
+  N_DIGIT, N_DIGIT, N_DIGIT, N_DIGIT, N_DIGIT, N_DIGIT, N_DIGIT, N_DIGIT,
+  N_DIGIT, N_DIGIT,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,   N_HEX,   N_HEX,   N_HEX,   N_HEX,   N_HEX,   N_HEX,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,   N_HEX,   N_HEX,   N_HEX,   N_HEX,   N_HEX,   N_HEX,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1,
+       -1,      -1,      -1,      -1,      -1,      -1,      -1,      -1
+};
+int DValue_FromString( DValue *self, DString *str, int type )
+{
+  return 0;
+}

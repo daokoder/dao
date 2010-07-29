@@ -20,6 +20,17 @@
 #include"daoNumtype.h"
 #include"daoNamespace.h"
 
+void DaoStream_Flush( DaoStream *self )
+{
+  DaoVmSpace *vms = self->vmSpace;
+  if( self->file ){
+    fflush( self->file->fd );
+  }else if( vms && vms->userHandler && vms->userHandler->StdioFlush ){
+    vms->userHandler->StdioFlush( vms->userHandler );
+  }else{
+    fflush( stdout );
+  }
+}
 static void DaoIO_Print0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 {
   DMap *cycData;
@@ -113,6 +124,7 @@ static void DaoIO_Printf0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
   }
   DString_Delete( mbs );
   DMap_Delete( cycData );
+  DaoStream_Flush( self );
 }
 static void DaoIO_Printf( DaoContext *ctx, DValue *p[], int N )
 {
@@ -125,18 +137,12 @@ static void DaoIO_Printf2( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Flush( DaoContext *ctx, DValue *p[], int N )
 {
   DaoStream *self = p[0]->v.stream;
-  DaoVmSpace *vms = self->vmSpace;
-  if( self->file ){
-    fflush( self->file->fd );
-  }else if( vms && vms->userHandler && vms->userHandler->StdioFlush ){
-    vms->userHandler->StdioFlush( vms->userHandler );
-  }else{
-    fflush( stdout );
-  }
+  DaoStream_Flush( self );
 }
 static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
 {
   DaoStream *self = ctx->vmSpace->stdStream;
+  DaoVmSpace *vms = self->vmSpace;
   DString *ds = DaoContext_PutMBString( ctx, "" );
   int ch, count = 0;
   if( N >0 ) self = p[0]->v.stream;
@@ -145,7 +151,9 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
     DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not open!" );
     return;
   }
-  if( count ){
+  if( vms && vms->userHandler && vms->userHandler->StdioRead ){
+    vms->userHandler->StdioRead( vms->userHandler, ds, count );
+  }else if( count ){
     FILE *fd = stdin;
     DString_Clear( ds );
     if( self->file ) fd = self->file->fd;
@@ -154,8 +162,8 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
         DString_AppendChar( ds, ch );
     }else{
       while( (ch = getc(fd) ) !=EOF ) DString_AppendChar( ds, ch );
-      if( fd == stdin ) clearerr( stdin );
     }
+    if( fd == stdin ) fseek( stdin, 0, SEEK_END );
   }else{
     DaoStream_ReadLine( self, ds );
   }
@@ -543,7 +551,10 @@ void DaoStream_WriteMBS( DaoStream *self, const char *val )
 {
   DaoVmSpace *vms = self->vmSpace;
   char *format = self->format;
+  void *newln;
   if( format == NULL ) format = "%s";
+  newln = strchr( format, '\n' );
+  if( newln == NULL ) newln = strchr( val, '\n' );
   if( self->redirect && self != self->redirect ){
     DaoStream_WriteMBS( self->redirect, val );
   }else if( self->file ){
@@ -556,12 +567,16 @@ void DaoStream_WriteMBS( DaoStream *self, const char *val )
   }else{
     printf( format, val );
   }
+  if( newln ) DaoStream_Flush( self );
 }
 void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val )
 {
   DaoVmSpace *vms = self->vmSpace;
   char *format = self->format;
+  void *newln;
   if( format == NULL ) format = "%ls";
+  newln = strchr( format, '\n' );
+  if( newln == NULL ) newln = wcschr( val, L'\n' );
   if( self->redirect && self != self->redirect ){
     DaoStream_WriteWCS( self->redirect, val );
   }else if( self->file ){
@@ -574,6 +589,7 @@ void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val )
   }else{
     printf( format, val );
   }
+  if( newln ) DaoStream_Flush( self );
 }
 void DString_SetWords( DString *self, const wchar_t *bytes, int count )
 {
@@ -721,13 +737,14 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
       DString_Erase( self->streamString, 0, pos+1 );
     }
   }else if( vms && vms->userHandler && vms->userHandler->StdioRead ){
-    vms->userHandler->StdioRead( vms->userHandler, line );
+    vms->userHandler->StdioRead( vms->userHandler, line, 0 );
   }else{
     ch = getchar();
     while( ch != delim && ch != EOF ){
       DString_AppendChar( line, ch );
       ch = getchar();
     }
+    clearerr( stdin );
   }
 }
 

@@ -1443,6 +1443,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
     if( value.t == 0 && ctype ){
       value = DaoFindValueOnly( ctype->typer, tokens[start]->string );
     }
+    /* TODO: look for type */
     if( value.t == 0 && ns ){
       i = DaoNameSpace_FindConst( ns, tokens[start]->string );
       if( i >=0 ) value = DaoNameSpace_GetConst( ns, i );
@@ -1453,6 +1454,10 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
     case DAO_TYPE : return (DaoType*) value.v.p;
     case DAO_INTERFACE : return value.v.inter->abtype;
     default: break;
+    }
+    if( ns ){
+      abtype = DaoNameSpace_FindType( ns, tokens[start]->string );
+      if( abtype ) return abtype;
     }
   }
   if( start > end ) return NULL;

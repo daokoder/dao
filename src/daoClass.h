@@ -19,7 +19,7 @@
 #define LOOKUP_BIND( sto, perm, index )  (((sto)<<24)|((perm)<<16)|index)
 #define LOOKUP_ST( one )  ((one)>>24)
 #define LOOKUP_PM( one )  (((one)>>16)&0xff)
-#define LOOKUP_ID( one )  ((short)((one)&0xffff))
+#define LOOKUP_ID( one )  ((unsigned short)((one)&0xffff))
 
 enum DaoClassStorage
 {

@@ -571,6 +571,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
   DaoVmSpace *vmSpace = self->vmSpace;
   DaoVmCode *vmc=NULL;
   DaoVmCode *vmcBase;
+  int hdyield = handler && handler->Yield;
   int i, j, retCode, nCycle;
   int exceptCount = 0;
   DaoVmFrame *topFrame;
@@ -1004,6 +1005,7 @@ CallEntry:
   */
 
   if( self->stopit | vmSpace->stopit ) goto FinishProc;
+  if( hdyield ) handler->Yield( handler );
 
   DaoContext_AdjustCodes( topCtx, vmSpace->options );
   topCtx->vmSpace = vmSpace;
@@ -2536,6 +2538,7 @@ CheckException:
   }
 
   if( self->stopit | vmSpace->stopit ) goto FinishProc;
+  if( hdyield ) handler->Yield( handler );
   if( self->exceptions->size > exceptCount ){
     size = (size_t)( vmc - vmcBase );
     if( topFrame->depth == 0 ) goto FinishCall;
