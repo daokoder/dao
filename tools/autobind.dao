@@ -3150,6 +3150,11 @@ global qt_application_dao =
 global qt_application_func =
 'static void dao_QApplication_DaoApp( DaoContext *_ctx, DValue *_p[], int _n )
 {
+  QApplication *app = (QApplication*) QApplication::instance();
+  if( app ){
+    DaoContext_PutCData( _ctx, app, dao_QApplication_Typer );
+    return;
+  }
   static int argc = 1;
   static DString *str = DString_New(1);
   static char* argv = (char*)DString_GetMBS( _p[0]->v.s );
