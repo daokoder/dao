@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms
-   of the GNU Lesser General Public License as published by the Free Software Foundation;
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifndef _DAO_H
 #define _DAO_H
@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20100728
+#define DAO_H_VERSION 20100815
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -117,7 +117,7 @@ DAO_EXTC_CLOSE
 #endif
 
 #define \
-  DAO_INIT_MODULE \
+    DAO_INIT_MODULE \
 DAO_EXTC_OPEN \
 DAO_DLL int DaoH_Version = DAO_H_VERSION; \
 DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNameSpace *ns ); \
@@ -138,93 +138,93 @@ extern int daoProxyPort;
 
 enum DaoTypes
 {
-  DAO_NIL     = 0,
-  DAO_INTEGER ,
-  DAO_FLOAT   ,
-  DAO_DOUBLE  ,
-  DAO_COMPLEX ,
-  DAO_STRING  ,
-  DAO_LONG  ,
-  DAO_ARRAY ,
-  DAO_LIST  ,
-  DAO_MAP   ,
-  DAO_PAIR  ,
-  DAO_TUPLE ,
-  DAO_STREAM ,
-  DAO_OBJECT ,
-  DAO_CDATA  ,
-  DAO_REGEX     ,
-  DAO_INTERFACE ,
-  DAO_CLASS     ,
-  DAO_FUNCTION  ,
-  DAO_ROUTINE   ,
-  DAO_CONTEXT   ,
-  DAO_VMPROCESS ,
-  DAO_NAMESPACE ,
-  DAO_VMSPACE   ,
-  DAO_MUTEX ,
-  DAO_CONDVAR ,
-  DAO_SEMA ,
-  DAO_THREAD ,
-  END_CORE_TYPES
+    DAO_NIL     = 0,
+    DAO_INTEGER ,
+    DAO_FLOAT   ,
+    DAO_DOUBLE  ,
+    DAO_COMPLEX ,
+    DAO_STRING  ,
+    DAO_LONG  ,
+    DAO_ARRAY ,
+    DAO_LIST  ,
+    DAO_MAP   ,
+    DAO_PAIR  ,
+    DAO_TUPLE ,
+    DAO_STREAM ,
+    DAO_OBJECT ,
+    DAO_CDATA  ,
+    DAO_REGEX     ,
+    DAO_INTERFACE ,
+    DAO_CLASS     ,
+    DAO_FUNCTION  ,
+    DAO_ROUTINE   ,
+    DAO_CONTEXT   ,
+    DAO_VMPROCESS ,
+    DAO_NAMESPACE ,
+    DAO_VMSPACE   ,
+    DAO_MUTEX ,
+    DAO_CONDVAR ,
+    DAO_SEMA ,
+    DAO_THREAD ,
+    END_CORE_TYPES
 };
 enum DaoVmProcessStatus
 {
-  DAO_VMPROC_FINISHED ,  /* finished normally */
-  DAO_VMPROC_ABORTED ,
-  DAO_VMPROC_SUSPENDED , /* suspended, by coroutine.yield() */
-  DAO_VMPROC_RUNNING ,
-  DAO_VMPROC_STACKED     /* new context is pushed onto the stack of the process */
+    DAO_VMPROC_FINISHED ,  /* finished normally */
+    DAO_VMPROC_ABORTED ,
+    DAO_VMPROC_SUSPENDED , /* suspended, by coroutine.yield() */
+    DAO_VMPROC_RUNNING ,
+    DAO_VMPROC_STACKED     /* new context is pushed onto the stack of the process */
 };
 /* Execution mode, combinatable by | */
 enum DaoExecMode
 {
-  DAO_EXEC_HELP      = (1<<0), /* -h, --help:       print this help information; */
-  DAO_EXEC_VINFO     = (1<<1), /* -v, --version:    print version information; */
-  DAO_EXEC_DEBUG     = (1<<2), /* -d, --debug:      run in debug mode; */
-  DAO_EXEC_SAFE      = (1<<3), /* -s, --safe:       run in safe mode; */
-  DAO_EXEC_INTERUN   = (1<<4), /* -i, --ineractive: run in interactive mode; */
-  DAO_EXEC_LIST_BC   = (1<<5), /* -l, --list-bc:    print compiled bytecodes; */
-  DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:    compile to bytecodes;(TODO) */
-  DAO_EXEC_INCR_COMP = (1<<7), /* -n, --incr-comp:  incremental compiling; */
-  DAO_EXEC_NO_JIT    = (1<<8), /* -J, --no-jit:     no JIT compiling; */
-  DAO_EXEC_NO_TC     = (1<<9), /* -T, --no-typed-code:   no typed code; */
+    DAO_EXEC_HELP      = (1<<0), /* -h, --help:       print this help information; */
+    DAO_EXEC_VINFO     = (1<<1), /* -v, --version:    print version information; */
+    DAO_EXEC_DEBUG     = (1<<2), /* -d, --debug:      run in debug mode; */
+    DAO_EXEC_SAFE      = (1<<3), /* -s, --safe:       run in safe mode; */
+    DAO_EXEC_INTERUN   = (1<<4), /* -i, --ineractive: run in interactive mode; */
+    DAO_EXEC_LIST_BC   = (1<<5), /* -l, --list-bc:    print compiled bytecodes; */
+    DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:    compile to bytecodes;(TODO) */
+    DAO_EXEC_INCR_COMP = (1<<7), /* -n, --incr-comp:  incremental compiling; */
+    DAO_EXEC_NO_JIT    = (1<<8), /* -J, --no-jit:     no JIT compiling; */
+    DAO_EXEC_NO_TC     = (1<<9), /* -T, --no-typed-code:   no typed code; */
 
-  DAO_EXEC_MBS_ONLY = (1<<20),
-  DAO_EXEC_WCS_ONLY = (1<<21),
+    DAO_EXEC_MBS_ONLY = (1<<20),
+    DAO_EXEC_WCS_ONLY = (1<<21),
 
-  /* -- disable JIT;
-   * -- disable function specialization;
-   * -- insert NOP codes for conveniently setting up break points; */
-  DAO_EXEC_IDE = (1<<31)
+    /* -- disable JIT;
+     * -- disable function specialization;
+     * -- insert NOP codes for conveniently setting up break points; */
+    DAO_EXEC_IDE = (1<<31)
 };
 enum DaoExceptionType
 {
-  DAO_EXCEPT_NONE = 0,
-  DAO_EXCEPT_ANY ,
-  DAO_WARNING ,
-  DAO_ERROR ,
+    DAO_EXCEPT_NONE = 0,
+    DAO_EXCEPT_ANY ,
+    DAO_WARNING ,
+    DAO_ERROR ,
 
-  DAO_ERROR_FIELD ,
-  DAO_ERROR_FIELD_NOTEXIST ,
-  DAO_ERROR_FIELD_NOTPERMIT ,
-  DAO_ERROR_FLOAT ,
-  DAO_ERROR_FLOAT_DIVBYZERO ,
-  DAO_ERROR_FLOAT_OVERFLOW ,
-  DAO_ERROR_FLOAT_UNDERFLOW ,
-  DAO_ERROR_INDEX ,
-  DAO_ERROR_INDEX_OUTOFRANGE ,
-  DAO_ERROR_KEY ,
-  DAO_ERROR_KEY_NOTEXIST ,
-  DAO_ERROR_PARAM ,
-  DAO_ERROR_SYNTAX ,
-  DAO_ERROR_TYPE ,
-  DAO_ERROR_VALUE ,
+    DAO_ERROR_FIELD ,
+    DAO_ERROR_FIELD_NOTEXIST ,
+    DAO_ERROR_FIELD_NOTPERMIT ,
+    DAO_ERROR_FLOAT ,
+    DAO_ERROR_FLOAT_DIVBYZERO ,
+    DAO_ERROR_FLOAT_OVERFLOW ,
+    DAO_ERROR_FLOAT_UNDERFLOW ,
+    DAO_ERROR_INDEX ,
+    DAO_ERROR_INDEX_OUTOFRANGE ,
+    DAO_ERROR_KEY ,
+    DAO_ERROR_KEY_NOTEXIST ,
+    DAO_ERROR_PARAM ,
+    DAO_ERROR_SYNTAX ,
+    DAO_ERROR_TYPE ,
+    DAO_ERROR_VALUE ,
 
-  DAO_WARNING_SYNTAX ,
-  DAO_WARNING_VALUE ,
+    DAO_WARNING_SYNTAX ,
+    DAO_WARNING_VALUE ,
 
-  ENDOF_BASIC_EXCEPT
+    ENDOF_BASIC_EXCEPT
 };
 
 typedef unsigned char uchar_t;
@@ -269,34 +269,34 @@ typedef struct DaoThread       DaoThread;
 
 struct DValue
 {
-  uchar_t t; /* type */
-  uchar_t sub; /* sub-type */
-  uchar_t cst; /* const */
-  uchar_t ndef; /* not a default parameter */
-  union {
-    dint           i; /* int */
-    float          f; /* float */
-    double         d; /* double */
-    complex16     *c; /* complex */
-    DString       *s; /* string */
-    DLong         *l; /* big integer */
-    DaoBase       *p; /* NOT one of the above data types */
-    DaoArray      *array;
-    DaoList       *list;
-    DaoMap        *map;
-    DaoPair       *pair;
-    DaoTuple      *tuple;
-    DaoRoutine    *routine;
-    DaoFunction   *func;
-    DaoObject     *object;
-    DaoClass      *klass;
-    DaoCData      *cdata;
-    DaoContext    *context;
-    DaoStream     *stream;
-    DaoInterface  *inter;
-    DaoNameSpace  *ns;
-    DaoVmProcess  *vmp;
-  } v ;
+    uchar_t t; /* type */
+    uchar_t sub; /* sub-type */
+    uchar_t cst; /* const */
+    uchar_t ndef; /* not a default parameter */
+    union {
+        dint           i; /* int */
+        float          f; /* float */
+        double         d; /* double */
+        complex16     *c; /* complex */
+        DString       *s; /* string */
+        DLong         *l; /* big integer */
+        DaoBase       *p; /* NOT one of the above data types */
+        DaoArray      *array;
+        DaoList       *list;
+        DaoMap        *map;
+        DaoPair       *pair;
+        DaoTuple      *tuple;
+        DaoRoutine    *routine;
+        DaoFunction   *func;
+        DaoObject     *object;
+        DaoClass      *klass;
+        DaoCData      *cdata;
+        DaoContext    *context;
+        DaoStream     *stream;
+        DaoInterface  *inter;
+        DaoNameSpace  *ns;
+        DaoVmProcess  *vmp;
+    } v ;
 };
 
 typedef void (*CallbackOnString)( const char *str );
@@ -311,30 +311,30 @@ typedef struct DaoFuncItem  DaoFuncItem;
 
 struct DaoNumItem
 {
-  const char *name;
-  int         type;
-  double      value;
+    const char *name;
+    int         type;
+    double      value;
 };
 struct DaoFuncItem
 {
-  DaoFuncPtr  fpter;    /* C function pointer; */
-  const char  *proto;    /* function prototype: name( parlist ) => return_type */
+    DaoFuncPtr  fpter;    /* C function pointer; */
+    const char *proto;    /* function prototype: name( parlist ) => return_type */
 };
 
 /* Typer structure, contains type information of each Dao type: */
 struct DaoTypeBase
 {
-  DaoTypeCore   *priv; /* data used internally; */
-  const char    *name; /* type name; */
-  DaoNumItem    *numItems; /* constant number list */
-  DaoFuncItem   *funcItems; /* method list: should end with a null item */
+    DaoTypeCore   *priv; /* data used internally; */
+    const char    *name; /* type name; */
+    DaoNumItem    *numItems; /* constant number list */
+    DaoFuncItem   *funcItems; /* method list: should end with a null item */
 
-  /* typers for super types, to create c type hierarchy;
-   * mainly useful for wrapping c++ libraries. */
-  DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
+    /* typers for super types, to create c type hierarchy;
+     * mainly useful for wrapping c++ libraries. */
+    DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
 
-  void*        (*New)();  /* function to allocate structure; */
-  void         (*Delete)( void *self ); /* function to free structure; */
+    void*        (*New)();  /* function to allocate structure; */
+    void         (*Delete)( void *self ); /* function to free structure; */
 };
 
 /* This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
@@ -342,18 +342,18 @@ struct DaoTypeBase
  * behaviour. */
 struct DaoUserHandler
 {
-  /* count>0: read count bytes; count=0: one line; count<0: until EOF */
-  void (*StdioRead)( DaoUserHandler *self, DString *input, int count );
-  void (*StdioWrite)( DaoUserHandler *self, DString *output );
-  void (*StdioFlush)( DaoUserHandler *self );
-  void (*StdlibDebug)( DaoUserHandler *self, DaoContext *context );
-  /* properly change some NOP codes to DEBUG codes */
-  void (*BreakPoints)( DaoUserHandler *self, DaoRoutine *routine );
-  /* profiling hooks, for future use */
-  void (*Called)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
-  void (*Returned)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
-  /* yield execution to the host program */
-  void (*Yield)( DaoUserHandler *self );
+    /* count>0: read count bytes; count=0: one line; count<0: until EOF */
+    void (*StdioRead)( DaoUserHandler *self, DString *input, int count );
+    void (*StdioWrite)( DaoUserHandler *self, DString *output );
+    void (*StdioFlush)( DaoUserHandler *self );
+    void (*StdlibDebug)( DaoUserHandler *self, DaoContext *context );
+    /* properly change some NOP codes to DEBUG codes */
+    void (*BreakPoints)( DaoUserHandler *self, DaoRoutine *routine );
+    /* profiling hooks, for future use */
+    void (*Called)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
+    void (*Returned)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
+    /* invoke host execution to do whatever (e.g., to process GUI events) */
+    void (*InvokeHost)( DaoUserHandler *self, DaoContext *context );
 };
 typedef char* (*ReadLine)( const char *prompt );
 typedef void  (*AddHistory)( const char *cmd );
@@ -363,281 +363,282 @@ typedef void  (*AddHistory)( const char *cmd );
 /* See the DAO_DIRECT_API part for descriptions of the functions */
 struct DaoAPI
 {
-  DaoVmSpace* (*DaoInit)();
-  void        (*DaoQuit)();
+    DaoVmSpace* (*DaoInit)();
+    void        (*DaoQuit)();
 
-  DValue (*DValue_NewInteger)( dint v );
-  DValue (*DValue_NewFloat)( float v );
-  DValue (*DValue_NewDouble)( double v );
-  DValue (*DValue_NewMBString)( char *s, int n );
-  DValue (*DValue_NewWCString)( wchar_t *s, int n );
-  DValue (*DValue_NewVectorB)( char *s, int n );
-  DValue (*DValue_NewVectorUB)( unsigned char *s, int n );
-  DValue (*DValue_NewVectorS)( short *s, int n );
-  DValue (*DValue_NewVectorUS)( unsigned short *s, int n );
-  DValue (*DValue_NewVectorI)( int *s, int n );
-  DValue (*DValue_NewVectorUI)( unsigned int *s, int n );
-  DValue (*DValue_NewVectorF)( float *s, int n );
-  DValue (*DValue_NewVectorD)( double *s, int n );
-  DValue (*DValue_NewMatrixB)( signed char **s, int n, int m );
-  DValue (*DValue_NewMatrixUB)( unsigned char **s, int n, int m );
-  DValue (*DValue_NewMatrixS)( short **s, int n, int m );
-  DValue (*DValue_NewMatrixUS)( unsigned short **s, int n, int m );
-  DValue (*DValue_NewMatrixI)( int **s, int n, int m );
-  DValue (*DValue_NewMatrixUI)( unsigned int **s, int n, int m );
-  DValue (*DValue_NewMatrixF)( float **s, int n, int m );
-  DValue (*DValue_NewMatrixD)( double **s, int n, int m );
-  DValue (*DValue_NewBuffer)( void *s, int n );
-  DValue (*DValue_NewStream)( FILE *f );
-  DValue (*DValue_NewCData)( DaoTypeBase *typer, void *data );
-  void (*DValue_Copy)( DValue *self, DValue from );
-  void (*DValue_Clear)( DValue *v );
-  void (*DValue_ClearAll)( DValue *v, int n );
+    DValue (*DValue_NewInteger)( dint v );
+    DValue (*DValue_NewFloat)( float v );
+    DValue (*DValue_NewDouble)( double v );
+    DValue (*DValue_NewMBString)( char *s, int n );
+    DValue (*DValue_NewWCString)( wchar_t *s, int n );
+    DValue (*DValue_NewVectorB)( char *s, int n );
+    DValue (*DValue_NewVectorUB)( unsigned char *s, int n );
+    DValue (*DValue_NewVectorS)( short *s, int n );
+    DValue (*DValue_NewVectorUS)( unsigned short *s, int n );
+    DValue (*DValue_NewVectorI)( int *s, int n );
+    DValue (*DValue_NewVectorUI)( unsigned int *s, int n );
+    DValue (*DValue_NewVectorF)( float *s, int n );
+    DValue (*DValue_NewVectorD)( double *s, int n );
+    DValue (*DValue_NewMatrixB)( signed char **s, int n, int m );
+    DValue (*DValue_NewMatrixUB)( unsigned char **s, int n, int m );
+    DValue (*DValue_NewMatrixS)( short **s, int n, int m );
+    DValue (*DValue_NewMatrixUS)( unsigned short **s, int n, int m );
+    DValue (*DValue_NewMatrixI)( int **s, int n, int m );
+    DValue (*DValue_NewMatrixUI)( unsigned int **s, int n, int m );
+    DValue (*DValue_NewMatrixF)( float **s, int n, int m );
+    DValue (*DValue_NewMatrixD)( double **s, int n, int m );
+    DValue (*DValue_NewBuffer)( void *s, int n );
+    DValue (*DValue_NewStream)( FILE *f );
+    DValue (*DValue_NewCData)( DaoTypeBase *typer, void *data );
+    void (*DValue_Copy)( DValue *self, DValue from );
+    void (*DValue_Clear)( DValue *v );
+    void (*DValue_ClearAll)( DValue *v, int n );
 
-  DString* (*DString_New)( int mbs );
-  void (*DString_Delete)( DString *self );
+    DString* (*DString_New)( int mbs );
+    void (*DString_Delete)( DString *self );
 
-  size_t (*DString_Size)( DString *self );
-  void (*DString_Clear)( DString *self );
-  void (*DString_Resize)( DString *self, size_t size );
+    size_t (*DString_Size)( DString *self );
+    void (*DString_Clear)( DString *self );
+    void (*DString_Resize)( DString *self, size_t size );
 
-  int (*DString_IsMBS)( DString *self );
-  void (*DString_SetMBS)( DString *self, const char *chs );
-  void (*DString_SetWCS)( DString *self, const wchar_t *chs );
-  void (*DString_SetDataMBS)( DString *self, const char *data, size_t n );
-  void (*DString_SetDataWCS)( DString *self, const wchar_t *data, size_t n );
-  void (*DString_ToWCS)( DString *self );
-  void (*DString_ToMBS)( DString *self );
-  char* (*DString_GetMBS)( DString *self );
-  wchar_t* (*DString_GetWCS)( DString *self );
+    int (*DString_IsMBS)( DString *self );
+    void (*DString_SetMBS)( DString *self, const char *chs );
+    void (*DString_SetWCS)( DString *self, const wchar_t *chs );
+    void (*DString_SetDataMBS)( DString *self, const char *data, size_t n );
+    void (*DString_SetDataWCS)( DString *self, const wchar_t *data, size_t n );
+    void (*DString_ToWCS)( DString *self );
+    void (*DString_ToMBS)( DString *self );
+    char* (*DString_GetMBS)( DString *self );
+    wchar_t* (*DString_GetWCS)( DString *self );
 
-  void (*DString_Erase)( DString *self, size_t start, size_t n );
-  void (*DString_Insert)( DString *self, DString *s, size_t i, size_t m, size_t n );
-  void (*DString_InsertMBS)( DString *self, const char *s, size_t i, size_t m, size_t n );
-  void (*DString_InsertChar)( DString *self, const char ch, size_t at );
-  void (*DString_InsertWCS)( DString *self, const wchar_t *s, size_t i, size_t m, size_t n );
-  void (*DString_Append)( DString *self, DString *chs );
-  void (*DString_AppendChar)( DString *self, const char ch );
-  void (*DString_AppendWChar)( DString *self, const wchar_t ch );
-  void (*DString_AppendMBS)( DString *self, const char *chs );
-  void (*DString_AppendWCS)( DString *self, const wchar_t *chs );
-  void (*DString_AppendDataMBS)( DString *self, const char *data, size_t n );
-  void (*DString_AppendDataWCS)( DString *self, const wchar_t *data,size_t n );
+    void (*DString_Erase)( DString *self, size_t start, size_t n );
+    void (*DString_Insert)( DString *self, DString *s, size_t i, size_t m, size_t n );
+    void (*DString_InsertMBS)( DString *self, const char *s, size_t i, size_t m, size_t n );
+    void (*DString_InsertChar)( DString *self, const char ch, size_t at );
+    void (*DString_InsertWCS)( DString *self, const wchar_t *s, size_t i, size_t m, size_t n );
+    void (*DString_Append)( DString *self, DString *chs );
+    void (*DString_AppendChar)( DString *self, const char ch );
+    void (*DString_AppendWChar)( DString *self, const wchar_t ch );
+    void (*DString_AppendMBS)( DString *self, const char *chs );
+    void (*DString_AppendWCS)( DString *self, const wchar_t *chs );
+    void (*DString_AppendDataMBS)( DString *self, const char *data, size_t n );
+    void (*DString_AppendDataWCS)( DString *self, const wchar_t *data,size_t n );
 
-  void (*DString_SubString)( DString *self, DString *sub, size_t from, size_t n );
+    void (*DString_SubString)( DString *self, DString *sub, size_t from, size_t n );
 
-  size_t (*DString_Find)( DString *self, DString *chs, size_t start );
-  size_t (*DString_RFind)( DString *self, DString *chs, size_t start );
-  size_t (*DString_FindMBS)( DString *self, const char *ch, size_t start );
-  size_t (*DString_RFindMBS)( DString *self, const char *ch, size_t start );
-  size_t (*DString_FindChar)( DString *self, char ch, size_t start );
-  size_t (*DString_FindWChar)( DString *self, wchar_t ch, size_t start );
-  size_t (*DString_RFindChar)( DString *self, char ch, size_t start );
+    size_t (*DString_Find)( DString *self, DString *chs, size_t start );
+    size_t (*DString_RFind)( DString *self, DString *chs, size_t start );
+    size_t (*DString_FindMBS)( DString *self, const char *ch, size_t start );
+    size_t (*DString_RFindMBS)( DString *self, const char *ch, size_t start );
+    size_t (*DString_FindChar)( DString *self, char ch, size_t start );
+    size_t (*DString_FindWChar)( DString *self, wchar_t ch, size_t start );
+    size_t (*DString_RFindChar)( DString *self, char ch, size_t start );
 
-  DString* (*DString_Copy)( DString *self );
-  void (*DString_Assign)( DString *left, DString *right );
-  int  (*DString_Compare)( DString *left, DString *right );
+    DString* (*DString_Copy)( DString *self );
+    void (*DString_Assign)( DString *left, DString *right );
+    int  (*DString_Compare)( DString *left, DString *right );
 
-  DaoList* (*DaoList_New)();
-  int    (*DaoList_Size)( DaoList *self );
-  DValue (*DaoList_Front)( DaoList *self );
-  DValue (*DaoList_Back)( DaoList *self );
-  DValue (*DaoList_GetItem)( DaoList *self, int pos );
+    DaoList* (*DaoList_New)();
+    int    (*DaoList_Size)( DaoList *self );
+    DValue (*DaoList_Front)( DaoList *self );
+    DValue (*DaoList_Back)( DaoList *self );
+    DValue (*DaoList_GetItem)( DaoList *self, int pos );
 
-  void (*DaoList_SetItem)( DaoList *self, DValue item, int pos );
-  void (*DaoList_Insert) ( DaoList *self, DValue item, int pos );
-  void (*DaoList_Erase)( DaoList *self, int pos );
-  void (*DaoList_Clear)( DaoList *self );
-  void (*DaoList_PushFront)( DaoList *self, DValue item );
-  void (*DaoList_PushBack) ( DaoList *self, DValue item );
-  void (*DaoList_PopFront)( DaoList *self );
-  void (*DaoList_PopBack) ( DaoList *self );
+    void (*DaoList_SetItem)( DaoList *self, DValue item, int pos );
+    void (*DaoList_Insert) ( DaoList *self, DValue item, int pos );
+    void (*DaoList_Erase)( DaoList *self, int pos );
+    void (*DaoList_Clear)( DaoList *self );
+    void (*DaoList_PushFront)( DaoList *self, DValue item );
+    void (*DaoList_PushBack) ( DaoList *self, DValue item );
+    void (*DaoList_PopFront)( DaoList *self );
+    void (*DaoList_PopBack) ( DaoList *self );
 
-  DaoMap* (*DaoMap_New)( int hashing );
-  int  (*DaoMap_Size)( DaoMap *self );
-  int  (*DaoMap_Insert)( DaoMap *self, DValue key, DValue value );
-  void (*DaoMap_Erase) ( DaoMap *self, DValue key );
-  void (*DaoMap_Clear) ( DaoMap *self );
-  void (*DaoMap_InsertMBS)( DaoMap *self, const char *key, DValue value );
-  void (*DaoMap_InsertWCS)( DaoMap *self, const wchar_t *key, DValue value );
-  void (*DaoMap_EraseMBS) ( DaoMap *self, const char *key );
-  void (*DaoMap_EraseWCS) ( DaoMap *self, const wchar_t *key );
-  DValue (*DaoMap_GetValue)( DaoMap *self, DValue key  );
-  DValue (*DaoMap_GetValueMBS)( DaoMap *self, const char *key  );
-  DValue (*DaoMap_GetValueWCS)( DaoMap *self, const wchar_t *key  );
-  DNode* (*DaoMap_First)( DaoMap *self );
-  DNode* (*DaoMap_Next)( DaoMap *self, DNode *iter );
-  DValue* (*DNode_Key)( DNode *self );
-  DValue* (*DNode_Value)( DNode *self );
+    DaoMap* (*DaoMap_New)( int hashing );
+    int  (*DaoMap_Size)( DaoMap *self );
+    int  (*DaoMap_Insert)( DaoMap *self, DValue key, DValue value );
+    void (*DaoMap_Erase) ( DaoMap *self, DValue key );
+    void (*DaoMap_Clear) ( DaoMap *self );
+    void (*DaoMap_InsertMBS)( DaoMap *self, const char *key, DValue value );
+    void (*DaoMap_InsertWCS)( DaoMap *self, const wchar_t *key, DValue value );
+    void (*DaoMap_EraseMBS) ( DaoMap *self, const char *key );
+    void (*DaoMap_EraseWCS) ( DaoMap *self, const wchar_t *key );
+    DValue (*DaoMap_GetValue)( DaoMap *self, DValue key  );
+    DValue (*DaoMap_GetValueMBS)( DaoMap *self, const char *key  );
+    DValue (*DaoMap_GetValueWCS)( DaoMap *self, const wchar_t *key  );
+    DNode* (*DaoMap_First)( DaoMap *self );
+    DNode* (*DaoMap_Next)( DaoMap *self, DNode *iter );
+    DValue* (*DNode_Key)( DNode *self );
+    DValue* (*DNode_Value)( DNode *self );
 
-  DaoTuple* (*DaoTuple_New)( int size );
-  int    (*DaoTuple_Size)( DaoTuple *self );
-  void   (*DaoTuple_SetItem)( DaoTuple *self, DValue it, int pos );
-  DValue (*DaoTuple_GetItem)( DaoTuple *self, int pos );
+    DaoTuple* (*DaoTuple_New)( int size );
+    int    (*DaoTuple_Size)( DaoTuple *self );
+    void   (*DaoTuple_SetItem)( DaoTuple *self, DValue it, int pos );
+    DValue (*DaoTuple_GetItem)( DaoTuple *self, int pos );
 
-  int  (*DaoArray_NumType)( DaoArray *self );
-  void (*DaoArray_SetNumType)( DaoArray *self, short numtype );
+    int  (*DaoArray_NumType)( DaoArray *self );
+    void (*DaoArray_SetNumType)( DaoArray *self, short numtype );
 
-  int  (*DaoArray_Size)( DaoArray *self );
-  int  (*DaoArray_DimCount)( DaoArray *self );
-  int  (*DaoArray_SizeOfDim)( DaoArray *self, int d );
-  void (*DaoArray_GetShape)( DaoArray *self, size_t *dims );
-  int  (*DaoArray_HasShape)( DaoArray *self, size_t *dims, int D );
-  int  (*DaoArray_GetFlatIndex)( DaoArray *self, size_t *index );
+    int  (*DaoArray_Size)( DaoArray *self );
+    int  (*DaoArray_DimCount)( DaoArray *self );
+    int  (*DaoArray_SizeOfDim)( DaoArray *self, int d );
+    void (*DaoArray_GetShape)( DaoArray *self, size_t *dims );
+    int  (*DaoArray_HasShape)( DaoArray *self, size_t *dims, int D );
+    int  (*DaoArray_GetFlatIndex)( DaoArray *self, size_t *index );
 
-  void (*DaoArray_ResizeVector)( DaoArray *self, int N );
-  void (*DaoArray_ResizeArray)( DaoArray *self, size_t *dims, int D );
-  int  (*DaoArray_Reshape)( DaoArray *self, size_t *dims, int D );
+    void (*DaoArray_ResizeVector)( DaoArray *self, int N );
+    void (*DaoArray_ResizeArray)( DaoArray *self, size_t *dims, int D );
+    int  (*DaoArray_Reshape)( DaoArray *self, size_t *dims, int D );
 
-  signed char* (*DaoArray_ToByte)( DaoArray *self );
-  short*       (*DaoArray_ToShort)( DaoArray *self );
-  int*         (*DaoArray_ToInt)( DaoArray *self );
-  float*       (*DaoArray_ToFloat)( DaoArray *self );
-  double*      (*DaoArray_ToDouble)( DaoArray *self );
-  unsigned char*  (*DaoArray_ToUByte)( DaoArray *self );
-  unsigned short* (*DaoArray_ToUShort)( DaoArray *self );
-  unsigned int*   (*DaoArray_ToUInt)( DaoArray *self );
+    signed char* (*DaoArray_ToByte)( DaoArray *self );
+    short*       (*DaoArray_ToShort)( DaoArray *self );
+    int*         (*DaoArray_ToInt)( DaoArray *self );
+    float*       (*DaoArray_ToFloat)( DaoArray *self );
+    double*      (*DaoArray_ToDouble)( DaoArray *self );
+    unsigned char*  (*DaoArray_ToUByte)( DaoArray *self );
+    unsigned short* (*DaoArray_ToUShort)( DaoArray *self );
+    unsigned int*   (*DaoArray_ToUInt)( DaoArray *self );
 
-  signed char** (*DaoArray_GetMatrixB)( DaoArray *self, int row );
-  short**  (*DaoArray_GetMatrixS)( DaoArray *self, int row );
-  int**    (*DaoArray_GetMatrixI)( DaoArray *self, int row );
-  float**  (*DaoArray_GetMatrixF)( DaoArray *self, int row );
-  double** (*DaoArray_GetMatrixD)( DaoArray *self, int row );
+    signed char** (*DaoArray_GetMatrixB)( DaoArray *self, int row );
+    short**  (*DaoArray_GetMatrixS)( DaoArray *self, int row );
+    int**    (*DaoArray_GetMatrixI)( DaoArray *self, int row );
+    float**  (*DaoArray_GetMatrixF)( DaoArray *self, int row );
+    double** (*DaoArray_GetMatrixD)( DaoArray *self, int row );
 
-  void (*DaoArray_FromByte)( DaoArray *self );
-  void (*DaoArray_FromShort)( DaoArray *self );
-  void (*DaoArray_FromInt)( DaoArray *self );
-  void (*DaoArray_FromFloat)( DaoArray *self );
-  void (*DaoArray_FromDouble)( DaoArray *self );
-  void (*DaoArray_FromUByte)( DaoArray *self );
-  void (*DaoArray_FromUShort)( DaoArray *self );
-  void (*DaoArray_FromUInt)( DaoArray *self );
+    void (*DaoArray_FromByte)( DaoArray *self );
+    void (*DaoArray_FromShort)( DaoArray *self );
+    void (*DaoArray_FromInt)( DaoArray *self );
+    void (*DaoArray_FromFloat)( DaoArray *self );
+    void (*DaoArray_FromDouble)( DaoArray *self );
+    void (*DaoArray_FromUByte)( DaoArray *self );
+    void (*DaoArray_FromUShort)( DaoArray *self );
+    void (*DaoArray_FromUInt)( DaoArray *self );
 
-  void (*DaoArray_SetVectorB)( DaoArray *self, char* vec, int N );
-  void (*DaoArray_SetVectorS)( DaoArray *self, short* vec, int N );
-  void (*DaoArray_SetVectorI)( DaoArray *self, int* vec, int N );
-  void (*DaoArray_SetVectorF)( DaoArray *self, float* vec, int N );
-  void (*DaoArray_SetVectorD)( DaoArray *self, double* vec, int N );
+    void (*DaoArray_SetVectorB)( DaoArray *self, char* vec, int N );
+    void (*DaoArray_SetVectorS)( DaoArray *self, short* vec, int N );
+    void (*DaoArray_SetVectorI)( DaoArray *self, int* vec, int N );
+    void (*DaoArray_SetVectorF)( DaoArray *self, float* vec, int N );
+    void (*DaoArray_SetVectorD)( DaoArray *self, double* vec, int N );
 
-  void (*DaoArray_SetMatrixB)( DaoArray *self, signed char **mat, int row, int col );
-  void (*DaoArray_SetMatrixS)( DaoArray *self, short **mat, int row, int col );
-  void (*DaoArray_SetMatrixI)( DaoArray *self, int **mat, int row, int col );
-  void (*DaoArray_SetMatrixF)( DaoArray *self, float **mat, int row, int col );
-  void (*DaoArray_SetMatrixD)( DaoArray *self, double **mat, int row, int col );
+    void (*DaoArray_SetMatrixB)( DaoArray *self, signed char **mat, int row, int col );
+    void (*DaoArray_SetMatrixS)( DaoArray *self, short **mat, int row, int col );
+    void (*DaoArray_SetMatrixI)( DaoArray *self, int **mat, int row, int col );
+    void (*DaoArray_SetMatrixF)( DaoArray *self, float **mat, int row, int col );
+    void (*DaoArray_SetMatrixD)( DaoArray *self, double **mat, int row, int col );
 
-  void (*DaoArray_SetVectorUB)( DaoArray *self, unsigned char* vec, int N );
-  void (*DaoArray_SetVectorUS)( DaoArray *self, unsigned short* vec, int N );
-  void (*DaoArray_SetVectorUI)( DaoArray *self, unsigned int* vec, int N );
+    void (*DaoArray_SetVectorUB)( DaoArray *self, unsigned char* vec, int N );
+    void (*DaoArray_SetVectorUS)( DaoArray *self, unsigned short* vec, int N );
+    void (*DaoArray_SetVectorUI)( DaoArray *self, unsigned int* vec, int N );
 
-  void* (*DaoArray_GetBuffer)( DaoArray *self );
-  void  (*DaoArray_SetBuffer)( DaoArray *self, void *buffer, size_t size );
+    void* (*DaoArray_GetBuffer)( DaoArray *self );
+    void  (*DaoArray_SetBuffer)( DaoArray *self, void *buffer, size_t size );
 
-  DValue (*DaoObject_GetField)( DaoObject *self, const char *name );
-  DaoCData* (*DaoObject_MapCData)( DaoObject *self, DaoTypeBase *typer );
-  /* TODO: DaoObject* DaoObject_MapObject( DaoObject *self, DaoClass *klass ) */
+    DValue (*DaoObject_GetField)( DaoObject *self, const char *name );
+    DaoCData* (*DaoObject_MapCData)( DaoObject *self, DaoTypeBase *typer );
+    /* TODO: DaoObject* DaoObject_MapObject( DaoObject *self, DaoClass *klass ) */
 
-  DaoStream* (*DaoStream_New)();
-  void  (*DaoStream_SetFile)( DaoStream *self, FILE *fd );
-  FILE* (*DaoStream_GetFile)( DaoStream *self );
+    DaoStream* (*DaoStream_New)();
+    void  (*DaoStream_SetFile)( DaoStream *self, FILE *fd );
+    FILE* (*DaoStream_GetFile)( DaoStream *self );
 
-  int (*DaoFunction_Call)( DaoFunction *func, DaoCData *self, DValue *p[], int n );
+    int (*DaoFunction_Call)( DaoFunction *func, DaoCData *self, DValue *p[], int n );
 
-  DaoCData* (*DaoCData_New)( DaoTypeBase *typer, void *data );
-  DaoCData* (*DaoCData_Wrap)( DaoTypeBase *typer, void *data );
-  int    (*DaoCData_IsType)( DaoCData *self, DaoTypeBase *typer );
-  void   (*DaoCData_SetData)( DaoCData *self, void *data );
-  void   (*DaoCData_SetBuffer)( DaoCData *self, void *data, size_t size );
-  void   (*DaoCData_SetArray) ( DaoCData *self, void *data, size_t size, int memsize );
-  void*  (*DaoCData_GetData)( DaoCData *self );
-  void*  (*DaoCData_GetBuffer)( DaoCData *self );
-  void** (*DaoCData_GetData2)( DaoCData *self );
-  DaoObject* (*DaoCData_GetObject)( DaoCData *self );
-  DaoTypeBase* (*DaoCData_GetTyper)( DaoCData *self );
+    DaoCData* (*DaoCData_New)( DaoTypeBase *typer, void *data );
+    DaoCData* (*DaoCData_Wrap)( DaoTypeBase *typer, void *data );
+    int    (*DaoCData_IsType)( DaoCData *self, DaoTypeBase *typer );
+    void   (*DaoCData_SetData)( DaoCData *self, void *data );
+    void   (*DaoCData_SetBuffer)( DaoCData *self, void *data, size_t size );
+    void   (*DaoCData_SetArray) ( DaoCData *self, void *data, size_t size, int memsize );
+    void*  (*DaoCData_GetData)( DaoCData *self );
+    void*  (*DaoCData_GetBuffer)( DaoCData *self );
+    void** (*DaoCData_GetData2)( DaoCData *self );
+    DaoObject* (*DaoCData_GetObject)( DaoCData *self );
+    DaoTypeBase* (*DaoCData_GetTyper)( DaoCData *self );
 
-  DaoMutex* (*DaoMutex_New)( DaoVmSpace *vms );
-  void (*DaoMutex_Lock)( DaoMutex *self );
-  void (*DaoMutex_Unlock)( DaoMutex *self );
-  int  (*DaoMutex_TryLock)( DaoMutex *self );
+    DaoMutex* (*DaoMutex_New)( DaoVmSpace *vms );
+    void (*DaoMutex_Lock)( DaoMutex *self );
+    void (*DaoMutex_Unlock)( DaoMutex *self );
+    int  (*DaoMutex_TryLock)( DaoMutex *self );
 
-  dint*      (*DaoContext_PutInteger)( DaoContext *self, dint value );
-  float*     (*DaoContext_PutFloat)( DaoContext *self, float value );
-  double*    (*DaoContext_PutDouble)( DaoContext *self, double value );
-  complex16* (*DaoContext_PutComplex)( DaoContext *self, complex16 value );
-  DString*   (*DaoContext_PutMBString)( DaoContext *self, const char *mbs );
-  DString*   (*DaoContext_PutWCString)( DaoContext *self, const wchar_t *wcs );
-  DString*   (*DaoContext_PutString)( DaoContext *self, DString *str );
-  DString*   (*DaoContext_PutBytes)( DaoContext *self, const char *bytes, int N );
-  DaoArray*  (*DaoContext_PutArrayInteger)( DaoContext *self, int *array, int N );
-  DaoArray*  (*DaoContext_PutArrayShort)( DaoContext *self, short *array, int N );
-  DaoArray*  (*DaoContext_PutArrayFloat)( DaoContext *self, float *array, int N );
-  DaoArray*  (*DaoContext_PutArrayDouble)( DaoContext *self, double *array, int N );
-  DaoArray*  (*DaoContext_PutArrayComplex)( DaoContext *self, complex16 *array, int N );
-  DaoList*   (*DaoContext_PutList)( DaoContext *self );
-  DaoMap*    (*DaoContext_PutMap)( DaoContext *self );
-  DaoArray*  (*DaoContext_PutArray)( DaoContext *self );
-  DaoStream* (*DaoContext_PutFile)( DaoContext *self, FILE *file );
-  DaoCData*  (*DaoContext_PutCData)( DaoContext *self, void *data, DaoTypeBase *t );
-  DaoCData*  (*DaoContext_PutCPointer)( DaoContext *self, void *data, int size );
-  DaoBase*   (*DaoContext_PutResult)( DaoContext *self, DaoBase *data );
-  DValue* (*DaoContext_PutValue)( DaoContext *self, DValue value );
+    dint*      (*DaoContext_PutInteger)( DaoContext *self, dint value );
+    float*     (*DaoContext_PutFloat)( DaoContext *self, float value );
+    double*    (*DaoContext_PutDouble)( DaoContext *self, double value );
+    complex16* (*DaoContext_PutComplex)( DaoContext *self, complex16 value );
+    DString*   (*DaoContext_PutMBString)( DaoContext *self, const char *mbs );
+    DString*   (*DaoContext_PutWCString)( DaoContext *self, const wchar_t *wcs );
+    DString*   (*DaoContext_PutString)( DaoContext *self, DString *str );
+    DString*   (*DaoContext_PutBytes)( DaoContext *self, const char *bytes, int N );
+    DaoArray*  (*DaoContext_PutArrayInteger)( DaoContext *self, int *array, int N );
+    DaoArray*  (*DaoContext_PutArrayShort)( DaoContext *self, short *array, int N );
+    DaoArray*  (*DaoContext_PutArrayFloat)( DaoContext *self, float *array, int N );
+    DaoArray*  (*DaoContext_PutArrayDouble)( DaoContext *self, double *array, int N );
+    DaoArray*  (*DaoContext_PutArrayComplex)( DaoContext *self, complex16 *array, int N );
+    DaoList*   (*DaoContext_PutList)( DaoContext *self );
+    DaoMap*    (*DaoContext_PutMap)( DaoContext *self );
+    DaoArray*  (*DaoContext_PutArray)( DaoContext *self );
+    DaoStream* (*DaoContext_PutFile)( DaoContext *self, FILE *file );
+    DaoCData*  (*DaoContext_PutCData)( DaoContext *self, void *data, DaoTypeBase *t );
+    DaoCData*  (*DaoContext_PutCPointer)( DaoContext *self, void *data, int size );
+    DaoBase*   (*DaoContext_PutResult)( DaoContext *self, DaoBase *data );
+    DValue* (*DaoContext_PutValue)( DaoContext *self, DValue value );
 
-  DaoCData*  (*DaoContext_WrapCData)( DaoContext *self, void *data, DaoTypeBase *t );
-  DaoCData* (*DaoContext_CopyCData)( DaoContext *self, void *d, int n, DaoTypeBase *t );
+    DaoCData*  (*DaoContext_WrapCData)( DaoContext *self, void *data, DaoTypeBase *t );
+    DaoCData* (*DaoContext_CopyCData)( DaoContext *self, void *d, int n, DaoTypeBase *t );
 
-  void (*DaoContext_RaiseException)( DaoContext *self, int type, const char *value );
+    void (*DaoContext_RaiseException)( DaoContext *self, int type, const char *value );
 
-  DaoVmProcess* (*DaoVmProcess_New)( DaoVmSpace *vms );
-  int (*DaoVmProcess_Compile)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-  int (*DaoVmProcess_Eval)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-  int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n);
-  DValue (*DaoVmProcess_GetReturned)( DaoVmProcess *self );
+    DaoVmProcess* (*DaoVmProcess_New)( DaoVmSpace *vms );
+    int (*DaoVmProcess_Compile)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+    int (*DaoVmProcess_Eval)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+    int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n);
+    void (*DaoVmProcess_Stop)( DaoVmProcess *self );
+    DValue (*DaoVmProcess_GetReturned)( DaoVmProcess *self );
 
-  DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms );
-  DaoNameSpace* (*DaoNameSpace_GetNameSpace)( DaoNameSpace *self, const char *name );
-  void (*DaoNameSpace_AddConstNumbers)( DaoNameSpace *self, DaoNumItem *items );
-  void (*DaoNameSpace_AddConstValue)( DaoNameSpace*self, const char *s, DValue v );
-  void (*DaoNameSpace_AddConstData)( DaoNameSpace *self, const char *name, DaoBase *data );
-  void (*DaoNameSpace_AddData)( DaoNameSpace *self, const char *s, DaoBase *d, const char *t);
-  void (*DaoNameSpace_AddValue)( DaoNameSpace *self, const char *s, DValue v, const char *t);
-  DValue (*DaoNameSpace_FindData)( DaoNameSpace *self, const char *name );
+    DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms );
+    DaoNameSpace* (*DaoNameSpace_GetNameSpace)( DaoNameSpace *self, const char *name );
+    void (*DaoNameSpace_AddConstNumbers)( DaoNameSpace *self, DaoNumItem *items );
+    void (*DaoNameSpace_AddConstValue)( DaoNameSpace*self, const char *s, DValue v );
+    void (*DaoNameSpace_AddConstData)( DaoNameSpace *self, const char *name, DaoBase *data );
+    void (*DaoNameSpace_AddData)( DaoNameSpace *self, const char *s, DaoBase *d, const char *t);
+    void (*DaoNameSpace_AddValue)( DaoNameSpace *self, const char *s, DValue v, const char *t);
+    DValue (*DaoNameSpace_FindData)( DaoNameSpace *self, const char *name );
 
-  int (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
-  int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
-  int (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer );
-  int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
-  int (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
-  int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
-  int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
-  int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
-  int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
+    int (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
+    int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
+    int (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer );
+    int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
+    int (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
+    int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
+    int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
+    int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
+    int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
 
-  DaoVmSpace* (*DaoVmSpace_New)();
+    DaoVmSpace* (*DaoVmSpace_New)();
 
-  int (*DaoVmSpace_ParseOptions)( DaoVmSpace *self, const char *options );
-  void (*DaoVmSpace_SetOptions)( DaoVmSpace *self, int options );
-  int  (*DaoVmSpace_GetOptions)( DaoVmSpace *self );
+    int (*DaoVmSpace_ParseOptions)( DaoVmSpace *self, const char *options );
+    void (*DaoVmSpace_SetOptions)( DaoVmSpace *self, int options );
+    int  (*DaoVmSpace_GetOptions)( DaoVmSpace *self );
 
-  int (*DaoVmSpace_RunMain)( DaoVmSpace *self, const char *file );
-  DaoNameSpace* (*DaoVmSpace_Load)( DaoVmSpace *self, const char *file );
-  DaoNameSpace* (*DaoVmSpace_MainNameSpace)( DaoVmSpace *self );
-  DaoVmProcess* (*DaoVmSpace_MainVmProcess)( DaoVmSpace *self );
-  DaoVmProcess* (*DaoVmSpace_AcquireProcess)( DaoVmSpace *self );
-  void (*DaoVmSpace_ReleaseProcess)( DaoVmSpace *self, DaoVmProcess *proc );
+    int (*DaoVmSpace_RunMain)( DaoVmSpace *self, const char *file );
+    DaoNameSpace* (*DaoVmSpace_Load)( DaoVmSpace *self, const char *file );
+    DaoNameSpace* (*DaoVmSpace_MainNameSpace)( DaoVmSpace *self );
+    DaoVmProcess* (*DaoVmSpace_MainVmProcess)( DaoVmSpace *self );
+    DaoVmProcess* (*DaoVmSpace_AcquireProcess)( DaoVmSpace *self );
+    void (*DaoVmSpace_ReleaseProcess)( DaoVmSpace *self, DaoVmProcess *proc );
 
-  void (*DaoVmSpace_SetUserHandler)( DaoVmSpace *self, DaoUserHandler *handler );
-  void (*DaoVmSpace_ReadLine)( DaoVmSpace *self, ReadLine fptr );
-  void (*DaoVmSpace_AddHistory)( DaoVmSpace *self, AddHistory fptr );
+    void (*DaoVmSpace_SetUserHandler)( DaoVmSpace *self, DaoUserHandler *handler );
+    void (*DaoVmSpace_ReadLine)( DaoVmSpace *self, ReadLine fptr );
+    void (*DaoVmSpace_AddHistory)( DaoVmSpace *self, AddHistory fptr );
 
-  void (*DaoVmSpace_AddVirtualFile)( DaoVmSpace *self, const char *f, const char *s );
-  void (*DaoVmSpace_SetPath)( DaoVmSpace *self, const char *path );
-  void (*DaoVmSpace_AddPath)( DaoVmSpace *self, const char *path );
-  void (*DaoVmSpace_DelPath)( DaoVmSpace *self, const char *path );
+    void (*DaoVmSpace_AddVirtualFile)( DaoVmSpace *self, const char *f, const char *s );
+    void (*DaoVmSpace_SetPath)( DaoVmSpace *self, const char *path );
+    void (*DaoVmSpace_AddPath)( DaoVmSpace *self, const char *path );
+    void (*DaoVmSpace_DelPath)( DaoVmSpace *self, const char *path );
 
-  int   (*DaoVmSpace_GetState)( DaoVmSpace *self );
-  void  (*DaoVmSpace_Stop)( DaoVmSpace *self, int bl );
+    int   (*DaoVmSpace_GetState)( DaoVmSpace *self );
+    void  (*DaoVmSpace_Stop)( DaoVmSpace *self, int bl );
 
-  void (*DaoGC_IncRC)( DaoBase *p );
-  void (*DaoGC_DecRC)( DaoBase *p );
+    void (*DaoGC_IncRC)( DaoBase *p );
+    void (*DaoGC_DecRC)( DaoBase *p );
 };
 
 
@@ -880,6 +881,7 @@ DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 DAO_DLL int DaoVmProcess_Eval   ( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoRoutine *r, DaoObject *o, DValue *p[], int n );
+DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
 DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
 
 DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
@@ -895,19 +897,19 @@ DAO_DLL DValue DaoNameSpace_FindData( DaoNameSpace *self, const char *name );
 /* equivalent to: typedef old type; in scripts */
 DAO_DLL int DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type );
 /*
-parameters alias[] is an array of type name aliases,
-used as typedefs like: typedef alias[2*i] alias[2*i+1];
-the last item in alias[] should also be NULL.
-*/
+   parameters alias[] is an array of type name aliases,
+   used as typedefs like: typedef alias[2*i] alias[2*i+1];
+   the last item in alias[] should also be NULL.
+ */
 DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
 /* wrap c type */
 DAO_DLL int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
 /* wrap c types, the last item in typer[] should be NULL;
-types that are cross-used in parameter lists
-(e.g. type A appears in the parameter list of B's methods,
-and type B appears in the parameter list of A's methods),
-should be wrapd using this function.
-*/
+   types that are cross-used in parameter lists
+   (e.g. type A appears in the parameter list of B's methods,
+   and type B appears in the parameter list of A's methods),
+   should be wrapd using this function.
+ */
 DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 /* wrap c function */
 DAO_DLL int DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
@@ -1168,6 +1170,7 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DaoVmProcess_Compile( self, ns, s, r ) __dao.DaoVmProcess_Compile( self, ns, s, r )
 #define DaoVmProcess_Eval( self, ns, src, rp ) __dao.DaoVmProcess_Eval( self, ns, src, rp )
 #define DaoVmProcess_Call( s, r, o, p, n )  __dao.DaoVmProcess_Call( s, r, o, p, n )
+#define DaoVmProcess_Stop( self )  __dao.DaoVmProcess_Stop( self )
 #define DaoVmProcess_GetReturned( s )  __dao.DaoVmProcess_GetReturned( s )
 
 #define DaoNameSpace_New( vms )  __dao.DaoNameSpace_New( vms )
@@ -1222,64 +1225,64 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 /* the parameter must be: NULL, or argv[0], or a Dao DLL file */
 static int DaoInitLibrary( const char *bin )
 {
-  FuncInitAPI pfunc;
-  void *handle = NULL;
-  char *daodir = getenv( "DAO_DIR" );
-  char *daolib = NULL;
-  int k=0;
+    FuncInitAPI pfunc;
+    void *handle = NULL;
+    char *daodir = getenv( "DAO_DIR" );
+    char *daolib = NULL;
+    int k=0;
 
-  /* Dao DLL file: */
-  if( bin && strcmp( bin + (strlen( bin ) - strlen( DAO_DLL_SUFFIX )), DAO_DLL_SUFFIX ) ==0 ){
-    handle = DaoLoadLibrary( bin );
-    pfunc = (FuncInitAPI)DaoFindSymbol( handle, "DaoInit" );
+    /* Dao DLL file: */
+    if( bin && strcmp( bin + (strlen( bin ) - strlen( DAO_DLL_SUFFIX )), DAO_DLL_SUFFIX ) ==0 ){
+        handle = DaoLoadLibrary( bin );
+        pfunc = (FuncInitAPI)DaoFindSymbol( handle, "DaoInit" );
+        if( pfunc == NULL ) return 0;
+        (*pfunc)( & __dao );
+        return 1;
+    }
+    handle = DaoLoadLibrary( "./dao" DAO_DLL_SUFFIX );
+    if( daodir == NULL && bin && bin[0] == '/' && strstr( bin, "/bin/" ) ==NULL ){
+        /* set the DAO_DIR environment variable if the command is
+         * started from a customized directory.
+         * for example, in web scripts, it may have:
+         *
+         * #!/home/some_user/some_dir/dao
+         *
+         * some_scripts();
+         *
+         * in such cases, setting DAO_DIR will allow the interpreter to
+         * find the library and module locations properly. */
+        k = strlen( bin );
+        if( strcmp( bin + k - 4, "/dao" ) ==0 ){
+            daodir = (char*) malloc( k + 10 );
+            strncpy( daodir, "DAO_DIR=", 9 );
+            strncat( daodir, bin, k - 4 );
+            putenv( daodir );
+            daodir += 8;
+        }
+    }
+    if( handle == NULL && daodir ){
+        k = strlen( daodir );
+        daolib = (char*) malloc( k + 10 );
+        strncpy( daolib, daodir, k + 1 );
+        if( daolib[k] == '/' ) daolib[k] = 0;
+        strcat( daolib, "/dao" DAO_DLL_SUFFIX );
+        handle = DaoLoadLibrary( daolib );
+        free( daolib );
+    }
+    if( handle == NULL ) handle = DaoLoadLibrary( "~/dao/dao" DAO_DLL_SUFFIX );
+    if( handle == NULL ) handle = DaoLoadLibrary( DAO_LIB_DEFAULT );
+    if( handle == NULL ){
+        /*
+           printf( "%s\n", dlerror() );
+         */
+        printf( "loading Dao library file failed\n" );
+        return 0;
+    }
+
+    pfunc = (FuncInitAPI)DaoFindSymbol( handle, "DaoInitAPI" );
     if( pfunc == NULL ) return 0;
     (*pfunc)( & __dao );
     return 1;
-  }
-  handle = DaoLoadLibrary( "./dao" DAO_DLL_SUFFIX );
-  if( daodir == NULL && bin && bin[0] == '/' && strstr( bin, "/bin/" ) ==NULL ){
-    /* set the DAO_DIR environment variable if the command is
-     * started from a customized directory.
-     * for example, in web scripts, it may have:
-     *
-     * #!/home/some_user/some_dir/dao
-     *
-     * some_scripts();
-     *
-     * in such cases, setting DAO_DIR will allow the interpreter to
-     * find the library and module locations properly. */
-    k = strlen( bin );
-    if( strcmp( bin + k - 4, "/dao" ) ==0 ){
-      daodir = (char*) malloc( k + 10 );
-      strncpy( daodir, "DAO_DIR=", 9 );
-      strncat( daodir, bin, k - 4 );
-      putenv( daodir );
-      daodir += 8;
-    }
-  }
-  if( handle == NULL && daodir ){
-    k = strlen( daodir );
-    daolib = (char*) malloc( k + 10 );
-    strncpy( daolib, daodir, k + 1 );
-    if( daolib[k] == '/' ) daolib[k] = 0;
-    strcat( daolib, "/dao" DAO_DLL_SUFFIX );
-    handle = DaoLoadLibrary( daolib );
-    free( daolib );
-  }
-  if( handle == NULL ) handle = DaoLoadLibrary( "~/dao/dao" DAO_DLL_SUFFIX );
-  if( handle == NULL ) handle = DaoLoadLibrary( DAO_LIB_DEFAULT );
-  if( handle == NULL ){
-    /*
-    printf( "%s\n", dlerror() );
-    */
-    printf( "loading Dao library file failed\n" );
-    return 0;
-  }
-
-  pfunc = (FuncInitAPI)DaoFindSymbol( handle, "DaoInitAPI" );
-  if( pfunc == NULL ) return 0;
-  (*pfunc)( & __dao );
-  return 1;
 }
 #endif
 

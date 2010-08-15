@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms 
+  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifndef DAO_CONTEXT_H
 #define DAO_CONTEXT_H
@@ -21,41 +21,41 @@
 
 struct DaoVmcArray
 {
-  DaoVmCode *codes;
-  DaoVmCode *buf;
-  ushort_t   size;
-  ushort_t   bufsize;
+    DaoVmCode *codes;
+    DaoVmCode *buf;
+    ushort_t   size;
+    ushort_t   bufsize;
 };
 
 /* running time context for dao routine. */
 struct DaoContext
 {
-  DAO_DATA_COMMON
+    DAO_DATA_COMMON;
 
-  DaoVmCode  *codes;
-  DaoVmCode  *vmc; /* current virtual machine code */
-  DaoVmFrame *frame;
-  
-  DVaTuple  *regArray; /* virtual registers for the call */
-  DValue   **regValues;
-  DaoType  **regTypes; /* = routine->regType->items.pAbtp; */
+    DaoVmCode  *codes;
+    DaoVmCode  *vmc; /* current virtual machine code */
+    DaoVmFrame *frame;
 
-  ushort_t  entryCode;
-  ushort_t  idClearFE;
-  ushort_t  parCount;
-  uchar_t   ctxState;
-  uchar_t   constCall;
+    DVaTuple  *regArray; /* virtual registers for the call */
+    DValue   **regValues;
+    DaoType  **regTypes; /* = routine->regType->items.pAbtp; */
 
-  DaoRoutine   *routine; /* routine prototype */
-  DaoObject    *object; /* self object */
-  DaoNameSpace *nameSpace;
-  DaoVmSpace   *vmSpace;
+    ushort_t  entryCode;
+    ushort_t  idClearFE;
+    ushort_t  parCount;
+    uchar_t   ctxState;
+    uchar_t   constCall;
 
-  DaoContext   *caller;
-  DaoVmProcess *process;
+    DaoRoutine   *routine; /* routine prototype */
+    DaoObject    *object; /* self object */
+    DaoNameSpace *nameSpace;
+    DaoVmSpace   *vmSpace;
 
-  /* the currently called wrapped C function, for DaoCLoader module only. */
-  DaoFunction *thisFunction;
+    DaoContext   *caller;
+    DaoVmProcess *process;
+
+    /* the currently called wrapped C function, for DaoCLoader module only. */
+    DaoFunction *thisFunction;
 
 };
 

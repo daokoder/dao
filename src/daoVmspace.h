@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms 
+  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifndef DAO_VMSPACE_H
 #define DAO_VMSPACE_H
@@ -28,57 +28,57 @@
  */
 struct DaoVmSpace
 {
-  DAO_DATA_COMMON
-  
-  /* To run the main script specified in the commad line (or the first loaded one),
-   * or scripts from an interactive console. */
-  DaoVmProcess  *mainProcess;
-  /* To store globals in the main script,
-   * or scripts from an interactive console. */
-  DaoNameSpace  *mainNamespace;
+    DAO_DATA_COMMON;
 
-  /* for some internal scripts and predefined objects or types */
-  DaoNameSpace  *nsInternal;
+    /* To run the main script specified in the commad line (or the first loaded one),
+     * or scripts from an interactive console. */
+    DaoVmProcess  *mainProcess;
+    /* To store globals in the main script,
+     * or scripts from an interactive console. */
+    DaoNameSpace  *mainNamespace;
 
-  DaoThdMaster  *thdMaster;
-  DaoStream     *stdStream;
+    /* for some internal scripts and predefined objects or types */
+    DaoNameSpace  *nsInternal;
 
-  DArray *processes;
+    DaoThdMaster  *thdMaster;
+    DaoStream     *stdStream;
 
-  DString *pathWorking;
-  DArray  *nameLoading;
-  DArray  *pathLoading;
-  DArray  *pathSearching; /* <DString*> */
-  
-  DString *srcFName;
-  DString *source;
-  int options;
-  int state;
-  int stopit;
-  int safeTag;
+    DArray *processes;
 
-  DMap  *vfiles;
+    DString *pathWorking;
+    DArray  *nameLoading;
+    DArray  *pathLoading;
+    DArray  *pathSearching; /* <DString*> */
 
-  /* map full file name (including path and suffix) to module namespace */
-  DMap  *nsModules;
-  /* map file name (excluding path and suffix) to module namespace:
-   * mainly for requiring modules in load statement */
-  DMap  *modRequire;
-  DMap  *allTokens;
+    DString *srcFName;
+    DString *source;
+    int options;
+    int state;
+    int stopit;
+    int safeTag;
 
-  DaoList *argParams;
+    DMap  *vfiles;
 
-  DaoUserHandler *userHandler;
+    /* map full file name (including path and suffix) to module namespace */
+    DMap  *nsModules;
+    /* map file name (excluding path and suffix) to module namespace:
+     * mainly for requiring modules in load statement */
+    DMap  *modRequire;
+    DMap  *allTokens;
 
-  char* (*ReadLine)( const char *prompt );
-  void  (*AddHistory)( const char *cmd );
+    DaoList *argParams;
 
-  DMap *friendPids;
+    DaoUserHandler *userHandler;
+
+    char* (*ReadLine)( const char *prompt );
+    void  (*AddHistory)( const char *cmd );
+
+    DMap *friendPids;
 
 #ifdef DAO_WITH_THREAD
-  DMutex  mutexLoad;
-  DMutex  mutexProc;
-  int locked;
+    DMutex  mutexLoad;
+    DMutex  mutexProc;
+    int locked;
 #endif
 };
 

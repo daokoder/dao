@@ -7,16 +7,16 @@ author: Fu Limin (phoolimin@gmail.com)
 
 routine BernsteinHash( key : string )
 {
-  hash = 0;
-  for( i = 0 : key.size()-1 ) hash = 33*hash + key[i];
-  return hash;
+	hash = 0;
+	for( i = 0 : key.size()-1 ) hash = 33*hash + key[i];
+	return hash;
 }
 routine RotatingHash( key : string )
 {
-  n = key.size();
-  hash = (double) n;
-  for( i = 0 : n-1 ) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
-  return hash % 997;
+	n = key.size();
+	hash = (double) n;
+	for( i = 0 : n-1 ) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
+	return hash % 997;
 }
 
 ###########################
@@ -41,11 +41,11 @@ global enum{
 	CT_ULONG ,
 	CT_FLOAT ,
 	CT_DOUBLE ,
-  CT_COMPLEX8, 
-  CT_COMPLEX16,
+	CT_COMPLEX8, 
+	CT_COMPLEX16,
 	CT_VOID ,
 	CT_FILE ,
-
+	
 	DAO_NIL_101 = 101,
 	DAO_STRING ,
 	DAO_LIST ,
@@ -122,7 +122,7 @@ const DAO_TYPES =
 	"int" , "int" , "int" , "int" , "int" ,
 	"int" , "int" , "int" , "int" , "int" ,
 	"int" , "int" , "int" , "float" , "double" ,
-  "complex", "complex",
+	"complex", "complex",
 	"cdata" , "stream"
 }
 
@@ -166,7 +166,7 @@ class Variable
 	var source2 = '';
 	var name = '';
 	var type = '';
-  var type_trans = '';
+	var type_trans = '';
 	var typeid = -1;
 	var isconst = 0;
 	var refer = ''; # *, **, &
@@ -175,10 +175,10 @@ class Variable
 	var vdefault = '';
 	var cxxdefault = '';
 	var host = '';
-
+	
 	var daotype = '';
 	var cxxtype = '';
-  var cxxtype2 = '';
+	var cxxtype2 = '';
 	var cxxcall = '';
 	var daopar = ''; # name : type [ = default ]
 	var cxxpar = ''; # type [*] name [ \[\] ]
@@ -191,14 +191,14 @@ class Variable
 	var getter = '';
 	var setter = '';
 	var unsupport = 0;
-  var isCallback = 0;
-
-  routine Variable( src : string, id = 0, src2 = '' ){
-  index = id;
-  source = src;
-  source2 = src2;
-  }
-  routine Parse( fname = '' );
+	var isCallback = 0;
+	
+	routine Variable( src : string, id = 0, src2 = '' ){
+		index = id;
+		source = src;
+		source2 = src2;
+	}
+	routine Parse( fname = '' );
 	routine Generate( cxx_no_self=0);
 	routine Clean(){
 		daotype.clear();
@@ -239,26 +239,26 @@ class Function
 	var hostType = '';
 	var daoName = '';
 	var cxxName = '';
-  var snamespace = '';
+	var snamespace = '';
 	var nameSuffix = ''; # name suffix to distinguish overloaded functions
 	var tilde = ''; # destructor tilde symbol: hostType::~hostType()
 	var attribs = 0;
 	var input_file = '';
 	var source = '';
-
+	
 	var retype : Variable;
 	var parlist : list<Variable> = {};
-
+	
 	var extraCodes = {};
-
+	
 	var excluded = 0;
 	var nowrap = 0;
-  var isCallback = 0;
-  var reimplemented = '';
+	var isCallback = 0;
+	var reimplemented = '';
 	var overload = '';
 	var signature = '';
 	var signature2 = '';
-  var cppSelf = '';
+	var cppSelf = '';
 	var cxxWrapName = ''; # dao_host_meth
 	var cxxWrapper = '';
 	var cxxWrapperVirt = '';
@@ -271,23 +271,23 @@ class Function
 	var qtSlotSlotCode = '';
 	var qtSignalSlotDecl = '';
 	var qtSignalSlotCode = '';
-  var calls_with_defaults : list<tuple<int,string>> = {};
-
-# Dao routine prototype for the wrapping function:
-# { dao_func_wrapping, "func( vec : array<int>, N : int )" },
+	var calls_with_defaults : list<tuple<int,string>> = {};
+	
+	# Dao routine prototype for the wrapping function:
+	# { dao_func_wrapping, "func( vec : array<int>, N : int )" },
 	var daoProtoCodes = '';
-
-# C prototype for the wrapping function:
-# void dao_func_wrapping( DaoContext *_ctx, DValue *_p[], int N )
+	
+	# C prototype for the wrapping function:
+	# void dao_func_wrapping( DaoContext *_ctx, DValue *_p[], int N )
 	var cxxProtoCodes = '';
-
+	
 	var cxxCallCodes = '';
 	var cxxProtoParam = '';
 	var cxxProtoParamDecl = '';
 	var cxxProtoParamVirt = '';
 	var cxxCallParam = '';
 	var cxxCallParamV = '';
-
+	
 	var codes = '';
 	var comments = '';
 	
@@ -301,12 +301,12 @@ class UserType
 {
 	var name = '';
 	var name2 = '';
-# 0: nested as private;
-# 1: nested as protected;
-# 2: not nested, or nested as public;
+	# 0: nested as private;
+	# 1: nested as protected;
+	# 2: not nested, or nested as public;
 	var nested = 2;
 	var source = '';
-  var snamespace = '';
+	var snamespace = '';
 	var isNameSpace = 0;
 	var isCallback = 0;
 	var isCppClass = 0;
@@ -326,7 +326,7 @@ class UserType
 	var isQObject = 0;
 	var isQWidget = 0;
 	var unsupport = 0;
-
+	
 	var fields : list<Variable> = {};
 	var methods : list<Function> = {};
 	var allocators : list<Function> = {};
@@ -341,14 +341,14 @@ class UserType
 	var classEnum : map<string,tuple<string,int>> = {=>}; # XXX not work without type decl
 	var classTypedef : map<string,int> = {=>}; # XXX not work without type decl
 	var intConsts = {};
-
+	
 	var restPureVirts = {};
 	var pureVirts = {};
-  var lastVirts : map<string,string> = {=>};
+	var lastVirts : map<string,string> = {=>};
 	var virtNonSupport : list<Function> = {};
-
+	
 	var input_file = '';
-
+	
 	var type_decls = '';
 	var type_codes = '';
 	var meth_decls = '';
@@ -356,7 +356,7 @@ class UserType
 	var dao_meths = '';
 	var alloc_default = 'NULL';
 	var cxxWrapperVirt = '';
-
+	
 	routine Parse( source = '', inExtFile=0 );
 	routine Generate();
 	routine GenerateMeth();
@@ -405,23 +405,23 @@ global functions = Functions();
 
 const pat_type = '<1>(static %s+|) <2>((const %s+|)) '
 '<3>( ( ((signed|unsigned|enum|struct)%s+) |)'
-		'( [%w:]+ (%b<> [%w:]* |) | long%s+ (((int|long|double))) ) )'
-		' %s* <4>(| %s | %*{1,2} | %& ) %s*'
-		'(|const %s*) <5>( %w* ) %s* <6>( %b[]{0,2} )'
-    '<7>(%s* = %s* ( [%+%-\'\"%w%.:%|]+ | [:%w]* %s* %b() ) |)';
+'( [%w:]+ (%b<> [%w:]* |) | long%s+ (((int|long|double))) ) )'
+' %s* <4>(| %s | %*{1,2} | %& ) %s*'
+'(|const %s*) <5>( %w* ) %s* <6>( %b[]{0,2} )'
+'<7>(%s* = %s* ( [%+%-\'\"%w%.:%|]+ | [:%w]* %s* %b() ) |)';
 
 const pat_type2 = '<1>(static %s+|) <2>((const %s+|)) '
 '<3>( ( ((signed|unsigned|enum|struct)%s+) |)'
-		'( [%w:]+ (%b<> [%w:]* |) |long%s+ (((int|long|double))) ) )'
-		' %s* <4>(| %s | %*{1,2} | %& ) %s*'
-		'(|const %s*) <5>( %w+ ) %s* <6>( %b[]{0,2} )'
-    '<7>(%s* = %s* ([%+%-\'\"%w%.:%|]+) |);';
+'( [%w:]+ (%b<> [%w:]* |) |long%s+ (((int|long|double))) ) )'
+' %s* <4>(| %s | %*{1,2} | %& ) %s*'
+'(|const %s*) <5>( %w+ ) %s* <6>( %b[]{0,2} )'
+'<7>(%s* = %s* ([%+%-\'\"%w%.:%|]+) |);';
 # virtual void bar() const : alias =0;
 const pat_funct = 
 '(|template %s* %b<> %s*)'
 '<1>( ((static|virtual) %s+|) (%w+::|) ( [^\n:;%(%)%{%}]* (%b<>|) ) (%s*|) ([%*%&] %s*|) )'
-	'( <2>(%w+) :: | ) <3>((( %w+ | operator %W+ ))) %s* <4>( %b() ) [%s%w]* (: %s* %w+ |)'
-	'<5>(%s* = %s* 0 |) %s* ( ; | %b{} )';
+'( <2>(%w+) :: | ) <3>((( %w+ | operator %W+ ))) %s* <4>( %b() ) [%s%w]* (: %s* %w+ |)'
+'<5>(%s* = %s* 0 |) %s* ( ; | %b{} )';
 # callback function pointer
 const pat_callback = 
 '([^\n%(%)%{%};]*) %( (%s*%*%s*(%w+)) %s* (%b[] |) %s* %)%s* (%b())%s* ;';
@@ -432,7 +432,7 @@ const pat_struct = '(class|struct|union|namespace|callback) %s+ (( %w+ )) (%s*) 
 '( : %s* %w [%w%s,]+ |) ( %b{} ) %s* (;|)';
 
 routine ParseFunction( funcs : list<Function>, source='', host='', input='', 
-    attribs=0, snamespace='' )
+attribs=0, snamespace='' )
 {
 	excluded = 0;
 	if( source.pfind( '(^|%W) operator %W' ) ) return;
@@ -448,38 +448,38 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 	ret = tks[1];
 	name = tks[3];
 	pars = tks[4];
-  #pars.change( '= %s* ( %w+ ) %s* %b()', '=%1' );
+	#pars.change( '= %s* ( %w+ ) %s* %b()', '=%1' );
 	if( name.find( 'EXCLUDE_' ) >= 0 ) excluded = 1;
 	if( name.find( 'operator' ) >= 0 ) excluded = 1;
 	if( tks[2] ) return; # skip class::method()
 	if( pars.pfind( '%] %s* %[' ) ) excluded = 1; # XXX skip a[][]
 	if( pars.pfind( '%* %s* %w+ %s* %[' ) ){
-    pts = pars.extract( '(%w+) %* %s* %w+ %s* %[' );
-    for( pt in pts ) if( not pt.pfind( '(short|int|float|double)' ) ) excluded = 1;
-    #return; # XXX skip *a[]
-  }
+		pts = pars.extract( '(%w+) %* %s* %w+ %s* %[' );
+		for( pt in pts ) if( not pt.pfind( '(short|int|float|double)' ) ) excluded = 1;
+		#return; # XXX skip *a[]
+	}
 	if( pars.pfind( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) ) excluded = 1;
 	#if( pars.pfind( '(char|wchar_t) %s* %*%* %s* %w+' ) ) excluded = 1;
 	if( pars.pfind( '%) %s* %(' ).size() || pars.pfind( '%W ((%s*)) %(' ).size()
-			|| ret.pfind( 'template' ).size() ){
+	|| ret.pfind( 'template' ).size() ){
 		log_file.println( source );
-    excluded = 1;
+		excluded = 1;
 	}
 	if( name != host && ret.pfind( '%w' ).size()==0 ){
 		log_file.println( source );
-    excluded = 1;
+		excluded = 1;
 	}
 	if( source.pfind( '(short|int|long|float|double) %s* %* %s* %*' ) ){
 		log_file.println( source );
-    excluded = 1;
+		excluded = 1;
 	}
-  #pars.change( '= %s* ([:%w]+) %s* %b()', '=0' );
-  #if( pars.pfind( '= %s* ([:%w]+) %s* %b()' ) ) excluded = 1;
+	#pars.change( '= %s* ([:%w]+) %s* %b()', '=0' );
+	#if( pars.pfind( '= %s* ([:%w]+) %s* %b()' ) ) excluded = 1;
 	parts = pars.extract( pat_type );
 	pars.change( pat_type, '' );
 	if( pars.pfind( '%( [,%s]* %)' ).size() ==0 ){
 		log_file.println( source );
-    excluded = 1;
+		excluded = 1;
 	}
 	if( source.pfind( 'typedef %s' ) ){
 		log_file.println( source );
@@ -498,8 +498,8 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 	func.attribs |= attribs;
 	func.source = source2;
 	func.excluded = excluded;
-  func.snamespace = snamespace;
-
+	func.snamespace = snamespace;
+	
 	if( ret.pfind( '^ %s* virtual %s+' ) ){
 		func.attribs |= FUNC_VIRTUAL;
 		if( tks[5] ) func.attribs |= FUNC_PURE_VIRTUAL;
@@ -513,10 +513,10 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 	func.retype = Variable( ret + ' _' + name, INDEX_RETURN, source );
 	func.retype.host = host;
 	func.retype.Parse( input );
-  if( excluded ){
-    funcs.append( func );
-    return;
-  }
+	if( excluded ){
+		funcs.append( func );
+		return;
+	}
 	for( i = 0 : parts.size()-1 ){
 		vo = Variable( parts[i], i, source );
 		vo.host = host;
@@ -529,9 +529,9 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 		vo = func.parlist[i];
 		var2 = func.parlist[i+1];
 		if( var2.typeid >= CT_SHORT && var2.typeid <= CT_ULONG
-				&& var2.refer =='' && var2.square =='' ){
+		&& var2.refer =='' && var2.square =='' ){
 			if( vo.refer == '*' && vo.square == ''
-					&& vo.typeid >= CT_SHORT && vo.typeid <= CT_COMPLEX16){
+			&& vo.typeid >= CT_SHORT && vo.typeid <= CT_COMPLEX16){
 				vo.refer = '';
 				vo.square = '[]';
 				vo.sqsizes.append( '0' );
@@ -664,22 +664,22 @@ routine UserType::Parse( source='', inExtFile=0 )
 			hasMember = 1;
 		}
 		for( part in parts ){
-      ispure = 0;
+			ispure = 0;
 			if( part.pfind( '= %s* 0 %s*;' ) ){
-        ispure = 1;
-        isPureVirt = 1;
-        hasVirtual = 1;
-        if( i == 0 ) noWrapping = 1;
-      }
+				ispure = 1;
+				isPureVirt = 1;
+				hasVirtual = 1;
+				if( i == 0 ) noWrapping = 1;
+			}
 			if( part.pfind( 'virtual ? %s* %~ %s* %w+' ).size() ){
 				noDestructor = (i != 2);
-        if( ispure ) noWrapping = 1;
+				if( ispure ) noWrapping = 1;
 				skip; # XXX
 			}
 			tks = part.capture( pat );
 			#attribs = (i==1||i==3||i==5) ? FUNC_PROTECTED : 0;
 			attribs = (i==1||i==3) ? FUNC_PROTECTED : 0;
-      if( i==5 ) attribs = FUNC_PRIVATE;
+			if( i==5 ) attribs = FUNC_PRIVATE;
 			if( not isCppClass and not isCallback ){
 				if( tks[4] ) skip; # struct x{ void (*func[10])(int i); }
 				part = tks[1] + tks[3] + tks[5] + ';';
@@ -691,14 +691,14 @@ routine UserType::Parse( source='', inExtFile=0 )
 				pat2 = 'virtual ((%s+)) ( [^%(%)]* %b() [%s%w]* ) = %s* 0';
 				tks = part.capture( pat2 );
 				if( tks ){
-          restPureVirts.append( { name, tks[3] } );
-        }
+					restPureVirts.append( { name, tks[3] } );
+				}
 			}else{
 				func = funclist.back();
 				switch(i){
-				case 3: func.attribs |= QT_SLOT; protslots.append( func );
-				case 4: func.attribs |= QT_SLOT; pubslots.append( func );
-				case 5: func.attribs |= QT_SIGNAL; protsignals.append( func );
+					case 3: func.attribs |= QT_SLOT; protslots.append( func );
+					case 4: func.attribs |= QT_SLOT; pubslots.append( func );
+					case 5: func.attribs |= QT_SIGNAL; protsignals.append( func );
 				}
 			}
 		}
@@ -725,15 +725,15 @@ routine UserType::Parse( source='', inExtFile=0 )
 				meth.attribs |= FUNC_VIRTUAL;
 			}
 		}
-    rep = '(%w[%w%s]*) ((%s*)) ([^,;%w]* %w+ [^;]*) , ((%s*)) ([%s%*]* %w+ [^,;]* ;)';
-    while( src.change( rep, '%1 %4;\n%1 %7' ) );
+		rep = '(%w[%w%s]*) ((%s*)) ([^,;%w]* %w+ [^;]*) , ((%s*)) ([%s%*]* %w+ [^,;]* ;)';
+		while( src.change( rep, '%1 %4;\n%1 %7' ) );
 		parts = src.extract( pat_type2 );
 		src.change( '%s+', '' );
-#{
-		if( name == 'mglGraphAB' ) io.println( src, parts );
-		if( src.pfind( 'std' ) ) io.println( src ); # DEBUG
-		io.println( parts ); # DEBUG
-#}
+		#{
+				if( name == 'mglGraphAB' ) io.println( src, parts );
+				if( src.pfind( 'std' ) ) io.println( src ); # DEBUG
+				io.println( parts ); # DEBUG
+		#}
 		if( i == 2 ){ # public fields only
 			selfield = '';
 			prevar = '';
@@ -792,18 +792,18 @@ routine UserType::Parse( source='', inExtFile=0 )
 		src.change( pat_type, '' );
 		source += src;
 	}
-  tt = '%W' + name + '%s* %( %s* %)';
-# private constructor:
+	tt = '%W' + name + '%s* %( %s* %)';
+	# private constructor:
 	if( psources[0].pfind( tt ) ) hasPrivConstr = 1;
-# protected constructor:
+	# protected constructor:
 	if( psources[1].pfind( tt ) ) hasProtConstr = 1;
 	if( hasPrivConstr and psources[2].pfind( tt ).size() ==0 ) noWrapping = 1;
-# private/protected constructor:
+	# private/protected constructor:
 	temp = name + '%s* %( %s* (const %s+|)' + name + '%s* %& %s* %w* %)';
 	if( psources[0].pfind( temp ) ) noCopyConstructor = 1;
 	if( psources[1].pfind( temp ) ) noCopyConstructor = 1;
 	if( psources[2].pfind( temp ) ) copyConstructor = 1;
-
+	
 	source.change( '[%{%}%;]', '' );
 	source.simplify();
 	if( source.size() ){
@@ -825,9 +825,9 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			map_user_types[ name ] = utp;
 		}
 		utp = map_user_types[ name ];
-    utp.snamespace = snamespace;
-    utp.input_file = fname;
-    if( snamespace ) map_ns_types[ snamespace + '::' + name ] = utp;
+		utp.snamespace = snamespace;
+		utp.input_file = fname;
+		if( snamespace ) map_ns_types[ snamespace + '::' + name ] = utp;
 		if( type == 'namespace' ) utp.isNameSpace = 1;
 		if( type == 'callback' ) utp.isCallback = 1;
 		if( type == 'class' || (type == 'struct' && lang != 'c') ) utp.isCppClass = 1;
@@ -836,9 +836,9 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			map_user_types[ 'struct ' + name ] = utp;
 			map_user_types[ 'union ' + name ] = utp;
 		}
-    body = tks[6];
-    if( utp.isNameSpace ) body = ParseCode( body, utp.name, lang, fname, inExtFile );
-    utp.Parse( body, inExtFile );
+		body = tks[6];
+		if( utp.isNameSpace ) body = ParseCode( body, utp.name, lang, fname, inExtFile );
+		utp.Parse( body, inExtFile );
 		supers = tks[5].extract( '(private|protected|public) %s+ (%w+)' );
 		for( sup in supers ){
 			tks2 = sup.capture( '(private|protected|public) %s+ (%w+)' );
@@ -850,12 +850,12 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			utp2 = map_user_types[ name2 ];
 			utp.supers.append( utp2 );
 			for( k in utp2.classEnum.keys(); v in utp2.classEnum.values() )
-				if( not utp.classEnum.has( k ) ) utp.classEnum[k] = v;
+			if( not utp.classEnum.has( k ) ) utp.classEnum[k] = v;
 			for( k in utp2.classTypedef.keys(); v2 in utp2.classTypedef.values() )
-				if( not utp.classTypedef.has( k ) ) utp.classTypedef[k] = v2;
+			if( not utp.classTypedef.has( k ) ) utp.classTypedef[k] = v2;
 		}
 	}
-		
+	
 	const pat_struct2 = 'typedef %s+ (const %s+ |) (struct|union) %s+ (%w+) %s+ (%w+) %s*;';
 	parts = source.extract( pat_struct2 );
 	source.change( pat_struct2, '' );
@@ -868,7 +868,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			map_user_types[ alias ] = utp;
 		}
 		utp = map_user_types[ alias ];
-    utp.input_file = fname;
+		utp.input_file = fname;
 		utp.name = name;
 		map_user_types[ name ] = utp;
 		map_user_types[ 'struct ' + name ] = utp; # XXX better handle struct typedef
@@ -876,10 +876,10 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 		map_user_types[ 'union ' + name ] = utp;
 		map_user_types[ 'union ' + alias ] = utp;
 	}
-
-  ns_utp : UserType;
-  if( snamespace ) ns_utp = map_user_types[ snamespace ];
-
+	
+	ns_utp : UserType;
+	if( snamespace ) ns_utp = map_user_types[ snamespace ];
+	
 	const pat_enum = 'enum %s+ (%w*) %s* (%b{}) %s* ;';
 	parts = source.extract( pat_enum );
 	source.change( pat_enum, '' );
@@ -887,23 +887,23 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 		tks = part.capture( pat_enum );
 		ename = tks[1];
 		enums = tks[2];
-    if( snamespace ) ns_utp.classEnum[ ename ] = ( snamespace, 1 );
-    if( ename ){
-      ename2 = ename;
-      if( snamespace ) ename2 = snamespace + '::' + ename;
-      enumMap[ ename ] = 1;
-      if( not CT_MAP.has( ename2 ) ){
-        CT_MAP[ ename2 ] = CT_INT;
-        basic_typedefs.append( ( snamespace, 'int', ename ) );
-      }
-    }
-    enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>]*', '' );
+		if( snamespace ) ns_utp.classEnum[ ename ] = ( snamespace, 1 );
+		if( ename ){
+			ename2 = ename;
+			if( snamespace ) ename2 = snamespace + '::' + ename;
+			enumMap[ ename ] = 1;
+			if( not CT_MAP.has( ename2 ) ){
+				CT_MAP[ ename2 ] = CT_INT;
+				basic_typedefs.append( ( snamespace, 'int', ename ) );
+			}
+		}
+		enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>]*', '' );
 		names = enums.extract( '%w+' );
 		for( name in names ) constNumbers.append( ( snamespace, 'DAO_INTEGER', name, name, inExtFile ) );
 	}
-
+	
 	const pat_typedef = 'typedef %s* ( %s+ const |) (( %s+ ))'
-		'<1>( [%w:%s] + ) ((%s+) | (%s*) <2>(%*) (%s*) ) <3>(%w+) %s*;';
+	'<1>( [%w:%s] + ) ((%s+) | (%s*) <2>(%*) (%s*) ) <3>(%w+) %s*;';
 	parts = source.extract( pat_typedef );
 	source.change( pat_typedef, '' );
 	for( part in parts ){
@@ -911,38 +911,38 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 		name = tks[1];
 		alias = tks[3];
 		if( alias.find( 'Fl_Callback_p' ) >=0 ) io.print( alias, ',', name, '\n' );
-    scoped = '';
-    if( snamespace ) scoped = snamespace + '::' + alias;
-# be sure that file order does not matter here
-# type alias may has been used before this file is parsed
-#
+		scoped = '';
+		if( snamespace ) scoped = snamespace + '::' + alias;
+		# be sure that file order does not matter here
+		# type alias may has been used before this file is parsed
+		#
 		if( alias != name and map_user_types.has( alias ) and map_user_types.has( name ) ){
 			map_user_types[ alias ].isAlias = 1;
 			map_user_types[ alias ] = map_user_types[ name ];
 			map_user_types[ 'struct ' + alias ] = map_user_types[ name ];
 			map_user_types[ 'union ' + alias ] = map_user_types[ name ];
 		}
-    if( snamespace ) ns_utp.classTypedef[ alias ] = -1;
+		if( snamespace ) ns_utp.classTypedef[ alias ] = -1;
 		if( CT_MAP.has( name ) ){
-      if( snamespace ) ns_utp.classTypedef[ alias ] = CT_MAP[ name ];
+			if( snamespace ) ns_utp.classTypedef[ alias ] = CT_MAP[ name ];
 			if( not CT_MAP.has( alias ) ) CT_MAP[ alias ] = CT_MAP[ name ];
 			basic_typedefs.append( ( snamespace, DAO_TYPES[ CT_MAP[ name ] ], alias ) );
-    }elif( snamespace != '' and ns_utp.classEnum.has( name ) ){
-      ns_utp.classTypedef[ alias ] = 1;
+		}elif( snamespace != '' and ns_utp.classEnum.has( name ) ){
+			ns_utp.classTypedef[ alias ] = 1;
 		}elif( map_user_types.has( name ) ){
 			map_user_types[ alias ] = map_user_types[ name ];
 			if( snamespace ) map_user_types[ scoped ] = map_user_types[ name ];
-    }elif( map_ns_types.has( name ) ){
-      typedef_ns_types[alias] = map_ns_types[name];
-    }elif( snamespace ){
-      typer = snamespace + '_' + alias;
-      utp = UserType{ name => typer, input_file => fname };
-      if( tks[1] == 'class' ) utp.isCppClass = 1;
-      utp.name2 = scoped;
-      utp.nested = 2;
-      map_user_types[ scoped ] = utp;
-    }
-    if( snamespace ) otherClassTypedef[ scoped ] = ns_utp.classTypedef[ alias ];
+		}elif( map_ns_types.has( name ) ){
+			typedef_ns_types[alias] = map_ns_types[name];
+		}elif( snamespace ){
+			typer = snamespace + '_' + alias;
+			utp = UserType{ name => typer, input_file => fname };
+			if( tks[1] == 'class' ) utp.isCppClass = 1;
+			utp.name2 = scoped;
+			utp.nested = 2;
+			map_user_types[ scoped ] = utp;
+		}
+		if( snamespace ) otherClassTypedef[ scoped ] = ns_utp.classTypedef[ alias ];
 		if( tks[2] == '*' ) pointer_types[ alias ] = name;
 		if( pointer_types.has( name ) ) pointer_types[ alias ] = pointer_types[name];
 		if( name.pfind( '(struct|union)' ) ){
@@ -962,7 +962,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 		basic_typedefs.append( ( snamespace, 'int', tk1 ) );
 		basic_typedefs.append( ( snamespace, tk1, tk2 ) );
 	}
-
+	
 	const pat_usercst = '%s* const %s+ (%w+) (%s+ | %s* (%*) %s*) (%w+) %s* ;';
 	parts = source.extract( pat_usercst );
 	source.change( pat_usercst, '' );
@@ -976,38 +976,38 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			constCData.append( ( snamespace, utp, tks[4], inExtFile ) );
 		}
 	}
-
+	
 	parts = source.extract( pat_funct );
 	source.change( pat_funct, '' );
 	for( part in parts ){
-    ParseFunction( functions.funcs, part, snamespace, fname, 0, snamespace );
-  }
-  return source;
+		ParseFunction( functions.funcs, part, snamespace, fname, 0, snamespace );
+	}
+	return source;
 }
 routine ParseFile( file : string, dir = '', subdir='',
-		fixing : list<list<string>>={}, lang='', inExtFile=0 )
+fixing : list<list<string>>={}, lang='', inExtFile=0 )
 {
 	subdirs = subdir.split( ',' );
 	utp : UserType;
-
-  file2 = file;
+	
+	file2 = file;
 	source = io.read( file, 1 );
 	if( source =='' ){
-    source = io.read( dir + file, 1 );
-    file2 = dir + file;
-  }
+		source = io.read( dir + file, 1 );
+		file2 = dir + file;
+	}
 	if( source =='' ){
 		for( sb in subdirs ){
 			source = io.read( dir + sb + '/' + file, 1 );
-      file2 = dir + sb + '/' + file;
+			file2 = dir + sb + '/' + file;
 			if( source ) break;
 		}
 	}
-  if( source == '' ) return 0;
-
+	if( source == '' ) return 0;
+	
 	io.println( 'parsing file: ', file2 );
-
-# remove comments
+	
+	# remove comments
 	source.change( '%B{ / %* }{ %* / }', '' );
 	#source.change( '[^\n]*// %s* <I>Not %s+ implement [^\n]*', '' );
 	source.change( '//[^\n]*', '' );
@@ -1033,13 +1033,13 @@ routine ParseFile( file : string, dir = '', subdir='',
 		}
 		#do{ k = source.change( pat[0], pat[1] ); } until( k==0 );
 	}
-
+	
 	fname = file;
 	#fname.change( '%..*$', '' );
-
-# multi-line macro, concatenate lines
+	
+	# multi-line macro, concatenate lines
 	source.change( '\\ %s* [\n]', '' );
-# preprocessers
+	# preprocessers
 	source.change( '%B{ #%s* if %s* (%!|) %s* defined }{ #%s*endif}', '' );
 	source.change( '%B{ #%s* if %s+ 0 }{ #%s*endif}', '' );
 	source.change('(^|[\n])%s* #%s*(if|ifdef|ifndef|else|elif|endif)[^\n]*([\n]|$)','\n');
@@ -1047,54 +1047,54 @@ routine ParseFile( file : string, dir = '', subdir='',
 	source.change('(^|[\n])%s* #%s*if %s+ defined [^\n]*([\n]|$)','\n');
 	source.change('(^|[\n])#[^\n]* PRAGMA [^\n]*([\n]|$)','\n');
 	source.change('(^|[\n])#%s* include [^\n]*([\n]|$)','\n');
-
+	
 	source.change('(^|%s) (extern|inline|explicit) (%s|$)',' ');
-
+	
 	source.change('template %s* %b<> %s* %w+ %s* (: [%s%w,:%<%>]* |) %b{}', '' );
 	source.change('friend %s+ %w+ [^;]* ;', '' );
 	source.change('using %s+ [%w:]+ %s* ;', '' );
-
+	
 	source.change('(%W) unsigned %s+ short %s+ int (%W)', '%1 unsigned short %2' );
-
+	
 	source.change('const %s+ char %s* %* %s* const %s+ (%w+ %s* %b[])', 'const char *%1' );
-
+	
 	source.change( 'typedef %s+ enum %s+ ( %w+ ) ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
-			'enum %3%2;\ntypedef %3 %1;\n' );
+	'enum %3%2;\ntypedef %3 %1;\n' );
 	source.change( 'typedef %s+ enum %s* ( %b{} ) %s* ( %w+ )', 'enum %2 %1' );
-
+	
 	source.change( 'typedef %s+ struct ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
-			'struct %2%1;\n' );
+	'struct %2%1;\n' );
 	source.change( 'typedef %s+ struct %s+ ( %w+ ) ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
-			'struct %3%2;\ntypedef %3 %1;\n' );
+	'struct %3%2;\ntypedef %3 %1;\n' );
 	source.change( 'typedef %s+ union %s+ ( %w+ ) ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
-			'union %3%2;\ntypedef %3 %1;\n' );
+	'union %3%2;\ntypedef %3 %1;\n' );
 	source.change( 'typedef %s+ union ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
-			'union %2%1;\n' );
-
+	'union %2%1;\n' );
+	
 	source.change( '%) %s* : ([^%{%}]*) %b{}', ');' ); # nested constructors
 	source.change( '%) %s* (%w*) %s* %b{}', ')%1;' ); # nested/inline functions
-
-  cbfrom1 = 'typedef %s+ <1>(%w [^;]*) %( %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
-  cbfrom2 = 'typedef %s+ <1>(%w [^;]*) %( %s* %* %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
-  cbto1 = 'callback %2 {public:\n\t%1 callback %3;\n};';
-  cbto2 = 'callback %2_x {public:\n\t%1 callback %3;\n};\ntypedef %2_x * %2;';
-  source.change( cbfrom1, cbto1 );
-  source.change( cbfrom2, cbto2 );
-  #if( file == 'Fl_Widget.H' ) io.writeln( source );
-
-#{
-	source.change( 'struct %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ struct %s+ %1 %s+ ( %w+ ) %s* ; )', 'struct %5%2\ntypedef %5 %1;\n%3' );
-	source.change( 'typedef %s+ struct %s+ ( %w+ ) %s+ ( %w+ ) %s* ; (.*) struct %s* %1 ( %s* %b{} %s*; )', 'struct %2%4\ntypedef %2 %1;\n%3' );
-
-	source.change( 'union %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ union %s+ %1 %s+ ( %w+ ) %s* ; )', 'union %5%2\ntypedef %5 %1;\n%3' );
-#}
-
+	
+	cbfrom1 = 'typedef %s+ <1>(%w [^;]*) %( %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
+	cbfrom2 = 'typedef %s+ <1>(%w [^;]*) %( %s* %* %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
+	cbto1 = 'callback %2 {public:\n\t%1 callback %3;\n};';
+	cbto2 = 'callback %2_x {public:\n\t%1 callback %3;\n};\ntypedef %2_x * %2;';
+	source.change( cbfrom1, cbto1 );
+	source.change( cbfrom2, cbto2 );
+	#if( file == 'Fl_Widget.H' ) io.writeln( source );
+	
+	#{
+		source.change( 'struct %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ struct %s+ %1 %s+ ( %w+ ) %s* ; )', 'struct %5%2\ntypedef %5 %1;\n%3' );
+		source.change( 'typedef %s+ struct %s+ ( %w+ ) %s+ ( %w+ ) %s* ; (.*) struct %s* %1 ( %s* %b{} %s*; )', 'struct %2%4\ntypedef %2 %1;\n%3' );
+	
+		source.change( 'union %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ union %s+ %1 %s+ ( %w+ ) %s* ; )', 'union %5%2\ntypedef %5 %1;\n%3' );
+	#}
+	
 	#if( file.find( 'columnCount' ) >=0 ) io.println( source );
-
+	
 	#const pat_defcst = '#%s* define %s+ (%w+) %s*'
 	#	'(%s %d [%x%.]* | %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %) ) %s*';
 	const pat_defcst = '#%s* define %s+ (%w+)'
-		'(%s+ %d [%x%.]* | %s* %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %s* %) ) %s*';
+	'(%s+ %d [%x%.]* | %s* %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %s* %) ) %s*';
 	parts = source.extract( pat_defcst );
 	source.change( pat_defcst, '' );
 	for( part in parts ){
@@ -1106,11 +1106,11 @@ routine ParseFile( file : string, dir = '', subdir='',
 			constNumbers.append( ( '', 'DAO_INTEGER', name, name, inExtFile ) );
 		}
 	}
-  source.change( '#%s* define [^\n]*', '' ); # other macros
-
-  #if( file.find( 'vtkInformationInformationKey' ) >=0 ) io.println( source ); # DEBUG
-  source = ParseCode( source, '', lang, fname, inExtFile );
-
+	source.change( '#%s* define [^\n]*', '' ); # other macros
+	
+	#if( file.find( 'vtkInformationInformationKey' ) >=0 ) io.println( source ); # DEBUG
+	source = ParseCode( source, '', lang, fname, inExtFile );
+	
 	source.change( '[\n]{2,}', '\n\n' );
 	source.change( '%s+[\n]', '\n' );
 	source = source.chop();
@@ -1119,7 +1119,7 @@ routine ParseFile( file : string, dir = '', subdir='',
 		log_file.println( '========= UNPARSED CODES FROM FILE:', file, '=========' );
 		log_file.println( source );
 	}
-  return 1;
+	return 1;
 }
 
 
@@ -1514,7 +1514,7 @@ routine Variable::Parse( fname = '' )
 		name = source;
 		name.simplify();
 		type = '';
-    type_trans = '';
+		type_trans = '';
 		return;
 	}
 	if( source.size() ==0 ) return;
@@ -1523,9 +1523,9 @@ routine Variable::Parse( fname = '' )
 	#if( name.size() ==0 ) name = '_cp' + (index >=0) ? ((string) index) : '_ret';
 	if( name.size() ==0 ){
 		if( index >= 0 )
-			name = '_cp' + (string) index;
+		name = '_cp' + (string) index;
 		else
-			name = '_cp_ret';
+		name = '_cp_ret';
 	}
 	isconst = ( tks[2].size() !=0 );
 	type = tks[3];
@@ -1535,7 +1535,7 @@ routine Variable::Parse( fname = '' )
 	vdefault = tks[7];
 	vdefault.replace( '\"', '\\\"' );
 	#vdefault.change( '%b()', '' );
-  vdefault.change( '= %s* ([:%w]+) %s* %b()', '=0' );
+	vdefault.change( '= %s* ([:%w]+) %s* %b()', '=0' );
 	refer.simplify();
 	type.change( '%s%s+', ' ' );
 	square.change( '%s+', '' );
@@ -1575,30 +1575,30 @@ routine Variable::Parse( fname = '' )
 			map_user_types[ 'struct ' + type ] = utp;
 			if( utp.name[0:0] == '_' ){
 				io.println( 'debug:', utp.name, ',', source );
-        std.sleep(10);
-            #reflect.trace();
+				std.sleep(10);
+				#reflect.trace();
 			}
 		}
 	}
-  #io.writeln( name, type, refer, square, sqsizes );
+	#io.writeln( name, type, refer, square, sqsizes );
 	if( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
-			&& refer == '*' && square == '' ){
+	&& refer == '*' && square == '' ){
 		refer = '';
 		square = '[]';
 		sqsizes.append( '0' );
 	}elif( typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
-			&& refer == '*' && square == '[]' ){
+	&& refer == '*' && square == '[]' ){
 		refer = '';
 		square = '[][]';
 		sqsizes.append( '0' );
 	}elif( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
-			&& refer == '**' && square == '' ){
+	&& refer == '**' && square == '' ){
 		refer = '';
 		square = '[][]';
 		sqsizes.append( '0' );
 		sqsizes.append( '0' );
 	}
-  type_trans = type;
+	type_trans = type;
 	#io.println( name, type, refer, sqsizes.size() );
 }
 
@@ -1606,18 +1606,18 @@ global qt_container = '^ (QList|QVector)(P|)_(%w+) $';
 
 routine Variable::Generate( cxx_no_self =0 )
 {
-  if( type == 'unsigned' ){
-    type = 'unsigned';
-    typeid = CT_UINT;
-  }elif( type.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
-    tks = type.capture( '^ unsigned %s (%w+) $' );
-    if( tks.size() ){
-      type = 'unsigned';
-      typeid = CT_UINT;
-      name = tks[1];
-    }
-  }
-  type_trans = type;
+	if( type == 'unsigned' ){
+		type = 'unsigned';
+		typeid = CT_UINT;
+	}elif( type.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
+		tks = type.capture( '^ unsigned %s (%w+) $' );
+		if( tks.size() ){
+			type = 'unsigned';
+			typeid = CT_UINT;
+			name = tks[1];
+		}
+	}
+	type_trans = type;
 	#if( type == 'SectionFlags' ) 
 	#if( type.pfind( 'PaintDeviceMetric' ) ) io.println( type, map_user_types.has( type ) );
 	list_item = type.capture( qt_container );
@@ -1625,42 +1625,42 @@ routine Variable::Generate( cxx_no_self =0 )
 	if( typeid <0 && map_user_types.has( host ) ){
 		utp = map_user_types[ host ];
 		if( utp.classEnum.has( type ) ){
-      v = utp.classEnum[type];
+			v = utp.classEnum[type];
 			type = v[0] + '::' + type;
-      type_trans = type;
-      if( not v[1] ) type_trans = 'int';
+			type_trans = type;
+			if( not v[1] ) type_trans = 'int';
 			isClassEnum = 1;
 			typeid = 1;
 		}elif( utp.classTypedef.has( type ) ){
-      old = type;
+			old = type;
 			id = utp.classTypedef[ type ];
 			type = utp.name + '::' + type;
-      type_trans = type;
+			type_trans = type;
 			if( id >=0 ){
 				typeid = id;
 				#isClassEnum = 1;
 			}
-      if( map_user_types.has(old) ) map_user_types[type] = map_user_types[old];
+			if( map_user_types.has(old) ) map_user_types[type] = map_user_types[old];
 		}
 	}
-  if( map_user_types.has( host ) ){
-    m = type.capture( 'enum %s+ ( %w+ )' );
-# XXX: enum in parent class
-    if( m.size() and map_user_types[ host ].classEnum.has( m[1] ) ){
-      type.change( 'enum %s+ ( %w+ )', 'enum ' + host + '::%1' );
-      type_trans = type;
-    }
-  }
+	if( map_user_types.has( host ) ){
+		m = type.capture( 'enum %s+ ( %w+ )' );
+		# XXX: enum in parent class
+		if( m.size() and map_user_types[ host ].classEnum.has( m[1] ) ){
+			type.change( 'enum %s+ ( %w+ )', 'enum ' + host + '::%1' );
+			type_trans = type;
+		}
+	}
 	ispointer = pointer_types.has( type );
 	sindex = (string) index;
 	kvmap = { 'type'=>type_trans, 'type2'=>type, 'name'=>name, 'refer'=>name,
-		'index'=>sindex, 'default'=>vdefault, 'namespace'=>'', 'namespace2'=>'' };
+	'index'=>sindex, 'default'=>vdefault, 'namespace'=>'', 'namespace2'=>'' };
 	kvmap[ 'size' ] = sqsizes.size() ? sqsizes[0] : '0';
 	kvmap[ 'size2' ] = sqsizes.size() >1 ? sqsizes[1] : '0';
 	if( kvmap[ 'size' ][0:0] == '.' )
-		kvmap[ 'size' ] = 'self->' + kvmap[ 'size' ][1:];
+	kvmap[ 'size' ] = 'self->' + kvmap[ 'size' ][1:];
 	if( kvmap[ 'size2' ][0:0] == '.' )
-		kvmap[ 'size2' ] = 'self->' + kvmap[ 'size2' ][1:];
+	kvmap[ 'size2' ] = 'self->' + kvmap[ 'size2' ][1:];
 	cxxtype = type;
 	cxxcall = name;
 	rescheck = '';
@@ -1671,169 +1671,169 @@ routine Variable::Generate( cxx_no_self =0 )
 	tpl_parset = '';
 	tpl_getres = '';
 	tpl_setter = '';
-  cxxtype2 = '';
+	cxxtype2 = '';
 	if( typeid >=0 ){
 		if( refer == '' && square == '' && not ispointer ){
 			daotype = 'int';
 			cxxpar = type + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
-        cxxpar_enum_virt = 'int ' + name;
-        cxxtype2 = 'int';
-      }
+				cxxpar_enum_virt = 'int ' + name;
+				cxxtype2 = 'int';
+			}
 			tpl_daopar = daopar_int;
 			tpl_dao2cxx = dao2cxx_int;
 			tpl_cxx2dao = cxx2dao_int;
 			tpl_ctxput = ctxput_int;
 			tpl_getres = getres_int;
 			tpl_setter = setter_int;
-      if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
+			if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 			switch( typeid ){
-#{
-				case CT_CHAR :
-					daotype = 'string';
-					tpl_daopar = daopar_string;
-					tpl_dao2cxx = dao2cxx_char;
-					if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\'\\\'';
-				case CT_WCHAR :
-					daotype = 'string';
-					tpl_daopar = daopar_string;
-					tpl_dao2cxx = dao2cxx_wchar;
-					if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\"\\\"';
-#}
+				#{
+								case CT_CHAR :
+									daotype = 'string';
+									tpl_daopar = daopar_string;
+									tpl_dao2cxx = dao2cxx_char;
+									if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\'\\\'';
+								case CT_WCHAR :
+									daotype = 'string';
+									tpl_daopar = daopar_string;
+									tpl_dao2cxx = dao2cxx_wchar;
+									if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\"\\\"';
+				#}
 				case CT_FLOAT :
-					daotype = 'float';
-					tpl_daopar = daopar_float;
-					tpl_dao2cxx = dao2cxx_float;
-					tpl_cxx2dao = cxx2dao_float;
-					tpl_ctxput = ctxput_float;
-					tpl_getres = getres_float;
-					tpl_setter = setter_float;
-					if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
+				daotype = 'float';
+				tpl_daopar = daopar_float;
+				tpl_dao2cxx = dao2cxx_float;
+				tpl_cxx2dao = cxx2dao_float;
+				tpl_ctxput = ctxput_float;
+				tpl_getres = getres_float;
+				tpl_setter = setter_float;
+				if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 				case CT_DOUBLE :
-					daotype = 'double';
-					tpl_daopar = daopar_double;
-					tpl_dao2cxx = dao2cxx_double;
-					tpl_cxx2dao = cxx2dao_double;
-					tpl_ctxput = ctxput_double;
-					tpl_getres = getres_double;
-					tpl_setter = setter_double;
+				daotype = 'double';
+				tpl_daopar = daopar_double;
+				tpl_dao2cxx = dao2cxx_double;
+				tpl_cxx2dao = cxx2dao_double;
+				tpl_ctxput = ctxput_double;
+				tpl_getres = getres_double;
+				tpl_setter = setter_double;
 				case CT_COMPLEX8 , CT_COMPLEX16 :
-					daotype = 'complex';
-					tpl_daopar = daopar_complex;
-					tpl_dao2cxx = dao2cxx_complex;
+				daotype = 'complex';
+				tpl_daopar = daopar_complex;
+				tpl_dao2cxx = dao2cxx_complex;
 				case CT_VOID, CT_FILE :
-					daotype = '';
+				daotype = '';
 			}
 		}elif( (refer == '*' || refer =='&' || ispointer) && square == '' ){
-      if( typeid <= CT_WCHAR and refer == '&' ) typeid = CT_INT;
+			if( typeid <= CT_WCHAR and refer == '&' ) typeid = CT_INT;
 			cxxtype += refer;
 			cxxpar = type + refer + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
-        cxxpar_enum_virt = 'int ' + refer + name;
-        cxxtype2 = 'int*';
-      }
+				cxxpar_enum_virt = 'int ' + refer + name;
+				cxxtype2 = 'int*';
+			}
 			if( refer == '*' && typeid >= CT_SHORT && typeid <=CT_COMPLEX16 )
-				cxxcall = '& ' + name;
+			cxxcall = '& ' + name;
 			elif( refer == '&' && typeid > CT_VOID )
-				cxxcall = '*' + name;
+			cxxcall = '*' + name;
 			switch( typeid ){
 				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
-					daotype = 'string';
-					tpl_daopar = daopar_string;
-					tpl_dao2cxx = dao2cxx_mbs;
-					tpl_cxx2dao = cxx2dao_mbs;
-					tpl_ctxput = ctxput_mbs;
-					tpl_parset = parset_mbs;
-					tpl_getres = getres_mbs;
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
+				daotype = 'string';
+				tpl_daopar = daopar_string;
+				tpl_dao2cxx = dao2cxx_mbs;
+				tpl_cxx2dao = cxx2dao_mbs;
+				tpl_ctxput = ctxput_mbs;
+				tpl_parset = parset_mbs;
+				tpl_getres = getres_mbs;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
 				case CT_WCHAR :
-					daotype = 'string';
-					tpl_daopar = daopar_string;
-					tpl_dao2cxx = dao2cxx_wcs;
-					tpl_cxx2dao = cxx2dao_wcs;
-					tpl_ctxput = ctxput_wcs;
-					tpl_parset = parset_wcs;
-					tpl_getres = getres_wcs;
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+				daotype = 'string';
+				tpl_daopar = daopar_string;
+				tpl_dao2cxx = dao2cxx_wcs;
+				tpl_cxx2dao = cxx2dao_wcs;
+				tpl_ctxput = ctxput_wcs;
+				tpl_parset = parset_wcs;
+				tpl_getres = getres_wcs;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
 				case CT_SHORT, CT_SSHORT, CT_USHORT, 
-             CT_INT, CT_SINT, CT_UINT, 
-             CT_LONG, CT_SLONG, CT_ULONG :
-					daotype = 'int';
-					tpl_daopar = daopar_int;
-					tpl_dao2cxx = dao2cxx_int;
-					tpl_cxx2dao = cxx2dao_int;
-					tpl_ctxput = ctxput_int;
-					tpl_parset = parset_int;
-					tpl_getres = getres_int;
-					if( refer == '*' ){
-						tpl_ctxput = ctxput_ints;
-						tpl_getres = getres_ints;
-						tpl_cxx2dao = cxx2dao_int2;
-					}
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+				CT_INT, CT_SINT, CT_UINT, 
+				CT_LONG, CT_SLONG, CT_ULONG :
+				daotype = 'int';
+				tpl_daopar = daopar_int;
+				tpl_dao2cxx = dao2cxx_int;
+				tpl_cxx2dao = cxx2dao_int;
+				tpl_ctxput = ctxput_int;
+				tpl_parset = parset_int;
+				tpl_getres = getres_int;
+				if( refer == '*' ){
+					tpl_ctxput = ctxput_ints;
+					tpl_getres = getres_ints;
+					tpl_cxx2dao = cxx2dao_int2;
+				}
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
 				case CT_FLOAT :
-					daotype = 'float';
-					tpl_daopar = daopar_float;
-					tpl_dao2cxx = dao2cxx_float;
-					tpl_cxx2dao = cxx2dao_float;
-					tpl_ctxput = ctxput_float;
-					tpl_parset = parset_float;
-					tpl_getres = getres_float;
-					if( refer == '*' ){
-						tpl_ctxput = ctxput_floats;
-						tpl_getres = getres_floats;
-						tpl_cxx2dao = cxx2dao_float2;
-					}
-					if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
+				daotype = 'float';
+				tpl_daopar = daopar_float;
+				tpl_dao2cxx = dao2cxx_float;
+				tpl_cxx2dao = cxx2dao_float;
+				tpl_ctxput = ctxput_float;
+				tpl_parset = parset_float;
+				tpl_getres = getres_float;
+				if( refer == '*' ){
+					tpl_ctxput = ctxput_floats;
+					tpl_getres = getres_floats;
+					tpl_cxx2dao = cxx2dao_float2;
+				}
+				if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 				case CT_DOUBLE :
-					daotype = 'double';
-					tpl_daopar = daopar_double;
-					tpl_dao2cxx = dao2cxx_double;
-					tpl_ctxput = ctxput_double;
-					tpl_cxx2dao = cxx2dao_double;
-					tpl_parset = parset_double;
-					tpl_getres = getres_double;
-					if( refer == '*' ){
-						tpl_ctxput = ctxput_doubles;
-						tpl_getres = getres_doubles;
-						tpl_cxx2dao = cxx2dao_double2;
-					}
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0D';
+				daotype = 'double';
+				tpl_daopar = daopar_double;
+				tpl_dao2cxx = dao2cxx_double;
+				tpl_ctxput = ctxput_double;
+				tpl_cxx2dao = cxx2dao_double;
+				tpl_parset = parset_double;
+				tpl_getres = getres_double;
+				if( refer == '*' ){
+					tpl_ctxput = ctxput_doubles;
+					tpl_getres = getres_doubles;
+					tpl_cxx2dao = cxx2dao_double2;
+				}
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0D';
 				case CT_COMPLEX8 , CT_COMPLEX16 :
-					daotype = 'complex';
-					tpl_daopar = daopar_complex;
-					tpl_dao2cxx = dao2cxx_complex;
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0$';
+				daotype = 'complex';
+				tpl_daopar = daopar_complex;
+				tpl_dao2cxx = dao2cxx_complex;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0$';
 				case CT_VOID :
-					daotype = 'cdata';
-					tpl_daopar = daopar_buffer;
-					tpl_dao2cxx = dao2cxx_user;
-					tpl_ctxput = ctxput_voidp;
-					tpl_cxx2dao = cxx2dao_voidp;
-          if( ispointer ){
-            tpl_dao2cxx = dao2cxx_user2;
-            tpl_cxx2dao = cxx2dao_user;
-          }
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
-          if( name == 'userdata' and refer == '*' ){
-            daotype = 'any';
-            cxxtype = 'DValue';
-            cxxpar = 'DValue ' + name;
-            cxxcall = name;
-            tpl_daopar = daopar_userdata;
-            tpl_dao2cxx = dao2cxx_userdata;
-            tpl_cxx2dao = cxx2dao_userdata;
-            if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=null';
-          }
+				daotype = 'cdata';
+				tpl_daopar = daopar_buffer;
+				tpl_dao2cxx = dao2cxx_user;
+				tpl_ctxput = ctxput_voidp;
+				tpl_cxx2dao = cxx2dao_voidp;
+				if( ispointer ){
+					tpl_dao2cxx = dao2cxx_user2;
+					tpl_cxx2dao = cxx2dao_user;
+				}
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+				if( name == 'userdata' and refer == '*' ){
+					daotype = 'any';
+					cxxtype = 'DValue';
+					cxxpar = 'DValue ' + name;
+					cxxcall = name;
+					tpl_daopar = daopar_userdata;
+					tpl_dao2cxx = dao2cxx_userdata;
+					tpl_cxx2dao = cxx2dao_userdata;
+					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=null';
+				}
 				case CT_FILE :
-					daotype = 'stream';
-					tpl_daopar = daopar_stream;
-					tpl_dao2cxx = dao2cxx_stream;
-					tpl_ctxput = ctxput_stream;
-					tpl_cxx2dao = cxx2dao_stream;
-					if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=0';
+				daotype = 'stream';
+				tpl_daopar = daopar_stream;
+				tpl_dao2cxx = dao2cxx_stream;
+				tpl_ctxput = ctxput_stream;
+				tpl_cxx2dao = cxx2dao_stream;
+				if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=0';
 			}
 			if( index == INDEX_RETURN ){
 				if( refer == '*' && typeid >= CT_SHORT && typeid <=CT_DOUBLE ){
@@ -1845,9 +1845,9 @@ routine Variable::Generate( cxx_no_self =0 )
 			cxxpar = type + ' ' + name + '[]';
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
-        cxxpar_enum_virt = 'int ' + name + '[]';
-        cxxtype2 = 'int[]';
-      }
+				cxxpar_enum_virt = 'int ' + name + '[]';
+				cxxtype2 = 'int[]';
+			}
 			daotype = 'array<int>';
 			tpl_daopar = daopar_ints;
 			tpl_ctxput = ctxput_ints;
@@ -1856,81 +1856,81 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_setter = setter_ints;
 			switch( typeid ){
 				case CT_CHAR, CT_SCHAR : 
-					tpl_dao2cxx = dao2cxx_bytes;
-					tpl_cxx2dao = cxx2dao_bytes;
-					tpl_ctxput = ctxput_bytes;
-					tpl_parset = parset_bytes;
-					tpl_getres = getres_bytes;
-					tpl_setter = setter_string;
+				tpl_dao2cxx = dao2cxx_bytes;
+				tpl_cxx2dao = cxx2dao_bytes;
+				tpl_ctxput = ctxput_bytes;
+				tpl_parset = parset_bytes;
+				tpl_getres = getres_bytes;
+				tpl_setter = setter_string;
 				case CT_UCHAR : 
-					tpl_dao2cxx = dao2cxx_ubytes;
-					tpl_cxx2dao = cxx2dao_ubytes;
-					tpl_ctxput = ctxput_bytes;
-					tpl_parset = parset_ubytes;
-					tpl_getres = getres_ubytes;
-					tpl_setter = setter_string;
+				tpl_dao2cxx = dao2cxx_ubytes;
+				tpl_cxx2dao = cxx2dao_ubytes;
+				tpl_ctxput = ctxput_bytes;
+				tpl_parset = parset_ubytes;
+				tpl_getres = getres_ubytes;
+				tpl_setter = setter_string;
 				case CT_WCHAR :
-					tpl_dao2cxx = dao2cxx_uints;
-					tpl_cxx2dao = cxx2dao_uints;
+				tpl_dao2cxx = dao2cxx_uints;
+				tpl_cxx2dao = cxx2dao_uints;
 				case CT_SHORT, CT_SSHORT : 
-					tpl_dao2cxx = dao2cxx_shorts;
-					tpl_cxx2dao = cxx2dao_shorts;
-					tpl_ctxput = ctxput_shorts;
-					tpl_parset = parset_shorts;
-					tpl_getres = getres_shorts;
-					tpl_setter = setter_shorts;
+				tpl_dao2cxx = dao2cxx_shorts;
+				tpl_cxx2dao = cxx2dao_shorts;
+				tpl_ctxput = ctxput_shorts;
+				tpl_parset = parset_shorts;
+				tpl_getres = getres_shorts;
+				tpl_setter = setter_shorts;
 				case CT_USHORT :
-					tpl_dao2cxx = dao2cxx_ushorts;
-					tpl_cxx2dao = cxx2dao_ushorts;
-					tpl_ctxput = ctxput_shorts;
-					tpl_parset = parset_ushorts;
-					tpl_getres = getres_ushorts;
-					tpl_setter = setter_shorts;
+				tpl_dao2cxx = dao2cxx_ushorts;
+				tpl_cxx2dao = cxx2dao_ushorts;
+				tpl_ctxput = ctxput_shorts;
+				tpl_parset = parset_ushorts;
+				tpl_getres = getres_ushorts;
+				tpl_setter = setter_shorts;
 				case CT_INT, CT_SINT, CT_LONG, CT_SLONG : 
-					tpl_dao2cxx = dao2cxx_ints;
-					tpl_cxx2dao = cxx2dao_ints;
+				tpl_dao2cxx = dao2cxx_ints;
+				tpl_cxx2dao = cxx2dao_ints;
 				case CT_UINT, CT_ULONG :
-					tpl_dao2cxx = dao2cxx_uints;
-					tpl_cxx2dao = cxx2dao_uints;
-					tpl_dao2cxx = dao2cxx_uints;
-					tpl_cxx2dao = cxx2dao_uints;
-					tpl_parset = parset_uints;
-					tpl_getres = getres_uints;
+				tpl_dao2cxx = dao2cxx_uints;
+				tpl_cxx2dao = cxx2dao_uints;
+				tpl_dao2cxx = dao2cxx_uints;
+				tpl_cxx2dao = cxx2dao_uints;
+				tpl_parset = parset_uints;
+				tpl_getres = getres_uints;
 				case CT_FLOAT :
-					daotype = 'array<float>';
-					tpl_daopar = daopar_floats;
-					tpl_dao2cxx = dao2cxx_floats;
-					tpl_cxx2dao = cxx2dao_floats;
-					tpl_ctxput = ctxput_floats;
-					tpl_parset = parset_floats;
-					tpl_getres = getres_floats;
-					tpl_setter = setter_floats;
+				daotype = 'array<float>';
+				tpl_daopar = daopar_floats;
+				tpl_dao2cxx = dao2cxx_floats;
+				tpl_cxx2dao = cxx2dao_floats;
+				tpl_ctxput = ctxput_floats;
+				tpl_parset = parset_floats;
+				tpl_getres = getres_floats;
+				tpl_setter = setter_floats;
 				case CT_DOUBLE :
-					daotype = 'array<double>';
-					tpl_daopar = daopar_doubles;
-					tpl_dao2cxx = dao2cxx_doubles;
-					tpl_cxx2dao = cxx2dao_doubles;
-					tpl_ctxput = ctxput_doubles;
-					tpl_parset = parset_doubles;
-					tpl_getres = getres_doubles;
-					tpl_setter = setter_doubles;
+				daotype = 'array<double>';
+				tpl_daopar = daopar_doubles;
+				tpl_dao2cxx = dao2cxx_doubles;
+				tpl_cxx2dao = cxx2dao_doubles;
+				tpl_ctxput = ctxput_doubles;
+				tpl_parset = parset_doubles;
+				tpl_getres = getres_doubles;
+				tpl_setter = setter_doubles;
 				case CT_COMPLEX8 :
-					daotype = 'array<complex>';
-					tpl_daopar = daopar_complexs;
-					tpl_dao2cxx = dao2cxx_complexs8;
+				daotype = 'array<complex>';
+				tpl_daopar = daopar_complexs;
+				tpl_dao2cxx = dao2cxx_complexs8;
 				case CT_COMPLEX16 :
-					daotype = 'array<complex>';
-					tpl_daopar = daopar_complexs;
-					tpl_dao2cxx = dao2cxx_complexs16;
+				daotype = 'array<complex>';
+				tpl_daopar = daopar_complexs;
+				tpl_dao2cxx = dao2cxx_complexs16;
 			}
 		}elif( refer == '' && sqsizes.size() == 2 ){
 			cxxtype += '**';
 			cxxpar = type + ' *' + name + '[]';
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
-        cxxpar_enum_virt = 'int *' + name + '[]';
-        cxxtype2 = 'int*[]';
-      }
+				cxxpar_enum_virt = 'int *' + name + '[]';
+				cxxtype2 = 'int*[]';
+			}
 			daotype = 'array<int>';
 			tpl_daopar = daopar_ints;
 			tpl_ctxput = ctxput_ints;
@@ -1939,55 +1939,55 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_setter = setter_ints;
 			switch( typeid ){
 				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
-					tpl_dao2cxx = dao2cxx_bmat;
-					tpl_cxx2dao = cxx2dao_bytes;
-					tpl_ctxput = ctxput_bytes;
-					tpl_parset = parset_bytes;
-					tpl_getres = getres_bytes;
-					tpl_setter = setter_string;
+				tpl_dao2cxx = dao2cxx_bmat;
+				tpl_cxx2dao = cxx2dao_bytes;
+				tpl_ctxput = ctxput_bytes;
+				tpl_parset = parset_bytes;
+				tpl_getres = getres_bytes;
+				tpl_setter = setter_string;
 				case CT_WCHAR :
-					tpl_dao2cxx = dao2cxx_imat;
-					tpl_cxx2dao = cxx2dao_uints;
+				tpl_dao2cxx = dao2cxx_imat;
+				tpl_cxx2dao = cxx2dao_uints;
 				case CT_SHORT, CT_SSHORT, CT_USHORT :
-					tpl_dao2cxx = dao2cxx_smat;
-					tpl_cxx2dao = cxx2dao_shorts;
-					tpl_ctxput = ctxput_shorts;
-					tpl_parset = parset_shorts;
-					tpl_getres = getres_shorts;
-					tpl_setter = setter_shorts;
+				tpl_dao2cxx = dao2cxx_smat;
+				tpl_cxx2dao = cxx2dao_shorts;
+				tpl_ctxput = ctxput_shorts;
+				tpl_parset = parset_shorts;
+				tpl_getres = getres_shorts;
+				tpl_setter = setter_shorts;
 				case CT_INT, CT_SINT, CT_LONG, CT_SLONG, CT_UINT, CT_ULONG :
-					tpl_dao2cxx = dao2cxx_imat;
-					tpl_cxx2dao = cxx2dao_uints;
-					tpl_dao2cxx = dao2cxx_uints;
-					tpl_cxx2dao = cxx2dao_uints;
-					tpl_parset = parset_uints;
-					tpl_getres = getres_uints;
+				tpl_dao2cxx = dao2cxx_imat;
+				tpl_cxx2dao = cxx2dao_uints;
+				tpl_dao2cxx = dao2cxx_uints;
+				tpl_cxx2dao = cxx2dao_uints;
+				tpl_parset = parset_uints;
+				tpl_getres = getres_uints;
 				case CT_FLOAT :
-					daotype = 'array<float>';
-					tpl_daopar = daopar_floats;
-					tpl_dao2cxx = dao2cxx_fmat;
-					tpl_cxx2dao = cxx2dao_floats;
-					tpl_ctxput = ctxput_floats;
-					tpl_parset = parset_floats;
-					tpl_getres = getres_floats;
-					tpl_setter = setter_floats;
+				daotype = 'array<float>';
+				tpl_daopar = daopar_floats;
+				tpl_dao2cxx = dao2cxx_fmat;
+				tpl_cxx2dao = cxx2dao_floats;
+				tpl_ctxput = ctxput_floats;
+				tpl_parset = parset_floats;
+				tpl_getres = getres_floats;
+				tpl_setter = setter_floats;
 				case CT_DOUBLE :
-					daotype = 'array<double>';
-					tpl_daopar = daopar_doubles;
-					tpl_dao2cxx = dao2cxx_dmat;
-					tpl_cxx2dao = cxx2dao_doubles;
-					tpl_ctxput = ctxput_doubles;
-					tpl_parset = parset_doubles;
-					tpl_getres = getres_doubles;
-					tpl_setter = setter_doubles;
+				daotype = 'array<double>';
+				tpl_daopar = daopar_doubles;
+				tpl_dao2cxx = dao2cxx_dmat;
+				tpl_cxx2dao = cxx2dao_doubles;
+				tpl_ctxput = ctxput_doubles;
+				tpl_parset = parset_doubles;
+				tpl_getres = getres_doubles;
+				tpl_setter = setter_doubles;
 				case CT_COMPLEX8 :
-					daotype = 'array<complex>';
-					tpl_daopar = daopar_complexs;
-					tpl_dao2cxx = dao2cxx_c8mat;
+				daotype = 'array<complex>';
+				tpl_daopar = daopar_complexs;
+				tpl_dao2cxx = dao2cxx_c8mat;
 				case CT_COMPLEX16 :
-					daotype = 'array<complex>';
-					tpl_daopar = daopar_complexs;
-					tpl_dao2cxx = dao2cxx_c16mat;
+				daotype = 'array<complex>';
+				tpl_daopar = daopar_complexs;
+				tpl_dao2cxx = dao2cxx_c16mat;
 			}
 		}elif( refer == '**' ){
 			cxxcall = '& ' + name;
@@ -1995,51 +1995,51 @@ routine Variable::Generate( cxx_no_self =0 )
 			cxxpar = type + refer + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
-        cxxpar_enum_virt = 'int ' + refer + name;
-        cxxtype2 = 'int';
-      }
+				cxxpar_enum_virt = 'int ' + refer + name;
+				cxxtype2 = 'int';
+			}
 			switch( typeid ){
 				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
-					daotype = 'string';
-					tpl_daopar = daopar_string;
-					tpl_dao2cxx = isconst ? dao2cxx_mbs_cst : dao2cxx_mbs2;
-					tpl_cxx2dao = cxx2dao_mbs;
-					tpl_ctxput = ctxput_mbs;
-					tpl_parset = parset_mbs2;
-					tpl_getres = getres_mbs;
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
+				daotype = 'string';
+				tpl_daopar = daopar_string;
+				tpl_dao2cxx = isconst ? dao2cxx_mbs_cst : dao2cxx_mbs2;
+				tpl_cxx2dao = cxx2dao_mbs;
+				tpl_ctxput = ctxput_mbs;
+				tpl_parset = parset_mbs2;
+				tpl_getres = getres_mbs;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
 				case CT_WCHAR :
-					daotype = 'string';
-					tpl_daopar = daopar_string;
-					tpl_dao2cxx = isconst ? dao2cxx_wcs_cst : dao2cxx_wcs2;
-					tpl_cxx2dao = cxx2dao_wcs;
-					tpl_ctxput = ctxput_wcs;
-					tpl_parset = parset_wcs2;
-					tpl_getres = getres_wcs;
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+				daotype = 'string';
+				tpl_daopar = daopar_string;
+				tpl_dao2cxx = isconst ? dao2cxx_wcs_cst : dao2cxx_wcs2;
+				tpl_cxx2dao = cxx2dao_wcs;
+				tpl_ctxput = ctxput_wcs;
+				tpl_parset = parset_wcs2;
+				tpl_getres = getres_wcs;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
 				case CT_VOID :
-					daotype = 'cdata';
-					cxxcall = name;
-					tpl_daopar = daopar_buffer;
-					tpl_dao2cxx = dao2cxx_user3;
-					tpl_ctxput = ctxput_voidp;
-					tpl_cxx2dao = cxx2dao_voidp;
-					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+				daotype = 'cdata';
+				cxxcall = name;
+				tpl_daopar = daopar_buffer;
+				tpl_dao2cxx = dao2cxx_user3;
+				tpl_ctxput = ctxput_voidp;
+				tpl_cxx2dao = cxx2dao_voidp;
+				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
 			}
 		}else{
 		}
 	}elif( map_user_types.has( type ) or map_ns_types.has( type ) ){
-    utp: UserType;
-    if( map_user_types.has( type ) ){
-      utp = map_user_types[ type ];
-      daotype = utp.name;
-    }else{
-      daotype = type;
-      utp = map_ns_types[ type ];
-      type = utp.name;
-      kvmap[ 'namespace2' ] = utp.snamespace + '::';
-    }
-    if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
+		utp: UserType;
+		if( map_user_types.has( type ) ){
+			utp = map_user_types[ type ];
+			daotype = utp.name;
+		}else{
+			daotype = type;
+			utp = map_ns_types[ type ];
+			type = utp.name;
+			kvmap[ 'namespace2' ] = utp.snamespace + '::';
+		}
+		if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 		if( not ispointer ){
 			kvmap[ 'type' ] = type;
 			kvmap[ 'type2' ] = utp.name;
@@ -2057,10 +2057,10 @@ routine Variable::Generate( cxx_no_self =0 )
 			cxxcall = '*' + name;
 			if( ispointer ) cxxcall = name;
 		}
-    if( utp.snamespace ){
-      cxxtype = utp.snamespace + '::' + cxxtype;
-      cxxpar = utp.snamespace + '::' + cxxpar;
-    }
+		if( utp.snamespace ){
+			cxxtype = utp.snamespace + '::' + cxxtype;
+			cxxpar = utp.snamespace + '::' + cxxpar;
+		}
 		if( refer != '*' && square =='' ) kvmap[ 'refer' ] = '& ' + name;
 		tpl_daopar = daopar_user;
 		tpl_ctxput = ctxput_user;
@@ -2152,18 +2152,18 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_dao2cxx += '  QVariant _$(name);\n';
 			tpl_dao2cxx += '  if( $(name) == NULL ) $(name) = & _$(name);\n';
 		}
-    if( utp.isCallback ){
-      daotype = 'any';
-      tpl_daopar = daopar_callback;
-      tpl_dao2cxx = dao2cxx_callback;
-      unsupport = utp.unsupport;
-      isCallback = 1;
-    }
-  }else{
-    io.writef( 'warning: unsupported type "%s" in "%s"\n', type, source );
-    unsupport = 1;
+		if( utp.isCallback ){
+			daotype = 'any';
+			tpl_daopar = daopar_callback;
+			tpl_dao2cxx = dao2cxx_callback;
+			unsupport = utp.unsupport;
+			isCallback = 1;
+		}
+	}else{
+		io.writef( 'warning: unsupported type "%s" in "%s"\n', type, source );
+		unsupport = 1;
 	}
-  if( cxxtype2 == '' ) cxxtype2 = cxxtype;
+	if( cxxtype2 == '' ) cxxtype2 = cxxtype;
 	if( isconst ){
 		cxxpar_enum_virt = 'const ' + cxxpar_enum_virt;
 		cxxpar = 'const ' + cxxpar;
@@ -2220,11 +2220,11 @@ const cxx_call_proto_d4 =
 ;
 const cxx_call_proto_list = 
 {
-  cxx_call_proto,
-  cxx_call_proto_d1,
-  cxx_call_proto_d2,
-  cxx_call_proto_d3,
-  cxx_call_proto_d4
+	cxx_call_proto,
+	cxx_call_proto_d1,
+	cxx_call_proto_d2,
+	cxx_call_proto_d3,
+	cxx_call_proto_d4
 }
 
 const cxx_call_proto2 = 
@@ -2255,11 +2255,11 @@ const cxx_call_proto2_d4 =
 
 const cxx_call_proto2_list = 
 {
-  cxx_call_proto2,
-  cxx_call_proto2_d1,
-  cxx_call_proto2_d2,
-  cxx_call_proto2_d3,
-  cxx_call_proto2_d4
+	cxx_call_proto2,
+	cxx_call_proto2_d1,
+	cxx_call_proto2_d2,
+	cxx_call_proto2_d3,
+	cxx_call_proto2_d4
 }
 
 const cxx_call_static = 
@@ -2293,11 +2293,11 @@ const cxx_call_static_d4 =
 ;
 const cxx_call_static_list = 
 {
-  cxx_call_static,
-  cxx_call_static_d1,
-  cxx_call_static_d2,
-  cxx_call_static_d3,
-  cxx_call_static_d4
+	cxx_call_static,
+	cxx_call_static_d1,
+	cxx_call_static_d2,
+	cxx_call_static_d3,
+	cxx_call_static_d4
 }
 
 const cxx_call_static2 = 
@@ -2327,11 +2327,11 @@ const cxx_call_static2_d4 =
 ;
 const cxx_call_static2_list = 
 {
-  cxx_call_static2,
-  cxx_call_static2_d1,
-  cxx_call_static2_d2,
-  cxx_call_static2_d3,
-  cxx_call_static2_d4
+	cxx_call_static2,
+	cxx_call_static2_d1,
+	cxx_call_static2_d2,
+	cxx_call_static2_d3,
+	cxx_call_static2_d4
 }
 
 const cxx_call_new = 
@@ -2358,7 +2358,7 @@ const cxx_virt_struct =
   $(type) *self2 = self->object;
   DaoCData *cdata = self->cdata;
   DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n';
-  
+
 const cxx_virt_class =
 '$(retype) DaoCxxVirt_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n';
 
@@ -2535,57 +2535,57 @@ routine Function::Generate()
 	cxx_no_self = cxx_no_self && (hostType != cxxName);
 	retype.Generate();
 	if( retype.unsupport or retype.isCallback ) excluded = 1;
-  pcount = parlist.size();
+	pcount = parlist.size();
 	for( i = 0 : pcount-2 ){
 		vo = parlist[i];
-    sq = vo.sqsizes.size();
-    if( sq ){
-      pi1 = parlist[i+1];
-      tid = pi1.typeid;
-      if( tid >=CT_SHORT and tid <= CT_COMPLEX16 
-          and pi1.refer == '' and pi1.square == '' ){
-        vo.sqsizes[0] = pi1.name;
-        if( sq >1 ) vo.sqsizes[1] = pi1.name;
-        if( sq >1 and i+2<pcount ){
-          pi2 = parlist[i+2];
-          tid = pi2.typeid;
-          if( tid >=CT_SHORT and tid <= CT_COMPLEX16
-            and pi2.refer == '' and pi2.square == '' )
-            vo.sqsizes[1] = pi2.name;
-        }
-      }
-    }
-  }
-  hasCallback = 0;
+		sq = vo.sqsizes.size();
+		if( sq ){
+			pi1 = parlist[i+1];
+			tid = pi1.typeid;
+			if( tid >=CT_SHORT and tid <= CT_COMPLEX16 
+			and pi1.refer == '' and pi1.square == '' ){
+				vo.sqsizes[0] = pi1.name;
+				if( sq >1 ) vo.sqsizes[1] = pi1.name;
+				if( sq >1 and i+2<pcount ){
+					pi2 = parlist[i+2];
+					tid = pi2.typeid;
+					if( tid >=CT_SHORT and tid <= CT_COMPLEX16
+					and pi2.refer == '' and pi2.square == '' )
+					vo.sqsizes[1] = pi2.name;
+				}
+			}
+		}
+	}
+	hasCallback = 0;
 	for( vo in parlist ){
-    vo.Generate( cxx_no_self );
-    if( vo.isCallback ) hasCallback = 1;
-  }
+		vo.Generate( cxx_no_self );
+		if( vo.isCallback ) hasCallback = 1;
+	}
 	daoprotpars  = ''; cxxprotpars  = ''; cxxcallpars = '';
 	dao2cxxcodes = ''; cxx2daocodes = ''; parsetcodes = '';
 	slot_dao2cxxcodes = ''; cxxprotpars_decl = '';
 	nils = '';
 	refs = '';
 	signature = cxxName + '('; # exclude return type from signature
-  signature2 = retype.cxxtype2 + '(';
+	signature2 = retype.cxxtype2 + '(';
 	cxxCallParamV = '';
 	cxxProtoParamVirt = '';
-  hasUserData = 0;
-  calls_with_defaults.clear();
+	hasUserData = 0;
+	calls_with_defaults.clear();
 	for( i = 0 : pcount-1 ){
 		vo = parlist[i];
 		if( vo.unsupport ){
 			excluded = 1;
 			return;
 		}
-    if( vo.name == 'userdata' ) hasUserData = 1;
+		if( vo.name == 'userdata' ) hasUserData = 1;
 		if( i ) daoprotpars += ', ';
 		daoprotpars += vo.daopar;
 		if( vo.sqsizes.size() <2 ) dao2cxxcodes += vo.dao2cxx;
 		parsetcodes += vo.parset;
-    if( vo.isconst and vo.refer == '&' and vo.vdefault != '' ){
-      calls_with_defaults.append( (i, cxxcallpars) );
-    }
+		if( vo.isconst and vo.refer == '&' and vo.vdefault != '' ){
+			calls_with_defaults.append( (i, cxxcallpars) );
+		}
 		if( i < cxx_no_self ) skip;
 		if( i > cxx_no_self ){
 			nils += ', ';
@@ -2614,76 +2614,76 @@ routine Function::Generate()
 			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
 		}
 	}
-  #io.writeln( calls_with_defaults );
-  if( retype.unsupport ) excluded = 1;
-  if( hasCallback and not hasUserData ) excluded = 1;
+	#io.writeln( calls_with_defaults );
+	if( retype.unsupport ) excluded = 1;
+	if( hasCallback and not hasUserData ) excluded = 1;
 	for( i = 0 : pcount-1 ){
 		vo = parlist[i];
 		if( vo.sqsizes.size() >=2 ){
-      dao2cxxcodes += vo.dao2cxx;
-    }
-  }
-  nowrap = excluded;
-  if( not nowrap and (attribs & FUNC_PROTECTED) ){
-    nowrap = attribs & (FUNC_STATIC|FUNC_PURE_VIRTUAL);
-    if( retype.type != retype.type_trans ) nowrap = 1;
-    for( vo in parlist ){
-      if( vo.type != vo.type_trans ) nowrap = 1;
-    }
-  }
+			dao2cxxcodes += vo.dao2cxx;
+		}
+	}
+	nowrap = excluded;
+	if( not nowrap and (attribs & FUNC_PROTECTED) ){
+		nowrap = attribs & (FUNC_STATIC|FUNC_PURE_VIRTUAL);
+		if( retype.type != retype.type_trans ) nowrap = 1;
+		for( vo in parlist ){
+			if( vo.type != vo.type_trans ) nowrap = 1;
+		}
+	}
 	signature += ')';
 	signature2 += ')';
 	if( attribs & FUNC_CONST ){
-    signature += 'const';
-    signature2 += 'const';
-  }
-  if( excluded ){
-    source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' );
-    while( source.replace( '>>', '> >' ) );
-    signature = source;
-    signature2 = source;
-  }
-  # if( excluded ) return; # can not return here, 
-  # because C/C++ parameter list is need for constructors!
+		signature += 'const';
+		signature2 += 'const';
+	}
+	if( excluded ){
+		source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' );
+		while( source.replace( '>>', '> >' ) );
+		signature = source;
+		signature2 = source;
+	}
+	# if( excluded ) return; # can not return here, 
+	# because C/C++ parameter list is need for constructors!
 	cxxProtoParam = cxxprotpars;
 	cxxProtoParamDecl = cxxprotpars_decl;
 	cxxCallParam = cxxcallpars;
-
+	
 	cxxWrapName = 'dao_' + hostType + '_' + cxxName + nameSuffix;
 	kvmap = { 'host'=>hostType, 'cxxname'=>cxxName + nameSuffix,
-		'daoname'=>daoName, 'parlist'=>daoprotpars, 'retype'=>'', 'namespace'=>'',
-		'self'=>'', 'overload'=>overload, 'count'=>(string)(parlist.size()-1), 
-		'nils'=>nils, 'refs'=>refs, 'signature'=>signature, 'file'=>input_file,
-    'func_ns'=>'', 'host_ns'=>'' };
+	'daoname'=>daoName, 'parlist'=>daoprotpars, 'retype'=>'', 'namespace'=>'',
+	'self'=>'', 'overload'=>overload, 'count'=>(string)(parlist.size()-1), 
+	'nils'=>nils, 'refs'=>refs, 'signature'=>signature, 'file'=>input_file,
+	'func_ns'=>'', 'host_ns'=>'' };
 	if( retype.daotype ) kvmap[ 'retype' ] = '=>' + retype.daotype;
-  if( snamespace ) kvmap[ 'func_ns' ] = snamespace + '::';
+	if( snamespace ) kvmap[ 'func_ns' ] = snamespace + '::';
 	daoProtoCodes = dao_proto.expand( kvmap );
 	cxxProtoCodes = cxx_wrap_proto.expand( kvmap );
 	kvmap[ 'retype' ] = retype.cxxtype;
 	kvmap[ 'name' ] = retype.name;
-
+	
 	if( attribs & FUNC_CPP ){
-    ss = 'self->';
-    if( not (attribs & (FUNC_PROTECTED|FUNC_PURE_VIRTUAL)) ) ss += hostType + '::';
+		ss = 'self->';
+		if( not (attribs & (FUNC_PROTECTED|FUNC_PURE_VIRTUAL)) ) ss += hostType + '::';
 		kvmap[ 'self' ] = ss;
 		kvmap[ 'parlist' ] = cxxCallParamV;
 	}
 	kvmap[ 'parlist' ] = cxxCallParam;
-  if( map_user_types.has( hostType ) ){
+	if( map_user_types.has( hostType ) ){
 		utp = map_user_types[ hostType ];
-    if( utp.snamespace ) kvmap[ 'host_ns' ] = utp.snamespace + '::';
-  }
-  dd = calls_with_defaults.size();
-  if( dd > 4 ) io.writeln( source );
-  for( i = 1 : dd ){
-    tup2 = calls_with_defaults[i-1];
-    kvmap[ 'n' + (string)i ] = (string) tup2[0];
-    kvmap[ 'parlist' + (string)i ] = tup2[1];
-  }
+		if( utp.snamespace ) kvmap[ 'host_ns' ] = utp.snamespace + '::';
+	}
+	dd = calls_with_defaults.size();
+	if( dd > 4 ) io.writeln( source );
+	for( i = 1 : dd ){
+		tup2 = calls_with_defaults[i-1];
+		kvmap[ 'n' + (string)i ] = (string) tup2[0];
+		kvmap[ 'parlist' + (string)i ] = tup2[1];
+	}
 	if( hostType == cxxName and not excluded ){
 		#kvmap[ 'parlist' ] = ''; # XXX disable parameters at the moment
 		utp = map_user_types[ hostType ];
-    if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
+		if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 		if( not utp.noConstructor ){
 			if( utp.hasVirtual ){
 				cxxCallCodes = cxx_call_new2.expand( kvmap );
@@ -2694,14 +2694,14 @@ routine Function::Generate()
 		#if( parlist.size() ) cxxCallCodes = ''; # XXX maybe there is no default constru
 	}elif( retype.daotype ){
 		if( attribs & FUNC_STATIC )
-			cxxCallCodes = cxx_call_static_list[dd].expand( kvmap );
+		cxxCallCodes = cxx_call_static_list[dd].expand( kvmap );
 		else
-			cxxCallCodes = cxx_call_proto_list[dd].expand( kvmap );
+		cxxCallCodes = cxx_call_proto_list[dd].expand( kvmap );
 	}else{
 		if( attribs & FUNC_STATIC )
-			cxxCallCodes = cxx_call_static2_list[dd].expand( kvmap );
+		cxxCallCodes = cxx_call_static2_list[dd].expand( kvmap );
 		else
-			cxxCallCodes = cxx_call_proto2_list[ dd ].expand( kvmap );
+		cxxCallCodes = cxx_call_proto2_list[ dd ].expand( kvmap );
 	}
 	if( lib_name == LIB_QT ){
 		size = (string)RotatingHash( signature );
@@ -2723,29 +2723,29 @@ routine Function::Generate()
 			qtSignalSlotCode = daoqt_sig_slot_code.expand( kvmap );
 			qtSignalSlotCode += cxx2daocodes;
 			qtSignalSlotCode += daoqt_sig_slot_emit.expand( kvmap );
-#{
-			io.println( signature );
-			io.println( qtSignalSlotDecl );
-			io.println( qtSignalSlotCode );
-#}
+			#{
+						io.println( signature );
+						io.println( qtSignalSlotDecl );
+						io.println( qtSignalSlotCode );
+			#}
 		}
 	}
-
+	
 	kvmap2 = { 'file'=>input_file, 'proto'=>cxxProtoCodes, 'dao2cxx'=>dao2cxxcodes,
-		'cxxcall'=>cxxCallCodes, 'parset'=>parsetcodes, 'return'=>retype.ctxput };
+	'cxxcall'=>cxxCallCodes, 'parset'=>parsetcodes, 'return'=>retype.ctxput };
 	if( retype.daotype.size() ==0 || hostType == cxxName ) kvmap2[ 'return' ] ='';
 	#if( hostType == cxxName ) kvmap2[ 'dao2cxx' ] =''; # XXX 
 	cxxWrapper = cxx_wrap.expand( kvmap2 );
-
+	
 	kvmap3 = { 'retype'=>retype.cxxtype, 'type'=>hostType, 'cxxname'=>cxxName,
-		'parlist'=>cxxProtoParam, 'count'=>(string)parlist.size(), 'nils'=>nils, 
-    'refs'=>refs, 'cxx2dao'=>cxx2daocodes, 'vareturn'=>retype.cxxpar + ' = 0;',
-		'return'=>retype.name, 'getreturn'=>retype.getres, 'const'=>'' };
+	'parlist'=>cxxProtoParam, 'count'=>(string)parlist.size(), 'nils'=>nils, 
+	'refs'=>refs, 'cxx2dao'=>cxx2daocodes, 'vareturn'=>retype.cxxpar + ' = 0;',
+	'return'=>retype.name, 'getreturn'=>retype.getres, 'const'=>'' };
 	vareturn = retype.cxxpar + ' = 0;';
-  if( retype.refer == '' and retype.typeid >=0 ){
-    tks = retype.dao2cxx.capture( '= %s* %b()' );
-    if( tks ) vareturn = retype.cxxpar + tks[0] + '0;';
-  }
+	if( retype.refer == '' and retype.typeid >=0 ){
+		tks = retype.dao2cxx.capture( '= %s* %b()' );
+		if( tks ) vareturn = retype.cxxpar + tks[0] + '0;';
+	}
 	if( retype.type.capture( qt_container ) ) vareturn = retype.cxxpar + ';';
 	kvmap3[ 'vareturn' ] = vareturn;
 	if( retype.daotype.size() ==0 ){
@@ -2756,97 +2756,97 @@ routine Function::Generate()
 		utp = map_user_types[ retype.type ];
 		if( utp.isCppClass ){
 			if( retype.refer == '*' )
-				kvmap3[ 'vareturn' ] = retype.cxxpar + ' = NULL;';
+			kvmap3[ 'vareturn' ] = retype.cxxpar + ' = NULL;';
 			else
-				kvmap3[ 'vareturn' ] = retype.cxxpar + ';';
+			kvmap3[ 'vareturn' ] = retype.cxxpar + ';';
 		}
 	}
 	if( attribs & FUNC_CONST ) kvmap3[ 'const' ] = 'const';
-
+	
 	#if( attribs & FUNC_VIRTUAL ){
-
-		if( attribs & FUNC_CPP ){
-			kvmap3[ 'count' ] = (string)(parlist.size() - cxx_no_self);
-			kvmap3[ 'parlist' ] = cxxProtoParamVirt;
-			cxxWrapperVirt = cxx_virt_class.expand( kvmap3 );
+	
+	if( attribs & FUNC_CPP ){
+		kvmap3[ 'count' ] = (string)(parlist.size() - cxx_no_self);
+		kvmap3[ 'parlist' ] = cxxProtoParamVirt;
+		cxxWrapperVirt = cxx_virt_class.expand( kvmap3 );
+	}else{
+		cxxWrapperVirtProto = cxx_virt_proto.expand( kvmap3 );
+		cxxWrapperVirt = cxx_virt_struct.expand( kvmap3 );
+	}
+	has_return = retype.daotype.size();
+	has_param = parlist.size() - cxx_no_self;
+	#{
+	    signature2 = signature;
+	    signature2.change( '^%w+', '' );
+	    signature2 = retype.cxxtype + signature2;
+	#}
+	#io.writeln( signature2 );
+	proxy_name = '';
+	if( not proxy_functions.has( signature2 ) ){
+		ss = io.sstream();
+		ss.write( Function() );
+		proxy_name = ss.getstring();
+		proxy_name.change( '%[', '_' )
+		proxy_name.change( '%]', '' )
+		kvmap3[ 'proxy_name' ] = proxy_name;
+		proxy_codes = '';
+		if( has_return and has_param ){
+			proxy_codes = cxx_proxy_body11.expand( kvmap3 );
+		}else if( has_return ){
+			proxy_codes = cxx_proxy_body10.expand( kvmap3 );
+		}else if( has_param ){
+			proxy_codes = cxx_proxy_body01.expand( kvmap3 );
 		}else{
-			cxxWrapperVirtProto = cxx_virt_proto.expand( kvmap3 );
-			cxxWrapperVirt = cxx_virt_struct.expand( kvmap3 );
+			proxy_codes = cxx_proxy_body00.expand( kvmap3 );
 		}
-    has_return = retype.daotype.size();
-    has_param = parlist.size() - cxx_no_self;
-#{
-    signature2 = signature;
-    signature2.change( '^%w+', '' );
-    signature2 = retype.cxxtype + signature2;
-#}
-    #io.writeln( signature2 );
-    proxy_name = '';
-    if( not proxy_functions.has( signature2 ) ){
-      ss = io.sstream();
-      ss.write( Function() );
-      proxy_name = ss.getstring();
-      proxy_name.change( '%[', '_' )
-      proxy_name.change( '%]', '' )
-      kvmap3[ 'proxy_name' ] = proxy_name;
-      proxy_codes = '';
-      if( has_return and has_param ){
-        proxy_codes = cxx_proxy_body11.expand( kvmap3 );
-      }else if( has_return ){
-        proxy_codes = cxx_proxy_body10.expand( kvmap3 );
-      }else if( has_param ){
-        proxy_codes = cxx_proxy_body01.expand( kvmap3 );
-      }else{
-        proxy_codes = cxx_proxy_body00.expand( kvmap3 );
-      }
-      proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes );
-      #io.writeln( proxy_name, proxy_codes );
-    }
-    if( has_return or has_param ) proxy_name = proxy_functions[ signature2 ].name;
-    kvmap3[ 'proxy_name' ] = proxy_name;
-    kvmap3[ 'parcall' ] = cxxCallParamV;
-
-    if( isCallback and not dao_callbacks2.has( self ) ){
-      cbproto = dao_callback_proto.expand( kvmap3 );
-      callback = dao_callback_def.expand( kvmap3 );
-      cbproto.replace( 'DValue userdata', 'void *_ud' );
-      callback.replace( 'DValue userdata', 'void *_ud' );
-      callback.replace( 'DValueX userdata', 'DValue userdata' );
-      proxy_functions[ signature2 ].used += 1;
-      dao_callbacks.append( callback );
-      dao_callbacks_proto.append( cbproto );
-      dao_callbacks2[ self ] = 1;
-    }
-
-    if( has_return ==0 and has_param ==0 ){
-      cxxWrapperVirt += cxx_virt_call_00.expand( kvmap3 );
-    }else if( has_return ==0 and has_param ){
-      cxxWrapperVirt += cxx_virt_call_01.expand( kvmap3 );
-    }else if( has_return and has_param ==0 ){
-      cxxWrapperVirt += cxx_virt_call_10.expand( kvmap3 );
-    }else{
-      cxxWrapperVirt += cxx_virt_call_11.expand( kvmap3 );
-    }
-    if( attribs & FUNC_CPP ){
-			kvmap3[ 'return' ] = 'return';
-			if( retype.type == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
-			kvmap3[ 'parlist' ] = cxxProtoParam;
-			if( attribs & FUNC_PURE_VIRTUAL ){
-				cxxWrapperVirt2 = cxx_virt_class2.expand( kvmap3 );
-			}else{
-				cxxWrapperVirt2 = cxx_virt_class3.expand( kvmap3 );
-      }
-			kvmap3[ 'parlist' ] = cxxProtoParamVirt;
-			cxxWrapperVirt3 = cxx_virt_class4.expand( kvmap3 );
+		proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes );
+		#io.writeln( proxy_name, proxy_codes );
+	}
+	if( has_return or has_param ) proxy_name = proxy_functions[ signature2 ].name;
+	kvmap3[ 'proxy_name' ] = proxy_name;
+	kvmap3[ 'parcall' ] = cxxCallParamV;
+	
+	if( isCallback and not dao_callbacks2.has( self ) ){
+		cbproto = dao_callback_proto.expand( kvmap3 );
+		callback = dao_callback_def.expand( kvmap3 );
+		cbproto.replace( 'DValue userdata', 'void *_ud' );
+		callback.replace( 'DValue userdata', 'void *_ud' );
+		callback.replace( 'DValueX userdata', 'DValue userdata' );
+		proxy_functions[ signature2 ].used += 1;
+		dao_callbacks.append( callback );
+		dao_callbacks_proto.append( cbproto );
+		dao_callbacks2[ self ] = 1;
+	}
+	
+	if( has_return ==0 and has_param ==0 ){
+		cxxWrapperVirt += cxx_virt_call_00.expand( kvmap3 );
+	}else if( has_return ==0 and has_param ){
+		cxxWrapperVirt += cxx_virt_call_01.expand( kvmap3 );
+	}else if( has_return and has_param ==0 ){
+		cxxWrapperVirt += cxx_virt_call_10.expand( kvmap3 );
+	}else{
+		cxxWrapperVirt += cxx_virt_call_11.expand( kvmap3 );
+	}
+	if( attribs & FUNC_CPP ){
+		kvmap3[ 'return' ] = 'return';
+		if( retype.type == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
+		kvmap3[ 'parlist' ] = cxxProtoParam;
+		if( attribs & FUNC_PURE_VIRTUAL ){
+			cxxWrapperVirt2 = cxx_virt_class2.expand( kvmap3 );
+		}else{
+			cxxWrapperVirt2 = cxx_virt_class3.expand( kvmap3 );
 		}
+		kvmap3[ 'parlist' ] = cxxProtoParamVirt;
+		cxxWrapperVirt3 = cxx_virt_class4.expand( kvmap3 );
+	}
 	# }
 	Clean();
-#{
-	io.println( daoProtoCodes );
-	io.println( cxx2daocodes );
-	io.println( cxxWrapper );
-	io.println( cxxWrapperVirt );
-#}
+	#{
+		io.println( daoProtoCodes );
+		io.println( cxx2daocodes );
+		io.println( cxxWrapper );
+		io.println( cxxWrapperVirt );
+	#}
 }
 
 
@@ -3152,7 +3152,7 @@ global qt_application_func =
 {
   QApplication *app = (QApplication*) QApplication::instance();
   if( app ){
-    DaoContext_PutCData( _ctx, app, dao_QApplication_Typer );
+    DaoContext_WrapCData( _ctx, app, dao_QApplication_Typer );
     return;
   }
   static int argc = 1;
@@ -3399,9 +3399,9 @@ routine UserType::CheckVirtual()
 	}
 	for( meth in methods ){
 		if( meth.attribs & FUNC_VIRTUAL ){
-      hasVirtual = 1;
-      break;
-    }
+			hasVirtual = 1;
+			break;
+		}
 	}
 }
 routine UserType::CheckPureVirtual()
@@ -3410,12 +3410,12 @@ routine UserType::CheckPureVirtual()
 	implemented = {=>};
 	for( meth in methods ){
 		if( meth.attribs & FUNC_VIRTUAL ){
-      hasVirtual = 1;
-      lastVirts[ meth.signature ] = name;
-    }
+			hasVirtual = 1;
+			lastVirts[ meth.signature ] = name;
+		}
 		if( meth.attribs & FUNC_PURE_VIRTUAL ){
-      hasVirtual = 1;
-      isPureVirt = 1;
+			hasVirtual = 1;
+			isPureVirt = 1;
 			pureVirts.append( meth );
 		}else{
 			implemented[ meth.signature ] = 1;
@@ -3433,19 +3433,19 @@ routine UserType::CheckPureVirtual()
 	}
 	for( meth in methods ){
 		if( meth.attribs & FUNC_VIRTUAL ) skip;
-    for( sup in supers ){
-      if( sup.lastVirts.has( meth.signature ) ){
-        hasVirtual = 1;
-        meth.reimplemented = sup.lastVirts[ meth.signature ];
-        break;
-      }
-    }
-    for( sup in supers ){
-      for( k in sup.lastVirts.keys(); v in sup.lastVirts.values() ){
-        if( not lastVirts.has( k ) ) lastVirts[k] = v;
-      }
-    }
-  }
+		for( sup in supers ){
+			if( sup.lastVirts.has( meth.signature ) ){
+				hasVirtual = 1;
+				meth.reimplemented = sup.lastVirts[ meth.signature ];
+				break;
+			}
+		}
+		for( sup in supers ){
+			for( k in sup.lastVirts.keys(); v in sup.lastVirts.values() ){
+				if( not lastVirts.has( k ) ) lastVirts[k] = v;
+			}
+		}
+	}
 	#io.println( name, isPureVirt, pureVirts, implemented );
 }
 routine UserType::GenerateMeth()
@@ -3474,15 +3474,15 @@ routine UserType::GenerateMeth()
 			while( methmap.has( meth.cxxName + meth.overload ) ) meth.overload += '_';
 		}
 	}
-  if( isCallback and methods.size() ){
-    for( par in meth.parlist ){
-      if( par.name == 'userdata' ) methods[0].isCallback = 1;
-    }
-    if( not methods[0].isCallback ){
-      methods[0].excluded = 1;
-      unsupport = 1;
-    }
-  }
+	if( isCallback and methods.size() ){
+		for( par in meth.parlist ){
+			if( par.name == 'userdata' ) methods[0].isCallback = 1;
+		}
+		if( not methods[0].isCallback ){
+			methods[0].excluded = 1;
+			unsupport = 1;
+		}
+	}
 	for( meth in methods ) meth.Generate();
 	for( meth in privameths ) meth.Generate();
 }
@@ -3493,8 +3493,8 @@ routine UserType::GenerateType()
 	type_decls = '';
 	type_codes = '';
 	kvmap2 = { 'host'=>name, 'cxxname'=>name, 'daoname'=>name,
-		'retype'=>'=>' + name, 'parlist'=> '', 'overload'=>'', 'namespace'=>''};
-  if( snamespace ) kvmap2[ 'namespace' ] = snamespace + '::';
+	'retype'=>'=>' + name, 'parlist'=> '', 'overload'=>'', 'namespace'=>''};
+	if( snamespace ) kvmap2[ 'namespace' ] = snamespace + '::';
 	for( meth in methods ) if( meth.attribs & FUNC_PURE_VIRTUAL ){
 		isPureVirt = 1;
 		noConstructor = 1;
@@ -3526,31 +3526,31 @@ routine UserType::GenerateType()
 		meth_codes += qt_qstream_func;
 	}else if( lib_name == LIB_QT and name == 'QStringList' ){
 		dao_meths += qt_qstringlist_dao;
-    meth_decls += qt_qstringlist_decl;
-    meth_codes += qt_qstringlist_func;
-  }
-  if( isQObject ){
-    dao_meths += qt_qobject_cast_dao.expand( kvmap );
-    meth_decls += qt_qobject_cast_decl.expand( kvmap );
-    if( noWrapping ){
-      meth_codes += qt_qobject_cast_func.expand( kvmap );
-    }else{
-      meth_codes += qt_qobject_cast_func2.expand( kvmap );
-    }
-  }
-
-  private_default = 0;
-  imp_default = allocators.size() == 0;
-  exp_default = 0;
+		meth_decls += qt_qstringlist_decl;
+		meth_codes += qt_qstringlist_func;
+	}
+	if( isQObject ){
+		dao_meths += qt_qobject_cast_dao.expand( kvmap );
+		meth_decls += qt_qobject_cast_decl.expand( kvmap );
+		if( noWrapping ){
+			meth_codes += qt_qobject_cast_func.expand( kvmap );
+		}else{
+			meth_codes += qt_qobject_cast_func2.expand( kvmap );
+		}
+	}
+	
+	private_default = 0;
+	imp_default = allocators.size() == 0;
+	exp_default = 0;
 	if( allocators.size() ){
-    noConstructor = 1;
+		noConstructor = 1;
 		if( isCppClass ){
 			for( meth in allocators ){
-        if( meth.parlist.size() ==0 ) exp_default = 1;
+				if( meth.parlist.size() ==0 ) exp_default = 1;
 				if( meth.attribs & FUNC_PRIVATE ){
-          private_default = meth.parlist.size() ==0;
-          skip;
-        }
+					private_default = meth.parlist.size() ==0;
+					skip;
+				}
 				if( (meth.attribs & FUNC_PROTECTED) and not hasVirtual ) skip;
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
@@ -3558,19 +3558,19 @@ routine UserType::GenerateType()
 			}
 		}
 	}
-  #if( name == 'Fl_Free' ) io.writeln( name, allocators, private_default );
-  if( imp_default and not exp_default and not private_default and not noWrapping 
-      and (not noConstructor or hasVirtual) ){
+	#if( name == 'Fl_Free' ) io.writeln( name, allocators, private_default );
+	if( imp_default and not exp_default and not private_default and not noWrapping 
+	and (not noConstructor or hasVirtual) ){
 		if( hasVirtual ){
-#			if( not isPureVirt ){
-				dao_meths += dao_proto.expand( kvmap2 );
-				meth_decls += cxx_wrap_proto.expand( kvmap2 ) + ';\n';
-        if( isCppClass ){
-          meth_codes += cxx_wrap_new.expand( kvmap2 );
-        }else{
-          meth_codes += c_wrap_new.expand( kvmap2 );
-        }
-#			}
+			#			if( not isPureVirt ){
+			dao_meths += dao_proto.expand( kvmap2 );
+			meth_decls += cxx_wrap_proto.expand( kvmap2 ) + ';\n';
+			if( isCppClass ){
+				meth_codes += cxx_wrap_new.expand( kvmap2 );
+			}else{
+				meth_codes += c_wrap_new.expand( kvmap2 );
+			}
+			#			}
 		}elif( isDefined and not hasProtConstr ){
 			dao_meths += dao_proto.expand( kvmap2 );
 			meth_decls += cxx_wrap_proto.expand( kvmap2 ) + ';\n';
@@ -3590,7 +3590,7 @@ routine UserType::GenerateType()
 			if( isCppClass ){
 				if( allocators.size() ){
 					for( alloc in allocators ){
-            if( alloc.excluded ) skip;
+						if( alloc.excluded ) skip;
 						if( alloc.attribs & (FUNC_PRIVATE|FUNC_PROTECTED) ) skip;
 						kvmap['parlist'] = alloc.cxxProtoParam;
 						kvmap['parcall'] = alloc.cxxCallParamV;
@@ -3598,11 +3598,11 @@ routine UserType::GenerateType()
 						type_decls += tpl_class_new_novirt.expand( kvmap );
 					}
 				}else{
-          type_decls = tpl_struct.expand( kvmap );
+					type_decls = tpl_struct.expand( kvmap );
 					type_codes = tpl_struct_alloc2.expand( kvmap );
 				}
 			}else{
-        type_decls = tpl_struct.expand( kvmap );
+				type_decls = tpl_struct.expand( kvmap );
 				type_codes = tpl_struct_alloc.expand( kvmap );
 			}
 		}
@@ -3610,7 +3610,7 @@ routine UserType::GenerateType()
 	}
 	mapnonvirt = {=>};
 	mapprivate = {=>};
-  implemented_meth_names = {=>};
+	implemented_meth_names = {=>};
 	for( meth in privameths ) mapprivate[ meth.signature ] = 1;
 	class_new = '';
 	class_decl = '';
@@ -3618,7 +3618,7 @@ routine UserType::GenerateType()
 		declmeths.clear();
 		declvirts.clear();
 		for( meth in methods ){
-      implemented_meth_names[ meth.cxxName ] = 1;
+			implemented_meth_names[ meth.cxxName ] = 1;
 			if( (meth.attribs & FUNC_VIRTUAL) ){
 				declmeths[ meth.signature ] = meth;
 				declvirts[ meth.signature ] = meth;
@@ -3654,14 +3654,14 @@ routine UserType::GenerateType()
 			}
 			for( s in sup.restPureVirts ){
 				#if( s[0] == sup.name ) 
-					restPureVirts.append( s );
+				restPureVirts.append( s );
 			}
 		}
 		#io.println( declmeths, declvirts, '\n' );
 		kmethods = '';
 		for( meth in declmeths.values() ){
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
-				'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
+			'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
 			if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
 			if( meth.excluded ){
 				kmethods += '  ' + meth.source + '{/*XXX 1*/}\n';
@@ -3669,65 +3669,65 @@ routine UserType::GenerateType()
 				kmethods += tpl_meth_decl.expand( kvmap );
 			}
 		}
-    tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
-    kvm = { 'type'=>name };
+		tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
+		kvm = { 'type'=>name };
 		kvirtuals = '';
 		for( meth in declvirts.values() ){
 			if( meth.excluded ) skip;
-#{
-      cxxProtoParamVirt for DaoCxxVirt_XXX:
-      where the virtual functions may use XXX::YYY as default value,
-      which should be stripped from the method declaration in DaoCxxVirt_XXX.
-#}
+			#{
+			      cxxProtoParamVirt for DaoCxxVirt_XXX:
+			      where the virtual functions may use XXX::YYY as default value,
+			      which should be stripped from the method declaration in DaoCxxVirt_XXX.
+			#}
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
-				'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
+			'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
 			if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
-      kvirtuals += tpl_meth_decl.expand( kvmap );
+			kvirtuals += tpl_meth_decl.expand( kvmap );
 			if( meth.attribs & FUNC_VIRTUAL ){
 				tmp = meth.cxxWrapperVirt2;
-# for virtual function from parent class:
+				# for virtual function from parent class:
 				#tmp.change( meth.hostType + '::', name + '::' ); 2010-03-20
-#{
-        if( implemented_meth_names.has( meth.cxxName ) ){
-          tmp.change( '_' + meth.hostType + '::', '_' + name + '::' );
-        }else{
-          tmp.change( meth.hostType + '::', name + '::' );
-        }
-#}
-        tmp.change( '_' + meth.hostType + '::', '_' + name + '::' );
+				#{
+				        if( implemented_meth_names.has( meth.cxxName ) ){
+				          tmp.change( '_' + meth.hostType + '::', '_' + name + '::' );
+				        }else{
+				          tmp.change( meth.hostType + '::', name + '::' );
+				        }
+				#}
+				tmp.change( '_' + meth.hostType + '::', '_' + name + '::' );
 				cxxWrapperVirt += tmp;
 			}
 		}
 		for( pvirt in restPureVirts ){
-      #kvm[ 'cxxname' ] = pvirt.cxxName;
-      #kvm[ 'parcall' ] = pvirt.cxxCallParamV;
-      #cd = pvirt.retype.typeid == CT_VOID ? '{}\n' : tmp.expand( kvm );
-      # 2010-01-19, 03:04
-      kmethods += '\t' + pvirt[1] + '{ /*XXX 2*/ }\n';
-    }
-    tmp = '{ $(return)DaoCxxVirt_$(type)::$(cxxname)( $(parcall) ); }\n';
-    tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
-    for( meth in methods ){
-      if( meth.reimplemented != '' and not meth.nowrap ){
-        kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
-          'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
-        if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
-        kmethods += tpl_meth_decl.expand( kvmap );
-        tmp2 = meth.cxxWrapperVirt2;
+			#kvm[ 'cxxname' ] = pvirt.cxxName;
+			#kvm[ 'parcall' ] = pvirt.cxxCallParamV;
+			#cd = pvirt.retype.typeid == CT_VOID ? '{}\n' : tmp.expand( kvm );
+			# 2010-01-19, 03:04
+			kmethods += '\t' + pvirt[1] + '{ /*XXX 2*/ }\n';
+		}
+		tmp = '{ $(return)DaoCxxVirt_$(type)::$(cxxname)( $(parcall) ); }\n';
+		tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
+		for( meth in methods ){
+			if( meth.reimplemented != '' and not meth.nowrap ){
+				kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
+				'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
+				if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+				kmethods += tpl_meth_decl.expand( kvmap );
+				tmp2 = meth.cxxWrapperVirt2;
 				tmp2.change( meth.hostType + '::(%w+ %b() %s* ; %s* %} %s* else )', meth.reimplemented + '::%1' );
 				cxxWrapperVirt += tmp2;
-      }
-      if( not noWrapping && not meth.excluded && (meth.attribs & FUNC_PROTECTED) ){
-        kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
-          'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
-        if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
-        rc = meth.retype.typeid == CT_VOID ? '' : 'return ';
-        kvm[ 'cxxname' ] = meth.cxxName;
-        kvm[ 'parcall' ] = meth.cxxCallParamV;
-        kvm[ 'return' ] = rc;
-        kmethods += tpl_meth_decl3.expand( kvmap ) + tmp.expand( kvm );
-      }
-    }
+			}
+			if( not noWrapping && not meth.excluded && (meth.attribs & FUNC_PROTECTED) ){
+				kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
+				'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
+				if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+				rc = meth.retype.typeid == CT_VOID ? '' : 'return ';
+				kvm[ 'cxxname' ] = meth.cxxName;
+				kvm[ 'parcall' ] = meth.cxxCallParamV;
+				kvm[ 'return' ] = rc;
+				kmethods += tpl_meth_decl3.expand( kvmap ) + tmp.expand( kvm );
+			}
+		}
 		kvmap = { 'class'=>name };
 		daoc_supers = '';
 		virt_supers = '';
@@ -3761,13 +3761,13 @@ routine UserType::GenerateType()
 		if( virt_supers ) virt_supers = ' :' + virt_supers;
 		if( init_supers ) init_supers += '\n';
 		kvmap = { 'class'=>name, 'virt_supers'=>virt_supers,
-			'supers'=>daoc_supers, 'get_supers'=>get_supers,
-			'virtuals'=>kvirtuals, 'methods'=>kmethods,
-			'init_supers'=>init_supers, 'parlist'=>'', 'parcall'=>'', 
-			'Q_OBJECT'=>'', 'qt_signal_slot'=>'', 
-			'qt_init'=>'', 'parents'=>'public QObject',
-			'init_parents'=>'', 'qt_make_linker'=>'', 'qt_virt_emit'=>'',
-			'qt_make_linker3'=>''};
+		'supers'=>daoc_supers, 'get_supers'=>get_supers,
+		'virtuals'=>kvirtuals, 'methods'=>kmethods,
+		'init_supers'=>init_supers, 'parlist'=>'', 'parcall'=>'', 
+		'Q_OBJECT'=>'', 'qt_signal_slot'=>'', 
+		'qt_init'=>'', 'parents'=>'public QObject',
+		'init_parents'=>'', 'qt_make_linker'=>'', 'qt_virt_emit'=>'',
+		'qt_make_linker3'=>''};
 		if( isQObject ){
 			kvmap['Q_OBJECT'] = 'Q_OBJECT';
 			kvmap['qt_init'] = qt_init;
@@ -3786,9 +3786,9 @@ routine UserType::GenerateType()
 				class_new += tpl_class_new.expand( kvmap );
 				type_codes += tpl_class_init2.expand( kvmap );
 			}
-    }elif( not noWrapping and (not noConstructor or hasVirtual) ){
-# class has no virtual methods but has protected constructor
-# should also be wrapped, so that it can be derived by Dao class:
+		}elif( not noWrapping and (not noConstructor or hasVirtual) ){
+			# class has no virtual methods but has protected constructor
+			# should also be wrapped, so that it can be derived by Dao class:
 			class_new += tpl_class_new.expand( kvmap );
 			type_codes += tpl_class_init2.expand( kvmap );
 		}elif( not hasVirtual ){
@@ -3826,18 +3826,18 @@ routine UserType::GenerateType()
 			type_decls += daoss_class.expand( kvmap );
 		} # isQObject
 		kvmap['constructors'] = class_decl;
-    if( not noWrapping ){
-      if( isPureVirt || noCopyConstructor ){
-        type_decls += tpl_class_def.expand( kvmap ) + class_new;
-        type_codes += tpl_class_init.expand( kvmap );
-      }else{
-        type_decls += tpl_class2.expand( kvmap ) + class_new;
-        type_codes += tpl_class_copy.expand( kvmap );
-      }
-    }
-  }else{
-    callbacks = '';
-    setfields = '';
+		if( not noWrapping ){
+			if( isPureVirt || noCopyConstructor ){
+				type_decls += tpl_class_def.expand( kvmap ) + class_new;
+				type_codes += tpl_class_init.expand( kvmap );
+			}else{
+				type_decls += tpl_class2.expand( kvmap ) + class_new;
+				type_codes += tpl_class_copy.expand( kvmap );
+			}
+		}
+	}else{
+		callbacks = '';
+		setfields = '';
 		kvmap = { 'name'=>name, 'callback' => '' };
 		for( meth in methods ){
 			kvmap[ 'callback' ] = meth.cxxName;
@@ -3849,7 +3849,7 @@ routine UserType::GenerateType()
 			setfields += tpl_set_selfield.expand( kvmap );
 		}
 		if( allocators.size() ){
-      io.writeln( name, '!!!!!!!' );
+			io.writeln( name, '!!!!!!!' );
 		}else{
 			kvmap = { 'name'=>name, 'callbacks'=>callbacks, 'selfields'=>setfields };
 			type_decls = tpl_struct_daoc.expand( kvmap );
@@ -3877,12 +3877,12 @@ routine UserType::Generate()
 	meth_codes = '';
 	dao_meths = '';
 	tpl_gs = cxx_gs_user;
-  ns = snamespace ? snamespace + '::' : '';
+	ns = snamespace ? snamespace + '::' : '';
 	kvmap = { 'type'=>name, 'name'=>'', 'namespace'=>ns };
 	for( field in fields ){
 		field.Generate();
-    if( field.unsupport ) skip;
-    if( field.isCallback ) skip;
+		if( field.unsupport ) skip;
+		if( field.isCallback ) skip;
 		kvmap[ 'name' ] = field.name;
 		kvmap[ 'ftype' ] = field.daotype;
 		decl = cxx_getter_proto.expand( kvmap );
@@ -3898,21 +3898,21 @@ routine UserType::Generate()
 	}
 	tmp = {=>};
 	for( meth in methods ) tmp[ meth.signature ] = meth;
-  if( not isCallback ){
-    methods.clear();
-    allocators.clear();
-    for( meth in tmp.values() ){
-      if( meth.cxxName == name ){
-        if( meth.excluded ) meth.attribs |= FUNC_PRIVATE;
-        allocators.append( meth );
-      }elif( not meth.excluded ){
-        methods.append( meth );
-      }
-      if( (meth.attribs & FUNC_VIRTUAL) && meth.excluded ){
-        virtNonSupport.append( meth );
-      }
-    }
-  }
+	if( not isCallback ){
+		methods.clear();
+		allocators.clear();
+		for( meth in tmp.values() ){
+			if( meth.cxxName == name ){
+				if( meth.excluded ) meth.attribs |= FUNC_PRIVATE;
+				allocators.append( meth );
+			}elif( not meth.excluded ){
+				methods.append( meth );
+			}
+			if( (meth.attribs & FUNC_VIRTUAL) && meth.excluded ){
+				virtNonSupport.append( meth );
+			}
+		}
+	}
 	GenerateType();
 	if( isCppClass ){
 		for( meth in methods ){
@@ -3924,17 +3924,17 @@ routine UserType::Generate()
 			}elif( hasVirtual && not noWrapping && not meth.nowrap && (meth.attribs & FUNC_PROTECTED) ){
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
-        wrapper = meth.cxxWrapper;
-        name2 = 'DaoCxx_' + name;
-        subst = name2 + ' *self = (' + name2 + '*)';
-        wrapper.change( name + '%s* %* %s* self %s* = %s* %b()', subst );
-        wrapper.change( 'self%-%>(%w+)%(', 'self->DaoWrap_%1(' );
+				wrapper = meth.cxxWrapper;
+				name2 = 'DaoCxx_' + name;
+				subst = name2 + ' *self = (' + name2 + '*)';
+				wrapper.change( name + '%s* %* %s* self %s* = %s* %b()', subst );
+				wrapper.change( 'self%-%>(%w+)%(', 'self->DaoWrap_%1(' );
 				meth_codes += wrapper;
-      }
+			}
 			if( not noWrapping && (meth.attribs & FUNC_VIRTUAL) ){
 				type_decls += meth.cxxWrapperVirtProto;
 				type_codes += meth.cxxWrapperVirt;
-        if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
+				if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
 			}
 		}
 		if( not noWrapping ) type_codes += cxxWrapperVirt;
@@ -3944,7 +3944,7 @@ routine UserType::Generate()
 			if( meth.attribs & FUNC_VIRTUAL ){
 				type_decls += meth.cxxWrapperVirtProto;
 				type_codes += meth.cxxWrapperVirt;
-        if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
+				if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
 			}else{
 				meth_decls += meth.cxxProtoCodes + ';\n';
 				meth_codes += meth.cxxWrapper;
@@ -3968,7 +3968,7 @@ global ifdef_cpp_close = '#ifdef __cplusplus\n}\n#endif\n'
 global add_number = '  { "$(name)", $(type), $(namespace)$(value) },\n';
 global tpl_typedef = '  DaoNameSpace_TypeDefine( $(ns), "$(old)", "$(new)" );\n';
 global add_ccdata = '  DaoNameSpace_AddConstData( $(ns), "$(name)", '
-		'(DaoBase*)DaoCData_New( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n'
+'(DaoBase*)DaoCData_New( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n'
 
 global ext_typer = 'extern DaoTypeBase *dao_$(type)_Typer;\n';
 global alias_typer = 'DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n';
@@ -4009,13 +4009,13 @@ routine WriteUserTypeCode( utp : UserType )
 		parents += 'dao_' + sup.name + '_Typer, ';
 	}
 	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 
-		'meths'=>utp.dao_meths, 'parents'=>parents, 'alloc'=>utp.alloc_default,
-		'delete'=>'', 'if_parent'=>'', 'namespace'=>''};
-  if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
+	'meths'=>utp.dao_meths, 'parents'=>parents, 'alloc'=>utp.alloc_default,
+	'delete'=>'', 'if_parent'=>'', 'namespace'=>''};
+	if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 	if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );
 	kvmap['delete'] = 'Dao_' + utp.name + '_Delete';
 	if( utp.isQWidget )
-		kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
+	kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
 	if( utp.isCppClass ) return usertype_code_class.expand( kvmap );
 	return usertype_code_struct.expand( kvmap );
 }
@@ -4050,7 +4050,7 @@ const cpp_DaoCallbackData =
 ';
 
 routine main( inputfiles : string, wrap_name='', lang='c', fixing='', 
-		dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
+dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 {
 	if( lang == 'cpp' ){
 		constNumbers.append( ('', 'DAO_INTEGER', 'false', '0', 0) );
@@ -4097,22 +4097,22 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	main_fname = wrap_name ? wrap_name : files[0];
 	main_fname.change( '%..*$', '' );
 	log_file = io.open( main_fname + '.log', 'w' );
-
+	
 	io.writeln( dir_input, dir_output );
-#{
-#}
+	#{
+	#}
 	size = dir_input.size();
 	if( size && dir_input[ size-1 ] != '/'[0] ) dir_input += '/';
 	size = dir_output.size();
 	if( size && dir_output[ size-1 ] != '/'[0] ) dir_output += '/';
 	size = dir_inc.size();
 	if( size && dir_inc[ size-1 ] != '/'[0] ) dir_inc += '/';
-
+	
 	file2fixing : map<string,list<list<string>>> = {=>};
 	for( file in files ) file2fixing[file] = {};
 	source = '';
 	dft_fixing = {};
-  unused_fixing = {};
+	unused_fixing = {};
 	if( fixing ){
 		source = io.read( fixing );
 		lines = source.split( '\n' );
@@ -4123,16 +4123,16 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 			line.change( '\\t', '\t' );
 			line.simplify();
 			pats = line.split( '\t', '\'' );
-      if( pats.size() ==0 ) pats = line.split( ' ', '\'' );
+			if( pats.size() ==0 ) pats = line.split( ' ', '\'' );
 			if( pats.size() ==2 ){
 				pat_fixing.append( pats );
 			}elif( file2fixing.has( line ) ){
 				#if( file == '' ) dft_fixing = pat_fixing;
 				#file = line;
 				pat_fixing = file2fixing[ line ];
-      }elif( line != '' ){
-        io.writeln( 'unused fixings for', line );
-        pat_fixing = unused_fixing;
+			}elif( line != '' ){
+				io.writeln( 'unused fixings for', line );
+				pat_fixing = unused_fixing;
 			}
 		}
 		#if( file == '' ) dft_fixing = pat_fixing;
@@ -4154,56 +4154,56 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	}
 	count = 0;
 	for( utp in map_user_types.values() )
-		if( utp.name[0] == 'Q'[0] ) count ++;
+	if( utp.name[0] == 'Q'[0] ) count ++;
 	if( count > map_user_types.size() / 2 ) lib_name = LIB_QT;
-
-  io.writeln( 'sorting classes ...' );
+	
+	io.writeln( 'sorting classes ...' );
 	tmp = {=>};
 	user_types = {};
-  namespaces = {};
-  callbacks = {};
-  ns_types :map<string,list<UserType>> = {=>} # bug without type name XXX
-  ns_funcs :map<string,list<Function>> = {=>}
-#{
-	for( name in map_user_types.keys(); utp in map_user_types.values() ){
-    if( utp.isNameSpace ) io.writeln( utp, utp.name, name );
-  }
-#}
+	namespaces = {};
+	callbacks = {};
+	ns_types :map<string,list<UserType>> = {=>} # bug without type name XXX
+	ns_funcs :map<string,list<Function>> = {=>}
+	#{
+		for( name in map_user_types.keys(); utp in map_user_types.values() ){
+	    if( utp.isNameSpace ) io.writeln( utp, utp.name, name );
+	  }
+	#}
 	for( utp in map_user_types.values() ){
-    if( utp.isNameSpace ){
-      namespaces.append( utp );
-    }elif( utp.isCallback ){
-      callbacks.append( utp );
-    }else{
-      utp.SortType( user_types, tmp );
-    }
-  }
+		if( utp.isNameSpace ){
+			namespaces.append( utp );
+		}elif( utp.isCallback ){
+			callbacks.append( utp );
+		}else{
+			utp.SortType( user_types, tmp );
+		}
+	}
 	for( utp in callbacks ) utp.GenerateMeth();
-
-  io.writeln( 'generating methods ...' );
+	
+	io.writeln( 'generating methods ...' );
 	for( utp in user_types ) utp.CheckVirtual();
 	for( utp in user_types ) utp.GenerateMeth();
-  io.writeln( 'checking ...' );
+	io.writeln( 'checking ...' );
 	for( utp in user_types ) utp.CheckPureVirtual();
-  io.writeln( 'generating classes /structs ...' );
+	io.writeln( 'generating classes /structs ...' );
 	for( utp in user_types ) utp.Generate();
 	for( utp in namespaces ) utp.Generate();
-  io.writeln( 'generating functions ...' );
+	io.writeln( 'generating functions ...' );
 	for( func in functions.funcs ) func.Generate();
-
-  for( utp in user_types ){
-    if( utp.snamespace ){
-      if( not ns_types.has( utp.snamespace ) ) ns_types[ utp.snamespace ] = {};
-      ns_types[ utp.snamespace ].append( utp );
-    }
-  }
+	
+	for( utp in user_types ){
+		if( utp.snamespace ){
+			if( not ns_types.has( utp.snamespace ) ) ns_types[ utp.snamespace ] = {};
+			ns_types[ utp.snamespace ].append( utp );
+		}
+	}
 	for( func in functions.funcs ){
-    if( func.snamespace ){
-      if( not ns_funcs.has( func.snamespace ) ) ns_funcs[ func.snamespace ] = {};
-      ns_funcs[ func.snamespace ].append( func );
-    }
-  }
-
+		if( func.snamespace ){
+			if( not ns_funcs.has( func.snamespace ) ) ns_funcs[ func.snamespace ] = {};
+			ns_funcs[ func.snamespace ].append( func );
+		}
+	}
+	
 	fname = main_fname + '.h';
 	fout_header = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_header.print( '#include<stdlib.h>\n' );
@@ -4213,38 +4213,38 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	if( lib_name == LIB_QT ) fout_header.print( '#include<QVector>\n#include<QList>\n' );
 	for( file in file_names ){
 		if( not extfiles.has( file + '.h' ) ){
-      if( dir_input ){
-        fout_header.print( '#include<' + dir_inc + file + '.h>\n' );
-      }else{
-        fout_header.print( '#include"' + dir_inc + file + '.h"\n' );
-      }
-    }
-  }
+			if( dir_input ){
+				fout_header.print( '#include<' + dir_inc + file + '.h>\n' );
+			}else{
+				fout_header.print( '#include"' + dir_inc + file + '.h"\n' );
+			}
+		}
+	}
 	if( include ){
-    wrap_name2 = include[].toupper();
+		wrap_name2 = include[].toupper();
 		fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
 		fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_IMPORT' );
 		fout_header.println( '#include"dao_' + include + '.h"' );
-    fout_header.println( '#else' );
+		fout_header.println( '#else' );
 		fout_header.println( '#define DAO_DLL_' + wrap_name2 );
-    fout_header.println( '#endif' );
-  }
-  wrap_name2 = wrap_name[].toupper();
-  fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
+		fout_header.println( '#endif' );
+	}
+	wrap_name2 = wrap_name[].toupper();
+	fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
 	fout_header.println( '#ifndef DAO_DLL_' + wrap_name2 );
 	fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_EXPORT' );
 	fout_header.println( '#endif' );
-  fout_header.println( '#else' );
-  fout_header.println( '#define DAO_DLL_' + wrap_name2 );
-  fout_header.println( '#endif' );
+	fout_header.println( '#else' );
+	fout_header.println( '#define DAO_DLL_' + wrap_name2 );
+	fout_header.println( '#endif' );
 	fout_header.println();
 	fout_header.println( 'extern DaoVmSpace *__daoVmSpace;\n' );
-
+	
 	fname = main_fname + suffix;
 	fout_source = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source.println( '#include"dao_' + main_fname + '.h"\n' );
 	fout_source.println( 'DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n' );
-
+	
 	fname = main_fname + '2' + suffix;
 	fout_source2 = io.open( dir_output + 'dao_' + fname, 'w' );
 	fout_source2.println( '#include"dao_' + main_fname + '.h"\n' );
@@ -4255,7 +4255,7 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	codes = {=>};
 	for( file in file_names ) codes[ file ] = ifdef_cpp_open;
 	fout_header.println( ifdef_cpp_open );
-
+	
 	for( utp in user_types ){
 		kvmap[ 'type' ] = utp.name;
 		#fout_header.print( '// ', utp.input_file, '.h : ', utp.source, '\n' );
@@ -4291,63 +4291,63 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	}
 	for( ptype in pointer_types.keys() ){
 		kvmap[ 'type' ] = ptype;
-    if( map_user_types.has( ptype ) and map_user_types[ptype].isCallback ) skip;
+		if( map_user_types.has( ptype ) and map_user_types[ptype].isCallback ) skip;
 		fout_header.print( ext_typer.expand( kvmap ) );
 	}
-  for( callback in dao_callbacks_proto ) fout_header.writeln( callback );
+	for( callback in dao_callbacks_proto ) fout_header.writeln( callback );
 	fout_header.println( ifdef_cpp_close );
-
-  if( include == '' ){
-    if( lang == 'c' ) fout_header.writeln( 'typedef struct DaoCallbackData DaoCallbackData;' );
-    fout_header.writeln( define_DaoCallbackData );
-    if( lang == 'cpp' ){
-      fout_source.writeln( cpp_DaoCallbackData );
-    }else{
-      fout_source.writeln( c_DaoCallbackData );
-    }
-  }
-
+	
+	if( include == '' ){
+		if( lang == 'c' ) fout_header.writeln( 'typedef struct DaoCallbackData DaoCallbackData;' );
+		fout_header.writeln( define_DaoCallbackData );
+		if( lang == 'cpp' ){
+			fout_source.writeln( cpp_DaoCallbackData );
+		}else{
+			fout_source.writeln( c_DaoCallbackData );
+		}
+	}
+	
 	fout_source2.println( ifdef_cpp_open );
 	for( utp in user_types ){
 		if( not extfiles.has( utp.input_file ) ){
-      open_ns = 'namespace ' + utp.snamespace + '{\n';
-      close_ns = '}\n';
+			open_ns = 'namespace ' + utp.snamespace + '{\n';
+			close_ns = '}\n';
 			if( utp.type_decls ){
-        if( utp.snamespace ) fout_header.print( open_ns );
-        fout_header.print( '\n', utp.type_decls.expand( kvmap ) );
-        if( utp.snamespace ) fout_header.print( close_ns );
-      }
-      fout_source2.println( '/* ', utp.input_file, '*/' );
-      fout_source2.println( WriteUserTypeCode( utp ).expand( kvmap ) );
-      fout_source2.println( utp.meth_codes.expand( kvmap ) );
-    }
+				if( utp.snamespace ) fout_header.print( open_ns );
+				fout_header.print( '\n', utp.type_decls.expand( kvmap ) );
+				if( utp.snamespace ) fout_header.print( close_ns );
+			}
+			fout_source2.println( '/* ', utp.input_file, '*/' );
+			fout_source2.println( WriteUserTypeCode( utp ).expand( kvmap ) );
+			fout_source2.println( utp.meth_codes.expand( kvmap ) );
+		}
 	}
 	for( utp in namespaces ){
 		if( not extfiles.has( utp.input_file ) ){
-      fout_source2.println( '/* ', utp.input_file, '*/' );
-      fout_source2.println( utp.meth_codes.expand( kvmap ) );
-    }
+			fout_source2.println( '/* ', utp.input_file, '*/' );
+			fout_source2.println( utp.meth_codes.expand( kvmap ) );
+		}
 	}
 	fout_source2.println( ifdef_cpp_close );
-
-  if( lib_name == LIB_QT ){
-    fout_header.writeln( qt_get_wrapper1 );
-    fout_source3.writeln( qt_get_wrapper2 );
-  }
-  fout_source3.writeln( cxx_get_object_method );
-  for( proxy in proxy_functions.values() ){
-    if( proxy.used ) fout_source3.writeln( proxy.codes );
-    #if( proxy.used ) io.writeln( proxy.name, proxy.used );
-  }
-  for( callback in dao_callbacks ) fout_source3.writeln( callback );
+	
+	if( lib_name == LIB_QT ){
+		fout_header.writeln( qt_get_wrapper1 );
+		fout_source3.writeln( qt_get_wrapper2 );
+	}
+	fout_source3.writeln( cxx_get_object_method );
+	for( proxy in proxy_functions.values() ){
+		if( proxy.used ) fout_source3.writeln( proxy.codes );
+		#if( proxy.used ) io.writeln( proxy.name, proxy.used );
+	}
+	for( callback in dao_callbacks ) fout_source3.writeln( callback );
 	for( utp in user_types ){
 		if( not extfiles.has( utp.input_file ) ){
-      open_ns = 'namespace ' + utp.snamespace + '{\n';
-      close_ns = '}\n';
-      if( utp.snamespace ) fout_source3.print( open_ns );
+			open_ns = 'namespace ' + utp.snamespace + '{\n';
+			close_ns = '}\n';
+			if( utp.snamespace ) fout_source3.print( open_ns );
 			fout_source3.println( utp.type_codes.expand( kvmap ) );
-      if( utp.snamespace ) fout_source3.print( close_ns );
-    }
+			if( utp.snamespace ) fout_source3.print( close_ns );
+		}
 	}
 	func_decl = '';
 	rout_entry = '';
@@ -4363,31 +4363,31 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 		}
 	}
 	for( func in functions.funcs ){
-    if( func.excluded ) skip;
+		if( func.excluded ) skip;
 		if( extfiles.has( func.input_file ) ) skip;
 		func_decl += func.cxxProtoCodes + ';\n';
 		func_codes += func.cxxWrapper;
 		if( func.snamespace =='' ) rout_entry += func.daoProtoCodes;
 	}
 	fout_source.println( ifdef_cpp_open );
-
-
+	
+	
 	fout_source.println( 'static DaoNumItem constNumbers[] =\n{\n' );
 	kvmap[ 'namespace' ] = '';
-  lastns = '';
-  #sort( constNumbers )->{ x[0]<=y[0] and x[1]<=y[1] and x[2]<=y[2] };
-  constNumbers.sorta();
-  ns_numbers = {=>};
+	lastns = '';
+	#sort( constNumbers )->{ x[0]<=y[0] and x[1]<=y[1] and x[2]<=y[2] };
+	constNumbers.sorta();
+	ns_numbers = {=>};
 	for( it in constNumbers ){
 		if( it[4] ) skip;
-    if( it[0] != lastns ){
-      lastns = it[0];
-      kvmap[ 'namespace' ] = lastns + '::';
-      fout_source.println( '  { NULL, 0, 0 }\n};' );
-      fout_source.printf( 'static DaoNumItem dao_%s_Nums[] =\n{\n', lastns );
-      ns_numbers[ lastns ] = 1;
-    }
-    kvmap[ 'type' ] = (string) it[1];
+		if( it[0] != lastns ){
+			lastns = it[0];
+			kvmap[ 'namespace' ] = lastns + '::';
+			fout_source.println( '  { NULL, 0, 0 }\n};' );
+			fout_source.printf( 'static DaoNumItem dao_%s_Nums[] =\n{\n', lastns );
+			ns_numbers[ lastns ] = 1;
+		}
+		kvmap[ 'type' ] = (string) it[1];
 		kvmap[ 'name' ] = (string) it[2];
 		kvmap[ 'value' ] = (string) it[3];
 		fout_source.print( add_number.expand( kvmap ) );
@@ -4400,141 +4400,141 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	hasNameSpace = 0;
 	for( utp in namespaces ){
 		#kvmap = { 'type'=>utp.name, 'decls'=>utp.meth_decls, 'meths'=>utp.dao_meths, 'module'=>wrap_name2 };
-    #fout_source.printf( '/* %s */\n', utp.input_file );
+		#fout_source.printf( '/* %s */\n', utp.input_file );
 		#fout_source.print( methlist_code2.expand( kvmap ) );
 		#fout_source.print( utp.meth_codes.expand( kvmap ) );
 		hasNameSpace = 1;
 	}
-  for( ns in ns_funcs.keys(); funcs in ns_funcs.values() ){
-    fout_source.printf( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
-    for( func in funcs ) fout_source.print( func.daoProtoCodes );
-    fout_source.printf( '\t{ NULL, NULL }\n};\n' );
-  }
-  for( ns in ns_types.keys(); utps in ns_types.values() ){
-    fout_source.printf( 'static DaoTypeBase *dao_%s_Types[%i] = \n{\n', ns, utps.size()+1 );
-    for( utp in utps ) fout_source.printf( '\tdao_%s_Typer,\n', utp.name );
-    fout_source.printf( '\tNULL\n};\n' );
-  }
+	for( ns in ns_funcs.keys(); funcs in ns_funcs.values() ){
+		fout_source.printf( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
+		for( func in funcs ) fout_source.print( func.daoProtoCodes );
+		fout_source.printf( '\t{ NULL, NULL }\n};\n' );
+	}
+	for( ns in ns_types.keys(); utps in ns_types.values() ){
+		fout_source.printf( 'static DaoTypeBase *dao_%s_Types[%i] = \n{\n', ns, utps.size()+1 );
+		for( utp in utps ) fout_source.printf( '\tdao_%s_Typer,\n', utp.name );
+		fout_source.printf( '\tNULL\n};\n' );
+	}
 	kvmap2 = {'old'=>'', 'new'=>''};
-  nalias = 0;
-  aliases = '';
-  ns_aliases : map<string,list<string>> = {=>};
+	nalias = 0;
+	aliases = '';
+	ns_aliases : map<string,list<string>> = {=>};
 	for( name in map_user_types.keys(); utp in map_user_types.values() ){
-    if( utp.isNameSpace or utp.isCallback ) skip;
+		if( utp.isNameSpace or utp.isCallback ) skip;
 		if( name != utp.name && name.pfind( '(%s|:)' ).size()==0 ){
-      ns = utp.snamespace;
-      if( ns ){
-        if( not ns_aliases.has( ns ) ) ns_aliases[ ns ] = {};
-        ns_aliases[ ns ].append( utp.name );
-        ns_aliases[ ns ].append( name );
-        skip;
-      }
+			ns = utp.snamespace;
+			if( ns ){
+				if( not ns_aliases.has( ns ) ) ns_aliases[ ns ] = {};
+				ns_aliases[ ns ].append( utp.name );
+				ns_aliases[ ns ].append( name );
+				skip;
+			}
 			kvmap2[ 'old' ] = utp.name;
 			kvmap2[ 'new' ] = name;
-      aliases += '  aliases[' + (string)(nalias) + '] = \"' + utp.name + '\";\n';
-      aliases += '  aliases[' + (string)(nalias+1) + '] = \"' + name + '\";\n';
-      nalias += 2;
+			aliases += '  aliases[' + (string)(nalias) + '] = \"' + utp.name + '\";\n';
+			aliases += '  aliases[' + (string)(nalias+1) + '] = \"' + name + '\";\n';
+			nalias += 2;
 			#fout_source.print( tpl_typedef.expand( kvmap2 ) );
 			fout_source2.print( alias_typer.expand( kvmap2 ) );
 		}
 	}
-  aliases += '  aliases[' + (string)(nalias) + '] = NULL;';
-  nalias += 1;
-
-  ns_has_aliases = {=>};
-  for( ns in ns_types.keys() ){
-    if( not ns_aliases.has( ns ) ) skip;
-    ns_has_aliases[ ns ] = 'dao_' + ns + '_Aliases';
-    names = ns_aliases[ns];
-    fout_source.printf( 'const char *dao_%s_Aliases[%i] = \n{\n', ns, names.size()+1 );
-    for( name in names ) fout_source.print( '\t\"' + name + '\",\n' );
-    fout_source.println( '\tNULL\n}\n;' );
-  }
-
+	aliases += '  aliases[' + (string)(nalias) + '] = NULL;';
+	nalias += 1;
+	
+	ns_has_aliases = {=>};
+	for( ns in ns_types.keys() ){
+		if( not ns_aliases.has( ns ) ) skip;
+		ns_has_aliases[ ns ] = 'dao_' + ns + '_Aliases';
+		names = ns_aliases[ns];
+		fout_source.printf( 'const char *dao_%s_Aliases[%i] = \n{\n', ns, names.size()+1 );
+		for( name in names ) fout_source.print( '\t\"' + name + '\",\n' );
+		fout_source.println( '\tNULL\n}\n;' );
+	}
+	
 	fout_source.println( 'int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )\n{' );
 	if( hasNameSpace ) fout_source.println( '  DaoNameSpace *ns2;' );
-  fout_source.print( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
-  fout_source.print( '  const char *aliases[', nalias, '];\n' );
+	fout_source.print( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
+	fout_source.print( '  const char *aliases[', nalias, '];\n' );
 	fout_source.println( '  __daoVmSpace = vms;' );
-  if( lib_name == LIB_QT ){
-    fout_source.print( '   qRegisterMetaType<DaoQtMessage>("DaoQtMessage");\n' );
-  }
-  count = 0;
-	for( utp in user_types ){
-    if( utp.snamespace ) skip;
-		fout_source.print( '  typers[', count, '] = dao_' + utp.name + '_Typer,\n' );
-    count = count + 1; # XXX bug with ++count;
-    #++ count;
+	if( lib_name == LIB_QT ){
+		fout_source.print( '   qRegisterMetaType<DaoQtMessage>("DaoQtMessage");\n' );
 	}
-  fout_source.print( '  typers[', count, '] = NULL;\n' );
-  fout_source.println( aliases );
-  kvmap2[ 'ns' ] = 'ns';
-  lastns = '';
-  basic_typedefs.sorta();
+	count = 0;
+	for( utp in user_types ){
+		if( utp.snamespace ) skip;
+		fout_source.print( '  typers[', count, '] = dao_' + utp.name + '_Typer,\n' );
+		count = count + 1; # XXX bug with ++count;
+		#++ count;
+	}
+	fout_source.print( '  typers[', count, '] = NULL;\n' );
+	fout_source.println( aliases );
+	kvmap2[ 'ns' ] = 'ns';
+	lastns = '';
+	basic_typedefs.sorta();
 	for( td in basic_typedefs ){
-    if( td[0] != lastns ){
-      lastns = td[0];
-      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
-      kvmap2[ 'ns' ] = 'ns2';
-    }
+		if( td[0] != lastns ){
+			lastns = td[0];
+			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+			kvmap2[ 'ns' ] = 'ns2';
+		}
 		kvmap2[ 'old' ] = (string)td[1];
 		kvmap2[ 'new' ] = (string)td[2];
 		fout_source.print( tpl_typedef.expand( kvmap2 ) );
 	}
 	fout_source.println( '  DaoNameSpace_AddConstNumbers( ns, constNumbers );' );
-  fout_source.println( '  DaoNameSpace_WrapTypes( ns, typers );' );
-  if( nalias >1 ) fout_source.println( '  DaoNameSpace_TypeDefines( ns, aliases );' );
+	fout_source.println( '  DaoNameSpace_WrapTypes( ns, typers );' );
+	if( nalias >1 ) fout_source.println( '  DaoNameSpace_TypeDefines( ns, aliases );' );
 	for( utp in namespaces ){
 		s = utp.name;
 		fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
 		if( ns_numbers.has( s ) )
-      fout_source.println( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
+		fout_source.println( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
 		if( ns_types.has( s ) )
-      fout_source.println( '  DaoNameSpace_WrapTypes( ns2, dao_' +s+ '_Types );' );
-    if( ns_has_aliases.has( s ) )
-      fout_source.println( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
-  }
+		fout_source.println( '  DaoNameSpace_WrapTypes( ns2, dao_' +s+ '_Types );' );
+		if( ns_has_aliases.has( s ) )
+		fout_source.println( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
+	}
 	for( utp in namespaces ){
 		s = utp.name;
 		if( ns_funcs.has( s ) ){
-      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
-      fout_source.println( '  DaoNameSpace_WrapFunctions( ns2, dao_' +s+ '_Funcs );' );
-    }
+			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+			fout_source.println( '  DaoNameSpace_WrapFunctions( ns2, dao_' +s+ '_Funcs );' );
+		}
 	}
 	kvmap[ 'refer' ] = '&';
-  #sort( constCData )->{ x[0]<=y[0] and x[1].name<=y[1].name };
-  constCData.sorta();
-  kvmap[ 'ns' ] = 'ns';
-  lastns = '';
+	#sort( constCData )->{ x[0]<=y[0] and x[1].name<=y[1].name };
+	constCData.sorta();
+	kvmap[ 'ns' ] = 'ns';
+	lastns = '';
 	for( p in constCData ){
 		if( p[3] ) skip;
-    if( p[0] != lastns ){
-      lastns = p[0];
-      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
-      kvmap[ 'ns' ] = 'ns2';
-    }
+		if( p[0] != lastns ){
+			lastns = p[0];
+			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+			kvmap[ 'ns' ] = 'ns2';
+		}
 		kvmap[ 'type' ] = (string) p[1].name;
 		kvmap[ 'name' ] = (string) p[2];
 		fout_source.print( add_ccdata.expand( kvmap ) );
 	}
 	kvmap[ 'refer' ] = '';
-  #sort( constCDataPtr )->{ x[0]<=y[0] and x[1].name<=y[1].name };
-  constCDataPtr.sorta();
-  kvmap[ 'ns' ] = 'ns';
-  lastns = '';
+	#sort( constCDataPtr )->{ x[0]<=y[0] and x[1].name<=y[1].name };
+	constCDataPtr.sorta();
+	kvmap[ 'ns' ] = 'ns';
+	lastns = '';
 	for( p in constCDataPtr ){
 		if( p[3] ) skip;
-    if( p[0] != lastns ){
-      lastns = p[0];
-      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
-      kvmap[ 'ns' ] = 'ns2';
-    }
+		if( p[0] != lastns ){
+			lastns = p[0];
+			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+			kvmap[ 'ns' ] = 'ns2';
+		}
 		kvmap[ 'type' ] = (string) p[1].name;
 		kvmap[ 'name' ] = (string) p[2];
 		fout_source.print( add_ccdata.expand( kvmap ) );
 	}
 	fout_source.println( '  DaoNameSpace_WrapFunctions( ns, dao_Funcs );' );
-  kvmap2[ 'ns' ] = 'ns';
+	kvmap2[ 'ns' ] = 'ns';
 	for( alias in typedef_ns_types.keys(); utp in typedef_ns_types.values() ){
 		kvmap2[ 'old' ] = utp.snamespace + '::' + utp.name;
 		kvmap2[ 'new' ] = alias;
@@ -4543,14 +4543,14 @@ routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 	for( utp in namespaces ){
 		s = utp.name;
 		if( ns_types.has( s ) ){
-      fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
-      #fout_source.println( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
-    }
-  }
-  #fout_source.println( '  DaoNameSpace_SetupTypes( ns, typers );' );
+			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+			#fout_source.println( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
+		}
+	}
+	#fout_source.println( '  DaoNameSpace_SetupTypes( ns, typers );' );
 	fout_source.println( '  return 0;\n}' );
 	fout_source.println( ifdef_cpp_close );
-
+	
 	fout_header.close();
 	fout_source.close();
 	fout_source2.close();

@@ -9,7 +9,7 @@
   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  =========================================================================================*/
 
 #ifndef DAO_ROUTINE_H
 #define DAO_ROUTINE_H
@@ -21,7 +21,7 @@
  */
 
 #define \
-  DAO_ROUT_COMMON \
+    DAO_ROUT_COMMON \
 uchar_t        attribs; \
 uchar_t        distance; \
 uchar_t        parCount; \
@@ -38,22 +38,22 @@ DaoNameSpace  *nameSpace;
 
 struct DRoutine
 {
-  DAO_DATA_COMMON
-  DAO_ROUT_COMMON
-  /*
-     char           attribs;
-     char           parCount;
-     short          distance;  inheritance distance to the self->hostClass
-     DValue         routHost;
-     DVarray       *routConsts;
-     DaoType       *routType;
-     DString       *routName;
-     DArray        *parTokens; 
-     DArray        *routOverLoad; <DRoutine*>
-     DRoutine      *firstRoutine;
-     DaoNameSpace  *nameSpace;
+    DAO_DATA_COMMON;
+    DAO_ROUT_COMMON;
+    /*
+       char           attribs;
+       char           parCount;
+       short          distance;  inheritance distance to the self->hostClass
+       DValue         routHost;
+       DVarray       *routConsts;
+       DaoType       *routType;
+       DString       *routName;
+       DArray        *parTokens; 
+       DArray        *routOverLoad; <DRoutine*>
+       DRoutine      *firstRoutine;
+       DaoNameSpace  *nameSpace;
      */
-  DString *docString;
+    DString *docString;
 };
 
 DRoutine* DRoutine_New();
@@ -64,7 +64,7 @@ int  DRoutine_AddConstValue( DRoutine *self, DValue value );
 
 DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoType *type );
 DRoutine* DRoutine_GetOverLoad( DRoutine *self, DaoVmProcess *vmp, DValue *obj, DValue *p[], int n, int code );
-  
+
 int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
 int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
 
@@ -80,44 +80,44 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 
 struct DaoRoutine
 {
-  DAO_DATA_COMMON
-  DAO_ROUT_COMMON
+    DAO_DATA_COMMON;
+    DAO_ROUT_COMMON;
 
-  DString *docString;
+    DString *docString;
 
-  /* virtual machine codes: */
-  DaoVmcArray *vmCodes;
+    /* virtual machine codes: */
+    DaoVmcArray *vmCodes;
 
-  /* data type for local registers: */
-  DArray *regType; /* <DaoType*> */
+    /* data type for local registers: */
+    DArray *regType; /* <DaoType*> */
 
-  /* VM codes with annotations */
-  DArray *annotCodes; /* <DaoVmCodeX*> */
+    /* VM codes with annotations */
+    DArray *annotCodes; /* <DaoVmCodeX*> */
 
-  /* definition of local constants and variables: */
-  DArray *defLocals; /* <DaoToken*> */
+    /* definition of local constants and variables: */
+    DArray *defLocals; /* <DaoToken*> */
 
-  DMap *regForLocVar;
-  int locRegCount;
-  int constParam;
-  int mode;
+    DMap *regForLocVar;
+    int locRegCount;
+    int constParam;
+    int mode;
 
-  int defLine; /* definition line number; */
-  int bodyStart;
-  int bodyEnd;
+    int defLine; /* definition line number; */
+    int bodyStart;
+    int bodyEnd;
 
-  DMap *abstypes;
+    DMap *abstypes;
 
-  DaoRoutine *upRoutine;
-  DaoContext *upContext;
-  DaoParser  *parser;
-  DaoRoutine *revised; /* to support edit & continue */
+    DaoRoutine *upRoutine;
+    DaoContext *upContext;
+    DaoParser  *parser;
+    DaoRoutine *revised; /* to support edit & continue */
 
 #ifdef DAO_WITH_JIT
-  DArray *binCodes; /* <DString*>: compiled machince codes */
-  DArray *jitFuncs; /* <void*>: executable machine codes as function pointers */
-  DaoVmcArray *preJit; /* original VM codes */
-  DaoJitMemory *jitMemory;
+    DArray *binCodes; /* <DString*>: compiled machince codes */
+    DArray *jitFuncs; /* <void*>: executable machine codes as function pointers */
+    DaoVmcArray *preJit; /* original VM codes */
+    DaoJitMemory *jitMemory;
 #endif
 };
 
@@ -135,13 +135,12 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 /* XXX gc */
 struct DaoFunction
 {
-  DAO_DATA_COMMON
+    DAO_DATA_COMMON;
+    DAO_ROUT_COMMON;
 
-  DAO_ROUT_COMMON
+    DaoFuncPtr   pFunc;
 
-  DaoFuncPtr   pFunc;
-
-  void  *ffiData; /* Data for Forign Function Interface, for DaoCLoader module */
+    void  *ffiData; /* Data for Forign Function Interface, for DaoCLoader module */
 };
 
 extern DaoFunction* DaoFunction_New();
@@ -153,11 +152,11 @@ int DaoFunction_Call( DaoFunction *func, DaoCData *self, DValue *p[], int n );
 
 struct DaoFunCurry
 {
-  DAO_DATA_COMMON
+    DAO_DATA_COMMON;
 
-  DValue    callable;
-  DValue    selfobj;
-  DVarray  *params;
+    DValue    callable;
+    DValue    selfobj;
+    DVarray  *params;
 };
 DaoFunCurry* DaoFunCurry_New( DValue v, DValue o );
 

@@ -9,7 +9,7 @@
   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  =========================================================================================*/
 
 #ifndef DAO_BASE_H
 #define DAO_BASE_H
@@ -109,14 +109,14 @@ void  dao_free( void *p );
 typedef struct DaoConfig  DaoConfig;
 struct DaoConfig
 {
-  short cpu;  /* number of CPU */
-  short jit;  /* enable JIT compiling, TODO fix */
-  short safe; /* enable safe running mode */
-  short typedcode; /* enable typed VM codes */
-  short incompile; /* enable incremental compiling */
-  short iscgi;     /* is CGI script */
-  short tabspace;  /* number of spaces counted for a tab */
-  short chindent;  /* check indentation */
+    short cpu;  /* number of CPU */
+    short jit;  /* enable JIT compiling, TODO fix */
+    short safe; /* enable safe running mode */
+    short typedcode; /* enable typed VM codes */
+    short incompile; /* enable incremental compiling */
+    short iscgi;     /* is CGI script */
+    short tabspace;  /* number of spaces counted for a tab */
+    short chindent;  /* check indentation */
 };
 
 extern DaoConfig daoConfig;
@@ -125,16 +125,16 @@ typedef struct DaoJitMemory  DaoJitMemory;
 
 struct DaoVmCode
 {
-  ushort_t code; /* opcode */
-  ushort_t a, b, c; /* register ids for operands */
+    ushort_t code; /* opcode */
+    ushort_t a, b, c; /* register ids for operands */
 };
 struct DaoVmCodeX
 {
-  ushort_t code; /* opcode */
-  ushort_t a, b, c; /* register ids for operands */
-  ushort_t line; /* line number in the source file */
-  ushort_t level; /* lexical level */
-  DString *annot; /* annotation */
+    ushort_t code; /* opcode */
+    ushort_t a, b, c; /* register ids for operands */
+    ushort_t line; /* line number in the source file */
+    ushort_t level; /* lexical level */
+    DString *annot; /* annotation */
 };
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );

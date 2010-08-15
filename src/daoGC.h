@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms 
+  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifndef DAO_GC_H
 #define DAO_GC_H
@@ -33,8 +33,8 @@ extern void DaoGC_DecRCs( DArray *dbases );
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoBase*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoBase*)(p) )
 #define GC_ShiftRC(up,down) \
-  if( (DaoBase*)(up) != (DaoBase*)(down) )\
-    DaoGC_ShiftRC( (DaoBase*)(up), (DaoBase*)(down) )
+    if( (DaoBase*)(up) != (DaoBase*)(down) )\
+DaoGC_ShiftRC( (DaoBase*)(up), (DaoBase*)(down) )
 
 #define GC_IncRCs( p )  DaoGC_IncRCs( p )
 #define GC_DecRCs( p )  DaoGC_DecRCs( p )
@@ -64,17 +64,17 @@ extern void DaoGC_DecRCs( DArray *dbases );
    To avoid using mutex lock for type matching caches, the following
    protection algorithm will be used:
    1. GC Cycle I, DaoLateDeleter::types more than N:
-      DaoLateDeleter::safe = false;
-      DaoLateDeleter::lock = false;
-      DaoLateDeleter::version += 1;
+   DaoLateDeleter::safe = false;
+   DaoLateDeleter::lock = false;
+   DaoLateDeleter::version += 1;
 
    2. GC Cycle I+1, ::safe == false, ::lock = false:
-      DaoLateDeleter::lock = true;
-      Clear DaoLateDeleter::types;
+   DaoLateDeleter::lock = true;
+   Clear DaoLateDeleter::types;
 
    3. GC Cycle I+2, ::safe == false, ::lock = true:
-      DaoLateDeleter::safe = true;
-      DaoLateDeleter::lock = false;
+   DaoLateDeleter::safe = true;
+   DaoLateDeleter::lock = false;
 
    Since these operations are done in different GC cyles, type matching
    caches are safe to use DaoLateDeleter::safe only to properly take action.
@@ -82,10 +82,10 @@ extern void DaoGC_DecRCs( DArray *dbases );
 typedef struct DaoLateDeleter DaoLateDeleter;
 struct DaoLateDeleter
 {
-  short   lock;
-  short   safe;
-  size_t  version;
-  DArray *buffer;
+    short   lock;
+    short   safe;
+    size_t  version;
+    DArray *buffer;
 };
 extern DaoLateDeleter dao_late_deleter;
 void DaoLateDeleter_Push( void *p );

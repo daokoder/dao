@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms 
+  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifndef DAO_ARRAY_H
 #define DAO_ARRAY_H
@@ -24,37 +24,37 @@ union DQuadUByte { void *p; struct{ unsigned char a, b, c, d; }X; };
 /* Array of pointers or integers: */
 struct DArray
 {
-  union{
-    dint                 *pInt;
-    size_t               *pSize;
-    DQuadUByte           *pQUB;
+    union{
+        dint                 *pInt;
+        size_t               *pSize;
+        DQuadUByte           *pQUB;
 
-    void                **pVoid;
-    struct DaoBase      **pBase;
-    struct DaoClass     **pClass;
-    struct DaoObject    **pObject;
-    struct DaoRoutine   **pRout;
-    struct DRoutine     **pRout2;
-    struct DaoCData     **pCData;
-    struct DaoType   **pAbtp;
-    struct DaoNameSpace **pNS;
+        void                **pVoid;
+        struct DaoBase      **pBase;
+        struct DaoClass     **pClass;
+        struct DaoObject    **pObject;
+        struct DaoRoutine   **pRout;
+        struct DRoutine     **pRout2;
+        struct DaoCData     **pCData;
+        struct DaoType      **pAbtp;
+        struct DaoNameSpace **pNS;
 
-    struct DValue       **pValue;
-    struct DString      **pString;
-    struct DArray       **pArray;
-    struct DMap         **pMap;
-    struct DVarray      **pVarray;
-    struct DaoInode     **pInode;
-    struct DaoVmCodeX   **pVmc;
+        struct DValue       **pValue;
+        struct DString      **pString;
+        struct DArray       **pArray;
+        struct DMap         **pMap;
+        struct DVarray      **pVarray;
+        struct DaoInode     **pInode;
+        struct DaoVmCodeX   **pVmc;
 
-    struct DaoJitCode   **pJitc;
-    struct DaoToken     **pToken;
+        struct DaoJitCode   **pJitc;
+        struct DaoToken     **pToken;
 
-  } buf, items;
+    } buf, items;
 
-  short  type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, D_MAP */
-  size_t size;
-  size_t bufsize;
+    short  type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, D_MAP */
+    size_t size;
+    size_t bufsize;
 };
 
 /* See daolib.h */
@@ -104,16 +104,16 @@ void DArray_CleanupCodes( DArray *self );
 
 struct DPtrTuple
 {
-  union{
-    size_t              *pInt;
-    void               **pVoid;
-    struct DaoBase     **pBase;
-    struct DaoClass    **pClass;
-    struct DaoObject   **pObject;
-    struct DaoType  **pAbtp;
-  } items;
+    union{
+        size_t             *pInt;
+        void              **pVoid;
+        struct DaoBase    **pBase;
+        struct DaoClass   **pClass;
+        struct DaoObject  **pObject;
+        struct DaoType    **pAbtp;
+    } items;
 
-  size_t size;
+    size_t size;
 };
 
 /* See daolib.h */
@@ -125,10 +125,10 @@ void DPtrTuple_Clear( DPtrTuple *self );
 typedef struct DaoJitCode DaoJitCode;
 struct DaoJitCode
 {
-  short opcode; /* basic opcode (not encoded) */
-  short rmsti;  /* reg, mem, stack, (encoded) */
-  short modsib; /* addressing mode, bit flags */
-  dint  extra; /* displacement, immediate data or SIB byte (encode) */
-  int   vmcID;
+    short opcode; /* basic opcode (not encoded) */
+    short rmsti;  /* reg, mem, stack, (encoded) */
+    short modsib; /* addressing mode, bit flags */
+    dint  extra; /* displacement, immediate data or SIB byte (encode) */
+    int   vmcID;
 };
 #endif

@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms 
+  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifdef DAO_WITH_ASMBC
 #undef DAO_WITH_ASMBC
@@ -28,27 +28,27 @@ typedef struct DaoAsmRoutine  DaoAsmRoutine;
 
 struct DaoAsmClass
 {
-  DaoClass *myClass;
-  DaoBase  *memb;
-  /* DArray<DArray<DString*>*>:
-   * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
-  DArray *stmtLoad;
-  DArray *nameConst;
-  DArray *nameGlobal;
-  DArray *nameVar;
+    DaoClass *myClass;
+    DaoBase  *memb;
+    /* DArray<DArray<DString*>*>:
+     * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
+    DArray *stmtLoad;
+    DArray *nameConst;
+    DArray *nameGlobal;
+    DArray *nameVar;
 };
 struct DaoAsmRoutine
 {
-  int tmp;
+    int tmp;
 };
 
 struct DaoAsmWriter
 {
-  /* DArray<DArray<DString*>*>:
-   * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
-  DArray *stmtLoad;
-  DArray *classes; /* DArray<DString*>: { class, NULL/class/ns, ... } */
-  DArray *routines; /* DArray<DString*>: { class, NULL/class/ns, ... } */
+    /* DArray<DArray<DString*>*>:
+     * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
+    DArray *stmtLoad;
+    DArray *classes; /* DArray<DString*>: { class, NULL/class/ns, ... } */
+    DArray *routines; /* DArray<DString*>: { class, NULL/class/ns, ... } */
 };
 
 DaoAsmWriter* DaoAsmWriter_New();

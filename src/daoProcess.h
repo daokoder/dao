@@ -1,15 +1,15 @@
 /*=========================================================================================
-   This file is a part of a virtual machine for the Dao programming language.
-   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  This file is a part of a virtual machine for the Dao programming language.
+  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-   This software is free software; you can redistribute it and/or modify it under the terms 
-   of the GNU Lesser General Public License as published by the Free Software Foundation; 
-   either version 2.1 of the License, or (at your option) any later version.
+  This software is free software; you can redistribute it and/or modify it under the terms 
+  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  either version 2.1 of the License, or (at your option) any later version.
 
-   This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-   See the GNU Lesser General Public License for more details.
-=========================================================================================*/
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  See the GNU Lesser General Public License for more details.
+  =========================================================================================*/
 
 #ifndef DAO_PROCESS_H
 #define DAO_PROCESS_H
@@ -26,68 +26,67 @@
 
 struct DaoVmFrame
 {
-  ushort_t    entry;     /* entry code id */
-  ushort_t    state;     /* context state */
-  ushort_t    returning; /* return register id */
-  ushort_t    depth;
-  ushort_t    ranges[DVM_MAX_TRY_DEPTH][2];
+    ushort_t    entry;     /* entry code id */
+    ushort_t    state;     /* context state */
+    ushort_t    returning; /* return register id */
+    ushort_t    depth;
+    ushort_t    ranges[DVM_MAX_TRY_DEPTH][2];
 
-  DaoContext *context;
-  DaoVmFrame *prev;
-  DaoVmFrame *next;
-  DaoVmFrame *rollback;
+    DaoContext *context;
+    DaoVmFrame *prev;
+    DaoVmFrame *next;
+    DaoVmFrame *rollback;
 };
 
 typedef struct DaoMpiData DaoMpiData;
 struct DaoMpiData
 {
-  DString *name;
-  DString *pidAwaited;
+    DString *name;
+    DString *pidAwaited;
 #ifdef WIN32
-  double timeout;
+    double timeout;
 #else
-  struct timeval timeout;
+    struct timeval timeout;
 #endif
-  DaoVmProcess *asynCreator; /* the process that created this one in an asynchronous call */
-  DaoObject    *future;
-  DMap         *asynCalls; /* the asynchronous calls invoked by this process */
-  int           asynCount;
-  int           asynJoin;
+    DaoVmProcess *asynCreator; /* the process that created this one in an asynchronous call */
+    DaoObject    *future;
+    DMap         *asynCalls; /* the asynchronous calls invoked by this process */
+    int           asynCount;
+    int           asynJoin;
 };
 DaoMpiData* DaoMpiData_New();
 void DaoMpiData_Delete( DaoMpiData *self );
 
 struct DaoVmProcess
 {
-  DAO_DATA_COMMON
+    DAO_DATA_COMMON;
 
-  DaoVmFrame *firstFrame; /* the first frame, never active */
-  DaoVmFrame *topFrame; /* top call frame */
+    DaoVmFrame *firstFrame; /* the first frame, never active */
+    DaoVmFrame *topFrame; /* top call frame */
 
-  DaoVmSpace *vmSpace;
-  DaoType    *abtype; /* for coroutine */
+    DaoVmSpace *vmSpace;
+    DaoType    *abtype; /* for coroutine */
 
-  DValue    returned;
-  DVarray  *parResume;/* for coroutine */
-  DVarray  *parYield;
-  DVarray  *exceptions;
+    DValue    returned;
+    DVarray  *parResume;/* for coroutine */
+    DVarray  *parYield;
+    DVarray  *exceptions;
 
-  char pauseType;
-  char status;
-  char stopit;
-  char cancelled;
+    char pauseType;
+    char status;
+    char stopit;
 
-  DaoMpiData *mpiData;
+    DaoMpiData *mpiData;
 
-  DString *mbstring;
-  DVarray *parbuf;
-  DArray  *array;
-  DArray  *signature;
-  DMap    *mbsRegex; /* <DString*,DString*> */
-  DMap    *wcsRegex; /* <DString*,DString*> */
-  DMap    *callsigs; /* HASH<DArray*,NULL> */
-  DMap    *matching; /* HASH<void*[2],int> */
-  size_t   version;
+    DString *mbstring;
+    DVarray *parbuf;
+    DArray  *array;
+    DArray  *signature;
+    DMap    *mbsRegex; /* <DString*,DString*> */
+    DMap    *wcsRegex; /* <DString*,DString*> */
+    DMap    *callsigs; /* HASH<DArray*,NULL> */
+    DMap    *matching; /* HASH<void*[2],int> */
+    size_t   version;
 };
 
 /* Create a new virtual machine process */
