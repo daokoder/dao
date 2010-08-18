@@ -23,7 +23,7 @@
 
 #define SUB_TYPE( x )  ( (x)->subType & (0xFF>>2) )
 
-#define DAO_DATA_COMMON uchar_t type, subType, gcState[2]; int refCount, cycRefCount;
+#define DAO_DATA_COMMON uchar_t type, subType, gcState[2]; int refCount, cycRefCount
 
 void DaoBase_Delete( void *obj );
 

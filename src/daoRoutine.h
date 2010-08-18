@@ -33,7 +33,7 @@ DVarray       *routConsts; \
 DArray        *parTokens; \
 DArray        *routOverLoad; \
 DRoutine      *firstRoutine; \
-DaoNameSpace  *nameSpace;
+DaoNameSpace  *nameSpace
 
 
 struct DRoutine
