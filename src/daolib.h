@@ -95,7 +95,7 @@ DMap* DMap_New( short kt, short vt );
 void DMap_Delete( DMap *self );
 void DMap_Clear( DMap *self );
 void DMap_Erase( DMap *self, void *key );
-void DMap_Insert( DMap *self, void *key, void *value );
+DNode* DMap_Insert( DMap *self, void *key, void *value );
 
 DNode* DMap_Find( DMap *self, void *key );
 DNode* DMap_First( DMap *self );

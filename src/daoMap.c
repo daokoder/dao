@@ -242,7 +242,9 @@ static int DHash_HashIndex( DMap *self, void *key )
     case D_VOID2 :
         id = MurmurHash2( key, 2*sizeof(void*), HASH_SEED) % T;
         break;
-    default : id = ((size_t)key) % T; break;
+    default : 
+        id = MurmurHash2( key, sizeof(void*), HASH_SEED) % T;
+        break;
     }
     return (int)id;
 }
@@ -709,7 +711,7 @@ static DNode* DMap_SimpleInsert( DMap *self, DNode *node )
     }
     return node;
 }
-void DMap_Insert( DMap *self, void *key, void *value )
+DNode* DMap_Insert( DMap *self, void *key, void *value )
 {
     DNode *p, *node=DNode_New( self->keytype, self->valtype );
     void *okey = node->key.pVoid;
@@ -725,7 +727,7 @@ void DMap_Insert( DMap *self, void *key, void *value )
             node->color = RB_BLACK;
             node->key.pVoid = DMap_CopyItem( node->key.pValue, key, self->keytype );
             node->value.pVoid = DMap_CopyItem( node->value.pValue, value, self->valtype );
-            return;
+            return node;
         }
     }
     node->key.pVoid = key;
@@ -746,6 +748,7 @@ void DMap_Insert( DMap *self, void *key, void *value )
         p->value.pVoid = DMap_CopyItem( p->value.pValue, value, self->valtype );
         dao_free( node );
     }
+    return p;
 }
 void DMap_Erase( DMap *self, void *key )
 {

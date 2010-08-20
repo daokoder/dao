@@ -2133,8 +2133,8 @@ DaoVmSpace* DaoInit()
 
     if( mainVmSpace ) return mainVmSpace;
 
-    //signal( SIGSEGV, print_trace );
-    //signal( SIGABRT, print_trace );
+    /* signal( SIGSEGV, print_trace ); */
+    /* signal( SIGABRT, print_trace ); */
 
 #ifdef DAO_WITH_THREAD
     DMutex_Init( & mutex_string_sharing );

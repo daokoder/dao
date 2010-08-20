@@ -885,7 +885,6 @@ int DaoToken_Check( const char *src, int size, int *length )
                     && state != TOK_COMT_LINE && state != TOK_COMT_OPEN ){
                 state = TOK_RESTART;
             }
-            //printf( "%3i  %c  %3i  %3i\n", it, ch, old, state );
             if( state >= TOK_END ){
                 type = daoTokenMap[ state ];
                 if( type == DTOK_NONE && isspace( src[0] ) )

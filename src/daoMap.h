@@ -63,9 +63,9 @@ extern DMap* DMap_Copy( DMap *dmap );
 extern void DMap_Delete( DMap *self );
 extern void DMap_Clear( DMap *self );
 /* Insert key/value, and return the previous value if existed. */
-extern void DMap_Insert( DMap *self, void *key, void *value );
 extern void DMap_Erase( DMap *self, void *key );
 
+extern DNode* DMap_Insert( DMap *self, void *key, void *value );
 extern DNode* DMap_Find( DMap *self, void *key );
 extern DNode* DMap_First( DMap *self );
 extern DNode* DMap_Next( DMap *self, DNode *node );

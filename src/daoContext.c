@@ -3122,9 +3122,9 @@ FailConversion:
 #endif
 static int CheckStringToNumber( DaoContext *ctx, DValue dA, int tid )
 {
-    int toktype = 0, toklen = 0;
-    if( dA.t != DAO_STRING || tid ==0 || tid > DAO_LONG ) return 0;
     DString *mbs = ctx->process->mbstring;
+    int toktype, toklen = 0;
+    if( dA.t != DAO_STRING || tid ==0 || tid > DAO_LONG ) return 0;
     if( dA.v.s->mbs ){
         DString_SetDataMBS( mbs, dA.v.s->mbs, dA.v.s->size );
     }else{

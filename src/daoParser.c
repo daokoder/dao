@@ -1132,8 +1132,8 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
     case DVM_CASETAG :
         node->below = top, self->vmcTop = node;
         while( it && it->code != DVM_SWITCH ) it = it->below;
-        // in IDE mode, DVM_NOP could be added in between DVM_SWITCH and DVM_LBRA
-        //if( it == NULL || it->next->code != DVM_LBRA ) goto ErrorSyntax;
+        /* in IDE mode, DVM_NOP could be added in between DVM_SWITCH and DVM_LBRA */
+        /* if( it == NULL || it->next->code != DVM_LBRA ) goto ErrorSyntax; */
         node->jumpTrue = it;
 
         map = self->switchMaps->items.pMap[ it->b ];
@@ -1143,7 +1143,7 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
     case DVM_DEFAULT :
         node->below = top, self->vmcTop = node;
         while( it && it->code != DVM_SWITCH ) it = it->below;
-        //if( it == NULL || it->next->code != DVM_LBRA ) goto ErrorSyntax;
+        /* if( it == NULL || it->next->code != DVM_LBRA ) goto ErrorSyntax; */
         node->jumpTrue = it;
         it->jumpTrue = node; /* default */
         break;
