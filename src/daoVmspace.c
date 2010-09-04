@@ -92,6 +92,7 @@ static const char *const cmd_help =
 " Options:\n"
 "   -h, --help:           print this help information;\n"
 "   -v, --version:        print version information;\n"
+"   -e, --eval:           evaluate command line codes;\n"
 "   -s, --safe:           run in safe mode;\n"
 "   -d, --debug:          run in debug mode;\n"
 "   -i, --ineractive:     run in interactive mode;\n"
@@ -256,10 +257,6 @@ void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr )
 {
     self->AddHistory = fptr;
 }
-int DaoVmSpace_GetState( DaoVmSpace *self )
-{
-    return self->state;
-}
 void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 {
     self->stopit = bl;
@@ -288,15 +285,15 @@ DaoVmSpace* DaoVmSpace_New()
     self->stdStream->vmSpace = self;
     self->source = DString_New(1);
     self->options = 0;
-    self->state = 0;
     self->stopit = 0;
     self->safeTag = 1;
+    self->evalCmdline = 0;
     self->userHandler = NULL;
     self->vfiles = DMap_New(D_STRING,D_STRING);
     self->nsModules = DMap_New(D_STRING,0);
     self->modRequire = DMap_New(D_STRING,0);
     self->allTokens = DMap_New(D_STRING,0);
-    self->srcFName = DString_New(1);
+    self->fileName = DString_New(1);
     self->pathWorking = DString_New(1);
     self->nameLoading = DArray_New(D_STRING);
     self->pathLoading = DArray_New(D_STRING);
@@ -371,7 +368,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
     GC_DecRC( self->thdMaster );
     GC_DecRCs( self->processes );
     DString_Delete( self->source );
-    DString_Delete( self->srcFName );
+    DString_Delete( self->fileName );
     DString_Delete( self->pathWorking );
     DArray_Delete( self->nameLoading );
     DArray_Delete( self->pathLoading );
@@ -528,11 +525,19 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
     SplitByWhiteSpaces( str, array );
     for( i=0; i<array->size; i++ ){
         DString *token = array->items.pString[i];
+        if( self->evalCmdline ){
+            DString_Append( self->source, token );
+            DString_AppendChar( self->source, ' ' );
+            continue;
+        }
         if( token->mbs[0] =='-' && token->size >1 && token->mbs[1] =='-' ){
             if( strcmp( token->mbs, "--help" ) ==0 ){
                 self->options |= DAO_EXEC_HELP;
             }else if( strcmp( token->mbs, "--version" ) ==0 ){
                 self->options |= DAO_EXEC_VINFO;
+            }else if( strcmp( token->mbs, "--eval" ) ==0 ){
+                self->evalCmdline = 1;
+                DString_Clear( self->source );
             }else if( strcmp( token->mbs, "--debug" ) ==0 ){
                 self->options |= DAO_EXEC_DEBUG;
             }else if( strcmp( token->mbs, "--safe" ) ==0 ){
@@ -598,6 +603,9 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
                 case 'J' : self->options |= DAO_EXEC_NO_JIT;
                            daoConfig.jit = 0;
                            break;
+                case 'e' : self->evalCmdline = 1;
+                           DString_Clear( self->source );
+                           break;
                 case 'p' : {
                                static char buf[256] = "PROC_NAME=";
                                if( j == token->size-1 )
@@ -629,8 +637,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
     DArray_Delete( array );
     return 1;
 }
-extern int IsValidName( const char *chs );
-extern int IsNumber( const char *chs );
 
 static DValue DaoParseNumber( const char *s )
 {
@@ -695,11 +701,11 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
     GC_IncRC( argv->unitype );
     DString_SetMBS( str, file );
     ParseScriptParameters( str, array );
-    DString_Assign( self->srcFName, array->items.pString[0] );
+    DString_Assign( self->fileName, array->items.pString[0] );
     DString_Assign( val, array->items.pString[0] );
     DaoList_Append( argv, sval );
     DaoMap_Insert( cmdarg, nkey, sval );
-    DaoVmSpace_MakePath( self, self->srcFName, 1 );
+    DaoVmSpace_MakePath( self, self->fileName, 1 );
     i = 1;
     while( i < array->size ){
         DString *s = array->items.pString[i];
@@ -713,7 +719,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
                 if( s->mbs[0] == '=' && s->mbs[1] == 0 ) i++;
                 if( i < array->size ){
                     s = array->items.pString[i];
-                    if( s->mbs[0] != '-' || IsNumber( s->mbs+1 ) ){
+                    if( s->mbs[0] != '-' || DaoToken_IsNumber( s->mbs+1, s->size-1 ) ){
                         value = s;
                         i ++;
                         if( i < array->size ){
@@ -726,14 +732,14 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, const char *file,
                     }
                 }
             }
-        }else if( IsValidName( s->mbs ) && i < array->size ){
+        }else if( DaoToken_IsValidName( s->mbs, s->size ) && i < array->size ){
             /* name=value */
             if( STRCMP( array->items.pString[i], "=" ) ==0 ){
                 name = s;
                 i ++;
                 if( i < array->size ){
                     s = array->items.pString[i];
-                    if( s->mbs[0] != '-' || IsNumber( s->mbs+1 ) ){
+                    if( s->mbs[0] != '-' || DaoToken_IsNumber( s->mbs+1, s->size-1 ) ){
                         value = s;
                         i ++;
                     }
@@ -844,7 +850,7 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
                             k = abtp->nested->items.pAbtp[id]->X.abtype->tid;
                     }
                 }
-                if( k >0 && k <= DAO_DOUBLE && IsNumber( chars ) ){
+                if( k >0 && k <= DAO_DOUBLE && DaoToken_IsNumber( chars, 0 ) ){
                     nkey = DaoParseNumber( chars );
                 }
             }
@@ -872,20 +878,20 @@ DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file )
     DaoNameSpace *ns = NULL;
     int m;
     DaoVmSpace_ParseArguments( self, file, argNames, argValues );
-    m = DaoVmSpace_CompleteModuleName( self, self->srcFName );
+    m = DaoVmSpace_CompleteModuleName( self, self->fileName );
     switch( m ){
     case DAO_MODULE_DAO_O :
-        ns = DaoVmSpace_LoadDaoByteCode( self, self->srcFName, 0 );
+        ns = DaoVmSpace_LoadDaoByteCode( self, self->fileName, 0 );
         break;
     case DAO_MODULE_DAO_S :
-        ns = DaoVmSpace_LoadDaoAssembly( self, self->srcFName, 0 );
+        ns = DaoVmSpace_LoadDaoAssembly( self, self->fileName, 0 );
         break;
     case DAO_MODULE_DAO :
-        ns = DaoVmSpace_LoadDaoModuleExt( self, self->srcFName, 0, 0 );
+        ns = DaoVmSpace_LoadDaoModuleExt( self, self->fileName, 0, 0 );
         break;
     default :
         /* also allows execution of script files without suffix .dao */
-        ns = DaoVmSpace_LoadDaoModuleExt( self, self->srcFName, 0, 0 );
+        ns = DaoVmSpace_LoadDaoModuleExt( self, self->fileName, 0, 0 );
         break;
     }
     if( ns ) DaoVmSpace_ConvertArguments( self, ns, argNames, argValues );
@@ -956,10 +962,8 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
     const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
     char *chs;
     int ch;
-    self->options &= ~DAO_EXEC_INTERUN;
-    self->state |= DAO_EXEC_INTERUN;
     while(1){
-        DString_SetMBS( self->srcFName, "" );
+        DString_SetMBS( self->fileName, "interactive codes" );
         DString_Clear( input );
         if( self->ReadLine ){
             chs = self->ReadLine( "(dao) " );
@@ -1061,9 +1065,19 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
     size_t N;
     int i, j, res;
 
-    if( file == NULL || strlen(file) ==0 ){
+    if( file == NULL || strlen(file) ==0 || self->evalCmdline ){
         DArray_PushFront( self->nameLoading, self->pathWorking );
         DArray_PushFront( self->pathLoading, self->pathWorking );
+        if( file ) DString_AppendMBS( self->source, file );
+        if( self->evalCmdline ){
+			DString_SetMBS( self->fileName, "command line codes" );
+            DaoVmProcess_Eval( vmp, ns, self->source, 1 );
+			if( vmp->returned.t ){
+				DaoContext *ctx = DaoVmProcess_MakeContext( vmp, ns->mainRoutine );
+				DValue_Print( vmp->returned, ctx, self->stdStream, NULL );
+				DaoStream_WriteNewLine( self->stdStream );
+			}
+        }
         DaoVmSpace_ExeCmdArgs( self );
         if( ( self->options & DAO_EXEC_INTERUN ) && self->userHandler == NULL )
             DaoVmSpace_Interun( self, NULL );
@@ -1072,7 +1086,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
     argNames = DArray_New(D_STRING);
     argValues = DArray_New(D_STRING);
     DaoVmSpace_ParseArguments( self, file, argNames, argValues );
-    DaoNameSpace_SetName( ns, self->srcFName->mbs );
+    DaoNameSpace_SetName( ns, self->fileName->mbs );
     DaoVmSpace_AddPath( self, ns->path->mbs );
     DArray_PushFront( self->nameLoading, ns->name );
     DArray_PushFront( self->pathLoading, ns->path );
@@ -1081,7 +1095,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
         GC_IncRC( ns );
     }
 
-    /* self->srcFName may has been changed */
+    /* self->fileName may has been changed */
     res = DaoVmSpace_ReadSource( self, ns->name );
     res = res && DaoVmProcess_Compile( vmp, ns, self->source, 1 );
     if( res ) DaoVmSpace_ConvertArguments( self, ns, argNames, argValues );
@@ -1290,14 +1304,14 @@ static DaoNameSpace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self,
     cfgpath = cfgpath || (j != MAXSIZE && j == libpath->size - 12);
     /*  XXX if cfgpath == true, only parsing? */
 
-    DString_SetMBS( self->srcFName, libpath->mbs );
+    DString_SetMBS( self->fileName, libpath->mbs );
     if( ! DaoVmSpace_ReadSource( self, libpath ) ) return 0;
 
     /*
        printf("%p : loading %s\n", self, libpath->mbs );
      */
     parser = DaoParser_New();
-    DString_Assign( parser->srcFName, self->srcFName );
+    DString_Assign( parser->fileName, self->fileName );
     parser->vmSpace = self;
     if( ! DaoParser_LexCode( parser, DString_GetMBS( self->source ), 1 ) ) goto LaodingFailed;
 
@@ -1480,16 +1494,16 @@ DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *file, const char *data )
 {
     DNode *node;
-    DString_ToMBS( self->srcFName );
-    DString_SetMBS( self->srcFName, "/@/" );
-    DString_AppendMBS( self->srcFName, file );
-    node = DMap_Find( self->vfiles, self->srcFName );
+    DString_ToMBS( self->fileName );
+    DString_SetMBS( self->fileName, "/@/" );
+    DString_AppendMBS( self->fileName, file );
+    node = DMap_Find( self->vfiles, self->fileName );
     if( node ){
         DString_AppendMBS( node->value.pString, data );
     }else{
         DString_ToMBS( self->source );
         DString_SetMBS( self->source, data );
-        MAP_Insert( self->vfiles, self->srcFName, self->source );
+        MAP_Insert( self->vfiles, self->fileName, self->source );
     }
 }
 
@@ -1673,7 +1687,6 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
     DString_Delete( pstr );
 }
 
-int IsValidName( const char *chs );
 static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 {
     DaoType *it;
@@ -1992,7 +2005,6 @@ void DaoInitAPI( DaoAPI *api )
     api->DaoVmSpace_AddPath = DaoVmSpace_AddPath;
     api->DaoVmSpace_DelPath = DaoVmSpace_DelPath;
 
-    api->DaoVmSpace_GetState = DaoVmSpace_GetState;
     api->DaoVmSpace_Stop = DaoVmSpace_Stop;
 
     api->DaoGC_IncRC = DaoGC_IncRC;
@@ -2190,7 +2202,7 @@ DaoVmSpace* DaoInit()
 
 #if 0
     DString_SetMBS( vms->source, daoScripts );
-    DString_SetMBS( vms->srcFName, "internal scripts" );
+    DString_SetMBS( vms->fileName, "internal scripts" );
     DaoVmProcess_Eval( vms->mainProcess, vms->nsInternal, vms->source, 0 );
 
     DString_SetMBS( mbs, "FutureValue" );

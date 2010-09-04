@@ -397,7 +397,6 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
     }
     tokens = DArray_New(D_STRING);
     cycData = DMap_New(0,0);
-    ctx->vmSpace->state |= DAO_EXEC_DEBUG;
     while(1){
         if( ctx->vmSpace->ReadLine ){
             chs = ctx->vmSpace->ReadLine( "(debug) " );
@@ -492,7 +491,6 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
     }
     DString_Delete( input );
     DArray_Delete( tokens );
-    ctx->vmSpace->state &= ~DAO_EXEC_DEBUG;
 }
 static void STD_Error( DaoContext *ctx, DValue *p[], int N )
 {
@@ -1749,14 +1747,7 @@ static void REFL_Argv( DaoContext *ctx, DValue *p[], int N )
 }
 static void REFL_Trace( DaoContext *ctx, DValue *p[], int N )
 {
-    DaoVmProcess *vmProc = ctx->process;
-    DaoVmFrame *frame = vmProc->topFrame;
-    DaoContext_Print( ctx, "======================\nCalling Trace:\n======================\n" );
-    while( frame ){
-        DaoContext *ctx = frame->context;
-        DaoContext_PrintInfo( ctx, "TRACE", ctx->routine->routName->mbs );
-        frame = frame->prev;
-    }
+	DaoVmProcess_Trace( ctx->process, 0x7fffffff );
 }
 static void REFL_Doc( DaoContext *ctx, DValue *p[], int N )
 {

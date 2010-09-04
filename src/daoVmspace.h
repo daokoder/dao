@@ -50,12 +50,12 @@ struct DaoVmSpace
     DArray  *pathLoading;
     DArray  *pathSearching; /* <DString*> */
 
-    DString *srcFName;
+    DString *fileName;
     DString *source;
     int options;
-    int state;
-    int stopit;
-    int safeTag;
+    char stopit;
+    char safeTag;
+    char evalCmdline;
 
     DMap  *vfiles;
 

@@ -20,7 +20,7 @@
 
 #include"dao.h"
 
-#define DAO_VERSION "1.1.1"
+#define DAO_VERSION "1.2"
 
 #ifdef __cplusplus
 extern "C" {

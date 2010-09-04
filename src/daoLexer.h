@@ -89,7 +89,7 @@ enum DaoTokNames
     DTOK_DECR , /* -- */
     DTOK_DOTS , /* ... */
     DTOK_ESC_LB ,  /* \( */
-    DTOK_ESC_RB ,  /* \] */
+    DTOK_ESC_RB ,  /* \) */
     DTOK_ESC_LCB ,  /* \{ */
     DTOK_ESC_RCB ,  /* \} */
     DTOK_ESC_LSB ,  /* \[ */
@@ -204,6 +204,9 @@ enum DaoKeyNames
     DKEY_TANH ,
     DAO_NOKEY2
 };
+
+const extern char *const dao_oper_tokens[];
+
 int dao_key_hash( const char *str, int len );
 
 typedef struct DIntStringPair
@@ -238,7 +241,11 @@ struct DaoToken
 
 DaoToken* DaoToken_New();
 void DaoToken_Delete( DaoToken *self );
+
 int DaoToken_Check( const char *src, int size, int *length );
+int DaoToken_IsNumber( const char *src, int size );
+int DaoToken_IsValidName( const char *src, int size );
+
 int DaoToken_Tokenize( DArray *tokens, const char *src, int repl, int comment, int space );
 void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
 

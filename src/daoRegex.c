@@ -883,7 +883,8 @@ static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
     printf( "npatt = %i %i\n", npatt, size );
     for(i=0; i<npatt; i++) printf( "%3i: ", i ), PrintRegex( self, patts + i );
 #endif
-    if( self->count == 0 ) return 0;
+    /* there is at least PAT_BEGIN and PAT_STOP */
+    if( self->count <= 2 ) return 0;
     if( start ) from = *start; else start = & s1;
     if( end ) to = *end + 1; else end = & s2;
     if( to > size ) to = size;
@@ -1217,7 +1218,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target,
         p2 = end;
         if( index && n == index ) break;
     }
-    DString_SubString( source, target, last, p2 - last );
+    DString_SubString( source, target, last, end - last );
     DString_Append( replace, target );
     DString_Assign( source, replace );
     DString_Delete( target );

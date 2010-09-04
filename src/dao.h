@@ -634,7 +634,6 @@ struct DaoAPI
     void (*DaoVmSpace_AddPath)( DaoVmSpace *self, const char *path );
     void (*DaoVmSpace_DelPath)( DaoVmSpace *self, const char *path );
 
-    int   (*DaoVmSpace_GetState)( DaoVmSpace *self );
     void  (*DaoVmSpace_Stop)( DaoVmSpace *self, int bl );
 
     void (*DaoGC_IncRC)( DaoBase *p );
@@ -943,7 +942,6 @@ DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
-DAO_DLL int   DaoVmSpace_GetState( DaoVmSpace *self );
 DAO_DLL void  DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 
 DAO_DLL void DaoGC_IncRC( DaoBase *p );
@@ -1213,7 +1211,6 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DaoVmSpace_AddPath( self, path )  __dao.DaoVmSpace_AddPath( self, path )
 #define DaoVmSpace_DelPath( self, path )  __dao.DaoVmSpace_DelPath( self, path )
 
-#define DaoVmSpace_GetState( self )  __dao.DaoVmSpace_GetState( self )
 #define DaoVmSpace_Stop( self, bl )  __dao.DaoVmSpace_Stop( self, bl )
 
 #define DaoGC_IncRC( p )  __dao.DaoGC_IncRC( p )

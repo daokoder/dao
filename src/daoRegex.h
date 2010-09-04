@@ -58,6 +58,7 @@ struct DaoRegex
 };
 
 DaoRegex* DaoRegex_New( DString *src );
+#define DaoRegex_Delete( self ) dao_free( self )
 void DaoRegex_Copy( DaoRegex *self, DaoRegex *src );
 
 /* compute the number of bytes needed for storing the compiled pattern */

@@ -138,7 +138,7 @@ DMap* DHash_New( short kt, short vt )
     DMap *self = DMap_New( kt, vt );
     self->hashing = 1;
     self->tsize = 4;
-    self->table = (DNode**) calloc( self->tsize, sizeof(DNode*) );
+    self->table = (DNode**) dao_calloc( self->tsize, sizeof(DNode*) );
     return self;
 }
 double norm_c( const complex16 com );

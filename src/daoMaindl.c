@@ -53,20 +53,7 @@ static void DaoSignalHandler( int sig )
         rl_forced_update_display();
 #endif
     }else{
-        if( DaoVmSpace_GetState( vmSpace ) & DAO_EXEC_DEBUG ){
-            printf( "\n" );
-#ifdef DAO_USE_READLINE
-            if( rl_end >0 ){
-                rl_replace_line( "", 0 );
-            }else{
-                rl_replace_line( "quit", 0 );
-                rl_point = 4;
-            }
-            rl_forced_update_display();
-#endif
-        }else{
-            printf( "keyboard interrupt...\n" );
-        }
+		printf( "keyboard interrupt...\n" );
     }
 }
 
