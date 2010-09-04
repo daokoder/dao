@@ -28,27 +28,27 @@ typedef struct DaoAsmRoutine  DaoAsmRoutine;
 
 struct DaoAsmClass
 {
-    DaoClass *myClass;
-    DaoBase  *memb;
-    /* DArray<DArray<DString*>*>:
-     * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
-    DArray *stmtLoad;
-    DArray *nameConst;
-    DArray *nameGlobal;
-    DArray *nameVar;
+	DaoClass *myClass;
+	DaoBase  *memb;
+	/* DArray<DArray<DString*>*>:
+	 * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
+	DArray *stmtLoad;
+	DArray *nameConst;
+	DArray *nameGlobal;
+	DArray *nameVar;
 };
 struct DaoAsmRoutine
 {
-    int tmp;
+	int tmp;
 };
 
 struct DaoAsmWriter
 {
-    /* DArray<DArray<DString*>*>:
-     * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
-    DArray *stmtLoad;
-    DArray *classes; /* DArray<DString*>: { class, NULL/class/ns, ... } */
-    DArray *routines; /* DArray<DString*>: { class, NULL/class/ns, ... } */
+	/* DArray<DArray<DString*>*>:
+	 * {{ "module", "@BY", "loader", "@AS", "ns", "name1", ... }} */
+	DArray *stmtLoad;
+	DArray *classes; /* DArray<DString*>: { class, NULL/class/ns, ... } */
+	DArray *routines; /* DArray<DString*>: { class, NULL/class/ns, ... } */
 };
 
 DaoAsmWriter* DaoAsmWriter_New();

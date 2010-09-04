@@ -33,7 +33,7 @@ extern void DaoGC_DecRCs( DArray *dbases );
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoBase*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoBase*)(p) )
 #define GC_ShiftRC(up,down) \
-    if( (DaoBase*)(up) != (DaoBase*)(down) )\
+	if( (DaoBase*)(up) != (DaoBase*)(down) )\
 DaoGC_ShiftRC( (DaoBase*)(up), (DaoBase*)(down) )
 
 #define GC_IncRCs( p )  DaoGC_IncRCs( p )
@@ -82,10 +82,10 @@ DaoGC_ShiftRC( (DaoBase*)(up), (DaoBase*)(down) )
 typedef struct DaoLateDeleter DaoLateDeleter;
 struct DaoLateDeleter
 {
-    short   lock;
-    short   safe;
-    size_t  version;
-    DArray *buffer;
+	short   lock;
+	short   safe;
+	size_t  version;
+	DArray *buffer;
 };
 extern DaoLateDeleter dao_late_deleter;
 void DaoLateDeleter_Push( void *p );

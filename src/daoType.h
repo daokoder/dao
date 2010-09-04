@@ -74,24 +74,24 @@
  */
 struct DaoType
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    short         tid; /* type id */
-    uchar_t       attrib;
-    uchar_t       ffitype; /* for DaoCLoader module */
-    DString      *name; /* type name */
-    DString      *fname; /* field name, or parameter name */
-    DArray       *nested;
-    DMap         *mapNames;
-    DMap         *interfaces;
-    DaoTypeBase  *typer; /* TYPER of the represented type: built-in or C types */
-    union {
-        DaoBase      *extra;
-        DaoType      *abtype;
-        DaoClass     *klass;
-        DaoCData     *cdata;
-        DaoInterface *inter;
-    }X; /* DaoClass, DaoCData or DaoType for returned/named... */
+	short         tid; /* type id */
+	uchar_t       attrib;
+	uchar_t       ffitype; /* for DaoCLoader module */
+	DString      *name; /* type name */
+	DString      *fname; /* field name, or parameter name */
+	DArray       *nested;
+	DMap         *mapNames;
+	DMap         *interfaces;
+	DaoTypeBase  *typer; /* TYPER of the represented type: built-in or C types */
+	union {
+		DaoBase      *extra;
+		DaoType      *abtype;
+		DaoClass     *klass;
+		DaoCData     *cdata;
+		DaoInterface *inter;
+	}X; /* DaoClass, DaoCData or DaoType for returned/named... */
 };
 extern DaoType *dao_type_udf;
 extern DaoType *dao_array_bit;
@@ -119,14 +119,14 @@ void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 
 struct DaoInterface
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    int bindany;
+	int bindany;
 
-    DArray  *supers; /* parent interfaces */
-    DMap    *methods; /* DHash<DString*,DRoutine*> */
-    DaoType *abtype;
-    DMap    *ovldRoutMap; /* <DString*,DaoRoutine*> */
+	DArray  *supers; /* parent interfaces */
+	DMap    *methods; /* DHash<DString*,DRoutine*> */
+	DaoType *abtype;
+	DMap    *ovldRoutMap; /* <DString*,DaoRoutine*> */
 };
 
 DaoInterface* DaoInterface_New( const char *name );

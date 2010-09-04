@@ -50,15 +50,15 @@ sort is position!
 
 struct DaoJitMemory
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    int size;
-    int offset;
-    unsigned char *memory;
-    void *heap;
-    /*
-       DArray *blocks;
-     */
+	int size;
+	int offset;
+	unsigned char *memory;
+	void *heap;
+	/*
+	   DArray *blocks;
+	 */
 };
 
 /* read|write|executable */

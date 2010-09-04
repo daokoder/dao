@@ -21,41 +21,41 @@
 
 struct DaoVmcArray
 {
-    DaoVmCode *codes;
-    DaoVmCode *buf;
-    ushort_t   size;
-    ushort_t   bufsize;
+	DaoVmCode *codes;
+	DaoVmCode *buf;
+	ushort_t   size;
+	ushort_t   bufsize;
 };
 
 /* running time context for dao routine. */
 struct DaoContext
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    DaoVmCode  *codes;
-    DaoVmCode  *vmc; /* current virtual machine code */
-    DaoVmFrame *frame;
+	DaoVmCode  *codes;
+	DaoVmCode  *vmc; /* current virtual machine code */
+	DaoVmFrame *frame;
 
-    DVaTuple  *regArray; /* virtual registers for the call */
-    DValue   **regValues;
-    DaoType  **regTypes; /* = routine->regType->items.pAbtp; */
+	DVaTuple  *regArray; /* virtual registers for the call */
+	DValue   **regValues;
+	DaoType  **regTypes; /* = routine->regType->items.pAbtp; */
 
-    ushort_t  entryCode;
-    ushort_t  idClearFE;
-    ushort_t  parCount;
-    uchar_t   ctxState;
-    uchar_t   constCall;
+	ushort_t  entryCode;
+	ushort_t  idClearFE;
+	ushort_t  parCount;
+	uchar_t   ctxState;
+	uchar_t   constCall;
 
-    DaoRoutine   *routine; /* routine prototype */
-    DaoObject    *object; /* self object */
-    DaoNameSpace *nameSpace;
-    DaoVmSpace   *vmSpace;
+	DaoRoutine   *routine; /* routine prototype */
+	DaoObject    *object; /* self object */
+	DaoNameSpace *nameSpace;
+	DaoVmSpace   *vmSpace;
 
-    DaoContext   *caller;
-    DaoVmProcess *process;
+	DaoContext   *caller;
+	DaoVmProcess *process;
 
-    /* the currently called wrapped C function, for DaoCLoader module only. */
-    DaoFunction *thisFunction;
+	/* the currently called wrapped C function, for DaoCLoader module only. */
+	DaoFunction *thisFunction;
 
 };
 

@@ -23,14 +23,14 @@
 
 struct DString
 {
-    size_t   size;
-    size_t   bufSize;
-    size_t  *data;
-    char    *mbs;
-    wchar_t *wcs;
-    /* if data==mbs or data==wcs, no implicit sharing;
-       otherwise, data+1 must be equal to mbs or wcs, 
-       and data[0] will be the reference count. */
+	size_t   size;
+	size_t   bufSize;
+	size_t  *data;
+	char    *mbs;
+	wchar_t *wcs;
+	/* if data==mbs or data==wcs, no implicit sharing;
+	   otherwise, data+1 must be equal to mbs or wcs, 
+	   and data[0] will be the reference count. */
 };
 
 DString* DString_New( int mbs );
@@ -87,9 +87,9 @@ int DString_MatchMBS( DString *self, const char *pat, size_t *start, size_t *end
 int DString_MatchWCS( DString *self, const wchar_t *pat, size_t *start, size_t *end );
 
 int DString_ChangeMBS( DString *self, char *pat, char *target, 
-        int index, size_t *start, size_t *end );
+		int index, size_t *start, size_t *end );
 int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target, 
-        int index, size_t *start, size_t *end );
+		int index, size_t *start, size_t *end );
 
 DString* DString_Copy( DString *self );
 DString* DString_DeepCopy( DString *self );
@@ -105,7 +105,7 @@ int DString_Encrypt( DString *self, DString *key, int hex );
 int DString_Decrypt( DString *self, DString *key, int hex );
 
 size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
-        uint_t esc0, size_t start, size_t end, int countonly );
+		uint_t esc0, size_t start, size_t end, int countonly );
 
 DString DString_WrapMBS( const char *mbs );
 DString DString_WrapWCS( const wchar_t *wcs );

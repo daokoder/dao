@@ -69,11 +69,11 @@ void DValue_IncRCs( DValue *v, int n );
 
 struct DVarray
 {
-    DValue   *data;
-    DValue   *buf;
+	DValue   *data;
+	DValue   *buf;
 
-    size_t size;
-    size_t bufsize;
+	size_t size;
+	size_t bufsize;
 };
 
 DVarray* DVarray_New();
@@ -102,8 +102,8 @@ void DVarray_AppendItem( DVarray *self, DaoBase *it );
 
 struct DVaTuple
 {
-    DValue *data;
-    size_t  size;
+	DValue *data;
+	size_t  size;
 };
 
 DVaTuple* DVaTuple_New( size_t size, DValue val );

@@ -25,48 +25,48 @@
 
 struct DaoNameSpace
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    DaoVmSpace *vmSpace;
-    DaoNameSpace *parent;
-    int cstUser;
+	DaoVmSpace *vmSpace;
+	DaoNameSpace *parent;
+	int cstUser;
 
-    /* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */
-    DVarray  *cstData;
-    DMap     *cstIndex; /* <DString*,size_t> */
-    DMap     *cstStatic; /* <DString*,size_t> */
+	/* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */
+	DVarray  *cstData;
+	DMap     *cstIndex; /* <DString*,size_t> */
+	DMap     *cstStatic; /* <DString*,size_t> */
 
-    /* global data in the name space: */
-    DVarray  *varData;
-    DArray   *varType;   /* <DaoType*> */
-    DMap     *varIndex;  /* <DString*,size_t> */
-    DMap     *varStatic;  /* <DString*,size_t> */
+	/* global data in the name space: */
+	DVarray  *varData;
+	DArray   *varType;   /* <DaoType*> */
+	DMap     *varIndex;  /* <DString*,size_t> */
+	DMap     *varStatic;  /* <DString*,size_t> */
 
-    DaoRoutine *mainRoutine;
+	DaoRoutine *mainRoutine;
 
-    DArray *mainRoutines; /* stdlib.eval() */
-    DArray *definedRoutines; /* for DaoStudio IDE */
+	DArray *mainRoutines; /* stdlib.eval() */
+	DArray *definedRoutines; /* for DaoStudio IDE */
 
-    DArray *nsLoaded; /* loaded modules as namespaces */
-    DArray *ctypers;
-    /* The methods of C types loaded from a C module,
-     * used for the purpose of GC. */
-    DArray *cmethods; /* <DaoFunction*> */
-    DMap   *macros; /* <DString*,DaoMacro*> */
-    DMap   *abstypes; /* <DString*,DaoType*> */
+	DArray *nsLoaded; /* loaded modules as namespaces */
+	DArray *ctypers;
+	/* The methods of C types loaded from a C module,
+	 * used for the purpose of GC. */
+	DArray *cmethods; /* <DaoFunction*> */
+	DMap   *macros; /* <DString*,DaoMacro*> */
+	DMap   *abstypes; /* <DString*,DaoType*> */
 
-    DaoType *udfType1;
-    DaoType *udfType2;
+	DaoType *udfType1;
+	DaoType *udfType2;
 
-    void   *libHandle;
-    DString *file;
-    DString *path;
-    DString *name; /* path + file */
-    DString *source;
-    ullong_t time;
+	void   *libHandle;
+	DString *file;
+	DString *path;
+	DString *name; /* path + file */
+	DString *source;
+	ullong_t time;
 
-    DaoVmProcess *vmpEvalConst;
-    DaoRoutine   *routEvalConst;
+	DaoVmProcess *vmpEvalConst;
+	DaoRoutine   *routEvalConst;
 };
 
 DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
@@ -100,9 +100,9 @@ DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name );
 int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );
 DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p );
 DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name, 
-        uchar_t basic, DaoBase *pb, DaoType *nest[], int N );
+		uchar_t basic, DaoBase *pb, DaoType *nest[], int N );
 DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
-        DValue *vals, DaoType *types[], DaoType *retp );
+		DValue *vals, DaoType *types[], DaoType *retp );
 DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val );
 
 int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer );

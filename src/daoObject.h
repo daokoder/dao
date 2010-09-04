@@ -18,14 +18,14 @@
 
 struct DaoObject
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    DValue     *objValues;
-    DVaTuple   *objData;
-    DaoClass   *myClass;
-    DPtrTuple  *superObject; /*DPtrTuple<DaoObject/DaoCData*>*/
-    DaoObject  *that;
-    DaoMap     *meta;
+	DValue     *objValues;
+	DVaTuple   *objData;
+	DaoClass   *myClass;
+	DPtrTuple  *superObject; /*DPtrTuple<DaoObject/DaoCData*>*/
+	DaoObject  *that;
+	DaoMap     *meta;
 };
 
 DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset );

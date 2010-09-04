@@ -21,30 +21,30 @@
 
 enum
 {
-    DAO_IO_FILE = 1 ,
-    DAO_IO_PIPE = 2 ,
-    DAO_IO_STRING = 4
+	DAO_IO_FILE = 1 ,
+	DAO_IO_PIPE = 2 ,
+	DAO_IO_STRING = 4
 };
 
 typedef struct DFile
 {
-    FILE   *fd;
-    int     rc;
+	FILE   *fd;
+	int     rc;
 } DFile;
 
 struct DaoStream
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    DFile      *file;
-    DString    *streamString;
-    char        attribs;
-    int         useQuote;
-    char       *format;
-    DaoVmSpace *vmSpace;
-    DString    *fname;
-    DaoStream  *redirect;
-    char        buffer[100];
+	DFile      *file;
+	DString    *streamString;
+	char        attribs;
+	int         useQuote;
+	char       *format;
+	DaoVmSpace *vmSpace;
+	DString    *fname;
+	DaoStream  *redirect;
+	char        buffer[100];
 };
 
 extern DaoStream* DaoStream_New();

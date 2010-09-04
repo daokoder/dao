@@ -21,40 +21,40 @@ typedef enum{ KEY_EQ=0, KEY_ML/*Max Less*/, KEY_MG/*Min Great*/ } KeySearchType;
 
 typedef union
 {
-    dint       pInt;
-    void      *pVoid;
-    DValue    *pValue;
-    DString   *pString;
-    DArray    *pArray;
-    DaoBase   *pBase;
-    DaoType   *pAbtp;
-    DaoInode  *pInode;
+	dint       pInt;
+	void      *pVoid;
+	DValue    *pValue;
+	DString   *pString;
+	DArray    *pArray;
+	DaoBase   *pBase;
+	DaoType   *pAbtp;
+	DaoInode  *pInode;
 }DNodeData;
 
 struct DNode
 {
-    unsigned int color :  1;
-    unsigned int hash  : 31;
+	unsigned int color :  1;
+	unsigned int hash  : 31;
 
-    DNode  *parent;
-    DNode  *left;
-    DNode  *right;
+	DNode  *parent;
+	DNode  *left;
+	DNode  *right;
 
-    DNodeData key;
-    DNodeData value;
+	DNodeData key;
+	DNodeData value;
 };
 extern DNode* DNode_Next( DNode *self );
 extern DNode* DNode_First( DNode *self );
 
 struct DMap
 {
-    DNode  *root;
-    DNode **table;
-    int     size;
-    int     tsize;
-    char    keytype;
-    char    valtype;
-    char    hashing;
+	DNode  *root;
+	DNode **table;
+	int     size;
+	int     tsize;
+	char    keytype;
+	char    valtype;
+	char    hashing;
 };
 extern DMap* DMap_New( short kt, short vt );
 extern DMap* DHash_New( short kt, short vt );

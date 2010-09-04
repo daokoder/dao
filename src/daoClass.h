@@ -23,50 +23,50 @@
 
 enum DaoClassStorage
 {
-    DAO_CLASS_CONST ,
-    DAO_CLASS_GLOBAL ,
-    DAO_CLASS_VARIABLE
+	DAO_CLASS_CONST ,
+	DAO_CLASS_GLOBAL ,
+	DAO_CLASS_VARIABLE
 };
 
 struct DaoClass
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    /* Holding index of class members, including data from its parents: */
-    /* negative index indicates an inaccessible private member from a parent. XXX */
-    DMap *lookupTable; /* <DString*,size_t>: (storage<<24)|(permission<<16)|index */
+	/* Holding index of class members, including data from its parents: */
+	/* negative index indicates an inaccessible private member from a parent. XXX */
+	DMap *lookupTable; /* <DString*,size_t>: (storage<<24)|(permission<<16)|index */
 
-    DArray   *objDataName;  /* <DString*>: keep tracking field declaration order: */
-    DArray   *objDataType;  /* <DaoType*> */
-    DVarray  *objDataDefault; /* <DValue>, NULL: no default, not for parent classes */
+	DArray   *objDataName;  /* <DString*>: keep tracking field declaration order: */
+	DArray   *objDataType;  /* <DaoType*> */
+	DVarray  *objDataDefault; /* <DValue>, NULL: no default, not for parent classes */
 
-    DArray   *cstDataName;  /* <DString*>: keep track field declaration order: */
-    /* Holding class consts and routines - class data: */
-    /* For both this class and its parents: */
-    DVarray  *cstData;
+	DArray   *cstDataName;  /* <DString*>: keep track field declaration order: */
+	/* Holding class consts and routines - class data: */
+	/* For both this class and its parents: */
+	DVarray  *cstData;
 
-    DArray   *glbDataName;  /* <DString*>: keep track field declaration order: */
-    DArray   *glbDataType;  /* <DaoType*> */
-    DVarray  *glbData;      /* <DValue> */
+	DArray   *glbDataName;  /* <DString*>: keep track field declaration order: */
+	DArray   *glbDataType;  /* <DaoType*> */
+	DVarray  *glbData;      /* <DValue> */
 
-    DArray *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
-    DArray *superAlias;
+	DArray *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
+	DArray *superAlias;
 
-    /* Routines with overloading signatures: */
-    /* They are inserted into cstData, no refCount updating for this. */
-    DMap   *ovldRoutMap; /* <DString*,DaoRoutine*> */
+	/* Routines with overloading signatures: */
+	/* They are inserted into cstData, no refCount updating for this. */
+	DMap   *ovldRoutMap; /* <DString*,DaoRoutine*> */
 
-    DaoRoutine *classRoutine; /* Class constructor. */
+	DaoRoutine *classRoutine; /* Class constructor. */
 
-    DString *className;
-    DString *docString;
+	DString *className;
+	DString *docString;
 
-    DaoType  *clsType;
-    DaoType  *objType;
-    DMap     *abstypes;
+	DaoType  *clsType;
+	DaoType  *objType;
+	DMap     *abstypes;
 
-    int       derived;
-    uint_t    attribs;
+	int       derived;
+	uint_t    attribs;
 };
 
 DaoClass* DaoClass_New();

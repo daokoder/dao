@@ -28,49 +28,49 @@ typedef unsigned short bits;
 
 
 #define \
-    COM_ASSN( self, com ) \
+	COM_ASSN( self, com ) \
 { (self).real = (com).real; (self).imag = (com).imag; }
 
 #define \
-    COM_ASSN2( self, com ) \
+	COM_ASSN2( self, com ) \
 { (self)->real = (com).real; (self)->imag = (com).imag; }
 
 #define \
-    COM_IP_ADD( self, com ) \
+	COM_IP_ADD( self, com ) \
 { (self).real += (com).real; (self).imag += (com).imag; }
 
 #define \
-    COM_IP_SUB( self, com ) \
+	COM_IP_SUB( self, com ) \
 { (self).real -= com.real; (self).imag -= com.imag; }
 
 #define \
-    COM_IP_MUL( self, com ) \
+	COM_IP_MUL( self, com ) \
 { (self).real *= com.real; (self).imag *= com.imag; }
 
 #define \
-    COM_IP_DIV( self, com ) \
+	COM_IP_DIV( self, com ) \
 { (self).real /= com.real; (self).imag /= com.imag; }
 
 #define \
-    COM_ADD( self, left, right ) \
+	COM_ADD( self, left, right ) \
 { (self).real = left.real + right.real; (self).imag = left.imag + right.imag; }
 
 #define \
-    COM_SUB( self, left, right ) \
+	COM_SUB( self, left, right ) \
 { (self).real = left.real - right.real; (self).imag = left.imag - right.imag; }
 
 #define \
-    COM_MUL( self, left, right ) \
+	COM_MUL( self, left, right ) \
 { (self).real = left.real*right.real - left.imag*right.imag; \
-    (self).imag = left.real*right.imag + left.imag*right.real; }
+	(self).imag = left.real*right.imag + left.imag*right.real; }
 
 #define \
-    COM_DIV( self, L, R ) \
+	COM_DIV( self, L, R ) \
 { (self).real = ( L.real*R.real + L.imag*R.imag ) / ( R.real*R.real + R.imag*R.imag ); \
-    (self).imag = ( L.imag*R.real - L.real*R.imag ) / ( R.real*R.real + R.imag*R.imag ); }
+	(self).imag = ( L.imag*R.real - L.real*R.imag ) / ( R.real*R.real + R.imag*R.imag ); }
 
 #define \
-    COM_UNMS( self, com ) \
+	COM_UNMS( self, com ) \
 { (self).real = - com.real; (self).imag = - com.imag;  }
 
 double abs_c( const complex16 com );
@@ -99,12 +99,12 @@ complex16 floor_c( const complex16 com );
 
 struct DLong
 {
-    ushort_t *data;
-    ushort_t *pbuf;
-    short     sign;
-    short     bits; /* bit array indicator */
-    size_t    size;
-    size_t    bufSize;
+	ushort_t *data;
+	ushort_t *pbuf;
+	short     sign;
+	short     bits; /* bit array indicator */
+	size_t    size;
+	size_t    bufSize;
 };
 DLong* DLong_New();
 void DLong_Delete( DLong *self );
@@ -139,27 +139,27 @@ ushort_t DLong_UDivDigit( DLong *z, ushort_t digit );
 
 struct DaoArray
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    size_t  size;
-    short   numType;
-    short   owner;
+	size_t  size;
+	short   numType;
+	short   owner;
 
-    union{
-        void       *p;
-        int        *i;
-        float      *f;
-        double     *d;
-        complex16  *c;
-    } data;
+	union{
+		void       *p;
+		int        *i;
+		float      *f;
+		double     *d;
+		complex16  *c;
+	} data;
 
-    DaoMap  *meta;
-    DaoType *unitype;
+	DaoMap  *meta;
+	DaoType *unitype;
 
-    DArray  *dims;
-    DArray  *dimAccum;
+	DArray  *dims;
+	DArray  *dimAccum;
 
-    void  **matrix;
+	void  **matrix;
 };
 #ifdef DAO_WITH_NUMARRAY
 
@@ -178,7 +178,7 @@ double DaoArray_GetDouble( DaoArray *na, int i );
 complex16 DaoArray_GetComplex( DaoArray *na, int i );
 
 #define NUMAR_IS_VEC( x ) ( (x)->dims->size == 2 && \
-        ( (x)->dims->items.pInt[0]==1 || (x)->dims->items.pInt[1]==1 ) )
+		( (x)->dims->items.pInt[0]==1 || (x)->dims->items.pInt[1]==1 ) )
 #define NUMAR_IS_INT( x ) ( (x)->numType == DAO_INTEGER )
 #define NUMAR_IS_FLOAT( x ) ( (x)->numType == DAO_FLOAT || (x)->numType == DAO_DOUBLE )
 #define NUMAR_IS_COMP( x ) ((x)->numType == DAO_COMPLEX )
