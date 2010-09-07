@@ -323,6 +323,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsInternal->refCount ++;
 	self->mainNamespace->refCount ++;
 
+	DString_SetMBS( self->nsInternal->name, "dao" );
 	DString_SetMBS( self->mainNamespace->name, "MainNameSpace" );
 
 	self->ReadLine = NULL;
@@ -1071,6 +1072,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		if( file ) DString_AppendMBS( self->source, file );
 		if( self->evalCmdline ){
 			DString_SetMBS( self->fileName, "command line codes" );
+			DString_SetMBS( self->mainNamespace->name, "command line codes" );
 			DaoVmProcess_Eval( vmp, ns, self->source, 1 );
 			if( vmp->returned.t ){
 				DaoContext *ctx = DaoVmProcess_MakeContext( vmp, ns->mainRoutine );

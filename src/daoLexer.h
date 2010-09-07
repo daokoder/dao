@@ -205,8 +205,6 @@ enum DaoKeyNames
 	DAO_NOKEY2
 };
 
-const extern char *const dao_oper_tokens[];
-
 int dao_key_hash( const char *str, int len );
 
 typedef struct DIntStringPair
@@ -242,6 +240,7 @@ struct DaoToken
 DaoToken* DaoToken_New();
 void DaoToken_Delete( DaoToken *self );
 
+const char* DaoToken_NameToString( unsigned char name );
 int DaoToken_Check( const char *src, int size, int *length );
 int DaoToken_IsNumber( const char *src, int size );
 int DaoToken_IsValidName( const char *src, int size );

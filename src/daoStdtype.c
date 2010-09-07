@@ -3397,8 +3397,9 @@ DaoException* DaoException_New( DaoTypeBase *typer )
 	DaoException *self = dao_malloc( sizeof(DaoException) );
 	self->fromLine = 0;
 	self->toLine = 0;
-	self->routName = DString_New(1);
-	self->fileName = DString_New(1);
+	self->routine = NULL;
+	self->callers = DArray_New(0);
+	self->lines = DArray_New(0);
 
 	self->name = DString_New(1);
 	self->info = DString_New(1);
@@ -3417,8 +3418,9 @@ void DaoException_Delete( DaoException *self )
 {
 	DValue_Clear( & self->data );
 	DString_Delete( self->name );
-	DString_Delete( self->routName );
-	DString_Delete( self->fileName );
+	DString_Delete( self->info );
+	DArray_Delete( self->callers );
+	DArray_Delete( self->lines );
 	dao_free( self );
 }
 

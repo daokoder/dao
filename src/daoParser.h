@@ -116,6 +116,7 @@ struct DaoParser
 	short error;
 	short parsed;
 	DArray *scoping; /* <size_t> */
+	DArray *errors;
 
 	/* members for convenience */
 	DLong     *bigint;

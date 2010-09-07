@@ -1015,8 +1015,9 @@ CallEntry:
 	id = self->topFrame->entry;
 	if( id >= topCtx->routine->vmCodes->size ){
 		if( id == 0 ){
-			DString_SetMBS( self->mbstring, "Not implemented function: " );
+			DString_SetMBS( self->mbstring, "Not implemented function, " );
 			DString_Append( self->mbstring, topCtx->routine->routName );
+			DString_AppendMBS( self->mbstring, "()" );
 			DaoContext_RaiseException( topCtx, DAO_ERROR, self->mbstring->mbs );
 			goto FinishProc;
 		}
@@ -3083,28 +3084,71 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 	}
 	self->process->status = DAO_VMPROC_RUNNING;
 }
+static void DaoType_WriteMainName( DaoType *self, DaoStream *stream )
+{
+	DString *name = self->name;
+	int i, n = DString_FindChar( name, '<', 0 );
+	if( n == MAXSIZE ) n = name->size;
+	for(i=0; i<n; i++) DaoStream_WriteChar( stream, name->mbs[i] );
+}
 void DaoPrintException( DaoCData *except, DaoStream *stream, char *header )
 {
 	DaoException *ex = (DaoException*) except->data;
-	DaoStream_WriteMBS( stream, header );
-	DaoStream_WriteString( stream, ex->routName );
-	DaoStream_WriteMBS( stream, "():" );
-	DaoStream_WriteNewLine( stream );
-	DaoStream_WriteMBS( stream, "  At line #" );
-	DaoStream_WriteInt( stream, ex->fromLine );
-	if( ex->fromLine != ex->toLine ){
-		DaoStream_WriteMBS( stream, " - #" );
-		DaoStream_WriteInt( stream, ex->toLine );
-	}
-	DaoStream_WriteMBS( stream, ", in file \"" );
-	DaoStream_WriteString( stream, ex->fileName );
-	DaoStream_WriteMBS( stream, "\";" );
-	DaoStream_WriteNewLine( stream );
-	DaoStream_WriteMBS( stream, "  " );
+	int i, n = ex->callers->size;
+
+	DaoStream_WriteMBS( stream, "[[" );
 	DaoStream_WriteString( stream, ex->name );
-	DaoStream_WriteMBS( stream, ": " );
+	DaoStream_WriteMBS( stream, "]] --- " );
 	DaoStream_WriteString( stream, ex->info );
+	DaoStream_WriteMBS( stream, ":" );
 	DaoStream_WriteNewLine( stream );
+	DaoStream_WriteMBS( stream, "  Raised by:  " );
+	if( ex->routine->attribs & DAO_ROUT_PARSELF ){
+		DaoType *type = ex->routine->routType->nested->items.pAbtp[0];
+		DaoType_WriteMainName( type->X.abtype, stream );
+		DaoStream_WriteMBS( stream, "." );
+	}else if( ex->routine->routHost ){
+		DaoType_WriteMainName( ex->routine->routHost, stream );
+		DaoStream_WriteMBS( stream, "." );
+	}
+	DaoStream_WriteString( stream, ex->routine->routName );
+	DaoStream_WriteMBS( stream, "(), " );
+
+	if( ex->routine->type == DAO_ROUTINE ){
+		DaoStream_WriteMBS( stream, "at line " );
+		DaoStream_WriteInt( stream, ex->fromLine );
+		if( ex->fromLine != ex->toLine ){
+			DaoStream_WriteMBS( stream, "-" );
+			DaoStream_WriteInt( stream, ex->toLine );
+		}
+		DaoStream_WriteMBS( stream, " in file \"" );
+		DaoStream_WriteString( stream, ex->routine->nameSpace->name );
+		DaoStream_WriteMBS( stream, "\";\n" );
+	}else{
+		DaoStream_WriteMBS( stream, "from namespace \"" );
+		DaoStream_WriteString( stream, ex->routine->nameSpace->name );
+		DaoStream_WriteMBS( stream, "\";\n" );
+	}
+
+	for(i=0; i<n; i++){
+		DRoutine *rout = (DRoutine*) ex->callers->items.pRout[i];
+		DaoStream_WriteMBS( stream, "  Called by:  " );
+		if( rout->attribs & DAO_ROUT_PARSELF ){
+			DaoType *type = rout->routType->nested->items.pAbtp[0];
+			DaoType_WriteMainName( type->X.abtype, stream );
+			DaoStream_WriteMBS( stream, "." );
+		}else if( rout->routHost ){
+			DaoType_WriteMainName( rout->routHost, stream );
+			DaoStream_WriteMBS( stream, "." );
+		}
+		DaoStream_WriteString( stream, rout->routName );
+		DaoStream_WriteMBS( stream, "(), " );
+		DaoStream_WriteMBS( stream, "at line " );
+		DaoStream_WriteInt( stream, ex->lines->items.pInt[i] );
+		DaoStream_WriteMBS( stream, " in file \"" );
+		DaoStream_WriteString( stream, rout->nameSpace->name );
+		DaoStream_WriteMBS( stream, "\";\n" );
+	}
 }
 void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
 {

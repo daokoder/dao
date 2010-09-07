@@ -237,11 +237,12 @@ void QuickSort( IndexValue *data, int first, int last, int part, int asc );
 
 struct DaoException
 {
-	int    fromLine;
-	int    toLine;
+	int       fromLine;
+	int       toLine;
+	DRoutine *routine;
+	DArray   *callers;
+	DArray   *lines;
 
-	DString  *routName;
-	DString  *fileName;
 	DString  *name;
 	DString  *info;
 	DValue    data;

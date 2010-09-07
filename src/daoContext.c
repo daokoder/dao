@@ -3791,6 +3791,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			 */
 			self->thisFunction = func;
 			func->pFunc( self, parbuf2, npar );
+			self->thisFunction = NULL;
 			/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
 			for(i=0; i<=rout->parCount; i++){
 				if( parbuf[i].ndef ) continue;
@@ -4042,6 +4043,7 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		 */
 		self->thisFunction = func;
 		func->pFunc( self, parbuf2, npar );
+		self->thisFunction = NULL;
 		DValue_ClearAll( parbuf, rout->parCount+1 );
 		if( DaoContext_CheckFE( self ) ) return;
 		if( self->process->status==DAO_VMPROC_SUSPENDED )
@@ -4133,18 +4135,17 @@ void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 		/* self->process->status is set to DAO_VMPROC_SUSPENDED by DaoVmProcess_Yield() */
 		self->process->status = DAO_VMPROC_FINISHED;
 	}else{
-		if( self->process->returned.t >= DAO_ARRAY ) GC_DecRC( self->process->returned.v.p );
-		self->process->returned = daoNullValue;
 		if( vmc->b == 1 ){
-			self->process->returned = *self->regValues[ vmc->a ];
+			DValue_Move( *self->regValues[ vmc->a ], & self->process->returned, NULL );
 		}else if( vmc->b > 1 ){
 			DaoTuple *tuple = DaoTuple_New( vmc->b );
+			DValue_Clear( & self->process->returned );
+			GC_IncRC( tuple );
 			self->process->returned.t = DAO_TUPLE;
 			self->process->returned.v.p = (DaoBase*) tuple;
 			for( i=0; i<vmc->b; i++)
 				DValue_Copy( tuple->items->data + i, *self->regValues[ vmc->a+i ] );
 		}
-		if( self->process->returned.t >= DAO_ARRAY ) GC_IncRC( self->process->returned.v.p );
 	}
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
@@ -4184,27 +4185,42 @@ int DaoContext_DoCheckExcept( DaoContext *self, DaoVmCode *vmc )
 	if( DaoContext_CheckFE( self ) ) return 1;
 	return ( self->process->exceptions->size > 0 );
 }
-	static void DaoInitException
-( DaoCData *except, DaoContext *ctx, DaoVmCode *vmc, 
-  int fe, const char *value )
+static void DaoInitException
+( DaoCData *except, DaoContext *ctx, DaoVmCode *vmc, int fe, const char *value )
 {
 	DaoRoutine *rout = ctx->routine;
 	DaoTypeBase *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
 	DaoException *exdat = (DaoException*) except->data;
 	DaoVmCodeX **annotCodes = rout->annotCodes->items.pVmc;
+	DaoVmFrame *frame = ctx->frame->prev;
+	DaoContext *ctx2;
 	DValue *objData;
-	int line, line2;
+	int k, line, line2;
 	int id = (int) (vmc - ctx->codes);
+
 	line = line2 = rout->defLine;
 	if( vmc && rout->vmCodes->size ) line = annotCodes[id]->line;
 	line2 = line;
-	DString_Assign( exdat->routName, rout->routName );
-	DString_Assign( exdat->fileName, rout->nameSpace->name );
+	exdat->routine = (DRoutine*) rout;
 	exdat->toLine = line;
 	if( DaoCData_ChildOf( except->typer, efloat ) && fe >=0 )
 		line2 = (vmc && rout->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
 	exdat->fromLine = line2;
 	if( value && value[0] != 0 ) DString_SetMBS( exdat->info, value );
+	DArray_Clear( exdat->callers );
+	DArray_Clear( exdat->lines );
+	if( ctx->thisFunction ){
+		DArray_Append( exdat->callers, rout );
+		DArray_Append( exdat->lines, (size_t)line );
+		exdat->routine = (DRoutine*) ctx->thisFunction;
+	}
+	while( frame && frame->context ){
+		if( exdat->callers->size >= 5 ) break;
+		line = frame->context->routine->annotCodes->items.pVmc[ frame->entry ]->line;
+		DArray_Append( exdat->callers, frame->context->routine );
+		DArray_Append( exdat->lines, (size_t) line );
+		frame = frame->prev;
+	}
 }
 extern void STD_Debug( DaoContext *ctx, DaoBase *p[], int N );
 void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc )

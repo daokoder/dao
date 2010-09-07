@@ -54,7 +54,8 @@ struct DaoContext
 	DaoContext   *caller;
 	DaoVmProcess *process;
 
-	/* the currently called wrapped C function, for DaoCLoader module only. */
+	/* the currently called wrapped C function,
+	   for exception handling and DaoCLoader module. */
 	DaoFunction *thisFunction;
 
 };

@@ -861,6 +861,12 @@ void DaoTokens_Append( DArray *self, int name, int line, const char *data )
 	DString_SetMBS( tok->string, data );
 }
 
+const char* DaoToken_NameToString( unsigned char name )
+{
+	if( name <= DTOK_NONE2 ) return dao_oper_tokens[name];
+	if( name < DAO_NOKEY2 ) return dao_keywords[ name - DKEY_USE ].key;
+	return "";
+}
 int DaoToken_IsNumber( const char *src, int size )
 {
 	int t, n = 0;
