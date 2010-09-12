@@ -835,10 +835,19 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_POW ]    = doper( DAO_OPER_POW,      0, 0, 2 );
 }
 
+typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
+
 DaoToken* DaoToken_New() { return dao_calloc( 1, sizeof(DaoToken) ); }
 void DaoToken_Delete( DaoToken *self )
 {
-	if( self->string ) DString_Delete( self->string );
+	DaoToken2 *tok2 = (DaoToken2*) self;
+	if( self->string ){
+		if( self->string == & tok2->string ){
+			DString_Clear( self->string );
+		}else{
+			DString_Delete( self->string );
+		}
+	}
 	dao_free( self );
 }
 void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s )
@@ -1226,4 +1235,70 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 	}
 #endif
 	return ret ? line : 0;
+}
+
+void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max )
+{
+	DaoToken **tokens = self->items.pToken;
+	DaoToken *t1, *t2;
+	int i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
+	int max2 = max/2;
+	DString_Clear( annot );
+	for(i=0; i<vmc.middle; i++){
+		k = i + vmc.first;
+		if( k >= self->size ) break;
+		t2 = tokens[k];
+		if( k != vmc.first ){
+			t1 = tokens[k-1];
+			pos = t1->cpos + t1->string->size;
+			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
+		}
+		len = t2->string->size;
+		if( t2->type == DTOK_IDENTIFIER ){
+			if( len > max2 ) len = max2 - 3;
+		}else{
+			if( len > m+3 ) len = m;
+		}
+		if( annot->size + len >= max2 ) len = max2 + 1 - annot->size;
+		DString_AppendDataMBS( annot, t2->string->mbs, len );
+		if( len != t2->string->size ){
+			DString_AppendMBS( annot, "..." );
+			if( t2->type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
+			else if( t2->type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
+			else break;
+		}
+		if( (i+1) < vmc.middle && annot->size >= max2 ){
+			DString_AppendMBS( annot, "..." );
+			break;
+		}
+	}
+	for(i=0; i<=vmc.last; i++){
+		k = i + vmc.first + vmc.middle;
+		if( k >= self->size ) break;
+		t2 = tokens[k];
+		if( k != vmc.first ){
+			t1 = tokens[k-1];
+			pos = t1->cpos + t1->string->size;
+			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
+		}
+		len = t2->string->size;
+		if( t2->type == DTOK_IDENTIFIER ){
+			if( len > max2 ) len = max2-3;
+		}else{
+			if( len > m+3 ) len = m;
+		}
+		if( annot->size + len >= max ) len = max - annot->size;
+		DString_AppendDataMBS( annot, t2->string->mbs, len );
+		if( len != t2->string->size ){
+			DString_AppendMBS( annot, "..." );
+			if( t2->type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
+			else if( t2->type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
+			else break;
+		}
+		if( i < vmc.last && annot->size >= max ){
+			DString_AppendMBS( annot, "..." );
+			break;
+		}
+	}
+	DString_ChangeMBS( annot, "{{\n}}", "\\n", 0, NULL, NULL );
 }

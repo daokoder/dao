@@ -963,8 +963,9 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
 	char *chs;
 	int ch;
+	DString_SetMBS( self->fileName, "interactive codes" );
+	DString_SetMBS( self->mainNamespace->name, "interactive codes" );
 	while(1){
-		DString_SetMBS( self->fileName, "interactive codes" );
 		DString_Clear( input );
 		if( self->ReadLine ){
 			chs = self->ReadLine( "(dao) " );
@@ -1327,7 +1328,7 @@ static DaoNameSpace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self,
 
 	ns = DaoNameSpace_New( self );
 	ns->time = tm;
-	DString_Assign( ns->source, self->source );
+	//DString_Assign( ns->source, self->source );
 
 	GC_IncRC( ns );
 	node = MAP_Find( self->nsModules, libpath );

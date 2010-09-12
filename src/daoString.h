@@ -70,7 +70,11 @@ void DString_AppendChar( DString *self, const char ch );
 void DString_AppendWChar( DString *self, const wchar_t ch );
 void DString_AppendMBS( DString *self, const char *chs );
 void DString_AppendWCS( DString *self, const wchar_t *chs );
-void DString_AppendBytes( DString *self, const char *bytes, size_t count );
+void DString_AppendDataMBS( DString *self, const char *chs, size_t n );
+void DString_AppendDataWCS( DString *self, const wchar_t *chs,size_t n );
+void DString_SetDataMBS( DString *self, const char *bytes, size_t count );
+void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count );
+
 void DString_Replace( DString *self, DString *chs, size_t start, size_t rm );
 void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm );
 void DString_SubString( DString *self, DString *sub, size_t from, size_t n );

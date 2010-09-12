@@ -67,6 +67,7 @@ void DArray_Resize( DArray *self, size_t size, void *val );
 void DArray_Clear( DArray *self );
 void DArray_Insert( DArray *self, void *val, size_t id );
 void DArray_InsertArray( DArray *self, size_t at, DArray *array, size_t id, size_t n );
+void DArray_AppendArray( DArray *self, DArray *array );
 void DArray_Erase( DArray *self, size_t start, size_t n );
 void DArray_PushFront( DArray *self, void *val );
 void DArray_PopFront( DArray *self );
@@ -125,10 +126,10 @@ void DPtrTuple_Clear( DPtrTuple *self );
 typedef struct DaoJitCode DaoJitCode;
 struct DaoJitCode
 {
-	short opcode; /* basic opcode (not encoded) */
-	short rmsti;  /* reg, mem, stack, (encoded) */
-	short modsib; /* addressing mode, bit flags */
-	dint  extra; /* displacement, immediate data or SIB byte (encode) */
-	int   vmcID;
+	short  opcode; /* basic opcode (not encoded) */
+	short  rmsti;  /* reg, mem, stack, (encoded) */
+	short  modsib; /* addressing mode, bit flags */
+	dint   extra; /* displacement, immediate data or SIB byte (encode) */
+	int    vmcID;
 };
 #endif

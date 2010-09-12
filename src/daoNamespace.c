@@ -660,7 +660,8 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	self->file = DString_New(1);
 	self->path = DString_New(1);
 	self->name = DString_New(1);
-	self->source = DString_New(1);
+	self->sources = DArray_New(D_ARRAY);
+	self->tokens = DHash_New(D_STRING,0);
 	self->libHandle = NULL;
 	self->udfType1 = DaoType_New( "?", DAO_UDF, 0,0 );
 	self->udfType2 = DaoType_New( "?", DAO_UDF, 0,0 );
@@ -713,7 +714,7 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DaoTypeCore *core;
 	DMap *values;
 	DNode *it;
-	int i;
+	int i, j;
 	it = DMap_First( self->macros );
 	for( ; it !=NULL; it = DMap_Next(self->macros, it) ) GC_DecRC( it->value.pBase );
 	it = DMap_First( self->abstypes );
@@ -723,6 +724,10 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 		DaoTypeBase_Free( typer );
 		if( typer->priv ) dao_free( typer->priv );
 		typer->priv = NULL;
+	}
+	for(i=0; i<self->sources->size; i++){
+		DArray *array = self->sources->items.pArray[i];
+		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
 
 	GC_DecRC( self->udfType1 );
@@ -747,7 +752,8 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DString_Delete( self->file );
 	DString_Delete( self->path );
 	DString_Delete( self->name );
-	DString_Delete( self->source );
+	DArray_Delete( self->sources );
+	DMap_Delete( self->tokens );
 	/* XXX if( self->libHandle ) DaoCloseLibrary( self->libHandle ); */
 	dao_free( self );
 }
@@ -1050,7 +1056,7 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 	}else{
 		DValue val = daoNullClass;
 		val.t = DAO_TYPE;
-		val.v.p = tp;
+		val.v.p = (DaoBase*) tp;
 		DaoNameSpace_AddConst( self, name, val );
 	}
 	/*

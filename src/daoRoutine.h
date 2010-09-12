@@ -96,6 +96,7 @@ struct DaoRoutine
 
 	/* definition of local constants and variables: */
 	DArray *defLocals; /* <DaoToken*> */
+	DArray *source; /* <DaoToken*> */
 
 	DMap *regForLocVar;
 	int locRegCount;
@@ -128,7 +129,7 @@ void DaoRoutine_Compile( DaoRoutine *self );
 void DaoRoutine_AddOverLoad( DaoRoutine *self, DaoRoutine *rout );
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
 
-int DaoRoutine_UpdateCode( DaoRoutine *self, DString *source );
+void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNameSpace *ns );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 

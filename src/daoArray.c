@@ -75,23 +75,31 @@ void DArray_Delete( DArray *self )
 	dao_free( self );
 }
 
+typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
+
 static DaoToken* DaoToken_Copy( DaoToken *self )
 {
-	DaoToken* copy = dao_malloc( sizeof(DaoToken) );
-	memcpy( copy, self, sizeof(DaoToken) );
-	if( self->string ) copy->string = DString_Copy( self->string );
+	DaoToken* copy = NULL;
+	if( self->string ){
+		DaoToken2* copy2 = dao_calloc( 1, sizeof(DaoToken2) );
+		copy = (DaoToken*) copy2;
+		memcpy( copy, self, sizeof(DaoToken) );
+		copy->string = & copy2->string;
+		DString_Assign( copy->string, self->string );
+	}else{
+		copy = dao_malloc( sizeof(DaoToken) );
+		memcpy( copy, self, sizeof(DaoToken) );
+	}
 	return copy;
 }
 static DaoVmCodeX* DaoVmCodeX_Copy( DaoVmCodeX *self )
 {
 	DaoVmCodeX* copy = dao_malloc( sizeof(DaoVmCodeX) );
 	memcpy( copy, self, sizeof(DaoVmCodeX) );
-	if( self->annot ) copy->annot = DString_Copy( self->annot );
 	return copy;
 }
 static void DaoVmCodeX_Delete( DaoVmCodeX *self )
 {
-	if( self->annot ) DString_Delete( self->annot );
 	dao_free( self );
 }
 static DaoJitCode* DaoJitCode_Copy( DaoJitCode *self )
@@ -278,6 +286,10 @@ void DArray_InsertArray( DArray *self, size_t at, DArray *array, size_t id, size
 		}
 	}
 	self->size += (n-id);
+}
+void DArray_AppendArray( DArray *self, DArray *array )
+{
+	DArray_InsertArray( self, self->size, array, 0, array->size );
 }
 void DArray_Erase( DArray *self, size_t start, size_t n )
 {

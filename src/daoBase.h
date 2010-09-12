@@ -125,16 +125,18 @@ typedef struct DaoJitMemory  DaoJitMemory;
 
 struct DaoVmCode
 {
-	ushort_t code; /* opcode */
-	ushort_t a, b, c; /* register ids for operands */
+	unsigned short  code; /* opcode */
+	unsigned short  a, b, c; /* register ids for operands */
 };
 struct DaoVmCodeX
 {
-	ushort_t code; /* opcode */
-	ushort_t a, b, c; /* register ids for operands */
-	ushort_t line; /* line number in the source file */
-	ushort_t level; /* lexical level */
-	DString *annot; /* annotation */
+	unsigned short  code; /* opcode */
+	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  level; /* lexical level */
+	unsigned short  line; /* line number in the source file */
+	unsigned int    first; /* first token */
+	unsigned short  middle; /* middle token, with respect to first */
+	unsigned short  last; /* last token, with respect to middle */
 };
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );

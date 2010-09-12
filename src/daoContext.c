@@ -77,7 +77,8 @@ void DaoVmCode_Print( DaoVmCode self, char *buffer )
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer )
 {
 	const char *name = getOpcodeName( self.code );
-	char *annot = self.annot ? self.annot->mbs : "";
+	//char *annot = self.annot ? self.annot->mbs : "";
+	char *annot = "";
 	static const char *fmt = "%-11s : %6i , %6i , %6i ;  %4i,  %s\n";
 	if( buffer == NULL )
 		printf( fmt, name, self.a, self.b, self.c, self.line, annot );

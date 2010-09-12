@@ -34,8 +34,8 @@
 typedef long long           dint;
 typedef unsigned long long  uint_t;
 #else
-typedef long dint;
-typedef unsigned long uint_t;
+typedef long                dint;
+typedef unsigned long       uint_t;
 #endif /* defined() */
 
 /* Get rid of the effects of UNICODE: */
@@ -68,7 +68,7 @@ typedef unsigned long uint_t;
 #define DaoFindSymbol( handle, name ) dlsym( handle, name )
 #define DaoCloseLibrary( handle ) dlclose( handle )
 
-typedef long dint;
+typedef long          dint;
 typedef unsigned long uint_t;
 
 #ifdef MAC_OSX
@@ -89,7 +89,7 @@ typedef unsigned long uint_t;
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
-typedef long dint;
+typedef long          dint;
 typedef unsigned long uint_t;
 
 #endif /* WIN32 */
@@ -269,10 +269,10 @@ typedef struct DaoThread       DaoThread;
 
 struct DValue
 {
-	uchar_t t; /* type */
-	uchar_t sub; /* sub-type */
-	uchar_t cst; /* const */
-	uchar_t ndef; /* not a default parameter */
+	uchar_t  t; /* type */
+	uchar_t  sub; /* sub-type */
+	uchar_t  cst; /* const */
+	uchar_t  ndef; /* not a default parameter */
 	union {
 		dint           i; /* int */
 		float          f; /* float */

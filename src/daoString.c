@@ -910,13 +910,31 @@ void DString_Assign( DString *self, DString *chs )
 		*self = *chs;
 		self->data[0] += 1;
 		assigned = 1;
+	}else if( self->data == NULL && share2 ){
+		*self = *chs;
+		self->data[0] += 1;
+		assigned = 1;
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & mutex_string_sharing );
 #endif
 
 	if( assigned ) return;
-	if( self->mbs && chs->mbs ){
+	if( self->data == NULL ){
+		if( chs->mbs ){
+			self->wcs = NULL;
+			self->size = self->bufSize = chs->size;
+			self->data = self->mbs = dao_malloc( (chs->size + 1)*sizeof(char) );
+			memcpy( self->mbs, chs->mbs, chs->size*sizeof(char) );
+			self->mbs[ self->size ] = 0;
+		}else{
+			self->mbs = NULL;
+			self->size = self->bufSize = chs->size;
+			self->data = self->wcs = dao_malloc( (chs->size + 1)*sizeof(wchar_t) );
+			memcpy( self->wcs, chs->wcs, chs->size*sizeof(wchar_t) );
+			self->wcs[ self->size ] = 0;
+		}
+	}else if( self->mbs && chs->mbs ){
 		DString_Resize( self, chs->size );
 		memcpy( self->mbs, chs->mbs, chs->size*sizeof(char) );
 	}else if( self->wcs && chs->wcs ){

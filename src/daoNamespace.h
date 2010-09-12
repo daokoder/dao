@@ -62,7 +62,8 @@ struct DaoNameSpace
 	DString *file;
 	DString *path;
 	DString *name; /* path + file */
-	DString *source;
+	DArray  *sources;
+	DMap    *tokens; /* hash<DString,int> */
 	ullong_t time;
 
 	DaoVmProcess *vmpEvalConst;

@@ -840,6 +840,7 @@ DaoRoutine* DaoRoutine_New()
 	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof( DaoRoutine ) );
 	DaoBase_Init( self, DAO_ROUTINE );
 	DRoutine_Init( (DRoutine*)self );
+	self->source = NULL;
 	self->vmCodes = DaoVmcArray_New();
 	self->regType = DArray_New(0);
 	self->defLocals = DArray_New(D_TOKEN);
@@ -847,6 +848,7 @@ DaoRoutine* DaoRoutine_New()
 	self->docString = DString_New(1);
 	self->regForLocVar = DMap_New(0,0);
 	self->abstypes = DMap_New(D_STRING,0);
+	self->bodyStart = self->bodyEnd = -1;
 #ifdef DAO_WITH_JIT
 	self->binCodes = DArray_New(D_STRING);
 	self->jitFuncs = DArray_New(0);
@@ -939,6 +941,7 @@ DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload )
 	if( overload ) DRoutine_AddOverLoad( (DRoutine*) self->firstRoutine, (DRoutine*) copy );
 	DMap_Delete( copy->regForLocVar );
 	DArray_Delete( copy->annotCodes );
+	copy->source = self->source;
 	copy->annotCodes = DArray_Copy( self->annotCodes );
 	copy->regForLocVar = DMap_Copy( self->regForLocVar );
 	DaoVmcArray_Assign( copy->vmCodes, self->vmCodes );
@@ -1018,18 +1021,18 @@ enum DaoTypingErrorCode{
 };
 static const char*const DaoTypingErrorString[] =
 {
-	"inconsistent typing",
-	"types not matching",
-	"variable not initialized",
-	"member not permited",
-	"member not exist",
-	"need class instance",
-	"invalid index",
-	"invalid key",
-	"invalid operation on the type",
-	"invalid parameters for the call",
-	"constant should not be modified",
-	"call to un-implemented function"
+	"Inconsistent typing",
+	"Types not matching",
+	"Variable not initialized",
+	"Member not permited",
+	"Member not exist",
+	"Need class instance",
+	"Invalid index",
+	"Invalid key",
+	"Invalid operation on the type",
+	"Invalid parameters for the call",
+	"Constant should not be modified",
+	"Call to un-implemented function"
 };
 extern DaoClass *daoClassFutureValue;
 
@@ -1608,7 +1611,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
 
-	vmc2.annot = NULL;
 	for(i=0; i<N; i++){
 		/* adding type to namespace may add constant data as well */
 		cstValues[ DAO_G ] = self->nameSpace->cstData->data;
@@ -1616,7 +1618,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		error = NULL;
 		vmc = vmcs[i];
 		vmc2 = * self->annotCodes->items.pVmc[i];
-		vmc2.annot = NULL;
 		code = vmc->code;
 		opa = vmc->a;  opb = vmc->b;  opc = vmc->c;
 		at = opa < M ? type[opa] : NULL;
@@ -4139,11 +4140,11 @@ ModifyConstant: ec = DT_MODIFY_CONST; goto ErrorTyping;
 #endif
 
 ErrorTyping:
-#if 0
-				//for(i=0; i<N; i++) DaoVmCode_Print( vmcs[i], NULL );
-#endif
 				stdio = ns->vmSpace->stdStream;
 				if( stdio ==NULL ) stdio = DaoStream_New();
+
+#if 0
+				//for(i=0; i<N; i++) DaoVmCode_Print( vmcs[i], NULL );
 				DaoStream_WriteMBS( stdio, "ERROR( " );
 				DaoStream_WriteString( stdio, self->nameSpace->name );
 				DaoStream_WriteMBS( stdio, ", line " );
@@ -4159,6 +4160,29 @@ ErrorTyping:
 				DaoVmCodeX_Print( *vmc, init );
 				DaoStream_WriteMBS( stdio, init );
 				DaoStream_WriteMBS( stdio, "\n" );
+#endif
+
+				sprintf( init, "%s:%i,%i,%i", getOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
+
+				vmc = self->annotCodes->items.pVmc[cid];
+
+				DaoStream_WriteMBS( stdio, "[[ERROR]] in file \"" );
+				DaoStream_WriteString( stdio, self->nameSpace->name );
+				DaoStream_WriteMBS( stdio, "\":\n" );
+				DaoStream_WriteMBS( stdio, "  At line " );
+				DaoStream_WriteInt( stdio, vmc->line );
+				DaoStream_WriteMBS( stdio, " : Invalid virtual machine instruction --- \" " );
+				DaoStream_WriteMBS( stdio, init );
+				DaoStream_WriteMBS( stdio, " \";\n" );
+				DaoStream_WriteMBS( stdio, "  At line " );
+				DaoStream_WriteInt( stdio, vmc->line );
+				DaoStream_WriteMBS( stdio, " : " );
+				DaoStream_WriteMBS( stdio, DaoTypingErrorString[ec] );
+				DaoStream_WriteMBS( stdio, " --- \" " );
+				DaoTokens_AnnotateCode( self->source, *vmc, mbs, 32 );
+				DaoStream_WriteString( stdio, mbs );
+				DaoStream_WriteMBS( stdio, " \";\n" );
+				//printf( "%5i %5i %5i\n", vmc->first, vmc->middle, vmc->last );
 				if( stdio != ns->vmSpace->stdStream ) DaoStream_Delete( stdio );
 				dao_free( init );
 				dao_free( addCount );
@@ -4182,6 +4206,27 @@ ErrorTyping:
 
 /* TODO register reallocation to reduce the usage of local variables for numbers */
 
+void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNameSpace *ns )
+{
+	DaoToken *tok, token = {0,0,0,0,0,NULL};
+	DArray array = {{NULL},{NULL},D_TOKEN,0,0};
+	DMap *nsTokens = self->nameSpace->tokens;
+	DNode *node;
+	DString *ts;
+	int i;
+	DArray_Append( self->nameSpace->sources, & array );
+	self->source = (DArray*) DArray_Back( self->nameSpace->sources );
+	for(i=0; i<tokens->size; i++){
+		tok = tokens->items.pToken[i];
+		node = DMap_Find( nsTokens, tok->string );
+		if( node == NULL ) node = DMap_Insert( nsTokens, tok->string, NULL );
+		token = *tok;
+		token.string = NULL;
+		DArray_Append( self->source, & token );
+		tok = (DaoToken*) DArray_Back( self->source );
+		tok->string = node->key.pString;
+	}
+}
 
 static const char *const sep1 = "==========================================\n";
 static const char *const sep2 =
@@ -4190,7 +4235,9 @@ static const char *const sep2 =
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 {
 	DaoVmCodeX **vmCodes = self->annotCodes->items.pVmc;
-	char buffer[100];
+	DString *annot = DString_New(1);
+	static const char *fmt = "%-11s : %5i , %5i , %5i ;  %4i;   %s\n";
+	char buffer[200];
 	int j;
 
 	DaoStream_WriteMBS( stream, sep1 );
@@ -4203,16 +4250,20 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, sep1 );
 	DaoStream_WriteMBS( stream, "Virtual Machine Code:\n\n" );
 	DaoStream_WriteMBS( stream,
-			"   ID  :    OPCODE    :      A ,      B ,      C ;  [ LINE ],  NOTES\n" );
+			"   ID :    OPCODE    :     A ,     B ,     C ;  [ LINE ],  NOTES\n" );
 
 	DaoStream_WriteMBS( stream, sep2 );
 	for( j=0; j<self->annotCodes->size; j++){
-		sprintf( buffer, "%5i  :  ", j);
+		DaoVmCodeX vmc = *vmCodes[j];
+		const char *name = getOpcodeName( vmc.code );
+		sprintf( buffer, "%5i :  ", j);
 		DaoStream_WriteMBS( stream, buffer );
-		DaoVmCodeX_Print( *vmCodes[j], buffer );
+		DaoTokens_AnnotateCode( self->source, vmc, annot, 24 );
+		sprintf( buffer, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, annot->mbs );
 		DaoStream_WriteMBS( stream, buffer );
 	}
 	DaoStream_WriteMBS( stream, sep2 );
+	DString_Delete( annot );
 }
 void DaoFunction_Delete( DaoFunction *self )
 {

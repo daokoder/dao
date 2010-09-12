@@ -19,11 +19,13 @@
 
 struct DaoInode
 {
-	ushort_t code; /* opcode */
-	ushort_t a, b, c; /* register ids for operands */
-	ushort_t line; /* line number in source file */
-	ushort_t level; /* lexical level */
-	DString  *annot; /* annotation */
+	unsigned short  code; /* opcode */
+	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  level; /* lexical level */
+	unsigned short  line; /* line number in source file */
+	unsigned int    first;
+	unsigned short  middle;
+	unsigned short  last;
 
 	int id;
 	int extra;
