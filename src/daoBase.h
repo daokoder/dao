@@ -128,6 +128,9 @@ struct DaoVmCode
 	unsigned short  code; /* opcode */
 	unsigned short  a, b, c; /* register ids for operands */
 };
+
+#define VMC_ZERO_ANNOT  0xffff
+
 struct DaoVmCodeX
 {
 	unsigned short  code; /* opcode */
@@ -136,7 +139,7 @@ struct DaoVmCodeX
 	unsigned short  line; /* line number in the source file */
 	unsigned int    first; /* first token */
 	unsigned short  middle; /* middle token, with respect to first */
-	unsigned short  last; /* last token, with respect to middle */
+	unsigned short  last; /* last token, with respect to first */
 };
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );

@@ -1243,7 +1243,9 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 	DaoToken *t1, *t2;
 	int i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
 	int max2 = max/2;
+	if( m < 5 ) m = 5;
 	DString_Clear( annot );
+	if( vmc.middle > vmc.last ) return;
 	for(i=0; i<vmc.middle; i++){
 		k = i + vmc.first;
 		if( k >= self->size ) break;
@@ -1272,8 +1274,8 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 			break;
 		}
 	}
-	for(i=0; i<=vmc.last; i++){
-		k = i + vmc.first + vmc.middle;
+	for(i=vmc.middle; i<=vmc.last; i++){
+		k = i + vmc.first;
 		if( k >= self->size ) break;
 		t2 = tokens[k];
 		if( k != vmc.first ){

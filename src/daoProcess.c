@@ -1090,6 +1090,10 @@ CallEntry:
 			case DAO_FLOAT : locVars[ vmc->c ]->v.f = vmc->b; break;
 			case DAO_DOUBLE : locVars[ vmc->c ]->v.d = vmc->b; break;
 			case DAO_COMPLEX : 
+							  if( locVars[ vmc->c ]->t != DAO_COMPLEX ){
+								  DValue_Clear( locVars[ vmc->c ] );
+								  DValue_InitComplex( locVars[ vmc->c ] );
+							  }
 							  locVars[ vmc->c ]->v.c[0].real = 0.0;
 							  locVars[ vmc->c ]->v.c[0].imag = vmc->b;
 							  break;
