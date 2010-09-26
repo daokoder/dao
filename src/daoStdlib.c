@@ -16,8 +16,9 @@
 #include"string.h"
 #include"locale.h"
 #ifdef UNIX
-#include"unistd.h"
-#include <sys/time.h>
+#include<unistd.h>
+#include<sys/time.h>
+#include<sys/stat.h>
 #endif
 
 #include"daoStdlib.h"
@@ -173,159 +174,6 @@ static void STD_Copy( DaoContext *ctx, DValue *p[], int N )
 	DMap_Delete( cycData );
 }
 
-static void STD_Ctime( DaoContext *ctx, DValue *p[], int N )
-{
-	struct tm *ctime;
-	time_t t = (time_t)p[0]->v.i;
-	DaoTuple *tuple = DaoTuple_New( 7 );
-	DValue val = daoZeroInt;
-	if( t == 0 ) t = time(NULL);
-	ctime = gmtime( & t );
-	val.v.i = ctime->tm_year + 1900;
-	DValue_Copy( tuple->items->data, val );
-	val.v.i = ctime->tm_mon + 1;
-	DValue_Copy( tuple->items->data + 1, val );
-	val.v.i = ctime->tm_mday;
-	DValue_Copy( tuple->items->data + 2, val );
-	val.v.i = ctime->tm_wday + 1;
-	DValue_Copy( tuple->items->data + 3, val );
-	val.v.i = ctime->tm_hour;
-	DValue_Copy( tuple->items->data + 4, val );
-	val.v.i = ctime->tm_min;
-	DValue_Copy( tuple->items->data + 5, val );
-	val.v.i = ctime->tm_sec;
-	DValue_Copy( tuple->items->data + 6, val );
-	DaoContext_PutResult( ctx, (DaoBase*) tuple );
-}
-static int addStringFromMap( DValue self, DString *S, DaoMap *sym, const char *key, int id )
-{
-	DNode *node;
-
-	if( S==NULL || sym==NULL ) return 0;
-	DString_SetMBS( self.v.s, key );
-	node = DMap_Find( sym->items, & self );
-	if( node ){
-		DaoList *list = node->value.pValue->v.list;
-		if( list->type == DAO_LIST && list->items->size > id ){
-			DValue p = list->items->data[ id ];
-			if( p.t == DAO_STRING ){
-				DString_Append( S, p.v.s );
-				return 1;
-			}
-		}
-	}
-	return 0;
-}
-static void STD_Ctimef( DaoContext *ctx, DValue *p[], int N )
-{
-	int  i;
-	int halfday = 0;
-	const int size = DString_Size( p[1]->v.s );
-	const char *format = DString_GetMBS( p[1]->v.s );
-	char buf[100];
-	char *p1 = buf+1;
-	char *p2;
-	DaoMap *sym = NULL;
-	DString *ds;
-	DString *S;
-	DValue key = daoNullString;
-
-	struct tm *ctime;
-	time_t t = (time_t)p[0]->v.i;
-	if( t == 0 ) t = time(NULL);
-	ctime = gmtime( & t );
-
-	if( N > 1 ){
-		sym = (DaoMap*)p[2]->v.p;
-		if( sym->items->size == 0 ) sym = NULL;
-	}
-	S = DaoContext_PutMBString( ctx, "" );
-
-	for( i=0; i+1<size; i++ ){
-		if( format[i] == '%' && ( format[i+1] == 'a' || format[i+1] == 'A' ) ){
-			halfday = 1;
-			break;
-		}
-	}
-	buf[0] = '0'; /* for padding */
-
-	ds = DString_New(1);
-	key.v.s = ds;
-
-	for( i=0; i+1<size; i++ ){
-		p2 = p1;
-		p1[0] = 0;
-		if( format[i] == '%' ){
-			const char ch = format[i+1];
-			switch( ch ){
-			case 'Y' :
-				sprintf( p1, "%i", ctime->tm_year+1900 );
-				break;
-			case 'y' :
-				sprintf( p1, "%i", ctime->tm_year+1900 );
-				p2 += 2;
-				break;
-			case 'M' :
-			case 'm' :
-				if( ! addStringFromMap( key, S, sym, "month", ctime->tm_mon ) ){
-					sprintf( p1, "%i", ctime->tm_mon+1 );
-					if( ch=='M' && p1[1]==0 ) p2 = buf; /* padding 0; */
-				}else p2 = NULL;
-				break;
-			case 'D' :
-			case 'd' :
-				if( ! addStringFromMap( key, S, sym, "date", ctime->tm_mday ) ){
-					sprintf( p1, "%i", ctime->tm_mday );
-					if( ch=='D' && p1[1]==0 ) p2 = buf; /* padding 0; */
-				}else p2 = NULL;
-				break;
-			case 'W' :
-			case 'w' :
-				if( ! addStringFromMap( key, S, sym, "week", ctime->tm_wday ) )
-					sprintf( p1, "%i", ctime->tm_wday+1 );
-				else p2 = NULL;
-				break;
-			case 'H' :
-			case 'h' :
-				if( halfday )
-					sprintf( p1, "%i", ctime->tm_hour %12 );
-				else
-					sprintf( p1, "%i", ctime->tm_hour );
-				if( ch=='H' && p1[1]==0 ) p2 = buf; /* padding 0; */
-				break;
-			case 'I' :
-			case 'i' :
-				sprintf( p1, "%i", ctime->tm_min );
-				if( ch=='I' && p1[1]==0 ) p2 = buf; /* padding 0; */
-				break;
-			case 'S' :
-			case 's' :
-				sprintf( p1, "%i", ctime->tm_sec );
-				if( ch=='S' && p1[1]==0 ) p2 = buf; /* padding 0; */
-				break;
-			case 'a' :
-				if( ! addStringFromMap( key, S, sym, "halfday", 0 ) ){
-					if( ctime->tm_hour >= 12 ) strcpy( p1, "pm" );
-					else strcpy( p1, "am" );
-				}else p2 = NULL;
-				break;
-			case 'A' :
-				if( ! addStringFromMap( key, S, sym, "halfday", 1 ) ){
-					if( ctime->tm_hour >= 12 ) strcpy( p1, "PM" );
-					else strcpy( p1, "AM" );
-				}else p2 = NULL;
-				break;
-			default : break;
-			}
-			if( p2 ) DString_AppendMBS( S, p2 );
-			i ++;
-		}else{
-			DString_AppendChar( S, format[i] );
-		}
-	}
-	if( i+1 == size ) DString_AppendChar( S, format[i] );
-	DString_Delete( ds );
-}
 extern void SplitByWhiteSpaces( DString *str, DArray *tokens );
 
 static const char *const header =
@@ -496,14 +344,6 @@ static void STD_Error( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoContext_RaiseException( ctx, DAO_ERROR, DString_GetMBS( p[0]->v.s ) );
 }
-static void STD_Exit( DaoContext *ctx, DValue *p[], int N )
-{
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
-		return;
-	}
-	exit( (int)p[0]->v.i );
-}
 static void STD_Log( DaoContext *ctx, DValue *p[], int N )
 {
 	DString *info = p[0]->v.s;
@@ -617,65 +457,6 @@ static void STD_Pack2( DaoContext *ctx, DValue *p[], int N )
 		}
 	}
 }
-static void STD_Sleep( DaoContext *ctx, DValue *p[], int N )
-{
-#ifdef DAO_WITH_THREAD
-	DMutex    mutex;
-	DCondVar  condv;
-#endif
-
-	double s = p[0]->v.f;
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
-		return;
-	}
-	if( s < 0 ){
-		DaoContext_RaiseException( ctx, DAO_WARNING_VALUE, "expecting positive value" );
-		return;
-	}
-#ifdef DAO_WITH_THREAD
-	/* sleep only the current thread: */
-	DMutex_Init( & mutex );
-	DCondVar_Init( & condv );
-	DMutex_Lock( & mutex );
-	DCondVar_TimedWait( & condv, & mutex, s );
-	DMutex_Unlock( & mutex );
-	DMutex_Destroy( & mutex );
-	DCondVar_Destroy( & condv );
-#elif UNIX
-	sleep( (int)s ); /* This may cause the whole process to sleep. */
-#else
-	Sleep( s * 1000 );
-#endif
-}
-static void STD_System( DaoContext *ctx, DValue *p[], int N )
-{
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
-		return;
-	}
-	DaoContext_PutInteger( ctx, system( DString_GetMBS( p[0]->v.s ) ) );
-}
-static void STD_Time( DaoContext *ctx, DValue *p[], int N )
-{
-	DaoContext_PutInteger( ctx, time( NULL ) );
-}
-static void STD_Time2( DaoContext *ctx, DValue *p[], int N )
-{
-	extern long timezone;
-	/* extern int daylight; // not on WIN32 */
-	struct tm ctime;
-	DValue *tup = p[0]->v.tuple->items->data;
-	memset( & ctime, 0, sizeof( struct tm ) );
-	ctime.tm_year = tup[0].v.i - 1900;
-	ctime.tm_mon = tup[1].v.i - 1;
-	ctime.tm_mday = tup[2].v.i;
-	ctime.tm_hour = tup[4].v.i;/* + daylight; */
-	ctime.tm_min = tup[5].v.i;
-	ctime.tm_sec = tup[6].v.i;
-	ctime.tm_isdst = 0;
-	DaoContext_PutInteger( ctx, (int) mktime( & ctime ) );
-}
 extern int DaoToken_Tokenize( DArray *toks, const char *src, int r, int cmt, int nosp );
 static void STD_Tokenize( DaoContext *ctx, DValue *p[], int N )
 {
@@ -734,13 +515,6 @@ static void STD_Version( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoContext_PutMBString( ctx, DAO_VERSION );
 }
-static void STD_SetLocale( DaoContext *ctx, DValue *p[], int N )
-{
-	int category = p[0]->v.i;
-	const char *locale = DString_GetMBS(p[1]->v.s);
-	char* old = setlocale(category,locale);
-	if (old) DaoContext_PutMBString(ctx,old);
-}
 
 static DaoFuncItem stdMeths[]=
 {
@@ -750,31 +524,327 @@ static DaoFuncItem stdMeths[]=
 	{ STD_About,     "about( ... )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },
 	{ STD_Copy,      "copy( object : @OBJECT ) =>@OBJECT" },
-	{ STD_Ctime,     "ctime( time=0 )=>tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int>" },
-	{ STD_Ctimef,    "ctimef( time=0, format=\'%Y-%M-%D, %H:%I:%S\', "
-		"namemap : map<string,list<string>> = {=>} )=>string" },
 	{ STD_Debug,     "debug( ... )" },
 	{ STD_Error,     "error( info :string )" },
-	{ STD_Exit,      "exit( code=0 )" },
 	{ STD_Log,       "log( info='' )" },
 	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
 	{ STD_ListMeth,  "listmeth( object )" },
 	{ STD_Pack1,     "pack( i :int )=>string" },
 	{ STD_Pack2,     "pack( ls :list<int> )=>string" },
-	{ STD_Sleep,     "sleep( seconds :float )" },
-	{ STD_System,    "system( command :string )" },
-	{ STD_Time,      "time(  )=>int" },
-	{ STD_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
 	{ STD_Tokenize,  "tokenize( source :string )=>list<string>" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
 	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
-	{ STD_SetLocale, "setlocale(category:int=0,locale:string='')=>string" },
 	{ NULL, NULL }
 };
-static DaoNumItem stdConsts[] =
+
+DaoTypeBase libStandardTyper = {
+	NULL,
+	"std",
+	NULL,
+	stdMeths, 
+	{0},
+	NULL, NULL 
+};
+
+static void SYS_Ctime( DaoContext *ctx, DValue *p[], int N )
+{
+	struct tm *ctime;
+	time_t t = (time_t)p[0]->v.i;
+	DaoTuple *tuple = DaoTuple_New( 7 );
+	DValue val = daoZeroInt;
+	if( t == 0 ) t = time(NULL);
+	ctime = gmtime( & t );
+	val.v.i = ctime->tm_year + 1900;
+	DValue_Copy( tuple->items->data, val );
+	val.v.i = ctime->tm_mon + 1;
+	DValue_Copy( tuple->items->data + 1, val );
+	val.v.i = ctime->tm_mday;
+	DValue_Copy( tuple->items->data + 2, val );
+	val.v.i = ctime->tm_wday + 1;
+	DValue_Copy( tuple->items->data + 3, val );
+	val.v.i = ctime->tm_hour;
+	DValue_Copy( tuple->items->data + 4, val );
+	val.v.i = ctime->tm_min;
+	DValue_Copy( tuple->items->data + 5, val );
+	val.v.i = ctime->tm_sec;
+	DValue_Copy( tuple->items->data + 6, val );
+	DaoContext_PutResult( ctx, (DaoBase*) tuple );
+}
+static int addStringFromMap( DValue self, DString *S, DaoMap *sym, const char *key, int id )
+{
+	DNode *node;
+
+	if( S==NULL || sym==NULL ) return 0;
+	DString_SetMBS( self.v.s, key );
+	node = DMap_Find( sym->items, & self );
+	if( node ){
+		DaoList *list = node->value.pValue->v.list;
+		if( list->type == DAO_LIST && list->items->size > id ){
+			DValue p = list->items->data[ id ];
+			if( p.t == DAO_STRING ){
+				DString_Append( S, p.v.s );
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+static void SYS_Ctimef( DaoContext *ctx, DValue *p[], int N )
+{
+	int  i;
+	int halfday = 0;
+	const int size = DString_Size( p[1]->v.s );
+	const char *format = DString_GetMBS( p[1]->v.s );
+	char buf[100];
+	char *p1 = buf+1;
+	char *p2;
+	DaoMap *sym = NULL;
+	DString *ds;
+	DString *S;
+	DValue key = daoNullString;
+
+	struct tm *ctime;
+	time_t t = (time_t)p[0]->v.i;
+	if( t == 0 ) t = time(NULL);
+	ctime = gmtime( & t );
+
+	if( N > 1 ){
+		sym = (DaoMap*)p[2]->v.p;
+		if( sym->items->size == 0 ) sym = NULL;
+	}
+	S = DaoContext_PutMBString( ctx, "" );
+
+	for( i=0; i+1<size; i++ ){
+		if( format[i] == '%' && ( format[i+1] == 'a' || format[i+1] == 'A' ) ){
+			halfday = 1;
+			break;
+		}
+	}
+	buf[0] = '0'; /* for padding */
+
+	ds = DString_New(1);
+	key.v.s = ds;
+
+	for( i=0; i+1<size; i++ ){
+		p2 = p1;
+		p1[0] = 0;
+		if( format[i] == '%' ){
+			const char ch = format[i+1];
+			switch( ch ){
+			case 'Y' :
+				sprintf( p1, "%i", ctime->tm_year+1900 );
+				break;
+			case 'y' :
+				sprintf( p1, "%i", ctime->tm_year+1900 );
+				p2 += 2;
+				break;
+			case 'M' :
+			case 'm' :
+				if( ! addStringFromMap( key, S, sym, "month", ctime->tm_mon ) ){
+					sprintf( p1, "%i", ctime->tm_mon+1 );
+					if( ch=='M' && p1[1]==0 ) p2 = buf; /* padding 0; */
+				}else p2 = NULL;
+				break;
+			case 'D' :
+			case 'd' :
+				if( ! addStringFromMap( key, S, sym, "date", ctime->tm_mday ) ){
+					sprintf( p1, "%i", ctime->tm_mday );
+					if( ch=='D' && p1[1]==0 ) p2 = buf; /* padding 0; */
+				}else p2 = NULL;
+				break;
+			case 'W' :
+			case 'w' :
+				if( ! addStringFromMap( key, S, sym, "week", ctime->tm_wday ) )
+					sprintf( p1, "%i", ctime->tm_wday+1 );
+				else p2 = NULL;
+				break;
+			case 'H' :
+			case 'h' :
+				if( halfday )
+					sprintf( p1, "%i", ctime->tm_hour %12 );
+				else
+					sprintf( p1, "%i", ctime->tm_hour );
+				if( ch=='H' && p1[1]==0 ) p2 = buf; /* padding 0; */
+				break;
+			case 'I' :
+			case 'i' :
+				sprintf( p1, "%i", ctime->tm_min );
+				if( ch=='I' && p1[1]==0 ) p2 = buf; /* padding 0; */
+				break;
+			case 'S' :
+			case 's' :
+				sprintf( p1, "%i", ctime->tm_sec );
+				if( ch=='S' && p1[1]==0 ) p2 = buf; /* padding 0; */
+				break;
+			case 'a' :
+				if( ! addStringFromMap( key, S, sym, "halfday", 0 ) ){
+					if( ctime->tm_hour >= 12 ) strcpy( p1, "pm" );
+					else strcpy( p1, "am" );
+				}else p2 = NULL;
+				break;
+			case 'A' :
+				if( ! addStringFromMap( key, S, sym, "halfday", 1 ) ){
+					if( ctime->tm_hour >= 12 ) strcpy( p1, "PM" );
+					else strcpy( p1, "AM" );
+				}else p2 = NULL;
+				break;
+			default : break;
+			}
+			if( p2 ) DString_AppendMBS( S, p2 );
+			i ++;
+		}else{
+			DString_AppendChar( S, format[i] );
+		}
+	}
+	if( i+1 == size ) DString_AppendChar( S, format[i] );
+	DString_Delete( ds );
+}
+static void SYS_Sleep( DaoContext *ctx, DValue *p[], int N )
+{
+#ifdef DAO_WITH_THREAD
+	DMutex    mutex;
+	DCondVar  condv;
+#endif
+
+	double s = p[0]->v.f;
+	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		return;
+	}
+	if( s < 0 ){
+		DaoContext_RaiseException( ctx, DAO_WARNING_VALUE, "expecting positive value" );
+		return;
+	}
+#ifdef DAO_WITH_THREAD
+	/* sleep only the current thread: */
+	DMutex_Init( & mutex );
+	DCondVar_Init( & condv );
+	DMutex_Lock( & mutex );
+	DCondVar_TimedWait( & condv, & mutex, s );
+	DMutex_Unlock( & mutex );
+	DMutex_Destroy( & mutex );
+	DCondVar_Destroy( & condv );
+#elif UNIX
+	sleep( (int)s ); /* This may cause the whole process to sleep. */
+#else
+	Sleep( s * 1000 );
+#endif
+}
+static void SYS_Exit( DaoContext *ctx, DValue *p[], int N )
+{
+	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		return;
+	}
+	exit( (int)p[0]->v.i );
+}
+static void SYS_System( DaoContext *ctx, DValue *p[], int N )
+{
+	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		return;
+	}
+	DaoContext_PutInteger( ctx, system( DString_GetMBS( p[0]->v.s ) ) );
+}
+static void SYS_Time( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoContext_PutInteger( ctx, time( NULL ) );
+}
+static void SYS_Time2( DaoContext *ctx, DValue *p[], int N )
+{
+	extern long timezone;
+	/* extern int daylight; // not on WIN32 */
+	struct tm ctime;
+	DValue *tup = p[0]->v.tuple->items->data;
+	memset( & ctime, 0, sizeof( struct tm ) );
+	ctime.tm_year = tup[0].v.i - 1900;
+	ctime.tm_mon = tup[1].v.i - 1;
+	ctime.tm_mday = tup[2].v.i;
+	ctime.tm_hour = tup[4].v.i;/* + daylight; */
+	ctime.tm_min = tup[5].v.i;
+	ctime.tm_sec = tup[6].v.i;
+	ctime.tm_isdst = 0;
+	DaoContext_PutInteger( ctx, (int) mktime( & ctime ) );
+}
+static void SYS_SetLocale( DaoContext *ctx, DValue *p[], int N )
+{
+	int category = p[0]->v.i;
+	const char *locale = DString_GetMBS(p[1]->v.s);
+	char* old = setlocale(category,locale);
+	if (old) DaoContext_PutMBString(ctx,old);
+}
+static void SYS_Clock( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoContext_PutFloat( ctx, ((float)clock())/CLOCKS_PER_SEC );
+}
+
+static void SYS_Rename( DaoContext *ctx, DValue *p[], int N )
+{
+	if( rename( DString_GetMBS( p[0]->v.s ), DString_GetMBS( p[1]->v.s ) ) )
+		DaoContext_RaiseException( ctx, DAO_ERROR, "rename failed" );
+}
+
+static void SYS_Remove( DaoContext *ctx, DValue *p[], int N )
+{
+	if( unlink( DString_GetMBS( p[0]->v.s ) ) )
+		DaoContext_RaiseException( ctx, DAO_ERROR, "remove failed" );
+}
+
+static void SYS_Rmdir( DaoContext *ctx, DValue *p[], int N )
+{
+	if( rmdir( DString_GetMBS( p[0]->v.s ) ) )
+		DaoContext_RaiseException( ctx, DAO_ERROR, "rmdir failed" );
+}
+
+static void SYS_Mkdir( DaoContext *ctx, DValue *p[], int N )
+{
+#ifdef WIN32
+	if( mkdir( DString_GetMBS( p[0]->v.s ) ) )
+#else
+	if( mkdir( DString_GetMBS( p[0]->v.s ), S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH ) )
+#endif
+		DaoContext_RaiseException( ctx, DAO_ERROR, "mkdir failed" );
+}
+
+static void SYS_Chdir( DaoContext *ctx, DValue *p[], int N )
+{
+	if( chdir( DString_GetMBS( p[0]->v.s ) ) )
+		DaoContext_RaiseException( ctx, DAO_ERROR, "chdir failed" );
+}
+
+static void SYS_Getcwd( DaoContext *ctx, DValue *p[], int N )
+{
+	char buf[1024];
+	char *cwd = getcwd( buf, 1023 );
+	if( cwd == NULL ) DaoContext_RaiseException( ctx, DAO_ERROR, "getcwd failed" );
+	DaoContext_PutMBString( ctx, cwd );
+}
+
+static DaoFuncItem sysMeths[]=
+{
+	{ SYS_Ctime,     "ctime( time=0 )=>tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int>" },
+	{ SYS_Ctimef,    "ctimef( time=0, format=\'%Y-%M-%D, %H:%I:%S\', "
+		"namemap : map<string,list<string>> = {=>} )=>string" },
+	{ SYS_Exit,      "exit( code=0 )" },
+	{ SYS_Sleep,     "sleep( seconds :float )" },
+	{ SYS_System,    "system( command :string )" },
+	{ SYS_Time,      "time(  )=>int" },
+	{ SYS_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
+	{ SYS_SetLocale, "setlocale(category:int=0,locale:string='')=>string" },
+	{ SYS_Clock,     "clock()=>float" },
+	{ SYS_Rename,    "rename( from:string, to:string )" },
+	{ SYS_Remove,    "remove( path:string )" },
+	{ SYS_Mkdir,     "mkdir( path:string )" },
+	{ SYS_Rmdir,     "rmdir( path:string )" },
+	{ SYS_Chdir,     "chdir( path:string )" },
+	{ SYS_Chdir,     "setcwd( path:string )" },
+	{ SYS_Getcwd,    "getcwd()=>string" },
+	{ NULL, NULL }
+};
+static DaoNumItem sysConsts[] =
 {
 	{ "LC_ALL", DAO_INTEGER, LC_ALL } ,
 	{ "LC_COLLATE", DAO_INTEGER, LC_COLLATE } ,
@@ -785,11 +855,11 @@ static DaoNumItem stdConsts[] =
 	{ NULL, 0, 0 }
 };
 
-DaoTypeBase libStandardTyper = {
+DaoTypeBase libSystemTyper = {
 	NULL,
-	"std",
-	stdConsts,
-	stdMeths, 
+	"sys",
+	sysConsts,
+	sysMeths, 
 	{0},
 	NULL, NULL 
 };

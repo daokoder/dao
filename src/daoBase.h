@@ -129,8 +129,6 @@ struct DaoVmCode
 	unsigned short  a, b, c; /* register ids for operands */
 };
 
-#define VMC_ZERO_ANNOT  0xffff
-
 struct DaoVmCodeX
 {
 	unsigned short  code; /* opcode */

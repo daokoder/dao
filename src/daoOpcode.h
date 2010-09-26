@@ -57,6 +57,7 @@ enum DaoOpcode
 	DVM_BITLFT , /* C = A << B */
 	DVM_BITRIT , /* C = A >> B */
 	DVM_CHECK , /* check type: C = A ?= B; C = A ?< B, where A is data, B is data or type */
+	DVM_NAMEVA , /* C = A => B: name A, local constant, value B, local register */
 	DVM_PAIR , /* C = A : B; create a pair of index, as an array; */
 	DVM_TUPLE , /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
 	DVM_LIST , /* list: C = { A, A+1, ..., A+B-10 }, or {A:A+1},{ A : A+1 : A+2 }; */

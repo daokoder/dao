@@ -251,5 +251,8 @@ void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s 
 void DaoTokens_Append( DArray *self, int name, int line, const char *data );
 
 void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max );
+int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end );
+int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
+int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
 
 #endif

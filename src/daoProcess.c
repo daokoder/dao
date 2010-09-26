@@ -49,6 +49,7 @@ extern void DaoContext_DoCurry(  DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc );
+extern void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc );
 
 extern void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc );
@@ -648,6 +649,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_BITLFT , 
 		&& LAB_BITRIT , 
 		&& LAB_CHECK , 
+		&& LAB_NAMEVA , 
 		&& LAB_PAIR , 
 		&& LAB_TUPLE , 
 		&& LAB_LIST , 
@@ -1234,6 +1236,9 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( CHECK ){
 			DaoContext_DoCheck( topCtx, vmc );
+		}OPNEXT()
+		OPCASE( NAMEVA ){
+			DaoContext_BindNameValue( topCtx, vmc );
 		}OPNEXT()
 		OPCASE( PAIR ){
 			topCtx->vmc = vmc;
@@ -3197,6 +3202,8 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 		DaoContext_DoBitFlip( ctx, vmc ); break;
 	case DVM_CHECK :
 		DaoContext_DoCheck( ctx, vmc ); break;
+	case DVM_NAMEVA :
+		DaoContext_BindNameValue( ctx, vmc ); break;
 	case DVM_PAIR :
 		DaoContext_DoPair( ctx, vmc ); break;
 	case DVM_TUPLE :
@@ -3218,6 +3225,10 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 		DaoContext_DoMatrix( ctx, vmc ); break;
 	case DVM_MATH :
 		DaoVM_DoMath( ctx, vmc, dC, *ctx->regValues[2] );
+		break;
+	case DVM_CURRY :
+	case DVM_MCURRY :
+		DaoContext_DoCurry( ctx, vmc );
 		break;
 	case DVM_CALL :
 	case DVM_MCALL :
@@ -3250,6 +3261,9 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
 	DaoContext *ctx = self->topFrame->context;
 
 	vmc.code = opc;
+	if( opc == DVM_NAMEVA ){
+		vmc.a = DRoutine_AddConstValue( (DRoutine*)ctx->routine, a );
+	}
 
 	/* no need GC */
 	DVaTuple_Clear( ctx->regArray );

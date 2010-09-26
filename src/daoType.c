@@ -840,6 +840,9 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 				rout = DRoutine_New(); /* dummy routine */
 				rout->routOverLoad->items.pBase[0] = it->value.pVoid;
 				rout->routType = ((DRoutine*)it->value.pVoid)->routType;
+				rout->routHost = ((DRoutine*)it->value.pVoid)->routHost;
+				rout->tidHost = ((DRoutine*)it->value.pVoid)->tidHost;
+				GC_IncRC( rout->routHost );
 				GC_IncRC( rout->routType );
 				GC_IncRC( it->value.pBase );
 				/* reference count of "rout" is already increased by DRoutine_New() */

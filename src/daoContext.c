@@ -1581,18 +1581,31 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 	}
 }
 
+void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc )
+{
+	DValue dA = self->routine->routConsts->data[ vmc->a ];
+	DValue dB = *self->regValues[ vmc->b ];
+	DaoPair *pair = DaoPair_New( dA, dB );;
+	pair->type = DAO_PAR_NAMED;
+	if( self->subType != DAO_CONSTEVAL && self->regTypes[ vmc->c ] ){
+		pair->unitype = self->regTypes[ vmc->c ];
+	}else{
+		DaoNameSpace *ns = self->nameSpace;
+		DaoType *tp = DaoNameSpace_GetTypeV( ns, pair->second );
+		pair->unitype = DaoNameSpace_MakeType( ns, dA.v.s->mbs, DAO_PAR_NAMED, tp, NULL, 0 );
+	}
+	GC_IncRC( pair->unitype );
+	DaoContext_SetData( self, vmc->c, (DaoBase*) pair );
+}
 void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoType *tp[2];
 	DValue dA = *self->regValues[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
-	DaoPair *pair;
-
-	pair = DaoPair_New( dA, dB );;
+	DaoPair *pair = DaoPair_New( dA, dB );;
 
 	if( self->subType != DAO_CONSTEVAL && self->regTypes[ vmc->c ] ){
 		pair->unitype = self->regTypes[ vmc->c ];
-		if( pair->unitype->tid == DAO_PAR_NAMED ) pair->type = DAO_PAR_NAMED;
 	}else{
 		tp[0] = DaoNameSpace_GetTypeV( self->nameSpace, pair->first );
 		tp[1] = DaoNameSpace_GetTypeV( self->nameSpace, pair->second );
@@ -1620,19 +1633,14 @@ void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
 			tp = DaoNameSpace_GetTypeV( ns, val );
 			if( tp == NULL ) tp = DaoNameSpace_GetType( ns, & nil );
 			if( i >0 ) DString_AppendMBS( ct->name, "," );
-			if( tp->tid == DAO_PAIR ){
+			if( tp->tid == DAO_PAR_NAMED ){
 				DaoPair *pair = (DaoPair*) val.v.p;
 				val2 = pair->first;
-				if( val2.sub == DAO_PARNAME ){
-					DString_Append( ct->name, val2.v.s );
-					DString_AppendMBS( ct->name, ":" );
-					tp = tp->nested->items.pAbtp[1];
-					DString_Append( ct->name, tp->name );
-					val = pair->second;
-				}else{
-					DString_Append( ct->name, tp->name );
-					DArray_Append( ct->nested, tp );
-				}
+				DString_Append( ct->name, val2.v.s );
+				DString_AppendMBS( ct->name, ":" );
+				tp = tp->nested->items.pAbtp[1];
+				DString_Append( ct->name, tp->name );
+				val = pair->second;
 			}else{
 				DString_Append( ct->name, tp->name );
 				DArray_Append( ct->nested, tp );
@@ -4257,6 +4265,7 @@ void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc )
 				DaoPrintException( cdata, stdio, "Un-suppressed warning raised by " );
 			DVarray_Append( self->process->exceptions, val );
 		}
+		continue;
 InvalidException:
 		DaoContext_RaiseException( self, DAO_ERROR, "invalid exception object" );
 		break;

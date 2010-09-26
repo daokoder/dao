@@ -50,7 +50,7 @@ static size_t DMBString_RFind( DString *self, size_t S, const char* chs, size_t 
 	if( self->size==0 ) return MAXSIZE;
 	if( S <0 || S >= self->size ) S = self->size-1;
 	if( M > S || M > self->size ) return MAXSIZE;
-	for( i=S; i>=M; i--){
+	for( i=S; i>=M-1; i--){
 		int found = 1;
 		for( j=0; j<M; j++ ){
 			if( self->mbs[i-j] != chs[M-1-j] ){
@@ -88,7 +88,7 @@ static size_t DWCString_RFind( DString *self, size_t S, const wchar_t* chs, size
 	if( self->size==0 ) return MAXSIZE;
 	if( S >= self->size ) S = self->size-1;
 	if( M > S || M > self->size ) return MAXSIZE;
-	for( i=S; i>=M; i--){
+	for( i=S; i>=M-1; i--){
 		int found = 1;
 		for( j=0; j<M; j++ ){
 			if( self->wcs[i-j] != chs[M-1-j] ){

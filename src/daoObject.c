@@ -143,7 +143,7 @@ static void DaoObject_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValu
 	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( ctx->process->mbstring ) );
 }
 extern void DaoCopyValues( DValue *copy, DValue *data, int N, DaoContext *ctx, DMap *cycData );
-static void DaoObject_CopyData(  DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cycData )
+void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cycData )
 {
 	DaoObject **selfSups = NULL;
 	DaoObject **fromSups = NULL;

@@ -221,6 +221,9 @@ void DaoClass_DeriveClassData( DaoClass *self )
 							value.v.routine->refCount --;
 							value.v.routine->routOverLoad->items.pBase[0] = tmp.v.p;
 							value.v.routine->routType = tmp.v.routine->routType;
+							value.v.routine->routHost = tmp.v.routine->routHost;
+							value.v.routine->tidHost = tmp.v.routine->tidHost;
+							GC_IncRC( value.v.routine->routHost );
 							GC_IncRC( value.v.routine->routType );
 							GC_IncRC( tmp.v.p );
 						}
@@ -330,7 +333,23 @@ void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DString *mbs = DString_New(1);
 	DNode *node;
-	int i, k, id;
+	int i, k, id, autodef = 0;
+	DString_Assign( mbs, self->className );
+	DString_AppendMBS( mbs, "()" );
+	autodef = DaoClass_GetOvldRoutine( self, mbs ) == NULL;
+	if( autodef ){
+		for( i=0; i<self->superClass->size; i++){
+			if( self->superClass->items.pBase[i]->type == DAO_CLASS ){
+				DaoClass *klass = self->superClass->items.pClass[i];
+				autodef = autodef && (klass->attribs & DAO_CLS_AUTO_DEFAULT); 
+				if( autodef ==0 ) break;
+			}else{
+				autodef = 0;
+				break;
+			}
+		}
+	}
+	if( autodef ) self->attribs |= DAO_CLS_AUTO_DEFAULT;
 	for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
 		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_MOVE] );
 		node = DMap_Find( self->lookupTable, mbs );
@@ -523,7 +542,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 {
 	DNode *node = DMap_First( self->lookupTable );
 	DaoStream_WriteMBS( stream, "class " );
-	DaoStream_WriteString( stream, node->key.pString );
+	DaoStream_WriteString( stream, self->className );
 	DaoStream_WriteMBS( stream, ":\n" );
 	for( ; node != NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DValue val;

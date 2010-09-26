@@ -230,7 +230,8 @@ static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
 		stream->file->fd = tmpfile();
 	}else{
 		char buf[100];
-		DString *fname = DString_Copy( p[0]->v.s );
+		DString *fname = stream->fname;
+		DString_Assign( fname, p[0]->v.s );
 		DString_ToMBS( fname );
 		snprintf( buf, 99, "file opening, %s", fname->mbs );
 		if( DString_Size( fname ) >0 ){
@@ -244,7 +245,6 @@ static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
 		}else{
 			DaoContext_RaiseException( ctx, DAO_ERROR, buf );
 		}
-		DString_Delete( fname );
 	}
 	DaoContext_SetResult( ctx, (DaoBase*)stream );
 }
@@ -316,7 +316,8 @@ static void DaoIO_Popen( DaoContext *ctx, DValue *p[], int N )
 	stream->file = (DFile*)dao_malloc( sizeof(DFile) );
 	stream->file->rc = 1;
 	stream->attribs |= DAO_IO_PIPE;
-	fname = DString_Copy( p[0]->v.s );
+	fname = stream->fname;
+	DString_Assign( fname, p[0]->v.s );
 	if( DString_Size( fname ) >0 ){
 		stream->file->fd = popen( DString_GetMBS( fname ), DString_GetMBS( p[1]->v.s ) );
 		if( stream->file->fd == NULL ){
@@ -327,7 +328,6 @@ static void DaoIO_Popen( DaoContext *ctx, DValue *p[], int N )
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "pipe opening" );
 	}
-	DString_Delete( fname );
 	DaoContext_SetResult( ctx, (DaoBase*)stream );
 }
 static void DaoIO_Iter( DaoContext *ctx, DValue *p[], int N )

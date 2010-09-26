@@ -195,7 +195,6 @@ struct DaoCData
 extern DaoTypeBase cdataTyper;
 extern DaoCData cptrCData;
 
-
 /* DaoPair is not data type for general use, it is mainly used for index pair,
  * and object-method pair.
  *

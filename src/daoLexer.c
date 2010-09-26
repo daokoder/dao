@@ -1304,3 +1304,83 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 	}
 	DString_ChangeMBS( annot, "{{\n}}", "\\n", 0, NULL, NULL );
 }
+int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end )
+{
+	int i, n1, n2, n3;
+	DaoToken **tokens = self->items.pToken;
+
+	if( start < 0 ) return -1;
+	if( end == -1 || end >= self->size ) end = self->size-1;
+
+	n1 = n2 = n3 = 0;
+	for( i=start; i<=end; i++){
+		uchar_t tki = tokens[i]->name;
+		if( ! ( n1 | n2 | n3 ) && tki == tok ){
+			return i;
+		}else if( n1 <0 || n2 <0 || n3 <0 ){
+			return -1;
+		}else{
+			switch( tki ){
+			case DTOK_LCB : n1 ++; break;
+			case DTOK_RCB : n1 --; break;
+			case DTOK_LB  : n2 ++; break;
+			case DTOK_RB  : n2 --; break;
+			case DTOK_LSB : n3 ++; break;
+			case DTOK_RSB : n3 --; break;
+			}
+		}
+	}
+	return -1;
+}
+int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop )
+{
+	DaoToken **tokens = self->items.pToken;
+	int k = 0;
+	int i = start;
+	int found = 0;
+	uchar_t tk;
+
+	if( start >= self->size ) start = self->size - 1;
+	if( stop <0 ) stop = 0;
+
+	while( i >= stop ){
+		tk = tokens[i]->name;
+		if( tk == rw ){
+			k++;
+		}else if( tk == lw ){
+			k--;
+			found = 1;
+		}
+		if( k==0 && found ) return i;
+		i--;
+	}
+	return -1;
+}
+int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop )
+{
+	DaoToken **tokens = self->items.pToken;
+	int k = 0;
+	int i = start;
+	int found = 0;
+	uchar_t tk;
+
+	if( start <0 ) return -1;
+	if( stop== -1 ) stop = self->size-1;
+
+	while(1){
+		if( i > stop ) break;
+		if( i >= (int) self->size ) break;
+
+		tk = tokens[i]->name;
+		if( tk == lw )
+			k++;
+		else if( tk == rw ){
+			k--;
+			found = 1;
+		}
+
+		if( k==0 && found ) return i;
+		i++;
+	}
+	return -1;
+}

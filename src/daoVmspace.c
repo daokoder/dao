@@ -812,7 +812,6 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
 	DaoList_Clear( self->argParams );
 	DString_SetMBS( key, "main" );
 	i = ns ? DaoNameSpace_FindConst( ns, key ) : -1;
-	skey.sub = DAO_PARNAME;
 	if( i >=0 ){
 		DValue nkey = DaoNameSpace_GetConst( ns, i );
 		/* It may has not been compiled if it is not called explicitly. */
@@ -861,7 +860,7 @@ static void DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoNameSpace *ns,
 			DString_Assign( key, argNames->items.pString[i] );
 			vp.v.pair = DaoPair_New( skey, nkey );
 			vp.v.pair->subType |= DAO_DATA_CONST;
-			vp.v.pair->type = vp.t = DAO_PAR_NAMED;
+			vp.t = DAO_PAR_NAMED;
 			DaoList_Append( self->argParams, vp );
 		}else{
 			DaoList_Append( self->argParams, nkey );
@@ -1077,6 +1076,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			DaoVmProcess_Eval( vmp, ns, self->source, 1 );
 			if( vmp->returned.t ){
 				DaoContext *ctx = DaoVmProcess_MakeContext( vmp, ns->mainRoutine );
+				DaoStream_WriteMBS( self->stdStream, "= " );
 				DValue_Print( vmp->returned, ctx, self->stdStream, NULL );
 				DaoStream_WriteNewLine( self->stdStream );
 			}
@@ -1723,6 +1723,7 @@ void DaoTypeBase_Free( DaoTypeBase *typer )
 	typer->priv->methods = NULL;
 }
 extern DaoTypeBase libStandardTyper;
+extern DaoTypeBase libSystemTyper;
 extern DaoTypeBase libMathTyper;
 extern DaoTypeBase libMpiTyper;
 extern DaoTypeBase libReflectTyper;
@@ -2144,7 +2145,6 @@ DaoVmSpace* DaoInit()
 	DaoVmSpace *vms;
 	DaoNameSpace *ns;
 	DString *mbs;
-	DArray *nested;
 
 	if( mainVmSpace ) return mainVmSpace;
 
@@ -2180,11 +2180,8 @@ DaoVmSpace* DaoInit()
 
 	DaoStartGC();
 
-	nested = DArray_New(0);
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
-	DArray_Append( nested, dao_type_udf );
-	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, NULL, nested );
-	DArray_Delete( nested );
+	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, dao_type_udf, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;
@@ -2244,6 +2241,7 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_SetupType( vms->nsInternal, & vmpTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & coroutTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libStandardTyper );
+	DaoNameSpace_WrapType( vms->nsInternal, & libSystemTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libMathTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libMpiTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libReflectTyper );

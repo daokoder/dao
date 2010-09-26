@@ -325,6 +325,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 		printf( "WARNING: type \"%s\" has no core structure.\n", typer->name );
 		return 0;
 	}
+	if( typer->funcItems == NULL ) return 0;
 	if( typer->priv->methods != NULL ) return 1;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		if( typer->supers[i] == NULL ) break;

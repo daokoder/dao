@@ -39,7 +39,6 @@ enum DaoRTTI
 {
 	DAO_ANY = END_CORE_TYPES, /* a : any */
 	DAO_INITYPE ,  /* a : @t */
-	DAO_PARNAME ,    /* sub-type of string */
 	DAO_MACRO ,
 	DAO_TYPE ,
 	DAO_FUNCURRY ,
@@ -143,7 +142,8 @@ enum DaoClassPerm
 };
 enum DaoClassAttrib
 {
-	DAO_CLS_FINAL = 1
+	DAO_CLS_FINAL = 1,
+	DAO_CLS_AUTO_DEFAULT = 2
 };
 enum DaoRoutineAttrib
 {

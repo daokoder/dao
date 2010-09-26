@@ -163,6 +163,8 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 		}else if( second.t ==DAO_NIL ){
 			*idtype = IDX_FROM;
 		}
+		if( n1 >= N || n2 >= N )
+			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 		break;
 	case DAO_LIST:
 		*idtype = IDX_MULTIPLE;
@@ -244,6 +246,8 @@ void DaoBase_Init( void *dbase, char type )
 #endif
 }
 
+extern void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
+
 DaoBase* DaoBase_Duplicate( void *dbase )
 {
 	DaoBase *self = (DaoBase*) dbase;
@@ -291,8 +295,14 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 	case DAO_ARRAY :
 		return (DaoBase*) DaoArray_Copy( (DaoArray*) self );
 #endif
-	case DAO_PAIR :
+	case DAO_PAIR : break;
 	default : break;
+	}
+	if( self->type == DAO_OBJECT ){
+		DaoObject *s = (DaoObject*) self;
+		DaoObject *t = DaoObject_New( s->myClass, NULL, 0 );
+		DaoObject_CopyData( t, s, NULL, NULL );
+		return (DaoBase*) t;
 	}
 	return self;
 }
@@ -1542,8 +1552,9 @@ static void DaoListCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	DaoList *res, *self = self0->v.list;
 	const size_t size = self->items->size;
 	size_t i, start, end;
-	int idtype;
+	int idtype, e = ctx->process->exceptions->size;
 	DArray *ids = MakeIndex( ctx, pid, size, & start, & end, & idtype );
+	if( ctx->process->exceptions->size > e ) return;
 
 	switch( idtype ){
 	case IDX_NULL :
@@ -3189,6 +3200,9 @@ static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 	DaoPair *self = self0->v.pair;
 	DValue copy = daoNullPair;
 	copy.v.pair = DaoPair_New( daoNullValue, daoNullValue );
+	copy.v.pair->type =  copy.t = self->type;
+	copy.v.pair->unitype = self->unitype;
+	GC_IncRC( self->unitype );
 	DValue_Copy( & copy.v.pair->first, self->first );
 	DValue_Copy( & copy.v.pair->second, self->second );
 	return copy;
@@ -3784,6 +3798,7 @@ static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 	plgCore->NewData = typer->New;
 	plgCore->DelData = typer->Delete;
 	typer->priv = (DaoTypeCore*)plgCore;
+	cdata->subType |= DAO_DATA_CONST;
 	DaoTypeCData_SetMethods( typer );
 	return abtype;
 }
