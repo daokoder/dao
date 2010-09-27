@@ -3230,7 +3230,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
-				ct = DaoNameSpace_MakeType( ns, csts[opa].v.s->mbs,
+				ct = DaoNameSpace_MakeType( ns, locConsts[opa].v.s->mbs,
 						DAO_PAR_NAMED, (DaoBase*) type[opb], 0, 0 );
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) type[opc] = ct;
 				AssertTypeMatching( ct, type[opc], defs, 0 );
@@ -4077,7 +4077,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			break;
 		case DVM_ADD_III : case DVM_SUB_III : case DVM_MUL_III : case DVM_DIV_III :
 		case DVM_MOD_III : case DVM_POW_III : case DVM_AND_III : case DVM_OR_III  :
-		case DVM_LT_III  : case DVM_LE_III  : case DVM_EQ_III :
+		case DVM_LT_III  : case DVM_LE_III  : case DVM_EQ_III : case DVM_NE_III :
 		case DVM_BITAND_III  : case DVM_BITOR_III  : case DVM_BITXOR_III :
 		case DVM_BITLFT_III  : case DVM_BITRIT_III  :
 		case DVM_ADD_FFF : case DVM_SUB_FFF : case DVM_MUL_FFF : case DVM_DIV_FFF :
@@ -4717,6 +4717,7 @@ void DaoFunction_SimpleCall( DaoFunction *self, DaoContext *ctx, DValue *p[], in
 	DRoutine_PassDefault( (DRoutine*)self, param, passed );
 	ctx->thisFunction = self;
 	self->pFunc( ctx, param, N );
+	ctx->thisFunction = NULL;
 	for(i=0; i<ndef; i++) DValue_Clear( param[i] );
 }
 int DaoFunction_Call( DaoFunction *func, DaoCData *self, DValue *p[], int n )

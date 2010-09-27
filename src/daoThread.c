@@ -851,6 +851,7 @@ static void DaoCFunction_Execute( DaoCFunctionCallData *self )
 	if( self->selfpar.t && (self->function->attribs & DAO_ROUT_PARSELF) ) npar ++;
 	self->context->thisFunction = self->function;
 	self->function->pFunc( self->context, self->par2, npar );
+	self->context->thisFunction = NULL;
 	for(i=0; i<npar; i++) DValue_Clear( self->par + i );
 	DValue_Clear( & self->selfpar );
 	DaoVmProcess_Delete( self->context->process );

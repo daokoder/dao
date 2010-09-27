@@ -2491,6 +2491,7 @@ CallEntry:
 			func = locVars[ vmc->a ]->v.func;
 			topCtx->thisFunction = func;
 			func->pFunc( topCtx, locVars + vmc->a +1, vmc->b );
+			topCtx->thisFunction = NULL;
 			if( self->status == DAO_VMPROC_SUSPENDED )
 				self->topFrame->entry = (short)(vmc - vmcBase);
 			goto CheckException;
@@ -2500,6 +2501,7 @@ CallEntry:
 			func = locVars[ vmc->a ]->v.func;
 			topCtx->thisFunction = func;
 			func->pFunc( topCtx, locVars + vmc->a +1, vmc->b );
+			topCtx->thisFunction = NULL;
 		}OPNEXT()
 		OPCASE( CALL_TC )
 			OPCASE( MCALL_TC ){

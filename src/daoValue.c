@@ -19,6 +19,7 @@
 #include"daoType.h"
 #include"daoStream.h"
 #include"daoRoutine.h"
+#include"daoClass.h"
 #include"daoObject.h"
 #include"daoNumtype.h"
 
@@ -207,9 +208,11 @@ DString* DValue_GetString( DValue val, DString *str )
 }
 void DValue_MarkConst( DValue *self )
 {
+	DaoObject *obj;
+	DValue oval = daoNullObject;
 	DMap *map;
 	DNode *it;
-	int i;
+	int i, n;
 	self->cst = 1;
 	if( self->t >= DAO_ARRAY ) self->v.p->subType |= DAO_DATA_CONST;
 	switch( self->t ){
@@ -231,6 +234,17 @@ void DValue_MarkConst( DValue *self )
 	case DAO_PAIR :
 		DValue_MarkConst( & self->v.pair->first );
 		DValue_MarkConst( & self->v.pair->second );
+		break;
+	case DAO_OBJECT :
+		obj = self->v.object;
+		n = obj->myClass->objDataDefault->size;
+		for(i=1; i<n; i++) DValue_MarkConst( obj->objValues + i );
+		if( obj->superObject == NULL ) break;
+		for(i=0; i<obj->superObject->size; i++){
+			oval.v.object = obj->superObject->items.pObject[i];
+			if( oval.v.object->type != DAO_OBJECT ) continue;
+			DValue_MarkConst( & oval );
+		}
 		break;
 	default : break;
 	}

@@ -2231,7 +2231,7 @@ static int DaoParser_CompleteScope( DaoParser *self, int tokid )
 		}else if( type == DVM_UNUSED2 ){
 			if( DaoParser_DelScope( self, DVM_UNUSED2, tokid ) == 0 ) return 0;
 		}else{
-			return 0;
+			return 1;
 		}
 	}
 	return 1;
@@ -2459,6 +2459,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	int rb, reg1;
 
 	int storeType = 0;
+	int storeType2 = 0;
 	int i, rbrack, end, temp, temp2, decl;
 	int reg, N = 0;
 	int cst = 0;
@@ -2513,6 +2514,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		if( self->errors->size ) return 0;
 		errorStart = start;
 		storeType = 0;
+		storeType2 = 0;
 		needName = 0;
 		while( tki >= DKEY_CONST && tki <= DKEY_VAR ){
 			int comb = ( storeType & DAO_DATA_VAR );
@@ -2520,6 +2522,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			switch( tki ){
 			case DKEY_CONST :
 				storeType |= DAO_DATA_CONST;
+				storeType2 |= DAO_DATA_CONST;
 				if( ! (storeType & DAO_DATA_LOCAL) ){
 					if( self->levelBase + self->lexLevel ==0 ) storeType |= DAO_DATA_GLOBAL;
 					else if( self->isClassBody ) storeType |= DAO_DATA_MEMBER;
@@ -2528,16 +2531,19 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			case DKEY_GLOBAL :
 				comb |= ( storeType & (DAO_DATA_LOCAL|DAO_DATA_CONST) );
 				storeType |= DAO_DATA_GLOBAL;
+				storeType2 |= DAO_DATA_GLOBAL;
 				break;
 			case DKEY_STATIC :
 				comb |= ( storeType & (DAO_DATA_LOCAL|DAO_DATA_CONST) );
 				storeType |= DAO_DATA_STATIC;
+				storeType2 |= DAO_DATA_STATIC;
 				if( self->levelBase ==0 ) storeType |= DAO_DATA_GLOBAL;
 				if( self->isClassBody ) storeType |= DAO_DATA_MEMBER;
 				break;
 			case DKEY_VAR :
 				comb |= storeType;
 				storeType |= DAO_DATA_VAR;
+				storeType2 |= DAO_DATA_VAR;
 				if( self->isClassBody )
 					storeType |= DAO_DATA_MEMBER;
 				else
@@ -2561,10 +2567,12 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		tki = tokens[start]->name;
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
 		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM 
-						&& tki > DAO_NOKEY1 && tki < DAO_NOKEY2)) ){
-			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
-			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
-			return 0;
+						&& tki > DAO_NOKEY1 && tki < DKEY_EACH )) ){
+			if( tki < DKEY_SUB || tki > DKEY_FUNCTION || storeType2 != DAO_DATA_STATIC ){
+				DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
+				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+				return 0;
+			}
 		}
 		if( tki == DTOK_SEMCO ){
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;

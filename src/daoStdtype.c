@@ -163,8 +163,9 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 		}else if( second.t ==DAO_NIL ){
 			*idtype = IDX_FROM;
 		}
-		if( n1 >= N || n2 >= N )
-			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+		/* when specify an index range, allow out of range: (eg, str[:5]=='abcde') */
+		if( n1 >= N ) n1 = N-1;
+		if( n2 >= N ) n2 = N-1;
 		break;
 	case DAO_LIST:
 		*idtype = IDX_MULTIPLE;
@@ -301,7 +302,8 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 	if( self->type == DAO_OBJECT ){
 		DaoObject *s = (DaoObject*) self;
 		DaoObject *t = DaoObject_New( s->myClass, NULL, 0 );
-		DaoObject_CopyData( t, s, NULL, NULL );
+		DMap *cyc = DHash_New(0,0);
+		DaoObject_CopyData( t, s, NULL, cyc );
 		return (DaoBase*) t;
 	}
 	return self;

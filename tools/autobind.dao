@@ -5,6 +5,36 @@ author: Fu Limin (phoolimin@gmail.com)
 
 #}
 
+class DaoCxxVariable
+{
+}
+class DaoCxxFunction
+{
+}
+
+class DaoCxxType
+{
+	var name = ''; # neat name
+	var full_name = ''; # full name including scopes: ns::class::name
+	var typer_name = ''; # full name with colons replaced with underscores
+}
+class DaoCxxEnum : DaoCxxType
+{
+	var en_names : map<string,int> = {:};
+}
+class DaoCxxClass : DaoCxxType
+{
+	var cls_enums : map<string,DaoCxxEnum> = {:};
+	var cls_fields : list<DaoCxxVariable> = {};
+	var cls_methods : list<DaoCxxFunction> = {};
+}
+class DaoCxxNamespace : DaoCxxType
+{
+	var ns_enums : map<string,DaoCxxEnum> = {:};
+	var ns_classes : map<string,DaoCxxClass> = {:};
+	var ns_namespaces : map<string,DaoCxxNamespace> = {:};
+}
+
 routine BernsteinHash( key : string )
 {
 	hash = 0;
@@ -461,7 +491,7 @@ attribs=0, snamespace='' )
 	if( pars.pfind( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) ) excluded = 1;
 	#if( pars.pfind( '(char|wchar_t) %s* %*%* %s* %w+' ) ) excluded = 1;
 	if( pars.pfind( '%) %s* %(' ).size() || pars.pfind( '%W ((%s*)) %(' ).size()
-	|| ret.pfind( 'template' ).size() ){
+		|| ret.pfind( 'template' ).size() ){
 		log_file.println( source );
 		excluded = 1;
 	}
@@ -529,9 +559,9 @@ attribs=0, snamespace='' )
 		vo = func.parlist[i];
 		var2 = func.parlist[i+1];
 		if( var2.typeid >= CT_SHORT && var2.typeid <= CT_ULONG
-		&& var2.refer =='' && var2.square =='' ){
+			&& var2.refer =='' && var2.square =='' ){
 			if( vo.refer == '*' && vo.square == ''
-			&& vo.typeid >= CT_SHORT && vo.typeid <= CT_COMPLEX16){
+				&& vo.typeid >= CT_SHORT && vo.typeid <= CT_COMPLEX16){
 				vo.refer = '';
 				vo.square = '[]';
 				vo.sqsizes.append( '0' );
@@ -1575,24 +1605,20 @@ routine Variable::Parse( fname = '' )
 			map_user_types[ 'struct ' + type ] = utp;
 			if( utp.name[0:0] == '_' ){
 				io.println( 'debug:', utp.name, ',', source );
-				std.sleep(10);
 				#reflect.trace();
 			}
 		}
 	}
 	#io.writeln( name, type, refer, square, sqsizes );
-	if( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
-	&& refer == '*' && square == '' ){
+	if( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 && refer == '*' && square == '' ){
 		refer = '';
 		square = '[]';
 		sqsizes.append( '0' );
-	}elif( typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
-	&& refer == '*' && square == '[]' ){
+	}elif( typeid >=CT_SHORT && typeid <= CT_COMPLEX16 && refer == '*' && square == '[]' ){
 		refer = '';
 		square = '[][]';
 		sqsizes.append( '0' );
-	}elif( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 
-	&& refer == '**' && square == '' ){
+	}elif( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 && refer == '**' && square == '' ){
 		refer = '';
 		square = '[][]';
 		sqsizes.append( '0' );
@@ -2614,7 +2640,6 @@ routine Function::Generate()
 			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
 		}
 	}
-	#io.writeln( calls_with_defaults );
 	if( retype.unsupport ) excluded = 1;
 	if( hasCallback and not hasUserData ) excluded = 1;
 	for( i = 0 : pcount-1 ){
@@ -3475,7 +3500,7 @@ routine UserType::GenerateMeth()
 		}
 	}
 	if( isCallback and methods.size() ){
-		for( par in meth.parlist ){
+		for( par in methods[0].parlist ){ # XXX
 			if( par.name == 'userdata' ) methods[0].isCallback = 1;
 		}
 		if( not methods[0].isCallback ){
