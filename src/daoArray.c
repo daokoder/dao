@@ -864,7 +864,7 @@ void DaoVmcArray_Cleanup( DaoVmcArray *self )
 	int i, j, k, M = 0, N = self->size;
 	for(i=0; i<N; i++){
 		vmc = self->codes + i;
-		if( vmc->code == DVM_UNUSED ) DArray_Append( dels, i );
+		if( vmc->code >= DVM_UNUSED ) DArray_Append( dels, i );
 	}
 	if( dels->size ==0 ){
 		DArray_Delete( dels );
@@ -915,7 +915,7 @@ void DArray_CleanupCodes( DArray *self )
 	dels = DArray_New(0);
 	for(i=0; i<N; i++){
 		vmc = self->items.pVmc[i];
-		if( vmc->code == DVM_UNUSED ) DArray_Append( dels, i );
+		if( vmc->code >= DVM_UNUSED ) DArray_Append( dels, i );
 	}
 	if( dels->size ==0 ){
 		DArray_Delete( dels );

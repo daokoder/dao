@@ -306,6 +306,8 @@ DRoutine* DRoutine_GetOverLoadByParamType( DRoutine *self, DaoType *selftype,
 	 */
 	if( best >=0 ){
 		rout = (DRoutine*) self->routOverLoad->items.pBase[best];
+		if( rout->type == DAO_ROUTINE && ((DaoRoutine*)rout)->parser )
+			DaoRoutine_Compile( (DaoRoutine*) rout );
 		return rout;
 	}
 	return NULL;
@@ -1667,7 +1669,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		type_source = t1; type_target = t2; goto ErrorTyping; }
 	
 #define AssertTypeIdMatching( source, id, gerror ) \
-	if( source->tid != id ) ErrorTypeNotMatching( gerror, source, simtps[id] );
+	if( source->tid != id ){ \
+		tid_target = id; ErrorTypeNotMatching( gerror, source, NULL ); }
 
 #define AssertTypeMatching( source, target, defs, gerror ) \
 	if( source->tid && source->tid != DAO_ANY && DaoType_MatchTo( source, target, defs ) ==0 ) \
@@ -1690,7 +1693,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	int min, norm, spec, worst, lastcomp = 0;
 	int TT0, TT1, TT2, TT3, TT4, TT5, TT6;
 	int ec = 0, ec_general = 0, ec_specific = 0;
-	int annot_first = 0, annot_last = 0;
+	int annot_first = 0, annot_last = 0, tid_target = 0;
 	ushort_t code;
 	ushort_t opa, opb, opc;
 	DaoNameSpace *ns = self->nameSpace;
@@ -4529,7 +4532,10 @@ ErrorTyping:
 						DString_SetMBS( mbs, "'" );
 						DString_AppendMBS( mbs, type_source ? type_source->name->mbs : "null" );
 						DString_AppendMBS( mbs, "' for '" );
-						DString_AppendMBS( mbs, type_target ? type_target->name->mbs : "null" );
+						if( type_target )
+							DString_AppendMBS( mbs, type_target->name->mbs );
+						else if( tid_target <= DAO_STREAM )
+							DString_AppendMBS( mbs, coreTypeNames[tid_target] );
 						DString_AppendChar( mbs, '\'' );
 					}else{
 						DaoTokens_AnnotateCode( self->source, *vmc, mbs, 32 );

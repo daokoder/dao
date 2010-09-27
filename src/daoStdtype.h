@@ -251,6 +251,7 @@ DaoException* DaoException_New( DaoTypeBase *typer );
 DaoException* DaoException_New2( DaoTypeBase *typer, DValue v );
 void DaoException_Delete( DaoException *self );
 void DaoException_Setup( DaoNameSpace *ns );
+void DaoException_CleanUp();
 
 DaoTypeBase* DaoException_GetType( int type );
 

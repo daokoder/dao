@@ -1592,7 +1592,7 @@ void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc )
 	}else{
 		DaoNameSpace *ns = self->nameSpace;
 		DaoType *tp = DaoNameSpace_GetTypeV( ns, pair->second );
-		pair->unitype = DaoNameSpace_MakeType( ns, dA.v.s->mbs, DAO_PAR_NAMED, tp, NULL, 0 );
+		pair->unitype = DaoNameSpace_MakeType( ns, dA.v.s->mbs, DAO_PAR_NAMED, (DaoBase*)tp, NULL, 0 );
 	}
 	GC_IncRC( pair->unitype );
 	DaoContext_SetData( self, vmc->c, (DaoBase*) pair );

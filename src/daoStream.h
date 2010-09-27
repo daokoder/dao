@@ -50,6 +50,7 @@ struct DaoStream
 extern DaoStream* DaoStream_New();
 extern void DaoStream_Delete( DaoStream *self );
 extern void DaoStream_Close( DaoStream *self );
+extern void DaoStream_Flush( DaoStream *self );
 
 extern void DaoStream_WriteChar( DaoStream *self, char val );
 extern void DaoStream_WriteInt( DaoStream *self, dint val );

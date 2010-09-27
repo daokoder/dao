@@ -132,7 +132,8 @@ static const char *const vmOperNames[] = {
 	"enum" ,
 	"setvg_aux" ,
 	"refer" ,
-	"unused"
+	"unused",
+	"unused2"
 };
 const char* getOpcodeName( int opc )
 {

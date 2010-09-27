@@ -2204,7 +2204,7 @@ static void DaoParser_AddScope( DaoParser *self, int type, int start )
 	DArray_Append( self->scoping, type );
 	DArray_Append( self->localVarMap, self->lvm );
 	DArray_Append( self->localCstMap, self->lvm );
-	DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, start, mid, 0 );
+	if( type != DVM_UNUSED2 ) DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, start, mid, 0 );
 }
 static int DaoParser_DelScope( DaoParser *self, int type, int tokid )
 {
@@ -2219,13 +2219,20 @@ static int DaoParser_DelScope( DaoParser *self, int type, int tokid )
 	DArray_Pop( self->localVarMap );
 	DArray_Pop( self->localCstMap );
 	DArray_Pop( self->scoping );
-	DaoParser_AddCode( self, DVM_RBRA, 0,0,0, tokid, mid, 0 );
+	if( type != DVM_UNUSED2 ) DaoParser_AddCode( self, DVM_RBRA, 0,0,0, tokid, mid, 0 );
 	return 1;
 }
 static int DaoParser_CompleteScope( DaoParser *self, int tokid )
 {
-	while( self->scoping->size >0 && (dint)DArray_Top( self->scoping ) == DVM_UNUSED ){
-		if( DaoParser_DelScope( self, DVM_UNUSED, tokid ) == 0 ) return 0;
+	while( self->scoping->size >0 ){
+		dint type = (dint)DArray_Top( self->scoping );
+		if( type == DVM_UNUSED ){
+			if( DaoParser_DelScope( self, DVM_UNUSED, tokid ) == 0 ) return 0;
+		}else if( type == DVM_UNUSED2 ){
+			if( DaoParser_DelScope( self, DVM_UNUSED2, tokid ) == 0 ) return 0;
+		}else{
+			return 0;
+		}
 	}
 	return 1;
 }
@@ -3024,7 +3031,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			DaoNameSpace *ns = NULL;
 			DaoInterface *inter = NULL;
 			DString *interName;
-			DString *ename;
+			DString *ename = NULL;
 			int ec = 0;
 			parser = NULL;
 			if( start+1 > to ) goto ErrorInterfaceDefinition;
@@ -3891,6 +3898,9 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	}
 	it = self->vmcFirst;
 	while( it ){
+		/*
+		DaoInode_Print( it );
+		*/
 		it->extra = 0;
 		switch( it->code ){
 		case DVM_GOTO :
@@ -4006,7 +4016,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	while( it ){
 		/* DaoInode_Print( it ); */
 		if( it->prev ) it->extra = it->prev->extra;
-		if( it->code == DVM_UNUSED ) it->extra ++;
+		if( it->code >= DVM_UNUSED ) it->extra ++;
 		it = it->next;
 	}
 	it = self->vmcFirst;
@@ -4022,7 +4032,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 			break;
 		default : break;
 		}
-		if( it->code == DVM_UNUSED ) rm ++;
+		if( it->code >= DVM_UNUSED ) rm ++;
 		it = it->next;
 	}
 	DArray_Clear( self->vmCodes );
@@ -4616,7 +4626,7 @@ int DaoParser_MakeForLoop( DaoParser *self, int start )
 
 	if( rb < 0 && in < 0 ) return -1;
 
-	DaoParser_AddScope( self, DVM_UNUSED, start );
+	DaoParser_AddScope( self, DVM_UNUSED2, start );
 	if( in >= 0 ){
 		int k, L, elem, semic, regItemt, reg;
 		int first;
@@ -4840,7 +4850,7 @@ int DaoParser_MakeWhileLogic( DaoParser *self, ushort_t opcode, int start )
 
 	/*for(int i=lb;i<=rb;i++) printf( "%s  ", tokChr[i].c_str() ); printf("\n"); */
 
-	DaoParser_AddScope( self, DVM_UNUSED, start );
+	DaoParser_AddScope( self, DVM_UNUSED2, start );
 	reg = DaoParser_MakeArithTree( self, lb+2, rb-1, & cst, -1, 0 );
 	if( reg < 0 ) return -1;
 	if( opcode == DVM_DOWHILE ){

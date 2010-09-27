@@ -401,7 +401,8 @@ enum DaoOpcodeExtra
 	 */
 	DVM_SETVG_AUX , 
 	DVM_REFER ,
-	DVM_UNUSED
+	DVM_UNUSED ,
+	DVM_UNUSED2
 };
 
 enum DaoMathFunct

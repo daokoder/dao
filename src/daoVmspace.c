@@ -2181,7 +2181,7 @@ DaoVmSpace* DaoInit()
 	DaoStartGC();
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
-	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, dao_type_udf, NULL );
+	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;
