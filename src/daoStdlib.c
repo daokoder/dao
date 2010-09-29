@@ -15,6 +15,7 @@
 #include"math.h"
 #include"string.h"
 #include"locale.h"
+#include"errno.h"
 #ifdef UNIX
 #include<unistd.h>
 #include<sys/time.h>
@@ -781,45 +782,110 @@ static void SYS_Clock( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutFloat( ctx, ((float)clock())/CLOCKS_PER_SEC );
 }
 
+static void GetErrnoMessage(char *buffer, int code, char *defpart, int isrmdir)
+{
+	strcpy(buffer, defpart);
+	switch ( code ){
+	case EACCES:
+		strcat(buffer, "write permission required");
+		break;
+	case EBUSY:
+		strcat(buffer, "the file/directory is used by the system");
+		break;
+	//Appeared to be synonyms
+	case ENOTEMPTY:
+	case EEXIST:
+		strcat(buffer, isrmdir? "the directory is not empty" : "the file/directory already exists");
+		break;
+	case EINVAL:
+		strcat(buffer, "trying to make the directory it's own subdirectory");
+		break;
+	//A file required but a dir passed and vice versa
+	case EPERM:
+	case ENOTDIR:
+	case EISDIR:
+		strcat(buffer, "inconsistent type of the file object(s)");
+		break;
+	case EMLINK:
+		strcat(buffer, "the parent directory would have to many entries");
+		break;
+	case ENOENT:
+		strcat(buffer, "the file/directory to change doesn't exist");
+		break;
+	case ENOSPC:
+		strcat(buffer, "no space for a new entry in the file system");
+		break;
+	case EROFS:
+		strcat(buffer, "writing to a directory on a read-only file system");
+		break;
+	case EXDEV:
+		strcat(buffer, "the files/directories are on different file systems");
+		break;
+	case ENAMETOOLONG:
+		strcat(buffer, "the file/directory name is too long");
+		break;
+	default:
+		strcat(buffer, "unknown error");
+	}
+}
+
 static void SYS_Rename( DaoContext *ctx, DValue *p[], int N )
 {
-	if( rename( DString_GetMBS( p[0]->v.s ), DString_GetMBS( p[1]->v.s ) ) )
-		DaoContext_RaiseException( ctx, DAO_ERROR, "rename failed" );
+   char errbuf[70];
+	if ( rename( DString_GetMBS( p[0]->v.s ), DString_GetMBS( p[1]->v.s ) ) ){
+		GetErrnoMessage( errbuf, errno, "rename -- ", 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void SYS_Remove( DaoContext *ctx, DValue *p[], int N )
 {
-	if( unlink( DString_GetMBS( p[0]->v.s ) ) )
-		DaoContext_RaiseException( ctx, DAO_ERROR, "remove failed" );
+	char errbuf[70];
+	if( unlink( DString_GetMBS( p[0]->v.s ) ) ){
+		GetErrnoMessage( errbuf, errno, "remove -- ", 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void SYS_Rmdir( DaoContext *ctx, DValue *p[], int N )
 {
-	if( rmdir( DString_GetMBS( p[0]->v.s ) ) )
-		DaoContext_RaiseException( ctx, DAO_ERROR, "rmdir failed" );
+	char errbuf[70];
+	if( rmdir( DString_GetMBS( p[0]->v.s ) ) ){
+		GetErrnoMessage( errbuf, errno, "rmdir -- ", 1 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void SYS_Mkdir( DaoContext *ctx, DValue *p[], int N )
 {
+	char errbuf[70];
 #ifdef WIN32
-	if( mkdir( DString_GetMBS( p[0]->v.s ) ) )
+	if( mkdir( DString_GetMBS( p[0]->v.s ) ) ){
 #else
-	if( mkdir( DString_GetMBS( p[0]->v.s ), S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH ) )
+	if( mkdir( DString_GetMBS( p[0]->v.s ), S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH ) ){
 #endif
-		DaoContext_RaiseException( ctx, DAO_ERROR, "mkdir failed" );
+		GetErrnoMessage( errbuf, errno, "mkdir -- ",  0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
-static void SYS_Chdir( DaoContext *ctx, DValue *p[], int N )
+static void SYS_Setcwd( DaoContext *ctx, DValue *p[], int N )
 {
-	if( chdir( DString_GetMBS( p[0]->v.s ) ) )
-		DaoContext_RaiseException( ctx, DAO_ERROR, "chdir failed" );
+	char errbuf[70];
+	if( chdir( DString_GetMBS( p[0]->v.s ) ) ){
+		GetErrnoMessage( errbuf, errno, "chdir -- ", 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void SYS_Getcwd( DaoContext *ctx, DValue *p[], int N )
 {
-	char buf[1024];
+	char buf[1024], errbuf[70];
 	char *cwd = getcwd( buf, 1023 );
-	if( cwd == NULL ) DaoContext_RaiseException( ctx, DAO_ERROR, "getcwd failed" );
+	if( cwd == NULL ){
+		GetErrnoMessage( errbuf, errno, "getcwd -- ", 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 	DaoContext_PutMBString( ctx, cwd );
 }
 
@@ -839,8 +905,7 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_Remove,    "remove( path:string )" },
 	{ SYS_Mkdir,     "mkdir( path:string )" },
 	{ SYS_Rmdir,     "rmdir( path:string )" },
-	{ SYS_Chdir,     "chdir( path:string )" },
-	{ SYS_Chdir,     "setcwd( path:string )" },
+	{ SYS_Setcwd,    "setcwd( path:string )" },
 	{ SYS_Getcwd,    "getcwd()=>string" },
 	{ NULL, NULL }
 };
