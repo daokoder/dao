@@ -1,0 +1,175 @@
+
+<title>DaoQt: 应用程序与图形界面框架Qt的封装</title>
+
+Qt4.5的官方文档:
+<link>Qt Reference Documentation=http://doc.qtsoftware.com/4.5/index.html</link>.
+
+
+Qt是一个非常优秀的C++应用程序与图形界面库和框架。
+使用DaoQt模块，Qt的大部分功能可以在Dao语言里使用。
+DaoQt对Qt的封装保留了大部分的Qt类的继承关系和
+函数的函数原型。
+不过，由于autobind工具的局限性，
+还有一些问题需要在使用DaoQt模块是注意。
+下面将会提到这些问题。
+（此模块使用LGPL协议发布！）
+
+<===>Hello world</===>
+<code dao>
+load DaoQtCore;
+load DaoQtGui require DaoQtCore;
+
+app = QApplication( 'Hello World!' );
+
+lab = QLabel( 'Hello World!' );
+lab.resize( 300, 200 );
+lab.move( 200, 200 );
+lab.show();
+
+app.exec();
+</code>
+
+<===>Signal/Slot 模型</===>
+
+使用DaoQt模块，Signal和Slot可以方便地在Qt对象和继承的Dao对象之间
+连接。
+
+<list>
+== Qt对象 => Qt对象:
+<code dao>
+QObject::connect( sender, 'signal name', receiver, 'slot name' );
+</code>
+例如
+<code dao>
+win = QMainWindow();
+bar = win.addToolBar( 'ToolBar' );
+action = bar.addAction( 'Close' );
+QObject::connect( action, 'triggered()', win, 'close()' );
+</code>
+
+== Qt对象 => Dao对象:
+<code dao>
+QObject::connect( sender, 'signal name', receiver, slot_function );
+</code>
+例如，
+<code dao>
+class MyWindow : QMainWindow
+{
+	routine MyClose( a = 1 ){ self.close(); }
+}
+win = MyWindow();
+bar = win.addToolBar( 'ToolBar' );
+action = bar.addAction( 'Close' );
+QObject::connect( action, 'triggered(bool)', win, win.MyClose );
+</code>
+
+== Dao对象 => Qt对象:
+<code dao>
+QObject::connect( sender, signal_function, receiver, 'slot name' );
+</code>
+<code dao>
+</code>
+这种情况下，signal可以是任何非字符串数据。
+
+== Dao对象 => Dao对象:
+<code dao>
+QObject::connect( sender, signal_function, receiver, slot_function );
+</code>
+<code dao>
+class MyObject : QObject
+{
+	routine MySlot( message ){
+		stdio.println( 'hello:', message );
+	}
+}
+
+o = MyObject();
+
+o.connect( o, 1, o, o.MySlot );
+o.emit( 1, 'DaoQt4.5' );
+
+o.connect( o, o.MySlot, o, o.MySlot );
+o.emit( o.MySlot, 'DaoQt4.5' );
+</code>
+</list>
+
+<==>Signal/Slot注意点</==>
+
+<list>
+== 在QObject::connect()函数里，字符串表示的signal/slot总表示原始
+的Qt signal/slot。其他情况下，任何数据对象都可用作signal，
+而只有Dao函数可被用作slot；
+
+== 当连结Qt signals/slots和用Dao语言里定义的signals/slots时，
+Qt signals/slots的名称必须是全的，即也包括缺省参数。如：
+<code dao>
+connect(button, 'clicked()', daowidget, daowidget.showMessage );
+</code>
+是无效的，因为QPushButton的clicked signal有一个缺省参数，正确的用法是：
+<code dao>
+connect(button, 'clicked(bool)', daowidget, daowidget.showMessage );
+</code>
+
+== 当连结Qt signals和用Dao语言里定义的slots时，
+Dao slot必须是一个函数，且它的参数类型与Qt signal的参数类型
+匹配，否则，这个slot将不被调用。
+</list>
+
+<===>QString</===>
+
+在大部分情况下，如果QString被用作函数的参数或返回值，
+那么在封装此函数时，它将被自动地转换为Dao字符串string类型。
+不过，如果它是作为指针使用，那么将不做自动转换。
+作为例子，对如下Qt函数，
+<code cpp>
+QString qt_func( const QString & p1, QString *p2 );
+</code>
+其封装将有如下原型，
+<code cpp>
+qt_func( p1 : string, p2 : QString ) => string;
+</code>
+
+为了使用QString的功能，QString对象必须使用QString的构造函数显示的创建，如，
+<code dao>
+s1 = QString( 'hi' );
+s2 = QString( 0x66 );
+</code>
+
+对于QString类的成员函数，如果函数的返回值为QString，
+它将不被转换为Dao字符串。如
+<code cpp>
+QString& QString::append(const QString &s);
+</code>
+将被封装为,
+<code dao>
+append( self : QString, s : string )=>QString
+</code>
+这样将允许用户写如下代码，
+<code dao>
+QString( 'abc' ).append( 'def' ).append( 'gh' );
+</code>
+
+要从QString转换为Dao字符串，可使用<bf>toLocal8Bit()</bf>。
+
+
+类似地，在DaoQt里，QChar被转换为int，而QByteArray也被转换为Dao string。
+
+<===>QList 和 QVector</===>
+
+
+当QList<X\>, QList<X*>, QVector<X\>, 和QVector<X*>类型被用作函数参数或返回值时，
+它们大部分都被转换为了list<X\>。
+
+<===>QTextStream 和 QFile</===>
+
+QTextStream的重载操作符没有被封装，下列函数被加到
+被封装的QTextStream类型里，以便写入数据到流。
+<code dao>
+write( self : QTextStream, data : int )=>QTextStream
+write( self : QTextStream, data : float )=>QTextStream
+write( self : QTextStream, data : double )=>QTextStream
+write( self : QTextStream, data : string )=>QTextStream
+write( self : QTextStream, data : any )=>QTextStream
+</code>
+
+QFile.close()在程序结束前被调用。

@@ -1,0 +1,182 @@
+
+<title>DaoQt: A Binding to Qt Application and GUI Framework</title>
+
+The official documentation of Qt4.5 can be found here:
+<link>Qt Reference Documentation=http://doc.qtsoftware.com/4.5/index.html</link>.
+
+
+With DaoQt module, it is possible to access most of the functionalities
+of the excellent Qt application and GUI framework.
+Most of the Qt classes and functions are wrapped as they are,
+with the same class inheritance relationships
+and similar function prototypes.
+However due to the limit of the autobind tool used to
+generate the bindings,
+there are several issues one needs to know.
+These issues will be explained bellow.
+(This module is released under LGPL!)
+
+<===>Hello world</===>
+<code dao>
+load DaoQtCore;
+load DaoQtGui require DaoQtCore;
+
+app = QApplication( 'Hello World!' );
+
+lab = QLabel( 'Hello World!' );
+lab.resize( 300, 200 );
+lab.move( 200, 200 );
+lab.show();
+
+app.exec();
+</code>
+
+<===>Revised Signal/Slot model</===>
+
+Using DaoQt, the signals and slots can be connected freely
+between native Qt objects and objects of derived classes in Dao.
+
+<list>
+== Native Qt object => native Qt object:
+<code dao>
+QObject::connect( sender, 'signal name', receiver, 'slot name' );
+</code>
+For example,
+<code dao>
+win = QMainWindow();
+bar = win.addToolBar( 'ToolBar' );
+action = bar.addAction( 'Close' );
+QObject::connect( action, 'triggered()', win, 'close()' );
+</code>
+
+== Native Qt object => Dao object:
+<code dao>
+QObject::connect( sender, 'signal name', receiver, slot_function );
+</code>
+For example,
+<code dao>
+class MyWindow : QMainWindow
+{
+	routine MyClose( a = 1 ){ self.close(); }
+}
+win = MyWindow();
+bar = win.addToolBar( 'ToolBar' );
+action = bar.addAction( 'Close' );
+QObject::connect( action, 'triggered(bool)', win, win.MyClose );
+</code>
+
+== Dao object => native Qt object:
+<code dao>
+QObject::connect( sender, signal_function, receiver, 'slot name' );
+</code>
+<code dao>
+</code>
+In this case, the signal can actually be anything except string.
+
+== Dao object => Dao object:
+<code dao>
+QObject::connect( sender, signal_function, receiver, slot_function );
+</code>
+<code dao>
+class MyObject : QObject
+{
+	routine MySlot( message ){
+		stdio.println( 'hello:', message );
+	}
+}
+
+o = MyObject();
+
+o.connect( o, 1, o, o.MySlot );
+o.emit( 1, 'DaoQt4.5' );
+
+o.connect( o, o.MySlot, o, o.MySlot );
+o.emit( o.MySlot, 'DaoQt4.5' );
+</code>
+</list>
+
+<==>Signal/Slot Issues</==>
+
+<list>
+== In the QObject::connect() function, a string signal/slot always identify
+a native Qt signal/slot. In other cases, any other objects/data can be used as signal,
+and only Dao functions can be used as slots;
+
+== When connecting native signals or slots with user signals or slots
+defined in Dao, the native signal and slot names must be complete.
+Namely, parameter types of the parameter with default values should
+also be included. For example,
+<code dao>
+connect(button, 'clicked()', daowidget, daowidget.showMessage );
+</code>
+is not valid, because the "clicked" signal of QPushButton has a default
+parameter. The correct way is,
+<code dao>
+connect(button, 'clicked(bool)', daowidget, daowidget.showMessage ).
+</code>
+
+== When connecting a native signal to a Dao slot, the Dao slot
+must be a function with parameter types matching to that of the signal.
+If not matched, the slot will not be invoked.
+</list>
+
+<===>QString</===>
+
+In most cases, if QString is used as parameter or returned value in a function,
+it is automatically converted to Dao string type when wrapping this function. 
+But if it is used as a pointer, it will not be convered automatically.
+So for a Qt function with the following prototype:
+<code cpp>
+QString qt_func( const QString & p1, QString *p2 );
+</code>
+It will be wrapped as,
+<code cpp>
+qt_func( p1 : string, p2 : QString ) => string;
+</code>
+
+To use the functionalities of QString, a QString
+object must be constructed explicitly by calling its constructor, e.g.
+<code dao>
+s1 = QString( 'hi' );
+s2 = QString( 0x66 );
+</code>
+
+For the methods of the QString class, if the returned value
+is QString, it is not converted automatically.
+For example,
+<code cpp>
+QString& QString::append(const QString &s);
+</code>
+will be wrapped as,
+<code dao>
+append( self : QString, s : string )=>QString
+</code>
+So it will still allow user to write codes like
+<code dao>
+QString( 'abc' ).append( 'def' ).append( 'gh' );
+</code>
+
+To convert from QString to Dao string, one can use <bf>toLocal8Bit()</bf>
+
+
+Similarly, in DaoQt, QChar is converted to int, and QByteArray is converted
+to Dao string.
+
+<===>QList and QVector</===>
+
+Most of the QList<X\>, QList<X*>, QVector<X\>, and QVector<X*>
+are converted to list<X\>, when they are used as parameters or returned values.
+
+<===>QTextStream and QFile</===>
+
+The operators of QTextStream are not wrapped,
+but several methods are added for writing data to the stream.
+<code dao>
+write( self : QTextStream, data : int )=>QTextStream
+write( self : QTextStream, data : float )=>QTextStream
+write( self : QTextStream, data : double )=>QTextStream
+write( self : QTextStream, data : string )=>QTextStream
+write( self : QTextStream, data : any )=>QTextStream
+</code>
+
+The QFile.close() must be called when it is done.

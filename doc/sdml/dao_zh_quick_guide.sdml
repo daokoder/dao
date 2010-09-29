@@ -1,0 +1,1280 @@
+<book>道语言简明教程</book>
+<author>傅利民(phoolimin@gmail.com)</author>
+
+
+(适用于道语言1.1)
+
+
+本文档基于<link>GNU Free Documentation License=http://www.gnu.org/copyleft/fdl.html</link>许可发布。
+
+
+<bf>道(Dao)</bf>语言是一门面向对象的程序设计语言，它支持显式的变量类型申明，和隐式的类型推测，
+既可以作为强类型语言使用，也可作为弱类型语言使用。
+道支持多种复杂的数据类型。它拥有较强的文本处理能力，支持正则表达式。
+它还提供了内置的如复数和数值数组等数值类型，这些类型的操作在道里比较方便。
+道语言还对函数式编程有了较好的支持。
+多线程编程作为一个不可分割的部分集成到了道语言及其虚拟机里。
+道语言还实现了函数的异步调用，使得某些类型的并行编程变得很简单。
+网络编程和基于消息传递的分布式编程也作为标准库被支持。
+道还有比较好的宏机制，可以实现语法扩展。
+道语言可以由C/C++以方便透明的方式加以扩展，或者被嵌入到C/C++程序中。
+
+<=====>基础</=====>
+
+<====>如何运行</====>
+从命令行，输入道解释器程序名称，后面跟上脚本文件名：
+
+<*>dao [选项] script_source.dao</*>
+
+可使用<%>dao -h</%>查看可用选项。
+
+
+既然helloworld是很多程序设计教程里的经典例子，这里也提供一个类似的例子来介绍一点道语言里最基本的要素。
+<demo dao>
+# Hello World例程:
+io.write( "Hello World!" );
+#{
+多行注释
+多行注释
+#}
+</demo>
+已在例子里提到了，<*>#</*>用于注释单行，其后的字符将被解释器忽略；一对<*>#{  #}</*>用于注释多行。
+多数情况下，语句结束符<*>;</*>可省略，例外是<*>load,return</*>语句，它们必须由<*>;</*>结束。
+<table>
+| <*>#</*> | 注释单行 |
+| <*>#{  #}</*> | 注释多行 |
+| <*>;</*> | 结束语句，可省略 |
+</table>
+
+<%>io</%>是道里面的基本IO库，<%>io.write()</%>将其参数的结果打印到标准输出。
+从道语言1.1版开始，道语言以内置函数的方式支持了一些基本的数学函数和函数式方法。
+道语言里的其他标准函数和方法都成为了某个库或类型的成员方法，
+需要适用相应的库或类型访问。
+道里面可用的库包括：
+<%>io</%>(stdio作为io的别名被保留，以保持向后兼容)，<%>std</%>(stdlib同样被作为别名被保留)，
+<%>math</%>，<%>reflect</%>，<%>coroutine</%>,
+<%>network</%>, <%>mpi</%>（message passing interface消息传递接口）
+和<%>mtlib</%>（multi-threading library多线程库）。
+另外，大部分道数据对象都有内置的成员方法。任何数据对象或库的成员方法均可由
+<%>stdlib.listmeth( obj )</%>列出来。
+参考<link>道语言类型和库函数手册</link>。
+
+<====>基本类型</====>
+
+道语言支持以下数据类型：数字，字符串，列表，关联表（字典），类对象
+复数和数值数组等。它们可由赋值，枚举或函数调用等方式创建。每个道变量可以有
+固定的类型。
+
+<table>
+| <%>int</%>（整数） | 十进制数 | 1234 |
+|  | 16进制数 | 0xff88 |
+===
+| <%>float</%>（单精度浮点数） | 十进制数 | 12.34 |
+|  | 科学记数 | 1e-10（小写e） |
+===
+| <%>double</%>（双精度浮点数） | 十进制数 | 12.34D |
+|  | 科学记数 | 1E-10（大写E） |
+===
+| <%>complex</%>（复数） | <%>\$</%>表征虚部 | 1+3\$ |
+===
+| <%>long</%> | 大整数 | 1234L |
+===
+| <%>string</%>（字符串） | 多字节字符串(MBS) | 'mbs'（单引号） |
+|  | 宽字节字符串(WCS) | "wcs"（双引号） |
+===
+| <%>list</%>（列表） | 枚举 | { 1, 2, 3 } |
+|  | 等差序列 | { init : step : size } |
+===
+| <%>map</%>（关联表，字典） | 枚举 | { "A"=>1, "B"=>2, "C"=>3 } |
+===
+| <%>array</%>（数值数组） | 枚举向量 | [ 1, 2, 3 ] |
+|  | 等差序列 | [ init : step : size ] |
+|  | 枚举矩阵 | [ 1, 2, 3; 4, 5, 6 ] |
+|  | 复数组 | [ 1, 2\$, 3 ] |
+===
+| <%>tuple</%>（元组） | 枚举 | ( 1, 2, "abc" ) |
+|  | 带元素域名的枚举 | ( x => 1.5, y => 2.0 ) |
+</table>
+
+注1：在以等差序列创建数值数组时，<%>init</%>值也可以是一个数值数组，
+这种情况下，被创建的多维数值数组中，“第一行”将等同于<%>init</%>，
+“第二行”将等同于<%>init + step</%>，如此等等：
+<demo dao>
+a = [ [ 0 : 3 ] : 5 ];
+io.writeln( a );
+
+a = [ [ 0 : 3 ] : [ 1 : 3 ] : 5 ];
+io.writeln( a );
+</demo>
+
+注2：当不带元素域名的枚举元组时，枚举的元素数目必须不少于二，
+因为当数目少于二时，这种枚举会和算术表达式使用括号分组相混淆。
+元素数目少于二的元组可从列表或关联表映射得到，
+<code dao>
+ls = { "abc" };
+tp = (tuple<string>) ls;
+</code>
+
+为了方便，道语言支持用<*>typedef</*>来定义类型的别名，
+<demo dao>
+typedef tuple<x:float,y:float,z:float> Point3D;
+pt : Point3D = ( 1, 2, 3 );
+io.writeln( pt.x );
+</demo>
+
+<==>MBS vs WCS</==>
+单引号字符串的内部表示为<*>多</*>字节字符串(UTF-8)；
+双引号字符串的内部表示为<*>宽</*>字节字符串(Unicode).
+单引号字符串用来表示西方语言字符更有效；
+而双引号字符串用来表示东方语言如CJK(Chinese, Japanese, and Korean)字符更有效。
+这两种字符串可以混合使用，如需要，它们间会作自动转换。
+但一般情况下最好一致的使用一种。
+
+
+<====>数据储存方式</====>
+道语言有不同方式储存的数据，包括：局部、全局、类的常量和变量。
+它们可由下面的关键字或它们的组合来申明。
+<list>
+==<bf>const</bf>: 用于申明常量。取决于使用的地方，
+它可以是局部常量，也可以是命名空间或类的全局变量。
+如果被用在类定义体里，它将申明一个类常量成员。
+如果被用在函数外并没有被任何花括号所包围，
+那么它将申明一个全局常量，否则申明一个局部常量。
+==<bf>global</bf>: 用于申明全局变量;
+==<bf>var</bf>: 用于申明局部变量，或者在类定义体里申明类实例成员变量;
+==<bf>static</bf>: 用于申明静态变量，可用于函数里或类定义体里（和C++里的类似）。
+</list>
+
+<====>变量声明</====>
+<table>
+^^例子 ^含义
+| <%>变量名 = 表达式</%> | 赋值申明变量; 如果“表达式”的值的类型可以推断出来，该变量的类型将被固定为此类型 |
+| <%>变量名 : 类型名</%> | 申明固定类型的变量 |
+| <%>变量名 : 类型名 = 表达式</%> | 申明固定类型的变量并赋值 |
+</table>
+对于<*>=</*>，如果它们被用来声明常量，运算符右侧的表达式必须是可在编译时求值
+的常量表达式。另外，如果<*>=</*>
+被使用在类的定义体里声明一个成员变量，而且操作符右侧是常量表达式，那么此成员变量将被声明为
+拥有固定类型，并以该常量表达式的值作缺省值。
+
+<====>下标运算</====>
+<table>
+^形式 ^含义 ^支持类型 ^备注
+| data[i] | 单元素 | 字符串，列表，哈希表，数值数组 | 多维数值数组作一维向量处理！ |
+| data[from:to] | 下标或键区间内的元素 | 字符串，列表，哈希表，数值数组 | <%>from</%>或<%>to</%>可省略；缺省情况下，<%>from</%>是第一个下标或键, <%>to</%>是最后一个 |
+| data[list] | 列表包含的下标所对应的元素 | 字符串，列表，数值数组 ||
+| data[numarray] | 数组包含的下标所对应的元素 | 数值数组 ||
+| data[ d1, d2, ...] | 多维下标 | 多维数组 | 每个维度上的下标可是上面任一种下标形式 |
+</table>
+
+<====>运算符</====>
+
+道语言支持丰富的运算符来增强代码的表达能力。许多运算符可用于多种数据类型。
+
+<==>算术运算</==>
+
+<table>
+^运算符 ^名称 ^支持类型
+| +  | 加 | 数字，字符串，复数，数值数组 |
+| -  | 减 | 数字，字符串，复数，数值数组 |
+| *  | 乘 | 数字，复数，数值数组 |
+| /  | 除 | 数字，复数，数值数组 |
+| %  | 取余数   | 数字，数值数组 |
+| ** | 取幂     | 数字，复数 |
+| ++ | 自增 | 数字，复数，数值数组 |
+| - - | 自减 | 数字，复数，数值数组 |
+| -  | 取负 | 数字，复数，数值数组 |
+| += | 加赋值 | 数字，字符串，复数，数值数组 |
+| -= | 减赋值 | 数字，复数，数值数组 |
+| *= | 乘值乘 | 数字，复数，数值数组 |
+| /= | 除值除 | 数字，复数，数值数组 |
+| %= | 取余赋值 | 数字，数值数组 |
+</table>
+<_>备注一：对于数值数组，上表中的二元运算符作对应元素之间的运算；
+一元运算符针对每个元素作运算</_>
+
+<_>备注二：对于自增或自减运算符，前缀与后缀无区别，均产生运算后的值。</_>
+
+
+<==>数字或字符串间的比较</==>
+<table>
+^运算符 ^名称 ^支持类型
+| ==  | 相等      | 数字，字符串，复数 |
+| !=  | 不等      | 数字，字符串，复数 |
+| <   | 小于      | 数字，字符串 |
+| >   | 大于      | 数字，字符串 |
+| <=  | 小于等于  | 数字，字符串 |
+| >=  | 大于等于  | 数字，字符串 |
+</table>
+
+<==>布尔运算</==>
+<table>
+^运算符 ^名称 ^支持类型
+| &&    | 与  | 数字 |
+| \|\|  | 或  | 数字 |
+| !     | 非  | 数字 |
+</table>
+
+为了增加可读性，与或非运算符可用<%>and</%>, <%>or</%>和<%>not</%>代替。
+与或运算符运算方式跟Lua里的与或运算符运算方式一样，
+也就是，这些运算返回最后求值的运算子的值。
+这意味着，如果第一个运算子的值可以决定运算的结果，返回第一个运算子的值；
+否则，返回第二个运算子的值。
+当运算子的值均为0或1时，这种运算方式跟普通的布尔运算完全等价。
+下面的例子给出运算子是任意值的情况，
+<code dao>
+10 && 0 => 0
+0 && 10 => 0
+10 && 20 => 20
+20 && 10 => 10
+
+10 || 0 => 10
+0 || 10 => 10
+10 || 20 => 10
+20 || 10 => 20
+</code>
+在某些情况下适当使用与或运算符的运算方式可以简化代码。
+
+<==>类型操作符</==>
+
+<table>
+^操作符 ^名称 ^用法 ^
+| ?=  | 数据类型相等 | 值A ?= 值B |
+| ?<  | 数据类型属于 | 值 ?< 类型 |
+</table>
+
+<==>断定检查操作(assertion)</==>
+
+Operator 
+操作符
+<bf>??</bf>
+可用来检查上一操作是否成功，如果成功返回1，否则0。
+如果上一操作能产生值，此操作符还可带第二个操作数，
+以指定上一操作失败时可使用的替代值。
+
+<code dao>
+a = alist[i] ??   # 检查下标运算是否成功；
+b = amap[key] ??  # 检查键值运算是否成功；
+val = amap[key] ?? another  # 如果存在键，返回值，否则返回第二个操作数的值；
+</code>
+
+<==>多元赋值</==>
+
+<code dao>
+( C, A, B, ... ) = ( A, B, C, ... )
+( A, B ) = func();
+</code>
+右边的表达式必须产生一个元组或列表，它们中的每个元素被赋给左边相应的变量。
+多余的列表元素或被赋值变量将被忽略。
+
+<==>其他运算符</==>
+<table>
+| & | 比特与 |
+| \| | 比特或 |
+| ^ | 比特与非 |
+| ~ | 取互补比特XXX |
+| &= | 比特与赋值 |
+| \|= | 比特或赋值 |
+</table>
+
+<=====>逻辑与循环控制</=====>
+
+为了完成一项任务，程序经常需要根据某个条件有选择性地或反复地执行一段代码，
+这可以使用逻辑与循环控制语句来做到。
+道语言目前支持<%>if-else</%>, <%>while</%>, <%>for</%>, <%>do-until</%>,
+<%>switch-case</%>, <%>break</%>和<%>skip</%>等控制。
+
+<====>If Else</====>
+
+当某条件表达式值为真时，执行一块代码：
+<code dao>
+if( expr1 ){
+   block1;
+}elif( expr2 ){
+   block2;
+}else{
+   block3;
+}
+</code>
+
+如果条件表达式<%>expr1</%>的值为真，<%>block1</%>将被执行；
+否则如条件<%>expr2</%>为真，<%>block2</%>被执行；
+否则执行<%>block3</%>。可使用零个或多个<*>elseif / elif</*>,
+和零个或一个<*>else</*>。
+
+<code dao>
+if( 2 > 1 ) io.writeln("2 is larger than 1.") 
+</code>
+
+<====>While</====>
+
+当某条件表达式值为真时，<*>反复</*>执行一块代码：
+<code dao>
+while( expr ){
+   block;
+}
+</code>
+如果条件表达式<%>expr</%>值为真，反复执行<%>block</%>直到表达式<%>expr</%>值为假。
+
+<code dao>
+i = 0;
+while( i < 5 ){
+   io.writeln( i );
+   i ++;
+}
+</code>
+
+<====>For</====>
+道语言支持多种形式的for循环，最方便使用的是下面这种，
+<code dao>
+for( 变量 = 初值 : 步长 : 终值 ){
+   代码;
+}
+</code>
+循环将从<it>变量=初值</it>开始执行，然后每次循环后，<it>变量</it>的值按<it>步长</it>
+增加，直到<it>变量</it>的值变得大于<it>终值</it>时终止循环。
+这里<it>步长</it>可以省略，其缺省值是1。
+<it>初值</it>，<it>步长</it>和<it>终值</it>总是在循环开始前被计算。
+
+
+C/C++类型<*>for</*>循环：
+<code dao>
+for( init; condition; step ){
+   block;
+}
+</code>
+<*>for</*>语句块的执行顺序是这样的：
+
+<list>
+==执行循环初始表达式<%>init</%>；转到3；
+==执行<%>step</%>；
+==执行条件表达式<%>condition</%>；
+==检查<%>condition</%>的值：如为真，转到5，否则转到6；
+==执行<%>block</%>；转到2；
+==终止循环，开始执行循环体后面的语句。
+</list>
+
+一般情况下，C/C++类型<*>for</*>循环等价于下面的<*>while</*>循环:
+<code dao>
+init;
+while( condition ){
+   block;
+   step;
+}
+</code>
+但如果<%>block</%>包含一个不被其他循环语句包含的<*>skip</*>语句，那么上面这个<*>while</*>循环
+与C/C++类型<*>for</*>循环并不完全等价。因在<*>for</*>循环体中，<*>skip</*>只跳过<%>block</%>
+块余下的部分，而在上面的<*>while</*>循环中，<*>skip</*>将同时跳过<%>step</%>语句。
+
+
+道语言也支持Python风格的<*>for-in</*>循环：
+<code dao>
+for( item in list ){
+	block;
+}
+</code>
+
+关联表也可用在for-in循环中，这里<%>item</%>将会是一对键与值，
+<code dao>
+for( item in a_map ){
+	block;
+}
+</code>
+
+在一个for-in循环中可以使用多个in语句，但那些列表或关联表必须含有相同个数的元素，
+否则，程序将抛出例外，
+<code dao>
+for( item1 in list1; item2 in list2; ... ){
+	block;
+}
+</code>
+
+例子，
+<demo dao>
+for( i:=0; i<3; i++ ){
+	io.writeln( i );
+}
+
+hash = { "b" => 11, "a" => 22, "e" => 33, "c" => 44 };
+for( a in hash.key(); b in hash.value(); c in {1 : 1 : hash.size()-1 } ){
+	#if a == "a" break
+	io.writeln( a, "\t", b, "\t", c );
+}
+</demo>
+这个例子抛出了一个例外，因为最后那个列表的元素数目比其他第一个列表少一。
+
+<====>Do-Until</====>
+<%>do-until</%>可用于执行一段代码<%>block</%>直到某个条件<%>condition</%>满足，
+<code dao>
+do{
+	block;
+} until ( condition )
+</code>
+<code dao>
+a = 10;
+do{
+	c = 1
+	io.writeln( "here", a -- );
+}until( a == 0 )
+</code>
+
+注：当使用单个字符串作为<*>if,while,for,until</*>中的条件表达式时，
+如果字符串长度大于零，返回真值；否则返回假值。
+
+<====>Do-While</====>
+<code dao>
+do{
+	block;
+} while ( condition )
+</code>
+执行代码块<it>block</it>, 然后在条件表达式式<it>condition</it>为真
+的情况下重复执行<it>block</it>。
+
+<====>Switch-Case</====>
+<*>Switch-case</*>开关控制可基于一个表达式的值选择相应的代码块执行。它可以用来方便地实现的分支控制。
+<code dao>
+switch( exprs ){
+   case C1 : block1
+   case C2 : block2
+   case C3 : block3
+   ...
+   default: block0
+}
+</code>
+如果表达式<%>exprs</%>的值等于某个<*>case</*>语句的<%>Ci</%>，代码块<%>blocki</%>将被执行。
+这里<%>Ci</%>必须是常量，可以是不同类型的值。与C/C++不同的是，代码块<%>blocki</%>被执行后，
+程序执行将跳到<*>switch</*>块外，因此这里不需要象C/C++里那样使用<*>break</*>语句来显示跳出
+<*>switch</*>块。
+
+如果你需要对不同的<*>case</*>值都执行同一块代码，你仅需将那些<*>case</*>值放在一起：
+<code dao>
+switch( value ){
+   case C1, C2, C3 : 
+      block3
+   ...
+   default: block0
+}
+</code>
+在这种情况下，<*>case</*>值<%>C1,C2,C3</%>将对应于同一代码块<%>block3</%>。
+<demo dao>
+a = "a";
+switch( a ){
+	case 1, "a" : io.write("case 1 or a");
+	default :  io.write("case default");
+}
+</demo>
+
+道语言的switch-case结构还允许使用值区间作为case，
+这样当switch值属于这个区间时，此case块将被执行。
+需要注意的是，如果switch值属于多个相互重叠的区间，
+那么对应下界最小的区间的case块将被执行。
+<demo dao>
+switch( 5 ){
+case 1 ... 5 : io.writeln( 'case 1-5' );
+case 5 ... 10 : io.writeln( 'case 5-10' );
+case 10 ... 11 : a = 1;
+}
+</demo>
+
+<====>其他控制</====>
+<*>break</*>可用来跳出循环。<*>skip</*>可用来跳过此轮循环的余下部分，开始下轮循环。
+<*>skip</*>等价于C/C++里的<*>continue</*>。
+
+<code dao>
+for( i=0; i<5; i++ ){
+	io.writeln( i );
+	if( i == 3 ) break;
+}
+</code>
+
+<=====>输入输出</=====>
+
+大多数程序需要处理某种形式的输入与输出(IO, Input / Output)。道语言支持一些基本的IO
+功能，它们主要由标准库<*>io</*>提供。更多信息请参看
+<link>道语言库方法参考=dao_zh_std_library</link>
+
+
+例子：
+<code dao>
+# 打开写文件:
+fout = io.open( "test1.txt", "w" );
+
+# 写入文件:
+fout.write( "log(10)=", math.log( 10 ) );
+
+# 打开读文件:
+fin = io.open( "test2.txt", "r" );
+
+# 当还未读到文件末尾:
+while( ! fin.eof() ){
+	# 从文件读入一行:
+	line = fin.read(); # line包含行结束符;
+	# 写到标准输出:
+	io.write( line );
+}
+
+# 从标准输入读入一行:
+d = io.read();
+io.writeln( d );
+</code>
+
+<=====>函数</=====>
+
+函数是一可反复使用的代码块，它由关键字<*>routine</*>定义。
+它可在被使用时接受参数，参数的名称，类型和缺省值需在定义时给定。
+它也可在使用结束时返回一个或多个结果。
+考虑到一些用户习惯，关键词<*>function, sub</*>也可用来定义函数，
+其作用跟<*>routine</*>完全等同。
+
+<====>定义</====>
+<code dao>
+routine name( [ param1 [ : type | [:]= const_expr ] [, param2 [...], ... ] ] )
+{
+	[...]
+}
+</code>
+
+<demo dao>
+routine func( a, b )
+{
+   io.writeln( a, b );
+   a = 10;
+   b = "test";
+   return a, b; # return more than one results.
+}
+	
+r1, r2;
+( r1, r2 ) = func( 111, "AAA" );
+r3 = func( r1, r2 );
+io.writeln( "r1 = ", r1 );
+io.writeln( "r2 = ", r2 );
+io.writeln( "r3 = ", r3 );
+</demo>
+
+<====>命名参数传递</====>
+
+道语言函数的参数可按参数名字传递：
+<code dao>
+func( b => 123, a => "ABC" );
+</code>
+
+<====>参数类型与缺省值</====>
+
+正如道语言变量可声明为有类型的，道函数的参数也可声明为有类型，并还可声明为有缺省值。
+<code dao>
+routine MyRout( name : string, index = 0 )
+{
+   io.writeln( "NAME  = ", name )
+   io.writeln( "INDEX = ", index )
+}
+</code>
+这里参数<%>name</%>被声明为字符串，参数<%>index</%>被声明为整数，并以零为缺省值。
+如果一个函数调用使用错误的参数，或没有数据传递给没有缺省值的参数，
+将导致报错，并终止运行。
+
+
+参数缺省值可指定给参数表中的任意参数，而不管指定缺省值的参数后面的参数是否有缺省值。如，
+<code dao>
+routine MyRout2( i=0, j ){ io.writeln( i, " ", j ) }
+MyRout2( j => 10 )
+</code>
+在这种情况下，如果你想用<%>i</%>的缺省值，那么你需要将数据按参数名字传给<%>j</%>。
+
+<====>常量参数</====>
+
+要申明不为函数所修改的常量参数，只需在参数类型前添加 const 即可：
+<code dao>
+routine Test( a : const list<int> )
+{
+  a[1] = 100; # 错误!!!
+  io.writeln( a );
+}
+a = { 1, 2, 3 }
+Test( a );
+</code>
+
+<====>按引用传递参数</====>
+
+在函数调用时，如果参数名前使用了<bf>&</bf>，
+那么该参数将作为引用被传递。
+只有基本数据类型的局部变量可作为引用被传递给函数调用，‘
+并且也只有在函数参数列表里创建引用。
+<code dao>
+routine Test( p : int )
+{
+	p += p;
+}
+i = 10;
+Test( & i );
+io.writeln( i );
+</code>
+
+<====>参数聚组</====>
+
+类似于Python里，道语言也支持参数聚组（grouping），
+它由一对括号定义，将括号里的参数聚集为一组。
+当一个元组被作为参数传递给有参数聚组的函数时，
+如果与参数聚组对应的元组的元素类型与组里的参数类型相符合，
+那么该元组将被展开，并将其元素传递给组里相应的参数。
+
+<code dao>
+routine Test( a : int, ( b : string, c = 0 ) )
+{
+  io.writeln( a, b, c );
+}
+t = ( 'abc', 123 )
+Test( 0, t )
+</code>
+
+<====>函数重载</====>
+
+道语言里，函数可按参数类型进行重载。也就是可对于拥有不同参数类型的函数
+使用同样的名称，函数调用时，道虚拟机根据调用中的参数选择正确的函数来运行。
+<code dao>
+routine MyRout( index : int, name = "ABC" )
+{
+   io.writeln( "INDEX = ", index )
+   io.writeln( "NAME  = ", name )
+}
+
+MyRout( "DAO", 123 ) # 调用上例中的MyRout()
+MyRout( 456, "script" ) # 调用此例中的MyRout()
+</code>
+
+<====>匿名函数</====>
+
+在道语言里有匿名函数，是基本类型（也就是first-class function），
+他们按如下方式定义：
+<code dao>
+foo = routine( x, y : TYPE, z = DEFAULT )
+{
+   codes;
+}
+</code>
+除了以下三点不同外，这种函数的定义跟普通函数的定义完全一样：
+<list>
+==它不需要函数名，但当它被创建时，需要赋值给一个变量；
+==参数缺省值不必是常量，可以是任意表达式，该表达时将在函数被创建时求值；
+==函数体里可使用定义在外层函数的局部变量；根据变量的类型，他们的拷贝或
+引用将被输入到被创建的函数里。
+</list>
+
+例子：
+<code dao>
+a = "ABC";
+
+rout = routine( x, y : string, z = a+a ){
+    a += "_abc";
+    io.writeln( "lambda ", a )
+    io.writeln( "lambda ", y )
+    io.writeln( "lambda ", z )
+}
+
+rout( 1, "XXX" );
+</code>
+
+<====>发生器(Generator)和协程(Coroutine)</====>
+
+当一个函数被调用时，如果它函数名前有<bf>@</bf>符号，
+此调用将不执行该函数，而是返回一个发生器或协程。
+在这样的函数里，可使用<bf>yield</bf>语句来向调用者返回值。
+当<bf>yield</bf>语句被执行时，此函数的运行将被暂停，
+并将运行控制权转给其调用者，而当调用者再次重新执行
+此函数时，函数将从暂停处继续执行。
+<bf>yield</bf>语句执行完后，它将会象函数调用一样返回值，
+被返回的值就是其调用者作为参数传入的值。
+当函数运行至函数末尾或<bf>return</bf>语句后，
+函数将终止运行，并且不可续。
+
+<code dao>
+# int => tuple<int,int>
+routine gen1( a = 0 )
+{
+	k = 0;
+	while( k ++ < 3 ) a = yield( k, a );
+	return 0,0;
+}
+routine gen2( a = 0 )
+{
+	return gen1( a );
+}
+g = @gen2( 1 );
+# 第一次调用时，参数可省略，
+# 创建时用到的参数将被在第一次调用时使用：
+io.writeln( 'main1: ', g() ); 
+io.writeln( 'main2: ', g( 100 ) );
+io.writeln( 'main3: ', g( 200 ) );
+</code>
+<code dao>
+routine foo( a = 0, b = '' )
+{
+	io.writeln( 'foo:', a );
+	return yield( 2 * a, 'by foo()' );
+}
+
+routine bar( a = 0, b = '' )
+{
+	io.writeln( 'bar:', a, b );
+	( r, s ) = foo( a + 1, b );
+	io.writeln( 'bar:', r, s );
+	( r, s ) = yield( a + 100, b );
+	io.writeln( 'bar:', r, s );
+	return a, 'ended';
+}
+
+co = @bar( 1, "a" );
+   
+io.writeln( 'main: ', co() );
+io.writeln( 'main: ', co( 1, 'x' ) );
+io.writeln( 'main: ', co( 2, 'y' ) );
+# 协程已运行完，再调用将产生异常：
+io.writeln( 'main: ', co( 3, 'z' ) );
+</code>
+
+发生器和协程也可由标准方法<bf>stdlib.coroutine()</bf>来创建，
+不过这种情况下，函数必须同时使用标准方法<bf>stdlib.yield()</bf>
+来返回值。
+另外，这两种方法创建的发生器或协程有个很重要的区别。
+使用前缀<bf>@</bf>创建的发生器或协程支持类型检查，
+而使用<bf>stdlib.coroutine()</bf>创建的不支持。
+
+<=====>类和面向对象编程</=====>
+
+道语言对面向对象编程(object-oriented programming, OOP)有良好的支持。
+道语言类使用关键字<*>class</*>定义。
+一个类就是一组变量与函数的集合的抽象表示，这些变量和函数称为类的成员；
+成员变量的值将决定该类的特性，成员函数决定了该类的行为。
+类本身是程序员定义的抽象类型，它的值即实例就是一个具体的数据集合，此集合
+包含了类定义的成员变量。
+类实例可以以函数调用的方式调用类的构造函数创建，也可通过枚举类成员变量来创建。
+类成员的访问权限可由修饰词<*>private</*>（私有），<*>protected</*>（保护）
+和<*>public</*>（公开）来限定,缺省权限为公开。
+这些修饰词后可跟也可不跟冒号。
+
+
+类与类之间可存在继承和包含关系。一个类（子类）可定义为另一个类（基类）的引申。
+子类可从基类继承某些特性，在基类的基础上扩充或专门化某些功能。类也可以包含其他类
+的实例为成员。
+
+<====>基类定义</====>
+
+<_>
+从道语言1.1开始，定义类的语法有所变化。
+现在类体将不能相函数那样接受参数，类体内也不能包含可执行语句。
+</_>
+
+
+类的定义由关键字class开始申明类的名称，
+然后在由花括号所包围的类体里，申明类的成员常量，变量
+和方法等。
+<code dao>
+class MyNumber
+{
+	private
+
+   var value = 0;
+   var name : string;
+
+	public
+
+   routine MyNumber( value = 0, s = "NoName" ){
+     value = value;
+     name = s;
+   }
+
+   routine setValue( v ){ value = v }
+   routine getValue(){ return value }
+
+   routine setValue( v : float );
+}
+
+routine MyNumber::setValue( v : float )
+{
+   value = v;
+}
+</code>
+
+类定义体里使用关键字<*>var</*>申明类的成员变量。
+同普通变量类似，类成员变量也可按下面方式申明为有固定类型，
+<code dao>
+var variable : type;
+</code>
+这里<%>type</%>必须是一类型名，这样<%>variable</%>的类型将固定为<%>type</%>的类型；
+或者<%>variable</%>必须是<%>type</%>的实例，如果<%>type</%>也是类的话。
+
+
+类的成员变量还可拥有缺省值。在类创建时，有缺省值的成员变量将被首先以缺省值填充。
+类的成员变量的缺省值可按以下方式指定，
+<code dao>
+var variable = init_value;
+var variable : type = init_value;
+</code>
+这里<%>init_value</%>也必须是一常量。
+
+
+在道语言里，类的定义体也是类的构造函数。和其他某些脚本语言里的类构造函数类似，
+道语言里的类构造函数并不是真正用来构造类实例，而是用来初始化类的成员数据。
+道语言里，类可拥有多个重载的构造函数，用来根据不同的构造函数调用参数以不同的方式初始化类实例。
+
+例子，
+<code dao>
+class MyNumber( value = 0, name = "NoName" )
+{
+	private
+   my Value = 0; # value类型为整形，缺省值为零
+   my Name : string; # name必须是字符串
+
+   Value = value;
+   self.Name = name;
+
+   public
+   routine setValue( value ){ Value = value }
+   routine getValue(){ return Value }
+
+   routine setValue( value : int );
+}
+
+routine MyNumber::setValue( value : int )
+{
+   Value = value;
+}
+</code>
+
+在类的构造函数或成员函数里，可使用一特殊变量<*>self</*>，它表示类的当前实例。
+
+
+与C++里的类成员函数定义类似，类的成员函数可在类定义体内申明，然后在类体外定义。
+不过在道语言里，类体外定义的成员函数的参数表必须和申明时的完全一致。
+Dao里，虚拟函数也可用关键词<bf>virtual</bf>来申明。
+
+
+如果一个类成员函数里没使用类成员变量，且没调用其他使用了类成员变量的成员函数，
+那么此成员函数可按如下方式调用，
+<code dao>
+classname.method(...)
+</code>
+
+<====>类实例</====>
+
+新的类实例可以由调用该类的构造函数得到，构造函数的调用方式跟普通函数调用完全一样。
+<code dao>
+obj1 = MyNumber(1);
+</code>
+类实例也可通过枚举类的成员变量创建，这种实例创建方式主要适合于比较简单的类，因为这种不需要
+复杂操作进行初始化。
+<code dao>
+obj2 = MyNumber{ 2, "enumerated" };
+</code>
+在枚举成员变量时，可指定成员的名称，
+<code dao>
+obj3 = MyNumber{
+   Name  => "enumerated";
+   Value => 3;
+};
+</code>
+
+当类实例由枚举创建时，类实例先被成员变量的缺省值填充，然后使用枚举中的数据初始化相应的
+成员变量。通过枚举创建类实例比通过调用类构造函数创建类实例要快得多，调用类构造函数有一系列
+额外开销，如参数传递，函数运行时数据的分配等。
+枚举创建实例很适合于创建大量简单类的实例。
+
+<====>类成员数据</====>
+
+正如上面提到，类的成员变量由关键字<*>var</*>在类体内申明。
+类的常量和静态成员可分别由<*>const</*>和<*>static</*>来申明。
+<code dao>
+class Klass
+{
+   const aClassConst = "KlassConst";
+   static aClassStatic;
+}
+</code>
+
+<====>Setters, Getters 和运算符重载</====>
+
+相对于给私有或保护的成员变量定义<%>setXyz()</%>或<%>getXyz()</%>方法，
+更好的方式是定义所谓的Setters和Getters，定义这样的方法使得从外部环境可以直接
+对私有或保护的成员变量进行访问，就像访问公开成员一样。
+对于成员变量<%>Xyz</%>其Setters应被定义为<bf>.Xyz=()</bf>，
+而其Getters应被定义为<%>.Xyz()</%>。
+当Setters被定义后<%>Xyz</%>可由<%>obj.Xyz=abc</%>设定；
+而当Getters被定义后<%>Xyz</%>可由<%>obj.Xyz</%>获取。
+<demo dao>
+class MyNumber0
+{
+	private
+   
+	var value = 0;
+
+	public
+
+  routine MyNumber0( v = 0 ){
+    value = v;
+  }
+
+  operator .value=( v ){ value = v; io.writeln( "value is set" ) }
+  operator .value(){ return value }
+}
+
+num = MyNumber0( 123 )
+num.value = 456
+io.writeln( num.value )
+</demo>
+
+<%>
+你也许已经猜到，通过Setters和Getters对类成员变量的访问会有比较大的运算开销。
+因此为了效率起见，需要从外部访问的成员变量应被设为公开。
+只有在必要时才用Setters和Getters，比如当你需要在那些成员变量被访问时作些额外工作时。
+</%>
+
+
+被支持重载的运算符还包括：
+<list>
+==[operator =(...)] 用作赋值运算;
+==[operator ()(...)] 用作函数调用;
+==[operator [](...)] 用作取元素;
+==[operator []=(...)] 用作设定元素;
+</list>
+其运算符的重载将载后续版本中支持。
+
+<====>重载成员方法</====>
+
+类的成员方法可以象普通函数那样被重载。类的构造函数也可被重载，给类定义于类同名的
+成员方法即可，不过在重载的类构造函数中不可使用关键词<*>my</*>来定义成员变量。
+如类<%>MyNumber</%>可作如下修改使得它只可从数字或该类的实例构造和赋值，
+<code dao>
+class MyNumber
+{
+	private
+   var value : int;
+
+   public
+   routine MyNumber( value = 0 ){ # accept builtin number as parameter
+      self.value = value;
+   }
+   # 接受MyNumber实例为参数的构造函数，类似于C++里的复制构造函数：
+   routine MyNumber( value : MyNumber ){ self.value = value.value }
+
+   operator .value=( v : int ){ value = v }
+   operator .value=( v : MyNumber ){ value = v.value }
+   operator .value(){ return value }
+}
+
+num1 = MyNumber( 123 )
+num1.value = 456
+io.writeln( num1.value )
+
+num2 = MyNumber( num1 )
+io.writeln( num2.value )
+
+num2.value = 789
+io.writeln( num2.value )
+
+num2.value = num1
+io.writeln( num2.value )
+</code>
+
+<====>类继承</====>
+<code dao>
+class ColorRBG
+{
+   var Red = 0;
+   var Green = 0;
+   var Blue = 0;
+
+   routine ColorRBG( r, g, b ){
+     Red = r;
+     Green = g;
+     Blue = b;
+   }
+   
+   routine setRed( r ){ Red = r; }
+   routine setGreen( g ){ Green = g; }
+   routine setBlue( b ){ Blue = b; }
+   
+   routine getRed(){ return Red; }
+   routine getGreen(){ return Green; }
+   routine getBlue(){ return Blue; }
+}
+
+yellow = ColorRBG( 255, 255, 0 ); # create an instance.
+</code>
+下面将定义<%>ColorRBG</%>的一个派生类，
+<code dao>
+class ColorQuad : ColorRBG
+{
+   var alpha = 0; # alpha component for tranparency.
+
+   routine ColorQuad( r, g, b, a ) : ColorRBG( r, g, b ){
+     alpha = a;
+   }
+}
+
+yellow2 = ColorQuad( 255, 255, 0, 0 ); # not tranparent.
+yellow2.alpha = 127; # change to half tranparency.
+</code>
+
+当从已有类派生新类时，基类必须放在派生类的参数列表后，并由<*>:</*>隔开。
+如果有多个基类，这基类都应被放在<*>:</*>后并被<*>,</*>隔开。
+派生类构造函数的参数可按例子所显示的方式传递给基类的构造函数。
+
+
+定义派生类时，如果只有一个父类，派生类将同时继承父类的构造函数。
+
+<=====>模块载入</=====>
+
+当一个程序变得比较大时，经常有必要将那个程序模块化，这样会使得程序的维护变得更容易。
+道语言对程序模块化有相当的支持，道的模块既可静态载入（编译时），也可动态载入（运行时）。
+道模块既可以由道语言开发，也可由C/C++语言开发。
+
+
+如果模块是由道语言开发，当模块被载入时，该模块的主代码
+（文件中不被类和函数所包含的代码）将在载入后立即被执行。
+如果模块是由C/C++语言开发，当模块被载入时，该模块的入口函数（<%>DaoOnLoad()</%>）
+将在载入后立即被执行。
+当该模块被再次载入时，上次载入的模块数据将被使用，如果模块是由道语言开发，
+那么该模块的主代码将被再次执行。
+
+<====>编译时载入</====> 
+
+编译时模块载入由关键词<%>load</%>完成，最简单的方式是：
+<code dao>
+load MyModule; # 或：load "MyModule";
+</code>
+这样载入时，道虚拟机将先在当前目录里然后在道库目录里寻找<%>MyModule.dao</%>，
+如果找到则载入，否则再寻找<%>MyModule.so</%>或<%>MyModule.dll</%>。
+
+
+模块所在的相对路径也可在<%>load</%>语句中指定：
+<code dao>
+load MyPath.MyModule; # 等价于: load "MyPath/MyModule";
+</code>
+这种情况与前面类似，只不过道虚拟机将先在当前目录和道库目录里寻找子目录<%>MyPatch</%>
+然后检查该目录里是否有相应于<%>MyModule</%>的模块文件。
+模块的绝对路径必须以字符串的形式指定。
+
+
+以上面的方式载入模块，模块中的所有全局常量，变量，函数，类和C/C++类型都将被输入到
+当前的命名空间。为了限制被输入的数据对象，可使用<%>import</%>：
+<code dao>
+load MyModule import name1, name2;
+</code>
+这样只有名字出现在列表中的全局数据对象被输入到当前命名空间。
+
+
+如果你不希望模块中的全局数据对象被输入到当前命名空间，可以这样作：
+<code dao>
+load MyModule as MyNS1;
+load MyModule import name1, name2, name3 as MyNS2;
+</code>
+这样名为<%>MyNS1</%>和<%>MyNS2</%>的命名空间将被创建，
+而模块中的全局数据对象将被输入到相应的命名空间。
+而后，那些数据对象可被这样访问：<%>MyNS1.xyz</%>或<%>MyNS1.xyz(...)</%>。
+
+
+某些情况下，C/C++模块可能依赖于另一些C/C++模块，这些被依赖的模块
+可使用<%>require</%>指定，
+<code dao>
+load MyModule require AnotherMod1, AnotherMod2;
+</code>
+<%>require</%>后面的模块名必须是不带目录和后缀的模块文件名。
+如果有多个从不同目录载入的模块拥有同样的模块文件名，
+只有最后被载入的那个被<%>require</%>使用。
+
+<====>运行时载入</====> 
+
+运行时载入模块可使用标准库里的函数<%>stdlib.load( mod )</%>，
+这个函数的参数<%>mod</%>必须是模块名称（可以包含路径）。
+那个模块中的全局数据对象将被输入到当前命名空间。
+
+<====>模块目录管理</====> 
+
+在模块载入时，如果模块的相对目录被给定，那么这个目录将从当前目录
+（缺省的当前目录为道虚拟机开始运行时的目录）开始查找，然后在库目录表中查找。
+在库目录表中查找时，后加入的目录将先被查找。
+当前目录和库目录表可在编译时有<%>@PATH(+-path)</%>设定：
+
+<list>
+--设定当前目录，
+<code dao>
+@@PATH( "/home/guest" )
+</code>
+
+--添加目录到库目录表里（加到其他目录之前），
+<code dao>
+@@PATH( + "./mypath/" )
+</code>
+如果添加的是相对目录，那么这个目录将被检查是否是当前目录或库目录之一的子目录，
+如果是，这个目录将被添加。
+如果这个目录里有名为<%>addpath.dao</%>文件，这个文件也将被执行。
+因此，如果此目录的子目录也需要被加入到库目录表里，
+那么这些子目录可用<%>@@PATH()</%>列在<%>addpath.dao</%>文件里，
+这样，当此目录被添加到库目录表里时，它的子目录也被自动地加入到库目录表里。
+<%>addpath.dao</%>文件示例，
+<code dao>
+# Sample addpath.dao file:
+@@PATH( + "subdir1" )
+@@PATH( + "subdir2" )
+@@PATH( + "subdir1/subsub" )
+...
+</code>
+
+--从库目录表里删除目录，
+<code dao>
+@@PATH( - "./mypath/" )
+</code>
+同样地，当该目录里含有<%>delpath.dao</%>文件时，该文件将被执行，
+可用来将该目录下已被添加到库目录表里子目录从库目录里删除。
+</list>
+
+缺省情况下，下列目录将被按顺序加入到库目录表里：
+<list>
+== 系统目录<%>/usr/lib/dao</%> （或Windows下的<%>C:\dao</%>）；
+== 用户目录<%>~/dao</%>；
+== 环境变量<%>DAO_DIR</%>所指定的目录，如果存在此环境变量的话。
+</list>
+前面已提过，在模块载入时，后加入的目录将被先查找。
+
+<=====>编程小提示</=====>
+
+<====>处理命令行参数</====>
+
+道语言里，命令行参数由两个全局变量保存：<%>CMDARG</%>和<%>ARGV</%>。
+<%>CMDARG</%>是一个关联表，将参数名和参数序号映射到参数值；
+而<%>ARGV</%>是一列表，按顺序保存参数值。
+例如，如果由命令行执行<%>dao cmdarg.dao -arg1 -arg2 abc -arg3=def arg4=10</%>，
+那么<%>CMDARG</%>和<%>ARGV</%>将包含以下元素：
+<code dao>
+CMDARG = { arg1 => arg1, arg2 => abc, arg3 => def, arg4 => 10, 1 => cmdarg.dao, 2 => arg1, 3 => abc, 4 => def, 5 => 10 }
+ARGV = { cmdarg.dao, arg1, abc, def, 10 }
+</code>
+命令行参数解析规则，
+<table>
+^参数形式  ^解析出的参数名 ^解析出的参数值 ^
+| -arg | arg | arg |
+| -arg value | arg | value |
+| -arg=value | arg | value |
+| arg=value | arg | value |
+| - -arg | arg | arg |
+| - -arg value | arg | value |
+| - -arg=value | arg | value |
+</table>
+虽然你可以使用<%>CMDARG</%>和<%>ARGV</%>来进行命令行参数处理，
+道语言支持另一种更简单明了的方式处理命令行参数。
+实际上，你并不需要专门处理命令行参数，你所要做的就是定义一个
+<%>main()</%>函数，然后将所希望接受的命令行参数名用作函数参数名，
+并将所希望接受的命令行参数类型用作函数参数类型。
+这样当程序被执行时，<%>main()</%>函数将被自动调用，
+并且命令行参数将被作为函数参数传递给<%>main()</%>函数。
+如果命令行参数数目或类型不符合<%>main()</%>函数的参数数目或类型，
+程序将被终止执行，<%>main()</%>函数文档将被打印到屏幕。
+如果一个命令行参数可有缺省值，那么这个值可作为函数参数的缺省值设定。
+<code dao>
+# the main function for script.dao:
+routine main( name : string, index=0 )
+#{
+	main()函数的文档，可包含如何使用此程序的信息：
+	使用：dao script.dao name=abc [index=0]
+#}
+{
+	...
+}
+</code>
+对于这个例子，这个程序被执行时，它命令行参数必须有一字符串， 还可有一数字。
+因此，它必须按以下方式被执行：
+<code dao>
+dao script.dao xyz
+dao script.dao xyz 10
+dao script.dao name=xyz index=10
+dao script.dao index=10 name=xyz
+...
+</code>
+
+<====>类型映射</====>
+
+通过类型映射，大部分道基本数据类型可以方便转换为其他数据类型，例如：
+<demo dao>
+num = 123456789;
+str = (string) num;
+ls = (list<int>) str;
+ar = (array<int>) ls;
+tup = (tuple<float,float>) ls[0:1];
+io.writeln( num );
+io.writeln( str );
+io.writeln( ls );
+io.writeln( ar );
+io.writeln( tup );
+
+ar += 'a'[0] - '1'[0];
+ls = (list<int>) ar;
+str = (string) ls;
+io.writeln( ar );
+io.writeln( ls );
+io.writeln( str );
+
+ar2 = [ [ 65 : 3] : 5 ];
+ls2 = (list<list<int> >) ar2;
+ls3 = (list<string>) ar2;
+ls4 = (list<string>) ls2;
+io.writeln( ar2 );
+io.writeln( ls2 );
+io.writeln( ls3 );
+io.writeln( ls4 );
+</demo>
+
+
+<comment>
+
+<====>文本处理（无正则表达式）</====>
+
+Text processing with regular expressions is an ddvanced topic which is not covered
+by this document. This section will give some tips for text processing using
+string methods and other methods related to string.
+There are two very useful string methods: <%>split()</%> and <%>tokenize()</%>.
+
+<===>split()</===>
+into a list of sub-strings.
+<code dao>
+split( sep : string, quote="", rm=1 ) => list<string>
+split( self : string, sep : string, quote="", rm=1 ) => list<string>
+</code>
+Split the string by seperator <%>sep</%>, and return the tokens as a list. 
+Quotation symbols may also be specified to avoid breaking the string inside 
+a pair of quotes. If the quotations symbols appear in the
+begin and end of a token and <%>rm</%> is true, they are removed.
+The seperators are not included in the result list.
+<demo dao>
+str1 = "dao programming language";
+io.writeln( str1.split( " " ) );
+io.writeln( str1.split( "ming" ) );
+
+str2 = "dao \"programming language\"";
+io.writeln( str2.split( " ", "\"" ) );
+</demo>
+
+<===>tokenize()</===>
+<code dao>
+tokenize( seps : string, quotes="", backslash=0 ) => list<string>
+tokenize( self : string, seps : string, quotes="", backslash=0 ) => list<string>
+</code>
+Tokenize the string by a set of separators. 
+Each character in <%>seps</%> is treated as a separator.
+Quotation symbols may also be specified to avoid breaking the string inside a pair of quotes.
+If <%>backslash</%> is true, the separators and quotes preceded by a backslash are considered as normal characters.
+The separators, quotes and backslashes are not removed from the result tokens.
+If <%>simplify</%> is true, the blank spaces are removed from the beginning and end of
+each token, and then empty tokens are remove from the resulting list.
+<demo dao>
+str = "res=(va+vb)*strlen(\"abc + xyz\\\"+123\\\"\")"
+io.writeln( str.tokenize( " ()=+-*%" ) );
+io.writeln( str.tokenize( " ()=+-*%", "\"" ) );
+io.writeln( str.tokenize( " ()=+-*%", "\"", 1 ) );
+str = "res = ( va + vb ) * ( vc - vd )"
+io.writeln( str.tokenize( "()=+-*%", "\"", 1 ) );
+io.writeln( str.tokenize( "()=+-*%", "\"", 1, 1 ) );
+</demo>
+
+<====>列表排序与定级</====>
+<====>Numeric Array (apply() and noapply())</====>
+
+</comment>

@@ -1,0 +1,137 @@
+
+<title>Simple Document Marking Language</title>
+
+Simple Document Marking Language (SDML, a tentative name),
+is a simple marking up language developed for writing documentation for Dao.
+SDML uses simple syntax to specify the elements of a document,
+which can be then converted to a Latex document (then PDF) or
+a HTML document.
+SDML is also the basic format used to prepare the website content 
+of <link>daovm.net</link>.
+
+
+Basic elements of SDML:
+<list>
+-- Document title: <bf><title>example</title></bf>;
+
+	One can optional use the followings, which have effects (currently)
+	only when the document is converted to Latex document, to set the type
+	of document.
+	<list>
+	== <bf><article>example</article></bf>;
+	== <bf><report>example</report></bf>;
+	== <bf><book>example</book></bf>;
+	</list>
+
+-- Author name: <bf><author>somebody</author></bf>;
+-- Chapter or section name: <bf>\<===\>section\</===\></bf>;
+
+	There can be one or more <bf>=</bf> marks in the tag.
+	The nesting level is corresponding to the length of the tag.
+
+-- Font: bold, <bf><bf\>text</bf\></bf>; italic, <bf><it\>text</it\></bf>;
+
+-- Link: <bf><link\>text=url</link\></bf>;
+
+	In the case that this format is used on the Dao website,
+	if <bf>url</bf> contains only letters, digits and underscore mark,
+	<bf>url</bf> is interpreted as a named web page,
+	otherwise it is interpreted as a HTTP URL.
+
+<code sdml>
+<link>Dao Documentations=document</link>
+<link>daovm.net=http://www.daovm.net</link>
+</code>
+<link>Dao Documentations=document</link>
+
+<link>daovm.net=http://www.daovm.net</link>
+
+-- Image: <bf>\<image\>name\</image\></bf>;
+
+	In the case that this format is used on the Dao website,
+	if <bf>url</bf> contains only letters, digits and underscore mark,
+	<bf>url</bf> is interpreted as a named image (uploaded image),
+	otherwise it is interpreted as the HTTP URL of an image.
+
+<code sdml>
+<image>Test</image>
+<image>images/calendar_cell.png</image>
+<image>http://daovm.net/images/calendar_cell.png</image>
+</code>
+
+-- List: <bf>\<list\>items\</list\></bf>;
+
+	Use <bf>==</bf> (for ordered list) or <bf>--</bf> (for un-ordered list)
+	to list the items.
+
+	Ordered list:
+<code sdml>
+<list>
+== item1
+== item2
+</list>
+</code>
+	This will give:
+	<list>
+	== item1
+	== item2
+	</list>
+
+	Un-ordered list:
+<code sdml>
+<list>
+-- item1
+-- item2
+</list>
+</code>
+	This will give:
+	<list>
+	-- item1
+	-- item2
+	</list>
+
+-- Table: <bf>\<table\>cells\</table\></bf>;
+
+	<bf>\^</bf> can be to mark the headers of a table;
+	<bf>\|</bf> to define the cells of a table;
+	and <bf>===</bf> can be use to mark a row break.
+<code sdml>
+<table>
+^ Header1 ^ Header2 ^
+| Cell11  | Cell12  |
+===
+| Cell21  | Cell22  |
+| Cell31  | Cell32  |
+</table>
+</code>
+	This will give:
+	<table>
+	^ Header1 ^ Header2 ^
+	| Cell11  | Cell12  |
+	===
+	| Cell21  | Cell22  |
+	| Cell31  | Cell32  |
+	</table>
+	The row of headers is optional.
+
+-- Text citing: <bf><cite\>text</cite\></bf>;
+<cite>
+text
+</cite>
+-- Source code highlighting: <bf><code lang\>source</code\></bf>;
+
+	At this moment, <bf>lang</bf> can be <bf>dao</bf>, <bf>cpp</bf>,
+	<bf>bnf</bf> or <bf>sdml</bf>, other languages will be supported
+	in the future.
+
+<code sdml>
+<code dao>
+stdio.println( 'hello world!' );
+</code>
+</code>
+This will give:
+<code dao>
+stdio.println( 'hello world!' );
+</code>
+</list>
+

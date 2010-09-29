@@ -1,0 +1,94 @@
+
+<article>Installation of Dao Virtual Machine (DVM)</article>
+
+<===>Compiling and Installation</===>
+
+Under Linux with GCC compiler, simply type:
+<code dao>
+shell: make
+shell: make install
+</code>
+This will compile the DVM with most features enabled and install it at <*>/usr/local/dao</*>. 
+
+
+One may modify the Makefile to change the compiler, 
+or disable some Dao language features, or change the installation location.
+
+
+Under Windows, it can be compiled with MinGW Developer studio and Microsoft Visual Studio Express.
+One just has to create a project and add the source files (excluding daoMaindl.h) 
+into the project, and then add additional preprocess definitions such as,
+<code dao>
+-DDAO_WITH_AFC,
+-DDAO_WITH_JIT,
+-DDAO_WITH_MPI,
+-DDAO_WITH_MACRO,
+-DDAO_WITH_THREAD,
+-DDAO_WITH_NETWORK,
+-DDAO_WITH_NUMARRAY
+</code>
+and add additional linking libraries: <%>msvcp60</%> for MinGW, 
+and <%>ws2_32</%>, <%>winmm</%>, <%>msvcprt</%> for MS visual studio.
+Now the DVM should be built without problem.
+
+
+A makefile for compiling using MinGW under Windows is also included in the release.
+
+
+Compiling the DVM under OS X is also possible.
+
+<===>Configuring Paths</===>
+
+The paths should be properly configured for Dao to load modules.
+To have an idea how the paths work for this purpose, one should
+refer to the <%>Path Management</%> section in the quick guide documentaion.
+Basically, one need create one file named <%>addpath.dao</%> with the following line:
+<code dao>
+@@PATH( + "YOUR_INSTALLATION_FOLD" )
+</code>
+and put it at one of the following 3 locations:
+<list>
+== /usr/lib/dao for linux, or C:\\dao for windows;
+== your_home_dir/dao
+== path defined by environment variable DAO_DIR
+</list>
+If you want to use the binaries coming with the distribution package, you may simple put
+the fold of the unzipped package as the <%>YOUR_INSTALLATION_FOLD</%> 
+in that <*>addpath.dao</*> file.
+
+<===>Extra Configuration</===>
+
+Extra configuration can be set by creating file(s) named <it>dao.conf</it>.
+When the Dao interpreter is started, it will search in the following
+folds for a file with such name,
+if found, the current configuration of the interpreter
+will be overrided by what is specified in the file.
+<list>
+== /usr/local/dao for Linux (or C:\\dao for Windows);
+== directory specified by the environment variable <it>DAO_DIR</it>;
+== the current directory where the interpreter is invoked.
+</list>
+All the found files with such name in these folds are used to change
+the configuration, so that, the first found <it>dao.conf</it> file
+can override the internal configuration;
+and the following <it>dao.conf</it> files can override the configurations
+set by the previous files.
+
+
+An example configuration file looks like,
+<code dao>
+# number of CPUs
+cpu = 2
+
+# just in time compiling
+jit = yes
+
+# typed virtual machine code
+typedcode = yes
+
+# incremental compiling
+incompile = yes
+
+# safe running mode
+safe = no
+</code>

@@ -1,0 +1,239 @@
+
+<title>Database Handling by DaoDataModel</title>
+<author>Limin Fu (phoolimin@gmail.com)</author>
+
+
+<bf>DaoDataModel</bf> is a module to map Dao classes to
+database tables (currently works only with MySQL).
+With such mapping, the handling of database with Dao
+becomes very simple.
+
+
+For example, there is such class,
+<code dao>
+load DaoDataModel;
+# class that can be mapped to a database table
+class Gene
+{
+	my id   : INT_PRIMARY_KEY_AUTO_INCREMENT;
+	my name : VARCHAR100;
+	my seq  : TEXT;
+}
+</code>
+Here, the type <bf>INT_PRIMARY_KEY_AUTO_INCREMENT,VARCHAR100,TEXT</bf>
+are defined by the DaoDataModel module, to allow the module
+interprete properly the class fields and corresponding database record fields.
+Those types provided by DaoDataModel are defined as aliases of 
+the built-in data types,
+<list>
+--<bf>int</bf> type as integer fields:
+<code dao>
+INT
+TINYINT
+SMALLINT
+MEDIUMINT
+INT_PRIMARY_KEY
+INT_PRIMARY_KEY_AUTO_INCREMENT
+</code>
+--<bf>string</bf> type as character fields:
+<code dao>
+CHAR10
+CHAR20
+CHAR50
+CHAR100
+CHAR200
+VARCHAR10
+VARCHAR20
+VARCHAR50
+VARCHAR100
+VARCHAR200
+</code>
+--<bf>string</bf> type as text and blob fields:
+<code dao>
+TEXT
+MEDIUMTEXT
+LONGTEXT
+BLOB
+MEDIUMBLOB
+LONGBLOB
+</code>
+</list>
+
+<==>Connect Database</==>
+
+For MySQL database, one can connect to the database by,
+<code dao>
+# connect database
+model = DataModel( 'dbname', 'host', 'user', 'password' );
+</code>
+The prototype of DataModel() is,
+<code dao>
+DataModel( name : string, host='', user='', pwd='' )=>DataModel
+</code>
+
+<==>Create Table</==>
+If the data table corresponding to class <bf>Gene</bf> does not exist yet,
+one can create it by,
+<code dao>
+# create a table for class Gene
+model.CreateTable( Gene );
+</code>
+A table named <bf>Gene</bf> will be created.
+
+
+Prototype of the method,
+<code dao>
+DataModel.CreateTable( klass )
+</code>
+
+If a class has a special constant string field named <bf>__TABLE_NAME__</bf>,
+the name of database table corresponding to the class will be the value of 
+<bf>__TABLE_NAME__</bf>.
+A class may also contain another constant string field named
+<bf>__TABLE_PROPERTY__</bf>,
+which indicates the property of the table or contains extra constraints
+on some fields.
+
+<==>Insert Record</==>
+Then one can insert to the database an instance of class <bf>Gene</bf> 
+as a record by,
+<code dao>
+gene = Gene{ 0, 'RAS', '...AATCCG...' };
+# insert a record into the table
+model.Insert( gene );
+</code>
+The module knows which table to insert. After inserting, 
+if the class has a field with type <bf>INT_PRIMARY_KEY_AUTO_INCREMENT</bf>,
+that instance field (in this case it is <it>gene.id</it>) will be filled
+with id of the inserted record.
+
+
+One can also insert multiple records at once by pass a list of class instances
+to the <bf>Insert()</bf> method.
+This method will return a database handler, with which one can insert more
+records to avoid repeatedly compile SQL statements internally.
+
+
+Similarly there is Delete(),
+<code dao>
+DataModel.Insert( object ) => Handler
+DataModel.Delete( object ) => Handler
+</code>
+
+<==>Query Database</==>
+Then one can perform querying by,
+<code dao>
+# SELECT * FROM Gene WHERE name = 'RAS';
+hd = model.Select( Gene ).Where().EQ( 'name', 'RAS' );
+# query and store the result into 'gene' object:
+hd.QueryOnce( gene );
+</code>
+this module uses a series of method calls to contruct a SQL statement
+and then compile it. 
+The following two methods can be use to create a handler for
+thse two types of query,
+<code dao>
+DataModel.Select( object, ... ) => Handler
+DataModel.Update( object, ... ) => Handler
+</code>
+These two methods can take a class or a list of classes
+as parameters, which indicate which database tables to be queried.
+And after each of the class parameter, there can follow an integer,
+which indicates how many fields to be queried for that class/table.
+For example,
+<code dao>
+hd = model.Select( Gene, 2 ).Where().EQ( 'name', 'RAS' );
+</code>
+this will generate such SQL statement,
+<code dao>
+# SELECT id,name FROM Gene WHERE name = 'RAS';
+</code>
+
+Then the handler can call the following methods to prepare the SQL
+statement for a query,
+<code dao>
+# WHERE
+Handler.Where( ) => Handler
+# SET field=value, or, SET field=?
+Handler.Set( field : string, value=nil ) => Handler
+# SET field=field+value, or, SET field=field+?
+Handler.Add( field : string, value=nil ) => Handler
+# field=value, or, field=?
+Handler.EQ( field : string, value=nil ) => Handler
+# field!=value, or, field!=?
+Handler.NE( field : string, value=nil ) => Handler
+Handler.GT( field : string, value=nil ) => Handler
+Handler.GE( field : string, value=nil ) => Handler
+Handler.LT( field : string, value=nil ) => Handler
+Handler.LE( field : string, value=nil ) => Handler
+# SET table.field=value, or, SET table.field=?
+Handler.Set( table, field : string, value=nil ) => Handler
+Handler.Add( table, field : string, value=nil ) => Handler
+Handler.EQ( table, field : string, value=nil ) => Handler
+Handler.NE( table, field : string, value=nil ) => Handler
+Handler.GT( table, field : string, value=nil ) => Handler
+Handler.GE( table, field : string, value=nil ) => Handler
+Handler.LT( table, field : string, value=nil ) => Handler
+Handler.LE( table, field : string, value=nil ) => Handler
+# field IN ( values ), or, field IN ?
+Handler.In( field : string, values={} ) => Handler
+Handler.In( table, field : string, values={} ) => Handler
+# OR
+Handler.Or( ) => Handler
+Handler.And( ) => Handler
+Handler.Not( ) => Handler
+# (
+Handler.LBrace( ) => Handler
+# )
+Handler.RBrace( ) => Handler
+# table1.field1=table2.field2
+Handler.Match( table1, table2, field1='', field2='' ) => Handler
+# ORDER BY field ASC/DESC
+Handler.Sort( field : string, desc=0 ) => Handler
+# ORDER BY table.field ASC/DESC
+Handler.Sort( table, field : string, desc=0 ) => Handler
+# LIMIT limit, or, LIMIT limit OFFSET offset
+Handler.Range( limit : int, offset=0 ) => Handler
+</code>
+For the methods that take an optional parameter <it>value</it>,
+if it is omitted, a place holder variable will be used,
+then data can be bind to these variables by,
+<code dao>
+Handler.Bind( value, index=0 ) => Handler
+</code>
+A index can be given in the parameter list to indicate which to bind,
+if there is multiple place-holder variables. 
+If no index parameter is given, the binds will be done sequentially.
+
+
+At last these two methods can be called to perform the query,
+<code dao>
+Handler.Query( ... ) => int
+Handler.QueryOnce( ... ) => int
+</code>
+These two method will take class instance(s) as parameter,
+and store the resulting data in the members of the class instances,
+if the query is successful. These method will return 1 when query
+is successful, otherwise return 0.
+If the query hits multiple records, Handler.Query() can be called
+repeatedly to get the result.
+After calling Handler.Query(), it is necessary to call Handler.Done()
+to reset the model. If Handler.QueryOnce() is called, there will be no
+such necessary.
+
+<==>Other Methods</==>
+<code dao>
+DataModel.Query( sql : string ) => int
+</code>
+Perform a arbitrary query, return the status of the query.
+
+<code dao>
+Handler.sqlstring( ) => string
+</code>
+Return the SQL statemenet as a string.
+
+<code dao>
+Handler.Insert( object ) => int
+</code>
+Use the handler created by <it>DataModel.Insert()</it>
+to insert more records.

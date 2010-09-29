@@ -1,0 +1,315 @@
+
+<title>Dao built-in methods for functional-style programming</title>
+
+(For version 1.1)
+
+<====>General Syntax</====>
+
+The general syntax for such built-in methods is the following,
+<code dao>
+RESULT = METHOD( PARAMETER ) -> |VARIABLE| { EXPRESSION }
+</code>
+where METHOD can be any of,
+<list>
+==map
+==reduce/fold
+==unfold
+==select
+==index
+==count
+==each
+==repeat
+</list>
+It can also be <bf>string</bf>, <bf>array</bf> or <bf>list</bf> for data construction
+with such syntax. Another two methods adopted such syntax are <bf>sort</bf> and <bf>apply</bf>.
+
+
+Depends on the METHOD, the PARAMETER can be one or more list, array, or any other types.
+Optional VARIABLE can be declared according to the METHOD and PARAMETER,
+if <bf>|VARIABLE|</bf> is not present, <bf>x,y,z</bf> and/or <bf>i,j</bf> will be
+declared automatically when necessary.
+
+
+The EXPRESSION placed inside the braces is the (inlined) function to be applied to 
+the PARAMETER or the items of PARAMETER if it is a list or array,
+which is passed to the EXPRESSION through parameter(s) declared in VARIABLE
+or declared automatically.
+
+
+A simple example,
+<code dao>
+a = { 1, 2, 3 }
+b = map( a ) -> { 10*x } # produce { 10, 20, 30 }
+</code>
+which is equivalent to,
+<code dao>
+a = { 1, 2, 3 }
+b = map( a ) -> |x| { 10*x }
+</code>
+
+
+When multiple lists/arrays are used as parameters,
+the variables can be declared accordingly as the items of the lists/arrays,
+<code dao>
+a = { 1, 2, 3 }
+b = { 11, 22, 33 }
+c = map( a, b ) -> |x,y| { x + y }
+</code>
+in this example, 
+<it>x</it> is declared as the item of <it>a</it>
+and
+<it>y</it> as the item of <it>b</it>.
+Here <it>|x,y|</it> can be omitted.
+
+
+Multiple expressions can also be used and must be separated by commas,
+and the result of the expressions will be a tuple,
+<code dao>
+a = { 1, 2, 3 }
+b = map( a ) -> { 10*x, x+10 } # produce { (10, 11), (20, 12), (30, 13) }
+</code>
+
+
+To use statements inside the braces, it is necessary to place a 
+<bf>return</bf> keyword before EXPRESSION as the following,
+<code dao>
+... -> |VARIABLE| { BLOCK return EXPRESSION }
+</code>
+for example,
+<code dao>
+a = { 1, 2, 3 }
+b = map( a ) -> |x| {
+  u = 10*x;
+  v = x+10;
+  if( u < v ) u += v;
+  return u*v
+}
+</code>
+No other <bf>return</bf> keyword can be used.
+
+
+Function composition can be done by appending more <bf>->|...|{...}</bf>
+structures one after another,
+<code dao>
+RESULT = METHOD( PARAMETER )
+  -> |VARIABLE| { EXPRESSION } 
+  -> |VARIABLE| { EXPRESSION }
+  ...
+</code>
+For the VARIABLE in the <bf>->|...|{...}</bf> structures after the first,
+variables can be declared according to the EXPRESSION in the previous 
+stucture. For example,
+<code dao>
+a = { 1, 2, 3 }
+b = { 11, 22, 33 }
+c = map( a, b ) -> |x,y| { x + y, x - y } -> |u,v| { u * v }
+</code>
+Here, 
+<it>u</it> is declared as the result of <it>x+y</it>
+and
+<it>v</it> as the result of <it>x-y</it>.
+
+<====>map, reduce/fold, unfold</====>
+
+<===>map()</===>
+
+map() take one or more lists/arrays as parameter(s),
+and apply a (inlined) function to each of the items of the lists/arrays,
+then return the results of the function applications as a list/array.
+When more than one list/array are used as parameters,
+they should have the same size.
+
+
+As mentioned, map() can also take array(s) as parameters, 
+and return an array as result.
+If a simple scalar type is returned as result in the (last) braces,
+an array of the same shape as the (first) parameter array.
+If a tupe, list, or array etc. is returned as result,
+the final resulting array has additional dimensions over
+the (first) parameter array, such that, the result of each
+function application is used to set the value of the corresponding slice
+of the final array.
+
+
+Some examples on list have been given in the previous section,
+here some examples on array will be shown,
+<code dao>
+a = [ 1, 2; 3, 4 ]
+b = map( a ) -> { 10*x } # produce [ 10, 20; 30, 40 ]
+</code>
+<code dao>
+a = [ 1, 2; 3, 4 ]
+b = [ 5, 6; 7, 8 ]
+c = map( a, b ) -> { x, y }
+# or
+c = map( a, b ) -> { [x, y] }
+# or
+c = map( a, b ) -> { {x, y} }
+# produce 3d array: [ [ [1, 5], [2, 6] ], [ [3, 7], [4, 8] ] ]
+</code>
+
+
+The zip() function which is often seen in some other languages is
+not supported in Dao, because it can easily achieved by map(),
+<code dao>
+a = { 1, 2, 3 }
+b = { 11, 22, 33 }
+c = map( a, b ) -> { x, y }
+</code>
+which will return a list of tuples "zipping" the two list.
+Clearly it can also be used to zip multiple lists.
+
+<===>reduce/fold()</===>
+
+fold() with its alias reduce(), takes a list/array and an initial
+value (the accumulator) as parameter, and apply the (inlined) function 
+to each item of the list/array and the accumulator,
+and then the value of the accumulator after the last function application
+is returned. If the second parameter is omitted, 
+the first item of the list is used as the initial value,
+and the function is applied to the rest of items.
+
+
+By default, the item of the list/array is passed as parameter/varaible <bf>x</bf>
+and the initial value (accumulator) as <bf>y</bf>, to the function application.
+Other parameter/variable names can also be used explicitly as described before.
+
+<code dao>
+a = { 1, 2, 3 }
+b = fold( a, 10 ) -> { x + y } # produce 16
+b = fold( a ) -> { x + y } # produce 6
+</code>
+
+<===>unfold()</===>
+
+unfold() takes an initial value as parameter,
+and generates a list from this initial value,
+by applying the function to the initial value and then to
+the result of the previous function application
+until a condition become false,
+<code dao>
+a = unfold( 5 ) -> |x| { while x > 0 return x - 1 }
+# produce: { 4, 3, 2, 1, 0 }
+</code>
+where the condition expression must be placed after the <bf>while</bf> keyword,
+and the <bf>return</bf> keyword must also be used after the condition
+expression and before the expression(s) to generate results.
+
+
+Statements can also be used before the <bf>while</bf> keyword.
+<code dao>
+a = unfold( 5 ) -> |x| {
+  stdio.println(x)
+  while x > 0 return x - 1
+}
+</code>
+
+<====>select, index, count</====>
+
+<bf>select, index, count</bf> are the methods
+test a condition as function application over the items of 
+the parameter lists/arrays, and select, or index, or count
+the items that makes the condition true.
+
+<code dao>
+a = { 10, 20, 30 }
+b = select( a ) -> { x >= 20 } # produce: { 20, 30 }
+c = index( a ) -> { x >= 20 } # produce: { 1, 2 }
+d = count( a ) -> { x >= 20 } # produce: 2
+</code>
+
+These methods can also be applied to multiple lists,
+or to array(s),
+<code dao>
+a = { 10, 20, 30 }
+b = { 'a', 'b', 'c' }
+c = select( a, b ) -> { 1 } 
+# effectively as zip, produce: { ( 10, a ), ( 20, b ), ( 30, c ) }
+</code>
+
+<====>each, repeat</====>
+
+<bf>each()</bf> is the same as <bf>map()</bf> except that
+no result is returned.
+
+
+<bf>repeat</bf> takes an integer number as parameter,
+and evaluate the BLOCK/EXPRESSION that number of times.
+
+<====>string, array, list</====>
+
+Based on the same idea as the above functional methods,
+<bf>string, array, list</bf> are provided as convenient
+way to contruct complex string, array, list with simple
+and flexible codes.
+
+
+These methods take a number as parameter, and evaluate
+the (inlined) function this number of times, and return
+the results as concatenated string, list or array.
+By default, the index of the function evaluation
+is passed as <bf>i</bf> to the function.
+Of course the variable for index can also be declared explicitly.
+
+<code dao>
+a = string( 5 ) -> { (string)i + 'a' }
+# produce: 0a1a2a3a4a
+
+b = list( 5 ) -> { (string)i + 'a' }
+# produce: { 0a, 1a, 2a, 3a, 4a }
+
+c = array( 5 ) -> |x| { 10 * x }
+# produce: [ 0, 10, 20, 30, 40 ]
+</code>
+
+Slightly more complex examples:
+<code dao>
+d = list( 3 ) -> { { 1 : (i+2) } }
+# produce: { { 1, 2 }, { 1, 2, 3 }, { 1, 2, 3, 4 } }
+
+e = array( 3 ) -> { [ 10*i+1, i+2 ] }
+# produce matrix: [ [1, 2], [11, 2], [21, 3] ]
+</code>
+
+<====>sort, apply</====>
+
+<===>sort()</===>
+
+sort() sorts a list according to a comparison function, 
+it takes a list as the first parameter and optionally a number
+as the second parameter. If the second parameter is presented, the list
+will be partially sorted such that only the first some number of items
+will be properly sorted, which can be used to search for the largest/smallest
+<it>K</it> items among a list.
+
+
+<code dao>
+a = { 3, 2, 15, 8, 25, 16, 3, 7, 1, 12, 17, 11, 0 };
+sort( a, 6 ) -> { x < y }
+</code>
+where <it>x,y</it> are declared as the variables representing
+the two items to be compared during sorting.
+These variables can be declared explicitly as well.
+
+<===>apply()</===>
+
+apply() evaluates a function for each element of an array,
+and replace the value of the element by the result of the evaluation.
+By default the variable representing the element value
+is declared automatically as <it>x</it>, and the indices
+as variables <it>i,j</it>. The can also be declared explicitly as well.
+For arrays with dimension higher than 2, one must declare
+variables explicitly to get all components of the multi-dimensional
+index passed in.
+
+<code dao>
+a = [ 10, 20, 30 ]
+apply( a ) -> { x + i }
+# a becomes: [ 10, 21, 32 ]
+
+b = [ [ 1, 2; 3, 4 ] : 3 ];
+apply( b ) -> |x,i,j,k| {
+  stdio.println( x, i, j, k );
+  return x + i*j*k;
+}
+</code>

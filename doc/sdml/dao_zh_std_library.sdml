@@ -1,0 +1,1599 @@
+<book>道语言标准库手册</book>
+<author>傅利民(phoolimin@gmail.com)</author>
+
+(适用于道语言1.1)
+
+
+此文档基于
+<link>GNU Free Documentation License</link>协议发布.
+
+<=====>介绍</=====>
+
+此文档介绍道语言的标准库和基本数据类型所提供的方法或函数。
+在参数列表里，
+<%>par : Xyz</%> 表示参数 <%>par</%> 的类型为 <%>Xyz</%>；
+<%>par = Xyz</%> 表示参数 <%>par</%> 有缺省值，其类型为 <%>Xyz</%>。
+有些方法为不同的参数类型提供了重载，这些方法都有同样的函数名，
+但带不同的参数类型。
+有些方法可用 <bf>use library</bf>
+输入到当前名字域。这样他们就可以被直接调用：
+<code dao>
+use math;
+a = cos( 1.5 );
+</code>
+
+下面文档中，函数原型一般以以下形式出现：
+<code dao>
+type.method( parameter_list )
+</code>
+但实际的函数原型定义如下：
+<code dao>
+method( self : type, parameter_list )
+</code>
+
+<=====>字符串</=====>
+
+<===>方法列表</===>
+
+<code dao>
+chop(  )
+erase( start=0, n=-1 )
+find( str : string, from=0, reverse=0 ) => int
+insert( str : string, index=0 )
+replace( str1 : string, str2 : string, index=0 )
+replace( str1 : string, table : map<string,string>, max=0 )
+expand( keys :map<string,string>, spec='$', keep=1 )
+expand( keys : tuple, spec='$', keep=1 )
+resize( size : int )
+size(  ) => int
+split( sep : string, quote="", rm=1 ) => list<string>
+tokenize( seps : string, quotes="", backslash=0, simplify=0 ) => list<string>
+tonumber( base=10 ) => double
+tolower(  ) => string
+toupper(  ) => string
+encrypt( key : string, hex=0 ) => string
+decrypt( key : string, hex=0 ) => string
+</code>
+
+字符串还提供了一些基于正则表达式的方法，请参看<link>道正则表达式</link>。
+
+<===>方法细节</===>
+
+<code dao>
+string.chop( utf=0 )
+</code>
+截掉字符串末尾的换行符。如果utf=1，不构成有效UTF-8编码的字符也将被截掉。
+
+
+<code dao>
+string.erase( start=0, n=-1 )
+</code>
+从下标start起删除n个字节的字符。
+如果n=-1，删除所有后面的字符。
+
+<code dao>
+string.find( str : string, from=0, reverse=0 ) => int
+</code>
+从下标from开始，查找子字符串<it>str</it>；
+如果reverse值非零，从后面反向查找。
+如果找到了str，返回其起始下标，否则，返回-1。
+
+<code dao>
+string.insert( str : string, index=0 )
+</code>
+在下标 <%>index</%>处插入子字符串 <%>str</%>。
+
+
+<code dao>
+string.replace( str1 : string, str2 : string, index=0 )
+</code>
+将子字符串 <%>str1</%> 替换为 <%>str2</%> 。
+如果 <%>index</%> 大于等于1，替换第 <%>index</%> 个。
+如果<%>index</%>等于零， 替换所有的<%>str1</%>。
+
+<code dao>
+string.replace( table : map<string,string>, max=0 )
+</code>
+将字符串里所出现的table的元素键字符串替换为table的元素值字符串。
+如果max为零，优先替换短的键，否则优先替换长的。
+
+<code dao>
+string.expand( keys : map<string,string>, spec='$', keep=1 ) => string
+</code>
+替换字符串中$(name)形式的占位变量。
+这里$是个特殊字符，由参数spec传入。
+对于每个占位变量，如果它的名字出现在keys的键中，那么它将被替换为
+该键的值。如果它的名字没有在keys找到，那么，
+如果keep等于零，它将被替换为空字符串，否则它将被保留。
+
+<demo dao>
+tpl = 'The quick brown $(A) jumps over the lazy $(B)';
+str = tpl.expand( { 'A' => 'fox', 'B' => 'dog' } );
+stdio.println( str );
+</demo>
+
+<code dao>
+string.expand( keys : tuple, spec='$', keep=1 ) => string
+</code>
+替换字符串中$(name)形式的占位变量。
+这里$是个特殊字符，由参数spec传入。
+对于每个占位变量，如果它的名字出现在keys的元素名中，那么它将被替换为
+该元素的值。如果它的名字没有在keys找到，那么，
+如果keep等于零，它将被替换为空字符串，否则它将被保留。
+
+<demo dao>
+tpl = 'The quick brown $(A) jumps over the lazy $(B)';
+str = tpl.expand( ( A => 'fox', B => 'dog' ) );
+stdio.println( str );
+</demo>
+
+<code dao>
+string.resize( size : int )
+</code>
+将字符串的长度变为 <%>n</%>，
+并将新增的字节填为空格字符。
+
+<code dao>
+string.size(  ) => int
+size( self : string ) => int
+</code>
+返回字符串的长度。
+
+<code dao>
+string.split( sep='', quote='', rm=1 ) => list<string>
+</code>
+分割字符串。如果分割字符串<%>sep</%>为空，将字符串按UTF-8编码分割，
+使得每个子字符串对应一个有效的UTF-8编码；
+如果不为空，则以<%>sep</%>分割标志将字符串分割为子字符串。
+如果quote包含了引号，在一对引号中出现的<%>sep</%>将不被用作分割标志。
+如果<%>rm</%>非零，分割出的子字符串首尾的引号将被除掉。
+返回一字符串列表。
+
+<code dao>
+string.tokenize( seps : string, quotes="", backslash=0 ) => list<string>
+</code>
+词句分解（译名？）：根据一组分割字符，将一个字符串分解为子字符串。
+<%>seps</%>里的每个字符都被当作一个分割字符。
+引号也可由<%>quotes</%>指定，以避免在被引号引起来的字符部分里分割。
+如果<%>backslash</%>非零，反斜杠后的分割符或引号将不做处理。
+分割字符，引号和反斜杠将在结果字符串列表里保留。
+如果<%>simplify</%>非零，那么每个结果子字符串首尾的空白字符将被移除，
+然后空子字符串也将从结果字符串列表里移除。
+
+<code dao>
+string.tonumber( base=10 ) => double
+</code>
+以<%>base</%>为进制将字符串转换为数。
+
+<code dao>
+string.tolower(  ) => string
+</code>
+将字符串里大写字母转换为小写。返回该字符串本身。
+
+<code dao>
+string.toupper(  ) => string
+</code>
+将字符串里小写字母转换为大写。返回该字符串本身。
+
+<code dao>
+string.encrypt( key : string, hex=0 ) => string
+</code>
+使用密钥<%>key</%>将字符串用XXTEA加密算法加密。
+如果<%>hex</%>非零，用16进制数字表示加密后的数据。
+返回该字符串本身。
+
+<code dao>
+string.decrypt( key : string, hex=0 ) => string
+</code>
+使用密钥<%>key</%>将XXTEA加密数据解密。
+如果<%>hex</%>非零，加密数据的每两个相邻的字符当作一个16进制数。
+返回该字符串本身。
+
+<=====>复数</=====>
+
+<===>方法列表</===>
+<code dao>
+imag( v=0.00 ) => double
+real( v=0.00 ) => double
+</code>
+
+<===>方法细节</===>
+<code dao>
+complex.imag( v=0.00 ) => double
+</code>
+如果不带参数调用，返回该复数的虚部。
+如果带参数，将该复数的虚部设为<it>v</it>，并返回原先的虚部值。
+
+<code dao>
+complex.real( v=0.00 ) => double
+</code>
+如果不带参数调用，返回该复数的实部。
+如果带参数，将该复数的实部设为<it>v</it>，并返回原先的实部值。
+
+<=====>列表</=====>
+
+<===>方法列表</===>
+
+<code dao>
+append( item : @ITEM )
+clear(  )
+dequeue(  )
+enqueue( item : @ITEM )
+erase( start=0, n=1 )
+front(  ) => @ITEM
+insert( item : @ITEM, pos=0 )
+max(  ) => tuple<@ITEM,int>
+min(  ) => tuple<@ITEM,int>
+pop(  )
+popback(  )
+popfront(  )
+push( item : @ITEM )
+pushback( item : @ITEM )
+pushfront( item : @ITEM )
+resize( size : int )
+size(  ) => int
+ranka( k=0 ) => list<int>
+rankd( k=0 ) => list<int>
+sorta( k=0 ) => list<@ITEM>
+sortd( k=0 ) => list<@ITEM>
+sum(  ) => @ITEM
+top(  ) => @ITEM
+</code>
+
+以表达式为参数的<bf>sort()</bf>方法现已被支持为一个内置函数，
+请参看<link>这里=dao_functional_methods</link>。
+
+<===>方法细节</===>
+<code dao>
+list<@ITEM>.append( item : @ITEM )
+</code>
+将<%>item</%>附加到列表末尾。
+
+这里<%>item</%>的类型为<*>@ITEM</*>，表示此类型必须跟列表所能容纳的元素类型一致，
+否则<%>item</%>将不能被添加到列表里。
+实际上，这里<*>@ITEM</*>表示一个待定类型，当一列表调用此方法时，
+<*>@ITEM</*>将被初始化为列表的元素类型，然后在检查<%>item</%>的参数类型时，
+<%>item</%>将必须匹配到<*>@ITEM</*>类型，即列表的元素类型。
+
+<code dao>
+list<@ITEM>.clear( )
+</code>
+清空列表。
+
+<code dao>
+list<@ITEM>.dequeue( )
+</code>
+将列表用作队列：取出并移除队列的首元素。
+
+<code dao>
+list<@ITEM>.enqueue( item : @ITEM )
+</code>
+将列表用作队列：将<%>item</%>添加到队列的末尾。
+
+<code dao>
+list<@ITEM>.erase( start=0, n=1 )
+</code>
+从下标<%>start</%>开始，删除<%>n</%>个元素。
+
+<code dao>
+list<@ITEM>.front( ) => @ITEM
+</code>
+取出列表的首元素。
+
+<code dao>
+list<@ITEM>.insert( item : @ITEM, pos=0 )
+</code>
+将元素<%>item</%>插入到列表的<%>pos</%>位子。
+
+<code dao>
+list<@ITEM>.max( ) => tuple<@ITEM,int>
+</code>
+返回列表的最大值及其下标。
+
+<code dao>
+list<@ITEM>.min( ) => tuple<@ITEM,int>
+</code>
+返回列表的最小值及其下标。
+
+<code dao>
+list<@ITEM>.pop( )
+</code>
+移除列表的末尾元素。
+
+<code dao>
+list<@ITEM>.popback( )
+</code>
+移除列表的末尾元素。
+
+<code dao>
+list<@ITEM>.popfront( )
+</code>
+移除列表的首元素。
+
+<code dao>
+list<@ITEM>.push( item : @ITEM )
+</code>
+将<%>item</%>附加到列表末尾。
+
+<code dao>
+list<@ITEM>.pushback( item : @ITEM )
+</code>
+将<%>item</%>附加到列表末尾。
+
+<code dao>
+list<@ITEM>.pushfront( item : @ITEM )
+</code>
+将<%>item</%>附加到列表开头。
+
+<code dao>
+list<@ITEM>.ranka( k=0 ) => list<int>
+list<@ITEM>.rankd( k=0 ) => list<int>
+</code>
+按升序或降序排名。
+如果<it>k</it>不为零，排名最小或最大的<it>k</it>个元素。
+
+<code dao>
+list<@ITEM>.resize( size : int )
+</code>
+将列表的大小改为<%>size</%>，新增的部分将被填<bf>nil</bf>值。
+
+<code dao>
+list<@ITEM>.size( ) => int
+</code>
+返回列表的大小。
+
+<code dao>
+list<@ITEM>.sorta( k=0 ) => list<@ITEM>
+list<@ITEM>.sortd( k=0 ) => list<@ITEM>
+</code>
+按升序或降序排列。
+如果<it>k</it>不为零，排列最小或最大的<it>k</it>个元素。
+
+<code dao>
+list<@ITEM>.sum( ) => @ITEM
+</code>
+返回列表的和（或连结）。列表必须是数字或字符串。
+
+<code dao>
+list<@ITEM>.top( ) => @ITEM
+</code>
+返回列表的末尾元素。
+
+<=====>映射表</=====>
+
+<===>方法列表</===>
+<code dao>
+clear(  )
+erase( from : @KEY=nil, to : @KEY=nil )
+find( key : @KEY, type=0 ) => tuple<int,@KEY,@VALUE>
+insert( key : @KEY, value : @VALUE )
+keys() => list<@KEY>
+keys( from : @KEY ) => list<@KEY>
+keys( from : @KEY, to : @KEY ) => list<@KEY>
+size(  ) => int
+values() => list<@VALUE>
+values( from : @KEY ) => list<@VALUE>
+values( from : @KEY, to : @KEY ) => list<@VALUE>
+</code>
+
+<===>方法细节</===>
+<code dao>
+map<@KEY,@VALUE>.clear( )
+</code>
+清除映射表的所有键值对。
+
+<code dao>
+map<@KEY,@VALUE>.erase( from : @KEY=nil, to : @KEY=nil )
+</code>
+将键区间<%>from</%>到<%>to</%>（包括<%>from</%>和<%>to</%>）之间的所有
+键值对删除。如果第二个参数被省略，仅删除等于<%>from</%>的键值。
+如果两个参数均被省略，删除所有的键值。
+
+<code dao>
+find( key : @KEY, type=0 ) => tuple<int,@KEY,@VALUE>
+map<@KEY,@VALUE>.find( key : @KEY, type=0 ) => tuple<int,@KEY,@VALUE>
+</code>
+如果<%>type=0</%>，查找键等于<%>key</%>的元素；
+如果<%>type<0</%>，查找键小于等于<%>key</%>的最大键值元素；
+如果<%>type>0</%>，查找键大于等于<%>key</%>的最小键值元素；
+返回一个三元组，其第一个元素是个整数，1表示键被找到，0表示没有；
+第二个和第三个元素是被找到的键和值。
+
+<code dao>
+map<@KEY,@VALUE>.insert( key : @KEY, value : @VALUE )
+</code>
+插入一键值对。
+
+<code dao>
+map<@KEY,@VALUE>.key( from : @KEY=nil, to : @KEY=nil ) => list<@KEY>
+</code>
+作为列表返回所有键区间<%>from</%>到<%>to</%>之间的<bf>键</bf>。
+参数的意义跟<*>erase()</*>方法的参数意义等同。
+
+<code dao>
+keys() => list<@KEY>
+keys( from : @KEY ) => list<@KEY>
+keys( from : @KEY, to : @KEY ) => list<@KEY>
+</code>
+作为列表返回所有键，或从<it>from</it>开始的键，
+或<%>from</%>到<%>to</%>之间的键。
+
+<code dao>
+map<@KEY,@VALUE>.size( ) => int
+</code>
+Return the number of elements in the map.
+
+<code dao>
+map<@KEY,@VALUE>.value( from : @KEY=nil, to : @VALUE=nil ) => list<@VALUE>
+</code>
+作为列表返回所有键区间<%>from</%>到<%>to</%>之间的<bf>值</bf>。
+参数的意义跟<*>erase()</*>方法的参数意义等同。
+<code dao>
+values() => list<@VALUE>
+values( from : @KEY ) => list<@VALUE>
+values( from : @KEY, to : @KEY ) => list<@VALUE>
+</code>
+作为列表返回所有值，或键从<it>from</it>开始的值，
+或键在<%>from</%>和<%>to</%>之间的值。
+
+<=====>数值数组</=====>
+
+<===>方法列表</===>
+<code dao>
+dim(  ) => array<int>
+dim( i : int ) => int
+index( i : int ) => array<int>
+size(  ) => int
+resize( dims : array<int> )
+reshape( dims : array<int> )
+sorta( k=0 )
+sortd( k=0 )
+ranka( k=0 ) => array<int>
+rankd( k=0 ) => array<int>
+max( slice={} ) => tuple<@ITEM,int>
+min( slice={} ) => tuple<@ITEM,int>
+sum( slice={} ) => @ITEM
+varn( slice={} ) => double
+fft( inv=-1 )
+</code>
+
+以表达式为参数的<bf>apply()</bf>方法现已被支持为一个内置函数，
+请参看<link>这里=dao_functional_methods</link>。
+而<bf>noapply()</bf>方法则被移除。
+
+<===>方法细节</===>
+
+<code dao>
+array<@ITEM>.dim( ) => array<int>
+</code>
+以整数向量的形式返回多维数组的每个维数的大小。
+
+<code dao>
+array<@ITEM>.dim( i : int ) => int
+</code>
+返回第i维的大小。
+
+<code dao>
+array<@ITEM>.index( i : int ) => array<int>
+</code>
+将数组元素的一维下标（将多维数组当作向量）转换为多维下标。
+
+<code dao>
+array<@ITEM>.size( ) => int
+</code>
+返回数组的所有元素个数。
+
+<code dao>
+array<@ITEM>.resize( dims : array<int> )
+</code>
+将数组的大小改为每维大小由<%>dims</%>指定的多维数组。
+
+<code dao>
+array<@ITEM>.reshape( dims : array<int> )
+</code>
+将数组的形状改为每维大小由<%>dims</%>指定的多维数组。
+
+<code dao>
+array<@ITEM>.rank( ) => array<int>
+</code>
+与<*>list.rank()</*>相似。
+
+<code dao>
+array<@ITEM>.sort( type=1 )
+</code>
+将数组当作向量，如果<it>type</it>非零，升序排列，否则，降序排列。
+
+<code dao>
+array<@ITEM>.max( slice={} ) => tuple<@ITEM,int>
+</code>
+返回数组里由<%>slice</%>指定的子数组里元素的最大值及其一维下标，如果<%>slice</%>为空或被省略，
+返回整个数组里元素的最大值。
+<demo dao>
+mat = [ 1.5, 2.5, 3, 4; 5, 6, 7, 8; 9, 0, 1, 2 ];
+stdio.println( mat.max( {  1:, 1:2 } ) ); # 第二行，第二三列
+</demo>
+
+<code dao>
+array<@ITEM>.min( slice={} ) => tuple<@ITEM,int>
+</code>
+返回数组里由<%>slice</%>指定的子数组里元素的最小值及其一维下标，如果<%>slice</%>为空或被省略，
+返回整个数组里元素的最小值。
+
+<code dao>
+array<@ITEM>.sum( slice={} ) => @ITEM
+</code>
+返回数组里由<%>slice</%>指定的子数组里元素的和，如果<%>slice</%>为空或被省略，
+返回整个数组里元素的和。
+
+<code dao>
+array<@ITEM>.varn( slice={} ) => double
+</code>
+返回数组里由<%>slice</%>指定的子数组里元素的样本方差，如果<%>slice</%>为空或被省略，
+返回整个数组里元素的样本方差。
+
+<code dao>
+array<complex>.fft( inv=-1 )
+</code>
+快速傅立叶变换。
+
+
+<=====>cdata</=====>
+
+<===>方法列表</===>
+<code dao>
+cdata( size : int ) => cdata
+copydata( buf : cdata )
+getbyte( index : int, signed=1 ) => int
+getdouble( index : int ) => double
+getfloat( index : int ) => float
+getint( index : int, signed=1 ) => int
+getshort( index : int, signed=1 ) => int
+getstring( mbs=1 ) => string
+resize( size : int )
+setbyte( index : int, value : int, signed=1 )
+setdouble( index : int, value : double )
+setfloat( index : int, value : float )
+setint( index : int, value : int, signed=1 )
+setshort( index : int, value : int, signed=1 )
+setstring( string : string )
+size(  ) => int
+</code>
+
+<===>方法细节</===>
+<code dao>
+cdata( size = 0 ) => cdata
+</code>
+创建一个大小为<%>size</%>字节的内存块。
+
+<code dao>
+cdata.copydata( buf :cdata )
+</code>
+从内存块<%>buf</%>复制数据。
+
+<code dao>
+cdata.getbyte( index : int, signed=1 ) => int
+</code>
+返回内存块的第<%>index</%>个字节。
+字节的符号性由<%>signed</%>确定。
+
+<code dao>
+cdata.getdouble( index : int ) => double
+</code>
+将内存块当作双精度浮点数数组，返回其第<%>index</%>元素。
+
+<code dao>
+cdata.getfloat( index : int ) =>float
+</code>
+将内存块当作单精度浮点数数组，返回其第<%>index</%>元素。
+
+<code dao>
+cdata.getint( index : int, signed=1 ) => int
+</code>
+将内存块当作整数数组，返回其第<%>index</%>元素。
+整数的符号性由<%>signed</%>确定。
+
+<code dao>
+cdata.getshort( index : int, signed=1 ) => int
+</code>
+将内存块当作短整数数组，返回其第<%>index</%>元素。
+整数的符号性由<%>signed</%>确定。
+
+<code dao>
+cdata.getstring( mbs=1 ) => string
+</code>
+将内存块当作字符串返回，如果<%>mbs=1</%>，作为多字节字符串(Multi-Bytes String)，
+否则作为宽字节字符串(Wide Character String)。
+
+<code dao>
+cdata.resize( size : int )
+</code>
+将内存块的大小改为<%>size</%>字节。
+
+<code dao>
+cdata.setbyte( index : int, value : int, signed=1 )
+</code>
+将内存块的第<%>index</%>字节设为<%>value</%>。
+字节的符号性由<%>signed</%>确定。
+
+<code dao>
+cdata.setdouble( index : int, value : double, )
+</code>
+将内存块当作双精度浮点数数组，将内存块的第<%>index</%>元素设为<%>value</%>。
+
+<code dao>
+cdata.setfloat( index : int, value : float )
+</code>
+将内存块当作单精度浮点数数组，将内存块的第<%>index</%>元素设为<%>value</%>。
+
+<code dao>
+cdata.setint( index : int, value : int, signed=1 )
+</code>
+将内存块当作整数数组，将内存块的第<%>index</%>元素设为<%>value</%>。
+整数的符号性由<%>signed</%>确定。
+
+<code dao>
+cdata.setshort( index : int, value : int, signed=1 )
+</code>
+将内存块当作短整数数组，将内存块的第<%>index</%>元素设为<%>value</%>。
+整数的符号性由<%>signed</%>确定。
+
+<code dao>
+cdata.setstring( string : string )
+</code>
+使用字符串填充内存块。
+
+<code dao>
+cdata.size() => int
+</code>
+返回内存块的大小，按字节数。
+
+<=====>标准库(std，即原来的stdlib)</=====>
+
+<===>方法列表</===>
+<code dao>
+stdlib.about( ... ) => string
+stdlib.callable( object ) => int
+stdlib.compile( source : string )
+stdlib.copy( object : @OBJECT ) => @OBJECT
+stdlib.ctimef( time=0, format='%Y-%M-%D, %H:%I:%S', namemap : map<string,list<string>> ={=>} ) => string
+stdlib.ctime( time=0 ) => tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int>
+stdlib.debug( ... )
+stdlib.error( info : string )
+stdlib.eval( source : string, stream=stdio )
+stdlib.exit( code=0 )
+stdlib.gcmax( limit=0 ) => int
+stdlib.gcmin( limit=0 ) => int
+stdlib.listmeth( object )
+stdlib.enable_fe( flags : int ) => int
+stdlib.disable_fe( flags : int ) => int
+stdlib.load( file : string )
+stdlib.pack( number : int ) => string
+stdlib.pack( list :list<int> ) => string
+stdlib.sleep( seconds : float )
+stdlib.system( command : string )
+stdlib.time(  ) => int
+stdlib.time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> ) => int
+stdlib.tokenize( source : string ) => list<string>
+stdlib.unpack( string : string ) => list<int>
+stdlib.warn( info : string )
+</code>
+
+<===>方法细节</===>
+<code dao>
+about( ... ) => string
+</code>
+返回参数变量的类型名和变量的内存地址。
+
+<code dao>
+callable( object ) => int
+</code>
+检测一个对象是否可以作为函数调用。
+
+<code dao>
+compile( source : string )
+</code>
+编译source表示的道代码，并返回主函数。
+
+<code dao>
+copy( object : @OBJECT ) => @OBJECT
+</code>
+返回对象的深拷贝。（TODO：可能实现不完全！）
+
+<code dao>
+ctime( time=0 ) => tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int>
+</code>
+将以秒记的时间(从Epoch(1970年1月1日00:00:00 UTC)开始计数，通常由std.time()返回)time转换为日历时间，返回为元组。
+
+<code dao>
+ctimef( time=0, format='%Y-%M-%D, %H:%I:%S', namemap : map<string,list<string>> ={=>} ) => string
+</code>
+将以秒记的时间time转换为日历时间，其格式由format指定，
+年份月份和日期等的表示形式（某语言的词汇）可由namemap指定。
+
+<code dao>
+debug( ... )
+</code>
+如果调用时带参数，返回参数变量的类型名和内存地址。
+如果不带参数，程序将进入调试终端。
+此函数仅在程序以调试模式运行时有效。
+
+<code dao>
+error( info : string )
+</code>
+将info作为错误信息打印，并终止当前虚拟进程。
+
+<code dao>
+eval( source : string, stream=stdio )
+</code>
+编译并执行source所表示道代码，并使用流对象stream作为标准输出输入流。
+
+<code dao>
+exit( code=0 )
+</code>
+退出程序，并向父进程返回code作为状态。
+
+<code dao>
+gcmax( limit=0 ) => int
+</code>
+返回当前内存垃圾回收器GC上限值。如果调用时还带参数，
+那么该上限值将被设置为参数所指定的值。
+
+
+此上限的作用是，当GC在处理的垃圾对象超过此上限时，其他程序线程将被暂停，
+直到这些垃圾被处理完。一般情况下，运行GC的线程与其他程序并行运行。
+
+<code dao>
+gcmin( limit=0 ) => int
+</code>
+返回当前内存垃圾回收器GC下限值。如果调用时还带参数，
+那么该下限值将被设置为参数所指定的值。
+
+
+此下限的作用是，当程序产生的垃圾对象数目小于此下限时，GC将不工作并进入休眠
+状态，直到垃圾数目超过此下限时被唤醒再开始工作。
+
+<code dao>
+listmeth( object )
+</code>
+列出对象object可用的方法。
+
+<code dao>
+load( file : string )
+</code>
+从文件file载入并运行道代码。
+
+<code dao>
+pack( number : int ) => string
+</code>
+将整数按字符编码转换成字符。
+
+<code dao>
+pack( list :list<int> ) => string
+</code>
+将整数列表按字符编码转换成字符串。
+
+<code dao>
+sleep( seconds : float )
+</code>
+让当前运行的线程暂停seconds秒，最短暂停时间可以小于1秒。
+
+<code dao>
+system( command : string )
+</code>
+运行系统命令。
+
+<code dao>
+time(  ) => int
+</code>
+返回当前时间，从Epoch(1970年1月1日00:00:00 UTC)到当前的秒数。
+
+<code dao>
+time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> ) => int
+</code>
+将日历时间转换为移秒记的时间（从Epoch(1970年1月1日00:00:00 UTC)开始计数）。
+
+<code dao>
+tokenize( source : string ) => list<string>
+</code>
+词法解析道代码。
+
+<code dao>
+unpack( string : string ) => list<int>
+</code>
+将字符串按字符编码转换为整数列表。
+
+<code dao>
+warn( info : string )
+</code>
+打印警告信息，并在信息里包含此语句所在的程序源文件名和行号。
+
+<=====>标准输入输出库(io，即原来的stdio)和流(stream)</=====>
+
+<===>方法列表</===>
+<code dao>
+close(  )
+eof(  )
+flush(  )
+getstring(  )
+isopen(  )
+name(  )
+open(  )
+open( file : string, mode : string )
+popen( cmd : string, mode : string )
+write( ... )
+writeln( ... )
+writef( format : string, ... )
+print( ... )
+println( ... )
+printf( format : string, ... )
+read( count=0 )=>string
+read( file : string )=>string
+seek( pos : int, from : int )
+sstream( mbs=1 )
+tell(  )
+</code>
+
+<===>方法细节</===>
+<code dao>
+close(  )
+</code>
+关闭流。
+
+<code dao>
+eof(  )
+</code>
+Check if the end of the stream is reached.
+检查流位置指示是否已经到了流末尾。
+
+<code dao>
+flush(  )
+</code>
+将所有缓存的输出写入到设备。
+
+<code dao>
+getstring(  )
+</code>
+如果流对象是字符流，作为字符串返回输出到流的数据。
+
+<code dao>
+isopen(  )
+</code>
+检查（文件）流是否打开。
+
+<code dao>
+name(  )
+</code>
+返回文件流的文件名。
+
+<code dao>
+open(  )
+</code>
+打开一个临时文件流。
+
+<code dao>
+open( file : string, mode : string )
+</code>
+以模式mode打开文件file。
+模式含义跟C语言里的fopen()一样。
+
+<code dao>
+popen( cmd : string, mode : string )
+</code>
+打开一个命令管道，模式可以是r或w。
+
+<code dao>
+write( ... )
+print( ... )
+</code>
+将参数变量的值输出到流里。
+
+<code dao>
+writeln( ... )
+println( ... )
+</code>
+将参数变量的值输出到流里。
+并且在参数变量的输出之间添加空格，在输出末尾添加换行符。
+
+<code dao>
+writef( format : string, ... )
+printf( format : string, ... )
+</code>
+格式输出，格式format的含义跟C语言里的printf()一样。
+
+<code dao>
+read( count=0 )=>string
+</code>
+如果count大于0，从流里读取count字节的数据；
+如果count小于0，读取流里所有的数据；
+否则从流中读取一行，并包括换行符。
+
+<code dao>
+read( file : string )=>string
+</code>
+从文件file里读取所有数据。
+
+<code dao>
+seek( pos : int, from : int )
+</code>
+将流位置指示定位于相对于<%>from</%>的位置<%>pos</%>，
+<%>from</%>可以是stdio.SEEK_CUR， stdio.SEEK_SET 或 stdio.SEEK_END。
+
+<code dao>
+sstream( mbs=1 )
+</code>
+创建一个字符串流，内部使用的缓存可以是MBS或WCS，取决于参数mbs。
+
+<code dao>
+tell(  )
+</code>
+返回流位置指示的当前位置。
+
+<=====>数学库(math)</=====>
+
+从道语言1.1开始，这些数学函数，除了<bf>srand()</bf> 和 <bf>pow()</bf>之外，
+都被作为内置函数被支持。
+
+<===>方法列表</===>
+<code dao>
+math.abs( p : double )
+</code>
+<code dao>
+math.abs( p : complex )
+</code>
+<code dao>
+math.acos( p : double )
+</code>
+<code dao>
+math.arg( p : complex )
+</code>
+<code dao>
+math.asin( p : double )
+</code>
+<code dao>
+math.atan( p : double )
+</code>
+<code dao>
+math.ceil( p : double )
+</code>
+<code dao>
+math.ceil( p : complex )
+</code>
+<code dao>
+math.cos( p : double )
+</code>
+<code dao>
+math.cos( p : complex )
+</code>
+<code dao>
+math.cosh( p : double )
+</code>
+<code dao>
+math.cosh( p : complex )
+</code>
+<code dao>
+math.exp( p : double )
+</code>
+<code dao>
+math.exp( p : complex )
+</code>
+<code dao>
+math.floor( p : double )
+</code>
+<code dao>
+math.floor( p : complex )
+</code>
+<code dao>
+math.imag( p : complex )
+</code>
+<code dao>
+math.log( p : double )
+</code>
+<code dao>
+math.log( p : complex )
+</code>
+<code dao>
+math.norm( p : complex )
+</code>
+<code dao>
+math.pow( p1 : double, p2 : double )
+</code>
+<code dao>
+math.pow( p1 : double, p2 : complex )
+</code>
+<code dao>
+math.pow( p1 : complex, p2 : double )
+</code>
+<code dao>
+math.pow( p1 : complex, p2 : complex )
+</code>
+<code dao>
+math.real( p : complex )
+</code>
+<code dao>
+math.sin( p : double )
+</code>
+<code dao>
+math.sin( p : complex )
+</code>
+<code dao>
+math.sinh( p : double )
+</code>
+<code dao>
+math.sinh( p : complex )
+</code>
+<code dao>
+math.sqrt( p : double )
+</code>
+<code dao>
+math.sqrt( p : complex )
+</code>
+<code dao>
+math.srand( p : double )
+</code>
+<code dao>
+math.rand( p : double )
+</code>
+<code dao>
+math.tan( p : double )
+</code>
+<code dao>
+math.tan( p : complex )
+</code>
+<code dao>
+math.tanh( p : double )
+</code>
+<code dao>
+math.tanh( p : complex )
+</code>
+
+<=====>反映reflection</=====>
+
+<===>方法列表</===>
+<code dao>
+namespace( object=nil ) => any
+name( object ) => string
+type( object ) => any
+base( object ) => list<any>
+doc( object, newdoc='' ) => string
+constant( object, restrict=0 )=>map<string,tuple<value:any,type:any> >
+variable( object, restrict=0 )=>map<string,tuple<value:any,type:any> >
+constant( object, name:string, value=nil )=>tuple<value:any,type:any>
+variable( object, name:string, value=nil )=>tuple<value:any,type:any>
+class( object ) => any
+routine() => any
+routine( rout : any ) => list<any>
+param( rout )=>list<tuple<name:string,type:any,deft:int,value:any> >
+isa( object, name : string ) => int
+isa( object, type : any ) => int
+self( object ) => any
+argc() => int
+argv() => list<any>
+argv( i : int ) => any
+</code>
+
+<===>方法细节</===>
+<code dao>
+namespace( object=nil ) => any
+</code>
+如果object是一个对象或函数，返回定义它的名字空间，
+返回当前名字空间。
+
+<code dao>
+name( object ) => string
+</code>
+如果object是一个类，类成员方法或函数，返回它们的名字。
+
+<code dao>
+type( object ) => any
+</code>
+返回object的类型。
+
+<code dao>
+base( object ) => list<any>
+</code>
+如果object是一个类，返回其直接父类；
+如果object是一个对象，返回其直接父对象。
+
+<code dao>
+doc( object, newdoc='' ) => string
+</code>
+返回函数或类的文档。
+如果newdoc参数被使用，那么设置它们的文档。
+一般，函数和类体左花括号之前的注释被认为是它们的文档。
+
+<code dao>
+constant( object, restrict=0 )=>map<string,tuple<value:any,type:any> >
+</code>
+返回object的成员常量。object可以是名字空间，类或类实例。
+如果restrict为零，返回所有常量，否则，仅返回公共常量。
+返回的值为从成员名到成员值和类型的映射表。
+
+<code dao>
+variable( object, restrict=0 )=>map<string,tuple<value:any,type:any> >
+</code>
+返回object的成员变量。object可以是名字空间，类或类实例。
+如果restrict为零，返回所有变量，否则，仅返回公共变量。
+返回的值为从成员名到成员值和类型的映射表。
+
+<code dao>
+constant( object, name:string, value=nil )=>tuple<value:any,type:any>
+</code>
+作为元组返回object的成员常量name的值和类型。
+如果value参数被使用了，将常量的值设为value。
+object的所有常量都能通过这种方式访问和修改。
+
+<code dao>
+variable( object, name:string, value=nil )=>tuple<value:any,type:any>
+</code>
+作为元组返回object的成员变量name的值和类型。
+如果value参数被使用了，将变量的值设为value。
+object的所有变量都能通过这种方式访问和修改。
+
+<code dao>
+class( object ) => any
+</code>
+如果object是个类成员函数，返回定义它的类；
+如果object是个类实例，返回它的原型类。
+
+<code dao>
+routine() => any
+</code>
+返回当前运行的函数。
+
+<code dao>
+routine( rout : any ) => list<any>
+</code>
+以列表返回rout的重载函数。
+
+<code dao>
+param( rout )=>list<tuple<name:string,type:any,deft:int,value:any> >
+</code>
+返回函数的参数定义信息：参数名name，类型type，缺省值value。
+元组的deft元素表示value是否是参数的缺省值。
+
+<code dao>
+isa( object, name : string ) => int
+</code>
+检查object的类型是否为类型名name所表示的类型。
+name既可以是一个有效的类型名（如int, float, list<int>等），
+也可以是以下一些类别名称。例如，如果name参数值是class，
+而object参数是一个类，那么此函数将返回真值。
+<table>
+^ 名称 ^ 类别 ^
+| class | 道类 |
+| object | 道类实例 |
+| routine | 道函数 |
+| function | C函数 |
+| namespace | 名字空间 |
+| tuple | 元组 |
+| list | 列表 |
+| map | 映射表 |
+| array | 数组 |
+</table>
+
+<code dao>
+isa( object, type : any ) => int
+</code>
+检查object的类型是否为类型名type。
+这里type应该是一个由reflect.type()所返回的对象。
+
+<code dao>
+argc() => int
+</code>
+返回当前运行函数的参数数目。
+
+<code dao>
+argv() => list<any>
+</code>
+返回当前运行函数的参数值。
+
+<code dao>
+argv( i : int ) => any
+</code>
+返回当前运行函数的第i个参数值。
+
+<code dao>
+self( object )
+</code>
+返回类实例的向下映射对象（子类对象）。
+<code dao>
+class Base
+{
+	routine Meth(){ stdio.println( reflect.self( self ) ) }
+}
+class Sub : Base {}
+o = Sub();
+o.Meth();
+</code>
+在此例中，reflect.self( self )中的self参数将是一个从Sub实例向上映射得到的
+Base实例，而reflect.self( self )将返回原来的Sub实例。
+
+<code dao>
+trace(  )
+</code>
+打印当前的函数调用栈。
+
+<=====>协程</=====>
+
+此库对象提供几个使用协程的基本方法。
+不过道语言对协程有语法支持，使用通过语法支持的协程更方便。
+
+<===>方法列表</===>
+<code dao>
+coroutine.create( object, ... )
+coroutine.resume( object, ... )
+coroutine.status( object )
+coroutine.yield( ... )
+</code>
+
+<===>方法细节</===>
+<code dao>
+create( object, ... )
+</code>
+创建一个协程对象，object参数必须是一个函数或函数名。
+协程的初始状态是暂停，必须使用coroutine.resume()使它继续运行。
+额外的参数将被传递给被创建的协程，如果参数类型不符合object的参数类型，
+将抛出一个异常。
+
+<code dao>
+resume( object, ... )
+</code>
+继续一个被暂停的协程。额外的resume()参数将变成yield()的返回值。
+继续一个已终止运行（由return返回或执行到了函数末尾）将抛出一个异常。
+
+<code dao>
+status( object )
+</code>
+返回协程的状态。返回值将是以下字符串之一：
+<table>
+| suspended | running | aborted | finished | not_a_coroutine |
+</table>
+
+<code dao>
+yield( ... )
+</code>
+暂停当前协程的运行，将执行权返回给其调用者。
+yield()的参数将变成resume()的返回值。
+
+<=====>多线程库</=====>
+
+道语言的多线程库名为mtlib。
+
+<===>方法列表</===>
+<code dao>
+mtlib.thread( object, ... ) => thread
+mtlib.mutex(  ) => mutex
+mtlib.condition(  ) => condition
+mtlib.semaphore(  ) => semaphore
+mtlib.exit(  )
+mtlib.mydata(  ) => map<string,any>
+mtlib.self(  ) => thread
+mtlib.testcancel(  )
+</code>
+
+<===>方法细节</===>
+<code dao>
+condition(  ) => condition
+</code>
+创建一个条件变量。
+
+<code dao>
+thread( object, ... )
+</code>
+创建一个线程对象。
+object参数必须是一个道函数或C函数，mtlib.thread()的额外参数将被传递给object。
+
+<code dao>
+exit(  )
+</code>
+终止当前线程。
+
+<code dao>
+mutex(  ) => mutex
+</code>
+创建一个互斥子。
+
+<code dao>
+mydata(  ) => map<string,any>
+</code>
+获得一个线程专有映射表。
+
+<code dao>
+self(  ) => thread
+</code>
+返回当前线程对象。
+
+<code dao>
+semaphore(  ) => semaphore
+</code>
+创建一个信号标。
+
+<code dao>
+testcancel(  )
+</code>
+创建一个线程取消点。如果thread.cancel()在此函数之前被调用了，
+那么此函数将终止当前线程。
+
+<=====>线程对象</=====>
+
+<===>方法列表</===>
+<code dao>
+cancel(  )
+detach(  )
+join(  )
+mydata(  ) => map<string,any>
+</code>
+
+<===>方法细节</===>
+<code dao>
+thread.cancel(  )
+</code>
+取消线程对象的运行。
+
+<code dao>
+thread.detach(  )
+</code>
+线程对象剥离，其他使用thread.join()等待该线程结束的线程将不在等待。
+
+<code dao>
+thread.join(  )
+</code>
+暂停当前线程，等待线程对象的结束。
+
+<code dao>
+thread.mydata(  ) => map<string,any>
+</code>
+获得线程对象专有的映射表。
+
+<=====>互斥子</=====>
+
+<===>方法列表</===>
+<code dao>
+lock(  )
+trylock(  )
+unlock(  )
+</code>
+
+<===>方法细节</===>
+<code dao>
+mutex.lock(  )
+</code>
+给互斥子上锁。
+
+<code dao>
+mutex.trylock(  )
+</code>
+尝试给互斥子上锁，如果哦成功返回真值，否则假值。
+
+<code dao>
+mutex.unlock(  )
+</code>
+给互斥子开锁。
+
+<=====>条件变量</=====>
+
+<===>方法列表</===>
+<code dao>
+broadcast(  )
+signal(  )
+timedwait( mtx : mutex, seconds : float )
+wait( mtx : mutex )
+</code>
+
+<code dao>
+condition.broadcast(  )
+</code>
+唤醒所有在此条件变量上等待的线程。
+
+<code dao>
+condition.signal(  )
+</code>
+随机唤醒在此条件变量上等待的一个线程。
+
+<code dao>
+condition.timedwait( mtx : mutex, seconds : float )
+</code>
+定时等待此条件变量，使用mutex保护，最长等待时间为seconds（可以是小数）。
+
+<code dao>
+condition.wait( mtx : mutex )
+</code>
+等待此条件变量，使用mutex保护。
+
+<=====>信号标</=====>
+
+<===>方法列表</===>
+<code dao>
+getvalue(  )
+post(  )
+setvalue( n : int )
+wait(  )
+</code>
+
+<===>方法细节</===>
+<code dao>
+semaphore.getvalue(  )
+</code>
+返回信号标的资源计数。
+
+<code dao>
+semaphore.post(  )
+</code>
+释放信号标的一个资源。
+
+<code dao>
+semaphore.setvalue( n : int )
+</code>
+设置信号标的资源计数。
+
+<code dao>
+semaphore.wait(  )
+</code>
+请求获取信号标的一个资源，如果未获取到，暂停当前线程，知道有资源可用再继续。
+not available.
+
+<=====>网络</=====>
+
+<===>方法列表</===>
+<code dao>
+network.FD_CLR( fd : int, set :fd_set )
+network.FD_ISSET( fd : int, set :fd_set )
+network.FD_SET( fd : int, set :fd_set )
+network.FD_ZERO( set :fd_set )
+network.accept( socket : int )=>int
+network.bind( port : int )=>int
+network.close( socket : int )
+network.connect( host : string, port : int )=>int
+network.gethost( host : string )=>map<string,string>
+network.getpeername( socket : int )=>string
+network.listen( socket : int, backlog =10 )=>int
+network.receive( socket : int, maxlen =1000 )=>string
+network.receive_dao( socket : int )=>list<any>
+network.select( nfd : int, setr :fd_set, setr :fd_set, setr :fd_set, tv : float )=>int
+network.send( socket : int, data : string )=>int
+network.send_dao( socket : int, ... )=>int
+</code>
+
+<===>网络文件描述集处理</===>
+网络文件描述集可由fd_set()创建。
+<code dao>
+network.FD_CLR( fd : int, set :fd_set )
+</code>
+从集set中删除fd。
+
+<code dao>
+network.FD_ISSET( fd : int, set :fd_set )
+</code>
+检查fd是否在集set中。
+
+<code dao>
+network.FD_SET( fd : int, set :fd_set )
+</code>
+将fd添加到集set里。
+
+<code dao>
+network.FD_ZERO( set :fd_set )
+</code>
+清空集。
+
+<===>方法细节</===>
+<code dao>
+network.accept( socket : int )=>int
+</code>
+接受一个来自套接字socket的连接。
+
+<code dao>
+network.bind( port : int )=>int
+</code>
+绑定到端口。
+
+<code dao>
+netork.close( socket : int )
+</code>
+关闭套接字。
+
+<code dao>
+netork.connect( host : string, port : int )=>int
+</code>
+Connect to <%>host</%> through <%>port</%>.
+连接到主机host的port端口，如果成功返回连接套接字，否则返回－1。
+
+<code dao>
+network.gethost( host : string )=>map<string,string>
+</code>
+Get host information (names and addresses).
+返回主机信息。
+
+<code dao>
+network.getpeername( socket : int )=>string
+</code>
+返回套接字socket连接者信息。
+
+<code dao>
+netork.listen( socket : int, backlog =10 )=>int
+</code>
+接听套接字。
+
+<code dao>
+network.receive( socket : int, maxlen =1000 )=>string
+</code>
+从套接字socket接收最多maxlen字节的未加工数据。
+
+<code dao>
+network.receive_dao( socket : int )=>list<any>
+</code>
+从套接字socket接收道类型数据。返回的列表可包含整数，浮点数，字符串
+和数值数组等。
+此函数必须与network.send_dao()配套使用。
+
+<code dao>
+network.select( nfd : int, setr :fd_set, setw :fd_set, sete :fd_set, tv : float )=>int
+</code>
+
+从glibc引用的文档（待翻译）：
+<cite>
+The select function blocks the calling process until there is activity on any of the specified sets of file descriptors, or until the timeout period has expired.
+
+
+The file descriptors specified by the read-fds argument are checked to see if they are ready for reading; the write-fds file descriptors are checked to see if they are ready for writing; and the except-fds file descriptors are checked for exceptional conditions. You can pass a null pointer for any of these arguments if you are not interested in checking for that kind of condition.
+
+
+A file descriptor is considered ready for reading if it is not at end of file. A server socket is considered ready for reading if there is a pending connection which can be accepted with accept; see section Accepting Connections. A client socket is ready for writing when its connection is fully established; see section Making a Connection.
+</cite>
+
+<code dao>
+network.send( socket : int, data : string )=>int
+</code>
+发送字符串表示的未加工数据。
+
+<code dao>
+network.send_dao( socket : int, ... )=>int
+</code>
+发送道数据，附加了数据类型，长度等信息，以便接收端重构数据类型。
+
+<=====>消息传递接口</=====>
+
+<===>方法列表</===>
+<code dao>
+mpi.receive( timeout=-1.0 )=>list<any>
+mpi.receive( pid : string, timeout=-1.0 )=>list<any>
+mpi.send( object, ... )
+mpi.spawn( pid : string, proc : string, timeout=-1.0, ... )
+</code>
+
+<===>方法细节</===>
+<code dao>
+mpi.receive( timeout=-1.0 )=>list<any>
+</code>
+Receive message with timeout. No possitive timeout means infinite waiting.
+Return a list of received data.
+限时接收消息。负数表示永远等待。以列表返回接收的数据。
+
+<code dao>
+mpi.receive( pid : string, timeout=-1.0 )=><any>
+</code>
+Receive message from process <%>pid</%> with timeout.
+从特定的虚拟进程限时接收消息。
+
+<code dao>
+mpi.send( object, ... )
+</code>
+如果object是一虚拟进程，把其余的参数作为消息发送给它；
+如果object是一个可调用对象，以其余参数作为object的参数异步调用object。
+
+<code dao>
+mpi.spawn( pid : string, proc : string, timeout=-1.0, ... )
+</code>
+产生一个虚拟进程，或系统进程。
+如果没有在给定的时间内成功产生进程，此函数抛出异常。
+如果是在同一个系统进程里产生虚拟进程，此函数还将返回一个虚拟进程对象。
+pid和proc必须遵循以下规则;
+<table>
+^pid ^proc ^其他参数 ^含义
+|""|函数名|函数参数|创建本系统进程里的一个无名虚拟进程的对象|
+|"vm_proc"|同上|同上|创建本系统进程里的一个名为"vm_proc"的虚拟进程的对象，可以被不同计算机上的不同进程访问|
+|"@os_proc"|Dao程序文件名|除timeout外无其他参数|创建本机有名系统进程，全局可用|
+|"vm_proc@os_proc"|同"vm_proc"|同"vm_proc"|在系统进程"os_proc"里创建名为"vm_proc"的虚拟进程，全局可用|
+|"@os_proc@@host"|同"@os_proc"|同"os_proc"|在主机"host"上创建名为"os_proc"的系统进程，全局可用|
+|"vm_proc@os_proc @@host"|同"vm_proc"|同"vm_proc"|在主机"host"上的系统进程里创建名为"vm_proc"的虚拟进程，全局可用|
+</table>

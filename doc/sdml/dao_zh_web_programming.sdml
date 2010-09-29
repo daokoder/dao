@@ -1,0 +1,163 @@
+
+<title>使用道语言作网站编程</title>
+<author>傅利民(phoolimin@gmail.com)</author>
+
+
+本文档将不介绍如何进行网站编程，而仅介绍如何将道语言用作服务器端脚本语言。
+服务端脚本程序主要是通过公共网关协议（Common Gateway Interface，CGI）
+来与网站服务器程序协作。
+脚本程序通过CGI获取HTTP请求的有关信息，然后决定如何回应。
+一般情况下，脚本程序还需要查询数据库并将结果以恰当的方式反馈给
+客户端网页浏览器。
+
+<====>使用CGI模块</====>
+
+DaoCGI是一个用来解析HTTP请求信息的模块，它将解析的结果以结构化的
+数据（道语言变量）形式供脚本程序使用。
+
+
+载入DaoCGI：
+<code dao>
+load DaoCGI;
+</code>
+载入后，当前的名字空间将增加如下全局变量：
+<table>
+^变量名 ^类型 ^含义
+| HTTP_ENV | map<string,string> | HTTP请求的环境变量 |
+| HTTP_GET | map<string,string> | GET请求的变量 |
+| HTTP_POST | map<string,string> | POST请求的变量 |
+| HTTP_GETS | map<string,list<string> > | GET请求的变量 |
+| HTTP_POSTS | map<string,list<string> > | POST请求的变量 |
+| HTTP_COOKIE | map<string,string> | 请求所附带的cookies |
+| HTTP_FILE | map<string,stream> | 请求所上传的文件 |
+</table>
+对于HTTP_GETS和HTTP_POSTS，里面可能包含同一个键的多个值。
+对于HTTP_FILE其元素的键是文件的上传名，
+<code dao>
+<input type="file" name="上传名" id="filename"/>
+</code>
+而元素的值是流对象，其中内容是上传的文件的数据。
+
+
+一个简单的CGI程序，
+<code dao>
+load DaoCGI;
+stdio.println( 'content-type: text/plain\n' );
+stdio.println( 'You are from:', HTTP_ENV[ 'REMOTE_ADDR' ] );
+stdio.println( 'Welcome to visit:', HTTP_ENV['REQUEST_URI'] );
+</code>
+
+<====>数据库处理</====>
+
+目前道语言还只有处理MYSQL数据库的模块，
+其处理方式是将道语言类映射到数据库表上，
+建立类成员到表域名的对应关系，
+然后通过类实例操作数据库表里的记录。
+请参看更详细的文档<link>使用DaoDataModel模块处理数据库=dao_datamodel_zh</link>。
+
+<====>简单的模型(Model)与视图(View)分离</====>
+
+通常情况下，服务端脚本程序要负责生成HTML代码以在网页浏览器里显示信息。
+这些信息或数据一般被保存在服务器上的文件或数据库里，
+脚本程序也要负责这些数据的处理，此即为模型部分。
+当这些数据需要被显示在客户端的浏览器里时，
+脚本程序需要生成合适的HTML代码以达到恰当可视化效果，
+这就是视图部分。
+
+
+显然程序的模型部分和视图部分最好是分离的，这样对一个部分的修改
+将不影响另一个部分。这使得程序的维护和升级更加简单安全。
+道语言的DaoDataModel比较适合处理程序的模型部分，
+而道语言的一些字符串方法将使得视图部分也比较简单。
+下面将以一个例子来作介绍。
+
+
+假设有一个名为Friend的数据库表，它保存着包含如下信息的地址簿：
+<code dao>
+id  : INTEGER PRIMARY KEY AUTOINCREMENT
+name  : CHAR(50)
+phone : CHAR(20)
+city  : CHAR(50)
+street : VARCHAR(100)
+</code>
+
+其对应的道语言类是:
+<code dao>
+typedef tuple<id:string,name:string,phone:string,city:string,street:string> friend_t;
+
+class Friend
+{
+	my id : INT_PRIMARY_KEY_AUTOINCREMENT;
+	my name  : CHAR50;
+	my phone : CHAR20;
+	my city  : CHAR50;
+	my street : CHAR100;
+
+	routine AsTuple() => friend_t {
+		return ( (string) id, name, phone, city, street );
+	}
+}
+</code>
+这里还定义了一个元组类型friend_t，它包含了带名称的元素。
+这个元组类型将是程序的模型部分与视图部分传递数据的基本数据结构。
+
+
+再假设，相关数据库被打开为：
+<code dao>
+global model = DataModel( 'dbname', 'host', 'user', 'password' );
+</code>
+
+现在在模型部分，数据库的查询将变得很简单。
+例如，如果要显示某个城市里的所有朋友，可以这样做：
+<code dao>
+routine FriendInCity( city : string ) => list<friend_t>
+{
+	friends = {};
+	friend = Friend();
+	hd = model.Select( Friend ).Where().EQ( 'city', city );
+	while( hd.Query( friend ) ) friends.append( friend.AsTuple() );
+	hd.Done();
+	return friends;
+}
+</code>
+显然这个函数也可被定义为Friend类的成员方法。
+
+
+数据视图的创建可以使用模板HTML代码进行简化。
+例如，如果需要在一个表单里显示所有被查询的朋友，
+可以定义如下HTML模板：
+<code dao>
+<tr class="myrowstyle"><td class="mycellstyle">@(id)</td>
+<td>@(name)</td><td>@(phone)</td>
+<td>@(city)</td><td>@(street)</td></tr>
+</code>
+HTML模板可用来决定显示那些数据，以何种方式显示。
+数据文本的字体颜色等也可被包含在模板里，
+不过，使用层叠样式表CSS来设置它们更方便。
+
+
+视图的创建可以是：
+<code dao>
+routine ViewFriends( friends : list<friend_t>, rowtpl = '' )
+{
+	html = '<table class="mytablestyle">\n';
+	for( friend in friends ) html += rowtpl.expand( friend, '@' );
+	html += '</table>';
+	return html;
+}
+</code>
+这里rowtpl.expand()方法将展开字符串rowtpl，并替换里面的占位变量，
+替换内容为元组friend里的跟占位变量同名的元素的值。
+expand()还有一个重载的函数，用来接受映射表为参数。
+
+
+最后，查询数据库并创建视图可以用，
+<code dao>
+row = '<tr class="myrowstyle"><td class="mycellstyle">@(id)</td>
+<td>@(name)</td><td>@(phone)</td>
+<td>@(city)</td><td>@(street)</td></tr>';
+
+friends = FriendInCity( 'Beijing' );
+view = ViewFriends( friends, row );
+</code>
+通过改变模板HTML代码（和CSS），视图的形式和效果可以很容易地被改变。
