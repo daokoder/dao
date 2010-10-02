@@ -799,6 +799,7 @@ static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, 
 		DaoTokens_Append( self, DTOK_SEMCO, line, ";" );
 	}
 }
+#if 0
 static void DaoParser_InheritConstructor( DaoParser *self, int line )
 {
 	DaoClass *klass = self->hostClass;
@@ -877,6 +878,7 @@ static void DaoParser_InheritConstructor( DaoParser *self, int line )
 	DaoTokens_AppendInitSuper( self->tokens, klass, line, 0 );
 	DaoParser_ParseRoutine( self );
 }
+#endif
 static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 		DValue *nested, int local, DString *fullname );
 static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int start )
@@ -1020,8 +1022,12 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	}
 	if( tokens[right+1]->name != DTOK_LCB ) return right;
 
-	DaoParser_ExtractComments( self, routine->docString,
-			tokens[start]->line, tokens[right+1]->line );
+	DString_Clear( self->mbs );
+	DaoParser_ExtractComments( self, self->mbs, tokens[start]->line, tokens[right+1]->line );
+	if( self->mbs->size ){
+		if( routine->routHelp == NULL ) routine->routHelp = DString_New(1);
+		DString_Assign( routine->routHelp, self->mbs );
+	}
 	start = right;
 
 	e2 = start + 1;
@@ -1468,7 +1474,7 @@ static int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *
 static DaoType* DaoType_FindType( DString *name, DaoNameSpace *ns, DaoClass *klass, DaoRoutine *rout )
 {
 	DNode *node = NULL;
-	if( rout && rout->type == DAO_ROUTINE && rout->tidHost != DAO_INTERFACE )
+	if( rout && rout->type == DAO_ROUTINE && rout->minimal ==0 )
 		node = MAP_Find( rout->abstypes, name );
 	if( node == NULL && klass ) node = MAP_Find( klass->abstypes, name );
 	if( node ) return node->value.pAbtp;
@@ -1860,7 +1866,7 @@ static void DaoParser_PushRegister( DaoParser *self )
 	int line;
 	self->locRegCount ++;
 	if( self->routine == NULL || self->routine->type != DAO_ROUTINE ) return;
-	if( self->routine->tidHost == DAO_INTERFACE ) return;
+	if( self->routine->minimal ==1 ) return;
 	line = self->curLine - self->routine->bodyStart - 1;
 	DArray_Append( self->regLines, line );
 }
@@ -1870,7 +1876,7 @@ static void DaoParser_PushRegisters( DaoParser *self, int n )
 	if( n <0 ) return;
 	self->locRegCount += n;
 	if( self->routine == NULL || self->routine->type != DAO_ROUTINE ) return;
-	if( self->routine->tidHost == DAO_INTERFACE ) return;
+	if( self->routine->minimal ==1 ) return;
 	line = self->curLine - self->routine->bodyStart - 1;
 	for(i=0; i<n; i++) DArray_Append( self->regLines, line );
 }
@@ -1926,6 +1932,7 @@ int DaoParser_ParseParams( DaoParser *self )
 	else if( klass ) hostname = klass->className->mbs;
 	else if( cdata ) hostname = cdata->typer->name;
 
+#if 0
 	if( hostname && strcmp( routine->routName->mbs, hostname ) ==0 ){
 		routine->parTokens = DArray_New( D_TOKEN );
 		for(i=0; i<=rb; i++) DArray_Append( routine->parTokens, tokens[i] );
@@ -1933,6 +1940,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		DaoTokens_Append( routine->parTokens, DTOK_IDENTIFIER, line, hostname );
 		DaoTokens_Append( routine->parTokens, DTOK_LB, line, "(" );
 	}
+#endif
 	DString_AppendMBS( pname, "routine<" );
 	i = 1;
 	tki = tokens[i]->name;
@@ -1946,7 +1954,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		DaoToken *tk;
 		DString_SetMBS( mbs, "self" );
 		MAP_Insert( DArray_Top( self->localVarMap ), mbs, self->locRegCount );
-		if( routine->type == DAO_ROUTINE && routine->tidHost != DAO_INTERFACE ){
+		if( routine->type == DAO_ROUTINE && routine->minimal ==0 ){
 			DArray_Append( routine->defLocals, tokens[i] );
 			tk = (DaoToken*) DArray_Back( routine->defLocals );
 			DaoToken_Set( tk, 1, 0, routine->parCount, "self" );
@@ -1974,14 +1982,16 @@ int DaoParser_ParseParams( DaoParser *self )
 			/*
 			   printf( "name = %s; regid = %i\n", tokens[i]->string->mbs, self->locRegCount );
 			 */
+#if 0
 			if( routine->parTokens ){
 				if( routine->parCount ) DaoTokens_Append( routine->parTokens, DTOK_COMMA, line, "," );
 				DArray_Append( routine->parTokens, tokens[i] );
 			}
+#endif
 			if( routine->parCount && tokens[i-1]->type == DTOK_IDENTIFIER ) goto ErrorNeedSeparator;
 
 			MAP_Insert( DArray_Top( self->localVarMap ), tok, self->locRegCount );
-			if( routine->type == DAO_ROUTINE && routine->tidHost != DAO_INTERFACE ){
+			if( routine->type == DAO_ROUTINE && routine->minimal ==0 ){
 				DaoToken *tk;
 				DArray_Append( routine->defLocals, tokens[i] );
 				tk = (DaoToken*) DArray_Back( routine->defLocals );
@@ -2109,7 +2119,9 @@ int DaoParser_ParseParams( DaoParser *self )
 		if( abstype == NULL ) break;
 		MAP_Insert( self->regForLocVar, regCount, abstype );
 	}
+#if 0
 	if( routine->parTokens ) DaoTokens_Append( routine->parTokens, DTOK_RB, line, ")" );
+#endif
 	abstype = NULL;
 	if( rb+1 < self->tokens->size ){
 		m1 = rb + 1;
@@ -2419,13 +2431,15 @@ for(i=0; i<tokens->size; i++) printf("%s  ", DString_GetMBS( tokens->items.pToke
 return 1;
 }
 static void DaoParser_AddToScope( DaoParser *self, DValue scope,
-		DString *name, DValue value, DaoType *abtype, int store )
+		DaoToken *tname, DValue value, DaoType *abtype, int store )
 {
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
+	DString *name = tname->string;
+	int line = tname->line;
 	if( scope.t == DAO_CLASS ){
 		DaoClass_AddType( scope.v.klass, name, abtype );
-		DaoClass_AddConst( scope.v.klass, name, value, DAO_CLS_PUBLIC );
+		DaoClass_AddConst( scope.v.klass, name, value, DAO_CLS_PUBLIC, line );
 	}else if( scope.t == DAO_NAMESPACE ){
 		DaoNameSpace_AddType( scope.v.ns, name, abtype );
 		DaoNameSpace_AddConst( scope.v.ns, name, value );
@@ -2436,13 +2450,621 @@ static void DaoParser_AddToScope( DaoParser *self, DValue scope,
 			if( store & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, name, 0 );
 		}else if( self->isClassBody && self->hostClass ){
 			DaoClass_AddType( self->hostClass, name, abtype );
-			DaoClass_AddConst( self->hostClass, name, value, DAO_CLS_PUBLIC );
+			DaoClass_AddConst( self->hostClass, name, value, DAO_CLS_PUBLIC, line );
 		}
 		GC_IncRC( abtype );
 		MAP_Insert( routine->abstypes, name, abtype );
 		MAP_Insert( DArray_Top( self->localCstMap ), name, routine->routConsts->size );
 		DRoutine_AddConstValue( (DRoutine*)routine, value );
 	}
+}
+static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	DaoNameSpace *inNS = self->vmSpace->nsInternal;
+	DaoNameSpace *myNS = self->nameSpace;
+	DaoTypeBase *typer;
+	DString *str;
+	DValue value;
+	int use = start;
+	start ++;
+	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
+		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
+		DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
+		return -1;
+	}
+	if( self->isClassBody ){
+		DString *signature = self->mbs;
+		DString *name = tokens[start]->string;
+		DaoClass *klass = NULL, *host = self->hostClass;
+		DaoCData *cdata = NULL;
+		int i;
+		for(i=0; i<host->superClass->size; i++){
+			if( host->superClass->items.pBase[i]->type == DAO_CLASS ){
+				klass = host->superClass->items.pClass[i];
+				if( ! DString_EQ( klass->className, name ) ) klass = NULL;
+				if( klass ) break;
+			}else if( host->superClass->items.pBase[i]->type == DAO_CDATA ){
+				cdata = host->superClass->items.pCData[i];
+				if( strcmp( cdata->typer->name, name->mbs ) !=0 ) cdata = NULL;
+				if( cdata ) break;
+			}
+		}
+		DString_Clear( signature );
+		if( start+1 <= to && tokens[start+1]->type == DTOK_LB ){
+			int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, to );
+			if( rb <0 ) return -1;
+			DString_Append( signature, name );
+			for(i=start+1; i<=rb; i++) DString_Append( signature, tokens[i]->string );
+			start = rb + 1;
+		}
+		if( klass ){
+			if( signature->size ){
+				DRoutine *rs = (DRoutine*)DaoClass_GetOvldRoutine( klass, signature );
+				DRoutine_AddOverLoad( (DRoutine*)host->classRoutine, rs );
+			}else{
+				DArray *routTable = klass->classRoutine->routTable;
+				for(i=0; i<routTable->size; i++){
+					DRoutine *rs = (DRoutine*) routTable->items.pRout[i];
+					if( rs->routHost != klass->objType ) continue;
+					DRoutine_AddOverLoad( (DRoutine*)host->classRoutine, rs );
+				}
+			}
+		}else if( cdata ){ /* TODO */
+		}else{
+			DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS_CTYPE, tokens[start]->string );
+			DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
+			return -1;
+		}
+		return start;
+	}
+	value = DaoNameSpace_GetData( myNS, tokens[start]->string );
+	if( value.t ==0 ) value = DaoNameSpace_GetData( inNS, tokens[start]->string );
+	if( value.t ==0 ){
+		DaoParser_Error( self, DAO_SYMBOL_POSSIBLY_UNDEFINED, tokens[start]->string );
+		DaoParser_Error( self, DAO_SYMBOL_NEED_CONSTANT, tokens[start]->string );
+		DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
+		return -1;
+	}
+	typer = DValue_GetTyper( value );
+	start ++;
+	if( start <= to && tokens[start]->name == DTOK_COLON ){
+		int prev = tokens[start]->line;
+		start ++;
+		while( start <= to && tokens[start]->type == DTOK_IDENTIFIER ){
+			str = tokens[start]->string;
+			value = DaoFindValue( typer, str );
+			if( value.t ==0 ){
+				DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, tokens[start]->string );
+				DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
+				return -1;
+			}
+			DaoNameSpace_AddConst( myNS, str, value );
+			start ++;
+			if( start <= to && tokens[start]->name == DTOK_COMMA ) start ++;
+			if( start > to || tokens[start]->name == DTOK_SEMCO ) break;
+			if( tokens[start]->line > prev ) break;
+		}
+	}else{
+		DMap *hash = typer->priv->methods;
+		DNode *it;
+		char *prev = "???";
+		if( typer->priv->nspace && typer->priv->methods == NULL ){
+			DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
+			hash = typer->priv->methods;
+		}
+		if( hash == NULL || hash->size ==0 ){
+			DaoParser_Warn( self, DAO_NO_METHOD_TO_USE, tokens[start-1]->string );
+			return start;
+		}
+		value.t = DAO_FUNCTION;
+		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
+			value.v.func = (DaoFunction*) it->value.pVoid;
+			if( STRCMP( value.v.func->routName, prev ) ==0 ) return start;
+			prev = value.v.func->routName->mbs;
+			DaoNameSpace_AddConst( myNS, value.v.func->routName, value );
+		}
+		if( typer->priv->values )
+			DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+		hash = typer->priv->values;
+		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
+			DaoNameSpace_AddConst( myNS, it->key.pString, *it->value.pValue );
+		}
+	}
+	return start;
+}
+static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
+		int from, int to, int permiType, int storeType )
+{
+	DaoToken *ptok, **tokens = self->tokens->items.pToken;
+	DaoNameSpace *myNS = self->nameSpace;
+	DaoTypeBase *typer;
+	DaoRoutine *rout = NULL;
+	DaoParser *parser = NULL;
+	DaoClass *klass;
+	DString *str, *mbs = self->mbs;
+	DValue value, scope;
+	int tki = tokens[start]->name;
+	int k, rb, right, virt = 0, stat = 0;
+	int errorStart = start;
+	if( start > from ){
+		int ttkk = tokens[start-1]->name;
+		if( ttkk == DKEY_VIRTUAL ) virt = DAO_ROUT_VIRTUAL;
+		if( ttkk == DKEY_STATIC ) stat = DAO_ROUT_STATIC;
+	}
+	if( start > from + 1 ){
+		int ttkk = tokens[start-2]->name;
+		if( virt && ttkk == DKEY_STATIC ){
+			stat = DAO_ROUT_STATIC;
+		}else if( stat && ttkk == DKEY_VIRTUAL ){
+			virt = DAO_ROUT_VIRTUAL;
+		}
+	}
+	if( (virt | stat) && self->hostClass ==NULL && self->hostInter ==NULL ){
+		DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, tokens[start-1]->string );
+		return -1;
+	}
+	right = -1;
+	if( start+2 <= to && tokens[start+2]->name == DTOK_COLON2 ){
+		/* For functions define outside the class body: */
+		int oldpos = start + 1;
+		int r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 ); /* parameter list. */
+		klass = NULL;
+		if( r1 < 0 || r1+1 >= self->tokens->size ) return -1;
+
+		start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
+		if( start < 0 || scope.t != DAO_CLASS ){
+			ptok = tokens[ oldpos ];
+			self->curLine = ptok->line;
+			if( start >=0 ) DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS, ptok->string );
+			DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
+			return -1;
+		}
+		DString_Clear( mbs );
+		if( tki == DKEY_OPERATOR && r1 == start + 1 ){
+			r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start + 2, -1 );
+		}
+		for( k=start; k<=r1; k++ ) DString_Append( mbs, tokens[k]->string );
+		rout= DaoClass_GetOvldRoutine( scope.v.klass, mbs );
+		if( ! rout ){
+			DMap *hash = scope.v.klass->ovldRoutMap;
+			DNode *it = DMap_First( hash );
+			int defined = 0;
+			ptok = tokens[ start+1 ];
+			self->curLine = ptok->line;
+			DString_Assign( mbs, tokens[start]->string );
+			if( tokens[start]->type == DTOK_LB ){
+				int m = start + 1;
+				while( m < r1 && tokens[m]->type != DTOK_LB ){
+					DString_Assign( mbs, tokens[m]->string );
+					m += 1;
+				}
+			}
+			for(;it;it=DMap_Next(hash,it)){
+				DaoRoutine *meth = (DaoRoutine*) it->value.pBase;
+				if( DString_EQ( meth->routName, mbs ) && meth->type == DAO_ROUTINE ){
+					if( DaoParser_ParseRoutine( meth->parser ) ==0 ) return -1;
+					if( meth->bodyStart <0 ){
+						defined = 1;
+						DaoParser_Error( self, DAO_ROUT_NEED_IMPLEMENTATION, it->key.pString );
+					}
+				}
+			}
+			if( defined ){
+				DaoParser_Error2( self, DAO_ROUT_WRONG_SIGNATURE, start, r1, 0 );
+			}else{
+				DaoParser_Error2( self, DAO_ROUT_NOT_DECLARED, errorStart+1, r1, 0 );
+			}
+			DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
+			return -1;
+		}
+		parser = rout->parser;
+	}else if( start < to ){
+		klass = NULL;
+		rout = NULL;
+		right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
+		start ++;
+		DString_Assign( self->str, tokens[start]->string );
+		if( tki == DKEY_OPERATOR && right == start+1 ){
+			right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+2, -1 );
+			DString_Append( self->str, tokens[start+1]->string );
+		}else if( tki == DKEY_OPERATOR ){
+			rb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
+			for( k=start+1; k<rb; k++ ) DString_Append( self->str, tokens[k]->string );
+		}
+		if( right < 0 ){
+			ptok = tokens[ start ];
+			self->curLine = ptok->line;
+			DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, ptok->string );
+			return -1;
+		}
+		DString_Clear( mbs );
+		for( k=start; k<=right; k++ ) DString_Append( mbs, tokens[k]->string );
+
+		if( self->isClassBody ){
+			klass = self->hostClass;
+			rout = DaoClass_GetOvldRoutine( klass, mbs );
+		}else{
+			/* XXX support: seperation of declaration and definition */
+		}
+
+		if( rout == NULL ){
+			if( self->isInterBody ){
+				rout = (DaoRoutine*) DRoutine_New();
+				DRoutine_AddOverLoad( (DRoutine*)rout, (DRoutine*)rout );
+				GC_ShiftRC( self->hostInter->abtype, rout->routHost );
+				rout->routHost = self->hostInter->abtype;
+				if( rout->routHost ) rout->attribs |= stat;
+			}else{
+				rout = DaoRoutine_New();
+				rout->defLine = tokens[start]->line;
+				if( self->isClassBody ){
+					GC_ShiftRC( self->hostClass->objType, rout->routHost );
+					rout->tidHost = DAO_OBJECT;
+					rout->attribs |= virt | stat;
+					rout->routHost = self->hostClass->objType;
+				}
+			}
+			parser = DaoParser_New();
+			parser->routine = rout;
+			parser->vmSpace = self->vmSpace;
+			parser->selfParam = self->selfParam;
+			parser->levelBase = self->levelBase + self->lexLevel + 1;
+			if( STRCMP( self->str, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
+			DString_Assign( rout->routName, self->str );
+		}else{
+			parser = rout->parser;
+		}
+
+		if( self->isClassBody ){
+			DValue *ref = NULL;
+			GC_ShiftRC( klass->objType, rout->routHost );
+			parser->hostClass = klass;
+			rout->tidHost = DAO_OBJECT;
+			rout->routHost = klass->objType;
+			DaoClass_AddOvldRoutine( klass, mbs, rout );
+
+			value = daoNullValue;
+			if( DString_Compare( self->str, klass->className ) == 0 ){
+				/* overloading constructor */
+				value.t = DAO_ROUTINE;
+				value.v.routine = klass->classRoutine;
+				rout->attribs |= DAO_ROUT_INITOR;
+				/* printf( "%i %p %s\n", self->inherit, rout, self->str->mbs ); */
+			}else{
+				DaoClass_GetData( klass, self->str, & value, klass, & ref );
+			}
+
+			if( value.t == DAO_ROUTINE ){
+				DRoutine_AddOverLoad( (DRoutine*) value.v.p, (DRoutine*)rout );
+#if 0
+				if( value.v.routine->routHost != klass->objType ){
+					/* value.v.routine a dummy routine derived from parent class */
+					DArray *atmp = rout->routTable;
+					rout->routTable = value.v.routine->routTable;
+					value.v.routine->routTable = atmp;
+					GC_ShiftRC( rout, value.v.routine );
+					ref->v.routine = rout;
+				}
+#endif
+			}else{
+				value.t = DAO_ROUTINE;
+				value.v.routine = rout;
+				DaoClass_AddConst( klass, self->str, value, permiType, rout->defLine );
+			}
+		}else if( self->isInterBody ){
+			DNode *node;
+			GC_ShiftRC( self->hostInter->abtype, rout->routHost );
+			parser->hostInter = self->hostInter;
+			rout->routHost = self->hostInter->abtype;
+			node = DMap_Find( self->hostInter->methods, self->str );
+
+			if( node ){
+				DRoutine *existing = (DRoutine*) node->value.pVoid;
+				DRoutine_AddOverLoad( (DRoutine*) existing, (DRoutine*)rout );
+#if 0
+				if( existing->routHost != self->hostInter->abtype ){
+					/* value.v.routine a dummy routine derived from parent class */
+					DArray *atmp = rout->routTable;
+					rout->routTable = existing->routTable;
+					existing->routTable = atmp;
+					GC_ShiftRC( rout, existing );
+					node->value.pVoid = rout;
+				}
+#endif
+			}else{
+				DMap_Insert( self->hostInter->methods, self->str, rout );
+				GC_IncRC( rout );
+			}
+		}else{
+			int rg = DaoNameSpace_FindConst( myNS, self->str );
+			value = DaoNameSpace_GetConst( myNS, rg );
+			if( value.t == DAO_ROUTINE ){
+				DRoutine_AddOverLoad( (DRoutine*) value.v.p, (DRoutine*)rout );
+			}else{
+				value.t = DAO_ROUTINE;
+				value.v.routine = rout;
+				DaoNameSpace_AddConst( myNS, self->str, value );
+				if( storeType & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, self->str, 0 );
+			}
+		}
+	}
+	if( rout->routHost ) rout->tidHost = rout->routHost->tid;
+	/**/
+	right = DaoParser_ParsePrototype( self, parser, tki, start );
+	if( right < 0 ){
+		ptok = tokens[ start ];
+		self->curLine = ptok->line;
+		DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, ptok->string );
+		return -1;
+	}
+	if( DaoParser_ParseParams( parser ) == 0 ) return -1;
+	if( tokens[right]->name == DTOK_RCB ){ /* with body */
+		DArray_Append( self->routCompilable, rout );
+		rout->parser = parser;
+	}else if( rout->minimal ==1 ){
+		DaoParser_Delete( parser );
+	}else{
+		rout->parser = parser;
+	}
+	return right+1;
+}
+static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to );
+static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int to, int storeType )
+{
+	DaoToken *ptok, **tokens = self->tokens->items.pToken;
+	DaoRoutine *routine = self->routine;
+	DaoNameSpace *myNS = self->nameSpace;
+	DaoNameSpace *ns = NULL;
+	DaoInterface *inter = NULL;
+	DaoParser *parser = NULL;
+	DaoToken *tokName;
+	DString *interName;
+	DString *mbs = self->mbs;
+	DString *ename = NULL;
+	DValue value, scope;
+	int i, right, ec = 0, errorStart = start;
+	parser = NULL;
+	if( start+1 > to ) goto ErrorInterfaceDefinition;
+	tokName = tokens[start+1];
+	interName = ename = tokName->string;
+	start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
+	if( start <0 ) goto ErrorInterfaceDefinition;
+	if( value.t == DAO_STRING ){
+		interName = value.v.s;
+		inter = DaoInterface_New( interName->mbs );
+		if( routine != myNS->mainRoutine ) ns = NULL;
+		value.t = DAO_INTERFACE;
+		value.v.inter = inter;
+		DaoParser_AddToScope( self, scope, tokName, value, inter->abtype, storeType );
+
+		if( tokens[start+2]->name == DTOK_SEMCO ){
+			start += 3;
+			return start;
+		}
+	}else{
+		ec = DAO_SYMBOL_WAS_DEFINED;
+		goto ErrorInterfaceDefinition;
+	}
+	start += 1; /* token after class name. */
+	if( tokens[start]->name == DTOK_COLON ){
+		/* interface AB : NS::BB, CC{ } */
+		unsigned char sep = DTOK_COLON;
+		while( tokens[start]->name == sep ){
+			start = DaoParser_FindScopedData( self, start+1, & scope, & value, 0, mbs );
+			if( start < 0 ) goto ErrorInterfaceDefinition;
+			ename = tokens[start]->string;
+			start ++;
+			if( value.t != DAO_INTERFACE ){
+				ec = DAO_SYMBOL_NEED_INTERFACE;
+				if( value.t == 0 || value.t == DAO_STRING ) ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+				goto ErrorInterfaceDefinition;
+			}
+			/* Add a reference to its super interfaces: */
+			DArray_Append( inter->supers, value.v.inter );
+			GC_IncRC( value.v.inter );
+			sep = DTOK_COMMA;
+		}
+	}
+	parser = DaoParser_New();
+	parser->vmSpace = self->vmSpace;
+	parser->nameSpace = myNS;
+	parser->hostInter = inter;
+	parser->isInterBody = 1;
+	parser->levelBase = self->levelBase + self->lexLevel + 1;
+	parser->selfParam = DaoType_New( "self:", DAO_PAR_NAMED, (DaoBase*) inter->abtype, NULL );
+	parser->selfParam->fname = DString_New(1);
+	DString_Append( parser->selfParam->name, interName );
+	DString_SetMBS( parser->selfParam->fname, "self" );
+	GC_IncRC( parser->selfParam );
+
+	DString_Assign( parser->fileName, self->fileName );
+
+	right = tokens[start]->name == DTOK_LCB ?
+		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
+	if( right < 0 ) goto ErrorInterfaceDefinition;
+#if 0
+	//DaoParser_ExtractComments( self, inter->docString,
+	//    rout->defLine, tokens[right]->line );
+#endif
+
+	DaoInterface_DeriveMethods( inter );
+	for(i=start+1; i<right; i++) DArray_Append( parser->tokens, tokens[i] );
+	DaoTokens_Append( parser->tokens, DTOK_SEMCO, tokens[right-1]->line, ";" );
+	parser->defined = 1;
+
+	if( DaoParser_ParseCodeSect( parser, 0, parser->tokens->size-1 )==0 ){
+		if( DString_EQ( self->fileName, parser->fileName ) )
+			DArray_AppendArray( self->errors, parser->errors );
+		else
+			DaoParser_PrintError( parser, 0, 0, NULL );
+		goto ErrorInterfaceDefinition;
+	}
+	if( parser->vmcLast != parser->vmcBase ){
+		DaoParser_StatementError( parser, DAO_STATEMENT_IN_INTERFACE );
+		goto ErrorInterfaceDefinition;
+	}
+	DaoParser_Delete( parser );
+	return right + 1;
+ErrorInterfaceDefinition:
+	if( parser ) DaoParser_Delete( parser );
+	if( ec ) DaoParser_Error( self, ec, ename );
+	if( ec == DAO_SYMBOL_POSSIBLY_UNDEFINED )
+		DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
+	DaoParser_Error2( self, DAO_INVALID_INTERFACE_DEFINITION, errorStart, to, 0 );
+	return -1;
+}
+static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
+{
+	DaoToken *ptok, **tokens = self->tokens->items.pToken;
+	DaoNameSpace *myNS = self->nameSpace;
+	DaoNameSpace *ns = NULL;
+	DaoRoutine *routine = self->routine;
+	DaoRoutine *rout = NULL;
+	DaoParser *parser = NULL;
+	DaoClass *klass = NULL;
+	DaoTypeBase *typer;
+	DaoToken *tokName;
+	DString *str, *mbs = self->mbs;
+	DString *className, *ename = NULL;
+	DValue value, scope;
+	int begin, line = self->curLine;
+	int tki = tokens[start]->name;
+	int i, k, rb, right, virt = 0, stat = 0;
+	int errorStart = start;
+	int final = 0;
+	int ec = 0;
+	if( tki == DKEY_FINAL ){
+		final = DAO_CLS_FINAL;
+		start ++;
+	}
+	if( start+1 > to ) goto ErrorClassDefinition;
+	tokName = tokens[start+1];
+	className = ename = tokName->string;
+	start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
+	if( start <0 ) goto ErrorClassDefinition;
+	ename = tokens[start]->string;
+	if( value.t == DAO_STRING ){
+		className = value.v.s;
+		klass = DaoClass_New();
+		klass->attribs |= final;
+		DaoClass_SetName( klass, className, myNS );
+		if( routine != myNS->mainRoutine ) ns = NULL;
+		value.t = DAO_CLASS;
+		value.v.klass = klass;
+		DaoParser_AddToScope( self, scope, tokName, value, klass->objType, storeType );
+
+		if( start+2 <= to && tokens[start+2]->name == DTOK_SEMCO ){
+			start += 3;
+			return start;
+		}
+	}else if( value.t != DAO_CLASS ){
+		ec = DAO_SYMBOL_WAS_DEFINED;
+		goto ErrorClassDefinition;
+	}else if( value.v.klass->derived ){
+		ec = DAO_SYMBOL_WAS_DEFINED;
+		goto ErrorClassDefinition;
+	}
+
+	rout = klass->classRoutine;
+	rout->defLine = tokens[start]->line;
+	GC_ShiftRC( myNS, rout->nameSpace );
+	rout->nameSpace = myNS;
+
+	parser = DaoParser_New();
+	parser->vmSpace = self->vmSpace;
+	parser->routine = rout;
+	parser->isClassBody = 1;
+	parser->hostClass = klass;
+	parser->nameSpace = myNS;
+	parser->levelBase = self->levelBase + self->lexLevel + 1;
+	parser->selfParam = DaoType_New( "self:", DAO_PAR_NAMED,
+			(DaoBase*) klass->objType, NULL );
+	parser->selfParam->fname = DString_New(1);
+	DString_Append( parser->selfParam->name, className );
+	DString_SetMBS( parser->selfParam->fname, "self" );
+	GC_IncRC( parser->selfParam );
+
+	DString_Assign( parser->fileName, self->fileName );
+
+	DaoTokens_Append( parser->partoks, DTOK_LB, tokens[start]->line, "(" );
+	DaoTokens_Append( parser->partoks, DTOK_RB, tokens[start]->line, ")" );
+
+	start ++; /* token after class name. */
+	if( start > to || tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
+	if( tokens[start]->name == DTOK_COLON ){
+		/* class AA : NS::BB, CC{ } */
+		unsigned char sep = DTOK_COLON;
+		while( tokens[start]->name == sep ){
+			DaoClass *super = 0;
+			start = DaoParser_FindScopedData( self, start+1, & scope, & value, 0, mbs );
+			super = NULL;
+			if( start <0 ) goto ErrorClassDefinition;
+			ename = tokens[start]->string;
+			if( value.t != DAO_CLASS && value.t != DAO_CDATA ){
+				ec = DAO_SYMBOL_NEED_CLASS_CTYPE;
+				if( value.t == 0 || value.t == DAO_STRING ) ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+				goto ErrorClassDefinition;
+			}
+			super = value.v.klass;
+			if( super->type ==DAO_CLASS && ( super->attribs & DAO_CLS_FINAL ) ){
+				ec = DAO_CLASS_DERIVE_FINAL;
+				goto ErrorClassDefinition;
+			}
+			start ++;
+
+			if( tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
+			if( super == NULL ){
+				ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+				goto ErrorClassDefinition;
+			}
+			/* Add a reference to its super classes: */
+			DaoClass_AddSuperClass( klass, (DaoBase*) super, mbs );
+			sep = DTOK_COMMA;
+		}
+	}/* end parsing super classes */
+	begin = start;
+	right = tokens[start]->name == DTOK_LCB ?
+		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
+
+	if( right < 0 ) goto ErrorClassDefinition;
+	DaoParser_ExtractComments( self, klass->classHelp, rout->defLine, tokens[right]->line );
+
+	for(i=begin+1; i<right; i++) DArray_Append( parser->tokens, tokens[i] );
+	DaoTokens_Append( parser->tokens, DTOK_SEMCO, tokens[right-1]->line, ";" );
+	parser->defined = 1;
+
+	DaoClass_DeriveClassData( klass );
+	DaoParser_ParseParams( parser );
+	if( DaoParser_ParseCodeSect( parser, 0, parser->tokens->size-1 )==0 ){
+		if( DString_EQ( self->fileName, parser->fileName ) )
+			DArray_AppendArray( self->errors, parser->errors );
+		else
+			DaoParser_PrintError( parser, 0, 0, NULL );
+		goto ErrorClassDefinition;
+	}
+	if( parser->vmcLast != parser->vmcBase ){
+		DaoParser_StatementError( parser, DAO_STATEMENT_IN_CLASS );
+		if( DString_EQ( self->fileName, parser->fileName ) )
+			DArray_AppendArray( self->errors, parser->errors );
+		else
+			DaoParser_PrintError( parser, 0, 0, NULL );
+		goto ErrorClassDefinition;
+	}
+	DaoClass_ResetAttributes( klass );
+	DArray_Clear( parser->tokens );
+	DaoParser_PostParsing( parser );
+	//DaoParser_InheritConstructor( parser, tokens[start]->line );
+	rout->parser = NULL;
+	DaoParser_Delete( parser );
+	/* TODO: compile routines if it is not in incremental compiling mode */
+
+	return right + 1;
+ErrorClassDefinition:
+	if( parser ) DaoParser_Delete( parser );
+	if( ec ) DaoParser_Error( self, ec, ename );
+	DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, to, 0 );
+	return -1;
 }
 static int DaoParser_GetNormRegister( DaoParser *self, int reg, int first, int mid, int last );
 static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
@@ -2485,8 +3107,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	DaoTypeBase *typer;
 	DaoFunction *meth;
 	DaoType  *abtp;
-	DValue       value, scope;
-	DValue       nil = daoNullValue;
+	DValue    value, scope;
+	DValue    nil = daoNullValue;
 
 	self->error = 0;
 	token.string = mbs;
@@ -2568,7 +3190,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
 		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM 
 						&& tki > DAO_NOKEY1 && tki < DKEY_EACH )) ){
-			if( tki < DKEY_SUB || tki > DKEY_FUNCTION || storeType2 != DAO_DATA_STATIC ){
+			if( tki < DKEY_SUB || tki > DKEY_OPERATOR || storeType2 != DAO_DATA_STATIC ){
 				DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
 				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 				return 0;
@@ -2613,67 +3235,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			start = end + 1;
 			continue;
 		}else if( tki == DKEY_USE ){
-			int use = start;
-			start ++;
-			if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
-				DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
-				DaoParser_Error2( self, DAO_INVALID_USE_LIB, use, start, 1 );
-				return 0;
-			}
-			value = DaoNameSpace_GetData( myNS, tokens[start]->string );
-			if( value.t ==0 )
-				value = DaoNameSpace_GetData( vmSpace->nsInternal, tokens[start]->string );
-			if( value.t ==0 ){
-				DaoParser_Error( self, DAO_SYMBOL_POSSIBLY_UNDEFINED, tokens[start]->string );
-				DaoParser_Error( self, DAO_SYMBOL_NEED_CONSTANT, tokens[start]->string );
-				DaoParser_Error2( self, DAO_INVALID_USE_LIB, use, start, 1 );
-				return 0;
-			}
-			typer = DValue_GetTyper( value );
-			start ++;
-			if( start <= to && tokens[start]->name == DTOK_COLON ){
-				int prev = tokens[start]->line;
-				start ++;
-				while( start <= to && tokens[start]->type == DTOK_IDENTIFIER ){
-					str = tokens[start]->string;
-					value = DaoFindValue( typer, str );
-					if( value.t ==0 ){
-						DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, tokens[start]->string );
-						DaoParser_Error2( self, DAO_INVALID_USE_LIB, use, start, 1 );
-						return 0;
-					}
-					DaoNameSpace_AddConst( myNS, str, value );
-					start ++;
-					if( start <= to && tokens[start]->name == DTOK_COMMA ) start ++;
-					if( start > to || tokens[start]->name == DTOK_SEMCO ) break;
-					if( tokens[start]->line > prev ) break;
-				}
-			}else{
-				DMap *hash = typer->priv->methods;
-				DNode *it;
-				char *prev = "???";
-				if( typer->priv->nspace && typer->priv->methods == NULL ){
-					DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
-					hash = typer->priv->methods;
-				}
-				if( hash == NULL || hash->size ==0 ){
-					DaoParser_Warn( self, DAO_NO_METHOD_TO_USE, tokens[start-1]->string );
-					continue;
-				}
-				value.t = DAO_FUNCTION;
-				for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-					value.v.func = (DaoFunction*) it->value.pVoid;
-					if( STRCMP( value.v.func->routName, prev ) ==0 ) continue;
-					prev = value.v.func->routName->mbs;
-					DaoNameSpace_AddConst( myNS, value.v.func->routName, value );
-				}
-				if( typer->priv->values )
-					DaoNameSpace_SetupValues( typer->priv->nspace, typer );
-				hash = typer->priv->values;
-				for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-					DaoNameSpace_AddConst( myNS, it->key.pString, *it->value.pValue );
-				}
-			}
+			start = DaoParser_ParseUseStatement( self, start, to );
+			if( start <0 ) return 0;
 			continue;
 		}else if( tki == DKEY_BIND ){
 			DaoInterface *inter;
@@ -2786,7 +3349,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 				}
 				iv.v.i = value ++;
 				if( self->isClassBody ){
-					DaoClass_AddConst( self->hostClass, str, iv, permiType );
+					DaoClass_AddConst( self->hostClass, str, iv, permiType, tokens[start]->line );
 				}else if( global ){
 					DaoNameSpace_AddConst( myNS, str, iv );
 					if( stat ) MAP_Insert( myNS->cstStatic, str, 0 );
@@ -2814,236 +3377,20 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 		/* parsing routine definition */
 		if( (tki >= DKEY_SUB && tki <= DKEY_FUNCTION && tki2 != DTOK_LB) || tki == DKEY_OPERATOR ){
-			int virt = 0, stat = 0;
-			if( start > from ){
-				int ttkk = tokens[start-1]->name;
-				if( ttkk == DKEY_VIRTUAL ) virt = DAO_ROUT_VIRTUAL;
-				if( ttkk == DKEY_STATIC ) stat = DAO_ROUT_STATIC;
-			}
-			if( start > from + 1 ){
-				int ttkk = tokens[start-2]->name;
-				if( virt && ttkk == DKEY_STATIC ){
-					stat = DAO_ROUT_STATIC;
-				}else if( stat && ttkk == DKEY_VIRTUAL ){
-					virt = DAO_ROUT_VIRTUAL;
-				}
-			}
-			if( (virt | stat) && self->hostClass ==NULL && self->hostInter ==NULL ){
-				DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, tokens[start-1]->string );
-				return 0;
-			}
-			right = -1;
-			if( start+2 <= to && tokens[start+2]->name == DTOK_COLON2 ){
-				/* For functions define outside the class body: */
-				int oldpos = start + 1;
-				int r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 ); /* parameter list. */
-				klass = NULL;
-				if( r1 < 0 || r1+1 >= self->tokens->size ) return 0;
-
-				start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
-				if( start < 0 || scope.t != DAO_CLASS ){
-					ptok = tokens[ oldpos ];
-					self->curLine = ptok->line;
-					if( start >=0 ) DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS, ptok->string );
-					DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
-					return 0;
-				}
-				DString_Clear( mbs );
-				if( tki == DKEY_OPERATOR && r1 == start + 1 ){
-					r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start + 2, -1 );
-				}
-				for( k=start; k<=r1; k++ ) DString_Append( mbs, tokens[k]->string );
-				rout= DaoClass_GetOvldRoutine( scope.v.klass, mbs );
-				if( ! rout ){
-					DMap *hash = scope.v.klass->ovldRoutMap;
-					DNode *it = DMap_First( hash );
-					int defined = 0;
-					ptok = tokens[ start+1 ];
-					self->curLine = ptok->line;
-					DString_Assign( mbs, tokens[start]->string );
-					if( tokens[start]->type == DTOK_LB ){
-						int m = start + 1;
-						while( m < r1 && tokens[m]->type != DTOK_LB ){
-							DString_Assign( mbs, tokens[m]->string );
-							m += 1;
-						}
-					}
-					for(;it;it=DMap_Next(hash,it)){
-						DaoRoutine *meth = (DaoRoutine*) it->value.pBase;
-						if( DString_EQ( meth->routName, mbs ) && meth->type == DAO_ROUTINE ){
-							if( DaoParser_ParseRoutine( meth->parser ) ==0 ) return 0;
-							if( meth->bodyStart <0 ){
-								defined = 1;
-								DaoParser_Error( self, DAO_ROUT_NEED_IMPLEMENTATION, it->key.pString );
-							}
-						}
-					}
-					if( defined ){
-						DaoParser_Error2( self, DAO_ROUT_WRONG_SIGNATURE, start, r1, 0 );
-					}else{
-						DaoParser_Error2( self, DAO_ROUT_NOT_DECLARED, errorStart+1, r1, 0 );
-					}
-					DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
-					return 0;
-				}
-				parser = rout->parser;
-			}else if( start < to ){
-				klass = NULL;
-				rout = NULL;
-				right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
-				start ++;
-				DString_Assign( self->str, tokens[start]->string );
-				if( tki == DKEY_OPERATOR && right == start+1 ){
-					right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+2, -1 );
-					DString_Append( self->str, tokens[start+1]->string );
-				}else if( tki == DKEY_OPERATOR ){
-					rb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
-					for( k=start+1; k<rb; k++ ) DString_Append( self->str, tokens[k]->string );
-				}
-				if( right < 0 ){
-					ptok = tokens[ start ];
-					self->curLine = ptok->line;
-					DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, ptok->string );
-					return 0;
-				}
-				DString_Clear( mbs );
-				for( k=start; k<=right; k++ ) DString_Append( mbs, tokens[k]->string );
-
-				if( self->isClassBody ){
-					klass = self->hostClass;
-					rout = DaoClass_GetOvldRoutine( klass, mbs );
-				}else{
-					/* XXX support: seperation of declaration and definition */
-				}
-
-				if( rout == NULL ){
-					if( self->isInterBody ){
-						rout = (DaoRoutine*) DRoutine_New();
-						GC_ShiftRC( self->hostInter->abtype, rout->routHost );
-						rout->routHost = self->hostInter->abtype;
-						if( rout->routHost ) rout->attribs |= stat;
-					}else{
-						rout = DaoRoutine_New();
-						rout->defLine = tokens[start]->line;
-						if( self->isClassBody ){
-							GC_ShiftRC( self->hostClass->objType, rout->routHost );
-							rout->tidHost = DAO_OBJECT;
-							rout->attribs |= virt | stat;
-							rout->routHost = self->hostClass->objType;
-						}
-					}
-					parser = DaoParser_New();
-					parser->vmSpace = vmSpace;
-					parser->routine = rout;
-					parser->selfParam = self->selfParam;
-					parser->levelBase = self->levelBase + self->lexLevel + 1;
-					if( STRCMP( self->str, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
-					DString_Assign( rout->routName, self->str );
-				}else{
-					parser = rout->parser;
-				}
-
-				if( self->isClassBody ){
-					DValue *ref = NULL;
-					GC_ShiftRC( klass->objType, rout->routHost );
-					parser->hostClass = klass;
-					rout->tidHost = DAO_OBJECT;
-					rout->routHost = klass->objType;
-					DaoClass_AddOvldRoutine( klass, mbs, rout );
-
-					value = daoNullValue;
-					if( DString_Compare( self->str, klass->className ) == 0 ){
-						/* overloading constructor */
-						value.t = DAO_ROUTINE;
-						value.v.routine = klass->classRoutine;
-						rout->distance = self->inherit;
-						rout->attribs |= DAO_ROUT_INITOR;
-						/* printf( "%i %p %s\n", self->inherit, rout, self->str->mbs ); */
-					}else{
-						DaoClass_GetData( klass, self->str, & value, klass, & ref );
-					}
-
-					if( value.t == DAO_ROUTINE ){
-						DRoutine_AddOverLoad( (DRoutine*) value.v.p, (DRoutine*)rout );
-#if 0
-						if( value.v.routine->routHost != klass->objType ){
-							/* value.v.routine a dummy routine derived from parent class */
-							DArray *atmp = rout->routOverLoad;
-							rout->routOverLoad = value.v.routine->routOverLoad;
-							value.v.routine->routOverLoad = atmp;
-							GC_ShiftRC( rout, value.v.routine );
-							ref->v.routine = rout;
-						}
-#endif
-					}else{
-						value.t = DAO_ROUTINE;
-						value.v.routine = rout;
-						DaoClass_AddConst( klass, self->str, value, permiType );
-					}
-				}else if( self->isInterBody ){
-					DNode *node;
-					GC_ShiftRC( self->hostInter->abtype, rout->routHost );
-					parser->hostInter = self->hostInter;
-					rout->routHost = self->hostInter->abtype;
-					node = DMap_Find( self->hostInter->methods, self->str );
-
-					if( node ){
-						DRoutine *existing = (DRoutine*) node->value.pVoid;
-						DRoutine_AddOverLoad( (DRoutine*) existing, (DRoutine*)rout );
-						if( existing->routHost != self->hostInter->abtype ){
-							/* value.v.routine a dummy routine derived from parent class */
-							DArray *atmp = rout->routOverLoad;
-							rout->routOverLoad = existing->routOverLoad;
-							existing->routOverLoad = atmp;
-							GC_ShiftRC( rout, existing );
-							node->value.pVoid = rout;
-						}
-					}else{
-						DMap_Insert( self->hostInter->methods, self->str, rout );
-						GC_IncRC( rout );
-					}
-				}else{
-					int rg = DaoNameSpace_FindConst( myNS, self->str );
-					value = DaoNameSpace_GetConst( myNS, rg );
-					if( value.t == DAO_ROUTINE ){
-						DRoutine_AddOverLoad( (DRoutine*) value.v.p, (DRoutine*)rout );
-					}else{
-						value.t = DAO_ROUTINE;
-						value.v.routine = rout;
-						DaoNameSpace_AddConst( myNS, self->str, value );
-						if( storeType & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, self->str, 0 );
-					}
-				}
-			}
-			if( rout->routHost ) rout->tidHost = rout->routHost->tid;
-			/**/
-			right = DaoParser_ParsePrototype( self, parser, tki, start );
-			if( right < 0 ){
-				ptok = tokens[ start ];
-				self->curLine = ptok->line;
-				DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, ptok->string );
-				return 0;
-			}
-			if( DaoParser_ParseParams( parser ) == 0 ) return 0;
-			if( tokens[right]->name == DTOK_RCB ){ /* with body */
-				DArray_Append( self->routCompilable, rout );
-				rout->parser = parser;
-			}else if( rout->tidHost == DAO_INTERFACE ){
-				DaoParser_Delete( parser );
-			}else{
-				rout->parser = parser;
-			}
-			start = right+1;
+			start = DaoParser_ParseRoutineDefinition( self, start, from, to, permiType, storeType );
+			if( start <0 ) return 0;
 			continue;
 		}else if( tki == DKEY_INTERFACE ){
 			DaoNameSpace *ns = NULL;
 			DaoInterface *inter = NULL;
+			DaoToken *tokName;
 			DString *interName;
 			DString *ename = NULL;
 			int ec = 0;
 			parser = NULL;
 			if( start+1 > to ) goto ErrorInterfaceDefinition;
-			interName = ename = tokens[start+1]->string;
+			tokName = tokens[start+1];
+			interName = ename = tokName->string;
 			start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
 			if( start <0 ) goto ErrorInterfaceDefinition;
 			if( value.t == DAO_STRING ){
@@ -3052,7 +3399,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 				if( routine != myNS->mainRoutine ) ns = NULL;
 				value.t = DAO_INTERFACE;
 				value.v.inter = inter;
-				DaoParser_AddToScope( self, scope, interName, value, inter->abtype, storeType );
+				DaoParser_AddToScope( self, scope, tokName, value, inter->abtype, storeType );
 
 				if( tokens[start+2]->name == DTOK_SEMCO ){
 					start += 3;
@@ -3133,143 +3480,9 @@ ErrorInterfaceDefinition:
 		}else if( ( tki == DKEY_FINAL && start+1 <= to
 					&& tokens[start+1]->name == DKEY_CLASS ) || tki == DKEY_CLASS ){
 			/* parsing class definition */
-			int begin, line = self->curLine;
-			int final = 0;
-			int ec = 0;
-			DString *className, *ename = NULL;
-			DaoNameSpace *ns = NULL;
-			parser = NULL;
-			if( tki == DKEY_FINAL ){
-				final = DAO_CLS_FINAL;
-				start ++;
-			}
-			if( start+1 > to ) goto ErrorClassDefinition;
-			className = ename = tokens[start+1]->string;
-			start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
-			if( start <0 ) goto ErrorClassDefinition;
-			ename = tokens[start]->string;
-			if( value.t == DAO_STRING ){
-				className = value.v.s;
-				klass = DaoClass_New();
-				klass->attribs |= final;
-				DaoClass_SetName( klass, className, myNS );
-				if( routine != myNS->mainRoutine ) ns = NULL;
-				value.t = DAO_CLASS;
-				value.v.klass = klass;
-				DaoParser_AddToScope( self, scope, className, value, klass->objType, storeType );
-
-				if( start+2 <= to && tokens[start+2]->name == DTOK_SEMCO ){
-					start += 3;
-					continue;
-				}
-			}else if( value.t != DAO_CLASS ){
-				ec = DAO_SYMBOL_WAS_DEFINED;
-				goto ErrorClassDefinition;
-			}else if( value.v.klass->derived ){
-				ec = DAO_SYMBOL_WAS_DEFINED;
-				goto ErrorClassDefinition;
-			}
-
-			rout = klass->classRoutine;
-			rout->defLine = tokens[start]->line;
-			GC_ShiftRC( myNS, rout->nameSpace );
-			rout->nameSpace = myNS;
-
-			parser = DaoParser_New();
-			parser->vmSpace = vmSpace;
-			parser->routine = rout;
-			parser->isClassBody = 1;
-			parser->hostClass = klass;
-			parser->nameSpace = myNS;
-			parser->levelBase = self->levelBase + self->lexLevel + 1;
-			parser->selfParam = DaoType_New( "self:", DAO_PAR_NAMED,
-					(DaoBase*) klass->objType, NULL );
-			parser->selfParam->fname = DString_New(1);
-			DString_Append( parser->selfParam->name, className );
-			DString_SetMBS( parser->selfParam->fname, "self" );
-			GC_IncRC( parser->selfParam );
-
-			DString_Assign( parser->fileName, self->fileName );
-
-			DaoTokens_Append( parser->partoks, DTOK_LB, tokens[start]->line, "(" );
-			DaoTokens_Append( parser->partoks, DTOK_RB, tokens[start]->line, ")" );
-
-			start ++; /* token after class name. */
-			if( start > to || tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
-			if( tokens[start]->name == DTOK_COLON ){
-				/* class AA : NS::BB, CC{ } */
-				unsigned char sep = DTOK_COLON;
-				while( tokens[start]->name == sep ){
-					DaoClass *super = 0;
-					start = DaoParser_FindScopedData( self, start+1, & scope, & value, 0, mbs );
-					super = NULL;
-					if( start <0 ) goto ErrorClassDefinition;
-					ename = tokens[start]->string;
-					if( value.t != DAO_CLASS && value.t != DAO_CDATA ){
-						ec = DAO_SYMBOL_NEED_CLASS_CTYPE;
-						if( value.t == 0 || value.t == DAO_STRING ) ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
-						goto ErrorClassDefinition;
-					}
-					super = value.v.klass;
-					if( super->type ==DAO_CLASS && ( super->attribs & DAO_CLS_FINAL ) ){
-						ec = DAO_CLASS_DERIVE_FINAL;
-						goto ErrorClassDefinition;
-					}
-					start ++;
-
-					if( tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
-					if( super == NULL ){
-						ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
-						goto ErrorClassDefinition;
-					}
-					/* Add a reference to its super classes: */
-					DaoClass_AddSuperClass( klass, (DaoBase*) super, mbs );
-					sep = DTOK_COMMA;
-				}
-			}/* end parsing super classes */
-			begin = start;
-			right = tokens[start]->name == DTOK_LCB ?
-				DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
-
-			if( right < 0 ) goto ErrorClassDefinition;
-			DaoParser_ExtractComments( self, klass->docString, rout->defLine, tokens[right]->line );
-
-			for(i=begin+1; i<right; i++) DArray_Append( parser->tokens, tokens[i] );
-			DaoTokens_Append( parser->tokens, DTOK_SEMCO, tokens[right-1]->line, ";" );
-			parser->defined = 1;
-
-			DaoClass_DeriveClassData( klass );
-			DaoParser_ParseParams( parser );
-			if( DaoParser_ParseCodeSect( parser, 0, parser->tokens->size-1 )==0 ){
-				if( DString_EQ( self->fileName, parser->fileName ) )
-					DArray_AppendArray( self->errors, parser->errors );
-				else
-					DaoParser_PrintError( parser, 0, 0, NULL );
-				goto ErrorClassDefinition;
-			}
-			if( parser->vmcLast != parser->vmcBase ){
-				DaoParser_StatementError( parser, DAO_STATEMENT_IN_CLASS );
-				if( DString_EQ( self->fileName, parser->fileName ) )
-					DArray_AppendArray( self->errors, parser->errors );
-				else
-					DaoParser_PrintError( parser, 0, 0, NULL );
-				goto ErrorClassDefinition;
-			}
-			DaoClass_ResetAttributes( klass );
-			DArray_Clear( parser->tokens );
-			DaoParser_InheritConstructor( parser, tokens[start]->line );
-			klass->classRoutine->distance = 0xff; /* very low priority for default constructors */
-			rout->parser = NULL;
-			DaoParser_Delete( parser );
-			/* TODO: compile routines if it is not in incremental compiling mode */
-
-			start = right + 1;
+			start = DaoParser_ParseClassDefinition( self, start, to, storeType );
+			if( start <0 ) return 0;
 			continue;
-ErrorClassDefinition:
-			if( parser ) DaoParser_Delete( parser );
-			if( ec ) DaoParser_Error( self, ec, ename );
-			DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, to, 0 );
-			return 0;
 		}
 
 		tki = tokens[start]->name;
@@ -3643,7 +3856,8 @@ ErrorClassDefinition:
 			}else if( ( storeType & DAO_DATA_MEMBER ) && self->hostClass ){
 				/* class Klass( var ){ my var; self.var = var; } */
 				DaoClass *klass = self->hostClass;
-				if( DMap_Find( klass->lookupTable, str ) ==NULL ){
+				DNode *node = DMap_Find( klass->deflines, str );
+				if( node == NULL ){
 					DaoParser_DeclareVariable( self, vtok, storeType, permiType, abtp );
 				}else{
 					DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
@@ -3845,28 +4059,10 @@ ErrorClassDefinition:
 	}
 	return 1;
 }
-int DaoParser_ParseRoutine( DaoParser *self )
+void DaoParser_SetupBranching( DaoParser *self )
 {
-	DaoNameSpace *myNS = self->nameSpace;
-	DaoRoutine *routine = self->routine;
 	DaoInode *it, *it2;
-	const int tokChrCount = self->tokens->size;
-	int rm, id, defLine = routine->defLine;
-
-	if( self->parsed ) return 1;
-	GC_ShiftRC( myNS, routine->nameSpace );
-	routine->nameSpace = myNS;
-
-	self->parsed  = 1;
-	self->error = 0;
-
-	if( DaoParser_ParseCodeSect( self, 0, tokChrCount-1 )==0 ){
-		DaoParser_PrintError( self, 0, 0, NULL );
-		return 0;
-	}
-	routine->defLine = defLine;
-
-	if( self->error ) return 0;
+	int rm, id;
 	if( self->vmcLast->code != DVM_RETURN ){
 		int first = self->vmcLast->first + self->vmcLast->middle + self->vmcLast->last + 1;
 		if( self->vmSpace->options & DAO_EXEC_IDE ){
@@ -4053,6 +4249,29 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	//self->locRegCount ++; /* TODO: check */
 #endif
 	DaoParser_PushRegister( self );
+}
+int DaoParser_ParseRoutine( DaoParser *self )
+{
+	DaoNameSpace *myNS = self->nameSpace;
+	DaoRoutine *routine = self->routine;
+	DaoInode *it, *it2;
+	const int tokChrCount = self->tokens->size;
+	int rm, id, defLine = routine->defLine;
+
+	if( self->parsed ) return 1;
+	GC_ShiftRC( myNS, routine->nameSpace );
+	routine->nameSpace = myNS;
+
+	self->parsed  = 1;
+	self->error = 0;
+
+	if( DaoParser_ParseCodeSect( self, 0, tokChrCount-1 )==0 ){
+		DaoParser_PrintError( self, 0, 0, NULL );
+		return 0;
+	}
+	routine->defLine = defLine;
+
+	if( self->error ) return 0;
 	return DaoParser_PostParsing( self );
 }
 static int DaoParser_NullValue( DaoParser *self, int start )
@@ -4112,19 +4331,20 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok,
 	}else if( storeType & DAO_DATA_MEMBER ){
 		if( self->hostClass ){
 			DaoClass *hostClass = self->hostClass;
-			DNode *node = MAP_Find( hostClass->lookupTable, name );
+			DNode *node = MAP_Find( hostClass->deflines, name );
 			if( node ){
 				DaoParser_Warn( self, DAO_CTW_WAS_DEFINED, name );
 				return;
 			}else{
 				if( self->isClassBody ){
+					int ln = tok->line;
 					int ec = 0;
 					if( storeType & DAO_DATA_CONST ){
-						ec = DaoClass_AddConst( hostClass, name, daoNullValue, permiType );
+						ec = DaoClass_AddConst( hostClass, name, daoNullValue, permiType, ln );
 					}else if( storeType & DAO_DATA_STATIC ){
-						ec = DaoClass_AddGlobalVar( hostClass, name, daoNullValue, permiType, abtp );
+						ec = DaoClass_AddGlobalVar( hostClass, name, daoNullValue, abtp, permiType, ln );
 					}else{
-						ec = DaoClass_AddObjectVar( hostClass, name, daoNullValue, permiType, abtp );
+						ec = DaoClass_AddObjectVar( hostClass, name, daoNullValue, abtp, permiType, ln );
 						routine->attribs |= DAO_ROUT_NEEDSELF;
 					}
 					if( ec ) DaoParser_Warn( self, ec, name );
@@ -4391,6 +4611,8 @@ int DaoParser_PostParsing( DaoParser *self )
 	int i, j, k;
 	int notide = ! (self->vmSpace->options & DAO_EXEC_IDE);
 
+	DaoParser_SetupBranching( self );
+
 	if( self->bindtos ){
 		DArray *fails = DArray_New(0);
 		if( DaoInterface_Bind( self->bindtos, fails ) ==0 ){
@@ -4443,7 +4665,7 @@ int DaoParser_PostParsing( DaoParser *self )
 		DaoRoutine* rout = (DaoRoutine*) self->routCompilable->items.pBase[i];
 		/* could be set to null in DaoRoutine_Compile() for recursive routines */
 		if( rout->parser == NULL ) continue;
-		if( rout->tidHost == DAO_INTERFACE ) continue;
+		if( rout->minimal ==1 ) continue;
 		if( DaoParser_ParseRoutine( rout->parser ) ==0 ) return 0;
 		/* could be set to null in DaoRoutine_Compile() for recursive routines */
 		if( rout->parser == NULL ) continue;
@@ -4550,7 +4772,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end, int permi
 		value.t = DAO_NAMESPACE;
 		value.v.ns = ns;
 		if( hostClass && self->isClassBody ){
-			DaoClass_AddConst( hostClass, modname, value, permiType );
+			DaoClass_AddConst( hostClass, modname, value, permiType, tokens[i-1]->line );
 		}else{
 			DaoNameSpace_AddConst( nameSpace, modname, value );
 		}

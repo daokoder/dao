@@ -23,37 +23,22 @@
 #define \
 	DAO_ROUT_COMMON \
 uchar_t        attribs; \
-uchar_t        distance; \
+uchar_t        minimal  : 1; \
+uchar_t        minParam : 7; \
 uchar_t        parCount; \
 uchar_t        tidHost; \
 DaoType       *routHost; \
 DaoType       *routType; \
 DString       *routName; \
+DString       *routHelp; \
 DVarray       *routConsts; \
-DArray        *parTokens; \
-DArray        *routOverLoad; \
-DRoutine      *firstRoutine; \
+DArray        *routTable; \
 DaoNameSpace  *nameSpace
-
 
 struct DRoutine
 {
 	DAO_DATA_COMMON;
 	DAO_ROUT_COMMON;
-	/*
-	   char           attribs;
-	   char           parCount;
-	   short          distance;  inheritance distance to the self->hostClass
-	   DValue         routHost;
-	   DVarray       *routConsts;
-	   DaoType       *routType;
-	   DString       *routName;
-	   DArray        *parTokens; 
-	   DArray        *routOverLoad; <DRoutine*>
-	   DRoutine      *firstRoutine;
-	   DaoNameSpace  *nameSpace;
-	 */
-	DString *docString;
 };
 
 DRoutine* DRoutine_New();
@@ -63,7 +48,7 @@ int  DRoutine_AddConst( DRoutine *self, DaoBase *data );
 int  DRoutine_AddConstValue( DRoutine *self, DValue value );
 
 DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoType *type );
-DRoutine* DRoutine_GetOverLoad( DRoutine *self, DaoVmProcess *vmp, DValue *obj, DValue *p[], int n, int code );
+DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int code );
 
 int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
 int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
@@ -82,8 +67,6 @@ struct DaoRoutine
 {
 	DAO_DATA_COMMON;
 	DAO_ROUT_COMMON;
-
-	DString *docString;
 
 	/* virtual machine codes: */
 	DaoVmcArray *vmCodes;
@@ -108,6 +91,10 @@ struct DaoRoutine
 	int bodyEnd;
 
 	DMap *abstypes;
+
+	/* XXX GC */
+	DaoRoutine *original;
+	DArray     *specialized;
 
 	DaoRoutine *upRoutine;
 	DaoContext *upContext;

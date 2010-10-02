@@ -89,6 +89,14 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 	if( tid == DAO_OBJECT || tid == DAO_CDATA ) self->interfaces = DHash_New(0,0);
 	DString_SetMBS( self->name, name );
 	DaoType_CheckAttributes( self );
+#if 0
+	if( tid == DAO_PAR_NAMED && extra ){
+		self->fname = DString_New(1);
+		DString_SetMBS( self->fname, name );
+		DString_AppendMBS( self->name, ":" );
+		if( extra->type == DAO_TYPE ) DString_Append( self->name, self->X.abtype->name );
+	}
+#endif
 	if( nest ){
 		self->nested = DArray_New(0);
 		DArray_Assign( self->nested, nest );
@@ -675,12 +683,12 @@ static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
 {
 	DRoutine *rout;
 	int i, j, k=-1, max = 0;
-	for(i=0; i<self->routOverLoad->size; i++){
-		rout = (DRoutine*) self->routOverLoad->items.pBase[i];
+	for(i=0; i<self->routTable->size; i++){
+		rout = (DRoutine*) self->routTable->items.pBase[i];
 		if( rout->routType == type ) return 1;
 	}
-	for(i=0; i<self->routOverLoad->size; i++){
-		rout = (DRoutine*) self->routOverLoad->items.pBase[i];
+	for(i=0; i<self->routTable->size; i++){
+		rout = (DRoutine*) self->routTable->items.pBase[i];
 		j = DaoType_Match( rout->routType, type, NULL, binds );
 		/*
 		   printf( "%3i: %3i  %s  %s\n",i,j,rout->routType->name->mbs,type->name->mbs );
@@ -838,20 +846,19 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 			node = DMap_Find( self->methods, it->key.pVoid );
 			if( node == NULL ){
 				rout = DRoutine_New(); /* dummy routine */
-				rout->routOverLoad->items.pBase[0] = it->value.pVoid;
-				rout->routType = ((DRoutine*)it->value.pVoid)->routType;
-				rout->routHost = ((DRoutine*)it->value.pVoid)->routHost;
-				rout->tidHost = ((DRoutine*)it->value.pVoid)->tidHost;
+				DString_Assign( rout->routName, it->key.pString );
+				rout->routType = rout2->routType;
+				rout->routHost = self->abtype;
+				rout->tidHost = DAO_INTERFACE;
 				GC_IncRC( rout->routHost );
 				GC_IncRC( rout->routType );
-				GC_IncRC( it->value.pBase );
 				/* reference count of "rout" is already increased by DRoutine_New() */
 				DMap_Insert( self->methods, it->key.pVoid, rout );
 			}else{
 				rout = (DRoutine*) node->value.pVoid;
 			}
-			for( k=0; k<rout2->routOverLoad->size; k++)
-				DRoutine_AddOverLoad( rout, rout2->routOverLoad->items.pRout2[k] );
+			for( k=0; k<rout2->routTable->size; k++)
+				DRoutine_AddOverLoad( rout, rout2->routTable->items.pRout2[k] );
 		}
 	}
 }
@@ -864,9 +871,9 @@ void DMap_SortMethods( DMap *hash, DArray *methods )
 	int i, n;
 	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
 		DRoutine *one = (DRoutine*) it->value.pVoid;
-		n = one->routOverLoad->size;
+		n = one->routTable->size;
 		for(i=0; i<n; i++){
-			DRoutine *rout = one->routOverLoad->items.pRout2[i];
+			DRoutine *rout = one->routTable->items.pRout2[i];
 			DString_Assign( name, rout->routName );
 			DString_AppendMBS( name, " " );
 			DString_Append( name, rout->routType->name );

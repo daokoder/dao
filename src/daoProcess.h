@@ -84,9 +84,6 @@ struct DaoVmProcess
 	DArray  *signature;
 	DMap    *mbsRegex; /* <DString*,DString*> */
 	DMap    *wcsRegex; /* <DString*,DString*> */
-	DMap    *callsigs; /* HASH<DArray*,NULL> */
-	DMap    *matching; /* HASH<void*[2],int> */
-	size_t   version;
 };
 
 /* Create a new virtual machine process */

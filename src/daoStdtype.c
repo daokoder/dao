@@ -378,7 +378,7 @@ void DaoBase_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	DString_SetMBS( ctx->process->mbstring, "[]" );
 	func = DaoFindFunction( typer, ctx->process->mbstring );
 	if( func )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, ctx->process, self0, p+1, 1, 0 );
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, 1, 0 );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
@@ -2876,7 +2876,7 @@ static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
 		DString_Append( ctx->process->mbstring, name );
 		p = DaoFindValue( typer, ctx->process->mbstring );
 		if( p.t == DAO_FUNCTION )
-			func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, ctx->process, NULL, & self, 1, 0 );
+			func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, NULL, & self, 1, 0 );
 		if( func == NULL ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
 			return;
@@ -2903,7 +2903,7 @@ static void DaoCData_SetField( DValue *self, DaoContext *ctx, DString *name, DVa
 	}
 	val = DaoFindValue( typer, ctx->process->mbstring );
 	if( val.t == DAO_FUNCTION )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, ctx->process, self, p+1, 1, 0 );
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, self, p+1, 1, 0 );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 		return;
@@ -2940,7 +2940,7 @@ static void DaoCData_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 		DString_SetMBS( ctx->process->mbstring, "[]" );
 		func = DaoFindFunction( typer, ctx->process->mbstring );
 		if( func )
-			func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, ctx->process, self0, p+1, 1, 0 );
+			func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, 1, 0 );
 		if( func == NULL ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 			return;
@@ -2964,7 +2964,7 @@ static void DaoCData_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue
 		p[0] = self0;
 		p[1] = & pid;
 		p[2] = & value;
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, ctx->process, self0, p+1, 2, 0 );
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, 2, 0 );
 	}
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );

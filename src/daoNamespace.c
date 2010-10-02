@@ -257,14 +257,27 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 		}
 	}
 }
+static void DaoTypeBase_Parents( DaoTypeBase *typer, DArray *parents )
+{
+	int i, k;
+	DArray_Clear( parents );
+	DArray_Append( parents, typer );
+	for(k=0; k<parents->size; k++){
+		typer = (DaoTypeBase*) parents->items.pVoid[k];
+		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+			if( typer->supers[i] == NULL ) break;
+			DArray_Append( parents, typer->supers[i] );
+		}
+	}
+}
 int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 {
-	int i, valCount;
+	int i, j, valCount;
+	DArray *parents;
 	DMap *values;
 	DMap *supValues;
 	DNode *it;
 	DValue value = daoNullValue;
-	DString name = { 0, 0, NULL, NULL, NULL };
 
 	if( typer->priv == NULL ) return 0;
 	if( typer->priv->values != NULL ) return 1;
@@ -284,10 +297,8 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 		values = DHash_New( D_STRING, D_VALUE );
 		typer->priv->values = values;
 		for(i=0; i<valCount; i++){
+			DString name = DString_WrapMBS( typer->numItems[i].name );
 			double dv = typer->numItems[i].value;
-			name.mbs = (char*) typer->numItems[i].name;
-			name.data = (size_t*) name.mbs;
-			name.size = name.bufSize = strlen( name.mbs );
 			value = daoNullValue;
 			value.t = typer->numItems[i].type;
 			switch( typer->numItems[i].type ){
@@ -298,13 +309,20 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 			}
 			DMap_Insert( values, & name, & value );
 		}
-		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-			if( typer->supers[i] == NULL ) break;
-			supValues = typer->supers[i]->priv->values;
-			for(it=DMap_First(supValues); it; it=DMap_Next(supValues, it)){
-				DMap_Insert( values, it->key.pVoid, it->value.pVoid );
+		parents = DArray_New(0);
+		DaoTypeBase_Parents( typer, parents );
+		for(i=1; i<parents->size; i++){
+			DaoTypeBase *sup = (DaoTypeBase*) parents->items.pVoid[i];
+			supValues = sup->priv->values;
+			if( sup->numItems == NULL ) continue;
+			for(j=0; sup->numItems[j].name!=NULL; j++){
+				DString name = DString_WrapMBS( sup->numItems[j].name );
+				it = DMap_Find( supValues, & name );
+				if( it && DMap_Find( values, & name ) == NULL )
+					DMap_Insert( values, it->key.pVoid, it->value.pVoid );
 			}
 		}
+		DArray_Delete( parents );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & dao_vsetup_mutex );
@@ -316,11 +334,12 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 	DaoParser *parser;
 	DaoFunction *cur;
 	DString *name1, *name2;
+	DArray *parents;
 	DMap *methods;
 	DMap *supMethods;
 	DNode *node;
 	DNode *it;
-	int i, size;
+	int i, k, size;
 	if( typer->priv == NULL ){
 		printf( "WARNING: type \"%s\" has no core structure.\n", typer->name );
 		return 0;
@@ -369,13 +388,20 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 				MAP_Insert( methods, cur->routName, cur );
 			}
 		}
-		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-			if( typer->supers[i] == NULL ) break;
-			supMethods = typer->supers[i]->priv->methods;
+		parents = DArray_New(0);
+		DaoTypeBase_Parents( typer, parents );
+		for(i=1; i<parents->size; i++){
+			DaoTypeBase *sup = (DaoTypeBase*) parents->items.pVoid[i];
+			supMethods = sup->priv->methods;
 			for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
+				DRoutine *rep = NULL;
 				cur = (DaoFunction*) it->value.pVoid;
-				if( STRCMP( cur->routName, typer->supers[i]->name ) ==0 ) continue;
+				/* skip constructor */
+				if( STRCMP( cur->routName, sup->name ) ==0 ) continue;
+				/* skip methods not defined in this parent type */
+				if( cur->routHost != sup->priv->abtype ) continue;
 				node = MAP_Find( methods, cur->routName );
+#if 0
 				if( node == NULL ){
 					/*
 					   cur = DaoFunction_Copy( cur, 0 );
@@ -385,11 +411,11 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 					MAP_Insert( methods, cur->routName, cur );
 				}else{
 					DRoutine *drt = (DRoutine*) node->value.pVoid;
-					DaoFunction *func = (DaoFunction*) drt->firstRoutine;
-					DaoFunction **fs = (DaoFunction**) func->routOverLoad->items.pBase;
+					DaoFunction *func = (DaoFunction*) drt;
+					DaoFunction **fs = (DaoFunction**) func->routTable->items.pBase;
 					int k, matched = 0;
 					DaoRoutine_GetSignature( cur->routType, name1 );
-					for(k=0; k<func->routOverLoad->size; k++){
+					for(k=0; k<func->routTable->size; k++){
 						if( (func->routType->attrib & DAO_ROUT_PARSELF) 
 								== (fs[k]->routType->attrib & DAO_ROUT_PARSELF) ){
 							DaoRoutine_GetSignature( fs[k]->routType, name2 );
@@ -400,18 +426,14 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 						}
 					}
 					if( matched ==0 ){
-						int dist = cur->distance + 1;
 						cur = DaoFunction_Copy( cur, 0 ); /* there is no entry in the structure */
 						GC_ShiftRC( typer->priv->abtype, cur->routHost );
 						cur->tidHost = DAO_CDATA;
 						cur->routHost = typer->priv->abtype;
-						cur->distance = dist; /* XXX distance , also for class */
 						if( func->routHost != typer->priv->abtype ){
 							/* there is only an entry from parent types,
 							   duplicate it before adding overloaed function: */
 							drt = (DRoutine*) DaoFunction_Copy( func, 0 );
-							drt->firstRoutine = drt;
-							drt->distance = func->distance + 1;
 							DRoutine_AddOverLoad( drt, drt );
 							GC_IncRC( drt );
 							GC_DecRC( func );
@@ -424,8 +446,29 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 						DRoutine_AddOverLoad( drt, (DRoutine*) cur );
 					}
 				}
+#else
+				if( node == NULL ){
+					rep = DRoutine_New(); /* a dummy function */
+					DString_Assign( rep->routName, cur->routName );
+					rep->tidHost = DAO_CDATA;
+					rep->routHost = typer->priv->abtype;
+					rep->routType = cur->routType;
+					GC_IncRC( rep->routHost );
+					GC_IncRC( rep->routType );
+					GC_IncRC( rep );
+					MAP_Insert( methods, rep->routName, rep );
+				}else{
+					rep = (DRoutine*) node->value.pVoid;
+				}
+				for( k=0; k<cur->routTable->size; k++){
+					DRoutine *rt = (DRoutine*)cur->routTable->items.pBase[k];
+					if( rt->routHost != sup->priv->abtype ) continue;
+					DRoutine_AddOverLoad( rep, rt );
+				}
+#endif
 			}
 		}
+		DArray_Delete( parents );
 		DaoParser_Delete( parser );
 
 		assert( DAO_ROUT_MAIN < (1<<DVM_MOVE) );
@@ -1496,7 +1539,7 @@ DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto,
 	return func;
 Error:
 	if( parser != pp ) DaoParser_Delete( parser );
-	DArray_Clear( func->routOverLoad ); /* routOverLoad contains func */
+	DArray_Clear( func->routTable ); /* routTable contains func */
 	DaoFunction_Delete( func );
 	return NULL;
 }

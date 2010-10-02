@@ -466,7 +466,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		dA = from.v.p;
 		if( tp->tid == DAO_ROUTINE && ( dA->type ==DAO_ROUTINE || dA->type ==DAO_FUNCTION ) ){
 			/* XXX pair<objetp,routine<...>> */
-			dA = (DaoBase*) DRoutine_GetOverLoadByType( ((DRoutine*)dA)->firstRoutine, tp );
+			dA = (DaoBase*) DRoutine_GetOverLoadByType( (DRoutine*)dA, tp );
 			if( dA == NULL ) return 0;
 			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
 		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
@@ -601,7 +601,7 @@ int DValue_Pass( DValue from, DValue *to, DaoType *tp )
 		dA = from.v.p;
 		if( tp->tid == DAO_ROUTINE && ( dA->type ==DAO_ROUTINE || dA->type ==DAO_FUNCTION ) ){
 			/* XXX pair<objetp,routine<...>> */
-			dA = (DaoBase*) DRoutine_GetOverLoadByType( ((DRoutine*)dA)->firstRoutine, tp );
+			dA = (DaoBase*) DRoutine_GetOverLoadByType( (DRoutine*)dA, tp );
 			if( dA == NULL ) return 0;
 			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
 		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA)

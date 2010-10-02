@@ -59,14 +59,15 @@ struct DaoClass
 	DaoRoutine *classRoutine; /* Class constructor. */
 
 	DString *className;
-	DString *docString;
+	DString *classHelp;
 
 	DaoType  *clsType;
 	DaoType  *objType;
 	DMap     *abstypes;
+	DMap     *deflines;
 
-	int       derived;
-	uint_t    attribs;
+	ushort_t  derived;
+	ushort_t  attribs;
 };
 
 DaoClass* DaoClass_New();
@@ -89,9 +90,9 @@ int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *th
 DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClass *thisClass );
 int DaoClass_GetDataIndex( DaoClass *self, DString *name, int *type );
 
-int DaoClass_AddConst( DaoClass *self, DString *name, DValue value, int s );
-int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue value, int s, DaoType *t );
-int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, int s, DaoType *t );
+int DaoClass_AddConst( DaoClass *self, DString *name, DValue value, int s, int l );
+int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue value, DaoType *t, int s, int l );
+int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, DaoType *t, int s, int l );
 
 int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 

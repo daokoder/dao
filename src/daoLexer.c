@@ -127,8 +127,8 @@ DIntStringPair dao_keywords[] =
 	{ 0, "sub" } ,
 	{ DAO_ROUTINE, "routine" } , /* for typing */
 	{ 0, "function" } ,
-	{ 100, "interface" } ,
 	{ 100, "operator" } ,
+	{ 100, "interface" } ,
 	{ 0, "self" } ,
 	{ DAO_INTEGER, "int" } ,
 	{ DAO_FLOAT, "float" } ,

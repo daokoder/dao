@@ -62,7 +62,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 		p[0].v.object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
 		p[0].t = p[0].v.object ? p[0].v.object->type : 0;
 		for(i=0; i<=N; i++) ps[i] = p + i;
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, vmp, &selfpar, ps, N+1, DVM_MCALL );
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, &selfpar, ps, N+1, DVM_MCALL );
 		DaoFunction_SimpleCall( func, ctx, ps, N+1 );
 	}
 	return 0;

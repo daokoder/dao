@@ -114,7 +114,7 @@ struct DaoParser
 	int lineCount;
 	short indent;
 	short defined;
-	short inherit; /* inherited constructors */
+	//short inherit; /* inherited constructors */
 	short error;
 	short parsed;
 	DArray *scoping; /* <size_t> */

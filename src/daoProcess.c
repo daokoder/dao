@@ -165,9 +165,6 @@ DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms )
 	self->array = NULL;
 	self->parbuf = NULL;
 	self->signature = DArray_New(0);
-	self->callsigs = DHash_New(D_ARRAY,0);
-	self->matching = DHash_New(D_VOID2,0);
-	self->version = 0;
 	return self;
 }
 
@@ -200,8 +197,6 @@ void DaoVmProcess_Delete( DaoVmProcess *self )
 	DValue_Clear( & self->returned );
 	DVarray_Delete( self->exceptions );
 	DArray_Delete( self->signature );
-	DMap_Delete( self->callsigs );
-	DMap_Delete( self->matching );
 	if( self->parResume ) DVarray_Delete( self->parResume );
 	if( self->parYield ) DVarray_Delete( self->parYield );
 	if( self->abtype ) GC_DecRC( self->abtype );
@@ -1017,6 +1012,7 @@ CallEntry:
 	id = self->topFrame->entry;
 	if( id >= topCtx->routine->vmCodes->size ){
 		if( id == 0 ){
+			printf( "%p\n", topCtx->routine );
 			DString_SetMBS( self->mbstring, "Not implemented function, " );
 			DString_Append( self->mbstring, topCtx->routine->routName );
 			DString_AppendMBS( self->mbstring, "()" );

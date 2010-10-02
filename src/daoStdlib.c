@@ -1743,14 +1743,13 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 	int i;
 	if( N ==1 ){
 		DRoutine *rout = (DRoutine*) p[0]->v.p;
-		rout = rout->firstRoutine;
 		list = DaoContext_PutList( ctx );
 		if( p[0]->t != DAO_ROUTINE && p[0]->t != DAO_FUNCTION ){
 			DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
 			return;
 		}
-		for(i=0; i<rout->routOverLoad->size; i++){
-			item.v.p = rout->routOverLoad->items.pBase[i];
+		for(i=0; i<rout->routTable->size; i++){
+			item.v.p = rout->routTable->items.pBase[i];
 			item.t = item.v.p->type;
 			DaoList_Append( list, item );
 		}
@@ -1888,9 +1887,9 @@ static void REFL_Doc( DaoContext *ctx, DValue *p[], int N )
 {
 	DString *doc = NULL;
 	switch( p[0]->t ){
-	case DAO_CLASS : doc = p[0]->v.klass->docString; break;
-	case DAO_OBJECT : doc = p[0]->v.object->myClass->docString; break;
-	case DAO_ROUTINE : doc = p[0]->v.routine->docString; break;
+	case DAO_CLASS : doc = p[0]->v.klass->classHelp; break;
+	case DAO_OBJECT : doc = p[0]->v.object->myClass->classHelp; break;
+	case DAO_ROUTINE : doc = p[0]->v.routine->routHelp; break;
 	default : break;
 	}
 	if( doc == NULL ){
