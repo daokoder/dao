@@ -746,6 +746,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 		}else{
 			DValue o = *obj;
 			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
+				o.v.object = o.v.object->that; /* for virtual method call */
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
