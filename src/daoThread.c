@@ -896,7 +896,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
 		params = buffer;
 	}
 	if( rov.t != DAO_ROUTINE && rov.t != DAO_FUNCTION ) goto ErrorParam;
-	rout = DRoutine_GetOverLoad( (DRoutine*)rov.v.routine, ctx->process, & selfobj, params, N, DVM_CALL );
+	rout = DRoutine_GetOverLoad( (DRoutine*)rov.v.routine, & selfobj, params, N, DVM_CALL );
 	if( rout == NULL ) goto ErrorParam;
 	if( rout->type == DAO_ROUTINE ){
 		DaoRoutine *drout = (DaoRoutine*) rout;

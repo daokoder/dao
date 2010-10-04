@@ -123,6 +123,7 @@ struct DaoParser
 	/* members for convenience */
 	DLong     *bigint;
 	DString   *mbs;
+	DString   *mbs2;
 	DString   *str;
 	DMap      *lvm; /* <DString*,int>, for localVarMap; */
 	DArray    *toks;

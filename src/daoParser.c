@@ -218,6 +218,7 @@ DaoParser* DaoParser_New()
 
 	self->routName = DString_New(1);
 	self->mbs = DString_New(1);
+	self->mbs2 = DString_New(1);
 	self->str = DString_New(1);
 	self->bigint = DLong_New();
 
@@ -238,6 +239,7 @@ void DaoParser_Delete( DaoParser *self )
 	DString_Delete( self->fileName );
 	DString_Delete( self->routName );
 	DString_Delete( self->mbs );
+	DString_Delete( self->mbs2 );
 	DString_Delete( self->str );
 	DArray_Delete( self->tokens );
 	DArray_Delete( self->partoks );
@@ -2664,13 +2666,13 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 		rout = NULL;
 		right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 		start ++;
-		DString_Assign( self->str, tokens[start]->string );
+		DString_Assign( self->mbs2, tokens[start]->string );
 		if( tki == DKEY_OPERATOR && right == start+1 ){
 			right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+2, -1 );
-			DString_Append( self->str, tokens[start+1]->string );
+			DString_Append( self->mbs2, tokens[start+1]->string );
 		}else if( tki == DKEY_OPERATOR ){
 			rb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
-			for( k=start+1; k<rb; k++ ) DString_Append( self->str, tokens[k]->string );
+			for( k=start+1; k<rb; k++ ) DString_Append( self->mbs2, tokens[k]->string );
 		}
 		if( right < 0 ){
 			ptok = tokens[ start ];
@@ -2710,8 +2712,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			parser->vmSpace = self->vmSpace;
 			parser->selfParam = self->selfParam;
 			parser->levelBase = self->levelBase + self->lexLevel + 1;
-			if( STRCMP( self->str, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
-			DString_Assign( rout->routName, self->str );
+			DString_Assign( rout->routName, self->mbs2 );
+			if( STRCMP( rout->routName, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
 		}else{
 			parser = rout->parser;
 		}
@@ -2725,14 +2727,14 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			DaoClass_AddOvldRoutine( klass, mbs, rout );
 
 			value = daoNullValue;
-			if( DString_Compare( self->str, klass->className ) == 0 ){
+			if( DString_Compare( self->mbs2, klass->className ) == 0 ){
 				/* overloading constructor */
 				value.t = DAO_ROUTINE;
 				value.v.routine = klass->classRoutine;
 				rout->attribs |= DAO_ROUT_INITOR;
-				/* printf( "%i %p %s\n", self->inherit, rout, self->str->mbs ); */
+				/* printf( "%i %p %s\n", self->inherit, rout, self->mbs2->mbs ); */
 			}else{
-				DaoClass_GetData( klass, self->str, & value, klass, & ref );
+				DaoClass_GetData( klass, self->mbs2, & value, klass, & ref );
 			}
 
 			if( value.t == DAO_ROUTINE ){
@@ -2750,14 +2752,14 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			}else{
 				value.t = DAO_ROUTINE;
 				value.v.routine = rout;
-				DaoClass_AddConst( klass, self->str, value, permiType, rout->defLine );
+				DaoClass_AddConst( klass, self->mbs2, value, permiType, rout->defLine );
 			}
 		}else if( self->isInterBody ){
 			DNode *node;
 			GC_ShiftRC( self->hostInter->abtype, rout->routHost );
 			parser->hostInter = self->hostInter;
 			rout->routHost = self->hostInter->abtype;
-			node = DMap_Find( self->hostInter->methods, self->str );
+			node = DMap_Find( self->hostInter->methods, self->mbs2 );
 
 			if( node ){
 				DRoutine *existing = (DRoutine*) node->value.pVoid;
@@ -2773,19 +2775,19 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 				}
 #endif
 			}else{
-				DMap_Insert( self->hostInter->methods, self->str, rout );
+				DMap_Insert( self->hostInter->methods, self->mbs2, rout );
 				GC_IncRC( rout );
 			}
 		}else{
-			int rg = DaoNameSpace_FindConst( myNS, self->str );
+			int rg = DaoNameSpace_FindConst( myNS, self->mbs2 );
 			value = DaoNameSpace_GetConst( myNS, rg );
 			if( value.t == DAO_ROUTINE ){
 				DRoutine_AddOverLoad( (DRoutine*) value.v.p, (DRoutine*)rout );
 			}else{
 				value.t = DAO_ROUTINE;
 				value.v.routine = rout;
-				DaoNameSpace_AddConst( myNS, self->str, value );
-				if( storeType & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, self->str, 0 );
+				DaoNameSpace_AddConst( myNS, self->mbs2, value );
+				if( storeType & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, self->mbs2, 0 );
 			}
 		}
 	}

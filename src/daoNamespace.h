@@ -43,6 +43,7 @@ struct DaoNameSpace
 	DMap     *varStatic;  /* <DString*,size_t> */
 
 	DaoRoutine *mainRoutine;
+    DaoList    *argParams;
 
 	DArray *mainRoutines; /* stdlib.eval() */
 	DArray *definedRoutines; /* for DaoStudio IDE */

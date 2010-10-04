@@ -299,12 +299,12 @@ DaoVmSpace* DaoVmSpace_New();
  */
 void DaoVmSpace_Delete( DaoVmSpace *self );
 
-int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
+int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
 void   DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 int    DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 int DaoVmSpace_Compile( DaoVmSpace *self, DaoNameSpace *ns, DString *src, int rpl );
-DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
+DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
 
 DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
 DaoNameSpace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *fname );

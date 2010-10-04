@@ -700,6 +700,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	self->varStatic = DHash_New(D_STRING,0);
 	self->macros   = DHash_New(D_STRING,0);
 	self->abstypes = DHash_New(D_STRING,0);
+	self->argParams = DaoList_New();
 	self->time = 0;
 	self->file = DString_New(1);
 	self->path = DString_New(1);
@@ -773,6 +774,7 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 		DArray *array = self->sources->items.pArray[i];
 		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
+	DaoList_Delete( self->argParams );
 
 	GC_DecRC( self->udfType1 );
 	GC_DecRC( self->udfType2 );

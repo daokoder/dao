@@ -66,8 +66,6 @@ struct DaoVmSpace
     DMap  *modRequire;
     DMap  *allTokens;
 
-    DaoList *argParams;
-
     DaoUserHandler *userHandler;
 
     char* (*ReadLine)( const char *prompt );
@@ -92,12 +90,12 @@ void DaoVmSpace_Delete( DaoVmSpace *self );
 void DaoVmSpace_Lock( DaoVmSpace *self );
 void DaoVmSpace_Unlock( DaoVmSpace *self );
 
-int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
+int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
 
 int DaoVmSpace_Compile( DaoVmSpace *self, DaoNameSpace *ns, DString *src, int rpl );
-int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
+int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 
-DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
+DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
 DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
 DaoNameSpace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *fname );
 DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *fname, DArray *reqns );

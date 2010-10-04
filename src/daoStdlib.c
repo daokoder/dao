@@ -78,7 +78,7 @@ static void STD_Load( DaoContext *ctx, DValue *p[], int N )
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
 	DArray_PushFront( vms->pathLoading, ctx->nameSpace->path );
-	ns = DaoVmSpace_Load( vms, name->mbs );
+	ns = DaoVmSpace_Load( vms, name );
 	DaoContext_SetResult( ctx, (DaoBase*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 #if 0

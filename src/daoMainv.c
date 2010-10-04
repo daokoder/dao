@@ -45,7 +45,7 @@ int main( int argc, char **argv )
 	args  = DString_New(1);
 	for(i=1; i<argc; i++ ){
 		DString_AppendMBS( args, argv[i] );
-		DString_AppendMBS( args, " " );
+		DString_AppendChar( args, '\0' );
 	}
 	k = 0;
 	while( dao_virtual_files[k][0] ){
@@ -53,12 +53,12 @@ int main( int argc, char **argv )
 		k ++;
 	}
 	if( k ==0 ) return 1;
-	DString_InsertChar( args, ' ', 0 );
+	DString_InsertChar( args, '\0', 0 );
 	DString_InsertMBS( args, dao_virtual_files[0][0], 0, 0, 0 );
 	DaoVmSpace_SetPath( vmSpace, "/@/" ); // path for the virtual files
 
 	/* Start execution. */
-	if( ! DaoVmSpace_RunMain( vmSpace, DString_GetMBS( args ) ) ) return 1;
+	if( ! DaoVmSpace_RunMain( vmSpace, args ) ) return 1;
 	DaoQuit();
 
 	//printf( "FINISHED %s\n", getenv( "PROC_NAME" ) );

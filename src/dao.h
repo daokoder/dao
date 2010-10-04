@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20100815
+#define DAO_H_VERSION 20101002
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -614,12 +614,12 @@ struct DaoAPI
 
 	DaoVmSpace* (*DaoVmSpace_New)();
 
-	int (*DaoVmSpace_ParseOptions)( DaoVmSpace *self, const char *options );
+	int (*DaoVmSpace_ParseOptions)( DaoVmSpace *self, DString *options );
 	void (*DaoVmSpace_SetOptions)( DaoVmSpace *self, int options );
 	int  (*DaoVmSpace_GetOptions)( DaoVmSpace *self );
 
-	int (*DaoVmSpace_RunMain)( DaoVmSpace *self, const char *file );
-	DaoNameSpace* (*DaoVmSpace_Load)( DaoVmSpace *self, const char *file );
+	int (*DaoVmSpace_RunMain)( DaoVmSpace *self, DString *file );
+	DaoNameSpace* (*DaoVmSpace_Load)( DaoVmSpace *self, DString *file );
 	DaoNameSpace* (*DaoVmSpace_MainNameSpace)( DaoVmSpace *self );
 	DaoVmProcess* (*DaoVmSpace_MainVmProcess)( DaoVmSpace *self );
 	DaoVmProcess* (*DaoVmSpace_AcquireProcess)( DaoVmSpace *self );
@@ -920,12 +920,12 @@ DAO_DLL int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 DAO_DLL int DaoNameSpace_Load( DaoNameSpace *self, const char *file );
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
-DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
+DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
 DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
-DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
-DAO_DLL DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
+DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
+DAO_DLL DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
 DAO_DLL DaoNameSpace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
 DAO_DLL DaoVmProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
 /* get a process object from a pool */

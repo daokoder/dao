@@ -89,21 +89,22 @@ int main( int argc, char **argv )
 
 	for(i=1; i<k; i++ ){
 		DString_AppendMBS( opts, argv[i] );
-		DString_AppendMBS( opts, " " );
+		DString_AppendChar( opts, '\0' );
 	}
 
-	DaoVmSpace_ParseOptions( vmSpace, DString_GetMBS( opts ) );
+	DaoVmSpace_ParseOptions( vmSpace, opts );
 
 	if( idsrc >= 0 ){
 		for(i=idsrc; i<argc; i++ ){
 			DString_AppendMBS( args, argv[i] );
-			DString_AppendMBS( args, " " );
+			DString_AppendChar( args, '\0' );
 		}
 	}else if( argc==1 ){
+		DString_AppendChar( opts, '\0' );
 		DString_AppendMBS( opts, "-vi" );
-		DaoVmSpace_ParseOptions( vmSpace, DString_GetMBS( opts ) );
+		DaoVmSpace_ParseOptions( vmSpace, opts );
 	}
-	if( strstr( DString_GetMBS( opts ), "v" ) ){
+	if( strstr( DString_GetMBS( opts ), "v" ) ){ /*XXX*/
 		printf( "\n  A simple shell for the Dao Virtual Machine.\n" );
 		printf( "  Copyright(C) 2006-2010, Fu Limin.\n" );
 		printf( "  This shell is distributed under GNU General Public License.\n" );
@@ -111,7 +112,7 @@ int main( int argc, char **argv )
 	if( DaoVmSpace_GetOptions( vmSpace ) & DAO_EXEC_INTERUN )
 		signal( SIGINT, DaoSignalHandler );
 
-	if( ! DaoVmSpace_RunMain( vmSpace, DString_GetMBS( args ) ) ) return 1;
+	if( ! DaoVmSpace_RunMain( vmSpace, args ) ) return 1;
 	DString_Delete( opts );
 	DString_Delete( args );
 	DaoQuit();
