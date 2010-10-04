@@ -375,10 +375,13 @@ static void STD_ListMeth( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *p[0] );
 	DaoFunction **meths;
-	DArray *array = DArray_New(0);
-	DMap *hash = typer->priv->values;
+	DArray *array;
+	DMap *hash;
 	DNode *it;
 	int i, j, methCount;
+	if( typer == NULL || typer->priv == NULL ) return;
+	array = DArray_New(0);
+	hash = typer->priv->values;
 	if( hash == NULL ){
 		DaoNameSpace_SetupValues( typer->priv->nspace, typer );
 		hash = typer->priv->values;
@@ -386,22 +389,26 @@ static void STD_ListMeth( DaoContext *ctx, DValue *p[], int N )
 	if( typer->priv->methods == NULL ){
 		DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
 	}
-	DMap_SortMethods( typer->priv->methods, array );
+	if( typer->priv->methods ) DMap_SortMethods( typer->priv->methods, array );
 	meths = (DaoFunction**) array->items.pVoid;
 	methCount = array->size;
 	DaoContext_Print( ctx, "======================\nConsts / Methods of " );
 	DaoContext_Print( ctx, typer->name );
 	DaoContext_Print( ctx, ":\n======================\n" );
-	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-		DaoContext_Print( ctx, it->key.pString->mbs );
-		DaoContext_Print( ctx, "\n" );
+	if( typer->priv->values ){
+		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
+			DaoContext_Print( ctx, it->key.pString->mbs );
+			DaoContext_Print( ctx, "\n" );
+		}
 	}
-	for(i=0; i<methCount; i++ ){
-		DaoContext_Print( ctx, meths[i]->routName->mbs );
-		DaoContext_Print( ctx, ": " );
-		for(j=meths[i]->routName->size; j<20; j++) DaoContext_Print( ctx, " " );
-		DaoContext_Print( ctx, meths[i]->routType->name->mbs );
-		DaoContext_Print( ctx, "\n" );
+	if( typer->priv->methods ){
+		for(i=0; i<methCount; i++ ){
+			DaoContext_Print( ctx, meths[i]->routName->mbs );
+			DaoContext_Print( ctx, ": " );
+			for(j=meths[i]->routName->size; j<20; j++) DaoContext_Print( ctx, " " );
+			DaoContext_Print( ctx, meths[i]->routType->name->mbs );
+			DaoContext_Print( ctx, "\n" );
+		}
 	}
 	DArray_Delete( array );
 }

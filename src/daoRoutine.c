@@ -1375,10 +1375,12 @@ static const char vmcTyping[][7] =
 	{ OT_OOO, -1, -1, -1, -1, -1, -1 } /* NULL */
 };
 
-static DaoType* DaoCheckBinArith( DaoVmCodeX *vmc, 
-		DaoType *at, DaoType *bt, DaoType *ct,
-		DaoClass *hostClass, DString *mbs )
+static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc, 
+		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass,
+		DString *mbs, int setname )
 {
+	DaoNameSpace *ns = self->nameSpace;
+	DaoType *inumt = DaoNameSpace_MakeType( ns, "int", DAO_INTEGER, NULL, NULL, 0 );
 	DaoType *ts[3];
 	DRoutine *rout = NULL;
 	DRoutine *rout2 = NULL;
@@ -1388,10 +1390,11 @@ static DaoType* DaoCheckBinArith( DaoVmCodeX *vmc,
 	int opb = vmc->b;
 	int opc = vmc->c;
 	int code = vmc->code;
+	int boolop = code >= DVM_AND && code <= DVM_NE;
 	ts[0] = ct;
 	ts[1] = at;
 	ts[2] = bt;
-	if( opa  == opc && daoBitBoolArithOpers2[code-DVM_MOVE] ){
+	if( setname && opa == opc && daoBitBoolArithOpers2[code-DVM_MOVE] ){
 		DString_SetMBS( mbs, daoBitBoolArithOpers2[code-DVM_MOVE] );
 		if( at->tid == DAO_INTERFACE ){
 			node = DMap_Find( at->X.inter->methods, mbs );
@@ -1403,10 +1406,13 @@ static DaoType* DaoCheckBinArith( DaoVmCodeX *vmc,
 		}
 		if( rout ){
 			rout = MatchByParamType( rout, NULL, NULL, ts+1, 2, DVM_CALL, &min, &spec );
+			/* if the operation is used in the overloaded operator,
+			   do operation by address */
+			if( boolop && rout == (DRoutine*) self ) return inumt;
 			if( rout ) return ct;
 		}
 	}
-	DString_SetMBS( mbs, daoBitBoolArithOpers[code-DVM_MOVE] );
+	if( setname ) DString_SetMBS( mbs, daoBitBoolArithOpers[code-DVM_MOVE] );
 	if( at->tid == DAO_INTERFACE ){
 		node = DMap_Find( at->X.inter->methods, mbs );
 		rout = (DRoutine*) node->value.pBase;
@@ -1418,6 +1424,9 @@ static DaoType* DaoCheckBinArith( DaoVmCodeX *vmc,
 	if( rout ){
 		rout2 = rout;
 		rout = MatchByParamType( rout2, NULL, NULL, ts+1, 2, DVM_CALL, &min, &spec );
+		/* if the operation is used in the overloaded operator,
+		   do operation by address */
+		if( boolop && rout == (DRoutine*) self ) return inumt;
 		if( rout ) ct = rout->routType->X.abtype;
 		if( rout == NULL && ct ){
 			rout = MatchByParamType( rout2, NULL, NULL, ts, 3, DVM_CALL, &min, &spec );
@@ -1434,6 +1443,9 @@ static DaoType* DaoCheckBinArith( DaoVmCodeX *vmc,
 		if( rout == NULL ) return NULL;
 		rout2 = rout;
 		rout = MatchByParamType( rout2, NULL, NULL, ts+1, 2, DVM_CALL, &min, &spec );
+		/* if the operation is used in the overloaded operator,
+		   do operation by address */
+		if( boolop && rout == (DRoutine*) self ) return inumt;
 		if( rout ) ct = rout->routType->X.abtype;
 		if( rout == NULL && ct ){
 			rout = MatchByParamType( rout2, NULL, NULL, ts, 3, DVM_CALL, &min, &spec );
@@ -1441,6 +1453,20 @@ static DaoType* DaoCheckBinArith( DaoVmCodeX *vmc,
 		if( rout == NULL ) return NULL;
 	}
 	return ct;
+}
+static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc, 
+		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass, DString *mbs )
+{
+	DaoType *rt = DaoCheckBinArith0( self, vmc, at, bt, ct, hostClass, mbs, 1 );
+	if( rt == NULL && (vmc->code == DVM_LT || vmc->code == DVM_LE) ){
+		if( vmc->code == DVM_LT ){
+			DString_SetMBS( mbs, ">" );
+		}else{
+			DString_SetMBS( mbs, ">=" );
+		}
+		return DaoCheckBinArith0( self, vmc, bt, at, ct, hostClass, mbs, 0 );
+	}
+	return rt;
 }
 static DString* AppendError( DArray *errors, DRoutine *rout, size_t type )
 {
@@ -2912,7 +2938,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
-					ct = DaoCheckBinArith( vmc, at, bt, ct, hostClass, mbs );
+					ct = type[opc];
+					ct = DaoCheckBinArith( self, vmc, at, bt, ct, hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
 				}else if( at->tid == bt->tid ){
 					ct = at;
@@ -2999,18 +3026,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
-					ct = DaoCheckBinArith( vmc, at, bt, ct, hostClass, mbs );
-					if( ct == NULL && (code == DVM_EQ || code == DVM_NE) ) ct = inumt;
-					if( ct == NULL && DString_EQ( mbs, self->routName ) ) ct = inumt;
-					if( ct == NULL ){
-						if( code == DVM_LT ){
-							DString_SetMBS( mbs, ">" );
-						}else{
-							DString_SetMBS( mbs, ">=" );
-						}
-						if( DString_EQ( mbs, self->routName ) ) ct = inumt;
-					}
-					if( ct == NULL ) goto InvOper;
+					ct = type[opc];
+					ct = DaoCheckBinArith( self, vmc, at, bt, ct, hostClass, mbs );
+					if( ct == NULL ) ct = inumt;
 				}else if( at->tid == bt->tid ){
 					ct = at;
 					switch( at->tid ){
@@ -3126,7 +3144,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
-					ct = DaoCheckBinArith( vmc, at, bt, ct, hostClass, mbs );
+					ct = DaoCheckBinArith( self, vmc, at, bt, ct, hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
 				}else if( at->tid == bt->tid ){
 					ct = at;

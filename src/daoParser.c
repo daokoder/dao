@@ -801,86 +801,6 @@ static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, 
 		DaoTokens_Append( self, DTOK_SEMCO, line, ";" );
 	}
 }
-#if 0
-static void DaoParser_InheritConstructor( DaoParser *self, int line )
-{
-	DaoClass *klass = self->hostClass;
-	DString *sig = NULL;
-	int dist = self->inherit;
-	size_t j;
-	if( self->isClassBody ==0 || klass->superAlias->size !=1 ){
-		if( self->isClassBody ){
-			DaoTokens_AppendInitSuper( self->tokens, klass, line, 0 );
-			DaoParser_ParseRoutine( self );
-		}
-		return;
-	}
-	sig = DString_New(1);
-	if( klass->superClass->items.pClass[0]->type == DAO_CLASS ){
-		DaoClass *sup = klass->superClass->items.pClass[0];
-		DNode *it = DMap_First( sup->ovldRoutMap );
-		DaoRoutine *rout;
-		int lb = 0;
-		for( ; it; it=DMap_Next(sup->ovldRoutMap,it) ){
-			rout = (DaoRoutine*) it->value.pBase;
-			if( rout->parTokens == NULL ) continue;
-			DArray_Clear( self->tokens );
-			lb = DString_FindChar( it->key.pString, '(', 0 );
-			DString_SubString( it->key.pString, sig, lb, -1 );
-			DString_Insert( sig, klass->className, 0, 0, 0 );
-#if 0
-			//printf( "signature: %s\n", sig->mbs );
-#endif
-			if( DMap_Find( klass->ovldRoutMap, sig ) ) continue;
-			DaoTokens_Append( self->tokens, DKEY_ROUTINE, line, "routine" );
-			DaoTokens_Append( self->tokens, DTOK_IDENTIFIER, line, klass->className->mbs );
-			for(j=0; j<rout->parTokens->size; j++)
-				DArray_Append( self->tokens, rout->parTokens->items.pToken[j] );
-			DaoTokens_Append( self->tokens, DTOK_LCB, line, "{" );
-			DaoTokens_Append( self->tokens, DTOK_RCB, line, "}" );
-			self->inherit = rout->distance + 1;
-			DaoParser_ParseRoutine( self );
-		}
-	}else if( klass->superClass->items.pClass[0]->type == DAO_CDATA ){
-		DaoCData *sup = klass->superClass->items.pCData[0];
-		DaoParser *searcher = DaoParser_New();
-		DMap *methods = sup->typer->priv->methods;
-		DNode *it;
-		int rb = 0;
-		if( sup->typer->priv->methods == NULL ){
-			DaoNameSpace_SetupMethods( sup->typer->priv->nspace, sup->typer );
-			methods = sup->typer->priv->methods;
-		}
-		for(it=DMap_First(methods); it; it=DMap_Next(methods,it)){
-			DaoFunction *func = (DaoFunction*) it->value.pVoid;
-			if( func->parTokens == NULL ) continue;
-			DString_Clear( sig );
-			DString_Append( sig, klass->className );
-			DArray_Swap( searcher->tokens, func->parTokens );
-			rb = DaoParser_FindPairToken( searcher, DTOK_LB, DTOK_RB, 0, -1 );
-			DArray_Swap( searcher->tokens, func->parTokens );
-			if( rb <0 ) continue;
-			for(j=0; j<=rb; j++) DString_Append( sig, func->parTokens->items.pToken[j]->string );
-			if( DMap_Find( klass->ovldRoutMap, sig ) ) continue;
-			DArray_Clear( self->tokens );
-			DaoTokens_Append( self->tokens, DKEY_ROUTINE, line, "routine" );
-			DaoTokens_Append( self->tokens, DTOK_IDENTIFIER, line, klass->className->mbs );
-			for(j=0; j<func->parTokens->size; j++)
-				DArray_Append( self->tokens, func->parTokens->items.pToken[j] );
-			DaoTokens_Append( self->tokens, DTOK_LCB, line, "{" );
-			DaoTokens_Append( self->tokens, DTOK_RCB, line, "}" );
-			self->inherit = func->distance + 1;
-			DaoParser_ParseRoutine( self );
-		}
-		DaoParser_Delete( searcher );
-	}
-	self->inherit = dist;
-	DArray_Clear( self->tokens );
-	DString_Delete( sig );
-	DaoTokens_AppendInitSuper( self->tokens, klass, line, 0 );
-	DaoParser_ParseRoutine( self );
-}
-#endif
 static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 		DValue *nested, int local, DString *fullname );
 static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int start )
@@ -1465,7 +1385,7 @@ ErrorSyntax:
 static void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int vt, int pt,
 		DaoType *abtp );
 static int DaoParser_MakeWhileLogic( DaoParser *self, ushort_t opcode, int start );
-static int DaoParser_MakeForLoop( DaoParser *self, int start );
+static int DaoParser_MakeForLoop( DaoParser *self, int start, int end );
 
 static int DaoParser_PostParsing( DaoParser *self );
 
@@ -3056,7 +2976,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoClass_ResetAttributes( klass );
 	DArray_Clear( parser->tokens );
 	DaoParser_PostParsing( parser );
-	//DaoParser_InheritConstructor( parser, tokens[start]->line );
 	rout->parser = NULL;
 	DaoParser_Delete( parser );
 	/* TODO: compile routines if it is not in incremental compiling mode */
@@ -3520,7 +3439,7 @@ ErrorInterfaceDefinition:
 			}
 			continue;
 		case DKEY_FOR :
-			start = DaoParser_MakeForLoop( self, start );
+			start = DaoParser_MakeForLoop( self, start, to );
 			if( start < 0 ){
 				DaoParser_Error3( self, DAO_CTW_FOR_INVALID, errorStart );
 				return 0;
@@ -4843,7 +4762,7 @@ ErrorLoad:
 	return 0;
 }
 
-int DaoParser_MakeForLoop( DaoParser *self, int start )
+int DaoParser_MakeForLoop( DaoParser *self, int start, int end )
 {
 	DaoToken *tok;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -4856,7 +4775,7 @@ int DaoParser_MakeForLoop( DaoParser *self, int start )
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 	if( rb >= 0 ) in = DaoParser_FindOpenToken( self, DKEY_IN, start+2, rb, 0 );
 
-	if( rb < 0 && in < 0 ) return -1;
+	if( (rb < 0 || rb >= end) && in < 0 ) return -1;
 
 	DaoParser_AddScope( self, DVM_UNUSED2, start );
 	if( in >= 0 ){
