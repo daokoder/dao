@@ -407,7 +407,7 @@ void DaoVmSpace_Unlock( DaoVmSpace *self )
 static int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname )
 {
 	FILE *fin;
-	int ch;
+	char buf[IO_BUF_SIZE];
 	DNode *node = MAP_Find( self->vfiles, fname );
 	/* printf( "reading %s\n", fname->mbs ); */
 	if( node ){
@@ -422,7 +422,11 @@ static int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname )
 		DaoStream_WriteMBS( self->stdStream, "\".\n" );
 		return 0;
 	}
-	while( ( ch=getc(fin) ) != EOF ) DString_AppendChar( self->source, ch );
+	while(1){
+		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
+		if( count ==0 ) break;
+		DString_AppendDataMBS( self->source, buf, count );
+	}
 	fclose( fin );
 	return 1;
 }
@@ -907,6 +911,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			printf( "(dao) " );
 			fflush( stdout );
 			ch = getchar();
+			if( ch == EOF ) break;
 			while( ch != '\n' && ch != EOF ){
 				DString_AppendChar( input, (char)ch );
 				ch = getchar();
@@ -993,7 +998,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DValue value;
 	DValue *ps;
 	size_t N;
-	int i, j, res;
+	int i, j, ch, res;
 
 	if( file == NULL || file->size ==0 || self->evalCmdline ){
 		DArray_PushFront( self->nameLoading, self->pathWorking );
@@ -1010,7 +1015,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 			}
 		}
 		DaoVmSpace_ExeCmdArgs( self );
-		if( ( self->options & DAO_EXEC_INTERUN ) && self->userHandler == NULL )
+		if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )
 			DaoVmSpace_Interun( self, NULL );
 		return 1;
 	}

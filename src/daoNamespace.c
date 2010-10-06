@@ -651,6 +651,7 @@ int DaoNameSpace_Load( DaoNameSpace *self, const char *fname )
 	DaoVmSpace *vms = self->vmSpace;
 	DString *src;
 	FILE *fin = fopen( fname, "r" );
+	char buf[IO_BUF_SIZE];
 	int ch;
 	if( ! fin ){
 		DaoStream_WriteMBS( vms->stdStream, "ERROR: can not open file \"" );
@@ -659,7 +660,11 @@ int DaoNameSpace_Load( DaoNameSpace *self, const char *fname )
 		return 0;
 	}
 	src = DString_New(1);
-	while( ( ch=getc(fin) ) != EOF ) DString_AppendChar( src, ch );
+	while(1){
+		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
+		if( count ==0 ) break;
+		DString_AppendDataMBS( src, buf, count );
+	}
 	fclose( fin );
 	ch = DaoVmProcess_Eval( self->vmSpace->mainProcess, self, src, 1 );
 	DString_Delete( src );

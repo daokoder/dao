@@ -3098,7 +3098,7 @@ static void DaoType_WriteMainName( DaoType *self, DaoStream *stream )
 	if( n == MAXSIZE ) n = name->size;
 	for(i=0; i<n; i++) DaoStream_WriteChar( stream, name->mbs[i] );
 }
-void DaoPrintException( DaoCData *except, DaoStream *stream, char *header )
+void DaoPrintException( DaoCData *except, DaoStream *stream )
 {
 	DaoException *ex = (DaoException*) except->data;
 	int i, n = ex->callers->size;
@@ -3163,10 +3163,8 @@ void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
 	DValue *excobjs = self->exceptions->data;
 	int i;
 	for(i=0; i<self->exceptions->size; i++)
-		DaoPrintException( excobjs[i].v.cdata, stdio, "Un-rescued exception raised by " );
-	if( clear ){
-		DVarray_Clear( self->exceptions );
-	}
+		DaoPrintException( excobjs[i].v.cdata, stdio );
+	if( clear ) DVarray_Clear( self->exceptions );
 }
 
 DValue DaoVmProcess_MakeConst( DaoVmProcess *self )

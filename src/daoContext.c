@@ -63,7 +63,7 @@ extern void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p,
 
 extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
 int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *ret );
-void DaoPrintException( DaoCData *except, DaoStream *stream, char *header );
+void DaoPrintException( DaoCData *except, DaoStream *stream );
 
 void DaoVmCode_Print( DaoVmCode self, char *buffer )
 {
@@ -4274,9 +4274,11 @@ void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc )
 			}
 			if( cdata == NULL || cdata->data == NULL ) goto InvalidException;
 			DaoInitException( cdata, self, vmc, self->idClearFE, NULL );
-			if( DaoCData_ChildOf( cdata->typer, warning ) )
-				DaoPrintException( cdata, stdio, "Un-suppressed warning raised by " );
-			DVarray_Append( self->process->exceptions, val );
+			if( DaoCData_ChildOf( cdata->typer, warning ) ){
+				DaoPrintException( cdata, stdio );
+			}else{
+				DVarray_Append( self->process->exceptions, val );
+			}
 		}
 		continue;
 InvalidException:
@@ -4364,8 +4366,7 @@ void DaoContext_RaiseException( DaoContext *self, int type, const char *value )
 	if( DaoCData_ChildOf( typer, warning ) ){
 		/* XXX support warning suppression */
 		cdata = DaoCData_New( typer, DaoException_New( typer ) );
-		DaoPrintException( cdata, stdio, 
-				"Un-suppressed warning raised by " );
+		DaoPrintException( cdata, stdio ); 
 		typer->Delete( cdata );
 		return;
 	}

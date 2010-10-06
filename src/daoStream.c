@@ -154,13 +154,24 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
 		vms->userHandler->StdioRead( vms->userHandler, ds, count );
 	}else if( count ){
 		FILE *fd = stdin;
+		char buf[IO_BUF_SIZE];
 		DString_Clear( ds );
 		if( self->file ) fd = self->file->fd;
 		if( count >0 ){
-			while( ds->size < count && (ch = getc(fd) ) !=EOF )
-				DString_AppendChar( ds, ch );
+			while( count >0 ){
+				size_t rest = count;
+				if( rest > IO_BUF_SIZE ) rest = IO_BUF_SIZE;
+				count -= rest;
+				rest = fread( buf, 1, rest, fd );
+				if( rest ==0 ) break;
+				DString_AppendDataMBS( ds, buf, rest );
+			}
 		}else{
-			while( (ch = getc(fd) ) !=EOF ) DString_AppendChar( ds, ch );
+			while( 1 ){
+				size_t rest = fread( buf, 1, IO_BUF_SIZE, fd );
+				if( rest ==0 ) break;
+				DString_AppendDataMBS( ds, buf, rest );
+			}
 		}
 		if( fd == stdin ) fseek( stdin, 0, SEEK_END );
 	}else{
@@ -184,6 +195,7 @@ static void DaoIO_MakePath( DaoContext *ctx, DString *path )
 }
 static void DaoIO_ReadFile( DaoContext *ctx, DValue *p[], int N )
 {
+	char buf[IO_BUF_SIZE];
 	DString *res = DaoContext_PutMBString( ctx, "" );
 	dint silent = p[1]->v.i;
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
@@ -191,27 +203,29 @@ static void DaoIO_ReadFile( DaoContext *ctx, DValue *p[], int N )
 		return;
 	}
 	if( DString_Size( p[0]->v.s ) ==0 ){
-		int ch = getchar();
-		while( ch != EOF ){
-			DString_AppendChar( res, ch );
-			ch = getchar();
+		while(1){
+			size_t count = fread( buf, 1, IO_BUF_SIZE, stdin );
+			if( count ==0 ) break;
+			DString_AppendDataMBS( res, buf, count );
 		}
 	}else{
 		DString *fname = DString_Copy( p[0]->v.s );
 		FILE *fin;
-		char buf[100];
-		int ch;
 		DString_ToMBS( fname );
 		DaoIO_MakePath( ctx, fname );
 		fin = fopen( fname->mbs, "r" );
 		DString_Delete( fname );
 		if( fin == NULL ){
 			if( silent ) return;
-			snprintf( buf, 99, "file not exist: %s", DString_GetMBS( p[0]->v.s ) );
+			snprintf( buf, IO_BUF_SIZE, "file not exist: %s", DString_GetMBS( p[0]->v.s ) );
 			DaoContext_RaiseException( ctx, DAO_ERROR, buf );
 			return;
 		}
-		while( (ch = getc( fin ) ) != EOF ) DString_AppendChar( res, (char)ch );
+		while(1){
+			size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
+			if( count ==0 ) break;
+			DString_AppendDataMBS( res, buf, count );
+		}
 		fclose( fin );
 	}
 }
@@ -690,18 +704,27 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 {
 	DaoVmSpace *vms = self->vmSpace;
 	int ch, delim = '\n';
+	char buf[IO_BUF_SIZE];
+	char *start = buf, *end = buf + IO_BUF_SIZE;
 
 	DString_Clear( line );
 	DString_ToMBS( line );
 	if( self->file ){
 		FILE *fd = self->file->fd;
 		if( feof( fd ) ) return;
-		ch = getc( fd );
-		if( ch != EOF ) DString_AppendChar( line, ch );
+		*start = ch = getc( fd );
+		start += 1;
 		while( ch != '\n' && ch != '\r' && ch != EOF ){ /* LF or CR */
-			ch = getc( fd );
-			DString_AppendChar( line, ch );
+			*start = ch = getc( fd );
+			start += 1;
+			if( start == end ){
+				if( ch == EOF ) start -= 1;
+				DString_AppendDataMBS( line, buf, start-buf );
+				start = buf;
+			}
 		}
+		if( ch == EOF && start != buf ) start -= 1;
+		DString_AppendDataMBS( line, buf, start-buf );
 		if( line->mbs[ line->size-1 ] == '\r' ){
 			/* some programs may write consecutive 2 \r under Windows */
 			if( feof( fd ) ) return;
@@ -730,11 +753,19 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 	}else if( vms && vms->userHandler && vms->userHandler->StdioRead ){
 		vms->userHandler->StdioRead( vms->userHandler, line, 0 );
 	}else{
-		ch = getchar();
+		*start = ch = getchar();
+		start += 1;
 		while( ch != delim && ch != EOF ){
-			DString_AppendChar( line, ch );
-			ch = getchar();
+			*start = ch = getchar();
+			start += 1;
+			if( start == end ){
+				if( ch == EOF ) start -= 1;
+				DString_AppendDataMBS( line, buf, start-buf );
+				start = buf;
+			}
 		}
+		if( ch == EOF && start != buf ) start -= 1;
+		DString_AppendDataMBS( line, buf, start-buf );
 		clearerr( stdin );
 	}
 }

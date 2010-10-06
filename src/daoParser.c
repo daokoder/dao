@@ -4713,7 +4713,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end, int permi
 			if( mod && mod->type != DAO_NAMESPACE ) mod = 0;
 		}
 		i += 2;
-	}else{
+	}else if( (mod = DaoNameSpace_FindNameSpace(nameSpace, self->mbs)) ==NULL ){
 		/* self->mbs could be changed by DaoVmSpace_LoadModule() */
 		DString_Assign( self->str, self->mbs );
 		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs, nsRequire );

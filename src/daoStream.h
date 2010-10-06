@@ -19,6 +19,8 @@
 
 #include"daoType.h"
 
+#define IO_BUF_SIZE  512
+
 enum
 {
 	DAO_IO_FILE = 1 ,

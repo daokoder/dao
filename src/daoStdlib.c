@@ -392,9 +392,9 @@ static void STD_ListMeth( DaoContext *ctx, DValue *p[], int N )
 	if( typer->priv->methods ) DMap_SortMethods( typer->priv->methods, array );
 	meths = (DaoFunction**) array->items.pVoid;
 	methCount = array->size;
-	DaoContext_Print( ctx, "======================\nConsts / Methods of " );
+	DaoContext_Print( ctx, "======================================\nConsts, methods of type \"" );
 	DaoContext_Print( ctx, typer->name );
-	DaoContext_Print( ctx, ":\n======================\n" );
+	DaoContext_Print( ctx, "\":\n======================================\n" );
 	if( typer->priv->values ){
 		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
 			DaoContext_Print( ctx, it->key.pString->mbs );
