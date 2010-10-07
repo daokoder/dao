@@ -251,7 +251,7 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 			chs = ctx->vmSpace->ReadLine( "(debug) " );
 			if( chs ){
 				DString_SetMBS( input, chs );
-				DString_Simplify( input );
+				DString_Trim( input );
 				if( input->size && ctx->vmSpace->AddHistory )
 					ctx->vmSpace->AddHistory( chs );
 				dao_free( chs );

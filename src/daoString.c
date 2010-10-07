@@ -1043,7 +1043,7 @@ void DString_Chop( DString *self )
 		}
 	}
 }
-void DString_Simplify( DString *self )
+void DString_Trim( DString *self )
 {
 	int i, ch;
 	DString_Detach( self );

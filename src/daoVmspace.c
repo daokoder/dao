@@ -917,7 +917,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			chs = self->ReadLine( "(dao) " );
 			if( chs ){
 				DString_SetMBS( input, chs );
-				DString_Simplify( input );
+				DString_Trim( input );
 				if( input->size && self->AddHistory ) self->AddHistory( chs );
 				dao_free( chs );
 			}
@@ -931,7 +931,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				ch = getchar();
 			}
 			if( ch == EOF ) clearerr( stdin );
-			DString_Simplify( input );
+			DString_Trim( input );
 		}
 		if( input->size == 0 ) continue;
 		self->stopit = 0;

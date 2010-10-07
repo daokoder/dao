@@ -596,6 +596,24 @@ static void DaoSTR_Utf8( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutInteger( ctx, self->sub == DAO_UTF8 );
 	if( N > 1 ) self->sub = p[1]->v.i ? DAO_UTF8 : 0;
 }
+static void DaoSTR_IsMBS( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoContext_PutInteger( ctx, p[0]->v.s->mbs != NULL );
+}
+static void DaoSTR_IsWCS( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoContext_PutInteger( ctx, p[0]->v.s->wcs != NULL );
+}
+static void DaoSTR_ToMBS( DaoContext *ctx, DValue *p[], int N )
+{
+	DString_ToMBS( p[0]->v.s );
+	DaoContext_PutReference( ctx, p[0] );
+}
+static void DaoSTR_ToWCS( DaoContext *ctx, DValue *p[], int N )
+{
+	DString_ToWCS( p[0]->v.s );
+	DaoContext_PutReference( ctx, p[0] );
+}
 static void DaoSTR_Insert( DaoContext *ctx, DValue *p[], int N )
 {
 	DString *self = p[0]->v.s;
@@ -647,9 +665,9 @@ static void DaoSTR_Chop( DaoContext *ctx, DValue *p[], int N )
 	}
 	DaoContext_PutReference( ctx, p[0] );
 }
-static void DaoSTR_Simplify( DaoContext *ctx, DValue *p[], int N )
+static void DaoSTR_Trim( DaoContext *ctx, DValue *p[], int N )
 {
-	DString_Simplify( p[0]->v.s );
+	DString_Trim( p[0]->v.s );
 	DaoContext_PutReference( ctx, p[0] );
 }
 static void DaoSTR_Find( DaoContext *ctx, DValue *p[], int N )
@@ -1085,14 +1103,14 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
 					s ++;
 					continue;
 				}else{
-					if( simplify ) DString_Simplify( str );
+					if( simplify ) DString_Trim( str );
 					if( str->size > 0 ){
 						DVarray_Append( list->items, value );
 						DString_Clear( str );
 					}
 					DString_AppendChar( str, *s );
 					s ++;
-					if( simplify ) DString_Simplify( str );
+					if( simplify ) DString_Trim( str );
 					if( str->size > 0 ) DVarray_Append( list->items, value );
 					DString_Clear( str );
 					continue;
@@ -1101,7 +1119,7 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
 			DString_AppendChar( str, *s );
 			s ++;
 		}
-		if( simplify ) DString_Simplify( str );
+		if( simplify ) DString_Trim( str );
 		if( str->size > 0 ) DVarray_Append( list->items, value );
 	}else{
 		wchar_t *s = self->wcs;
@@ -1129,14 +1147,14 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
 					s ++;
 					continue;
 				}else{
-					if( simplify ) DString_Simplify( str );
+					if( simplify ) DString_Trim( str );
 					if( str->size > 0 ){
 						DVarray_Append( list->items, value );
 						DString_Clear( str );
 					}
 					DString_AppendChar( str, *s );
 					s ++;
-					if( simplify ) DString_Simplify( str );
+					if( simplify ) DString_Trim( str );
 					if( str->size > 0 ) DVarray_Append( list->items, value );
 					DString_Clear( str );
 					continue;
@@ -1145,7 +1163,7 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
 			DString_AppendChar( str, *s );
 			s ++;
 		}
-		if( simplify ) DString_Simplify( str );
+		if( simplify ) DString_Trim( str );
 		if( str->size > 0 ) DVarray_Append( list->items, value );
 	}
 	DString_Delete( str );
@@ -1474,13 +1492,17 @@ static DaoFuncItem stringMeths[] =
 {
 	{ DaoSTR_Size,    "size( self :string )const=>int" },
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
-	{ DaoSTR_Utf8,    "utf8( self :string ) =>int" },
+	{ DaoSTR_Utf8,    "utf8( self :string )const =>int" },
 	{ DaoSTR_Utf8,    "utf8( self :string, utf8 : int ) =>int" },
+	{ DaoSTR_IsMBS,   "ismbs( self :string )const =>int" },
+	{ DaoSTR_IsWCS,   "iswcs( self :string )const =>int" },
+	{ DaoSTR_ToMBS,   "tombs( self :string ) =>string" },
+	{ DaoSTR_ToWCS,   "towcs( self :string ) =>string" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
 	{ DaoSTR_Clear,   "clear( self :string )" },
 	{ DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
 	{ DaoSTR_Chop,    "chop( self :string ) =>string" },
-	{ DaoSTR_Simplify,"simplify( self :string ) =>string" },
+	{ DaoSTR_Trim,    "trim( self :string ) =>string" },
 	/* return -1, if not found. */
 	{ DaoSTR_Find,    "find( self :string, str :string, from=0, reverse=0 )const=>int" },
 	/* replace index-th occurrence: =0: replace all; >0: from begin; <0: from end. */
@@ -1490,9 +1512,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )const=>string" },
 	{ DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )const=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )const=>list<string>" },
-	{ DaoSTR_Tokenize,
-		"tokenize( self :string, seps :string, quotes='', backslash=0, simplify=0 )"
-			"const=>list<string>" },
+	{ DaoSTR_Tokenize, "tokenize( self :string, seps :string, quotes='', backslash=0, simplify=0 )const=>list<string>" },
 	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )const=>list<tuple<int,int>>" },
 	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )const=>tuple<start:int,end:int,substring:string>" },
 	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )const=>tuple<start:int,end:int,substring:string>" },

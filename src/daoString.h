@@ -103,7 +103,7 @@ int  DString_EQ( DString *left, DString *right );
 
 void DString_Add( DString *self, DString *left, DString *right );
 void DString_Chop( DString *self );
-void DString_Simplify( DString *self );
+void DString_Trim( DString *self );
 
 int DString_Encrypt( DString *self, DString *key, int hex );
 int DString_Decrypt( DString *self, DString *key, int hex );

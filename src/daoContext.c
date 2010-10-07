@@ -3148,7 +3148,7 @@ static int CheckStringToNumber( DaoContext *ctx, DValue dA, int tid )
 	}else{
 		DString_SetDataWCS( mbs, dA.v.s->wcs, dA.v.s->size );
 	}
-	DString_Simplify( mbs );
+	DString_Trim( mbs );
 	toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
 	if( toklen != mbs->size ) return 0;
 	if( toktype < DTOK_DIGITS_HEX || toktype > DTOK_NUMBER_SCI ) return 0;
