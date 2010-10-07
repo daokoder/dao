@@ -209,6 +209,19 @@ int DaoVmSpace_GetOptions( DaoVmSpace *self )
 {
 	return self->options;
 }
+DaoNameSpace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name )
+{
+	DaoNameSpace *ns;
+	DString str = DString_WrapMBS( name );
+	DNode *node = DMap_Find( self->nsModules, & str );
+	if( node ) return (DaoNameSpace*) node->value.pBase;
+	ns = DaoNameSpace_New( self );
+	ns->refCount ++;
+	DaoVmSpace_Lock( self );
+	DMap_Insert( self->nsModules, & str, ns );
+	DaoVmSpace_Unlock( self );
+	return ns;
+}
 DaoNameSpace* DaoVmSpace_MainNameSpace( DaoVmSpace *self )
 {
 	return self->mainNamespace;
@@ -318,11 +331,12 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainNamespace->vmSpace = self;
 
 	self->stdStream->refCount ++;
-	self->nsInternal->refCount ++;
+	self->nsInternal->refCount += 2;
 	self->mainNamespace->refCount ++;
 
 	DString_SetMBS( self->nsInternal->name, "dao" );
 	DString_SetMBS( self->mainNamespace->name, "MainNameSpace" );
+	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
 
 	self->ReadLine = NULL;
 	self->AddHistory = NULL;
@@ -1993,6 +2007,7 @@ void DaoInitAPI( DaoAPI *api )
 
 	api->DaoVmSpace_RunMain = DaoVmSpace_RunMain;
 	api->DaoVmSpace_Load = DaoVmSpace_Load;
+	api->DaoVmSpace_GetNameSpace = DaoVmSpace_GetNameSpace;
 	api->DaoVmSpace_MainNameSpace = DaoVmSpace_MainNameSpace;
 	api->DaoVmSpace_MainVmProcess = DaoVmSpace_MainVmProcess;
 	api->DaoVmSpace_AcquireProcess = DaoVmSpace_AcquireProcess;

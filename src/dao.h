@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20101002
+#define DAO_H_VERSION 20101006
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -620,6 +620,7 @@ struct DaoAPI
 
 	int (*DaoVmSpace_RunMain)( DaoVmSpace *self, DString *file );
 	DaoNameSpace* (*DaoVmSpace_Load)( DaoVmSpace *self, DString *file );
+	DaoNameSpace* (*DaoVmSpace_GetNameSpace)( DaoVmSpace *self, const char *name );
 	DaoNameSpace* (*DaoVmSpace_MainNameSpace)( DaoVmSpace *self );
 	DaoVmProcess* (*DaoVmSpace_MainVmProcess)( DaoVmSpace *self );
 	DaoVmProcess* (*DaoVmSpace_AcquireProcess)( DaoVmSpace *self );
@@ -926,6 +927,7 @@ DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 DAO_DLL DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
+DAO_DLL DaoNameSpace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
 DAO_DLL DaoNameSpace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
 DAO_DLL DaoVmProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
 /* get a process object from a pool */
@@ -1197,6 +1199,7 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 
 #define DaoVmSpace_RunMain( self, file )  __dao.DaoVmSpace_RunMain( self, file )
 #define DaoVmSpace_Load( self, file )  __dao.DaoVmSpace_Load( self, file )
+#define DaoVmSpace_GetNameSpace( self )  __dao.DaoVmSpace_GetNameSpace( self, name )
 #define DaoVmSpace_MainNameSpace( self )  __dao.DaoVmSpace_MainNameSpace( self )
 #define DaoVmSpace_MainVmProcess( self )  __dao.DaoVmSpace_MainVmProcess( self )
 #define DaoVmSpace_AcquireProcess( self )  __dao.DaoVmSpace_AcquireProcess( self )

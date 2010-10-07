@@ -590,6 +590,12 @@ static void DaoSTR_Resize( DaoContext *ctx, DValue *p[], int N )
 	}
 	DString_Resize( p[0]->v.s, p[1]->v.i );
 }
+static void DaoSTR_Utf8( DaoContext *ctx, DValue *p[], int N )
+{
+	DValue *self = p[0];
+	DaoContext_PutInteger( ctx, self->sub == DAO_UTF8 );
+	if( N > 1 ) self->sub = p[1]->v.i ? DAO_UTF8 : 0;
+}
 static void DaoSTR_Insert( DaoContext *ctx, DValue *p[], int N )
 {
 	DString *self = p[0]->v.s;
@@ -615,7 +621,7 @@ static void DaoSTR_Chop( DaoContext *ctx, DValue *p[], int N )
 	DString_Detach( self );
 	DString_Chop( self );
 
-	if( p[1]->v.i && self->mbs && self->size ){
+	if( p[0]->sub == DAO_UTF8 && self->mbs && self->size ){
 		chs = (unsigned char*) self->mbs;
 		i = self->size - 1;
 		k = utf8_markers[ chs[i] ];
@@ -1468,10 +1474,12 @@ static DaoFuncItem stringMeths[] =
 {
 	{ DaoSTR_Size,    "size( self :string )const=>int" },
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
+	{ DaoSTR_Utf8,    "utf8( self :string ) =>int" },
+	{ DaoSTR_Utf8,    "utf8( self :string, utf8 : int ) =>int" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
 	{ DaoSTR_Clear,   "clear( self :string )" },
 	{ DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
-	{ DaoSTR_Chop,    "chop( self :string, utf8=0 ) =>string" },
+	{ DaoSTR_Chop,    "chop( self :string ) =>string" },
 	{ DaoSTR_Simplify,"simplify( self :string ) =>string" },
 	/* return -1, if not found. */
 	{ DaoSTR_Find,    "find( self :string, str :string, from=0, reverse=0 )const=>int" },
