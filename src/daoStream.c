@@ -531,7 +531,7 @@ void DaoStream_WriteInt( DaoStream *self, dint val )
 {
 	char *format = self->format;
 	if( format == NULL ){
-		format = sizeof(dint)==4 ? "%i" : "%li";
+		format = sizeof(dint)==4 ? "%i" : "%lli";
 	}
 	DaoStream_WriteFormatedInt( self, val, format );
 }

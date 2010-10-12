@@ -196,7 +196,7 @@ DString* DValue_GetString( DValue val, DString *str )
 	char chs[100] = {0};
 	DString_Clear( str );
 	switch( val.t ){
-	case DAO_INTEGER : sprintf( chs, "%li", val.v.i ); break;
+	case DAO_INTEGER : sprintf( chs, ( sizeof(dint) == 4 )? "%li" : "%lli", val.v.i ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", val.v.f ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", val.v.d ); break;
 	case DAO_STRING  : DString_Assign( str, val.v.s ); break;

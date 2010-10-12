@@ -30,7 +30,7 @@
 
 #ifdef WIN32
 
-#if defined( _MSC_VER ) && defined( _M_X64 )
+#if defined( _MSC_VER ) && defined( _M_X64 ) || defined( __x86_64__ )
 typedef long long           dint;
 typedef unsigned long long  uint_t;
 #else
