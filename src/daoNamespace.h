@@ -22,13 +22,33 @@
 #include"daoMap.h"
 #include"daoType.h"
 
+struct DaoCModule
+{
+	DAO_DATA_COMMON;
+
+	void    *libHandle;
+
+	DArray  *ctypers;
+
+	/* The methods of C types loaded from a C module,
+	 * used for the purpose of GC. */
+	DArray  *cmethods; /* <DaoFunction*> */
+};
+DaoCModule* DaoCModule_New();
+void DaoCModule_Delete( DaoCModule *self );
 
 struct DaoNameSpace
 {
 	DAO_DATA_COMMON;
 
 	DaoVmSpace *vmSpace;
-	DaoNameSpace *parent;
+
+	/* Namespaces that should be used to resolve un-resolved symbols: */
+	/* 1. vmSpace.nsInternal; */
+	/* 2. loaded namespaces by: load name, without "import" or "as" etc. */
+	/* No GC, these namespaces are also referenced by ::cstData. */
+	DArray *parents; /* DArray<DaoNameSpace*> */
+
 	int cstUser;
 
 	/* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */
@@ -49,17 +69,15 @@ struct DaoNameSpace
 	DArray *definedRoutines; /* for DaoStudio IDE */
 
 	DArray *nsLoaded; /* loaded modules as namespaces */
-	DArray *ctypers;
-	/* The methods of C types loaded from a C module,
-	 * used for the purpose of GC. */
-	DArray *cmethods; /* <DaoFunction*> */
+
+	DaoCModule *cmodule;
+
 	DMap   *macros; /* <DString*,DaoMacro*> */
 	DMap   *abstypes; /* <DString*,DaoType*> */
 
 	DaoType *udfType1;
 	DaoType *udfType2;
 
-	void   *libHandle;
 	DString *file;
 	DString *path;
 	DString *name; /* path + file */
@@ -76,13 +94,13 @@ void DaoNameSpace_Delete( DaoNameSpace *self );
 
 void DaoNameSpace_SetName( DaoNameSpace *self, const char *name );
 
-int  DaoNameSpace_FindConst( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value );
+int DaoNameSpace_FindConst( DaoNameSpace *self, DString *name );
+int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value );
 void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DValue value );
 DValue DaoNameSpace_GetConst( DaoNameSpace *self, int i );
 
-int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
+int DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
+int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
 int DaoNameSpace_SetVariable( DaoNameSpace *self, int index, DValue var );
 DValue DaoNameSpace_GetVariable( DaoNameSpace *self, int i );
 
@@ -92,6 +110,7 @@ DValue DaoNameSpace_GetData( DaoNameSpace *self, DString *name );
 DaoClass* DaoNameSpace_FindClass( DaoNameSpace *self, DString *name );
 DaoNameSpace* DaoNameSpace_FindNameSpace( DaoNameSpace *self, DString *name );
 
+void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
 void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImport );
 
 void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );

@@ -1,7 +1,5 @@
 #include"dao_greeting.h"
 
-extern DaoVmSpace *__daoVmSpace;
-
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -31,6 +29,7 @@ static DaoNumItem dao_Greeting_Nums[] =
 {
   { NULL, 0, 0 }
 };
+static void dao_Greeting_add_extrc( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_Greeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_DoGreeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_PrintMessage( DaoContext *_ctx, DValue *_p[], int _n );
@@ -41,6 +40,7 @@ static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n
 
 static DaoFuncItem dao_Greeting_Meths[] = 
 {
+  { dao_Greeting_add_extrc, "dao_add_external_reference( self : Greeting )" },
   { dao_Greeting_Greeting, "Greeting( msg : string=\'\' )=>Greeting" },
   { dao_Greeting_DoGreeting, "DoGreeting( self : Greeting, name : string )" },
   { dao_Greeting_PrintMessage, "PrintMessage( self : Greeting )" },
@@ -55,6 +55,11 @@ static DaoTypeBase Greeting_Typer =
 { NULL, "Greeting", dao_Greeting_Nums, dao_Greeting_Meths, {  0 }, 
 NULL, Dao_Greeting_Delete };
 DaoTypeBase DAO_DLL_GREETING *dao_Greeting_Typer = & Greeting_Typer;
+static void dao_Greeting_add_extrc( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	DaoCxx_Greeting *self = (DaoCxx_Greeting*)DaoCData_GetData(_p[0]->v.cdata);
+	self->DaoAddExternalReference();
+}
 /* greeting.h */
 static void dao_Greeting_Greeting( DaoContext *_ctx, DValue *_p[], int _n )
 {

@@ -835,7 +835,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 	if( psources[2].pfind( temp ) ) copyConstructor = 1;
 	
 	source.change( '[%{%}%;]', '' );
-	source.simplify();
+	source.trim();
 	if( source.size() ){
 		log_file.println( '----------- UNPARSED FIELD FOR TYPE:', name, '---------' );
 		log_file.println( source );
@@ -1542,7 +1542,7 @@ routine Variable::Parse( fname = '' )
 {
 	if( index == INDEX_RETURN && source.pfind( '^ %s* (%w+) %s* $' ).size() ){
 		name = source;
-		name.simplify();
+		name.trim();
 		type = '';
 		type_trans = '';
 		return;
@@ -1566,7 +1566,7 @@ routine Variable::Parse( fname = '' )
 	vdefault.replace( '\"', '\\\"' );
 	#vdefault.change( '%b()', '' );
 	vdefault.change( '= %s* ([:%w]+) %s* %b()', '=0' );
-	refer.simplify();
+	refer.trim();
 	type.change( '%s%s+', ' ' );
 	square.change( '%s+', '' );
 	sqsizes = square.extract( '%[ [^%[%]]* %]' );
@@ -2472,9 +2472,10 @@ const cxx_proxy_body10 =
 '$(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
   DValue _res;
   DaoCData *_cd;
+  DaoVmProcess *_vmp;
   $(vareturn)
   if( _ro == NULL ) goto EndCall;
-  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
+  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   if( DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 ) ==0 ) goto EndCall;
   _res = DaoVmProcess_GetReturned( _vmp );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
@@ -2489,10 +2490,11 @@ const cxx_proxy_body11 =
   DValue *_dp2[$(count)] = { $(refs) };
   DValue _res;
   DaoCData *_cd;
+  DaoVmProcess *_vmp;
   $(vareturn)
   if( _ro == NULL ) goto EndCall;
 $(cxx2dao)
-  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
+  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   if( DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) ) ==0 ) goto EndCall;
   _res = DaoVmProcess_GetReturned( _vmp );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
@@ -3236,6 +3238,19 @@ static void dao_QTextStream_Write5( DaoContext *_ctx, DValue *_p[], int _n )
 }
 ';
 
+global dao_add_extrc_decl =
+'static void dao_$(host)_add_extrc( DaoContext *_ctx, DValue *_p[], int _n );\n';
+global dao_add_extrc_dao =
+'  { dao_$(host)_add_extrc, "dao_add_external_reference( self : $(host) )" },\n';
+
+global dao_add_extrc_func =
+'static void dao_$(host)_add_extrc( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	$(namespace)DaoCxx_$(host) *self = ($(namespace)DaoCxx_$(host)*)DaoCData_GetData(_p[0]->v.cdata);
+	self->DaoAddExternalReference();
+}
+';
+
 global tpl_struct = '$(name)* DAO_DLL_$(module) Dao_$(name)_New();\n';
 
 global tpl_struct_alloc =
@@ -3313,8 +3328,7 @@ global tpl_class_def =
 'class DAO_DLL_$(module) DaoCxxVirt_$(class) $(virt_supers)\n{
 	public:
 	DaoCxxVirt_$(class)(){ self = 0; cdata = 0; }
-	~DaoCxxVirt_$(class)(){ if( cdata ) DaoCData_SetData( cdata, NULL ); }
-	void Init( $(class) *self, DaoCData *d );\n
+	void DaoInitWrapper( $(class) *self, DaoCData *d );\n
 	$(class) *self;
 	DaoCData *cdata;
 \n$(virtuals)
@@ -3322,9 +3336,12 @@ $(qt_virt_emit)
 };
 class DAO_DLL_$(module) DaoCxx_$(class) : public $(class), public DaoCxxVirt_$(class)
 { $(Q_OBJECT)\n
+\tunsigned int refCount;
 \tpublic:
 $(constructors)
-	void Init();\n
+	~DaoCxx_$(class)();
+	void DaoInitWrapper();\n
+	void DaoAddExternalReference();\n
 $(methods)
 };\n';
 
@@ -3333,18 +3350,30 @@ $(methods)
 global tpl_class2 = tpl_class_def + '$(class)* Dao_$(class)_Copy( const $(class) &p );\n';
 
 global tpl_class_init =
-'void DaoCxxVirt_$(class)::Init( $(class) *s, DaoCData *d )
+'void DaoCxxVirt_$(class)::DaoInitWrapper( $(class) *s, DaoCData *d )
 {
 	self = s;
 	cdata = d;
 $(init_supers)
 $(qt_init)
 }
-void DaoCxx_$(class)::Init()
+DaoCxx_$(class)::~DaoCxx_$(class)()
+{
+	if( cdata ){
+		DaoCData_SetData( cdata, NULL );
+		for(; refCount>0; refCount--) DaoGC_DecRC( (DaoBase*)cdata );
+	} 
+}
+void DaoCxx_$(class)::DaoInitWrapper()
 {
 	cdata = DaoCData_New( dao_$(class)_Typer, this );
-	DaoCxxVirt_$(class)::Init( this, cdata );
+	DaoCxxVirt_$(class)::DaoInitWrapper( this, cdata );
 $(qt_make_linker)
+}
+void DaoCxx_$(class)::DaoAddExternalReference()
+{
+	refCount += 1;
+	DaoGC_IncRC( (DaoBase*) cdata );
 }
 ';
 global tpl_class_init_qtss = 
@@ -3364,7 +3393,7 @@ $(qt_make_linker3)
 	return object;
 }\n';
 global tpl_class_decl_constru = 
-'   DaoCxx_$(class)( $(parlist) ) : $(class)( $(parcall) ){}\n';
+'   DaoCxx_$(class)( $(parlist) ) : $(class)( $(parcall) ){ refCount = 0; }\n';
 
 global tpl_class_new = '
 DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) );
@@ -3390,11 +3419,11 @@ global tpl_class_init2 =
 DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) )
 {
 	DaoCxx_$(class) *self = new DaoCxx_$(class)( $(parcall) );
-	self->Init();
+	self->DaoInitWrapper();
 	return self;
 }\n';
 
-global tpl_init_super = '\tDaoCxxVirt_$(super)::Init( s, d );\n';
+global tpl_init_super = '\tDaoCxxVirt_$(super)::DaoInitWrapper( s, d );\n';
 
 global tpl_meth_decl =
 '\t$(retype) $(name)( $(parlist) )$(extra);\n';
@@ -3537,6 +3566,12 @@ routine UserType::GenerateType()
 		meth_decls += number_item.expand( kvmap );
 	}
 	meth_decls += '  { NULL, 0, 0 }\n};\n';
+
+	if( isCppClass and hasVirtual and not noWrapping ){
+		dao_meths += dao_add_extrc_dao.expand( kvmap2 );
+		meth_decls += dao_add_extrc_decl.expand( kvmap2 );
+		meth_codes += dao_add_extrc_func.expand( kvmap2 );
+	}
 	if( isQObjectBase ){
 		dao_meths += qt_connect_dao;
 		meth_decls += qt_connect_decl;
@@ -4090,7 +4125,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 	if( cate.size() ==1 ){
 		tmps = {=>};
 		for( f in cate[0].split( ',' ) ){
-			f.simplify();
+			f.trim();
 			if( tmps.has( f ) ) skip;
 			tmps[f] = 1;
 			if( f ) files.append( f );
@@ -4098,7 +4133,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 	}elif( cate.size() ==2 ){
 		tmps = {=>};
 		for( f in cate[0].split( ',' ) ){
-			f.simplify();
+			f.trim();
 			if( tmps.has( f ) ) skip;
 			tmps[f] = 1;
 			if( f ){
@@ -4108,7 +4143,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 		}
 		tmps = {=>};
 		for( f in cate[1].split( ',' ) ){
-			f.simplify();
+			f.trim();
 			if( tmps.has( f ) ) skip;
 			tmps[f] = 1;
 			if( f ) files.append( f );
@@ -4146,7 +4181,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 		for( line in lines ){
 			line.change( '\\n', '\n' );
 			line.change( '\\t', '\t' );
-			line.simplify();
+			line.trim();
 			pats = line.split( '\t', '\'' );
 			if( pats.size() ==0 ) pats = line.split( ' ', '\'' );
 			if( pats.size() ==2 ){
@@ -4288,7 +4323,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 		list_item = utp.name.capture( qt_container );
 		if( list_item ){
 			item = list_item[3];
-			kvmap = { 'qtype'=>list_item[1], 'item' => item, 'module'=>wrap_name2  }; # XXX
+			kvmap = { 'qtype'=>(string)list_item[1], 'item' => item, 'module'=>wrap_name2  }; # XXX
 			if( list_item[2] ){
 				fout_header.println( qt_qlist_decl2.expand( kvmap ) );
 				if( map_user_types.has( item ) ){

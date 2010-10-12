@@ -20,11 +20,13 @@
  * becauses some wrapped libraries may contains tens of thousand of functions.
  */
 
+typedef unsigned int bits_t;
+
 #define \
 	DAO_ROUT_COMMON \
 uchar_t        attribs; \
-uchar_t        minimal  : 1; \
-uchar_t        minParam : 7; \
+bits_t         minimal  : 1; \
+bits_t         minParam : 7; \
 uchar_t        parCount; \
 uchar_t        tidHost; \
 DaoType       *routHost; \

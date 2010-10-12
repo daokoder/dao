@@ -177,23 +177,26 @@ struct DaoCData
 {
 	DAO_DATA_COMMON;
 
-	void *data;
-	void *buffer;
+	void  *data;
+	void  *buffer;
 
-	DaoMap      *meta;
-	DaoObject   *daoObject;
-	DaoTypeBase *typer;
+	DaoMap       *meta;
+	DaoObject    *daoObject;
+	DaoCModule   *cmodule;
+	DaoTypeBase  *typer;
 
-	int attribs;
-	int memsize; /* size of single C/C++ object */
+	ushort_t  attribs;
+	ushort_t  memsize; /* size of single C/C++ object */
 
-	/* in case ::data is a memory buffer: */
-	size_t size;
-	size_t bufsize;
+	/* in case it is a memory buffer: */
+	size_t  size;
+	size_t  bufsize;
 };
 
 extern DaoTypeBase cdataTyper;
 extern DaoCData cptrCData;
+
+void DaoCData_DeleteData( DaoCData *self );
 
 /* DaoPair is not data type for general use, it is mainly used for index pair,
  * and object-method pair.

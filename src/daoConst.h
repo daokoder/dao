@@ -43,7 +43,7 @@ enum DaoRTTI
 	DAO_TYPE ,
 	DAO_UTF8 , /* sub type of string */
 	DAO_FUNCURRY ,
-	DAO_LIBRARY ,
+	DAO_CMODULE ,
 	DAO_THDMASTER ,
 	DAO_THREADID ,
 	DAO_CONSTEVAL ,

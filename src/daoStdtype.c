@@ -2796,20 +2796,18 @@ DNode* DaoMap_Next( DaoMap *self, DNode *iter )
 /**/
 DaoCData* DaoCData_New( DaoTypeBase *typer, void *data )
 {
-	DaoCData *self = (DaoCData*)dao_malloc( sizeof(DaoCData) );
+	DaoCData *self = (DaoCData*)dao_calloc( 1, sizeof(DaoCData) );
 	DaoBase_Init( self, DAO_CDATA );
 	self->typer = typer;
 	self->attribs = DAO_CDATA_FREE;
 	self->data = data;
-	self->buffer = NULL;
-	self->memsize = 0;
-	self->meta = NULL;
-	self->daoObject = NULL;
-	self->size = 0;
-	self->bufsize = 0;
 	if( typer == NULL ){
 		self->typer = & cdataTyper;
 		self->buffer = data;
+	}
+	if( self->typer->priv ){
+		self->cmodule = self->typer->priv->nspace->cmodule;
+		GC_IncRC( self->cmodule );
 	}
 	return self;
 }
@@ -2821,10 +2819,19 @@ DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data )
 }
 static void DaoCData_Delete( DaoCData *self )
 {
+	DaoCData_DeleteData( self );
+	dao_free( self );
+}
+void DaoCData_DeleteData( DaoCData *self )
+{
 	DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
 	void (*fdel)(void*) = (void (*)(void *))DaoCData_Delete;
 	if( self->meta ) GC_DecRC( self->meta );
 	if( self->daoObject ) GC_DecRC( self->daoObject );
+	if( self->cmodule ) GC_DecRC( self->cmodule );
+	self->meta = NULL;
+	self->daoObject = NULL;
+	self->cmodule = NULL;
 	if( self->attribs & DAO_CDATA_FREE ){
 		if( self->buffer ){
 			dao_free( self->buffer );
@@ -2838,8 +2845,9 @@ static void DaoCData_Delete( DaoCData *self )
 				dao_free( self->data );
 			}
 		}
+		self->buffer = NULL;
+		self->data = NULL;
 	}
-	dao_free( self );
 }
 int DaoCData_IsType( DaoCData *self, DaoTypeBase *typer )
 {

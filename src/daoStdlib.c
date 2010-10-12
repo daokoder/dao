@@ -799,7 +799,7 @@ static void GetErrnoMessage(char *buffer, int code, char *defpart, int isrmdir)
 	case EBUSY:
 		strcat(buffer, "the file/directory is used by the system");
 		break;
-	//Appeared to be synonyms
+	/* Appeared to be synonyms */
 	case ENOTEMPTY:
 	case EEXIST:
 		strcat(buffer, isrmdir? "the directory is not empty" : "the file/directory already exists");
@@ -807,7 +807,7 @@ static void GetErrnoMessage(char *buffer, int code, char *defpart, int isrmdir)
 	case EINVAL:
 		strcat(buffer, "trying to make the directory it's own subdirectory");
 		break;
-	//A file required but a dir passed and vice versa
+	/* A file required but a dir passed and vice versa */
 	case EPERM:
 	case ENOTDIR:
 	case EISDIR:

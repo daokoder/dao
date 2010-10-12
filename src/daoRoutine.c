@@ -39,6 +39,7 @@ static const unsigned char daoScriptRaise2[] =
 
 static void DRoutine_Init( DRoutine *self )
 {
+	self->minimal = 0;
 	self->attribs = 0;
 	self->parCount = 0;
 	self->tidHost = 0;
@@ -574,8 +575,6 @@ NextRoutine:
 	routine = (DaoRoutine*) DRoutine_GetOverLoadExt( routine->specialized, NULL, obj, p, n, code );
 	if( routine ) return (DRoutine*) routine;
 	return (DRoutine*) routTable->items.pBase[best];
-	//if( best >=0 ) return (DRoutine*) routTable->items.pBase[best];
-	//return NULL;
 }
 DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int code )
 {
@@ -648,6 +647,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	DaoType *tp, **types = routype->nested->items.pAbtp;
 #if 0
 	int i;
+	printf( "%s: %i %i %i\n", routine->routName->mbs, ndef, np, obj ? obj->t : 0 );
 	for(i=0; i<npar; i++){
 		tp = DaoNameSpace_GetTypeV( routine->nameSpace, *p[i] );
 		printf( "%i  %s\n", i, tp->name->mbs );
@@ -1682,7 +1682,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	int i, j, k, cid=0, retinf = 0;
 	int N = self->vmCodes->size;
 	int M = self->locRegCount;
-	int min, spec=0, lastcomp = 0;
+	int min=0, spec=0, lastcomp = 0;
 	int TT0, TT1, TT2, TT3, TT4, TT5, TT6;
 	int ec = 0, ec_general = 0, ec_specific = 0;
 	int annot_first = 0, annot_last = 0, tid_target = 0;
@@ -3670,7 +3670,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						if( rout->type == DAO_ROUTINE && rout != (DRoutine*) self
 								&& ((DaoRoutine*)rout)->vmCodes->size >0 && notide ){
 							/* rout may has only been declared */
-							//printf( "copying %s\n", rout->routType->name->mbs );
 							rout = (DRoutine*) DaoRoutine_Copy2( (DaoRoutine*) rout );
 							DRoutine_PassParamTypes( rout, bt, pp, tp, j, code );
 							if( DaoRoutine_InferTypes( (DaoRoutine*) rout ) ==0 ) goto InvParam;
@@ -4490,7 +4489,6 @@ ErrorTyping:
 					DString_Delete( errors->items.pString[i+1] );
 				}
 				DArray_Delete( errors );
-				//printf( "%5i %5i %5i\n", vmc->first, vmc->middle, vmc->last );
 				if( stdio != ns->vmSpace->stdStream ) DaoStream_Delete( stdio );
 				dao_free( init );
 				dao_free( addCount );

@@ -87,6 +87,7 @@ typedef struct DaoVmCode       DaoVmCode;
 typedef struct DaoVmCodeX      DaoVmCodeX;
 typedef struct DaoVmcArray     DaoVmcArray;
 
+typedef struct DaoCModule      DaoCModule;
 typedef struct DaoException    DaoException;
 
 typedef struct DaoMacro        DaoMacro;

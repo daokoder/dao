@@ -161,13 +161,13 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
 void DaoNameSpace_Delete( DaoNameSpace *self );
 
 /* return virtual register id of the const named "name". return -1 if not found. */
-int  DaoNameSpace_FindConst( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value );
+int DaoNameSpace_FindConst( DaoNameSpace *self, DString *name );
+int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value );
 void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DValue value );
 DValue DaoNameSpace_GetConst( DaoNameSpace *self, int i );
 
-int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
+int DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
+int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
 int DaoNameSpace_SetVariable( DaoNameSpace *self, int index, DValue var );
 DValue DaoNameSpace_GetVariable( DaoNameSpace *self, int i );
 

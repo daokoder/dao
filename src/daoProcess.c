@@ -1390,10 +1390,7 @@ CallEntry:
 #ifdef DAO_WITH_JIT
 			DaoJitFunc jitfunc;
 			jitfunc = (DaoJitFunc)topCtx->routine->jitFuncs->items.pVoid[vmc->a];
-			//printf( "jitfunc = %p, context = %p\n", jitfunc, topCtx );
 			inum = (*jitfunc)( locVars, & extra );
-			//printf( "jitc: %i %i\n", inum, vmc->b );
-			//printf( "value: %f\n", locVars[3]->v.f );
 			if( inum ){
 				vmc = vmcBase + inum;
 				goto RaiseErrorIndexOutOfRange;

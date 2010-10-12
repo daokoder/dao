@@ -77,7 +77,6 @@ void DaoVmCode_Print( DaoVmCode self, char *buffer )
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer )
 {
 	const char *name = getOpcodeName( self.code );
-	//char *annot = self.annot ? self.annot->mbs : "";
 	char *annot = "";
 	static const char *fmt = "%-11s : %6i , %6i , %6i ;  %4i,  %s\n";
 	if( buffer == NULL )
@@ -236,7 +235,9 @@ void DaoContext_SetResult( DaoContext *self, DaoBase *result )
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 {
 	if( ! DValue_Move( A, C, t ) ){
-		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching1" );
+		DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, A );
+		printf( "%s %s\n", type->name->mbs, t->name->mbs );
+		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching11" );
 		return 0;
 	}
 	return 1;
@@ -266,7 +267,7 @@ int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase )
 	 */
 	bl = DaoAssign( self, dbase, self->regValues[ reg ], abtp );
 	if( bl ==0 ){
-		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching1" );
+		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching12" );
 		return 0;
 	}
 	return bl;
@@ -364,7 +365,6 @@ void DaoJIT_MovePP( DaoContext *self, int id )
 }
 void DaoJIT_DoBinArith( DaoContext *self, int id )
 {
-	//printf( "self = %p, id = %i\n", self, id );
 	self->vmc = self->codes + id;
 	DaoContext_DoBinArith( self, self->vmc );
 }
@@ -400,15 +400,11 @@ void DaoJIT_AddString( DaoContext *self, int id )
 }
 void DaoJIT_GETI_LI( DaoContext *self, int id )
 {
-	//printf( "%p %i\n", self, id );
 	DaoVmCode *vmc = self->codes + id;
 	DValue **locVars = self->regValues;
 	DaoList *list = locVars[ vmc->a ]->v.list;
-	//DValue *dC = self->regValues + vmc->c;
 	id = locVars[ vmc->b ]->v.i;
-	//DValue *dA = list->items->data + id;
 	DValue_SimpleMove2( list->items->data[id], locVars[ vmc->c ] );
-	//XXX if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
 	/*
 	   DaoType *abtp = self->routine->regType->items.pAbtp[ vmc->c ];
 	   DaoMoveAC( self, list->items->data[id], locVars + vmc->c, abtp );
@@ -421,11 +417,8 @@ void DaoJIT_SETI_LI( DaoContext *self, int id )
 	DaoVmCode *vmc = self->codes + id;
 	DValue **locVars = self->regValues;
 	DaoList *list = locVars[ vmc->c ]->v.list;
-	//DValue *dA = self->regValues + vmc->a;
 	id = locVars[ vmc->b ]->v.i;
-	//DValue *dC = list->items->data + id;
 	DValue_SimpleMove2( locVars[ vmc->a ][0], list->items->data + id );
-	//XXX if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
 	/*
 	   DaoType *abtp = self->routine->regType->items.pAbtp[ vmc->c ];
 	   DaoMoveAC( self, list->items->data[id], locVars + vmc->c, abtp );

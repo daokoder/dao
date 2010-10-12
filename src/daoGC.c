@@ -32,7 +32,7 @@
 #endif
 #endif
 
-#ifdef __GLIBC__
+#ifdef DEBUG_TRACE
 #include <execinfo.h>
 void print_trace()
 {
@@ -54,8 +54,6 @@ void print_trace()
 	fclose( debug );
 	fflush( stdout );
 }
-#else
-void print_trace(){}
 #endif
 
 #define GC_BREAK_REF( p ) { if( p ){ (p)->refCount --; (p) = NULL; } }
@@ -425,7 +423,10 @@ void DaoGC_DecRC( DaoBase *p )
 	if( ! p ) return;
 
 #ifdef DEBUG_TRACE
-	if( p == 0x1011a0 ) print_trace();
+	if( p == 0x2531c40 ){
+		print_trace();
+		printf( "rc: %i\n", p->refCount );
+	}
 #endif
 	DMutex_Lock( & gcWorker.mutex_switch_heap );
 
@@ -609,6 +610,7 @@ void cycRefCountDecreScan()
 				cycRefCountDecrementsT( obj->superObject );
 				cycRefCountDecrementsVT( obj->objData );
 				cycRefCountDecrement( (DaoBase*) obj->meta );
+				cycRefCountDecrement( (DaoBase*) obj->myClass );
 				break;
 			}
 		case DAO_CDATA :
@@ -671,11 +673,11 @@ void cycRefCountDecreScan()
 				cycRefCountDecrementsV( ns->cstData );
 				cycRefCountDecrementsV( ns->varData );
 				cycRefCountDecrements( ns->varType );
-				cycRefCountDecrements( ns->cmethods );
+				cycRefCountDecrements( ns->cmodule->cmethods );
 				cycRefCountDecrements( ns->mainRoutines );
 				cycRefCountDecrementMapValue( ns->abstypes );
-				for(k=0; k<ns->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->ctypers->items.pBase[k];
+				for(k=0; k<ns->cmodule->ctypers->size; k++){
+					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pBase[k];
 					if( typer->priv == NULL ) continue;
 					cycRefCountDecrementMapValueV( typer->priv->values );
 					cycRefCountDecrementMapValue( typer->priv->methods );
@@ -782,6 +784,7 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrementsT( obj->superObject );
 				cycRefCountIncrementsVT( obj->objData );
 				cycRefCountIncrement( (DaoBase*) obj->meta );
+				cycRefCountIncrement( (DaoBase*) obj->myClass );
 				break;
 			}
 		case DAO_CDATA :
@@ -844,11 +847,11 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrementsV( ns->cstData );
 				cycRefCountIncrementsV( ns->varData );
 				cycRefCountIncrements( ns->varType );
-				cycRefCountIncrements( ns->cmethods );
+				cycRefCountIncrements( ns->cmodule->cmethods );
 				cycRefCountIncrements( ns->mainRoutines );
 				cycRefCountIncrementMapValue( ns->abstypes );
-				for(k=0; k<ns->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->ctypers->items.pBase[k];
+				for(k=0; k<ns->cmodule->ctypers->size; k++){
+					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pBase[k];
 					if( typer->priv == NULL ) continue;
 					cycRefCountIncrementMapValueV( typer->priv->values );
 					cycRefCountIncrementMapValue( typer->priv->methods );
@@ -899,7 +902,7 @@ void freeGarbage()
 		DaoBase *dbase = pool->items.pBase[i];
 		dbase->gcState[work] = 0;
 
-		if( dbase->cycRefCount == 0 ){
+		if( dbase->cycRefCount == 0 || dbase->refCount ==0 ){
 
 			DMutex_Lock( & gcWorker.mutex_switch_heap );
 			switch( dbase->type ){
@@ -958,6 +961,7 @@ void freeGarbage()
 					directRefCountDecrementT( obj->superObject );
 					directRefCountDecrementVT( obj->objData );
 					GC_BREAK_REF( obj->meta );
+					GC_BREAK_REF( obj->myClass );
 					break;
 				}
 			case DAO_CDATA :
@@ -1020,11 +1024,11 @@ void freeGarbage()
 					directRefCountDecrementV( ns->cstData );
 					directRefCountDecrementV( ns->varData );
 					directRefCountDecrement( ns->varType );
-					directRefCountDecrement( ns->cmethods );
+					directRefCountDecrement( ns->cmodule->cmethods );
 					directRefCountDecrement( ns->mainRoutines );
 					directRefCountDecrementMapValue( ns->abstypes );
-					for(k=0; k<ns->ctypers->size; k++){
-						DaoTypeBase *typer = (DaoTypeBase*)ns->ctypers->items.pBase[k];
+					for(k=0; k<ns->cmodule->ctypers->size; k++){
+						DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pBase[k];
 						if( typer->priv == NULL ) continue;
 						directRefCountDecrementMapValueV( typer->priv->values );
 						directRefCountDecrementMapValue( typer->priv->methods );
@@ -1068,7 +1072,7 @@ void freeGarbage()
 
 	for( i=0; i<pool->size; i++ ){
 		DaoBase *dbase = pool->items.pBase[i];
-		if( dbase->cycRefCount==0 ){
+		if( dbase->cycRefCount==0 || dbase->refCount==0 ){
 			if( dbase->refCount !=0 ){
 				printf(" refCount not zero %i: %i\n", dbase->type, dbase->refCount );
 
@@ -1184,8 +1188,6 @@ void DaoGC_IncRC( DaoBase *p )
 	if( p == 0x736d010 ){
 		print_trace();
 	}
-	//if( p == 0x452840 && p->refCount >= 35 ) print_trace();
-	//if( mainVmSpace && mainVmSpace->safeTag && p->type == DAO_NAMESPACE ) print_trace();
 #endif
 	if( p->refCount == 0 ){
 		p->refCount ++;
@@ -1387,6 +1389,7 @@ void cycRefCountDecreScan()
 				if( obj->superObject ) j += obj->superObject->size;
 				if( obj->objData ) j += obj->objData->size;
 				cycRefCountDecrement( (DaoBase*) obj->meta );
+				cycRefCountDecrement( (DaoBase*) obj->myClass );
 				break;
 			}
 		case DAO_CDATA :
@@ -1456,12 +1459,12 @@ void cycRefCountDecreScan()
 				cycRefCountDecrementsV( ns->cstData );
 				cycRefCountDecrementsV( ns->varData );
 				cycRefCountDecrements( ns->varType );
-				cycRefCountDecrements( ns->cmethods );
+				cycRefCountDecrements( ns->cmodule->cmethods );
 				cycRefCountDecrements( ns->mainRoutines );
 				j += ns->cstData->size + ns->varData->size + ns->abstypes->size;
 				cycRefCountDecrementMapValue( ns->abstypes );
-				for(k=0; k<ns->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->ctypers->items.pBase[k];
+				for(k=0; k<ns->cmodule->ctypers->size; k++){
+					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pBase[k];
 					if( typer->priv == NULL ) continue;
 					cycRefCountDecrementMapValueV( typer->priv->values );
 					cycRefCountDecrementMapValue( typer->priv->methods );
@@ -1565,6 +1568,7 @@ void cycRefCountIncreScan()
 					cycRefCountIncrementsT( obj->superObject );
 					cycRefCountIncrementsVT( obj->objData );
 					cycRefCountIncrement( (DaoBase*) obj->meta );
+					cycRefCountIncrement( (DaoBase*) obj->myClass );
 					if( obj->superObject ) j += obj->superObject->size;
 					if( obj->objData ) j += obj->objData->size;
 					break;
@@ -1636,12 +1640,12 @@ void cycRefCountIncreScan()
 					cycRefCountIncrementsV( ns->cstData );
 					cycRefCountIncrementsV( ns->varData );
 					cycRefCountIncrements( ns->varType );
-					cycRefCountIncrements( ns->cmethods );
+					cycRefCountIncrements( ns->cmodule->cmethods );
 					cycRefCountIncrements( ns->mainRoutines );
 					j += ns->cstData->size + ns->varData->size + ns->abstypes->size;
 					cycRefCountIncrementMapValue( ns->abstypes );
-					for(k=0; k<ns->ctypers->size; k++){
-						DaoTypeBase *typer = (DaoTypeBase*)ns->ctypers->items.pBase[k];
+					for(k=0; k<ns->cmodule->ctypers->size; k++){
+						DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pBase[k];
 						if( typer->priv == NULL ) continue;
 						cycRefCountIncrementMapValueV( typer->priv->values );
 						cycRefCountIncrementMapValue( typer->priv->methods );
@@ -1763,6 +1767,7 @@ void directDecRC()
 					directRefCountDecrementT( obj->superObject );
 					directRefCountDecrementVT( obj->objData );
 					GC_BREAK_REF( obj->meta );
+					GC_BREAK_REF( obj->myClass );
 					break;
 				}
 			case DAO_CDATA :
@@ -1838,11 +1843,11 @@ void directDecRC()
 					directRefCountDecrementV( ns->cstData );
 					directRefCountDecrementV( ns->varData );
 					directRefCountDecrement( ns->varType );
-					directRefCountDecrement( ns->cmethods );
+					directRefCountDecrement( ns->cmodule->cmethods );
 					directRefCountDecrement( ns->mainRoutines );
 					directRefCountDecrementMapValue( ns->abstypes );
-					for(k=0; k<ns->ctypers->size; k++){
-						DaoTypeBase *typer = (DaoTypeBase*)ns->ctypers->items.pBase[k];
+					for(k=0; k<ns->cmodule->ctypers->size; k++){
+						DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pBase[k];
 						if( typer->priv == NULL ) continue;
 						directRefCountDecrementMapValueV( typer->priv->values );
 						directRefCountDecrementMapValue( typer->priv->methods );

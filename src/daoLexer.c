@@ -837,13 +837,15 @@ void DaoInitLexTable()
 
 typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
 
+extern void DString_DeleteData( DString *self );
+
 DaoToken* DaoToken_New() { return dao_calloc( 1, sizeof(DaoToken) ); }
 void DaoToken_Delete( DaoToken *self )
 {
 	DaoToken2 *tok2 = (DaoToken2*) self;
 	if( self->string ){
 		if( self->string == & tok2->string ){
-			DString_Clear( self->string );
+			if( self->string->data ) DString_DeleteData( self->string );
 		}else{
 			DString_Delete( self->string );
 		}

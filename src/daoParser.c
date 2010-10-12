@@ -2975,7 +2975,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 	DaoClass_ResetAttributes( klass );
 	DArray_Clear( parser->tokens );
-	DaoParser_PostParsing( parser );
+	DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
+	DaoParser_ParseRoutine( parser );
 	rout->parser = NULL;
 	DaoParser_Delete( parser );
 	/* TODO: compile routines if it is not in incremental compiling mode */
@@ -4730,7 +4731,9 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end, int permi
 		if( vmSpace->stopit ) code = DAO_CTW_LOAD_CANCELLED;
 		goto ErrorLoad;
 	}
-	if( ns != mod ) DaoNameSpace_Import( ns, mod, varImport );
+	if( modname == NULL && varImport->size ==0 ){
+		DaoNameSpace_AddParent( nameSpace, mod );
+	}else if( ns != mod ) DaoNameSpace_Import( ns, mod, varImport );
 	if( ns == nameSpace ){
 		DArray_Append( nameSpace->nsLoaded, mod );
 	}else{
@@ -5459,13 +5462,12 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 					return -1;
 				}
 				i = DaoParser_GetClassMember( self, tokens[start+2]->string );
-				if( !(i >= DVR_CLS_CST && i < DVR_GLB_VAR) && !(i >= DVR_CLS_VAR && i < DVR_MAX) ){
-					DString_SetMBS( self->mbs, "not a class member" );
-					DaoParser_Error( self, DAO_CTW_EXPR_INVALID, self->mbs );
-					return -1;
+				if( (i >= DVR_CLS_CST && i < DVR_GLB_VAR) || (i >= DVR_CLS_VAR && i < DVR_MAX) ){
+					regLast = DaoParser_GetNormRegister( self, i, start+2, 0, start+2 );
+					start += 2;
+				}else{ /* for operator .field, i will be <0 */
+					regLast = DaoParser_MakeArithLeaf( self, start, cst );
 				}
-				regLast = DaoParser_GetNormRegister( self, i, start+2, 0, start+2 );
-				start += 2;
 			}else if( tki == DKEY_YIELD ){
 				if( start+1 > right || tokens[start+1]->name != DTOK_LB ){
 					DaoParser_Error( self, DAO_CTW_EXPR_INVALID, NULL );
@@ -6809,10 +6811,11 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 			if( tokens[pos]->name == DTOK_ASSN && was )
 				DaoParser_Warn( self, DAO_CTW_ASSIGN_INSIDE, NULL );
 			if( tkt == DTOK_IDENTIFIER && (tkn2 == DTOK_DOT || tkn2 == DTOK_COLON2 || tkn2 == DTOK_ARROW) ){
-				if( start == pos-3 && tokens[start]->name == DKEY_SELF ){
+				i = DaoParser_GetClassMember( self, tokens[pos-1]->string );
+				/* for operator .field, i will be <0 */
+				if( i >=0 && start == pos-3 && tokens[start]->name == DKEY_SELF ){
 					reg2 = DaoParser_MakeArithTree( self, pos+1, end, & c2, regC, state );
 					if( reg2 < 0 ) goto ParsingError;
-					i = DaoParser_GetClassMember( self, tokens[pos-1]->string );
 					if( i >= DVR_CLS_CST && i < DVR_GLB_VAR ){
 						DaoParser_Error( self, DAO_CTW_MODIFY_CONST, tokens[pos-1]->string );
 						return -1;

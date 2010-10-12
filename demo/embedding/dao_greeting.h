@@ -11,6 +11,8 @@
 #define DAO_DLL_GREETING
 #endif
 
+extern DaoVmSpace *__daoVmSpace;
+
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -34,24 +36,22 @@ DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue *userdata );
 class DAO_DLL_GREETING DaoCxxVirt_Greeting 
 {
 	public:
-	DaoCxxVirt_Greeting(){ self = 0; cdata = 0; vmproc = 0; }
-	~DaoCxxVirt_Greeting(){
-		DaoGC_DecRC( (DaoBase*) vmproc );
-		DaoGC_DecRC( (DaoBase*) cdata );
-	}
-	void Init( Greeting *self, DaoCData *d, DaoVmProcess *p );
+	DaoCxxVirt_Greeting(){ self = 0; cdata = 0; }
+	void DaoInitWrapper( Greeting *self, DaoCData *d );
 	Greeting *self;
 	DaoCData *cdata;
-	DaoVmProcess *vmproc;
 	void DoGreeting( const char* name );
 	void VirtWithDefault( const Greeting &g );
 
 };
 class DAO_DLL_GREETING DaoCxx_Greeting : public Greeting, public DaoCxxVirt_Greeting
 { 
+	unsigned int refCount;
 	public:
-   DaoCxx_Greeting( const char* msg=NULL ) : Greeting( msg ){}
-	void Init();
+   DaoCxx_Greeting( const char* msg=NULL ) : Greeting( msg ){ refCount = 0; }
+	~DaoCxx_Greeting();
+	void DaoInitWrapper();
+	void DaoAddExternalReference();
 	void DoGreeting( const char* name );
 	void VirtWithDefault( const Greeting &g = Greeting() );
 };
