@@ -452,13 +452,8 @@ FILE* DaoStream_GetFile( DaoStream *self )
 
 DaoTypeBase streamTyper =
 {
-	(void*) & streamCore,
-	"stream",
-	streamConsts,
-	(DaoFuncItem*) streamMeths,
-	{0},
-	(FuncPtrNew) DaoStream_New, 
-	(FuncPtrDel) DaoStream_Delete
+	"stream", & streamCore, streamConsts, (DaoFuncItem*) streamMeths, {0},
+	(FuncPtrDel) DaoStream_Delete, NULL
 };
 
 DaoStream* DaoStream_New()
@@ -512,17 +507,18 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format )
 {
 	DaoVmSpace *vms = self->vmSpace;
+	char buffer[100];
 	if( self->redirect && self != self->redirect ){
 		DaoStream_WriteInt( self->redirect, val );
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-		sprintf( self->buffer, format, val );
-		DString_SetMBS( self->streamString, self->buffer );
+		sprintf( buffer, format, val );
+		DString_SetMBS( self->streamString, buffer );
 		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
 	}else if( self->attribs & DAO_IO_STRING ){
-		sprintf( self->buffer, format, val );
-		DString_AppendMBS( self->streamString, self->buffer );
+		sprintf( buffer, format, val );
+		DString_AppendMBS( self->streamString, buffer );
 	}else{
 		printf( format, val );
 	}
@@ -540,6 +536,7 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 	DaoVmSpace *vms = self->vmSpace;
 	char *format = self->format;
 	const char *iconvs = "diouxXcC";
+	char buffer[100];
 	if( format && strchr( iconvs, format[ strlen(format)-1 ] ) && val ==(long)val ){
 		DaoStream_WriteInt( self, (dint)val );
 		return;
@@ -550,12 +547,12 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-		sprintf( self->buffer, format, val );
-		DString_SetMBS( self->streamString, self->buffer );
+		sprintf( buffer, format, val );
+		DString_SetMBS( self->streamString, buffer );
 		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
 	}else if( self->attribs & DAO_IO_STRING ){
-		sprintf( self->buffer, format, val );
-		DString_AppendMBS( self->streamString, self->buffer );
+		sprintf( buffer, format, val );
+		DString_AppendMBS( self->streamString, buffer );
 	}else{
 		printf( format, val );
 	}
@@ -665,17 +662,18 @@ void DaoStream_WritePointer( DaoStream *self, void *val )
 {
 	DaoVmSpace *vms = self->vmSpace;
 	const char *format = "%p";
+	char buffer[100];
 	if( self->redirect && self != self->redirect ){
 		DaoStream_WritePointer( self->redirect, val );
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-		sprintf( self->buffer, format, val );
-		DString_SetMBS( self->streamString, self->buffer );
+		sprintf( buffer, format, val );
+		DString_SetMBS( self->streamString, buffer );
 		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
 	}else if( self->attribs & DAO_IO_STRING ){
-		sprintf( self->buffer, format, val );
-		DString_AppendMBS( self->streamString, self->buffer );
+		sprintf( buffer, format, val );
+		DString_AppendMBS( self->streamString, buffer );
 	}else{
 		printf( format, val );
 	}

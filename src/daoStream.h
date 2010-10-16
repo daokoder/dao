@@ -46,7 +46,6 @@ struct DaoStream
 	DaoVmSpace *vmSpace;
 	DString    *fname;
 	DaoStream  *redirect;
-	char        buffer[100];
 };
 
 extern DaoStream* DaoStream_New();

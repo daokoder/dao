@@ -279,13 +279,8 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 
 static DaoTypeBase vmsTyper=
 {
-	NULL,
-	"VMSPACE",
-	NULL,
-	NULL,
-	{0},
-	(FuncPtrNew) DaoVmSpace_New,
-	(FuncPtrDel) DaoVmSpace_Delete
+	"vmspace", NULL, NULL, NULL, {0},
+	(FuncPtrDel) DaoVmSpace_Delete, NULL
 };
 
 
@@ -850,7 +845,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 			DValue vp = daoNullPair;
 			DString_Assign( key, argNames->items.pString[i] );
 			vp.v.pair = DaoPair_New( skey, nkey );
-			vp.v.pair->subType |= DAO_DATA_CONST;
+			vp.v.pair->trait |= DAO_DATA_CONST;
 			vp.t = DAO_PAR_NAMED;
 			DaoList_Append( ns->argParams, vp );
 		}else{
@@ -1789,6 +1784,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DValue_NewBuffer = DValue_NewBuffer;
 	api->DValue_NewStream = DValue_NewStream;
 	api->DValue_NewCData = DValue_NewCData;
+	api->DValue_WrapCData = DValue_WrapCData;
 	api->DValue_Copy = DValue_Copy;
 	api->DValue_Clear = DValue_Clear;
 	api->DValue_ClearAll = DValue_ClearAll;
@@ -1940,6 +1936,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoCData_New = DaoCData_New;
 	api->DaoCData_Wrap = DaoCData_Wrap;
 	api->DaoCData_IsType = DaoCData_IsType;
+	api->DaoCData_SetExtReference = DaoCData_SetExtReference;
 	api->DaoCData_SetData = DaoCData_SetData;
 	api->DaoCData_SetBuffer = DaoCData_SetBuffer;
 	api->DaoCData_SetArray = DaoCData_SetArray;
@@ -2030,6 +2027,7 @@ void DaoInitAPI( DaoAPI *api )
 
 	api->DaoGC_IncRC = DaoGC_IncRC;
 	api->DaoGC_DecRC = DaoGC_DecRC;
+	api->DaoCallbackData_New = DaoCallbackData_New;
 }
 extern void DaoInitLexTable();
 
@@ -2151,10 +2149,14 @@ extern DMutex mutex_string_sharing;
 extern DMutex dao_typing_mutex;
 extern DMutex dao_vsetup_mutex;
 extern DMutex dao_msetup_mutex;
+extern DMutex dao_cdata_mutex;
 #endif
 
 #include<signal.h>
 void print_trace();
+
+extern DMap *dao_cdata_bindings;
+extern DArray *dao_callback_data;
 
 DaoVmSpace* DaoInit()
 {
@@ -2165,6 +2167,9 @@ DaoVmSpace* DaoInit()
 
 	if( mainVmSpace ) return mainVmSpace;
 
+	dao_cdata_bindings = DHash_New(0,0);
+	dao_callback_data = DArray_New(0);
+
 	/* signal( SIGSEGV, print_trace ); */
 	/* signal( SIGABRT, print_trace ); */
 
@@ -2173,6 +2178,7 @@ DaoVmSpace* DaoInit()
 	DMutex_Init( & dao_typing_mutex );
 	DMutex_Init( & dao_vsetup_mutex );
 	DMutex_Init( & dao_msetup_mutex );
+	DMutex_Init( & dao_cdata_mutex );
 #endif
 
 	mbs = DString_New(1);
@@ -2341,6 +2347,8 @@ void DaoQuit()
 	DaoVmSpace_Delete( mainVmSpace );
 	DaoFinishGC();
 	DMap_Delete( dao_typing_cache );
+	DMap_Delete( dao_cdata_bindings );
+	DArray_Delete( dao_callback_data );
 }
 DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns )
 {

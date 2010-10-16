@@ -27,16 +27,6 @@
 #include"daoNumtype.h"
 #include"daoNamespace.h"
 
-static const char* const daoScriptRaise[] =
-{
-	"raise", "Exception","::","Error","(","'Compiling failed'",")",";",
-	NULL
-};
-static const unsigned char daoScriptRaise2[] =
-{
-	DKEY_RAISE, DTOK_IDENTIFIER, DTOK_COLON2, DTOK_IDENTIFIER, DTOK_LB, DTOK_MBS, DTOK_RB, DTOK_SEMCO
-};
-
 static void DRoutine_Init( DRoutine *self )
 {
 	self->minimal = 0;
@@ -783,12 +773,8 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 
 DaoTypeBase routTyper=
 {
-	& baseCore,
-	"ROUTINE",
-	NULL,
-	NULL, {0},
-	(FuncPtrNew) DaoRoutine_New,
-	(FuncPtrDel) DaoRoutine_Delete
+	"routine", & baseCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoRoutine_Delete, NULL
 };
 
 DaoRoutine* DaoRoutine_New()
@@ -871,10 +857,7 @@ void DaoRoutine_Compile( DaoRoutine *self )
 				int i = 0, k = self->parser->curLine;
 				DArray_Clear( self->parser->errors );
 				self->parser->error = 0;
-				while( daoScriptRaise[i] ){
-					DaoTokens_Append( tokens, daoScriptRaise2[i], k, daoScriptRaise[i] );
-					i ++;
-				}
+				DaoTokens_AddRaiseStatement( tokens, "Error", "'Compiling failed'", k );
 				if( routp ){ /* XXX */
 					/* to avoid type checking for RETURN */
 					retp = routp->X.abtype;
@@ -3611,11 +3594,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					ct = at->X.klass->objType;
 				}else if( at->tid == DAO_CDATA ){
 					val = DaoFindValue( at->typer, at->name );
-					if( val.t == 0 && at->typer->New != NULL && (vmc->b & 0xff) ==0 ){
-						if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) type[opc] = at;
-						AssertTypeMatching( ct, type[opc], defs, 0 );
-						continue;
-					}
 					if( val.t != DAO_FUNCTION ) goto ErrorTyping;
 					rout = (DRoutine*) val.v.routine;
 				}else if( csts[opa].t == DAO_ROUTINE || csts[opa].t == DAO_FUNCTION ){
@@ -4588,12 +4566,8 @@ void DaoFunction_Delete( DaoFunction *self )
 
 DaoTypeBase funcTyper =
 {
-	& baseCore,
-	"FUNCTION",
-	NULL,
-	NULL, {0},
-	NULL,
-	(FuncPtrDel) DaoFunction_Delete
+	"function", & baseCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoFunction_Delete, NULL
 };
 DaoFunction* DaoFunction_New()
 {
@@ -4657,12 +4631,8 @@ void DaoFunCurry_Delete( DaoFunCurry *self )
 }
 DaoTypeBase curryTyper =
 {
-	& baseCore,
-	"curry",
-	NULL,
-	NULL, {0},
-	NULL,
-	(FuncPtrDel) DaoFunCurry_Delete
+	"curry", & baseCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoFunCurry_Delete, NULL
 };
 DaoFunCurry* DaoFunCurry_New( DValue v, DValue o )
 {

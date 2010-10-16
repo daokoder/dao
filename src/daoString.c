@@ -924,13 +924,15 @@ void DString_Assign( DString *self, DString *chs )
 		if( chs->mbs ){
 			self->wcs = NULL;
 			self->size = self->bufSize = chs->size;
-			self->data = self->mbs = dao_malloc( (chs->size + 1)*sizeof(char) );
+			self->data = dao_malloc( (chs->size + 1)*sizeof(char) );
+			self->mbs = (char*) self->data;
 			memcpy( self->mbs, chs->mbs, chs->size*sizeof(char) );
 			self->mbs[ self->size ] = 0;
 		}else{
 			self->mbs = NULL;
 			self->size = self->bufSize = chs->size;
-			self->data = self->wcs = dao_malloc( (chs->size + 1)*sizeof(wchar_t) );
+			self->data = dao_malloc( (chs->size + 1)*sizeof(wchar_t) );
+			self->wcs = (wchar_t*) self->data;
 			memcpy( self->wcs, chs->wcs, chs->size*sizeof(wchar_t) );
 			self->wcs[ self->size ] = 0;
 		}

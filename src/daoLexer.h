@@ -254,5 +254,6 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end );
 int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
+DString* DaoTokens_AddRaiseStatement( DArray *self, const char *type, const char *info, int line );
 
 #endif

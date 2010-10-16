@@ -68,11 +68,7 @@ static DaoFuncItem comMeths[] =
 
 DaoTypeBase comTyper = 
 {
-	& comCore,
-	"complex",
-	NULL,
-	(DaoFuncItem*) comMeths,
-	{0}, NULL, NULL
+	"complex", & comCore, NULL, (DaoFuncItem*) comMeths, {0}, NULL, NULL
 };
 
 double abs_c( const complex16 com )
@@ -1393,11 +1389,7 @@ static DaoFuncItem longMeths[] =
 };
 DaoTypeBase longTyper =
 {
-	(void*) & longCore,
-	"LONG",
-	NULL,
-	(DaoFuncItem*) longMeths,
-	{0}, NULL, NULL
+	"long", & longCore, NULL, (DaoFuncItem*) longMeths, {0}, NULL, NULL
 };
 
 #ifdef DAO_WITH_NUMARRAY
@@ -3481,13 +3473,8 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size )
 
 DaoTypeBase numarTyper = 
 {
-	& numarrCore,
-	"array",
-	NULL,
-	(DaoFuncItem*) numarMeths,
-	{0},
-	(FuncPtrNew) DaoArray_New,
-	(FuncPtrDel) DaoArray_Delete
+	"array", & numarrCore, NULL, (DaoFuncItem*) numarMeths, {0},
+	(FuncPtrDel) DaoArray_Delete, NULL
 };
 
 #ifdef DEBUG

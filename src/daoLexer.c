@@ -1358,7 +1358,7 @@ int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, in
 	}
 	return -1;
 }
-int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop )
+int DaoTokens_FindRightPair( DArray *self, uchar_t lw, uchar_t rw, int start, int stop )
 {
 	DaoToken **tokens = self->items.pToken;
 	int k = 0;
@@ -1385,4 +1385,17 @@ int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, i
 		i++;
 	}
 	return -1;
+}
+
+DString* DaoTokens_AddRaiseStatement( DArray *self, const char *type, const char *info, int line )
+{
+	DaoTokens_Append( self, DKEY_RAISE, line, "raise" );
+	DaoTokens_Append( self, DTOK_IDENTIFIER, line, "Exception" );
+	DaoTokens_Append( self, DTOK_COLON2, line, "::" );
+	DaoTokens_Append( self, DTOK_IDENTIFIER, line, type );
+	DaoTokens_Append( self, DTOK_LB, line, "(" );
+	DaoTokens_Append( self, DTOK_MBS, line, info );
+	DaoTokens_Append( self, DTOK_RB, line, ")" );
+	DaoTokens_Append( self, DTOK_SEMCO, line, ";" );
+	return self->items.pToken[ self->size - 3 ]->string;
 }

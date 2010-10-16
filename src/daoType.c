@@ -51,10 +51,8 @@ void DaoType_Delete( DaoType *self )
 }
 DaoTypeBase abstypeTyper=
 {
-	& baseCore,
-	"type",
-	NULL, NULL, {0}, NULL,
-	(FuncPtrDel) DaoType_Delete
+	"type", & baseCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoType_Delete, NULL
 };
 
 void DaoType_MapNames( DaoType *self );
@@ -662,10 +660,8 @@ void DaoInterface_Delete( DaoInterface *self )
 }
 DaoTypeBase interTyper=
 {
-	& baseCore,
-	"interface",
-	NULL, NULL, {0}, NULL,
-	(FuncPtrDel) DaoInterface_Delete
+	"interface", & baseCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoInterface_Delete, NULL
 };
 
 DaoInterface* DaoInterface_New( const char *name )

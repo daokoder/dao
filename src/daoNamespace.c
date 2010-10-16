@@ -42,10 +42,8 @@ extern void DaoTypeBase_Free( DaoTypeBase *typer );
 
 DaoTypeBase cmodTyper=
 {
-	& baseCore,
-	"cmodule",
-	NULL, NULL, {0}, NULL,
-	(FuncPtrDel) DaoCModule_Delete
+	"cmodule", & baseCore, NULL, NULL, {0}, 
+	(FuncPtrDel) DaoCModule_Delete, NULL
 };
 
 DaoCModule* DaoCModule_New()
@@ -456,6 +454,18 @@ int DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *ty
 DaoCDataCore* DaoCDataCore_New();
 extern void DaoTypeCData_SetMethods( DaoTypeBase *self );
 
+static FuncPtrTest DaoTypeBase_GetDeleteTest( DaoTypeBase *typer )
+{
+	FuncPtrTest fptr;
+	int i;
+	if( typer->DelTest ) return typer->DelTest;
+	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+		if( typer->supers[i] == NULL ) break;
+		fptr = DaoTypeBase_GetDeleteTest( typer->supers[i] );
+		if( fptr ) return fptr;
+	}
+	return NULL;
+}
 static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
 {
 	DaoType *abtype;
@@ -477,8 +487,8 @@ static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
 
 	plgCore->abtype = abtype;
 	plgCore->nspace = self;
-	plgCore->NewData = typer->New;
 	plgCore->DelData = typer->Delete;
+	plgCore->DelTest = DaoTypeBase_GetDeleteTest( typer );
 	typer->priv = (DaoTypeCore*)plgCore;
 	DaoTypeCData_SetMethods( typer );
 	return 1;
@@ -613,10 +623,8 @@ int DaoNameSpace_Load( DaoNameSpace *self, const char *fname )
 
 DaoTypeBase nsTyper=
 {
-	& nsCore,
-	"namespace",
-	NULL, NULL, {0}, NULL,
-	(FuncPtrDel) DaoNameSpace_Delete
+	"namespace", & nsCore, NULL, NULL, {0}, 
+	(FuncPtrDel) DaoNameSpace_Delete, NULL
 };
 
 DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
@@ -684,7 +692,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	GC_IncRC( dao_routine );
 	GC_IncRC( self );
 	DaoVmProcess_PushRoutine( self->vmpEvalConst, self->routEvalConst );
-	self->vmpEvalConst->topFrame->context->subType = DAO_CONSTEVAL;
+	self->vmpEvalConst->topFrame->context->trait |= DAO_DATA_CONST;
 	value.t = DAO_ROUTINE;
 	value.v.routine = self->routEvalConst;
 	DVarray_Append( self->cstData, value );
@@ -704,6 +712,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 }
 void DaoNameSpace_Delete( DaoNameSpace *self )
 {
+	/* printf( "DaoNameSpace_Delete  %s\n", self->name->mbs ); */
 	DaoTypeCore *core;
 	DMap *values;
 	DNode *it;

@@ -124,13 +124,8 @@ void DMacroGroup_Delete( DMacroGroup *self )
 
 DaoTypeBase macroTyper=
 {
-	(void*) & baseCore,
-	"MACRO",
-	NULL,
-	NULL,
-	{0},
-	(FuncPtrNew) DaoMacro_New,
-	(FuncPtrDel) DaoMacro_Delete
+	"macro", (void*) & baseCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoMacro_Delete, NULL
 };
 
 DaoMacro* DaoMacro_New()

@@ -243,7 +243,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 		id = MurmurHash2( key, 2*sizeof(void*), HASH_SEED) % T;
 		break;
 	default : 
-		id = MurmurHash2( key, sizeof(void*), HASH_SEED) % T;
+		id = MurmurHash2( & key, sizeof(void*), HASH_SEED) % T;
 		break;
 	}
 	return (int)id;
@@ -611,10 +611,11 @@ void DMap_EraseNode( DMap *self, DNode *node )
 {
 	if( node == NULL ) return;
 	if( self->hashing ){
-		self->root = self->table[ node->hash ];
+		int hash = node->hash;
+		self->root = self->table[ hash ];
 		if( self->root == NULL ) return;
 		DMap_EraseChild( self, node );
-		self->table[ node->hash ] = self->root;
+		self->table[ hash ] = self->root;
 		if( self->size < 0.25*self->tsize ) DHash_ResetTable( self );
 	}else{
 		DMap_EraseChild( self, node );

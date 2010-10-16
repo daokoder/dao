@@ -214,7 +214,7 @@ void DValue_MarkConst( DValue *self )
 	DNode *it;
 	int i, n;
 	self->cst = 1;
-	if( self->t >= DAO_ARRAY ) self->v.p->subType |= DAO_DATA_CONST;
+	if( self->t >= DAO_ARRAY ) self->v.p->trait |= DAO_DATA_CONST;
 	switch( self->t ){
 	case DAO_LIST :
 		for(i=0; i<self->v.list->items->size; i++)
@@ -978,7 +978,13 @@ DValue DValue_NewCData( DaoTypeBase *typer, void *data )
 {
 	DValue res = daoNullCData;
 	res.v.cdata = DaoCData_New( typer, data );
-	res.v.cdata->attribs = 0;
+	GC_IncRC( res.v.p );
+	return res;
+}
+DValue DValue_WrapCData( DaoTypeBase *typer, void *data )
+{
+	DValue res = daoNullCData;
+	res.v.cdata = DaoCData_Wrap( typer, data );
 	GC_IncRC( res.v.p );
 	return res;
 }

@@ -46,7 +46,6 @@ enum DaoRTTI
 	DAO_CMODULE ,
 	DAO_THDMASTER ,
 	DAO_THREADID ,
-	DAO_CONSTEVAL ,
 
 	DAO_LIST_EMPTY ,
 	DAO_ARRAY_EMPTY ,
@@ -106,6 +105,7 @@ enum DaoDataState
 	DAO_DATA_GLOBAL     = (1<<2), /* for compiling only */
 	DAO_DATA_STATIC     = (1<<3), /* for compiling only */
 	DAO_DATA_VAR        = (1<<4), /* for compiling only */
+	DAO_DATA_CALLBACK   = (1<<6), /* attribute for object used as callback data */
 	DAO_DATA_CONST      = (1<<7)  /* using the highest bit in the subType field */
 };
 

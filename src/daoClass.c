@@ -85,13 +85,8 @@ static DaoTypeCore classCore=
 
 DaoTypeBase classTyper =
 {
-	& classCore,
-	"CLASS",
-	NULL,
-	NULL,
-	{0},
-	(FuncPtrNew) DaoClass_New,
-	(FuncPtrDel) DaoClass_Delete
+	"class", & classCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoClass_Delete, NULL
 };
 
 DaoClass* DaoClass_New()
@@ -205,7 +200,7 @@ void DaoClass_Parents( DaoBase *self, DArray *parents, DArray *offsets )
 				DaoClass *cls = klass->superClass->items.pClass[j];
 				DArray_Append( parents, cls );
 				DArray_Append( offsets, (size_t) offset );
-				if( cls->type == DAO_CLASS ) offset += cls->objDataName->size;
+				offset += (cls->type == DAO_CLASS) ? cls->objDataName->size : 0;
 			}
 		}else if( dbase->type == DAO_CDATA ){
 			cdata = (DaoCData*) dbase;
@@ -213,6 +208,7 @@ void DaoClass_Parents( DaoBase *self, DArray *parents, DArray *offsets )
 			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
 				if( typer->supers[j] == NULL ) break;
 				DArray_Append( parents, typer->supers[j]->priv->abtype->X.extra );
+				DArray_Append( offsets, (size_t) offset );
 			}
 		}
 	}

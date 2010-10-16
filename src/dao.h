@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20101006
+#define DAO_H_VERSION 20101016
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -243,6 +243,7 @@ typedef struct DMap        DMap;
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
 typedef struct DaoUserHandler  DaoUserHandler;
+typedef struct DaoCallbackData DaoCallbackData;
 
 typedef struct DaoBase         DaoBase;
 typedef struct DaoArray        DaoArray;
@@ -302,8 +303,8 @@ struct DValue
 typedef void (*CallbackOnString)( const char *str );
 typedef void (*FuncInitAPI)( DaoAPI *api );
 typedef void  (*DThreadTask)( void *arg );
-typedef void* (*FuncPtrNew)();
 typedef void  (*FuncPtrDel)( void* );
+typedef int   (*FuncPtrTest)( void* );
 typedef void  (*DaoFuncPtr) ( DaoContext *context, DValue *params[], int npar );
 
 typedef struct DaoNumItem   DaoNumItem;
@@ -324,8 +325,8 @@ struct DaoFuncItem
 /* Typer structure, contains type information of each Dao type: */
 struct DaoTypeBase
 {
-	DaoTypeCore   *priv; /* data used internally; */
 	const char    *name; /* type name; */
+	DaoTypeCore   *priv; /* data used internally; */
 	DaoNumItem    *numItems; /* constant number list */
 	DaoFuncItem   *funcItems; /* method list: should end with a null item */
 
@@ -333,8 +334,18 @@ struct DaoTypeBase
 	 * mainly useful for wrapping c++ libraries. */
 	DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
 
-	void*        (*New)();  /* function to allocate structure; */
-	void         (*Delete)( void *self ); /* function to free structure; */
+	/* function to free data:
+	 * only for DaoCData created by DValue_NewCData() or DaoCData_New() */
+	void   (*Delete)( void *data );
+	/* test if the data is deletable by Dao: called by gc before deletion. */
+	int    (*DelTest)( void *data );
+};
+
+/* Callback data: freed when "callback" or "userdata" is collected by GC. */
+struct DaoCallbackData
+{
+	DaoRoutine  *callback;
+	DValue       userdata;
 };
 
 /* This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
@@ -390,6 +401,7 @@ struct DaoAPI
 	DValue (*DValue_NewBuffer)( void *s, int n );
 	DValue (*DValue_NewStream)( FILE *f );
 	DValue (*DValue_NewCData)( DaoTypeBase *typer, void *data );
+	DValue (*DValue_WrapCData)( DaoTypeBase *typer, void *data );
 	void (*DValue_Copy)( DValue *self, DValue from );
 	void (*DValue_Clear)( DValue *v );
 	void (*DValue_ClearAll)( DValue *v, int n );
@@ -545,6 +557,7 @@ struct DaoAPI
 	DaoCData* (*DaoCData_New)( DaoTypeBase *typer, void *data );
 	DaoCData* (*DaoCData_Wrap)( DaoTypeBase *typer, void *data );
 	int    (*DaoCData_IsType)( DaoCData *self, DaoTypeBase *typer );
+	void   (*DaoCData_SetExtReference)( DaoCData *self, int bl );
 	void   (*DaoCData_SetData)( DaoCData *self, void *data );
 	void   (*DaoCData_SetBuffer)( DaoCData *self, void *data, size_t size );
 	void   (*DaoCData_SetArray) ( DaoCData *self, void *data, size_t size, int memsize );
@@ -639,6 +652,8 @@ struct DaoAPI
 
 	void (*DaoGC_IncRC)( DaoBase *p );
 	void (*DaoGC_DecRC)( DaoBase *p );
+
+	DaoCallbackData* (*DaoCallbackData_New)( DaoRoutine *callback, DValue userdata );
 };
 
 
@@ -674,8 +689,10 @@ DAO_DLL DValue DValue_NewMatrixF( float **s, int n, int m );
 DAO_DLL DValue DValue_NewMatrixD( double **s, int n, int m );
 DAO_DLL DValue DValue_NewBuffer( void *s, int n );
 DAO_DLL DValue DValue_NewStream( FILE *f );
-/* data will not be deleted with the DaoCData structure allocated by this function */
+/* data will be deleted with the DaoCData structure created by this function */
 DAO_DLL DValue DValue_NewCData( DaoTypeBase *typer, void *data );
+/* data will NOT be deleted with the DaoCData structure created by this function */
+DAO_DLL DValue DValue_WrapCData( DaoTypeBase *typer, void *data );
 DAO_DLL void DValue_Copy( DValue *self, DValue from );
 DAO_DLL void DValue_Clear( DValue *v );
 DAO_DLL void DValue_ClearAll( DValue *v, int n );
@@ -835,6 +852,7 @@ DAO_DLL DaoCData* DaoCData_New( DaoTypeBase *typer, void *data );
 /* data will not be deleted with the new DaoCData */
 DAO_DLL DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data );
 DAO_DLL int    DaoCData_IsType( DaoCData *self, DaoTypeBase *typer );
+DAO_DLL void   DaoCData_SetExtReference( DaoCData *self, int bl );
 DAO_DLL void   DaoCData_SetData( DaoCData *self, void *data );
 DAO_DLL void   DaoCData_SetBuffer( DaoCData *self, void *data, size_t size );
 DAO_DLL void   DaoCData_SetArray( DaoCData *self, void *data, size_t size, int itsize );
@@ -873,6 +891,7 @@ DAO_DLL DaoCData*  DaoContext_PutCPointer( DaoContext *self, void *data, int siz
 DAO_DLL DaoBase*   DaoContext_PutResult( DaoContext *self, DaoBase *data );
 /* data will not be deleted with the new DaoCData */
 DAO_DLL DaoCData*  DaoContext_WrapCData( DaoContext *self, void *data, DaoTypeBase *typer );
+/* data will be deleted with the new DaoCData */
 DAO_DLL DaoCData*  DaoContext_CopyCData( DaoContext *self, void *d, int n, DaoTypeBase *t );
 
 DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
@@ -949,6 +968,8 @@ DAO_DLL void  DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 DAO_DLL void DaoGC_IncRC( DaoBase *p );
 DAO_DLL void DaoGC_DecRC( DaoBase *p );
 
+DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata );
+
 #else
 
 #define DaoInit()  __dao.DaoInit()
@@ -978,6 +999,7 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DValue_NewBuffer( s, n )  __dao.DValue_NewBuffer( s, n )
 #define DValue_NewStream( f )  __dao.DValue_NewStream( f )
 #define DValue_NewCData( typer, data )  __dao.DValue_NewCData( typer, data )
+#define DValue_WrapCData( typer, data )  __dao.DValue_WrapCData( typer, data )
 #define DValue_Copy( self, from )  __dao.DValue_Copy( self, from )
 #define DValue_Clear( v )  __dao.DValue_Clear( v )
 #define DValue_ClearAll( v, n )  __dao.DValue_ClearAll( v, n )
@@ -1126,6 +1148,7 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 #define DaoCData_New( typer, data )  __dao.DaoCData_New( typer, data )
 #define DaoCData_Wrap( typer, data )  __dao.DaoCData_Wrap( typer, data )
 #define DaoCData_IsType( self, typer )  __dao.DaoCData_IsType( self, typer )
+#define DaoCData_SetExtReference( self, bl ) __dao.DaoCData_SetExtReference( self, bl )
 #define DaoCData_SetData( self, data ) __dao.DaoCData_SetData( self, data )
 #define DaoCData_SetBuffer( self, data, size ) __dao.DaoCData_SetBuffer( self, data, size )
 #define DaoCData_SetArray( self, data, n, ms ) __dao.DaoCData_SetArray( self, data, n, ms )
@@ -1218,6 +1241,8 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 
 #define DaoGC_IncRC( p )  __dao.DaoGC_IncRC( p )
 #define DaoGC_DecRC( p )  __dao.DaoGC_DecRC( p )
+
+#define DaoCallbackData_New( cb, ud ) __dao.DaoCallbackData_New( cb, ud )
 
 
 #if defined( UNIX ) || defined( WIN32 )

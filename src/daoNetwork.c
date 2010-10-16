@@ -111,23 +111,24 @@ static void DaoFdSet_IsSet( DaoContext *ctx, DValue *par[], int N  )
 {
 	DaoContext_PutInteger( ctx, FD_ISSET( par[1]->v.i, GET_FDSET( par[0] ) ) );
 }
+extern DaoTypeBase DaoFdSet_Typer;
+static void DaoFdSet_New( DaoContext *ctx, DValue *par[], int N  )
+{
+	fd_set *set = dao_malloc( sizeof(fd_set) );
+	FD_ZERO( set );
+	DaoContext_PutCData( ctx, set, & DaoFdSet_Typer );
+}
 static DaoFuncItem fdsetMeths[] =
 {
+	{  DaoFdSet_New,        "fd_set()=>fd_set" },
 	{  DaoFdSet_Zero,       "zero( self : fd_set )" },
 	{  DaoFdSet_Set,        "set( self : fd_set, fd : int )" },
 	{  DaoFdSet_Clear,      "clear( self : fd_set, fd : int )" },
 	{  DaoFdSet_IsSet,      "isset( self : fd_set, fd : int )=>int" },
 	{ NULL, NULL }
 };
-static void* DaoFdSet_New()
-{
-	fd_set *set = dao_malloc( sizeof(fd_set) );
-	FD_ZERO( set );
-	return set;
-}
 DaoTypeBase DaoFdSet_Typer = 
-{ NULL, "fd_set", NULL, fdsetMeths, 
-	{0}, (FuncPtrNew)DaoFdSet_New, (FuncPtrDel)free };
+{ "fd_set", NULL, NULL, fdsetMeths, {0}, (FuncPtrDel)free, NULL };
 
 void DaoNetwork_Close( int sockfd );
 int DaoNetwork_Bind( int port )
@@ -706,12 +707,7 @@ static DaoTypeCore netCore =
 	DaoBase_Copy,
 };
 DaoTypeBase libNetTyper = {
-	NULL,
-	"network",
-	NULL,
-	netMeths,
-	{0},
-	NULL, NULL
+	"network", NULL, NULL, netMeths, {0}, NULL, NULL
 };
 
 #ifdef DAO_WITH_MPI

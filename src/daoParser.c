@@ -789,13 +789,26 @@ static void DaoParser_ExtractComments( DaoParser *self, DString *docString,
 }
 static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, int flags )
 {
+	DString *info;
 	int i;
 	for(i=0; i<klass->superAlias->size; i++){
-		char *sup = klass->superAlias->items.pString[i]->mbs;
+		DString *sup = klass->superAlias->items.pString[i];
+		DaoCData *cdata = (DaoCData*) klass->superClass->items.pBase[i];
 		if( flags & (1<<i) ) continue;
+		if( cdata->type == DAO_CDATA ){
+			DRoutine *func = (DRoutine*) DaoFindFunction( cdata->typer, sup );
+			if( func ) func = DRoutine_GetOverLoad( func, NULL, NULL, 0, DVM_CALL );
+			if( func ) goto AppendInitSuper;
+			info = DaoTokens_AddRaiseStatement( self, "Error", "", line );
+			DString_SetMBS( info, "'No default constructor for parent type \"" );
+			DString_Append( info, sup );
+			DString_AppendMBS( info, "\"'" );
+			continue;
+		}
+AppendInitSuper:
 		DaoTokens_Append( self, DKEY_SELF, line, "self" );
 		DaoTokens_Append( self, DTOK_DOT, line, "." );
-		DaoTokens_Append( self, DTOK_IDENTIFIER, line, sup );
+		DaoTokens_Append( self, DTOK_IDENTIFIER, line, sup->mbs );
 		DaoTokens_Append( self, DTOK_LB, line, "(" );
 		DaoTokens_Append( self, DTOK_RB, line, ")" );
 		DaoTokens_Append( self, DTOK_SEMCO, line, ";" );
@@ -3747,7 +3760,7 @@ ErrorInterfaceDefinition:
 		value = nil;
 		if( cst ){
 			value = DaoParser_GetVariable( self, cst );
-			if( value.t >= DAO_ARRAY ) value.v.p->subType |= DAO_DATA_CONST;
+			if( value.t >= DAO_ARRAY ) value.v.p->trait |= DAO_DATA_CONST;
 		}
 		if( abtp ==0 && value.t ) abtp = DaoNameSpace_GetTypeV( myNS, value );
 
@@ -6242,7 +6255,7 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 	}else if( tki == DTOK_COLON ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			DaoPair *pair = DaoPair_New( daoNullValue, daoNullValue );
-			pair->subType |= DAO_DATA_CONST;
+			pair->trait |= DAO_DATA_CONST;
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConst( (DRoutine*)routine, (DaoBase*)pair );
 		}

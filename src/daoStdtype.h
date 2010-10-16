@@ -21,9 +21,7 @@
 #include"daoArray.h"
 #include"daoMap.h"
 
-#define SUB_TYPE( x )  ( (x)->subType & (0xFF>>2) )
-
-#define DAO_DATA_COMMON uchar_t type, subType, gcState[2]; int refCount, cycRefCount
+#define DAO_DATA_COMMON uchar_t type, trait, gcState[2]; int refCount, cycRefCount
 
 void DaoBase_Delete( void *obj );
 
@@ -133,8 +131,8 @@ struct DaoCDataCore
 	void   (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 	DValue (*Copy)(  DValue *self, DaoContext *ctx, DMap *cycData );
 
-	void*  (*NewData)();
 	void   (*DelData)( void *data );
+	int    (*DelTest)( void *data );
 };
 DaoCDataCore* DaoCDataCore_New();
 
@@ -185,7 +183,8 @@ struct DaoCData
 	DaoCModule   *cmodule;
 	DaoTypeBase  *typer;
 
-	ushort_t  attribs;
+	uchar_t   attribs;
+	uchar_t   extref;
 	ushort_t  memsize; /* size of single C/C++ object */
 
 	/* in case it is a memory buffer: */

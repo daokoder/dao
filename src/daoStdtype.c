@@ -223,13 +223,7 @@ DaoTypeCore baseCore =
 };
 DaoTypeBase baseTyper =
 {
-	& baseCore,
-	"null",
-	NULL,
-	NULL,
-	{0},
-	NULL,
-	DaoBase_Delete
+	"null", & baseCore, NULL, NULL, {0}, DaoBase_Delete, NULL
 };
 DaoBase nil = { 0, DAO_DATA_CONST, {0,0}, 1, 0 };
 
@@ -238,7 +232,8 @@ int ObjectProfile[100];
 void DaoBase_Init( void *dbase, char type )
 {
 	DaoBase *self = (DaoBase*) dbase;
-	self->type = self->subType = type;
+	self->type = type;
+	self->trait = 0;
 	self->gcState[0] = self->gcState[1]  = 0;
 	self->refCount = 0;
 	self->cycRefCount = 0;
@@ -255,13 +250,12 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 	size_t i;
 
 	if( dbase == NULL ) return & nil;
-	if( ! (self->subType & DAO_DATA_CONST) ) return self;
+	if( ! (self->trait & DAO_DATA_CONST) ) return self;
 	switch( self->type ){
 	case DAO_LIST :
 		{
 			DaoList *list = (DaoList*) self;
 			DaoList *copy = DaoList_New();
-			copy->subType = SUB_TYPE( list ); /* remove const state */
 			DVarray_Resize( copy->items, list->items->size, daoNullValue );
 			for(i=0; i<list->items->size; i++)
 				DaoList_SetItem( copy, list->items->data[i], i );
@@ -274,7 +268,6 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 			DaoMap *map = (DaoMap*) self;
 			DaoMap *copy = DaoMap_New( map->items->hashing );
 			DNode *node = DMap_First( map->items );
-			copy->subType = SUB_TYPE( map ); /* remove const state */
 			for( ; node !=NULL; node = DMap_Next(map->items, node ))
 				DMap_Insert( copy->items, node->key.pVoid, node->value.pVoid );
 			copy->unitype = map->unitype;
@@ -285,7 +278,6 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 		{
 			DaoTuple *tuple = (DaoTuple*) self;
 			DaoTuple *copy = DaoTuple_New( tuple->items->size );
-			copy->subType = SUB_TYPE( tuple ); /* remove const state */
 			for(i=0; i<tuple->items->size; i++)
 				DValue_Copy( copy->items->data + i, tuple->items->data[i] );
 			copy->unitype = tuple->unitype;
@@ -458,9 +450,7 @@ static DaoTypeCore numberCore=
 
 DaoTypeBase numberTyper=
 {
-	& numberCore,
-	"double",
-	NULL, NULL, {0}, NULL, NULL
+	"double", & numberCore, NULL, NULL, {0}, NULL, NULL
 };
 
 /**/
@@ -1532,11 +1522,7 @@ static DaoFuncItem stringMeths[] =
 
 DaoTypeBase stringTyper=
 {
-	(void*) &stringCore,
-	"string",
-	NULL,
-	(DaoFuncItem*) stringMeths,
-	{0}, NULL, NULL
+	"string", & stringCore, NULL, (DaoFuncItem*) stringMeths, {0}, NULL, NULL
 };
 
 /* also used for printing tuples */
@@ -1715,7 +1701,6 @@ static DValue DaoListCore_Copy( DValue *dbase, DaoContext *ctx, DMap *cycData )
 
 	copy = DaoList_New();
 	res.v.list = copy;
-	copy->subType = SUB_TYPE( self ); /* remove const state */
 	copy->unitype = self->unitype;
 	GC_IncRC( copy->unitype );
 	if( cycData ) MAP_Insert( cycData, self, copy );
@@ -2293,13 +2278,8 @@ void DaoList_PopBack( DaoList *self )
 
 DaoTypeBase listTyper=
 {
-	& listCore,
-	"LIST",
-	NULL,
-	(DaoFuncItem*)listMeths,
-	{0},
-	(FuncPtrNew) DaoList_New,
-	(FuncPtrDel) DaoList_Delete
+	"list", & listCore, NULL, (DaoFuncItem*)listMeths, {0},
+	(FuncPtrDel) DaoList_Delete, NULL
 };
 
 DaoList* DaoList_New()
@@ -2466,7 +2446,6 @@ static DValue DaoMap_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 
 	copy = DaoMap_New( self->items->hashing );
 	value.v.map = copy;
-	copy->subType = SUB_TYPE( self ); /* remove const state */
 	copy->unitype = self->unitype;
 	GC_IncRC( copy->unitype );
 
@@ -2722,17 +2701,11 @@ DValue DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 	if( node ) return node->value.pValue[0];
 	return daoNullValue;
 }
-DaoMap* DaoMap_New2(){ return DaoMap_New(0); }
 
 DaoTypeBase mapTyper=
 {
-	& mapCore,
-	"MAP",
-	NULL,
-	(DaoFuncItem*) mapMeths,
-	{0},
-	(FuncPtrNew)DaoMap_New2,
-	(FuncPtrDel)DaoMap_Delete
+	"map", & mapCore, NULL, (DaoFuncItem*) mapMeths, {0},
+	(FuncPtrDel)DaoMap_Delete, NULL
 };
 
 DaoMap* DaoMap_New( int hashing )
@@ -2793,17 +2766,58 @@ DNode* DaoMap_Next( DaoMap *self, DNode *iter )
 	return DMap_Next(self->items,iter);
 }
 
+DMap *dao_cdata_bindings = NULL;
+static DaoCData* DaoCDataBindings_Find( void *data )
+{
+	DNode *node = DMap_Find( dao_cdata_bindings, data );
+	if( node ) return (DaoCData*) node->value.pVoid;
+	return NULL;
+}
+#ifdef DAO_WITH_THREAD
+DMutex dao_cdata_mutex;
+static void DaoCDataBindings_Insert( void *data, DaoCData *wrap )
+{
+	if( data == NULL ) return;
+	DMutex_Lock( & dao_cdata_mutex );
+	DMap_Insert( dao_cdata_bindings, data, wrap );
+	DMutex_Unlock( & dao_cdata_mutex );
+}
+static void DaoCDataBindings_Erase( void *data )
+{
+	if( data == NULL ) return;
+	DMutex_Lock( & dao_cdata_mutex );
+	DMap_Erase( dao_cdata_bindings, data );
+	DMutex_Unlock( & dao_cdata_mutex );
+}
+#else
+static void DaoCDataBindings_Insert( void *data, DaoCData *wrap )
+{
+	if( data == NULL ) return;
+	DMap_Insert( dao_cdata_bindings, data, wrap );
+}
+static void DaoCDataBindings_Erase( void *data )
+{
+	if( data == NULL ) return;
+	DMap_Erase( dao_cdata_bindings, data );
+}
+#endif
+
 /**/
 DaoCData* DaoCData_New( DaoTypeBase *typer, void *data )
 {
-	DaoCData *self = (DaoCData*)dao_calloc( 1, sizeof(DaoCData) );
+	DaoCData *self = DaoCDataBindings_Find( data );
+	if( self && self->typer == typer && self->data == data ) return self;
+	self = (DaoCData*)dao_calloc( 1, sizeof(DaoCData) );
 	DaoBase_Init( self, DAO_CDATA );
 	self->typer = typer;
 	self->attribs = DAO_CDATA_FREE;
+	self->extref = 0;
 	self->data = data;
 	if( typer == NULL ){
 		self->typer = & cdataTyper;
 		self->buffer = data;
+	}else if( data ){
+		DaoCDataBindings_Insert( data, self );
 	}
 	if( self->typer->priv ){
 		self->cmodule = self->typer->priv->nspace->cmodule;
@@ -2813,7 +2827,9 @@ DaoCData* DaoCData_New( DaoTypeBase *typer, void *data )
 }
 DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data )
 {
-	DaoCData *self = DaoCData_New( typer, data );
+	DaoCData *self = DaoCDataBindings_Find( data );
+	if( self && self->typer == typer && self->data == data ) return self;
+	self = DaoCData_New( typer, data );
 	self->attribs = 0;
 	return self;
 }
@@ -2824,39 +2840,53 @@ static void DaoCData_Delete( DaoCData *self )
 }
 void DaoCData_DeleteData( DaoCData *self )
 {
+	//int p = strcmp(self->typer->name, "Fl_Table_Row") ==0;
+	//if(p) printf( "delete %s: %p\n", self->typer->name, self );
 	DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
 	void (*fdel)(void*) = (void (*)(void *))DaoCData_Delete;
+	if( self->buffer == NULL ) DaoCDataBindings_Erase( self->data );
 	if( self->meta ) GC_DecRC( self->meta );
 	if( self->daoObject ) GC_DecRC( self->daoObject );
 	if( self->cmodule ) GC_DecRC( self->cmodule );
 	self->meta = NULL;
 	self->daoObject = NULL;
 	self->cmodule = NULL;
-	if( self->attribs & DAO_CDATA_FREE ){
-		if( self->buffer ){
-			dao_free( self->buffer );
-		}else if( self->data ){
-			if( c && c->DelData && c->DelData != fdel ){
-				c->DelData( self->data );
-			}else if( c ==0 && self->typer->Delete && self->typer->Delete != fdel ){
-				/* if the methods of typer has not been setup, typer->priv would be NULL */
-				self->typer->Delete( self->data );
-			}else if( self->bufsize > 0 ){
-				dao_free( self->data );
-			}
+	if( !(self->attribs & DAO_CDATA_FREE) ) return;
+	if( self->buffer ){
+		dao_free( self->buffer );
+	}else if( self->data ){
+		if( c && c->DelData && c->DelData != fdel ){
+			c->DelData( self->data );
+		}else if( c ==0 && self->typer->Delete && self->typer->Delete != fdel ){
+			/* if the methods of typer has not been setup, typer->priv would be NULL */
+			self->typer->Delete( self->data );
+		}else if( self->bufsize > 0 ){
+			dao_free( self->data );
 		}
-		self->buffer = NULL;
-		self->data = NULL;
 	}
+	self->buffer = NULL;
+	self->data = NULL;
 }
 int DaoCData_IsType( DaoCData *self, DaoTypeBase *typer )
 {
 	return DaoCData_ChildOf( self->typer, typer );
 }
-
+void DaoCData_SetExtReference( DaoCData *self, int bl )
+{
+	if( (bl && self->extref) || (bl==0 && self->extref ==0) ) return;
+	if( bl ){
+		GC_IncRC( self );
+		self->cycRefCount += 1;
+	}else{
+		GC_DecRC( self );
+	}
+	self->extref = bl != 0;
+}
 void DaoCData_SetData( DaoCData *self, void *data )
 {
+	if( self->buffer == NULL && self->data ) DaoCDataBindings_Erase( self->data );
 	self->data = data;
+	if( self->buffer == NULL && data ) DaoCDataBindings_Insert( data, self );
 }
 void DaoCData_SetBuffer( DaoCData *self, void *data, size_t size )
 {
@@ -3022,7 +3052,6 @@ DaoCDataCore* DaoCDataCore_New()
 }
 void DaoTypeCData_SetMethods( DaoTypeBase *self )
 {
-	self->New = (FuncPtrNew)DaoCData_New;
 	self->Delete = (FuncPtrDel)DaoCData_Delete;
 }
 
@@ -3207,15 +3236,11 @@ static DaoFuncItem cptrMeths[]=
 
 DaoTypeBase cdataTyper =
 {
-	NULL,
-	"cdata",
-	NULL,
-	(DaoFuncItem*) cptrMeths,
-	{0},
-	(FuncPtrNew)DaoCData_New,
-	(FuncPtrDel)DaoCData_Delete
+	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0},
+	(FuncPtrDel)DaoCData_Delete, NULL
 };
-DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, NULL,NULL,NULL,NULL, & cdataTyper, 0,0,0,0 };
+DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, 
+	NULL, NULL, NULL, NULL, NULL, & cdataTyper, 0,0,0,0,0 };
 
 void DaoPair_Delete( DaoPair *self )
 {
@@ -3257,12 +3282,7 @@ static DaoTypeCore pairCore=
 };
 DaoTypeBase pairTyper =
 {
-	& pairCore,
-	"pair",
-	NULL,
-	NULL, {0},
-	NULL,
-	(FuncPtrDel) DaoPair_Delete,
+	"pair", & pairCore, NULL, NULL, {0}, (FuncPtrDel) DaoPair_Delete, NULL
 };
 DaoPair* DaoPair_New( DValue p1, DValue p2 )
 {
@@ -3366,7 +3386,6 @@ static DValue DaoTupleCore_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 
 	copy = DaoTuple_New( self->items->size );
 	res.v.tuple = copy;
-	copy->subType = SUB_TYPE( self ); /* remove const state */
 	copy->unitype = self->unitype;
 	GC_IncRC( copy->unitype );
 	if( cycData ) MAP_Insert( cycData, self, copy );
@@ -3386,13 +3405,7 @@ static DaoTypeCore tupleCore=
 };
 DaoTypeBase tupleTyper=
 {
-	& tupleCore,
-	"tuple",
-	NULL,
-	NULL,
-	{0},
-	NULL,
-	(FuncPtrDel) DaoTuple_Delete
+	"tuple", & tupleCore, NULL, NULL, {0}, (FuncPtrDel) DaoTuple_Delete, NULL
 };
 DaoTuple* DaoTuple_New( int size )
 {
@@ -3499,8 +3512,8 @@ static DaoFuncItem dao_Exception_Meths[] =
 };
 
 DaoTypeBase dao_Exception_Typer =
-{ NULL, "Exception", NULL, dao_Exception_Meths,
-	{ 0 }, NULL, (FuncPtrDel) DaoException_Delete };
+{ "Exception", NULL, NULL, dao_Exception_Meths,
+	{ 0 }, (FuncPtrDel) DaoException_Delete, NULL };
 
 static void Dao_Exception_Get_name( DaoContext *ctx, DValue *p[], int n )
 {
@@ -3555,10 +3568,9 @@ static DaoFuncItem dao_ExceptionNone_Meths[] =
 };
 DaoTypeBase dao_ExceptionNone_Typer =
 {
-	NULL, "None",
-	NULL, dao_ExceptionNone_Meths,
+	"None", NULL, NULL, dao_ExceptionNone_Meths,
 	{ & dao_Exception_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ExceptionAny_Meths[] =
@@ -3569,10 +3581,9 @@ static DaoFuncItem dao_ExceptionAny_Meths[] =
 };
 DaoTypeBase dao_ExceptionAny_Typer =
 {
-	NULL, "Any",
-	NULL, dao_ExceptionAny_Meths,
+	"Any", NULL, NULL, dao_ExceptionAny_Meths,
 	{ & dao_Exception_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
@@ -3583,10 +3594,9 @@ static DaoFuncItem dao_ExceptionWarning_Meths[] =
 };
 DaoTypeBase dao_ExceptionWarning_Typer =
 {
-	NULL, "Warning",
-	NULL, dao_ExceptionWarning_Meths,
+	"Warning", NULL, NULL, dao_ExceptionWarning_Meths,
 	{ & dao_Exception_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ExceptionError_Meths[] =
@@ -3597,10 +3607,9 @@ static DaoFuncItem dao_ExceptionError_Meths[] =
 };
 DaoTypeBase dao_ExceptionError_Typer =
 {
-	NULL, "Error",
-	NULL, dao_ExceptionError_Meths,
+	"Error", NULL, NULL, dao_ExceptionError_Meths,
 	{ & dao_Exception_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ErrorField_Meths[] =
@@ -3611,10 +3620,9 @@ static DaoFuncItem dao_ErrorField_Meths[] =
 };
 DaoTypeBase dao_ErrorField_Typer =
 {
-	NULL, "Field",
-	NULL, dao_ErrorField_Meths,
+	"Field", NULL, NULL, dao_ErrorField_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_NotExist_Meths[] =
@@ -3625,10 +3633,9 @@ static DaoFuncItem dao_NotExist_Meths[] =
 };
 DaoTypeBase dao_FieldNotExist_Typer =
 {
-	NULL, "NotExist",
-	NULL, dao_NotExist_Meths,
+	"NotExist", NULL, NULL, dao_NotExist_Meths,
 	{ & dao_ErrorField_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_FieldNotPermit_Meths[] =
@@ -3639,10 +3646,9 @@ static DaoFuncItem dao_FieldNotPermit_Meths[] =
 };
 DaoTypeBase dao_FieldNotPermit_Typer =
 {
-	NULL, "NotPermit",
-	NULL, dao_FieldNotPermit_Meths,
+	"NotPermit", NULL, NULL, dao_FieldNotPermit_Meths,
 	{ & dao_ErrorField_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ErrorFloat_Meths[] =
@@ -3653,10 +3659,9 @@ static DaoFuncItem dao_ErrorFloat_Meths[] =
 };
 DaoTypeBase dao_ErrorFloat_Typer =
 {
-	NULL, "Float",
-	NULL, dao_ErrorFloat_Meths,
+	"Float", NULL, NULL, dao_ErrorFloat_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_FloatDivByZero_Meths[] =
@@ -3667,10 +3672,9 @@ static DaoFuncItem dao_FloatDivByZero_Meths[] =
 };
 DaoTypeBase dao_FloatDivByZero_Typer =
 {
-	NULL, "DivByZero",
-	NULL, dao_FloatDivByZero_Meths,
+	"DivByZero", NULL, NULL, dao_FloatDivByZero_Meths,
 	{ & dao_ErrorFloat_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_FloatOverFlow_Meths[] =
@@ -3681,10 +3685,9 @@ static DaoFuncItem dao_FloatOverFlow_Meths[] =
 };
 DaoTypeBase dao_FloatOverFlow_Typer =
 {
-	NULL, "OverFlow",
-	NULL, dao_FloatOverFlow_Meths,
+	"OverFlow", NULL, NULL, dao_FloatOverFlow_Meths,
 	{ & dao_ErrorFloat_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_FloatUnderFlow_Meths[] =
@@ -3695,10 +3698,9 @@ static DaoFuncItem dao_FloatUnderFlow_Meths[] =
 };
 DaoTypeBase dao_FloatUnderFlow_Typer =
 {
-	NULL, "UnderFlow",
-	NULL, dao_FloatUnderFlow_Meths,
+	"UnderFlow", NULL, NULL, dao_FloatUnderFlow_Meths,
 	{ & dao_ErrorFloat_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ErrorIndex_Meths[] =
@@ -3709,10 +3711,9 @@ static DaoFuncItem dao_ErrorIndex_Meths[] =
 };
 DaoTypeBase dao_ErrorIndex_Typer =
 {
-	NULL, "Index",
-	NULL, dao_ErrorIndex_Meths,
+	"Index", NULL, NULL, dao_ErrorIndex_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_IndexOutOfRange_Meths[] =
@@ -3723,10 +3724,9 @@ static DaoFuncItem dao_IndexOutOfRange_Meths[] =
 };
 DaoTypeBase dao_IndexOutOfRange_Typer =
 {
-	NULL, "OutOfRange",
-	NULL, dao_IndexOutOfRange_Meths,
+	"OutOfRange", NULL, NULL, dao_IndexOutOfRange_Meths,
 	{ & dao_ErrorIndex_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ErrorKey_Meths[] =
@@ -3737,18 +3737,16 @@ static DaoFuncItem dao_ErrorKey_Meths[] =
 };
 DaoTypeBase dao_ErrorKey_Typer =
 {
-	NULL, "Key",
-	NULL, dao_ErrorKey_Meths,
+	"Key", NULL, NULL, dao_ErrorKey_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 DaoTypeBase dao_KeyNotExist_Typer =
 {
-	NULL, "NotExist",
-	NULL, dao_NotExist_Meths,
+	"NotExist", NULL, NULL, dao_NotExist_Meths,
 	{ & dao_ErrorKey_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ErrorParam_Meths[] =
@@ -3759,10 +3757,9 @@ static DaoFuncItem dao_ErrorParam_Meths[] =
 };
 DaoTypeBase dao_ErrorParam_Typer =
 {
-	NULL, "Param",
-	NULL, dao_ErrorParam_Meths,
+	"Param", NULL, NULL, dao_ErrorParam_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_Syntax_Meths[] =
@@ -3773,17 +3770,15 @@ static DaoFuncItem dao_Syntax_Meths[] =
 };
 DaoTypeBase dao_WarningSyntax_Typer =
 {
-	NULL, "Syntax",
-	NULL, dao_Syntax_Meths,
+	"Syntax", NULL, NULL, dao_Syntax_Meths,
 	{ & dao_ExceptionWarning_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 DaoTypeBase dao_ErrorSyntax_Typer =
 {
-	NULL, "Syntax",
-	NULL, dao_Syntax_Meths,
+	"Syntax", NULL, NULL, dao_Syntax_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_ErrorType_Meths[] =
@@ -3794,10 +3789,9 @@ static DaoFuncItem dao_ErrorType_Meths[] =
 };
 DaoTypeBase dao_ErrorType_Typer =
 {
-	NULL, "Type",
-	NULL, dao_ErrorType_Meths,
+	"Type", NULL, NULL, dao_ErrorType_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoFuncItem dao_Value_Meths[] =
@@ -3808,17 +3802,15 @@ static DaoFuncItem dao_Value_Meths[] =
 };
 DaoTypeBase dao_WarningValue_Typer =
 {
-	NULL, "Value",
-	NULL, dao_Value_Meths,
+	"Value", NULL, NULL, dao_Value_Meths,
 	{ & dao_ExceptionWarning_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 DaoTypeBase dao_ErrorValue_Typer =
 {
-	NULL, "Value",
-	NULL, dao_Value_Meths,
+	"Value", NULL, NULL, dao_Value_Meths,
 	{ & dao_ExceptionError_Typer, NULL },
-	NULL, (FuncPtrDel) DaoException_Delete
+	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
@@ -3833,10 +3825,9 @@ static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 	plgCore = DaoCDataCore_New();
 	plgCore->abtype = abtype;
 	plgCore->nspace = ns;
-	plgCore->NewData = typer->New;
 	plgCore->DelData = typer->Delete;
 	typer->priv = (DaoTypeCore*)plgCore;
-	cdata->subType |= DAO_DATA_CONST;
+	cdata->trait |= DAO_DATA_CONST;
 	DaoTypeCData_SetMethods( typer );
 	return abtype;
 }

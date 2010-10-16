@@ -153,11 +153,9 @@ static void STD_Callable( DaoContext *ctx, DValue *p[], int N )
 			DaoCData *plugin = (DaoCData*) p[0]->v.p;
 			DaoTypeBase *tp = plugin->typer;
 			DaoFunction *func;
-			if( plugin->data == NULL && plugin->subType & DAO_DATA_CONST ){
+			if( plugin->data == NULL && (plugin->trait & DAO_DATA_CONST) ){
 				func = DaoFindFunction2( tp, tp->name );
-				*res = 1;
-				if( func ==NULL && ((DaoCDataCore*)tp->priv)->NewData ==NULL )
-					*res = 0;
+				*res = func != NULL;
 			}else{
 				func = DaoFindFunction2( tp, "()" );
 				if( func ) *res = 1;
@@ -549,12 +547,7 @@ static DaoFuncItem stdMeths[]=
 };
 
 DaoTypeBase libStandardTyper = {
-	NULL,
-	"std",
-	NULL,
-	stdMeths, 
-	{0},
-	NULL, NULL 
+	"std", NULL, NULL, stdMeths, {0}, NULL, NULL
 };
 
 static void SYS_Ctime( DaoContext *ctx, DValue *p[], int N )
@@ -928,12 +921,7 @@ static DaoNumItem sysConsts[] =
 };
 
 DaoTypeBase libSystemTyper = {
-	NULL,
-	"sys",
-	sysConsts,
-	sysMeths, 
-	{0},
-	NULL, NULL 
+	"sys", NULL, sysConsts, sysMeths, {0}, NULL, NULL
 };
 
 DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DValue *par[], int N )
@@ -1453,12 +1441,7 @@ static DaoFuncItem mpiMeths[]=
 };
 
 DaoTypeBase libMpiTyper = {
-	NULL,
-	"mpi",
-	NULL,
-	mpiMeths, 
-	{0},
-	NULL, NULL 
+	"mpi", NULL, NULL, mpiMeths, {0}, NULL, NULL
 };
 
 /**/
@@ -1951,12 +1934,7 @@ static DaoFuncItem reflMeths[]=
 };
 
 DaoTypeBase libReflectTyper = { 
-	NULL,
-	"reflect", 
-	NULL,
-	reflMeths, 
-	{0},
-	NULL, NULL
+	"reflect", NULL, NULL, reflMeths, {0}, NULL, NULL
 };
 
 static void Corout_Create( DaoContext *ctx, DValue *p[], int N )
@@ -2016,12 +1994,7 @@ static DaoFuncItem coroutMeths[]=
 };
 
 DaoTypeBase coroutTyper = {
-	NULL,
-	"coroutine", 
-	NULL,
-	coroutMeths, 
-	{0},
-	NULL, NULL
+	"coroutine", NULL, NULL, coroutMeths, {0}, NULL, NULL
 };
 
 /**/
@@ -2282,12 +2255,7 @@ static DaoFuncItem mathMeths[]=
 };
 
 DaoTypeBase libMathTyper = {
-	NULL,
-	"math",
-	NULL,
-	mathMeths, 
-	{0},
-	NULL, NULL 
+	"math", NULL, NULL, mathMeths, {0}, NULL, NULL
 };
 
 

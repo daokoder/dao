@@ -189,10 +189,8 @@ static DaoTypeCore objCore =
 
 DaoTypeBase objTyper=
 {
-	& objCore,
-	"OBJECT",
-	NULL, NULL, {0}, NULL,
-	(FuncPtrDel) DaoObject_Delete
+	"object", & objCore, NULL, NULL, {0},
+	(FuncPtrDel) DaoObject_Delete, NULL
 };
 
 DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )

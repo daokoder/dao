@@ -175,7 +175,6 @@ global CT_MAP_TYPE_ATTRIB : map<string,int> = { => };
 global pointer_types : map<string,string> = { => };
 global otherClassTypedef : map<string,int> = {=>};
 
-global proxy_functions : map<string,tuple<used:int,name:string,codes:string>> = {=>};
 global dao_callbacks_proto = {};
 global dao_callbacks = {};
 global dao_callbacks2 = {=>};
@@ -327,6 +326,7 @@ class Function
 		parlist.clear();
 	}
 }
+global proxy_functions : map<string,tuple<used:int,name:string,codes:string,id:Function>> = {=>};
 class UserType
 {
 	var name = '';
@@ -356,6 +356,8 @@ class UserType
 	var isQObject = 0;
 	var isQWidget = 0;
 	var unsupport = 0;
+
+	var condType : UserType;
 	
 	var fields : list<Variable> = {};
 	var methods : list<Function> = {};
@@ -414,6 +416,21 @@ class UserType
 		}
 		mo[ self ] = self;
 		lo.append( self );
+	}
+	routine ChildOf( other : UserType ){
+		if( self == other ) return 1;
+		for( sup in supers ){
+			if( sup.ChildOf( other ) ) return 1;
+		}
+		return 0;
+	}
+	routine SetupDeleteCondition( del_tests : map<UserType,string> ){
+		condType = self;
+		for( sup in supers ){
+			sup.SetupDeleteCondition( del_tests );
+			if( del_tests.has( sup ) ) condType = sup;
+		}
+		if( del_tests.has( self ) ) condType = self;
 	}
 }
 global map_user_types : map<string,UserType> = {=>};
@@ -590,6 +607,7 @@ attribs=0, snamespace='' )
 
 routine UserType::Parse( source='', inExtFile=0 )
 {
+	condType = self;
 	source.change( pat_struct, 'typedef %1 %2 %2;' ); # nested class/struct...
 	oldsource = source;
 	isDefined = 1;
@@ -1214,7 +1232,7 @@ global dao2cxx_callback =
   $(type) *$(name) = Dao_$(type);\n';
 global dao2cxx_userdata =
 '  DValue *_ud = _p[$(index)];
-  DaoCallbackData *$(name) = DaoCallbackData_New( _ro, _ud );\n';
+  DaoCallbackData *$(name) = DaoCallbackData_New( _ro, *_ud );\n';
 
 
 const cxx2dao = '  _dp[$(index)] = DValue_New';
@@ -1238,7 +1256,7 @@ global cxx2dao_doubles = cxx2dao + 'VectorD( (double*) $(name), $(size) );\n';
 
 global cxx2dao_stream = cxx2dao + 'Stream( (FILE*) $(refer) );\n';
 global cxx2dao_voidp = cxx2dao + 'CData( NULL, (void*) $(refer) );\n';
-global cxx2dao_user = cxx2dao + 'CData( dao_$(type2)_Typer, (void*) $(refer) );\n';
+global cxx2dao_user = '  _dp[$(index)] = DValue_WrapCData( dao_$(type2)_Typer, (void*) $(refer) );\n';
 
 global cxx2dao_userdata = '  DValue_Copy( _dp2[$(index)], $(name) );\n';
 
@@ -2811,7 +2829,8 @@ routine Function::Generate()
 	proxy_name = '';
 	if( not proxy_functions.has( signature2 ) ){
 		ss = io.sstream();
-		ss.write( Function() );
+		pfun = Function();
+		ss.write( pfun );
 		proxy_name = ss.getstring();
 		proxy_name.change( '%[', '_' )
 		proxy_name.change( '%]', '' )
@@ -2826,7 +2845,7 @@ routine Function::Generate()
 		}else{
 			proxy_codes = cxx_proxy_body00.expand( kvmap3 );
 		}
-		proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes );
+		proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes, id=>pfun );
 		#io.writeln( proxy_name, proxy_codes );
 	}
 	if( has_return or has_param ) proxy_name = proxy_functions[ signature2 ].name;
@@ -3336,12 +3355,10 @@ $(qt_virt_emit)
 };
 class DAO_DLL_$(module) DaoCxx_$(class) : public $(class), public DaoCxxVirt_$(class)
 { $(Q_OBJECT)\n
-\tunsigned int refCount;
 \tpublic:
 $(constructors)
 	~DaoCxx_$(class)();
 	void DaoInitWrapper();\n
-	void DaoAddExternalReference();\n
 $(methods)
 };\n';
 
@@ -3361,7 +3378,7 @@ DaoCxx_$(class)::~DaoCxx_$(class)()
 {
 	if( cdata ){
 		DaoCData_SetData( cdata, NULL );
-		for(; refCount>0; refCount--) DaoGC_DecRC( (DaoBase*)cdata );
+		DaoCData_SetExtReference( cdata, 0 );
 	} 
 }
 void DaoCxx_$(class)::DaoInitWrapper()
@@ -3370,12 +3387,17 @@ void DaoCxx_$(class)::DaoInitWrapper()
 	DaoCxxVirt_$(class)::DaoInitWrapper( this, cdata );
 $(qt_make_linker)
 }
+';
+#{
+\tunsigned int refCount;
+		for(; refCount>0; refCount--) DaoGC_DecRC( (DaoBase*)cdata );
+	void DaoAddExternalReference();\n
 void DaoCxx_$(class)::DaoAddExternalReference()
 {
 	refCount += 1;
 	DaoGC_IncRC( (DaoBase*) cdata );
 }
-';
+#}
 global tpl_class_init_qtss = 
 'void DAO_DLL_$(module) Dao_$(class)_InitSS( $(class) *p )
 {
@@ -3393,7 +3415,7 @@ $(qt_make_linker3)
 	return object;
 }\n';
 global tpl_class_decl_constru = 
-'   DaoCxx_$(class)( $(parlist) ) : $(class)( $(parcall) ){ refCount = 0; }\n';
+'   DaoCxx_$(class)( $(parlist) ) : $(class)( $(parcall) ){}\n';
 
 global tpl_class_new = '
 DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) );
@@ -3567,11 +3589,13 @@ routine UserType::GenerateType()
 	}
 	meth_decls += '  { NULL, 0, 0 }\n};\n';
 
+#{
 	if( isCppClass and hasVirtual and not noWrapping ){
 		dao_meths += dao_add_extrc_dao.expand( kvmap2 );
 		meth_decls += dao_add_extrc_decl.expand( kvmap2 );
 		meth_codes += dao_add_extrc_func.expand( kvmap2 );
 	}
+#}
 	if( isQObjectBase ){
 		dao_meths += qt_connect_dao;
 		meth_decls += qt_connect_decl;
@@ -3985,8 +4009,8 @@ routine UserType::Generate()
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
 				wrapper = meth.cxxWrapper;
-				name2 = 'DaoCxx_' + name;
-				subst = name2 + ' *self = (' + name2 + '*)';
+				name22 = 'DaoCxx_' + name;
+				subst = name22 + ' *self = (' + name22 + '*)';
 				wrapper.change( name + '%s* %* %s* self %s* = %s* %b()', subst );
 				wrapper.change( 'self%-%>(%w+)%(', 'self->DaoWrap_%1(' );
 				meth_codes += wrapper;
@@ -4043,24 +4067,41 @@ global methlist_code2 =
 ';
 
 global delete_struct 
-= 'static void Dao_$(type)_Delete( void *self ){ free( self ); }\n';
+= 'static void Dao_$(type)_Delete( void *self )
+{
+	free( self );
+}\n';
+
 global delete_class
-= 'static void Dao_$(type)_Delete( void *self ){ $(if_parent) delete ($(namespace)$(type2)*)self; }\n';
+= 'static void Dao_$(type)_Delete( void *self )
+{
+	delete ($(namespace)$(type2)*) self;
+}\n';
+
+global delete_test
+= 'static int Dao_$(type)_DelTest( void *self0 )
+{
+	$(namespace)$(type2) *self = ($(namespace)$(type2)*) self0;
+	return ($(condition));
+}
+';
+#	self->DaoAddExternalReference();
 
 global usertype_code =
 'static DaoTypeBase $(type)_Typer = 
-{ NULL, "$(type)", dao_$(type)_Nums, dao_$(type)_Meths, { $(parents) 0 }, 
-$(alloc), $(delete) };
+{ "$(type)", NULL, dao_$(type)_Nums, dao_$(type)_Meths, 
+  { $(parents)0 }, $(delete), $(deltest) };
 DaoTypeBase DAO_DLL_$(module) *dao_$(type)_Typer = & $(type)_Typer;';
 
 global usertype_code_none = methlist_code + usertype_code;
 global usertype_code_struct = methlist_code + delete_struct + usertype_code;
 global usertype_code_class = methlist_code + delete_class + usertype_code;
+global usertype_code_class2 = methlist_code + delete_class + delete_test + usertype_code;
 
 routine WriteUserTypeDecl( utp : UserType, fout : stream )
 {
 }
-routine WriteUserTypeCode( utp : UserType )
+routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 {
 	#if( utp.isNameSpace ) return '';
 	if( utp.isAlias ) return '';
@@ -4070,12 +4111,17 @@ routine WriteUserTypeCode( utp : UserType )
 	}
 	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 
 	'meths'=>utp.dao_meths, 'parents'=>parents, 'alloc'=>utp.alloc_default,
-	'delete'=>'', 'if_parent'=>'', 'namespace'=>''};
+	'delete'=>'NULL', 'if_parent'=>'', 'namespace'=>'', 'deltest'=>'NULL'};
 	if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 	if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );
 	kvmap['delete'] = 'Dao_' + utp.name + '_Delete';
 	if( utp.isQWidget )
 	kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
+	if( del_tests.has( utp.condType ) ){
+		kvmap['condition'] = del_tests[ utp.condType ];
+		kvmap['deltest'] = 'Dao_' + utp.name + '_DelTest';
+		return usertype_code_class2.expand( kvmap );
+	}
 	if( utp.isCppClass ) return usertype_code_class.expand( kvmap );
 	return usertype_code_struct.expand( kvmap );
 }
@@ -4109,8 +4155,8 @@ const cpp_DaoCallbackData =
 }
 ';
 
-routine main( inputfiles : string, wrap_name='', lang='c', fixing='', 
-dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
+routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
+del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 {
 	if( lang == 'cpp' ){
 		constNumbers.append( ('', 'DAO_INTEGER', 'false', '0', 0) );
@@ -4263,6 +4309,19 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 			ns_funcs[ func.snamespace ].append( func );
 		}
 	}
+	delete_tests = {:};
+	parts = del_tests.split( ';' );
+	for( part in parts ){
+		p = part.split( '@' );
+		if( p.size() < 2 ) skip;
+		name = p[0];
+		code = p[1].trim();
+		if( not map_user_types.has( name ) ) skip;
+		delete_tests[ map_user_types[name] ] = code;
+	}
+	io.writeln( delete_tests );
+	#for( utp in user_types ) utp.SetupDeleteCondition( delete_tests );
+	#for( utp in user_types ) io.writeln( utp.name, utp.condType.name );
 	
 	fname = main_fname + '.h';
 	fout_header = io.open( dir_output + 'dao_' + fname, 'w' );
@@ -4357,6 +4416,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 	for( callback in dao_callbacks_proto ) fout_header.writeln( callback );
 	fout_header.println( ifdef_cpp_close );
 	
+#{
 	if( include == '' ){
 		if( lang == 'c' ) fout_header.writeln( 'typedef struct DaoCallbackData DaoCallbackData;' );
 		fout_header.writeln( define_DaoCallbackData );
@@ -4366,6 +4426,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 			fout_source.writeln( c_DaoCallbackData );
 		}
 	}
+#}
 	
 	fout_source2.println( ifdef_cpp_open );
 	for( utp in user_types ){
@@ -4378,7 +4439,7 @@ dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 				if( utp.snamespace ) fout_header.print( close_ns );
 			}
 			fout_source2.println( '/* ', utp.input_file, '*/' );
-			fout_source2.println( WriteUserTypeCode( utp ).expand( kvmap ) );
+			fout_source2.println( WriteUserTypeCode( utp, delete_tests ).expand( kvmap ) );
 			fout_source2.println( utp.meth_codes.expand( kvmap ) );
 		}
 	}

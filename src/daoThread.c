@@ -477,10 +477,6 @@ static DaoFuncItem mutexMeths[] =
 	{ DaoMutex_Lib_TryLock,   "trylock( self : mutex )=>int" },
 	{ NULL, NULL }
 };
-static void* DaoMutex_New2()
-{
-	return DaoMutex_New( NULL );
-}
 static void DaoMutex_Delete( DaoMutex *self )
 {
 	DMutex_Destroy( & self->myMutex );
@@ -498,13 +494,8 @@ static DaoTypeCore mutexCore =
 };
 DaoTypeBase mutexTyper =
 {
-	& mutexCore,
-	"mutex",
-	NULL,
-	(DaoFuncItem*) mutexMeths,
-	{0},
-	(FuncPtrNew) DaoMutex_New2,
-	(FuncPtrDel) DaoMutex_Delete
+	"mutex", & mutexCore, NULL, (DaoFuncItem*) mutexMeths, {0},
+	(FuncPtrDel) DaoMutex_Delete, NULL
 };
 
 DaoMutex* DaoMutex_New( DaoVmSpace *vms )
@@ -593,7 +584,6 @@ static DaoFuncItem condvMeths[] =
 	{ DaoCondV_Lib_BroadCast, "broadcast( self : condition )" },
 	{ NULL, NULL }
 };
-static void* DaoCondVar_New2(){ return DaoCondVar_New(NULL); }
 
 static DaoTypeCore condvCore =
 {
@@ -607,13 +597,8 @@ static DaoTypeCore condvCore =
 };
 DaoTypeBase condvTyper =
 {
-	& condvCore,
-	"condition",
-	NULL,
-	(DaoFuncItem*) condvMeths,
-	{0},
-	(FuncPtrNew) DaoCondVar_New2,
-	(FuncPtrDel) DaoCondVar_Delete
+	"condition", & condvCore, NULL, (DaoFuncItem*) condvMeths, {0},
+	(FuncPtrDel) DaoCondVar_Delete, NULL
 };
 DaoCondVar* DaoCondVar_New( DaoThdMaster *thdm )
 {
@@ -686,13 +671,8 @@ static DaoTypeCore semaCore =
 };
 DaoTypeBase semaTyper =
 {
-	& semaCore,
-	"semaphore",
-	NULL,
-	(DaoFuncItem*) semaMeths,
-	{0},
-	(FuncPtrNew) DaoSema_New,
-	(FuncPtrDel) DaoSema_Delete
+	"semaphore", & semaCore, NULL, (DaoFuncItem*) semaMeths, {0},
+	(FuncPtrDel) DaoSema_Delete, NULL
 };
 DaoSema* DaoSema_New( int n )
 {
@@ -769,7 +749,6 @@ static DaoFuncItem threadMeths[] =
 	{ NULL, NULL }
 };
 
-static void* DaoThread_New2(){ return DaoThread_New(0); }
 static void DaoThread_Delete( DaoThread *self );
 
 static DaoTypeCore threadCore =
@@ -784,13 +763,8 @@ static DaoTypeCore threadCore =
 };
 DaoTypeBase threadTyper =
 {
-	& threadCore,
-	"thread",
-	NULL,
-	(DaoFuncItem*) threadMeths,
-	{0},
-	(FuncPtrNew) DaoThread_New2,
-	(FuncPtrDel) DaoThread_Delete,
+	"thread", & threadCore, NULL, (DaoFuncItem*) threadMeths, {0},
+	(FuncPtrDel) DaoThread_Delete, NULL
 };
 
 DaoThread* DaoThread_New( DaoThdMaster *thdm )
@@ -1022,13 +996,8 @@ static DaoTypeCore thdMasterCore =
 };
 DaoTypeBase thdMasterTyper =
 {
-	& thdMasterCore,
-	"mtlib",
-	NULL,
-	(DaoFuncItem*) thdMasterMeths,
-	{0},
-	(FuncPtrNew) DaoThdMaster_New,
-	(FuncPtrDel) DaoThdMaster_Delete,
+	"mtlib", & thdMasterCore, NULL, (DaoFuncItem*) thdMasterMeths, {0},
+	(FuncPtrDel) DaoThdMaster_Delete, NULL
 };
 
 DaoThdMaster* DaoThdMaster_New()

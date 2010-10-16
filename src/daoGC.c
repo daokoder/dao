@@ -22,6 +22,70 @@
 #include"daoNamespace.h"
 #include"daoThread.h"
 
+void GC_Lock();
+void GC_Unlock();
+
+DArray *dao_callback_data = NULL;
+
+DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata )
+{
+	DaoCallbackData *self;
+	if( callback == NULL || callback->type != DAO_ROUTINE ) return NULL;
+	self = (DaoCallbackData*) calloc( 1, sizeof(DaoCallbackData) );
+	self->callback = callback;
+	if( userdata.t >= DAO_ARRAY )
+		self->userdata = userdata;
+	else
+		DValue_Copy( & self->userdata, userdata );
+	GC_Lock();
+	DArray_Append( dao_callback_data, self );
+	GC_Unlock();
+	return self;
+}
+static void DaoCallbackData_Delete( DaoCallbackData *self )
+{
+	if( self->userdata.t < DAO_ARRAY ) DValue_Clear( & self->userdata );
+	dao_free( self );
+}
+static void DaoCallbackData_DeleteByCallback( DaoRoutine *callback )
+{
+	DaoCallbackData *cd = NULL;
+	DaoCallbackData *cd2 = NULL;
+	int i;
+	if( dao_callback_data->size ==0 ) return;
+	GC_Lock();
+	for(i=0; i<dao_callback_data->size; i++){
+		cd = (DaoCallbackData*) dao_callback_data->items.pBase[i];
+		if( cd->callback == callback ){
+			cd2 = cd;
+			DArray_Erase( dao_callback_data, i, 1 );
+			break;
+		}
+	}
+	GC_Unlock();
+	if( cd2 ) DaoCallbackData_Delete( cd2 );
+}
+static void DaoCallbackData_DeleteByUserdata( DaoBase *userdata )
+{
+	DaoCallbackData *cd = NULL;
+	DaoCallbackData *cd2 = NULL;
+	int i;
+	if( userdata == NULL ) return;
+	if( dao_callback_data->size ==0 ) return;
+	GC_Lock();
+	for(i=0; i<dao_callback_data->size; i++){
+		cd = (DaoCallbackData*) dao_callback_data->items.pBase[i];
+		if( cd->userdata.t != userdata->type ) continue;
+		if( cd->userdata.v.p == userdata ){
+			cd2 = cd;
+			DArray_Erase( dao_callback_data, i, 1 );
+			break;
+		}
+	}
+	GC_Unlock();
+	if( cd2 ) DaoCallbackData_Delete( cd2 );
+}
+
 
 #define GC_IN_POOL 1
 #define GC_MARKED  2
@@ -414,6 +478,15 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 }
 #ifdef DAO_WITH_THREAD
 
+void GC_Lock()
+{
+	DMutex_Lock( & gcWorker.mutex_switch_heap );
+}
+void GC_Unlock()
+{
+	DMutex_Unlock( & gcWorker.mutex_switch_heap );
+}
+
 /* Concurrent Garbage Collector */
 
 void DaoGC_DecRC( DaoBase *p )
@@ -723,8 +796,17 @@ void cycRefCountIncreScan()
 	for(j=0; j<2; j++){
 		for( i=0; i<pool->size; i++ ){
 			DaoBase *dbase = pool->items.pBase[i];
-			if( ( dbase->cycRefCount>0 && ! ( dbase->gcState[work] & GC_MARKED ) ) )
-				markAliveObjects( dbase );
+			if( dbase->gcState[work] & GC_MARKED ) continue;
+			if( dbase->type == DAO_CDATA && (dbase->refCount ==0 || dbase->cycRefCount ==0) ){
+				DaoCData *cdata = (DaoCData*) dbase;
+				DaoCDataCore *core = (DaoCDataCore*)cdata->typer->priv;
+				if( !(cdata->attribs & DAO_CDATA_FREE) ) continue;
+				if( cdata->data == NULL || core == NULL ) continue;
+				if( core->DelTest == NULL ) continue;
+				if( core->DelTest( cdata->data ) ) continue;
+				DaoCData_SetExtReference( cdata, 1 );
+			}
+			if( dbase->cycRefCount >0 ) markAliveObjects( dbase );
 		}
 	}
 }
@@ -1052,7 +1134,9 @@ void freeGarbage()
 				{
 					DaoVmProcess *vmp = (DaoVmProcess*) dbase;
 					DaoVmFrame *frame = vmp->firstFrame;
-					if( vmp->returned.t >= DAO_ARRAY ) vmp->returned.v.p->refCount --;
+					if( vmp->returned.t >= DAO_ARRAY )
+						vmp->returned.v.p->refCount --;
+					else DValue_Clear( & vmp->returned );
 					vmp->returned.t = 0;
 					directRefCountDecrementV( vmp->parResume );
 					directRefCountDecrementV( vmp->parYield );
@@ -1111,6 +1195,9 @@ void freeGarbage()
 				   if( dbase->type < DAO_STRING )
 				   if( dbase->type != DAO_CONTEXT )
 				 */
+				if( dbase->type == DAO_ROUTINE )
+					DaoCallbackData_DeleteByCallback( (DaoRoutine*) dbase );
+				DaoCallbackData_DeleteByUserdata( dbase );
 				typer = DaoBase_GetTyper( dbase );
 				typer->Delete( dbase );
 			}
@@ -1161,6 +1248,9 @@ void cycRefCountIncrement( DaoBase *dbase )
 }
 
 #else
+
+void GC_Lock(){}
+void GC_Unlock(){}
 
 /* Incremental Garbage Collector */
 enum DaoGCWorkType
@@ -1519,6 +1609,15 @@ void cycRefCountIncreScan()
 	for( ; i<pool->size; i++ ){
 		DaoBase *dbase = pool->items.pBase[i];
 		j ++;
+		if( dbase->type == DAO_CDATA && dbase->cycRefCount ==0 ){
+			DaoCData *cdata = (DaoCData*) dbase;
+			DaoCDataCore *core = (DaoCDataCore*)cdata->typer->priv;
+			if( !(cdata->attribs & DAO_CDATA_FREE) ) continue;
+			if( cdata->data == NULL || core == NULL ) continue;
+			if( core->DelTest == NULL ) continue;
+			if( core->DelTest( cdata->data ) ) continue;
+			DaoCData_SetExtReference( cdata, 1 );
+		}
 		if( dbase->cycRefCount >0 && ! ( dbase->gcState[work] & GC_MARKED ) ){
 			dbase->gcState[work] |= GC_MARKED;
 			switch( dbase->type ){
@@ -1871,7 +1970,9 @@ void directDecRC()
 				{
 					DaoVmProcess *vmp = (DaoVmProcess*) dbase;
 					DaoVmFrame *frame = vmp->firstFrame;
-					if( vmp->returned.t >= DAO_ARRAY ) vmp->returned.v.p->refCount --;
+					if( vmp->returned.t >= DAO_ARRAY )
+						vmp->returned.v.p->refCount --;
+					else DValue_Clear( & vmp->returned );
 					vmp->returned.t = 0;
 					directRefCountDecrementV( vmp->parResume );
 					directRefCountDecrementV( vmp->parYield );
@@ -1946,6 +2047,9 @@ void freeGarbage()
 				   if( dbase->type == DAO_FUNCTION ) printf( "here\n" );
 				   if( dbase->type < DAO_STRING )
 				 */
+				if( dbase->type == DAO_ROUTINE )
+					DaoCallbackData_DeleteByCallback( (DaoRoutine*) dbase );
+				DaoCallbackData_DeleteByUserdata( dbase );
 				typer = DaoBase_GetTyper( dbase );
 				typer->Delete( dbase );
 			}
