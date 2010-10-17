@@ -2013,7 +2013,7 @@ void freeGarbage()
 		j ++;
 		if( dbase->cycRefCount==0 ){
 			if( dbase->refCount !=0 ){
-				printf(" refCount not zero %p %i: %i, %i\n", dbase, dbase->type, dbase->refCount, dbase->subType );
+				printf(" refCount not zero %p %i: %i, %i\n", dbase, dbase->type, dbase->refCount, dbase->trait);
 #if DEBUG
 				if( dbase->type == DAO_FUNCTION ){
 					DaoFunction *func = (DaoFunction*)dbase;
