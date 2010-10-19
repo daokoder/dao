@@ -117,7 +117,7 @@ void DaoVmProcess_Yield( DaoVmProcess *self, DValue *par[], int N, DaoList *list
 void DaoVmProcess_PrintException( DaoVmProcess *self, int clear );
 
 DValue DaoVmProcess_MakeConst( DaoVmProcess *self );
-DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmCode, int Nreg );
+DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmCode, int n, DaoType *t );
 DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, DValue b );
 
 DaoRegex* DaoVmProcess_MakeRegex( DaoContext *self, DString *src, int mbs );

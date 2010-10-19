@@ -1853,7 +1853,7 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( MOVE_PP ){
 			vA = locVars[ vmc->a ];
-			DValue_Copy( locVars[ vmc->c ], *vA );
+			DValue_Move( *vA, locVars[ vmc->c ], locTypes[ vmc->c ] );
 			/* assigning no-duplicated constant:
 			   routine Func( a : const list<int> ){ b = a; } */
 			if( vA->cst && vA->t >= DAO_ARRAY && ! (vA->v.p->trait & DAO_DATA_CONST) )
@@ -3270,18 +3270,24 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 	/* DVarray_Clear( ctx->regArray ); */
 	return value;
 }
-DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmc, int Nreg )
+DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmc, int n, DaoType *t )
 {
 	DaoContext *ctx = self->topFrame->context;
+	DValue cst;
+	ctx->regTypes = (DaoType**) dao_calloc(1,n*sizeof(DaoType*));
+	ctx->regTypes[0] = t;
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = vmc;
-	return DaoVmProcess_MakeConst( self );
+	cst = DaoVmProcess_MakeConst( self );
+	dao_free( ctx->regTypes );
+	return cst;
 }
 DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, DValue b )
 {
 	int i;
 	DaoVmCode vmc = { 0, 1, 2, 0 };
 	DaoContext *ctx = self->topFrame->context;
+	DaoType *types[] = { NULL, NULL, NULL };
 
 	vmc.code = opc;
 	if( opc == DVM_NAMEVA ){
@@ -3300,6 +3306,7 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
 
 	DValue_Copy( ctx->regValues[1], a );
 	DValue_Copy( ctx->regValues[2], b );
+	ctx->regTypes = types;
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = & vmc;
 	return DaoVmProcess_MakeConst( self );

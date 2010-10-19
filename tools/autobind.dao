@@ -4309,7 +4309,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 			ns_funcs[ func.snamespace ].append( func );
 		}
 	}
-	delete_tests = {:};
+	delete_tests : map<UserType,string> = {:};
 	parts = del_tests.split( ';' );
 	for( part in parts ){
 		p = part.split( '@' );
@@ -4526,6 +4526,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		#fout_source.print( utp.meth_codes.expand( kvmap ) );
 		hasNameSpace = 1;
 	}
+	io.writeln( std.about( ns_funcs ) );
 	for( ns in ns_funcs.keys(); funcs in ns_funcs.values() ){
 		fout_source.printf( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
 		for( func in funcs ) fout_source.print( func.daoProtoCodes );

@@ -247,9 +247,8 @@ static int DaoAssign( DaoContext *self, DaoBase *A, DValue *C, DaoType *t )
 
 int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase )
 {
-	DaoType *abtp = NULL;
+	DaoType *abtp = self->regTypes[ reg ];
 	int bl;
-	if( !(self->trait & DAO_DATA_CONST) ) abtp = self->regTypes[ reg ];
 	/*
 	   if( dbase && dbase->type == DAO_ARRAY )
 	   printf("type=%i\treg=%i\tdbase=%p\n", dbase ? dbase->type : 0, reg, dbase);
@@ -269,7 +268,7 @@ int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase )
 }
 DValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DValue value )
 {
-	DaoType *tp = (!(self->trait & DAO_DATA_CONST)) ? self->regTypes[reg] : NULL;
+	DaoType *tp = self->regTypes[reg];
 	int res = DValue_Move( value, self->regValues[ reg ], tp );
 	if( res ) return self->regValues[ reg ];
 	return NULL;
@@ -281,9 +280,8 @@ DValue* DaoContext_PutValue( DaoContext *self, DValue value )
 int DaoContext_PutReference( DaoContext *self, DValue *refer )
 {
 	int tm, reg = self->vmc->c;
-	DaoType *tp;
+	DaoType *tp = self->regTypes[reg];
 	if( self->regValues[reg] == refer ) return 1;
-	tp = (!(self->trait & DAO_DATA_CONST)) ? self->regTypes[reg] : NULL;
 	if( tp == NULL ){
 		self->regValues[reg] = refer;
 		return 1;
@@ -330,7 +328,7 @@ void DaoContext_PrintVmCode( DaoContext *self )
 void DValue_SimpleMove2( DValue from, DValue *to )
 {
 	if( from.ndef != DAO_NOCOPYING ){ /* XXX */
-		from.v.p = DaoBase_Duplicate( from.v.p );
+		from.v.p = DaoBase_Duplicate( from.v.p, NULL );
 	}else{
 		from.t = 0;
 	}
@@ -739,13 +737,10 @@ void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
 
 DLong* DaoContext_GetLong( DaoContext *self, DaoVmCode *vmc )
 {
-	DaoType *tp = NULL;
+	DaoType *tp = self->regTypes[ vmc->c ];
 	DValue *dC = self->regValues[ vmc->c ];
 	if( dC->t == DAO_LONG ) return dC->v.l;
-	if( !(self->trait & DAO_DATA_CONST) ){
-		tp = self->regTypes[ vmc->c ];
-		if( tp->tid !=DAO_LONG && tp->tid !=DAO_UDF && tp->tid !=DAO_ANY ) return NULL;
-	}
+	if( tp && tp->tid !=DAO_LONG && tp->tid !=DAO_UDF && tp->tid !=DAO_ANY ) return NULL;
 	DValue_Clear( dC );
 	dC->t = DAO_LONG;
 	dC->v.l = DLong_New();
@@ -757,52 +752,45 @@ DaoList* DaoContext_GetList( DaoContext *self, DaoVmCode *vmc )
 {
 	/* create a new list in any case. */
 	DaoList *list = DaoList_New();
-	if( self->trait & DAO_DATA_CONST ){
-		DaoAssign( self, (DaoBase*) list, self->regValues[ vmc->c ], NULL );
-	}else{
-		DaoType *tp = self->regTypes[ vmc->c ];
-		if( tp == NULL || tp->tid !=DAO_LIST || NESTYPE( tp, 0 )->tid == DAO_UDF )
-			tp = DaoNameSpace_MakeType( self->nameSpace, "list", DAO_LIST,0,0,0 );
-		list->unitype = tp;
-		GC_IncRC( tp );
-		DaoAssign( self, (DaoBase*) list, self->regValues[ vmc->c ], tp );
-	}
+	DaoType *tp = self->regTypes[ vmc->c ];
+	if( tp == NULL || tp->tid !=DAO_LIST 
+#if 0
+		|| NESTYPE( tp, 0 )->tid == DAO_UDF 
+#endif
+		)
+		tp = dao_list_any;
+	list->unitype = tp;
+	GC_IncRC( tp );
+	DaoAssign( self, (DaoBase*) list, self->regValues[ vmc->c ], tp );
 	return list;
 }
 DaoMap* DaoContext_GetMap( DaoContext *self,  DaoVmCode *vmc )
 {
 	DaoMap *map = DaoMap_New( vmc->code == DVM_HASH );
-	if( self->trait & DAO_DATA_CONST ){
-		DaoAssign( self, (DaoBase*) map, self->regValues[ vmc->c ], NULL );
-	}else{
-		DaoType *tp = self->regTypes[ vmc->c ];
-		DaoAssign( self, (DaoBase*) map, self->regValues[ vmc->c ], tp );
-		if( tp == NULL || tp->tid !=DAO_MAP
-				|| NESTYPE( tp, 0 )->tid + NESTYPE( tp, 1 )->tid == DAO_UDF ){
-			tp = DaoNameSpace_MakeType( self->nameSpace, "map", DAO_MAP,0,0,0 );
-		}else if( NESTYPE( tp, 0 )->tid * NESTYPE( tp, 1 )->tid == DAO_UDF ){
-			DMap *map = DMap_New(0,0);
-			tp = DaoType_DefineTypes( tp, self->nameSpace, map );
-			DMap_Delete( map );
-		}
-		GC_ShiftRC( tp, map->unitype );
-		map->unitype = tp;
+	DaoType *tp = self->regTypes[ vmc->c ];
+	DaoAssign( self, (DaoBase*) map, self->regValues[ vmc->c ], tp );
+	if( tp == NULL || tp->tid !=DAO_MAP
+			|| NESTYPE( tp, 0 )->tid + NESTYPE( tp, 1 )->tid == DAO_UDF ){
+		tp = dao_map_any;
+	}else if( NESTYPE( tp, 0 )->tid * NESTYPE( tp, 1 )->tid == DAO_UDF ){
+		DMap *map = DMap_New(0,0);
+		tp = DaoType_DefineTypes( tp, self->nameSpace, map );
+		DMap_Delete( map );
 	}
+	GC_ShiftRC( tp, map->unitype );
+	map->unitype = tp;
 	return map;
 }
 
 DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
-	DaoType *tp = NULL;
+	DaoType *tp = self->regTypes[ vmc->c ];
 	DValue dC = *self->regValues[ vmc->c ];
 	int type = DAO_FLOAT;
 	DaoArray *array = dC.v.array;
-	if( !(self->trait & DAO_DATA_CONST) ){
-		tp = self->regTypes[ vmc->c ];
-		if( tp->tid == DAO_ARRAY && tp->nested->size )
-			type = tp->nested->items.pAbtp[0]->tid -1;
-	}
+	if( tp && tp->tid == DAO_ARRAY && tp->nested->size )
+		type = tp->nested->items.pAbtp[0]->tid -1;
 	if( dC.t == DAO_ARRAY && array->refCount == 1 ){
 		if( array->numType < type ) DaoArray_ResizeVector( array, 0 );
 		array->numType = type;
@@ -811,12 +799,10 @@ DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc )
 		dC.t = DAO_ARRAY;
 		DValue_Copy( self->regValues[ vmc->c ], dC );
 	}
-	if( !(self->trait & DAO_DATA_CONST) ){
-		if( tp == NULL || tp->tid !=DAO_ARRAY || NESTYPE( tp, 0 )->tid == DAO_UDF )
-			tp = DaoNameSpace_MakeType( self->nameSpace, "array", DAO_ARRAY,0,0,0 );
-		array->unitype = tp;
-		GC_IncRC( tp );
-	}
+	if( tp == NULL || tp->tid !=DAO_ARRAY || NESTYPE( tp, 0 )->tid == DAO_UDF )
+		tp = dao_array_any;
+	array->unitype = tp;
+	GC_IncRC( tp );
 	return array;
 #else
 	self->vmc = vmc;
@@ -828,6 +814,7 @@ DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc )
 void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc );
 void DaoContext_DoList(  DaoContext *self, DaoVmCode *vmc )
 {
+	DaoNameSpace *ns = self->nameSpace;
 	DValue **regValues = self->regValues;
 	const ushort_t opA = vmc->a;
 	int i;
@@ -838,26 +825,20 @@ void DaoContext_DoList(  DaoContext *self, DaoVmCode *vmc )
 		DVarray_Resize( list->items, bval, daoNullValue );
 		for( i=0; i<bval; i++) DaoList_SetItem( list, *regValues[opA+i], i );
 
-		if( list->unitype ==NULL ){
-			if( (self->trait & DAO_DATA_CONST) && bval >0 ){
-				/* for constant evaluation only */
-				DValue *data = list->items->data;
-				DaoType *abtp = DaoNameSpace_GetTypeV( self->nameSpace, data[0] );
-				for(i=1; i<bval; i++){
-					DaoType *tp = DaoNameSpace_GetTypeV( self->nameSpace, data[i] );
-					if( DaoType_MatchTo( tp, abtp, 0 ) == 0 ){
-						abtp = NULL;
-						break;
-					}
+		if( bval >0 && self->regTypes[ vmc->c ] ==NULL ){
+			DValue *data = list->items->data;
+			DaoType *abtp = DaoNameSpace_GetTypeV( ns, data[0] );
+			for(i=1; i<bval; i++){
+				DaoType *tp = DaoNameSpace_GetTypeV( ns, data[i] );
+				if( DaoType_MatchTo( tp, abtp, 0 ) == 0 ){
+					abtp = NULL;
+					break;
 				}
-				if( abtp ){
-					list->unitype = DaoNameSpace_MakeType( self->nameSpace,
-							"list", DAO_LIST, NULL, & abtp, 1 );
-					GC_IncRC( list->unitype );
-				}
-			}else if( !(self->trait & DAO_DATA_CONST) ){
-				list->unitype = self->routine->regType->items.pAbtp[ vmc->c ];
-				GC_IncRC( list->unitype );
+			}
+			if( abtp ){
+				DaoType *t = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
+				GC_ShiftRC( t, list->unitype );
+				list->unitype = t;
 			}
 		}
 	}else{
@@ -1004,11 +985,10 @@ void DaoContext_DoArray( DaoContext *self, DaoVmCode *vmc )
 		}
 	}
 	DVarray_Delete( tmpArray );
-	if( array->unitype ==NULL ){
+	array->unitype = self->regTypes[ vmc->c ];
+	GC_IncRC( array->unitype );
+	if( array->unitype == NULL ){
 		array->unitype = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
-		GC_IncRC( array->unitype );
-	}else if( !(self->trait & DAO_DATA_CONST) ){
-		array->unitype = self->routine->regType->items.pAbtp[ vmc->c ];
 		GC_IncRC( array->unitype );
 	}
 #else
@@ -1027,7 +1007,6 @@ void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc )
 	int num = (int)DValue_GetDouble( *dn );
 	int ta = regValues[ opA ]->t;
 	int i;
-	DaoType *et = NULL;
 
 	self->vmc = vmc;
 	if( dn->t < DAO_INTEGER || dn->t > DAO_DOUBLE ){
@@ -1122,14 +1101,12 @@ void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc )
 		break;
 	default: break;
 	}
-	if( list->unitype ==NULL ){
-		et = DaoNameSpace_GetTypeV( self->nameSpace, *regValues[opA] );
-		list->unitype = DaoNameSpace_MakeType( self->nameSpace, 
-				"list", DAO_LIST, NULL, & et, et !=NULL );
-		GC_IncRC( list->unitype );
-	}else if( !(self->trait & DAO_DATA_CONST) ){
-		list->unitype = self->routine->regType->items.pAbtp[ vmc->c ];
-		GC_IncRC( list->unitype );
+	if( self->regTypes[ vmc->c ] == NULL ){
+		DaoNameSpace *ns = self->nameSpace;
+		DaoType *et = DaoNameSpace_GetTypeV( ns, *regValues[opA] );
+		DaoType *tp = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & et, et !=NULL );
+		GC_ShiftRC( tp, list->unitype );
+		list->unitype = tp;
 	}
 }
 void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
@@ -1310,12 +1287,10 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
 		break;
 	default: break;
 	}
-	if( array->unitype ==NULL ){
-		array->unitype = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
-		GC_IncRC( array->unitype );
-	}else if( !(self->trait & DAO_DATA_CONST) ){
-		array->unitype = self->routine->regType->items.pAbtp[ vmc->c ];
-		GC_IncRC( array->unitype );
+	if( self->regTypes[ vmc->c ] ==NULL ){
+		DaoType *tp = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
+		GC_ShiftRC( tp, array->unitype );
+		array->unitype = tp;
 	}
 	if( ( self->vmSpace->options & DAO_EXEC_SAFE ) && array->size > 5000 ){
 		DaoContext_RaiseException( self, DAO_ERROR, "not permitted" );
@@ -1345,10 +1320,10 @@ void DaoContext_DoMap( DaoContext *self, DaoVmCode *vmc )
 			break;
 		}
 	}
-	if( map->unitype ==NULL && self->routine->vmCodes->size ==0 && bval >0 ){
+	if( bval >0 && self->regTypes[ vmc->c ] ==NULL ){
 		/* for constant evaluation only */
 		DaoType *any = DaoNameSpace_MakeType( ns, "any", DAO_ANY, 0,0,0 );
-		DaoType *tp[2];
+		DaoType *t, *tp[2];
 		tp[0] = DaoNameSpace_GetTypeV( ns, *pp[opA] );
 		tp[1] = DaoNameSpace_GetTypeV( ns, *pp[opA+1] );
 		for(i=2; i<bval; i+=2){
@@ -1358,8 +1333,9 @@ void DaoContext_DoMap( DaoContext *self, DaoVmCode *vmc )
 			if( DaoType_MatchTo( tv, tp[1], 0 )==0 ) tp[1] = any;
 			if( tp[0] ==any && tp[1] ==any ) break;
 		}
-		map->unitype = DaoNameSpace_MakeType( ns, "map", DAO_MAP, NULL, tp, 2 );
-		GC_IncRC( map->unitype );
+		t = DaoNameSpace_MakeType( ns, "map", DAO_MAP, NULL, tp, 2 );
+		GC_ShiftRC( t, map->unitype );
+		map->unitype = t;
 	}
 }
 void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
@@ -1409,12 +1385,10 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 		vec = array->data.c;
 		for( i=0; i<size; i++) vec[i] = DValue_GetComplex( *regv[ opA+i ] );
 	}
-	if( array->unitype ==NULL ){
-		array->unitype = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
-		GC_IncRC( array->unitype );
-	}else if( !(self->trait & DAO_DATA_CONST) ){
-		array->unitype = self->routine->regType->items.pAbtp[ vmc->c ];
-		GC_IncRC( array->unitype );
+	if( self->regTypes[ vmc->c ] ==NULL ){
+		DaoType *tp = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
+		GC_ShiftRC( tp, array->unitype );
+		array->unitype = tp;
 	}
 #else
 	self->vmc = vmc;
@@ -1441,7 +1415,7 @@ static DaoTuple* DaoContext_GetTuple( DaoContext *self, DaoType *type, int size 
 }
 DaoTuple* DaoContext_PutTuple( DaoContext *self )
 {
-	DaoType *type = (self->trait & DAO_DATA_CONST) ? NULL : self->regTypes[ self->vmc->c ];
+	DaoType *type = self->regTypes[ self->vmc->c ];
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	return DaoContext_GetTuple( self, type, type->nested->size );
 }
@@ -1577,9 +1551,8 @@ void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc )
 	DValue dB = *self->regValues[ vmc->b ];
 	DaoPair *pair = DaoPair_New( dA, dB );;
 	pair->type = DAO_PAR_NAMED;
-	if( !(self->trait & DAO_DATA_CONST) && self->regTypes[ vmc->c ] ){
-		pair->unitype = self->regTypes[ vmc->c ];
-	}else{
+	pair->unitype = self->regTypes[ vmc->c ];
+	if( pair->unitype == NULL ){
 		DaoNameSpace *ns = self->nameSpace;
 		DaoType *tp = DaoNameSpace_GetTypeV( ns, pair->second );
 		pair->unitype = DaoNameSpace_MakeType( ns, dA.v.s->mbs, DAO_PAR_NAMED, (DaoBase*)tp, NULL, 0 );
@@ -1593,10 +1566,8 @@ void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 	DValue dA = *self->regValues[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
 	DaoPair *pair = DaoPair_New( dA, dB );;
-
-	if( !(self->trait & DAO_DATA_CONST) && self->regTypes[ vmc->c ] ){
-		pair->unitype = self->regTypes[ vmc->c ];
-	}else{
+	pair->unitype = self->regTypes[ vmc->c ];
+	if( pair->unitype == NULL ){
 		tp[0] = DaoNameSpace_GetTypeV( self->nameSpace, pair->first );
 		tp[1] = DaoNameSpace_GetTypeV( self->nameSpace, pair->second );
 		pair->unitype = DaoNameSpace_MakeType( self->nameSpace, "pair", DAO_PAIR, NULL, tp, 2 );
@@ -1607,14 +1578,12 @@ void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoTuple *tuple;
-	DaoType *tp, *ct = NULL;
+	DaoType *tp, *ct = self->regTypes[ vmc->c ];
 	DaoNameSpace *ns = self->nameSpace;
 	DValue val, val2;
 	int i;
 
 	self->vmc = vmc;
-	if( !(self->trait & DAO_DATA_CONST) ) ct = self->regTypes[ vmc->c ];
-
 	tuple = DaoContext_GetTuple( self, ct, vmc->b );
 	if( ct == NULL ){
 		ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
@@ -1700,9 +1669,7 @@ void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 	DValue q;
 	DValue *p = self->regValues[ vmc->a ];
 	DaoTypeCore *tc = DValue_GetTyper( * p )->priv;
-	DaoType *ct = NULL;
-
-	if( !(self->trait & DAO_DATA_CONST) ) ct = self->regTypes[ vmc->c ];
+	DaoType *ct = self->regTypes[ vmc->c ];
 
 	self->vmc = vmc;
 	if( p->t == 0 ){

@@ -303,7 +303,7 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 	default :
 		self->v.p = NULL;
 		if( from.v.p ){
-			if( copy ) from.v.p = DaoBase_Duplicate( from.v.p );
+			if( copy ) from.v.p = DaoBase_Duplicate( from.v.p, NULL );
 			self->v.p = from.v.p;
 			GC_IncRC( self->v.p );
 		}
@@ -326,7 +326,7 @@ void DValue_SetType( DValue *to, DaoType *tp )
 	/* XXX compatible types? list<int> list<float> */
 	switch( to->t ){
 	case DAO_LIST :
-		/* var : any = {}, var->unitype should be list<any> */
+		/* v : any = {}, v->unitype should be list<any> */
 		if( tp->tid == DAO_ANY ) tp = dao_list_any;
 		tp2 = to->v.list->unitype;
 		if( tp2 && !(tp2->attrib & DAO_TYPE_EMPTY) ) break;
@@ -559,7 +559,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		return 1;
 	}
 
-	dA = DaoBase_Duplicate( dA );
+	dA = DaoBase_Duplicate( dA, tp );
 	GC_IncRC( dA );
 	to->t = dA->type;
 	to->v.p = dA;

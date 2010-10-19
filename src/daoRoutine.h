@@ -94,7 +94,6 @@ struct DaoRoutine
 
 	DMap *abstypes;
 
-	/* XXX GC */
 	DaoRoutine *original;
 	DArray     *specialized;
 

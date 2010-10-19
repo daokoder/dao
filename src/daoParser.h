@@ -65,6 +65,7 @@ struct DaoParser
 	DArray  *localVarMap; /* < DMap<DString*,int> > */
 	DArray  *localCstMap; /* < DMap<DString*,int> > */
 	DArray  *switchMaps;
+	DArray  *enumTypes; /* <DaoType*> */
 
 	/* the line number where a register is first used;
 	 * with respect to the first line in the routine body;
@@ -81,7 +82,7 @@ struct DaoParser
 
 	int    locRegCount;
 	DMap  *varStatic; /* <DString*,int> */
-	DMap  *regForLocVar; /* <int,int>: registers representing local variables. */
+	DMap  *regForLocVar; /* <int,DaoType*>: registers representing local variables. */
 	DMap  *varFunctional; /* <DString*,int>: variables in functional blocks. */
 
 	int nullValue;

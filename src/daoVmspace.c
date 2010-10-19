@@ -2138,8 +2138,11 @@ extern void DaoType_Init();
 DaoType *dao_type_udf = NULL;
 DaoType *dao_array_bit = NULL;
 DaoType *dao_array_any = NULL;
+DaoType *dao_array_empty = NULL;
 DaoType *dao_list_any = NULL;
+DaoType *dao_list_empty = NULL;
 DaoType *dao_map_any = NULL;
+DaoType *dao_map_empty = NULL;
 DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
 DaoType *dao_type_for_iterator = NULL;
@@ -2222,6 +2225,25 @@ DaoVmSpace* DaoInit()
 	dao_array_bit = DaoType_Copy( dao_array_bit );
 	DString_SetMBS( dao_array_bit->name, "bitarray" );
 	DaoNameSpace_AddType( ns, dao_array_bit->name, dao_array_bit );
+
+#if 0
+	dao_array_empty = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
+	dao_list_empty = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
+	dao_map_empty = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
+#else
+	dao_array_empty = DaoType_Copy( dao_array_any );
+	dao_list_empty = DaoType_Copy( dao_list_any );
+	dao_map_empty = DaoType_Copy( dao_map_any );
+#endif
+	DString_SetMBS( dao_array_empty->name, "array<>" );
+	DString_SetMBS( dao_list_empty->name, "list<>" );
+	DString_SetMBS( dao_map_empty->name, "map<>" );
+	dao_array_empty->attrib |= DAO_TYPE_EMPTY;
+	dao_list_empty->attrib |= DAO_TYPE_EMPTY;
+	dao_map_empty->attrib |= DAO_TYPE_EMPTY;
+	DaoNameSpace_AddType( ns, dao_array_empty->name, dao_array_empty );
+	DaoNameSpace_AddType( ns, dao_list_empty->name, dao_list_empty );
+	DaoNameSpace_AddType( ns, dao_map_empty->name, dao_map_empty );
 
 #if 0
 	DString_SetMBS( vms->source, daoScripts );

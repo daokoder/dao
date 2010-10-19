@@ -244,7 +244,7 @@ void DaoBase_Init( void *dbase, char type )
 
 extern void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
 
-DaoBase* DaoBase_Duplicate( void *dbase )
+DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 {
 	DaoBase *self = (DaoBase*) dbase;
 	size_t i;
@@ -256,11 +256,12 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 		{
 			DaoList *list = (DaoList*) self;
 			DaoList *copy = DaoList_New();
+			/* no detailed checking of type matching, must be ensured by caller */
+			copy->unitype = (tp && tp->tid == DAO_LIST) ? tp : list->unitype;
+			GC_IncRC( copy->unitype );
 			DVarray_Resize( copy->items, list->items->size, daoNullValue );
 			for(i=0; i<list->items->size; i++)
 				DaoList_SetItem( copy, list->items->data[i], i );
-			copy->unitype = list->unitype;
-			GC_IncRC( copy->unitype );
 			return (DaoBase*)copy;
 		}
 	case DAO_MAP :
@@ -268,25 +269,32 @@ DaoBase* DaoBase_Duplicate( void *dbase )
 			DaoMap *map = (DaoMap*) self;
 			DaoMap *copy = DaoMap_New( map->items->hashing );
 			DNode *node = DMap_First( map->items );
+			copy->unitype = (tp && tp->tid == DAO_MAP) ? tp : map->unitype;
+			GC_IncRC( copy->unitype );
 			for( ; node !=NULL; node = DMap_Next(map->items, node ))
 				DMap_Insert( copy->items, node->key.pVoid, node->value.pVoid );
-			copy->unitype = map->unitype;
-			GC_IncRC( copy->unitype );
 			return (DaoBase*)copy;
 		}
 	case DAO_TUPLE :
 		{
 			DaoTuple *tuple = (DaoTuple*) self;
 			DaoTuple *copy = DaoTuple_New( tuple->items->size );
+			copy->unitype = (tp && tp->tid == DAO_TUPLE) ? tp : tuple->unitype;
+			GC_IncRC( copy->unitype );
 			for(i=0; i<tuple->items->size; i++)
 				DValue_Copy( copy->items->data + i, tuple->items->data[i] );
-			copy->unitype = tuple->unitype;
-			GC_IncRC( copy->unitype );
 			return (DaoBase*) copy;
 		}
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
-		return (DaoBase*) DaoArray_Copy( (DaoArray*) self );
+		{
+			DaoArray *array = (DaoArray*) self;
+			DaoArray *copy = DaoArray_New( array->numType );
+			copy->unitype = (tp && tp->tid == DAO_ARRAY) ? tp : array->unitype;
+			GC_IncRC( copy->unitype );
+			DaoArray_CopyArray( copy, array );
+			return (DaoBase*) copy;
+		}
 #endif
 	case DAO_PAIR : break;
 	default : break;
@@ -2840,8 +2848,6 @@ static void DaoCData_Delete( DaoCData *self )
 }
 void DaoCData_DeleteData( DaoCData *self )
 {
-	//int p = strcmp(self->typer->name, "Fl_Table_Row") ==0;
-	//if(p) printf( "delete %s: %p\n", self->typer->name, self );
 	DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
 	void (*fdel)(void*) = (void (*)(void *))DaoCData_Delete;
 	if( self->buffer == NULL ) DaoCDataBindings_Erase( self->data );

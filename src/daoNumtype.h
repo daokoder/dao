@@ -163,12 +163,13 @@ struct DaoArray
 };
 #ifdef DAO_WITH_NUMARRAY
 
-extern DaoArray* DaoArray_New( int type );
-extern DaoArray* DaoArray_Copy( DaoArray *self );
-extern void DaoArray_Delete( DaoArray *self );
+DaoArray* DaoArray_New( int type );
+DaoArray* DaoArray_Copy( DaoArray *self );
+int DaoArray_CopyArray( DaoArray *self, DaoArray *other );
+void DaoArray_Delete( DaoArray *self );
 
-extern void DaoArray_ResizeVector( DaoArray *self, int size );
-extern void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
+void DaoArray_ResizeVector( DaoArray *self, int size );
+void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
 
 void DaoArray_UseData( DaoArray *self, void *data );
 

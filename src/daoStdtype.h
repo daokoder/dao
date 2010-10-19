@@ -63,7 +63,7 @@ void DaoBase_ChangeState( void *dbase, char state, char add );
 
 DaoTypeBase* DaoBase_GetTyper( DaoBase *p );
 
-DaoBase* DaoBase_Duplicate( void *dbase );
+DaoBase* DaoBase_Duplicate( void *dbase, DaoType *type );
 
 void DaoBase_GetField( DValue *self, DaoContext *ctx, DString *name );
 void DaoBase_SetField( DValue *self, DaoContext *ctx, DString *name, DValue value );

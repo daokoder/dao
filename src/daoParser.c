@@ -227,6 +227,7 @@ DaoParser* DaoParser_New()
 	self->localVarMap = DArray_New(D_MAP);
 	self->localCstMap = DArray_New(D_MAP);
 	self->switchMaps = DArray_New(D_MAP);
+	self->enumTypes = DArray_New(0);
 	DArray_Append( self->localVarMap, self->lvm );
 	DArray_Append( self->localCstMap, self->lvm );
 
@@ -248,6 +249,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->localCstMap );
 	DArray_Delete( self->routCompilable );
 	DArray_Delete( self->switchMaps );
+	DArray_Delete( self->enumTypes );
 	DArray_Delete( self->scoping );
 	DArray_Delete( self->errors );
 	DArray_Delete( self->regLines );
@@ -3069,6 +3071,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		   printf("At tokPos : %i, %i, %s\n", start,ptok->line, ptok->string->mbs );
 		 */
 		if( self->errors->size ) return 0;
+		DArray_Clear( self->enumTypes );
 		errorStart = start;
 		storeType = 0;
 		storeType2 = 0;
@@ -3741,6 +3744,7 @@ ErrorInterfaceDefinition:
 				DaoParser_Warn( self, DAO_CTW_NULL, mbs );
 			}
 		}
+		if( abtp && abtp->tid != DAO_ANY ) DArray_PushFront( self->enumTypes, abtp );
 		/*
 		   printf( "start %i %s\n", start, tokens[start]->string->mbs );
 		   printf( "decStart %i %s\n", decStart, tokens[decStart]->string->mbs );
@@ -5393,6 +5397,7 @@ InvalidFunctional:
 static int DaoParser_MakeConst( DaoParser *self, DaoInode *front, DaoInode *back,
 		DArray *cid, int regcount, int N, int start, int mid, int end, int *cst )
 {
+	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pAbtp[0] : NULL;
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoContext *ctx = myNS->vmpEvalConst->topFrame->context;
 	DaoVmCodeX vmcValue;
@@ -5421,7 +5426,8 @@ static int DaoParser_MakeConst( DaoParser *self, DaoInode *front, DaoInode *back
 	DArray_Resize( self->regLines, regcount, 0 );
 	/* Execute the instruction to get the const result: */
 	DaoVmCode_Set( & vmcValue, code, 1, opB, 0, self->lexLevel, tokPos, start, mid, end );
-	value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, (DaoVmCode*)(void*) & vmcValue, N+1 );
+	value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, 
+			(DaoVmCode*)(void*) & vmcValue, N+1, type );
 	*cst = DRoutine_AddConstValue( (DRoutine*)self->routine, value ) + DVR_LOC_CST;
 	return DaoParser_GetNormRegister( self, *cst, start, 0, end );
 }
@@ -6011,11 +6017,42 @@ static int DaoParser_MakeEnumMatrix( DaoParser *self, int L, int R, int *N, int 
 	if( regC == self->locRegCount ) DaoParser_PushRegister( self );
 	return regC;
 }
+static void DaoParser_PushItemType( DaoParser *self, DaoType *type, int id, uchar_t sep1 )
+{
+	if( type && type->nested && type->nested->size ){
+		DaoType *itp = NULL;
+		switch( type->tid ){
+		case DAO_ARRAY :
+			if( sep1 == DTOK_COLON && id == 0 ){
+				itp = type->nested->items.pAbtp[0];
+			}
+			break;
+		case DAO_LIST :
+			if( sep1 == DTOK_COLON && id == 0 ){
+				itp = type->nested->items.pAbtp[0];
+			}else{
+				itp = type->nested->items.pAbtp[0];
+			}
+			break;
+		case DAO_MAP :
+			if( type->nested->size > 1 ) itp = type->nested->items.pAbtp[id%2];
+			break;
+		case DAO_TUPLE :
+			itp = type->nested->items.pAbtp[id];
+			break;
+		default : break;
+		}
+		DArray_PushFront( self->enumTypes, itp );
+	}else{
+		DArray_PushFront( self->enumTypes, NULL );
+	}
+}
 int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *N,
 		int *cst, uchar_t sep1, uchar_t sep2, DArray *cid, int state )
 {
+	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pAbtp[0] : NULL;
 	DaoToken **tokens = self->tokens->items.pToken;
-	int i, pos, regFix = self->locRegCount;
+	int i, pos, id=0, regFix = self->locRegCount;
 	int field = 0;
 	int tok1, tok2;
 	uchar_t nsep = 1 + (sep2 != 0);
@@ -6065,8 +6102,10 @@ int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *N,
 			if( state == EXP_IN_CALL && tok1 == DTOK_IDENTIFIER && tok2 == DTOK_FIELD ){
 				field = 1;
 			}
+			DaoParser_PushItemType( self, type, id++, sep1 );
 			c0 = 0;
 			reg = DaoParser_MakeArithTree( self, last, comma-1, & c0, regFix, state );
+			DArray_PopFront( self->enumTypes );
 			if( last > comma-1 || reg <0 ) return -1;
 			if( ! c0 ) *cst = 0;
 
@@ -6095,8 +6134,10 @@ int DaoParser_MakeArithArray( DaoParser *self, int left, int right, int *N,
 			DaoParser_Error( self, DAO_CTW_IS_EXPECTED, self->mbs );
 			return -1;
 		}
+		DaoParser_PushItemType( self, type, id, sep1 );
 		c0 = 0;
 		reg = DaoParser_MakeArithTree( self, last, right, & c0, regFix, state );
+		DArray_PopFront( self->enumTypes );
 		if( reg < 0 ) return -1;
 		if( ! c0 ) *cst = 0;
 
@@ -7145,6 +7186,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 			|| (tki == DTOK_LSB && tki2 == DTOK_RSB) ){
 		/* list, map, matrix, tuple expressions: */
 		/* { a=>1, b=>[] }; {1,2,10}; {1:2:10}; {1:10}; [1,2,10]; [1:2:10]; [1:10] */
+		DaoType *tp = self->enumTypes->size ? self->enumTypes->items.pAbtp[0] : 0;
 		int regcount = self->locRegCount;
 		int enumcode = DVM_LIST;
 		int lb = start+1;
@@ -7153,7 +7195,8 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 		int colon = DaoParser_FindOpenToken( self, DTOK_COLON, lb, rb, 0 );
 		int semi = DaoParser_FindOpenToken( self, DTOK_SEMCO, lb, rb, 0 );
 		int comma = DaoParser_FindOpenToken( self, DTOK_COMMA, lb, rb, 0 );
-		int N = 0;
+		int isempty = 0;
+		int reg, N = 0;
 		ushort_t opB = 0;
 		if( tki == DTOK_LSB ) enumcode = DVM_ARRAY;
 		if( typed_data_enum == DKEY_ARRAY ) enumcode = DVM_ARRAY;
@@ -7169,28 +7212,36 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 
 		if( typed_data_enum == DKEY_TUPLE || tki == DTOK_LB ){
 			/* ( a, b ) */
-			int reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst,
-					DTOK_COMMA, 0, cid, 0 );
+			if( tp && tp->tid != DAO_TUPLE ) goto ParsingError;
+			reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst, DTOK_COMMA, 0, cid, 0 );
 			if( reg < 0 ) goto ParsingError;
 			regC = self->locRegCount;
+			enumcode = DVM_TUPLE;
 			if( regFix >= 0 ) regC = regFix;
 			DaoParser_AddCode( self, DVM_TUPLE, reg, N, regC, start, mid, end );
 		}else if( (typed_data_enum ==0  && (pto >= 0 || (colon >= 0 && tki == DTOK_LCB)) ) || typed_data_enum == DKEY_MAP ){
 			/* { a=>1, b=>[] }; {=>}; */
 			/* { a: 1, b: [] }; {:}; */
-			int mh = pto >= 0 ? DVM_MAP : DVM_HASH;
-			if( typed_data_enum == DKEY_MAP && colon <0 ) mh = DVM_MAP;
+			if( tp && tp->tid != DAO_MAP ) goto ParsingError;
+			enumcode = pto >= 0 ? DVM_MAP : DVM_HASH;
+			isempty = lb >= rb;
+			if( typed_data_enum == DKEY_MAP && colon <0 ) enumcode = DVM_MAP;
 			if( lb >= rb ){
-				regC = DRoutine_AddConst( (DRoutine*) self->routine, (DaoBase*) DaoMap_New(colon>=0) );
+				DaoMap *hm = DaoMap_New(colon>=0);
+				hm->unitype = dao_map_empty;
+				GC_IncRC( dao_map_empty );
+				regC = DRoutine_AddConst( (DRoutine*) self->routine, (DaoBase*) hm );
 				*cst = regC + DVR_LOC_CST;
 				regC = DaoParser_GetNormRegister( self, regC + DVR_LOC_CST, start, 0, end );
 			}else{
-				regC = DaoParser_MakeEnumMap( self, mh, lb, rb, & N, cst, regFix, cid );
+				regC = DaoParser_MakeEnumMap( self, enumcode, lb, rb, & N, cst, regFix, cid );
 			}
 		}else if( colon >= 0 && comma < 0 ){
 			/* [1:2:10]; [1:10] */
-			int reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst,
-					DTOK_COLON, 0, cid, 0 );
+			if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
+			if( tp && (enumcode == DVM_ARRAY && tp->tid != DAO_ARRAY) ) goto ParsingError;
+			reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst, DTOK_COLON, 0, cid, 0 );
+			isempty = lb > rb;
 			if( reg < 0 || N < 2 || N > 3 ){
 				DaoParser_Error( self, DAO_CTW_ENUM_INVALID, NULL );
 				goto ParsingError;
@@ -7201,14 +7252,19 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 
 		}else if( semi < 0 ){
 			/* [a,b,c] */
-			int reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst,
-					DTOK_COMMA, 0, cid, 0 );
+			if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
+			if( tp && (enumcode == DVM_ARRAY && tp->tid != DAO_ARRAY) ) goto ParsingError;
+			reg = DaoParser_MakeArithArray( self, lb, rb, & N, cst, DTOK_COMMA, 0, cid, 0 );
 			if( reg < 0 ) goto ParsingError;
+			isempty = lb > rb;
 			regC = self->locRegCount;
 			if( regFix >= 0 ) regC = regFix;
 			DaoParser_AddCode( self, enumcode, reg, N+10, regC, start, mid, end );
 		}else if( typed_data_enum == 0 || typed_data_enum == DKEY_ARRAY ){
 			/* [1,2; 3,4] */
+			isempty = lb > rb;
+			enumcode = DVM_MATRIX;
+			if( tp && (enumcode == DVM_ARRAY && tp->tid != DAO_ARRAY) ) goto ParsingError;
 			regC = DaoParser_MakeEnumMatrix( self, lb, rb, & N, cst, regFix, cid );
 		}else{
 			regC = -1;
@@ -7218,42 +7274,26 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 			goto ParsingError;
 		}
 		if( colon >= 0 && tki != DTOK_LCB ) *cst = 0;
-		if( *cst == 1 )
-			regC = DaoParser_MakeConst( self, front, back, cid, regcount, N, start, mid, end, cst );
-#if 0
-		if( *cst == 1 ){
-			int code = self->vmcLast->code;
-			/* For register allocation: */
-			DaoContext *ctx = myNS->vmpEvalConst->topFrame->context;
-			if( ctx->regArray->size < N+1 ){
-				DVaTuple_Resize( ctx->regArray, N+1, daoNullValue );
-				ctx->regValues = dao_realloc( ctx->regValues, (N+1) * sizeof(DValue*) );
-				for(i=0; i<N+1; i++) ctx->regValues[i] = ctx->regArray->data + i;
+		if( self->enumTypes->size ==0 && isempty ){
+			tp = NULL;
+			switch( enumcode ){
+			case DVM_LIST : tp = dao_list_empty; break;
+			case DVM_ARRAY : case DVM_MATRIX : tp = dao_array_empty; break;
+			case DVM_MAP : case DVM_HASH : tp = dao_map_empty; break;
 			}
-
-			/* printf( "code = %s, %i\n", getOpcodeName( code ), N ); */
-			/* Prepare registers for the instruction. */
-			for( i=0; i<N; i++ ){
-				/* printf( "reg = %i\n", cid->items.pInt[i] ); */
-				/* No need GC here: */
-				DValue v = DaoParser_GetVariable( self, cid->items.pInt[i] );
-				DValue_SimpleMove( v, ctx->regValues[i+1] );
-			}
-			/* for( i=0; i<size; i++) DaoVmCode_Print( *vmCodes->items.pVmc[i], NULL ); */
-			opB = self->vmcLast->b;
-			DaoParser_PopCodes( self, front, back );
-			self->locRegCount = regcount;
-			DArray_Resize( self->regLines, regcount, 0 );
-			/* Execute the instruction to get the const result: */
-			DaoVmCode_Set( & vmcValue, code, 1, opB, 0, self->lexLevel, tokPos, start, mid, end );
-			value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, (DaoVmCode*)(void*) & vmcValue, N+1 );
-			*cst = DRoutine_AddConstValue( (DRoutine*)self->routine, value ) + DVR_LOC_CST;
-			DArray_Delete( cid );
-			return DaoParser_GetNormRegister( self, *cst, start, 0, end );
+			if( tp ) DArray_PushFront( self->enumTypes, tp );
 		}
-#endif
+		if( *cst == 1 ){
+			regC = DaoParser_MakeConst( self, front, back, cid, regcount, N, start, mid, end, cst );
+		}else if( self->enumTypes->size ){
+			tp = self->enumTypes->items.pAbtp[0];
+			if( tp && tp->tid != DAO_ANY ) MAP_Insert( self->regForLocVar, regC, tp );
+		}
 	}else{
-		return DaoParser_MakeChain( self, start, end, cst, regFix );
+		DArray_PushFront( self->enumTypes, NULL );
+		regC = DaoParser_MakeChain( self, start, end, cst, regFix );
+		DArray_PopFront( self->enumTypes );
+		return regC;
 	}
 	/* If _regC_ is the one after the last register, increase register number: */
 	/* !!! It is NOT equivalent to if( regFix < 0 ). */

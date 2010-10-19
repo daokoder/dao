@@ -171,10 +171,10 @@ void DaoType_Init()
 		dao_type_matrix[DAO_INITYPE][i] = DAO_MT_INIT;
 		dao_type_matrix[i][DAO_INITYPE] = DAO_MT_INIT;
 
-		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EQ+1;
-		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EQ+1;
-		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EQ+1;
-		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EQ+1;
+		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EQ+2;
+		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EQ+2;
+		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EQ+2;
+		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EQ+2;
 	}
 	dao_type_matrix[DAO_UDF][DAO_ANY] = DAO_MT_ANYUDF;
 	dao_type_matrix[DAO_ANY][DAO_UDF] = DAO_MT_ANYUDF;
@@ -228,7 +228,9 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
 	/*
 	   printf( "m = %i:  %s  %s\n", m, ext1->name->mbs, ext2->name->mbs );
 	 */
-	if( host == DAO_ROUTINE ){
+	if( host == DAO_TUPLE ){
+		if( m == DAO_MT_EQ && self->tid != type->tid ) return DAO_MT_SUB;
+	}else if( host == DAO_ROUTINE ){
 		if( self->tid != DAO_PAR_DEFAULT && type->tid == DAO_PAR_DEFAULT ) return 0;
 		return m;
 	}
@@ -273,18 +275,22 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( self->tid==DAO_ANY || self->tid==DAO_UDF ) return DAO_MT_ANYUDF;
 		}
 		return mt;
+	}else if( mt == DAO_MT_ANYUDF ){
+		if( self->tid == DAO_ANY && (type->tid == DAO_UDF || type->tid == DAO_INITYPE) ){
+			if( defs ) MAP_Insert( defs, type, self );
+		}
+		return mt;
 	}
 	mt = dao_type_matrix[self->tid][type->tid];
-	switch( mt ){
-	case DAO_MT_NOT : case DAO_MT_ANYUDF : case DAO_MT_ANY : case DAO_MT_EQ :
-		return mt;
-	default : break;
-	}
+	if( mt <= DAO_MT_EQ ) return mt;
+	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
+
 	switch( self->tid ){
 	case DAO_ARRAY : case DAO_LIST :
 	case DAO_MAP : case DAO_TUPLE :
 		/* tuple<...> to tuple */
 		if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
+		if( self->attrib & DAO_TYPE_EMPTY ) return DAO_MT_SUB;
 		if( self->nested->size > type->nested->size ) return DAO_MT_NOT;
 		for(i=0; i<self->nested->size; i++){
 			it1 = self->nested->items.pAbtp[i];
@@ -340,13 +346,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			return DAO_MT_NOT;
 		}
 		break;
-	case DAO_PAR_NAMED :
-	case DAO_PAR_DEFAULT :
-		return DaoType_MatchPar( self, type, defs, binds, 0 );
-	default :
-		if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT )
-			return DaoType_MatchPar( self, type, defs, binds, 0 );
-		break;
+	default : break;
 	}
 	if( mt > DAO_MT_EQ ) mt = DAO_MT_NOT;
 	return mt;
@@ -550,7 +550,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		if( DString_FindChar( node->value.pAbtp->name, '@', 0 ) != MAXSIZE ){
 			return self;
 		}
-		return node->value.pAbtp;
+		return DaoType_DefineTypes( node->value.pAbtp, ns, defs );
 	}
 
 	if( self->tid ==DAO_INITYPE ){
@@ -599,23 +599,22 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 			DString_Append( copy->name, copy->X.abtype->name );
 		}
 		DString_AppendChar( copy->name, '>' );
+	}
+	if( self->X.abtype && self->X.abtype->type == DAO_TYPE ){
+		copy->X.abtype = DaoType_DefineTypes( self->X.abtype, ns, defs );
 	}else{
-		if( self->X.abtype && self->X.abtype->type == DAO_TYPE ){
-			copy->X.abtype = DaoType_DefineTypes( self->X.abtype, ns, defs );
-		}else{
-			copy->X.abtype = self->X.abtype;
-		}
-		if( self->tid == DAO_PAR_NAMED ){
-			DString_Append( copy->name, self->fname );
-			DString_AppendChar( copy->name, ':' );
-			DString_Append( copy->name, copy->X.abtype->name );
-		}else if( self->tid == DAO_PAR_DEFAULT ){
-			DString_Append( copy->name, self->fname );
-			DString_AppendChar( copy->name, '=' );
-			DString_Append( copy->name, copy->X.abtype->name );
-		}else{
-			DString_Assign( copy->name, self->name );
-		}
+		copy->X.abtype = self->X.abtype;
+	}
+	if( self->tid == DAO_PAR_NAMED ){
+		DString_Append( copy->name, self->fname );
+		DString_AppendChar( copy->name, ':' );
+		DString_Append( copy->name, copy->X.abtype->name );
+	}else if( self->tid == DAO_PAR_DEFAULT ){
+		DString_Append( copy->name, self->fname );
+		DString_AppendChar( copy->name, '=' );
+		DString_Append( copy->name, copy->X.abtype->name );
+	}else if( self->nested == NULL ){
+		DString_Assign( copy->name, self->name );
 	}
 	DaoType_CheckAttributes( copy );
 	GC_IncRC( copy->X.abtype );
