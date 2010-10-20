@@ -1192,7 +1192,7 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		DaoInode_Print( it2 );
 		it2 = it2->below;
 	}
-	//DaoParser_PrintCodes( self );
+	DaoParser_PrintCodes( self );
 #endif
 
 	switch( code ){
@@ -2173,6 +2173,8 @@ static int DaoParser_DelScope( DaoParser *self, int type, int tokid )
 }
 static int DaoParser_CompleteScope( DaoParser *self, int tokid )
 {
+	DaoToken **tokens = self->tokens->items.pToken;
+	int tc, tk = (tokid+1 < self->tokens->size) ? tokens[tokid+1]->name : 0;
 	while( self->scoping->size >0 ){
 		dint type = (dint)DArray_Top( self->scoping );
 		if( type == DVM_UNUSED ){
@@ -2182,6 +2184,10 @@ static int DaoParser_CompleteScope( DaoParser *self, int tokid )
 		}else{
 			return 1;
 		}
+		tc = self->vmcTop->code;
+		if( tk == DKEY_ELIF && (tc == DVM_IF || tc ==DVM_ELIF) ) return 1;
+		if( tk == DKEY_ELSE && (tc == DVM_IF || tc ==DVM_ELIF) ) return 1;
+		if( tk == DKEY_RESCUE && (tc == DVM_TRY || tc == DVM_RESCUE) ) return 1;
 	}
 	return 1;
 }
@@ -3809,7 +3815,7 @@ ErrorInterfaceDefinition:
 		}
 		if( expStart > to ) break;
 		if( tokens[expStart]->name == DTOK_SEMCO ){
-			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
+			if( DaoParser_CompleteScope( self, expStart ) == 0 ) return 0;
 			start = expStart + 1;
 			continue;
 		}
