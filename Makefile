@@ -20,8 +20,8 @@ LIB_READLINE = -lreadline
 
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_NETWORK) $(DAO_MPI) $(DAO_AFC) $(DAO_ASMBC) $(DAO_JIT) $(USE_READLINE)
 
-CC        = gcc
-CFLAGS    = -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
+CC        = $(CROSS_COMPILE)gcc
+CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
 INCPATH   = -I. -Isrc
 LFLAGS    = -fPIC #-s
 LFLAGSDLL = -fPIC #-s

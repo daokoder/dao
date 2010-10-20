@@ -14,9 +14,11 @@
 #include"stdio.h"
 #include"string.h"
 #include"math.h"
-#ifdef UNIX
+
+#ifndef NO_FENV
 #include"fenv.h"
 #endif
+
 #include<assert.h>
 
 #include"daoContext.h"

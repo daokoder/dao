@@ -18,10 +18,18 @@
 
 #if defined (__GNUC__)
 
-#include"fenv.h"
+#if NO_FENV
 
+#define dao_fe_clear()  0
+#define dao_fe_status()  0
+
+#else
+
+#include"fenv.h"
 #define dao_fe_clear()  feclearexcept( FE_ALL_EXCEPT )
 #define dao_fe_status()  fetestexcept( FE_ALL_EXCEPT )
+
+#endif
 
 #ifdef FE_DIVBYZERO
 #define dao_fe_divbyzero()  fetestexcept( FE_DIVBYZERO )
