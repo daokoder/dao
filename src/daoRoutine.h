@@ -16,10 +16,6 @@
 
 #include"daoType.h"
 
-/* The core members of DRoutine should be kept few to reduce memory comsuption,
- * becauses some wrapped libraries may contains tens of thousand of functions.
- */
-
 typedef unsigned int bits_t;
 
 #define \
@@ -33,6 +29,7 @@ DaoType       *routHost; \
 DaoType       *routType; \
 DString       *routName; \
 DString       *routHelp; \
+DString       *parCodes; \
 DVarray       *routConsts; \
 DArray        *routTable; \
 DaoNameSpace  *nameSpace

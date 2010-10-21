@@ -3824,13 +3824,55 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				}
 			}
 		}else if( caller.t==DAO_CLASS ){
-			rout = (DaoRoutine*) caller.v.klass->classRoutine;
+			DaoClass *klass = caller.v.klass;
+			rout = (DaoRoutine*) klass->classRoutine;
 			rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
 			if( rout == NULL && (npar ==0 || (npar == 1 && (code == DVM_MCALL || code == DVM_MCALL_TC) ) ) ){
 				/* default contstructor */
-				rout = (DaoRoutine*) caller.v.klass->classRoutine;
+				rout = (DaoRoutine*) klass->classRoutine;
 			}
-			if( rout != NULL ){
+			if( rout->type == DAO_FUNCTION ){
+				DaoObject *othis = NULL;
+				DaoFunction *func = (DaoFunction*) rout;
+				DaoVmCode vmcode = { DVM_CALL, 0, 0, 0 };
+				DValue returned = daoNullValue;
+				DValue *returned2 = & returned;
+				if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
+					DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched3" );
+					for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
+					return;
+				}
+				ctx = DaoVmProcess_MakeContext( self->process, rout );
+				ctx->vmc = & vmcode;
+				ctx->regValues = & returned2;
+				ctx->regTypes = & rout->routHost;
+				self->thisFunction = func;
+				func->pFunc( ctx, parbuf2, npar );
+				self->thisFunction = NULL;
+				ctx->regValues = NULL;
+				/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
+				for(i=0; i<=rout->parCount; i++){
+					if( parbuf[i].ndef ) continue;
+					DValue_Clear( parbuf+i );
+				}
+				if( initbase ){
+					othis = params[0]->v.object;
+				}else{
+					othis = DaoObject_New( klass, NULL, 0 );
+				}
+				obj = (DaoObject*) DaoObject_MapChildObject( othis, rout->routHost );
+				sup = DaoClass_FindSuper( obj->myClass, rout->routHost->X.extra );
+				if( returned.t == DAO_CDATA ){
+					DaoCData *cdata = returned.v.cdata;
+					GC_ShiftRC( cdata, obj->superObject->items.pBase[sup] );
+					obj->superObject->items.pBase[sup] = (DaoBase*) cdata;
+					GC_ShiftRC( obj->that, cdata->daoObject );
+					cdata->daoObject = obj->that;
+				}
+				DaoContext_SetResult( self, (DaoBase*) othis );
+				DValue_Clear( & returned );
+				return;
+			}else if( rout != NULL ){
 				ctx = DaoVmProcess_MakeContext( self->process, rout );
 				if( initbase ){
 					obj = params[0]->v.object;

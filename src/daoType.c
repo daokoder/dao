@@ -228,8 +228,8 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
 	/*
 	   printf( "m = %i:  %s  %s\n", m, ext1->name->mbs, ext2->name->mbs );
 	 */
-	if( host == DAO_TUPLE ){
-		if( m == DAO_MT_EQ && self->tid != type->tid ) return DAO_MT_SUB;
+	if( host == DAO_TUPLE && m == DAO_MT_EQ ){
+		if( self->tid != DAO_PAR_NAMED && type->tid == DAO_PAR_NAMED ) return DAO_MT_SUB;
 	}else if( host == DAO_ROUTINE ){
 		if( self->tid != DAO_PAR_DEFAULT && type->tid == DAO_PAR_DEFAULT ) return 0;
 		return m;
