@@ -34,12 +34,13 @@ static void DRoutine_Init( DRoutine *self )
 	self->parCount = 0;
 	self->tidHost = 0;
 	self->routHost = NULL;
+	self->routType = NULL;
+	self->routHelp = NULL;
 	self->routName   = DString_New(1);
+	self->parCodes   = DString_New(1);
 	self->routConsts = DVarray_New();
 	self->routTable = DArray_New(0);
 	self->nameSpace = NULL;
-	self->routType = NULL;
-	self->routHelp = NULL;
 }
 DRoutine* DRoutine_New()
 {
@@ -63,6 +64,7 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 	self->routType = from->routType;
 	DVarray_Assign( self->routConsts, from->routConsts );
 	DString_Assign( self->routName, from->routName );
+	DString_Assign( self->parCodes, from->parCodes );
 	for(i=0; i<from->routConsts->size; i++) DValue_MarkConst( self->routConsts->data + i );
 }
 static void DRoutine_DeleteFields( DRoutine *self )
@@ -72,6 +74,7 @@ static void DRoutine_DeleteFields( DRoutine *self )
 	GC_DecRC( self->routType );
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
+	DString_Delete( self->parCodes );
 	DVarray_Delete( self->routConsts );
 	DArray_Delete( self->routTable );
 	if( self->routHelp ) DString_Delete( self->routHelp );

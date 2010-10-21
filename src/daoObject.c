@@ -311,6 +311,31 @@ DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 	}
 	return NULL;
 }
+DaoBase* DaoObject_MapChildObject( DaoObject *self, DaoType *parent )
+{
+	int i;
+	if( parent == NULL ) return NULL;
+	if( self->myClass->objType == parent ) return NULL;
+	if( self->superObject ==NULL ) return NULL;
+	for( i=0; i<self->superObject->size; i++ ){
+		DaoBase *sup = self->myClass->superClass->items.pBase[i];
+		if( sup == NULL ) continue;
+		if( sup->type == DAO_CLASS ){
+			if( ((DaoClass*)sup)->objType == parent ) return (DaoBase*) self;
+		}else if( sup->type == DAO_CDATA ){
+			DaoCData *cdata = (DaoCData*)sup;
+			if( DaoCData_ChildOf( cdata->typer, parent->typer ) ) return (DaoBase*) self;
+		}
+		sup = self->superObject->items.pBase[i];
+		if( sup == NULL ) continue;
+		if( sup->type == DAO_OBJECT ){
+			DaoObject *obj = (DaoObject*)sup;
+			if( obj->myClass->objType == parent ) return (DaoBase*) self;
+			return DaoObject_MapChildObject( obj, parent );
+		}
+	}
+	return NULL;
+}
 DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer )
 {
 	DaoBase *p = NULL;
