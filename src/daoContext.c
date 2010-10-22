@@ -3093,21 +3093,85 @@ FailConversion:
 	return 0;
 }
 #endif
-static int CheckStringToNumber( DaoContext *ctx, DValue dA, int tid )
+static int ConvertStringToNumber( DaoContext *ctx, DValue dA, DValue *dC )
 {
 	DString *mbs = ctx->process->mbstring;
+	double d1 = 0.0, d2 = 0.0;
+	int set1 = 0, set2 = 0;
 	int toktype, toklen = 0;
+	int tid = dC->t;
+	int imagfirst = 0;
+	int sign = 1;
 	if( dA.t != DAO_STRING || tid ==0 || tid > DAO_LONG ) return 0;
+	if( tid == DAO_STRING ){
+		*dC = dA;
+		return 1;
+	}
 	if( dA.v.s->mbs ){
 		DString_SetDataMBS( mbs, dA.v.s->mbs, dA.v.s->size );
 	}else{
 		DString_SetDataWCS( mbs, dA.v.s->wcs, dA.v.s->size );
 	}
 	DString_Trim( mbs );
+	if( mbs->size ==0 ) return 0;
 	toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
-	if( toklen != mbs->size ) return 0;
-	if( toktype < DTOK_DIGITS_HEX || toktype > DTOK_NUMBER_SCI ) return 0;
-	return 1;
+	if( toktype == DTOK_ADD || toktype == DTOK_SUB ){
+		if( toktype == DTOK_SUB ) sign = -1;
+		DString_Erase( mbs, 0, toklen );
+		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
+	}
+	if( tid != DAO_COMPLEX ){
+		if( toklen != mbs->size ) return 0;
+		if( toktype < DTOK_DIGITS_HEX || toktype > DTOK_NUMBER_SCI ) return 0;
+		if( tid == DAO_INTEGER ){
+			dC->v.i = (sizeof(dint) == 4) ? strtol( mbs->mbs, 0, 0 ) : strtoll( mbs->mbs, 0, 0 );
+			if( sign <0 ) dC->v.i = - dC->v.i;
+		}else if( tid == DAO_FLOAT ){
+			dC->v.f = strtod( mbs->mbs, 0 );
+			if( sign <0 ) dC->v.f = - dC->v.f;
+		}else if( tid == DAO_DOUBLE ){
+			dC->v.d = strtod( mbs->mbs, 0 );
+			if( sign <0 ) dC->v.d = - dC->v.d;
+		}else{ /* DAO_LONG */
+			if( DLong_FromString( dC->v.l, mbs ) ==0 ) return 0;
+			dC->v.l->sign = sign;
+		}
+		return 1;
+	}
+	dC->v.c->real = dC->v.c->imag = 0.0;
+	if( toktype >= DTOK_DIGITS_HEX && toktype <= DTOK_NUMBER_SCI ){
+		set1 = 1;
+		d1 = strtod( mbs->mbs, 0 );
+		DString_Erase( mbs, 0, toklen );
+		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
+	}
+	if( toktype == DTOK_DOLLAR ){
+		imagfirst = 1;
+		if( set1 ==0 ) d1 = 1.0;
+		DString_Erase( mbs, 0, toklen );
+		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
+	}
+	if( sign <0 ) d1 = - d1;
+	if( imagfirst ) dC->v.c->imag = d1; else dC->v.c->real = d1;
+	if( mbs->size ==0 ) return 1;
+	if( toktype != DTOK_ADD && toktype != DTOK_SUB ) return 0;
+	if( toklen == mbs->size ) return 0;
+	sign = toktype == DTOK_ADD ? 1 : -1;
+	DString_Erase( mbs, 0, toklen );
+	toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
+	if( imagfirst && toktype == DTOK_DOLLAR ) return 0;
+	if( toktype >= DTOK_DIGITS_HEX && toktype <= DTOK_NUMBER_SCI ){
+		set2 = 1;
+		d2 = strtod( mbs->mbs, 0 );
+		DString_Erase( mbs, 0, toklen );
+		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
+	}
+	if( imagfirst && toktype == DTOK_DOLLAR ) return 0;
+	if( imagfirst ==0 && toktype != DTOK_DOLLAR ) return 0;
+	if( toktype == DTOK_DOLLAR && set2 ==0 ) d2 = 1.0;
+	if( sign <0 ) d2 = - d2;
+	if( imagfirst ) dC->v.c->real = d2; else dC->v.c->imag = d2;
+	return toklen == mbs->size;
 }
 static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA, 
 		complex16 *cb, DLong *lb, DString *sb )
@@ -3132,7 +3196,10 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 	if( ct->tid == DAO_ANY ) goto Rebind;
 	if( dA.t == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
 	if( dA.t == DAO_STRING && ct->tid >= 0 && ct->tid <= DAO_LONG ){
-		if( CheckStringToNumber( ctx, dA, ct->tid ) ==0 ) goto FailConversion;
+		if( ct->tid == DAO_COMPLEX ) dC.v.c = cb;
+		else if( ct->tid == DAO_LONG ) dC.v.l = lb;
+		if( ConvertStringToNumber( ctx, dA, & dC ) ==0 ) goto FailConversion;
+		return dC;
 	}
 	switch( ct->tid ){
 	case DAO_INTEGER :
@@ -3499,10 +3566,11 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 
 	if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_STRING ){
 		if( va.t >= DAO_INTEGER && va.t <= DAO_STRING ){
-			if( va.t == DAO_STRING && ct->tid != DAO_STRING ){
-				if( CheckStringToNumber( self, va, ct->tid ) ==0 ) goto FailConversion;
-			}
 			vc->t = ct->tid;
+			if( va.t == DAO_STRING && ct->tid != DAO_STRING ){
+				if( ConvertStringToNumber( self, va, vc ) ==0 ) goto FailConversion;
+				return;
+			}
 			switch( ct->tid ){
 			case DAO_INTEGER : vc->v.i = DValue_GetInteger( va ); break;
 			case DAO_FLOAT   : vc->v.f = DValue_GetFloat( va );  break;

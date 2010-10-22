@@ -6297,7 +6297,7 @@ extern DValue DaoParseNumber( DaoToken *tok, DLong *bigint )
 		DLong_FromString( bigint, tok->string );
 	}else{
 		value.t = DAO_INTEGER;
-		value.v.i = ( sizeof(dint) == 4 )? strtod( str, 0 ) : strtoll( str, 0, 0 );
+		value.v.i = (sizeof(dint) == 4) ? strtol( str, 0, 0 ) : strtoll( str, 0, 0 );
 	}
 	return value;
 }
