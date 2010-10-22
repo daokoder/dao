@@ -50,25 +50,22 @@ static void DaoCallbackData_Delete( DaoCallbackData *self )
 static void DaoCallbackData_DeleteByCallback( DaoRoutine *callback )
 {
 	DaoCallbackData *cd = NULL;
-	DaoCallbackData *cd2 = NULL;
 	int i;
 	if( dao_callback_data->size ==0 ) return;
 	GC_Lock();
 	for(i=0; i<dao_callback_data->size; i++){
 		cd = (DaoCallbackData*) dao_callback_data->items.pBase[i];
 		if( cd->callback == callback ){
-			cd2 = cd;
+			DaoCallbackData_Delete( cd );
 			DArray_Erase( dao_callback_data, i, 1 );
-			break;
+			i--;
 		}
 	}
 	GC_Unlock();
-	if( cd2 ) DaoCallbackData_Delete( cd2 );
 }
 static void DaoCallbackData_DeleteByUserdata( DaoBase *userdata )
 {
 	DaoCallbackData *cd = NULL;
-	DaoCallbackData *cd2 = NULL;
 	int i;
 	if( userdata == NULL ) return;
 	if( dao_callback_data->size ==0 ) return;
@@ -77,13 +74,12 @@ static void DaoCallbackData_DeleteByUserdata( DaoBase *userdata )
 		cd = (DaoCallbackData*) dao_callback_data->items.pBase[i];
 		if( cd->userdata.t != userdata->type ) continue;
 		if( cd->userdata.v.p == userdata ){
-			cd2 = cd;
+			DaoCallbackData_Delete( cd );
 			DArray_Erase( dao_callback_data, i, 1 );
-			break;
+			i--;
 		}
 	}
 	GC_Unlock();
-	if( cd2 ) DaoCallbackData_Delete( cd2 );
 }
 
 

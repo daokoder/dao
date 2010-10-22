@@ -830,7 +830,7 @@ int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name )
 		DValue value;
 		if( (k = DaoNameSpace_FindVariable( ns, name )) < 0 ) continue;
 		type = ns->varType->items.pAbtp[k];
-		value = ns->cstData->data[k];
+		value = ns->varData->data[k];
 		return DaoNameSpace_AddVariable( self, name, value, type );
 	}
 	return -1;
