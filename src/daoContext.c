@@ -231,7 +231,7 @@ int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 {
 	if( ! DValue_Move( A, C, t ) ){
 		DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, A );
-		printf( "%s %s\n", type->name->mbs, t->name->mbs );
+		printf( "%p %p %s %s\n", type, t, type->name->mbs, t->name->mbs );
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching11" );
 		return 0;
 	}

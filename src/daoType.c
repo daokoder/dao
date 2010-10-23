@@ -187,6 +187,7 @@ void DaoType_Init()
 	dao_type_matrix[DAO_ARRAY_EMPTY][DAO_ARRAY] = DAO_MT_EQ;
 	dao_type_matrix[DAO_MAP_EMPTY][DAO_MAP] = DAO_MT_EQ;
 
+	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EQ+1;
@@ -287,7 +288,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 
 	switch( self->tid ){
 	case DAO_ARRAY : case DAO_LIST :
-	case DAO_MAP : case DAO_TUPLE :
+	case DAO_MAP : case DAO_TUPLE : case DAO_TYPE :
 		/* tuple<...> to tuple */
 		if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
 		if( self->attrib & DAO_TYPE_EMPTY ) return DAO_MT_SUB;
@@ -523,8 +524,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		}
 		break;
 	case DAO_TYPE :
-		if( (DaoType*)value.v.p == self ) return DAO_MT_EQ;
-		return DaoType_MatchTo( (DaoType*)value.v.p, self, defs );
+		tp = (DaoType*)value.v.p;
+		if( self->tid != DAO_TYPE ) return 0;
+		/* if( tp == self ) return DAO_MT_EQ; */
+		return DaoType_MatchTo( tp, self->nested->items.pAbtp[0], defs );
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
 		if( value.v.pair->unitype == self ) return DAO_MT_EQ;

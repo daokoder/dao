@@ -181,7 +181,7 @@ int DaoNetwork_Connect( const char *host, unsigned short port )
 }
 int DaoNetwork_Send( int sockfd, DString *buf )
 {
-	return send( sockfd, DString_GetMBS( buf ), DString_Size( buf ), MSG_NOSIGNAL);
+	return send( sockfd, DString_GetMBS( buf ), DString_Size( buf ), 0);
 }
 int DaoNetwork_Receive( int sockfd, DString *buf, int max )
 {

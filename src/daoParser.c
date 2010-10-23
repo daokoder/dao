@@ -1951,6 +1951,9 @@ int DaoParser_ParseParams( DaoParser *self )
 			abstype = DaoNameSpace_MakeType( myNS, "...", DAO_PAR_VALIST, 0,0,0 );
 			m1 = i;  m2 = rb;
 			if( i+1 != rb ) goto ErrorMiddleValist;
+		}else if( tki == DTOK_IDENTIFIER && tok->mbs[0] == '@' ){
+			abstype = DaoNameSpace_MakeType( myNS, tok->mbs, DAO_INITYPE, 0,0,0 );
+			abstype = DaoNameSpace_GetType( myNS, abstype );
 		}else if( i+1<rb && (tokens[i+1]->name == DTOK_COLON
 					|| tokens[i+1]->name == DTOK_ASSN
 					|| tokens[i+1]->name == DTOK_CASSN)){

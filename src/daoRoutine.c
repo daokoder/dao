@@ -372,6 +372,15 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
 		if( DaoType_MatchTo( selftype, abtp, defs ) )
 			DaoType_RenewTypes( selftype, self->nameSpace, defs );
 	}
+	if( self->type == DAO_ROUTINE ){
+		DaoRoutine *rout = (DaoRoutine*) self;
+		for(j=0; j<rout->regType->size; j++){
+			abtp = rout->regType->items.pAbtp[j];
+			abtp = DaoType_DefineTypes( abtp, rout->nameSpace, defs );
+			GC_ShiftRC( abtp, rout->regType->items.pAbtp[j] );
+			rout->regType->items.pAbtp[j] = abtp;
+		}
+	}
 	DMap_Delete( defs );
 }
 DaoType* DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
