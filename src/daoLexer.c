@@ -164,7 +164,7 @@ DIntStringPair dao_keywords[] =
 	{ 100, "skip" } ,
 	{ 100, "return" } ,
 	{   0, "yield" } ,
-	{ 100, "enum" } ,
+	{ DAO_ENUM, "enum" } ,
 	{ 100, "const" } ,
 	{ 100, "global" } ,
 	{ 100, "static" } ,
@@ -1063,7 +1063,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 	lextok.cpos = 0;
 	while( it < srcSize ){
 #if 0
-		//printf( "tok: %i %i  %i  %c    %s\n", srcSize, it, ch, ch, literal->mbs );
+		printf( "tok: %i %i  %i  %c    %s\n", srcSize, it, ch, ch, literal->mbs );
 #endif
 		lextok.type = state;
 		lextok.name = 0;

@@ -50,8 +50,12 @@ int DValue_Compare( DValue left, DValue right )
 	int res = 0;
 	if( left.t >= DAO_INTEGER && left.t <= DAO_DOUBLE
 			&& right.t >= DAO_INTEGER && right.t <= DAO_DOUBLE ){
-		double R = DValue_GetDouble( right );
 		double L = DValue_GetDouble( left );
+		double R = DValue_GetDouble( right );
+		return L==R ? 0 : ( L<R ? -1 : 1 );
+	}else if( left.t == DAO_ENUM && right.t == DAO_ENUM ){
+		int L = left.v.e->value;
+		int R = right.v.e->value;
 		return L==R ? 0 : ( L<R ? -1 : 1 );
 	}else if( left.t == DAO_STRING && right.t == DAO_STRING ){
 		return DString_Compare( left.v.s, right.v.s );
@@ -132,16 +136,18 @@ double DValue_GetDouble( DValue self )
 		return self.v.f;
 	case DAO_DOUBLE  :
 		return self.v.d;
+	case DAO_COMPLEX :
+		return self.v.c->real;
+	case DAO_LONG :
+		return DLong_ToInteger( self.v.l );
+	case DAO_ENUM  :
+		return self.v.e->value;
 	case DAO_STRING  :
 		str = self.v.s;
 		if( DString_IsMBS( str ) )
 			return strtod( str->mbs, 0 );
 		else
 			return wcstod( str->wcs, 0 );
-	case DAO_COMPLEX :
-		return self.v.c->real;
-	case DAO_LONG :
-		return DLong_ToInteger( self.v.l );
 	default : break;
 	}
 	return 0.0;
@@ -161,8 +167,6 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 		DaoStream_WriteFloat( stream, self.v.f ); break;
 	case DAO_DOUBLE  :
 		DaoStream_WriteFloat( stream, self.v.d ); break;
-	case DAO_STRING  :
-		DaoStream_WriteString( stream, self.v.s ); break;
 	case DAO_COMPLEX :
 		DaoStream_WriteFloat( stream, self.v.c->real );
 		if( self.v.c->imag >= -0.0 ) DaoStream_WriteMBS( stream, "+" );
@@ -173,6 +177,13 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 		DLong_Print( self.v.l, stream->streamString );
 		DaoStream_WriteString( stream, stream->streamString );
 		break;
+	case DAO_ENUM  :
+		DaoStream_WriteString( stream, self.v.e->name );
+		DaoStream_WriteMBS( stream, "=" );
+		DaoStream_WriteInt( stream, self.v.e->value );
+		break;
+	case DAO_STRING  :
+		DaoStream_WriteString( stream, self.v.s ); break;
 	default :
 		typer = DaoVmSpace_GetTyper( self.t );
 		typer->priv->Print( & self, ctx, stream, cycData );
@@ -199,11 +210,13 @@ DString* DValue_GetString( DValue val, DString *str )
 	case DAO_INTEGER : sprintf( chs, ( sizeof(dint) == 4 )? "%li" : "%lli", val.v.i ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", val.v.f ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", val.v.d ); break;
-	case DAO_STRING  : DString_Assign( str, val.v.s ); break;
+		/* TODO complex */
 	case DAO_LONG  : DLong_Print( val.v.l, str ); break;
+	case DAO_ENUM : DString_Assign( str, val.v.e->name ); break;
+	case DAO_STRING : DString_Assign( str, val.v.s ); break;
 	default : break;
 	}
-	if( val.t < DAO_STRING ) DString_SetMBS( str, chs );
+	if( val.t < DAO_ENUM ) DString_SetMBS( str, chs );
 	return str;
 }
 void DValue_MarkConst( DValue *self )
@@ -254,8 +267,9 @@ void DValue_Clear( DValue *self )
 	if( self->t >= DAO_COMPLEX ){
 		switch( self->t ){
 		case DAO_COMPLEX : dao_free( self->v.c ); break;
-		case DAO_STRING : DString_Delete( self->v.s ); break;
 		case DAO_LONG : DLong_Delete( self->v.l ); break;
+		case DAO_ENUM : DEnum_Delete( self->v.e ); break;
+		case DAO_STRING : DString_Delete( self->v.s ); break;
 		default : GC_DecRC( self->v.p ); break;
 		}
 	}
@@ -288,17 +302,25 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 		if( self->t != DAO_COMPLEX ) self->v.c = dao_malloc( sizeof(complex16) );
 		self->v.c[0] = from.v.c[0];
 		break;
+	case DAO_LONG  :
+		if( self->t != DAO_LONG ) self->v.l = DLong_New();
+		self->t = DAO_LONG;
+		DLong_Move( self->v.l, from.v.l );
+		break;
+	case DAO_ENUM :
+		if( self->t == DAO_ENUM ){
+			self->v.e->value = from.v.e->value;
+			DString_Assign( self->v.e->name, from.v.e->name );
+		}else{
+			self->v.e = DEnum_Copy( from.v.e );
+		}
+		break;
 	case DAO_STRING  :
 		if( self->t == DAO_STRING ){
 			DString_Assign( self->v.s, from.v.s );
 		}else{
 			self->v.s = DString_Copy( from.v.s );
 		}
-		break;
-	case DAO_LONG  :
-		if( self->t != DAO_LONG ) self->v.l = DLong_New();
-		self->t = DAO_LONG;
-		DLong_Move( self->v.l, from.v.l );
 		break;
 	default :
 		self->v.p = NULL;
@@ -442,6 +464,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 int DValue_Move( DValue from, DValue *to, DaoType *tp )
 {
 	DaoBase *dA = NULL;
+	DNode *node = NULL;
 	int i = 1;
 	if( tp ==0 || tp->tid ==DAO_NIL || tp->tid ==DAO_INITYPE ){
 		DValue_Copy( to, from );
@@ -456,7 +479,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	if( from.t >= DAO_ARRAY && from.t == to->t && from.v.p == to->v.p ) return 1;
 	if( from.t >= DAO_INTEGER && from.t <= DAO_DOUBLE ){
 		if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) return 0;
-	}else if( from.t == DAO_COMPLEX || from.t == DAO_STRING || from.t == DAO_LONG ){
+	}else if( from.t >= DAO_COMPLEX && from.t <= DAO_STRING ){
 		if( tp->tid != from.t ) return 0;
 	}else if( from.v.p ==NULL && tp->tid == DAO_OBJECT ){
 		from.t = 0;
@@ -501,10 +524,12 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		GC_DecRC( to->v.p );
 	}else if( to->t == DAO_COMPLEX ){
 		if( from.t != DAO_COMPLEX ) dao_free( to->v.c );
-	}else if( to->t == DAO_STRING ){
-		if( from.t != DAO_STRING ) DString_Delete( to->v.s );
 	}else if( to->t == DAO_LONG ){
 		if( from.t != DAO_LONG ) DLong_Delete( to->v.l );
+	}else if( to->t == DAO_ENUM ){
+		if( from.t != DAO_ENUM ) DEnum_Delete( to->v.e );
+	}else if( to->t == DAO_STRING ){
+		if( from.t != DAO_STRING ) DString_Delete( to->v.s );
 	}
 	if( from.t >= DAO_INTEGER && from.t < DAO_ARRAY ){
 		switch( from.t ){
@@ -540,6 +565,23 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			to->t = from.t;
 			to->v.c[0] = from.v.c[0];
 			break;
+		case DAO_LONG  :
+			if( to->t != DAO_LONG ) to->v.l = DLong_New();
+			to->t = DAO_LONG;
+			DLong_Move( to->v.l, from.v.l );
+			if( tp == dao_array_bit ) to->v.l->bits = 1;
+			break;
+		case DAO_ENUM :
+			if( to->t == DAO_ENUM ){
+				to->v.e->value = from.v.e->value;
+				DString_Assign( to->v.e->name, from.v.e->name );
+			}else{
+				to->v.e = DEnum_Copy( from.v.e );
+			}
+			if( tp->mapNames ) node = DMap_Find( tp->mapNames, to->v.e->name );
+			if( node ) to->v.e->value = node->value.pInt;
+			to->t = from.t;
+			break;
 		case DAO_STRING  :
 			if( to->t == DAO_STRING ){
 				DString_Assign( to->v.s, from.v.s );
@@ -547,12 +589,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 				to->v.s = DString_Copy( from.v.s );
 			}
 			to->t = from.t;
-			break;
-		case DAO_LONG  :
-			if( to->t != DAO_LONG ) to->v.l = DLong_New();
-			to->t = DAO_LONG;
-			DLong_Move( to->v.l, from.v.l );
-			if( tp == dao_array_bit ) to->v.l->bits = 1;
 			break;
 		default : break;
 		}
@@ -567,126 +603,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		GC_ShiftRC( tp, to->v.tuple->unitype );
 		to->v.tuple->unitype = tp;
 	}else if( tp && ! ( tp->attrib & DAO_TYPE_EMPTY ) && tp->tid == dA->type ){
-#if 0
-		//int defed = DString_FindChar( tp->name, '@', 0 ) == MAXSIZE;
-		//defed &= DString_FindChar( tp->name, '?', 0 ) == MAXSIZE;
-#endif
-		DValue_SetType( to, tp );
-	}
-	return 1;
-}
-/* to should be a null value */
-int DValue_Pass( DValue from, DValue *to, DaoType *tp )
-{
-	DaoBase *dA = NULL;
-	int i = 1;
-	assert( to->t == 0 );
-	to->sub = from.sub;
-	to->ndef = 0;
-	if( tp ==0 || tp->tid ==DAO_NIL || tp->tid ==DAO_INITYPE ){
-		*to = from;
-		to->cst = to->ndef = 0;
-		return 1;
-	}else if( tp->tid == DAO_ANY ){
-		*to = from;
-		to->cst = to->ndef = 0;
-		DValue_SetType( to, tp );
-		return 1;
-	}
-	if( from.v.p ==NULL && tp->tid == DAO_OBJECT ){
-		from.t = 0;
-	}else if( from.t ==0 ){
-		return 0;
-	}else{
-		dA = from.v.p;
-		if( tp->tid == DAO_ROUTINE && ( dA->type ==DAO_ROUTINE || dA->type ==DAO_FUNCTION ) ){
-			/* XXX pair<objetp,routine<...>> */
-			dA = (DaoBase*) DRoutine_GetOverLoadByType( (DRoutine*)dA, tp );
-			if( dA == NULL ) return 0;
-			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
-		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA)
-				&& dA->type == DAO_OBJECT){
-			if( ((DaoObject*)dA)->myClass != tp->X.klass ){
-				dA = DaoObject_MapThisObject( (DaoObject*)dA, tp );
-				i = (dA != NULL);
-			}
-		}else{
-			i = DaoType_MatchValue( tp, from, NULL );
-		}
-		/*
-		   if( i ==0 ){
-		   printf( "tp = %p; dA = %p, type = %i\n", tp, dA, from.t );
-		   printf( "tp: %s %i\n", tp->name->mbs, tp->tid );
-		   if( from.t == DAO_TUPLE ) printf( "%p\n", from.v.tuple->unitype );
-		   }
-		   printf( "tp2: %s %i\n", tp2->name->mbs, tp2->tid );
-		   printf( "dA->type = %p\n", dA );
-		 */
-		if( i==0 ) return 0;
-		/* composite known types must match exactly. example,
-		 * where it will not work if composite types are allowed to match loosely.
-		 * d : list<list<int> > = {};
-		 * e : list<float> = { 1.0 };
-		 * d.append( e );
-		 * 
-		 * but if d is of type list<list<any> >, 
-		 * the matching do not necessary to be exact.
-		 */
-	}
-
-	if( from.t >= DAO_INTEGER && from.t < DAO_ARRAY ){
-		switch( from.t ){
-		case DAO_INTEGER :
-			to->t = tp->tid;
-			switch( tp->tid ){
-			case DAO_INTEGER : to->v.i = from.v.i; break;
-			case DAO_FLOAT   : to->v.f = from.v.i; break;
-			case DAO_DOUBLE  : to->v.d = from.v.i; break;
-			default : break;
-			}
-			break;
-		case DAO_FLOAT   :
-			to->t = tp->tid;
-			switch( tp->tid ){
-			case DAO_INTEGER : to->v.i = from.v.f; break;
-			case DAO_FLOAT   : to->v.f = from.v.f; break;
-			case DAO_DOUBLE  : to->v.d = from.v.f; break;
-			default : break;
-			}
-			break;
-		case DAO_DOUBLE  :
-			to->t = tp->tid;
-			switch( tp->tid ){
-			case DAO_INTEGER : to->v.i = from.v.d; break;
-			case DAO_FLOAT   : to->v.f = from.v.d; break;
-			case DAO_DOUBLE  : to->v.d = from.v.d; break;
-			default : break;
-			}
-			break;
-		case DAO_COMPLEX :
-			to->t = from.t;
-			to->v.c = from.v.c;
-			to->ndef = 1;
-			break;
-		case DAO_STRING  :
-			to->v.s = from.v.s;
-			to->t = from.t;
-			to->ndef = 1;
-			break;
-		case DAO_LONG  :
-			to->t = DAO_LONG;
-			to->v.l = from.v.l;
-			to->ndef = 1;
-			break;
-		default : break;
-		}
-		return 1;
-	}
-
-	to->t = dA->type;
-	to->v.p = dA;
-	GC_IncRC( dA );
-	if( tp && ! ( tp->attrib & DAO_TYPE_EMPTY ) && tp->tid == dA->type ){
 #if 0
 		//int defed = DString_FindChar( tp->name, '@', 0 ) == MAXSIZE;
 		//defed &= DString_FindChar( tp->name, '?', 0 ) == MAXSIZE;

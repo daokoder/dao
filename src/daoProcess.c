@@ -1284,11 +1284,18 @@ CallEntry:
 				vmc = vA2.v.f ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_DOUBLE  :
 				vmc = vA2.v.d ? vmc+1 : vmcBase + vmc->b; break;
-			case DAO_STRING  :
-				vmc = DString_Size( vA2.v.s ) ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_COMPLEX :
 				vmc = (vA2.v.c->real || vA2.v.c->imag) ? vmc+1 : vmcBase + vmc->b;
 				break;
+			case DAO_LONG :
+				j = vA2.v.l->size >1 || (vA2.v.l->size ==1 && vA2.v.l->data[0]);
+				vmc = j ? vmc+1 : vmcBase + vmc->b;
+				break;
+			case DAO_ENUM  :
+				vmc = vA2.v.e->value ? vmc+1 : vmcBase + vmc->b;
+				break;
+			case DAO_STRING  :
+				vmc = DString_Size( vA2.v.s ) ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_TUPLE :
 				if( vA2.v.tuple->unitype == dao_type_for_iterator && vA2.v.tuple->items->data[0].v.i ){
 					vmc = vmc + 1;

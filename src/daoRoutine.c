@@ -1697,9 +1697,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoType **tp, **type;
 	DaoType *type_source = NULL, *type_target = NULL;
 	DaoType *container = NULL, *indexkey = NULL, *itemvalue = NULL;
-	DaoType *at, *bt, *ct, *tt, *ts[DAO_STRING+1];
-	DaoType *simtps[DAO_ARRAY], *listps[DAO_ARRAY], *arrtps[DAO_ARRAY];
-	DaoType *inumt, *fnumt, *dnumt, *comt, *strt;
+	DaoType *at, *bt, *ct, *tt, *ts[DAO_ARRAY];
+	DaoType *simtps[DAO_ARRAY], *arrtps[DAO_ARRAY];
+	DaoType *inumt, *fnumt, *dnumt, *comt, *longt, *enumt, *strt;
 	DaoType *ilst, *flst, *dlst, *slst, *iart, *fart, *dart, *cart, *any, *udf;
 	DaoType **varTypes[ DAO_U+1 ];
 	DaoVmCodeX **vmcs = self->annotCodes->items.pVmc;
@@ -1750,6 +1750,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	fnumt = DaoNameSpace_MakeType( ns, "float", DAO_FLOAT, NULL, NULL, 0 );
 	dnumt = DaoNameSpace_MakeType( ns, "double", DAO_DOUBLE, NULL, NULL, 0 );
 	comt = DaoNameSpace_MakeType( ns, "complex", DAO_COMPLEX, NULL, NULL, 0 );
+	longt = DaoNameSpace_MakeType( ns, "long", DAO_LONG, NULL, NULL, 0 );
+	enumt = DaoNameSpace_MakeType( ns, "enum", DAO_ENUM, NULL, NULL, 0 );
 	strt = DaoNameSpace_MakeType( ns, "string", DAO_STRING, NULL, NULL, 0 );
 	ilst = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, &inumt, 1 );
 	flst = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, &fnumt, 1 );
@@ -1760,25 +1762,25 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	dart = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, &dnumt, 1 );
 	cart = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, &comt, 1 );
 
-	ts[0] = simtps[0] = listps[0] = arrtps[0] = any;
+	ts[0] = simtps[0] = arrtps[0] = any;
 	simtps[DAO_INTEGER] = inumt;
 	simtps[DAO_FLOAT] = fnumt;
 	simtps[DAO_DOUBLE] = dnumt;
 	simtps[DAO_COMPLEX] = comt;
+	simtps[DAO_LONG] = longt;
+	simtps[DAO_ENUM] = enumt;
 	simtps[DAO_STRING] = strt;
-	listps[DAO_INTEGER] = ilst;
-	listps[DAO_FLOAT] = flst;
-	listps[DAO_DOUBLE] = dlst;
-	listps[DAO_STRING] = slst;
 	arrtps[DAO_INTEGER] = iart;
 	arrtps[DAO_FLOAT] = fart;
 	arrtps[DAO_DOUBLE] = dart;
 	arrtps[DAO_COMPLEX] = cart;
-	ts[1] = inumt;
-	ts[2] = fnumt;
-	ts[3] = dnumt;
-	ts[4] = comt;
-	ts[5] = DaoNameSpace_MakeType( ns, "string", DAO_STRING, NULL, NULL, 0 );
+	ts[DAO_INTEGER] = inumt;
+	ts[DAO_FLOAT] = fnumt;
+	ts[DAO_DOUBLE] = dnumt;
+	ts[DAO_COMPLEX] = comt;
+	ts[DAO_LONG] = longt;
+	ts[DAO_ENUM] = enumt;
+	ts[DAO_STRING] = strt;
 
 	GC_DecRCs( self->regType );
 	regConst = DVarray_New();

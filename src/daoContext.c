@@ -147,7 +147,7 @@ static void DaoContext_InitValues( DaoContext *self )
 		t = 0;
 		self->regValues[i] = values + i;
 		if( self->regTypes[i] ) t = self->regTypes[i]->tid;
-		if( t > DAO_DOUBLE && t <= DAO_STRING ) DValue_Clear( & values[i] );
+		if( t > DAO_DOUBLE && t < DAO_ARRAY ) DValue_Clear( & values[i] );
 		if( t <= DAO_DOUBLE ) values[i].t = t;
 	}
 }
@@ -747,6 +747,17 @@ DLong* DaoContext_GetLong( DaoContext *self, DaoVmCode *vmc )
 	if( tp == dao_array_bit ) dC->v.l->bits = 1;
 	return dC->v.l;
 }
+DEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc )
+{
+	DaoType *tp = self->regTypes[ vmc->c ];
+	DValue *dC = self->regValues[ vmc->c ];
+	if( dC->t == DAO_ENUM ) return dC->v.e;
+	if( tp && tp->tid !=DAO_ENUM && tp->tid !=DAO_UDF && tp->tid !=DAO_ANY ) return NULL;
+	DValue_Clear( dC );
+	dC->t = DAO_ENUM;
+	dC->v.e = DEnum_New("",0);
+	return dC->v.e;
+}
 /**/
 DaoList* DaoContext_GetList( DaoContext *self, DaoVmCode *vmc )
 {
@@ -1013,7 +1024,7 @@ void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc )
 		DaoContext_RaiseException( self, DAO_ERROR_VALUE, "need number" );
 		return;
 	}
-	if( ta < DAO_INTEGER || ta > DAO_LONG ){
+	if( ta < DAO_INTEGER || ta >= DAO_ARRAY ){
 		DaoContext_RaiseException( self, DAO_ERROR_VALUE, 
 				"need data of a primitive type as first value" );
 		return;
@@ -2811,7 +2822,7 @@ static int DaoBase_CheckTypeShape( DValue self, int type,
 		depth ++;
 		if( list->unitype && list->unitype->nested->size ){
 			j = list->unitype->nested->items.pAbtp[0]->tid;
-			if( j < DAO_STRING ){
+			if( j <= DAO_COMPLEX ){
 				if( type <= j ) type = j;
 			}else if( j == DAO_STRING ){
 				type = type == DAO_UDF || type == j ? j : -1;
@@ -3544,7 +3555,8 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	DValue va = *self->regValues[ vmc->a ];
 	DValue *vc = self->regValues[ vmc->c ];
 	DString *sb = NULL;
-	DLong   *lb = NULL;
+	DLong *lb = NULL;
+	DNode *node;
 	complex16 cb;
 
 	self->vmc = vmc;
@@ -3558,11 +3570,46 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		return;
 	}
 	if( ct->tid != DAO_COMPLEX  && vc->t == DAO_COMPLEX ) dao_free( vc->v.c );
+	if( ct->tid != DAO_LONG  && vc->t == DAO_LONG ) DLong_Delete( vc->v.l );
+	if( ct->tid != DAO_ENUM  && vc->t == DAO_ENUM ) DEnum_Delete( vc->v.e );
 	if( ct->tid != DAO_STRING  && vc->t == DAO_STRING ) DString_Delete( vc->v.s );
 	if( ct->tid == DAO_COMPLEX && vc->t != DAO_COMPLEX )
 		vc->v.c = dao_malloc( sizeof(complex16) );
-	if( ct->tid == DAO_STRING && vc->t != DAO_STRING )
-		vc->v.s = DString_New(1);
+	if( ct->tid == DAO_LONG && vc->t != DAO_LONG ) vc->v.l = DLong_New();
+	if( ct->tid == DAO_ENUM && vc->t != DAO_ENUM ) vc->v.e = DEnum_New("",0);
+	if( ct->tid == DAO_STRING && vc->t != DAO_STRING ) vc->v.s = DString_New(1);
+
+	if( ct->tid == DAO_ENUM && va.t == DAO_ENUM ){
+		DString_Assign( vc->v.e->name, va.v.e->name );
+		vc->v.e->value = va.v.e->value;
+		vc->t = DAO_ENUM;
+		if( ct->mapNames ){
+			node = DMap_Find( ct->mapNames, va.v.e->name );
+			if( node == NULL ) goto FailConversion;
+			vc->v.e->value = node->value.pInt;
+		}
+		return;
+	}else if( ct->tid == DAO_ENUM && va.t == DAO_INTEGER ){
+		vc->t = DAO_ENUM;
+		if( ct->mapNames == NULL ) goto FailConversion;
+		for(node=DMap_First(ct->mapNames);node;node=DMap_Next(ct->mapNames,node)){
+			if( node->value.pInt == va.v.i ) break;
+		}
+		if( node == NULL ) goto FailConversion;
+		DString_Assign( vc->v.e->name, node->key.pString );
+		vc->v.e->value = node->value.pInt;
+		return;
+	}else if( ct->tid == DAO_ENUM && va.t == DAO_STRING ){
+		vc->t = DAO_ENUM;
+		if( ct->mapNames == NULL ) goto FailConversion;
+		node = DMap_Find( ct->mapNames, va.v.s );
+		if( node == NULL ) goto FailConversion;
+		DString_Assign( vc->v.e->name, va.v.s );
+		vc->v.e->value = node->value.pInt;
+		return;
+	}else if( ct->tid == DAO_ENUM ){
+		goto FailConversion;
+	}
 
 	if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_STRING ){
 		if( va.t >= DAO_INTEGER && va.t <= DAO_STRING ){

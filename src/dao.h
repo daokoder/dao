@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20101016
+#define DAO_H_VERSION 20101023
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -143,8 +143,9 @@ enum DaoTypes
 	DAO_FLOAT   ,
 	DAO_DOUBLE  ,
 	DAO_COMPLEX ,
-	DAO_STRING  ,
 	DAO_LONG  ,
+	DAO_ENUM  ,
+	DAO_STRING ,
 	DAO_ARRAY ,
 	DAO_LIST  ,
 	DAO_MAP   ,
@@ -229,14 +230,11 @@ enum DaoExceptionType
 
 typedef unsigned char uchar_t;
 
-/* Complex type: */
-typedef struct complex8  { float  real, imag; } complex8;
-typedef struct complex16 { double real, imag; } complex16;
-
 typedef struct DValue      DValue;
 typedef struct DString     DString;
 typedef struct DArray      DArray;
 typedef struct DLong       DLong;
+typedef struct DEnum       DEnum;
 typedef struct DNode       DNode;
 typedef struct DMap        DMap;
 
@@ -268,6 +266,17 @@ typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
 typedef struct DaoThread       DaoThread;
 
+/* Complex type: */
+typedef struct complex8  { float  real, imag; } complex8;
+typedef struct complex16 { double real, imag; } complex16;
+
+struct DEnum
+{
+	DString *name;
+	dint     value;
+};
+
+
 struct DValue
 {
 	uchar_t  t; /* type */
@@ -279,8 +288,9 @@ struct DValue
 		float          f; /* float */
 		double         d; /* double */
 		complex16     *c; /* complex */
+		DLong         *l; /* long */
+		DEnum         *e; /* enum */
 		DString       *s; /* string */
-		DLong         *l; /* big integer */
 		DaoBase       *p; /* NOT one of the above data types */
 		DaoArray      *array;
 		DaoList       *list;

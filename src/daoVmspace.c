@@ -123,6 +123,7 @@ extern DaoTypeBase  baseTyper;
 extern DaoTypeBase  numberTyper;
 extern DaoTypeBase  stringTyper;
 extern DaoTypeBase  longTyper;
+extern DaoTypeBase  enumTyper;
 extern DaoTypeBase  listTyper;
 extern DaoTypeBase  mapTyper;
 extern DaoTypeBase  pairTyper;
@@ -157,13 +158,14 @@ static DaoTypeBase vmsTyper;
 DaoTypeBase* DaoVmSpace_GetTyper( short type )
 {
 	switch( type ){
-	case DAO_INTEGER   :  return & numberTyper;
-	case DAO_FLOAT     :  return & numberTyper;
-	case DAO_DOUBLE    :  return & numberTyper;
-	case DAO_STRING    :  return & stringTyper;
-	case DAO_COMPLEX   :  return & comTyper;
-	case DAO_LONG      :  return & longTyper;
-	case DAO_LIST      :  return & listTyper;
+	case DAO_INTEGER  :  return & numberTyper;
+	case DAO_FLOAT    :  return & numberTyper;
+	case DAO_DOUBLE   :  return & numberTyper;
+	case DAO_COMPLEX  :  return & comTyper;
+	case DAO_LONG     :  return & longTyper;
+	case DAO_ENUM     :  return & enumTyper;
+	case DAO_STRING   :  return & stringTyper;
+	case DAO_LIST     :  return & listTyper;
 	case DAO_MAP      :  return & mapTyper;
 	case DAO_PAIR     :  return & pairTyper;
 	case DAO_PAR_NAMED :  return & pairTyper;

@@ -221,6 +221,7 @@ DaoParser* DaoParser_New()
 	self->mbs2 = DString_New(1);
 	self->str = DString_New(1);
 	self->bigint = DLong_New();
+	self->denum = DEnum_New("",0);
 
 	self->toks = DArray_New(0);
 	self->lvm = DMap_New(D_STRING,0);
@@ -242,6 +243,7 @@ void DaoParser_Delete( DaoParser *self )
 	DString_Delete( self->mbs );
 	DString_Delete( self->mbs2 );
 	DString_Delete( self->str );
+	DEnum_Delete( self->denum );
 	DArray_Delete( self->tokens );
 	DArray_Delete( self->partoks );
 	DArray_Delete( self->toks );
@@ -1483,7 +1485,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 	DaoType **nest = NULL;
 	DaoBase *ext = NULL;
 	DaoNameSpace *ns0 = ns;
-	int i, j=0, newtype = 0, t = 0;
+	int c, i, j=0, newtype = 0, t = 0;
 	int line = tokens[start]->line;
 	int ec = 0;
 	dint open;
@@ -1664,7 +1666,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 			DString_Append( nameStack->items.pString[0], name );
 			newtype = 1;
 			break;
-		case DKEY_ARRAY : case DKEY_LIST : case DKEY_MAP :
+		case DKEY_ENUM : case DKEY_ARRAY : case DKEY_LIST : case DKEY_MAP :
 		case DKEY_TUPLE : case DKEY_ROUTINE : case DKEY_CLASS :
 			switch( t ){
 			case 0: case DTOK_LT: case DTOK_COMMA: case DTOK_FIELD:
@@ -1672,6 +1674,55 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 			default: goto WrongForm;
 			}
 			if( i >= end || tokens[i+1]->name != DTOK_LT ) goto WrongForm;
+			if( tok->name == DKEY_ENUM ){
+				DString *field = NULL;
+				dint value = 0;
+				int k, sign = 1;
+				abtype = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
+				abtype->mapNames = DMap_New(D_STRING,0);
+				for(k=i+2; k<=end; k++){
+					tok = tokens[k];
+					field = tok->string;
+					c = tok->string->mbs[0];
+					sign = 1;
+					if( tok->type != DTOK_IDENTIFIER ) break;
+					if( c == '$' || c == '@' ) break;
+					if( k+1 <= end && tokens[k+1]->type == DTOK_ASSN ){
+						k += 1;
+						if( k+1 <= end ){
+							c = tokens[k+1]->type;
+							if( c == DTOK_ADD || c == DTOK_SUB ){
+								k += 1;
+								if( c == DTOK_SUB ) sign = -1;
+							}
+						}
+						if( k+1 > end ) break;
+						c = tokens[k+1]->type;
+						if( c >= DTOK_DIGITS_HEX && c <= DTOK_NUMBER_HEX ){
+							k += 1;
+							value = strtoll( tokens[k]->string->mbs, 0, 0 );
+						}else break;
+					}
+					if( DMap_Find( abtype->mapNames, field ) ) goto WrongForm;
+					if( sign < 0 ) value = - value;
+					DMap_Insert( abtype->mapNames, field, (void*)value );
+					value += 1;
+					if( k+1 > end ) break;
+					k += 1;
+					tok = tokens[k];
+					if( tok->type != DTOK_COMMA ) break;
+				}
+				for(i=i+2; i<=k; i++) DString_Append( abtype->name, tokens[i]->string );
+				/*
+				printf( "%i  %i  %s\n", end, i, abtype->name->mbs );
+				*/
+				if( tok->type != DTOK_GT ) goto WrongForm;
+				i = k;
+				DArray_Append( typeStack, abtype );
+				DArray_Append( typeArray, abtype );
+				DString_Append( nameStack->items.pString[0], abtype->name );
+				break;
+			}
 			DString_Assign( name, tok->string );
 			DString_AppendMBS( name, "<" );
 			state.X.a = tok->name;
@@ -1953,7 +2004,7 @@ int DaoParser_ParseParams( DaoParser *self )
 			if( i+1 != rb ) goto ErrorMiddleValist;
 		}else if( tki == DTOK_IDENTIFIER && tok->mbs[0] == '@' ){
 			abstype = DaoNameSpace_MakeType( myNS, tok->mbs, DAO_INITYPE, 0,0,0 );
-			abstype = DaoNameSpace_GetType( myNS, abstype );
+			abstype = DaoNameSpace_GetType( myNS, (DaoBase*) abstype );
 		}else if( i+1<rb && (tokens[i+1]->name == DTOK_COLON
 					|| tokens[i+1]->name == DTOK_ASSN
 					|| tokens[i+1]->name == DTOK_CASSN)){
@@ -3300,20 +3351,37 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			/* printf( "%s\n", abtp->name->mbs ); */
 			start ++;
 			continue;
-		}else if( tki == DKEY_ENUM ){
+		}else if( tki == DKEY_ENUM && (tki2 == DTOK_LCB || tki2 == DTOK_IDENTIFIER) ){
+			DaoType *abtp2;
+			DString *alias = NULL;
 			DValue dv, iv = daoZeroInt;
 			int global = storeType & (DAO_DATA_GLOBAL|DAO_DATA_STATIC);
 			int stat = storeType & DAO_DATA_STATIC;
 			int value = 0;
-			int id, comma;
+			int id, comma, explicit=0;
+			char buf[32];
 			rbrack = -1;
+			abtp = NULL;
 			if( self->levelBase + self->lexLevel ==0 ) global = 1;
+			if( tokens[start+1]->type == DTOK_IDENTIFIER ){
+				DaoToken *tk = tokens[start+1];
+				alias = tk->string;
+				if( alias->mbs[0] != '$' && alias->mbs[0] != '@' ) start += 1;
+				if( (id = DaoParser_GetRegister( self, tk )) >=0 ){
+					DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, alias );
+					goto ErrorEnumDefinition;
+				}
+				if( DaoNameSpace_FindType( self->nameSpace, alias) ){
+					DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, alias );
+					goto ErrorEnumDefinition;
+				}
+			}
 			if( tokens[start+1]->type == DTOK_LCB )
 				rbrack = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start+1, -1 );
-			if( rbrack <0 ){
-				DaoParser_Error( self, DAO_INVALID_ENUM_DEFINITION, NULL );
-				return 0;
-			}
+			if( rbrack <0 ) goto ErrorEnumDefinition;
+
+			abtp = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
+			abtp->mapNames = DMap_New(D_STRING,0);
 			comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+2, -1, 0 );
 			if( comma <0 ) comma = rbrack;
 			start = start + 2;
@@ -3321,8 +3389,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 				if( start >= comma ) break;
 				if( tokens[start]->type != DTOK_IDENTIFIER ){
 					DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
-					DaoParser_Error( self, DAO_INVALID_ENUM_DEFINITION, NULL );
-					return 0;
+					goto ErrorEnumDefinition;
 				}
 				str = tokens[start]->string;
 				if( (id = DaoParser_GetRegister( self, tokens[start] )) >=0 ){
@@ -3331,22 +3398,23 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 					if( global ==0 && id >= DVR_GLB_CST ) defined = 0;
 					if( defined ){
 						DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, tokens[start]->string );
-						DaoParser_Error( self, DAO_INVALID_ENUM_DEFINITION, NULL );
-						return 0;
+						goto ErrorEnumDefinition;
 					}
 				}
+				explicit = 0;
 				if( tokens[start+1]->type == DTOK_ASSN ){
+					explicit = 1;
 					reg = DaoParser_MakeArithTree( self, start+2, comma-1, & cst, -1, 0 );
 					if( reg < 0 ) return 0;
 					dv = daoNullValue;
 					if( cst ) dv = DaoParser_GetVariable( self, cst );
 					if( dv.t < DAO_INTEGER || dv.t > DAO_DOUBLE ){
 						DaoParser_Error( self, DAO_EXPR_NEED_CONST_NUMBER, tokens[start+2]->string );
-						DaoParser_Error( self, DAO_INVALID_ENUM_DEFINITION, NULL );
-						return 0;
+						goto ErrorEnumDefinition;
 					}
 					value = DValue_GetInteger( dv );
 				}
+#if 0
 				iv.v.i = value ++;
 				if( self->isClassBody ){
 					DaoClass_AddConst( self->hostClass, str, iv, permiType, tokens[start]->line );
@@ -3358,13 +3426,44 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 					MAP_Insert( DArray_Top( self->localCstMap ), str, id );
 					DaoRoutine_AddConstValue( routine, iv );
 				}
+#else
+				if( DMap_Find( abtp->mapNames, str ) ){
+					DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
+					goto ErrorEnumDefinition;
+				}
+				if( abtp->mapNames->size ) DString_AppendChar( abtp->name, ',' );
+				DString_Append( abtp->name, str );
+				if( explicit ){
+					sprintf( buf, "=%i", value );
+					DString_AppendMBS( abtp->name, buf );
+				}
+				DMap_Insert( abtp->mapNames, str, (void*) value );
+				value += 1;
+#endif
 				if( comma == rbrack ) break;
 				start = comma + 1;
 				comma = DaoParser_FindOpenToken( self, DTOK_COMMA, comma+1, -1, 0 );
 				if( comma <0 ) comma = rbrack;
 			}
+			DString_AppendChar( abtp->name, '>' );
+			abtp2 = DaoNameSpace_FindType( self->nameSpace, abtp->name );
+			if( abtp2 ){
+				DaoType_Delete( abtp );
+			}else{
+				DaoNameSpace_AddType( self->nameSpace, abtp->name, abtp );
+				abtp2 = abtp;
+			}
+			if( alias ){
+				abtp2 = DaoType_Copy( abtp2 );
+				DString_Assign( abtp2->name, alias );
+				DaoNameSpace_AddType( self->nameSpace, abtp2->name, abtp2 );
+			}
 			start = rbrack + 1;
 			continue;
+ErrorEnumDefinition:
+			DaoParser_Error( self, DAO_INVALID_ENUM_DEFINITION, NULL );
+			if( abtp ) DaoType_Delete( abtp );
+			return 0;
 		}
 
 		tki = tokens[start]->name;
@@ -6352,6 +6451,14 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 		}
 		varReg = MAP_Find( self->allConsts, str )->value.pInt + DVR_LOC_CST;
 		*cst = varReg;
+	}else if( tki == DTOK_IDENTIFIER && str->mbs[0] == '$' ){
+		value = daoNullValue;
+		value.t = DAO_ENUM;
+		value.v.e = self->denum;
+		self->denum->value = 0;
+		DString_Assign( self->denum->name, str );
+		DString_Erase( self->denum->name, 0, 1 );
+		*cst = varReg = DaoNameSpace_AddConst( self->nameSpace, str, value ) + DVR_GLB_CST;
 	}else if( tki == DTOK_DOLLAR ){
 		varReg = DaoParser_ImaginaryOne( self, start );
 		*cst = varReg;

@@ -311,7 +311,31 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 
 extern DaoTypeBase numberTyper;
 extern DaoTypeBase comTyper;
+extern DaoTypeBase longTyper;
 extern DaoTypeBase stringTyper;
+
+DEnum* DEnum_New( const char *name, int value )
+{
+	DEnum *self = (DEnum*) dao_malloc( sizeof(DEnum) );
+	self->name = DString_New(1);
+	self->value = value;
+	if( name ) DString_SetMBS( self->name, name );
+	return self;
+}
+DEnum* DEnum_Copy( DEnum *self )
+{
+	return DEnum_New( self->name->mbs, self->value );
+}
+void DEnum_Delete( DEnum *self )
+{
+	DString_Delete( self->name );
+	dao_free( self );
+}
+
+DaoTypeBase enumTyper=
+{
+	"enum", & baseCore, NULL, NULL, {0}, NULL, NULL
+};
 
 DaoTypeBase* DaoBase_GetTyper( DaoBase *p )
 {
@@ -328,6 +352,8 @@ DaoTypeBase* DValue_GetTyper( DValue self )
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  : return & numberTyper;
 	case DAO_COMPLEX : return & comTyper;
+	case DAO_LONG  : return & longTyper;
+	case DAO_ENUM  : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CDATA   : return self.v.cdata->typer;
 	case DAO_FUNCTION : return & funcTyper;
@@ -1678,11 +1704,13 @@ void DaoCopyValues( DValue *copy, DValue *data, int N, DaoContext *ctx, DMap *cy
 			copy[i].v.c = dao_malloc( sizeof(complex16) );
 			copy[i].v.c->real = data[i].v.c->real;
 			copy[i].v.c->imag = data[i].v.c->imag;
-		}else if( t == DAO_STRING ){
-			copy[i].v.s = DString_Copy( data[i].v.s );
 		}else if( t == DAO_LONG ){
 			copy[i].v.l = DLong_New();
 			DLong_Move( copy[i].v.l, data[i].v.l );
+		}else if( t == DAO_ENUM ){
+			copy[i].v.e = DEnum_Copy( data[i].v.e );
+		}else if( t == DAO_STRING ){
+			copy[i].v.s = DString_Copy( data[i].v.s );
 		}else if( t >= DAO_ARRAY) {
 			if( cycData ){
 				/* deep copy */
@@ -1796,6 +1824,7 @@ static int DaoList_CheckType( DaoList *self, DaoContext *ctx )
 	}
 	return type;
 }
+#if 0
 static void DaoList_PutDefault( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoList *self = p[0]->v.list;
@@ -1805,14 +1834,15 @@ static void DaoList_PutDefault( DaoContext *ctx, DValue *p[], int N )
 		case DAO_INTEGER : DaoContext_PutInteger( ctx, 0 ); break;
 		case DAO_FLOAT   : DaoContext_PutFloat( ctx, 0.0 ); break;
 		case DAO_DOUBLE  : DaoContext_PutDouble( ctx, 0.0 ); break;
-		case DAO_STRING  : DaoContext_PutMBString( ctx, "" ); break;
 		case DAO_COMPLEX : DaoContext_PutComplex( ctx, com ); break;
+		case DAO_STRING  : DaoContext_PutMBString( ctx, "" ); break;
 		default : DaoContext_SetResult( ctx, NULL ); break;
 		}
 	}else{
 		DaoContext_SetResult( ctx, NULL );
 	}
 }
+#endif
 static void DaoLIST_Max( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );
@@ -1863,6 +1893,8 @@ static void DaoLIST_Min( DaoContext *ctx, DValue *p[], int N )
 	tuple->items->data[1].v.i = imin;
 	DaoTuple_SetItem( tuple, res, 0 );
 }
+extern DLong* DaoContext_GetLong( DaoContext *self, DaoVmCode *vmc );
+extern DEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc );
 static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoList *self = p[0]->v.list;
@@ -1870,7 +1902,7 @@ static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
 	DValue *data = self->items->data;
 	type = DaoList_CheckType( self, ctx );
 	if( type == 0 ){
-		DaoList_PutDefault( ctx, p, N );
+		/* DaoList_PutDefault( ctx, p, N ); */
 		return;
 	}
 	switch( type ){
@@ -1900,6 +1932,18 @@ static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
 			complex16 res = { 0.0, 0.0 };
 			for(i=0; i<self->items->size; i++) COM_IP_ADD( res, data[i].v.c[0] );
 			DaoContext_PutComplex( ctx, res );
+			break;
+		}
+	case DAO_LONG :
+		{
+			DLong *dlong = DaoContext_GetLong( ctx, ctx->vmc );
+			for(i=0; i<self->items->size; i++) DLong_Add( dlong, dlong, data[i].v.l );
+			break;
+		}
+	case DAO_ENUM :
+		{
+			DEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
+			for(i=0; i<self->items->size; i++) denum->value += data[i].v.e->value;
 			break;
 		}
 	case DAO_STRING :
@@ -2263,8 +2307,14 @@ void DaoList_ClearItem( DaoList *self, int i )
 	case DAO_COMPLEX :
 		dao_free( self->items->data[i].v.c );
 		break;
+	case DAO_LONG :
+		DLong_Delete( self->items->data[i].v.l );
+		break;
+	case DAO_ENUM :
+		DEnum_Delete( self->items->data[i].v.e );
+		break;
 	case DAO_STRING  :
-		DString_Clear( self->items->data[i].v.s );
+		DString_Delete( self->items->data[i].v.s );
 		break;
 	default : GC_DecRC( self->items->data[i].v.p );
 	}

@@ -162,6 +162,14 @@ static int DValue_Hash( DValue self, unsigned int buf[], int id, int max )
 		data = & self.v.d;  len = sizeof(double);  break;
 	case DAO_COMPLEX : 
 		data = self.v.c;  len = sizeof(complex16);  break;
+	case DAO_LONG : 
+		data = self.v.l->data;
+		len = self.v.l->size*sizeof(short);
+		break;
+	case DAO_ENUM  : 
+		data = self.v.e->name->mbs;
+		len = self.v.e->name->size;
+		break;
 	case DAO_STRING  : 
 		if( self.v.s->mbs ){
 			data = self.v.s->mbs;
@@ -170,10 +178,6 @@ static int DValue_Hash( DValue self, unsigned int buf[], int id, int max )
 			data = self.v.s->wcs;
 			len = self.v.s->size * sizeof(wchar_t);
 		}
-		break;
-	case DAO_LONG : 
-		data = self.v.l->data;
-		len = self.v.l->size*sizeof(short);
 		break;
 	case DAO_ARRAY :
 		data = self.v.array->data.p;

@@ -282,20 +282,27 @@ static void DaoIO_Isopen( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Seek( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *self = p[0]->v.stream;
-	fseek( self->file->fd, p[1]->v.i, p[2]->v.i );
+	int where = SEEK_CUR;
+	if( self->file == NULL ) return;
+	switch( p[2]->v.e->value ){
+	case 0 : where = SEEK_SET; break;
+	case 1 : where = SEEK_CUR; break;
+	case 2 : where = SEEK_END; break;
+	}
+	fseek( self->file->fd, p[1]->v.i, where );
 }
 static void DaoIO_Tell( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *self = p[0]->v.stream;
 	dint *num = DaoContext_PutInteger( ctx, 0 );
-	if( ! self->file ) return;
+	if( self->file == NULL ) return;
 	*num = ftell( self->file->fd );
 }
 static void DaoIO_FileNO( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *self = p[0]->v.stream;
 	dint *num = DaoContext_PutInteger( ctx, 0 );
-	if( ! self->file ) return;
+	if( self->file == NULL ) return;
 	*num = fileno( self->file->fd );
 }
 static void DaoIO_Name( DaoContext *ctx, DValue *p[], int N )
@@ -389,7 +396,7 @@ static DaoFuncItem streamMeths[] =
 	{  DaoIO_Close,     "close( self :stream )" },
 	{  DaoIO_Eof,       "eof( self :stream )=>int" },
 	{  DaoIO_Isopen,    "isopen( self :stream )=>int" },
-	{  DaoIO_Seek,      "seek( self :stream, pos :int, from : int )=>int" },
+	{  DaoIO_Seek,      "seek( self :stream, pos :int, from :enum<begin,current,end> )=>int" },
 	{  DaoIO_Tell,      "tell( self :stream )=>int" },
 	{  DaoIO_FileNO,    "fileno( self :stream )=>int" },
 	{  DaoIO_Name,      "name( self :stream )=>string" },
@@ -412,13 +419,6 @@ static DValue DaoStream_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 	val.v.stream = stream;
 	return val;
 }
-static DaoNumItem streamConsts[] =
-{
-	{ "SEEK_CUR", DAO_INTEGER, SEEK_CUR } ,
-	{ "SEEK_SET", DAO_INTEGER, SEEK_SET } ,
-	{ "SEEK_END", DAO_INTEGER, SEEK_END } ,
-	{ NULL, 0, 0 }
-};
 static DaoTypeCore streamCore =
 {
 	0, NULL, NULL, NULL, NULL,
@@ -452,7 +452,7 @@ FILE* DaoStream_GetFile( DaoStream *self )
 
 DaoTypeBase streamTyper =
 {
-	"stream", & streamCore, streamConsts, (DaoFuncItem*) streamMeths, {0},
+	"stream", & streamCore, NULL, (DaoFuncItem*) streamMeths, {0},
 	(FuncPtrDel) DaoStream_Delete, NULL
 };
 

@@ -122,6 +122,7 @@ struct DaoParser
 
 	/* members for convenience */
 	DLong     *bigint;
+	DEnum     *denum;
 	DString   *mbs;
 	DString   *mbs2;
 	DString   *str;

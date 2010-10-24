@@ -1103,8 +1103,9 @@ void* DValue_GetTypeID( DValue self )
 	case DAO_FLOAT :
 	case DAO_DOUBLE :
 	case DAO_COMPLEX :
-	case DAO_STRING :
-	case DAO_LONG :  id = simpleTypes[ self.t ]; break;
+	case DAO_LONG :  
+	case DAO_ENUM :  
+	case DAO_STRING : id = simpleTypes[ self.t ]; break;
 	case DAO_ARRAY : id = self.v.array->unitype; break;
 	case DAO_LIST :  id = self.v.list->unitype; break;
 	case DAO_MAP :   id = self.v.map->unitype; break;
@@ -1128,7 +1129,8 @@ DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val )
 	switch( val.t ){
 	case DAO_NIL :
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
-	case DAO_COMPLEX : case DAO_STRING : case DAO_LONG :
+	case DAO_COMPLEX : case DAO_LONG :
+	case DAO_ENUM : case DAO_STRING : 
 		abtp = simpleTypes[ val.t ];
 		if( abtp ) break;
 		abtp = DaoNameSpace_MakeType( self, coreTypeNames[val.t], val.t, NULL, NULL, 0 );
@@ -1166,7 +1168,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 
 	switch( p->type ){
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
-	case DAO_COMPLEX : case DAO_STRING : case DAO_LONG :
+	case DAO_COMPLEX : case DAO_LONG :
+	case DAO_ENUM : case DAO_STRING : 
 		abtp = simpleTypes[ p->type ]; break;
 	case DAO_LIST :
 		abtp = list->unitype; break;

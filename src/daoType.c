@@ -160,9 +160,11 @@ void DaoType_Init()
 	dao_typing_version = 0;
 	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
 	for(i=DAO_INTEGER; i<=DAO_DOUBLE; i++){
+		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
 		for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)
 			dao_type_matrix[i][j] = DAO_MT_SUB;
 	}
+	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++){
 		dao_type_matrix[i][i] = DAO_MT_EQ;
 		dao_type_matrix[DAO_UDF][i] = DAO_MT_UDF;

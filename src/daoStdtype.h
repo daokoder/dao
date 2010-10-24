@@ -75,6 +75,10 @@ DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData );
 void DaoBase_SafeGetField( DValue *self, DaoContext *ctx, DString *name );
 void DaoBase_SafeSetField( DValue *self, DaoContext *ctx, DString *name, DValue value );
 
+DEnum* DEnum_New( const char *name, int value );
+DEnum* DEnum_Copy( DEnum *self );
+void DEnum_Delete( DEnum *self );
+
 struct DaoList
 {
 	DAO_DATA_COMMON;
