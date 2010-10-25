@@ -2035,6 +2035,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}
 				}else if( at->tid == DAO_LONG ){
 					ct = inumt; /* XXX slicing */
+				}else if( at->tid == DAO_TYPE ){
+					at = at->nested->items.pAbtp[0];
+					if( at->tid == DAO_ENUM && at->mapNames ){
+						ct = at; /* TODO const index */
+					}else{
+						goto NotExist;
+					}
 				}else if( at->tid == DAO_LIST ){
 					/*
 					 */
@@ -2266,6 +2273,14 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( at->tid == DAO_ANY || at->tid == DAO_UDF ){
 					/* allow less strict typing: */
 					ct = any;
+				}else if( at->tid == DAO_TYPE ){
+					at = at->nested->items.pAbtp[0];
+					if( at->tid == DAO_ENUM && at->mapNames ){
+						if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist;
+						ct = at;
+					}else{
+						goto NotExist;
+					}
 				}else if( at->tid == DAO_INTERFACE ){
 					node = DMap_Find( at->X.inter->methods, str );
 					if( node ){
@@ -3046,11 +3061,14 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					switch( at->tid ){
 					case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
 						break;
-					case DAO_STRING :
-						if( code > DVM_OR ) ct = inumt; break;
 					case DAO_COMPLEX :
 						ct = inumt;
 						if( code < DVM_EQ ) goto InvOper;
+						break;
+					case DAO_STRING :
+						if( code > DVM_OR ) ct = inumt; break;
+					case DAO_ENUM :
+						ct = inumt;
 						break;
 					case DAO_ARRAY :
 						if( code <= DVM_OR )

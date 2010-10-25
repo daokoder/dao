@@ -314,20 +314,31 @@ extern DaoTypeBase comTyper;
 extern DaoTypeBase longTyper;
 extern DaoTypeBase stringTyper;
 
-DEnum* DEnum_New( const char *name, int value )
+DEnum* DEnum_New( int id, const char *name )
 {
 	DEnum *self = (DEnum*) dao_malloc( sizeof(DEnum) );
+	self->id = id;
+	self->type = NULL;
 	self->name = DString_New(1);
-	self->value = value;
 	if( name ) DString_SetMBS( self->name, name );
 	return self;
 }
 DEnum* DEnum_Copy( DEnum *self )
 {
-	return DEnum_New( self->name->mbs, self->value );
+	DEnum *copy = DEnum_New( self->id, self->name->mbs );
+	GC_IncRC( self->type );
+	copy->type = self->type;
+	return copy;
+}
+void DEnum_SetType( DEnum *self, DaoType *type )
+{
+	if( self->type == type ) return;
+	GC_ShiftRC( type, self->type );
+	self->type = type;
 }
 void DEnum_Delete( DEnum *self )
 {
+	if( self->type ) GC_DecRC( self->type );
 	DString_Delete( self->name );
 	dao_free( self );
 }
@@ -1943,7 +1954,7 @@ static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
 	case DAO_ENUM :
 		{
 			DEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
-			for(i=0; i<self->items->size; i++) denum->value += data[i].v.e->value;
+			for(i=0; i<self->items->size; i++) denum->id += data[i].v.e->id;
 			break;
 		}
 	case DAO_STRING :

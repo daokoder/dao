@@ -33,13 +33,8 @@ typedef struct DPtrTuple  DPtrTuple;
 typedef struct DRoutine        DRoutine;
 
 typedef struct DaoThdMaster    DaoThdMaster;
-typedef struct DaoLibrary      DaoLibrary;
-typedef struct DaoType      DaoType;
-
 typedef struct DaoFunCurry     DaoFunCurry;
-
 typedef struct DaoCDataCore    DaoCDataCore;
-
 
 /* Initialize the Dao Virtual Machine libraray.
  * Return a virtual machine space ready to use.

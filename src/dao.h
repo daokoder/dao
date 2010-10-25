@@ -144,8 +144,8 @@ enum DaoTypes
 	DAO_DOUBLE  ,
 	DAO_COMPLEX ,
 	DAO_LONG  ,
-	DAO_ENUM  ,
 	DAO_STRING ,
+	DAO_ENUM  ,
 	DAO_ARRAY ,
 	DAO_LIST  ,
 	DAO_MAP   ,
@@ -265,6 +265,7 @@ typedef struct DaoMutex        DaoMutex;
 typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
 typedef struct DaoThread       DaoThread;
+typedef struct DaoType         DaoType;
 
 /* Complex type: */
 typedef struct complex8  { float  real, imag; } complex8;
@@ -272,8 +273,9 @@ typedef struct complex16 { double real, imag; } complex16;
 
 struct DEnum
 {
+	dint     id;
 	DString *name;
-	dint     value;
+	DaoType *type;
 };
 
 
@@ -289,8 +291,8 @@ struct DValue
 		double         d; /* double */
 		complex16     *c; /* complex */
 		DLong         *l; /* long */
-		DEnum         *e; /* enum */
 		DString       *s; /* string */
+		DEnum         *e; /* enum */
 		DaoBase       *p; /* NOT one of the above data types */
 		DaoArray      *array;
 		DaoList       *list;

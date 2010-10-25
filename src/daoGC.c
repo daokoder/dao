@@ -33,7 +33,7 @@ DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata )
 	if( callback == NULL || callback->type != DAO_ROUTINE ) return NULL;
 	self = (DaoCallbackData*) calloc( 1, sizeof(DaoCallbackData) );
 	self->callback = callback;
-	if( userdata.t >= DAO_ARRAY )
+	if( userdata.t >= DAO_ENUM )
 		self->userdata = userdata;
 	else
 		DValue_Copy( & self->userdata, userdata );
@@ -44,7 +44,7 @@ DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata )
 }
 static void DaoCallbackData_Delete( DaoCallbackData *self )
 {
-	if( self->userdata.t < DAO_ARRAY ) DValue_Clear( & self->userdata );
+	if( self->userdata.t < DAO_ENUM ) DValue_Clear( & self->userdata );
 	dao_free( self );
 }
 static void DaoCallbackData_DeleteByCallback( DaoRoutine *callback )
@@ -166,6 +166,7 @@ struct DaoGarbageCollector
 	int       count, boundary;
 	int       ii, jj;
 	short     busy;
+	short     locked;
 	short     workType;
 	short     finalizing;
 
@@ -219,6 +220,7 @@ void InitGC()
 	gcWorker.ii = 0;
 	gcWorker.jj = 0;
 	gcWorker.busy = 0;
+	gcWorker.locked = 0;
 
 #ifdef DAO_WITH_THREAD
 	DThread_Init( & gcWorker.thread );
@@ -331,7 +333,7 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 					tp = list->unitype->nested->items.pAbtp[0];
 					for(i=0; i<n; i++){
 						DValue *it = list->items->data + i;
-						if( it->t > DAO_DOUBLE && it->t < DAO_ARRAY ) DValue_Clear( it );
+						if( it->t > DAO_DOUBLE && it->t < DAO_ENUM ) DValue_Clear( it );
 					}
 				}
 				break;
@@ -342,7 +344,7 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 				n = tuple->items->size;
 				for(i=0; i<n; i++){
 					DValue *it = tuple->items->data + i;
-					if( it->t > DAO_DOUBLE && it->t < DAO_ARRAY ) DValue_Clear( it );
+					if( it->t > DAO_DOUBLE && it->t < DAO_ENUM ) DValue_Clear( it );
 				}
 				break;
 			}
@@ -353,7 +355,7 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 				if( tp2 == NULL || tp2->nested->size != 2 ) break;
 				tp = tp2->nested->items.pAbtp[0];
 				tp2 = tp2->nested->items.pAbtp[1];
-				if( tp->tid >DAO_DOUBLE && tp2->tid >DAO_DOUBLE && tp->tid <DAO_ARRAY && tp2->tid <DAO_ARRAY ){
+				if( tp->tid >DAO_DOUBLE && tp2->tid >DAO_DOUBLE && tp->tid <DAO_ENUM && tp2->tid <DAO_ENUM ){
 					/* DaoMap_Clear( map ); this is NOT thread safe, there is RC update scan */
 					i = 0;
 					node = DMap_First( map->items );
@@ -363,12 +365,12 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 						node->key.pValue->t = DAO_INTEGER;
 						node->key.pValue->v.i = ++ i; /* keep key ordering */
 					}
-				}else if( tp2->tid >DAO_DOUBLE && tp2->tid < DAO_ARRAY ){
+				}else if( tp2->tid >DAO_DOUBLE && tp2->tid < DAO_ENUM ){
 					node = DMap_First( map->items );
 					for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
 						DValue_Clear( node->value.pValue );
 					}
-				}else if( tp->tid >DAO_DOUBLE && tp->tid < DAO_ARRAY ){
+				}else if( tp->tid >DAO_DOUBLE && tp->tid < DAO_ENUM ){
 					i = 0;
 					node = DMap_First( map->items );
 					for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
@@ -413,7 +415,7 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 				n = ctx->regArray->size;
 				for(i=0; i<n; i++){
 					DValue *it = ctx->regArray->data + i;
-					if( it->t > DAO_DOUBLE && it->t < DAO_ARRAY ) DValue_Clear( it );
+					if( it->t > DAO_DOUBLE && it->t < DAO_ENUM ) DValue_Clear( it );
 				}
 				break;
 			}
@@ -1019,12 +1021,20 @@ void freeGarbage()
 							node->key.pValue->v.p->refCount --;
 							node->key.pValue->t = 0;
 						}else{
+							if( node->key.pValue->t == DAO_ENUM && node->key.pValue->v.e->type ){
+								node->key.pValue->v.e->type->refCount --;
+								node->key.pValue->v.e->type = NULL;
+							}
 							DValue_Clear( node->key.pValue );
 						}
 						if( node->value.pValue->t >= DAO_ARRAY ){
 							node->value.pValue->v.p->refCount --;
 							node->value.pValue->t = 0;
 						}else{
+							if( node->value.pValue->t == DAO_ENUM && node->value.pValue->v.e->type ){
+								node->value.pValue->v.e->type->refCount --;
+								node->value.pValue->v.e->type = NULL;
+							}
 							DValue_Clear( node->value.pValue );
 						}
 					}
@@ -1130,9 +1140,15 @@ void freeGarbage()
 				{
 					DaoVmProcess *vmp = (DaoVmProcess*) dbase;
 					DaoVmFrame *frame = vmp->firstFrame;
-					if( vmp->returned.t >= DAO_ARRAY )
+					if( vmp->returned.t >= DAO_ARRAY ){
 						vmp->returned.v.p->refCount --;
-					else DValue_Clear( & vmp->returned );
+					}else{
+						if( vmp->returned.t == DAO_ENUM && vmp->returned.v.e->type ){
+							vmp->returned.v.e->type->refCount --;
+							vmp->returned.v.e->type = NULL;
+						}
+						DValue_Clear( & vmp->returned );
+					}
 					vmp->returned.t = 0;
 					directRefCountDecrementV( vmp->parResume );
 					directRefCountDecrementV( vmp->parYield );
@@ -2171,6 +2187,10 @@ void directRefCountDecrementMapValueV( DMap *dmap )
 			it->value.pValue->v.p->refCount --;
 			it->value.pValue->t = 0;
 		}else{
+			if( it->value.pValue->t == DAO_ENUM && it->value.pValue->v.e->type ){
+				it->value.pValue->v.e->type->refCount --;
+				it->value.pValue->v.e->type = NULL;
+			}
 			DValue_Clear( it->value.pValue );
 		}
 	}
@@ -2178,11 +2198,13 @@ void directRefCountDecrementMapValueV( DMap *dmap )
 }
 void cycRefCountDecrementV( DValue value )
 {
+	if( value.t == DAO_ENUM ) cycRefCountDecrement( (DaoBase*)value.v.e->type );
 	if( value.t < DAO_ARRAY ) return;
 	cycRefCountDecrement( value.v.p );
 }
 void cycRefCountIncrementV( DValue value )
 {
+	if( value.t == DAO_ENUM ) cycRefCountIncrement( (DaoBase*)value.v.e->type );
 	if( value.t < DAO_ARRAY ) return;
 	cycRefCountIncrement( value.v.p );
 }
@@ -2212,6 +2234,9 @@ void directRefCountDecrementV( DVarray *list )
 		if( data[i].t >= DAO_ARRAY ){
 			data[i].v.p->refCount --;
 			data[i].t = 0;
+		}else if( data[i].t == DAO_ENUM && data[i].v.e->type ){
+			data[i].v.e->type->refCount --;
+			data[i].v.e->type = NULL;
 		}
 	}
 	DVarray_Clear( list );
@@ -2267,6 +2292,9 @@ void directRefCountDecrementVT( DVaTuple *list )
 		if( data[i].t >= DAO_ARRAY ){
 			data[i].v.p->refCount --;
 			data[i].t = 0;
+		}else if( data[i].t == DAO_ENUM && data[i].v.e->type ){
+			data[i].v.e->type->refCount --;
+			data[i].v.e->type = NULL;
 		}
 	}
 	DVaTuple_Clear( list );

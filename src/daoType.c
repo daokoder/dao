@@ -49,9 +49,54 @@ void DaoType_Delete( DaoType *self )
 	if( self->interfaces ) DMap_Delete( self->interfaces );
 	DaoLateDeleter_Push( self );
 }
+extern DEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc );
+static void DaoType_GetField( DValue *self0, DaoContext *ctx, DString *name )
+{
+	DaoType *self = (DaoType*) self0->v.p;
+	DEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
+	DNode *node;
+	if( self->mapNames == NULL ) goto ErrorNotExist;
+	node = DMap_Find( self->mapNames, name );
+	if( node == NULL ) goto ErrorNotExist;
+	GC_ShiftRC( self, denum->type );
+	denum->type = self;
+	denum->id = node->value.pInt;
+	DString_Assign( denum->name, name );
+	return;
+ErrorNotExist:
+	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, DString_GetMBS( name ) );
+}
+static void DaoType_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+{
+	DaoType *self = (DaoType*) self0->v.p;
+	DEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
+	DNode *node;
+	if( self->mapNames == NULL || pid.t != DAO_INTEGER ) goto ErrorNotExist;
+	for(node=DMap_First(self->mapNames);node;node=DMap_Next(self->mapNames,node)){
+		if( node->value.pInt == pid.v.i ){
+			GC_ShiftRC( self, denum->type );
+			denum->type = self;
+			denum->id = node->value.pInt;
+			DString_Assign( denum->name, node->key.pString );
+			return;
+		}
+	}
+ErrorNotExist:
+	DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not valid" );
+}
+static DaoTypeCore typeCore=
+{
+	0, NULL, NULL, NULL, NULL,
+	DaoType_GetField,
+	DaoBase_SetField,
+	DaoType_GetItem,
+	DaoBase_SetItem,
+	DaoBase_Print,
+	DaoBase_Copy
+};
 DaoTypeBase abstypeTyper=
 {
-	"type", & baseCore, NULL, NULL, {0},
+	"type", & typeCore, NULL, NULL, {0},
 	(FuncPtrDel) DaoType_Delete, NULL
 };
 
@@ -189,6 +234,7 @@ void DaoType_Init()
 	dao_type_matrix[DAO_ARRAY_EMPTY][DAO_ARRAY] = DAO_MT_EQ;
 	dao_type_matrix[DAO_MAP_EMPTY][DAO_MAP] = DAO_MT_EQ;
 
+	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EQ+1;
@@ -243,7 +289,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	DMap *inters;
 	DaoType *it1, *it2;
-	DNode *node = NULL;
+	DNode *it, *node = NULL;
 	short i, k, mt = DAO_MT_NOT;
 	if( self ==NULL || type ==NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
@@ -289,6 +335,16 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
 	switch( self->tid ){
+	case DAO_ENUM :
+		if( DString_EQ( self->name, type->name ) ) return DAO_MT_EQ;
+		if( self->mapNames ==NULL && self->mapNames ==NULL ) return DAO_MT_SUB;
+		if( self->mapNames ==NULL || self->mapNames ==NULL ) return DAO_MT_SUB;
+		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
+			node = DMap_Find( type->mapNames, it->key.pVoid );
+			if( node ==NULL ) return 0;
+			if( node->value.pInt != it->value.pInt ) return 0;
+		}
+		return DAO_MT_EQ;
 	case DAO_ARRAY : case DAO_LIST :
 	case DAO_MAP : case DAO_TUPLE : case DAO_TYPE :
 		/* tuple<...> to tuple */
@@ -434,6 +490,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( self->nested->size >1 ) it2 = self->nested->items.pAbtp[1]->tid;
 	}
 	switch( value.t ){
+	case DAO_ENUM :
+		if( value.v.e->type == self ) return DAO_MT_EQ;
+		if( self->mapNames == NULL ) return DAO_MT_SUB;
+		return DMap_Find( self->mapNames, value.v.e->name ) ? DAO_MT_EQ : DAO_MT_NOT;
 	case DAO_ARRAY :
 		if( value.v.array->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.array->unitype;

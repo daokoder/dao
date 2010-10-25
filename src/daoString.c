@@ -988,6 +988,7 @@ static int DWCString_Compare( DString *self, DString *chs )
 int DString_Compare( DString *self, DString *chs )
 {
 	int res = 0;
+	if( self->data == chs->data ) return 0; /* shared */
 	if( self->mbs && chs->mbs ){
 		res = DMBString_Compare( self, chs );
 	}else if( self->wcs && chs->wcs ){

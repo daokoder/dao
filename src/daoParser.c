@@ -221,7 +221,7 @@ DaoParser* DaoParser_New()
 	self->mbs2 = DString_New(1);
 	self->str = DString_New(1);
 	self->bigint = DLong_New();
-	self->denum = DEnum_New("",0);
+	self->denum = DEnum_New(0,"");
 
 	self->toks = DArray_New(0);
 	self->lvm = DMap_New(D_STRING,0);
@@ -6020,12 +6020,27 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 			name = tokens[start+1]->string;
 			/* printf( "%s  %i\n", name->mbs, cstlast ); */
 			if( cstlast ){
-				DaoTypeBase *typer;
 				DValue ov = DaoParser_GetVariable( self, cstlast );
+				DaoType *tp = (DaoType*) ov.v.p;
+				DaoTypeBase *typer;
 				/*
 				   printf( "%s  %i\n", name->mbs, ov.t );
 				 */
 				switch( ov.t ){
+				case DAO_TYPE :
+					if( tp->tid == DAO_TYPE ) tp = tp->nested->items.pAbtp[0];
+					if( tp && tp->tid == DAO_ENUM && tp->mapNames ){
+						DNode *node = DMap_Find( tp->mapNames, name );
+						if( node ){
+							it.t = DAO_ENUM;
+							it.v.e = self->denum;
+							self->denum->id = node->value.pInt;
+							DString_Assign( self->denum->name, name );
+							GC_ShiftRC( tp, self->denum->type );
+							self->denum->type = tp;
+						}
+					}
+					break;
 				case DAO_NAMESPACE :
 					regB = DaoNameSpace_FindConst( ov.v.ns, name );
 					if( regB >=0 ) it = DaoNameSpace_GetConst( ov.v.ns, regB );
@@ -6455,7 +6470,7 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 		value = daoNullValue;
 		value.t = DAO_ENUM;
 		value.v.e = self->denum;
-		self->denum->value = 0;
+		self->denum->id = 0;
 		DString_Assign( self->denum->name, str );
 		DString_Erase( self->denum->name, 0, 1 );
 		*cst = varReg = DaoNameSpace_AddConst( self->nameSpace, str, value ) + DVR_GLB_CST;

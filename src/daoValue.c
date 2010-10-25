@@ -54,9 +54,18 @@ int DValue_Compare( DValue left, DValue right )
 		double R = DValue_GetDouble( right );
 		return L==R ? 0 : ( L<R ? -1 : 1 );
 	}else if( left.t == DAO_ENUM && right.t == DAO_ENUM ){
-		int L = left.v.e->value;
-		int R = right.v.e->value;
-		return L==R ? 0 : ( L<R ? -1 : 1 );
+		DNode *N = NULL;
+		DEnum *L = left.v.e;
+		DEnum *R = right.v.e;
+		if( L->type && L->type == R->type ){
+			return L->id == R->id ? 0 : ( L->id < R->id ? -1 : 1 );
+		}else if( L->type && (N = DMap_Find(L->type->mapNames, R->name)) ){
+			return L->id == N->value.pInt ? 0 : (L->id < N->value.pInt ? -1 : 1);
+		}else if( R->type && (N = DMap_Find(R->type->mapNames, L->name)) ){
+			return N->value.pInt == R->id ? 0 : (N->value.pInt < R->id ? -1 : 1);
+		}else{
+			return DString_Compare( L->name, R->name );
+		}
 	}else if( left.t == DAO_STRING && right.t == DAO_STRING ){
 		return DString_Compare( left.v.s, right.v.s );
 	}else if( left.t == DAO_LONG && right.t == DAO_LONG ){
@@ -141,7 +150,7 @@ double DValue_GetDouble( DValue self )
 	case DAO_LONG :
 		return DLong_ToInteger( self.v.l );
 	case DAO_ENUM  :
-		return self.v.e->value;
+		return self.v.e->id;
 	case DAO_STRING  :
 		str = self.v.s;
 		if( DString_IsMBS( str ) )
@@ -180,7 +189,7 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 	case DAO_ENUM  :
 		DaoStream_WriteString( stream, self.v.e->name );
 		DaoStream_WriteMBS( stream, "=" );
-		DaoStream_WriteInt( stream, self.v.e->value );
+		DaoStream_WriteInt( stream, self.v.e->id );
 		break;
 	case DAO_STRING  :
 		DaoStream_WriteString( stream, self.v.s ); break;
@@ -287,8 +296,9 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 	if( from.t >= DAO_ARRAY && from.t == self->t && from.v.p == self->v.p ) return;
 	switch( self->t ){
 	case DAO_COMPLEX : if( from.t != DAO_COMPLEX ) dao_free( self->v.c ); break;
-	case DAO_STRING  : if( from.t != DAO_STRING ) DString_Delete( self->v.s ); break;
 	case DAO_LONG  : if( from.t != DAO_LONG ) DLong_Delete( self->v.l ); break;
+	case DAO_ENUM  : if( from.t != DAO_ENUM ) DEnum_Delete( self->v.e ); break;
+	case DAO_STRING  : if( from.t != DAO_STRING ) DString_Delete( self->v.s ); break;
 	default : if( self->t >= DAO_ARRAY ) GC_DecRC( self->v.p ); break;
 	}
 	switch( from.t ){
@@ -309,11 +319,12 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 		break;
 	case DAO_ENUM :
 		if( self->t == DAO_ENUM ){
-			self->v.e->value = from.v.e->value;
+			self->v.e->id = from.v.e->id;
 			DString_Assign( self->v.e->name, from.v.e->name );
 		}else{
 			self->v.e = DEnum_Copy( from.v.e );
 		}
+		DEnum_SetType( self->v.e, from.v.e->type );
 		break;
 	case DAO_STRING  :
 		if( self->t == DAO_STRING ){
@@ -573,13 +584,16 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			break;
 		case DAO_ENUM :
 			if( to->t == DAO_ENUM ){
-				to->v.e->value = from.v.e->value;
+				to->v.e->id = from.v.e->id;
 				DString_Assign( to->v.e->name, from.v.e->name );
 			}else{
 				to->v.e = DEnum_Copy( from.v.e );
 			}
 			if( tp->mapNames ) node = DMap_Find( tp->mapNames, to->v.e->name );
-			if( node ) to->v.e->value = node->value.pInt;
+			if( node ){
+				to->v.e->id = node->value.pInt;
+				DEnum_SetType( to->v.e, tp );
+			}
 			to->t = from.t;
 			break;
 		case DAO_STRING  :

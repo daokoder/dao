@@ -394,8 +394,8 @@ extern const char* getOpcodeName( int opc );
 
 static const char* const coreTypeNames[] =
 {
-	"?", "int", "float", "double", "complex", "long", "enum", 
-	"string", "array", "list", "map", "pair", "tuple", "stream"
+	"?", "int", "float", "double", "complex", "long", "string", 
+	"enum", "array", "list", "map", "pair", "tuple", "stream"
 };
 static const char *const daoBitBoolArithOpers[] = {
 	"=", "!", "-", "~", "+", "-", "*", "/", "%", "**", 

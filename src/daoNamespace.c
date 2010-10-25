@@ -1129,8 +1129,17 @@ DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val )
 	switch( val.t ){
 	case DAO_NIL :
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
-	case DAO_COMPLEX : case DAO_LONG :
-	case DAO_ENUM : case DAO_STRING : 
+	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING : 
+		abtp = simpleTypes[ val.t ];
+		if( abtp ) break;
+		abtp = DaoNameSpace_MakeType( self, coreTypeNames[val.t], val.t, NULL, NULL, 0 );
+		/* abtp = DaoType_New( coreTypeNames[val.t], val.t, NULL, NULL ); */
+		simpleTypes[ val.t ] = abtp;
+		GC_IncRC( abtp );
+		break;
+	case DAO_ENUM : 
+		abtp = val.v.e->type;
+		if( abtp ) break;
 		abtp = simpleTypes[ val.t ];
 		if( abtp ) break;
 		abtp = DaoNameSpace_MakeType( self, coreTypeNames[val.t], val.t, NULL, NULL, 0 );

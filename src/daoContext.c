@@ -755,7 +755,7 @@ DEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc )
 	if( tp && tp->tid !=DAO_ENUM && tp->tid !=DAO_UDF && tp->tid !=DAO_ANY ) return NULL;
 	DValue_Clear( dC );
 	dC->t = DAO_ENUM;
-	dC->v.e = DEnum_New("",0);
+	dC->v.e = DEnum_New(0,"");
 	return dC->v.e;
 }
 /**/
@@ -2476,7 +2476,8 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		case DVM_NE:  dC.v.i = STR_NE( dA.v.s, dB.v.s ); break;
 		default: break;
 		}
-	}else if( dA.t == DAO_TUPLE && dB.t == DAO_TUPLE ){
+	}else if( (dA.t == DAO_ENUM && dB.t == DAO_ENUM)
+			|| (dA.t == DAO_TUPLE && dB.t == DAO_TUPLE) ){
 		switch( vmc->code ){
 		case DVM_AND: dC = DValue_GetInteger( dA ) ? dB : dA; break;
 		case DVM_OR:  dC = DValue_GetInteger( dA ) ? dA : dB; break;
@@ -3576,17 +3577,18 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	if( ct->tid == DAO_COMPLEX && vc->t != DAO_COMPLEX )
 		vc->v.c = dao_malloc( sizeof(complex16) );
 	if( ct->tid == DAO_LONG && vc->t != DAO_LONG ) vc->v.l = DLong_New();
-	if( ct->tid == DAO_ENUM && vc->t != DAO_ENUM ) vc->v.e = DEnum_New("",0);
+	if( ct->tid == DAO_ENUM && vc->t != DAO_ENUM ) vc->v.e = DEnum_New(0,"");
 	if( ct->tid == DAO_STRING && vc->t != DAO_STRING ) vc->v.s = DString_New(1);
 
 	if( ct->tid == DAO_ENUM && va.t == DAO_ENUM ){
 		DString_Assign( vc->v.e->name, va.v.e->name );
-		vc->v.e->value = va.v.e->value;
+		vc->v.e->id = va.v.e->id;
 		vc->t = DAO_ENUM;
 		if( ct->mapNames ){
 			node = DMap_Find( ct->mapNames, va.v.e->name );
 			if( node == NULL ) goto FailConversion;
-			vc->v.e->value = node->value.pInt;
+			vc->v.e->id = node->value.pInt;
+			DEnum_SetType( vc->v.e, ct );
 		}
 		return;
 	}else if( ct->tid == DAO_ENUM && va.t == DAO_INTEGER ){
@@ -3597,7 +3599,8 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		}
 		if( node == NULL ) goto FailConversion;
 		DString_Assign( vc->v.e->name, node->key.pString );
-		vc->v.e->value = node->value.pInt;
+		vc->v.e->id = node->value.pInt;
+		DEnum_SetType( vc->v.e, ct );
 		return;
 	}else if( ct->tid == DAO_ENUM && va.t == DAO_STRING ){
 		vc->t = DAO_ENUM;
@@ -3605,7 +3608,8 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		node = DMap_Find( ct->mapNames, va.v.s );
 		if( node == NULL ) goto FailConversion;
 		DString_Assign( vc->v.e->name, va.v.s );
-		vc->v.e->value = node->value.pInt;
+		vc->v.e->id = node->value.pInt;
+		DEnum_SetType( vc->v.e, ct );
 		return;
 	}else if( ct->tid == DAO_ENUM ){
 		goto FailConversion;

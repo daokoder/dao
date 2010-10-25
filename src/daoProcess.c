@@ -1292,7 +1292,7 @@ CallEntry:
 				vmc = j ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_ENUM  :
-				vmc = vA2.v.e->value ? vmc+1 : vmcBase + vmc->b;
+				vmc = vA2.v.e->id ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_STRING  :
 				vmc = DString_Size( vA2.v.s ) ? vmc+1 : vmcBase + vmc->b; break;
