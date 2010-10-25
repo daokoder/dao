@@ -3583,7 +3583,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				break;
 			case DVM_FUNCT_APPLY :
 				ct = bt;
-				if( bt->tid == DAO_ARRAY ){
+				if( bt->tid == DAO_ARRAY || bt->tid == DAO_LIST ){
 					if( bt->nested->size != 1 ) goto ErrorTyping;
 					at = type[ vmcs[i-2]->c ];
 					bt = bt->nested->items.pAbtp[0];

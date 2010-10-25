@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
@@ -20,6 +20,7 @@
 #endif
 
 #include<assert.h>
+#include<ctype.h>
 
 #include"daoContext.h"
 #include"daoProcess.h"
@@ -68,7 +69,7 @@ extern int DaoContext_TryCDataArith( DaoContext *self, DValue dA, DValue dB );
 
 extern void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc );
 /* binary operation with boolean result. */
-extern void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc ); 
+extern void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoBitLogic( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc );
@@ -133,7 +134,7 @@ void DaoMpiData_Delete( DaoMpiData *self )
 	dao_free( self );
 }
 
-DaoTypeBase vmpTyper = 
+DaoTypeBase vmpTyper =
 {
 	"process",
 	& baseCore, NULL, NULL, {0},
@@ -390,7 +391,7 @@ int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *
 			DaoContext_PutResult( ctx, (DaoBase*) tuple );
 		}
 		self->topFrame->entry ++;
-	}else if( N && ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, 
+	}else if( N && ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL,
 				ctx->regValues, par, NULL, N, DVM_CALL ) ){
 		DaoContext_RaiseException( ret, DAO_ERROR, "invalid parameters." );
 		return 0;
@@ -519,14 +520,14 @@ static void DaoVM_EnsureConst( DaoContext *ctx, DaoVmCode *vmc, DValue **locVars
 	locBuf->cst = 0;
 	if( ! locVars[ vmc->c ]->cst ){
 		/* a data structure maybe marked as constant in const call,
-		   but its items are not marked, so use context buffer to store the retrieved item, 
+		   but its items are not marked, so use context buffer to store the retrieved item,
 		   and mark it as constant */
 		DValue_Copy( locBuf, *locVars[ vmc->c ] );
 		locVars[ vmc->c ] = locBuf;
 		locBuf->cst = 1;
 	}
 }
-static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts, 
+static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts,
 		DValue **values, DaoType ***types )
 {
 	DaoNameSpace *ns = ctx->nameSpace;
@@ -607,84 +608,84 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 
 #ifdef HAS_VARLABEL
 	const void *labels[] = {
-		&& LAB_NOP , 
-		&& LAB_DATA , 
-		&& LAB_GETC , 
-		&& LAB_GETV , 
-		&& LAB_GETI ,  
-		&& LAB_GETF ,  
-		&& LAB_GETMF ,  
-		&& LAB_SETV , 
-		&& LAB_SETI , 
-		&& LAB_SETF , 
-		&& LAB_SETMF , 
+		&& LAB_NOP ,
+		&& LAB_DATA ,
+		&& LAB_GETC ,
+		&& LAB_GETV ,
+		&& LAB_GETI ,
+		&& LAB_GETF ,
+		&& LAB_GETMF ,
+		&& LAB_SETV ,
+		&& LAB_SETI ,
+		&& LAB_SETF ,
+		&& LAB_SETMF ,
 		&& LAB_LOAD ,
-		&& LAB_CAST , 
-		&& LAB_MOVE , 
-		&& LAB_NOT ,  
-		&& LAB_UNMS , 
-		&& LAB_BITREV , 
-		&& LAB_ADD ,  
-		&& LAB_SUB ,  
-		&& LAB_MUL ,  
-		&& LAB_DIV ,  
-		&& LAB_MOD ,  
-		&& LAB_POW ,  
-		&& LAB_AND ,  
-		&& LAB_OR ,   
-		&& LAB_LT ,   
-		&& LAB_LE ,   
-		&& LAB_EQ ,   
-		&& LAB_NE ,   
-		&& LAB_BITAND , 
-		&& LAB_BITOR ,  
-		&& LAB_BITXOR ,  
-		&& LAB_BITLFT , 
-		&& LAB_BITRIT , 
-		&& LAB_CHECK , 
-		&& LAB_NAMEVA , 
-		&& LAB_PAIR , 
-		&& LAB_TUPLE , 
-		&& LAB_LIST , 
-		&& LAB_MAP , 
-		&& LAB_HASH , 
-		&& LAB_ARRAY , 
-		&& LAB_MATRIX , 
-		&& LAB_CURRY , 
-		&& LAB_MCURRY , 
-		&& LAB_GOTO , 
-		&& LAB_SWITCH , 
-		&& LAB_CASE , 
-		&& LAB_ITER , 
-		&& LAB_TEST , 
-		&& LAB_MATH , 
-		&& LAB_FUNCT , 
-		&& LAB_CALL , 
-		&& LAB_MCALL , 
-		&& LAB_CLOSE , 
+		&& LAB_CAST ,
+		&& LAB_MOVE ,
+		&& LAB_NOT ,
+		&& LAB_UNMS ,
+		&& LAB_BITREV ,
+		&& LAB_ADD ,
+		&& LAB_SUB ,
+		&& LAB_MUL ,
+		&& LAB_DIV ,
+		&& LAB_MOD ,
+		&& LAB_POW ,
+		&& LAB_AND ,
+		&& LAB_OR ,
+		&& LAB_LT ,
+		&& LAB_LE ,
+		&& LAB_EQ ,
+		&& LAB_NE ,
+		&& LAB_BITAND ,
+		&& LAB_BITOR ,
+		&& LAB_BITXOR ,
+		&& LAB_BITLFT ,
+		&& LAB_BITRIT ,
+		&& LAB_CHECK ,
+		&& LAB_NAMEVA ,
+		&& LAB_PAIR ,
+		&& LAB_TUPLE ,
+		&& LAB_LIST ,
+		&& LAB_MAP ,
+		&& LAB_HASH ,
+		&& LAB_ARRAY ,
+		&& LAB_MATRIX ,
+		&& LAB_CURRY ,
+		&& LAB_MCURRY ,
+		&& LAB_GOTO ,
+		&& LAB_SWITCH ,
+		&& LAB_CASE ,
+		&& LAB_ITER ,
+		&& LAB_TEST ,
+		&& LAB_MATH ,
+		&& LAB_FUNCT ,
+		&& LAB_CALL ,
+		&& LAB_MCALL ,
+		&& LAB_CLOSE ,
 		&& LAB_CRRE ,
-		&& LAB_JITC , 
-		&& LAB_JOINT , 
-		&& LAB_RETURN , 
-		&& LAB_YIELD , 
-		&& LAB_DEBUG , 
-		&& LAB_SECT ,   
+		&& LAB_JITC ,
+		&& LAB_JOINT ,
+		&& LAB_RETURN ,
+		&& LAB_YIELD ,
+		&& LAB_DEBUG ,
+		&& LAB_SECT ,
 
-		&& LAB_GETC_I , 
-		&& LAB_GETC_F , 
-		&& LAB_GETC_D , 
-		&& LAB_GETV_I , 
-		&& LAB_GETV_F , 
-		&& LAB_GETV_D , 
-		&& LAB_SETV_II , 
-		&& LAB_SETV_IF , 
-		&& LAB_SETV_ID , 
-		&& LAB_SETV_FI , 
-		&& LAB_SETV_FF , 
-		&& LAB_SETV_FD , 
-		&& LAB_SETV_DI , 
-		&& LAB_SETV_DF , 
-		&& LAB_SETV_DD , 
+		&& LAB_GETC_I ,
+		&& LAB_GETC_F ,
+		&& LAB_GETC_D ,
+		&& LAB_GETV_I ,
+		&& LAB_GETV_F ,
+		&& LAB_GETV_D ,
+		&& LAB_SETV_II ,
+		&& LAB_SETV_IF ,
+		&& LAB_SETV_ID ,
+		&& LAB_SETV_FI ,
+		&& LAB_SETV_FF ,
+		&& LAB_SETV_FD ,
+		&& LAB_SETV_DI ,
+		&& LAB_SETV_DF ,
+		&& LAB_SETV_DD ,
 		&& LAB_MOVE_II ,
 		&& LAB_MOVE_IF ,
 		&& LAB_MOVE_ID ,
@@ -694,9 +695,9 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_MOVE_DI ,
 		&& LAB_MOVE_DF ,
 		&& LAB_MOVE_DD ,
-		&& LAB_MOVE_CC , 
-		&& LAB_MOVE_SS , 
-		&& LAB_MOVE_PP , 
+		&& LAB_MOVE_CC ,
+		&& LAB_MOVE_SS ,
+		&& LAB_MOVE_PP ,
 		&& LAB_NOT_I ,
 		&& LAB_NOT_F ,
 		&& LAB_NOT_D ,
@@ -798,91 +799,91 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_EQ_SS ,
 		&& LAB_NE_SS ,
 
-		&& LAB_GETI_LI , 
-		&& LAB_SETI_LI , 
-		&& LAB_GETI_SI , 
-		&& LAB_SETI_SII , 
-		&& LAB_GETI_LII , 
-		&& LAB_GETI_LFI , 
-		&& LAB_GETI_LDI , 
-		&& LAB_GETI_LSI , 
-		&& LAB_SETI_LIII , 
-		&& LAB_SETI_LIIF , 
-		&& LAB_SETI_LIID , 
-		&& LAB_SETI_LFII , 
-		&& LAB_SETI_LFIF , 
-		&& LAB_SETI_LFID , 
-		&& LAB_SETI_LDII , 
-		&& LAB_SETI_LDIF , 
-		&& LAB_SETI_LDID , 
-		&& LAB_SETI_LSIS , 
-		&& LAB_GETI_AII , 
-		&& LAB_GETI_AFI , 
-		&& LAB_GETI_ADI , 
-		&& LAB_SETI_AIII , 
-		&& LAB_SETI_AIIF , 
-		&& LAB_SETI_AIID , 
-		&& LAB_SETI_AFII , 
-		&& LAB_SETI_AFIF , 
-		&& LAB_SETI_AFID , 
-		&& LAB_SETI_ADII , 
-		&& LAB_SETI_ADIF , 
-		&& LAB_SETI_ADID , 
+		&& LAB_GETI_LI ,
+		&& LAB_SETI_LI ,
+		&& LAB_GETI_SI ,
+		&& LAB_SETI_SII ,
+		&& LAB_GETI_LII ,
+		&& LAB_GETI_LFI ,
+		&& LAB_GETI_LDI ,
+		&& LAB_GETI_LSI ,
+		&& LAB_SETI_LIII ,
+		&& LAB_SETI_LIIF ,
+		&& LAB_SETI_LIID ,
+		&& LAB_SETI_LFII ,
+		&& LAB_SETI_LFIF ,
+		&& LAB_SETI_LFID ,
+		&& LAB_SETI_LDII ,
+		&& LAB_SETI_LDIF ,
+		&& LAB_SETI_LDID ,
+		&& LAB_SETI_LSIS ,
+		&& LAB_GETI_AII ,
+		&& LAB_GETI_AFI ,
+		&& LAB_GETI_ADI ,
+		&& LAB_SETI_AIII ,
+		&& LAB_SETI_AIIF ,
+		&& LAB_SETI_AIID ,
+		&& LAB_SETI_AFII ,
+		&& LAB_SETI_AFIF ,
+		&& LAB_SETI_AFID ,
+		&& LAB_SETI_ADII ,
+		&& LAB_SETI_ADIF ,
+		&& LAB_SETI_ADID ,
 
-		&& LAB_GETI_TI , 
-		&& LAB_SETI_TI , 
+		&& LAB_GETI_TI ,
+		&& LAB_SETI_TI ,
 
 		&& LAB_GETF_T ,
-		&& LAB_GETF_TI , 
-		&& LAB_GETF_TF , 
-		&& LAB_GETF_TD , 
-		&& LAB_GETF_TS , 
+		&& LAB_GETF_TI ,
+		&& LAB_GETF_TF ,
+		&& LAB_GETF_TD ,
+		&& LAB_GETF_TS ,
 		&& LAB_SETF_T ,
-		&& LAB_SETF_TII , 
-		&& LAB_SETF_TIF , 
-		&& LAB_SETF_TID , 
-		&& LAB_SETF_TFI , 
-		&& LAB_SETF_TFF , 
-		&& LAB_SETF_TFD , 
-		&& LAB_SETF_TDI , 
-		&& LAB_SETF_TDF , 
-		&& LAB_SETF_TDD , 
-		&& LAB_SETF_TSS , 
+		&& LAB_SETF_TII ,
+		&& LAB_SETF_TIF ,
+		&& LAB_SETF_TID ,
+		&& LAB_SETF_TFI ,
+		&& LAB_SETF_TFF ,
+		&& LAB_SETF_TFD ,
+		&& LAB_SETF_TDI ,
+		&& LAB_SETF_TDF ,
+		&& LAB_SETF_TDD ,
+		&& LAB_SETF_TSS ,
 
 		&& LAB_ADD_CC ,
 		&& LAB_SUB_CC ,
 		&& LAB_MUL_CC ,
 		&& LAB_DIV_CC ,
-		&& LAB_GETI_ACI , 
-		&& LAB_SETI_ACI , 
+		&& LAB_GETI_ACI ,
+		&& LAB_SETI_ACI ,
 
-		&& LAB_GETI_AM , 
-		&& LAB_SETI_AM , 
+		&& LAB_GETI_AM ,
+		&& LAB_SETI_AM ,
 
-		&& LAB_GETF_M , 
+		&& LAB_GETF_M ,
 
-		&& LAB_GETF_KC , 
-		&& LAB_GETF_KG , 
-		&& LAB_GETF_OC , 
-		&& LAB_GETF_OG , 
-		&& LAB_GETF_OV , 
+		&& LAB_GETF_KC ,
+		&& LAB_GETF_KG ,
+		&& LAB_GETF_OC ,
+		&& LAB_GETF_OG ,
+		&& LAB_GETF_OV ,
 		&& LAB_SETF_KG ,
 		&& LAB_SETF_OG ,
 		&& LAB_SETF_OV ,
 
-		&& LAB_GETF_KCI , 
+		&& LAB_GETF_KCI ,
 		&& LAB_GETF_KGI ,
-		&& LAB_GETF_OCI , 
+		&& LAB_GETF_OCI ,
 		&& LAB_GETF_OGI ,
 		&& LAB_GETF_OVI ,
-		&& LAB_GETF_KCF , 
+		&& LAB_GETF_KCF ,
 		&& LAB_GETF_KGF ,
-		&& LAB_GETF_OCF , 
+		&& LAB_GETF_OCF ,
 		&& LAB_GETF_OGF ,
 		&& LAB_GETF_OVF ,
-		&& LAB_GETF_KCD , 
+		&& LAB_GETF_KCD ,
 		&& LAB_GETF_KGD ,
-		&& LAB_GETF_OCD , 
+		&& LAB_GETF_OCD ,
 		&& LAB_GETF_OGD ,
 		&& LAB_GETF_OVD ,
 
@@ -918,21 +919,21 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_TEST_F ,
 		&& LAB_TEST_D ,
 
-		&& LAB_CALL_CF , 
-		&& LAB_CALL_CMF , 
+		&& LAB_CALL_CF ,
+		&& LAB_CALL_CMF ,
 
-		&& LAB_CALL_TC , 
-		&& LAB_MCALL_TC , 
+		&& LAB_CALL_TC ,
+		&& LAB_MCALL_TC ,
 
-		&& LAB_SAFE_GOTO 
+		&& LAB_SAFE_GOTO
 	};
 #endif
 
 #ifdef HAS_VARLABEL
 
 #define OPBEGIN() goto *labels[ vmc->code ];
-#define OPCASE( name ) LAB_##name : 
-#define OPNEXT() goto *labels[ (++vmc)->code ]; 
+#define OPCASE( name ) LAB_##name :
+#define OPNEXT() goto *labels[ (++vmc)->code ];
 #define OPJUMP() goto *labels[ vmc->code ];
 #define OPDEFAULT()
 #define OPEND()
@@ -949,7 +950,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 
 #define OPBEGIN() for(;;){ switch( vmc->code )
 #define OPCASE( name ) case DVM_##name :
-#define OPNEXT() break; 
+#define OPNEXT() break;
 #define OPJUMP() continue;
 #define OPDEFAULT() default:
 #define OPEND() vmc++; }
@@ -981,7 +982,7 @@ CallEntry:
 	topCtx = topFrame->context;
 #if 0
 	if( (vmSpace->options & DAO_EXEC_SAFE) && self->topFrame->index >= 100 ){
-		DaoContext_RaiseException( topCtx, DAO_ERROR, 
+		DaoContext_RaiseException( topCtx, DAO_ERROR,
 				"too deep recursion for safe running mode." );
 		goto FinishProc;;
 	}
@@ -1049,7 +1050,7 @@ CallEntry:
 		topFrame->depth --;
 		vmc = vmcBase + topFrame->ranges[ topFrame->depth ][1];
 	}
-	if( self->status == DAO_VMPROC_SUSPENDED && 
+	if( self->status == DAO_VMPROC_SUSPENDED &&
 			( vmc->code ==DVM_CALL || vmc->code ==DVM_MCALL || vmc->code ==DVM_YIELD ) ){
 		if( self->parResume && self->pauseType != DAO_VMP_AFC ){
 			DaoList *list = DaoContext_GetList( topCtx, vmc );
@@ -1085,7 +1086,7 @@ CallEntry:
 			case DAO_INTEGER : locVars[ vmc->c ]->v.i = vmc->b; break;
 			case DAO_FLOAT : locVars[ vmc->c ]->v.f = vmc->b; break;
 			case DAO_DOUBLE : locVars[ vmc->c ]->v.d = vmc->b; break;
-			case DAO_COMPLEX : 
+			case DAO_COMPLEX :
 							  if( locVars[ vmc->c ]->t != DAO_COMPLEX ){
 								  DValue_Clear( locVars[ vmc->c ] );
 								  DValue_InitComplex( locVars[ vmc->c ] );
@@ -1184,11 +1185,11 @@ CallEntry:
 				locVars[ vmc->c ]->cst = DAO_CONST_VALUE;
 			goto CheckException;
 		}OPNEXT()
-		OPCASE( ADD ) 
-			OPCASE( SUB ) 
-			OPCASE( MUL ) 
-			OPCASE( DIV ) 
-			OPCASE( MOD ) 
+		OPCASE( ADD )
+			OPCASE( SUB )
+			OPCASE( MUL )
+			OPCASE( DIV )
+			OPCASE( MOD )
 			OPCASE( POW ){
 				topCtx->vmc = vmc;
 				DaoContext_DoBinArith( topCtx, vmc );
@@ -1197,9 +1198,9 @@ CallEntry:
 		OPCASE( AND )
 			OPCASE( OR )
 			OPCASE( LT )
-			OPCASE( LE )  
-			OPCASE( EQ ) 
-			OPCASE( NE ){ 
+			OPCASE( LE )
+			OPCASE( EQ )
+			OPCASE( NE ){
 				topCtx->vmc = vmc;
 				DaoContext_DoBinBool( topCtx, vmc );
 				goto CheckException;
@@ -1210,14 +1211,14 @@ CallEntry:
 				DaoContext_DoUnaArith( topCtx, vmc );
 				goto CheckException;
 			}OPNEXT()
-		OPCASE( BITAND ) 
-			OPCASE( BITOR ) 
+		OPCASE( BITAND )
+			OPCASE( BITOR )
 			OPCASE( BITXOR ){
 				topCtx->vmc = vmc;
 				DaoContext_DoBitLogic( topCtx, vmc );
 				goto CheckException;
 			}OPNEXT()
-		OPCASE( BITLFT ) 
+		OPCASE( BITLFT )
 			OPCASE( BITRIT ){
 				topCtx->vmc = vmc;
 				DaoContext_DoBitShift( topCtx, vmc );
@@ -1514,11 +1515,11 @@ CallEntry:
 			locVars[ vmc->c ]->v.i = pow( locVars[ vmc->a ]->v.i, locVars[ vmc->b ]->v.i );
 		}OPNEXT()
 		OPCASE( AND_III ){
-			locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i 
+			locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i
 				? locVars[ vmc->b ]->v.i : locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( OR_III ){
-			locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i 
+			locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i
 				? locVars[ vmc->a ]->v.i : locVars[ vmc->b ]->v.i;
 		}OPNEXT()
 		OPCASE( NOT_I ){
@@ -2181,13 +2182,13 @@ CallEntry:
 			OPCASE( GETI_AFI )
 			OPCASE( GETI_ADI )
 			OPCASE( SETI_AIII )
-			OPCASE( SETI_AIIF ) 
+			OPCASE( SETI_AIIF )
 			OPCASE( SETI_AIID )
 			OPCASE( SETI_AFII )
-			OPCASE( SETI_AFIF ) 
+			OPCASE( SETI_AFIF )
 			OPCASE( SETI_AFID )
 			OPCASE( SETI_ADII )
-			OPCASE( SETI_ADIF ) 
+			OPCASE( SETI_ADIF )
 			OPCASE( SETI_ADID )
 			OPCASE( GETI_ACI )
 			OPCASE( SETI_ACI )
@@ -2467,7 +2468,7 @@ CallEntry:
 				gotoCount ++;
 				if( gotoCount > 1E6 ){
 					topCtx->vmc = vmc;
-					DaoContext_RaiseException( topCtx, DAO_ERROR, 
+					DaoContext_RaiseException( topCtx, DAO_ERROR,
 							"too many goto operations for safe running mode." );
 					goto CheckException;
 				}
@@ -3023,6 +3024,30 @@ static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int ind
 	}
 #endif
 }
+static void DaoContext_ApplyList( DaoContext *self, DaoVmCode *vmc, int index, int vdim, int entry, int last )
+{
+	DValue param = *self->regValues[ vmc->b ];
+	DaoTuple *tuple = NULL;
+	DaoList *list = param.v.list;
+	DaoList *result = NULL;
+	DValue res = daoNullValue;
+	int i, j, count = 0;
+	int size = list->items->size;
+
+	for(i=0; i<size; i++){
+		/* Set the iteration variable's value in dao and execute the inline code. */
+		self->regValues[index]->v.i = i;
+		DaoVmProcess_ExecuteSection( self->process, entry );
+		if( self->process->status == DAO_VMPROC_ABORTED ) break;
+		res = *self->regValues[ last ];
+
+		/* Now we need to replace the current list's content with the one returned
+		 * by the inline code, that is placed in "res".
+		 */
+		DaoList_SetItem( list, res, i );
+	}
+	self->vmc = vmc; /* it is changed! */
+}
 void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue param = *self->regValues[ vmc->b ];
@@ -3048,7 +3073,13 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 	switch( vmc->a ){
 	case DVM_FUNCT_APPLY :
 #ifdef DAO_WITH_NUMARRAY
-		DaoContext_Apply( self, vmc, index, idc-1, entry, last );
+		if( param.t == DAO_ARRAY ){
+			DaoContext_Apply( self, vmc, index, idc-1, entry, last );
+		} else if( param.t == DAO_LIST ){
+			DaoContext_ApplyList( self, vmc, index, idc-1, entry, last );
+		} else {
+			DaoContext_RaiseException( self, DAO_ERROR, "apply currently is only supported for numeric arrays and lists" );
+		}
 #else
 		DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
 #endif
