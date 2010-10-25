@@ -16,10 +16,21 @@
 #include"string.h"
 #include"locale.h"
 #include"errno.h"
+#include<sys/stat.h>
+
+#ifdef _MSC_VER
+#define chdir _chdir
+#define rmdir _rmdir
+#define getcwd _getcwd
+#define mkdir _mkdir
+#define stat _stat
+#else
+#include"dirent.h"
+#endif
+
 #ifdef UNIX
 #include<unistd.h>
 #include<sys/time.h>
-#include<sys/stat.h>
 #endif
 
 #include"daoStdlib.h"
@@ -782,47 +793,54 @@ static void SYS_Clock( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutFloat( ctx, ((float)clock())/CLOCKS_PER_SEC );
 }
 
-static void GetErrnoMessage(char *buffer, int code, char *defpart, int isrmdir)
+static void GetErrnoMessage( char *buffer, int code, char *defpart, int special )
 {
-	strcpy(buffer, defpart);
+	strcpy( buffer, defpart );
 	switch ( code ){
 	case EACCES:
-		strcat(buffer, "write permission required");
+		strcat( buffer, special? "read permission required" : "write permission required" );
 		break;
 	case EBUSY:
-		strcat(buffer, "the file/directory is used by the system");
+		strcat (buffer, "the file/directory is used by the system" );
 		break;
 	/* Appeared to be synonyms */
 	case ENOTEMPTY:
 	case EEXIST:
-		strcat(buffer, isrmdir? "the directory is not empty" : "the file/directory already exists");
+		strcat( buffer, special? "the directory is not empty" : "the file/directory already exists" );
 		break;
 	case EINVAL:
-		strcat(buffer, "trying to make the directory it's own subdirectory");
+		strcat( buffer, special? "the directory doesn't exist" : "trying to make the directory it's own subdirectory" );
 		break;
 	/* A file required but a dir passed and vice versa */
 	case EPERM:
 	case ENOTDIR:
 	case EISDIR:
-		strcat(buffer, "inconsistent type of the file object(s)");
+		strcat( buffer, "inconsistent type of the file object(s)" );
 		break;
 	case EMLINK:
-		strcat(buffer, "the parent directory would have to many entries");
+		strcat( buffer, "the parent directory would have to many entries" );
 		break;
 	case ENOENT:
-		strcat(buffer, "the file/directory to change doesn't exist");
+		strcat( buffer, special? "the directory doesn't exist" : "the file/directory doesn't exist" );
 		break;
 	case ENOSPC:
-		strcat(buffer, "no space for a new entry in the file system");
+		strcat( buffer, "no space for a new entry in the file system" );
 		break;
 	case EROFS:
-		strcat(buffer, "writing to a directory on a read-only file system");
+		strcat( buffer, "writing to a directory on a read-only file system" );
 		break;
 	case EXDEV:
-		strcat(buffer, "the files/directories are on different file systems");
+		strcat( buffer, "the files/directories are on different file systems" );
 		break;
 	case ENAMETOOLONG:
-		strcat(buffer, "the file/directory name is too long");
+		strcat( buffer, "the file/directory name is too long" );
+		break;
+	case EMFILE:
+	case ENFILE:
+		strcat( buffer, "too many files open" );
+		break;
+	case ENOMEM:
+		strcat( buffer, "not enough memory" );
 		break;
 	default:
 		strcat(buffer, "unknown error");
@@ -885,9 +903,118 @@ static void SYS_Getcwd( DaoContext *ctx, DValue *p[], int N )
 	if( cwd == NULL ){
 		GetErrnoMessage( errbuf, errno, "getcwd -- ", 0 );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}
+	}else
 	DaoContext_PutMBString( ctx, cwd );
 }
+
+static void SYS_Scandir( DaoContext *ctx, DValue *p[], int N )
+{
+	char errbuf[70];
+	DaoList *list = DaoContext_PutList( ctx );
+	struct stat buf;
+	char path[MAX_PATH + 2];
+	int type;
+	unsigned pos;
+	strcpy( path, DString_GetMBS( p[0]->v.s ) );
+	pos = strlen( path );
+	type = p[1]->v.e->id;
+#ifdef WIN32
+	/* Using _findfirst/_findnext for Windows */
+	strcpy( path + pos++, "\\*" );
+	intptr_t handle;
+	struct _finddata_t finfo;
+	handle = _findfirst( path, &finfo );
+	if (handle != -1){
+		DString *str = DString_New( 1 );
+		DValue value = daoNullString;
+		value.v.s = str;
+		do
+			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
+				DString_SetDataMBS( str, finfo.name, strlen(finfo.name) );
+				strcpy( path + pos, finfo.name );
+				if( stat( path, &buf ) ){
+					GetErrnoMessage( errbuf, errno, "scandir -- ", 0 );
+					DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+					return;
+				}
+				if( type == 0 && ( buf.st_mode & _S_IFREG ) || type == 1 &&
+				( buf.st_mode & _S_IFDIR ) || type == 2)
+					DVarray_Append( list->items, value );
+			}
+		while( !_findnext( handle, &finfo ) );
+		DString_Delete( str );
+		_findclose( handle );  
+	}
+#else
+	/* Using POSIX opendir/readdir otherwise */
+	DIR *dp;
+	struct dirent *ep;
+	dp = opendir( path );
+	if( dp ){
+		DString *str = DString_New( 1 );
+		DValue value = daoNullString;
+		value.v.s = str;
+		strcpy( path + pos++,  "/");
+		while( ( ep = readdir( dp ) ) )
+			if( strcmp( ep->d_name, "." ) && strcmp( ep->d_name, ".." ) ){
+				DString_SetDataMBS( str, ep->d_name, strlen(ep->d_name) );
+				strcpy( path + pos, ep->d_name );
+				if( stat( path, &buf ) ){
+					GetErrnoMessage( errbuf, errno, "scandir -- ", 0 );
+					DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+					return;
+				}
+				if( type == 0 && S_ISREG( buf.st_mode ) || type == 1 &&
+				S_ISDIR( buf.st_mode ) || type == 2)
+					DVarray_Append( list->items, value );
+			}
+		DString_Delete( str );
+		closedir( dp );
+	}
+#endif
+	else{
+		GetErrnoMessage( errbuf, errno, "scandir -- ", 1 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
+}
+
+static void SYS_Type( DaoContext *ctx, DValue *p[], int N )
+{
+	char errbuf[70];
+	struct stat buf;
+	DValue value = daoNullValue;
+	DEnum *en;
+	if( stat( DString_GetMBS( p[0]->v.s ), &buf ) ){
+		GetErrnoMessage( errbuf, errno, "type -- ", 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	value.t = DAO_ENUM;
+#ifdef WIN32
+	if( buf.st_mode & _S_IFREG )
+		en = DEnum_New( 0, "file" );
+	else if( buf.st_mode & _S_IFDIR )
+		en = DEnum_New( 1, "dir" );
+#else
+	if( S_ISREG( buf.st_mode ) )
+		en = DEnum_New( 0, "file" );
+	else if( S_ISDIR( buf.st_mode ) )
+      en = DEnum_New( 1, "dir" );
+#endif
+	else
+      en = DEnum_New( 2, "unknown" );
+   value.v.e = en;
+	DaoContext_PutValue( ctx, value );
+	DEnum_Delete( en );
+}
+
+#ifdef _MSC_VER
+#undef chdir
+#undef rmdir
+#undef getcwd
+#undef mkdir
+#undef stat
+#endif
 
 static DaoFuncItem sysMeths[]=
 {
@@ -907,6 +1034,8 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_Rmdir,     "rmdir( path:string )" },
 	{ SYS_Setcwd,    "setcwd( path:string )" },
 	{ SYS_Getcwd,    "getcwd()=>string" },
+	{ SYS_Scandir,   "scandir( path:string, type:enum<file,dir,any> )=>list<string>" },
+	{ SYS_Type,      "type( path:string )=>enum<file,dir,unknown>" },
 	{ NULL, NULL }
 };
 static DaoNumItem sysConsts[] =
