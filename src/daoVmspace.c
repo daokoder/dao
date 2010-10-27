@@ -288,11 +288,8 @@ static DaoTypeBase vmsTyper=
 
 DaoVmSpace* DaoVmSpace_New()
 {
-	char *daodir = getenv( "DAO_DIR" );
-	char pwd[512];
 	DaoVmSpace *self = (DaoVmSpace*) dao_malloc( sizeof(DaoVmSpace) );
 	DaoBase_Init( self, DAO_VMSPACE );
-	getcwd( pwd, 511 );
 	self->stdStream = DaoStream_New();
 	self->stdStream->vmSpace = self;
 	self->source = DString_New(1);
@@ -338,12 +335,6 @@ DaoVmSpace* DaoVmSpace_New()
 
 	self->ReadLine = NULL;
 	self->AddHistory = NULL;
-
-	DaoVmSpace_SetPath( self, pwd );
-	DaoVmSpace_AddPath( self, pwd );
-	DaoVmSpace_AddPath( self, DAO_PATH );
-	DaoVmSpace_AddPath( self, "~/dao" );
-	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 
 	self->mainProcess = DaoVmProcess_New( self );
 	GC_IncRC( self->mainProcess );
@@ -399,6 +390,17 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DMap_Delete( self->friendPids );
 #endif
 	dao_free( self );
+}
+static DaoVmSpace_InitPath( DaoVmSpace *self )
+{
+	char *daodir = getenv( "DAO_DIR" );
+	char pwd[512];
+	getcwd( pwd, 511 );
+	DaoVmSpace_SetPath( self, pwd );
+	DaoVmSpace_AddPath( self, pwd );
+	DaoVmSpace_AddPath( self, DAO_PATH );
+	DaoVmSpace_AddPath( self, "~/dao" );
+	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 }
 void DaoVmSpace_Lock( DaoVmSpace *self )
 {
@@ -600,7 +602,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 				static char buf[256] = "PROC_PORT=";
 				strncat( buf, token->mbs+12, 240 );
 				putenv( buf );
-			}else{
+			}else if( token->size ){
 				DaoStream_WriteMBS( self->stdStream, "Unknown option: " );
 				DaoStream_WriteMBS( self->stdStream, token->mbs );
 				DaoStream_WriteMBS( self->stdStream, ";\n" );
@@ -646,8 +648,10 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 						   }
 				case '-' : break;
 				default :
-						   DString_AppendChar( str, token->mbs[j] );
-						   DString_AppendChar( str, ' ' );
+						   if( token->mbs[j] ){
+							   DString_AppendChar( str, token->mbs[j] );
+							   DString_AppendChar( str, ' ' );
+						   }
 						   break;
 				}
 			}
@@ -2304,7 +2308,7 @@ DaoVmSpace* DaoInit()
 #endif
 	DaoNameSpace_Import( vms->mainNamespace, vms->nsInternal, NULL );
 
-	DaoVmSpace_AddPath( vms, DAO_PATH );
+	DaoVmSpace_InitPath( vms );
 	/*
 	   printf( "initialized...\n" );
 	 */

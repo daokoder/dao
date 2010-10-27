@@ -907,6 +907,10 @@ static void SYS_Getcwd( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutMBString( ctx, cwd );
 }
 
+#ifndef MAX_PATH
+#define MAX_PATH 512
+#endif
+
 static void SYS_Scandir( DaoContext *ctx, DValue *p[], int N )
 {
 	char errbuf[70];
@@ -964,8 +968,8 @@ static void SYS_Scandir( DaoContext *ctx, DValue *p[], int N )
 					DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 					return;
 				}
-				if( type == 0 && S_ISREG( buf.st_mode ) || type == 1 &&
-				S_ISDIR( buf.st_mode ) || type == 2)
+				if( (type == 0 && S_ISREG( buf.st_mode )) || (type == 1 &&
+				S_ISDIR( buf.st_mode )) || type == 2)
 					DVarray_Append( list->items, value );
 			}
 		DString_Delete( str );
