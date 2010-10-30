@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20101023
+#define DAO_H_VERSION 20101028
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -271,11 +271,17 @@ typedef struct DaoType         DaoType;
 typedef struct complex8  { float  real, imag; } complex8;
 typedef struct complex16 { double real, imag; } complex16;
 
+/* Structure for symbol, enum and flag:
+ * Storage modes:
+ * Symbol: $AA => { type<$AA>, 0 }
+ * Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
+ * Enum: MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
+ * Flag: MyFlag{ AA=1, BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
+ */
 struct DEnum
 {
-	dint     id;
-	DString *name;
-	DaoType *type;
+	DaoType  *type;
+	dint      value;
 };
 
 
@@ -592,6 +598,7 @@ struct DaoAPI
 	DString*   (*DaoContext_PutWCString)( DaoContext *self, const wchar_t *wcs );
 	DString*   (*DaoContext_PutString)( DaoContext *self, DString *str );
 	DString*   (*DaoContext_PutBytes)( DaoContext *self, const char *bytes, int N );
+	DEnum*     (*DaoContext_PutEnum)( DaoContext *self, const char *symbols );
 	DaoArray*  (*DaoContext_PutArrayInteger)( DaoContext *self, int *array, int N );
 	DaoArray*  (*DaoContext_PutArrayShort)( DaoContext *self, short *array, int N );
 	DaoArray*  (*DaoContext_PutArrayFloat)( DaoContext *self, float *array, int N );
@@ -887,6 +894,7 @@ DAO_DLL DString*   DaoContext_PutMBString( DaoContext *self, const char *mbs );
 DAO_DLL DString*   DaoContext_PutWCString( DaoContext *self, const wchar_t *wcs );
 DAO_DLL DString*   DaoContext_PutString( DaoContext *self, DString *str );
 DAO_DLL DString*   DaoContext_PutBytes( DaoContext *self, const char *bytes, int N );
+DAO_DLL DEnum*     DaoContext_PutEnum( DaoContext *self, const char *symbols );
 DAO_DLL DaoArray*  DaoContext_PutArrayInteger( DaoContext *self, int *array, int N );
 DAO_DLL DaoArray*  DaoContext_PutArrayShort( DaoContext *self, short *array, int N );
 DAO_DLL DaoArray*  DaoContext_PutArrayFloat( DaoContext *self, float *array, int N );
@@ -1183,6 +1191,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoContext_PutWCString( self, wcs ) __dao.DaoContext_PutWCString( self, wcs )
 #define DaoContext_PutString( self, str ) __dao.DaoContext_PutString( self, str )
 #define DaoContext_PutBytes( self, bytes, N ) __dao.DaoContext_PutBytes( self, bytes, N )
+#define DaoContext_PutEnum( self, symbols ) __dao.DaoContext_PutEnum( self, symbols )
 #define DaoContext_PutArrayInteger( s, a, N ) __dao.DaoContext_PutArrayInteger( s, a, N )
 #define DaoContext_PutArrayShort( s, a, N ) __dao.DaoContext_PutArrayShort( s, a, N )
 #define DaoContext_PutArrayFloat( s, a, N ) __dao.DaoContext_PutArrayFloat( s, a, N )

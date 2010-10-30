@@ -1078,6 +1078,7 @@ static const char vmcTyping[][7] =
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LE */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_EQ */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_NE */
+	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_IN */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITAND */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITOR */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITXOR */
@@ -2974,10 +2975,24 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
 					case DAO_LONG :
 						break;
-					case DAO_STRING :
-						if( code != DVM_ADD ) goto InvOper; break;
 					case DAO_COMPLEX :
 						if( code == DVM_MOD ) goto InvOper; break;
+					case DAO_STRING :
+						if( code != DVM_ADD ) goto InvOper; break;
+					case DAO_ENUM :
+						if( code != DVM_ADD && code != DVM_SUB ) goto InvOper;
+						if( at->name->mbs[0] =='$' && bt->name->mbs[0] =='$' ){
+							ct = NULL;
+							if( code == DVM_ADD ){
+								ct = DaoNameSpace_SymbolTypeAdd( ns, at, bt, NULL );
+							}else{
+								ct = DaoNameSpace_SymbolTypeSub( ns, at, bt, NULL );
+							}
+							if( ct == NULL ) goto InvOper;
+						}else if( at->name->mbs[0] =='$' ){
+							ct = bt;
+						}
+						break;
 					case DAO_LIST :
 						if( code != DVM_ADD ) goto InvOper;
 						AssertTypeMatching( bt, at, defs, 0);
@@ -3123,6 +3138,16 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				break;
 			}
+		case DVM_IN :
+			init[opc] = 1;
+			ct = inumt;
+			if( at->tid != DAO_ENUM && bt->tid == DAO_ENUM ) goto InvOper;
+			if( bt->tid != DAO_UDF && bt->tid != DAO_ANY && bt->tid != DAO_INITYPE ){
+				if( bt->tid < DAO_STRING || bt->tid > DAO_PAIR ) goto InvOper;
+			}
+			if( type[opc] == NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
+			break;
 		case DVM_NOT : case DVM_UNMS : case DVM_BITREV :
 			{
 				init[opc] = 1;

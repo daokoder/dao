@@ -54,17 +54,41 @@ int DValue_Compare( DValue left, DValue right )
 		double R = DValue_GetDouble( right );
 		return L==R ? 0 : ( L<R ? -1 : 1 );
 	}else if( left.t == DAO_ENUM && right.t == DAO_ENUM ){
+		DEnum E;
 		DNode *N = NULL;
 		DEnum *L = left.v.e;
 		DEnum *R = right.v.e;
-		if( L->type && L->type == R->type ){
-			return L->id == R->id ? 0 : ( L->id < R->id ? -1 : 1 );
-		}else if( L->type && (N = DMap_Find(L->type->mapNames, R->name)) ){
-			return L->id == N->value.pInt ? 0 : (L->id < N->value.pInt ? -1 : 1);
-		}else if( R->type && (N = DMap_Find(R->type->mapNames, L->name)) ){
-			return N->value.pInt == R->id ? 0 : (N->value.pInt < R->id ? -1 : 1);
+		DMap *ML = L->type->mapNames;
+		DMap *MR = R->type->mapNames;
+		uchar_t FL = L->type->flagtype;
+		uchar_t FR = R->type->flagtype;
+		char SL = L->type->name->mbs[0];
+		char SR = R->type->name->mbs[0];
+		if( L->type == R->type ){
+			return L->value == R->value ? 0 : ( L->value < R->value ? -1 : 1 );
+		}else if( SL == '$' && SR == '$' && FL == 0 && FR == 0 ){
+			return DString_Compare( L->type->name, R->type->name );
+		}else if( SL == '$' && SR == '$' ){
+			if( L->type->mapNames->size != R->type->mapNames->size ){
+				return (int)L->type->mapNames->size - (int)R->type->mapNames->size;
+			}else{
+				for(N=DMap_First(ML);N;N=DMap_Next(ML,N)){
+					if( DMap_Find( MR, N->key.pVoid ) ==0 ) return -1;
+				}
+				return 0;
+			}
+		}else if( SL == '$' ){
+			E.type = R->type;
+			E.value = R->value;
+			DEnum_SetValue( & E, L, NULL );
+			return E.value == R->value ? 0 : ( E.value < R->value ? -1 : 1 );
+		}else if( SR == '$' ){
+			E.type = L->type;
+			E.value = L->value;
+			DEnum_SetValue( & E, R, NULL );
+			return L->value == E.value ? 0 : ( L->value < E.value ? -1 : 1 );
 		}else{
-			return DString_Compare( L->name, R->name );
+			return L->value == R->value ? 0 : ( L->value < R->value ? -1 : 1 );
 		}
 	}else if( left.t == DAO_STRING && right.t == DAO_STRING ){
 		return DString_Compare( left.v.s, right.v.s );
@@ -150,7 +174,7 @@ double DValue_GetDouble( DValue self )
 	case DAO_LONG :
 		return DLong_ToInteger( self.v.l );
 	case DAO_ENUM  :
-		return self.v.e->id;
+		return self.v.e->value;
 	case DAO_STRING  :
 		str = self.v.s;
 		if( DString_IsMBS( str ) )
@@ -168,6 +192,7 @@ int DValue_IsNumber( DValue self )
 }
 void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
+	DString *name;
 	DaoTypeBase *typer;
 	switch( self.t ){
 	case DAO_INTEGER :
@@ -187,9 +212,12 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 		DaoStream_WriteString( stream, stream->streamString );
 		break;
 	case DAO_ENUM  :
-		DaoStream_WriteString( stream, self.v.e->name );
+		name = DString_New(1);
+		DEnum_MakeName( self.v.e, name );
+		DaoStream_WriteMBS( stream, name->mbs );
 		DaoStream_WriteMBS( stream, "=" );
-		DaoStream_WriteInt( stream, self.v.e->id );
+		DaoStream_WriteInt( stream, self.v.e->value );
+		DString_Delete( name );
 		break;
 	case DAO_STRING  :
 		DaoStream_WriteString( stream, self.v.s ); break;
@@ -219,13 +247,13 @@ DString* DValue_GetString( DValue val, DString *str )
 	case DAO_INTEGER : sprintf( chs, ( sizeof(dint) == 4 )? "%li" : "%lli", val.v.i ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", val.v.f ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", val.v.d ); break;
-		/* TODO complex */
+	case DAO_COMPLEX : sprintf( chs, "%g+%g$", val.v.c->real, val.v.c->imag );
 	case DAO_LONG  : DLong_Print( val.v.l, str ); break;
-	case DAO_ENUM : DString_Assign( str, val.v.e->name ); break;
+	case DAO_ENUM : DEnum_MakeName( val.v.e, str ); break;
 	case DAO_STRING : DString_Assign( str, val.v.s ); break;
 	default : break;
 	}
-	if( val.t < DAO_ENUM ) DString_SetMBS( str, chs );
+	if( val.t <= DAO_COMPLEX ) DString_SetMBS( str, chs );
 	return str;
 }
 void DValue_MarkConst( DValue *self )
@@ -318,13 +346,12 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 		DLong_Move( self->v.l, from.v.l );
 		break;
 	case DAO_ENUM :
-		if( self->t == DAO_ENUM ){
-			self->v.e->id = from.v.e->id;
-			DString_Assign( self->v.e->name, from.v.e->name );
-		}else{
+		if( self->t != DAO_ENUM ){
 			self->v.e = DEnum_Copy( from.v.e );
+		}else{
+			DEnum_SetType( self->v.e, from.v.e->type );
+			DEnum_SetValue( self->v.e, from.v.e, NULL );
 		}
-		DEnum_SetType( self->v.e, from.v.e->type );
 		break;
 	case DAO_STRING  :
 		if( self->t == DAO_STRING ){
@@ -583,18 +610,16 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			if( tp == dao_array_bit ) to->v.l->bits = 1;
 			break;
 		case DAO_ENUM :
-			if( to->t == DAO_ENUM ){
-				to->v.e->id = from.v.e->id;
-				DString_Assign( to->v.e->name, from.v.e->name );
-			}else{
-				to->v.e = DEnum_Copy( from.v.e );
+			if( to->t != DAO_ENUM ){
+				to->v.e = DEnum_New( NULL, 0 );
+				to->t = from.t;
 			}
-			if( tp->mapNames ) node = DMap_Find( tp->mapNames, to->v.e->name );
-			if( node ){
-				to->v.e->id = node->value.pInt;
-				DEnum_SetType( to->v.e, tp );
-			}
-			to->t = from.t;
+#if 0
+			printf( "%s %s %i %i\n", tp->name->mbs, from.v.e->type->name->mbs, to->v.e->value, from.v.e->value );
+			printf( "%i %i\n", tp->flagtype, from.v.e->type->flagtype );
+#endif
+			DEnum_SetType( to->v.e, tp );
+			DEnum_SetValue( to->v.e, from.v.e, NULL );
 			break;
 		case DAO_STRING  :
 			if( to->t == DAO_STRING ){

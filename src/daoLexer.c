@@ -134,8 +134,9 @@ DIntStringPair dao_keywords[] =
 	{ DAO_FLOAT, "float" } ,
 	{ DAO_DOUBLE, "double" } ,
 	{ DAO_COMPLEX, "complex" } ,
-	{ DAO_STRING, "string" } ,
 	{ DAO_LONG, "long" } ,
+	{ DAO_STRING, "string" } ,
+	{ DAO_ENUM, "enum" } ,
 	{ DAO_ARRAY, "array" } ,
 	{ DAO_TUPLE, "tuple" } ,
 	{ DAO_MAP, "map" } ,
@@ -164,7 +165,6 @@ DIntStringPair dao_keywords[] =
 	{ 100, "skip" } ,
 	{ 100, "return" } ,
 	{   0, "yield" } ,
-	{ DAO_ENUM, "enum" } ,
 	{ 100, "const" } ,
 	{ 100, "global" } ,
 	{ 100, "static" } ,
@@ -821,6 +821,7 @@ void DaoInitLexTable()
 	daoArithOper[ DKEY_AND ]    = doper( DAO_OPER_AND,      0, 0, 8 );
 	daoArithOper[ DTOK_OR ]     = doper( DAO_OPER_OR,       0, 0, 8 );
 	daoArithOper[ DKEY_OR ]     = doper( DAO_OPER_OR,       0, 0, 8 );
+	daoArithOper[ DKEY_IN ]     = doper( DAO_OPER_IN,       0, 0, 7 );
 	daoArithOper[ DTOK_LT ]     = doper( DAO_OPER_LT,       0, 0, 7 );
 	daoArithOper[ DTOK_GT ]     = doper( DAO_OPER_GT,       0, 0, 7 );
 	daoArithOper[ DTOK_EQ ]     = doper( DAO_OPER_EQ,       0, 0, 7 );

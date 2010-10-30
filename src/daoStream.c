@@ -282,13 +282,9 @@ static void DaoIO_Isopen( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Seek( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *self = p[0]->v.stream;
-	int where = SEEK_CUR;
+	int options[] = { SEEK_SET, SEEK_CUR, SEEK_END };
+	int where = options[ p[2]->v.e->value ];
 	if( self->file == NULL ) return;
-	switch( p[2]->v.e->id ){
-	case 0 : where = SEEK_SET; break;
-	case 1 : where = SEEK_CUR; break;
-	case 2 : where = SEEK_END; break;
-	}
 	fseek( self->file->fd, p[1]->v.i, where );
 }
 static void DaoIO_Tell( DaoContext *ctx, DValue *p[], int N )

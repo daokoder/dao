@@ -75,10 +75,17 @@ DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData );
 void DaoBase_SafeGetField( DValue *self, DaoContext *ctx, DString *name );
 void DaoBase_SafeSetField( DValue *self, DaoContext *ctx, DString *name, DValue value );
 
-DEnum* DEnum_New( int id, const char *name );
+DEnum* DEnum_New( DaoType *type, dint value );
 DEnum* DEnum_Copy( DEnum *self );
-void DEnum_SetType( DEnum *self, DaoType *type );
 void DEnum_Delete( DEnum *self );
+void DEnum_MakeName( DEnum *self, DString *name );
+void DEnum_SetType( DEnum *self, DaoType *type );
+int DEnum_SetSymbols( DEnum *self, const char *symbols );
+int DEnum_SetValue( DEnum *self, DEnum *other, DString *enames );
+int DEnum_AddValue( DEnum *self, DEnum *other, DString *enames );
+int DEnum_RemoveValue( DEnum *self, DEnum *other, DString *enames );
+int DEnum_AddSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns );
+int DEnum_SubSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns );
 
 struct DaoList
 {

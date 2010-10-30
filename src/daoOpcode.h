@@ -51,6 +51,7 @@ enum DaoOpcode
 	DVM_LE ,   /* C = A <= B; */
 	DVM_EQ ,   /* C = A == B; */
 	DVM_NE ,   /* C = A != B; */
+	DVM_IN ,   /* C = A in B; */
 	DVM_BITAND , /* C = A & B */
 	DVM_BITOR ,  /* C = A | B */
 	DVM_BITXOR ,  /* C = A ^ B */

@@ -314,33 +314,271 @@ extern DaoTypeBase comTyper;
 extern DaoTypeBase longTyper;
 extern DaoTypeBase stringTyper;
 
-DEnum* DEnum_New( int id, const char *name )
+DEnum* DEnum_New( DaoType *type, dint value )
 {
 	DEnum *self = (DEnum*) dao_malloc( sizeof(DEnum) );
-	self->id = id;
-	self->type = NULL;
-	self->name = DString_New(1);
-	if( name ) DString_SetMBS( self->name, name );
+	self->value = value;
+	self->type = type;
+	if( type ) GC_IncRC( type );
 	return self;
 }
 DEnum* DEnum_Copy( DEnum *self )
 {
-	DEnum *copy = DEnum_New( self->id, self->name->mbs );
-	GC_IncRC( self->type );
-	copy->type = self->type;
-	return copy;
+	return DEnum_New( self->type, self->value );
+}
+void DEnum_Delete( DEnum *self )
+{
+	if( self->type ) GC_DecRC( self->type );
+	dao_free( self );
+}
+void DEnum_MakeName( DEnum *self, DString *name )
+{
+	DMap *mapNames;
+	DNode *node;
+	int n;
+	DString_Clear( name );
+	mapNames = self->type->mapNames;
+	for(node=DMap_First(mapNames);node;node=DMap_Next(mapNames,node)){
+		if( self->type->flagtype ){
+			if( !(node->value.pInt & self->value) ) continue;
+		}else if( node->value.pInt != self->value ){
+			continue;
+		}
+		DString_AppendChar( name, '$' );
+		DString_Append( name, node->key.pString );
+	}
 }
 void DEnum_SetType( DEnum *self, DaoType *type )
 {
 	if( self->type == type ) return;
 	GC_ShiftRC( type, self->type );
 	self->type = type;
+	self->value = type->mapNames->root->value.pInt;
 }
-void DEnum_Delete( DEnum *self )
+int DEnum_SetSymbols( DEnum *self, const char *symbols )
 {
-	if( self->type ) GC_DecRC( self->type );
-	DString_Delete( self->name );
-	dao_free( self );
+	DString *names;
+	dint first = 0;
+	dint value = 0;
+	int notfound = 0;
+	int i, k = 0;
+	if( self->type->name->mbs[0] == '$' ) return 0;
+	names = DString_New(1);
+	DString_SetMBS( names, symbols );
+	for(i=0; i<names->size; i++) if( names->mbs[i] == '$' ) names->mbs[i] == 0;
+	i = 0;
+	if( names->mbs[0] == '\0' ) i += 1;
+	do{ /* for multiple symbols */
+		DString name = DString_WrapMBS( names->mbs + i );
+		DNode *node = DMap_Find( self->type->mapNames, &name );
+		if( node ){
+			if( ! k ) first = node->value.pInt;
+			value |= node->value.pInt;
+			k += 1;
+		}else{
+			notfound = 1;
+		}
+		i += name.size + 1;
+	}while( i < names->size );
+	DString_Delete( names );
+	if( k == 0 ) return 0;
+	if( self->type->flagtype ==0 && k > 1 ){
+		self->value = first;
+		return 0;
+	}
+	self->value = value;
+	return notfound == 0;
+}
+int DEnum_SetValue( DEnum *self, DEnum *other, DString *enames )
+{
+	DMap *selfNames = self->type->mapNames;
+	DMap *otherNames = other->type->mapNames;
+	DNode *node, *search;
+	int count = 0;
+	int i = 0;
+
+	if( self->type == other->type ){
+		self->value = other->value;
+		return 1;
+	}
+	if( self->type->name->mbs[0] == '$' ) return 0;
+
+	self->value = 0;
+	if( self->type->flagtype && other->type->flagtype ){
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( !(node->value.pInt & other->value) ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value |= search->value.pInt;
+		}
+	}else if( self->type->flagtype ){
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( node->value.pInt != other->value ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value |= search->value.pInt;
+		}
+	}else if( other->type->flagtype ){
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( !(node->value.pInt & other->value) ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value = search->value.pInt;
+			break;
+		}
+		return node && (node->value.pInt == other->value);
+	}else{
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( node->value.pInt != other->value ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value = search->value.pInt;
+			break;
+		}
+	}
+	return other->type->name->mbs[0] == '$';
+}
+int DEnum_AddValue( DEnum *self, DEnum *other, DString *enames )
+{
+	DMap *selfNames = self->type->mapNames;
+	DMap *otherNames = other->type->mapNames;
+	DNode *node, *search;
+	int count = 0;
+	int i = 0;
+
+	if( self->type->flagtype ==0 || self->type->name->mbs[0] == '$' ) return 0;
+
+	if( self->type == other->type ){
+		self->value |= other->value;
+		return 1;
+	}else if( other->type->flagtype ){
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( !(node->value.pInt & other->value) ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value |= search->value.pInt;
+		}
+	}else{
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( node->value.pInt != other->value ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value |= search->value.pInt;
+		}
+	}
+	return other->type->name->mbs[0] == '$';
+}
+int DEnum_RemoveValue( DEnum *self, DEnum *other, DString *enames )
+{
+	DMap *selfNames = self->type->mapNames;
+	DMap *otherNames = other->type->mapNames;
+	DNode *node, *search;
+	int count = 0;
+	int i = 0;
+
+	if( self->type->flagtype ==0 || self->type->name->mbs[0] == '$' ) return 0;
+
+	if( self->type == other->type ){
+		self->value &= ~ other->value;
+		return 1;
+	}else if( other->type->flagtype ){
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( !(node->value.pInt & other->value) ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value &= ~search->value.pInt;
+		}
+	}else{
+		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+			if( node->value.pInt != other->value ) continue;
+			search = DMap_Find( selfNames, node->key.pVoid );
+			if( search == NULL ) return 0;
+			self->value &= ~search->value.pInt;
+		}
+	}
+	return other->type->name->mbs[0] == '$';
+}
+int DEnum_AddSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns )
+{
+	DaoType *type;
+	DMap *names1 = s1->type->mapNames;
+	DMap *names2 = s2->type->mapNames;
+	DMap *mapNames;
+	DNode *node;
+	DString *name;
+	dint value = 0;
+	if( s1->type->name->mbs[0] != '$' && s2->type->name->mbs[0] != '$' ) return 0;
+	name = DString_New(1);
+	for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
+		DString_AppendChar( name, '$' );
+		DString_Append( name, node->key.pString );
+	}
+	for(node=DMap_First(names2);node;node=DMap_Next(names2,node)){
+		if( DMap_Find( names1, node->key.pVoid ) ) continue;
+		DString_AppendChar( name, '$' );
+		DString_Append( name, node->key.pString );
+	}
+	type = DaoNameSpace_FindType( ns, name );
+	if( type == NULL ){
+		type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
+		type->flagtype = 1;
+		type->mapNames = mapNames = DMap_Copy( names1 );
+		value = s1->value;
+		if( mapNames->size == 1 ){
+			mapNames->root->value.pInt = 1;
+			value = 1;
+		}
+		for(node=DMap_First(names2);node;node=DMap_Next(names2,node)){
+			if( DMap_Find( names1, node->key.pVoid ) ) continue;
+			value |= (1<<mapNames->size);
+			DMap_Insert( mapNames, node->key.pVoid, (void*)(1<<mapNames->size) );
+		}
+		DaoNameSpace_AddType( ns, name, type );
+	}
+	DEnum_SetType( self, type );
+	DString_Delete( name );
+	self->value = value;
+	return 1;
+}
+int DEnum_SubSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns )
+{
+	DaoType *type;
+	DMap *names1 = s1->type->mapNames;
+	DMap *names2 = s2->type->mapNames;
+	DMap *mapNames;
+	DNode *node;
+	DString *name;
+	dint value = 0;
+	int count = 0;
+	if( s1->type->name->mbs[0] != '$' && s2->type->name->mbs[0] != '$' ) return 0;
+	name = DString_New(1);
+	for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
+		if( DMap_Find( names2, node->key.pVoid ) ) continue;
+		DString_AppendChar( name, '$' );
+		DString_Append( name, node->key.pString );
+		count += 1;
+	}
+	if( count ==0 ){
+		DString_Delete( name );
+		return 0;
+	}
+	type = DaoNameSpace_FindType( ns, name );
+	if( type == NULL ){
+		type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
+		type->flagtype = count > 1 ? 1 : 0;
+		type->mapNames = mapNames = DMap_New(D_STRING,0);
+		value = type->flagtype;
+		for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
+			if( DMap_Find( names2, node->key.pVoid ) ) continue;
+			value |= (1<<mapNames->size);
+			DMap_Insert( mapNames, node->key.pVoid, (void*)(1<<mapNames->size) );
+		}
+		DaoNameSpace_AddType( ns, name, type );
+	}
+	DEnum_SetType( self, type );
+	DString_Delete( name );
+	self->value = value;
+	return 1;
 }
 
 DaoTypeBase enumTyper=
@@ -1953,8 +2191,9 @@ static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
 		}
 	case DAO_ENUM :
 		{
+			/* XXX */
 			DEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
-			for(i=0; i<self->items->size; i++) denum->id += data[i].v.e->id;
+			for(i=0; i<self->items->size; i++) denum->value += data[i].v.e->value;
 			break;
 		}
 	case DAO_STRING :

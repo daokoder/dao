@@ -92,6 +92,7 @@ DString*   DaoContext_PutMBString( DaoContext *self, const char *mbs );
 DString*   DaoContext_PutWCString( DaoContext *self, const wchar_t *wcs );
 DString*   DaoContext_PutString( DaoContext *self, DString *str );
 DString*   DaoContext_PutBytes( DaoContext *self, const char *bytes, int N );
+DEnum*     DaoContext_PutEnum( DaoContext *self, const char *symbols );
 DaoArray*  DaoContext_PutArrayInteger( DaoContext *self, int *array, int N );
 DaoArray*  DaoContext_PutArrayShort( DaoContext *self, short *array, int N );
 DaoArray*  DaoContext_PutArrayFloat( DaoContext *self, float *array, int N );

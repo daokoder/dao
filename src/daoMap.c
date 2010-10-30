@@ -167,8 +167,8 @@ static int DValue_Hash( DValue self, unsigned int buf[], int id, int max )
 		len = self.v.l->size*sizeof(short);
 		break;
 	case DAO_ENUM  : 
-		data = self.v.e->name->mbs;
-		len = self.v.e->name->size;
+		data = self.v.e->type->name->mbs; /* XXX */
+		len = self.v.e->type->name->size;
 		break;
 	case DAO_STRING  : 
 		if( self.v.s->mbs ){

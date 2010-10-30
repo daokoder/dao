@@ -67,6 +67,7 @@ extern void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc );
 extern int DaoContext_TryObjectArith( DaoContext *self, DValue dA, DValue dB );
 extern int DaoContext_TryCDataArith( DaoContext *self, DValue dA, DValue dB );
 
+extern void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc );
 /* binary operation with boolean result. */
 extern void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc );
@@ -637,6 +638,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_LE ,
 		&& LAB_EQ ,
 		&& LAB_NE ,
+		&& LAB_IN ,
 		&& LAB_BITAND ,
 		&& LAB_BITOR ,
 		&& LAB_BITXOR ,
@@ -1205,6 +1207,11 @@ CallEntry:
 				DaoContext_DoBinBool( topCtx, vmc );
 				goto CheckException;
 			}OPNEXT()
+		OPCASE( IN ){
+				topCtx->vmc = vmc;
+				DaoContext_DoInTest( topCtx, vmc );
+				goto CheckException;
+			}OPNEXT()
 		OPCASE( NOT )
 			OPCASE( UNMS ){
 				topCtx->vmc = vmc;
@@ -1293,7 +1300,7 @@ CallEntry:
 				vmc = j ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_ENUM  :
-				vmc = vA2.v.e->id ? vmc+1 : vmcBase + vmc->b;
+				vmc = vA2.v.e->value ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_STRING  :
 				vmc = DString_Size( vA2.v.s ) ? vmc+1 : vmcBase + vmc->b; break;
@@ -3254,6 +3261,9 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 	case DVM_AND : case DVM_OR : case DVM_LT :
 	case DVM_LE :  case DVM_EQ : case DVM_NE :
 		DaoContext_DoBinBool( ctx, vmc );
+		break;
+	case DVM_IN :
+		DaoContext_DoInTest( ctx, vmc );
 		break;
 	case DVM_NOT : case DVM_UNMS :
 		DaoContext_DoUnaArith( ctx, vmc ); break;

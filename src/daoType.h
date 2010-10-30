@@ -76,8 +76,9 @@ struct DaoType
 {
 	DAO_DATA_COMMON;
 
-	short         tid; /* type id */
+	uchar_t       tid; /* type id */
 	uchar_t       attrib;
+	uchar_t       flagtype; /* for enum type */
 	uchar_t       ffitype; /* for DaoCLoader module */
 	DString      *name; /* type name */
 	DString      *fname; /* field name, or parameter name */

@@ -115,7 +115,6 @@ enum DaoTypeAttribs
 	DAO_TYPE_SELF = (1<<1),
 	DAO_TYPE_NOTDEF = (1<<3),
 	DAO_TYPE_INTER = (1<<4)
-		/* DAO_TYPE_CONST = (1<<2) */
 };
 
 enum DaoCallMode
@@ -217,6 +216,8 @@ enum DaoArithOperType{
 
 	DAO_OPER_AND ,
 	DAO_OPER_OR ,
+
+	DAO_OPER_IN ,
 
 	DAO_OPER_LT ,
 	DAO_OPER_GT ,

@@ -20,7 +20,7 @@ static const char *const vmOperNames[] = {
 	"LOAD", "CAST", "MOVE",
 	"NOT", "UNMS", "BITREV",
 	"ADD", "SUB", "MUL", "DIV", "MOD", "POW",
-	"AND", "OR", "LT", "LE", "EQ", "NE",
+	"AND", "OR", "LT", "LE", "EQ", "NE", "IN",
 	"BITAND", "BITOR", "BITXOR", "BITLFT", "BITRIT",
 	"CHECK", "NAMEVA", "PAIR", "TUPLE",
 	"LIST", "MAP", "HASH", "ARRAY", "MATRIX", "CURRY", "MCURRY",

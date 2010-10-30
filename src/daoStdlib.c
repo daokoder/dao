@@ -921,7 +921,7 @@ static void SYS_Scandir( DaoContext *ctx, DValue *p[], int N )
 	unsigned pos;
 	strcpy( path, DString_GetMBS( p[0]->v.s ) );
 	pos = strlen( path );
-	type = p[1]->v.e->id;
+	type = p[1]->v.e->value;
 #ifdef WIN32
 	/* Using _findfirst/_findnext for Windows */
 	strcpy( path + pos++, "\\*" );
@@ -986,30 +986,24 @@ static void SYS_Type( DaoContext *ctx, DValue *p[], int N )
 {
 	char errbuf[70];
 	struct stat buf;
-	DValue value = daoNullValue;
-	DEnum *en;
+	const char *en = "unkown";
 	if( stat( DString_GetMBS( p[0]->v.s ), &buf ) ){
 		GetErrnoMessage( errbuf, errno, "type -- ", 0 );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
-	value.t = DAO_ENUM;
 #ifdef WIN32
 	if( buf.st_mode & _S_IFREG )
-		en = DEnum_New( 0, "file" );
+		en = "file";
 	else if( buf.st_mode & _S_IFDIR )
-		en = DEnum_New( 1, "dir" );
+		en = "dir";
 #else
 	if( S_ISREG( buf.st_mode ) )
-		en = DEnum_New( 0, "file" );
+		en = "file";
 	else if( S_ISDIR( buf.st_mode ) )
-      en = DEnum_New( 1, "dir" );
+      en = "dir";
 #endif
-	else
-      en = DEnum_New( 2, "unknown" );
-   value.v.e = en;
-	DaoContext_PutValue( ctx, value );
-	DEnum_Delete( en );
+	DaoContext_PutEnum( ctx, en );
 }
 
 #ifdef _MSC_VER

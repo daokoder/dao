@@ -391,7 +391,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 #endif
 	dao_free( self );
 }
-static DaoVmSpace_InitPath( DaoVmSpace *self )
+static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
 	char *daodir = getenv( "DAO_DIR" );
 	char pwd[512];
@@ -1965,6 +1965,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoContext_PutWCString = DaoContext_PutWCString;
 	api->DaoContext_PutString = DaoContext_PutString;
 	api->DaoContext_PutBytes = DaoContext_PutBytes;
+	api->DaoContext_PutEnum = DaoContext_PutEnum;
 	api->DaoContext_PutArrayInteger = DaoContext_PutArrayInteger;
 	api->DaoContext_PutArrayShort = DaoContext_PutArrayShort;
 	api->DaoContext_PutArrayFloat = DaoContext_PutArrayFloat;

@@ -60,8 +60,7 @@ static void DaoType_GetField( DValue *self0, DaoContext *ctx, DString *name )
 	if( node == NULL ) goto ErrorNotExist;
 	GC_ShiftRC( self, denum->type );
 	denum->type = self;
-	denum->id = node->value.pInt;
-	DString_Assign( denum->name, name );
+	denum->value = node->value.pInt;
 	return;
 ErrorNotExist:
 	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, DString_GetMBS( name ) );
@@ -76,8 +75,7 @@ static void DaoType_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 		if( node->value.pInt == pid.v.i ){
 			GC_ShiftRC( self, denum->type );
 			denum->type = self;
-			denum->id = node->value.pInt;
-			DString_Assign( denum->name, node->key.pString );
+			denum->value = node->value.pInt;
 			return;
 		}
 	}
@@ -124,6 +122,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 	self->name = DString_New(1);
 	self->fname = NULL;
 	self->attrib = 0;
+	self->flagtype = 0;
 	self->ffitype = 0;
 	self->nested = NULL;
 	self->mapNames = NULL;
@@ -337,12 +336,13 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	switch( self->tid ){
 	case DAO_ENUM :
 		if( DString_EQ( self->name, type->name ) ) return DAO_MT_EQ;
+		if( self->flagtype && type->flagtype ==0 ) return 0;
 		if( self->mapNames ==NULL && self->mapNames ==NULL ) return DAO_MT_SUB;
 		if( self->mapNames ==NULL || self->mapNames ==NULL ) return DAO_MT_SUB;
 		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
 			node = DMap_Find( type->mapNames, it->key.pVoid );
 			if( node ==NULL ) return 0;
-			if( node->value.pInt != it->value.pInt ) return 0;
+			/* if( node->value.pInt != it->value.pInt ) return 0; */
 		}
 		return DAO_MT_EQ;
 	case DAO_ARRAY : case DAO_LIST :
@@ -466,7 +466,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 {
 	ullong_t flags = (1<<DAO_UDF)|(1<<DAO_ANY)|(1<<DAO_INITYPE);
 	DaoType *tp;
+	DEnum *other;
+	DNode *node;
 	DMap *inters;
+	DMap *names;
 	short i, mt, mt2, it1=0, it2=0;
 	if( self == NULL ) return DAO_MT_NOT;
 	mt = dao_type_matrix[value.t][self->tid];
@@ -492,8 +495,18 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	switch( value.t ){
 	case DAO_ENUM :
 		if( value.v.e->type == self ) return DAO_MT_EQ;
-		if( self->mapNames == NULL ) return DAO_MT_SUB;
-		return DMap_Find( self->mapNames, value.v.e->name ) ? DAO_MT_EQ : DAO_MT_NOT;
+		other = value.v.e;
+		names = other->type->mapNames;
+		for(node=DMap_First(names); node; node=DMap_Next(names,node)){
+			if( other->type->flagtype ){
+				if( !(node->value.pInt & other->value) ) continue;
+			}else if( node->value.pInt != other->value ){
+				continue;
+			}
+			if( DMap_Find( self->mapNames, node->key.pVoid ) == NULL ) return 0;
+		}
+		return DAO_MT_EQ;
+		break;
 	case DAO_ARRAY :
 		if( value.v.array->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.array->unitype;
