@@ -2143,7 +2143,6 @@ extern void DaoJitMapper_Init();
 extern void DaoType_Init();
 
 DaoType *dao_type_udf = NULL;
-DaoType *dao_array_bit = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_array_empty = NULL;
 DaoType *dao_list_any = NULL;
@@ -2228,10 +2227,6 @@ DaoVmSpace* DaoInit()
 	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
 	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
 	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, 0,0 );
-	dao_array_bit = DaoParser_ParseTypeName( "long", ns, 0,0 );
-	dao_array_bit = DaoType_Copy( dao_array_bit );
-	DString_SetMBS( dao_array_bit->name, "bitarray" );
-	DaoNameSpace_AddType( ns, dao_array_bit->name, dao_array_bit );
 
 #if 0
 	dao_array_empty = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );

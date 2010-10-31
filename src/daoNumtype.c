@@ -267,7 +267,7 @@ DLong* DLong_New()
 {
 	DLong *self = dao_calloc( 1, sizeof(DLong) );
 	self->sign = 1;
-	self->bits = 0;
+	self->base = 10;
 	return self;
 }
 void DLong_Delete( DLong *self )
@@ -369,10 +369,10 @@ void DLong_Move( DLong *z, DLong *x )
 	size_t nz = z->size;
 	if( nx+nx < nz || nz < nx ) DLong_Resize( z, nx );
 	z->sign = x->sign;
-	z->bits = x->bits;
+	z->base = x->base;
 	memmove( z->data, x->data, nx * sizeof(ushort_t) );
 	z->size = nx;
-	if( x->bits ==0 ) DLong_Normalize2( z );
+	if( x->base != 2 ) DLong_Normalize2( z );
 }
 
 static void LongAdd2( DLong *z, DLong *x, DLong *y, int base )
@@ -1150,7 +1150,7 @@ void DLong_Flip( DLong *self )
 void DLong_Convert( DLong *self, int base, DLong *to, int tobase )
 {
 	DLong *radix, *digit;
-	size_t j, i = self->size * (log(tobase)/ log(base)+1);
+	size_t j, i = 1 + self->size * (log(base)/ log(tobase)+1);
 	radix = DLong_New();
 	digit = DLong_New();
 	DLong_Resize( radix, i );
@@ -1187,6 +1187,7 @@ static void DLong_PrintBits( DLong *self, DString *s )
 		}
 	}
 Finish:
+	DString_AppendMBS( s, "L2" );
 	if( s2 == NULL ){
 		printf( "%s\n", s->mbs );
 		DString_Delete(s);
@@ -1194,12 +1195,11 @@ Finish:
 }
 void DLong_Print( DLong *self, DString *s )
 {
-	DLong *long10p;
+	const char *digits = "0123456789abcdef";
+	DLong *based;
 	DString *s2 = s;
-	int w = 0, base10p = 1;
 	size_t i = self->size;
-	char fmt[10], digits[20];
-	if( self->bits ){
+	if( self->base == 2 ){
 		DLong_PrintBits( self, s );
 		return;
 	}
@@ -1209,27 +1209,20 @@ void DLong_Print( DLong *self, DString *s )
 	if( i ==0 ) goto Finish;
 	DString_Clear( s );
 	if( self->sign <0 ) DString_AppendChar( s, '-' );
-	/* keep base10p smaller than LONG_BASE to not overflow int type: */
-	while( base10p * 10 < LONG_BASE ) base10p *= 10, w ++;
-	snprintf( fmt, 9, "%%0%ii", w );
 
-	/*
-	   printf( "base10p = %i,  w = %i,  fmt = %s\n", base10p, w, fmt );
-	   base10p = LONG_BASE; w = 5; printf( "not base 10: " );
-	 */
-	long10p = DLong_New();
-	DLong_Convert( self, LONG_BASE, long10p, base10p );
-	i = long10p->size;
-	while(i >0 && long10p->data[i-1] ==0 ) i--;
-	snprintf( digits, 19, "%i", long10p->data[i-1] );
-	DString_AppendMBS( s, digits );
-	for(; i>=2; i--){
-		snprintf( digits, 19, fmt, long10p->data[i-2] );
-		DString_AppendMBS( s, digits );
-	}
+	based = DLong_New();
+	DLong_Convert( self, LONG_BASE, based, self->base );
+	i = based->size;
+	while(i >0 && based->data[i-1] ==0 ) i--;
+	for(; i>=1; i--) DString_AppendChar( s, digits[based->data[i-1]] );
 	DString_AppendChar( s, 'L' );
-	DLong_Delete( long10p );
+	DLong_Delete( based );
 Finish:
+	if( self->base != 10 ){
+		char buf[20];
+		sprintf( buf, "%i", self->base );
+		DString_AppendMBS( s, buf );
+	}
 	if( s2 == NULL ){
 		printf( "%s\n", s->mbs );
 		DString_Delete(s);
@@ -1262,22 +1255,34 @@ void DLong_FromInteger( DLong *self, dint x )
 		x = x >> LONG_BITS;
 	}
 }
-int DLong_FromString( DLong *self, DString *s )
+char DLong_FromString( DLong *self, DString *s )
 {
 	DLong *tmp;
 	char table[256];
 	char *mbs;
-	int i, j, n, base = 10;
+	int i, j, n, pl;
+	int base = 10;
+
 	DLong_Clear( self );
 	DString_ToMBS( s );
+	self->base = 10;
 	n = s->size;
 	mbs = s->mbs;
-	if( n == 0 ) return 1;
+	if( n == 0 ) return 0;
 	memset( table, 0, 256 );
 	for(i='0'; i<='9'; i++) table[i] = i - ('0'-1);
-	for(i='a'; i<='f'; i++) table[i] = i - ('a'-1);
-	for(i='A'; i<='F'; i++) table[i] = i - ('A'-1);
-	if( mbs[n-1] == 'L' ) n --;
+	for(i='a'; i<='f'; i++) table[i] = i - ('a'-1) + 10;
+	for(i='A'; i<='F'; i++) table[i] = i - ('A'-1) + 10;
+	pl = DString_FindChar(s, 'L', 0);
+	if( pl != MAXSIZE ){
+		/* if( mbs[pl+1] == '0' ) return 0; */
+		if( (pl+3) < n ) return 'L';
+		if( (pl+1) < n && ! isdigit( mbs[pl+1] ) ) return 'L';
+		if( (pl+2) < n && ! isdigit( mbs[pl+2] ) ) return 'L';
+		if( (pl+1) < n ) self->base = base = strtol( mbs+pl+1, NULL, 0 );
+		if( base > 16 ) return 'L';
+		n = pl;
+	}
 	if( n && mbs[0] == '-' ){
 		self->sign = -1;
 		mbs ++;
@@ -1290,60 +1295,104 @@ int DLong_FromString( DLong *self, DString *s )
 	}
 	DLong_Resize( self, n );
 	for(i=n-1, j=0; i>=0; i--, j++){
-		self->data[j] = table[ (short)mbs[i] ] - 1;
-		if( self->data[j] > base ){
+		short digit = table[ (short)mbs[i] ];
+		if( digit ==0 ) return mbs[i];
+		self->data[j] = digit - 1;
+		if( self->data[j] >= base ){
 			self->data[j] = 0;
 			self->size = j;
-			return 0;
+			return mbs[i];
 		}
 	}
 	tmp = DLong_New();
 	DLong_Move( tmp, self );
 	DLong_Convert( tmp, base, self, LONG_BASE );
 	DLong_Delete( tmp );
-	return 1;
+	return 0;
 }
 
 static void DaoLong_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DLong *self = self0->v.l;
 	dint id = DValue_GetInteger( pid );
-	int w = self->bits ? LONG_BITS : 1;
-	if( id <0 || id >= self->size * w ){
+	int ws[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
+	int ms[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
+	int w = ws[self->base];
+	int n = self->size;
+	int digit = 0;
+	if( w == 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need power 2 radix" );
+		return;
+	}
+	if( id <0 || (w && id*w >= n*LONG_BITS) || (w == 0 && id >= n) ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
 		return;
 	}
-	if( self->bits ){
-		DaoContext_PutInteger( ctx, self->data[id/LONG_BITS] & (1<<(id%LONG_BITS)) );
+	if( self->base == 2 ){
+		digit = (self->data[id/LONG_BITS] & (1<<(id%LONG_BITS)))>>(id%LONG_BITS);
+	}else if( w ){
+		int m = id*w / LONG_BITS;
+		if( ((id+1)*w <= (m+1)*LONG_BITS) || m+1 >= n ){
+			int digit2 = self->data[m] >> (id*w - m*LONG_BITS);
+			digit = digit2 & ms[self->base];
+			if( m+1 >= n && digit2 ==0 )
+				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
+		}else{
+			int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
+			digit = (d>>(id*w - m*LONG_BITS)) & ms[self->base];
+		}
 	}else{
-		DaoContext_PutInteger( ctx, self->data[id] );
+		digit = self->data[id];
 	}
+	DaoContext_PutInteger( ctx, digit );
 }
 static void DaoLong_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DLong *self = self0->v.l;
 	dint id = DValue_GetInteger( pid );
 	dint digit = DValue_GetInteger( value );
-	int w = self->bits ? LONG_BITS : 1;
-	int m = self->bits ? 2 : LONG_BASE;
+	int ws[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
+	int ms[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
+	int w = ws[self->base];
+	int n = self->size;
 	int i;
-	if( id <0 || id >= self->size * w ){
+	if( w == 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need power 2 radix" );
+		return;
+	}
+	if( id <0 || (w && id*w >= n*LONG_BITS) || (w == 0 && id >= n) ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
 		return;
-	}else if( digit <0 || digit >= m ){
+	}else if( digit <0 || digit >= self->base ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "digit value out of range" );
 		return;
 	}
 	if( pid.t == 0 ){
 		ushort_t bits = digit;
-		if( self->bits ) bits = digit ? LONG_BASE-1 : 0;
+		if( self->base == 2 ) bits = digit ? LONG_BASE-1 : 0;
 		for(i=0; i<self->size; i++) self->data[i] = bits;
 	}else{
-		if( self->bits ){
+		if( self->base == 2 ){
 			if( digit )
 				self->data[id/LONG_BITS] |= (1<<(id%LONG_BITS));
 			else
 				self->data[id/LONG_BITS] &= ~(1<<(id%LONG_BITS));
+		}else if( w ){
+			int m = id*w / LONG_BITS;
+			int shift = id*w - m*LONG_BITS;
+			if( ((id+1)*w <= (m+1)*LONG_BITS) || m+1 >= n ){
+				int digit2 = self->data[m] >> shift;
+				self->data[m] &= ~(ms[self->base]<<shift);
+				self->data[m] |= digit<<shift;
+				if( m+1 >= n && digit2 ==0 )
+					DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
+			}else{
+				int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
+				d &= ~(ms[self->base]<<shift);
+				d |= digit<<shift;
+				self->data[m] = d & LONG_MASK;
+				self->data[m+1] = d >> LONG_BITS;
+			}
 		}else{
 			self->data[id] = digit;
 		}
@@ -1363,6 +1412,10 @@ static void DaoLong_Size( DaoContext *ctx, DValue *p[], int N )
 {
 	DLong *self = p[0]->v.l;
 	size_t size = self->size;
+	if( self->base ==2 ){
+		DaoContext_PutInteger( ctx, size*LONG_BITS );
+		return;
+	}
 	while( size && self->data[size-1] ==0 ) size --;
 	assert( self->size == size );
 	DaoContext_PutInteger( ctx, size );
@@ -2012,11 +2065,7 @@ void DaoArray_SetItem( DValue *va, DaoContext *ctx, DValue pid, DValue value, in
 	}
 	if( value.t ==0 ) return;
 	if( pid.t == 0 ){
-		if( self->unitype == dao_array_bit ){
-			unsigned int *bits = (unsigned int*) self->data.i;
-			unsigned int bit = DValue_GetInteger( value ) ? 0xffffffff : 0;
-			for(i=0; i<self->size; i++) bits[i] = bit;
-		}else if( value.t >= DAO_INTEGER && value.t <= DAO_DOUBLE ){
+		if( value.t >= DAO_INTEGER && value.t <= DAO_DOUBLE ){
 			DaoArray_ScalarAssign( self, value, NULL, op );
 		}else if( value.t == DAO_COMPLEX ){
 			DaoArray_ScalarAssign( self, value, NULL, op );
@@ -2106,12 +2155,6 @@ static void DaoArray_Print( DValue *dbase, DaoContext *ctx, DaoStream *stream, D
 	DaoArray *self = dbase->v.array;
 	int i, j, n = self->size * BBITS;
 	size_t *tmp, *dims = self->dims->items.pSize;
-
-	if( self->unitype == dao_array_bit ){
-		unsigned int *bits = (unsigned int*) self->data.i;
-		for(i=0; i<n; i++) DaoStream_WriteInt( stream, BTEST( bits, i ) !=0 );
-		return;
-	}
 
 	if( self->dims->size < 2 ) return;
 	if( self->dims->size==2 && ( dims[0] ==1 || dims[1] ==1 ) ){

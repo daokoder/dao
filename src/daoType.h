@@ -95,7 +95,6 @@ struct DaoType
 	}X; /* DaoClass, DaoCData or DaoType for returned/named... */
 };
 extern DaoType *dao_type_udf;
-extern DaoType *dao_array_bit;
 extern DaoType *dao_array_any;
 extern DaoType *dao_array_empty;
 extern DaoType *dao_list_any;

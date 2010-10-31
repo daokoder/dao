@@ -236,6 +236,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 		 * its .unitype may need to be set properaly */
 		if( klass->objDataDefault->data[i].t ){
 			DValue_Move( klass->objDataDefault->data[i], value, type );
+			continue;
 		}
 		if( value->t ==0 && type ){
 			if( type->tid <= DAO_DOUBLE ){
@@ -246,7 +247,6 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 			}else if( type->tid == DAO_LONG ){
 				value->t = type->tid;
 				value->v.l = DLong_New();
-				if( type == dao_array_bit ) value->v.l->bits = 1;
 			}else if( type->tid == DAO_ENUM ){
 				value->t = type->tid;
 				value->v.e = DEnum_New(0,"");

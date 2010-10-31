@@ -470,7 +470,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		case (DAO_LONG)|DAO_LONG  :
 			if( to->t != DAO_LONG ) to->v.l = DLong_New();
 			DLong_Move( to->v.l, from.v.l );
-			if( tp == dao_array_bit ) to->v.l->bits = 1;
 			break;
 		case (DAO_INTEGER<<8)|DAO_INTEGER : to->v.i = from.v.i; break;
 		case (DAO_INTEGER<<8)|DAO_FLOAT   : to->v.f = from.v.i; break;
@@ -607,7 +606,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			if( to->t != DAO_LONG ) to->v.l = DLong_New();
 			to->t = DAO_LONG;
 			DLong_Move( to->v.l, from.v.l );
-			if( tp == dao_array_bit ) to->v.l->bits = 1;
 			break;
 		case DAO_ENUM :
 			if( to->t != DAO_ENUM ){

@@ -16,8 +16,6 @@
 
 #include"daoType.h"
 
-typedef unsigned short bits;
-
 #define BBITS    (sizeof(unsigned short) * 8)
 #define BSIZE(x)  (((x) / 8) + sizeof(unsigned int))
 #define BMASK(x)  (1 << ((x) % BBITS))
@@ -102,7 +100,7 @@ struct DLong
 	ushort_t *data;
 	ushort_t *pbuf;
 	short     sign;
-	short     bits; /* bit array indicator */
+	short     base;
 	size_t    size;
 	size_t    bufSize;
 };
@@ -130,7 +128,7 @@ void DLong_ShiftLeft( DLong *self, int bits );
 void DLong_ShiftRight( DLong *self, int bits );
 void DLong_Print( DLong *self, DString *s );
 void DLong_FromInteger( DLong *self, dint x );
-int DLong_FromString( DLong *self, DString *s );
+char DLong_FromString( DLong *self, DString *s );
 dint DLong_ToInteger( DLong *self );
 
 ushort_t DLong_UDivDigit( DLong *z, ushort_t digit );

@@ -744,7 +744,6 @@ DLong* DaoContext_GetLong( DaoContext *self, DaoVmCode *vmc )
 	DValue_Clear( dC );
 	dC->t = DAO_LONG;
 	dC->v.l = DLong_New();
-	if( tp == dao_array_bit ) dC->v.l->bits = 1;
 	return dC->v.l;
 }
 DEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc )
@@ -2739,6 +2738,11 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 		}
 	}else if( B.t == DAO_LIST ){
 		DVarray *items = B.v.list->items;
+		DaoType *ta = DaoNameSpace_GetTypeV( self->nameSpace, A );
+		if( ta && B.v.list->unitype && B.v.list->unitype->nested->size ){
+			DaoType *tb = B.v.list->unitype->nested->items.pAbtp[0];
+			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
+		}
 		for(i=0; i<items->size; i++){
 			if( DValue_Compare( A, items->data[i] ) ==0 ){
 				*C = 1;
@@ -2746,6 +2750,11 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 			}
 		}
 	}else if( B.t == DAO_MAP ){
+		DaoType *ta = DaoNameSpace_GetTypeV( self->nameSpace, A );
+		if( ta && B.v.map->unitype && B.v.map->unitype->nested->size ){
+			DaoType *tb = B.v.map->unitype->nested->items.pAbtp[0];
+			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
+		}
 		*C = DMap_Find( B.v.map->items, & A ) != NULL;
 	}else if( B.t == DAO_PAIR ){
 		int c1 = DValue_Compare( B.v.pair->first, A );
@@ -3261,7 +3270,12 @@ static int ConvertStringToNumber( DaoContext *ctx, DValue dA, DValue *dC )
 			dC->v.d = strtod( mbs->mbs, 0 );
 			if( sign <0 ) dC->v.d = - dC->v.d;
 		}else{ /* DAO_LONG */
-			if( DLong_FromString( dC->v.l, mbs ) ==0 ) return 0;
+			char ec = DLong_FromString( dC->v.l, mbs );
+			if( ec ){
+				const char *msg = ec == 'L' ? "invalid radix" : "invalid digit";
+				DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, msg );
+				return 0;
+			}
 			dC->v.l->sign = sign;
 		}
 		return 1;

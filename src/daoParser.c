@@ -6445,10 +6445,11 @@ static int DaoParser_FindRootOper( DaoParser *self, int start, int end, int *opt
 	}
 	return -1000;
 }
-extern DValue DaoParseNumber( DaoToken *tok, DLong *bigint )
+extern DValue DaoParseNumber( DaoParser *self, DaoToken *tok, DLong *bigint )
 {
 	char *str = tok->string->mbs;
 	DValue value = daoNullValue;
+	size_t pl = 0;
 	if( tok->name == DTOK_NUMBER_SCI ){
 		if( DString_FindChar( tok->string, 'e', 0 ) != MAXSIZE ){
 			value.t = DAO_FLOAT;
@@ -6464,10 +6465,22 @@ extern DValue DaoParseNumber( DaoToken *tok, DLong *bigint )
 	}else if( tok->name == DTOK_NUMBER_DEC ){
 		value.t = DAO_FLOAT;
 		value.v.f = strtod( str, 0 );
-	}else if( bigint && tok->string->mbs[ tok->string->size-1 ] =='L' ){
+	}else if( bigint && (pl = DString_FindChar(tok->string, 'L', 0)) != MAXSIZE ){
+		char ec = DLong_FromString( bigint, tok->string );
+		if( ec ){
+			if( ec == 'L' ){
+				DString_SetMBS( self->mbs, tok->string->mbs + pl );
+				DaoParser_Error( self, DAO_INVALID_RADIX, self->mbs );
+			}else{
+				DString_Clear( self->mbs );
+				DString_AppendChar( self->mbs, ec );
+				DaoParser_Error( self, DAO_INVALID_DIGIT, self->mbs );
+			}
+			DaoParser_Error( self, DAO_INVALID_LITERAL, tok->string );
+			return value;
+		}
 		value.t = DAO_LONG;
 		value.v.l = bigint;
-		DLong_FromString( bigint, tok->string );
 	}else{
 		value.t = DAO_INTEGER;
 		value.v.i = (sizeof(dint) == 4) ? strtol( str, 0, 0 ) : strtoll( str, 0, 0 );
@@ -6516,7 +6529,8 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 		*cst = varReg;
 	}else if( tki >= DTOK_DIGITS_HEX && tki <= DTOK_NUMBER_SCI ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
-			value = DaoParseNumber( tokens[start], self->bigint );
+			value = DaoParseNumber( self, tokens[start], self->bigint );
+			if( value.t == 0 ) return -1;
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConstValue( (DRoutine*)routine, value );
 		}
@@ -7094,6 +7108,7 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 	tki2 = tokens[end]->name;
 	if( pos > start || optype == DAO_OPER_COLON || optype == DAO_OPER_FIELD ){
 
+		int notin = 0;
 		int end2   = pos-1;
 		int start2 = pos+1;
 		short code = mapAithOpcode[optype];
@@ -7305,6 +7320,10 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 			DaoParser_AddCode( self, DVM_MOVE, reg1, 0, regC, mid+1, 0, end );
 			return regC;
 		}else{
+			if( tokens[end2]->name == DKEY_NOT ){
+				end2 -= 1;
+				notin = 1;
+			}
 			if( optype == DAO_OPER_FIELD){
 				DString *field = tokens[start]->string;
 				DString_Assign( mbs, field );
@@ -7378,6 +7397,11 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 				DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
 				goto ParsingError;
 			}
+			if( notin ){
+				int v = DValue_GetInteger( value );
+				value = daoZeroInt;
+				value.v.i = ! v;
+			}
 			/* for( i=0; i<self->vmCodes->size; i++) DaoVmCodeX_Print( *self->vmCodes->items.pVmc[i], NULL ); */
 			i = DaoParser_PopCodes( self, front, back );
 			DaoParser_PopRegisters( self, i );
@@ -7403,7 +7427,14 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 				if( regC == self->locRegCount ) DaoParser_PushRegister( self );
 				return regC;
 			}
-			DaoParser_PushBackCode( self, & vmcValue );
+			if( notin ){
+				vmcValue.c = self->locRegCount;
+				DaoParser_PushRegister( self );
+				DaoParser_PushBackCode( self, & vmcValue );
+				DaoParser_AddCode( self, DVM_NOT, vmcValue.c, 0, regC, start, mid, end );
+			}else{
+				DaoParser_PushBackCode( self, & vmcValue );
+			}
 		}
 	}else if( daoArithOper[ tokens[end]->name ].right ){
 		i = daoArithOper[ tokens[end]->name ].oper;
