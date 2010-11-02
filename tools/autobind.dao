@@ -54,7 +54,8 @@ routine RotatingHash( key : string )
 ###########################
 
 # Supported C type IDs:
-global enum{
+global enum CxxTypeID
+{
 	CT_USER = -1,
 	CT_CHAR ,
 	CT_SCHAR ,
@@ -89,57 +90,57 @@ global enum{
 # Supported C type names, with mapping to IDs:
 const CT_MAP_BASIC =
 {
-	"char" => CT_CHAR ,
-	"signed char" => CT_SCHAR ,
-	"unsigned char" => CT_UCHAR ,
-	"wchar_t" => CT_WCHAR ,
-	"short" => CT_SHORT ,
-	"signed short" => CT_SSHORT ,
-	"unsigned short" => CT_USHORT ,
-	"bool" => CT_INT ,
-	"int" => CT_INT ,
-	"signed int" => CT_SINT ,
-	"ptrdiff_t" => CT_SINT , # XXX
-	"unsigned" => CT_UINT ,
-	"unsigned int" => CT_UINT ,
-	"size_t" => CT_UINT ,
-	"int8_t" => CT_INT ,
-	"uint8_t" => CT_UINT ,
-	"int16_t" => CT_INT ,
-	"uint16_t" => CT_UINT ,
-	"int32_t" => CT_INT ,
-	"uint32_t" => CT_UINT ,
-	"int64_t" => CT_INT ,
-	"uint64_t" => CT_UINT ,
-	"long" => CT_LONG ,
-	"signed long" => CT_SLONG ,
-	"unsigned long" => CT_ULONG ,
-	"long long" => CT_DOUBLE ,
-	"long double" => CT_DOUBLE ,
-	"signed long int" => CT_INT ,
-	"unsigned long int" => CT_UINT ,
-	"signed long long" => CT_DOUBLE ,
-	"unsigned long long" => CT_DOUBLE ,
-	"__int64" => CT_DOUBLE ,
-	"signed __int64" => CT_DOUBLE ,
-	"unsigned __int64" => CT_DOUBLE ,
-	"float" => CT_FLOAT ,
-	"double" => CT_DOUBLE ,
-	"complex8" => CT_COMPLEX8 ,
-	"complex16" => CT_COMPLEX16 ,
-	"void" => CT_VOID, 
-	"FILE" => CT_FILE 
+	"char" => CxxTypeID.CT_CHAR ,
+	"signed char" => CxxTypeID.CT_SCHAR ,
+	"unsigned char" => CxxTypeID.CT_UCHAR ,
+	"wchar_t" => CxxTypeID.CT_WCHAR ,
+	"short" => CxxTypeID.CT_SHORT ,
+	"signed short" => CxxTypeID.CT_SSHORT ,
+	"unsigned short" => CxxTypeID.CT_USHORT ,
+	"bool" => CxxTypeID.CT_INT ,
+	"int" => CxxTypeID.CT_INT ,
+	"signed int" => CxxTypeID.CT_SINT ,
+	"ptrdiff_t" => CxxTypeID.CT_SINT , # XXX
+	"unsigned" => CxxTypeID.CT_UINT ,
+	"unsigned int" => CxxTypeID.CT_UINT ,
+	"size_t" => CxxTypeID.CT_UINT ,
+	"int8_t" => CxxTypeID.CT_INT ,
+	"uint8_t" => CxxTypeID.CT_UINT ,
+	"int16_t" => CxxTypeID.CT_INT ,
+	"uint16_t" => CxxTypeID.CT_UINT ,
+	"int32_t" => CxxTypeID.CT_INT ,
+	"uint32_t" => CxxTypeID.CT_UINT ,
+	"int64_t" => CxxTypeID.CT_INT ,
+	"uint64_t" => CxxTypeID.CT_UINT ,
+	"long" => CxxTypeID.CT_LONG ,
+	"signed long" => CxxTypeID.CT_SLONG ,
+	"unsigned long" => CxxTypeID.CT_ULONG ,
+	"long long" => CxxTypeID.CT_DOUBLE ,
+	"long double" => CxxTypeID.CT_DOUBLE ,
+	"signed long int" => CxxTypeID.CT_INT ,
+	"unsigned long int" => CxxTypeID.CT_UINT ,
+	"signed long long" => CxxTypeID.CT_DOUBLE ,
+	"unsigned long long" => CxxTypeID.CT_DOUBLE ,
+	"__int64" => CxxTypeID.CT_DOUBLE ,
+	"signed __int64" => CxxTypeID.CT_DOUBLE ,
+	"unsigned __int64" => CxxTypeID.CT_DOUBLE ,
+	"float" => CxxTypeID.CT_FLOAT ,
+	"double" => CxxTypeID.CT_DOUBLE ,
+	"complex8" => CxxTypeID.CT_COMPLEX8 ,
+	"complex16" => CxxTypeID.CT_COMPLEX16 ,
+	"void" => CxxTypeID.CT_VOID, 
+	"FILE" => CxxTypeID.CT_FILE 
 };
 const DT_MAP = 
 {
-	"DaoBase" => DAO_NIL_101 ,
-	"DString" => DAO_STRING ,
-	"DaoList" => DAO_LIST ,
-	"DaoMap" => DAO_MAP ,
-	"DaoTuple" => DAO_TUPLE ,
-	"DaoArray" => DAO_ARRAY ,
-	"DaoRoutine" => DAO_ROUTINE ,
-	"DaoObject" => DAO_OBJECT
+	"DaoBase" => CxxTypeID.DAO_NIL_101 ,
+	"DString" => CxxTypeID.DAO_STRING ,
+	"DaoList" => CxxTypeID.DAO_LIST ,
+	"DaoMap" => CxxTypeID.DAO_MAP ,
+	"DaoTuple" => CxxTypeID.DAO_TUPLE ,
+	"DaoArray" => CxxTypeID.DAO_ARRAY ,
+	"DaoRoutine" => CxxTypeID.DAO_ROUTINE ,
+	"DaoObject" => CxxTypeID.DAO_OBJECT
 };
 const DAO_TYPES0 =
 {
@@ -156,9 +157,9 @@ const DAO_TYPES =
 	"cdata" , "stream"
 }
 
-global enum{ LIB_NONE, LIB_QT }
+global enum LibType{ LIB_NONE, LIB_QT }
 
-global lib_name = LIB_NONE;
+global lib_name = LibType.LIB_NONE;
 
 const CT_TYPE_NORMAL = 0; # type var
 const CT_TYPE_REFER = 1; # type *var
@@ -173,7 +174,7 @@ global basic_typedefs = {};
 global CT_MAP = CT_MAP_BASIC;
 global CT_MAP_TYPE_ATTRIB : map<string,int> = { => };
 global pointer_types : map<string,string> = { => };
-global otherClassTypedef : map<string,int> = {=>};
+global otherClassTypedef : map<string,CxxTypeID> = {=>};
 
 global dao_callbacks_proto = {};
 global dao_callbacks = {};
@@ -196,7 +197,7 @@ class Variable
 	var name = '';
 	var type = '';
 	var type_trans = '';
-	var typeid = -1;
+	var typeid : CxxTypeID = $CT_USER;
 	var isconst = 0;
 	var refer = ''; # *, **, &
 	var square = ''; # [...], [...][...]
@@ -247,16 +248,17 @@ class Variable
 	routine _PRINT( s : stream ){ io.println( name, typeid, type ); }
 }
 
-global enum
+global enum FunctionTrait
 {
-	FUNC_CPP = 1,
-	FUNC_VIRTUAL = 2,
-	FUNC_PURE_VIRTUAL = 4,
-	FUNC_PROTECTED = 8,
-	FUNC_PRIVATE = 16,
-	FUNC_STATIC = 32 ,
-	FUNC_CONST = 64 ,
-	QT_SIGNAL = 128 ,
+	FUNC_NONE = 0;
+	FUNC_CPP = 1;
+	FUNC_VIRTUAL = 2;
+	FUNC_PURE_VIRTUAL = 4;
+	FUNC_PROTECTED = 8;
+	FUNC_PRIVATE = 16;
+	FUNC_STATIC = 32;
+	FUNC_CONST = 64;
+	QT_SIGNAL = 128;
 	QT_SLOT = 256
 }
 
@@ -271,7 +273,7 @@ class Function
 	var snamespace = '';
 	var nameSuffix = ''; # name suffix to distinguish overloaded functions
 	var tilde = ''; # destructor tilde symbol: hostType::~hostType()
-	var attribs = 0;
+	var attribs : FunctionTrait = $FUNC_NONE;
 	var input_file = '';
 	var source = '';
 	
@@ -371,7 +373,7 @@ class UserType
 	var supers : list<UserType> = {};
 	var selfields : map<string,int> = {=>};
 	var classEnum : map<string,tuple<string,int>> = {=>}; # XXX not work without type decl
-	var classTypedef : map<string,int> = {=>}; # XXX not work without type decl
+	var classTypedef : map<string,CxxTypeID> = {=>}; # XXX not work without type decl
 	var intConsts = {};
 	
 	var restPureVirts = {};
@@ -404,7 +406,7 @@ class UserType
 		allocators.clear();
 	}
 	routine SortType( lo, mo ){
-		if( lib_name == LIB_QT ){
+		if( lib_name == LibType.LIB_QT ){
 			if( name == 'QObject' ) isQObject = 1;
 			elif( name == 'QWidget' ) isQWidget = 1;
 		}
@@ -479,13 +481,13 @@ const pat_struct = '(class|struct|union|namespace|callback) %s+ (( %w+ )) (%s*) 
 '( : %s* %w [%w%s,]+ |) ( %b{} ) %s* (;|)';
 
 routine ParseFunction( funcs : list<Function>, source='', host='', input='', 
-attribs=0, snamespace='' )
+attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 {
 	excluded = 0;
 	if( source.pfind( '(^|%W) operator %W' ) ) return;
 	if( source.pfind( '(%w+) :: %~ %1 %s* %b()' ) ) excluded = 1;
 	if( source.pfind( '%w+ %s* %< %s* [%s%w%*,:]+ %s* %>' ) ) exclude = 1; # template function
-	if( source.pfind( '%b() %s* const' ) ) attribs |= FUNC_CONST;
+	if( source.pfind( '%b() %s* const' ) ) attribs += $FUNC_CONST;
 	source.change( '%s+', ' ' );
 	pat2 = '%s* ((virtual|)) ((%s+)) ( [^%(%)]* %b() [%s%w]* )';
 	tks = source.capture( pat2 );
@@ -542,17 +544,17 @@ attribs=0, snamespace='' )
 	func.cxxName = name;
 	func.daoName = name;
 	func.input_file = input;
-	func.attribs |= attribs;
+	func.attribs += attribs;
 	func.source = source2;
 	func.excluded = excluded;
 	func.snamespace = snamespace;
 	
 	if( ret.pfind( '^ %s* virtual %s+' ) ){
-		func.attribs |= FUNC_VIRTUAL;
-		if( tks[5] ) func.attribs |= FUNC_PURE_VIRTUAL;
+		func.attribs += $FUNC_VIRTUAL;
+		if( tks[5] ) func.attribs += $FUNC_PURE_VIRTUAL;
 		ret.change( '^ %s* virtual %s+', '' );
 	}elif( ret.pfind( '^ %s* static %s+' ) ){
-		func.attribs |= FUNC_STATIC;
+		func.attribs += $FUNC_STATIC;
 		ret.change( '^ %s* static %s+', '' );
 	}elif( host == name ){
 		ret = name;
@@ -575,10 +577,10 @@ attribs=0, snamespace='' )
 	for( i = 0 : func.parlist.size()-2 ){
 		vo = func.parlist[i];
 		var2 = func.parlist[i+1];
-		if( var2.typeid >= CT_SHORT && var2.typeid <= CT_ULONG
+		if( var2.typeid >= $CT_SHORT && var2.typeid <= $CT_ULONG
 			&& var2.refer =='' && var2.square =='' ){
 			if( vo.refer == '*' && vo.square == ''
-				&& vo.typeid >= CT_SHORT && vo.typeid <= CT_COMPLEX16){
+				&& vo.typeid >= $CT_SHORT && vo.typeid <= $CT_COMPLEX16){
 				vo.refer = '';
 				vo.square = '[]';
 				vo.sqsizes.append( '0' );
@@ -655,7 +657,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 				ename2 = name + '::' + ename;
 				enumMap[ ename ] = 1;
 				if( not CT_MAP.has( ename2 ) ){
-					CT_MAP[ ename2 ] = CT_INT;
+					CT_MAP[ ename2 ] = $CT_INT;
 					basic_typedefs.append( ( '', 'int', ename ) );
 				}
 			}
@@ -677,9 +679,9 @@ routine UserType::Parse( source='', inExtFile=0 )
 			if( CT_MAP.has( old ) ){
 				classTypedef[ new ] = CT_MAP[ old ];
 			}elif( classEnum.has( old ) ){
-				classTypedef[ new ] = 1;
+				classTypedef[ new ] = $CT_SCHAR;
 			}else{
-				classTypedef[ new ] = -1;
+				classTypedef[ new ] = $CT_USER;
 				typer = name + '_' + new;
 				if( map_user_types.has( old ) ){
 					map_user_types[ scoped ] = map_user_types[ old ];
@@ -699,7 +701,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 			parts = src.extract( pat_constru );
 			for( part in parts ){
 				tks = part.capture( pat_constru );
-				attribs = i==1 ? FUNC_PROTECTED : 0;
+				attribs = i==1 ? FunctionTrait.FUNC_PROTECTED : FunctionTrait.FUNC_NONE;
 				ParseFunction( funclist, tks[1] + ';', name, input_file, attribs );
 			}
 			src.change( pat_constru, '' );
@@ -726,12 +728,12 @@ routine UserType::Parse( source='', inExtFile=0 )
 			}
 			tks = part.capture( pat );
 			#attribs = (i==1||i==3||i==5) ? FUNC_PROTECTED : 0;
-			attribs = (i==1||i==3) ? FUNC_PROTECTED : 0;
-			if( i==5 ) attribs = FUNC_PRIVATE;
+			attribs = (i==1||i==3) ? FunctionTrait.FUNC_PROTECTED : FunctionTrait.FUNC_NONE;
+			if( i==5 ) attribs = $FUNC_PRIVATE;
 			if( not isCppClass and not isCallback ){
 				if( tks[4] ) skip; # struct x{ void (*func[10])(int i); }
 				part = tks[1] + tks[3] + tks[5] + ';';
-				attribs |= FUNC_VIRTUAL;
+				attribs += $FUNC_VIRTUAL;
 			}
 			m = funclist.size();
 			ParseFunction( funclist, part, name, input_file, attribs );
@@ -744,9 +746,9 @@ routine UserType::Parse( source='', inExtFile=0 )
 			}else{
 				func = funclist.back();
 				switch(i){
-					case 3: func.attribs |= QT_SLOT; protslots.append( func );
-					case 4: func.attribs |= QT_SLOT; pubslots.append( func );
-					case 5: func.attribs |= QT_SIGNAL; protsignals.append( func );
+					case 3: func.attribs += $QT_SLOT; protslots.append( func );
+					case 4: func.attribs += $QT_SLOT; pubslots.append( func );
+					case 5: func.attribs += $QT_SIGNAL; protsignals.append( func );
 				}
 			}
 		}
@@ -764,13 +766,13 @@ routine UserType::Parse( source='', inExtFile=0 )
 		if( isCppClass ){
 			for( meth in methods ){
 				meth.hostType = name;
-				meth.attribs |= FUNC_CPP;
-				if( meth.attribs & FUNC_VIRTUAL ) hasVirtual = 1;
+				meth.attribs += $FUNC_CPP;
+				if( $FUNC_VIRTUAL in meth.attribs ) hasVirtual = 1;
 			}
 		}else{
 			for( meth in methods ){
 				meth.hostType = name;
-				meth.attribs |= FUNC_VIRTUAL;
+				meth.attribs += $FUNC_VIRTUAL;
 			}
 		}
 		rep = '(%w[%w%s]*) ((%s*)) ([^,;%w]* %w+ [^;]*) , ((%s*)) ([%s%*]* %w+ [^,;]* ;)';
@@ -941,11 +943,11 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			if( snamespace ) ename2 = snamespace + '::' + ename;
 			enumMap[ ename ] = 1;
 			if( not CT_MAP.has( ename2 ) ){
-				CT_MAP[ ename2 ] = CT_INT;
+				CT_MAP[ ename2 ] = $CT_INT;
 				basic_typedefs.append( ( snamespace, 'int', ename ) );
 			}
 		}
-		enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>]*', '' );
+		enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>%\']*', '' );
 		names = enums.extract( '%w+' );
 		for( name in names ) constNumbers.append( ( snamespace, 'DAO_INTEGER', name, name, inExtFile ) );
 	}
@@ -970,13 +972,13 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			map_user_types[ 'struct ' + alias ] = map_user_types[ name ];
 			map_user_types[ 'union ' + alias ] = map_user_types[ name ];
 		}
-		if( snamespace ) ns_utp.classTypedef[ alias ] = -1;
+		if( snamespace ) ns_utp.classTypedef[ alias ] = $CT_USER;
 		if( CT_MAP.has( name ) ){
 			if( snamespace ) ns_utp.classTypedef[ alias ] = CT_MAP[ name ];
 			if( not CT_MAP.has( alias ) ) CT_MAP[ alias ] = CT_MAP[ name ];
-			basic_typedefs.append( ( snamespace, DAO_TYPES[ CT_MAP[ name ] ], alias ) );
+			basic_typedefs.append( ( snamespace, DAO_TYPES[ (int)CT_MAP[ name ] ], alias ) );
 		}elif( snamespace != '' and ns_utp.classEnum.has( name ) ){
-			ns_utp.classTypedef[ alias ] = 1;
+			ns_utp.classTypedef[ alias ] = $CT_SCHAR;
 		}elif( map_user_types.has( name ) ){
 			map_user_types[ alias ] = map_user_types[ name ];
 			if( snamespace ) map_user_types[ scoped ] = map_user_types[ name ];
@@ -1028,7 +1030,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	parts = source.extract( pat_funct );
 	source.change( pat_funct, '' );
 	for( part in parts ){
-		ParseFunction( functions.funcs, part, snamespace, fname, 0, snamespace );
+		ParseFunction( functions.funcs, part, snamespace, fname, FunctionTrait.FUNC_NONE, snamespace );
 	}
 	return source;
 }
@@ -1596,11 +1598,11 @@ routine Variable::Parse( fname = '' )
 		typeid = CT_MAP[ type ];
 	}elif( type.pfind( 'enum %s' ) ){
 		tks = type.capture( 'enum %s+ ( %w+ )' );
-		typeid = CT_INT;
+		typeid = $CT_INT;
 		tpname = tks[1];
 		enumMap[ tpname ] = 1;
 		if( not CT_MAP.has( tpname ) ){
-			CT_MAP[ tpname ] = CT_INT;
+			CT_MAP[ tpname ] = $CT_INT;
 			basic_typedefs.append( ( '', 'int', tpname ) );
 		}
 	}elif( type.find('::') >= 0 and otherClassTypedef.has( type ) ){
@@ -1610,7 +1612,7 @@ routine Variable::Parse( fname = '' )
 		if( map_user_types.has( host ) ){
 			utp = map_user_types[ host ];
 			if( utp.classTypedef.has( type ) ){
-				if( utp.classTypedef[type] >=0 ){
+				if( utp.classTypedef[type] > $CT_USER ){
 					user = 0;
 				}else{
 					type = utp.name + '::' + type;
@@ -1628,15 +1630,15 @@ routine Variable::Parse( fname = '' )
 		}
 	}
 	#io.writeln( name, type, refer, square, sqsizes );
-	if( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 && refer == '*' && square == '' ){
+	if( isconst && typeid >=$CT_SHORT && typeid <= $CT_COMPLEX16 && refer == '*' && square == '' ){
 		refer = '';
 		square = '[]';
 		sqsizes.append( '0' );
-	}elif( typeid >=CT_SHORT && typeid <= CT_COMPLEX16 && refer == '*' && square == '[]' ){
+	}elif( typeid >=$CT_SHORT && typeid <= $CT_COMPLEX16 && refer == '*' && square == '[]' ){
 		refer = '';
 		square = '[][]';
 		sqsizes.append( '0' );
-	}elif( isconst && typeid >=CT_SHORT && typeid <= CT_COMPLEX16 && refer == '**' && square == '' ){
+	}elif( isconst && typeid >=$CT_SHORT && typeid <= $CT_COMPLEX16 && refer == '**' && square == '' ){
 		refer = '';
 		square = '[][]';
 		sqsizes.append( '0' );
@@ -1652,12 +1654,12 @@ routine Variable::Generate( cxx_no_self =0 )
 {
 	if( type == 'unsigned' ){
 		type = 'unsigned';
-		typeid = CT_UINT;
+		typeid = $CT_UINT;
 	}elif( type.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
 		tks = type.capture( '^ unsigned %s (%w+) $' );
 		if( tks.size() ){
 			type = 'unsigned';
-			typeid = CT_UINT;
+			typeid = $CT_UINT;
 			name = tks[1];
 		}
 	}
@@ -1666,7 +1668,7 @@ routine Variable::Generate( cxx_no_self =0 )
 	#if( type.pfind( 'PaintDeviceMetric' ) ) io.println( type, map_user_types.has( type ) );
 	list_item = type.capture( qt_container );
 	isClassEnum = 0;
-	if( typeid <0 && map_user_types.has( host ) ){
+	if( typeid == $CT_USER && map_user_types.has( host ) ){
 		utp = map_user_types[ host ];
 		if( utp.classEnum.has( type ) ){
 			v = utp.classEnum[type];
@@ -1674,13 +1676,13 @@ routine Variable::Generate( cxx_no_self =0 )
 			type_trans = type;
 			if( not v[1] ) type_trans = 'int';
 			isClassEnum = 1;
-			typeid = 1;
+			typeid = $CT_SCHAR;
 		}elif( utp.classTypedef.has( type ) ){
 			old = type;
 			id = utp.classTypedef[ type ];
 			type = utp.name + '::' + type;
 			type_trans = type;
-			if( id >=0 ){
+			if( id > $CT_USER ){
 				typeid = id;
 				#isClassEnum = 1;
 			}
@@ -1716,7 +1718,7 @@ routine Variable::Generate( cxx_no_self =0 )
 	tpl_getres = '';
 	tpl_setter = '';
 	cxxtype2 = '';
-	if( typeid >=0 ){
+	if( typeid > $CT_USER ){
 		if( refer == '' && square == '' && not ispointer ){
 			daotype = 'int';
 			cxxpar = type + ' ' + name;
@@ -1734,18 +1736,18 @@ routine Variable::Generate( cxx_no_self =0 )
 			if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 			switch( typeid ){
 				#{
-								case CT_CHAR :
+								case $CT_CHAR :
 									daotype = 'string';
 									tpl_daopar = daopar_string;
 									tpl_dao2cxx = dao2cxx_char;
 									if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\'\\\'';
-								case CT_WCHAR :
+								case $CT_WCHAR :
 									daotype = 'string';
 									tpl_daopar = daopar_string;
 									tpl_dao2cxx = dao2cxx_wchar;
 									if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=\\\"\\\"';
 				#}
-				case CT_FLOAT :
+				case $CT_FLOAT :
 				daotype = 'float';
 				tpl_daopar = daopar_float;
 				tpl_dao2cxx = dao2cxx_float;
@@ -1754,7 +1756,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_getres = getres_float;
 				tpl_setter = setter_float;
 				if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
-				case CT_DOUBLE :
+				case $CT_DOUBLE :
 				daotype = 'double';
 				tpl_daopar = daopar_double;
 				tpl_dao2cxx = dao2cxx_double;
@@ -1762,15 +1764,15 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_ctxput = ctxput_double;
 				tpl_getres = getres_double;
 				tpl_setter = setter_double;
-				case CT_COMPLEX8 , CT_COMPLEX16 :
+				case $CT_COMPLEX8 , $CT_COMPLEX16 :
 				daotype = 'complex';
 				tpl_daopar = daopar_complex;
 				tpl_dao2cxx = dao2cxx_complex;
-				case CT_VOID, CT_FILE :
+				case $CT_VOID, $CT_FILE :
 				daotype = '';
 			}
 		}elif( (refer == '*' || refer =='&' || ispointer) && square == '' ){
-			if( typeid <= CT_WCHAR and refer == '&' ) typeid = CT_INT;
+			if( typeid <= $CT_WCHAR and refer == '&' ) typeid = $CT_INT;
 			cxxtype += refer;
 			cxxpar = type + refer + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
@@ -1778,12 +1780,12 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxpar_enum_virt = 'int ' + refer + name;
 				cxxtype2 = 'int*';
 			}
-			if( refer == '*' && typeid >= CT_SHORT && typeid <=CT_COMPLEX16 )
+			if( refer == '*' && typeid >= $CT_SHORT && typeid <=$CT_COMPLEX16 )
 			cxxcall = '& ' + name;
-			elif( refer == '&' && typeid > CT_VOID )
+			elif( refer == '&' && typeid > $CT_VOID )
 			cxxcall = '*' + name;
 			switch( typeid ){
-				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
+				case $CT_CHAR, $CT_SCHAR, $CT_UCHAR : 
 				daotype = 'string';
 				tpl_daopar = daopar_string;
 				tpl_dao2cxx = dao2cxx_mbs;
@@ -1792,7 +1794,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_mbs;
 				tpl_getres = getres_mbs;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
-				case CT_WCHAR :
+				case $CT_WCHAR :
 				daotype = 'string';
 				tpl_daopar = daopar_string;
 				tpl_dao2cxx = dao2cxx_wcs;
@@ -1801,9 +1803,9 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_wcs;
 				tpl_getres = getres_wcs;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
-				case CT_SHORT, CT_SSHORT, CT_USHORT, 
-				CT_INT, CT_SINT, CT_UINT, 
-				CT_LONG, CT_SLONG, CT_ULONG :
+				case $CT_SHORT, $CT_SSHORT, $CT_USHORT, 
+				$CT_INT, $CT_SINT, $CT_UINT, 
+				$CT_LONG, $CT_SLONG, $CT_ULONG :
 				daotype = 'int';
 				tpl_daopar = daopar_int;
 				tpl_dao2cxx = dao2cxx_int;
@@ -1817,7 +1819,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_cxx2dao = cxx2dao_int2;
 				}
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
-				case CT_FLOAT :
+				case $CT_FLOAT :
 				daotype = 'float';
 				tpl_daopar = daopar_float;
 				tpl_dao2cxx = dao2cxx_float;
@@ -1831,7 +1833,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_cxx2dao = cxx2dao_float2;
 				}
 				if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
-				case CT_DOUBLE :
+				case $CT_DOUBLE :
 				daotype = 'double';
 				tpl_daopar = daopar_double;
 				tpl_dao2cxx = dao2cxx_double;
@@ -1845,12 +1847,12 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_cxx2dao = cxx2dao_double2;
 				}
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0D';
-				case CT_COMPLEX8 , CT_COMPLEX16 :
+				case $CT_COMPLEX8 , $CT_COMPLEX16 :
 				daotype = 'complex';
 				tpl_daopar = daopar_complex;
 				tpl_dao2cxx = dao2cxx_complex;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0$';
-				case CT_VOID :
+				case $CT_VOID :
 				daotype = 'cdata';
 				tpl_daopar = daopar_buffer;
 				tpl_dao2cxx = dao2cxx_user;
@@ -1871,7 +1873,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_cxx2dao = cxx2dao_userdata;
 					if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=null';
 				}
-				case CT_FILE :
+				case $CT_FILE :
 				daotype = 'stream';
 				tpl_daopar = daopar_stream;
 				tpl_dao2cxx = dao2cxx_stream;
@@ -1880,7 +1882,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				if( vdefault.pfind( '= %s* 0' ) ) vdefault = '=0';
 			}
 			if( index == INDEX_RETURN ){
-				if( refer == '*' && typeid >= CT_SHORT && typeid <=CT_DOUBLE ){
+				if( refer == '*' && typeid >= $CT_SHORT && typeid <=$CT_DOUBLE ){
 					daotype = 'array<' + daotype + '>';
 				}
 			}
@@ -1899,48 +1901,48 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_getres = getres_ints;
 			tpl_setter = setter_ints;
 			switch( typeid ){
-				case CT_CHAR, CT_SCHAR : 
+				case $CT_CHAR, $CT_SCHAR : 
 				tpl_dao2cxx = dao2cxx_bytes;
 				tpl_cxx2dao = cxx2dao_bytes;
 				tpl_ctxput = ctxput_bytes;
 				tpl_parset = parset_bytes;
 				tpl_getres = getres_bytes;
 				tpl_setter = setter_string;
-				case CT_UCHAR : 
+				case $CT_UCHAR : 
 				tpl_dao2cxx = dao2cxx_ubytes;
 				tpl_cxx2dao = cxx2dao_ubytes;
 				tpl_ctxput = ctxput_bytes;
 				tpl_parset = parset_ubytes;
 				tpl_getres = getres_ubytes;
 				tpl_setter = setter_string;
-				case CT_WCHAR :
+				case $CT_WCHAR :
 				tpl_dao2cxx = dao2cxx_uints;
 				tpl_cxx2dao = cxx2dao_uints;
-				case CT_SHORT, CT_SSHORT : 
+				case $CT_SHORT, $CT_SSHORT : 
 				tpl_dao2cxx = dao2cxx_shorts;
 				tpl_cxx2dao = cxx2dao_shorts;
 				tpl_ctxput = ctxput_shorts;
 				tpl_parset = parset_shorts;
 				tpl_getres = getres_shorts;
 				tpl_setter = setter_shorts;
-				case CT_USHORT :
+				case $CT_USHORT :
 				tpl_dao2cxx = dao2cxx_ushorts;
 				tpl_cxx2dao = cxx2dao_ushorts;
 				tpl_ctxput = ctxput_shorts;
 				tpl_parset = parset_ushorts;
 				tpl_getres = getres_ushorts;
 				tpl_setter = setter_shorts;
-				case CT_INT, CT_SINT, CT_LONG, CT_SLONG : 
+				case $CT_INT, $CT_SINT, $CT_LONG, $CT_SLONG : 
 				tpl_dao2cxx = dao2cxx_ints;
 				tpl_cxx2dao = cxx2dao_ints;
-				case CT_UINT, CT_ULONG :
+				case $CT_UINT, $CT_ULONG :
 				tpl_dao2cxx = dao2cxx_uints;
 				tpl_cxx2dao = cxx2dao_uints;
 				tpl_dao2cxx = dao2cxx_uints;
 				tpl_cxx2dao = cxx2dao_uints;
 				tpl_parset = parset_uints;
 				tpl_getres = getres_uints;
-				case CT_FLOAT :
+				case $CT_FLOAT :
 				daotype = 'array<float>';
 				tpl_daopar = daopar_floats;
 				tpl_dao2cxx = dao2cxx_floats;
@@ -1949,7 +1951,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_floats;
 				tpl_getres = getres_floats;
 				tpl_setter = setter_floats;
-				case CT_DOUBLE :
+				case $CT_DOUBLE :
 				daotype = 'array<double>';
 				tpl_daopar = daopar_doubles;
 				tpl_dao2cxx = dao2cxx_doubles;
@@ -1958,11 +1960,11 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_doubles;
 				tpl_getres = getres_doubles;
 				tpl_setter = setter_doubles;
-				case CT_COMPLEX8 :
+				case $CT_COMPLEX8 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_complexs8;
-				case CT_COMPLEX16 :
+				case $CT_COMPLEX16 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_complexs16;
@@ -1982,31 +1984,31 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_getres = getres_ints;
 			tpl_setter = setter_ints;
 			switch( typeid ){
-				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
+				case $CT_CHAR, $CT_SCHAR, $CT_UCHAR : 
 				tpl_dao2cxx = dao2cxx_bmat;
 				tpl_cxx2dao = cxx2dao_bytes;
 				tpl_ctxput = ctxput_bytes;
 				tpl_parset = parset_bytes;
 				tpl_getres = getres_bytes;
 				tpl_setter = setter_string;
-				case CT_WCHAR :
+				case $CT_WCHAR :
 				tpl_dao2cxx = dao2cxx_imat;
 				tpl_cxx2dao = cxx2dao_uints;
-				case CT_SHORT, CT_SSHORT, CT_USHORT :
+				case $CT_SHORT, $CT_SSHORT, $CT_USHORT :
 				tpl_dao2cxx = dao2cxx_smat;
 				tpl_cxx2dao = cxx2dao_shorts;
 				tpl_ctxput = ctxput_shorts;
 				tpl_parset = parset_shorts;
 				tpl_getres = getres_shorts;
 				tpl_setter = setter_shorts;
-				case CT_INT, CT_SINT, CT_LONG, CT_SLONG, CT_UINT, CT_ULONG :
+				case $CT_INT, $CT_SINT, $CT_LONG, $CT_SLONG, $CT_UINT, $CT_ULONG :
 				tpl_dao2cxx = dao2cxx_imat;
 				tpl_cxx2dao = cxx2dao_uints;
 				tpl_dao2cxx = dao2cxx_uints;
 				tpl_cxx2dao = cxx2dao_uints;
 				tpl_parset = parset_uints;
 				tpl_getres = getres_uints;
-				case CT_FLOAT :
+				case $CT_FLOAT :
 				daotype = 'array<float>';
 				tpl_daopar = daopar_floats;
 				tpl_dao2cxx = dao2cxx_fmat;
@@ -2015,7 +2017,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_floats;
 				tpl_getres = getres_floats;
 				tpl_setter = setter_floats;
-				case CT_DOUBLE :
+				case $CT_DOUBLE :
 				daotype = 'array<double>';
 				tpl_daopar = daopar_doubles;
 				tpl_dao2cxx = dao2cxx_dmat;
@@ -2024,11 +2026,11 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_doubles;
 				tpl_getres = getres_doubles;
 				tpl_setter = setter_doubles;
-				case CT_COMPLEX8 :
+				case $CT_COMPLEX8 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_c8mat;
-				case CT_COMPLEX16 :
+				case $CT_COMPLEX16 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_c16mat;
@@ -2043,7 +2045,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxtype2 = 'int';
 			}
 			switch( typeid ){
-				case CT_CHAR, CT_SCHAR, CT_UCHAR : 
+				case $CT_CHAR, $CT_SCHAR, $CT_UCHAR : 
 				daotype = 'string';
 				tpl_daopar = daopar_string;
 				tpl_dao2cxx = isconst ? dao2cxx_mbs_cst : dao2cxx_mbs2;
@@ -2052,7 +2054,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_mbs2;
 				tpl_getres = getres_mbs;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
-				case CT_WCHAR :
+				case $CT_WCHAR :
 				daotype = 'string';
 				tpl_daopar = daopar_string;
 				tpl_dao2cxx = isconst ? dao2cxx_wcs_cst : dao2cxx_wcs2;
@@ -2061,7 +2063,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_wcs2;
 				tpl_getres = getres_wcs;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
-				case CT_VOID :
+				case $CT_VOID :
 				daotype = 'cdata';
 				cxxcall = name;
 				tpl_daopar = daopar_buffer;
@@ -2577,7 +2579,7 @@ routine Function::Generate()
 {
 	#if( cxxName == 'processEvents' ) io.println( source, parlist );
 	if( map_user_types.has( hostType ) ) hostType = map_user_types[ hostType ].name;
-	cxx_no_self = not(attribs & FUNC_STATIC) and (attribs & FUNC_CPP) != 0;
+	cxx_no_self = not($FUNC_STATIC in attribs) and ($FUNC_CPP in attribs) != 0;
 	cxx_no_self = cxx_no_self && (hostType != cxxName);
 	retype.Generate();
 	if( retype.unsupport or retype.isCallback ) excluded = 1;
@@ -2588,14 +2590,14 @@ routine Function::Generate()
 		if( sq ){
 			pi1 = parlist[i+1];
 			tid = pi1.typeid;
-			if( tid >=CT_SHORT and tid <= CT_COMPLEX16 
+			if( tid >=$CT_SHORT and tid <= $CT_COMPLEX16 
 			and pi1.refer == '' and pi1.square == '' ){
 				vo.sqsizes[0] = pi1.name;
 				if( sq >1 ) vo.sqsizes[1] = pi1.name;
 				if( sq >1 and i+2<pcount ){
 					pi2 = parlist[i+2];
 					tid = pi2.typeid;
-					if( tid >=CT_SHORT and tid <= CT_COMPLEX16
+					if( tid >=$CT_SHORT and tid <= $CT_COMPLEX16
 					and pi2.refer == '' and pi2.square == '' )
 					vo.sqsizes[1] = pi2.name;
 				}
@@ -2654,7 +2656,7 @@ routine Function::Generate()
 		cxxCallParamV += vo.name;
 		nils += '_dao_nil';
 		refs += '_dp+' + (string)(i-cxx_no_self);
-		if( attribs & QT_SLOT ){
+		if( $QT_SLOT in attribs ){
 			vo.index --;
 			vo.Generate( cxx_no_self );
 			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
@@ -2669,8 +2671,8 @@ routine Function::Generate()
 		}
 	}
 	nowrap = excluded;
-	if( not nowrap and (attribs & FUNC_PROTECTED) ){
-		nowrap = attribs & (FUNC_STATIC|FUNC_PURE_VIRTUAL);
+	if( not nowrap and ($FUNC_PROTECTED in attribs) ){
+		nowrap = attribs + $FUNC_STATIC + $FUNC_PURE_VIRTUAL;
 		if( retype.type != retype.type_trans ) nowrap = 1;
 		for( vo in parlist ){
 			if( vo.type != vo.type_trans ) nowrap = 1;
@@ -2678,7 +2680,7 @@ routine Function::Generate()
 	}
 	signature += ')';
 	signature2 += ')';
-	if( attribs & FUNC_CONST ){
+	if( $FUNC_CONST in attribs ){
 		signature += 'const';
 		signature2 += 'const';
 	}
@@ -2707,9 +2709,10 @@ routine Function::Generate()
 	kvmap[ 'retype' ] = retype.cxxtype;
 	kvmap[ 'name' ] = retype.name;
 	
-	if( attribs & FUNC_CPP ){
+	if( $FUNC_CPP in attribs ){
 		ss = 'self->';
-		if( not (attribs & (FUNC_PROTECTED|FUNC_PURE_VIRTUAL)) ) ss += hostType + '::';
+		if( $FUNC_PROTECTED not in attribs and $FUNC_PURE_VIRTUAL not in attribs )
+			ss += hostType + '::';
 		kvmap[ 'self' ] = ss;
 		kvmap[ 'parlist' ] = cxxCallParamV;
 	}
@@ -2738,29 +2741,29 @@ routine Function::Generate()
 		}
 		#if( parlist.size() ) cxxCallCodes = ''; # XXX maybe there is no default constru
 	}elif( retype.daotype ){
-		if( attribs & FUNC_STATIC )
+		if( $FUNC_STATIC in attribs )
 		cxxCallCodes = cxx_call_static_list[dd].expand( kvmap );
 		else
 		cxxCallCodes = cxx_call_proto_list[dd].expand( kvmap );
 	}else{
-		if( attribs & FUNC_STATIC )
+		if( $FUNC_STATIC in attribs )
 		cxxCallCodes = cxx_call_static2_list[dd].expand( kvmap );
 		else
 		cxxCallCodes = cxx_call_proto2_list[ dd ].expand( kvmap );
 	}
-	if( lib_name == LIB_QT ){
+	if( lib_name == LibType.LIB_QT ){
 		size = (string)RotatingHash( signature );
 		ssname = cxxName + size;
 		sig = '   void signal_' + signature + ';\n'
 		sig.replace( cxxName+'(', cxxName+size+'(' );
 		kvmap['ssname'] = ssname;
-		if( attribs & QT_SLOT ){
+		if( $QT_SLOT in attribs ){
 			qtSlotSignalDecl = sig;
 			qtSlotSlotDecl = daoqt_slot_slot_decl.expand( kvmap );
 			qtSlotSlotCode = daoqt_slot_slot_code.expand( kvmap );
 			qtSlotSlotCode += slot_dao2cxxcodes;
 			qtSlotSlotCode += '  emit signal_' + ssname + '( ' + cxxCallParam + ' );\n}\n';
-		}elif( attribs & QT_SIGNAL ){
+		}elif( $QT_SIGNAL in attribs ){
 			qtSignalSignalDecl = '   void signal_' + ssname + '(void*,const QString&,const DaoQtMessage&);\n'
 			kvmap['parlist'] = cxxprotpars_decl;
 			qtSignalSlotDecl = daoqt_sig_slot_decl.expand( kvmap );
@@ -2787,7 +2790,7 @@ routine Function::Generate()
 	'refs'=>refs, 'cxx2dao'=>cxx2daocodes, 'vareturn'=>retype.cxxpar + ' = 0;',
 	'return'=>retype.name, 'getreturn'=>retype.getres, 'const'=>'' };
 	vareturn = retype.cxxpar + ' = 0;';
-	if( retype.refer == '' and retype.typeid >=0 ){
+	if( retype.refer == '' and retype.typeid > $CT_USER ){
 		tks = retype.dao2cxx.capture( '= %s* %b()' );
 		if( tks ) vareturn = retype.cxxpar + tks[0] + '0;';
 	}
@@ -2806,11 +2809,11 @@ routine Function::Generate()
 			kvmap3[ 'vareturn' ] = retype.cxxpar + ';';
 		}
 	}
-	if( attribs & FUNC_CONST ) kvmap3[ 'const' ] = 'const';
+	if( $FUNC_CONST in attribs ) kvmap3[ 'const' ] = 'const';
 	
 	#if( attribs & FUNC_VIRTUAL ){
 	
-	if( attribs & FUNC_CPP ){
+	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'count' ] = (string)(parlist.size() - cxx_no_self);
 		kvmap3[ 'parlist' ] = cxxProtoParamVirt;
 		cxxWrapperVirt = cxx_virt_class.expand( kvmap3 );
@@ -2873,11 +2876,11 @@ routine Function::Generate()
 	}else{
 		cxxWrapperVirt += cxx_virt_call_11.expand( kvmap3 );
 	}
-	if( attribs & FUNC_CPP ){
+	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'return' ] = 'return';
 		if( retype.type == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
 		kvmap3[ 'parlist' ] = cxxProtoParam;
-		if( attribs & FUNC_PURE_VIRTUAL ){
+		if( $FUNC_PURE_VIRTUAL in attribs ){
 			cxxWrapperVirt2 = cxx_virt_class2.expand( kvmap3 );
 		}else{
 			cxxWrapperVirt2 = cxx_virt_class3.expand( kvmap3 );
@@ -3460,8 +3463,8 @@ global tpl_meth_decl3 =
 #}
 routine UserType::CheckVirtual()
 {
-	if( lib_name == LIB_QT and name == 'QXmlDefaultHandler' ){
-		for( meth in methods ) meth.attribs |= FUNC_VIRTUAL;
+	if( lib_name == LibType.LIB_QT and name == 'QXmlDefaultHandler' ){
+		for( meth in methods ) meth.attribs += $FUNC_VIRTUAL;
 	}
 	if( noWrapping ){
 		hasVirtual = 0;
@@ -3474,7 +3477,7 @@ routine UserType::CheckVirtual()
 		if( copyConstructor ==0 and sup.noCopyConstructor ) noCopyConstructor = 1;
 	}
 	for( meth in methods ){
-		if( meth.attribs & FUNC_VIRTUAL ){
+		if( $FUNC_VIRTUAL in meth.attribs ){
 			hasVirtual = 1;
 			break;
 		}
@@ -3485,11 +3488,11 @@ routine UserType::CheckPureVirtual()
 	if( pureVirts.size() or lastVirts.size() ) return;
 	implemented = {=>};
 	for( meth in methods ){
-		if( meth.attribs & FUNC_VIRTUAL ){
+		if( $FUNC_VIRTUAL in meth.attribs ){
 			hasVirtual = 1;
 			lastVirts[ meth.signature ] = name;
 		}
-		if( meth.attribs & FUNC_PURE_VIRTUAL ){
+		if( $FUNC_PURE_VIRTUAL in meth.attribs ){
 			hasVirtual = 1;
 			isPureVirt = 1;
 			pureVirts.append( meth );
@@ -3508,7 +3511,7 @@ routine UserType::CheckPureVirtual()
 		}
 	}
 	for( meth in methods ){
-		if( meth.attribs & FUNC_VIRTUAL ) skip;
+		if( $FUNC_VIRTUAL in meth.attribs ) skip;
 		for( sup in supers ){
 			if( sup.lastVirts.has( meth.signature ) ){
 				hasVirtual = 1;
@@ -3529,7 +3532,7 @@ routine UserType::GenerateMeth()
 	if( name2 == '' ) name2 = name;
 	if( isCppClass ){
 		for( meth in methods ){
-			if( meth.attribs & FUNC_STATIC ) skip;
+			if( $FUNC_STATIC in meth.attribs ) skip;
 			if( meth.hostType == meth.cxxName ) skip;
 			vo = Variable( name + '*self', 0 );
 			vo.host = name;
@@ -3571,7 +3574,7 @@ routine UserType::GenerateType()
 	kvmap2 = { 'host'=>name, 'cxxname'=>name, 'daoname'=>name,
 	'retype'=>'=>' + name, 'parlist'=> '', 'overload'=>'', 'namespace'=>''};
 	if( snamespace ) kvmap2[ 'namespace' ] = snamespace + '::';
-	for( meth in methods ) if( meth.attribs & FUNC_PURE_VIRTUAL ){
+	for( meth in methods ) if( $FUNC_PURE_VIRTUAL in meth.attribs ){
 		isPureVirt = 1;
 		noConstructor = 1;
 	}
@@ -3604,11 +3607,11 @@ routine UserType::GenerateType()
 		dao_meths += qt_application_dao;
 		meth_decls += qt_application_decl;
 		meth_codes += qt_application_func;
-	}else if( lib_name == LIB_QT and name == 'QTextStream' ){
+	}else if( lib_name == LibType.LIB_QT and name == 'QTextStream' ){
 		dao_meths += qt_qstream_dao;
 		meth_decls += qt_qstream_decl;
 		meth_codes += qt_qstream_func;
-	}else if( lib_name == LIB_QT and name == 'QStringList' ){
+	}else if( lib_name == LibType.LIB_QT and name == 'QStringList' ){
 		dao_meths += qt_qstringlist_dao;
 		meth_decls += qt_qstringlist_decl;
 		meth_codes += qt_qstringlist_func;
@@ -3631,11 +3634,11 @@ routine UserType::GenerateType()
 		if( isCppClass ){
 			for( meth in allocators ){
 				if( meth.parlist.size() ==0 ) exp_default = 1;
-				if( meth.attribs & FUNC_PRIVATE ){
+				if( $FUNC_PRIVATE in meth.attribs ){
 					private_default = meth.parlist.size() ==0;
 					skip;
 				}
-				if( (meth.attribs & FUNC_PROTECTED) and not hasVirtual ) skip;
+				if( ($FUNC_PROTECTED in meth.attribs) and not hasVirtual ) skip;
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
 				meth_codes += meth.cxxWrapper;
@@ -3675,7 +3678,7 @@ routine UserType::GenerateType()
 				if( allocators.size() ){
 					for( alloc in allocators ){
 						if( alloc.excluded ) skip;
-						if( alloc.attribs & (FUNC_PRIVATE|FUNC_PROTECTED) ) skip;
+						if( $FUNC_PRIVATE in alloc.attribs or $FUNC_PROTECTED in alloc.attribs ) skip;
 						kvmap['parlist'] = alloc.cxxProtoParam;
 						kvmap['parcall'] = alloc.cxxCallParamV;
 						type_codes += tpl_class_noderive.expand( kvmap );
@@ -3703,25 +3706,25 @@ routine UserType::GenerateType()
 		declvirts.clear();
 		for( meth in methods ){
 			implemented_meth_names[ meth.cxxName ] = 1;
-			if( (meth.attribs & FUNC_VIRTUAL) ){
+			if( ($FUNC_VIRTUAL in meth.attribs) ){
 				declmeths[ meth.signature ] = meth;
 				declvirts[ meth.signature ] = meth;
 			}
-			if( not ( meth.attribs & FUNC_VIRTUAL ) ) mapnonvirt[ meth.signature ] = 1;
+			if( not ($FUNC_VIRTUAL in meth.attribs) ) mapnonvirt[ meth.signature ] = 1;
 		}
 		for( meth in virtNonSupport ){
-			if( meth.attribs & FUNC_VIRTUAL ){
+			if( $FUNC_VIRTUAL in meth.attribs ){
 				declmeths[ meth.signature ] = meth;
 				declvirts[ meth.signature ] = meth;
 			}
-			if( not ( meth.attribs & FUNC_VIRTUAL ) ) mapnonvirt[ meth.signature ] = 1;
+			if( $FUNC_VIRTUAL not in meth.attribs ) mapnonvirt[ meth.signature ] = 1;
 		}
 		#io.println( name, mapnonvirt, methods );
 		for( sup in supers ){
 			for( meth in sup.declmeths.values() ){
 				if( mapprivate.has( meth.signature ) ) skip;
 				if( mapnonvirt.has( meth.signature ) ) skip;
-				if( meth.hostType != sup.name && not (meth.attribs & FUNC_PURE_VIRTUAL) ) skip; # from parents of parents
+				if( meth.hostType != sup.name && not ($FUNC_PURE_VIRTUAL in meth.attribs) ) skip; # from parents of parents
 				if( not declmeths.has( meth.signature ) ){
 					declmeths[ meth.signature ] = meth;
 				}
@@ -3729,7 +3732,7 @@ routine UserType::GenerateType()
 			for( meth in sup.declvirts.values() ){
 				if( mapprivate.has( meth.signature ) ) skip;
 				if( mapnonvirt.has( meth.signature ) ) skip;
-				if( meth.hostType != sup.name && not (meth.attribs & FUNC_PURE_VIRTUAL) ) skip; # from parents of parents
+				if( meth.hostType != sup.name && not ($FUNC_PURE_VIRTUAL in meth.attribs) ) skip; # from parents of parents
 				if( not declvirts.has( meth.signature ) ){
 					declvirts[ meth.signature ] = meth;
 					kvmap = { 'sub' => name };
@@ -3746,7 +3749,7 @@ routine UserType::GenerateType()
 		for( meth in declmeths.values() ){
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 			'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
-			if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+			if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
 			if( meth.excluded ){
 				kmethods += '  ' + meth.source + '{/*XXX 1*/}\n';
 			}else{
@@ -3765,9 +3768,9 @@ routine UserType::GenerateType()
 			#}
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 			'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
-			if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+			if( $FUNC_CONST in meth.attribs) kvmap['extra'] = 'const';
 			kvirtuals += tpl_meth_decl.expand( kvmap );
-			if( meth.attribs & FUNC_VIRTUAL ){
+			if( $FUNC_VIRTUAL in meth.attribs ){
 				tmp = meth.cxxWrapperVirt2;
 				# for virtual function from parent class:
 				#tmp.change( meth.hostType + '::', name + '::' ); 2010-03-20
@@ -3795,17 +3798,17 @@ routine UserType::GenerateType()
 			if( meth.reimplemented != '' and not meth.nowrap ){
 				kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 				'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
-				if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
+				if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
 				kmethods += tpl_meth_decl.expand( kvmap );
 				tmp2 = meth.cxxWrapperVirt2;
 				tmp2.change( meth.hostType + '::(%w+ %b() %s* ; %s* %} %s* else )', meth.reimplemented + '::%1' );
 				cxxWrapperVirt += tmp2;
 			}
-			if( not noWrapping && not meth.excluded && (meth.attribs & FUNC_PROTECTED) ){
+			if( not noWrapping && not meth.excluded && ($FUNC_PROTECTED in meth.attribs) ){
 				kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 				'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
-				if( meth.attribs & FUNC_CONST ) kvmap['extra'] = 'const';
-				rc = meth.retype.typeid == CT_VOID ? '' : 'return ';
+				if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
+				rc = meth.retype.typeid == $CT_VOID ? '' : 'return ';
 				kvm[ 'cxxname' ] = meth.cxxName;
 				kvm[ 'parcall' ] = meth.cxxCallParamV;
 				kvm[ 'return' ] = rc;
@@ -3861,8 +3864,8 @@ routine UserType::GenerateType()
 		}
 		if( not noWrapping and allocators.size() ){
 			for( alloc in allocators ){
-				if( alloc.attribs & FUNC_PRIVATE ) skip;
-				if( (alloc.attribs & FUNC_PROTECTED) and noWrapping ) skip;
+				if( $FUNC_PRIVATE in alloc.attribs ) skip;
+				if( ($FUNC_PROTECTED in alloc.attribs) and noWrapping ) skip;
 				kvmap['parlist'] = alloc.cxxProtoParamDecl;
 				kvmap['parcall'] = alloc.cxxCallParamV;
 				class_decl += tpl_class_decl_constru.expand( kvmap );
@@ -3987,12 +3990,12 @@ routine UserType::Generate()
 		allocators.clear();
 		for( meth in tmp.values() ){
 			if( meth.cxxName == name ){
-				if( meth.excluded ) meth.attribs |= FUNC_PRIVATE;
+				if( meth.excluded ) meth.attribs += $FUNC_PRIVATE;
 				allocators.append( meth );
 			}elif( not meth.excluded ){
 				methods.append( meth );
 			}
-			if( (meth.attribs & FUNC_VIRTUAL) && meth.excluded ){
+			if( ($FUNC_VIRTUAL in meth.attribs) && meth.excluded ){
 				virtNonSupport.append( meth );
 			}
 		}
@@ -4001,11 +4004,11 @@ routine UserType::Generate()
 	if( isCppClass ){
 		for( meth in methods ){
 			if( meth.excluded ) skip;
-			if( not ( meth.attribs & (FUNC_PRIVATE|FUNC_PROTECTED) ) ){
+			if( $FUNC_PRIVATE not in meth.attribs and $FUNC_PROTECTED not in meth.attribs ){
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
 				meth_codes += meth.cxxWrapper;
-			}elif( hasVirtual && not noWrapping && not meth.nowrap && (meth.attribs & FUNC_PROTECTED) ){
+			}elif( hasVirtual && not noWrapping && not meth.nowrap && ($FUNC_PROTECTED in meth.attribs) ){
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
 				wrapper = meth.cxxWrapper;
@@ -4015,7 +4018,7 @@ routine UserType::Generate()
 				wrapper.change( 'self%-%>(%w+)%(', 'self->DaoWrap_%1(' );
 				meth_codes += wrapper;
 			}
-			if( not noWrapping && (meth.attribs & FUNC_VIRTUAL) ){
+			if( not noWrapping && ($FUNC_VIRTUAL in meth.attribs) ){
 				type_decls += meth.cxxWrapperVirtProto;
 				type_codes += meth.cxxWrapperVirt;
 				if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
@@ -4025,7 +4028,7 @@ routine UserType::Generate()
 	}else{
 		for( meth in methods ){
 			if( meth.excluded ) skip;
-			if( meth.attribs & FUNC_VIRTUAL ){
+			if( $FUNC_VIRTUAL in meth.attribs ){
 				type_decls += meth.cxxWrapperVirtProto;
 				type_codes += meth.cxxWrapperVirt;
 				if( proxy_functions.has( meth.signature2 ) ) proxy_functions[ meth.signature2 ].used += 1;
@@ -4261,7 +4264,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	count = 0;
 	for( utp in map_user_types.values() )
 	if( utp.name[0] == 'Q'[0] ) count ++;
-	if( count > map_user_types.size() / 2 ) lib_name = LIB_QT;
+	if( count > map_user_types.size() / 2 ) lib_name = LibType.LIB_QT;
 	
 	io.writeln( 'sorting classes ...' );
 	tmp = {=>};
@@ -4329,7 +4332,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	fout_header.print( '#include<assert.h>\n' );
 	fout_header.print( '#include<string.h>\n' );
 	fout_header.print( '#include<dao.h>\n' );
-	if( lib_name == LIB_QT ) fout_header.print( '#include<QVector>\n#include<QList>\n' );
+	if( lib_name == LibType.LIB_QT ) fout_header.print( '#include<QVector>\n#include<QList>\n' );
 	for( file in file_names ){
 		if( not extfiles.has( file + '.h' ) ){
 			if( dir_input ){
@@ -4451,7 +4454,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	}
 	fout_source2.println( ifdef_cpp_close );
 	
-	if( lib_name == LIB_QT ){
+	if( lib_name == LibType.LIB_QT ){
 		fout_header.writeln( qt_get_wrapper1 );
 		fout_source3.writeln( qt_get_wrapper2 );
 	}
@@ -4578,7 +4581,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	fout_source.print( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
 	fout_source.print( '  const char *aliases[', nalias, '];\n' );
 	fout_source.println( '  __daoVmSpace = vms;' );
-	if( lib_name == LIB_QT ){
+	if( lib_name == LibType.LIB_QT ){
 		fout_source.print( '   qRegisterMetaType<DaoQtMessage>("DaoQtMessage");\n' );
 	}
 	count = 0;

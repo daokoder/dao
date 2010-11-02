@@ -3041,6 +3041,7 @@ int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 {
 	DaoType *tp = self->unitype;
 	DaoType *tp1=NULL, *tp2=NULL;
+	DEnum ekey, evalue;
 	if( tp ){
 		if( tp->nested->size >=2 ){
 			tp1 = tp->nested->items.pAbtp[0];
@@ -3052,11 +3053,25 @@ int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 	/* type checking and setting */
 	if( tp1 ){
 		if( DaoType_MatchValue( tp1, key, NULL ) ==0 ) return 1;
-		DValue_SetType( & key, tp1 );
+		if( key.t == DAO_ENUM && tp1->tid == DAO_ENUM ){
+			DEnum *ek = key.v.e;
+			key.v.e = & ekey;
+			ekey.type = tp1;
+			DEnum_SetValue( & ekey, ek, NULL );
+		}else{
+			DValue_SetType( & key, tp1 );
+		}
 	}
 	if( tp2 ){
 		if( DaoType_MatchValue( tp2, value, NULL ) ==0 ) return 2;
-		DValue_SetType( & value, tp2 );
+		if( value.t == DAO_ENUM && tp2->tid == DAO_ENUM ){
+			DEnum *ev = value.v.e;
+			value.v.e = & evalue;
+			evalue.type = tp2;
+			DEnum_SetValue( & evalue, ev, NULL );
+		}else{
+			DValue_SetType( & value, tp2 );
+		}
 	}
 	DMap_Insert( self->items, & key, & value );
 	return 0;

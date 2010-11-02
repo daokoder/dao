@@ -1340,11 +1340,14 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 				if( iter->value.pInode ){
 					it2->a = iter->value.pInode->a;
 					it2->jumpTrue = iter->value.pInode;
+					it2->first = iter->value.pInode->first;
+					it2->middle = iter->value.pInode->middle;
+					it2->last = iter->value.pInode->last;
 				}else{
 					it2->a = DRoutine_AddConstValue( routine, *iter->key.pValue );
 					it2->jumpFalse = node;
 				}
-				if( aux == it ) it2->c = direct; /* mark integer jump table */
+				if( aux == it ) it2->c = DAO_CASE_TABLE; /* mark integer jump table */
 				it2->prev = aux;
 				aux->next = it2;
 				it2->next = top;
@@ -3424,7 +3427,10 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 				comma = semco;
 			}
 			if( comma <0 ) comma = rbrack;
-			if( sep == DTOK_SEMCO ) value = 1;
+			if( sep == DTOK_SEMCO ){
+				value = 1;
+				abtp->flagtype = 1;
+			}
 			start = start + 2;
 			while( comma >=0 ){
 				if( start >= comma ) break;

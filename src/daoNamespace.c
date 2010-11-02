@@ -1093,7 +1093,7 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 	return 1;
 }
 
-static DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0 };
+static DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 void* DValue_GetTypeID( DValue self )
 {

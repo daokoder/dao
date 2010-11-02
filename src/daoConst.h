@@ -116,6 +116,12 @@ enum DaoTypeAttribs
 	DAO_TYPE_NOTDEF = (1<<3),
 	DAO_TYPE_INTER = (1<<4)
 };
+enum DaoCaseMode
+{
+	DAO_CASE_ORDERED ,
+	DAO_CASE_UNORDERED ,
+	DAO_CASE_TABLE
+};
 
 enum DaoCallMode
 {

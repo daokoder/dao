@@ -1720,8 +1720,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray   *vmCodeNew, *addCode;
 	DArray   *addRegType;
 	DVarray  *regConst;
+	DVarray  *routConsts = self->routConsts;
 	DValue   *cstValues[ DAO_U+1 ];
-	DValue   *locConsts = self->routConsts->data;
 	DValue    empty = daoNullValue;
 	DValue    val;
 	DValue   *csts;
@@ -2265,7 +2265,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = NULL;
-				val = locConsts[opb];
+				val = routConsts->data[opb];
 				if( val.t != DAO_STRING ) goto NotMatch;
 				str = val.v.s;
 				at = type[opa];
@@ -2676,7 +2676,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = any;
-				val = locConsts[opb];
+				val = routConsts->data[opb];
 				if( val.t != DAO_STRING ) goto NotMatch;
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0);
@@ -2695,7 +2695,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				   printf( "a: %s\n", type[opa]->name->mbs );
 				   printf( "c: %s\n", type[opc]->name->mbs );
 				 */
-				val = locConsts[opb];
+				val = routConsts->data[opb];
 				if( val.t != DAO_STRING ){
 					printf( "field: %i\n", val.t );
 					goto NotMatch;
@@ -2834,7 +2834,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				   printf( "a: %s\n", type[opa]->name->mbs );
 				   printf( "c: %s\n", type[opc]->name->mbs );
 				 */
-				val = locConsts[opb];
+				val = routConsts->data[opb];
 				if( val.t != DAO_STRING ) goto NotMatch;
 				break;
 			}
@@ -2842,9 +2842,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			init[opc] = 1;
 			lastcomp = opc;
 			AssertInitialized( opa, 0, vmc->middle + 1, vmc->last );
-			if( locConsts[opb].t != DAO_TYPE ) goto ErrorTyping;
+			if( routConsts->data[opb].t != DAO_TYPE ) goto ErrorTyping;
 			if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-			at = (DaoType*) locConsts[opb].v.p;
+			at = (DaoType*) routConsts->data[opb].v.p;
 			if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 			AssertTypeMatching( at, type[opc], defs, 0);
 			at = type[opa];
@@ -3257,7 +3257,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
-				ct = DaoNameSpace_MakeType( ns, locConsts[opa].v.s->mbs,
+				ct = DaoNameSpace_MakeType( ns, routConsts->data[opa].v.s->mbs,
 						DAO_PAR_NAMED, (DaoBase*) type[opb], 0, 0 );
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
@@ -3463,6 +3463,104 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				break;
 			}
+		case DVM_SWITCH :
+			AssertInitialized( opa, 0, vmc->middle + 2, vmc->last-1 );
+			j = 0;
+			for(k=1; k<=opc; k++){
+				DValue cc = routConsts->data[ vmcs[i+k]->a ];
+				j += (cc.t == DAO_ENUM && cc.v.e->type->name->mbs[0] == '$');
+				bt = DaoNameSpace_GetTypeV( ns, cc );
+				if( at->name->mbs[0] == '$' && bt->name->mbs[0] == '$' ) continue;
+				if( DaoType_MatchValue( at, cc, defs ) ==0 ){
+					cid = i + k;
+					vmc = vmcs[i + k];
+					type_source = DaoNameSpace_GetTypeV( ns, cc ); 
+					type_target = at;
+					ec_specific = DTE_TYPE_NOT_MATCHING;
+					goto ErrorTyping;
+				}
+			}
+			if( csts[opa].t ){
+				DValue sv = csts[opa];
+				int jump = opb;
+				for(k=1; k<=opc; k++){
+					DValue cc = routConsts->data[ vmcs[i+k]->a ];
+					if( DValue_Compare( sv, cc ) ==0 ){
+						jump = vmcs[i+k]->b;
+						break;
+					}
+				}
+				vmc->code = DVM_GOTO;
+				vmc->b = jump;
+			}else if( at->tid == DAO_ENUM && at->name->mbs[0] != '$' && j == opc ){
+				DMap *jumps = DMap_New(D_VALUE,0);
+				DValue key = daoNullEnum;
+				DNode *it, *find;
+				DEnum em;
+				int max=0, min=0;
+				em.type = at;
+				key.v.e = & em;
+				for(k=1; k<=opc; k++){
+					DValue cc = routConsts->data[ vmcs[i+k]->a ];
+					if( DEnum_SetValue( & em, cc.v.e, NULL ) ==0 ){
+						cid = i + k;
+						vmc = vmcs[i + k];
+						type_source = cc.v.e->type; 
+						type_target = at;
+						ec_specific = DTE_TYPE_NOT_MATCHING;
+						DMap_Delete( jumps );
+						goto ErrorTyping;
+					}
+					if( k ==1 ){
+						max = min = em.value;
+					}else{
+						if( em.value > max ) max = em.value;
+						if( em.value < min ) min = em.value;
+					}
+					MAP_Insert( jumps, & key, vmcs[i+k] );
+				}
+				if( at->flagtype == 0 && opc > 0.75*(max-min+1) ){
+					for(it=DMap_First(at->mapNames);it;it=DMap_Next(at->mapNames,it)){
+						em.value = it->value.pInt;
+						find = DMap_Find( jumps, & key );
+						if( find == NULL ) DMap_Insert( jumps, & key, NULL );
+					}
+					k = 1;
+					for(it=DMap_First(jumps);it;it=DMap_Next(jumps,it)){
+						if( it->value.pVoid ){
+							vmcs[i+k] = (DaoVmCodeX*) it->value.pVoid;
+							vmcs[i+k]->a = routConsts->size;
+							k += 1;
+						}else{
+							vmc2.code = DVM_CASE;
+							vmc2.a = routConsts->size;
+							vmc2.b = opb;
+							vmc2.c = DAO_CASE_TABLE;
+							vmc2.first = vmc2.last = 0;
+							vmc2.middle = 1;
+							addCount[i+k] += 1;
+							DArray_Append( addCode, & vmc2 );
+						}
+						DRoutine_AddConstValue( (DRoutine*)self, it->key.pValue[0] );
+					}
+					vmc->c = jumps->size;
+					vmcs[i+1]->c = DAO_CASE_TABLE;
+				}else{
+					k = 1;
+					for(it=DMap_First(jumps);it;it=DMap_Next(jumps,it)){
+						vmcs[i+k] = (DaoVmCodeX*) it->value.pVoid;
+						vmcs[i+k]->a = routConsts->size;
+						DRoutine_AddConstValue( (DRoutine*)self, it->key.pValue[0] );
+						k += 1;
+					}
+				}
+				DMap_Delete( jumps );
+			}else if( j ){
+				vmcs[i + 1]->c = DAO_CASE_UNORDERED;
+			}
+			break;
+		case DVM_CASE :
+			break;
 		case DVM_ITER :
 			{
 				init[opc] = 1;

@@ -30,6 +30,7 @@ const DValue daoZeroFloat = { DAO_FLOAT, 0, 0, 0, {0}};
 const DValue daoZeroDouble = { DAO_DOUBLE, 0, 0, 0, {0}};
 const DValue daoNullComplex = { DAO_COMPLEX, 0, 0, 0, {0}};
 const DValue daoNullString = { DAO_STRING, 0, 0, 0, {0}};
+const DValue daoNullEnum = { DAO_ENUM, 0, 0, 0, {0}};
 const DValue daoNullArray = { DAO_ARRAY, 0, 0, 0, {0}};
 const DValue daoNullList = { DAO_LIST, 0, 0, 0, {0}};
 const DValue daoNullMap = { DAO_MAP, 0, 0, 0, {0}};

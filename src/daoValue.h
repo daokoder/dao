@@ -27,6 +27,7 @@ const extern DValue daoZeroFloat;
 const extern DValue daoZeroDouble;
 const extern DValue daoNullComplex;
 const extern DValue daoNullString;
+const extern DValue daoNullEnum;
 const extern DValue daoNullArray;
 const extern DValue daoNullList;
 const extern DValue daoNullMap;

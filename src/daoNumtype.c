@@ -1311,15 +1311,24 @@ char DLong_FromString( DLong *self, DString *s )
 	return 0;
 }
 
+const int base_bits[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
+const int base_masks[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
 static void DaoLong_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DLong *self = self0->v.l;
 	dint id = DValue_GetInteger( pid );
-	int ws[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
-	int ms[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
-	int w = ws[self->base];
+	int w = base_bits[self->base];
 	int n = self->size;
 	int digit = 0;
+	if( self->base == 0 ){
+		if( id <0 || id >= n*LONG_BITS ){
+			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
+			return;
+		}
+		digit = (self->data[id/LONG_BITS] & (1<<(id%LONG_BITS)))>>(id%LONG_BITS);
+		DaoContext_PutInteger( ctx, digit );
+		return;
+	}
 	if( w == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need power 2 radix" );
 		return;
@@ -1334,12 +1343,12 @@ static void DaoLong_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 		int m = id*w / LONG_BITS;
 		if( ((id+1)*w <= (m+1)*LONG_BITS) || m+1 >= n ){
 			int digit2 = self->data[m] >> (id*w - m*LONG_BITS);
-			digit = digit2 & ms[self->base];
+			digit = digit2 & base_masks[self->base];
 			if( m+1 >= n && digit2 ==0 )
 				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
 		}else{
 			int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
-			digit = (d>>(id*w - m*LONG_BITS)) & ms[self->base];
+			digit = (d>>(id*w - m*LONG_BITS)) & base_masks[self->base];
 		}
 	}else{
 		digit = self->data[id];
@@ -1351,11 +1360,20 @@ static void DaoLong_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue 
 	DLong *self = self0->v.l;
 	dint id = DValue_GetInteger( pid );
 	dint digit = DValue_GetInteger( value );
-	int ws[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
-	int ms[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
-	int w = ws[self->base];
-	int n = self->size;
-	int i;
+	int i, n = self->size;
+	int w = base_bits[self->base];
+	if( self->base == 2 ){
+		if( pid.t == 0 ){
+			ushort_t bits = digit ? LONG_BASE-1 : 0;;
+			for(i=0; i<self->size; i++) self->data[i] = bits;
+		}else{
+			if( digit )
+				self->data[id/LONG_BITS] |= (1<<(id%LONG_BITS));
+			else
+				self->data[id/LONG_BITS] &= ~(1<<(id%LONG_BITS));
+		}
+		return;
+	}
 	if( w == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need power 2 radix" );
 		return;
@@ -1382,13 +1400,13 @@ static void DaoLong_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue 
 			int shift = id*w - m*LONG_BITS;
 			if( ((id+1)*w <= (m+1)*LONG_BITS) || m+1 >= n ){
 				int digit2 = self->data[m] >> shift;
-				self->data[m] &= ~(ms[self->base]<<shift);
+				self->data[m] &= ~(base_masks[self->base]<<shift);
 				self->data[m] |= digit<<shift;
 				if( m+1 >= n && digit2 ==0 )
 					DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "out of range" );
 			}else{
 				int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
-				d &= ~(ms[self->base]<<shift);
+				d &= ~(base_masks[self->base]<<shift);
 				d |= digit<<shift;
 				self->data[m] = d & LONG_MASK;
 				self->data[m+1] = d >> LONG_BITS;

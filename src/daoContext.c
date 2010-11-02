@@ -666,13 +666,26 @@ DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc )
 	dint min, max;
 
 	if( vmc->c ==0 ) return self->codes + vmc->b;
-	if( vmc[1].c ){
-		if( opa.t != DAO_INTEGER ) return self->codes + vmc->b;
-		min = cst[ vmc[1].a ].v.i;
-		max = cst[ vmc[vmc->c].a ].v.i;
-		if( opa.v.i >= min && opa.v.i <= max )
-			return self->codes + vmc[ opa.v.i - min + 1 ].b;
+	if( vmc[1].c == DAO_CASE_TABLE ){
+		if( opa.t == DAO_INTEGER ){
+			min = cst[ vmc[1].a ].v.i;
+			max = cst[ vmc[vmc->c].a ].v.i;
+			if( opa.v.i >= min && opa.v.i <= max )
+				return self->codes + vmc[ opa.v.i - min + 1 ].b;
+		}else if( opa.t == DAO_ENUM ){
+			min = cst[ vmc[1].a ].v.e->value;
+			max = cst[ vmc[vmc->c].a ].v.e->value;
+			if( opa.v.e->value >= min && opa.v.e->value <= max )
+				return self->codes + vmc[ opa.v.e->value - min + 1 ].b;
+		}
 		return self->codes + vmc->b;
+	}else if( vmc[1].c == DAO_CASE_UNORDERED ){
+		for(id=1; id<=vmc->c; id++){
+			mid = vmc + id;
+			if( DValue_Compare( opa, cst[ mid->a ] ) ==0 ){
+				return self->codes + mid->b;
+			}
+		}
 	}
 	first = 1;
 	last = vmc->c;

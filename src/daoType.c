@@ -485,7 +485,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		}
 		return mt;
 	case DAO_MT_SUB :
-		if( value.t <= DAO_DOUBLE ) return mt;
+		if( value.t < DAO_ARRAY ) return mt;
 	default : break;
 	}
 	if( self->nested ){
