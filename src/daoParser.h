@@ -109,8 +109,6 @@ struct DaoParser
 	DaoType      *selfParam; /* type "self:host" */
 	DaoParser    *outParser;
 
-	DArray *bindtos;
-
 	int curLine;
 	int lineCount;
 	short indent;
@@ -119,6 +117,7 @@ struct DaoParser
 	short parsed;
 	DArray *scoping; /* <size_t> */
 	DArray *errors;
+	DArray *bindtos;
 
 	/* members for convenience */
 	DLong     *bigint;

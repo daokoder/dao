@@ -51,7 +51,7 @@ ifeq ($(UNAME), Darwin)
   CFLAGS += -DUNIX -DMAC_OSX
   LFLAGLIB = -fPIC -dynamiclib
   LFLAGSDLL += -dynamiclib -install_name libdao.dylib
-  LIBS += -L/opt/local/lib
+  LIBS += -L/usr/local/lib
 endif
 
 ifeq ($(CC), gcc)

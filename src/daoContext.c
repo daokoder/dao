@@ -2383,6 +2383,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 		}
 		if( vmc->c != vmc->a ){
 			denum = DaoContext_GetEnum( self, vmc );
+			if( denum->type == NULL ) DEnum_SetType( denum, dA.v.e->type );
 			DEnum_SetValue( denum, dA.v.e, NULL );
 		}
 		if( vmc->code == DVM_ADD ){
@@ -2391,7 +2392,10 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 			rc = DEnum_RemoveValue( denum, dB.v.e, NULL );
 		}
 		if( rc == 0 ){
-			DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
+			if( denum->type->flagtype ==0 )
+				DaoContext_RaiseException( self, DAO_ERROR_TYPE, "not combinable enum" );
+			else
+				DaoContext_RaiseException( self, DAO_ERROR_TYPE, "symbol not found in the enum" );
 			return;
 		}
 	}else if( dA.t == DAO_LIST && dB.t == DAO_LIST && vmc->code == DVM_ADD ){

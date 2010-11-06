@@ -21,9 +21,10 @@ typedef unsigned int bits_t;
 #define \
 	DAO_ROUT_COMMON \
 uchar_t        attribs; \
-bits_t         minimal  : 1; \
-bits_t         minParam : 7; \
+uchar_t        minimal; \
+uchar_t        minParam; \
 uchar_t        parCount; \
+ushort_t       defLine; \
 uchar_t        tidHost; \
 DaoType       *routHost; \
 DaoType       *routType; \
@@ -81,13 +82,13 @@ struct DaoRoutine
 	DArray *source; /* <DaoToken*> */
 
 	DMap *regForLocVar;
-	int locRegCount;
-	int constParam;
+
 	int mode;
 
-	int defLine; /* definition line number; */
-	int bodyStart;
-	int bodyEnd;
+	ushort_t locRegCount;
+	ushort_t constParam;
+	ushort_t bodyStart;
+	ushort_t bodyEnd;
 
 	DMap *abstypes;
 

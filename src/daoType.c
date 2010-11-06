@@ -773,8 +773,7 @@ static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
 	}
 	return (k >= 0);
 }
-	int DaoInterface_CheckBind
-( DArray *methods, DaoType *type, DMap *binds, DArray *fails )
+int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds, DArray *fails )
 {
 	DValue value;
 	int i, id, fcount = 0;
@@ -829,6 +828,8 @@ static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *bind
 		DaoInterface_TempBind( super, type, binds );
 	}
 }
+/* INPUT:  <interface, type, first, last, 0> */
+/* OUTPUT: <interface, type, first, last, fail_count> */
 int DaoInterface_Bind( DArray *pairs, DArray *fails )
 {
 	DaoType *type;
@@ -836,7 +837,7 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
 	DArray *methods = DArray_New(0);
 	DMap *binds = DHash_New(D_VOID2,0);
 	int i, j, N = pairs->size;
-	for(i=0; i<N; i+=2){
+	for(i=0; i<N; i+=5){
 		inter = (DaoInterface*) pairs->items.pBase[i];
 		type = (DaoType*) pairs->items.pBase[i+1];
 		/*
@@ -844,13 +845,17 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
 		 */
 		DaoInterface_TempBind( inter, type, binds );
 	}
-	for(i=0; i<N; i+=2){
+	for(i=0; i<N; i+=5){
+		j = fails->size;
 		inter = (DaoInterface*) pairs->items.pBase[i];
 		type = (DaoType*) pairs->items.pBase[i+1];
 		if( DMap_Find( type->interfaces, inter ) ) continue;
 		methods->size = 0;
 		DMap_SortMethods( inter->methods, methods );
-		if( DaoInterface_CheckBind( methods, type, binds, fails ) ==0 ) continue;
+		if( DaoInterface_CheckBind( methods, type, binds, fails ) ==0 ){
+			pairs->items.pInt[i+4] = fails->size - j;
+			continue;
+		}
 
 		GC_IncRC( inter );
 		DMap_Insert( type->interfaces, inter, NULL );
@@ -865,8 +870,7 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
 	DArray_Delete( methods );
 	return fails->size ==0;
 }
-	int DaoInterface_BindTo
-( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails )
+int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails )
 {
 	DMap *newbinds = NULL;
 	DArray *methods;
@@ -894,8 +898,7 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
 	}
 	return 1;
 }
-	static int DaoInterface_TryBindTo
-( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails )
+static int DaoInterface_TryBindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails )
 {
 	DNode *it;
 	if( DMap_Find( type->interfaces, self ) ) return 1;
