@@ -1,5 +1,16 @@
 
 #include<stdio.h>
+#include<stdlib.h>
+
+class otto 
+{
+	private:
+	int a;
+	public:
+	otto(int b=123){ a = b; }
+	virtual ~otto(){};
+	int geta(){ return a; }
+};
 
 class Greeting
 {
@@ -9,6 +20,7 @@ class Greeting
   public:
 
   Greeting( const char * msg=NULL );
+  ~Greeting(){ if( message ) free( message ); }
   void SetMessage( const char * msg );
   void PrintMessage();
 
@@ -35,15 +47,31 @@ class Greeting
   class Null{};
   Null TestNull( const Null & ){}
 };
+class Greeting2 : public Greeting{};
+
+class AutobindTest
+{
+  public:
+ // virtual void InternalTransformDerivative(const float in[3], float out[3],
+ //     float derivative[3][3]) = 0;
+ // virtual void InternalTransformDerivative(const double in[3], double out[3],
+ //     double derivative[3][3]) = 0;
+};
 
 Greeting* GetGreetingObject();
 
 enum Enum1 { AA, BB, CC };
 
+#ifdef TRUE
+#undef TRUE
+#undef FALSE
+#endif
+
 namespace CxxNS
 {
   enum Bool { FALSE, TRUE };
   enum Enum2 { AA, BB, CC };
+  //namespace NestedNS { enum NestedEnum { DD, EE, FF }; }
 
   typedef Bool Bool2;
 

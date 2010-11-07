@@ -945,11 +945,13 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
 {
 	int i;
 	if( vmCodes == NULL || vmCodes->type != D_VMCODE ) return 0;
+	DArray_Swap( self->annotCodes, vmCodes );
+	if( self->upRoutine && self->upRoutine->regType->size ==0 ) return 1;
+	vmCodes = self->annotCodes;
 	DaoVmcArray_Resize( self->vmCodes, vmCodes->size );
 	for(i=0; i<vmCodes->size; i++){
 		self->vmCodes->codes[i] = * (DaoVmCode*) vmCodes->items.pVmc[i];
 	}
-	DArray_Swap( self->annotCodes, vmCodes );
 	return DaoRoutine_InferTypes( self );
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes )
@@ -1051,12 +1053,20 @@ static const char vmcTyping[][7] =
 	/*  ,  A,  B,  C,    */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_NOP */
 	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_DATA */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETC */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETV */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETCL */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETCK */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETCG */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVL */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVO */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVK */
+	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVG */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETI */
 	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF */
 	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETMF */
-	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETV */
+	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVL */
+	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVO */
+	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVK */
+	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVG */
 	{ OT_ABC,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETI */
 	{ OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETF */
 	{ OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETMF */
@@ -1104,7 +1114,7 @@ static const char vmcTyping[][7] =
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_FUNCT */
 	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_CALL */
 	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_MCALL */
-	{ OT_EXP, 'A',   0, -1, -1, -1,  -1 } , /* DVM_CLOSE */
+	{ OT_EXP, 'A',   0, -1, -1, -1,  -1 } , /* DVM_CLOSURE */
 	{ OT_EXP,   0, 'B', -1, -1, -1,  -1 } , /* DVM_CRRE */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JITC */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JOINT */
@@ -1113,22 +1123,42 @@ static const char vmcTyping[][7] =
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_DEBUG */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_SECT */
 
-	{ OT_OOC, -1, -1, 'I', 'L', -1,  -1 } , /* DVM_GETC_I */
-	{ OT_OOC, -1, -1, 'F', 'L', -1,  -1 } , /* DVM_GETC_F */
-	{ OT_OOC, -1, -1, 'D', 'L', -1,  -1 } , /* DVM_GETC_D */
-	{ OT_OOC, -1, -1, 'I', 'G', -1,  -1 } , /* DVM_GETV_I */
-	{ OT_OOC, -1, -1, 'F', 'G', -1,  -1 } , /* DVM_GETV_F */
-	{ OT_OOC, -1, -1, 'D', 'G', -1,  -1 } , /* DVM_GETV_D */
-
-	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_II */
-	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_IF */
-	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETV_ID */
-	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FI */
-	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FF */
-	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETV_FD */
-	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DI */
-	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DF */
-	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETV_DD */
+	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVL_II */
+	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVL_IF */
+	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVL_ID */
+	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVL_FI */
+	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVL_FF */
+	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVL_FD */
+	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVL_DI */
+	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVL_DF */
+	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVL_DD */
+	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVO_II */
+	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVO_IF */
+	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVO_ID */
+	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVO_FI */
+	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVO_FF */
+	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVO_FD */
+	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVO_DI */
+	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVO_DF */
+	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVO_DD */
+	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVK_II */
+	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVK_IF */
+	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVK_ID */
+	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVK_FI */
+	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVK_FF */
+	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVK_FD */
+	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVK_DI */
+	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVK_DF */
+	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVK_DD */
+	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVG_II */
+	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVG_IF */
+	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVG_ID */
+	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVG_FI */
+	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVG_FF */
+	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVG_FD */
+	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVG_DI */
+	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVG_DF */
+	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVG_DD */
 
 	{ OT_AOC, 'I', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_II */
 	{ OT_AOC, 'F', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_IF */
@@ -1721,6 +1751,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray   *addRegType;
 	DVarray  *regConst;
 	DVarray  *routConsts = self->routConsts;
+	DVarray  *dataCL[2] = { NULL, NULL };
+	DVarray **dataCK = self->tidHost == DAO_OBJECT ? & hostClass->cstData : NULL;
+	DVarray **dataCG = & self->nameSpace->cstData;
+	DArray   *typeVL[2] = { NULL, NULL };
+	DArray  **typeVO = self->tidHost == DAO_OBJECT ? & hostClass->objDataType : NULL;
+	DArray  **typeVK = self->tidHost == DAO_OBJECT ? & hostClass->glbDataType : NULL;
+	DArray  **typeVG = & self->nameSpace->varType;
 	DValue   *cstValues[ DAO_U+1 ];
 	DValue    empty = daoNullValue;
 	DValue    val;
@@ -1733,6 +1770,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	 * (1) function specialization based on parameter types;
 	 * (2) instruction specialization requiring
 	 *     additional instructions and vm registers; */
+
+	 dataCL[0] = self->routConsts;
+	 if( self->upRoutine ){
+		 if( self->upRoutine->parser ) DaoRoutine_Compile( self->upRoutine );
+		 dataCL[1] = self->upRoutine->routConsts;
+		 typeVL[1] = self->upRoutine->regType;
+	 }
 
 	if( self->vmCodes->size ==0 ) return 1;
 	defs = DMap_New(0,0);
@@ -1881,10 +1925,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( at, type[opc], defs, 0);
 			}
 			break;
-		case DVM_GETC :
+		case DVM_GETCL : case DVM_GETCK : case DVM_GETCG :
 			{
-				val = empty;
-				if( cstValues[ opa ] ) val = cstValues[ opa ][ opb ];
+				if( code == DVM_GETCL ) val = dataCL[opa]->data[opb];
+				else if( code == DVM_GETCK ) val = dataCK[opa]->data[opb];
+				else /* code == DVM_GETCG */ val = dataCG[opa]->data[opb];
 				at = DaoNameSpace_GetTypeV( ns, val );
 
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
@@ -1893,24 +1938,25 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				 */
 				AssertTypeMatching( at, type[opc], defs, 0);
 				csts[opc] = val;
+				csts[opc].cst = 1;
 				init[opc] = 1;
 				lastcomp = opc;
-				if( typed_code ){
-					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
-						vmc->code = DVM_GETC_I + ( at->tid - DAO_INTEGER );
-					}
-				}
-				csts[opc].cst = 1;
 				break;
 			}
-		case DVM_GETV :
+		case DVM_GETVL : case DVM_GETVO : case DVM_GETVK : case DVM_GETVG :
 			{
 				at = 0;
+				if( code == DVM_GETVL ) at = typeVL[opa]->items.pAbtp[opb];
+				else if( code == DVM_GETVO ) at = typeVO[opa]->items.pAbtp[opb];
+				else if( code == DVM_GETVK ) at = typeVK[opa]->items.pAbtp[opb];
+				else /* code == DVM_GETVG */ at = typeVG[opa]->items.pAbtp[opb];
+#if 0
 				if( varTypes[ opa ] ) at = varTypes[ opa ][ opb ];
 				if( self->tidHost == DAO_OBJECT && varTypes[ opa ] == NULL ){
 					printf( "need host class\n" );
 					goto NotMatch;/* XXX */
 				}
+#endif
 				if( at == NULL ) at = any;
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				/*
@@ -1921,35 +1967,36 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( at, type[opc], defs, 0);
 				init[opc] = 1;
 				lastcomp = opc;
-				if( typed_code ){
-					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
-						vmc->code = DVM_GETV_I + ( at->tid - DAO_INTEGER );
-					}
-				}
-				if( isconst && opa == DAO_OV ) csts[opc].cst = 1;
+				if( isconst && code == DVM_GETVO ) csts[opc].cst = 1;
 				break;
 			}
-		case DVM_SETV :
+		case DVM_SETVL : case DVM_SETVO : case DVM_SETVK : case DVM_SETVG :
 			{
-				if( isconst && opc == DAO_OV ) goto ModifyConstant;
+				if( isconst && code == DVM_SETVO ) goto ModifyConstant;
 				AssertInitialized( opa, 0, vmc->middle + 1, vmc->last );
 				tp = NULL;
+				if( code == DVM_SETVL ) tp = typeVL[opc]->items.pAbtp + opb;
+				else if( code == DVM_SETVO ) tp = typeVO[opc]->items.pAbtp + opb;
+				else if( code == DVM_SETVK ) tp = typeVK[opc]->items.pAbtp + opb;
+				else /* code == DVM_SETVG */ tp = typeVG[opc]->items.pAbtp + opb;
+#if 0
 				if( varTypes[ opc ] ) tp = varTypes[ opc ] + opb;
 				if( self->tidHost == DAO_OBJECT && varTypes[ opc ] == NULL ){
 					printf( "need host class\n" );
 					goto NotMatch;/* XXX */
 				}
+#endif
 				at = type[opa];
 				if( tp && ( *tp==NULL || (*tp)->tid ==DAO_UDF ) ){
 					GC_ShiftRC( at, *tp );
 					*tp = at;
 				}
 				if( tp && (*tp)->tid <= DAO_DOUBLE ){
-					if( opc == DAO_OV && opb < hostClass->objDataDefault->size ){
+					if( code == DVM_SETVO && opb < hostClass->objDataDefault->size ){
 						hostClass->objDataDefault->data[ opb ].t = at->tid;
-					}else if( opc == DAO_K && opb < hostClass->glbData->size ){
+					}else if( code == DVM_SETVK && opb < hostClass->glbData->size ){
 						hostClass->glbData->data[ opb ].t = at->tid;
-					}else if( opc == DAO_G && opb < ns->varData->size ){
+					}else if( code == DVM_SETVG && opb < ns->varData->size ){
 						ns->varData->data[ opb ].t = at->tid;
 					}
 				}
@@ -1967,7 +2014,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( tp[0]->tid >= DAO_INTEGER && tp[0]->tid <= DAO_DOUBLE
 						&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 					if( typed_code ){
-						vmc->code = 3*( tp[0]->tid - DAO_INTEGER ) + ( at->tid - DAO_INTEGER ) + DVM_SETV_II;
+						vmc->code = 3*(tp[0]->tid - DAO_INTEGER) + (at->tid - DAO_INTEGER) + DVM_SETVL_II;
+						vmc->code += 9*(code - DVM_SETVL);
 					}
 				}else if( k == DAO_MT_SUB && notide ){
 					/* global L = { 1.5, 2.5 }; L = { 1, 2 }; L[0] = 3.5 */
@@ -3734,7 +3782,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						p->code = DVM_NOP;
 						if( i+2 < N ){
 							p = vmcs[i+2];
-							if( p->code >= DVM_SETV && p->code <= DVM_SETF && p->a == opa+1 )
+							if( p->code >= DVM_SETVL && p->code <= DVM_SETF && p->a == opa+1 )
 								p->code = DVM_NOP;
 						}
 					}
@@ -3896,7 +3944,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				vmc->code += DVM_CALL_TC - DVM_CALL;
 				break;
 			}
-		case DVM_CLOSE :
+		case DVM_CLOSURE :
 			{
 				init[opc] = 1;
 				lastcomp = opc;
@@ -4059,55 +4107,47 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
 			AssertTypeMatching( ct, type[opc], defs, 0 );
 			break;
-		case DVM_GETC_I : case DVM_GETC_F : case DVM_GETC_D :
-			{
-				val = empty;
-				if( cstValues[opa] ) val = cstValues[opa][opb];
-				at = DaoNameSpace_GetTypeV( ns, val );
-				if( at == NULL ) goto NotInit;
-				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
-				AssertTypeIdMatching( at, TT3, 0 );
-				AssertTypeIdMatching( type[opc], TT3, 0 );
-				csts[opc] = val;
-				init[opc] = 1;
-				lastcomp = opc;
-				break;
-			}
-		case DVM_GETV_I : case DVM_GETV_F : case DVM_GETV_D :
-			{
-				at = 0;
-				if( opa != DAO_G && self->tidHost != DAO_OBJECT ) goto ErrorTyping;
-				if( varTypes[opa] ) at = varTypes[opa][opb];
-				if( at == NULL ) goto NotInit;
-				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
-				/*
-				   printf( "%p %p\n", at, type[opc] );
-				   printf( "%s %s\n", at->name->mbs, type[opc]->name->mbs );
-				 */
-				AssertTypeIdMatching( at, TT3, 0 );
-				AssertTypeIdMatching( type[opc], TT3, 0 );
-				init[opc] = 1;
-				lastcomp = opc;
-				break;
-			}
-		case DVM_SETV_II : case DVM_SETV_IF : case DVM_SETV_ID :
-		case DVM_SETV_FI : case DVM_SETV_FF : case DVM_SETV_FD :
-		case DVM_SETV_DI : case DVM_SETV_DF : case DVM_SETV_DD :
-			{
-				tp = NULL;
-				if( opc != DAO_G && self->tidHost != DAO_OBJECT ) goto ErrorTyping;
-				if( varTypes[opc] ) tp = varTypes[opc] + opb;
-				if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
-				/* less strict checking */
-				if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
-				/*
-				   printf( "%s %s\n", (*tp)->name->mbs, type[opa]->name->mbs );
-				 */
-				AssertTypeMatching( type[opa], *tp, defs, 0 );
-				AssertTypeIdMatching( at, TT1, 0 );
-				AssertTypeIdMatching( tp[0], TT3, 0 );
-				break;
-			}
+		case DVM_SETVL_II : case DVM_SETVL_IF : case DVM_SETVL_ID :
+		case DVM_SETVL_FI : case DVM_SETVL_FF : case DVM_SETVL_FD :
+		case DVM_SETVL_DI : case DVM_SETVL_DF : case DVM_SETVL_DD :
+			tp = typeVL[opc]->items.pAbtp + opb;
+			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
+			AssertTypeMatching( type[opa], *tp, defs, 0 );
+			AssertTypeIdMatching( at, TT1, 0 );
+			AssertTypeIdMatching( tp[0], TT3, 0 );
+			break;
+		case DVM_SETVO_II : case DVM_SETVO_IF : case DVM_SETVO_ID :
+		case DVM_SETVO_FI : case DVM_SETVO_FF : case DVM_SETVO_FD :
+		case DVM_SETVO_DI : case DVM_SETVO_DF : case DVM_SETVO_DD :
+			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;
+			tp = typeVO[opc]->items.pAbtp + opb;
+			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
+			AssertTypeMatching( type[opa], *tp, defs, 0 );
+			AssertTypeIdMatching( at, TT1, 0 );
+			AssertTypeIdMatching( tp[0], TT3, 0 );
+			break;
+		case DVM_SETVK_II : case DVM_SETVK_IF : case DVM_SETVK_ID :
+		case DVM_SETVK_FI : case DVM_SETVK_FF : case DVM_SETVK_FD :
+		case DVM_SETVK_DI : case DVM_SETVK_DF : case DVM_SETVK_DD :
+			tp = typeVK[opc]->items.pAbtp + opb;
+			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
+			AssertTypeMatching( type[opa], *tp, defs, 0 );
+			AssertTypeIdMatching( at, TT1, 0 );
+			AssertTypeIdMatching( tp[0], TT3, 0 );
+			break;
+		case DVM_SETVG_II : case DVM_SETVG_IF : case DVM_SETVG_ID :
+		case DVM_SETVG_FI : case DVM_SETVG_FF : case DVM_SETVG_FD :
+		case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
+			tp = typeVG[opc]->items.pAbtp + opb;
+			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
+			AssertTypeMatching( type[opa], *tp, defs, 0 );
+			AssertTypeIdMatching( at, TT1, 0 );
+			AssertTypeIdMatching( tp[0], TT3, 0 );
+			break;
 		case DVM_MOVE_II : case DVM_NOT_I : case DVM_UNMS_I : case DVM_BITREV_I :
 		case DVM_MOVE_FF : case DVM_NOT_F : case DVM_UNMS_F : case DVM_BITREV_F :
 		case DVM_MOVE_DD : case DVM_NOT_D : case DVM_UNMS_D : case DVM_BITREV_D :

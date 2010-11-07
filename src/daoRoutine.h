@@ -87,8 +87,8 @@ struct DaoRoutine
 
 	ushort_t locRegCount;
 	ushort_t constParam;
-	ushort_t bodyStart;
-	ushort_t bodyEnd;
+	int bodyStart;
+	int bodyEnd;
 
 	DMap *abstypes;
 

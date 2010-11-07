@@ -24,12 +24,20 @@ enum DaoOpcode
 {
 	DVM_NOP = 0, /* no operation */
 	DVM_DATA , /* create primitive data: A: type, B: value, C: register; */
-	DVM_GETC , /* get const: C = A::B, local A=0, class A=1, global A=2 */
-	DVM_GETV , /* get non-local variables: C = A::B, object A=0, the rest as DVM_GETC */
+	DVM_GETCL , /* get local const: C = A::B; current routine, A=0; up routine: A=1; */
+	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
+	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
+	DVM_GETVL , /* get local variables: C = A::B; A=1, up routine; */
+	DVM_GETVO , /* get instance object variables: C = A::B; A=0; */
+	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
+	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
 	DVM_GETI ,  /* GET Item(s) : C = A[B]; */
 	DVM_GETF ,  /* GET Field : C = A.B */
 	DVM_GETMF , /* GET Meta Field: C = A->B */
-	DVM_SETV , /* set non-local variables: C::B = A, C the same as A in DVM_GETV */
+	DVM_SETVL , /* set local variables: C::B = A, C the same as A in DVM_GETVL */
+	DVM_SETVO , /* set object variables: C::B = A, C the same as A in DVM_GETVO */
+	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
+	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
 	DVM_SETI , /* SET Item(s) : C[B] = A;  */
 	DVM_SETF , /* SET Field : C.B = A */
 	DVM_SETMF , /* SET Meta Field : C->B = A */
@@ -77,7 +85,7 @@ enum DaoOpcode
 	DVM_FUNCT , /* C = A( B ); A: map,reduce,...; B: list,tuple */
 	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
 	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
-	DVM_CLOSE , /* create a function closure */
+	DVM_CLOSURE , /* create a function closure */
 	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:
 				  A,A+1,..,A+B-2; If B==1, no exception to raise or rescue. */
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
@@ -88,21 +96,43 @@ enum DaoOpcode
 	DVM_SECT ,   /* indicate the starting of a code subsection, A is the id. */
 
 	/* optimized opcodes: */
-	DVM_GETC_I , 
-	DVM_GETC_F , 
-	DVM_GETC_D , 
-	DVM_GETV_I , 
-	DVM_GETV_F , 
-	DVM_GETV_D , 
-	DVM_SETV_II , 
-	DVM_SETV_IF , 
-	DVM_SETV_ID , 
-	DVM_SETV_FI , 
-	DVM_SETV_FF , 
-	DVM_SETV_FD , 
-	DVM_SETV_DI , 
-	DVM_SETV_DF , 
-	DVM_SETV_DD , 
+	DVM_SETVL_II , 
+	DVM_SETVL_IF , 
+	DVM_SETVL_ID , 
+	DVM_SETVL_FI , 
+	DVM_SETVL_FF , 
+	DVM_SETVL_FD , 
+	DVM_SETVL_DI , 
+	DVM_SETVL_DF , 
+	DVM_SETVL_DD , 
+	DVM_SETVO_II , 
+	DVM_SETVO_IF , 
+	DVM_SETVO_ID , 
+	DVM_SETVO_FI , 
+	DVM_SETVO_FF , 
+	DVM_SETVO_FD , 
+	DVM_SETVO_DI , 
+	DVM_SETVO_DF , 
+	DVM_SETVO_DD , 
+	DVM_SETVK_II , 
+	DVM_SETVK_IF , 
+	DVM_SETVK_ID , 
+	DVM_SETVK_FI , 
+	DVM_SETVK_FF , 
+	DVM_SETVK_FD , 
+	DVM_SETVK_DI , 
+	DVM_SETVK_DF , 
+	DVM_SETVK_DD , 
+	DVM_SETVG_II , 
+	DVM_SETVG_IF , 
+	DVM_SETVG_ID , 
+	DVM_SETVG_FI , 
+	DVM_SETVG_FF , 
+	DVM_SETVG_FD , 
+	DVM_SETVG_DI , 
+	DVM_SETVG_DF , 
+	DVM_SETVG_DD , 
+
 	DVM_MOVE_II ,
 	DVM_MOVE_IF ,
 	DVM_MOVE_ID ,

@@ -261,6 +261,8 @@ int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase )
 	 */
 	bl = DaoAssign( self, dbase, self->regValues[ reg ], abtp );
 	if( bl ==0 ){
+		DaoType *type = DaoNameSpace_GetType( self->nameSpace, dbase );
+		printf( "%p %p %s %s\n", type, abtp, type->name->mbs, abtp->name->mbs );
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching12" );
 		return 0;
 	}
@@ -4415,6 +4417,12 @@ void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc )
 	DaoRoutine *closure;
 	DaoRoutine *proto = pp[0]->v.routine;
 	int i;
+	if( proto->vmCodes->size ==0 && proto->annotCodes->size ){
+		if( DaoRoutine_SetVmCodes( proto, proto->annotCodes ) ==0 ){
+			DaoContext_RaiseException( self, DAO_ERROR, "invalid closure" );
+			return;
+		}
+	}
 
 	closure = DaoRoutine_Copy( proto, 0 );
 	closure->upRoutine = self->routine;
@@ -4603,6 +4611,7 @@ void DaoContext_RaiseException( DaoContext *self, int type, const char *value )
 	if( DaoCData_ChildOf( typer, warning ) ){
 		/* XXX support warning suppression */
 		cdata = DaoCData_New( typer, DaoException_New( typer ) );
+		DaoInitException( cdata, self, self->vmc, self->idClearFE, value );
 		DaoPrintException( cdata, stdio ); 
 		typer->Delete( cdata );
 		return;

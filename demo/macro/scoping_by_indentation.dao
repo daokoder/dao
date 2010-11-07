@@ -28,7 +28,7 @@ syntax{ # if : elif : else :
   }
 }
 syntax{ # for in :
-  for $ID_1 in $EXP_1 \{ , $ID_2 in $EXP_2 \} : \[ $IBL_1 \]
+	for $ID_1 in $EXP_1 \{ , $ID_2 in $EXP_2 \} : \[ $IBL_1 \]
 }as{ # for( in ){}
   for( $ID_1 in $EXP_1 \{ ; $ID_2 in $EXP_2 \} ){ \[ $IBL_1 \] }
   io.writeln( \" \[ $IBL_1 \] \" ) 

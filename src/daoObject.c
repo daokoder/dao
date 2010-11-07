@@ -249,7 +249,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 				value->v.l = DLong_New();
 			}else if( type->tid == DAO_ENUM ){
 				value->t = type->tid;
-				value->v.e = DEnum_New(0,"");
+				value->v.e = DEnum_New(type,0);
 			}else if( type->tid == DAO_STRING ){
 				value->t = type->tid;
 				value->v.s = DString_New(1);

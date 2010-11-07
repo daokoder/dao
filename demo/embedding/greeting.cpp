@@ -53,11 +53,11 @@ void Testing( int a, Bool2 bl )
 }
 void Testing( Test *t, int b, const Test & o, const Test &g, int c )
 {
-  printf( "CxxNS::Testing(): %p\n", o );
+  printf( "CxxNS::Testing(): %p\n", &o );
 }
 int Testing2( Test *t, int b, const Test & o, const Test &g, int c )
 {
-  printf( "CxxNS::Testing(): %p\n", o );
+  printf( "CxxNS::Testing(): %p\n", &o );
   return 1;
 }
 }

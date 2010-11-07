@@ -581,6 +581,17 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DaoObject *this = NULL;
 	DaoObject *object = NULL;
 	DaoArray *array;
+	DVarray  *dataCL[2] = { NULL, NULL };
+	DVarray **dataCK = NULL;
+	DVarray **dataCG = NULL;
+	DVarray **dataVK = NULL;
+	DVarray **dataVG = NULL;
+	DValue  **dataVL = NULL;
+	DValue   *dataVO = NULL;
+	DArray   *typeVL = NULL;
+	DArray  **typeVO = NULL;
+	DArray  **typeVK = NULL;
+	DArray  **typeVG = NULL;
 	DValue *value, *vA, *vB, *vC = NULL;
 	DValue vA2;
 	DValue **locVars;
@@ -611,60 +622,33 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	const void *labels[] = {
 		&& LAB_NOP ,
 		&& LAB_DATA ,
-		&& LAB_GETC ,
-		&& LAB_GETV ,
-		&& LAB_GETI ,
-		&& LAB_GETF ,
-		&& LAB_GETMF ,
-		&& LAB_SETV ,
-		&& LAB_SETI ,
-		&& LAB_SETF ,
-		&& LAB_SETMF ,
-		&& LAB_LOAD ,
-		&& LAB_CAST ,
-		&& LAB_MOVE ,
-		&& LAB_NOT ,
-		&& LAB_UNMS ,
-		&& LAB_BITREV ,
-		&& LAB_ADD ,
-		&& LAB_SUB ,
-		&& LAB_MUL ,
-		&& LAB_DIV ,
-		&& LAB_MOD ,
-		&& LAB_POW ,
-		&& LAB_AND ,
-		&& LAB_OR ,
-		&& LAB_LT ,
-		&& LAB_LE ,
-		&& LAB_EQ ,
-		&& LAB_NE ,
-		&& LAB_IN ,
-		&& LAB_BITAND ,
-		&& LAB_BITOR ,
-		&& LAB_BITXOR ,
-		&& LAB_BITLFT ,
-		&& LAB_BITRIT ,
-		&& LAB_CHECK ,
-		&& LAB_NAMEVA ,
-		&& LAB_PAIR ,
-		&& LAB_TUPLE ,
-		&& LAB_LIST ,
-		&& LAB_MAP ,
-		&& LAB_HASH ,
-		&& LAB_ARRAY ,
-		&& LAB_MATRIX ,
-		&& LAB_CURRY ,
-		&& LAB_MCURRY ,
+		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
+		&& LAB_GETVL , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
+		&& LAB_GETI  , && LAB_GETF  , && LAB_GETMF ,
+		&& LAB_SETVL , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
+		&& LAB_SETI  , && LAB_SETF , && LAB_SETMF ,
+		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
+		&& LAB_NOT , && LAB_UNMS , && LAB_BITREV ,
+		&& LAB_ADD , && LAB_SUB ,
+		&& LAB_MUL , && LAB_DIV ,
+		&& LAB_MOD , && LAB_POW ,
+		&& LAB_AND , && LAB_OR ,
+		&& LAB_LT , && LAB_LE ,
+		&& LAB_EQ , && LAB_NE , && LAB_IN ,
+		&& LAB_BITAND , && LAB_BITOR ,
+		&& LAB_BITXOR , && LAB_BITLFT ,
+		&& LAB_BITRIT , && LAB_CHECK ,
+		&& LAB_NAMEVA , && LAB_PAIR ,
+		&& LAB_TUPLE  , && LAB_LIST ,
+		&& LAB_MAP    , && LAB_HASH ,
+		&& LAB_ARRAY  , && LAB_MATRIX ,
+		&& LAB_CURRY  , && LAB_MCURRY ,
 		&& LAB_GOTO ,
-		&& LAB_SWITCH ,
-		&& LAB_CASE ,
-		&& LAB_ITER ,
-		&& LAB_TEST ,
-		&& LAB_MATH ,
-		&& LAB_FUNCT ,
-		&& LAB_CALL ,
-		&& LAB_MCALL ,
-		&& LAB_CLOSE ,
+		&& LAB_SWITCH , && LAB_CASE ,
+		&& LAB_ITER , && LAB_TEST ,
+		&& LAB_MATH , && LAB_FUNCT ,
+		&& LAB_CALL , && LAB_MCALL ,
+		&& LAB_CLOSURE ,
 		&& LAB_CRRE ,
 		&& LAB_JITC ,
 		&& LAB_JOINT ,
@@ -673,253 +657,132 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_DEBUG ,
 		&& LAB_SECT ,
 
-		&& LAB_GETC_I ,
-		&& LAB_GETC_F ,
-		&& LAB_GETC_D ,
-		&& LAB_GETV_I ,
-		&& LAB_GETV_F ,
-		&& LAB_GETV_D ,
-		&& LAB_SETV_II ,
-		&& LAB_SETV_IF ,
-		&& LAB_SETV_ID ,
-		&& LAB_SETV_FI ,
-		&& LAB_SETV_FF ,
-		&& LAB_SETV_FD ,
-		&& LAB_SETV_DI ,
-		&& LAB_SETV_DF ,
-		&& LAB_SETV_DD ,
-		&& LAB_MOVE_II ,
-		&& LAB_MOVE_IF ,
-		&& LAB_MOVE_ID ,
-		&& LAB_MOVE_FI ,
-		&& LAB_MOVE_FF ,
-		&& LAB_MOVE_FD ,
-		&& LAB_MOVE_DI ,
-		&& LAB_MOVE_DF ,
-		&& LAB_MOVE_DD ,
-		&& LAB_MOVE_CC ,
-		&& LAB_MOVE_SS ,
-		&& LAB_MOVE_PP ,
-		&& LAB_NOT_I ,
-		&& LAB_NOT_F ,
-		&& LAB_NOT_D ,
-		&& LAB_UNMS_I ,
-		&& LAB_UNMS_F ,
-		&& LAB_UNMS_D ,
-		&& LAB_BITREV_I ,
-		&& LAB_BITREV_F ,
-		&& LAB_BITREV_D ,
+		&& LAB_SETVL_II , && LAB_SETVL_IF , && LAB_SETVL_ID ,
+		&& LAB_SETVL_FI , && LAB_SETVL_FF , && LAB_SETVL_FD ,
+		&& LAB_SETVL_DI , && LAB_SETVL_DF , && LAB_SETVL_DD ,
+		&& LAB_SETVO_II , && LAB_SETVO_IF , && LAB_SETVO_ID ,
+		&& LAB_SETVO_FI , && LAB_SETVO_FF , && LAB_SETVO_FD ,
+		&& LAB_SETVO_DI , && LAB_SETVO_DF , && LAB_SETVO_DD ,
+		&& LAB_SETVK_II , && LAB_SETVK_IF , && LAB_SETVK_ID ,
+		&& LAB_SETVK_FI , && LAB_SETVK_FF , && LAB_SETVK_FD ,
+		&& LAB_SETVK_DI , && LAB_SETVK_DF , && LAB_SETVK_DD ,
+		&& LAB_SETVO_II , && LAB_SETVO_IF , && LAB_SETVO_ID ,
+		&& LAB_SETVO_FI , && LAB_SETVO_FF , && LAB_SETVO_FD ,
+		&& LAB_SETVO_DI , && LAB_SETVO_DF , && LAB_SETVO_DD ,
+
+		&& LAB_MOVE_II , && LAB_MOVE_IF , && LAB_MOVE_ID ,
+		&& LAB_MOVE_FI , && LAB_MOVE_FF , && LAB_MOVE_FD ,
+		&& LAB_MOVE_DI , && LAB_MOVE_DF , && LAB_MOVE_DD ,
+		&& LAB_MOVE_CC , && LAB_MOVE_SS , && LAB_MOVE_PP ,
+		&& LAB_NOT_I , && LAB_NOT_F , && LAB_NOT_D ,
+		&& LAB_UNMS_I , && LAB_UNMS_F , && LAB_UNMS_D ,
+		&& LAB_BITREV_I , && LAB_BITREV_F , && LAB_BITREV_D ,
 		&& LAB_UNMS_C ,
 
-		&& LAB_ADD_III ,
-		&& LAB_SUB_III ,
-		&& LAB_MUL_III ,
-		&& LAB_DIV_III ,
-		&& LAB_MOD_III ,
-		&& LAB_POW_III ,
-		&& LAB_AND_III ,
-		&& LAB_OR_III ,
-		&& LAB_LT_III ,
-		&& LAB_LE_III ,
-		&& LAB_EQ_III ,
-		&& LAB_NE_III ,
-		&& LAB_BITAND_III ,
-		&& LAB_BITOR_III ,
-		&& LAB_BITXOR_III ,
-		&& LAB_BITLFT_III ,
+		&& LAB_ADD_III , && LAB_SUB_III ,
+		&& LAB_MUL_III , && LAB_DIV_III ,
+		&& LAB_MOD_III , && LAB_POW_III ,
+		&& LAB_AND_III , && LAB_OR_III ,
+		&& LAB_LT_III , && LAB_LE_III ,
+		&& LAB_EQ_III , && LAB_NE_III ,
+		&& LAB_BITAND_III , && LAB_BITOR_III ,
+		&& LAB_BITXOR_III , && LAB_BITLFT_III ,
 		&& LAB_BITRIT_III ,
 
-		&& LAB_ADD_FFF ,
-		&& LAB_SUB_FFF ,
-		&& LAB_MUL_FFF ,
-		&& LAB_DIV_FFF ,
-		&& LAB_MOD_FFF ,
-		&& LAB_POW_FFF ,
-		&& LAB_AND_FFF ,
-		&& LAB_OR_FFF ,
-		&& LAB_LT_FFF ,
-		&& LAB_LE_FFF ,
-		&& LAB_EQ_FFF ,
-		&& LAB_NE_FFF ,
-		&& LAB_BITAND_FFF ,
-		&& LAB_BITOR_FFF ,
-		&& LAB_BITXOR_FFF ,
-		&& LAB_BITLFT_FFF ,
+		&& LAB_ADD_FFF , && LAB_SUB_FFF ,
+		&& LAB_MUL_FFF , && LAB_DIV_FFF ,
+		&& LAB_MOD_FFF , && LAB_POW_FFF ,
+		&& LAB_AND_FFF , && LAB_OR_FFF ,
+		&& LAB_LT_FFF , && LAB_LE_FFF ,
+		&& LAB_EQ_FFF , && LAB_NE_FFF ,
+		&& LAB_BITAND_FFF , && LAB_BITOR_FFF ,
+		&& LAB_BITXOR_FFF , && LAB_BITLFT_FFF ,
 		&& LAB_BITRIT_FFF ,
 
-		&& LAB_ADD_DDD ,
-		&& LAB_SUB_DDD ,
-		&& LAB_MUL_DDD ,
-		&& LAB_DIV_DDD ,
-		&& LAB_MOD_DDD ,
-		&& LAB_POW_DDD ,
-		&& LAB_AND_DDD ,
-		&& LAB_OR_DDD ,
-		&& LAB_LT_DDD ,
-		&& LAB_LE_DDD ,
-		&& LAB_EQ_DDD ,
-		&& LAB_NE_DDD ,
-		&& LAB_BITAND_DDD ,
-		&& LAB_BITOR_DDD ,
-		&& LAB_BITXOR_DDD ,
-		&& LAB_BITLFT_DDD ,
+		&& LAB_ADD_DDD , && LAB_SUB_DDD ,
+		&& LAB_MUL_DDD , && LAB_DIV_DDD ,
+		&& LAB_MOD_DDD , && LAB_POW_DDD ,
+		&& LAB_AND_DDD , && LAB_OR_DDD ,
+		&& LAB_LT_DDD , && LAB_LE_DDD ,
+		&& LAB_EQ_DDD , && LAB_NE_DDD ,
+		&& LAB_BITAND_DDD , && LAB_BITOR_DDD ,
+		&& LAB_BITXOR_DDD , && LAB_BITLFT_DDD ,
 		&& LAB_BITRIT_DDD ,
 
-		&& LAB_ADD_FNN ,
-		&& LAB_SUB_FNN ,
-		&& LAB_MUL_FNN ,
-		&& LAB_DIV_FNN ,
-		&& LAB_MOD_FNN ,
-		&& LAB_POW_FNN ,
-		&& LAB_AND_FNN ,
-		&& LAB_OR_FNN ,
-		&& LAB_LT_FNN ,
-		&& LAB_LE_FNN ,
-		&& LAB_EQ_FNN ,
-		&& LAB_NE_FNN ,
-		&& LAB_BITLFT_FNN ,
-		&& LAB_BITRIT_FNN ,
+		&& LAB_ADD_FNN , && LAB_SUB_FNN ,
+		&& LAB_MUL_FNN , && LAB_DIV_FNN ,
+		&& LAB_MOD_FNN , && LAB_POW_FNN ,
+		&& LAB_AND_FNN , && LAB_OR_FNN ,
+		&& LAB_LT_FNN , && LAB_LE_FNN ,
+		&& LAB_EQ_FNN , && LAB_NE_FNN ,
+		&& LAB_BITLFT_FNN , && LAB_BITRIT_FNN ,
 
-		&& LAB_ADD_DNN ,
-		&& LAB_SUB_DNN ,
-		&& LAB_MUL_DNN ,
-		&& LAB_DIV_DNN ,
-		&& LAB_MOD_DNN ,
-		&& LAB_POW_DNN ,
-		&& LAB_AND_DNN ,
-		&& LAB_OR_DNN ,
-		&& LAB_LT_DNN ,
-		&& LAB_LE_DNN ,
-		&& LAB_EQ_DNN ,
-		&& LAB_NE_DNN ,
-		&& LAB_BITLFT_DNN ,
-		&& LAB_BITRIT_DNN ,
+		&& LAB_ADD_DNN , && LAB_SUB_DNN ,
+		&& LAB_MUL_DNN , && LAB_DIV_DNN ,
+		&& LAB_MOD_DNN , && LAB_POW_DNN ,
+		&& LAB_AND_DNN , && LAB_OR_DNN ,
+		&& LAB_LT_DNN , && LAB_LE_DNN ,
+		&& LAB_EQ_DNN , && LAB_NE_DNN ,
+		&& LAB_BITLFT_DNN , && LAB_BITRIT_DNN ,
 
 		&& LAB_ADD_SS ,
-		&& LAB_LT_SS ,
-		&& LAB_LE_SS ,
-		&& LAB_EQ_SS ,
-		&& LAB_NE_SS ,
+		&& LAB_LT_SS , && LAB_LE_SS ,
+		&& LAB_EQ_SS , && LAB_NE_SS ,
 
-		&& LAB_GETI_LI ,
-		&& LAB_SETI_LI ,
-		&& LAB_GETI_SI ,
-		&& LAB_SETI_SII ,
-		&& LAB_GETI_LII ,
-		&& LAB_GETI_LFI ,
-		&& LAB_GETI_LDI ,
+		&& LAB_GETI_LI , && LAB_SETI_LI , && LAB_GETI_SI ,
+		&& LAB_SETI_SII , && LAB_GETI_LII ,
+		&& LAB_GETI_LFI , && LAB_GETI_LDI ,
 		&& LAB_GETI_LSI ,
-		&& LAB_SETI_LIII ,
-		&& LAB_SETI_LIIF ,
-		&& LAB_SETI_LIID ,
-		&& LAB_SETI_LFII ,
-		&& LAB_SETI_LFIF ,
-		&& LAB_SETI_LFID ,
-		&& LAB_SETI_LDII ,
-		&& LAB_SETI_LDIF ,
-		&& LAB_SETI_LDID ,
+		&& LAB_SETI_LIII , && LAB_SETI_LIIF , && LAB_SETI_LIID ,
+		&& LAB_SETI_LFII , && LAB_SETI_LFIF , && LAB_SETI_LFID ,
+		&& LAB_SETI_LDII , && LAB_SETI_LDIF , && LAB_SETI_LDID ,
 		&& LAB_SETI_LSIS ,
-		&& LAB_GETI_AII ,
-		&& LAB_GETI_AFI ,
-		&& LAB_GETI_ADI ,
-		&& LAB_SETI_AIII ,
-		&& LAB_SETI_AIIF ,
-		&& LAB_SETI_AIID ,
-		&& LAB_SETI_AFII ,
-		&& LAB_SETI_AFIF ,
-		&& LAB_SETI_AFID ,
-		&& LAB_SETI_ADII ,
-		&& LAB_SETI_ADIF ,
-		&& LAB_SETI_ADID ,
+		&& LAB_GETI_AII , && LAB_GETI_AFI , && LAB_GETI_ADI ,
+		&& LAB_SETI_AIII , && LAB_SETI_AIIF , && LAB_SETI_AIID ,
+		&& LAB_SETI_AFII , && LAB_SETI_AFIF , && LAB_SETI_AFID ,
+		&& LAB_SETI_ADII , && LAB_SETI_ADIF , && LAB_SETI_ADID ,
 
-		&& LAB_GETI_TI ,
-		&& LAB_SETI_TI ,
+		&& LAB_GETI_TI , && LAB_SETI_TI ,
 
 		&& LAB_GETF_T ,
-		&& LAB_GETF_TI ,
-		&& LAB_GETF_TF ,
-		&& LAB_GETF_TD ,
-		&& LAB_GETF_TS ,
+		&& LAB_GETF_TI , && LAB_GETF_TF ,
+		&& LAB_GETF_TD , && LAB_GETF_TS ,
 		&& LAB_SETF_T ,
-		&& LAB_SETF_TII ,
-		&& LAB_SETF_TIF ,
-		&& LAB_SETF_TID ,
-		&& LAB_SETF_TFI ,
-		&& LAB_SETF_TFF ,
-		&& LAB_SETF_TFD ,
-		&& LAB_SETF_TDI ,
-		&& LAB_SETF_TDF ,
-		&& LAB_SETF_TDD ,
+		&& LAB_SETF_TII , && LAB_SETF_TIF , && LAB_SETF_TID ,
+		&& LAB_SETF_TFI , && LAB_SETF_TFF , && LAB_SETF_TFD ,
+		&& LAB_SETF_TDI , && LAB_SETF_TDF , && LAB_SETF_TDD ,
 		&& LAB_SETF_TSS ,
 
-		&& LAB_ADD_CC ,
-		&& LAB_SUB_CC ,
-		&& LAB_MUL_CC ,
-		&& LAB_DIV_CC ,
-		&& LAB_GETI_ACI ,
-		&& LAB_SETI_ACI ,
+		&& LAB_ADD_CC , && LAB_SUB_CC ,
+		&& LAB_MUL_CC , && LAB_DIV_CC ,
+		&& LAB_GETI_ACI , && LAB_SETI_ACI ,
 
-		&& LAB_GETI_AM ,
-		&& LAB_SETI_AM ,
+		&& LAB_GETI_AM , && LAB_SETI_AM ,
 
 		&& LAB_GETF_M ,
 
-		&& LAB_GETF_KC ,
-		&& LAB_GETF_KG ,
-		&& LAB_GETF_OC ,
-		&& LAB_GETF_OG ,
-		&& LAB_GETF_OV ,
-		&& LAB_SETF_KG ,
-		&& LAB_SETF_OG ,
-		&& LAB_SETF_OV ,
+		&& LAB_GETF_KC , && LAB_GETF_KG ,
+		&& LAB_GETF_OC , && LAB_GETF_OG , && LAB_GETF_OV ,
+		&& LAB_SETF_KG , && LAB_SETF_OG , && LAB_SETF_OV ,
 
-		&& LAB_GETF_KCI ,
-		&& LAB_GETF_KGI ,
-		&& LAB_GETF_OCI ,
-		&& LAB_GETF_OGI ,
-		&& LAB_GETF_OVI ,
-		&& LAB_GETF_KCF ,
-		&& LAB_GETF_KGF ,
-		&& LAB_GETF_OCF ,
-		&& LAB_GETF_OGF ,
-		&& LAB_GETF_OVF ,
-		&& LAB_GETF_KCD ,
-		&& LAB_GETF_KGD ,
-		&& LAB_GETF_OCD ,
-		&& LAB_GETF_OGD ,
-		&& LAB_GETF_OVD ,
+		&& LAB_GETF_KCI , && LAB_GETF_KGI ,
+		&& LAB_GETF_OCI , && LAB_GETF_OGI , && LAB_GETF_OVI ,
+		&& LAB_GETF_KCF , && LAB_GETF_KGF ,
+		&& LAB_GETF_OCF , && LAB_GETF_OGF , && LAB_GETF_OVF ,
+		&& LAB_GETF_KCD , && LAB_GETF_KGD ,
+		&& LAB_GETF_OCD , && LAB_GETF_OGD , && LAB_GETF_OVD ,
 
-		&& LAB_SETF_KGII ,
-		&& LAB_SETF_OGII ,
-		&& LAB_SETF_OVII ,
-		&& LAB_SETF_KGIF ,
-		&& LAB_SETF_OGIF ,
-		&& LAB_SETF_OVIF ,
-		&& LAB_SETF_KGID ,
-		&& LAB_SETF_OGID ,
-		&& LAB_SETF_OVID ,
-		&& LAB_SETF_KGFI ,
-		&& LAB_SETF_OGFI ,
-		&& LAB_SETF_OVFI ,
-		&& LAB_SETF_KGFF ,
-		&& LAB_SETF_OGFF ,
-		&& LAB_SETF_OVFF ,
-		&& LAB_SETF_KGFD ,
-		&& LAB_SETF_OGFD ,
-		&& LAB_SETF_OVFD ,
-		&& LAB_SETF_KGDI ,
-		&& LAB_SETF_OGDI ,
-		&& LAB_SETF_OVDI ,
-		&& LAB_SETF_KGDF ,
-		&& LAB_SETF_OGDF ,
-		&& LAB_SETF_OVDF ,
-		&& LAB_SETF_KGDD ,
-		&& LAB_SETF_OGDD ,
-		&& LAB_SETF_OVDD ,
+		&& LAB_SETF_KGII , && LAB_SETF_OGII , && LAB_SETF_OVII ,
+		&& LAB_SETF_KGIF , && LAB_SETF_OGIF , && LAB_SETF_OVIF ,
+		&& LAB_SETF_KGID , && LAB_SETF_OGID , && LAB_SETF_OVID ,
+		&& LAB_SETF_KGFI , && LAB_SETF_OGFI , && LAB_SETF_OVFI ,
+		&& LAB_SETF_KGFF , && LAB_SETF_OGFF , && LAB_SETF_OVFF ,
+		&& LAB_SETF_KGFD , && LAB_SETF_OGFD , && LAB_SETF_OVFD ,
+		&& LAB_SETF_KGDI , && LAB_SETF_OGDI , && LAB_SETF_OVDI ,
+		&& LAB_SETF_KGDF , && LAB_SETF_OGDF , && LAB_SETF_OVDF ,
+		&& LAB_SETF_KGDD , && LAB_SETF_OGDD , && LAB_SETF_OVDD ,
 
-		&& LAB_TEST_I ,
-		&& LAB_TEST_F ,
-		&& LAB_TEST_D ,
+		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
 
 		&& LAB_CALL_CF ,
 		&& LAB_CALL_CMF ,
@@ -1064,14 +927,29 @@ CallEntry:
 	self->status = DAO_VMPROC_RUNNING;
 	self->pauseType = DAO_VMP_NOPAUSE;
 	host = NULL;
-	if( topCtx->routine->tidHost == DAO_OBJECT )
-		host = topCtx->routine->routHost->X.klass;
 	here = topCtx->routine->nameSpace;
 	this = topCtx->object;
 	locVars = topCtx->regValues;
 	locTypes = topCtx->routine->regType->items.pAbtp;
 	cstValues[ DAO_LC ] = topCtx->routine->routConsts->data;
 	DaoVM_ResetNonLocals( topCtx, cstValues, varValues, varTypes );
+	dataCL[0] = topCtx->routine->routConsts;
+	dataCG = & topCtx->routine->nameSpace->cstData;
+	dataVG = & topCtx->routine->nameSpace->varData;
+	typeVG = & topCtx->routine->nameSpace->varType;
+	if( topCtx->routine->tidHost == DAO_OBJECT ){
+		host = topCtx->routine->routHost->X.klass;
+		dataCK = & host->cstData;
+		dataVK = & host->glbData;
+		typeVK = & host->glbDataType;
+		typeVO = & host->objDataType;
+		dataVO = this->objValues;
+	}
+	 if( topCtx->routine->upRoutine ){
+		 dataCL[1] = topCtx->routine->upRoutine->routConsts;
+		 dataVL = topCtx->routine->upContext->regValues;
+		 typeVL = topCtx->routine->upRoutine->regType;
+	 }
 	extra.context = topCtx;
 	extra.glbVars = varValues[ DAO_G ];
 	extra.clsVars = varValues[ DAO_K ];
@@ -1099,14 +977,24 @@ CallEntry:
 			default : break;
 			}
 		}OPNEXT()
-		OPCASE( GETC ){
+		OPCASE( GETCL ){
 			/* ensure no copying here: */
-			locVars[ vmc->c ] = cstValues[ vmc->a ] + vmc->b;
+			locVars[ vmc->c ] = dataCL[ vmc->a ]->data + vmc->b;
 		}OPNEXT()
-		OPCASE( GETV ){
-			vC = varValues[vmc->a] + vmc->b;
-			abtp = locTypes[ vmc->c ];
-			if( topCtx->constCall && vmc->a == DAO_OV ){
+		OPCASE( GETCK ){
+			/* ensure no copying here: */
+			locVars[ vmc->c ] = dataCK[ vmc->a ]->data + vmc->b;
+		}OPNEXT()
+		OPCASE( GETCG ){
+			/* ensure no copying here: */
+			locVars[ vmc->c ] = dataCG[ vmc->a ]->data + vmc->b;
+		}OPNEXT()
+		OPCASE( GETVL ){
+			locVars[ vmc->c ] = dataVL[ vmc->b ];
+		}OPNEXT()
+		OPCASE( GETVO ){
+			vC = dataVO + vmc->b;
+			if( topCtx->constCall ){
 				/* in const call, use context buffer, and mark as constant */
 				locVars[ vmc->c ] = topCtx->regArray->data + vmc->c;
 				DValue_Copy( locVars[ vmc->c ], *vC );
@@ -1116,6 +1004,22 @@ CallEntry:
 			}else{
 				locVars[ vmc->c ] = vC;
 			}
+		}OPNEXT()
+		OPCASE( GETVK ){
+			vC = dataVK[vmc->a]->data + vmc->b;
+			if( topCtx->constCall ){
+				/* in const call, use context buffer, and mark as constant */
+				locVars[ vmc->c ] = topCtx->regArray->data + vmc->c;
+				DValue_Copy( locVars[ vmc->c ], *vC );
+				locVars[ vmc->c ]->cst = 1;
+				/* there is no need to unmark the buffer as non-const,
+				   because this buffer is not used in other cases */
+			}else{
+				locVars[ vmc->c ] = vC;
+			}
+		}OPNEXT()
+		OPCASE( GETVG ){
+			locVars[ vmc->c ] = dataVG[vmc->a]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETI ){
 #ifdef DAO_WITH_NUMARRAY
@@ -1142,10 +1046,26 @@ CallEntry:
 			if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 			goto CheckException;
 		}OPNEXT()
-		OPCASE( SETV ){
-			abtp = varTypes[ vmc->c ][ vmc->b ];
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			if( DaoMoveAC( topCtx, *locVars[vmc->a], varValues[vmc->c]+vmc->b, abtp ) ==0 )
+		OPCASE( SETVL ){
+			abtp = typeVL->items.pAbtp[ vmc->b ];
+			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVL[vmc->b], abtp ) ==0 )
+				goto CheckException;
+		}OPNEXT()
+		OPCASE( SETVO ){
+			abtp = typeVO[ vmc->c ]->items.pAbtp[ vmc->b ];
+			if( topCtx->constCall ) goto ModifyConstant;
+			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVO+vmc->b, abtp ) ==0 )
+				goto CheckException;
+		}OPNEXT()
+		OPCASE( SETVK ){
+			abtp = typeVK[ vmc->c ]->items.pAbtp[ vmc->b ];
+			if( topCtx->constCall ) goto ModifyConstant;
+			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVK[vmc->c]->data+vmc->b, abtp ) ==0 )
+				goto CheckException;
+		}OPNEXT()
+		OPCASE( SETVG ){
+			abtp = typeVG[ vmc->c ]->items.pAbtp[ vmc->b ];
+			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVG[vmc->c]->data+vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETI ){
@@ -1354,7 +1274,7 @@ CallEntry:
 				DaoContext_DoCall( topCtx, vmc );
 				goto CheckException;
 			}OPNEXT()
-		OPCASE( CLOSE ){
+		OPCASE( CLOSURE ){
 			topCtx->vmc = vmc;
 			DaoContext_DoClose( topCtx, vmc );
 		}OPNEXT()
@@ -1443,58 +1363,132 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( SECT ){
 			goto ReturnFalse;
-		}OPCASE( GETC_I )
-		OPCASE( GETC_F )
-			OPCASE( GETC_D ){
-				locVars[ vmc->c ] = cstValues[ vmc->a ] + vmc->b;
-			}OPNEXT()
-		OPCASE( GETV_I )
-			OPCASE( GETV_F )
-			OPCASE( GETV_D ){
-				if( topCtx->constCall && vmc->a == DAO_OV ){
-					locVars[ vmc->c ] = topCtx->regArray->data + vmc->c;
-					DValue_Copy( locVars[ vmc->c ], *vC );
-					locVars[ vmc->c ]->cst = 1;
-				}else{
-					locVars[ vmc->c ]->cst = 0;
-					locVars[ vmc->c ] = varValues[ vmc->a ] + vmc->b;
-				}
-			}OPNEXT()
-		OPCASE( SETV_II ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
-		OPCASE( SETV_IF ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
+		OPCASE( SETVL_II ){
+			dataVL[ vmc->b ]->v.i = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
-		OPCASE( SETV_ID ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
+		OPCASE( SETVL_IF ){
+			dataVL[ vmc->b ]->v.i = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
-		OPCASE( SETV_FI ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
+		OPCASE( SETVL_ID ){
+			dataVL[ vmc->b ]->v.i = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
-		OPCASE( SETV_FF ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
+		OPCASE( SETVL_FI ){
+			dataVL[ vmc->b ]->v.f = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
-		OPCASE( SETV_FD ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
+		OPCASE( SETVL_FF ){
+			dataVL[ vmc->b ]->v.f = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
-		OPCASE( SETV_DI ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
+		OPCASE( SETVL_FD ){
+			dataVL[ vmc->b ]->v.f = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
-		OPCASE( SETV_DF ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
+		OPCASE( SETVL_DI ){
+			dataVL[ vmc->b ]->v.d = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
-		OPCASE( SETV_DD ){
-			if( topCtx->constCall && vmc->c == DAO_OV ) goto ModifyConstant;
-			varValues[ vmc->c ][ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
+		OPCASE( SETVL_DF ){
+			dataVL[ vmc->b ]->v.d = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVL_DD ){
+			dataVL[ vmc->b ]->v.d = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVO_II ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVO_IF ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVO_ID ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVO_FI ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVO_FF ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVO_FD ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVO_DI ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVO_DF ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVO_DD ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVO[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVK_II ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVK_IF ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVK_ID ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVK_FI ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVK_FF ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVK_FD ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVK_DI ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVK_DF ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVK_DD ){
+			if( topCtx->constCall ) goto ModifyConstant;
+			dataVK[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVG_II ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVG_IF ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVG_ID ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVG_FI ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVG_FF ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVG_FD ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
+		}OPNEXT()
+		OPCASE( SETVG_DI ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
+		}OPNEXT()
+		OPCASE( SETVG_DF ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
+		}OPNEXT()
+		OPCASE( SETVG_DD ){
+			dataVG[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( MOVE_II ){
 			locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i;
