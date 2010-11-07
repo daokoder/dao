@@ -528,29 +528,6 @@ static void DaoVM_EnsureConst( DaoContext *ctx, DaoVmCode *vmc, DValue **locVars
 		locBuf->cst = 1;
 	}
 }
-static void DaoVM_ResetNonLocals( DaoContext *ctx, DValue **consts,
-		DValue **values, DaoType ***types )
-{
-	DaoNameSpace *ns = ctx->nameSpace;
-	DaoObject *object = ctx->object;
-	consts[ DAO_G ] = ns->cstData->data;
-	values[ DAO_G ] = ns->varData->data;
-	types[ DAO_G ] = ns->varType->items.pAbtp;
-	if( ctx->routine->tidHost == DAO_OBJECT ){
-		DaoClass *klass = ctx->routine->routHost->X.klass;
-		consts[ DAO_K ] = klass->cstData->data;
-		values[ DAO_K ] = klass->glbData->data;
-		types[ DAO_K ] = klass->glbDataType->items.pAbtp;
-		types[ DAO_OV ] = klass->objDataType->items.pAbtp;
-		if( object ) values[ DAO_OV ] = object->objValues;
-	}
-	if( ctx->routine->upContext ){
-		ctx = ctx->routine->upContext;
-		consts[ DAO_U ] = ctx->routine->routConsts->data;
-		values[ DAO_U ] = ctx->regArray->data;
-		types[ DAO_U ] = ctx->regTypes;
-	}
-}
 
 static void DValue_InitComplex( DValue *value )
 {
@@ -582,23 +559,20 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DaoObject *object = NULL;
 	DaoArray *array;
 	DVarray  *dataCL[2] = { NULL, NULL };
-	DVarray **dataCK = NULL;
-	DVarray **dataCG = NULL;
-	DVarray **dataVK = NULL;
-	DVarray **dataVG = NULL;
+	DArray   *dataCK = NULL;
+	DArray   *dataCG = NULL;
 	DValue  **dataVL = NULL;
 	DValue   *dataVO = NULL;
+	DArray   *dataVK = NULL;
+	DArray   *dataVG = NULL;
 	DArray   *typeVL = NULL;
-	DArray  **typeVO = NULL;
-	DArray  **typeVK = NULL;
-	DArray  **typeVG = NULL;
+	DArray   *typeVO = NULL;
+	DArray   *typeVK = NULL;
+	DArray   *typeVG = NULL;
 	DValue *value, *vA, *vB, *vC = NULL;
 	DValue vA2;
 	DValue **locVars;
-	DValue *cstValues[ DAO_U+1 ];
-	DValue *varValues[ DAO_U+1 ];
-	DaoType **varTypes[ DAO_U+1 ];
-	DaoType  **locTypes;
+	DaoType **locTypes;
 	DaoType *abtp;
 	DaoFunction *func;
 	DaoTuple *tuple;
@@ -931,29 +905,29 @@ CallEntry:
 	this = topCtx->object;
 	locVars = topCtx->regValues;
 	locTypes = topCtx->routine->regType->items.pAbtp;
-	cstValues[ DAO_LC ] = topCtx->routine->routConsts->data;
-	DaoVM_ResetNonLocals( topCtx, cstValues, varValues, varTypes );
 	dataCL[0] = topCtx->routine->routConsts;
-	dataCG = & topCtx->routine->nameSpace->cstData;
-	dataVG = & topCtx->routine->nameSpace->varData;
-	typeVG = & topCtx->routine->nameSpace->varType;
+	dataCG = topCtx->routine->nameSpace->cstDataTable;
+	dataVG = topCtx->routine->nameSpace->varDataTable;
+	typeVG = topCtx->routine->nameSpace->varTypeTable;
 	if( topCtx->routine->tidHost == DAO_OBJECT ){
 		host = topCtx->routine->routHost->X.klass;
-		dataCK = & host->cstData;
-		dataVK = & host->glbData;
-		typeVK = & host->glbDataType;
-		typeVO = & host->objDataType;
+		dataCK = host->cstDataTable;
+		dataVK = host->glbDataTable;
+		typeVK = host->glbTypeTable;
 		dataVO = this->objValues;
+		typeVO = host->objDataType;
 	}
-	 if( topCtx->routine->upRoutine ){
-		 dataCL[1] = topCtx->routine->upRoutine->routConsts;
-		 dataVL = topCtx->routine->upContext->regValues;
-		 typeVL = topCtx->routine->upRoutine->regType;
-	 }
+	if( topCtx->routine->upRoutine ){
+		dataCL[1] = topCtx->routine->upRoutine->routConsts;
+		dataVL = topCtx->routine->upContext->regValues;
+		typeVL = topCtx->routine->upRoutine->regType;
+	}
+#if 0
 	extra.context = topCtx;
 	extra.glbVars = varValues[ DAO_G ];
 	extra.clsVars = varValues[ DAO_K ];
 	extra.objVars = varValues[ DAO_OV ];
+#endif
 
 
 	OPBEGIN(){
@@ -983,11 +957,11 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( GETCK ){
 			/* ensure no copying here: */
-			locVars[ vmc->c ] = dataCK[ vmc->a ]->data + vmc->b;
+			locVars[ vmc->c ] = dataCK->items.pVarray[ vmc->a ]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETCG ){
 			/* ensure no copying here: */
-			locVars[ vmc->c ] = dataCG[ vmc->a ]->data + vmc->b;
+			locVars[ vmc->c ] = dataCG->items.pVarray[ vmc->a ]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETVL ){
 			locVars[ vmc->c ] = dataVL[ vmc->b ];
@@ -1006,7 +980,7 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( GETVK ){
-			vC = dataVK[vmc->a]->data + vmc->b;
+			vC = dataVK->items.pVarray[vmc->a]->data + vmc->b;
 			if( topCtx->constCall ){
 				/* in const call, use context buffer, and mark as constant */
 				locVars[ vmc->c ] = topCtx->regArray->data + vmc->c;
@@ -1019,7 +993,7 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( GETVG ){
-			locVars[ vmc->c ] = dataVG[vmc->a]->data + vmc->b;
+			locVars[ vmc->c ] = dataVG->items.pVarray[vmc->a]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETI ){
 #ifdef DAO_WITH_NUMARRAY
@@ -1052,21 +1026,21 @@ CallEntry:
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVO ){
-			abtp = typeVO[ vmc->c ]->items.pAbtp[ vmc->b ];
+			abtp = typeVO->items.pAbtp[ vmc->b ];
 			if( topCtx->constCall ) goto ModifyConstant;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVO+vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVK ){
-			abtp = typeVK[ vmc->c ]->items.pAbtp[ vmc->b ];
+			abtp = typeVK->items.pArray[ vmc->c ]->items.pAbtp[ vmc->b ];
+			vC = dataVK->items.pVarray[vmc->c]->data + vmc->b;
 			if( topCtx->constCall ) goto ModifyConstant;
-			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVK[vmc->c]->data+vmc->b, abtp ) ==0 )
-				goto CheckException;
+			if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVG ){
-			abtp = typeVG[ vmc->c ]->items.pAbtp[ vmc->b ];
-			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVG[vmc->c]->data+vmc->b, abtp ) ==0 )
-				goto CheckException;
+			abtp = typeVG->items.pArray[ vmc->c ]->items.pAbtp[ vmc->b ];
+			vC = dataVG->items.pVarray[vmc->c]->data + vmc->b;
+			if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
 		OPCASE( SETI ){
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -1429,66 +1403,66 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( SETVK_II ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( SETVK_IF ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
 		OPCASE( SETVK_ID ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( SETVK_FI ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( SETVK_FF ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
 		OPCASE( SETVK_FD ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( SETVK_DI ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( SETVK_DF ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
 		OPCASE( SETVK_DD ){
 			if( topCtx->constCall ) goto ModifyConstant;
-			dataVK[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
+			dataVK->items.pVarray[ vmc->c ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( SETVG_II ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( SETVG_IF ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
 		OPCASE( SETVG_ID ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.i = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( SETVG_FI ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( SETVG_FF ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
 		OPCASE( SETVG_FD ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.f = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( SETVG_DI ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.i;
 		}OPNEXT()
 		OPCASE( SETVG_DF ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.f;
 		}OPNEXT()
 		OPCASE( SETVG_DD ){
-			dataVG[  vmc->c  ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
+			dataVG->items.pVarray[ vmc->c ]->data[ vmc->b ].v.d = locVars[ vmc->a ]->v.d;
 		}OPNEXT()
 		OPCASE( MOVE_II ){
 			locVars[ vmc->c ]->v.i = locVars[ vmc->a ]->v.i;
@@ -2537,18 +2511,6 @@ RaiseErrorNullObject:
 			goto CheckException;
 #endif
 CheckException:
-			cstValues[ DAO_G ] = here->cstData->data;
-			if( varValues[ DAO_G ] != here->varData->data ){
-				varValues[ DAO_G ] = here->varData->data;
-				varTypes[ DAO_G ] = here->varType->items.pAbtp;
-			}
-			if( host ){
-				cstValues[ DAO_K ] = host->cstData->data;
-				varValues[ DAO_K ] = host->glbData->data;
-				varTypes[ DAO_K ] = host->glbDataType->items.pAbtp;
-				varTypes[ DAO_OV ] = host->objDataType->items.pAbtp;
-				if( this ) varValues[ DAO_OV ] = this->objValues;
-			}
 
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			if( invokehost ) handler->InvokeHost( handler, topCtx );

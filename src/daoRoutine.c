@@ -1724,7 +1724,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	ushort_t opa, opb, opc;
 	DaoNameSpace *ns = self->nameSpace;
 	DaoVmSpace *vms = ns->vmSpace;
-	DaoType **gdtypes, **cdtypes=NULL, **odtypes=NULL;
 	DaoType **tp, **type;
 	DaoType *type_source = NULL, *type_target = NULL;
 	DaoType *container = NULL, *indexkey = NULL, *itemvalue = NULL;
@@ -1732,7 +1731,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoType *simtps[DAO_ARRAY], *arrtps[DAO_ARRAY];
 	DaoType *inumt, *fnumt, *dnumt, *comt, *longt, *enumt, *strt;
 	DaoType *ilst, *flst, *dlst, *slst, *iart, *fart, *dart, *cart, *any, *udf;
-	DaoType **varTypes[ DAO_U+1 ];
 	DaoVmCodeX **vmcs = self->annotCodes->items.pVmc;
 	DaoVmCodeX *vmc;
 	DaoVmCodeX  vmc2;
@@ -1752,13 +1750,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DVarray  *regConst;
 	DVarray  *routConsts = self->routConsts;
 	DVarray  *dataCL[2] = { NULL, NULL };
-	DVarray **dataCK = self->tidHost == DAO_OBJECT ? & hostClass->cstData : NULL;
-	DVarray **dataCG = & self->nameSpace->cstData;
 	DArray   *typeVL[2] = { NULL, NULL };
-	DArray  **typeVO = self->tidHost == DAO_OBJECT ? & hostClass->objDataType : NULL;
-	DArray  **typeVK = self->tidHost == DAO_OBJECT ? & hostClass->glbDataType : NULL;
-	DArray  **typeVG = & self->nameSpace->varType;
-	DValue   *cstValues[ DAO_U+1 ];
+	DArray   *typeVO[2] = { NULL, NULL };
+	DArray   *dataCK = hostClass ? hostClass->cstDataTable : NULL;
+	DArray   *typeVK = hostClass ? hostClass->glbTypeTable : NULL;
+	DArray   *dataCG = self->nameSpace->cstDataTable;
+	DArray   *typeVG = self->nameSpace->varTypeTable;
 	DValue    empty = daoNullValue;
 	DValue    val;
 	DValue   *csts;
@@ -1772,6 +1769,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	 *     additional instructions and vm registers; */
 
 	 dataCL[0] = self->routConsts;
+	 if( hostClass ) typeVO[0] = hostClass->objDataType;
 	 if( self->upRoutine ){
 		 if( self->upRoutine->parser ) DaoRoutine_Compile( self->upRoutine );
 		 dataCL[1] = self->upRoutine->routConsts;
@@ -1851,25 +1849,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	 * may decrease the reference count of a type before it get increased! */
 	DaoGC_IncRCs( self->regType );
 
-	varTypes[ DAO_OV ] = NULL;
-	varTypes[ DAO_K ] = NULL;
-	cstValues[ DAO_K ] = NULL;
-	gdtypes = self->nameSpace->varType->items.pAbtp;
-	if( self->tidHost == DAO_OBJECT ){
-		cdtypes = hostClass->glbDataType->items.pAbtp;
-		odtypes = hostClass->objDataType->items.pAbtp;
-		varTypes[ DAO_OV ] = odtypes;
-		varTypes[ DAO_K ] = cdtypes;
-		cstValues[ DAO_K ] = hostClass->cstData->data;
-	}
-	cstValues[ DAO_LC ] = self->routConsts->data;
-	cstValues[ DAO_G ] = self->nameSpace->cstData->data;
-	varTypes[ DAO_G ] = self->nameSpace->varType->items.pAbtp;
-	if( self->upRoutine ){
-		cstValues[ DAO_U ] = self->upRoutine->routConsts->data;
-		varTypes[ DAO_U ] = self->upRoutine->regType->items.pAbtp;
-	}
-
 	/*
 	   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->locRegCount );
 	   if( self->routType ) printf( "%p %p\n", hostClass, self->routType->X.extra );
@@ -1879,7 +1858,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	errors = DArray_New(0);
 	for(i=0; i<N; i++){
 		/* adding type to namespace may add constant data as well */
-		cstValues[ DAO_G ] = self->nameSpace->cstData->data;
 		cid = i;
 		error = NULL;
 		vmc = vmcs[i];
@@ -1908,7 +1886,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		}
 
 #if 0
-		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, NULL );
+		DaoTokens_AnnotateCode( self->source, vmc2, mbs, 24 );
+		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, mbs->mbs );
 #endif
 		switch( code ){
 		case DVM_NOP :
@@ -1928,8 +1907,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_GETCL : case DVM_GETCK : case DVM_GETCG :
 			{
 				if( code == DVM_GETCL ) val = dataCL[opa]->data[opb];
-				else if( code == DVM_GETCK ) val = dataCK[opa]->data[opb];
-				else /* code == DVM_GETCG */ val = dataCG[opa]->data[opb];
+				else if( code == DVM_GETCK ) val = dataCK->items.pVarray[opa]->data[opb];
+				else /* code == DVM_GETCG */ val = dataCG->items.pVarray[opa]->data[opb];
 				at = DaoNameSpace_GetTypeV( ns, val );
 
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
@@ -1938,7 +1917,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				 */
 				AssertTypeMatching( at, type[opc], defs, 0);
 				csts[opc] = val;
-				csts[opc].cst = 1;
+				csts[opc].cst = val.cst;
 				init[opc] = 1;
 				lastcomp = opc;
 				break;
@@ -1948,15 +1927,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				at = 0;
 				if( code == DVM_GETVL ) at = typeVL[opa]->items.pAbtp[opb];
 				else if( code == DVM_GETVO ) at = typeVO[opa]->items.pAbtp[opb];
-				else if( code == DVM_GETVK ) at = typeVK[opa]->items.pAbtp[opb];
-				else /* code == DVM_GETVG */ at = typeVG[opa]->items.pAbtp[opb];
-#if 0
-				if( varTypes[ opa ] ) at = varTypes[ opa ][ opb ];
-				if( self->tidHost == DAO_OBJECT && varTypes[ opa ] == NULL ){
-					printf( "need host class\n" );
-					goto NotMatch;/* XXX */
-				}
-#endif
+				else if( code == DVM_GETVK ) at = typeVK->items.pArray[opa]->items.pAbtp[opb];
+				else /* code == DVM_GETVG */ at = typeVG->items.pArray[opa]->items.pAbtp[opb];
 				if( at == NULL ) at = any;
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				/*
@@ -1977,15 +1949,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				tp = NULL;
 				if( code == DVM_SETVL ) tp = typeVL[opc]->items.pAbtp + opb;
 				else if( code == DVM_SETVO ) tp = typeVO[opc]->items.pAbtp + opb;
-				else if( code == DVM_SETVK ) tp = typeVK[opc]->items.pAbtp + opb;
-				else /* code == DVM_SETVG */ tp = typeVG[opc]->items.pAbtp + opb;
-#if 0
-				if( varTypes[ opc ] ) tp = varTypes[ opc ] + opb;
-				if( self->tidHost == DAO_OBJECT && varTypes[ opc ] == NULL ){
-					printf( "need host class\n" );
-					goto NotMatch;/* XXX */
-				}
-#endif
+				else if( code == DVM_SETVK ) tp = typeVK->items.pArray[opc]->items.pAbtp + opb;
+				else /* code == DVM_SETVG */ tp = typeVG->items.pArray[opc]->items.pAbtp + opb;
 				at = type[opa];
 				if( tp && ( *tp==NULL || (*tp)->tid ==DAO_UDF ) ){
 					GC_ShiftRC( at, *tp );
@@ -2310,6 +2275,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				int ak = 0;
 				init[opc] = 1;
 				lastcomp = opc;
+				csts[opc].cst = csts[opa].cst;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = NULL;
@@ -2377,7 +2343,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
 					if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
 					j = DaoClass_GetDataIndex( klass, str, & k );
-					if( k == DAO_CLASS_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
+					if( k == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
+					if( k == DAO_CLASS_VARIABLE ) csts[opc].cst = 0;
 					if( getter ) break;
 					if( tp ==NULL ){
 						DaoClass_GetData( klass, str, & val, hostClass, NULL );
@@ -2390,19 +2357,19 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						/* specialize instructions for finalized class/instance: */
 						vmc->b = DaoClass_GetDataIndex( klass, str, & k );
 						if( ct && ct->tid >=DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
-							if( k == DAO_CLASS_CONST )
+							if( k == DAO_CLASS_CONSTANT )
 								vmc->code = ak ? DVM_GETF_KCI : DVM_GETF_OCI;
-							else if( k == DAO_CLASS_GLOBAL )
-								vmc->code = ak ? DVM_GETF_KGI : DVM_GETF_OGI;
 							else if( k == DAO_CLASS_VARIABLE )
+								vmc->code = ak ? DVM_GETF_KGI : DVM_GETF_OGI;
+							else if( k == DAO_OBJECT_VARIABLE )
 								vmc->code = DVM_GETF_OVI;
 							vmc->code += 5 * ( ct->tid - DAO_INTEGER );
 						}else{
-							if( k == DAO_CLASS_CONST )
+							if( k == DAO_CLASS_CONSTANT )
 								vmc->code = ak ? DVM_GETF_KC : DVM_GETF_OC;
-							else if( k == DAO_CLASS_GLOBAL )
-								vmc->code = ak ? DVM_GETF_KG : DVM_GETF_OG;
 							else if( k == DAO_CLASS_VARIABLE )
+								vmc->code = ak ? DVM_GETF_KG : DVM_GETF_OG;
+							else if( k == DAO_OBJECT_VARIABLE )
 								vmc->code = DVM_GETF_OV;
 						}
 						if( vmc->code != DVM_GETF && vmcs[i+1]->code == DVM_JOINT ){
@@ -2491,7 +2458,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 			if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
 			AssertTypeMatching( ct, type[opc], defs, 0);
-			csts[opc].cst = csts[opa].cst;
 			break;
 			}
 		case DVM_SETI :
@@ -2784,26 +2750,26 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
 						if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
 						j = DaoClass_GetDataIndex( klass, str, & k );
-						if( k == DAO_CLASS_VARIABLE && ct->tid ==DAO_CLASS ) goto NeedInstVar;
+						if( k == DAO_OBJECT_VARIABLE && ct->tid ==DAO_CLASS ) goto NeedInstVar;
 						if( setter ) break;
 						if( tp ==NULL ) goto NotPermit;
 						if( *tp ==NULL ) *tp = type[opa];
 						AssertTypeMatching( type[opa], *tp, defs, 0);
 						if( typed_code && (klass->attribs & DAO_CLS_FINAL) ){
 							vmc->b = DaoClass_GetDataIndex( klass, str, & k );
-							if( k == DAO_CLASS_CONST ) goto InvOper;
+							if( k == DAO_CLASS_CONSTANT ) goto InvOper;
 							if( *tp && (*tp)->tid>=DAO_INTEGER && (*tp)->tid<=DAO_DOUBLE
 									&& at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE ){
-								if( k == DAO_CLASS_GLOBAL )
+								if( k == DAO_CLASS_VARIABLE )
 									vmc->code = ck ? DVM_SETF_KGII : DVM_SETF_OGII;
-								else if( k == DAO_CLASS_VARIABLE )
+								else if( k == DAO_OBJECT_VARIABLE )
 									vmc->code = DVM_SETF_OVII;
 								vmc->code += 9 * ( (*tp)->tid - DAO_INTEGER )
 									+ 3 * ( at->tid - DAO_INTEGER );
 							}else{
-								if( k == DAO_CLASS_GLOBAL )
+								if( k == DAO_CLASS_VARIABLE )
 									vmc->code = ck ? DVM_SETF_KG : DVM_SETF_OG;
-								else if( k == DAO_CLASS_VARIABLE )
+								else if( k == DAO_OBJECT_VARIABLE )
 									vmc->code = DVM_SETF_OV;
 							}
 						}
@@ -3625,7 +3591,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
 					if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
 					j = DaoClass_GetDataIndex( klass, mbs, & k );
-					if( k == DAO_CLASS_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
+					if( k == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
 					DaoClass_GetData( klass, mbs, & val, hostClass, NULL );
 					if( val.t != DAO_ROUTINE && val.t != DAO_FUNCTION ) goto NotMatch;
 					rout = (DRoutine*)val.v.routine;
@@ -4131,7 +4097,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETVK_II : case DVM_SETVK_IF : case DVM_SETVK_ID :
 		case DVM_SETVK_FI : case DVM_SETVK_FF : case DVM_SETVK_FD :
 		case DVM_SETVK_DI : case DVM_SETVK_DF : case DVM_SETVK_DD :
-			tp = typeVK[opc]->items.pAbtp + opb;
+			tp = typeVK->items.pArray[opc]->items.pAbtp + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
 			if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
 			AssertTypeMatching( type[opa], *tp, defs, 0 );
@@ -4141,7 +4107,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETVG_II : case DVM_SETVG_IF : case DVM_SETVG_ID :
 		case DVM_SETVG_FI : case DVM_SETVG_FF : case DVM_SETVG_FD :
 		case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
-			tp = typeVG[opc]->items.pAbtp + opb;
+			tp = typeVG->items.pArray[opc]->items.pAbtp + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
 			if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
 			AssertTypeMatching( type[opa], *tp, defs, 0 );

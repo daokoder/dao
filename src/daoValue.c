@@ -264,7 +264,8 @@ void DValue_MarkConst( DValue *self )
 	DMap *map;
 	DNode *it;
 	int i, n;
-	self->cst = 1;
+	/* to allow class statics and namespace globals to be mutable:  */
+	if( self->t != DAO_CLASS && self->t != DAO_NAMESPACE ) self->cst = 1;
 	if( self->t >= DAO_ARRAY ) self->v.p->trait |= DAO_DATA_CONST;
 	switch( self->t ){
 	case DAO_LIST :

@@ -531,7 +531,7 @@ int DEnum_AddSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns )
 		for(node=DMap_First(names2);node;node=DMap_Next(names2,node)){
 			if( DMap_Find( names1, node->key.pVoid ) ) continue;
 			value |= (1<<mapNames->size);
-			DMap_Insert( mapNames, node->key.pVoid, (void*)(1<<mapNames->size) );
+			MAP_Insert( mapNames, node->key.pVoid, 1<<mapNames->size );
 		}
 		DaoNameSpace_AddType( ns, name, type );
 	}
@@ -571,7 +571,7 @@ int DEnum_SubSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns )
 		for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
 			if( DMap_Find( names2, node->key.pVoid ) ) continue;
 			value |= (1<<mapNames->size);
-			DMap_Insert( mapNames, node->key.pVoid, (void*)(1<<mapNames->size) );
+			MAP_Insert( mapNames, node->key.pVoid, 1<<mapNames->size );
 		}
 		DaoNameSpace_AddType( ns, name, type );
 	}

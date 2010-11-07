@@ -196,7 +196,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 	char *P = src2->mbs;
 	short state = 0;
 	short i, code = 0, opa = 0, opb = 0, opc = 0;
-	int permi = DAO_CLS_PUBLIC;
+	int permi = DAO_DATA_PUBLIC;
 
 	memset( consts, 0, 26*sizeof(DArray*) );
 	for(i=0; i<constTypeCount; i++) consts[ constTypeChar[i]-'A' ] = DArray_New(0);
@@ -418,19 +418,19 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			}
 		}else if( STRCMP( tok, "@PRIVATE" ) ==0 ){
 			if( bc ) AppendSectHead( bc, SECT_PRIVATE );
-			permi = DAO_CLS_PRIVATE;
+			permi = DAO_DATA_PRIVATE;
 
 		}else if( STRCMP( tok, "@PROTECTED" ) ==0 ){
 			if( bc ) AppendSectHead( bc, SECT_PROTECTED );
-			permi = DAO_CLS_PROTECTED;
+			permi = DAO_DATA_PROTECTED;
 
 		}else if( STRCMP( tok, "@PUBLIC" ) ==0 ){
 			if( bc ) AppendSectHead( bc, SECT_PUBLIC );
-			permi = DAO_CLS_PUBLIC;
+			permi = DAO_DATA_PUBLIC;
 
 		}else if( STRCMP( tok, "@DEF" ) ==0 ){
 			if( bc ) AppendSectHead( bc, SECT_DEF );
-			permi = DAO_CLS_PUBLIC;
+			permi = DAO_DATA_PUBLIC;
 			P = NextToken( P, tok, '$', bc );
 			routine = NULL;
 			klass = (DaoClass*)AsmGetConst( consts, tok, 'K' );
@@ -678,7 +678,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 	char *P = src2->mbs;
 	short sect = 0;
 	short i, code = 0, opa = 0, opb = 0, opc = 0;
-	int permi = DAO_CLS_PUBLIC;
+	int permi = DAO_DATA_PUBLIC;
 
 	memset( consts, 0, 26*sizeof(DArray*) );
 	for(i=0; i<constTypeCount; i++) consts[ constTypeChar[i]-'A' ] = DArray_New(0);
@@ -905,13 +905,13 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			}
 			break;
 		case SECT_PRIVATE :
-			permi = DAO_CLS_PRIVATE;
+			permi = DAO_DATA_PRIVATE;
 			break;
 		case SECT_PROTECTED :
-			permi = DAO_CLS_PROTECTED;
+			permi = DAO_DATA_PROTECTED;
 			break;
 		case SECT_PUBLIC :
-			permi = DAO_CLS_PUBLIC;
+			permi = DAO_DATA_PUBLIC;
 			break;
 		case SECT_LOAD :
 			if( *P != 'S' ) goto InvalidFormat;
@@ -1087,7 +1087,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			if( DaoRoutine_SetVmCodes( routine, routine->vmCodes ) ==0 ) goto InvalidFormat;
 			break;
 		case SECT_DEF :
-			permi = DAO_CLS_PUBLIC;
+			permi = DAO_DATA_PUBLIC;
 			routine = NULL;
 			klass = (DaoClass*)BcGetConst( consts, P, 'K', asmc );
 			P += 3;

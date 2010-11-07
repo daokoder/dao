@@ -108,6 +108,17 @@ enum DaoDataState
 	DAO_DATA_CALLBACK   = (1<<6), /* attribute for object used as callback data */
 	DAO_DATA_CONST      = (1<<7)  /* using the highest bit in the subType field */
 };
+enum DaoDataStorage
+{
+	DAO_LOCAL_VARIABLE = 0,
+	DAO_LOCAL_CONSTANT = 1, /* lowest bit set to 1 for constant */
+	DAO_OBJECT_VARIABLE = 2,
+	DAO_CLASS_VARIABLE = 4,
+	DAO_CLASS_CONSTANT = 5, /* lowest bit set to 1 for constant */
+	DAO_GLOBAL_VARIABLE = 6,
+	DAO_GLOBAL_CONSTANT = 7, /* lowest bit set to 1 for constant */
+	DAO_LAST_REGISTER
+};
 
 enum DaoTypeAttribs
 {
@@ -140,11 +151,11 @@ enum DaoVmProcPauseType
 	DAO_VMP_RECEIVE  /* by message passing interface */
 };
 
-enum DaoClassPerm
+enum DaoDataPermission
 {
-	DAO_CLS_PRIVATE = 1,
-	DAO_CLS_PROTECTED ,
-	DAO_CLS_PUBLIC
+	DAO_DATA_PRIVATE = 1,
+	DAO_DATA_PROTECTED ,
+	DAO_DATA_PUBLIC
 };
 enum DaoClassAttrib
 {

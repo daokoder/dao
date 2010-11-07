@@ -361,17 +361,17 @@ int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *o
 	node = DMap_Find( self->myClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
-	perm = LOOKUP_PM( node->value.pInt );
-	sto = LOOKUP_ST( node->value.pInt );
-	id = LOOKUP_ID( node->value.pInt );
-	if( objThis == self || perm == DAO_CLS_PUBLIC
-			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_CLS_PROTECTED) ){
-		if( sto == DAO_CLASS_VARIABLE ){
+	perm = LOOKUP_PM( node->value.pSize );
+	sto = LOOKUP_ST( node->value.pSize );
+	id = LOOKUP_ID( node->value.pSize );
+	if( objThis == self || perm == DAO_DATA_PUBLIC
+			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
+		if( sto == DAO_OBJECT_VARIABLE ){
 			if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 			type = self->myClass->objDataType->items.pAbtp[ id ];
 			value = self->objValues + id;
 			DValue_Move( data, value, type );
-		}else if( sto == DAO_CLASS_GLOBAL ){
+		}else if( sto == DAO_CLASS_VARIABLE ){
 			value = self->myClass->glbData->data + id;
 			type = self->myClass->glbDataType->items.pAbtp[ id ];
 			DValue_Move( data, value, type );
@@ -391,15 +391,15 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
 	node = DMap_Find( self->myClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
-	perm = LOOKUP_PM( node->value.pInt );
-	sto = LOOKUP_ST( node->value.pInt );
-	id = LOOKUP_ID( node->value.pInt );
-	if( objThis == self || perm == DAO_CLS_PUBLIC 
-			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_CLS_PROTECTED) ){
+	perm = LOOKUP_PM( node->value.pSize );
+	sto = LOOKUP_ST( node->value.pSize );
+	id = LOOKUP_ID( node->value.pSize );
+	if( objThis == self || perm == DAO_DATA_PUBLIC 
+			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
 		switch( sto ){
-		case DAO_CLASS_VARIABLE : p = self->objValues + id; break;
-		case DAO_CLASS_GLOBAL   : p = self->myClass->glbData->data + id; break;
-		case DAO_CLASS_CONST    : p = self->myClass->cstData->data + id; break;
+		case DAO_OBJECT_VARIABLE : p = self->objValues + id; break;
+		case DAO_CLASS_VARIABLE   : p = self->myClass->glbData->data + id; break;
+		case DAO_CLASS_CONSTANT    : p = self->myClass->cstData->data + id; break;
 		default : break;
 		}
 		if( p ) *data = *p;

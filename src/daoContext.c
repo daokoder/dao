@@ -74,15 +74,11 @@ void DaoVmCode_Print( DaoVmCode self, char *buffer )
 	else
 		sprintf( buffer, fmt, name, self.a, self.b, self.c );
 }
-void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer )
+void DaoVmCodeX_Print( DaoVmCodeX self, char *annot )
 {
 	const char *name = getOpcodeName( self.code );
-	char *annot = "";
 	static const char *fmt = "%-11s : %6i , %6i , %6i ;  %4i,  %s\n";
-	if( buffer == NULL )
-		printf( fmt, name, self.a, self.b, self.c, self.line, annot );
-	else
-		sprintf( buffer, fmt, name, self.a, self.b, self.c, self.line, annot );
+	printf( fmt, name, self.a, self.b, self.c, self.line, annot ? annot : "" );
 }
 
 /**/
@@ -1529,11 +1525,11 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 				if( p->t == DAO_PAR_NAMED ){
 					DaoPair *pair = p->v.pair;
 					node = DMap_Find( klass->lookupTable, pair->first.v.s );
-					if( node == NULL || LOOKUP_ST( node->value.pInt ) != DAO_CLASS_VARIABLE ){
+					if( node == NULL || LOOKUP_ST( node->value.pSize ) != DAO_OBJECT_VARIABLE ){
 						DaoContext_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, "" );
 						break;
 					}
-					k = LOOKUP_ID( node->value.pInt );
+					k = LOOKUP_ID( node->value.pSize );
 					p = & pair->second;
 				}
 				if( DValue_Move( *p, object->objValues + k, mtype[k] ) ==0 ){

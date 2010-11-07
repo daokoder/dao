@@ -642,6 +642,9 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	self->cstData  = DVarray_New();
 	self->varData  = DVarray_New();
 	self->varType  = DArray_New(0);
+	self->cstDataTable = DArray_New(0);
+	self->varDataTable = DArray_New(0);
+	self->varTypeTable = DArray_New(0);
 	self->mainRoutines  = DArray_New(0);
 	self->definedRoutines  = DArray_New(0);
 	self->nsLoaded  = DArray_New(0);
@@ -664,6 +667,10 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	GC_IncRC( self->udfType1 );
 	GC_IncRC( self->udfType2 );
 	GC_IncRC( self->cmodule );
+
+	DArray_Append( self->cstDataTable, self->cstData );
+	DArray_Append( self->varDataTable, self->varData );
+	DArray_Append( self->varTypeTable, self->varType );
 
 	DString_SetMBS( name, "null" ); 
 	DaoNameSpace_AddConst( self, name, value );
@@ -741,6 +748,9 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DVarray_Delete( self->varData );
 	DArray_Delete( self->varType );
 	DArray_Delete( self->parents );
+	DArray_Delete( self->cstDataTable );
+	DArray_Delete( self->varDataTable );
+	DArray_Delete( self->varTypeTable );
 	/* no need for GC, because these namespaces are indirectly
 	 * referenced through functions. */
 	DArray_Delete( self->nsLoaded );
@@ -1567,7 +1577,7 @@ DaoType* DaoNameSpace_SymbolTypeAdd( DaoNameSpace *self, DaoType *t1, DaoType *t
 		for(node=DMap_First(names2);node;node=DMap_Next(names2,node)){
 			if( DMap_Find( names1, node->key.pVoid ) ) continue;
 			*value |= (1<<mapNames->size);
-			DMap_Insert( mapNames, node->key.pVoid, (void*)(1<<mapNames->size) );
+			MAP_Insert( mapNames, node->key.pVoid, 1<<mapNames->size );
 		}
 		DaoNameSpace_AddType( self, name, type );
 	}
@@ -1605,7 +1615,7 @@ DaoType* DaoNameSpace_SymbolTypeSub( DaoNameSpace *self, DaoType *t1, DaoType *t
 		for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
 			if( DMap_Find( names2, node->key.pVoid ) ) continue;
 			*value |= (1<<mapNames->size);
-			DMap_Insert( mapNames, node->key.pVoid, (void*)(1<<mapNames->size) );
+			MAP_Insert( mapNames, node->key.pVoid, 1<<mapNames->size );
 		}
 		DaoNameSpace_AddType( self, name, type );
 	}

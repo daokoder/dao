@@ -14,11 +14,13 @@
 #ifndef DAO_OPCODE_H
 #define DAO_OPCODE_H
 
+#if 0
 #define DAO_LC 0 /* local */
 #define DAO_OV 0 /* object */
 #define DAO_K 1 /* class */
 #define DAO_G 2 /* global */
 #define DAO_U 3 /* up values */
+#endif
 
 enum DaoOpcode
 {
@@ -476,26 +478,6 @@ enum DaoFunctMeth
 	DVM_FUNCT_LIST ,
 	DVM_FUNCT_NULL
 };
-
-/* 0x00000 - 0x0ffff : local and intermediate variables in a routine; */
-
-/* 0x10000 - 0x1ffff : local constants in a routine, such as numbers and strings etc; */
-#define DVR_LOC_CST   0x10000
-
-/* 0x30000 - 0x3ffff : global constants, such as: routines, classes, C functions etc; */
-#define DVR_GLB_CST   0x20000
-
-/* 0x40000 - 0x4ffff : class constants, such as: member routines, const members etc; */
-#define DVR_CLS_CST   0x30000
-
-/* 0x60000 - 0x6ffff : global variables; */
-#define DVR_GLB_VAR   0x40000
-
-/* 0x70000 - 0x7ffff : class global variables; */
-#define DVR_CLS_VAR   0x50000
-
-/* 0x80000 - 0x8ffff : class instance variables; */
-#define DVR_OBJ_VAR   0x60000
 
 #define DVR_MAX       0x70000
 

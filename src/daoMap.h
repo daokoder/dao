@@ -22,6 +22,7 @@ typedef enum{ KEY_EQ=0, KEY_ML/*Max Less*/, KEY_MG/*Min Great*/ } KeySearchType;
 typedef union
 {
 	dint       pInt;
+	size_t     pSize;
 	void      *pVoid;
 	DValue    *pValue;
 	DString   *pString;

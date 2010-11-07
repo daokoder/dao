@@ -16,25 +16,17 @@
 
 #include"daoType.h"
 
-#define LOOKUP_BIND( sto, perm, index )  (((sto)<<24)|((perm)<<16)|index)
-#define LOOKUP_ST( one )  ((one)>>24)
-#define LOOKUP_PM( one )  (((one)>>16)&0xff)
-#define LOOKUP_ID( one )  ((unsigned short)((one)&0xffff))
-
-enum DaoClassStorage
-{
-	DAO_CLASS_CONST ,
-	DAO_CLASS_GLOBAL ,
-	DAO_CLASS_VARIABLE
-};
-
 struct DaoClass
 {
 	DAO_DATA_COMMON;
 
 	/* Holding index of class members, including data from its parents: */
 	/* negative index indicates an inaccessible private member from a parent. XXX */
-	DMap *lookupTable; /* <DString*,size_t>: (storage<<24)|(permission<<16)|index */
+	DMap *lookupTable; /* <DString*,size_t> */
+
+	DArray   *cstDataTable; /* <DVarray*> */
+	DArray   *glbDataTable; /* <DVarray*> */
+	DArray   *glbTypeTable; /* <DVarray*> */
 
 	DArray   *objDataName;  /* <DString*>: keep tracking field declaration order: */
 	DArray   *objDataType;  /* <DaoType*> */
@@ -84,6 +76,7 @@ int  DaoClass_ChildOf( DaoClass *self, DaoBase *super );
 void DaoClass_AddSuperClass( DaoClass *self, DaoBase *super, DString *alias );
 
 int  DaoClass_FindConst( DaoClass *self, DString *name );
+DValue DaoClass_GetConst( DaoClass *self, int id );
 void DaoClass_SetConst( DaoClass *self, int id, DValue value );
 int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *thisClass/*=0*/, DValue **d2 );
 

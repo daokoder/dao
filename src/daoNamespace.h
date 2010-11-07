@@ -49,6 +49,10 @@ struct DaoNameSpace
 	/* No GC, these namespaces are also referenced by ::cstData. */
 	DArray *parents; /* DArray<DaoNameSpace*> */
 
+	DArray *cstDataTable;
+	DArray *varDataTable;
+	DArray *varTypeTable;
+
 	int cstUser;
 
 	/* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */

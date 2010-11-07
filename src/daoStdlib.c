@@ -1668,8 +1668,8 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
 	}
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
-		int id = node->value.pInt;
-		if( restri && lookup && LOOKUP_PM( id ) != DAO_CLS_PUBLIC ) continue;
+		size_t id = node->value.pSize;
+		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
 		if( lookup ) id = LOOKUP_ID( id );
 		tuple = DaoTuple_New( 2 );
 		tuple->unitype = tp;
@@ -1721,12 +1721,12 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
 	}
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
-		int st = 0, id = node->value.pInt;
-		if( restri && lookup && LOOKUP_PM( id ) != DAO_CLS_PUBLIC ) continue;
+		size_t st = 0, id = node->value.pSize;
+		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
 		if( lookup ){
 			st = LOOKUP_ST( id );
 			id = LOOKUP_ID( id );
-			if( st == DAO_CLASS_CONST ) continue;
+			if( st == DAO_CLASS_CONSTANT ) continue;
 		}
 		tuple = DaoTuple_New( 2 );
 		tuple->unitype = tp;
@@ -1734,13 +1734,13 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
 		value = daoNullValue;
 		vabtp.t = DAO_TYPE;
 		if( lookup ){
-			if( st == DAO_CLASS_VARIABLE && object ){
+			if( st == DAO_OBJECT_VARIABLE && object ){
 				value = object->objValues[id];
 				vabtp.v.p = klass->objDataType->items.pBase[ id ];
-			}else if( st == DAO_CLASS_GLOBAL ){
+			}else if( st == DAO_CLASS_VARIABLE ){
 				value = klass->glbData->data[id];
 				vabtp.v.p = klass->glbDataType->items.pBase[ id ];
-			}else if( st == DAO_CLASS_VARIABLE ){
+			}else if( st == DAO_OBJECT_VARIABLE ){
 				vabtp.v.p = klass->objDataType->items.pBase[ id ];
 			}
 		}else{
@@ -1770,8 +1770,8 @@ static void REFL_Cst2( DaoContext *ctx, DValue *p[], int N )
 		klass = p[0]->v.klass;
 		if( p[0]->t == DAO_OBJECT ) klass = p[0]->v.object->myClass;
 		node = DMap_Find( klass->lookupTable, name );
-		if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_CONST ){
-			value = klass->cstData->data + LOOKUP_ID( node->value.pInt );
+		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_CONSTANT ){
+			value = klass->cstData->data + LOOKUP_ID( node->value.pSize );
 			type.v.p = (DaoBase*) DaoNameSpace_GetTypeV( ns, *value );
 		}
 	}else if( p[0]->t == DAO_NAMESPACE ){
@@ -1817,12 +1817,12 @@ static void REFL_Var2( DaoContext *ctx, DValue *p[], int N )
 		klass = p[0]->v.klass;
 		if( p[0]->t == DAO_OBJECT ) klass = p[0]->v.object->myClass;
 		node = DMap_Find( klass->lookupTable, name );
-		if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_GLOBAL ){
-			value = klass->cstData->data + LOOKUP_ID( node->value.pInt );
-			type.v.p = klass->glbDataType->items.pBase[ LOOKUP_ID( node->value.pInt ) ];
-		}else if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
-			value = p[0]->v.object->objData->data + LOOKUP_ID( node->value.pInt );
-			type.v.p = klass->objDataType->items.pBase[ LOOKUP_ID( node->value.pInt ) ];
+		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_VARIABLE ){
+			value = klass->cstData->data + LOOKUP_ID( node->value.pSize );
+			type.v.p = klass->glbDataType->items.pBase[ LOOKUP_ID( node->value.pSize ) ];
+		}else if( node && LOOKUP_ST( node->value.pSize ) == DAO_OBJECT_VARIABLE ){
+			value = p[0]->v.object->objData->data + LOOKUP_ID( node->value.pSize );
+			type.v.p = klass->objDataType->items.pBase[ LOOKUP_ID( node->value.pSize ) ];
 		}
 	}else if( p[0]->t == DAO_NAMESPACE ){
 		DaoNameSpace *ns2 = p[0]->v.ns;
