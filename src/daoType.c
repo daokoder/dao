@@ -783,7 +783,7 @@ int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds, DArray 
 			DRoutine *rout = methods->items.pRout2[i];
 			id = DaoClass_FindConst( klass, rout->routName );
 			if( id <0 ) goto RecordFailA;
-			value = klass->cstData->data[id];
+			value = DaoClass_GetConst( klass, id );
 			if( value.t != DAO_ROUTINE && value.t != DAO_FUNCTION ) goto RecordFailA;
 			if( DRoutine_IsCompatible( (DRoutine*) value.v.routine, rout->routType, binds ) ==0 )
 				goto RecordFailA;

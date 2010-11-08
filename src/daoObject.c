@@ -353,27 +353,29 @@ void DaoObject_AddData( DaoObject *self, DString *name, DaoBase  *data )
 }
 int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *objThis )
 {
+	DaoClass *klass = self->myClass;
 	DaoType *type;
 	DValue *value ;
 	DNode *node;
-	int id, sto, perm;
+	int id, sto, up, perm;
 
 	node = DMap_Find( self->myClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
 	perm = LOOKUP_PM( node->value.pSize );
 	sto = LOOKUP_ST( node->value.pSize );
+	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
 	if( objThis == self || perm == DAO_DATA_PUBLIC
 			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
 		if( sto == DAO_OBJECT_VARIABLE ){
 			if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
-			type = self->myClass->objDataType->items.pAbtp[ id ];
+			type = klass->objDataType->items.pAbtp[ id ];
 			value = self->objValues + id;
 			DValue_Move( data, value, type );
 		}else if( sto == DAO_CLASS_VARIABLE ){
-			value = self->myClass->glbData->data + id;
-			type = self->myClass->glbDataType->items.pAbtp[ id ];
+			value = klass->glbDataTable->items.pVarray[up]->data + id;
+			type = klass->glbTypeTable->items.pArray[up]->items.pAbtp[ id ];
 			DValue_Move( data, value, type );
 		}
 	}else{
@@ -383,9 +385,10 @@ int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *o
 }
 int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *objThis, DValue **d2 )
 {
+	DaoClass *klass = self->myClass;
 	DValue *p = NULL;
 	DNode *node;
-	int id, sto, perm;
+	int id, sto, up, perm;
 
 	*data = daoNullValue;
 	node = DMap_Find( self->myClass->lookupTable, name );
@@ -393,13 +396,14 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
 
 	perm = LOOKUP_PM( node->value.pSize );
 	sto = LOOKUP_ST( node->value.pSize );
+	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
 	if( objThis == self || perm == DAO_DATA_PUBLIC 
 			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
 		switch( sto ){
 		case DAO_OBJECT_VARIABLE : p = self->objValues + id; break;
-		case DAO_CLASS_VARIABLE   : p = self->myClass->glbData->data + id; break;
-		case DAO_CLASS_CONSTANT    : p = self->myClass->cstData->data + id; break;
+		case DAO_CLASS_VARIABLE  : p = klass->glbDataTable->items.pVarray[up]->data + id; break;
+		case DAO_CLASS_CONSTANT  : p = klass->cstDataTable->items.pVarray[up]->data + id; break;
 		default : break;
 		}
 		if( p ) *data = *p;

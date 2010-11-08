@@ -4287,10 +4287,12 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 			utp.SortType( user_types, tmp );
 		}
 	}
+	io.writeln( 'generating methods for callback ...' );
 	for( utp in callbacks ) utp.GenerateMeth();
 	
-	io.writeln( 'generating methods ...' );
+	io.writeln( 'checking virtual methods ...' );
 	for( utp in user_types ) utp.CheckVirtual();
+	io.writeln( 'generating methods ...' );
 	for( utp in user_types ) utp.GenerateMeth();
 	io.writeln( 'checking ...' );
 	for( utp in user_types ) utp.CheckPureVirtual();

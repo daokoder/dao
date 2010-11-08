@@ -1083,7 +1083,7 @@ static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 			res = DaoNameSpace_GetData( res.v.ns, name );
 		}else if( res.t == DAO_CLASS ){
 			i = DaoClass_FindConst( res.v.klass, name );
-			res = (i >=0) ? res.v.klass->cstData->data[i] : daoNullValue;
+			res = (i >=0) ? DaoClass_GetConst( res.v.klass, i ) : daoNullValue;
 		}else if( res.t == DAO_CDATA ){
 			res = DaoFindValueOnly( res.v.cdata->typer, name );
 		}else{
@@ -1350,7 +1350,8 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 					it2->a = DRoutine_AddConstValue( routine, *iter->key.pValue );
 					it2->jumpFalse = node;
 				}
-				if( aux == it ) it2->c = DAO_CASE_TABLE; /* mark integer jump table */
+				/* mark integer jump table */
+				if( aux == it ) it2->c = direct ? DAO_CASE_TABLE : DAO_CASE_ORDERED;
 				it2->prev = aux;
 				aux->next = it2;
 				it2->next = top;
@@ -1539,7 +1540,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 		line = tokens[start]->line;
 		if( value.t == 0 && cls ){
 			i = DaoClass_FindConst( cls, scope );
-			if( i >=0 ) value = cls->cstData->data[i];
+			if( i >=0 ) value = DaoClass_GetConst( cls, i );
 		}
 		if( value.t == 0 && ctype ){
 			value = DaoFindValueOnly( ctype->typer, scope );
@@ -1572,7 +1573,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 		value = daoNullValue;
 		if( value.t == 0 && cls ){
 			i = DaoClass_FindConst( cls, scope );
-			if( i >=0 ) value = cls->cstData->data[i];
+			if( i >=0 ) value = DaoClass_GetConst( cls, i );
 		}
 		if( value.t == 0 && ctype ){
 			value = DaoFindValueOnly( ctype->typer, scope );
@@ -4105,7 +4106,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 					int up = LOOKUP_UP( regC );
 					int id = LOOKUP_ID( regC );
 					int isov = st == DAO_OBJECT_VARIABLE;
-					if( (storeType & DAO_DATA_MEMBER || tki == DTOK_CASSN) && cst && isov ){
+					int isdecl = self->isClassBody && (storeType & DAO_DATA_MEMBER);
+					if( isdecl && cst && isov ){
 						DaoType *tp1 = hostClass->objDataType->items.pAbtp[ id ];
 						if( tp1 && DaoType_MatchValue( tp1, value, 0 ) ==0 ){
 							DaoType *tp2 = DaoNameSpace_GetTypeV( myNS, value );
@@ -4133,7 +4135,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 							DaoParser_AddCode( self, DVM_SETVO, reg, id, 0, first, eq, end );
 							break;
 						case DAO_CLASS_VARIABLE :
-							if( cst ){
+							if( isdecl && cst ){
 								DaoType *type = hostClass->glbTypeTable->items.pArray[up]->items.pAbtp[id];
 								DValue *data = hostClass->glbDataTable->items.pVarray[up]->data + id;
 								if( data->t == DAO_NIL ) DValue_Move( value, data, type );
@@ -6061,7 +6063,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 					break;
 				case DAO_CLASS :
 					regB = DaoClass_FindConst( ov.v.klass, name );
-					if( regB >=0 ) it = ov.v.klass->cstData->data[ regB ];
+					if( regB >=0 ) it = DaoClass_GetConst( ov.v.klass, regB );
 					break;
 				default :
 					typer = DValue_GetTyper( ov );

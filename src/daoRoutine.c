@@ -1959,8 +1959,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( tp && (*tp)->tid <= DAO_DOUBLE ){
 					if( code == DVM_SETVO && opb < hostClass->objDataDefault->size ){
 						hostClass->objDataDefault->data[ opb ].t = at->tid;
-					}else if( code == DVM_SETVK && opb < hostClass->glbData->size ){
-						hostClass->glbData->data[ opb ].t = at->tid;
+					}else if( code == DVM_SETVK && opc < hostClass->glbDataTable->size ){
+						DVarray *array = hostClass->glbDataTable->items.pVarray[opc];
+						if( opb < array->size ) array->data[opb].t = at->tid;
 					}else if( code == DVM_SETVG && opb < ns->varData->size ){
 						ns->varData->data[ opb ].t = at->tid;
 					}
@@ -2755,6 +2756,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						if( tp ==NULL ) goto NotPermit;
 						if( *tp ==NULL ) *tp = type[opa];
 						AssertTypeMatching( type[opa], *tp, defs, 0);
+#if 0
 						if( typed_code && (klass->attribs & DAO_CLS_FINAL) ){
 							vmc->b = DaoClass_GetDataIndex( klass, str, & k );
 							if( k == DAO_CLASS_CONSTANT ) goto InvOper;
@@ -2773,6 +2775,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 									vmc->code = DVM_SETF_OV;
 							}
 						}
+#endif
 						break;
 					}
 				case DAO_TUPLE :
