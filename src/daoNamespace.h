@@ -49,21 +49,23 @@ struct DaoNameSpace
 	/* No GC, these namespaces are also referenced by ::cstData. */
 	DArray *parents; /* DArray<DaoNameSpace*> */
 
+	DMap   *lookupTable; /* <DString*,size_t> */
 	DArray *cstDataTable;
 	DArray *varDataTable;
 	DArray *varTypeTable;
+	DArray *nsTable;
 
 	int cstUser;
 
 	/* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */
 	DVarray  *cstData;
-	DMap     *cstIndex; /* <DString*,size_t> */
+	//DMap     *cstIndex; /* <DString*,size_t> */
 	DMap     *cstStatic; /* <DString*,size_t> */
 
 	/* global data in the name space: */
 	DVarray  *varData;
 	DArray   *varType;   /* <DaoType*> */
-	DMap     *varIndex;  /* <DString*,size_t> */
+	//DMap     *varIndex;  /* <DString*,size_t> */
 	DMap     *varStatic;  /* <DString*,size_t> */
 
 	DaoRoutine *mainRoutine;
@@ -99,14 +101,15 @@ void DaoNameSpace_Delete( DaoNameSpace *self );
 void DaoNameSpace_SetName( DaoNameSpace *self, const char *name );
 
 int DaoNameSpace_FindConst( DaoNameSpace *self, DString *name );
-int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value );
+int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value, int pm );
 void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DValue value );
 DValue DaoNameSpace_GetConst( DaoNameSpace *self, int i );
 
 int DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
-int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp );
+int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue var, DaoType *tp, int pm );
 int DaoNameSpace_SetVariable( DaoNameSpace *self, int index, DValue var );
 DValue DaoNameSpace_GetVariable( DaoNameSpace *self, int i );
+DaoType* DaoNameSpace_GetVariableType( DaoNameSpace *self, int i );
 
 void DaoNameSpace_SetData( DaoNameSpace *self, DString *name, DValue value );
 DValue DaoNameSpace_GetData( DaoNameSpace *self, DString *name );

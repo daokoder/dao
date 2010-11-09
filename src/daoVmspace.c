@@ -776,13 +776,15 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 	DString_SetMBS( str, "ARGV" );
 	nkey.t = DAO_LIST;
 	nkey.v.list = argv;
-	DaoNameSpace_AddConst( ns, str, nkey );
-	if( ns == self->mainNamespace ) DaoNameSpace_AddConst( self->nsInternal, str, nkey );
+	DaoNameSpace_AddConst( ns, str, nkey, DAO_DATA_PUBLIC );
+	if( ns == self->mainNamespace )
+		DaoNameSpace_AddConst( self->nsInternal, str, nkey, DAO_DATA_PUBLIC );
 	DString_SetMBS( str, "CMDARG" );
 	nkey.t = DAO_MAP;
 	nkey.v.map = cmdarg;
-	DaoNameSpace_AddConst( ns, str, nkey );
-	if( ns == self->mainNamespace ) DaoNameSpace_AddConst( self->nsInternal, str, nkey );
+	DaoNameSpace_AddConst( ns, str, nkey, DAO_DATA_PUBLIC );
+	if( ns == self->mainNamespace )
+		DaoNameSpace_AddConst( self->nsInternal, str, nkey, DAO_DATA_PUBLIC );
 	if( args == NULL ) DArray_Delete( array );
 	DString_Delete( key );
 	DString_Delete( val );

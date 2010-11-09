@@ -1638,7 +1638,7 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
 	DaoObject *object;
 	DaoType *tp = map->unitype->nested->items.pAbtp[1];
 	DaoNameSpace *ns, *here = ctx->nameSpace;
-	DMap *index, *lookup = NULL;
+	DMap *index = NULL, *lookup = NULL;
 	DVarray *data;
 	DNode *node, *node2;
 	DValue value;
@@ -1659,13 +1659,14 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
 		data = klass->cstData;
 	}else if( p[0]->t == DAO_NAMESPACE ){
 		ns = p[0]->v.ns;
-		index = ns->cstIndex;
+		//index = ns->cstIndex; XXX
 		data = ns->cstData;
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
 		DString_Delete( name.v.s );
 		return;
 	}
+	if( index == NULL ) return;
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
 		size_t id = node->value.pSize;
@@ -1694,7 +1695,7 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
 	DaoObject *object = NULL;
 	DaoType *tp = map->unitype->nested->items.pAbtp[1];
 	DaoNameSpace *ns = NULL;
-	DMap *index, *lookup = NULL;
+	DMap *index = NULL, *lookup = NULL;
 	DNode *node;
 	DValue value;
 	DValue name = daoNullString;
@@ -1713,12 +1714,13 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
 		index = klass->lookupTable;
 	}else if( p[0]->t == DAO_NAMESPACE ){
 		ns = p[0]->v.ns;
-		index = ns->varIndex;
+		//index = ns->varIndex; XXX
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
 		DString_Delete( name.v.s );
 		return;
 	}
+	if( index == NULL ) return;
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
 		size_t st = 0, id = node->value.pSize;
@@ -1776,7 +1778,8 @@ static void REFL_Cst2( DaoContext *ctx, DValue *p[], int N )
 		}
 	}else if( p[0]->t == DAO_NAMESPACE ){
 		DaoNameSpace *ns2 = p[0]->v.ns;
-		node = DMap_Find( ns2->cstIndex, name );
+		return; //XXX
+		//node = DMap_Find( ns2->cstIndex, name );
 		if( node ){
 			value = ns2->cstData->data + node->value.pInt;
 			type.v.p = (DaoBase*) DaoNameSpace_GetTypeV( ns, *value );
@@ -1826,7 +1829,8 @@ static void REFL_Var2( DaoContext *ctx, DValue *p[], int N )
 		}
 	}else if( p[0]->t == DAO_NAMESPACE ){
 		DaoNameSpace *ns2 = p[0]->v.ns;
-		node = DMap_Find( ns2->varIndex, name );
+		return; //XXX
+		//node = DMap_Find( ns2->varIndex, name );
 		if( node ){
 			value = ns2->varData->data + node->value.pInt;
 			type.v.p = ns2->varType->items.pBase[ node->value.pInt ];

@@ -640,9 +640,9 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_SETVK_II , && LAB_SETVK_IF , && LAB_SETVK_ID ,
 		&& LAB_SETVK_FI , && LAB_SETVK_FF , && LAB_SETVK_FD ,
 		&& LAB_SETVK_DI , && LAB_SETVK_DF , && LAB_SETVK_DD ,
-		&& LAB_SETVO_II , && LAB_SETVO_IF , && LAB_SETVO_ID ,
-		&& LAB_SETVO_FI , && LAB_SETVO_FF , && LAB_SETVO_FD ,
-		&& LAB_SETVO_DI , && LAB_SETVO_DF , && LAB_SETVO_DD ,
+		&& LAB_SETVG_II , && LAB_SETVG_IF , && LAB_SETVG_ID ,
+		&& LAB_SETVG_FI , && LAB_SETVG_FF , && LAB_SETVG_FD ,
+		&& LAB_SETVG_DI , && LAB_SETVG_DF , && LAB_SETVG_DD ,
 
 		&& LAB_MOVE_II , && LAB_MOVE_IF , && LAB_MOVE_ID ,
 		&& LAB_MOVE_FI , && LAB_MOVE_FF , && LAB_MOVE_FD ,

@@ -2491,10 +2491,10 @@ static void DaoParser_AddToScope( DaoParser *self, DValue scope,
 		DaoClass_AddConst( scope.v.klass, name, value, DAO_DATA_PUBLIC, line );
 	}else if( scope.t == DAO_NAMESPACE ){
 		DaoNameSpace_AddType( scope.v.ns, name, abtype );
-		DaoNameSpace_AddConst( scope.v.ns, name, value );
+		DaoNameSpace_AddConst( scope.v.ns, name, value, DAO_DATA_PUBLIC );
 	}else{
 		if( routine == myNS->mainRoutine ){
-			DaoNameSpace_AddConst( myNS, name, value );
+			DaoNameSpace_AddConst( myNS, name, value, DAO_DATA_PUBLIC );
 			DaoNameSpace_AddType( myNS, name, abtype );
 			if( store & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, name, 0 );
 		}else if( self->isClassBody && self->hostClass ){
@@ -2643,7 +2643,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
 				return -1;
 			}
-			DaoNameSpace_AddConst( myNS, str, value );
+			DaoNameSpace_AddConst( myNS, str, value, DAO_DATA_PUBLIC );
 			start ++;
 			if( start <= to && tokens[start]->name == DTOK_COMMA ) start ++;
 			if( start > to || tokens[start]->name == DTOK_SEMCO ) break;
@@ -2666,13 +2666,13 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 			value.v.func = (DaoFunction*) it->value.pVoid;
 			if( STRCMP( value.v.func->routName, prev ) ==0 ) return start;
 			prev = value.v.func->routName->mbs;
-			DaoNameSpace_AddConst( myNS, value.v.func->routName, value );
+			DaoNameSpace_AddConst( myNS, value.v.func->routName, value, DAO_DATA_PUBLIC );
 		}
 		if( typer->priv->values )
 			DaoNameSpace_SetupValues( typer->priv->nspace, typer );
 		hash = typer->priv->values;
 		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-			DaoNameSpace_AddConst( myNS, it->key.pString, *it->value.pValue );
+			DaoNameSpace_AddConst( myNS, it->key.pString, *it->value.pValue, DAO_DATA_PUBLIC );
 		}
 	}
 	return start;
@@ -2888,7 +2888,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			}else{
 				value.t = DAO_ROUTINE;
 				value.v.routine = rout;
-				DaoNameSpace_AddConst( myNS, self->mbs2, value );
+				DaoNameSpace_AddConst( myNS, self->mbs2, value, DAO_DATA_PUBLIC );
 				if( storeType & DAO_DATA_STATIC ) MAP_Insert( myNS->cstStatic, self->mbs2, 0 );
 			}
 		}
@@ -3520,7 +3520,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			DString_Assign( abtp->name, str );
 			/*  XXX typedef in routine or class */
 			DaoNameSpace_AddType( myNS, str, abtp );
-			DaoNameSpace_AddConst( myNS, str, value );
+			DaoNameSpace_AddConst( myNS, str, value, DAO_DATA_PUBLIC );
 			/* printf( "%s\n", abtp->name->mbs ); */
 			start ++;
 			continue;
@@ -4469,10 +4469,10 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok,
 	if( found >= 0 ) return;
 
 	if( ( storeType & DAO_DATA_GLOBAL ) && ( storeType & DAO_DATA_CONST) ){
-		DaoNameSpace_AddConst( nameSpace, name, daoNullValue );
+		DaoNameSpace_AddConst( nameSpace, name, daoNullValue, DAO_DATA_PUBLIC );
 		if( storeType & DAO_DATA_STATIC ) MAP_Insert( nameSpace->cstStatic, name, 0 );
 	}else if( storeType & DAO_DATA_GLOBAL ){
-		DaoNameSpace_AddVariable( nameSpace, name, daoNullValue, abtp );
+		DaoNameSpace_AddVariable( nameSpace, name, daoNullValue, abtp, DAO_DATA_PUBLIC );
 		if( storeType & DAO_DATA_STATIC ) MAP_Insert( nameSpace->varStatic, name, 0 );
 	}else if( storeType & DAO_DATA_STATIC ){
 		if( MAP_Find( self->varStatic, name ) == NULL ){
@@ -4549,12 +4549,12 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 	if( node ) return node->value.pInt + DVR_GLB_VAR;
 #endif 
 
-	if( (i = DaoNameSpace_FindVariable( ns, name )) >= 0 ) return LOOKUP_BIND_GV(i);
+	if( (i = DaoNameSpace_FindVariable( ns, name )) >= 0 ) return i;
 
 	if( ( node = MAP_Find( self->allConsts, name ) ) )
 		return LOOKUP_BIND_LC( node->value.pInt );
 
-	if( (i = DaoNameSpace_FindConst( ns, name )) >= 0 ) return LOOKUP_BIND_GC(i);
+	if( (i = DaoNameSpace_FindConst( ns, name )) >= 0 ) return i;
 
 	if( self->outParser ){ /* search upvalues before globals/class members??? */
 		int st, up, id;
@@ -4889,7 +4889,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end, int permi
 		if( hostClass && self->isClassBody ){
 			DaoClass_AddConst( hostClass, modname, value, permiType, tokens[i-1]->line );
 		}else{
-			DaoNameSpace_AddConst( nameSpace, modname, value );
+			DaoNameSpace_AddConst( nameSpace, modname, value, DAO_DATA_PUBLIC );
 		}
 	}
 
@@ -6512,8 +6512,9 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 		value.v.e = self->denum;
 		self->denum->value = 0;
 		DEnum_SetType( self->denum, type );
-		varReg = DaoNameSpace_AddConst( self->nameSpace, str, value );
-		*cst = varReg = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_DATA_PUBLIC, 0, varReg );
+		varReg = DaoNameSpace_AddConst( self->nameSpace, str, value, DAO_DATA_PUBLIC );
+		if( varReg <0 ) return -1;
+		*cst = varReg;
 	}else if( tki == DTOK_DOLLAR ){
 		varReg = DaoParser_ImaginaryOne( self, start );
 		*cst = varReg;

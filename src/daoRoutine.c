@@ -1962,8 +1962,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}else if( code == DVM_SETVK && opc < hostClass->glbDataTable->size ){
 						DVarray *array = hostClass->glbDataTable->items.pVarray[opc];
 						if( opb < array->size ) array->data[opb].t = at->tid;
-					}else if( code == DVM_SETVG && opb < ns->varData->size ){
-						ns->varData->data[ opb ].t = at->tid;
+					}else if( code == DVM_SETVG && opc < ns->varDataTable->size ){
+						DVarray *array = ns->varDataTable->items.pVarray[opc];
+						if( opb < array->size ) array->data[opb].t = at->tid;
 					}
 				}
 				/* less strict checking */
@@ -2408,10 +2409,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						DaoNameSpace *ans = csts[opa].v.ns;
 						k = DaoNameSpace_FindVariable( ans, str );
 						if( k >=0 ){
-							ct = ans->varType->items.pAbtp[k];
+							ct = DaoNameSpace_GetVariableType( ans, k );
 						}else{
 							k = DaoNameSpace_FindConst( ans, str );
-							if( k >=0 ) ct = DaoNameSpace_GetTypeV( ans, ans->cstData->data[k] );
+							val = DaoNameSpace_GetConst( ans, k );
+							if( val.t ) ct = DaoNameSpace_GetTypeV( ans, val );
 						}
 						if( k <0 ) goto NotExist;
 					}
@@ -2810,10 +2812,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							DaoNameSpace *ans = csts[opc].v.ns;
 							k = DaoNameSpace_FindVariable( ans, str );
 							if( k >=0 ){
-								ct = ans->varType->items.pAbtp[k];
+								ct = DaoNameSpace_GetVariableType( ans, k );
 							}else{
 								k = DaoNameSpace_FindConst( ans, str );
-								if( k >=0 ) ct = DaoNameSpace_GetTypeV( ans, ans->cstData->data[k] );
+								val = DaoNameSpace_GetConst( ans, k );
+								if( val.t ) ct = DaoNameSpace_GetTypeV( ans, val );
 							}
 							if( k <0 ) goto NotExist;
 							AssertTypeMatching( at, ct, defs, 0);
