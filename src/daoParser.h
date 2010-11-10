@@ -100,6 +100,7 @@ struct DaoParser
 	char topAsGlobal;
 	char isClassBody;
 	char isInterBody;
+	char permission;
 	char warnAssn;
 	char pairLtGt; /* <> */
 

@@ -827,10 +827,30 @@ void DaoNameSpace_SetName( DaoNameSpace *self, const char *name )
 		DString_Clear( self->path );
 	}
 }
+static int DaoNameSpace_GetUpIndex( DaoNameSpace *self, DaoNameSpace *ns );
+static int DaoNameSpace_FindParentData( DaoNameSpace *self, DString *name, int storage )
+{
+	int i, st, pm, up, id;
+	for(i=0; i<self->parents->size; i++){
+		DaoNameSpace *parent = self->parents->items.pNS[i];
+		DNode *node = MAP_Find( parent->lookupTable, name );
+		if( node == NULL ) continue;
+		pm = LOOKUP_PM( node->value.pSize );
+		if( pm != DAO_DATA_PUBLIC ) continue;
+		st = LOOKUP_ST( node->value.pSize );
+		if( st != storage ) continue;
+		up = LOOKUP_UP( node->value.pSize );
+		id = LOOKUP_ID( node->value.pSize );
+		up = DaoNameSpace_GetUpIndex( self, parent->nsTable->items.pNS[up] );
+		node = MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up, id ) );
+		return node->value.pSize;
+	}
+	return -1;
+}
 int  DaoNameSpace_FindConst( DaoNameSpace *self, DString *name )
 {
 	DNode *node = DMap_Find( self->lookupTable, name );
-	if( node == NULL ) return -1;
+	if( node == NULL ) return DaoNameSpace_FindParentData( self, name, DAO_GLOBAL_CONSTANT );
 	if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_CONSTANT ) return -1;
 	return node->value.pSize;
 }
@@ -888,7 +908,7 @@ DValue DaoNameSpace_GetConst( DaoNameSpace *self, int index )
 int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name )
 {
 	DNode *node = DMap_Find( self->lookupTable, name );
-	if( node == NULL ) return -1;
+	if( node == NULL ) return DaoNameSpace_FindParentData( self, name, DAO_GLOBAL_VARIABLE );
 	if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_VARIABLE ) return -1;
 	return node->value.pSize;
 }
@@ -985,12 +1005,17 @@ void DaoNameSpace_SetData( DaoNameSpace *self, DString *name, DValue value )
 DValue DaoNameSpace_GetData( DaoNameSpace *self, DString *name )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
+	int st, id;
 	if( node ){
-		int id = node->value.pSize;
-		int st = LOOKUP_ST( id );
+		id = node->value.pSize;
+		st = LOOKUP_ST( id );
 		if( st == DAO_GLOBAL_CONSTANT ) return DaoNameSpace_GetConst( self, id );
 		if( st == DAO_GLOBAL_VARIABLE ) return DaoNameSpace_GetVariable( self, id );
 	}
+	id = DaoNameSpace_FindParentData( self, name, DAO_GLOBAL_VARIABLE );
+	if( id >= 0 ) return DaoNameSpace_GetVariable( self, id );
+	id = DaoNameSpace_FindParentData( self, name, DAO_GLOBAL_CONSTANT );
+	if( id >= 0 ) return DaoNameSpace_GetConst( self, id );
 	return daoNullValue;
 }
 DaoClass* DaoNameSpace_FindClass( DaoNameSpace *self, DString *name )
@@ -998,12 +1023,20 @@ DaoClass* DaoNameSpace_FindClass( DaoNameSpace *self, DString *name )
 	int id = DaoNameSpace_FindConst( self, name );
 	DValue value = DaoNameSpace_GetConst( self, id );
 	if( value.t == DAO_CLASS ) return value.v.klass;
+	if( id >= 0 ) return NULL;
+	id = DaoNameSpace_FindParentData( self, name, DAO_GLOBAL_CONSTANT );
+	value = DaoNameSpace_GetConst( self, id );
+	if( value.t == DAO_CLASS ) return value.v.klass;
 	return NULL;
 }
 DaoNameSpace* DaoNameSpace_FindNameSpace( DaoNameSpace *self, DString *name )
 {
 	int id = DaoNameSpace_FindConst( self, name );
 	DValue value = DaoNameSpace_GetConst( self, id );
+	if( value.t == DAO_NAMESPACE ) return value.v.ns;
+	if( id >= 0 ) return NULL;
+	id = DaoNameSpace_FindParentData( self, name, DAO_GLOBAL_CONSTANT );
+	value = DaoNameSpace_GetConst( self, id );
 	if( value.t == DAO_NAMESPACE ) return value.v.ns;
 	return NULL;
 }
@@ -1024,11 +1057,27 @@ void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent )
 	DValue value = { DAO_NAMESPACE, 0, 0, 0, {0} };
 	value.v.ns = parent;
 	DaoNameSpace_AddConst( self, parent->name, value, DAO_DATA_PUBLIC );
-	DArray_Append( self->cstDataTable, parent->cstData );
-	DArray_Append( self->varDataTable, parent->varData );
-	DArray_Append( self->varTypeTable, parent->varType );
-	DArray_Append( self->nsTable, parent );
 	DArray_Append( self->parents, parent );
+}
+static int DaoNameSpace_GetUpIndex( DaoNameSpace *self, DaoNameSpace *ns )
+{
+	int i, up = 0;
+	if( ns == NULL ) return 0;
+	for(i=0; i<self->nsTable->size; i++){
+		if( self->nsTable->items.pNS[i] == ns ){
+			up = i;
+			ns = NULL;
+			break;
+		}
+	}
+	if( ns ){
+		up = self->nsTable->size;
+		DArray_Append( self->nsTable, ns );
+		DArray_Append( self->cstDataTable, ns->cstData );
+		DArray_Append( self->varDataTable, ns->varData );
+		DArray_Append( self->varTypeTable, ns->varType );
+	}
+	return up;
 }
 void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImport )
 {
@@ -1057,18 +1106,7 @@ void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImpor
 					DRoutine_AddOverLoad( (DRoutine*)v2.v.p, (DRoutine*)v1.v.p );
 				continue;
 			}
-			upNS = ns->nsTable->items.pNS[up];
-			for(i=0; i<self->nsTable->size; i++){
-				if( self->nsTable->items.pNS[i] == upNS ){
-					up = i;
-					upNS = NULL;
-					break;
-				}
-			}
-			if( upNS ){
-				up = self->nsTable->size;
-				DaoNameSpace_AddParent( self, upNS );
-			}
+			up = DaoNameSpace_GetUpIndex( self, ns->nsTable->items.pNS[up] );
 			MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up, id ) );
 		}
 	}else{
@@ -1083,18 +1121,7 @@ void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImpor
 			if( up >= ns->nsTable->size ) continue;
 			st = LOOKUP_ST( node->value.pSize );
 			id = LOOKUP_ID( node->value.pSize );
-			upNS = ns->nsTable->items.pNS[up];
-			for(i=0; i<self->nsTable->size; i++){
-				if( self->nsTable->items.pNS[i] == upNS ){
-					up = i;
-					upNS = NULL;
-					break;
-				}
-			}
-			if( upNS ){
-				up = self->nsTable->size;
-				DaoNameSpace_AddParent( self, upNS );
-			}
+			up = DaoNameSpace_GetUpIndex( self, ns->nsTable->items.pNS[up] );
 			MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up, id ) );
 		}
 	}
