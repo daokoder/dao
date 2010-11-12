@@ -869,24 +869,7 @@ static void DaoSTR_Utf8( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutInteger( ctx, self->sub == DAO_UTF8 );
 	if( N > 1 ) self->sub = p[1]->v.i ? DAO_UTF8 : 0;
 }
-static void DaoSTR_IsMBS( DaoContext *ctx, DValue *p[], int N )
-{
-	DaoContext_PutInteger( ctx, p[0]->v.s->mbs != NULL );
-}
-static void DaoSTR_IsWCS( DaoContext *ctx, DValue *p[], int N )
-{
-	DaoContext_PutInteger( ctx, p[0]->v.s->wcs != NULL );
-}
-static void DaoSTR_ToMBS( DaoContext *ctx, DValue *p[], int N )
-{
-	DString_ToMBS( p[0]->v.s );
-	DaoContext_PutReference( ctx, p[0] );
-}
-static void DaoSTR_ToWCS( DaoContext *ctx, DValue *p[], int N )
-{
-	DString_ToWCS( p[0]->v.s );
-	DaoContext_PutReference( ctx, p[0] );
-}
+
 static void DaoSTR_Insert( DaoContext *ctx, DValue *p[], int N )
 {
 	DString *self = p[0]->v.s;
@@ -1741,13 +1724,13 @@ static const char *errmsg[2] =
 };
 static void DaoSTR_Encrypt( DaoContext *ctx, DValue *p[], int N )
 {
-	int rc = DString_Encrypt( p[0]->v.s, p[1]->v.s, p[2]->v.i );
+	int rc = DString_Encrypt( p[0]->v.s, p[1]->v.s, p[2]->v.e->value );
 	if( rc ) DaoContext_RaiseException( ctx, DAO_ERROR, errmsg[rc-1] );
 	DaoContext_PutReference( ctx, p[0] );
 }
 static void DaoSTR_Decrypt( DaoContext *ctx, DValue *p[], int N )
 {
-	int rc = DString_Decrypt( p[0]->v.s, p[1]->v.s, p[2]->v.i );
+	int rc = DString_Decrypt( p[0]->v.s, p[1]->v.s, p[2]->v.e->value );
 	if( rc ) DaoContext_RaiseException( ctx, DAO_ERROR, errmsg[rc-1] );
 	DaoContext_PutReference( ctx, p[0] );
 }
@@ -1761,16 +1744,28 @@ static void DaoSTR_Iter( DaoContext *ctx, DValue *p[], int N )
 	DValue_Copy( & data[1], iter );
 }
 
+static void DaoSTR_Type( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoContext_PutEnum( ctx, ( p[0]->v.s->mbs != NULL )? "mbs" : "wcs" );
+}
+
+static void DaoSTR_Convert( DaoContext *ctx, DValue *p[], int N )
+{
+	if( p[1]->v.e->value == 0 )
+		DString_ToMBS( p[0]->v.s );
+	else
+		DString_ToWCS( p[0]->v.s );
+	DaoContext_PutReference( ctx, p[0] );
+}
+
 static DaoFuncItem stringMeths[] =
 {
 	{ DaoSTR_Size,    "size( self :string )const=>int" },
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
 	{ DaoSTR_Utf8,    "utf8( self :string )const =>int" },
 	{ DaoSTR_Utf8,    "utf8( self :string, utf8 : int ) =>int" },
-	{ DaoSTR_IsMBS,   "ismbs( self :string )const =>int" },
-	{ DaoSTR_IsWCS,   "iswcs( self :string )const =>int" },
-	{ DaoSTR_ToMBS,   "tombs( self :string ) =>string" },
-	{ DaoSTR_ToWCS,   "towcs( self :string ) =>string" },
+	{ DaoSTR_Type,    "type( self :string )const =>enum<mbs, wcs>" },
+	{ DaoSTR_Convert, "convert( self :string, to :enum<mbs, wcs> ) =>string" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
 	{ DaoSTR_Clear,   "clear( self :string )" },
 	{ DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
@@ -1797,8 +1792,8 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Tonumber, "tonumber( self :string, base=10 )const=>double" },
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
-	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, hex=0 ) => string" },
-	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, hex=0 ) => string" },
+	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
+	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
 	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
 	{ NULL, NULL }
 };
@@ -3432,7 +3427,7 @@ static void DaoBuf_GetString( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	DString *str = DaoContext_PutMBString( ctx, "" );
-	if( (int)p[1]->v.i ){
+	if( p[1]->v.e->value == 0 ){
 		DString_Resize( str, self->size );
 		memcpy( str->mbs, self->buffer, self->size );
 	}else{
@@ -3463,7 +3458,7 @@ static void DaoBuf_GetByte( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	int i = p[1]->v.i;
-	int it = p[2]->v.i ? ((signed char*)self->buffer)[i] : ((unsigned char*)self->buffer)[i];
+	int it = ( p[2]->v.e->value == 0 )? ((signed char*)self->buffer)[i] : ((unsigned char*)self->buffer)[i];
 	if( DaoBuf_CheckRange( self, i, sizeof(char), ctx ) ) return;
 	DaoContext_PutInteger( ctx, it );
 }
@@ -3471,7 +3466,7 @@ static void DaoBuf_GetShort( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	int i = p[1]->v.i;
-	int it = p[2]->v.i ? ((signed short*)self->buffer)[i] : ((unsigned short*)self->buffer)[i];
+	int it = ( p[2]->v.e->value == 0 )? ((signed short*)self->buffer)[i] : ((unsigned short*)self->buffer)[i];
 	if( DaoBuf_CheckRange( self, i, sizeof(short), ctx ) ) return;
 	DaoContext_PutInteger( ctx, it );
 }
@@ -3479,7 +3474,7 @@ static void DaoBuf_GetInt( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	int i = p[1]->v.i;
-	int it = p[2]->v.i ? ((signed int*)self->buffer)[i] : ((unsigned int*)self->buffer)[i];
+	int it = ( p[2]->v.e->value == 0 )? ((signed int*)self->buffer)[i] : ((unsigned int*)self->buffer)[i];
 	if( DaoBuf_CheckRange( self, i, sizeof(int), ctx ) ) return;
 	DaoContext_PutInteger( ctx, it );
 }
@@ -3499,7 +3494,7 @@ static void DaoBuf_SetByte( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	if( DaoBuf_CheckRange( self, p[1]->v.i, sizeof(char), ctx ) ) return;
-	if( p[3]->v.i )
+	if( p[3]->v.e->value == 0 )
 		((signed char*)self->buffer)[ p[1]->v.i ] = (signed char)p[2]->v.i;
 	else
 		((unsigned char*)self->buffer)[ p[1]->v.i ] = (unsigned char)p[2]->v.i;
@@ -3508,7 +3503,7 @@ static void DaoBuf_SetShort( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	if( DaoBuf_CheckRange( self, p[1]->v.i, sizeof(short), ctx ) ) return;
-	if( p[3]->v.i )
+	if( p[3]->v.e->value == 0 )
 		((signed short*)self->buffer)[ p[1]->v.i ] = (signed short)p[2]->v.i;
 	else
 		((unsigned short*)self->buffer)[ p[1]->v.i ] = (unsigned short)p[2]->v.i;
@@ -3517,7 +3512,7 @@ static void DaoBuf_SetInt( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoCData *self = p[0]->v.cdata;
 	if( DaoBuf_CheckRange( self, p[1]->v.i, sizeof(int), ctx ) ) return;
-	if( p[3]->v.i )
+	if( p[3]->v.e->value == 0 )
 		((signed int*)self->buffer)[ p[1]->v.i ] = (signed int)p[2]->v.i;
 	else
 		((unsigned int*)self->buffer)[ p[1]->v.i ] = (unsigned int)p[2]->v.i;
@@ -3540,16 +3535,16 @@ static DaoFuncItem cptrMeths[]=
 	{  DaoBuf_Size,        "size( self : cdata )=>int" },
 	{  DaoBuf_Resize,      "resize( self : cdata, size :int )" },
 	{  DaoBuf_CopyData,    "copydata( self : cdata, buf : cdata )" },
-	{  DaoBuf_GetString,   "getstring( self : cdata, mbs=1 )=>string" },
+	{  DaoBuf_GetString,   "getstring( self : cdata, type :enum<mbs, wcs> = $mbs )=>string" },
 	{  DaoBuf_SetString,   "setstring( self : cdata, str : string )" },
-	{  DaoBuf_GetByte,     "getbyte( self : cdata, index : int, signed=1 )=>int" },
-	{  DaoBuf_GetShort,    "getshort( self : cdata, index : int, signed=1 )=>int" },
-	{  DaoBuf_GetInt,      "getint( self : cdata, index : int, signed=1 )=>int" },
+	{  DaoBuf_GetByte,     "getbyte( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
+	{  DaoBuf_GetShort,    "getshort( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
+	{  DaoBuf_GetInt,      "getint( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
 	{  DaoBuf_GetFloat,    "getfloat( self : cdata, index : int )=>float" },
 	{  DaoBuf_GetDouble,   "getdouble( self : cdata, index : int )=>double" },
-	{  DaoBuf_SetByte,     "setbyte( self : cdata, index : int, value: int, signed=1)" },
-	{  DaoBuf_SetShort,    "setshort( self : cdata, index : int, value: int, signed=1)"},
-	{  DaoBuf_SetInt,      "setint( self : cdata, index : int, value: int, signed=1)" },
+	{  DaoBuf_SetByte,     "setbyte( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
+	{  DaoBuf_SetShort,    "setshort( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)"},
+	{  DaoBuf_SetInt,      "setint( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
 	{  DaoBuf_SetFloat,    "setfloat( self : cdata, index : int, value : float )" },
 	{  DaoBuf_SetDouble,   "setdouble( self : cdata, index : int, value : double )" },
 	{ NULL, NULL },

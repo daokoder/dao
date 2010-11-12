@@ -2669,7 +2669,7 @@ static void DaoArray_Lib_Transpose( DaoContext *ctx, DValue *par[], int npar )
 static void DaoArray_Lib_FFT( DaoContext *ctx, DValue *par[], int npar )
 {
 	DaoArray *self = par[0]->v.array;
-	int inv = par[1]->v.i;
+	int inv = ( par[1]->v.e->value == 0 )? -1 : 1;
 	int size = self->size;
 	int m = 0;
 	if( self->numType != DAO_COMPLEX ) return;
@@ -2708,7 +2708,7 @@ static DaoFuncItem numarMeths[] =
 	{ DaoArray_Lib_sorta,     "sorta( self :array, k=0 )" },
 	{ DaoArray_Lib_sortd,     "sortd( self :array, k=0 )" },
 
-	{ DaoArray_Lib_FFT,  "fft( self :array<complex>, inv=-1 )" },
+	{ DaoArray_Lib_FFT,  "fft( self :array<complex>, direct :enum<forward, backward> )" },
 	{ DaoArray_Lib_Iter, "__for_iterator__( self :array<any>, iter : for_iterator )" },
 	{ NULL, NULL }
 };

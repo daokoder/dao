@@ -310,7 +310,7 @@ static void DaoIO_Name( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_SStream( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *stream = DaoStream_New();
-	if( p[0]->v.i == 0 ) DString_ToWCS( stream->streamString );
+	if( p[0]->v.e->value == 1 ) DString_ToWCS( stream->streamString );
 	stream->attribs |= DAO_IO_STRING;
 	DaoContext_SetResult( ctx, (DaoBase*)stream );
 }
@@ -366,6 +366,16 @@ static void DaoIO_GetItem( DaoContext *ctx, DValue *p[], int N )
 	if( self->file && self->file->fd ) tuple[0].v.i = ! feof( self->file->fd );
 }
 
+static void DaoIO_Read2( DaoContext *ctx, DValue *p[], int N )
+{
+	DValue p0 = daoNullStream;
+	DValue p1 = daoZeroInt;
+	DValue *params[2] = {&p0, &p1};
+	p0.v.stream = p[0]->v.stream;
+	p1.v.i = ( p[1]->v.e->value == 0 )? 0 : -1;
+	DaoIO_Read( ctx, params, N );
+}
+
 static DaoFuncItem streamMeths[] =
 {
 	{  DaoIO_Print,     "print( self :stream, ... )const" },
@@ -382,12 +392,13 @@ static DaoFuncItem streamMeths[] =
 	{  DaoIO_Println2,  "writeln( ... )" },
 	{  DaoIO_Flush,     "flush( self :stream )const" },
 	{  DaoIO_Read,      "read( self :stream, count=0 )const=>string" },
+	{  DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )const=>string" },
 	{  DaoIO_Read,      "read( )=>string" },
 	{  DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{  DaoIO_Open,      "open( )=>stream" },
 	{  DaoIO_Open,      "open( file :string, mode :string )=>stream" },
 	{  DaoIO_Popen,     "popen( cmd :string, mode :string )=>stream" },
-	{  DaoIO_SStream,   "sstream(  mbs=1 )=>stream" },
+	{  DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
 	{  DaoIO_GetString, "getstring( self :stream )=>string" },
 	{  DaoIO_Close,     "close( self :stream )" },
 	{  DaoIO_Eof,       "eof( self :stream )=>int" },
