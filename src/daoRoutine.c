@@ -3785,9 +3785,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					rout = (DRoutine*) val.v.routine;
 				}else if( csts[opa].t == DAO_ROUTINE || csts[opa].t == DAO_FUNCTION ){
 					rout = (DRoutine*) csts[opa].v.p;
-				}else if( at->tid == DAO_ANY || at->tid == DAO_FUNCURRY ){
+				}else if( at->tid == DAO_INITYPE || at->tid == DAO_FUNCURRY ){
 					if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, any );
 					AssertTypeMatching( any, type[opc], defs, 0 );
+					break;
+				}else if( at->tid == DAO_UDF || at->tid == DAO_ANY ){
+					if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, any );
 					break;
 				}else if( at->tid == DAO_OBJECT ){
 					rout = (DRoutine*) DaoClass_FindOperator( at->X.klass, "()", hostClass );

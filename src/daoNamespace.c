@@ -691,10 +691,6 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	self->definedRoutines  = DArray_New(0);
 	self->nsLoaded  = DArray_New(0);
 	self->cmodule = DaoCModule_New();
-	//self->cstIndex = DHash_New(D_STRING,0);
-	//self->varIndex = DHash_New(D_STRING,0);
-	self->cstStatic = DHash_New(D_STRING,0);
-	self->varStatic = DHash_New(D_STRING,0);
 	self->macros   = DHash_New(D_STRING,0);
 	self->abstypes = DHash_New(D_STRING,0);
 	self->argParams = DaoList_New();
@@ -801,10 +797,6 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DArray_Delete( self->nsLoaded );
 	DArray_Delete( self->mainRoutines );
 	DArray_Delete( self->definedRoutines );
-	//DMap_Delete( self->cstIndex );
-	//DMap_Delete( self->varIndex );
-	DMap_Delete( self->cstStatic );
-	DMap_Delete( self->varStatic );
 	DMap_Delete( self->macros );
 	DMap_Delete( self->abstypes );
 	DString_Delete( self->file );

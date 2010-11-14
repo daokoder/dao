@@ -81,7 +81,6 @@ struct DaoParser
 	DArray *routCompilable; /* list of defined routines with bodies */
 
 	int    locRegCount;
-	DMap  *varStatic; /* <DString*,int> */
 	DMap  *regForLocVar; /* <int,DaoType*>: registers representing local variables. */
 	DMap  *varFunctional; /* <DString*,int>: variables in functional blocks. */
 

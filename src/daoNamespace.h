@@ -59,14 +59,8 @@ struct DaoNameSpace
 
 	/* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */
 	DVarray  *cstData;
-	//DMap     *cstIndex; /* <DString*,size_t> */
-	DMap     *cstStatic; /* <DString*,size_t> */
-
-	/* global data in the name space: */
-	DVarray  *varData;
-	DArray   *varType;   /* <DaoType*> */
-	//DMap     *varIndex;  /* <DString*,size_t> */
-	DMap     *varStatic;  /* <DString*,size_t> */
+	DVarray  *varData; /* global data in the name space: */
+	DArray   *varType; /* <DaoType*> */
 
 	DaoRoutine *mainRoutine;
     DaoList    *argParams;
