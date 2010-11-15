@@ -118,6 +118,8 @@ struct DaoParser
 	DArray *scoping; /* <size_t> */
 	DArray *errors;
 	DArray *bindtos;
+	DArray *decoFuncs;
+	DArray *decoParams;
 
 	/* members for convenience */
 	DLong     *bigint;

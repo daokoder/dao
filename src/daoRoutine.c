@@ -1836,6 +1836,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	for( ; node !=NULL; node = DMap_Next(self->regForLocVar,node) ){
 		type[ node->key.pInt ] = (DaoType*)node->value.pVoid;
 	}
+	if( self->routName->mbs[0] == '@' && self->routType->nested->size ){
+		DaoType *ftype = self->routType->nested->items.pAbtp[0];
+		if( ftype->tid == DAO_PAR_NAMED && ftype->X.abtype->tid == DAO_ROUTINE ){
+			ftype = ftype->X.abtype;
+			for(i=0; i<ftype->nested->size; i++) init[i+self->parCount] = 1;
+		}
+	}
 	for(i=0, k=0; i<self->routType->nested->size; i++, k++){
 		init[k] = 1;
 		type[k] = self->routType->nested->items.pAbtp[i];
@@ -1999,11 +2006,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_GETI :
 			{
 				csts[opc].cst = csts[opa].cst;
-				init[opc] = 1;
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
 				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+				init[opc] = 1;
 				at = type[opa];
 				bt = type[opb];
 				ct = NULL;
@@ -2275,10 +2282,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_GETF :
 			{
 				int ak = 0;
-				init[opc] = 1;
 				lastcomp = opc;
 				csts[opc].cst = csts[opa].cst;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = NULL;
 				val = routConsts->data[opb];
@@ -2688,9 +2695,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_GETMF :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = any;
 				val = routConsts->data[opb];
@@ -2859,9 +2866,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				break;
 			}
 		case DVM_CAST :
-			init[opc] = 1;
 			lastcomp = opc;
 			AssertInitialized( opa, 0, vmc->middle + 1, vmc->last );
+			init[opc] = 1;
 			if( routConsts->data[opb].t != DAO_TYPE ) goto ErrorTyping;
 			if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 			at = (DaoType*) routConsts->data[opb].v.p;
@@ -2882,9 +2889,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_LOAD :
 			{
 				if( code == DVM_MOVE && csts[opc].cst ) goto ModifyConstant;
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, 0, vmc->middle ? vmc->middle + 1 : 0, vmc->last );
+				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				at = type[opa];
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
@@ -2966,13 +2973,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_ADD : case DVM_SUB : case DVM_MUL :
 		case DVM_DIV : case DVM_MOD : case DVM_POW :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				at = type[opa];
 				bt = type[opb];
 				if( csts[opc].cst ) goto ModifyConstant;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+				init[opc] = 1;
 				ct = NULL;
 				/*
 				   if( type[opa] ) printf( "a: %s\n", type[opa]->name->mbs );
@@ -3074,13 +3081,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_AND : case DVM_OR : case DVM_LT :
 		case DVM_LE :  case DVM_EQ : case DVM_NE :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				at = type[opa];
 				bt = type[opb];
 				if( csts[opc].cst ) goto ModifyConstant;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+				init[opc] = 1;
 				ct = inumt;
 				if( at->tid == DAO_ANY || bt->tid == DAO_ANY
 						|| at->tid == DAO_UDF || bt->tid == DAO_UDF){
@@ -3159,6 +3166,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				break;
 			}
 		case DVM_IN :
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
 			init[opc] = 1;
 			ct = inumt;
 			if( at->tid != DAO_ENUM && bt->tid == DAO_ENUM ) goto InvOper;
@@ -3170,12 +3179,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			break;
 		case DVM_NOT : case DVM_UNMS : case DVM_BITREV :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				/* force the result of DVM_NOT to be a number? */
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				if( csts[opc].cst ) goto ModifyConstant;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				if( type[opc] == NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				if( at->tid ==DAO_UDF || at->tid == DAO_ANY ) continue;
 				AssertTypeMatching( type[opa], type[opc], defs, 0 );
@@ -3196,13 +3205,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
 		case DVM_BITLFT : case DVM_BITRIT :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				at = type[opa];
 				bt = type[opb];
 				if( csts[opc].cst ) goto ModifyConstant;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+				init[opc] = 1;
 				ct = NULL;
 				if( at->tid == DAO_LIST ){
 					if( code != DVM_BITLFT && code != DVM_BITRIT ) goto InvOper;
@@ -3262,21 +3271,21 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_CHECK :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+				init[opc] = 1;
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, inumt );
 				AssertTypeMatching( inumt, type[opc], defs, 0 );
 				break;
 			}
 		case DVM_NAMEVA :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+				init[opc] = 1;
 				ct = DaoNameSpace_MakeType( ns, routConsts->data[opa].v.s->mbs,
 						DAO_PAR_NAMED, (DaoBase*) type[opb], 0, 0 );
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
@@ -3285,11 +3294,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_PAIR :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+				init[opc] = 1;
 				ts[0] = type[opa];
 				ts[1] = type[opb];
 				ct = DaoNameSpace_MakeType( ns, "pair", DAO_PAIR, NULL, ts, 2 );
@@ -3299,10 +3308,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_TUPLE :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
 				k = 1;
 				for(j=0; j<opb; j++){
@@ -3441,9 +3450,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_CURRY :
 		case DVM_MCURRY :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				at = type[opa];
 				ct = NULL;
 				if( at->tid == DAO_TYPE ) at = at->nested->items.pAbtp[0];
@@ -3583,9 +3592,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			break;
 		case DVM_ITER :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, 0, 0, vmc->last );
+				init[opc] = 1;
 				DString_SetMBS( mbs, "__for_iterator__" );
 				ts[0] = dao_type_for_iterator;
 				rout = NULL;
@@ -3635,9 +3644,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				break;
 			}
 		case DVM_MATH :
-			init[opc] = 1;
 			lastcomp = opc;
 			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last - 1 );
+			init[opc] = 1;
 			ct = type[opb];
 			if( ct->tid > DAO_COMPLEX && ct->tid != DAO_ANY ) goto InvParam;
 			if( opa == DVM_MATH_ARG || opa == DVM_MATH_IMAG || opa == DVM_MATH_NORM || opa == DVM_MATH_REAL ){
@@ -3651,9 +3660,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			AssertTypeMatching( ct, type[opc], defs, 0 );
 			break;
 		case DVM_FUNCT :
-			init[opc] = 1;
 			lastcomp = opc;
 			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last - 1 );
+			init[opc] = 1;
 			bt = type[ opb ];
 			j = bt->tid;
 			k = bt->tid != DAO_UDF && bt->tid != DAO_ANY;
@@ -3744,9 +3753,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_CALL : case DVM_MCALL :
 			{
 				int ctchecked = 0;
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				j = type[opa+1] ? type[opa+1]->tid : 0;
 				if( code == DVM_MCALL && j >= DAO_ARRAY && j != DAO_ANY ){
 					DaoVmCodeX *p = vmcs[i+1];
@@ -3801,6 +3810,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				pp = csts+opa+1;
 				tp = type+opa+1;
 				j = vmc->b & 0xff;
+				if( j == DAO_CALLER_PARAM ){
+					j = self->parCount;
+					pp = csts;
+					tp = type;
+				}
 				if( rout == NULL ){
 					if( DRoutine_CheckType( at, ns, bt, pp, tp, j, code, 0, &min, &spec ) ==0 ){
 						goto ErrorTyping;
@@ -3921,9 +3935,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_CLOSURE :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				if( type[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
 				/* close on types */
@@ -4024,12 +4038,17 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 #if USE_TYPED_OPCODE
 		case DVM_CALL_CF :
 		case DVM_CALL_CMF :
-			init[opc] = 1;
 			lastcomp = opc;
 			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			init[opc] = 1;
 			pp = csts+opa+1;
 			tp = type+opa+1;
 			j = vmc->b & 0xff;
+			if( j == DAO_CALLER_PARAM ){
+				j = self->parCount;
+				pp = csts;
+				tp = type;
+			}
 			rout2 = rout = (DRoutine*) csts[opa].v.routine;
 			rout = MatchByParamType( rout, NULL, pp, tp, j, code, &min, &spec );
 			if( rout ==NULL ){
@@ -4050,13 +4069,18 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			break;
 		case DVM_CALL_TC :
 		case DVM_MCALL_TC :
-			init[opc] = 1;
 			lastcomp = opc;
 			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			init[opc] = 1;
 			at = type[opa];
 			pp = csts+opa+1;
 			tp = type+opa+1;
 			j = vmc->b;
+			if( j == DAO_CALLER_PARAM ){
+				j = self->parCount;
+				pp = csts;
+				tp = type;
+			}
 			if( vmc->b > 0xff ) goto ErrorTyping;
 			rout = (DRoutine*) csts[opa].v.routine;
 			if( code == DVM_CALL_TC && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
@@ -4222,7 +4246,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_GETI_LI :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
 				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
@@ -4232,13 +4255,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( at->tid < DAO_ARRAY || at->tid >= DAO_ANY ) goto NotMatch;
 				if( type[opc] ==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				AssertTypeMatching( at, type[opc], defs, 0 );
+				init[opc] = 1;
 				break;
 			}
 		case DVM_GETI_LII : case DVM_GETI_LFI : case DVM_GETI_LDI :
 		case DVM_GETI_AII : case DVM_GETI_AFI : case DVM_GETI_ADI :
 		case DVM_GETI_LSI :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
 				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
@@ -4248,6 +4271,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( bt ==NULL || bt->tid != TT2 ) goto NotMatch;
 				if( type[opc] ==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				AssertTypeIdMatching( type[opc], TT3, 0 );
+				init[opc] = 1;
 				break;
 			}
 		case DVM_SETI_LI :
@@ -4284,12 +4308,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_GETI_TI :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
 				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
 				if( at->tid != TT6 || bt->tid != TT2 ) goto NotMatch;
 				if( type[opc] ==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, any );
+				init[opc] = 1;
 				break;
 			}
 		case DVM_SETI_TI :
@@ -4317,7 +4341,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_GETF_TI : case DVM_GETF_TF :
 		case DVM_GETF_TD : case DVM_GETF_TS :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( init[opa] ==0 ) goto NotInit;
 				if( at ==NULL || at->tid != TT6 ) goto NotMatch;
@@ -4331,6 +4354,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else{
 					AssertTypeMatching( ct, type[opc], defs, 0 );
 				}
+				init[opc] = 1;
 				break;
 			}
 		case DVM_SETF_TII : case DVM_SETF_TIF : case DVM_SETF_TID :
@@ -4375,9 +4399,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 		case DVM_GETF_M :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+				init[opc] = 1;
 				at = type[opa];
 				if( at->typer ==NULL ) goto NotMatch;
 #if 0
@@ -4397,9 +4421,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_GETF_KCD : case DVM_GETF_KGD :
 		case DVM_GETF_OCD : case DVM_GETF_OGD : case DVM_GETF_OVD :
 			{
-				init[opc] = 1;
 				lastcomp = opc;
 				if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+				init[opc] = 1;
 				at = type[opa];
 				klass = (DaoClass*) at->X.extra;
 				ct = NULL;

@@ -31,6 +31,8 @@ struct DArray
 
 		void                **pVoid;
 		struct DaoBase      **pBase;
+		struct DaoList      **pList;
+		struct DaoTuple     **pTuple;
 		struct DaoClass     **pClass;
 		struct DaoObject    **pObject;
 		struct DaoRoutine   **pRout;

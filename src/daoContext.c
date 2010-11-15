@@ -3856,6 +3856,12 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DValue value = daoNullValue;
 #endif
 
+	//printf( "DoCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
+	if( npar == DAO_CALLER_PARAM ){
+		npar = self->parCount;
+		base = self->regArray->data;
+		params = self->regValues;
+	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
 	self->vmc = vmc;
@@ -4240,6 +4246,13 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	DRoutine *rout = NULL;
 	DaoContext *ctx;
 
+	//printf( "DoFastCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
+	//printf( "%i\n", npar );
+	if( npar == DAO_CALLER_PARAM ){
+		npar = self->parCount;
+		base = self->regArray->data;
+		params = self->regValues;
+	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
 	self->vmc = vmc;
@@ -4257,7 +4270,6 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	/*
 	   printf("caller = %i; %i\n", caller.t, npar );
 	   printf("selfpar = %i; %i\n", selfpar->t ? selfpar->t : 0, vmc->a +1 );
-	   printf( "rout = %p %s %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
 	 */
 
 	if( caller.t == DAO_FUNCTION ){
@@ -4308,7 +4320,9 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		DaoObject  *obj = NULL;
 		int inclass = 0;
 		/* rout itself could be a dummy routine */
-		rout = rout->routTable->items.pRout[0];
+		//printf( "rout = %p %s %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
+		//rout = rout->routTable->items.pRout[0];
+		//printf( "rout = %p %s %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
 		ctx = DaoVmProcess_MakeContext( self->process, rout );
 		if( rout->tidHost == DAO_OBJECT ){
 			if( selfpar->t == DAO_OBJECT ){

@@ -200,6 +200,7 @@ static const char* const daoCtInfo[] =
 	"Invalid class definition",
 	"Invalid function definition",
 	"Invalid interface definition",
+	"Invalid function decoration",
 	"Invalid parent class",
 	"Invalid use statement",
 	"Invalid interface binding",

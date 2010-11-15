@@ -3098,7 +3098,7 @@ static void DString_Format( DString *self, int width, int head )
 {
 	int i, j, k = width - head;
 	int  n = self->size - head;
-	char buffer[31];
+	char buffer[32];
 	if( head >= 30 ) head = 30;
 	memset( buffer, ' ', head+1 );
 	buffer[0] = '\n';
