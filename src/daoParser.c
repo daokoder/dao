@@ -4255,6 +4255,9 @@ DecoratorError:
 						if( regC <0 ){
 							DaoParser_DeclareVariable( self, tokens[expStart], 0, NULL );
 							regC = DaoParser_GetRegister( self, exptok );
+							st = LOOKUP_ST( regC );
+							up = LOOKUP_UP( regC );
+							ic = LOOKUP_ID( regC );
 						}
 						switch( st ){
 						case DAO_LOCAL_VARIABLE :
