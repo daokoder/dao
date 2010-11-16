@@ -1541,6 +1541,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		abtp->mapNames = DMap_Copy( routype->mapNames );
 	}
 
+	if( routype->name->mbs[0] == '@' ) DString_AppendChar( abtp->name, '@' );
 	DString_AppendMBS( abtp->name, "routine<" );
 	for(i=0; i<routype->nested->size; i++){
 		if( i >0 ) DString_AppendMBS( abtp->name, "," );

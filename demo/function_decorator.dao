@@ -23,7 +23,7 @@ routine @test( func : routine<index:int=>string>, expected = '' )
 	return res;
 }
 
-@test( 'hello' )
+@test#( 'hello' )
 routine hello( index = 0 )
 {
 	io.writeln( 'calling hello(int)' );
@@ -52,3 +52,9 @@ routine hello( name : string )
 
 io.writeln( '=========test + trace decorator=============' );
 io.writeln( hello( 'abc' ) );
+
+#b = @trace( func );
+io.writeln( std.about( @trace ) );
+
+d = @trace;
+io.writeln( std.about(d) );

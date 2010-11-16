@@ -360,6 +360,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 		break;
 	case DAO_ROUTINE :
+		if( self->name->mbs[0] != type->name->mbs[0] ) return 0; /* @routine */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( self->X.extra == NULL && type->X.extra ) return 0;
 		/* self may have extra parameters, but they must have default values: */
@@ -656,7 +657,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
 	if( self->nested ){
 		if( copy->nested == NULL ) copy->nested = DArray_New(0);
-		for(i=0; i<self->name->size; i++){
+		DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
+		for(i=1; i<self->name->size; i++){
 			char ch = self->name->mbs[i];
 			if( ch < 'a' || ch > 'z' ) break;
 			DString_AppendChar( copy->name, self->name->mbs[i] );

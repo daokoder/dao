@@ -2007,6 +2007,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		DaoTokens_Append( routine->parTokens, DTOK_LB, line, "(" );
 	}
 #endif
+	if( routine->routName->mbs[0] == '@' ) DString_AppendChar( pname, '@' );
 	DString_AppendMBS( pname, "routine<" );
 	i = 1;
 	tki = tokens[i]->name;
@@ -2707,9 +2708,9 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 {
 	DaoRoutine *dc, *best = NULL;
 	DaoType *ft, *tp, **types, **stypes = self->routType->nested->items.pAbtp;
+	DMap *mapNames, *mapids = DMap_New(0,D_STRING);
 	DArray *nested;
 	DNode *it, *node;
-	DMap *mapNames, *mapids = DMap_New(0,D_STRING);
 	int parpass[DAO_MAX_PARAM];
 	float sum, sum2, max = 0;
 	int i, j, k, match;
@@ -2717,7 +2718,6 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 		dc = deco->routTable->items.pRout[i];
 		nested = dc->routType->nested;
 		types = nested->items.pAbtp;
-		if( param == NULL && nested->size > 1 ) continue;
 		if( param && param->items->size >= nested->size ) continue;
 		ft = types[0];
 		if( ft->tid != DAO_PAR_NAMED || ft->X.abtype->tid != DAO_ROUTINE ) continue;
@@ -2734,35 +2734,29 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 			sum += match;
 		}
 		if( mapNames->size ==0 ) sum = 1;
-		if( param == NULL ){
-			sum /= self->routType->nested->size + 1;
-			if( sum > max ){
-				max = sum;
-				best = dc;
-			}
-			continue;
-		}
 		k = 1;
 		for(j=0; j<nested->size; j++) parpass[j] = 0;
-		DMap_Clear( mapids );
-		mapNames = param->unitype->mapNames;
-		for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
-			DMap_Insert( mapids, it->value.pVoid, it->key.pVoid );
-		}
-		for(j=0; j<param->items->size; j++){
-			DValue pv = param->items->data[j];
-			node = MAP_Find( mapids, j );
-			if( node ){
-				node = DMap_Find( dc->routType->mapNames, node->value.pString );
-				if( node == NULL ) goto NextDecorator;
-				k = node->value.pInt;
-				if( k ==0 ) goto NextDecorator;
+		if( param ){
+			DMap_Clear( mapids );
+			mapNames = param->unitype->mapNames;
+			for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
+				DMap_Insert( mapids, it->value.pVoid, it->key.pVoid );
 			}
-			match = DaoType_MatchValue( types[k]->X.abtype, pv, NULL );
-			if( match ==0 ) goto NextDecorator;
-			sum2 += match;
-			parpass[k] = 1;
-			k += 1;
+			for(j=0; j<param->items->size; j++){
+				DValue pv = param->items->data[j];
+				node = MAP_Find( mapids, j );
+				if( node ){
+					node = DMap_Find( dc->routType->mapNames, node->value.pString );
+					if( node == NULL ) goto NextDecorator;
+					k = node->value.pInt;
+					if( k ==0 ) goto NextDecorator;
+				}
+				match = DaoType_MatchValue( types[k]->X.abtype, pv, NULL );
+				if( match ==0 ) goto NextDecorator;
+				sum2 += match;
+				parpass[k] = 1;
+				k += 1;
+			}
 		}
 		for(j=1; j<nested->size; j++){
 			k = types[j]->tid;
@@ -2847,7 +2841,7 @@ static void DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoTupl
 		if( parpass[i] ) continue;
 		if( k != DAO_PAR_DEFAULT ) continue;
 		k = DRoutine_AddConstValue( (DRoutine*)routine, decoFunc->routConsts->data[i] );
-		MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[k]->fname, k );
+		MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[i]->fname, k );
 		parpass[i] = 1;
 	}
 
@@ -6000,12 +5994,15 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 				}
 			}else if( tokens[start]->string->mbs[0] == '@' && tokens[start+1]->name == DTOK_LB ){
 				DaoToken tok = *tokens[start];
-				DString_SetMBS( self->mbs, tokens[start]->string->mbs + 1 );
-				tok.string = self->mbs;
 				regLast = DaoParser_GetRegister( self, & tok );
-				if( regLast < 0 ){
-					DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, self->mbs );
-					return -1;
+				if( regLast <0 ){
+					DString_SetMBS( self->mbs, tokens[start]->string->mbs + 1 );
+					tok.string = self->mbs;
+					regLast = DaoParser_GetRegister( self, & tok );
+					if( regLast < 0 ){
+						DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, self->mbs );
+						return -1;
+					}
 				}
 				regLast = DaoParser_GetNormRegister( self, regLast, start, 0, start );
 			}else{

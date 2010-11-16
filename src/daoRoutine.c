@@ -106,6 +106,70 @@ void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout )
 		DArray_PushBack( self->routTable, rout );
 	}
 }
+static int DaoDecorator_CheckType( DaoType *routType, DValue *csts, DaoType *ts[], int np )
+{
+	DArray *nested = routType->nested;
+	DaoType **types = nested->items.pAbtp;
+#if 0
+	if( np ==0 && nested->size > 1 ) continue;
+	if( param && param->items->size >= nested->size ) continue;
+	ft = types[0];
+	if( ft->tid != DAO_PAR_NAMED || ft->X.abtype->tid != DAO_ROUTINE ) continue;
+	ft = ft->X.abtype;
+	if( ft->nested->size > self->routType->nested->size ) continue;
+	sum = sum2 = 0;
+	mapNames = ft->mapNames;
+	for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
+		tp = ft->nested->items.pAbtp[it->value.pInt];
+		node = DMap_Find( self->routType->mapNames, it->key.pVoid );
+		if( node == NULL ) goto NextDecorator;
+		match = DaoType_MatchTo( tp, stypes[node->value.pInt], NULL );
+		if( match ==0 ) goto NextDecorator;
+		sum += match;
+	}
+	if( mapNames->size ==0 ) sum = 1;
+	if( param == NULL ){
+		sum /= self->routType->nested->size + 1;
+		if( sum > max ){
+			max = sum;
+			best = dc;
+		}
+		continue;
+	}
+	k = 1;
+	for(j=0; j<nested->size; j++) parpass[j] = 0;
+	DMap_Clear( mapids );
+	mapNames = param->unitype->mapNames;
+	for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
+		DMap_Insert( mapids, it->value.pVoid, it->key.pVoid );
+	}
+	for(j=0; j<param->items->size; j++){
+		DValue pv = param->items->data[j];
+		node = MAP_Find( mapids, j );
+		if( node ){
+			node = DMap_Find( dc->routType->mapNames, node->value.pString );
+			if( node == NULL ) goto NextDecorator;
+			k = node->value.pInt;
+			if( k ==0 ) goto NextDecorator;
+		}
+		match = DaoType_MatchValue( types[k]->X.abtype, pv, NULL );
+		if( match ==0 ) goto NextDecorator;
+		sum2 += match;
+		parpass[k] = 1;
+		k += 1;
+	}
+	for(j=1; j<nested->size; j++){
+		k = types[j]->tid;
+		if( k == DAO_PAR_VALIST ) break;
+		if( parpass[j] ) continue;
+		if( k != DAO_PAR_DEFAULT ) goto NextDecorator;
+		parpass[j] = 1;
+		sum2 += 1;
+	}
+	sum = sum / (self->routType->nested->size + 1) + sum2 / nested->size;
+#endif
+	return -1;
+}
 static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *selftype,
 		DValue *csts, DaoType *ts[], int np, int code, int def, int *min, int *spec )
 {
@@ -115,13 +179,17 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 	int parpass[DAO_MAX_PARAM];
 	int npar = np, size = routType->nested->size;
 	int selfChecked = 0, selfMatch = 0;
+	DaoType  *abtp, **partypes = routType->nested->items.pAbtp;
+	DaoType **tps = ts;
 	DValue cs = daoNullValue;
 	DRoutine *rout;
 	DNode *node;
-	DMap *defs = DMap_New(0,0);
-	DaoType  *abtp, **partypes = routType->nested->items.pAbtp;
-	DaoType **tps = ts;
+	DMap *defs;
 
+	if( routType->name->mbs[0] == '@' )
+		return DaoDecorator_CheckType( routType, csts, ts, np );
+
+	defs = DMap_New(0,0);
 	if( routType->nested ){
 		ndef = routType->nested->size;
 		if( ndef ){
