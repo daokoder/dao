@@ -2734,7 +2734,6 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 			sum += match;
 		}
 		if( mapNames->size ==0 ) sum = 1;
-		k = 1;
 		for(j=0; j<nested->size; j++) parpass[j] = 0;
 		if( param ){
 			DMap_Clear( mapids );
@@ -2742,6 +2741,7 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 			for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
 				DMap_Insert( mapids, it->value.pVoid, it->key.pVoid );
 			}
+			k = 1;
 			for(j=0; j<param->items->size; j++){
 				DValue pv = param->items->data[j];
 				node = MAP_Find( mapids, j );
@@ -2857,6 +2857,7 @@ static void DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoTupl
 	DaoParser_Delete( parser );
 	return;
 ErrorDecorator:
+	DaoRoutine_Delete( routine );
 	DaoParser_Delete( parser );
 	DMap_Delete( mapids );
 }

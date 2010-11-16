@@ -53,8 +53,17 @@ routine hello( name : string )
 io.writeln( '=========test + trace decorator=============' );
 io.writeln( hello( 'abc' ) );
 
-#b = @trace( func );
-io.writeln( std.about( @trace ) );
+routine hello2( index = 123 )
+{
+	io.writeln( 'calling hello2(int)' );
+	return 'hello2';
+}
+# running time decoration:
+b = @test( hello2 );
+io.writeln( std.about( b ) );
+io.writeln( b(123) );
+b = @test( b );
+io.writeln( b(123) );
 
 d = @trace;
 io.writeln( std.about(d) );
