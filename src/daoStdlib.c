@@ -919,14 +919,16 @@ static void SYS_Scandir( DaoContext *ctx, DValue *p[], int N )
 	char path[MAX_PATH + 2];
 	int type;
 	unsigned pos;
+#ifdef WIN32
+	intptr_t handle;
+	struct _finddata_t finfo;
+#endif
 	strcpy( path, DString_GetMBS( p[0]->v.s ) );
 	pos = strlen( path );
 	type = p[1]->v.e->value;
 #ifdef WIN32
 	/* Using _findfirst/_findnext for Windows */
 	strcpy( path + pos++, "\\*" );
-	intptr_t handle;
-	struct _finddata_t finfo;
 	handle = _findfirst( path, &finfo );
 	if (handle != -1){
 		DString *str = DString_New( 1 );

@@ -4974,7 +4974,7 @@ int DaoParser_PostParsing( DaoParser *self )
 				DaoInterface *inter = (DaoInterface*) self->bindtos->items.pBase[i];
 				DaoType *type = (DaoType*) self->bindtos->items.pBase[i+1];
 				int first = self->bindtos->items.pInt[i+2];
-				int last  = self->bindtos->items.pInt[i+3];;
+				int last  = self->bindtos->items.pInt[i+3];
 				int count = self->bindtos->items.pInt[i+4];
 				for(j=0; j<count; j++){
 					DRoutine *fail = fails->items.pRout2[j+k];

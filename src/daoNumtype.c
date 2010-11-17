@@ -363,6 +363,13 @@ int DLong_Compare( DLong *x, DLong *y )
 	if( x->sign != y->sign ) return x->sign - y->sign;
 	return x->sign * DLong_UCompare( x, y );
 }
+int DLong_CompareToZero( DLong *self )
+{
+	size_t n = self->size;
+	while( n && self->data[n-1] ==0 ) n -= 1;
+	if( n == 0 ) return 0;
+	return self->sign;
+}
 void DLong_Move( DLong *z, DLong *x )
 {
 	size_t nx = x->size;
@@ -1364,7 +1371,7 @@ static void DaoLong_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue 
 	int w = base_bits[self->base];
 	if( self->base == 2 ){
 		if( pid.t == 0 ){
-			ushort_t bits = digit ? LONG_BASE-1 : 0;;
+			ushort_t bits = digit ? LONG_BASE-1 : 0;
 			for(i=0; i<self->size; i++) self->data[i] = bits;
 		}else{
 			if( digit )
@@ -2069,6 +2076,58 @@ int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
 	default : break;
 	}
 	return 1;
+}
+int DaoArray_Compare( DaoArray *x, DaoArray *y )
+{
+	int *xi = x->data.i, *yi = y->data.i;
+	float *xf = x->data.f, *yf = y->data.f;
+	double *xd = x->data.d, *yd = y->data.d;
+	complex16 *xc = x->data.c, *yc = y->data.c;
+	int min = x->size < y->size ? x->size : y->size;
+	int i = 0, cmp = 0;
+	if( x->numType == DAO_INTEGER && y->numType == DAO_INTEGER ){
+		while( i < min && *xi == *yi ) i++, xi++, yi++;
+		if( i < min ) return *xi < *yi ? -1 : 1;
+	}else if( x->numType == DAO_FLOAT && y->numType == DAO_FLOAT ){
+		while( i < min && *xf == *yf ) i++, xf++, yf++;
+		if( i < min ) return *xf < *yf ? -1 : 1;
+	}else if( x->numType == DAO_DOUBLE && y->numType == DAO_DOUBLE ){
+		while( i < min && *xd == *yd ) i++, xd++, yd++;
+		if( i < min ) return *xd < *yd ? -1 : 1;
+	}else if( x->numType == DAO_COMPLEX && y->numType == DAO_COMPLEX ){
+		while( i < min && xc->real == yc->real && xc->imag == yc->imag ) i++, xc++, yc++;
+		if( i < min ){
+			if( xc->real == yc->real && xc->imag == yc->imag ) return 0;
+			if( xc->real == yc->real ) return xc->imag < yc->imag ? -1 : 1;
+			if( xc->imag == yc->imag ) return xc->real < yc->real ? -1 : 1;
+		}
+	}else if( x->numType == DAO_COMPLEX ){
+		while( i < min && xc->real == DaoArray_GetDouble( y, i ) && xc->imag ==0 ) i++, xc++;
+		if( i < min ){
+			double v = DaoArray_GetDouble( y, i );
+			if( xc->real == v && xc->imag == 0 ) return 0;
+			if( xc->real == v ) return xc->imag < 0 ? -1 : 1;
+			if( xc->imag == 0 ) return xc->real < v ? -1 : 1;
+		}
+	}else if( y->numType == DAO_COMPLEX ){
+		while( i < min && yc->real == DaoArray_GetDouble( x, i ) && yc->imag ==0 ) i++, yc++;
+		if( i < min ){
+			double v = DaoArray_GetDouble( x, i );
+			if( v == yc->real && 0 == yc->imag ) return 0;
+			if( v == yc->real ) return 0 < yc->imag ? -1 : 1;
+			if( 0 == yc->imag ) return v < yc->real ? -1 : 1;
+		}
+	}else{
+		while( i < min && DaoArray_GetDouble( x, i ) == DaoArray_GetDouble( y, i ) ) i++;
+		if( i < min ){
+			double xv = DaoArray_GetDouble( x, i );
+			double yv = DaoArray_GetDouble( y, i );
+			if( xv == yv ) return 0;
+			return xv < yv ? -1 : 1;
+		}
+	}
+	if( x->size == y->size  ) return 0;
+	return x->size > y->size ? 1 : -1;
 }
 void DaoArray_SetItem( DValue *va, DaoContext *ctx, DValue pid, DValue value, int op )
 {

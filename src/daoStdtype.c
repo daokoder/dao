@@ -292,6 +292,7 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 			DaoArray *copy = DaoArray_New( array->numType );
 			copy->unitype = (tp && tp->tid == DAO_ARRAY) ? tp : array->unitype;
 			GC_IncRC( copy->unitype );
+			DaoArray_ResizeArray( copy, array->dims->items.pSize, array->dims->size );
 			DaoArray_CopyArray( copy, array );
 			return (DaoBase*) copy;
 		}

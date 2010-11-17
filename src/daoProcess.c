@@ -823,7 +823,7 @@ CallEntry:
 	if( (vmSpace->options & DAO_EXEC_SAFE) && self->topFrame->index >= 100 ){
 		DaoContext_RaiseException( topCtx, DAO_ERROR,
 				"too deep recursion for safe running mode." );
-		goto FinishProc;;
+		goto FinishProc;
 	}
 #endif
 

@@ -45,6 +45,7 @@ const DValue daoNullStream = { DAO_STREAM, 0, 0, 0, {0}};
 const DValue daoNullType = { DAO_TYPE, 0, 0, 0, {0}};
 #endif
 
+int DaoArray_Compare( DaoArray *x, DaoArray *y );
 
 int DValue_Compare( DValue left, DValue right )
 {
@@ -135,6 +136,22 @@ int DValue_Compare( DValue left, DValue right )
 		}else if( lt->items->size > rt->items->size ){
 			return 1;
 		}
+	}else if( left.t == DAO_LIST && right.t == DAO_LIST ){
+		DaoList *list1 = left.v.list;
+		DaoList *list2 = right.v.list;
+		DValue *d1 = list1->items->data;
+		DValue *d2 = list2->items->data;
+		int size1 = list1->items->size;
+		int size2 = list2->items->size;
+		int min = size1 < size2 ? size1 : size2;
+		int i = 0, cmp = 0;
+		/* find the first unequal items */
+		while( i < min && (cmp = DValue_Compare(*d1, *d2)) ==0 ) i++, d1++, d2++;
+		if( i < min ) return cmp;
+		if( size1 == size2  ) return 0;
+		return size1 > size2 ? 1 : -1;
+	}else if( left.t == DAO_ARRAY && right.t == DAO_ARRAY ){
+		return DaoArray_Compare( left.v.array, right.v.array );
 	}else if( left.t == DAO_CDATA && right.t == DAO_CDATA ){
 		return (int)( (size_t)right.v.cdata->data - (size_t)left.v.cdata->data );
 	}else if( left.t != right.t ){

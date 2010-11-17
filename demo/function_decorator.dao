@@ -55,7 +55,7 @@ io.writeln( hello( 'abc' ) );
 
 routine hello2( index = 123 )
 {
-	io.writeln( 'calling hello2(int)' );
+	io.writeln( 'calling hello2(int)', index );
 	return 'hello2';
 }
 # running time decoration:
@@ -67,3 +67,7 @@ io.writeln( b(123) );
 
 d = @trace;
 io.writeln( std.about(d) );
+
+e = d(b);
+
+e(789);

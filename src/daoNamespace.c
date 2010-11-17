@@ -906,7 +906,7 @@ int  DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name )
 }
 int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, DaoType *tp, int pm )
 {
-	DaoType *abtp = DaoNameSpace_GetTypeV( self, value );;
+	DaoType *abtp = DaoNameSpace_GetTypeV( self, value );
 	DNode *node = MAP_Find( self->lookupTable, name );
 	DValue *dest;
 	int up, id = 0;

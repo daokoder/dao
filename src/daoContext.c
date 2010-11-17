@@ -1580,7 +1580,7 @@ void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue dA = self->routine->routConsts->data[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
-	DaoPair *pair = DaoPair_New( dA, dB );;
+	DaoPair *pair = DaoPair_New( dA, dB );
 	pair->type = DAO_PAR_NAMED;
 	pair->unitype = self->regTypes[ vmc->c ];
 	if( pair->unitype == NULL ){
@@ -1596,7 +1596,7 @@ void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 	DaoType *tp[2];
 	DValue dA = *self->regValues[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
-	DaoPair *pair = DaoPair_New( dA, dB );;
+	DaoPair *pair = DaoPair_New( dA, dB );
 	pair->unitype = self->regTypes[ vmc->c ];
 	if( pair->unitype == NULL ){
 		tp[0] = DaoNameSpace_GetTypeV( self->nameSpace, pair->first );
@@ -2524,6 +2524,16 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		case DVM_NE:  dC.v.i = (dA.v.c->real != dB.v.c->real) || (dA.v.c->imag != dB.v.c->imag); break;
 		default: break;
 		}
+	}else if( dA.t == DAO_LONG && dB.t == DAO_LONG ){
+		switch( vmc->code ){
+		case DVM_AND: dC = DLong_CompareToZero( dA.v.l ) ? dB : dA; break;
+		case DVM_OR:  dC = DLong_CompareToZero( dA.v.l ) ? dA : dB; break;
+		case DVM_LT:  dC.v.i = DLong_Compare( dA.v.l, dB.v.l )< 0; break;
+		case DVM_LE:  dC.v.i = DLong_Compare( dA.v.l, dB.v.l )<=0; break;
+		case DVM_EQ:  dC.v.i = DLong_Compare( dA.v.l, dB.v.l )==0; break;
+		case DVM_NE:  dC.v.i = DLong_Compare( dA.v.l, dB.v.l )!=0; break;
+		default: break;
+		}
 	}else if( dA.t == DAO_STRING && dB.t == DAO_STRING ){
 		switch( vmc->code ){
 		case DVM_AND: dC = DString_Size( dA.v.s ) ? dB : dA; break;
@@ -2545,18 +2555,30 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		case DVM_NE:  dC.v.i = DValue_Compare( dA, dB ) != 0; break;
 		default: break;
 		}
+	}else if( vmc->code == DVM_AND || vmc->code == DVM_OR ){
+		DValue AA = dA, BB = dB;
+		if( vmc->code == DVM_OR ){ AA = dB; BB = dA; }
+		switch( dA.t ){
+		case DAO_INTEGER : dC = dA.v.i ? BB : AA; break;
+		case DAO_FLOAT   : dC = dA.v.f ? BB : AA; break;
+		case DAO_DOUBLE  : dC = dA.v.d ? BB : AA; break;
+		case DAO_COMPLEX : dC = dA.v.c->real && dA.v.c->imag ? BB : AA; break;
+		case DAO_LONG : dC = DLong_CompareToZero( dA.v.l ) ? BB : AA; break;
+		case DAO_STRING : dC = DString_Size( dA.v.s ) ? BB : AA; break;
+		case DAO_ENUM : dC = dA.v.e->value ? BB : AA; break;
+		case DAO_LIST : dC = dA.v.list->items->size ? BB : AA; break;
+		case DAO_MAP  : dC = dA.v.map->items->size ? BB : AA; break;
+		case DAO_ARRAY : dC = dA.v.array->size ? BB : AA; break;
+		default : dC = dA.t ? BB : AA; break;
+		}
 	}else{
-#if 0
 		switch( vmc->code ){
-		case DVM_AND: dC = dA ? dB : dA; break;
-		case DVM_OR:  dC = dA ? dA : dB; break;
-		case DVM_LT: dC.v.i = dA < dB; break;
-		case DVM_LE: dC.v.i = dA <= dB; break;
-		case DVM_EQ: dC.v.i = dA == dB; break; /*XXX numarray*/
-		case DVM_NE: dC.v.i = dA != dB; break;
+		case DVM_LT: dC.v.i = DValue_Compare( dA, dB )< 0; break;
+		case DVM_LE: dC.v.i = DValue_Compare( dA, dB )<=0; break;
+		case DVM_EQ: dC.v.i = DValue_Compare( dA, dB )==0; break; /*XXX numarray*/
+		case DVM_NE: dC.v.i = DValue_Compare( dA, dB )!=0; break;
 		default: break;
 		}
-#endif
 	}
 	DaoContext_SetValue( self, vmc->c, dC );
 }

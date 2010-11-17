@@ -3281,17 +3281,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						ct = inumt;
 						if( code < DVM_EQ ) goto InvOper;
 						break;
+					case DAO_LONG :
 					case DAO_STRING :
+					case DAO_LIST :
+					case DAO_ARRAY :
 						if( code > DVM_OR ) ct = inumt; break;
 					case DAO_ENUM :
 						ct = inumt;
-						break;
-					case DAO_ARRAY :
-						if( code <= DVM_OR )
-							ct = at;
-						else if( code >= DVM_EQ )
-							ct = inumt;
-						else goto InvOper;
 						break;
 					case DAO_TUPLE :
 						ct = inumt;

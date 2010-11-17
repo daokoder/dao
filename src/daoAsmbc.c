@@ -380,7 +380,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 				abtp = NULL;
 				if( *P == 'T' ){
 					P = NextToken( P, tok, '$', bc );
-					abtp = (DaoType*) AsmGetConst( consts, tok, 'T' );;
+					abtp = (DaoType*) AsmGetConst( consts, tok, 'T' );
 					if( abtp == NULL ) goto InvalidFormat;
 				}
 				if( klass && routine ==NULL ){
@@ -401,7 +401,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 				dbase = NULL;
 				if( *P == 'T' ){
 					P = NextToken( P, tok, '$', bc );
-					abtp = (DaoType*) AsmGetConst( consts, tok, 'T' );;
+					abtp = (DaoType*) AsmGetConst( consts, tok, 'T' );
 					if( abtp == NULL ) goto InvalidFormat;
 				}
 				if( *P !='\n' ){
