@@ -2449,6 +2449,7 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 	DValue dA = *A, dB = *B;
 	DValue dC = daoZeroInt;
 	int rc = 0;
+	DLong *lng;
 
 	self->vmc = vmc;
 
@@ -2534,6 +2535,32 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		case DVM_NE:  dC.v.i = DLong_Compare( dA.v.l, dB.v.l )!=0; break;
 		default: break;
 		}
+	}else if( dA.t == DAO_INTEGER && dB.t == DAO_LONG ){
+		lng = DLong_New();
+		DLong_FromInteger( lng, dA.v.i );
+		switch( vmc->code ){
+		case DVM_AND: dC = dA.v.i ? dB : dA; break;
+		case DVM_OR:  dC = dA.v.i ? dA : dB; break;
+		case DVM_LT:  dC.v.i = DLong_Compare( lng, dB.v.l )< 0; break;
+		case DVM_LE:  dC.v.i = DLong_Compare( lng, dB.v.l )<=0; break;
+		case DVM_EQ:  dC.v.i = DLong_Compare( lng, dB.v.l )==0; break;
+		case DVM_NE:  dC.v.i = DLong_Compare( lng, dB.v.l )!=0; break;
+		default: break;
+		}
+		DLong_Delete( lng );
+	}else if( dA.t == DAO_LONG && dB.t == DAO_INTEGER ){
+		lng = DLong_New();
+		DLong_FromInteger( lng, dB.v.i );
+		switch( vmc->code ){
+		case DVM_AND: dC = DLong_CompareToZero( dA.v.l ) ? dB : dA; break;
+		case DVM_OR:  dC = DLong_CompareToZero( dA.v.l ) ? dA : dB; break;
+		case DVM_LT:  dC.v.i = DLong_Compare( dA.v.l, lng )< 0; break;
+		case DVM_LE:  dC.v.i = DLong_Compare( dA.v.l, lng )<=0; break;
+		case DVM_EQ:  dC.v.i = DLong_Compare( dA.v.l, lng )==0; break;
+		case DVM_NE:  dC.v.i = DLong_Compare( dA.v.l, lng )!=0; break;
+		default: break;
+		}
+		DLong_Delete( lng );
 	}else if( dA.t == DAO_STRING && dB.t == DAO_STRING ){
 		switch( vmc->code ){
 		case DVM_AND: dC = DString_Size( dA.v.s ) ? dB : dA; break;

@@ -3303,6 +3303,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE
 						&& bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE ){
 					ct = at->tid > bt->tid ? at : bt;
+				}else if( at->tid == DAO_INTEGER && bt->tid == DAO_LONG
+						|| at->tid == DAO_LONG && bt->tid == DAO_INTEGER ){
+					ct = at->tid == DAO_INTEGER ? at : bt;
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
 				}
