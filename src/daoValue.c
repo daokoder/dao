@@ -257,6 +257,25 @@ complex16 DValue_GetComplex( DValue self )
 	}
 	return com;
 }
+DLong* DValue_GetLong( DValue val, DLong *lng )
+{
+	switch( val.t ){
+	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
+		DLong_FromInteger( lng, DValue_GetInteger( val ) );
+		break;
+	case DAO_COMPLEX :
+		DLong_FromInteger( lng, val.v.c->real );
+		break;
+	case DAO_LONG :
+		DLong_Move( lng, val.v.l );
+		break;
+	case DAO_STRING :
+		DLong_FromString( lng, val.v.s );
+		break;
+	default : break; /* TODO list array? */
+	}
+	return lng;
+}
 DString* DValue_GetString( DValue val, DString *str )
 {
 	char chs[100] = {0};

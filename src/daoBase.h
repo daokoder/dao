@@ -110,7 +110,7 @@ typedef void     (*DelPtr)( DaoBase * );
 #define STRCMP( x, y ) strcmp( (x)->mbs, y )
 #define TOKCMP( x, y ) strcmp( (x)->string->mbs, y )
 
-/* bit structure of look up index: S4P2U12I16 */
+/* bit structure of lookup index: S4P2U12I16 */
 /* S: storage; P: permission; U: up/parent; I: index*/
 #define LOOKUP_BIND( st, pm, up, id )  (((st)<<28)|((pm)<<26)|((up)<<16)|id)
 

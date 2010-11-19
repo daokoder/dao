@@ -58,6 +58,13 @@ struct DaoClass
 	DMap     *abstypes;
 	DMap     *deflines;
 
+	/* When DaoClass is used as a proto-class structure,
+	 * protoValues map upvalue register ids to member lookup ids.
+	 * so that those upvalues can be used to set the constant or
+	 * default values of the fields in the classes created from 
+	 * this proto-class. */
+	DMap     *protoValues; /* <int,int> */
+
 	ushort_t  derived;
 	ushort_t  attribs;
 };

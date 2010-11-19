@@ -70,6 +70,8 @@ enum DaoOpcode
 	DVM_MATRIX , /* matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.*/
 	DVM_CURRY , /* class_or_routine_name: A{ A+1, ..., A+B } */
 	DVM_MCURRY , /* object.method: A{ A+1, ..., A+B } */
+	DVM_ROUTINE , /* create a function, possibly with closure */
+	DVM_CLASS , /* create a class, C = class( A ){ B }, A: a tuple, B: a proto-class */
 	DVM_GOTO , /* go to B; */
 	DVM_SWITCH , /* A: variable, B: location of default codes, C: number of cases */
 	DVM_CASE , /* A: constant of the case, B: location of the case codes, C: case mode */
@@ -80,7 +82,6 @@ enum DaoOpcode
 	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters;
 				  call with caller's params C = A( 0, 1, ... ), if B==DAO_CALLER_PARAM. */
 	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
-	DVM_CLOSURE , /* create a function closure */
 	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:
 				  A,A+1,..,A+B-2; If B==1, no exception to raise or rescue. */
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */

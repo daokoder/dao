@@ -4817,13 +4817,15 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 		st = LOOKUP_ST( i );
 		up = LOOKUP_UP( i );
 		id = LOOKUP_ID( i );
-		if( st > DAO_LOCAL_CONSTANT || up ){ /* XXX */
+		if( st > DAO_LOCAL_CONSTANT && st < DAO_GLOBAL_VARIABLE ){
 			DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, name );
 			DaoParser_Suggest( self,
 					"only can access up-level local constants or variables" );
 			return -1;
 		}
 		if( i >=0 ){
+			routine->upRoutine = self->outParser->routine;
+			GC_IncRC( routine->upRoutine );
 			MAP_Insert( self->regForLocVar, self->locRegCount, NULL );
 			MAP_Insert( DArray_Top( self->localVarMap ), name, self->locRegCount );
 			if( st == DAO_LOCAL_VARIABLE ){
@@ -6967,33 +6969,6 @@ static int DaoParser_StripParenthesis( DaoParser *self, int *start, int *end )
  *   return bar;
  * }
  *
- * TYPE, DEFAULT : may be var from the outer function;
- * code_block : may also contain var from the outer function;
- *
- * XXX: outdated comments
- *
- * Implementation:
- * (1) It will be compile into a virtual machine instruction:
- *       DVM_CLOSURE A, A+1, A+2, ..., A+B, C
- *     where rout_proto is the routine compiled here, and upv?s are the register
- *     index of the var (up values) from the outer function, loc?s are the
- *     register id of the local constant.
- * (2) The parser will check for TYPE and DEFAULT, if it is var from the outer,
- *     a. label it as an up value;
- *     b. add a constant in rout_proto:
- *        loc? = DRoutine_AddConst( rout_proto, DATA[upv?] );
- *     c. parTypeREGID: loc?+DVR_LOC_CST;
- * (3) The parser will check variable in code_block, if it is a var from the outer,
- *     a. label it as an up value;
- *     b. add a constant in rout_proto:
- *        loc? = DRoutine_AddConst( rout_proto, DATA[upv?] );
- *     c. declare variable with the name of the outer var, with register id: reg?;
- *     d. add vm code: LOAD loc?+DVR_LOC_CST, 0, reg?
- * (4) When DVM_CLOSURE is interperited:
- *     a. create a copy of rout_proto: rout_copy;
- *     b. for each pair (loc?, upv?), get var from the outer and put to the const
- *        of rout_copy.
- *     c. update the parameter information of rout_copy;
  */
 static int DaoParser_ExpClosure( DaoParser *self, int start, int end, int regFix )
 {
@@ -7027,8 +7002,6 @@ static int DaoParser_ExpClosure( DaoParser *self, int start, int end, int regFix
 	}
 	parser = DaoParser_New();
 	rout = DaoRoutine_New();
-	rout->upRoutine = self->routine;
-	GC_IncRC( rout->upRoutine );
 	parser->routine = rout;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
 	GC_ShiftRC( self->nameSpace, rout->nameSpace );
@@ -7204,8 +7177,8 @@ static int DaoParser_ExpClosure( DaoParser *self, int start, int end, int regFix
 		regFix = self->locRegCount;
 		DaoParser_PushRegister( self );
 	}
-	/* DVM_CLOSURE rout_proto, upv1, upv2, ..., regFix */
-	DaoParser_AddCode( self, DVM_CLOSURE, regCall, uplocs->size, regFix, 0,0,0/*XXX*/ );
+	/* DVM_ROUTINE rout_proto, upv1, upv2, ..., regFix */
+	DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size, regFix, 0,0,0/*XXX*/ );
 	DString_Delete( pname );
 	DString_Delete( mbs );
 	DArray_Delete( uplocs );

@@ -92,7 +92,7 @@ extern void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc );
 extern int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc );
 
 extern void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc );
+extern void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc );
 
 static int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DValue *c, DValue p );
 
@@ -617,12 +617,12 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_MAP    , && LAB_HASH ,
 		&& LAB_ARRAY  , && LAB_MATRIX ,
 		&& LAB_CURRY  , && LAB_MCURRY ,
+		&& LAB_ROUTINE , && LAB_CLASS ,
 		&& LAB_GOTO ,
 		&& LAB_SWITCH , && LAB_CASE ,
 		&& LAB_ITER , && LAB_TEST ,
 		&& LAB_MATH , && LAB_FUNCT ,
 		&& LAB_CALL , && LAB_MCALL ,
-		&& LAB_CLOSURE ,
 		&& LAB_CRRE ,
 		&& LAB_JITC ,
 		&& LAB_JOINT ,
@@ -1247,10 +1247,12 @@ CallEntry:
 				if( self->stopit | vmSpace->stopit ) goto FinishProc;
 				DaoContext_DoCall( topCtx, vmc );
 				goto CheckException;
-			}OPNEXT()
-		OPCASE( CLOSURE ){
+		}OPNEXT()
+		OPCASE( ROUTINE ){
 			topCtx->vmc = vmc;
-			DaoContext_DoClose( topCtx, vmc );
+			DaoContext_MakeRoutine( topCtx, vmc );
+		}OPNEXT()
+		OPCASE( CLASS ){
 		}OPNEXT()
 		OPCASE( CRRE ){
 			DaoContext_CheckFE( topCtx );

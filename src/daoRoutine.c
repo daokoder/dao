@@ -1279,6 +1279,8 @@ static const char vmcTyping[][7] =
 	{ OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MATRIX */
 	{ OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_CURRY */
 	{ OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_MCURRY */
+	{ OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_ROUTINE */
+	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_CLASS */
 	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_GOTO */
 	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SWITCH */
 	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_CASE */
@@ -1288,7 +1290,6 @@ static const char vmcTyping[][7] =
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_FUNCT */
 	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_CALL */
 	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_MCALL */
-	{ OT_EXP, 'A',   0, -1, -1, -1,  -1 } , /* DVM_CLOSURE */
 	{ OT_EXP,   0, 'B', -1, -1, -1,  -1 } , /* DVM_CRRE */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JITC */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JOINT */
@@ -3303,8 +3304,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE
 						&& bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE ){
 					ct = at->tid > bt->tid ? at : bt;
-				}else if( at->tid == DAO_INTEGER && bt->tid == DAO_LONG
-						|| at->tid == DAO_LONG && bt->tid == DAO_INTEGER ){
+				}else if( (at->tid == DAO_INTEGER && bt->tid == DAO_LONG)
+						|| (at->tid == DAO_LONG && bt->tid == DAO_INTEGER) ){
 					ct = at->tid == DAO_INTEGER ? at : bt;
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
@@ -4125,7 +4126,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				vmc->code += DVM_CALL_TC - DVM_CALL;
 				break;
 			}
-		case DVM_CLOSURE :
+		case DVM_ROUTINE :
 			{
 				lastcomp = opc;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
@@ -4152,6 +4153,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				csts[opc] = csts[opa];
 				break;
 			}
+		case DVM_CLASS :
+			break;
 		case DVM_RETURN :
 		case DVM_YIELD :
 			{

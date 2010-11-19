@@ -57,6 +57,7 @@ llong_t DValue_GetInteger( DValue val );
 float  DValue_GetFloat( DValue val );
 double DValue_GetDouble( DValue val );
 complex16 DValue_GetComplex( DValue val );
+DLong* DValue_GetLong( DValue val, DLong *lng );
 DString* DValue_GetString( DValue val, DString *str );
 
 int DValue_FromString( DValue *self, DString *str, int type );

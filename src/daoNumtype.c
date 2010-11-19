@@ -865,11 +865,11 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 	while(nx >0 && x->data[nx-1] ==0 ) nx--;
 	while(nz >0 && z->data[nz-1] ==0 ) nz--;
 	DLong_Move( r, z );
-	y->size = 0;
 	y->sign = z->sign * x->sign;
 	if( nz < nx ) return;
 	if( nx ==0 ){
 		/* XXX error */
+		y->size = 0;
 		return;
 	}else if( nx == 1 ){
 		DLong_Move( y, z );
@@ -877,6 +877,7 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 		r->data[0] = DLong_UDivDigit( y, x->data[0] );
 		return;
 	}
+	y->size = 0; /* z might be y */
 	mul = DLong_New();
 	r2 = DLong_New();
 	pbase = r->data;

@@ -2121,8 +2121,7 @@ ArithError:
 	DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
 	return 0;
 }
-	static void DaoContext_LongDiv
-( DaoContext *self, DLong *z, DLong *x, DLong *y, DLong *r )
+static void DaoContext_LongDiv ( DaoContext *self, DLong *z, DLong *x, DLong *y, DLong *r )
 {
 	if( x->size ==0 || (x->size ==1 && x->data[0] ==0) ){
 		self->idClearFE = self->vmc - self->codes;
@@ -3814,6 +3813,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 			case DAO_FLOAT   : vc->v.f = DValue_GetFloat( va );  break;
 			case DAO_DOUBLE  : vc->v.d = DValue_GetDouble( va ); break;
 			case DAO_COMPLEX : *vc->v.c = DValue_GetComplex( va ); break;
+			case DAO_LONG    : DValue_GetLong( va, vc->v.l ); break;
 			case DAO_STRING  : DValue_GetString( va, vc->v.s ); break;
 			default : break;
 			}
@@ -4545,7 +4545,7 @@ void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload );
-void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc )
+void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue **pp = self->regValues + vmc->a;
 	DValue *pp2;
@@ -4561,10 +4561,12 @@ void DaoContext_DoClose( DaoContext *self, DaoVmCode *vmc )
 	}
 
 	closure = DaoRoutine_Copy( proto, 0 );
-	closure->upRoutine = self->routine;
-	closure->upContext = self;
-	GC_IncRC( self );
-	GC_IncRC( self->routine );
+	if( proto->upRoutine ){
+		closure->upRoutine = self->routine;
+		closure->upContext = self;
+		GC_IncRC( self );
+		GC_IncRC( self->routine );
+	}
 	pp2 = closure->routConsts->data;
 	for(i=0; i<vmc->b; i+=2) DValue_Copy( pp2 + pp[i+2]->v.i, *pp[i+1] );
 	tp = DaoNameSpace_MakeRoutType( self->nameSpace, closure->routType, pp2, NULL, NULL );

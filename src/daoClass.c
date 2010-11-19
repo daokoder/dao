@@ -120,6 +120,7 @@ DaoClass* DaoClass_New()
 	self->superClass   = DArray_New(0);
 	self->superAlias   = DArray_New(D_STRING);
 	self->objDataDefault  = DVarray_New();
+	self->protoValues = NULL;
 	return self;
 }
 void DaoClass_Delete( DaoClass *self )
@@ -147,6 +148,7 @@ void DaoClass_Delete( DaoClass *self )
 	DArray_Delete( self->superClass );
 	DArray_Delete( self->superAlias );
 	DVarray_Delete( self->objDataDefault );
+	if( self->protoValues ) DMap_Delete( self->protoValues );
 
 	DString_Delete( self->className );
 	DString_Delete( self->classHelp );
