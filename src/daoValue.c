@@ -171,7 +171,29 @@ llong_t DValue_GetLongLong( DValue self )
 }
 llong_t DValue_GetInteger( DValue self )
 {
-	return (llong_t) DValue_GetDouble( self );
+	DString *str;
+	switch( self.t ){
+	case DAO_INTEGER :
+		return self.v.i;
+	case DAO_FLOAT   :
+		return self.v.f;
+	case DAO_DOUBLE  :
+		return self.v.d;
+	case DAO_COMPLEX :
+		return self.v.c->real;
+	case DAO_LONG :
+		return DLong_ToInteger( self.v.l );
+	case DAO_ENUM  :
+		return self.v.e->value;
+	case DAO_STRING  :
+		str = self.v.s;
+		if( DString_IsMBS( str ) )
+			return strtod( str->mbs, 0 );
+		else
+			return wcstod( str->wcs, 0 );
+	default : break;
+	}
+	return 0;
 }
 float DValue_GetFloat( DValue self )
 {
