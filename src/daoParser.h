@@ -99,6 +99,7 @@ struct DaoParser
 	char topAsGlobal;
 	char isClassBody;
 	char isInterBody;
+	char isDynamicClass;
 	char permission;
 	char warnAssn;
 	char pairLtGt; /* <> */
@@ -109,7 +110,6 @@ struct DaoParser
 	DaoType      *selfParam; /* type "self:host" */
 	DaoParser    *outParser;
 
-	int outOffset;
 	int curLine;
 	int lineCount;
 	short indent;

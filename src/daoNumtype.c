@@ -370,6 +370,56 @@ int DLong_CompareToZero( DLong *self )
 	if( n == 0 ) return 0;
 	return self->sign;
 }
+int DLong_CompareToInteger( DLong *self, dint x )
+{
+	int i, n = self->size - 1, m = (sizeof(dint)*8) / LONG_BITS;
+	if( self->sign < 0 && x > 0 ) return -1;
+	if( self->sign > 0 && x < 0 ) return  1;
+	x = abs( x );
+	while( m > 0 && ((x>>(m*LONG_BITS)) & LONG_MASK) ==0 ) m -= 1;
+	while( n > 0 && self->data[n] == 0 ) n -= 1; /* bit array has leading 0 */
+	if( n > m ) return self->sign;
+	if( n < m ) return - self->sign;
+	for(i=m; i>=0; i--){
+		ushort_t d = (x>>(i*LONG_BITS)) & LONG_MASK;
+		if( self->data[i] > d ) return self->sign;
+		if( self->data[i] < d ) return - self->sign;
+	}
+	return 0;
+}
+int DLong_CompareToDouble( DLong *self, double x )
+{
+	double prod, frac;
+	int i, expon, bit, bit2, res;
+
+	if( self->sign > 0 && x < 0 ) return 1;
+	if( self->sign < 0 && x > 0 ) return -1;
+
+	frac = frexp( fabs( x ), & expon );
+	if( expon <=0 ){ /* |x|<1 */
+		res = DLong_CompareToZero( self );
+		if( res ==0 ) return 0 < x ? -1 : 1;
+		return self->sign;
+	}
+
+	for(i=self->size*LONG_BITS-1; i>=expon; i--){ /* check extra bits */
+		bit = (self->data[i/LONG_BITS] & (1<<(i%LONG_BITS)))>>(i%LONG_BITS);
+		if( bit ) return self->sign;
+	}
+
+	/* compare integer part bit by bit */
+	while( expon ){
+		expon -= 1;
+		prod = frac * 2;
+		bit = (int) prod;
+		frac = prod - bit;
+		bit2 = (self->data[expon/LONG_BITS] & (1<<(expon%LONG_BITS)))>>(expon%LONG_BITS);
+		if( bit != bit2 ) return bit - bit2;
+	}
+	/* integer part is equal: */
+	if( frac ) return - self->sign;
+	return 0;
+}
 void DLong_Move( DLong *z, DLong *x )
 {
 	size_t nx = x->size;
@@ -1277,7 +1327,7 @@ void DLong_FromDouble( DLong *self, double value )
 
 	DLong_Resize( self, expon / LONG_BITS + 1 );
 	/* convert bit by bit */
-	while( frac > 0 ){
+	while( frac > 0 && expon ){
 		expon -= 1;
 		prod = frac * 2;
 		bit = (int) prod;

@@ -93,6 +93,7 @@ extern int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc );
 
 extern void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc );
+extern void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc );
 
 static int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DValue *c, DValue p );
 
@@ -1253,6 +1254,8 @@ CallEntry:
 			DaoContext_MakeRoutine( topCtx, vmc );
 		}OPNEXT()
 		OPCASE( CLASS ){
+			topCtx->vmc = vmc;
+			DaoContext_MakeClass( topCtx, vmc );
 		}OPNEXT()
 		OPCASE( CRRE ){
 			DaoContext_CheckFE( topCtx );

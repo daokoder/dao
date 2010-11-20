@@ -2175,6 +2175,7 @@ DaoVmSpace* DaoInit()
 	int i;
 	DaoVmSpace *vms;
 	DaoNameSpace *ns;
+	DaoFunction *func;
 	DString *mbs;
 
 	if( mainVmSpace ) return mainVmSpace;
@@ -2217,7 +2218,7 @@ DaoVmSpace* DaoInit()
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
-	dao_class_any = DaoType_New( "class", DAO_CLASS, DaoClass_New(), NULL );
+	dao_class_any = DaoType_New( "class", DAO_CLASS, (DaoBase*)DaoClass_New(), NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;

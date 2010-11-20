@@ -157,6 +157,7 @@ void DaoClass_Delete( DaoClass *self )
 void DaoClass_SetName( DaoClass *self, DString *name )
 {
 	DaoRoutine *rout = DaoRoutine_New();
+	DString *str = DString_New(1);
 	DValue value = daoNullClass;
 
 	rout->refCount --;
@@ -170,8 +171,8 @@ void DaoClass_SetName( DaoClass *self, DString *name )
 	DString_InsertMBS( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
 	self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoBase*)self, NULL );
-	DString_SetMBS( self->className, "self" );
-	DaoClass_AddObjectVar( self, self->className, daoNullValue, self->objType, DAO_DATA_PRIVATE, -1 );
+	DString_SetMBS( str, "self" );
+	DaoClass_AddObjectVar( self, str, daoNullValue, self->objType, DAO_DATA_PRIVATE, -1 );
 	DString_Assign( self->className, name );
 	DaoClass_AddType( self, name, self->objType );
 
@@ -188,6 +189,7 @@ void DaoClass_SetName( DaoClass *self, DString *name )
 	value.t = DAO_ROUTINE;
 	value.v.routine = rout;
 	DaoClass_AddConst( self, rout->routName, value, DAO_DATA_PRIVATE, -1 );
+	DString_Delete( str );
 }
 /* breadth-first search */
 void DaoClass_Parents( DaoBase *self, DArray *parents, DArray *offsets )

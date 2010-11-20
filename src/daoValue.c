@@ -282,8 +282,11 @@ complex16 DValue_GetComplex( DValue self )
 DLong* DValue_GetLong( DValue val, DLong *lng )
 {
 	switch( val.t ){
-	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
+	case DAO_INTEGER :
 		DLong_FromInteger( lng, DValue_GetInteger( val ) );
+		break;
+	case DAO_FLOAT : case DAO_DOUBLE :
+		DLong_FromDouble( lng, DValue_GetDouble( val ) );
 		break;
 	case DAO_COMPLEX :
 		DLong_FromInteger( lng, val.v.c->real );

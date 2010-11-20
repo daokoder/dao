@@ -2535,31 +2535,47 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		default: break;
 		}
 	}else if( dA.t == DAO_INTEGER && dB.t == DAO_LONG ){
-		lng = DLong_New();
-		DLong_FromInteger( lng, dA.v.i );
 		switch( vmc->code ){
 		case DVM_AND: dC = dA.v.i ? dB : dA; break;
 		case DVM_OR:  dC = dA.v.i ? dA : dB; break;
-		case DVM_LT:  dC.v.i = DLong_Compare( lng, dB.v.l )< 0; break;
-		case DVM_LE:  dC.v.i = DLong_Compare( lng, dB.v.l )<=0; break;
-		case DVM_EQ:  dC.v.i = DLong_Compare( lng, dB.v.l )==0; break;
-		case DVM_NE:  dC.v.i = DLong_Compare( lng, dB.v.l )!=0; break;
+		case DVM_LT:  dC.v.i = DLong_CompareToInteger( dB.v.l, dA.v.i )> 0; break;
+		case DVM_LE:  dC.v.i = DLong_CompareToInteger( dB.v.l, dA.v.i )>=0; break;
+		case DVM_EQ:  dC.v.i = DLong_CompareToInteger( dB.v.l, dA.v.i )==0; break;
+		case DVM_NE:  dC.v.i = DLong_CompareToInteger( dB.v.l, dA.v.i )!=0; break;
 		default: break;
 		}
-		DLong_Delete( lng );
 	}else if( dA.t == DAO_LONG && dB.t == DAO_INTEGER ){
-		lng = DLong_New();
-		DLong_FromInteger( lng, dB.v.i );
 		switch( vmc->code ){
 		case DVM_AND: dC = DLong_CompareToZero( dA.v.l ) ? dB : dA; break;
 		case DVM_OR:  dC = DLong_CompareToZero( dA.v.l ) ? dA : dB; break;
-		case DVM_LT:  dC.v.i = DLong_Compare( dA.v.l, lng )< 0; break;
-		case DVM_LE:  dC.v.i = DLong_Compare( dA.v.l, lng )<=0; break;
-		case DVM_EQ:  dC.v.i = DLong_Compare( dA.v.l, lng )==0; break;
-		case DVM_NE:  dC.v.i = DLong_Compare( dA.v.l, lng )!=0; break;
+		case DVM_LT:  dC.v.i = DLong_CompareToInteger( dA.v.l, dB.v.i )< 0; break;
+		case DVM_LE:  dC.v.i = DLong_CompareToInteger( dA.v.l, dB.v.i )<=0; break;
+		case DVM_EQ:  dC.v.i = DLong_CompareToInteger( dA.v.l, dB.v.i )==0; break;
+		case DVM_NE:  dC.v.i = DLong_CompareToInteger( dA.v.l, dB.v.i )!=0; break;
 		default: break;
 		}
-		DLong_Delete( lng );
+	}else if( (dA.t == DAO_FLOAT || dA.t == DAO_DOUBLE) && dB.t == DAO_LONG ){
+		double va = DValue_GetDouble( dA );
+		switch( vmc->code ){
+		case DVM_AND: dC = va ? dB : dA; break;
+		case DVM_OR:  dC = va ? dA : dB; break;
+		case DVM_LT:  dC.v.i = DLong_CompareToDouble( dB.v.l, va )> 0; break;
+		case DVM_LE:  dC.v.i = DLong_CompareToDouble( dB.v.l, va )>=0; break;
+		case DVM_EQ:  dC.v.i = DLong_CompareToDouble( dB.v.l, va )==0; break;
+		case DVM_NE:  dC.v.i = DLong_CompareToDouble( dB.v.l, va )!=0; break;
+		default: break;
+		}
+	}else if( dA.t == DAO_LONG && (dB.t == DAO_FLOAT || dB.t == DAO_DOUBLE) ){
+		double vb = DValue_GetDouble( dB );
+		switch( vmc->code ){
+		case DVM_AND: dC = DLong_CompareToZero( dA.v.l ) ? dB : dA; break;
+		case DVM_OR:  dC = DLong_CompareToZero( dA.v.l ) ? dA : dB; break;
+		case DVM_LT:  dC.v.i = DLong_CompareToDouble( dA.v.l, vb )< 0; break;
+		case DVM_LE:  dC.v.i = DLong_CompareToDouble( dA.v.l, vb )<=0; break;
+		case DVM_EQ:  dC.v.i = DLong_CompareToDouble( dA.v.l, vb )==0; break;
+		case DVM_NE:  dC.v.i = DLong_CompareToDouble( dA.v.l, vb )!=0; break;
+		default: break;
+		}
 	}else if( dA.t == DAO_STRING && dB.t == DAO_STRING ){
 		switch( vmc->code ){
 		case DVM_AND: dC = DString_Size( dA.v.s ) ? dB : dA; break;
@@ -3430,9 +3446,11 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		if( dA.t >= DAO_ARRAY ) goto FailConversion;
 		switch( dA.t ){
 		case DAO_INTEGER :
+			DLong_FromInteger( lb, DValue_GetInteger( dA ) );
+			break;
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
-			DLong_FromInteger( lb, DValue_GetInteger( dA ) );
+			DLong_FromDouble( lb, DValue_GetDouble( dA ) );
 			break;
 		case DAO_STRING :
 			DLong_FromString( lb, dA.v.s );
@@ -4579,6 +4597,53 @@ void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 	   DaoRoutine_PrintCode( proto, self->vmSpace->stdStream );
 	   DaoRoutine_PrintCode( closure, self->vmSpace->stdStream );
 	 */
+	 printf( "%s\n", closure->routType->name->mbs );
+}
+void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
+{
+	DaoTuple *tuple = self->regValues[vmc->a]->v.tuple;
+	DaoClass *proto = NULL, *klass = DaoClass_New();
+	DMap *protoValues = NULL;
+	DNode *it;
+	printf( "%s\n", tuple->unitype->name->mbs );
+	DaoContext_SetData( self, vmc->c, (DaoBase*) klass );
+	if( tuple->items->size && tuple->items->data[0].t == DAO_STRING )
+		DaoClass_SetName( klass, tuple->items->data[0].v.s );
+	if( vmc->b && self->routine->routConsts->data[vmc->b-1].t == DAO_CLASS ){
+		proto = self->routine->routConsts->data[vmc->b-1].v.klass;
+		protoValues = proto->protoValues;
+	}
+	DaoClass_DeriveClassData( klass );
+	if( proto ){
+		DMap_Assign( klass->lookupTable, proto->lookupTable );
+		DArray_Assign( klass->objDataName, proto->objDataName );
+		DArray_Assign( klass->cstDataName, proto->cstDataName );
+		DArray_Assign( klass->glbDataName, proto->glbDataName );
+		DArray_Assign( klass->objDataType, proto->objDataType );
+		DArray_Assign( klass->glbDataType, proto->glbDataType );
+		DVarray_Assign( klass->objDataDefault, proto->objDataDefault );
+		DVarray_Assign( klass->cstData, proto->cstData );
+		DVarray_Assign( klass->glbData, proto->glbData );
+	}
+	for(it=DMap_First(protoValues);it;it=DMap_Next(protoValues,it)){
+		DNode *node = DMap_Find( proto->lookupTable, it->value.pString );
+		DValue value;
+		int st = LOOKUP_ST( node->value.pSize );
+		int pm = LOOKUP_PM( node->value.pSize );
+		int up = LOOKUP_UP( node->value.pSize );
+		int id = LOOKUP_ID( node->value.pSize );
+		if( up ) continue; /* should be never true */
+		value = *self->regValues[it->key.pInt];
+		printf( "%3i  %3i  %s\n", (int)it->key.pInt, id, it->value.pString->mbs );
+		if( st == DAO_CLASS_CONSTANT ){
+			DValue_Move( value, klass->cstData->data+id, NULL );
+		}else if( st == DAO_CLASS_VARIABLE ){
+			DValue_Move( value, klass->glbData->data+id, NULL );
+		}else if( st == DAO_OBJECT_VARIABLE ){
+			DValue_Move( value, klass->objDataDefault->data+id, NULL );
+		}
+	}
+	DaoClass_ResetAttributes( klass );
 }
 int DaoContext_DoCheckExcept( DaoContext *self, DaoVmCode *vmc )
 {

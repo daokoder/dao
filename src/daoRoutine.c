@@ -3301,12 +3301,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						ct = inumt;
 						if( code != DVM_EQ && code != DVM_NE ) goto InvOper;
 					}
-				}else if( at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE
-						&& bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE ){
+				}else if( at->tid >= DAO_INTEGER && at->tid <= DAO_LONG
+						&& bt->tid >= DAO_INTEGER && bt->tid <= DAO_LONG
+						&& at->tid != DAO_COMPLEX && bt->tid != DAO_COMPLEX ){
 					ct = at->tid > bt->tid ? at : bt;
-				}else if( (at->tid == DAO_INTEGER && bt->tid == DAO_LONG)
-						|| (at->tid == DAO_LONG && bt->tid == DAO_INTEGER) ){
-					ct = at->tid == DAO_INTEGER ? at : bt;
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
 				}
@@ -4157,7 +4155,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			lastcomp = opc;
 			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 			init[opc] = 1;
-			ct = type[opa];
+			ct = any;
 			if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
 			AssertTypeMatching( ct, type[opc], defs, 0 );
 			break;

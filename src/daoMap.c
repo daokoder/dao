@@ -285,23 +285,27 @@ static void DHash_ResetTable( DMap *self )
 	for(i=0; i<tsize; i++) if( nodes[i] ) DMap_InsertTree( self, nodes[i] );
 	if( nodes ) dao_free( nodes );
 }
-DMap* DMap_Copy( DMap *dmap )
+DMap* DMap_Copy( DMap *other )
 {
 	DMap *self = NULL;
-	DNode *node;
-	if( dmap->hashing ){
-		self = DHash_New( dmap->keytype, dmap->valtype );
-		self->tsize = dmap->tsize;
-		self->table = (DNode**)dao_realloc( self->table, dmap->tsize*sizeof(DNode*) );
+	if( other->hashing ){
+		self = DHash_New( other->keytype, other->valtype );
+		self->tsize = other->tsize;
+		self->table = (DNode**)dao_realloc( self->table, other->tsize*sizeof(DNode*) );
 	}else{
-		self = DMap_New( dmap->keytype, dmap->valtype );
+		self = DMap_New( other->keytype, other->valtype );
 	}
-	node = DMap_First( dmap );
+	DMap_Assign( self, other );
+	return self;
+}
+void DMap_Assign( DMap *self, DMap *other )
+{
+	DNode *node = DMap_First( other );
+	DMap_Clear( self );
 	while( node ){
 		DMap_Insert( self, node->key.pVoid, node->value.pVoid );
-		node = DMap_Next( dmap, node );
+		node = DMap_Next( other, node );
 	}
-	return self;
 }
 void DMap_Delete( DMap *self )
 {
@@ -775,6 +779,7 @@ DNode* DMap_First( DMap *self )
 {
 	DNode *node = NULL;
 	int i = 0;
+	if( self == NULL ) return NULL;
 	if( self->hashing ){
 		while( i < self->tsize && self->table[i] == NULL ) i += 1;
 		if( i < self->tsize ) node = DNode_First( self->table[i] );

@@ -60,6 +60,7 @@ struct DMap
 extern DMap* DMap_New( short kt, short vt );
 extern DMap* DHash_New( short kt, short vt );
 extern DMap* DMap_Copy( DMap *dmap );
+extern void DMap_Assign( DMap *self, DMap *other );
 
 extern void DMap_Delete( DMap *self );
 extern void DMap_Clear( DMap *self );
