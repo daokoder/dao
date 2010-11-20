@@ -188,9 +188,9 @@ llong_t DValue_GetInteger( DValue self )
 	case DAO_STRING  :
 		str = self.v.s;
 		if( DString_IsMBS( str ) )
-			return strtod( str->mbs, 0 );
+			return strtoll( str->mbs, NULL, 0 );
 		else
-			return wcstod( str->wcs, 0 );
+			return wcstoll( str->wcs, NULL, 0 );
 	default : break;
 	}
 	return 0;
