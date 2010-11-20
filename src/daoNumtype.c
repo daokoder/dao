@@ -1263,6 +1263,43 @@ void DLong_FromInteger( DLong *self, dint x )
 		x = x >> LONG_BITS;
 	}
 }
+void DLong_FromDouble( DLong *self, double value )
+{
+	double prod, frac;
+	int expon, bit;
+
+	DLong_Clear( self );
+	self->sign = value > 0 ? 1 : -1;
+
+	value = fabs( value );
+	frac = frexp( value, & expon );
+	if( expon <=0 ) return;
+
+	DLong_Resize( self, expon / LONG_BITS + 1 );
+	/* convert bit by bit */
+	while( frac > 0 ){
+		expon -= 1;
+		prod = frac * 2;
+		bit = (int) prod;
+		frac = prod - bit;
+		self->data[ expon/LONG_BITS ] |= (bit<<(expon%LONG_BITS));
+	}
+	DLong_Normalize( self );
+
+#if 0
+	DLong_Print( self, NULL );
+	DLong_Clear( self );
+	value = floor( value );
+	/* convert base by base: */
+	while( value ){
+		double y = floor( value / LONG_BASE );
+		ushort_t r = (ushort_t)(value - y * LONG_BASE);
+		DLong_Append( self, r );
+		value = y;
+	}
+	DLong_Print( self, NULL );
+#endif
+}
 char DLong_FromString( DLong *self, DString *s )
 {
 	DLong *tmp;

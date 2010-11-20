@@ -59,11 +59,11 @@ struct DaoClass
 	DMap     *deflines;
 
 	/* When DaoClass is used as a proto-class structure,
-	 * protoValues map upvalue register ids to member lookup ids.
+	 * protoValues map upvalue register ids to member names.
 	 * so that those upvalues can be used to set the constant or
 	 * default values of the fields in the classes created from 
 	 * this proto-class. */
-	DMap     *protoValues; /* <int,int> */
+	DMap     *protoValues; /* <int,DString*> */
 
 	ushort_t  derived;
 	ushort_t  attribs;
@@ -74,7 +74,7 @@ void DaoClass_Delete( DaoClass *self );
 
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 
-void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns );
+void DaoClass_SetName( DaoClass *self, DString *name );
 void DaoClass_DeriveClassData( DaoClass *self );
 void DaoClass_ResetAttributes( DaoClass *self );
 

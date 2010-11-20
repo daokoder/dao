@@ -154,7 +154,7 @@ void DaoClass_Delete( DaoClass *self )
 	DString_Delete( self->classHelp );
 	dao_free( self );
 }
-void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
+void DaoClass_SetName( DaoClass *self, DString *name )
 {
 	DaoRoutine *rout = DaoRoutine_New();
 	DValue value = daoNullClass;
@@ -165,7 +165,6 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 	DString_AppendMBS( rout->routName, "::" );
 	DString_Append( rout->routName, name );
 	self->classRoutine = rout; /* XXX class<name> */
-	DArray_Append( ns->definedRoutines, rout );
 	self->clsType = DaoType_New( name->mbs, DAO_CLASS, (DaoBase*) self, NULL );
 	GC_IncRC( self->clsType );
 	DString_InsertMBS( self->clsType->name, "class<", 0, 0, 0 );

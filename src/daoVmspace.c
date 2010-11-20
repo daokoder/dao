@@ -2153,6 +2153,7 @@ DaoType *dao_map_any = NULL;
 DaoType *dao_map_empty = NULL;
 DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
+DaoType *dao_class_any = NULL;
 DaoType *dao_type_for_iterator = NULL;
 
 #ifdef DAO_WITH_THREAD
@@ -2216,6 +2217,7 @@ DaoVmSpace* DaoInit()
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
+	dao_class_any = DaoType_New( "class", DAO_CLASS, DaoClass_New(), NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;

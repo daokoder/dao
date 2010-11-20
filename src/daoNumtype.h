@@ -128,6 +128,7 @@ void DLong_ShiftLeft( DLong *self, int bits );
 void DLong_ShiftRight( DLong *self, int bits );
 void DLong_Print( DLong *self, DString *s );
 void DLong_FromInteger( DLong *self, dint x );
+void DLong_FromDouble( DLong *self, double x );
 char DLong_FromString( DLong *self, DString *s );
 dint DLong_ToInteger( DLong *self );
 int DLong_CompareToZero( DLong *self );

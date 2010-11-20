@@ -103,6 +103,7 @@ extern DaoType *dao_map_any;
 extern DaoType *dao_map_empty;
 extern DaoType *dao_map_meta;
 extern DaoType *dao_routine;
+extern DaoType *dao_class_any;
 extern DaoType *dao_type_for_iterator;
 
 DaoType* DaoType_New( const char *name, short tid, DaoBase *pb, DArray *nest );

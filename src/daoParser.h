@@ -109,6 +109,7 @@ struct DaoParser
 	DaoType      *selfParam; /* type "self:host" */
 	DaoParser    *outParser;
 
+	int outOffset;
 	int curLine;
 	int lineCount;
 	short indent;

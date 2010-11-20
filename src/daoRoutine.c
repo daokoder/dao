@@ -4154,6 +4154,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				break;
 			}
 		case DVM_CLASS :
+			lastcomp = opc;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			init[opc] = 1;
+			ct = type[opa];
+			if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
 			break;
 		case DVM_RETURN :
 		case DVM_YIELD :
