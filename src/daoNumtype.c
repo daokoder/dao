@@ -1301,6 +1301,26 @@ dint DLong_ToInteger( DLong *self )
 	}
 	return res * self->sign;
 }
+double DLong_ToDouble( DLong *self )
+{
+	size_t i, n;
+	double res = 0.0, k = 1.0;
+	switch( self->size ){
+	case 0 : break;
+	case 1 : res = self->data[0]; break;
+	case 2 : res = self->data[0] + LONG_BASE * self->data[1]; break;
+	default :
+		for( n = 0; n < self->size && self->data[n] == 0; n++ );
+		if( n == self->size )
+			return res;
+		for( i = n; i < self->size; i++, k *= LONG_BASE )
+			res += k * self->data[i];
+		if( n != 0 )
+			res = ldexp( res, n * LONG_BITS - 1 );
+		break;
+	}
+	return res * self->sign;
+}
 void DLong_FromInteger( DLong *self, dint x )
 {
 	if( x < 0 ){

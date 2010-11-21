@@ -212,7 +212,7 @@ double DValue_GetDouble( DValue self )
 	case DAO_COMPLEX :
 		return self.v.c->real;
 	case DAO_LONG :
-		return DLong_ToInteger( self.v.l );
+		return DLong_ToDouble( self.v.l );
 	case DAO_ENUM  :
 		return self.v.e->value;
 	case DAO_STRING  :

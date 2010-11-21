@@ -131,6 +131,7 @@ void DLong_FromInteger( DLong *self, dint x );
 void DLong_FromDouble( DLong *self, double x );
 char DLong_FromString( DLong *self, DString *s );
 dint DLong_ToInteger( DLong *self );
+double DLong_ToDouble( DLong *self );
 int DLong_CompareToZero( DLong *self );
 int DLong_CompareToInteger( DLong *self, dint x );
 int DLong_CompareToDouble( DLong *self, double x );
