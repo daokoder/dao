@@ -356,7 +356,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 }
 int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 {
-	DaoParser *parser;
+	DaoParser *parser, *defparser;
 	DaoFunction *cur;
 	DString *name1, *name2;
 	DArray *parents;
@@ -388,15 +388,21 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
 		parser->hostCData = typer->priv->abtype;
+		parser->defParser = defparser = DaoParser_New();
+		defparser->vmSpace = self->vmSpace;
+		defparser->nameSpace = self;
+		defparser->hostCData = typer->priv->abtype;
+		defparser->routine = self->routEvalConst;
 
 		if( typer->funcItems != NULL ){
 			while( typer->funcItems[ size ].proto != NULL ) size ++;
 		}
 
 		for( i=0; i<size; i++ ){
-			cur = DaoNameSpace_ParsePrototype( self, typer->funcItems[i].proto, parser );
+			const char *proto = typer->funcItems[i].proto;
+			cur = DaoNameSpace_ParsePrototype( self, proto, parser );
 			if( cur == NULL ){
-				printf( "  In function: %s::%s\n", typer->name, typer->funcItems[i].proto );
+				printf( "  In function: %s::%s\n", typer->name, proto );
 				continue;
 			}
 			cur->pFunc = typer->funcItems[i].fpter;
@@ -448,6 +454,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 		}
 		DArray_Delete( parents );
 		DaoParser_Delete( parser );
+		DaoParser_Delete( defparser );
 
 		assert( DAO_ROUT_MAIN < (1<<DVM_MOVE) );
 		for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
@@ -1591,28 +1598,25 @@ DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto,
 {
 	DaoFunction *func = DaoFunction_New();
 	DaoVmSpace *vms = self->vmSpace;
-	DaoParser *pp = parser;
+	DaoParser *defparser;
 	int key = DKEY_OPERATOR;
+
+	assert( parser != NULL );
+	assert( parser->defParser != NULL );
+	defparser = parser->defParser;
 
 	GC_IncRC( self );
 	func->nameSpace = self;
-	if( parser == NULL ){
-		parser = DaoParser_New();
-		parser->vmSpace = vms;
-		parser->nameSpace = self;
-	}
-	if( ! DaoToken_Tokenize( parser->tokens, proto, 0, 0, 0 ) ) goto Error;
-	if( parser->tokens->size ==0 ) goto Error;
-	if( parser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER ) key = 0;
-	DArray_Clear( parser->partoks );
+	if( ! DaoToken_Tokenize( defparser->tokens, proto, 0, 0, 0 ) ) goto Error;
+	if( defparser->tokens->size ==0 ) goto Error;
+	if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER ) key = 0;
+	DArray_Clear( defparser->partoks );
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
-	if( DaoParser_ParsePrototype( parser, parser, key, 0 ) < 0 ) goto Error;
+	if( DaoParser_ParsePrototype( defparser, parser, key, 0 ) < 0 ) goto Error;
 	if( DaoParser_ParseParams( parser ) == 0 ) goto Error;
-	if( parser != pp ) DaoParser_Delete( parser );
 	return func;
 Error:
-	if( parser != pp ) DaoParser_Delete( parser );
 	DArray_Clear( func->routTable ); /* routTable contains func */
 	DaoFunction_Delete( func );
 	return NULL;

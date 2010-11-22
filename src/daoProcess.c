@@ -553,6 +553,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	int exceptCount = 0;
 	DaoVmFrame *topFrame;
 	DaoContext *topCtx;
+	DaoRoutine *routine;
 	DaoNameSpace *here = NULL;
 	DaoClass *host = NULL;
 	DaoClass *klass = NULL;
@@ -820,6 +821,7 @@ CallEntry:
 	}
 	topFrame = self->topFrame;
 	topCtx = topFrame->context;
+	routine = topCtx->routine;
 #if 0
 	if( (vmSpace->options & DAO_EXEC_SAFE) && self->topFrame->index >= 100 ){
 		DaoContext_RaiseException( topCtx, DAO_ERROR,
@@ -832,14 +834,14 @@ CallEntry:
 	topCtx->idClearFE = self->topFrame->entry;
 
 	/*
-	   if( topCtx->routine->tidHost == DAO_OBJECT )
-	   printf("class name = %s\n", topCtx->routine->routHost->X.klass->className->mbs);
-	   printf("routine name = %s\n", topCtx->routine->routName->mbs);
+	   if( routine->tidHost == DAO_OBJECT )
+	   printf("class name = %s\n", routine->routHost->X.klass->className->mbs);
+	   printf("routine name = %s\n", routine->routName->mbs);
 	//printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
-	printf("number of instruction: %i\n", topCtx->routine->vmCodes->size );
-	if( topCtx->routine->routType ) printf("routine type = %s\n", topCtx->routine->routType->name->mbs);
+	printf("number of instruction: %i\n", routine->vmCodes->size );
+	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 	printf( "vmSpace = %p; nameSpace = %p\n", self->vmSpace, topCtx->nameSpace );
-	printf("routine = %p; context = %p\n", topCtx->routine, topCtx );
+	printf("routine = %p; context = %p\n", routine, topCtx );
 	 */
 
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
@@ -849,11 +851,11 @@ CallEntry:
 	topCtx->vmSpace = vmSpace;
 	vmcBase = topCtx->codes;
 	id = self->topFrame->entry;
-	if( id >= topCtx->routine->vmCodes->size ){
+	if( id >= routine->vmCodes->size ){
 		if( id == 0 ){
-			printf( "%p\n", topCtx->routine );
+			printf( "%p\n", routine );
 			DString_SetMBS( self->mbstring, "Not implemented function, " );
-			DString_Append( self->mbstring, topCtx->routine->routName );
+			DString_Append( self->mbstring, routine->routName );
 			DString_AppendMBS( self->mbstring, "()" );
 			DaoContext_RaiseException( topCtx, DAO_ERROR, self->mbstring->mbs );
 			goto FinishProc;
@@ -865,8 +867,8 @@ CallEntry:
 	   printf("==================VM==============================\n");
 	   printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	   printf("number of register: %i\n", topCtx->regArray->size );
-	   printf("number of register: %i\n", topCtx->routine->locRegCount );
-	   printf("number of instruction: %i\n", topCtx->routine->vmCodes->size );
+	   printf("number of register: %i\n", routine->locRegCount );
+	   printf("number of instruction: %i\n", routine->vmCodes->size );
 	   printf( "VM process: %p\n", self );
 	   printf("==================================================\n");
 	 */
@@ -876,8 +878,8 @@ CallEntry:
 	vmc = vmcBase + id;
 	topCtx->vmc = vmc;
 	if( id ==0 ){
-		/* ( 0, topCtx->routine->vmCodes->size-1 ) */
-		DaoVmFrame_PushRange( topFrame, 0, (topCtx->routine->vmCodes->size-1) );
+		/* ( 0, routine->vmCodes->size-1 ) */
+		DaoVmFrame_PushRange( topFrame, 0, (routine->vmCodes->size-1) );
 	}
 
 	exceptCount = self->exceptions->size;
@@ -902,26 +904,26 @@ CallEntry:
 	self->status = DAO_VMPROC_RUNNING;
 	self->pauseType = DAO_VMP_NOPAUSE;
 	host = NULL;
-	here = topCtx->routine->nameSpace;
+	here = routine->nameSpace;
 	this = topCtx->object;
 	locVars = topCtx->regValues;
-	locTypes = topCtx->routine->regType->items.pAbtp;
-	dataCL[0] = topCtx->routine->routConsts;
-	dataCG = topCtx->routine->nameSpace->cstDataTable;
-	dataVG = topCtx->routine->nameSpace->varDataTable;
-	typeVG = topCtx->routine->nameSpace->varTypeTable;
-	if( topCtx->routine->tidHost == DAO_OBJECT ){
-		host = topCtx->routine->routHost->X.klass;
+	locTypes = routine->regType->items.pAbtp;
+	dataCL[0] = routine->routConsts;
+	dataCG = routine->nameSpace->cstDataTable;
+	dataVG = routine->nameSpace->varDataTable;
+	typeVG = routine->nameSpace->varTypeTable;
+	if( routine->tidHost == DAO_OBJECT && !(routine->attribs & DAO_ROUT_STATIC) ){
+		host = routine->routHost->X.klass;
 		dataCK = host->cstDataTable;
 		dataVK = host->glbDataTable;
 		typeVK = host->glbTypeTable;
 		dataVO = this->objValues;
 		typeVO = host->objDataType;
 	}
-	if( topCtx->routine->upRoutine ){
-		dataCL[1] = topCtx->routine->upRoutine->routConsts;
-		dataVL = topCtx->routine->upContext->regValues;
-		typeVL = topCtx->routine->upRoutine->regType;
+	if( routine->upRoutine ){
+		dataCL[1] = routine->upRoutine->routConsts;
+		dataVL = routine->upContext->regValues;
+		typeVL = routine->upRoutine->regType;
 	}
 #if 0
 	extra.context = topCtx;

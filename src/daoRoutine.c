@@ -1072,34 +1072,41 @@ void DaoRoutine_Compile( DaoRoutine *self )
 		self->parser = NULL;
 	}
 }
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload )
 {
 	DaoRoutine *copy = DaoRoutine_New();
 	DaoRoutine_Compile( self );
 	DRoutine_CopyFields( (DRoutine*) copy, (DRoutine*) self );
 	if( overload ) DRoutine_AddOverLoad( (DRoutine*) self, (DRoutine*) copy );
-	DMap_Delete( copy->regForLocVar );
-	DArray_Delete( copy->annotCodes );
-	copy->source = self->source;
-	copy->annotCodes = DArray_Copy( self->annotCodes );
-	copy->regForLocVar = DMap_Copy( self->regForLocVar );
-	DaoVmcArray_Assign( copy->vmCodes, self->vmCodes );
 	DString_Assign( copy->routName, self->routName );
-	DaoGC_IncRCs( self->regType );
-	DaoGC_DecRCs( copy->regType );
-	DArray_Assign( copy->regType, self->regType );
-	copy->constParam = self->constParam;
-	copy->locRegCount = self->locRegCount;
-	copy->defLine = self->defLine;
-	copy->bodyStart = self->bodyStart;
-	copy->bodyEnd = self->bodyEnd;
-#ifdef DAO_WITH_JIT
-	DArray_Assign( copy->binCodes, self->binCodes );
-	DArray_Assign( copy->jitFuncs, self->jitFuncs );
-	DaoVmcArray_Assign( copy->preJit, self->preJit );
-	copy->jitMemory = self->jitMemory;
-#endif
+	DaoRoutine_CopyFields( copy, self );
 	return copy;
+}
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
+{
+	DMap_Delete( self->regForLocVar );
+	DArray_Delete( self->annotCodes );
+	self->source = other->source;
+	self->annotCodes = DArray_Copy( other->annotCodes );
+	self->regForLocVar = DMap_Copy( other->regForLocVar );
+	DaoVmcArray_Assign( self->vmCodes, other->vmCodes );
+	DaoGC_IncRCs( other->regType );
+	DaoGC_DecRCs( self->regType );
+	DArray_Assign( self->regType, other->regType );
+	GC_ShiftRC( other->nameSpace, self->nameSpace );
+	self->nameSpace = other->nameSpace;
+	self->constParam = other->constParam;
+	self->locRegCount = other->locRegCount;
+	self->defLine = other->defLine;
+	self->bodyStart = other->bodyStart;
+	self->bodyEnd = other->bodyEnd;
+#ifdef DAO_WITH_JIT
+	DArray_Assign( self->binCodes, other->binCodes );
+	DArray_Assign( self->jitFuncs, other->jitFuncs );
+	DaoVmcArray_Assign( self->preJit, other->preJit );
+	self->jitMemory = other->jitMemory;
+#endif
 }
 static DaoRoutine* DaoRoutine_Copy2( DaoRoutine *self )
 {
@@ -2469,7 +2476,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				at = type[opa];
 				ak = at->tid ==DAO_CLASS;
 				error = str;
-				if( at->tid == DAO_ANY || at->tid == DAO_UDF ){
+				if( at->tid == DAO_ANY || at->tid == DAO_UDF || at->tid == DAO_INITYPE ){
 					/* allow less strict typing: */
 					ct = any;
 				}else if( at->tid == DAO_TYPE ){

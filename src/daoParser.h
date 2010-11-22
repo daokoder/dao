@@ -46,6 +46,10 @@ struct DaoParser
 
 	DString *fileName;
 
+	DaoParser *defParser;
+	int parStart;
+	int parEnd;
+
 	DArray  *tokens;
 	DArray  *partoks;
 	DMap    *comments; /* <int,DString*> */
@@ -107,7 +111,7 @@ struct DaoParser
 	DaoInterface *hostInter;
 	DaoClass     *hostClass;
 	DaoType      *hostCData;
-	DaoType      *selfParam; /* type "self:host" */
+	DaoType      *hostType;
 	DaoParser    *outParser;
 
 	int curLine;
@@ -119,6 +123,7 @@ struct DaoParser
 	DArray *scoping; /* <size_t> */
 	DArray *errors;
 	DArray *bindtos;
+	DArray *uplocs;
 	DArray *decoFuncs;
 	DArray *decoParams;
 
