@@ -3431,6 +3431,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoParser_PrintError( parser, 0, 0, NULL );
 		goto ErrorClassDefinition;
 	}
+	DaoClass_DeriveObjectData( klass );
 	if( parser->vmcLast != parser->vmcBase ){
 		DArray_AppendArray( self->errors, parser->errors );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_CLASS );
@@ -5991,7 +5992,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 			}else if( tki == DKEY_SELF && start+2 <= right && tokens[start+1]->name == DTOK_DOT
 					&& (start+3 > right || tokens[start+3]->name != DTOK_LB) ){
 				int st;
-				if( self->hostClass ==NULL || tokens[start+2]->type != DTOK_IDENTIFIER ){
+				if( self->hostClass ==NULL && !(self->routine->attribs & DAO_ROUT_PARSELF) ){
 					DaoParser_Error( self, DAO_CTW_EXPR_INVALID, NULL );
 					return -1;
 				}
@@ -7185,6 +7186,7 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 		return 0;
 	}
 	DaoParser_CompleteScope( self, start );
+	DaoClass_DeriveObjectData( klass );
 	self->isClassBody -= 1;
 	self->isDynamicClass -= 1;
 	self->hostInter = oldHostInter;

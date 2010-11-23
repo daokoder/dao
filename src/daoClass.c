@@ -102,6 +102,7 @@ DaoClass* DaoClass_New()
 
 	self->derived = 0;
 	self->attribs = 0;
+	self->objDefCount = 0;
 
 	self->cstDataTable = DArray_New(0);
 	self->glbDataTable = DArray_New(0);
@@ -192,7 +193,7 @@ void DaoClass_SetName( DaoClass *self, DString *name )
 	DString_Delete( str );
 }
 /* breadth-first search */
-void DaoClass_Parents( DaoBase *self, DArray *parents, DArray *offsets )
+void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 {
 	DaoBase *dbase;
 	DaoClass *klass;
@@ -202,7 +203,7 @@ void DaoClass_Parents( DaoBase *self, DArray *parents, DArray *offsets )
 	DArray_Clear( parents );
 	DArray_Clear( offsets );
 	DArray_Append( parents, self );
-	DArray_Append( offsets, 0 );
+	DArray_Append( offsets, self->objDataName->size );
 	for(i=0; i<parents->size; i++){
 		dbase = parents->items.pBase[i];
 		offset = offsets->items.pInt[i];
@@ -234,36 +235,18 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	DNode *search;
 	DString *mbs;
 	DValue value = daoNullValue;
-	size_t i, k, id, perm, index, offset = 0;
+	size_t i, k, id, perm, index;
 
-	if( self->derived ) return;
-	offset = self->objDataName->size;
-	assert( offset == 1 );
 	mbs = DString_New(1);
 
 	for( i=0; i<self->superClass->size; i++){
 		if( self->superClass->items.pBase[i]->type == DAO_CLASS ){
 			DaoClass *klass = self->superClass->items.pClass[i];
-			DaoClass_DeriveClassData( klass );
 			if( DString_EQ( klass->className, self->superAlias->items.pString[i] ) ==0 ){
 				value = daoNullClass;
 				value.v.klass = klass;
 				DaoClass_AddConst( self, self->superAlias->items.pString[i], value, DAO_DATA_PRIVATE, -1 );
 			}
-
-			/* for properly arrangement object data: */
-			for( id=0; id<klass->objDataName->size; id ++ ){
-				DString *name = klass->objDataName->items.pString[id];
-				type = klass->objDataType->items.pAbtp[id];
-				value = klass->objDataDefault->data[id];
-				GC_IncRC( type );
-				DArray_Append( self->objDataName, name );
-				DArray_Append( self->objDataType, type );
-				DVarray_Append( self->objDataDefault, daoNullValue );
-				DValue_SimpleMove( value, self->objDataDefault->data + self->objDataDefault->size-1 );
-				DValue_MarkConst( self->objDataDefault->data + self->objDataDefault->size-1 );
-			}
-			offset += klass->objDataName->size;
 		}else if( self->superClass->items.pBase[i]->type == DAO_CDATA ){
 			DaoCData *cdata = self->superClass->items.pCData[i];
 			DaoTypeBase *typer = cdata->typer;
@@ -292,7 +275,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	}
 	parents = DArray_New(0);
 	offsets = DArray_New(0);
-	DaoClass_Parents( (DaoBase*)self, parents, offsets );
+	DaoClass_Parents( self, parents, offsets );
 	DArray_Append( self->cstDataTable, self->cstData );
 	DArray_Append( self->glbDataTable, self->glbData );
 	DArray_Append( self->glbTypeTable, self->glbDataType );
@@ -300,7 +283,6 @@ void DaoClass_DeriveClassData( DaoClass *self )
 		DaoClass *klass = parents->items.pClass[i];
 		DaoCData *cdata = parents->items.pCData[i];
 		DaoTypeBase *typer;
-		offset = offsets->items.pInt[i] + 1; /* plus self */
 		if( klass->type == DAO_CLASS ){
 			int up = self->cstDataTable->size;
 			DArray_Append( self->cstDataTable, klass->cstData );
@@ -362,19 +344,6 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					MAP_Insert( self->lookupTable, name, index );
 				}
 			}
-			/* For object data: */
-			for( id=0; id<klass->objDataName->size; id ++ ){
-				DString *name = klass->objDataName->items.pString[id];
-				search = MAP_Find( klass->lookupTable, name );
-				perm = LOOKUP_PM( search->value.pSize );
-				/* NO deriving private member: */
-				if( perm <= DAO_DATA_PRIVATE ) continue;
-				search = MAP_Find( self->lookupTable, name );
-				if( search == NULL ){ /* To not overide data and routine: */
-					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, 0, (offset+id) );
-					MAP_Insert( self->lookupTable, name, index );
-				}
-			}
 		}else if( cdata->type == DAO_CDATA ){
 			DaoTypeBase *typer = cdata->typer;
 			DaoTypeCore *core = typer->priv;
@@ -401,7 +370,68 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 		}
 	}
-	self->derived = 1;
+	DString_Delete( mbs );
+	DArray_Delete( parents );
+	DArray_Delete( offsets );
+}
+/* assumed to be called after parsing class body */
+void DaoClass_DeriveObjectData( DaoClass *self )
+{
+	DArray *parents, *offsets;
+	DRoutine *rep, *mem;
+	DaoType *type;
+	DNode *search;
+	DString *mbs;
+	DValue value = daoNullValue;
+	size_t i, k, id, perm, index, offset = 0;
+
+	self->objDefCount = self->objDataName->size;
+	offset = self->objDataName->size;
+	mbs = DString_New(1);
+
+	parents = DArray_New(0);
+	offsets = DArray_New(0);
+	DaoClass_Parents( self, parents, offsets );
+	for( i=0; i<self->superClass->size; i++){
+		if( self->superClass->items.pBase[i]->type == DAO_CLASS ){
+			DaoClass *klass = self->superClass->items.pClass[i];
+
+			/* for properly arrangement object data: */
+			for( id=0; id<klass->objDataName->size; id ++ ){
+				DString *name = klass->objDataName->items.pString[id];
+				type = klass->objDataType->items.pAbtp[id];
+				value = klass->objDataDefault->data[id];
+				GC_IncRC( type );
+				DArray_Append( self->objDataName, name );
+				DArray_Append( self->objDataType, type );
+				DVarray_Append( self->objDataDefault, daoNullValue );
+				DValue_SimpleMove( value, self->objDataDefault->data + self->objDataDefault->size-1 );
+				DValue_MarkConst( self->objDataDefault->data + self->objDataDefault->size-1 );
+			}
+			offset += klass->objDataName->size;
+		}
+	}
+	for(i=1; i<parents->size; i++){
+		DaoClass *klass = parents->items.pClass[i];
+		DaoCData *cdata = parents->items.pCData[i];
+		DaoTypeBase *typer;
+		offset = offsets->items.pInt[i]; /* plus self */
+		if( klass->type == DAO_CLASS ){
+			/* For object data: */
+			for( id=0; id<klass->objDataName->size; id ++ ){
+				DString *name = klass->objDataName->items.pString[id];
+				search = MAP_Find( klass->lookupTable, name );
+				perm = LOOKUP_PM( search->value.pSize );
+				/* NO deriving private member: */
+				if( perm <= DAO_DATA_PRIVATE ) continue;
+				search = MAP_Find( self->lookupTable, name );
+				if( search == NULL ){ /* To not overide data and routine: */
+					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, 0, (offset+id) );
+					MAP_Insert( self->lookupTable, name, index );
+				}
+			}
+		}
+	}
 	DString_Delete( mbs );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );

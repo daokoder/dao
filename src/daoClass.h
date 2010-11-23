@@ -26,7 +26,7 @@ struct DaoClass
 
 	DArray   *cstDataTable; /* <DVarray*> */
 	DArray   *glbDataTable; /* <DVarray*> */
-	DArray   *glbTypeTable; /* <DVarray*> */
+	DArray   *glbTypeTable; /* <DArray*> */
 
 	DArray   *objDataName;  /* <DString*>: keep tracking field declaration order: */
 	DArray   *objDataType;  /* <DaoType*> */
@@ -67,6 +67,7 @@ struct DaoClass
 
 	ushort_t  derived;
 	ushort_t  attribs;
+	ushort_t  objDefCount;
 };
 
 DaoClass* DaoClass_New();
@@ -76,6 +77,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 
 void DaoClass_SetName( DaoClass *self, DString *name );
 void DaoClass_DeriveClassData( DaoClass *self );
+void DaoClass_DeriveObjectData( DaoClass *self );
 void DaoClass_ResetAttributes( DaoClass *self );
 
 int  DaoClass_FindSuper( DaoClass *self, DaoBase *super );

@@ -212,7 +212,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 		self->objData = DVaTuple_New( klass->objDataName->size, daoNullValue );
 		self->objValues = self->objData->data;
 	}
-	offset += 1;
+	offset += self->myClass->objDefCount;
 	if( klass->superClass->size ){
 		self->superObject = DPtrTuple_New( klass->superClass->size, NULL );
 		for(i=0; i<klass->superClass->size; i++){

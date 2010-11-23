@@ -1,0 +1,36 @@
+
+class Base
+{
+	var name = 'Base';
+}
+
+routine CreateClass( name : string, value = 0 )
+{
+	io.writeln( name, value );
+
+	rout = routine( self : @class ){ # @class for host class type
+		io.writeln( 'Extra()', self.index );
+	}
+
+	# klass = class( name, parents, fields, methods ){ core_class_body }
+	klass=class( name, { 'Alias'=>Base }, { ('added', 789) }, { ('Extra', rout) } )
+	{
+		var index = value;
+
+		routine Meth( id = 0 ){ io.writeln( 'Meth(id)', id, index, self.Alias ) }
+		routine Meth( text : string ){ io.writeln( 'Meth(text)', self.name, self.added ) }
+	}
+	return klass;
+}
+
+klass1 = CreateClass( 'AA', 123 );
+klass2 = CreateClass( 'BB', 456 );
+
+obj1 = klass1();
+obj2 = klass2();
+
+obj1.Meth();
+obj2.Meth();
+obj1.Meth( 'abc' );
+obj2.Meth( 'def' );
+obj1.Extra();

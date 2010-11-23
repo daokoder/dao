@@ -4599,6 +4599,8 @@ void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 	 printf( "%s\n", closure->routType->name->mbs );
 	 */
 }
+static int storages[3] = { DAO_OBJECT_VARIABLE, DAO_CLASS_VARIABLE, DAO_CLASS_CONSTANT };
+static int permissions[3] = { DAO_DATA_PUBLIC, DAO_DATA_PROTECTED, DAO_DATA_PRIVATE };
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 {
@@ -4608,6 +4610,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	DaoClass *klass = DaoClass_New();
 	DaoClass *proto = NULL;
 	DaoList *parents = NULL;
+	DaoMap *parents2 = NULL;
 	DaoList *fields = NULL;
 	DaoList *methods = NULL;
 	DString *name = NULL;
@@ -4617,10 +4620,11 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	DMap *deftypes = DMap_New(0,0);
 	DMap *protoValues = NULL;
 	DValue *dest;
-	DNode *it;
+	DNode *it, *node;
+	int i, st, pm, up, id, size;
 	char buf[50];
-	int i, extra_bases=0, extra_fields=0;
 
+	DaoContext_SetData( self, vmc->c, (DaoBase*) klass );
 	//printf( "%s\n", tuple->unitype->name->mbs );
 	if( vmc->b && self->routine->routConsts->data[vmc->b-1].t == DAO_CLASS ){
 		proto = self->routine->routConsts->data[vmc->b-1].v.klass;
@@ -4631,27 +4635,28 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	if( it && data[it->value.pInt].t == DAO_STRING ) name = data[it->value.pInt].v.s;
 	it = MAP_Find( keys, "parents" );
 	if( it && data[it->value.pInt].t == DAO_LIST ) parents = data[it->value.pInt].v.list;
+	if( it && data[it->value.pInt].t == DAO_MAP ) parents2 = data[it->value.pInt].v.map;
 	it = MAP_Find( keys, "fields" );
 	if( it && data[it->value.pInt].t == DAO_LIST ) fields = data[it->value.pInt].v.list;
 	it = MAP_Find( keys, "methods" );
 	if( it && data[it->value.pInt].t == DAO_LIST ) methods = data[it->value.pInt].v.list;
 
 	if( name ==NULL && items->size && data[0].t == DAO_STRING ) name = data[0].v.s;
-	if( parents ==NULL && items->size >1 && data[1].t == DAO_LIST ) parents = data[1].v.list;
+	if( parents ==NULL && parents2 == NULL && items->size >1 ){
+		if( data[1].t == DAO_LIST ) parents = data[1].v.list;
+		if( data[1].t == DAO_MAP ) parents2 = data[1].v.map;
+	}
 	if( fields ==NULL && items->size >2 && data[2].t == DAO_LIST ) fields = data[2].v.list;
 	if( methods ==NULL && items->size >3 && data[3].t == DAO_LIST ) methods = data[3].v.list;
 
-	extra_bases = parents && parents->items->size;
-	extra_fields = fields && fields->items->size;
-	if( extra_bases || extra_fields || name == NULL ){
+	if( name == NULL || name->size ==0 ){
 		sprintf( buf, "AnonymousClass%p", klass );
 		DString_SetMBS( klass->className, buf );
 		DaoClass_SetName( klass, klass->className );
-		DaoRoutine_CopyFields( klass->classRoutine, proto->classRoutine );
 	}else{
 		DaoClass_SetName( klass, name );
-		DaoRoutine_CopyFields( klass->classRoutine, proto->classRoutine );
 	}
+	DaoRoutine_CopyFields( klass->classRoutine, proto->classRoutine );
 	DaoClass_DeriveClassData( klass );
 	tp = DaoNameSpace_MakeType( ns, "@class", DAO_INITYPE, NULL,NULL,0 );
 	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
@@ -4667,12 +4672,12 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 		DVarray_Assign( klass->glbData, proto->glbData );
 	}
 	for(it=DMap_First(protoValues);it;it=DMap_Next(protoValues,it)){
-		DNode *node = DMap_Find( proto->lookupTable, it->value.pString );
 		DValue value;
-		int st = LOOKUP_ST( node->value.pSize );
-		int pm = LOOKUP_PM( node->value.pSize );
-		int up = LOOKUP_UP( node->value.pSize );
-		int id = LOOKUP_ID( node->value.pSize );
+		node = DMap_Find( proto->lookupTable, it->value.pString );
+		st = LOOKUP_ST( node->value.pSize );
+		pm = LOOKUP_PM( node->value.pSize );
+		up = LOOKUP_UP( node->value.pSize );
+		id = LOOKUP_ID( node->value.pSize );
 		if( up ) continue; /* should be never true */
 		value = *self->regValues[it->key.pInt];
 		if( st == DAO_CLASS_CONSTANT ){
@@ -4702,28 +4707,6 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			DValue_Move( value, klass->objDataDefault->data+id, NULL );
 		}
 	}
-	DaoClass_ResetAttributes( klass );
-
-	if( extra_bases || extra_fields ){
-		DaoVmCodeX vmcx = {DVM_RETURN,0,0,0,0,0,0,0,0};
-		DaoVmCode  vmc = {DVM_RETURN,0,0,0};
-		DaoClass *cls = klass;
-		klass = DaoClass_New();
-		if( name ){
-			DaoClass_SetName( klass, name );
-		}else{
-			sprintf( buf, "AnonymousClass%p", klass );
-			DString_SetMBS( klass->className, buf );
-			DaoClass_SetName( klass, klass->className );
-		}
-		DaoClass_AddSuperClass( klass, cls, cls->className );
-		vmcx.line = proto->classRoutine->defLine;
-		DArray_Append( klass->classRoutine->annotCodes, & vmcx );
-		DaoVmcArray_Append( klass->classRoutine->vmCodes, vmc );
-		GC_ShiftRC( self->routine->nameSpace, klass->classRoutine->nameSpace );
-		klass->classRoutine->nameSpace = self->routine->nameSpace;
-	}
-	DaoContext_SetData( self, vmc->c, (DaoBase*) klass );
 
 	if( parents ){
 		for(i=0; i<parents->items->size; i++){
@@ -4732,81 +4715,122 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 				DaoClass_AddSuperClass( klass, item.v.klass, item.v.klass->className );
 			}
 		}
+	}else if( parents2 ){
+		for(it=DMap_First(parents2->items);it;it=DMap_Next(parents2->items,it)){
+			if( it->key.pValue->t == DAO_STRING && it->value.pValue->t == DAO_CLASS ){
+				DaoClass_AddSuperClass( klass, it->value.pValue->v.klass, it->key.pValue->v.s );
+			}
+		}
 	}
 	DaoClass_DeriveClassData( klass );
+	if( fields ){
+		for(i=0; i<fields->items->size; i++){
+			DaoType *type = NULL;
+			DaoTuple *field = NULL;
+			DMap *keys = NULL;
+			DValue *data = NULL;
+			DValue *name = NULL;
+			DValue *value = NULL;
+			DValue *storage = NULL;
+			DValue *access = NULL;
+			if( fields->items->data[i].t != DAO_TUPLE ) continue;
+			field = fields->items->data[i].v.tuple;
+			keys = field->unitype->mapNames;
+			data = field->items->data;
+			size = field->items->size;
+			st = DAO_OBJECT_VARIABLE;
+			pm = DAO_DATA_PUBLIC;
+			id = (it = MAP_Find( keys, "name" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t == DAO_STRING ) name = data + id;
+			id = (it = MAP_Find( keys, "value" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t ){
+				value = data + id;
+				type = field->unitype->nested->items.pAbtp[id];
+			}
+			id = (it = MAP_Find( keys, "storage" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t == DAO_ENUM ) storage = data + id;
+			id = (it = MAP_Find( keys, "access" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t == DAO_ENUM ) access = data + id;
 
-#if 0
-	tp = DaoNameSpace_MakeType( ns, "@class", DAO_INITYPE, NULL,NULL,0 );
-	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
-	if( proto ){
-		//DMap_Assign( klass->lookupTable, proto->lookupTable );
-		//DArray_Assign( klass->objDataName, proto->objDataName );
-		DArray_Assign( klass->cstDataName, proto->cstDataName );
-		DArray_Assign( klass->glbDataName, proto->glbDataName );
-		//DArray_Assign( klass->objDataType, proto->objDataType );
-		DArray_Assign( klass->glbDataType, proto->glbDataType );
-		//DVarray_Assign( klass->objDataDefault, proto->objDataDefault );
-		DVarray_Assign( klass->cstData, proto->cstData );
-		DVarray_Assign( klass->glbData, proto->glbData );
+			if( name ==NULL && size && data[0].t == DAO_STRING ) name = data;
+			if( value ==NULL && size >1 && data[1].t ){
+				value = & data[1];
+				type = field->unitype->nested->items.pAbtp[1];
+			}
+			if( storage ==NULL && size >2 && data[2].t == DAO_ENUM ) storage = & data[2];
+			if( access ==NULL && size >3 && data[3].t == DAO_ENUM ) access = & data[3];
+			if( name == NULL || value == NULL ) continue;
+			if( MAP_Find( klass->lookupTable, name->v.s ) ) continue;
+			if( storage ) st = storages[ storage->v.e->value ];
+			if( access ) pm = permissions[ access->v.e->value ];
+			switch( st ){
+			case DAO_OBJECT_VARIABLE :
+				DaoClass_AddObjectVar( klass, name->v.s, *value, type, pm, 0 );
+				break;
+			case DAO_CLASS_VARIABLE :
+				DaoClass_AddGlobalVar( klass, name->v.s, *value, type, pm, 0 );
+				break;
+			case DAO_CLASS_CONSTANT :
+				DaoClass_AddConst( klass, name->v.s, *value, pm, 0 );
+				break;
+			default : break;
+			}
+		}
 	}
-	for(it=DMap_First(protoValues);it;it=DMap_Next(protoValues,it)){
-		DNode *node = DMap_Find( proto->lookupTable, it->value.pString );
-		DValue value;
-		int st = LOOKUP_ST( node->value.pSize );
-		int pm = LOOKUP_PM( node->value.pSize );
-		int up = LOOKUP_UP( node->value.pSize );
-		int id = LOOKUP_ID( node->value.pSize );
-		if( up ) continue; /* should be never true */
-		value = *self->regValues[it->key.pInt];
-		if( st == DAO_CLASS_CONSTANT ){
-			DaoRoutine *newRout = NULL;
-//			DValue *dest = klass->cstData->data + id;
-			if( value.t == DAO_ROUTINE && value.v.routine->routHost == proto->objType ){
-				newRout = value.v.routine;
-				tp = DaoType_DefineTypes( newRout->routType, newRout->nameSpace, deftypes );
-				GC_ShiftRC( tp, newRout->routType );
-				GC_ShiftRC( klass->objType, newRout->routHost );
-				newRout->routHost = klass->objType;
-				newRout->routType = tp;
-			}
-			node = DMap_Find( klass->lookupTable, it->value.pString );
+	if( methods ){
+		for(i=0; i<methods->items->size; i++){
+			DaoTuple *tuple;
+			DaoRoutine *newRout;
+			DValue *data = NULL;
+			DValue *name = NULL;
+			DValue *method = NULL;
+			DValue *access = NULL;
+			DValue *dest;
+
+			if( methods->items->data[i].t != DAO_TUPLE ) continue;
+			tuple = methods->items->data[i].v.tuple;
+			data = tuple->items->data;
+			size = tuple->items->size;
+			pm = DAO_DATA_PUBLIC;
+
+			id = (it = MAP_Find( keys, "name" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t == DAO_ENUM ) name = data + id;
+			id = (it = MAP_Find( keys, "method" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t == DAO_ENUM ) method = data + id;
+			id = (it = MAP_Find( keys, "access" )) ? it->value.pInt : -1;
+			if( id >=0 && data[id].t == DAO_ENUM ) access = data + id;
+
+			if( name ==NULL && size && data[0].t == DAO_STRING ) name = data;
+			if( method ==NULL && size >1 && data[1].t == DAO_ROUTINE ) method = & data[1];
+			if( access ==NULL && size >2 && data[2].t == DAO_ENUM ) access = & data[2];
+
+			if( name == NULL || method == NULL ) continue;
+			if( access ) pm = permissions[ access->v.e->value ];
+
+			newRout = method->v.routine;
+			if( newRout->tidHost !=0 ) continue;
+			tp = DaoType_DefineTypes( newRout->routType, newRout->nameSpace, deftypes );
+			GC_ShiftRC( tp, newRout->routType );
+			GC_ShiftRC( klass->objType, newRout->routHost );
+			newRout->routHost = klass->objType;
+			newRout->routType = tp;
+
+			node = DMap_Find( proto->lookupTable, name->v.s );
 			if( node == NULL ){
-				DaoClass_AddConst( klass, it->value.pString, value, pm, 0 );
-			}else{
-				st = LOOKUP_ST( node->value.pSize );
-				up = LOOKUP_UP( node->value.pSize );
-				id = LOOKUP_ID( node->value.pSize );
-				if( st != DAO_CLASS_CONSTANT || up ) continue;
-				dest = klass->cstData->data + id;
-				if( dest->t == DAO_ROUTINE ){
-					DaoRoutine *rout = dest->v.routine;
-					DRoutine_AddOverLoad( (DRoutine*)rout, (DRoutine*)newRout );
-				}
+				DaoClass_AddConst( klass, name->v.s, *method, pm, 0 );
+				continue;
 			}
-#if 0
-			if( dest->t == DAO_ROUTINE ){
-				DaoRoutine *rout = dest->v.routine;
-				if( rout->routHost != klass->objType ) DValue_Clear( dest );
-			}
+			if( LOOKUP_UP( node->value.pSize ) ) continue;
+			if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
+			id = LOOKUP_ID( node->value.pSize );
+			dest = klass->cstData->data + id;
 			if( dest->t == DAO_ROUTINE ){
 				DaoRoutine *rout = dest->v.routine;
 				DRoutine_AddOverLoad( (DRoutine*)rout, (DRoutine*)newRout );
-			}else{
-				DValue_Move( value, klass->cstData->data+id, NULL );
 			}
-#endif
-		}else if( st == DAO_CLASS_VARIABLE ){
-			DValue_Move( value, klass->glbData->data+id, NULL );
-		}else if( st == DAO_OBJECT_VARIABLE ){
-			DaoType *tp = proto->objDataType->items.pAbtp[id];
-			if( tp == NULL || tp->tid == DAO_UDF || tp->tid == DAO_INITYPE ){
-				if( self->regTypes[it->key.pInt] ) tp = self->regTypes[it->key.pInt];
-			}
-			//DValue_Move( value, klass->objDataDefault->data+id, NULL );
-			DaoClass_AddObjectVar( klass, it->value.pString, value, tp, pm, 0 );
 		}
 	}
-#endif
+	DaoClass_DeriveObjectData( klass );
 	DaoClass_ResetAttributes( klass );
 	DMap_Delete( deftypes );
 }
