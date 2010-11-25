@@ -2155,6 +2155,8 @@ DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
 DaoType *dao_class_any = NULL;
 DaoType *dao_type_for_iterator = NULL;
+DaoType *dao_access_enum = NULL;
+DaoType *dao_storage_enum = NULL;
 
 #ifdef DAO_WITH_THREAD
 extern DMutex mutex_string_sharing;
@@ -2225,6 +2227,9 @@ DaoVmSpace* DaoInit()
 	ns = vms->nsInternal;
 
 	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, 0,0 );
+	dao_access_enum = DaoNameSpace_MakeEnumType( ns, "private,protected,public" );
+	dao_storage_enum = DaoNameSpace_MakeEnumType( ns, "const,global,var"  );
+
 	DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
 	DaoNameSpace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
 

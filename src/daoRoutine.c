@@ -2910,6 +2910,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				switch( ct->tid ){
 				case DAO_UDF :
 				case DAO_ANY :
+				case DAO_INITYPE :
 					/* allow less strict typing: */
 					break;
 				case DAO_CLASS :

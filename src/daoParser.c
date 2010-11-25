@@ -2039,6 +2039,7 @@ int DaoParser_ParseParams( DaoParser *self )
 	isMeth = klass && routine != klass->classRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && strcmp( routine->routName->mbs, hostname ) != 0;
+	notConstr &= strcmp( routine->routName->mbs, "@class" ) != 0;
 	if( (isMeth || inter) && tki != DKEY_SELF && notStatic && notConstr ){
 		DaoType *hostype = self->hostType;
 		DaoToken *tk;
@@ -2154,7 +2155,9 @@ int DaoParser_ParseParams( DaoParser *self )
 				//for(j=i+1; j<comma; j++) printf( "%s\n", tokens[j]->string->mbs );
 #endif
 				/* QWidget( parent : QWidget=0, f : int=0 )=>QWidget */
+				DArray_PushFront( defparser->enumTypes, abstype );
 				if( ! cst ) reg = DaoParser_MakeArithTree( defparser, i+1, comma-1, & cst, -1, 0 );
+				DArray_PopFront( defparser->enumTypes );
 				if( reg < 0 ) goto ErrorInvalidDefault;
 				if( cst ){
 					dft = DaoParser_GetVariable( defparser, cst );
@@ -2203,7 +2206,7 @@ int DaoParser_ParseParams( DaoParser *self )
 			if( tp ){
 				abstype = tp;
 			}else{
-				abstype = DaoType_New( mbs->mbs, m2, (DaoBase*) abstype, NULL );
+				abstype = DaoType_New( tok->mbs, m2, (DaoBase*) abstype, NULL );
 				if( abstype->fname == NULL ) abstype->fname = DString_New(1);
 				DString_Assign( abstype->fname, tok );
 			}

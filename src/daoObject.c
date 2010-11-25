@@ -104,14 +104,15 @@ static void DaoObject_Core_GetField( DValue *self0, DaoContext *ctx, DString *na
 static void DaoObject_Core_SetField( DValue *self0, DaoContext *ctx, DString *name, DValue value )
 {
 	DaoObject *self = self0->v.object;
-	int ec;
-	ec = DaoObject_SetData( self, name, value, ctx->object );
+	int ec = DaoObject_SetData( self, name, value, ctx->object );
+	int ec2 = ec;
 	if( ec ){
 		DString_SetMBS( ctx->process->mbstring, "." );
 		DString_Append( ctx->process->mbstring, name );
 		DString_AppendMBS( ctx->process->mbstring, "=" );
 		ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
 				ctx->process->mbstring, ctx, & value, 1, -1 );
+		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, DString_GetMBS( name ) );
 }
@@ -377,6 +378,10 @@ int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *o
 			value = klass->glbDataTable->items.pVarray[up]->data + id;
 			type = klass->glbTypeTable->items.pArray[up]->items.pAbtp[ id ];
 			DValue_Move( data, value, type );
+		}else if( sto == DAO_CLASS_CONSTANT ){
+			return DAO_ERROR_FIELD;
+		}else{
+			return DAO_ERROR_FIELD;
 		}
 	}else{
 		return DAO_ERROR_FIELD_NOTPERMIT;

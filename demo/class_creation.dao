@@ -11,13 +11,19 @@ routine CreateClass( name : string, value = 0 )
 	rout = routine( self : @class ){ # @class for host class type
 		io.writeln( 'Extra()', self.index );
 	}
+	init = routine( self : @class, txt : string ){
+		self.text = txt;
+	}
 
 	# klass = class( name, parents, fields, methods ){ core_class_body }
-	klass=class( name, { 'Alias'=>Base }, { ('added', 789) }, { ('Extra', rout) } )
+	klass=class( name, { 'Alias'=>Base }, { ('added', 789, $const, $public) }, { ('Extra', rout) } )
 	{
 		var index = value;
+		var text = '---';
 
-		routine Meth( id = 0 ){ io.writeln( 'Meth(id)', id, index, self.Alias ) }
+		routine @class( id = 0 ){ index = id }
+
+		routine Meth( id = 0 ){ io.writeln( 'Meth(id)', id, index, text, self.Alias ) }
 		routine Meth( text : string ){ io.writeln( 'Meth(text)', self.name, self.added ) }
 	}
 	return klass;
@@ -26,11 +32,14 @@ routine CreateClass( name : string, value = 0 )
 klass1 = CreateClass( 'AA', 123 );
 klass2 = CreateClass( 'BB', 456 );
 
-obj1 = klass1();
-obj2 = klass2();
+obj1 = klass1( )#'abcdef' );
+obj2 = klass2( 123456 );
 
 obj1.Meth();
 obj2.Meth();
 obj1.Meth( 'abc' );
 obj2.Meth( 'def' );
 obj1.Extra();
+
+obj1.added = 987;
+io.writeln( obj1.added ); # error, accessing private member
