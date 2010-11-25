@@ -1621,7 +1621,7 @@ Error:
 	DaoFunction_Delete( func );
 	return NULL;
 }
-/* symbols should comma or semicolon delimited string */
+/* symbols should be comma or semicolon delimited string */
 DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols )
 {
 	DaoType *type;

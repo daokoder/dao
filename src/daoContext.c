@@ -4958,6 +4958,8 @@ InvalidMethod:
 	DaoClass_DeriveObjectData( klass );
 	DaoClass_ResetAttributes( klass );
 	DMap_Delete( deftypes );
+	DMap_Delete( pm_map );
+	DMap_Delete( st_map );
 }
 int DaoContext_DoCheckExcept( DaoContext *self, DaoVmCode *vmc )
 {
