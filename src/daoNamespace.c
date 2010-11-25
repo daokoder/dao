@@ -1621,6 +1621,52 @@ Error:
 	DaoFunction_Delete( func );
 	return NULL;
 }
+/* symbols should comma or semicolon delimited string */
+DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols )
+{
+	DaoType *type;
+	DString *key, *name = DString_New(1);
+	DNode *node;
+	int n = strlen( symbols );
+	int i, k = 0, t1 = 0, t2 = 0;
+
+	DString_SetMBS( name, "enum<" );
+	DString_AppendMBS( name, symbols );
+	DString_AppendChar( name, '>' );
+	type = DaoNameSpace_FindType( self, name );
+	if( type ){
+		DString_Delete( name );
+		return type;
+	}
+	key = DString_New(1);
+	type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
+	type->mapNames = DMap_New(D_STRING,0);
+	for(i=0; i<n; i++){
+		char sym = symbols[i];
+		if( sym == ',' ){
+			MAP_Insert( type->mapNames, key, k );
+			DString_Clear( key );
+			k += 1;
+			t1 = 1;
+		}else if( sym == ';' ){
+			MAP_Insert( type->mapNames, key, 1<<k );
+			DString_Clear( key );
+			k += 1;
+			t2 = 1;
+		}else{
+			DString_AppendChar( key, sym );
+		}
+	}
+	if( t2 ){
+		MAP_Insert( type->mapNames, key, 1<<k );
+	}else{
+		MAP_Insert( type->mapNames, key, k );
+	}
+	DaoNameSpace_AddType( self, name, type );
+	DString_Delete( name );
+	DString_Delete( key );
+	return (t1&t2) ==0 ? type : NULL;
+}
 DaoType* DaoNameSpace_SymbolTypeAdd( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value )
 {
 	DaoType *type;

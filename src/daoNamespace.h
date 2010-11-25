@@ -127,6 +127,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		DValue *vals, DaoType *types[], DaoType *retp );
 DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val );
 
+DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols );
 DaoType* DaoNameSpace_SymbolTypeAdd( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value );
 DaoType* DaoNameSpace_SymbolTypeSub( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value );
 

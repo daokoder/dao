@@ -131,10 +131,10 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 	if( tid == DAO_OBJECT || tid == DAO_CDATA ) self->interfaces = DHash_New(0,0);
 	DString_SetMBS( self->name, name );
 	DaoType_CheckAttributes( self );
-	if( tid == DAO_PAR_NAMED && extra && extra->type == DAO_TYPE ){
+	if( (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) && extra && extra->type == DAO_TYPE ){
 		self->fname = DString_New(1);
 		DString_SetMBS( self->fname, name );
-		DString_AppendMBS( self->name, ":" );
+		DString_AppendChar( self->name, (tid == DAO_PAR_NAMED) ? ':' : '=' );
 		DString_Append( self->name, self->X.abtype->name );
 	}
 	if( nest ){

@@ -105,6 +105,8 @@ extern DaoType *dao_map_meta;
 extern DaoType *dao_routine;
 extern DaoType *dao_class_any;
 extern DaoType *dao_type_for_iterator;
+extern DaoType *dao_access_enum;
+extern DaoType *dao_storage_enum;
 
 DaoType* DaoType_New( const char *name, short tid, DaoBase *pb, DArray *nest );
 DaoType* DaoType_Copy( DaoType *self );
