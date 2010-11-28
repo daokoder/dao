@@ -724,7 +724,23 @@ void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	*tp = tmp;
 	DaoType_Delete( tp );
 }
+void DaoType_GetTypes( DaoType *self, DMap *types )
+{
+	int i;
+	if( self->tid == DAO_INITYPE ){
+		DMap_Insert( types, self, 0 );
+		return;
+	}
+	if( self->nested ){
+		for(i=0; i<self->nested->size; i++){
+			DaoType_GetTypes( self->nested->items.pAbtp[i], types );
+		}
+	}
+	if( self->X.extra && self->X.extra->type == DAO_TYPE )
+		DaoType_GetTypes( self->X.abtype, types );
+}
 
+/* interface implementations */
 void DaoInterface_Delete( DaoInterface *self )
 {
 	DNode *it = DMap_First(self->methods);

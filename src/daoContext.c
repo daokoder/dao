@@ -4232,8 +4232,21 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			}
 		}else if( caller.t==DAO_CLASS ){
 			DaoClass *klass = caller.v.klass;
-			rout = (DaoRoutine*) klass->classRoutine;
+			DaoObject *othis = NULL, *onew = NULL;
+			DValue tmp = daoNullObject;
+			if( initbase ){
+				othis = params[0]->v.object;
+			}else{
+				othis = onew = DaoObject_New( klass, NULL, 0 );
+			}
+			tmp.v.object = othis;
+			rout = (DaoRoutine*)klass->classRoutine;
 			rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+			if( rout == NULL ){
+				selfpar = & tmp;
+				rout = (DaoRoutine*)klass->classRoutine;
+				rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+			}
 			if( rout == NULL && (npar ==0 || (npar == 1 && (code == DVM_MCALL || code == DVM_MCALL_TC) ) ) ){
 				/* default contstructor */
 				rout = (DaoRoutine*) klass->classRoutine;
@@ -4243,7 +4256,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				return;
 			}
 			if( rout->type == DAO_FUNCTION ){
-				DaoObject *othis = NULL;
 				DaoFunction *func = (DaoFunction*) rout;
 				DaoVmCode vmcode = { DVM_CALL, 0, 0, 0 };
 				DValue returned = daoNullValue;
@@ -4251,6 +4263,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
 					DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched3" );
 					for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
+					if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
 					return;
 				}
 				ctx = DaoVmProcess_MakeContext( self->process, rout );
@@ -4266,11 +4279,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 					if( parbuf[i].ndef ) continue;
 					DValue_Clear( parbuf+i );
 				}
-				if( initbase ){
-					othis = params[0]->v.object;
-				}else{
-					othis = DaoObject_New( klass, NULL, 0 );
-				}
 				obj = (DaoObject*) DaoObject_MapChildObject( othis, rout->routHost );
 				sup = DaoClass_FindSuper( obj->myClass, rout->routHost->X.extra );
 				if( returned.t == DAO_CDATA ){
@@ -4285,18 +4293,18 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				return;
 			}else if( rout != NULL ){
 				ctx = DaoVmProcess_MakeContext( self->process, rout );
+				obj = othis;
 				if( initbase ){
-					obj = params[0]->v.object;
 					obj = (DaoObject*) DaoObject_MapThisObject( obj, rout->routHost );
 					GC_ShiftRC( obj, ctx->object );
 					ctx->object = obj;
 				}else{
-					obj = DaoObject_New( caller.v.klass, NULL, 0 );
 					GC_ShiftRC( obj, ctx->object );
 					ctx->object = obj;
 					ctx->ctxState = DVM_MAKE_OBJECT;
 				}
 			}else{
+				if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
 				DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (class)" );
 			}
 		}else{ /* DaoObject */
@@ -4567,8 +4575,49 @@ void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload );
+int DaoRoutine_InferTypes( DaoRoutine *self );
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
+
+static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
+{
+	DaoRoutine *routine = self->routine;
+	DNode *it = DMap_First(routine->regForLocVar);
+	for(; it; it = DMap_Next(routine->regForLocVar,it) ){
+		DValue value = *self->regValues[ it->key.pInt ];
+		if( value.t != DAO_TYPE || it->value.pAbtp->tid != DAO_TYPE ) continue;
+		MAP_Insert( deftypes, it->value.pAbtp->nested->items.pAbtp[0], value.v.p );
+	}
+}
+static void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
+{
+	DaoType *tp;
+	DNode *it;
+	for(it=DMap_First(self->regForLocVar); it; it=DMap_Next(self->regForLocVar,it) ){
+		tp = DaoType_DefineTypes( it->value.pAbtp, self->nameSpace, deftypes );
+		it->value.pAbtp = tp;
+	}
+}
+static void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
+{
+	DNode *it;
+	DMap *old = deftypes;
+	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
+	GC_ShiftRC( tp, self->routType );
+	self->routType = tp;
+	if( klass ){
+		GC_ShiftRC( klass->objType, self->routHost );
+		self->routHost = klass->objType;
+	}
+	DaoRoutine_MapTypes( self, deftypes );
+	DaoRoutine_InferTypes( self );
+	/*
+	DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
+	*/
+}
+
 void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 {
+	DMap *deftypes;
 	DValue **pp = self->regValues + vmc->a;
 	DValue *pp2;
 	DaoType *tp;
@@ -4594,17 +4643,24 @@ void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 	tp = DaoNameSpace_MakeRoutType( self->nameSpace, closure->routType, pp2, NULL, NULL );
 	GC_ShiftRC( tp, closure->routType );
 	closure->routType = tp;
+
+	deftypes = DMap_New(0,0);
+	DaoContext_MapTypes( self, deftypes );
+	tp = DaoType_DefineTypes( closure->routType, closure->nameSpace, deftypes );
+	GC_ShiftRC( tp, closure->routType );
+	closure->routType = tp;
+	DaoRoutine_MapTypes( closure, deftypes );
+	DMap_Delete( deftypes );
+
 	DArray_Assign( closure->annotCodes, proto->annotCodes );
 	DaoRoutine_SetVmCodes2( closure, proto->vmCodes );
 	DaoContext_SetData( self, vmc->c, (DaoBase*) closure );
 	/*
 	   DaoRoutine_PrintCode( proto, self->vmSpace->stdStream );
+	 */
 	   DaoRoutine_PrintCode( closure, self->vmSpace->stdStream );
 	 printf( "%s\n", closure->routType->name->mbs );
-	 */
 }
-
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 
 /* storage enum<const,global,var> */
 static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VARIABLE };
@@ -4621,6 +4677,7 @@ static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUB
 void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoType *tp;
+	DaoRoutine *routine = self->routine;
 	DaoNameSpace *ns = self->nameSpace;
 	DaoTuple *tuple = self->regValues[vmc->a]->v.tuple;
 	DaoClass *klass = DaoClass_New();
@@ -4649,8 +4706,8 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 
 	DaoContext_SetData( self, vmc->c, (DaoBase*) klass );
 	//printf( "%s\n", tuple->unitype->name->mbs );
-	if( vmc->b && self->routine->routConsts->data[vmc->b-1].t == DAO_CLASS ){
-		proto = self->routine->routConsts->data[vmc->b-1].v.klass;
+	if( vmc->b && routine->routConsts->data[vmc->b-1].t == DAO_CLASS ){
+		proto = routine->routConsts->data[vmc->b-1].v.klass;
 		protoValues = proto->protoValues;
 	}
 
@@ -4684,6 +4741,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	DaoClass_DeriveClassData( klass );
 	tp = DaoNameSpace_MakeType( ns, "@class", DAO_INITYPE, NULL,NULL,0 );
 	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
+	DaoContext_MapTypes( self, deftypes );
 
 	if( proto ){ /* copy data from the proto class */
 		for(it=DMap_First(proto->lookupTable);it;it=DMap_Next(proto->lookupTable,it)){
@@ -4703,16 +4761,22 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			DArray_Append( klass->cstDataName, proto->cstDataName->items.pString[i] );
 		for(i=klass->glbDataName->size; i<proto->glbDataName->size; i++)
 			DArray_Append( klass->glbDataName, proto->glbDataName->items.pString[i] );
-		for(i=klass->objDataType->size; i<proto->objDataType->size; i++)
-			DArray_Append( klass->objDataType, proto->objDataType->items.pString[i] );
-		for(i=klass->glbDataType->size; i<proto->glbDataType->size; i++)
-			DArray_Append( klass->glbDataType, proto->glbDataType->items.pString[i] );
 		for(i=klass->objDataDefault->size; i<proto->objDataDefault->size; i++)
 			DVarray_Append( klass->objDataDefault, proto->objDataDefault->data[i] );
 		for(i=klass->cstData->size; i<proto->cstData->size; i++)
 			DVarray_Append( klass->cstData, proto->cstData->data[i] );
 		for(i=klass->glbData->size; i<proto->glbData->size; i++)
 			DVarray_Append( klass->glbData, proto->glbData->data[i] );
+		for(i=klass->objDataType->size; i<proto->objDataType->size; i++){
+			tp = proto->objDataType->items.pAbtp[i];
+			tp = DaoType_DefineTypes( tp, ns, deftypes );
+			DArray_Append( klass->objDataType, tp );
+		}
+		for(i=klass->glbDataType->size; i<proto->glbDataType->size; i++){
+			tp = proto->glbDataType->items.pAbtp[i];
+			tp = DaoType_DefineTypes( tp, ns, deftypes );
+			DArray_Append( klass->glbDataType, tp );
+		}
 		GC_IncRCs( klass->objDataType );
 		GC_IncRCs( klass->glbDataType );
 	}
@@ -4731,11 +4795,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			DValue *dest = klass->cstData->data + id;
 			if( value.t == DAO_ROUTINE && value.v.routine->routHost == proto->objType ){
 				newRout = value.v.routine;
-				tp = DaoType_DefineTypes( newRout->routType, newRout->nameSpace, deftypes );
-				GC_ShiftRC( tp, newRout->routType );
-				GC_ShiftRC( klass->objType, newRout->routHost );
-				newRout->routHost = klass->objType;
-				newRout->routType = tp;
+				DaoRoutine_Finalize( newRout, klass, deftypes );
 				if( strcmp( newRout->routName->mbs, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
@@ -4927,11 +4987,7 @@ InvalidField:
 
 			newRout = method->v.routine;
 			if( newRout->tidHost !=0 ) continue;
-			tp = DaoType_DefineTypes( newRout->routType, newRout->nameSpace, deftypes );
-			GC_ShiftRC( tp, newRout->routType );
-			GC_ShiftRC( klass->objType, newRout->routHost );
-			newRout->routHost = klass->objType;
-			newRout->routType = tp;
+			DaoRoutine_Finalize( newRout, klass, deftypes );
 			DString_Assign( newRout->routName, name->v.s );
 			if( DString_EQ( newRout->routName, klass->className ) ){
 				DRoutine_AddOverLoad( (DRoutine*)klass->classRoutine, (DRoutine*)newRout );

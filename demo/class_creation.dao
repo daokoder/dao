@@ -11,12 +11,17 @@ routine CreateClass( name : string, value = 0 )
 	rout = routine( self : @class ){ # @class for host class type
 		io.writeln( 'Extra()', self.index );
 	}
+	# to be used as initializer/constructor
 	init = routine( self : @class, txt : string ){
+		io.writeln( 'initialized by init' );
 		self.text = txt;
 	}
 
 	# klass = class( name, parents, fields, methods ){ core_class_body }
-	klass=class( name, { 'Alias'=>Base }, { ('added', 789, $const, $public) }, { ('Extra', rout) } )
+	klass=class( name, 
+			{ 'Alias'=>Base }, 
+			{ ('added', 789, $const, $public) }, 
+			{ (name, init), ('Extra', rout) } )
 	{
 		var index = value;
 		var text = '---';
@@ -32,7 +37,7 @@ routine CreateClass( name : string, value = 0 )
 klass1 = CreateClass( 'AA', 123 );
 klass2 = CreateClass( 'BB', 456 );
 
-obj1 = klass1( )#'abcdef' );
+obj1 = klass1( 'abcdef' );
 obj2 = klass2( 123456 );
 
 obj1.Meth();

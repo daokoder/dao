@@ -1119,7 +1119,7 @@ static DaoRoutine* DaoRoutine_Copy2( DaoRoutine *self )
 	return copy;
 }
 
-static int DaoRoutine_InferTypes( DaoRoutine *self );
+int DaoRoutine_InferTypes( DaoRoutine *self );
 extern void DaoRoutine_JitCompile( DaoRoutine *self );
 
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
@@ -2014,10 +2014,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	type = self->regType->items.pAbtp;
 	csts = regConst->data;
 
-	node = DMap_First( self->regForLocVar ); /* XXX remove DaoParser::regForLocVar */
-	for( ; node !=NULL; node = DMap_Next(self->regForLocVar,node) ){
-		type[ node->key.pInt ] = (DaoType*)node->value.pVoid;
-	}
 	if( self->routName->mbs[0] == '@' && self->routType->nested->size ){
 		DaoType *ftype = self->routType->nested->items.pAbtp[0];
 		if( ftype->tid == DAO_PAR_NAMED && ftype->X.abtype->tid == DAO_ROUTINE ){
@@ -2025,13 +2021,22 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			for(i=0; i<ftype->nested->size; i++) init[i+self->parCount] = 1;
 		}
 	}
-	for(i=0, k=0; i<self->routType->nested->size; i++, k++){
-		init[k] = 1;
-		type[k] = self->routType->nested->items.pAbtp[i];
-		if( type[k] && type[k]->tid == DAO_PAR_VALIST ) type[k] = NULL;
+	for(i=0; i<self->routType->nested->size; i++){
+		init[i] = 1;
+		type[i] = self->routType->nested->items.pAbtp[i];
+		if( type[i] && type[i]->tid == DAO_PAR_VALIST ) type[i] = NULL;
 		if( self->constParam & (1<<i) ) csts[i].cst = 1;
-		tt = type[k];
-		if( tt ) type[k] = tt->X.abtype; /* name:type, name=type */
+		tt = type[i];
+		if( tt ) type[i] = tt->X.abtype; /* name:type, name=type */
+		node = MAP_Find( self->regForLocVar, i );
+		if( node == NULL ) continue;
+		if( node->value.pAbtp == NULL || type[i] == NULL ) continue;
+		DaoType_MatchTo( type[i], node->value.pAbtp, defs );
+	}
+	node = DMap_First( self->regForLocVar ); /* XXX remove DaoParser::regForLocVar */
+	for( ; node !=NULL; node = DMap_Next(self->regForLocVar,node) ){
+		if( node->key.pInt < self->routType->nested->size ) continue;
+		type[ node->key.pInt ] = DaoType_DefineTypes( node->value.pAbtp, ns, defs );
 	}
 	/* reference counts of types should be updated right in place,
 	 * not at the end of this funciton), because function specialization
@@ -2066,7 +2071,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		node = DMap_First( defs );
 		while( node !=NULL ){
 			DaoType *abtp = (DaoType*) node->key.pBase;
-			if( STRCMP( abtp->name, "?" ) == 0 ){
+			if( abtp->tid == DAO_UDF ){
 				DMap_Erase( defs, (void*) abtp );
 				node = DMap_First( defs );
 				continue;
@@ -2189,16 +2194,16 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			{
 				csts[opc].cst = csts[opa].cst;
 				lastcomp = opc;
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
 				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
 				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				at = type[opa];
 				bt = type[opb];
 				ct = NULL;
 				container = at;
 				indexkey = bt;
-				if( at->tid == DAO_ANY || at->tid == DAO_UDF ){
+				if( at->tid == DAO_ANY || at->tid == DAO_UDF || at->tid == DAO_INITYPE ){
 					/* allow less strict typing: */
 					ct = any;
 				}else if( at->tid == DAO_INTEGER ){
@@ -3171,6 +3176,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				 */
 				if( at->tid ==DAO_UDF || bt->tid ==DAO_UDF ){
 					ct = udf;
+				}else if( at->tid ==DAO_INITYPE || bt->tid ==DAO_INITYPE ){
+					ct = any;
 				}else if( at->tid ==DAO_ANY || bt->tid ==DAO_ANY ){
 					ct = any;
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
@@ -3361,10 +3368,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			{
 				lastcomp = opc;
 				/* force the result of DVM_NOT to be a number? */
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-				if( csts[opc].cst ) goto ModifyConstant;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
+				if( csts[opc].cst ) goto ModifyConstant;
 				if( type[opc] == NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				if( at->tid ==DAO_UDF || at->tid == DAO_ANY ) continue;
 				AssertTypeMatching( type[opa], type[opc], defs, 0 );
@@ -3452,10 +3459,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_CHECK :
 			{
 				lastcomp = opc;
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
 				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, inumt );
 				AssertTypeMatching( inumt, type[opc], defs, 0 );
 				break;
@@ -3463,9 +3470,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_NAMEVA :
 			{
 				lastcomp = opc;
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
 				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = DaoNameSpace_MakeType( ns, routConsts->data[opa].v.s->mbs,
 						DAO_PAR_NAMED, (DaoBase*) type[opb], 0, 0 );
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
@@ -3475,10 +3482,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_PAIR :
 			{
 				lastcomp = opc;
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
 				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ts[0] = type[opa];
 				ts[1] = type[opb];
 				ct = DaoNameSpace_MakeType( ns, "pair", DAO_PAIR, NULL, ts, 2 );
@@ -3489,9 +3496,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_TUPLE :
 			{
 				lastcomp = opc;
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
 				k = 1;
 				for(j=0; j<opb; j++){

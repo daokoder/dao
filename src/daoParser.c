@@ -2020,15 +2020,6 @@ int DaoParser_ParseParams( DaoParser *self )
 	else if( klass ) hostname = klass->className->mbs;
 	else if( cdata ) hostname = cdata->typer->name;
 
-#if 0
-	if( hostname && strcmp( routine->routName->mbs, hostname ) ==0 ){
-		routine->parTokens = DArray_New( D_TOKEN );
-		for(i=0; i<=rb; i++) DArray_Append( routine->parTokens, tokens[i] );
-		DaoTokens_Append( routine->parTokens, DTOK_COLON, line, ":" );
-		DaoTokens_Append( routine->parTokens, DTOK_IDENTIFIER, line, hostname );
-		DaoTokens_Append( routine->parTokens, DTOK_LB, line, "(" );
-	}
-#endif
 	if( routine->routName->mbs[0] == '@' ) DString_AppendChar( pname, '@' );
 	DString_AppendMBS( pname, "routine<" );
 	i = start + 1;
@@ -2078,12 +2069,6 @@ int DaoParser_ParseParams( DaoParser *self )
 			/*
 			   printf( "name = %s; regid = %i\n", tokens[i]->string->mbs, self->locRegCount );
 			 */
-#if 0
-			if( routine->parTokens ){
-				if( routine->parCount ) DaoTokens_Append( routine->parTokens, DTOK_COMMA, line, "," );
-				DArray_Append( routine->parTokens, tokens[i] );
-			}
-#endif
 			if( routine->parCount && tokens[i-1]->type == DTOK_IDENTIFIER ) goto ErrorNeedSeparator;
 
 			MAP_Insert( DArray_Top( self->localVarMap ), tok, self->locRegCount );
@@ -2192,48 +2177,18 @@ int DaoParser_ParseParams( DaoParser *self )
 		}
 		i ++;
 
+		MAP_Insert( self->regForLocVar, regCount, abstype );
 		if( abstype->tid != DAO_PAR_VALIST ){
-			m1 = ':';
-			m2 = DAO_PAR_NAMED;
-			if( abtp ){
-				m1 = '=';
-				m2 = DAO_PAR_DEFAULT;
-			}
-			DString_Assign( mbs, tok );
-			DString_AppendChar( mbs, (char) m1 );
-			DString_Append( mbs, abstype->name );
-			tp = DaoType_FindType( mbs, myNS, klass, routine );
-			if( tp ){
-				abstype = tp;
-			}else{
-				abstype = DaoType_New( tok->mbs, m2, (DaoBase*) abstype, NULL );
-				if( abstype->fname == NULL ) abstype->fname = DString_New(1);
-				DString_Assign( abstype->fname, tok );
-			}
+			m2 = abtp ? DAO_PAR_DEFAULT : DAO_PAR_NAMED;
+			abstype = DaoType_New( tok->mbs, m2, (DaoBase*) abstype, NULL );
 		}
 		/* e.g.: spawn( pid :string, src :string, timeout=-1, ... ) */
 		DArray_Append( nested, (void*) abstype );
-#if 0
-		if( routine->routConsts->size < routine->parCount ){
-			DRoutine_AddConstValue( (DRoutine*) routine, dft );
-		}else if( routine->routConsts->size > routine->parCount ){
-			DVarray_Erase( routine->routConsts, routine->parCount-1, routine->routConsts->size );
-			DRoutine_AddConstValue( (DRoutine*) routine, dft );
-		}
-		DaoParser_PopRegisters( self, self->vmcCount );
-		DaoParser_ClearCodes( self );
-		DMap_Clear( self->allConsts );
-#endif
 		DRoutine_AddConstValue( (DRoutine*) routine, dft );
 		k = pname->size >0 ? pname->mbs[pname->size-1] : 0;
 		if( k !='<' && k != '(' ) DString_AppendMBS( pname, "," );
 		DString_AppendMBS( pname, abstype->name->mbs );
-		if( abstype == NULL ) break;
-		MAP_Insert( self->regForLocVar, regCount, abstype );
 	}
-#if 0
-	if( routine->parTokens ) DaoTokens_Append( routine->parTokens, DTOK_RB, line, ")" );
-#endif
 	i = rb + 1;
 	if( i <= end && tokens[i]->name == DKEY_CONST ){
 		routine->attribs |= DAO_ROUT_ISCONST;
@@ -4932,18 +4887,16 @@ int DaoParser_GetClassMember( DaoParser *self, DString *name )
 	DaoRoutine *routine = self->routine;
 	DaoClass *hostClass = self->hostClass;
 	DNode *node = NULL;
-	int id;
 
 	/* Look for variable in class: */
 	if( hostClass == NULL ) return -1;
 	node = MAP_Find( hostClass->lookupTable, name );
 	if( node == NULL ) return -1;
 
-	id = LOOKUP_ID( node->value.pSize );
 	switch( LOOKUP_ST( node->value.pSize ) ){
 	case DAO_OBJECT_VARIABLE : routine->attribs |= DAO_ROUT_NEEDSELF;
 	case DAO_CLASS_VARIABLE : 
-	case DAO_CLASS_CONSTANT : return id;
+	case DAO_CLASS_CONSTANT : return node->value.pSize;
 	default : break;
 	}
 	return -1;
@@ -7374,9 +7327,9 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 					int st, up, id;
 					reg2 = DaoParser_MakeArithTree( self, pos+1, end, & c2, regC, state );
 					if( reg2 < 0 ) goto ParsingError;
-					st = LOOKUP_ST( reg2 );
-					up = LOOKUP_UP( reg2 );
-					id = LOOKUP_ID( reg2 );
+					st = LOOKUP_ST( i );
+					up = LOOKUP_UP( i );
+					id = LOOKUP_ID( i );
 					if( st & 1 ){
 						DaoParser_Error( self, DAO_CTW_MODIFY_CONST, tokens[pos-1]->string );
 						return -1;
