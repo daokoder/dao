@@ -4581,8 +4581,8 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
 {
 	DaoRoutine *routine = self->routine;
-	DNode *it = DMap_First(routine->regForLocVar);
-	for(; it; it = DMap_Next(routine->regForLocVar,it) ){
+	DNode *it = DMap_First(routine->localVarType);
+	for(; it; it = DMap_Next(routine->localVarType,it) ){
 		DValue value = *self->regValues[ it->key.pInt ];
 		if( value.t != DAO_TYPE || it->value.pAbtp->tid != DAO_TYPE ) continue;
 		MAP_Insert( deftypes, it->value.pAbtp->nested->items.pAbtp[0], value.v.p );
@@ -4592,7 +4592,7 @@ static void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 {
 	DaoType *tp;
 	DNode *it;
-	for(it=DMap_First(self->regForLocVar); it; it=DMap_Next(self->regForLocVar,it) ){
+	for(it=DMap_First(self->localVarType); it; it=DMap_Next(self->localVarType,it) ){
 		tp = DaoType_DefineTypes( it->value.pAbtp, self->nameSpace, deftypes );
 		it->value.pAbtp = tp;
 	}
@@ -4657,9 +4657,9 @@ void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 	DaoContext_SetData( self, vmc->c, (DaoBase*) closure );
 	/*
 	   DaoRoutine_PrintCode( proto, self->vmSpace->stdStream );
-	 */
 	   DaoRoutine_PrintCode( closure, self->vmSpace->stdStream );
 	 printf( "%s\n", closure->routType->name->mbs );
+	 */
 }
 
 /* storage enum<const,global,var> */
