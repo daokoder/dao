@@ -309,7 +309,7 @@ DString* DValue_GetString( DValue val, DString *str )
 	case DAO_INTEGER : sprintf( chs, ( sizeof(dint) == 4 )? "%li" : "%lli", val.v.i ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", val.v.f ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", val.v.d ); break;
-	case DAO_COMPLEX : sprintf( chs, "%g+%g$", val.v.c->real, val.v.c->imag );
+	case DAO_COMPLEX : sprintf( chs, "%g+%g$", val.v.c->real, val.v.c->imag ); break;
 	case DAO_LONG  : DLong_Print( val.v.l, str ); break;
 	case DAO_ENUM : DEnum_MakeName( val.v.e, str ); break;
 	case DAO_STRING : DString_Assign( str, val.v.s ); break;
