@@ -58,6 +58,7 @@ void DString_ToUpper( DString *self );
 
 size_t  DString_Size( DString *self );
 void DString_Resize( DString *self, size_t size );
+void DString_Reserve( DString *self, size_t size );
 void DString_Clear( DString *self );
 
 void DString_Erase( DString *self, size_t start, size_t n );

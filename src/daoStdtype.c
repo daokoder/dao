@@ -2438,6 +2438,59 @@ static void DaoLIST_Iter( DaoContext *ctx, DValue *p[], int N )
 	data[0].v.i = self->items->size >0;
 	DValue_Copy( & data[1], iter );
 }
+static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoList *self = p[0]->v.list;
+	DString *res;
+	DString *buf = DString_New( 1 );
+	DString *sep = p[1]->v.s;
+	DValue *data = self->items->data;
+	size_t size = 0, i;
+	int mbs = 1;
+	wchar_t ewcs[] = {0};
+	for( i = 0; i < self->items->size; i++ ){
+		switch( data[i].t )
+		{
+			case DAO_STRING:
+				if( data[i].v.s->mbs == NULL )
+					mbs = 0;
+				size += data[i].v.s->size;
+				break;
+			case DAO_INTEGER:
+				size += ( data[i].v.i < 0 ) ? 2 : 1;
+				break;
+			case DAO_FLOAT:
+				size += ( data[i].v.f < 0 ) ? 2 : 1;
+				break;
+			case DAO_DOUBLE:
+				size += ( data[i].v.d < 0 ) ? 2 : 1;
+				break;
+			case DAO_COMPLEX:
+				size += ( data[i].v.c->real < 0 ) ? 5 : 4;
+				break;
+			case DAO_LONG:
+				size += self->items->data[i].v.l->size + ( data[i].v.l->sign < 0 ) ? 2 : 1;
+				break;
+			default:
+				DaoContext_RaiseException( ctx, DAO_ERROR, "Incompatible list type (expected numeric or string)" );
+				return;
+		}
+	}
+	if( !mbs || ( sep->size != 0 && sep->mbs == NULL ) )
+		res = DaoContext_PutWCString( ctx, ewcs );
+	else
+		res = DaoContext_PutMBString( ctx, "" );
+	if( self->items->size != 0 ){
+		DString_Reserve( res, size + ( self->items->size - 1 ) * sep->size );
+		for( i = 0; i < self->items->size - 1; i++ ){
+			DString_Append( res, DValue_GetString( self->items->data[i], buf ) );
+			if( sep->size != 0 )
+				DString_Append( res, sep );
+		}
+		DString_Append( res, DValue_GetString( self->items->data[i], buf ) );
+	}
+	DString_Delete( buf );
+}
 static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Insert,     "insert( self :list<@T>, item : @T, pos=0 )" },
@@ -2448,6 +2501,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Max,        "max( self :list<@T> )const=>tuple<@T,int>" },
 	{ DaoLIST_Min,        "min( self :list<@T> )const=>tuple<@T,int>" },
 	{ DaoLIST_Sum,        "sum( self :list<@T> )const=>@T" },
+	{ DaoLIST_Join,       "join( self :list<any>, separator='' )const=>string" },
 	{ DaoLIST_PushFront,  "pushfront( self :list<@T>, item :@T )" },
 	{ DaoLIST_PopFront,   "popfront( self :list<any> )" },
 	{ DaoLIST_PopFront,   "dequeue( self :list<any> )" },
