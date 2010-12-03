@@ -3206,6 +3206,7 @@ void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
 
 DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 {
+	DaoType *types[] = { NULL, NULL, NULL };
 	DaoContext *ctx = self->topFrame->context;
 	DaoVmCode *vmc = ctx->vmc;
 	DValue *dC = ctx->regValues[ vmc->c ];
@@ -3213,6 +3214,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 
 	dao_fe_clear();
 	ctx->idClearFE = -1;
+	ctx->regTypes = types;
 
 	switch( vmc->code ){
 	case DVM_MOVE :
@@ -3285,14 +3287,15 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 }
 DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmc, int n, DaoType *t )
 {
+	DaoType **tps = (DaoType**) dao_calloc(1,n*sizeof(DaoType*));
 	DaoContext *ctx = self->topFrame->context;
 	DValue cst;
-	ctx->regTypes = (DaoType**) dao_calloc(1,n*sizeof(DaoType*));
+	ctx->regTypes = tps;
 	ctx->regTypes[0] = t;
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = vmc;
 	cst = DaoVmProcess_MakeConst( self );
-	dao_free( ctx->regTypes );
+	dao_free( tps );
 	return cst;
 }
 DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, DValue b )

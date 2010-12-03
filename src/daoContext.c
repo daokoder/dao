@@ -4750,7 +4750,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			id = LOOKUP_ID( it->value.pSize );
 			if( up ==0 ){
 				if( st == DAO_CLASS_CONSTANT && id <klass->cstData->size ) continue;
-				if( st == DAO_CLASS_VARIABLE && id <klass->cstData->size ) continue;
+				if( st == DAO_CLASS_VARIABLE && id <klass->glbData->size ) continue;
 				if( st == DAO_OBJECT_VARIABLE && id <klass->objDataDefault->size ) continue;
 			}
 			DMap_Insert( klass->lookupTable, it->key.pVoid, it->value.pVoid );
@@ -4819,9 +4819,11 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 				DValue_Move( value, klass->cstData->data+id, NULL );
 			}
 		}else if( st == DAO_CLASS_VARIABLE ){
-			DValue_Move( value, klass->glbData->data+id, NULL );
+			tp = klass->glbDataType->items.pAbtp[id];
+			DValue_Move( value, klass->glbData->data+id, tp );
 		}else if( st == DAO_OBJECT_VARIABLE ){
-			DValue_Move( value, klass->objDataDefault->data+id, NULL );
+			tp = klass->objDataType->items.pAbtp[id];
+			DValue_Move( value, klass->objDataDefault->data+id, tp );
 		}
 	}
 

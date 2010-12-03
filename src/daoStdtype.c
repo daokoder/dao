@@ -15,6 +15,7 @@
 #include"stdio.h"
 #include"string.h"
 #include"ctype.h"
+#include"math.h"
 
 #include"daoType.h"
 #include"daoVmspace.h"
@@ -2446,7 +2447,7 @@ static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
 	DString *sep = p[1]->v.s;
 	DValue *data = self->items->data;
 	size_t size = 0, i;
-	int mbs = 1;
+	int digits, mbs = 1;
 	wchar_t ewcs[] = {0};
 	for( i = 0; i < self->items->size; i++ ){
 		switch( data[i].t )
@@ -2469,7 +2470,13 @@ static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
 				size += ( data[i].v.c->real < 0 ) ? 5 : 4;
 				break;
 			case DAO_LONG:
-				size += self->items->data[i].v.l->size + ( data[i].v.l->sign < 0 ) ? 2 : 1;
+				digits = self->items->data[i].v.l->size;
+				digits = digits > 1 ? (LONG_BITS * (digits - 1) + 1) : 1; /* bits */
+				digits /= log( self->items->data[i].v.l->base ) / log(2); /* digits */
+				size += digits + (data[i].v.l->sign < 0) ? 3 : 2; /* sign + suffix */
+				break;
+			case DAO_ENUM :
+				size += 1;
 				break;
 			default:
 				DaoContext_RaiseException( ctx, DAO_ERROR, "Incompatible list type (expected numeric or string)" );
