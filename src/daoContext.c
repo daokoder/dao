@@ -4761,8 +4761,6 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			DArray_Append( klass->cstDataName, proto->cstDataName->items.pString[i] );
 		for(i=klass->glbDataName->size; i<proto->glbDataName->size; i++)
 			DArray_Append( klass->glbDataName, proto->glbDataName->items.pString[i] );
-		for(i=klass->objDataDefault->size; i<proto->objDataDefault->size; i++)
-			DVarray_Append( klass->objDataDefault, proto->objDataDefault->data[i] );
 		for(i=klass->cstData->size; i<proto->cstData->size; i++)
 			DVarray_Append( klass->cstData, proto->cstData->data[i] );
 		for(i=klass->glbData->size; i<proto->glbData->size; i++)
@@ -4779,6 +4777,12 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 		}
 		GC_IncRCs( klass->objDataType );
 		GC_IncRCs( klass->glbDataType );
+		for(i=klass->objDataDefault->size; i<proto->objDataDefault->size; i++){
+			DValue v = proto->objDataDefault->data[i];
+			tp = klass->objDataType->items.pAbtp[i];
+			DVarray_Append( klass->objDataDefault, daoNullValue );
+			DValue_Move( v, & klass->objDataDefault->data[klass->objDataDefault->size-1], tp );
+		}
 	}
 	/* update class members with running time data */
 	for(it=DMap_First(protoValues);it;it=DMap_Next(protoValues,it)){

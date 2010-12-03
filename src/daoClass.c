@@ -39,12 +39,13 @@ static void DaoClass_GetField( DValue *self0, DaoContext *ctx, DString *name )
 	DValue *d2 = NULL;
 	DValue value = daoNullValue;
 	int rc = DaoClass_GetData( self, name, & value, host, & d2 );
-	DaoContext_PutReference( ctx, d2 );
 	if( rc ){
 		DString_SetMBS( mbs, DString_GetMBS( self->className ) );
 		DString_AppendMBS( mbs, "." );
 		DString_Append( mbs, name );
 		DaoContext_RaiseException( ctx, rc, mbs->mbs );
+	}else{
+		DaoContext_PutReference( ctx, d2 );
 	}
 	DString_Delete( mbs );
 }
@@ -619,7 +620,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, DaoType *
 	DArray_Append( self->objDataType, (void*)t );
 	DArray_Append( self->objDataName, (void*)name );
 	DVarray_Append( self->objDataDefault, daoNullValue );
-	DValue_SimpleMove( deft, self->objDataDefault->data + self->objDataDefault->size-1 );
+	DValue_Move( deft, self->objDataDefault->data + self->objDataDefault->size-1, t );
 	DValue_MarkConst( self->objDataDefault->data + self->objDataDefault->size-1 );
 	return 0;
 }

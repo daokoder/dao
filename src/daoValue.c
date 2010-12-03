@@ -663,7 +663,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		case DAO_COMPLEX :
 			if( to->t != DAO_COMPLEX ) to->v.c = dao_malloc( sizeof(complex16) );
 			to->t = from.t;
-			to->v.c[0] = from.v.c[0];
+			to->v.c[0] = DValue_GetComplex( from );
 			break;
 		case DAO_LONG  :
 			if( to->t != DAO_LONG ) to->v.l = DLong_New();

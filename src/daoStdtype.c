@@ -291,7 +291,14 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 		{
 			DaoArray *array = (DaoArray*) self;
 			DaoArray *copy = DaoArray_New( array->numType );
-			copy->unitype = (tp && tp->tid == DAO_ARRAY) ? tp : array->unitype;
+			copy->unitype = array->unitype;
+			if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
+				int nt = tp->nested->items.pAbtp[0]->tid;
+				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ){
+					copy->unitype = tp;
+					copy->numType = nt;
+				}
+			}
 			GC_IncRC( copy->unitype );
 			DaoArray_ResizeArray( copy, array->dims->items.pSize, array->dims->size );
 			DaoArray_CopyArray( copy, array );

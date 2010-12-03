@@ -2550,7 +2550,7 @@ FinishCall:
 		}
 		return 1;
 	}
-	if( vmc && vmc->code == DVM_RETURN ){
+	if( vmc && vmc->code == DVM_RETURN && topCtx->caller ==NULL && topCtx->regValues ){
 		DValue_Move( *topCtx->regValues[ vmc->c ], & self->returned, NULL );
 	}
 	DaoVmProcess_PopContext( self );

@@ -203,6 +203,7 @@ void DaoType_Init()
 	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
 	for(i=DAO_INTEGER; i<=DAO_DOUBLE; i++){
 		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
+		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SUB;
 		for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)
 			dao_type_matrix[i][j] = DAO_MT_SUB;
 	}
