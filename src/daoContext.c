@@ -53,13 +53,9 @@ extern void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc );
 
-extern void DaoArray_ScaleAssign( DaoArray *aL, DaoBase *val, DArray *idxL, short op );
-extern void DaoArray_ArrayAssign( DaoArray *aL, DaoArray *aR, DArray *idxL, short op );
-extern void DaoArray_numL_arrayR( DaoArray *root, double vL, DaoArray *aR, short op );
-extern void DaoArray_comL_arrayR( DaoArray *root, complex16 vL, DaoArray *aR, short op );
-extern void DaoArray_arrayL_numR( DaoArray *root, DaoArray *aL, double vR, short op );
-extern void DaoArray_arrayL_comR( DaoArray *root, DaoArray *aL, complex16 vR, short op );
-extern void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoContext *c );
+void DaoArray_number_op_array( DaoArray *C, DValue A, DaoArray *B, short op, DaoContext *ctx );
+void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DValue B, short op, DaoContext *ctx );
+void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoContext *c );
 
 extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
 int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *ret );
@@ -820,8 +816,10 @@ DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc )
 	DValue dC = *self->regValues[ vmc->c ];
 	int type = DAO_FLOAT;
 	DaoArray *array = dC.v.array;
-	if( tp && tp->tid == DAO_ARRAY && tp->nested->size )
+	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
 		type = tp->nested->items.pAbtp[0]->tid;
+		if( type == 0 || type > DAO_COMPLEX ) type = DAO_FLOAT;
+	}
 	if( dC.t == DAO_ARRAY && array->refCount == 1 ){
 		if( array->numType < type ) DaoArray_ResizeVector( array, 0 );
 		array->numType = type;
@@ -2311,26 +2309,16 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 		DLong_Delete( a );
 		DLong_Delete( b2 );
 #ifdef DAO_WITH_NUMARRAY
-	}else if( dB.t >=DAO_INTEGER && dB.t <=DAO_DOUBLE && dA.t ==DAO_ARRAY ){
+	}else if( dB.t >=DAO_INTEGER && dB.t <=DAO_COMPLEX && dA.t ==DAO_ARRAY ){
 		DaoArray *na = dA.v.array;
 		DaoArray *nc = na;
 		if( vmc->a != vmc->c ) nc = DaoContext_GetArray( self, vmc );
-		DaoArray_arrayL_numR( nc, na, DValue_GetDouble(dB), vmc->code );
-	}else if( dA.t >=DAO_INTEGER && dA.t <=DAO_DOUBLE && dB.t ==DAO_ARRAY ){
+		DaoArray_array_op_number( nc, na, dB, vmc->code, self );
+	}else if( dA.t >=DAO_INTEGER && dA.t <=DAO_COMPLEX && dB.t ==DAO_ARRAY ){
 		DaoArray *nb = dB.v.array;
 		DaoArray *nc = nb;
 		if( vmc->b != vmc->c ) nc = DaoContext_GetArray( self, vmc );
-		DaoArray_numL_arrayR( nc, DValue_GetDouble(dA), nb, vmc->code );
-	}else if( dA.t ==DAO_COMPLEX && dB.t ==DAO_ARRAY ){
-		DaoArray *nb = dB.v.array;
-		DaoArray *nc = nb;
-		if( vmc->b != vmc->c ) nc = DaoContext_GetArray( self, vmc );
-		DaoArray_comL_arrayR( nc, *dA.v.c, nb, vmc->code );
-	}else if( dB.t ==DAO_COMPLEX && dA.t ==DAO_ARRAY ){
-		DaoArray *na = dA.v.array;
-		DaoArray *nc = na;
-		if( vmc->a != vmc->c ) nc = DaoContext_GetArray( self, vmc );
-		DaoArray_arrayL_comR( nc, na, *dB.v.c, vmc->code );
+		DaoArray_number_op_array( nc, dA, nb, vmc->code, self );
 	}else if( dA.t ==DAO_ARRAY && dB.t ==DAO_ARRAY ){
 		DaoArray *na = dA.v.array;
 		DaoArray *nb = dB.v.array;

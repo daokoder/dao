@@ -627,7 +627,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_CALL , && LAB_MCALL ,
 		&& LAB_CRRE ,
 		&& LAB_JITC ,
-		&& LAB_JOINT ,
 		&& LAB_RETURN ,
 		&& LAB_YIELD ,
 		&& LAB_DEBUG ,
@@ -999,18 +998,8 @@ CallEntry:
 			locVars[ vmc->c ] = dataVG->items.pVarray[vmc->a]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETI ){
-#ifdef DAO_WITH_NUMARRAY
-			if( locVars[ vmc->a ]->t == DAO_ARRAY && vmc[1].code == DVM_JOINT ){
-				DaoArray_SetItem( locVars[ vmc->a ], topCtx, *locVars[ vmc->b ],
-						*locVars[ vmc[2].b ], vmc[2].code );
-				vmc += 4;
-				OPJUMP()
-			}else
-#endif
-			{
-				DaoContext_DoGetItem( topCtx, vmc );
-				if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
-			}
+			DaoContext_DoGetItem( topCtx, vmc );
+			if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( GETF ){
@@ -1318,8 +1307,6 @@ CallEntry:
 				   dbase = (DaoBase*)inum;
 				   printf( "jitc: %#x, %i\n", inum, dbase->type );
 				 */
-		}OPNEXT()
-		OPCASE( JOINT ){
 		}OPNEXT()
 		OPCASE( RETURN ){
 			topCtx->vmc = vmc;

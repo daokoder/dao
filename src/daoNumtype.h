@@ -156,11 +156,14 @@ struct DaoArray
 		complex16  *c;
 	} data;
 
-	DaoMap  *meta;
-	DaoType *unitype;
-
 	DArray  *dims;
 	DArray  *dimAccum;
+
+	DArray   *slice; /* array of indexes in each dimension */
+	DaoArray *reference; /* reference array */
+
+	DaoMap  *meta;
+	DaoType *unitype;
 
 	void  **matrix;
 };
@@ -174,6 +177,7 @@ void DaoArray_Delete( DaoArray *self );
 void DaoArray_ResizeVector( DaoArray *self, int size );
 void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
 
+int DaoArray_Sliced( DaoArray *self );
 void DaoArray_UseData( DaoArray *self, void *data );
 
 int    DaoArray_GetInteger( DaoArray *na, int i );

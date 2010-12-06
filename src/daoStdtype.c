@@ -251,6 +251,10 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 	size_t i;
 
 	if( dbase == NULL ) return & nil;
+	if( self->type == DAO_ARRAY && ((DaoArray*)self)->reference ){
+		DaoArray_Sliced( (DaoArray*)self );
+		return self;
+	}
 	if( ! (self->trait & DAO_DATA_CONST) ) return self;
 	switch( self->type ){
 	case DAO_LIST :

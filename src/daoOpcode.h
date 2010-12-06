@@ -85,7 +85,6 @@ enum DaoOpcode
 	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:
 				  A,A+1,..,A+B-2; If B==1, no exception to raise or rescue. */
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
-	DVM_JOINT , /* joint interpretation of more VM opcodes */
 	DVM_RETURN , /* return A, A+1,.., A+B-1; if B==0, no returns;  */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
 	DVM_DEBUG , /* prompt to debugging mode */

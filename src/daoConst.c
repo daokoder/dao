@@ -30,7 +30,7 @@ static const char *const vmOperNames[] = {
 	"LIST", "MAP", "HASH", "ARRAY", "MATRIX", "CURRY", "MCURRY",
 	"ROUTINE", "CLASS", "GOTO", "SWITCH", "CASE", "ITER", "TEST", 
 	"MATH", "FUNCT", "CALL", "MCALL", 
-	"CRRE", "JITC", "JOINT", "RETURN", "YIELD", "DEBUG", "SECT",
+	"CRRE", "JITC", "RETURN", "YIELD", "DEBUG", "SECT",
 	"SETVL_II", "SETVL_IF", "SETVL_ID", 
 	"SETVL_FI", "SETVL_FF", "SETVL_FD", 
 	"SETVL_DI", "SETVL_DF", "SETVL_DD",

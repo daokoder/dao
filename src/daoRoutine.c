@@ -836,8 +836,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	}
 #endif
 
-	if( (code == DVM_MCALL || code == DVM_MCALL_TC)
-			&& ! (routype->attrib & DAO_TYPE_SELF) ){
+	if( (code == DVM_MCALL || code == DVM_MCALL_TC) && !(routype->attrib & DAO_TYPE_SELF) ){
 		npar --;
 		p ++;
 		if(base) base ++;
@@ -892,7 +891,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		if( ito >= ndef ) return 0;
 		passed |= 1<<ito;
 		tp = types[ito]->X.abtype;
-		if( loc && val != loc && val->t < DAO_ARRAY && !(constParam & (1<<ito)) ){
+		if( loc && val != loc && !(constParam & (1<<ito)) ){ /* put by DVM_LOAD */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
 				recv[ito] = val;
 				continue;
@@ -945,7 +944,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 		DValue *loc = base ? base + ifrom : NULL;
 		ito = ifrom + selfChecked;
 		tp = types[ito]->X.abtype;
-		if( loc && val != loc && val->t < DAO_ARRAY && !(constParam & (1<<ito)) ){
+		if( loc && val != loc && !(constParam & (1<<ito)) ){ /* put by DVM_LOAD */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
 				recv[ito] = val;
 				continue;
@@ -1299,7 +1298,6 @@ static const char vmcTyping[][7] =
 	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_MCALL */
 	{ OT_EXP,   0, 'B', -1, -1, -1,  -1 } , /* DVM_CRRE */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JITC */
-	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JOINT */
 	{ OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_RETURN */
 	{ OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_YIELD */
 	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_DEBUG */
@@ -2266,10 +2264,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								/* for skipping type checking */
 								vmc->code = DVM_GETI_LI;
 							}
-							if( vmc->code != DVM_GETI && vmcs[i+1]->code == DVM_JOINT ){
-								vmcs[i+1]->code = DVM_UNUSED;
-								vmcs[i+3]->code = DVM_UNUSED;
-							}
 
 							if( bt->tid == DAO_FLOAT ){
 								InsertCodeMoveToInteger( vmc->b, DVM_MOVE_IF );
@@ -2375,10 +2369,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 									vmc->b = k;
 									vmc->code = DVM_GETF_T;
 								}
-								if( vmc->code != DVM_GETI && vmcs[i+1]->code == DVM_JOINT ){
-									vmcs[i+1]->code = DVM_UNUSED;
-									vmcs[i+3]->code = DVM_UNUSED;
-								}
 							}
 						}
 					}else if( bt->tid >= DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
@@ -2394,10 +2384,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
-						}
-						if( vmc->code != DVM_GETI && vmcs[i+1]->code == DVM_JOINT ){
-							vmcs[i+1]->code = DVM_UNUSED;
-							vmcs[i+3]->code = DVM_UNUSED;
 						}
 					}else if( bt->tid != DAO_UDF && bt->tid != DAO_ANY ){
 						goto InvIndex;
@@ -2558,10 +2544,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							else if( k == DAO_OBJECT_VARIABLE )
 								vmc->code = DVM_GETF_OV;
 						}
-						if( vmc->code != DVM_GETF && vmcs[i+1]->code == DVM_JOINT ){
-							vmcs[i+1]->code = DVM_UNUSED;
-							vmcs[i+3]->code = DVM_UNUSED;
-						}
 					}
 				}else if( at->tid == DAO_TUPLE ){
 					if( at->mapNames == NULL ) goto NotExist;
@@ -2580,10 +2562,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								/* for skipping type checking */
 								vmc->code = DVM_GETF_T;
 								vmc->b = k;
-							}
-							if( vmc->code != DVM_GETF && vmcs[i+1]->code == DVM_JOINT ){
-								vmcs[i+1]->code = DVM_UNUSED;
-								vmcs[i+3]->code = DVM_UNUSED;
 							}
 						}
 					}
@@ -3224,7 +3202,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( ct->tid ==DAO_UDF || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				ct = type[opc];
-				if( i && typed_code && vmcs[i-1]->code != DVM_JOINT ){
+				if( i && typed_code ){
 					if( at->tid == bt->tid && at->tid == ct->tid ){
 						switch( at->tid ){
 						case DAO_INTEGER :
@@ -3309,7 +3287,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( ct->tid ==DAO_UDF || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				ct = type[opc];
-				if( i && typed_code && vmcs[i-1]->code != DVM_JOINT ){
+				if( i && typed_code ){
 					if( at->tid == bt->tid && at->tid == ct->tid ){
 						switch( at->tid ){
 						case DAO_INTEGER :

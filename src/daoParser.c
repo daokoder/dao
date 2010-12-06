@@ -7387,7 +7387,6 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 						regC = self->locRegCount;
 						if( regFix >= 0 ) regC = regFix;
 						DaoParser_AddCode( self, fget, reg1, reg3, regC, start, 0, mid-1 );
-						DaoParser_AddCode( self, DVM_JOINT, 0, 3, 0, start, mid, end );
 						DaoParser_AddCode( self, -code, regC, reg2, regC, start, mid, end );
 						DaoParser_AddCode( self, fset, regC, reg3, reg1, start, mid, end );
 						if( regC == self->locRegCount ) DaoParser_PushRegister( self );
@@ -7426,7 +7425,6 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 					regC = self->locRegCount;
 					if( regFix >= 0 ) regC = regFix;
 					DaoParser_AddCode( self, DVM_GETI, reg1, reg2, regC, start, 0, mid-1 );
-					DaoParser_AddCode( self, DVM_JOINT, 0, 3, 0, start, mid, end );
 					DaoParser_AddCode( self, -code, regC, reg3, regC, start, mid, end );
 					DaoParser_AddCode( self, DVM_SETI, regC, reg2, reg1, start, mid, end );
 					if( regC == self->locRegCount ) DaoParser_PushRegister( self );

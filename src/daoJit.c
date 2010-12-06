@@ -1075,7 +1075,6 @@ static void* jitCalls[] =
 	DVM_CLOSE , 
 	DVM_CRRE , 
 	DVM_JITC , 
-	DVM_JOINT , 
 	DVM_RETURN , 
 	DVM_SECT ,   
 #endif
