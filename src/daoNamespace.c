@@ -667,6 +667,14 @@ int DaoNameSpace_Load( DaoNameSpace *self, const char *fname )
 	DString_Delete( src );
 	return ch;
 }
+void DaoNameSpace_SetOptions( DaoNameSpace *self, int options )
+{
+	self->options = options;
+}
+int DaoNameSpace_GetOptions( DaoNameSpace *self )
+{
+	return self->options;
+}
 
 DaoTypeBase nsTyper=
 {
@@ -684,6 +692,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	DaoBase_Init( self, DAO_NAMESPACE );
 	self->vmSpace = vms;
 	self->cstUser = 0;
+	self->options = 0;
 	self->mainRoutine = NULL;
 	self->parents = DArray_New(0);
 	self->cstData  = DVarray_New();
@@ -1053,10 +1062,17 @@ void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro )
 }
 void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent )
 {
+	int i;
 	DValue value = { DAO_NAMESPACE, 0, 0, 0, {0} };
 	value.v.ns = parent;
-	DaoNameSpace_AddConst( self, parent->name, value, DAO_DATA_PUBLIC );
+	if( parent == self ) return;
+	for(i=0; i<self->parents->size; i++)
+		if( self->parents->items.pNS[i] == parent ) return;
+	DVarray_Append( self->cstData, value );
+	DValue_MarkConst( self->cstData->data + self->cstData->size -1 );
 	DArray_Append( self->parents, parent );
+	for(i=0; i<parent->parents->size; i++)
+		DaoNameSpace_AddParent( self, parent->parents->items.pNS[i] );
 }
 static int DaoNameSpace_GetUpIndex( DaoNameSpace *self, DaoNameSpace *ns )
 {

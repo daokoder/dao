@@ -1778,7 +1778,7 @@ static void MakeIndex( DaoContext *ctx, DValue pid, int N, DArray *ids )
 			DaoArray *na = pid.v.array;
 			size_t *p;
 
-			if( NUMAR_IS_COMP( na ) ){
+			if( na->numType == DAO_COMPLEX ){
 				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX,
 						"complex array can not be used as index" );
 				break;
@@ -1939,7 +1939,7 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 			DaoArray *na = pid.v.array;
 			size_t *p;
 
-			if( NUMAR_IS_COMP( na ) ){
+			if( na->numType == DAO_COMPLEX ){
 				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX,
 						"complex array can not be used as index" );
 				break;
@@ -1955,11 +1955,12 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 
 	}
 }
-static void DaoArray_MakeSlice( DaoArray *self, DaoContext *ctx, DValue *idx, int N, DArray *slice )
+static int DaoArray_MakeSlice( DaoArray *self, DaoContext *ctx, DValue *idx, int N, DArray *slice )
 {
 	DArray *tmp = DArray_New(0);
 	size_t *dims = self->dims->items.pSize;
 	int i, j, D = self->dims->size;
+	int S = D != 0;
 	/* slice: DArray<DArray<int> > */
 	DArray_Clear( slice );
 	DArray_Resize( tmp, 3, 0 );
@@ -1982,6 +1983,8 @@ static void DaoArray_MakeSlice( DaoArray *self, DaoContext *ctx, DValue *idx, in
 		const int n = N > D ? D : N;
 		for( i=0; i<n; i++ ) MakeSlice( ctx, idx[i], (int)dims[i], slice->items.pArray[i] );
 	}
+	for(i=0; i<D; i ++) S *= slice->items.pArray[i]->items.pSize[1];
+	return S;
 }
 static int DaoArray_AlignShape( DaoArray *self, DArray *sidx, DArray *dims )
 {
@@ -2045,6 +2048,7 @@ static int DaoArray_SliceSize( DaoArray *self )
 {
 	int i, m;
 	if( self->reference == NULL || self->slice == NULL ) return self->size;
+	return self->subSize;
 	m = self->slice->size != 0;
 	for(i=0; i<self->slice->size; i++){
 		m *= self->slice->items.pArray[i]->items.pSize[1];
@@ -2097,10 +2101,12 @@ complex16 DaoArray_GetComplex( DaoArray *na, int i )
 	return com;
 }
 
+int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
 void DaoArray_number_op_array( DaoArray *C, DValue A, DaoArray *B, short op, DaoContext *ctx );
 void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DValue B, short op, DaoContext *ctx );
 void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoContext *c );
 static void DaoArray_Print( DValue *dbase, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+
 static void DaoArray_GetItem( DValue *dbase, DaoContext *ctx, DValue pid )
 {
 	DaoArray *na, *self = dbase->v.array;
@@ -2128,21 +2134,30 @@ static void DaoArray_GetItem( DValue *dbase, DaoContext *ctx, DValue pid )
 		}
 		return;
 	}else if( pid.t == DAO_TUPLE && pid.v.tuple->unitype == dao_type_for_iterator ){
+		DaoArray *array = self;
 		DValue *data = pid.v.tuple->items->data;
+		int size = self->size;
 		int id = data[1].v.i;
-		if( data[1].t != DAO_INTEGER || id < 0 || id >= self->size ){
+		if( self->reference && self->slice ){
+			array = self->reference;
+			size = self->subSize;
+		}
+		if( data[1].t != DAO_INTEGER || id < 0 || id >= size ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "index out of range" );
 			return;
 		}
-		switch( self->numType ){
-		case DAO_INTEGER : DaoContext_PutInteger( ctx, self->data.i[id] ); break;
-		case DAO_FLOAT : DaoContext_PutFloat( ctx, self->data.f[id] ); break;
-		case DAO_DOUBLE : DaoContext_PutDouble( ctx, self->data.d[id] ); break;
-		case DAO_COMPLEX : DaoContext_PutComplex( ctx, self->data.c[id] ); break;
+		if( self->reference && self->slice ){
+			id = DaoArray_IndexFromSlice( self->reference, self->slice, id );
+		}
+		switch( array->numType ){
+		case DAO_INTEGER : DaoContext_PutInteger( ctx, array->data.i[id] ); break;
+		case DAO_FLOAT : DaoContext_PutFloat( ctx, array->data.f[id] ); break;
+		case DAO_DOUBLE : DaoContext_PutDouble( ctx, array->data.d[id] ); break;
+		case DAO_COMPLEX : DaoContext_PutComplex( ctx, array->data.c[id] ); break;
 		default : break;
 		}
 		data[1].v.i += 1;
-		data[0].v.i = data[1].v.i < self->size;
+		data[0].v.i = data[1].v.i < size;
 		return;
 	}else if( pid.t == DAO_TUPLE && N == self->dims->size ){
 		int allNumbers = 1;
@@ -2184,7 +2199,7 @@ static void DaoArray_GetItem( DValue *dbase, DaoContext *ctx, DValue pid )
 	na->unitype = self->unitype;
 	na->reference = self;
 	if( na->slice == NULL ) na->slice = DArray_New(D_ARRAY);
-	DaoArray_MakeSlice( self, ctx, vs, N, na->slice );
+	na->subSize = DaoArray_MakeSlice( self, ctx, vs, N, na->slice );
 }
 static void DaoArray_SetOneItem( DaoArray *self, int id, DValue value, int op )
 {
@@ -2411,7 +2426,7 @@ void DaoArray_SetItem( DValue *va, DaoContext *ctx, DValue pid, DValue value, in
 		}
 	}
 	if( self->slice == NULL ) self->slice = DArray_New(D_ARRAY);
-	DaoArray_MakeSlice( self, ctx, vs, N, self->slice );
+	self->subSize = DaoArray_MakeSlice( self, ctx, vs, N, self->slice );
 	self->reference = self;
 	if( value.t == DAO_ARRAY ){
 		DaoArray *na = value.v.array;
@@ -2562,7 +2577,7 @@ static void DaoArray_Lib_Resize( DaoContext *ctx, DValue *par[], int N )
 	DaoArray_Sliced( self );
 	DaoArray_Sliced( nad );
 
-	if( NUMAR_IS_COMP( nad ) ){
+	if( nad->numType == DAO_COMPLEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "invalid dimension" );
 		return;
 	}
@@ -2594,7 +2609,7 @@ static void DaoArray_Lib_Reshape( DaoContext *ctx, DValue *par[], int N )
 	DaoArray_Sliced( self );
 	DaoArray_Sliced( nad );
 
-	if( NUMAR_IS_COMP( nad ) ){
+	if( nad->numType == DAO_COMPLEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "invalid dimension" );
 		return;
 	}
@@ -2641,218 +2656,196 @@ static void DaoArray_Lib_Index( DaoContext *ctx, DValue *par[], int N )
 static void DaoArray_Lib_max( DaoContext *ctx, DValue *par[], int N )
 {
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );
-	DaoArray *p = par[0]->v.array;
-	int i, k, cmp=0, imax = -1;
-	tuple->items->data[0].t = p->numType;
+	DaoArray *self = par[0]->v.array;
+	int i, k, size, cmp=0, imax = -1;
+	tuple->items->data[0].t = self->numType;
 	tuple->items->data[1].t = DAO_INTEGER;
 	tuple->items->data[1].v.i = -1;
-	/* TODO slicing */
-	if( NUMAR_IS_COMP( p ) ) return;/* no exception, guaranteed by the typing system */
-	if( p->size == 0 ) return;
-	if( N > 0 ){
-		DArray *idMul = DArray_New(D_ARRAY);
-		DArray *idMap = DArray_New(0);
-		DVarray *index = par[1]->v.list->items;
-		size_t *idm;
-		DaoMakeNumIndex( p, ctx, index->data, index->size, idMul, idMap );
-		idm = idMap->items.pSize;
-		if( idMap->size == 0 ) return;
-		imax = idm[0];
-		for(i=1; i<idMap->size; i++ ){
-			k = idm[i];
-			switch( p->numType ){
-			case DAO_INTEGER : cmp = p->data.i[imax] < p->data.i[k]; break;
-			case DAO_FLOAT  : cmp = p->data.f[imax] < p->data.f[k]; break;
-			case DAO_DOUBLE : cmp = p->data.d[imax] < p->data.d[k]; break;
+	if( self->numType == DAO_COMPLEX ) return;/* no exception, guaranteed by the typing system */
+	if( DaoArray_SliceSize( self ) == 0 ) return;
+	if( self->reference && self->slice ){
+		DArray *slice = self->slice;
+		size = self->subSize;
+		self = self->reference;;
+		if( size == 0 ) return;
+		imax = DaoArray_IndexFromSlice( self, slice, 0 );
+		for(i=1; i<size; i++ ){
+			k = DaoArray_IndexFromSlice( self, slice, i );
+			switch( self->numType ){
+			case DAO_INTEGER : cmp = self->data.i[imax] < self->data.i[k]; break;
+			case DAO_FLOAT  : cmp = self->data.f[imax] < self->data.f[k]; break;
+			case DAO_DOUBLE : cmp = self->data.d[imax] < self->data.d[k]; break;
 			default : break;
 			}
 			if( cmp ) imax = k;
 		}
-		DArray_Delete( idMul );
-		DArray_Delete( idMap );
 	}else{
 		imax = 0;
-		for(i=1; i<p->size; i++ ){
-			switch( p->numType ){
-			case DAO_INTEGER : cmp = p->data.i[imax] < p->data.i[i]; break;
-			case DAO_FLOAT  : cmp = p->data.f[imax] < p->data.f[i]; break;
-			case DAO_DOUBLE : cmp = p->data.d[imax] < p->data.d[i]; break;
+		for(i=1; i<self->size; i++ ){
+			switch( self->numType ){
+			case DAO_INTEGER : cmp = self->data.i[imax] < self->data.i[i]; break;
+			case DAO_FLOAT  : cmp = self->data.f[imax] < self->data.f[i]; break;
+			case DAO_DOUBLE : cmp = self->data.d[imax] < self->data.d[i]; break;
 			default : break;
 			}
 			if( cmp ) imax = i;
 		}
 	}
 	tuple->items->data[1].v.i = imax;
-	switch( p->numType ){
-	case DAO_INTEGER : tuple->items->data[0].v.i = p->data.i[imax]; break;
-	case DAO_FLOAT  : tuple->items->data[0].v.f = p->data.f[imax]; break;
-	case DAO_DOUBLE : tuple->items->data[0].v.d = p->data.d[imax]; break;
+	switch( self->numType ){
+	case DAO_INTEGER : tuple->items->data[0].v.i = self->data.i[imax]; break;
+	case DAO_FLOAT  : tuple->items->data[0].v.f = self->data.f[imax]; break;
+	case DAO_DOUBLE : tuple->items->data[0].v.d = self->data.d[imax]; break;
 	default : break;
 	}
 }
 static void DaoArray_Lib_min( DaoContext *ctx, DValue *par[], int N )
 {
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );
-	DaoArray *p = par[0]->v.array;
-	int i, k, cmp=0, imax = -1;
-	tuple->items->data[0].t = p->numType;
+	DaoArray *self = par[0]->v.array;
+	int i, k, size, cmp=0, imax = -1;
+	tuple->items->data[0].t = self->numType;
 	tuple->items->data[1].t = DAO_INTEGER;
 	tuple->items->data[1].v.i = -1;
-	/* TODO slicing */
-	if( NUMAR_IS_COMP( p ) ) return;
-	if( p->size == 0 ) return;
-	if( N > 0 ){
-		DArray *idMul = DArray_New(D_ARRAY);
-		DArray *idMap = DArray_New(0);
-		DVarray *index = par[1]->v.list->items;
-		size_t *idm;
-		DaoMakeNumIndex( p, ctx, index->data, index->size, idMul, idMap );
-		idm = idMap->items.pSize;
-		if( idMap->size ==0 ) return;
-		imax = idm[0];
-		for(i=1; i<idMap->size; i++ ){
-			k = idm[i];
-			switch( p->numType ){
-			case DAO_INTEGER : cmp = p->data.i[imax] > p->data.i[k]; break;
-			case DAO_FLOAT  : cmp = p->data.f[imax] > p->data.f[k]; break;
-			case DAO_DOUBLE : cmp = p->data.d[imax] > p->data.d[k]; break;
+	if( self->numType == DAO_COMPLEX ) return;
+	if( DaoArray_SliceSize( self ) == 0 ) return;
+	if( self->reference && self->slice ){
+		DArray *slice = self->slice;
+		size = self->subSize;
+		self = self->reference;;
+		if( size == 0 ) return;
+		imax = DaoArray_IndexFromSlice( self, slice, 0 );
+		for(i=1; i<size; i++ ){
+			k = DaoArray_IndexFromSlice( self, slice, i );
+			switch( self->numType ){
+			case DAO_INTEGER : cmp = self->data.i[imax] > self->data.i[k]; break;
+			case DAO_FLOAT  : cmp = self->data.f[imax] > self->data.f[k]; break;
+			case DAO_DOUBLE : cmp = self->data.d[imax] > self->data.d[k]; break;
 			default : break;
 			}
 			if( cmp ) imax = k;
 		}
-		DArray_Delete( idMul );
-		DArray_Delete( idMap );
 	}else{
 		imax = 0;
-		for(i=1; i<p->size; i++ ){
-			switch( p->numType ){
-			case DAO_INTEGER : cmp = p->data.i[imax] > p->data.i[i]; break;
-			case DAO_FLOAT  : cmp = p->data.f[imax] > p->data.f[i]; break;
-			case DAO_DOUBLE : cmp = p->data.d[imax] > p->data.d[i]; break;
+		for(i=1; i<self->size; i++ ){
+			switch( self->numType ){
+			case DAO_INTEGER : cmp = self->data.i[imax] > self->data.i[i]; break;
+			case DAO_FLOAT  : cmp = self->data.f[imax] > self->data.f[i]; break;
+			case DAO_DOUBLE : cmp = self->data.d[imax] > self->data.d[i]; break;
 			default : break;
 			}
 			if( cmp ) imax = i;
 		}
 	}
 	tuple->items->data[1].v.i = imax;
-	switch( p->numType ){
-	case DAO_INTEGER : tuple->items->data[0].v.i = p->data.i[imax]; break;
-	case DAO_FLOAT  : tuple->items->data[0].v.f = p->data.f[imax]; break;
-	case DAO_DOUBLE : tuple->items->data[0].v.d = p->data.d[imax]; break;
+	switch( self->numType ){
+	case DAO_INTEGER : tuple->items->data[0].v.i = self->data.i[imax]; break;
+	case DAO_FLOAT  : tuple->items->data[0].v.f = self->data.f[imax]; break;
+	case DAO_DOUBLE : tuple->items->data[0].v.d = self->data.d[imax]; break;
 	default : break;
 	}
 }
 static void DaoArray_Lib_sum( DaoContext *ctx, DValue *par[], int N )
 {
-	DaoArray *p = par[0]->v.array;
-	int i;
-	if( p->size == 0 ) return;
-	/* TODO slicing */
-	if( N > 0 ){
-		DArray *idMul = DArray_New(D_ARRAY);
-		DArray *idMap = DArray_New(0);
-		DVarray *index = par[1]->v.list->items;
-		size_t *idm;
-		DaoMakeNumIndex( p, ctx, index->data, index->size, idMul, idMap );
-		idm = idMap->items.pSize;
-		if( idMap->size > 0 ){
-			if( NUMAR_IS_INT( p ) ){
-				long sum = 0;
-				int *v = p->data.i;
-				for(i=0; i<idMap->size; i++ ) sum += v[idm[i]];
-				DaoContext_PutInteger( ctx, sum );
-			}else if( p->numType == DAO_FLOAT ){
-				double sum = 0;
-				float *v = p->data.f;
-				for(i=0; i<idMap->size; i++ ) sum += v[idm[i]];
-				DaoContext_PutFloat( ctx, sum );
-			}else if( p->numType == DAO_DOUBLE ){
-				double sum = 0;
-				double *v = p->data.d;
-				for(i=0; i<idMap->size; i++ ) sum += v[idm[i]];
-				DaoContext_PutDouble( ctx, sum );
-			}else{
-				complex16 sum = {0,0};
-				complex16 *v = p->data.c;
-				for(i=0; i<idMap->size; i++ ) COM_IP_ADD( sum, v[idm[i]] );
-				DaoContext_PutComplex( ctx, sum );
-			}
-		}
-		DArray_Delete( idMul );
-		DArray_Delete( idMap );
-	}else{
-		if( NUMAR_IS_INT( p ) ){
+	DaoArray *self = par[0]->v.array;
+	int i, size;
+	if( self->reference && self->slice ){
+		DArray *slice = self->slice;
+		size = self->subSize;
+		self = self->reference;;
+		if( size == 0 ) return;
+		if( self->numType == DAO_INTEGER ){
 			long sum = 0;
-			int *v = p->data.i;
-			for(i=0; i<p->size; i++ ) sum += v[i];
+			int *v = self->data.i;
+			for(i=0; i<size; i++ ) sum += v[ DaoArray_IndexFromSlice( self, slice, i ) ];
 			DaoContext_PutInteger( ctx, sum );
-		}else if( p->numType == DAO_FLOAT ){
+		}else if( self->numType == DAO_FLOAT ){
 			double sum = 0;
-			float *v = p->data.f;
-			for(i=0; i<p->size; i++ ) sum += v[i];
-			DaoContext_PutDouble( ctx, sum );
-		}else if( p->numType == DAO_DOUBLE ){
+			float *v = self->data.f;
+			for(i=0; i<size; i++ ) sum += v[ DaoArray_IndexFromSlice( self, slice, i ) ];
+			DaoContext_PutFloat( ctx, sum );
+		}else if( self->numType == DAO_DOUBLE ){
 			double sum = 0;
-			double *v = p->data.d;
-			for(i=0; i<p->size; i++ ) sum += v[i];
+			double *v = self->data.d;
+			for(i=0; i<size; i++ ) sum += v[ DaoArray_IndexFromSlice( self, slice, i ) ];
 			DaoContext_PutDouble( ctx, sum );
 		}else{
 			complex16 sum = {0,0};
-			complex16 *v = p->data.c;
-			for(i=0; i<p->size; i++ ) COM_IP_ADD( sum, v[i] );
+			complex16 *v = self->data.c;
+			for(i=0; i<size; i++ ){
+				complex16 x = v[ DaoArray_IndexFromSlice( self, slice, i ) ];
+				COM_IP_ADD( sum, x );
+			}
+			DaoContext_PutComplex( ctx, sum );
+		}
+	}else{
+		if( self->numType == DAO_INTEGER ){
+			long sum = 0;
+			int *v = self->data.i;
+			for(i=0; i<self->size; i++ ) sum += v[i];
+			DaoContext_PutInteger( ctx, sum );
+		}else if( self->numType == DAO_FLOAT ){
+			double sum = 0;
+			float *v = self->data.f;
+			for(i=0; i<self->size; i++ ) sum += v[i];
+			DaoContext_PutDouble( ctx, sum );
+		}else if( self->numType == DAO_DOUBLE ){
+			double sum = 0;
+			double *v = self->data.d;
+			for(i=0; i<self->size; i++ ) sum += v[i];
+			DaoContext_PutDouble( ctx, sum );
+		}else{
+			complex16 sum = {0,0};
+			complex16 *v = self->data.c;
+			for(i=0; i<self->size; i++ ) COM_IP_ADD( sum, v[i] );
 			DaoContext_PutComplex( ctx, sum );
 		}
 	}
 }
 static void DaoArray_Lib_varn( DaoContext *ctx, DValue *par[], int N )
 {
-	DaoArray *p = par[0]->v.array;
+	DaoArray *self = par[0]->v.array;
 	double *num = DaoContext_PutDouble( ctx, 0.0 );
 	double e = 0.0;
 	double sum = 0;
 	double sum2 = 0;
 	double dev;
-	int i;
+	int i, size;
 
-	/* TODO slicing */
-	if( NUMAR_IS_COMP( p ) ) return;
-	if( p->size <= 1 ) return;
-	if( N > 0 ){
-		DArray *idMul = DArray_New(D_ARRAY);
-		DArray *idMap = DArray_New(0);
-		DVarray *index = par[1]->v.list->items;
-		size_t *idm;
-		DaoMakeNumIndex( p, ctx, index->data, index->size, idMul, idMap );
-		idm = idMap->items.pSize;
-		if( idMap->size > 0 ){
-			for(i=0; i<idMap->size; i++ ){
-				switch( p->numType ){
-				case DAO_INTEGER : e = p->data.i[ idm[i] ]; break;
-				case DAO_FLOAT   : e = p->data.f[ idm[i] ]; break;
-				case DAO_DOUBLE  : e = p->data.d[ idm[i] ]; break;
+	if( self->numType == DAO_COMPLEX ) return;
+	if( DaoArray_SliceSize( self ) ==0 ) return;
+	if( self->reference && self->slice ){
+		DArray *slice = self->slice;
+		size = self->subSize;
+		self = self->reference;;
+		if( size > 0 ){
+			for(i=0; i<size; i++ ){
+				int k = DaoArray_IndexFromSlice( self, slice, i );
+				switch( self->numType ){
+				case DAO_INTEGER : e = self->data.i[k]; break;
+				case DAO_FLOAT   : e = self->data.f[k]; break;
+				case DAO_DOUBLE  : e = self->data.d[k]; break;
 				default : break;
 				}
 				sum += e;
 				sum2 += e * e;
 			}
-			dev = sum2 - sum * sum / idMap->size;
-			*num = dev / idMap->size;
+			dev = sum2 - sum * sum / size;
+			*num = dev / size;
 		}
-		DArray_Delete( idMul );
-		DArray_Delete( idMap );
 	}else{
-		for(i=0; i<p->size; i++ ){
-			switch( p->numType ){
-			case DAO_INTEGER : e = p->data.i[i]; break;
-			case DAO_FLOAT   : e = p->data.f[i]; break;
-			case DAO_DOUBLE  : e = p->data.d[i]; break;
+		for(i=0; i<self->size; i++ ){
+			switch( self->numType ){
+			case DAO_INTEGER : e = self->data.i[i]; break;
+			case DAO_FLOAT   : e = self->data.f[i]; break;
+			case DAO_DOUBLE  : e = self->data.d[i]; break;
 			default : break;
 			}
 			sum += e;
 			sum2 += e * e;
 		}
-		dev = sum2 - sum * sum / p->size;
-		*num = dev / p->size;
+		dev = sum2 - sum * sum / self->size;
+		*num = dev / self->size;
 	}
 }
 static void DaoArray_Lib_rank( DaoContext *ctx, DValue *par[], int npar, int asc )
@@ -2865,6 +2858,7 @@ static void DaoArray_Lib_rank( DaoContext *ctx, DValue *par[], int npar, int asc
 	int *ids;
 
 	/* TODO slicing */
+	DaoArray_Sliced( array );
 	if( res == 0 ) return;
 	if( array->numType == DAO_COMPLEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "unable to rank complex array" );
@@ -2909,6 +2903,7 @@ static void DaoArray_Lib_sort( DaoContext *ctx, DValue *par[], int npar, int asc
 	int i, N;
 
 	/* TODO slicing */
+	DaoArray_Sliced( array );
 	DaoContext_PutValue( ctx, *par[0] );
 	if( array->numType == DAO_COMPLEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "unable to sort complex array" );
@@ -2995,7 +2990,7 @@ static void DaoArray_Lib_Iter( DaoContext *ctx, DValue *p[], int N )
 	DaoTuple *tuple = p[1]->v.tuple;
 	DValue *data = tuple->items->data;
 	DValue iter = DValue_NewInteger(0);
-	data[0].v.i = self->size >0;
+	data[0].v.i = DaoArray_SliceSize( self ) >0;
 	DValue_Copy( & data[1], iter );
 }
 static DaoFuncItem numarMeths[] =
@@ -3009,10 +3004,10 @@ static DaoFuncItem numarMeths[] =
 
 	{ DaoArray_Lib_Permute,   "permute( self :array, dims :array<int> )" },
 	{ DaoArray_Lib_Transpose, "transpose( self :array )" },
-	{ DaoArray_Lib_max,       "max( self :array<@ITEM>, slice={} )=>tuple<@ITEM,int>" },
-	{ DaoArray_Lib_min,       "min( self :array<@ITEM>, slice={} )=>tuple<@ITEM,int>" },
-	{ DaoArray_Lib_sum,       "sum( self :array<@ITEM>, slice={} )=>@ITEM" },
-	{ DaoArray_Lib_varn,      "varn( self :array, slice={} )=>double" },
+	{ DaoArray_Lib_max,       "max( self :array<@ITEM> )=>tuple<@ITEM,int>" },
+	{ DaoArray_Lib_min,       "min( self :array<@ITEM> )=>tuple<@ITEM,int>" },
+	{ DaoArray_Lib_sum,       "sum( self :array<@ITEM> )=>@ITEM" },
+	{ DaoArray_Lib_varn,      "varn( self :array )=>double" },
 	{ DaoArray_Lib_ranka,     "ranka( self :array, k=0 )=>array<int>" },
 	{ DaoArray_Lib_rankd,     "rankd( self :array, k=0 )=>array<int>" },
 	{ DaoArray_Lib_sorta,     "sorta( self :array, k=0 )" },

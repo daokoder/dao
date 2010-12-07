@@ -4977,6 +4977,13 @@ void DaoFunction_SimpleCall( DaoFunction *self, DaoContext *ctx, DValue *p[], in
 		param[i] = & buffer[i];
 		passed |= 1<<i;
 		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->X.abtype;
+		if( i ==0 && (self->routType->attrib & DAO_TYPE_SELF) ){
+			/* pass reference for self parameter */
+			if( DaoType_MatchValue( tp, *p[i], NULL ) == DAO_MT_EQ ){
+				param[i] = p[i];
+				continue;
+			}
+		}
 		if( DValue_Move( *p[i], param[i], tp ) ==0 ){
 			printf( "%i  %s\n", p[i]->t, tp->name->mbs );
 			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "not matching" );
@@ -4988,7 +4995,7 @@ void DaoFunction_SimpleCall( DaoFunction *self, DaoContext *ctx, DValue *p[], in
 	ctx->thisFunction = self;
 	self->pFunc( ctx, param, N );
 	ctx->thisFunction = NULL;
-	for(i=0; i<ndef; i++) DValue_Clear( param[i] );
+	for(i=0; i<ndef; i++) DValue_Clear( buffer + i );
 }
 int DaoFunction_Call( DaoFunction *func, DaoCData *self, DValue *p[], int n )
 {

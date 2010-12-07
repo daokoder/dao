@@ -159,6 +159,7 @@ struct DaoArray
 	DArray  *dims;
 	DArray  *dimAccum;
 
+	size_t    subSize; /* size of the sub array / slice */
 	DArray   *slice; /* array of indexes in each dimension */
 	DaoArray *reference; /* reference array */
 
@@ -184,12 +185,6 @@ int    DaoArray_GetInteger( DaoArray *na, int i );
 float  DaoArray_GetFloat( DaoArray *na, int i );
 double DaoArray_GetDouble( DaoArray *na, int i );
 complex16 DaoArray_GetComplex( DaoArray *na, int i );
-
-#define NUMAR_IS_VEC( x ) ( (x)->dims->size == 2 && \
-		( (x)->dims->items.pInt[0]==1 || (x)->dims->items.pInt[1]==1 ) )
-#define NUMAR_IS_INT( x ) ( (x)->numType == DAO_INTEGER )
-#define NUMAR_IS_FLOAT( x ) ( (x)->numType == DAO_FLOAT || (x)->numType == DAO_DOUBLE )
-#define NUMAR_IS_COMP( x ) ((x)->numType == DAO_COMPLEX )
 
 #define ARRAY_GET_INT( x, i ) DaoArray_GetInteger( x, i )
 #define ARRAY_GET_SF( x, i ) DaoArray_GetFloat( x, i )

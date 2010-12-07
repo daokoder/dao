@@ -2687,7 +2687,7 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 	}else if( ta==DAO_ARRAY ){
 		DaoArray *array = dA.v.array;
 		size_t i;
-		if( NUMAR_IS_FLOAT( array ) ){
+		if( array->numType == DAO_FLOAT ){
 			if( vmc->code == DVM_NOT || vmc->code == DVM_UNMS ){
 				DaoArray *res = DaoContext_GetArray( self, vmc );
 				res->numType = array->numType;

@@ -177,8 +177,13 @@ enum DaoVmProcessStatus
 	DAO_VMPROC_RUNNING ,
 	DAO_VMPROC_STACKED     /* new context is pushed onto the stack of the process */
 };
-/* Execution mode, combinatable by | */
-enum DaoExecMode
+enum DaoNameSpaceOption
+{
+	/* automatically make variable declared outside {} global, for interactive mode */
+	DAO_NS_AUTO_GLOBAL = (1<<0)
+};
+/* Execution options, combinatable by | */
+enum DaoExecOption
 {
 	DAO_EXEC_HELP      = (1<<0), /* -h, --help:       print this help information; */
 	DAO_EXEC_VINFO     = (1<<1), /* -v, --version:    print version information; */
@@ -627,6 +632,7 @@ struct DaoAPI
 
 	DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms );
 	DaoNameSpace* (*DaoNameSpace_GetNameSpace)( DaoNameSpace *self, const char *name );
+	void (*DaoNameSpace_AddParent)( DaoNameSpace *self, DaoNameSpace *parent );
 	void (*DaoNameSpace_AddConstNumbers)( DaoNameSpace *self, DaoNumItem *items );
 	void (*DaoNameSpace_AddConstValue)( DaoNameSpace*self, const char *s, DValue v );
 	void (*DaoNameSpace_AddConstData)( DaoNameSpace *self, const char *name, DaoBase *data );
@@ -643,6 +649,8 @@ struct DaoAPI
 	int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
 	int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
 	int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
+	int (*DaoNameSpace_GetOptions)( DaoNameSpace *self );
+	void (*DaoNameSpace_SetOptions)( DaoNameSpace *self, int options );
 
 	DaoVmSpace* (*DaoVmSpace_New)();
 
@@ -926,6 +934,7 @@ DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
 DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
 /* get namespace with the name, create if not exits: */
 DAO_DLL DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name );
+DAO_DLL void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
 DAO_DLL void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );
 DAO_DLL void DaoNameSpace_AddConstValue( DaoNameSpace *self, const char *s, DValue v );
 DAO_DLL void DaoNameSpace_AddConstData( DaoNameSpace *self, const char *name, DaoBase *data );
@@ -958,6 +967,8 @@ DAO_DLL int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
 DAO_DLL int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 /* load the scripts in "file" to the namespace */
 DAO_DLL int DaoNameSpace_Load( DaoNameSpace *self, const char *file );
+DAO_DLL int DaoNameSpace_GetOptions( DaoNameSpace *self );
+DAO_DLL void DaoNameSpace_SetOptions( DaoNameSpace *self, int options );
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
@@ -1218,7 +1229,8 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoVmProcess_GetReturned( s )  __dao.DaoVmProcess_GetReturned( s )
 
 #define DaoNameSpace_New( vms )  __dao.DaoNameSpace_New( vms )
-#define DaoNameSpace_GetNameSpace( vms, s ) __dao.DaoNameSpace_GetNameSpace( vms, s )
+#define DaoNameSpace_GetNameSpace( ns, s ) __dao.DaoNameSpace_GetNameSpace( ns, s )
+#define DaoNameSpace_AddParent( self, ns ) __dao.DaoNameSpace_AddParent( self, ns )
 #define DaoNameSpace_AddConstNumbers( s, n ) __dao.DaoNameSpace_AddConstNumbers( s, n )
 #define DaoNameSpace_AddConstValue( sf,s,v )  __dao.DaoNameSpace_AddConstValue( sf,s,v )
 #define DaoNameSpace_AddConstData( sf,s,d )  __dao.DaoNameSpace_AddConstData( sf,s,d )
@@ -1235,6 +1247,8 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoNameSpace_SetupType( self, typer ) __dao.DaoNameSpace_SetupType( self, typer )
 #define DaoNameSpace_SetupTypes( self, types ) __dao.DaoNameSpace_SetupTypes( self, types )
 #define DaoNameSpace_Load( self, file ) __dao.DaoNameSpace_Load( self, file )
+#define DaoNameSpace_GetOptions( self ) __dao.DaoNameSpace_GetOptions( self )
+#define DaoNameSpace_SetOptions( self, opt ) __dao.DaoNameSpace_SetOptions( self, opt )
 
 #define DaoVmSpace_New()  __dao.DaoVmSpace_New()
 #define DaoVmSpace_ParseOptions( self, o )  __dao.DaoVmSpace_ParseOptions( self, o )

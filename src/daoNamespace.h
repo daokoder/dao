@@ -56,6 +56,7 @@ struct DaoNameSpace
 	DArray *nsTable;
 
 	int cstUser;
+	int options;
 
 	/* Global consts: including builtin types, routines, classes, namespaces, plugins etc. */
 	DVarray  *cstData;

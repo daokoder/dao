@@ -915,6 +915,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	int ch;
 	DString_SetMBS( self->fileName, "interactive codes" );
 	DString_SetMBS( self->mainNamespace->name, "interactive codes" );
+	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
 	while(1){
 		DString_Clear( input );
 		if( self->ReadLine ){
@@ -970,6 +971,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 		   printf( "%s\n", input->mbs );
 		 */
 	}
+	self->mainNamespace->options &= ~DAO_NS_AUTO_GLOBAL;
 	DString_Delete( input );
 }
 
@@ -1994,6 +1996,7 @@ void DaoInitAPI( DaoAPI *api )
 
 	api->DaoNameSpace_New = DaoNameSpace_New;
 	api->DaoNameSpace_GetNameSpace = DaoNameSpace_GetNameSpace;
+	api->DaoNameSpace_AddParent = DaoNameSpace_AddParent;
 	api->DaoNameSpace_AddConstNumbers = DaoNameSpace_AddConstNumbers;
 	api->DaoNameSpace_AddConstValue = DaoNameSpace_AddConstValue;
 	api->DaoNameSpace_AddConstData = DaoNameSpace_AddConstData;
@@ -2010,6 +2013,8 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoNameSpace_SetupType = DaoNameSpace_SetupType;
 	api->DaoNameSpace_SetupTypes = DaoNameSpace_SetupTypes;
 	api->DaoNameSpace_Load = DaoNameSpace_Load;
+	api->DaoNameSpace_GetOptions = DaoNameSpace_GetOptions;
+	api->DaoNameSpace_SetOptions = DaoNameSpace_SetOptions;
 
 	api->DaoVmSpace_New = DaoVmSpace_New;
 	api->DaoVmSpace_ParseOptions = DaoVmSpace_ParseOptions;
