@@ -3684,7 +3684,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			ptok = tokens[start];
 			tki = ptok->name;
 		}
-		if( (vmSpace->options & DAO_EXEC_INTERUN) && myNS == vmSpace->mainNamespace ){
+		if( myNS->options & DAO_NS_AUTO_GLOBAL ){
 			if( self->levelBase + self->lexLevel ==0 && !(storeType & DAO_DATA_LOCAL) ){
 				storeType |= DAO_DATA_GLOBAL;
 			}
