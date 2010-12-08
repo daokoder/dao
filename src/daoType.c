@@ -147,7 +147,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 	GC_IncRC( extra );
 	if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
 #if 0
-	if( strstr( self->name->mbs, "map<" ) ){
+	if( strstr( self->name->mbs, "map[" ) ){
 		printf( "%s  %p\n", self->name->mbs, self );
 		print_trace();
 	}
@@ -346,7 +346,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return DAO_MT_EQ;
 	case DAO_ARRAY : case DAO_LIST :
 	case DAO_MAP : case DAO_TUPLE : case DAO_TYPE :
-		/* tuple<...> to tuple */
+		/* tuple[...] to tuple */
 		if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
 		if( self->attrib & DAO_TYPE_EMPTY ) return DAO_MT_SUB;
 		if( self->nested->size > type->nested->size ) return DAO_MT_NOT;
@@ -662,7 +662,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 			if( ch < 'a' || ch > 'z' ) break;
 			DString_AppendChar( copy->name, self->name->mbs[i] );
 		}
-		DString_AppendChar( copy->name, '<' );
+		DString_AppendChar( copy->name, '[' );
 		for(i=0; i<self->nested->size; i++){
 			nest = DaoType_DefineTypes( self->nested->items.pAbtp[i], ns, defs );
 			if( nest ==NULL ) goto DefFailed;
@@ -677,7 +677,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 			if( copy->X.abtype ==NULL ) goto DefFailed;
 			DString_Append( copy->name, copy->X.abtype->name );
 		}
-		DString_AppendChar( copy->name, '>' );
+		DString_AppendChar( copy->name, ']' );
 	}
 	if( self->X.abtype && self->X.abtype->type == DAO_TYPE ){
 		copy->X.abtype = DaoType_DefineTypes( self->X.abtype, ns, defs );
@@ -699,7 +699,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	GC_IncRC( copy->X.abtype );
 	node = DMap_Find( ns->abstypes, copy->name );
 #if 0
-	if( strstr( copy->name->mbs, "map<" ) == copy->name->mbs ){
+	if( strstr( copy->name->mbs, "map[" ) == copy-]name->mbs ){
 		printf( "%s  %p  %p\n", copy->name->mbs, copy, node );
 		print_trace();
 	}

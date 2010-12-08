@@ -2224,37 +2224,37 @@ DaoVmSpace* DaoInit()
 	DaoStartGC();
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
-	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
+	dao_routine = DaoType_New( "routine[=>?]", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
 	dao_class_any = DaoType_New( "class", DAO_CLASS, (DaoBase*)DaoClass_New(), NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;
 	ns = vms->nsInternal;
 
-	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, 0,0 );
+	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple[valid:int,iterator:any]", ns, 0,0 );
 	dao_access_enum = DaoNameSpace_MakeEnumType( ns, "private,protected,public" );
 	dao_storage_enum = DaoNameSpace_MakeEnumType( ns, "const,global,var"  );
 
 	DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
 	DaoNameSpace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
 
-	dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
-	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
-	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
-	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, 0,0 );
+	dao_array_any = DaoParser_ParseTypeName( "array[any]", ns, 0,0 );
+	dao_list_any = DaoParser_ParseTypeName( "list[any]", ns, 0,0 );
+	dao_map_any = DaoParser_ParseTypeName( "map[any,any]", ns, 0,0 );
+	dao_map_meta = DaoParser_ParseTypeName( "map[string,any]", ns, 0,0 );
 
 #if 0
-	dao_array_empty = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
-	dao_list_empty = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
-	dao_map_empty = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
+	dao_array_empty = DaoParser_ParseTypeName( "array[any]", ns, 0,0 );
+	dao_list_empty = DaoParser_ParseTypeName( "list[any]", ns, 0,0 );
+	dao_map_empty = DaoParser_ParseTypeName( "map[any,any]", ns, 0,0 );
 #else
 	dao_array_empty = DaoType_Copy( dao_array_any );
 	dao_list_empty = DaoType_Copy( dao_list_any );
 	dao_map_empty = DaoType_Copy( dao_map_any );
 #endif
-	DString_SetMBS( dao_array_empty->name, "array<>" );
-	DString_SetMBS( dao_list_empty->name, "list<>" );
-	DString_SetMBS( dao_map_empty->name, "map<>" );
+	DString_SetMBS( dao_array_empty->name, "array[]" );
+	DString_SetMBS( dao_list_empty->name, "list[]" );
+	DString_SetMBS( dao_map_empty->name, "map[]" );
 	dao_array_empty->attrib |= DAO_TYPE_EMPTY;
 	dao_list_empty->attrib |= DAO_TYPE_EMPTY;
 	dao_map_empty->attrib |= DAO_TYPE_EMPTY;

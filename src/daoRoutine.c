@@ -3457,7 +3457,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-				ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
+				ct = DaoType_New( "tuple[", DAO_TUPLE, NULL, NULL );
 				k = 1;
 				for(j=0; j<opb; j++){
 					at = type[opa+j];
@@ -3474,7 +3474,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}
 					DArray_Append( ct->nested, at );
 				}
-				DString_AppendMBS( ct->name, ">" );
+				DString_AppendMBS( ct->name, "]" );
 				GC_IncRCs( ct->nested );
 				bt = DaoNameSpace_FindType( ns, ct->name );
 				if( bt ){
@@ -3862,7 +3862,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			case DVM_FUNCT_SELECT :
 				if( bt->tid == DAO_TUPLE ){
 					if( bt->nested->size ==0 ) goto ErrorTyping;
-					at = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
+					at = DaoType_New( "tuple[", DAO_TUPLE, NULL, NULL );
 					at->nested = DArray_New(0);
 					for( j=0; j<bt->nested->size; j++ ){
 						ct = bt->nested->items.pAbtp[j]->nested->items.pAbtp[0];
@@ -3871,7 +3871,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						DArray_Append( at->nested, ct );
 						GC_IncRC( ct );
 					}
-					DString_AppendChar( at->name, '>' ); /* functional XXX gc */
+					DString_AppendChar( at->name, ']' ); /* functional XXX gc */
 					DaoType_CheckAttributes( at );
 					ct = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & at, 1 );
 				}else{
@@ -4165,7 +4165,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}else if( ct && ct->tid != DAO_UDF ){
 						if( notide && DaoType_MatchTo( at, ct, defs )== DAO_MT_SUB ){
 							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs ) ){
-								/* typedef tuple<x:float,y:float> Point2D
+								/* typedef tuple[x:float,y:float] Point2D
 								 * routine Test()=>Point2D{ return (1.0,2.0); } */
 								addCount[i] ++;
 								vmc2.code = DVM_CAST;

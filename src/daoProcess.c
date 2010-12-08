@@ -1068,7 +1068,7 @@ CallEntry:
 			DaoContext_DoMove( topCtx, vmc );
 			vA = locVars[ vmc->a ];
 			/* assigning no-duplicated constant:
-			   routine Func( a : const list<int> ){ b = a; } */
+			   routine Func( a : const list[int] ){ b = a; } */
 			if( vA->cst && vA->t >= DAO_ARRAY && ! (vA->v.p->trait & DAO_DATA_CONST) )
 				locVars[ vmc->c ]->cst = DAO_CONST_VALUE;
 			goto CheckException;
@@ -1834,7 +1834,7 @@ CallEntry:
 			vA = locVars[ vmc->a ];
 			DValue_Move( *vA, locVars[ vmc->c ], locTypes[ vmc->c ] );
 			/* assigning no-duplicated constant:
-			   routine Func( a : const list<int> ){ b = a; } */
+			   routine Func( a : const list[int] ){ b = a; } */
 			if( vA->cst && vA->t >= DAO_ARRAY && ! (vA->v.p->trait & DAO_DATA_CONST) )
 				locVars[ vmc->c ]->cst = DAO_CONST_VALUE;
 		}OPNEXT()
@@ -3201,7 +3201,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 
 	dao_fe_clear();
 	ctx->idClearFE = -1;
-	ctx->regTypes = types;
+	if( ctx->regTypes == NULL ) ctx->regTypes = types;
 
 	switch( vmc->code ){
 	case DVM_MOVE :

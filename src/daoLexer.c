@@ -729,12 +729,10 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_TILDE ][ '~' ] = TOK_OP_RGXA; /* ~~ */
 	daoLexTable[ TOK_START ][ '=' ] = TOK_OP_EQ;
 	/* :=  +=  -=  /=  *=  %=  &=  |=  !=*/
-	for(i=TOK_OP_COLON; i<=TOK_OP_LT; i++)
+	for(i=TOK_OP_COLON; i<=TOK_OP_GT; i++)
 		daoLexTable[i]['='] = i + (TOK_EQ_COLON - TOK_OP_COLON);
 	daoLexTable[ TOK_START ][ '>' ] = TOK_OP_GT;
-#if 0
-	// daoLexTable[ TOK_OP_GT ][ '>' ] = TOK_END_RSHIFT; /* >> */
-#endif
+	daoLexTable[ TOK_OP_GT ][ '>' ] = TOK_END_RSHIFT; /* >> */
 	daoLexTable[ TOK_OP_QUEST ][ '?' ] = TOK_END_ASSERT; /* ?? */
 	daoLexTable[ TOK_OP_QUEST ][ '=' ] = TOK_END_TEQ; /* ?= */
 	daoLexTable[ TOK_OP_QUEST ][ '<' ] = TOK_END_TISA; /* ?< */

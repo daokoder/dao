@@ -1777,8 +1777,8 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
 	{ DaoSTR_Utf8,    "utf8( self :string )const =>int" },
 	{ DaoSTR_Utf8,    "utf8( self :string, utf8 : int ) =>int" },
-	{ DaoSTR_Type,    "type( self :string )const =>enum<mbs, wcs>" },
-	{ DaoSTR_Convert, "convert( self :string, to :enum<mbs, wcs> ) =>string" },
+	{ DaoSTR_Type,    "type( self :string )const =>enum[mbs, wcs]" },
+	{ DaoSTR_Convert, "convert( self :string, to :enum[mbs, wcs] ) =>string" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
 	{ DaoSTR_Clear,   "clear( self :string )" },
 	{ DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
@@ -1789,24 +1789,24 @@ static DaoFuncItem stringMeths[] =
 	/* replace index-th occurrence: =0: replace all; >0: from begin; <0: from end. */
 	/* return int of occurrence replaced. */
 	{ DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )=>int" },
-	{ DaoSTR_Replace2, "replace( self :string, table : map<string,string>, max=0 )" },
-	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )const=>string" },
+	{ DaoSTR_Replace2, "replace( self :string, table : map[string,string], max=0 )" },
+	{ DaoSTR_Expand,  "expand( self :string, keys :map[string,string], spec='$', keep=1 )const=>string" },
 	{ DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )const=>string" },
-	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )const=>list<string>" },
-	{ DaoSTR_Tokenize, "tokenize( self :string, seps :string, quotes='', backslash=0, simplify=0 )const=>list<string>" },
-	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )const=>list<tuple<int,int>>" },
-	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )const=>tuple<start:int,end:int,substring:string>" },
-	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )const=>tuple<start:int,end:int,substring:string>" },
-	{ DaoSTR_Extract, "extract( self :string, pt :string, matched=1, mask='', rev=0 )const=>list<string>" },
-	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )const=>list<string>" },
+	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )const=>list[string]" },
+	{ DaoSTR_Tokenize, "tokenize( self :string, seps :string, quotes='', backslash=0, simplify=0 )const=>list[string]" },
+	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )const=>list[tuple[int,int]]" },
+	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )const=>tuple[start:int,end:int,substring:string]" },
+	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )const=>tuple[start:int,end:int,substring:string]" },
+	{ DaoSTR_Extract, "extract( self :string, pt :string, matched=1, mask='', rev=0 )const=>list[string]" },
+	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )const=>list[string]" },
 	{ DaoSTR_Change,  "change( self :string, pt :string, s:string, index=0, start=0, end=0 )=>int" },
 	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s:string, index=0 )const=>string" },
-	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s:string, index : int, count : int )const=>list<string>" },
+	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s:string, index : int, count : int )const=>list[string]" },
 	{ DaoSTR_Tonumber, "tonumber( self :string, base=10 )const=>double" },
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
-	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
-	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
+	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum[regular, hex] = $regular )=>string" },
+	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum[regular, hex] = $regular )=>string" },
 	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
 	{ NULL, NULL }
 };
@@ -1918,7 +1918,7 @@ static void DaoListCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DVa
 	int idtype;
 	DArray *ids = MakeIndex( ctx, pid, size, & start, & end, & idtype );
 	if( self->unitype == NULL ){
-		/* a : tuple<string,list<int>> = ('',{});
+		/* a : tuple[string,list[int]] = ('',{});
 		   duplicating the constant to assign to a may not set the unitype properly */
 		self->unitype = ctx->regTypes[ ctx->vmc->c ];
 		GC_IncRC( self->unitype );
@@ -2511,32 +2511,32 @@ static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
 }
 static DaoFuncItem listMeths[] =
 {
-	{ DaoLIST_Insert,     "insert( self :list<@T>, item : @T, pos=0 )" },
-	{ DaoLIST_Erase,      "erase( self :list<any>, start=0, n=1 )" },
-	{ DaoLIST_Clear,      "clear( self :list<any> )" },
-	{ DaoLIST_Size,       "size( self :list<any> )const=>int" },
-	{ DaoLIST_Resize,     "resize( self :list<any>, size :int )" },
-	{ DaoLIST_Max,        "max( self :list<@T> )const=>tuple<@T,int>" },
-	{ DaoLIST_Min,        "min( self :list<@T> )const=>tuple<@T,int>" },
-	{ DaoLIST_Sum,        "sum( self :list<@T> )const=>@T" },
-	{ DaoLIST_Join,       "join( self :list<any>, separator='' )const=>string" },
-	{ DaoLIST_PushFront,  "pushfront( self :list<@T>, item :@T )" },
-	{ DaoLIST_PopFront,   "popfront( self :list<any> )" },
-	{ DaoLIST_PopFront,   "dequeue( self :list<any> )" },
-	{ DaoLIST_PushBack,   "append( self :list<@T>, item :@T )" },
-	{ DaoLIST_PushBack,   "pushback( self :list<@T>, item :@T )" },
-	{ DaoLIST_PushBack,   "enqueue( self :list<@T>, item :@T )" },
-	{ DaoLIST_PushBack,   "push( self :list<@T>, item :@T )" },
-	{ DaoLIST_PopBack,    "popback( self :list<any> )" },
-	{ DaoLIST_PopBack,    "pop( self :list<any> )" },
-	{ DaoLIST_Front,      "front( self :list<@T> )const=>@T" },
-	{ DaoLIST_Top,        "top( self :list<@T> )const=>@T" },
-	{ DaoLIST_Top,        "back( self :list<@T> )const=>@T" },
-	{ DaoLIST_Ranka,      "ranka( self :list<any>, k=0 )const=>list<int>" },
-	{ DaoLIST_Rankd,      "rankd( self :list<any>, k=0 )const=>list<int>" },
-	{ DaoLIST_Sorta,      "sorta( self :list<any>, k=0 )" },
-	{ DaoLIST_Sortd,      "sortd( self :list<any>, k=0 )" },
-	{ DaoLIST_Iter,       "__for_iterator__( self :list<any>, iter : for_iterator )" },
+	{ DaoLIST_Insert,     "insert( self :list[@T], item : @T, pos=0 )" },
+	{ DaoLIST_Erase,      "erase( self :list[any], start=0, n=1 )" },
+	{ DaoLIST_Clear,      "clear( self :list[any] )" },
+	{ DaoLIST_Size,       "size( self :list[any] )const=>int" },
+	{ DaoLIST_Resize,     "resize( self :list[any], size :int )" },
+	{ DaoLIST_Max,        "max( self :list[@T] )const=>tuple[@T,int]" },
+	{ DaoLIST_Min,        "min( self :list[@T] )const=>tuple[@T,int]" },
+	{ DaoLIST_Sum,        "sum( self :list[@T] )const=>@T" },
+	{ DaoLIST_Join,       "join( self :list[any], separator='' )const=>string" },
+	{ DaoLIST_PushFront,  "pushfront( self :list[@T], item :@T )" },
+	{ DaoLIST_PopFront,   "popfront( self :list[any] )" },
+	{ DaoLIST_PopFront,   "dequeue( self :list[any] )" },
+	{ DaoLIST_PushBack,   "append( self :list[@T], item :@T )" },
+	{ DaoLIST_PushBack,   "pushback( self :list[@T], item :@T )" },
+	{ DaoLIST_PushBack,   "enqueue( self :list[@T], item :@T )" },
+	{ DaoLIST_PushBack,   "push( self :list[@T], item :@T )" },
+	{ DaoLIST_PopBack,    "popback( self :list[any] )" },
+	{ DaoLIST_PopBack,    "pop( self :list[any] )" },
+	{ DaoLIST_Front,      "front( self :list[@T] )const=>@T" },
+	{ DaoLIST_Top,        "top( self :list[@T] )const=>@T" },
+	{ DaoLIST_Top,        "back( self :list[@T] )const=>@T" },
+	{ DaoLIST_Ranka,      "ranka( self :list[any], k=0 )const=>list[int]" },
+	{ DaoLIST_Rankd,      "rankd( self :list[any], k=0 )const=>list[int]" },
+	{ DaoLIST_Sorta,      "sorta( self :list[any], k=0 )" },
+	{ DaoLIST_Sortd,      "sortd( self :list[any], k=0 )" },
+	{ DaoLIST_Iter,       "__for_iterator__( self :list[any], iter : for_iterator )" },
 	{ NULL, NULL }
 };
 
@@ -2773,7 +2773,7 @@ static void DaoMap_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue v
 	DaoType *tp = self->unitype;
 	DaoType *tp1=NULL, *tp2=NULL;
 	if( tp == NULL ){
-		/* a : tuple<string,map<string,int>> = ('',{=>});
+		/* a : tuple[string,map[string,int]] = ('',{=>});
 		   duplicating the constant to assign to a may not set the unitype properly */
 		tp = ctx->regTypes[ ctx->vmc->c ];
 		if( tp == NULL || tp->tid == 0 ) tp = dao_map_any;
@@ -2996,22 +2996,22 @@ static void DaoMAP_Iter( DaoContext *ctx, DValue *p[], int N )
 }
 static DaoFuncItem mapMeths[] =
 {
-	{ DaoMAP_Clear,  "clear( self :map<any,any> )" },
-	{ DaoMAP_Erase,  "erase( self :map<any,any> )" },
-	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
-	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
-	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
+	{ DaoMAP_Clear,  "clear( self :map[any,any] )" },
+	{ DaoMAP_Erase,  "erase( self :map[any,any] )" },
+	{ DaoMAP_Erase,  "erase( self :map[@K,@V], from :@K )" },
+	{ DaoMAP_Erase,  "erase( self :map[@K,@V], from :@K, to :@K )" },
+	{ DaoMAP_Insert, "insert( self :map[@K,@V], key :@K, value :@V )" },
 	/* 0:EQ; -1:MaxLess; 1:MinGreat */
-	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type=0 )const=>tuple<int,@K,@V>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any> )const=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K )const=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K, to :@K )const=>list<@K>" },
-	{ DaoMAP_Value,  "values( self :map<any,@V> )const=>list<@V>" },
-	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K )const=>list<@V>" },
-	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K, to :@K )const=>list<@V>" },
-	{ DaoMAP_Has,    "has( self :map<@K,any>, key :@K )const=>int" },
-	{ DaoMAP_Size,   "size( self :map<any,any> )const=>int" },
-	{ DaoMAP_Iter,   "__for_iterator__( self :map<any,any>, iter : for_iterator )" },
+	{ DaoMAP_Find,   "find( self :map[@K,@V], key :@K, type=0 )const=>tuple[int,@K,@V]" },
+	{ DaoMAP_Key,    "keys( self :map[@K,any] )const=>list[@K]" },
+	{ DaoMAP_Key,    "keys( self :map[@K,any], from :@K )const=>list[@K]" },
+	{ DaoMAP_Key,    "keys( self :map[@K,any], from :@K, to :@K )const=>list[@K]" },
+	{ DaoMAP_Value,  "values( self :map[any,@V] )const=>list[@V]" },
+	{ DaoMAP_Value,  "values( self :map[@K,@V], from :@K )const=>list[@V]" },
+	{ DaoMAP_Value,  "values( self :map[@K,@V], from :@K, to :@K )const=>list[@V]" },
+	{ DaoMAP_Has,    "has( self :map[@K,any], key :@K )const=>int" },
+	{ DaoMAP_Size,   "size( self :map[any,any] )const=>int" },
+	{ DaoMAP_Iter,   "__for_iterator__( self :map[any,any], iter : for_iterator )" },
 	{ NULL, NULL }
 };
 
@@ -3608,16 +3608,16 @@ static DaoFuncItem cptrMeths[]=
 	{  DaoBuf_Size,        "size( self : cdata )=>int" },
 	{  DaoBuf_Resize,      "resize( self : cdata, size :int )" },
 	{  DaoBuf_CopyData,    "copydata( self : cdata, buf : cdata )" },
-	{  DaoBuf_GetString,   "getstring( self : cdata, type :enum<mbs, wcs> = $mbs )=>string" },
+	{  DaoBuf_GetString,   "getstring( self : cdata, type :enum[mbs, wcs] = $mbs )=>string" },
 	{  DaoBuf_SetString,   "setstring( self : cdata, str : string )" },
-	{  DaoBuf_GetByte,     "getbyte( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetShort,    "getshort( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetInt,      "getint( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
+	{  DaoBuf_GetByte,     "getbyte( self : cdata, index : int, type :enum[signed, unsigned] = $signed )=>int" },
+	{  DaoBuf_GetShort,    "getshort( self : cdata, index : int, type :enum[signed, unsigned] = $signed )=>int" },
+	{  DaoBuf_GetInt,      "getint( self : cdata, index : int, type :enum[signed, unsigned] = $signed )=>int" },
 	{  DaoBuf_GetFloat,    "getfloat( self : cdata, index : int )=>float" },
 	{  DaoBuf_GetDouble,   "getdouble( self : cdata, index : int )=>double" },
-	{  DaoBuf_SetByte,     "setbyte( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
-	{  DaoBuf_SetShort,    "setshort( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)"},
-	{  DaoBuf_SetInt,      "setint( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
+	{  DaoBuf_SetByte,     "setbyte( self : cdata, index : int, value: int, type :enum[signed, unsigned] = $signed)" },
+	{  DaoBuf_SetShort,    "setshort( self : cdata, index : int, value: int, type :enum[signed, unsigned] = $signed)"},
+	{  DaoBuf_SetInt,      "setint( self : cdata, index : int, value: int, type :enum[signed, unsigned] = $signed)" },
 	{  DaoBuf_SetFloat,    "setfloat( self : cdata, index : int, value : float )" },
 	{  DaoBuf_SetDouble,   "setdouble( self : cdata, index : int, value : double )" },
 	{ NULL, NULL },

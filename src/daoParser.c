@@ -595,8 +595,6 @@ int DaoParser_FindOpenToken( DaoParser *self, uchar_t tok, int start, int end/*=
 			case DTOK_RB  : n2 --; break;
 			case DTOK_LSB : n3 ++; break;
 			case DTOK_RSB : n3 --; break;
-			case DTOK_LT : if( self->pairLtGt ) n4 ++; break;
-			case DTOK_GT : if( self->pairLtGt ) n4 --; break;
 			}
 		}
 	}
@@ -709,13 +707,11 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 			if( rb >= end ) return end;
 			/* type casting:
 			 * (int)a
-			 * (array<float>)[1,2,3];
+			 * (array[float])[1,2,3];
 			 */
 #if 0
 			/* a = b() + c; */
-			self->pairLtGt = 1;
 			comma = DaoParser_FindOpenToken( self, ",", i+1, rb, 0 ); /* tuple */
-			self->pairLtGt = 0;
 			/* tuple, but not multiple assignment */
 			if( comma >=0 && rb+1 <end && STRCMP( tokStr[rb+1], "=" ) !=0 ) return rb;
 #endif
@@ -756,14 +752,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 			if( i+1 > end ) break;
 			tk = tokens[i+1]->name;
 			tkp = tokens[i+1]->type;
-			if( old >= DKEY_ENUM && old <= DKEY_LIST && tkp == DTOK_LT ){
-				int rb;
-				self->pairLtGt = 1;
-				rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, i, end );
-				self->pairLtGt = 0;
-				if( rb < 0 ) return -1;
-				i = rb + 1;
-			}else if( tkp == DTOK_DOT ){
+			if( tkp == DTOK_DOT ){
 				i ++;
 			}else if( tk == DKEY_AND || tk == DKEY_OR || tk == DKEY_NOT || tk == DKEY_IN ){
 				i ++;
@@ -968,11 +957,9 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 			right += 2;
 		}
 		if( tokens[right]->type != DTOK_IDENTIFIER ) goto ErrorInvalidTypeForm;
-		if( right+1 < size && tokens[right+1]->name == DTOK_LT ){
+		if( right+1 < size && tokens[right+1]->name == DTOK_LSB ){
 			start = right + 1;
-			self->pairLtGt = 1;
-			right = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, right, -1 );
-			self->pairLtGt = 0;
+			right = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, right, -1 );
 			for( i=start; i<=right; i++ ) DArray_Append( module->partoks, tokens[i] );
 		}
 	}
@@ -1523,7 +1510,7 @@ static DaoType* DaoType_MakeType( short tid, DString *name, DaoBase *extra,
 	MAP_Insert( ns->abstypes, name, self );
 	DaoType_CheckAttributes( self );
 #if 0
-	if( strstr( self->name->mbs, "map<" ) ){
+	if( strstr( self->name->mbs, "map[" ) ){
 		printf( "%s  %p\n", self->name->mbs, self );
 		print_trace();
 	}
@@ -1614,19 +1601,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 	for(i=start; i<=end; i++) printf("%s  ", tokens[i]->string->mbs); printf("\n\n");
 #endif
 
-	if( tokens[start]->name == DKEY_ROUTINE && start+2 <= end ){
-		i = start;
-		if( tokens[i+1]->name == DTOK_LE && tokens[i+2]->name == DTOK_GT ){
-			if( tokens[i+1]->cpos + 2 == tokens[i+2]->cpos ){
-				tokens[i+1]->name = tokens[i+1]->type = DTOK_LT;
-				tokens[i+2]->name = tokens[i+2]->type = DTOK_FIELD;
-				DString_SetMBS( tokens[i+1]->string, "<" );
-				DString_SetMBS( tokens[i+2]->string, "=>" );
-				tokens[i+2]->cpos -= 1;
-			}
-		}
-	}
-	if( start == end || tokens[start+1]->name != DTOK_LT ){
+	if( start == end || tokens[start+1]->name != DTOK_LSB ){
 		*newpos = start + 1;
 		tok = tokens[start];
 		abtype = DaoType_ScalarType( tok, ns, cls, rout );
@@ -1662,7 +1637,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 		switch( tok->name ){
 		case DTOK_COMMA :
 			switch( t ){
-			case DTOK_IDENTIFIER : case DTOK_GT : case DTOK_QUES :
+			case DTOK_IDENTIFIER : case DTOK_RSB : case DTOK_QUES :
 			case DTOK_DOTS : break;
 			default: goto WrongForm;
 			}
@@ -1671,7 +1646,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 		case DTOK_QUES :
 		case DTOK_DOTS :
 			switch( t ){
-			case 0: case DTOK_LT: case DTOK_COMMA: case DTOK_FIELD:
+			case 0: case DTOK_LSB: case DTOK_COMMA: case DTOK_FIELD:
 			case DTOK_ASSN: case DTOK_COLON: break;
 			default: goto WrongForm;
 			}
@@ -1687,7 +1662,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 			break;
 		case DTOK_FIELD :
 			switch( t ){
-			case DTOK_IDENTIFIER : case DTOK_LT : case DTOK_GT :
+			case DTOK_IDENTIFIER : case DTOK_LSB : case DTOK_RSB :
 			case DTOK_QUES : case DTOK_DOTS : break;
 			default: goto WrongForm;
 			}
@@ -1697,9 +1672,9 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 			if( state.X.a != DKEY_ROUTINE || state.X.b ) goto WrongForm;
 			stateStack->items.pQUB[0].X.b = typeStack->size + 1;
 			break;
-		case DTOK_GT :
+		case DTOK_RSB :
 			switch( t ){
-			case DTOK_IDENTIFIER : case DTOK_GT : case DTOK_QUES :
+			case DTOK_IDENTIFIER : case DTOK_RSB : case DTOK_QUES :
 			case DTOK_DOTS : break;
 			default: goto WrongForm;
 			}
@@ -1748,28 +1723,17 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 		case DKEY_ENUM : case DKEY_ARRAY : case DKEY_LIST : case DKEY_MAP :
 		case DKEY_TUPLE : case DKEY_ROUTINE : case DKEY_CLASS :
 			switch( t ){
-			case 0: case DTOK_LT: case DTOK_COMMA: case DTOK_FIELD:
+			case 0: case DTOK_LSB: case DTOK_COMMA: case DTOK_FIELD:
 			case DTOK_ASSN: case DTOK_COLON: break;
 			default: goto WrongForm;
 			}
-			if( tok->name == DKEY_ROUTINE && i+2 <= end ){
-				if( tokens[i+1]->name == DTOK_LE && tokens[i+2]->name == DTOK_GT ){
-					if( tokens[i+1]->cpos + 2 == tokens[i+2]->cpos ){
-						tokens[i+1]->name = tokens[i+1]->type = DTOK_LT;
-						tokens[i+2]->name = tokens[i+2]->type = DTOK_FIELD;
-						DString_SetMBS( tokens[i+1]->string, "<" );
-						DString_SetMBS( tokens[i+2]->string, "=>" );
-						tokens[i+2]->cpos -= 1;
-					}
-				}
-			}
-			if( i >= end || tokens[i+1]->name != DTOK_LT ) goto WrongForm;
+			if( i >= end || tokens[i+1]->name != DTOK_LSB ) goto WrongForm;
 			if( tok->name == DKEY_ENUM ){
 				DString *field = NULL;
 				uchar_t sep = 0;
 				dint value = 0;
 				int k, set=0, sign = 1;
-				abtype = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
+				abtype = DaoType_New( "enum[", DAO_ENUM, NULL, NULL );
 				abtype->mapNames = DMap_New(D_STRING,0);
 				for(k=i+2; k<=end; k++){
 					tok = tokens[k];
@@ -1819,7 +1783,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 				/*
 				printf( "%i  %i  %s\n", end, i, abtype->name->mbs );
 				*/
-				if( tok->type != DTOK_GT ) goto WrongForm;
+				if( tok->type != DTOK_RSB ) goto WrongForm;
 				i = k;
 				DArray_Append( typeStack, abtype );
 				DArray_Append( typeArray, abtype );
@@ -1827,7 +1791,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 				break;
 			}
 			DString_Assign( name, tok->string );
-			DString_AppendMBS( name, "<" );
+			DString_AppendMBS( name, "[" );
 			state.X.a = tok->name;
 			state.X.c = typeStack->size;
 			state.X.b = state.X.d = 0;
@@ -1838,7 +1802,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 		default :
 			if( tokens[i]->type == DTOK_IDENTIFIER && i+2 <= end ){
 				if( tokens[i+1]->name == DTOK_COLON || tokens[i+1]->name == DTOK_ASSN ){
-					if( t != DTOK_LT && t != DTOK_COMMA ) goto WrongForm;
+					if( t != DTOK_LSB && t != DTOK_COMMA ) goto WrongForm;
 					state.X.a = tokens[i+1]->name;
 					state.X.c = typeStack->size;
 					state.X.b = state.X.d = 0;
@@ -1850,7 +1814,7 @@ static DaoType* DaoType_Parse( DaoToken **tokens, int start, int end, int *newpo
 				}
 			}
 			switch( t ){
-			case 0: case DTOK_LT: case DTOK_COMMA: case DTOK_FIELD:
+			case 0: case DTOK_LSB: case DTOK_COMMA: case DTOK_FIELD:
 			case DTOK_ASSN: case DTOK_COLON: break;
 			default: goto WrongForm;
 			}
@@ -2043,7 +2007,7 @@ int DaoParser_ParseParams( DaoParser *self )
 	else if( cdata ) hostname = cdata->typer->name;
 
 	if( routine->routName->mbs[0] == '@' ) DString_AppendChar( pname, '@' );
-	DString_AppendMBS( pname, "routine<" );
+	DString_AppendMBS( pname, "routine[" );
 	i = start + 1;
 	tki = tokens[i]->name;
 	routine->parCount = 0;
@@ -2235,7 +2199,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		abstype = DaoType_New( "?", DAO_UDF, 0,0 );
 		DString_AppendMBS( pname, "=>?" );
 	}
-	DString_AppendMBS( pname, ">" );
+	DString_AppendMBS( pname, "]" );
 	GC_IncRCs( nested );
 	GC_IncRC( abstype );
 	tp = DaoType_New( pname->mbs, DAO_ROUTINE, (DaoBase*) abstype, nested );
@@ -3472,7 +3436,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		goto ErrorEnumDefinition;
 	}
 
-	abtp = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
+	abtp = DaoType_New( "enum[", DAO_ENUM, NULL, NULL );
 	abtp->mapNames = DMap_New(D_STRING,0);
 	comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+2, -1, 0 );
 	semco = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+2, -1, 0 );
@@ -3533,7 +3497,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		comma = DaoParser_FindOpenToken( self, sep, comma+1, -1, 0 );
 		if( comma <0 ) comma = rb;
 	}
-	DString_AppendChar( abtp->name, '>' );
+	DString_AppendChar( abtp->name, ']' );
 	abtp2 = DaoNameSpace_FindType( self->nameSpace, abtp->name );
 	if( abtp2 ){
 		DaoType_Delete( abtp );
@@ -6730,23 +6694,6 @@ static int DaoParser_FindRootOper( DaoParser *self, int start, int end, int *opt
 	i = imax;
 	if( max ){
 		*optype = daoArithOper[ tokens[i]->name ].oper;
-		/* adjust for >> or >= as two tokens */
-		if( tokens[i-1]->name == DTOK_GT && tokens[i]->cpos == tokens[i-1]->cpos+1 ){
-			if( tokens[i]->name == DTOK_GT ){ /* >> */
-				*optype = DAO_OPER_GGT;
-				tokens[i]->type = DTOK_RSHIFT;
-				tokens[i]->name = DTOK_RSHIFT;
-				tokens[i-1]->name = DTOK_BLANK;
-				/* priority could be different, search again */
-				return DaoParser_FindRootOper( self, start, end, optype );
-			}else if( tokens[i]->name == DTOK_ASSN ){ /* >= */
-				*optype = DAO_OPER_GE;
-				tokens[i]->type = DTOK_GE;
-				tokens[i]->name = DTOK_GE;
-				tokens[i-1]->name = DTOK_BLANK;
-				return DaoParser_FindRootOper( self, start, end, optype );
-			}
-		}
 		return imax;
 	}
 	return -1000;

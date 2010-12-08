@@ -548,10 +548,10 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
 	{ STD_ListMeth,  "listmeth( object )" },
 	{ STD_Pack1,     "pack( i :int )=>string" },
-	{ STD_Pack2,     "pack( ls :list<int> )=>string" },
-	{ STD_Tokenize,  "tokenize( source :string )=>list<string>" },
+	{ STD_Pack2,     "pack( ls :list[int] )=>string" },
+	{ STD_Tokenize,  "tokenize( source :string )=>list[string]" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
-	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
+	{ STD_Unpack,    "unpack( string :string )=>list[int]" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
 	{ NULL, NULL }
@@ -1018,14 +1018,14 @@ static void SYS_Type( DaoContext *ctx, DValue *p[], int N )
 
 static DaoFuncItem sysMeths[]=
 {
-	{ SYS_Ctime,     "ctime( time=0 )=>tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int>" },
+	{ SYS_Ctime,     "ctime( time=0 )=>tuple[year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int]" },
 	{ SYS_Ctimef,    "ctimef( time=0, format=\'%Y-%M-%D, %H:%I:%S\', "
-		"namemap : map<string,list<string>> = {=>} )=>string" },
+		"namemap : map[string,list[string]] = {=>} )=>string" },
 	{ SYS_Exit,      "exit( code=0 )" },
 	{ SYS_Sleep,     "sleep( seconds :float )" },
 	{ SYS_System,    "system( command :string )" },
 	{ SYS_Time,      "time(  )=>int" },
-	{ SYS_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
+	{ SYS_Time2,     "time( tm : tuple[year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int] )=>int" },
 	{ SYS_SetLocale, "setlocale(category:int=0,locale:string='')=>string" },
 	{ SYS_Clock,     "clock()=>float" },
 	{ SYS_Rename,    "rename( from:string, to:string )" },
@@ -1034,8 +1034,8 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_Rmdir,     "rmdir( path:string )" },
 	{ SYS_Setcwd,    "setcwd( path:string )" },
 	{ SYS_Getcwd,    "getcwd()=>string" },
-	{ SYS_Scandir,   "scandir( path:string, type:enum<file,dir,any> )=>list<string>" },
-	{ SYS_Type,      "type( path:string )=>enum<file,dir,unknown>" },
+	{ SYS_Scandir,   "scandir( path:string, type:enum[file,dir,any] )=>list[string]" },
+	{ SYS_Type,      "type( path:string )=>enum[file,dir,unknown]" },
 	{ NULL, NULL }
 };
 static DaoNumItem sysConsts[] =
@@ -1562,8 +1562,8 @@ static DaoFuncItem mpiMeths[]=
 {
 	/* no need for this api, called automatically by send() */
 	/* { MPI_FindPID,      "locate",      "pid :string" }, */
-	{ MPI_ReceiveTM,    "receive( timeout=-1.0 )=>list<any>" },
-	{ MPI_ReceivePID,   "receive( pid :string, timeout=-1.0 )=>list<any>" },
+	{ MPI_ReceiveTM,    "receive( timeout=-1.0 )=>list[any]" },
+	{ MPI_ReceivePID,   "receive( pid :string, timeout=-1.0 )=>list[any]" },
 	{ MPI_Send,         "send( object, ... )" },
 	{ MPI_Spawn,        "spawn( pid :string, proc :string, timeout=-1.0, ... )" },
 	{ NULL, NULL }
@@ -2044,23 +2044,23 @@ static DaoFuncItem reflMeths[]=
 	{ REFL_NS,    "namespace( object ) => any" },
 	{ REFL_Name,  "name( object ) => string" },
 	{ REFL_Type,  "type( object ) => any" },
-	{ REFL_Base,  "base( object ) => list<any>" },
+	{ REFL_Base,  "base( object ) => list[any]" },
 	{ REFL_Doc,   "doc( object, newdoc='' ) => string" },
-	{ REFL_Cst1,  "constant( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
-	{ REFL_Var1,  "variable( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
-	{ REFL_Cst2,  "constant( object, name:string )=>tuple<value:any,type:any>" },
-	{ REFL_Var2,  "variable( object, name:string )=>tuple<value:any,type:any>" },
-	{ REFL_Cst2,  "constant( object, name:string, value )=>tuple<value:any,type:any>" },
-	{ REFL_Var2,  "variable( object, name:string, value )=>tuple<value:any,type:any>" },
+	{ REFL_Cst1,  "constant( object, restrict=0 )=>map[string,tuple[value:any,type:any]]" },
+	{ REFL_Var1,  "variable( object, restrict=0 )=>map[string,tuple[value:any,type:any]]" },
+	{ REFL_Cst2,  "constant( object, name:string )=>tuple[value:any,type:any]" },
+	{ REFL_Var2,  "variable( object, name:string )=>tuple[value:any,type:any]" },
+	{ REFL_Cst2,  "constant( object, name:string, value )=>tuple[value:any,type:any]" },
+	{ REFL_Var2,  "variable( object, name:string, value )=>tuple[value:any,type:any]" },
 	{ REFL_Class,   "class( object ) => any" },
 	{ REFL_Routine, "routine() => any" },
-	{ REFL_Routine, "routine( rout : any ) => list<any>" },
-	{ REFL_Param,   "param( rout )=>list<tuple<name:string,type:any,deft:int,value:any>>" },
+	{ REFL_Routine, "routine( rout : any ) => list[any]" },
+	{ REFL_Param,   "param( rout )=>list[tuple[name:string,type:any,deft:int,value:any]]" },
 	{ REFL_Isa,     "isa( object, name : string ) => int" },
 	{ REFL_Isa,     "isa( object, type : any ) => int" },
 	{ REFL_Self,    "self( object ) => any" },
 	{ REFL_Argc,    "argc() => int" },
-	{ REFL_Argv,    "argv() => list<any>" },
+	{ REFL_Argv,    "argv() => list[any]" },
 	{ REFL_Argv,    "argv( i : int ) => any" },
 	{ REFL_Trace,   "trace(  )" },
 	{ NULL, NULL }
