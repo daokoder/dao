@@ -446,10 +446,10 @@ void DValue_SetType( DValue *to, DaoType *tp )
 	DaoType *tp2;
 	DNode *it;
 	if( to->t != tp->tid && tp->tid != DAO_ANY ) return;
-	/* XXX compatible types? list[int] list[float] */
+	/* XXX compatible types? list<int> list<float> */
 	switch( to->t ){
 	case DAO_LIST :
-		/* v : any = {}, v->unitype should be list[any] */
+		/* v : any = {}, v->unitype should be list<any> */
 		if( tp->tid == DAO_ANY ) tp = dao_list_any;
 		tp2 = to->v.list->unitype;
 		if( tp2 && !(tp2->attrib & DAO_TYPE_EMPTY) ) break;
@@ -481,7 +481,7 @@ void DValue_SetType( DValue *to, DaoType *tp )
 		break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
-		/*XXX array[int] array[float]*/
+		/*XXX array<int> array<float>*/
 		if( tp->tid == DAO_ANY ) tp = dao_array_any;
 		tp2 = to->v.array->unitype;
 		if( tp2 && !(tp2->attrib & DAO_TYPE_EMPTY) ) break;
@@ -611,11 +611,11 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		if( i==0 ) return 0;
 		/* composite known types must match exactly. example,
 		 * where it will not work if composite types are allowed to match loosely.
-		 * d : list[list[int]] = {};
-		 * e : list[float] = { 1.0 };
+		 * d : list<list<int>> = {};
+		 * e : list<float> = { 1.0 };
 		 * d.append( e );
 		 * 
-		 * but if d is of type list[list[any]], 
+		 * but if d is of type list<list<any>>, 
 		 * the matching do not necessary to be exact.
 		 */
 	}

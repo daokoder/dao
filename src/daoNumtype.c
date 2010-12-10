@@ -1570,7 +1570,7 @@ static void DaoLong_Sqrt( DaoContext *ctx, DValue *p[], int N )
 static DaoFuncItem longMeths[] =
 {
 	{ DaoLong_Size, "size( self : long ) => int" } ,
-	{ DaoLong_Sqrt, "sqrt( self : long ) => tuple[long,long]" } ,
+	{ DaoLong_Sqrt, "sqrt( self : long ) => tuple<long,long>" } ,
 	{ NULL, NULL }
 };
 DaoTypeBase longTyper =
@@ -2996,25 +2996,25 @@ static void DaoArray_Lib_Iter( DaoContext *ctx, DValue *p[], int N )
 static DaoFuncItem numarMeths[] =
 {
 	{ DaoArray_Lib_Dim,       "dim( self :array, i : int )=>int" },
-	{ DaoArray_Lib_Dim,       "dim( self :array )=>array[int]" },
-	{ DaoArray_Lib_Index,     "index( self :array, i : int )=>array[int]" },
+	{ DaoArray_Lib_Dim,       "dim( self :array )=>array<int>" },
+	{ DaoArray_Lib_Index,     "index( self :array, i : int )=>array<int>" },
 	{ DaoArray_Lib_Size,      "size( self :array )=>int" },
-	{ DaoArray_Lib_Resize,    "resize( self :array, dims :array[int] )" },
-	{ DaoArray_Lib_Reshape,   "reshape( self :array, dims :array[int] )" },
+	{ DaoArray_Lib_Resize,    "resize( self :array, dims :array<int> )" },
+	{ DaoArray_Lib_Reshape,   "reshape( self :array, dims :array<int> )" },
 
-	{ DaoArray_Lib_Permute,   "permute( self :array, dims :array[int] )" },
+	{ DaoArray_Lib_Permute,   "permute( self :array, dims :array<int> )" },
 	{ DaoArray_Lib_Transpose, "transpose( self :array )" },
-	{ DaoArray_Lib_max,       "max( self :array[@ITEM] )=>tuple[@ITEM,int]" },
-	{ DaoArray_Lib_min,       "min( self :array[@ITEM] )=>tuple[@ITEM,int]" },
-	{ DaoArray_Lib_sum,       "sum( self :array[@ITEM] )=>@ITEM" },
+	{ DaoArray_Lib_max,       "max( self :array<@ITEM> )=>tuple<@ITEM,int>" },
+	{ DaoArray_Lib_min,       "min( self :array<@ITEM> )=>tuple<@ITEM,int>" },
+	{ DaoArray_Lib_sum,       "sum( self :array<@ITEM> )=>@ITEM" },
 	{ DaoArray_Lib_varn,      "varn( self :array )=>double" },
-	{ DaoArray_Lib_ranka,     "ranka( self :array, k=0 )=>array[int]" },
-	{ DaoArray_Lib_rankd,     "rankd( self :array, k=0 )=>array[int]" },
+	{ DaoArray_Lib_ranka,     "ranka( self :array, k=0 )=>array<int>" },
+	{ DaoArray_Lib_rankd,     "rankd( self :array, k=0 )=>array<int>" },
 	{ DaoArray_Lib_sorta,     "sorta( self :array, k=0 )" },
 	{ DaoArray_Lib_sortd,     "sortd( self :array, k=0 )" },
 
-	{ DaoArray_Lib_FFT,  "fft( self :array[complex], direct :enum[forward, backward] )" },
-	{ DaoArray_Lib_Iter, "__for_iterator__( self :array[any], iter : for_iterator )" },
+	{ DaoArray_Lib_FFT,  "fft( self :array<complex>, direct :enum<forward, backward> )" },
+	{ DaoArray_Lib_Iter, "__for_iterator__( self :array<any>, iter : for_iterator )" },
 	{ NULL, NULL }
 };
 

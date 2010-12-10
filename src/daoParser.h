@@ -106,6 +106,7 @@ struct DaoParser
 	char isDynamicClass;
 	char permission;
 	char warnAssn;
+	char pairLtGt; /* <> */
 
 	DaoInterface *hostInter;
 	DaoClass     *hostClass;

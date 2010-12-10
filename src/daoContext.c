@@ -4657,7 +4657,7 @@ static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VA
 static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUBLIC };
 
 /* a = class( name, parents, fields, methods ){ proto_class_body }
- * (1) parents: optional, list[class] or map[string,class]
+ * (1) parents: optional, list<class> or map<string,class>
  * (2) fields: optional, tuple<name:string,value:any,storage:enum<>,access:enum<>>
  * (3) methods: optional, tuple<name:string,method:routine,access:enum<>>
  * (4) default storage: $var, default access: $public.

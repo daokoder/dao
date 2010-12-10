@@ -742,7 +742,7 @@ static void DaoThread_Lib_Cancel( DaoContext *ctx, DValue *par[], int N )
 }
 static DaoFuncItem threadMeths[] =
 {
-	{ DaoThread_Lib_MyData,      "mydata( self : thread )=>map[string,any]" },
+	{ DaoThread_Lib_MyData,      "mydata( self : thread )=>map<string,any>" },
 	{ DaoThread_Lib_Join,        "join( self : thread )" },
 	{ DaoThread_Lib_Detach,      "detach( self : thread )" },
 	{ DaoThread_Lib_Cancel,      "cancel( self : thread )" },
@@ -978,7 +978,7 @@ static DaoFuncItem thdMasterMeths[] =
 	{ DaoThdMaster_Lib_Exit,        "exit( self : mtlib )const" },
 	{ DaoThdMaster_Lib_TestCancel,  "testcancel( self : mtlib )const" },
 	{ DaoThdMaster_Lib_Self,        "self( self : mtlib )const=>thread" },
-	{ DaoThdMaster_Lib_MyData,      "mydata( self : mtlib )const=>map[string,any]" },
+	{ DaoThdMaster_Lib_MyData,      "mydata( self : mtlib )const=>map<string,any>" },
 	{ NULL, NULL }
 };
 

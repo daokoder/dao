@@ -1326,24 +1326,24 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		if( p->type == DAO_LIST ){
 			nested = DArray_New(0);
 			if( list->items->size ==0 ){
-				DString_AppendMBS( mbs, "[?]" );
+				DString_AppendMBS( mbs, "<?>" );
 				DArray_Append( nested, self->udfType1 );
 				zerosize = 1;
 			}else{
 				itp = DaoNameSpace_MakeType( self, "any", DAO_ANY, 0,0,0 );
-				DString_AppendMBS( mbs, "[any]" );
+				DString_AppendMBS( mbs, "<any>" );
 				DArray_Append( nested, itp );
 			}  
 		}else if( p->type == DAO_MAP ){
 			nested = DArray_New(0);
 			if( map->items->size ==0 ){
-				DString_AppendMBS( mbs, "[?,?]" );
+				DString_AppendMBS( mbs, "<?,?>" );
 				DArray_Append( nested, self->udfType1 );
 				DArray_Append( nested, self->udfType2 );
 				zerosize = 1;
 			}else{
 				itp = DaoNameSpace_MakeType( self, "any", DAO_ANY, 0,0,0 );
-				DString_AppendMBS( mbs, "[any,any]" );
+				DString_AppendMBS( mbs, "<any,any>" );
 				DArray_Append( nested, itp );
 				DArray_Append( nested, itp );
 			}
@@ -1351,38 +1351,38 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		}else if( p->type == DAO_ARRAY ){
 			nested = DArray_New(0);
 			if( array->size ==0 ){
-				DString_AppendMBS( mbs, "[?]" );
+				DString_AppendMBS( mbs, "<?>" );
 				DArray_Append( nested, self->udfType1 );
 				zerosize = 1;
 			}else if( array->numType == DAO_INTEGER ){
 				itp = DaoNameSpace_MakeType( self, "int", DAO_INTEGER, 0,0,0 );
-				DString_AppendMBS( mbs, "[int]" );
+				DString_AppendMBS( mbs, "<int>" );
 				DArray_Append( nested, itp );
 			}else if( array->numType == DAO_FLOAT ){
 				itp = DaoNameSpace_MakeType( self, "float", DAO_FLOAT, 0,0,0 );
-				DString_AppendMBS( mbs, "[float]" );
+				DString_AppendMBS( mbs, "<float>" );
 				DArray_Append( nested, itp );
 			}else if( array->numType == DAO_DOUBLE ){
 				itp = DaoNameSpace_MakeType( self, "double", DAO_DOUBLE, 0,0,0 );
-				DString_AppendMBS( mbs, "[double]" );
+				DString_AppendMBS( mbs, "<double>" );
 				DArray_Append( nested, itp );
 			}else{
 				itp = DaoNameSpace_MakeType( self, "complex", DAO_COMPLEX, 0,0,0 );
-				DString_AppendMBS( mbs, "[complex]" );
+				DString_AppendMBS( mbs, "<complex>" );
 				DArray_Append( nested, itp );
 			}
 #endif
 		}else if( p->type == DAO_PAIR ){
-			DString_SetMBS( mbs, "pair[" );
+			DString_SetMBS( mbs, "pair<" );
 			nested = DArray_New(0);
 			DArray_Append( nested, DaoNameSpace_GetTypeV( self, pair->first ) );
 			DString_Append( mbs, nested->items.pAbtp[0]->name );
 			DArray_Append( nested, DaoNameSpace_GetTypeV( self, pair->second ) );
 			DString_AppendMBS( mbs, "," );
 			DString_Append( mbs, nested->items.pAbtp[1]->name );
-			DString_AppendMBS( mbs, "]" );
+			DString_AppendMBS( mbs, ">" );
 		}else if( p->type == DAO_TUPLE ){
-			DString_SetMBS( mbs, "tuple[" );
+			DString_SetMBS( mbs, "tuple<" );
 			nested = DArray_New(0);
 			for(i=0; i<tuple->items->size; i++){
 				itp = DaoNameSpace_GetTypeV( self, tuple->items->data[i] );
@@ -1390,7 +1390,7 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 				DString_Append( mbs, itp->name );
 				if( i+1 < tuple->items->size ) DString_AppendMBS( mbs, "," );
 			}
-			DString_AppendMBS( mbs, "]" );
+			DString_AppendMBS( mbs, ">" );
 		}
 		node = MAP_Find( self->abstypes, mbs );
 		if( node ){
@@ -1452,11 +1452,11 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		}
 		abtp->typer = cdata->typer;
 	}else if( p->type == DAO_TYPE ){
-		DString_SetMBS( mbs, "type[" );
+		DString_SetMBS( mbs, "type<" );
 		nested = DArray_New(0);
 		DArray_Append( nested, itp );
 		DString_Append( mbs, itp->name );
-		DString_AppendMBS( mbs, "]" );
+		DString_AppendMBS( mbs, ">" );
 		node = MAP_Find( self->abstypes, mbs );
 		if( node ){
 			abtp = (DaoType*) node->value.pBase;
@@ -1499,7 +1499,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 
 	DString_SetMBS( mbs, name );
 	if( N > 0 ){
-		DString_AppendChar( mbs, '[' );
+		DString_AppendChar( mbs, '<' );
 		DString_Append( mbs, nest[0]->name );
 		DArray_Append( nstd, nest[0] );
 		for(i=1; i<N; i++){
@@ -1507,12 +1507,12 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 			DString_Append( mbs, nest[i]->name );
 			DArray_Append( nstd, nest[i] );
 		}
-		DString_AppendChar( mbs, ']' );
+		DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
-		DString_AppendMBS( mbs, "[any]" );
+		DString_AppendMBS( mbs, "<any>" );
 		DArray_Append( nstd, any );
 	}else if( tid == DAO_MAP ){
-		DString_AppendMBS( mbs, "[any,any]" );
+		DString_AppendMBS( mbs, "<any,any>" );
 		DArray_Append( nstd, any );
 		DArray_Append( nstd, any );
 	}else if( tid == DAO_CLASS ){
@@ -1565,7 +1565,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 	}
 
 	if( routype->name->mbs[0] == '@' ) DString_AppendChar( abtp->name, '@' );
-	DString_AppendMBS( abtp->name, "routine[" );
+	DString_AppendMBS( abtp->name, "routine<" );
 	for(i=0; i<routype->nested->size; i++){
 		if( i >0 ) DString_AppendMBS( abtp->name, "," );
 		tp = tp2 = routype->nested->items.pAbtp[i];
@@ -1596,7 +1596,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		DString_AppendMBS( abtp->name, "=>" );
 		DString_Append( abtp->name, tp->name );
 	}
-	DString_AppendMBS( abtp->name, "]" );
+	DString_AppendMBS( abtp->name, ">" );
 	abtp->X.abtype = tp;
 	GC_IncRC( abtp->X.abtype );
 	GC_IncRCs( abtp->nested );
@@ -1646,9 +1646,9 @@ DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols )
 	int n = strlen( symbols );
 	int i, k = 0, t1 = 0, t2 = 0;
 
-	DString_SetMBS( name, "enum[" );
+	DString_SetMBS( name, "enum<" );
 	DString_AppendMBS( name, symbols );
-	DString_AppendChar( name, ']' );
+	DString_AppendChar( name, '>' );
 	type = DaoNameSpace_FindType( self, name );
 	if( type ){
 		DString_Delete( name );

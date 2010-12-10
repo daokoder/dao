@@ -20,19 +20,19 @@ class DaoCxxType
 }
 class DaoCxxEnum : DaoCxxType
 {
-	var en_names : map[string,int] = {:};
+	var en_names : map<string,int> = {:};
 }
 class DaoCxxClass : DaoCxxType
 {
-	var cls_enums : map[string,DaoCxxEnum] = {:};
-	var cls_fields : list[DaoCxxVariable] = {};
-	var cls_methods : list[DaoCxxFunction] = {};
+	var cls_enums : map<string,DaoCxxEnum> = {:};
+	var cls_fields : list<DaoCxxVariable> = {};
+	var cls_methods : list<DaoCxxFunction> = {};
 }
 class DaoCxxNamespace : DaoCxxType
 {
-	var ns_enums : map[string,DaoCxxEnum] = {:};
-	var ns_classes : map[string,DaoCxxClass] = {:};
-	var ns_namespaces : map[string,DaoCxxNamespace] = {:};
+	var ns_enums : map<string,DaoCxxEnum> = {:};
+	var ns_classes : map<string,DaoCxxClass> = {:};
+	var ns_namespaces : map<string,DaoCxxNamespace> = {:};
 }
 
 routine BernsteinHash( key : string )
@@ -172,9 +172,9 @@ global log_file;
 global on_load = '';
 global basic_typedefs = {};
 global CT_MAP = CT_MAP_BASIC;
-global CT_MAP_TYPE_ATTRIB : map[string,int] = { => };
-global pointer_types : map[string,string] = { => };
-global otherClassTypedef : map[string,CxxTypeID] = {=>};
+global CT_MAP_TYPE_ATTRIB : map<string,int> = { => };
+global pointer_types : map<string,string> = { => };
+global otherClassTypedef : map<string,CxxTypeID> = {=>};
 
 global dao_callbacks_proto = {};
 global dao_callbacks = {};
@@ -278,7 +278,7 @@ class Function
 	var source = '';
 	
 	var retype : Variable;
-	var parlist : list[Variable] = {};
+	var parlist : list<Variable> = {};
 	
 	var extraCodes = {};
 	
@@ -302,10 +302,10 @@ class Function
 	var qtSlotSlotCode = '';
 	var qtSignalSlotDecl = '';
 	var qtSignalSlotCode = '';
-	var calls_with_defaults : list[tuple[int,string]] = {};
+	var calls_with_defaults : list<tuple<int,string>> = {};
 	
 	# Dao routine prototype for the wrapping function:
-	# { dao_func_wrapping, "func( vec : array[int], N : int )" },
+	# { dao_func_wrapping, "func( vec : array<int>, N : int )" },
 	var daoProtoCodes = '';
 	
 	# C prototype for the wrapping function:
@@ -328,7 +328,7 @@ class Function
 		parlist.clear();
 	}
 }
-global proxy_functions : map[string,tuple[used:int,name:string,codes:string,id:Function]] = {=>};
+global proxy_functions : map<string,tuple<used:int,name:string,codes:string,id:Function>> = {=>};
 class UserType
 {
 	var name = '';
@@ -361,25 +361,25 @@ class UserType
 
 	var condType : UserType;
 	
-	var fields : list[Variable] = {};
-	var methods : list[Function] = {};
-	var allocators : list[Function] = {};
-	var privameths : list[Function] = {};
-	var protslots : list[Function] = {};
-	var pubslots : list[Function] = {};
-	var protsignals : list[Function] = {};
-	var declmeths : map[string,Function] = {=>};
-	var declvirts : map[string,Function] = {=>};
-	var supers : list[UserType] = {};
-	var selfields : map[string,int] = {=>};
-	var classEnum : map[string,tuple[string,int]] = {=>}; # XXX not work without type decl
-	var classTypedef : map[string,CxxTypeID] = {=>}; # XXX not work without type decl
+	var fields : list<Variable> = {};
+	var methods : list<Function> = {};
+	var allocators : list<Function> = {};
+	var privameths : list<Function> = {};
+	var protslots : list<Function> = {};
+	var pubslots : list<Function> = {};
+	var protsignals : list<Function> = {};
+	var declmeths : map<string,Function> = {=>};
+	var declvirts : map<string,Function> = {=>};
+	var supers : list<UserType> = {};
+	var selfields : map<string,int> = {=>};
+	var classEnum : map<string,tuple<string,int>> = {=>}; # XXX not work without type decl
+	var classTypedef : map<string,CxxTypeID> = {=>}; # XXX not work without type decl
 	var intConsts = {};
 	
 	var restPureVirts = {};
 	var pureVirts = {};
-	var lastVirts : map[string,string] = {=>};
-	var virtNonSupport : list[Function] = {};
+	var lastVirts : map<string,string> = {=>};
+	var virtNonSupport : list<Function> = {};
 	
 	var input_file = '';
 	
@@ -426,7 +426,7 @@ class UserType
 		}
 		return 0;
 	}
-	routine SetupDeleteCondition( del_tests : map[UserType,string] ){
+	routine SetupDeleteCondition( del_tests : map<UserType,string> ){
 		condType = self;
 		for( sup in supers ){
 			sup.SetupDeleteCondition( del_tests );
@@ -435,13 +435,13 @@ class UserType
 		if( del_tests.has( self ) ) condType = self;
 	}
 }
-global map_user_types : map[string,UserType] = {=>};
-global map_ns_types : map[string,UserType] = {=>};
-global typedef_ns_types : map[string,UserType] = {=>};
+global map_user_types : map<string,UserType> = {=>};
+global map_ns_types : map<string,UserType> = {=>};
+global typedef_ns_types : map<string,UserType> = {=>};
 
 class Functions
 {
-	var funcs : list[Function] = {};
+	var funcs : list<Function> = {};
 	var overload = {=>}; # count of overloaded Dao functions
 	var overwrap = {=>}; # count of wrapping of the same C/C++ function
 	var funcDeclCodes = '';
@@ -480,7 +480,7 @@ const pat_constru = '((%w+) %s* %b()) %s* : [^%{%}]* %b{}';
 const pat_struct = '(class|struct|union|namespace|callback) %s+ (( %w+ )) (%s*) '
 '( : %s* %w [%w%s,]+ |) ( %b{} ) %s* (;|)';
 
-routine ParseFunction( funcs : list[Function], source='', host='', input='', 
+routine ParseFunction( funcs : list<Function>, source='', host='', input='', 
 attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 {
 	excluded = 0;
@@ -1035,7 +1035,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	return source;
 }
 routine ParseFile( file : string, dir = '', subdir='',
-fixing : list[list[string]]={}, lang='', inExtFile=0 )
+fixing : list<list<string>>={}, lang='', inExtFile=0 )
 {
 	subdirs = subdir.split( ',' );
 	utp : UserType;
@@ -1178,10 +1178,10 @@ global daopar_float = '$(name) : float$(default)';
 global daopar_double = '$(name) : double$(default)';
 global daopar_complex = '$(name) : complex$(default)';
 global daopar_string = '$(name) : string$(default)';
-global daopar_ints = '$(name) : array[int]';
-global daopar_floats = '$(name) : array[float]';
-global daopar_doubles = '$(name) : array[double]';
-global daopar_complexs = '$(name) : array[complex]$(default)';
+global daopar_ints = '$(name) : array<int>';
+global daopar_floats = '$(name) : array<float>';
+global daopar_doubles = '$(name) : array<double>';
+global daopar_complexs = '$(name) : array<complex>$(default)';
 global daopar_buffer = '$(name) : cdata$(default)';
 global daopar_stream = '$(name) : stream$(default)';
 global daopar_user = '$(name) : $(namespace2)$(type2)$(default)';
@@ -1883,7 +1883,7 @@ routine Variable::Generate( cxx_no_self =0 )
 			}
 			if( index == INDEX_RETURN ){
 				if( refer == '*' && typeid >= $CT_SHORT && typeid <=$CT_DOUBLE ){
-					daotype = 'array[' + daotype + ']';
+					daotype = 'array<' + daotype + '>';
 				}
 			}
 		}elif( refer == '' && sqsizes.size() == 1 ){
@@ -1894,7 +1894,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxpar_enum_virt = 'int ' + name + '[]';
 				cxxtype2 = 'int[]';
 			}
-			daotype = 'array[int]';
+			daotype = 'array<int>';
 			tpl_daopar = daopar_ints;
 			tpl_ctxput = ctxput_ints;
 			tpl_parset = parset_ints;
@@ -1943,7 +1943,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_uints;
 				tpl_getres = getres_uints;
 				case $CT_FLOAT :
-				daotype = 'array[float]';
+				daotype = 'array<float>';
 				tpl_daopar = daopar_floats;
 				tpl_dao2cxx = dao2cxx_floats;
 				tpl_cxx2dao = cxx2dao_floats;
@@ -1952,7 +1952,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_getres = getres_floats;
 				tpl_setter = setter_floats;
 				case $CT_DOUBLE :
-				daotype = 'array[double]';
+				daotype = 'array<double>';
 				tpl_daopar = daopar_doubles;
 				tpl_dao2cxx = dao2cxx_doubles;
 				tpl_cxx2dao = cxx2dao_doubles;
@@ -1961,11 +1961,11 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_getres = getres_doubles;
 				tpl_setter = setter_doubles;
 				case $CT_COMPLEX8 :
-				daotype = 'array[complex]';
+				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_complexs8;
 				case $CT_COMPLEX16 :
-				daotype = 'array[complex]';
+				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_complexs16;
 			}
@@ -1977,7 +1977,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxpar_enum_virt = 'int *' + name + '[]';
 				cxxtype2 = 'int*[]';
 			}
-			daotype = 'array[int]';
+			daotype = 'array<int>';
 			tpl_daopar = daopar_ints;
 			tpl_ctxput = ctxput_ints;
 			tpl_parset = parset_ints;
@@ -2009,7 +2009,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_uints;
 				tpl_getres = getres_uints;
 				case $CT_FLOAT :
-				daotype = 'array[float]';
+				daotype = 'array<float>';
 				tpl_daopar = daopar_floats;
 				tpl_dao2cxx = dao2cxx_fmat;
 				tpl_cxx2dao = cxx2dao_floats;
@@ -2018,7 +2018,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_getres = getres_floats;
 				tpl_setter = setter_floats;
 				case $CT_DOUBLE :
-				daotype = 'array[double]';
+				daotype = 'array<double>';
 				tpl_daopar = daopar_doubles;
 				tpl_dao2cxx = dao2cxx_dmat;
 				tpl_cxx2dao = cxx2dao_doubles;
@@ -2027,11 +2027,11 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_getres = getres_doubles;
 				tpl_setter = setter_doubles;
 				case $CT_COMPLEX8 :
-				daotype = 'array[complex]';
+				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_c8mat;
 				case $CT_COMPLEX16 :
-				daotype = 'array[complex]';
+				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_c16mat;
 			}
@@ -2140,7 +2140,7 @@ routine Variable::Generate( cxx_no_self =0 )
 		cxxpar_enum_virt = cxxpar;
 		if( list_item ){
 			item = list_item[3];
-			daotype = 'list[' + item + ']';
+			daotype = 'list<' + item + '>';
 			tpl_daopar = '$(name) : ' + daotype;
 			kvmap[ 'item' ] = item;
 			kvmap[ 'qtype' ] = list_item[1];
@@ -3137,8 +3137,8 @@ global qt_qstringlist_decl =
 static void dao_QStringList_toDaoList( DaoContext *_ctx, DValue *_p[], int _n );
 ';
 global qt_qstringlist_dao =
-'  { dao_QStringList_fromDaoList, "QStringList( dslist : list[string] )=>QStringList" },
-  { dao_QStringList_toDaoList, "toDaoList( self : QStringList )=>list[string]" },
+'  { dao_QStringList_fromDaoList, "QStringList( dslist : list<string> )=>QStringList" },
+  { dao_QStringList_toDaoList, "toDaoList( self : QStringList )=>list<string>" },
 ';
 global qt_qstringlist_func =
 'static void dao_QStringList_fromDaoList( DaoContext *_ctx, DValue *_p[], int _n )
@@ -4104,7 +4104,7 @@ global usertype_code_class2 = methlist_code + delete_class + delete_test + usert
 routine WriteUserTypeDecl( utp : UserType, fout : stream )
 {
 }
-routine WriteUserTypeCode( utp : UserType, del_tests : map[UserType,string] )
+routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 {
 	#if( utp.isNameSpace ) return '';
 	if( utp.isAlias ) return '';
@@ -4217,7 +4217,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	size = dir_inc.size();
 	if( size && dir_inc[ size-1 ] != '/'[0] ) dir_inc += '/';
 	
-	file2fixing : map[string,list[list[string]]] = {=>};
+	file2fixing : map<string,list<list<string>>> = {=>};
 	for( file in files ) file2fixing[file] = {};
 	source = '';
 	dft_fixing = {};
@@ -4254,7 +4254,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		file.change( '%..*$', '' );
 		file_names.append( file );
 	}
-	overloads : map[string,int] = {=>};
+	overloads : map<string,int> = {=>};
 	for( meth in functions.funcs ){
 		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
 		overloads[ meth.cxxName ] ++;
@@ -4271,8 +4271,8 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	user_types = {};
 	namespaces = {};
 	callbacks = {};
-	ns_types :map[string,list[UserType]] = {=>} # bug without type name XXX
-	ns_funcs :map[string,list[Function]] = {=>}
+	ns_types :map<string,list<UserType>> = {=>} # bug without type name XXX
+	ns_funcs :map<string,list<Function>> = {=>}
 	#{
 		for( name in map_user_types.keys(); utp in map_user_types.values() ){
 	    if( utp.isNameSpace ) io.writeln( utp, utp.name, name );
@@ -4314,7 +4314,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 			ns_funcs[ func.snamespace ].append( func );
 		}
 	}
-	delete_tests : map[UserType,string] = {:};
+	delete_tests : map<UserType,string> = {:};
 	parts = del_tests.split( ';' );
 	for( part in parts ){
 		p = part.split( '@' );
@@ -4479,9 +4479,9 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	rout_entry = '';
 	func_codes = '';
 	if( lang == 'c' ){
-		tmp2 : map[string,Function] = {=>};
+		tmp2 : map<string,Function> = {=>};
 		tmp3 = functions.funcs;
-		functions.funcs = (list[Function]){};
+		functions.funcs = (list<Function>){};
 		for( func in tmp3 ){
 			if( tmp2.has( func.cxxName ) ) skip;
 			tmp2[ func.cxxName ] = func;
@@ -4545,7 +4545,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	kvmap2 = {'old'=>'', 'new'=>''};
 	nalias = 0;
 	aliases = '';
-	ns_aliases : map[string,list[string]] = {=>};
+	ns_aliases : map<string,list<string>> = {=>};
 	for( name in map_user_types.keys(); utp in map_user_types.values() ){
 		if( utp.isNameSpace or utp.isCallback ) skip;
 		if( name != utp.name && name.pfind( '(%s|:)' ).size()==0 ){

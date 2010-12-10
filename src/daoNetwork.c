@@ -687,10 +687,10 @@ static DaoFuncItem netMeths[] =
 	{  DaoNetLib_Send,          "send( socket :int, data :string )=>int" },
 	{  DaoNetLib_Receive,       "receive( socket :int, maxlen=512 )=>string" },
 	{  DaoNetLib_SendDao,       "send_dao( socket :int, ... )=>int" },
-	{  DaoNetLib_ReceiveDao,    "receive_dao( socket :int )=>list[any]" },
+	{  DaoNetLib_ReceiveDao,    "receive_dao( socket :int )=>list<any>" },
 	{  DaoNetLib_GetPeerName,   "getpeername( socket :int )=>string" },
 	{  DaoNetLib_Close,         "close( socket :int )" },
-	{  DaoNetLib_GetHost,       "gethost( host :string )=>map[string,string]" },
+	{  DaoNetLib_GetHost,       "gethost( host :string )=>map<string,string>" },
 	{  DaoNetLib_Select,
 		"select( nfd :int, setr :fd_set, setw :fd_set, sete :fd_set, tv :float )=>int" },
 	{ NULL, NULL }
