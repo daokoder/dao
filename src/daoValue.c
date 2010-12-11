@@ -23,6 +23,11 @@
 #include"daoObject.h"
 #include"daoNumtype.h"
 
+#if _MSC_VER
+#define strtoll _strtoi64
+#define wcstoll _wcstoi64
+#endif
+
 #if 1
 const DValue daoNullValue = { 0, 0, 0, 0, {0}};
 const DValue daoZeroInt = { DAO_INTEGER, 0, 0, 0, {0}};
@@ -596,6 +601,12 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			if( ((DaoObject*)dA)->myClass != tp->X.klass ){
 				dA = DaoObject_MapThisObject( (DaoObject*)dA, tp );
 				i = (dA != NULL);
+			}
+		}else if( from.t == DAO_CLASS && tp->tid == DAO_CLASS && from.v.klass->typeHolders ){
+			if( DMap_Find( from.v.klass->instanceClasses, tp->X.klass->className ) ){
+				from.v.klass = tp->X.klass;
+				dA = (DaoBase*) from.v.klass;
+				i = DAO_MT_SUB;
 			}
 		}else{
 			i = DaoType_MatchValue( tp, from, NULL );

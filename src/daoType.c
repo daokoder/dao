@@ -631,16 +631,20 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		return DaoType_DefineTypes( node->value.pAbtp, ns, defs );
 	}
 
-	if( self->tid ==DAO_INITYPE ){
+	if( self->tid == DAO_INITYPE ){
 		node = MAP_Find( defs, self );
 		if( node == NULL ) return self;
 		return DaoType_DefineTypes( node->value.pAbtp, ns, defs );
-	}else if( self->tid ==DAO_UDF ){
+	}else if( self->tid == DAO_UDF ){
 		node = MAP_Find( defs, self );
 		copy = node ? node->value.pAbtp : NULL;
-		if( copy ==0 || copy->tid ==DAO_ANY || copy->tid == DAO_UDF ) return self;
+		if( copy ==0 || copy->tid == DAO_ANY || copy->tid == DAO_UDF ) return self;
 		return DaoType_DefineTypes( copy, ns, defs );
-	}else if( self->tid ==DAO_ANY ){
+	}else if( self->tid == DAO_ANY ){
+		return self;
+	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
+		copy = DaoType_DefineTypes( self->X.klass->objType, ns, defs );
+		if( copy->X.klass != self->X.klass ) self = copy->X.klass->clsType;
 		return self;
 	}
 
@@ -659,7 +663,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
 		for(i=1; i<self->name->size; i++){
 			char ch = self->name->mbs[i];
-			if( ch < 'a' || ch > 'z' ) break;
+			if( ch != '_' && !isalnum( ch ) ) break;
 			DString_AppendChar( copy->name, self->name->mbs[i] );
 		}
 		DString_AppendChar( copy->name, '<' );
@@ -697,10 +701,22 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	}
 	DaoType_CheckAttributes( copy );
 	GC_IncRC( copy->X.abtype );
+	if( self->tid == DAO_OBJECT && self->X.klass->instanceClasses ){
+		DaoClass *klass = self->X.klass;
+		node = DMap_Find( klass->instanceClasses, copy->name );
+		if( node ){
+			klass = node->value.pClass;
+		}else{
+			klass = DaoClass_Instantiate( klass, copy->nested );
+		}
+		DaoType_Delete( copy );
+		return klass->objType;
+	}
 	node = DMap_Find( ns->abstypes, copy->name );
 #if 0
 	if( strstr( copy->name->mbs, "map<" ) == copy->name->mbs ){
 		printf( "%s  %p  %p\n", copy->name->mbs, copy, node );
+		printf( "%s  %s  %p  %p\n", self->name->mbs, copy->name->mbs, copy, node );
 		print_trace();
 	}
 #endif
@@ -710,6 +726,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	}else{
 		GC_IncRC( copy );
 		DMap_Insert( ns->abstypes, copy->name, copy );
+		DMap_Insert( defs, self, copy );
 	}
 	return copy;
 DefFailed:

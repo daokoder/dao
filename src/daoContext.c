@@ -4578,14 +4578,30 @@ static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
 }
 static void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 {
-	DaoType *tp;
+	DaoType *tp, *tp2;
 	DNode *it;
+	int i;
 	for(it=DMap_First(self->localVarType); it; it=DMap_Next(self->localVarType,it) ){
 		tp = DaoType_DefineTypes( it->value.pAbtp, self->nameSpace, deftypes );
 		it->value.pAbtp = tp;
 	}
+	for(i=0; i<self->regType->size; i++){
+		tp = self->regType->items.pAbtp[i];
+		tp = DaoType_DefineTypes( tp, self->nameSpace, deftypes );
+		GC_ShiftRC( tp, self->regType->items.pAbtp[i] );
+		self->regType->items.pAbtp[i] = tp;
+	}
+	for(i=0; i<self->routConsts->size; i++){
+		DValue value = self->routConsts->data[i];
+		if( value.t < DAO_ARRAY ) continue;
+		tp = DaoNameSpace_GetTypeV( self->nameSpace, value );
+		tp2 = DaoType_DefineTypes( tp, self->nameSpace, deftypes );
+		if( tp == tp2 ) continue;
+		DValue_Clear( & self->routConsts->data[i] );
+		DValue_Move( value, & self->routConsts->data[i], tp2 );
+	}
 }
-static void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
+void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 {
 	DNode *it;
 	DMap *old = deftypes;
@@ -4657,7 +4673,7 @@ static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VA
 static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUBLIC };
 
 /* a = class( name, parents, fields, methods ){ proto_class_body }
- * (1) parents: optional, list<class> or map<string,class>
+ * (1) parents: optional, list[class] or map[string,class]
  * (2) fields: optional, tuple<name:string,value:any,storage:enum<>,access:enum<>>
  * (3) methods: optional, tuple<name:string,method:routine,access:enum<>>
  * (4) default storage: $var, default access: $public.
@@ -4725,53 +4741,13 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	}else{
 		DaoClass_SetName( klass, name );
 	}
-	DaoRoutine_CopyFields( klass->classRoutine, proto->classRoutine );
-	DaoClass_DeriveClassData( klass );
 	tp = DaoNameSpace_MakeType( ns, "@class", DAO_INITYPE, NULL,NULL,0 );
 	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
 	DaoContext_MapTypes( self, deftypes );
 
-	if( proto ){ /* copy data from the proto class */
-		for(it=DMap_First(proto->lookupTable);it;it=DMap_Next(proto->lookupTable,it)){
-			st = LOOKUP_ST( it->value.pSize );
-			up = LOOKUP_UP( it->value.pSize );
-			id = LOOKUP_ID( it->value.pSize );
-			if( up ==0 ){
-				if( st == DAO_CLASS_CONSTANT && id <klass->cstData->size ) continue;
-				if( st == DAO_CLASS_VARIABLE && id <klass->glbData->size ) continue;
-				if( st == DAO_OBJECT_VARIABLE && id <klass->objDataDefault->size ) continue;
-			}
-			DMap_Insert( klass->lookupTable, it->key.pVoid, it->value.pVoid );
-		}
-		for(i=klass->objDataName->size; i<proto->objDataName->size; i++)
-			DArray_Append( klass->objDataName, proto->objDataName->items.pString[i] );
-		for(i=klass->cstDataName->size; i<proto->cstDataName->size; i++)
-			DArray_Append( klass->cstDataName, proto->cstDataName->items.pString[i] );
-		for(i=klass->glbDataName->size; i<proto->glbDataName->size; i++)
-			DArray_Append( klass->glbDataName, proto->glbDataName->items.pString[i] );
-		for(i=klass->cstData->size; i<proto->cstData->size; i++)
-			DVarray_Append( klass->cstData, proto->cstData->data[i] );
-		for(i=klass->glbData->size; i<proto->glbData->size; i++)
-			DVarray_Append( klass->glbData, proto->glbData->data[i] );
-		for(i=klass->objDataType->size; i<proto->objDataType->size; i++){
-			tp = proto->objDataType->items.pAbtp[i];
-			tp = DaoType_DefineTypes( tp, ns, deftypes );
-			DArray_Append( klass->objDataType, tp );
-		}
-		for(i=klass->glbDataType->size; i<proto->glbDataType->size; i++){
-			tp = proto->glbDataType->items.pAbtp[i];
-			tp = DaoType_DefineTypes( tp, ns, deftypes );
-			DArray_Append( klass->glbDataType, tp );
-		}
-		GC_IncRCs( klass->objDataType );
-		GC_IncRCs( klass->glbDataType );
-		for(i=klass->objDataDefault->size; i<proto->objDataDefault->size; i++){
-			DValue v = proto->objDataDefault->data[i];
-			tp = klass->objDataType->items.pAbtp[i];
-			DVarray_Append( klass->objDataDefault, daoNullValue );
-			DValue_Move( v, & klass->objDataDefault->data[klass->objDataDefault->size-1], tp );
-		}
-	}
+	/* copy data from the proto class */
+	if( proto ) DaoClass_CopyField( klass, proto, deftypes );
+
 	/* update class members with running time data */
 	for(it=DMap_First(protoValues);it;it=DMap_Next(protoValues,it)){
 		DValue value;

@@ -109,6 +109,7 @@ struct DaoRoutine
 };
 
 DaoRoutine* DaoRoutine_New();
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload );
 void DaoRoutine_Delete( DaoRoutine *self );
 
 void DaoRoutine_Compile( DaoRoutine *self );

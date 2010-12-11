@@ -728,20 +728,27 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_NOT ][ '~' ] = TOK_OP_RGXU; /* !~ */
 	daoLexTable[ TOK_OP_TILDE ][ '~' ] = TOK_OP_RGXA; /* ~~ */
 	daoLexTable[ TOK_START ][ '=' ] = TOK_OP_EQ;
+
 	/* :=  +=  -=  /=  *=  %=  &=  |=  !=*/
-	for(i=TOK_OP_COLON; i<=TOK_OP_LT; i++)
+	for(i=TOK_OP_COLON; i<TOK_OP_LT; i++)
 		daoLexTable[i]['='] = i + (TOK_EQ_COLON - TOK_OP_COLON);
 	daoLexTable[ TOK_START ][ '>' ] = TOK_OP_GT;
-#if 0
-	// daoLexTable[ TOK_OP_GT ][ '>' ] = TOK_END_RSHIFT; /* >> */
-#endif
 	daoLexTable[ TOK_OP_QUEST ][ '?' ] = TOK_END_ASSERT; /* ?? */
 	daoLexTable[ TOK_OP_QUEST ][ '=' ] = TOK_END_TEQ; /* ?= */
 	daoLexTable[ TOK_OP_QUEST ][ '<' ] = TOK_END_TISA; /* ?< */
 	daoLexTable[ TOK_OP_SUB ][ '>' ] = TOK_END_ARROW; /* -> */
 	daoLexTable[ TOK_OP_EQ ][ '>' ] = TOK_END_FIELD; /* => */
 	daoLexTable[ TOK_START ][ '<' ] = TOK_OP_LT;
-	daoLexTable[ TOK_OP_LT ][ '<' ] = TOK_END_LSHIFT; /* << */
+
+	/* example use of generic types: */
+	/* routine<=>int>; list<list<int>>; abc : list<int>={} */
+	/* to handle them properly, the lexer should not compose tokens: <=, >>, >= */
+
+	/* to be consistent, the lexer will not compose any tokens start with < or > */
+
+	/* daoLexTable[ TOK_OP_GT ][ '>' ] = TOK_END_RSHIFT; */ /* >> */
+	/* daoLexTable[ TOK_OP_LT ][ '<' ] = TOK_END_LSHIFT; */ /* << */
+
 	daoLexTable[ TOK_START ][ '+' ] = TOK_OP_ADD;
 	daoLexTable[ TOK_OP_ADD ][ '+' ] = TOK_END_INCR; /* ++ */
 	daoLexTable[ TOK_START ][ '-' ] = TOK_OP_SUB; 

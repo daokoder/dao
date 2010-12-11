@@ -629,11 +629,15 @@ int DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fptr, const char *
 
 int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items )
 {
-	DaoParser *parser = DaoParser_New();
+	DaoParser *defparser, *parser = DaoParser_New();
 	DaoFunction *func;
 	int i = 0;
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
+	parser->defParser = defparser = DaoParser_New();
+	defparser->vmSpace = self->vmSpace;
+	defparser->nameSpace = self;
+	defparser->routine = self->routEvalConst;
 	while( items[i].fpter != NULL ){
 		func = DaoNameSpace_MakeFunction( self, items[i].proto, parser );
 		if( func == NULL ) break;
@@ -641,6 +645,7 @@ int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items )
 		i ++;
 	}
 	DaoParser_Delete( parser );
+	DaoParser_Delete( defparser );
 	return (items[i].fpter == NULL);
 }
 int DaoNameSpace_Load( DaoNameSpace *self, const char *fname )

@@ -1,0 +1,35 @@
+
+class Item<@V>
+{
+	var value : @V;
+	var next : Item;
+
+	routine Item( v : @V ){ value = v }
+}
+
+class LinkList<@V,@T=int>
+{
+	var first : Item<@V>;
+	var last  : Item<@V>;
+
+	routine Append( value : @V ){
+		item = Item<@V>( value );
+		#io.writeln( std.about( first, last, item ) );
+		if( first == null ) first = item else last.next = item;
+		last = item;
+	}
+	routine Print(){
+		item = first;
+		io.writeln( item.value, item );
+		while( item.next != null ){
+			item = item.next;
+			io.writeln( item.value, item );
+		}
+	}
+}
+
+ll = LinkList<int>();
+ll.Append(11);
+ll.Append(22);
+ll.Append(33);
+ll.Print();

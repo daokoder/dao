@@ -19,6 +19,7 @@
 #include<sys/stat.h>
 
 #ifdef _MSC_VER
+#include<io.h> /* XXX ? */
 #define chdir _chdir
 #define rmdir _rmdir
 #define getcwd _getcwd

@@ -28,6 +28,7 @@ typedef union
 	DString   *pString;
 	DArray    *pArray;
 	DaoBase   *pBase;
+	DaoClass  *pClass;
 	DaoType   *pAbtp;
 	DaoInode  *pInode;
 }DNodeData;

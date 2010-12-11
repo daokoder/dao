@@ -3201,7 +3201,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 
 	dao_fe_clear();
 	ctx->idClearFE = -1;
-	ctx->regTypes = types;
+	if( ctx->regTypes == NULL ) ctx->regTypes = types;
 
 	switch( vmc->code ){
 	case DVM_MOVE :
