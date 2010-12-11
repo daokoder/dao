@@ -378,7 +378,7 @@ int DEnum_SetSymbols( DEnum *self, const char *symbols )
 	if( self->type->name->mbs[0] == '$' ) return 0;
 	names = DString_New(1);
 	DString_SetMBS( names, symbols );
-	for(i=0; i<names->size; i++) if( names->mbs[i] == '$' ) names->mbs[i] == 0;
+	for(i=0; i<names->size; i++) if( names->mbs[i] == '$' ) names->mbs[i] = 0;
 	i = 0;
 	if( names->mbs[0] == '\0' ) i += 1;
 	do{ /* for multiple symbols */
