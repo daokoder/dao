@@ -960,8 +960,10 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 				rout->routType = rout2->routType;
 				rout->routHost = self->abtype;
 				rout->tidHost = DAO_INTERFACE;
+				rout->nameSpace = rout2->nameSpace;
 				GC_IncRC( rout->routHost );
 				GC_IncRC( rout->routType );
+				GC_IncRC( rout->nameSpace );
 				/* reference count of "rout" is already increased by DRoutine_New() */
 				DMap_Insert( self->methods, it->key.pVoid, rout );
 			}else{

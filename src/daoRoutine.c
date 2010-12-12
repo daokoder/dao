@@ -1074,16 +1074,27 @@ void DaoRoutine_Compile( DaoRoutine *self )
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload )
 {
-	DaoRoutine *copy = DaoRoutine_New();
+	DaoRoutine *copy = NULL;
+	if( self->minimal ){
+		DRoutine *copy2 = DRoutine_New();
+		DRoutine_CopyFields( (DRoutine*) copy2, (DRoutine*) self );
+		if( overload ) DRoutine_AddOverLoad( (DRoutine*) self, (DRoutine*) copy2 );
+		return (DaoRoutine*) copy2;
+	}
+	copy = DaoRoutine_New();
 	DaoRoutine_Compile( self );
 	DRoutine_CopyFields( (DRoutine*) copy, (DRoutine*) self );
 	if( overload ) DRoutine_AddOverLoad( (DRoutine*) self, (DRoutine*) copy );
-	DString_Assign( copy->routName, self->routName );
 	DaoRoutine_CopyFields( copy, self );
 	return copy;
 }
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 {
+	int i;
+	DaoRoutine_Compile( other );
+	DVarray_Assign( self->routConsts, other->routConsts );
+	for(i=0; i<other->routConsts->size; i++) DValue_MarkConst( self->routConsts->data + i );
+	if( other->minimal ==1 ) return;
 	DMap_Delete( self->localVarType );
 	DArray_Delete( self->annotCodes );
 	self->source = other->source;

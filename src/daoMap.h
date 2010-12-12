@@ -67,6 +67,7 @@ extern void DMap_Delete( DMap *self );
 extern void DMap_Clear( DMap *self );
 /* Insert key/value, and return the previous value if existed. */
 extern void DMap_Erase( DMap *self, void *key );
+void DMap_EraseNode( DMap *self, DNode *node );
 
 extern DNode* DMap_Insert( DMap *self, void *key, void *value );
 extern DNode* DMap_Find( DMap *self, void *key );

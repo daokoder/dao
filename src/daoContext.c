@@ -4576,7 +4576,7 @@ static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
 		MAP_Insert( deftypes, it->value.pAbtp->nested->items.pAbtp[0], value.v.p );
 	}
 }
-static void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
+void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 {
 	DaoType *tp, *tp2;
 	DNode *it;
@@ -4597,8 +4597,10 @@ static void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		tp = DaoNameSpace_GetTypeV( self->nameSpace, value );
 		tp2 = DaoType_DefineTypes( tp, self->nameSpace, deftypes );
 		if( tp == tp2 ) continue;
+		value = daoNullValue;
+		DValue_Move( self->routConsts->data[i], & value, tp2 );
 		DValue_Clear( & self->routConsts->data[i] );
-		DValue_Move( value, & self->routConsts->data[i], tp2 );
+		self->routConsts->data[i] = value;
 	}
 }
 void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
@@ -4612,6 +4614,7 @@ void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 		GC_ShiftRC( klass->objType, self->routHost );
 		self->routHost = klass->objType;
 	}
+	if( self->minimal ==1 ) return;
 	DaoRoutine_MapTypes( self, deftypes );
 	DaoRoutine_InferTypes( self );
 	/*

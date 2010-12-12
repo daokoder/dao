@@ -834,8 +834,7 @@ static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, 
 			continue;
 		}
 AppendInitSuper:
-		DaoTokens_Append( self, DKEY_SELF, line, "self" );
-		DaoTokens_Append( self, DTOK_DOT, line, "." );
+		/* need to be compiled into DVM_GETCK, for proper class instantiation: */
 		DaoTokens_Append( self, DTOK_IDENTIFIER, line, sup->mbs );
 		DaoTokens_Append( self, DTOK_LB, line, "(" );
 		DaoTokens_Append( self, DTOK_RB, line, ")" );
@@ -1058,6 +1057,7 @@ static DaoClass* DaoParse_InstantiateClass( DaoParser *self, DaoClass *klass, in
 			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, tokens[i]->string );
 			goto FailedInstantiation;
 		}
+		i += 1;
 	}
 	cls = DaoClass_Instantiate( klass, types );
 	GC_IncRCs( types );
@@ -1110,7 +1110,10 @@ static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 			i = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, N );
 			if( i >=0 ){
 				res.v.klass = DaoParse_InstantiateClass( self, res.v.klass, start+2, i-1 );
-				start = i;
+				if( res.v.klass ){
+					if( fullname ) DString_Assign( fullname, res.v.klass->objType->name );
+					start = i;
+				}
 			}
 		}
 	}
@@ -1155,7 +1158,10 @@ static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 				i = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, N );
 				if( i >=0 ){
 					res.v.klass = DaoParse_InstantiateClass( self, res.v.klass, start+2, i-1 );
-					start = i;
+					if( res.v.klass ){
+						if( fullname ) DString_Assign( fullname, res.v.klass->objType->name );
+						start = i;
+					}
 				}
 			}
 		}
@@ -3060,6 +3066,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 		if( rout == NULL ){
 			if( self->isInterBody ){
 				rout = (DaoRoutine*) DRoutine_New();
+				rout->nameSpace = self->nameSpace;
+				GC_IncRC( rout->nameSpace );
 				DRoutine_AddOverLoad( (DRoutine*)rout, (DRoutine*)rout );
 				GC_ShiftRC( self->hostInter->abtype, rout->routHost );
 				rout->routHost = self->hostInter->abtype;
@@ -3455,6 +3463,13 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( tokens[start]->name == DTOK_COLON ){
 		/* class AA : NS::BB, CC{ } */
 		unsigned char sep = DTOK_COLON;
+		if( klass->typeHolders ){
+			for(k=0; k<klass->typeHolders->size; k++){
+				DaoType *tp = klass->typeHolders->items.pAbtp[k];
+				if( DMap_Find( self->initTypes, tp ) ) continue;
+				DMap_Insert( self->initTypes, tp, tp );
+			}
+		}
 		while( tokens[start]->name == sep ){
 			DaoClass *super = 0;
 			start = DaoParser_FindScopedData( self, start+1, & scope, & value, 0, mbs );
@@ -3481,6 +3496,14 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			/* Add a reference to its super classes: */
 			DaoClass_AddSuperClass( klass, (DaoBase*) super, mbs );
 			sep = DTOK_COMMA;
+		}
+		if( klass->typeHolders ){
+			for(k=0; k<klass->typeHolders->size; k++){
+				DaoType *tp = klass->typeHolders->items.pAbtp[k];
+				DNode *node = DMap_Find( self->initTypes, tp );
+				if( node && node->key.pVoid == node->value.pVoid )
+					DMap_EraseNode( self->initTypes, node );
+			}
 		}
 	}/* end parsing super classes */
 	begin = start;

@@ -165,6 +165,8 @@ void DaoClass_Delete( DaoClass *self )
 	dao_free( self );
 }
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
+void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
+int  DaoRoutine_InferTypes( DaoRoutine *self );
 void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
@@ -173,7 +175,22 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DNode *it;
 	int i, st, up, id;
 
+	for(i=0; i<other->superClass->size; i++){
+		DaoClass *klass = other->superClass->items.pClass[i];
+		if( klass->type == DAO_CLASS && klass->typeHolders ){
+			tp = DaoType_DefineTypes( klass->objType, ns, deftypes );
+			if( tp ) klass = tp->X.klass;
+			DArray_Append( self->superClass, klass );
+			DArray_Append( self->superAlias, klass->objType->name );
+		}else{
+			DArray_Append( self->superClass, klass );
+			DArray_Append( self->superAlias, other->superAlias->items.pVoid[i] );
+		}
+	}
+
 	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine );
+	DaoRoutine_MapTypes( self->classRoutine, deftypes );
+	DaoRoutine_InferTypes( self->classRoutine );
 	for(it=DMap_First(other->lookupTable);it;it=DMap_Next(other->lookupTable,it)){
 		st = LOOKUP_ST( it->value.pSize );
 		up = LOOKUP_UP( it->value.pSize );
@@ -215,13 +232,26 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DValue value = other->cstData->data[i];
 		if( value.t == DAO_ROUTINE && value.v.routine->routHost == other->objType ){
 			DaoRoutine *rout = value.v.routine;
+			DString *name = rout->routName;
 			rout = value.v.routine = DaoRoutine_Copy( rout, 0 );
 			DaoRoutine_Finalize( rout, self, deftypes );
 #if 0
-			printf( "%s\n", rout->routType->name->mbs );
+			printf( "%p:  %s  %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
 #endif
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DRoutine_AddOverLoad( (DRoutine*)self->classRoutine, (DRoutine*)rout );
+			}else{
+				it = DMap_Find( other->lookupTable, name );
+				if( it ){
+					st = LOOKUP_ST( it->value.pSize );
+					up = LOOKUP_UP( it->value.pSize );
+					id = LOOKUP_ID( it->value.pSize );
+					if( st == DAO_CLASS_CONSTANT && up ==0 && id < i ){
+						DValue v2 = self->cstData->data[id];
+						if( v2.t == DAO_ROUTINE && v2.v.routine->routHost == self->objType )
+							DRoutine_AddOverLoad( (DRoutine*)v2.v.routine, (DRoutine*)rout );
+					}
+				}
 			}
 			DVarray_Append( self->cstData, value );
 			continue;
@@ -231,8 +261,10 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		tp = DaoNameSpace_GetTypeV( ns, value );
 		tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 		if( tp == tp2 ) continue;
-		DValue_Clear( & self->cstData->data[ self->cstData->size-1 ] );
-		DValue_Move( value, & self->cstData->data[ self->cstData->size-1 ], tp2 );
+		value = daoNullValue;
+		DValue_Move( self->cstData->data[i], & value, tp2 );
+		DValue_Clear( & self->cstData->data[i] );
+		self->cstData->data[i] = value;
 	}
 }
 DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
@@ -422,6 +454,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				DString *name = klass->cstDataName->items.pString[id];
 				value = klass->cstData->data[ id ];
 				search = MAP_Find( klass->lookupTable, name );
+				if( search == NULL ) continue;
 				perm = LOOKUP_PM( search->value.pSize );
 				if( perm <= DAO_DATA_PRIVATE ) continue;
 				rep = mem = NULL;
@@ -437,8 +470,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
 						rep->tidHost = DAO_OBJECT;
 						rep->routHost = self->objType;
 						rep->routType = mem->routType;
+						rep->nameSpace = value.v.routine->nameSpace;
 						GC_IncRC( rep->routHost );
 						GC_IncRC( rep->routType );
+						GC_IncRC( rep->nameSpace );
 						value.v.p = (DaoBase*) rep;
 						DaoClass_AddConst( self, name, value, perm, -1 );
 					}else{

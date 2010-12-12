@@ -12,6 +12,10 @@ class LinkList<@V,@T=int>
 	var first : Item<@V>;
 	var last  : Item<@V>;
 
+	routine LinkList(){
+		io.writeln( std.about( self ) );
+	}
+
 	routine Append( value : @V ){
 		item = Item<@V>( value );
 		#io.writeln( std.about( first, last, item ) );
@@ -33,3 +37,34 @@ ll.Append(11);
 ll.Append(22);
 ll.Append(33);
 ll.Print();
+#ll.Append('abc'); # error
+
+class StringLinkList : LinkList<string>
+{
+}
+
+sll = StringLinkList();
+sll.Append( 'AA' )
+sll.Append( 'BB' )
+sll.Append( 'CC' )
+sll.Print();
+#sll.Append( 123 ); # error
+
+class Base{ routine Base(){} }
+
+class LinkList2<@V,@T=int> : LinkList<@V,@T>
+{
+}
+
+ll2 = LinkList2<int>();
+ll2.Append(11);
+ll2.Append(22);
+ll2.Append(33);
+ll2.Print();
+#{
+
+class LinkList3<@X> : LinkList<@X>
+{
+}
+#class LinkList2<@V> : StringLinkList
+#}
