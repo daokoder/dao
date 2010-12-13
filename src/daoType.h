@@ -124,7 +124,7 @@ void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 /* all DAO_INITYPE: @T ... */
 void DaoType_GetTypes( DaoType *self, DMap *types );
 
-#define NESTYPE(t,i) ((t)->nested->items.pAbtp[i])
+#define NESTYPE(t,i) ((t)->nested->items.pType[i])
 
 struct DaoInterface
 {

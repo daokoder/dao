@@ -887,7 +887,7 @@ static void DaoJIT_X87Load2( DaoJIT *self, int get, int put, int reg )
 	int t = 0;
 	DaoType *abtp = NULL;
 	if( self->routine ){
-		abtp = self->routine->regType->items.pAbtp[get];
+		abtp = self->routine->regType->items.pType[get];
 		if( abtp ) t = abtp->tid;
 	}
 	if( t >= DAO_INTEGER && t <= DAO_DOUBLE )
@@ -965,7 +965,7 @@ static void DaoJIT_X87StoreAndPop( DaoJIT *self )
 	tp = 0;
 	mem = self->x87Stack[self->x87Top].store;
 	if( mem >=0 && self->routine ){
-		abtp = self->routine->regType->items.pAbtp[mem];
+		abtp = self->routine->regType->items.pType[mem];
 		if( abtp ) tp = abtp->tid;
 	}
 	if( tp >= DAO_INTEGER && tp <= DAO_DOUBLE ){
@@ -1117,7 +1117,7 @@ static int DaoJIT_Encode( DaoJIT *self, DaoVmcArray *vmCodes, int id, int min, i
 {
 	DaoVmCode *vmc = vmCodes->codes + id;
 	DaoVmCode *vmc2;
-	DaoType **type = self->routine->regType->items.pAbtp;
+	DaoType **type = self->routine->regType->items.pType;
 	DNode *node;
 	ushort_t code = vmc->code;
 	ushort_t opa = vmc->a;

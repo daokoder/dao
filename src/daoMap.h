@@ -29,7 +29,7 @@ typedef union
 	DArray    *pArray;
 	DaoBase   *pBase;
 	DaoClass  *pClass;
-	DaoType   *pAbtp;
+	DaoType   *pType;
 	DaoInode  *pInode;
 }DNodeData;
 

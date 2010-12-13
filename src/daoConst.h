@@ -137,11 +137,12 @@ enum DaoCaseMode
 
 enum DaoCallMode
 {
-	DAO_CALL_EXPAR = (1<<8),
-	DAO_CALL_ASYNC = (1<<9),
-	DAO_CALL_HURRY = (1<<10),
-	DAO_CALL_JOIN  = (1<<11),
-	DAO_CALL_COROUT = (1<<12)
+	DAO_CALL_INIT = (1<<8),
+	DAO_CALL_EXPAR = (1<<9),
+	DAO_CALL_COROUT = (1<<10),
+	DAO_CALL_ASYNC = (1<<13),
+	DAO_CALL_HURRY = (1<<14),
+	DAO_CALL_JOIN  = (1<<15)
 };
 enum DaoVmProcPauseType
 {
@@ -428,11 +429,11 @@ static const char* const coreTypeNames[] =
 };
 static const char *const daoBitBoolArithOpers[] = {
 	"=", "!", "-", "~", "+", "-", "*", "/", "%", "**", 
-	"&&", "||", "<", "<=", "==", "!=", "&", "|", "^", "<<", ">>"
+	"&&", "||", "<", "<=", "==", "!=", "in", "&", "|", "^", "<<", ">>"
 };
 static const char *const daoBitBoolArithOpers2[] = {
 	NULL, NULL, NULL, NULL, "+=", "-=", "*=", "/=", "%=", NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, "&=", "|=", "^=", NULL, NULL
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, "&=", "|=", "^=", NULL, NULL
 };
 
 

@@ -231,7 +231,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 	GC_IncRC( self );
 	if( self->objData == NULL ) return self;
 	for(i=1; i<klass->objDataDefault->size; i++){
-		DaoType *type = klass->objDataType->items.pAbtp[i];
+		DaoType *type = klass->objDataType->items.pType[i];
 		DValue *value = self->objValues + i;
 		/* for data type such as list/map/array, 
 		 * its .unitype may need to be set properaly */
@@ -371,12 +371,12 @@ int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *o
 			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
 		if( sto == DAO_OBJECT_VARIABLE ){
 			if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
-			type = klass->objDataType->items.pAbtp[ id ];
+			type = klass->objDataType->items.pType[ id ];
 			value = self->objValues + id;
 			DValue_Move( data, value, type );
 		}else if( sto == DAO_CLASS_VARIABLE ){
 			value = klass->glbDataTable->items.pVarray[up]->data + id;
-			type = klass->glbTypeTable->items.pArray[up]->items.pAbtp[ id ];
+			type = klass->glbTypeTable->items.pArray[up]->items.pType[ id ];
 			DValue_Move( data, value, type );
 		}else if( sto == DAO_CLASS_CONSTANT ){
 			return DAO_ERROR_FIELD;

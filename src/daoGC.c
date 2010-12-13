@@ -330,7 +330,7 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 				DaoList *list = (DaoList*) p;
 				n = list->items->size;
 				if( list->unitype && list->unitype->nested->size ){
-					tp = list->unitype->nested->items.pAbtp[0];
+					tp = list->unitype->nested->items.pType[0];
 					for(i=0; i<n; i++){
 						DValue *it = list->items->data + i;
 						if( it->t > DAO_DOUBLE && it->t < DAO_ENUM ) DValue_Clear( it );
@@ -353,8 +353,8 @@ static void DaoGC_DecRC2( DaoBase *p, int change )
 				DaoMap *map = (DaoMap*) p;
 				tp2 = map->unitype;
 				if( tp2 == NULL || tp2->nested->size != 2 ) break;
-				tp = tp2->nested->items.pAbtp[0];
-				tp2 = tp2->nested->items.pAbtp[1];
+				tp = tp2->nested->items.pType[0];
+				tp2 = tp2->nested->items.pType[1];
 				if( tp->tid >DAO_DOUBLE && tp2->tid >DAO_DOUBLE && tp->tid <DAO_ENUM && tp2->tid <DAO_ENUM ){
 					/* DaoMap_Clear( map ); this is NOT thread safe, there is RC update scan */
 					i = 0;
@@ -720,6 +720,7 @@ void cycRefCountDecreScan()
 				cycRefCountDecrements( klass->superClass );
 				cycRefCountDecrements( klass->objDataType );
 				cycRefCountDecrements( klass->glbDataType );
+				cycRefCountDecrements( klass->references );
 				break;
 			}
 		case DAO_INTERFACE :
@@ -903,6 +904,7 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrements( klass->superClass );
 				cycRefCountIncrements( klass->objDataType );
 				cycRefCountIncrements( klass->glbDataType );
+				cycRefCountDecrements( klass->references );
 				break;
 			}
 		case DAO_INTERFACE :
@@ -1088,6 +1090,7 @@ void freeGarbage()
 					directRefCountDecrement( klass->superClass );
 					directRefCountDecrement( klass->objDataType );
 					directRefCountDecrement( klass->glbDataType );
+					directRefCountDecrement( klass->references );
 					break;
 				}
 			case DAO_INTERFACE :
@@ -1532,9 +1535,11 @@ void cycRefCountDecreScan()
 				cycRefCountDecrements( klass->superClass );
 				cycRefCountDecrements( klass->objDataType );
 				cycRefCountDecrements( klass->glbDataType );
+				cycRefCountDecrements( klass->references );
 				j += klass->cstData->size + klass->glbData->size;
 				j += klass->superClass->size + klass->abstypes->size;
 				j += klass->objDataType->size + klass->glbDataType->size;
+				j += klass->references->size + klass->abstypes->size;
 				break;
 			}
 		case DAO_INTERFACE :
@@ -1722,9 +1727,11 @@ void cycRefCountIncreScan()
 					cycRefCountIncrements( klass->superClass );
 					cycRefCountIncrements( klass->objDataType );
 					cycRefCountIncrements( klass->glbDataType );
+					cycRefCountIncrements( klass->references );
 					j += klass->cstData->size + klass->glbData->size;
 					j += klass->superClass->size + klass->abstypes->size;
 					j += klass->objDataType->size + klass->glbDataType->size;
+					j += klass->references->size + klass->abstypes->size;
 					break;
 				}
 			case DAO_INTERFACE :
@@ -1920,6 +1927,7 @@ void directDecRC()
 					j += klass->cstData->size + klass->glbData->size;
 					j += klass->superClass->size + klass->abstypes->size;
 					j += klass->objDataType->size + klass->glbDataType->size;
+					j += klass->references->size + klass->abstypes->size;
 					GC_BREAK_REF( klass->clsType );
 					directRefCountDecrementMapValue( klass->abstypes );
 					directRefCountDecrementV( klass->cstData );
@@ -1927,6 +1935,7 @@ void directDecRC()
 					directRefCountDecrement( klass->superClass );
 					directRefCountDecrement( klass->objDataType );
 					directRefCountDecrement( klass->glbDataType );
+					directRefCountDecrement( klass->references );
 					break;
 				}
 			case DAO_INTERFACE :

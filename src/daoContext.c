@@ -128,7 +128,7 @@ static void DaoContext_InitValues( DaoContext *self )
 	self->constCall = 0;
 	self->vmc = NULL;
 	self->codes = self->routine->vmCodes->codes;
-	self->regTypes = self->routine->regType->items.pAbtp;
+	self->regTypes = self->routine->regType->items.pType;
 	if( self->regArray->size < N ){
 		DVaTuple_Resize( self->regArray, N, daoNullValue );
 		self->regValues = dao_realloc( self->regValues, N * sizeof(DValue*) );
@@ -393,7 +393,7 @@ void DaoJIT_GETI_LI( DaoContext *self, int id )
 	id = locVars[ vmc->b ]->v.i;
 	DValue_SimpleMove2( list->items->data[id], locVars[ vmc->c ] );
 	/*
-	   DaoType *abtp = self->routine->regType->items.pAbtp[ vmc->c ];
+	   DaoType *abtp = self->routine->regType->items.pType[ vmc->c ];
 	   DaoMoveAC( self, list->items->data[id], locVars + vmc->c, abtp );
 	   GC_ShiftRC( dA->v.p, dC->v.p );
 	 *dC = *dA;
@@ -407,7 +407,7 @@ void DaoJIT_SETI_LI( DaoContext *self, int id )
 	id = locVars[ vmc->b ]->v.i;
 	DValue_SimpleMove2( locVars[ vmc->a ][0], list->items->data + id );
 	/*
-	   DaoType *abtp = self->routine->regType->items.pAbtp[ vmc->c ];
+	   DaoType *abtp = self->routine->regType->items.pType[ vmc->c ];
 	   DaoMoveAC( self, list->items->data[id], locVars + vmc->c, abtp );
 	   GC_ShiftRC( dA->v.p, dC->v.p );
 	 *dC = *dA;
@@ -817,7 +817,7 @@ DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc )
 	int type = DAO_FLOAT;
 	DaoArray *array = dC.v.array;
 	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-		type = tp->nested->items.pAbtp[0]->tid;
+		type = tp->nested->items.pType[0]->tid;
 		if( type == 0 || type > DAO_COMPLEX ) type = DAO_FLOAT;
 	}
 	if( dC.t == DAO_ARRAY && array->refCount == 1 ){
@@ -1472,7 +1472,7 @@ void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DValue **its, int 
 			}
 			val = pair->second;
 		}
-		tp = ct->nested->items.pAbtp[i];
+		tp = ct->nested->items.pType[i];
 		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->X.abtype;
 		if( DValue_Move( val, tuple->items->data+i, tp ) == 0){
 			DaoContext_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );
@@ -1512,7 +1512,7 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 			DaoClass *klass = p->v.klass;
 			object = DaoObject_New( klass, NULL, 0 );
 			DaoContext_SetData( self, vmc->c, (DaoBase*)object );
-			mtype = klass->objDataType->items.pAbtp;
+			mtype = klass->objDataType->items.pType;
 			if( bval >= object->objData->size ){
 				DaoContext_RaiseException( self, DAO_ERROR, "enumerating too many members" );
 				break;
@@ -1661,7 +1661,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 	self->vmc = vmc;
 	res = DaoContext_PutInteger( self, 0 );
 	if( dA.t && dB.t == DAO_TYPE && type->tid == DAO_TYPE ){
-		type = type->nested->items.pAbtp[0];
+		type = type->nested->items.pType[0];
 		if( dA.t < DAO_ARRAY ){
 			*res = dA.t == type->tid;
 		}else if( dA.t == DAO_OBJECT ){
@@ -2807,7 +2807,7 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 		DVarray *items = B.v.list->items;
 		DaoType *ta = DaoNameSpace_GetTypeV( self->nameSpace, A );
 		if( ta && B.v.list->unitype && B.v.list->unitype->nested->size ){
-			DaoType *tb = B.v.list->unitype->nested->items.pAbtp[0];
+			DaoType *tb = B.v.list->unitype->nested->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
 		}
 		for(i=0; i<items->size; i++){
@@ -2819,7 +2819,7 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 	}else if( B.t == DAO_MAP ){
 		DaoType *ta = DaoNameSpace_GetTypeV( self->nameSpace, A );
 		if( ta && B.v.map->unitype && B.v.map->unitype->nested->size ){
-			DaoType *tb = B.v.map->unitype->nested->items.pAbtp[0];
+			DaoType *tb = B.v.map->unitype->nested->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
 		}
 		*C = DMap_Find( B.v.map->items, & A ) != NULL;
@@ -2940,7 +2940,7 @@ void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc )
 		if( vmc->code ==DVM_BITLFT ){
 			DaoType *abtp = list->unitype;
 			if( abtp && abtp->nested->size ){
-				abtp = abtp->nested->items.pAbtp[0];
+				abtp = abtp->nested->items.pType[0];
 				if( DaoType_MatchValue( abtp, vB, NULL ) ==0 ) return; /* XXX information */
 			}
 			DVarray_PushBack( list->items, vB );
@@ -3014,7 +3014,7 @@ static int DaoBase_CheckTypeShape( DValue self, int type,
 		if( check_size && list->items->size != shape->items.pSize[depth] ) return -1;
 		depth ++;
 		if( list->unitype && list->unitype->nested->size ){
-			j = list->unitype->nested->items.pAbtp[0]->tid;
+			j = list->unitype->nested->items.pType[0]->tid;
 			if( j <= DAO_COMPLEX ){
 				if( type <= j ) type = j;
 			}else if( j == DAO_STRING ){
@@ -3146,7 +3146,7 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 	size_t i, size, isvector = self->dims->size==2 && (ds[0] ==1 || ds[1] ==1);
 
 	if( abtp == NULL ) return 0;
-	abtp = abtp->nested->items.pAbtp[0];
+	abtp = abtp->nested->items.pType[0];
 	if( abtp == NULL ) return 0;
 	if( isvector ) dim = ds[0] ==1 ? 1 : 0;
 	if( dim >= self->dims->size-1 || isvector ){
@@ -3484,7 +3484,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
-		if( ct->nested->size >0 ) tp = ct->nested->items.pAbtp[0];
+		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
 		if( dA.t == DAO_STRING ){
 			str = dA.v.s;
 			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
@@ -3574,7 +3574,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		list->unitype = ct;
 		GC_IncRC( ct );
 		dC.v.list = list;
-		if( ct->nested->size >0 ) tp = ct->nested->items.pAbtp[0];
+		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
 		if( tp == NULL ) goto FailConversion;
 		value.t = tp->tid;
 		value.v.d = 0.0;
@@ -3629,8 +3629,8 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		GC_IncRC( ct );
 		dC.v.map = map;
 		dC.t = DAO_MAP;
-		if( ct->nested->size >0 ) tp = ct->nested->items.pAbtp[0];
-		if( ct->nested->size >1 ) tp2 = ct->nested->items.pAbtp[1];
+		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
+		if( ct->nested->size >1 ) tp2 = ct->nested->items.pType[1];
 		if( tp == NULL || tp2 == NULL ) goto FailConversion;
 		node = DMap_First( map2->items );
 		for(; node!=NULL; node=DMap_Next(map2->items,node) ){
@@ -3663,7 +3663,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 				value = items[i];
 				tp = DaoNameSpace_GetTypeV( ns, value );
 				if( tsize ){
-					tp2 = ct->nested->items.pAbtp[i];
+					tp2 = ct->nested->items.pType[i];
 					if( tp2->tid == DAO_PAR_NAMED ) tp2 = tp2->X.abtype;
 					/* if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion; */
 					value = DaoTypeCast( ctx, tp2, value, cb, lb, sb );
@@ -3682,7 +3682,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 				if( i >= ct->nested->size ){
 					DValue_Copy( tuple->items->data + i, value );
 				}else{
-					tp2 = ct->nested->items.pAbtp[i];
+					tp2 = ct->nested->items.pType[i];
 					if( node->key.pValue->t != DAO_STRING ) goto FailConversion;
 					value = DaoTypeCast( ctx, tp2, node->value.pValue[0], cb, lb, sb );
 					if( value.t ==0 ) goto FailConversion;
@@ -3890,7 +3890,7 @@ int DaoContext_CheckFE( DaoContext *self )
 static DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue *p[], int n )
 {
 	DArray *nested = decoFunc->routType->nested;
-	DaoType **decotypes = nested->items.pAbtp;
+	DaoType **decotypes = nested->items.pType;
 	DaoParser *parser = DaoParser_New();
 	DaoRoutine *routine = DaoRoutine_New();
 	DaoRoutine tmp = *self;
@@ -3911,7 +3911,7 @@ static DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, 
 	DString_Assign( routine->routName, self->routName );
 	DString_Assign( routine->parCodes, self->parCodes );
 	for(i=0; i<self->routType->nested->size; i++){
-		DaoType *type = self->routType->nested->items.pAbtp[i];
+		DaoType *type = self->routType->nested->items.pType[i];
 		DRoutine_AddConstValue( (DRoutine*)routine, self->routConsts->data[i] );
 		if( type->tid == DAO_PAR_VALIST ) break;
 		MAP_Insert( DArray_Top( parser->localVarMap ), type->fname, i );
@@ -4051,7 +4051,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		selfpar->t = DAO_OBJECT;
 		selfpar->v.object = self->object;
 	}
-	if( npar && params[0]->v.object == self->object && self->object ){
+	if( (mode & DAO_CALL_INIT) && self->object ){
 		DaoClass *klass = self->object->myClass;
 		if( DString_EQ( self->routine->routName, klass->className )
 				|| self->routine == klass->classRoutine ){
@@ -4223,7 +4223,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			DaoObject *othis = NULL, *onew = NULL;
 			DValue tmp = daoNullObject;
 			if( initbase ){
-				othis = params[0]->v.object;
+				othis = self->object;
 			}else{
 				othis = onew = DaoObject_New( klass, NULL, 0 );
 			}
@@ -4572,8 +4572,8 @@ static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
 	DNode *it = DMap_First(routine->localVarType);
 	for(; it; it = DMap_Next(routine->localVarType,it) ){
 		DValue value = *self->regValues[ it->key.pInt ];
-		if( value.t != DAO_TYPE || it->value.pAbtp->tid != DAO_TYPE ) continue;
-		MAP_Insert( deftypes, it->value.pAbtp->nested->items.pAbtp[0], value.v.p );
+		if( value.t != DAO_TYPE || it->value.pType->tid != DAO_TYPE ) continue;
+		MAP_Insert( deftypes, it->value.pType->nested->items.pType[0], value.v.p );
 	}
 }
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
@@ -4581,15 +4581,25 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 	DaoType *tp, *tp2;
 	DNode *it;
 	int i;
+#if 0
+	printf( "DaoRoutine_MapTypes() %s\n", self->routName->mbs );
+	for(it=DMap_First(deftypes); it; it=DMap_Next(deftypes,it) ){
+		printf( "%16p -> %p\n", it->key.pType, it->value.pType );
+		printf( "%16s -> %s\n", it->key.pType->name->mbs, it->value.pType->name->mbs );
+	}
+#endif
 	for(it=DMap_First(self->localVarType); it; it=DMap_Next(self->localVarType,it) ){
-		tp = DaoType_DefineTypes( it->value.pAbtp, self->nameSpace, deftypes );
-		it->value.pAbtp = tp;
+		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
+		it->value.pType = tp;
 	}
 	for(i=0; i<self->regType->size; i++){
-		tp = self->regType->items.pAbtp[i];
+		tp = self->regType->items.pType[i];
 		tp = DaoType_DefineTypes( tp, self->nameSpace, deftypes );
-		GC_ShiftRC( tp, self->regType->items.pAbtp[i] );
-		self->regType->items.pAbtp[i] = tp;
+		GC_ShiftRC( tp, self->regType->items.pType[i] );
+		self->regType->items.pType[i] = tp;
+#if 0
+		if( tp ) printf( "%3i: %s\n", i, tp->name->mbs );
+#endif
 	}
 	for(i=0; i<self->routConsts->size; i++){
 		DValue value = self->routConsts->data[i];
@@ -4676,7 +4686,7 @@ static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VA
 static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUBLIC };
 
 /* a = class( name, parents, fields, methods ){ proto_class_body }
- * (1) parents: optional, list[class] or map[string,class]
+ * (1) parents: optional, list<class> or map<string,class>
  * (2) fields: optional, tuple<name:string,value:any,storage:enum<>,access:enum<>>
  * (3) methods: optional, tuple<name:string,method:routine,access:enum<>>
  * (4) default storage: $var, default access: $public.
@@ -4790,10 +4800,10 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 				DValue_Move( value, klass->cstData->data+id, NULL );
 			}
 		}else if( st == DAO_CLASS_VARIABLE ){
-			tp = klass->glbDataType->items.pAbtp[id];
+			tp = klass->glbDataType->items.pType[id];
 			DValue_Move( value, klass->glbData->data+id, tp );
 		}else if( st == DAO_OBJECT_VARIABLE ){
-			tp = klass->objDataType->items.pAbtp[id];
+			tp = klass->objDataType->items.pType[id];
 			DValue_Move( value, klass->objDataDefault->data+id, tp );
 		}
 	}
@@ -4845,7 +4855,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			if( id >=0 && data[id].t ){
 				flags |= 1<<id;
 				value = data + id;
-				type = field->unitype->nested->items.pAbtp[id];
+				type = field->unitype->nested->items.pType[id];
 			}
 			id = (it = MAP_Find( keys, "storage" )) ? it->value.pInt : -1;
 			if( id >=0 && data[id].t == DAO_ENUM ){
@@ -4865,7 +4875,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			if( value ==NULL && size >1 && data[1].t && !(flags & 2) ){
 				flags |= 2;
 				value = & data[1];
-				type = field->unitype->nested->items.pAbtp[1];
+				type = field->unitype->nested->items.pType[1];
 			}
 			if( storage ==NULL && size >2 && data[2].t == DAO_ENUM && !(flags&4) ){
 				flags |= 4;

@@ -906,7 +906,7 @@ CallEntry:
 	here = routine->nameSpace;
 	this = topCtx->object;
 	locVars = topCtx->regValues;
-	locTypes = routine->regType->items.pAbtp;
+	locTypes = routine->regType->items.pType;
 	dataCL[0] = routine->routConsts;
 	dataCG = routine->nameSpace->cstDataTable;
 	dataVG = routine->nameSpace->varDataTable;
@@ -1013,24 +1013,24 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVL ){
-			abtp = typeVL->items.pAbtp[ vmc->b ];
+			abtp = typeVL->items.pType[ vmc->b ];
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVL[vmc->b], abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVO ){
-			abtp = typeVO->items.pAbtp[ vmc->b ];
+			abtp = typeVO->items.pType[ vmc->b ];
 			if( topCtx->constCall ) goto ModifyConstant;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], dataVO+vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVK ){
-			abtp = typeVK->items.pArray[ vmc->c ]->items.pAbtp[ vmc->b ];
+			abtp = typeVK->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
 			vC = dataVK->items.pVarray[vmc->c]->data + vmc->b;
 			if( topCtx->constCall ) goto ModifyConstant;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVG ){
-			abtp = typeVG->items.pArray[ vmc->c ]->items.pAbtp[ vmc->b ];
+			abtp = typeVG->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
 			vC = dataVG->items.pVarray[vmc->c]->data + vmc->b;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
@@ -1914,7 +1914,7 @@ CallEntry:
 			id = locVars[ vmc->b ]->v.i;
 			abtp = NULL;
 			if( list->unitype && list->unitype->nested->size )
-				abtp = list->unitype->nested->items.pAbtp[0];
+				abtp = list->unitype->nested->items.pType[0];
 			if( id <0 ) id += list->items->size;
 			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], list->items->data + id, abtp ) ==0 )
@@ -2182,7 +2182,7 @@ CallEntry:
 			id = locVars[ vmc->b ]->v.i;
 			abtp = NULL;
 			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
-			abtp = tuple->unitype->nested->items.pAbtp[id];
+			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->X.abtype;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], tuple->items->data + id, abtp ) ==0 )
 				goto CheckException;
@@ -2199,7 +2199,7 @@ CallEntry:
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 			tuple = locVars[ vmc->c ]->v.tuple;
 			id = vmc->b;
-			abtp = tuple->unitype->nested->items.pAbtp[id];
+			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->X.abtype;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], tuple->items->data + id, abtp ) ==0 )
 				goto CheckException;
@@ -2340,7 +2340,7 @@ CallEntry:
 		OPCASE( SETF_KG ){
 			klass = locVars[ vmc->c ]->v.klass;
 			vC = klass->glbData->data + vmc->b;
-			abtp = klass->glbDataType->items.pAbtp[ vmc->b ];
+			abtp = klass->glbDataType->items.pType[ vmc->b ];
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
@@ -2350,11 +2350,11 @@ CallEntry:
 				if( vmc->code == DVM_SETF_OG ){
 					klass = ((DaoObject*)klass)->myClass;
 					vC = klass->glbData->data + vmc->b;
-					abtp = klass->glbDataType->items.pAbtp[ vmc->b ];
+					abtp = klass->glbDataType->items.pType[ vmc->b ];
 				}else{
 					if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 					vC = object->objData->data + vmc->b;
-					abtp = object->myClass->objDataType->items.pAbtp[ vmc->b ];
+					abtp = object->myClass->objDataType->items.pType[ vmc->b ];
 				}
 				if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 )
 					goto CheckException;
@@ -2748,9 +2748,9 @@ static void DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
 		self->numType = type->tid;
 	}else if( type->tid == DAO_TUPLE && type->nested->size ){
 		m = type->nested->size;
-		t = type->nested->items.pAbtp[0]->tid;
+		t = type->nested->items.pType[0]->tid;
 		for(j=1; j<m; j++){
-			k = type->nested->items.pAbtp[j]->tid;
+			k = type->nested->items.pType[j]->tid;
 			if( k > t ) t = k;
 		}
 		if( t == 0 || t > DAO_COMPLEX ) t = DAO_DOUBLE; /* XXX warning */
@@ -3128,7 +3128,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 
 	DaoStream_WriteMBS( ss, "  Raised by:  " );
 	if( ex->routine->attribs & DAO_ROUT_PARSELF ){
-		DaoType *type = ex->routine->routType->nested->items.pAbtp[0];
+		DaoType *type = ex->routine->routType->nested->items.pType[0];
 		DaoType_WriteMainName( type->X.abtype, ss );
 		DaoStream_WriteMBS( ss, "." );
 	}else if( ex->routine->routHost ){
@@ -3161,7 +3161,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 		DRoutine *rout = (DRoutine*) ex->callers->items.pRout[i];
 		DaoStream_WriteMBS( ss, "  Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
-			DaoType *type = rout->routType->nested->items.pAbtp[0];
+			DaoType *type = rout->routType->nested->items.pType[0];
 			DaoType_WriteMainName( type->X.abtype, ss );
 			DaoStream_WriteMBS( ss, "." );
 		}else if( rout->routHost ){

@@ -282,7 +282,7 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 		}else if( strcmp( cmd, "a" ) == 0 || strcmp( cmd, "about" ) == 0 ){
 			if( tokens->size > 1 ){
 				ushort_t reg = (ushort_t)strtod( tokens->items.pString[1]->mbs, 0 );
-				DaoType *tp = ctx->routine->regType->items.pAbtp[ reg ];
+				DaoType *tp = ctx->routine->regType->items.pType[ reg ];
 				DString_Clear( input );
 				Dao_AboutVar( ctx->nameSpace, *ctx->regValues[reg], input );
 				DaoStream_WriteMBS( stream, "type: " );
@@ -1639,7 +1639,7 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
 	DaoTuple *tuple;
 	DaoClass *klass;
 	DaoObject *object;
-	DaoType *tp = map->unitype->nested->items.pAbtp[1];
+	DaoType *tp = map->unitype->nested->items.pType[1];
 	DaoNameSpace *ns, *here = ctx->nameSpace;
 	DMap *index = NULL, *lookup = NULL;
 	DVarray *data;
@@ -1696,7 +1696,7 @@ static void REFL_Var1( DaoContext *ctx, DValue *p[], int N )
 	DaoTuple *tuple;
 	DaoClass *klass = NULL;
 	DaoObject *object = NULL;
-	DaoType *tp = map->unitype->nested->items.pAbtp[1];
+	DaoType *tp = map->unitype->nested->items.pType[1];
 	DaoNameSpace *ns = NULL;
 	DMap *index = NULL, *lookup = NULL;
 	DNode *node;
@@ -1947,8 +1947,8 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
 	DaoList *list = DaoContext_PutList( ctx );
 	DaoTuple *tuple;
 	DaoType *routype = routine->routType;
-	DaoType *itp = list->unitype->nested->items.pAbtp[0];
-	DaoType **nested = routype->nested->items.pAbtp;
+	DaoType *itp = list->unitype->nested->items.pType[0];
+	DaoType **nested = routype->nested->items.pType;
 	DString *mbs = DString_New(1);
 	DNode *node;
 	DValue num = daoZeroInt;

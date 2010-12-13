@@ -61,10 +61,23 @@ ll2.Append(11);
 ll2.Append(22);
 ll2.Append(33);
 ll2.Print();
-#{
 
 class LinkList3<@X> : LinkList<@X>
 {
 }
-#class LinkList2<@V> : StringLinkList
+ll3 = LinkList3<int>();
+ll3.Append(11);
+ll3.Append(33);
+ll3.Append(33);
+ll3.Print();
+
+class LinkList4<@V> : StringLinkList
+{
+}
+sll = LinkList4<int>();
+sll.Append( 'AA' )
+sll.Append( 'BB' )
+sll.Append( 'CC' )
+sll.Print();
+#{
 #}

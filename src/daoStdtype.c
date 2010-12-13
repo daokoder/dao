@@ -299,7 +299,7 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 			DaoArray *copy = DaoArray_New( array->numType );
 			copy->unitype = array->unitype;
 			if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-				int nt = tp->nested->items.pAbtp[0]->tid;
+				int nt = tp->nested->items.pType[0]->tid;
 				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ){
 					copy->unitype = tp;
 					copy->numType = nt;
@@ -2089,7 +2089,7 @@ static void DaoList_PutDefault( DaoContext *ctx, DValue *p[], int N )
 	DaoList *self = p[0]->v.list;
 	complex16 com = { 0.0, 0.0 };
 	if( self->unitype && self->unitype->nested->size ){
-		switch( self->unitype->nested->items.pAbtp[0]->tid ){
+		switch( self->unitype->nested->items.pType[0]->tid ){
 		case DAO_INTEGER : DaoContext_PutInteger( ctx, 0 ); break;
 		case DAO_FLOAT   : DaoContext_PutFloat( ctx, 0.0 ); break;
 		case DAO_DOUBLE  : DaoContext_PutDouble( ctx, 0.0 ); break;
@@ -2572,7 +2572,7 @@ void DaoList_SetItem( DaoList *self, DValue it, int pos )
 	if( pos <0 || pos >= self->items->size ) return;
 	val = self->items->data + pos;
 	if( self->unitype && self->unitype->nested->size ){
-		DValue_Move( it, val, self->unitype->nested->items.pAbtp[0] );
+		DValue_Move( it, val, self->unitype->nested->items.pType[0] );
 	}else{
 		DValue_Copy( val, it );
 	}
@@ -2582,7 +2582,7 @@ static int DaoList_CheckItemType( DaoList *self, DValue it )
 {
 	DaoType *tp = self->unitype;
 	int mt;
-	if( tp ) tp = self->unitype->nested->items.pAbtp[0];
+	if( tp ) tp = self->unitype->nested->items.pType[0];
 	if( tp == NULL ) return 1;
 	mt = DaoType_MatchValue( tp, it, NULL );
 	if( tp->tid >= DAO_ARRAY && tp->tid <= DAO_TUPLE && mt != DAO_MT_EQ ) return 0;
@@ -2590,27 +2590,27 @@ static int DaoList_CheckItemType( DaoList *self, DValue it )
 }
 static void DaoList_SetItemType( DaoList *self, DValue it )
 {
-	DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
+	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	if( tp ) DValue_SetType( & it, tp );
 }
 
 void DaoList_Insert( DaoList *self, DValue item, int pos )
 {
-	DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
+	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	if( DaoList_CheckItemType( self, item ) ==0 ) return;
 	DVarray_Insert( self->items, daoNullValue, pos );
 	DValue_Move( item, self->items->data + pos, tp );
 }
 void DaoList_PushFront( DaoList *self, DValue item )
 {
-	DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
+	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	if( DaoList_CheckItemType( self, item ) ==0 ) return;
 	DVarray_PushFront( self->items, daoNullValue );
 	DValue_Move( item, self->items->data, tp );
 }
 void DaoList_PushBack( DaoList *self, DValue item )
 {
-	DaoType *tp = self->unitype ? self->unitype->nested->items.pAbtp[0] : NULL;
+	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	if( DaoList_CheckItemType( self, item ) ==0 ) return;
 	DVarray_PushBack( self->items, daoNullValue );
 	DValue_Move( item, self->items->data + self->items->size - 1, tp );
@@ -2784,10 +2784,10 @@ static void DaoMap_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue v
 	}
 	if( tp ){
 		if( tp->nested->size >=2 ){
-			tp1 = tp->nested->items.pAbtp[0];
-			tp2 = tp->nested->items.pAbtp[1];
+			tp1 = tp->nested->items.pType[0];
+			tp2 = tp->nested->items.pType[1];
 		}else if( tp->nested->size >=1 ){
-			tp1 = tp->nested->items.pAbtp[0];
+			tp1 = tp->nested->items.pType[0];
 		}
 	}
 	if( pid.t == DAO_PAIR ){
@@ -3114,10 +3114,10 @@ int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 	DEnum ekey, evalue;
 	if( tp ){
 		if( tp->nested->size >=2 ){
-			tp1 = tp->nested->items.pAbtp[0];
-			tp2 = tp->nested->items.pAbtp[1];
+			tp1 = tp->nested->items.pType[0];
+			tp2 = tp->nested->items.pType[1];
 		}else if( tp->nested->size >=1 ){
-			tp1 = tp->nested->items.pAbtp[0];
+			tp1 = tp->nested->items.pType[0];
 		}
 	}
 	/* type checking and setting */
@@ -3716,7 +3716,7 @@ static void DaoTupleCore_GetField( DValue *self0, DaoContext *ctx, DString *name
 static void DaoTupleCore_SetField( DValue *self0, DaoContext *ctx, DString *name, DValue value )
 {
 	DaoTuple *self = self0->v.tuple;
-	DaoType *t, **type = self->unitype->nested->items.pAbtp;
+	DaoType *t, **type = self->unitype->nested->items.pType;
 	int id = DaoTuple_GetIndex( self, ctx, name );
 	if( id <0 ) return;
 	t = type[id];
@@ -3745,7 +3745,7 @@ static void DaoTupleCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 static void DaoTupleCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoTuple *self = self0->v.tuple;
-	DaoType *t, **type = self->unitype->nested->items.pAbtp;
+	DaoType *t, **type = self->unitype->nested->items.pType;
 	int ec = 0;
 	if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
 		int id = DValue_GetInteger( pid );
@@ -3833,7 +3833,7 @@ void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos )
 	if( pos <0 || pos >= self->items->size ) return;
 	val = self->items->data + pos;
 	if( self->unitype && self->unitype->nested->size ){
-		DaoType *t = self->unitype->nested->items.pAbtp[pos];
+		DaoType *t = self->unitype->nested->items.pType[pos];
 		if( t->tid == DAO_PAR_NAMED ) t = t->X.abtype;
 		DValue_Move( it, val, t );
 	}else{

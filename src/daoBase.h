@@ -67,6 +67,9 @@
 #define dao_fe_overflow()  (_status87() & _SW_OVERFLOW)
 #define dao_fe_invalid()  (_status87() & _SW_INVALID)
 
+#define strtoll _strtoi64
+#define wcstoll _wcstoi64
+
 #endif
 
 #if defined (WIN32) && !defined (__GNUC__)

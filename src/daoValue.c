@@ -23,11 +23,6 @@
 #include"daoObject.h"
 #include"daoNumtype.h"
 
-#if _MSC_VER
-#define strtoll _strtoi64
-#define wcstoll _wcstoi64
-#endif
-
 #if 1
 const DValue daoNullValue = { 0, 0, 0, 0, {0}};
 const DValue daoZeroInt = { DAO_INTEGER, 0, 0, 0, {0}};

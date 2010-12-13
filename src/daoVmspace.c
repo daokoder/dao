@@ -829,19 +829,19 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 		DString_Assign( val, argValues->items.pString[i] );
 		if( abtp->nested->size > i ){
 			if( abtp->nested->items.pBase[i] ){
-				int k = abtp->nested->items.pAbtp[i]->tid;
+				int k = abtp->nested->items.pType[i]->tid;
 				char *chars = argValues->items.pString[i]->mbs;
 				if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
-					k = abtp->nested->items.pAbtp[i]->X.abtype->tid;
+					k = abtp->nested->items.pType[i]->X.abtype->tid;
 				if( chars[0] == '+' || chars[0] == '-' ) chars ++;
 				str = argNames->items.pString[i];
 				if( str->size && abtp->mapNames ){
 					DNode *node = MAP_Find( abtp->mapNames, str );
 					if( node ){
 						int id = node->value.pInt;
-						k = abtp->nested->items.pAbtp[id]->tid;
+						k = abtp->nested->items.pType[id]->tid;
 						if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
-							k = abtp->nested->items.pAbtp[id]->X.abtype->tid;
+							k = abtp->nested->items.pType[id]->X.abtype->tid;
 					}
 				}
 				if( k >0 && k <= DAO_DOUBLE && DaoToken_IsNumber( chars, 0 ) ){
@@ -1718,7 +1718,7 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 	DString_Clear( sig );
 	DString_ToMBS( sig );
 	for(i=((rt->attrib & DAO_ROUT_PARSELF)!=0); i<rt->nested->size; i++){
-		it = rt->nested->items.pAbtp[i];
+		it = rt->nested->items.pType[i];
 		if( sig->size ) DString_AppendChar( sig, ',' );
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
 			DString_Append( sig, it->X.abtype->name );

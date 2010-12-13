@@ -7,7 +7,7 @@ class otto
 	private:
 	int a;
 	public:
-	otto(int b=123){ a = b; }
+	otto(int b=123){ a = b; printf( "new otto\n" ); }
 	virtual ~otto(){};
 	int geta(){ return a; }
 };

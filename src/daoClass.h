@@ -21,7 +21,7 @@ struct DaoClass
 	DAO_DATA_COMMON;
 
 	/* Holding index of class members, including data from its parents: */
-	/* negative index indicates an inaccessible private member from a parent. XXX */
+	/* negative index indicates an inaccessible private member from a parent? XXX */
 	DMap *lookupTable; /* <DString*,size_t> */
 
 	DArray   *cstDataTable; /* <DVarray*> */
@@ -65,11 +65,14 @@ struct DaoClass
 	 * this proto-class. */
 	DMap     *protoValues; /* <int,DString*> */
 
-	/* TODO GC */
 	/* for template class: class name[@S,@T=some_type] */
 	DArray   *typeHolders; /* @S, @T */
 	DArray   *typeDefaults; /* some_type */
 	DMap     *instanceClasses; /* instantiated classes */
+	DaoClass *templateClass; /* for incomplete instantiation */
+
+	/* for GC */
+	DArray *references;
 
 	ushort_t  derived;
 	ushort_t  attribs;
@@ -80,6 +83,7 @@ DaoClass* DaoClass_New();
 void DaoClass_Delete( DaoClass *self );
 
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
+void DaoClass_AddReference( DaoClass *self, void *reference );
 
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
 void DaoClass_SetName( DaoClass *self, DString *name );

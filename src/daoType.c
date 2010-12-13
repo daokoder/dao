@@ -184,7 +184,7 @@ void DaoType_MapNames( DaoType *self )
 	if( self->tid != DAO_TUPLE && self->tid != DAO_ROUTINE ) return;
 	if( self->mapNames == NULL ) self->mapNames = DMap_New(D_STRING,0);
 	for(i=0; i<self->nested->size; i++){
-		tp = self->nested->items.pAbtp[i];
+		tp = self->nested->items.pType[i];
 		if( tp->fname ) MAP_Insert( self->mapNames, tp->fname, i );
 	}
 }
@@ -298,7 +298,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt == DAO_MT_INIT ){
 		if( self && self->tid == DAO_INITYPE ){
 			if( defs ) node = MAP_Find( defs, self );
-			if( node ) self = node->value.pAbtp;
+			if( node ) self = node->value.pType;
 		}
 		if( type && type->tid == DAO_INITYPE ){
 			if( defs ) node = MAP_Find( defs, type );
@@ -308,7 +308,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 					return DAO_MT_ANYUDF;
 				return DAO_MT_INIT; /* even if self==NULL, for typing checking for undefined @X */
 			}
-			type = node->value.pAbtp;
+			type = node->value.pType;
 			mt = DAO_MT_INIT;
 			if( type == NULL || type->tid==DAO_ANY || type->tid==DAO_UDF )
 				return DAO_MT_ANYUDF;
@@ -351,8 +351,8 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( self->attrib & DAO_TYPE_EMPTY ) return DAO_MT_SUB;
 		if( self->nested->size > type->nested->size ) return DAO_MT_NOT;
 		for(i=0; i<self->nested->size; i++){
-			it1 = self->nested->items.pAbtp[i];
-			it2 = type->nested->items.pAbtp[i];
+			it1 = self->nested->items.pType[i];
+			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
@@ -364,12 +364,12 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( self->X.extra == NULL && type->X.extra ) return 0;
 		/* self may have extra parameters, but they must have default values: */
 		for(i=type->nested->size; i<self->nested->size; i++){
-			it1 = self->nested->items.pAbtp[i];
+			it1 = self->nested->items.pType[i];
 			if( it1->tid != DAO_PAR_DEFAULT ) return 0;
 		}
 		for(i=0; i<type->nested->size; i++){
-			it1 = self->nested->items.pAbtp[i];
-			it2 = type->nested->items.pAbtp[i];
+			it1 = self->nested->items.pType[i];
+			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, DAO_ROUTINE );
 			/*
 			   printf( "%2i  %2i:  %s  %s\n", i, k, it1->name->mbs, it2->name->mbs );
@@ -481,7 +481,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( defs ){
 			DNode *node = NULL;
 			if( defs ) node = MAP_Find( defs, self );
-			if( node ) return DaoType_MatchValue( node->value.pAbtp, value, defs );
+			if( node ) return DaoType_MatchValue( node->value.pType, value, defs );
 		}
 		return mt;
 	case DAO_MT_SUB :
@@ -489,8 +489,8 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	default : break;
 	}
 	if( self->nested ){
-		if( self->nested->size ) it1 = self->nested->items.pAbtp[0]->tid;
-		if( self->nested->size >1 ) it2 = self->nested->items.pAbtp[1]->tid;
+		if( self->nested->size ) it1 = self->nested->items.pType[0]->tid;
+		if( self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
 	}
 	switch( value.t ){
 	case DAO_ENUM :
@@ -546,7 +546,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		}else{
 			mt = DAO_MT_EQ;
 			for(i=0; i<self->nested->size; i++){
-				tp = self->nested->items.pAbtp[i];
+				tp = self->nested->items.pType[i];
 				if( tp->tid == DAO_PAR_NAMED ) tp = tp->X.abtype;
 
 				/* for C functions that returns a tuple:
@@ -602,7 +602,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		tp = (DaoType*)value.v.p;
 		if( self->tid != DAO_TYPE ) return 0;
 		/* if( tp == self ) return DAO_MT_EQ; */
-		return DaoType_MatchTo( tp, self->nested->items.pAbtp[0], defs );
+		return DaoType_MatchTo( tp, self->nested->items.pType[0], defs );
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
 		if( value.v.pair->unitype == self ) return DAO_MT_EQ;
@@ -625,19 +625,17 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 
 	node = MAP_Find( defs, self );
 	if( node ){
-		if( DString_FindChar( node->value.pAbtp->name, '@', 0 ) != MAXSIZE ){
-			return self;
-		}
-		return DaoType_DefineTypes( node->value.pAbtp, ns, defs );
+		if( node->value.pType == self ) return self;
+		return DaoType_DefineTypes( node->value.pType, ns, defs );
 	}
 
 	if( self->tid == DAO_INITYPE ){
 		node = MAP_Find( defs, self );
 		if( node == NULL ) return self;
-		return DaoType_DefineTypes( node->value.pAbtp, ns, defs );
+		return DaoType_DefineTypes( node->value.pType, ns, defs );
 	}else if( self->tid == DAO_UDF ){
 		node = MAP_Find( defs, self );
-		copy = node ? node->value.pAbtp : NULL;
+		copy = node ? node->value.pType : NULL;
 		if( copy ==0 || copy->tid == DAO_ANY || copy->tid == DAO_UDF ) return self;
 		return DaoType_DefineTypes( copy, ns, defs );
 	}else if( self->tid == DAO_ANY ){
@@ -668,7 +666,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		}
 		DString_AppendChar( copy->name, '<' );
 		for(i=0; i<self->nested->size; i++){
-			nest = DaoType_DefineTypes( self->nested->items.pAbtp[i], ns, defs );
+			nest = DaoType_DefineTypes( self->nested->items.pType[i], ns, defs );
 			if( nest ==NULL ) goto DefFailed;
 			DArray_Append( copy->nested, nest );
 			DString_Append( copy->name, nest->name );
@@ -703,12 +701,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	GC_IncRC( copy->X.abtype );
 	if( self->tid == DAO_OBJECT && self->X.klass->instanceClasses ){
 		DaoClass *klass = self->X.klass;
-		node = DMap_Find( klass->instanceClasses, copy->name );
-		if( node ){
-			klass = node->value.pClass;
-		}else{
-			klass = DaoClass_Instantiate( klass, copy->nested );
-		}
+		klass = DaoClass_Instantiate( klass, copy->nested );
 		DaoType_Delete( copy );
 		return klass->objType;
 	}
@@ -722,7 +715,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 #endif
 	if( node ){
 		DaoType_Delete( copy );
-		return node->value.pAbtp;
+		return node->value.pType;
 	}else{
 		GC_IncRC( copy );
 		DMap_Insert( ns->abstypes, copy->name, copy );
@@ -751,7 +744,7 @@ void DaoType_GetTypes( DaoType *self, DMap *types )
 	}
 	if( self->nested ){
 		for(i=0; i<self->nested->size; i++){
-			DaoType_GetTypes( self->nested->items.pAbtp[i], types );
+			DaoType_GetTypes( self->nested->items.pType[i], types );
 		}
 	}
 	if( self->X.extra && self->X.extra->type == DAO_TYPE )
