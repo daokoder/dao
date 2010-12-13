@@ -2848,44 +2848,136 @@ static void DaoArray_Lib_varn( DaoContext *ctx, DValue *par[], int N )
 		*num = dev / self->size;
 	}
 }
+static int Compare( DaoArray *array, int *slice, int *index, int i, int j )
+{
+	if( index ){
+		i = index[i];
+		j = index[j];
+	}
+	i = slice[i];
+	j = slice[j];
+	switch( array->numType ){
+	case DAO_INTEGER :
+		{
+			int a = array->data.i[i];
+			int b = array->data.i[j];
+			return a == b ? 0 : (a < b ? -1 : 1);
+		}
+	case DAO_FLOAT :
+		{
+			float a = array->data.f[i];
+			float b = array->data.f[j];
+			return a == b ? 0 : (a < b ? -1 : 1);
+		}
+	case DAO_DOUBLE :
+		{
+			double a = array->data.d[i];
+			double b = array->data.d[j];
+			return a == b ? 0 : (a < b ? -1 : 1);
+		}
+	default : break;
+	}
+	return 0;
+}
+static void Swap( DaoArray *array, int *slice, int *index, int i, int j )
+{
+	if( index ){
+		int k = index[i];
+		index[i] = index[j];
+		index[j] = k;
+		return;
+	}
+	i = slice[i];
+	j = slice[j];
+	switch( array->numType ){
+	case DAO_INTEGER :
+		{
+			int a = array->data.i[i];
+			int b = array->data.i[j];
+			array->data.i[i] = b;
+			array->data.i[j] = a;
+			break;
+		}
+	case DAO_FLOAT :
+		{
+			float a = array->data.f[i];
+			float b = array->data.f[j];
+			array->data.f[i] = b;
+			array->data.f[j] = a;
+			break;
+		}
+	case DAO_DOUBLE :
+		{
+			double a = array->data.d[i];
+			double b = array->data.d[j];
+			array->data.d[i] = b;
+			array->data.d[j] = a;
+			break;
+		}
+	default : break;
+	}
+}
+static void QuickSort2( DaoArray *array, int *slice, 
+		int *index, int first, int last, int part, int asc )
+{
+	int lower = first+1, upper = last;
+	int pivot = (first + last) / 2;
+	if( first >= last ) return;
+	Swap( array, slice, index, first, pivot );
+
+	while( lower <= upper ){
+		if( asc ){
+			while( lower < last && Compare( array, slice, index, lower, pivot ) <0 ) lower ++;
+			while( upper > first && Compare( array, slice, index, pivot, upper ) <0 ) upper --;
+		}else{
+			while( lower < last && Compare( array, slice, index, lower, pivot ) >0 ) lower ++;
+			while( upper > first && Compare( array, slice, index, pivot, upper ) >0 ) upper --;
+		}
+		if( lower < upper ){
+			Swap( array, slice, index, lower, upper );
+			upper --;
+		}
+		lower ++;
+	}
+	Swap( array, slice, index, first, upper );
+	if( first < upper-1 ) QuickSort2( array, slice, index, first, upper-1, part, asc );
+	if( upper >= part ) return;
+	if( upper+1 < last ) QuickSort2( array, slice, index, upper+1, last, part, asc );
+}
+void DaoArray_GetSliceShape( DaoArray *self, DArray *shape );
 static void DaoArray_Lib_rank( DaoContext *ctx, DValue *par[], int npar, int asc )
 {
-	IndexValue *data;
 	DaoArray *res = DaoContext_PutArray( ctx );
 	DaoArray *array = par[0]->v.array;
+	DaoArray *ref = array->reference;
+	DArray *slice = array->slice;
 	dint part = par[1]->v.i;
-	int i, N;
+	int i, N = DaoArray_SliceSize( array );
+	int *index;
 	int *ids;
 
-	/* TODO slicing */
-	DaoArray_Sliced( array );
-	if( res == 0 ) return;
+	if( res == NULL ) return;
 	if( array->numType == DAO_COMPLEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "unable to rank complex array" );
 		return;
 	}
-	N = array->size;
+	if( N == 0 ) return;
 	res->numType = DAO_INTEGER;
-	DaoArray_ResizeVector( res, N );
-	ids  = res->data.i;
+	DaoArray_GetSliceShape( array, res->dimAccum );
+	DaoArray_ResizeArray( res, res->dimAccum->items.pSize, res->dimAccum->size );
+	ids = res->data.i;
 	for(i=0; i<N; i++) ids[i] = i;
 
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
-	data = dao_malloc( N * sizeof( IndexValue ) );
+	index = dao_malloc( N * sizeof(int) );
 	for(i=0; i<N; i++){
-		data[i].index = i;
-		data[i].value.t = array->numType;
+		index[i] = i;
+		ids[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
 	}
-	switch( array->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) data[i].value.v.i = array->data.i[i]; break;
-	case DAO_FLOAT  : for(i=0; i<N; i++) data[i].value.v.f = array->data.f[i]; break;
-	case DAO_DOUBLE : for(i=0; i<N; i++) data[i].value.v.d = array->data.d[i]; break;
-	default : break;
-	}
-	QuickSort( data, 0, N-1, part, asc );
-	for(i=0; i<N; i++) ids[i] = data[i].index;
-	dao_free( data );
+	QuickSort2( ref ? ref : array, ids, index, 0, N-1, part, asc );
+	for(i=0; i<N; i++) ids[i] = index[i];
+	dao_free( index );
 }
 static void DaoArray_Lib_ranka( DaoContext *ctx, DValue *par[], int npar )
 {
@@ -2897,40 +2989,24 @@ static void DaoArray_Lib_rankd( DaoContext *ctx, DValue *par[], int npar )
 }
 static void DaoArray_Lib_sort( DaoContext *ctx, DValue *par[], int npar, int asc )
 {
-	IndexValue *data;
 	DaoArray *array = par[0]->v.array;
+	DaoArray *ref = array->reference;
+	DArray *slice = array->slice;
 	dint part = par[1]->v.i;
-	int i, N;
+	int i, N = DaoArray_SliceSize( array );
+	int *index;
 
-	/* TODO slicing */
-	DaoArray_Sliced( array );
 	DaoContext_PutValue( ctx, *par[0] );
 	if( array->numType == DAO_COMPLEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "unable to sort complex array" );
 		return;
 	}
-	N = array->size;
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
-	data = dao_malloc( N * sizeof( IndexValue ) );
-	for(i=0; i<N; i++){
-		data[i].index = i;
-		data[i].value.t = array->numType;
-	}
-	switch( array->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) data[i].value.v.i = array->data.i[i]; break;
-	case DAO_FLOAT  : for(i=0; i<N; i++) data[i].value.v.f = array->data.f[i]; break;
-	case DAO_DOUBLE : for(i=0; i<N; i++) data[i].value.v.d = array->data.d[i]; break;
-	default : break;
-	}
-	QuickSort( data, 0, N-1, part, asc );
-	switch( array->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) array->data.i[i] = data[i].value.v.i; break;
-	case DAO_FLOAT  : for(i=0; i<N; i++) array->data.f[i] = data[i].value.v.f; break;
-	case DAO_DOUBLE : for(i=0; i<N; i++) array->data.d[i] = data[i].value.v.d; break;
-	default : break;
-	}
-	dao_free( data );
+	index = dao_malloc( N * sizeof(int) );
+	for(i=0; i<N; i++) index[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
+	QuickSort2( ref ? ref : array, index, NULL, 0, N-1, part, asc );
+	dao_free( index );
 }
 static void DaoArray_Lib_sorta( DaoContext *ctx, DValue *par[], int npar )
 {
@@ -3995,34 +4071,7 @@ int DaoArray_Sliced( DaoArray *self )
 	if( slice == NULL || ref == NULL ) goto ReturnFalse;
 	if( self->numType != ref->numType ) goto ReturnFalse;
 	if( slice->size != ref->dims->size ) goto ReturnFalse;
-	return DaoArray_SliceFrom( self, ref, slice ); /* XXX */
-	for(i=0; i<slice->size; i++){
-		k = slice->items.pArray[i]->items.pSize[1];
-		S += k > 1;
-		if( k ==0 ){ /* skip empty dimension */
-			DaoArray_ResizeVector( self, 0 );
-			goto ReturnTrue;
-		}
-	}
-	DArray_Clear( self->dimAccum );
-	for(i=0; i<slice->size; i++){
-		k = slice->items.pArray[i]->items.pSize[1];
-		/* skip size one dimension if the final slice has at least two dimensions */
-		if( k == 1 && (S > 1 || self->dimAccum->size > 1) ) continue;
-		DArray_Append( self->dimAccum, k );
-	}
-	DaoArray_ResizeArray( self, self->dimAccum->items.pSize, self->dimAccum->size );
-
-	for(i=0; i<self->size; i++){
-		int j = DaoArray_IndexFromSlice( ref, slice, i );
-		switch( self->numType ){
-		case DAO_INTEGER : self->data.i[i] = ref->data.i[j]; break;
-		case DAO_FLOAT   : self->data.f[i] = ref->data.f[j]; break;
-		case DAO_DOUBLE  : self->data.d[i] = ref->data.d[j]; break;
-		case DAO_COMPLEX : self->data.c[i] = ref->data.c[j]; break;
-		default : break;
-		}
-	}
+	if( DaoArray_SliceFrom( self, ref, slice ) ==0 ) goto ReturnFalse;
 ReturnTrue:
 	GC_DecRC( self->reference );
 	self->reference = NULL;

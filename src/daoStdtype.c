@@ -2276,8 +2276,7 @@ static void DaoLIST_Top( DaoContext *ctx, DValue *p[], int N )
 /* Quick Sort.
  * Adam Drozdek: Data Structures and Algorithms in C++, 2nd Edition.
  */
-	static int
-Compare( DaoContext *ctx, int entry, int reg0, int reg1, int res, DValue v0, DValue v1 )
+static int Compare( DaoContext *ctx, int entry, int reg0, int reg1, int res, DValue v0, DValue v1 )
 {
 	DValue **locs = ctx->regValues;
 
@@ -2286,8 +2285,7 @@ Compare( DaoContext *ctx, int entry, int reg0, int reg1, int res, DValue v0, DVa
 	DaoVmProcess_ExecuteSection( ctx->process, entry );
 	return DValue_GetInteger( * ctx->regValues[ res ] );
 }
-	static void
-PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1, int rr,
+static void PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1, int rr,
 		DValue *data, int first, int last, int part )
 {
 	int lower=first+1, upper=last;
