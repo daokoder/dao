@@ -1512,6 +1512,10 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 			DString_Append( mbs, nest[i]->name );
 			DArray_Append( nstd, nest[i] );
 		}
+		if( tid == DAO_ROUTINE && pb && pb->type == DAO_TYPE ){
+			DString_AppendMBS( mbs, "=>" );
+			DString_Append( mbs, ((DaoType*)pb)->name );
+		}
 		DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
 		DString_AppendMBS( mbs, "<any>" );
@@ -1533,6 +1537,11 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 		klass = (DaoClass*) pb;
 		tp = klass->objType;
 		goto Finalizing;
+	}else if( tid == DAO_ROUTINE && pb && pb->type == DAO_TYPE ){
+		DString_AppendChar( mbs, '<' );
+		DString_AppendMBS( mbs, "=>" );
+		DString_Append( mbs, ((DaoType*)pb)->name );
+		DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_PAR_NAMED ){
 		DString_AppendMBS( mbs, ":" );
 		if( pb->type == DAO_TYPE ) DString_Append( mbs, ((DaoType*)pb)->name );

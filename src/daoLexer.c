@@ -30,6 +30,8 @@ const char *const dao_oper_tokens[] =
 	"\"" ,
 	"#" ,
 	"id" ,
+	"@id" ,
+	"$id" ,
 	"0x0" ,
 	"0.0" ,
 	"0x0" ,
@@ -420,6 +422,8 @@ enum
 	TOK_STRING_MBS ,
 	TOK_STRING_WCS ,
 	TOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
+	TOK_ID_INITYPE ,
+	TOK_ID_SYMBOL ,
 	TOK_OP_COLON ,
 	TOK_OP_ADD ,
 	TOK_OP_SUB ,
@@ -522,6 +526,8 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_MBS_OPEN ,
 	DTOK_WCS_OPEN ,
 	DTOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
+	DTOK_ID_INITYPE ,
+	DTOK_ID_SYMBOL ,
 	DTOK_COLON ,
 	DTOK_ADD ,
 	DTOK_SUB ,
@@ -676,12 +682,16 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_NUMBER_SCI_ES ][ j ] = TOK_NUMBER_SCI;
 			daoLexTable[ TOK_NUMBER_SCI ][ j ] = TOK_NUMBER_SCI;
 			daoLexTable[ TOK_IDENTIFIER ][ j ] = TOK_IDENTIFIER;
-			daoLexTable[ TOK_OP_AT ][ j ] = TOK_IDENTIFIER; /* @3 */
+			daoLexTable[ TOK_ID_INITYPE ][ j ] = TOK_ID_INITYPE;
+			daoLexTable[ TOK_ID_SYMBOL ][ j ] = TOK_ID_SYMBOL;
+			daoLexTable[ TOK_OP_AT ][ j ] = TOK_ID_INITYPE; /* @3 */
 		}else if( isalpha( j ) || j == '_' ){
 			daoLexTable[ TOK_START ][ j ] = TOK_IDENTIFIER;
 			daoLexTable[ TOK_IDENTIFIER ][ j ] = TOK_IDENTIFIER;
-			daoLexTable[ TOK_OP_IMG ][ j ] = TOK_IDENTIFIER;
-			daoLexTable[ TOK_OP_AT ][ j ] = TOK_IDENTIFIER; /* @s2 */
+			daoLexTable[ TOK_ID_INITYPE ][ j ] = TOK_ID_INITYPE;
+			daoLexTable[ TOK_ID_SYMBOL ][ j ] = TOK_ID_SYMBOL;
+			daoLexTable[ TOK_OP_AT ][ j ] = TOK_ID_INITYPE; /* @T */
+			daoLexTable[ TOK_OP_IMG ][ j ] = TOK_ID_SYMBOL; /* $S */
 			if( isxdigit( j ) ){
 				daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_NUMBER_HEX;
 				daoLexTable[ TOK_NUMBER_HEX ][ j ] = TOK_NUMBER_HEX;
@@ -718,6 +728,8 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_NUMBER_DEC_D ][ 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_NUMBER_DEC ][ 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_IDENTIFIER ][ '.' ] = TOK_RESTART;
+	daoLexTable[ TOK_ID_INITYPE ][ '.' ] = TOK_RESTART;
+	daoLexTable[ TOK_ID_SYMBOL ][ '.' ] = TOK_RESTART;
 	daoLexTable[ TOK_OP_SHARP ][ '{' ] = TOK_COMT_OPEN;
 	daoLexTable[ TOK_OP_SHARP ][ '}' ] = TOK_COMT_CLOSE;
 	daoLexTable[ TOK_START ][ '\\' ] = TOK_OP_ESC;
@@ -862,6 +874,7 @@ void DaoToken_Delete( DaoToken *self )
 }
 void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s )
 {
+	if( name == DTOK_ID_INITYPE || name == DTOK_ID_SYMBOL ) type = DTOK_IDENTIFIER;
 	self->type = type;
 	self->name = name;
 	self->index = index;
@@ -874,6 +887,7 @@ void DaoTokens_Append( DArray *self, int name, int line, const char *data )
 	token.type = token.name = name;
 	token.line = line;
 	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
+	if( name == DTOK_ID_INITYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
 	DArray_Append( self, & token );
 	tok = DArray_Top( self );
 	tok->string = DString_New(1);
@@ -1158,6 +1172,8 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 			if( state >= TOK_END ){
 				DString_AppendChar( literal, ch );
 				lextok.type = lextok.name = daoTokenMap[ state ];
+				if( lextok.type == DTOK_ID_INITYPE || lextok.type == DTOK_ID_SYMBOL )
+					lextok.type = DTOK_IDENTIFIER;
 				if( space || comment || lextok.type != DTOK_COMMENT ){
 					if( isspace( lextok.string->mbs[0] ) )
 						lextok.type = lextok.name = daoSpaceType[ (int)lextok.string->mbs[0] ];
@@ -1175,6 +1191,8 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 						DArray_Append( tokens, & lextok );
 					}else if( old > TOK_RESTART && old != TOK_END ){
 						lextok.type = lextok.name = daoTokenMap[ old ];
+						if( lextok.type == DTOK_ID_INITYPE || lextok.type == DTOK_ID_SYMBOL )
+							lextok.type = DTOK_IDENTIFIER;
 						DArray_Append( tokens, & lextok );
 					}else if( space ){
 						if( isspace( lextok.string->mbs[0] ) )
@@ -1226,6 +1244,8 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 		if( lextok.type == DTOK_IDENTIFIER ){
 			lextok.name = dao_key_hash( literal->mbs, literal->size );
 			if( lextok.name == 0 ) lextok.name = DTOK_IDENTIFIER;
+		}else if( lextok.type == DTOK_ID_INITYPE || lextok.type == DTOK_ID_SYMBOL ){
+			lextok.type = DTOK_IDENTIFIER;
 		}
 		if( lextok.type || space ){
 			if( isspace( lextok.string->mbs[0] ) )
