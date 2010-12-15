@@ -579,7 +579,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	if( from.t >= DAO_ARRAY && from.t == to->t && from.v.p == to->v.p ) return 1;
 	if( from.t >= DAO_INTEGER && from.t <= DAO_DOUBLE ){
 		if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) return 0;
-	}else if( from.t >= DAO_COMPLEX && from.t <= DAO_STRING ){
+	}else if( from.t >= DAO_COMPLEX && from.t <= DAO_ENUM ){
 		if( tp->tid != from.t ) return 0;
 	}else if( from.v.p ==NULL && tp->tid == DAO_OBJECT ){
 		from.t = 0;

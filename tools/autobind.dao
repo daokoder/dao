@@ -2672,7 +2672,7 @@ routine Function::Generate()
 	}
 	nowrap = excluded;
 	if( not nowrap and ($FUNC_PROTECTED in attribs) ){
-		nowrap = attribs + $FUNC_STATIC + $FUNC_PURE_VIRTUAL;
+		nowrap = (int)(attribs + $FUNC_STATIC + $FUNC_PURE_VIRTUAL);
 		if( retype.type != retype.type_trans ) nowrap = 1;
 		for( vo in parlist ){
 			if( vo.type != vo.type_trans ) nowrap = 1;

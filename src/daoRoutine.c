@@ -1950,7 +1950,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray   *dataCG = self->nameSpace->cstDataTable;
 	DArray   *typeVG = self->nameSpace->varTypeTable;
 	DValue    empty = daoNullValue;
-	DValue    val;
+	DValue    val = daoNullValue;
 	DValue   *csts;
 	DValue   *pp;
 	int isconst = self->attribs & DAO_ROUT_ISCONST;
@@ -4654,8 +4654,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		default : break;
 		}
 	}
-	GC_DecRC( self->regType->items.pBase[self->regType->size-1] );
-	DArray_PopBack( self->regType );
+#if 0
+	if( self->regType->size ){
+		GC_DecRC( self->regType->items.pBase[self->regType->size-1] );
+		DArray_PopBack( self->regType );
+	}
+#endif
 	for(i=0; i<addRegType->size; i++){
 		GC_IncRC( addRegType->items.pVoid[i] );
 		DArray_Append( self->regType, addRegType->items.pVoid[i] );
@@ -4937,7 +4941,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 		const char *name = getOpcodeName( vmc.code );
 		sprintf( buffer, "%5i :  ", j);
 		DaoStream_WriteMBS( stream, buffer );
-		DaoTokens_AnnotateCode( self->source, vmc, annot, 24 );
+		if( self->source ) DaoTokens_AnnotateCode( self->source, vmc, annot, 24 );
 		sprintf( buffer, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, annot->mbs );
 		DaoStream_WriteMBS( stream, buffer );
 	}

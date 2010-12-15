@@ -1545,15 +1545,15 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 	}else if( tid == DAO_PAR_NAMED ){
 		DString_AppendMBS( mbs, ":" );
 		if( pb->type == DAO_TYPE ) DString_Append( mbs, ((DaoType*)pb)->name );
+	}else if( tid == DAO_PAR_DEFAULT ){
+		DString_AppendMBS( mbs, "=" );
+		if( pb->type == DAO_TYPE ) DString_Append( mbs, ((DaoType*)pb)->name );
 	}
 	node = MAP_Find( self->abstypes, mbs );
 	if( node == NULL ){
+		if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) DString_SetMBS( mbs, name );
 		tp = DaoType_New( mbs->mbs, tid, pb, nstd );
 		if( pb && pb->type == DAO_CDATA ) tp->typer = ((DaoCData*)pb)->typer;
-		if( tid == DAO_PAR_NAMED ){
-			tp->fname = DString_New(1);
-			DString_SetMBS( tp->fname, name );
-		}
 		DaoNameSpace_AddType( self, tp->name, tp );
 	}else{
 		tp = node->value.pType;
