@@ -368,7 +368,6 @@ void DEnum_SetType( DEnum *self, DaoType *type )
 	if( self->type == type ) return;
 	GC_ShiftRC( type, self->type );
 	self->type = type;
-	if( type->mapNames == NULL ) printf( "%s %i\n", type->name->mbs, type->tid );
 	self->value = type->mapNames->root->value.pInt;
 }
 int DEnum_SetSymbols( DEnum *self, const char *symbols )

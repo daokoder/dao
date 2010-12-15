@@ -1297,7 +1297,6 @@ InvalidType:
 	GC_IncRCs( types );
 	GC_DecRCs( types );
 	if( old == NULL ) DArray_Delete( types );
-	printf( "debug\n" );
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[start]->line, tks->mbs );
 	return NULL;
 }
