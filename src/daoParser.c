@@ -1041,22 +1041,42 @@ static DaoType* DaoType_FindType( DString *name, DaoNameSpace *ns, DaoClass *kla
 	if( ns ) return DaoNameSpace_FindType( ns, name );
 	return NULL;
 }
+static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, int *newpos )
+{
+	DaoNameSpace *ns = self->nameSpace;
+	DaoType *type = NULL;
+	DValue scope = daoNullValue;
+	DValue value = daoNullValue;
+	int k = DaoParser_FindScopedData( self, start, &scope, &value, 0, NULL );
+	if( k <0 && value.t == 0 ) return NULL;
+	*newpos = k + 1;
+	switch( value.t ){
+	case DAO_CLASS : type = value.v.klass->objType; break;
+	case DAO_TYPE  : type = (DaoType*) value.v.p; break;
+	case DAO_INTERFACE : type = value.v.inter->abtype; break;
+	default : type = DaoNameSpace_GetTypeV( ns, value );
+	}
+	return type;
+}
 static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, int *newpos )
 {
+	DaoType *type = NULL;
+	DaoCData *cdata = & cptrCData;
 	DaoNameSpace *ns = self->nameSpace;
 	DaoClass *klass = self->hostClass;
 	DaoRoutine *routine = self->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *token = tokens[start];
 	DString *name = token->string;
-	DaoType *type = DaoType_FindType( name, ns, klass, routine );
-	DaoCData *cdata = & cptrCData;
-	DValue scope = daoNullValue;
-	DValue value = daoNullValue;
 	int i = token->name > DKEY_USE ? dao_keywords[ token->name - DKEY_USE ].value : 0;
-	int k;
+
+	if( end > start && token->name == DTOK_IDENTIFIER ){
+		type = DaoParser_ParseUserType( self, start, end, newpos );
+		if( type ) return type;
+	}
 
 	*newpos = start + 1;
+	type = DaoType_FindType( name, ns, klass, routine );
 	if( type ) return type;
 	if( i > 0 && i < 100 ){
 		DaoBase *pbasic = token->name == DKEY_CDATA ? (DaoBase*) cdata : NULL;
@@ -1069,15 +1089,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoNameSpace_MakeType( ns, "...", DAO_UDF, 0,0,0 );
 	}else{
 		/* scoped type or user defined template class */
-		k = DaoParser_FindScopedData( self, start, &scope, &value, 0, NULL );
-		if( k <0 && value.t == 0 ) goto InvalidTypeName;
-		*newpos = k + 1;
-		switch( value.t ){
-		case DAO_CLASS : type = value.v.klass->objType; break;
-		case DAO_TYPE  : type = (DaoType*) value.v.p; break;
-		case DAO_INTERFACE : type = value.v.inter->abtype; break;
-		default : type = DaoNameSpace_GetTypeV( ns, value );
-		}
+		type = DaoParser_ParseUserType( self, start, end, newpos );
 	}
 	return type;
 InvalidTypeName:
@@ -1122,7 +1134,6 @@ ReturnType:
 	}
 	return NULL;
 InvalidTypeForm:
-printf( "error1\n" );
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[i]->line, tokens[i]->string->mbs );
 	return NULL;
 }
@@ -1224,7 +1235,7 @@ static DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *n
 	if( tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
 	if( tokens[start]->name == DTOK_IDENTIFIER ){
 		/* scoped type or user defined template class */
-		type = DaoParser_ParsePlainType( self, start, end, newpos );
+		type = DaoParser_ParseUserType( self, start, end, newpos );
 		if( type == NULL ) goto InvalidTypeName;
 	}else if( tokens[start]->name == DKEY_ENUM && tokens[start+1]->name == DTOK_LT ){
 		gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );

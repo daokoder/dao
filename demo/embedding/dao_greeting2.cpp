@@ -83,9 +83,14 @@ static void Dao_Greeting_Delete( void *self )
 {
 	delete (Greeting*) self;
 }
+static int Dao_Greeting_DelTest( void *self0 )
+{
+	Greeting *self = (Greeting*) self0;
+	return (self!=GetGreetingObject());
+}
 static DaoTypeBase Greeting_Typer = 
 { "Greeting", NULL, dao_Greeting_Nums, dao_Greeting_Meths, 
-  { 0 }, Dao_Greeting_Delete, NULL };
+  { 0 }, Dao_Greeting_Delete, Dao_Greeting_DelTest };
 DaoTypeBase DAO_DLL_GREETING *dao_Greeting_Typer = & Greeting_Typer;
 /* greeting.h */
 static void dao_Greeting_Greeting( DaoContext *_ctx, DValue *_p[], int _n )
