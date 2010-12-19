@@ -671,7 +671,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 		tk = tokens[i]->name;
 		tkp = tokens[i]->type;
 		if( tk == DTOK_DOT ){
-			i += 2; /* thread.my[], obj.skip(). */
+			i += 1; /* thread.my[], obj.skip(). */
 		}else if( tk == DKEY_AND || tk == DKEY_OR || tk == DKEY_NOT || tk == DKEY_IN ){
 			i ++;
 		}else if( tk == DTOK_ARROW ){
@@ -758,10 +758,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 			tk = tokens[i+1]->name;
 			tkp = tokens[i+1]->type;
 			if( old >= DKEY_ENUM && old <= DKEY_LIST && tkp == DTOK_LT ){
-				int rb;
-				self->pairLtGt = 1;
-				rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, i, end );
-				self->pairLtGt = 0;
+				int rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, i, end );
 				if( rb < 0 ) return -1;
 				i = rb + 1;
 			}else if( tkp == DTOK_DOT ){
@@ -972,9 +969,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( tokens[right]->type != DTOK_IDENTIFIER ) goto ErrorInvalidTypeForm;
 		if( right+1 < size && tokens[right+1]->name == DTOK_LT ){
 			start = right + 1;
-			self->pairLtGt = 1;
 			right = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, right, -1 );
-			self->pairLtGt = 0;
 			for( i=start; i<=right; i++ ) DArray_Append( module->partoks, tokens[i] );
 		}
 	}
@@ -3572,10 +3567,10 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		self->curLine = tokens[start]->line;
 		ptok = tokens[start];
 		tki = tokens[start]->name;
-		/*
-		   printf("At tokPos : %i, %i, %p\n", start,ptok->line, ptok->string );
-		   printf("At tokPos : %i, %i, %s\n", start,ptok->line, ptok->string->mbs );
-		 */
+#if 0
+		printf("At tokPos : %i, %i, %p\n", start,ptok->line, ptok->string );
+		printf("At tokPos : %i, %i, %s\n", start,ptok->line, ptok->string->mbs );
+#endif
 		if( self->errors->size ) return 0;
 		if( empty_decos ){
 			DArray_Clear( self->decoFuncs );
@@ -4120,15 +4115,18 @@ DecoratorError:
 				if( abtp == NULL ) return 0;
 				decEnd = colon - 1;
 				expStart = temp2 + 1;
-				end = expEnd = DaoParser_FindPhraseEnd( self, temp2, to );
 				eq = tokens[temp2]->name == DTOK_ASSN || tokens[temp2]->name == DTOK_CASSN ? temp2 : -1 ;
+				if( temp2 < end && eq <0 ){
+					DaoParser_Error2( self, DAO_INVALID_STATEMENT, errorStart, end, 0 );
+					return 0;
+				}
 			}else if( eq >= 0 ){
 				decEnd = eq -1;
 				expStart = eq + 1;
 			}else if( colon >= 0 ){
 				decl = 1;
 				decEnd = colon - 1;
-				abtp = DaoParser_ParseType( self, colon+1, end, & end, NULL );
+				abtp = DaoParser_ParseType( self, colon+1, end, & temp2, NULL );
 				if( abtp == NULL ) return 0;
 			}else{
 				decEnd = end;
@@ -4194,9 +4192,6 @@ DecoratorError:
 				return 0;
 			}
 			DArray_Append( self->toks, vtok );
-			if( storeType & DAO_DATA_LOCAL )
-				DaoParser_DeclareVariable( self, vtok, storeType, abtp );
-			if( self->error ) return 0;
 			var = DaoParser_GetRegister( self, vtok );
 			if( self->error ) return 0;
 			if( var < 0 ){
