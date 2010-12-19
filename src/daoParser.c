@@ -3554,7 +3554,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 	token.string = mbs;
 	self->error = 0;
-	self->permission = self->isClassBody ? DAO_DATA_PUBLIC : DAO_DATA_PROTECTED;
+	self->permission = DAO_DATA_PUBLIC;
 	myNS->vmpEvalConst->topFrame->context->vmSpace = vmSpace;
 	myNS->vmpEvalConst->vmSpace = vmSpace;
 
@@ -3583,7 +3583,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		}
 		DArray_Clear( self->enumTypes );
 		errorStart = start;
-		if( ! self->isClassBody ) self->permission = DAO_DATA_PROTECTED;
+		if( ! self->isClassBody ) self->permission = DAO_DATA_PUBLIC;
 		if( tki >= DKEY_PRIVATE && tki <= DKEY_PUBLIC ){
 			self->permission = tki - DKEY_PRIVATE + DAO_DATA_PRIVATE;
 			start ++;

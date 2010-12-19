@@ -4256,7 +4256,7 @@ void DaoException_Setup( DaoNameSpace *ns )
 	DaoType *type = DaoException_WrapType( ns, & dao_ErrorType_Typer );
 
 	value.v.cdata = exception->X.cdata;
-	DaoNameSpace_AddConst( ns, exception->name, value, DAO_DATA_GLOBAL );
+	DaoNameSpace_AddConst( ns, exception->name, value, DAO_DATA_PUBLIC );
 	DaoNameSpace_AddType( ns, exception->name, exception );
 
 	DaoNameSpace_SetupValues( ns, & dao_Exception_Typer );
