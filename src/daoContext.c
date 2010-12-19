@@ -3580,9 +3580,9 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		value.v.d = 0.0;
 		if( dA.t == DAO_STRING ){
 			str = dA.v.s;
+			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
 			DVarray_Resize( list->items, DString_Size( str ), value );
 			data = list->items->data;
-			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
 			if( str->mbs ){
 				for(i=0; i<str->size; i++){
 					switch( tp->tid ){

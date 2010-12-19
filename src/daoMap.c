@@ -14,6 +14,7 @@
 #include"stdlib.h"
 #include"string.h"
 #include"math.h"
+#include"assert.h"
 
 #include"daoConst.h"
 #include"daoMap.h"
@@ -32,6 +33,7 @@ struct DNodeV1
 	DNode  *parent;
 	DNode  *left;
 	DNode  *right;
+	DNode  *next;
 
 	DNodeData key;
 	DNodeData value;
@@ -46,6 +48,7 @@ struct DNodeV2
 	DNode  *parent;
 	DNode  *left;
 	DNode  *right;
+	DNode  *next;
 
 	DNodeData key;
 	DNodeData value;
@@ -54,11 +57,17 @@ struct DNodeV2
 	DValue value2;
 };
 
-static DNode* DNode_New( int keytype, int valtype )
+static DNode* DNode_New( DMap *map, int keytype, int valtype )
 {
 	struct DNodeV2 *nodev2;
 	struct DNodeV1 *nodev1;
 	DNode *self;
+	if( map->first && map->keytype == keytype && map->valtype == valtype ){
+		DNode *node = map->first;
+		map->first = map->first->next;
+		node->next = NULL;
+		return node;
+	}
 	if( keytype != D_VALUE ) keytype = 0;
 	if( valtype != D_VALUE ) valtype = 0;
 	switch( (keytype<<8) | valtype ){
@@ -126,6 +135,8 @@ DMap* DMap_New( short kt, short vt )
 	DMap *self = (DMap*) dao_malloc( sizeof( DMap) );
 	self->size = 0;
 	self->tsize = 0;
+	self->first = NULL;
+	self->last = NULL;
 	self->root = NULL;
 	self->table = NULL;
 	self->keytype = kt;
@@ -363,19 +374,28 @@ static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )
 		break;
 	}
 }
-static void* DMap_CopyItem( DValue *val, void *item, short type )
+static void DMap_CopyItem( void **dest, void *item, short type )
 {
 	int n = 2*sizeof(void*);
-	void *p = item;
-	switch( type ){
-	case D_STRING : return DString_Copy( (DString*) item );
-	case D_ARRAY  : return DArray_Copy( (DArray*) item );
-	case D_MAP    : return DMap_Copy( (DMap*) item );
-	case D_VALUE  : DValue_Copy( val, *(DValue*) item ); return val;
-	case D_VOID2  : item = dao_malloc(n); memcpy(item,p,n); break;
-	default : break;
+	if( *dest == NULL ){
+		switch( type ){
+		case D_STRING : *dest = DString_Copy( (DString*) item ); break;
+		case D_ARRAY  : *dest = DArray_Copy( (DArray*) item ); break;
+		case D_MAP    : *dest = DMap_Copy( (DMap*) item ); break;
+		case D_VALUE  : assert( *dest != NULL ); break; /* should never happen */
+		case D_VOID2  : *dest = dao_malloc(n); memcpy(*dest, item, n); break;
+		default : *dest = item; break;
+		}
+	}else{
+		switch( type ){
+		case D_STRING : DString_Assign( (DString*)(*dest), (DString*) item ); break;
+		case D_ARRAY  : DArray_Assign( (DArray*)(*dest), (DArray*) item ); break;
+		case D_MAP    : DMap_Assign( (DMap*)(*dest), (DMap*) item ); break;
+		case D_VALUE  : DValue_Copy( (DValue*)(*dest), *(DValue*) item ); break;
+		case D_VOID2  : memcpy(*dest, item, n); break;
+		default : *dest = item; break;
+		}
 	}
-	return item;
 }
 static void DMap_DeleteItem( void *item, short type )
 {
@@ -387,6 +407,23 @@ static void DMap_DeleteItem( void *item, short type )
 	case D_VOID2  : dao_free( item ); break;
 	default : break;
 	}
+}
+static void DMap_BufferNode( DMap *self, DNode *node )
+{
+	node->parent = node->left = node->right = node->next = NULL;
+	if( self->first == NULL ){
+		self->first = self->last = node;
+		return;
+	}
+	self->last->next = node;
+	self->last = node;
+}
+static void DMap_BufferTree( DMap *self, DNode *node )
+{
+	if( node == NULL ) return;
+	DMap_BufferTree( self, node->left );
+	DMap_BufferTree( self, node->right );
+	DMap_BufferNode( self, node );
 }
 static void DMap_DeleteNode( DMap *self, DNode *node )
 {
@@ -411,6 +448,19 @@ void DMap_Clear( DMap *self )
 		self->table = (DNode**) dao_calloc( self->tsize, sizeof(DNode*) );
 	}else{
 		DMap_DeleteTree( self, self->root );
+	}
+	self->root = NULL;
+	self->size = 0;
+}
+void DMap_Reset( DMap *self )
+{
+	int i;
+	if( self->hashing ){
+		for(i=0; i<self->tsize; i++) DMap_BufferTree( self, self->table[i] );
+		memset( self->table, 0, self->tsize*sizeof(DNode*) );
+		self->tsize = 4;
+	}else{
+		DMap_BufferTree( self, self->root );
 	}
 	self->root = NULL;
 	self->size = 0;
@@ -613,7 +663,7 @@ static void DMap_EraseChild( DMap *self, DNode *node )
 	}else{
 		self->root = NULL;
 	}
-	DMap_DeleteNode( self, extreme );
+	DMap_BufferNode( self, extreme );
 }
 void DMap_EraseNode( DMap *self, DNode *node )
 {
@@ -722,7 +772,7 @@ static DNode* DMap_SimpleInsert( DMap *self, DNode *node )
 }
 DNode* DMap_Insert( DMap *self, void *key, void *value )
 {
-	DNode *p, *node=DNode_New( self->keytype, self->valtype );
+	DNode *p, *node = DNode_New( self, self->keytype, self->valtype );
 	void *okey = node->key.pVoid;
 	void *ovalue = node->value.pVoid;
 	int id = 0;
@@ -734,8 +784,8 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 			self->size += 1;
 			self->table[id] = node;
 			node->color = RB_BLACK;
-			node->key.pVoid = DMap_CopyItem( node->key.pValue, key, self->keytype );
-			node->value.pVoid = DMap_CopyItem( node->value.pValue, value, self->valtype );
+			DMap_CopyItem( & node->key.pVoid, key, self->keytype );
+			DMap_CopyItem( & node->value.pVoid, value, self->valtype );
 			return node;
 		}
 	}
@@ -745,8 +795,8 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 	node->key.pVoid = okey;
 	node->value.pVoid = ovalue;
 	if( p == node ){ /* key not exist: */
-		node->key.pVoid = DMap_CopyItem( node->key.pValue, key, self->keytype );
-		node->value.pVoid = DMap_CopyItem( node->value.pValue, value, self->valtype );
+		DMap_CopyItem( & node->key.pVoid, key, self->keytype );
+		DMap_CopyItem( & node->value.pVoid, value, self->valtype );
 		DMap_InsertNode( self, node );
 		if( self->hashing ){
 			self->table[id] = self->root;
@@ -754,7 +804,8 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 		}
 	}else{
 		DMap_DeleteItem( p->value.pVoid, self->valtype );
-		p->value.pVoid = DMap_CopyItem( p->value.pValue, value, self->valtype );
+		if( self->valtype != D_VALUE ) p->value.pVoid = NULL;
+		DMap_CopyItem( & p->value.pVoid, value, self->valtype );
 		dao_free( node );
 	}
 	return p;

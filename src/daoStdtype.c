@@ -2855,6 +2855,10 @@ static void DaoMAP_Clear( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoMap_Clear( p[0]->v.map );
 }
+static void DaoMAP_Reset( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoMap_Reset( p[0]->v.map );
+}
 static void DaoMAP_Erase( DaoContext *ctx, DValue *p[], int N )
 {
 	DMap *self = p[0]->v.map->items;
@@ -2997,6 +3001,7 @@ static void DaoMAP_Iter( DaoContext *ctx, DValue *p[], int N )
 static DaoFuncItem mapMeths[] =
 {
 	{ DaoMAP_Clear,  "clear( self :map<any,any> )" },
+	{ DaoMAP_Reset,  "reset( self :map<any,any> )" },
 	{ DaoMAP_Erase,  "erase( self :map<any,any> )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
@@ -3104,6 +3109,10 @@ void DaoMap_Delete( DaoMap *self )
 void DaoMap_Clear( DaoMap *self )
 {
 	DMap_Clear( self->items );
+}
+void DaoMap_Reset( DaoMap *self )
+{
+	DMap_Reset( self->items );
 }
 int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 {

@@ -41,6 +41,7 @@ struct DNode
 	DNode  *parent;
 	DNode  *left;
 	DNode  *right;
+	DNode  *next;
 
 	DNodeData key;
 	DNodeData value;
@@ -50,8 +51,10 @@ extern DNode* DNode_First( DNode *self );
 
 struct DMap
 {
-	DNode  *root;
 	DNode **table;
+	DNode  *root;
+	DNode  *first;
+	DNode  *last;
 	int     size;
 	int     tsize;
 	char    keytype;
@@ -65,6 +68,7 @@ extern void DMap_Assign( DMap *self, DMap *other );
 
 extern void DMap_Delete( DMap *self );
 extern void DMap_Clear( DMap *self );
+extern void DMap_Reset( DMap *self );
 /* Insert key/value, and return the previous value if existed. */
 extern void DMap_Erase( DMap *self, void *key );
 void DMap_EraseNode( DMap *self, DNode *node );

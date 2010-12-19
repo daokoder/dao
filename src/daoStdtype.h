@@ -123,6 +123,7 @@ struct DaoMap
 DaoMap* DaoMap_New( int hashing );
 void DaoMap_Delete( DaoMap *self );
 void DaoMap_Clear( DaoMap *self );
+void DaoMap_Reset( DaoMap *self );
 
 int DaoMap_Insert( DaoMap *self, DValue key, DValue value );
 void DaoMap_Erase( DaoMap *self, DValue key );

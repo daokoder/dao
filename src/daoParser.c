@@ -1386,7 +1386,6 @@ static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 		}
 		if( res.t ==0 && self->hostCData ){
 			res = DaoFindValueOnly( self->hostCData->typer, name );
-			printf( ">>>>>>>>>>> %s  %i\n", name->mbs, res.t );
 		}
 		if( res.t ==0 ) res = DaoNameSpace_GetData( myNS, name );
 	}
@@ -5898,7 +5897,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 	int rbrack=right, regC, cstlast;
 	int start=left, N=0;
 	int regLast = -1;
-	int reg, rb, i;
+	int reg, reg2, rb, i;
 	ushort_t opB;
 
 	/*
@@ -5911,15 +5910,29 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 	}
 	*cst = 0;
 	if( tokens[left]->type == DTOK_IDENTIFIER && (tki == DTOK_COLON2 || tki == DTOK_LT) ){
+		DString *name = DString_New(1);
 		DValue scope = daoNullValue;
 		DValue value = daoNullValue;
-		int pos = DaoParser_FindScopedData( self, start, & scope, & value, 0, NULL );
-		if( pos >=0 ){
-			start = pos + 1;
+		int pos = DaoParser_FindScopedData( self, start, & scope, & value, 0, name );
+		if( pos >=0 && value.t != DAO_STRING ){
 			regLast = DRoutine_AddConstValue( (DRoutine*)self->routine, value );
 			*cst = LOOKUP_BIND_LC( regLast );
 			regLast = DaoParser_GetNormRegister( self, *cst, start, 0, pos );
+			start = pos + 1;
+		}else if( pos >=0 && scope.t && value.t == DAO_STRING ){
+			int k = DString_RFindMBS( name, "::", name->size );
+			if( k != MAXSIZE ) DString_Erase( name, 0, k+1 );
+			reg = self->locRegCount;
+			DaoParser_PushRegister( self );
+			regLast = DRoutine_AddConstValue( (DRoutine*)self->routine, scope );
+			DaoParser_AddCode( self, DVM_GETCL, 0, regLast, reg, start, 0, pos );
+			reg2 = DaoParser_AddFieldConst( self, name );
+			regLast = self->locRegCount;
+			DaoParser_PushRegister( self );
+			DaoParser_AddCode( self, DVM_GETF, reg, reg2, regLast, start, 0, pos+1 );
+			start = pos + 1;
 		}
+		DString_Delete( name );
 	}
 	while( start <= right ){
 		int pos = tokens[start]->line;
