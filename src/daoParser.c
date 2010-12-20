@@ -3625,6 +3625,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			default : break;
 			}
 			if( comb || ((storeType & DAO_DATA_STATIC) && ! self->isClassBody) ){
+				if( comb ==0 ) DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
 				DaoParser_Error2( self, DAO_INVALID_STORAGE, errorStart, start, 0 );
 				return 0;
 			}
@@ -3714,9 +3715,18 @@ DecoratorError:
 			}
 			start = rb + 1;
 			continue;
-		}else if( tki == DKEY_VIRTUAL && tki2 >= DKEY_SUB && tki2 <= DKEY_FUNCTION ){
-			start ++;
-			continue;
+		}else if( tki == DKEY_VIRTUAL ){
+			int t3 = start+2 <= to ? tokens[start+2]->name : 0;
+			if( tki2 >= DKEY_SUB && tki2 <= DKEY_FUNCTION ){
+				start ++;
+				continue;
+			}else if( tki2 == DKEY_STATIC && t3 >= DKEY_SUB && t3 <= DKEY_FUNCTION ){
+				start ++;
+				continue;
+			}else{
+				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
+				return 0;
+			}
 		}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
 			end = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, -1, 1 );
 			if( end < 0 ) return 0;

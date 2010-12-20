@@ -911,13 +911,15 @@ CallEntry:
 	dataCG = routine->nameSpace->cstDataTable;
 	dataVG = routine->nameSpace->varDataTable;
 	typeVG = routine->nameSpace->varTypeTable;
-	if( routine->tidHost == DAO_OBJECT && !(routine->attribs & DAO_ROUT_STATIC) ){
+	if( routine->tidHost == DAO_OBJECT ){
 		host = routine->routHost->X.klass;
 		dataCK = host->cstDataTable;
 		dataVK = host->glbDataTable;
 		typeVK = host->glbTypeTable;
-		dataVO = this->objValues;
-		typeVO = host->objDataType;
+		if( !(routine->attribs & DAO_ROUT_STATIC) ){
+			dataVO = this->objValues;
+			typeVO = host->objDataType;
+		}
 	}
 	if( routine->upRoutine ){
 		dataCL[1] = routine->upRoutine->routConsts;
@@ -3112,21 +3114,31 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 	DaoException *ex = (DaoException*) except->data;
 	int i, h, w = 100, n = ex->callers->size;
 	DaoStream *ss = DaoStream_New();
+	DString *sstring = ss->streamString;
 	ss->attribs |= DAO_IO_STRING;
 
 	DaoStream_WriteMBS( ss, "[[" );
 	DaoStream_WriteString( ss, ex->name );
 	DaoStream_WriteMBS( ss, "]] --- " );
-	h = ss->streamString->size;
+	h = sstring->size;
 	if( h > 40 ) h = 40;
 	DaoStream_WriteString( ss, ex->info );
 	DaoStream_WriteMBS( ss, ":" );
 	DaoStream_WriteNewLine( ss );
-	DString_Format( ss->streamString, w, h );
-	DaoStream_WriteString( stream, ss->streamString );
-	DString_Clear( ss->streamString );
+	DString_Format( sstring, w, h );
+	DaoStream_WriteString( stream, sstring );
+	DString_Clear( sstring );
 
-	DaoStream_WriteMBS( ss, "  Raised by:  " );
+	if( ex->data.t == DAO_STRING ){
+		DaoStream_WriteString( ss, ex->data.v.s );
+		if( DString_RFindChar( sstring, '\n', -1 ) != sstring->size-1 )
+			DaoStream_WriteNewLine( ss );
+		DaoStream_WriteString( stream, sstring );
+		DString_Clear( sstring );
+		DaoStream_WriteMBS( ss, "--\n" );
+	}
+
+	DaoStream_WriteMBS( ss, "Raised by:  " );
 	if( ex->routine->attribs & DAO_ROUT_PARSELF ){
 		DaoType *type = ex->routine->routType->nested->items.pType[0];
 		DaoType_WriteMainName( type->X.abtype, ss );
@@ -3153,13 +3165,13 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 		DaoStream_WriteString( ss, ex->routine->nameSpace->name );
 		DaoStream_WriteMBS( ss, "\";\n" );
 	}
-	DString_Format( ss->streamString, w, 14 );
-	DaoStream_WriteString( stream, ss->streamString );
-	DString_Clear( ss->streamString );
+	DString_Format( sstring, w, 12 );
+	DaoStream_WriteString( stream, sstring );
+	DString_Clear( sstring );
 
 	for(i=0; i<n; i++){
 		DRoutine *rout = (DRoutine*) ex->callers->items.pRout[i];
-		DaoStream_WriteMBS( ss, "  Called by:  " );
+		DaoStream_WriteMBS( ss, "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
 			DaoType *type = rout->routType->nested->items.pType[0];
 			DaoType_WriteMainName( type->X.abtype, ss );
@@ -3175,9 +3187,9 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 		DaoStream_WriteMBS( ss, " in file \"" );
 		DaoStream_WriteString( ss, rout->nameSpace->name );
 		DaoStream_WriteMBS( ss, "\";\n" );
-		DString_Format( ss->streamString, w, 14 );
-		DaoStream_WriteString( stream, ss->streamString );
-		DString_Clear( ss->streamString );
+		DString_Format( sstring, w, 12 );
+		DaoStream_WriteString( stream, sstring );
+		DString_Clear( sstring );
 	}
 	DaoStream_Delete( ss );
 }

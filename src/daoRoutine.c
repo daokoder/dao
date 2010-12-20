@@ -98,7 +98,6 @@ int  DRoutine_AddConstValue( DRoutine *self, DValue value )
 }
 void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout )
 {
-	int i;
 	GC_IncRC( rout );
 	if( self->routHost == rout->routHost ){
 		DArray_PushFront( self->routTable, rout );
@@ -1716,6 +1715,12 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 	DMap *defs = DMap_New(0,0);
 	DaoType  *abtp, **partypes = routType->nested->items.pType;
 	DaoType **tps = ts;
+	DaoType *tbuf[DAO_MAX_PARAM];
+
+	if( ts == NULL && csts ){
+		tps = ts = tbuf;
+		for(i=0; i<np; i++) tbuf[i] = DaoNameSpace_GetTypeV( ns, csts[i] );
+	}
 
 	if( routType->nested ){
 		ndef = routType->nested->size;
@@ -1859,6 +1864,45 @@ void DRoutine_ShowError( DRoutine *self, DaoType *selftype,
 	 */
 }
 
+void DaoPrintCallError( DArray *errors, DaoStream *stdio )
+{
+	DString *mbs = DString_New(1);
+	int i, k;
+	for(i=0; i<errors->size; i+=2){
+		DRoutine *rout = errors->items.pRout2[i];
+		DaoStream_WriteMBS( stdio, "  ** " );
+		DaoStream_WriteString( stdio, errors->items.pString[i+1] );
+		DaoStream_WriteMBS( stdio, "     Assuming  : " );
+		if( DaoToken_IsValidName( rout->routName->mbs, rout->routName->size ) ){
+			DaoStream_WriteMBS( stdio, "routine " );
+		}else{
+			DaoStream_WriteMBS( stdio, "operator " );
+		}
+		k = DString_RFindMBS( rout->routType->name, "=>", rout->routType->name->size );
+		DString_Assign( mbs, rout->routName );
+		DString_AppendChar( mbs, '(' );
+		DString_AppendDataMBS( mbs, rout->routType->name->mbs + 8, k-9 );
+		DString_AppendChar( mbs, ')' );
+		if( rout->routType->name->mbs[k+1] != '?' ){
+			DString_AppendMBS( mbs, "=>" );
+			DString_Append( mbs, rout->routType->X.abtype->name );
+		}
+		DString_AppendMBS( mbs, ";\n" );
+		//DaoStream_WritePointer( stdio, rout );
+		DaoStream_WriteString( stdio, mbs );
+		DaoStream_WriteMBS( stdio, "     Reference : " );
+		if( rout->type == DAO_ROUTINE ){
+			DaoStream_WriteMBS( stdio, "line " );
+			DaoStream_WriteInt( stdio, ((DaoRoutine*)rout)->defLine );
+			DaoStream_WriteMBS( stdio, ", " );
+		}
+		DaoStream_WriteMBS( stdio, "file \"" );
+		DaoStream_WriteString( stdio, rout->nameSpace->name );
+		DaoStream_WriteMBS( stdio, "\";\n" );
+		DString_Delete( errors->items.pString[i+1] );
+	}
+	DString_Delete( mbs );
+}
 int DaoRoutine_InferTypes( DaoRoutine *self )
 {
 #define NoCheckingType(t) ((t->tid==DAO_UDF)|(t->tid==DAO_ANY)|(t->tid==DAO_INITYPE))
@@ -4824,38 +4868,7 @@ ErrorTyping:
 					DaoStream_WriteMBS( stdio, " \";\n" );
 				}
 #endif
-				for(i=0; i<errors->size; i+=2){
-					rout = errors->items.pRout2[i];
-					DaoStream_WriteMBS( stdio, "  ** " );
-					DaoStream_WriteString( stdio, errors->items.pString[i+1] );
-					DaoStream_WriteMBS( stdio, "     Assuming  : " );
-					if( DaoToken_IsValidName( rout->routName->mbs, rout->routName->size ) ){
-						DaoStream_WriteMBS( stdio, "routine " );
-					}else{
-						DaoStream_WriteMBS( stdio, "operator " );
-					}
-					k = DString_RFindMBS( rout->routType->name, "=>", rout->routType->name->size );
-					DString_Assign( mbs, rout->routName );
-					DString_AppendChar( mbs, '(' );
-					DString_AppendDataMBS( mbs, rout->routType->name->mbs + 8, k-9 );
-					DString_AppendChar( mbs, ')' );
-					if( rout->routType->name->mbs[k+1] != '?' ){
-						DString_AppendMBS( mbs, "=>" );
-						DString_Append( mbs, rout->routType->X.abtype->name );
-					}
-					DString_AppendMBS( mbs, ";\n" );
-					DaoStream_WriteString( stdio, mbs );
-					DaoStream_WriteMBS( stdio, "     Reference : " );
-					if( rout->type == DAO_ROUTINE ){
-						DaoStream_WriteMBS( stdio, "line " );
-						DaoStream_WriteInt( stdio, ((DaoRoutine*)rout)->defLine );
-						DaoStream_WriteMBS( stdio, ", " );
-					}
-					DaoStream_WriteMBS( stdio, "file \"" );
-					DaoStream_WriteString( stdio, rout->nameSpace->name );
-					DaoStream_WriteMBS( stdio, "\";\n" );
-					DString_Delete( errors->items.pString[i+1] );
-				}
+				DaoPrintCallError( errors, stdio );
 				DArray_Delete( errors );
 				if( stdio != ns->vmSpace->stdStream ) DaoStream_Delete( stdio );
 				dao_free( init );
@@ -4906,11 +4919,30 @@ static const char *const sep1 = "==========================================\n";
 static const char *const sep2 =
 "-------------------------------------------------------------------------\n";
 
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output )
+{
+	DaoVmCodeX **vmCodes = self->annotCodes->items.pVmc;
+	DaoVmCodeX vmc;
+	char buffer1[10];
+	char buffer2[200];
+	const char *fmt = daoRoutineCodeFormat;
+	const char *name;
+
+	DString_Clear( output );
+	if( i < 0 || i >= self->annotCodes->size ) return;
+	vmc = *vmCodes[i];
+	name = getOpcodeName( vmc.code );
+	sprintf( buffer1, "%5i :  ", i);
+	if( self->source ) DaoTokens_AnnotateCode( self->source, vmc, output, 24 );
+	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->mbs );
+	DString_SetMBS( output, buffer1 );
+	DString_AppendMBS( output, buffer2 );
+}
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 {
 	DaoVmCodeX **vmCodes;
 	DString *annot;
-	static const char *fmt = "%-11s : %5i , %5i , %5i ;  %4i;   %s\n";
+	const char *fmt = daoRoutineCodeFormat;
 	char buffer[200];
 	int j;
 
@@ -4930,13 +4962,15 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, "\n" );
 	DaoStream_WriteMBS( stream, sep1 );
 	DaoStream_WriteMBS( stream, "Virtual Machine Code:\n\n" );
-	DaoStream_WriteMBS( stream,
-			"   ID :    OPCODE    :     A ,     B ,     C ;  [ LINE ],  NOTES\n" );
+	DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
 
 	DaoStream_WriteMBS( stream, sep2 );
 	annot = DString_New(1);
 	vmCodes = self->annotCodes->items.pVmc;
 	for( j=0; j<self->annotCodes->size; j++){
+		DaoRoutine_FormatCode( self, j, annot );
+		DaoStream_WriteString( stream, annot );
+		continue;
 		DaoVmCodeX vmc = *vmCodes[j];
 		const char *name = getOpcodeName( vmc.code );
 		sprintf( buffer, "%5i :  ", j);

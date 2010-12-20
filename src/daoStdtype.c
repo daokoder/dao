@@ -4378,8 +4378,9 @@ void DaoException_CleanUp()
 DaoTypeBase* DaoException_GetType( int type )
 {
 	switch( type ){
-	case DAO_EXCEPT_NONE : return & dao_ExceptionNone_Typer;
-	case DAO_EXCEPT_ANY : return & dao_ExceptionAny_Typer;
+	case DAO_EXCEPTION : return & dao_Exception_Typer;
+	case DAO_EXCEPTION_NONE : return & dao_ExceptionNone_Typer;
+	case DAO_EXCEPTION_ANY : return & dao_ExceptionAny_Typer;
 	case DAO_WARNING : return & dao_ExceptionWarning_Typer;
 	case DAO_ERROR : return & dao_ExceptionError_Typer;
 	case DAO_ERROR_FIELD : return & dao_ErrorField_Typer;
@@ -4405,114 +4406,12 @@ DaoTypeBase* DaoException_GetType( int type )
 }
 void DaoException_Init( DaoException *self, DaoTypeBase *typer )
 {
-	if( typer == & dao_Exception_Typer ){
-		DString_SetMBS( self->name, "Exception" );
-		DString_SetMBS( self->info, "undefined exception" );
-		return;
-	}
-	if( typer == & dao_ExceptionNone_Typer ){
-		DString_SetMBS( self->name, "Exception.None" );
-		DString_SetMBS( self->info, "none exception" );
-		return;
-	}
-	if( typer == & dao_ExceptionAny_Typer ){
-		DString_SetMBS( self->name, "Exception.Any" );
-		DString_SetMBS( self->info, "any or none exception" );
-		return;
-	}
-	if( typer == & dao_ExceptionWarning_Typer ){
-		DString_SetMBS( self->name, "Exception.Warning" );
-		DString_SetMBS( self->info, "undefined error" );
-		return;
-	}
-	if( typer == & dao_ExceptionError_Typer ){
-		DString_SetMBS( self->name, "Exception.Error" );
-		DString_SetMBS( self->info, "undefined error" );
-		return;
-	}
-	if( typer == & dao_ErrorField_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Field" );
-		DString_SetMBS( self->info, "invalid field accessing" );
-		return;
-	}
-	if( typer == & dao_FieldNotExist_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Field.NotExist" );
-		DString_SetMBS( self->info, "field not exist" );
-		return;
-	}
-	if( typer == & dao_FieldNotPermit_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Field.NotPermit" );
-		DString_SetMBS( self->info, "field not permit" );
-		return;
-	}
-	if( typer == & dao_ErrorFloat_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Float" );
-		DString_SetMBS( self->info, "invalid floating point operation" );
-		return;
-	}
-	if( typer == & dao_FloatDivByZero_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Float" );
-		DString_SetMBS( self->info, "division by zero" );
-		return;
-	}
-	if( typer == & dao_FloatOverFlow_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Float" );
-		DString_SetMBS( self->info, "floating point overflow" );
-		return;
-	}
-	if( typer == & dao_FloatUnderFlow_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Float" );
-		DString_SetMBS( self->info, "floating point underflow" );
-		return;
-	}
-	if( typer == & dao_ErrorIndex_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Index" );
-		DString_SetMBS( self->info, "invalid index" );
-		return;
-	}
-	if( typer == & dao_IndexOutOfRange_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Index.OutOfRange" );
-		DString_SetMBS( self->info, "index out of range" );
-		return;
-	}
-	if( typer == & dao_ErrorKey_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Key" );
-		DString_SetMBS( self->info, "invalid key" );
-		return;
-	}
-	if( typer == & dao_KeyNotExist_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Key.NotExist" );
-		DString_SetMBS( self->info, "key not exist" );
-		return;
-	}
-	if( typer == & dao_ErrorParam_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Param" );
-		DString_SetMBS( self->info, "invalid parameter list for the call" );
-		return;
-	}
-	if( typer == & dao_ErrorSyntax_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Syntax" );
-		DString_SetMBS( self->info, "invalid syntax" );
-		return;
-	}
-	if( typer == & dao_ErrorValue_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Value" );
-		DString_SetMBS( self->info, "invalid variable value for the operation" );
-		return;
-	}
-	if( typer == & dao_ErrorType_Typer ){
-		DString_SetMBS( self->name, "Exception.Error.Type" );
-		DString_SetMBS( self->info, "invalid variable type for the operation" );
-		return;
-	}
-	if( typer == & dao_WarningSyntax_Typer ){
-		DString_SetMBS( self->name, "Exception.Warning.Syntax" );
-		DString_SetMBS( self->info, "invalid syntax" );
-		return;
-	}
-	if( typer == & dao_WarningValue_Typer ){
-		DString_SetMBS( self->name, "Exception.Warning.Value" );
-		DString_SetMBS( self->info, "invalid value for the operation" );
-		return;
+	int i;
+	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
+		if( typer == DaoException_GetType( i ) ){
+			DString_SetMBS( self->name, daoExceptionName[i] );
+			DString_SetMBS( self->info, daoExceptionInfo[i] );
+			return;
+		}
 	}
 }

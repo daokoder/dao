@@ -534,12 +534,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					if( value.t == DAO_ROUTINE || value.t == DAO_FUNCTION )
 						rep = (DRoutine*) value.v.routine;
 				}
-				if( rep && mem ){
-					for( k=0; k<mem->routTable->size; k++){
-						DRoutine *rt = (DRoutine*)mem->routTable->items.pBase[k];
-						if( rt->routHost != klass->objType ) continue;
-						DRoutine_AddOverLoad( rep, rt );
-					}
+				if( rep && mem && mem->minimal ==0 && mem->routHost == klass->objType ){
+					/* no need to use mem->routTable, overloaded methods have 
+					 * multiple entries in klass->cstDataName. */
+					DRoutine_AddOverLoad( rep, mem );
 				}
 			}
 			/* class global data */

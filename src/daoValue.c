@@ -736,7 +736,7 @@ DValue DValue_NewDouble( double v )
 	res.v.d = v;
 	return res;
 }
-DValue DValue_NewMBString( char *s, int n )
+DValue DValue_NewMBString( const char *s, int n )
 {
 	DValue res = daoNullString;
 	res.v.s = DString_New(1);
@@ -746,7 +746,7 @@ DValue DValue_NewMBString( char *s, int n )
 		DString_SetMBS( res.v.s, s );
 	return res;
 }
-DValue DValue_NewWCString( wchar_t *s, int n )
+DValue DValue_NewWCString( const wchar_t *s, int n )
 {
 	DValue res = daoNullValue;
 	res.v.s = DString_New(0);

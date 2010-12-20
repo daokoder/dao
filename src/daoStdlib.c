@@ -187,8 +187,6 @@ static void STD_Copy( DaoContext *ctx, DValue *p[], int N )
 
 extern void SplitByWhiteSpaces( DString *str, DArray *tokens );
 
-static const char *const header =
-"   ID  : OPCODE :     A ,    B ,    C ; [ LINE ] ( LL )\n";
 static const char *const sep =
 "-------------------------------------------------------------------\n";
 static const char *const help =
@@ -226,6 +224,7 @@ void DaoVmProcess_Trace( DaoVmProcess *self, int depth )
 		DaoStream_WriteNewLine( stream );
 	}
 }
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output );
 void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoUserHandler *handler = ctx->vmSpace->userHandler;
@@ -235,7 +234,7 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 	DArray *tokens;
 	DMap   *cycData;
 	char *chs, *cmd, buffer[100];
-	int i;
+	int i, j;
 	if( ! (ctx->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
 	input = DString_New(1);
 	if( N > 0 && p[0]->t == DAO_STREAM ){
@@ -307,7 +306,8 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
 			DaoStream_WriteMBS( stream, help );
 		}else if( strcmp( cmd, "l" ) == 0 || strcmp( cmd, "list" ) == 0 ){
-			DaoVmCode *vmCodes = routine->vmCodes->codes;
+			DaoVmCodeX **vmCodes = routine->annotCodes->items.pVmc;
+			DString *mbs = DString_New(1);
 			int entry = ctx->vmc - ctx->routine->vmCodes->codes;
 			int start = entry - 10;
 			int end = entry;
@@ -326,14 +326,13 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 			DaoStream_WriteMBS( stream, "(): " );
 			if( routine->routType ) DaoStream_WriteString( stream, routine->routType->name );
 			DaoStream_WriteMBS( stream, "\n" );
-			DaoStream_WriteMBS( stream, header );
+			DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
 			DaoStream_WriteMBS( stream, sep );
 			for( i=start; i<=end; i++ ){
-				sprintf( buffer, "%5i  :  ", i);
-				DaoStream_WriteMBS( stream, buffer );
-				DaoVmCode_Print( vmCodes[i], buffer );
-				DaoStream_WriteMBS( stream, buffer );
+				DaoRoutine_FormatCode( routine, i, mbs );
+				DaoStream_WriteString( stream, mbs );
 			}
+			DString_Delete( mbs );
 		}else if( strcmp( cmd, "p" ) == 0 || strcmp( cmd, "print" ) == 0 ){
 			if( tokens->size > 1 ){
 				ushort_t reg = (ushort_t)atoi( tokens->items.pString[1]->mbs );

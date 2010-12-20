@@ -418,6 +418,7 @@ typedef struct DaoExceptionTripple
 }DaoExceptionTripple;
 
 extern const char* const daoExceptionName[];
+extern const char* const daoExceptionInfo[];
 
 extern const char* getExceptName( int id );
 extern const char* getOpcodeName( int opc );
@@ -436,6 +437,9 @@ static const char *const daoBitBoolArithOpers2[] = {
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, "&=", "|=", "^=", NULL, NULL
 };
 
+static const char *daoRoutineCodeHeader =
+"   ID :    OPCODE    :     A ,     B ,     C ;  [ LINE ],  NOTES\n";
+static const char *daoRoutineCodeFormat = "%-11s : %5i , %5i , %5i ;  %4i;   %s\n";
 
 static const char utf8_markers[256] = 
 {

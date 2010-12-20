@@ -107,6 +107,7 @@ DaoCData*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
 DaoCData*  DaoContext_CopyCData( DaoContext *self, void *data, int n, DaoTypeBase *t );
 
 void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
+void DaoContext_RaiseTypeError( DaoContext *self, DaoType *from, DaoType *to, const char *op );
 /**/
 void DaoContext_Print( DaoContext *self, const char *chs );
 void DaoContext_PrintInfo( DaoContext *self, const char *head, const char *info );

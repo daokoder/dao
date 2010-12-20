@@ -223,8 +223,7 @@ int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 {
 	if( ! DValue_Move( A, C, t ) ){
 		DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, A );
-		printf( "%p %p %s %s\n", type, t, type->name->mbs, t->name->mbs );
-		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching11" );
+		DaoContext_RaiseTypeError( self, type, t, "moving" );
 		return 0;
 	}
 	return 1;
@@ -254,8 +253,7 @@ int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase )
 	bl = DaoAssign( self, dbase, self->regValues[ reg ], abtp );
 	if( bl ==0 ){
 		DaoType *type = DaoNameSpace_GetType( self->nameSpace, dbase );
-		printf( "%p %p %s %s\n", type, abtp, type->name->mbs, abtp->name->mbs );
-		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "types not matching12" );
+		DaoContext_RaiseTypeError( self, type, abtp, "moving" );
 		return 0;
 	}
 	return bl;
@@ -1531,7 +1529,8 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 					p = & pair->second;
 				}
 				if( DValue_Move( *p, object->objValues + k, mtype[k] ) ==0 ){
-					DaoContext_RaiseException( self, DAO_ERROR_TYPE, "not matched" );
+					DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, *p );
+					DaoContext_RaiseTypeError( self, type, mtype[k], "moving" );
 					break;
 				}
 			}
@@ -2361,7 +2360,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 			}else{
 				type = DaoNameSpace_SymbolTypeAdd( ns, ta, tb, &value );
 			}
-			if( type == NULL ) DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
+			if( type == NULL ) DaoContext_RaiseException( self, DAO_ERROR_TYPE, "symbol not found in the enum" );
 			DEnum_SetType( denum, type );
 			denum->value = value;
 			return;
@@ -3751,7 +3750,7 @@ FailConversion :
 }
 void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 {
-	DaoType *ct = self->regTypes[ vmc->c ];
+	DaoType *at, *ct = self->regTypes[ vmc->c ];
 	DValue va = *self->regValues[ vmc->a ];
 	DValue *vc = self->regValues[ vmc->c ];
 	DString *sb = NULL;
@@ -3837,9 +3836,8 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 FailConversion :
 	if( sb ) DString_Delete( sb );
 	if( lb ) DLong_Delete( lb );
-	DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid conversion" );
-	printf( "%s\n", self->regTypes[ vmc->a ]->name->mbs );
-	printf( "%s\n", ct->name->mbs );
+	at = DaoNameSpace_GetTypeV( self->nameSpace, *self->regValues[ vmc->a ] );
+	DaoContext_RaiseTypeError( self, at, ct, "casting" );
 }
 void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc )
 {
@@ -3959,6 +3957,28 @@ ErrorDecorator:
 	DMap_Delete( mapids );
 	return NULL;
 }
+void DRoutine_ShowError( DRoutine *self, DaoType *selftype,
+		DValue *csts, DaoType *ts[], int np, int code, DArray *errors );
+void DaoPrintCallError( DArray *errors, DaoStream *stdio );
+
+void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout, 
+		DValue *selfobj, DValue *ps[], DaoType *ts[], int np, int code )
+{
+	DaoStream *ss = DaoStream_New();
+	DaoNameSpace *ns = self->nameSpace;
+	DaoType *selftype = selfobj ? DaoNameSpace_GetTypeV( ns, *selfobj ) : NULL;
+	DValue csts[ DAO_MAX_PARAM + 1 ];
+	DArray *errors = DArray_New(0);
+	int i, k;
+	for(i=0; i<np; i++) csts[i] = *ps[i];
+	DRoutine_ShowError( rout, selftype, csts, ts, np, code, errors );
+	ss->attribs |= DAO_IO_STRING;
+	DaoPrintCallError( errors, ss );
+	DArray_Delete( errors );
+	DaoContext_RaiseException( self, DAO_ERROR_PARAM, ss->streamString->mbs );
+	DaoStream_Delete( ss );
+}
+
 extern DaoClass *daoClassFutureValue;
 void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 {
@@ -4185,7 +4205,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			rout = caller.v.routine;
 			rout = (DaoRoutine*) DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
 			if( rout == NULL ){
-				DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched" );
+				DaoContext_ShowCallError( self, (DRoutine*) caller.v.routine, selfpar, params, NULL, npar, code );
 				return;
 			}
 			if( rout->type == DAO_FUNCTION ){
@@ -5029,7 +5049,10 @@ static void DaoInitException
 	if( DaoCData_ChildOf( except->typer, efloat ) && fe >=0 )
 		line2 = (vmc && rout->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
 	exdat->fromLine = line2;
-	if( value && value[0] != 0 ) DString_SetMBS( exdat->info, value );
+	if( value && value[0] != 0 ){
+		DValue_Clear( & exdat->data );
+		exdat->data = DValue_NewMBString( value, 0 );
+	}
 	DArray_Clear( exdat->callers );
 	DArray_Clear( exdat->lines );
 	if( ctx->thisFunction ){
@@ -5098,8 +5121,8 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoList *list = self->nameSpace->varData->data[DVR_NSV_EXCEPTIONS].v.list;
 	DaoTypeBase *ext = & dao_Exception_Typer;
-	DaoTypeBase *any = DaoException_GetType( DAO_EXCEPT_ANY );
-	DaoTypeBase *none = DaoException_GetType( DAO_EXCEPT_NONE );
+	DaoTypeBase *any = DaoException_GetType( DAO_EXCEPTION_ANY );
+	DaoTypeBase *none = DaoException_GetType( DAO_EXCEPTION_NONE );
 	DaoClass *p, *q;
 	DaoCData *cdata;
 	DValue **excepts = self->regValues + vmc->a;
@@ -5185,4 +5208,16 @@ void DaoContext_RaiseException( DaoContext *self, int type, const char *value )
 			STD_Debug( self, NULL, 0 );
 		}
 	}
+}
+void DaoContext_RaiseTypeError( DaoContext *self, DaoType *from, DaoType *to, const char *op )
+{
+	DString *details = DString_New(1);
+	DString_AppendMBS( details, op );
+	DString_AppendMBS( details, " from \'" );
+	DString_Append( details,  from->name );
+	DString_AppendMBS( details, "\' to \'" );
+	DString_Append( details,  to->name );
+	DString_AppendMBS( details, "\'." );
+	DaoContext_RaiseException( self, DAO_ERROR_TYPE, details->mbs );
+	DString_Delete( details );
 }

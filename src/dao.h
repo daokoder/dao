@@ -206,8 +206,9 @@ enum DaoExecOption
 };
 enum DaoExceptionType
 {
-	DAO_EXCEPT_NONE = 0,
-	DAO_EXCEPT_ANY ,
+	DAO_EXCEPTION = 0,
+	DAO_EXCEPTION_NONE ,
+	DAO_EXCEPTION_ANY ,
 	DAO_WARNING ,
 	DAO_ERROR ,
 
@@ -403,8 +404,8 @@ struct DaoAPI
 	DValue (*DValue_NewInteger)( dint v );
 	DValue (*DValue_NewFloat)( float v );
 	DValue (*DValue_NewDouble)( double v );
-	DValue (*DValue_NewMBString)( char *s, int n );
-	DValue (*DValue_NewWCString)( wchar_t *s, int n );
+	DValue (*DValue_NewMBString)( const char *s, int n );
+	DValue (*DValue_NewWCString)( const wchar_t *s, int n );
 	DValue (*DValue_NewVectorB)( char *s, int n );
 	DValue (*DValue_NewVectorUB)( unsigned char *s, int n );
 	DValue (*DValue_NewVectorS)( short *s, int n );
@@ -696,8 +697,8 @@ DAO_DLL void        DaoQuit();
 DAO_DLL DValue DValue_NewInteger( dint v );
 DAO_DLL DValue DValue_NewFloat( float v );
 DAO_DLL DValue DValue_NewDouble( double v );
-DAO_DLL DValue DValue_NewMBString( char *s, int n );
-DAO_DLL DValue DValue_NewWCString( wchar_t *s, int n );
+DAO_DLL DValue DValue_NewMBString( const char *s, int n );
+DAO_DLL DValue DValue_NewWCString( const wchar_t *s, int n );
 DAO_DLL DValue DValue_NewVectorB( char *s, int n );
 DAO_DLL DValue DValue_NewVectorUB( unsigned char *s, int n );
 DAO_DLL DValue DValue_NewVectorS( short *s, int n );
