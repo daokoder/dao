@@ -850,7 +850,13 @@ void DaoContext_DoList(  DaoContext *self, DaoVmCode *vmc )
 		const int bval = vmc->b ? vmc->b - 10 : 0;
 		DaoList *list = DaoContext_GetList( self, vmc );
 		DVarray_Resize( list->items, bval, daoNullValue );
-		for( i=0; i<bval; i++) DaoList_SetItem( list, *regValues[opA+i], i );
+		for( i=0; i<bval; i++){
+			DaoList_SetItem( list, *regValues[opA+i], i );
+			if( list->items->data[i].t == 0 && regValues[opA+i]->t !=0 ){
+				DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
+				return;
+			}
+		}
 
 		if( bval >0 && self->regTypes[ vmc->c ] ==NULL ){
 			DValue *data = list->items->data;

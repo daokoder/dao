@@ -100,8 +100,6 @@ DaoList* DaoList_New();
 void DaoList_Delete( DaoList *self );
 void DaoList_Clear( DaoList *self );
 
-void DaoList_Append( DaoList *self, DValue it );
-void DaoList_SetValue( DaoList *self, DValue it, int id );
 void DaoList_Erase( DaoList *self, int id );
 DValue DaoList_GetValue( DaoList *self, int id );
 void DaoList_SetItem( DaoList *self, DValue it, int id );

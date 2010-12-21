@@ -1,0 +1,410 @@
+
+#{
+Author: Limin Fu
+Email: phoolimin@gmail.com
+Date: 2007-01-22
+License: GPL
+#}
+
+@@ON( MBS );
+
+load sdml_parser;
+
+class DaoCodeHL : SdmlCodeHL
+{
+
+	const Library = { "io"=>1, "std"=>1, "reflect"=>1, "math"=>1, "coroutine"=>1 };
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
+		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br/>" };
+
+	const Block = { "#"=>"<span class=Comment>", "\'"=>"<span class=String>", 
+		"\""=>"<span class=String>" };
+
+	const HilitMap = {
+		"my"     => "<span class=DataPrefix>",
+		"const"  => "<span class=DataPrefix>",
+		"global" => "<span class=DataPrefix>",
+		"typedef"   => "<span class=CodeStruct>",
+		"class"   => "<span class=CodeStruct>",
+		"routine" => "<span class=CodeStruct>",
+		"function" => "<span class=CodeStruct>",
+		"syntax" => "<span class=CodeStruct>",
+		"as" => "<span class=CodeStruct>",
+		"end"     => "<span class=CodeStruct>",
+		"public"    => "<span class=PermiPrefix>",
+		"protected" => "<span class=PermiPrefix>",
+		"private"   => "<span class=PermiPrefix>",
+		"do"      => "<span class=StmtKey>",
+		"if"      => "<span class=StmtKey>",
+		"else"    => "<span class=StmtKey>",
+		"elif"    => "<span class=StmtKey>",
+		"elseif"  => "<span class=StmtKey>",
+		"while"   => "<span class=StmtKey>",
+		"for"     => "<span class=StmtKey>",
+		"in"      => "<span class=StmtKey>",
+		"switch"  => "<span class=StmtKey>",
+		"case"    => "<span class=StmtKey>",
+		"default" => "<span class=StmtKey>",
+		"skip"    => "<span class=StmtKey>",
+		"break"  => "<span class=StmtKey>",
+		"return"  => "<span class=StmtKey>",
+		"load"    => "<span class=StmtKey>",
+		"require"    => "<span class=StmtKey>",
+		"async"   => "<span class=StmtKey>",
+		"join"    => "<span class=StmtKey>",
+		"hurry"   => "<span class=StmtKey>",
+		"int"   => "<span class=DataType>",
+		"long"   => "<span class=DataType>",
+		"float"   => "<span class=DataType>",
+		"double"   => "<span class=DataType>",
+		"complex"  => "<span class=DataType>",
+		"string"   => "<span class=DataType>",
+		"list"     => "<span class=DataType>",
+		"map"     => "<span class=DataType>",
+		"tuple"     => "<span class=DataType>",
+		"stream"   => "<span class=DataType>",
+		"array" => "<span class=DataType>",
+		"read"    => "<span class=Method>",
+		"print"   => "<span class=Method>",
+		"println" => "<span class=Method>",
+		"size"    => "<span class=Method>",
+		"clear"    => "<span class=Method>",
+		"key"     => "<span class=Method>",
+		"value"   => "<span class=Method>",
+		"append"  => "<span class=Method>",
+		"push"    => "<span class=Method>",
+		"pop"     => "<span class=Method>",
+		"insert"  => "<span class=Method>",
+		"exit"   => "<span class=Method>",
+		"error"   => "<span class=Method>",
+		"warn"   => "<span class=Method>",
+		"("   => "<span class=SpecSymbol>",
+		")"   => "<span class=SpecSymbol>",
+		"["   => "<span class=SpecSymbol>",
+		"]"   => "<span class=SpecSymbol>",
+		"{"   => "<span class=SpecSymbol>",
+		"}"   => "<span class=SpecSymbol>",
+		"::"  => "<span class=SpecSymbol>",
+		":="  => "<span class=SpecSymbol>",
+		"=>"  => "<span class=SpecSymbol>",
+		"=~"  => "<span class=SpecSymbol>",
+		"!~"  => "<span class=SpecSymbol>",
+		"~~"  => "<span class=SpecSymbol>",
+		"<@>" => "<span class=SpecSymbol>",
+		"..." => "<span class=SpecSymbol>"
+	};
+
+	public
+
+	static routine Highlight( source : string, name = '' )=>string;
+
+}
+
+routine DaoCodeHL::Highlight( source : string, name = '' )
+{
+	tokens = std.tokenize( source );
+	output = '<div class="hlcode">\n';
+
+	size = tokens.size();
+	i = 0;
+	while( i < size ){
+		tok = tokens[i];
+		if( Replace.has( tok ) ){
+			repl = Replace[tok];
+			output += repl;
+		}elif( HilitMap.has( tok ) ){
+			tag = HilitMap[tok];
+			output += tag + tok + "</span>";
+		}elif( Library.has( tok ) ){
+			output += "<span class=Method>" + tok;
+			i ++;
+			if( i+1<size ){
+				if( tokens[i] == "." ){
+					output += tokens[i] + tokens[i+1];
+					i ++;
+				}
+			}
+			output += "</span>";
+		}elif( Block.has( tok[0:0] ) ){
+			tag = Block[ tok[0:0] ];
+			tmp = tok;
+			tmp.replace( "<", "&lt;" );
+			tmp.replace( ">", "&gt;" );
+			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
+			tmp.replace( "\n", "\n<br />" );
+			output += tag + tmp + "</span>";
+		}elif( tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+			output += "<span class=Number>" + tok + "</span>";
+		}elif( i+2 <size && tokens[i+1]=="@" && tokens[i+2]=="END" ){
+			tmp = tok[1:];
+			tmp.replace( "<", "&lt;" );
+			tmp.replace( ">", "&gt;" );
+			tmp.replace( " ", "&nbsp;" );
+			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
+			tmp.replace( "\n", "\n<br />" );
+			output += tmp;
+		}else{
+			output += tok;
+		}
+		i ++;
+	}
+	output += "</div>\n";
+	return output;
+}
+
+class CppCodeHL : SdmlCodeHL
+{
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
+		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br /> " };
+	const Block = { "\'"=>"<span class=String>", "\""=>"<span class=String>" };
+
+	const HilitMap = {
+		"const"  => "<span class=DataPrefix>",
+		"extern" => "<span class=DataPrefix>",
+		"static"     => "<span class=DataPrefix>",
+		"class"   => "<span class=CodeStruct>",
+		"struct" => "<span class=CodeStruct>",
+		"enum"     => "<span class=CodeStruct>",
+		"public"    => "<span class=PermiPrefix>",
+		"protected" => "<span class=PermiPrefix>",
+		"private"   => "<span class=PermiPrefix>",
+		"do"      => "<span class=StmtKey>",
+		"if"      => "<span class=StmtKey>",
+		"else"    => "<span class=StmtKey>",
+		"while"   => "<span class=StmtKey>",
+		"for"     => "<span class=StmtKey>",
+		"switch"  => "<span class=StmtKey>",
+		"case"    => "<span class=StmtKey>",
+		"default" => "<span class=StmtKey>",
+		"continue"  => "<span class=StmtKey>",
+		"break"  => "<span class=StmtKey>",
+		"return"  => "<span class=StmtKey>",
+		"signed"   => "<span class=DataType>",
+		"unsigned"  => "<span class=DataType>",
+		"char"   => "<span class=DataType>",
+		"bool"     => "<span class=DataType>",
+		"int"     => "<span class=DataType>",
+		"short"   => "<span class=DataType>",
+		"float" => "<span class=DataType>",
+		"double" => "<span class=DataType>",
+		"void" => "<span class=DataType>",
+		"sizeof"    => "<span class=Method>",
+		"typedef"    => "<span class=StmtKey>",
+		"typeid"   => "<span class=Method>"
+	};
+	public
+
+	static routine Highlight( source : string, name = '' )=>string;
+}
+
+routine CppCodeHL::Highlight( source : string, name = '' )
+{
+	tokens = source.tokenize( "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
+	output = '<div class="hlcode">\n';
+
+	size = tokens.size();
+	i = 0;
+	while( i < size ){
+		tok = tokens[i];
+		if( Replace.has( tok ) ){
+			output += Replace[tok];
+		}elif( HilitMap.has( tok ) ){
+			output += HilitMap[tok] + tok + "</span>";
+		}elif( Block.has( tok[0:0] ) ){
+			tmp = tok;
+			tmp.replace( "<", "&lt;" );
+			tmp.replace( ">", "&gt;" );
+			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
+			tmp.replace( "\n", "\n<br />" );
+			output += Block[ tok[0:0] ] + tmp + "</span>";
+		}elif( tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+			output += "<span class=Number>" + tok + "</span>";
+		}elif( tok == "#" ){
+			output += "<span class=SpecSymbol>" + tok + tokens[i+1] + "</span>";
+			i ++;
+		}elif( tok == "/" && i+1<size && tokens[i+1]=="/" ){
+			output += "<span class=Comment>//";
+			i += 2;
+			tok = tokens[i]
+			tmp = "";
+			while( tok != "\n" ){
+				tmp += tok;
+				i ++;
+				if( i >= size ) break;
+				tok = tokens[i];
+			}
+			tmp.replace( "<", "&lt;" );
+			tmp.replace( ">", "&gt;" );
+			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
+			tmp.replace( "\n", "\n<br />" );
+			output += tmp + "<br />";
+			output += "</span>";
+		}elif( tok == "/" && i+1<size && tokens[i+1]=="*" ){
+			output += "<span class=Comment>/*";
+			i += 2;
+			tmp = "";
+			while( i < size ){
+				if( tokens[i] == "*" && i+1<size && tokens[i+1]=="/" ) break;
+				tmp += tokens[i];
+				i ++;
+			}
+			tmp += "*/";
+			i ++;
+			tmp.replace( "<", "&lt;" );
+			tmp.replace( ">", "&gt;" );
+			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
+			tmp.replace( "\n", "<br />" );
+			output += tmp;
+			output += "</span>";
+		}else{
+			output += tok;
+		}
+		i ++;
+	}
+	output += "</div>\n";
+	return output;
+}
+
+
+class BnfCodeHL : SdmlCodeHL
+{
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
+		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br /> " };
+	const Block = { "\'"=>"<span class=String>", "\""=>"<span class=String>" };
+
+	const HilitMap = {
+		"("   => "<span class=SpecSymbol>",
+		")"   => "<span class=SpecSymbol>",
+		"["   => "<span class=SpecSymbol>",
+		"]"   => "<span class=SpecSymbol>",
+		"{"   => "<span class=SpecSymbol>",
+		"}"   => "<span class=SpecSymbol>",
+		"::="  => "<span class=CodeStruct>",
+		"|"  => "<span class=SpecSymbol>",
+		"&"  => "<span class=SpecSymbol>",
+		"+"  => "<span class=DataType>",
+		"*"  => "<span class=DataType>"
+	};
+	public
+
+	static routine Highlight( source : string, name = '' )=>string;
+}
+
+routine BnfCodeHL::Highlight( source : string, name = '' )
+{
+	tokens = source.tokenize( "|+*(){}[] \t\n\r", "\'\"", 1 );
+	output = '<div class="hlcode">\n';
+
+	size = tokens.size();
+	i = 0;
+	while( i < size ){
+		tok = tokens[i];
+		if( Replace.has(tok) ){
+			output += Replace[tok];
+		}elif( HilitMap.has(tok) ){
+			output += HilitMap[tok] + tok + "</span>";
+		}elif( Block.has( tok[0:0] ) ){
+			tag = Block[ tok[0:0] ];
+			tmp = tok;
+			tmp.replace( "<", "&lt;" );
+			tmp.replace( ">", "&gt;" );
+			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
+			tmp.replace( "\n", "\n<br />" );
+			output += tag + tmp + "</span>";
+		}else{
+			output += tok;
+		}
+		i ++;
+	}
+	output += "</div>\n";
+	return output;
+}
+
+
+class SdmlCodeHL2 : SdmlCodeHL
+{
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
+		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br />\n" };
+	const Block = { "\'"=>"<span class=String>", "\""=>"<span class=String>" };
+
+	const HilitMap = {
+		"("   => "<span class=SpecSymbol>",
+		")"   => "<span class=SpecSymbol>",
+		"["   => "<span class=SpecSymbol>",
+		"]"   => "<span class=SpecSymbol>",
+		"{"   => "<span class=SpecSymbol>",
+		"}"   => "<span class=SpecSymbol>",
+		"::="  => "<span class=CodeStruct>",
+		"|"  => "<span class=SpecSymbol>",
+		"+"  => "<span class=SpecSymbol>",
+		"*"  => "<span class=SpecSymbol>"
+	};
+	public
+
+	routine HL( source : string )=>string;
+	static routine Highlight( source : string, name = '' )=>string;
+}
+
+routine SdmlCodeHL2::HL( source : string )
+{
+	const pat1 = '%B{ %<%s* ([%w=]+ |%* |%% |_) [%s%w]* %> }{ %< %s* / %s* ([%w=]+ |%* |%% |_) %s*%> }';
+	const pat2 = '^( %<%s* ([%w=]+ |%* |%% |_) [%s%w]* %> ) (.*) ( %<%s* / %s* %2 %s*%> )$';
+	const kv = {
+		'title' => '<span class=DataType>',
+		'article' => '<span class=DataType>',
+		'report' => '<span class=DataType>',
+		'book' => '<span class=DataType>',
+		"table" => "<span class=StmtKey>",
+		"list" => "<span class=StmtKey>",
+		"code" => "<span class=StmtKey>",
+		"bf"  => "<span class=SpecSymbol>",
+		"it"  => "<span class=SpecSymbol>",
+		"*"  => "<span class=SpecSymbol>",
+		"%"  => "<span class=SpecSymbol>",
+		"_"  => "<span class=SpecSymbol>",
+		'' => ''
+	};
+	const kv2 = {
+		"list" => "<span class=codeback>",
+		"table" => "<span class=codeback>",
+		"code" => "<span class=codeback>",
+		"bf"  => "<span class=text_bold>",
+		"it"  => "<span class=text_italic>",
+		"*"  => "<span class=text_bold>",
+		"%"  => "<span class=text_italic>",
+		"_"  => "<span class=SpecSymbol>",
+		'' => ''
+	};
+	tokens = source.extract( pat1, 0 );
+	output = '';
+	for( tok in tokens ){
+		tks = tok.capture( pat2 );
+		if( tks ){
+			tag = tks[2];
+			tk1 = tks[1];  tk1.replace( Replace );
+			tk4 = tks[4];  tk4.replace( Replace );
+			html = '<span class=DataType>';
+			html2 = ''; html3 = '';
+			if( kv.has( tag ) ) html = kv[tag];
+			if( kv2.has( tag ) ){
+				html2 = kv2[tag];
+				html3 = '</span>';
+			}
+			output += html + tk1 + '</span>' + html2;
+			output += HL( tks[3] );
+			output += html3 + html + tk4 + '</span>';
+		}else{
+			tok.replace( Replace );
+			output += tok;
+		}
+	}
+	return output;
+}
+routine SdmlCodeHL2::Highlight( source : string, name = '' )
+{
+	output = '<div class="hlcode">\n';
+	output += HL( source );
+	output += "</div>\n";
+	return output;
+}
+

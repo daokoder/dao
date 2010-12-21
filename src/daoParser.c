@@ -670,7 +670,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 	while( i <= end ){
 		tk = tokens[i]->name;
 		tkp = tokens[i]->type;
-		if( tk == DTOK_DOT ){
+		if( tk == DTOK_DOT || tk == DTOK_COLON2 ){
 			i += 1; /* thread.my[], obj.skip(). */
 		}else if( tk == DKEY_AND || tk == DKEY_OR || tk == DKEY_NOT || tk == DKEY_IN ){
 			i ++;
@@ -685,8 +685,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 				}
 				if( tokens[i]->name == DTOK_PIPE ) i++;
 			}
-		}else if( tk == DTOK_SEMCO || tk == DTOK_AT2
-				|| ( tk > DAO_NOKEY1 && dao_keywords[tk - DAO_NOKEY1-1].value ==100 ) ){
+		}else if( tk == DTOK_SEMCO || tk == DTOK_AT2 ){
 			return i - 1;
 		}else if( tk == DTOK_LCB ){
 			int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, i, -1 );
@@ -712,23 +711,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 			 * (int)a
 			 * (array<float>)[1,2,3];
 			 */
-#if 0
-			/* a = b() + c; */
-			self->pairLtGt = 1;
-			comma = DaoParser_FindOpenToken( self, ",", i+1, rb, 0 ); /* tuple */
-			self->pairLtGt = 0;
-			/* tuple, but not multiple assignment */
-			if( comma >=0 && rb+1 <end && STRCMP( tokStr[rb+1], "=" ) !=0 ) return rb;
-#endif
 			i = rb;
-			tk = tokens[i+1]->name;
-			if( tk > DAO_NOKEY1 && dao_keywords[tk - DAO_NOKEY1-1].value ==101 ){
-				while( tk > DAO_NOKEY1 && dao_keywords[tk - DAO_NOKEY1-1].value ==101 ){
-					i ++;
-					tk = tokens[i+1]->name;
-				}
-				return i;
-			}
 			if( i+1 <= end && tokens[i]->line == tokens[i+1]->line ) i ++;
 		}else if( tk == DTOK_LSB ){
 			int rb = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, i, -1 );
@@ -5905,8 +5888,8 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 	int reg, reg2, rb, i;
 	ushort_t opB;
 
-	/*
 	   for(i=left;i<=right;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
+	/*
 	 */
 	if( left == right ){
 		self->curLine = tokens[left]->line;

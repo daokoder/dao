@@ -578,19 +578,19 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	to->cst = to->ndef = 0;
 	if( from.t >= DAO_ARRAY && from.t == to->t && from.v.p == to->v.p ) return 1;
 	if( from.t >= DAO_INTEGER && from.t <= DAO_DOUBLE ){
-		if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) return 0;
+		if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto MoveFailed;;
 	}else if( from.t >= DAO_COMPLEX && from.t <= DAO_ENUM ){
-		if( tp->tid != from.t ) return 0;
+		if( tp->tid != from.t ) goto MoveFailed;;
 	}else if( from.v.p ==NULL && tp->tid == DAO_OBJECT ){
 		from.t = 0;
 	}else if( from.t ==0 ){
-		return 0;
+		goto MoveFailed;;
 	}else{
 		dA = from.v.p;
 		if( tp->tid == DAO_ROUTINE && ( dA->type ==DAO_ROUTINE || dA->type ==DAO_FUNCTION ) ){
 			/* XXX pair<objetp,routine<...>> */
 			dA = (DaoBase*) DRoutine_GetOverLoadByType( (DRoutine*)dA, tp );
-			if( dA == NULL ) return 0;
+			if( dA == NULL ) goto MoveFailed;;
 			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
 		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
 			if( ((DaoObject*)dA)->myClass != tp->X.klass ){
@@ -614,7 +614,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		   }
 		   printf( "dA->type = %p\n", dA );
 		 */
-		if( i==0 ) return 0;
+		if( i==0 ) goto MoveFailed;;
 		/* composite known types must match exactly. example,
 		 * where it will not work if composite types are allowed to match loosely.
 		 * d : list<list<int>> = {};
@@ -716,6 +716,9 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		DValue_SetType( to, tp );
 	}
 	return 1;
+MoveFailed:
+	DValue_Clear( to );
+	return 0;
 }
 
 DValue DValue_NewInteger( dint v )
