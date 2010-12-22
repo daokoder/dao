@@ -1751,6 +1751,7 @@ extern DaoTypeBase libReflectTyper;
 extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase coroutTyper;
+extern DaoTypeBase inodeTyper;
 
 DaoClass *daoClassFutureValue = NULL;
 
@@ -2307,6 +2308,7 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_WrapType( vms->nsInternal, & libMathTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libMpiTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libReflectTyper );
+	DaoNameSpace_WrapType( vms->nsInternal, & inodeTyper );
 
 #if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
 	DaoSched_Init( vms );

@@ -793,220 +793,828 @@ static void SYS_Clock( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutFloat( ctx, ((float)clock())/CLOCKS_PER_SEC );
 }
 
-static void GetErrnoMessage( char *buffer, int code, char *defpart, int special )
-{
-	strcpy( buffer, defpart );
-	switch ( code ){
-	case EACCES:
-		strcat( buffer, special? "read permission required" : "write permission required" );
-		break;
-	case EBUSY:
-		strcat (buffer, "the file/directory is used by the system" );
-		break;
-	/* Appeared to be synonyms */
-	case ENOTEMPTY:
-	case EEXIST:
-		strcat( buffer, special? "the directory is not empty" : "the file/directory already exists" );
-		break;
-	case EINVAL:
-		strcat( buffer, special? "the directory doesn't exist" : "trying to make the directory it's own subdirectory" );
-		break;
-	/* A file required but a dir passed and vice versa */
-	case EPERM:
-	case ENOTDIR:
-	case EISDIR:
-		strcat( buffer, "inconsistent type of the file object(s)" );
-		break;
-	case EMLINK:
-		strcat( buffer, "the parent directory would have to many entries" );
-		break;
-	case ENOENT:
-		strcat( buffer, special? "the directory doesn't exist" : "the file/directory doesn't exist" );
-		break;
-	case ENOSPC:
-		strcat( buffer, "no space for a new entry in the file system" );
-		break;
-	case EROFS:
-		strcat( buffer, "writing to a directory on a read-only file system" );
-		break;
-	case EXDEV:
-		strcat( buffer, "the files/directories are on different file systems" );
-		break;
-	case ENAMETOOLONG:
-		strcat( buffer, "the file/directory name is too long" );
-		break;
-	case EMFILE:
-	case ENFILE:
-		strcat( buffer, "too many files open" );
-		break;
-	case ENOMEM:
-		strcat( buffer, "not enough memory" );
-		break;
-	default:
-		strcat(buffer, "unknown error");
-	}
-}
-
-static void SYS_Rename( DaoContext *ctx, DValue *p[], int N )
-{
-   char errbuf[70];
-	if ( rename( DString_GetMBS( p[0]->v.s ), DString_GetMBS( p[1]->v.s ) ) ){
-		GetErrnoMessage( errbuf, errno, "rename -- ", 0 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}
-}
-
-static void SYS_Remove( DaoContext *ctx, DValue *p[], int N )
-{
-	char errbuf[70];
-	if( unlink( DString_GetMBS( p[0]->v.s ) ) ){
-		GetErrnoMessage( errbuf, errno, "remove -- ", 0 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}
-}
-
-static void SYS_Rmdir( DaoContext *ctx, DValue *p[], int N )
-{
-	char errbuf[70];
-	if( rmdir( DString_GetMBS( p[0]->v.s ) ) ){
-		GetErrnoMessage( errbuf, errno, "rmdir -- ", 1 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}
-}
-
-static void SYS_Mkdir( DaoContext *ctx, DValue *p[], int N )
-{
-	char errbuf[70];
-#ifdef WIN32
-	if( mkdir( DString_GetMBS( p[0]->v.s ) ) ){
-#else
-	if( mkdir( DString_GetMBS( p[0]->v.s ), S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH ) ){
-#endif
-		GetErrnoMessage( errbuf, errno, "mkdir -- ",  0 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}
-}
-
-static void SYS_Setcwd( DaoContext *ctx, DValue *p[], int N )
-{
-	char errbuf[70];
-	if( chdir( DString_GetMBS( p[0]->v.s ) ) ){
-		GetErrnoMessage( errbuf, errno, "chdir -- ", 0 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}
-}
-
-static void SYS_Getcwd( DaoContext *ctx, DValue *p[], int N )
-{
-	char buf[1024], errbuf[70];
-	char *cwd = getcwd( buf, 1023 );
-	if( cwd == NULL ){
-		GetErrnoMessage( errbuf, errno, "getcwd -- ", 0 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-	}else
-	DaoContext_PutMBString( ctx, cwd );
-}
-
 #ifndef MAX_PATH
 #define MAX_PATH 512
 #endif
 
-static void SYS_Scandir( DaoContext *ctx, DValue *p[], int N )
+#define MAX_ERRMSG 80
+
+struct DInode
 {
-	char errbuf[70];
-	DaoList *list = DaoContext_PutList( ctx );
-	struct stat buf;
-	char path[MAX_PATH + 2];
-	int type;
-	unsigned pos;
-#ifdef WIN32
-	intptr_t handle;
-	struct _finddata_t finfo;
-#endif
-	strcpy( path, DString_GetMBS( p[0]->v.s ) );
-	pos = strlen( path );
-	type = p[1]->v.e->value;
-#ifdef WIN32
-	/* Using _findfirst/_findnext for Windows */
-	strcpy( path + pos++, "\\*" );
-	handle = _findfirst( path, &finfo );
-	if (handle != -1){
-		DString *str = DString_New( 1 );
-		DValue value = daoNullString;
-		value.v.s = str;
-		do
-			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
-				DString_SetDataMBS( str, finfo.name, strlen(finfo.name) );
-				strcpy( path + pos, finfo.name );
-				if( stat( path, &buf ) ){
-					GetErrnoMessage( errbuf, errno, "scandir -- ", 0 );
-					DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-					return;
-				}
-				if( type == 0 && ( buf.st_mode & _S_IFREG ) || type == 1 &&
-				( buf.st_mode & _S_IFDIR ) || type == 2)
-					DVarray_Append( list->items, value );
-			}
-		while( !_findnext( handle, &finfo ) );
-		DString_Delete( str );
-		_findclose( handle );  
-	}
-#else
-	/* Using POSIX opendir/readdir otherwise */
-	DIR *dp;
-	struct dirent *ep;
-	dp = opendir( path );
-	if( dp ){
-		DString *str = DString_New( 1 );
-		DValue value = daoNullString;
-		value.v.s = str;
-		strcpy( path + pos++,  "/");
-		while( ( ep = readdir( dp ) ) )
-			if( strcmp( ep->d_name, "." ) && strcmp( ep->d_name, ".." ) ){
-				DString_SetDataMBS( str, ep->d_name, strlen(ep->d_name) );
-				strcpy( path + pos, ep->d_name );
-				if( stat( path, &buf ) ){
-					GetErrnoMessage( errbuf, errno, "scandir -- ", 0 );
-					DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
-					return;
-				}
-				if( (type == 0 && S_ISREG( buf.st_mode )) || (type == 1 &&
-				S_ISDIR( buf.st_mode )) || type == 2)
-					DVarray_Append( list->items, value );
-			}
-		DString_Delete( str );
-		closedir( dp );
-	}
-#endif
-	else{
-		GetErrnoMessage( errbuf, errno, "scandir -- ", 1 );
-		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	char *path;
+	short type;
+	time_t ctime;
+	time_t mtime;
+	short pread;
+	short pwrite;
+	short pexec;
+};
+
+typedef struct DInode DInode;
+
+DInode* DInode_New()
+{
+	DInode *res = (DInode*)dao_malloc( sizeof(DInode) );
+	res->path = NULL;
+	res->type = -1;
+	return res;
+}
+
+void DInode_Close( DInode *self )
+{
+	if( self->path ){
+		dao_free( self->path );
+		self->path = NULL;
+		self->type = -1;
 	}
 }
 
-static void SYS_Type( DaoContext *ctx, DValue *p[], int N )
+void DInode_Delete( DInode *self )
 {
-	char errbuf[70];
-	struct stat buf;
-	const char *en = "unkown";
-	if( stat( DString_GetMBS( p[0]->v.s ), &buf ) ){
-		GetErrnoMessage( errbuf, errno, "type -- ", 0 );
+	DInode_Close( self );
+	dao_free( self );
+}
+
+#ifdef WIN32
+#define IS_PATH_SEP( c ) ( ( c ) == '\\' || ( c ) == '/' || ( c ) == ':' )
+#define STD_PATH_SEP "\\"
+#else
+#define IS_PATH_SEP( c ) ( ( c ) == '/' )
+#define STD_PATH_SEP "/"
+#endif
+
+int DInode_Open( DInode *self, const char *path )
+{
+	char buf[MAX_PATH + 1] = {0};
+	struct stat info;
+	DInode_Close( self );
+	int len, i;
+	if( !path )
+		return 1;
+	len = strlen( path );
+	if( stat( path, &info ) != 0 )
+		return errno;
+	for( i = 0; i < len; i++ )
+		if( path[i] == '.' && ( i == 0 || IS_PATH_SEP( path[i - 1] ) )
+			&& ( i == len - 1 || IS_PATH_SEP( path[i + 1] ) ||
+			( path[i + 1] == '.' && ( i == len - 2 || IS_PATH_SEP( path[i + 2] ) ) ) ) )
+			return -1;
+#ifdef WIN32
+	if( !( info.st_mode & _S_IFDIR ) && !( info.st_mode & _S_IFREG ) )
+		return 1;
+	self->pread = info.st_mode & _S_IREAD;
+	self->pwrite = info.st_mode & _S_IWRITE;
+	self->pexec = info.st_mode & _S_IEXEC;
+	self->type = ( info.st_mode & _S_IFDIR )? 0 : 1;
+	if( len < 2 || path[1] != ':' ){
+		if( !getcwd( buf, MAX_PATH ) )
+			return errno;
+		strcat( buf, "\\" );
+	}
+#else
+	if( !S_ISDIR( info.st_mode ) && !S_ISREG( info.st_mode ) )
+		return 1;
+	self->pread = info.st_mode & S_IRUSR;
+	self->pwrite = info.st_mode & S_IWUSR;
+	self->pexec = info.st_mode & S_IXUSR;
+	self->type = ( S_ISDIR( info.st_mode ) )? 0 : 1;
+	if( path[0] != '/' ){
+		if( !getcwd( buf, MAX_PATH ) )
+			return errno;
+		strcat( buf, "/" );
+	}
+#endif
+	len += strlen( buf );
+	if( len > MAX_PATH )
+		return ENAMETOOLONG;
+	self->path = (char*)dao_malloc( len + 1 );
+	strcpy( self->path, buf );
+	strcat( self->path, path );
+#ifndef WIN32
+	if( self->path[len - 1] == '/' && len > 1 )
+		self->path[len - 1] = '\0';
+#endif
+	self->ctime = info.st_ctime;
+	self->mtime = info.st_mtime;
+	return 0;
+}
+
+char* DInode_Parent( DInode *self, char *buffer )
+{
+	int i;
+	if( !self->path )
+		return NULL;
+	for (i = strlen( self->path ) - 1; i >= 0; i--)
+		if( IS_PATH_SEP( self->path[i] ) )
+			break;
+	if( self->path[i + 1] == '\0' )
+		return NULL;
+#ifdef WIN32
+	if( self->path[i] == ':' ){
+		strncpy( buffer, self->path, i + 1 );
+		buffer[i + 1] = '\\';
+		buffer[i + 2] = '\0';
+	}
+	else{
+		if( i == 2 )
+			i++;
+		strncpy( buffer, self->path, i );
+		buffer[i] = '\0';
+	}
+#else
+	if( i == 0 )
+		strcpy( buffer, "/" );
+	else{
+		strncpy( buffer, self->path, i );
+		buffer[i] = '\0';
+	}
+#endif
+	return buffer;
+}
+
+int DInode_Rename( DInode *self, const char *path )
+{
+	char buf[MAX_PATH + 1] = {0};
+	int i, len;
+	if( !self->path )
+		return 1;
+	len = strlen( path );
+	for( i = 0; i < len; i++ )
+		if( path[i] == '.' && ( i == 0 || IS_PATH_SEP( path[i - 1] ) )
+			&& ( i == len - 1 || IS_PATH_SEP( path[i + 1] ) ||
+			( path[i + 1] == '.' && ( i == len - 2 || IS_PATH_SEP( path[i + 2] ) ) ) ) )
+			return -1;
+	if( !DInode_Parent( self, buf ) )
+		return 1;
+#ifdef WIN32
+	if( len < 2 || path[1] != ':' ){
+#else
+	if( path[0] != '/' ){
+#endif
+		strcat( buf, STD_PATH_SEP );
+		len += strlen( buf );
+		if( len > MAX_PATH )
+			return ENAMETOOLONG;
+		strcat( buf, path );
+	}else{
+		if( len > MAX_PATH )
+			return ENAMETOOLONG;
+		strcpy( buf, path );
+	}
+	if( rename( self->path, buf ) != 0 )
+		return errno;
+	self->path = (char*)dao_realloc( self->path, len + 1 );
+	strcpy( self->path, buf );
+	return 0;
+}
+
+int DInode_Remove( DInode *self )
+{
+	if( !self->path )
+		return 1;
+	if( self->type == 0 ){
+		if( rmdir( self->path ) != 0 )
+			return errno;
+	}else{
+		if( unlink( self->path ) != 0 )
+			return errno;
+	}
+	DInode_Close( self );
+	return 0;
+}
+
+int DInode_Append( DInode *self, const char *path, int dir, DInode *dest )
+{
+	int i, len;
+	char buf[MAX_PATH + 1];
+	FILE *handle;
+	struct stat info;
+	if( !self->path || self->type != 0 || !dest )
+		return 1;
+	len = strlen( path );
+	for( i = 0; i < len; i++ )
+		if( path[i] == '.' && ( i == 0 || IS_PATH_SEP( path[i - 1] ) )
+			&& ( i == len - 1 || IS_PATH_SEP( path[i + 1] ) ||
+			( path[i + 1] == '.' && ( i == len - 2 || IS_PATH_SEP( path[i + 2] ) ) ) ) )
+			return -1;
+	if( DInode_Parent( self, buf ) ){
+		strcpy( buf, self->path );
+		strcat( buf, STD_PATH_SEP );
+	}
+	else
+		strcpy( buf, self->path );
+	if( strlen( buf ) + len > MAX_PATH )
+		return ENAMETOOLONG;
+	strcat( buf, path );
+#ifdef WIN32
+	if( stat( buf, &info ) == 0 && ( ( dir && ( info.st_mode & _S_IFDIR ) )
+		|| ( !dir && ( info.st_mode & _S_IFREG ) ) ) )
+		return DInode_Open( dest, buf );
+#else
+	if( stat( buf, &info ) == 0 && ( ( dir && S_ISDIR( info.st_mode ) )
+		|| ( !dir && S_ISREG( info.st_mode ) ) ) )
+		return DInode_Open( dest, buf );
+#endif
+	if( !dir ){
+		if( !( handle = fopen( buf, "w" ) ) )
+			return ( errno == EINVAL ) ? 1 : errno;
+		fclose( handle );
+	}else{
+#ifdef WIN32
+	if( mkdir( buf ) != 0 )
+		return ( errno == EINVAL ) ? 1 : errno;
+#else
+	if( mkdir( buf, S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH ) != 0 )
+		return ( errno == EINVAL ) ? 1 : errno;
+#endif
+	}
+	return DInode_Open( dest, buf );
+}
+
+extern DaoTypeBase inodeTyper;
+
+int DInode_Children( DInode *self, int type, DVarray *dest, DaoRegex *pattern )
+{
+	char buffer[MAX_PATH + 1];
+	int len, res;
+#ifdef WIN32
+	intptr_t handle;
+	struct _finddata_t finfo;
+#else
+	DIR *handle;
+	struct dirent *finfo;
+#endif
+	if( !self->path || self->type != 0 )
+		return 1;
+    strcpy( buffer, self->path );
+	len = strlen( buffer );
+#ifdef WIN32
+	/* Using _findfirst/_findnext for Windows */
+	if( IS_PATH_SEP( buffer[len - 1] ) )
+    	strcpy( buffer + len, "*" );
+    else
+		strcpy( buffer + len++, "\\*" );
+	handle = _findfirst( buffer, &finfo );
+	if (handle != -1){
+		DString *str = DString_New( 1 );
+		DValue value = daoNullCData;
+		DInode *inode;
+		do
+			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
+				DString_SetDataMBS( str, finfo.name, strlen(finfo.name) );
+				strcpy( buffer + len, finfo.name );
+				inode = DInode_New();
+				if( ( res = DInode_Open( inode, buffer ) ) != 0 ){
+					DInode_Delete( inode );
+					return res;
+				}
+				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
+					value.v.cdata = DaoCData_New( &inodeTyper, inode );
+					DVarray_Append( dest, value );
+				}
+				else
+					DInode_Delete( inode );
+			}
+		while( !_findnext( handle, &finfo ) );
+		DString_Delete( str );
+		_findclose( handle );
+	}
+#else
+	/* Using POSIX opendir/readdir otherwise */
+	handle = opendir( buffer );
+	if( !IS_PATH_SEP( buffer[len - 1] ) )
+		strcpy( buffer + len++,  "/");
+	if( handle ){
+		DString *str = DString_New( 1 );
+		DValue value = daoNullCData;
+		DInode *inode;
+		while( ( finfo = readdir( handle ) ) )
+			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
+				DString_SetDataMBS( str, finfo->d_name, strlen(finfo->d_name) );
+				strcpy( buffer + len, finfo->d_name );
+				inode = DInode_New();
+				if( ( res = DInode_Open( inode, buffer ) ) != 0 ){
+					DInode_Delete( inode );
+					return res;
+				}
+				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
+					value.v.cdata = DaoCData_New( &inodeTyper, inode );
+					DVarray_Append( dest, value );
+				}
+				else
+					DInode_Delete( inode );
+			}
+		DString_Delete( str );
+		closedir( handle );
+	}
+#endif
+	else
+		return errno;
+	return 0;
+}
+
+static void GetErrorMessage( char *buffer, int code, int special )
+{
+	switch ( code ){
+	case EACCES:
+	case EBADF:
+		strcpy( buffer, "Access permission required (EACCES/EBADF)");
+		break;
+	case EBUSY:
+		strcpy (buffer, "The inode's path is being used (EBUSY)" );
+		break;
+	case ENOTEMPTY:
+	case EEXIST:
+		strcpy( buffer, special? "The directory is not empty (ENOTEMPTY/EEXIST)" : "The inode already exists (EEXIST/ENOTEMPTY)" );
+		break;
+	case EPERM:
+	case ENOTDIR:
+	case EISDIR:
+		strcat( buffer, "Inconsistent type of the file object(s) (EPERM/ENOTDIR/EISDIR)" );
+		break;
+	case EINVAL:
+		strcpy( buffer, special? "The inode's path doesn't exist (EINVAL)" : "Trying to make the directory it's own subdirectory (EINVAL)" );
+		break;
+	case EMLINK:
+		strcat( buffer, "Trying to create too many entries in the parent directory (EMLINK)" );
+		break;
+	case ENOENT:
+		strcpy( buffer, "The inode's path doesn't exist (ENOENT)" );
+		break;
+	case ENOSPC:
+		strcpy( buffer, "No space for a new entry in the file system (ENOSPC)" );
+		break;
+	case EROFS:
+		strcpy( buffer, "Trying to write to a read-only file system (EROFS)" );
+		break;
+	case EXDEV:
+		strcpy( buffer, "Trying to relocate the inode to a different file system (EXDEV)" );
+		break;
+	case ENAMETOOLONG:
+		strcpy( buffer, "The inode's path is too long (ENAMETOOLONG)" );
+		break;
+	case EMFILE:
+	case ENFILE:
+		strcpy( buffer, "Too many inodes open (EMFILE/ENFILE)" );
+		break;
+	case ENOMEM:
+		strcpy( buffer, "Not enough memory (ENOMEM)" );
+		break;
+	default:
+		strcpy( buffer, "Unknown system error (0x" );
+		itoa( code, buffer + strlen( buffer ), 16 );
+		strcat( buffer, ")" );
+	}
+}
+
+static void DaoInode_Open( DaoContext *ctx, DValue *p[], int N )
+{
+	char errbuf[MAX_ERRMSG];
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	int res;
+	if( ( res = DInode_Open( self, DString_GetMBS( p[1]->v.s ) ) ) != 0 ){
+		if( res == 1 )
+			strcpy( errbuf, "Trying to open something which is not a file/directory" );
+		else if( res == -1 )
+			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
+		else
+			GetErrorMessage( errbuf, res, 0 );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
-#ifdef WIN32
-	if( buf.st_mode & _S_IFREG )
-		en = "file";
-	else if( buf.st_mode & _S_IFDIR )
-		en = "dir";
-#else
-	if( S_ISREG( buf.st_mode ) )
-		en = "file";
-	else if( S_ISDIR( buf.st_mode ) )
-      en = "dir";
-#endif
-	DaoContext_PutEnum( ctx, en );
 }
+
+static void DaoInode_Isopen( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoContext_PutInteger( ctx, ((DInode*)p[0]->v.cdata->data)->path ? 1 : 0 );
+}
+
+static void DaoInode_Close( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode_Close( self );
+}
+
+static void DaoInode_Path( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	DaoContext_PutMBString( ctx, self->path );
+}
+
+static void DaoInode_Name( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	int i;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	for (i = strlen( self->path ) - 1; i >= 0; i--)
+		if( IS_PATH_SEP( self->path[i] ) )
+			break;
+	if( self->path[i + 1] == '\0' )
+		DaoContext_PutMBString( ctx, self->path );
+	else
+		DaoContext_PutMBString( ctx, self->path + i + 1 );
+}
+
+static void DaoInode_Parent( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode *par;
+	char path[MAX_PATH + 1];
+	int res = 0;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	par = DInode_New();
+	if( !DInode_Parent( self, path ) || ( res = DInode_Open( par, path ) ) != 0 ){
+		DInode_Delete( par );
+		if( res == 0 )
+			strcpy( path, "The inode has no parent" );
+		else
+			GetErrorMessage( path, res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, path );
+		return;
+	}
+	DaoContext_PutCData( ctx, (void*)par, &inodeTyper );
+}
+
+static void DaoInode_Type( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	DaoContext_PutEnum( ctx, self->type == 1 ? "file" : "dir" );
+}
+
+static void DaoInode_Rename( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	int res;
+	char errbuf[MAX_ERRMSG];
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if ( (res = DInode_Rename( self, DString_GetMBS( p[1]->v.s ) ) ) != 0 ){
+		if( res == -1 )
+			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
+		else if( res == 1 )
+			strcpy( errbuf, "Trying to rename root inode" );
+		else
+			GetErrorMessage( errbuf, res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+}
+
+static void DaoInode_Remove( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	int res;
+	char errbuf[MAX_ERRMSG];
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if ( (res = DInode_Remove( self ) ) != 0 ){
+		GetErrorMessage( errbuf, res, self->type == 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+}
+
+static void DaoInode_Ctime( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	DaoContext_PutInteger( ctx, self->ctime );
+}
+
+static void DaoInode_Mtime( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	DaoContext_PutInteger( ctx, self->mtime );
+}
+
+static void DaoInode_Access( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	char res[20] = {0};
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if( self->pread )
+		strcat( res, "$read" );
+	if( self->pwrite )
+		strcat( res, "$write" );
+	if( self->pexec )
+		strcat( res, "$execute" );
+	DaoContext_PutEnum( ctx, res );
+}
+
+static void DaoInode_Makefile( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode *child;
+	char errbuf[MAX_ERRMSG];
+	int res;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if( self->type != 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not a directory" );
+		return;
+	}
+	child = DInode_New();
+	if( ( res = DInode_Append( self, DString_GetMBS( p[1]->v.s ), 0, child ) ) != 0 ){
+		DInode_Delete( child );
+		if( res == 1 )
+			strcpy( errbuf, "The inode's name is invalid (EINVAL)" );
+		else if( res == -1 )
+			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
+		else
+			GetErrorMessage( errbuf, res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	DaoContext_PutCData( ctx, (void*)child, &inodeTyper );
+}
+
+static void DaoInode_Makedir( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode *child;
+	char errbuf[MAX_ERRMSG];
+	int res;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if( self->type != 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not a directory" );
+		return;
+	}
+	child = DInode_New();
+	if( ( res = DInode_Append( self, DString_GetMBS( p[1]->v.s ), 1, child ) ) != 0 ){
+		DInode_Delete( child );
+		if( res == 1 )
+			strcpy( errbuf, "The inode's name is invalid (EINVAL)" );
+		else if( res == -1 )
+			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
+		else
+			GetErrorMessage( errbuf, res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	DaoContext_PutCData( ctx, (void*)child, &inodeTyper );
+}
+
+static void DaoInode_Isroot( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	if( self->path == NULL ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	DaoContext_PutInteger( ctx, IS_PATH_SEP( self->path[strlen( self->path ) - 1] ) ? 1 : 0 );
+}
+
+static void DaoInode_Child( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode *child;
+	char path[MAX_PATH + 1], *str;
+	int res;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if( self->type != 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not a directory" );
+		return;
+	}
+	child = DInode_New();
+	strcpy( path, self->path );
+	strcat( path, STD_PATH_SEP );
+	str = DString_GetMBS( p[1]->v.s );
+	if( strlen( path ) + strlen( str ) > MAX_PATH ){
+		GetErrorMessage( path, ENAMETOOLONG, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, path );
+		return;
+	}
+	strcat( path, str );
+	if( ( res = DInode_Open( child, path ) ) != 0 ){
+		DInode_Delete( child );
+		if( res == 1 )
+			strcpy( path, "The inode is not a directory" );
+		else if( res == -1 )
+			strcpy( path, "'.' and '..' entries in path are not allowed" );
+		else
+			GetErrorMessage( path, res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, path );
+		return;                                  
+	}
+	DaoContext_PutCData( ctx, (void*)child, &inodeTyper );
+}
+
+static void DaoInode_Children( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DaoList *list = DaoContext_PutList( ctx );
+	char buffer[MAX_PATH + 1], *filter;
+	int res, type = p[1]->v.e->value, i, j, len;
+	DString strbuf;
+	DaoRegex *pattern;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if( self->type != 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not a directory" );
+		return;
+	}
+	filter = DString_GetMBS( p[2]->v.s );
+	len = strlen( filter );
+	if( len > MAX_PATH ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The filter is too large" );
+		return;
+	}
+	if( !p[3]->v.e->value == 1 ){
+		buffer[0] = '^';
+		buffer[1] = '(';
+		for( i = 0, j = 2; i < len && j < MAX_PATH - 1; i++, j++ )
+			switch( filter[i] )
+			{
+			case '?':
+				buffer[j] = '.';
+				break;
+			case '*':
+				buffer[j++] = '.';
+				buffer[j] = '*';
+				break;
+			case ';':
+				buffer[j] = '|';
+				break;
+			case '{':
+			case '}':
+			case '(':
+			case ')':
+			case '%':
+			case '.':
+			case '|':
+			case '$':
+			case '^':
+			case '[':
+			case ']':
+			case '+':
+			case '-':
+			case '<':
+			case '>':
+				buffer[j++] = '%';
+				buffer[j] = filter[i];
+				break;
+			default:
+				buffer[j] = filter[i];
+			}
+		if( j >= MAX_PATH - 1 ){
+			DaoContext_RaiseException( ctx, DAO_ERROR, "The filter is too large" );
+			return;
+		}
+		buffer[j] = ')';
+		buffer[j + 1] = '$';
+		buffer[j + 2] = '\0';
+	}
+	else
+		strcpy( buffer, filter );
+	strbuf = DString_WrapMBS( buffer );
+    pattern = DaoVmProcess_MakeRegex( ctx, &strbuf, 1 );
+    if( !pattern )
+    	return;
+	type = ( type == 3 ) ? 2 : ( ( type == 1 ) ? 1 : 0 );
+	if( ( res = DInode_Children( self, type, list->items, pattern ) ) != 0 ){
+		GetErrorMessage( buffer, res, 1 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, buffer );
+		return;
+	}
+}
+
+static void DaoInode_Files( DaoContext *ctx, DValue *p[], int N )
+{
+	DValue value = daoNullEnum;
+	DValue *params[] = {p[0], &value, p[1], p[2]};
+	value.v.e = DEnum_New( NULL, 1 );
+	DaoInode_Children( ctx, params, N + 1 );
+	DEnum_Delete( value.v.e );
+}
+
+static void DaoInode_Dirs( DaoContext *ctx, DValue *p[], int N )
+{
+	DValue value = daoNullEnum;
+	DValue *params[] = {p[0], &value, p[1], p[2]};
+	value.v.e = DEnum_New( NULL, 2 );
+	DaoInode_Children( ctx, params, N + 1 );
+	DEnum_Delete( value.v.e );
+}
+
+static DaoFuncItem inodeMeths[] =
+{
+	{ DaoInode_Open,     "open( self : inode, path : string )" },
+	{ DaoInode_Isopen,   "isopen( self : inode )const=>int" },
+	{ DaoInode_Close,    "close( self : inode )" },
+	{ DaoInode_Path,     "path( self : inode )const=>string" },
+	{ DaoInode_Name,     "name( self : inode )const=>string" },
+	{ DaoInode_Type,     "type( self : inode )const=>enum<file, dir>" },
+	{ DaoInode_Parent,   "parent( self : inode )const=>inode" },
+	{ DaoInode_Ctime,    "ctime( self : inode )const=>int" },
+	{ DaoInode_Mtime,    "mtime( self : inode )const=>int" },
+	{ DaoInode_Access,   "access( self : inode )const=>enum<read; write; execute>" },
+	{ DaoInode_Rename,   "rename( self : inode, path : string )" },
+	{ DaoInode_Remove,   "remove( self : inode )" },
+	{ DaoInode_Makefile, "makefile( self : inode, path : string )=>inode" },
+	{ DaoInode_Makedir,  "makedir( self : inode, path : string )=>inode" },
+	{ DaoInode_Isroot,   "isroot( self : inode )const=>int" },
+	{ DaoInode_Children, "children( self : inode, type : enum<files; dirs>, filter='*', filtering : enum<wildcard, regex> = $wildcard )const=>list<inode>" },
+	{ DaoInode_Files,    "files( self : inode, filter='*', filtering : enum<wildcard, regex> = $wildcard )const=>list<inode>" },
+	{ DaoInode_Dirs,     "dirs( self : inode, filter='*', filtering : enum<wildcard, regex> = $wildcard )const=>list<inode>" },
+	{ DaoInode_Child,    "[]( self : inode, path : string )const=>inode" },
+	{ NULL, NULL }
+};
+
+static void SYS_Inode( DaoContext *ctx, DValue *p[], int N )
+{
+	char errbuf[MAX_ERRMSG];
+	DInode *inode = DInode_New();
+	int res;
+	if( ( res = DInode_Open( inode, DString_GetMBS( p[0]->v.s ) ) ) != 0 ){
+		if( res == 1 )
+			strcpy( errbuf, "Trying to open something which is not a file/directory" );
+		else if( res == -1 )
+			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
+		else
+			GetErrorMessage( errbuf, res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	DaoContext_PutCData( ctx, (void*)inode, &inodeTyper );
+}
+
+static void SYS_GetCWD( DaoContext *ctx, DValue *p[], int N )
+{
+	char buf[MAX_PATH + 1];
+	int res = 0;
+	DInode *inode = DInode_New();
+	if( !getcwd( buf, MAX_PATH ) || ( res = DInode_Open( inode, buf ) ) != 0 ){
+		DInode_Delete( inode );
+		GetErrorMessage( buf, ( res == 0 )? errno : res, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, buf );
+		return;
+	}
+	DaoContext_PutCData( ctx, (void*)inode, &inodeTyper );
+}
+
+static void SYS_SetCWD( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *inode = (DInode*)p[0]->v.cdata->data;
+	char errbuf[MAX_PATH + 1];
+	if( inode->path == NULL ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		return;
+	}
+	if( inode->type != 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not a directory" );
+		return;
+	}
+	if( chdir( inode->path ) != 0 ){
+		GetErrorMessage( errbuf, errno, 0 );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+}
+
+DaoTypeBase inodeTyper = {
+	"inode", NULL, NULL, inodeMeths, {NULL}, (FuncPtrDel)DInode_Delete, NULL
+};
+
+#undef IS_PATH_SEP
+#undef MAX_ERRMSG
 
 #ifdef _MSC_VER
 #undef chdir
@@ -1028,14 +1636,9 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
 	{ SYS_SetLocale, "setlocale(category:int=0,locale:string='')=>string" },
 	{ SYS_Clock,     "clock()=>float" },
-	{ SYS_Rename,    "rename( from:string, to:string )" },
-	{ SYS_Remove,    "remove( path:string )" },
-	{ SYS_Mkdir,     "mkdir( path:string )" },
-	{ SYS_Rmdir,     "rmdir( path:string )" },
-	{ SYS_Setcwd,    "setcwd( path:string )" },
-	{ SYS_Getcwd,    "getcwd()=>string" },
-	{ SYS_Scandir,   "scandir( path:string, type:enum<file,dir,any> )=>list<string>" },
-	{ SYS_Type,      "type( path:string )=>enum<file,dir,unknown>" },
+	{ SYS_Inode,     "inode( path : string )=>inode" },
+	{ SYS_GetCWD,    "getcwd(  )=>inode" },
+	{ SYS_SetCWD,    "setcwd( dir : inode )" },
 	{ NULL, NULL }
 };
 static DaoNumItem sysConsts[] =
