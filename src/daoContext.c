@@ -3999,6 +3999,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DValue *selfpar = & selfpar0;
 	DValue caller = *self->regValues[ vmc->a ];
 	DRoutine *rout = NULL;
+	DRoutine *rout2 = NULL;
 	DaoVmProcess *proc = self->process;
 	DaoVmProcess *vmp;
 	DaoContext *ctx;
@@ -4116,8 +4117,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			rout = DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
 		}
 		if( rout == NULL ){
-			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched1" );
-			return;
+			rout2 = (DRoutine*) caller.v.routine;
+			goto InvalidParameter;
 		}else if( rout->type == DAO_ROUTINE ){
 			DaoContext_RaiseException( self, DAO_ERROR, "not supported overloading" );
 			return;
@@ -4133,7 +4134,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
 			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched3" );
 			for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
-			return;
+			rout2 = (DRoutine*) rout;
+			goto InvalidParameter;
 		}
 		if( ! (mode & DAO_CALL_ASYNC) ){
 			/* foo: routine<x:int,s:string>
@@ -4211,8 +4213,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			rout = caller.v.routine;
 			rout = (DaoRoutine*) DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
 			if( rout == NULL ){
-				DaoContext_ShowCallError( self, (DRoutine*) caller.v.routine, selfpar, params, NULL, npar, code );
-				return;
+				rout2 = (DRoutine*) caller.v.routine;
+				goto InvalidParameter;
 			}
 			if( rout->type == DAO_FUNCTION ){
 				DaoContext_RaiseException( self, DAO_ERROR, "not supported overloading" );
@@ -4266,8 +4268,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				rout = (DaoRoutine*) klass->classRoutine;
 			}
 			if( rout == NULL ){
-				DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched3" );
-				return;
+				rout2 = (DRoutine*) klass->classRoutine;
+				goto InvalidParameter;
 			}
 			if( rout->type == DAO_FUNCTION ){
 				DaoFunction *func = (DaoFunction*) rout;
@@ -4275,9 +4277,10 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				DValue returned = daoNullValue;
 				DValue *returned2 = & returned;
 				if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
-					DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched3" );
 					for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
 					if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
+					rout2 = (DRoutine*) rout;
+					goto InvalidParameter;
 					return;
 				}
 				ctx = DaoVmProcess_MakeContext( self->process, rout );
@@ -4400,6 +4403,9 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	}else{
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 	}
+	return;
+InvalidParameter:
+	DaoContext_ShowCallError( self, rout2, selfpar, params, NULL, npar, code );
 }
 void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 {
@@ -4414,6 +4420,7 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	DValue *selfpar = & selfpar0;
 	DValue caller = *self->regValues[ vmc->a ];
 	DRoutine *rout = NULL;
+	DRoutine *rout2 = NULL;
 	DaoContext *ctx;
 
 	//printf( "DoFastCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
@@ -4454,9 +4461,9 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		}
 		/* DArray_Resize( self->parbuf, rout->parCount, 0 ); */
 		if( ! DRoutine_FastPassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
-			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched4" );
 			for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
-			return;
+			rout2 = (DRoutine*)rout;
+			goto InvalidParameter;
 		}
 		/* foo: routine<x:int,s:string>
 		 *   ns.foo( 1, "" );
@@ -4518,8 +4525,8 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		ctx->parCount = npar;
 
 		if( ! DRoutine_FastPassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code ) ){
-			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
-			return;
+			rout2 = (DRoutine*)ctx->routine;
+			goto InvalidParameter;
 		}
 		if( (inclass && self->constCall) || (rout->attribs & DAO_ROUT_ISCONST) 
 				|| (selfpar->t == DAO_OBJECT && selfpar->cst ) )
@@ -4549,6 +4556,8 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	}else{
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 	}
+InvalidParameter:
+	DaoContext_ShowCallError( self, rout2, selfpar, params, NULL, npar, vmc->code );
 }
 void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 {

@@ -1161,9 +1161,7 @@ static void GetErrorMessage( char *buffer, int code, int special )
 		strcpy( buffer, "Not enough memory (ENOMEM)" );
 		break;
 	default:
-		strcpy( buffer, "Unknown system error (0x" );
-		itoa( code, buffer + strlen( buffer ), 16 );
-		strcat( buffer, ")" );
+		sprintf( buffer, "Unknown system error (%x)", code );
 	}
 }
 

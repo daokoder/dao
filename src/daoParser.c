@@ -5888,8 +5888,8 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 	int reg, reg2, rb, i;
 	ushort_t opB;
 
-	   for(i=left;i<=right;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
 	/*
+	   for(i=left;i<=right;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
 	 */
 	if( left == right ){
 		self->curLine = tokens[left]->line;

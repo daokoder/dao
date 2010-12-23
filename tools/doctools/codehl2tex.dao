@@ -140,6 +140,8 @@ routine DaoCodeHL::Highlight( source : string, name='' )
 			output += "\\STRING{" + replace( tok ) + "}";
 		}elif( tok[0:0] == "@" ){
 			output += "\\TYPE{" + replace( tok ) + "}";
+		}elif( tok[0:0] == "$" ){
+			output += "\\CONST{" + replace( tok ) + "}";
 		}elif( tok == "[" || tok == "]" || tok == "(" || tok == ")" ){
 			output += tok; 
 		}elif( HilitMap.has( tok ) ){
