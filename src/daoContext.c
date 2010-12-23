@@ -4556,6 +4556,7 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	}else{
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 	}
+	return;
 InvalidParameter:
 	DaoContext_ShowCallError( self, rout2, selfpar, params, NULL, npar, vmc->code );
 }

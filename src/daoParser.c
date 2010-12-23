@@ -2397,13 +2397,11 @@ for(i=0; i<tokens->size; i++) printf("%s  ", DString_GetMBS( tokens->items.pToke
 return 1;
 }
 static void DaoParser_AddToScope( DaoParser *self, DValue scope,
-		DaoToken *tname, DValue value, DaoType *abtype, int store )
+		DString *name, DValue value, DaoType *abtype, int store, int line )
 {
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	DString *name = tname->string;
 	int perm = self->permission;
-	int line = tname->line;
 	if( scope.t == DAO_CLASS ){
 		DaoClass_AddType( scope.v.klass, name, abtype );
 		DaoClass_AddConst( scope.v.klass, name, value, perm, line );
@@ -3079,12 +3077,13 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	start = DaoParser_FindScopedData( self, start+1, & scope, & value, 1, NULL );
 	if( start <0 ) goto ErrorInterfaceDefinition;
 	if( value.t == DAO_STRING ){
+		int line = tokens[start]->line;
 		interName = value.v.s;
 		inter = DaoInterface_New( interName->mbs );
 		if( routine != myNS->mainRoutine ) ns = NULL;
 		value.t = DAO_INTERFACE;
 		value.v.inter = inter;
-		DaoParser_AddToScope( self, scope, tokName, value, inter->abtype, storeType );
+		DaoParser_AddToScope( self, scope, interName, value, inter->abtype, storeType, line );
 
 		if( tokens[start+2]->name == DTOK_SEMCO ){
 			start += 3;
@@ -3191,9 +3190,16 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( start <0 ) goto ErrorClassDefinition;
 	ename = tokens[start]->string;
 	if( value.t == DAO_STRING ){
-		className = value.v.s;
+		int line = tokens[start]->line;
 		klass = DaoClass_New();
 		klass->attribs |= final;
+
+		className = klass->className;
+		DString_Assign( className, value.v.s );
+		if( className->mbs[0] == '@' ){
+			DString_Erase( className, 0, 1 );
+			klass->attribs |= DAO_CLS_SYNCHRONOUS;
+		}
 
 		if( start+1 <= to && tokens[start+1]->name == DTOK_LT ){
 			rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start+1, -1 );
@@ -3201,8 +3207,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			klass->typeHolders = DArray_New(0);
 			klass->typeDefaults = DArray_New(0);
 			klass->instanceClasses = DMap_New(D_STRING,0);
-			className = klass->className;
-			DString_Assign( className, value.v.s );
 			DString_AppendChar( className, '<' );
 			i = start + 2;
 			while( i < rb ){
@@ -3239,6 +3243,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			klass->objType->nested = DArray_Copy( klass->typeHolders );
 			DMap_Insert( klass->instanceClasses, className, klass );
 			DString_Assign( klass->className, value.v.s );
+			if( className->mbs[0] == '@' ) DString_Erase( className, 0, 1 );
 			GC_IncRCs( klass->objType->nested );
 			GC_IncRC( klass );
 			start = rb;
@@ -3249,7 +3254,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		if( routine != myNS->mainRoutine ) ns = NULL;
 		value.t = DAO_CLASS;
 		value.v.klass = klass;
-		DaoParser_AddToScope( self, scope, tokName, value, klass->objType, storeType );
+		DaoParser_AddToScope( self, scope, className, value, klass->objType, storeType, line );
 
 		if( start+1 <= to && tokens[start+1]->name == DTOK_SEMCO ){
 			start += 2;
@@ -3368,7 +3373,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 ErrorClassDefinition:
 	if( parser ) DaoParser_Delete( parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
-	DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, to, 0 );
+	ec = DAO_INVALID_CLASS_DEFINITION + ((klass->attribs & DAO_CLS_SYNCHRONOUS) !=0);
+	DaoParser_Error2( self, ec, errorStart, to, 0 );
 	return -1;
 }
 static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, int storeType )
@@ -3619,6 +3625,17 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		if( myNS->options & DAO_NS_AUTO_GLOBAL ){
 			if( self->levelBase + self->lexLevel ==0 && !(storeType & DAO_DATA_LOCAL) ){
 				storeType |= DAO_DATA_GLOBAL;
+			}
+		}
+		if( self->isClassBody ){
+			if( hostClass->attribs & DAO_CLS_SYNCHRONOUS ){
+				if( storeType & DAO_DATA_STATIC ){
+					DaoParser_Error2( self, DAO_INVALID_ACCESS, errorStart, start, 0 );
+				}
+				if( (storeType & DAO_DATA_VAR) && self->permission == DAO_DATA_PUBLIC ){
+					DaoParser_Error2( self, DAO_INVALID_STORAGE, errorStart, start, 0 );
+				}
+				if( self->errors->size ) return 0;
 			}
 		}
 		tki = tokens[start]->name;
@@ -5040,6 +5057,19 @@ int DaoParser_PostParsing( DaoParser *self )
 			vmc = vmCodes[j];
 			vmCodes[j] = vmCodes[k-1-j];
 			vmCodes[k-1-j] = vmc;
+		}
+	}
+	if( self->hostClass && (self->hostClass->attribs & DAO_CLS_SYNCHRONOUS) ){
+		for( j=0; j<self->vmCodes->size; j++){
+			DaoVmCodeX *vmc = vmCodes[j];
+			int c = vmc->code;
+			if( c == DVM_GETVG || c == DVM_SETVG ){
+				DaoParser_Error3( self, DAO_INVALID_SHARED, vmc->first );
+			}
+		}
+		if( self->errors->size ){
+			DaoParser_PrintError( self, 0, 0, NULL );
+			return 0;
 		}
 	}
 	/* DArray_Swap( self->regLines, routine->regLines ); */
