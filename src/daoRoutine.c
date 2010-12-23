@@ -4971,6 +4971,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 		DaoRoutine_FormatCode( self, j, annot );
 		DaoStream_WriteString( stream, annot );
 		continue;
+		{
 		DaoVmCodeX vmc = *vmCodes[j];
 		const char *name = getOpcodeName( vmc.code );
 		sprintf( buffer, "%5i :  ", j);
@@ -4978,6 +4979,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 		if( self->source ) DaoTokens_AnnotateCode( self->source, vmc, annot, 24 );
 		sprintf( buffer, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, annot->mbs );
 		DaoStream_WriteMBS( stream, buffer );
+		}
 	}
 	DaoStream_WriteMBS( stream, sep2 );
 	DString_Delete( annot );

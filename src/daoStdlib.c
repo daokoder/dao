@@ -847,8 +847,8 @@ int DInode_Open( DInode *self, const char *path )
 {
 	char buf[MAX_PATH + 1] = {0};
 	struct stat info;
-	DInode_Close( self );
 	int len, i;
+	DInode_Close( self );
 	if( !path )
 		return 1;
 	len = strlen( path );
