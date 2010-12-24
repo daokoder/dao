@@ -28,6 +28,7 @@
 #include"daoRegex.h"
 #include"daoStream.h"
 #include"daoParser.h"
+#include"daoSched.h"
 
 #ifndef FE_ALL_EXCEPT
 #define FE_ALL_EXCEPT 0xffff
@@ -4005,6 +4006,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoContext *ctx;
 	DaoTuple *tuple;
 	int initbase = 0;
+	int async = 0;
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_AFC )
 	DaoObject *future;
 	DValue value = daoNullValue;
@@ -4347,6 +4349,22 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 			return;
 		}
+
+#if( defined DAO_WITH_THREAD )
+		async = code == DVM_MCALL && params[0]->t == DAO_OBJECT;
+		async = async && (params[0]->v.object->myClass->attribs & DAO_CLS_SYNCHRONOUS);
+		if( self->object ) async &= !DaoObject_ChildOf( self->object->that, params[0]->v.object );
+		if( async ){
+			DaoNameSpace *ns = self->nameSpace;
+			DaoFuture *future = DaoCallServer_Add( ctx, NULL, NULL );
+			DaoType *retype = ctx->routine->routType->X.abtype;
+			DaoType *type = DaoNameSpace_MakeType( ns, "future", DAO_FUTURE, NULL, &retype,1 );
+			GC_ShiftRC( type, future->unitype );
+			future->unitype = type;
+			DaoContext_PutResult( self, (DaoBase*) future );
+			return;
+		}
+#endif
 
 		if( ! (mode & DAO_CALL_ASYNC) ){
 			DaoVmCode *vmc2 = vmc + 1;

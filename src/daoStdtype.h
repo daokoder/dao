@@ -270,4 +270,21 @@ DaoTypeBase* DaoException_GetType( int type );
 
 extern DaoTypeBase dao_Exception_Typer;
 
+enum{ DAO_CALL_QUEUED, DAO_CALL_RUNNING, DAO_CALL_PAUSED, DAO_CALL_FINISHED };
+
+typedef struct DaoFuture  DaoFuture;
+struct DaoFuture
+{
+	DAO_DATA_COMMON;
+
+	int       state;
+	DValue    value;
+	DaoType  *unitype;
+
+	DaoFuture     *precondition;
+	DaoContext    *context;
+	DaoVmProcess  *process;
+};
+DaoFuture* DaoFuture_New();
+
 #endif

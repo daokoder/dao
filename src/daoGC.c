@@ -126,6 +126,7 @@ static void cycRefCountIncrements( DArray * dbases );
 static void directRefCountDecrement( DArray * dbases );
 static void cycRefCountDecrementV( DValue value );
 static void cycRefCountIncrementV( DValue value );
+static void directRefCountDecrementValue( DValue *value );
 static void cycRefCountDecrementsV( DVarray * values );
 static void cycRefCountIncrementsV( DVarray * values );
 static void directRefCountDecrementV( DVarray * values );
@@ -768,6 +769,16 @@ void cycRefCountDecreScan()
 				}
 				break;
 			}
+		case DAO_FUTURE :
+			{
+				DaoFuture *future = (DaoFuture*) dbase;
+				cycRefCountDecrementV( future->value );
+				cycRefCountDecrement( (DaoBase*) future->unitype );
+				cycRefCountDecrement( (DaoBase*) future->context );
+				cycRefCountDecrement( (DaoBase*) future->process );
+				cycRefCountDecrement( (DaoBase*) future->precondition );
+				break;
+			}
 		case DAO_VMPROCESS :
 			{
 				DaoVmProcess *vmp = (DaoVmProcess*) dbase;
@@ -950,6 +961,16 @@ void markAliveObjects( DaoBase *root )
 					for( ; node != NULL; node = DMap_Next( abtp->interfaces, node ) )
 						cycRefCountIncrement( node->key.pBase );
 				}
+				break;
+			}
+		case DAO_FUTURE :
+			{
+				DaoFuture *future = (DaoFuture*) dbase;
+				cycRefCountIncrementV( future->value );
+				cycRefCountIncrement( (DaoBase*) future->unitype );
+				cycRefCountIncrement( (DaoBase*) future->context );
+				cycRefCountIncrement( (DaoBase*) future->process );
+				cycRefCountIncrement( (DaoBase*) future->precondition );
 				break;
 			}
 		case DAO_VMPROCESS :
@@ -1137,6 +1158,16 @@ void freeGarbage()
 							node->key.pBase->refCount --;
 						DMap_Clear( abtp->interfaces );
 					}
+					break;
+				}
+			case DAO_FUTURE :
+				{
+					DaoFuture *future = (DaoFuture*) dbase;
+					directRefCountDecrementValue( & future->value );
+					GC_BREAK_REF( future->unitype );
+					GC_BREAK_REF( future->context );
+					GC_BREAK_REF( future->process );
+					GC_BREAK_REF( future->precondition );
 					break;
 				}
 			case DAO_VMPROCESS :
@@ -1589,6 +1620,16 @@ void cycRefCountDecreScan()
 						cycRefCountDecrement( node->key.pBase );
 				}
 				break;
+		case DAO_FUTURE :
+			{
+				DaoFuture *future = (DaoFuture*) dbase;
+				cycRefCountDecrementV( future->value );
+				cycRefCountDecrement( (DaoBase*) future->unitype );
+				cycRefCountDecrement( (DaoBase*) future->context );
+				cycRefCountDecrement( (DaoBase*) future->process );
+				cycRefCountDecrement( (DaoBase*) future->precondition );
+				break;
+			}
 			}
 		case DAO_VMPROCESS :
 			{
@@ -1780,6 +1821,16 @@ void cycRefCountIncreScan()
 						for( ; node != NULL; node = DMap_Next( abtp->interfaces, node ) )
 							cycRefCountIncrement( node->key.pBase );
 					}
+					break;
+				}
+			case DAO_FUTURE :
+				{
+					DaoFuture *future = (DaoFuture*) dbase;
+					cycRefCountIncrementV( future->value );
+					cycRefCountIncrement( (DaoBase*) future->unitype );
+					cycRefCountIncrement( (DaoBase*) future->context );
+					cycRefCountIncrement( (DaoBase*) future->process );
+					cycRefCountIncrement( (DaoBase*) future->precondition );
 					break;
 				}
 			case DAO_VMPROCESS :
@@ -1985,6 +2036,16 @@ void directDecRC()
 							node->key.pBase->refCount --;
 						DMap_Clear( abtp->interfaces );
 					}
+					break;
+				}
+			case DAO_FUTURE :
+				{
+					DaoFuture *future = (DaoFuture*) dbase;
+					directRefCountDecrementValue( & future->value );
+					GC_BREAK_REF( future->unitype );
+					GC_BREAK_REF( future->context );
+					GC_BREAK_REF( future->process );
+					GC_BREAK_REF( future->precondition );
 					break;
 				}
 			case DAO_VMPROCESS :
@@ -2232,6 +2293,19 @@ void cycRefCountIncrementsV( DVarray *list )
 	if( list == NULL ) return;
 	data = list->data;
 	for( i=0; i<list->size; i++ ) cycRefCountIncrementV( data[i] );
+}
+void directRefCountDecrementValue( DValue *value )
+{
+	if( value->t >= DAO_ARRAY ){
+		value->v.p->refCount --;
+	}else{
+		if( value->t == DAO_ENUM && value->v.e->type ){
+			value->v.e->type->refCount --;
+			value->v.e->type = NULL;
+		}
+		DValue_Clear( value );
+	}
+	value->t = 0;
 }
 void directRefCountDecrementV( DVarray *list )
 {

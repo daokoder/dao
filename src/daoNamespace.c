@@ -1314,6 +1314,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		abtp = pair->unitype; break;
 	case DAO_TUPLE :
 		abtp = tuple->unitype; break;
+	case DAO_FUTURE :
+		abtp = ((DaoFuture*)p)->unitype; break;
 	case DAO_VMPROCESS :
 		abtp = vmp->abtype; break;
 	case DAO_INTERFACE :

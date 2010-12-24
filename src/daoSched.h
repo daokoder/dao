@@ -25,3 +25,7 @@ void DaoSched_Register( DString *name, DaoVmProcess *vmproc );
 void DaoSched_StartWaiting( DaoVmProcess *vmp );
 
 #endif
+
+void DaoCallServer_Init( DaoVmSpace *vms );
+void DaoCallServer_Join( DaoVmSpace *vms );
+DaoFuture* DaoCallServer_Add( DaoContext *ctx, DaoVmProcess *proc, DaoFuture *pre );

@@ -1211,7 +1211,7 @@ static DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *n
 	if( types == NULL ) types = DArray_New(0);
 	count = types->size;
 	if( tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
-	if( tokens[start]->name == DTOK_IDENTIFIER ){
+	if( tokens[start]->name == DTOK_IDENTIFIER && strcmp( tokens[start]->string->mbs, "future" ) !=0 ){
 		/* scoped type or user defined template class */
 		type = DaoParser_ParseUserType( self, start, end, newpos );
 		if( type == NULL ) goto InvalidTypeName;
@@ -1254,7 +1254,9 @@ static DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *n
 			if( type == NULL ) type = DaoType_New( "?", DAO_UDF, NULL, NULL );
 			retype = (DaoBase*) type;
 			break;
-		default : break;
+		default : 
+			if( strcmp( tokens[start]->string->mbs, "future" ) ==0 ) tid = DAO_FUTURE;
+			break;
 		}
 		tks = tokens[start]->string;
 		nested = types->items.pType + count;

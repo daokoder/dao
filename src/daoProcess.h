@@ -77,6 +77,7 @@ struct DaoVmProcess
 	char stopit;
 
 	DaoMpiData *mpiData;
+	DaoFuture *future;
 
 	DString *mbstring;
 	DVarray *parbuf;

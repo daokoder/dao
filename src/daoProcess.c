@@ -155,6 +155,7 @@ DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms )
 	self->parResume = NULL;
 	self->parYield = NULL;
 	self->abtype = NULL;
+	self->future = NULL;
 	self->exceptions = DVarray_New();
 
 	self->mbstring = DString_New(1);
@@ -264,6 +265,7 @@ DaoContext* DaoVmProcess_MakeContext( DaoVmProcess *self, DaoRoutine *routine )
 	if( ctx && ctx->refCount >1 ){
 		/* this should never happen in the current implementation.
 		 * it is added just in case if something may change in the future. */
+		/* this may actually happen, for asynchronous method call */
 		GC_DecRC( ctx );
 		ctx = frame->context = NULL;
 	}
@@ -897,6 +899,8 @@ CallEntry:
 			DaoList *list = DaoContext_GetList( topCtx, vmc );
 			for(i=0; i<self->parResume->size; i++)
 				DaoList_Append( list, self->parResume->data[i] );
+		}else if( self->pauseType == DAO_VMP_AFC && self->future->precondition ){
+			DaoContext_PutValue( topCtx, self->future->precondition->value );
 		}
 		vmc ++;
 	}

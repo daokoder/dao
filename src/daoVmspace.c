@@ -142,6 +142,7 @@ extern DaoTypeBase  comTyper;
 extern DaoTypeBase  abstypeTyper;
 extern DaoTypeBase  curryTyper;
 extern DaoTypeBase  rgxMatchTyper;
+extern DaoTypeBase  futureTyper;
 
 extern DaoTypeBase mutexTyper;
 extern DaoTypeBase condvTyper;
@@ -199,6 +200,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_SEMA      :  return & semaTyper;
 	case DAO_THREAD    :  return & threadTyper;
 	case DAO_THDMASTER :  return & thdMasterTyper;
+	case DAO_FUTURE    :  return & futureTyper;
 #endif
 	default : break;
 	}
@@ -2300,6 +2302,7 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_SetupType( ns, & mutexTyper );
 	DaoNameSpace_SetupType( ns, & condvTyper );
 	DaoNameSpace_SetupType( ns, & semaTyper );
+	DaoNameSpace_SetupType( ns, & futureTyper );
 #endif
 	DaoNameSpace_SetupType( vms->nsInternal, & vmpTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & coroutTyper );
@@ -2310,6 +2313,9 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_WrapType( vms->nsInternal, & libReflectTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & inodeTyper );
 
+#if( defined DAO_WITH_THREAD )
+	DaoCallServer_Init( vms );
+#endif
 #if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
 	DaoSched_Init( vms );
 #endif
@@ -2335,6 +2341,9 @@ void DaoQuit()
 {
 	int i;
 	/* TypeTest(); */
+#if( defined DAO_WITH_THREAD )
+	DaoCallServer_Join( mainVmSpace );
+#endif
 #if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
 	DaoSched_Join( mainVmSpace );
 #endif

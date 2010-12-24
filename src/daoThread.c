@@ -75,7 +75,7 @@ void DCondVar_Wait( DCondVar *self, DMutex *mutex )
 }
 int DCondVar_TimedWait( DCondVar *self, DMutex *mutex, double seconds )
 {
-	long sec = (long)seconds;
+	long sec = floor( seconds );
 	long nsec = (long)(( seconds - sec ) * 1E9);
 	struct timeval now;
 	struct timespec timeout;

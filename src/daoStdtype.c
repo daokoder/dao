@@ -32,6 +32,7 @@
 #include"daoParser.h"
 #include"daoMacro.h"
 #include"daoRegex.h"
+#include"daoSched.h"
 
 DMap *dao_typing_cache; /* HASH<void*[2],int> */
 #ifdef DAO_WITH_THREAD
@@ -4414,4 +4415,57 @@ void DaoException_Init( DaoException *self, DaoTypeBase *typer )
 			return;
 		}
 	}
+}
+
+static void DaoFuture_Lib_Value( DaoContext *ctx, DValue *par[], int N )
+{
+	DaoVmProcess *proc = ctx->process;
+	DaoFuture *self = (DaoFuture*) par[0]->v.p;
+	if( self->state == DAO_CALL_FINISHED ){
+		DaoContext_PutValue( ctx, self->value );
+		return;
+	}
+#if( defined DAO_WITH_THREAD )
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_AFC;
+	proc->topFrame->entry = (short)(ctx->vmc - ctx->codes);
+	DaoCallServer_Add( NULL, proc, self );
+#endif
+}
+static DaoFuncItem futureMeths[] =
+{
+	{ DaoFuture_Lib_Value,      "value( self : future<@V> )=>@V" },
+	{ NULL, NULL }
+};
+static void DaoFuture_Delete( DaoFuture *self )
+{
+	DValue_Clear( & self->value );
+	GC_DecRC( self->unitype );
+	GC_DecRC( self->context );
+	GC_DecRC( self->process );
+	GC_DecRC( self->precondition );
+}
+
+static DaoTypeCore futureCore =
+{
+	0, NULL, NULL, NULL, NULL,
+	DaoBase_SafeGetField,
+	DaoBase_SafeSetField,
+	DaoBase_GetItem,
+	DaoBase_SetItem,
+	DaoBase_Print,
+	DaoBase_Copy,
+};
+DaoTypeBase futureTyper =
+{
+	"future", & futureCore, NULL, (DaoFuncItem*) futureMeths, {0},
+	(FuncPtrDel) DaoFuture_Delete, NULL
+};
+
+DaoFuture* DaoFuture_New()
+{
+	DaoFuture *self = (DaoFuture*)dao_calloc(1,sizeof(DaoFuture));
+	DaoBase_Init( self, DAO_FUTURE );
+	self->state = DAO_CALL_QUEUED;
+	return self;
 }
