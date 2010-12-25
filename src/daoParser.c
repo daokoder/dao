@@ -51,13 +51,10 @@ extern DIntStringPair dao_keywords[];
 
 static DStringIntPair mapCallMode[]=
 {
-	{ "async",      DAO_CALL_ASYNC } ,
-	{ "hurry",      DAO_CALL_HURRY } ,
 	{ "init",       DAO_CALL_INIT } ,
-	{ "join",       DAO_CALL_JOIN } ,
 	{ NULL, 0 }
 };
-static const int countCallMode = 4;
+static const int countCallMode = 1;
 
 static const int mapAithOpcode[]=
 {
@@ -6104,13 +6101,6 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 					break;
 				}
 			}
-#if (!defined(DAO_WITH_MPI) || !defined(DAO_WITH_THREAD))
-			if( mode & (DAO_CALL_ASYNC|DAO_CALL_HURRY|DAO_CALL_JOIN) ){
-				DString_SetMBS( self->mbs, "asynchronous function call" );
-				DaoParser_Error( self, DAO_CTW_FEATURE_DISABLED, self->mbs );
-				return -1;
-			}
-#endif
 			if( tokens[start-1]->name == DTOK_ID_INITYPE ){
 				if( DaoParser_GetRegister( self, tokens[start-1] ) <0 ){
 					mode |= DAO_CALL_COROUT;

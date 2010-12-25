@@ -38,25 +38,6 @@ struct DaoVmFrame
 	DaoVmFrame *rollback;
 };
 
-typedef struct DaoMpiData DaoMpiData;
-struct DaoMpiData
-{
-	DString *name;
-	DString *pidAwaited;
-#ifdef WIN32
-	double timeout;
-#else
-	struct timeval timeout;
-#endif
-	DaoVmProcess *asynCreator; /* the process that created this one in an asynchronous call */
-	DaoObject    *future;
-	DMap         *asynCalls; /* the asynchronous calls invoked by this process */
-	int           asynCount;
-	int           asynJoin;
-};
-DaoMpiData* DaoMpiData_New();
-void DaoMpiData_Delete( DaoMpiData *self );
-
 struct DaoVmProcess
 {
 	DAO_DATA_COMMON;
@@ -76,7 +57,6 @@ struct DaoVmProcess
 	char status;
 	char stopit;
 
-	DaoMpiData *mpiData;
 	DaoFuture *future;
 
 	DString *mbstring;

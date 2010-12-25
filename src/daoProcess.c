@@ -114,28 +114,6 @@ static void DaoVmFrame_PushRange( DaoVmFrame *self, ushort_t from, ushort_t to )
 	self->depth ++;
 }
 
-DaoMpiData* DaoMpiData_New()
-{
-	DaoMpiData *self = dao_calloc( 1, sizeof(DaoMpiData) );
-	self->name = DString_New(1);
-	self->pidAwaited = DString_New(1);
-	self->asynCalls = DMap_New(0,0);
-#ifdef WIN32
-	self->timeout = 0;
-#else
-	self->timeout.tv_sec = 0;
-	self->timeout.tv_usec = 0;
-#endif
-	return self;
-}
-void DaoMpiData_Delete( DaoMpiData *self )
-{
-	DString_Delete( self->name );
-	DString_Delete( self->pidAwaited );
-	DMap_Delete( self->asynCalls );
-	dao_free( self );
-}
-
 DaoTypeBase vmpTyper =
 {
 	"process",
@@ -163,7 +141,6 @@ DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms )
 	self->wcsRegex = NULL;
 	self->returned = daoNullValue;
 	self->pauseType = 0;
-	self->mpiData = NULL;
 	self->array = NULL;
 	self->parbuf = NULL;
 	self->signature = DArray_New(0);
@@ -202,7 +179,6 @@ void DaoVmProcess_Delete( DaoVmProcess *self )
 	if( self->parResume ) DVarray_Delete( self->parResume );
 	if( self->parYield ) DVarray_Delete( self->parYield );
 	if( self->abtype ) GC_DecRC( self->abtype );
-	if( self->mpiData ) DaoMpiData_Delete( self->mpiData );
 	dao_free( self );
 }
 
@@ -358,7 +334,7 @@ int DaoVmProcess_Resume( DaoVmProcess *self, DValue *par[], int N, DaoList *list
 		if( list )
 			for( i=0; i<self->parYield->size; i++ )
 				DaoList_Append( list, self->parYield->data[i] );
-	}else if( self->status == DAO_VMPROC_SUSPENDED && self->pauseType == DAO_VMP_AFC ){
+	}else if( self->status == DAO_VMPROC_SUSPENDED && self->pauseType == DAO_VMP_ASYNC ){
 		DaoVmProcess_Execute( self );
 	}
 	return self->status;
@@ -895,11 +871,11 @@ CallEntry:
 	}
 	if( self->status == DAO_VMPROC_SUSPENDED &&
 			( vmc->code ==DVM_CALL || vmc->code ==DVM_MCALL || vmc->code ==DVM_YIELD ) ){
-		if( self->parResume && self->pauseType != DAO_VMP_AFC ){
+		if( self->parResume && self->pauseType != DAO_VMP_ASYNC ){
 			DaoList *list = DaoContext_GetList( topCtx, vmc );
 			for(i=0; i<self->parResume->size; i++)
 				DaoList_Append( list, self->parResume->data[i] );
-		}else if( self->pauseType == DAO_VMP_AFC && self->future->precondition ){
+		}else if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
 			DaoContext_PutValue( topCtx, self->future->precondition->value );
 		}
 		vmc ++;

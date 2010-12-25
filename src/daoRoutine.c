@@ -4109,13 +4109,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT 
 						&& (tp[0]->X.klass->attribs & DAO_CLS_SYNCHRONOUS) ){
 					ct = DaoNameSpace_MakeType( ns, "future", DAO_FUTURE, NULL, &ct, 1 );
-					//ct = DaoNameSpace_MakeType( ns, "tuple", DAO_TUPLE, NULL, &ct, 1 );
 				}
-#if 0
-				if( opb & DAO_CALL_ASYNC ){
-					ct = DaoNameSpace_MakeType( ns, "FutureValue", DAO_OBJECT, (DaoBase*) daoClassFutureValue, NULL, 0 );
-				}
-#endif
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				if( ct == NULL ) ct = DaoNameSpace_GetType( ns, & nil );
 				/*

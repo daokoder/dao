@@ -4425,9 +4425,9 @@ static void DaoFuture_Lib_Value( DaoContext *ctx, DValue *par[], int N )
 		DaoContext_PutValue( ctx, self->value );
 		return;
 	}
-#if( defined DAO_WITH_THREAD )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 	proc->status = DAO_VMPROC_SUSPENDED;
-	proc->pauseType = DAO_VMP_AFC;
+	proc->pauseType = DAO_VMP_ASYNC;
 	proc->topFrame->entry = (short)(ctx->vmc - ctx->codes);
 	DaoCallServer_Add( NULL, proc, self );
 #endif

@@ -126,8 +126,6 @@ DAO_EXTC_CLOSE
 
 
 #define DAO_MAX_CDATA_SUPER 10
-/* D: 4 ; A: 1 ; O: 15 */
-#define DAO_PROXY_PORT  4115
 
 
 #ifdef __cplusplus

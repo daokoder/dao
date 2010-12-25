@@ -1,5 +1,5 @@
 
-class @Item<@V>
+class Item<@V>
 {
 	var value : @V;
 	var next : Item;

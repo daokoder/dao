@@ -44,7 +44,6 @@
 #endif
 
 #ifdef DAO_WITH_NETWORK
-void DaoProxy_Init( DaoVmSpace *vmSpace );
 void DaoNetwork_Init( DaoVmSpace *vms, DaoNameSpace *ns );
 extern DaoTypeBase libNetTyper;
 #endif
@@ -100,24 +99,13 @@ static const char *const cmd_help =
 "   -T, --no-typed-code:  no typed VM codes;\n"
 "   -J, --no-jit:         no just-in-time compiling;\n"
 "   -n, --incr-comp:      incremental compiling;\n"
-"   -p, --proc-name:      process name for communication.\n\n";
+;
 /*
    "   -s, --assembly:    generate assembly file;\n"
    "   -b, --bytecode:    generate bytecode file;\n"
    "   -c, --compile:     compile to bytecodes; (TODO)\n"
  */
 
-static const char* daoScripts =
-"class FutureValue {\n"
-"    var Value;\n"
-"    routine FutureValue( value ){ Value = value; }\n"
-"}\n";
-
-/* TODO: modify proxy_receive() so that it can be run in native thread: */
-static const char* daoProxyScripts =
-"routine Proxy_Receiver(){ proxy_receive() }\n"
-"Proxy_Receiver() async join;";
-/* need wrapping so that proxy_receive() can access the namespace */
 
 extern DaoTypeBase  baseTyper;
 extern DaoTypeBase  numberTyper;
@@ -341,13 +329,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainProcess = DaoVmProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
-#if( defined DAO_WITH_NETWORK && defined DAO_WITH_MPI )
-	self->friendPids = DMap_New(D_STRING,0);
-	self->mainProcess->mpiData = DaoMpiData_New();
-	DString_SetMBS( self->mainProcess->mpiData->name, "main" );
-	MAP_Insert( self->friendPids, self->mainProcess->mpiData->name, self->mainProcess );
-#endif
-
 	if( mainVmSpace ) DaoNameSpace_Import( self->nsInternal, mainVmSpace->nsInternal, 0 );
 	DString_Clear( self->source );
 
@@ -388,9 +369,6 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DMutex_Destroy( & self->mutexProc );
 #endif
 
-#if( defined DAO_WITH_NETWORK && defined DAO_WITH_MPI )
-	DMap_Delete( self->friendPids );
-#endif
 	dao_free( self );
 }
 static void DaoVmSpace_InitPath( DaoVmSpace *self )
@@ -592,18 +570,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 			}else if( strcmp( token->mbs, "--no-typedcode" ) ==0 ){
 				self->options |= DAO_EXEC_NO_JIT;
 				daoConfig.jit = 0;
-			}else if( strcmp( token->mbs, "--proc-name" ) ==0 ){
-				putenv( "PROC_NAME=MASTER" );
-			}else if( strncmp( token->mbs, "--proc-name=", 12 ) ==0 ){
-				static char buf[256] = "PROC_NAME=";
-				strncat( buf, token->mbs+12, 240 );
-				putenv( buf );
-			}else if( strcmp( token->mbs, "--proc-port" ) ==0 ){
-				putenv( "PROC_PORT=4115" );
-			}else if( strncmp( token->mbs, "--proc-port=", 12 ) ==0 ){
-				static char buf[256] = "PROC_PORT=";
-				strncat( buf, token->mbs+12, 240 );
-				putenv( buf );
 			}else if( token->size ){
 				DaoStream_WriteMBS( self->stdStream, "Unknown option: " );
 				DaoStream_WriteMBS( self->stdStream, token->mbs );
@@ -638,16 +604,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 				case 'e' : self->evalCmdline = 1;
 						   DString_Clear( self->source );
 						   break;
-				case 'p' : {
-							   static char buf[256] = "PROC_NAME=";
-							   if( j == token->size-1 )
-								   strncat( buf, "MASTER", 240 );
-							   else
-								   strncat( buf, token->mbs+j+1, 240 );
-							   putenv( buf );
-							   j = len;
-							   break;
-						   }
 				case '-' : break;
 				default :
 						   if( token->mbs[j] ){
@@ -664,9 +620,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 			}
 		}
 	}
-#if( defined DAO_WITH_NETWORK && defined DAO_WITH_MPI )
-	if( getenv( "PROC_NAME" ) || getenv( "PROC_PORT" ) ) DaoProxy_Init( self );
-#endif
 	DString_Delete( str );
 	DArray_Delete( array );
 	return 1;
@@ -891,19 +844,6 @@ DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file )
 	}
 	DArray_Delete( args );
 	if( ns == NULL ) return 0;
-
-#ifdef DAO_WITH_NETWORK
-#if 0
-	/* XXX, see comments near daoProxyScripts */
-	if( ! proxy_started && ( getenv( "PROC_NAME" ) || getenv( "PROC_PORT" ) ) ){
-		/* start Proxy_Receiver() after compiling the script file from command line; */
-		proxy_started = 0;
-		DString_SetMBS( self->source, daoProxyScripts );
-		DaoVmSpace_Compile( self, self->source, 1, NULL );
-		DaoVmSpace_RunMain( self, self->nsWorking );
-	}
-#endif
-#endif
 	return ns;
 }
 
@@ -1748,7 +1688,6 @@ void DaoTypeBase_Free( DaoTypeBase *typer )
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libSystemTyper;
 extern DaoTypeBase libMathTyper;
-extern DaoTypeBase libMpiTyper;
 extern DaoTypeBase libReflectTyper;
 extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
@@ -2309,15 +2248,11 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_WrapType( vms->nsInternal, & libStandardTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libSystemTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libMathTyper );
-	DaoNameSpace_WrapType( vms->nsInternal, & libMpiTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libReflectTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & inodeTyper );
 
-#if( defined DAO_WITH_THREAD )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 	DaoCallServer_Init( vms );
-#endif
-#if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
-	DaoSched_Init( vms );
 #endif
 
 #ifdef DAO_WITH_NETWORK
@@ -2341,11 +2276,8 @@ void DaoQuit()
 {
 	int i;
 	/* TypeTest(); */
-#if( defined DAO_WITH_THREAD )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 	DaoCallServer_Join( mainVmSpace );
-#endif
-#if( defined DAO_WITH_THREAD && ( defined DAO_WITH_MPI || defined DAO_WITH_AFC ) )
-	DaoSched_Join( mainVmSpace );
 #endif
 
 #ifdef DAO_WITH_THREAD
@@ -2378,7 +2310,6 @@ void DaoQuit()
 
 	DaoTypeBase_Free( & libStandardTyper );
 	DaoTypeBase_Free( & libMathTyper );
-	DaoTypeBase_Free( & libMpiTyper );
 	DaoTypeBase_Free( & libReflectTyper );
 
 #ifdef DAO_WITH_NETWORK

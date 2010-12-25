@@ -4001,16 +4001,15 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DValue caller = *self->regValues[ vmc->a ];
 	DRoutine *rout = NULL;
 	DRoutine *rout2 = NULL;
+	DaoFunction *func = NULL;
 	DaoVmProcess *proc = self->process;
 	DaoVmProcess *vmp;
 	DaoContext *ctx;
 	DaoTuple *tuple;
+	DaoVmCode *vmc2;
 	int initbase = 0;
 	int async = 0;
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_AFC )
-	DaoObject *future;
-	DValue value = daoNullValue;
-#endif
+	int tail = 0;
 
 	//printf( "DoCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
 	if( npar == DAO_CALLER_PARAM ){
@@ -4060,14 +4059,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			}else if( npar > 1 ){
 				DArray_Append( self->process->array, params[npar-1] );
 			}
-			npar = self->process->array->size;
-			params = self->process->array->items.pValue;
-		}else if( mode & DAO_CALL_ASYNC ){
-			if( self->vmSpace->options & DAO_EXEC_SAFE ){
-				DaoContext_RaiseException( self, DAO_ERROR, "not permitted" );
-				return;
-			}
-			for( i=0; i<npar; i++ ) DArray_Append( self->process->array, params[i] );
 			npar = self->process->array->size;
 			params = self->process->array->items.pValue;
 		}
@@ -4139,68 +4130,44 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			rout2 = (DRoutine*) rout;
 			goto InvalidParameter;
 		}
-		if( ! (mode & DAO_CALL_ASYNC) ){
-			/* foo: routine<x:int,s:string>
-			 *   ns.foo( 1, "" );
-			 * bar: routine<self:cdata,x:int>
-			 *   obj.bar(1);
-			 * inside: Dao class member method:
-			 *   bar(1); # pass Dao class instances as self 
-			 */
-			DaoFunction *func = (DaoFunction*)rout;
-			if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
-			if( !(rout->attribs & DAO_ROUT_ISCONST) ){
-				for(i=0; i<npar; i++){
-					if( parbuf2[i]->cst ){
-						DValue_ClearAll( parbuf, rout->parCount+1 );
-						DaoContext_RaiseException( self, DAO_ERROR, "calling non-const function on constant" );
-						return;
-					}
+		/* foo: routine<x:int,s:string>
+		 *   ns.foo( 1, "" );
+		 * bar: routine<self:cdata,x:int>
+		 *   obj.bar(1);
+		 * inside: Dao class member method:
+		 *   bar(1); # pass Dao class instances as self 
+		 */
+		func = (DaoFunction*)rout;
+		if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
+		if( !(rout->attribs & DAO_ROUT_ISCONST) ){
+			for(i=0; i<npar; i++){
+				if( parbuf2[i]->cst ){
+					DValue_ClearAll( parbuf, rout->parCount+1 );
+					DaoContext_RaiseException( self, DAO_ERROR, "calling non-const function on constant" );
+					return;
 				}
 			}
-			/*
-			   printf( "call: %s %i\n", rout->routName->mbs, npar );
-			 */
-			self->thisFunction = func;
-			func->pFunc( self, parbuf2, npar );
-			self->thisFunction = NULL;
-			/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
-			for(i=0; i<=rout->parCount; i++){
-				if( parbuf[i].ndef ) continue;
-				DValue_Clear( parbuf+i );
-			}
+		}
+		/*
+		   printf( "call: %s %i\n", rout->routName->mbs, npar );
+		 */
+		self->thisFunction = func;
+		func->pFunc( self, parbuf2, npar );
+		self->thisFunction = NULL;
+		/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
+		for(i=0; i<=rout->parCount; i++){
+			if( parbuf[i].ndef ) continue;
+			DValue_Clear( parbuf+i );
+		}
 
-			if( initbase ){
-				DaoCData *cdata = self->regValues[ vmc->c ]->v.cdata;
-				if( cdata && cdata->type == DAO_CDATA ){
-					GC_ShiftRC( cdata, self->object->superObject->items.pBase[sup] );
-					self->object->superObject->items.pBase[sup] = (DaoBase*) cdata;
-					GC_ShiftRC( self->object->that, cdata->daoObject );
-					cdata->daoObject = self->object->that;
-				}
+		if( initbase ){
+			DaoCData *cdata = self->regValues[ vmc->c ]->v.cdata;
+			if( cdata && cdata->type == DAO_CDATA ){
+				GC_ShiftRC( cdata, self->object->superObject->items.pBase[sup] );
+				self->object->superObject->items.pBase[sup] = (DaoBase*) cdata;
+				GC_ShiftRC( self->object->that, cdata->daoObject );
+				cdata->daoObject = self->object->that;
 			}
-		}else{
-			/*XXX*/
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_AFC )
-			if( self->process->parbuf == NULL ) self->process->parbuf = DVarray_New();
-			if( self->process->mpiData == NULL ) self->process->mpiData = DaoMpiData_New();
-			DVarray_Clear( self->process->parbuf );
-			value.t = rout->type;
-			value.v.p = (DaoBase*) rout;
-			DVarray_PushFront( self->process->parbuf, value );
-			future = DaoObject_New( daoClassFutureValue, NULL, 0 );
-			GC_IncRC( future );
-			DaoContext_SetData( self, vmc->c, (DaoBase*)future );
-			self->process->mpiData->asynCount ++;
-			if( mode & DAO_CALL_JOIN ){
-				self->process->pauseType = DAO_VMP_AFC;
-				self->process->status = DAO_VMPROC_SUSPENDED;
-				self->process->topFrame->entry = (short)(vmc - self->codes);
-			}
-			DaoSched_Send( self->process->parbuf, mode, self->process, future );
-#else
-			DaoContext_RaiseException( self, DAO_ERROR, "Asynchronous Function Call is disabled" );
-#endif
 		}
 		if( DaoContext_CheckFE( self ) ) return;
 		if( self->process->status==DAO_VMPROC_SUSPENDED )
@@ -4350,7 +4317,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			return;
 		}
 
-#if( defined DAO_WITH_THREAD )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 		async = code == DVM_MCALL && params[0]->t == DAO_OBJECT;
 		async = async && (params[0]->v.object->myClass->attribs & DAO_CLS_SYNCHRONOUS);
 		if( self->object ) async &= !DaoObject_ChildOf( self->object->that, params[0]->v.object );
@@ -4366,49 +4333,25 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		}
 #endif
 
-		if( ! (mode & DAO_CALL_ASYNC) ){
-			DaoVmCode *vmc2 = vmc + 1;
-			int tail = 0;
-			if( (inclass && self->constCall) || (rout->attribs & DAO_ROUT_ISCONST) 
-					|| (selfpar->t == DAO_OBJECT && selfpar->cst ) )
-				ctx->constCall = 1;
-			if( caller.t == DAO_ROUTINE && !(self->frame->state & DVM_MAKE_OBJECT) ){
-				/* not in constructor */
-				while( vmc2->code == DVM_NOP ) vmc2 ++;
-				if( vmc2->code == DVM_RETURN && vmc2->c ==0 ) tail = vmc2->b ==0 || (vmc2->b ==1 && vmc2->a == vmc->c);
-				if( tail ){
-					DaoVmFrame *frame = self->frame;
-					DaoVmProcess_PopContext( self->process );
-					ctx->frame = frame;
-					self->frame = frame->next;
-					frame->context = ctx;
-					frame->next->context = self;
-					self = ctx;
-				}
+		vmc2 = vmc + 1;
+		if( (inclass && self->constCall) || (rout->attribs & DAO_ROUT_ISCONST) 
+				|| (selfpar->t == DAO_OBJECT && selfpar->cst ) )
+			ctx->constCall = 1;
+		if( caller.t == DAO_ROUTINE && !(self->frame->state & DVM_MAKE_OBJECT) ){
+			/* not in constructor */
+			while( vmc2->code == DVM_NOP ) vmc2 ++;
+			if( vmc2->code == DVM_RETURN && vmc2->c ==0 ) tail = vmc2->b ==0 || (vmc2->b ==1 && vmc2->a == vmc->c);
+			if( tail ){
+				DaoVmFrame *frame = self->frame;
+				DaoVmProcess_PopContext( self->process );
+				ctx->frame = frame;
+				self->frame = frame->next;
+				frame->context = ctx;
+				frame->next->context = self;
+				self = ctx;
 			}
-			DaoVmProcess_PushContext( self->process, ctx );
-		}else{
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_AFC )
-			if( self->process->parbuf == NULL ) self->process->parbuf = DVarray_New();
-			if( self->process->mpiData == NULL ) self->process->mpiData = DaoMpiData_New();
-			DVarray_Clear( self->process->parbuf );
-			future = DaoObject_New( daoClassFutureValue, NULL, 0 );
-			DaoContext_SetData( self, vmc->c, (DaoBase*) future );
-			GC_IncRC( future );
-			value.t = ctx->type;
-			value.v.p = (DaoBase*) ctx;
-			DVarray_PushFront( self->process->parbuf, value );
-			self->process->mpiData->asynCount ++;
-			if( mode & DAO_CALL_JOIN ){
-				self->process->pauseType = DAO_VMP_AFC;
-				self->process->status = DAO_VMPROC_SUSPENDED;
-				self->process->topFrame->entry = (short)(vmc - self->codes);
-			}
-			DaoSched_Send( self->process->parbuf, mode, self->process, future );
-#else
-			DaoContext_RaiseException( self, DAO_ERROR, "Asynchronous Function Call is disabled" );
-#endif
 		}
+		DaoVmProcess_PushContext( self->process, ctx );
 	}else if( caller.t == DAO_VMPROCESS && caller.v.vmp->abtype ){
 		DaoVmProcess *vmProc = caller.v.vmp;
 		if( vmProc->status == DAO_VMPROC_FINISHED ){

@@ -140,15 +140,12 @@ enum DaoCallMode
 {
 	DAO_CALL_INIT = (1<<8),
 	DAO_CALL_EXPAR = (1<<9),
-	DAO_CALL_COROUT = (1<<10),
-	DAO_CALL_ASYNC = (1<<13),
-	DAO_CALL_HURRY = (1<<14),
-	DAO_CALL_JOIN  = (1<<15)
+	DAO_CALL_COROUT = (1<<10)
 };
 enum DaoVmProcPauseType
 {
 	DAO_VMP_NOPAUSE ,
-	DAO_VMP_AFC ,    /* by join mode of asynchronous function call */
+	DAO_VMP_ASYNC ,    /* by join mode of asynchronous call */
 	DAO_VMP_YIELD ,  /* by coroutine */
 	DAO_VMP_SPAWN ,  /* by message passing interface */
 	DAO_VMP_RECEIVE  /* by message passing interface */

@@ -71,8 +71,6 @@ struct DaoVmSpace
     char* (*ReadLine)( const char *prompt );
     void  (*AddHistory)( const char *cmd );
 
-    DMap *friendPids;
-
 #ifdef DAO_WITH_THREAD
     DMutex  mutexLoad;
     DMutex  mutexProc;
