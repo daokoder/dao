@@ -4125,7 +4125,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		}
 		/* DArray_Resize( self->parbuf, rout->parCount, 0 ); */
 		if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
-			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched3" );
 			for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
 			rout2 = (DRoutine*) rout;
 			goto InvalidParameter;
@@ -4320,7 +4319,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 		async = code == DVM_MCALL && params[0]->t == DAO_OBJECT;
 		async = async && (params[0]->v.object->myClass->attribs & DAO_CLS_SYNCHRONOUS);
-		if( self->object ) async &= !DaoObject_ChildOf( self->object->that, params[0]->v.object );
+		if( self->object ) async = async && !DaoObject_ChildOf( self->object->that, params[0]->v.object );
 		if( async ){
 			DaoNameSpace *ns = self->nameSpace;
 			DaoFuture *future = DaoCallServer_Add( ctx, NULL, NULL );

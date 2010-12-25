@@ -465,6 +465,7 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext )
 		}
 		DaoStream_WriteMBS( stream, ";\n" );
 	}
+	DArray_Clear( self->errors );
 }
 static void DaoParser_StatementError( DaoParser *self, DaoParser *parser, int code )
 {
@@ -1985,9 +1986,7 @@ int DaoParser_ParseParams( DaoParser *self )
 					i ++;
 				}
 				if( i+1 >= rb || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorNeedType;
-				self->tokens = defparser->tokens;
-				abstype = DaoParser_ParseType( self, i+1, rb-1, &i, NULL );
-				self->tokens = tokArray;
+				abstype = DaoParser_ParseType( defparser, i+1, rb-1, &i, NULL );
 				if( abstype == NULL ) goto ErrorParamParsing;
 			}
 			if( tokens[i]->name == DTOK_CASSN ){
@@ -2007,10 +2006,11 @@ int DaoParser_ParseParams( DaoParser *self )
 					DString *zero = tokens[i+1]->string;
 					if( i+1 == comma-1 && zero->size ==1 && zero->mbs[0] =='0' ){
 						/* generate a constant of null UserData pointer */
-						DValue null = daoNullCData;
-						null.v.cdata = DaoCData_New( abstype->typer, NULL );
-						null.v.cdata->attribs = 0;
-						cst = LOOKUP_BIND_LC( DRoutine_AddConstValue( (DRoutine*)defparser->routine, null ) );
+						dft.t = DAO_CDATA;
+						dft.v.cdata = DaoCData_New( abstype->typer, NULL );
+						dft.v.cdata->attribs = 0;
+						abtp = abstype;
+						cst = 1;
 					}
 				}
 #if 0
@@ -2023,8 +2023,10 @@ int DaoParser_ParseParams( DaoParser *self )
 				DArray_PopFront( defparser->enumTypes );
 				if( reg < 0 ) goto ErrorInvalidDefault;
 				if( cst ){
-					dft = DaoParser_GetVariable( defparser, cst );
-					abtp = DaoNameSpace_GetTypeV( myNS, dft );
+					if( cst > 1 ){
+						dft = DaoParser_GetVariable( defparser, cst );
+						abtp = DaoNameSpace_GetTypeV( myNS, dft );
+					}
 				}else if( self->uplocs ){
 					int loc = routine->routConsts->size;
 					DArray_Append( self->uplocs, reg );
@@ -2078,9 +2080,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		m1 = i;
 		m2 = end;
 		if( tokens[i]->name != DTOK_FIELD || i+1 > end ) goto ErrorInvalidReturn;
-		self->tokens = defparser->tokens;
-		abstype = DaoParser_ParseType( self, i+1, end, &i, NULL );
-		self->tokens = tokArray;
+		abstype = DaoParser_ParseType( defparser, i+1, end, &i, NULL );
 		if( abstype == NULL || i < end ) goto ErrorInvalidReturn;
 		DString_AppendMBS( pname, "=>" );
 		DString_Append( pname, abstype->name );
@@ -4803,7 +4803,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 	DNode *node = NULL;
 	int i;
 
-	if( routine->type == DAO_FUNCTION && self->hostCData ){
+	if( self->hostCData ){
 		/* QStyleOption( version : int = QStyleOption::Version, ... ) */
 		DValue it = DaoFindValueOnly( self->hostCData->typer, name );
 		if( it.t ){
