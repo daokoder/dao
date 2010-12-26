@@ -1378,6 +1378,7 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 	const ushort_t opA = vmc->a;
 	const ushort_t bval = ( vmc->b & BITS_LOW12 );
 	int i, size, type = DAO_NIL;
+	DValue value = daoNullValue;
 	DValue **regv = self->regValues;
 	DaoArray *array = NULL;
 
@@ -1418,9 +1419,12 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 		DaoArray_ResizeArray( array, dim, 2 );
 		vec = array->data.c;
 		for( i=0; i<size; i++) vec[i] = DValue_GetComplex( *regv[ opA+i ] );
+		type = DAO_COMPLEX;
 	}
+	value.t = type;
 	if( self->regTypes[ vmc->c ] ==NULL ){
-		DaoType *tp = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
+		DaoType *tp = DaoNameSpace_GetTypeV( self->nameSpace, value );
+		tp = DaoNameSpace_MakeType( self->nameSpace, "array", DAO_ARRAY, NULL, &tp, 1 );
 		GC_ShiftRC( tp, array->unitype );
 		array->unitype = tp;
 	}

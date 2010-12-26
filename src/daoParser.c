@@ -3356,6 +3356,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 	DaoClass_DeriveObjectData( klass );
 	if( parser->vmcLast != parser->vmcBase ){
+#if 0
+		DaoParser_PrintCodes( parser );
+#endif
 		DArray_AppendArray( self->errors, parser->errors );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_CLASS );
 		goto ErrorClassDefinition;
@@ -4374,8 +4377,11 @@ DecoratorError:
 						if( cst ){
 							id = DaoClass_FindConst( hostClass, varTok->string );
 							DaoClass_SetConst( hostClass, id, value );
-						}else{
+						}else if( self->isDynamicClass ){
 							MAP_Insert( hostClass->protoValues, reg, varTok->string );
+						}else{
+							DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq + 1, end, 0 );
+							return 0;
 						}
 					}else{
 						id = LOOKUP_ID( DaoParser_GetRegister( self, varTok) );
@@ -4411,23 +4417,33 @@ DecoratorError:
 								DaoParser_Error2( self, DAO_TYPE_NOT_MATCHING, decStart, end, 0 );
 								return 0;
 							}
+							remove = 1;
 							DValue_SimpleMove( value, hostClass->objDataDefault->data + id );
 							DValue_MarkConst( hostClass->objDataDefault->data + id );
-						}else if( isdecl ){
+						}else if( isdecl && self->isDynamicClass ){
 							MAP_Insert( hostClass->protoValues, reg, varTok->string );
-						}else{
+						}else if( ! self->isClassBody ){
 							DaoParser_AddCode( self, DVM_SETVO, reg, id, 0, first, eq, end );
+						}else{
+							DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq + 1, end, 0 );
+							return 0;
 						}
 						break;
 					case DAO_CLASS_VARIABLE :
 						if( isdecl && cst ){
 							DaoType *type = hostClass->glbTypeTable->items.pArray[up]->items.pType[id];
 							DValue *data = hostClass->glbDataTable->items.pVarray[up]->data + id;
-							if( data->t == DAO_NIL ) DValue_Move( value, data, type );
-						}else if( isdecl ){
+							if( data->t == DAO_NIL ){
+								DValue_Move( value, data, type );
+								remove = 1;
+							}
+						}else if( isdecl && self->isDynamicClass ){
 							MAP_Insert( hostClass->protoValues, reg, varTok->string );
-						}else{
+						}else if( ! self->isClassBody ){
 							DaoParser_AddCode( self, DVM_SETVK, reg, id, up, first, eq, end );
+						}else{
+							DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq + 1, end, 0 );
+							return 0;
 						}
 						break;
 					case DAO_GLOBAL_VARIABLE :
