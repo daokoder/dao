@@ -453,7 +453,7 @@ int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *
 	value.v.object = o;
 	GC_ShiftRC( o, ctx->object );
 	ctx->object = o;
-	if( p && DRoutine_FastPassParams( (DRoutine*)r, & value, ctx->regValues, p, NULL, n, call ) ==0 )
+	if( DRoutine_FastPassParams( (DRoutine*)r, & value, ctx->regValues, p, NULL, n, call ) ==0 )
 		return 0;
 	/*
 	   if( db ) printf( "%i  %p\n", db->refCount, db );

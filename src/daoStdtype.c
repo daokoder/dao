@@ -108,6 +108,8 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 	DArray *array;
 
 	*idtype = IDX_NULL;
+	*start = 0;
+	*end = N - 1;
 	if( index.t == 0 ) return NULL;
 
 	switch( index.t ){
@@ -116,18 +118,21 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 		n1 = index.v.i;
 		if( n1 <0 ) n1 += N;
 		*start = n1;
+		*end = n1;
 		break;
 	case DAO_FLOAT :
 		*idtype = IDX_SINGLE;
 		n1 = (llong_t)(index.v.f);
 		if( n1 <0 ) n1 += N;
 		*start = n1;
+		*end = n1;
 		break;
 	case DAO_DOUBLE :
 		*idtype = IDX_SINGLE;
 		n1 = (llong_t)(index.v.d);
 		if( n1 <0 ) n1 += N;
 		*start = n1;
+		*end = n1;
 		break;
 	case DAO_PAIR :
 	case DAO_TUPLE:
@@ -816,11 +821,22 @@ static void DaoString_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValu
 	int idtype;
 	DArray *ids = MakeIndex( ctx, pid, size, & start, & end, & idtype );
 	if( value.t >= DAO_INTEGER && value.t <= DAO_DOUBLE ){
-		int id = value.v.i;
-		if( self->mbs )
-			self->mbs[start] = id;
-		else
-			self->wcs[start] = id;
+		int i, id = value.v.i;
+		if( idtype == IDX_MULTIPLE ){
+			dint *ip = ids->items.pInt;
+			if( self->mbs ){
+				for(i=0; i<ids->size; i++) self->mbs[ ip[i] ] = id;
+			}else{
+				for(i=0; i<ids->size; i++) self->wcs[ ip[i] ] = id;
+			}
+			DArray_Delete( ids );
+			return;
+		}
+		if( self->mbs ){
+			for(i=start; i<=end; i++) self->mbs[i] = id;
+		}else{
+			for(i=start; i<=end; i++) self->wcs[i] = id;
+		}
 	}else if( value.t == DAO_STRING ){
 		DString *str = value.v.s;
 		switch( idtype ){
@@ -1797,7 +1813,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )const=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )const=>list<string>" },
 	{ DaoSTR_Tokenize, "tokenize( self :string, seps :string, quotes='', backslash=0, simplify=0 )const=>list<string>" },
-	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )const=>list<tuple<int,int>>" },
+	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )const=>list<tuple<start:int,end:int>>" },
 	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )const=>tuple<start:int,end:int,substring:string>" },
 	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )const=>tuple<start:int,end:int,substring:string>" },
 	{ DaoSTR_Extract, "extract( self :string, pt :string, matched=1, mask='', rev=0 )const=>list<string>" },

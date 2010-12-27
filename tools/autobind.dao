@@ -862,175 +862,205 @@ routine UserType::Parse( source='', inExtFile=0 )
 	}
 }
 
+enum PatternType{
+	pat_struct, pat_struct2, pat_enum, pat_typedef, pat_enum2, pat_usercst, pat_funct
+};
+
 routine ParseCode( source : string, snamespace='', lang='', fname : string='', inExtFile=0  )
 {
-	parts = source.extract( pat_struct );
-	source.change( pat_struct, '' );
-	for( part in parts ){
-		tks = part.capture( pat_struct );
-		type = tks[1];
-		name = tks[3];
-		if( not map_user_types.has( name ) ){
-			utp = UserType{ name => name, input_file => fname };
-			map_user_types[ name ] = utp;
-		}
-		utp = map_user_types[ name ];
-		utp.snamespace = snamespace;
-		utp.input_file = fname;
-		if( snamespace ) map_ns_types[ snamespace + '::' + name ] = utp;
-		if( type == 'namespace' ) utp.isNameSpace = 1;
-		if( type == 'callback' ) utp.isCallback = 1;
-		if( type == 'class' || (type == 'struct' && lang != 'c') ) utp.isCppClass = 1;
-		if( type == 'struct' || type == 'union' ) utp.isStruct = 1;
-		if( utp.isCppClass ==0 and not utp.isNameSpace and not utp.isCallback ){
-			map_user_types[ 'struct ' + name ] = utp;
-			map_user_types[ 'union ' + name ] = utp;
-		}
-		body = tks[6];
-		if( utp.isNameSpace ) body = ParseCode( body, utp.name, lang, fname, inExtFile );
-		utp.Parse( body, inExtFile );
-		supers = tks[5].extract( '(private|protected|public) %s+ (%w+)' );
-		for( sup in supers ){
-			tks2 = sup.capture( '(private|protected|public) %s+ (%w+)' );
-			name2 = tks2[2];
-			if( not map_user_types.has( name2 ) ){
-				utp2 = UserType{ name => name2, input_file => fname };
-				map_user_types[ name2 ] = utp2;
-			}
-			utp2 = map_user_types[ name2 ];
-			utp.supers.append( utp2 );
-			for( k in utp2.classEnum.keys(); v in utp2.classEnum.values() )
-			if( not utp.classEnum.has( k ) ) utp.classEnum[k] = v;
-			for( k in utp2.classTypedef.keys(); v2 in utp2.classTypedef.values() )
-			if( not utp.classTypedef.has( k ) ) utp.classTypedef[k] = v2;
-		}
-	}
-	
-	const pat_struct2 = 'typedef %s+ (const %s+ |) (struct|union) %s+ (%w+) %s+ (%w+) %s*;';
-	parts = source.extract( pat_struct2 );
-	source.change( pat_struct2, '' );
-	for( part in parts ){
-		tks = part.capture( pat_struct2 );
-		alias = tks[3];
-		name = tks[4];
-		if( not map_user_types.has( alias ) ){
-			utp = UserType{ name => name, input_file => fname };
-			map_user_types[ alias ] = utp;
-		}
-		utp = map_user_types[ alias ];
-		utp.input_file = fname;
-		utp.name = name;
-		map_user_types[ name ] = utp;
-		map_user_types[ 'struct ' + name ] = utp; # XXX better handle struct typedef
-		map_user_types[ 'struct ' + alias ] = utp;
-		map_user_types[ 'union ' + name ] = utp;
-		map_user_types[ 'union ' + alias ] = utp;
-	}
-	
 	ns_utp : UserType;
 	if( snamespace ) ns_utp = map_user_types[ snamespace ];
-	
+
+	const pat_struct2 = 'typedef %s+ (const %s+ |) (struct|union) %s+ (%w+) %s+ (%w+) %s*;';
 	const pat_enum = 'enum %s+ (%w*) %s* (%b{}) %s* ;';
-	parts = source.extract( pat_enum );
-	source.change( pat_enum, '' );
-	for( part in parts ){
-		tks = part.capture( pat_enum );
-		ename = tks[1];
-		enums = tks[2];
-		if( snamespace ) ns_utp.classEnum[ ename ] = ( snamespace, 1 );
-		if( ename ){
-			ename2 = ename;
-			if( snamespace ) ename2 = snamespace + '::' + ename;
-			enumMap[ ename ] = 1;
-			if( not CT_MAP.has( ename2 ) ){
-				CT_MAP[ ename2 ] = $CT_INT;
-				basic_typedefs.append( ( snamespace, 'int', ename ) );
-			}
-		}
-		enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>%\']*', '' );
-		names = enums.extract( '%w+' );
-		for( name in names ) constNumbers.append( ( snamespace, 'DAO_INTEGER', name, name, inExtFile ) );
-	}
-	
 	const pat_typedef = 'typedef %s* ( %s+ const |) (( %s+ ))'
-	'<1>( [%w:%s] + ) ((%s+) | (%s*) <2>(%*) (%s*) ) <3>(%w+) %s*;';
-	parts = source.extract( pat_typedef );
-	source.change( pat_typedef, '' );
-	for( part in parts ){
-		tks = part.capture( pat_typedef );
-		name = tks[1];
-		alias = tks[3];
-		if( alias.find( 'Fl_Callback_p' ) >=0 ) io.print( alias, ',', name, '\n' );
-		scoped = '';
-		if( snamespace ) scoped = snamespace + '::' + alias;
-		# be sure that file order does not matter here
-		# type alias may has been used before this file is parsed
-		#
-		if( alias != name and map_user_types.has( alias ) and map_user_types.has( name ) ){
-			map_user_types[ alias ].isAlias = 1;
-			map_user_types[ alias ] = map_user_types[ name ];
-			map_user_types[ 'struct ' + alias ] = map_user_types[ name ];
-			map_user_types[ 'union ' + alias ] = map_user_types[ name ];
-		}
-		if( snamespace ) ns_utp.classTypedef[ alias ] = $CT_USER;
-		if( CT_MAP.has( name ) ){
-			if( snamespace ) ns_utp.classTypedef[ alias ] = CT_MAP[ name ];
-			if( not CT_MAP.has( alias ) ) CT_MAP[ alias ] = CT_MAP[ name ];
-			basic_typedefs.append( ( snamespace, DAO_TYPES[ (int)CT_MAP[ name ] ], alias ) );
-		}elif( snamespace != '' and ns_utp.classEnum.has( name ) ){
-			ns_utp.classTypedef[ alias ] = $CT_SCHAR;
-		}elif( map_user_types.has( name ) ){
-			map_user_types[ alias ] = map_user_types[ name ];
-			if( snamespace ) map_user_types[ scoped ] = map_user_types[ name ];
-		}elif( map_ns_types.has( name ) ){
-			typedef_ns_types[alias] = map_ns_types[name];
-		}elif( snamespace ){
-			typer = snamespace + '_' + alias;
-			utp = UserType{ name => typer, input_file => fname };
-			if( tks[1] == 'class' ) utp.isCppClass = 1;
-			utp.name2 = scoped;
-			utp.nested = 2;
-			map_user_types[ scoped ] = utp;
-		}
-		if( snamespace ) otherClassTypedef[ scoped ] = ns_utp.classTypedef[ alias ];
-		if( tks[2] == '*' ) pointer_types[ alias ] = name;
-		if( pointer_types.has( name ) ) pointer_types[ alias ] = pointer_types[name];
-		if( name.pfind( '(struct|union)' ) ){
-			map_user_types[ name ] = UserType{ name => alias, input_file => fname };;
-			map_user_types[ alias ] = map_user_types[ name ];
-			if( tks[2] == '*' ) pointer_types[ alias ] = alias;
-		}
-		source.change( pat_typedef, '', 1 );
-	}
-	
+		'<1>( [%w:%s] + ) ((%s+) | (%s*) <2>(%*) (%s*) ) <3>(%w+) %s*;';
 	const pat_enum2 = 'typedef %s+ enum %s+ ( %w+ ) %s+ ( %w+ )';
-	parts = source.extract( pat_enum2 );
-	source.change( pat_enum2, '' );
-	for( part in parts ){
-		tks = part.capture( pat_enum2 );
-		tk1 = tks[1];  tk2 = tks[2];
-		basic_typedefs.append( ( snamespace, 'int', tk1 ) );
-		basic_typedefs.append( ( snamespace, tk1, tk2 ) );
-	}
-	
 	const pat_usercst = '%s* const %s+ (%w+) (%s+ | %s* (%*) %s*) (%w+) %s* ;';
-	parts = source.extract( pat_usercst );
-	source.change( pat_usercst, '' );
-	for( part in parts ){
-		tks = part.capture( pat_usercst );
-		if( not map_user_types.has( tks[1] ) ) skip;
-		utp = map_user_types[ tks[1] ];
-		if( tks[3] ){
-			constCDataPtr.append( ( snamespace, utp, tks[4], inExtFile ) );
-		}else{
-			constCData.append( ( snamespace, utp, tks[4], inExtFile ) );
-		}
+
+	blank = ';'[0];
+	allpats = {};
+	mlist = source.pfind( pat_struct );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_struct, it.start, codes ) );
 	}
-	
-	parts = source.extract( pat_funct );
-	source.change( pat_funct, '' );
-	for( part in parts ){
-		ParseFunction( functions.funcs, part, snamespace, fname, FunctionTrait.FUNC_NONE, snamespace );
+	mlist = source.pfind( pat_struct2 );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_struct, it.start, codes ) );
+	}
+	mlist = source.pfind( pat_enum );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_enum, it.start, codes ) );
+	}
+	mlist = source.pfind( pat_typedef );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_typedef, it.start, codes ) );
+	}
+	mlist = source.pfind( pat_enum2 );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_enum2, it.start, codes ) );
+	}
+	mlist = source.pfind( pat_funct );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_funct, it.start, codes ) );
+	}
+	source.change( ';%s*;[;%s]+', ';' );
+
+	sort( allpats )->{ x[1] < y[1] };
+	for( it in allpats ){
+		part = (string)it[2];
+		switch( (PatternType) it[0] ){
+		case $pat_struct :
+			tks = part.capture( pat_struct );
+			type = tks[1];
+			name = tks[3];
+			if( not map_user_types.has( name ) ){
+				utp = UserType{ name => name, input_file => fname };
+				map_user_types[ name ] = utp;
+			}
+			utp = map_user_types[ name ];
+			utp.snamespace = snamespace;
+			utp.input_file = fname;
+			if( snamespace ) map_ns_types[ snamespace + '::' + name ] = utp;
+			if( type == 'namespace' ) utp.isNameSpace = 1;
+			if( type == 'callback' ) utp.isCallback = 1;
+			if( type == 'class' || (type == 'struct' && lang != 'c') ) utp.isCppClass = 1;
+			if( type == 'struct' || type == 'union' ) utp.isStruct = 1;
+			if( utp.isCppClass ==0 and not utp.isNameSpace and not utp.isCallback ){
+				map_user_types[ 'struct ' + name ] = utp;
+				map_user_types[ 'union ' + name ] = utp;
+			}
+			body = tks[6];
+			if( utp.isNameSpace ) body = ParseCode( body, utp.name, lang, fname, inExtFile );
+			utp.Parse( body, inExtFile );
+			supers = tks[5].extract( '(private|protected|public) %s+ (%w+)' );
+			for( sup in supers ){
+				tks2 = sup.capture( '(private|protected|public) %s+ (%w+)' );
+				name2 = tks2[2];
+				if( not map_user_types.has( name2 ) ){
+					utp2 = UserType{ name => name2, input_file => fname };
+					map_user_types[ name2 ] = utp2;
+				}
+				utp2 = map_user_types[ name2 ];
+				utp.supers.append( utp2 );
+				for( k in utp2.classEnum.keys(); v in utp2.classEnum.values() )
+					if( not utp.classEnum.has( k ) ) utp.classEnum[k] = v;
+				for( k in utp2.classTypedef.keys(); v2 in utp2.classTypedef.values() )
+					if( not utp.classTypedef.has( k ) ) utp.classTypedef[k] = v2;
+			}
+
+		case $pat_struct2 :
+			tks = part.capture( pat_struct2 );
+			alias = tks[3];
+			name = tks[4];
+			if( not map_user_types.has( alias ) ){
+				utp = UserType{ name => name, input_file => fname };
+				map_user_types[ alias ] = utp;
+			}
+			utp = map_user_types[ alias ];
+			utp.input_file = fname;
+			utp.name = name;
+			map_user_types[ name ] = utp;
+			map_user_types[ 'struct ' + name ] = utp; # XXX better handle struct typedef
+				map_user_types[ 'struct ' + alias ] = utp;
+			map_user_types[ 'union ' + name ] = utp;
+			map_user_types[ 'union ' + alias ] = utp;
+
+		case $pat_enum :
+			tks = part.capture( pat_enum );
+			ename = tks[1];
+			enums = tks[2];
+			if( snamespace ) ns_utp.classEnum[ ename ] = ( snamespace, 1 );
+			if( ename ){
+				ename2 = ename;
+				if( snamespace ) ename2 = snamespace + '::' + ename;
+				enumMap[ ename ] = 1;
+				if( not CT_MAP.has( ename2 ) ){
+					CT_MAP[ ename2 ] = $CT_INT;
+					basic_typedefs.append( ( snamespace, 'int', ename ) );
+				}
+			}
+			enums.change( '= [~:%s%w+%-%*%/%%%(%)%|%&%<%>%\']*', '' );
+			names = enums.extract( '%w+' );
+			for( name in names ) constNumbers.append( ( snamespace, 'DAO_INTEGER', name, name, inExtFile ) );
+
+		case $pat_typedef :
+			 tks = part.capture( pat_typedef );
+			 name = tks[1];
+			 alias = tks[3];
+			 if( alias.find( 'Fl_Callback_p' ) >=0 ) io.print( alias, ',', name, '\n' );
+			 scoped = '';
+			 if( snamespace ) scoped = snamespace + '::' + alias;
+# be sure that file order does not matter here
+# type alias may has been used before this file is parsed
+#
+			 if( alias != name and map_user_types.has( alias ) and map_user_types.has( name ) ){
+				 map_user_types[ alias ].isAlias = 1;
+				 map_user_types[ alias ] = map_user_types[ name ];
+				 map_user_types[ 'struct ' + alias ] = map_user_types[ name ];
+				 map_user_types[ 'union ' + alias ] = map_user_types[ name ];
+			 }
+			 if( snamespace ) ns_utp.classTypedef[ alias ] = $CT_USER;
+			 if( CT_MAP.has( name ) ){
+				 if( snamespace ) ns_utp.classTypedef[ alias ] = CT_MAP[ name ];
+				 if( not CT_MAP.has( alias ) ) CT_MAP[ alias ] = CT_MAP[ name ];
+				 basic_typedefs.append( ( snamespace, DAO_TYPES[ (int)CT_MAP[ name ] ], alias ) );
+			 }elif( snamespace != '' and ns_utp.classEnum.has( name ) ){
+				 ns_utp.classTypedef[ alias ] = $CT_SCHAR;
+			 }elif( map_user_types.has( name ) ){
+				 map_user_types[ alias ] = map_user_types[ name ];
+				 if( snamespace ) map_user_types[ scoped ] = map_user_types[ name ];
+			 }elif( map_ns_types.has( name ) ){
+				 typedef_ns_types[alias] = map_ns_types[name];
+			 }elif( snamespace ){
+				 typer = snamespace + '_' + alias;
+				 utp = UserType{ name => typer, input_file => fname };
+				 if( tks[1] == 'class' ) utp.isCppClass = 1;
+				 utp.name2 = scoped;
+				 utp.nested = 2;
+				 map_user_types[ scoped ] = utp;
+			 }
+			 if( snamespace ) otherClassTypedef[ scoped ] = ns_utp.classTypedef[ alias ];
+			 if( tks[2] == '*' ) pointer_types[ alias ] = name;
+			 if( pointer_types.has( name ) ) pointer_types[ alias ] = pointer_types[name];
+			 if( name.pfind( '(struct|union)' ) ){
+				 map_user_types[ name ] = UserType{ name => alias, input_file => fname };;
+				 map_user_types[ alias ] = map_user_types[ name ];
+				 if( tks[2] == '*' ) pointer_types[ alias ] = alias;
+			 }
+			 source.change( pat_typedef, '', 1 );
+
+		case $pat_enum2 :
+			 tks = part.capture( pat_enum2 );
+			 tk1 = tks[1];  tk2 = tks[2];
+			 basic_typedefs.append( ( snamespace, 'int', tk1 ) );
+			 basic_typedefs.append( ( snamespace, tk1, tk2 ) );
+
+		case $pat_usercst :
+			 tks = part.capture( pat_usercst );
+			 if( not map_user_types.has( tks[1] ) ) skip;
+			 utp = map_user_types[ tks[1] ];
+			 if( tks[3] ){
+				 constCDataPtr.append( ( snamespace, utp, tks[4], inExtFile ) );
+			 }else{
+				 constCData.append( ( snamespace, utp, tks[4], inExtFile ) );
+			 }
+
+		case $pat_funct :
+			 ParseFunction( functions.funcs, part, snamespace, fname, FunctionTrait.FUNC_NONE, snamespace );
+		}
 	}
 	return source;
 }

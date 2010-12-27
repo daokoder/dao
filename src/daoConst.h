@@ -97,6 +97,7 @@ enum DaoMatchType
 	DAO_MT_UDF ,
 	DAO_MT_ANY ,
 	DAO_MT_SUB ,
+	DAO_MT_SIM , /* int, float, double */
 	DAO_MT_EQ
 };
 

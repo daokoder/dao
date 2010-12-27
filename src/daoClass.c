@@ -507,8 +507,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				perm = LOOKUP_PM( search->value.pSize );
 				if( perm <= DAO_DATA_PRIVATE ) continue;
 				rep = mem = NULL;
-				if( value.t == DAO_ROUTINE || value.t == DAO_FUNCTION )
+				if( value.t == DAO_ROUTINE || value.t == DAO_FUNCTION ){
 					mem = (DRoutine*) value.v.routine;
+					if( DString_EQ( mem->routName, klass->className ) ) continue;
+				}
 				/* NO deriving private member: */
 				search = MAP_Find( self->lookupTable, name );
 				/* To overide data and routine: */
@@ -575,6 +577,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
 				value.v.func = (DaoFunction*) it->value.pVoid;
 				if( value.v.func->routHost != typer->priv->abtype ) continue;
+				if( DString_EQ( value.v.func->routName, core->abtype->name ) ) continue;
 				search = MAP_Find( self->lookupTable, it->key.pVoid );
 				if( search ==NULL ) /* TODO: overload between C and Dao functions */
 					DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );

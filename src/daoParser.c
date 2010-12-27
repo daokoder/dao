@@ -2014,8 +2014,8 @@ int DaoParser_ParseParams( DaoParser *self )
 					}
 				}
 #if 0
-				//printf( "cst = %i;  reg = %i\n", cst, reg );
-				//for(j=i+1; j<comma; j++) printf( "%s\n", tokens[j]->string->mbs );
+				printf( "cst = %i;  reg = %i, %s\n", cst, reg, abstype?abstype->name->mbs:"" );
+				for(j=i+1; j<comma; j++) printf( "%s\n", tokens[j]->string->mbs );
 #endif
 				/* QWidget( parent : QWidget=0, f : int=0 )=>QWidget */
 				DArray_PushFront( defparser->enumTypes, abstype );

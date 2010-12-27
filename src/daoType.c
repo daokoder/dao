@@ -205,7 +205,7 @@ void DaoType_Init()
 		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
 		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SUB;
 		for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)
-			dao_type_matrix[i][j] = DAO_MT_SUB;
+			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
 	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++){
@@ -477,8 +477,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	mt = dao_type_matrix[value.t][self->tid];
 	switch( mt ){
 	case DAO_MT_NOT : case DAO_MT_ANYUDF : case DAO_MT_ANY : case DAO_MT_EQ :
-	case DAO_MT_UDF :
-	case DAO_MT_INIT :
+	case DAO_MT_UDF : case DAO_MT_INIT : case DAO_MT_SIM :
 		/* TODO : two rounds type inferring? */
 		if( defs ){
 			DNode *node = NULL;

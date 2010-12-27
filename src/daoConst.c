@@ -329,8 +329,8 @@ const char* const daoExceptionName[] =
 	"Exception.Error.Key.NotExist" ,
 	"Exception.Error.Param" ,
 	"Exception.Error.Syntax" ,
-	"Exception.Error.Value" ,
 	"Exception.Error.Type" ,
+	"Exception.Error.Value" ,
 	"Exception.Warning.Syntax" ,
 	"Exception.Warning.Value"
 };

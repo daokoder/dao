@@ -2716,13 +2716,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					/* less strict checking */
 					if( at->tid >= DAO_ARRAY && at->tid !=DAO_ANY ) goto NotMatch;
 
-					if( bt->tid==DAO_PAIR && at->tid==DAO_STRING ){
+					if( bt->tid==DAO_PAIR && (at->tid==DAO_STRING || at->tid <= DAO_DOUBLE) ){
 						/* passed */
 						AssertPairNumberType( bt );
 					}else if( bt->tid ==DAO_TUPLE && bt->nested->size ==2
-							&& at->tid==DAO_STRING ){
-						ct = at;
+							&& (at->tid==DAO_STRING || at->tid <= DAO_DOUBLE) ){
 						AssertPairNumberType( bt );
+					}else if( bt->tid == DAO_LIST && at->tid <= DAO_DOUBLE ){
 					}else if( bt->tid > DAO_DOUBLE && bt->tid !=DAO_ANY ){
 						/* less strict checking */
 						goto NotMatch;
