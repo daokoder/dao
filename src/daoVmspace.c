@@ -269,6 +269,18 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 	self->stopit = bl;
 }
 
+static void DaoVmSpace_InitPath( DaoVmSpace *self )
+{
+	char *daodir = getenv( "DAO_DIR" );
+	char pwd[512];
+	getcwd( pwd, 511 );
+	DaoVmSpace_SetPath( self, pwd );
+	DaoVmSpace_AddPath( self, pwd );
+	DaoVmSpace_AddPath( self, DAO_PATH );
+	DaoVmSpace_AddPath( self, "~/dao" );
+	if( daodir ) DaoVmSpace_AddPath( self, daodir );
+}
+
 static DaoTypeBase vmsTyper=
 {
 	"vmspace", NULL, NULL, NULL, {0},
@@ -329,7 +341,11 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainProcess = DaoVmProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
-	if( mainVmSpace ) DaoNameSpace_Import( self->nsInternal, mainVmSpace->nsInternal, 0 );
+	if( mainVmSpace ){
+		DaoNameSpace_Import( self->nsInternal, mainVmSpace->nsInternal, 0 );
+	}else{
+		DaoVmSpace_InitPath( self );
+	}
 	DString_Clear( self->source );
 
 	return self;
@@ -370,17 +386,6 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 #endif
 
 	dao_free( self );
-}
-static void DaoVmSpace_InitPath( DaoVmSpace *self )
-{
-	char *daodir = getenv( "DAO_DIR" );
-	char pwd[512];
-	getcwd( pwd, 511 );
-	DaoVmSpace_SetPath( self, pwd );
-	DaoVmSpace_AddPath( self, pwd );
-	DaoVmSpace_AddPath( self, DAO_PATH );
-	DaoVmSpace_AddPath( self, "~/dao" );
-	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 }
 void DaoVmSpace_Lock( DaoVmSpace *self )
 {
