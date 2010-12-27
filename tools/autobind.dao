@@ -890,7 +890,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	for( it in mlist ){
 		codes = source[ it.start : it.end ];
 		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_struct, it.start, codes ) );
+		allpats.append( ($pat_struct2, it.start, codes ) );
 	}
 	mlist = source.pfind( pat_enum );
 	for( it in mlist ){
