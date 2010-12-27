@@ -688,7 +688,7 @@ void DaoClass_ResetAttributes( DaoClass *self )
 		id = LOOKUP_ID( node->value.pSize );
 		k = self->cstData->data[id].t;
 		if( k != DAO_ROUTINE && k != DAO_FUNCTION ) continue;
-		self->attribs |= DAO_OPER_OVERLOADED | (1<<i);
+		self->attribs |= DAO_OPER_OVERLOADED | (DAO_OPER_OVERLOADED<<(i-DVM_MOVE+1));
 	}
 	DString_Delete( mbs );
 }

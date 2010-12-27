@@ -176,7 +176,8 @@ enum DaoRoutineAttrib
 	DAO_ROUT_MAIN = (1<<7)
 };
 
-#define DAO_OPER_OVERLOADED  (DAO_ROUT_MAIN<<1)
+#define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)
+#define DAO_OPER_OVERLOADED  (DAO_TYPER_PRIV_FREE<<1)
 
 enum DaoIoFormatKeyId
 {

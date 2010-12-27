@@ -26,20 +26,27 @@ static DaoNumItem dao_CxxNS_Nums[] =
   { "TRUE", DAO_INTEGER, CxxNS::TRUE },
   { NULL, 0, 0 }
 };
+static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao__Testing( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao__Testing_dao_2( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao__Testing_dao_3( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao__Testing2( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao__Testing_dao_4( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_Funcs[] =
 {
   { dao__GetGreetingObject, "GetGreetingObject(  )=>Greeting" },
-  { dao__Testing_dao_5, "Testing( bl : int=CxxNS::FALSE )" },
+  { dao__Testing_dao_4, "Testing( bl : int=CxxNS::FALSE )" },
   { NULL, NULL }
 };
+/* greeting.h */
+static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n )
+{
+
+  Greeting* _GetGreetingObject = GetGreetingObject(  );
+  DaoContext_WrapCData( _ctx, (void*) _GetGreetingObject, dao_Greeting_Typer );
+}
 /* greeting.h */
 static void dao__Testing( DaoContext *_ctx, DValue *_p[], int _n )
 {
@@ -87,24 +94,17 @@ static void dao__Testing2( DaoContext *_ctx, DValue *_p[], int _n )
 /* greeting.h */
 static void dao__Testing_dao_4( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  CxxNS::Test* test= (CxxNS::Test*) DaoCData_GetData( _p[0]->v.cdata );
-  CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
+  CxxNS::Bool bl= (CxxNS::Bool) _p[0]->v.i;
 
-  CxxNS2::Testing( test, bl );
-}
-/* greeting.h */
-static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n )
-{
-
-  Greeting* _GetGreetingObject = GetGreetingObject(  );
-  DaoContext_WrapCData( _ctx, (void*) _GetGreetingObject, dao_Greeting_Typer );
+  Testing( bl );
 }
 /* greeting.h */
 static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  CxxNS::Bool bl= (CxxNS::Bool) _p[0]->v.i;
+  CxxNS::Test* test= (CxxNS::Test*) DaoCData_GetData( _p[0]->v.cdata );
+  CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
 
-  Testing( bl );
+  CxxNS2::Testing( test, bl );
 }
 
 static DaoFuncItem dao_CxxNS_Funcs[] = 
@@ -117,7 +117,7 @@ static DaoFuncItem dao_CxxNS_Funcs[] =
 };
 static DaoFuncItem dao_CxxNS2_Funcs[] = 
 {
-  { dao__Testing_dao_4, "Testing( test : CxxNS::Test, bl : int=CxxNS::FALSE )" },
+  { dao__Testing_dao_5, "Testing( test : CxxNS::Test, bl : int=CxxNS::FALSE )" },
 	{ NULL, NULL }
 };
 static DaoTypeBase *dao_CxxNS_Types[2] = 

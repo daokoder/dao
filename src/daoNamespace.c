@@ -460,7 +460,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 		for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
 			DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_MOVE] );
 			if( DMap_Find( methods, name1 ) == NULL ) continue;
-			typer->priv->attribs |= DAO_OPER_OVERLOADED | (1<<i);
+			typer->priv->attribs |= DAO_OPER_OVERLOADED | (DVM_MOVE<<(i-DVM_MOVE+1));
 		}
 		DString_Delete( name1 );
 		DString_Delete( name2 );
@@ -522,6 +522,7 @@ static int DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer )
 
 	if( typer->priv ) return 1;
 	plgCore = DaoCDataCore_New();
+	plgCore->attribs |= DAO_TYPER_PRIV_FREE;
 	s = DString_New(1);
 
 	DString_SetMBS( s, typer->name );

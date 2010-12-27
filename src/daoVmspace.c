@@ -1684,6 +1684,10 @@ void DaoTypeBase_Free( DaoTypeBase *typer )
 	if( typer->priv->values ) DMap_Delete( typer->priv->values );
 	typer->priv->values = NULL;
 	typer->priv->methods = NULL;
+	if( typer->priv->attribs & DAO_TYPER_PRIV_FREE ){
+		dao_free( typer->priv );
+		typer->priv = NULL;
+	}
 }
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libSystemTyper;
@@ -2330,6 +2334,11 @@ void DaoQuit()
 	DMap_Delete( dao_typing_cache );
 	DMap_Delete( dao_cdata_bindings );
 	DArray_Delete( dao_callback_data );
+	dao_typing_cache = NULL;
+	dao_cdata_bindings = NULL;
+	dao_callback_data = NULL;
+	mainVmSpace = NULL;
+	mainVmProcess = NULL; 
 }
 DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns )
 {

@@ -519,6 +519,7 @@ void DaoFinishGC()
 	DArray_Delete( gcWorker.pool[1] );
 	DArray_Delete( gcWorker.objAlive );
 	DaoLateDeleter_Finish();
+	gcWorker.objAlive = NULL;
 }
 void DaoGC_IncRC( DaoBase *p )
 {
@@ -1449,6 +1450,7 @@ void DaoFinishGC()
 	DArray_Delete( gcWorker.pool[1] );
 	DArray_Delete( gcWorker.objAlive );
 	DaoLateDeleter_Finish();
+	gcWorker.objAlive = NULL;
 }
 void InitRC()
 {
