@@ -1788,11 +1788,11 @@ void DaoType_MapNames( DaoType *self );
 
 DaoType* DaoParser_ParseTypeName( const char *name, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout )
 {
-	DArray *tokens = DArray_New( D_TOKEN );
 	DaoParser *parser = DaoParser_New();
+	DArray *tokens = parser->tokens;
 	DaoType *type = NULL;
 	int i = 0;
-	if( ! DaoToken_Tokenize( parser->tokens, name, 1, 0, 0 ) ) goto ErrorType;
+	if( ! DaoToken_Tokenize( tokens, name, 1, 0, 0 ) ) goto ErrorType;
 	parser->nameSpace = ns;
 	parser->hostClass = cls;
 	parser->routine = rout;
@@ -1802,11 +1802,9 @@ DaoType* DaoParser_ParseTypeName( const char *name, DaoNameSpace *ns, DaoClass *
 		if( type->refCount == 0 ) DaoType_Delete( type );
 		type = NULL;
 	}
-	DArray_Delete( tokens );
 	DaoParser_Delete( parser );
 	return type;
 ErrorType:
-	DArray_Delete( tokens );
 	DaoParser_Delete( parser );
 	return NULL;
 }
