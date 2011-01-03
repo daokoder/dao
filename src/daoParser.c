@@ -5247,7 +5247,12 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	}
 	if( modname == NULL && varImport->size ==0 ){
 		DaoNameSpace_AddParent( nameSpace, mod );
-	}else if( ns != mod ) DaoNameSpace_Import( ns, mod, varImport );
+	}else if( ns != mod ){
+		if( varImport->size )
+			DaoNameSpace_Import( ns, mod, varImport );
+		else
+			DaoNameSpace_AddParent( ns, mod );
+	}
 	if( ns == nameSpace ){
 		DArray_Append( nameSpace->nsLoaded, mod );
 	}else{
