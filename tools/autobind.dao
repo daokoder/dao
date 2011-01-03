@@ -220,6 +220,9 @@ class Variable
 	var getres = ''; # for virtual function: if( _res. == .. ) ...
 	var getter = '';
 	var setter = '';
+	var dao_itemtype = '';
+	var get_item = ''; # type data[size]; "[]( self:X, i:int )=>type"
+	var set_item = ''; # type data[size]; "[]=( self:X, i:int, v:type )"
 	var unsupport = 0;
 	var isCallback = 0;
 	
@@ -244,6 +247,9 @@ class Variable
 		getres.clear();
 		getter.clear();
 		setter.clear();
+		dao_itemtype.clear();
+		get_item.clear();
+		set_item.clear();
 	}
 	routine _PRINT( s : stream ){ io.println( name, typeid, type ); }
 }
@@ -469,7 +475,7 @@ const pat_type2 = '<1>(static %s+|) <2>((const %s+|)) '
 const pat_funct = 
 '(|template %s* %b<> %s*)'
 '<1>( ((static|virtual) %s+|) (%w+::|) ( [^\n:;%(%)%{%}]* (%b<>|) ) (%s*|) ([%*%&] %s*|) )'
-'( <2>(%w+) :: | ) <3>((( %w+ | operator %W+ ))) %s* <4>( %b() ) [%s%w]* (: %s* %w+ |)'
+'( <2>(%w+) :: | ) <3>((( %w+ | operator %W+ ))) %s* <4>( %b() ) [%s%w]* <6>(: %s* %w+ |)'
 '<5>(%s* = %s* 0 |) %s* ( ; | %b{} )';
 # callback function pointer
 const pat_callback = 
@@ -478,7 +484,7 @@ const pat_callback =
 const pat_constru = '((%w+) %s* %b()) %s* : [^%{%}]* %b{}';
 
 const pat_struct = '(class|struct|union|namespace|callback) %s+ (( %w+ )) (%s*) '
-'( : %s* %w [%w%s,]+ |) ( %b{} ) %s* (;|)';
+'( : %s* %w [%w%s,:]+ |) ( %b{} ) %s* (;|)';
 
 routine ParseFunction( funcs : list<Function>, source='', host='', input='', 
 attribs=FunctionTrait.FUNC_NONE, snamespace='' )
@@ -500,11 +506,12 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 	#pars.change( '= %s* ( %w+ ) %s* %b()', '=%1' );
 	if( name.find( 'EXCLUDE_' ) >= 0 ) excluded = 1;
 	if( name.find( 'operator' ) >= 0 ) excluded = 1;
+	if( tks[6].find( 'NotImplemented' ) >= 0 ) excluded = 1;
 	if( tks[2] ) return; # skip class::method()
 	if( pars.pfind( '%] %s* %[' ) ) excluded = 1; # XXX skip a[][]
 	if( pars.pfind( '%* %s* %w+ %s* %[' ) ){
 		pts = pars.extract( '(%w+) %* %s* %w+ %s* %[' );
-		for( pt in pts ) if( not pt.pfind( '(short|int|float|double)' ) ) excluded = 1;
+		for( pt in pts ) if( pt.pfind( '(short|int|float|double)' ).size()==0 ) excluded = 1;
 		#return; # XXX skip *a[]
 	}
 	if( pars.pfind( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) ) excluded = 1;
@@ -732,7 +739,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 			if( i==5 ) attribs = $FUNC_PRIVATE;
 			if( not isCppClass and not isCallback ){
 				if( tks[4] ) skip; # struct x{ void (*func[10])(int i); }
-				part = tks[1] + tks[3] + tks[5] + ';';
+				part = tks[1] + tks[3] + tks[5] + tks[6] + ';';
 				attribs += $FUNC_VIRTUAL;
 			}
 			m = funclist.size();
@@ -794,7 +801,12 @@ routine UserType::Parse( source='', inExtFile=0 )
 				if( part.pfind( ': %s* %d+' ) ) skip; # bit field
 				if( part.pfind( '%* %s* %*' ) ) skip; # type **name;
 				if( part.pfind( '%] %s* %[' ) ) skip; # type name[][];
-				if( part.pfind( '(class|struct|union|typedef) %s+ %w+ %s* %{' ) ) skip; #
+				if( part.pfind( '(class|struct|union) %s+ %w+ %s*' ) ){
+					tmp = part.capture( '(class|struct|union) %s+ (%w+) %s*' )
+					ParseCode( 'typedef ' + tmp[1] + ' ' + tmp[2] + ' ' + tmp[2] + ';', name );
+					skip;
+				}
+				if( part.pfind( 'typedef %s+ %w+ %s*' ) ) skip;
 				tks = part.capture( '^ %s* ( %w+ ) %s* $' ); # int x, y;
 				if( tks.size() && prevar.size() ){
 					varname = tks[1];
@@ -945,10 +957,11 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			body = tks[6];
 			if( utp.isNameSpace ) body = ParseCode( body, utp.name, lang, fname, inExtFile );
 			utp.Parse( body, inExtFile );
-			supers = tks[5].extract( '(private|protected|public) %s+ (%w+)' );
+			supers = tks[5].extract( '(private|protected|public) %s+ ([%w:]+)' );
 			for( sup in supers ){
-				tks2 = sup.capture( '(private|protected|public) %s+ (%w+)' );
+				tks2 = sup.capture( '(private|protected|public) %s+ ([%w:]+)' );
 				name2 = tks2[2];
+				name2.change( ':', '_' );
 				if( not map_user_types.has( name2 ) ){
 					utp2 = UserType{ name => name2, input_file => fname };
 					map_user_types[ name2 ] = utp2;
@@ -1087,6 +1100,8 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	
 	io.println( 'parsing file: ', file2 );
 	
+	source.change( '(%S %s* %b()) %s* %w* %s*; %s* /[/%*] %s* <I>not %s+ implemented', '%1 :NotImplemented;' );
+	source.change( '{{//BTX}} %s* %B{ #%s* if }{ #%s*endif} %s* {{//ETX}}', '' ); # VTK
 	# remove comments
 	source.change( '%B{ / %* }{ %* / }', '' );
 	#source.change( '[^\n]*// %s* <I>Not %s+ implement [^\n]*', '' );
@@ -1130,7 +1145,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	
 	source.change('(^|%s) (extern|inline|explicit) (%s|$)',' ');
 	
-	source.change('template %s* %b<> %s* %w+ %s* (: [%s%w,:%<%>]* |) %b{}', '' );
+	source.change('template %s* %b<> %s* (class|struct) %s+ %w+ %s* (: [%s%w,:%<%>]* |) %b{}', '' );
 	source.change('friend %s+ %w+ [^;]* ;', '' );
 	source.change('using %s+ [%w:]+ %s* ;', '' );
 	
@@ -1151,7 +1166,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	source.change( 'typedef %s+ union ( %s* %b{} ) %s* ( %w+ ) %s* ;', 
 	'union %2%1;\n' );
 	
-	source.change( '%) %s* : ([^%{%}]*) %b{}', ');' ); # nested constructors
+	source.change( '%) %s* : ([^;%{%}]*) %b{}', ');' ); # nested constructors
 	source.change( '%) %s* (%w*) %s* %b{}', ')%1;' ); # nested/inline functions
 	
 	cbfrom1 = 'typedef %s+ <1>(%w [^;]*) %( %s* <2>(%w+) %s* %) %s* <3>( %b() ) %s* ;';
@@ -1287,7 +1302,7 @@ global cxx2dao_floats = cxx2dao + 'VectorF( (float*) $(name), $(size) );\n';
 global cxx2dao_doubles = cxx2dao + 'VectorD( (double*) $(name), $(size) );\n';
 
 global cxx2dao_stream = cxx2dao + 'Stream( (FILE*) $(refer) );\n';
-global cxx2dao_voidp = cxx2dao + 'CData( NULL, (void*) $(refer) );\n';
+global cxx2dao_voidp = '  _dp[$(index)] = DValue_WrapCData( NULL, (void*) $(refer) );\n';
 global cxx2dao_user = '  _dp[$(index)] = DValue_WrapCData( dao_$(type2)_Typer, (void*) $(refer) );\n';
 
 global cxx2dao_userdata = '  DValue_Copy( _dp2[$(index)], $(name) );\n';
@@ -1564,6 +1579,35 @@ global getres_user = getres_cdata +
 global getres_user2 = getres_cdata +
 '    $(name) = *($(namespace)$(type)*) DaoCData_GetData( _res.v.cdata );\n  }\n';
 
+
+global getitem_int = ctxput + 'Integer( _ctx, (int) self->$(name)[_p[1]->v.i] );\n';
+global getitem_float = ctxput + 'Float( _ctx, (float) self->$(name)[_p[1]->v.i] );\n';
+global getitem_double = ctxput + 'Double( _ctx, (double) self->$(name)[_p[1]->v.i] );\n';
+
+global setitem_int = 
+'  if( _p[1]->v.i < 0 || _p[1]->v.i >= $(size) ) return;\n'
+'  self->$(name)[_p[1]->v.i] = _p[2]->v.i;\n';
+global setitem_float = 
+'  if( _p[1]->v.i < 0 || _p[1]->v.i >= $(size) ) return;\n'
+'  self->$(name)[_p[1]->v.i] = _p[2]->v.f;\n';
+global setitem_double = 
+'  if( _p[1]->v.i < 0 || _p[1]->v.i >= $(size) ) return;\n'
+'  self->$(name)[_p[1]->v.i] = _p[2]->v.d;\n';
+
+global getitem_int2 = ctxput + 'Integer( _ctx, (int) (*self)[_p[1]->v.i] );\n';
+global getitem_float2 = ctxput + 'Float( _ctx, (float) (*self)[_p[1]->v.i] );\n';
+global getitem_double2 = ctxput + 'Double( _ctx, (double) (*self)[_p[1]->v.i] );\n';
+
+global setitem_int2 = 
+'  if( _p[1]->v.i < 0 || _p[1]->v.i >= $(size) ) return;\n'
+'  (*self)[_p[1]->v.i] = _p[2]->v.i;\n';
+global setitem_float2 = 
+'  if( _p[1]->v.i < 0 || _p[1]->v.i >= $(size) ) return;\n'
+'  (*self)[_p[1]->v.i] = _p[2]->v.f;\n';
+global setitem_double2 = 
+'  if( _p[1]->v.i < 0 || _p[1]->v.i >= $(size) ) return;\n'
+'  (*self)[_p[1]->v.i] = _p[2]->v.d;\n';
+
 global setter_int = '  self->$(name) = ($(type)) _p[1]->v.i;\n';
 global setter_float = '  self->$(name) = ($(type)) _p[1]->v.f;\n';
 global setter_double = '  self->$(name) = ($(type)) _p[1]->v.d;\n';
@@ -1747,6 +1791,8 @@ routine Variable::Generate( cxx_no_self =0 )
 	tpl_parset = '';
 	tpl_getres = '';
 	tpl_setter = '';
+	tpl_get_item = '';
+	tpl_set_item = '';
 	cxxtype2 = '';
 	if( typeid > $CT_USER ){
 		if( refer == '' && square == '' && not ispointer ){
@@ -1925,11 +1971,14 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxtype2 = 'int[]';
 			}
 			daotype = 'array<int>';
+			dao_itemtype = 'int';
 			tpl_daopar = daopar_ints;
 			tpl_ctxput = ctxput_ints;
 			tpl_parset = parset_ints;
 			tpl_getres = getres_ints;
 			tpl_setter = setter_ints;
+			tpl_get_item = name == 'this' ? getitem_int2 : getitem_int;
+			tpl_set_item = name == 'this' ? setitem_int2 : setitem_int;
 			switch( typeid ){
 				case $CT_CHAR, $CT_SCHAR : 
 				tpl_dao2cxx = dao2cxx_bytes;
@@ -1974,6 +2023,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_getres = getres_uints;
 				case $CT_FLOAT :
 				daotype = 'array<float>';
+				dao_itemtype = 'float';
 				tpl_daopar = daopar_floats;
 				tpl_dao2cxx = dao2cxx_floats;
 				tpl_cxx2dao = cxx2dao_floats;
@@ -1981,8 +2031,11 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_floats;
 				tpl_getres = getres_floats;
 				tpl_setter = setter_floats;
+				tpl_get_item = name == 'this' ? getitem_float2 : getitem_float;
+				tpl_set_item = name == 'this' ? setitem_float2 : setitem_float;
 				case $CT_DOUBLE :
 				daotype = 'array<double>';
+				dao_itemtype = 'double';
 				tpl_daopar = daopar_doubles;
 				tpl_dao2cxx = dao2cxx_doubles;
 				tpl_cxx2dao = cxx2dao_doubles;
@@ -1990,14 +2043,23 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_doubles;
 				tpl_getres = getres_doubles;
 				tpl_setter = setter_doubles;
+				tpl_get_item = name == 'this' ? getitem_double2 : getitem_double;
+				tpl_set_item = name == 'this' ? setitem_double2 : setitem_double;
 				case $CT_COMPLEX8 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_complexs8;
+				tpl_get_item = '';
+				tpl_set_item = '';
 				case $CT_COMPLEX16 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
 				tpl_dao2cxx = dao2cxx_complexs16;
+				tpl_get_item = '';
+				tpl_set_item = '';
+				default:
+				tpl_get_item = '';
+				tpl_set_item = '';
 			}
 		}elif( refer == '' && sqsizes.size() == 2 ){
 			cxxtype += '**';
@@ -2256,7 +2318,11 @@ routine Variable::Generate( cxx_no_self =0 )
 		ctxput = tpl_ctxput.expand( kvmap );
 		getres = tpl_getres.expand( kvmap );
 	}elif( index == INDEX_FIELD ){
-		if( not isconst ) setter = tpl_setter.expand( kvmap );
+		if( not isconst ){
+			setter = tpl_setter.expand( kvmap );
+			set_item = tpl_set_item.expand( kvmap );
+		}
+		get_item = tpl_get_item.expand( kvmap );
 		kvmap[ 'name' ] = 'self->' + name;
 		getter = tpl_ctxput.expand( kvmap );
 	}
@@ -2714,8 +2780,15 @@ routine Function::Generate()
 		signature += 'const';
 		signature2 += 'const';
 	}
-	if( excluded ){
+	if( excluded ){ 
+		#{ signature might be improperly generated for excluded function
+			that has complex types #}
 		source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' );
+		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' );
+		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' );
+		source.change( '%w+( , | %) | %[ )', '%1' );
+		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' );
+		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' );
 		while( source.replace( '>>', '> >' ) );
 		signature = source;
 		signature2 = source;
@@ -2734,6 +2807,7 @@ routine Function::Generate()
 	'func_ns'=>'', 'host_ns'=>'' };
 	if( retype.daotype ) kvmap[ 'retype' ] = '=>' + retype.daotype;
 	if( snamespace ) kvmap[ 'func_ns' ] = snamespace + '::';
+
 	daoProtoCodes = dao_proto.expand( kvmap );
 	cxxProtoCodes = cxx_wrap_proto.expand( kvmap );
 	kvmap[ 'retype' ] = retype.cxxtype;
@@ -2741,8 +2815,16 @@ routine Function::Generate()
 	
 	if( $FUNC_CPP in attribs ){
 		ss = 'self->';
+
+#{ Commented on 2010-12-30:
+		for situation:
+			o = Klass::New(); -- instance of derived class
+			o.Meth(); -- virtual method
+
 		if( $FUNC_PROTECTED not in attribs and $FUNC_PURE_VIRTUAL not in attribs )
 			ss += hostType + '::';
+#}
+
 		kvmap[ 'self' ] = ss;
 		kvmap[ 'parlist' ] = cxxCallParamV;
 	}
@@ -3763,6 +3845,7 @@ routine UserType::GenerateType()
 				if( mapprivate.has( meth.signature ) ) skip;
 				if( mapnonvirt.has( meth.signature ) ) skip;
 				if( meth.hostType != sup.name && not ($FUNC_PURE_VIRTUAL in meth.attribs) ) skip; # from parents of parents
+
 				if( not declvirts.has( meth.signature ) ){
 					declvirts[ meth.signature ] = meth;
 					kvmap = { 'sub' => name };
@@ -3980,6 +4063,11 @@ global cxx_getter_proto =
 global cxx_setter_proto = 
 'static void dao_$(type)_SETF_$(name)( DaoContext *_ctx, DValue *_p[], int _n )';
 
+global cxx_get_item_proto = 
+'static void dao_$(type)_GETI_$(name)( DaoContext *_ctx, DValue *_p[], int _n )';
+global cxx_set_item_proto = 
+'static void dao_$(type)_SETI_$(name)( DaoContext *_ctx, DValue *_p[], int _n )';
+
 global cxx_gs_user =
 '  $(namespace)$(type) *self = ($(namespace)$(type)*)DaoCData_GetData(_p[0]->v.cdata);\n';
 
@@ -3987,6 +4075,10 @@ global dao_getter_proto =
 '  { dao_$(type)_GETF_$(name), ".$(name)( self : $(type) )=>$(ftype)" },\n';
 global dao_setter_proto = 
 '  { dao_$(type)_SETF_$(name), ".$(name)=( self : $(type), $(name) : $(ftype) )" },\n';
+global dao_get_item_proto = 
+'  { dao_$(type)_GETI_$(name), "[]( self : $(type), i : int )=>$(itype)" },\n';
+global dao_set_item_proto = 
+'  { dao_$(type)_SETI_$(name), "[]=( self : $(type), i : int, value : $(itype) )" },\n';
 
 routine UserType::Generate()
 {
@@ -4002,15 +4094,30 @@ routine UserType::Generate()
 		if( field.isCallback ) skip;
 		kvmap[ 'name' ] = field.name;
 		kvmap[ 'ftype' ] = field.daotype;
-		decl = cxx_getter_proto.expand( kvmap );
-		dao_meths += dao_getter_proto.expand( kvmap );
-		meth_decls += decl + ';\n';
-		meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.getter +'}\n';
-		if( field.setter ){
-			decl = cxx_setter_proto.expand( kvmap );
-			dao_meths += dao_setter_proto.expand( kvmap );
+		kvmap[ 'itype' ] = field.dao_itemtype;
+		if( field.name != 'this' ){
+			decl = cxx_getter_proto.expand( kvmap );
+			dao_meths += dao_getter_proto.expand( kvmap );
 			meth_decls += decl + ';\n';
-			meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.setter +'}\n';
+			meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.getter +'}\n';
+			if( field.setter ){
+				decl = cxx_setter_proto.expand( kvmap );
+				dao_meths += dao_setter_proto.expand( kvmap );
+				meth_decls += decl + ';\n';
+				meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.setter +'}\n';
+			}
+		}
+		if( field.get_item ){
+			decl = cxx_get_item_proto.expand( kvmap );
+			dao_meths += dao_get_item_proto.expand( kvmap );
+			meth_decls += decl + ';\n';
+			meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.get_item +'}\n';
+		}
+		if( field.set_item ){
+			decl = cxx_set_item_proto.expand( kvmap );
+			dao_meths += dao_set_item_proto.expand( kvmap );
+			meth_decls += decl + ';\n';
+			meth_codes += decl + '\n{\n'+ tpl_gs.expand( kvmap ) + field.set_item +'}\n';
 		}
 	}
 	tmp = {=>};
@@ -4360,6 +4467,11 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	
 	fname = main_fname + '.h';
 	fout_header = io.open( dir_output + 'dao_' + fname, 'w' );
+
+	wrap_name2 = wrap_name[].toupper();
+	fout_header.println( '#ifndef __DAO_' + wrap_name2 + '_H__' );
+	fout_header.println( '#define __DAO_' + wrap_name2 + '_H__' );
+
 	fout_header.print( '#include<stdlib.h>\n' );
 	fout_header.print( '#include<assert.h>\n' );
 	fout_header.print( '#include<string.h>\n' );
@@ -4375,13 +4487,17 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		}
 	}
 	if( include ){
-		wrap_name2 = include[].toupper();
-		fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
-		fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_IMPORT' );
-		fout_header.println( '#include"dao_' + include + '.h"' );
-		fout_header.println( '#else' );
-		fout_header.println( '#define DAO_DLL_' + wrap_name2 );
-		fout_header.println( '#endif' );
+		includes = include.split(',');
+		for( inc in includes ){
+			wrap_name2 = inc[].toupper();
+			fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
+			fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_IMPORT' );
+			fout_header.println( '#include"dao_' + inc + '.h"' );
+			fout_header.println( '#else' );
+			fout_header.println( '#define DAO_DLL_' + wrap_name2 );
+			fout_header.println( '#include"dao_' + inc + '.h"' );
+			fout_header.println( '#endif' );
+		}
 	}
 	wrap_name2 = wrap_name[].toupper();
 	fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
@@ -4578,6 +4694,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	ns_aliases : map<string,list<string>> = {=>};
 	for( name in map_user_types.keys(); utp in map_user_types.values() ){
 		if( utp.isNameSpace or utp.isCallback ) skip;
+		if( extfiles.has( utp.input_file ) ) skip;
 		if( name != utp.name && name.pfind( '(%s|:)' ).size()==0 ){
 			ns = utp.snamespace;
 			if( ns ){
@@ -4708,6 +4825,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	fout_source.println( '  return 0;\n}' );
 	fout_source.println( ifdef_cpp_close );
 	
+	fout_header.println( '#endif' );
 	fout_header.close();
 	fout_source.close();
 	fout_source2.close();

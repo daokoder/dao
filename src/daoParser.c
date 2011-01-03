@@ -1831,12 +1831,16 @@ static void DaoParser_PopRegister( DaoParser *self )
 {
 	self->locRegCount --;
 	DArray_Pop( self->regLines );
+	MAP_Erase( self->routine->localVarType, self->locRegCount );
 }
 static void DaoParser_PopRegisters( DaoParser *self, int n )
 {
 	int i;
 	if( n <0 ) return;
-	for(i=0; i<n; i++) DArray_Pop( self->regLines );
+	for(i=0; i<n; i++){
+		DArray_Pop( self->regLines );
+		MAP_Erase( self->routine->localVarType, self->locRegCount - i - 1 );
+	}
 	self->locRegCount -= n;
 }
 int DaoParser_ParseParams( DaoParser *self )
@@ -5911,6 +5915,7 @@ static int DaoParser_MakeConst( DaoParser *self, DaoInode *front, DaoInode *back
 	/* for( i=0; i<size; i++) DaoVmCode_Print( *vmCodes->items.pVmc[i], NULL ); */
 	opB = self->vmcLast->b;
 	DaoParser_PopCodes( self, front, back );
+	for(i=regcount; i<self->locRegCount; i++) MAP_Erase( self->routine->localVarType, i );
 	self->locRegCount = regcount;
 	DArray_Resize( self->regLines, regcount, 0 );
 	/* Execute the instruction to get the const result: */

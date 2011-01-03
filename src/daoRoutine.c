@@ -4783,11 +4783,16 @@ ErrorTyping:
 
 				vmc = self->annotCodes->items.pVmc[cid];
 				sprintf( char200, "%s:%i,%i,%i", getOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
-				sprintf( char50, "  At line %i : ", vmc->line );
 
 				DaoStream_WriteMBS( stdio, "[[ERROR]] in file \"" );
 				DaoStream_WriteString( stdio, self->nameSpace->name );
 				DaoStream_WriteMBS( stdio, "\":\n" );
+				sprintf( char50, "  At line %i : ", self->defLine );
+				DaoStream_WriteMBS( stdio, char50 );
+				DaoStream_WriteMBS( stdio, "Invalid function definition --- \" " );
+				DaoStream_WriteString( stdio, self->routName );
+				DaoStream_WriteMBS( stdio, "() \";\n" );
+				sprintf( char50, "  At line %i : ", vmc->line );
 				DaoStream_WriteMBS( stdio, char50 );
 				DaoStream_WriteMBS( stdio, "Invalid virtual machine instruction --- \" " );
 				DaoStream_WriteMBS( stdio, char200 );

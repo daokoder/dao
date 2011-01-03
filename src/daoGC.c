@@ -2105,6 +2105,9 @@ void freeGarbage()
 				}else if( dbase->type == DAO_TYPE ){
 					DaoType *func = (DaoType*)dbase;
 					printf( "%s\n", func->name->mbs );
+				}else if( dbase->type == DAO_CDATA ){
+					DaoCData *cdata = (DaoCData*) dbase;
+					printf( "%s\n", cdata->typer->name );
 				}
 #endif
 				if( ! ( dbase->gcState[ idle ] & GC_IN_POOL ) ){

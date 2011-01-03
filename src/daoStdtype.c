@@ -2519,8 +2519,7 @@ static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
 		DString_Reserve( res, size + ( self->items->size - 1 ) * sep->size );
 		for( i = 0; i < self->items->size - 1; i++ ){
 			DString_Append( res, DValue_GetString( self->items->data[i], buf ) );
-			if( sep->size != 0 )
-				DString_Append( res, sep );
+			if( sep->size != 0 ) DString_Append( res, sep );
 		}
 		DString_Append( res, DValue_GetString( self->items->data[i], buf ) );
 	}
