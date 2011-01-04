@@ -1128,6 +1128,10 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 		}
 		#do{ k = source.change( pat[0], pat[1] ); } until( k==0 );
 	}
+	pat_exclude = '<1>(%w+)_EXCLUDE_ %s* <2>(%b()) <3>([%w%s]*) <4>(=|;|%{)';
+	pat_apply = '%1%2%3:NotImplemented%4';
+	k  = 0;
+	do{ k = source.change( pat_exclude, pat_apply ); } until( k==0 );
 	
 	fname = file;
 	#fname.change( '%..*$', '' );
@@ -1963,13 +1967,21 @@ routine Variable::Generate( cxx_no_self =0 )
 				}
 			}
 		}elif( refer == '' && sqsizes.size() == 1 ){
-			cxxtype += '*';
 			cxxpar = type + ' ' + name + '[]';
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int ' + name + '[]';
 				cxxtype2 = 'int[]';
 			}
+			if( index == INDEX_RETURN ){
+				cxxpar = cxxtype + ' *' + name;
+				cxxpar_enum_virt = cxxpar;
+				if( isClassEnum ){
+					cxxpar_enum_virt = 'int *' + name;
+					cxxtype2 = 'int*';
+				}
+			}
+			cxxtype += '*';
 			daotype = 'array<int>';
 			dao_itemtype = 'int';
 			tpl_daopar = daopar_ints;
@@ -2062,13 +2074,21 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_set_item = '';
 			}
 		}elif( refer == '' && sqsizes.size() == 2 ){
-			cxxtype += '**';
 			cxxpar = type + ' *' + name + '[]';
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int *' + name + '[]';
 				cxxtype2 = 'int*[]';
 			}
+			if( index == INDEX_RETURN ){
+				cxxpar = cxxtype + ' **' + name;
+				cxxpar_enum_virt = cxxpar;
+				if( isClassEnum ){
+					cxxpar_enum_virt = 'int **' + name;
+					cxxtype2 = 'int**';
+				}
+			}
+			cxxtype += '**';
 			daotype = 'array<int>';
 			tpl_daopar = daopar_ints;
 			tpl_ctxput = ctxput_ints;
@@ -2566,14 +2586,14 @@ const cxx_virt_call_11 =
 }\n';
 
 const cxx_proxy_body00 =
-'void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
+'static void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
   if( _ro == NULL ) return;
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }\n';
 const cxx_proxy_body01 =
-'void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+'static void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
@@ -2585,7 +2605,7 @@ $(cxx2dao)
   DValue_ClearAll( _dp, $(count) );
 }\n';
 const cxx_proxy_body10 =
-'$(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
+'static $(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
   DValue _res;
   DaoCData *_cd;
   DaoVmProcess *_vmp;
@@ -2600,7 +2620,7 @@ EndCall:
   return $(return);
 }\n';
 const cxx_proxy_body11 =
-'$(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+'static $(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
@@ -2670,6 +2690,14 @@ global daoqt_sig_slot_code =
 ';
 global daoqt_sig_slot_emit = 
 '  emit signal_$(ssname)( this, "$(signature)", _message );\n}\n';
+
+routine NewProxyFunctionName()
+{
+	id = 10000L16;
+	while(1) yield ('Function_' + (string)(++id));
+	return '';
+}
+global new_proxy_function_name = @NewProxyFunctionName();
 
 routine Function::Generate()
 {
@@ -2783,12 +2811,14 @@ routine Function::Generate()
 	if( excluded ){ 
 		#{ signature might be improperly generated for excluded function
 			that has complex types #}
-		source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' );
-		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' );
-		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' );
-		source.change( '%w+( , | %) | %[ )', '%1' );
-		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' );
-		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' );
+		source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); # join special letter
+		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
+		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
+		source.change( '(%w+ %s* %( .* ) ((%w+)) ( , | %) | %[ )', '%1%4' ); # remove param name
+		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
+		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
+		# one space between return type and function anme
+		source.change( '(%S+)%s*((%w+)%b()%w*$)', '%1 %2' );
 		while( source.replace( '>>', '> >' ) );
 		signature = source;
 		signature2 = source;
@@ -2943,12 +2973,8 @@ routine Function::Generate()
 	#io.writeln( signature2 );
 	proxy_name = '';
 	if( not proxy_functions.has( signature2 ) ){
-		ss = io.sstream();
-		pfun = Function();
-		ss.write( pfun );
-		proxy_name = ss.getstring();
-		proxy_name.change( '%[', '_' )
-		proxy_name.change( '%]', '' )
+		proxy_name = new_proxy_function_name();
+		proxy_name = proxy_name[ : proxy_name.size()-4 ];
 		kvmap3[ 'proxy_name' ] = proxy_name;
 		proxy_codes = '';
 		if( has_return and has_param ){
@@ -2960,7 +2986,7 @@ routine Function::Generate()
 		}else{
 			proxy_codes = cxx_proxy_body00.expand( kvmap3 );
 		}
-		proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes, id=>pfun );
+		proxy_functions[ signature2 ] = ( used=>0, name=>proxy_name, codes=>proxy_codes );
 		#io.writeln( proxy_name, proxy_codes );
 	}
 	if( has_return or has_param ) proxy_name = proxy_functions[ signature2 ].name;
