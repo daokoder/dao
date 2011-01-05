@@ -463,18 +463,18 @@ const pat_type = '<1>(static %s+|) <2>((const %s+|)) '
 '( [%w:]+ (%b<> [%w:]* |) | long%s+ (((int|long|double))) ) )'
 ' %s* <4>(| %s | %*{1,2} | %& ) %s*'
 '(|const %s*) <5>( %w* ) %s* <6>( %b[]{0,2} )'
-'<7>(%s* = %s* ( [%+%-\'\"%w%.:%|]+ | [:%w]* %s* %b() ) |)';
+'<7>(%s* = %s* ( [%s%+%-\'\"%w%.:%|]+ | [:%w]* %s* %b() ) |)';
 
 const pat_type2 = '<1>(static %s+|) <2>((const %s+|)) '
 '<3>( ( ((signed|unsigned|enum|struct)%s+) |)'
 '( [%w:]+ (%b<> [%w:]* |) |long%s+ (((int|long|double))) ) )'
 ' %s* <4>(| %s | %*{1,2} | %& ) %s*'
 '(|const %s*) <5>( %w+ ) %s* <6>( %b[]{0,2} )'
-'<7>(%s* = %s* ([%+%-\'\"%w%.:%|]+) |);';
+'<7>(%s* = %s* ([%s%+%-\'\"%w%.:%|]+) |);';
 # virtual void bar() const : alias =0;
 const pat_funct = 
 '(|template %s* %b<> %s*)'
-'<1>( ((static|virtual) %s+|) (%w+::|) ( [^\n:;%(%)%{%}]* (%b<>|) ) (%s*|) ([%*%&] %s*|) )'
+'<1>( ((inline|static|virtual) %s+|) (%w+::|) ( [^\n:;%(%)%{%}]* (%b<>|) ) (%s*|) ([%*%&] %s*|) )'
 '( <2>(%w+) :: | ) <3>((( %w+ | operator %W+ ))) %s* <4>( %b() ) [%s%w]* <6>(: %s* %w+ |)'
 '<5>(%s* = %s* 0 |) %s* ( ; | %b{} )';
 # callback function pointer
@@ -617,6 +617,7 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 routine UserType::Parse( source='', inExtFile=0 )
 {
 	condType = self;
+	source.change( 'struct %s* %b{} %s* %w+ %s* ;', '' ); # struct { int x; } d;
 	source.change( pat_struct, 'typedef %1 %2 %2;' ); # nested class/struct...
 	oldsource = source;
 	isDefined = 1;
@@ -1149,7 +1150,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	
 	source.change('(^|%s) (extern|inline|explicit) (%s|$)',' ');
 	
-	source.change('template %s* %b<> %s* (class|struct) %s+ %w+ %s* (: [%s%w,:%<%>]* |) %b{}', '' );
+	source.change('template %s* %b<> %s* (class|struct) %s+ %w+ %s* (%b<>|) %s* (: [%s%w,:%<%>]* |) %b{}', '' );
 	source.change('friend %s+ %w+ [^;]* ;', '' );
 	source.change('using %s+ [%w:]+ %s* ;', '' );
 	
@@ -3196,10 +3197,10 @@ signals:
 
 global qt_connect_decl =
 'static void dao_QObject_emit( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao_QObject_connect( DaoContext *_ctx, DValue *_p[], int _n );\n'
+static void dao_QObject_connect_dao( DaoContext *_ctx, DValue *_p[], int _n );\n'
 global qt_connect_dao =
 '  { dao_QObject_emit, "emit( self : QObject, signal : any, ... )" },
-  { dao_QObject_connect, "connect( sender : QObject, signal : any, receiver : QObject, slot : any )" },\n';
+  { dao_QObject_connect_dao, "connect( sender : QObject, signal : any, receiver : QObject, slot : any )" },\n';
 
 global qt_connect_func =
 'static void dao_QObject_emit( DaoContext *_ctx, DValue *_p[], int _n )
@@ -3212,7 +3213,7 @@ global qt_connect_func =
   for(int i=0; i<_n-2; i++) DValue_Copy( msg.p2[i], *_p[i+2] );
 	linker->Emit( linker, signal->v.p, msg );
 }
-static void dao_QObject_connect( DaoContext *_ctx, DValue *_p[], int _n )
+static void dao_QObject_connect_dao( DaoContext *_ctx, DValue *_p[], int _n )
 {
 	QObject *sender = (QObject*) DaoCData_GetData(_p[0]->v.cdata);
 	QObject *receiver = (QObject*) DaoCData_GetData(_p[2]->v.cdata);
@@ -3783,6 +3784,18 @@ routine UserType::GenerateType()
 			}
 		}
 	}
+	if( exp_default == 0 && privameths.size() ){
+		if( isCppClass ){
+			for( meth in privameths ){
+				if( meth.cxxName != name ) skip;
+# no explicit default constr. and explicit private constr.
+# imply private default constr.
+				hasPrivConstr = 1;
+				private_default = 1;
+				break;
+			}
+		}
+	}
 	#if( name == 'Fl_Free' ) io.writeln( name, allocators, private_default );
 	if( imp_default and not exp_default and not private_default and not noWrapping 
 	and (not noConstructor or hasVirtual) ){
@@ -3796,7 +3809,7 @@ routine UserType::GenerateType()
 				meth_codes += c_wrap_new.expand( kvmap2 );
 			}
 			#			}
-		}elif( isDefined and not hasProtConstr ){
+		}elif( isDefined and not hasProtConstr and not hasPrivConstr ){
 			dao_meths += dao_proto.expand( kvmap2 );
 			meth_decls += cxx_wrap_proto.expand( kvmap2 ) + ';\n';
 			meth_codes += cxx_wrap_alloc2.expand( kvmap2 );
@@ -4012,7 +4025,7 @@ routine UserType::GenerateType()
 				class_new += tpl_class_new.expand( kvmap );
 				type_codes += tpl_class_init2.expand( kvmap );
 			}
-		}elif( not noWrapping and (not noConstructor or hasVirtual) ){
+		}elif( not noWrapping and not private_default and (not noConstructor or hasVirtual) ){
 			# class has no virtual methods but has protected constructor
 			# should also be wrapped, so that it can be derived by Dao class:
 			class_new += tpl_class_new.expand( kvmap );
@@ -4321,6 +4334,83 @@ const cpp_DaoCallbackData =
 }
 ';
 
+routine SortFiles( files : list<string>, dir='', subdir='' )
+{
+	subdirs = subdir.split( ',' );
+
+	depends = { '' : {'' : 1} };
+	for( file in files ){
+		depends[ file ] = {:};
+
+		file2 = file;
+		source = io.read( file, 1 );
+		if( source =='' ){
+			source = io.read( dir + file, 1 );
+			file2 = dir + file;
+		}
+		if( source =='' ){
+			for( sb in subdirs ){
+				source = io.read( dir + sb + '/' + file, 1 );
+				file2 = dir + sb + '/' + file;
+				if( source ) break;
+			}
+		}
+		if( source == '' ) skip;
+		includes = source.extract( '# %s* include %s* (%b<> | %b"")' );
+		if( includes.size() ==0 ) skip;
+		for( inc in includes ){
+			parts = inc.capture( '("|%<|/|\\) ([%w]+%.h) ("|>) %s* $' );
+			if( parts.size() < 3 ) skip;
+			depends[ file ][ parts[2] ] = 1;
+		}
+		#io.writeln( file, depends[ file ] );
+	}
+#{
+	compare = routine( x : string, y : string ){
+		if( depends.has( x ) and depends[x].has(y) ) return 0;
+		if( depends.has( y ) and depends[y].has(x) ) return 1;
+		return x < y;
+	}
+	sort( files )->{
+		( depends.has( x ) and depends[x].has(y) ) ? 0 :
+		( ( depends.has( y ) and depends[y].has(x) ) ? 1 : 0 )
+	}
+#}
+	debug = 0;
+	sorted : list<string> = {};
+	inserted = { '' : 1 }
+	while( sorted.size() < files.size() ){
+		last = sorted.size();
+		for( file in files ){
+			if( inserted.has( file ) ) skip;
+			insert = 1;
+			for( dep in depends[file].keys() ){
+				if( not depends.has( dep ) ) skip;
+				if( depends[dep].has( file ) ) skip;
+				if( not inserted.has( dep ) ){
+					if( debug ) io.writeln( file, dep );
+					insert = 0;
+					break;
+				}
+			}
+			if( insert ){
+				inserted[file] = 1;
+				sorted.append( file );
+			}
+		}
+		if( debug and sorted.size() == last ){
+			io.writeln( 'ERROR: cyclic dependency is detected among header files!' );
+			sys.exit();
+			break;
+		}
+		debug = sorted.size() == last;
+	}
+#{
+	io.writeln( sorted );
+#}
+	return sorted;
+}
+
 routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
 del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
 {
@@ -4332,8 +4422,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	inputfiles.change( '%s+', '' );
 	cate = inputfiles.split(':');
 	extfiles = {=>};
-	files = {};
-	# XXX order of files
+	files : list<string> = {};
 	if( cate.size() ==1 ){
 		tmps = {=>};
 		for( f in cate[0].split( ',' ) ){
@@ -4409,8 +4498,12 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		}
 		#if( file == '' ) dft_fixing = pat_fixing;
 	}
+	files = SortFiles( files, dir_input, subdir_input );
 	file_names = {};
+	progress = 0;
 	for( file in files ){
+		progress += 1;
+		io.writef( '%4i: %4i, ', files.size(), progress );
 		pat_fixing = file2fixing[ file ];
 		for( pts in dft_fixing ) pat_fixing.append( pts );
 		if( ParseFile( file, dir_input, subdir_input, pat_fixing, lang, extfiles.has( file ) ) ==0 ) skip;
@@ -4706,7 +4799,11 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	io.writeln( std.about( ns_funcs ) );
 	for( ns in ns_funcs.keys(); funcs in ns_funcs.values() ){
 		fout_source.printf( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
-		for( func in funcs ) fout_source.print( func.daoProtoCodes );
+		for( func in funcs ){
+			if( func.excluded ) skip;
+			if( extfiles.has( func.input_file ) ) skip;
+			fout_source.print( func.daoProtoCodes );
+		}
 		fout_source.printf( '\t{ NULL, NULL }\n};\n' );
 	}
 	for( ns in ns_types.keys(); utps in ns_types.values() ){

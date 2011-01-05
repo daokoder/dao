@@ -803,8 +803,10 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 			if( self->size >= self->tsize ) DHash_ResetTable( self );
 		}
 	}else{
-		DMap_DeleteItem( p->value.pVoid, self->valtype );
-		if( self->valtype != D_VALUE ) p->value.pVoid = NULL;
+		if( self->valtype != D_VALUE ){
+			DMap_DeleteItem( p->value.pVoid, self->valtype );
+			p->value.pVoid = NULL;
+		}
 		DMap_CopyItem( & p->value.pVoid, value, self->valtype );
 		dao_free( node );
 	}

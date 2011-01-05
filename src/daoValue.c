@@ -384,7 +384,7 @@ void DValue_IncRCs( DValue *v, int n )
 
 void DValue_CopyExt( DValue *self, DValue from, int copy )
 {
-	if( from.t >= DAO_ARRAY && from.t == self->t && from.v.p == self->v.p ) return;
+	if( from.t >= DAO_COMPLEX && from.t == self->t && from.v.p == self->v.p ) return;
 	switch( self->t ){
 	case DAO_COMPLEX : if( from.t != DAO_COMPLEX ) dao_free( self->v.c ); break;
 	case DAO_LONG  : if( from.t != DAO_LONG ) DLong_Delete( self->v.l ); break;
@@ -576,7 +576,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	}
 	to->sub = from.sub;
 	to->cst = to->ndef = 0;
-	if( from.t >= DAO_ARRAY && from.t == to->t && from.v.p == to->v.p ) return 1;
+	if( from.t >= DAO_COMPLEX && from.t == to->t && from.v.p == to->v.p ) return 1;
 	if( from.t >= DAO_INTEGER && from.t <= DAO_DOUBLE ){
 		if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto MoveFailed;;
 	}else if( from.t >= DAO_COMPLEX && from.t <= DAO_ENUM ){
