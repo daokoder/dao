@@ -1097,9 +1097,12 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 			if( source ) break;
 		}
 	}
-	if( source == '' ) return 0;
+	if( source == '' ){
+		io.println( 'skipping', file );
+		return 0;
+	}
 	
-	io.println( 'parsing file: ', file2 );
+	io.println( 'parsing', file2 );
 	
 	source.change( '(%S %s* %b()) %s* %w* %s*; %s* /[/%*] %s* <I>not %s+ implemented', '%1 :NotImplemented;' );
 	source.change( '{{//BTX}} %s* %B{ #%s* if }{ #%s*endif} %s* {{//ETX}}', '' ); # VTK
@@ -4334,7 +4337,7 @@ const cpp_DaoCallbackData =
 }
 ';
 
-routine SortFiles( files : list<string>, dir='', subdir='' )
+routine SortFiles( files : list<string>, dir='', subdir='', mod='' )
 {
 	subdirs = subdir.split( ',' );
 
@@ -4379,7 +4382,7 @@ routine SortFiles( files : list<string>, dir='', subdir='' )
 	debug = 0;
 	sorted : list<string> = {};
 	inserted = { '' : 1 }
-	while( sorted.size() < files.size() ){
+	while( inserted.size() < depends.size() ){
 		last = sorted.size();
 		for( file in files ){
 			if( inserted.has( file ) ) skip;
@@ -4388,7 +4391,7 @@ routine SortFiles( files : list<string>, dir='', subdir='' )
 				if( not depends.has( dep ) ) skip;
 				if( depends[dep].has( file ) ) skip;
 				if( not inserted.has( dep ) ){
-					if( debug ) io.writeln( file, dep );
+					if( debug ) io.writef( '%s: %s %s\n', mod, file, dep );
 					insert = 0;
 					break;
 				}
@@ -4398,8 +4401,9 @@ routine SortFiles( files : list<string>, dir='', subdir='' )
 				sorted.append( file );
 			}
 		}
+		io.writef( '%4i  %4i  %4i\n', depends.size(), last, sorted.size() );
 		if( debug and sorted.size() == last ){
-			io.writeln( 'ERROR: cyclic dependency is detected among header files!' );
+			io.writef( 'ERROR: cyclic dependency is detected among header files for module: %s!\n', mod );
 			sys.exit();
 			break;
 		}
@@ -4450,7 +4454,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 			if( f ) files.append( f );
 		}
 	}
-	io.println( extfiles );
+	#io.println( extfiles );
 	if( files.size() ==0 ){
 		io.println( 'no input, quit...' );
 		return;
@@ -4498,12 +4502,12 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		}
 		#if( file == '' ) dft_fixing = pat_fixing;
 	}
-	files = SortFiles( files, dir_input, subdir_input );
+	files = SortFiles( files, dir_input, subdir_input, wrap_name );
 	file_names = {};
 	progress = 0;
 	for( file in files ){
 		progress += 1;
-		io.writef( '%4i: %4i, ', files.size(), progress );
+		io.writef( '%4i: %4i: %16s:  ', files.size(), progress, wrap_name );
 		pat_fixing = file2fixing[ file ];
 		for( pts in dft_fixing ) pat_fixing.append( pts );
 		if( ParseFile( file, dir_input, subdir_input, pat_fixing, lang, extfiles.has( file ) ) ==0 ) skip;
