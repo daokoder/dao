@@ -2815,17 +2815,26 @@ routine Function::Generate()
 	if( excluded ){ 
 		#{ signature might be improperly generated for excluded function
 			that has complex types #}
-		source.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); # join special letter
-		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
-		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
-		source.change( '(%w+ %s* %( .* ) ((%w+)) ( , | %) | %[ )', '%1%4' ); # remove param name
-		source.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
-		source.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
-		# one space between return type and function anme
-		source.change( '(%S+)%s*((%w+)%b()%w*$)', '%1 %2' );
-		while( source.replace( '>>', '> >' ) );
+		parts = source.capture( '^(.*)((%w+) %s* %b() .*)$' );
+		ret = parts[1];
+		par = parts[2];
+		ret.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); # join special letter
+		ret.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
+		ret.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
+		ret.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
+		ret.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
+
+		par.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); # join special letter
+		par.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
+		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
+		par.change( '(%w %>? ) %s* ([%*%&]*) %s* (((%w+))) (, | %) | %[)', '%1%2%6' ); # remove param name
+		par.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
+		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
+
+		source = ret + ' ' + par;
 		signature = source;
 		signature2 = source;
+		#io.writeln( source );
 	}
 	# if( excluded ) return; # can not return here, 
 	# because C/C++ parameter list is need for constructors!

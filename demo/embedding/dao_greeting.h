@@ -47,7 +47,7 @@ class DAO_DLL_GREETING DaoCxxVirt_Greeting
 class DAO_DLL_GREETING DaoCxx_Greeting : public Greeting, public DaoCxxVirt_Greeting
 { 
 	public:
-   DaoCxx_Greeting( const char* msg=NULL ) : Greeting( msg ){}
+   DaoCxx_Greeting( const char* msg=NULL  ) : Greeting( msg ){}
 	~DaoCxx_Greeting();
 	void DaoInitWrapper();
 	void DoGreeting( const char* name );

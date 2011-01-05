@@ -37,7 +37,7 @@ static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n );
 static DaoFuncItem dao_Funcs[] =
 {
   { dao__GetGreetingObject, "GetGreetingObject(  )=>Greeting" },
-  { dao__Testing_dao_4, "Testing( bl : int=CxxNS::FALSE )" },
+  { dao__Testing_dao_4, "Testing( bl : int=CxxNS::FALSE  )" },
   { NULL, NULL }
 };
 /* greeting.h */
@@ -109,15 +109,15 @@ static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n )
 
 static DaoFuncItem dao_CxxNS_Funcs[] = 
 {
-  { dao__Testing, "Testing( greeting : Greeting, bl : int=FALSE )" },
-  { dao__Testing_dao_2, "Testing( a : int, bl : int=FALSE )" },
-  { dao__Testing_dao_3, "Testing( t : Test, b : int=0, o : Test =0, g : Test=0, c : int=0 )" },
-  { dao__Testing2, "Testing2( t : Test, b : int=0, o : Test =0, g : Test=0, c : int=0 )=>int" },
+  { dao__Testing, "Testing( greeting : Greeting, bl : int=FALSE  )" },
+  { dao__Testing_dao_2, "Testing( a : int, bl : int=FALSE  )" },
+  { dao__Testing_dao_3, "Testing( t : Test, b : int=0, o : Test =0, g : Test=0, c : int=0  )" },
+  { dao__Testing2, "Testing2( t : Test, b : int=0, o : Test =0, g : Test=0, c : int=0  )=>int" },
 	{ NULL, NULL }
 };
 static DaoFuncItem dao_CxxNS2_Funcs[] = 
 {
-  { dao__Testing_dao_5, "Testing( test : CxxNS::Test, bl : int=CxxNS::FALSE )" },
+  { dao__Testing_dao_5, "Testing( test : CxxNS::Test, bl : int=CxxNS::FALSE  )" },
 	{ NULL, NULL }
 };
 static DaoTypeBase *dao_CxxNS_Types[2] = 
