@@ -1274,9 +1274,15 @@ global dao2cxx_c16mat = dao2cxx3 + '(complex16*) DaoArray_GetMatrixD( _p[$(index
 
 global dao2cxx_stream = dao2cxx2 + 'DaoStream_GetFile( _p[$(index)]->v.stream );\n';
 
-global dao2cxx_user = dao2cxx2 + 'DaoCData_GetData( _p[$(index)]->v.cdata );\n';
-global dao2cxx_user2 = '  $(namespace)$(type) $(name)= ($(namespace)$(type)) '
+global dao2cxx_void = dao2cxx2 + 
 'DaoCData_GetData( _p[$(index)]->v.cdata );\n';
+global dao2cxx_void2 = '  $(namespace)$(type) $(name)= ($(namespace)$(type)) '
+'DaoCData_GetData( _p[$(index)]->v.cdata );\n';
+
+global dao2cxx_user = dao2cxx2 + 
+'DaoCData_CastData( _p[$(index)]->v.cdata, dao_$(type2)_Typer );\n';
+global dao2cxx_user2 = '  $(namespace)$(type) $(name)= ($(namespace)$(type)) '
+'DaoCData_CastData( _p[$(index)]->v.cdata, dao_$(type2)_Typer );\n';
 global dao2cxx_user3 = '  $(namespace)$(type)** $(name)= ($(namespace)$(type)**) '
 'DaoCData_GetData2( _p[$(index)]->v.cdata );\n';
 global dao2cxx_user4 = '  $(namespace)$(type)* $(name)= ($(namespace)$(type)*) '
@@ -1382,7 +1388,7 @@ void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist )
 		DValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
 		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( *($(item)*) DaoCData_GetData( it.v.cdata ) );
+		qlist.append( *($(item)*) DaoCData_CastData( it.v.cdata, dao_$(item)_Typer ) );
 	}
 }
 ';
@@ -1404,7 +1410,7 @@ void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist )
 		DValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
 		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( * ($(item)*) DaoCData_GetData( it.v.cdata ) );
+		qlist.append( * ($(item)*) DaoCData_CastData( it.v.cdata, dao_$(item)_Typer ) );
 	}
 }
 ';
@@ -1426,7 +1432,7 @@ void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist )
 		DValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
 		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( ($(item)*) DaoCData_GetData( it.v.cdata ) );
+		qlist.append( ($(item)*) DaoCData_CastData( it.v.cdata, dao_$(item)_Typer ) );
 	}
 }
 ';
@@ -1448,7 +1454,7 @@ void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist )
 		DValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
 		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( ($(item)*) DaoCData_GetData( it.v.cdata ) );
+		qlist.append( ($(item)*) DaoCData_CastData( it.v.cdata, dao_$(item)_Typer ) );
 	}
 }
 ';
@@ -1582,10 +1588,10 @@ const getres_cdata =
 ';
 
 global getres_user = getres_cdata +
-'    $(name) = ($(namespace)$(type)*) DaoCData_GetData( _res.v.cdata );\n  }\n';
+'    $(name) = ($(namespace)$(type)*) DaoCData_CastData( _res.v.cdata, dao_$(type2)_Typer );\n  }\n';
 
 global getres_user2 = getres_cdata +
-'    $(name) = *($(namespace)$(type)*) DaoCData_GetData( _res.v.cdata );\n  }\n';
+'    $(name) = *($(namespace)$(type)*) DaoCData_CastData( _res.v.cdata, dao_$(type2)_Typer );\n  }\n';
 
 
 global getitem_int = ctxput + 'Integer( _ctx, (int) self->$(name)[_p[1]->v.i] );\n';
@@ -1939,11 +1945,11 @@ routine Variable::Generate( cxx_no_self =0 )
 				case $CT_VOID :
 				daotype = 'cdata';
 				tpl_daopar = daopar_buffer;
-				tpl_dao2cxx = dao2cxx_user;
+				tpl_dao2cxx = dao2cxx_void;
 				tpl_ctxput = ctxput_voidp;
 				tpl_cxx2dao = cxx2dao_voidp;
 				if( ispointer ){
-					tpl_dao2cxx = dao2cxx_user2;
+					tpl_dao2cxx = dao2cxx_void2;
 					tpl_cxx2dao = cxx2dao_user;
 				}
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
@@ -2824,10 +2830,12 @@ routine Function::Generate()
 		ret.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
 		ret.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
 
+		par.change( '= %s* [%w:]+ (%s* %b<> |) %s* %b()', '' ); # remove defaults
+		par.change( '= %s* [^,%)]*', '' ); # remove defaults
 		par.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); # join special letter
 		par.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
 		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
-		par.change( '(%w %>? ) %s* ([%*%&]*) %s* (((%w+))) (, | %) | %[)', '%1%2%6' ); # remove param name
+		par.change( '(%w) (%s* (%>?) %s* ([%*%&]+) %s* | %s* (%>?) %s* | %s+) (((%w+))) (, | %) | %[)', '%1%3%4%5%9' ); # remove param name
 		par.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
 		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
 
@@ -3217,7 +3225,7 @@ global qt_connect_dao =
 global qt_connect_func =
 'static void dao_QObject_emit( DaoContext *_ctx, DValue *_p[], int _n )
 {
-	QObject* self = (QObject*) DaoCData_GetData(_p[0]->v.cdata);
+	QObject* self = (QObject*) DaoCData_CastData(_p[0]->v.cdata, dao_QObject_Typer );
 	DaoSS_QObject *linker = (DaoSS_QObject*) self->userData(0);
 	DValue *signal = _p[1];
 	if( self == NULL || linker == NULL ) return;
@@ -3227,8 +3235,8 @@ global qt_connect_func =
 }
 static void dao_QObject_connect_dao( DaoContext *_ctx, DValue *_p[], int _n )
 {
-	QObject *sender = (QObject*) DaoCData_GetData(_p[0]->v.cdata);
-	QObject *receiver = (QObject*) DaoCData_GetData(_p[2]->v.cdata);
+	QObject *sender = (QObject*) DaoCData_CastData(_p[0]->v.cdata, dao_QObject_Typer );
+	QObject *receiver = (QObject*) DaoCData_CastData(_p[2]->v.cdata, dao_QObject_Typer);
 	DaoSS_QObject *senderSS = (DaoSS_QObject*) sender->userData(0);
 	DaoSS_QObject *receiverSS = (DaoSS_QObject*) receiver->userData(0);
 	DValue signal = *_p[1];
@@ -3306,7 +3314,7 @@ global qt_qstringlist_func =
 }
 static void dao_QStringList_toDaoList( DaoContext *_ctx, DValue *_p[], int _n )
 {
-	QStringList* self= (QStringList*) DaoCData_GetData( _p[0]->v.cdata );
+	QStringList* self= (QStringList*) DaoCData_CastData( _p[0]->v.cdata, dao_QStringList_Typer );
 	DaoList *dlist = DaoContext_PutList( _ctx );
 	DValue it = DValue_NewMBString( "", 0 );
 	int i, m = self->size();
@@ -3324,7 +3332,7 @@ global qt_qobject_cast_dao =
 global qt_qobject_cast_func =
 'static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QObject *from = (QObject*)DaoCData_GetData(_p[0]->v.cdata);
+  QObject *from = (QObject*)DaoCData_CastData(_p[0]->v.cdata, dao_QObject_Typer );
   $(host) *to = qobject_cast<$(host)*>( from );
 	DaoContext_PutCData( _ctx, to, dao_$(host)_Typer );
 }
@@ -3332,7 +3340,7 @@ global qt_qobject_cast_func =
 global qt_qobject_cast_func2 =
 'static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QObject *from = (QObject*)DaoCData_GetData(_p[0]->v.cdata);
+  QObject *from = (QObject*)DaoCData_CastData(_p[0]->v.cdata, dao_QObject_Typer);
   DaoBase *to = DaoQt_Get_Wrapper( from );
   if( to ){
     DaoContext_PutResult( _ctx, to );
@@ -3381,31 +3389,31 @@ global qt_qstream_dao =
 global qt_qstream_func =
 'static void dao_QTextStream_Write1( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  QTextStream *self = (QTextStream*) DaoCData_CastData( _p[0]->v.cdata, dao_QTextStream_Typer );
   *self << _p[1]->v.i;
   DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
 }
 static void dao_QTextStream_Write2( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  QTextStream *self = (QTextStream*) DaoCData_CastData( _p[0]->v.cdata, dao_QTextStream_Typer );
   *self << _p[1]->v.f;
   DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
 }
 static void dao_QTextStream_Write3( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  QTextStream *self = (QTextStream*) DaoCData_CastData( _p[0]->v.cdata, dao_QTextStream_Typer );
   *self << _p[1]->v.d;
   DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
 }
 static void dao_QTextStream_Write4( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  QTextStream *self = (QTextStream*) DaoCData_CastData( _p[0]->v.cdata, dao_QTextStream_Typer );
   *self << DString_GetMBS( _p[1]->v.s );
   DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
 }
 static void dao_QTextStream_Write5( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  QTextStream *self = (QTextStream*) DaoCData_GetData( _p[0]->v.cdata );
+  QTextStream *self = (QTextStream*) DaoCData_CastData( _p[0]->v.cdata, dao_QTextStream_Typer );
   *self << _p[1]->v.p;
   DaoContext_PutResult( _ctx, (DaoBase*) _p[0]->v.cdata );
 }
@@ -3847,7 +3855,7 @@ routine UserType::GenerateType()
 						type_codes += tpl_class_noderive.expand( kvmap );
 						type_decls += tpl_class_new_novirt.expand( kvmap );
 					}
-				}else{
+				}else if( not hasPrivConstr ){
 					type_decls = tpl_struct.expand( kvmap );
 					type_codes = tpl_struct_alloc2.expand( kvmap );
 				}
@@ -4120,7 +4128,7 @@ global cxx_set_item_proto =
 'static void dao_$(type)_SETI_$(name)( DaoContext *_ctx, DValue *_p[], int _n )';
 
 global cxx_gs_user =
-'  $(namespace)$(type) *self = ($(namespace)$(type)*)DaoCData_GetData(_p[0]->v.cdata);\n';
+'  $(namespace)$(type) *self = ($(namespace)$(type)*)DaoCData_CastData(_p[0]->v.cdata,dao_$(type2)_Typer);\n';
 
 global dao_getter_proto = 
 '  { dao_$(type)_GETF_$(name), ".$(name)( self : $(type) )=>$(ftype)" },\n';
@@ -4138,7 +4146,7 @@ routine UserType::Generate()
 	dao_meths = '';
 	tpl_gs = cxx_gs_user;
 	ns = snamespace ? snamespace + '::' : '';
-	kvmap = { 'type'=>name, 'name'=>'', 'namespace'=>ns };
+	kvmap = { 'type'=>name, 'name'=>'', 'namespace'=>ns, 'type2'=>name2 };
 	for( field in fields ){
 		field.Generate();
 		if( field.unsupport ) skip;
@@ -4276,12 +4284,25 @@ global delete_test
 	return ($(condition));
 }
 ';
+global cast_to_parent = 
+'void* dao_cast_$(type)_to_$(parent)( void *data )
+{
+	return ($(parent)*)($(child)*)data;
+}
+';
 #	self->DaoAddExternalReference();
 
 global usertype_code =
-'static DaoTypeBase $(type)_Typer = 
-{ "$(type)", NULL, dao_$(type)_Nums, dao_$(type)_Meths, 
-  { $(parents)0 }, $(delete), $(deltest) };
+'$(cast_funcs)
+static DaoTypeBase $(type)_Typer = 
+{ "$(type)", NULL, 
+  dao_$(type)_Nums,
+  dao_$(type)_Meths, 
+  { $(parents)0 },
+  { $(casts)0 },
+  $(delete),
+  $(deltest)
+};
 DaoTypeBase DAO_DLL_$(module) *dao_$(type)_Typer = & $(type)_Typer;';
 
 global usertype_code_none = methlist_code + usertype_code;
@@ -4297,11 +4318,19 @@ routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 	#if( utp.isNameSpace ) return '';
 	if( utp.isAlias ) return '';
 	parents = '';
+	casts = '';
+	cast_funcs = '';
+	child = utp.snamespace ? utp.snamespace + '::' + utp.name : utp.name;
+	kvmap0 = { 'type'=>utp.name, 'child'=>child, 'parent'=>'' };
 	for( sup in utp.supers ){
 		parents += 'dao_' + sup.name + '_Typer, ';
+		casts += 'dao_cast_' + utp.name + '_to_' + sup.name + ',';
+		kvmap0[ 'parent' ] = sup.snamespace ? sup.snamespace + '::' + sup.name : sup.name;
+		cast_funcs += cast_to_parent.expand( kvmap0 );
 	}
 	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 
-	'meths'=>utp.dao_meths, 'parents'=>parents, 'alloc'=>utp.alloc_default,
+	'meths'=>utp.dao_meths, 'parents'=>parents, 'casts'=>casts, 
+	'cast_funcs'=>cast_funcs, 'alloc'=>utp.alloc_default,
 	'delete'=>'NULL', 'if_parent'=>'', 'namespace'=>'', 'deltest'=>'NULL'};
 	if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 	if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );

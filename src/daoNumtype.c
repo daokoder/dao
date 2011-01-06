@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -68,7 +68,7 @@ static DaoFuncItem comMeths[] =
 
 DaoTypeBase comTyper = 
 {
-	"complex", & comCore, NULL, (DaoFuncItem*) comMeths, {0}, NULL, NULL
+	"complex", & comCore, NULL, (DaoFuncItem*) comMeths, {0}, {0}, NULL, NULL
 };
 
 double abs_c( const complex16 com )
@@ -1575,7 +1575,7 @@ static DaoFuncItem longMeths[] =
 };
 DaoTypeBase longTyper =
 {
-	"long", & longCore, NULL, (DaoFuncItem*) longMeths, {0}, NULL, NULL
+	"long", & longCore, NULL, (DaoFuncItem*) longMeths, {0}, {0}, NULL, NULL
 };
 
 #ifdef DAO_WITH_NUMARRAY
@@ -3915,7 +3915,7 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size )
 
 DaoTypeBase numarTyper = 
 {
-	"array", & numarrCore, NULL, (DaoFuncItem*) numarMeths, {0},
+	"array", & numarrCore, NULL, (DaoFuncItem*) numarMeths, {0}, {0},
 	(FuncPtrDel) DaoArray_Delete, NULL
 };
 

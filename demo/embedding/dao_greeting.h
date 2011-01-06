@@ -26,6 +26,7 @@ extern DaoTypeBase *dao_Greeting2_Typer;
 extern DaoTypeBase *dao_Greeting_Null_Typer;
 extern DaoTypeBase *dao_Test_Typer;
 extern DaoTypeBase *dao_otto_Typer;
+extern DaoTypeBase *dao_otto2_Typer;
 #ifdef __cplusplus
 }
 #endif
@@ -84,4 +85,6 @@ Test* DAO_DLL_GREETING Dao_Test_New();
 
 
 otto* DAO_DLL_GREETING Dao_otto_New( int b );
+
+otto2* DAO_DLL_GREETING Dao_otto2_New();
 #endif

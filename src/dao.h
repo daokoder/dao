@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20101028
+#define DAO_H_VERSION 20110105
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -325,6 +325,7 @@ struct DValue
 typedef void (*CallbackOnString)( const char *str );
 typedef void (*FuncInitAPI)( DaoAPI *api );
 typedef void  (*DThreadTask)( void *arg );
+typedef void* (*FuncPtrCast)( void* );
 typedef void  (*FuncPtrDel)( void* );
 typedef int   (*FuncPtrTest)( void* );
 typedef void  (*DaoFuncPtr) ( DaoContext *context, DValue *params[], int npar );
@@ -355,6 +356,7 @@ struct DaoTypeBase
 	/* typers for super types, to create c type hierarchy;
 	 * mainly useful for wrapping c++ libraries. */
 	DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
+	FuncPtrCast    casts[ DAO_MAX_CDATA_SUPER ];
 
 	/* function to free data:
 	 * only for DaoCData created by DValue_NewCData() or DaoCData_New() */
@@ -583,6 +585,7 @@ struct DaoAPI
 	void   (*DaoCData_SetData)( DaoCData *self, void *data );
 	void   (*DaoCData_SetBuffer)( DaoCData *self, void *data, size_t size );
 	void   (*DaoCData_SetArray) ( DaoCData *self, void *data, size_t size, int memsize );
+	void*  (*DaoCData_CastData)( DaoCData *self, DaoTypeBase *totyper );
 	void*  (*DaoCData_GetData)( DaoCData *self );
 	void*  (*DaoCData_GetBuffer)( DaoCData *self );
 	void** (*DaoCData_GetData2)( DaoCData *self );
@@ -882,6 +885,7 @@ DAO_DLL void   DaoCData_SetExtReference( DaoCData *self, int bl );
 DAO_DLL void   DaoCData_SetData( DaoCData *self, void *data );
 DAO_DLL void   DaoCData_SetBuffer( DaoCData *self, void *data, size_t size );
 DAO_DLL void   DaoCData_SetArray( DaoCData *self, void *data, size_t size, int itsize );
+DAO_DLL void*  DaoCData_CastData( DaoCData *self, DaoTypeBase *totyper );
 DAO_DLL void*  DaoCData_GetData( DaoCData *self );
 DAO_DLL void*  DaoCData_GetBuffer( DaoCData *self );
 DAO_DLL void** DaoCData_GetData2( DaoCData *self );
@@ -1182,6 +1186,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoCData_SetData( self, data ) __dao.DaoCData_SetData( self, data )
 #define DaoCData_SetBuffer( self, data, size ) __dao.DaoCData_SetBuffer( self, data, size )
 #define DaoCData_SetArray( self, data, n, ms ) __dao.DaoCData_SetArray( self, data, n, ms )
+#define DaoCData_CastData( self, typer )  __dao.DaoCData_CastData( self, typer )
 #define DaoCData_GetData( self ) __dao.DaoCData_GetData( self )
 #define DaoCData_GetBuffer( self ) __dao.DaoCData_GetBuffer( self )
 #define DaoCData_GetData2( self ) __dao.DaoCData_GetData2( self )

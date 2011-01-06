@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -963,7 +963,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 
 DaoTypeBase routTyper=
 {
-	"routine", & baseCore, NULL, NULL, {0},
+	"routine", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoRoutine_Delete, NULL
 };
 
@@ -4990,7 +4990,7 @@ void DaoFunction_Delete( DaoFunction *self )
 
 DaoTypeBase funcTyper =
 {
-	"function", & baseCore, NULL, NULL, {0},
+	"function", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoFunction_Delete, NULL
 };
 DaoFunction* DaoFunction_New()
@@ -5062,7 +5062,7 @@ void DaoFunCurry_Delete( DaoFunCurry *self )
 }
 DaoTypeBase curryTyper =
 {
-	"curry", & baseCore, NULL, NULL, {0},
+	"curry", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoFunCurry_Delete, NULL
 };
 DaoFunCurry* DaoFunCurry_New( DValue v, DValue o )

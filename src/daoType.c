@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -94,7 +94,7 @@ static DaoTypeCore typeCore=
 };
 DaoTypeBase abstypeTyper=
 {
-	"type", & typeCore, NULL, NULL, {0},
+	"type", & typeCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoType_Delete, NULL
 };
 
@@ -773,7 +773,7 @@ void DaoInterface_Delete( DaoInterface *self )
 }
 DaoTypeBase interTyper=
 {
-	"interface", & baseCore, NULL, NULL, {0},
+	"interface", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoInterface_Delete, NULL
 };
 

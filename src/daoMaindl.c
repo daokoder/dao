@@ -1,6 +1,6 @@
 /*=========================================================================================
   This is a shell for the virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU General Public License as published by the Free Software Foundation; 
@@ -106,7 +106,7 @@ int main( int argc, char **argv )
 	}
 	if( strstr( DString_GetMBS( opts ), "v" ) ){ /*XXX*/
 		printf( "\n  A simple shell for the Dao Virtual Machine.\n" );
-		printf( "  Copyright(C) 2006-2010, Fu Limin.\n" );
+		printf( "  Copyright(C) 2006-2011, Fu Limin.\n" );
 		printf( "  This shell is distributed under GNU General Public License.\n" );
 	}
 	if( DaoVmSpace_GetOptions( vmSpace ) & DAO_EXEC_INTERUN )

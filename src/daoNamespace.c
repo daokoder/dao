@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -42,7 +42,7 @@ extern void DaoTypeBase_Free( DaoTypeBase *typer );
 
 DaoTypeBase cmodTyper=
 {
-	"cmodule", & baseCore, NULL, NULL, {0}, 
+	"cmodule", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoCModule_Delete, NULL
 };
 
@@ -684,7 +684,7 @@ int DaoNameSpace_GetOptions( DaoNameSpace *self )
 
 DaoTypeBase nsTyper=
 {
-	"namespace", & nsCore, NULL, NULL, {0}, 
+	"namespace", & nsCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoNameSpace_Delete, NULL
 };
 

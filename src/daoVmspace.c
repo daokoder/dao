@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -82,7 +82,7 @@ enum{
 
 static const char *const copy_notice =
 "\n  Dao Virtual Machine (" DAO_VERSION ", " __DATE__ ")\n"
-"  Copyright(C) 2006-2010, Fu Limin.\n"
+"  Copyright(C) 2006-2011, Fu Limin.\n"
 "  Dao can be copied under the terms of GNU Lesser General Public License.\n"
 "  Dao Language website: http://www.daovm.net\n\n";
 
@@ -283,7 +283,7 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 
 static DaoTypeBase vmsTyper=
 {
-	"vmspace", NULL, NULL, NULL, {0},
+	"vmspace", NULL, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoVmSpace_Delete, NULL
 };
 
@@ -1901,6 +1901,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoCData_SetData = DaoCData_SetData;
 	api->DaoCData_SetBuffer = DaoCData_SetBuffer;
 	api->DaoCData_SetArray = DaoCData_SetArray;
+	api->DaoCData_CastData = DaoCData_CastData;
 	api->DaoCData_GetTyper = DaoCData_GetTyper;
 	api->DaoCData_GetData = DaoCData_GetData;
 	api->DaoCData_GetBuffer = DaoCData_GetBuffer;

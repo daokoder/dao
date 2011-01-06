@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2010, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -230,7 +230,7 @@ DaoTypeCore baseCore =
 };
 DaoTypeBase baseTyper =
 {
-	"null", & baseCore, NULL, NULL, {0}, DaoBase_Delete, NULL
+	"null", & baseCore, NULL, NULL, {0}, {0}, DaoBase_Delete, NULL
 };
 DaoBase nil = { 0, DAO_DATA_CONST, {0,0}, 1, 0 };
 
@@ -604,7 +604,7 @@ int DEnum_SubSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns )
 
 DaoTypeBase enumTyper=
 {
-	"enum", & baseCore, NULL, NULL, {0}, NULL, NULL
+	"enum", & baseCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
 
 DaoTypeBase* DaoBase_GetTyper( DaoBase *p )
@@ -754,7 +754,7 @@ static DaoTypeCore numberCore=
 
 DaoTypeBase numberTyper=
 {
-	"double", & numberCore, NULL, NULL, {0}, NULL, NULL
+	"double", & numberCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
 
 /**/
@@ -1832,7 +1832,7 @@ static DaoFuncItem stringMeths[] =
 
 DaoTypeBase stringTyper=
 {
-	"string", & stringCore, NULL, (DaoFuncItem*) stringMeths, {0}, NULL, NULL
+	"string", & stringCore, NULL, (DaoFuncItem*) stringMeths, {0}, {0}, NULL, NULL
 };
 
 /* also used for printing tuples */
@@ -2670,7 +2670,7 @@ void DaoList_PopBack( DaoList *self )
 
 DaoTypeBase listTyper=
 {
-	"list", & listCore, NULL, (DaoFuncItem*)listMeths, {0},
+	"list", & listCore, NULL, (DaoFuncItem*)listMeths, {0}, {0},
 	(FuncPtrDel) DaoList_Delete, NULL
 };
 
@@ -3101,7 +3101,7 @@ DValue DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 
 DaoTypeBase mapTyper=
 {
-	"map", & mapCore, NULL, (DaoFuncItem*) mapMeths, {0},
+	"map", & mapCore, NULL, (DaoFuncItem*) mapMeths, {0}, {0},
 	(FuncPtrDel)DaoMap_Delete, NULL
 };
 
@@ -3341,6 +3341,26 @@ DaoObject* DaoCData_GetObject( DaoCData *self )
 DaoTypeBase* DaoCData_GetTyper(DaoCData *self )
 {
 	return self->typer;
+}
+void* DaoCData_CastData( DaoCData *self, DaoTypeBase *totyper )
+{
+	DaoTypeBase *typer = self->typer;
+	DaoCData tmp = *self;
+	void *data;
+	int i;
+	if( typer == totyper || totyper == NULL || self->data == NULL ) return self->data;
+	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+		if( typer->supers[i] == NULL ) break;
+		if( typer->supers[i] == totyper ){
+			if( typer->casts[i] ) return (*typer->casts[i])( self->data );
+			return self->data;
+		}
+		if( typer->casts[i] ) tmp.data = (*typer->casts[i])( self->data );
+		tmp.typer = typer->supers[i];
+		data = DaoCData_CastData( & tmp, totyper );
+		if( data ) return data;
+	}
+	return NULL;
 }
 static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
 {
@@ -3650,7 +3670,7 @@ static DaoFuncItem cptrMeths[]=
 
 DaoTypeBase cdataTyper =
 {
-	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0},
+	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0}, {0},
 	(FuncPtrDel)DaoCData_Delete, NULL
 };
 DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, 
@@ -3696,7 +3716,7 @@ static DaoTypeCore pairCore=
 };
 DaoTypeBase pairTyper =
 {
-	"pair", & pairCore, NULL, NULL, {0}, (FuncPtrDel) DaoPair_Delete, NULL
+	"pair", & pairCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoPair_Delete, NULL
 };
 DaoPair* DaoPair_New( DValue p1, DValue p2 )
 {
@@ -3819,7 +3839,7 @@ static DaoTypeCore tupleCore=
 };
 DaoTypeBase tupleTyper=
 {
-	"tuple", & tupleCore, NULL, NULL, {0}, (FuncPtrDel) DaoTuple_Delete, NULL
+	"tuple", & tupleCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoTuple_Delete, NULL
 };
 DaoTuple* DaoTuple_New( int size )
 {
@@ -3927,7 +3947,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 
 DaoTypeBase dao_Exception_Typer =
 { "Exception", NULL, NULL, dao_Exception_Meths,
-	{ 0 }, (FuncPtrDel) DaoException_Delete, NULL };
+	{ 0 }, { 0 }, (FuncPtrDel) DaoException_Delete, NULL };
 
 static void Dao_Exception_Get_name( DaoContext *ctx, DValue *p[], int n )
 {
@@ -3983,7 +4003,7 @@ static DaoFuncItem dao_ExceptionNone_Meths[] =
 DaoTypeBase dao_ExceptionNone_Typer =
 {
 	"None", NULL, NULL, dao_ExceptionNone_Meths,
-	{ & dao_Exception_Typer, NULL },
+	{ & dao_Exception_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -3996,7 +4016,7 @@ static DaoFuncItem dao_ExceptionAny_Meths[] =
 DaoTypeBase dao_ExceptionAny_Typer =
 {
 	"Any", NULL, NULL, dao_ExceptionAny_Meths,
-	{ & dao_Exception_Typer, NULL },
+	{ & dao_Exception_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4009,7 +4029,7 @@ static DaoFuncItem dao_ExceptionWarning_Meths[] =
 DaoTypeBase dao_ExceptionWarning_Typer =
 {
 	"Warning", NULL, NULL, dao_ExceptionWarning_Meths,
-	{ & dao_Exception_Typer, NULL },
+	{ & dao_Exception_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4022,7 +4042,7 @@ static DaoFuncItem dao_ExceptionError_Meths[] =
 DaoTypeBase dao_ExceptionError_Typer =
 {
 	"Error", NULL, NULL, dao_ExceptionError_Meths,
-	{ & dao_Exception_Typer, NULL },
+	{ & dao_Exception_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4035,7 +4055,7 @@ static DaoFuncItem dao_ErrorField_Meths[] =
 DaoTypeBase dao_ErrorField_Typer =
 {
 	"Field", NULL, NULL, dao_ErrorField_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4048,7 +4068,7 @@ static DaoFuncItem dao_NotExist_Meths[] =
 DaoTypeBase dao_FieldNotExist_Typer =
 {
 	"NotExist", NULL, NULL, dao_NotExist_Meths,
-	{ & dao_ErrorField_Typer, NULL },
+	{ & dao_ErrorField_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4061,7 +4081,7 @@ static DaoFuncItem dao_FieldNotPermit_Meths[] =
 DaoTypeBase dao_FieldNotPermit_Typer =
 {
 	"NotPermit", NULL, NULL, dao_FieldNotPermit_Meths,
-	{ & dao_ErrorField_Typer, NULL },
+	{ & dao_ErrorField_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4074,7 +4094,7 @@ static DaoFuncItem dao_ErrorFloat_Meths[] =
 DaoTypeBase dao_ErrorFloat_Typer =
 {
 	"Float", NULL, NULL, dao_ErrorFloat_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4087,7 +4107,7 @@ static DaoFuncItem dao_FloatDivByZero_Meths[] =
 DaoTypeBase dao_FloatDivByZero_Typer =
 {
 	"DivByZero", NULL, NULL, dao_FloatDivByZero_Meths,
-	{ & dao_ErrorFloat_Typer, NULL },
+	{ & dao_ErrorFloat_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4100,7 +4120,7 @@ static DaoFuncItem dao_FloatOverFlow_Meths[] =
 DaoTypeBase dao_FloatOverFlow_Typer =
 {
 	"OverFlow", NULL, NULL, dao_FloatOverFlow_Meths,
-	{ & dao_ErrorFloat_Typer, NULL },
+	{ & dao_ErrorFloat_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4113,7 +4133,7 @@ static DaoFuncItem dao_FloatUnderFlow_Meths[] =
 DaoTypeBase dao_FloatUnderFlow_Typer =
 {
 	"UnderFlow", NULL, NULL, dao_FloatUnderFlow_Meths,
-	{ & dao_ErrorFloat_Typer, NULL },
+	{ & dao_ErrorFloat_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4126,7 +4146,7 @@ static DaoFuncItem dao_ErrorIndex_Meths[] =
 DaoTypeBase dao_ErrorIndex_Typer =
 {
 	"Index", NULL, NULL, dao_ErrorIndex_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4139,7 +4159,7 @@ static DaoFuncItem dao_IndexOutOfRange_Meths[] =
 DaoTypeBase dao_IndexOutOfRange_Typer =
 {
 	"OutOfRange", NULL, NULL, dao_IndexOutOfRange_Meths,
-	{ & dao_ErrorIndex_Typer, NULL },
+	{ & dao_ErrorIndex_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4152,14 +4172,14 @@ static DaoFuncItem dao_ErrorKey_Meths[] =
 DaoTypeBase dao_ErrorKey_Typer =
 {
 	"Key", NULL, NULL, dao_ErrorKey_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
 DaoTypeBase dao_KeyNotExist_Typer =
 {
 	"NotExist", NULL, NULL, dao_NotExist_Meths,
-	{ & dao_ErrorKey_Typer, NULL },
+	{ & dao_ErrorKey_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4172,7 +4192,7 @@ static DaoFuncItem dao_ErrorParam_Meths[] =
 DaoTypeBase dao_ErrorParam_Typer =
 {
 	"Param", NULL, NULL, dao_ErrorParam_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4185,13 +4205,13 @@ static DaoFuncItem dao_Syntax_Meths[] =
 DaoTypeBase dao_WarningSyntax_Typer =
 {
 	"Syntax", NULL, NULL, dao_Syntax_Meths,
-	{ & dao_ExceptionWarning_Typer, NULL },
+	{ & dao_ExceptionWarning_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 DaoTypeBase dao_ErrorSyntax_Typer =
 {
 	"Syntax", NULL, NULL, dao_Syntax_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4204,7 +4224,7 @@ static DaoFuncItem dao_ErrorType_Meths[] =
 DaoTypeBase dao_ErrorType_Typer =
 {
 	"Type", NULL, NULL, dao_ErrorType_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4217,13 +4237,13 @@ static DaoFuncItem dao_Value_Meths[] =
 DaoTypeBase dao_WarningValue_Typer =
 {
 	"Value", NULL, NULL, dao_Value_Meths,
-	{ & dao_ExceptionWarning_Typer, NULL },
+	{ & dao_ExceptionWarning_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 DaoTypeBase dao_ErrorValue_Typer =
 {
 	"Value", NULL, NULL, dao_Value_Meths,
-	{ & dao_ExceptionError_Typer, NULL },
+	{ & dao_ExceptionError_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
@@ -4473,7 +4493,7 @@ static DaoTypeCore futureCore =
 };
 DaoTypeBase futureTyper =
 {
-	"future", & futureCore, NULL, (DaoFuncItem*) futureMeths, {0},
+	"future", & futureCore, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
 	(FuncPtrDel) DaoFuture_Delete, NULL
 };
 

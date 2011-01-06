@@ -50,7 +50,7 @@ static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n )
 /* greeting.h */
 static void dao__Testing( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  Greeting* greeting= (Greeting*) DaoCData_GetData( _p[0]->v.cdata );
+  Greeting* greeting= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
   CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
 
   CxxNS::Testing( greeting, bl );
@@ -66,10 +66,10 @@ static void dao__Testing_dao_2( DaoContext *_ctx, DValue *_p[], int _n )
 /* greeting.h */
 static void dao__Testing_dao_3( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  CxxNS::Test* t= (CxxNS::Test*) DaoCData_GetData( _p[0]->v.cdata );
+  CxxNS::Test* t= (CxxNS::Test*) DaoCData_CastData( _p[0]->v.cdata, dao_Test_Typer );
   int b= (int) _p[1]->v.i;
-  CxxNS::Test* o= (CxxNS::Test*) DaoCData_GetData( _p[2]->v.cdata );
-  CxxNS::Test* g= (CxxNS::Test*) DaoCData_GetData( _p[3]->v.cdata );
+  CxxNS::Test* o= (CxxNS::Test*) DaoCData_CastData( _p[2]->v.cdata, dao_Test_Typer );
+  CxxNS::Test* g= (CxxNS::Test*) DaoCData_CastData( _p[3]->v.cdata, dao_Test_Typer );
   int c= (int) _p[4]->v.i;
 
   if(_n<=2) CxxNS::Testing( t, b );
@@ -79,10 +79,10 @@ static void dao__Testing_dao_3( DaoContext *_ctx, DValue *_p[], int _n )
 /* greeting.h */
 static void dao__Testing2( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  CxxNS::Test* t= (CxxNS::Test*) DaoCData_GetData( _p[0]->v.cdata );
+  CxxNS::Test* t= (CxxNS::Test*) DaoCData_CastData( _p[0]->v.cdata, dao_Test_Typer );
   int b= (int) _p[1]->v.i;
-  CxxNS::Test* o= (CxxNS::Test*) DaoCData_GetData( _p[2]->v.cdata );
-  CxxNS::Test* g= (CxxNS::Test*) DaoCData_GetData( _p[3]->v.cdata );
+  CxxNS::Test* o= (CxxNS::Test*) DaoCData_CastData( _p[2]->v.cdata, dao_Test_Typer );
+  CxxNS::Test* g= (CxxNS::Test*) DaoCData_CastData( _p[3]->v.cdata, dao_Test_Typer );
   int c= (int) _p[4]->v.i;
 
   int _Testing2;
@@ -101,7 +101,7 @@ static void dao__Testing_dao_4( DaoContext *_ctx, DValue *_p[], int _n )
 /* greeting.h */
 static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  CxxNS::Test* test= (CxxNS::Test*) DaoCData_GetData( _p[0]->v.cdata );
+  CxxNS::Test* test= (CxxNS::Test*) DaoCData_CastData( _p[0]->v.cdata, dao_Test_Typer );
   CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
 
   CxxNS2::Testing( test, bl );
@@ -128,7 +128,7 @@ static DaoTypeBase *dao_CxxNS_Types[2] =
 int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
 {
   DaoNameSpace *ns2;
-  DaoTypeBase *typers[8];
+  DaoTypeBase *typers[9];
   const char *aliases[1];
   __daoVmSpace = vms;
   typers[0] = dao_AutobindTest_Typer,
@@ -137,7 +137,8 @@ int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
   typers[3] = dao_Greeting2_Typer,
   typers[4] = dao_Greeting_Null_Typer,
   typers[5] = dao_otto_Typer,
-  typers[6] = NULL;
+  typers[6] = dao_otto2_Typer,
+  typers[7] = NULL;
   aliases[0] = NULL;
   DaoNameSpace_TypeDefine( ns, "int", "Enum1" );
   ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );

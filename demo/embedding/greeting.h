@@ -11,6 +11,7 @@ class otto
 	virtual ~otto(){};
 	int geta(){ return a; }
 };
+class otto2 : public otto {};
 
 class Greeting
 {

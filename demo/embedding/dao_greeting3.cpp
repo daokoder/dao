@@ -183,3 +183,9 @@ otto* DAO_DLL_GREETING Dao_otto_New( int b )
 	return object;
 }
 
+otto2* Dao_otto2_New()
+{
+	otto2 *self = new otto2();
+	return self;
+}
+
