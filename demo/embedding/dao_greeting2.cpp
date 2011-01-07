@@ -312,11 +312,13 @@ static DaoNumItem dao_otto_Nums[] =
 };
 static void dao_otto_otto( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_otto_geta( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_otto_test( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_otto_Meths[] = 
 {
   { dao_otto_otto, "otto( b : int=123 )=>otto" },
   { dao_otto_geta, "geta( self : otto )=>int" },
+  { dao_otto_test, "test( self : otto, value : otto )=>otto" },
   { NULL, NULL }
 };
 static void Dao_otto_Delete( void *self )
@@ -338,8 +340,8 @@ DaoTypeBase DAO_DLL_GREETING *dao_otto_Typer = & otto_Typer;
 static void dao_otto_otto( DaoContext *_ctx, DValue *_p[], int _n )
 {
   int b= (int) _p[0]->v.i;
-	otto *_self = Dao_otto_New( b );
-	DaoContext_PutCData( _ctx, _self, dao_otto_Typer );
+	DaoCxx_otto *_self = DaoCxx_otto_New( b );
+	DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );
 }
 /* greeting.h */
 static void dao_otto_geta( DaoContext *_ctx, DValue *_p[], int _n )
@@ -347,6 +349,18 @@ static void dao_otto_geta( DaoContext *_ctx, DValue *_p[], int _n )
   otto* self= (otto*) DaoCData_CastData( _p[0]->v.cdata, dao_otto_Typer );
   int _geta = self->geta(  );
   DaoContext_PutInteger( _ctx, (int) _geta );
+}
+/* greeting.h */
+static void dao_otto_test( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  if( DaoCData_GetObject( _p[0]->v.cdata ) == NULL ){
+    DaoContext_RaiseException( _ctx, DAO_ERROR, "call to protected method" );
+    return;
+  }
+  DaoCxx_otto *self = (DaoCxx_otto*) DaoCData_CastData( _p[0]->v.cdata, dao_otto_Typer );
+  otto* value= (otto*) DaoCData_CastData( _p[1]->v.cdata, dao_otto_Typer );
+  otto _test = self->DaoWrap_test( *value );
+  DaoContext_PutCData( _ctx, (void*)new otto( _test ), dao_otto_Typer );
 }
 
 /*  greeting.h */
@@ -384,8 +398,8 @@ static DaoTypeBase otto2_Typer =
 DaoTypeBase DAO_DLL_GREETING *dao_otto2_Typer = & otto2_Typer;
 static void dao_otto2_otto2( DaoContext *_ctx, DValue *_p[], int _n )
 {
-	otto2 *self = Dao_otto2_New();
-	DaoContext_PutCData( _ctx, self, dao_otto2_Typer );
+	DaoCxx_otto2 *self = DaoCxx_otto2_New();
+	DaoContext_PutResult( _ctx, (DaoBase*) self->cdata );
 }
 
 /*  greeting.h */

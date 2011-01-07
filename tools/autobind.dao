@@ -339,6 +339,7 @@ class UserType
 {
 	var name = '';
 	var name2 = '';
+	var fullname = '';
 	# 0: nested as private;
 	# 1: nested as protected;
 	# 2: not nested, or nested as public;
@@ -492,7 +493,7 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 	excluded = 0;
 	if( source.pfind( '(^|%W) operator %W' ) ) return;
 	if( source.pfind( '(%w+) :: %~ %1 %s* %b()' ) ) excluded = 1;
-	if( source.pfind( '%w+ %s* %< %s* [%s%w%*,:]+ %s* %>' ) ) exclude = 1; # template function
+	if( source.pfind( '%w+ %s* %< %s* [%s%w%*,:]+ %s* %>' ) ) excluded = 1; # template function
 	if( source.pfind( '%b() %s* const' ) ) attribs += $FUNC_CONST;
 	source.change( '%s+', ' ' );
 	pat2 = '%s* ((virtual|)) ((%s+)) ( [^%(%)]* %b() [%s%w]* )';
@@ -650,8 +651,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 		psources[ perm ] += part;
 	}
 	source = '';
-	for( i = 0 : 5 ){ # protected methods, public fields and methods
-		funclist = i ==0 ? privameths : methods;
+	for( i = 0 : 5 ){ # enums
 		src = psources[i];
 		const pat_enum = 'enum %s+ (%w*) %s* (%b{}) %s* ;';
 		parts = src.extract( pat_enum );
@@ -704,6 +704,11 @@ routine UserType::Parse( source='', inExtFile=0 )
 			otherClassTypedef[ scoped ] = classTypedef[ new ];
 		}
 		src.change( pat_typedef, '' );
+		psources[i] = src;
+	}
+	for( i = 0 : 5 ){ # protected methods, public fields and methods
+		funclist = i ==0 ? privameths : methods;
+		src = psources[i];
 		if( isCppClass ){
 			src.change( pat_callback, '' );
 			parts = src.extract( pat_constru );
@@ -961,10 +966,10 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			supers = tks[5].extract( '(private|protected|public) %s+ ([%w:]+)' );
 			for( sup in supers ){
 				tks2 = sup.capture( '(private|protected|public) %s+ ([%w:]+)' );
-				name2 = tks2[2];
+				name2 = fullname = tks2[2];
 				name2.change( ':', '_' );
 				if( not map_user_types.has( name2 ) ){
-					utp2 = UserType{ name => name2, input_file => fname };
+					utp2 = UserType{ name => name2, fullname=>fullname, input_file => fname };
 					map_user_types[ name2 ] = utp2;
 				}
 				utp2 = map_user_types[ name2 ];
@@ -1043,6 +1048,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 				 utp = UserType{ name => typer, input_file => fname };
 				 if( tks[1] == 'class' ) utp.isCppClass = 1;
 				 utp.name2 = scoped;
+				 utp.fullname = snamespace + '::' + alias;
 				 utp.nested = 2;
 				 map_user_types[ scoped ] = utp;
 			 }
@@ -2237,6 +2243,7 @@ routine Variable::Generate( cxx_no_self =0 )
 		if( refer != '*' && square =='' && not ispointer ){
 			tpl_getres = getres_user2;
 			if( index == INDEX_RETURN ){
+				if( refer == '**' ) unsupport = 1;
 				if( utp.isCppClass ){
 					tpl_ctxput = ctxput_newcdata;
 				}else{
@@ -2806,7 +2813,7 @@ routine Function::Generate()
 	}
 	nowrap = excluded;
 	if( not nowrap and ($FUNC_PROTECTED in attribs) ){
-		nowrap = (int)(attribs + $FUNC_STATIC + $FUNC_PURE_VIRTUAL);
+		nowrap = ($FUNC_STATIC in attribs or $FUNC_PURE_VIRTUAL in attribs);
 		if( retype.type != retype.type_trans ) nowrap = 1;
 		for( vo in parlist ){
 			if( vo.type != vo.type_trans ) nowrap = 1;
@@ -2835,7 +2842,7 @@ routine Function::Generate()
 		par.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); # join special letter
 		par.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
 		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
-		par.change( '(%w) (%s* (%>?) %s* ([%*%&]+) %s* | %s* (%>?) %s* | %s+) (((%w+))) (, | %) | %[)', '%1%3%4%5%9' ); # remove param name
+		par.change( '(%w) (%s* (%>?) %s* ([%*%&]+) %s* | %s* (%>) %s* | %s+) (((%w+))) (, | %) | %[)', '%1%3%4%5%9' ); # remove param name
 		par.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); # join alnum_ and special
 		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); # join special and alnum_
 
@@ -2914,7 +2921,7 @@ routine Function::Generate()
 		else
 		cxxCallCodes = cxx_call_proto2_list[ dd ].expand( kvmap );
 	}
-	if( lib_name == LibType.LIB_QT ){
+	if( lib_name == LibType.LIB_QT and not excluded ){
 		size = (string)RotatingHash( signature );
 		ssname = cxxName + size;
 		sig = '   void signal_' + signature + ';\n'
@@ -3618,6 +3625,13 @@ global tpl_meth_decl2 =
 global tpl_meth_decl3 =
 '\t$(retype) DaoWrap_$(name)( $(parlist) )$(extra)';
 
+global tpl_raise_call_protected =
+'  if( DaoCData_GetObject( _p[0]->v.cdata ) == NULL ){
+    DaoContext_RaiseException( _ctx, DAO_ERROR, "call to protected method" );
+    return;
+  }
+';
+
 #{
 #}
 routine UserType::CheckVirtual()
@@ -3689,6 +3703,7 @@ routine UserType::CheckPureVirtual()
 routine UserType::GenerateMeth()
 {
 	if( name2 == '' ) name2 = name;
+	if( fullname == '' ) fullname = name;
 	if( isCppClass ){
 		for( meth in methods ){
 			if( $FUNC_STATIC in meth.attribs ) skip;
@@ -3923,7 +3938,8 @@ routine UserType::GenerateType()
 			'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
 			if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
 			if( meth.excluded ){
-				kmethods += '  ' + meth.source + '{/*XXX 1*/}\n';
+				if( $FUNC_PURE_VIRTUAL in meth.attribs )
+					kmethods += '  ' + meth.source + '{/*XXX 1*/}\n';
 			}else{
 				kmethods += tpl_meth_decl.expand( kvmap );
 			}
@@ -4212,7 +4228,9 @@ routine UserType::Generate()
 				subst = name22 + ' *self = (' + name22 + '*)';
 				wrapper.change( name + '%s* %* %s* self %s* = %s* %b()', subst );
 				wrapper.change( 'self%-%>(%w+)%(', 'self->DaoWrap_%1(' );
-				meth_codes += wrapper;
+				lines = wrapper.split( '\n' );
+				lines.insert( tpl_raise_call_protected, 3 );
+				meth_codes += lines.join( '\n' );
 			}
 			if( not noWrapping && ($FUNC_VIRTUAL in meth.attribs) ){
 				type_decls += meth.cxxWrapperVirtProto;
@@ -4285,7 +4303,7 @@ global delete_test
 }
 ';
 global cast_to_parent = 
-'void* dao_cast_$(type)_to_$(parent)( void *data )
+'void* dao_cast_$(type)_to_$(parent2)( void *data )
 {
 	return ($(parent)*)($(child)*)data;
 }
@@ -4321,11 +4339,12 @@ routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 	casts = '';
 	cast_funcs = '';
 	child = utp.snamespace ? utp.snamespace + '::' + utp.name : utp.name;
-	kvmap0 = { 'type'=>utp.name, 'child'=>child, 'parent'=>'' };
+	kvmap0 = { 'type'=>utp.name, 'child'=>child, 'parent'=>'', 'parent2'=>'' };
 	for( sup in utp.supers ){
 		parents += 'dao_' + sup.name + '_Typer, ';
 		casts += 'dao_cast_' + utp.name + '_to_' + sup.name + ',';
-		kvmap0[ 'parent' ] = sup.snamespace ? sup.snamespace + '::' + sup.name : sup.name;
+		kvmap0[ 'parent' ] = sup.snamespace ? sup.snamespace + '::' + sup.fullname : sup.fullname;
+		kvmap0[ 'parent2' ] = sup.snamespace ? sup.snamespace + '::' + sup.name2 : sup.name2;
 		cast_funcs += cast_to_parent.expand( kvmap0 );
 	}
 	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 

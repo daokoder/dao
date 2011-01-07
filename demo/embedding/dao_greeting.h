@@ -83,8 +83,45 @@ namespace CxxNS{
 Test* DAO_DLL_GREETING Dao_Test_New();
 }
 
+class DAO_DLL_GREETING DaoCxxVirt_otto 
+{
+	public:
+	DaoCxxVirt_otto(){ self = 0; cdata = 0; }
+	void DaoInitWrapper( otto *self, DaoCData *d );
+	otto *self;
+	DaoCData *cdata;
+	otto test( const otto &value );
 
-otto* DAO_DLL_GREETING Dao_otto_New( int b );
+};
+class DAO_DLL_GREETING DaoCxx_otto : public otto, public DaoCxxVirt_otto
+{ 
+	public:
+   DaoCxx_otto( int b=123 ) : otto( b ){}
+	~DaoCxx_otto();
+	void DaoInitWrapper();
+	otto test( const otto &value );
+	otto DaoWrap_test( const otto &value ){ return otto::test( value ); }
+};
+otto* Dao_otto_Copy( const otto &p );
+DaoCxx_otto* DAO_DLL_GREETING DaoCxx_otto_New( int b );
 
-otto2* DAO_DLL_GREETING Dao_otto2_New();
+class DAO_DLL_GREETING DaoCxxVirt_otto2  : public DaoCxxVirt_otto
+{
+	public:
+	DaoCxxVirt_otto2(){ self = 0; cdata = 0; }
+	void DaoInitWrapper( otto2 *self, DaoCData *d );
+	otto2 *self;
+	DaoCData *cdata;
+	otto test( const otto &value );
+
+};
+class DAO_DLL_GREETING DaoCxx_otto2 : public otto2, public DaoCxxVirt_otto2
+{ 
+	public:
+	~DaoCxx_otto2();
+	void DaoInitWrapper();
+	otto test( const otto &value );
+};
+otto2* Dao_otto2_Copy( const otto2 &p );
+DaoCxx_otto2* DAO_DLL_GREETING DaoCxx_otto2_New(  );
 #endif

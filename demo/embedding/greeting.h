@@ -2,7 +2,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-class otto 
+class otto
 {
 	private:
 	int a;
@@ -10,6 +10,12 @@ class otto
 	otto(int b=123){ a = b; printf( "new otto\n" ); }
 	virtual ~otto(){};
 	int geta(){ return a; }
+
+protected:
+	virtual otto test(const otto &value){
+		printf( "call protected method\n" );
+		return otto();
+	}
 };
 class otto2 : public otto {};
 

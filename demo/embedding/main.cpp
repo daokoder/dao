@@ -51,12 +51,15 @@ const char* dao_source =
 "class DaoOtto : otto\n"
 "{\n"
 "	sub doOtto(){\n"
+"		test( self );\n"
 "		io.writef( 'Dao: in doOtto() a=%d\n', geta())\n"
 "	}\n"
 "}\n"
 "obj5 = DaoOtto()\n"
 "obj5.doOtto()\n"
 "io.writeln('END script test.dao')\n"
+"ot = otto();\n"
+"ot.test(ot); #error \n"
 ;
 
 const char* dao_source2 = 
