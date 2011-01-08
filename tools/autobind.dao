@@ -480,7 +480,7 @@ const pat_funct =
 '<5>(%s* = %s* 0 |) %s* ( ; | %b{} )';
 # callback function pointer
 const pat_callback = 
-'([^\n%(%)%{%};]*) %( (%s*%*%s*(%w+)) %s* (%b[] |) %s* %)%s* (%b())%s* ;';
+'([^\n%(%)%{%};]*) %( (%s*%*%s*(%w+)) %s* (%b[] |) %s* %)%s* (%b())%s* (%s*) ;';
 
 const pat_constru = '((%w+) %s* %b()) %s* : [^%{%}]* %b{}';
 
@@ -1138,10 +1138,6 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 		}
 		#do{ k = source.change( pat[0], pat[1] ); } until( k==0 );
 	}
-	pat_exclude = '<1>(%w+)_EXCLUDE_ %s* <2>(%b()) <3>([%w%s]*) <4>(=|;|%{)';
-	pat_apply = '%1%2%3:NotImplemented%4';
-	k  = 0;
-	do{ k = source.change( pat_exclude, pat_apply ); } until( k==0 );
 	
 	fname = file;
 	#fname.change( '%..*$', '' );
@@ -1190,6 +1186,11 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	source.change( cbfrom1, cbto1 );
 	source.change( cbfrom2, cbto2 );
 	#if( file == 'Fl_Widget.H' ) io.writeln( source );
+
+	pat_exclude = '<1>(%w+)_EXCLUDE_ %s* <2>(%b()) <3>([%w%s]*) <4>(=|;|%{)';
+	pat_apply = '%1%2%3:NotImplemented%4';
+	k  = 0;
+	do{ k = source.change( pat_exclude, pat_apply ); } until( k==0 );
 	
 	#{
 		source.change( 'struct %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ struct %s+ %1 %s+ ( %w+ ) %s* ; )', 'struct %5%2\ntypedef %5 %1;\n%3' );
@@ -3781,6 +3782,17 @@ routine UserType::GenerateType()
 		dao_meths += qt_application_dao;
 		meth_decls += qt_application_decl;
 		meth_codes += qt_application_func;
+	}else if( isQObject and name == 'QCoreApplication' ){
+		qmeth = qt_application_dao;
+		qdecl = qt_application_decl;
+		qfunc = qt_application_func;
+		qmeth.replace( 'QApplication', 'QCoreApplication' );
+		qdecl.replace( 'QApplication', 'QCoreApplication' );
+		qfunc.replace( 'QApplication', 'QCoreApplication' );
+		qfunc.replace( ', QT_VERSION', '' );
+		dao_meths += qmeth;
+		meth_decls += qdecl;
+		meth_codes += qfunc;
 	}else if( lib_name == LibType.LIB_QT and name == 'QTextStream' ){
 		dao_meths += qt_qstream_dao;
 		meth_decls += qt_qstream_decl;
@@ -4292,7 +4304,7 @@ global delete_struct
 global delete_class
 = 'static void Dao_$(type)_Delete( void *self )
 {
-	delete ($(namespace)$(type2)*) self;
+	$(comment)delete ($(namespace)$(type2)*) self;
 }\n';
 
 global delete_test
@@ -4350,10 +4362,12 @@ routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 
 	'meths'=>utp.dao_meths, 'parents'=>parents, 'casts'=>casts, 
 	'cast_funcs'=>cast_funcs, 'alloc'=>utp.alloc_default,
-	'delete'=>'NULL', 'if_parent'=>'', 'namespace'=>'', 'deltest'=>'NULL'};
+	'delete'=>'NULL', 'if_parent'=>'', 'namespace'=>'', 'deltest'=>'NULL',
+	'comment'=>''};
 	if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 	if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );
 	kvmap['delete'] = 'Dao_' + utp.name + '_Delete';
+	if( utp.name == 'QApplication' or utp.name == 'QCoreApplication' ) kvmap[ 'comment' ] = '//';
 	if( utp.isQWidget )
 	kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
 	if( del_tests.has( utp.condType ) ){
