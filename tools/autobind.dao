@@ -928,6 +928,12 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 		source[ it.start : it.end ] = blank;
 		allpats.append( ($pat_enum2, it.start, codes ) );
 	}
+	mlist = source.pfind( pat_usercst );
+	for( it in mlist ){
+		codes = source[ it.start : it.end ];
+		source[ it.start : it.end ] = blank;
+		allpats.append( ($pat_usercst, it.start, codes ) );
+	}
 	mlist = source.pfind( pat_funct );
 	for( it in mlist ){
 		codes = source[ it.start : it.end ];
@@ -4281,7 +4287,7 @@ global ifdef_cpp_close = '#ifdef __cplusplus\n}\n#endif\n'
 global add_number = '  { "$(name)", $(type), $(namespace)$(value) },\n';
 global tpl_typedef = '  DaoNameSpace_TypeDefine( $(ns), "$(old)", "$(new)" );\n';
 global add_ccdata = '  DaoNameSpace_AddConstData( $(ns), "$(name)", '
-'(DaoBase*)DaoCData_New( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n'
+'(DaoBase*)DaoCData_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n'
 
 global ext_typer = 'extern DaoTypeBase *dao_$(type)_Typer;\n';
 global alias_typer = 'DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n';
