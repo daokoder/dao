@@ -188,6 +188,11 @@ void DaoType_MapNames( DaoType *self )
 		if( tp->fname ) MAP_Insert( self->mapNames, tp->fname, i );
 	}
 }
+DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer )
+{
+	if( typer->priv == NULL ) return NULL;
+	return typer->priv->abtype;
+}
 
 #define MIN(x,y) (x>y?y:x)
 

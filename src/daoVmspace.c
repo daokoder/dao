@@ -1676,6 +1676,7 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 }
 void DaoTypeBase_Free( DaoTypeBase *typer )
 {
+	DaoCDataCore *hostCore;
 	DMap *hs;
 	DNode *it;
 	if( typer->priv == NULL ) return;
@@ -1690,6 +1691,8 @@ void DaoTypeBase_Free( DaoTypeBase *typer )
 	typer->priv->values = NULL;
 	typer->priv->methods = NULL;
 	if( typer->priv->attribs & DAO_TYPER_PRIV_FREE ){
+		hostCore = (DaoCDataCore*) typer->priv;
+		if( hostCore->instanceCData ) DMap_Delete( hostCore->instanceCData );
 		dao_free( typer->priv );
 		typer->priv = NULL;
 	}
@@ -1702,8 +1705,6 @@ extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase coroutTyper;
 extern DaoTypeBase inodeTyper;
-
-DaoClass *daoClassFutureValue = NULL;
 
 extern DaoTypeBase DaoFdSet_Typer;
 
@@ -1993,6 +1994,7 @@ void DaoInitAPI( DaoAPI *api )
 
 	api->DaoGC_IncRC = DaoGC_IncRC;
 	api->DaoGC_DecRC = DaoGC_DecRC;
+	api->DaoType_GetFromTypeStructure = DaoType_GetFromTypeStructure;
 	api->DaoCallbackData_New = DaoCallbackData_New;
 }
 extern void DaoInitLexTable();
@@ -2097,6 +2099,65 @@ static void DaoConfigure()
 	DaoConfigure_FromFile( "./dao.conf" );
 	DString_Delete( mbs );
 }
+
+#ifdef DEBUG
+static void dao_FakeShoftList_FakeShoftList( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeShoftList_Size( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_FakeShoftList_SetItem( DaoContext *_ctx, DValue *_p[], int _n );
+
+static DaoFuncItem dao_FakeShoftList_Meths[] = 
+{
+  { dao_FakeShoftList_FakeShoftList, "FakeList<short>( size=0 )=>FakeList<short>" },
+  { dao_FakeShoftList_Size, "size( self : FakeList<short> )=>int" },
+  { dao_FakeShoftList_GetItem, "[]( self : FakeList<short>, index : int )=>int" },
+  { dao_FakeShoftList_SetItem, "[]=( self : FakeList<short>, index : int, value : int )=>int" },
+  { NULL, NULL }
+};
+static void Dao_FakeShoftList_Delete( void *self ){}
+static DaoTypeBase FakeShoftList_Typer = 
+{ "FakeList<short>", NULL, NULL, dao_FakeShoftList_Meths, {0}, {0}, Dao_FakeShoftList_Delete, NULL };
+DaoTypeBase *dao_FakeShoftList_Typer = & FakeShoftList_Typer;
+
+static void dao_FakeShoftList_FakeShoftList( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  int size = _p[0]->v.i;
+  DaoContext_PutCData( _ctx, (void*)(size_t)size, dao_FakeShoftList_Typer );
+}
+static void dao_FakeShoftList_Size( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  int size = (int) DaoCData_GetData( _p[0]->v.cdata );
+  DaoContext_PutInteger( _ctx, size );
+}
+static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  DaoContext_PutInteger( _ctx, 123 );
+}
+static void dao_FakeShoftList_SetItem( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  int index = _p[1]->v.i;
+  int value = _p[2]->v.i;
+}
+static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n );
+static DaoFuncItem dao_FakeList_Meths[] = 
+{
+  { dao_FakeList_GetType, "<>( @ITEM )" },
+  //{ dao_FakeList_GetType, "<>( @ITEM )=>FakeList<@ITEM>" },
+  { NULL, NULL }
+};
+static DaoTypeBase FakeList_Typer = 
+{ "FakeList", NULL, NULL, dao_FakeList_Meths, {0}, {0}, NULL, NULL };
+DaoTypeBase *dao_FakeList_Typer = & FakeList_Typer;
+
+DaoType *fakeShortType = NULL;
+static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n )
+{
+	if( _p[0]->v.type == fakeShortType ){
+		DaoContext_PutResult( _ctx, DaoCData_Wrap( NULL, dao_FakeShoftList_Typer ) );
+	}else{
+	}
+}
+#endif
 
 extern void DaoJitMapper_Init();
 extern void DaoType_Init();
@@ -2214,20 +2275,15 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_AddType( ns, dao_list_empty->name, dao_list_empty );
 	DaoNameSpace_AddType( ns, dao_map_empty->name, dao_map_empty );
 
-#if 0
-	DString_SetMBS( vms->source, daoScripts );
-	DString_SetMBS( vms->fileName, "internal scripts" );
-	DaoVmProcess_Eval( vms->mainProcess, vms->nsInternal, vms->source, 0 );
-
-	DString_SetMBS( mbs, "FutureValue" );
-	daoClassFutureValue = DaoNameSpace_GetData( vms->nsInternal, mbs ).v.klass;
-	GC_IncRC( daoClassFutureValue );
+#ifdef DEBUG
+	fakeShortType = DaoNameSpace_TypeDefine( ns, "int", "short" );
+	DaoNameSpace_WrapType( vms->nsInternal, dao_FakeList_Typer );
+	DaoNameSpace_WrapType( vms->nsInternal, dao_FakeShoftList_Typer );
 #endif
 
 #ifdef DAO_WITH_NUMARRAY
 	DaoNameSpace_SetupType( vms->nsInternal, & numarTyper );
 #endif
-
 
 	DaoNameSpace_SetupType( vms->nsInternal, & stringTyper );
 	DaoNameSpace_SetupType( vms->nsInternal, & longTyper );
@@ -2327,7 +2383,6 @@ void DaoQuit()
 	DaoTypeBase_Free( & libNetTyper );
 #endif
 
-	GC_DecRC( daoClassFutureValue );
 	DaoException_CleanUp();
 
 	/* 

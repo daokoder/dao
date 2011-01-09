@@ -1218,7 +1218,6 @@ static const char*const DaoTypingErrorString[] =
 	"Constant should not be modified",
 	"Call to un-implemented function"
 };
-extern DaoClass *daoClassFutureValue;
 
 enum OprandType
 {

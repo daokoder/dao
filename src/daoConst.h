@@ -41,7 +41,6 @@ enum DaoRTTI
 	DAO_ANY = END_CORE_TYPES, /* a : any */
 	DAO_INITYPE ,  /* a : @t */
 	DAO_MACRO ,
-	DAO_TYPE ,
 	DAO_UTF8 , /* sub type of string */
 	DAO_FUNCURRY ,
 	DAO_CMODULE ,

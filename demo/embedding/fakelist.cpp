@@ -20,7 +20,7 @@ static DaoFuncItem dao_FakeList_Meths[] =
 };
 static void Dao_FakeList_Delete( void *self ){}
 static DaoTypeBase FakeList_Typer = 
-{ NULL, "FakeList", NULL, dao_FakeList_Meths, {0}, NULL, Dao_FakeList_Delete };
+{ "FakeList", NULL, NULL, dao_FakeList_Meths, {0}, {0}, Dao_FakeList_Delete, NULL };
 DaoTypeBase *dao_FakeList_Typer = & FakeList_Typer;
 
 static void dao_FakeList_FakeList( DaoContext *_ctx, DValue *_p[], int _n )

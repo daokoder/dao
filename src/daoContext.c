@@ -3990,7 +3990,6 @@ void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout,
 	DaoStream_Delete( ss );
 }
 
-extern DaoClass *daoClassFutureValue;
 void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 {
 	int i, sup = 0, code = vmc->code;

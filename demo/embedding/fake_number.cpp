@@ -31,7 +31,7 @@ static DaoFuncItem dao_FakeNumber_Meths[] =
 };
 static void Dao_FakeNumber_Delete( void *self ){}
 static DaoTypeBase FakeNumber_Typer = 
-{ NULL, "FakeNumber", NULL, dao_FakeNumber_Meths, {0}, NULL, Dao_FakeNumber_Delete };
+{ "FakeNumber", NULL, NULL, dao_FakeNumber_Meths, {0}, {0}, Dao_FakeNumber_Delete, NULL };
 DaoTypeBase *dao_FakeNumber_Typer = & FakeNumber_Typer;
 
 static void dao_FakeNumber_FakeNumber( DaoContext *_ctx, DValue *_p[], int _n )

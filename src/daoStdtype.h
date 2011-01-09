@@ -144,6 +144,8 @@ struct DaoCDataCore
 
 	void   (*DelData)( void *data );
 	int    (*DelTest)( void *data );
+
+	DMap *instanceCData;
 };
 DaoCDataCore* DaoCDataCore_New();
 

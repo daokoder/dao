@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20110105
+#define DAO_H_VERSION 20110108
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -165,6 +165,7 @@ enum DaoTypes
 	DAO_CONDVAR ,
 	DAO_SEMA ,
 	DAO_THREAD ,
+	DAO_TYPE ,
 	END_CORE_TYPES
 };
 enum DaoVmProcessStatus
@@ -319,6 +320,7 @@ struct DValue
 		DaoInterface  *inter;
 		DaoNameSpace  *ns;
 		DaoVmProcess  *vmp;
+		DaoType       *type;
 	} v ;
 };
 
@@ -642,14 +644,14 @@ struct DaoAPI
 	void (*DaoNameSpace_AddValue)( DaoNameSpace *self, const char *s, DValue v, const char *t);
 	DValue (*DaoNameSpace_FindData)( DaoNameSpace *self, const char *name );
 
-	int (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
+	DaoType* (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
+	DaoType* (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer );
+	DaoType* (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
+	DaoFunction* (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *pro );
 	int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
-	int (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer );
 	int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
-	int (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
-	int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
-	int (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
 	int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
+	int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
 	int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
 	int (*DaoNameSpace_GetOptions)( DaoNameSpace *self );
 	void (*DaoNameSpace_SetOptions)( DaoNameSpace *self, int options );
@@ -681,6 +683,8 @@ struct DaoAPI
 
 	void (*DaoGC_IncRC)( DaoBase *p );
 	void (*DaoGC_DecRC)( DaoBase *p );
+
+	DaoType* (*DaoType_GetFromTypeStructure)( DaoTypeBase *typer );
 
 	DaoCallbackData* (*DaoCallbackData_New)( DaoRoutine *callback, DValue userdata );
 };
@@ -946,28 +950,32 @@ DAO_DLL void DaoNameSpace_AddValue( DaoNameSpace *self, const char *name, DValue
 DAO_DLL DValue DaoNameSpace_FindData( DaoNameSpace *self, const char *name );
 
 /* equivalent to: typedef old type; in scripts */
-DAO_DLL int DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type );
+/* return NULL if failed */
+DAO_DLL DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type );
+/* wrap c type, return NULL if failed */
+DAO_DLL DaoType* DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
+DAO_DLL DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
+/* wrap c function, return NULL if failed */
+DAO_DLL DaoFunction* DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
 /*
    parameters alias[] is an array of type name aliases,
    used as typedefs like: typedef alias[2*i] alias[2*i+1];
    the last item in alias[] should also be NULL.
+   return the number of failed typedefs.
  */
 DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
-/* wrap c type */
-DAO_DLL int DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
 /* wrap c types, the last item in typer[] should be NULL;
    types that are cross-used in parameter lists
    (e.g. type A appears in the parameter list of B's methods,
    and type B appears in the parameter list of A's methods),
    should be wrapd using this function.
+   return the number of failed wrapping.
  */
 DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
-/* wrap c function */
-DAO_DLL int DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
-/* wrap c functions */
-DAO_DLL int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items );
-DAO_DLL int DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
+/* return the number of failed wrapping. */
 DAO_DLL int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
+/* wrap c functions, return the number of failed wrapping. */
+DAO_DLL int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items );
 /* load the scripts in "file" to the namespace */
 DAO_DLL int DaoNameSpace_Load( DaoNameSpace *self, const char *file );
 DAO_DLL int DaoNameSpace_GetOptions( DaoNameSpace *self );
@@ -1001,6 +1009,8 @@ DAO_DLL void  DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 
 DAO_DLL void DaoGC_IncRC( DaoBase *p );
 DAO_DLL void DaoGC_DecRC( DaoBase *p );
+
+DAO_DLL DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
 
 DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata );
 
@@ -1280,6 +1290,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 
 #define DaoGC_IncRC( p )  __dao.DaoGC_IncRC( p )
 #define DaoGC_DecRC( p )  __dao.DaoGC_DecRC( p )
+#define DaoType_GetFromTypeStructure( t ) __dao.DaoType_GetFromTypeStructure( t )
 
 #define DaoCallbackData_New( cb, ud ) __dao.DaoCallbackData_New( cb, ud )
 
