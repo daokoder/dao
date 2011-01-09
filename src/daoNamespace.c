@@ -657,9 +657,25 @@ int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typers[] )
 DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self, 
 		const char *proto, DaoParser *parser )
 {
-	DaoFunction *func = DaoNameSpace_ParsePrototype( self, proto, parser );
+	DaoParser *old = parser;
+	DaoParser *defparser = NULL;
+	DaoFunction *func;
 	DValue val = daoNullValue;
 
+	if( parser == NULL ){
+		parser = DaoParser_New();
+		parser->vmSpace = self->vmSpace;
+		parser->nameSpace = self;
+		parser->defParser = defparser = DaoParser_New();
+		defparser->vmSpace = self->vmSpace;
+		defparser->nameSpace = self;
+		defparser->routine = self->routEvalConst;
+	}
+	func = DaoNameSpace_ParsePrototype( self, proto, parser );
+	if( old == NULL ){
+		DaoParser_Delete( parser );
+		DaoParser_Delete( defparser );
+	}
 	if( func == NULL ) return NULL;
 	val = DaoNameSpace_GetData( self, func->routName );
 	if( val.t == DAO_ROUTINE || val.t == DAO_FUNCTION ){
@@ -673,8 +689,7 @@ DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self,
 }
 DaoFunction* DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fptr, const char *proto )
 {
-	DaoFunction *func;
-	func = DaoNameSpace_MakeFunction( self, proto, NULL );
+	DaoFunction *func = DaoNameSpace_MakeFunction( self, proto, NULL );
 	if( func == NULL ) return NULL;
 	func->pFunc = fptr;
 	return func;

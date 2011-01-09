@@ -1858,9 +1858,6 @@ void DRoutine_ShowError( DRoutine *self, DaoType *selftype,
 		DRoutine_CheckError( rout, self->nameSpace, selftype, csts, ts, np, code, errors );
 		i ++;
 	}
-	/*
-	   printf("%s : best = %i, spec = %i\n", self->routName->mbs, best, *spec);
-	 */
 }
 
 void DaoPrintCallError( DArray *errors, DaoStream *stdio )
@@ -4964,7 +4961,9 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, "routine " );
 	DaoStream_WriteString( stream, self->routName );
 	DaoStream_WriteMBS( stream, "():\n" );
-	DaoStream_WriteMBS( stream, "Number of register:\n" );
+	DaoStream_WriteMBS( stream, "type: " );
+	DaoStream_WriteString( stream, self->routType->name );
+	DaoStream_WriteMBS( stream, "\nNumber of register:\n" );
 	DaoStream_WriteInt( stream, (double)self->locRegCount );
 	DaoStream_WriteMBS( stream, "\n" );
 	DaoStream_WriteMBS( stream, sep1 );
