@@ -1452,8 +1452,8 @@ static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 		}
 		if( res.t ==0 ) res = DaoNameSpace_GetData( myNS, name );
 	}
-	if( start+1 < N && tokens[start+1]->name ==  DTOK_LT ){
-		i = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, N );
+	if( res.t && start+1 < N && tokens[start+1]->name == DTOK_LT ){
+		i = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, N );
 		if( i >=0 && (res.t == DAO_CLASS || res.t == DAO_CDATA) ){
 			DaoBase *p = DaoParse_InstantiateType( self, res.v.p, start+2, i-1, fullname );
 			if( p ){
@@ -1498,8 +1498,8 @@ static int DaoParser_FindScopedData( DaoParser *self, int start, DValue *scope,
 			break;
 		}
 		if( tokens[start]->type != DTOK_IDENTIFIER ) return start;
-		if( start+1 < N && tokens[start+1]->name ==  DTOK_LT ){
-			i = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, N );
+		if( res.t && start+1 < N && tokens[start+1]->name == DTOK_LT ){
+			i = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, N );
 			if( i >=0 && (res.t == DAO_CLASS || res.t == DAO_CDATA) ){
 				DaoBase *p = DaoParse_InstantiateType( self, res.v.p, start+2, i-1, fullname );
 				if( p ){
