@@ -36,18 +36,11 @@ typedef size_t socklen_t;
 
 #endif
 
-#include"daolib.h"
-#include"daoString.h"
-#include"daoMap.h"
-#include"daoArray.h"
-#include"daoType.h"
-#include"daoNumtype.h"
-#include"daoThread.h"
-#include"daoStdlib.h"
-#include"daoContext.h"
-#include"daoProcess.h"
-#include"daoSched.h"
-#include"daoVmspace.h"
+#include"dao.h"
+//#include"daoString.h"
+//#include"daoNumtype.h"
+
+#define dao_malloc malloc
 
 #define BACKLOG 1000 /*  how many pending connections queue will hold */
 #define MAX_DATA 512 /*  max number of bytes we can get at once */
@@ -72,7 +65,7 @@ typedef struct DaoDataPacket
 
 static int offset = (char*) ( & ((DaoDataPacket*)0)->data ) - (char*) ( & ((DaoDataPacket*)0)->type );
 
-#define GET_FDSET( p )  ((fd_set*) p->v.cdata->data)
+#define GET_FDSET( p )  ((fd_set*) DaoCData_GetData( p->v.cdata ) )
 static void DaoFdSet_Zero( DaoContext *ctx, DValue *par[], int N  )
 {
 	FD_ZERO( GET_FDSET( par[0] ) );
@@ -168,8 +161,8 @@ int DaoNetwork_Receive( int sockfd, DString *buf, int max )
 	DString_ToMBS( buf );
 	DString_Resize( buf, max );
 	numbytes = recv( sockfd, (char*)DString_GetMBS( buf ), max, 0 );
-	/*if( numbytes >=0 ) DString_Resize( buf, numbytes );*/
-	if( numbytes >=0 ) buf->size = numbytes;
+	if( numbytes >=0 ) DString_Resize( buf, numbytes );
+	/* if( numbytes >=0 ) buf->size = numbytes; */
 	return numbytes;
 }
 void DaoNetwork_Close( int sockfd )
@@ -308,7 +301,7 @@ static int DaoNetwork_SendChars( int sockfd, const char *mbs, int len )
 static int DaoNetwork_SendString( int sockfd, DString *str )
 {
 	DString_ToMBS( str );
-	return DaoNetwork_SendChars( sockfd, str->mbs, str->size );
+	return DaoNetwork_SendChars( sockfd, DString_GetMBS( str ), DString_Size( str ) );
 }
 static int DaoNetwork_SendComplex( int sockfd, complex16 data )
 {
@@ -338,7 +331,7 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 	int M = DaoArray_Size( data );
 	int j, len;
 
-	packet.type = data->type;
+	packet.type = DAO_ARRAY;
 	packet.tag = numtype;
 	packet.dataI1 = htonl( M );
 	packet.dataI2 = htonl( 0 );
@@ -428,7 +421,7 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 	char *buf2 = buf;
 	short numtype;
 	complex16  com;
-	DValue item = daoNullValue;
+	DValue item = {0,0,0,0,{(double)0.0}};
 	DString  *str = DString_New(1);
 	DaoArray *arr = NULL;
 	float *fv = NULL;
@@ -473,30 +466,30 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 			switch( inpack->type ){
 			case DAO_INTEGER :
 				item.v.i = DaoParseNumber32( inpack->data );
-				DaoList_Append( data, item );
+				DaoList_PushBack( data, item );
 				break;
 			case DAO_FLOAT :
 				item.v.f = DaoParseNumber32( inpack->data );
 				/* printf( "number: %s %g\n", inpack->data, num->item.f ); */
-				DaoList_Append( data, item );
+				DaoList_PushBack( data, item );
 				break;
 			case DAO_DOUBLE :
 				item.v.d = DaoParseNumber32( inpack->data );
-				DaoList_Append( data, item );
+				DaoList_PushBack( data, item );
 				break;
 			case DAO_STRING :
 				item.v.s = str;
 				if( inpack->tag == 0 ) DString_Clear( str );
 				DString_AppendMBS( str, inpack->data );
 				/* printf( "string: %s\n", inpack->data ); */
-				if( inpack->tag ==2 || size <= MAX_DATA ) DaoList_Append( data, item );
+				if( inpack->tag ==2 || size <= MAX_DATA ) DaoList_PushBack( data, item );
 				break;
 			case DAO_COMPLEX :
 				com.real = DaoParseNumber32( buf2 );
 				while( *buf2 ) buf2 ++;
 				com.imag = DaoParseNumber32( buf2+1 );
 				item.v.c = & com;
-				DaoList_Append( data, item );
+				DaoList_PushBack( data, item );
 				break;
 #ifdef DAO_WITH_NUMARRAY
 			case DAO_ARRAY :
@@ -509,7 +502,7 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 					item.v.array = arr;
 					DaoArray_SetNumType( arr, numtype );
 					DaoArray_ResizeVector( arr, M );
-					DaoList_Append( data, item );
+					DaoList_PushBack( data, item );
 				}
 				if( numtype == DAO_INTEGER ){
 					int *iv = DaoArray_ToInt( arr );
@@ -616,7 +609,7 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 	const char *host = DString_GetMBS( par[0]->v.s );
 	DaoMap *res = DaoContext_PutMap( ctx );
 	DString *str;
-	DValue value = daoNullString;
+	DValue value = {DAO_STRING,0,0,0,{(double)0.0}};
 	if( DString_Size( par[0]->v.s ) ==0 ) return;
 	if( host[0] >= '0' && host[0] <= '9' ){
 		struct in_addr id;
@@ -674,16 +667,6 @@ static DaoFuncItem netMeths[] =
 	{ NULL, NULL }
 };
 
-static DaoTypeCore netCore =
-{
-	0, NULL, NULL, NULL, NULL,
-	DaoBase_GetField,
-	DaoBase_SetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
-};
 DaoTypeBase libNetTyper = {
 	"network", NULL, NULL, netMeths, {0}, {0}, NULL, NULL
 };

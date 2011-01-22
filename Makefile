@@ -7,7 +7,6 @@ DAO_TOOL_DIR = $(DAO_DIR)/tools
 
 DAO_MACRO = -DDAO_WITH_MACRO
 #DAO_THREAD = -DDAO_WITH_THREAD
-DAO_NETWORK = -DDAO_WITH_NETWORK
 DAO_NUMARRAY = -DDAO_WITH_NUMARRAY
 DAO_SYNCLASS = -DDAO_WITH_SYNCLASS
 
@@ -17,11 +16,11 @@ DAO_SYNCLASS = -DDAO_WITH_SYNCLASS
 #USE_READLINE = -DDAO_USE_READLINE
 #LIB_READLINE = -lreadline
 
-DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_NETWORK) $(DAO_SYNCLASS) $(DAO_ASMBC) $(DAO_JIT) $(USE_READLINE)
+DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_ASMBC) $(DAO_JIT) $(USE_READLINE)
 
 CC        = $(CROSS_COMPILE)gcc
 CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
-INCPATH   = -I. -Isrc
+INCPATH   = -I. -Ikernel
 LFLAGS    = -fPIC #-s
 LFLAGSDLL = -fPIC #-s
 #LFLAGSDLL = -shared -fPIC -s -Wl,--version-script=daolibsym.map
@@ -81,34 +80,33 @@ OBJECTS_DIR = objs/
 
 ####### Files
 
-SOURCES = src/daoType.c \
-    src/daoStdtype.c \
-		src/daoNamespace.c \
-		src/daoGC.c \
-		src/daoNumtype.c \
-		src/daoMaindl.c \
-		src/daoClass.c \
-		src/daoLexer.c \
-		src/daoParser.c \
-		src/daoMacro.c \
-		src/daoAsmbc.c \
-		src/daoRegex.c \
-		src/daoValue.c \
-		src/daoContext.c \
-		src/daoProcess.c \
-		src/daoJit.c \
-		src/daoStdlib.c \
-		src/daoArray.c \
-		src/daoMap.c \
-		src/daoConst.c \
-		src/daoRoutine.c \
-		src/daoObject.c \
-		src/daoThread.c \
-		src/daoNetwork.c \
-		src/daoSched.c \
-		src/daoStream.c \
-		src/daoString.c \
-		src/daoVmspace.c
+SOURCES = kernel/daoType.c \
+    kernel/daoStdtype.c \
+		kernel/daoNamespace.c \
+		kernel/daoGC.c \
+		kernel/daoNumtype.c \
+		kernel/daoMaindl.c \
+		kernel/daoClass.c \
+		kernel/daoLexer.c \
+		kernel/daoParser.c \
+		kernel/daoMacro.c \
+		kernel/daoAsmbc.c \
+		kernel/daoRegex.c \
+		kernel/daoValue.c \
+		kernel/daoContext.c \
+		kernel/daoProcess.c \
+		kernel/daoJit.c \
+		kernel/daoStdlib.c \
+		kernel/daoArray.c \
+		kernel/daoMap.c \
+		kernel/daoConst.c \
+		kernel/daoRoutine.c \
+		kernel/daoObject.c \
+		kernel/daoThread.c \
+		kernel/daoSched.c \
+		kernel/daoStream.c \
+		kernel/daoString.c \
+		kernel/daoVmspace.c
 OBJECTS = \
 			 objs/daoArray.o \
 			 objs/daoMap.o \
@@ -132,7 +130,6 @@ OBJECTS = \
 		objs/daoClass.o \
 		objs/daoConst.o \
 		objs/daoObject.o \
-		objs/daoNetwork.o \
 		objs/daoSched.o \
 		objs/daoStream.o \
 		objs/daoVmspace.o \
@@ -189,96 +186,93 @@ FORCE:
 ####### Compile
 
 #main
-objs/daoMaindl.o: src/daoMaindl.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMaindl.o src/daoMaindl.c
+objs/daoMaindl.o: kernel/daoMaindl.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMaindl.o kernel/daoMaindl.c
 
-objs/daoMain.o: src/daoMain.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMain.o src/daoMain.c
+objs/daoMain.o: kernel/daoMain.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMain.o kernel/daoMain.c
 
-objs/daoMainv.o: src/daoMainv.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMainv.o src/daoMainv.c
+objs/daoMainv.o: kernel/daoMainv.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMainv.o kernel/daoMainv.c
 
 #dll
-objs/daoType.o: src/daoType.c src/daoType.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoType.o src/daoType.c
+objs/daoType.o: kernel/daoType.c kernel/daoType.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoType.o kernel/daoType.c
 
-objs/daoStdtype.o: src/daoStdtype.c src/daoStdtype.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStdtype.o src/daoStdtype.c
+objs/daoStdtype.o: kernel/daoStdtype.c kernel/daoStdtype.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStdtype.o kernel/daoStdtype.c
 
-objs/daoNamespace.o: src/daoNamespace.c src/daoNamespace.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNamespace.o src/daoNamespace.c
+objs/daoNamespace.o: kernel/daoNamespace.c kernel/daoNamespace.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNamespace.o kernel/daoNamespace.c
 
-objs/daoNumtype.o: src/daoNumtype.c src/daoNumtype.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNumtype.o src/daoNumtype.c
+objs/daoNumtype.o: kernel/daoNumtype.c kernel/daoNumtype.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNumtype.o kernel/daoNumtype.c
 
-objs/daoClass.o: src/daoClass.c src/daoClass.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoClass.o src/daoClass.c
+objs/daoClass.o: kernel/daoClass.c kernel/daoClass.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoClass.o kernel/daoClass.c
 
-objs/daoRegex.o: src/daoRegex.c src/daoRegex.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoRegex.o src/daoRegex.c
+objs/daoRegex.o: kernel/daoRegex.c kernel/daoRegex.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoRegex.o kernel/daoRegex.c
 
-objs/daoContext.o: src/daoContext.c src/daoType.h src/daoContext.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoContext.o src/daoContext.c
+objs/daoContext.o: kernel/daoContext.c kernel/daoType.h kernel/daoContext.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoContext.o kernel/daoContext.c
 
-objs/daoProcess.o: src/daoProcess.c src/daoType.h src/daoProcess.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoProcess.o src/daoProcess.c
+objs/daoProcess.o: kernel/daoProcess.c kernel/daoType.h kernel/daoProcess.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoProcess.o kernel/daoProcess.c
 
-objs/daoValue.o: src/daoValue.c src/daoValue.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoValue.o src/daoValue.c
+objs/daoValue.o: kernel/daoValue.c kernel/daoValue.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoValue.o kernel/daoValue.c
 
-objs/daoArray.o: src/daoArray.c src/daoArray.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoArray.o src/daoArray.c
+objs/daoArray.o: kernel/daoArray.c kernel/daoArray.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoArray.o kernel/daoArray.c
 
-objs/daoMap.o: src/daoMap.c src/daoMap.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMap.o src/daoMap.c
+objs/daoMap.o: kernel/daoMap.c kernel/daoMap.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMap.o kernel/daoMap.c
 
-objs/daoConst.o: src/daoConst.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoConst.o src/daoConst.c
+objs/daoConst.o: kernel/daoConst.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoConst.o kernel/daoConst.c
 
-objs/daoRoutine.o: src/daoRoutine.c src/daoRoutine.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoRoutine.o src/daoRoutine.c
+objs/daoRoutine.o: kernel/daoRoutine.c kernel/daoRoutine.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoRoutine.o kernel/daoRoutine.c
 
-objs/daoObject.o: src/daoObject.c src/daoObject.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoObject.o src/daoObject.c
+objs/daoObject.o: kernel/daoObject.c kernel/daoObject.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoObject.o kernel/daoObject.c
 
-objs/daoNetwork.o: src/daoNetwork.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoNetwork.o src/daoNetwork.c
+objs/daoSched.o: kernel/daoSched.c kernel/daoSched.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoSched.o kernel/daoSched.c
 
-objs/daoSched.o: src/daoSched.c src/daoSched.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoSched.o src/daoSched.c
+objs/daoStream.o: kernel/daoStream.c kernel/daoStream.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStream.o kernel/daoStream.c
 
-objs/daoStream.o: src/daoStream.c src/daoStream.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStream.o src/daoStream.c
+objs/daoString.o: kernel/daoString.c kernel/daoString.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoString.o kernel/daoString.c
 
-objs/daoString.o: src/daoString.c src/daoString.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoString.o src/daoString.c
+objs/daoVmspace.o: kernel/daoVmspace.c kernel/daoVmspace.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoVmspace.o kernel/daoVmspace.c
 
-objs/daoVmspace.o: src/daoVmspace.c src/daoVmspace.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoVmspace.o src/daoVmspace.c
+objs/daoGC.o: kernel/daoGC.c kernel/daoGC.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoGC.o kernel/daoGC.c
 
-objs/daoGC.o: src/daoGC.c src/daoGC.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoGC.o src/daoGC.c
+objs/daoStdlib.o: kernel/daoStdlib.c kernel/daoStdlib.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStdlib.o kernel/daoStdlib.c
 
-objs/daoStdlib.o: src/daoStdlib.c src/daoStdlib.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoStdlib.o src/daoStdlib.c
+objs/daoMacro.o: kernel/daoMacro.c kernel/daoMacro.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMacro.o kernel/daoMacro.c
 
-objs/daoMacro.o: src/daoMacro.c src/daoMacro.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoMacro.o src/daoMacro.c
+objs/daoLexer.o: kernel/daoLexer.c kernel/daoLexer.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoLexer.o kernel/daoLexer.c
 
-objs/daoLexer.o: src/daoLexer.c src/daoLexer.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoLexer.o src/daoLexer.c
+objs/daoParser.o: kernel/daoParser.c kernel/daoParser.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoParser.o kernel/daoParser.c
 
-objs/daoParser.o: src/daoParser.c src/daoParser.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoParser.o src/daoParser.c
+objs/daoAsmbc.o: kernel/daoAsmbc.c kernel/daoAsmbc.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoAsmbc.o kernel/daoAsmbc.c
 
-objs/daoAsmbc.o: src/daoAsmbc.c src/daoAsmbc.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoAsmbc.o src/daoAsmbc.c
+objs/daoThread.o: kernel/daoThread.c kernel/daoThread.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoThread.o kernel/daoThread.c
 
-objs/daoThread.o: src/daoThread.c src/daoThread.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoThread.o src/daoThread.c
-
-objs/daoJit.o: src/daoJit.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoJit.o src/daoJit.c
+objs/daoJit.o: kernel/daoJit.c
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoJit.o kernel/daoJit.c
 
 ####### Install
 
@@ -292,8 +286,8 @@ install:
 	$(HAS_FILE) tools/autobind.dao && $(COPY_FILE) tools/autobind.dao $(DAO_TOOL_DIR)
 	$(HAS_FILE) tools/autobind.dao && $(SYMLINK) $(DAO_TOOL_DIR)/autobind.dao /usr/bin/autobind.dao
 
-	$(COPY_FILE) src/*.h $(DAO_INC_DIR)
-	$(COPY_FILE) $(TARGET) $(TARGETDLL) src/dao.h src/daolib.h dao.conf $(DAO_DIR)
+	$(COPY_FILE) kernel/*.h $(DAO_INC_DIR)
+	$(COPY_FILE) $(TARGET) $(TARGETDLL) kernel/dao.h kernel/daolib.h dao.conf $(DAO_DIR)
 	$(SYMLINK) $(DAO_DIR)/$(TARGET) /usr/bin/$(TARGET)
 	$(SYMLINK) $(DAO_DIR)/$(TARGETDLL) /usr/lib/lib$(TARGETDLL)
 	$(SYMLINK) $(DAO_DIR)/dao.h /usr/include/dao.h

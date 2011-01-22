@@ -43,11 +43,6 @@
 #include"daoThread.h"
 #endif
 
-#ifdef DAO_WITH_NETWORK
-void DaoNetwork_Init( DaoVmSpace *vms, DaoNameSpace *ns );
-extern DaoTypeBase libNetTyper;
-#endif
-
 extern int ObjectProfile[100];
 
 DAO_DLL DaoAPI __dao;
@@ -1833,6 +1828,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoTuple_GetItem = DaoTuple_GetItem;
 
 #ifdef DAO_WITH_NUMARRAY
+	api->DaoArray_New = DaoArray_New;
 	api->DaoArray_NumType = DaoArray_NumType;
 	api->DaoArray_SetNumType = DaoArray_SetNumType;
 	api->DaoArray_Size = DaoArray_Size;
@@ -2321,11 +2317,6 @@ DaoVmSpace* DaoInit()
 	DaoCallServer_Init( vms );
 #endif
 
-#ifdef DAO_WITH_NETWORK
-	DaoNameSpace_WrapType( vms->nsInternal, & DaoFdSet_Typer );
-	DaoNameSpace_WrapType( vms->nsInternal, & libNetTyper );
-	DaoNetwork_Init( vms, vms->nsInternal );
-#endif
 	DaoNameSpace_Import( vms->mainNamespace, vms->nsInternal, NULL );
 
 	DaoVmSpace_InitPath( vms );
@@ -2377,11 +2368,6 @@ void DaoQuit()
 	DaoTypeBase_Free( & libStandardTyper );
 	DaoTypeBase_Free( & libMathTyper );
 	DaoTypeBase_Free( & libReflectTyper );
-
-#ifdef DAO_WITH_NETWORK
-	/* DaoTypeBase_Free( & DaoFdSet_Typer ); */
-	DaoTypeBase_Free( & libNetTyper );
-#endif
 
 	DaoException_CleanUp();
 

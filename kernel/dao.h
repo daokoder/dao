@@ -513,6 +513,7 @@ struct DaoAPI
 	void   (*DaoTuple_SetItem)( DaoTuple *self, DValue it, int pos );
 	DValue (*DaoTuple_GetItem)( DaoTuple *self, int pos );
 
+	DaoArray* (*DaoArray_New)( int numtype );
 	int  (*DaoArray_NumType)( DaoArray *self );
 	void (*DaoArray_SetNumType)( DaoArray *self, short numtype );
 
@@ -817,6 +818,7 @@ DAO_DLL int  DaoTuple_Size( DaoTuple *self );
 DAO_DLL void   DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );
 DAO_DLL DValue DaoTuple_GetItem( DaoTuple *self, int pos );
 
+DAO_DLL DaoArray* DaoArray_New( int numtype );
 DAO_DLL int  DaoArray_NumType( DaoArray *self );
 DAO_DLL void DaoArray_SetNumType( DaoArray *self, short numtype );
 DAO_DLL int  DaoArray_Size( DaoArray *self );
@@ -1127,6 +1129,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoTuple_SetItem( self, it, pos )  __dao.DaoTuple_SetItem( self, it, pos )
 #define DaoTuple_GetItem( self, pos )  __dao.DaoTuple_GetItem( self, pos )
 
+#define DaoArray_New( numtype ) __dao.DaoArray_New( numtype )
 #define DaoArray_NumType( self ) __dao.DaoArray_NumType( self )
 #define DaoArray_SetNumType( self, numtype ) __dao.DaoArray_SetNumType( self, numtype )
 #define DaoArray_Size( self ) __dao.DaoArray_Size( self )
