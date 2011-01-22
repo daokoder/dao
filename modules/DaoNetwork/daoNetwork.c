@@ -17,8 +17,6 @@
 #include"time.h"
 #include"math.h"
 
-#ifdef DAO_WITH_NETWORK
-
 #ifdef UNIX
 
 #include <sys/socket.h>
@@ -37,8 +35,7 @@ typedef size_t socklen_t;
 #endif
 
 #include"dao.h"
-//#include"daoString.h"
-//#include"daoNumtype.h"
+DAO_INIT_MODULE;
 
 #define dao_malloc malloc
 
@@ -321,7 +318,6 @@ static int DaoNetwork_SendComplex( int sockfd, complex16 data )
 	send( sockfd, (char*) &packet, length, 0);
 	return 1;
 }
-#ifdef DAO_WITH_NUMARRAY
 static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 {
 	DaoDataPacket packet;
@@ -386,7 +382,6 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 	send( sockfd, (char*) &packet, offset + length, 0);
 	return 1;
 }
-#endif
 int DaoNetwork_SendExt( int sockfd, DValue *data[], int size )
 {
 	int i;
@@ -404,11 +399,9 @@ int DaoNetwork_SendExt( int sockfd, DValue *data[], int size )
 		case DAO_COMPLEX :
 			DaoNetwork_SendComplex( sockfd, * item.v.c );
 			break;
-#ifdef DAO_WITH_NUMARRAY
 		case DAO_ARRAY :
 			DaoNetwork_SendArray( sockfd, item.v.array );
 			break;
-#endif
 		default : break;
 		}
 	}
@@ -491,7 +484,6 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 				item.v.c = & com;
 				DaoList_PushBack( data, item );
 				break;
-#ifdef DAO_WITH_NUMARRAY
 			case DAO_ARRAY :
 				numtype = inpack->tag;
 				M = ntohl( inpack->dataI1 );
@@ -531,7 +523,6 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 					}
 				}
 				break;
-#endif
 			default : break;
 			}
 			start += size;
@@ -686,4 +677,10 @@ void DaoNetwork_Init( DaoVmSpace *vms, DaoNameSpace *ns )
 
 }
 
-#endif
+int DaoOnLoad( DaoVmSpace *vmSpace, DaoNameSpace *ns )
+{
+	DaoNameSpace_WrapType( ns, & DaoFdSet_Typer );
+	DaoNameSpace_WrapType( ns, & libNetTyper );
+	DaoNetwork_Init( vmSpace, ns );
+	return 0;
+}
