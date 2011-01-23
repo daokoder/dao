@@ -1967,7 +1967,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoVmCodeX **vmcs = self->annotCodes->items.pVmc;
 	DaoVmCodeX *vmc;
 	DaoVmCodeX  vmc2;
-	DaoStream  *stdio = NULL;
+	DaoStream  *stdio = ns->vmSpace->stdStream;
 	DRoutine *rout = NULL, *rout2;
 	DaoClass *hostClass = self->tidHost==DAO_OBJECT ? self->routHost->X.klass:NULL;
 	DaoClass *klass;
@@ -4102,10 +4102,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				if( at->tid != DAO_CLASS && ! ctchecked && ! (opb & DAO_CALL_COROUT) ) ct = ct->X.abtype;
 
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT 
 						&& (tp[0]->X.klass->attribs & DAO_CLS_SYNCHRONOUS) ){
 					ct = DaoNameSpace_MakeType( ns, "future", DAO_FUTURE, NULL, &ct, 1 );
 				}
+#endif
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				if( ct == NULL ) ct = DaoNameSpace_GetType( ns, & nil );
 				/*
@@ -4774,9 +4776,6 @@ ModifyConstant: ec = DTE_CONST_WRONG_MODIFYING; goto ErrorTyping;
 #endif
 
 ErrorTyping:
-				stdio = ns->vmSpace->stdStream;
-				if( stdio ==NULL ) stdio = DaoStream_New();
-
 				vmc = self->annotCodes->items.pVmc[cid];
 				sprintf( char200, "%s:%i,%i,%i", getOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
 
@@ -4874,7 +4873,6 @@ ErrorTyping:
 #endif
 				DaoPrintCallError( errors, stdio );
 				DArray_Delete( errors );
-				if( stdio != ns->vmSpace->stdStream ) DaoStream_Delete( stdio );
 				dao_free( init );
 				dao_free( addCount );
 				tmp = DMap_New(0,0);

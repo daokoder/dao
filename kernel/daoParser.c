@@ -3280,7 +3280,13 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString_Assign( className, value.v.s );
 		if( className->mbs[0] == '@' ){
 			DString_Erase( className, 0, 1 );
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 			klass->attribs |= DAO_CLS_SYNCHRONOUS;
+#else
+			DaoParser_Error3( self, DAO_INVALID_SYNC_CLASS_DEFINITION, start );
+			DString_SetMBS( self->mbs, "synchronous class is disabled" );
+			DaoParser_Error( self, DAO_FEATURE_DISABLED, mbs );
+#endif
 		}
 
 		if( start+1 <= to && tokens[start+1]->name == DTOK_LT ){

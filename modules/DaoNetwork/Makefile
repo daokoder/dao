@@ -7,22 +7,25 @@ LFLAG =
 
 UNAME := $(shell uname)
 
+TARGET = DaoNetwork.so
+
 ifeq ($(UNAME), Linux)
   CFLAG += -DUNIX
   LFLAGLIB = -s -fPIC -shared
 endif
 ifeq ($(UNAME), Darwin)
+  TARGET = DaoNetwork.dylib
   CFLAG += -DUNIX -DMAC_OSX
   LFLAGLIB = -s -fPIC -dynamiclib
 endif
 
-all: DaoNetwork.so
+all: $(TARGET)
 
 daoNetwork.o: daoNetwork.c
 	$(CC) $(CFLAG) $(INCLUDE) daoNetwork.c
 	
-DaoNetwork.so: daoNetwork.o
-	$(CC) $(LFLAGLIB) $(LIB) daoNetwork.o -o DaoNetwork.so
+$(TARGET): daoNetwork.o
+	$(CC) $(LFLAGLIB) $(LIB) daoNetwork.o -o $(TARGET)
 
 bind: clean
 

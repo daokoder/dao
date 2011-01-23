@@ -1,0 +1,43 @@
+
+load DaoNetwork;
+
+class @Server
+{
+	routine Start()
+	{
+#	io.println( network.gethost( '127.0.0.1' ) );
+		io.println( network.gethost( 'localhost' ) );
+		socket = network.bind( 10000 );
+		network.listen( socket );
+		while(1){
+			sockfd = network.accept( socket );
+			message = network.receive( sockfd );
+			io.println( network.getpeername( sockfd ) );
+			io.println( 'received', message );
+			network.send_dao( sockfd, 'TEST', 12.345, [1,2,3] );
+			network.close( sockfd );
+			break;
+		}
+	}
+}
+
+class @Client
+{
+	routine Start()
+	{
+		sockfd = network.connect( 'localhost', 10000 );
+		io.writeln( 'sending' );
+		network.send( sockfd, 'TEST' );
+		message = network.receive_dao( sockfd );
+		io.println( 'received', message );
+		network.close( sockfd );
+	}
+}
+#std.listmeth( network );
+#io.println( network );
+
+server = Server();
+server.Start();
+sys.sleep(1);
+client = Client();
+client.Start();

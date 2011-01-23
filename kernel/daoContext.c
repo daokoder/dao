@@ -4002,6 +4002,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DValue selfpar0 = daoNullValue;
 	DValue *selfpar = & selfpar0;
 	DValue caller = *self->regValues[ vmc->a ];
+	DaoType *retype = self->regTypes[ self->vmc->c ];
 	DRoutine *rout = NULL;
 	DRoutine *rout2 = NULL;
 	DaoFunction *func = NULL;
@@ -4011,7 +4012,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoTuple *tuple;
 	DaoVmCode *vmc2;
 	int initbase = 0;
-	int async = 0;
 	int tail = 0;
 
 	//printf( "DoCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
@@ -4320,10 +4320,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		}
 
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
-		async = code == DVM_MCALL && params[0]->t == DAO_OBJECT;
-		async = async && (params[0]->v.object->myClass->attribs & DAO_CLS_SYNCHRONOUS);
-		if( self->object ) async = async && !DaoObject_ChildOf( self->object->that, params[0]->v.object );
-		if( async ){
+		if( retype && retype->tid == DAO_FUTURE ){
 			DaoNameSpace *ns = self->nameSpace;
 			DaoFuture *future = DaoCallServer_Add( ctx, NULL, NULL );
 			DaoType *retype = ctx->routine->routType->X.abtype;
