@@ -391,6 +391,8 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		break;
 	case DAO_CLASS :
 	case DAO_OBJECT :
+		/* par : class */
+		if( type->X.extra == NULL && self->tid == DAO_CLASS ) return DAO_MT_SUB;
 		if( self->X.extra == type->X.extra ) return DAO_MT_EQ;
 		it1 = self->X.klass->objType;
 		if( type->tid == DAO_INTERFACE ){
@@ -579,6 +581,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( tp ) return DaoType_MatchTo( tp, self, defs );
 		break;
 	case DAO_CLASS :
+		if( self->X.extra == NULL ) return DAO_MT_SUB; /* par : class */
 		if( self->X.klass == value.v.klass ) return DAO_MT_EQ;
 		if( DaoClass_ChildOf( value.v.klass, self->X.extra ) ) return DAO_MT_SUB;
 		break;

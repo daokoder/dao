@@ -2298,6 +2298,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( at->tid == DAO_ENUM && at->mapNames ){
 						ct = at; /* TODO const index */
 					}else{
+						type_source = at;
 						goto NotExist;
 					}
 				}else if( at->tid == DAO_LIST ){
@@ -2508,11 +2509,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				at = type[opa];
 				ak = at->tid ==DAO_CLASS;
 				error = str;
+				type_source = at;
 				if( NoCheckingType( at ) ){
 					/* allow less strict typing: */
 					ct = any;
 				}else if( at->tid == DAO_TYPE ){
 					at = at->nested->items.pType[0];
+					type_source = at;
 					if( at->tid == DAO_ENUM && at->mapNames ){
 						if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist;
 						ct = at;
@@ -2926,6 +2929,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					printf( "field: %i\n", val.t );
 					goto NotMatch;
 				}
+				type_source = ct;
 				str = val.v.s;
 				switch( ct->tid ){
 				case DAO_UDF :
@@ -3794,6 +3798,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				DString_SetMBS( mbs, "__for_iterator__" );
 				ts[0] = dao_type_for_iterator;
 				rout = NULL;
+				type_source = at;
 				switch( at->tid ){
 				case DAO_CLASS :
 				case DAO_OBJECT :
@@ -4843,6 +4848,10 @@ ErrorTyping:
 					DaoStream_WriteMBS( stdio, " --- \" " );
 					DaoTokens_AnnotateCode( self->source, *vmc, mbs, 32 );
 					DaoStream_WriteString( stdio, mbs );
+					if( ec_general == DTE_FIELD_NOT_EXIST ){
+						DaoStream_WriteMBS( stdio, " for " );
+						DaoStream_WriteMBS( stdio, type_source->name->mbs );
+					}
 					DaoStream_WriteMBS( stdio, " \";\n" );
 				}
 				if( ec_specific ){

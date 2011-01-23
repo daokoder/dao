@@ -1251,7 +1251,7 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 		GC_IncRC( tp );
 	}
 	if( id >=0 ) return 1;
-	if( tp->tid == DAO_CLASS || tp->tid == DAO_CDATA ){
+	if( tp->X.extra && (tp->tid == DAO_CLASS || tp->tid == DAO_CDATA) ){
 		DValue val = daoNullClass;
 		val.t = tp->tid;
 		val.v.p = tp->X.extra;
@@ -1595,7 +1595,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 		DString_AppendMBS( mbs, "<any,any>" );
 		DArray_Append( nstd, any );
 		DArray_Append( nstd, any );
-	}else if( tid == DAO_CLASS ){
+	}else if( tid == DAO_CLASS && pb ){
 		/* do not save the abstract type for class and object in namespace,
 		 * because the class may be nested in another class, and different
 		 * class may nest different class with the same name, eg:
