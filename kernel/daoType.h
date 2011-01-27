@@ -86,13 +86,12 @@ struct DaoType
 	DMap         *mapNames;
 	DMap         *interfaces;
 	DaoTypeBase  *typer; /* TYPER of the represented type: built-in or C types */
-	union {
-		DaoBase      *extra;
-		DaoType      *abtype;
-		DaoClass     *klass;
-		DaoCData     *cdata;
-		DaoInterface *inter;
-	}X; /* DaoClass, DaoCData or DaoType for returned/named... */
+	/* For routine type: value.v.type is the returned type;
+	 * For named parameter type: value.v.type is the parameter type;
+	 * For class and object type: value.v.klass is the class object;
+	 * For wrapped C type: value.v.cdata is the DaoCData object;
+	 * For constant as type: value is the constant value. */
+	DValue        value;
 };
 extern DaoType *dao_type_udf;
 extern DaoType *dao_array_any;

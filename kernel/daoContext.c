@@ -1482,7 +1482,7 @@ void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DValue **its, int 
 			val = pair->second;
 		}
 		tp = ct->nested->items.pType[i];
-		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->X.abtype;
+		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->value.v.type;
 		if( DValue_Move( val, tuple->items->data+i, tp ) == 0){
 			DaoContext_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );
 			return;
@@ -1638,7 +1638,7 @@ void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
 				MAP_Insert( ct->mapNames, val2.v.s, i );
 				DString_Append( ct->name, val2.v.s );
 				DString_AppendMBS( ct->name, ":" );
-				DString_Append( ct->name, tp->X.abtype->name );
+				DString_Append( ct->name, tp->value.v.type->name );
 				val = pair->second;
 			}else{
 				DString_Append( ct->name, tp->name );
@@ -3674,7 +3674,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 				tp = DaoNameSpace_GetTypeV( ns, value );
 				if( tsize ){
 					tp2 = ct->nested->items.pType[i];
-					if( tp2->tid == DAO_PAR_NAMED ) tp2 = tp2->X.abtype;
+					if( tp2->tid == DAO_PAR_NAMED ) tp2 = tp2->value.v.type;
 					/* if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion; */
 					value = DaoTypeCast( ctx, tp2, value, cb, lb, sb );
 				}
@@ -3734,6 +3734,10 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		}else{
 			goto FailConversion;
 		}
+		break;
+	case DAO_VALTYPE :
+		if( DValue_Compare( ct->value, dA ) != 0 ) goto FailConversion;
+		dC = dA;
 		break;
 	default : break;
 	}
@@ -4268,7 +4272,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 					DValue_Clear( parbuf+i );
 				}
 				obj = (DaoObject*) DaoObject_MapChildObject( othis, rout->routHost );
-				sup = DaoClass_FindSuper( obj->myClass, rout->routHost->X.extra );
+				sup = DaoClass_FindSuper( obj->myClass, rout->routHost->value.v.p );
 				if( returned.t == DAO_CDATA ){
 					DaoCData *cdata = returned.v.cdata;
 					GC_ShiftRC( cdata, obj->superObject->items.pBase[sup] );
@@ -4323,7 +4327,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		if( retype && retype->tid == DAO_FUTURE ){
 			DaoNameSpace *ns = self->nameSpace;
 			DaoFuture *future = DaoCallServer_Add( ctx, NULL, NULL );
-			DaoType *retype = ctx->routine->routType->X.abtype;
+			DaoType *retype = ctx->routine->routType->value.v.type;
 			DaoType *type = DaoNameSpace_MakeType( ns, "future", DAO_FUTURE, NULL, &retype,1 );
 			GC_ShiftRC( type, future->unitype );
 			future->unitype = type;

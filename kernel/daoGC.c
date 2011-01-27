@@ -761,7 +761,7 @@ void cycRefCountDecreScan()
 		case DAO_TYPE :
 			{
 				DaoType *abtp = (DaoType*) dbase;
-				cycRefCountDecrement( abtp->X.extra );
+				cycRefCountDecrementV( abtp->value );
 				cycRefCountDecrements( abtp->nested );
 				if( abtp->interfaces ){
 					node = DMap_First( abtp->interfaces );
@@ -955,7 +955,7 @@ void markAliveObjects( DaoBase *root )
 		case DAO_TYPE :
 			{
 				DaoType *abtp = (DaoType*) dbase;
-				cycRefCountIncrement( abtp->X.extra );
+				cycRefCountIncrementV( abtp->value );
 				cycRefCountIncrements( abtp->nested );
 				if( abtp->interfaces ){
 					node = DMap_First( abtp->interfaces );
@@ -1152,7 +1152,7 @@ void freeGarbage()
 				{
 					DaoType *abtp = (DaoType*) dbase;
 					directRefCountDecrement( abtp->nested );
-					GC_BREAK_REF( abtp->X.extra );
+					directRefCountDecrementValue( & abtp->value );
 					if( abtp->interfaces ){
 						node = DMap_First( abtp->interfaces );
 						for( ; node != NULL; node = DMap_Next( abtp->interfaces, node ) )
@@ -1614,7 +1614,7 @@ void cycRefCountDecreScan()
 		case DAO_TYPE :
 			{
 				DaoType *abtp = (DaoType*) dbase;
-				cycRefCountDecrement( abtp->X.extra );
+				cycRefCountDecrementV( abtp->value );
 				cycRefCountDecrements( abtp->nested );
 				if( abtp->interfaces ){
 					node = DMap_First( abtp->interfaces );
@@ -1816,7 +1816,7 @@ void cycRefCountIncreScan()
 			case DAO_TYPE :
 				{
 					DaoType *abtp = (DaoType*) dbase;
-					cycRefCountIncrement( abtp->X.extra );
+					cycRefCountIncrementV( abtp->value );
 					cycRefCountIncrements( abtp->nested );
 					if( abtp->interfaces ){
 						node = DMap_First( abtp->interfaces );
@@ -2031,7 +2031,7 @@ void directDecRC()
 				{
 					DaoType *abtp = (DaoType*) dbase;
 					directRefCountDecrement( abtp->nested );
-					GC_BREAK_REF( abtp->X.extra );
+					directRefCountDecrementValue( & abtp->value );
 					if( abtp->interfaces ){
 						node = DMap_First( abtp->interfaces );
 						for( ; node != NULL; node = DMap_Next( abtp->interfaces, node ) )

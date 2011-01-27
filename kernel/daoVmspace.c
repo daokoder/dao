@@ -787,7 +787,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 				int k = abtp->nested->items.pType[i]->tid;
 				char *chars = argValues->items.pString[i]->mbs;
 				if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
-					k = abtp->nested->items.pType[i]->X.abtype->tid;
+					k = abtp->nested->items.pType[i]->value.v.type->tid;
 				if( chars[0] == '+' || chars[0] == '-' ) chars ++;
 				str = argNames->items.pString[i];
 				if( str->size && abtp->mapNames ){
@@ -796,7 +796,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 						int id = node->value.pInt;
 						k = abtp->nested->items.pType[id]->tid;
 						if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
-							k = abtp->nested->items.pType[id]->X.abtype->tid;
+							k = abtp->nested->items.pType[id]->value.v.type->tid;
 					}
 				}
 				if( k >0 && k <= DAO_DOUBLE && DaoToken_IsNumber( chars, 0 ) ){
@@ -1663,7 +1663,7 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 		it = rt->nested->items.pType[i];
 		if( sig->size ) DString_AppendChar( sig, ',' );
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
-			DString_Append( sig, it->X.abtype->name );
+			DString_Append( sig, it->value.v.type->name );
 		}else{
 			DString_Append( sig, it->name );
 		}

@@ -74,10 +74,9 @@ DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name )
 {
 	DValue value = daoNullValue;
 	DNode *node;
-	if( typer->priv->abtype && typer->priv->abtype->X.extra ){
+	if( typer->priv->abtype && typer->priv->abtype->value.v.p ){
 		if( DString_EQ( name, typer->priv->abtype->name ) ){
-			value.v.p = typer->priv->abtype->X.extra;
-			if( value.v.p ) value.t = value.v.p->type;
+			value = typer->priv->abtype->value;
 		}
 	}
 	if( typer->priv->values == NULL ){
@@ -3763,7 +3762,7 @@ static void DaoTupleCore_SetField( DValue *self0, DaoContext *ctx, DString *name
 	int id = DaoTuple_GetIndex( self, ctx, name );
 	if( id <0 ) return;
 	t = type[id];
-	if( t->tid == DAO_PAR_NAMED ) t = t->X.abtype;
+	if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
 	if( DValue_Move( value, self->items->data + id, t ) ==0)
 		DaoContext_RaiseException( ctx, DAO_ERROR, "type not matching" );
 }
@@ -3794,7 +3793,7 @@ static void DaoTupleCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DV
 		int id = DValue_GetInteger( pid );
 		if( id >=0 && id < self->items->size ){
 			t = type[id];
-			if( t->tid == DAO_PAR_NAMED ) t = t->X.abtype;
+			if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
 			if( DValue_Move( value, self->items->data + id, t ) ==0 ) ec = DAO_ERROR_TYPE;
 		}else{
 			ec = DAO_ERROR_INDEX_OUTOFRANGE;
@@ -3877,7 +3876,7 @@ void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos )
 	val = self->items->data + pos;
 	if( self->unitype && self->unitype->nested->size ){
 		DaoType *t = self->unitype->nested->items.pType[pos];
-		if( t->tid == DAO_PAR_NAMED ) t = t->X.abtype;
+		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
 		DValue_Move( it, val, t );
 	}else{
 		DValue_Copy( val, it );
@@ -4267,7 +4266,6 @@ static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 }
 void DaoException_Setup( DaoNameSpace *ns )
 {
-	DValue value = daoNullCData;
 	DaoType *exception = DaoException_WrapType( ns, & dao_Exception_Typer );
 	DaoType *none = DaoException_WrapType( ns, & dao_ExceptionNone_Typer );
 	DaoType *any = DaoException_WrapType( ns, & dao_ExceptionAny_Typer );
@@ -4291,8 +4289,7 @@ void DaoException_Setup( DaoNameSpace *ns )
 	DaoType *evalue = DaoException_WrapType( ns, & dao_ErrorValue_Typer );
 	DaoType *type = DaoException_WrapType( ns, & dao_ErrorType_Typer );
 
-	value.v.cdata = exception->X.cdata;
-	DaoNameSpace_AddConst( ns, exception->name, value, DAO_DATA_PUBLIC );
+	DaoNameSpace_AddConst( ns, exception->name, exception->value, DAO_DATA_PUBLIC );
 	DaoNameSpace_AddType( ns, exception->name, exception );
 
 	DaoNameSpace_SetupValues( ns, & dao_Exception_Typer );
@@ -4319,48 +4316,27 @@ void DaoException_Setup( DaoNameSpace *ns )
 	DaoNameSpace_SetupValues( ns, & dao_WarningValue_Typer );
 
 	/* setup hierarchicy of exception types: */
-	value.v.cdata = none->X.cdata;
-	DMap_Insert( exception->typer->priv->values, none->name, & value );
-	value.v.cdata = any->X.cdata;
-	DMap_Insert( exception->typer->priv->values, any->name, & value );
-	value.v.cdata = warning->X.cdata;
-	DMap_Insert( exception->typer->priv->values, warning->name, & value );
-	value.v.cdata = error->X.cdata;
-	DMap_Insert( exception->typer->priv->values, error->name, & value );
-	value.v.cdata = field->X.cdata;
-	DMap_Insert( error->typer->priv->values, field->name, & value );
-	value.v.cdata = fdnotexist->X.cdata;
-	DMap_Insert( field->typer->priv->values, fdnotexist->name, & value );
-	value.v.cdata = fdnotperm->X.cdata;
-	DMap_Insert( field->typer->priv->values, fdnotperm->name, & value );
-	value.v.cdata = tfloat->X.cdata;
-	DMap_Insert( error->typer->priv->values, tfloat->name, & value );
-	value.v.cdata = fltzero->X.cdata;
-	DMap_Insert( tfloat->typer->priv->values, fltzero->name, & value );
-	value.v.cdata = fltoflow->X.cdata;
-	DMap_Insert( tfloat->typer->priv->values, fltoflow->name, & value );
-	value.v.cdata = fltuflow->X.cdata;
-	DMap_Insert( tfloat->typer->priv->values, fltuflow->name, & value );
-	value.v.cdata = index->X.cdata;
-	DMap_Insert( error->typer->priv->values, index->name, & value );
-	value.v.cdata = idorange->X.cdata;
-	DMap_Insert( index->typer->priv->values, idorange->name, & value );
-	value.v.cdata = key->X.cdata;
-	DMap_Insert( error->typer->priv->values, key->name, & value );
-	value.v.cdata = keynotexist->X.cdata;
-	DMap_Insert( key->typer->priv->values, keynotexist->name, & value );
-	value.v.cdata = param->X.cdata;
-	DMap_Insert( error->typer->priv->values, param->name, & value );
-	value.v.cdata = esyntax->X.cdata;
-	DMap_Insert( error->typer->priv->values, esyntax->name, & value );
-	value.v.cdata = evalue->X.cdata;
-	DMap_Insert( error->typer->priv->values, evalue->name, & value );
-	value.v.cdata = type->X.cdata;
-	DMap_Insert( error->typer->priv->values, type->name, & value );
-	value.v.cdata = wsyntax->X.cdata;
-	DMap_Insert( warning->typer->priv->values, wsyntax->name, & value );
-	value.v.cdata = wvalue->X.cdata;
-	DMap_Insert( warning->typer->priv->values, wvalue->name, & value );
+	DMap_Insert( exception->typer->priv->values, none->name, & none->value );
+	DMap_Insert( exception->typer->priv->values, any->name, & any->value );
+	DMap_Insert( exception->typer->priv->values, warning->name, & warning->value );
+	DMap_Insert( exception->typer->priv->values, error->name, & error->value );
+	DMap_Insert( error->typer->priv->values, field->name, & field->value );
+	DMap_Insert( field->typer->priv->values, fdnotexist->name, & fdnotexist->value );
+	DMap_Insert( field->typer->priv->values, fdnotperm->name, & fdnotperm->value );
+	DMap_Insert( error->typer->priv->values, tfloat->name, & tfloat->value );
+	DMap_Insert( tfloat->typer->priv->values, fltzero->name, & fltzero->value );
+	DMap_Insert( tfloat->typer->priv->values, fltoflow->name, & fltoflow->value );
+	DMap_Insert( tfloat->typer->priv->values, fltuflow->name, & fltuflow->value );
+	DMap_Insert( error->typer->priv->values, index->name, & index->value );
+	DMap_Insert( index->typer->priv->values, idorange->name, & idorange->value );
+	DMap_Insert( error->typer->priv->values, key->name, & key->value );
+	DMap_Insert( key->typer->priv->values, keynotexist->name, & keynotexist->value );
+	DMap_Insert( error->typer->priv->values, param->name, & param->value );
+	DMap_Insert( error->typer->priv->values, esyntax->name, & esyntax->value );
+	DMap_Insert( error->typer->priv->values, evalue->name, & evalue->value );
+	DMap_Insert( error->typer->priv->values, type->name, & type->value );
+	DMap_Insert( warning->typer->priv->values, wsyntax->name, & wsyntax->value );
+	DMap_Insert( warning->typer->priv->values, wvalue->name, & wvalue->value );
 
 	DaoNameSpace_SetupMethods( ns, & dao_Exception_Typer );
 	DaoNameSpace_SetupMethods( ns, & dao_ExceptionNone_Typer );

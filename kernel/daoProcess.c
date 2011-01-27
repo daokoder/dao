@@ -894,7 +894,7 @@ CallEntry:
 	dataVG = routine->nameSpace->varDataTable;
 	typeVG = routine->nameSpace->varTypeTable;
 	if( routine->tidHost == DAO_OBJECT ){
-		host = routine->routHost->X.klass;
+		host = routine->routHost->value.v.klass;
 		dataCK = host->cstDataTable;
 		dataVK = host->glbDataTable;
 		typeVK = host->glbTypeTable;
@@ -2167,7 +2167,7 @@ CallEntry:
 			abtp = NULL;
 			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
 			abtp = tuple->unitype->nested->items.pType[id];
-			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->X.abtype;
+			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->value.v.type;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], tuple->items->data + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
@@ -2184,7 +2184,7 @@ CallEntry:
 			tuple = locVars[ vmc->c ]->v.tuple;
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
-			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->X.abtype;
+			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->value.v.type;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], tuple->items->data + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
@@ -3123,7 +3123,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 	DaoStream_WriteMBS( ss, "Raised by:  " );
 	if( ex->routine->attribs & DAO_ROUT_PARSELF ){
 		DaoType *type = ex->routine->routType->nested->items.pType[0];
-		DaoType_WriteMainName( type->X.abtype, ss );
+		DaoType_WriteMainName( type->value.v.type, ss );
 		DaoStream_WriteMBS( ss, "." );
 	}else if( ex->routine->routHost ){
 		DaoType_WriteMainName( ex->routine->routHost, ss );
@@ -3156,7 +3156,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 		DaoStream_WriteMBS( ss, "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
 			DaoType *type = rout->routType->nested->items.pType[0];
-			DaoType_WriteMainName( type->X.abtype, ss );
+			DaoType_WriteMainName( type->value.v.type, ss );
 			DaoStream_WriteMBS( ss, "." );
 		}else if( rout->routHost ){
 			DaoType_WriteMainName( rout->routHost, ss );

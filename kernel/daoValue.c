@@ -573,6 +573,10 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		DValue_Copy( to, from );
 		DValue_SetType( to, tp );
 		return 1;
+	}else if( tp->tid == DAO_VALTYPE ){
+		if( DValue_Compare( from, tp->value ) !=0 ) return 0;
+		DValue_Copy( to, from );
+		return 1;
 	}
 	to->sub = from.sub;
 	to->cst = to->ndef = 0;
@@ -593,13 +597,13 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			if( dA == NULL ) goto MoveFailed;;
 			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
 		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
-			if( ((DaoObject*)dA)->myClass != tp->X.klass ){
+			if( ((DaoObject*)dA)->myClass != tp->value.v.klass ){
 				dA = DaoObject_MapThisObject( (DaoObject*)dA, tp );
 				i = (dA != NULL);
 			}
 		}else if( from.t == DAO_CLASS && tp->tid == DAO_CLASS && from.v.klass->typeHolders ){
-			if( DMap_Find( from.v.klass->instanceClasses, tp->X.klass->className ) ){
-				from.v.klass = tp->X.klass;
+			if( DMap_Find( from.v.klass->instanceClasses, tp->value.v.klass->className ) ){
+				from.v.klass = tp->value.v.klass;
 				dA = (DaoBase*) from.v.klass;
 				i = DAO_MT_SUB;
 			}
