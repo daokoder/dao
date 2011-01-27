@@ -3572,10 +3572,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ts[0] = type[opa];
 				ts[1] = type[opb];
-				if( csts[opa].cst ) ts[0] = DaoNameSpace_MakeValueType( ns, csts[opa] );
-				if( csts[opb].cst ) ts[1] = DaoNameSpace_MakeValueType( ns, csts[opb] );
+				//if( csts[opa].cst ) ts[0] = DaoNameSpace_MakeValueType( ns, csts[opa] );
+				//if( csts[opb].cst ) ts[1] = DaoNameSpace_MakeValueType( ns, csts[opb] );
 				ct = DaoNameSpace_MakeType( ns, "pair", DAO_PAIR, NULL, ts, 2 );
-				printf( "here: %s %i %i\n", ct->name->mbs, csts[opa].cst, csts[opb].cst );
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				break;

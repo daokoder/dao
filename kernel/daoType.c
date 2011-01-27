@@ -224,6 +224,7 @@ void DaoType_Init()
 		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EQ+2;
 
 		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EQ+1;
+		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EQ+1;
 	}
 	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EQ+1;
 
@@ -506,6 +507,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( self->nested->size ) it1 = self->nested->items.pType[0]->tid;
 		if( self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
 	}
+	if( self->tid == DAO_VALTYPE ){
+		if( DValue_Compare( self->value, value ) ==0 ) return DAO_MT_EQ + 1;
+		return DAO_MT_NOT;
+	}
 	switch( value.t ){
 	case DAO_ENUM :
 		if( value.v.e->type == self ) return DAO_MT_EQ;
@@ -555,6 +560,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		mt = DaoType_MatchValue( self->nested->items.pType[0], value.v.pair->first, defs );
 		mt2 = DaoType_MatchValue( self->nested->items.pType[1], value.v.pair->second, defs );
+		printf( "%i %i\n", mt, mt2 );
 		return mt < mt2 ? mt : mt2;
 		break;
 	case DAO_TUPLE :
@@ -637,9 +643,6 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	case DAO_PAR_DEFAULT :
 		if( value.v.pair->unitype == self ) return DAO_MT_EQ;
 		return DaoType_MatchTo( value.v.pair->unitype, self, defs );
-	case DAO_VALTYPE :
-		if( DValue_Compare( self->value, value ) ==0 ) return DAO_MT_EQ + 1;
-		return DAO_MT_NOT;
 	default :
 		break;
 	}
