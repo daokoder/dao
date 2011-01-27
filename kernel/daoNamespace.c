@@ -1451,9 +1451,9 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		}else if( p->type == DAO_PAIR ){
 			DString_SetMBS( mbs, "pair<" );
 			nested = DArray_New(0);
-			DArray_Append( nested, DaoNameSpace_GetTypeV( self, pair->first ) );
+			DArray_Append( nested, DaoNameSpace_MakeValueType( self, pair->first ) );
 			DString_Append( mbs, nested->items.pType[0]->name );
-			DArray_Append( nested, DaoNameSpace_GetTypeV( self, pair->second ) );
+			DArray_Append( nested, DaoNameSpace_MakeValueType( self, pair->second ) );
 			DString_AppendMBS( mbs, "," );
 			DString_Append( mbs, nested->items.pType[1]->name );
 			DString_AppendMBS( mbs, ">" );
@@ -1847,4 +1847,39 @@ DaoType* DaoNameSpace_SymbolTypeSub( DaoNameSpace *self, DaoType *t1, DaoType *t
 	}
 	DString_Delete( name );
 	return type;
+}
+DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DValue value )
+{
+	DaoType *type;
+	DString *name;
+	if( value.cst ==0 || value.t >= DAO_ARRAY ) return NULL;
+	name = DString_New(1);
+	DValue_GetString( value, name );
+	if( value.t == DAO_STRING ){
+		DString_InsertChar( name, '\'', 0 );
+		DString_AppendChar( name, '\'' );
+	}
+	if( name->size ==0 && value.t ==0 ) DString_SetMBS( name, "null" );
+	type = DaoNameSpace_MakeType( self, name->mbs, DAO_VALTYPE, 0,0,0 );
+	DValue_Copy( & type->value, value );
+	DString_Delete( name );
+	return type;
+}
+DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DValue first, DValue second )
+{
+	DaoType *tp[2];
+	first.cst = second.cst = 1;
+	tp[0] = DaoNameSpace_MakeValueType( self, first );
+	tp[1] = DaoNameSpace_MakeValueType( self, second );
+	return DaoNameSpace_MakeType( self, "pair", DAO_PAIR, NULL, tp, 2 );
+}
+DaoType* DaoNameSpace_MakePairType2( DaoNameSpace *self, DaoType *first, DaoType *second )
+{
+	DaoType *types[2] = {NULL, NULL};
+	DaoType *nullType = DaoNameSpace_MakeType( self, "null", DAO_VALTYPE, 0, 0, 0 );
+	if( first == NULL ) first = nullType;
+	if( second == NULL ) second = nullType;
+	types[0] = DaoNameSpace_MakeType( self, "first", DAO_PAR_NAMED, (DaoBase*)first, 0, 0 );
+	types[1] = DaoNameSpace_MakeType( self, "second", DAO_PAR_NAMED, (DaoBase*)second, 0, 0 );
+	return DaoNameSpace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
 }

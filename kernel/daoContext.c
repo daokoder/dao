@@ -1602,15 +1602,12 @@ void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc )
 void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoType *tp[2];
+	DaoNameSpace *ns = self->nameSpace;
 	DValue dA = *self->regValues[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
 	DaoPair *pair = DaoPair_New( dA, dB );
 	pair->unitype = self->regTypes[ vmc->c ];
-	if( pair->unitype == NULL ){
-		tp[0] = DaoNameSpace_GetTypeV( self->nameSpace, pair->first );
-		tp[1] = DaoNameSpace_GetTypeV( self->nameSpace, pair->second );
-		pair->unitype = DaoNameSpace_MakeType( self->nameSpace, "pair", DAO_PAIR, NULL, tp, 2 );
-	}
+	if( pair->unitype == NULL ) pair->unitype = DaoNameSpace_MakePairType( ns, dA, dB );
 	GC_IncRC( pair->unitype );
 	DaoContext_SetData( self, vmc->c, (DaoBase*) pair );
 }

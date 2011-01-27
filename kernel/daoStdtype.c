@@ -3682,14 +3682,37 @@ void DaoPair_Delete( DaoPair *self )
 	GC_DecRC( self->unitype );
 	dao_free( self );
 }
-static void DaoPair_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+static void DaoPair_GetField( DValue *self0, DaoContext *ctx, DString *name )
 {
 	DaoPair *self = self0->v.pair;
-	DaoStream_WriteMBS( stream, "( " );
-	DValue_Print( self->first, ctx, stream, cycData );
-	DaoStream_WriteMBS( stream, ", " );
-	DValue_Print( self->second, ctx, stream, cycData );
-	DaoStream_WriteMBS( stream, " )" );
+	if( strcmp( name->mbs, "first" ) ==0 ){
+		DaoContext_PutReference( ctx, & self->first );
+	}else if( strcmp( name->mbs, "second" ) ==0 ){
+		DaoContext_PutReference( ctx, & self->second );
+	}else{
+		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid field" );
+		return;
+	}
+}
+static void DaoPair_SetField( DValue *self0, DaoContext *ctx, DString *name, DValue value )
+{
+	DaoPair *self = self0->v.pair;
+	DaoType *t, **type = self->unitype->nested->items.pType;
+	if( strcmp( name->mbs, "first" ) ==0 ){
+		t = type[0];
+		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
+		if( DValue_Move( value, & self->first, t ) ==0 ) goto TypeNotMatching;
+	}else if( strcmp( name->mbs, "second" ) ==0 ){
+		t = type[1];
+		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
+		if( DValue_Move( value, & self->second, t ) ==0 ) goto TypeNotMatching;
+	}else{
+		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid field" );
+		return;
+	}
+	return;
+TypeNotMatching:
+	DaoContext_RaiseException( ctx, DAO_ERROR, "type not matching" );
 }
 static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {
@@ -3703,13 +3726,56 @@ static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 	DValue_Copy( & copy.v.pair->second, self->second );
 	return copy;
 }
+static void DaoPair_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+{
+	DaoPair *self = self0->v.pair;
+	int ec = 0;
+	if( pid.t == DAO_NIL ){
+		DValue copy = DaoPair_Copy( self0, ctx, NULL );
+		DaoContext_PutValue( ctx, copy );
+	}else if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
+		int id = DValue_GetInteger( pid );
+		switch( id ){
+		case 0 : DaoContext_PutReference( ctx, & self->first ); break;
+		case 1 : DaoContext_PutReference( ctx, & self->second ); break;
+		default: ec = DAO_ERROR_INDEX_OUTOFRANGE;
+		}
+	}
+	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
+}
+static void DaoPair_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+{
+	DaoPair *self = self0->v.pair;
+	DaoType *t = NULL, **type = self->unitype->nested->items.pType;
+	int ec = 0;
+	if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
+		int id = DValue_GetInteger( pid );
+		if( id ==0 || id ==1 ) t = type[id];
+		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
+		switch( id ){
+		case 0 : DValue_Move( value, & self->first, t ); break;
+		case 1 : DValue_Move( value, & self->second, t ); break;
+		default: ec = DAO_ERROR_INDEX_OUTOFRANGE;
+		}
+	}
+	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
+}
+static void DaoPair_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+{
+	DaoPair *self = self0->v.pair;
+	DaoStream_WriteMBS( stream, "( " );
+	DValue_Print( self->first, ctx, stream, cycData );
+	DaoStream_WriteMBS( stream, ", " );
+	DValue_Print( self->second, ctx, stream, cycData );
+	DaoStream_WriteMBS( stream, " )" );
+}
 static DaoTypeCore pairCore=
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_GetField,
-	DaoBase_SetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
+	DaoPair_GetField,
+	DaoPair_SetField,
+	DaoPair_GetItem,
+	DaoPair_SetItem,
 	DaoPair_Print,
 	DaoPair_Copy
 };

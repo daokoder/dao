@@ -1025,22 +1025,6 @@ static DaoType* DaoType_FindType( DString *name, DaoNameSpace *ns, DaoClass *kla
 }
 static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst );
 static DValue DaoParser_GetVariable( DaoParser *self, int reg );
-static DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DValue value )
-{
-	DaoType *type;
-	DString *name;
-	if( value.cst ==0 || value.t >= DAO_ARRAY ) return NULL;
-	name = DString_New(1);
-	DValue_GetString( value, name );
-	if( value.t == DAO_STRING ){
-		DString_InsertChar( name, '\'', 0 );
-		DString_AppendChar( name, '\'' );
-	}
-	type = DaoNameSpace_MakeType( self, name->mbs, DAO_VALTYPE, 0,0,0 );
-	DValue_Copy( & type->value, value );
-	DString_Delete( name );
-	return type;
-}
 static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 {
 	DValue value;
@@ -1291,6 +1275,10 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 			break;
 		case DKEY_MAP  :
 			tid = DAO_MAP;
+			if( count2 != 2 ) goto InvalidTypeForm;
+			break;
+		case DKEY_PAIR  :
+			tid = DAO_PAIR;
 			if( count2 != 2 ) goto InvalidTypeForm;
 			break;
 		case DKEY_TUPLE :
@@ -4065,6 +4053,8 @@ DecoratorError:
 					v1 = DaoParser_GetVariable( self, c1 );
 					v2 = DaoParser_GetVariable( self, c2 );
 					pair = DaoPair_New( v1, v2 );
+					pair->unitype = DaoNameSpace_MakePairType( myNS, v1, v2 );
+					GC_IncRC( pair->unitype );
 					cst = DaoRoutine_AddConst( routine, pair );
 				}
 				if( ! cst ){
@@ -4839,9 +4829,12 @@ int DaoParser_ParseRoutine( DaoParser *self )
 }
 static int DaoParser_NullValue( DaoParser *self, int start )
 {
-	if( self->nullValue >= 0 ) return self->nullValue;
+	int cst;
+	/* can not reuse the data, because it might not be executed! TODO remove */
+	/* if( self->nullValue >= 0 ) return self->nullValue; */
 	self->nullValue = self->locRegCount;
-	DaoParser_AddCode( self, DVM_DATA, DAO_NIL, 0, self->nullValue, start,start+1,0 );
+	cst = DaoRoutine_AddConstValue( self->routine, daoNullValue );
+	DaoParser_AddCode( self, DVM_GETCL, 0, cst, self->nullValue, start,start+1,0 );
 	DaoParser_PushRegister( self );
 	return self->nullValue;
 }
@@ -4856,9 +4849,12 @@ static int DaoParser_IntegerZero( DaoParser *self, int start )
 }
 static int DaoParser_IntegerOne( DaoParser *self, int start )
 {
+	int cst;
+	DValue one = {DAO_INTEGER,0,0,0,{1}};
 	/* if( self->integerOne >= 0 ) return self->integerOne; */
 	self->integerOne = self->locRegCount;
-	DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 1, self->integerOne, start,start+1,0 );
+	cst = DaoRoutine_AddConstValue( self->routine, one );
+	DaoParser_AddCode( self, DVM_GETCL, 0, cst, self->integerOne, start,start+1,0 );
 	DaoParser_PushRegister( self );
 	return self->integerOne;
 }
@@ -6973,6 +6969,7 @@ extern DValue DaoParseNumber( DaoParser *self, DaoToken *tok, DLong *bigint )
 static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
+	DaoNameSpace *ns = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	DString *str = tokens[start]->string;
 	DValue value = daoNullValue;
@@ -7020,21 +7017,21 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 		varReg = LOOKUP_BIND_LC( MAP_Find( self->allConsts, str )->value.pInt );
 		*cst = varReg;
 	}else if( tki == DTOK_ID_SYMBOL ){
-		DaoType *type = DaoNameSpace_FindType( self->nameSpace, str );
+		DaoType *type = DaoNameSpace_FindType( ns, str );
 		if( type == NULL ){
 			type = DaoType_New( str->mbs, DAO_ENUM, NULL, NULL );
 			type->mapNames = DMap_New(D_STRING,0);
 			DString_Assign( self->mbs, str );
 			DString_Erase( self->mbs, 0, 1 );
 			DMap_Insert( type->mapNames, self->mbs, (void*)0 );
-			DaoNameSpace_AddType( self->nameSpace, str, type );
+			DaoNameSpace_AddType( ns, str, type );
 		}
 		value = daoNullValue;
 		value.t = DAO_ENUM;
 		value.v.e = self->denum;
 		self->denum->value = 0;
 		DEnum_SetType( self->denum, type );
-		varReg = DaoNameSpace_AddConst( self->nameSpace, str, value, DAO_DATA_PUBLIC );
+		varReg = DaoNameSpace_AddConst( ns, str, value, DAO_DATA_PUBLIC );
 		if( varReg <0 ) return -1;
 		*cst = varReg;
 	}else if( tki == DTOK_DOLLAR ){
@@ -7043,6 +7040,8 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 	}else if( tki == DTOK_COLON ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			DaoPair *pair = DaoPair_New( daoNullValue, daoNullValue );
+			pair->unitype = DaoNameSpace_MakePairType( ns, daoNullValue, daoNullValue );
+			GC_IncRC( pair->unitype );
 			pair->trait |= DAO_DATA_CONST;
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConst( (DRoutine*)routine, (DaoBase*)pair );

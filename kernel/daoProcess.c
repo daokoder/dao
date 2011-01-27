@@ -921,6 +921,7 @@ CallEntry:
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 		}OPNEXT()
 		OPCASE( DATA ){
+			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 			switch( vmc->a ){
 			case DAO_NIL : *locVars[ vmc->c ] = daoNullValue; break;
 			case DAO_INTEGER : locVars[ vmc->c ]->v.i = vmc->b; break;
