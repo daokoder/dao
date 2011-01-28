@@ -26,14 +26,16 @@ enum DaoOpcode
 	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
 	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
 	DVM_GETI ,  /* GET Item(s) : C = A[B]; */
+	DVM_GETMI , /* GET Item(s) : C = A[A+1, ..., A+B]; */
 	DVM_GETF ,  /* GET Field : C = A.B */
 	DVM_GETMF , /* GET Meta Field: C = A->B */
 	DVM_SETVL , /* set local variables: C::B = A, C the same as A in DVM_GETVL */
 	DVM_SETVO , /* set object variables: C::B = A, C the same as A in DVM_GETVO */
 	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
 	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
-	DVM_SETI , /* SET Item(s) : C[B] = A;  */
-	DVM_SETF , /* SET Field : C.B = A */
+	DVM_SETI ,  /* SET Item(s) : C[B] = A;  */
+	DVM_SETMI , /* SET Item(s) : C[C+1, ..., C+B] = A;  */
+	DVM_SETF ,  /* SET Field : C.B = A */
 	DVM_SETMF , /* SET Meta Field : C->B = A */
 	DVM_LOAD ,
 	DVM_CAST , /* convert A to C if they have different types; */

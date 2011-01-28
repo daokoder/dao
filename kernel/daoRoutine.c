@@ -1254,6 +1254,7 @@ static const char vmcTyping[][7] =
 	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVK */
 	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVG */
 	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETI */
+	{      0,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETMI */
 	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF */
 	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETMF */
 	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVL */
@@ -1261,6 +1262,7 @@ static const char vmcTyping[][7] =
 	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVK */
 	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVG */
 	{ OT_ABC,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETI */
+	{      0,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETMI */
 	{ OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETF */
 	{ OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETMF */
 	{ OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_LOAD */
@@ -2517,6 +2519,19 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( ct, type[opc], defs, 0);
 				break;
 			}
+		case DVM_GETMI :
+			{
+				csts[opc].cst = csts[opa].cst;
+				lastcomp = opc;
+				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+				init[opc] = 1;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
+				ct = any;
+				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
+				AssertTypeMatching( ct, type[opc], defs, 0);
+				break;
+			}
 		case DVM_GETF :
 			{
 				int ak = 0;
@@ -2956,6 +2971,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					break;
 				default : break;
 				}
+				break;
+			}
+		case DVM_SETMI :
+			{
 				break;
 			}
 		case DVM_GETMF :

@@ -131,10 +131,10 @@ TypeNotMatching:
 InvalidField:
 	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD, name->mbs );
 }
-static void DNS_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DNS_GetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N )
 {
 }
-static void DNS_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DNS_SetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N, DValue value )
 {
 }
 static DaoTypeCore nsCore =

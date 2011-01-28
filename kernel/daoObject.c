@@ -25,9 +25,8 @@
 #include"daoNumtype.h"
 
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
-		DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue par[], int N, int ret )
+		DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue *ps[], int N, int ret )
 {
-	DValue *ps[ DAO_MAX_PARAM+1 ];
 	DValue value = daoNullValue;
 	DValue selfpar = daoNullObject;
 	int i, errcode = DaoObject_GetData( self, name, & value, thisObject, NULL );
@@ -36,7 +35,6 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 	if( value.t == DAO_ROUTINE ){
 		DaoRoutine *rout = value.v.routine;
 		DaoContext *ctxNew = DaoVmProcess_MakeContext( vmp, rout );
-		for(i=0; i<=N; i++) ps[i] = par + i;
 		GC_ShiftRC( self, ctxNew->object );
 		ctxNew->object = self;
 		DaoContext_Init( ctxNew, rout );
@@ -56,13 +54,13 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 		return DAO_ERROR_PARAM;
 	}else if( value.t == DAO_FUNCTION ){
 		DaoFunction *func = value.v.func;
-		DValue p[ DAO_MAX_PARAM+1 ];
-		p[0] = daoNullValue;
-		memcpy( p+1, par, N*sizeof(DValue) );
-		p[0].v.object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
-		p[0].t = p[0].v.object ? p[0].v.object->type : 0;
-		for(i=0; i<=N; i++) ps[i] = p + i;
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, &selfpar, ps, N+1, DVM_MCALL );
+		DValue *ps2[ DAO_MAX_PARAM+1 ];
+		DValue self0 = daoNullObject;
+		memcpy( ps2+1, ps, N*sizeof(DValue*) );
+		ps2[0] = & self0;
+		self0.v.object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
+		self0.t = self0.v.object ? self0.v.object->type : 0;
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, &selfpar, ps2, N+1, DVM_MCALL );
 		DaoFunction_SimpleCall( func, ctx, ps, N+1 );
 	}
 	return 0;
@@ -70,9 +68,10 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 static void DaoObject_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
 	DaoObject *self = self0->v.object;
-	DValue pars = daoNullStream;
+	DValue vs = daoNullStream;
+	DValue *pars = & vs;
 	int ec;
-	pars.v.stream = stream;
+	vs.v.stream = stream;
 	DString_SetMBS( ctx->process->mbstring, "_PRINT" );
 	ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
 			ctx->process->mbstring, ctx, & pars, 1, -1 );
@@ -104,6 +103,7 @@ static void DaoObject_Core_GetField( DValue *self0, DaoContext *ctx, DString *na
 static void DaoObject_Core_SetField( DValue *self0, DaoContext *ctx, DString *name, DValue value )
 {
 	DaoObject *self = self0->v.object;
+	DValue *par = & value;
 	int ec = DaoObject_SetData( self, name, value, ctx->object );
 	int ec2 = ec;
 	if( ec ){
@@ -111,36 +111,30 @@ static void DaoObject_Core_SetField( DValue *self0, DaoContext *ctx, DString *na
 		DString_Append( ctx->process->mbstring, name );
 		DString_AppendMBS( ctx->process->mbstring, "=" );
 		ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-				ctx->process->mbstring, ctx, & value, 1, -1 );
+				ctx->process->mbstring, ctx, & par, 1, -1 );
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, DString_GetMBS( name ) );
 }
-static void DaoObject_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoObject_GetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N )
 {
 	DaoObject *self = self0->v.object;
 	int rc = 0;
 	DString_SetMBS( ctx->process->mbstring, "[]" );
-	if( pid.t == DAO_TUPLE && pid.v.tuple->unitype != dao_type_for_iterator ){
-		rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-				ctx->process->mbstring, ctx, pid.v.tuple->items->data, 
-				pid.v.tuple->items->size, -100 );
-	}else{
-		rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-				ctx->process->mbstring, ctx, & pid, 1, -100 );
-	}
+	rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
+			ctx->process->mbstring, ctx, ids, N, -100 );
 	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( ctx->process->mbstring ) );
 }
-static void DaoObject_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoObject_SetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N, DValue value )
 {
 	DaoObject *self = self0->v.object;
-	DValue par[ DAO_MAX_PARAM ];
-	int rc, N = 1;
-	par[0] = pid;
-	par[1] = value;
+	DValue *ps[ DAO_MAX_PARAM ];
+	int rc;
+	memcpy( ps, ids, N*sizeof(DValue*) );
+	ps[N] = & value;
 	DString_SetMBS( ctx->process->mbstring, "[]=" );
 	rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-			ctx->process->mbstring, ctx, par, N+1, -1 );
+			ctx->process->mbstring, ctx, ps, N+1, -1 );
 	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( ctx->process->mbstring ) );
 }
 extern void DaoCopyValues( DValue *copy, DValue *data, int N, DaoContext *ctx, DMap *cycData );

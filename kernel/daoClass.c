@@ -65,10 +65,10 @@ static void DaoClass_SetField( DValue *self0, DaoContext *ctx, DString *name, DV
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD, "not exist" );
 	}
 }
-static void DaoClass_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoClass_GetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N )
 {
 }
-static void DaoClass_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoClass_SetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N, DValue value )
 {
 }
 static DValue DaoClass_Copy(  DValue *self, DaoContext *ctx, DMap *cycData )

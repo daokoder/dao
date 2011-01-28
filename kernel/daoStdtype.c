@@ -663,25 +663,40 @@ void DaoBase_SafeSetField( DValue *dbase, DaoContext *ctx, DString *name, DValue
 	}
 	DaoBase_SetField( dbase, ctx, name, value );
 }
-void DaoBase_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+void DaoBase_GetItem( DValue *self0, DaoContext *ctx, DValue *pid[], int N )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self0 );
 	DaoFunction *func = NULL;
 	DValue *p[ DAO_MAX_PARAM ];
+	memcpy( p + 1, pid, N*sizeof(DValue*) );
 	p[0] = self0;
-	p[1] = & pid;
 	DString_SetMBS( ctx->process->mbstring, "[]" );
 	func = DaoFindFunction( typer, ctx->process->mbstring );
 	if( func )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, 1, 0 );
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, N, 0 );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, 2 );
+	DaoFunction_SimpleCall( func, ctx, p, N+1 );
 }
-void DaoBase_SetItem( DValue *dbase, DaoContext *ctx, DValue pid, DValue value )
+void DaoBase_SetItem( DValue *self0, DaoContext *ctx, DValue *pid[], int N, DValue value )
 {
+	DaoTypeBase *typer = DValue_GetTyper( *self0 );
+	DaoFunction *func = NULL;
+	DValue *p[ DAO_MAX_PARAM ];
+	memcpy( p + 1, pid, N*sizeof(DValue*) );
+	p[0] = self0;
+	p[N+1] = & value;
+	DString_SetMBS( ctx->process->mbstring, "[]=" );
+	func = DaoFindFunction( typer, ctx->process->mbstring );
+	if( func )
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, N+1, 0 );
+	if( func == NULL ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
+		return;
+	}
+	DaoFunction_SimpleCall( func, ctx, p, N+2 );
 }
 
 /**/
@@ -694,7 +709,7 @@ static void DaoNumber_Print( DValue *self, DaoContext *ctx, DaoStream *stream, D
 	else
 		DaoStream_WriteFloat( stream, self->v.d );
 }
-static void DaoNumber_GetItem( DValue *self, DaoContext *ctx, DValue pid )
+static void DaoNumber_GetItem1( DValue *self, DaoContext *ctx, DValue pid )
 {
 	uint_t bits = (uint_t) DValue_GetDouble( *self );
 	size_t size = 8*sizeof(uint_t);
@@ -718,7 +733,7 @@ static void DaoNumber_GetItem( DValue *self, DaoContext *ctx, DValue pid )
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
-static void DaoNumber_SetItem( DValue *self, DaoContext *ctx, DValue pid, DValue value )
+static void DaoNumber_SetItem1( DValue *self, DaoContext *ctx, DValue pid, DValue value )
 {
 	uint_t bits = (uint_t) DValue_GetDouble( *self );
 	uint_t val = (uint_t) DValue_GetDouble( value );
@@ -738,6 +753,22 @@ static void DaoNumber_SetItem( DValue *self, DaoContext *ctx, DValue pid, DValue
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 	self->v.i = bits;
+}
+static void DaoNumber_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	switch( N ){
+	case 0 : DaoNumber_GetItem1( self, ctx, daoNullValue ); break;
+	case 1 : DaoNumber_GetItem1( self, ctx, *ids[0] ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
+}
+static void DaoNumber_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	switch( N ){
+	case 0 : DaoNumber_SetItem1( self, ctx, daoNullValue, value ); break;
+	case 1 : DaoNumber_SetItem1( self, ctx, *ids[0], value ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
 }
 
 static DaoTypeCore numberCore=
@@ -763,7 +794,7 @@ static void DaoString_Print( DValue *self, DaoContext *ctx, DaoStream *stream, D
 	DaoStream_WriteString( stream, self->v.s );
 	if( stream->useQuote ) DaoStream_WriteChar( stream, '\"' );
 }
-static void DaoString_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoString_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DString *self = self0->v.s;
 	size_t size = DString_Size( self );
@@ -812,7 +843,7 @@ static void DaoString_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	default : break;
 	}
 }
-static void DaoString_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoString_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DString *self = self0->v.s;
 	size_t size = DString_Size( self );
@@ -868,6 +899,22 @@ static void DaoString_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValu
 			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 		default : break;
 		}
+	}
+}
+static void DaoString_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	switch( N ){
+	case 0 : DaoString_GetItem1( self, ctx, daoNullValue ); break;
+	case 1 : DaoString_GetItem1( self, ctx, *ids[0] ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
+}
+static void DaoString_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	switch( N ){
+	case 0 : DaoString_SetItem1( self, ctx, daoNullValue, value ); break;
+	case 1 : DaoString_SetItem1( self, ctx, *ids[0], value ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
 static DaoTypeCore stringCore=
@@ -1872,7 +1919,7 @@ static void DaoListCore_Print( DValue *self0, DaoContext *ctx, DaoStream *stream
 	DaoStream_WriteMBS( stream, rb );
 	if( cycData ) MAP_Erase( cycData, self );
 }
-static void DaoListCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoListCore_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoList *res, *self = self0->v.list;
 	const size_t size = self->items->size;
@@ -1928,7 +1975,7 @@ static void DaoListCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	default : break;
 	}
 }
-static void DaoListCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoListCore_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoList *self = self0->v.list;
 	const size_t size = self->items->size;
@@ -1966,6 +2013,22 @@ static void DaoListCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DVa
 		DArray_Delete( ids );
 		break;
 	default : break;
+	}
+}
+static void DaoListCore_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	switch( N ){
+	case 0 : DaoListCore_GetItem1( self, ctx, daoNullValue ); break;
+	case 1 : DaoListCore_GetItem1( self, ctx, *ids[0] ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
+}
+static void DaoListCore_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	switch( N ){
+	case 0 : DaoListCore_SetItem1( self, ctx, daoNullValue, value ); break;
+	case 1 : DaoListCore_SetItem1( self, ctx, *ids[0], value ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
 void DaoCopyValues( DValue *copy, DValue *data, int N, DaoContext *ctx, DMap *cycData )
@@ -2748,7 +2811,7 @@ static void DaoMap_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMa
 	DaoStream_WriteMBS( stream, " }" );
 	if( cycData ) MAP_Erase( cycData, self );
 }
-static void DaoMap_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoMap_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoMap *self = self0->v.map;
 	if( pid.t == DAO_PAIR ){
@@ -2782,7 +2845,7 @@ static void DaoMap_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	}
 }
 extern DaoType *dao_map_any;
-static void DaoMap_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoMap_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoMap *self = self0->v.map;
 	DaoType *tp = self->unitype;
@@ -2819,6 +2882,22 @@ static void DaoMap_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue v
 		}else if( c ==2 ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "value not matching" );
 		}
+	}
+}
+static void DaoMap_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	switch( N ){
+	case 0 : DaoMap_GetItem1( self, ctx, daoNullValue ); break;
+	case 1 : DaoMap_GetItem1( self, ctx, *ids[0] ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
+}
+static void DaoMap_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	switch( N ){
+	case 0 : DaoMap_SetItem1( self, ctx, daoNullValue, value ); break;
+	case 1 : DaoMap_SetItem1( self, ctx, *ids[0], value ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
 static DValue DaoMap_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
@@ -3409,7 +3488,7 @@ static void DaoCData_SetField( DValue *self, DaoContext *ctx, DString *name, DVa
 	}
 	DaoFunction_SimpleCall( func, ctx, p, 2 );
 }
-static void DaoCData_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoCData_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self0 );
 	DaoCData *self = self0->v.cdata;
@@ -3447,7 +3526,7 @@ static void DaoCData_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 		DaoFunction_SimpleCall( func, ctx, p, 2 );
 	}
 }
-static void DaoCData_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoCData_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self0 );
 	DaoFunction *func = NULL;
@@ -3470,6 +3549,58 @@ static void DaoCData_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue
 		return;
 	}
 	DaoFunction_SimpleCall( func, ctx, p, 3 );
+}
+static void DaoCData_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	DaoTypeBase *typer = DValue_GetTyper( *self );
+	DaoFunction *func = NULL;
+	DValue *p[ DAO_MAX_PARAM ];
+	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		return;
+	}
+	if( N == 1 ){
+		DaoCData_GetItem1( self, ctx, *ids[0] );
+		return;
+	}
+	memcpy( p + 1, ids, N*sizeof(DValue*) );
+	p[0] = self;
+	DString_SetMBS( ctx->process->mbstring, "[]" );
+	func = DaoFindFunction( typer, ctx->process->mbstring );
+	if( func )
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self, p+1, N, 0 );
+	if( func == NULL ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
+		return;
+	}
+	DaoFunction_SimpleCall( func, ctx, p, N + 1 );
+}
+static void DaoCData_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	DaoTypeBase *typer = DValue_GetTyper( *self );
+	DaoFunction *func = NULL;
+	DValue *p[ DAO_MAX_PARAM ];
+	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		return;
+	}
+	if( N == 1 ){
+		DaoCData_SetItem1( self, ctx, *ids[0], value );
+		return;
+	}
+	DString_SetMBS( ctx->process->mbstring, "[]=" );
+	func = DaoFindFunction( typer, ctx->process->mbstring );
+	if( func ){
+		memcpy( p + 1, ids, N*sizeof(DValue*) );
+		p[0] = self;
+		p[N+1] = & value;
+		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self, p+1, N+1, 0 );
+	}
+	if( func == NULL ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
+		return;
+	}
+	DaoFunction_SimpleCall( func, ctx, p, N+2 );
 }
 
 DaoCDataCore* DaoCDataCore_New()
@@ -3726,7 +3857,7 @@ static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 	DValue_Copy( & copy.v.pair->second, self->second );
 	return copy;
 }
-static void DaoPair_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoPair_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoPair *self = self0->v.pair;
 	int ec = 0;
@@ -3743,7 +3874,7 @@ static void DaoPair_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
 }
-static void DaoPair_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoPair_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoPair *self = self0->v.pair;
 	DaoType *t = NULL, **type = self->unitype->nested->items.pType;
@@ -3759,6 +3890,22 @@ static void DaoPair_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue 
 		}
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
+}
+static void DaoPair_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	switch( N ){
+	case 0 : DaoPair_GetItem1( self, ctx, daoNullValue ); break;
+	case 1 : DaoPair_GetItem1( self, ctx, *ids[0] ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
+}
+static void DaoPair_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	switch( N ){
+	case 0 : DaoPair_SetItem1( self, ctx, daoNullValue, value ); break;
+	case 1 : DaoPair_SetItem1( self, ctx, *ids[0], value ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
 }
 static void DaoPair_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
@@ -3832,7 +3979,7 @@ static void DaoTupleCore_SetField( DValue *self0, DaoContext *ctx, DString *name
 	if( DValue_Move( value, self->items->data + id, t ) ==0)
 		DaoContext_RaiseException( ctx, DAO_ERROR, "type not matching" );
 }
-static void DaoTupleCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoTupleCore_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoTuple *self = self0->v.tuple;
 	int ec = DAO_ERROR_INDEX;
@@ -3850,7 +3997,7 @@ static void DaoTupleCore_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
 }
-static void DaoTupleCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
+static void DaoTupleCore_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoTuple *self = self0->v.tuple;
 	DaoType *t, **type = self->unitype->nested->items.pType;
@@ -3868,6 +4015,22 @@ static void DaoTupleCore_SetItem( DValue *self0, DaoContext *ctx, DValue pid, DV
 		ec = DAO_ERROR_INDEX;
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
+}
+static void DaoTupleCore_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
+{
+	switch( N ){
+	case 0 : DaoTupleCore_GetItem1( self, ctx, daoNullValue ); break;
+	case 1 : DaoTupleCore_GetItem1( self, ctx, *ids[0] ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
+}
+static void DaoTupleCore_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	switch( N ){
+	case 0 : DaoTupleCore_SetItem1( self, ctx, daoNullValue, value ); break;
+	case 1 : DaoTupleCore_SetItem1( self, ctx, *ids[0], value ); break;
+	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
+	}
 }
 static DValue DaoTupleCore_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {

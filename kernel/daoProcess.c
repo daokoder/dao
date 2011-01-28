@@ -491,7 +491,6 @@ struct DaoExtraParam
 
 typedef int (*DaoJitFunc)( DValue *locVars, DaoExtraParam *extra );
 
-void DaoArray_SetItem( DValue *va, DaoContext *ctx, DValue pid, DValue value, int op );
 void DaoContext_AdjustCodes( DaoContext *self, int options );
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t );
 void DValue_SimpleMove2( DValue from, DValue *to );
@@ -580,9 +579,9 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
 		&& LAB_GETVL , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
-		&& LAB_GETI  , && LAB_GETF  , && LAB_GETMF ,
+		&& LAB_GETI  , && LAB_GETMI , && LAB_GETF  , && LAB_GETMF ,
 		&& LAB_SETVL , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
-		&& LAB_SETI  , && LAB_SETF , && LAB_SETMF ,
+		&& LAB_SETI  , && LAB_SETMI , && LAB_SETF , && LAB_SETMF ,
 		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
 		&& LAB_NOT , && LAB_UNMS , && LAB_BITREV ,
 		&& LAB_ADD , && LAB_SUB ,
@@ -982,7 +981,8 @@ CallEntry:
 		OPCASE( GETVG ){
 			locVars[ vmc->c ] = dataVG->items.pVarray[vmc->a]->data + vmc->b;
 		}OPNEXT()
-		OPCASE( GETI ){
+		OPCASE( GETI )
+		OPCASE( GETMI ){
 			DaoContext_DoGetItem( topCtx, vmc );
 			if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 			goto CheckException;
@@ -1019,7 +1019,8 @@ CallEntry:
 			vC = dataVG->items.pVarray[vmc->c]->data + vmc->b;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
-		OPCASE( SETI ){
+		OPCASE( SETI )
+		OPCASE( SETMI ){
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 			DaoContext_DoSetItem( topCtx, vmc );
 			goto CheckException;
@@ -3229,9 +3230,13 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 	case DVM_TUPLE :
 		DaoContext_DoTuple( ctx, vmc ); break;
 	case DVM_GETI :
+	case DVM_GETMI :
+		DaoContext_DoGetItem( ctx, vmc ); break;
 	case DVM_GETF :
 		DaoContext_DoGetField( ctx, vmc ); break;
 	case DVM_SETI :
+	case DVM_SETMI :
+		DaoContext_DoSetItem( ctx, vmc ); break;
 	case DVM_SETF :
 		DaoContext_DoSetField( ctx, vmc ); break;
 	case DVM_LIST :

@@ -6462,25 +6462,26 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 						DaoParser_AddCode( self, DVM_GETI, regLast, reg, regC, left, start, rbrack );
 					}
 					regLast = regC;
-					if( regC == self->locRegCount )
-						DaoParser_PushRegister( self );
+					if( regC == self->locRegCount ) DaoParser_PushRegister( self );
 				}
 			}else{
-				int regEn;
+				int regEn = 0;
+				if( regLast != self->locRegCount - 1 ){
+					regEn = self->locRegCount;
+					DaoParser_AddCode( self, DVM_LOAD, regLast, 0, regEn, start, 0, rbrack );
+					regLast = self->locRegCount;
+					DaoParser_PushRegister( self );
+				}
 				regEn = DaoParser_MakeArithArray( self,
 						start+1, rbrack-1, & N, & isC, DTOK_COMMA, 0, NULL, 0 );
 				if( regEn < 0 ) return -1;
-				regC = self->locRegCount;
-				DaoParser_AddCode( self, DVM_TUPLE, regEn, N, regC, start, 0, rbrack );
-				DaoParser_PushRegister( self );
-				regEn = regC;
 
 				regC = self->locRegCount;
 				if( regFix >=0 && rbrack == right ) regC = regFix;
 				if( tokens[start-1]->type == DTOK_IDENTIFIER ){
-					DaoParser_AddCode( self, DVM_GETI, regLast, regEn, regC, start-1, start, rbrack );
+					DaoParser_AddCode( self, DVM_GETMI, regLast, N, regC, start-1, start, rbrack );
 				}else{
-					DaoParser_AddCode( self, DVM_GETI, regLast, regEn, regC, left, start, rbrack );
+					DaoParser_AddCode( self, DVM_GETMI, regLast, regEn, regC, left, start, rbrack );
 				}
 				regLast = regC;
 				if( regC == self->locRegCount )
@@ -7146,6 +7147,8 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
 			vmc->c = regB;
 			if( vmc->code == DVM_GETI )
 				vmc->code = DVM_SETI;
+			else if( vmc->code == DVM_GETMI )
+				vmc->code = DVM_SETMI;
 			else if( vmc->code == DVM_GETF )
 				vmc->code = DVM_SETF;
 			else if( vmc->code == DVM_GETMF )
@@ -7567,6 +7570,8 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 				}
 				return self->vmcLast->a;
 			}else if( tkn == DTOK_RSB ){
+				int dvmget = DVM_GETI;
+				int dvmset = DVM_SETI;
 				int lb, bal = -1;
 				for(lb=pos-2; lb>start; lb--){
 					if( tokens[lb]->name == DTOK_LSB ){
@@ -7581,25 +7586,30 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 				if( reg1 < 0 ) goto ParsingError;
 				if( DaoParser_FindOpenToken( self, DTOK_COMMA, lb+1, pos-2, 0 ) < 0 ){
 					reg2 = DaoParser_MakeArithTree( self, lb+1, pos-2, & c2, -1, state );
+					if( reg2 < 0 ) goto ParsingError;
 				}else{
-					int regEn, N;
-					regEn = DaoParser_MakeArithArray( self, lb+1, pos-2, & N, & c2, DTOK_COMMA, 0, NULL, 0 );
+					int regEn;
+					dvmget = DVM_GETMI;
+					dvmset = DVM_SETMI;
+					if( reg1 != self->locRegCount - 1 ){
+						regEn = self->locRegCount;
+						DaoParser_AddCode( self, DVM_LOAD, reg1, 0, regEn, start, 0, lb-1 );
+						reg1 = self->locRegCount;
+						DaoParser_PushRegister( self );
+					}
+					regEn = DaoParser_MakeArithArray( self, lb+1, pos-2, & reg2, & c2, DTOK_COMMA, 0, NULL, 0 );
 					if( regEn < 0 ) goto ParsingError;
-					reg2 = self->locRegCount;
-					DaoParser_AddCode( self, DVM_TUPLE, regEn, N, reg2, start, mid, end );
-					DaoParser_PushRegister( self );
 				}
-				if( reg2 < 0 ) goto ParsingError;
 				reg3 = DaoParser_MakeArithTree( self, pos+1, end, & c2, regC, state );
 				if( reg3 < 0 ) goto ParsingError;
 				if( optype == DAO_OPER_ASSN ){
-					DaoParser_AddCode( self, DVM_SETI, reg3, reg2, reg1, start, mid, end );
+					DaoParser_AddCode( self, dvmset, reg3, reg2, reg1, start, mid, end );
 				}else{
 					regC = self->locRegCount;
 					if( regFix >= 0 ) regC = regFix;
-					DaoParser_AddCode( self, DVM_GETI, reg1, reg2, regC, start, 0, mid-1 );
+					DaoParser_AddCode( self, dvmget, reg1, reg2, regC, start, 0, mid-1 );
 					DaoParser_AddCode( self, -code, regC, reg3, regC, start, mid, end );
-					DaoParser_AddCode( self, DVM_SETI, regC, reg2, reg1, start, mid, end );
+					DaoParser_AddCode( self, dvmset, regC, reg2, reg1, start, mid, end );
 					if( regC == self->locRegCount ) DaoParser_PushRegister( self );
 				}
 				return self->vmcLast->a;

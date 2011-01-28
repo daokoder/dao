@@ -65,14 +65,14 @@ static void DaoType_GetField( DValue *self0, DaoContext *ctx, DString *name )
 ErrorNotExist:
 	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, DString_GetMBS( name ) );
 }
-static void DaoType_GetItem( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoType_GetItem( DValue *self0, DaoContext *ctx, DValue *ids[], int N )
 {
 	DaoType *self = (DaoType*) self0->v.p;
 	DEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
 	DNode *node;
-	if( self->mapNames == NULL || pid.t != DAO_INTEGER ) goto ErrorNotExist;
+	if( self->mapNames == NULL || N != 1 || ids[0]->t != DAO_INTEGER ) goto ErrorNotExist;
 	for(node=DMap_First(self->mapNames);node;node=DMap_Next(self->mapNames,node)){
-		if( node->value.pInt == pid.v.i ){
+		if( node->value.pInt == ids[0]->v.i ){
 			GC_ShiftRC( self, denum->type );
 			denum->type = self;
 			denum->value = node->value.pInt;

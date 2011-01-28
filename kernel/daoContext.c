@@ -701,7 +701,7 @@ DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc )
 	return self->codes + vmc->b;
 }
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
-		DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue par[], int N, int ret );
+		DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue *par[], int N, int ret );
 void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue *va = self->regValues[ vmc->a ];
@@ -727,7 +727,7 @@ void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
 	p[1] = vc;
 	DString_SetMBS( name, "__for_iterator__" );
 	if( va->t == DAO_OBJECT ){
-		rc = DaoObject_InvokeMethod( va->v.object, NULL, self->process, name, self, vc, 1, vmc->c );
+		rc = DaoObject_InvokeMethod( va->v.object, NULL, self->process, name, self, & vc, 1, vmc->c );
 	}else{
 		func = DaoFindFunction( typer, name );
 		if( func )
@@ -1702,7 +1702,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 {
 	int id;
-	DValue q;
+	DValue q = daoNullValue;
 	DValue *p = self->regValues[ vmc->a ];
 	DaoTypeCore *tc = DValue_GetTyper( * p )->priv;
 	DaoType *ct = self->regTypes[ vmc->c ];
@@ -1712,7 +1712,7 @@ void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 		DaoContext_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
 		return;
 	}
-	q = *self->regValues[ vmc->b ];
+	if( vmc->code == DVM_GETI ) q = *self->regValues[ vmc->b ];
 	if( p->t == DAO_LIST && ( q.t >= DAO_INTEGER && q.t <= DAO_DOUBLE ) ){
 		DaoList *list = p->v.list;
 		id = DValue_GetInteger( q );
@@ -1739,8 +1739,10 @@ void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 		}
 		DaoMoveAC( self, q, self->regValues[ vmc->c ], ct );
 #endif
-	}else{
-		tc->GetItem( p, self, q );
+	}else if( vmc->code == DVM_GETI ){
+		tc->GetItem( p, self, & self->regValues[ vmc->b ], 1 );
+	}else if( vmc->code == DVM_GETMI ){
+		tc->GetItem( p, self, self->regValues + vmc->a + 1, vmc->b );
 	}
 }
 void DaoContext_DoGetField( DaoContext *self, DaoVmCode *vmc )
@@ -1812,7 +1814,7 @@ void DaoContext_DoGetMetaField( DaoContext *self, DaoVmCode *vmc )
 }
 void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 {
-	DValue q, v;
+	DValue v, q = daoNullValue;
 	DValue *p = self->regValues[ vmc->c ];
 	DaoTypeCore *tc = DValue_GetTyper( * p )->priv;
 	int id;
@@ -1824,7 +1826,7 @@ void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 		return;
 	}
 
-	q = *self->regValues[ vmc->b ];
+	if( vmc->code == DVM_SETI ) q = *self->regValues[ vmc->b ];
 	if( p->t == DAO_LIST && q.t == DAO_INTEGER ){
 		DaoList_SetItem( p->v.list, v, q.v.i );
 	}else if( p->t == DAO_LIST && q.t == DAO_FLOAT ){
@@ -1850,8 +1852,10 @@ void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 		default : break;
 		}
 #endif
-	}else{
-		tc->SetItem( p, self, q, v );
+	}else if( vmc->code == DVM_SETI ){
+		tc->SetItem( p, self, & self->regValues[ vmc->b ], 1, v );
+	}else if( vmc->code == DVM_SETMI ){
+		tc->SetItem( p, self, self->regValues + vmc->c + 1, vmc->b, v );
 	}
 }
 void DaoContext_DoSetField( DaoContext *self, DaoVmCode *vmc )

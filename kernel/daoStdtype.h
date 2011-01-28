@@ -42,8 +42,8 @@ struct DaoTypeCore
 
 	void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
 	void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
-	void (*GetItem) ( DValue *self, DaoContext *ctx, DValue pid );
-	void (*SetItem) ( DValue *self, DaoContext *ctx, DValue pid, DValue value );
+	void (*GetItem) ( DValue *self, DaoContext *ctx, DValue *pid[], int N );
+	void (*SetItem) ( DValue *self, DaoContext *ctx, DValue *pid[], int N, DValue value );
 
 	void (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 	DValue (*Copy)(  DValue *self, DaoContext *ctx, DMap *cycData );
@@ -67,8 +67,8 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *type );
 
 void DaoBase_GetField( DValue *self, DaoContext *ctx, DString *name );
 void DaoBase_SetField( DValue *self, DaoContext *ctx, DString *name, DValue value );
-void DaoBase_GetItem( DValue *self, DaoContext *ctx, DValue pid );
-void DaoBase_SetItem( DValue *self, DaoContext *ctx, DValue pid, DValue value );
+void DaoBase_GetItem( DValue *self, DaoContext *ctx, DValue *pid[], int N );
+void DaoBase_SetItem( DValue *self, DaoContext *ctx, DValue *pid[], int N, DValue value );
 void DaoBase_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData );
 
@@ -136,8 +136,8 @@ struct DaoCDataCore
 
 	void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
 	void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
-	void (*GetItem)(  DValue *self, DaoContext *ctx, DValue pid );
-	void (*SetItem)(  DValue *self, DaoContext *ctx, DValue pid, DValue value );
+	void (*GetItem)(  DValue *self, DaoContext *ctx, DValue *pid[], int N );
+	void (*SetItem)(  DValue *self, DaoContext *ctx, DValue *pid[], int N, DValue value );
 
 	void   (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 	DValue (*Copy)(  DValue *self, DaoContext *ctx, DMap *cycData );
