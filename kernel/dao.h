@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20110108
+#define DAO_H_VERSION 20110128
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -358,6 +358,12 @@ struct DaoTypeBase
 	/* typers for super types, to create c type hierarchy;
 	 * mainly useful for wrapping c++ libraries. */
 	DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
+
+	/* function(s) to cast a C/C++ type to one of its parent type:
+	 * usually they should be set to NULL, but for wrapping C++ class
+	 * with virtual methods, it is necessary to provide casting function(s)
+	 * in the following form:
+	 *   void* cast_Sub_to_Base( void *data ) { return (Base*)(Sub*)data; } */
 	FuncPtrCast    casts[ DAO_MAX_CDATA_SUPER ];
 
 	/* function to free data:
@@ -584,6 +590,7 @@ struct DaoAPI
 	DaoCData* (*DaoCData_New)( DaoTypeBase *typer, void *data );
 	DaoCData* (*DaoCData_Wrap)( DaoTypeBase *typer, void *data );
 	int    (*DaoCData_IsType)( DaoCData *self, DaoTypeBase *typer );
+	int    (*DaoCData_OwnData)( DaoCData *self );
 	void   (*DaoCData_SetExtReference)( DaoCData *self, int bl );
 	void   (*DaoCData_SetData)( DaoCData *self, void *data );
 	void   (*DaoCData_SetBuffer)( DaoCData *self, void *data, size_t size );
@@ -887,6 +894,9 @@ DAO_DLL DaoCData* DaoCData_New( DaoTypeBase *typer, void *data );
 /* data will not be deleted with the new DaoCData */
 DAO_DLL DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data );
 DAO_DLL int    DaoCData_IsType( DaoCData *self, DaoTypeBase *typer );
+/* return 1 if the data will be deleted with the DaoCData, otherwise 0 */
+DAO_DLL int    DaoCData_OwnData( DaoCData *self );
+/* tell daovm that self->data has external reference */
 DAO_DLL void   DaoCData_SetExtReference( DaoCData *self, int bl );
 DAO_DLL void   DaoCData_SetData( DaoCData *self, void *data );
 DAO_DLL void   DaoCData_SetBuffer( DaoCData *self, void *data, size_t size );
@@ -1195,6 +1205,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoCData_New( typer, data )  __dao.DaoCData_New( typer, data )
 #define DaoCData_Wrap( typer, data )  __dao.DaoCData_Wrap( typer, data )
 #define DaoCData_IsType( self, typer )  __dao.DaoCData_IsType( self, typer )
+#define DaoCData_OwnData( self )  __dao.DaoCData_OwnData( self )
 #define DaoCData_SetExtReference( self, bl ) __dao.DaoCData_SetExtReference( self, bl )
 #define DaoCData_SetData( self, data ) __dao.DaoCData_SetData( self, data )
 #define DaoCData_SetBuffer( self, data, size ) __dao.DaoCData_SetBuffer( self, data, size )

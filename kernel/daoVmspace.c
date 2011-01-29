@@ -1894,6 +1894,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoCData_New = DaoCData_New;
 	api->DaoCData_Wrap = DaoCData_Wrap;
 	api->DaoCData_IsType = DaoCData_IsType;
+	api->DaoCData_OwnData = DaoCData_OwnData;
 	api->DaoCData_SetExtReference = DaoCData_SetExtReference;
 	api->DaoCData_SetData = DaoCData_SetData;
 	api->DaoCData_SetBuffer = DaoCData_SetBuffer;

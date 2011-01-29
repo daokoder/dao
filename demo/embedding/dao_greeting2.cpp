@@ -75,11 +75,13 @@ static DaoNumItem dao_Greeting_Nums[] =
   { NULL, 0, 0 }
 };
 static void dao_Greeting_Greeting( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_Greeting_DoGreeting__Greeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_DoGreeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_PrintMessage( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_SetMessage( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_TestNull( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_Greeting_VirtWithDefault__Greeting( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting_Meths[] = 
@@ -121,8 +123,19 @@ static void dao_Greeting_Greeting( DaoContext *_ctx, DValue *_p[], int _n )
 	DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );
 }
 /* greeting.h */
+static void dao_Greeting_DoGreeting__Greeting( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
+  char* name= (char*) DString_GetMBS( _p[1]->v.s );
+  self->Greeting::DoGreeting( name );
+}
+/* greeting.h */
 static void dao_Greeting_DoGreeting( DaoContext *_ctx, DValue *_p[], int _n )
 {
+  if( DaoCData_OwnData( _p[0]->v.cdata ) ){
+    dao_Greeting_DoGreeting__Greeting( _ctx, _p, _n );
+    return;
+  }
   Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
   char* name= (char*) DString_GetMBS( _p[1]->v.s );
   self->DoGreeting( name );
@@ -131,14 +144,14 @@ static void dao_Greeting_DoGreeting( DaoContext *_ctx, DValue *_p[], int _n )
 static void dao_Greeting_PrintMessage( DaoContext *_ctx, DValue *_p[], int _n )
 {
   Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
-  self->PrintMessage(  );
+  self->Greeting::PrintMessage(  );
 }
 /* greeting.h */
 static void dao_Greeting_SetMessage( DaoContext *_ctx, DValue *_p[], int _n )
 {
   Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
   char* msg= (char*) DString_GetMBS( _p[1]->v.s );
-  self->SetMessage( msg );
+  self->Greeting::SetMessage( msg );
 }
 /* greeting.h */
 static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n )
@@ -146,19 +159,31 @@ static void dao_Greeting_TestGreeting( DaoContext *_ctx, DValue *_p[], int _n )
   Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
   Greeting* g= (Greeting*) DaoCData_CastData( _p[1]->v.cdata, dao_Greeting_Typer );
   char* name= (char*) DString_GetMBS( _p[2]->v.s );
-  self->TestGreeting( g, name );
+  self->Greeting::TestGreeting( g, name );
 }
 /* greeting.h */
 static void dao_Greeting_TestNull( DaoContext *_ctx, DValue *_p[], int _n )
 {
   Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
   Greeting::Null* _cp0= (Greeting::Null*) DaoCData_CastData( _p[1]->v.cdata, dao_Greeting_Null_Typer );
-  Greeting::Null _TestNull = self->TestNull( *_cp0 );
+  Greeting::Null _TestNull = self->Greeting::TestNull( *_cp0 );
   DaoContext_PutCData( _ctx, (void*)new Greeting::Null( _TestNull ), dao_Greeting_Null_Typer );
+}
+/* greeting.h */
+static void dao_Greeting_VirtWithDefault__Greeting( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
+  Greeting* g= (Greeting*) DaoCData_CastData( _p[1]->v.cdata, dao_Greeting_Typer );
+  if(_n<=1) self->Greeting::VirtWithDefault(  );
+  else self->Greeting::VirtWithDefault( *g );
 }
 /* greeting.h */
 static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DValue *_p[], int _n )
 {
+  if( DaoCData_OwnData( _p[0]->v.cdata ) ){
+    dao_Greeting_VirtWithDefault__Greeting( _ctx, _p, _n );
+    return;
+  }
   Greeting* self= (Greeting*) DaoCData_CastData( _p[0]->v.cdata, dao_Greeting_Typer );
   Greeting* g= (Greeting*) DaoCData_CastData( _p[1]->v.cdata, dao_Greeting_Typer );
   if(_n<=1) self->VirtWithDefault(  );
@@ -300,7 +325,7 @@ static void dao_Test_Test( DaoContext *_ctx, DValue *_p[], int _n )
 static void dao_Test_Print( DaoContext *_ctx, DValue *_p[], int _n )
 {
   CxxNS::Test* self= (CxxNS::Test*) DaoCData_CastData( _p[0]->v.cdata, dao_Test_Typer );
-  self->Print(  );
+  self->Test::Print(  );
 }
 
 /*  greeting.h */
@@ -347,7 +372,7 @@ static void dao_otto_otto( DaoContext *_ctx, DValue *_p[], int _n )
 static void dao_otto_geta( DaoContext *_ctx, DValue *_p[], int _n )
 {
   otto* self= (otto*) DaoCData_CastData( _p[0]->v.cdata, dao_otto_Typer );
-  int _geta = self->geta(  );
+  int _geta = self->otto::geta(  );
   DaoContext_PutInteger( _ctx, (int) _geta );
 }
 /* greeting.h */

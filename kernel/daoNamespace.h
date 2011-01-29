@@ -73,7 +73,8 @@ struct DaoNameSpace
 
 	DaoCModule *cmodule;
 
-	DMap   *macros; /* <DString*,DaoMacro*> */
+	DMap   *localMacros; /* <DString*,DaoMacro*> */
+	DMap   *globalMacros; /* <DString*,DaoMacro*> */
 	DMap   *abstypes; /* <DString*,DaoType*> */
 
 	DaoType *udfType1;
@@ -117,7 +118,8 @@ void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImpor
 
 void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );
 
-void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro );
+void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro, int local );
+DaoMacro* DaoNameSpace_FindMacro( DaoNameSpace *self, DString *name );
 
 DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name );
 int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );

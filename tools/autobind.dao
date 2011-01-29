@@ -2885,10 +2885,11 @@ routine Function::Generate()
 		for situation:
 			o = Klass::New(); -- instance of derived class
 			o.Meth(); -- virtual method
-
-		if( $FUNC_PROTECTED not in attribs and $FUNC_PURE_VIRTUAL not in attribs )
-			ss += hostType + '::';
 #}
+
+		if( $FUNC_PROTECTED not in attribs and $FUNC_PURE_VIRTUAL not in attribs ){
+			ss += hostType + '::';
+		}
 
 		kvmap[ 'self' ] = ss;
 		kvmap[ 'parlist' ] = cxxCallParamV;
@@ -2961,6 +2962,11 @@ routine Function::Generate()
 	if( retype.daotype.size() ==0 || hostType == cxxName ) kvmap2[ 'return' ] ='';
 	#if( hostType == cxxName ) kvmap2[ 'dao2cxx' ] =''; # XXX 
 	cxxWrapper = cxx_wrap.expand( kvmap2 );
+	if( cxxWrapper.find( 'self->' + hostType + '::' ) >=0 ){
+		daoProtoCodes.change( ', (%s*) \"(%w+%b())', '__' + hostType + ',%1\"' + hostType + '::%2' );
+		cxxProtoCodes.change( '_(%w+)(%b())', '_%1__' + hostType + '%2' );
+		cxxWrapper.change( '({{static void }}%w+)_(%w+)(%b())', '%1_%2__' + hostType + '%3' );
+	}
 	
 	kvmap3 = { 'retype'=>retype.cxxtype, 'type'=>hostType, 'cxxname'=>cxxName,
 	'parlist'=>cxxProtoParam, 'count'=>(string)parlist.size(), 'nils'=>nils, 
@@ -4235,6 +4241,36 @@ routine UserType::Generate()
 		for( meth in methods ){
 			if( meth.excluded ) skip;
 			if( $FUNC_PRIVATE not in meth.attribs and $FUNC_PROTECTED not in meth.attribs ){
+#{
+				s1 = '';
+				s2 = '';
+				s3 = '';
+				if( meth.cxxWrapper.find( 'self->' + name + '::' ) >=0 ){
+					s1 = meth.daoProtoCodes;
+					s2 = meth.cxxProtoCodes + ';\n';
+					s3 = meth.cxxWrapper
+					s1.change( '__' + name + ', (%s*) \"' + name + '::(%w+%b())', ',%1\"%2' );
+					s2.change( '__' + name + '(%b())', '%1' );
+					s3.change( '__' + name + '(%b()%s*%b{})', '%1' );
+					s3.replace( 'self->' + name + '::', 'self->' );
+				}
+#}
+				if( meth.cxxWrapper.find( 'self->' + name + '::' ) >=0 ){
+					if( $FUNC_VIRTUAL in meth.attribs ){
+						#dao_meths += meth.daoProtoCodes;
+						meth_decls += meth.cxxProtoCodes + ';\n';
+						meth_codes += meth.cxxWrapper;
+						meth.daoProtoCodes.change( '__' + name + ', (%s*) \"' + name + '::(%w+%b())', ',%1\"%2' );
+						meth.cxxProtoCodes.change( '__' + name + '(%b())', '%1' );
+						meth.cxxWrapper.change( '%s ((%w+)__' + name + ')(%b()%s* %{)', 
+								' %2%3\n  if( DaoCData_OwnData( _p[0]->v.cdata ) ){\n    %1( _ctx, _p, _n );\n    return;\n  }' );
+						meth.cxxWrapper.replace( 'self->' + name + '::', 'self->' );
+					}else{
+						meth.daoProtoCodes.change( '__' + name + ', (%s*) \"' + name + '::(%w+%b())', ',%1\"%2' );
+						meth.cxxProtoCodes.change( '__' + name + '(%b())', '%1' );
+						meth.cxxWrapper.change( '__' + name + '(%b()%s*%b{})', '%1' );
+					}
+				}
 				dao_meths += meth.daoProtoCodes;
 				meth_decls += meth.cxxProtoCodes + ';\n';
 				meth_codes += meth.cxxWrapper;

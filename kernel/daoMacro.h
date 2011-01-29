@@ -83,7 +83,7 @@ struct DaoMacro
 DaoMacro* DaoMacro_New();
 void DaoMacro_Delete( DaoMacro *self );
 
-int DaoParser_ParseMacro( DaoParser *self, int start );
+int DaoParser_ParseMacro( DaoParser *self, int start, int local );
 int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int tag );
 
 #endif

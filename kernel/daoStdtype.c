@@ -3363,6 +3363,10 @@ int DaoCData_IsType( DaoCData *self, DaoTypeBase *typer )
 {
 	return DaoCData_ChildOf( self->typer, typer );
 }
+int DaoCData_OwnData( DaoCData *self )
+{
+	return (self->attribs & DAO_CDATA_FREE) != 0;
+}
 void DaoCData_SetExtReference( DaoCData *self, int bl )
 {
 	if( (bl && self->extref) || (bl==0 && self->extref ==0) ) return;

@@ -422,7 +422,7 @@ static void DMacroGroup_FindVariables( DMacroGroup *self )
 	   printf( "%p %s\n", self, self->variables->items.pString[j]->mbs );
 	 */
 }
-int DaoParser_ParseMacro( DaoParser *self, int start )
+int DaoParser_ParseMacro( DaoParser *self, int start, int local )
 {
 	DaoMacro *macro;
 	DaoToken **toks = self->tokens->items.pToken;
@@ -496,7 +496,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	DMacroGroup_FindVariables( macro->macroMatch );
 	DArray_Clear( stops );
 	DMacroGroup_SetStop( macro->macroApply, stops );
-	DaoNameSpace_AddMacro( self->nameSpace, toks[start+2]->string, macro );
+	DaoNameSpace_AddMacro( self->nameSpace, toks[start+2]->string, macro, local );
 	DArray_Delete( stops );
 	DMap_Delete( markers );
 	return rb2;

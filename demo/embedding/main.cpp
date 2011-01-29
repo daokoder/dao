@@ -42,7 +42,8 @@ const char* dao_source =
 "}\n"
 "\n"
 "obj2 = DaoGreeting()\n"
-"obj2.DoGreeting( 'bob' )\n"
+"obj2.DoGreeting( 'bob' );\n"
+"((Greeting)obj2).DoGreeting( 'bob' )\n"
 "\n"
 "\n"  // Check if the re-implemented virtual method will be called. 
 "obj.TestGreeting( obj2, 'alice' )\n"

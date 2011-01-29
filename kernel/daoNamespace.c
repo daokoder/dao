@@ -781,7 +781,8 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	self->definedRoutines  = DArray_New(0);
 	self->nsLoaded  = DArray_New(0);
 	self->cmodule = DaoCModule_New();
-	self->macros   = DHash_New(D_STRING,0);
+	self->localMacros   = DHash_New(D_STRING,0);
+	self->globalMacros   = DHash_New(D_STRING,0);
 	self->abstypes = DHash_New(D_STRING,0);
 	self->argParams = DaoList_New();
 	self->time = 0;
@@ -856,8 +857,10 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DMap *values;
 	DNode *it;
 	int i, j;
-	it = DMap_First( self->macros );
-	for( ; it !=NULL; it = DMap_Next(self->macros, it) ) GC_DecRC( it->value.pBase );
+	it = DMap_First( self->localMacros );
+	for( ; it !=NULL; it = DMap_Next(self->localMacros, it) ) GC_DecRC( it->value.pBase );
+	it = DMap_First( self->globalMacros );
+	for( ; it !=NULL; it = DMap_Next(self->globalMacros, it) ) GC_DecRC( it->value.pBase );
 	it = DMap_First( self->abstypes );
 	for( ; it !=NULL; it = DMap_Next(self->abstypes, it) ) GC_DecRC( it->value.pBase );
 	if( self->cmodule ){
@@ -890,7 +893,8 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DArray_Delete( self->nsLoaded );
 	DArray_Delete( self->mainRoutines );
 	DArray_Delete( self->definedRoutines );
-	DMap_Delete( self->macros );
+	DMap_Delete( self->localMacros );
+	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );
 	DString_Delete( self->file );
 	DString_Delete( self->path );
@@ -1125,12 +1129,13 @@ DaoNameSpace* DaoNameSpace_FindNameSpace( DaoNameSpace *self, DString *name )
 	if( value.t == DAO_NAMESPACE ) return value.v.ns;
 	return NULL;
 }
-void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro )
+void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro, int local )
 {
-	DNode *node = MAP_Find( self->macros, name );
+	DMap *macros = local ? self->localMacros : self->globalMacros;
+	DNode *node = MAP_Find( macros, name );
 	if( node == NULL ){
 		GC_IncRC( macro );
-		MAP_Insert( self->macros, name, macro );
+		MAP_Insert( macros, name, macro );
 	}else{
 		DaoMacro *m2 = (DaoMacro*) node->value.pVoid;
 		GC_IncRC( macro );
@@ -1223,6 +1228,36 @@ void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImpor
 		DaoNameSpace_AddType( self, node->key.pString, node->value.pType );
 
 	DArray_Delete( names );
+}
+
+static DaoMacro* DaoNameSpace_FindMacro2( DaoNameSpace *self, DString *name )
+{
+	int i, n = self->parents->size;
+	DNode *node = MAP_Find( self->globalMacros, name );
+	if( node ) return (DaoMacro*) node->value.pVoid;
+	for(i=0; i<n; i++){
+		DaoNameSpace *ns = self->parents->items.pNS[i];
+		DaoMacro *macro = DaoNameSpace_FindMacro2( ns, name );
+		if( macro ) return macro;
+	}
+	return NULL;
+}
+DaoMacro* DaoNameSpace_FindMacro( DaoNameSpace *self, DString *name )
+{
+	int i, n = self->parents->size;
+	DNode *node = MAP_Find( self->localMacros, name );
+	if( node ) return (DaoMacro*) node->value.pVoid;
+	node = MAP_Find( self->globalMacros, name );
+	if( node ) return (DaoMacro*) node->value.pVoid;
+	for(i=0; i<n; i++){
+		DaoNameSpace *ns = self->parents->items.pNS[i];
+		DaoMacro *macro = DaoNameSpace_FindMacro2( ns, name );
+		if( macro == NULL ) continue;
+		MAP_Insert( self->globalMacros, name, macro );
+		GC_IncRC( macro );
+		return macro;
+	}
+	return NULL;
 }
 
 DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name )
@@ -1711,7 +1746,8 @@ DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto,
 	func->nameSpace = self;
 	if( ! DaoToken_Tokenize( defparser->tokens, proto, 0, 0, 0 ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;
-	if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER ) key = 0;
+	if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER 
+		&& defparser->tokens->items.pToken[1]->type == DTOK_LB ) key = 0;
 	DArray_Clear( defparser->partoks );
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
