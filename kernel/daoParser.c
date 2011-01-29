@@ -1023,13 +1023,13 @@ static DaoType* DaoType_FindType( DString *name, DaoNameSpace *ns, DaoClass *kla
 	if( ns ) return DaoNameSpace_FindType( ns, name );
 	return NULL;
 }
-static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst );
+static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst, int regFix );
 static DValue DaoParser_GetVariable( DaoParser *self, int reg );
 static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 {
 	DValue value;
 	int cst = 0;
-	DaoParser_MakeArithLeaf( self, start, & cst );
+	DaoParser_MakeArithLeaf( self, start, & cst, -1 );
 	if( cst ==0 ) return NULL;
 	value = DaoParser_GetVariable( self, cst );
 	return DaoNameSpace_MakeValueType( self->nameSpace, value );
@@ -2049,6 +2049,8 @@ int DaoParser_ParseParams( DaoParser *self )
 	while( i < rb ){
 		int comma;
 		int regCount = self->locRegCount;
+		DaoInode *front = defparser->vmcFirst;
+		DaoInode *back = defparser->vmcLast;
 
 		m1 = i;
 		m2 = rb;
@@ -2182,6 +2184,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		k = pname->size >0 ? pname->mbs[pname->size-1] : 0;
 		if( k !='<' && k != '(' ) DString_AppendMBS( pname, "," );
 		DString_AppendMBS( pname, abstype->name->mbs );
+		DaoParser_PopCodes( defparser, front, back );
 	}
 	i = rb + 1;
 	if( i <= end && tokens[i]->name == DKEY_CONST ){
@@ -5190,7 +5193,7 @@ int DaoParser_PostParsing( DaoParser *self )
 	if( notide ){
 		k = -1;
 		for( j=0; j<self->vmCodes->size; j++){
-			if( vmCodes[j]->code > DVM_GETCL ){
+			if( vmCodes[j]->code != DVM_GETCL ){
 				k = j;
 				break;
 			}
@@ -6135,7 +6138,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 					regLast = DaoParser_GetNormRegister( self, i, start+2, 0, start+2 );
 					start += 2;
 				}else{ /* for operator .field, i will be <0 */
-					regLast = DaoParser_MakeArithLeaf( self, start, cst );
+					regLast = DaoParser_MakeArithLeaf( self, start, cst, -1 );
 				}
 			}else if( tki == DKEY_YIELD ){
 				if( start+1 > right || tokens[start+1]->name != DTOK_LB ){
@@ -6227,7 +6230,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 				}
 				regLast = DaoParser_GetNormRegister( self, regLast, start, 0, start );
 			}else{
-				regLast = DaoParser_MakeArithLeaf( self, start, cst );
+				regLast = DaoParser_MakeArithLeaf( self, start, cst, -1 );
 			}
 			if( regLast < 0 ) return -1;
 			start ++;
@@ -6967,7 +6970,7 @@ extern DValue DaoParseNumber( DaoParser *self, DaoToken *tok, DLong *bigint )
 	}
 	return value;
 }
-static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
+static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst, int regFix )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNameSpace *ns = self->nameSpace;
@@ -7015,8 +7018,10 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConstValue( (DRoutine*)routine, value );
 		}
-		varReg = LOOKUP_BIND_LC( MAP_Find( self->allConsts, str )->value.pInt );
-		*cst = varReg;
+		node = MAP_Find( self->allConsts, str );
+		*cst = LOOKUP_BIND_LC( node->value.pInt );
+		value = routine->routConsts->data[ node->value.pInt ];
+		varReg = *cst;
 	}else if( tki == DTOK_ID_SYMBOL ){
 		DaoType *type = DaoNameSpace_FindType( ns, str );
 		if( type == NULL ){
@@ -7053,6 +7058,14 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst )
 		*cst = 0;
 		DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, str );
 		return -1;
+	}
+	if( value.t == DAO_INTEGER && value.v.i >=0 && value.v.i <= 0xffff ){
+		varReg = regFix;
+		if( regFix <0 ){
+			varReg = self->locRegCount;
+			DaoParser_PushRegister( self );
+		}
+		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, value.v.i, varReg, start, 0, 0 );
 	}
 	return DaoParser_GetNormRegister( self, varReg, start, 0, start );
 }
@@ -7429,7 +7442,7 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 	if( start == end ){
 		DaoInode *first = self->vmcFirst;
 		DaoInode *last = self->vmcLast;
-		regC = DaoParser_MakeArithLeaf( self, start, cst );
+		regC = DaoParser_MakeArithLeaf( self, start, cst, regFix );
 		return regC;
 	}
 

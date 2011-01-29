@@ -3348,7 +3348,7 @@ global qt_qobject_cast_func =
 {
   QObject *from = (QObject*)DaoCData_CastData(_p[0]->v.cdata, dao_QObject_Typer );
   $(host) *to = qobject_cast<$(host)*>( from );
-	DaoContext_PutCData( _ctx, to, dao_$(host)_Typer );
+  DaoContext_WrapCData( _ctx, to, dao_$(host)_Typer );
 }
 ';
 global qt_qobject_cast_func2 =
@@ -3361,7 +3361,7 @@ global qt_qobject_cast_func2 =
     return;
   }
   $(host) *to2 = qobject_cast<$(host)*>( from );
-	DaoContext_PutCData( _ctx, to2, dao_$(host)_Typer );
+  DaoContext_WrapCData( _ctx, to2, dao_$(host)_Typer );
 }
 ';
 global qt_application_decl =

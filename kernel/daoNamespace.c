@@ -1256,7 +1256,7 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 	if( id >=0 ) return 1;
 	if( tp->value.v.p && (tp->tid == DAO_CLASS || tp->tid == DAO_CDATA) ){
 		DaoNameSpace_AddConst( self, name, tp->value, DAO_DATA_PUBLIC );
-	}else{
+	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_INITYPE ){
 		DValue val = daoNullClass;
 		val.t = DAO_TYPE;
 		val.v.p = (DaoBase*) tp;
@@ -1710,7 +1710,7 @@ DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto,
 	GC_IncRC( self );
 	func->nameSpace = self;
 	if( ! DaoToken_Tokenize( defparser->tokens, proto, 0, 0, 0 ) ) goto Error;
-	if( defparser->tokens->size ==0 ) goto Error;
+	if( defparser->tokens->size < 3 ) goto Error;
 	if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER ) key = 0;
 	DArray_Clear( defparser->partoks );
 

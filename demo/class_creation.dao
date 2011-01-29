@@ -46,5 +46,5 @@ obj1.Meth( 'abc' );
 obj2.Meth( 'def' );
 obj1.Extra();
 
-obj1.added = 987;
-io.writeln( obj1.added ); # error, accessing private member
+obj1.added = 987; # error modify const
+io.writeln( obj1.added ); 

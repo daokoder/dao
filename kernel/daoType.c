@@ -560,7 +560,6 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		mt = DaoType_MatchValue( self->nested->items.pType[0], value.v.pair->first, defs );
 		mt2 = DaoType_MatchValue( self->nested->items.pType[1], value.v.pair->second, defs );
-		printf( "%i %i\n", mt, mt2 );
 		return mt < mt2 ? mt : mt2;
 		break;
 	case DAO_TUPLE :
