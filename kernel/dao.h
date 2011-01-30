@@ -11,18 +11,15 @@
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
-#ifndef _DAO_H
-#define _DAO_H
+#ifndef __DAO_H__
+#define __DAO_H__
 
-#include"wctype.h"
-#include"wchar.h"
-#include"stdio.h"
-#include"stdlib.h"
+#include<wctype.h>
+#include<wchar.h>
+#include<stdio.h>
+#include<stdlib.h>
 
 #define DAO_H_VERSION 20110129
-
-/* define an integer type with size equal to the size of pointers
- * under both 32-bits and 64-bits systems. */
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -31,11 +28,7 @@
 #ifdef WIN32
 
 #if defined( _MSC_VER ) && defined( _M_X64 ) || defined( __x86_64__ )
-typedef long long           dint;
-typedef unsigned long long  uint_t;
-#else
-typedef long                dint;
-typedef unsigned long       uint_t;
+#define DAO_USE_INT64
 #endif /* defined() */
 
 /* Get rid of the effects of UNICODE: */
@@ -68,8 +61,9 @@ typedef unsigned long       uint_t;
 #define DaoFindSymbol( handle, name ) dlsym( handle, name )
 #define DaoCloseLibrary( handle ) dlclose( handle )
 
-typedef long          dint;
-typedef unsigned long uint_t;
+#ifdef __x86_64__
+#define DAO_USE_INT64
+#endif
 
 #ifdef MAC_OSX
 
@@ -89,18 +83,21 @@ typedef unsigned long uint_t;
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
-typedef long          dint;
-typedef unsigned long uint_t;
+#ifdef __x86_64__
+#define DAO_USE_INT64
+#endif
 
 #endif /* WIN32 */
 
-typedef struct DaoAPI    DaoAPI;
-
-#ifndef DAO_DIRECT_API
-#define DAO_API_PROXY DAO_DLL DaoAPI __dao;
+/* define an integer type with size equal to the size of pointers
+ * under both 32-bits and 64-bits systems. */
+#ifdef DAO_USE_INT64
+typedef long long           dint;
+typedef unsigned long long  uint_t;
 #else
-#define DAO_API_PROXY
-#endif
+typedef long                dint;
+typedef unsigned long       uint_t;
+#endif /* defined() */
 
 #ifdef __cplusplus
 #define DAO_EXTC_OPEN extern "C"{
@@ -110,12 +107,19 @@ typedef struct DaoAPI    DaoAPI;
 #define DAO_EXTC_CLOSE
 #endif
 
+typedef struct DaoAPI    DaoAPI;
+
+/* declare __dao: */
 #ifndef DAO_DIRECT_API
 DAO_EXTC_OPEN
 extern DAO_DLL DaoAPI __dao;
 DAO_EXTC_CLOSE
+#define DAO_API_PROXY DAO_DLL DaoAPI __dao;
+#else
+#define DAO_API_PROXY
 #endif
 
+/* define module initializer: */
 #define \
     DAO_INIT_MODULE \
 DAO_EXTC_OPEN \

@@ -2120,7 +2120,7 @@ static void dao_FakeShoftList_FakeShoftList( DaoContext *_ctx, DValue *_p[], int
 }
 static void dao_FakeShoftList_Size( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  int size = (int) DaoCData_GetData( _p[0]->v.cdata );
+  dint size = (dint) DaoCData_GetData( _p[0]->v.cdata );
   DaoContext_PutInteger( _ctx, size );
 }
 static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DValue *_p[], int _n )
@@ -2147,7 +2147,7 @@ DaoType *fakeShortType = NULL;
 static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n )
 {
 	if( _p[0]->v.type == fakeShortType ){
-		DaoContext_PutResult( _ctx, DaoCData_Wrap( NULL, dao_FakeShoftList_Typer ) );
+		DaoContext_PutResult( _ctx, (DaoBase*)DaoCData_Wrap( NULL, dao_FakeShoftList_Typer ) );
 	}else{
 	}
 }
