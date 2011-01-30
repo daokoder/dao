@@ -687,7 +687,7 @@ DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc )
 		mid = vmc + id;
 		cmp = DValue_Compare( opa, cst[ mid->a ] );
 		if( cmp ==0 ){
-			if( cst[mid->a].t == DAO_PAIR ){
+			if( cst[mid->a].t == DAO_TUPLE && cst[mid->a].v.tuple->pair ){
 				while( id > first && DValue_Compare( opa, cst[ vmc[id-1].a ] ) ==0 ) id --;
 				mid = vmc + id;
 			}
@@ -1461,7 +1461,7 @@ DaoTuple* DaoContext_PutTuple( DaoContext *self )
 void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DValue **its, int N )
 {
 	DaoType *tp, *ct = tuple->unitype;
-	DValue val, val2;
+	DValue val;
 	DNode *node;
 	int i;
 	if( ct == NULL ) return;
@@ -1472,14 +1472,13 @@ void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DValue **its, int 
 	for(i=0; i<N; i++){
 		val = *its[i];
 		if( val.t == DAO_PAR_NAMED ){
-			DaoPair *pair = (DaoPair*) val.v.p;
-			val2 = pair->first;
-			node = MAP_Find( ct->mapNames, val2.v.s );
+			DaoNameValue *nameva = val.v.nameva;
+			node = MAP_Find( ct->mapNames, nameva->name );
 			if( node == NULL || node->value.pInt != i ){
 				DaoContext_RaiseException( self, DAO_ERROR, "name not matched" );
 				return;
 			}
-			val = pair->second;
+			val = nameva->value;
 		}
 		tp = ct->nested->items.pType[i];
 		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->value.v.type;
@@ -1530,14 +1529,14 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 				k = i+1; /* skip self */
 				p = self->regValues[opA+i+1];
 				if( p->t == DAO_PAR_NAMED ){
-					DaoPair *pair = p->v.pair;
-					node = DMap_Find( klass->lookupTable, pair->first.v.s );
+					DaoNameValue *nameva = p->v.nameva;
+					node = DMap_Find( klass->lookupTable, nameva->name );
 					if( node == NULL || LOOKUP_ST( node->value.pSize ) != DAO_OBJECT_VARIABLE ){
 						DaoContext_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, "" );
 						break;
 					}
 					k = LOOKUP_ID( node->value.pSize );
-					p = & pair->second;
+					p = & nameva->value;
 				}
 				if( DValue_Move( *p, object->objValues + k, mtype[k] ) ==0 ){
 					DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, *p );
@@ -1550,7 +1549,6 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
 	case DAO_CONTEXT :
-	case DAO_PAIR :
 		{
 			DaoFunCurry *curry = DaoFunCurry_New( *p, *selfobj );
 			DaoContext_SetData( self, vmc->c, (DaoBase*)curry );
@@ -1588,35 +1586,36 @@ void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue dA = self->routine->routConsts->data[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
-	DaoPair *pair = DaoPair_New( dA, dB );
-	pair->type = DAO_PAR_NAMED;
-	pair->unitype = self->regTypes[ vmc->c ];
-	if( pair->unitype == NULL ){
+	DaoNameValue *nameva = DaoNameValue_New( dA.v.s, dB );
+	nameva->unitype = self->regTypes[ vmc->c ];
+	if( nameva->unitype == NULL ){
 		DaoNameSpace *ns = self->nameSpace;
-		DaoType *tp = DaoNameSpace_GetTypeV( ns, pair->second );
-		pair->unitype = DaoNameSpace_MakeType( ns, dA.v.s->mbs, DAO_PAR_NAMED, (DaoBase*)tp, NULL, 0 );
+		DaoType *tp = DaoNameSpace_GetTypeV( ns, nameva->value );
+		nameva->unitype = DaoNameSpace_MakeType( ns, dA.v.s->mbs, DAO_PAR_NAMED, (DaoBase*)tp, NULL, 0 );
 	}
-	GC_IncRC( pair->unitype );
-	DaoContext_SetData( self, vmc->c, (DaoBase*) pair );
+	GC_IncRC( nameva->unitype );
+	DaoContext_SetData( self, vmc->c, (DaoBase*) nameva );
 }
 void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 {
-	DaoType *tp[2];
 	DaoNameSpace *ns = self->nameSpace;
+	DaoType *tp = self->regTypes[ vmc->c ];
 	DValue dA = *self->regValues[ vmc->a ];
 	DValue dB = *self->regValues[ vmc->b ];
-	DaoPair *pair = DaoPair_New( dA, dB );
-	pair->unitype = self->regTypes[ vmc->c ];
-	if( pair->unitype == NULL ) pair->unitype = DaoNameSpace_MakePairType( ns, dA, dB );
-	GC_IncRC( pair->unitype );
-	DaoContext_SetData( self, vmc->c, (DaoBase*) pair );
+	DaoTuple *tuple = DaoTuple_New(2);
+	if( tp == NULL ) tp = DaoNameSpace_MakePairValueType( ns, dA, dB );
+	tuple->unitype = tp;
+	GC_IncRC( tuple->unitype );
+	DValue_Copy( & tuple->items->data[0], dA );
+	DValue_Copy( & tuple->items->data[1], dB );
+	DaoContext_SetData( self, vmc->c, (DaoBase*) tuple );
 }
 void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoTuple *tuple;
 	DaoType *tp, *ct = self->regTypes[ vmc->c ];
 	DaoNameSpace *ns = self->nameSpace;
-	DValue val, val2;
+	DValue val;
 	int i;
 
 	self->vmc = vmc;
@@ -1629,14 +1628,13 @@ void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
 			if( tp == NULL ) tp = DaoNameSpace_GetType( ns, & nil );
 			if( i >0 ) DString_AppendMBS( ct->name, "," );
 			if( tp->tid == DAO_PAR_NAMED ){
-				DaoPair *pair = (DaoPair*) val.v.p;
-				val2 = pair->first;
+				DaoNameValue *nameva = val.v.nameva;
 				if( ct->mapNames == NULL ) ct->mapNames = DMap_New(D_STRING,0);
-				MAP_Insert( ct->mapNames, val2.v.s, i );
-				DString_Append( ct->name, val2.v.s );
+				MAP_Insert( ct->mapNames, nameva->name, i );
+				DString_Append( ct->name, nameva->name );
 				DString_AppendMBS( ct->name, ":" );
 				DString_Append( ct->name, tp->value.v.type->name );
-				val = pair->second;
+				val = nameva->value;
 			}else{
 				DString_Append( ct->name, tp->name );
 			}
@@ -1691,7 +1689,6 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 			case DAO_ARRAY : t1 = dA.v.array->unitype; t2 = dB.v.array->unitype; break;
 			case DAO_LIST : t1 = dA.v.list->unitype; t2 = dB.v.list->unitype; break;
 			case DAO_MAP : t1 = dA.v.map->unitype; t2 = dB.v.map->unitype; break;
-			case DAO_PAIR : t1 = dA.v.pair->unitype; t2 = dB.v.pair->unitype; break;
 			case DAO_TUPLE : t1 = dA.v.tuple->unitype; t2 = dB.v.tuple->unitype; break;
 			default : break;
 			}
@@ -2834,9 +2831,9 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
 		}
 		*C = DMap_Find( B.v.map->items, & A ) != NULL;
-	}else if( B.t == DAO_PAIR ){
-		int c1 = DValue_Compare( B.v.pair->first, A );
-		int c2 = DValue_Compare( A, B.v.pair->second );
+	}else if( B.t == DAO_TUPLE && B.v.tuple->pair ){
+		int c1 = DValue_Compare( B.v.tuple->items->data[0], A );
+		int c2 = DValue_Compare( A, B.v.tuple->items->data[1] );
 		*C = c1 <=0 && c2 <= 0;
 	}else{
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
@@ -3940,10 +3937,10 @@ static DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, 
 	for(i=0; i<n; i++){
 		DValue pv = *p[i];
 		if( pv.t == DAO_PAR_NAMED ){
-			DaoPair *pair = pv.v.pair;
-			DNode *node = DMap_Find( decoFunc->routType->mapNames, pair->first.v.s );
+			DaoNameValue *nameva = pv.v.nameva;
+			DNode *node = DMap_Find( decoFunc->routType->mapNames, nameva->name );
 			if( node == NULL ) goto ErrorDecorator;
-			pv = pair->second;
+			pv = nameva->value;
 			k = node->value.pInt;
 		}
 		j = DRoutine_AddConstValue( (DRoutine*)routine, pv );

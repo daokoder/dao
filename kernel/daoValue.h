@@ -31,7 +31,6 @@ const extern DValue daoNullEnum;
 const extern DValue daoNullArray;
 const extern DValue daoNullList;
 const extern DValue daoNullMap;
-const extern DValue daoNullPair;
 const extern DValue daoNullTuple;
 const extern DValue daoNullClass;
 const extern DValue daoNullObject;

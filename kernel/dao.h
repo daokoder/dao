@@ -19,7 +19,7 @@
 #include"stdio.h"
 #include"stdlib.h"
 
-#define DAO_H_VERSION 20110128
+#define DAO_H_VERSION 20110129
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
@@ -147,7 +147,6 @@ enum DaoTypes
 	DAO_ARRAY ,
 	DAO_LIST  ,
 	DAO_MAP   ,
-	DAO_PAIR  ,
 	DAO_TUPLE ,
 	DAO_STREAM ,
 	DAO_OBJECT ,
@@ -252,7 +251,6 @@ typedef struct DaoBase         DaoBase;
 typedef struct DaoArray        DaoArray;
 typedef struct DaoList         DaoList;
 typedef struct DaoMap          DaoMap;
-typedef struct DaoPair         DaoPair;
 typedef struct DaoTuple        DaoTuple;
 typedef struct DaoRoutine      DaoRoutine;
 typedef struct DaoFunction     DaoFunction;
@@ -266,6 +264,7 @@ typedef struct DaoNameSpace    DaoNameSpace;
 typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoContext      DaoContext;
 typedef struct DaoVmProcess    DaoVmProcess;
+typedef struct DaoNameValue    DaoNameValue;
 typedef struct DaoMutex        DaoMutex;
 typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
@@ -308,7 +307,6 @@ struct DValue
 		DaoArray      *array;
 		DaoList       *list;
 		DaoMap        *map;
-		DaoPair       *pair;
 		DaoTuple      *tuple;
 		DaoRoutine    *routine;
 		DaoFunction   *func;
@@ -320,6 +318,7 @@ struct DValue
 		DaoInterface  *inter;
 		DaoNameSpace  *ns;
 		DaoVmProcess  *vmp;
+		DaoNameValue  *nameva;
 		DaoType       *type;
 	} v ;
 };

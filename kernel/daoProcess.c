@@ -2284,7 +2284,7 @@ CallEntry:
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OV ){
-			value = locVars[ vmc->a ]->v.object->objData->data + vmc->b;
+			value = locVars[ vmc->a ]->v.object->objValues + vmc->b;
 			abtp = locTypes[ vmc->c ];
 			if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
 			locVars[ vmc->c ] = value;
@@ -2319,7 +2319,7 @@ CallEntry:
 		OPCASE( GETF_OVI )
 			OPCASE( GETF_OVF )
 			OPCASE( GETF_OVD ){
-				value = locVars[ vmc->a ]->v.object->objData->data + vmc->b;
+				value = locVars[ vmc->a ]->v.object->objValues + vmc->b;
 				locVars[ vmc->c ] = value;
 				if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 			}OPNEXT()
@@ -2339,7 +2339,7 @@ CallEntry:
 					abtp = klass->glbDataType->items.pType[ vmc->b ];
 				}else{
 					if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
-					vC = object->objData->data + vmc->b;
+					vC = object->objValues + vmc->b;
 					abtp = object->myClass->objDataType->items.pType[ vmc->b ];
 				}
 				if( DaoMoveAC( topCtx, *locVars[vmc->a], vC, abtp ) ==0 )
@@ -2404,7 +2404,7 @@ CallEntry:
 			OPCASE( SETF_OVDD ){
 				if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 				object = locVars[ vmc->c ]->v.object;
-				vC =  object->objData->data + vmc->b;
+				vC =  object->objValues + vmc->b;
 				switch( vmc->code ){
 				case DVM_SETF_OVII : vC->v.i = locVars[ vmc->a ]->v.i; break;
 				case DVM_SETF_OVIF : vC->v.i = locVars[ vmc->a ]->v.f; break;

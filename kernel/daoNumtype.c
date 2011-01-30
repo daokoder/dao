@@ -1719,161 +1719,6 @@ static void DaoArray_UpdateDimAccum( DaoArray *self )
 	self->size = (int)( dims[0] * dimAccum[0] );
 }
 
-static void MakeIndex( DaoContext *ctx, DValue pid, int N, DArray *ids )
-{
-	int j, id, from, to;
-	if( pid.t == 0 ){
-		DArray_Resize( ids, N, 0 );
-		for(j=0; j<N; j++) ids->items.pSize[j] = j;
-		return;
-	}
-	switch( pid.t ){
-	case DAO_INTEGER :
-	case DAO_FLOAT :
-	case DAO_DOUBLE :
-		{
-			id = DValue_GetInteger( pid );
-			if( id < 0 ) id += N;
-			DArray_Clear( ids );
-			DArray_Append( ids, id );
-			break;
-		}
-	case DAO_PAIR :
-		{
-			DaoPair *pair = pid.v.pair;
-			DValue first = pair->first;
-			DValue second = pair->second;
-			from = 0;
-			to = N-1;
-			if( first.t > DAO_DOUBLE || second.t > DAO_DOUBLE )
-				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
-			if( first.t ) from = DValue_GetInteger( first );
-			if( from <0 ) from += N;
-			if( second.t ) to = DValue_GetInteger( second );
-			if( to <0 ) to += N;
-			if( to -from +1 <= 0 ){
-				DArray_Clear( ids );
-			}else{
-				DArray_Resize( ids, to-from+1, 0 );
-				for(j=from; j<=to; j++) ids->items.pSize[ j-from ]=j;
-			}
-			break;
-		}
-	case DAO_TUPLE :
-		{
-			DValue *data = pid.v.tuple->items->data;
-			DArray_Clear( ids );
-			if( data[0].t == data[1].t && data[0].t == DAO_INTEGER ){
-				if( pid.v.tuple->unitype == dao_type_for_iterator ){
-					DArray_Append( ids, data[1].v.i );
-					data[1].v.i += 1;
-					data[0].v.i = data[1].v.i < N;
-				}else{
-					from = data[0].v.i;
-					to   = data[1].v.i;
-					DArray_Resize( ids, to-from+1, 0 );
-					for(j=from; j<=to; j++) ids->items.pSize[ j-from ]=j;
-				}
-			}
-			break;
-		}
-	case DAO_LIST :
-		{
-			DaoList *list = pid.v.list;
-			DValue *v = list->items->data;
-			DArray_Resize( ids, list->items->size, 0 );
-			for( j=0; j<list->items->size; j++){
-				if( v[j].t < DAO_INTEGER || v[j].t > DAO_DOUBLE )
-					DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
-				ids->items.pSize[j] = DValue_GetInteger( v[j] );
-			}
-			break;
-		}
-	case DAO_ARRAY :
-		{
-			DaoArray *na = pid.v.array;
-			size_t *p;
-
-			if( na->numType == DAO_COMPLEX ){
-				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX,
-						"complex array can not be used as index" );
-				break;
-			}
-			DArray_Resize( ids, na->size, 0 );
-			p = ids->items.pSize;
-			for( j=0; j<na->size; j++) p[j] = (int)DaoArray_GetInteger( na, j );
-			break;
-		}
-	default: break;
-
-	}
-}
-static void DaoMapNumIndex( DaoArray *self, DArray *idMul, DArray *idMap )
-{
-	/* Have a look at this to see how indices are enumerated
-	 * 4  3  2:
-	 * 6  2  1: multi
-	 *         res:  
-	 * i=0:  0  0  0
-	 * i=1:  0  0  1
-	 * i=2:  0  1  0
-	 * i=3:  0  1  1
-	 * i=4:  0  2  0
-	 * i=5:  0  2  1
-	 * i=6:  1  0  0
-	 * i=numElem-1:  ...
-	 */
-
-	int N = 1;
-	int i, j;
-	size_t *idMapped, *dimAccum;
-
-	for(i=0; i<idMul->size; i++ ) N *= idMul->items.pArray[i]->size;
-	DArray_Resize( idMap, N, 0 );
-
-	idMapped = idMap->items.pSize;
-	dimAccum = self->dimAccum->items.pSize;
-	for( i=0; i<N; i++ ){
-		int mod = i;
-		idMapped[i] = 0;
-		for( j=(int)idMul->size-1; j>=0; j-- ){
-			DArray *sub = idMul->items.pArray[j];
-			int res = mod % sub->size;
-			mod /= sub->size;
-			idMapped[i] += sub->items.pSize[ res ] * dimAccum[j];
-		}
-	}
-}
-static void DaoMakeNumIndex( DaoArray *self, DaoContext *ctx, DValue *idx, int N,
-		DArray *idMul, DArray *idMap )
-{
-	int i, j;
-	const int D = self->dims->size;
-	size_t *dims = self->dims->items.pSize;
-	DArray *tmpArray = DArray_New(0);
-	/* idMul: DArray<DArray<int> > */
-	DArray_Clear( idMul );
-	for(i=0; i<D; i ++){
-		DArray_Resize( tmpArray, (int)dims[i], 0 );
-		for(j=0; j<dims[i]; j++ ) tmpArray->items.pSize[j] = j;
-		DArray_Append( idMul, tmpArray );
-	}
-	DArray_Delete( tmpArray );
-	if( N == 1 ){
-		if( D ==2 && ( dims[0] ==1 || dims[1] ==1 ) ){
-			/* For vectors: */
-			int k = (dims[0] == 1);
-			DArray_Resize( idMul->items.pArray[ ! k ], 1, 0 );
-			MakeIndex( ctx, idx[0], (int)dims[k], idMul->items.pArray[k] );
-		}else{
-			MakeIndex( ctx, idx[0], (int)dims[0], idMul->items.pArray[0] );
-		}
-	}else{
-		const int n = N > D ? D : N;
-		for( i=0; i<n; i++ ) MakeIndex( ctx, idx[i], (int)dims[i], idMul->items.pArray[i] );
-	}
-	DaoMapNumIndex( self, idMul, idMap );
-}
 static void SliceRange( DArray *slice, int first, int count )
 {
 	if( count <0 ) count = 0;
@@ -1899,31 +1744,11 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 			SliceRange( slice, id, 1 );
 			break;
 		}
-	case DAO_PAIR :
-		{
-			DaoPair *pair = pid.v.pair;
-			DValue first = pair->first;
-			DValue second = pair->second;
-			from = 0;
-			to = N-1;
-			if( first.t > DAO_DOUBLE || second.t > DAO_DOUBLE )
-				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
-			if( first.t ) from = DValue_GetInteger( first );
-			if( from <0 ) from += N;
-			if( second.t ) to = DValue_GetInteger( second );
-			if( to <0 ) to += N;
-			if( to -from +1 <= 0 ){
-				SliceRange( slice, from, 0 );
-			}else{
-				SliceRange( slice, from, to-from+1 );
-			}
-			break;
-		}
 	case DAO_TUPLE :
 		{
 			DValue *data = pid.v.tuple->items->data;
 			DArray_Clear( slice );
-			if( data[0].t == data[1].t && data[0].t == DAO_INTEGER ){
+			if( data[0].t == DAO_INTEGER && data[1].t == DAO_INTEGER ){
 				if( pid.v.tuple->unitype == dao_type_for_iterator ){
 					SliceRange( slice, data[1].v.i, 1 );
 					data[1].v.i += 1;
@@ -1933,6 +1758,19 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 					to   = data[1].v.i;
 					SliceRange( slice, from, to-from+1 );
 				}
+			}else if( data[0].t == DAO_NIL && data[1].t <= DAO_NIL ){
+				SliceRange( slice, 0, N );
+			}else if( data[0].t <= DAO_DOUBLE ){
+				from = DValue_GetInteger( data[0] );
+				if( from <0 ) from += N;
+				if( from >= N ) from -= N;
+				SliceRange( slice, from, N - from );
+			}else if( data[1].t <= DAO_DOUBLE ){
+				to = DValue_GetInteger( data[1] );
+				if( to <0 ) to += N;
+				SliceRange( slice, 0, to + 1 );
+			}else{
+				DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
 			}
 			break;
 		}
@@ -1968,10 +1806,10 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 			break;
 		}
 	default: break;
-
 	}
+	if( slice->size < 2 ) SliceRange( slice, 0, N );
 }
-static int DaoArray_MakeSlice( DaoArray *self, DaoContext *ctx, DValue *idx[0], int N, DArray *slice )
+static int DaoArray_MakeSlice( DaoArray *self, DaoContext *ctx, DValue *idx[], int N, DArray *slice )
 {
 	DArray *tmp = DArray_New(0);
 	size_t *dims = self->dims->items.pSize;

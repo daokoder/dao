@@ -210,26 +210,17 @@ extern DaoCData cptrCData;
 
 void DaoCData_DeleteData( DaoCData *self );
 
-/* DaoPair is not data type for general use, it is mainly used for index pair,
- * and object-method pair.
- *
- * class_instance.method => DaoPair
- * cdata_instance.method => DaoPair
- *
- * class.method => DRoutine
- * cdata_type.method => DRoutine
- */
-
-struct DaoPair
+/* DaoNameValue is not data type for general use, it is mainly used for 
+ * passing named parameters and fields: */
+struct DaoNameValue
 {
 	DAO_DATA_COMMON;
 
-	DValue first;
-	DValue second;
-
+	DString *name;
+	DValue   value;
 	DaoType *unitype;
 };
-DaoPair* DaoPair_New( DValue v1, DValue v2 );
+DaoNameValue* DaoNameValue_New( DString *name, DValue value );
 
 struct DaoTuple
 {
@@ -238,6 +229,7 @@ struct DaoTuple
 	DVaTuple  *items;
 	DaoMap    *meta;
 	DaoType   *unitype;
+	unsigned   pair;
 };
 void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );
 

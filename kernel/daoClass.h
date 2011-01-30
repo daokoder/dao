@@ -103,7 +103,7 @@ void DaoClass_SetConst( DaoClass *self, int id, DValue value );
 int DaoClass_GetData( DaoClass *self, DString *name, DValue *value, DaoClass *thisClass/*=0*/, DValue **d2 );
 
 DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClass *thisClass );
-int DaoClass_GetDataIndex( DaoClass *self, DString *name, int *type );
+int DaoClass_GetDataIndex( DaoClass *self, DString *name );
 
 int DaoClass_AddConst( DaoClass *self, DString *name, DValue value, int s, int l );
 int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue value, DaoType *t, int s, int l );

@@ -855,11 +855,6 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
 	DValue selfobj = daoNullValue;
 	int i;
 
-	if( rov.t == DAO_PAIR ){
-		DaoPair *pair = rov.v.pair;
-		rov = pair->second;
-		selfobj = pair->first;
-	}
 	N -= 2;
 	if( rov.t == DAO_FUNCURRY ){
 		DaoFunCurry *curry = (DaoFunCurry*) rov.v.p;

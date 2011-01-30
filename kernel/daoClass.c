@@ -813,12 +813,11 @@ DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClas
 	*res = DAO_ERROR_FIELD_NOTPERMIT;
 	return NULL;
 }
-int DaoClass_GetDataIndex( DaoClass *self, DString *name, int *type )
+int DaoClass_GetDataIndex( DaoClass *self, DString *name )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
 	if( ! node ) return -1;
-	*type = LOOKUP_ST( node->value.pSize );
-	return LOOKUP_ID( node->value.pSize );
+	return node->value.pSize;
 }
 int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, DaoType *t, int s, int ln )
 {

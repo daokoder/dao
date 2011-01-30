@@ -148,17 +148,6 @@ static DaoTypeCore nsCore =
 	DaoBase_Copy, /* do not copy namespace */
 };
 
-#if 0
-static void NS_AddConst( DaoNameSpace *self, const char *name, DValue data )
-{
-	DString *s = DString_New(1);
-	DaoBase *dbase = (DaoBase*)data;
-	dbase->subType |= DAO_DATA_CONST;
-	DString_SetMBS( s, name );
-	DaoNameSpace_AddConst( self, s, dbase );
-	DString_Delete( s );
-}
-#endif
 DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name )
 {
 	DValue value = { DAO_NAMESPACE, 0, 0, 0, {0} };
@@ -215,19 +204,6 @@ DValue DaoNameSpace_FindData( DaoNameSpace *self, const char *name )
 	DString_Delete( s );
 	return res;
 }
-#if 0
-static void NS_AddConstString( DaoNameSpace *self0, const char *name, const char *cst )
-{
-	DaoNameSpace *self = (DaoNameSpace*)self0;
-	DString *s = DString_New(1);
-	DaoBase *dbase = (DaoBase*)DaoString_New();
-	dbase->subType |= DAO_DATA_CONST;
-	DString_SetMBS( STRV( dbase ), cst );
-	DString_SetMBS( s, name );
-	DaoNameSpace_AddConst( self, s, dbase );
-	DString_Delete( s );
-}
-#endif
 void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items )
 {
 	DaoNameSpace *self = (DaoNameSpace*)self0;
@@ -1324,8 +1300,7 @@ void* DValue_GetTypeID( DValue self )
 	case DAO_ARRAY : id = self.v.array->unitype; break;
 	case DAO_LIST :  id = self.v.list->unitype; break;
 	case DAO_MAP :   id = self.v.map->unitype; break;
-	case DAO_PAIR :
-	case DAO_PAR_NAMED : id = self.v.pair->unitype; break;
+	case DAO_PAR_NAMED : id = self.v.nameva->unitype; break;
 	case DAO_TUPLE :  id = self.v.tuple->unitype; break;
 	case DAO_OBJECT : id = self.v.object->myClass->objType; break;
 	case DAO_CLASS :  id = self.v.klass->clsType; break;
@@ -1376,7 +1351,7 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 	DaoType *abtp = NULL;
 	DaoType *itp = (DaoType*) p;
 	DaoTuple *tuple = (DaoTuple*) p;
-	DaoPair *pair = (DaoPair*) p;
+	DaoNameValue *nameva = (DaoNameValue*) p;
 	DaoList *list = (DaoList*) p;
 	DaoMap *map = (DaoMap*) p;
 	DaoArray *array = (DaoArray*) p;
@@ -1413,9 +1388,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		rout = (DRoutine*) p;
 		abtp = rout->routType;
 		break;
-	case DAO_PAIR :
 	case DAO_PAR_NAMED :
-		abtp = pair->unitype; break;
+		abtp = nameva->unitype; break;
 	case DAO_TUPLE :
 		abtp = tuple->unitype; break;
 	case DAO_FUTURE :
@@ -1483,15 +1457,6 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 				DArray_Append( nested, itp );
 			}
 #endif
-		}else if( p->type == DAO_PAIR ){
-			DString_SetMBS( mbs, "pair<" );
-			nested = DArray_New(0);
-			DArray_Append( nested, DaoNameSpace_MakeValueType( self, pair->first ) );
-			DString_Append( mbs, nested->items.pType[0]->name );
-			DArray_Append( nested, DaoNameSpace_MakeValueType( self, pair->second ) );
-			DString_AppendMBS( mbs, "," );
-			DString_Append( mbs, nested->items.pType[1]->name );
-			DString_AppendMBS( mbs, ">" );
 		}else if( p->type == DAO_TUPLE ){
 			DString_SetMBS( mbs, "tuple<" );
 			nested = DArray_New(0);
@@ -1535,9 +1500,9 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 				}
 				break;
 #endif
-			case DAO_PAIR :
+			case DAO_PAR_NAMED :
 				GC_IncRC( abtp );
-				pair->unitype = abtp;
+				nameva->unitype = abtp;
 				break;
 			case DAO_TUPLE :
 				GC_IncRC( abtp );
@@ -1901,15 +1866,7 @@ DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DValue value )
 	DString_Delete( name );
 	return type;
 }
-DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DValue first, DValue second )
-{
-	DaoType *tp[2];
-	first.cst = second.cst = 1;
-	tp[0] = DaoNameSpace_MakeValueType( self, first );
-	tp[1] = DaoNameSpace_MakeValueType( self, second );
-	return DaoNameSpace_MakeType( self, "pair", DAO_PAIR, NULL, tp, 2 );
-}
-DaoType* DaoNameSpace_MakePairType2( DaoNameSpace *self, DaoType *first, DaoType *second )
+DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DaoType *first, DaoType *second )
 {
 	DaoType *types[2] = {NULL, NULL};
 	DaoType *nullType = DaoNameSpace_MakeType( self, "null", DAO_VALTYPE, 0, 0, 0 );
@@ -1918,4 +1875,24 @@ DaoType* DaoNameSpace_MakePairType2( DaoNameSpace *self, DaoType *first, DaoType
 	types[0] = DaoNameSpace_MakeType( self, "first", DAO_PAR_NAMED, (DaoBase*)first, 0, 0 );
 	types[1] = DaoNameSpace_MakeType( self, "second", DAO_PAR_NAMED, (DaoBase*)second, 0, 0 );
 	return DaoNameSpace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
+}
+DaoType* DaoNameSpace_MakePairValueType( DaoNameSpace *self, DValue first, DValue second )
+{
+	DaoType *tp1, *tp2;
+	first.cst = second.cst = 1;
+	tp1 = DaoNameSpace_MakeValueType( self, first );
+	tp2 = DaoNameSpace_MakeValueType( self, second );
+	return DaoNameSpace_MakePairType( self, tp1, tp2 );
+}
+DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DValue first, DValue second )
+{
+	DaoTuple *tuple = DaoTuple_New(2);
+	DaoType *type1 = DaoNameSpace_MakeValueType( self, first );
+	DaoType *type2 = DaoNameSpace_MakeValueType( self, second );
+	tuple->unitype = DaoNameSpace_MakePairType( self, type1, type2 );
+	GC_IncRC( tuple->unitype );
+	DValue_Copy( & tuple->items->data[0], first );
+	DValue_Copy( & tuple->items->data[1], second );
+	tuple->pair = 1;
+	return tuple;
 }

@@ -133,10 +133,9 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 		*start = n1;
 		*end = n1;
 		break;
-	case DAO_PAIR :
 	case DAO_TUPLE:
 		*idtype = IDX_PAIR;
-		if( index.t == DAO_TUPLE && index.v.tuple->unitype == dao_type_for_iterator ){
+		if( index.v.tuple->unitype == dao_type_for_iterator ){
 			DValue *data = index.v.tuple->items->data;
 			if( data[0].t == data[1].t && data[0].t == DAO_INTEGER ){
 				*idtype = IDX_SINGLE;
@@ -146,13 +145,8 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 				break;
 			}
 		}
-		if( index.t == DAO_TUPLE ){
-			first = index.v.tuple->items->data[0];
-			second = index.v.tuple->items->data[1];
-		}else{
-			first = ((DaoPair*)index.v.p)->first;
-			second = ((DaoPair*)index.v.p)->second;
-		}
+		first = index.v.tuple->items->data[0];
+		second = index.v.tuple->items->data[1];
 		/* a[ : 1 ] ==> pair(nil,int) */
 		if( first.t > DAO_DOUBLE || second.t > DAO_DOUBLE )
 			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "need number" );
@@ -316,7 +310,6 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 			return (DaoBase*) copy;
 		}
 #endif
-	case DAO_PAIR : break;
 	default : break;
 	}
 	if( self->type == DAO_OBJECT ){
@@ -722,11 +715,6 @@ static void DaoNumber_GetItem1( DValue *self, DaoContext *ctx, DValue pid )
 		*res = bits; break;
 	case IDX_SINGLE :
 		*res = ( bits >> start ) & 0x1; break;
-		/*
-		   case IDX_PAIR :
-		   for(i=start; i<=end; i++) val |= bits & ( 1<<i );
-		   res->value = val >> start; break;
-		 */
 	case IDX_MULTIPLE :
 		DArray_Delete( ids );
 	default :
@@ -2814,17 +2802,7 @@ static void DaoMap_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMa
 static void DaoMap_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoMap *self = self0->v.map;
-	if( pid.t == DAO_PAIR ){
-		DaoPair *pair = pid.v.pair;
-		DaoMap *map = DaoContext_PutMap( ctx );
-		DNode *node1 = DMap_First( self->items );
-		DNode *node2 = NULL;
-		if( pair->first.t ) node1 = MAP_FindMG( self->items, & pair->first );
-		if( pair->second.t ) node2 = MAP_FindML( self->items, & pair->second );
-		if( node2 ) node2 = DMap_Next(self->items, node2 );
-		for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
-			DaoMap_Insert( map, node1->key.pValue[0], node1->value.pValue[0] );
-	}else if( pid.t == DAO_TUPLE && pid.v.tuple->unitype == dao_type_for_iterator ){
+	if( pid.t == DAO_TUPLE && pid.v.tuple->unitype == dao_type_for_iterator ){
 		DaoTuple *iter = pid.v.tuple;
 		DaoTuple *tuple = DaoTuple_New( 2 );
 		DNode *node = (DNode*) iter->items->data[1].v.p;
@@ -2848,55 +2826,70 @@ extern DaoType *dao_map_any;
 static void DaoMap_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoMap *self = self0->v.map;
-	DaoType *tp = self->unitype;
-	DaoType *tp1=NULL, *tp2=NULL;
-	if( tp == NULL ){
-		/* a : tuple<string,map<string,int>> = ('',{=>});
-		   duplicating the constant to assign to a may not set the unitype properly */
-		tp = ctx->regTypes[ ctx->vmc->c ];
-		if( tp == NULL || tp->tid == 0 ) tp = dao_map_any;
-		self->unitype = tp;
-		GC_IncRC( tp );
+	int c = DaoMap_Insert( self, pid, value );
+	if( c ==1 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "key not matching" );
+	}else if( c ==2 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "value not matching" );
 	}
-	if( tp ){
-		if( tp->nested->size >=2 ){
-			tp1 = tp->nested->items.pType[0];
-			tp2 = tp->nested->items.pType[1];
-		}else if( tp->nested->size >=1 ){
-			tp1 = tp->nested->items.pType[0];
-		}
-	}
-	if( pid.t == DAO_PAIR ){
-		DaoPair *pair = pid.v.pair;
-		DNode *node1 = DMap_First( self->items );
-		DNode *node2 = NULL;
-		if( pair->first.t ) node1 = MAP_FindMG( self->items, & pair->first );
-		if( pair->second.t ) node2 = MAP_FindML( self->items, & pair->second );
-		if( node2 ) node2 = DMap_Next(self->items, node2 );
-		for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
-			DValue_Move( value, node1->value.pValue, tp2 );
-	}else{
-		int c = DaoMap_Insert( self, pid, value );
-		if( c ==1 ){
-			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "key not matching" );
-		}else if( c ==2 ){
-			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "value not matching" );
-		}
-	}
+}
+static void DaoMap_GetItem2( DValue *self0, DaoContext *ctx, DValue *ids[], int N )
+{
+	DaoMap *self = self0->v.map;
+	DaoMap *map = DaoContext_PutMap( ctx );
+	DNode *node1 = DMap_First( self->items );
+	DNode *node2 = NULL;
+	if( ids[0]->t ) node1 = MAP_FindMG( self->items, ids[0] );
+	if( ids[1]->t ) node2 = MAP_FindML( self->items, ids[1] );
+	if( node2 ) node2 = DMap_Next(self->items, node2 );
+	for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
+		DaoMap_Insert( map, node1->key.pValue[0], node1->value.pValue[0] );
 }
 static void DaoMap_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
 {
 	switch( N ){
 	case 0 : DaoMap_GetItem1( self, ctx, daoNullValue ); break;
 	case 1 : DaoMap_GetItem1( self, ctx, *ids[0] ); break;
+	case 2 : DaoMap_GetItem2( self, ctx, ids, N ); break;
 	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
+}
+static void DaoMap_SetItem2( DValue *self0, DaoContext *ctx, DValue *ids[], int N, DValue value )
+{
+	DaoMap *self = self0->v.map;
+	DaoType *tp = self->unitype;
+	DaoType *tp2=NULL;
+	DNode *node1 = DMap_First( self->items );
+	DNode *node2 = NULL;
+	if( tp == NULL ){
+		/* a : tuple<string,map<string,int>> = ('',{=>});
+		   duplicating the constant to assign to "a" may not set the unitype properly */
+		tp = ctx->regTypes[ ctx->vmc->c ];
+		if( tp == NULL || tp->tid == 0 ) tp = dao_map_any;
+		self->unitype = tp;
+		GC_IncRC( tp );
+	}
+	if( tp ){
+		if( tp->nested->size != 2 || tp->nested->items.pType[1] == NULL ){
+			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "invalid map" );
+			return;
+		}
+		tp2 = tp->nested->items.pType[1];
+		if( DaoType_MatchValue( tp2, value, NULL ) ==0 )
+			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "value not matching" );
+	}
+	if( ids[0]->t ) node1 = MAP_FindMG( self->items, ids[0] );
+	if( ids[1]->t ) node2 = MAP_FindML( self->items, ids[1] );
+	if( node2 ) node2 = DMap_Next(self->items, node2 );
+	for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
+		DValue_Move( value, node1->value.pValue, tp2 );
 }
 static void DaoMap_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
 {
 	switch( N ){
 	case 0 : DaoMap_SetItem1( self, ctx, daoNullValue, value ); break;
 	case 1 : DaoMap_SetItem1( self, ctx, *ids[0], value ); break;
+	case 2 : DaoMap_SetItem2( self, ctx, ids, N, value ); break;
 	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
@@ -3810,138 +3803,53 @@ DaoTypeBase cdataTyper =
 DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, 
 	NULL, NULL, NULL, NULL, NULL, & cdataTyper, 0,0,0,0,0 };
 
-void DaoPair_Delete( DaoPair *self )
+void DaoNameValue_Delete( DaoNameValue *self )
 {
-	DValue_Clear( & self->first );
-	DValue_Clear( & self->second );
+	DString_Delete( self->name );
+	DValue_Clear( & self->value );
 	GC_DecRC( self->unitype );
 	dao_free( self );
 }
-static void DaoPair_GetField( DValue *self0, DaoContext *ctx, DString *name )
+static DValue DaoNameValue_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 {
-	DaoPair *self = self0->v.pair;
-	if( strcmp( name->mbs, "first" ) ==0 ){
-		DaoContext_PutReference( ctx, & self->first );
-	}else if( strcmp( name->mbs, "second" ) ==0 ){
-		DaoContext_PutReference( ctx, & self->second );
-	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid field" );
-		return;
-	}
-}
-static void DaoPair_SetField( DValue *self0, DaoContext *ctx, DString *name, DValue value )
-{
-	DaoPair *self = self0->v.pair;
-	DaoType *t, **type = self->unitype->nested->items.pType;
-	if( strcmp( name->mbs, "first" ) ==0 ){
-		t = type[0];
-		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
-		if( DValue_Move( value, & self->first, t ) ==0 ) goto TypeNotMatching;
-	}else if( strcmp( name->mbs, "second" ) ==0 ){
-		t = type[1];
-		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
-		if( DValue_Move( value, & self->second, t ) ==0 ) goto TypeNotMatching;
-	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid field" );
-		return;
-	}
-	return;
-TypeNotMatching:
-	DaoContext_RaiseException( ctx, DAO_ERROR, "type not matching" );
-}
-static DValue DaoPair_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
-{
-	DaoPair *self = self0->v.pair;
-	DValue copy = daoNullPair;
-	copy.v.pair = DaoPair_New( daoNullValue, daoNullValue );
-	copy.v.pair->type =  copy.t = self->type;
-	copy.v.pair->unitype = self->unitype;
+	DaoNameValue *self = self0->v.nameva;
+	DValue copy = {DAO_PAR_NAMED,0,0,0,{0}};
+	copy.v.nameva = DaoNameValue_New( self->name, daoNullValue );
+	copy.v.nameva->type = copy.t = self->type;
+	copy.v.nameva->unitype = self->unitype;
 	GC_IncRC( self->unitype );
-	DValue_Copy( & copy.v.pair->first, self->first );
-	DValue_Copy( & copy.v.pair->second, self->second );
+	DValue_Copy( & copy.v.nameva->value, self->value );
 	return copy;
 }
-static void DaoPair_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
+static void DaoNameValue_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
-	DaoPair *self = self0->v.pair;
-	int ec = 0;
-	if( pid.t == DAO_NIL ){
-		DValue copy = DaoPair_Copy( self0, ctx, NULL );
-		DaoContext_PutValue( ctx, copy );
-	}else if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
-		int id = DValue_GetInteger( pid );
-		switch( id ){
-		case 0 : DaoContext_PutReference( ctx, & self->first ); break;
-		case 1 : DaoContext_PutReference( ctx, & self->second ); break;
-		default: ec = DAO_ERROR_INDEX_OUTOFRANGE;
-		}
-	}
-	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
+	DaoNameValue *self = self0->v.nameva;
+	DaoStream_WriteString( stream, self->name );
+	DaoStream_WriteMBS( stream, "=>" );
+	DValue_Print( self->value, ctx, stream, cycData );
 }
-static void DaoPair_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
-{
-	DaoPair *self = self0->v.pair;
-	DaoType *t = NULL, **type = self->unitype->nested->items.pType;
-	int ec = 0;
-	if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
-		int id = DValue_GetInteger( pid );
-		if( id ==0 || id ==1 ) t = type[id];
-		if( t->tid == DAO_PAR_NAMED ) t = t->value.v.type;
-		switch( id ){
-		case 0 : DValue_Move( value, & self->first, t ); break;
-		case 1 : DValue_Move( value, & self->second, t ); break;
-		default: ec = DAO_ERROR_INDEX_OUTOFRANGE;
-		}
-	}
-	if( ec ) DaoContext_RaiseException( ctx, ec, "" );
-}
-static void DaoPair_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
-{
-	switch( N ){
-	case 0 : DaoPair_GetItem1( self, ctx, daoNullValue ); break;
-	case 1 : DaoPair_GetItem1( self, ctx, *ids[0] ); break;
-	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
-	}
-}
-static void DaoPair_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
-{
-	switch( N ){
-	case 0 : DaoPair_SetItem1( self, ctx, daoNullValue, value ); break;
-	case 1 : DaoPair_SetItem1( self, ctx, *ids[0], value ); break;
-	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
-	}
-}
-static void DaoPair_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
-{
-	DaoPair *self = self0->v.pair;
-	DaoStream_WriteMBS( stream, "( " );
-	DValue_Print( self->first, ctx, stream, cycData );
-	DaoStream_WriteMBS( stream, ", " );
-	DValue_Print( self->second, ctx, stream, cycData );
-	DaoStream_WriteMBS( stream, " )" );
-}
-static DaoTypeCore pairCore=
+static DaoTypeCore namevaCore=
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoPair_GetField,
-	DaoPair_SetField,
-	DaoPair_GetItem,
-	DaoPair_SetItem,
-	DaoPair_Print,
-	DaoPair_Copy
+	DaoBase_GetField,
+	DaoBase_SetField,
+	DaoBase_GetItem,
+	DaoBase_SetItem,
+	DaoNameValue_Print,
+	DaoNameValue_Copy
 };
-DaoTypeBase pairTyper =
+DaoTypeBase namevaTyper =
 {
-	"pair", & pairCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoPair_Delete, NULL
+	"NameValue", & namevaCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoNameValue_Delete, NULL
 };
-DaoPair* DaoPair_New( DValue p1, DValue p2 )
+DaoNameValue* DaoNameValue_New( DString *name, DValue value )
 {
-	DaoPair *self = (DaoPair*)dao_malloc( sizeof(DaoPair) );
-	DaoBase_Init( self, DAO_PAIR );
+	DaoNameValue *self = (DaoNameValue*)dao_malloc( sizeof(DaoNameValue) );
+	DaoBase_Init( self, DAO_PAR_NAMED );
 	self->unitype = NULL;
-	self->first = self->second = daoNullValue;
-	DValue_Copy( & self->first, p1 );
-	DValue_Copy( & self->second, p2 );
+	self->name = DString_Copy( name );
+	self->value = daoNullValue;
+	DValue_Copy( & self->value, value );
 	return self;
 }
 
@@ -4080,6 +3988,7 @@ DaoTuple* DaoTuple_New( int size )
 	self->items = DVaTuple_New( size, daoNullValue );
 	self->meta = NULL;
 	self->unitype = NULL;
+	self->pair = 0;
 	return self;
 }
 void DaoTuple_Delete( DaoTuple *self )

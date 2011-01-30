@@ -131,8 +131,9 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val );
 
 DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DValue value );
-DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DValue first, DValue second );
-DaoType* DaoNameSpace_MakePairType2( DaoNameSpace *self, DaoType *first, DaoType *second );
+DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DaoType *first, DaoType *second );
+DaoType* DaoNameSpace_MakePairValueType( DaoNameSpace *self, DValue first, DValue second );
+DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DValue first, DValue second );
 
 DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols );
 DaoType* DaoNameSpace_SymbolTypeAdd( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value );

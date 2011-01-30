@@ -109,7 +109,6 @@ extern DaoTypeBase  longTyper;
 extern DaoTypeBase  enumTyper;
 extern DaoTypeBase  listTyper;
 extern DaoTypeBase  mapTyper;
-extern DaoTypeBase  pairTyper;
 extern DaoTypeBase  streamTyper;
 extern DaoTypeBase  routTyper;
 extern DaoTypeBase  funcTyper;
@@ -119,6 +118,7 @@ extern DaoTypeBase  objTyper;
 extern DaoTypeBase  nsTyper;
 extern DaoTypeBase  cmodTyper;
 extern DaoTypeBase  tupleTyper;
+extern DaoTypeBase  namevaTyper;
 
 extern DaoTypeBase  numarTyper;
 extern DaoTypeBase  comTyper;
@@ -151,8 +151,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_STRING   :  return & stringTyper;
 	case DAO_LIST     :  return & listTyper;
 	case DAO_MAP      :  return & mapTyper;
-	case DAO_PAIR     :  return & pairTyper;
-	case DAO_PAR_NAMED :  return & pairTyper;
+	case DAO_PAR_NAMED : return & namevaTyper;
 	case DAO_TUPLE     : return & tupleTyper;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY  :  return & numarTyper;
@@ -805,11 +804,9 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 			}
 		}
 		if( argNames->items.pString[i]->size ){
-			DValue vp = daoNullPair;
-			DString_Assign( key, argNames->items.pString[i] );
-			vp.v.pair = DaoPair_New( skey, nkey );
-			vp.v.pair->trait |= DAO_DATA_CONST;
-			vp.t = DAO_PAR_NAMED;
+			DValue vp = {DAO_PAR_NAMED,0,0,0,{0}};
+			vp.v.nameva = DaoNameValue_New( argNames->items.pString[i], nkey );
+			vp.v.nameva->trait |= DAO_DATA_CONST;
 			DaoList_Append( ns->argParams, vp );
 		}else{
 			DaoList_Append( ns->argParams, nkey );

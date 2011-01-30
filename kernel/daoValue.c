@@ -34,7 +34,6 @@ const DValue daoNullEnum = { DAO_ENUM, 0, 0, 0, {0}};
 const DValue daoNullArray = { DAO_ARRAY, 0, 0, 0, {0}};
 const DValue daoNullList = { DAO_LIST, 0, 0, 0, {0}};
 const DValue daoNullMap = { DAO_MAP, 0, 0, 0, {0}};
-const DValue daoNullPair = { DAO_PAIR, 0, 0, 0, {0}};
 const DValue daoNullTuple = { DAO_TUPLE, 0, 0, 0, {0}};
 const DValue daoNullClass = { DAO_CLASS, 0, 0, 0, {0}};
 const DValue daoNullObject = { DAO_OBJECT, 0, 0, 0, {0}};
@@ -96,14 +95,10 @@ int DValue_Compare( DValue left, DValue right )
 		return DString_Compare( left.v.s, right.v.s );
 	}else if( left.t == DAO_LONG && right.t == DAO_LONG ){
 		return DLong_Compare( left.v.l, right.v.l );
-	}else if( left.t == DAO_PAIR && right.t == DAO_PAIR ){
-		res = DValue_Compare( left.v.pair->first, right.v.pair->first );
-		if( res == 0 ) res = DValue_Compare( left.v.pair->second, right.v.pair->second );
-		return res;
-	}else if( right.t == DAO_PAIR ){
-		res = DValue_Compare( left, right.v.pair->first );
+	}else if( right.t == DAO_TUPLE && right.v.tuple->items->size == 2 ){
+		res = DValue_Compare( left, right.v.tuple->items->data[0] );
 		if( res <= 0 ) return res;
-		res = DValue_Compare( left, right.v.pair->second );
+		res = DValue_Compare( left, right.v.tuple->items->data[1] );
 		if( res >= 0 ) return res;
 	}else if( left.t == DAO_TUPLE && right.t == DAO_TUPLE ){
 		DaoTuple *lt = left.v.tuple;
@@ -343,10 +338,6 @@ void DValue_MarkConst( DValue *self )
 			DValue_MarkConst( it->key.pValue );
 			DValue_MarkConst( it->value.pValue );
 		}
-		break;
-	case DAO_PAIR :
-		DValue_MarkConst( & self->v.pair->first );
-		DValue_MarkConst( & self->v.pair->second );
 		break;
 	case DAO_OBJECT :
 		obj = self->v.object;
