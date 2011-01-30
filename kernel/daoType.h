@@ -129,7 +129,8 @@ struct DaoInterface
 {
 	DAO_DATA_COMMON;
 
-	int bindany;
+	short bindany;
+	short derived;
 
 	DArray  *supers; /* parent interfaces */
 	DMap    *methods; /* DHash<DString*,DRoutine*> */

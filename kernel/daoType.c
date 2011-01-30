@@ -799,6 +799,7 @@ DaoInterface* DaoInterface_New( const char *name )
 	DaoInterface *self = (DaoInterface*) dao_malloc( sizeof(DaoInterface) );
 	DaoBase_Init( self, DAO_INTERFACE );
 	self->bindany = 0;
+	self->derived = 0;
 	self->supers = DArray_New(0);
 	self->methods = DHash_New(D_STRING,0);
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoBase*)self, NULL );
@@ -992,6 +993,7 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 				DRoutine_AddOverLoad( rout, rout2->routTable->items.pRout2[k] );
 		}
 	}
+	self->derived = 1;
 }
 
 void DMap_SortMethods( DMap *hash, DArray *methods )

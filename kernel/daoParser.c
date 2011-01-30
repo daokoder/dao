@@ -3174,13 +3174,18 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		value.v.inter = inter;
 		DaoParser_AddToScope( self, scope, interName, value, inter->abtype, storeType, line );
 
-		if( tokens[start+2]->name == DTOK_SEMCO ){
-			start += 3;
+		if( start+1 <= to && tokens[start+1]->name == DTOK_SEMCO ){
+			start += 2;
 			return start;
 		}
-	}else{
+	}else if( value.t != DAO_INTERFACE ){
 		ec = DAO_SYMBOL_WAS_DEFINED;
 		goto ErrorInterfaceDefinition;
+	}else if( value.v.inter->derived ){
+		ec = DAO_SYMBOL_WAS_DEFINED;
+		goto ErrorInterfaceDefinition;
+	}else{
+		inter = value.v.inter;
 	}
 	start += 1; /* token after class name. */
 	if( tokens[start]->name == DTOK_COLON ){
@@ -3355,8 +3360,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		ec = DAO_SYMBOL_WAS_DEFINED;
 		goto ErrorClassDefinition;
 	}else if( value.v.klass->derived ){
+		klass = value.v.klass;
 		ec = DAO_SYMBOL_WAS_DEFINED;
 		goto ErrorClassDefinition;
+	}else{
+		klass = value.v.klass;
 	}
 
 	rout = klass->classRoutine;
@@ -3467,7 +3475,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 ErrorClassDefinition:
 	if( parser ) DaoParser_Delete( parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
-	ec = DAO_INVALID_CLASS_DEFINITION + ((klass->attribs & DAO_CLS_SYNCHRONOUS) !=0);
+	ec = DAO_INVALID_CLASS_DEFINITION;
+	if( klass )ec += ((klass->attribs & DAO_CLS_SYNCHRONOUS) !=0);
 	DaoParser_Error2( self, ec, errorStart, to, 0 );
 	return -1;
 }

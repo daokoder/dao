@@ -1,0 +1,20 @@
+
+class One;
+
+class Another
+{
+	routine Test( o : One );
+}
+class One
+{
+	var index = 123;
+}
+
+routine Another::Test( o : One )
+{
+	io.writeln( o.index );
+}
+
+o = One();
+a = Another();
+a.Test( o );

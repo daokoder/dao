@@ -646,6 +646,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 			}
 		}
 	}
+	self->derived = 1;
 	DString_Delete( mbs );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
