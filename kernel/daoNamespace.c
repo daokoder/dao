@@ -984,7 +984,6 @@ int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, D
 	DValue *dest;
 	int up, id = 0;
 
-	if( tp && tp->tid <= DAO_DOUBLE ) value.t = tp->tid;
 	if( tp && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
 	if( node ){

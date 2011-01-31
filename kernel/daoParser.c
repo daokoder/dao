@@ -2971,6 +2971,9 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 		if( self->isClassBody ){
 			klass = self->hostClass;
 			rout = DaoClass_GetOvldRoutine( klass, mbs );
+			if( rout && rout->type == DAO_FUNCTION ) rout = NULL;
+			if( rout && rout->routHost != klass->objType ) rout = NULL;
+			if( rout && rout->parser == NULL ) rout = NULL;
 		}else{
 			/* XXX support: seperation of declaration and definition */
 		}

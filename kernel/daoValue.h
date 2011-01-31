@@ -26,6 +26,7 @@ const extern DValue daoZeroInt;
 const extern DValue daoZeroFloat;
 const extern DValue daoZeroDouble;
 const extern DValue daoNullComplex;
+const extern DValue daoNullLong;
 const extern DValue daoNullString;
 const extern DValue daoNullEnum;
 const extern DValue daoNullArray;
@@ -41,7 +42,10 @@ const extern DValue daoNullStream;
 const extern DValue daoNullType;
 
 void DValue_Clear( DValue *self );
-void DValue_Init( DValue *self, DaoBase *p );
+/* initialize self to default value as "type",
+ * but it will do nothing if self->t == type.
+ * return type if successful, otherwise, 0 */
+int DValue_Init( DValue *self, int type );
 void DValue_CopyExt( DValue *self, DValue from, int copy );
 void DValue_Copy( DValue *self, DValue from );
 int DValue_Compare( DValue left, DValue right );

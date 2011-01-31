@@ -29,6 +29,7 @@ const DValue daoZeroInt = { DAO_INTEGER, 0, 0, 0, {0}};
 const DValue daoZeroFloat = { DAO_FLOAT, 0, 0, 0, {0}};
 const DValue daoZeroDouble = { DAO_DOUBLE, 0, 0, 0, {0}};
 const DValue daoNullComplex = { DAO_COMPLEX, 0, 0, 0, {0}};
+const DValue daoNullLong = { DAO_LONG, 0, 0, 0, {0}};
 const DValue daoNullString = { DAO_STRING, 0, 0, 0, {0}};
 const DValue daoNullEnum = { DAO_ENUM, 0, 0, 0, {0}};
 const DValue daoNullArray = { DAO_ARRAY, 0, 0, 0, {0}};
@@ -372,6 +373,21 @@ void DValue_IncRCs( DValue *v, int n )
 	int i;
 	for(i=0; i<n; i++) if( v[i].t >= DAO_ARRAY ) GC_IncRC( v[i].v.p );
 }
+int DValue_Init( DValue *self, int type )
+{
+	if( self->t == type ) return type;
+	if( self->t ) DValue_Clear( self );
+	switch( type ){
+	case DAO_NIL : break;
+	case DAO_INTEGER : *self = daoZeroInt; break;
+	case DAO_FLOAT   : *self = daoZeroFloat; break;
+	case DAO_DOUBLE  : *self = daoZeroDouble; break;
+	case DAO_COMPLEX : *self = daoNullComplex; self->v.c = dao_calloc(1,sizeof(complex16)); break;
+	case DAO_LONG    : *self = daoNullLong; self->v.l = DLong_New(); break;
+	case DAO_STRING  : *self = daoNullString; self->v.s = DString_New(1); break;
+	}
+	return self->t;
+}
 
 void DValue_CopyExt( DValue *self, DValue from, int copy )
 {
@@ -559,6 +575,9 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	int i = 1;
 	if( tp ==0 || tp->tid ==DAO_NIL || tp->tid ==DAO_INITYPE ){
 		DValue_Copy( to, from );
+		return 1;
+	}else if( from.t ==0 && tp->tid <= DAO_STRING ){
+		DValue_Init( to, tp->tid );
 		return 1;
 	}else if( tp->tid == DAO_ANY ){
 		DValue_Copy( to, from );
