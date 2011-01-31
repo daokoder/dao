@@ -95,8 +95,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 
 DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
 DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
-DaoNameSpace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *fname );
-DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *fname, DArray *reqns );
+DaoNameSpace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 
 void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check );
 

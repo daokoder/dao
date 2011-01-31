@@ -113,7 +113,7 @@ DValue DaoNameSpace_GetData( DaoNameSpace *self, DString *name );
 DaoClass* DaoNameSpace_FindClass( DaoNameSpace *self, DString *name );
 DaoNameSpace* DaoNameSpace_FindNameSpace( DaoNameSpace *self, DString *name );
 
-void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
+int DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
 void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImport );
 
 void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );

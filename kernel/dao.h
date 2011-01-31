@@ -647,7 +647,7 @@ struct DaoAPI
 
 	DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms );
 	DaoNameSpace* (*DaoNameSpace_GetNameSpace)( DaoNameSpace *self, const char *name );
-	void (*DaoNameSpace_AddParent)( DaoNameSpace *self, DaoNameSpace *parent );
+	int  (*DaoNameSpace_AddParent)( DaoNameSpace *self, DaoNameSpace *parent );
 	void (*DaoNameSpace_AddConstNumbers)( DaoNameSpace *self, DaoNumItem *items );
 	void (*DaoNameSpace_AddConstValue)( DaoNameSpace*self, const char *s, DValue v );
 	void (*DaoNameSpace_AddConstData)( DaoNameSpace *self, const char *name, DaoBase *data );
@@ -956,7 +956,7 @@ DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
 DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
 /* get namespace with the name, create if not exits: */
 DAO_DLL DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name );
-DAO_DLL void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
+DAO_DLL int  DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
 DAO_DLL void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );
 DAO_DLL void DaoNameSpace_AddConstValue( DaoNameSpace *self, const char *s, DValue v );
 DAO_DLL void DaoNameSpace_AddConstData( DaoNameSpace *self, const char *name, DaoBase *data );

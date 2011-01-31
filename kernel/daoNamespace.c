@@ -1118,19 +1118,32 @@ void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro, 
 		DArray_Append( m2->macroList, macro );
 	}
 }
-void DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent )
+int DaoNameSpace_CyclicParent( DaoNameSpace *self, DaoNameSpace *parent )
+{
+	int i;
+	if( parent == self ) return 1;
+	for(i=0; i<self->parents->size; i++)
+		if( self->parents->items.pNS[i] == parent ) return 0;
+	for(i=0; i<parent->parents->size; i++){
+		if( DaoNameSpace_CyclicParent( self, parent->parents->items.pNS[i] ) ) return 1;
+	}
+	return 0;
+}
+int DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent )
 {
 	int i;
 	DValue value = { DAO_NAMESPACE, 0, 0, 0, {0} };
 	value.v.ns = parent;
-	if( parent == self ) return;
+	if( parent == self ) return 0;
 	for(i=0; i<self->parents->size; i++)
-		if( self->parents->items.pNS[i] == parent ) return;
+		if( self->parents->items.pNS[i] == parent ) return 1;
 	DVarray_Append( self->cstData, value );
 	DValue_MarkConst( self->cstData->data + self->cstData->size -1 );
 	DArray_Append( self->parents, parent );
-	for(i=0; i<parent->parents->size; i++)
-		DaoNameSpace_AddParent( self, parent->parents->items.pNS[i] );
+	for(i=0; i<parent->parents->size; i++){
+		if( DaoNameSpace_AddParent( self, parent->parents->items.pNS[i] ) ==0 ) return 0;
+	}
+	return 1;
 }
 static int DaoNameSpace_GetUpIndex( DaoNameSpace *self, DaoNameSpace *ns )
 {

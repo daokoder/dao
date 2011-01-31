@@ -335,11 +335,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainProcess = DaoVmProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
-	if( mainVmSpace ){
-		DaoNameSpace_Import( self->nsInternal, mainVmSpace->nsInternal, 0 );
-	}else{
-		DaoVmSpace_InitPath( self );
-	}
+	if( mainVmSpace ) DaoNameSpace_Import( self->nsInternal, mainVmSpace->nsInternal, 0 );
 	DString_Clear( self->source );
 
 	return self;
@@ -956,6 +952,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DArray *argValues;
 	DValue value;
 	DValue *ps;
+	ullong_t tm = 0;
 	size_t N;
 	int i, j, ch, res;
 
@@ -989,6 +986,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		MAP_Insert( self->nsModules, ns->name, ns );
 		GC_IncRC( ns );
 	}
+	tm = FileChangedTime( ns->name->mbs );
+	ns->time = tm;
 
 	/* self->fileName may has been changed */
 	res = DaoVmSpace_ReadSource( self, ns->name );
@@ -1185,6 +1184,12 @@ static DaoNameSpace* DaoVmSpace_LoadDaoAssembly( DaoVmSpace *self, DString *fnam
 	return NULL;
 }
 #endif
+/* Loading module in Dao source file.
+ * The first time the module is loaded:
+ * (1) its default main (codes outside of any class and function) is executed;
+ * (2) then, its explicit main that matches with "args" will be executed.
+ * The next time the module is loaded:
+ * (1) its explicit main that matches with "args" will be executed. */
 static DaoNameSpace* 
 DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 {
@@ -1221,7 +1226,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 
 	node = MAP_Find( self->nsModules, libpath );
 	tm = FileChangedTime( libpath->mbs );
-	/* printf( "time = %lli, %s\n", tm, libpath->mbs ); */
+	/* printf( "time = %lli,  %s  %p\n", tm, libpath->mbs, node ); */
 	if( node ){
 		ns = (DaoNameSpace*)node->value.pBase;
 		if( ns->time >= tm ){
@@ -2385,14 +2390,21 @@ void DaoQuit()
 	mainVmSpace = NULL;
 	mainVmProcess = NULL; 
 }
-DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns )
+DaoNameSpace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {
 	DNode *node = MAP_Find( self->nsModules, fname );
+	if( node ) return (DaoNameSpace*) node->value.pBase;
+	DaoVmSpace_CompleteModuleName( self, fname );
+	node = MAP_Find( self->nsModules, fname );
+	if( node ) return (DaoNameSpace*) node->value.pBase;
+	return NULL;
+}
+DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns )
+{
 	DaoNameSpace *ns = NULL;
 	int modtype;
 #ifdef DAO_WITH_THREAD
 #endif
-	if( node ) return (DaoNameSpace*) node->value.pBase;
 	modtype = DaoVmSpace_CompleteModuleName( self, fname );
 #if 0
 	printf( "modtype = %i\n", modtype );

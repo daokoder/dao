@@ -1,0 +1,3 @@
+
+@@PATH( + '' )
+io.writeln( 'add' );

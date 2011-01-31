@@ -241,6 +241,7 @@ static const char* const daoCtInfo[] =
 	"Constructor not defined",
 	"Invalid case statement",
 	"Case value not constant",
+	"Cyclic loading detected",
 	"Feature is disabled",
 	"default parameter is not const",
 	"invalid parameter list",
