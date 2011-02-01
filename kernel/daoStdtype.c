@@ -2585,7 +2585,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Max,        "max( self :list<@T> )const=>tuple<@T,int>" },
 	{ DaoLIST_Min,        "min( self :list<@T> )const=>tuple<@T,int>" },
 	{ DaoLIST_Sum,        "sum( self :list<@T> )const=>@T" },
-	{ DaoLIST_Join,       "join( self :list<any>, separator='' )const=>string" },
+	{ DaoLIST_Join,       "join( self :list<int|float|double|long|complex|string|enum>, separator='' )const=>string" },
 	{ DaoLIST_PushFront,  "pushfront( self :list<@T>, item :@T )" },
 	{ DaoLIST_PopFront,   "popfront( self :list<any> )" },
 	{ DaoLIST_PopFront,   "dequeue( self :list<any> )" },
