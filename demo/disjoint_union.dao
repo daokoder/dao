@@ -1,0 +1,72 @@
+
+####################################
+# First example:
+####################################
+
+intstring : list<int|string> = {};
+
+intstring.append( 123 );
+intstring.append( 'abc' );
+
+#intstring.append( {} ); # typing error
+
+io.writeln( intstring, intstring[0], intstring[1] );
+
+
+
+####################################
+# Second example:
+####################################
+
+interface HasSizeMethod
+{
+	routine Size()=>int;
+}
+class AA
+{
+	routine Size()=>int{ return 10 }
+}
+class BB
+{
+	routine Size()=>int{ return 20 }
+}
+
+routine Test( object : AA | BB | HasSizeMethod )
+{
+# casting to an interface will invoke automatic binding:
+	object2 = (HasSizeMethod) object;
+	io.writeln( object2.Size() )
+}
+
+io.writeln( std.about( Test ) );
+
+Test( AA() )
+Test( BB() )
+
+
+
+####################################
+# Third example:
+####################################
+
+class FakeImage
+{
+	var image = [1,2,3,4;5,6,7,8;11,12,13,14;15,16,17,18];
+
+# instead of writing operator methods with all the combinations
+# such as tuple<int,int>, tuple<int,null>, ...
+# one can use disjoint union to simplify this.
+	operator[]( i : int, js : tuple<int|null,int|null> )=>array<int>
+	{
+# one can simply return image[i,js], but the following is for demonstration purpose:
+		j1 = 0;
+		j2 = image.dim(1) - 1;
+		if( js[0] != null ) j1 = (int) js[0];
+		if( js[1] != null ) j2 = (int) js[1];
+		return image[i,j1:j2];
+	}
+}
+
+image = FakeImage();
+io.writeln( image[1,1:] );
+io.writeln( image[2,:1] );
