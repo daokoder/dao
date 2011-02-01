@@ -587,6 +587,18 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		if( DValue_Compare( from, tp->value ) !=0 ) return 0;
 		DValue_Copy( to, from );
 		return 1;
+	}else if( tp->tid == DAO_UNION ){
+		DaoType *itp = NULL;
+		int j, k, mt = 0;
+		for(j=0; j<tp->nested->size; j++){
+			k = DaoType_MatchValue( tp->nested->items.pType[j], from, NULL );
+			if( k > mt ){
+				itp = tp->nested->items.pType[j];
+				mt = k;
+			}
+		}
+		if( itp == NULL ) return 0;
+		return DValue_Move( from, to, itp );
 	}
 	to->sub = from.sub;
 	to->cst = to->ndef = 0;

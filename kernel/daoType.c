@@ -225,8 +225,11 @@ void DaoType_Init()
 
 		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EQ+1;
 		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EQ+1;
+		dao_type_matrix[DAO_UNION][i] = DAO_MT_EQ+1;
+		dao_type_matrix[i][DAO_UNION] = DAO_MT_EQ+1;
 	}
 	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_UNION][DAO_UNION] = DAO_MT_EQ+1;
 
 	dao_type_matrix[DAO_UDF][DAO_ANY] = DAO_MT_ANYUDF;
 	dao_type_matrix[DAO_ANY][DAO_UDF] = DAO_MT_ANYUDF;
@@ -265,8 +268,7 @@ void DaoType_Init()
 	dao_type_matrix[DAO_VMPROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
 }
 static short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
-static int DaoInterface_TryBindTo
-( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
+static int DaoInterface_TryBindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
 
 static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int host )
 {
@@ -340,6 +342,13 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt <= DAO_MT_EQ ) return mt;
 	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
+	if( type->tid == DAO_UNION ){
+		for(i=0; i<type->nested->size; i++){
+			it2 = type->nested->items.pType[i];
+			if( DaoType_MatchTo( self, it2, defs ) ) return DAO_MT_SUB;
+		}
+		return DAO_MT_NOT;
+	}
 	switch( self->tid ){
 	case DAO_ENUM :
 		if( DString_EQ( self->name, type->name ) ) return DAO_MT_EQ;
@@ -419,6 +428,12 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type->tid != DAO_VALTYPE ) return DaoType_MatchValue( type, self->value, defs );
 		if( DValue_Compare( self->value, type->value ) ==0 ) return DAO_MT_EQ + 1;
 		return DAO_MT_NOT;
+	case DAO_UNION :
+		for(i=0; i<self->nested->size; i++){
+			it1 = self->nested->items.pType[i];
+			if( DaoType_MatchTo( it1, type, defs ) ) return DAO_MT_SUB;
+		}
+		break;
 	default : break;
 	}
 	if( mt > DAO_MT_EQ ) mt = DAO_MT_NOT;
@@ -507,6 +522,12 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	}
 	if( self->tid == DAO_VALTYPE ){
 		if( DValue_Compare( self->value, value ) ==0 ) return DAO_MT_EQ + 1;
+		return DAO_MT_NOT;
+	}else if( self->tid == DAO_UNION ){
+		for(i=0; i<self->nested->size; i++){
+			tp = self->nested->items.pType[i];
+			if( DaoType_MatchValue( tp, value, defs ) ) return DAO_MT_SUB;
+		}
 		return DAO_MT_NOT;
 	}
 	switch( value.t ){

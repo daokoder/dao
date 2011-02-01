@@ -1217,7 +1217,8 @@ WrongForm:
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[k]->line, tokens[k]->string->mbs );
 	return type;
 }
-DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types )
+static DaoType* 
+DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *types )
 {
 	DaoType *type = NULL;
 	DaoBase *retype = NULL;
@@ -1230,7 +1231,6 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 	DValue scope = daoNullValue;
 	DValue value = daoNullValue;
 	DString *tks = tok->string;
-	DArray *old = types;
 	int i, k, t = tokens[start]->name;
 	int gt, tid, count, count2;
 
@@ -1242,7 +1242,6 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 	if( start == end || t == DTOK_QUES || t == DTOK_DOTS || (t == DTOK_ID_INITYPE ) ){
 		return DaoParser_ParsePlainType( self, start, end, newpos );
 	}
-	if( types == NULL ) types = DArray_New(0);
 	count = types->size;
 	if( tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
 	if( tokens[start]->name == DTOK_IDENTIFIER && strcmp( tokens[start]->string->mbs, "future" ) !=0 ){
@@ -1312,17 +1311,52 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 #if 0
 	printf( "%s %i\n", type->name->mbs, *newpos );
 #endif
-	GC_IncRCs( types );
-	GC_DecRCs( types );
-	if( old == NULL ) DArray_Delete( types );
 	return type;
 InvalidTypeName:
 InvalidTypeForm:
 InvalidType:
+	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[start]->line, tks->mbs );
+	return NULL;
+}
+DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DArray *types )
+{
+	DaoNameSpace *ns = self->nameSpace;
+	DaoToken **tokens = self->tokens->items.pToken;
+	DaoType *tp, *type = NULL;
+	DArray *old = types;
+	int count;
+	if( types == NULL ) types = DArray_New(0);
+	count = types->size;
+	type = DaoParser_ParseType2( self, start, end, next, types );
+	if( type == NULL ) goto InvalidType;
+	DArray_Append( types, type );
+	while( type && *next <= end && tokens[*next]->name == DTOK_PIPE ){
+		type = DaoParser_ParseType2( self, *next + 1, end, next, types );
+		if( type == NULL ) goto InvalidType;
+		DArray_Append( types, type );
+	}
+	if( types->size == count + 1 ){
+		type = types->items.pType[count];
+		DArray_PopBack( types );
+	}else{
+		DaoType **nested = types->items.pType + count;
+		int i, count2 = types->size - count;
+		type = DaoNameSpace_MakeType( ns, "", DAO_UNION, NULL, nested, count2 );
+		if( type == NULL ) goto InvalidType;
+		for(i=0; i<count2; i++){
+			GC_IncRC( nested[i] );
+			GC_DecRC( nested[i] );
+		}
+		DArray_Erase( types, count, count2 );
+	}
 	GC_IncRCs( types );
 	GC_DecRCs( types );
 	if( old == NULL ) DArray_Delete( types );
-	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[start]->line, tks->mbs );
+	return type;
+InvalidType:
+	GC_IncRCs( types );
+	GC_DecRCs( types );
+	if( old == NULL ) DArray_Delete( types );
 	return NULL;
 }
 
@@ -5206,6 +5240,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DValue value;
 	int i = start+1, j, code = 0;
 	int perm = self->permission;
+	int cyclic = 0;
 	unsigned char tki = tokens[i]->name;
 
 	DString_Clear( self->mbs );
@@ -5319,10 +5354,8 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		if( modname ) MAP_Insert( vmSpace->modRequire, modname, mod );
 		if( mod == NULL && modname == NULL && varImport->size ==0 ){
 			mod = DaoVmSpace_FindModule( vmSpace, self->mbs );
-			if( mod && DaoNameSpace_CyclicParent( mod, nameSpace ) ){
-				DaoParser_Error( self, DAO_LOAD_CYCLIC, NULL );
-				mod = NULL;
-			}
+			cyclic = mod && DaoNameSpace_CyclicParent( mod, nameSpace );
+			mod = NULL;
 		}
 	}
 	DaoVmSpace_Unlock( self->vmSpace );
@@ -5335,16 +5368,16 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		if( vmSpace->stopit ) code = DAO_CTW_LOAD_CANCELLED;
 		goto ErrorLoad;
 	}
-	code = DAO_LOAD_CYCLIC;
 	if( modname == NULL && varImport->size ==0 ){
-		if( DaoNameSpace_AddParent( nameSpace, mod ) == 0) goto ErrorLoad;
+		cyclic = (DaoNameSpace_AddParent( nameSpace, mod ) == 0);
 	}else if( ns != mod ){
 		if( varImport->size ){
 			DaoNameSpace_Import( ns, mod, varImport );
 		}else{
-			if( DaoNameSpace_AddParent( ns, mod ) == 0 ) goto ErrorLoad;
+			cyclic = (DaoNameSpace_AddParent( ns, mod ) == 0);
 		}
 	}
+	if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
 	if( ns == nameSpace ){
 		DArray_Append( nameSpace->nsLoaded, mod );
 	}else{

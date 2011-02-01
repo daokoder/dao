@@ -140,7 +140,8 @@ struct DaoInterface
 
 DaoInterface* DaoInterface_New( const char *name );
 
-int  DaoInterface_Bind( DArray *pairs, DArray *fails );
+int DaoInterface_Bind( DArray *pairs, DArray *fails );
+int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
 void DaoInterface_DeriveMethods( DaoInterface *self );
 
 void DMap_SortMethods( DMap *hash, DArray *methods );

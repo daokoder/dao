@@ -1134,6 +1134,7 @@ int DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent )
 	DValue value = { DAO_NAMESPACE, 0, 0, 0, {0} };
 	value.v.ns = parent;
 	if( parent == self ) return 0;
+	if( DaoNameSpace_CyclicParent( self, parent ) ) return 0;
 	for(i=0; i<self->parents->size; i++)
 		if( self->parents->items.pNS[i] == parent ) return 1;
 	DVarray_Append( self->cstData, value );
@@ -1587,11 +1588,11 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 
 	DString_SetMBS( mbs, name );
 	if( N > 0 ){
-		DString_AppendChar( mbs, '<' );
+		if( tid != DAO_UNION ) DString_AppendChar( mbs, '<' );
 		DString_Append( mbs, nest[0]->name );
 		DArray_Append( nstd, nest[0] );
 		for(i=1; i<N; i++){
-			DString_AppendChar( mbs, ',' );
+			DString_AppendChar( mbs, tid == DAO_UNION ? '|' : ',' );
 			DString_Append( mbs, nest[i]->name );
 			DArray_Append( nstd, nest[i] );
 		}
@@ -1599,7 +1600,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 			DString_AppendMBS( mbs, "=>" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
 		}
-		DString_AppendChar( mbs, '>' );
+		if( tid != DAO_UNION ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
 		DString_AppendMBS( mbs, "<any>" );
 		DArray_Append( nstd, any );

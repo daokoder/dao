@@ -3520,19 +3520,16 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 			}
 		}else if( dA.t == DAO_ARRAY ){
 			if( tp == NULL ) goto Rebind;
-			if( tp->tid <DAO_INTEGER || tp->tid >DAO_COMPLEX ) goto FailConversion;
+			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) goto Rebind;
+			if( array2->numType == tp->tid ) goto Rebind;
+			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
 			array2 = dA.v.array;
 			size = array2->size;
-			if( tp->tid ==DAO_COMPLEX && array2->numType == DAO_COMPLEX ) goto Rebind;
 			array = DaoArray_New( tp->tid );
 			if( array2->numType == DAO_DOUBLE && tp->tid == DAO_COMPLEX )
 				array->numType = DAO_COMPLEX;
 			DaoArray_ResizeArray( array, array2->dims->items.pSize, array2->dims->size );
-			if( tp->tid == array2->numType ){
-				/* might be between int array and bit array */
-				int bs = sizeof(int) * ( (tp->tid == DAO_DOUBLE) + 1 );
-				memmove( array->data.p, array2->data.p, bs * size );
-			}else if( array2->numType == DAO_INTEGER ){
+			if( array2->numType == DAO_INTEGER ){
 				if( tp->tid == DAO_FLOAT ){
 					for( i=0; i<size; i++ ) array->data.f[i] = array2->data.i[i];
 				}else if( tp->tid == DAO_DOUBLE ){
@@ -3770,6 +3767,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	DLong *lb = NULL;
 	DNode *node;
 	complex16 cb;
+	int mt;
 
 	self->vmc = vmc;
 	if( va.t == vc->t && va.v.d == vc->v.d ) return;
@@ -3778,7 +3776,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		return;
 	}
 	if( ct == NULL || ct->type == DAO_UDF || ct->type == DAO_ANY ){
-		DaoContext_DoMove( self, vmc );
+		DValue_Copy( vc, va );
 		return;
 	}
 	if( ct->tid != DAO_COMPLEX  && vc->t == DAO_COMPLEX ) dao_free( vc->v.c );
@@ -3837,6 +3835,17 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 			}
 			return;
 		}
+	}
+	if( ct->tid == DAO_INTERFACE ){
+		at = DaoNameSpace_GetTypeV( self->nameSpace, va );
+		/* automatic binding when casted to an interface: */
+		mt = DaoInterface_BindTo( ct->value.v.inter, at, NULL, NULL );
+	}
+	mt = DaoType_MatchValue( ct, va, NULL );
+	/* printf( "mt = %i, ct = %s\n", mt, ct->name->mbs ); */
+	if( mt == DAO_MT_EQ || (mt && ct->tid == DAO_INTERFACE) ){
+		DValue_Copy( vc, va );
+		return;
 	}
 	sb = DString_New(1);
 	lb = DLong_New();
