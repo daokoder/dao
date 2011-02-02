@@ -70,3 +70,22 @@ class FakeImage
 image = FakeImage();
 io.writeln( image[1,1:] );
 io.writeln( image[2,:1] );
+
+
+
+####################################
+# Fourth example:
+####################################
+
+routine Sum( alist : list<@TT<int|string>> ) => @TT
+{
+#	reflect.trace();
+	return alist.sum();
+}
+
+s = Sum( { 1, 2, 3 } );
+#s += 'a'; # typing error
+io.writeln( s );
+
+s2 = Sum( { 'a', 'b', 'c' } );
+io.writeln( s2 );

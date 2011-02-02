@@ -1240,7 +1240,32 @@ DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *
 
 	*newpos = start + 1;
 	if( start == end || t == DTOK_QUES || t == DTOK_DOTS || (t == DTOK_ID_INITYPE ) ){
-		return DaoParser_ParsePlainType( self, start, end, newpos );
+		DaoBase *initype = NULL;
+		DaoType *vartype = NULL;
+		type = DaoParser_ParsePlainType( self, start, end, newpos );
+		initype = (DaoBase*) type;
+		if( type->tid == DAO_INITYPE && start < end && tokens[start+1]->name == DTOK_LT ){
+			int gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start+1, end );
+			if( gt < 0 ) goto WrongType;
+			vartype = DaoParser_ParseType( self, start + 2, gt, newpos, types );
+			if( vartype == NULL || *newpos != gt ) goto WrongType;
+			if( vartype->tid != DAO_UNION ){
+				printf( "Error: expecting disjiont union type instead of %s\n", vartype->name->mbs );
+				goto WrongType;
+			}
+			*newpos = gt + 1;
+			type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_UNION, initype, 
+					vartype->nested->items.pType, vartype->nested->size );
+			if( type == NULL ) goto WrongType;
+		}
+		return type;
+WrongType:
+		GC_IncRC( initype );
+		GC_DecRC( initype );
+		GC_IncRC( vartype );
+		GC_DecRC( vartype );
+		DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[start]->line, tks->mbs );
+		return NULL;
 	}
 	count = types->size;
 	if( tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidTypeName;

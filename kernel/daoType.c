@@ -345,7 +345,12 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( type->tid == DAO_UNION ){
 		for(i=0; i<type->nested->size; i++){
 			it2 = type->nested->items.pType[i];
-			if( DaoType_MatchTo( self, it2, defs ) ) return DAO_MT_SUB;
+			if( DaoType_MatchTo( self, it2, defs ) ){
+				if( defs && type->value.t == DAO_TYPE ){
+					MAP_Insert( defs, type->value.v.type, self );
+				}
+				return DAO_MT_SUB;
+			}
 		}
 		return DAO_MT_NOT;
 	}
@@ -704,6 +709,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
 	if( self->nested ){
+		char sep = self->tid == DAO_UNION ? '|' : ',';
 		if( copy->nested == NULL ) copy->nested = DArray_New(0);
 		DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
 		for(i=1; i<self->name->size; i++){
@@ -717,21 +723,35 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 			if( nest ==NULL ) goto DefFailed;
 			DArray_Append( copy->nested, nest );
 			DString_Append( copy->name, nest->name );
-			if( i+1 <self->nested->size ) DString_AppendMBS( copy->name, "," );
+			if( i+1 <self->nested->size ) DString_AppendChar( copy->name, sep );
 		}
 		GC_IncRCs( copy->nested );
-		if( self->value.v.type && self->value.v.type->type == DAO_TYPE ){
+		/* NOT FOR @T<int|string> kind types, see notes below: */
+		if( self->value.t == DAO_TYPE && self->tid != DAO_UNION ){
 			DString_AppendMBS( copy->name, "=>" );
 			copy->value.v.type = DaoType_DefineTypes( self->value.v.type, ns, defs );
 			if( copy->value.v.type ==NULL ) goto DefFailed;
 			DString_Append( copy->name, copy->value.v.type->name );
+			GC_IncRC( copy->value.v.type );
+			copy->value.t = DAO_TYPE;
 		}
 		DString_AppendChar( copy->name, '>' );
 	}
-	if( self->value.v.type && self->value.v.type->type == DAO_TYPE ){
-		copy->value.v.type = DaoType_DefineTypes( self->value.v.type, ns, defs );
-	}else{
-		copy->value.v.type = self->value.v.type;
+	if( copy->value.t == 0 && self->value.t != 0 ){
+		/* NOT FOR @T<int|string> kind types. Consider:
+		 *   routine Sum( alist : list<@T<int|string>> ) =>@T { return alist.sum(); }
+		 * when type inference is performed for "Sum( { 1, 2, 3 } )",
+		 * type holder "@T" will be defined to "int", then type inference is
+		 * performed on "alist.sum()", and "@T" will be defined to "@T<int|string>",
+		 * because of the prototype of "sum()"; So a cyclic definition is formed. */
+		if( self->value.t == DAO_TYPE && self->tid != DAO_UNION ){
+			copy->value.v.type = DaoType_DefineTypes( self->value.v.type, ns, defs );
+			if( copy->value.v.type ==NULL ) goto DefFailed;
+			GC_IncRC( copy->value.v.type );
+			copy->value.t = DAO_TYPE;
+		}else{
+			DValue_Copy( & copy->value, self->value );
+		}
 	}
 	if( self->tid == DAO_PAR_NAMED ){
 		DString_Append( copy->name, self->fname );
@@ -745,7 +765,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		DString_Assign( copy->name, self->name );
 	}
 	DaoType_CheckAttributes( copy );
-	GC_IncRC( copy->value.v.type );
 	if( self->tid == DAO_OBJECT && self->value.v.klass->instanceClasses ){
 		DaoClass *klass = self->value.v.klass;
 		klass = DaoClass_Instantiate( klass, copy->nested );

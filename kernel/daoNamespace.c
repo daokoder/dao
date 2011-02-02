@@ -1581,14 +1581,14 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 	DNode      *node;
 	DString    *mbs = DString_New(1);
 	DArray     *nstd = DArray_New(0);
-	int i;
+	int i, n = strlen( name );
 
 	if( tid != DAO_ANY )
 		any = DaoNameSpace_MakeType( self, "any", DAO_ANY, 0,0,0 );
 
 	DString_SetMBS( mbs, name );
 	if( N > 0 ){
-		if( tid != DAO_UNION ) DString_AppendChar( mbs, '<' );
+		if( n || tid != DAO_UNION ) DString_AppendChar( mbs, '<' );
 		DString_Append( mbs, nest[0]->name );
 		DArray_Append( nstd, nest[0] );
 		for(i=1; i<N; i++){
@@ -1600,7 +1600,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 			DString_AppendMBS( mbs, "=>" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
 		}
-		if( tid != DAO_UNION ) DString_AppendChar( mbs, '>' );
+		if( n || tid != DAO_UNION ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
 		DString_AppendMBS( mbs, "<any>" );
 		DArray_Append( nstd, any );
