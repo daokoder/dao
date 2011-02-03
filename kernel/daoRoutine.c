@@ -555,6 +555,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
 		DaoType  *abtp;
 		DMap *mapNames = rout->routType->mapNames;
 		DValue **dpar = p;
+		int is_virtual = rout->attribs & DAO_ROUT_VIRTUAL;
 		int ndef = rout->parCount;
 		int npar = n;
 		int selfChecked = 0, selfMatch = 0;
@@ -578,6 +579,11 @@ static DRoutine* DRoutine_GetOverLoadExt(
 			 */
 			abtp = parType[0]->value.v.type;
 			selfMatch = DaoType_MatchValue( abtp, *obj, defs );
+			if( is_virtual && selfMatch == 0 && obj->t == DAO_OBJECT ){
+				DValue value = *obj;
+				value.v.object = value.v.object->that;
+				selfMatch = DaoType_MatchValue( abtp, value, defs );
+			}
 			if( selfMatch ){
 				parpass[0] = selfMatch;
 				selfChecked = 1;
@@ -589,11 +595,11 @@ static DRoutine* DRoutine_GetOverLoadExt(
 		 */
 		sum = 0;
 		if( (npar | ndef) ==0 ){
-			if( max <1 ){
-				max = 1;
+			if( max < 1 ){
+				max = selfMatch + 1;
 				best = i;
 			}
-			sum = 1;
+			sum = selfMatch + 1;
 			goto NextRoutine;
 		}
 		if( npar > ndef ) goto NextRoutine;
@@ -615,6 +621,10 @@ static DRoutine* DRoutine_GetOverLoadExt(
 			if( ito >= ndef )  goto NextRoutine;
 			abtp = parType[ito]->value.v.type; /* must be named */
 			parpass[ito] = DaoType_MatchValue( abtp, val, defs );
+			if( is_virtual && ifrom == 0 && parpass[ito] == 0 && val.t == DAO_OBJECT ){
+				val.v.object = val.v.object->that;
+				parpass[ito] = DaoType_MatchValue( abtp, val, defs );
+			}
 			/*
 			   printf( "%i:  %s\n", parpass[ito], abtp->name->mbs );
 			 */
@@ -629,7 +639,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
 		}
 		sum = selfMatch;
 		for( j=selfChecked; j<ndef; j++ ) sum += parpass[j];
-		if( npar ==0 && ( ndef==0 || parType[0]->tid == DAO_PAR_VALIST ) ) sum = 1;
+		if( npar ==0 && ( ndef==0 || parType[0]->tid == DAO_PAR_VALIST ) ) sum = selfMatch + 1;
 		match = sum / (ndef + 1.0);
 		if( match > max ){
 			max = match;
@@ -736,35 +746,38 @@ NextDecorator:
 DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int code )
 {
 	DValue value = daoNullValue;
-	DaoClass *klass, *filter;
+	DaoClass *filter, *klass = NULL;
 	DaoRoutine *rout;
 	DRoutine *rout2;
+	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
 	if( self->routType->name->mbs[0] == '@' )
 		self = (DRoutine*) DaoRoutine_GetDecorator( self->routTable, p, n );
 	else
 		self = DRoutine_GetOverLoadExt( self->routTable, NULL, obj, p, n, code );
 	if( self ==NULL ) return NULL;
 	if( !(self->attribs & DAO_ROUT_VIRTUAL) ) return self;
+	if( self->tidHost != DAO_OBJECT ) return self;
 	rout = (DaoRoutine*) self;
-	if( (obj && obj->t != DAO_OBJECT) || rout->tidHost != DAO_OBJECT ) return self;
+
+	if( obj && obj->t == DAO_OBJECT ){
+		klass = obj->v.object->that->myClass;
+	}else if( mcall && n && p[0]->t == DAO_OBJECT ){
+		klass = p[0]->v.object->that->myClass;
+	}
 
 	/* when,
 	 *   Base::VirtMeth();
 	 * is called in a "Sub" class method, the rout->routHost->value.v.klass
 	 * will be "Base", but the obj.v.object->myClass will be "Sub". */
 	filter = rout->routHost->value.v.klass;
-	if( filter != obj->v.object->myClass ) return self;
 	/* when called with scope resolution operator ::, they are always the same.  */
-
-	klass = obj->v.object->that->myClass;
-	if( klass == filter ) return self;
+	if( klass == NULL || klass == filter ) return self;
 	if( DaoClass_ChildOf( klass, (DaoBase*) filter ) ==0 ) return self;
 	DaoClass_GetData( klass, self->routName, & value, klass, NULL );
 	if( value.t == DAO_ROUTINE ){
 		rout2 = (DRoutine*) value.v.routine;
-		value = daoNullObject;
-		value.v.object = obj->v.object->that;
-		rout2 = DRoutine_GetOverLoadExt( rout2->routTable, filter, &value, p, n, code );
+		rout2 = DRoutine_GetOverLoadExt( rout2->routTable, filter, obj, p, n, code );
+		/* if( rout2 ) printf( "overload: %s\n", rout2->routType->name->mbs ); */
 		if( rout2 ) return (DRoutine*) rout2;
 	}
 	return self;
@@ -798,6 +811,8 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code )
 {
 	ullong_t passed = 0;
+	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
+	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
 	int constParam = routine->type == DAO_ROUTINE ? ((DaoRoutine*)routine)->constParam : 0;
 	int npar = np;
 	int ifrom, ito;
@@ -829,7 +844,9 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			}
 		}else{
 			DValue o = *obj;
-			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
+			if( is_virtual && o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
+				/* no need to do similar things for DRoutine_FastPassParams():
+				 * because DVM_CALL is not specialized for virtual method call. */
 				o.v.object = o.v.object->that; /* for virtual method call */
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
@@ -850,6 +867,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DValue *val = p[ifrom];
 		DValue *loc = base ? base + ifrom : NULL;
+		DValue val2 = *val;
 		ito = ifrom + selfChecked;
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
 			for(; ifrom<npar; ifrom++){
@@ -863,6 +881,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			DaoNameValue *nameva = val->v.nameva;
 			DNode *node = DMap_Find( routype->mapNames, nameva->name );
 			val = & nameva->value;
+			val2 = *val;
 			if( node == NULL ) return 0;
 			ito = node->value.pInt;
 		}
@@ -875,7 +894,12 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 				continue;
 			}
 		}
-		if( DValue_Move( *val, recv[ito], tp ) ==0 ) return 0;
+		if( is_virtual && ifrom ==0 && val2.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
+			val2.v.object = val2.v.object->that; /* for virtual method call */
+			val2.v.p = DaoObject_MapThisObject( val2.v.object, tp );
+			if( val2.v.p == NULL ) return 0;
+		}
+		if( DValue_Move( val2, recv[ito], tp ) ==0 ) return 0;
 		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
 	return DRoutine_PassDefault( routine, recv, passed );
@@ -904,11 +928,13 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 			}
 		}else{
 			DValue o = *obj;
+#if 0
 			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
 				o.v.object = o.v.object->that; /* for virtual method call */
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
+#endif
 			if( DValue_Move( o, recv[0], tp ) ) selfChecked = 1;
 			recv[0]->cst = obj->cst;
 		}

@@ -77,7 +77,7 @@ io.writeln( image[2,:1] );
 # Fourth example:
 ####################################
 
-routine Sum( alist : list<@TT<int|string>> ) => @TT
+routine Sum( alist : list<@T<int|string>> ) => @T
 {
 #	reflect.trace();
 	return alist.sum();

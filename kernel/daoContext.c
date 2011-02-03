@@ -4329,6 +4329,11 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 			return;
 		}
+		if( ctx->routine->tidHost == DAO_OBJECT && ctx->regValues[0]->t == DAO_OBJECT ){
+			DaoObject *obj = ctx->regValues[0]->v.object;
+			GC_ShiftRC( obj, ctx->object );
+			ctx->object = obj;
+		}
 
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 		if( retype && retype->tid == DAO_FUTURE ){
