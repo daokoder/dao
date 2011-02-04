@@ -17,7 +17,7 @@
 #include"daoBase.h"
 #include"daoValue.h"
 
-typedef enum{ KEY_EQ=0, KEY_ML/*Max Less*/, KEY_MG/*Min Great*/ } KeySearchType;
+typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 
 typedef union
 {
@@ -78,13 +78,13 @@ extern DNode* DMap_Find( DMap *self, void *key );
 extern DNode* DMap_First( DMap *self );
 extern DNode* DMap_Next( DMap *self, DNode *node );
 
-extern DNode* DMap_FindML( DMap *self, void *key );
-extern DNode* DMap_FindMG( DMap *self, void *key );
+extern DNode* DMap_FindLE( DMap *self, void *key );
+extern DNode* DMap_FindGE( DMap *self, void *key );
 
 #define MAP_Insert( s, k, v ) DMap_Insert( (DMap*)(s), (void*)(size_t)(k), (void*)(size_t)(v) )
 #define MAP_Erase( s, k ) DMap_Erase( (DMap*)(s), (void*)(size_t)(k) )
 #define MAP_Find( s, k ) DMap_Find( (DMap*)(s), (void*)(size_t)(k) )
-#define MAP_FindML( s, k ) DMap_FindML( (DMap*)(s), (void*)(size_t)(k) )
-#define MAP_FindMG( s, k ) DMap_FindMG( (DMap*)(s), (void*)(size_t)(k) )
+#define MAP_FindLE( s, k ) DMap_FindLE( (DMap*)(s), (void*)(size_t)(k) )
+#define MAP_FindGE( s, k ) DMap_FindGE( (DMap*)(s), (void*)(size_t)(k) )
 
 #endif

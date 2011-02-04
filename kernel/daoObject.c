@@ -302,7 +302,7 @@ DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 		DaoBase *sup = self->superObject->items.pBase[i];
 		if( sup == NULL ) return NULL;
 		if( sup->type == DAO_OBJECT ){
-			return DaoObject_MapThisObject( (DaoObject*)sup, host );
+			if( (sup = DaoObject_MapThisObject( (DaoObject*)sup, host ) ) ) return sup;
 		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
 			if( DaoCData_ChildOf( ((DaoCData*)sup)->typer, host->typer ) ) return sup;
 		}

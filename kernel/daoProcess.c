@@ -813,13 +813,14 @@ CallEntry:
 
 	/*
 	   if( routine->tidHost == DAO_OBJECT )
-	   printf("class name = %s\n", routine->routHost->X.klass->className->mbs);
+	   printf("class name = %s\n", routine->routHost->value.v.klass->className->mbs);
 	   printf("routine name = %s\n", routine->routName->mbs);
 	//printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	printf("number of instruction: %i\n", routine->vmCodes->size );
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 	printf( "vmSpace = %p; nameSpace = %p\n", self->vmSpace, topCtx->nameSpace );
 	printf("routine = %p; context = %p\n", routine, topCtx );
+	printf( "self object = %p\n", topCtx->object );
 	 */
 
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;

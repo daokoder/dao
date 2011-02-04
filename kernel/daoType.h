@@ -65,12 +65,6 @@
  *    DaoType.basic = DAO_PARNAME
  *    DaoType.count = 2
  *    DaoType.nested[] = string, X
- *
- * for pair id: id1 : id2
- *    DaoType.name = "pair<X,Y>"
- *    DaoType.basic = DAO_PAIR
- *    DaoType.count = 2
- *    DaoType.nested[] = X, Y
  */
 struct DaoType
 {

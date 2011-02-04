@@ -556,6 +556,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
 		DMap *mapNames = rout->routType->mapNames;
 		DValue **dpar = p;
 		int is_virtual = rout->attribs & DAO_ROUT_VIRTUAL;
+		int need_self = rout->routType->attrib & DAO_TYPE_SELF;
 		int ndef = rout->parCount;
 		int npar = n;
 		int selfChecked = 0, selfMatch = 0;
@@ -571,8 +572,7 @@ static DRoutine* DRoutine_GetOverLoadExt(
 				&& ! ( rout->routType->attrib & DAO_TYPE_SELF ) ){
 			npar --;
 			dpar ++;
-		}else if( obj && obj->t && ( rout->routType->attrib & DAO_TYPE_SELF)
-				&& code != DVM_MCALL && code != DVM_MCALL_TC ){
+		}else if( obj && obj->t && need_self && ! mcall ){
 			/* class DaoClass : CppClass{ cppmethod(); }
 			 * use stdio;
 			 * print(..);
@@ -813,6 +813,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	ullong_t passed = 0;
 	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
 	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
+	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	int constParam = routine->type == DAO_ROUTINE ? ((DaoRoutine*)routine)->constParam : 0;
 	int npar = np;
 	int ifrom, ito;
@@ -829,11 +830,11 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	}
 #endif
 
-	if( (code == DVM_MCALL || code == DVM_MCALL_TC) && !(routype->attrib & DAO_TYPE_SELF) ){
+	if( mcall && ! need_self ){
 		npar --;
 		p ++;
 		if(base) base ++;
-	}else if( obj && obj->t && (routype->attrib & DAO_TYPE_SELF) ){
+	}else if( obj && obj->t && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		tp = types[0]->value.v.type;
 		if( obj->t < DAO_ARRAY ){
@@ -894,7 +895,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 				continue;
 			}
 		}
-		if( is_virtual && ifrom ==0 && val2.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
+		if( is_virtual && need_self && ifrom ==0 && val2.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
 			val2.v.object = val2.v.object->that; /* for virtual method call */
 			val2.v.p = DaoObject_MapThisObject( val2.v.object, tp );
 			if( val2.v.p == NULL ) return 0;
@@ -927,7 +928,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 				selfChecked = 1;
 			}
 		}else{
-			DValue o = *obj;
+			DValue o = *obj; /* see comments in DRoutine_PassParams() */
 #if 0
 			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
 				o.v.object = o.v.object->that; /* for virtual method call */

@@ -719,10 +719,10 @@ static DNode* DMap_FindChild( DMap *self, DNode *root, void *key, KeySearchType 
 		if( compare == 0 ) return p;
 
 		if( compare < 0 ){
-			if( type == KEY_MG ) m = p;
+			if( type == KEY_GE ) m = p;
 			if( p->left ) p = p->left; else break;
 		}else{
-			if( type == KEY_ML ) m = p;
+			if( type == KEY_LE ) m = p;
 			if( p->right ) p = p->right; else break;
 		}
 	}
@@ -820,13 +820,13 @@ DNode* DMap_Find( DMap *self, void *key )
 {
 	return DMap_FindNode( self, key, KEY_EQ );
 }
-DNode* DMap_FindML( DMap *self, void *key )
+DNode* DMap_FindLE( DMap *self, void *key )
 {
-	return DMap_FindNode( self, key, KEY_ML );
+	return DMap_FindNode( self, key, KEY_LE );
 }
-DNode* DMap_FindMG( DMap *self, void *key )
+DNode* DMap_FindGE( DMap *self, void *key )
 {
-	return DMap_FindNode( self, key, KEY_MG );
+	return DMap_FindNode( self, key, KEY_GE );
 }
 DNode* DMap_First( DMap *self )
 {

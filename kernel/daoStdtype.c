@@ -1088,7 +1088,7 @@ static void DaoSTR_Replace2( DaoContext *ctx, DValue *p[], int N )
 				k = sizes->items.pInt[j];
 				if( i+k > n ) break;
 				DString_SubString( self, key, i, k );
-				node = DMap_FindMG( words, key );
+				node = DMap_FindGE( words, key );
 				if( node == NULL ) break;
 				if( DString_EQ( node->key.pString, key ) ){
 					val = node->value.pString;
@@ -1121,7 +1121,7 @@ static void DaoSTR_Replace2( DaoContext *ctx, DValue *p[], int N )
 				k = sizes->items.pInt[j];
 				if( i+k > n ) break;
 				DString_SubString( self, key, i, k );
-				node = DMap_FindMG( words, key );
+				node = DMap_FindGE( words, key );
 				if( node == NULL ) break;
 				if( DString_EQ( node->key.pString, key ) ){
 					val = node->value.pString;
@@ -2839,8 +2839,8 @@ static void DaoMap_GetItem2( DValue *self0, DaoContext *ctx, DValue *ids[], int 
 	DaoMap *map = DaoContext_PutMap( ctx );
 	DNode *node1 = DMap_First( self->items );
 	DNode *node2 = NULL;
-	if( ids[0]->t ) node1 = MAP_FindMG( self->items, ids[0] );
-	if( ids[1]->t ) node2 = MAP_FindML( self->items, ids[1] );
+	if( ids[0]->t ) node1 = MAP_FindGE( self->items, ids[0] );
+	if( ids[1]->t ) node2 = MAP_FindLE( self->items, ids[1] );
 	if( node2 ) node2 = DMap_Next(self->items, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
 		DaoMap_Insert( map, node1->key.pValue[0], node1->value.pValue[0] );
@@ -2878,8 +2878,8 @@ static void DaoMap_SetItem2( DValue *self0, DaoContext *ctx, DValue *ids[], int 
 		if( DaoType_MatchValue( tp2, value, NULL ) ==0 )
 			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "value not matching" );
 	}
-	if( ids[0]->t ) node1 = MAP_FindMG( self->items, ids[0] );
-	if( ids[1]->t ) node2 = MAP_FindML( self->items, ids[1] );
+	if( ids[0]->t ) node1 = MAP_FindGE( self->items, ids[0] );
+	if( ids[1]->t ) node2 = MAP_FindLE( self->items, ids[1] );
 	if( node2 ) node2 = DMap_Next(self->items, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
 		DValue_Move( value, node1->value.pValue, tp2 );
@@ -2959,8 +2959,8 @@ static void DaoMAP_Erase( DaoContext *ctx, DValue *p[], int N )
 		MAP_Erase( self, p[1] );
 		break;
 	case 2 :
-		mg = MAP_FindMG( self, p[1] );
-		ml = MAP_FindML( self, p[2] );
+		mg = MAP_FindGE( self, p[1] );
+		ml = MAP_FindLE( self, p[2] );
 		if( mg ==NULL || ml ==NULL ) return;
 		ml = DMap_Next( self, ml );
 		keys = DArray_New(0);
@@ -2991,23 +2991,23 @@ static void DaoMAP_Find( DaoContext *ctx, DValue *p[], int N )
 	DNode *node;
 	DaoContext_SetResult( ctx, (DaoBase*) res );
 	res->items->data[0].t = DAO_INTEGER;
-	switch( (int)p[2]->v.i ){
-	case -1 :
-		node = MAP_FindML( self->items, p[1] );
-		if( node == NULL ) return;
-		res->items->data[0].v.i = 1;
-		DValue_Copy( res->items->data + 1, node->key.pValue[0] );
-		DValue_Copy( res->items->data + 2, node->value.pValue[0] );
-		break;
-	case 0  :
-		node = MAP_Find( self->items, p[1] );
+	switch( (int)p[2]->v.e->value ){
+	case 0 :
+		node = MAP_FindLE( self->items, p[1] );
 		if( node == NULL ) return;
 		res->items->data[0].v.i = 1;
 		DValue_Copy( res->items->data + 1, node->key.pValue[0] );
 		DValue_Copy( res->items->data + 2, node->value.pValue[0] );
 		break;
 	case 1  :
-		node = MAP_FindMG( self->items, p[1] );
+		node = MAP_Find( self->items, p[1] );
+		if( node == NULL ) return;
+		res->items->data[0].v.i = 1;
+		DValue_Copy( res->items->data + 1, node->key.pValue[0] );
+		DValue_Copy( res->items->data + 2, node->value.pValue[0] );
+		break;
+	case 2  :
+		node = MAP_FindGE( self->items, p[1] );
 		if( node == NULL ) return;
 		res->items->data[0].v.i = 1;
 		DValue_Copy( res->items->data + 1, node->key.pValue[0] );
@@ -3027,11 +3027,11 @@ static void DaoMAP_Key( DaoContext *ctx, DValue *p[], int N )
 		mg = DMap_First( self->items );
 		break;
 	case 1 :
-		mg = MAP_FindMG( self->items, p[1] );
+		mg = MAP_FindGE( self->items, p[1] );
 		break;
 	case 2 :
-		mg = MAP_FindMG( self->items, p[1] );
-		ml = MAP_FindML( self->items, p[2] );
+		mg = MAP_FindGE( self->items, p[1] );
+		ml = MAP_FindLE( self->items, p[2] );
 		if( ml == NULL ) return;
 		ml = DMap_Next( self->items, ml );
 		break;
@@ -3052,11 +3052,11 @@ static void DaoMAP_Value( DaoContext *ctx, DValue *p[], int N )
 		mg = DMap_First( self->items );
 		break;
 	case 1 :
-		mg = MAP_FindMG( self->items, p[1] );
+		mg = MAP_FindGE( self->items, p[1] );
 		break;
 	case 2 :
-		mg = MAP_FindMG( self->items, p[1] );
-		ml = MAP_FindML( self->items, p[2] );
+		mg = MAP_FindGE( self->items, p[1] );
+		ml = MAP_FindLE( self->items, p[2] );
 		if( ml ==NULL ) return;
 		ml = DMap_Next( self->items, ml );
 		break;
@@ -3094,7 +3094,7 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
 	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
 	/* 0:EQ; -1:MaxLess; 1:MinGreat */
-	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type=0 )const=>tuple<int,@K,@V>" },
+	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type : enum<le,eq,ge>=$eq )const=>tuple<int,@K,@V>" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any> )const=>list<@K>" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K )const=>list<@K>" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K, to :@K )const=>list<@K>" },

@@ -775,7 +775,7 @@ static void DaoParser_ExtractComments( DaoParser *self, DString *docString,
 	DNode *node;
 	size_t j;
 
-	node = MAP_FindML( self->comments, lnstart );
+	node = MAP_FindLE( self->comments, lnstart );
 	if( node == NULL ) node = DMap_First( self->comments );
 
 	for(; node!=NULL; node = DMap_Next(self->comments, node) ){

@@ -1667,11 +1667,21 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 	res = DaoContext_PutInteger( self, 0 );
 	if( dA.t && dB.t == DAO_TYPE && type->tid == DAO_TYPE ){
 		type = type->nested->items.pType[0];
+		if( dA.t == DAO_OBJECT ) dA.v.object = dA.v.object->that;
+		if( type->tid == DAO_UNION ){
+			int i, mt, id = 0, max = 0;
+			for(i=0; i<type->nested->size; i++){
+				mt = DaoType_MatchValue( type->nested->items.pType[i], dA, NULL );
+				if( mt > max ){
+					max = mt;
+					id = i + 1;
+				}
+			}
+			*res = id;
+			return;
+		}
 		if( dA.t < DAO_ARRAY ){
 			*res = dA.t == type->tid;
-		}else if( dA.t == DAO_OBJECT ){
-			dA.v.object = dA.v.object->that;
-			*res = DaoType_MatchValue( type, dA, NULL ) != 0;
 		}else{
 			*res = DaoType_MatchValue( type, dA, NULL ) != 0;
 		}
@@ -4022,6 +4032,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoContext *ctx;
 	DaoTuple *tuple;
 	DaoVmCode *vmc2;
+	int need_self, mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
 	int initbase = 0;
 	int tail = 0;
 
@@ -4329,7 +4340,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 			return;
 		}
-		if( ctx->routine->tidHost == DAO_OBJECT && ctx->regValues[0]->t == DAO_OBJECT ){
+		need_self = ctx->routine->routType->attrib & DAO_TYPE_SELF;
+		if( mcall && need_self && ctx->routine->tidHost == DAO_OBJECT && ctx->regValues[0]->t == DAO_OBJECT ){
 			DaoObject *obj = ctx->regValues[0]->v.object;
 			GC_ShiftRC( obj, ctx->object );
 			ctx->object = obj;
