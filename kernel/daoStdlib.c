@@ -2004,7 +2004,7 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 static void REFL_Class( DaoContext *ctx, DValue *p[], int N )
 {
 	if( p[0]->t == DAO_ROUTINE && p[0]->v.routine->tidHost == DAO_OBJECT ){
-		DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->routHost->value.v.klass );
+		DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->routHost->aux.v.klass );
 	}else if( p[0]->t == DAO_OBJECT ){
 		DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.object->myClass );
 	}

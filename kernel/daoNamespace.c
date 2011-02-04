@@ -252,7 +252,7 @@ static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
 		it = rt->nested->items.pType[i];
 		if( sig->size ) DString_AppendChar( sig, ',' );
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
-			DString_Append( sig, it->value.v.type->name );
+			DString_Append( sig, it->aux.v.type->name );
 		}else{
 			DString_Append( sig, it->name );
 		}
@@ -551,7 +551,7 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 			}
 			i += 1;
 		}
-		DMap_Insert( hostCore->instanceCData, abtype->nested, abtype->value.v.cdata );
+		DMap_Insert( hostCore->instanceCData, abtype->nested, abtype->aux.v.cdata );
 		if( parser != parser2 ) DaoParser_Delete( parser );
 	}
 
@@ -1278,8 +1278,8 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 		GC_IncRC( tp );
 	}
 	if( id >=0 ) return 1;
-	if( tp->value.v.p && (tp->tid == DAO_CLASS || tp->tid == DAO_CDATA) ){
-		DaoNameSpace_AddConst( self, name, tp->value, DAO_DATA_PUBLIC );
+	if( tp->aux.v.p && (tp->tid == DAO_CLASS || tp->tid == DAO_CDATA) ){
+		DaoNameSpace_AddConst( self, name, tp->aux, DAO_DATA_PUBLIC );
 	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_INITYPE ){
 		DValue val = daoNullClass;
 		val.t = DAO_TYPE;
@@ -1669,7 +1669,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		tp = tp2 = routype->nested->items.pType[i];
 		if( tp && (tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT) ){
 			ch = tp->name->mbs[tp->fname->size];
-			tp2 = tp->value.v.type;
+			tp2 = tp->aux.v.type;
 		}
 		if( tp2 && tp2->tid ==DAO_UDF ){
 			if( vals ){
@@ -1679,7 +1679,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 			}
 		}
 		/* XXX typing DString_AppendMBS( abtp->name, tp ? tp->name->mbs : "..." ); */
-		if( tp2 != tp && tp2 != tp->value.v.type ){
+		if( tp2 != tp && tp2 != tp->aux.v.type ){
 			fname = tp->fname;
 			tp = DaoType_New( fname->mbs, tp->tid, (DaoBase*) tp2, NULL );
 			DString_AppendChar( tp->name, ch );
@@ -1689,15 +1689,15 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		DString_Append( abtp->name, tp->name );
 		DArray_Append( abtp->nested, tp );
 	}
-	tp = retp ? retp : routype->value.v.type;
+	tp = retp ? retp : routype->aux.v.type;
 	if( tp ){
 		DString_AppendMBS( abtp->name, "=>" );
 		DString_Append( abtp->name, tp->name );
 	}
 	DString_AppendMBS( abtp->name, ">" );
-	abtp->value.t = DAO_TYPE;
-	abtp->value.v.type = tp;
-	GC_IncRC( abtp->value.v.type );
+	abtp->aux.t = DAO_TYPE;
+	abtp->aux.v.type = tp;
+	GC_IncRC( abtp->aux.v.type );
 	GC_IncRCs( abtp->nested );
 	node = MAP_Find( self->abstypes, abtp->name );
 	if( node ){
@@ -1875,7 +1875,7 @@ DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DValue value )
 	}
 	if( name->size ==0 && value.t ==0 ) DString_SetMBS( name, "null" );
 	type = DaoNameSpace_MakeType( self, name->mbs, DAO_VALTYPE, 0,0,0 );
-	DValue_Copy( & type->value, value );
+	DValue_Copy( & type->aux, value );
 	DString_Delete( name );
 	return type;
 }

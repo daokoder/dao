@@ -874,7 +874,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
 		if( rout->attribs & DAO_ROUT_NEEDSELF ){
 			if( selfobj.t != DAO_OBJECT || drout->routHost ==NULL ) goto ErrorParam;
 			obj = selfobj.v.object;
-			if( ! DaoClass_ChildOf( obj->myClass, drout->routHost->value.v.p ) ) goto ErrorParam;
+			if( ! DaoClass_ChildOf( obj->myClass, drout->routHost->aux.v.p ) ) goto ErrorParam;
 		}
 	}
 	thread = DaoThread_New( self );

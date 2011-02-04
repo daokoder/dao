@@ -1437,7 +1437,7 @@ static DaoCData* DaoCData_Instantiate( DaoCData *self, DaoFunction *func, DArray
 	DaoFunction_SimpleCall( func, ctx, pars, n );
 	if( result.t == DAO_CDATA && result.v.cdata != NULL ){
 		DaoTypeBase *typer = (DaoTypeBase*) result.v.cdata->data;
-		return typer->priv->abtype->value.v.cdata;
+		return typer->priv->abtype->aux.v.cdata;
 	}
 	return NULL;
 }
@@ -2609,12 +2609,12 @@ static int DaoParser_UseConstructor( DaoParser *self, DRoutine *rout, int t1, in
 	DString *s1 = DString_Copy( rout->routType->name );
 	DString *s2 = DString_New(1);
 	int perm = self->permission;
-	int i, k = DString_Find( s1, rout->routType->value.v.type->name, 0 );
+	int i, k = DString_Find( s1, rout->routType->aux.v.type->name, 0 );
 	if( k != MAXSIZE ) DString_Erase( s1, k, -1 );
 	for(i=0; i<classRoutine->routTable->size; i++){
 		DaoRoutine *rt = classRoutine->routTable->items.pRout[i];
 		DString_Assign( s2, rt->routType->name );
-		k = DString_Find( s2, rt->routType->value.v.type->name, 0 );
+		k = DString_Find( s2, rt->routType->aux.v.type->name, 0 );
 		if( k != MAXSIZE ) DString_Erase( s2, k, -1 );
 		if( DString_EQ( s1, s2 ) ){
 			DaoParser_SumTokens( self, s2, t1, t2-1, 1 );
@@ -2761,8 +2761,8 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 		types = nested->items.pType;
 		if( param && param->items->size >= nested->size ) continue;
 		ft = types[0];
-		if( ft->tid != DAO_PAR_NAMED || ft->value.v.type->tid != DAO_ROUTINE ) continue;
-		ft = ft->value.v.type;
+		if( ft->tid != DAO_PAR_NAMED || ft->aux.v.type->tid != DAO_ROUTINE ) continue;
+		ft = ft->aux.v.type;
 		if( ft->nested->size > self->routType->nested->size ) continue;
 		sum = sum2 = 0;
 		mapNames = ft->mapNames;
@@ -2792,7 +2792,7 @@ static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, 
 					k = node->value.pInt;
 					if( k ==0 ) goto NextDecorator;
 				}
-				match = DaoType_MatchValue( types[k]->value.v.type, pv, NULL );
+				match = DaoType_MatchValue( types[k]->aux.v.type, pv, NULL );
 				if( match ==0 ) goto NextDecorator;
 				sum2 += match;
 				parpass[k] = 1;
@@ -4818,17 +4818,17 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	if( routine->routName->mbs[0] == '@' && routine->routType->nested->size ){
 		DaoType *ftype = routine->routType->nested->items.pType[0];
 		DaoToken tok = { DTOK_IDENTIFIER, DTOK_IDENTIFIER, 0, 0, 0, NULL };
-		if( ftype->tid == DAO_PAR_NAMED && ftype->value.v.type->tid == DAO_ROUTINE ){
+		if( ftype->tid == DAO_PAR_NAMED && ftype->aux.v.type->tid == DAO_ROUTINE ){
 			DMap *names;
 			DNode *it;
-			ftype = ftype->value.v.type;
+			ftype = ftype->aux.v.type;
 			names = ftype->mapNames;
 			assert( routine->parCount == self->locRegCount );
 			for(id=0,it=DMap_First(names); it; it=DMap_Next(names,it),id++){
 				DaoType *tp = ftype->nested->items.pType[it->value.pInt];
 				tok.string = it->key.pString;
 				if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT )
-					tp = tp->value.v.type;
+					tp = tp->aux.v.type;
 				DaoParser_DeclareVariable( self, & tok, 0, tp );
 				self->locRegCount = routine->parCount + (id+1);
 			}

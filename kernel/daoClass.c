@@ -33,7 +33,7 @@ static void DaoClass_GetField( DValue *self0, DaoContext *ctx, DString *name )
 {
 	int tid = ctx->routine->tidHost;
 	DaoType *type = ctx->routine->routHost;
-	DaoClass *host = tid == DAO_OBJECT ? type->value.v.klass : NULL;
+	DaoClass *host = tid == DAO_OBJECT ? type->aux.v.klass : NULL;
 	DaoClass *self = self0->v.klass;
 	DString *mbs = DString_New(1);
 	DValue *d2 = NULL;
@@ -192,7 +192,7 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DaoClass *klass = other->superClass->items.pClass[i];
 		if( klass->type == DAO_CLASS && klass->typeHolders ){
 			tp = DaoType_DefineTypes( klass->objType, ns, deftypes );
-			if( tp ) klass = tp->value.v.klass;
+			if( tp ) klass = tp->aux.v.klass;
 			DArray_Append( self->superClass, klass );
 			DArray_Append( self->superAlias, klass->objType->name );
 		}else{
@@ -433,7 +433,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 			typer = cdata->typer;
 			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
 				if( typer->supers[j] == NULL ) break;
-				DArray_Append( parents, typer->supers[j]->priv->abtype->value.v.p );
+				DArray_Append( parents, typer->supers[j]->priv->abtype->aux.v.p );
 				DArray_Append( offsets, (size_t) offset );
 			}
 		}

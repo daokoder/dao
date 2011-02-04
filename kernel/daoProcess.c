@@ -813,7 +813,7 @@ CallEntry:
 
 	/*
 	   if( routine->tidHost == DAO_OBJECT )
-	   printf("class name = %s\n", routine->routHost->value.v.klass->className->mbs);
+	   printf("class name = %s\n", routine->routHost->aux.v.klass->className->mbs);
 	   printf("routine name = %s\n", routine->routName->mbs);
 	//printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	printf("number of instruction: %i\n", routine->vmCodes->size );
@@ -894,7 +894,7 @@ CallEntry:
 	dataVG = routine->nameSpace->varDataTable;
 	typeVG = routine->nameSpace->varTypeTable;
 	if( routine->tidHost == DAO_OBJECT ){
-		host = routine->routHost->value.v.klass;
+		host = routine->routHost->aux.v.klass;
 		dataCK = host->cstDataTable;
 		dataVK = host->glbDataTable;
 		typeVK = host->glbTypeTable;
@@ -2170,7 +2170,7 @@ CallEntry:
 			abtp = NULL;
 			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
 			abtp = tuple->unitype->nested->items.pType[id];
-			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->value.v.type;
+			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->aux.v.type;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], tuple->items->data + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
@@ -2187,7 +2187,7 @@ CallEntry:
 			tuple = locVars[ vmc->c ]->v.tuple;
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
-			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->value.v.type;
+			if( abtp->tid == DAO_PAR_NAMED ) abtp = abtp->aux.v.type;
 			if( DaoMoveAC( topCtx, *locVars[vmc->a], tuple->items->data + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
@@ -3126,7 +3126,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 	DaoStream_WriteMBS( ss, "Raised by:  " );
 	if( ex->routine->attribs & DAO_ROUT_PARSELF ){
 		DaoType *type = ex->routine->routType->nested->items.pType[0];
-		DaoType_WriteMainName( type->value.v.type, ss );
+		DaoType_WriteMainName( type->aux.v.type, ss );
 		DaoStream_WriteMBS( ss, "." );
 	}else if( ex->routine->routHost ){
 		DaoType_WriteMainName( ex->routine->routHost, ss );
@@ -3159,7 +3159,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 		DaoStream_WriteMBS( ss, "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
 			DaoType *type = rout->routType->nested->items.pType[0];
-			DaoType_WriteMainName( type->value.v.type, ss );
+			DaoType_WriteMainName( type->aux.v.type, ss );
 			DaoStream_WriteMBS( ss, "." );
 		}else if( rout->routHost ){
 			DaoType_WriteMainName( rout->routHost, ss );
