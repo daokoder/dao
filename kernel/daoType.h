@@ -87,9 +87,10 @@ struct DaoType
 	 * For wrapped C type: aux.v.cdata is the DaoCData object;
 	 * For constant as type: aux is the constant value. */
 	DValue        aux;
-	DValue        value;
+	DValue        value; /* default value for the type */
 };
 extern DaoType *dao_type_udf;
+extern DaoType *dao_type_any;
 extern DaoType *dao_array_any;
 extern DaoType *dao_array_empty;
 extern DaoType *dao_list_any;
@@ -107,6 +108,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *pb, DArray *nest );
 DaoType* DaoType_Copy( DaoType *self );
 void DaoType_Delete( DaoType *self );
 
+void DaoType_InitDefault( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self );
 
 /* if "self" match to "type": */

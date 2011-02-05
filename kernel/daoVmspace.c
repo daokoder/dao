@@ -1436,12 +1436,7 @@ DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 		return 0;
 	}
 	api = (DaoAPI*) DaoGetSymbolAddress( handle, "__dao" );
-	if( api == NULL ){
-		DaoStream_WriteMBS( self->stdStream,
-				"WARNING: Dao APIs are not available through wrapped interfaces.\n" );
-	}else{
-		DaoInitAPI( api );
-	}
+	if( api ) DaoInitAPI( api );
 
 	funpter = (FuncType) DaoGetSymbolAddress( handle, "DaoOnLoad" );
 	if( ! funpter ){
@@ -2162,6 +2157,7 @@ extern void DaoJitMapper_Init();
 extern void DaoType_Init();
 
 DaoType *dao_type_udf = NULL;
+DaoType *dao_type_any = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_array_empty = NULL;
 DaoType *dao_list_any = NULL;
@@ -2236,6 +2232,7 @@ DaoVmSpace* DaoInit()
 	DaoStartGC();
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
+	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
 	dao_class_any = DaoType_New( "class", DAO_CLASS, (DaoBase*)DaoClass_New(), NULL );
 

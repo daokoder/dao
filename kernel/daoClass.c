@@ -826,6 +826,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DValue deft, DaoType *
 	DNode *node = MAP_Find( self->deflines, name );
 	if( node ) return DAO_CTW_WAS_DEFINED;
 	if( ln >= 0 ) MAP_Insert( self->deflines, name, (size_t)ln );
+	if( deft.t == 0 && t ) deft = t->value;
 
 	GC_IncRC( t );
 	id = self->objDataName->size;
@@ -855,6 +856,7 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DValue data, DaoType *
 	DNode *node = MAP_Find( self->deflines, name );
 	if( node ) return DAO_CTW_WAS_DEFINED;
 	if( ln >= 0 ) MAP_Insert( self->deflines, name, (size_t)ln );
+	if( data.t == 0 && t ) data = t->value;
 	GC_IncRC( t );
 	MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_VARIABLE, s, 0, self->glbData->size ) );
 	DVarray_Append( self->glbData, daoNullValue );

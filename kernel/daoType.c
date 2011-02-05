@@ -142,6 +142,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 		self->nested = DArray_New(0);
 	}
 	if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
+	DaoType_InitDefault( self );
 #if 0
 	if( strstr( self->name->mbs, "map<" ) ){
 		printf( "%s  %p\n", self->name->mbs, self );
@@ -149,6 +150,46 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 	}
 #endif
 	return self;
+}
+void DaoType_InitDefault( DaoType *self )
+{
+	DaoType **types = self->nested ? self->nested->items.pType : NULL;
+	DaoType *itype1 = types && self->nested->size > 0 ? types[0] : NULL;
+	DaoType *itype2 = types && self->nested->size > 1 ? types[1] : NULL;
+	int i, count = self->nested ? self->nested->size : 0;
+	if( self->value.t ) return;
+	if( self->tid <= DAO_STRING ){
+		DValue_Init( & self->value, self->tid );
+	}else if( self->tid == DAO_ENUM ){
+		self->value = daoNullEnum;
+		self->value.v.e = DEnum_New( self, 0 );
+	}else if( self->tid == DAO_ARRAY ){
+		self->value = daoNullArray;
+		self->value.v.array = DaoArray_New( itype1 ? itype1->tid : DAO_INTEGER );
+		self->value.v.array->unitype = self;
+		GC_IncRC( self );
+	}else if( self->tid == DAO_LIST ){
+		self->value = daoNullList;
+		self->value.v.list = DaoList_New();
+		self->value.v.list->unitype = self;
+		GC_IncRC( self );
+	}else if( self->tid == DAO_MAP ){
+		self->value = daoNullMap;
+		self->value.v.map = DaoMap_New(0);
+		self->value.v.map->unitype = self;
+		GC_IncRC( self );
+	}else if( self->tid == DAO_TUPLE ){
+		self->value = daoNullTuple;
+		self->value.v.tuple = DaoTuple_New( count );
+		self->value.v.tuple->unitype = self;
+		GC_IncRC( self );
+		for(i=0; i<count; i++){
+			DaoType_InitDefault( types[i] );
+			DValue_Copy( & self->value.v.tuple->items->data[i], types[i]->value );
+		}
+	}
+	if( self->value.t ) DValue_MarkConst( & self->value );
+	if( self->value.t >= DAO_ARRAY ) GC_IncRC( self->value.v.p );
 }
 DaoType* DaoType_Copy( DaoType *other )
 {
@@ -172,6 +213,7 @@ DaoType* DaoType_Copy( DaoType *other )
 	self->aux = daoNullValue;
 	self->value = daoNullValue;
 	DValue_Copy( & self->aux, other->aux );
+	DValue_Copy( & self->value, other->value );
 	return self;
 }
 void DaoType_MapNames( DaoType *self )
@@ -788,6 +830,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		DMap_Insert( ns->abstypes, copy->name, copy );
 		DMap_Insert( defs, self, copy );
 	}
+	DValue_Clear( & copy->value );
+	DaoType_InitDefault( copy );
 	return copy;
 DefFailed:
 	printf( "redefine failed\n" );

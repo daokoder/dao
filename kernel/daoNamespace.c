@@ -986,6 +986,7 @@ int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, D
 
 	if( tp && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
+	if( value.t == 0 && tp ) value = tp->value;
 	if( node ){
 		up = LOOKUP_UP( node->value.pSize );
 		id = LOOKUP_ID( node->value.pSize );
