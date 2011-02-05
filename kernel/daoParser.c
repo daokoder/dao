@@ -4212,8 +4212,8 @@ DecoratorError:
 			continue;
 		}
 		if( ptok->type != DTOK_IDENTIFIER && ptok->type != DTOK_LB ){
-			reg = DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 );
-			if( reg < 0 ) return 0;
+			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
 		}
@@ -4232,8 +4232,8 @@ DecoratorError:
 					DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
 					return 0;
 				}
-				reg = DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 );
-				if( reg < 0 ) return 0;
+				if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+				if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 				start = end + 1;
 				continue;
 			}
@@ -4337,6 +4337,7 @@ DecoratorError:
 					comma = -1;
 				}
 			}
+			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
 		}
@@ -4345,6 +4346,7 @@ DecoratorError:
 		if( tki != DTOK_IDENTIFIER ){ /* statement */
 			self->warnAssn = 0;
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
 		}else if( storeType == 0 && tki == DTOK_IDENTIFIER && tki2 == DTOK_ASSN ){
@@ -4353,6 +4355,7 @@ DecoratorError:
 			self->warnAssn = 0;
 			DaoParser_DeclareVariable( self, tokens[start], 0, NULL );
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
 		}
@@ -4413,15 +4416,13 @@ DecoratorError:
 				DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start + 1, end, 0 );
 				return 0;
 			}
-			if( eq <0 && abtp == NULL && (storeType == 0 || storeType == DAO_DATA_LOCAL) ){
-				start = end + 1;
-				continue;
-			}
 			value = daoNullValue;
 			if( cst ){
 				value = DaoParser_GetVariable( self, cst );
 				if( value.t >= DAO_ARRAY ) value.v.p->trait |= DAO_DATA_CONST;
 			}
+			if( abtp ==0 && value.t ) abtp = DaoNameSpace_GetTypeV( myNS, value );
+			if( abtp ==0 && eq <0 ) abtp = dao_type_any;
 			if( reg < 0 && abtp && (storeType == 0 || storeType == DAO_DATA_LOCAL) ){
 				/* prepare default value for local variables */
 				int id = DaoRoutine_AddConstValue( self->routine, abtp->value );
@@ -4429,7 +4430,6 @@ DecoratorError:
 				DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, DVM_GETCL, 0, id, reg, start, end,0 );
 			}
-			if( abtp ==0 && value.t ) abtp = DaoNameSpace_GetTypeV( myNS, value );
 			for(k=0; k<self->toks->size; k++){
 				DaoToken *varTok = self->toks->items.pToken[k];
 				int id = 0;
@@ -4536,6 +4536,7 @@ DecoratorError:
 		}else if( storeType == 0 ){
 			self->warnAssn = 0;
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
 		}else{
