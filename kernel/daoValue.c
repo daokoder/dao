@@ -351,7 +351,7 @@ void DValue_MarkConst( DValue *self )
 		if( obj->superObject == NULL ) break;
 		for(i=0; i<obj->superObject->size; i++){
 			oval.v.object = obj->superObject->items.pObject[i];
-			if( oval.v.object->type != DAO_OBJECT ) continue;
+			if( oval.v.object == NULL || oval.v.object->type != DAO_OBJECT ) continue;
 			DValue_MarkConst( & oval );
 		}
 		break;
