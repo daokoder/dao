@@ -19,19 +19,18 @@ class LinkList<@V,@T=int>
 	routine Append( value : @V ){
 		item = Item<@V>( value );
 		#io.writeln( std.about( first, last, item ) );
-		if( first == null ) first = item else last.next = item;
+		if( first == Item<@V>::default ) first = item else last.next = item;
 		last = item;
 	}
 	routine Print(){
 		item = first;
 		io.writeln( item.value, item );
-		while( item.next != null ){
+		while( item.next != Item<@V>::default ){
 			item = item.next;
 			io.writeln( item.value, item );
 		}
 	}
 }
-
 ll = LinkList<int>();
 ll.Append(11);
 ll.Append(22);

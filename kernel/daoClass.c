@@ -179,6 +179,28 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int  DaoRoutine_InferTypes( DaoRoutine *self );
 void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
+void DValue_Update( DValue *self, DaoNameSpace *ns, DMap *deftypes )
+{
+	DValue value = *self;
+	DaoObject *obj = value.v.object;
+	DaoType *tp, *tp2;
+
+	if( value.t < DAO_ARRAY ) return;
+	tp = DaoNameSpace_GetTypeV( ns, value );
+	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
+	if( tp == tp2 ) return;
+	if( value.t == DAO_OBJECT && obj == obj->myClass->objType->value.v.object ){
+		if( tp2->tid == DAO_OBJECT ){
+			GC_ShiftRC( tp2->value.v.object, obj );
+			self->v.object = tp2->value.v.object;
+			return;
+		}
+	}
+	value = daoNullValue;
+	DValue_Move( *self, & value, tp2 );
+	DValue_Clear( self );
+	*self = value;
+}
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
 	DaoNameSpace *ns = other->classRoutine->nameSpace;
@@ -281,14 +303,7 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			continue;
 		}
 		DVarray_Append( self->cstData, value );
-		if( value.t < DAO_ARRAY ) continue;
-		tp = DaoNameSpace_GetTypeV( ns, value );
-		tp2 = DaoType_DefineTypes( tp, ns, deftypes );
-		if( tp == tp2 ) continue;
-		value = daoNullValue;
-		DValue_Move( self->cstData->data[i], & value, tp2 );
-		DValue_Clear( & self->cstData->data[i] );
-		self->cstData->data[i] = value;
+		DValue_Update( & self->cstData->data[i], ns, deftypes );
 	}
 	DArray_Erase( self->cstDataTable, 1, MAXSIZE );
 	DArray_Erase( self->glbDataTable, 1, MAXSIZE );

@@ -1957,8 +1957,6 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoNameSpace_WrapTypes = DaoNameSpace_WrapTypes;
 	api->DaoNameSpace_WrapFunction = DaoNameSpace_WrapFunction;
 	api->DaoNameSpace_WrapFunctions = DaoNameSpace_WrapFunctions;
-	api->DaoNameSpace_SetupType = DaoNameSpace_SetupType;
-	api->DaoNameSpace_SetupTypes = DaoNameSpace_SetupTypes;
 	api->DaoNameSpace_Load = DaoNameSpace_Load;
 	api->DaoNameSpace_GetOptions = DaoNameSpace_GetOptions;
 	api->DaoNameSpace_SetOptions = DaoNameSpace_SetOptions;

@@ -580,9 +580,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	if( tp ==0 || tp->tid ==DAO_NIL || tp->tid ==DAO_INITYPE ){
 		DValue_Copy( to, from );
 		return 1;
-	}else if( from.t ==0 && tp->tid <= DAO_STRING ){
-		DValue_Init( to, tp->tid );
-		return 1;
 	}else if( tp->tid == DAO_ANY ){
 		DValue_Copy( to, from );
 		DValue_SetType( to, tp );
@@ -603,6 +600,8 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		}
 		if( itp == NULL ) return 0;
 		return DValue_Move( from, to, itp );
+	}else if( from.t == 0 ){
+		return 0;
 	}
 	to->sub = from.sub;
 	to->cst = to->ndef = 0;

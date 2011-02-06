@@ -581,6 +581,7 @@ DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer )
 {
 	DMap *methods;
 	DNode *it;
+	if( typer->priv->abtype ) return typer->priv->abtype;
 	if( DaoNameSpace_SetupValues( self, typer ) == 0 ) return NULL;
 	if( DaoNameSpace_SetupMethods( self, typer ) == 0 ) return NULL;
 	methods = typer->priv->methods;
@@ -984,7 +985,7 @@ int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, D
 	DValue *dest;
 	int up, id = 0;
 
-	if( tp && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
+	if( tp && value.t && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
 	if( value.t == 0 && tp ) value = tp->value;
 	if( node ){

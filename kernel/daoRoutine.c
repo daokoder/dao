@@ -1811,10 +1811,10 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 		}
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
-		/*
-		   printf( "%p %s %p %s\n", tp->aux.v.p, tp->name->mbs, abtp->aux.v.p, abtp->name->mbs );
-		   printf( "%i:  %i\n", ito, parpass[ito] );
-		 */
+#if 0
+		printf( "%p %s %p %s\n", tp->aux.v.p, tp->name->mbs, abtp->aux.v.p, abtp->name->mbs );
+		printf( "%i:  %i\n", ito, parpass[ito] );
+#endif
 
 		/* less strict */
 		if( tp && parpass[ito] ==0 ){

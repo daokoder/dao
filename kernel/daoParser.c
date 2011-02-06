@@ -1243,6 +1243,7 @@ DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *
 		DaoBase *initype = NULL;
 		DaoType *vartype = NULL;
 		type = DaoParser_ParsePlainType( self, start, end, newpos );
+		if( type == NULL ) return type;
 		initype = (DaoBase*) type;
 		if( type->tid == DAO_INITYPE && start < end && tokens[start+1]->name == DTOK_LT ){
 			int gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start+1, end );
@@ -2211,7 +2212,7 @@ int DaoParser_ParseParams( DaoParser *self )
 					goto ErrorVariableDefault;
 				}
 				if( abtp == NULL ) goto ErrorInvalidDefault;
-				if( abstype && DaoType_MatchValue( abstype, dft, NULL ) ==0 )
+				if( cst && abstype && DaoType_MatchValue( abstype, dft, NULL ) ==0 )
 					goto ErrorImproperDefault;
 				if( abstype == NULL ) abstype = abtp;
 				i = comma;
@@ -4417,21 +4418,30 @@ DecoratorError:
 				return 0;
 			}
 			value = daoNullValue;
-			if( cst ) value = DaoParser_GetVariable( self, cst );
+			if( cst ){
+				value = DaoParser_GetVariable( self, cst );
+				if( abtp && DaoType_MatchValue( abtp, value, NULL ) == 0 ){
+					DaoParser_Error3( self, DAO_TYPE_NOT_MATCHING, errorStart );
+					return 0;
+				}
+			}
 			if( abtp ==0 && value.t ) abtp = DaoNameSpace_GetTypeV( myNS, value );
-			if( abtp ==0 && eq <0 ) abtp = dao_type_any;
 			if( reg < 0 && abtp && (storeType == 0 || storeType == DAO_DATA_LOCAL) ){
 				/* prepare default value for local variables */
 				int id = DaoRoutine_AddConstValue( self->routine, abtp->value );
 				reg = self->locRegCount;
 				DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, DVM_GETCL, 0, id, reg, start, end,0 );
+				if( DaoType_MatchValue( abtp, abtp->value, NULL ) == 0 ){
+					DaoParser_Error3( self, DAO_TYPE_NO_DEFAULT, errorStart );
+					return 0;
+				}
 			}
 			for(k=0; k<self->toks->size; k++){
 				DaoToken *varTok = self->toks->items.pToken[k];
 				int id = 0;
 				DaoParser_DeclareVariable( self, varTok, storeType, abtp );
-				if( eq <0 && storeType != 0 && storeType != DAO_DATA_LOCAL ) continue;
+				if( reg < 0 ) continue;
 				if( storeType & DAO_DATA_CONST ){
 					if( storeType & DAO_DATA_GLOBAL ){
 						id = DaoNameSpace_FindConst( myNS, varTok->string );
@@ -4495,6 +4505,9 @@ DecoratorError:
 						}else if( eq >=0 ){
 							DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 							return 0;
+						}else if( abtp && DaoType_MatchValue( abtp, abtp->value, NULL ) ==0 ){
+							DaoParser_Error3( self, DAO_TYPE_NOT_MATCHING, errorStart );
+							return 0;
 						}
 						break;
 					case DAO_CLASS_VARIABLE :
@@ -4510,12 +4523,16 @@ DecoratorError:
 						}else if( eq >=0 ){
 							DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 							return 0;
+						}else if( abtp && DaoType_MatchValue( abtp, abtp->value, NULL ) ==0 ){
+							DaoParser_Error3( self, DAO_TYPE_NOT_MATCHING, errorStart );
+							return 0;
 						}
 						break;
 					case DAO_GLOBAL_VARIABLE :
 						DaoParser_AddCode( self, DVM_SETVG, reg, id, up, first, mid, end );
 						break;
 					default :
+					printf( "here: %i\n", st );
 						DaoParser_Error( self, DAO_EXPR_MODIFY_CONSTANT, varTok->string );
 						return 0;
 					}
@@ -6053,6 +6070,13 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 			*cst = LOOKUP_BIND_LC( regLast );
 			regLast = DaoParser_GetNormRegister( self, *cst, start, 0, pos );
 			start = pos + 1;
+			if( value.t == DAO_OBJECT ){
+				DaoObject *obj = value.v.object;
+				if( obj == obj->myClass->objType->value.v.object ){
+					/* Klass<@T>::default need update in class instantiation. */
+					if( obj->myClass->typeHolders ) *cst = 0;
+				}
+			}
 		}else if( pos >=0 && scope.t && value.t == DAO_STRING ){
 			int k = DString_RFindMBS( name, "::", name->size );
 			if( k != MAXSIZE ) DString_Erase( name, 0, k+1 );

@@ -3744,6 +3744,9 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		if( DValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
 		dC = dA;
 		break;
+	case DAO_UNION :
+		dC = dA;
+		break;
 	default : break;
 	}
 	if( wcs ) DString_Delete( wcs );
@@ -3777,7 +3780,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	DLong *lb = NULL;
 	DNode *node;
 	complex16 cb;
-	int mt;
+	int i, mt, mt2;
 
 	self->vmc = vmc;
 	if( va.t == vc->t && va.v.d == vc->v.d ) return;
@@ -3845,6 +3848,20 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 			}
 			return;
 		}
+	}
+	if( ct->tid == DAO_UNION ){
+		at = NULL;
+		mt = DAO_MT_NOT;
+		for(i=0; i<ct->nested->size; i++){
+			DaoType *tp = ct->nested->items.pType[i];
+			mt2 = DaoType_MatchValue( tp, va, NULL );
+			if( mt2 > mt ){
+				mt = mt2;
+				at = tp;
+			}
+		}
+		if( at == NULL ) goto FailConversion;
+		ct = at;
 	}
 	if( ct->tid == DAO_INTERFACE ){
 		at = DaoNameSpace_GetTypeV( self->nameSpace, va );
@@ -4589,6 +4606,7 @@ int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload );
 int DaoRoutine_InferTypes( DaoRoutine *self );
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
+void DValue_Update( DValue *self, DaoNameSpace *ns, DMap *deftypes );
 
 static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
 {
@@ -4626,15 +4644,7 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 #endif
 	}
 	for(i=0; i<self->routConsts->size; i++){
-		DValue value = self->routConsts->data[i];
-		if( value.t < DAO_ARRAY ) continue;
-		tp = DaoNameSpace_GetTypeV( self->nameSpace, value );
-		tp2 = DaoType_DefineTypes( tp, self->nameSpace, deftypes );
-		if( tp == tp2 ) continue;
-		value = daoNullValue;
-		DValue_Move( self->routConsts->data[i], & value, tp2 );
-		DValue_Clear( & self->routConsts->data[i] );
-		self->routConsts->data[i] = value;
+		DValue_Update( & self->routConsts->data[i], self->nameSpace, deftypes );
 	}
 }
 void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )

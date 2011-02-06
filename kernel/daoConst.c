@@ -229,6 +229,7 @@ static const char* const daoCtInfo[] =
 	"Type not matching",
 	"Type of given value",
 	"Type of expected value",
+	"Type without default value",
 	"Finalized class cannot be derived",
 	"Function need return type",
 	"Invalid operator for overloading",

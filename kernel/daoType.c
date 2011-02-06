@@ -187,6 +187,13 @@ void DaoType_InitDefault( DaoType *self )
 			DaoType_InitDefault( types[i] );
 			DValue_Copy( & self->value.v.tuple->items->data[i], types[i]->value );
 		}
+	}else if( self->tid == DAO_ANY ){
+		DValue_Init( & self->value, DAO_INTEGER );
+	}else if( self->tid == DAO_VALTYPE ){
+		DValue_Copy( & self->value, self->aux );
+	}else if( self->tid == DAO_UNION ){
+		for(i=0; i<count; i++) DaoType_InitDefault( types[i] );
+		if( count ) DValue_Copy( & self->value, types[0]->value );
 	}
 	if( self->value.t ) DValue_MarkConst( & self->value );
 	if( self->value.t >= DAO_ARRAY ) GC_IncRC( self->value.v.p );
@@ -253,14 +260,8 @@ void DaoType_Init()
 			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
 	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
+	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
 	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[i][i] = DAO_MT_EQ;
-		dao_type_matrix[DAO_UDF][i] = DAO_MT_UDF;
-		dao_type_matrix[i][DAO_UDF] = DAO_MT_UDF;
-		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
-		dao_type_matrix[DAO_INITYPE][i] = DAO_MT_INIT;
-		dao_type_matrix[i][DAO_INITYPE] = DAO_MT_INIT;
-
 		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EQ+2;
 		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EQ+2;
 		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EQ+2;
@@ -273,6 +274,14 @@ void DaoType_Init()
 	}
 	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_UNION][DAO_UNION] = DAO_MT_EQ+1;
+
+	for(i=0; i<END_EXTRA_TYPES; i++){
+		dao_type_matrix[DAO_UDF][i] = DAO_MT_UDF;
+		dao_type_matrix[i][DAO_UDF] = DAO_MT_UDF;
+		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
+		dao_type_matrix[DAO_INITYPE][i] = DAO_MT_INIT;
+		dao_type_matrix[i][DAO_INITYPE] = DAO_MT_INIT;
+	}
 
 	dao_type_matrix[DAO_UDF][DAO_ANY] = DAO_MT_ANYUDF;
 	dao_type_matrix[DAO_ANY][DAO_UDF] = DAO_MT_ANYUDF;
@@ -341,12 +350,13 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	DMap *inters;
 	DaoType *it1, *it2;
 	DNode *it, *node = NULL;
-	short i, k, mt = DAO_MT_NOT;
+	short i, k, mt2, mt = DAO_MT_NOT;
 	if( self ==NULL || type ==NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 	mt = dao_type_matrix[self->tid][type->tid];
 	/*
-	   printf( "here: %i  %i  %i, %s %s\n", mt, self->tid, type->tid, self->name->mbs, type->name->mbs );
+	printf( "here: %i  %i  %i, %s  %s,  %p\n", mt, self->tid, type->tid, 
+			self->name->mbs, type->name->mbs, defs );
 	 */
 	if( mt == DAO_MT_INIT ){
 		if( self && self->tid == DAO_INITYPE ){
@@ -386,16 +396,15 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
 	if( type->tid == DAO_UNION ){
+		mt = DAO_MT_NOT;
 		for(i=0; i<type->nested->size; i++){
 			it2 = type->nested->items.pType[i];
-			if( DaoType_MatchTo( self, it2, defs ) ){
-				if( defs && type->aux.t == DAO_TYPE ){
-					MAP_Insert( defs, type->aux.v.type, self );
-				}
-				return DAO_MT_SUB;
-			}
+			mt2 = DaoType_MatchTo( self, it2, defs );
+			if( mt2 > mt ) mt = mt2;
 		}
-		return DAO_MT_NOT;
+		if( mt && defs && type->aux.t == DAO_TYPE )
+			MAP_Insert( defs, type->aux.v.type, self );
+		return mt;
 	}
 	switch( self->tid ){
 	case DAO_ENUM :
@@ -477,10 +486,13 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( DValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EQ + 1;
 		return DAO_MT_NOT;
 	case DAO_UNION :
+		mt = DAO_MT_NOT;
 		for(i=0; i<self->nested->size; i++){
 			it1 = self->nested->items.pType[i];
-			if( DaoType_MatchTo( it1, type, defs ) ) return DAO_MT_SUB;
+			mt2 = DaoType_MatchTo( it1, type, defs );
+			if( mt2 > mt ) mt = mt2;
 		}
+		return mt;
 		break;
 	default : break;
 	}
@@ -550,6 +562,22 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	short i, mt, mt2, it1=0, it2=0;
 	if( self == NULL ) return DAO_MT_NOT;
 	mt = dao_type_matrix[value.t][self->tid];
+	if( value.t == 0 || self->tid == DAO_VALTYPE || self->tid == DAO_UNION ){
+		if( self->tid == DAO_VALTYPE ){
+			if( DValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EQ + 1;
+		}else if( self->tid == DAO_UNION ){
+			mt = DAO_MT_NOT;
+			for(i=0; i<self->nested->size; i++){
+				tp = self->nested->items.pType[i];
+				mt2 = DaoType_MatchValue( tp, value, defs );
+				if( mt2 > mt ) mt = mt2;
+			}
+			return mt;
+		}else if( self->tid == DAO_ANY ){
+			return DAO_MT_ANY;
+		}
+		return DAO_MT_NOT;
+	}
 	switch( mt ){
 	case DAO_MT_NOT : case DAO_MT_ANYUDF : case DAO_MT_ANY : case DAO_MT_EQ :
 	case DAO_MT_UDF : case DAO_MT_INIT : case DAO_MT_SIM :
@@ -567,16 +595,6 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	if( self->nested ){
 		if( self->nested->size ) it1 = self->nested->items.pType[0]->tid;
 		if( self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
-	}
-	if( self->tid == DAO_VALTYPE ){
-		if( DValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EQ + 1;
-		return DAO_MT_NOT;
-	}else if( self->tid == DAO_UNION ){
-		for(i=0; i<self->nested->size; i++){
-			tp = self->nested->items.pType[i];
-			if( DaoType_MatchValue( tp, value, defs ) ) return DAO_MT_SUB;
-		}
-		return DAO_MT_NOT;
 	}
 	switch( value.t ){
 	case DAO_ENUM :

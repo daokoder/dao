@@ -19,7 +19,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#define DAO_H_VERSION 20110129
+#define DAO_H_VERSION 20110205
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -657,11 +657,9 @@ struct DaoAPI
 
 	DaoType* (*DaoNameSpace_TypeDefine)( DaoNameSpace *self, const char *old, const char *type );
 	DaoType* (*DaoNameSpace_WrapType)( DaoNameSpace *self, DaoTypeBase *typer );
-	DaoType* (*DaoNameSpace_SetupType)( DaoNameSpace *self, DaoTypeBase *typer );
 	DaoFunction* (*DaoNameSpace_WrapFunction)( DaoNameSpace *self, DaoFuncPtr fp, const char *pro );
 	int (*DaoNameSpace_TypeDefines)( DaoNameSpace *self, const char *alias[] );
 	int (*DaoNameSpace_WrapTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
-	int (*DaoNameSpace_SetupTypes)( DaoNameSpace *self, DaoTypeBase *typer[] );
 	int (*DaoNameSpace_WrapFunctions)( DaoNameSpace *self, DaoFuncItem *items );
 	int (*DaoNameSpace_Load)( DaoNameSpace *self, const char *file );
 	int (*DaoNameSpace_GetOptions)( DaoNameSpace *self );
@@ -969,7 +967,6 @@ DAO_DLL DValue DaoNameSpace_FindData( DaoNameSpace *self, const char *name );
 DAO_DLL DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type );
 /* wrap c type, return NULL if failed */
 DAO_DLL DaoType* DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
-DAO_DLL DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
 /* wrap c function, return NULL if failed */
 DAO_DLL DaoFunction* DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
 /*
@@ -987,8 +984,6 @@ DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
    return the number of failed wrapping.
  */
 DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
-/* return the number of failed wrapping. */
-DAO_DLL int DaoNameSpace_SetupTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
 /* wrap c functions, return the number of failed wrapping. */
 DAO_DLL int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items );
 /* load the scripts in "file" to the namespace */
@@ -1275,8 +1270,6 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoNameSpace_WrapTypes( self, ts ) __dao.DaoNameSpace_WrapTypes( self, ts )
 #define DaoNameSpace_WrapFunction( ns, f, p ) __dao.DaoNameSpace_WrapFunction( ns, f, p )
 #define DaoNameSpace_WrapFunctions( ns, fs ) __dao.DaoNameSpace_WrapFunctions( ns, fs )
-#define DaoNameSpace_SetupType( self, typer ) __dao.DaoNameSpace_SetupType( self, typer )
-#define DaoNameSpace_SetupTypes( self, types ) __dao.DaoNameSpace_SetupTypes( self, types )
 #define DaoNameSpace_Load( self, file ) __dao.DaoNameSpace_Load( self, file )
 #define DaoNameSpace_GetOptions( self ) __dao.DaoNameSpace_GetOptions( self )
 #define DaoNameSpace_SetOptions( self, opt ) __dao.DaoNameSpace_SetOptions( self, opt )
