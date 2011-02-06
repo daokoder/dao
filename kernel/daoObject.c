@@ -162,10 +162,12 @@ static DValue DaoObject_Copy(  DValue *value, DaoContext *ctx, DMap *cycData )
 		res.v.p = node->value.pBase;
 		return res;
 	}
+	if( self->trait & DAO_DATA_NOCOPY ) return *value;
 
-	pnew = DaoObject_New( self->myClass, NULL, 0 );
+	pnew = DaoObject_Allocate( self->myClass );
 	res.v.object = pnew;
 	DMap_Insert( cycData, self, pnew );
+	DaoObject_Init( pnew, NULL, 0 );
 	DaoObject_CopyData( pnew, self, ctx, cycData );
 
 	return res;
@@ -188,17 +190,28 @@ DaoTypeBase objTyper=
 	(FuncPtrDel) DaoObject_Delete, NULL
 };
 
-DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
+DaoObject* DaoObject_Allocate( DaoClass *klass )
 {
 	DaoObject *self = (DaoObject*) dao_malloc( sizeof( DaoObject ) );
-	int i;
-
 	DaoBase_Init( self, DAO_OBJECT );
 	self->myClass = klass;
 	self->objData = NULL;
 	self->superObject = NULL;
 	self->meta = NULL;
 	GC_IncRC( klass );
+	return self;
+}
+DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
+{
+	DaoObject *self = DaoObject_Allocate( klass );
+	DaoObject_Init( self, that, offset );
+	return self;
+}
+void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
+{
+	DaoClass *klass = self->myClass;
+	int i;
+
 	if( that ){
 		self->that = that;
 		self->objValues = that->objData->data + offset;
@@ -211,9 +224,10 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 	if( klass->superClass->size ){
 		self->superObject = DPtrTuple_New( klass->superClass->size, NULL );
 		for(i=0; i<klass->superClass->size; i++){
+			DaoClass *supclass = klass->superClass->items.pClass[i];
 			DaoObject *sup = NULL;
-			if( klass->superClass->items.pClass[i]->type == DAO_CLASS ){
-				sup = DaoObject_New( klass->superClass->items.pClass[i], self->that, offset );
+			if( supclass->type == DAO_CLASS ){
+				sup = DaoObject_New( supclass, self->that, offset );
 				sup->refCount ++;
 				offset += sup->myClass->objDataName->size;
 			}
@@ -223,7 +237,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 	self->objValues[0].t = DAO_OBJECT;
 	self->objValues[0].v.object = self;
 	GC_IncRC( self );
-	if( self->objData == NULL ) return self;
+	if( self->objData == NULL ) return;
 	for(i=1; i<klass->objDataDefault->size; i++){
 		DaoType *type = klass->objDataType->items.pType[i];
 		DValue *value = self->objValues + i;
@@ -232,26 +246,10 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 		if( klass->objDataDefault->data[i].t ){
 			DValue_Move( klass->objDataDefault->data[i], value, type );
 			continue;
-		}
-		if( value->t ==0 && type ){
-			if( type->tid <= DAO_DOUBLE ){
-				value->t = type->tid;
-			}else if( type->tid == DAO_COMPLEX ){
-				value->t = type->tid;
-				value->v.c = dao_calloc( 1, sizeof(complex16) );
-			}else if( type->tid == DAO_LONG ){
-				value->t = type->tid;
-				value->v.l = DLong_New();
-			}else if( type->tid == DAO_ENUM ){
-				value->t = type->tid;
-				value->v.e = DEnum_New(type,0);
-			}else if( type->tid == DAO_STRING ){
-				value->t = type->tid;
-				value->v.s = DString_New(1);
-			}
+		}else if( value->t == 0 && type && type->value.t ){
+			DValue_Move( type->value, value, type );
 		}
 	}
-	return self;
 }
 void DaoObject_Delete( DaoObject *self )
 {

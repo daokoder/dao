@@ -257,6 +257,7 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 	}
 #endif
 	if( ! (self->trait & DAO_DATA_CONST) ) return self;
+	if( self->trait & DAO_DATA_NOCOPY ) return self;
 	switch( self->type ){
 	case DAO_LIST :
 		{

@@ -396,6 +396,14 @@ void DaoClass_SetName( DaoClass *self, DString *name )
 	rout->attribs |= DAO_ROUT_INITOR;
 	value.v.klass = self;
 	DaoClass_AddConst( self, name, value, DAO_DATA_PUBLIC, -1 );
+
+	self->objType->value.t = DAO_OBJECT;
+	self->objType->value.v.object = DaoObject_Allocate( self );
+	self->objType->value.v.object->trait |= DAO_DATA_NOCOPY | DAO_DATA_CONST;
+	GC_IncRC( self->objType->value.v.object );
+	DString_SetMBS( str, "default" );
+	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC, -1 );
+
 	value.t = DAO_ROUTINE;
 	value.v.routine = rout;
 	DaoClass_AddConst( self, rout->routName, value, DAO_DATA_PRIVATE, -1 );
@@ -650,6 +658,10 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DString_Delete( mbs );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
+	DaoObject_Init( self->objType->value.v.object, NULL, 0 );
+	self->objType->value.v.object->trait &= ~ DAO_DATA_CONST;
+	DValue_MarkConst( & self->objType->value );
+	DValue_MarkConst( & self->cstData->data[1] ); /* ::default */
 }
 void DaoClass_ResetAttributes( DaoClass *self )
 {

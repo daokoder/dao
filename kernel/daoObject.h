@@ -28,7 +28,9 @@ struct DaoObject
 	DaoMap     *meta;
 };
 
+DaoObject* DaoObject_Allocate( DaoClass *klass );
 DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset );
+void DaoObject_Init( DaoObject *self, DaoObject *that, int offset );
 void DaoObject_Delete( DaoObject *self );
 
 int DaoObject_ChildOf( DaoObject *self, DaoObject *obj );

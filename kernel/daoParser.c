@@ -4417,10 +4417,7 @@ DecoratorError:
 				return 0;
 			}
 			value = daoNullValue;
-			if( cst ){
-				value = DaoParser_GetVariable( self, cst );
-				if( value.t >= DAO_ARRAY ) value.v.p->trait |= DAO_DATA_CONST;
-			}
+			if( cst ) value = DaoParser_GetVariable( self, cst );
 			if( abtp ==0 && value.t ) abtp = DaoNameSpace_GetTypeV( myNS, value );
 			if( abtp ==0 && eq <0 ) abtp = dao_type_any;
 			if( reg < 0 && abtp && (storeType == 0 || storeType == DAO_DATA_LOCAL) ){
@@ -4504,10 +4501,8 @@ DecoratorError:
 						if( isdecl && cst ){
 							DaoType *type = hostClass->glbTypeTable->items.pArray[up]->items.pType[id];
 							DValue *data = hostClass->glbDataTable->items.pVarray[up]->data + id;
-							if( data->t == DAO_NIL ){
-								DValue_Move( value, data, type );
-								remove = 1;
-							}
+							DValue_Move( value, data, type );
+							remove = 1;
 						}else if( isdecl && self->isDynamicClass ){
 							MAP_Insert( hostClass->protoValues, reg, varTok->string );
 						}else if( ! self->isClassBody ){
@@ -6028,6 +6023,7 @@ static int DaoParser_MakeConst( DaoParser *self, DaoInode *front, DaoInode *back
 }
 static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, int regFix )
 {
+	DaoType *type;
 	DaoInode *vmc = NULL;
 	DaoToken **tokens = self->tokens->items.pToken;
 	unsigned char tki = tokens[left+1]->type;
@@ -6047,7 +6043,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 		return -1;
 	}
 	*cst = 0;
-	if( tokens[left]->type == DTOK_IDENTIFIER && (tki == DTOK_COLON2 || tki == DTOK_LT) ){
+	if( tokens[left]->type == DTOK_IDENTIFIER && (tki==DTOK_COLON2 || tki==DTOK_LT) ){
 		DString *name = DString_New(1);
 		DValue scope = daoNullValue;
 		DValue value = daoNullValue;
@@ -6539,7 +6535,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 					break;
 				}
 			}
-			if( it.t && it.t < DAO_ARRAY ){
+			if( (it.t || it.cst) && it.t < DAO_ARRAY ){
 				*cst = DRoutine_AddConstValue( (DRoutine*)self->routine, it );
 				*cst = LOOKUP_BIND_LC( *cst );
 				regLast = DaoParser_GetNormRegister( self, *cst, start, 0, next );
