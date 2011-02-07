@@ -19,7 +19,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#define DAO_H_VERSION 20110205
+#define DAO_H_VERSION 20110206
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -158,6 +158,7 @@ enum DaoTypes
 	DAO_REGEX     ,
 	DAO_INTERFACE ,
 	DAO_CLASS     ,
+	DAO_CTYPE     ,
 	DAO_FUNCTION  ,
 	DAO_ROUTINE   ,
 	DAO_CONTEXT   ,
@@ -437,8 +438,13 @@ struct DaoAPI
 	DValue (*DValue_NewStream)( FILE *f );
 	DValue (*DValue_NewCData)( DaoTypeBase *typer, void *data );
 	DValue (*DValue_WrapCData)( DaoTypeBase *typer, void *data );
+	char* (*DValue_GetMBString)( DValue *self );
+	wchar_t* (*DValue_GetWCString)( DValue *self );
+	void*  (*DValue_CastCData)( DValue *self, DaoTypeBase *totyper );
+	void*  (*DValue_GetCData)( DValue *self );
+	void** (*DValue_GetCData2)( DValue *self );
 	void (*DValue_Copy)( DValue *self, DValue from );
-	void (*DValue_Clear)( DValue *v );
+	void (*DValue_Clear)( DValue *self );
 	void (*DValue_ClearAll)( DValue *v, int n );
 
 	DString* (*DString_New)( int mbs );
@@ -735,6 +741,11 @@ DAO_DLL DValue DValue_NewStream( FILE *f );
 DAO_DLL DValue DValue_NewCData( DaoTypeBase *typer, void *data );
 /* data will NOT be deleted with the DaoCData structure created by this function */
 DAO_DLL DValue DValue_WrapCData( DaoTypeBase *typer, void *data );
+DAO_DLL char* DValue_GetMBString( DValue *self );
+DAO_DLL wchar_t* DValue_GetWCString( DValue *self );
+DAO_DLL void*  DValue_CastCData( DValue *self, DaoTypeBase *totyper );
+DAO_DLL void*  DValue_GetCData( DValue *self );
+DAO_DLL void** DValue_GetCData2( DValue *self );
 DAO_DLL void DValue_Copy( DValue *self, DValue from );
 DAO_DLL void DValue_Clear( DValue *v );
 DAO_DLL void DValue_ClearAll( DValue *v, int n );
@@ -1054,6 +1065,11 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DValue_NewStream( f )  __dao.DValue_NewStream( f )
 #define DValue_NewCData( typer, data )  __dao.DValue_NewCData( typer, data )
 #define DValue_WrapCData( typer, data )  __dao.DValue_WrapCData( typer, data )
+#define DValue_GetMBString( self ) __dao.DValue_GetMBString( self )
+#define DValue_GetWCString( self ) __dao.DValue_GetWCString( self )
+#define DValue_CastCData( self, typer ) __dao.DValue_CastCData( self, typer )
+#define DValue_GetCData( self ) __dao.DValue_GetCData( self )
+#define DValue_GetCData2( self ) __dao.DValue_GetCData2( self )
 #define DValue_Copy( self, from )  __dao.DValue_Copy( self, from )
 #define DValue_Clear( v )  __dao.DValue_Clear( v )
 #define DValue_ClearAll( v, n )  __dao.DValue_ClearAll( v, n )

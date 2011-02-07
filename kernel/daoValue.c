@@ -148,6 +148,8 @@ int DValue_Compare( DValue left, DValue right )
 		return size1 > size2 ? 1 : -1;
 	}else if( left.t == DAO_ARRAY && right.t == DAO_ARRAY ){
 		return DaoArray_Compare( left.v.array, right.v.array );
+	}else if( left.t == DAO_CTYPE && right.t == DAO_CTYPE ){
+		return (int)( (size_t)right.v.cdata->data - (size_t)left.v.cdata->data );
 	}else if( left.t == DAO_CDATA && right.t == DAO_CDATA ){
 		return (int)( (size_t)right.v.cdata->data - (size_t)left.v.cdata->data );
 	}else if( left.t != right.t ){
@@ -1041,6 +1043,31 @@ DValue DValue_WrapCData( DaoTypeBase *typer, void *data )
 	res.v.cdata = DaoCData_Wrap( typer, data );
 	GC_IncRC( res.v.p );
 	return res;
+}
+char* DValue_GetMBString( DValue *self )
+{
+	if( self->t != DAO_STRING ) return NULL;
+	return DString_GetMBS( self->v.s );
+}
+wchar_t* DValue_GetWCString( DValue *self )
+{
+	if( self->t != DAO_STRING ) return NULL;
+	return DString_GetWCS( self->v.s );
+}
+void* DValue_CastCData( DValue *self, DaoTypeBase *typer )
+{
+	if( self->t != DAO_CDATA ) return NULL;
+	return DaoCData_CastData( self->v.cdata, typer );
+}
+void* DValue_GetCData( DValue *self )
+{
+	if( self->t != DAO_CDATA ) return NULL;
+	return self->v.cdata->data;
+}
+void** DValue_GetCData2( DValue *self )
+{
+	if( self->t != DAO_CDATA ) return NULL;
+	return & self->v.cdata->data;
 }
 void DValue_ClearAll( DValue *v, int n )
 {

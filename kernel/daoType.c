@@ -124,8 +124,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 		self->aux.v.p = extra;
 		GC_IncRC( extra );
 	}
-	if( tid == DAO_CDATA ) self->typer = self->aux.v.cdata->typer;
-	if( tid == DAO_OBJECT || tid == DAO_CDATA ) self->interfaces = DHash_New(0,0);
+	if( tid == DAO_OBJECT || tid == DAO_CTYPE ) self->interfaces = DHash_New(0,0);
 	DString_SetMBS( self->name, name );
 	DaoType_CheckAttributes( self );
 	if( (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) && extra && extra->type == DAO_TYPE ){
@@ -306,11 +305,14 @@ void DaoType_Init()
 	dao_type_matrix[DAO_FUTURE][DAO_FUTURE] = DAO_MT_EQ+1;
 
 	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CLASS][DAO_CDATA] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
@@ -405,6 +407,10 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( mt && defs && type->aux.t == DAO_TYPE )
 			MAP_Insert( defs, type->aux.v.type, self );
 		return mt;
+	}else if( type->tid == DAO_VALTYPE ){
+		if( self->tid != DAO_VALTYPE ) return DaoType_MatchValue( self, type->aux, defs );
+		if( DValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EQ + 1;
+		return DAO_MT_NOT;
 	}
 	switch( self->tid ){
 	case DAO_ENUM :
@@ -466,9 +472,12 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( DaoType_HasInterface( it1, type->aux.v.inter ) ) return DAO_MT_SUB;
 			if( DaoInterface_TryBindTo( type->aux.v.inter, it1, binds, NULL ) ) return DAO_MT_SUB;
 		}
+		if( type->aux.v.p == NULL )
+			printf( "type->aux.v.p: %i %i %i\n", type->tid, type->aux.t, DAO_MACRO );
 		if( DaoClass_ChildOf( self->aux.v.klass, type->aux.v.p ) ) return DAO_MT_SUB;
 		return DAO_MT_NOT;
 		break;
+	case DAO_CTYPE :
 	case DAO_CDATA :
 		if( self->typer == type->typer ){
 			return DAO_MT_EQ;
@@ -573,7 +582,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 				if( mt2 > mt ) mt = mt2;
 			}
 			return mt;
-		}else if( self->tid == DAO_ANY ){
+		}else if( self->tid == DAO_ANY || self->tid == DAO_INITYPE ){
 			return DAO_MT_ANY;
 		}
 		return DAO_MT_NOT;
@@ -690,7 +699,9 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		}
 		if( DaoClass_ChildOf( value.v.object->myClass, self->aux.v.p ) ) return DAO_MT_SUB;
 		break;
+	case DAO_CTYPE :
 	case DAO_CDATA :
+		if( value.v.cdata->data == NULL && self->tid == DAO_CDATA ) return DAO_MT_NOT;
 		if( self->typer == value.v.cdata->typer ){
 			return DAO_MT_EQ;
 		}else if( DaoCData_ChildOf( value.v.cdata->typer, self->typer ) ){

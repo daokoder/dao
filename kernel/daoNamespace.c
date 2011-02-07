@@ -477,23 +477,12 @@ DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const cha
 DaoCDataCore* DaoCDataCore_New();
 extern void DaoTypeCData_SetMethods( DaoTypeBase *self );
 
-static FuncPtrTest DaoTypeBase_GetDeleteTest( DaoTypeBase *typer )
-{
-	FuncPtrTest fptr;
-	int i;
-	if( typer->DelTest ) return typer->DelTest;
-	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-		if( typer->supers[i] == NULL ) break;
-		fptr = DaoTypeBase_GetDeleteTest( typer->supers[i] );
-		if( fptr ) return fptr;
-	}
-	return NULL;
-}
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 void DaoParser_Error( DaoParser *self, int code, DString *ext );
 void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 
+DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer );
 static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, DaoParser *parser )
 {
 	DaoParser *parser2 = parser;
@@ -505,18 +494,9 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 
 	if( typer->priv ) return typer->priv->abtype;
 
-	plgCore = DaoCDataCore_New();
-	plgCore->attribs |= DAO_TYPER_PRIV_FREE;
-
-	s = DString_New(1);
-	DString_SetMBS( s, typer->name );
-
-	/* Add it before preparing methods, since itself may appear in parameter lists: */
-	value.v.cdata = DaoCData_New( typer, NULL );
-	DaoNameSpace_AddConst( self, s, value, DAO_DATA_PUBLIC );
-	abtype = DaoNameSpace_MakeType( self, s->mbs, DAO_CDATA, value.v.p, NULL, 0 );
-	DaoNameSpace_AddType( self, s, abtype );
-	DString_Delete( s );
+	abtype = DaoCData_WrapType( self, typer );
+	typer->priv->attribs |= DAO_TYPER_PRIV_FREE;
+	DaoNameSpace_AddConst( self, abtype->name, abtype->aux, DAO_DATA_PUBLIC );
 
 	if( strchr( typer->name, '<' ) != NULL ){
 		DaoToken **tokens;
@@ -533,7 +513,7 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 		if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, 0, -1 ) != n ) goto Error;
 		i = DaoNameSpace_FindConst( self, tokens[0]->string );
 		value = DaoNameSpace_GetConst( self, i ); 
-		if( value.t != DAO_CDATA ) goto Error;
+		if( value.t != DAO_CTYPE ) goto Error;
 		hostCore = (DaoCDataCore*) value.v.cdata->typer->priv;
 		if( hostCore->instanceCData == NULL ) hostCore->instanceCData = DMap_New(D_ARRAY,0);
 		abtype->nested = DArray_New(0);
@@ -555,12 +535,6 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 		if( parser != parser2 ) DaoParser_Delete( parser );
 	}
 
-	plgCore->abtype = abtype;
-	plgCore->nspace = self;
-	plgCore->DelData = typer->Delete;
-	plgCore->DelTest = DaoTypeBase_GetDeleteTest( typer );
-	typer->priv = (DaoTypeCore*)plgCore;
-	DaoTypeCData_SetMethods( typer );
 	return abtype;
 Error:
 	printf( "type wrapping failed: %s\n", typer->name );
@@ -581,7 +555,7 @@ DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer )
 {
 	DMap *methods;
 	DNode *it;
-	if( typer->priv->abtype ) return typer->priv->abtype;
+	if( typer->priv && typer->priv->abtype ) return typer->priv->abtype;
 	if( DaoNameSpace_SetupValues( self, typer ) == 0 ) return NULL;
 	if( DaoNameSpace_SetupMethods( self, typer ) == 0 ) return NULL;
 	methods = typer->priv->methods;
@@ -686,8 +660,8 @@ int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items )
 	defparser->routine = self->routEvalConst;
 	while( items[i].fpter != NULL ){
 		func = DaoNameSpace_MakeFunction( self, items[i].proto, parser );
+		if( func ) func->pFunc = (DaoFuncPtr)items[i].fpter;
 		ec += func == NULL;
-		func->pFunc = (DaoFuncPtr)items[i].fpter;
 		i ++;
 	}
 	DaoParser_Delete( parser );
@@ -1319,6 +1293,7 @@ void* DValue_GetTypeID( DValue self )
 	case DAO_TUPLE :  id = self.v.tuple->unitype; break;
 	case DAO_OBJECT : id = self.v.object->myClass->objType; break;
 	case DAO_CLASS :  id = self.v.klass->clsType; break;
+	case DAO_CTYPE :
 	case DAO_CDATA :  id = self.v.cdata->typer; break;
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :  id = self.v.routine->routType; break;
@@ -1396,8 +1371,9 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 		abtp = ((DaoObject*)p)->myClass->objType; break;
 	case DAO_CLASS :
 		abtp = ((DaoClass*)p)->clsType; break;
+	case DAO_CTYPE :
 	case DAO_CDATA :
-		abtp = ((DaoCData*)p)->typer->priv->abtype; break;
+		abtp = ((DaoCData*)p)->ctype; break;
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
 		rout = (DRoutine*) p;
@@ -1686,7 +1662,8 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 			tp = DaoType_New( fname->mbs, tp->tid, (DaoBase*) tp2, NULL );
 			DString_AppendChar( tp->name, ch );
 			DString_Append( tp->name, tp2->name );
-			tp->fname = DString_Copy( fname );
+			if( tp->fname ) DString_Assign( tp->fname, fname );
+			else tp->fname = DString_Copy( fname );
 		}
 		DString_Append( abtp->name, tp->name );
 		DArray_Append( abtp->nested, tp );

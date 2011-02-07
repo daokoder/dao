@@ -451,7 +451,9 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
 	   }
 	 */
 	for( j=0; j<npar; j++){
-		tps[j] = DaoType_DefineTypes( tps[j], self->nameSpace, defs );
+		abtp = DaoType_DefineTypes( tps[j], self->nameSpace, defs );
+		GC_ShiftRC( abtp, tps[j] );
+		tps[j] = abtp;
 	}
 	if( selftype && ( self->routType->attrib & DAO_TYPE_SELF) ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
@@ -797,11 +799,6 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 		if( m != DAO_PAR_DEFAULT ) return 0;
 
 		val = routine->routConsts->data[ito];
-		if( val.t ==0 && val.ndef ) return 0; /* no default */
-		if( val.t ==0 ){ /* null value as default (e.g. in DaoMap methods) */
-			DValue_Copy( recv[ito], val );
-			continue;
-		}
 		tp = types[ito]->aux.v.type;
 		if( DValue_Move( val, recv[ito], tp ) ==0 ) return 0;
 		if( constParam & (1<<ito) ) recv[0]->cst = 1;
@@ -845,10 +842,8 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			}
 		}else{
 			DValue o = *obj;
-			if( is_virtual && o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				/* no need to do similar things for DRoutine_FastPassParams():
-				 * because DVM_CALL is not specialized for virtual method call. */
-				o.v.object = o.v.object->that; /* for virtual method call */
+			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
+				if( is_virtual ) o.v.object = o.v.object->that; /* for virtual method call */
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
@@ -909,6 +904,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 {
 	int npar = np;
 	int ndef = routine->parCount;
+	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
 	int ifrom, ito;
 	int selfChecked = 0;
 	int constParam = routine->type == DAO_ROUTINE ? ((DaoRoutine*)routine)->constParam : 0;
@@ -928,14 +924,12 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 				selfChecked = 1;
 			}
 		}else{
-			DValue o = *obj; /* see comments in DRoutine_PassParams() */
-#if 0
+			DValue o = *obj;
 			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				o.v.object = o.v.object->that; /* for virtual method call */
+				if( is_virtual ) o.v.object = o.v.object->that; /* for virtual method call */
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
-#endif
 			if( DValue_Move( o, recv[0], tp ) ) selfChecked = 1;
 			recv[0]->cst = obj->cst;
 		}
@@ -2184,7 +2178,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, at );
 				/*
-				   printf( "at %i %i\n", at->tid, type[opc]->tid );
+				   printf( "at %i %i %p, %p\n", at->tid, type[opc]->tid, at, type[opc] );
 				 */
 				AssertTypeMatching( at, type[opc], defs, 0);
 				csts[opc] = val;
@@ -4118,7 +4112,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( at->tid == DAO_CLASS ){
 					rout = (DRoutine*) at->aux.v.klass->classRoutine;
 					ct = at->aux.v.klass->objType;
-				}else if( at->tid == DAO_CDATA ){
+				}else if( at->tid == DAO_CTYPE ){
 					val = DaoFindValue( at->typer, at->name );
 					if( val.t != DAO_FUNCTION ) goto ErrorTyping;
 					rout = (DRoutine*) val.v.routine;
@@ -4133,6 +4127,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					break;
 				}else if( at->tid == DAO_OBJECT ){
 					rout = (DRoutine*) DaoClass_FindOperator( at->aux.v.klass, "()", hostClass );
+					if( rout == NULL ) goto ErrorTyping;
+				}else if( at->tid == DAO_CDATA ){
+					rout = (DRoutine*) DaoFindFunction2( at->typer, "()" );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( at->tid != DAO_ROUTINE && at->tid != DAO_FUNCTION ){
 					goto ErrorTyping;

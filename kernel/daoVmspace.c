@@ -1739,6 +1739,11 @@ void DaoInitAPI( DaoAPI *api )
 	api->DValue_NewStream = DValue_NewStream;
 	api->DValue_NewCData = DValue_NewCData;
 	api->DValue_WrapCData = DValue_WrapCData;
+	api->DValue_GetMBString = DValue_GetMBString;
+	api->DValue_GetWCString = DValue_GetWCString;
+	api->DValue_CastCData = DValue_CastCData;
+	api->DValue_GetCData = DValue_GetCData;
+	api->DValue_GetCData2 = DValue_GetCData2;
 	api->DValue_Copy = DValue_Copy;
 	api->DValue_Clear = DValue_Clear;
 	api->DValue_ClearAll = DValue_ClearAll;
@@ -2286,7 +2291,8 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_SetupType( vms->nsInternal, & mapTyper );
 
 	DaoNameSpace_SetupType( vms->nsInternal, & streamTyper );
-	DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper );
+	cptrCData.ctype = DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper );
+	GC_IncRC( cptrCData.ctype );
 
 	DaoException_Setup( vms->nsInternal );
 

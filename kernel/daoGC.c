@@ -686,11 +686,12 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) obj->myClass );
 				break;
 			}
-		case DAO_CDATA :
+		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCData *cdata = (DaoCData*) dbase;
 				cycRefCountDecrement( (DaoBase*) cdata->meta );
 				cycRefCountDecrement( (DaoBase*) cdata->daoObject );
+				cycRefCountDecrement( (DaoBase*) cdata->ctype );
 				break;
 			}
 		case DAO_ROUTINE :
@@ -881,11 +882,12 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrement( (DaoBase*) obj->myClass );
 				break;
 			}
-		case DAO_CDATA :
+		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCData *cdata = (DaoCData*) dbase;
 				cycRefCountIncrement( (DaoBase*) cdata->meta );
 				cycRefCountIncrement( (DaoBase*) cdata->daoObject );
+				cycRefCountIncrement( (DaoBase*) cdata->ctype );
 				break;
 			}
 		case DAO_ROUTINE :
@@ -1078,11 +1080,12 @@ void freeGarbage()
 					GC_BREAK_REF( obj->myClass );
 					break;
 				}
-			case DAO_CDATA :
+			case DAO_CDATA : case DAO_CTYPE :
 				{
 					DaoCData *cdata = (DaoCData*) dbase;
 					GC_BREAK_REF( cdata->meta );
 					GC_BREAK_REF( cdata->daoObject );
+					GC_BREAK_REF( cdata->ctype );
 					break;
 				}
 			case DAO_ROUTINE :
@@ -1533,11 +1536,12 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) obj->myClass );
 				break;
 			}
-		case DAO_CDATA :
+		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCData *cdata = (DaoCData*) dbase;
 				cycRefCountDecrement( (DaoBase*) cdata->meta );
 				cycRefCountDecrement( (DaoBase*) cdata->daoObject );
+				cycRefCountDecrement( (DaoBase*) cdata->ctype );
 				break;
 			}
 		case DAO_ROUTINE :
@@ -1736,11 +1740,12 @@ void cycRefCountIncreScan()
 					if( obj->objData ) j += obj->objData->size;
 					break;
 				}
-			case DAO_CDATA :
+			case DAO_CDATA : case DAO_CTYPE :
 				{
 					DaoCData *cdata = (DaoCData*) dbase;
 					cycRefCountIncrement( (DaoBase*) cdata->meta );
 					cycRefCountIncrement( (DaoBase*) cdata->daoObject );
+					cycRefCountIncrement( (DaoBase*) cdata->ctype );
 					break;
 				}
 			case DAO_ROUTINE :
@@ -1946,11 +1951,12 @@ void directDecRC()
 					GC_BREAK_REF( obj->myClass );
 					break;
 				}
-			case DAO_CDATA :
+			case DAO_CDATA : case DAO_CTYPE :
 				{
 					DaoCData *cdata = (DaoCData*) dbase;
 					GC_BREAK_REF( cdata->meta );
 					GC_BREAK_REF( cdata->daoObject );
+					GC_BREAK_REF( cdata->ctype );
 					break;
 				}
 			case DAO_ROUTINE :

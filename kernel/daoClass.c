@@ -451,7 +451,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 				DArray_Append( offsets, (size_t) offset );
 				offset += (cls->type == DAO_CLASS) ? cls->objDataName->size : 0;
 			}
-		}else if( dbase->type == DAO_CDATA ){
+		}else if( dbase->type == DAO_CTYPE ){
 			cdata = (DaoCData*) dbase;
 			typer = cdata->typer;
 			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
@@ -483,7 +483,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				value.v.klass = klass;
 				DaoClass_AddConst( self, self->superAlias->items.pString[i], value, DAO_DATA_PRIVATE, -1 );
 			}
-		}else if( self->superClass->items.pBase[i]->type == DAO_CDATA ){
+		}else if( self->superClass->items.pBase[i]->type == DAO_CTYPE ){
 			DaoCData *cdata = self->superClass->items.pCData[i];
 			DaoTypeBase *typer = cdata->typer;
 			DaoTypeCore *core = typer->priv;
@@ -501,7 +501,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 
 			DString_SetMBS( mbs, typer->name );
-			value.t = DAO_CDATA;
+			value.t = DAO_CTYPE;
 			value.v.cdata = cdata;
 			DaoClass_AddConst( self, mbs, value, DAO_DATA_PRIVATE, -1 );
 			if( strcmp( typer->name, self->superAlias->items.pString[i]->mbs ) ){
@@ -580,7 +580,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					MAP_Insert( self->lookupTable, name, index );
 				}
 			}
-		}else if( cdata->type == DAO_CDATA ){
+		}else if( cdata->type == DAO_CTYPE ){
 			DaoTypeBase *typer = cdata->typer;
 			DaoTypeCore *core = typer->priv;
 			DMap *values = core->values;
@@ -745,13 +745,14 @@ int  DaoClass_ChildOf( DaoClass *self, DaoBase *klass )
 	if( self == NULL ) return 0;
 	if( klass == (DaoBase*) self ) return 1;
 	for( i=0; i<self->superClass->size; i++ ){
+		DaoClass *dsup = self->superClass->items.pClass[i];
+		DaoCData *csup = self->superClass->items.pCData[i];
+		if( dsup == NULL ) continue;
 		if( klass == self->superClass->items.pBase[i] ) return 1;
-		if( self->superClass->items.pClass[i]->type == DAO_CLASS
-				&& DaoClass_ChildOf( self->superClass->items.pClass[i],  klass ) ){
+		if( dsup->type == DAO_CLASS && DaoClass_ChildOf( dsup,  klass ) ){
 			return 1;
-		}else if( self->superClass->items.pClass[i]->type == DAO_CDATA
-				&& klass->type == DAO_CDATA ){
-			if( DaoCData_ChildOf( self->superClass->items.pCData[i]->typer, cdata->typer ) )
+		}else if( csup->type == DAO_CTYPE && klass->type == DAO_CTYPE ){
+			if( DaoCData_ChildOf( csup->typer, cdata->typer ) )
 				return 1;
 		}
 	}

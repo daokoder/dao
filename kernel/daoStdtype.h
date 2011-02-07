@@ -195,6 +195,7 @@ struct DaoCData
 	DaoObject    *daoObject;
 	DaoCModule   *cmodule;
 	DaoTypeBase  *typer;
+	DaoType      *ctype;
 
 	uchar_t   attribs;
 	uchar_t   extref;

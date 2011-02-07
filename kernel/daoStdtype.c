@@ -603,7 +603,7 @@ DaoTypeBase enumTyper=
 DaoTypeBase* DaoBase_GetTyper( DaoBase *p )
 {
 	if( p ==NULL ) return & baseTyper;
-	if( p->type == DAO_CDATA ) return ((DaoCData*)p)->typer;
+	if( p->type == DAO_CDATA || p->type == DAO_CTYPE ) return ((DaoCData*)p)->typer;
 	return DaoVmSpace_GetTyper( p->type );
 }
 extern DaoTypeBase funcTyper;
@@ -618,6 +618,7 @@ DaoTypeBase* DValue_GetTyper( DValue self )
 	case DAO_LONG  : return & longTyper;
 	case DAO_ENUM  : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
+	case DAO_CTYPE   :
 	case DAO_CDATA   : return self.v.cdata->typer;
 	case DAO_FUNCTION : return & funcTyper;
 	default : break;
@@ -3297,20 +3298,23 @@ DaoCData* DaoCData_New( DaoTypeBase *typer, void *data )
 	if( self && self->typer == typer && self->data == data ) return self;
 	self = (DaoCData*)dao_calloc( 1, sizeof(DaoCData) );
 	DaoBase_Init( self, DAO_CDATA );
-	self->typer = typer;
 	self->attribs = DAO_CDATA_FREE;
 	self->extref = 0;
 	self->data = data;
+	self->typer = typer;
+	if( typer && typer->priv ) self->ctype = typer->priv->abtype;
 	if( typer == NULL ){
+		self->ctype = cdataTyper.priv->abtype;
 		self->typer = & cdataTyper;
 		self->buffer = data;
 	}else if( data ){
 		DaoCDataBindings_Insert( data, self );
 	}
-	if( self->typer->priv ){
-		self->cmodule = self->typer->priv->nspace->cmodule;
+	if( typer && typer->priv ){
+		self->cmodule = typer->priv->nspace->cmodule;
 		GC_IncRC( self->cmodule );
 	}
+	if( self->ctype ) GC_IncRC( self->ctype );
 	return self;
 }
 DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data )
@@ -3331,12 +3335,14 @@ void DaoCData_DeleteData( DaoCData *self )
 	DaoCDataCore *c = (DaoCDataCore*)self->typer->priv;
 	void (*fdel)(void*) = (void (*)(void *))DaoCData_Delete;
 	if( self->buffer == NULL ) DaoCDataBindings_Erase( self->data );
+	if( self->ctype ) GC_DecRC( self->ctype );
 	if( self->meta ) GC_DecRC( self->meta );
 	if( self->daoObject ) GC_DecRC( self->daoObject );
 	if( self->cmodule ) GC_DecRC( self->cmodule );
 	self->meta = NULL;
 	self->daoObject = NULL;
 	self->cmodule = NULL;
+	self->ctype = NULL;
 	if( !(self->attribs & DAO_CDATA_FREE) ) return;
 	if( self->buffer ){
 		dao_free( self->buffer );
@@ -3432,6 +3438,7 @@ void* DaoCData_CastData( DaoCData *self, DaoTypeBase *totyper )
 			return self->data;
 		}
 		if( typer->casts[i] ) tmp.data = (*typer->casts[i])( self->data );
+		tmp.ctype = typer->supers[i]->priv->abtype;
 		tmp.typer = typer->supers[i];
 		data = DaoCData_CastData( & tmp, totyper );
 		if( data ) return data;
@@ -3802,7 +3809,7 @@ DaoTypeBase cdataTyper =
 	(FuncPtrDel)DaoCData_Delete, NULL
 };
 DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, 
-	NULL, NULL, NULL, NULL, NULL, & cdataTyper, 0,0,0,0,0 };
+	NULL, NULL, NULL, NULL, NULL, NULL, 0,0,0,0,0 };
 
 void DaoNameValue_Delete( DaoNameValue *self )
 {
@@ -4389,48 +4396,76 @@ DaoTypeBase dao_ErrorValue_Typer =
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
-static DaoType* DaoException_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
+static FuncPtrTest DaoTypeBase_GetDeleteTest( DaoTypeBase *typer )
+{
+	FuncPtrTest fptr;
+	int i;
+	if( typer->DelTest ) return typer->DelTest;
+	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+		if( typer->supers[i] == NULL ) break;
+		fptr = DaoTypeBase_GetDeleteTest( typer->supers[i] );
+		if( fptr ) return fptr;
+	}
+	return NULL;
+}
+DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 {
 	DaoCDataCore *plgCore;
 	DaoCData *cdata;
 	DaoType *abtype;
 
-	/* cdata = DaoCData_New( typer, DaoException_New( typer ) ); */
 	cdata = DaoCData_New( typer, NULL );
+	cdata->type = DAO_CTYPE;
+	cdata->trait |= DAO_DATA_NOCOPY;
+	abtype = DaoType_New( typer->name, DAO_CTYPE, (DaoBase*)cdata, NULL );
+	GC_ShiftRC( abtype, cdata->ctype );
+	cdata->ctype = abtype;
+	abtype->typer = typer;
 	abtype = DaoType_New( typer->name, DAO_CDATA, (DaoBase*)cdata, NULL );
+	abtype->typer = typer;
+	abtype->value = daoNullCData;
+
+	cdata = DaoCData_New( typer, NULL );
+	GC_ShiftRC( abtype, cdata->ctype );
+	cdata->ctype = abtype;
+	abtype->value.v.cdata = cdata;
+	cdata->trait |= DAO_DATA_NOCOPY;
+	GC_IncRC( cdata );
+	DValue_MarkConst( & abtype->value );
+
 	plgCore = DaoCDataCore_New();
 	plgCore->abtype = abtype;
 	plgCore->nspace = ns;
 	plgCore->DelData = typer->Delete;
+	plgCore->DelTest = DaoTypeBase_GetDeleteTest( typer );
 	typer->priv = (DaoTypeCore*)plgCore;
-	cdata->trait |= DAO_DATA_CONST;
 	DaoTypeCData_SetMethods( typer );
 	return abtype;
 }
 void DaoException_Setup( DaoNameSpace *ns )
 {
-	DaoType *exception = DaoException_WrapType( ns, & dao_Exception_Typer );
-	DaoType *none = DaoException_WrapType( ns, & dao_ExceptionNone_Typer );
-	DaoType *any = DaoException_WrapType( ns, & dao_ExceptionAny_Typer );
-	DaoType *warning = DaoException_WrapType( ns, & dao_ExceptionWarning_Typer );
-	DaoType *error = DaoException_WrapType( ns, & dao_ExceptionError_Typer );
-	DaoType *field = DaoException_WrapType( ns, & dao_ErrorField_Typer );
-	DaoType *fdnotexist = DaoException_WrapType( ns, & dao_FieldNotExist_Typer );
-	DaoType *fdnotperm = DaoException_WrapType( ns, & dao_FieldNotPermit_Typer );
-	DaoType *tfloat = DaoException_WrapType( ns, & dao_ErrorFloat_Typer );
-	DaoType *fltzero = DaoException_WrapType( ns, & dao_FloatDivByZero_Typer );
-	DaoType *fltoflow = DaoException_WrapType( ns, & dao_FloatOverFlow_Typer );
-	DaoType *fltuflow = DaoException_WrapType( ns, & dao_FloatUnderFlow_Typer );
-	DaoType *index = DaoException_WrapType( ns, & dao_ErrorIndex_Typer );
-	DaoType *idorange = DaoException_WrapType( ns, & dao_IndexOutOfRange_Typer );
-	DaoType *key = DaoException_WrapType( ns, & dao_ErrorKey_Typer );
-	DaoType *keynotexist = DaoException_WrapType( ns, & dao_KeyNotExist_Typer );
-	DaoType *param = DaoException_WrapType( ns, & dao_ErrorParam_Typer );
-	DaoType *wsyntax = DaoException_WrapType( ns, & dao_WarningSyntax_Typer );
-	DaoType *esyntax = DaoException_WrapType( ns, & dao_ErrorSyntax_Typer );
-	DaoType *wvalue = DaoException_WrapType( ns, & dao_WarningValue_Typer );
-	DaoType *evalue = DaoException_WrapType( ns, & dao_ErrorValue_Typer );
-	DaoType *type = DaoException_WrapType( ns, & dao_ErrorType_Typer );
+	DaoType *exception = DaoCData_WrapType( ns, & dao_Exception_Typer );
+	DaoType *none = DaoCData_WrapType( ns, & dao_ExceptionNone_Typer );
+	DaoType *any = DaoCData_WrapType( ns, & dao_ExceptionAny_Typer );
+	DaoType *warning = DaoCData_WrapType( ns, & dao_ExceptionWarning_Typer );
+	DaoType *error = DaoCData_WrapType( ns, & dao_ExceptionError_Typer );
+	DaoType *field = DaoCData_WrapType( ns, & dao_ErrorField_Typer );
+	DaoType *fdnotexist = DaoCData_WrapType( ns, & dao_FieldNotExist_Typer );
+	DaoType *fdnotperm = DaoCData_WrapType( ns, & dao_FieldNotPermit_Typer );
+	DaoType *tfloat = DaoCData_WrapType( ns, & dao_ErrorFloat_Typer );
+	DaoType *fltzero = DaoCData_WrapType( ns, & dao_FloatDivByZero_Typer );
+	DaoType *fltoflow = DaoCData_WrapType( ns, & dao_FloatOverFlow_Typer );
+	DaoType *fltuflow = DaoCData_WrapType( ns, & dao_FloatUnderFlow_Typer );
+	DaoType *index = DaoCData_WrapType( ns, & dao_ErrorIndex_Typer );
+	DaoType *idorange = DaoCData_WrapType( ns, & dao_IndexOutOfRange_Typer );
+	DaoType *key = DaoCData_WrapType( ns, & dao_ErrorKey_Typer );
+	DaoType *keynotexist = DaoCData_WrapType( ns, & dao_KeyNotExist_Typer );
+	DaoType *param = DaoCData_WrapType( ns, & dao_ErrorParam_Typer );
+	DaoType *wsyntax = DaoCData_WrapType( ns, & dao_WarningSyntax_Typer );
+	DaoType *esyntax = DaoCData_WrapType( ns, & dao_ErrorSyntax_Typer );
+	DaoType *wvalue = DaoCData_WrapType( ns, & dao_WarningValue_Typer );
+	DaoType *evalue = DaoCData_WrapType( ns, & dao_ErrorValue_Typer );
+	DaoType *type = DaoCData_WrapType( ns, & dao_ErrorType_Typer );
 
 	DaoNameSpace_AddConst( ns, exception->name, exception->aux, DAO_DATA_PUBLIC );
 	DaoNameSpace_AddType( ns, exception->name, exception );

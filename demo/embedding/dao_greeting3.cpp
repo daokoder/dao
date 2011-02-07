@@ -31,7 +31,7 @@ static otto Function_10007( DaoRoutine *_ro, DaoObject *_ob, const otto &value )
     _res.v.cdata = _cd;
   }
   if( _res.t == DAO_CDATA && DaoCData_IsType( _res.v.cdata, dao_otto_Typer ) ){
-    _test = *(otto*) DaoCData_CastData( _res.v.cdata, dao_otto_Typer );
+    _test = *(otto*) DValue_CastCData( &_res, dao_otto_Typer );
   }
 
 EndCall:

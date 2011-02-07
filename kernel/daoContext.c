@@ -223,6 +223,14 @@ void DaoContext_SetResult( DaoContext *self, DaoBase *result )
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 {
 	if( ! DValue_Move( A, C, t ) ){
+		if( self->vmc->code == DVM_MOVE || self->vmc->code == DVM_MOVE_PP ){
+			if( A.t == DAO_CDATA && t && t->tid == DAO_CDATA ){
+				if( DaoType_MatchTo( A.v.cdata->ctype, t, NULL ) ){
+					DValue_Copy( C, A );
+					return 1;
+				}
+			}
+		}
 		DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, A );
 		DaoContext_RaiseTypeError( self, type, t, "moving" );
 		return 0;
@@ -1690,7 +1698,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 		if( dA.t == DAO_OBJECT ){
 			*res = dA.v.object->that->myClass == dB.v.object->that->myClass;
 		}else if( dA.t == DAO_CDATA ){
-			*res = dA.v.cdata->typer == dB.v.cdata->typer;
+			*res = dA.v.cdata->ctype == dB.v.cdata->ctype;
 		}else if( dA.t >= DAO_ARRAY && dA.t <= DAO_TUPLE ){
 			DaoType *t1 = NULL;
 			DaoType *t2 = NULL;
@@ -1772,6 +1780,7 @@ static DaoMap* DaoGetMetaMap( DValue *self, int create )
 	case DAO_LIST  : meta = self->v.list->meta; break;
 	case DAO_TUPLE : meta = self->v.tuple->meta; break;
 	case DAO_MAP   : meta = self->v.map->meta; break;
+	case DAO_CTYPE :
 	case DAO_CDATA : meta = self->v.cdata->meta; break;
 	case DAO_OBJECT : meta = self->v.object->meta; break;
 	default : break;
@@ -1782,6 +1791,7 @@ static DaoMap* DaoGetMetaMap( DValue *self, int create )
 	case DAO_LIST  : meta = self->v.list->meta = DaoMap_New(1); break;
 	case DAO_TUPLE : meta = self->v.tuple->meta = DaoMap_New(1); break;
 	case DAO_MAP   : meta = self->v.map->meta = DaoMap_New(1); break;
+	case DAO_CTYPE :
 	case DAO_CDATA : meta = self->v.cdata->meta = DaoMap_New(1); break;
 	case DAO_OBJECT : meta = self->v.object->meta = DaoMap_New(1); break;
 	default : break;
@@ -3720,6 +3730,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		if( dC.v.p == NULL ) goto FailConversion;
 		dC.t = dC.v.p->type;
 		break;
+	case DAO_CTYPE :
 	case DAO_CDATA :
 		if( dA.t == DAO_CDATA ){
 			if( DaoCData_ChildOf( dA.v.cdata->typer, ct->typer ) ){
@@ -4128,23 +4139,19 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	   printf( "rout = %p %s %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
 	 */
 
-	if( caller.t == DAO_FUNCTION || caller.t == DAO_CDATA ){
+	if( caller.t == DAO_FUNCTION || caller.t == DAO_CTYPE || caller.t == DAO_CDATA ){
 		rout = (DRoutine*) caller.v.p;
-		if( caller.t == DAO_CDATA ){
+		if( caller.t == DAO_CTYPE || caller.t == DAO_CDATA ){
 			DaoCData *cdata = caller.v.cdata;
 			DaoFunction *func = NULL;
-			if( cdata->data == NULL && (cdata->trait & DAO_DATA_CONST) ){
+			if( caller.t == DAO_CTYPE )
 				func = DaoFindFunction2( cdata->typer, cdata->typer->name );
-				if( func == NULL ){
-					DaoContext_RaiseException( self, DAO_ERROR_TYPE, "c type object not callable" );
-					return;
-				}
-			}else{
-				func = DaoFindFunction2( cdata->typer, "()" );
-				if( func == NULL ){
-					DaoContext_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
-					return;
-				}
+			if( func == NULL ) func = DaoFindFunction2( cdata->typer, "()" );
+			if( func == NULL ){
+				const char *e = "C type not callable";
+				if( caller.t == DAO_CDATA ) e = "C object not callable";
+				DaoContext_RaiseException( self, DAO_ERROR_TYPE, e );
+				return;
 			}
 			rout = (DRoutine*)func;
 			rout = DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );

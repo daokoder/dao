@@ -160,6 +160,7 @@ static void STD_Callable( DaoContext *ctx, DValue *p[], int N )
 			if( p0.t == DAO_ROUTINE ) *res = 1;
 			break;
 		}
+	case DAO_CTYPE :
 	case DAO_CDATA :
 		{
 			DaoCData *plugin = (DaoCData*) p[0]->v.p;

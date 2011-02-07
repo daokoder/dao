@@ -1200,6 +1200,7 @@ CallEntry:
 				case DAO_TUPLE :
 					vmc = vA2.v.tuple->items->size ? vmc+1 : vmcBase + vmc->b;
 					break;
+				case DAO_CTYPE :
 				case DAO_CDATA :
 					vmc = vA2.v.cdata->data ? vmc+1 : vmcBase + vmc->b;
 					break;
@@ -1819,7 +1820,9 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( MOVE_PP ){
 			vA = locVars[ vmc->a ];
-			DValue_Move( *vA, locVars[ vmc->c ], locTypes[ vmc->c ] );
+			topCtx->vmc = vmc;
+			if( DaoMoveAC( topCtx, *vA, locVars[ vmc->c ], locTypes[ vmc->c ] ) ==0 )
+				goto CheckException;
 			/* assigning no-duplicated constant:
 			   routine Func( a : const list<int> ){ b = a; } */
 			if( vA->cst && vA->t >= DAO_ARRAY && ! (vA->v.p->trait & DAO_DATA_CONST) )

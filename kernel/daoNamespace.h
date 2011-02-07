@@ -141,6 +141,7 @@ DaoType* DaoNameSpace_SymbolTypeSub( DaoNameSpace *self, DaoType *t1, DaoType *t
 
 int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer );
 int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer );
+DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
 
 DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto, DaoParser *parser );
 DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self, const char *proto, DaoParser *parser );
