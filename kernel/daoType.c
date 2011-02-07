@@ -472,8 +472,6 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( DaoType_HasInterface( it1, type->aux.v.inter ) ) return DAO_MT_SUB;
 			if( DaoInterface_TryBindTo( type->aux.v.inter, it1, binds, NULL ) ) return DAO_MT_SUB;
 		}
-		if( type->aux.v.p == NULL )
-			printf( "type->aux.v.p: %i %i %i\n", type->tid, type->aux.t, DAO_MACRO );
 		if( DaoClass_ChildOf( self->aux.v.klass, type->aux.v.p ) ) return DAO_MT_SUB;
 		return DAO_MT_NOT;
 		break;
