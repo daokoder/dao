@@ -751,6 +751,14 @@ MoveFailed:
 	DValue_Clear( to );
 	return 0;
 }
+int DValue_Move2( DValue from, DValue *to, DaoType *totype )
+{
+	int rc = DValue_Move( from, to, totype );
+	if( rc && from.t == DAO_CDATA && totype && totype->tid == DAO_CDATA ){
+		if( from.v.cdata->data == NULL ) return 0;
+	}
+	return rc;
+}
 
 DValue DValue_NewInteger( dint v )
 {

@@ -699,7 +699,6 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
-		if( value.v.cdata->data == NULL && self->tid == DAO_CDATA ) return DAO_MT_NOT;
 		if( self->typer == value.v.cdata->typer ){
 			return DAO_MT_EQ;
 		}else if( DaoCData_ChildOf( value.v.cdata->typer, self->typer ) ){
@@ -733,6 +732,14 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		break;
 	}
 	return DAO_MT_NOT;
+}
+short DaoType_MatchValue2( DaoType *self, DValue value, DMap *defs )
+{
+	short m = DaoType_MatchValue( self, value, defs );
+	if( m && value.t == DAO_CDATA && self->tid == DAO_CDATA ){
+		if( value.v.cdata->data == NULL ) m = 0;
+	}
+	return m;
 }
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 {

@@ -2194,6 +2194,7 @@ DaoVmSpace* DaoInit()
 	DaoVmSpace *vms;
 	DaoNameSpace *ns;
 	DaoFunction *func;
+	DaoType *type;
 	DString *mbs;
 
 	if( mainVmSpace ) return mainVmSpace;
@@ -2291,6 +2292,11 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_SetupType( vms->nsInternal, & mapTyper );
 
 	DaoNameSpace_SetupType( vms->nsInternal, & streamTyper );
+	type = DaoNameSpace_MakeType( ns, "stream", DAO_STREAM, NULL, NULL, 0 );
+	type->value.t = DAO_STREAM;
+	type->value.v.stream = vms->stdStream;
+	GC_IncRC( vms->stdStream );
+
 	cptrCData.ctype = DaoNameSpace_WrapType( vms->nsInternal, & cdataTyper );
 	GC_IncRC( cptrCData.ctype );
 

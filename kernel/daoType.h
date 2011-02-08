@@ -114,6 +114,7 @@ void DaoType_CheckAttributes( DaoType *self );
 /* if "self" match to "type": */
 short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
 short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs );
+short DaoType_MatchValue2( DaoType *self, DValue value, DMap *defs );
 /* define @X */
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );

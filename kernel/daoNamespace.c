@@ -295,8 +295,11 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 	DMutex_Lock( & dao_vsetup_mutex );
 #endif
 	if( typer->priv->values == NULL ){
+		DaoType *abtype = typer->priv->abtype;
+		DString defname = DString_WrapMBS( "default" );
 		values = DHash_New( D_STRING, D_VALUE );
 		typer->priv->values = values;
+		if( abtype && abtype->value.t ) DMap_Insert( values, & defname, & abtype->value );
 		for(i=0; i<valCount; i++){
 			DString name = DString_WrapMBS( typer->numItems[i].name );
 			double dv = typer->numItems[i].value;

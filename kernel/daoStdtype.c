@@ -4413,6 +4413,7 @@ DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 	DaoCDataCore *plgCore;
 	DaoCData *cdata;
 	DaoType *abtype;
+	DString name = DString_WrapMBS( "default" );
 
 	cdata = DaoCData_New( typer, NULL );
 	cdata->type = DAO_CTYPE;

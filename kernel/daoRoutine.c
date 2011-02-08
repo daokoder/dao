@@ -580,11 +580,11 @@ static DRoutine* DRoutine_GetOverLoadExt(
 			 * print(..);
 			 */
 			abtp = parType[0]->aux.v.type;
-			selfMatch = DaoType_MatchValue( abtp, *obj, defs );
+			selfMatch = DaoType_MatchValue2( abtp, *obj, defs );
 			if( is_virtual && selfMatch == 0 && obj->t == DAO_OBJECT ){
 				DValue value = *obj;
 				value.v.object = value.v.object->that;
-				selfMatch = DaoType_MatchValue( abtp, value, defs );
+				selfMatch = DaoType_MatchValue2( abtp, value, defs );
 			}
 			if( selfMatch ){
 				parpass[0] = selfMatch;
@@ -622,13 +622,13 @@ static DRoutine* DRoutine_GetOverLoadExt(
 			}
 			if( ito >= ndef )  goto NextRoutine;
 			abtp = parType[ito]->aux.v.type; /* must be named */
-			parpass[ito] = DaoType_MatchValue( abtp, val, defs );
+			parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
 			if( is_virtual && ifrom == 0 && parpass[ito] == 0 && val.t == DAO_OBJECT ){
 				val.v.object = val.v.object->that;
-				parpass[ito] = DaoType_MatchValue( abtp, val, defs );
+				parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
 			}
 			/*
-			   printf( "%i:  %s\n", parpass[ito], abtp->name->mbs );
+			   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->mbs );
 			 */
 			if( parpass[ito] ==0 ) goto NextRoutine;
 		}
@@ -800,7 +800,7 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 
 		val = routine->routConsts->data[ito];
 		tp = types[ito]->aux.v.type;
-		if( DValue_Move( val, recv[ito], tp ) ==0 ) return 0;
+		if( DValue_Move2( val, recv[ito], tp ) ==0 ) return 0;
 		if( constParam & (1<<ito) ) recv[0]->cst = 1;
 	}
 	return 1;
@@ -847,7 +847,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
-			if( DValue_Move( o, recv[0], tp ) ){
+			if( DValue_Move2( o, recv[0], tp ) ){
 				selfChecked = 1;
 				passed = 1;
 			}
@@ -868,7 +868,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
 			for(; ifrom<npar; ifrom++){
 				ito = ifrom + selfChecked;
-				DValue_Move( *p[ifrom], recv[ito], NULL );
+				DValue_Move2( *p[ifrom], recv[ito], NULL );
 				passed |= 1<<ito;
 			}
 			break;
@@ -895,7 +895,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			val2.v.p = DaoObject_MapThisObject( val2.v.object, tp );
 			if( val2.v.p == NULL ) return 0;
 		}
-		if( DValue_Move( val2, recv[ito], tp ) ==0 ) return 0;
+		if( DValue_Move2( val2, recv[ito], tp ) ==0 ) return 0;
 		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
 	return DRoutine_PassDefault( routine, recv, passed );
@@ -930,7 +930,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
-			if( DValue_Move( o, recv[0], tp ) ) selfChecked = 1;
+			if( DValue_Move2( o, recv[0], tp ) ) selfChecked = 1;
 			recv[0]->cst = obj->cst;
 		}
 	}
@@ -955,7 +955,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 		printf( "%s\n", parType[ip]->aux.v.type->name->mbs );
 		printf( "%s\n", tp->name->mbs );
 #endif
-		if( ! DValue_Move( *val, recv[ito], tp ) ) return 0;
+		if( ! DValue_Move2( *val, recv[ito], tp ) ) return 0;
 		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
 	return 1;

@@ -4384,7 +4384,7 @@ DecoratorError:
 		temp |= (tki2 == DTOK_COLON); /* "V1 : TYPE" */
 		temp |= (tki2 == DTOK_ASSN); /* "V1 = EXPR" or "V1 : TYPE = EXPR" */
 		temp |= (tki2 == DTOK_CASSN); /* "V1 := EXPR" */
-		if( storeType || (tki == DTOK_IDENTIFIER && temp) ){
+		if( storeType2 || (tki == DTOK_IDENTIFIER && temp) ){
 			DaoToken *vtok = tokens[start];
 			int eq = -1, remove = 1;
 			DArray_Clear( self->toks );
@@ -4563,15 +4563,12 @@ DecoratorError:
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
-		}else if( storeType == 0 ){
+		}else{
 			self->warnAssn = 0;
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
-		}else{
-			DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
-			return 0;
 		}
 	}
 	return 1;
