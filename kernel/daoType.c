@@ -193,6 +193,8 @@ void DaoType_InitDefault( DaoType *self )
 	}else if( self->tid == DAO_UNION ){
 		for(i=0; i<count; i++) DaoType_InitDefault( types[i] );
 		if( count ) DValue_Copy( & self->value, types[0]->value );
+	}else if( self->tid == DAO_ROUTINE || self->tid == DAO_INTERFACE ){
+		self->value.cst = 1;
 	}
 	if( self->value.t ) DValue_MarkConst( & self->value );
 	if( self->value.t >= DAO_ARRAY ) GC_IncRC( self->value.v.p );
@@ -736,10 +738,24 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 short DaoType_MatchValue2( DaoType *self, DValue value, DMap *defs )
 {
 	short m = DaoType_MatchValue( self, value, defs );
-	if( m && value.t == DAO_CDATA && self->tid == DAO_CDATA ){
+	if( m == 0 || value.t <= DAO_STREAM || value.t != self->tid ) return m;
+	if( value.t == DAO_CDATA ){
 		if( value.v.cdata->data == NULL ) m = 0;
+	}else{
+		if( value.v.p == self->value.v.p ) m = 0;
 	}
 	return m;
+}
+static void DMap_Erase2( DMap *defs, void *p )
+{
+	DArray *keys = DArray_New(0);
+	DNode *node;
+	int i;
+	DMap_Erase( defs, p );
+	for(node=DMap_First(defs); node; node=DMap_Next(defs,node)){
+		DArray_Append( keys, node->key.pVoid );
+	}
+	for(i=0; i<keys->size; i++) DMap_Erase( defs, keys->items.pVoid[i] );
 }
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 {
@@ -780,6 +796,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	copy->attrib = self->attrib;
 	copy->ffitype = self->ffitype;
 	copy->attrib &= ~ DAO_TYPE_EMPTY; /* not any more empty */
+	DMap_Insert( defs, self, copy );
 	if( self->mapNames ){
 		if( copy->mapNames ) DMap_Delete( copy->mapNames );
 		copy->mapNames = DMap_Copy( self->mapNames );
@@ -845,6 +862,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	if( self->tid == DAO_OBJECT && self->aux.v.klass->instanceClasses ){
 		DaoClass *klass = self->aux.v.klass;
 		klass = DaoClass_Instantiate( klass, copy->nested );
+		DMap_Erase2( defs, copy );
 		DaoType_Delete( copy );
 		return klass->objType;
 	}
@@ -857,6 +875,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	}
 #endif
 	if( node ){
+		DMap_Erase2( defs, copy );
 		DaoType_Delete( copy );
 		return node->value.pType;
 	}else{

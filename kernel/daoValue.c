@@ -754,8 +754,12 @@ MoveFailed:
 int DValue_Move2( DValue from, DValue *to, DaoType *totype )
 {
 	int rc = DValue_Move( from, to, totype );
-	if( rc && from.t == DAO_CDATA && totype && totype->tid == DAO_CDATA ){
-		if( from.v.cdata->data == NULL ) return 0;
+	if( rc == 0 || totype == 0 ) return rc;
+	if( from.t <= DAO_STREAM || from.t != totype->tid ) return rc;
+	if( from.t == DAO_CDATA ){
+		if( from.v.cdata->data == NULL ) rc = 0;
+	}else{
+		if( from.v.p == totype->value.v.p ) rc = 0;
 	}
 	return rc;
 }

@@ -2190,12 +2190,12 @@ extern DArray *dao_callback_data;
 
 DaoVmSpace* DaoInit()
 {
-	int i;
 	DaoVmSpace *vms;
 	DaoNameSpace *ns;
 	DaoFunction *func;
-	DaoType *type;
+	DaoType *type, *type1, *type2, *type3, *type4;
 	DString *mbs;
+	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
 
@@ -2303,11 +2303,23 @@ DaoVmSpace* DaoInit()
 	DaoException_Setup( vms->nsInternal );
 
 #ifdef DAO_WITH_THREAD
-	DaoNameSpace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
 	DaoNameSpace_MakeType( ns, "mtlib", DAO_THDMASTER, NULL, NULL, 0 );
-	DaoNameSpace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
-	DaoNameSpace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
-	DaoNameSpace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
+	type1 = DaoNameSpace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
+	type2 = DaoNameSpace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
+	type3 = DaoNameSpace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
+	type4 = DaoNameSpace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
+	type1->value.t = DAO_THREAD;
+	type2->value.t = DAO_MUTEX;
+	type3->value.t = DAO_CONDVAR;
+	type4->value.t = DAO_SEMA;
+	type1->value.v.p = (DaoBase*) DaoThread_New( vms->thdMaster );
+	type2->value.v.p = (DaoBase*) DaoMutex_New( vms );
+	type3->value.v.p = (DaoBase*) DaoCondVar_New( vms->thdMaster );
+	type4->value.v.p = (DaoBase*) DaoSema_New( 0 );
+	GC_IncRC( type1->value.v.p );
+	GC_IncRC( type2->value.v.p );
+	GC_IncRC( type3->value.v.p );
+	GC_IncRC( type4->value.v.p );
 	DaoNameSpace_SetupType( ns, & threadTyper );
 	DaoNameSpace_SetupType( ns, & thdMasterTyper );
 	DaoNameSpace_SetupType( ns, & mutexTyper );

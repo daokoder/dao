@@ -191,6 +191,7 @@ void DaoBase_Delete( void *self ){ dao_free( self ); }
 
 void DaoBase_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
+	DaoType *type = DaoNameSpace_GetTypeV( ctx->nameSpace, *self );
 	if( self->t <= DAO_STREAM )
 		DaoStream_WriteMBS( stream, coreTypeNames[ self->t ] );
 	else
@@ -205,6 +206,9 @@ void DaoBase_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycD
 	DaoStream_WriteInt( stream, self->t );
 	DaoStream_WriteMBS( stream, "_" );
 	DaoStream_WritePointer( stream, self->v.p );
+	if( self->t < DAO_STREAM ) return;
+	if( type && type->value.t && self->v.p == type->value.v.p )
+		DaoStream_WriteMBS( stream, "[default]" );
 }
 DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData )
 {

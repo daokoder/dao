@@ -71,6 +71,11 @@ static void DaoObject_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, 
 	DValue vs = daoNullStream;
 	DValue *pars = & vs;
 	int ec;
+	if( self == self->myClass->objType->value.v.object ){
+		DaoStream_WriteString( stream, self->myClass->className );
+		DaoStream_WriteMBS( stream, "[default]" );
+		return;
+	}
 	vs.v.stream = stream;
 	DString_SetMBS( ctx->process->mbstring, "_PRINT" );
 	ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
@@ -210,7 +215,7 @@ DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
 void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 {
 	DaoClass *klass = self->myClass;
-	int i;
+	int i, defobj = self == klass->objType->value.v.object;
 
 	if( that ){
 		self->that = that;
@@ -227,7 +232,11 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 			DaoClass *supclass = klass->superClass->items.pClass[i];
 			DaoObject *sup = NULL;
 			if( supclass->type == DAO_CLASS ){
-				sup = DaoObject_New( supclass, self->that, offset );
+				if( defobj ){
+					sup = supclass->objType->value.v.object;
+				}else{
+					sup = DaoObject_New( supclass, self->that, offset );
+				}
 				sup->refCount ++;
 				offset += sup->myClass->objDataName->size;
 			}
@@ -359,6 +368,8 @@ int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *o
 	sto = LOOKUP_ST( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
+	if( self == klass->objType->value.v.object && sto == DAO_OBJECT_VARIABLE )
+		return DAO_ERROR_FIELD_NOTPERMIT;
 	if( objThis == self || perm == DAO_DATA_PUBLIC
 			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
 		if( sto == DAO_OBJECT_VARIABLE ){
@@ -395,6 +406,8 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
 	sto = LOOKUP_ST( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
+	if( self == klass->objType->value.v.object && sto == DAO_OBJECT_VARIABLE )
+		return DAO_ERROR_FIELD_NOTPERMIT;
 	if( objThis == self || perm == DAO_DATA_PUBLIC 
 			|| (objThis && DaoObject_ChildOf( objThis, self ) && perm >= DAO_DATA_PROTECTED) ){
 		switch( sto ){

@@ -2288,7 +2288,9 @@ CallEntry:
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OV ){
-			value = locVars[ vmc->a ]->v.object->objValues + vmc->b;
+			object = locVars[ vmc->a ]->v.object;
+			if( object == object->myClass->objType->value.v.object ) goto AccessDefault;
+			value = object->objValues + vmc->b;
 			abtp = locTypes[ vmc->c ];
 			if( abtp && DaoType_MatchValue( abtp, *value, NULL ) ==0 ) goto CheckException;
 			locVars[ vmc->c ] = value;
@@ -2323,7 +2325,9 @@ CallEntry:
 		OPCASE( GETF_OVI )
 			OPCASE( GETF_OVF )
 			OPCASE( GETF_OVD ){
-				value = locVars[ vmc->a ]->v.object->objValues + vmc->b;
+				object = locVars[ vmc->a ]->v.object;
+				if( object == object->myClass->objType->value.v.object ) goto AccessDefault;
+				value = object->objValues + vmc->b;
 				locVars[ vmc->c ] = value;
 				if( locVars[ vmc->a ]->cst ) DaoVM_EnsureConst( topCtx, vmc, locVars );
 			}OPNEXT()
@@ -2342,6 +2346,7 @@ CallEntry:
 					vC = klass->glbData->data + vmc->b;
 					abtp = klass->glbDataType->items.pType[ vmc->b ];
 				}else{
+					if( object == object->myClass->objType->value.v.object ) goto AccessDefault;
 					if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 					vC = object->objValues + vmc->b;
 					abtp = object->myClass->objDataType->items.pType[ vmc->b ];
@@ -2406,8 +2411,9 @@ CallEntry:
 			OPCASE( SETF_OVDI )
 			OPCASE( SETF_OVDF )
 			OPCASE( SETF_OVDD ){
-				if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 				object = locVars[ vmc->c ]->v.object;
+				if( object == object->myClass->objType->value.v.object ) goto AccessDefault;
+				if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 				vC =  object->objValues + vmc->b;
 				switch( vmc->code ){
 				case DVM_SETF_OVII : vC->v.i = locVars[ vmc->a ]->v.i; break;
@@ -2487,6 +2493,10 @@ RaiseErrorInvalidOperation:
 ModifyConstant:
 			topCtx->vmc = vmc;
 			DaoContext_RaiseException( topCtx, DAO_ERROR, "attempt to modify a constant" );
+			goto CheckException;
+AccessDefault:
+			topCtx->vmc = vmc;
+			DaoContext_RaiseException( topCtx, DAO_ERROR, "invalid field access for default object" );
 			goto CheckException;
 #if 0
 RaiseErrorNullObject:

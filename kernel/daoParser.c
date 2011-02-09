@@ -3669,14 +3669,13 @@ static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
 	int mt = 0;
 	if( type->value.t == DAO_CTYPE || type->value.t == DAO_CDATA ){
 		mt = DaoType_MatchTo( type->value.v.cdata->ctype, type, NULL );
+	}else if( type->value.t ==0 && type->value.cst ){
+		mt = 1;
 	}else{
 		mt = DaoType_MatchValue( type, type->value, NULL );
 	}
-	if( mt == 0 ){
-		DaoParser_Error3( self, DAO_TYPE_NO_DEFAULT, estart );
-		return 0;
-	}
-	return 1;
+	if( mt == 0 ) DaoParser_Error3( self, DAO_TYPE_NO_DEFAULT, estart );
+	return mt;
 }
 static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 {
@@ -4446,11 +4445,12 @@ DecoratorError:
 			if( reg < 0 && abtp && (storeType == 0 || storeType == DAO_DATA_LOCAL) ){
 				/* prepare default value for local variables */
 				int id = DaoRoutine_AddConstValue( self->routine, abtp->value );
-				int mt = 0;
-				reg = self->locRegCount;
-				DaoParser_PushRegister( self );
-				DaoParser_AddCode( self, DVM_GETCL, 0, id, reg, start, end,0 );
 				if( DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ) return 0;
+				if( abtp->value.t ){
+					reg = self->locRegCount;
+					DaoParser_PushRegister( self );
+					DaoParser_AddCode( self, DVM_GETCL, 0, id, reg, start, end,0 );
+				}
 			}
 			for(k=0; k<self->toks->size; k++){
 				DaoToken *varTok = self->toks->items.pToken[k];
