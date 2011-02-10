@@ -756,6 +756,7 @@ static void DMap_Erase2( DMap *defs, void *p )
 		DArray_Append( keys, node->key.pVoid );
 	}
 	for(i=0; i<keys->size; i++) DMap_Erase( defs, keys->items.pVoid[i] );
+	DArray_Delete( keys );
 }
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 {

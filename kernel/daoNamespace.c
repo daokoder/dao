@@ -500,6 +500,7 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 	abtype = DaoCData_WrapType( self, typer );
 	typer->priv->attribs |= DAO_TYPER_PRIV_FREE;
 	DaoNameSpace_AddConst( self, abtype->name, abtype->aux, DAO_DATA_PUBLIC );
+	DaoNameSpace_AddType( self, abtype->name, abtype );
 
 	if( strchr( typer->name, '<' ) != NULL ){
 		DaoToken **tokens;

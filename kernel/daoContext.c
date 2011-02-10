@@ -4392,7 +4392,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			/* not in constructor */
 			while( vmc2->code == DVM_NOP ) vmc2 ++;
 			if( vmc2->code == DVM_RETURN && vmc2->c ==0 ) tail = vmc2->b ==0 || (vmc2->b ==1 && vmc2->a == vmc->c);
-			if( tail ){
+			if( tail && self->process->topFrame->depth ==0 ){ /* no tail call in try{} */
 				DaoVmFrame *frame = self->frame;
 				DaoVmProcess_PopContext( self->process );
 				ctx->frame = frame;
@@ -4546,13 +4546,15 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		while( vmc2->code == DVM_NOP ) vmc2 ++;
 		if( vmc2->code == DVM_RETURN && vmc2->c ==0 ) tail = vmc2->b ==0 || (vmc2->b ==1 && vmc2->a == vmc->c);
 		if( tail && !(self->frame->state & DVM_MAKE_OBJECT) ){
-			DaoVmFrame *frame = self->frame;
-			DaoVmProcess_PopContext( self->process );
-			ctx->frame = frame;
-			self->frame = frame->next;
-			frame->context = ctx;
-			frame->next->context = self;
-			self = ctx;
+			if( self->process->topFrame->depth ==0 ){ /* no tail call in try{} */
+				DaoVmFrame *frame = self->frame;
+				DaoVmProcess_PopContext( self->process );
+				ctx->frame = frame;
+				self->frame = frame->next;
+				frame->context = ctx;
+				frame->next->context = self;
+				self = ctx;
+			}
 		}
 		DaoVmProcess_PushContext( self->process, ctx );
 

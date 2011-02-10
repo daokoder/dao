@@ -653,9 +653,11 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
 		}else if( self->attribs & DAO_IO_STRING ){
 			DString *wcs = self->streamString;
+			int size = 0;
 			DString_ToWCS( self->streamString );
+			size = wcs->size;
 			DString_Resize( self->streamString, wcs->size + val->size );
-			memcpy( wcs->wcs + wcs->size, val->wcs, val->size * sizeof(wchar_t) );
+			memcpy( wcs->wcs + size, val->wcs, val->size * sizeof(wchar_t) );
 		}else{
 			if( self->format ){
 				printf( self->format, data );

@@ -2393,6 +2393,11 @@ void DaoQuit()
 
 	DaoException_CleanUp();
 
+#ifdef DEBUG
+	DaoTypeBase_Free( dao_FakeList_Typer );
+	DaoTypeBase_Free( dao_FakeShoftList_Typer );
+#endif
+
 	/* 
 	   DaoNameSpace *ns = mainVmSpace->mainNamespace;
 	   printf( "%i  %p\n", ns->refCount, ns );

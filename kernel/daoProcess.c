@@ -3090,21 +3090,22 @@ static void DaoType_WriteMainName( DaoType *self, DaoStream *stream )
 }
 static void DString_Format( DString *self, int width, int head )
 {
-	int i, j, k = width - head;
-	int  n = self->size - head;
+	int i, j, n, k = width - head;
 	char buffer[32];
 	if( head >= 30 ) head = 30;
+	if( width <= head ) return;
 	memset( buffer, ' ', head+1 );
 	buffer[0] = '\n';
 	buffer[head+1] = '\0';
-	if( width <= head ) return;
+	DString_ToMBS( self );
+	n = self->size - head;
 	if( self->size <= width ) return;
 	while( n > k ){
-		i = k * (n / k);
+		i = k * (n / k) + head;
 		j = 0;
-		while( isspace( self->mbs[i+head+j] ) ) j += 1;
-		DString_InsertMBS( self, buffer, i+head, j, head+1 );
-		n = i - 1;
+		while( (i+j) < self->size && isspace( self->mbs[i+j] ) ) j += 1;
+		DString_InsertMBS( self, buffer, i, j, head+1 );
+		n = i - head - 1;
 	}
 }
 void DaoPrintException( DaoCData *except, DaoStream *stream )
