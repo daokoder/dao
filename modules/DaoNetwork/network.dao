@@ -7,15 +7,15 @@ class @Server
 	{
 #	io.println( network.gethost( '127.0.0.1' ) );
 		io.println( network.gethost( 'localhost' ) );
-		socket = network.bind( 10000 );
-		network.listen( socket );
+		sock = network.bind( 10000 );
+		sock.listen();
 		while(1){
-			sockfd = network.accept( socket );
-			message = network.receive( sockfd );
-			io.println( network.getpeername( sockfd ) );
+			sockfd = sock.accept();
+			message = sockfd.receive();
+			io.println( sockfd.peername() );
 			io.println( 'received', message );
-			network.send_dao( sockfd, 'TEST', 12.345, [1,2,3] );
-			network.close( sockfd );
+			sockfd.send_dao( 'TEST', 12.345, [1,2,3] );
+			sockfd.close();
 			break;
 		}
 	}
@@ -27,10 +27,10 @@ class @Client
 	{
 		sockfd = network.connect( 'localhost', 10000 );
 		io.writeln( 'sending' );
-		network.send( sockfd, 'TEST' );
-		message = network.receive_dao( sockfd );
+		sockfd.send( 'TEST' );
+		message = sockfd.receive_dao();
 		io.println( 'received', message );
-		network.close( sockfd );
+		sockfd.close();
 	}
 }
 #std.listmeth( network );

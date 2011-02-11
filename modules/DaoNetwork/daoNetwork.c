@@ -537,49 +537,122 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 	return dpp;
 }
 
-static void DaoNetLib_Bind( DaoContext *ctx, DValue *par[], int N  )
+struct DaoSocket
 {
-	DaoContext_PutInteger( ctx, DaoNetwork_Bind( par[0]->v.i ) );
+	int id;
+};
+
+typedef struct DaoSocket DaoSocket;
+
+extern DaoTypeBase socketTyper;
+
+static DaoSocket* DaoSocket_New(  )
+{
+	DaoSocket *self = dao_malloc( sizeof(DaoSocket) );
+	self->id = -1;
+	return self;
 }
-static void DaoNetLib_Listen( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Close( DaoSocket *self )
 {
-	DaoContext_PutInteger( ctx, DaoNetwork_Listen( par[0]->v.i, par[1]->v.i ) );
+	if( self->id != -1 ){
+		DaoNetwork_Close( self->id );
+		self->id = -1;
+	}
 }
-static void DaoNetLib_Accept( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Delete( DaoSocket *self )
 {
-	DaoContext_PutInteger( ctx, DaoNetwork_Accept( par[0]->v.i ) );
+	DaoSocket_Close( self );
+	free( self );
 }
-static void DaoNetLib_Connect( DaoContext *ctx, DValue *p[], int N  )
+
+static void DaoSocket_Bind( DaoSocket *self, int port )
 {
-	DaoContext_PutInteger( ctx, DaoNetwork_Connect( DString_GetMBS( p[0]->v.s ), p[1]->v.i ) );
+	DaoSocket_Close( self );
+	self->id = DaoNetwork_Bind( port );
 }
-static void DaoNetLib_Send( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Connect( DaoSocket *self, DString *host, int port )
 {
-	DaoContext_PutInteger( ctx, DaoNetwork_Send( par[0]->v.i, par[1]->v.s ) );
+	DaoSocket_Close( self );
+	self->id = DaoNetwork_Connect( DString_GetMBS( host ), port );
 }
-static void DaoNetLib_Receive( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Lib_Close( DaoContext *ctx, DValue *par[], int N  )
 {
+	DaoSocket_Close( (DaoSocket*)DaoCData_GetData(par[0]->v.cdata) );
+}
+
+static void DaoSocket_Lib_Bind( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket_Bind( self, par[1]->v.i );
+}
+
+static void DaoSocket_Lib_Listen( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoNetwork_Listen( self->id, par[1]->v.i );
+}
+
+static void DaoSocket_Lib_Accept( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *sock = DaoSocket_New(  );
+	sock->id = DaoNetwork_Accept( self->id );
+	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
+}
+
+static void DaoSocket_Lib_Connect( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket_Connect( self, par[1]->v.s, par[2]->v.i );
+}
+
+static void DaoSocket_Lib_Send( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoContext_PutInteger( ctx, DaoNetwork_Send( self->id, par[1]->v.s ) );
+}
+
+static void DaoSocket_Lib_Receive( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
 	DString *mbs = DaoContext_PutMBString( ctx, "" );
-	DaoNetwork_Receive( par[0]->v.i, mbs, par[1]->v.i );
+	DaoNetwork_Receive( self->id, mbs, par[1]->v.i );
 }
-static void DaoNetLib_SendDao( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Lib_SendDao( DaoContext *ctx, DValue *par[], int N  )
 {
-	DaoContext_PutInteger( ctx, DaoNetwork_SendExt( par[0]->v.i, par+1, N-1 ) );
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoContext_PutInteger( ctx, DaoNetwork_SendExt( self->id, par+1, N-1 ) );
 }
-static void DaoNetLib_ReceiveDao( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Lib_ReceiveDao( DaoContext *ctx, DValue *par[], int N  )
 {
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
 	DaoList *res = DaoContext_PutList( ctx );
-	DaoNetwork_ReceiveExt( par[0]->v.i, res );
+	DaoNetwork_ReceiveExt( self->id, res );
 }
+
+static void DaoSocket_Lib_Id( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoContext_PutInteger( ctx, self->id );
+}
+
 #ifdef WIN32
 #define ENOTSOCK WSAENOTSOCK
 #define ENOTCONN WSAENOTCONN
 #endif
-static void DaoNetLib_GetPeerName( DaoContext *ctx, DValue *par[], int N  )
+
+static void DaoSocket_Lib_GetPeerName( DaoContext *ctx, DValue *par[], int N  )
 {
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
 	struct sockaddr_in addr;
 	socklen_t size = sizeof( struct sockaddr_in );
-	int rt = getpeername( par[0]->v.i, (struct sockaddr *) & addr, & size );
+	int rt = getpeername( self->id, (struct sockaddr *) & addr, & size );
 	DString *res = DaoContext_PutMBString( ctx, "" );
 	switch( rt ){
 	case 0 : DString_SetMBS( res, inet_ntoa( addr.sin_addr ) ); break;
@@ -588,9 +661,38 @@ static void DaoNetLib_GetPeerName( DaoContext *ctx, DValue *par[], int N  )
 	default : DString_SetMBS( res, "EUNKNOWN" ); break;
 	}
 }
-static void DaoNetLib_Close( DaoContext *ctx, DValue *par[], int N  )
+
+static DaoFuncItem socketMeths[] =
 {
-	DaoNetwork_Close( par[0]->v.i );
+	{  DaoSocket_Lib_Bind,          "bind( self :socket, port :int )" },
+	{  DaoSocket_Lib_Listen,        "listen( self :socket, backlog=10 )" },
+	{  DaoSocket_Lib_Accept,        "accept( self :socket )=>socket" },
+	{  DaoSocket_Lib_Connect,       "connect( self :socket, host :string, port :int )" },
+	{  DaoSocket_Lib_Send,          "send( self :socket, data :string )=>int" },
+	{  DaoSocket_Lib_Receive,       "receive( self :socket, maxlen=512 )=>string" },
+	{  DaoSocket_Lib_SendDao,       "send_dao( self :socket, ... )=>int" },
+	{  DaoSocket_Lib_ReceiveDao,    "receive_dao( self :socket )=>list<int|float|double|complex|string|array>" },
+	{  DaoSocket_Lib_GetPeerName,   "peername( self :socket )const=>string" },
+	{  DaoSocket_Lib_Id,            "id( self :socket )const=>int" },
+	{  DaoSocket_Lib_Close,         "close( self :socket )" },
+	{ NULL, NULL }
+};
+
+DaoTypeBase socketTyper = {
+	"socket", NULL, NULL, socketMeths, {0}, {0}, (FuncPtrDel)DaoSocket_Delete, NULL
+};
+
+static void DaoNetLib_Bind( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *sock = DaoSocket_New(  );
+	DaoSocket_Bind( sock, par[0]->v.i );
+	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
+}
+static void DaoNetLib_Connect( DaoContext *ctx, DValue *p[], int N  )
+{
+	DaoSocket *sock = DaoSocket_New(  );
+	DaoSocket_Connect( sock, p[0]->v.s, p[1]->v.i );
+	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
 static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 {
@@ -642,16 +744,8 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 
 static DaoFuncItem netMeths[] =
 {
-	{  DaoNetLib_Bind,          "bind( port :int )=>int" },
-	{  DaoNetLib_Listen,        "listen( socket :int, backlog=10 )=>int" },
-	{  DaoNetLib_Accept,        "accept( socket :int )=>int" },
-	{  DaoNetLib_Connect,       "connect( host :string, port :int )=>int" },
-	{  DaoNetLib_Send,          "send( socket :int, data :string )=>int" },
-	{  DaoNetLib_Receive,       "receive( socket :int, maxlen=512 )=>string" },
-	{  DaoNetLib_SendDao,       "send_dao( socket :int, ... )=>int" },
-	{  DaoNetLib_ReceiveDao,    "receive_dao( socket :int )=>list<any>" },
-	{  DaoNetLib_GetPeerName,   "getpeername( socket :int )=>string" },
-	{  DaoNetLib_Close,         "close( socket :int )" },
+	{  DaoNetLib_Bind,          "bind( port :int )=>socket" },
+	{  DaoNetLib_Connect,       "connect( host :string, port :int )=>socket" },
 	{  DaoNetLib_GetHost,       "gethost( host :string )=>map<string,string>" },
 	{  DaoNetLib_Select,
 		"select( nfd :int, setr :fd_set, setw :fd_set, sete :fd_set, tv :float )=>int" },
@@ -680,6 +774,7 @@ void DaoNetwork_Init( DaoVmSpace *vms, DaoNameSpace *ns )
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNameSpace *ns )
 {
 	DaoNameSpace_WrapType( ns, & DaoFdSet_Typer );
+	DaoNameSpace_WrapType( ns, & socketTyper );
 	DaoNameSpace_WrapType( ns, & libNetTyper );
 	DaoNetwork_Init( vmSpace, ns );
 	return 0;

@@ -2292,22 +2292,28 @@ static void DaoLIST_Sum( DaoContext *ctx, DValue *p[], int N )
 	default : break;
 	}
 }
-static void DaoLIST_PushFront( DaoContext *ctx, DValue *p[], int N )
+static void DaoLIST_Push( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoList *self = p[0]->v.list;
 	int size = self->items->size;
-	DaoList_PushFront( self, *p[1] );
+	if ( p[2]->v.e->value == 0 )
+		DaoList_PushFront( self, *p[1] );
+	else
+		DaoList_Append( self, *p[1] );
 	if( size == self->items->size )
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "value type" );
 }
-static void DaoLIST_PopFront( DaoContext *ctx, DValue *p[], int N )
+static void DaoLIST_Pop( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoList *self = p[0]->v.list;
 	if( self->items->size == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "list is empty" );
 		return;
 	}
-	DaoList_Erase( self, 0 );
+	if ( p[1]->v.e->value == 0 )
+		DaoList_Erase( self, 0 );
+	else
+		DaoList_Erase( self, self->items->size -1 );
 }
 static void DaoLIST_PushBack( DaoContext *ctx, DValue *p[], int N )
 {
@@ -2316,15 +2322,6 @@ static void DaoLIST_PushBack( DaoContext *ctx, DValue *p[], int N )
 	DaoList_Append( self, *p[1] );
 	if( size == self->items->size )
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "value type" );
-}
-static void DaoLIST_PopBack( DaoContext *ctx, DValue *p[], int N )
-{
-	DaoList *self = p[0]->v.list;
-	if( self->items->size == 0 ){
-		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "list is empty" );
-		return;
-	}
-	DaoList_Erase( self, self->items->size -1 );
 }
 static void DaoLIST_Front( DaoContext *ctx, DValue *p[], int N )
 {
@@ -2588,21 +2585,14 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Clear,      "clear( self :list<any> )" },
 	{ DaoLIST_Size,       "size( self :list<any> )const=>int" },
 	{ DaoLIST_Resize,     "resize( self :list<any>, size :int )" },
-	{ DaoLIST_Max,        "max( self :list<@T> )const=>tuple<@T,int>" },
-	{ DaoLIST_Min,        "min( self :list<@T> )const=>tuple<@T,int>" },
-	{ DaoLIST_Sum,        "sum( self :list<@T> )const=>@T" },
+	{ DaoLIST_Max,        "max( self :list<@T<int|long|float|double|complex|string|enum>> )const=>tuple<@T,int>" },
+	{ DaoLIST_Min,        "min( self :list<@T<int|long|float|double|complex|string|enum>> )const=>tuple<@T,int>" },
+	{ DaoLIST_Sum,        "sum( self :list<@T<int|long|float|double|complex|string|enum>> )const=>@T" },
 	{ DaoLIST_Join,       "join( self :list<int|float|double|long|complex|string|enum>, separator='' )const=>string" },
-	{ DaoLIST_PushFront,  "pushfront( self :list<@T>, item :@T )" },
-	{ DaoLIST_PopFront,   "popfront( self :list<any> )" },
-	{ DaoLIST_PopFront,   "dequeue( self :list<any> )" },
 	{ DaoLIST_PushBack,   "append( self :list<@T>, item :@T )" },
-	{ DaoLIST_PushBack,   "pushback( self :list<@T>, item :@T )" },
-	{ DaoLIST_PushBack,   "enqueue( self :list<@T>, item :@T )" },
-	{ DaoLIST_PushBack,   "push( self :list<@T>, item :@T )" },
-	{ DaoLIST_PopBack,    "popback( self :list<any> )" },
-	{ DaoLIST_PopBack,    "pop( self :list<any> )" },
+	{ DaoLIST_Push,       "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
+	{ DaoLIST_Pop,        "pop( self :list<any>, from :enum<front, back> = $back )" },
 	{ DaoLIST_Front,      "front( self :list<@T> )const=>@T" },
-	{ DaoLIST_Top,        "top( self :list<@T> )const=>@T" },
 	{ DaoLIST_Top,        "back( self :list<@T> )const=>@T" },
 	{ DaoLIST_Ranka,      "ranka( self :list<any>, k=0 )const=>list<int>" },
 	{ DaoLIST_Rankd,      "rankd( self :list<any>, k=0 )const=>list<int>" },
