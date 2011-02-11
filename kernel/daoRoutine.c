@@ -898,7 +898,8 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		if( DValue_Move2( val2, recv[ito], tp ) ==0 ) return 0;
 		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
-	return DRoutine_PassDefault( routine, recv, passed );
+	if( DRoutine_PassDefault( routine, recv, passed ) == 0) return 0;
+	return 1 + npar + selfChecked;
 }
 int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code )
 {
@@ -958,7 +959,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 		if( ! DValue_Move2( *val, recv[ito], tp ) ) return 0;
 		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
-	return 1;
+	return 1 + npar + selfChecked;
 }
 
 DaoTypeBase routTyper=
@@ -1737,12 +1738,12 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 
 	/*
 	   printf( "=====================================\n" );
+	   printf( "%s\n", self->routName->mbs );
 	   for( j=0; j<npar; j++){
 	   DaoType *tp = tps[j];
 	   if( tp != NULL ) printf( "tp[ %i ]: %s\n", j, tp->name->mbs );
 	   }
 	   printf( "%s %i %i\n", routType->name->mbs, ndef, npar );
-	   if( selftype ) printf( "%i\n", routType->name->mbs, ndef, npar, selftype );
 	 */
 
 	if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
@@ -4138,9 +4139,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				tp = type+opa+1;
 				j = vmc->b & 0xff;
 				if( j == DAO_CALLER_PARAM ){
-					j = self->parCount;
-					pp = csts;
-					tp = type;
+					k = (self->routType->attrib & DAO_TYPE_SELF) != 0;
+					j = self->parCount - k;
+					pp = csts + 1;
+					tp = type + 1;
 				}
 				for(k=0; k<j; k++){
 					tt = DaoType_DefineTypes( tp[k], ns, defs );

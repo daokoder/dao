@@ -753,7 +753,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 				 * (a,b) = ....
 				 */
 				return i;
-			}else if( old > DTOK_IDENTIFIER && tkp == DTOK_LCB ){
+			}else if( old2 > DTOK_IDENTIFIER && tkp == DTOK_LCB ){
 				return i;
 			}else{
 				i ++;
@@ -2824,10 +2824,12 @@ NextDecorator:
 static void DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoTuple *decoParam )
 {
 	DArray *nested = decoFunc->routType->nested;
+	DaoType *udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
 	DaoType **decotypes = nested->items.pType;
 	DaoParser *parser = DaoParser_New();
 	DaoRoutine *routine = DaoRoutine_New();
 	DaoRoutine tmp = *self;
+	DaoNameSpace *ns = self->nameSpace;
 	DMap *mapids = DMap_New(0,D_STRING);
 	int parpass[DAO_MAX_PARAM];
 	int i, j, k;
@@ -2839,9 +2841,9 @@ static void DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoTupl
 	routine->attribs = self->attribs;
 	routine->tidHost = self->tidHost;
 	GC_ShiftRC( self->routHost, routine->routHost );
-	GC_ShiftRC( self->routType, routine->routType );
 	routine->routHost = self->routHost;
-	routine->routType = self->routType;
+	routine->routType = DaoNameSpace_MakeRoutType( ns, self->routType, NULL, NULL, udf );
+	GC_IncRC( routine->routType );
 	DString_Assign( routine->routName, self->routName );
 	DString_Assign( routine->parCodes, self->parCodes );
 	for(i=0; i<self->routType->nested->size; i++){
@@ -2901,7 +2903,8 @@ static void DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoTupl
 	DaoParser_Delete( parser );
 	return;
 ErrorDecorator:
-	DaoRoutine_Delete( routine );
+	GC_IncRC( routine );
+	GC_DecRC( routine );
 	DaoParser_Delete( parser );
 	DMap_Delete( mapids );
 }

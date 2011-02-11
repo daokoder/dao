@@ -50,6 +50,7 @@ int  DRoutine_AddConstValue( DRoutine *self, DValue value );
 DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoType *type );
 DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int code );
 
+/* Return 0 if failed, otherwise return 1 plus number passed parameters: */
 int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
 int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
 

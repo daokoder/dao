@@ -4066,9 +4066,10 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 
 	//printf( "DoCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
 	if( npar == DAO_CALLER_PARAM ){
-		npar = self->parCount;
-		base = self->regArray->data;
-		params = self->regValues;
+		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
+		npar = self->parCount - m;
+		base = self->regArray->data + 1;
+		params = self->regValues + 1;
 	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
@@ -4358,12 +4359,13 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			ctx->object = obj;
 		}
 		if( ctx == NULL ) return;
-		ctx->parCount = npar;
 
-		if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code ) ){
+		i = DRoutine_PassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code );
+		if( i ==0 ){
 			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 			return;
 		}
+		ctx->parCount = i - 1;
 		need_self = ctx->routine->routType->attrib & DAO_TYPE_SELF;
 		if( mcall && need_self && ctx->routine->tidHost == DAO_OBJECT && ctx->regValues[0]->t == DAO_OBJECT ){
 			DaoObject *obj = ctx->regValues[0]->v.object;
@@ -4438,9 +4440,10 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	//printf( "DoFastCall: %p %i %i\n", self->routine, self->routine->parCount, self->parCount );
 	//printf( "%i\n", npar );
 	if( npar == DAO_CALLER_PARAM ){
-		npar = self->parCount;
-		base = self->regArray->data;
-		params = self->regValues;
+		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
+		npar = self->parCount - 1;
+		base = self->regArray->data + 1;
+		params = self->regValues + 1;
 	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
@@ -4534,12 +4537,13 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 			}
 		}
 		if( ctx == NULL ) return;
-		ctx->parCount = npar;
 
-		if( ! DRoutine_FastPassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code ) ){
+		i = DRoutine_FastPassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code );
+		if( i == 0 ){
 			rout2 = (DRoutine*)ctx->routine;
 			goto InvalidParameter;
 		}
+		ctx->parCount = i - 1;
 		if( (inclass && self->constCall) || (rout->attribs & DAO_ROUT_ISCONST) 
 				|| (selfpar->t == DAO_OBJECT && selfpar->cst ) )
 			ctx->constCall = 1;
