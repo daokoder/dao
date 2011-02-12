@@ -1,0 +1,21 @@
+
+CC = gcc
+INCLUDE = -I.
+LIB = -lwsock32
+CFLAG = -c -Wall -O2
+LFLAG = -s -shared 
+
+TARGET = DaoNetwork.dll
+
+all: $(TARGET)
+
+daoNetwork.o: daoNetwork.c
+	$(CC) $(CFLAG) $(INCLUDE) daoNetwork.c
+	
+$(TARGET): daoNetwork.o
+	$(CC) $(LFLAG) daoNetwork.o $(LIB) -o $(TARGET)
+
+bind: clean
+
+clean:
+	rm *.o
