@@ -16,6 +16,7 @@
 #include"string.h"
 #include"time.h"
 #include"math.h"
+#include"errno.h"
 
 #ifdef UNIX
 
@@ -38,6 +39,7 @@ typedef size_t socklen_t;
 DAO_INIT_MODULE;
 
 #define dao_malloc malloc
+#define dao_free free
 
 #define BACKLOG 1000 /*  how many pending connections queue will hold */
 #define MAX_DATA 512 /*  max number of bytes we can get at once */
@@ -96,7 +98,89 @@ static DaoFuncItem fdsetMeths[] =
 	{ NULL, NULL }
 };
 DaoTypeBase DaoFdSet_Typer = 
-{ "fd_set", NULL, NULL, fdsetMeths, {0}, {0}, (FuncPtrDel)free, NULL };
+{ "fd_set", NULL, NULL, fdsetMeths, {0}, {0}, (FuncPtrDel)dao_free, NULL };
+
+static void GetErrorMessage( char *buffer, int code )
+{
+	switch( code ){
+#ifdef WIN32
+	case WSAENETDOWN:            strcpy( buffer, "The network subsystem has failed (WSAENETDOWN)" ); break;
+	case WSAEAFNOSUPPORT:        strcpy( buffer, "The address family is not supported (WSAEAFNOSUPPORT)" ); break;
+	case WSAEINPROGRESS:         strcpy( buffer, "The service provider is processing another call (WSAEINPROGRESS)" ); break;
+	case WSAEMFILE:              strcpy( buffer, "No more file descriptors available (WSAEMFILE)" ); break;
+	case WSAENOBUFS:             strcpy( buffer, "Insufficient buffer space (WSAENOBUFS)" ); break;
+	case WSAEPROTONOSUPPORT:     strcpy( buffer, "The protocol is not supported (WSAEPROTONOSUPPORT)" ); break;
+	case WSAEPROVIDERFAILEDINIT: strcpy( buffer, "The service provider failed to initialize (WSAEPROVIDERFAILEDINIT)" ); break;
+	case WSAECONNRESET:          strcpy( buffer, "The connection was terminated by the remote side (WSAECONNRESET)" ); break;
+	case WSAEADDRNOTAVAIL:       strcpy( buffer, "The address is not available (WSAEADDRNOTAVAIL)" ); break;
+	case WSAECONNREFUSED:        strcpy( buffer, "The connection was refused (WSAECONNREFUSED)" ); break;
+	case WSAENETUNREACH:         strcpy( buffer, "The network is not reachable (WSAENETUNREACH)" ); break;
+	case WSAEHOSTUNREACH:        strcpy( buffer, "The host is not reachable (WSAEHOSTUNREACH)" ); break;
+	case WSAETIMEDOUT:           strcpy( buffer, "The attempt to establish the connection timed out (WSAETIMEDOUT)" ); break;
+	case WSAENETRESET:           strcpy( buffer, "The connection was broken (WSAENETRESET)" ); break;
+	case WSAEMSGSIZE:            strcpy( buffer, "The message is too large (WSAEMSGSIZE)" ); break;
+	case WSAECONNABORTED:        strcpy( buffer, "The connection was terminated due to a time-out or other failure (WSAECONNABORTED)" ); break;
+	case WSAEINVAL:              strcpy( buffer, "Invalid parameter (WSAEINVAL)" ); break;
+	case WSAHOST_NOT_FOUND:      strcpy( buffer, "Authoritative answer host not found (WSAHOST_NOT_FOUND)" ); break;
+	case WSATRY_AGAIN:           strcpy( buffer, "Nonauthoritative host not found, or no response from the server (WSATRY_AGAIN)" ); break;
+	case WSANO_RECOVERY:         strcpy( buffer, "A non-recoverable error occurred (WSANO_RECOVERY)" ); break;
+	case WSANO_DATA:             strcpy( buffer, "Address not found (WSANO_DATA)" ); break;
+	case WSASYSNOTREADY:         strcpy( buffer, "The network subsystem is not ready (WSASYSNOTREADY)" ); break;
+	case WSAVERNOTSUPPORTED:     strcpy( buffer, "The version is not supported (WSAVERNOTSUPPORTED)" ); break;
+	case WSAEPROCLIM:            strcpy( buffer, "A limit on the number of tasks has been reached (WSAEPROCLIM)" ); break;
+#else
+	case EAFNOSUPPORT:    strcpy( buffer, "The address family is not supported (EAFNOSUPPORT)" ); break;
+	case EMFILE:
+	case ENFILE:          strcpy( buffer, "No more file descriptors available (EMFILE/ENFILE)" ); break;
+	case EPROTONOSUPPORT: strcpy( buffer, "The protocol is not supported (EPROTONOSUPPORT)" ); break;
+	case EACCES:          strcpy( buffer, "The process does not have the appropriate privileges (EACCES)" ); break;
+	case ENOBUFS:         strcpy( buffer, "Insufficient buffer space (ENOBUFS)" ); break;
+	case EADDRNOTAVAIL:   strcpy( buffer, "The address is not available (EADDRNOTAVAIL)" ); break;
+	case ETIMEDOUT:       strcpy( buffer, "The attempt to establish the connection timed out (ETIMEDOUT)" ); break;
+	case ECONNREFUSED:    strcpy( buffer, "The connection was refused (ECONNREFUSED)" ); break;
+	case ENETUNREACH:     strcpy( buffer, "The network is not reachable (ENETUNREACH)" ); break;
+	case EADDRINUSE:      strcpy( buffer, "The socket address is already in use (EADDRINUSE)" ); break;
+	case EINTR:           strcpy( buffer, "The data sending was interrupted by a signal (EINTR)" ); break;
+	case EMSGSIZE:        strcpy( buffer, "The message is too large (EMSGSIZE)" ); break;
+	case EPIPE:           strcpy( buffer, "The connection was broken (EPIPE)" ); break;
+	case EINVAL:          strcpy( buffer, "Invalid parameter (EINVAL)" ); break;
+#endif
+	default: sprintf( buffer, "Unknown system error (%x)", code );
+	}
+}
+
+static void GetHostErrorMessage( char *buffer, int code )
+{
+#ifdef WIN32
+	GetErrorMessage( buffer, code );
+#else
+	switch( code ){
+	case HOST_NOT_FOUND: strcpy( buffer, "Host not found (HOST_NOT_FOUND)" ); break;
+	case TRY_AGAIN:      strcpy( buffer, "No response from the server (TRY_AGAIN)" ); break;
+	case NO_RECOVERY:    strcpy( buffer, "A non-recoverable error occurred (NO_RECOVERY)" ); break;
+	case NO_ADDRESS:     strcpy( buffer, "Address not found (NO_ADDRESS)" ); break;
+	default:             sprintf( buffer, "Unknown system error (%x)", code );
+	}
+#endif
+}
+
+static int GetError()
+{
+#ifdef WIN32
+	return WSAGetLastError();
+#else
+	return errno;
+#endif
+}
+
+static int GetHostError()
+{
+#ifdef WIN32
+	return WSAGetLastError();
+#else
+	return h_errno;
+#endif
+}
 
 void DaoNetwork_Close( int sockfd );
 int DaoNetwork_Bind( int port )
@@ -113,7 +197,7 @@ int DaoNetwork_Bind( int port )
 	memset( &( myaddr.sin_zero ), '\0', 8); /*  zero the rest of the struct */
 
 	if( bind( sockfd, (struct sockaddr *) & myaddr, sizeof(struct sockaddr) ) == -1){
-		close(sockfd);
+		DaoNetwork_Close(sockfd);
 		return -1;
 	}
 	return sockfd;
@@ -231,8 +315,7 @@ static int DaoNetwork_SendTag( int sockfd, char tag )
 	packet.tag = tag;
 	packet.size = htons( length );
 	packet.dataI1 = packet.dataI2 = 0;
-	send( sockfd, (char*)&packet, length, 0);
-	return 1; /*XXX*/
+	return send( sockfd, (char*)&packet, length, 0);
 }
 static int DaoNetwork_SendNil( int sockfd )
 {
@@ -249,8 +332,7 @@ static int DaoNetwork_SendInteger( int sockfd, int value )
 	/* printf( "send number: %i, %s\n", length, packet.data ); */
 	packet.type = DAO_INTEGER;
 	packet.size = htons( length );
-	send( sockfd, (char*)&packet, length, 0);
-	return 1;
+	return send( sockfd, (char*)&packet, length, 0);
 }
 static int DaoNetwork_SendFloat( int sockfd, float value )
 {
@@ -262,8 +344,7 @@ static int DaoNetwork_SendFloat( int sockfd, float value )
 	length = offset + strlen( packet.data ) + 1;
 	packet.type = DAO_FLOAT;
 	packet.size = htons( length );
-	send( sockfd, (char*)&packet, length, 0);
-	return 1;
+	return send( sockfd, (char*)&packet, length, 0);
 }
 static int DaoNetwork_SendNumber( int sockfd, DValue data )
 {
@@ -290,10 +371,11 @@ static int DaoNetwork_SendChars( int sockfd, const char *mbs, int len )
 		strncpy( packet.data, mbs + shift, copy );
 		packet.data[copy] = 0;
 		packet.size = htons( length );
-		send( sockfd, (char*) &packet, length, 0);
+		if( send( sockfd, (char*) &packet, length, 0) == -1 )
+			return -1;
 		shift += copy;
 	}
-	return 1;
+	return 0;
 }
 static int DaoNetwork_SendString( int sockfd, DString *str )
 {
@@ -315,8 +397,7 @@ static int DaoNetwork_SendComplex( int sockfd, complex16 data )
 	DaoPrintNumber32( buf2, data.imag );
 	length += strlen( buf2 );
 	packet.size = htons( length );
-	send( sockfd, (char*) &packet, length, 0);
-	return 1;
+	return send( sockfd, (char*) &packet, length, 0);
 }
 static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 {
@@ -340,7 +421,8 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 			buf2 += len;
 			if( length >= MAX_DATA ){
 				packet.size = htons( offset + length );
-				send( sockfd, (char*) &packet, offset + length, 0);
+				if( send( sockfd, (char*) &packet, offset + length, 0) == -1 )
+					return -1;
 				length = 0;
 				buf2 = packet.data;
 				packet.dataI2 = htonl( j+1 );
@@ -355,7 +437,8 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 			buf2 += len;
 			if( length >= MAX_DATA ){
 				packet.size = htons( offset + length );
-				send( sockfd, (char*) &packet, offset + length, 0);
+				if( send( sockfd, (char*) &packet, offset + length, 0) == -1 )
+					return -1;
 				length = 0;
 				buf2 = packet.data;
 				packet.dataI2 = htonl( j+1 );
@@ -371,7 +454,8 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 			buf2 += len;
 			if( length >= MAX_DATA ){
 				packet.size = htons( offset + length );
-				send( sockfd, (char*) &packet, offset + length, 0);
+				if( send( sockfd, (char*) &packet, offset + length, 0) == -1 )
+					return -1;
 				length = 0;
 				buf2 = packet.data;
 				packet.dataI2 = htonl( j+1 );
@@ -379,8 +463,7 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 		}
 	}
 	packet.size = htons( offset + length );
-	send( sockfd, (char*) &packet, offset + length, 0);
-	return 1;
+	return send( sockfd, (char*) &packet, offset + length, 0);
 }
 int DaoNetwork_SendExt( int sockfd, DValue *data[], int size )
 {
@@ -425,6 +508,10 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 
 	/* printf( "receive3 : offset = %i\n", offset ); */
 	numbytes = recv( sockfd, bufin, MAX_DATA, 0 );
+	if( numbytes == -1 ){
+		DString_Delete( str );
+		return -1;
+	}
 	while( numbytes >0 ){
 		bufin[ numbytes ] = '\0';
 		start = 0;
@@ -441,7 +528,10 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 				/* printf( "1 count = %i\n", count ); */
 				count = recv( sockfd, bufin + numbytes, MAX_DATA, 0 );
 				/* printf( "count = %i\n", count ); */
-				if( count < 0 ) break;
+				if( count < 0 ){
+					DString_Delete( str );
+					return -1;
+				}
 				numbytes += count;
 				bufin[ numbytes ] = '\0';
 				start = 0;
@@ -532,6 +622,10 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 		/* printf( "before %i %i\n", daoProxyPort, sockfd ); */
 		numbytes = recv( sockfd, bufin, MAX_DATA, 0 );
 		/* printf( "after %i %i\n", daoProxyPort, sockfd ); */
+		if( numbytes == -1 ){
+			DString_Delete( str );
+			return -1;
+		}
 	}
 	DString_Delete( str );
 	return dpp;
@@ -540,7 +634,13 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 struct DaoSocket
 {
 	int id;
+	int state;
 };
+
+#define MAX_ERRMSG 100
+#define SOCKET_BOUND 1
+#define SOCKET_CONNECTED 2
+#define SOCKET_LISTENING 3
 
 typedef struct DaoSocket DaoSocket;
 
@@ -550,6 +650,7 @@ static DaoSocket* DaoSocket_New(  )
 {
 	DaoSocket *self = dao_malloc( sizeof(DaoSocket) );
 	self->id = -1;
+	self->state = 0;
 	return self;
 }
 
@@ -558,25 +659,32 @@ static void DaoSocket_Close( DaoSocket *self )
 	if( self->id != -1 ){
 		DaoNetwork_Close( self->id );
 		self->id = -1;
+		self->state = 0;
 	}
 }
 
 static void DaoSocket_Delete( DaoSocket *self )
 {
 	DaoSocket_Close( self );
-	free( self );
+	dao_free( self );
 }
 
-static void DaoSocket_Bind( DaoSocket *self, int port )
+static int DaoSocket_Bind( DaoSocket *self, int port )
 {
 	DaoSocket_Close( self );
 	self->id = DaoNetwork_Bind( port );
+	if( self->id != -1 )
+		self->state = SOCKET_BOUND;
+	return self->id;
 }
 
-static void DaoSocket_Connect( DaoSocket *self, DString *host, int port )
+static int DaoSocket_Connect( DaoSocket *self, DString *host, int port )
 {
 	DaoSocket_Close( self );
 	self->id = DaoNetwork_Connect( DString_GetMBS( host ), port );
+	if( self->id != -1 )
+		self->state = SOCKET_CONNECTED;
+	return self->id;
 }
 
 static void DaoSocket_Lib_Close( DaoContext *ctx, DValue *par[], int N  )
@@ -586,54 +694,123 @@ static void DaoSocket_Lib_Close( DaoContext *ctx, DValue *par[], int N  )
 
 static void DaoSocket_Lib_Bind( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	DaoSocket_Bind( self, par[1]->v.i );
+	if( DaoSocket_Bind( self, par[1]->v.i ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void DaoSocket_Lib_Listen( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	DaoNetwork_Listen( self->id, par[1]->v.i );
+	if( self->state != SOCKET_BOUND ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not bound" );
+		return;
+	}
+	if( DaoNetwork_Listen( self->id, par[1]->v.i ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	self->state = SOCKET_LISTENING;
 }
 
 static void DaoSocket_Lib_Accept( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	DaoSocket *sock = DaoSocket_New(  );
+	DaoSocket *sock;
+	if( self->state != SOCKET_LISTENING ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not in the listening state" );
+		return;
+	}
+	sock = DaoSocket_New(  );
 	sock->id = DaoNetwork_Accept( self->id );
+	if( sock->id == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	sock->state = SOCKET_CONNECTED;
 	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
 
 static void DaoSocket_Lib_Connect( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	DaoSocket_Connect( self, par[1]->v.s, par[2]->v.i );
+	if( DaoSocket_Connect( self, par[1]->v.s, par[2]->v.i ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void DaoSocket_Lib_Send( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	DaoContext_PutInteger( ctx, DaoNetwork_Send( self->id, par[1]->v.s ) );
+	int n;
+	if( self->state != SOCKET_CONNECTED ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
+		return;
+	}
+	n = DaoNetwork_Send( self->id, par[1]->v.s );
+	if( n == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
+	DaoContext_PutInteger( ctx, n );
 }
 
 static void DaoSocket_Lib_Receive( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	if( self->state != SOCKET_CONNECTED ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
+		return;
+	}
 	DString *mbs = DaoContext_PutMBString( ctx, "" );
-	DaoNetwork_Receive( self->id, mbs, par[1]->v.i );
+	if( DaoNetwork_Receive( self->id, mbs, par[1]->v.i ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void DaoSocket_Lib_SendDao( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
+	int n;
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	DaoContext_PutInteger( ctx, DaoNetwork_SendExt( self->id, par+1, N-1 ) );
+	if( self->state != SOCKET_CONNECTED ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
+		return;
+	}
+	n = DaoNetwork_SendExt( self->id, par+1, N-1 );
+	if( n == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	DaoContext_PutInteger( ctx, n );
 }
 
 static void DaoSocket_Lib_ReceiveDao( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	if( self->state != SOCKET_CONNECTED ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
+		return;
+	}
 	DaoList *res = DaoContext_PutList( ctx );
-	DaoNetwork_ReceiveExt( self->id, res );
+	if( DaoNetwork_ReceiveExt( self->id, res ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+	}
 }
 
 static void DaoSocket_Lib_Id( DaoContext *ctx, DValue *par[], int N  )
@@ -642,24 +819,40 @@ static void DaoSocket_Lib_Id( DaoContext *ctx, DValue *par[], int N  )
 	DaoContext_PutInteger( ctx, self->id );
 }
 
-#ifdef WIN32
-#define ENOTSOCK WSAENOTSOCK
-#define ENOTCONN WSAENOTCONN
-#endif
+static void DaoSocket_Lib_State( DaoContext *ctx, DValue *par[], int N  )
+{
+	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	char buffer[10];
+	switch( self->state ){
+	case 0:                strcpy( buffer, "closed" ); break;
+	case SOCKET_BOUND:     strcpy( buffer, "bound" ); break;
+	case SOCKET_LISTENING: strcpy( buffer, "listening" ); break;
+	case SOCKET_CONNECTED: strcpy( buffer, "connected" ); break;
+	}
+	DaoContext_PutEnum( ctx, buffer );
+}
 
 static void DaoSocket_Lib_GetPeerName( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
 	struct sockaddr_in addr;
+#ifdef WIN32
+	int size = sizeof( struct sockaddr_in );
+#else
 	socklen_t size = sizeof( struct sockaddr_in );
-	int rt = getpeername( self->id, (struct sockaddr *) & addr, & size );
-	DString *res = DaoContext_PutMBString( ctx, "" );
-	switch( rt ){
-	case 0 : DString_SetMBS( res, inet_ntoa( addr.sin_addr ) ); break;
-	case ENOTSOCK : DString_SetMBS( res, "ENOTSOCK" ); break;
-	case ENOTCONN : DString_SetMBS( res, "ENOTCONN" ); break;
-	default : DString_SetMBS( res, "EUNKNOWN" ); break;
+#endif
+	if( self->state != SOCKET_CONNECTED ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
+		return;
 	}
+	if( getpeername( self->id, (struct sockaddr *) & addr, & size ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	DString *res = DaoContext_PutMBString( ctx, "" );
+	DString_SetMBS( res, inet_ntoa( addr.sin_addr ) );
 }
 
 static DaoFuncItem socketMeths[] =
@@ -674,6 +867,7 @@ static DaoFuncItem socketMeths[] =
 	{  DaoSocket_Lib_ReceiveDao,    "receive_dao( self :socket )=>list<int|float|double|complex|string|array>" },
 	{  DaoSocket_Lib_GetPeerName,   "peername( self :socket )const=>string" },
 	{  DaoSocket_Lib_Id,            "id( self :socket )const=>int" },
+	{  DaoSocket_Lib_State,         "state( self :socket )const=>enum<closed, bound, listening, connected>" },
 	{  DaoSocket_Lib_Close,         "close( self :socket )" },
 	{ NULL, NULL }
 };
@@ -684,20 +878,32 @@ DaoTypeBase socketTyper = {
 
 static void DaoNetLib_Bind( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *sock = DaoSocket_New(  );
-	DaoSocket_Bind( sock, par[0]->v.i );
+	if( DaoSocket_Bind( sock, par[0]->v.i ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
 	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
 static void DaoNetLib_Connect( DaoContext *ctx, DValue *p[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	DaoSocket *sock = DaoSocket_New(  );
-	DaoSocket_Connect( sock, p[0]->v.s, p[1]->v.i );
+	if( DaoSocket_Connect( sock, p[0]->v.s, p[1]->v.i ) == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
 	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
 static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	struct hostent *hent;
 	struct sockaddr_in addr;
+	struct in_addr id;
 	size_t size = sizeof( struct sockaddr_in );
 	const char *host = DString_GetMBS( par[0]->v.s );
 	DaoMap *res = DaoContext_PutMap( ctx );
@@ -705,7 +911,6 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 	DValue value = {DAO_STRING,0,0,0,{(double)0.0}};
 	if( DString_Size( par[0]->v.s ) ==0 ) return;
 	if( host[0] >= '0' && host[0] <= '9' ){
-		struct in_addr id;
 #ifdef UNIX
 		if( inet_aton( host, & id ) == 0 ) return;
 #elif WIN32
@@ -715,9 +920,13 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 		addr.sin_addr = id;
 		memset( &( addr.sin_zero ), '\0', 8);
 		hent = gethostbyaddr( (void*) & addr, size, AF_INET );
-		if( hent == NULL ) return;
 	}else{
 		hent = gethostbyname( host );
+	}
+	if( hent == NULL ){
+		GetHostErrorMessage( errbuf, GetHostError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
 	}
 	str = value.v.s = DString_New(1);
 	if( hent->h_addrtype == AF_INET ){
@@ -735,11 +944,18 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 }
 static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 {
+	char errbuf[MAX_ERRMSG];
 	struct timeval tv;
+	int res;
 	tv.tv_sec = (int)par[4]->v.f;
 	tv.tv_usec = ( par[4]->v.f - tv.tv_sec ) * 1E6;
-	DaoContext_PutInteger( ctx, select( par[0]->v.i, GET_FDSET( par[1] ),
-				GET_FDSET( par[2] ), GET_FDSET( par[3] ), & tv ) );
+	res = select( par[0]->v.i, GET_FDSET( par[1] ), GET_FDSET( par[2] ), GET_FDSET( par[3] ), & tv );
+	if( res == -1 ){
+		GetErrorMessage( errbuf, GetError() );
+		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
+		return;
+	}
+	DaoContext_PutInteger( ctx, res );
 }
 
 static DaoFuncItem netMeths[] =
@@ -760,11 +976,15 @@ void DaoNetwork_Init( DaoVmSpace *vms, DaoNameSpace *ns )
 {
 
 #ifdef WIN32
+	char errbuf[MAX_ERRMSG];
 	WSADATA wsaData;   /*  if this doesn't work */
 	/* WSAData wsaData; // then try this instead */
 
 	if(WSAStartup(MAKEWORD(1, 1), &wsaData) != 0) {
-		fprintf(stderr, "WSAStartup failed.\n");
+		strcpy( errbuf, "WSAStartup failed: " );
+		GetErrorMessage( buffer + strlen( errbuf ), GetError() );
+		strcat( errbuf, "\n" );
+		fprintf(stderr, errbuf );
 		exit(1);
 	} 
 #endif
