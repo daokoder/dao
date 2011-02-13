@@ -257,9 +257,6 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 				unit->type = DMACRO_BL;
 			}else if( DString_FindMBS( toks[i]->string, "IBL", 0 ) == 1 ){
 				unit->type = DMACRO_IBL;
-			}else{
-				DaoParser_Error( self, DAO_CTW_INV_MAC_VARIABLE, toks[i]->string );
-				return 0;
 			}
 			break;
 		case '(' :

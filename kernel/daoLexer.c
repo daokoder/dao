@@ -1331,7 +1331,7 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 			break;
 		}
 	}
-	DString_ChangeMBS( annot, "{{\n}}", "\\n", 0, NULL, NULL );
+	DString_ChangeMBS( annot, "{{\n}}", "\\n", 0 );
 }
 int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end )
 {

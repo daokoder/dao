@@ -1485,8 +1485,8 @@ void Dao_MakePath( DString *base, DString *path )
 {
 	while( DString_MatchMBS( path, " ^ %.%. / ", NULL, NULL ) ){
 		if( DString_MatchMBS( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
-			DString_ChangeMBS( path, " ^ %.%. / ", "", 1, NULL, NULL );
-			DString_ChangeMBS( base, " [^/] + ( / |) $ ", "", 0, NULL, NULL );
+			DString_ChangeMBS( path, " ^ %.%. / ", "", 1 );
+			DString_ChangeMBS( base, " [^/] + ( / |) $ ", "", 0 );
 		}else return;
 	}
 	if( base->size && path->size ){
@@ -1494,7 +1494,7 @@ void Dao_MakePath( DString *base, DString *path )
 			DString_InsertChar( path, '/', 0 );
 		DString_Insert( path, base, 0, 0, 0 );
 	}
-	DString_ChangeMBS( path, "/ %. /", "/", 0, NULL, NULL );
+	DString_ChangeMBS( path, "/ %. /", "/", 0 );
 }
 void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check )
 {
@@ -1503,8 +1503,8 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check )
 	DString *path;
 
 	DString_ToMBS( fname );
-	DString_ChangeMBS( fname, "/ %s* %. %s* /", "/", 0, NULL, NULL );
-	DString_ChangeMBS( fname, "[^%./] + / %. %. /", "", 0, NULL, NULL );
+	DString_ChangeMBS( fname, "/ %s* %. %s* /", "/", 0 );
+	DString_ChangeMBS( fname, "[^%./] + / %. %. /", "", 0 );
 	/* erase the last '/' */
 	if( fname->size && fname->mbs[ fname->size-1 ] =='/' ){
 		fname->size --;
@@ -1908,6 +1908,11 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoCData_GetData2 = DaoCData_GetData2;
 	api->DaoCData_GetObject = DaoCData_GetObject;
 
+	api->DaoRegex_New = DaoRegex_New;
+	api->DaoRegex_Match = DaoRegex_Match;
+	api->DaoRegex_SubMatch = DaoRegex_SubMatch;
+	api->DaoRegex_Change = DaoRegex_Change;
+
 	api->DaoMutex_New = DaoMutex_New;
 	api->DaoMutex_Lock = DaoMutex_Lock;
 	api->DaoMutex_Unlock = DaoMutex_Unlock;
@@ -1937,6 +1942,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoContext_WrapCData = DaoContext_WrapCData;
 	api->DaoContext_CopyCData = DaoContext_CopyCData;
 	api->DaoContext_PutValue = DaoContext_PutValue;
+	api->DaoContext_CurrentProcess = DaoContext_CurrentProcess;
 	api->DaoContext_RaiseException = DaoContext_RaiseException;
 
 	api->DaoVmProcess_New = DaoVmProcess_New;
@@ -1944,6 +1950,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoVmProcess_Eval = DaoVmProcess_Eval;
 	api->DaoVmProcess_Call = DaoVmProcess_Call;
 	api->DaoVmProcess_Stop = DaoVmProcess_Stop;
+	api->DaoVmProcess_MakeRegex = DaoVmProcess_MakeRegex;
 	api->DaoVmProcess_GetReturned = DaoVmProcess_GetReturned;
 
 	api->DaoNameSpace_New = DaoNameSpace_New;

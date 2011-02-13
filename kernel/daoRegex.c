@@ -1035,8 +1035,7 @@ int DString_MatchWCS( DString *self, const wchar_t *pat, size_t *start, size_t *
 	return rc;
 }
 
-int DString_ChangeMBS( DString *self, char *pat, char *target, 
-		int index, size_t *start, size_t *end )
+int DString_ChangeMBS( DString *self, char *pat, char *target, int index )
 {
 	DString *str = DString_New(1);
 	DString *tg = DString_New(1);
@@ -1051,13 +1050,12 @@ int DString_ChangeMBS( DString *self, char *pat, char *target,
 	}
 	DaoRegex_Init( p, str );
 	DString_Delete( str );
-	res = DaoRegex_Change( p, self, tg, index, start, end );
+	res = DaoRegex_Change( p, self, tg, index );
 	DString_Delete( tg );
 	dao_free( buf );
 	return res;
 }
-int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target, 
-		int index, size_t *start, size_t *end )
+int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target, int index )
 {
 	DString *str = DString_New(0);
 	DString *tg = DString_New(0);
@@ -1072,7 +1070,7 @@ int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target,
 	}
 	DaoRegex_Init( p, str );
 	DString_Delete( str );
-	rc = DaoRegex_Change( p, self, tg, index, start, end );
+	rc = DaoRegex_Change( p, self, tg, index );
 	dao_free( buf );
 	return rc;
 }
@@ -1175,7 +1173,7 @@ static void Dao_ParseTarget( DString *target, DVarray *parts, DValue sval )
 	}
 	DVarray_PushBack( parts, sval );
 }
-int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, 
+int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
 		int index, size_t *start2, size_t *end2 )
 {
 	size_t start = start2 ? (size_t) *start2 : 0;
@@ -1227,6 +1225,10 @@ DoNothing:
 	DString_Delete( replace );
 	DVarray_Delete( array );
 	return n;
+}
+int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, int index )
+{
+	return DaoRegex_ChangeExt( self, source, target, index, NULL, NULL );
 }
 int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
 		int index, int count, DVarray *packs )

@@ -91,10 +91,8 @@ size_t DString_RFindChar( DString *self, char ch, size_t start );
 int DString_MatchMBS( DString *self, const char *pat, size_t *start, size_t *end );
 int DString_MatchWCS( DString *self, const wchar_t *pat, size_t *start, size_t *end );
 
-int DString_ChangeMBS( DString *self, char *pat, char *target, 
-		int index, size_t *start, size_t *end );
-int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target, 
-		int index, size_t *start, size_t *end );
+int DString_ChangeMBS( DString *self, char *pat, char *target, int index );
+int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target, int index );
 
 DString* DString_Copy( DString *self );
 DString* DString_DeepCopy( DString *self );

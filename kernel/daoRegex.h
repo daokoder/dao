@@ -67,8 +67,10 @@ int DaoRegex_CheckSize( DString *src );
 int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
 int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
 
-int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, 
-		int index, size_t *start, size_t *end );
+int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
+int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
+		int index, size_t *start2, size_t *end2 );
+
 int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
 		int index, int count, DVarray *packs );
 

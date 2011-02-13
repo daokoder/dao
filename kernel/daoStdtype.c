@@ -1590,7 +1590,7 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
 	DValue vtup = daoNullTuple;
 	DaoTuple *tuple = NULL;
 	DaoList *list = DaoContext_PutList( ctx );
-	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
+	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	if( patt ==NULL ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	i = 0;
@@ -1622,7 +1622,7 @@ static void DaoSTR_Match0( DaoContext *ctx, DValue *p[], int N, int subm )
 	DValue value = daoZeroInt;
 	DValue matched = daoNullString;
 	DaoTuple *tuple = DaoTuple_New( 3 );
-	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
+	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	DaoContext_SetResult( ctx, (DaoBase*) tuple );
 	if( patt ==NULL ) return;
 	if( subm ){
@@ -1671,13 +1671,13 @@ static void DaoSTR_Extract( DaoContext *ctx, DValue *p[], int N )
 	DArray *masks = DArray_New(0);
 	DArray *matchs = DArray_New(0);
 	DaoList *list = DaoContext_PutList( ctx );
-	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
+	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	DaoRegex *ptmask = NULL;
 	pt = DString_Copy( pt );
 	if( size == 0 ) goto DoNothing;
 	if( DString_Size( mask ) ==0 ) mask = NULL;
 	if( mask ){
-		ptmask = DaoVmProcess_MakeRegex( ctx, mask, self->wcs ==NULL );
+		ptmask = DaoVmProcess_MakeRegex( ctx->process, mask, self->wcs ==NULL );
 		if( ptmask ==NULL ) goto DoNothing;
 	}
 	if( patt ==NULL ) goto DoNothing;
@@ -1738,7 +1738,7 @@ static void DaoSTR_Capture( DaoContext *ctx, DValue *p[], int N )
 	int gid;
 	DValue subs = daoNullString;
 	DaoList *list = DaoContext_PutList( ctx );
-	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
+	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	if( patt ==NULL ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & p1, & p2 ) ==0 ) return;
@@ -1763,8 +1763,8 @@ static void DaoSTR_Change( DaoContext *ctx, DValue *p[], int N )
 	size_t start = (size_t)p[4]->v.i;
 	size_t end = (size_t)p[5]->v.i;
 	dint n, index = p[3]->v.i;
-	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
-	n = DaoRegex_Change( patt, self, str, index, & start, & end );
+	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
+	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoContext_PutInteger( ctx, n );
 }
 static void DaoSTR_Mpack( DaoContext *ctx, DValue *p[], int N )
@@ -1773,7 +1773,7 @@ static void DaoSTR_Mpack( DaoContext *ctx, DValue *p[], int N )
 	DString *pt = p[1]->v.s;
 	DString *str = p[2]->v.s;
 	dint index = p[3]->v.i;
-	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx, pt, self->wcs ==NULL );
+	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	if( N == 5 ){
 		DaoList *res = DaoContext_PutList( ctx );
 		dint count = p[4]->v.i;

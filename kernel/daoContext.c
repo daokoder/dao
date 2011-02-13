@@ -299,6 +299,10 @@ int DaoContext_PutReference( DaoContext *self, DValue *refer )
 	}
 	return 0;
 }
+DaoVmProcess* DaoContext_CurrentProcess( DaoContext *self )
+{
+	return self->process;
+}
 
 void DaoContext_Print( DaoContext *self, const char *chs )
 {

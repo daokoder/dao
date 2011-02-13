@@ -191,8 +191,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *
  * =======================================================================================*/
 DaoRegex* DaoRegex_New( DString *src );
 int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
-int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, 
-    int index, size_t *start, size_t *end );
+int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
 int DaoRegex_Extract( DaoRegex *self, DString *s, DVarray *ls, short tp );
 
 /* =======================================================================================

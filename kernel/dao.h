@@ -19,7 +19,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#define DAO_H_VERSION 20110206
+#define DAO_H_VERSION 20110212
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -611,6 +611,11 @@ struct DaoAPI
 	DaoObject* (*DaoCData_GetObject)( DaoCData *self );
 	DaoTypeBase* (*DaoCData_GetTyper)( DaoCData *self );
 
+	DaoRegex* (*DaoRegex_New)( DString *pattern );
+	int (*DaoRegex_Match)( DaoRegex *self, DString *src, size_t *start, size_t *end );
+	int (*DaoRegex_SubMatch)( DaoRegex *self, int gid, size_t *start, size_t *end );
+	int (*DaoRegex_Change)( DaoRegex *self, DString *src, DString *target, int index );
+
 	DaoMutex* (*DaoMutex_New)( DaoVmSpace *vms );
 	void (*DaoMutex_Lock)( DaoMutex *self );
 	void (*DaoMutex_Unlock)( DaoMutex *self );
@@ -641,6 +646,7 @@ struct DaoAPI
 
 	DaoCData*  (*DaoContext_WrapCData)( DaoContext *self, void *data, DaoTypeBase *t );
 	DaoCData* (*DaoContext_CopyCData)( DaoContext *self, void *d, int n, DaoTypeBase *t );
+	DaoVmProcess* (*DaoContext_CurrentProcess)( DaoContext *self );
 
 	void (*DaoContext_RaiseException)( DaoContext *self, int type, const char *value );
 
@@ -650,6 +656,7 @@ struct DaoAPI
 	int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n);
 	void (*DaoVmProcess_Stop)( DaoVmProcess *self );
 	DValue (*DaoVmProcess_GetReturned)( DaoVmProcess *self );
+	DaoRegex* (*DaoVmProcess_MakeRegex)( DaoVmProcess *self, DString *patt, int mbs );
 
 	DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms );
 	DaoNameSpace* (*DaoNameSpace_GetNameSpace)( DaoNameSpace *self, const char *name );
@@ -920,6 +927,11 @@ DAO_DLL void** DaoCData_GetData2( DaoCData *self );
 DAO_DLL DaoObject* DaoCData_GetObject( DaoCData *self );
 DAO_DLL DaoTypeBase* DaoCData_GetTyper( DaoCData *self );
 
+DAO_DLL DaoRegex* DaoRegex_New( DString *pattern );
+DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
+DAO_DLL int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
+DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
+
 DAO_DLL DaoMutex* DaoMutex_New( DaoVmSpace *vms );
 DAO_DLL void DaoMutex_Lock( DaoMutex *self );
 DAO_DLL void DaoMutex_Unlock( DaoMutex *self );
@@ -953,6 +965,7 @@ DAO_DLL DaoCData*  DaoContext_WrapCData( DaoContext *self, void *data, DaoTypeBa
 /* data will be deleted with the new DaoCData */
 DAO_DLL DaoCData*  DaoContext_CopyCData( DaoContext *self, void *d, int n, DaoTypeBase *t );
 
+DAO_DLL DaoVmProcess* DaoContext_CurrentProcess( DaoContext *self );
 DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 
 DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
@@ -961,6 +974,7 @@ DAO_DLL int DaoVmProcess_Eval   ( DaoVmProcess *self, DaoNameSpace *ns, DString 
 DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoRoutine *r, DaoObject *o, DValue *p[], int n );
 DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
 DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
+DAO_DLL DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *patt, int mbs );
 
 DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
 /* get namespace with the name, create if not exits: */
@@ -1231,6 +1245,11 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoCData_GetObject( self ) __dao.DaoCData_GetObject( self )
 #define DaoCData_GetTyper( self )  __dao.DaoCData_GetTyper( self )
 
+#define DaoRegex_New( patt )  __dao.DaoRegex_New( patt )
+#define DaoRegex_Match( self, s, p0, p1 )  __dao.DaoRegex_Match( self, s, p0 ,p1 )
+#define DaoRegex_SubMatch( self, g, p0, p1 )  __dao.DaoRegex_SubMatch( self, g, p0, p1 )
+#define DaoRegex_Change( self, s, t, i ) __dao.DaoRegex_Change( self, s, t, i )
+
 #define DaoMutex_New( vms )  __dao.DaoMutex_New( vms )
 #define DaoMutex_Lock( self )  __dao.DaoMutex_Lock( self )
 #define DaoMutex_Unlock( self )  __dao.DaoMutex_Unlock( self )
@@ -1261,6 +1280,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoContext_WrapCData( s, data, typer ) __dao.DaoContext_WrapCData( s, data, typer )
 #define DaoContext_CopyCData( s, d, n, t )  __dao.DaoContext_CopyCData( s, d, n, t )
 
+#define DaoContext_CurrentProcess( self )  __dao.DaoContext_CurrentProcess( self )
 #define DaoContext_RaiseException( s, t, v ) __dao.DaoContext_RaiseException( s, t, v ) ;
 
 #define DaoVmProcess_New( vms )  __dao.DaoVmProcess_New( vms )
@@ -1269,6 +1289,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoVmProcess_Call( s, r, o, p, n )  __dao.DaoVmProcess_Call( s, r, o, p, n )
 #define DaoVmProcess_Stop( self )  __dao.DaoVmProcess_Stop( self )
 #define DaoVmProcess_GetReturned( s )  __dao.DaoVmProcess_GetReturned( s )
+#define DaoVmProcess_MakeRegex( p, s, m )  __dao.DaoVmProcess_MakeRegex( p, s, m )
 
 #define DaoNameSpace_New( vms )  __dao.DaoNameSpace_New( vms )
 #define DaoNameSpace_GetNameSpace( ns, s ) __dao.DaoNameSpace_GetNameSpace( ns, s )

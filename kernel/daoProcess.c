@@ -182,8 +182,9 @@ void DaoVmProcess_Delete( DaoVmProcess *self )
 	dao_free( self );
 }
 
-DaoRegex* DaoVmProcess_MakeRegex( DaoContext *self, DString *src, int mbs )
+DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *src, int mbs )
 {
+	DaoContext *ctx = NULL;
 	DaoRegex *pat = NULL;
 	DaoRgxItem *it;
 	DNode *node;
@@ -191,24 +192,26 @@ DaoRegex* DaoVmProcess_MakeRegex( DaoContext *self, DString *src, int mbs )
 	if( mbs && src->wcs ) DString_ToMBS( src );
 	if( mbs==0 && src->mbs ) DString_ToWCS( src );
 	if( src->mbs ){
-		if( self->process->mbsRegex == NULL ) self->process->mbsRegex = DHash_New(D_STRING,0);
-		node = DMap_Find( self->process->mbsRegex, src );
+		if( self->mbsRegex == NULL ) self->mbsRegex = DHash_New(D_STRING,0);
+		node = DMap_Find( self->mbsRegex, src );
 		if( node ) return (DaoRegex*) node->value.pVoid;
 		pat = DaoRegex_New( src );
-		DMap_Insert( self->process->mbsRegex, src, pat );
+		DMap_Insert( self->mbsRegex, src, pat );
 	}else{
-		if( self->process->wcsRegex == NULL ) self->process->wcsRegex = DHash_New(D_STRING,0);
-		node = DMap_Find( self->process->wcsRegex, src );
+		if( self->wcsRegex == NULL ) self->wcsRegex = DHash_New(D_STRING,0);
+		node = DMap_Find( self->wcsRegex, src );
 		if( node ) return (DaoRegex*) node->value.pVoid;
 		pat = DaoRegex_New( src );
-		DMap_Insert( self->process->wcsRegex, src, pat );
+		DMap_Insert( self->wcsRegex, src, pat );
 	}
+	if( self->topFrame == NULL || self->topFrame == self->firstFrame )
+		ctx = self->topFrame->context;
 	for( i=0; i<pat->count; i++ ){
 		it = pat->items + i;
 		if( it->type ==0 ){
 			char buf[50];
 			sprintf( buf, "incorrect pattern, at char %i.", it->length );
-			DaoContext_RaiseException( self, DAO_ERROR, buf );
+			if( ctx ) DaoContext_RaiseException( ctx, DAO_ERROR, buf );
 			return NULL;
 		}
 	}

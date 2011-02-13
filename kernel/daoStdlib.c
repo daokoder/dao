@@ -1034,7 +1034,7 @@ int DInode_Append( DInode *self, const char *path, int dir, DInode *dest )
 
 extern DaoTypeBase inodeTyper;
 
-int DInode_Children( DInode *self, int type, DVarray *dest, DaoRegex *pattern )
+int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *pattern )
 {
 	char buffer[MAX_PATH + 1];
 	int len, res;
@@ -1071,7 +1071,7 @@ int DInode_Children( DInode *self, int type, DVarray *dest, DaoRegex *pattern )
 				}
 				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
 					value.v.cdata = DaoCData_New( &inodeTyper, inode );
-					DVarray_Append( dest, value );
+					DaoList_PushBack( dest, value );
 				}
 				else
 					DInode_Delete( inode );
@@ -1100,7 +1100,7 @@ int DInode_Children( DInode *self, int type, DVarray *dest, DaoRegex *pattern )
 				}
 				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
 					value.v.cdata = DaoCData_New( &inodeTyper, inode );
-					DVarray_Append( dest, value );
+					DaoList_PushBack( dest, value );
 				}
 				else
 					DInode_Delete( inode );
@@ -1434,12 +1434,11 @@ static void DaoInode_Child( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutCData( ctx, (void*)child, &inodeTyper );
 }
 
-static void DaoInode_Children( DaoContext *ctx, DValue *p[], int N )
+static void DInode_Children( DInode *self, DaoContext *ctx, int type, DString *pat, int ft )
 {
-	DInode *self = (DInode*)p[0]->v.cdata->data;
 	DaoList *list = DaoContext_PutList( ctx );
 	char buffer[MAX_PATH + 1], *filter;
-	int res, type = p[1]->v.e->value, i, j, len;
+	int res, i, j, len;
 	DString strbuf;
 	DaoRegex *pattern;
 	if( !self->path ){
@@ -1450,13 +1449,13 @@ static void DaoInode_Children( DaoContext *ctx, DValue *p[], int N )
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not a directory" );
 		return;
 	}
-	filter = DString_GetMBS( p[2]->v.s );
+	filter = DString_GetMBS( pat );
 	len = strlen( filter );
 	if( len > MAX_PATH ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The filter is too large" );
 		return;
 	}
-	if( !p[3]->v.e->value == 1 ){
+	if( ft == 0 ){
 		buffer[0] = '^';
 		buffer[1] = '(';
 		for( i = 0, j = 2; i < len && j < MAX_PATH - 1; i++, j++ )
@@ -1504,33 +1503,32 @@ static void DaoInode_Children( DaoContext *ctx, DValue *p[], int N )
 	else
 		strcpy( buffer, filter );
 	strbuf = DString_WrapMBS( buffer );
-    pattern = DaoVmProcess_MakeRegex( ctx, &strbuf, 1 );
+    pattern = DaoVmProcess_MakeRegex( ctx->process, &strbuf, 1 );
     if( !pattern )
     	return;
 	type = ( type == 3 ) ? 2 : ( ( type == 1 ) ? 1 : 0 );
-	if( ( res = DInode_Children( self, type, list->items, pattern ) ) != 0 ){
+	if( ( res = DInode_ChildrenRegex( self, type, list, pattern ) ) != 0 ){
 		GetErrorMessage( buffer, res, 1 );
 		DaoContext_RaiseException( ctx, DAO_ERROR, buffer );
 		return;
 	}
 }
+static void DaoInode_Children( DaoContext *ctx, DValue *p[], int N )
+{
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode_Children( self, ctx, p[1]->v.e->value, p[2]->v.s, p[3]->v.e->value );
+}
 
 static void DaoInode_Files( DaoContext *ctx, DValue *p[], int N )
 {
-	DValue value = daoNullEnum;
-	DValue *params[] = {p[0], &value, p[1], p[2]};
-	value.v.e = DEnum_New( NULL, 1 );
-	DaoInode_Children( ctx, params, N + 1 );
-	DEnum_Delete( value.v.e );
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode_Children( self, ctx, 1, p[1]->v.s, p[2]->v.e->value );
 }
 
 static void DaoInode_Dirs( DaoContext *ctx, DValue *p[], int N )
 {
-	DValue value = daoNullEnum;
-	DValue *params[] = {p[0], &value, p[1], p[2]};
-	value.v.e = DEnum_New( NULL, 2 );
-	DaoInode_Children( ctx, params, N + 1 );
-	DEnum_Delete( value.v.e );
+	DInode *self = (DInode*)p[0]->v.cdata->data;
+	DInode_Children( self, ctx, 2, p[1]->v.s, p[2]->v.e->value );
 }
 
 static DaoFuncItem inodeMeths[] =
