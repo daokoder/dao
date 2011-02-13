@@ -758,6 +758,24 @@ int  DaoClass_ChildOf( DaoClass *self, DaoBase *klass )
 	}
 	return 0;
 }
+DaoBase* DaoClass_MapToParent( DaoClass *self, DaoType *parent )
+{
+	int i;
+	if( parent == NULL ) return NULL;
+	if( self->objType == parent ) return (DaoBase*) self;
+	if( self->superClass ==NULL ) return NULL;
+	for( i=0; i<self->superClass->size; i++ ){
+		DaoBase *sup = self->superClass->items.pBase[i];
+		if( sup == NULL ) return NULL;
+		if( sup->type == DAO_CLASS ){
+			if( (sup = DaoClass_MapToParent( (DaoClass*)sup, parent ) ) ) return sup;
+		}else if( sup->type == DAO_CTYPE && parent->tid == DAO_CDATA ){
+			/* cdata is accessible as cdata type, not ctype type. */
+			if( DaoCData_ChildOf( ((DaoCData*)sup)->typer, parent->typer ) ) return sup;
+		}
+	}
+	return NULL;
+}
 void DaoClass_AddSuperClass( DaoClass *self, DaoBase *super, DString *alias )
 {
 	/* XXX if( alias == NULL ) alias = super->className; */

@@ -5171,11 +5171,11 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 	}
 	for(i=0; i<N; i++){
 		val = *excepts[i];
-		if( val.t == DAO_OBJECT || val.t == DAO_CDATA ){
+		if( val.t == DAO_CLASS || val.t == DAO_CDATA ){
 			cdata = val.v.cdata;
-			if( val.t == DAO_OBJECT ){
+			if( val.t == DAO_CLASS ){
 				DaoType *type = ext->priv->abtype;
-				cdata = (DaoCData*) DaoObject_MapThisObject( val.v.object, type );
+				cdata = (DaoCData*) DaoClass_MapToParent( val.v.klass, type );
 			}
 			if( cdata && DaoCData_ChildOf( cdata->typer, any ) ){
 				DVarray_Swap( self->process->exceptions, list->items );

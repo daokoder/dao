@@ -96,6 +96,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 int  DaoClass_FindSuper( DaoClass *self, DaoBase *super );
 int  DaoClass_ChildOf( DaoClass *self, DaoBase *super );
 void DaoClass_AddSuperClass( DaoClass *self, DaoBase *super, DString *alias );
+DaoBase* DaoClass_MapToParent( DaoClass *self, DaoType *parent );
 
 int  DaoClass_FindConst( DaoClass *self, DString *name );
 DValue DaoClass_GetConst( DaoClass *self, int id );

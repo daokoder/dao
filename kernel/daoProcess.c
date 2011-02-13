@@ -3197,11 +3197,20 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 }
 void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
 {
+	DaoType *extype = dao_Exception_Typer.priv->abtype;
 	DaoStream *stdio = self->vmSpace->stdStream;
 	DValue *excobjs = self->exceptions->data;
 	int i;
-	for(i=0; i<self->exceptions->size; i++)
-		DaoPrintException( excobjs[i].v.cdata, stdio );
+	for(i=0; i<self->exceptions->size; i++){
+		DaoCData *cdata = NULL;
+		if( excobjs[i].t == DAO_CDATA ){
+			cdata = excobjs[i].v.cdata;
+		}else if( excobjs[i].t == DAO_OBJECT ){
+			cdata = (DaoCData*)DaoObject_MapThisObject( excobjs[i].v.object, extype );
+		}
+		if( cdata == NULL ) continue;
+		DaoPrintException( cdata, stdio );
+	}
 	if( clear ) DVarray_Clear( self->exceptions );
 }
 
