@@ -982,7 +982,7 @@ void DaoNetwork_Init( DaoVmSpace *vms, DaoNameSpace *ns )
 
 	if(WSAStartup(MAKEWORD(1, 1), &wsaData) != 0) {
 		strcpy( errbuf, "WSAStartup failed: " );
-		GetErrorMessage( buffer + strlen( errbuf ), GetError() );
+		GetErrorMessage( errbuf + strlen( errbuf ), GetError() );
 		strcat( errbuf, "\n" );
 		fprintf(stderr, errbuf );
 		exit(1);
