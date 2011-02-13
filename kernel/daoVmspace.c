@@ -1696,7 +1696,6 @@ extern DaoTypeBase libReflectTyper;
 extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase coroutTyper;
-extern DaoTypeBase inodeTyper;
 
 extern DaoTypeBase DaoFdSet_Typer;
 
@@ -2340,7 +2339,6 @@ DaoVmSpace* DaoInit()
 	DaoNameSpace_WrapType( vms->nsInternal, & libSystemTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libMathTyper );
 	DaoNameSpace_WrapType( vms->nsInternal, & libReflectTyper );
-	DaoNameSpace_WrapType( vms->nsInternal, & inodeTyper );
 
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 	DaoCallServer_Init( vms );
