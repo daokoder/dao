@@ -4072,8 +4072,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	if( npar == DAO_CALLER_PARAM ){
 		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
 		npar = self->parCount - m;
-		base = self->regArray->data + 1;
-		params = self->regValues + 1;
+		base = self->regArray->data + m;
+		params = self->regValues + m;
 	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
@@ -4445,9 +4445,9 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	//printf( "%i\n", npar );
 	if( npar == DAO_CALLER_PARAM ){
 		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
-		npar = self->parCount - 1;
-		base = self->regArray->data + 1;
-		params = self->regValues + 1;
+		npar = self->parCount - m;
+		base = self->regArray->data + m;
+		params = self->regValues + m;
 	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;

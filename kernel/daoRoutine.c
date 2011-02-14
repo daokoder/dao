@@ -1779,7 +1779,7 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 		if( csts && csts[ifrom].t ==0 ) cs = csts[ifrom];
 		if( tp == NULL ){
 			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
-			DString_AppendMBS( s, "unknow parameter type \";\n" );
+			DString_AppendMBS( s, "unknown parameter type \";\n" );
 			goto FinishError;
 		}
 		if( tp->tid == DAO_PAR_NAMED ){
@@ -1795,7 +1795,7 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 		}
 		if( ito > ndef || tp ==NULL ){
 			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
-			DString_AppendMBS( s, "unknow parameter type \";\n" );
+			DString_AppendMBS( s, "unknown parameter type \";\n" );
 			goto FinishError;
 		}
 		abtp = routType->nested->items.pType[ito];
@@ -4141,8 +4141,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( j == DAO_CALLER_PARAM ){
 					k = (self->routType->attrib & DAO_TYPE_SELF) != 0;
 					j = self->parCount - k;
-					pp = csts + 1;
-					tp = type + 1;
+					pp = csts + k;
+					tp = type + k;
 				}
 				for(k=0; k<j; k++){
 					tt = DaoType_DefineTypes( tp[k], ns, defs );

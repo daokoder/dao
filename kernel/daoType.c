@@ -753,7 +753,7 @@ static void DMap_Erase2( DMap *defs, void *p )
 	int i;
 	DMap_Erase( defs, p );
 	for(node=DMap_First(defs); node; node=DMap_Next(defs,node)){
-		DArray_Append( keys, node->key.pVoid );
+		if( node->value.pVoid == p ) DArray_Append( keys, node->key.pVoid );
 	}
 	for(i=0; i<keys->size; i++) DMap_Erase( defs, keys->items.pVoid[i] );
 	DArray_Delete( keys );
