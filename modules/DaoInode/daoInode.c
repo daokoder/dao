@@ -11,7 +11,9 @@
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
-#include"io.h"
+/* Contribution logs: */
+/* 2011-02-13, Aleksey Danilov: added initial implementation. */
+
 #include"string.h"
 #include"errno.h"
 #include<sys/stat.h>
@@ -25,14 +27,24 @@ DAO_INIT_MODULE;
 
 const DValue daoNullCData = { DAO_CDATA, 0, 0, 0, {0}};
 
+#ifdef WIN32
+
+#include"io.h"
 #ifdef _MSC_VER
 #define chdir _chdir
 #define rmdir _rmdir
 #define getcwd _getcwd
 #define mkdir _mkdir
 #define stat _stat
+#endif
+
 #else
 #include"dirent.h"
+#endif
+
+#ifdef UNIX
+#include<unistd.h>
+#include<sys/time.h>
 #endif
 
 #ifndef MAX_PATH

@@ -11,6 +11,10 @@
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
+/* Contribution logs: */
+/* 2011-02-11, Aleksey Danilov: added socket type with OOP-style methods; */
+/* 2011-02-13, Aleksey Danilov: added socket error handling; */
+
 #include"stdio.h"
 #include"stdlib.h"
 #include"string.h"
