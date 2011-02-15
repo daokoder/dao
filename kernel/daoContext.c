@@ -5171,7 +5171,7 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 	}
 	for(i=0; i<N; i++){
 		val = *excepts[i];
-		if( val.t == DAO_CLASS || val.t == DAO_CDATA ){
+		if( val.t == DAO_CLASS || val.t == DAO_CTYPE ){
 			cdata = val.v.cdata;
 			if( val.t == DAO_CLASS ){
 				DaoType *type = ext->priv->abtype;
@@ -5185,21 +5185,22 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 			}else if( cdata ){
 				for(j=0; j<self->process->exceptions->size; j++){
 					val2 = self->process->exceptions->data[j];
-					if( val2.t == DAO_OBJECT || val2.t == DAO_CDATA ){
-						DaoCData *cdata2 = val2.v.cdata;
-						if( val2.t == DAO_OBJECT ){
-							DaoType *type = ext->priv->abtype;
-							cdata2 = (DaoCData*) DaoObject_MapThisObject( val2.v.object, type );
+					if( val.t == DAO_CLASS && val2.t == DAO_OBJECT ){
+						if( DaoClass_ChildOf( val2.v.object->myClass, val.v.p ) ){
+							canRescue = 1;
+							DVarray_Append( list->items, val2 );
+							DVarray_Erase( self->process->exceptions, j, 1 );
 						}
-						if( cdata2 == NULL ){
-							/* XXX */
-							continue;
+					}else if( val.t == DAO_CTYPE ){
+						DaoCData *cdata2 = val2.v.cdata;
+						if( val2.t == DAO_CLASS ){
+							DaoType *type = ext->priv->abtype;
+							cdata2 = (DaoCData*) DaoClass_MapToParent( val2.v.klass, type );
 						}
 						if( DaoCData_ChildOf( cdata2->typer, cdata->typer ) ){
 							canRescue = 1;
 							DVarray_Append( list->items, val2 );
 							DVarray_Erase( self->process->exceptions, j, 1 );
-							continue;
 						}
 					}
 				}
