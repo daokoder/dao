@@ -512,6 +512,16 @@ static void STD_Unpack( DaoContext *ctx, DValue *p[], int N )
 		}
 	}
 }
+static void STD_Serialize( DaoContext *ctx, DValue *p[], int N )
+{
+	DString *mbs = DaoContext_PutMBString( ctx, "" );
+	DValue_Serialize( p[0], mbs, ctx->nameSpace, ctx->process );
+}
+static void STD_Deserialize( DaoContext *ctx, DValue *p[], int N )
+{
+	DValue *value = DaoContext_PutValue( ctx, daoNullValue );
+	DValue_Deserialize( value, p[0]->v.s, ctx->nameSpace, ctx->process );
+}
 static void STD_Warn( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoContext_RaiseException( ctx, DAO_WARNING, DString_GetMBS( p[0]->v.s ) );
@@ -540,6 +550,8 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Tokenize,  "tokenize( source :string )=>list<string>" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
 	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
+	{ STD_Serialize, "serialize( value : any )=>string" },
+	{ STD_Deserialize, "deserialize( text : string )=>any" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
 	{ NULL, NULL }

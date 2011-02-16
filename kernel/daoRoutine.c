@@ -2222,17 +2222,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					GC_ShiftRC( at, *tp );
 					*tp = at;
 				}
-				if( tp && (*tp)->tid <= DAO_DOUBLE ){
-					if( code == DVM_SETVO && opb < hostClass->objDataDefault->size ){
-						hostClass->objDataDefault->data[ opb ].t = at->tid;
-					}else if( code == DVM_SETVK && opc < hostClass->glbDataTable->size ){
-						DVarray *array = hostClass->glbDataTable->items.pVarray[opc];
-						if( opb < array->size ) array->data[opb].t = at->tid;
-					}else if( code == DVM_SETVG && opc < ns->varDataTable->size ){
-						DVarray *array = ns->varDataTable->items.pVarray[opc];
-						if( opb < array->size ) array->data[opb].t = at->tid;
-					}
-				}
 				/* less strict checking */
 				if( type[opa]->tid == DAO_ANY || type[opa]->tid == DAO_UDF ) break;
 				if( tp == 0 ) break;
@@ -3669,6 +3658,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					ct = bt;
 				}else{
 					DaoType_CheckAttributes( ct );
+					DaoType_InitDefault( ct );
 					DaoNameSpace_AddType( ns, ct->name, ct );
 				}
 				if( type[opc]==NULL || type[opc]->tid ==DAO_UDF ) UpdateType( opc, ct );
@@ -4060,6 +4050,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}
 					DString_AppendChar( at->name, '>' ); /* functional XXX gc */
 					DaoType_CheckAttributes( at );
+					DaoType_InitDefault( at );
 					ct = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & at, 1 );
 				}else{
 					ct = bt;

@@ -66,6 +66,9 @@ DString* DValue_GetString( DValue val, DString *str );
 
 int DValue_FromString( DValue *self, DString *str, int type );
 
+int DValue_Serialize( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
+int DValue_Deserialize( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
+
 int DValue_IsNumber( DValue self );
 void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 

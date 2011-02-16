@@ -3728,7 +3728,7 @@ routine UserType::GenerateMeth()
 			vo = Variable( name + '*self', 0 );
 			vo.host = name;
 			vo.Parse( input_file );
-			meth.parlist.pushfront( vo );
+			meth.parlist.push( vo, $front );
 			for( i = 0 : meth.parlist.size() -1 ) meth.parlist[i].index = i;
 		}
 	}

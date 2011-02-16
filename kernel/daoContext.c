@@ -1661,6 +1661,7 @@ void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
 			ct = tp;
 		}else{
 			DaoType_CheckAttributes( ct );
+			DaoType_InitDefault( ct );
 			DaoNameSpace_AddType( ns, ct->name, ct );
 		}
 		tuple->unitype = ct;

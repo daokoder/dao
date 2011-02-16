@@ -720,6 +720,7 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) klass->clsType );
 				cycRefCountDecrementsV( klass->cstData );
 				cycRefCountDecrementsV( klass->glbData );
+				cycRefCountDecrementsV( klass->objDataDefault );
 				cycRefCountDecrements( klass->superClass );
 				cycRefCountDecrements( klass->objDataType );
 				cycRefCountDecrements( klass->glbDataType );
@@ -916,6 +917,7 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrement( (DaoBase*) klass->clsType );
 				cycRefCountIncrementsV( klass->cstData );
 				cycRefCountIncrementsV( klass->glbData );
+				cycRefCountIncrementsV( klass->objDataDefault );
 				cycRefCountIncrements( klass->superClass );
 				cycRefCountIncrements( klass->objDataType );
 				cycRefCountIncrements( klass->glbDataType );
@@ -1114,6 +1116,7 @@ void freeGarbage()
 					directRefCountDecrementMapValue( klass->abstypes );
 					directRefCountDecrementV( klass->cstData );
 					directRefCountDecrementV( klass->glbData );
+					directRefCountDecrementV( klass->objDataDefault );
 					directRefCountDecrement( klass->superClass );
 					directRefCountDecrement( klass->objDataType );
 					directRefCountDecrement( klass->glbDataType );
@@ -1572,11 +1575,13 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) klass->clsType );
 				cycRefCountDecrementsV( klass->cstData );
 				cycRefCountDecrementsV( klass->glbData );
+				cycRefCountDecrementsV( klass->objDataDefault );
 				cycRefCountDecrements( klass->superClass );
 				cycRefCountDecrements( klass->objDataType );
 				cycRefCountDecrements( klass->glbDataType );
 				cycRefCountDecrements( klass->references );
 				j += klass->cstData->size + klass->glbData->size;
+				j += klass->cstData->size + klass->objDataDefault->size;
 				j += klass->superClass->size + klass->abstypes->size;
 				j += klass->objDataType->size + klass->glbDataType->size;
 				j += klass->references->size + klass->abstypes->size;
@@ -1776,11 +1781,13 @@ void cycRefCountIncreScan()
 					cycRefCountIncrement( (DaoBase*) klass->clsType );
 					cycRefCountIncrementsV( klass->cstData );
 					cycRefCountIncrementsV( klass->glbData );
+					cycRefCountIncrementsV( klass->objDataDefault );
 					cycRefCountIncrements( klass->superClass );
 					cycRefCountIncrements( klass->objDataType );
 					cycRefCountIncrements( klass->glbDataType );
 					cycRefCountIncrements( klass->references );
 					j += klass->cstData->size + klass->glbData->size;
+					j += klass->cstData->size + klass->objDataDefault->size;
 					j += klass->superClass->size + klass->abstypes->size;
 					j += klass->objDataType->size + klass->glbDataType->size;
 					j += klass->references->size + klass->abstypes->size;
@@ -1989,6 +1996,7 @@ void directDecRC()
 				{
 					DaoClass *klass = (DaoClass*)dbase;
 					j += klass->cstData->size + klass->glbData->size;
+					j += klass->cstData->size + klass->objDataDefault->size;
 					j += klass->superClass->size + klass->abstypes->size;
 					j += klass->objDataType->size + klass->glbDataType->size;
 					j += klass->references->size + klass->abstypes->size;
@@ -1996,6 +2004,7 @@ void directDecRC()
 					directRefCountDecrementMapValue( klass->abstypes );
 					directRefCountDecrementV( klass->cstData );
 					directRefCountDecrementV( klass->glbData );
+					directRefCountDecrementV( klass->objDataDefault );
 					directRefCountDecrement( klass->superClass );
 					directRefCountDecrement( klass->objDataType );
 					directRefCountDecrement( klass->glbDataType );

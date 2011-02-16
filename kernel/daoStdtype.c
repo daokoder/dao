@@ -4074,6 +4074,7 @@ static void Dao_Exception_Get_data( DaoContext *ctx, DValue *p[], int n );
 static void Dao_Exception_Set_data( DaoContext *ctx, DValue *p[], int n );
 static void Dao_Exception_New( DaoContext *ctx, DValue *p[], int n );
 static void Dao_Exception_New22( DaoContext *ctx, DValue *p[], int n );
+static void Dao_Exception_Serialize( DaoContext *ctx, DValue *p[], int n );
 
 static DaoFuncItem dao_Exception_Meths[] =
 {
@@ -4085,6 +4086,9 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ Dao_Exception_Set_data, ".data=( self : Exception, data : any)" },
 	{ Dao_Exception_New, "Exception( info = '' )=>Exception" },
 	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
+#ifdef DEBUG
+	{ Dao_Exception_Serialize, "serialize( self : Exception )=>string" },
+#endif
 	{ NULL, NULL }
 };
 
@@ -4135,6 +4139,11 @@ static void Dao_Exception_New22( DaoContext *ctx, DValue *p[], int n )
 	DaoTypeBase *typer = ctx->regTypes[ ctx->vmc->c ]->typer;
 	DaoException *self = (DaoException*)DaoException_New2( typer, *p[0] );
 	DaoContext_PutCData( ctx, self, typer );
+}
+static void Dao_Exception_Serialize( DaoContext *ctx, DValue *p[], int n )
+{
+	DaoException* self = (DaoException*) (p[0]->v.cdata)->data;
+	DaoContext_PutString( ctx, self->info );
 }
 
 static DaoFuncItem dao_ExceptionNone_Meths[] =

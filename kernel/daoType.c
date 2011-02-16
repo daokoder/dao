@@ -156,7 +156,9 @@ void DaoType_InitDefault( DaoType *self )
 	DaoType *itype1 = types && self->nested->size > 0 ? types[0] : NULL;
 	DaoType *itype2 = types && self->nested->size > 1 ? types[1] : NULL;
 	int i, count = self->nested ? self->nested->size : 0;
-	if( self->value.t ) return;
+	if( self->value.t && self->value.t != DAO_TUPLE ) return;
+	if( self->value.t == DAO_TUPLE && self->value.v.tuple->items->size == count ) return;
+	DValue_Clear( & self->value );
 	if( self->tid <= DAO_STRING ){
 		DValue_Init( & self->value, self->tid );
 	}else if( self->tid == DAO_ENUM ){

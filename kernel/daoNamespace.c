@@ -1688,6 +1688,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		return node->value.pType;
 	}
 	DaoType_CheckAttributes( abtp );
+	DaoType_InitDefault( abtp );
 	DaoNameSpace_AddType( self, abtp->name, abtp );
 	return abtp;
 }
