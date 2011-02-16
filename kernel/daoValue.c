@@ -23,7 +23,7 @@
 #include"daoClass.h"
 #include"daoObject.h"
 #include"daoNumtype.h"
-#include"daoNameSpace.h"
+#include"daoNamespace.h"
 #include"daoParser.h"
 #include"daoContext.h"
 #include"daoProcess.h"
