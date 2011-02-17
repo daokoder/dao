@@ -69,4 +69,6 @@ extern void DaoStream_ReadLine( DaoStream *self, DString *buf );
 
 extern DString* DaoStream_GetFormat( DaoStream *self, int tp );
 
+int DaoFile_ReadLine( FILE *fin, DString *line );
+
 #endif

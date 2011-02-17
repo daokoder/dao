@@ -104,7 +104,7 @@ int main( int argc, char **argv )
 		DString_AppendMBS( opts, "-vi" );
 		DaoVmSpace_ParseOptions( vmSpace, opts );
 	}
-	if( strstr( DString_GetMBS( opts ), "v" ) ){ /*XXX*/
+	if( DaoVmSpace_GetOptions( vmSpace ) & (DAO_EXEC_VINFO|DAO_EXEC_INTERUN) ){
 		printf( "\n  A simple shell for the Dao Virtual Machine.\n" );
 		printf( "  Copyright(C) 2006-2011, Fu Limin.\n" );
 		printf( "  This shell is distributed under GNU General Public License.\n" );

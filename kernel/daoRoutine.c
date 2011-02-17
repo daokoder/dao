@@ -151,7 +151,7 @@ static int DaoDecorator_CheckType( DaoType *decoType, DValue *csts, DaoType *ts[
 			k = node->value.pInt;
 			tp = tp->aux.v.type;
 		}
-		if( k > nested->size || tp ==NULL )  goto CheckFailed;
+		if( k >= nested->size || tp ==NULL )  goto CheckFailed;
 		t = nested->items.pType[k];
 		if( t->tid == DAO_PAR_NAMED || t->tid == DAO_PAR_DEFAULT ) t = t->aux.v.type;
 		if( t->tid ==DAO_ROUTINE && ( cs.t ==DAO_ROUTINE || cs.t ==DAO_FUNCTION ) ){
@@ -271,7 +271,7 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 			ito = node->value.pInt;
 			tp = tp->aux.v.type;
 		}
-		if( ito > ndef || tp ==NULL )  goto FinishError;
+		if( ito >= ndef || tp ==NULL )  goto FinishError;
 		abtp = routType->nested->items.pType[ito];
 		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = abtp->aux.v.type;
 		if( abtp->tid ==DAO_ROUTINE && ( cs.t ==DAO_ROUTINE || cs.t ==DAO_FUNCTION ) ){
@@ -713,7 +713,7 @@ static DaoRoutine* DaoRoutine_GetDecorator( DArray *routTable, DValue *p[], int 
 				pv = nameva->value;
 				k = node->value.pInt;
 			}
-			if( k ==0 || k > nested->size )  goto NextDecorator;
+			if( k ==0 || k >= nested->size )  goto NextDecorator;
 			match = DaoType_MatchValue( types[k]->aux.v.type, pv, defs );
 
 			/*
@@ -745,18 +745,20 @@ NextDecorator:
 	if( defs ) DMap_Delete( defs );
 	return best;
 }
-DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int code )
+DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int cm )
 {
 	DValue value = daoNullValue;
 	DaoClass *filter, *klass = NULL;
 	DaoRoutine *rout;
 	DRoutine *rout2;
+	int code = cm & 0xffff;
+	int mode = cm >> 16;
 	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
 	if( self->routType->name->mbs[0] == '@' )
 		self = (DRoutine*) DaoRoutine_GetDecorator( self->routTable, p, n );
 	else
 		self = DRoutine_GetOverLoadExt( self->routTable, NULL, obj, p, n, code );
-	if( self ==NULL ) return NULL;
+	if( self ==NULL || (mode & DAO_CALL_NOVIRT) ) return self;
 	if( !(self->attribs & DAO_ROUT_VIRTUAL) ) return self;
 	if( self->tidHost != DAO_OBJECT ) return self;
 	rout = (DaoRoutine*) self;
@@ -1793,9 +1795,13 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 			ito = node->value.pInt;
 			tp = tp->aux.v.type;
 		}
-		if( ito > ndef || tp ==NULL ){
+		if( tp ==NULL ){
 			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
 			DString_AppendMBS( s, "unknown parameter type \";\n" );
+			goto FinishError;
+		}else if( ito >= ndef ){
+			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_NUMBER );
+			DString_AppendMBS( s, "too many parameters \";\n" );
 			goto FinishError;
 		}
 		abtp = routType->nested->items.pType[ito];

@@ -148,4 +148,7 @@ DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self, const char *proto, D
 
 void* DValue_GetTypeID( DValue self );
 
+void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout );
+void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin );
+
 #endif

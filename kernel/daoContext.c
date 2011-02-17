@@ -4066,6 +4066,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoTuple *tuple;
 	DaoVmCode *vmc2;
 	int need_self, mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
+	int codemode = code | (mode<<16);
 	int initbase = 0;
 	int tail = 0;
 
@@ -4160,9 +4161,9 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				return;
 			}
 			rout = (DRoutine*)func;
-			rout = DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+			rout = DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, codemode );
 		}else{
-			rout = DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+			rout = DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, codemode );
 		}
 		if( rout == NULL ){
 			rout2 = (DRoutine*) caller.v.routine;
@@ -4234,7 +4235,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		ctx = 0;
 		if( caller.t==DAO_ROUTINE ){
 			rout = caller.v.routine;
-			rout = (DaoRoutine*) DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+			rout = (DaoRoutine*) DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, codemode );
 			if( rout == NULL ){
 				rout2 = (DRoutine*) caller.v.routine;
 				goto InvalidParameter;
@@ -4280,11 +4281,11 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			}
 			tmp.v.object = othis;
 			rout = (DaoRoutine*)klass->classRoutine;
-			rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+			rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, codemode );
 			if( rout == NULL ){
 				selfpar = & tmp;
 				rout = (DaoRoutine*)klass->classRoutine;
-				rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, code );
+				rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)rout, selfpar, params, npar, codemode );
 			}
 			if( rout == NULL && (npar ==0 || (npar == 1 && (code == DVM_MCALL || code == DVM_MCALL_TC) ) ) ){
 				/* default contstructor */
@@ -4358,7 +4359,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				DaoContext_RaiseException( self, DAO_ERROR_TYPE, "class instance not callable" );
 				return;
 			}
-			rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, selfpar, params, npar, code );
+			rout = (DaoRoutine*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, selfpar, params, npar, codemode );
 			ctx = DaoVmProcess_MakeContext( self->process, rout );
 			GC_ShiftRC( obj, ctx->object );
 			ctx->object = obj;

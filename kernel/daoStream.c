@@ -717,37 +717,7 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 	DString_Clear( line );
 	DString_ToMBS( line );
 	if( self->file ){
-		FILE *fd = self->file->fd;
-		if( feof( fd ) ) return;
-		*start = ch = getc( fd );
-		start += 1;
-		while( ch != '\n' && ch != '\r' && ch != EOF ){ /* LF or CR */
-			*start = ch = getc( fd );
-			start += 1;
-			if( start == end ){
-				if( ch == EOF ) start -= 1;
-				DString_AppendDataMBS( line, buf, start-buf );
-				start = buf;
-			}
-		}
-		if( ch == EOF && start != buf ) start -= 1;
-		DString_AppendDataMBS( line, buf, start-buf );
-		if( line->mbs[ line->size-1 ] == '\r' ){
-			/* some programs may write consecutive 2 \r under Windows */
-			if( feof( fd ) ) return;
-			ch = getc( fd );
-			if( ch == '\n' ){ /* CR + LF*/
-				DString_AppendChar( line, ch );
-			}else if( ch != '\r' && ch != EOF ){
-				if( ch != EOF ) ungetc( ch, fd );
-			}
-		}
-		/* the last line may be ended with newline, but followed with no line: */
-		if( feof( fd ) ) return;
-		if( line->mbs[ line->size-1 ] == '\n' ){
-			ch = getc( fd );
-			if( ch != EOF ) ungetc( ch, fd );
-		}
+		DaoFile_ReadLine( self->file->fd, line );
 	}else if( self->attribs & DAO_IO_STRING ){
 		size_t pos = DString_FindWChar( self->streamString, delim, 0 );
 		if( pos == MAXSIZE ){
@@ -775,6 +745,47 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 		DString_AppendDataMBS( line, buf, start-buf );
 		clearerr( stdin );
 	}
+}
+int DaoFile_ReadLine( FILE *fin, DString *line )
+{
+	int ch, delim = '\n';
+	char buf[IO_BUF_SIZE];
+	char *start = buf, *end = buf + IO_BUF_SIZE;
+
+	DString_Clear( line );
+	DString_ToMBS( line );
+	if( feof( fin ) ) return 0;
+
+	*start = ch = getc( fin );
+	start += 1;
+	while( ch != '\n' && ch != '\r' && ch != EOF ){ /* LF or CR */
+		*start = ch = getc( fin );
+		start += 1;
+		if( start == end ){
+			if( ch == EOF ) start -= 1;
+			DString_AppendDataMBS( line, buf, start-buf );
+			start = buf;
+		}
+	}
+	if( ch == EOF && start != buf ) start -= 1;
+	DString_AppendDataMBS( line, buf, start-buf );
+	if( line->mbs[ line->size-1 ] == '\r' ){
+		/* some programs may write consecutive 2 \r under Windows */
+		if( feof( fin ) ) return 1;
+		ch = getc( fin );
+		if( ch == '\n' ){ /* CR + LF*/
+			DString_AppendChar( line, ch );
+		}else if( ch != '\r' && ch != EOF ){
+			if( ch != EOF ) ungetc( ch, fin );
+		}
+	}
+	/* the last line may be ended with newline, but followed with no line: */
+	if( feof( fin ) ) return 1;
+	if( line->mbs[ line->size-1 ] == '\n' ){
+		ch = getc( fin );
+		if( ch != EOF ) ungetc( ch, fin );
+	}
+	return 1;
 }
 
 

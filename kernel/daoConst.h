@@ -142,7 +142,8 @@ enum DaoCallMode
 {
 	DAO_CALL_INIT = (1<<8),
 	DAO_CALL_EXPAR = (1<<9),
-	DAO_CALL_COROUT = (1<<10)
+	DAO_CALL_COROUT = (1<<10),
+	DAO_CALL_NOVIRT = (1<<11)
 };
 enum DaoVmProcPauseType
 {

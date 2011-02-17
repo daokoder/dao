@@ -1893,3 +1893,88 @@ DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DValue first, DValue second
 	tuple->pair = 1;
 	return tuple;
 }
+
+void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout )
+{
+	DNode *node = DMap_First( self->lookupTable );
+	DValue value = daoNullValue;
+	DString *serial = DString_New(1);
+	int id, pm, up, st;
+	for( ; node !=NULL; node = DMap_Next( self->lookupTable, node ) ){
+		DString *name = node->key.pString;
+		id = node->value.pSize;
+		up = LOOKUP_UP( id );
+		st = LOOKUP_ST( id );
+		pm = LOOKUP_PM( id );
+		if( up ) continue;
+		if( st == DAO_GLOBAL_CONSTANT ) value = DaoNameSpace_GetConst( self, id );
+		if( st == DAO_GLOBAL_VARIABLE ) value = DaoNameSpace_GetVariable( self, id );
+		if( value.t == 0 ) continue;
+		if( DValue_Serialize( & value, serial, self, proc ) ==0 ) continue;
+		switch( pm ){
+		case DAO_DATA_PRIVATE   : fprintf( fout, "private " ); break;
+		case DAO_DATA_PROTECTED : fprintf( fout, "protected " ); break;
+		case DAO_DATA_PUBLIC    : fprintf( fout, "public " ); break;
+		}
+		switch( st ){
+		case DAO_GLOBAL_CONSTANT : fprintf( fout, "const " ); break;
+		case DAO_GLOBAL_VARIABLE : fprintf( fout, "var " ); break;
+		}
+		fprintf( fout, "%s = %s\n", name->mbs, serial->mbs );
+	}
+	DString_Delete( serial );
+}
+int DaoParser_Deserialize( DaoParser*, int, int, DValue*, DArray*, DaoNameSpace*, DaoVmProcess* );
+void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin )
+{
+	DaoParser *parser = DaoParser_New();
+	DString *line = DString_New(1);
+	DArray *types = DArray_New(0);
+	DArray *tokens = parser->tokens;
+	DString *name;
+	DNode *node;
+
+	parser->nameSpace = self;
+	parser->vmSpace = self->vmSpace;
+	while( DaoFile_ReadLine( fin, line ) ){
+		DValue value = daoNullValue;
+		int st = DAO_GLOBAL_VARIABLE;
+		int pm = DAO_DATA_PRIVATE;
+		int id, start = 0;
+
+		DaoParser_LexCode( parser, line->mbs, 0 );
+		if( tokens->size == 0 ) continue;
+		switch( tokens->items.pToken[start]->name ){
+		case DKEY_PRIVATE   : pm = DAO_DATA_PRIVATE;   start += 1; break;
+		case DKEY_PROTECTED : pm = DAO_DATA_PROTECTED; start += 1; break;
+		case DKEY_PUBLIC    : pm = DAO_DATA_PUBLIC;    start += 1; break;
+		}
+		if( start >= tokens->size ) continue;
+		switch( tokens->items.pToken[start]->name ){
+		case DKEY_CONST : st = DAO_GLOBAL_CONSTANT; start += 1; break;
+		case DKEY_VAR   : st = DAO_GLOBAL_VARIABLE; start += 1; break;
+		}
+		if( tokens->items.pToken[start]->name != DTOK_IDENTIFIER ) continue;
+		name = tokens->items.pToken[start]->string;
+		start += 1;
+		if( start + 3 >= tokens->size ) continue;
+		if( tokens->items.pToken[start]->name != DTOK_ASSN ) continue;
+		start += 1;
+
+		DArray_Clear( types );
+		DArray_PushFront( types, NULL );
+		DaoParser_Deserialize( parser, start, tokens->size-1, &value, types, self, proc );
+		if( value.t == 0 ) continue;
+		node = DMap_Find( self->lookupTable, name );
+		if( node ) continue;
+		if( st == DAO_GLOBAL_CONSTANT ){
+			DaoNameSpace_AddConst( self, name, value, pm );
+		}else{
+			DaoNameSpace_AddVariable( self, name, value, NULL, pm );
+		}
+		DValue_Clear( & value );
+	}
+	DString_Delete( line );
+	DArray_Delete( types );
+	DaoParser_Delete( parser );
+}

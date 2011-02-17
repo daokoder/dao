@@ -6249,6 +6249,8 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 			/* obj . routine( A, B ) . more : */
 			rbrack = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, right );
 			if( rbrack < 0 ) return -1;
+			if( start > left+2 && tokens[start-2]->name == DTOK_COLON2 )
+				mode |= DAO_CALL_NOVIRT;
 
 			rb = rbrack;
 			while( rbrack +1 <= right ){
@@ -6294,6 +6296,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 					if( (vmc->code == DVM_GETF || vmc->code == DVM_GETMF) && vmc->c == regLast ){
 						DaoInode *p = vmc->prev;
 						if( p->code >= DVM_GETVL && p->code <= DVM_GETMF && p->c == vmc->a ) set = p;
+						if( p->code == DVM_CAST ) mode |= DAO_CALL_NOVIRT;
 
 						opB ++;
 						code = DVM_MCALL;
@@ -6510,7 +6513,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 				DaoType *abtp;
 				mm = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+1, right );
 				if( mm <0 ) return -1;
-				abtp = DaoParser_ParseType( self, start+1, mm-1, & newpos, NULL );
+				abtp = DaoParser_ParseType( self, start+2, mm-1, & newpos, NULL );
 				if( abtp == NULL || newpos != mm ) return -1;
 				regC = regFix;
 				if( regFix <0 || mm < right ){

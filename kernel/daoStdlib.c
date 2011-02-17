@@ -522,6 +522,18 @@ static void STD_Deserialize( DaoContext *ctx, DValue *p[], int N )
 	DValue *value = DaoContext_PutValue( ctx, daoNullValue );
 	DValue_Deserialize( value, p[0]->v.s, ctx->nameSpace, ctx->process );
 }
+static void STD_Backup( DaoContext *ctx, DValue *p[], int N )
+{
+	FILE *fout = fopen( DString_GetMBS( p[0]->v.s ), "w+" );
+	DaoNameSpace_Backup( ctx->nameSpace, ctx->process, fout );
+	fclose( fout );
+}
+static void STD_Restore( DaoContext *ctx, DValue *p[], int N )
+{
+	FILE *fin = fopen( DString_GetMBS( p[0]->v.s ), "r" );
+	DaoNameSpace_Restore( ctx->nameSpace, ctx->process, fin );
+	fclose( fin );
+}
 static void STD_Warn( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoContext_RaiseException( ctx, DAO_WARNING, DString_GetMBS( p[0]->v.s ) );
@@ -552,6 +564,8 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
 	{ STD_Serialize, "serialize( value : any )=>string" },
 	{ STD_Deserialize, "deserialize( text : string )=>any" },
+	{ STD_Backup,    "backup( tofile = 'backup.sdo' )" },
+	{ STD_Restore,   "restore( fromfile = 'backup.sdo' )" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
 	{ NULL, NULL }
