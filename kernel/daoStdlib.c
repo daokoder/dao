@@ -525,7 +525,7 @@ static void STD_Deserialize( DaoContext *ctx, DValue *p[], int N )
 static void STD_Backup( DaoContext *ctx, DValue *p[], int N )
 {
 	FILE *fout = fopen( DString_GetMBS( p[0]->v.s ), "w+" );
-	DaoNameSpace_Backup( ctx->nameSpace, ctx->process, fout );
+	DaoNameSpace_Backup( ctx->nameSpace, ctx->process, fout, p[1]->v.i );
 	fclose( fout );
 }
 static void STD_Restore( DaoContext *ctx, DValue *p[], int N )
@@ -564,7 +564,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
 	{ STD_Serialize, "serialize( value : any )=>string" },
 	{ STD_Deserialize, "deserialize( text : string )=>any" },
-	{ STD_Backup,    "backup( tofile = 'backup.sdo' )" },
+	{ STD_Backup,    "backup( tofile = 'backup.sdo', limit=1000 )" },
 	{ STD_Restore,   "restore( fromfile = 'backup.sdo' )" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },

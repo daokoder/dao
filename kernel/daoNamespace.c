@@ -1894,11 +1894,14 @@ DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DValue first, DValue second
 	return tuple;
 }
 
-void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout )
+void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, int limit )
 {
 	DNode *node = DMap_First( self->lookupTable );
 	DValue value = daoNullValue;
+	DString *prefix = DString_New(1);
 	DString *serial = DString_New(1);
+	size_t max = limit * 1000000;
+	size_t more, writen = 0;
 	int id, pm, up, st;
 	for( ; node !=NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DString *name = node->key.pString;
@@ -1911,17 +1914,23 @@ void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout )
 		if( st == DAO_GLOBAL_VARIABLE ) value = DaoNameSpace_GetVariable( self, id );
 		if( value.t == 0 ) continue;
 		if( DValue_Serialize( & value, serial, self, proc ) ==0 ) continue;
+		prefix->size = 0;
 		switch( pm ){
-		case DAO_DATA_PRIVATE   : fprintf( fout, "private " ); break;
-		case DAO_DATA_PROTECTED : fprintf( fout, "protected " ); break;
-		case DAO_DATA_PUBLIC    : fprintf( fout, "public " ); break;
+		case DAO_DATA_PRIVATE   : DString_AppendMBS( prefix, "private " ); break;
+		case DAO_DATA_PROTECTED : DString_AppendMBS( prefix, "protected " ); break;
+		case DAO_DATA_PUBLIC    : DString_AppendMBS( prefix, "public " ); break;
 		}
 		switch( st ){
-		case DAO_GLOBAL_CONSTANT : fprintf( fout, "const " ); break;
-		case DAO_GLOBAL_VARIABLE : fprintf( fout, "var " ); break;
+		case DAO_GLOBAL_CONSTANT : DString_AppendMBS( prefix, "const " ); break;
+		case DAO_GLOBAL_VARIABLE : DString_AppendMBS( prefix, "var " ); break;
 		}
-		fprintf( fout, "%s = %s\n", name->mbs, serial->mbs );
+		more = prefix->size + name->size + serial->size + 4;
+		if( writen + more > max ) continue;
+		fprintf( fout, "%s%s = %s\n", prefix->mbs, name->mbs, serial->mbs );
+		writen += more;
+		if( writen + 1000 > max ) break;
 	}
+	DString_Delete( prefix );
 	DString_Delete( serial );
 }
 int DaoParser_Deserialize( DaoParser*, int, int, DValue*, DArray*, DaoNameSpace*, DaoVmProcess* );

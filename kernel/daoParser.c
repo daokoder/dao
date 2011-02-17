@@ -5764,7 +5764,7 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 	case DKEY_LIST   : func = DVM_FUNCT_LIST;  break;
 	default : break;
 	}
-#ifndef DAO_WITH_ARRAY
+#ifndef DAO_WITH_NUMARRAY
 	if( func == DVM_FUNCT_ARRAY ){
 		printf( "Error: numeric array is NOT enabled!\n" );
 		return -1;

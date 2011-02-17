@@ -1116,14 +1116,16 @@ void DaoEncodeDouble( char *buf, double value )
 		p ++;
 		if( frac <= 0 ) break;
 	}
-	sprintf( p, "_%i", expon );
+	*(p++) = '_';
+	if( expon < 0 ) *(p++) = 'M';
+	sprintf( p, "%i", abs( expon ) );
 	/* printf( "DaoEncodeDouble: %s, %g\n", buf, value ); */
 	return;
 }
 double DaoDecodeDouble( char *buf )
 {
 	double frac = 0;
-	int expon, sign = 1;
+	int expon, sign = 1, sign2 = 1;
 	char *p = buf;
 	double factor = 1.0 / RADIX;
 	double accum = factor;
@@ -1139,7 +1141,11 @@ double DaoDecodeDouble( char *buf )
 		accum *= factor;
 		p ++;
 	}
-	expon = strtol( p+1, NULL, 10 );
+	if( p[1] == 'M' ){
+		sign2 = -1;
+		p ++;
+	}
+	expon = sign2 * strtol( p+1, NULL, 10 );
 	/* printf( "DaoDecodeDouble: %f %f %f %s\n", frac, accum, ldexp( frac, expon ), p+1 ); */
 	return ldexp( frac, expon ) * sign;
 }
