@@ -1472,43 +1472,43 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 				simpleTypes[ p->type ] = abtp;
 				GC_IncRC( abtp );
 			}
-#if 1
 			if( zerosize ) abtp->attrib |= DAO_TYPE_EMPTY;
-			switch( p->type ){
-			case DAO_LIST :
-				if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
-					list->unitype = abtp;
-					GC_IncRC( abtp );
-				}
-				break;
-			case DAO_MAP :
-				if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
-					map->unitype = abtp;
-					GC_IncRC( abtp );
-				}
-				break;
-#ifdef DAO_WITH_NUMARRAY
-			case DAO_ARRAY :
-				if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
-					array->unitype = abtp;
-					GC_IncRC( abtp );
-				}
-				break;
-#endif
-			case DAO_PAR_NAMED :
-				GC_IncRC( abtp );
-				nameva->unitype = abtp;
-				break;
-			case DAO_TUPLE :
-				GC_IncRC( abtp );
-				tuple->unitype = abtp;
-				break;
-			default : break;
-			}
-#endif
 			/* XXX if( DString_FindChar( abtp->name, '?', 0 ) == MAXSIZE ) */
 			DaoNameSpace_AddType( self, abtp->name, abtp );
 		}
+#if 1
+		switch( p->type ){
+		case DAO_LIST :
+			if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
+				list->unitype = abtp;
+				GC_IncRC( abtp );
+			}
+			break;
+		case DAO_MAP :
+			if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
+				map->unitype = abtp;
+				GC_IncRC( abtp );
+			}
+			break;
+#ifdef DAO_WITH_NUMARRAY
+		case DAO_ARRAY :
+			if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
+				array->unitype = abtp;
+				GC_IncRC( abtp );
+			}
+			break;
+#endif
+		case DAO_PAR_NAMED :
+			GC_IncRC( abtp );
+			nameva->unitype = abtp;
+			break;
+		case DAO_TUPLE :
+			GC_IncRC( abtp );
+			tuple->unitype = abtp;
+			break;
+		default : break;
+		}
+#endif
 	}else if( p->type == DAO_ROUTINE || p->type == DAO_FUNCTION ){
 		DRoutine *rout = (DRoutine*) p;
 		abtp = rout->routType; /* might be NULL */
@@ -1970,6 +1970,7 @@ void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin )
 		if( tokens->items.pToken[start]->name != DTOK_ASSN ) continue;
 		start += 1;
 
+		DArray_Clear( parser->errors );
 		DArray_Clear( types );
 		DArray_PushFront( types, NULL );
 		DaoParser_Deserialize( parser, start, tokens->size-1, &value, types, self, proc );

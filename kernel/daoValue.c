@@ -1094,7 +1094,46 @@ void DValue_ClearAll( DValue *v, int n )
 
 
 #define RADIX 32
+static const char *hex_digits = "ABCDEFGHIJKLMNOP";
 static const char *mydigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVW";
+
+void DaoEncodeInteger( char *p, dint value )
+{
+	int m;
+	if( value < 0 ){
+		*(p++) = '-';
+		value = - value;
+	}
+	if( value == 0 ){
+		*(p++) = '0';
+		*p = 0;
+		return;
+	}
+	while( value ){
+		m = value % RADIX;
+		value /= RADIX;
+		*(p++) = mydigits[m];
+	}
+	*p = 0;
+}
+dint DaoDecodeInteger( char *p )
+{
+	dint value = 0;
+	dint power = 1;
+	int sign = 1;
+	if( *p == '-' ){
+		sign = -1;
+		p ++;
+	}
+	while( *p ){
+		int digit = *p;
+		digit -= digit >= 'A' ? 'A' - 10 : '0';
+		value += digit * power;
+		power *= RADIX;
+		p ++;
+	}
+	return value * sign;
+}
 
 void DaoEncodeDouble( char *buf, double value )
 {
@@ -1102,24 +1141,20 @@ void DaoEncodeDouble( char *buf, double value )
 	double prod, frac;
 	char *p = buf;
 	if( value <0.0 ){
-		p[0] = '-';
-		p ++;
+		*(p++) = '-';
 		value = -value;
 	}
 	frac = frexp( value, & expon );
-	/* printf( "DaoEncodeDouble: frac = %f %f\n", frac, value ); */
 	while(1){
 		prod = frac * RADIX;
 		digit = (int) prod;
 		frac = prod - digit;
-		sprintf( p, "%c", mydigits[ digit ] );
-		p ++;
+		*(p++) = mydigits[ digit ];
 		if( frac <= 0 ) break;
 	}
 	*(p++) = '_';
 	if( expon < 0 ) *(p++) = 'M';
-	sprintf( p, "%i", abs( expon ) );
-	/* printf( "DaoEncodeDouble: %s, %g\n", buf, value ); */
+	DaoEncodeInteger( p, abs( expon ) );
 	return;
 }
 double DaoDecodeDouble( char *buf )
@@ -1133,7 +1168,6 @@ double DaoDecodeDouble( char *buf )
 		p ++;
 		sign = -1;
 	}
-	/* printf( "DaoDecodeDouble: %s\n", buf ); */
 	while( *p && *p != '_' ){
 		int digit = *p;
 		digit -= digit >= 'A' ? 'A' - 10 : '0';
@@ -1145,19 +1179,33 @@ double DaoDecodeDouble( char *buf )
 		sign2 = -1;
 		p ++;
 	}
-	expon = sign2 * strtol( p+1, NULL, 10 );
-	/* printf( "DaoDecodeDouble: %f %f %f %s\n", frac, accum, ldexp( frac, expon ), p+1 ); */
+	expon = sign2 * DaoDecodeInteger( p+1 );
 	return ldexp( frac, expon ) * sign;
 }
 
+static void DaoSerializeInteger( dint value, DString *serial )
+{
+	char buf[100];
+	DaoEncodeInteger( buf, value );
+	DString_AppendMBS( serial, buf );
+}
 static void DaoSerializeDouble( double value, DString *serial )
 {
-	char buf[200];
+	char buf[100];
 	DaoEncodeDouble( buf, value );
 	DString_AppendMBS( serial, buf );
 }
+static void DaoSerializeLong( DLong *value, DString *serial )
+{
+	int i;
+	DaoSerializeInteger( value->base, serial );
+	DString_AppendChar( serial, value->sign > 0 ? '+' : '-' );
+	for(i=0; i<value->size; i++){
+		if( i ) DString_AppendChar( serial, ',' );
+		DaoSerializeInteger( value->data[i], serial );
+	}
+}
 
-static char *hex_digits = "ABCDEFGHIJKLMNOP";
 static int DValue_Serialize2( DValue*, DString*, DaoNameSpace*, DaoVmProcess*, DaoType*, DString* );
 
 static void DString_Serialize( DString *self, DString *serial, DString *buf )
@@ -1191,10 +1239,8 @@ static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 	switch( self->numType ){
 	case DAO_INTEGER :
 		for(i=0; i<self->size; i++){
-			value.v.i = self->data.i[i];
-			DValue_GetString( value, buf );
 			if( i ) DString_AppendChar( serial, ',' );
-			DString_Append( serial, buf );
+			DaoSerializeInteger( self->data.i[i], serial );
 		}
 		break;
 	case DAO_FLOAT :
@@ -1349,10 +1395,7 @@ int DValue_Serialize2( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmPro
 	}
 	switch( self->t ){
 	case DAO_INTEGER :
-	case DAO_LONG :
-	case DAO_ENUM :
-		DValue_GetString( *self, buf );
-		DString_Append( serial, buf );
+		DaoSerializeInteger( self->v.i, serial );
 		break;
 	case DAO_FLOAT :
 		DaoSerializeDouble( self->v.f, serial );
@@ -1365,8 +1408,14 @@ int DValue_Serialize2( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmPro
 		DString_AppendChar( serial, ' ' );
 		DaoSerializeDouble( self->v.c->imag, serial );
 		break;
+	case DAO_LONG :
+		DaoSerializeLong( self->v.l, serial );
+		break;
 	case DAO_STRING :
 		DString_Serialize( self->v.s, serial, buf );
+		break;
+	case DAO_ENUM :
+		DaoSerializeInteger( self->v.e->value, serial );
 		break;
 	case DAO_ARRAY :
 		DaoArray_Serialize( self->v.array, serial, buf );
@@ -1474,9 +1523,24 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 	int tok2 = start < end ? tokens[start+1]->type : 0;
 	int maybetype = tok2 == DTOK_COLON2 || tok2 == DTOK_LT || tok2 == DTOK_LCB;
 
-	if( tokens[start]->type == DTOK_IDENTIFIER && maybetype ){
-		type = DaoParser_ParseType( self, start, end, & start, NULL );
+	if( tokens[start]->name == DTOK_ID_SYMBOL ){
+		DString *mbs = DString_New(1);
+		while( tokens[start]->name == DTOK_ID_SYMBOL ){
+			DString_Append( mbs, tokens[start]->string );
+			start += 1;
+		}
+		type = DaoNameSpace_MakeType( ns, mbs->mbs, DAO_ENUM, NULL, NULL, 0 );
+		DString_Delete( mbs );
 		if( type == NULL ) return start;
+		if( tokens[start]->name != DTOK_LCB ) return start;
+		end = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+		if( end < 0 ) return start;
+		next = end + 1;
+		start += 1;
+		end -= 1;
+	}else if( tokens[start]->type == DTOK_IDENTIFIER && maybetype ){
+		type = DaoParser_ParseType( self, start, end, & start, NULL );
+		if( type == NULL ) return next;
 		if( tokens[start]->name != DTOK_LCB ) return start;
 		end = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 		if( end < 0 ) return start;
@@ -1502,7 +1566,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 #endif
 	switch( type->tid ){
 	case DAO_INTEGER :
-		value->v.i = (sizeof(dint) == 4) ? strtol( str, 0, 0 ) : strtoll( str, 0, 0 );
+		value->v.i = DaoDecodeInteger( str );
 		if( minus ) value->v.i = - value->v.i;
 		break;
 	case DAO_FLOAT :
@@ -1527,6 +1591,21 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 		if( minus ) value->v.c->imag = - value->v.c->imag;
 		next = start + 2;
 		break;
+	case DAO_LONG :
+		value->v.l->base = DaoDecodeInteger( str );
+		start += 1;
+		if( tokens[start]->name == DTOK_ADD ){
+			value->v.l->sign = 1;
+			start += 1;
+		}else if( tokens[start]->name == DTOK_SUB ){
+			value->v.l->sign = -1;
+			start += 1;
+		}
+		for(i=start; i<=end; i++){
+			if( tokens[i]->name == DTOK_COMMA ) continue;
+			DLong_PushBack( value->v.l, DaoDecodeInteger( tokens[i]->string->mbs ) );
+		}
+		break;
 	case DAO_STRING :
 		n = tokens[start]->string->size - 1;
 		for(i=1; i<n; i++){
@@ -1537,6 +1616,9 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 			i += 1;
 		}
 		if( str[0] == '\"' ) DString_ToWCS( value->v.s );
+		break;
+	case DAO_ENUM :
+		value->v.e->value = DaoDecodeInteger( str );
 		break;
 	case DAO_ARRAY :
 		if( tokens[start]->name != DTOK_LSB ) return next;
@@ -1633,7 +1715,9 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 		}
 		break;
 	case DAO_OBJECT :
+		DArray_PushFront( types, NULL );
 		DaoParser_Deserialize( self, start, end, & tmp, types, ns, proc );
+		DArray_PopFront( types );
 		if( tmp.t == 0 ) break;
 		object = DaoClass_MakeObject( type->aux.v.klass, tmp, proc );
 		if( object == NULL ) break;
@@ -1641,7 +1725,9 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 		value->v.object = object;
 		break;
 	case DAO_CDATA :
+		DArray_PushFront( types, NULL );
 		DaoParser_Deserialize( self, start, end, & tmp, types, ns, proc );
+		DArray_PopFront( types );
 		if( tmp.t == 0 ) break;
 		cdata = DaoCData_MakeObject( type->aux.v.cdata, tmp, proc );
 		if( cdata == NULL ) break;

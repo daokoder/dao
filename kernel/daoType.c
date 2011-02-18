@@ -189,7 +189,8 @@ void DaoType_InitDefault( DaoType *self )
 			DValue_Copy( & self->value.v.tuple->items->data[i], types[i]->value );
 		}
 	}else if( self->tid == DAO_ANY ){
-		DValue_Init( & self->value, DAO_INTEGER );
+		DValue_Init( & self->value, 0 );
+		DValue_MarkConst( & self->value );
 	}else if( self->tid == DAO_VALTYPE ){
 		DValue_Copy( & self->value, self->aux );
 	}else if( self->tid == DAO_UNION ){

@@ -1282,11 +1282,12 @@ WrongType:
 		*newpos = gt + 1;
 		type = DaoParser_ParseEnumTypeItems( self, start+2, gt-1 );
 	}else if( tokens[start+1]->name == DTOK_LT ){
+		int ecount = self->errors->size;
 		gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );
 		if( gt < 0 ) goto InvalidTypeForm;
 		*newpos = gt + 1;
 		type = DaoParser_ParseTypeItems( self, start+2, gt-1, types );
-		if( self->errors->size ) goto InvalidTypeForm;
+		if( self->errors->size > ecount ) goto InvalidTypeForm;
 		if( type && tokens[start]->name != DKEY_ROUTINE ) goto InvalidTypeForm;
 		count2 = types->size - count;
 		retype = NULL;
@@ -4428,9 +4429,12 @@ DecoratorError:
 					DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
 					return 0;
 				}
-			}else if( start <= end ){
-				DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
-				return 0;
+			}else{
+				if( abtp == NULL ) abtp = dao_type_any;
+				if( start <= end ){
+					DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
+					return 0;
+				}
 			}
 			if( cst == 0 && (storeType & DAO_DATA_CONST) && ! self->isDynamicClass ){
 				DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start + 1, end, 0 );
