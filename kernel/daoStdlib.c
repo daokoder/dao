@@ -564,7 +564,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
 	{ STD_Serialize, "serialize( value : any )=>string" },
 	{ STD_Deserialize, "deserialize( text : string )=>any" },
-	{ STD_Backup,    "backup( tofile = 'backup.sdo', limit=1000 )" },
+	{ STD_Backup,    "backup( tofile = 'backup.sdo', limit=0 )" },
 	{ STD_Restore,   "restore( fromfile = 'backup.sdo' )" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },

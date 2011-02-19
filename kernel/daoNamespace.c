@@ -1900,8 +1900,7 @@ void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, in
 	DValue value = daoNullValue;
 	DString *prefix = DString_New(1);
 	DString *serial = DString_New(1);
-	size_t max = limit * 1000000;
-	size_t more, writen = 0;
+	size_t max = limit * 1000; /* limit per object in KB */
 	int id, pm, up, st;
 	for( ; node !=NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DString *name = node->key.pString;
@@ -1924,11 +1923,8 @@ void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, in
 		case DAO_GLOBAL_CONSTANT : DString_AppendMBS( prefix, "const " ); break;
 		case DAO_GLOBAL_VARIABLE : DString_AppendMBS( prefix, "var " ); break;
 		}
-		more = prefix->size + name->size + serial->size + 4;
-		if( writen + more > max ) continue;
+		if( max && prefix->size + name->size + serial->size + 4 > max ) continue;
 		fprintf( fout, "%s%s = %s\n", prefix->mbs, name->mbs, serial->mbs );
-		writen += more;
-		if( writen + 1000 > max ) break;
 	}
 	DString_Delete( prefix );
 	DString_Delete( serial );

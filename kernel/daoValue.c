@@ -1153,7 +1153,7 @@ void DaoEncodeDouble( char *buf, double value )
 		if( frac <= 0 ) break;
 	}
 	*(p++) = '_';
-	if( expon < 0 ) *(p++) = 'M';
+	if( expon < 0 ) *(p++) = '_';
 	DaoEncodeInteger( p, abs( expon ) );
 	return;
 }
@@ -1175,7 +1175,7 @@ double DaoDecodeDouble( char *buf )
 		accum *= factor;
 		p ++;
 	}
-	if( p[1] == 'M' ){
+	if( p[1] == '_' ){
 		sign2 = -1;
 		p ++;
 	}
@@ -1194,6 +1194,12 @@ static void DaoSerializeDouble( double value, DString *serial )
 	char buf[100];
 	DaoEncodeDouble( buf, value );
 	DString_AppendMBS( serial, buf );
+}
+static void DaoSerializeComplex( complex16 *value, DString *serial )
+{
+	DaoSerializeDouble( value->real, serial );
+	DString_AppendChar( serial, ' ' );
+	DaoSerializeDouble( value->imag, serial );
 }
 static void DaoSerializeLong( DLong *value, DString *serial )
 {
@@ -1236,33 +1242,14 @@ static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 		DString_Append( serial, buf );
 	}
 	DString_AppendChar( serial, ']' );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<self->size; i++){
-			if( i ) DString_AppendChar( serial, ',' );
-			DaoSerializeInteger( self->data.i[i], serial );
+	for(i=0; i<self->size; i++){
+		if( i ) DString_AppendChar( serial, ',' );
+		switch( self->numType ){
+		case DAO_INTEGER : DaoSerializeInteger( self->data.i[i], serial ); break;
+		case DAO_FLOAT : DaoSerializeDouble( self->data.f[i], serial ); break;
+		case DAO_DOUBLE : DaoSerializeDouble( self->data.d[i], serial ); break;
+		case DAO_COMPLEX : DaoSerializeComplex( self->data.c + i, serial ); break;
 		}
-		break;
-	case DAO_FLOAT :
-		for(i=0; i<self->size; i++){
-			if( i ) DString_AppendChar( serial, ',' );
-			DaoSerializeDouble( self->data.f[i], serial );
-		}
-		break;
-	case DAO_DOUBLE :
-		for(i=0; i<self->size; i++){
-			if( i ) DString_AppendChar( serial, ',' );
-			DaoSerializeDouble( self->data.d[i], serial );
-		}
-		break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			if( i ) DString_AppendChar( serial, ',' );
-			DaoSerializeDouble( self->data.c[i].real, serial );
-			DString_AppendChar( serial, ' ' );
-			DaoSerializeDouble( self->data.c[i].imag, serial );
-		}
-		break;
 	}
 }
 static int DaoList_Serialize( DaoList *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc, DString *buf )
@@ -1404,9 +1391,7 @@ int DValue_Serialize2( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmPro
 		DaoSerializeDouble( self->v.d, serial );
 		break;
 	case DAO_COMPLEX :
-		DaoSerializeDouble( self->v.c->real, serial );
-		DString_AppendChar( serial, ' ' );
-		DaoSerializeDouble( self->v.c->imag, serial );
+		DaoSerializeComplex( self->v.c, serial );
 		break;
 	case DAO_LONG :
 		DaoSerializeLong( self->v.l, serial );
@@ -1456,7 +1441,6 @@ int DValue_Serialize( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmProc
 	DString_Delete( buf );
 	return rc;
 }
-
 
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
