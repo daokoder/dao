@@ -1590,6 +1590,7 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
 	DValue vtup = daoNullTuple;
 	DaoTuple *tuple = NULL;
 	DaoList *list = DaoContext_PutList( ctx );
+	DaoType *itp = list->unitype->nested->items.pType[0];
 	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	if( patt ==NULL ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
@@ -1597,6 +1598,8 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
 	while( DaoRegex_Match( patt, self, & p1, & p2 ) ){
 		if( index ==0 || (++i) == index ){
 			tuple = vtup.v.tuple = DaoTuple_New( 2 );
+			GC_IncRC( itp );
+			tuple->unitype = itp;
 			value.v.i = p1;
 			DValue_Copy( tuple->items->data, value );
 			value.v.i = p2;
