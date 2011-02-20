@@ -1,8 +1,8 @@
 
 CC = gcc
-INCLUDE = -I.
+INCLUDE = -I. -I../../kernel
 LIB =
-CFLAG = -c -Wall -O2
+CFLAG = -c -Wall -O2 -fPIC
 LFLAG = -s -shared 
 
 TARGET = DaoInode.so

@@ -1,6 +1,6 @@
 
 CC = gcc
-INCLUDE = -I.
+INCLUDE = -I. -I../../kernel
 LIB =
 CFLAG = -c -Wall -O2 -fPIC
 LFLAG =
