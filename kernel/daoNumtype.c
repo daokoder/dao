@@ -1970,6 +1970,7 @@ static void DaoArray_GetItem1( DValue *dbase, DaoContext *ctx, DValue pid )
 
 	if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
 		int id = DValue_GetInteger( pid );
+		if( id < 0 ) id += self->size;
 		if( id < 0 || id >= self->size ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;
@@ -2206,6 +2207,7 @@ void DaoArray_SetItem1( DValue *va, DaoContext *ctx, DValue pid, DValue value, i
 		return;
 	}else if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE && value.t <= DAO_LONG ){
 		int id = DValue_GetInteger( pid );
+		if( id < 0 ) id += self->size;
 		if( id < 0 || id >= self->size ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;
@@ -2953,6 +2955,25 @@ static void DaoArray_Lib_Iter( DaoContext *ctx, DValue *p[], int N )
 	data[0].v.i = DaoArray_SliceSize( self ) >0;
 	DValue_Copy( & data[1], iter );
 }
+static void DaoArray_Reverse( DaoContext *ctx, DValue *p[], int npar )
+{
+	DaoArray *self = p[0]->v.array;
+	size_t i = 0, N = self->size;
+	complex16 swc, *dc = self->data.c;
+	double swd, *dd = self->data.d;
+	float swf, *df = self->data.f;
+	int swi, *di = self->data.i;
+
+	DaoContext_PutReference( ctx, p[0] );
+	for(i=0; i<N/2; i++){
+		switch( self->numType ){
+		case DAO_INTEGER : swi = di[i]; di[i] = di[N-1-i]; di[N-1-i] = swi; break;
+		case DAO_FLOAT   : swf = df[i]; df[i] = df[N-1-i]; df[N-1-i] = swf; break;
+		case DAO_DOUBLE  : swd = dd[i]; dd[i] = dd[N-1-i]; dd[N-1-i] = swd; break;
+		case DAO_COMPLEX : swc = dc[i]; dc[i] = dc[N-1-i]; dc[N-1-i] = swc; break;
+		}
+	}
+}
 static DaoFuncItem numarMeths[] =
 {
 	{ DaoArray_Lib_Dim,       "dim( self :array, i : int )=>int" },
@@ -2968,6 +2989,7 @@ static DaoFuncItem numarMeths[] =
 	{ DaoArray_Lib_min,       "min( self :array<@ITEM> )=>tuple<@ITEM,int>" },
 	{ DaoArray_Lib_sum,       "sum( self :array<@ITEM> )=>@ITEM" },
 	{ DaoArray_Lib_varn,      "varn( self :array )=>double" },
+	{ DaoArray_Reverse,       "reverse( self :array<@ITEM> )=>array<@ITEM>" },
 	{ DaoArray_Lib_ranka,     "ranka( self :array, k=0 )=>array<int>" },
 	{ DaoArray_Lib_rankd,     "rankd( self :array, k=0 )=>array<int>" },
 	{ DaoArray_Lib_sorta,     "sorta( self :array, k=0 )" },

@@ -286,6 +286,8 @@ int DaoContext_PutReference( DaoContext *self, DValue *refer )
 	if( tp == NULL ){
 		self->regValues[reg] = refer;
 		return 1;
+	}else if( refer->t >= DAO_ARRAY ){
+		return DValue_Move( *refer, self->regValues[ reg ], tp );
 	}
 	tm = DaoType_MatchValue( tp, *refer, NULL );
 	if( tm == DAO_MT_EQ ){
@@ -1736,6 +1738,7 @@ void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 	if( p->t == DAO_LIST && ( q.t >= DAO_INTEGER && q.t <= DAO_DOUBLE ) ){
 		DaoList *list = p->v.list;
 		id = DValue_GetInteger( q );
+		if( id < 0 ) id += list->items->size;
 		if( id >=0 && id < list->items->size ){
 			self->regValues[ vmc->c ] = list->items->data + id;
 		}else{
@@ -1746,6 +1749,7 @@ void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 	}else if( p->t == DAO_ARRAY && ( q.t >=DAO_INTEGER && q.t <=DAO_DOUBLE )){
 		DaoArray *na = p->v.array;
 		id = DValue_GetInteger( q );
+		if( id < 0 ) id += na->size;
 		if( id < 0 || id >= na->size ){
 			DaoContext_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;
@@ -1862,6 +1866,7 @@ void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 		double val = DValue_GetDouble( v );
 		complex16 cpx = DValue_GetComplex( v );
 		id = DValue_GetDouble( q );
+		if( id < 0 ) id += na->size;
 		if( id < 0 || id >= na->size ){
 			DaoContext_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;

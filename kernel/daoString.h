@@ -42,6 +42,7 @@ void DString_SetSharing( DString *self, int sharing );
 int DString_IsMBS( DString *self );
 int DString_IsDigits( DString *self );
 int DString_IsDecimal( DString *self );
+size_t DString_CheckUTF8( DString *self );
 
 char* DString_GetMBS( DString *self );
 wchar_t* DString_GetWCS( DString *self );
@@ -55,6 +56,7 @@ void DString_ToWCS( DString *self );
 void DString_ToMBS( DString *self );
 void DString_ToLower( DString *self );
 void DString_ToUpper( DString *self );
+void DString_Reverse( DString *self );
 
 size_t  DString_Size( DString *self );
 void DString_Resize( DString *self, size_t size );

@@ -1832,6 +1832,12 @@ static void DaoSTR_Convert( DaoContext *ctx, DValue *p[], int N )
 		DString_ToWCS( p[0]->v.s );
 	DaoContext_PutReference( ctx, p[0] );
 }
+static void DaoSTR_Reverse( DaoContext *ctx, DValue *p[], int N )
+{
+	DString *self = p[0]->v.s;
+	DString_Reverse( self );
+	DaoContext_PutReference( ctx, p[0] );
+}
 
 static DaoFuncItem stringMeths[] =
 {
@@ -1867,6 +1873,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Tonumber, "tonumber( self :string, base=10 )const=>double" },
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
+	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },
 	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
 	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
 	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
@@ -2581,6 +2588,19 @@ static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
 	}
 	DString_Delete( buf );
 }
+static void DaoLIST_Reverse( DaoContext *ctx, DValue *p[], int npar )
+{
+	DaoList *list = p[0]->v.list;
+	DValue *items = list->items->data;
+	size_t i = 0, N = list->items->size;
+
+	DaoContext_PutReference( ctx, p[0] );
+	for(i=0; i<N/2; i++){
+		DValue tmp = items[N-i-1];
+		items[N-i-1] = items[i];
+		items[i] = tmp;
+	}
+}
 static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Insert,     "insert( self :list<@T>, item : @T, pos=0 )" },
@@ -2601,6 +2621,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Rankd,      "rankd( self :list<any>, k=0 )const=>list<int>" },
 	{ DaoLIST_Sorta,      "sorta( self :list<any>, k=0 )" },
 	{ DaoLIST_Sortd,      "sortd( self :list<any>, k=0 )" },
+	{ DaoLIST_Reverse,    "reverse( self :list<@T> )=>list<@T>" },
 	{ DaoLIST_Iter,       "__for_iterator__( self :list<any>, iter : for_iterator )" },
 	{ NULL, NULL }
 };
