@@ -22,7 +22,7 @@
  */
 
 const extern DValue daoNullValue;
-const extern DValue daoZeroInt;
+const extern DValue daoZeroInteger;
 const extern DValue daoZeroFloat;
 const extern DValue daoZeroDouble;
 const extern DValue daoNullComplex;

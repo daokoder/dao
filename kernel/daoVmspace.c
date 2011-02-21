@@ -668,7 +668,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 	DString *str = DString_New(1);
 	DString *key = DString_New(1);
 	DString *val = DString_New(1);
-	DValue nkey = daoZeroInt;
+	DValue nkey = daoZeroInteger;
 	DValue skey = daoNullString;
 	DValue sval = daoNullString;
 	size_t i, pk;
@@ -747,7 +747,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 	DString *key = DString_New(1);
 	DString *val = DString_New(1);
 	DString *str;
-	DValue nkey = daoZeroInt;
+	DValue nkey = daoZeroInteger;
 	DValue skey = daoNullString;
 	DValue sval = daoNullString;
 	int i;

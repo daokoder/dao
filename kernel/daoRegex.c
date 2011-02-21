@@ -1136,7 +1136,7 @@ int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end )
 static void Dao_ParseTarget( DString *target, DVarray *parts, DValue sval )
 {
 	DString *tmp = sval.v.s;
-	DValue ival = daoZeroInt;
+	DValue ival = daoZeroInteger;
 	size_t i, n = DString_Size( target );
 	int ch, ch2;
 	DString_Clear( tmp );
@@ -1180,7 +1180,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 	size_t end = end2 ? (size_t) *end2 : 0;
 	size_t i, n=0, p1=start, p2=end, p3, last;
 	wchar_t ch, ch2;
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	DValue matched = daoNullString;
 	DString *tmp = DString_New( source->mbs != NULL );
 	DString *replace = DString_New( source->mbs != NULL );
@@ -1236,7 +1236,7 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
 	size_t start = 0, end = 0;
 	size_t i, n=0, p1=start, p2=end, p3;
 	wchar_t ch, ch2;
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	DValue matched = daoNullString;
 	DString *tmp = DString_New( source->mbs != NULL );
 	DString *tmp2 = DString_New( source->mbs != NULL );

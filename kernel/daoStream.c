@@ -369,7 +369,7 @@ static void DaoIO_GetItem( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Read2( DaoContext *ctx, DValue *p[], int N )
 {
 	DValue p0 = daoNullStream;
-	DValue p1 = daoZeroInt;
+	DValue p1 = daoZeroInteger;
 	DValue *params[2] = {&p0, &p1};
 	p0.v.stream = p[0]->v.stream;
 	p1.v.i = ( p[1]->v.e->value == 0 )? 0 : -1;

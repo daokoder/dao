@@ -3559,7 +3559,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	DaoRoutine *routine = self->routine;
 	DaoType *abtp, *abtp2;
 	DString *str, *alias = NULL;
-	DValue dv, iv = daoZeroInt;
+	DValue dv, iv = daoZeroInteger;
 	int global = storeType & (DAO_DATA_GLOBAL|DAO_DATA_STATIC);
 	int stat = storeType & DAO_DATA_STATIC;
 	int sep = DTOK_COMMA, value = 0;
@@ -5043,9 +5043,9 @@ DValue DaoParser_GetVariable( DaoParser *self, int reg )
 
 	if( st == DAO_LOCAL_VARIABLE ){
 		if( reg == self->integerZero ){
-			val = daoZeroInt;
+			val = daoZeroInteger;
 		}else if( reg == self->integerOne ){
-			val = daoZeroInt;
+			val = daoZeroInteger;
 			val.v.i = 1;
 		}else if( reg == self->imaginaryOne ){
 			val = daoNullComplex;
@@ -7857,7 +7857,7 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 			}
 			if( notin ){
 				int v = DValue_GetInteger( value );
-				value = daoZeroInt;
+				value = daoZeroInteger;
 				value.v.i = ! v;
 			}
 			/* for( i=0; i<self->vmCodes->size; i++) DaoVmCodeX_Print( *self->vmCodes->items.pVmc[i], NULL ); */

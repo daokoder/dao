@@ -935,12 +935,6 @@ static void DaoSTR_Resize( DaoContext *ctx, DValue *p[], int N )
 	}
 	DString_Resize( p[0]->v.s, p[1]->v.i );
 }
-static void DaoSTR_Utf8( DaoContext *ctx, DValue *p[], int N )
-{
-	DValue *self = p[0];
-	DaoContext_PutInteger( ctx, self->sub == DAO_UTF8 );
-	if( N > 1 ) self->sub = p[1]->v.i ? DAO_UTF8 : 0;
-}
 
 static void DaoSTR_Insert( DaoContext *ctx, DValue *p[], int N )
 {
@@ -967,7 +961,7 @@ static void DaoSTR_Chop( DaoContext *ctx, DValue *p[], int N )
 	DString_Detach( self );
 	DString_Chop( self );
 
-	if( p[0]->sub == DAO_UTF8 && self->mbs && self->size ){
+	if( DString_CheckUTF8( self ) && self->mbs && self->size ){
 		chs = (unsigned char*) self->mbs;
 		i = self->size - 1;
 		k = utf8_markers[ chs[i] ];
@@ -1586,7 +1580,7 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
 	size_t start = (size_t)p[3]->v.i;
 	size_t end = (size_t)p[4]->v.i;
 	size_t i, p1=start, p2=end;
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	DValue vtup = daoNullTuple;
 	DaoTuple *tuple = NULL;
 	DaoList *list = DaoContext_PutList( ctx );
@@ -1622,7 +1616,7 @@ static void DaoSTR_Match0( DaoContext *ctx, DValue *p[], int N, int subm )
 	int capt = p[4]->v.i;
 	size_t p1=start, p2=end;
 	int gid = p[2]->v.i;
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	DValue matched = daoNullString;
 	DaoTuple *tuple = DaoTuple_New( 3 );
 	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
@@ -1843,8 +1837,6 @@ static DaoFuncItem stringMeths[] =
 {
 	{ DaoSTR_Size,    "size( self :string )const=>int" },
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
-	{ DaoSTR_Utf8,    "utf8( self :string )const =>int" },
-	{ DaoSTR_Utf8,    "utf8( self :string, utf8 : int ) =>int" },
 	{ DaoSTR_Type,    "type( self :string )const =>enum<mbs, wcs>" },
 	{ DaoSTR_Convert, "convert( self :string, to :enum<mbs, wcs> ) =>string" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
@@ -2440,7 +2432,7 @@ static void DaoLIST_Rank( DaoContext *ctx, DValue *p[], int npar, int asc )
 	size_t i, N;
 
 	N = list->items->size;
-	DVarray_Resize( res->items, N, daoZeroInt );
+	DVarray_Resize( res->items, N, daoZeroInteger );
 	ids  = res->items->data;
 	for(i=0; i<N; i++) ids[i].v.i = i;
 	if( N < 2 ) return;

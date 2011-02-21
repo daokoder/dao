@@ -459,7 +459,7 @@ void DaoJIT_SETI_LSIS( DaoContext *self, int id )
 
 dint* DaoContext_PutInteger( DaoContext *self, dint value )
 {
-	DValue *res = DaoContext_SetValue( self, self->vmc->c, daoZeroInt );
+	DValue *res = DaoContext_SetValue( self, self->vmc->c, daoZeroInteger );
 	if( res ==NULL ) return NULL;
 	res->v.i = value;
 	return & res->v.i;
@@ -2472,7 +2472,7 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 	DValue *B = self->regValues[ vmc->b ];
 	DValue *C = self->regValues[ vmc->c ];
 	DValue dA = *A, dB = *B;
-	DValue dC = daoZeroInt;
+	DValue dC = daoZeroInteger;
 	int rc = 0;
 	DLong *lng;
 
@@ -2932,7 +2932,7 @@ void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue vA = *self->regValues[ vmc->a ];
 	DValue vB = *self->regValues[ vmc->b ];
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	if( vA.t && vB.t && vA.t <= DAO_DOUBLE && vB.t <= DAO_DOUBLE ){
 		llong_t inum = 0;
 		if( vmc->code == DVM_BITLFT ){
@@ -2996,7 +2996,7 @@ void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc )
 void DaoContext_DoBitFlip( DaoContext *self, DaoVmCode *vmc )
 {
 	DValue vA = *self->regValues[ vmc->a ];
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	if( vA.t >= DAO_INTEGER && vA.t <= DAO_DOUBLE ){
 		value.v.i = ~ DValue_GetInteger( vA );
 		DaoContext_SetValue( self, vmc->c, value );
@@ -3177,7 +3177,7 @@ static void DaoArray_ToWCString( DaoArray *self, DString *str, int offset, int s
 static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 		int dim, int offset )
 {
-	DValue num = daoZeroInt;
+	DValue num = daoZeroInteger;
 	DValue it;
 	DaoList *ls;
 	size_t *ds = self->dims->items.pSize;

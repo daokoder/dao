@@ -580,7 +580,7 @@ static void SYS_Ctime( DaoContext *ctx, DValue *p[], int N )
 	struct tm *ctime;
 	time_t t = (time_t)p[0]->v.i;
 	DaoTuple *tuple = DaoTuple_New( 7 );
-	DValue val = daoZeroInt;
+	DValue val = daoZeroInteger;
 	if( t == 0 ) t = time(NULL);
 	ctime = gmtime( & t );
 	val.v.i = ctime->tm_year + 1900;
@@ -1253,7 +1253,7 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
 	DaoType **nested = routype->nested->items.pType;
 	DString *mbs = DString_New(1);
 	DNode *node;
-	DValue num = daoZeroInt;
+	DValue num = daoZeroInteger;
 	DValue str = daoNullString;
 	DValue vtp = daoNullValue;
 	DValue vtup = daoNullTuple;
@@ -1316,6 +1316,9 @@ static void REFL_Trace( DaoContext *ctx, DValue *p[], int N )
 	DValue vEntry = daoNullTuple;
 	DaoStream *stream = ctx->vmSpace->stdStream;
 	DValue vRoutType = daoNullType;
+	DValue routName = daoNullString;
+	DValue nsName = daoNullString;
+	DValue line = daoZeroInteger;
 
 	if( N >=1 ) print = p[0]->v.e->value;
 	if( N ==2 ) maxDepth = p[1]->v.i;
@@ -1326,25 +1329,28 @@ static void REFL_Trace( DaoContext *ctx, DValue *p[], int N )
 	}
 
 	for( ; frame && frame->context ; frame = frame->prev, ++depth ){
-		// Check if we got deeper than requested
+		/* Check if we got deeper than requested */
 		if( depth > maxDepth && maxDepth > 0 ) break;
 
-		// Gather some of the informations we need.
+		/* Gather some of the informations we need. */
 		instr = (depth==1) ? (int)( ctx->vmc - ctx->codes ) : frame->entry;
 		vRoutType.v.type = frame->context->routine->routType;
 
-		// Put all the informations into a tuple which we append to the list.
-		// Tuple type: tuple<rout_name : string, rout_type : any, line : int, namespace : string>
-		// Also, namespace is most often the current file name, but not always!
+		/* Put all the informations into a tuple which we append to the list. */
+		/* Tuple type: tuple<rout_name:string,rout_type:any,line:int,namespace:string> */
+		/* Also, namespace is most often the current file name, but not always! */
 		entry = DaoTuple_New( 5 );
 		entry->unitype = backtrace->unitype->nested->items.pType[0];
 		GC_IncRC( entry->unitype );
 
-		DaoTuple_SetItem( entry, DValue_NewMBString(DString_GetMBS(frame->context->routine->routName), 0), 0 );
+		routName.v.s = frame->context->routine->routName;
+		nsName.v.s = frame->context->nameSpace->name;
+		line.v.i = frame->context->routine->annotCodes->items.pVmc[instr]->line;
+		DaoTuple_SetItem( entry, routName, 0 );
 		DaoTuple_SetItem( entry, vRoutType, 1 );
 		DaoTuple_SetItem( entry, DValue_NewInteger(instr), 2 );
-		DaoTuple_SetItem( entry, DValue_NewInteger(frame->context->routine->annotCodes->items.pVmc[instr]->line), 3 );
-		DaoTuple_SetItem( entry, DValue_NewMBString(DString_GetMBS(frame->context->nameSpace->name), 0), 4 );
+		DaoTuple_SetItem( entry, line, 3 );
+		DaoTuple_SetItem( entry, nsName, 4 );
 
 		vEntry.v.tuple = entry;
 		DaoList_PushBack( backtrace, vEntry );

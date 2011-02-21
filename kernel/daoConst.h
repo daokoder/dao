@@ -43,7 +43,6 @@ enum DaoRTTI
 	DAO_VALTYPE ,
 	DAO_UNION , /* disjoint union */
 	DAO_MACRO ,
-	DAO_UTF8 , /* sub type of string */
 	DAO_FUNCURRY ,
 	DAO_CMODULE ,
 	DAO_THDMASTER ,

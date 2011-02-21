@@ -724,6 +724,8 @@ DAO_DLL void        DaoQuit();
 DAO_DLL DValue DValue_NewInteger( dint v );
 DAO_DLL DValue DValue_NewFloat( float v );
 DAO_DLL DValue DValue_NewDouble( double v );
+/* Values created by the following DValue_NewXyz() and DValue_WrapXyz(),
+ * must be cleared by DValue_Clear() to avoid memory leaking: */
 DAO_DLL DValue DValue_NewMBString( const char *s, int n );
 DAO_DLL DValue DValue_NewWCString( const wchar_t *s, int n );
 DAO_DLL DValue DValue_NewVectorB( char *s, int n );

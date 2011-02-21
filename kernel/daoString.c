@@ -1104,7 +1104,7 @@ size_t DString_CheckUTF8( DString *self )
 void DString_Reverse( DString *self )
 {
 	DString *front, *back;
-	int m, utf8 = DString_CheckUTF8( self );
+	size_t m, utf8 = DString_CheckUTF8( self );
 	size_t i, j, k, gi, gj, size = self->size;
 	size_t half = size / 2;
 	unsigned char ch, *mbs;

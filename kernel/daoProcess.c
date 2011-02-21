@@ -2643,7 +2643,7 @@ void DaoContext_Sort( DaoContext *self, DaoVmCode *vmc, int index, int entry, in
 void DaoContext_Apply( DaoContext *self, DaoVmCode *vmc, int index, int dim, int entry, int last );
 static DValue DaoArray_GetValue( DaoArray *self, int i, complex16 *com )
 {
-	DValue res = daoZeroInt;
+	DValue res = daoZeroInteger;
 	res.t = self->numType;
 	if( self->numType == DAO_COMPLEX ) res.v.c = com;
 	switch( self->numType ){
@@ -2811,7 +2811,7 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
 			break;
 		case DVM_FUNCT_INDEX :
 			if( DValue_GetInteger( res ) ){
-				res = daoZeroInt;
+				res = daoZeroInteger;
 				res.v.i = i;
 				DaoList_PushBack( result, res );
 			}
@@ -2887,7 +2887,7 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 			break;
 		case DVM_FUNCT_INDEX :
 			if( DValue_GetInteger( res ) ){
-				res = daoZeroInt;
+				res = daoZeroInteger;
 				res.v.i = i;
 				DaoList_PushBack( list, res );
 			}

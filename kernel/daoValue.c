@@ -30,7 +30,7 @@
 
 #if 1
 const DValue daoNullValue = { 0, 0, 0, 0, {0}};
-const DValue daoZeroInt = { DAO_INTEGER, 0, 0, 0, {0}};
+const DValue daoZeroInteger = { DAO_INTEGER, 0, 0, 0, {0}};
 const DValue daoZeroFloat = { DAO_FLOAT, 0, 0, 0, {0}};
 const DValue daoZeroDouble = { DAO_DOUBLE, 0, 0, 0, {0}};
 const DValue daoNullComplex = { DAO_COMPLEX, 0, 0, 0, {0}};
@@ -390,7 +390,7 @@ int DValue_Init( DValue *self, int type )
 	if( self->t ) DValue_Clear( self );
 	switch( type ){
 	case DAO_NIL : break;
-	case DAO_INTEGER : *self = daoZeroInt; break;
+	case DAO_INTEGER : *self = daoZeroInteger; break;
 	case DAO_FLOAT   : *self = daoZeroFloat; break;
 	case DAO_DOUBLE  : *self = daoZeroDouble; break;
 	case DAO_COMPLEX : *self = daoNullComplex; self->v.c = dao_calloc(1,sizeof(complex16)); break;
@@ -771,7 +771,7 @@ int DValue_Move2( DValue from, DValue *to, DaoType *totype )
 
 DValue DValue_NewInteger( dint v )
 {
-	DValue res = daoZeroInt;
+	DValue res = daoZeroInteger;
 	res.v.i = v;
 	return res;
 }
@@ -1232,7 +1232,7 @@ static void DString_Serialize( DString *self, DString *serial, DString *buf )
 }
 static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 {
-	DValue value = daoZeroInt;
+	DValue value = daoZeroInteger;
 	int i;
 	DString_AppendChar( serial, '[' );
 	for(i=0; i<self->dims->size; i++){
