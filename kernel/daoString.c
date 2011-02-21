@@ -1082,6 +1082,102 @@ void DString_Trim( DString *self )
 		DString_Erase( self, 0, i );
 	}
 }
+size_t DString_CheckUTF8( DString *self )
+{
+	size_t i = 0, k, m, size = self->size;
+	size_t total = 0;
+	size_t valid = 0;
+	unsigned char *mbs;
+	if( self->wcs ) return 0;
+	mbs = (unsigned char*) self->mbs;
+	while( i < size ){
+		unsigned char ch = mbs[i++];
+		m = utf8_markers[ ch ];
+		total += 1;
+		if( m == 1 || (ch <= 0x7f && ! isprint( ch )) ) continue; /*invalid encoding*/
+		while( m > 0 && i < size && utf8_markers[ mbs[i] ] == 1 ) i += 1, m -= 1;
+		valid += m <= 1;
+	}
+	if( valid >= 0.95 * total ) return total;
+	return 0;
+}
+void DString_Reverse( DString *self )
+{
+	DString *front, *back;
+	int m, utf8 = DString_CheckUTF8( self );
+	size_t i, j, k, gi, gj, size = self->size;
+	size_t half = size / 2;
+	unsigned char ch, *mbs;
+	if( size <= 1 ) return;
+	if( self->wcs ){
+		for(i=0; i<half; i++){
+			wchar_t c = self->wcs[i];
+			self->wcs[i] = self->wcs[size-1-i];
+			self->wcs[size-1-i] = c;
+		}
+		return;
+	}
+	if( utf8 == 0 ){
+		for(i=0; i<half; i++){
+			char c = self->mbs[i];
+			self->mbs[i] = self->mbs[size-1-i];
+			self->mbs[size-1-i] = c;
+		}
+		return;
+	}
+	front = DString_New(1);
+	back = DString_New(1);
+	mbs = (unsigned char*) self->mbs;
+	i = 0;
+	j = size - 1;
+	gi = gj = 0;
+	while( utf8 > 1 ){
+		if( front->size ==0 ){ /* get valid multibytes from front */
+			size_t i2 = 0;
+			gi += 1;
+			ch = mbs[i++];
+			m = utf8_markers[ ch ];
+			DString_InsertChar( front, ch, 0 );
+			while( m > 1 && i < size && utf8_markers[ mbs[i] ] == 1 ){
+				DString_InsertChar( front, self->mbs[i], ++i2 );
+				gi += 1;
+				i += 1;
+				m -= 1;
+			}
+		}
+		if( back->size ==0 ){ /* get valid multibytes from back */
+			size_t j2 = j;
+			k = 1;
+			while( k < 7 && j >= 0 && utf8_markers[ mbs[j] ] == 1 ) j -= 1, k += 1;
+			m = utf8_markers[ mbs[j] ];
+			if( m && m != k ){
+				DString_AppendChar( back, mbs[j2] );
+				gj += 1;
+				j = j2 - 1;
+			}else{
+				DString_AppendDataMBS( back, (char*)mbs+j, k );
+				gj += k;
+				j -= 1;
+			}
+		}
+		if( back->size <= gi ){ /* enough space reserved for back mulitbytes */
+			strncpy( self->mbs + i - gi, back->mbs, back->size );
+			gi -= back->size;
+			back->size = 0;
+			utf8 -= 1;
+		}
+		if( front->size <= gj ){ /* enough space reserved for front mulitbytes */
+			strncpy( self->mbs + j + 1 + (gj - front->size), front->mbs, front->size );
+			gj -= front->size;
+			front->size = 0;
+			utf8 -= 1;
+		}
+	}
+	DString_Append( back, front );
+	if( back->size && gi ) strncpy( self->mbs + i - gi, back->mbs, back->size );
+	DString_Delete( front );
+	DString_Delete( back );
+}
 size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
 		uint_t esc0, size_t start, size_t end, int countonly )
 {
