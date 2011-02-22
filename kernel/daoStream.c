@@ -31,7 +31,7 @@ void DaoStream_Flush( DaoStream *self )
 		fflush( stdout );
 	}
 }
-static void DaoIO_Print0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Write0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 {
 	DMap *cycData;
 	int i;
@@ -43,15 +43,15 @@ static void DaoIO_Print0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 	for(i=0; i<N; i++) DValue_Print( *p[i], ctx, self, cycData );
 	DMap_Delete( cycData );
 }
-static void DaoIO_Print( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Write( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Print0( p[0]->v.stream, ctx, p+1, N-1 );
+	DaoIO_Write0( p[0]->v.stream, ctx, p+1, N-1 );
 }
-static void DaoIO_Print2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Write2( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Print0( ctx->vmSpace->stdStream, ctx, p, N );
+	DaoIO_Write0( ctx->vmSpace->stdStream, ctx, p, N );
 }
-static void DaoIO_Println0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writeln0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 {
 	DMap *cycData;
 	int i;
@@ -67,15 +67,15 @@ static void DaoIO_Println0( DaoStream *self, DaoContext *ctx, DValue *p[], int N
 	DMap_Delete( cycData );
 	DaoStream_WriteMBS( self, "\n");
 }
-static void DaoIO_Println( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writeln( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Println0( p[0]->v.stream, ctx, p+1, N-1 );
+	DaoIO_Writeln0( p[0]->v.stream, ctx, p+1, N-1 );
 }
-static void DaoIO_Println2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writeln2( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Println0( ctx->vmSpace->stdStream, ctx, p, N );
+	DaoIO_Writeln0( ctx->vmSpace->stdStream, ctx, p, N );
 }
-static void DaoIO_Printf0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 {
 	DString *mbs;
 	DMap *cycData;
@@ -125,13 +125,13 @@ static void DaoIO_Printf0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
 	DString_Delete( mbs );
 	DMap_Delete( cycData );
 }
-static void DaoIO_Printf( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writef( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Printf0( p[0]->v.stream, ctx, p+1, N-1 );
+	DaoIO_Writef0( p[0]->v.stream, ctx, p+1, N-1 );
 }
-static void DaoIO_Printf2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writef2( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Printf0( ctx->vmSpace->stdStream, ctx, p, N );
+	DaoIO_Writef0( ctx->vmSpace->stdStream, ctx, p, N );
 }
 static void DaoIO_Flush( DaoContext *ctx, DValue *p[], int N )
 {
@@ -378,18 +378,12 @@ static void DaoIO_Read2( DaoContext *ctx, DValue *p[], int N )
 
 static DaoFuncItem streamMeths[] =
 {
-	{  DaoIO_Print,     "print( self :stream, ... )const" },
-	{  DaoIO_Print2,    "print( ... )" },
-	{  DaoIO_Printf,    "printf( self :stream, format : string, ... )const" },
-	{  DaoIO_Printf2,   "printf( format : string, ... )" },
-	{  DaoIO_Println,   "println( self :stream, ... )const" },
-	{  DaoIO_Println2,  "println( ... )" },
-	{  DaoIO_Print,     "write( self :stream, ... )const" },
-	{  DaoIO_Print2,    "write( ... )" },
-	{  DaoIO_Printf,    "writef( self :stream, format : string, ... )const" },
-	{  DaoIO_Printf2,   "writef( format : string, ... )" },
-	{  DaoIO_Println,   "writeln( self :stream, ... )const" },
-	{  DaoIO_Println2,  "writeln( ... )" },
+	{  DaoIO_Write,     "write( self :stream, ... )const" },
+	{  DaoIO_Write2,    "write( ... )" },
+	{  DaoIO_Writef,    "writef( self :stream, format : string, ... )const" },
+	{  DaoIO_Writef2,   "writef( format : string, ... )" },
+	{  DaoIO_Writeln,   "writeln( self :stream, ... )const" },
+	{  DaoIO_Writeln2,  "writeln( ... )" },
 	{  DaoIO_Flush,     "flush( self :stream )const" },
 	{  DaoIO_Read,      "read( self :stream, count=0 )const=>string" },
 	{  DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )const=>string" },

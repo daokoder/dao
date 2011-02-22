@@ -251,7 +251,7 @@ class Variable
 		get_item.clear();
 		set_item.clear();
 	}
-	routine _PRINT( s : stream ){ io.println( name, typeid, type ); }
+	routine _PRINT( s : stream ){ io.writeln( name, typeid, type ); }
 }
 
 global enum FunctionTrait
@@ -519,15 +519,15 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 	#if( pars.pfind( '(char|wchar_t) %s* %*%* %s* %w+' ) ) excluded = 1;
 	if( pars.pfind( '%) %s* %(' ).size() || pars.pfind( '%W ((%s*)) %(' ).size()
 		|| ret.pfind( 'template' ).size() ){
-		log_file.println( source );
+		log_file.writeln( source );
 		excluded = 1;
 	}
 	if( name != host && ret.pfind( '%w' ).size()==0 ){
-		log_file.println( source );
+		log_file.writeln( source );
 		excluded = 1;
 	}
 	if( source.pfind( '(short|int|long|float|double) %s* %* %s* %*' ) ){
-		log_file.println( source );
+		log_file.writeln( source );
 		excluded = 1;
 	}
 	#pars.change( '= %s* ([:%w]+) %s* %b()', '=0' );
@@ -535,16 +535,16 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 	parts = pars.extract( pat_type );
 	pars.change( pat_type, '' );
 	if( pars.pfind( '%( [,%s]* %)' ).size() ==0 ){
-		log_file.println( source );
+		log_file.writeln( source );
 		excluded = 1;
 	}
 	if( source.pfind( 'typedef %s' ) ){
-		log_file.println( source );
+		log_file.writeln( source );
 		return;
 	}
 	for( part in parts ){
 		if( part.pfind( '%* %s* %*' ) ){
-			#log_file.println( source );
+			#log_file.writeln( source );
 			#return;
 		}
 	}
@@ -578,7 +578,7 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 		vo = Variable( parts[i], i, source );
 		vo.host = host;
 		vo.Parse( input );
-		#if( host == 'QCoreApplication' and func.cxxName == 'processEvents' ) io.println( parts[i], var );
+		#if( host == 'QCoreApplication' and func.cxxName == 'processEvents' ) io.writeln( parts[i], var );
 		if( vo.type == 'void' && vo.refer == '' ) skip; # int func(void);
 		func.parlist.append( vo );
 	}
@@ -793,9 +793,9 @@ routine UserType::Parse( source='', inExtFile=0 )
 		parts = src.extract( pat_type2 );
 		src.change( '%s+', '' );
 		#{
-				if( name == 'mglGraphAB' ) io.println( src, parts );
-				if( src.pfind( 'std' ) ) io.println( src ); # DEBUG
-				io.println( parts ); # DEBUG
+				if( name == 'mglGraphAB' ) io.writeln( src, parts );
+				if( src.pfind( 'std' ) ) io.writeln( src ); # DEBUG
+				io.writeln( parts ); # DEBUG
 		#}
 		if( i == 2 ){ # public fields only
 			selfield = '';
@@ -875,8 +875,8 @@ routine UserType::Parse( source='', inExtFile=0 )
 	source.change( '[%{%}%;]', '' );
 	source.trim();
 	if( source.size() ){
-		log_file.println( '----------- UNPARSED FIELD FOR TYPE:', name, '---------' );
-		log_file.println( source );
+		log_file.writeln( '----------- UNPARSED FIELD FOR TYPE:', name, '---------' );
+		log_file.writeln( source );
 	}
 }
 
@@ -1025,7 +1025,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			 tks = part.capture( pat_typedef );
 			 name = tks[1];
 			 alias = tks[3];
-			 if( alias.find( 'Fl_Callback_p' ) >=0 ) io.print( alias, ',', name, '\n' );
+			 if( alias.find( 'Fl_Callback_p' ) >=0 ) io.write( alias, ',', name, '\n' );
 			 scoped = '';
 			 if( snamespace ) scoped = snamespace + '::' + alias;
 # be sure that file order does not matter here
@@ -1110,11 +1110,11 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 		}
 	}
 	if( source == '' ){
-		io.println( 'skipping', file );
+		io.writeln( 'skipping', file );
 		return 0;
 	}
 	
-	io.println( 'parsing', file2 );
+	io.writeln( 'parsing', file2 );
 	
 	source.change( '(%S %s* %b()) %s* %w* %s*; %s* /[/%*] %s* <I>not %s+ implemented', '%1 :NotImplemented;' );
 	source.change( '{{//BTX}} %s* %B{ #%s* if }{ #%s*endif} %s* {{//ETX}}', '' ); # VTK
@@ -1205,7 +1205,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 		source.change( 'union %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ union %s+ %1 %s+ ( %w+ ) %s* ; )', 'union %5%2\ntypedef %5 %1;\n%3' );
 	#}
 	
-	#if( file.find( 'columnCount' ) >=0 ) io.println( source );
+	#if( file.find( 'columnCount' ) >=0 ) io.writeln( source );
 	
 	#const pat_defcst = '#%s* define %s+ (%w+) %s*'
 	#	'(%s %d [%x%.]* | %( %s* [%d%+%-] [%x%.%+%-%*%/%%]* %) ) %s*';
@@ -1224,7 +1224,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	}
 	source.change( '#%s* define [^\n]*', '' ); # other macros
 	
-	#if( file.find( 'vtkInformationInformationKey' ) >=0 ) io.println( source ); # DEBUG
+	#if( file.find( 'vtkInformationInformationKey' ) >=0 ) io.writeln( source ); # DEBUG
 	source = ParseCode( source, '', lang, fname, inExtFile );
 	
 	source.change( '[\n]{2,}', '\n\n' );
@@ -1232,8 +1232,8 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	source = source.chop();
 	source = source + '\n';
 	if( source ){
-		log_file.println( '========= UNPARSED CODES FROM FILE:', file, '=========' );
-		log_file.println( source );
+		log_file.writeln( '========= UNPARSED CODES FROM FILE:', file, '=========' );
+		log_file.writeln( source );
 	}
 	return 1;
 }
@@ -1725,7 +1725,7 @@ routine Variable::Parse( fname = '' )
 			map_user_types[ type ] = utp;
 			map_user_types[ 'struct ' + type ] = utp;
 			if( utp.name[0:0] == '_' ){
-				io.println( 'debug:', utp.name, ',', source );
+				io.writeln( 'debug:', utp.name, ',', source );
 				#reflect.trace();
 			}
 		}
@@ -1746,7 +1746,7 @@ routine Variable::Parse( fname = '' )
 		sqsizes.append( '0' );
 	}
 	type_trans = type;
-	#io.println( name, type, refer, sqsizes.size() );
+	#io.writeln( name, type, refer, sqsizes.size() );
 }
 
 global qt_container = '^ (QList|QVector)(P|)_(%w+) $';
@@ -1766,7 +1766,7 @@ routine Variable::Generate( cxx_no_self =0 )
 	}
 	type_trans = type;
 	#if( type == 'SectionFlags' ) 
-	#if( type.pfind( 'PaintDeviceMetric' ) ) io.println( type, map_user_types.has( type ) );
+	#if( type.pfind( 'PaintDeviceMetric' ) ) io.writeln( type, map_user_types.has( type ) );
 	list_item = type.capture( qt_container );
 	isClassEnum = 0;
 	if( typeid == $CT_USER && map_user_types.has( host ) ){
@@ -2729,7 +2729,7 @@ global new_proxy_function_name = @NewProxyFunctionName();
 
 routine Function::Generate()
 {
-	#if( cxxName == 'processEvents' ) io.println( source, parlist );
+	#if( cxxName == 'processEvents' ) io.writeln( source, parlist );
 	if( map_user_types.has( hostType ) ) hostType = map_user_types[ hostType ].name;
 	cxx_no_self = not($FUNC_STATIC in attribs) and ($FUNC_CPP in attribs) != 0;
 	cxx_no_self = cxx_no_self && (hostType != cxxName);
@@ -2954,9 +2954,9 @@ routine Function::Generate()
 			qtSignalSlotCode += cxx2daocodes;
 			qtSignalSlotCode += daoqt_sig_slot_emit.expand( kvmap );
 			#{
-						io.println( signature );
-						io.println( qtSignalSlotDecl );
-						io.println( qtSignalSlotCode );
+						io.writeln( signature );
+						io.writeln( qtSignalSlotDecl );
+						io.writeln( qtSignalSlotCode );
 			#}
 		}
 	}
@@ -3074,10 +3074,10 @@ routine Function::Generate()
 	# }
 	Clean();
 	#{
-		io.println( daoProtoCodes );
-		io.println( cxx2daocodes );
-		io.println( cxxWrapper );
-		io.println( cxxWrapperVirt );
+		io.writeln( daoProtoCodes );
+		io.writeln( cxx2daocodes );
+		io.writeln( cxxWrapper );
+		io.writeln( cxxWrapperVirt );
 	#}
 }
 
@@ -3715,7 +3715,7 @@ routine UserType::CheckPureVirtual()
 			}
 		}
 	}
-	#io.println( name, isPureVirt, pureVirts, implemented );
+	#io.writeln( name, isPureVirt, pureVirts, implemented );
 }
 routine UserType::GenerateMeth()
 {
@@ -3878,7 +3878,7 @@ routine UserType::GenerateType()
 			meth_codes += cxx_wrap_alloc2.expand( kvmap2 );
 		}
 	}
-	#io.println( name, hasVirtual, noConstructor, isDefined, allocators, isCppClass );
+	#io.writeln( name, hasVirtual, noConstructor, isDefined, allocators, isCppClass );
 	if( isQObject and not noWrapping ){
 		kvmap = { 'name'=>name, 'class'=>name, 'qt_make_linker3'=>'' };
 		type_decls += tpl_class_init_qtss_decl.expand( kvmap );
@@ -3933,7 +3933,7 @@ routine UserType::GenerateType()
 			}
 			if( $FUNC_VIRTUAL not in meth.attribs ) mapnonvirt[ meth.signature ] = 1;
 		}
-		#io.println( name, mapnonvirt, methods );
+		#io.writeln( name, mapnonvirt, methods );
 		for( sup in supers ){
 			for( meth in sup.declmeths.values() ){
 				if( mapprivate.has( meth.signature ) ) skip;
@@ -3959,7 +3959,7 @@ routine UserType::GenerateType()
 				restPureVirts.append( s );
 			}
 		}
-		#io.println( declmeths, declvirts, '\n' );
+		#io.writeln( declmeths, declvirts, '\n' );
 		kmethods = '';
 		for( meth in declmeths.values() ){
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
@@ -4571,9 +4571,9 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 			if( f ) files.append( f );
 		}
 	}
-	#io.println( extfiles );
+	#io.writeln( extfiles );
 	if( files.size() ==0 ){
-		io.println( 'no input, quit...' );
+		io.writeln( 'no input, quit...' );
 		return;
 	}
 	main_fname = wrap_name ? wrap_name : files[0];
@@ -4709,20 +4709,20 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	fout_header = io.open( dir_output + 'dao_' + fname, 'w' );
 
 	wrap_name2 = wrap_name[].toupper();
-	fout_header.println( '#ifndef __DAO_' + wrap_name2 + '_H__' );
-	fout_header.println( '#define __DAO_' + wrap_name2 + '_H__' );
+	fout_header.writeln( '#ifndef __DAO_' + wrap_name2 + '_H__' );
+	fout_header.writeln( '#define __DAO_' + wrap_name2 + '_H__' );
 
-	fout_header.print( '#include<stdlib.h>\n' );
-	fout_header.print( '#include<assert.h>\n' );
-	fout_header.print( '#include<string.h>\n' );
-	fout_header.print( '#include<dao.h>\n' );
-	if( lib_name == LibType.LIB_QT ) fout_header.print( '#include<QVector>\n#include<QList>\n' );
+	fout_header.write( '#include<stdlib.h>\n' );
+	fout_header.write( '#include<assert.h>\n' );
+	fout_header.write( '#include<string.h>\n' );
+	fout_header.write( '#include<dao.h>\n' );
+	if( lib_name == LibType.LIB_QT ) fout_header.write( '#include<QVector>\n#include<QList>\n' );
 	for( file in file_names ){
 		if( not extfiles.has( file + '.h' ) ){
 			if( dir_input ){
-				fout_header.print( '#include<' + dir_inc + file + '.h>\n' );
+				fout_header.write( '#include<' + dir_inc + file + '.h>\n' );
 			}else{
-				fout_header.print( '#include"' + dir_inc + file + '.h"\n' );
+				fout_header.write( '#include"' + dir_inc + file + '.h"\n' );
 			}
 		}
 	}
@@ -4730,69 +4730,69 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		includes = include.split(',');
 		for( inc in includes ){
 			wrap_name2 = inc[].toupper();
-			fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
-			fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_IMPORT' );
-			fout_header.println( '#include"dao_' + inc + '.h"' );
-			fout_header.println( '#else' );
-			fout_header.println( '#define DAO_DLL_' + wrap_name2 );
-			fout_header.println( '#include"dao_' + inc + '.h"' );
-			fout_header.println( '#endif' );
+			fout_header.writeln( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
+			fout_header.writeln( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_IMPORT' );
+			fout_header.writeln( '#include"dao_' + inc + '.h"' );
+			fout_header.writeln( '#else' );
+			fout_header.writeln( '#define DAO_DLL_' + wrap_name2 );
+			fout_header.writeln( '#include"dao_' + inc + '.h"' );
+			fout_header.writeln( '#endif' );
 		}
 	}
 	wrap_name2 = wrap_name[].toupper();
-	fout_header.println( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
-	fout_header.println( '#ifndef DAO_DLL_' + wrap_name2 );
-	fout_header.println( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_EXPORT' );
-	fout_header.println( '#endif' );
-	fout_header.println( '#else' );
-	fout_header.println( '#define DAO_DLL_' + wrap_name2 );
-	fout_header.println( '#endif' );
-	fout_header.println();
-	fout_header.println( 'extern DaoVmSpace *__daoVmSpace;\n' );
+	fout_header.writeln( '#ifndef DAO_' + wrap_name2 + '_STATIC' );
+	fout_header.writeln( '#ifndef DAO_DLL_' + wrap_name2 );
+	fout_header.writeln( '#define DAO_DLL_' + wrap_name2 + ' DAO_DLL_EXPORT' );
+	fout_header.writeln( '#endif' );
+	fout_header.writeln( '#else' );
+	fout_header.writeln( '#define DAO_DLL_' + wrap_name2 );
+	fout_header.writeln( '#endif' );
+	fout_header.writeln();
+	fout_header.writeln( 'extern DaoVmSpace *__daoVmSpace;\n' );
 	
 	fname = main_fname + suffix;
 	fout_source = io.open( dir_output + 'dao_' + fname, 'w' );
-	fout_source.println( '#include"dao_' + main_fname + '.h"\n' );
-	fout_source.println( 'DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n' );
+	fout_source.writeln( '#include"dao_' + main_fname + '.h"\n' );
+	fout_source.writeln( 'DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n' );
 	
 	fname = main_fname + '2' + suffix;
 	fout_source2 = io.open( dir_output + 'dao_' + fname, 'w' );
-	fout_source2.println( '#include"dao_' + main_fname + '.h"\n' );
+	fout_source2.writeln( '#include"dao_' + main_fname + '.h"\n' );
 	fname = main_fname + '3' + suffix;
 	fout_source3 = io.open( dir_output + 'dao_' + fname, 'w' );
-	fout_source3.println( '#include"dao_' + main_fname + '.h"\n' );
+	fout_source3.writeln( '#include"dao_' + main_fname + '.h"\n' );
 	kvmap = { 'type' => '', 'module'=>wrap_name2 };
 	codes = {=>};
 	for( file in file_names ) codes[ file ] = ifdef_cpp_open;
-	fout_header.println( ifdef_cpp_open );
+	fout_header.writeln( ifdef_cpp_open );
 	
 	for( utp in user_types ){
 		kvmap[ 'type' ] = utp.name;
-		#fout_header.print( '// ', utp.input_file, '.h : ', utp.source, '\n' );
-		fout_header.print( ext_typer.expand( kvmap ) );
+		#fout_header.write( '// ', utp.input_file, '.h : ', utp.source, '\n' );
+		fout_header.write( ext_typer.expand( kvmap ) );
 		list_item = utp.name.capture( qt_container );
 		if( list_item ){
 			item = list_item[3];
 			kvmap = { 'qtype'=>(string)list_item[1], 'item' => item, 'module'=>wrap_name2  }; # XXX
 			if( list_item[2] ){
-				fout_header.println( qt_qlist_decl2.expand( kvmap ) );
+				fout_header.writeln( qt_qlist_decl2.expand( kvmap ) );
 				if( map_user_types.has( item ) ){
 					itp = map_user_types[ item ];
 					if( itp.hasVirtual ){
-						fout_source2.println( qt_daolist_func_virt2.expand( kvmap ) );
+						fout_source2.writeln( qt_daolist_func_virt2.expand( kvmap ) );
 					}else{
-						fout_source2.println( qt_daolist_func2.expand( kvmap ) );
+						fout_source2.writeln( qt_daolist_func2.expand( kvmap ) );
 					}
 				}else{ # XXX
 				}
 			}else{
-				fout_header.println( qt_qlist_decl.expand( kvmap ) );
+				fout_header.writeln( qt_qlist_decl.expand( kvmap ) );
 				if( map_user_types.has( item ) ){
 					itp = map_user_types[ item ];
 					if( itp.hasVirtual ){
-						fout_source2.println( qt_daolist_func_virt.expand( kvmap ) );
+						fout_source2.writeln( qt_daolist_func_virt.expand( kvmap ) );
 					}else{
-						fout_source2.println( qt_daolist_func.expand( kvmap ) );
+						fout_source2.writeln( qt_daolist_func.expand( kvmap ) );
 					}
 				}else{ # XXX
 				}
@@ -4802,10 +4802,10 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	for( ptype in pointer_types.keys() ){
 		kvmap[ 'type' ] = ptype;
 		if( map_user_types.has( ptype ) and map_user_types[ptype].isCallback ) skip;
-		fout_header.print( ext_typer.expand( kvmap ) );
+		fout_header.write( ext_typer.expand( kvmap ) );
 	}
 	for( callback in dao_callbacks_proto ) fout_header.writeln( callback );
-	fout_header.println( ifdef_cpp_close );
+	fout_header.writeln( ifdef_cpp_close );
 	
 #{
 	if( include == '' ){
@@ -4819,28 +4819,28 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	}
 #}
 	
-	fout_source2.println( ifdef_cpp_open );
+	fout_source2.writeln( ifdef_cpp_open );
 	for( utp in user_types ){
 		if( not extfiles.has( utp.input_file ) ){
 			open_ns = 'namespace ' + utp.snamespace + '{\n';
 			close_ns = '}\n';
 			if( utp.type_decls ){
-				if( utp.snamespace ) fout_header.print( open_ns );
-				fout_header.print( '\n', utp.type_decls.expand( kvmap ) );
-				if( utp.snamespace ) fout_header.print( close_ns );
+				if( utp.snamespace ) fout_header.write( open_ns );
+				fout_header.write( '\n', utp.type_decls.expand( kvmap ) );
+				if( utp.snamespace ) fout_header.write( close_ns );
 			}
-			fout_source2.println( '/* ', utp.input_file, '*/' );
-			fout_source2.println( WriteUserTypeCode( utp, delete_tests ).expand( kvmap ) );
-			fout_source2.println( utp.meth_codes.expand( kvmap ) );
+			fout_source2.writeln( '/* ', utp.input_file, '*/' );
+			fout_source2.writeln( WriteUserTypeCode( utp, delete_tests ).expand( kvmap ) );
+			fout_source2.writeln( utp.meth_codes.expand( kvmap ) );
 		}
 	}
 	for( utp in namespaces ){
 		if( not extfiles.has( utp.input_file ) ){
-			fout_source2.println( '/* ', utp.input_file, '*/' );
-			fout_source2.println( utp.meth_codes.expand( kvmap ) );
+			fout_source2.writeln( '/* ', utp.input_file, '*/' );
+			fout_source2.writeln( utp.meth_codes.expand( kvmap ) );
 		}
 	}
-	fout_source2.println( ifdef_cpp_close );
+	fout_source2.writeln( ifdef_cpp_close );
 	
 	if( lib_name == LibType.LIB_QT ){
 		fout_header.writeln( qt_get_wrapper1 );
@@ -4856,9 +4856,9 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		if( not extfiles.has( utp.input_file ) ){
 			open_ns = 'namespace ' + utp.snamespace + '{\n';
 			close_ns = '}\n';
-			if( utp.snamespace ) fout_source3.print( open_ns );
-			fout_source3.println( utp.type_codes.expand( kvmap ) );
-			if( utp.snamespace ) fout_source3.print( close_ns );
+			if( utp.snamespace ) fout_source3.write( open_ns );
+			fout_source3.writeln( utp.type_codes.expand( kvmap ) );
+			if( utp.snamespace ) fout_source3.write( close_ns );
 		}
 	}
 	func_decl = '';
@@ -4881,10 +4881,10 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		func_codes += func.cxxWrapper;
 		if( func.snamespace =='' ) rout_entry += func.daoProtoCodes;
 	}
-	fout_source.println( ifdef_cpp_open );
+	fout_source.writeln( ifdef_cpp_open );
 	
 	
-	fout_source.println( 'static DaoNumItem constNumbers[] =\n{\n' );
+	fout_source.writeln( 'static DaoNumItem constNumbers[] =\n{\n' );
 	kvmap[ 'namespace' ] = '';
 	lastns = '';
 	#sort( constNumbers )->{ x[0]<=y[0] and x[1]<=y[1] and x[2]<=y[2] };
@@ -4895,42 +4895,42 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		if( it[0] != lastns ){
 			lastns = it[0];
 			kvmap[ 'namespace' ] = lastns + '::';
-			fout_source.println( '  { NULL, 0, 0 }\n};' );
-			fout_source.printf( 'static DaoNumItem dao_%s_Nums[] =\n{\n', lastns );
+			fout_source.writeln( '  { NULL, 0, 0 }\n};' );
+			fout_source.writef( 'static DaoNumItem dao_%s_Nums[] =\n{\n', lastns );
 			ns_numbers[ lastns ] = 1;
 		}
 		kvmap[ 'type' ] = (string) it[1];
 		kvmap[ 'name' ] = (string) it[2];
 		kvmap[ 'value' ] = (string) it[3];
-		fout_source.print( add_number.expand( kvmap ) );
+		fout_source.write( add_number.expand( kvmap ) );
 	}
-	fout_source.println( '  { NULL, 0, 0 }\n};' );
-	fout_source.println( func_decl );
-	fout_source.print( 'static DaoFuncItem dao_Funcs[] =\n{\n', rout_entry );
-	fout_source.print( '  { NULL, NULL }\n};\n' );
-	fout_source.println( func_codes );
+	fout_source.writeln( '  { NULL, 0, 0 }\n};' );
+	fout_source.writeln( func_decl );
+	fout_source.write( 'static DaoFuncItem dao_Funcs[] =\n{\n', rout_entry );
+	fout_source.write( '  { NULL, NULL }\n};\n' );
+	fout_source.writeln( func_codes );
 	hasNameSpace = 0;
 	for( utp in namespaces ){
 		#kvmap = { 'type'=>utp.name, 'decls'=>utp.meth_decls, 'meths'=>utp.dao_meths, 'module'=>wrap_name2 };
-		#fout_source.printf( '/* %s */\n', utp.input_file );
-		#fout_source.print( methlist_code2.expand( kvmap ) );
-		#fout_source.print( utp.meth_codes.expand( kvmap ) );
+		#fout_source.writef( '/* %s */\n', utp.input_file );
+		#fout_source.write( methlist_code2.expand( kvmap ) );
+		#fout_source.write( utp.meth_codes.expand( kvmap ) );
 		hasNameSpace = 1;
 	}
 	io.writeln( std.about( ns_funcs ) );
 	for( ns in ns_funcs.keys(); funcs in ns_funcs.values() ){
-		fout_source.printf( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
+		fout_source.writef( 'static DaoFuncItem dao_%s_Funcs[] = \n{\n', ns, funcs.size()+1 );
 		for( func in funcs ){
 			if( func.excluded ) skip;
 			if( extfiles.has( func.input_file ) ) skip;
-			fout_source.print( func.daoProtoCodes );
+			fout_source.write( func.daoProtoCodes );
 		}
-		fout_source.printf( '\t{ NULL, NULL }\n};\n' );
+		fout_source.writef( '\t{ NULL, NULL }\n};\n' );
 	}
 	for( ns in ns_types.keys(); utps in ns_types.values() ){
-		fout_source.printf( 'static DaoTypeBase *dao_%s_Types[%i] = \n{\n', ns, utps.size()+1 );
-		for( utp in utps ) fout_source.printf( '\tdao_%s_Typer,\n', utp.name );
-		fout_source.printf( '\tNULL\n};\n' );
+		fout_source.writef( 'static DaoTypeBase *dao_%s_Types[%i] = \n{\n', ns, utps.size()+1 );
+		for( utp in utps ) fout_source.writef( '\tdao_%s_Typer,\n', utp.name );
+		fout_source.writef( '\tNULL\n};\n' );
 	}
 	kvmap2 = {'old'=>'', 'new'=>''};
 	nalias = 0;
@@ -4952,8 +4952,8 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 			aliases += '  aliases[' + (string)(nalias) + '] = \"' + utp.name + '\";\n';
 			aliases += '  aliases[' + (string)(nalias+1) + '] = \"' + name + '\";\n';
 			nalias += 2;
-			#fout_source.print( tpl_typedef.expand( kvmap2 ) );
-			fout_source2.print( alias_typer.expand( kvmap2 ) );
+			#fout_source.write( tpl_typedef.expand( kvmap2 ) );
+			fout_source2.write( alias_typer.expand( kvmap2 ) );
 		}
 	}
 	aliases += '  aliases[' + (string)(nalias) + '] = NULL;';
@@ -4964,59 +4964,59 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		if( not ns_aliases.has( ns ) ) skip;
 		ns_has_aliases[ ns ] = 'dao_' + ns + '_Aliases';
 		names = ns_aliases[ns];
-		fout_source.printf( 'const char *dao_%s_Aliases[%i] = \n{\n', ns, names.size()+1 );
-		for( name in names ) fout_source.print( '\t\"' + name + '\",\n' );
-		fout_source.println( '\tNULL\n}\n;' );
+		fout_source.writef( 'const char *dao_%s_Aliases[%i] = \n{\n', ns, names.size()+1 );
+		for( name in names ) fout_source.write( '\t\"' + name + '\",\n' );
+		fout_source.writeln( '\tNULL\n}\n;' );
 	}
 	
-	fout_source.println( 'int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )\n{' );
-	if( hasNameSpace ) fout_source.println( '  DaoNameSpace *ns2;' );
-	fout_source.print( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
-	fout_source.print( '  const char *aliases[', nalias, '];\n' );
-	fout_source.println( '  __daoVmSpace = vms;' );
+	fout_source.writeln( 'int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )\n{' );
+	if( hasNameSpace ) fout_source.writeln( '  DaoNameSpace *ns2;' );
+	fout_source.write( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
+	fout_source.write( '  const char *aliases[', nalias, '];\n' );
+	fout_source.writeln( '  __daoVmSpace = vms;' );
 	if( lib_name == LibType.LIB_QT ){
-		fout_source.print( '   qRegisterMetaType<DaoQtMessage>("DaoQtMessage");\n' );
+		fout_source.write( '   qRegisterMetaType<DaoQtMessage>("DaoQtMessage");\n' );
 	}
 	count = 0;
 	for( utp in user_types ){
 		if( utp.snamespace ) skip;
-		fout_source.print( '  typers[', count, '] = dao_' + utp.name + '_Typer,\n' );
+		fout_source.write( '  typers[', count, '] = dao_' + utp.name + '_Typer,\n' );
 		count = count + 1; # XXX bug with ++count;
 		#++ count;
 	}
-	fout_source.print( '  typers[', count, '] = NULL;\n' );
-	fout_source.println( aliases );
+	fout_source.write( '  typers[', count, '] = NULL;\n' );
+	fout_source.writeln( aliases );
 	kvmap2[ 'ns' ] = 'ns';
 	lastns = '';
 	basic_typedefs.sorta();
 	for( td in basic_typedefs ){
 		if( td[0] != lastns ){
 			lastns = td[0];
-			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+			fout_source.writeln( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
 			kvmap2[ 'ns' ] = 'ns2';
 		}
 		kvmap2[ 'old' ] = (string)td[1];
 		kvmap2[ 'new' ] = (string)td[2];
-		fout_source.print( tpl_typedef.expand( kvmap2 ) );
+		fout_source.write( tpl_typedef.expand( kvmap2 ) );
 	}
-	fout_source.println( '  DaoNameSpace_AddConstNumbers( ns, constNumbers );' );
-	fout_source.println( '  DaoNameSpace_WrapTypes( ns, typers );' );
-	if( nalias >1 ) fout_source.println( '  DaoNameSpace_TypeDefines( ns, aliases );' );
+	fout_source.writeln( '  DaoNameSpace_AddConstNumbers( ns, constNumbers );' );
+	fout_source.writeln( '  DaoNameSpace_WrapTypes( ns, typers );' );
+	if( nalias >1 ) fout_source.writeln( '  DaoNameSpace_TypeDefines( ns, aliases );' );
 	for( utp in namespaces ){
 		s = utp.name;
-		fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+		fout_source.writeln( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
 		if( ns_numbers.has( s ) )
-		fout_source.println( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
+		fout_source.writeln( '  DaoNameSpace_AddConstNumbers( ns2, dao_' +s+ '_Nums );' );
 		if( ns_types.has( s ) )
-		fout_source.println( '  DaoNameSpace_WrapTypes( ns2, dao_' +s+ '_Types );' );
+		fout_source.writeln( '  DaoNameSpace_WrapTypes( ns2, dao_' +s+ '_Types );' );
 		if( ns_has_aliases.has( s ) )
-		fout_source.println( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
+		fout_source.writeln( '  DaoNameSpace_TypeDefines( ns2, ' + ns_has_aliases[s] +' );' );
 	}
 	for( utp in namespaces ){
 		s = utp.name;
 		if( ns_funcs.has( s ) ){
-			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
-			fout_source.println( '  DaoNameSpace_WrapFunctions( ns2, dao_' +s+ '_Funcs );' );
+			fout_source.writeln( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+			fout_source.writeln( '  DaoNameSpace_WrapFunctions( ns2, dao_' +s+ '_Funcs );' );
 		}
 	}
 	kvmap[ 'refer' ] = '&';
@@ -5028,12 +5028,12 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		if( p[3] ) skip;
 		if( p[0] != lastns ){
 			lastns = p[0];
-			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+			fout_source.writeln( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
 			kvmap[ 'ns' ] = 'ns2';
 		}
 		kvmap[ 'type' ] = (string) p[1].name;
 		kvmap[ 'name' ] = (string) p[2];
-		fout_source.print( add_ccdata.expand( kvmap ) );
+		fout_source.write( add_ccdata.expand( kvmap ) );
 	}
 	kvmap[ 'refer' ] = '';
 	#sort( constCDataPtr )->{ x[0]<=y[0] and x[1].name<=y[1].name };
@@ -5044,32 +5044,32 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		if( p[3] ) skip;
 		if( p[0] != lastns ){
 			lastns = p[0];
-			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
+			fout_source.writeln( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +lastns+ '" );' );
 			kvmap[ 'ns' ] = 'ns2';
 		}
 		kvmap[ 'type' ] = (string) p[1].name;
 		kvmap[ 'name' ] = (string) p[2];
-		fout_source.print( add_ccdata.expand( kvmap ) );
+		fout_source.write( add_ccdata.expand( kvmap ) );
 	}
-	fout_source.println( '  DaoNameSpace_WrapFunctions( ns, dao_Funcs );' );
+	fout_source.writeln( '  DaoNameSpace_WrapFunctions( ns, dao_Funcs );' );
 	kvmap2[ 'ns' ] = 'ns';
 	for( alias in typedef_ns_types.keys(); utp in typedef_ns_types.values() ){
 		kvmap2[ 'old' ] = utp.snamespace + '::' + utp.name;
 		kvmap2[ 'new' ] = alias;
-		fout_source.print( tpl_typedef.expand( kvmap2 ) );
+		fout_source.write( tpl_typedef.expand( kvmap2 ) );
 	}
 	for( utp in namespaces ){
 		s = utp.name;
 		if( ns_types.has( s ) ){
-			fout_source.println( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
-			#fout_source.println( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
+			fout_source.writeln( '  ns2 = DaoNameSpace_GetNameSpace( ns, "' +s+ '" );' );
+			#fout_source.writeln( '  DaoNameSpace_SetupTypes( ns2, dao_' +s+ '_Types );' );
 		}
 	}
-	#fout_source.println( '  DaoNameSpace_SetupTypes( ns, typers );' );
-	fout_source.println( '  return 0;\n}' );
-	fout_source.println( ifdef_cpp_close );
+	#fout_source.writeln( '  DaoNameSpace_SetupTypes( ns, typers );' );
+	fout_source.writeln( '  return 0;\n}' );
+	fout_source.writeln( ifdef_cpp_close );
 	
-	fout_header.println( '#endif' );
+	fout_header.writeln( '#endif' );
 	fout_header.close();
 	fout_source.close();
 	fout_source2.close();

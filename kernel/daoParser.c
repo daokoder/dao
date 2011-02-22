@@ -668,38 +668,18 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 	while( i <= end ){
 		tk = tokens[i]->name;
 		tkp = tokens[i]->type;
-		if( tk == DTOK_DOT || tk == DTOK_COLON2 ){
+		if( tk == DTOK_DOT || tk == DTOK_COLON2 || tk == DTOK_ARROW ){
 			i += 1; /* thread.my[], obj.skip(). */
 		}else if( tk == DKEY_AND || tk == DKEY_OR || tk == DKEY_NOT || tk == DKEY_IN ){
 			i ++;
-		}else if( tk == DTOK_ARROW ){
-			i ++;
-			if( tokens[i]->name == DTOK_PIPE ){
-				i ++;
-				while( tokens[i]->type == DTOK_IDENTIFIER ){
-					i ++;
-					if( tokens[i]->name == DTOK_PIPE ) break;
-					if( tokens[i]->name == DTOK_COMMA ) i ++;
-				}
-				if( tokens[i]->name == DTOK_PIPE ) i++;
-			}
 		}else if( tk == DTOK_SEMCO || tk == DTOK_AT2 ){
 			return i - 1;
 		}else if( tk == DTOK_LCB ){
 			int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, i, -1 );
 			if( rb < 0 ) return -100;
 			if( rb >= end ) return rb;
-			tk = tokens[rb+1]->name;
-			if( tk == DTOK_COMMA ){
-				switch( prev ){
-				case DKEY_RETURN : case DKEY_YIELD :
-				case DKEY_RAISE : case DKEY_RESCUE : case DKEY_CATCH :
-					i = rb + 1; break;
-				default : break;
-				}
-			}
-			if( i == rb + 1 ) continue;
-			if( tk != DTOK_DOT && tk != DTOK_ARROW ) return rb;
+			tk = tokens[rb+1]->type;
+			if( tk >= DTOK_MBS_OPEN && tk <= DTOK_WCS ) return rb;
 			i = rb + 1;
 		}else if( tk == DTOK_LB ){
 			int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, i, -1 );
@@ -5693,7 +5673,7 @@ static int DaoParser_AddFieldConst( DaoParser *self, DString *field )
 #if 0
 /*
    Compiling method:
-   c = map( a, b )->|x,y|{ x + 1, y - 10 }->{ x * y };
+   c = map( a, b )->[x,y]{ x + 1, y - 10 }->{ x * y };
 
    it will be compiled into something like the following:
 
@@ -5888,7 +5868,7 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 		start = rb + 2;
 		arrows ++;
 		j = 0;
-		if( tokens[start]->name == DTOK_PIPE ){
+		if( tokens[start]->name == DTOK_LSB ){
 			/* -> | u, v, w | {} */
 			/* declare explicit variables from available registers saved before: */
 			i = start + 1;
@@ -5913,7 +5893,7 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 					DaoParser_PushRegister( self );
 				}
 				j ++;
-				if( tokens[i+1]->name == DTOK_PIPE ) break;
+				if( tokens[i+1]->name == DTOK_RSB ) break;
 				if( tokens[i+1]->name != DTOK_COMMA ) goto InvalidFunctionalSyntax;
 				i += 2;
 			}
@@ -6860,19 +6840,7 @@ static int DaoParser_FindRootOper( DaoParser *self, int start, int end, int *opt
 	for(i=start; i<=end; i++){
 		int tname = tokens[i]->name;
 		int t = i < end ? tokens[i+1]->type : 0;
-		if( tname == DTOK_ARROW ){
-			i ++;
-			if( tokens[i]->name == DTOK_PIPE ){
-				i ++;
-				while( tokens[i]->type == DTOK_IDENTIFIER ){
-					i ++;
-					if( tokens[i]->type == DTOK_PIPE ) break;
-					if( tokens[i]->type == DTOK_COMMA ) i ++;
-				}
-				if( tokens[i]->type == DTOK_PIPE ) i ++;
-			}
-			if( i > end ) break;
-		}else if( tname >= DKEY_ENUM && tname <= DKEY_LIST && t == DTOK_LT ){
+		if( tname >= DKEY_ENUM && tname <= DKEY_LIST && t == DTOK_LT ){
 			/* type names: list<int>, enum<a,b,c> ... */
 			i = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, i, end );
 			if( i < 0 ) return -1000;
