@@ -698,13 +698,8 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 		}else if( tk == DTOK_RB || tk == DTOK_RSB ){
 			if( i+1 > end ) break;
 			tk = tokens[i+1]->type;
-			if( tk == DTOK_DOT ){
-				i ++;
-			}else if( tk >= DTOK_IDENTIFIER && tk <= DTOK_WCS ){
-				return i;
-			}else{
-				i ++;
-			}
+			if( tk >= DTOK_IDENTIFIER && tk <= DTOK_WCS ) return i;
+			i ++;
 		}else if( tk == DTOK_RCB ){
 			if( i+1 > end ){
 				if( start < i ) return i-1;
@@ -3661,6 +3656,17 @@ static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
 	if( mt == 0 ) DaoParser_Error3( self, DAO_TYPE_NO_DEFAULT, estart );
 	return mt;
 }
+static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int end )
+{
+	DaoToken **tks = self->tokens->items.pToken;
+	DString *mbs = self->mbs;
+	if( check >= end ) return;
+	self->curLine = tks[check]->line;
+	if( tks[check]->line == tks[check+1]->line && tks[check+1]->type != DTOK_SEMCO ){
+		DString_SetMBS( mbs, "statements not separated properly" );
+		DaoParser_Warn( self, DAO_CTW_NULL, mbs );
+	}
+}
 static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 {
 	DaoNameSpace *myNS = self->nameSpace;
@@ -4357,6 +4363,7 @@ DecoratorError:
 			DaoParser_DeclareVariable( self, tokens[start], 0, NULL );
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
+			DaoParser_CheckStatementSeparation( self, end, to );
 			start = end + 1;
 			continue;
 		}
@@ -4387,7 +4394,7 @@ DecoratorError:
 			abtp = NULL;
 			if( start < end && tokens[start]->name == DTOK_COLON ){ /* V : TYPE */
 				abtp = DaoParser_ParseType( self, start+1, end, & start, NULL );
-				if( abtp == NULL || (start <= end && tokens[start]->name != DTOK_ASSN) ){
+				if( abtp == NULL ){
 					DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 					return 0;
 				}
@@ -4411,10 +4418,7 @@ DecoratorError:
 				}
 			}else{
 				if( abtp == NULL ) abtp = dao_type_any;
-				if( start <= end ){
-					DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
-					return 0;
-				}
+				end = start - 1;
 			}
 			if( cst == 0 && (storeType & DAO_DATA_CONST) && ! self->isDynamicClass ){
 				DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start + 1, end, 0 );
@@ -4548,12 +4552,14 @@ DecoratorError:
 				DaoParser_PopRegisters( self, k-1 );
 			}
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
+			DaoParser_CheckStatementSeparation( self, end, to );
 			start = end + 1;
 			continue;
 		}else{
 			self->warnAssn = 0;
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
+			DaoParser_CheckStatementSeparation( self, end, to );
 			start = end + 1;
 			continue;
 		}
