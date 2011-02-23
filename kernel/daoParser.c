@@ -4452,6 +4452,20 @@ DecoratorError:
 					DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
 					return 0;
 				}
+			}else if( abtp == NULL && cons && topll && storeType2 ==0 ){
+				/* (dao) a, b */
+				for(k=0; k<self->toks->size; k++){
+					DaoToken *varTok = self->toks->items.pToken[k];
+					int reg = DaoParser_GetRegister( self, varTok );
+					int idx = varTok->index;
+					if( reg < 0 ){
+						DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, varTok->string );
+						continue;
+					}
+					DaoParser_GetNormRegister( self, reg, idx, 0, idx );
+				}
+				if( self->errors->size ) return 0;
+				end = start - 1;
 			}else{
 				if( abtp == NULL ) abtp = dao_type_any;
 				end = start - 1;

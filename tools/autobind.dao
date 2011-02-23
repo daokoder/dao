@@ -4888,7 +4888,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	kvmap[ 'namespace' ] = '';
 	lastns = '';
 	#sort( constNumbers )->{ x[0]<=y[0] and x[1]<=y[1] and x[2]<=y[2] };
-	constNumbers.sorta();
+	constNumbers.sort( $ascend );
 	ns_numbers = {=>};
 	for( it in constNumbers ){
 		if( it[4] ) skip;
@@ -4988,7 +4988,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	fout_source.writeln( aliases );
 	kvmap2[ 'ns' ] = 'ns';
 	lastns = '';
-	basic_typedefs.sorta();
+	basic_typedefs.sort( $ascend );
 	for( td in basic_typedefs ){
 		if( td[0] != lastns ){
 			lastns = td[0];
@@ -5021,7 +5021,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	}
 	kvmap[ 'refer' ] = '&';
 	#sort( constCData )->{ x[0]<=y[0] and x[1].name<=y[1].name };
-	constCData.sorta();
+	constCData.sort( $ascend );
 	kvmap[ 'ns' ] = 'ns';
 	lastns = '';
 	for( p in constCData ){
@@ -5037,7 +5037,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	}
 	kvmap[ 'refer' ] = '';
 	#sort( constCDataPtr )->{ x[0]<=y[0] and x[1].name<=y[1].name };
-	constCDataPtr.sorta();
+	constCDataPtr.sort( $ascend );
 	kvmap[ 'ns' ] = 'ns';
 	lastns = '';
 	for( p in constCDataPtr ){
