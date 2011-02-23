@@ -2421,14 +2421,14 @@ void QuickSort( IndexValue *data, int first, int last, int part, int asc )
 	if( upper >= part ) return;
 	if( upper+1 < last ) QuickSort( data, upper+1, last, part, asc );
 }
-static void DaoLIST_Rank( DaoContext *ctx, DValue *p[], int npar, int asc )
+static void DaoLIST_Rank( DaoContext *ctx, DValue *p[], int npar)
 {
 	DaoList *list = p[0]->v.list;
 	DaoList *res = DaoContext_PutList( ctx );
 	IndexValue *data;
 	DValue *items = list->items->data;
 	DValue *ids;
-	dint part = p[1]->v.i;
+	dint part = p[2]->v.i;
 	size_t i, N;
 
 	N = list->items->size;
@@ -2442,24 +2442,16 @@ static void DaoLIST_Rank( DaoContext *ctx, DValue *p[], int npar, int asc )
 		data[i].index = i;
 		data[i].value = items[i];
 	}
-	QuickSort( data, 0, N-1, part, asc );
+	QuickSort( data, 0, N-1, part, ( p[1]->v.e->value == 0 ) ? 1 : 0 );
 	for(i=0; i<N; i++) ids[i].v.i = data[i].index;
 	dao_free( data );
 }
-static void DaoLIST_Ranka( DaoContext *ctx, DValue *p[], int npar )
-{
-	DaoLIST_Rank( ctx, p, npar, 1 );
-}
-static void DaoLIST_Rankd( DaoContext *ctx, DValue *p[], int npar )
-{
-	DaoLIST_Rank( ctx, p, npar, 0 );
-}
-static void DaoLIST_Sort( DaoContext *ctx, DValue *p[], int npar, int asc )
+static void DaoLIST_Sort( DaoContext *ctx, DValue *p[], int npar )
 {
 	DaoList *list = p[0]->v.list;
 	IndexValue *data;
 	DValue *items = list->items->data;
-	dint part = p[1]->v.i;
+	dint part = p[2]->v.i;
 	size_t i, N;
 
 	DaoContext_PutReference( ctx, p[0] );
@@ -2471,17 +2463,9 @@ static void DaoLIST_Sort( DaoContext *ctx, DValue *p[], int npar, int asc )
 		data[i].index = i;
 		data[i].value = items[i];
 	}
-	QuickSort( data, 0, N-1, part, asc );
+	QuickSort( data, 0, N-1, part, ( p[1]->v.e->value == 0 ) ? 1 : 0 );
 	for(i=0; i<N; i++) items[i] = data[i].value;
 	dao_free( data );
-}
-static void DaoLIST_Sorta( DaoContext *ctx, DValue *p[], int npar )
-{
-	DaoLIST_Sort( ctx, p, npar, 1 );
-}
-static void DaoLIST_Sortd( DaoContext *ctx, DValue *p[], int npar )
-{
-	DaoLIST_Sort( ctx, p, npar, 0 );
 }
 void DaoContext_Sort( DaoContext *ctx, DaoVmCode *vmc, int index, int entry, int last )
 {
@@ -2609,10 +2593,8 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Pop,        "pop( self :list<any>, from :enum<front, back> = $back )" },
 	{ DaoLIST_Front,      "front( self :list<@T> )const=>@T" },
 	{ DaoLIST_Top,        "back( self :list<@T> )const=>@T" },
-	{ DaoLIST_Ranka,      "ranka( self :list<any>, k=0 )const=>list<int>" },
-	{ DaoLIST_Rankd,      "rankd( self :list<any>, k=0 )const=>list<int>" },
-	{ DaoLIST_Sorta,      "sorta( self :list<any>, k=0 )" },
-	{ DaoLIST_Sortd,      "sortd( self :list<any>, k=0 )" },
+	{ DaoLIST_Rank,       "rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )const=>list<int>" },
+	{ DaoLIST_Sort,       "sort( self :list<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>list<@T>" },
 	{ DaoLIST_Reverse,    "reverse( self :list<@T> )=>list<@T>" },
 	{ DaoLIST_Iter,       "__for_iterator__( self :list<any>, iter : for_iterator )" },
 	{ NULL, NULL }

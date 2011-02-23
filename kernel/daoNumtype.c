@@ -2831,22 +2831,18 @@ static void QuickSort2( DaoArray *array, int *slice,
 	if( upper+1 < last ) QuickSort2( array, slice, index, upper+1, last, part, asc );
 }
 void DaoArray_GetSliceShape( DaoArray *self, DArray *shape );
-static void DaoArray_Lib_rank( DaoContext *ctx, DValue *par[], int npar, int asc )
+static void DaoArray_Lib_rank( DaoContext *ctx, DValue *par[], int npar )
 {
 	DaoArray *res = DaoContext_PutArray( ctx );
 	DaoArray *array = par[0]->v.array;
 	DaoArray *ref = array->reference;
 	DArray *slice = array->slice;
-	dint part = par[1]->v.i;
+	dint part = par[2]->v.i;
 	int i, N = DaoArray_SliceSize( array );
 	int *index;
 	int *ids;
 
 	if( res == NULL ) return;
-	if( array->numType == DAO_COMPLEX ){
-		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "unable to rank complex array" );
-		return;
-	}
 	if( N == 0 ) return;
 	res->numType = DAO_INTEGER;
 	DaoArray_GetSliceShape( array, res->dimAccum );
@@ -2861,46 +2857,26 @@ static void DaoArray_Lib_rank( DaoContext *ctx, DValue *par[], int npar, int asc
 		index[i] = i;
 		ids[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
 	}
-	QuickSort2( ref ? ref : array, ids, index, 0, N-1, part, asc );
+	QuickSort2( ref ? ref : array, ids, index, 0, N-1, part, ( par[1]->v.e->value == 0 ) ? 1 : 0 );
 	for(i=0; i<N; i++) ids[i] = index[i];
 	dao_free( index );
 }
-static void DaoArray_Lib_ranka( DaoContext *ctx, DValue *par[], int npar )
-{
-	DaoArray_Lib_rank( ctx, par, npar, 1 );
-}
-static void DaoArray_Lib_rankd( DaoContext *ctx, DValue *par[], int npar )
-{
-	DaoArray_Lib_rank( ctx, par, npar, 0 );
-}
-static void DaoArray_Lib_sort( DaoContext *ctx, DValue *par[], int npar, int asc )
+static void DaoArray_Lib_sort( DaoContext *ctx, DValue *par[], int npar )
 {
 	DaoArray *array = par[0]->v.array;
 	DaoArray *ref = array->reference;
 	DArray *slice = array->slice;
-	dint part = par[1]->v.i;
+	dint part = par[2]->v.i;
 	int i, N = DaoArray_SliceSize( array );
 	int *index;
 
 	DaoContext_PutValue( ctx, *par[0] );
-	if( array->numType == DAO_COMPLEX ){
-		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "unable to sort complex array" );
-		return;
-	}
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
 	index = dao_malloc( N * sizeof(int) );
 	for(i=0; i<N; i++) index[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
-	QuickSort2( ref ? ref : array, index, NULL, 0, N-1, part, asc );
+	QuickSort2( ref ? ref : array, index, NULL, 0, N-1, part, ( par[1]->v.e->value == 0 ) ? 1 : 0 );
 	dao_free( index );
-}
-static void DaoArray_Lib_sorta( DaoContext *ctx, DValue *par[], int npar )
-{
-	DaoArray_Lib_sort( ctx, par, npar, 1 );
-}
-static void DaoArray_Lib_sortd( DaoContext *ctx, DValue *par[], int npar )
-{
-	DaoArray_Lib_sort( ctx, par, npar, 0 );
 }
 
 static void DaoArray_Lib_Permute( DaoContext *ctx, DValue *par[], int npar )
@@ -2990,10 +2966,8 @@ static DaoFuncItem numarMeths[] =
 	{ DaoArray_Lib_sum,       "sum( self :array<@ITEM> )=>@ITEM" },
 	{ DaoArray_Lib_varn,      "varn( self :array )=>double" },
 	{ DaoArray_Reverse,       "reverse( self :array<@ITEM> )=>array<@ITEM>" },
-	{ DaoArray_Lib_ranka,     "ranka( self :array, k=0 )=>array<int>" },
-	{ DaoArray_Lib_rankd,     "rankd( self :array, k=0 )=>array<int>" },
-	{ DaoArray_Lib_sorta,     "sorta( self :array, k=0 )" },
-	{ DaoArray_Lib_sortd,     "sortd( self :array, k=0 )" },
+	{ DaoArray_Lib_rank,      "rank( self :array<any>, order :enum<ascend, descend>=$ascend, k=0 )const=>array<int>" },
+	{ DaoArray_Lib_sort,      "sort( self :array<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>array<@T>" },
 
 	{ DaoArray_Lib_FFT,  "fft( self :array<complex>, direct :enum<forward, backward> )" },
 	{ DaoArray_Lib_Iter, "__for_iterator__( self :array<any>, iter : for_iterator )" },
