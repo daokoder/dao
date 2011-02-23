@@ -531,7 +531,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DaoVmCode *vmc=NULL;
 	DaoVmCode *vmcBase;
 	int invokehost = handler && handler->InvokeHost;
-	int i, j, retCode, nCycle;
+	int i, j, print, retCode, nCycle;
 	int exceptCount = 0;
 	DaoVmFrame *topFrame;
 	DaoContext *topCtx;
@@ -2542,6 +2542,14 @@ FinishCall:
 	}
 	if( vmc && vmc->code == DVM_RETURN && topCtx->caller ==NULL && topCtx->regValues ){
 		DValue_Move( *topCtx->regValues[ vmc->c ], & self->returned, NULL );
+	}
+	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
+	if( print || vmSpace->evalCmdline ){
+		if( self->returned.t ){
+			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
+			DValue_Print( self->returned, topCtx, vmSpace->stdStream, NULL );
+			DaoStream_WriteNewLine( vmSpace->stdStream );
+		}
 	}
 	DaoVmProcess_PopContext( self );
 	goto CallEntry;

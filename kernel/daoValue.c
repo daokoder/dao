@@ -237,6 +237,8 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 {
 	DString *name;
 	DaoTypeBase *typer;
+	DMap *cd = cycData;
+	if( cycData == NULL ) cycData = DMap_New(0,0);
 	switch( self.t ){
 	case DAO_INTEGER :
 		DaoStream_WriteInt( stream, self.v.i ); break;
@@ -269,6 +271,7 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 		typer->priv->Print( & self, ctx, stream, cycData );
 		break;
 	}
+	if( cycData != cd ) DMap_Delete( cycData );
 }
 complex16 DValue_GetComplex( DValue self )
 {

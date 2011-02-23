@@ -5874,10 +5874,18 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 		start = rb + 2;
 		arrows ++;
 		j = 0;
-		if( tokens[start]->name == DTOK_LSB ){
-			/* -> | u, v, w | {} */
+
+		/* ->{ block return expressions } */
+		if( tokens[start]->name != DTOK_LCB ) goto InvalidFunctionalSyntax;
+		DaoParser_AddScope( self, DVM_FUNCT, start );
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, right );
+		if( rb < 0 ) goto InvalidFunctional;
+		islast = rb+1 >= right || (tokens[rb+1]->name != DTOK_ARROW);
+
+		if( tokens[start+1]->name == DTOK_PIPE ){
+			/* -> { | u, v, w | } */
 			/* declare explicit variables from available registers saved before: */
-			i = start + 1;
+			i = start + 2;
 			while( i < right ){
 				if( tokens[i]->type != DTOK_IDENTIFIER ) goto InvalidFunctionalSyntax;
 				if( j < fregs->size ){
@@ -5899,11 +5907,11 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 					DaoParser_PushRegister( self );
 				}
 				j ++;
-				if( tokens[i+1]->name == DTOK_RSB ) break;
+				if( tokens[i+1]->name == DTOK_PIPE ) break;
 				if( tokens[i+1]->name != DTOK_COMMA ) goto InvalidFunctionalSyntax;
 				i += 2;
 			}
-			start = i + 2;
+			start = i + 1;
 		}else{
 			/* declare implicit variables with default names: */
 			for(j=0; j<fnames->size; j++){
@@ -5913,14 +5921,6 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 		/* if( j < fregs->size ) printf( "Warning: unused paraemter\n" ); */
 		if( j > fregs->size && tki != DKEY_APPLY ) goto InvalidFunctionalSyntax; /*  XXX */
 
-		if( tokens[start]->name != DTOK_LCB ) goto InvalidFunctionalSyntax;
-		DaoParser_AddScope( self, DVM_FUNCT, start );
-
-		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, right );
-		if( rb < 0 ) goto InvalidFunctional;
-		islast = rb+1 >= right || (tokens[rb+1]->name != DTOK_ARROW);
-
-		/* ->{ block return expressions } */
 		ret = DaoParser_FindOpenToken( self, DKEY_RETURN, start+1, rb, 0 );
 		pos = tokens[rb]->line;
 		/* parse block */

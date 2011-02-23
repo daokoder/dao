@@ -888,7 +888,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			}
 			DaoVmProcess_Eval( self->mainProcess, self->mainNamespace, input, 1 );
 		}else if( DString_MatchMBS( input, varRegex, NULL, NULL ) ){
-			DString_InsertMBS( input, "io.println(", 0, 0, 0 );
+			DString_InsertMBS( input, "io.writeln( '=', ", 0, 0, 0 );
 			DString_AppendMBS( input, ")" );
 			if( callback ){
 				(*callback)( input->mbs );
@@ -963,12 +963,6 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 			DString_SetMBS( self->fileName, "command line codes" );
 			DString_SetMBS( self->mainNamespace->name, "command line codes" );
 			DaoVmProcess_Eval( vmp, ns, self->source, 1 );
-			if( vmp->returned.t ){
-				DaoContext *ctx = DaoVmProcess_MakeContext( vmp, ns->mainRoutine );
-				DaoStream_WriteMBS( self->stdStream, "= " );
-				DValue_Print( vmp->returned, ctx, self->stdStream, NULL );
-				DaoStream_WriteNewLine( self->stdStream );
-			}
 		}
 		DaoVmSpace_ExeCmdArgs( self );
 		if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )

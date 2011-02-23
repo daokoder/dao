@@ -2811,6 +2811,7 @@ static void QuickSort2( DaoArray *array, int *slice,
 	if( first >= last ) return;
 	Swap( array, slice, index, first, pivot );
 
+	pivot = first;
 	while( lower <= upper ){
 		if( asc ){
 			while( lower < last && Compare( array, slice, index, lower, pivot ) <0 ) lower ++;
