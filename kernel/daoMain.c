@@ -41,13 +41,9 @@ int main( int argc, char **argv )
 	vmSpace = DaoInit();
 	idsrc = -1;
 	for(i=1; i<argc; i++){
-		char *ch = strstr( argv[i], ".dao" );
-		char *ch2 = strstr( argv[i], ".cgi" );
-		if( ch && ( strcmp( ch, ".dao" ) ==0 || strcmp( ch, ".dao.o" ) ==0
-					|| strcmp( ch, ".dao.s" ) ==0 ) ){
-			idsrc = i;
-			break;
-		}else if( ch2 && strcmp( ch2, ".cgi" ) == 0 ){
+		if( strcmp( argv[i], "-e" ) ==0 || strcmp( argv[i], "--eval" ) ==0 ) break;
+		/* also allows execution of script files without suffix .dao */
+		if( argv[i][0] != '-' ){
 			idsrc = i;
 			break;
 		}

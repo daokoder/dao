@@ -77,6 +77,7 @@ int main( int argc, char **argv )
 
 	idsrc = -1;
 	for(i=1; i<argc; i++){
+		if( strcmp( argv[i], "-e" ) ==0 || strcmp( argv[i], "--eval" ) ==0 ) break;
 		/* also allows execution of script files without suffix .dao */
 		if( argv[i][0] != '-' ){
 			idsrc = i;

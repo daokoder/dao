@@ -83,6 +83,7 @@ struct DaoNameSpace
 	DString *file;
 	DString *path;
 	DString *name; /* path + file */
+	DString *inputs; /* interactive inputs (load statements and some definitions) */
 	DArray  *sources;
 	DMap    *tokens; /* hash<DString,int> */
 	ullong_t time;

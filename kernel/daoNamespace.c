@@ -744,6 +744,7 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	self->file = DString_New(1);
 	self->path = DString_New(1);
 	self->name = DString_New(1);
+	self->inputs = DString_New(1);
 	self->sources = DArray_New(D_ARRAY);
 	self->tokens = DHash_New(D_STRING,0);
 	self->udfType1 = DaoType_New( "?", DAO_UDF, 0,0 );
@@ -854,6 +855,7 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DString_Delete( self->file );
 	DString_Delete( self->path );
 	DString_Delete( self->name );
+	DString_Delete( self->inputs );
 	DArray_Delete( self->sources );
 	DMap_Delete( self->tokens );
 	dao_free( self );
@@ -1894,7 +1896,7 @@ DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DValue first, DValue second
 	return tuple;
 }
 
-void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, int limit )
+static void NS_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, int limit, int store )
 {
 	DNode *node = DMap_First( self->lookupTable );
 	DValue value = daoNullValue;
@@ -1902,6 +1904,7 @@ void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, in
 	DString *serial = DString_New(1);
 	size_t max = limit * 1000; /* limit per object in KB */
 	int id, pm, up, st;
+
 	for( ; node !=NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DString *name = node->key.pString;
 		id = node->value.pSize;
@@ -1909,6 +1912,7 @@ void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, in
 		st = LOOKUP_ST( id );
 		pm = LOOKUP_PM( id );
 		if( up ) continue;
+		if( st != store ) continue;
 		if( st == DAO_GLOBAL_CONSTANT ) value = DaoNameSpace_GetConst( self, id );
 		if( st == DAO_GLOBAL_VARIABLE ) value = DaoNameSpace_GetVariable( self, id );
 		if( value.t == 0 ) continue;
@@ -1929,6 +1933,21 @@ void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, in
 	DString_Delete( prefix );
 	DString_Delete( serial );
 }
+void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, int limit )
+{
+	int i;
+	NS_Backup( self, proc, fout, limit, DAO_GLOBAL_CONSTANT );
+	if( self->inputs->size ){
+		static const char *digits = "ABCDEFGHIJKLMNOP";
+		unsigned char *mbs = (unsigned char*) self->inputs->mbs;
+		fprintf( fout, "require { " );
+		for(i=0; i<self->inputs->size; i++){
+			fprintf( fout, "%c%c", digits[ mbs[i] / 16 ], digits[ mbs[i] % 16 ] );
+		}
+		fprintf( fout, " }\n" );
+	}
+	NS_Backup( self, proc, fout, limit, DAO_GLOBAL_VARIABLE );
+}
 int DaoParser_Deserialize( DaoParser*, int, int, DValue*, DArray*, DaoNameSpace*, DaoVmProcess* );
 void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin )
 {
@@ -1945,10 +1964,27 @@ void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin )
 		DValue value = daoNullValue;
 		int st = DAO_GLOBAL_VARIABLE;
 		int pm = DAO_DATA_PRIVATE;
-		int id, start = 0;
+		int i, n, id, start = 0;
+		char *mbs;
 
 		DaoParser_LexCode( parser, line->mbs, 0 );
 		if( tokens->size == 0 ) continue;
+		if( tokens->items.pToken[start]->name == DKEY_REQUIRE ){
+			if( tokens->size < 3 ) continue;
+			DString_Clear( line );
+			n = tokens->items.pToken[start+2]->string->size;
+			mbs = tokens->items.pToken[start+2]->string->mbs;
+			for(i=0; i<n; i++){
+				char c1 = mbs[i];
+				char c2 = mbs[i+1];
+				if( c1 < 'A' || c1 > 'P' ) continue;
+				DString_AppendChar( line, (char)((c1-'A')*16 + (c2-'A')) );
+				i += 1;
+			}
+			/* printf( "%s\n", line->mbs ); */
+			DaoVmProcess_Eval( proc, self, line, 0 );
+			continue;
+		}
 		switch( tokens->items.pToken[start]->name ){
 		case DKEY_PRIVATE   : pm = DAO_DATA_PRIVATE;   start += 1; break;
 		case DKEY_PROTECTED : pm = DAO_DATA_PROTECTED; start += 1; break;

@@ -843,7 +843,7 @@ DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file )
 static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 {
 	DString *input = DString_New(1);
-	const char *varRegex = "^ %s* %w+ %s* $";
+	const char *varRegex = "^ %s* = %s* %S+";
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
 	const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
 	char *chs;
@@ -888,6 +888,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			}
 			DaoVmProcess_Eval( self->mainProcess, self->mainNamespace, input, 1 );
 		}else if( DString_MatchMBS( input, varRegex, NULL, NULL ) ){
+			DString_ChangeMBS( input, "^ %s* = %s*", "", 0 );
 			DString_InsertMBS( input, "io.writeln( '=', ", 0, 0, 0 );
 			DString_AppendMBS( input, ")" );
 			if( callback ){
