@@ -1684,9 +1684,13 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 		type = type->nested->items.pType[0];
 		if( dA.t == DAO_OBJECT ) dA.v.object = dA.v.object->that;
 		if( type->tid == DAO_UNION ){
-			int i, mt, id = 0, max = 0;
+			int i, mt = 0, id = 0, max = 0;
 			for(i=0; i<type->nested->size; i++){
-				mt = DaoType_MatchValue( type->nested->items.pType[i], dA, NULL );
+				if( dA.t == DAO_TYPE ){
+					mt = DaoType_MatchTo( dA.v.type, type->nested->items.pType[i], NULL );
+				}else{
+					mt = DaoType_MatchValue( type->nested->items.pType[i], dA, NULL );
+				}
 				if( mt > max ){
 					max = mt;
 					id = i + 1;
@@ -3797,6 +3801,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	DaoType *at, *ct = self->regTypes[ vmc->c ];
 	DValue va = *self->regValues[ vmc->a ];
 	DValue *vc = self->regValues[ vmc->c ];
+	DRoutine *rout;
 	DString *sb = NULL;
 	DLong *lb = NULL;
 	DNode *node;
@@ -3893,6 +3898,36 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	/* printf( "mt = %i, ct = %s\n", mt, ct->name->mbs ); */
 	if( mt == DAO_MT_EQ || (mt && ct->tid == DAO_INTERFACE) ){
 		DValue_Copy( vc, va );
+		return;
+	}
+	if( va.t == DAO_OBJECT ){
+		DaoContext *ctx;
+		DaoClass *scope = self->object ? self->object->myClass : NULL;
+		DValue typeval = daoNullType;
+		DValue *p[2] = { NULL, & typeval };
+		p[0] = & va;
+		typeval.v.type = ct;
+		rout = (DRoutine*)DaoClass_FindOperator( va.v.object->myClass, "cast", scope );
+		if( rout ) rout = DRoutine_GetOverLoad( rout, NULL, p, 2, DVM_CALL );
+		if( rout == NULL ) goto FailConversion;
+
+		ctx = DaoVmProcess_MakeContext( self->process, (DaoRoutine*) rout );
+
+		if( ! DRoutine_PassParams( rout, NULL, ctx->regValues, p, NULL, 2, DVM_CALL ) ) goto FailConversion;
+
+		DaoVmProcess_PushContext( self->process, ctx );
+		ctx->process->topFrame->returning = self->vmc->c;
+		return;
+	}else if( va.t == DAO_CDATA ){
+		DaoCData *cdata = va.v.cdata;
+		DValue typeval = daoNullType;
+		DValue *p[2] = { NULL, & typeval };
+		p[0] = & va;
+		typeval.v.type = ct;
+		rout = (DRoutine*) DaoFindFunction2( (DaoTypeBase*) cdata->typer, "cast" );
+		if( rout ) rout = DRoutine_GetOverLoad( rout, NULL, p, 2, DVM_CALL );
+		if( rout ) DaoFunction_SimpleCall( (DaoFunction*) rout, self, p, 2 );
+		if( rout == NULL ) goto FailConversion;
 		return;
 	}
 	sb = DString_New(1);

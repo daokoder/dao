@@ -1225,13 +1225,14 @@ DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *
 			if( gt < 0 ) goto WrongType;
 			vartype = DaoParser_ParseType( self, start + 2, gt, newpos, types );
 			if( vartype == NULL || *newpos != gt ) goto WrongType;
-			if( vartype->tid != DAO_UNION ){
-				printf( "Error: expecting variant type instead of %s\n", vartype->name->mbs );
-				goto WrongType;
+			if( vartype->tid == DAO_UNION ){
+				type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_UNION, initype, 
+						vartype->nested->items.pType, vartype->nested->size );
+			}else{
+				type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_UNION, initype, 
+						&vartype, 1 );
 			}
 			*newpos = gt + 1;
-			type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_UNION, initype, 
-					vartype->nested->items.pType, vartype->nested->size );
 			if( type == NULL ) goto WrongType;
 		}
 		GC_IncRC( vartype );
@@ -2126,7 +2127,8 @@ int DaoParser_ParseParams( DaoParser *self )
 			m1 = i;  m2 = rb;
 			if( i+1 != rb ) goto ErrorMiddleValist;
 		}else if( tki == DTOK_ID_INITYPE ){
-			abstype = DaoNameSpace_MakeType( myNS, tok->mbs, DAO_INITYPE, 0,0,0 );
+			abstype = DaoParser_ParseType( defparser, i, rb-1, &i, NULL );
+			if( abstype == NULL ) goto ErrorInvalidParam;
 			abstype = DaoNameSpace_GetType( myNS, (DaoBase*) abstype );
 		}else if( i+1<rb && (tokens[i+1]->name == DTOK_COLON
 					|| tokens[i+1]->name == DTOK_ASSN
@@ -6894,10 +6896,10 @@ static int DaoParser_FindRootOper( DaoParser *self, int start, int end, int *opt
 	int imax=0, bc1, bc2, bc3, i = 0;
 	bc1 = bc2 = bc3 = 0;
 	for(i=start; i<=end; i++){
-		int tname = tokens[i]->name;
+		int m = tokens[i]->name;
 		int t = i < end ? tokens[i+1]->type : 0;
-		if( tname >= DKEY_ENUM && tname <= DKEY_LIST && t == DTOK_LT ){
-			/* type names: list<int>, enum<a,b,c> ... */
+		if( (m == DTOK_ID_INITYPE || (m >= DKEY_ENUM && m <= DKEY_LIST)) && t == DTOK_LT ){
+			/* type names: @T<int|string>, list<int>, enum<a,b,c> ... */
 			i = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, i, end );
 			if( i < 0 ) return -1000;
 			continue;

@@ -1,0 +1,32 @@
+
+class Test
+{
+	var value = { 123, 456 };
+
+	# conversion to int:
+	routine cast( @T<int> ) => @T { # or simply: => int
+		return value.sum();
+	}
+	# conversion to float or string:
+	routine cast( @T<float|string> ) => @T {
+		switch( @T ?< float|string ){
+		case 1 : return value.sum() * 1.23; # convert to float
+		case 2 : return value.join(); # convert to string
+		}
+		return 0;
+	}
+}
+
+t = Test();
+
+a = (int)t;
+b = (string)t;
+c = (float)t;
+#d = (long)t; # error
+
+io.writeln( a, b, c )
+
+e = Exception( 'testing' );
+io.writeln( (string)e );
+
+# a = (int)e; # error
