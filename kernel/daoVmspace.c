@@ -697,14 +697,15 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 		DString *name = NULL, *value = NULL;
 		i ++;
 		nkey.v.i ++;
+		offset = 0;
 		if( s->mbs[0] == '-' ){
 			offset += 1;
 			if( s->mbs[1] == '-' ) offset += 1;
 		}
-		tk = DaoToken_Check( s->mbs, s->size-offset, & eq );
+		tk = DaoToken_Check( s->mbs+offset, s->size-offset, & eq );
 		if( tk == DTOK_IDENTIFIER && s->mbs[eq+offset] == '=' ){
-			DString_SubString( s, key, offset, eq-offset );
-			DString_SubString( s, val, eq+1, s->size-eq );
+			DString_SubString( s, key, offset, eq );
+			DString_SubString( s, val, eq+offset+1, s->size-offset-eq );
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, val );
 
@@ -713,6 +714,18 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 			DString_SubString( s, key, 0, eq );
 			DaoMap_Insert( cmdarg, skey, sval );
 			DaoMap_Insert( cmdarg, nkey, sval );
+		}else if( tk == DTOK_IDENTIFIER && offset && i < array->size ){
+			DString_SubString( s, key, offset, s->size-offset );
+			DString_Assign( val, array->items.pString[i] );
+			DArray_Append( argNames, key );
+			DArray_Append( argValues, val );
+
+			DaoList_Append( argv, sval );
+			DaoMap_Insert( cmdarg, skey, sval );
+			DString_Assign( key, s );
+			DaoMap_Insert( cmdarg, skey, sval );
+			DaoMap_Insert( cmdarg, nkey, sval );
+			i += 1;
 		}else{
 			DString_Clear( key );
 			DString_Assign( val, s );
@@ -1013,7 +1026,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 			DaoContext_Init( ctx, mainRoutine );
 			if( DaoContext_InitWithParams( ctx, vmp, array->items.pValue, N ) == 0 ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
+				if( mainRoutine->routHelp )
+					DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
 				DArray_Delete( array );
 				return 0;
 			}
