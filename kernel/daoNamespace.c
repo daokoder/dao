@@ -1716,7 +1716,7 @@ DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto,
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
 	if( DaoParser_ParsePrototype( defparser, parser, key, 0 ) < 0 ) goto Error;
-	if( DaoParser_ParseParams( parser ) == 0 ) goto Error;
+	if( DaoParser_ParseParams( parser, key ) == 0 ) goto Error;
 	return func;
 Error:
 	DArray_Clear( func->routTable ); /* routTable contains func */

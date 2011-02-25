@@ -144,7 +144,7 @@ void DaoParser_Delete( DaoParser *self );
 
 int DaoParser_LexCode( DaoParser *self, const char *source, int replace );
 int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start );
-int DaoParser_ParseParams( DaoParser *self );
+int DaoParser_ParseParams( DaoParser *self, int defkey );
 int DaoParser_ParseScript( DaoParser *self );
 int DaoParser_ParseRoutine( DaoParser *self );
 

@@ -4,16 +4,22 @@ class Test
 	var value = { 123, 456 };
 
 	# conversion to int:
-	routine cast( @T<int> ) => @T { # or simply: => int
+	operator cast() => int { # or simply: => int
+		io.writeln( 'casting to int' );
 		return value.sum();
 	}
 	# conversion to float or string:
 	routine cast( @T<float|string> ) => @T {
+		io.writeln( 'casting to float or string' )
 		switch( @T ?< float|string ){
 		case 1 : return value.sum() * 1.23; # convert to float
 		case 2 : return value.join(); # convert to string
 		}
 		return 0;
+	}
+	operator cast() => array<int> {
+		io.writeln( 'casting to array<int>' );
+		return (array<int>) value
 	}
 }
 
@@ -23,8 +29,9 @@ a = (int)t;
 b = (string)t;
 c = (float)t;
 #d = (long)t; # error
+v = (array<int>)t;
 
-io.writeln( a, b, c )
+io.writeln( a, b, c, v )
 
 e = Exception( 'testing' );
 io.writeln( (string)e );

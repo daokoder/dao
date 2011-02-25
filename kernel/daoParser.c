@@ -1992,7 +1992,7 @@ static void DaoParser_PopRegisters( DaoParser *self, int n )
 	}
 	self->locRegCount -= n;
 }
-int DaoParser_ParseParams( DaoParser *self )
+int DaoParser_ParseParams( DaoParser *self, int defkey )
 {
 	DaoToken **tokens = self->partoks->items.pToken;
 	DaoParser *defparser = self->defParser;
@@ -2015,7 +2015,7 @@ int DaoParser_ParseParams( DaoParser *self )
 	int isMeth, notStatic, notConstr;
 	int i, j, k, rb, m1=0, m2=end;
 	int ec = 0, line = tokens[0]->line;
-	int hasdeft = 0;
+	int hasdeft = 0, selfpar = 0;
 	unsigned char tki;
 
 	self->error = 0;
@@ -2052,7 +2052,10 @@ int DaoParser_ParseParams( DaoParser *self )
 	i = start + 1;
 	tki = tokens[i]->name;
 	routine->parCount = 0;
-	if( tki == DKEY_SELF ) routine->attribs |= DAO_ROUT_PARSELF;
+	if( tki == DKEY_SELF ){
+		routine->attribs |= DAO_ROUT_PARSELF;
+		selfpar = 1;
+	}
 
 	isMeth = klass && routine != klass->classRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
@@ -2061,6 +2064,7 @@ int DaoParser_ParseParams( DaoParser *self )
 	if( (isMeth || inter) && tki != DKEY_SELF && notStatic && notConstr ){
 		DaoType *hostype = self->hostType;
 		DaoToken *tk;
+		selfpar = 1;
 		DString_SetMBS( mbs, "self" );
 		MAP_Insert( DArray_Top( self->localVarMap ), mbs, self->locRegCount );
 		if( routine->type == DAO_ROUTINE && routine->minimal ==0 ){
@@ -2230,6 +2234,7 @@ int DaoParser_ParseParams( DaoParser *self )
 		routine->attribs |= DAO_ROUT_ISCONST;
 		i += 1;
 	}
+	k = pname->size;
 	abstype = NULL;
 	if( i <= end ){
 		m1 = i;
@@ -2246,6 +2251,24 @@ int DaoParser_ParseParams( DaoParser *self )
 	}else{
 		abstype = DaoType_New( "?", DAO_UDF, 0,0 );
 		DString_AppendMBS( pname, "=>?" );
+	}
+	if( defkey == DKEY_OPERATOR && strcmp( routine->routName->mbs, "cast" ) ==0 ){
+		DaoType *tt;
+		if( nested->size > selfpar ) goto ErrorTooManyParams;
+		if( abstype == NULL || abstype->tid == DAO_UDF ) goto ErrorInvalidReturn;
+		tt = DaoNameSpace_GetType( myNS, (DaoBase*) abstype );
+		DString_Erase( pname, k, -1 );
+		DString_AppendChar( pname, ',' );
+		DString_Append( pname, tt->name );
+		DString_AppendMBS( pname, "=>" );
+		DString_Append( pname, abstype->name );
+		tt = DaoType_New( "", DAO_PAR_NAMED, (DaoBase*) tt, NULL );
+		DArray_Append( nested, (void*) tt );
+		dft = daoNullValue;
+		dft.ndef = 1;
+		DRoutine_AddConstValue( (DRoutine*) routine, dft );
+		DaoParser_PushRegister( self );
+		routine->parCount ++;
 	}
 	DString_AppendMBS( pname, ">" );
 	GC_IncRCs( nested );
@@ -2977,6 +3000,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start + 2, -1 );
 		}
 		for( k=start; k<=r1; k++ ) DString_Append( mbs, tokens[k]->string );
+		while( k <= to && tokens[k]->name != DTOK_LCB )
+			DString_Append( mbs, tokens[k++]->string );
 		rout= DaoClass_GetOvldRoutine( scope.v.klass, mbs );
 		if( ! rout ){
 			DMap *hash = scope.v.klass->ovldRoutMap;
@@ -3032,6 +3057,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 		}
 		DString_Clear( mbs );
 		for( k=start; k<=right; k++ ) DString_Append( mbs, tokens[k]->string );
+		while( k <= to && tokens[k]->name != DTOK_LCB && tokens[k]->name != DTOK_SEMCO )
+			DString_Append( mbs, tokens[k++]->string );
 
 		if( self->isClassBody ){
 			klass = self->hostClass;
@@ -3168,7 +3195,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 		}
 		parser->uplocs = uplocs;
 		parser->outParser = self;
-		if( DaoParser_ParseParams( parser ) == 0 ) return -1;
+		if( DaoParser_ParseParams( parser, DKEY_ROUTINE ) == 0 ) return -1;
 		parser->outParser = NULL;
 		if( ! DaoParser_ParseRoutine( parser ) ){
 			DString_SetMBS( mbs, "invalid method in anonymous class" );
@@ -3198,7 +3225,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 		if( newparser ) DaoParser_Delete( newparser );
 		return right + 1;
 	}
-	if( DaoParser_ParseParams( parser ) == 0 ) return -1;
+	if( DaoParser_ParseParams( parser, tki ) == 0 ) return -1;
 	if( k && self->decoFuncs->size ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) return -1;
 		DaoParser_DecorateRoutine( self, rout );
@@ -3517,7 +3544,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	parser->defined = 1;
 
 	DaoClass_DeriveClassData( klass );
-	DaoParser_ParseParams( parser );
+	DaoParser_ParseParams( parser, DKEY_ROUTINE );
 	if( DaoParser_ParseCodeSect( parser, 0, parser->tokens->size-1 )==0 ){
 		if( DString_EQ( self->fileName, parser->fileName ) )
 			DArray_AppendArray( self->errors, parser->errors );
@@ -7334,7 +7361,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start, int end, int regFix
 	parser->defParser = self;
 	parser->parStart = start + 1;
 	parser->parEnd = lb2 - 1;
-	if( DaoParser_ParseParams( parser ) == 0 ) goto ErrorParamParsing;
+	if( DaoParser_ParseParams( parser, DKEY_ROUTINE ) == 0 ) goto ErrorParamParsing;
 
 	for( i=lb2+1; i<rb2; i++ ) DArray_Append( parser->tokens, tokens[i] );
 	if( tokens[rb2-1]->name != DTOK_SEMCO ){
