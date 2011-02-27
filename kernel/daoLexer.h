@@ -143,8 +143,6 @@ enum DaoKeyNames
 	DKEY_NOT ,
 	DKEY_IF ,
 	DKEY_ELSE ,
-	DKEY_ELIF ,
-	DKEY_ELSEIF ,
 	DKEY_FOR ,
 	DKEY_IN ,
 	DKEY_DO ,

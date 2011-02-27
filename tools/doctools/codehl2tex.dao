@@ -63,8 +63,6 @@ class DaoCodeHL : CodeHL
 		"do"      => "\\STMTKEY{",
 		"if"      => "\\STMTKEY{",
 		"else"    => "\\STMTKEY{",
-		"elif"    => "\\STMTKEY{",
-		"elseif"  => "\\STMTKEY{",
 		"while"   => "\\STMTKEY{",
 		"for"     => "\\STMTKEY{",
 		"until"     => "\\STMTKEY{",
@@ -114,9 +112,9 @@ routine replace( tok : string )
 		ch = tok[i:i];
 		if( ch == '\\' ){
 			output += '\\textbackslash';
-#		}elif( ch == '\n' ){
+#		}else if( ch == '\n' ){
 #			output += '\\newline\n\n';
-		}elif( chars.find( ch ) >=0 ){
+		}else if( chars.find( ch ) >=0 ){
 			output += "\\" + ch;
 		}else{
 			output += ch;
@@ -136,19 +134,19 @@ routine DaoCodeHL::Highlight( source : string, name='' )
 		tok = tokens[i];
 		if( tok[0:0] == "#" && tok[1:1] != "{" ){
 			output += "\\COMMENT{" + replace( tok ) + "}\n";
-		}elif( tok[0:0] == "\"" || tok[0:0] == "\'" ){
+		}else if( tok[0:0] == "\"" || tok[0:0] == "\'" ){
 			output += "\\STRING{" + replace( tok ) + "}";
-		}elif( tok[0:0] == "@" ){
+		}else if( tok[0:0] == "@" ){
 			output += "\\TYPE{" + replace( tok ) + "}";
-		}elif( tok[0:0] == "$" ){
+		}else if( tok[0:0] == "$" ){
 			output += "\\CONST{" + replace( tok ) + "}";
-		}elif( tok == "[" || tok == "]" || tok == "(" || tok == ")" ){
+		}else if( tok == "[" || tok == "]" || tok == "(" || tok == ")" ){
 			output += tok; 
-		}elif( HilitMap.has( tok ) ){
+		}else if( HilitMap.has( tok ) ){
 			output += HilitMap[tok] + replace( tok ) + "}";
-		}elif( HilitMap3.has( tok ) ){
+		}else if( HilitMap3.has( tok ) ){
 			output += HilitMap3[tok] + replace( tok ) + "}";
-		}elif( Library.has( tok ) ){
+		}else if( Library.has( tok ) ){
 			output += "\\METHOD{" + replace( tok );
 			if( i+1<size ){
 				if( tokens[i] == "." ){
@@ -157,15 +155,15 @@ routine DaoCodeHL::Highlight( source : string, name='' )
 				}
 			}
 			output += "}";
-		}elif( tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( tok.pfind( '^[%d%C_]+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}elif( tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( tok.pfind( '^%d* %.%d+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}elif( tok[0:1] == "#{" ){
+		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );
 			tok.replace( '\n', '}\n\\COMMENT{' );
 			output += "\\COMMENT{" + tok + "}";
-		}elif( tok == "\n" ){
+		}else if( tok == "\n" ){
 			output += tok;
 		}else{
 			output += replace( tok );
@@ -185,7 +183,7 @@ code = "class Foo{
 
 if( a == 123 ){
 	io.println( \"hello world!\" );
-}elif( b ){
+}else if( b ){
 	c = [ 1, 2, 3 ]
 }
 "
@@ -249,16 +247,16 @@ routine CppCodeHL::Highlight( source : string, name='' )
 #}
 		if( HilitMap.has( tok ) ){
 			output += HilitMap[tok] + tok + "}";
-		}elif( tok[0:0] == "\"" || tok[0:0] == "\'" ){
+		}else if( tok[0:0] == "\"" || tok[0:0] == "\'" ){
 			output += "\\STRING{" + replace( tok ) + "}";
-		}elif( tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( tok.pfind( '^[%d%C_]+$' ) ){
 			output += "\\NUMBER{" + replace(tok) + "}";
-		}elif( tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( tok.pfind( '^%d* %.%d+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}elif( tok == "#" ){
+		}else if( tok == "#" ){
 			output += "\\SPECIAL{\\#" + tokens[i+1] + "}";
 			i ++;
-		}elif( tok == "/" && i+1<size && tokens[i+1]=="/" ){
+		}else if( tok == "/" && i+1<size && tokens[i+1]=="/" ){
 			output += "\\COMMENT{//";
 			i += 2;
 			tok = tokens[i]
@@ -270,7 +268,7 @@ routine CppCodeHL::Highlight( source : string, name='' )
 				tok = tokens[i];
 			}
 			output += replace( tmp ) + "}";
-		}elif( tok == "/" && i+1<size && tokens[i+1]=="*" ){
+		}else if( tok == "/" && i+1<size && tokens[i+1]=="*" ){
 			output += "\\COMMENT{/*";
 			i += 2;
 			tmp = "";
@@ -324,16 +322,16 @@ routine BnfCodeHL::Highlight( source : string, name = '' )
 		tok = tokens[i];
 		if( tok[0:0] == "#" && tok[1:1] != "{" ){
 			output += "\\COMMENT{" + replace( tok ) + "}";
-		}elif( tok[0:0] == "\"" || tok[0:0] == "\'" ){
+		}else if( tok[0:0] == "\"" || tok[0:0] == "\'" ){
 			output += "\\STRING{" + replace( tok ) + "}";
-		}elif( HilitMap.has( tok ) ){
+		}else if( HilitMap.has( tok ) ){
 			output += HilitMap[tok] + replace( tok ) + "}";
-		# }elif( tok =~/^(\d|\C|_)+$/ ){
-		}elif( tok.pfind( '^[%d%C_]+$' ) ){
+		# }else if( tok =~/^(\d|\C|_)+$/ ){
+		}else if( tok.pfind( '^[%d%C_]+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}elif( tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( tok.pfind( '^%d* %.%d+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}elif( tok[0:1] == "#{" ){
+		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );
 			tok.replace( '\n', '}\n\\COMMENT{' );
 			output += "\\COMMENT{" + tok + "}";

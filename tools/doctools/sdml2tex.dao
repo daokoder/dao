@@ -193,34 +193,34 @@ routine Sdml2Tex::Replace( src = '' ) #=> string
 				default : out += "$\\backslash$" + ch2;
 			}
 			i ++;
-		}elif( chars.find( ch ) >=0 ){
+		}else if( chars.find( ch ) >=0 ){
 			out += '\\' + ch;
-		}elif( ch == "^" ){
+		}else if( ch == "^" ){
 			out += "$\\land$";
-		}elif( ch == "$" ){
+		}else if( ch == "$" ){
 			out += "\\$";
-		}elif( ch == "|" ){
+		}else if( ch == "|" ){
 			out += "$|$";
-		}elif( ch == "<" ){
+		}else if( ch == "<" ){
 			s0 = src[i:i+1];
 			s1 = src[i:i+2];
 			s2 = src[i:i+3];
 			if( s1 == "<*>" ){
 				out += "{\\bf ";
 				i += 2;
-			}elif( s1 == "<%>" ){
+			}else if( s1 == "<%>" ){
 				out += "{\\it ";
 				i += 2;
-			}elif( s2 == "</*>" ){
+			}else if( s2 == "</*>" ){
 				out += "}";
 				i += 3;
-			}elif( s2 == "</%>" ){
+			}else if( s2 == "</%>" ){
 				out += "}";
 				i += 3;
 			}else{
 				out += "$<$";
 			}
-		}elif( ch == ">" ){
+		}else if( ch == ">" ){
 			out += "$>$";
 		}else{
 			out += ch;
@@ -282,7 +282,7 @@ routine Sdml2Tex::MakeTable( headers :list<string>, cells :list<list<string> >, 
 	for( i = 0 : colm-1 ){
 		if( widths[i] > thd )
 			widths[i] = thd;
-		elif( widths[i] < thd/2 )
+		else if( widths[i] < thd/2 )
 			widths[i] = thd/2;
 	}
 	sum = 0.0;

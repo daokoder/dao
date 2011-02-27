@@ -121,7 +121,7 @@ routine Sdml2Html::MakeLink( name='', tok1='', tok2='' )
 	code = "<a href=\"";
 	if( tok2.size() ){
 		code += "/space" + tok1 + "/page/" + tok2;
-	}elif( tok1.pfind( '^ %w+ (|#[%d%.]*) $' ) ){
+	}else if( tok1.pfind( '^ %w+ (|#[%d%.]*) $' ) ){
 		code += "@(url_base_" + suffix + ")/page/" + tok1;
 	}else{
 		code += tok1;

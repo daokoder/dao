@@ -2385,8 +2385,7 @@ static int DaoParser_CompleteScope( DaoParser *self, int tokid )
 			return 1;
 		}
 		tc = self->vmcTop->code;
-		if( tk == DKEY_ELIF && (tc == DVM_IF || tc ==DVM_ELIF) ) return 1;
-		if( tk == DKEY_ELSE && (tc == DVM_IF || tc ==DVM_ELIF) ) return 1;
+		if( tk == DKEY_ELSE && tc == DVM_IF ) return 1;
 		if( tk == DKEY_RESCUE && (tc == DVM_TRY || tc == DVM_RESCUE) ) return 1;
 	}
 	return 1;
@@ -3715,8 +3714,8 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 	self->curLine = tks[check]->line;
 	if( tks[check]->line != tks[check+1]->line ) return;
 	switch( tks[check+1]->name ){
-	case DTOK_RCB : case DTOK_SEMCO : case DKEY_ELSE : case DKEY_ELIF :
-	case DKEY_ELSEIF : case DKEY_UNTIL : case DKEY_RESCUE :
+	case DTOK_RCB : case DTOK_SEMCO : case DKEY_ELSE :
+	case DKEY_UNTIL : case DKEY_RESCUE :
 		break;
 	default :
 		DString_SetMBS( mbs, "statements not separated properly" );
@@ -4056,10 +4055,6 @@ DecoratorError:
 			continue;
 		case DKEY_IF :
 			if( ( rbrack = DaoParser_MakeWhileLogic( self, DVM_IF, start ) ) <0 ) return 0;
-			start = rbrack+1;
-			continue;
-		case DKEY_ELIF : case DKEY_ELSEIF :
-			if( ( rbrack = DaoParser_MakeWhileLogic( self, DVM_ELIF, start ) ) <0 ) return 0;
 			start = rbrack+1;
 			continue;
 		case DKEY_ELSE :
