@@ -3735,7 +3735,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	DMap *switchMap;
 	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int i, rbrack, end, temp, temp2, decl;
-	int rb, reg1, topll = 0;
+	int rb, reg1, oldcount, topll = 0;
 	int storeType = 0;
 	int storeType2 = 0;
 	int reg, N = 0;
@@ -4112,6 +4112,7 @@ DecoratorError:
 			if( comma < 0 ) comma = colon;
 			while( last < colon ){
 				int dots = DaoParser_FindOpenToken( self, DTOK_DOTS, last, comma, 0 );
+				int oldcount = self->locRegCount;
 				front = self->vmcFirst;
 				back = self->vmcLast;
 				if( dots <0 ){
@@ -4156,8 +4157,8 @@ DecoratorError:
 				}
 				/* remove GETC so that CASETAG will be together,
 				   which is neccessary to properly setup switch table: */
-				k = DaoParser_PopCodes( self, front, back );
-				DaoParser_PopRegisters( self, k-1 );
+				DaoParser_PopCodes( self, front, back );
+				DaoParser_PopRegisters( self, self->locRegCount - oldcount );
 				DaoParser_AddCode( self, DVM_CASETAG, cst, 0, 0, last, 0, colon );
 				last = comma + 1;
 				comma = DaoParser_FindOpenToken( self, DTOK_COMMA, last, colon, 0 );
@@ -4229,6 +4230,9 @@ DecoratorError:
 			if( rb < 0 ) return 0;
 			if( rb==to || ( tokens[rb+1]->name != DTOK_ASSN && tokens[rb+1]->name != DTOK_CASSN ) ){
 				int code = self->vmcLast->code;
+				int semco = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+1, rb, 0 );
+				int eq = DaoParser_FindOpenToken( self, DTOK_CASSN, start+1, rb, 0 );
+				if( eq <0 ) eq = DaoParser_FindOpenToken( self, DTOK_ASSN, start+1, rb, 0 );
 				if( code != DVM_IF && code != DVM_ELIF && code != DVM_ELSE
 						&& code != DVM_WHILE && code != DVM_FOR && code != DVM_DO
 						&& code != DVM_SWITCH && code != DVM_TRY && code != DVM_RESCUE ){
@@ -4237,7 +4241,7 @@ DecoratorError:
 						if( cst ) DaoParser_GetNormRegister( self, cst, start, 0, rb );
 						start = rb +1;
 						continue;
-					}else{
+					}else if( semco < 0 && eq < 0 ){
 						end = DaoParser_FindPhraseEnd( self, start+1, to );
 						if( end+1 == rb || tokens[end+1]->name == DTOK_COMMA ){
 							reg = DaoParser_MakeArithTree( self, start, rb, & cst, -1, 0 );
@@ -4427,6 +4431,7 @@ DecoratorError:
 			start = end + 1;
 			continue;
 		}
+		oldcount = self->locRegCount;
 		front = self->vmcFirst;
 		back = self->vmcLast;
 		temp = (start >= end); /* "V1" or "var V1" */
@@ -4623,8 +4628,8 @@ DecoratorError:
 				}
 			}
 			if( cst && remove ){
-				k = DaoParser_PopCodes( self, front, back );
-				DaoParser_PopRegisters( self, k-1 );
+				DaoParser_PopCodes( self, front, back );
+				DaoParser_PopRegisters( self, self->locRegCount - oldcount );
 			}
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			DaoParser_CheckStatementSeparation( self, end, to );
@@ -6112,8 +6117,7 @@ static int DaoParser_MakeConst( DaoParser *self, DaoInode *front, DaoInode *back
 	opB = self->vmcLast->b;
 	DaoParser_PopCodes( self, front, back );
 	for(i=regcount; i<self->locRegCount; i++) MAP_Erase( self->routine->localVarType, i );
-	self->locRegCount = regcount;
-	DArray_Resize( self->regLines, regcount, 0 );
+	DaoParser_PopRegisters( self, self->locRegCount - regcount );
 	/* Execute the instruction to get the const result: */
 	DaoVmCode_Set( & vmcValue, code, 1, opB, 0, self->lexLevel, tokPos, start, mid, end );
 	value = DaoVmProcess_MakeEnumConst( myNS->vmpEvalConst, 
@@ -7157,6 +7161,7 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
 	int reg, pos = self->tokens->items.pToken[ start ]->line;
 	int first = start - (left_unary != 0);
 	int last = end + (left_unary == 0);
+	int oldcount = self->locRegCount;
 	ushort_t opimag = 0;
 	ushort_t  opc = 0;
 	DaoNameSpace *myNS = self->nameSpace;
@@ -7210,8 +7215,8 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
 	}
 
 	if( c && opc != DVM_INCR && opc != DVM_DECR ){
-		int i = DaoParser_PopCodes( self, front, back );
-		DaoParser_PopRegisters( self, i );
+		DaoParser_PopCodes( self, front, back );
+		DaoParser_PopRegisters( self, self->locRegCount - oldcount );
 		value = DaoVmProcess_MakeArithConst( myNS->vmpEvalConst, opc,
 				DaoParser_GetVariable( self, c ), value );
 		if( value.t == 0 ){
@@ -7492,7 +7497,7 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 {
 	int i, rb, optype, pos, tokPos, reg1, reg2, reg3, regC;
 	int cgeto = -1, cgetc = -1;
-	int was, c1, c2, comma;
+	int was, c1, c2, comma, oldcount = self->locRegCount;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *mbs = self->mbs;
 	DaoInode *front = self->vmcFirst;
@@ -7910,8 +7915,8 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 				value.v.i = ! v;
 			}
 			/* for( i=0; i<self->vmCodes->size; i++) DaoVmCodeX_Print( *self->vmCodes->items.pVmc[i], NULL ); */
-			i = DaoParser_PopCodes( self, front, back );
-			DaoParser_PopRegisters( self, i );
+			DaoParser_PopCodes( self, front, back );
+			DaoParser_PopRegisters( self, self->locRegCount - oldcount );
 			*cst = DRoutine_AddConstValue( (DRoutine*)self->routine, value );
 			*cst = LOOKUP_BIND_LC( *cst );
 			return DaoParser_GetNormRegister( self, *cst, start, 0, end );
