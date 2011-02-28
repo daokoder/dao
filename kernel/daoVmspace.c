@@ -75,11 +75,11 @@ enum{
 	DAO_MODULE_DLL
 };
 
-static const char *const copy_notice =
-"\n  Dao Virtual Machine (" DAO_VERSION ", " __DATE__ ")\n"
+const char *const dao_copy_notice =
+"  Dao Virtual Machine (" DAO_VERSION ", " __DATE__ ")\n"
 "  Copyright(C) 2006-2011, Fu Limin.\n"
 "  Dao can be copied under the terms of GNU Lesser General Public License.\n"
-"  Dao Language website: http://www.daovm.net\n\n";
+"  Dao Language website: http://www.daovm.net\n";
 
 static const char *const cmd_help =
 "\n Usage: dao [options] script_file\n"
@@ -929,7 +929,11 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 	DaoNameSpace *ns = self->mainNamespace;
 	DaoRoutine *rout;
 	size_t i, j, n;
-	if( self->options & DAO_EXEC_VINFO ) DaoStream_WriteMBS( self->stdStream, copy_notice );
+	if( self->options & DAO_EXEC_VINFO ){
+		DaoStream_WriteNewLine( self->stdStream );
+		DaoStream_WriteMBS( self->stdStream, dao_copy_notice );
+		DaoStream_WriteNewLine( self->stdStream );
+	}
 	if( self->options & DAO_EXEC_HELP )  DaoStream_WriteMBS( self->stdStream, cmd_help );
 	DaoStream_Flush( self->stdStream );
 

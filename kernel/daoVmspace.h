@@ -19,6 +19,8 @@
 #include"daoType.h"
 #include"daoThread.h"
 
+extern const char *const dao_copy_notice;
+
 /* Dao Virtual Machine Space:
  * For handling:
  * -- Execution options and configuration;

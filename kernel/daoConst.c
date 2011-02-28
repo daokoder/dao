@@ -359,6 +359,7 @@ const char* const daoExceptionInfo[] =
 	"invalid syntax" ,
 	"invalid variable type for the operation" ,
 	"invalid variable value for the operation" ,
+	"file error",
 	"invalid syntax" ,
 	"invalid value for the operation"
 };

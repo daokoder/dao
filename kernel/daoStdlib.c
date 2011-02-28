@@ -525,12 +525,20 @@ static void STD_Deserialize( DaoContext *ctx, DValue *p[], int N )
 static void STD_Backup( DaoContext *ctx, DValue *p[], int N )
 {
 	FILE *fout = fopen( DString_GetMBS( p[0]->v.s ), "w+" );
+	if( fout == NULL ){
+		DaoContext_RaiseException( ctx,DAO_ERROR_FILE, DString_GetMBS( p[0]->v.s ) );
+		return;
+	}
 	DaoNameSpace_Backup( ctx->nameSpace, ctx->process, fout, p[1]->v.i );
 	fclose( fout );
 }
 static void STD_Restore( DaoContext *ctx, DValue *p[], int N )
 {
 	FILE *fin = fopen( DString_GetMBS( p[0]->v.s ), "r" );
+	if( fin == NULL ){
+		DaoContext_RaiseException( ctx,DAO_ERROR_FILE, DString_GetMBS( p[0]->v.s ) );
+		return;
+	}
 	DaoNameSpace_Restore( ctx->nameSpace, ctx->process, fin );
 	fclose( fin );
 }

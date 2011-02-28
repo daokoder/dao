@@ -4490,6 +4490,7 @@ DecoratorError:
 				}
 				if( self->errors->size ) return 0;
 				end = start - 1;
+				continue;
 			}else{
 				if( abtp == NULL ) abtp = dao_type_any;
 				end = start - 1;
