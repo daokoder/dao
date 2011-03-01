@@ -454,12 +454,17 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext )
 				if( DString_EQ( tok->string, tok2->string ) ) continue;
 			}
 		}
-		DaoStream_WriteMBS( stream, "  At line " );
-		DaoStream_WriteInt( stream, tok->line );
-		DaoStream_WriteMBS( stream, " : " );
-		DaoStream_WriteMBS( stream, getCtInfo( tok->name ) );
+		if( tok->name == 0 ){
+			DaoStream_WriteMBS( stream, "  From file : " );
+		}else{
+			DaoStream_WriteMBS( stream, "  At line " );
+			DaoStream_WriteInt( stream, tok->line );
+			DaoStream_WriteMBS( stream, " : " );
+			DaoStream_WriteMBS( stream, getCtInfo( tok->name ) );
+			if( tok->string && tok->string->size ) DaoStream_WriteMBS( stream, " --- " );
+		}
 		if( tok->string && tok->string->size ){
-			DaoStream_WriteMBS( stream, " --- \" " );
+			DaoStream_WriteMBS( stream, "\" " );
 			DaoStream_WriteString( stream, tok->string );
 			DaoStream_WriteMBS( stream, " \"" );
 		}
@@ -2956,6 +2961,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 	DaoParser *newparser = NULL;
 	DaoClass *klass;
 	DString *str, *mbs = self->mbs;
+	DString *mbs2 = self->mbs2;
 	DValue value, scope;
 	int perm = self->permission;
 	int tki = tokens[start]->name;
@@ -2994,7 +3000,13 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
 			return -1;
 		}
-		DString_Clear( mbs );
+		DString_Clear( mbs ); /* routine signature */
+		DString_Assign( mbs2, tokens[start]->string ); /* routine name */
+		if( tki == DKEY_OPERATOR ){
+			k = start + 1;
+			while( k <= to && tokens[k]->name != DTOK_LB )
+				DString_Append( mbs2, tokens[k++]->string );
+		}
 		if( tki == DKEY_OPERATOR && r1 == start + 1 ){
 			r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start + 2, -1 );
 		}
@@ -3003,35 +3015,36 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			DString_Append( mbs, tokens[k++]->string );
 		rout= DaoClass_GetOvldRoutine( scope.v.klass, mbs );
 		if( ! rout ){
+			DaoNameSpace *nsdef = NULL;
 			DMap *hash = scope.v.klass->ovldRoutMap;
 			DNode *it = DMap_First( hash );
 			int defined = 0;
-			ptok = tokens[ start+1 ];
-			self->curLine = ptok->line;
-			DString_Assign( mbs, tokens[start]->string );
-			if( tokens[start]->type == DTOK_LB ){
-				int m = start + 1;
-				while( m < r1 && tokens[m]->type != DTOK_LB ){
-					DString_Assign( mbs, tokens[m]->string );
-					m += 1;
-				}
-			}
 			for(;it;it=DMap_Next(hash,it)){
 				DaoRoutine *meth = (DaoRoutine*) it->value.pBase;
-				if( DString_EQ( meth->routName, mbs ) && meth->type == DAO_ROUTINE ){
-					if( DaoParser_ParseRoutine( meth->parser ) ==0 ) return -1;
+				if( DString_EQ( meth->routName, mbs2 ) && meth->type == DAO_ROUTINE ){
 					if( meth->bodyStart <0 ){
-						defined = 1;
-						DaoParser_Error( self, DAO_ROUT_NEED_IMPLEMENTATION, it->key.pString );
+						nsdef = meth->nameSpace;
+						self->curLine = meth->defLine;
+						DaoParser_Error( self, DAO_ROUT_DECLARED_SIGNATURE, it->key.pString );
 					}
+					defined = 1;
 				}
 			}
+			self->curLine = tokens[ start+1 ]->line;
 			if( defined ){
-				DaoParser_Error2( self, DAO_ROUT_WRONG_SIGNATURE, start, r1, 0 );
+				if( nsdef && nsdef != myNS ) DaoParser_Error( self, 0, nsdef->name );
+				DaoParser_Error( self, DAO_ROUT_WRONG_SIGNATURE, mbs );
 			}else{
 				DaoParser_Error2( self, DAO_ROUT_NOT_DECLARED, errorStart+1, r1, 0 );
 			}
 			DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
+			return -1;
+		}else if( rout->bodyStart >=0 ){
+			self->curLine = rout->defLine;
+			DaoParser_Error2( self, DAO_ROUT_WAS_IMPLEMENTED, errorStart+1, r1, 0 );
+			if( rout->nameSpace != myNS ) DaoParser_Error( self, 0, rout->nameSpace->name );
+			self->curLine = tokens[ start+1 ]->line;
+			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, r1, 0 );
 			return -1;
 		}
 		parser = rout->parser;

@@ -376,11 +376,11 @@ int DaoObject_SetData( DaoObject *self, DString *name, DValue data, DaoObject *o
 			if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 			type = klass->objDataType->items.pType[ id ];
 			value = self->objValues + id;
-			DValue_Move( data, value, type );
+			if( DValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 		}else if( sto == DAO_CLASS_VARIABLE ){
 			value = klass->glbDataTable->items.pVarray[up]->data + id;
 			type = klass->glbTypeTable->items.pArray[up]->items.pType[ id ];
-			DValue_Move( data, value, type );
+			if( DValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 		}else if( sto == DAO_CLASS_CONSTANT ){
 			return DAO_ERROR_FIELD;
 		}else{

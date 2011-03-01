@@ -633,7 +633,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
 		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
 			if( ((DaoObject*)dA)->myClass != tp->aux.v.klass ){
-				dA = DaoObject_MapThisObject( (DaoObject*)dA, tp );
+				dA = DaoObject_MapThisObject( ((DaoObject*)dA)->that, tp );
 				i = (dA != NULL);
 			}
 		}else if( from.t == DAO_CLASS && tp->tid == DAO_CLASS && from.v.klass->typeHolders ){

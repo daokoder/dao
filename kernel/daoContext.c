@@ -3909,11 +3909,11 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		typeval.v.type = ct;
 		rout = (DRoutine*)DaoClass_FindOperator( va.v.object->myClass, "cast", scope );
 		if( rout ) rout = DRoutine_GetOverLoad( rout, NULL, p, 2, DVM_CALL );
-		if( rout == NULL ) goto FailConversion;
+		if( rout == NULL ) goto NormalCasting;
 
 		ctx = DaoVmProcess_MakeContext( self->process, (DaoRoutine*) rout );
 
-		if( ! DRoutine_PassParams( rout, NULL, ctx->regValues, p, NULL, 2, DVM_CALL ) ) goto FailConversion;
+		if( ! DRoutine_PassParams( rout, NULL, ctx->regValues, p, NULL, 2, DVM_CALL ) ) goto NormalCasting;
 
 		DaoVmProcess_PushContext( self->process, ctx );
 		ctx->process->topFrame->returning = self->vmc->c;
@@ -3926,10 +3926,11 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		typeval.v.type = ct;
 		rout = (DRoutine*) DaoFindFunction2( (DaoTypeBase*) cdata->typer, "cast" );
 		if( rout ) rout = DRoutine_GetOverLoad( rout, NULL, p, 2, DVM_CALL );
-		if( rout ) DaoFunction_SimpleCall( (DaoFunction*) rout, self, p, 2 );
-		if( rout == NULL ) goto FailConversion;
+		if( rout == NULL ) goto NormalCasting;
+		DaoFunction_SimpleCall( (DaoFunction*) rout, self, p, 2 );
 		return;
 	}
+NormalCasting:
 	sb = DString_New(1);
 	lb = DLong_New();
 	va = DaoTypeCast( self, ct, va, & cb, lb, sb );
