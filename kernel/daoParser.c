@@ -3011,8 +3011,10 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 			r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start + 2, -1 );
 		}
 		for( k=start; k<=r1; k++ ) DString_Append( mbs, tokens[k]->string );
-		while( k <= to && tokens[k]->name != DTOK_LCB )
-			DString_Append( mbs, tokens[k++]->string );
+		if( k <= to && (tokens[k]->name == DTOK_FIELD || tokens[k]->name == DKEY_CONST) ){
+			while( k <= to && tokens[k]->name != DTOK_LCB )
+				DString_Append( mbs, tokens[k++]->string );
+		}
 		rout= DaoClass_GetOvldRoutine( scope.v.klass, mbs );
 		if( ! rout ){
 			DaoNameSpace *nsdef = NULL;
