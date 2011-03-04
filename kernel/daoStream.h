@@ -25,7 +25,9 @@ enum
 {
 	DAO_IO_FILE = 1 ,
 	DAO_IO_PIPE = 2 ,
-	DAO_IO_STRING = 4
+	DAO_IO_STRING = 4 ,
+	DAO_IO_READ = 1 ,
+	DAO_IO_WRITE = 2
 };
 
 typedef struct DFile
@@ -46,6 +48,7 @@ struct DaoStream
 	DaoVmSpace *vmSpace;
 	DString    *fname;
 	DaoStream  *redirect;
+	int mode;
 };
 
 extern DaoStream* DaoStream_New();

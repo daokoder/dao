@@ -5,15 +5,15 @@ class @Server
 {
 	routine Start()
 	{
-#	io.println( network.gethost( '127.0.0.1' ) );
-		io.println( network.gethost( 'localhost' ) );
+#	io.writeln( network.gethost( '127.0.0.1' ) );
+		io.writeln( network.gethost( 'localhost' ) );
 		sock = network.bind( 10000 );
 		sock.listen();
 		while(1){
 			sockfd = sock.accept();
 			message = sockfd.receive();
-			io.println( sockfd.peername() );
-			io.println( 'received', message );
+			io.writeln( sockfd.peername() );
+			io.writeln( 'received', message );
 			sockfd.send_dao( 'TEST', 12.345, [1,2,3] );
 			sockfd.close();
 			break;
@@ -29,7 +29,7 @@ class @Client
 		io.writeln( 'sending' );
 		sockfd.send( 'TEST' );
 		message = sockfd.receive_dao();
-		io.println( 'received', message );
+		io.writeln( 'received', message );
 		sockfd.close();
 	}
 }

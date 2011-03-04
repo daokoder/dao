@@ -45,7 +45,12 @@ static void DaoIO_Write0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 }
 static void DaoIO_Write( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Write0( p[0]->v.stream, ctx, p+1, N-1 );
+	DaoStream *self = p[0]->v.stream;
+	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not writable" );
+		return;
+	}
+	DaoIO_Write0( self, ctx, p+1, N-1 );
 }
 static void DaoIO_Write2( DaoContext *ctx, DValue *p[], int N )
 {
@@ -69,7 +74,12 @@ static void DaoIO_Writeln0( DaoStream *self, DaoContext *ctx, DValue *p[], int N
 }
 static void DaoIO_Writeln( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Writeln0( p[0]->v.stream, ctx, p+1, N-1 );
+	DaoStream *self = p[0]->v.stream;
+	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not writable" );
+		return;
+	}
+	DaoIO_Writeln0( self, ctx, p+1, N-1 );
 }
 static void DaoIO_Writeln2( DaoContext *ctx, DValue *p[], int N )
 {
@@ -127,7 +137,12 @@ static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
 }
 static void DaoIO_Writef( DaoContext *ctx, DValue *p[], int N )
 {
-	DaoIO_Writef0( p[0]->v.stream, ctx, p+1, N-1 );
+	DaoStream *self = p[0]->v.stream;
+	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not writable" );
+		return;
+	}
+	DaoIO_Writef0( self, ctx, p+1, N-1 );
 }
 static void DaoIO_Writef2( DaoContext *ctx, DValue *p[], int N )
 {
@@ -148,6 +163,10 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
 	if( N >1 ) count = p[1]->v.i;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not open!" );
+		return;
+	}
+	if( ( self->mode & DAO_IO_READ ) == 0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not readable" );
 		return;
 	}
 	if( self->file == NULL && vms && vms->userHandler && vms->userHandler->StdioRead ){
@@ -232,6 +251,7 @@ static void DaoIO_ReadFile( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *stream = NULL;
+	char *mode;
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
 		return;
@@ -242,6 +262,10 @@ static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
 	stream->attribs |= DAO_IO_FILE;
 	if( N==0 ){
 		stream->file->fd = tmpfile();
+		if( stream->file->fd <= 0 ){
+			DaoContext_RaiseException( ctx, DAO_ERROR, "failed to create a temporary file" );
+			return;
+		}
 	}else{
 		char buf[100];
 		DString *fname = stream->fname;
@@ -250,11 +274,21 @@ static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
 		snprintf( buf, 99, "file opening, %s", fname->mbs );
 		if( DString_Size( fname ) >0 ){
 			DaoIO_MakePath( ctx, fname );
-			stream->file->fd = fopen( DString_GetMBS( fname ), DString_GetMBS( p[1]->v.s ) );
+			mode = DString_GetMBS( p[1]->v.s );
+			stream->file->fd = fopen( DString_GetMBS( fname ), mode );
 			if( stream->file->fd == NULL ){
 				dao_free( stream->file );
 				stream->file = NULL;
 				DaoContext_RaiseException( ctx, DAO_ERROR, buf );
+			}
+			stream->mode = 0;
+			if( strstr( mode, "+" ) )
+				stream->mode = DAO_IO_WRITE | DAO_IO_READ;
+			else{
+				if( strstr( mode, "r" ) )
+					stream->mode |= DAO_IO_READ;
+				if( strstr( mode, "w" ) || strstr( mode, "a" ) )
+					stream->mode |= DAO_IO_WRITE;
 			}
 		}else{
 			DaoContext_RaiseException( ctx, DAO_ERROR, buf );
@@ -324,6 +358,7 @@ static void DaoIO_GetString( DaoContext *ctx, DValue *p[], int N )
 static void DaoIO_Popen( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoStream *stream = NULL;
+	char *mode;
 	DString *fname;
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
@@ -336,11 +371,21 @@ static void DaoIO_Popen( DaoContext *ctx, DValue *p[], int N )
 	fname = stream->fname;
 	DString_Assign( fname, p[0]->v.s );
 	if( DString_Size( fname ) >0 ){
-		stream->file->fd = popen( DString_GetMBS( fname ), DString_GetMBS( p[1]->v.s ) );
+		mode = DString_GetMBS( p[1]->v.s );
+		stream->file->fd = popen( DString_GetMBS( fname ), mode );
 		if( stream->file->fd == NULL ){
 			dao_free( stream->file );
 			stream->file = NULL;
 			DaoContext_RaiseException( ctx, DAO_ERROR, "pipe opening" );
+		}
+		stream->mode = 0;
+		if( strstr( mode, "+" ) )
+			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
+		else{
+			if( strstr( mode, "r" ) )
+				stream->mode |= DAO_IO_READ;
+			if( strstr( mode, "w" ) || strstr( mode, "a" ) )
+				stream->mode |= DAO_IO_WRITE;
 		}
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "pipe opening" );
@@ -376,6 +421,17 @@ static void DaoIO_Read2( DaoContext *ctx, DValue *p[], int N )
 	DaoIO_Read( ctx, params, N );
 }
 
+static void DaoIO_Mode( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoStream *self = p[0]->v.stream;
+	char buf[10] = {0};
+	if( self->mode & DAO_IO_READ )
+		strcat( buf, "$read" );
+	if( self->mode & DAO_IO_WRITE )
+		strcat( buf, "$write" );
+	DaoContext_PutEnum( ctx, buf );
+}
+
 static DaoFuncItem streamMeths[] =
 {
 	{  DaoIO_Write,     "write( self :stream, ... )const" },
@@ -401,6 +457,7 @@ static DaoFuncItem streamMeths[] =
 	{  DaoIO_Tell,      "tell( self :stream )=>int" },
 	{  DaoIO_FileNO,    "fileno( self :stream )=>int" },
 	{  DaoIO_Name,      "name( self :stream )=>string" },
+	{  DaoIO_Mode,      "mode( self :stream )=>enum<read; write>" },
 	{  DaoIO_Iter,      "__for_iterator__( self :stream, iter : for_iterator )" },
 	{  DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
 	{ NULL, NULL }
@@ -463,6 +520,7 @@ DaoStream* DaoStream_New()
 	DaoBase_Init( self, DAO_STREAM );
 	self->streamString = DString_New(1);
 	self->fname = DString_New(1);
+	self->mode = DAO_IO_READ | DAO_IO_WRITE;
 	return self;
 }
 void DaoStream_Close( DaoStream *self )
@@ -479,6 +537,7 @@ void DaoStream_Close( DaoStream *self )
 		}
 		self->file = NULL;
 	}
+	self->mode = DAO_IO_WRITE | DAO_IO_READ;
 }
 void DaoStream_Delete( DaoStream *self )
 {
