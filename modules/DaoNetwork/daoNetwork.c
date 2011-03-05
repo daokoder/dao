@@ -1012,7 +1012,7 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	for( i = 0; i < DaoList_Size( list1 ); i++ ){
 		value = DaoList_GetItem( list1, i );
 		if( value.t == DAO_STREAM ){
-			if( FD_ISSET( DaoStream_GetFile( value.v.stream ), &set1 ) )
+			if( FD_ISSET( (int)DaoStream_GetFile( value.v.stream ), &set1 ) )
 				DaoList_PushBack( reslist, value );
 		}else if( FD_ISSET( ((DaoSocket*)DaoCData_GetData( value.v.cdata ))->id, &set1 ) )
 			DaoList_PushBack( reslist, value );
@@ -1024,7 +1024,7 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
 		value = DaoList_GetItem( list2, i );
 		if( value.t == DAO_STREAM ){
-			if( FD_ISSET( DaoStream_GetFile( value.v.stream ), &set2 ) )
+			if( FD_ISSET( (int)DaoStream_GetFile( value.v.stream ), &set2 ) )
 				DaoList_PushBack( reslist, value );
 		}else if( FD_ISSET( ((DaoSocket*)DaoCData_GetData( value.v.cdata ))->id, &set2 ) )
 			DaoList_PushBack( reslist, value );
