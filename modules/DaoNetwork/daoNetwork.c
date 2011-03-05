@@ -1019,7 +1019,6 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	}
 	value = daoNullList;
 	value.v.list = reslist;
-	value.v.type = par[0]->v.type;
 	DaoTuple_SetItem( tuple, value, 0 );
 	reslist = DaoList_New();
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
@@ -1032,9 +1031,10 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	}
 	value = daoNullList;
 	value.v.list = reslist;
-	value.v.type = par[1]->v.type;
 	DaoTuple_SetItem( tuple, value, 1 );
-	DaoContext_PutResult( ctx, (DaoBase*)tuple );
+	value = daoNullTuple;
+	value.v.tuple = tuple;
+	DaoContext_PutValue( ctx, value );
 }
 
 static DaoFuncItem netMeths[] =
