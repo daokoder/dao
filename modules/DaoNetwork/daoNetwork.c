@@ -955,7 +955,7 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	DaoList *list1 = par[0]->v.list;
 	DaoList *list2 = par[1]->v.list;
 	DaoList *reslist;
-	DaoTuple *tuple = DaoTuple_New( 2 );
+	DaoTuple *tuple = DaoContext_PutTuple( ctx );
 	DValue value;
 	DaoSocket *socket;
 	FILE *file;
@@ -1009,6 +1009,9 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 		return;
 	}
 	reslist = DaoList_New();
+	value = daoNullList;
+	value.v.list = reslist;
+	DaoTuple_SetItem( tuple, value, 0 );
 	for( i = 0; i < DaoList_Size( list1 ); i++ ){
 		value = DaoList_GetItem( list1, i );
 		if( value.t == DAO_STREAM ){
@@ -1017,10 +1020,10 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 		}else if( FD_ISSET( ((DaoSocket*)DaoCData_GetData( value.v.cdata ))->id, &set1 ) )
 			DaoList_PushBack( reslist, value );
 	}
+	reslist = DaoList_New();
 	value = daoNullList;
 	value.v.list = reslist;
-	DaoTuple_SetItem( tuple, value, 0 );
-	reslist = DaoList_New();
+	DaoTuple_SetItem( tuple, value, 1 );
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
 		value = DaoList_GetItem( list2, i );
 		if( value.t == DAO_STREAM ){
@@ -1029,12 +1032,6 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 		}else if( FD_ISSET( ((DaoSocket*)DaoCData_GetData( value.v.cdata ))->id, &set2 ) )
 			DaoList_PushBack( reslist, value );
 	}
-	value = daoNullList;
-	value.v.list = reslist;
-	DaoTuple_SetItem( tuple, value, 1 );
-	value = daoNullTuple;
-	value.v.tuple = tuple;
-	DaoContext_PutValue( ctx, value );
 }
 
 static DaoFuncItem netMeths[] =
@@ -1043,7 +1040,7 @@ static DaoFuncItem netMeths[] =
 	{  DaoNetLib_Connect,       "connect( host :string, port :int )=>socket" },
 	{  DaoNetLib_GetHost,       "gethost( host :string )=>map<string,string>" },
 	{  DaoNetLib_Select,
-		"select( read :list<@X<stream|socket>>, write :list<@Y<stream|socket>>, timeout :float )=>tuple<read :list<@X>, write : list<@Y>>" },
+		"select( read :list<@X<stream|socket>>, write :list<@Y<stream|socket>>, timeout :float )=>tuple<read :list<@X>, write :list<@Y>>" },
 	{ NULL, NULL }
 };
 
