@@ -334,7 +334,7 @@ class Function
 		parlist.clear();
 	}
 }
-global proxy_functions : map<string,tuple<used:int,name:string,codes:string,id:Function>> = {=>};
+global proxy_functions : map<string,tuple<used:int,name:string,codes:string>> = {=>};
 class UserType
 {
 	var name = '';

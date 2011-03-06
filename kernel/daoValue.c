@@ -586,7 +586,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 {
 	DaoBase *dA = NULL;
 	DNode *node = NULL;
-	int i = 1;
+	int tm = 1;
 	if( tp ==0 || tp->tid ==DAO_NIL || tp->tid ==DAO_INITYPE ){
 		DValue_Copy( to, from );
 		return 1;
@@ -630,30 +630,30 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 			/* XXX pair<objetp,routine<...>> */
 			dA = (DaoBase*) DRoutine_GetOverLoadByType( (DRoutine*)dA, tp );
 			if( dA == NULL ) goto MoveFailed;;
-			/* printf( "dA = %p,  %i  %s  %s\n", dA, i, tp->name->mbs, from.v.routine->routType->name->mbs ); */
+			/* printf( "dA = %p,  %i  %s  %s\n", dA, tm, tp->name->mbs, from.v.routine->routType->name->mbs ); */
 		}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
 			if( ((DaoObject*)dA)->myClass != tp->aux.v.klass ){
 				dA = DaoObject_MapThisObject( ((DaoObject*)dA)->that, tp );
-				i = (dA != NULL);
+				tm = (dA != NULL);
 			}
 		}else if( from.t == DAO_CLASS && tp->tid == DAO_CLASS && from.v.klass->typeHolders ){
 			if( DMap_Find( from.v.klass->instanceClasses, tp->aux.v.klass->className ) ){
 				from.v.klass = tp->aux.v.klass;
 				dA = (DaoBase*) from.v.klass;
-				i = DAO_MT_SUB;
+				tm = DAO_MT_SUB;
 			}
 		}else{
-			i = DaoType_MatchValue( tp, from, NULL );
+			tm = DaoType_MatchValue( tp, from, NULL );
 		}
 		/*
 		   if( i ==0 ){
 		   printf( "tp = %p; dA = %p, type = %i\n", tp, dA, from.t );
-		   printf( "tp: %s %i\n", tp->name->mbs, tp->tid );
+		   printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
 		   if( from.t == DAO_TUPLE ) printf( "%p\n", from.v.tuple->unitype );
 		   }
 		   printf( "dA->type = %p\n", dA );
 		 */
-		if( i==0 ) goto MoveFailed;;
+		if( tm == 0 ) goto MoveFailed;;
 		/* composite known types must match exactly. example,
 		 * where it will not work if composite types are allowed to match loosely.
 		 * d : list<list<int>> = {};
@@ -744,9 +744,39 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	GC_IncRC( dA );
 	to->t = dA->type;
 	to->v.p = dA;
-	if( from.t == DAO_TUPLE && from.v.p != dA && to->v.tuple->unitype != tp ){
-		GC_ShiftRC( tp, to->v.tuple->unitype );
-		to->v.tuple->unitype = tp;
+	if( from.t == DAO_TUPLE && to->v.tuple->unitype != tp ){
+		DaoType *totype = to->v.tuple->unitype;
+		DMap *names = totype ? totype->mapNames : NULL;
+		/* auto-cast tuple type, on the following conditions:
+		 * (1) the item values of "to" must match exactly to the item types of "tp";
+		 * (2) "tp->mapNames" must contain "to->v.tuple->unitype->mapNames"; */
+		if( totype == NULL || (totype->attrib & DAO_TYPE_NOTDEF) 
+				|| (names && names->size < tp->mapNames->size) ){
+			DaoTuple *tuple;
+			DaoType **item_types = tp->nested->items.pType;;
+			DValue *data = to->v.tuple->items->data;
+			DNode *node, *search;
+			int i, T = tp->nested->size;
+			for(i=0; i<T; i++){
+				DaoType *it = item_types[i];
+				if( it->tid == DAO_PAR_NAMED ) it = it->aux.v.type;
+				tm = DaoType_MatchValue( it, data[i], NULL );
+				if( tm != DAO_MT_EQ ) return 1;
+			}
+			if( names ){
+				for(node=DMap_First(names); node; node=DMap_Next(names,node)){
+					search = DMap_Find( tp->mapNames, node->key.pVoid );
+					if( search == NULL ) return 0;
+					if( node->value.pInt != search->value.pInt ) return 0;
+				}
+			}
+			tuple = DaoTuple_New( T );
+			for(i=0; i<T; i++) DValue_Copy( tuple->items->data+i, data[i] );
+			GC_IncRC( tp );
+			tuple->unitype = tp;
+			GC_ShiftRC( tuple, to->v.tuple );
+			to->v.tuple = tuple;
+		}
 	}else if( tp && ! ( tp->attrib & DAO_TYPE_EMPTY ) && tp->tid == dA->type ){
 #if 0
 		//int defed = DString_FindChar( tp->name, '@', 0 ) == MAXSIZE;

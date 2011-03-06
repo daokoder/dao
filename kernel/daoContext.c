@@ -223,6 +223,7 @@ void DaoContext_SetResult( DaoContext *self, DaoBase *result )
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 {
 	if( ! DValue_Move( A, C, t ) ){
+		DaoType *type;
 		if( self->vmc->code == DVM_MOVE || self->vmc->code == DVM_MOVE_PP ){
 			if( A.t == DAO_CDATA && t && t->tid == DAO_CDATA ){
 				if( DaoType_MatchTo( A.v.cdata->ctype, t, NULL ) ){
@@ -231,7 +232,7 @@ int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 				}
 			}
 		}
-		DaoType *type = DaoNameSpace_GetTypeV( self->nameSpace, A );
+		type = DaoNameSpace_GetTypeV( self->nameSpace, A );
 		DaoContext_RaiseTypeError( self, type, t, "moving" );
 		return 0;
 	}
@@ -1847,7 +1848,7 @@ void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 	DValue v, q = daoNullValue;
 	DValue *p = self->regValues[ vmc->c ];
 	DaoTypeCore *tc = DValue_GetTyper( * p )->priv;
-	int id;
+	int id, rc = 0;
 
 	self->vmc = vmc;
 	v = *self->regValues[ vmc->a ];
@@ -1858,11 +1859,11 @@ void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 
 	if( vmc->code == DVM_SETI ) q = *self->regValues[ vmc->b ];
 	if( p->t == DAO_LIST && q.t == DAO_INTEGER ){
-		DaoList_SetItem( p->v.list, v, q.v.i );
+		rc = DaoList_SetItem( p->v.list, v, q.v.i );
 	}else if( p->t == DAO_LIST && q.t == DAO_FLOAT ){
-		DaoList_SetItem( p->v.list, v, (int) q.v.f );
+		rc = DaoList_SetItem( p->v.list, v, (int) q.v.f );
 	}else if( p->t == DAO_LIST && q.t == DAO_DOUBLE ){
-		DaoList_SetItem( p->v.list, v, (int) q.v.d );
+		rc = DaoList_SetItem( p->v.list, v, (int) q.v.d );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( p->t == DAO_ARRAY && ( q.t >=DAO_INTEGER && q.t <=DAO_DOUBLE )
 			&& ( v.t >=DAO_INTEGER && v.t <=DAO_DOUBLE ) ){
@@ -1888,6 +1889,7 @@ void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc )
 	}else if( vmc->code == DVM_SETMI ){
 		tc->SetItem( p, self, self->regValues + vmc->c + 1, vmc->b, v );
 	}
+	if( rc ) DaoContext_RaiseException( self, DAO_ERROR_VALUE, "value type" );
 }
 void DaoContext_DoSetField( DaoContext *self, DaoVmCode *vmc )
 {
@@ -4707,20 +4709,21 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		DValue_Update( & self->routConsts->data[i], self->nameSpace, deftypes );
 	}
 }
-void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
+int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 {
 	DNode *it;
 	DMap *old = deftypes;
 	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
+	if( tp == NULL ) return 0;
 	GC_ShiftRC( tp, self->routType );
 	self->routType = tp;
 	if( klass ){
 		GC_ShiftRC( klass->objType, self->routHost );
 		self->routHost = klass->objType;
 	}
-	if( self->minimal ==1 ) return;
+	if( self->minimal ==1 ) return 1;
 	DaoRoutine_MapTypes( self, deftypes );
-	DaoRoutine_InferTypes( self );
+	return DaoRoutine_InferTypes( self );
 	/*
 	DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	*/
@@ -4764,7 +4767,9 @@ void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc )
 	DMap_Delete( deftypes );
 
 	DArray_Assign( closure->annotCodes, proto->annotCodes );
-	DaoRoutine_SetVmCodes2( closure, proto->vmCodes );
+	if( DaoRoutine_SetVmCodes2( closure, proto->vmCodes ) ==0 ){
+		DaoContext_RaiseException( self, DAO_ERROR, "function creation failed" );
+	}
 	DaoContext_SetData( self, vmc->c, (DaoBase*) closure );
 	/*
 	   DaoRoutine_PrintCode( proto, self->vmSpace->stdStream );
@@ -4870,7 +4875,10 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			DValue *dest = klass->cstData->data + id;
 			if( value.t == DAO_ROUTINE && value.v.routine->routHost == proto->objType ){
 				newRout = value.v.routine;
-				DaoRoutine_Finalize( newRout, klass, deftypes );
+				if( DaoRoutine_Finalize( newRout, klass, deftypes ) == 0){
+					DaoContext_RaiseException( self, DAO_ERROR, "method creation failed" );
+					continue;
+				}
 				if( strcmp( newRout->routName->mbs, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
@@ -5064,7 +5072,10 @@ InvalidField:
 
 			newRout = method->v.routine;
 			if( newRout->tidHost !=0 ) continue;
-			DaoRoutine_Finalize( newRout, klass, deftypes );
+			if( DaoRoutine_Finalize( newRout, klass, deftypes ) == 0){
+				DaoContext_RaiseException( self, DAO_ERROR, "method creation failed" );
+				continue;
+			}
 			DString_Assign( newRout->routName, name->v.s );
 			if( DString_EQ( newRout->routName, klass->className ) ){
 				DRoutine_AddOverLoad( (DRoutine*)klass->classRoutine, (DRoutine*)newRout );

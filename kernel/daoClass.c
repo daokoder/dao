@@ -177,7 +177,7 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int  DaoRoutine_InferTypes( DaoRoutine *self );
-void DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
+int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
 void DValue_Update( DValue *self, DaoNameSpace *ns, DMap *deftypes )
 {
@@ -272,6 +272,13 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DValue v = other->objDataDefault->data[i];
 		tp = self->objDataType->items.pType[i];
 		DVarray_Append( self->objDataDefault, daoNullValue );
+		/* TODO fail checking */
+		if( v.t >= DAO_ARRAY && v.t <= DAO_TUPLE ){
+			v.v.p = DaoBase_Duplicate( v.v.p, tp );
+			GC_IncRC( v.v.p );
+			self->objDataDefault->data[self->objDataDefault->size-1] = v;
+			continue;
+		}
 		DValue_Move( v, & self->objDataDefault->data[self->objDataDefault->size-1], tp );
 	}
 	for(i=self->cstData->size; i<other->cstData->size; i++){
@@ -280,7 +287,7 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			DaoRoutine *rout = value.v.routine;
 			DString *name = rout->routName;
 			rout = value.v.routine = DaoRoutine_Copy( rout, 0 );
-			DaoRoutine_Finalize( rout, self, deftypes );
+			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) continue;
 #if 0
 			printf( "%p:  %s  %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
 #endif

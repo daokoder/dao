@@ -498,24 +498,24 @@ struct DaoAPI
 	DValue (*DaoList_Back)( DaoList *self );
 	DValue (*DaoList_GetItem)( DaoList *self, int pos );
 
-	void (*DaoList_SetItem)( DaoList *self, DValue item, int pos );
-	void (*DaoList_Insert) ( DaoList *self, DValue item, int pos );
-	void (*DaoList_Erase)( DaoList *self, int pos );
-	void (*DaoList_Clear)( DaoList *self );
-	void (*DaoList_PushFront)( DaoList *self, DValue item );
-	void (*DaoList_PushBack) ( DaoList *self, DValue item );
+	int (*DaoList_SetItem)( DaoList *self, DValue item, int pos );
+	int (*DaoList_Insert) ( DaoList *self, DValue item, int pos );
+	int (*DaoList_PushFront)( DaoList *self, DValue item );
+	int (*DaoList_PushBack) ( DaoList *self, DValue item );
 	void (*DaoList_PopFront)( DaoList *self );
 	void (*DaoList_PopBack) ( DaoList *self );
+	void (*DaoList_Erase)( DaoList *self, int pos );
+	void (*DaoList_Clear)( DaoList *self );
 
 	DaoMap* (*DaoMap_New)( int hashing );
 	int  (*DaoMap_Size)( DaoMap *self );
 	int  (*DaoMap_Insert)( DaoMap *self, DValue key, DValue value );
+	int  (*DaoMap_InsertMBS)( DaoMap *self, const char *key, DValue value );
+	int  (*DaoMap_InsertWCS)( DaoMap *self, const wchar_t *key, DValue value );
 	void (*DaoMap_Erase) ( DaoMap *self, DValue key );
-	void (*DaoMap_Clear) ( DaoMap *self );
-	void (*DaoMap_InsertMBS)( DaoMap *self, const char *key, DValue value );
-	void (*DaoMap_InsertWCS)( DaoMap *self, const wchar_t *key, DValue value );
 	void (*DaoMap_EraseMBS) ( DaoMap *self, const char *key );
 	void (*DaoMap_EraseWCS) ( DaoMap *self, const wchar_t *key );
+	void (*DaoMap_Clear) ( DaoMap *self );
 	DValue (*DaoMap_GetValue)( DaoMap *self, DValue key  );
 	DValue (*DaoMap_GetValueMBS)( DaoMap *self, const char *key  );
 	DValue (*DaoMap_GetValueWCS)( DaoMap *self, const wchar_t *key  );
@@ -639,6 +639,7 @@ struct DaoAPI
 	DaoList*   (*DaoContext_PutList)( DaoContext *self );
 	DaoMap*    (*DaoContext_PutMap)( DaoContext *self );
 	DaoArray*  (*DaoContext_PutArray)( DaoContext *self );
+	DaoTuple*  (*DaoContext_PutTuple)( DaoContext *self );
 	DaoStream* (*DaoContext_PutFile)( DaoContext *self, FILE *file );
 	DaoCData*  (*DaoContext_PutCData)( DaoContext *self, void *data, DaoTypeBase *t );
 	DaoCData*  (*DaoContext_PutCPointer)( DaoContext *self, void *data, int size );
@@ -816,24 +817,26 @@ DAO_DLL DValue DaoList_Front( DaoList *self );
 DAO_DLL DValue DaoList_Back( DaoList *self );
 DAO_DLL DValue DaoList_GetItem( DaoList *self, int pos );
 
-DAO_DLL void DaoList_SetItem( DaoList *self, DValue item, int pos );
-DAO_DLL void DaoList_Insert( DaoList *self, DValue item, int pos );
-DAO_DLL void DaoList_Erase( DaoList *self, int pos );
-DAO_DLL void DaoList_Clear( DaoList *self );
-DAO_DLL void DaoList_PushFront( DaoList *self, DValue item );
-DAO_DLL void DaoList_PushBack( DaoList *self, DValue item );
+/* return 0 if seccessful, 1 if failed: */
+DAO_DLL int DaoList_SetItem( DaoList *self, DValue item, int pos );
+DAO_DLL int DaoList_Insert( DaoList *self, DValue item, int pos );
+DAO_DLL int DaoList_PushFront( DaoList *self, DValue item );
+DAO_DLL int DaoList_PushBack( DaoList *self, DValue item );
 DAO_DLL void DaoList_PopFront( DaoList *self );
 DAO_DLL void DaoList_PopBack( DaoList *self );
+DAO_DLL void DaoList_Erase( DaoList *self, int pos );
+DAO_DLL void DaoList_Clear( DaoList *self );
 
 DAO_DLL DaoMap* DaoMap_New( int hashing );
 DAO_DLL int  DaoMap_Size( DaoMap *self );
+/* return 0 if successful; return 1 if key not matching, 2 if value not matching: */
 DAO_DLL int  DaoMap_Insert( DaoMap *self, DValue key, DValue value );
+DAO_DLL int  DaoMap_InsertMBS( DaoMap *self, const char *key, DValue value );
+DAO_DLL int  DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value );
 DAO_DLL void DaoMap_Erase( DaoMap *self, DValue key );
-DAO_DLL void DaoMap_Clear( DaoMap *self );
-DAO_DLL void DaoMap_InsertMBS( DaoMap *self, const char *key, DValue value );
-DAO_DLL void DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value );
 DAO_DLL void DaoMap_EraseMBS( DaoMap *self, const char *key );
 DAO_DLL void DaoMap_EraseWCS( DaoMap *self, const wchar_t *key );
+DAO_DLL void DaoMap_Clear( DaoMap *self );
 DAO_DLL DValue DaoMap_GetValue( DaoMap *self, DValue key  );
 DAO_DLL DValue DaoMap_GetValueMBS( DaoMap *self, const char *key  );
 DAO_DLL DValue DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  );
@@ -957,6 +960,7 @@ DAO_DLL DaoArray*  DaoContext_PutArrayComplex( DaoContext *self, complex16 *arra
 DAO_DLL DaoList*   DaoContext_PutList( DaoContext *self );
 DAO_DLL DaoMap*    DaoContext_PutMap( DaoContext *self );
 DAO_DLL DaoArray*  DaoContext_PutArray( DaoContext *self );
+DAO_DLL DaoTuple*  DaoContext_PutTuple( DaoContext *self );
 DAO_DLL DaoStream* DaoContext_PutFile( DaoContext *self, FILE *file );
 DAO_DLL DValue* DaoContext_PutValue( DaoContext *self, DValue value );
 /* data will be deleted with the new DaoCData */
@@ -1141,22 +1145,22 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 
 #define DaoList_SetItem( self, item, pos )  __dao.DaoList_SetItem( self, item, pos )
 #define DaoList_Insert( self, item, pos )  __dao.DaoList_Insert( self, item, pos )
-#define DaoList_Erase( self, pos )  __dao.DaoList_Erase( self, pos )
-#define DaoList_Clear( self )  __dao.DaoList_Clear( self )
 #define DaoList_PushFront( self, item )  __dao.DaoList_PushFront( self, item )
 #define DaoList_PushBack( self, item )  __dao.DaoList_PushBack( self, item )
 #define DaoList_PopFront( self )  __dao.DaoList_PopFront( self )
 #define DaoList_PopBack( self )  __dao.DaoList_PopBack( self )
+#define DaoList_Erase( self, pos )  __dao.DaoList_Erase( self, pos )
+#define DaoList_Clear( self )  __dao.DaoList_Clear( self )
 
 #define DaoMap_New( hashing )  __dao.DaoMap_New( hashing )
 #define DaoMap_Size( self )  __dao.DaoMap_Size( self )
 #define DaoMap_Insert( self, key, value )  __dao.DaoMap_Insert( self, key, value )
-#define DaoMap_Erase( self, key )  __dao.DaoMap_Erase( self, key )
-#define DaoMap_Clear( self )  __dao.DaoMap_Clear( self )
 #define DaoMap_InsertMBS( self, key, value )  __dao.DaoMap_InsertMBS( self, key, value )
 #define DaoMap_InsertWCS( self, key, value )  __dao.DaoMap_InsertWCS( self, key, value )
+#define DaoMap_Erase( self, key )  __dao.DaoMap_Erase( self, key )
 #define DaoMap_EraseMBS( self, key )  __dao.DaoMap_EraseMBS( self, key )
 #define DaoMap_EraseWCS( self, key )  __dao.DaoMap_EraseWCS( self, key )
+#define DaoMap_Clear( self )  __dao.DaoMap_Clear( self )
 #define DaoMap_GetValue( self, key  )  __dao.DaoMap_GetValue( self, key  )
 #define DaoMap_GetValueMBS( self, key  )  __dao.DaoMap_GetValueMBS( self, key  )
 #define DaoMap_GetValueWCS( self, key  )  __dao.DaoMap_GetValueWCS( self, key  )
@@ -1275,6 +1279,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoContext_PutList( self ) __dao.DaoContext_PutList( self )
 #define DaoContext_PutMap( self ) __dao.DaoContext_PutMap( self )
 #define DaoContext_PutArray( self ) __dao.DaoContext_PutArray( self )
+#define DaoContext_PutTuple( self ) __dao.DaoContext_PutTuple( self )
 #define DaoContext_PutFile( self, file ) __dao.DaoContext_PutFile( self, file )
 #define DaoContext_PutCData( s, data, typer ) __dao.DaoContext_PutCData( s, data, typer )
 #define DaoContext_PutCPointer( s, data, size ) __dao.DaoContext_PutCPointer( s, data, size )

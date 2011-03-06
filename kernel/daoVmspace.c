@@ -50,10 +50,10 @@ DAO_DLL DaoAPI __dao;
 DaoConfig daoConfig =
 {
 	1,    /*cpu*/
-	1,    /*jit*/
+	0,    /*jit*/
 	0,    /*safe*/
 	1,    /*typedcode*/
-	1,    /*incompile*/
+	0,    /*incompile*/
 	0,    /*iscgi*/
 	8,    /*tabspace*/
 	0     /*chindent*/
@@ -1812,22 +1812,22 @@ void DaoInitAPI( DaoAPI *api )
 
 	api->DaoList_SetItem = DaoList_SetItem;
 	api->DaoList_Insert = DaoList_Insert;
-	api->DaoList_Erase = DaoList_Erase;
-	api->DaoList_Clear = DaoList_Clear;
 	api->DaoList_PushFront = DaoList_PushFront;
 	api->DaoList_PushBack = DaoList_PushBack;
 	api->DaoList_PopFront = DaoList_PopFront;
 	api->DaoList_PopBack = DaoList_PopBack;
+	api->DaoList_Erase = DaoList_Erase;
+	api->DaoList_Clear = DaoList_Clear;
 
 	api->DaoMap_New = DaoMap_New;
 	api->DaoMap_Size = DaoMap_Size;
 	api->DaoMap_Insert = DaoMap_Insert;
-	api->DaoMap_Erase = DaoMap_Erase;
-	api->DaoMap_Clear = DaoMap_Clear;
 	api->DaoMap_InsertMBS = DaoMap_InsertMBS;
 	api->DaoMap_InsertWCS = DaoMap_InsertWCS;
+	api->DaoMap_Erase = DaoMap_Erase;
 	api->DaoMap_EraseMBS = DaoMap_EraseMBS;
 	api->DaoMap_EraseWCS = DaoMap_EraseWCS;
+	api->DaoMap_Clear = DaoMap_Clear;
 	api->DaoMap_GetValue = DaoMap_GetValue;
 	api->DaoMap_GetValueMBS = DaoMap_GetValueMBS;
 	api->DaoMap_GetValueWCS = DaoMap_GetValueWCS;
@@ -1947,6 +1947,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoContext_PutList = DaoContext_PutList;
 	api->DaoContext_PutMap = DaoContext_PutMap;
 	api->DaoContext_PutArray = DaoContext_PutArray;
+	api->DaoContext_PutTuple = DaoContext_PutTuple;
 	api->DaoContext_PutFile = DaoContext_PutFile;
 	api->DaoContext_PutCData = DaoContext_PutCData;
 	api->DaoContext_PutCPointer = DaoContext_PutCPointer;
@@ -2096,8 +2097,6 @@ static void DaoConfigure()
 	DString *mbs = DString_New(1);
 
 	DaoInitLexTable();
-	daoConfig.cpu = daoConfig.jit = daoConfig.typedcode = daoConfig.incompile = 1;
-	daoConfig.safe = 0;
 	daoConfig.iscgi = getenv( "GATEWAY_INTERFACE" ) ? 1 : 0;
 
 	DString_SetMBS( mbs, DAO_PATH );

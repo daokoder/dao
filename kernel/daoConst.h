@@ -60,9 +60,6 @@ enum DaoRTTI
 	DAO_PAR_VALIST , /* ... */
 	END_EXTRA_TYPES ,
 
-	DAO_TYPE_LT ,
-	DAO_TYPE_GT ,
-	DAO_TYPE_RET ,
 	DAO_NOCOPYING , /* not a type! */
 	END_NOT_TYPES
 };

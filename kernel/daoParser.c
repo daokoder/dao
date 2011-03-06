@@ -1597,7 +1597,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	DaoNameSpace *ns = self->nameSpace;
 	DaoVmSpace   *vmSpace = self->vmSpace;
 	DValue value = daoNullRoutine;
-	int bl;
+	int i, bl;
 	DaoRoutine *routMain = self->routine; /* could be set in DaoVmSpace_Eval() */
 
 	self->error = 0;
@@ -1627,10 +1627,24 @@ int DaoParser_ParseScript( DaoParser *self )
 	self->nameSpace = ns;
 	GC_ShiftRC( ns, routMain->nameSpace );
 	routMain->nameSpace = ns;
+	routMain->parser = self;
 
-	bl = DaoParser_Preprocess( self );
+	bl = DaoParser_Preprocess( self ) && DaoParser_ParseRoutine( self );
+	if( daoConfig.incompile ) return 1;
+	for(i=0; i<self->routCompilable->size; i++){
+		DaoRoutine* rout = (DaoRoutine*) self->routCompilable->items.pBase[i];
+		/* could be set to null in DaoRoutine_Compile() for recursive routines */
+		if( rout->parser == NULL ) continue;
+		if( rout->minimal ==1 ) continue;
+		if( DaoParser_ParseRoutine( rout->parser ) ==0 ) return 0;
+		/* could be set to null in DaoRoutine_Compile() for recursive routines */
+		if( rout->parser == NULL ) continue;
+		DaoParser_Delete( rout->parser );
+		rout->parser = NULL;
+	}
+	routMain->parser = NULL;
 	if( bl ==0 ) DaoParser_PrintError( self, 0, 0, NULL );
-	return bl && DaoParser_ParseRoutine( self );
+	return bl;
 }
 
 static void DaoVmCode_Set( DaoVmCodeX *self, ushort_t code, ushort_t a, ushort_t b,
@@ -3201,13 +3215,13 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 	}
 	k = tokens[right]->name == DTOK_RCB;
 	if( self->isClassBody && self->isDynamicClass ){
-		DArray *uplocs = DArray_New(0);
+		DArray *uplocs;
 		int i, regCall;
 		if( k == 0 ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DEFINITION, NULL );
 			return -1;
 		}
-		parser->uplocs = uplocs;
+		parser->uplocs = uplocs = DArray_New(0);
 		parser->outParser = self;
 		if( DaoParser_ParseParams( parser, DKEY_ROUTINE ) == 0 ) return -1;
 		parser->outParser = NULL;
@@ -3246,7 +3260,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start,
 	}else if( k && rout->routName->mbs[0] == '@' ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) return -1;
 	}else if( k ){ /* with body */
-		DArray_Append( self->routCompilable, rout );
+		DArray_Append( self->nameSpace->mainRoutine->parser->routCompilable, rout );
 		rout->parser = parser;
 		newparser = NULL;
 	}else if( rout->minimal == 0 ){
@@ -5297,19 +5311,6 @@ int DaoParser_PostParsing( DaoParser *self )
 	/*
 	   DaoRoutine_PrintCode( routine, self->vmSpace->stdStream );
 	 */
-	if( routine->parser == NULL ) return 1; /* recursive function */
-	if( daoConfig.incompile ) return 1;
-	for(i=0; i<self->routCompilable->size; i++){
-		DaoRoutine* rout = (DaoRoutine*) self->routCompilable->items.pBase[i];
-		/* could be set to null in DaoRoutine_Compile() for recursive routines */
-		if( rout->parser == NULL ) continue;
-		if( rout->minimal ==1 ) continue;
-		if( DaoParser_ParseRoutine( rout->parser ) ==0 ) return 0;
-		/* could be set to null in DaoRoutine_Compile() for recursive routines */
-		if( rout->parser == NULL ) continue;
-		DaoParser_Delete( rout->parser );
-		rout->parser = NULL;
-	}
 	return 1;
 }
 int DaoNameSpace_CyclicParent( DaoNameSpace *self, DaoNameSpace *parent );

@@ -1976,7 +1976,7 @@ static void DaoListCore_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DV
 	DaoList *self = self0->v.list;
 	const size_t size = self->items->size;
 	size_t i, start, end;
-	int idtype;
+	int idtype, rc = 0;
 	DArray *ids = MakeIndex( ctx, pid, size, & start, & end, & idtype );
 	if( self->unitype == NULL ){
 		/* a : tuple<string,list<int>> = ('',{});
@@ -1986,23 +1986,23 @@ static void DaoListCore_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DV
 	}
 	switch( idtype ){
 	case IDX_NULL :
-		for( i=0; i<size; i++ ) DaoList_SetItem( self, value, i );
+		for( i=0; i<size; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;
 	case IDX_SINGLE :
-		if( start >=0 && start <size ) DaoList_SetItem( self, value, start );
+		if( start >=0 && start <size ) rc = DaoList_SetItem( self, value, start );
 		else DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 		break;
 	case IDX_FROM :
-		for( i=start; i<self->items->size; i++ ) DaoList_SetItem( self, value, i );
+		for( i=start; i<self->items->size; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;
 	case IDX_TO :
-		for( i=0; i<=end; i++ ) DaoList_SetItem( self, value, i );
+		for( i=0; i<=end; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;
 	case IDX_PAIR :
-		for( i=start; i<=end; i++ ) DaoList_SetItem( self, value, i );
+		for( i=start; i<=end; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;
 	case IDX_ALL :
-		for( i=0; i<self->items->size; i++ ) DaoList_SetItem( self, value, i );
+		for( i=0; i<self->items->size; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;
 	case IDX_MULTIPLE :
 		DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
@@ -2010,6 +2010,7 @@ static void DaoListCore_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DV
 		break;
 	default : break;
 	}
+	if( rc ) DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "value type" );
 }
 static void DaoListCore_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
 {
@@ -2624,54 +2625,54 @@ DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
 	/* XXX */
 	return NULL;
 }
-void DaoList_SetItem( DaoList *self, DValue it, int pos )
+int DaoList_SetItem( DaoList *self, DValue it, int pos )
 {
 	DValue *val;
-	if( pos <0 || pos >= self->items->size ) return;
+	if( pos <0 || pos >= self->items->size ) return 0;
 	val = self->items->data + pos;
 	if( self->unitype && self->unitype->nested->size ){
-		DValue_Move( it, val, self->unitype->nested->items.pType[0] );
+		return DValue_Move( it, val, self->unitype->nested->items.pType[0] ) == 0;
 	}else{
 		DValue_Copy( val, it );
 	}
-}
-void DValue_SetType( DValue *to, DaoType *tp );
-static int DaoList_CheckItemType( DaoList *self, DValue it )
-{
-	DaoType *tp = self->unitype;
-	int mt;
-	if( tp ) tp = self->unitype->nested->items.pType[0];
-	if( tp == NULL ) return 1;
-	mt = DaoType_MatchValue( tp, it, NULL );
-	if( tp->tid >= DAO_ARRAY && tp->tid <= DAO_TUPLE && mt != DAO_MT_EQ ) return 0;
-	return mt;
-}
-static void DaoList_SetItemType( DaoList *self, DValue it )
-{
-	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
-	if( tp ) DValue_SetType( & it, tp );
+	return 0;
 }
 
-void DaoList_Insert( DaoList *self, DValue item, int pos )
+int DaoList_Insert( DaoList *self, DValue item, int pos )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
-	if( DaoList_CheckItemType( self, item ) ==0 ) return;
+	DValue temp = daoNullValue;
+	if( DValue_Move( item, & temp, tp ) ==0 ){
+		DValue_Clear( & temp );
+		return 1;
+	}
 	DVarray_Insert( self->items, daoNullValue, pos );
-	DValue_Move( item, self->items->data + pos, tp );
+	self->items->data[ pos ] = temp;
+	return 0;
 }
-void DaoList_PushFront( DaoList *self, DValue item )
+int DaoList_PushFront( DaoList *self, DValue item )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
-	if( DaoList_CheckItemType( self, item ) ==0 ) return;
+	DValue temp = daoNullValue;
+	if( DValue_Move( item, & temp, tp ) ==0 ){
+		DValue_Clear( & temp );
+		return 1;
+	}
 	DVarray_PushFront( self->items, daoNullValue );
-	DValue_Move( item, self->items->data, tp );
+	self->items->data[ 0 ] = temp;
+	return 0;
 }
-void DaoList_PushBack( DaoList *self, DValue item )
+int DaoList_PushBack( DaoList *self, DValue item )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
-	if( DaoList_CheckItemType( self, item ) ==0 ) return;
+	DValue temp = daoNullValue;
+	if( DValue_Move( item, & temp, tp ) ==0 ){
+		DValue_Clear( & temp );
+		return 1;
+	}
 	DVarray_PushBack( self->items, daoNullValue );
-	DValue_Move( item, self->items->data + self->items->size - 1, tp );
+	self->items->data[ self->items->size - 1 ] = temp;
+	return 0;
 }
 void DaoList_ClearItem( DaoList *self, int i )
 {
@@ -2739,9 +2740,9 @@ void DaoList_Clear( DaoList *self )
 {
 	DVarray_Clear( self->items );
 }
-void DaoList_Append( DaoList *self, DValue value )
+int DaoList_Append( DaoList *self, DValue value )
 {
-	DaoList_PushBack( self, value );
+	return DaoList_PushBack( self, value );
 }
 void DaoList_Erase( DaoList *self, int pos )
 {
@@ -3057,8 +3058,9 @@ static void DaoMAP_Value( DaoContext *ctx, DValue *p[], int N )
 	default: break;
 	}
 	if( mg == NULL ) return;
-	for( node=mg; node != ml; node = DMap_Next( self->items, node ) )
+	for( node=mg; node != ml; node = DMap_Next( self->items, node ) ){
 		DaoList_Append( list, node->value.pValue[0] );
+	}
 }
 static void DaoMAP_Has( DaoContext *ctx, DValue *p[], int N )
 {
@@ -3111,23 +3113,27 @@ DValue DaoMap_GetValue( DaoMap *self, DValue key  )
 	if( node ) return node->value.pValue[0];
 	return daoNullValue;
 }
-void DaoMap_InsertMBS( DaoMap *self, const char *key, DValue value )
+int DaoMap_InsertMBS( DaoMap *self, const char *key, DValue value )
 {
 	DString *str = DString_New(1);
 	DValue vkey = daoNullString;
+	int rc;
 	vkey.v.s = str;
 	DString_SetMBS( str, key );
-	DaoMap_Insert( self, vkey, value );
+	rc = DaoMap_Insert( self, vkey, value );
 	DString_Delete( str );
+	return rc;
 }
-void DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value )
+int DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DValue value )
 {
 	DString *str = DString_New(0);
 	DValue vkey = daoNullString;
+	int rc;
 	vkey.v.s = str;
 	DString_SetWCS( str, key );
-	DaoMap_Insert( self, vkey, value );
+	rc = DaoMap_Insert( self, vkey, value );
 	DString_Delete( str );
+	return rc;
 }
 void DaoMap_EraseMBS ( DaoMap *self, const char *key )
 {
@@ -3195,11 +3201,13 @@ void DaoMap_Reset( DaoMap *self )
 {
 	DMap_Reset( self->items );
 }
+void DValue_SetType( DValue *to, DaoType *tp );
 int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 {
 	DaoType *tp = self->unitype;
 	DaoType *tp1=NULL, *tp2=NULL;
 	DEnum ekey, evalue;
+	DNode *node;
 	if( tp ){
 		if( tp->nested->size >=2 ){
 			tp1 = tp->nested->items.pType[0];
@@ -3216,8 +3224,6 @@ int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 			key.v.e = & ekey;
 			ekey.type = tp1;
 			DEnum_SetValue( & ekey, ek, NULL );
-		}else{
-			DValue_SetType( & key, tp1 );
 		}
 	}
 	if( tp2 ){
@@ -3227,11 +3233,23 @@ int DaoMap_Insert( DaoMap *self, DValue key, DValue value )
 			value.v.e = & evalue;
 			evalue.type = tp2;
 			DEnum_SetValue( & evalue, ev, NULL );
-		}else{
-			DValue_SetType( & value, tp2 );
 		}
 	}
-	DMap_Insert( self->items, & key, & value );
+	node = DMap_Insert( self->items, & key, & value );
+	if( tp1 && key.t == DAO_TUPLE ){
+		key = *node->key.pValue;
+		*node->key.pValue = daoNullValue;
+		DValue_Move( key, node->key.pValue, tp1 );
+	}else if( tp1 && key.t >= DAO_ENUM ){
+		DValue_SetType( node->key.pValue, tp1 );
+	}
+	if( tp2 && value.t == DAO_TUPLE ){
+		value = *node->value.pValue;
+		*node->value.pValue = daoNullValue;
+		DValue_Move( value, node->value.pValue, tp2 );
+	}else if( tp2 && value.t >= DAO_ENUM ){
+		DValue_SetType( node->value.pValue, tp2 );
+	}
 	return 0;
 }
 void DaoMap_Erase( DaoMap *self, DValue key )

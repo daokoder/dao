@@ -126,7 +126,6 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 	}
 	if( tid == DAO_OBJECT || tid == DAO_CTYPE ) self->interfaces = DHash_New(0,0);
 	DString_SetMBS( self->name, name );
-	DaoType_CheckAttributes( self );
 	if( (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) && extra && extra->type == DAO_TYPE ){
 		self->fname = DString_New(1);
 		DString_SetMBS( self->fname, name );
@@ -141,6 +140,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 		self->nested = DArray_New(0);
 	}
 	if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
+	DaoType_CheckAttributes( self );
 	DaoType_InitDefault( self );
 #if 0
 	if( strstr( self->name->mbs, "map<" ) ){
@@ -434,7 +434,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		/* tuple<...> to tuple */
 		if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
 		if( self->attrib & DAO_TYPE_EMPTY ) return DAO_MT_SUB;
-		if( self->nested->size > type->nested->size ) return DAO_MT_NOT;
+		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
 		for(i=0; i<self->nested->size; i++){
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
@@ -627,56 +627,59 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( value.v.array->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.array->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( tp ) return DaoType_MatchTo( tp, self, defs );
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
 		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( value.v.array->numType == it1 ) return DAO_MT_EQ;
+		/* return DAO_MT_EQ for exact match, or zero otherwise: */
+		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_LIST :
 		if( value.v.list->items->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.list->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( tp ) return DaoType_MatchTo( tp, self, defs );
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
 		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_MAP :
 		if( value.v.map->items->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.map->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( tp ) return DaoType_MatchTo( tp, self, defs );
 		if( ((1<<it1)&flags) && ((1<<it2)&flags) ){
 			if( it1 == DAO_UDF || it2 == DAO_UDF ) return DAO_MT_UDF;
 			if( it1 == DAO_INITYPE || it2 == DAO_INITYPE ) return DAO_MT_INIT;
 			if( it1 == DAO_ANY || it2 == DAO_ANY ) return DAO_MT_ANY;
 		}
+		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_TUPLE :
 		tp = value.v.tuple->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( tp ){
-			return DaoType_MatchTo( tp, self, defs );
-		}else if( value.v.tuple->items->size != self->nested->size ){
-			return DAO_MT_NOT;
-		}else{
-			mt = DAO_MT_EQ;
-			for(i=0; i<self->nested->size; i++){
-				tp = self->nested->items.pType[i];
-				if( tp->tid == DAO_PAR_NAMED ) tp = tp->aux.v.type;
+		if( value.v.tuple->items->size != self->nested->size ) return DAO_MT_NOT;
 
-				/* for C functions that returns a tuple:
-				 * the tuple may be assigned to a context value before
-				 * its values are set properly! */
-				if( value.v.tuple->items->data[i].t == 0 ) continue;
+		for(i=0; i<self->nested->size; i++){
+			tp = self->nested->items.pType[i];
+			if( tp->tid == DAO_PAR_NAMED ) tp = tp->aux.v.type;
 
-				mt2 = DaoType_MatchValue( tp, value.v.tuple->items->data[i], defs );
-				if( mt2 < mt ) mt = mt2;
-				if( mt == 0 ) break;
-			}
-			return mt;
+			/* for C functions that returns a tuple:
+			 * the tuple may be assigned to a context value before
+			 * its values are set properly! */
+			if( value.v.tuple->items->data[i].t == 0 ) continue;
+			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) continue;
+
+			mt = DaoType_MatchValue( tp, value.v.tuple->items->data[i], defs );
+			if( mt != DAO_MT_EQ ) return 0;
 		}
-		break;
+		if( value.v.tuple->unitype == NULL ) return DAO_MT_EQ;
+		names = self->mapNames;
+		tp = value.v.tuple->unitype;
+		for(node=DMap_First(names); node; node=DMap_Next(names,node)){
+			DNode *search = DMap_Find( tp->mapNames, node->key.pVoid );
+			if( search && search->value.pInt != node->value.pInt ) return 0;
+		}
+		return DAO_MT_EQ;
 	case DAO_FUNCTION :
 	case DAO_ROUTINE :
 		tp = value.v.routine->routType;
@@ -724,10 +727,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	case DAO_FUTURE :
 		tp = ((DaoFuture*)value.v.p)->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( tp ) return DaoType_MatchTo( tp, self, defs );
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
 		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
@@ -806,7 +809,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		copy->mapNames = DMap_Copy( self->mapNames );
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
-	if( self->nested ){
+	if( self->nested && DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL ) ){
 		char sep = self->tid == DAO_UNION ? '|' : ',';
 		if( copy->nested == NULL ) copy->nested = DArray_New(0);
 		DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */

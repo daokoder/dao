@@ -28,8 +28,8 @@ routine CreateClass( name : string, value = 0 )
 
 		routine @class( id = 0 ){ index = id }
 
-		routine Meth( id = 0 ){ io.writeln( 'Meth(id)', id, index, text, self.Alias ) }
-		routine Meth( text : string ){ io.writeln( 'Meth(text)', self.name, self.added ) }
+		routine Meth( id = 0 ){ io.writeln( 'Meth(id)', id, index, text ) }
+		routine Meth( text : string ){ io.writeln( 'Meth(text)' ) }
 	}
 	return klass;
 }
@@ -46,5 +46,6 @@ obj1.Meth( 'abc' );
 obj2.Meth( 'def' );
 obj1.Extra();
 
+io.writeln( obj1.added ); 
 obj1.added = 987; # error modify const
 io.writeln( obj1.added ); 
