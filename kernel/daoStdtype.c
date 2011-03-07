@@ -2111,11 +2111,30 @@ static void DaoLIST_Erase( DaoContext *ctx, DValue *p[], int N )
 	DaoList *self = p[0]->v.list;
 	size_t start = (size_t)p[1]->v.i;
 	size_t n = (size_t)p[2]->v.i;
-	size_t i;
-	for(i=0; i<n; i++){
-		if( self->items->size == start ) break;
-		DaoList_Erase( self, start );
+	DVarray_Erase( self->items, start, n );
+}
+static void DaoLIST_Erase2( DaoContext *ctx, DValue *p[], int N )
+{
+	DaoList *self = p[0]->v.list;
+	DaoList *ids = p[1]->v.list;
+	size_t i, k = self->items->size;
+	for(i=0; i<ids->items->size; i++){
+		dint id = ids->items->data[i].v.i;
+		if( id < 0 ) id += self->items->size;
+		if( id < 0 || id >= self->items->size ) continue;
+		if( id < k ) k = id;
+		DValue_Clear( self->items->data + id );
+		self->items->data[id].sub = 1; /* mark as deleted */
 	}
+	for(i=k; i<self->items->size; i++){
+		DValue val = self->items->data[i];
+		if( val.t == 0 && val.sub == 1 ) continue;
+		self->items->data[k] = val;
+		k += 1;
+	}
+	self->items->size = k;
+	/* to possibly reduce buffer size: */
+	DVarray_Resize( self->items, k, daoNullValue );
 }
 static void DaoLIST_Clear( DaoContext *ctx, DValue *p[], int N )
 {
@@ -2138,7 +2157,6 @@ static void DaoLIST_Resize( DaoContext *ctx, DValue *p[], int N )
 				"not permitted to create large list in safe running mode" );
 		return;
 	}
-	for(i=size; i<oldSize; i++ ) DaoList_Erase( self, size );
 	DVarray_Resize( self->items, size, daoNullValue );
 }
 static int DaoList_CheckType( DaoList *self, DaoContext *ctx )
@@ -2582,6 +2600,7 @@ static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Insert,     "insert( self :list<@T>, item : @T, pos=0 )" },
 	{ DaoLIST_Erase,      "erase( self :list<any>, start=0, n=1 )" },
+	{ DaoLIST_Erase2,     "erase( self :list<any>, indices : list<int> )" },
 	{ DaoLIST_Clear,      "clear( self :list<any> )" },
 	{ DaoLIST_Size,       "size( self :list<any> )const=>int" },
 	{ DaoLIST_Resize,     "resize( self :list<any>, size :int )" },
@@ -2674,42 +2693,14 @@ int DaoList_PushBack( DaoList *self, DValue item )
 	self->items->data[ self->items->size - 1 ] = temp;
 	return 0;
 }
-void DaoList_ClearItem( DaoList *self, int i )
-{
-	if( i < 0 || i >= self->items->size ) return;
-	switch( self->items->data[i].t ){
-	case DAO_NIL :
-	case DAO_INTEGER :
-	case DAO_FLOAT   :
-	case DAO_DOUBLE  :
-		break;
-	case DAO_COMPLEX :
-		dao_free( self->items->data[i].v.c );
-		break;
-	case DAO_LONG :
-		DLong_Delete( self->items->data[i].v.l );
-		break;
-	case DAO_ENUM :
-		DEnum_Delete( self->items->data[i].v.e );
-		break;
-	case DAO_STRING  :
-		DString_Delete( self->items->data[i].v.s );
-		break;
-	default : GC_DecRC( self->items->data[i].v.p );
-	}
-	self->items->data[i].v.d = 0.0;
-	self->items->data[i].t = 0;
-}
 void DaoList_PopFront( DaoList *self )
 {
 	if( self->items->size ==0 ) return;
-	DaoList_ClearItem( self, 0 );
 	DVarray_PopFront( self->items );
 }
 void DaoList_PopBack( DaoList *self )
 {
 	if( self->items->size ==0 ) return;
-	DaoList_ClearItem( self, self->items->size-1 );
 	DVarray_PopBack( self->items );
 }
 
@@ -2747,7 +2738,6 @@ int DaoList_Append( DaoList *self, DValue value )
 void DaoList_Erase( DaoList *self, int pos )
 {
 	if( pos < 0 || pos >= self->items->size ) return;
-	DaoList_ClearItem( self, pos );
 	DVarray_Erase( self->items, pos, 1 );
 }
 void DaoList_FlatList( DaoList *self, DVarray *flat )

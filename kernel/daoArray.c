@@ -449,7 +449,7 @@ void DVarray_Resize( DVarray *self, size_t size, DValue val )
 {
 	DValue nil = daoNullValue;
 	size_t i;
-	if( size == self->size && self->bufsize>0 ) return;
+	if( size == self->size && self->bufsize >0 && size > 0.8*self->bufsize ) return;
 
 	for(i=size; i<self->size; i++ ) DValue_Clear( self->data + i );
 
