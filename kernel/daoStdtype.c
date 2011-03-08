@@ -283,7 +283,7 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 			copy->unitype = (tp && tp->tid == DAO_MAP) ? tp : map->unitype;
 			GC_IncRC( copy->unitype );
 			for( ; node !=NULL; node = DMap_Next(map->items, node ))
-				DMap_Insert( copy->items, node->key.pVoid, node->value.pVoid );
+				DaoMap_Insert( copy, *node->key.pValue, *node->value.pValue );
 			return (DaoBase*)copy;
 		}
 	case DAO_TUPLE :
@@ -293,7 +293,7 @@ DaoBase* DaoBase_Duplicate( void *dbase, DaoType *tp )
 			copy->unitype = (tp && tp->tid == DAO_TUPLE) ? tp : tuple->unitype;
 			GC_IncRC( copy->unitype );
 			for(i=0; i<tuple->items->size; i++)
-				DValue_Copy( copy->items->data + i, tuple->items->data[i] );
+				DaoTuple_SetItem( copy, tuple->items->data[i], i );
 			return (DaoBase*) copy;
 		}
 #ifdef DAO_WITH_NUMARRAY

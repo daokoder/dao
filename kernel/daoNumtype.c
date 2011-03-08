@@ -1758,14 +1758,14 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 					to   = data[1].v.i;
 					SliceRange( slice, from, to-from+1 );
 				}
-			}else if( data[0].t == DAO_NIL && data[1].t <= DAO_NIL ){
+			}else if( data[0].t == DAO_NIL && data[1].t == DAO_NIL ){
 				SliceRange( slice, 0, N );
-			}else if( data[0].t <= DAO_DOUBLE ){
+			}else if( data[0].t <= DAO_DOUBLE && data[1].t <= DAO_NIL ){
 				from = DValue_GetInteger( data[0] );
 				if( from <0 ) from += N;
 				if( from >= N ) from -= N;
 				SliceRange( slice, from, N - from );
-			}else if( data[1].t <= DAO_DOUBLE ){
+			}else if( data[0].t == DAO_NIL && data[1].t <= DAO_DOUBLE ){
 				to = DValue_GetInteger( data[1] );
 				if( to <0 ) to += N;
 				SliceRange( slice, 0, to + 1 );

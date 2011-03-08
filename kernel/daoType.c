@@ -670,7 +670,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) continue;
 
 			mt = DaoType_MatchValue( tp, value.v.tuple->items->data[i], defs );
-			if( mt != DAO_MT_EQ ) return 0;
+			if( mt < DAO_MT_SIM ) return 0;
 		}
 		if( value.v.tuple->unitype == NULL ) return DAO_MT_EQ;
 		names = self->mapNames;

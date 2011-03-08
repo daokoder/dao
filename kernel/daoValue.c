@@ -744,39 +744,40 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	GC_IncRC( dA );
 	to->t = dA->type;
 	to->v.p = dA;
-	if( from.t == DAO_TUPLE && to->v.tuple->unitype != tp ){
+	if( from.t == DAO_TUPLE && to->v.tuple->unitype != tp && tm >= DAO_MT_SIM ){
+		DaoTuple *tuple;
 		DaoType *totype = to->v.tuple->unitype;
+		DaoType **item_types = tp->nested->items.pType;
+		DValue *data = to->v.tuple->items->data;
 		DMap *names = totype ? totype->mapNames : NULL;
+		DNode *node, *search;
+		int i, T = tp->nested->size;
 		/* auto-cast tuple type, on the following conditions:
 		 * (1) the item values of "to" must match exactly to the item types of "tp";
 		 * (2) "tp->mapNames" must contain "to->v.tuple->unitype->mapNames"; */
-		if( totype == NULL || (totype->attrib & DAO_TYPE_NOTDEF) 
-				|| (names && names->size < tp->mapNames->size) ){
-			DaoTuple *tuple;
-			DaoType **item_types = tp->nested->items.pType;;
-			DValue *data = to->v.tuple->items->data;
-			DNode *node, *search;
-			int i, T = tp->nested->size;
-			for(i=0; i<T; i++){
-				DaoType *it = item_types[i];
-				if( it->tid == DAO_PAR_NAMED ) it = it->aux.v.type;
-				tm = DaoType_MatchValue( it, data[i], NULL );
-				if( tm != DAO_MT_EQ ) return 1;
-			}
-			if( names ){
-				for(node=DMap_First(names); node; node=DMap_Next(names,node)){
-					search = DMap_Find( tp->mapNames, node->key.pVoid );
-					if( search == NULL ) return 0;
-					if( node->value.pInt != search->value.pInt ) return 0;
-				}
-			}
-			tuple = DaoTuple_New( T );
-			for(i=0; i<T; i++) DValue_Copy( tuple->items->data+i, data[i] );
-			GC_IncRC( tp );
-			tuple->unitype = tp;
-			GC_ShiftRC( tuple, to->v.tuple );
-			to->v.tuple = tuple;
+		for(i=0; i<T; i++){
+			DaoType *it = item_types[i];
+			if( it->tid == DAO_PAR_NAMED ) it = it->aux.v.type;
+			tm = DaoType_MatchValue( it, data[i], NULL );
+			if( tm < DAO_MT_SIM ) return 1;
 		}
+		if( names ){
+			for(node=DMap_First(names); node; node=DMap_Next(names,node)){
+				search = DMap_Find( tp->mapNames, node->key.pVoid );
+				if( search == NULL ) return 0;
+				if( node->value.pInt != search->value.pInt ) return 0;
+			}
+		}
+		tuple = DaoTuple_New( T );
+		for(i=0; i<T; i++){
+			DaoType *it = item_types[i];
+			if( it->tid == DAO_PAR_NAMED ) it = it->aux.v.type;
+			DValue_Move( data[i], tuple->items->data+i, it );
+		}
+		GC_IncRC( tp );
+		tuple->unitype = tp;
+		GC_ShiftRC( tuple, to->v.tuple );
+		to->v.tuple = tuple;
 	}else if( tp && ! ( tp->attrib & DAO_TYPE_EMPTY ) && tp->tid == dA->type ){
 #if 0
 		//int defed = DString_FindChar( tp->name, '@', 0 ) == MAXSIZE;

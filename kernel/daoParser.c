@@ -704,6 +704,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 			if( i+1 > end ) break;
 			tk = tokens[i+1]->type;
 			if( tk >= DTOK_IDENTIFIER && tk <= DTOK_WCS ) return i;
+			if( i >= end || tokens[i]->line != tokens[i+1]->line ) return i;
 			i ++;
 		}else if( tk == DTOK_RCB ){
 			if( i+1 > end ){
