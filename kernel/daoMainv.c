@@ -15,11 +15,6 @@
 #include"stdlib.h"
 #include"string.h"
 
-#ifdef DAO_USE_READLINE
-#include"readline/readline.h"
-#include"readline/history.h"
-#endif
-
 #include"daoType.h"
 #include"daoVmspace.h"
 
@@ -27,34 +22,6 @@
 #include"virt.c"
 
 /*#include"mcheck.h" */
-
-static int readingline = 0;
-static DaoVmSpace *vmSpace = NULL;
-
-static char* DaoReadLine( const char *s )
-{
-	char *line;
-	readingline = 1;
-#ifdef DAO_USE_READLINE
-	line = readline( s );
-#endif
-	readingline = 0;
-	return line;
-}
-static void DaoSignalHandler( int sig )
-{
-	DaoVmSpace_Stop( vmSpace, 1);
-	if( readingline ){
-		printf( "\n" );
-#ifdef DAO_USE_READLINE
-		if( rl_end ==0 ) printf( "type \"q\" to quit.\n" );
-		rl_replace_line( "", 0 );
-		rl_forced_update_display();
-#endif
-	}else{
-		printf( "keyboard interrupt...\n" );
-	}
-}
 
 int main( int argc, char **argv )
 {
@@ -76,11 +43,6 @@ int main( int argc, char **argv )
 	/*mtrace(); */
 
 	vmSpace = DaoInit();
-
-#ifdef DAO_USE_READLINE
-	DaoVmSpace_ReadLine( vmSpace, DaoReadLine );
-	DaoVmSpace_AddHistory( vmSpace, add_history );
-#endif
 
 	args  = DString_New(1);
 	for(i=1; i<argc; i++ ){
