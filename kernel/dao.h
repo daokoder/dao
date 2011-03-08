@@ -1326,7 +1326,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 
 #define DaoVmSpace_RunMain( self, file )  __dao.DaoVmSpace_RunMain( self, file )
 #define DaoVmSpace_Load( self, file )  __dao.DaoVmSpace_Load( self, file )
-#define DaoVmSpace_GetNameSpace( self )  __dao.DaoVmSpace_GetNameSpace( self, name )
+#define DaoVmSpace_GetNameSpace( self, name )  __dao.DaoVmSpace_GetNameSpace( self, name )
 #define DaoVmSpace_MainNameSpace( self )  __dao.DaoVmSpace_MainNameSpace( self )
 #define DaoVmSpace_MainVmProcess( self )  __dao.DaoVmSpace_MainVmProcess( self )
 #define DaoVmSpace_AcquireProcess( self )  __dao.DaoVmSpace_AcquireProcess( self )
