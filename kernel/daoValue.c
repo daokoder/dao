@@ -833,7 +833,7 @@ DValue DValue_NewMBString( const char *s, int n )
 }
 DValue DValue_NewWCString( const wchar_t *s, int n )
 {
-	DValue res = daoNullValue;
+	DValue res = daoNullString;
 	res.v.s = DString_New(0);
 	if( n ){
 		DString_Resize( res.v.s, n );
