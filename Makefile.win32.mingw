@@ -24,7 +24,7 @@ INCPATH   = -I. -Ikernel
 LFLAGS    = -s
 LFLAGSDLL = -s -shared
 #LFLAGSDLL = -shared -fPIC -s -Wl,--version-script=daolibsym.map
-LIBS      = -L. -lwinmm
+LIBS      = -L. -lwinmm -lmsvcp60
 
 AR = ar rcs
 COPY      = copy /y

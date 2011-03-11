@@ -1760,7 +1760,7 @@ static void MakeSlice( DaoContext *ctx, DValue pid, int N, DArray *slice )
 				}
 			}else if( data[0].t == DAO_NIL && data[1].t == DAO_NIL ){
 				SliceRange( slice, 0, N );
-			}else if( data[0].t <= DAO_DOUBLE && data[1].t <= DAO_NIL ){
+			}else if( data[0].t <= DAO_DOUBLE && data[1].t == DAO_NIL ){
 				from = DValue_GetInteger( data[0] );
 				if( from <0 ) from += N;
 				if( from >= N ) from -= N;
