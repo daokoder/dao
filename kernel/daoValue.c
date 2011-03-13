@@ -253,8 +253,10 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 		DaoStream_WriteMBS( stream, "$" );
 		break;
 	case DAO_LONG :
-		DLong_Print( self.v.l, stream->streamString );
-		DaoStream_WriteString( stream, stream->streamString );
+		name = DString_New(1);
+		DLong_Print( self.v.l, name );
+		DaoStream_WriteString( stream, name );
+		DString_Delete( name );
 		break;
 	case DAO_ENUM  :
 		name = DString_New(1);
