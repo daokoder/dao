@@ -789,7 +789,7 @@ static void SYS_Time( DaoContext *ctx, DValue *p[], int N )
 }
 static void SYS_Time2( DaoContext *ctx, DValue *p[], int N )
 {
-	extern long timezone;
+	/* extern long timezone; */
 	/* extern int daylight; // not on WIN32 */
 	struct tm ctime;
 	DValue *tup = p[0]->v.tuple->items->data;

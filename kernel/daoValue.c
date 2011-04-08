@@ -50,7 +50,9 @@ const DValue daoNullStream = { DAO_STREAM, 0, 0, 0, {0}};
 const DValue daoNullType = { DAO_TYPE, 0, 0, 0, {0}};
 #endif
 
+#ifdef DAO_WITH_NUMARRAY
 int DaoArray_Compare( DaoArray *x, DaoArray *y );
+#endif
 
 int DValue_Compare( DValue left, DValue right )
 {
@@ -152,7 +154,9 @@ int DValue_Compare( DValue left, DValue right )
 		if( size1 == size2  ) return 0;
 		return size1 > size2 ? 1 : -1;
 	}else if( left.t == DAO_ARRAY && right.t == DAO_ARRAY ){
+#ifdef DAO_WITH_NUMARRAY
 		return DaoArray_Compare( left.v.array, right.v.array );
+#endif
 	}else if( left.t == DAO_CTYPE && right.t == DAO_CTYPE ){
 		return (int)( (size_t)right.v.cdata->data - (size_t)left.v.cdata->data );
 	}else if( left.t == DAO_CDATA && right.t == DAO_CDATA ){
@@ -1641,6 +1645,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 		value->v.e->value = DaoDecodeInteger( str );
 		break;
 	case DAO_ARRAY :
+#ifdef DAO_WITH_NUMARRAY
 		if( tokens[start]->name != DTOK_LSB ) return next;
 		k = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, end );
 		if( k < 0 ) return next;
@@ -1677,6 +1682,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 			n += 1;
 		}
 		DArray_PopFront( types );
+#endif
 		break;
 	case DAO_LIST :
 		list = value->v.list;

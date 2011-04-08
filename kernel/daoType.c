@@ -165,10 +165,12 @@ void DaoType_InitDefault( DaoType *self )
 		self->value = daoNullEnum;
 		self->value.v.e = DEnum_New( self, 0 );
 	}else if( self->tid == DAO_ARRAY ){
+#ifdef DAO_WITH_NUMARRAY
 		self->value = daoNullArray;
 		self->value.v.array = DaoArray_New( itype1 ? itype1->tid : DAO_INTEGER );
 		self->value.v.array->unitype = self;
 		GC_IncRC( self );
+#endif
 	}else if( self->tid == DAO_LIST ){
 		self->value = daoNullList;
 		self->value.v.list = DaoList_New();
