@@ -11,12 +11,11 @@ DAO_NUMARRAY = -DDAO_WITH_NUMARRAY
 DAO_SYNCLASS = -DDAO_WITH_SYNCLASS
 
 #DAO_ASMBC = -DDAO_WITH_ASMBC
-#DAO_JIT = -DDAO_WITH_JIT
 
 #USE_READLINE = -DDAO_USE_READLINE
 #LIB_READLINE = -lreadline
 
-DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_ASMBC) $(DAO_JIT) $(USE_READLINE)
+DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_ASMBC) $(USE_READLINE)
 
 CC        = $(CROSS_COMPILE)gcc
 CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -ggdb #-DDAO_GC_PROF
@@ -95,7 +94,6 @@ SOURCES = kernel/daoType.c \
 		kernel/daoValue.c \
 		kernel/daoContext.c \
 		kernel/daoProcess.c \
-		kernel/daoJit.c \
 		kernel/daoStdlib.c \
 		kernel/daoArray.c \
 		kernel/daoMap.c \
@@ -119,7 +117,6 @@ OBJECTS = \
 		objs/daoGC.o \
 		objs/daoRoutine.o \
 		objs/daoString.o \
-		objs/daoJit.o \
 		objs/daoStdlib.o \
 		objs/daoMacro.o \
 		objs/daoAsmbc.o \
@@ -271,8 +268,6 @@ objs/daoAsmbc.o: kernel/daoAsmbc.c kernel/daoAsmbc.h
 objs/daoThread.o: kernel/daoThread.c kernel/daoThread.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoThread.o kernel/daoThread.c
 
-objs/daoJit.o: kernel/daoJit.c
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoJit.o kernel/daoJit.c
 
 ####### Install
 
