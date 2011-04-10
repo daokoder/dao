@@ -196,7 +196,7 @@ enum DaoExecOption
 	DAO_EXEC_LIST_BC   = (1<<5), /* -l, --list-bc:    print compiled bytecodes; */
 	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:    compile to bytecodes;(TODO) */
 	DAO_EXEC_INCR_COMP = (1<<7), /* -n, --incr-comp:  incremental compiling; */
-	DAO_EXEC_NO_JIT    = (1<<8), /* -J, --no-jit:     no JIT compiling; */
+	DAO_EXEC_JIT       = (1<<8), /* -J, --jit:        enable JIT compiling; */
 	DAO_EXEC_NO_TC     = (1<<9), /* -T, --no-typed-code:   no typed code; */
 
 	DAO_EXEC_MBS_ONLY = (1<<20),

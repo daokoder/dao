@@ -101,4 +101,22 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self );
 DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmCode, int n, DaoType *t );
 DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, DValue b );
 
+
+typedef struct DaoJIT DaoJIT;
+typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
+typedef void (*DaoJIT_QuitFPT)();
+typedef void (*DaoJIT_FreeFPT)( DaoRoutine *routine );
+typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
+typedef void (*DaoJIT_ExecuteFPT)( DaoContext *context, int jitcode );
+
+struct DaoJIT
+{
+	void (*Quit)();
+	void (*Free)( DaoRoutine *routine );
+	void (*Compile)( DaoRoutine *routine );
+	void (*Execute)( DaoContext *context, int jitcode );
+};
+
+extern struct DaoJIT dao_jit;
+
 #endif

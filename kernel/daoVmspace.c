@@ -91,8 +91,8 @@ static const char *const cmd_help =
 "   -d, --debug:          run in debug mode;\n"
 "   -i, --ineractive:     run in interactive mode;\n"
 "   -l, --list-bc:        print compiled bytecodes;\n"
+"   -j, --jit:            enable just-in-time compiling;\n"
 "   -T, --no-typed-code:  no typed VM codes;\n"
-"   -J, --no-jit:         no just-in-time compiling;\n"
 "   -n, --incr-comp:      incremental compiling;\n"
 ;
 /*
@@ -521,6 +521,7 @@ static void ParseScriptParameters( DString *str, DArray *tokens )
 	DString_Delete( tok );
 }
 
+int DaoJIT_TryInit( DaoVmSpace *vms );
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 {
 	DString *str = DString_New(1);
@@ -562,9 +563,9 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 			}else if( strcmp( token->mbs, "--no-typed-code" ) ==0 ){
 				self->options |= DAO_EXEC_NO_TC;
 				daoConfig.typedcode = 0;
-			}else if( strcmp( token->mbs, "--no-typedcode" ) ==0 ){
-				self->options |= DAO_EXEC_NO_JIT;
-				daoConfig.jit = 0;
+			}else if( strcmp( token->mbs, "--jit" ) ==0 ){
+				self->options |= DAO_EXEC_JIT;
+				daoConfig.jit = 1;
 			}else if( token->size ){
 				DaoStream_WriteMBS( self->stdStream, "Unknown option: " );
 				DaoStream_WriteMBS( self->stdStream, token->mbs );
@@ -590,11 +591,11 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 				case 'n' : self->options |= DAO_EXEC_INCR_COMP;
 						   daoConfig.incompile = 0;
 						   break;
+				case 'j' : self->options |= DAO_EXEC_JIT;
+						   daoConfig.jit = 1;
+						   break;
 				case 'T' : self->options |= DAO_EXEC_NO_TC;
 						   daoConfig.typedcode = 0;
-						   break;
-				case 'J' : self->options |= DAO_EXEC_NO_JIT;
-						   daoConfig.jit = 0;
 						   break;
 				case 'e' : self->evalCmdline = 1;
 						   DString_Clear( self->source );
@@ -617,6 +618,9 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 	}
 	DString_Delete( str );
 	DArray_Delete( array );
+	if( daoConfig.jit && dao_jit.Compile == NULL && DaoJIT_TryInit( self ) == 0 ){
+		DaoStream_WriteMBS( self->stdStream, "Failed to enable Just-In-Time compiling!\n" );
+	}
 	return 1;
 }
 
@@ -2174,7 +2178,6 @@ static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n )
 }
 #endif
 
-extern void DaoJitMapper_Init();
 extern void DaoType_Init();
 
 DaoType *dao_type_udf = NULL;
@@ -2205,6 +2208,25 @@ void print_trace();
 
 extern DMap *dao_cdata_bindings;
 extern DArray *dao_callback_data;
+
+int DaoJIT_TryInit( DaoVmSpace *vms )
+{
+	void (*init)( DaoVmSpace*, DaoJIT* );
+	char name[64];
+	void *jitHandle;
+	sprintf( name, "libDaoJIT%s", DAO_DLL_SUFFIX );
+	jitHandle = DaoLoadLibrary( name );
+	if( jitHandle == NULL ) return 0;
+	init = (DaoJIT_InitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Init" );
+	if( init == NULL ) return 0;
+	(*init)( vms, & dao_jit );
+	dao_jit.Quit = (DaoJIT_QuitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Quit" );
+	dao_jit.Free = (DaoJIT_FreeFPT) DaoFindSymbol( jitHandle, "DaoJIT_Free" );
+	dao_jit.Compile = (DaoJIT_CompileFPT) DaoFindSymbol( jitHandle, "DaoJIT_Compile" );
+	dao_jit.Execute = (DaoJIT_ExecuteFPT) DaoFindSymbol( jitHandle, "DaoJIT_Execute" );
+	if( dao_jit.Execute == NULL ) dao_jit.Compile = NULL;
+	return dao_jit.Compile != NULL;
+}
 
 DaoVmSpace* DaoInit()
 {
@@ -2245,10 +2267,6 @@ DaoVmSpace* DaoInit()
 
 #ifdef DAO_WITH_THREAD
 	DaoInitThread();
-#endif
-
-#ifdef DAO_WITH_JIT
-	DaoJitMapper_Init();
 #endif
 
 	DaoStartGC();
@@ -2430,6 +2448,13 @@ void DaoQuit()
 	dao_callback_data = NULL;
 	mainVmSpace = NULL;
 	mainVmProcess = NULL; 
+	if( dao_jit.Quit ){
+		dao_jit.Quit();
+		dao_jit.Quit = NULL;
+		dao_jit.Free = NULL;
+		dao_jit.Compile = NULL;
+		dao_jit.Execute = NULL;
+	}
 }
 DaoNameSpace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {

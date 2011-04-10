@@ -42,6 +42,9 @@
 
 #define SEMA_PER_VMPROC  1000
 
+struct DaoJIT dao_jit = { NULL, NULL, NULL, NULL };
+
+
 extern DaoList*  DaoContext_GetList( DaoContext *self, DaoVmCode *vmc );
 
 extern void DaoContext_DoList(  DaoContext *self, DaoVmCode *vmc );
@@ -1281,19 +1284,10 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( JITC ){
-#ifdef DAO_WITH_JIT
-			DaoJitFunc jitfunc;
-			jitfunc = (DaoJitFunc)topCtx->routine->jitFuncs->items.pVoid[vmc->a];
-			inum = (*jitfunc)( locVars, & extra );
-			if( inum ){
-				vmc = vmcBase + inum;
-				goto RaiseErrorIndexOutOfRange;
-			}else if( self->exceptions->size > exceptCount ){
-				goto CheckException;
-			}
+			dao_jit.Execute( topCtx, vmc->a );
+			if( self->exceptions->size > exceptCount ) goto CheckException;
 			vmc += vmc->b;
 			OPJUMP()
-#endif
 				/*
 				   dbase = (DaoBase*)inum;
 				   printf( "jitc: %#x, %i\n", inum, dbase->type );

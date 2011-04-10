@@ -986,11 +986,7 @@ DaoRoutine* DaoRoutine_New()
 	self->localVarType = DMap_New(0,0);
 	self->abstypes = DMap_New(D_STRING,0);
 	self->bodyStart = self->bodyEnd = -1;
-#ifdef DAO_WITH_JIT
-	self->binCodes = DArray_New(D_STRING);
-	self->jitFuncs = DArray_New(0);
-	self->preJit = DaoVmcArray_New();
-#endif
+	self->jitData = NULL;
 	return self;
 }
 void DaoRoutine_Delete( DaoRoutine *self )
@@ -1019,12 +1015,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	DMap_Delete( self->abstypes );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->parser ) DaoParser_Delete( self->parser );
-#ifdef DAO_WITH_JIT
-	DArray_Delete( self->binCodes );
-	DArray_Delete( self->jitFuncs );
-	DaoVmcArray_Delete( self->preJit );
-	if( self->jitMemory ) GC_DecRC( self->jitMemory );
-#endif
+	if( dao_jit.Free ) dao_jit.Free( self->jitData );
 	DaoLateDeleter_Push( self );
 }
 void DaoParser_ClearCodes( DaoParser *self );
@@ -1117,12 +1108,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	self->defLine = other->defLine;
 	self->bodyStart = other->bodyStart;
 	self->bodyEnd = other->bodyEnd;
-#ifdef DAO_WITH_JIT
-	DArray_Assign( self->binCodes, other->binCodes );
-	DArray_Assign( self->jitFuncs, other->jitFuncs );
-	DaoVmcArray_Assign( self->preJit, other->preJit );
-	self->jitMemory = other->jitMemory;
-#endif
 }
 static DaoRoutine* DaoRoutine_Copy2( DaoRoutine *self )
 {
@@ -4879,9 +4864,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	/*
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
-#ifdef DAO_WITH_JIT
-	if( daoConfig.jit && notide ) DaoRoutine_JitCompile( self );
-#endif
+	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self );
+
 	regConst->size = 0; /* its values should not be deleted by DValue_Clear(). */
 	DVarray_Delete( regConst );
 	DMap_Delete( defs );

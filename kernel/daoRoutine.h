@@ -101,12 +101,7 @@ struct DaoRoutine
 	DaoParser  *parser;
 	DaoRoutine *revised; /* to support edit & continue */
 
-#ifdef DAO_WITH_JIT
-	DArray *binCodes; /* <DString*>: compiled machince codes */
-	DArray *jitFuncs; /* <void*>: executable machine codes as function pointers */
-	DaoVmcArray *preJit; /* original VM codes */
-	DaoJitMemory *jitMemory;
-#endif
+	void *jitData;
 };
 
 DaoRoutine* DaoRoutine_New();
