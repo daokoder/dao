@@ -71,12 +71,17 @@ void simple_tests( DaoContext *ctx )
 	outs() << "Result: " << GV.IntVal << "\n";
 }
 
+void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & segments );
 
 
 const char* dao_source = 
 "a = 11.2\n"
 "b = 22.3\n"
 "c = a + b\n"
+"if( c ){\n"
+"d = c + 1.0\n"
+"}\n"
+"for( i = 1 : 5){ e = i; break; e = i + 1; }\n"
 ;
 
 const char* dao_source3 = 
@@ -130,6 +135,9 @@ int main( int argc, char *argv[] )
 	DaoVmProcess_Eval( vmp, ns, src, 1 );
 
 	DaoJIT_Init( vms );
+	dao_jit.Free = DaoJIT_Free;
+	dao_jit.Compile = DaoJIT_Compile;
+	dao_jit.Execute = DaoJIT_Execute;
 	DaoRoutine_PrintCode( ns->mainRoutine, vms->stdStream );
 	//DaoJIT_Compile( ns->mainRoutine );
 	//DaoRoutine_PrintCode( ns->mainRoutine, vms->stdStream );
@@ -140,6 +148,9 @@ int main( int argc, char *argv[] )
 	simple_tests( ctx );
 
 	printf( "value.f = %g\n", ctx->regValues[1]->v.f );
+
+	std::vector<IndexRange> segments;
+	DaoJIT_SearchCompilable( ns->mainRoutine, segments );
 
 	// Check if the Dao scripts have indeed modified the C++ object.
 

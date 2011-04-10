@@ -3,6 +3,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<math.h>
+#include<stack>
 
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
@@ -48,6 +49,8 @@ const PointerType *dao_context_type_p = NULL; // DaoContext*
 const ArrayType *dao_value_ptr_array_type = NULL; // DValue*[]
 const PointerType *dao_value_ptr_array_type_p = NULL; // DValue*[]*
 
+int dao_opcode_compilable[ DVM_NULL ];
+
 extern "C"{
 DValue** DaoContext_GetLocalValues( DaoContext *daoctx )
 {
@@ -59,6 +62,15 @@ Function *dao_context_get_local_values = NULL;
 
 void DaoJIT_Init( DaoVmSpace *vms )
 {
+	int i;
+	memset( dao_opcode_compilable, 0, DVM_NULL*sizeof(int) );
+	for(i=DVM_MOVE_II; i<=DVM_MOVE_DD; i++) dao_opcode_compilable[i] = 1;
+	for(i=DVM_ADD_III; i<=DVM_BITRIT_DNN; i++) dao_opcode_compilable[i] = 1;
+	for(i=DVM_GETF_KCI; i<=DVM_SETF_OVDD; i++) dao_opcode_compilable[i] = 1;
+	dao_opcode_compilable[ DVM_NOP ] = 1;
+	dao_opcode_compilable[ DVM_GETCL ] = 1;
+	// TODO: GETCX, GETVX, swith, complex, string, array, tuple, list etc.
+
 	printf( "DaoJIT_Init()\n" );
 	InitializeNativeTarget();
 	llvm_context = new LLVMContext();
@@ -176,8 +188,84 @@ CastInst* DaoJIT_CastDouble( Value *pvalue, BasicBlock *block )
 
 
 
+void DaoJIT_Free( DaoRoutine *routine )
+{
+}
+void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & segments )
+{
+	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
+	std::stack<IndexRange> bounds;
+	int i, j, k, m, open = 0, N = routine->annotCodes->size;
+	int last_uncomp = -1;
+	bool compilable;
+	bounds.push( IndexRange( 0, N-1 ) );
+	for(i=0; i<N; i++){
+		//printf( "i = %i: %i %i\n", i, (int)bounds.size(), (int)segments.size() );
+		if( i > bounds.top().end and segments.size() > 1 ){ // merge segments
+			IndexRange & seg = segments.back();
+			m = segments.size();
+			vmc = vmcs[seg.start];
+			if( seg.start == (i-1) and vmc->code == DVM_GOTO and vmc->b < i ){
+				// jump backward goto:
+				bool merged = false;
+				if( (k = IndexRange::Locate( segments, vmc->b )) >= 0 ){
+					IndexRange & segoto = segments[k];
+					if( last_uncomp < segoto.start ){ // merge
+						segoto.end = seg.end;
+						while( (int)segments.size() > (k+1) ) segments.pop_back();
+						merged = true;
+					}
+				}
+				if( merged == false ){
+					last_uncomp = i-1;
+					segments.pop_back();
+				}
+			}else{
+				while( segments.size() > 1 ){
+					if( (segments[i-2].end + 1) < segments[i-1].start ) break;
+					k = segments.back().end;
+					segments.pop_back();
+					segments.back().end = k;
+				}
+			}
+			bounds.pop();
+		}
+		vmc = vmcs[i];
+		switch( vmc->code ){
+		case DVM_GOTO :
+			if( vmc->b <= (bounds.top().end + 1) ){
+				segments.push_back( IndexRange( i, i ) );
+			}else{
+				last_uncomp = i;
+			}
+			break;
+		case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
+			bounds.push( IndexRange( i+1, vmc->b - 1 ) );
+			segments.push_back( IndexRange( i, i ) );
+			break;
+		default :
+			compilable = dao_opcode_compilable[ vmc->code ];
+			if( vmc->code == DVM_DATA ) compilable = vmc->a <= DAO_DOUBLE;
+			if( compilable ){
+				if( segments.size() == 0 or segments.back().end < (i-1) ){
+					segments.push_back( IndexRange( i, i ) );
+				}else{
+					if( i == bounds.top().start ) segments.push_back( IndexRange( i, i ) );
+					segments.back().end = i;
+				}
+			}else{
+				last_uncomp = i;
+			}
+			break;
+		}
+	}
+	for(i=0,k=segments.size(); i<k; i++){
+		printf( "%3i: %5i %5i\n", i, segments[i].start, segments[i].end );
+	}
+}
 void DaoJIT_Compile( DaoRoutine *routine )
 {
+	std::vector<Function*> jitFunctions;
 	DaoVmCodeX **vmcs = routine->annotCodes->items.pVmc;
 	DaoVmCodeX *vmc;
 	int i, N = routine->annotCodes->size;
@@ -186,8 +274,9 @@ void DaoJIT_Compile( DaoRoutine *routine )
 		if( vmc->code == DVM_MOVE_II ){
 		}
 	}
+	if( jitFunctions.size() ) routine->jitData = new std::vector<Function*>( jitFunctions );
 }
-void DaoJIT_Execute( DaoContext *context, DaoRoutine *routine, int jitcode )
+void DaoJIT_Execute( DaoContext *context, int jitcode )
 {
 }
 
