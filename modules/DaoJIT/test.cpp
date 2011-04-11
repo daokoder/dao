@@ -44,7 +44,8 @@ void simple_tests( DaoContext *ctx )
 
 
 const char* dao_source = 
-"a = 11.2\n"
+"a = 8.0\n"
+"a = 12.0 + a\n"
 "io.writeln( std.about(a), a )\n"
 "return\n"
 "b = 22.3\n"
@@ -128,10 +129,8 @@ int main( int argc, char *argv[] )
 	ctx = vmp->topFrame->context;
 	DaoVmProcess_Execute( vmp );
 	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[0]->v.f );
-	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[1]->v.f );
+	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[3]->v.f );
 	printf( "%p %p %p\n", ns->mainRoutine->routConsts->data, ctx->regValues[1], ctx->regArray->data+1 );
-
-	// Check if the Dao scripts have indeed modified the C++ object.
 
 	DString_Delete( src );
 	DaoQuit(); // Finalizing

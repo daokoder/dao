@@ -7871,7 +7871,11 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 			}else{
 				reg1 = DaoParser_MakeArithTree( self, start, end2, & c1, -1, state );
 
-				if( optype == DAO_OPER_AND ){
+				if( optype == DAO_OPER_AND && start2 == end ){
+					reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
+				}else if( optype == DAO_OPER_OR && start2 == end ){
+					reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
+				}else if( optype == DAO_OPER_AND ){
 					/* adding another layer of {} to avoid messing up the
 					 * explicit control statements stack */
 					DaoParser_AddCode( self, DVM_LBRA2, 0, 0, 0, start, start+1, 0 );
