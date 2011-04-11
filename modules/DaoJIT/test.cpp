@@ -1,46 +1,16 @@
 
-#include"daoJIT.h"
-#include"daoNamespace.h"
 #include<stdio.h>
+#include"daoJIT.cpp"
+#include"daoNamespace.h"
 
-
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Constants.h"
-#include "llvm/Instructions.h"
 #include "llvm/PassManager.h"
 #include "llvm/CallingConv.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/JIT.h"
-#include "llvm/ExecutionEngine/Interpreter.h"
-#include "llvm/Support/raw_ostream.h"
-
-using namespace llvm;
-
-extern LLVMContext     *llvm_context;
-extern Module          *llvm_module;
-extern ExecutionEngine *llvm_exe_engine;
-
-extern const Type *float_type;
-
-LoadInst* DaoJIT_Dereference( Value *pvalue, BasicBlock *block );
-GetElementPtrInst* DaoJIT_GetElementPointer( Value *pvalue, int id, BasicBlock *block );
-Function* DaoJIT_NewFunction( DaoRoutine *routine, int id );
-LoadInst* DaoJIT_GetLocalValue( Function *jitFunc, int id, BasicBlock *block );
-GetElementPtrInst* DaoJIT_GetValueDataPointer( Value *pvalue, BasicBlock *block );
-CastInst* DaoJIT_CastInteger( Value *pvalue, BasicBlock *block );
-CastInst* DaoJIT_CastFloat( Value *pvalue, BasicBlock *block );
-CastInst* DaoJIT_CastDouble( Value *pvalue, BasicBlock *block );
-
-extern Function *dao_context_get_local_values;
 
 void simple_tests( DaoContext *ctx )
 {
 	Value *cst, *cast, *value, *fvalue, *field, *pfield, *pfloat;
-	Function *func = DaoJIT_NewFunction( ctx->routine, 0 );
+	Function *func = DaoJIT_NewFunction( ctx->routine, 1000 );
 	BasicBlock *block = func->begin();
 	// value = ctx->regValues[1]
 	value = DaoJIT_GetLocalValue( func, 1, block );
@@ -65,17 +35,18 @@ void simple_tests( DaoContext *ctx )
 	PassManager PM;
 	PM.add(createPrintModulePass(&outs()));
 	PM.run(*llvm_module);
-	std::vector<GenericValue> Args(1);
+	std::vector<GenericValue> Args(2);
 	Args[0].PointerVal = ctx;
+	Args[1].PointerVal = ctx->routine;
 	GenericValue GV = llvm_exe_engine->runFunction( func, Args);
 	outs() << "Result: " << GV.IntVal << "\n";
 }
 
-void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & segments );
-
 
 const char* dao_source = 
 "a = 11.2\n"
+"io.writeln( std.about(a), a )\n"
+"return\n"
 "b = 22.3\n"
 "c = a + b\n"
 "if( c ){\n"
@@ -147,10 +118,18 @@ int main( int argc, char *argv[] )
 	ctx->regValues[1]->v.f = 123.56;
 	simple_tests( ctx );
 
-	printf( "value.f = %g\n", ctx->regValues[1]->v.f );
+	printf( "%p value.f = %g\n", ctx, ctx->regValues[1]->v.f );
 
 	std::vector<IndexRange> segments;
 	DaoJIT_SearchCompilable( ns->mainRoutine, segments );
+
+	DaoJIT_Compile( ns->mainRoutine );
+	DaoVmProcess_PushRoutine( vmp, ns->mainRoutine );
+	ctx = vmp->topFrame->context;
+	DaoVmProcess_Execute( vmp );
+	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[0]->v.f );
+	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[1]->v.f );
+	printf( "%p %p %p\n", ns->mainRoutine->routConsts->data, ctx->regValues[1], ctx->regArray->data+1 );
 
 	// Check if the Dao scripts have indeed modified the C++ object.
 

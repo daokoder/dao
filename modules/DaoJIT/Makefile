@@ -41,8 +41,8 @@ all: $(TARGET) $(TARGET2)
 $(TARGET): $(OBJECTS)
 	$(CC) $(LFLAGS) $(OBJECTS) -o $(TARGET)
 
-$(TARGET2): $(OBJECTS) test.o
-	$(CC) $(LFLAGS2) $(OBJECTS) test.o -o $(TARGET2)
+$(TARGET2): test.o
+	$(CC) $(LFLAGS2) test.o -o $(TARGET2)
 
 clean:
 	rm *.o
