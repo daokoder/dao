@@ -183,17 +183,6 @@ void DaoJIT_Init( DaoVmSpace *vms )
 }
 
 
-LoadInst* DaoJIT_Dereference( Value *pvalue, BasicBlock *block )
-{
-	return new LoadInst( pvalue, "value", block );
-}
-GetElementPtrInst* DaoJIT_GetElementPointer( Value *pvalue, int id, BasicBlock *block )
-{
-	Value *ids[2];
-	ids[0] = ConstantInt::get( int32_type, 0 );
-	ids[1] = ConstantInt::get( int32_type, id );
-	return GetElementPtrInst::Create( pvalue, ids, ids+2, "pfield", block );
-}
 // Create a function with signature: void (DaoContext*,DaoRoutine*)
 Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 {
@@ -230,61 +219,6 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 #endif
 	return jitFunction;
 }
-Function* DaoJIT_NewFunction( DaoRoutine *routine, int id )
-{
-	return NULL;
-}
-Value* DaoJIT_GetLocalValueRef( Function *jitFunc, int id, BasicBlock *block )
-{
-	BasicBlock *entryBlock = & jitFunc->getEntryBlock();
-	BasicBlock::iterator it = entryBlock->begin(); // context
-	Instruction *ppvalues = ++it; // context->regValues
-	// context->regValues + id
-	GetElementPtrInst *ppvalue = DaoJIT_GetElementPointer( ppvalues, id, block );
-	ppvalue->setName( "local_ref" );
-	return ppvalue;
-}
-Value* DaoJIT_GetLocalValue( Function *jitFunc, int id, BasicBlock *block )
-{
-	Value *ppvalue = DaoJIT_GetLocalValueRef( jitFunc, id, block );
-	LoadInst *pvalue = new LoadInst( ppvalue, "pvalue", block );
-	pvalue->setName( "local_value" );
-	return pvalue;
-}
-Value* DaoJIT_GetLocalConstant( Function *jitFunc, int id, BasicBlock *block )
-{
-	BasicBlock *entryBlock = & jitFunc->getEntryBlock();
-	BasicBlock::iterator it = entryBlock->begin(); // routine
-	Instruction *values = ++(++(++(++(++it)))); // routine->routConsts
-	// routine->routConsts->data + id
-	GetElementPtrInst *pvalue = DaoJIT_GetElementPointer( values, id, block );
-	pvalue->setName( "local_const" );
-	return pvalue;
-}
-GetElementPtrInst* DaoJIT_GetValueTypePointer( Value *pvalue, BasicBlock *block )
-{
-	return DaoJIT_GetElementPointer( pvalue, 0, block );
-}
-GetElementPtrInst* DaoJIT_GetValueDataPointer( Value *pvalue, BasicBlock *block )
-{
-	return DaoJIT_GetElementPointer( pvalue, 4, block );
-}
-CastInst* DaoJIT_CastInteger( Value *pvalue, BasicBlock *block )
-{
-	const PointerType *type = PointerType::getUnqual( dint_type );
-	return CastInst::CreatePointerCast( pvalue, type, "todint", block );
-}
-CastInst* DaoJIT_CastFloat( Value *pvalue, BasicBlock *block )
-{
-	const PointerType *type = PointerType::getUnqual( float_type );
-	return CastInst::CreatePointerCast( pvalue, type, "tofloat", block );
-}
-CastInst* DaoJIT_CastDouble( Value *pvalue, BasicBlock *block )
-{
-	const PointerType *type = PointerType::getUnqual( double_type );
-	return CastInst::CreatePointerCast( pvalue, type, "todouble", block );
-}
-
 
 
 struct IndexRange
@@ -423,31 +357,6 @@ Value* DaoJitHandle::GetValueDataPointer( Value *value )
 	SetInsertPoint( activeBlock );
 	return CreateConstGEP2_32( value, 0, 4 );
 }
-Value* DaoJIT_GetLocalReference( Function *func, int reg, std::vector<Value*> & refs )
-{
-	BasicBlock *entryBlock = & func->getEntryBlock();
-	if( refs[reg] ) return refs[reg];
-	Value *ref = DaoJIT_GetLocalValueRef( func, reg, entryBlock );
-	refs[reg] = ref;
-	return ref;
-}
-Value* DaoJIT_GetLocalValue( Function *func, BasicBlock *bl, int reg, std::vector<Value*> & refs )
-{
-	Value *ref = DaoJIT_GetLocalReference( func, reg, refs );
-	Value *value = new LoadInst( ref, "pvalue", bl );
-	return value;
-}
-Value* DaoJIT_GetValueDataPointer( Function *func, BasicBlock *bl, int reg, std::vector<Value*> & refs )
-{
-	Value *value = DaoJIT_GetLocalValue( func, bl, reg, refs );
-	Value *vdata = DaoJIT_GetValueDataPointer( value, bl );
-	return vdata;
-}
-Value* DaoJIT_Call( Value *call, Value *param1, Value *param2, BasicBlock *block )
-{
-	Value *params[2] = { param1, param2 };
-	return CallInst::Create( call, params, params+2, "", block);
-}
 Value* DaoJitHandle::Dereference( Value *value )
 {
 	SetInsertPoint( activeBlock );
@@ -515,55 +424,6 @@ void DaoJitHandle::GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, V
 	*dA = A;
 	*dB = B;
 	*dC = C;
-}
-void DaoJIT_GetIntegerOperands( Function *func, BasicBlock *bl, DaoVmCodeX *vmc, 
-		std::vector<Value*> & refs, Value **dA, Value **dB, Value **dC )
-{
-	Value *A = DaoJIT_GetValueDataPointer( func, bl, vmc->a, refs );
-	Value *B = DaoJIT_GetValueDataPointer( func, bl, vmc->b, refs );
-	Value *C = DaoJIT_GetValueDataPointer( func, bl, vmc->c, refs );
-	A = DaoJIT_CastInteger( A, bl );
-	B = DaoJIT_CastInteger( B, bl );
-	C = DaoJIT_CastInteger( C, bl );
-	A = DaoJIT_Dereference( A, bl );
-	B = DaoJIT_Dereference( B, bl );
-	*dA = A;
-	*dB = B;
-	*dC = C;
-}
-void DaoJIT_GetFloatOperands( Function *func, BasicBlock *bl, DaoVmCodeX *vmc, 
-		std::vector<Value*> & refs, Value **dA, Value **dB, Value **dC )
-{
-	Value *A = DaoJIT_GetValueDataPointer( func, bl, vmc->a, refs );
-	Value *B = DaoJIT_GetValueDataPointer( func, bl, vmc->b, refs );
-	Value *C = DaoJIT_GetValueDataPointer( func, bl, vmc->c, refs );
-	A = DaoJIT_CastFloat( A, bl );
-	B = DaoJIT_CastFloat( B, bl );
-	C = DaoJIT_CastFloat( C, bl );
-	A = DaoJIT_Dereference( A, bl );
-	B = DaoJIT_Dereference( B, bl );
-	*dA = A;
-	*dB = B;
-	*dC = C;
-}
-void DaoJIT_GetDoubleOperands( Function *func, BasicBlock *bl, DaoVmCodeX *vmc, 
-		std::vector<Value*> & refs, Value **dA, Value **dB, Value **dC )
-{
-	Value *A = DaoJIT_GetValueDataPointer( func, bl, vmc->a, refs );
-	Value *B = DaoJIT_GetValueDataPointer( func, bl, vmc->b, refs );
-	Value *C = DaoJIT_GetValueDataPointer( func, bl, vmc->c, refs );
-	A = DaoJIT_CastDouble( A, bl );
-	B = DaoJIT_CastDouble( B, bl );
-	C = DaoJIT_CastDouble( C, bl );
-	A = DaoJIT_Dereference( A, bl );
-	B = DaoJIT_Dereference( B, bl );
-	*dA = A;
-	*dB = B;
-	*dC = C;
-}
-Function* DaoJIT_Compile( DaoRoutine *routine, int start, int end )
-{
-	return NULL;
 }
 Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 {
