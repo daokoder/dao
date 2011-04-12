@@ -7,6 +7,7 @@
 #include "llvm/CallingConv.h"
 #include "llvm/Assembly/PrintModulePass.h"
 
+#if 0
 void simple_tests( DaoContext *ctx )
 {
 	Value *cst, *cast, *value, *fvalue, *field, *pfield, *pfloat;
@@ -41,11 +42,12 @@ void simple_tests( DaoContext *ctx )
 	GenericValue GV = llvm_exe_engine->runFunction( func, Args);
 	outs() << "Result: " << GV.IntVal << "\n";
 }
+#endif
 
 
 const char* dao_source = 
-"a = 8.0\n"
-"a = 12.0 + a\n"
+"a = 8.0D\n"
+"a = 12.0D * a\n"
 "io.writeln( std.about(a), a )\n"
 "return\n"
 "b = 22.3\n"
@@ -117,7 +119,7 @@ int main( int argc, char *argv[] )
 	DaoContext *ctx = DaoContext_New();
 	DaoContext_Init( ctx, ns->mainRoutine );
 	ctx->regValues[1]->v.f = 123.56;
-	simple_tests( ctx );
+	//simple_tests( ctx );
 
 	printf( "%p value.f = %g\n", ctx, ctx->regValues[1]->v.f );
 

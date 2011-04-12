@@ -18,10 +18,9 @@
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/PassManager.h"
 #include "llvm/Assembly/PrintModulePass.h"
+#include "llvm/Support/IRBuilder.h"
 
 #include "daoJIT.h"
-
-using namespace llvm;
 
 LLVMContext     *llvm_context = NULL;
 Module          *llvm_module = NULL;
@@ -72,6 +71,8 @@ DValue** DaoContext_GetLocalValues( DaoContext *daoctx )
 Function *dao_context_get_local_values = NULL;
 Function *dao_pow_double = NULL;
 
+FunctionType *dao_jit_function_type = NULL;
+
 void DaoJIT_Init( DaoVmSpace *vms )
 {
 	int i;
@@ -104,9 +105,9 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	void_type_p = PointerType::getUnqual( int8_type );
 
 	std::vector<const Type*> dvalue_types( 4, int8_type );
-	dvalue_types.push_back( void_type_p );
+	dvalue_types.push_back( double_type );
 
-	// type { i8, i8, i8, i8, i8* }
+	// type { i8, i8, i8, i8, double }
 	dao_value_type = StructType::get( *llvm_context, dvalue_types );
 	dao_value_type_p = PointerType::getUnqual( dao_value_type );
 	dao_value_type_pp = PointerType::getUnqual( dao_value_type_p );
@@ -160,6 +161,11 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_routine_type = StructType::get( *llvm_context, base_types );
 	dao_routine_type_p = PointerType::getUnqual( dao_routine_type );
 
+	// void (context*,routine*)
+	std::vector<const Type*> jitParams( 1, dao_context_type_p );
+	jitParams.push_back( dao_routine_type_p );
+	dao_jit_function_type = FunctionType::get( void_type, jitParams, false );
+
 	std::vector<const Type*> Double1( 1, dao_context_type_p );
 	FunctionType *FT = FunctionType::get(void_type,Double1,false);
 	dao_context_get_local_values = Function::Create( FT, Function::ExternalLinkage, "DaoContext_GetLocalValues", llvm_module);
@@ -176,6 +182,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	llvm_exe_engine->addGlobalMapping( dao_pow_double, (void*) pow );
 }
 
+
 LoadInst* DaoJIT_Dereference( Value *pvalue, BasicBlock *block )
 {
 	return new LoadInst( pvalue, "value", block );
@@ -188,29 +195,44 @@ GetElementPtrInst* DaoJIT_GetElementPointer( Value *pvalue, int id, BasicBlock *
 	return GetElementPtrInst::Create( pvalue, ids, ids+2, "pfield", block );
 }
 // Create a function with signature: void (DaoContext*,DaoRoutine*)
-Function* DaoJIT_NewFunction( DaoRoutine *routine, int id )
+Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 {
+	int i;
 	char buf[100];
 	std::string name = routine->routName->mbs;
 	sprintf( buf, "_%p_%i", routine, id );
 	name += buf;
-	Function *jitFunc = cast<Function>( llvm_module->getOrInsertFunction( 
-				name, void_type, dao_context_type_p, dao_routine_type_p, (Type *)0));
 
-	BasicBlock *BB = BasicBlock::Create(*llvm_context, "EntryBlock", jitFunc);
-	Argument *ctx = jitFunc->arg_begin();
-	Argument *rout = (++jitFunc->arg_begin());
+	jitFunction = cast<Function>( llvm_module->getOrInsertFunction( name, dao_jit_function_type ) );
+	entryBlock = BasicBlock::Create( *llvm_context, "EntryBlock", jitFunction );
+	activeBlock = entryBlock;
+	SetInsertPoint( entryBlock );
+
+	Argument *ctx = jitFunction->arg_begin();
+	Argument *rout = (++jitFunction->arg_begin());
 	ctx->setName("context");
 	rout->setName("routine");
 
-	GetElementPtrInst *pppvalues = DaoJIT_GetElementPointer( ctx, 9, BB );
-	DaoJIT_Dereference( pppvalues, BB )->setName( "context.regValues" );
-	GetElementPtrInst *ppvarray = DaoJIT_GetElementPointer( rout, 17, BB );
-	Value *pvarray = DaoJIT_Dereference( ppvarray, BB );
-	Value *values = DaoJIT_GetElementPointer( pvarray, 0, BB );
-	values = DaoJIT_Dereference( values, BB ); // routine->routConsts->data[]*
-	pvarray->setName( "routie.routConsts" );
-	return jitFunc;
+	Value *value = CreateConstGEP2_32( ctx, 0, 9 ); // context->regValues: DValue***
+	localValues = CreateLoad( value ); // context->regValues: DValue**
+
+	value = CreateConstGEP2_32( rout, 0, 17 ); // routine->routConsts: DVarray**
+	value = CreateLoad( value ); //routine->routConsts: DVarray*
+	value = CreateConstGEP2_32( value, 0, 0 ); // routine->routConsts->data: DValue[]**
+	localConsts = CreateLoad( value ); // routine->routConsts->data: DValue[]*
+
+	localRefers.resize( routine->locRegCount );
+	for(i=0; i<routine->locRegCount; i++) localRefers[i] = NULL;
+
+#ifdef DEBUG
+	localValues->setName( "context.regValues" );
+	localConsts->setName( "routie.routConsts" );
+#endif
+	return jitFunction;
+}
+Function* DaoJIT_NewFunction( DaoRoutine *routine, int id )
+{
+	return NULL;
 }
 Value* DaoJIT_GetLocalValueRef( Function *jitFunc, int id, BasicBlock *block )
 {
@@ -363,6 +385,44 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 		printf( "%3i: %5i %5i\n", i, segments[i].start, segments[i].end );
 	}
 }
+Value* DaoJitHandle::GetLocalConstant( int id )
+{
+	SetInsertPoint( activeBlock );
+	return CreateConstGEP2_32( localConsts, 0, id );
+}
+Value* DaoJitHandle::GetLocalReference( int reg )
+{
+	Value *refer;
+	if( localRefers[reg] ) return localRefers[reg];
+	SetInsertPoint( entryBlock );
+	refer = CreateConstGEP2_32( localValues, 0, reg );
+	refer->setName( "local_ref" );
+	localRefers[reg] = refer;
+	SetInsertPoint( activeBlock );
+	return refer;
+}
+Value* DaoJitHandle::GetLocalValue( int reg )
+{
+	Value *value = GetLocalReference( reg );
+	SetInsertPoint( activeBlock );
+	return CreateLoad( value );
+}
+Value* DaoJitHandle::GetLocalValueDataPointer( int reg )
+{
+	Value *value = GetLocalValue( reg );
+	SetInsertPoint( activeBlock );
+	return GetValueDataPointer( value );
+}
+Value* DaoJitHandle::GetValueTypePointer( Value *value )
+{
+	SetInsertPoint( activeBlock );
+	return CreateConstGEP2_32( value, 0, 0 );
+}
+Value* DaoJitHandle::GetValueDataPointer( Value *value )
+{
+	SetInsertPoint( activeBlock );
+	return CreateConstGEP2_32( value, 0, 4 );
+}
 Value* DaoJIT_GetLocalReference( Function *func, int reg, std::vector<Value*> & refs )
 {
 	BasicBlock *entryBlock = & func->getEntryBlock();
@@ -387,6 +447,74 @@ Value* DaoJIT_Call( Value *call, Value *param1, Value *param2, BasicBlock *block
 {
 	Value *params[2] = { param1, param2 };
 	return CallInst::Create( call, params, params+2, "", block);
+}
+Value* DaoJitHandle::Dereference( Value *value )
+{
+	SetInsertPoint( activeBlock );
+	return CreateLoad( value );
+}
+Value* DaoJitHandle::CastIntegerPointer( Value *value )
+{
+	const PointerType *type = PointerType::getUnqual( dint_type );
+	SetInsertPoint( activeBlock );
+	return CreatePointerCast( value, type );
+}
+Value* DaoJitHandle::CastFloatPointer( Value *value )
+{
+	const PointerType *type = PointerType::getUnqual( float_type );
+	SetInsertPoint( activeBlock );
+	return CreatePointerCast( value, type );
+}
+Value* DaoJitHandle::CastDoublePointer( Value *value )
+{
+	const PointerType *type = PointerType::getUnqual( double_type );
+	SetInsertPoint( activeBlock );
+	return CreatePointerCast( value, type );
+}
+void DaoJitHandle::GetIntegerOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
+{
+	Value *A = GetLocalValueDataPointer( vmc->a );
+	Value *B = GetLocalValueDataPointer( vmc->b );
+	Value *C = GetLocalValueDataPointer( vmc->c );
+	SetInsertPoint( activeBlock );
+	A = CastIntegerPointer( A );
+	B = CastIntegerPointer( B );
+	C = CastIntegerPointer( C );
+	A = Dereference( A );
+	B = Dereference( B );
+	*dA = A;
+	*dB = B;
+	*dC = C;
+}
+void DaoJitHandle::GetFloatOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
+{
+	Value *A = GetLocalValueDataPointer( vmc->a );
+	Value *B = GetLocalValueDataPointer( vmc->b );
+	Value *C = GetLocalValueDataPointer( vmc->c );
+	SetInsertPoint( activeBlock );
+	A = CastFloatPointer( A );
+	B = CastFloatPointer( B );
+	C = CastFloatPointer( C );
+	A = Dereference( A );
+	B = Dereference( B );
+	*dA = A;
+	*dB = B;
+	*dC = C;
+}
+void DaoJitHandle::GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
+{
+	Value *A = GetLocalValueDataPointer( vmc->a );
+	Value *B = GetLocalValueDataPointer( vmc->b );
+	Value *C = GetLocalValueDataPointer( vmc->c );
+	SetInsertPoint( activeBlock );
+	A = CastDoublePointer( A );
+	B = CastDoublePointer( B );
+	C = CastDoublePointer( C );
+	A = Dereference( A );
+	B = Dereference( B );
+	*dA = A;
+	*dB = B;
+	*dC = C;
 }
 void DaoJIT_GetIntegerOperands( Function *func, BasicBlock *bl, DaoVmCodeX *vmc, 
 		std::vector<Value*> & refs, Value **dA, Value **dB, Value **dC )
@@ -435,10 +563,14 @@ void DaoJIT_GetDoubleOperands( Function *func, BasicBlock *bl, DaoVmCodeX *vmc,
 }
 Function* DaoJIT_Compile( DaoRoutine *routine, int start, int end )
 {
+	return NULL;
+}
+Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
+{
 	DaoType **regtypes = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
-	Function *jitfunc = DaoJIT_NewFunction( routine, start );
-	BasicBlock *block = & jitfunc->getEntryBlock();
+	Function *jitfunc = NewFunction( routine, start );
+
 	Constant *zero32 = ConstantInt::get( int32_type, 0 );
 	Constant *zero8 = ConstantInt::get( int8_type, 0 );
 	Constant *zero = ConstantInt::get( dint_type, 0 );
@@ -447,8 +579,8 @@ Function* DaoJIT_Compile( DaoRoutine *routine, int start, int end )
 	Constant *tid8_double = ConstantInt::get( int8_type, DAO_DOUBLE );
 	Constant *type_ids[DAO_DOUBLE+1] = { zero8, tid8_integer, tid8_float, tid8_double };
 	Value *type, *vdata, *dA, *dB, *dC, *value=NULL, *tmp;
-	std::vector<Value*> refers( routine->locRegCount, NULL );
 	int code, k;
+
 	for(int i=start; i<=end; i++){
 		vmc = vmcs[i];
 		code = vmc->code;
@@ -456,254 +588,256 @@ Function* DaoJIT_Compile( DaoRoutine *routine, int start, int end )
 		case DVM_NOP :
 			break;
 		case DVM_DATA :
-			dC = DaoJIT_GetLocalValue( jitfunc, block, vmc->c, refers );
-			type = DaoJIT_GetValueTypePointer( dC, block );
-			vdata = DaoJIT_GetValueDataPointer( dC, block );
-			value = ConstantInt::get( int32_type, (int) vmc->b );
-			tmp = new StoreInst( type_ids[ vmc->a ], type, block );
-			dC->setName( "DVM_DATA" );
-			type->setName( "DVM_DATA.t" );
-			vdata->setName( "DVM_DATA.v" );
+			dC = GetLocalValue( vmc->c );
+			type = GetValueTypePointer( dC );
+			vdata = GetValueDataPointer( dC );
+			value = getInt32( (int) vmc->b );
+			tmp = CreateStore( type_ids[ vmc->a ], type );
 			switch( vmc->a ){
 			case DAO_NIL :
 				break;
 			case DAO_INTEGER :
-				vdata = DaoJIT_CastInteger( vdata, block );
+				vdata = CastIntegerPointer( vdata );
 				break;
 			case DAO_FLOAT :
-				value = new UIToFPInst( value, float_type, "tofloat", block );
-				vdata = DaoJIT_CastFloat( vdata, block );
+				value = CreateUIToFP( value, float_type );
+				vdata = CastFloatPointer( vdata );
 				break;
 			case DAO_DOUBLE :
-				value = new UIToFPInst( value, double_type, "todouble", block );
-				vdata = DaoJIT_CastFloat( vdata, block );
+				value = CreateUIToFP( value, double_type );
+				vdata = CastFloatPointer( vdata );
 				break;
 			default: goto Failed;
 			}
-			if( vmc->a ) tmp = new StoreInst( value, vdata, block );
+			if( vmc->a ) tmp = CreateStore( value, vdata );
 			break;
 		case DVM_GETCL :
 			if( vmc->a ) goto Failed;
-			dC = DaoJIT_GetLocalReference( jitfunc, vmc->c, refers );
-			dB = DaoJIT_GetLocalConstant( jitfunc, vmc->b, block );
-			tmp = new StoreInst( dB, dC, block );
+			dC = GetLocalReference( vmc->c );
+			dB = GetLocalConstant( vmc->b );
+			tmp = CreateStore( dB, dC );
 			break;
 		case DVM_MOVE_II : case DVM_MOVE_IF : case DVM_MOVE_ID :
 		case DVM_MOVE_FI : case DVM_MOVE_FF : case DVM_MOVE_FD :
 		case DVM_MOVE_DI : case DVM_MOVE_DF : case DVM_MOVE_DD :
-			dA = DaoJIT_GetValueDataPointer( jitfunc, block, vmc->a, refers );
-			dC = DaoJIT_GetValueDataPointer( jitfunc, block, vmc->c, refers );
+			dA = GetLocalValueDataPointer( vmc->a );
+			dC = GetLocalValueDataPointer( vmc->c );
 			switch( regtypes[ vmc->a ]->tid ){
-			case DAO_INTEGER : dA = DaoJIT_CastInteger( dA, block ); break;
-			case DAO_FLOAT   : dA = DaoJIT_CastFloat( dA, block ); break;
-			case DAO_DOUBLE  : dA = DaoJIT_CastDouble( dA, block ); break;
+			case DAO_INTEGER : dA = CastIntegerPointer( dA ); break;
+			case DAO_FLOAT   : dA = CastFloatPointer( dA ); break;
+			case DAO_DOUBLE  : dA = CastDoublePointer( dA ); break;
 			}
 			switch( regtypes[ vmc->c ]->tid ){
-			case DAO_INTEGER : dC = DaoJIT_CastInteger( dC, block ); break;
-			case DAO_FLOAT   : dC = DaoJIT_CastFloat( dC, block ); break;
-			case DAO_DOUBLE  : dC = DaoJIT_CastDouble( dC, block ); break;
+			case DAO_INTEGER : dC = CastIntegerPointer( dC ); break;
+			case DAO_FLOAT   : dC = CastFloatPointer( dC ); break;
+			case DAO_DOUBLE  : dC = CastDoublePointer( dC ); break;
 			}
-			dA = DaoJIT_Dereference( dA, block );
+			dA = Dereference( dA );
 			switch( code ){
 			case DVM_MOVE_IF : 
-			case DVM_MOVE_ID : dA = new FPToSIInst( dA, dint_type, "i", block ); break;
-			case DVM_MOVE_FI : dA = new SIToFPInst( dA, float_type, "f", block ); break;
-			case DVM_MOVE_DI : dA = new SIToFPInst( dA, double_type, "d", block ); break;
-			case DVM_MOVE_FD : dA = CastInst::CreateFPCast( dA, float_type, "f", block ); break;
-			case DVM_MOVE_DF : dA = CastInst::CreateFPCast( dA, double_type, "d", block ); break;
+			case DVM_MOVE_ID : dA = CreateFPToSI( dA, dint_type ); break;
+			case DVM_MOVE_FI : dA = CreateSIToFP( dA, float_type ); break;
+			case DVM_MOVE_DI : dA = CreateSIToFP( dA, double_type ); break;
+			case DVM_MOVE_FD : dA = CreateFPCast( dA, float_type ); break;
+			case DVM_MOVE_DF : dA = CreateFPCast( dA, double_type ); break;
 			}
-			tmp = new StoreInst( dA, dC, block );
-			dC->setName( "DVM_MOVE" );
+			tmp = CreateStore( dA, dC );
 			break;
 		case DVM_ADD_III :
 		case DVM_SUB_III :
 		case DVM_MUL_III :
 		case DVM_DIV_III :
 		case DVM_MOD_III :
-			DaoJIT_GetIntegerOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetIntegerOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_ADD_III : value = BinaryOperator::CreateAdd( dA, dB, "add", block); break;
-			case DVM_SUB_III : value = BinaryOperator::CreateSub( dA, dB, "sub", block); break;
-			case DVM_MUL_III : value = BinaryOperator::CreateMul( dA, dB, "mul", block); break;
-			case DVM_DIV_III : value = BinaryOperator::CreateSDiv( dA, dB, "div", block); break;
-			case DVM_MOD_III : value = BinaryOperator::CreateSRem( dA, dB, "mod", block); break;
+			case DVM_ADD_III : value = CreateAdd( dA, dB ); break;
+			case DVM_SUB_III : value = CreateSub( dA, dB ); break;
+			case DVM_MUL_III : value = CreateMul( dA, dB ); break;
+			case DVM_DIV_III : value = CreateSDiv( dA, dB ); break;
+			case DVM_MOD_III : value = CreateSRem( dA, dB ); break;
 			}
-			tmp = new StoreInst( value, dC, block );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_POW_III :
-			DaoJIT_GetIntegerOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			dA = new SIToFPInst( dA, double_type, "a", block );
-			dB = new SIToFPInst( dB, double_type, "b", block );
-			tmp = DaoJIT_Call( dao_pow_double, dA, dB, block );
-			tmp = new FPToSIInst( tmp, dint_type, "c", block );
-			tmp = new StoreInst( tmp, dC, block );
+			GetIntegerOperands( vmc, & dA, & dB, & dC );
+			dA = CreateSIToFP( dA, double_type );
+			dB = CreateSIToFP( dB, double_type );
+			tmp = CreateCall2( dao_pow_double, dA, dB );
+			tmp = CreateFPToSI( tmp, dint_type );
+			tmp = CreateStore( tmp, dC );
 			break;
 		case DVM_AND_III :
 		case DVM_OR_III :
-			DaoJIT_GetIntegerOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			k = code == DVM_AND_III ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
-			value = new ICmpInst( *block, ICmpInst::ICMP_EQ, dA, zero );
-			value = SelectInst::Create( value, dA, dB, "and", block );
-			tmp = new StoreInst( value, dC, block );
+			GetIntegerOperands( vmc, & dA, & dB, & dC );
+			switch( code ){
+			case DVM_AND_III : value = CreateICmpEQ( dA, zero ); break;
+			case DVM_OR_III  : value = CreateICmpNE( dA, zero ); break;
+			}
+			value = CreateSelect( value, dA, dB );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_LT_III :
 		case DVM_LE_III :
 		case DVM_EQ_III :
 		case DVM_NE_III :
-			DaoJIT_GetIntegerOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetIntegerOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_LT_III : value = new ICmpInst( *block, ICmpInst::ICMP_SLT, dA, dB ); break;
-			case DVM_LE_III : value = new ICmpInst( *block, ICmpInst::ICMP_SLE, dA, dB ); break;
-			case DVM_EQ_III : value = new ICmpInst( *block, ICmpInst::ICMP_EQ, dA, dB ); break;
-			case DVM_NE_III : value = new ICmpInst( *block, ICmpInst::ICMP_NE, dA, dB ); break;
+			case DVM_LT_III : value = CreateICmpSLT( dA, dB ); break;
+			case DVM_LE_III : value = CreateICmpSLE( dA, dB ); break;
+			case DVM_EQ_III : value = CreateICmpEQ( dA, dB ); break;
+			case DVM_NE_III : value = CreateICmpNE( dA, dB ); break;
 			}
-			value = CastInst::CreateIntegerCast( value, dint_type, true, "i", block );
-			tmp = new StoreInst( value, dC, block );
+			value = CreateIntCast( value, dint_type, false );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_BITAND_III :
 		case DVM_BITOR_III :
 		case DVM_BITXOR_III :
 		case DVM_BITLFT_III :
 		case DVM_BITRIT_III :
-			DaoJIT_GetIntegerOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetIntegerOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_BITAND_III : value = BinaryOperator::CreateAnd( dA, dB, "bitand", block); break;
-			case DVM_BITOR_III : value = BinaryOperator::CreateOr( dA, dB, "bitor", block); break;
-			case DVM_BITXOR_III : value = BinaryOperator::CreateXor( dA, dB, "bitxor", block); break;
-			case DVM_BITLFT_III : value = BinaryOperator::CreateShl( dA, dB, "shl", block); break;
-			case DVM_BITRIT_III : value = BinaryOperator::CreateLShr( dA, dB, "lshr", block); break;
+			case DVM_BITAND_III : value = CreateAnd( dA, dB ); break;
+			case DVM_BITOR_III : value = CreateOr( dA, dB ); break;
+			case DVM_BITXOR_III : value = CreateXor( dA, dB ); break;
+			case DVM_BITLFT_III : value = CreateShl( dA, dB ); break;
+			case DVM_BITRIT_III : value = CreateLShr( dA, dB ); break;
 			}
-			tmp = new StoreInst( value, dC, block );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_ADD_FFF :
 		case DVM_SUB_FFF :
 		case DVM_MUL_FFF :
 		case DVM_DIV_FFF :
 		case DVM_MOD_FFF :
-			DaoJIT_GetFloatOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetFloatOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_ADD_FFF : value = BinaryOperator::CreateFAdd( dA, dB, "add", block); break;
-			case DVM_SUB_FFF : value = BinaryOperator::CreateFSub( dA, dB, "sub", block); break;
-			case DVM_MUL_FFF : value = BinaryOperator::CreateFMul( dA, dB, "mul", block); break;
-			case DVM_DIV_FFF : value = BinaryOperator::CreateFDiv( dA, dB, "div", block); break;
-			case DVM_MOD_FFF : value = BinaryOperator::CreateFRem( dA, dB, "mod", block); break;
+			case DVM_ADD_FFF : value = CreateFAdd( dA, dB ); break;
+			case DVM_SUB_FFF : value = CreateFSub( dA, dB ); break;
+			case DVM_MUL_FFF : value = CreateFMul( dA, dB ); break;
+			case DVM_DIV_FFF : value = CreateFDiv( dA, dB ); break;
+			case DVM_MOD_FFF : value = CreateFRem( dA, dB ); break;
 			// XXX: float mod in daovm.
 			}
-			tmp = new StoreInst( value, dC, block );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_POW_FFF :
-			DaoJIT_GetFloatOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			dA = CastInst::CreateFPCast( dA, double_type, "a", block );
-			dB = CastInst::CreateFPCast( dB, double_type, "b", block );
-			tmp = DaoJIT_Call( dao_pow_double, dA, dB, block );
-			tmp = CastInst::CreateFPCast( tmp, float_type, "c", block );
-			tmp = new StoreInst( tmp, dC, block );
+			GetFloatOperands( vmc, & dA, & dB, & dC );
+			dA = CreateFPCast( dA, double_type );
+			dB = CreateFPCast( dB, double_type );
+			tmp = CreateCall2( dao_pow_double, dA, dB );
+			tmp = CreateFPCast( tmp, float_type );
+			tmp = CreateStore( tmp, dC );
 			break;
 		case DVM_AND_FFF :
 		case DVM_OR_FFF :
-			DaoJIT_GetFloatOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			k = code == DVM_AND_FFF ? FCmpInst::ICMP_EQ : FCmpInst::ICMP_NE;
-			value = new FCmpInst( *block, FCmpInst::ICMP_EQ, dA, zero );
-			value = SelectInst::Create( value, dA, dB, "and", block );
-			tmp = new StoreInst( value, dC, block );
+			GetFloatOperands( vmc, & dA, & dB, & dC );
+			switch( code ){
+			case DVM_AND_FFF : value = CreateFCmpOEQ( dA, zero ); break;
+			case DVM_OR_FFF  : value = CreateFCmpONE( dA, zero ); break;
+			}
+			value = CreateSelect( value, dA, dB );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_LT_FFF :
 		case DVM_LE_FFF :
 		case DVM_EQ_FFF :
 		case DVM_NE_FFF :
-			DaoJIT_GetFloatOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetFloatOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_LT_FFF : value = new FCmpInst( *block, FCmpInst::ICMP_SLT, dA, dB ); break;
-			case DVM_LE_FFF : value = new FCmpInst( *block, FCmpInst::ICMP_SLE, dA, dB ); break;
-			case DVM_EQ_FFF : value = new FCmpInst( *block, FCmpInst::ICMP_EQ, dA, dB ); break;
-			case DVM_NE_FFF : value = new FCmpInst( *block, FCmpInst::ICMP_NE, dA, dB ); break;
+			case DVM_LT_FFF : value = CreateFCmpOLT( dA, dB ); break;
+			case DVM_LE_FFF : value = CreateFCmpOLE( dA, dB ); break;
+			case DVM_EQ_FFF : value = CreateFCmpOEQ( dA, dB ); break;
+			case DVM_NE_FFF : value = CreateFCmpONE( dA, dB ); break;
 			}
-			value = new UIToFPInst( value, float_type, "i", block );
-			tmp = new StoreInst( value, dC, block );
+			value = CreateUIToFP( value, float_type );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_BITAND_FFF :
 		case DVM_BITOR_FFF :
 		case DVM_BITXOR_FFF :
 		case DVM_BITLFT_FFF :
 		case DVM_BITRIT_FFF :
-			DaoJIT_GetFloatOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			dA = new FPToUIInst( dA, dint_type, "i", block );
-			dB = new FPToUIInst( dB, dint_type, "i", block );
+			GetFloatOperands( vmc, & dA, & dB, & dC );
+			dA = CreateFPToUI( dA, dint_type );
+			dB = CreateFPToUI( dB, dint_type );
 			switch( code ){
-			case DVM_BITAND_FFF : value = BinaryOperator::CreateAnd( dA, dB, "bitand", block); break;
-			case DVM_BITOR_FFF : value = BinaryOperator::CreateOr( dA, dB, "bitor", block); break;
-			case DVM_BITXOR_FFF : value = BinaryOperator::CreateXor( dA, dB, "bitxor", block); break;
-			case DVM_BITLFT_FFF : value = BinaryOperator::CreateShl( dA, dB, "shl", block); break;
-			case DVM_BITRIT_FFF : value = BinaryOperator::CreateLShr( dA, dB, "lshr", block); break;
+			case DVM_BITAND_FFF : value = CreateAnd( dA, dB ); break;
+			case DVM_BITOR_FFF : value = CreateOr( dA, dB ); break;
+			case DVM_BITXOR_FFF : value = CreateXor( dA, dB ); break;
+			case DVM_BITLFT_FFF : value = CreateShl( dA, dB ); break;
+			case DVM_BITRIT_FFF : value = CreateLShr( dA, dB ); break;
 			}
-			value = new UIToFPInst( value, float_type, "f", block );
-			tmp = new StoreInst( value, dC, block );
+			value = CreateUIToFP( value, float_type );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_ADD_DDD :
 		case DVM_SUB_DDD :
 		case DVM_MUL_DDD :
 		case DVM_DIV_DDD :
 		case DVM_MOD_DDD :
-			DaoJIT_GetDoubleOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetDoubleOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_ADD_DDD : value = BinaryOperator::CreateFAdd( dA, dB, "add", block); break;
-			case DVM_SUB_DDD : value = BinaryOperator::CreateFSub( dA, dB, "sub", block); break;
-			case DVM_MUL_DDD : value = BinaryOperator::CreateFMul( dA, dB, "mul", block); break;
-			case DVM_DIV_DDD : value = BinaryOperator::CreateFDiv( dA, dB, "div", block); break;
-			case DVM_MOD_DDD : value = BinaryOperator::CreateFRem( dA, dB, "mod", block); break;
+			case DVM_ADD_DDD : value = CreateFAdd( dA, dB ); break;
+			case DVM_SUB_DDD : value = CreateFSub( dA, dB ); break;
+			case DVM_MUL_DDD : value = CreateFMul( dA, dB ); break;
+			case DVM_DIV_DDD : value = CreateFDiv( dA, dB ); break;
+			case DVM_MOD_DDD : value = CreateFRem( dA, dB ); break;
 			// XXX: float mod in daovm.
 			}
-			tmp = new StoreInst( value, dC, block );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_POW_DDD :
-			DaoJIT_GetDoubleOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			tmp = DaoJIT_Call( dao_pow_double, dA, dB, block );
-			tmp = new StoreInst( tmp, dC, block );
+			GetDoubleOperands( vmc, & dA, & dB, & dC );
+			tmp = CreateCall2( dao_pow_double, dA, dB );
+			tmp = CreateStore( tmp, dC );
 			break;
 		case DVM_AND_DDD :
 		case DVM_OR_DDD :
-			DaoJIT_GetDoubleOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			k = code == DVM_AND_DDD ? FCmpInst::ICMP_EQ : FCmpInst::ICMP_NE;
-			value = new FCmpInst( *block, FCmpInst::ICMP_EQ, dA, zero );
-			value = SelectInst::Create( value, dA, dB, "and", block );
-			tmp = new StoreInst( value, dC, block );
+			GetDoubleOperands( vmc, & dA, & dB, & dC );
+			switch( code ){
+			case DVM_AND_DDD : value = CreateFCmpOEQ( dA, zero ); break;
+			case DVM_OR_DDD  : value = CreateFCmpONE( dA, zero ); break;
+			}
+			value = CreateSelect( value, dA, dB );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_LT_DDD :
 		case DVM_LE_DDD :
 		case DVM_EQ_DDD :
 		case DVM_NE_DDD :
-			DaoJIT_GetDoubleOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
+			GetDoubleOperands( vmc, & dA, & dB, & dC );
 			switch( code ){
-			case DVM_LT_DDD : value = new FCmpInst( *block, FCmpInst::ICMP_SLT, dA, dB ); break;
-			case DVM_LE_DDD : value = new FCmpInst( *block, FCmpInst::ICMP_SLE, dA, dB ); break;
-			case DVM_EQ_DDD : value = new FCmpInst( *block, FCmpInst::ICMP_EQ, dA, dB ); break;
-			case DVM_NE_DDD : value = new FCmpInst( *block, FCmpInst::ICMP_NE, dA, dB ); break;
+			case DVM_LT_DDD : value = CreateFCmpOLT( dA, dB ); break;
+			case DVM_LE_DDD : value = CreateFCmpOLE( dA, dB ); break;
+			case DVM_EQ_DDD : value = CreateFCmpOEQ( dA, dB ); break;
+			case DVM_NE_DDD : value = CreateFCmpONE( dA, dB ); break;
 			}
-			value = new UIToFPInst( value, double_type, "i", block );
-			tmp = new StoreInst( value, dC, block );
+			value = CreateUIToFP( value, double_type );
+			tmp = CreateStore( value, dC );
 			break;
 		case DVM_BITAND_DDD :
 		case DVM_BITOR_DDD :
 		case DVM_BITXOR_DDD :
 		case DVM_BITLFT_DDD :
 		case DVM_BITRIT_DDD :
-			DaoJIT_GetDoubleOperands( jitfunc, block, vmc, refers, & dA, & dB, & dC );
-			dA = new FPToUIInst( dA, int32_type, "i", block );
-			dB = new FPToUIInst( dB, int32_type, "i", block );
+			GetDoubleOperands( vmc, & dA, & dB, & dC );
+			dA = CreateFPToUI( dA, int32_type );
+			dB = CreateFPToUI( dB, int32_type );
 			switch( code ){
-			case DVM_BITAND_DDD : value = BinaryOperator::CreateAnd( dA, dB, "bitand", block); break;
-			case DVM_BITOR_DDD : value = BinaryOperator::CreateOr( dA, dB, "bitor", block); break;
-			case DVM_BITXOR_DDD : value = BinaryOperator::CreateXor( dA, dB, "bitxor", block); break;
-			case DVM_BITLFT_DDD : value = BinaryOperator::CreateShl( dA, dB, "shl", block); break;
-			case DVM_BITRIT_DDD : value = BinaryOperator::CreateLShr( dA, dB, "lshr", block); break;
+			case DVM_BITAND_DDD : value = CreateAnd( dA, dB ); break;
+			case DVM_BITOR_DDD : value = CreateOr( dA, dB ); break;
+			case DVM_BITXOR_DDD : value = CreateXor( dA, dB ); break;
+			case DVM_BITLFT_DDD : value = CreateShl( dA, dB ); break;
+			case DVM_BITRIT_DDD : value = CreateLShr( dA, dB ); break;
 			}
-			value = new UIToFPInst( value, double_type, "f", block );
-			tmp = new StoreInst( value, dC, block );
+			value = CreateUIToFP( value, double_type );
+			tmp = CreateStore( value, dC );
 			break;
 		default : goto Failed;
 		}
 	}
-	ReturnInst::Create( *llvm_context, block );
+	CreateRetVoid();
 	return jitfunc;
 Failed:
 	delete jitfunc;
@@ -711,13 +845,14 @@ Failed:
 }
 void DaoJIT_Compile( DaoRoutine *routine )
 {
+	DaoJitHandle handle( *llvm_context );
 	std::vector<Function*> jitFunctions;
 	std::vector<IndexRange> segments;
 	DaoJIT_SearchCompilable( routine, segments );
 	for(int i=0, n=segments.size(); i<n; i++){
 		//if( (segments[i].end - segments[i].start) < 10 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
-		Function *jitfunc = DaoJIT_Compile( routine, segments[i].start, segments[i].end );
+		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
 		DaoVmCode *vmc = routine->vmCodes->codes + segments[i].start;
 		vmc->code = DVM_JITC;
