@@ -81,6 +81,14 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	for(i=DVM_ADD_III; i<=DVM_BITRIT_DNN; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_GETF_KCI; i<=DVM_SETF_OVDD; i++) dao_opcode_compilable[i] = 1;
 	dao_opcode_compilable[ DVM_NOP ] = 1;
+	dao_opcode_compilable[ DVM_GOTO ] = 1;
+	dao_opcode_compilable[ DVM_SWITCH ] = 1;
+	dao_opcode_compilable[ DVM_CASE ] = 1;
+	dao_opcode_compilable[ DVM_CRRE ] = 1;
+	dao_opcode_compilable[ DVM_TEST ] = 1;
+	dao_opcode_compilable[ DVM_TEST_I ] = 1;
+	dao_opcode_compilable[ DVM_TEST_F ] = 1;
+	dao_opcode_compilable[ DVM_TEST_D ] = 1;
 	// TODO: GETCX, GETVX, swith, complex, string, array, tuple, list etc.
 
 	printf( "DaoJIT_Init()\n" );
@@ -194,7 +202,7 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 
 	jitFunction = cast<Function>( llvm_module->getOrInsertFunction( name, dao_jit_function_type ) );
 	entryBlock = BasicBlock::Create( *llvm_context, "EntryBlock", jitFunction );
-	activeBlock = entryBlock;
+	lastBlock = activeBlock = entryBlock;
 	SetInsertPoint( entryBlock );
 
 	Argument *ctx = jitFunction->arg_begin();
@@ -219,6 +227,19 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 #endif
 	return jitFunction;
 }
+BasicBlock* DaoJitHandle::NewBlock( DaoVmCodeX *vmc )
+{
+	const char *name = getOpcodeName( vmc->code );
+	activeBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
+	SetInsertPoint( activeBlock );
+	lastBlock = activeBlock;
+	return activeBlock;
+}
+void DaoJitHandle::SetActiveBlock( BasicBlock *block )
+{
+	activeBlock = block;
+	SetInsertPoint( activeBlock );
+}
 
 
 struct IndexRange
@@ -227,12 +248,8 @@ struct IndexRange
 	int end;
 	IndexRange( int s=0, int e=0 ){ start = s; end = e; }
 
-	static int Locate( const std::vector<IndexRange> & ranges, int index ){
-		for(int i=0, n=ranges.size(); i<n; i++){
-			const IndexRange & range = ranges[i];
-			if( range.start <= index and index <= range.end ) return i;
-		}
-		return -1;
+	bool operator<( const IndexRange & other )const{
+		return end < other.start;
 	}
 };
 
@@ -240,85 +257,134 @@ struct IndexRange
 void DaoJIT_Free( DaoRoutine *routine )
 {
 }
+/*
+A compilable block is a block of virtual instructions that only branch within the block, 
+or just branch to the instruction right after this block.
+*/
 void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & segments )
 {
+	std::map<IndexRange,int> ranges;
+	std::map<IndexRange,int>::iterator it;
+	DValue *routConsts = routine->routConsts->data;
+	DaoType **regtypes = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
-	std::stack<IndexRange> bounds;
-	int i, j, k, m, open = 0, N = routine->annotCodes->size;
-	int last_uncomp = -1;
-	bool compilable;
-	bounds.push( IndexRange( 0, N-1 ) );
-	for(i=0; i<N; i++){
-		//printf( "i = %i: %i %i\n", i, (int)bounds.size(), (int)segments.size() );
-		if( i > bounds.top().end and segments.size() > 1 ){ // merge segments
-#if 0
-			printf( "try merging...\n" );
-			for(j=0, m=segments.size(); j<m; j++){
-				printf( "segment %3i: %5i %5i\n", j, segments[j].start, segments[j].end );
-			}
-#endif
-			IndexRange & seg = segments.back();
-			m = segments.size();
-			vmc = vmcs[seg.start];
-			if( seg.start == (i-1) and vmc->code == DVM_GOTO and vmc->b < i ){
-				// jump backward goto:
-				bool merged = false;
-				if( (k = IndexRange::Locate( segments, vmc->b )) >= 0 ){
-					IndexRange & segoto = segments[k];
-					if( last_uncomp < segoto.start ){ // merge
-						segoto.end = seg.end;
-						while( (int)segments.size() > (k+1) ) segments.pop_back();
-						merged = true;
-					}
-				}
-				if( merged == false ){
-					last_uncomp = i-1;
-					segments.pop_back();
-				}
-			}else{
-				while( (m = segments.size()) > 1 ){
-					if( (segments[m-2].end + 1) < segments[m-1].start ) break;
-					k = segments.back().end;
-					segments.pop_back();
-					segments.back().end = k;
-				}
-			}
-			bounds.pop();
-		}
+	int i, j, m, jump, N = routine->annotCodes->size;
+	bool compilable, last = false;
+	size_t k;
+	int case_mode = DAO_CASE_UNORDERED;
+	for(i=0; i<N; i++){ // find the maximum blocks
 		vmc = vmcs[i];
+		compilable = dao_opcode_compilable[ vmc->code ];
+		if( vmc->code != DVM_CASE ) case_mode = DAO_CASE_UNORDERED;
+		// all branching instructions are assumed to be jit compilable for now,
+		// so that they can be checked in the next stage:
 		switch( vmc->code ){
-		case DVM_GOTO :
-			if( vmc->b <= (bounds.top().end + 1) ){
+		case DVM_DATA :
+			compilable = vmc->a <= DAO_DOUBLE;
+			break;
+		case DVM_GETCL :
+			compilable = vmc->a == 0;
+			break;
+#if 0
+		case DVM_SWITCH : 
+			m = regtypes[vmc->a]->tid;
+			if( m == DAO_INTEGER or m == DAO_ENUM ) case_mode = vmcs[i+1]->c; // first case
+			compilable = case_mode != DAO_CASE_UNORDERED;
+			break;
+		case DVM_CASE : 
+			compilable = case_mode != DAO_CASE_UNORDERED;
+			m = routConsts[ vmc->a ].t;
+			if( m != DAO_INTEGER and m != DAO_ENUM ) compilable = false;
+			break;
+#endif
+		default : break;
+		}
+		if( compilable ){
+			if( last ){
+				segments.back().end = i;
+			}else{
 				segments.push_back( IndexRange( i, i ) );
-			}else{
-				last_uncomp = i;
 			}
-			break;
-		case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
-			bounds.push( IndexRange( i+1, vmc->b - 1 ) );
-			segments.push_back( IndexRange( i, i ) );
-			break;
-		default :
-			compilable = dao_opcode_compilable[ vmc->code ];
-			if( vmc->code == DVM_DATA ) compilable = vmc->a <= DAO_DOUBLE;
-			if( vmc->code == DVM_GETCL ) compilable = vmc->a == 0;
-			if( compilable ){
-				if( segments.size() == 0 or segments.back().end < (i-1) ){
-					segments.push_back( IndexRange( i, i ) );
-				}else{
-					if( i == bounds.top().start ) segments.push_back( IndexRange( i, i ) );
-					segments.back().end = i;
+		}
+		last = compilable;
+	}
+	for(k=0; k<segments.size(); k++) ranges[segments[k]] = 1;
+	for(k=0; k<segments.size(); k++){
+		int code, start = segments[k].start;
+		int end = segments[k].end;
+		bool modified = false;
+		for(j=start; j<=end; j++){
+			vmc = vmcs[j];
+			code = vmc->code;
+			jump = vmc->b;
+			if( code != DVM_CASE ) case_mode = DAO_CASE_UNORDERED;
+			//DaoVmCodeX_Print( *vmc, NULL );
+			switch( code ){
+			case DVM_GOTO : case DVM_TEST : case DVM_CRRE : 
+			case DVM_SWITCH : case DVM_CASE :
+			case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
+				compilable = false;
+				switch( code ){
+				case DVM_GOTO : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
+					// branchs out of the block
+					compilable = vmc->b >= start and vmc->b <= (end+1);
+					break;
+				case DVM_SWITCH : 
+					m = regtypes[vmc->a]->tid;
+					if( m == DAO_INTEGER or m == DAO_ENUM ) case_mode = vmcs[j+1]->c; // first case
+					compilable = case_mode >= DAO_CASE_INTS;
+					if( vmc->b < start or vmc->b > (end+1) ) compilable = false;
+					break;
+				case DVM_CASE : 
+					compilable = case_mode >= DAO_CASE_INTS;
+					m = routConsts[ vmc->a ].t;
+					if( m != DAO_INTEGER and m != DAO_ENUM ) compilable = false;
+					if( vmc->b < start or vmc->b > (end+1) ) compilable = false;
+					break;
+				case DVM_CRRE :
+					jump = vmc->c ? vmc->c : -1;
+					break;
 				}
-			}else{
-				last_uncomp = i;
+				if( compilable == false ){
+					// break the block:
+					segments.push_back( IndexRange( start, j-1 ) );
+					segments.push_back( IndexRange( j+1, end ) );
+					// check branching into another block:
+					it = ranges.find( IndexRange( j, j ) );
+					if( it != ranges.end() ) ranges.erase( it );
+					ranges[ IndexRange( start, j-1 ) ] = 1;
+					ranges[ IndexRange( j+1, end ) ] = 1;
+					// check branching inside block:
+					if( jump >= start and jump <= end ){
+						it = ranges.find( IndexRange( jump, jump ) );
+						if( it != ranges.end() ) ranges.erase( it );
+						if( jump < j ){
+							segments.push_back( IndexRange( start, jump-1 ) );
+							segments.push_back( IndexRange( jump+1, j-1 ) );
+							ranges[ IndexRange( start, jump-1 ) ] = 1;
+							ranges[ IndexRange( jump+1, j-1 ) ] = 1;
+						}else if( jump > j ){
+							segments.push_back( IndexRange( j+1, jump-1 ) );
+							segments.push_back( IndexRange( jump+1, end ) );
+							ranges[ IndexRange( j+1, jump-1 ) ] = 1;
+							ranges[ IndexRange( jump+1, end ) ] = 1;
+						}
+					}
+					modified = true;
+				}
+				break;
 			}
-			break;
+			if( modified ) break;
 		}
 	}
-	for(i=0,k=segments.size(); i<k; i++){
-		printf( "%3i: %5i %5i\n", i, segments[i].start, segments[i].end );
+	segments.clear();
+	for(it=ranges.begin(); it!=ranges.end(); it++){
+		if( it->first.start < it->first.end ) segments.push_back( it->first );
 	}
+	for(k=0;k<segments.size();k++) printf( "%3li:%5i%5i\n", k, segments[k].start, segments[k].end );
 }
+
+
 Value* DaoJitHandle::GetLocalConstant( int id )
 {
 	SetInsertPoint( activeBlock );
@@ -416,9 +482,52 @@ void DaoJitHandle::GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, V
 	Value *B = GetLocalValueDataPointer( vmc->b );
 	Value *C = GetLocalValueDataPointer( vmc->c );
 	SetInsertPoint( activeBlock );
-	A = CastDoublePointer( A );
-	B = CastDoublePointer( B );
-	C = CastDoublePointer( C );
+	//A = CastDoublePointer( A );
+	//B = CastDoublePointer( B );
+	//C = CastDoublePointer( C );
+	A = Dereference( A );
+	B = Dereference( B );
+	*dA = A;
+	*dB = B;
+	*dC = C;
+}
+void DaoJitHandle::GetFNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
+{
+	DaoType **regtypes = routine->regType->items.pType;
+	Value *A = GetLocalValueDataPointer( vmc->a );
+	Value *B = GetLocalValueDataPointer( vmc->b );
+	Value *C = GetLocalValueDataPointer( vmc->c );
+	SetInsertPoint( activeBlock );
+	C = CastFloatPointer( C );
+	switch( regtypes[ vmc->a ]->tid ){
+	case DAO_INTEGER : A = CastIntegerPointer( A ); break;
+	case DAO_FLOAT :   A = CastFloatPointer( A ); break;
+	}
+	switch( regtypes[ vmc->b ]->tid ){
+	case DAO_INTEGER : B = CastIntegerPointer( B ); break;
+	case DAO_FLOAT :   B = CastFloatPointer( B ); break;
+	}
+	A = Dereference( A );
+	B = Dereference( B );
+	*dA = A;
+	*dB = B;
+	*dC = C;
+}
+void DaoJitHandle::GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
+{
+	DaoType **regtypes = routine->regType->items.pType;
+	Value *A = GetLocalValueDataPointer( vmc->a );
+	Value *B = GetLocalValueDataPointer( vmc->b );
+	Value *C = GetLocalValueDataPointer( vmc->c );
+	SetInsertPoint( activeBlock );
+	switch( regtypes[ vmc->a ]->tid ){
+	case DAO_INTEGER : A = CastIntegerPointer( A ); break;
+	case DAO_FLOAT :   A = CastFloatPointer( A ); break;
+	}
+	switch( regtypes[ vmc->b ]->tid ){
+	case DAO_INTEGER : B = CastIntegerPointer( B ); break;
+	case DAO_FLOAT :   B = CastFloatPointer( B ); break;
+	}
 	A = Dereference( A );
 	B = Dereference( B );
 	*dA = A;
@@ -427,6 +536,7 @@ void DaoJitHandle::GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, V
 }
 Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 {
+	DValue *routConsts = routine->routConsts->data;
 	DaoType **regtypes = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
 	Function *jitfunc = NewFunction( routine, start );
@@ -439,11 +549,42 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	Constant *tid8_double = ConstantInt::get( int8_type, DAO_DOUBLE );
 	Constant *type_ids[DAO_DOUBLE+1] = { zero8, tid8_integer, tid8_float, tid8_double };
 	Value *type, *vdata, *dA, *dB, *dC, *value=NULL, *tmp;
-	int code, k;
+	ConstantInt *caseint;
+	SwitchInst *inswitch;
+	int code, i, k;
 
-	for(int i=start; i<=end; i++){
+	std::map<int,BasicBlock*> branchings;
+	std::map<int,BasicBlock*> labels;
+	std::map<int,BasicBlock*>::iterator iter, stop;
+	for(i=start; i<=end; i++){
 		vmc = vmcs[i];
 		code = vmc->code;
+		switch( code ){
+		case DVM_GOTO : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
+			branchings[i] = NULL;
+			labels[i+1] = NULL;
+			labels[vmc->b] = NULL;
+			if( vmc->b ) branchings[vmc->b-1] = NULL;
+			break;
+		case DVM_SWITCH :
+			branchings[i] = NULL;
+			labels[i+1] = NULL;
+			labels[vmc->b] = NULL;
+			branchings[vmc->b-1] = NULL;
+			// use DVM_CASE to add labels
+			for(k=1; k<=vmc->c; k++) labels[vmcs[i+k]->b] = NULL;
+			break;
+		}
+	}
+
+	for(i=start; i<=end; i++){
+		vmc = vmcs[i];
+		code = vmc->code;
+		printf( "%3i ", i ); DaoVmCodeX_Print( *vmc, NULL );
+		if( labels.find( i ) != labels.end() ){
+			printf( "%3i ", i ); DaoVmCodeX_Print( *vmc, NULL );
+			labels[i] = NewBlock( vmc );
+		}
 		switch( code ){
 		case DVM_NOP :
 			break;
@@ -694,23 +835,257 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			value = CreateUIToFP( value, double_type );
 			tmp = CreateStore( value, dC );
 			break;
+		case DVM_ADD_FNN :
+		case DVM_SUB_FNN :
+		case DVM_MUL_FNN :
+		case DVM_DIV_FNN :
+		case DVM_MOD_FNN :
+			GetFNNOperands( vmc, & dA, & dB, & dC );
+			switch( regtypes[ vmc->a ]->tid ){
+			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
+			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
+			}
+			switch( regtypes[ vmc->b ]->tid ){
+			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
+			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
+			}
+			switch( code ){
+			case DVM_ADD_FNN : value = CreateFAdd( dA, dB ); break;
+			case DVM_SUB_FNN : value = CreateFSub( dA, dB ); break;
+			case DVM_MUL_FNN : value = CreateFMul( dA, dB ); break;
+			case DVM_DIV_FNN : value = CreateFDiv( dA, dB ); break;
+			case DVM_MOD_FNN : value = CreateFRem( dA, dB ); break;
+			// XXX: float mod in daovm.
+			}
+			value = CreateFPCast( value, float_type );
+			tmp = CreateStore( value, dC );
+			break;
+		case DVM_POW_FNN :
+			GetFNNOperands( vmc, & dA, & dB, & dC );
+			dA = CreateFPCast( dA, double_type );
+			dB = CreateFPCast( dB, double_type );
+			switch( regtypes[ vmc->a ]->tid ){
+			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
+			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
+			}
+			switch( regtypes[ vmc->b ]->tid ){
+			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
+			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
+			}
+			tmp = CreateCall2( dao_pow_double, dA, dB );
+			tmp = CreateFPCast( tmp, float_type );
+			tmp = CreateStore( tmp, dC );
+			break;
+		case DVM_LT_FNN :
+		case DVM_LE_FNN :
+		case DVM_EQ_FNN :
+		case DVM_NE_FNN :
+			GetFNNOperands( vmc, & dA, & dB, & dC );
+			switch( regtypes[ vmc->a ]->tid ){
+			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
+			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
+			}
+			switch( regtypes[ vmc->b ]->tid ){
+			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
+			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
+			}
+			switch( code ){
+			case DVM_LT_FNN : value = CreateFCmpOLT( dA, dB ); break;
+			case DVM_LE_FNN : value = CreateFCmpOLE( dA, dB ); break;
+			case DVM_EQ_FNN : value = CreateFCmpOEQ( dA, dB ); break;
+			case DVM_NE_FNN : value = CreateFCmpONE( dA, dB ); break;
+			}
+			value = CreateUIToFP( value, float_type );
+			tmp = CreateStore( value, dC );
+			break;
+		case DVM_BITLFT_FNN :
+		case DVM_BITRIT_FNN :
+			GetFNNOperands( vmc, & dA, & dB, & dC );
+			if( regtypes[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
+			if( regtypes[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
+			switch( code ){
+			case DVM_BITLFT_FNN : value = CreateShl( dA, dB ); break;
+			case DVM_BITRIT_FNN : value = CreateLShr( dA, dB ); break;
+			}
+			value = CreateUIToFP( value, float_type );
+			tmp = CreateStore( value, dC );
+			break;
+		case DVM_ADD_DNN :
+		case DVM_SUB_DNN :
+		case DVM_MUL_DNN :
+		case DVM_DIV_DNN :
+		case DVM_MOD_DNN :
+			GetDNNOperands( vmc, & dA, & dB, & dC );
+			switch( regtypes[ vmc->a ]->tid ){
+			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
+			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
+			}
+			switch( regtypes[ vmc->b ]->tid ){
+			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
+			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
+			}
+			dA->print( outs() ); printf( "\n" );
+			dB->print( outs() ); printf( "\n" );
+			switch( code ){
+			case DVM_ADD_DNN : value = CreateFAdd( dA, dB ); break;
+			case DVM_SUB_DNN : value = CreateFSub( dA, dB ); break;
+			case DVM_MUL_DNN : value = CreateFMul( dA, dB ); break;
+			case DVM_DIV_DNN : value = CreateFDiv( dA, dB ); break;
+			case DVM_MOD_DNN : value = CreateFRem( dA, dB ); break;
+			// XXX: float mod in daovm.
+			}
+			tmp = CreateStore( value, dC );
+			break;
+		case DVM_POW_DNN :
+			GetDNNOperands( vmc, & dA, & dB, & dC );
+			dA = CreateFPCast( dA, double_type );
+			dB = CreateFPCast( dB, double_type );
+			switch( regtypes[ vmc->a ]->tid ){
+			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
+			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
+			}
+			switch( regtypes[ vmc->b ]->tid ){
+			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
+			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
+			}
+			tmp = CreateCall2( dao_pow_double, dA, dB );
+			tmp = CreateStore( tmp, dC );
+			break;
+		case DVM_LT_DNN :
+		case DVM_LE_DNN :
+		case DVM_EQ_DNN :
+		case DVM_NE_DNN :
+			GetDNNOperands( vmc, & dA, & dB, & dC );
+			switch( regtypes[ vmc->a ]->tid ){
+			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
+			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
+			}
+			switch( regtypes[ vmc->b ]->tid ){
+			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
+			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
+			}
+			switch( code ){
+			case DVM_LT_DNN : value = CreateFCmpOLT( dA, dB ); break;
+			case DVM_LE_DNN : value = CreateFCmpOLE( dA, dB ); break;
+			case DVM_EQ_DNN : value = CreateFCmpOEQ( dA, dB ); break;
+			case DVM_NE_DNN : value = CreateFCmpONE( dA, dB ); break;
+			}
+			value = CreateUIToFP( value, double_type );
+			tmp = CreateStore( value, dC );
+			break;
+		case DVM_BITLFT_DNN :
+		case DVM_BITRIT_DNN :
+			GetDNNOperands( vmc, & dA, & dB, & dC );
+			if( regtypes[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
+			if( regtypes[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
+			switch( code ){
+			case DVM_BITLFT_DNN : value = CreateShl( dA, dB ); break;
+			case DVM_BITRIT_DNN : value = CreateLShr( dA, dB ); break;
+			}
+			value = CreateUIToFP( value, double_type );
+			tmp = CreateStore( value, dC );
+			break;
+		case DVM_GOTO : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
+		case DVM_SWITCH : case DVM_CASE :
+			break;
 		default : goto Failed;
 		}
+		if( branchings.find( i ) != branchings.end() ) branchings[i] = activeBlock;
+		//if( code == DVM_SWITCH ) i += vmc->c + 1; // skip cases and one goto.
 	}
+	for(iter=branchings.begin(), stop=branchings.end(); iter!=stop; iter++){
+		vmc = vmcs[ iter->first ];
+		code = vmc->code;
+		k = iter->first + 1;
+		switch( code ){
+		case DVM_GOTO : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
+		case DVM_SWITCH :
+			k = vmc->b;
+			break;
+		}
+		if( k > end ){
+			labels[end+1] = NewBlock( vmcs[end+1] );
+			break;
+		}
+	}
+	for(iter=branchings.begin(), stop=branchings.end(); iter!=stop; iter++){
+		vmc = vmcs[ iter->first ];
+		code = vmc->code;
+		if( labels[ vmc->b ] == NULL ) labels[vmc->b] = lastBlock;
+		//printf( "%3i %3i %p\n", iter->first, vmc->b, labels[vmc->b] );
+		printf( "%3i %9p: ", iter->first, iter->second ); DaoVmCodeX_Print( *vmc, NULL );
+		SetActiveBlock( iter->second );
+		switch( code ){
+		case DVM_GOTO :
+			CreateBr( labels[ vmc->b ] );
+			break;
+		case DVM_TEST_I :
+			dA = GetLocalValueDataPointer( vmc->a );
+			dA = Dereference( CastIntegerPointer( dA ) );
+			value = CreateICmpNE( dA, zero );
+			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
+			break;
+		case DVM_TEST_F :
+			dA = GetLocalValueDataPointer( vmc->a );
+			dA = Dereference( CastFloatPointer( dA ) );
+			value = CreateUIToFP( zero, float_type );
+			value = CreateFCmpOEQ( dA, value );
+			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
+			break;
+		case DVM_TEST_D :
+			dA = Dereference( GetLocalValueDataPointer( vmc->a ) );
+			value = CreateUIToFP( zero, double_type );
+			value = CreateFCmpOEQ( dA, value );
+			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
+			break;
+		case DVM_SWITCH :
+			dA = GetLocalValueDataPointer( vmc->a );
+			dA = Dereference( CastIntegerPointer( dA ) );
+			inswitch = CreateSwitch( dA, labels[ vmc->b ], vmc->c );
+			// use DVM_CASE to add switch labels
+			if( regtypes[vmc->a]->tid == DAO_INTEGER ){
+				for(k=1; k<=vmc->c; k++){
+					DaoVmCodeX *vmc2 = vmcs[ iter->first + k ];
+					dint ic = routConsts[vmc2->a].v.i;
+					caseint = cast<ConstantInt>( ConstantInt::get( dint_type, ic ) );
+					inswitch->addCase( caseint, labels[vmc2->b] );
+				}
+			}else{
+			}
+			break;
+		default :
+			if( iter->first < end ){
+				CreateBr( labels[ iter->first + 1 ] );
+			}else{
+				CreateBr( labels[ end + 1 ] );
+			}
+			break;
+		}
+	}
+	SetInsertPoint( lastBlock );
 	CreateRetVoid();
+#if 0
+	if( 1 ){
+		BasicBlock::iterator iter;
+		for(iter=entryBlock->begin(); iter!=entryBlock->end(); iter++){
+			iter->print( outs() );
+			printf( "\n" );
+		}
+	}
+#endif
 	return jitfunc;
 Failed:
-	delete jitfunc;
+	jitfunc->eraseFromParent();
 	return NULL;
 }
 void DaoJIT_Compile( DaoRoutine *routine )
 {
-	DaoJitHandle handle( *llvm_context );
+	DaoJitHandle handle( *llvm_context, routine );
 	std::vector<Function*> jitFunctions;
 	std::vector<IndexRange> segments;
 	DaoJIT_SearchCompilable( routine, segments );
 	for(int i=0, n=segments.size(); i<n; i++){
-		//if( (segments[i].end - segments[i].start) < 10 ) continue;
+		if( (segments[i].end - segments[i].start) < 10 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
@@ -719,7 +1094,6 @@ void DaoJIT_Compile( DaoRoutine *routine )
 		vmc->a = jitFunctions.size();
 		vmc->b = segments[i].end - segments[i].start + 1;
 		jitFunctions.push_back( jitfunc );
-		break;
 	}
 	if( jitFunctions.size() ) routine->jitData = new std::vector<Function*>( jitFunctions );
 	verifyModule(*llvm_module, PrintMessageAction);

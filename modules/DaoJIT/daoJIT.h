@@ -31,20 +31,26 @@ using namespace llvm;
 
 struct DaoJitHandle : public IRBuilder<>
 {
+	DaoRoutine *routine;
 	Function   *jitFunction;
 	BasicBlock *entryBlock;
 	BasicBlock *activeBlock;
+	BasicBlock *lastBlock;
 
 	Value *localValues; // context->regValues: DValue*[]*
 	Value *localConsts; // routine->routConsts->data: DValue[]*
 
 	std::vector<Value*> localRefers;
 
-	DaoJitHandle( LLVMContext & ctx ) : IRBuilder<>( ctx ){}
+	DaoJitHandle( LLVMContext & ctx, DaoRoutine *rout=NULL ) : IRBuilder<>( ctx ){
+		routine = rout;
+	}
 
 	Function* Compile( DaoRoutine *routine, int start, int end );
 
 	Function* NewFunction( DaoRoutine *routine, int id );
+	BasicBlock* NewBlock( DaoVmCodeX *vmc );
+	void SetActiveBlock( BasicBlock *block );
 
 	Value* GetLocalConstant( int id );
 	Value* GetLocalReference( int reg );
@@ -62,6 +68,8 @@ struct DaoJitHandle : public IRBuilder<>
 	void GetIntegerOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetFloatOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
+	void GetFNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
+	void GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 };
 
 #endif

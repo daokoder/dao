@@ -1,6 +1,6 @@
 
 #include<stdio.h>
-#include"daoJIT.cpp"
+#include"daoJIT.h"
 #include"daoNamespace.h"
 
 #include "llvm/PassManager.h"
@@ -46,16 +46,23 @@ void simple_tests( DaoContext *ctx )
 
 
 const char* dao_source = 
-"a = 8.0D\n"
+"a=1; switch(a){case 1: a=2; case 2: a = 3}\n"
+/*
+"a = 8.0\n"
 "a = 12.0D * a\n"
+"ii = 0\n"
+"if( ii ) a = 100 else a = 200\n"
+"for(i=1:5) a *= 2D\n"
 "io.writeln( std.about(a), a )\n"
-"return\n"
+//"return\n"
 "b = 22.3\n"
-"c = a + b\n"
+"c = 1.0 + b\n"
 "if( c ){\n"
 "d = c + 1.0\n"
 "}\n"
-"for( i = 1 : 5){ e = i; break; e = i + 1; }\n"
+"for( i = 1 : 5){ c = i; break; e = i + 1; }\n"
+"io.writeln( c )\n"
+*/
 ;
 
 const char* dao_source3 = 
@@ -123,8 +130,8 @@ int main( int argc, char *argv[] )
 
 	printf( "%p value.f = %g\n", ctx, ctx->regValues[1]->v.f );
 
-	std::vector<IndexRange> segments;
-	DaoJIT_SearchCompilable( ns->mainRoutine, segments );
+	//std::vector<IndexRange> segments;
+	//DaoJIT_SearchCompilable( ns->mainRoutine, segments );
 
 	DaoJIT_Compile( ns->mainRoutine );
 	DaoVmProcess_PushRoutine( vmp, ns->mainRoutine );

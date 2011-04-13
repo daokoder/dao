@@ -1820,7 +1820,7 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 			}
 			it->jumpTrue = aux;
 		}else if( it->code == DVM_SWITCH ){
-			int direct = 0;
+			int case_mode = DAO_CASE_ORDERED;
 			min = max = 0;
 			count = 0;
 			map = self->switchMaps->items.pMap[ it->b ];
@@ -1833,12 +1833,15 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 					count ++;
 				}
 			}
-			if( count == map->size && count > 0.75 * (max - min) ){
-				for(i=min+1; i<max; i++){
-					key.v.i = i;
-					if( DMap_Find( map, &key ) ==NULL ) DMap_Insert( map, &key, NULL );
+			if( count == map->size ){
+				case_mode = DAO_CASE_INTS;
+				if( count > 0.75 * (max - min) ){
+					for(i=min+1; i<max; i++){
+						key.v.i = i;
+						if( DMap_Find( map, &key ) ==NULL ) DMap_Insert( map, &key, NULL );
+					}
+					case_mode = DAO_CASE_TABLE;
 				}
-				direct = 1;
 			}
 			it->c = map->size;
 			aux = it;
@@ -1856,7 +1859,7 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 					it2->jumpFalse = node;
 				}
 				/* mark integer jump table */
-				if( aux == it ) it2->c = direct ? DAO_CASE_TABLE : DAO_CASE_ORDERED;
+				if( aux == it ) it2->c = case_mode;
 				it2->prev = aux;
 				aux->next = it2;
 				it2->next = top;

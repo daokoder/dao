@@ -131,6 +131,7 @@ enum DaoCaseMode
 {
 	DAO_CASE_ORDERED ,
 	DAO_CASE_UNORDERED ,
+	DAO_CASE_INTS , /* ordered integer cases; TODO optimize, enums */
 	DAO_CASE_TABLE
 };
 
