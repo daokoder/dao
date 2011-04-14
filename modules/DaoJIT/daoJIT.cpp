@@ -40,6 +40,8 @@ const Type *void_type = NULL; // i8*
 
 const StructType *dao_value_type = NULL; // DValue
 const StructType *dao_varray_type = NULL; // DVarray
+const StructType *dao_enum_type = NULL; // DEnum
+
 const StructType *dao_base_type = NULL; // DaoBase
 const StructType *dao_routine_type = NULL; // DaoRoutine
 const StructType *dao_context_type = NULL; // DaoContext
@@ -48,8 +50,10 @@ const PointerType *void_type_p = NULL; // DValue*
 
 const PointerType *dao_value_type_p = NULL; // DValue*
 const PointerType *dao_value_type_pp = NULL; // DValue**
-
 const PointerType *dao_varray_type_p = NULL; // DVarray*
+const PointerType *dao_enum_type_p = NULL; // DEnum*
+const PointerType *dao_enum_type_pp = NULL; // DEnum**
+
 const PointerType *dao_base_type_p = NULL; // DaoBase*
 const PointerType *dao_routine_type_p = NULL; // DaoRoutine*
 const PointerType *dao_context_type_p = NULL; // DaoContext*
@@ -61,17 +65,27 @@ const PointerType *dao_value_ptr_array_type_p = NULL; // DValue*[]*
 
 int dao_opcode_compilable[ DVM_NULL ];
 
-extern "C"{
-DValue** DaoContext_GetLocalValues( DaoContext *daoctx )
-{
-	printf( "DaoContext_GetLocalValues: %p\n", daoctx );
-	return daoctx->regValues;
-}
-}
-Function *dao_context_get_local_values = NULL;
 Function *dao_pow_double = NULL;
+Function *dao_abs_double = NULL;
+Function *dao_acos_double = NULL;
+Function *dao_asin_double = NULL;
+Function *dao_atan_double = NULL;
+Function *dao_ceil_double = NULL;
+Function *dao_cos_double = NULL;
+Function *dao_cosh_double = NULL;
+Function *dao_exp_double = NULL;
+Function *dao_floor_double = NULL;
+Function *dao_log_double = NULL;
+Function *dao_rand_double = NULL;
+Function *dao_sin_double = NULL;
+Function *dao_sinh_double = NULL;
+Function *dao_sqrt_double = NULL;
+Function *dao_tan_double = NULL;
+Function *dao_tanh_double = NULL;
 
 FunctionType *dao_jit_function_type = NULL;
+
+double dao_rand( double max ){ return max * rand() / (RAND_MAX+1.0); }
 
 void DaoJIT_Init( DaoVmSpace *vms )
 {
@@ -141,6 +155,12 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_base_type = StructType::get( *llvm_context, base_types );
 	dao_base_type_p = PointerType::getUnqual( dao_base_type );
 
+	std::vector<const Type*> enum_types( 1, dao_base_type_p );
+	enum_types.push_back( dint_type );
+	dao_enum_type = StructType::get( *llvm_context, enum_types );
+	dao_enum_type_p = PointerType::getUnqual( dao_enum_type );
+	dao_enum_type_pp = PointerType::getUnqual( dao_enum_type_p );
+
 	base_types.push_back( void_type_p ); // codes
 	base_types.push_back( void_type_p ); // vmc
 	base_types.push_back( void_type_p ); // frame
@@ -174,20 +194,47 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	jitParams.push_back( dao_routine_type_p );
 	dao_jit_function_type = FunctionType::get( void_type, jitParams, false );
 
-	std::vector<const Type*> Double1( 1, dao_context_type_p );
-	FunctionType *FT = FunctionType::get(void_type,Double1,false);
-	dao_context_get_local_values = Function::Create( FT, Function::ExternalLinkage, "DaoContext_GetLocalValues", llvm_module);
-
 
 	std::vector<const Type*> double2( 2, double_type );
 	FunctionType *funtype = FunctionType::get( double_type, double2, false );
 	dao_pow_double = Function::Create( funtype, Function::ExternalLinkage, "pow", llvm_module );
 
+	std::vector<const Type*> double1( 1, double_type );
+	FunctionType *mathft = FunctionType::get( double_type, double1, false );
+	dao_abs_double = Function::Create( mathft, Function::ExternalLinkage, "abs", llvm_module );
+	dao_acos_double = Function::Create( mathft, Function::ExternalLinkage, "acos", llvm_module );
+	dao_asin_double = Function::Create( mathft, Function::ExternalLinkage, "asin", llvm_module );
+	dao_atan_double = Function::Create( mathft, Function::ExternalLinkage, "atan", llvm_module );
+	dao_ceil_double = Function::Create( mathft, Function::ExternalLinkage, "ceil", llvm_module );
+	dao_cos_double = Function::Create( mathft, Function::ExternalLinkage, "cos", llvm_module );
+	dao_cosh_double = Function::Create( mathft, Function::ExternalLinkage, "cosh", llvm_module );
+	dao_exp_double = Function::Create( mathft, Function::ExternalLinkage, "exp", llvm_module );
+	dao_floor_double = Function::Create( mathft, Function::ExternalLinkage, "floor", llvm_module );
+	dao_log_double = Function::Create( mathft, Function::ExternalLinkage, "log", llvm_module );
+	dao_rand_double = Function::Create( mathft, Function::ExternalLinkage, "rand", llvm_module );
+	dao_sin_double = Function::Create( mathft, Function::ExternalLinkage, "sin", llvm_module );
+	dao_sinh_double = Function::Create( mathft, Function::ExternalLinkage, "sinh", llvm_module );
+	dao_sqrt_double = Function::Create( mathft, Function::ExternalLinkage, "sqrt", llvm_module );
+	dao_tan_double = Function::Create( mathft, Function::ExternalLinkage, "tan", llvm_module );
+	dao_tanh_double = Function::Create( mathft, Function::ExternalLinkage, "tanh", llvm_module );
 
 	llvm_exe_engine = EngineBuilder( llvm_module ).setEngineKind(EngineKind::JIT).create();
-	llvm_exe_engine->addGlobalMapping( dao_context_get_local_values, 
-			(void*)(DaoContext_GetLocalValues));
 	llvm_exe_engine->addGlobalMapping( dao_pow_double, (void*) pow );
+	llvm_exe_engine->addGlobalMapping( dao_abs_double, (void*) abs );
+	llvm_exe_engine->addGlobalMapping( dao_acos_double, (void*) acos );
+	llvm_exe_engine->addGlobalMapping( dao_asin_double, (void*) asin );
+	llvm_exe_engine->addGlobalMapping( dao_atan_double, (void*) atan );
+	llvm_exe_engine->addGlobalMapping( dao_ceil_double, (void*) ceil );
+	llvm_exe_engine->addGlobalMapping( dao_cos_double, (void*) cos );
+	llvm_exe_engine->addGlobalMapping( dao_cosh_double, (void*) cosh );
+	llvm_exe_engine->addGlobalMapping( dao_exp_double, (void*) exp );
+	llvm_exe_engine->addGlobalMapping( dao_floor_double, (void*) floor );
+	llvm_exe_engine->addGlobalMapping( dao_log_double, (void*) log );
+	llvm_exe_engine->addGlobalMapping( dao_rand_double, (void*) dao_rand );
+	llvm_exe_engine->addGlobalMapping( dao_sin_double, (void*) sin );
+	llvm_exe_engine->addGlobalMapping( dao_sinh_double, (void*) sinh );
+	llvm_exe_engine->addGlobalMapping( dao_sqrt_double, (void*) sqrt );
+	llvm_exe_engine->addGlobalMapping( dao_tan_double, (void*) tan );
 }
 
 
@@ -266,7 +313,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 	std::map<IndexRange,int> ranges;
 	std::map<IndexRange,int>::iterator it;
 	DValue *routConsts = routine->routConsts->data;
-	DaoType **regtypes = routine->regType->items.pType;
+	DaoType **types = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
 	int i, j, m, jump, N = routine->annotCodes->size;
 	bool compilable, last = false;
@@ -279,24 +326,13 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 		// all branching instructions are assumed to be jit compilable for now,
 		// so that they can be checked in the next stage:
 		switch( vmc->code ){
-		case DVM_DATA :
-			compilable = vmc->a <= DAO_DOUBLE;
+		case DVM_MATH :
+			j = types[vmc->b]->tid;
+			m = types[vmc->c]->tid;
+			compilable = j and j <= DAO_DOUBLE and m and m <= DAO_DOUBLE;
 			break;
-		case DVM_GETCL :
-			compilable = vmc->a == 0;
-			break;
-#if 0
-		case DVM_SWITCH : 
-			m = regtypes[vmc->a]->tid;
-			if( m == DAO_INTEGER or m == DAO_ENUM ) case_mode = vmcs[i+1]->c; // first case
-			compilable = case_mode != DAO_CASE_UNORDERED;
-			break;
-		case DVM_CASE : 
-			compilable = case_mode != DAO_CASE_UNORDERED;
-			m = routConsts[ vmc->a ].t;
-			if( m != DAO_INTEGER and m != DAO_ENUM ) compilable = false;
-			break;
-#endif
+		case DVM_DATA : compilable = vmc->a <= DAO_DOUBLE; break;
+		case DVM_GETCL : compilable = vmc->a == 0; break;
 		default : break;
 		}
 		if( compilable ){
@@ -330,7 +366,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 					compilable = vmc->b >= start and vmc->b <= (end+1);
 					break;
 				case DVM_SWITCH : 
-					m = regtypes[vmc->a]->tid;
+					m = types[vmc->a]->tid;
 					if( m == DAO_INTEGER or m == DAO_ENUM ) case_mode = vmcs[j+1]->c; // first case
 					compilable = case_mode >= DAO_CASE_INTS;
 					if( vmc->b < start or vmc->b > (end+1) ) compilable = false;
@@ -493,17 +529,17 @@ void DaoJitHandle::GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, V
 }
 void DaoJitHandle::GetFNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
 {
-	DaoType **regtypes = routine->regType->items.pType;
+	DaoType **types = routine->regType->items.pType;
 	Value *A = GetLocalValueDataPointer( vmc->a );
 	Value *B = GetLocalValueDataPointer( vmc->b );
 	Value *C = GetLocalValueDataPointer( vmc->c );
 	SetInsertPoint( activeBlock );
 	C = CastFloatPointer( C );
-	switch( regtypes[ vmc->a ]->tid ){
+	switch( types[ vmc->a ]->tid ){
 	case DAO_INTEGER : A = CastIntegerPointer( A ); break;
 	case DAO_FLOAT :   A = CastFloatPointer( A ); break;
 	}
-	switch( regtypes[ vmc->b ]->tid ){
+	switch( types[ vmc->b ]->tid ){
 	case DAO_INTEGER : B = CastIntegerPointer( B ); break;
 	case DAO_FLOAT :   B = CastFloatPointer( B ); break;
 	}
@@ -515,16 +551,16 @@ void DaoJitHandle::GetFNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Valu
 }
 void DaoJitHandle::GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
 {
-	DaoType **regtypes = routine->regType->items.pType;
+	DaoType **types = routine->regType->items.pType;
 	Value *A = GetLocalValueDataPointer( vmc->a );
 	Value *B = GetLocalValueDataPointer( vmc->b );
 	Value *C = GetLocalValueDataPointer( vmc->c );
 	SetInsertPoint( activeBlock );
-	switch( regtypes[ vmc->a ]->tid ){
+	switch( types[ vmc->a ]->tid ){
 	case DAO_INTEGER : A = CastIntegerPointer( A ); break;
 	case DAO_FLOAT :   A = CastFloatPointer( A ); break;
 	}
-	switch( regtypes[ vmc->b ]->tid ){
+	switch( types[ vmc->b ]->tid ){
 	case DAO_INTEGER : B = CastIntegerPointer( B ); break;
 	case DAO_FLOAT :   B = CastFloatPointer( B ); break;
 	}
@@ -537,9 +573,10 @@ void DaoJitHandle::GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Valu
 Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 {
 	DValue *routConsts = routine->routConsts->data;
-	DaoType **regtypes = routine->regType->items.pType;
+	DaoType **types = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
 	Function *jitfunc = NewFunction( routine, start );
+	Function *mathfunc = NULL;
 
 	Constant *zero32 = ConstantInt::get( int32_type, 0 );
 	Constant *zero8 = ConstantInt::get( int8_type, 0 );
@@ -551,7 +588,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	Value *type, *vdata, *dA, *dB, *dC, *value=NULL, *tmp;
 	ConstantInt *caseint;
 	SwitchInst *inswitch;
-	int code, i, k;
+	int code, i, k, m;
 
 	std::map<int,BasicBlock*> branchings;
 	std::map<int,BasicBlock*> labels;
@@ -592,7 +629,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dC = GetLocalValue( vmc->c );
 			type = GetValueTypePointer( dC );
 			vdata = GetValueDataPointer( dC );
-			value = getInt32( (int) vmc->b );
+			if( sizeof(void*) == 8 ){
+				value = getInt64( (int) vmc->b );
+			}else{
+				value = getInt32( (int) vmc->b );
+			}
 			tmp = CreateStore( type_ids[ vmc->a ], type );
 			switch( vmc->a ){
 			case DAO_NIL :
@@ -618,17 +659,66 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dB = GetLocalConstant( vmc->b );
 			tmp = CreateStore( dB, dC );
 			break;
+		case DVM_MATH :
+			dB = GetLocalValueDataPointer( vmc->b );
+			dC = GetLocalValueDataPointer( vmc->c );
+			switch( types[ vmc->b ]->tid ){
+			case DAO_INTEGER :
+				dB = Dereference( CastIntegerPointer( dB ) );
+				dB = CreateSIToFP( dB, double_type );
+				break;
+			case DAO_FLOAT :
+				dB = Dereference( CastFloatPointer( dB ) );
+				dB = CreateFPCast( dB, double_type );
+				break;
+			}
+			switch( vmc->a ){
+			case DVM_MATH_ABS  : mathfunc = dao_abs_double;  break;
+			case DVM_MATH_ACOS : mathfunc = dao_acos_double; break;
+			case DVM_MATH_ASIN : mathfunc = dao_asin_double; break;
+			case DVM_MATH_ATAN : mathfunc = dao_atan_double; break;
+			case DVM_MATH_CEIL : mathfunc = dao_ceil_double; break;
+			case DVM_MATH_COS  : mathfunc = dao_cos_double;  break;
+			case DVM_MATH_COSH : mathfunc = dao_cosh_double; break;
+			case DVM_MATH_EXP  : mathfunc = dao_exp_double;  break;
+			case DVM_MATH_FLOOR : mathfunc = dao_floor_double; break;
+			case DVM_MATH_LOG  : mathfunc = dao_log_double;  break;
+			case DVM_MATH_RAND : mathfunc = dao_rand_double; break;
+			case DVM_MATH_SIN  : mathfunc = dao_sin_double;  break;
+			case DVM_MATH_SINH : mathfunc = dao_sinh_double; break;
+			case DVM_MATH_SQRT : mathfunc = dao_sqrt_double; break;
+			case DVM_MATH_TAN  : mathfunc = dao_tan_double;  break;
+			case DVM_MATH_TANH : mathfunc = dao_tanh_double; break;
+			default : break;
+			}
+			dB = CreateCall( mathfunc, dB );
+			switch( types[ vmc->c ]->tid ){
+			case DAO_INTEGER :
+				dB = CreateFPToSI( dB, dint_type );
+				dC = CastIntegerPointer( dC );
+				tmp = CreateStore( dB, dC );
+				break;
+			case DAO_FLOAT :
+				dB = CreateFPCast( dB, double_type );
+				dC = CastFloatPointer( dC );
+				tmp = CreateStore( dB, dC );
+				break;
+			case DAO_DOUBLE :
+				tmp = CreateStore( dB, dC );
+				break;
+			}
+			break;
 		case DVM_MOVE_II : case DVM_MOVE_IF : case DVM_MOVE_ID :
 		case DVM_MOVE_FI : case DVM_MOVE_FF : case DVM_MOVE_FD :
 		case DVM_MOVE_DI : case DVM_MOVE_DF : case DVM_MOVE_DD :
 			dA = GetLocalValueDataPointer( vmc->a );
 			dC = GetLocalValueDataPointer( vmc->c );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CastIntegerPointer( dA ); break;
 			case DAO_FLOAT   : dA = CastFloatPointer( dA ); break;
 			case DAO_DOUBLE  : dA = CastDoublePointer( dA ); break;
 			}
-			switch( regtypes[ vmc->c ]->tid ){
+			switch( types[ vmc->c ]->tid ){
 			case DAO_INTEGER : dC = CastIntegerPointer( dC ); break;
 			case DAO_FLOAT   : dC = CastFloatPointer( dC ); break;
 			case DAO_DOUBLE  : dC = CastDoublePointer( dC ); break;
@@ -841,11 +931,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_DIV_FNN :
 		case DVM_MOD_FNN :
 			GetFNNOperands( vmc, & dA, & dB, & dC );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
 			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
 			}
-			switch( regtypes[ vmc->b ]->tid ){
+			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
 			}
@@ -864,11 +954,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			GetFNNOperands( vmc, & dA, & dB, & dC );
 			dA = CreateFPCast( dA, double_type );
 			dB = CreateFPCast( dB, double_type );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
 			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
 			}
-			switch( regtypes[ vmc->b ]->tid ){
+			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
 			}
@@ -881,11 +971,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_EQ_FNN :
 		case DVM_NE_FNN :
 			GetFNNOperands( vmc, & dA, & dB, & dC );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
 			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
 			}
-			switch( regtypes[ vmc->b ]->tid ){
+			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
 			}
@@ -901,8 +991,8 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_BITLFT_FNN :
 		case DVM_BITRIT_FNN :
 			GetFNNOperands( vmc, & dA, & dB, & dC );
-			if( regtypes[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
-			if( regtypes[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
+			if( types[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
+			if( types[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
 			switch( code ){
 			case DVM_BITLFT_FNN : value = CreateShl( dA, dB ); break;
 			case DVM_BITRIT_FNN : value = CreateLShr( dA, dB ); break;
@@ -916,11 +1006,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_DIV_DNN :
 		case DVM_MOD_DNN :
 			GetDNNOperands( vmc, & dA, & dB, & dC );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
 			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
 			}
-			switch( regtypes[ vmc->b ]->tid ){
+			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
 			}
@@ -940,11 +1030,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			GetDNNOperands( vmc, & dA, & dB, & dC );
 			dA = CreateFPCast( dA, double_type );
 			dB = CreateFPCast( dB, double_type );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
 			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
 			}
-			switch( regtypes[ vmc->b ]->tid ){
+			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
 			}
@@ -956,11 +1046,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_EQ_DNN :
 		case DVM_NE_DNN :
 			GetDNNOperands( vmc, & dA, & dB, & dC );
-			switch( regtypes[ vmc->a ]->tid ){
+			switch( types[ vmc->a ]->tid ){
 			case DAO_INTEGER : dA = CreateUIToFP( dA, double_type ); break;
 			case DAO_FLOAT : dA = CreateFPCast( dA, double_type ); break;
 			}
-			switch( regtypes[ vmc->b ]->tid ){
+			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateUIToFP( dB, double_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, double_type ); break;
 			}
@@ -976,8 +1066,8 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_BITLFT_DNN :
 		case DVM_BITRIT_DNN :
 			GetDNNOperands( vmc, & dA, & dB, & dC );
-			if( regtypes[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
-			if( regtypes[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
+			if( types[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
+			if( types[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
 			switch( code ){
 			case DVM_BITLFT_DNN : value = CreateShl( dA, dB ); break;
 			case DVM_BITRIT_DNN : value = CreateLShr( dA, dB ); break;
@@ -1029,28 +1119,32 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dA = GetLocalValueDataPointer( vmc->a );
 			dA = Dereference( CastFloatPointer( dA ) );
 			value = CreateUIToFP( zero, float_type );
-			value = CreateFCmpOEQ( dA, value );
+			value = CreateFCmpONE( dA, value );
 			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
 			break;
 		case DVM_TEST_D :
 			dA = Dereference( GetLocalValueDataPointer( vmc->a ) );
 			value = CreateUIToFP( zero, double_type );
-			value = CreateFCmpOEQ( dA, value );
+			value = CreateFCmpONE( dA, value );
 			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
 			break;
 		case DVM_SWITCH :
+			m = types[vmc->a]->tid; // integer or enum
 			dA = GetLocalValueDataPointer( vmc->a );
+			if( m == DAO_ENUM ){
+				dA = CreatePointerCast( dA, dao_enum_type_pp );
+				dA = Dereference( dA );
+				dA = CreateConstGEP2_32( dA, 0, 1 );
+			}
 			dA = Dereference( CastIntegerPointer( dA ) );
 			inswitch = CreateSwitch( dA, labels[ vmc->b ], vmc->c );
 			// use DVM_CASE to add switch labels
-			if( regtypes[vmc->a]->tid == DAO_INTEGER ){
-				for(k=1; k<=vmc->c; k++){
-					DaoVmCodeX *vmc2 = vmcs[ iter->first + k ];
-					dint ic = routConsts[vmc2->a].v.i;
-					caseint = cast<ConstantInt>( ConstantInt::get( dint_type, ic ) );
-					inswitch->addCase( caseint, labels[vmc2->b] );
-				}
-			}else{
+			for(k=1; k<=vmc->c; k++){
+				DaoVmCodeX *vmc2 = vmcs[ iter->first + k ];
+				dint ic = routConsts[vmc2->a].v.i;
+				if( m == DAO_ENUM ) ic = routConsts[vmc2->a].v.e->value;
+				caseint = cast<ConstantInt>( ConstantInt::get( dint_type, ic ) );
+				inswitch->addCase( caseint, labels[vmc2->b] );
 			}
 			break;
 		default :
@@ -1075,6 +1169,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 #endif
 	return jitfunc;
 Failed:
+	printf( "failed compiling: %s %4i %4i\n", routine->routName->mbs, start, end );
 	jitfunc->eraseFromParent();
 	return NULL;
 }

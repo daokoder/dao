@@ -29,7 +29,6 @@ void simple_tests( DaoContext *ctx )
 	// *pfloat = 999;
 	StoreInst *store = new StoreInst( add, pfloat, block );
 
-	CallInst *daoctx = CallInst::Create(dao_context_get_local_values, func->arg_begin(), "", block);
 	ReturnInst::Create( *llvm_context, block );
 
 	verifyModule(*llvm_module, PrintMessageAction);
@@ -46,7 +45,15 @@ void simple_tests( DaoContext *ctx )
 
 
 const char* dao_source = 
-"a=1; switch(a){case 1: a=2; case 2: a = 3}\n"
+//"a=2; switch(a){case 1: a=2; case 2: a = 3}\n"
+//"a:enum<AA,BB>=$AA; b = 0; switch(a){ case $AA: b=1; case $BB: c=1; default: c = 2 }\n"
+"c = 1.0\n"
+"d = c < 1.0\n"
+"a = sin( c )\n"
+"a = cos( c )\n"
+"b = rand( 100 )\n"
+"b = rand( 100 )\n"
+"io.writeln( std.about(a), a, b )\n"
 /*
 "a = 8.0\n"
 "a = 12.0D * a\n"

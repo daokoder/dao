@@ -6272,7 +6272,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 						reg = DaoParser_MakeArithTree( self, start+2, rb-1, cst, -1, 0 );
 					}
 					if( reg <0 ) return -1;
-					if( *cst ){
+					if( *cst && tki != DKEY_RAND ){
 						DaoVmProcess *vmp = self->nameSpace->vmpEvalConst;
 						DaoContext *ctx = vmp->topFrame->context;
 						DValue value = DaoParser_GetVariable( self, *cst );

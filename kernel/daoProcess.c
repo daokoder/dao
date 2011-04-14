@@ -2563,6 +2563,8 @@ ReturnTrue :
 extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
 int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DValue *c, DValue p )
 {
+	DaoNameSpace *ns = self->nameSpace;
+	DaoType *type = self->regTypes[vmc->c];
 	int func = vmc->a;
 	self->vmc = vmc;
 	if( p.t == DAO_COMPLEX ){
@@ -2590,12 +2592,14 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DValue *c, DValue p )
 		default : return 1;
 		}
 		if( isreal ){
+			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetTypeV( ns, daoZeroDouble );
 			if( c->t == DAO_DOUBLE ){
 				c->v.d = rres;
 			}else{
 				return DaoContext_PutDouble( self, rres ) == NULL;
 			}
 		}else{
+			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetTypeV( ns, daoNullComplex );
 			if( c->t == DAO_COMPLEX ){
 				c->v.c[0] = cres;
 			}else{
@@ -2626,6 +2630,7 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DValue *c, DValue p )
 		default : return 1;
 		}
 		if( func == DVM_MATH_RAND ){
+			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetTypeV( ns, p );
 			switch( p.t ){
 			case DAO_INTEGER : return DaoContext_PutInteger( self, res ) == NULL;
 			case DAO_FLOAT  : return DaoContext_PutFloat( self, res ) == NULL;
@@ -2636,6 +2641,7 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DValue *c, DValue p )
 			c->v.d = res;
 			return 0;
 		}else{
+			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetTypeV( ns, daoZeroDouble );
 			return DaoContext_PutDouble( self, res ) == NULL;
 		}
 	}
@@ -3311,6 +3317,7 @@ DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmc, int n, Da
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = vmc;
 	cst = DaoVmProcess_MakeConst( self );
+	ctx->regTypes = NULL;
 	dao_free( tps );
 	return cst;
 }
@@ -3320,6 +3327,7 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
 	DaoVmCode vmc = { 0, 1, 2, 0 };
 	DaoContext *ctx = self->topFrame->context;
 	DaoType *types[] = { NULL, NULL, NULL };
+	DValue res;
 
 	vmc.code = opc;
 	if( opc == DVM_NAMEVA ){
@@ -3341,5 +3349,7 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
 	ctx->regTypes = types;
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = & vmc;
-	return DaoVmProcess_MakeConst( self );
+	res = DaoVmProcess_MakeConst( self );
+	ctx->regTypes = NULL;
+	return res;
 }
