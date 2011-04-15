@@ -40,7 +40,9 @@ struct DaoJitHandle : public IRBuilder<>
 	Value *localValues; // context->regValues: DValue*[]*
 	Value *localConsts; // routine->routConsts->data: DValue[]*
 
-	std::vector<Value*> localRefers;
+	std::vector<Value*> localRefers; // DValue**
+	std::vector<Value*> tempRefers; // int*, float*, double*, for intermediate operands
+	std::vector<Value*> tempValues; // int, float, double, for intermediate operands
 
 	DaoJitHandle( LLVMContext & ctx, DaoRoutine *rout=NULL ) : IRBuilder<>( ctx ){
 		routine = rout;
@@ -65,9 +67,19 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* CastFloatPointer( Value *value ); // to float*
 	Value* CastDoublePointer( Value *value ); // to double*
 
+	void ClearTempOperand( int reg );
+	void ClearTempOperand( DaoVmCodeX *vmc );
+	void StoreTempResult( Value *value, Value *dest, int reg );
+	Value* GetIntegerOperand( int reg ); // int
+	Value* GetFloatOperand( int reg ); // float
+	Value* GetDoubleOperand( int reg ); // double
+	Value* GetIntegerLeftValue( int reg ); // int*
+	Value* GetFloatLeftValue( int reg ); // float*
+	Value* GetDoubleLeftValue( int reg ); // double*
 	void GetIntegerOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetFloatOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
+	void GetNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB );
 	void GetFNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 };

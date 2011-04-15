@@ -46,13 +46,15 @@ void simple_tests( DaoContext *ctx )
 
 const char* dao_source = 
 //"a=2; switch(a){case 1: a=2; case 2: a = 3}\n"
-//"a:enum<AA,BB>=$AA; b = 0; switch(a){ case $AA: b=1; case $BB: c=1; default: c = 2 }\n"
+"a:enum<AA,BB>=$AA; b = 0; switch(a){ case $AA: b=1; case $BB: c=1; default: c = 2 }\n"
+#if 0
 "c = 1.0\n"
 "d = c < 1.0\n"
 "a = sin( c )\n"
 "a = cos( c )\n"
 "b = rand( 100 )\n"
 "b = rand( 100 )\n"
+#endif
 "io.writeln( std.about(a), a, b )\n"
 /*
 "a = 8.0\n"
