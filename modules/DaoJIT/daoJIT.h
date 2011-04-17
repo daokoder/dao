@@ -76,6 +76,12 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* GetIntegerLeftValue( int reg ); // int*
 	Value* GetFloatLeftValue( int reg ); // float*
 	Value* GetDoubleLeftValue( int reg ); // double*
+	Value* GetListItem( int reg, int index ); // Value*
+	Value* GetClassConstant( int reg, int field ); // Value*
+	Value* GetClassStatic( int reg, int field ); // Value*
+	Value* GetObjectConstant( int reg, int field ); // Value*
+	Value* GetObjectStatic( int reg, int field ); // Value*
+	Value* GetObjectVariable( int reg, int field ); // Value*
 	void GetIntegerOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetFloatOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetDoubleOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );

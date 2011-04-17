@@ -45,8 +45,11 @@ void simple_tests( DaoContext *ctx )
 
 
 const char* dao_source = 
+"class Test{ var a = 1.0D; } o = Test(); o.a=3.0D + rand(100.0D); a = b = o.a;\n"
+"ls = { o }; c = ls[0]\n"
+"io.writeln( c, rand(10.0) )\n"
 //"a=2; switch(a){case 1: a=2; case 2: a = 3}\n"
-"a:enum<AA,BB>=$AA; b = 0; switch(a){ case $AA: b=1; case $BB: c=1; default: c = 2 }\n"
+//"a:enum<AA,BB>=$AA; b = 0; switch(a){ case $AA: b=1; case $BB: c=1; default: c = 2 }\n"
 #if 0
 "c = 1.0\n"
 "d = c < 1.0\n"
