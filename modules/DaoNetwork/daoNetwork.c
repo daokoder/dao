@@ -864,9 +864,9 @@ static DaoFuncItem socketMeths[] =
 	{  DaoSocket_Lib_Receive,       "receive( self :socket, maxlen=512 )=>string" },
 	{  DaoSocket_Lib_SendDao,       "send_dao( self :socket, ... )=>int" },
 	{  DaoSocket_Lib_ReceiveDao,    "receive_dao( self :socket )=>list<int|float|double|complex|string|array>" },
-	{  DaoSocket_Lib_GetPeerName,   "peername( self :socket )const=>string" },
-	{  DaoSocket_Lib_Id,            "id( self :socket )const=>int" },
-	{  DaoSocket_Lib_State,         "state( self :socket )const=>enum<closed, bound, listening, connected>" },
+	{  DaoSocket_Lib_GetPeerName,   "peername( self :socket )=>string" },
+	{  DaoSocket_Lib_Id,            "id( self :socket )=>int" },
+	{  DaoSocket_Lib_State,         "state( self :socket )=>enum<closed, bound, listening, connected>" },
 	{  DaoSocket_Lib_Close,         "close( self :socket )" },
 	{ NULL, NULL }
 };
