@@ -43,6 +43,7 @@ const VectorType *int8_vector2 = NULL;
 const Type *void_type = NULL; // void
 
 const StructType *dao_value_type = NULL; // DValue
+const StructType *dao_string_type = NULL; // DString
 const StructType *dao_varray_type = NULL; // DVarray
 const StructType *dao_vatuple_type = NULL; // DVaTuple
 const StructType *dao_enum_type = NULL; // DEnum
@@ -58,10 +59,13 @@ const StructType *dao_context_type = NULL; // DaoContext
 const PointerType *void_type_p = NULL; // i8*
 
 const PointerType *dao_value_type_p = NULL; // DValue*
-const PointerType *dao_value_type_pp = NULL; // DValue**
+const PointerType *dao_string_type_p = NULL; // DString*
 const PointerType *dao_varray_type_p = NULL; // DVarray*
 const PointerType *dao_vatuple_type_p = NULL; // DVaTuple*
 const PointerType *dao_enum_type_p = NULL; // DEnum*
+
+const PointerType *dao_value_type_pp = NULL; // DValue**
+const PointerType *dao_string_type_pp = NULL; // DString**
 const PointerType *dao_enum_type_pp = NULL; // DEnum**
 
 const PointerType *dao_base_type_p = NULL; // DaoBase*
@@ -102,9 +106,58 @@ Function *dao_sqrt_double = NULL;
 Function *dao_tan_double = NULL;
 Function *dao_tanh_double = NULL;
 
+Function *dao_string_move = NULL;
+Function *dao_string_add = NULL;
+Function *dao_string_lt = NULL;
+Function *dao_string_le = NULL;
+Function *dao_string_eq = NULL;
+Function *dao_string_ne = NULL;
+
 FunctionType *dao_jit_function_type = NULL;
 
+extern "C"{
+
 double dao_rand( double max ){ return max * rand() / (RAND_MAX+1.0); }
+
+void DaoJIT_MOVE_SS( DValue *dA, DValue *dC )
+{
+	if( dC->t ==0 ){
+		dC->t = DAO_STRING;
+		dC->v.s = DString_Copy( dA->v.s );
+	}else{
+		DString_Assign( dC->v.s, dA->v.s );
+	}
+}
+void DaoJIT_ADD_SS( DValue *dA, DValue *dB, DValue *dC )
+{
+	dC->t = DAO_STRING;
+	if( dA == dC ){
+		DString_Append( dA->v.s, dB->v.s );
+	}else if( dB == dC ){
+		DString_Insert( dB->v.s, dA->v.s, 0, 0, 0 );
+	}else{
+		if( dC->v.s == NULL ) dC->v.s = DString_Copy( dA->v.s );
+		DString_Assign( dC->v.s, dA->v.s );
+		DString_Append( dC->v.s, dB->v.s );
+	}
+}
+void DaoJIT_ADD_LT( DValue *dA, DValue *dB, DValue *dC )
+{
+	dC->v.i = (DString_Compare( dA->v.s, dB->v.s ) <0);
+}
+void DaoJIT_ADD_LE( DValue *dA, DValue *dB, DValue *dC )
+{
+	dC->v.i = (DString_Compare( dA->v.s, dB->v.s ) <=0);
+}
+void DaoJIT_ADD_EQ( DValue *dA, DValue *dB, DValue *dC )
+{
+	dC->v.i = (DString_Compare( dA->v.s, dB->v.s ) ==0);
+}
+void DaoJIT_ADD_NE( DValue *dA, DValue *dB, DValue *dC )
+{
+	dC->v.i = (DString_Compare( dA->v.s, dB->v.s ) !=0);
+}
+}
 
 void DaoJIT_Init( DaoVmSpace *vms )
 {
@@ -112,7 +165,9 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	memset( dao_opcode_compilable, 0, DVM_NULL*sizeof(int) );
 	for(i=DVM_MOVE_II; i<=DVM_MOVE_DD; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_ADD_III; i<=DVM_BITRIT_DNN; i++) dao_opcode_compilable[i] = 1;
+	for(i=DVM_ADD_SS; i<=DVM_NE_SS; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_GETF_KCI; i<=DVM_SETF_OVDD; i++) dao_opcode_compilable[i] = 1;
+	for(i=DVM_GETI_TI; i<=DVM_SETF_TSS; i++) dao_opcode_compilable[i] = 1;
 	dao_opcode_compilable[ DVM_NOP ] = 1;
 	dao_opcode_compilable[ DVM_GOTO ] = 1;
 	dao_opcode_compilable[ DVM_SWITCH ] = 1;
@@ -124,6 +179,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_opcode_compilable[ DVM_TEST_D ] = 1;
 	dao_opcode_compilable[ DVM_GETI_LI ] = 1;
 	dao_opcode_compilable[ DVM_MOVE_PP ] = 1;
+	dao_opcode_compilable[ DVM_MOVE_SS ] = 1;
 
 	// TODO: GETCX, GETVX, swith, complex, string, array, tuple, list etc.
 
@@ -160,6 +216,14 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_value_array_type_p = PointerType::getUnqual( dao_value_array_type );
 	dao_value_ptr_array_type = ArrayType::get( dao_value_type_p, 0 );
 	dao_value_ptr_array_type_p = PointerType::getUnqual( dao_value_ptr_array_type );
+
+	std::vector<const Type*> string_types( 5, size_t_type );
+	string_types[2] = PointerType::getUnqual( size_t_type );
+	string_types[3] = PointerType::getUnqual( int8_type );
+	string_types[4] = PointerType::getUnqual( int32_type );
+	dao_string_type = StructType::get( *llvm_context, string_types );
+	dao_string_type_p = PointerType::getUnqual( dao_string_type );
+	dao_string_type_pp = PointerType::getUnqual( dao_string_type_p );
 
 	std::vector<const Type*> varray_types( 2, dao_value_array_type_p ); // data, buf
 	varray_types.push_back( size_t_type ); // size
@@ -249,6 +313,17 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	jitParams.push_back( dao_routine_type_p );
 	dao_jit_function_type = FunctionType::get( void_type, jitParams, false );
 
+	std::vector<const Type*> value2( 2, dao_value_type_p );
+	FunctionType *ft2 = FunctionType::get( void_type, value2, false );
+	dao_string_move = Function::Create( ft2, Function::ExternalLinkage, "DaoJIT_MOVE_SS", llvm_module );
+
+	std::vector<const Type*> value3( 3, dao_value_type_p );
+	FunctionType *ft3 = FunctionType::get( void_type, value3, false );
+	dao_string_add= Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_SS", llvm_module );
+	dao_string_lt = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_LT", llvm_module );
+	dao_string_le = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_LE", llvm_module );
+	dao_string_eq = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_EQ", llvm_module );
+	dao_string_ne = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_NE", llvm_module );
 
 	std::vector<const Type*> double2( 2, double_type );
 	FunctionType *funtype = FunctionType::get( double_type, double2, false );
@@ -266,7 +341,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_exp_double = Function::Create( mathft, Function::ExternalLinkage, "exp", llvm_module );
 	dao_floor_double = Function::Create( mathft, Function::ExternalLinkage, "floor", llvm_module );
 	dao_log_double = Function::Create( mathft, Function::ExternalLinkage, "log", llvm_module );
-	dao_rand_double = Function::Create( mathft, Function::ExternalLinkage, "rand", llvm_module );
+	dao_rand_double = Function::Create( mathft, Function::ExternalLinkage, "dao_rand", llvm_module );
 	dao_sin_double = Function::Create( mathft, Function::ExternalLinkage, "sin", llvm_module );
 	dao_sinh_double = Function::Create( mathft, Function::ExternalLinkage, "sinh", llvm_module );
 	dao_sqrt_double = Function::Create( mathft, Function::ExternalLinkage, "sqrt", llvm_module );
@@ -274,8 +349,8 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_tanh_double = Function::Create( mathft, Function::ExternalLinkage, "tanh", llvm_module );
 
 	llvm_exe_engine = EngineBuilder( llvm_module ).setEngineKind(EngineKind::JIT).create();
-	llvm_exe_engine->addGlobalMapping( dao_rand_double, (void*) dao_rand );
 #if 0
+	llvm_exe_engine->addGlobalMapping( dao_rand_double, (void*) dao_rand );
 	llvm_exe_engine->addGlobalMapping( dao_pow_double, (void*) pow );
 	llvm_exe_engine->addGlobalMapping( dao_abs_double, (void*) abs );
 	llvm_exe_engine->addGlobalMapping( dao_acos_double, (void*) acos );
@@ -630,16 +705,39 @@ Value* DaoJitHandle::GetDoubleLeftValue( int reg )
 	}
 	return C;
 }
+Value* DaoJitHandle::GetValueItem( Value *array, Value *index )
+{
+	Value *idx[2];
+	if( sizeof(void*) == 8 ){
+		idx[0] = getInt64( 0 );
+	}else{
+		idx[0] = getInt32( 0 );
+	}
+	idx[1] = index;
+	return CreateGEP( array, idx, idx+2 );
+}
+Value* DaoJitHandle::GetTuple( int reg )
+{
+	Value *value = GetLocalValueDataPointer( reg );
+	SetInsertPoint( activeBlock );
+	value = CreatePointerCast( value, dao_tuple_type_pp );
+	value = Dereference( value ); // DValue.v.tuple: DaoTuple*
+	value = CreateConstGEP2_32( value, 0, 5 );
+	value = Dereference( value ); // tuple->items: DVaTuple*
+	value = CreateConstGEP2_32( value, 0, 0 );
+	value = Dereference( value ); // tuple->items->data: DValue[]*
+	return value;
+}
 Value* DaoJitHandle::GetListItem( int reg, int index )
 {
 	Value *value = GetLocalValueDataPointer( reg );
 	Value *id = GetIntegerOperand( index );
 	SetInsertPoint( activeBlock );
-	value = CreatePointerCast( value, dao_list_type_pp ); // DValue.v.list: DaoList**
-	value = Dereference( value );
-	value = CreateConstGEP2_32( value, 0, 5 ); // list->items: DVarray**
+	value = CreatePointerCast( value, dao_list_type_pp );
+	value = Dereference( value ); // DValue.v.list: DaoList*
+	value = CreateConstGEP2_32( value, 0, 5 );
 	value = Dereference( value ); // list->items: DVarray*
-	value = CreateConstGEP2_32( value, 0, 0 ); // list->items->data: DValue[]**
+	value = CreateConstGEP2_32( value, 0, 0 );
 	value = Dereference( value ); // list->items->data: DValue[]*
 	Value *idx[2];
 	if( sizeof(void*) == 8 ){
@@ -1339,8 +1437,29 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			value = CreateUIToFP( value, double_type );
 			StoreTempResult( value, dC, vmc->c );
 			break;
+		case DVM_ADD_SS :
+		case DVM_LT_SS :
+		case DVM_LE_SS :
+		case DVM_EQ_SS :
+		case DVM_NE_SS :
+			dA = GetLocalValue( vmc->a );
+			dB = GetLocalValue( vmc->b );
+			dC = GetLocalValue( vmc->c );
+			switch( code ){
+			case DVM_ADD_SS : CreateCall3( dao_string_add, dA, dB, dC ); break;
+			case DVM_LT_SS : CreateCall3( dao_string_lt, dA, dB, dC ); break;
+			case DVM_LE_SS : CreateCall3( dao_string_le, dA, dB, dC ); break;
+			case DVM_EQ_SS : CreateCall3( dao_string_eq, dA, dB, dC ); break;
+			case DVM_NE_SS : CreateCall3( dao_string_ne, dA, dB, dC ); break;
+			}
+			break;
 		case DVM_GOTO : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
 		case DVM_SWITCH : case DVM_CASE :
+			break;
+		case DVM_MOVE_SS :
+			dA = GetLocalValue( vmc->a );
+			dC = GetLocalValue( vmc->c );
+			CreateCall2( dao_string_move, dA, dC );
 			break;
 		case DVM_MOVE_PP : // FIXME
 			value = GetLocalValue( vmc->a );
@@ -1351,6 +1470,83 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			value = GetListItem( vmc->a, vmc->b );
 			refer = GetLocalReference( vmc->c );
 			tmp = CreateStore( value, refer );
+			break;
+		case DVM_GETI_TI :
+			value = GetTuple( vmc->a );
+			dB = GetIntegerOperand( vmc->b );
+			value = GetValueItem( value, dB );
+			refer = GetLocalReference( vmc->c );
+			tmp = CreateStore( value, refer );
+			break;
+		case DVM_GETF_T :
+		case DVM_GETF_TI :
+		case DVM_GETF_TF :
+		case DVM_GETF_TD :
+		case DVM_GETF_TS :
+			value = GetTuple( vmc->a );
+			value = CreateConstGEP2_32( value, 0, vmc->b );
+			refer = GetLocalReference( vmc->c );
+			tmp = CreateStore( value, refer );
+			break;
+		case DVM_SETI_TI : // TODO
+			break;
+		case DVM_SETF_T : // TODO
+			break;
+		case DVM_SETF_TII :
+		case DVM_SETF_TIF :
+		case DVM_SETF_TID :
+		case DVM_SETF_TFI :
+		case DVM_SETF_TFF :
+		case DVM_SETF_TFD :
+		case DVM_SETF_TDI :
+		case DVM_SETF_TDF :
+		case DVM_SETF_TDD :
+			refer = GetTuple( vmc->c );
+			refer = CreateConstGEP2_32( refer, 0, vmc->b );
+			refer = GetValueDataPointer( refer );
+			switch( types[vmc->a]->tid ){
+			case DAO_INTEGER : value = GetIntegerOperand( vmc->a ); break;
+			case DAO_FLOAT  : value = GetFloatOperand( vmc->a ); break;
+			default : value = GetDoubleOperand( vmc->a ); break;
+			}
+			switch( code ){
+			case DVM_SETF_TII :
+				refer = CastIntegerPointer( refer );
+				break;
+			case DVM_SETF_TIF :
+				refer = CastIntegerPointer( refer );
+				value = CreateFPToSI( value, dint_type );
+				break;
+			case DVM_SETF_TID :
+				refer = CastIntegerPointer( refer );
+				value = CreateFPToSI( value, dint_type );
+				break;
+			case DVM_SETF_TFI :
+				refer = CastFloatPointer( refer );
+				value = CreateSIToFP( value, float_type );
+				break;
+			case DVM_SETF_TFF :
+				refer = CastFloatPointer( refer );
+				break;
+			case DVM_SETF_TFD :
+				refer = CastFloatPointer( refer );
+				value = CreateFPCast( value, float_type );
+				break;
+			case DVM_SETF_TDI :
+				value = CreateSIToFP( value, double_type );
+				break;
+			case DVM_SETF_TDF :
+				value = CreateFPCast( value, float_type );
+				break;
+			case DVM_SETF_TDD : break;
+			}
+			CreateStore( value, refer );
+			break;
+		case DVM_SETF_TSS :
+			refer = GetTuple( vmc->c );
+			refer = CreateConstGEP2_32( refer, 0, vmc->b );
+			dA = GetLocalValue( vmc->a );
+			CreateCall2( dao_string_move, dA, refer );
 			break;
 		case DVM_GETF_KCI :
 		case DVM_GETF_KCF :
@@ -1602,7 +1798,7 @@ void DaoJIT_Compile( DaoRoutine *routine )
 	std::vector<IndexRange> segments;
 	DaoJIT_SearchCompilable( routine, segments );
 	for(int i=0, n=segments.size(); i<n; i++){
-		if( (segments[i].end - segments[i].start) < 10 ) continue;
+		//if( (segments[i].end - segments[i].start) < 10 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
@@ -1616,7 +1812,6 @@ void DaoJIT_Compile( DaoRoutine *routine )
 	}
 	if( jitFunctions.size() ) routine->jitData = new std::vector<Function*>( jitFunctions );
 	verifyModule(*llvm_module, PrintMessageAction);
-	return;
 	PassManager PM;
 	PM.add(createPrintModulePass(&outs()));
 	PM.run(*llvm_module);

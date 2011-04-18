@@ -66,6 +66,7 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* CastIntegerPointer( Value *value ); // to dint*
 	Value* CastFloatPointer( Value *value ); // to float*
 	Value* CastDoublePointer( Value *value ); // to double*
+	Value* GetValueItem( Value *array, Value *index );
 
 	void ClearTempOperand( int reg );
 	void ClearTempOperand( DaoVmCodeX *vmc );
@@ -76,6 +77,7 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* GetIntegerLeftValue( int reg ); // int*
 	Value* GetFloatLeftValue( int reg ); // float*
 	Value* GetDoubleLeftValue( int reg ); // double*
+	Value* GetTuple( int reg ); // Value[]*
 	Value* GetListItem( int reg, int index ); // Value*
 	Value* GetClassConstant( int reg, int field ); // Value*
 	Value* GetClassStatic( int reg, int field ); // Value*

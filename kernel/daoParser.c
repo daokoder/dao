@@ -912,10 +912,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	module->parStart = start;
 	module->parEnd = right;
 	if( right+1 >= size ) return right;
-	if( tokens[right+1]->name == DKEY_CONST ){
-		routine->attribs |= DAO_ROUT_ISCONST;
-		right ++;
-	}
 	module->parEnd = right;
 	e1 = e2 = right + 1;
 	if( right+1 >= size ) return right;
@@ -2162,10 +2158,6 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 					|| tokens[i+1]->name == DTOK_CASSN)){
 			i ++;
 			if( tokens[i]->name == DTOK_COLON ){
-				if( tokens[i+1]->name == DKEY_CONST ){
-					if( routine->type == DAO_ROUTINE ) routine->constParam |= 1<<(routine->parCount-1);
-					i ++;
-				}
 				if( i+1 >= rb || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorNeedType;
 				abstype = DaoParser_ParseType( defparser, i+1, rb-1, &i, NULL );
 				if( abstype == NULL ) goto ErrorParamParsing;
@@ -2253,10 +2245,6 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 		if( self->outParser == NULL ) DaoParser_PopCodes( defparser, front, back );
 	}
 	i = rb + 1;
-	if( i <= end && tokens[i]->name == DKEY_CONST ){
-		routine->attribs |= DAO_ROUT_ISCONST;
-		i += 1;
-	}
 	k = pname->size;
 	abstype = NULL;
 	if( i <= end ){

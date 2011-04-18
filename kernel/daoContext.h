@@ -43,8 +43,7 @@ struct DaoContext
 	ushort_t  entryCode;
 	ushort_t  idClearFE;
 	ushort_t  parCount;
-	uchar_t   ctxState;
-	uchar_t   constCall;
+	ushort_t  ctxState;
 
 	DaoRoutine   *routine; /* routine prototype */
 	DaoObject    *object; /* self object */

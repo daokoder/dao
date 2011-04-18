@@ -108,7 +108,6 @@ DaoContext* DaoContext_New()
 	self->parCount = 0;
 	self->entryCode = 0;
 	self->ctxState = 0;
-	self->constCall = 0;
 	return self;
 }
 
@@ -126,7 +125,6 @@ static void DaoContext_InitValues( DaoContext *self )
 	int i, t, N = self->routine->locRegCount;
 	self->entryCode = 0;
 	self->ctxState = 0;
-	self->constCall = 0;
 	self->vmc = NULL;
 	self->codes = self->routine->vmCodes->codes;
 	self->regTypes = self->routine->regType->items.pType;
@@ -3994,7 +3992,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoContext *ctx;
 	DaoTuple *tuple;
 	DaoVmCode *vmc2;
-	int need_self, mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
+	int need_self, mcall = (code == DVM_MCALL || code == DVM_MCALL_TC);
 	int codemode = code | (mode<<16);
 	int initbase = 0;
 	int tail = 0;
@@ -4123,15 +4121,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		 */
 		func = (DaoFunction*)rout;
 		if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
-		if( !(rout->attribs & DAO_ROUT_ISCONST) ){
-			for(i=0; i<npar; i++){
-				if( parbuf2[i]->cst ){
-					DValue_ClearAll( parbuf, rout->parCount+1 );
-					DaoContext_RaiseException( self, DAO_ERROR, "calling non-const function on constant" );
-					return;
-				}
-			}
-		}
 		/*
 		   printf( "call: %s %i\n", rout->routName->mbs, npar );
 		 */
@@ -4322,9 +4311,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 #endif
 
 		vmc2 = vmc + 1;
-		if( (inclass && self->constCall) || (rout->attribs & DAO_ROUT_ISCONST) 
-				|| (selfpar->t == DAO_OBJECT && selfpar->cst ) )
-			ctx->constCall = 1;
 		if( caller.t == DAO_ROUTINE && !(self->frame->state & DVM_MAKE_OBJECT) ){
 			/* not in constructor */
 			while( vmc2->code == DVM_NOP ) vmc2 ++;
@@ -4423,15 +4409,6 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		 *   bar(1); # pass Dao class instances as self 
 		 */
 		if( vmc->code == DVM_MCALL_TC && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
-		if( !(func->attribs & DAO_ROUT_ISCONST) ){
-			for(i=0; i<npar; i++){
-				if( parbuf2[i]->cst ){
-					DValue_ClearAll( parbuf, rout->parCount+1 );
-					DaoContext_RaiseException( self, DAO_ERROR, "calling non-const function on constant" );
-					return;
-				}
-			}
-		}
 		/*
 		   printf( "call: %s %i\n", rout->routName->mbs, npar );
 		 */
@@ -4479,9 +4456,6 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 			goto InvalidParameter;
 		}
 		ctx->parCount = i - 1;
-		if( (inclass && self->constCall) || (rout->attribs & DAO_ROUT_ISCONST) 
-				|| (selfpar->t == DAO_OBJECT && selfpar->cst ) )
-			ctx->constCall = 1;
 		while( vmc2->code == DVM_NOP ) vmc2 ++;
 		if( vmc2->code == DVM_RETURN && vmc2->c ==0 ) tail = vmc2->b ==0 || (vmc2->b ==1 && vmc2->a == vmc->c);
 		if( tail && !(self->frame->state & DVM_MAKE_OBJECT) ){

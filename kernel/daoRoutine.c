@@ -790,7 +790,6 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 {
 	DaoType *tp, *routype = routine->routType;
 	DaoType **types = routype->nested->items.pType;
-	int constParam = routine->type == DAO_ROUTINE ? ((DaoRoutine*)routine)->constParam : 0;
 	int ndef = routine->parCount;
 	int ito;
 	for(ito=0; ito<ndef; ito++){
@@ -803,7 +802,6 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 		val = routine->routConsts->data[ito];
 		tp = types[ito]->aux.v.type;
 		if( DValue_Move2( val, recv[ito], tp ) ==0 ) return 0;
-		if( constParam & (1<<ito) ) recv[0]->cst = 1;
 	}
 	return 1;
 }
@@ -813,7 +811,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
 	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
 	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
-	int constParam = routine->type == DAO_ROUTINE ? ((DaoRoutine*)routine)->constParam : 0;
 	int npar = np;
 	int ifrom, ito;
 	int ndef = routine->parCount;
@@ -853,7 +850,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 				selfChecked = 1;
 				passed = 1;
 			}
-			recv[0]->cst = obj->cst;
 		}
 	}
 	/*
@@ -886,7 +882,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		if( ito >= ndef ) return 0;
 		passed |= 1<<ito;
 		tp = types[ito]->aux.v.type;
-		if( loc && val != loc && !(constParam & (1<<ito)) ){ /* put by DVM_LOAD */
+		if( loc && val != loc ){ /* put by DVM_LOAD */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
 				recv[ito] = val;
 				continue;
@@ -898,7 +894,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			if( val2.v.p == NULL ) return 0;
 		}
 		if( DValue_Move2( val2, recv[ito], tp ) ==0 ) return 0;
-		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
 	if( DRoutine_PassDefault( routine, recv, passed ) == 0) return 0;
 	return 1 + npar + selfChecked;
@@ -910,7 +905,6 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
 	int ifrom, ito;
 	int selfChecked = 0;
-	int constParam = routine->type == DAO_ROUTINE ? ((DaoRoutine*)routine)->constParam : 0;
 	DaoType *routype = routine->routType;
 	DaoType *tp, **types = routype->nested->items.pType;
 
@@ -934,7 +928,6 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
 			if( DValue_Move2( o, recv[0], tp ) ) selfChecked = 1;
-			recv[0]->cst = obj->cst;
 		}
 	}
 	/*
@@ -946,7 +939,7 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 		DValue *loc = base ? base + ifrom : NULL;
 		ito = ifrom + selfChecked;
 		tp = types[ito]->aux.v.type;
-		if( loc && val != loc && !(constParam & (1<<ito)) ){ /* put by DVM_LOAD */
+		if( loc && val != loc ){ /* put by DVM_LOAD */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
 				recv[ito] = val;
 				continue;
@@ -959,7 +952,6 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 		printf( "%s\n", tp->name->mbs );
 #endif
 		if( ! DValue_Move2( *val, recv[ito], tp ) ) return 0;
-		if( constParam & (1<<ito) ) recv[ito]->cst = 1;
 	}
 	return 1 + npar + selfChecked;
 }
@@ -1103,7 +1095,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	DArray_Assign( self->regType, other->regType );
 	GC_ShiftRC( other->nameSpace, self->nameSpace );
 	self->nameSpace = other->nameSpace;
-	self->constParam = other->constParam;
 	self->locRegCount = other->locRegCount;
 	self->defLine = other->defLine;
 	self->bodyStart = other->bodyStart;
@@ -1999,7 +1990,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DValue    val = daoNullValue;
 	DValue   *csts;
 	DValue   *pp;
-	int isconst = self->attribs & DAO_ROUT_ISCONST;
 	int notide = ! (vms->options & DAO_EXEC_IDE);
 	/* To support Edit&Continue in DaoStudio, some of the features
 	 * have to be switched off:
@@ -2084,7 +2074,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		init[i] = 1;
 		type[i] = self->routType->nested->items.pType[i];
 		if( type[i] && type[i]->tid == DAO_PAR_VALIST ) type[i] = NULL;
-		if( self->constParam & (1<<i) ) csts[i].cst = 1;
 		tt = type[i];
 		if( tt ) type[i] = tt->aux.v.type; /* name:type, name=type */
 		node = MAP_Find( self->localVarType, i );
@@ -2200,12 +2189,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( at, type[opc], defs, 0);
 				init[opc] = 1;
 				lastcomp = opc;
-				if( isconst && code == DVM_GETVO ) csts[opc].cst = 1;
 				break;
 			}
 		case DVM_SETVL : case DVM_SETVO : case DVM_SETVK : case DVM_SETVG :
 			{
-				if( isconst && code == DVM_SETVO ) goto ModifyConstant;
 				AssertInitialized( opa, 0, vmc->middle + 1, vmc->last );
 				tp = NULL;
 				if( code == DVM_SETVL ) tp = typeVL[opc]->items.pType + opb;

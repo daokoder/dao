@@ -168,10 +168,9 @@ enum DaoRoutineAttrib
 	DAO_ROUT_PARSELF = 1, /* need self parameter */
 	DAO_ROUT_INITOR = (1<<1), /* class constructor */
 	DAO_ROUT_NEEDSELF = (1<<2), /* for routines use class instance variable(s) */
-	DAO_ROUT_ISCONST = (1<<3), /* constant routine  */
-	DAO_ROUT_EXTFUNC = (1<<4), /* external C function */
-	DAO_ROUT_VIRTUAL = (1<<5),
-	DAO_ROUT_STATIC = (1<<6),
+	DAO_ROUT_EXTFUNC = (1<<3), /* external C function */
+	DAO_ROUT_VIRTUAL = (1<<4),
+	DAO_ROUT_STATIC = (1<<5),
 	DAO_ROUT_MAIN = (1<<7)
 };
 
