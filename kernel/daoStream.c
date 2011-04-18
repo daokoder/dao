@@ -434,15 +434,15 @@ static void DaoIO_Mode( DaoContext *ctx, DValue *p[], int N )
 
 static DaoFuncItem streamMeths[] =
 {
-	{  DaoIO_Write,     "write( self :stream, ... )const" },
+	{  DaoIO_Write,     "write( self :stream, ... )" },
 	{  DaoIO_Write2,    "write( ... )" },
-	{  DaoIO_Writef,    "writef( self :stream, format : string, ... )const" },
+	{  DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
 	{  DaoIO_Writef2,   "writef( format : string, ... )" },
-	{  DaoIO_Writeln,   "writeln( self :stream, ... )const" },
+	{  DaoIO_Writeln,   "writeln( self :stream, ... )" },
 	{  DaoIO_Writeln2,  "writeln( ... )" },
-	{  DaoIO_Flush,     "flush( self :stream )const" },
-	{  DaoIO_Read,      "read( self :stream, count=0 )const=>string" },
-	{  DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )const=>string" },
+	{  DaoIO_Flush,     "flush( self :stream )" },
+	{  DaoIO_Read,      "read( self :stream, count=0 )=>string" },
+	{  DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },
 	{  DaoIO_Read,      "read( )=>string" },
 	{  DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{  DaoIO_Open,      "open( )=>stream" },

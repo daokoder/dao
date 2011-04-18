@@ -2967,7 +2967,7 @@ static DaoFuncItem numarMeths[] =
 	{ DaoArray_Lib_sum,       "sum( self :array<@ITEM> )=>@ITEM" },
 	{ DaoArray_Lib_varn,      "varn( self :array )=>double" },
 	{ DaoArray_Reverse,       "reverse( self :array<@ITEM> )=>array<@ITEM>" },
-	{ DaoArray_Lib_rank,      "rank( self :array<any>, order :enum<ascend, descend>=$ascend, k=0 )const=>array<int>" },
+	{ DaoArray_Lib_rank,      "rank( self :array<any>, order :enum<ascend, descend>=$ascend, k=0 )=>array<int>" },
 	{ DaoArray_Lib_sort,      "sort( self :array<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>array<@T>" },
 
 	{ DaoArray_Lib_FFT,  "fft( self :array<complex>, direct :enum<forward, backward> )" },

@@ -967,14 +967,14 @@ static void DaoThdMaster_Lib_Sema( DaoContext *ctx, DValue *par[], int N )
 
 static DaoFuncItem thdMasterMeths[] =
 {
-	{ DaoThdMaster_Lib_Create,      "thread( self : mtlib, object, ... )const=>thread" },
-	{ DaoThdMaster_Lib_Mutex,       "mutex( self : mtlib )const=>mutex" },
-	{ DaoThdMaster_Lib_CondVar,     "condition( self : mtlib )const=>condition" },
-	{ DaoThdMaster_Lib_Sema,        "semaphore( self : mtlib )const=>semaphore" },
-	{ DaoThdMaster_Lib_Exit,        "exit( self : mtlib )const" },
-	{ DaoThdMaster_Lib_TestCancel,  "testcancel( self : mtlib )const" },
-	{ DaoThdMaster_Lib_Self,        "self( self : mtlib )const=>thread" },
-	{ DaoThdMaster_Lib_MyData,      "mydata( self : mtlib )const=>map<string,any>" },
+	{ DaoThdMaster_Lib_Create,      "thread( self : mtlib, object, ... )=>thread" },
+	{ DaoThdMaster_Lib_Mutex,       "mutex( self : mtlib )=>mutex" },
+	{ DaoThdMaster_Lib_CondVar,     "condition( self : mtlib )=>condition" },
+	{ DaoThdMaster_Lib_Sema,        "semaphore( self : mtlib )=>semaphore" },
+	{ DaoThdMaster_Lib_Exit,        "exit( self : mtlib )" },
+	{ DaoThdMaster_Lib_TestCancel,  "testcancel( self : mtlib )" },
+	{ DaoThdMaster_Lib_Self,        "self( self : mtlib )=>thread" },
+	{ DaoThdMaster_Lib_MyData,      "mydata( self : mtlib )=>map<string,any>" },
 	{ NULL, NULL }
 };
 
