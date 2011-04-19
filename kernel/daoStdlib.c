@@ -872,7 +872,7 @@ DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DValue *par[], int N )
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "need more parameters." );
 		return NULL;
 	}
-	if( ! DRoutine_PassParams( (DRoutine*)coCtx->routine, NULL, coCtx->regValues, par+1, NULL, N-1, DVM_CALL ) ){
+	if( ! DRoutine_PassParams( (DRoutine*)coCtx->routine, NULL, coCtx->regValues, par+1, N-1, DVM_CALL ) ){
 		DaoContext_SetResult( ctx, NULL );
 		if( newed ) DaoContext_Delete( coCtx );
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "not matched" );

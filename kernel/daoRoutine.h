@@ -51,18 +51,18 @@ DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoType *type );
 DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int code );
 
 /* Return 0 if failed, otherwise return 1 plus number passed parameters: */
-int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
-int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code );
+int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], int np, int code );
+int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], int np, int code );
 
 #define DaoRoutine_AddConst(f,d) DRoutine_AddConst((DRoutine*)(f),(DaoBase*)(d))
 #define DaoRoutine_AddConstValue(f,v) DRoutine_AddConstValue((DRoutine*)(f),v)
 #define DaoRoutine_GetOverLoad(f,o,p,n,c) (DaoRoutine*)DRoutine_GetOverLoad((DRoutine*)(f),o,p,n,c)
-#define DaoRoutine_PassParams(f,o,r,p,b,n,c) DRoutine_PassParam((DRoutine*)(f),o,r,p,b,n,c)
-#define DaoRoutine_FastPassParams(f,o,r,p,b,n,c) DRoutine_FastPassParam((DRoutine*)(f),o,r,p,b,n,c)
+#define DaoRoutine_PassParams(f,o,r,p,n,c) DRoutine_PassParam((DRoutine*)(f),o,r,p,n,c)
+#define DaoRoutine_FastPassParams(f,o,r,p,n,c) DRoutine_FastPassParam((DRoutine*)(f),o,r,p,n,c)
 
 #define DaoFunction_GetOverLoad(f,o,p,n,c) (DaoFunction*)DRoutine_GetOverLoad((DRoutine*)(f),o,p,n,c)
-#define DaoFunction_PassParams(f,o,r,p,b,n,c) DRoutine_PassParam((DRoutine*)(f),o,r,p,b,n,c)
-#define DaoFunction_FastPassParams(f,o,r,p,b,n,c) DRoutine_FastPassParam((DRoutine*)(f),o,r,p,b,n,c)
+#define DaoFunction_PassParams(f,o,r,p,n,c) DRoutine_PassParam((DRoutine*)(f),o,r,p,n,c)
+#define DaoFunction_FastPassParams(f,o,r,p,n,c) DRoutine_FastPassParam((DRoutine*)(f),o,r,p,n,c)
 
 struct DaoRoutine
 {

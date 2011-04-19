@@ -1939,7 +1939,7 @@ TryAgain:
 		rout = (DaoRoutine*) drout;
 		ctx = DaoVmProcess_MakeContext( self->process, rout );
 
-		if( ! DRoutine_PassParams( drout, NULL, ctx->regValues, p, NULL, n, DVM_CALL ) ) goto ArithError;
+		if( ! DRoutine_PassParams( drout, NULL, ctx->regValues, p, n, DVM_CALL ) ) goto ArithError;
 
 		DaoVmProcess_PushContext( self->process, ctx );
 		ctx->process->topFrame->returning = self->vmc->c;
@@ -3799,7 +3799,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 
 		ctx = DaoVmProcess_MakeContext( self->process, (DaoRoutine*) rout );
 
-		if( ! DRoutine_PassParams( rout, NULL, ctx->regValues, p, NULL, 2, DVM_CALL ) ) goto NormalCasting;
+		if( ! DRoutine_PassParams( rout, NULL, ctx->regValues, p, 2, DVM_CALL ) ) goto NormalCasting;
 
 		DaoVmProcess_PushContext( self->process, ctx );
 		ctx->process->topFrame->returning = self->vmc->c;
@@ -3976,7 +3976,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	int i, sup = 0, code = vmc->code;
 	int mode = vmc->b & 0xff00;
 	int npar = vmc->b & 0xff;
-	DValue  *base = self->regArray->data + vmc->a + 1;
 	DValue **params = self->regValues + vmc->a + 1;
 	DValue parbuf[DAO_MAX_PARAM+1];
 	DValue *parbuf2[DAO_MAX_PARAM+1];
@@ -4001,7 +4000,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	if( npar == DAO_CALLER_PARAM ){
 		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
 		npar = self->parCount - m;
-		base = self->regArray->data + m;
 		params = self->regValues + m;
 	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
@@ -4023,7 +4021,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	}else if( mode || caller.t == DAO_FUNCURRY ){
 		if( self->process->array == NULL ) self->process->array = DArray_New(0);
 		DArray_Clear( self->process->array );
-		base = NULL;
 		if( caller.t == DAO_FUNCURRY ){
 			DaoFunCurry *curry = (DaoFunCurry*) caller.v.p;
 			caller = curry->callable;
@@ -4107,7 +4104,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			return;
 		}
 		/* DArray_Resize( self->parbuf, rout->parCount, 0 ); */
-		if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
+		if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, npar, vmc->code ) ){
 			for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
 			rout2 = (DRoutine*) rout;
 			goto InvalidParameter;
@@ -4218,7 +4215,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				DaoVmCode vmcode = { DVM_CALL, 0, 0, 0 };
 				DValue returned = daoNullValue;
 				DValue *returned2 = & returned;
-				if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
+				if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, npar, vmc->code ) ){
 					for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
 					if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
 					rout2 = (DRoutine*) rout;
@@ -4284,7 +4281,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		}
 		if( ctx == NULL ) return;
 
-		i = DRoutine_PassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code );
+		i = DRoutine_PassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, npar, vmc->code );
 		if( i ==0 ){
 			DaoContext_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 			return;
@@ -4347,7 +4344,6 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	int i, npar = vmc->b;
 	int tail = 0;
 	DaoVmCode *vmc2 = vmc + 1;
-	DValue  *base = self->regArray->data + vmc->a + 1;
 	DValue **params = self->regValues + vmc->a + 1;
 	DValue parbuf[DAO_MAX_PARAM+1];
 	DValue *parbuf2[DAO_MAX_PARAM+1];
@@ -4363,7 +4359,6 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 	if( npar == DAO_CALLER_PARAM ){
 		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
 		npar = self->parCount - m;
-		base = self->regArray->data + m;
 		params = self->regValues + m;
 	}
 	memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
@@ -4396,7 +4391,7 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 			return;
 		}
 		/* DArray_Resize( self->parbuf, rout->parCount, 0 ); */
-		if( ! DRoutine_FastPassParams( (DRoutine*)rout, selfpar, parbuf2, params, base, npar, vmc->code ) ){
+		if( ! DRoutine_FastPassParams( (DRoutine*)rout, selfpar, parbuf2, params, npar, vmc->code ) ){
 			for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf2[i] );
 			rout2 = (DRoutine*)rout;
 			goto InvalidParameter;
@@ -4450,7 +4445,7 @@ void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc )
 		}
 		if( ctx == NULL ) return;
 
-		i = DRoutine_FastPassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, base, npar, vmc->code );
+		i = DRoutine_FastPassParams( (DRoutine*)ctx->routine, selfpar, ctx->regValues, params, npar, vmc->code );
 		if( i == 0 ){
 			rout2 = (DRoutine*)ctx->routine;
 			goto InvalidParameter;

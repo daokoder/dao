@@ -378,7 +378,7 @@ int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *
 		}
 		self->topFrame->entry ++;
 	}else if( N && ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL,
-				ctx->regValues, par, NULL, N, DVM_CALL ) ){
+				ctx->regValues, par, N, DVM_CALL ) ){
 		DaoContext_RaiseException( ret, DAO_ERROR, "invalid parameters." );
 		return 0;
 	}
@@ -459,7 +459,7 @@ int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *
 	value.v.object = o;
 	GC_ShiftRC( o, ctx->object );
 	ctx->object = o;
-	if( DRoutine_FastPassParams( (DRoutine*)r, & value, ctx->regValues, p, NULL, n, call ) ==0 ){
+	if( DRoutine_FastPassParams( (DRoutine*)r, & value, ctx->regValues, p, n, call ) ==0 ){
 		printf( "calling %s failed\n", r->routName->mbs );
 		return 0;
 	}
@@ -1004,9 +1004,13 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( LOAD ){
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, *locVars[ vmc->a ], NULL ) ==0 ) goto CheckException;
-			locVars[ vmc->c ] = locVars[ vmc->a ];
+			if( locVars[ vmc->a ]->cst == 0 ){
+				locVars[ vmc->c ] = locVars[ vmc->a ];
+			}else{
+				DValue *locBuf = topCtx->regArray->data + vmc->c;
+				DValue_Copy( locBuf, *locVars[ vmc->a ] );
+				locVars[ vmc->c ] = locBuf;
+			}
 		}OPNEXT()
 		OPCASE( CAST ){
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;

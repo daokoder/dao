@@ -805,7 +805,7 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 	}
 	return 1;
 }
-int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code )
+int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], int np, int code )
 {
 	ullong_t passed = 0;
 	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
@@ -829,7 +829,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	if( mcall && ! need_self ){
 		npar --;
 		p ++;
-		if(base) base ++;
 	}else if( obj && obj->t && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		tp = types[0]->aux.v.type;
@@ -860,7 +859,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	/* pass from p[ifrom] to recv[ito], with type checking by types[ito] */
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DValue *val = p[ifrom];
-		DValue *loc = base ? base + ifrom : NULL;
 		DValue val2 = *val;
 		ito = ifrom + selfChecked;
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
@@ -882,7 +880,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		if( ito >= ndef ) return 0;
 		passed |= 1<<ito;
 		tp = types[ito]->aux.v.type;
-		if( loc && val != loc ){ /* put by DVM_LOAD */
+		if( mcall && need_self && ifrom ==0 && ito ==0 ){ /* self parameter */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
 				recv[ito] = val;
 				continue;
@@ -898,21 +896,22 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 	if( DRoutine_PassDefault( routine, recv, passed ) == 0) return 0;
 	return 1 + npar + selfChecked;
 }
-int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], DValue *base, int np, int code )
+int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], int np, int code )
 {
 	int npar = np;
 	int ndef = routine->parCount;
+	int mcall = code == DVM_MCALL_TC;
 	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
+	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	int ifrom, ito;
 	int selfChecked = 0;
 	DaoType *routype = routine->routType;
 	DaoType *tp, **types = routype->nested->items.pType;
 
-	if( code == DVM_MCALL_TC && ! (routype->attrib & DAO_TYPE_SELF) ){
+	if( mcall && ! need_self ){
 		npar --;
 		p ++;
-		if(base) base ++;
-	}else if( obj && obj->t && (routype->attrib & DAO_TYPE_SELF) ){
+	}else if( obj && obj->t && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		tp = types[0]->aux.v.type;
 		if( obj->t < DAO_ARRAY ){
@@ -936,10 +935,9 @@ int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DVa
 	if( (npar|ndef) ==0 ) return 1;
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DValue *val = p[ifrom];
-		DValue *loc = base ? base + ifrom : NULL;
 		ito = ifrom + selfChecked;
 		tp = types[ito]->aux.v.type;
-		if( loc && val != loc ){ /* put by DVM_LOAD */
+		if( mcall && need_self && ifrom ==0 && ito ==0 ){ /* self parameter */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
 				recv[ito] = val;
 				continue;

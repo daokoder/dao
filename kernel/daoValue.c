@@ -1364,7 +1364,7 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNameSpace *
 		GC_ShiftRC( self, ctx->object );
 		ctx->object = self;
 		DaoContext_Init( ctx, rout );
-		if( DRoutine_PassParams( rt, &selfpar, ctx->regValues, NULL, NULL, 0, DVM_CALL ) ){
+		if( DRoutine_PassParams( rt, &selfpar, ctx->regValues, NULL, 0, DVM_CALL ) ){
 			DaoVmProcess_PushContext( proc, ctx );
 			proc->topFrame->returning = -1;
 			DaoVmProcess_Execute( proc );
@@ -1494,7 +1494,7 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DValue param, DaoVmProces
 	if( rt == NULL || rt->type != DAO_ROUTINE ) return NULL;
 	ctx = DaoVmProcess_MakeContext( proc, (DaoRoutine*) rt );
 	DaoContext_Init( ctx, ctx->routine );
-	if( DRoutine_PassParams( rt, NULL, ctx->regValues, & p, NULL, 1, DVM_CALL ) ){
+	if( DRoutine_PassParams( rt, NULL, ctx->regValues, & p, 1, DVM_CALL ) ){
 		DaoObject *object = DaoObject_New( self, NULL, 0 );
 		GC_ShiftRC( object, ctx->object );
 		ctx->object = object;

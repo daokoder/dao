@@ -7259,30 +7259,9 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
 		}
 		return regLast;
 	}else if( oper == DAO_OPER_BIT_AND ){
-		int st = 0, up = 0;
-		int ok = 0;
-		if( regFix >=0 && state == EXP_IN_CALL ){
-			if( ! DaoParser_StripParenthesis( self, & start, & end ) ) return -1;
-			reg = -1;
-			if( start == end ){
-				reg = DaoParser_GetRegister( self, self->tokens->items.pToken[start] );
-				st = LOOKUP_ST( reg );
-				up = LOOKUP_UP( reg );
-			}
-			if( reg >=0 && st == DAO_LOCAL_VARIABLE && up ==0
-					&& MAP_Find( self->routine->localVarType, reg ) ){
-				ok = 1;
-				DaoParser_AddCode( self, DVM_LOAD, reg, 1, regFix, first, 0, last );
-			}
-		}
-		if( ok ==0 ){
-			DString_SetMBS( self->mbs,
-					"reference can only be used for local variables in parameter list!" );
-			DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->mbs );
-			return -1;
-		}
-		return regFix;
-
+		DString_SetMBS( self->mbs, "reference parameter is not supported!" );
+		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->mbs );
+		return -1;
 	}else if( oper != DAO_OPER_ADD ){
 		int regLast = self->locRegCount;
 		if( regFix >= 0 ) regLast = regFix;

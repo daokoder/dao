@@ -40,7 +40,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 		DaoContext_Init( ctxNew, rout );
 		DaoContext_InitWithParams( ctxNew, vmp, ps, N );
 		if( DRoutine_PassParams( (DRoutine*) ctxNew->routine, &selfpar, 
-					ctxNew->regValues, ps, NULL, N, DVM_CALL ) ){
+					ctxNew->regValues, ps, N, DVM_CALL ) ){
 			if( STRCMP( name, "_PRINT" ) ==0 ){
 				DaoVmProcess_PushContext( ctx->process, ctxNew );
 				DaoVmProcess_Execute( ctx->process );

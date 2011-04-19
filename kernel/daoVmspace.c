@@ -1054,7 +1054,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		value = DaoNameSpace_GetConst( ns, i );
 		if( value.t == DAO_ROUTINE ){
 			if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
-						array->items.pValue, NULL, N, 0 ) ){
+						array->items.pValue, N, 0 ) ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
 				DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
 				DaoVmProcess_CacheContext( vmp, ctx );
@@ -1354,7 +1354,7 @@ ExecuteModule :
 			}
 			DaoVmProcess_PushContext( vmp, ctx );
 			if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
-						array->items.pValue, NULL, N, 0 ) ){
+						array->items.pValue, N, 0 ) ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
 				DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
 				DaoVmProcess_CacheContext( vmp, ctx );

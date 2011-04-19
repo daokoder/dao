@@ -892,7 +892,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
 	if( rout->type == DAO_ROUTINE ){
 		DaoVmProcess_PushContext( vmProc, thdCtx );
 		if( ! DRoutine_PassParams( (DRoutine*)rout, & selfobj, 
-					thdCtx->regValues, params, NULL, N, DVM_CALL ) ){
+					thdCtx->regValues, params, N, DVM_CALL ) ){
 			DaoVmProcess_Delete( vmProc );
 			goto ErrorParam;
 		}
@@ -905,7 +905,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
 		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
 		calldata->npar = N;
 		if( ! DRoutine_PassParams( (DRoutine*)rout, & selfobj, 
-					calldata->par2, params, NULL, N, DVM_CALL ) ){
+					calldata->par2, params, N, DVM_CALL ) ){
 			DValue_ClearAll( calldata->par, N );
 			DaoVmProcess_Delete( vmProc );
 			dao_free( calldata );

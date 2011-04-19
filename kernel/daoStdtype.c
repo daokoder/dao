@@ -1601,8 +1601,6 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
 			DVarray_Append( list->items, vtup );
 			if( index ) break;
 		}
-		p[3]->v.i = p1;
-		p[4]->v.i = p2;
 		p1 = p2 + 1;
 		p2 = end;
 	}
@@ -1641,10 +1639,6 @@ static void DaoSTR_Match0( DaoContext *ctx, DValue *p[], int N, int subm )
 	DValue_Copy( tuple->items->data + 1, value );
 	if( p1 >=0 && ( subm || capt ) ) DString_SubString( self, pt, p1, p2-p1+1 );
 	DValue_Copy( tuple->items->data + 2, matched );
-	if( subm ==0 ){
-		p[2]->v.i = p1;
-		p[3]->v.i = p2;
-	}
 	DString_Delete( pt );
 }
 static void DaoSTR_Match( DaoContext *ctx, DValue *p[], int N )
@@ -1748,8 +1742,6 @@ static void DaoSTR_Capture( DaoContext *ctx, DValue *p[], int N )
 		}
 		DVarray_Append( list->items, subs );
 	}
-	p[2]->v.i = p1;
-	p[3]->v.i = p2;
 	DString_Delete( pt );
 }
 static void DaoSTR_Change( DaoContext *ctx, DValue *p[], int N )
