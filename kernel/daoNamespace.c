@@ -1248,10 +1248,9 @@ DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name )
 	}
 	return NULL;
 }
-int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
+void DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 {
 	DNode *node = MAP_Find( self->abstypes, name );
-	int id = DaoNameSpace_FindConst( self, name );
 #if 0
 	//XXX no need? if( DString_FindChar( name, '?', 0 ) != MAXSIZE ) return 0;
 #endif
@@ -1259,7 +1258,11 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 		MAP_Insert( self->abstypes, name, tp );
 		GC_IncRC( tp );
 	}
-	if( id >=0 ) return 1;
+}
+void DaoNameSpace_AddTypeConstant( DaoNameSpace *self, DString *name, DaoType *tp )
+{
+	int id = DaoNameSpace_FindConst( self, name );
+	if( id >=0 ) return;
 	if( tp->aux.v.p && (tp->tid == DAO_CLASS || tp->tid == DAO_CDATA) ){
 		DaoNameSpace_AddConst( self, name, tp->aux, DAO_DATA_PUBLIC );
 	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_INITYPE ){
@@ -1268,15 +1271,6 @@ int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp )
 		val.v.p = (DaoBase*) tp;
 		DaoNameSpace_AddConst( self, name, val, DAO_DATA_PUBLIC );
 	}
-	/*
-	   node = DMap_First( self->abstypes );
-	   for(; node!=NULL; node=DNode_Next(node)){
-	   if( DString_Compare( node->key.pString, node->value.pType->name ) != 0 )
-	   printf( ">>>>>>>>>>> %s %s\n", node->key.pString->mbs, 
-	   node->value.pType->name->mbs );
-	   }
-	 */
-	return 1;
 }
 
 static DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -1572,11 +1566,11 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 
 	DString_SetMBS( mbs, name );
 	if( N > 0 ){
-		if( n || tid != DAO_UNION ) DString_AppendChar( mbs, '<' );
+		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
 		DString_Append( mbs, nest[0]->name );
 		DArray_Append( nstd, nest[0] );
 		for(i=1; i<N; i++){
-			DString_AppendChar( mbs, tid == DAO_UNION ? '|' : ',' );
+			DString_AppendChar( mbs, tid == DAO_VARIANT ? '|' : ',' );
 			DString_Append( mbs, nest[i]->name );
 			DArray_Append( nstd, nest[i] );
 		}
@@ -1584,7 +1578,7 @@ DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 			DString_AppendMBS( mbs, "=>" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
 		}
-		if( n || tid != DAO_UNION ) DString_AppendChar( mbs, '>' );
+		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
 		DString_AppendMBS( mbs, "<any>" );
 		DArray_Append( nstd, any );

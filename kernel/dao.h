@@ -19,7 +19,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#define DAO_H_VERSION 20110212
+#define DAO_H_VERSION 20110423
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -298,9 +298,9 @@ struct DEnum
 struct DValue
 {
 	uchar_t  t; /* type */
-	uchar_t  sub; /* sub-type */
 	uchar_t  cst; /* const */
-	uchar_t  ndef; /* not a default parameter */
+	uchar_t  mode; /* value mode */
+	uchar_t  temp; /* for temporary use */
 	union {
 		dint           i; /* int */
 		float          f; /* float */

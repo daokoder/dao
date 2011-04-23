@@ -96,6 +96,7 @@ DaoContext* DaoContext_New()
 	self->frame = NULL;
 	self->regArray = DVaTuple_New( 0, daoNullValue );
 	self->regValues = NULL;
+	self->regModes = NULL;
 
 	self->routine   = NULL;
 	self->object    = NULL;
@@ -128,6 +129,7 @@ static void DaoContext_InitValues( DaoContext *self )
 	self->vmc = NULL;
 	self->codes = self->routine->vmCodes->codes;
 	self->regTypes = self->routine->regType->items.pType;
+	self->regModes = (uchar_t*) self->routine->regMode->mbs;
 	if( self->regArray->size < N ){
 		DVaTuple_Resize( self->regArray, N, daoNullValue );
 		self->regValues = dao_realloc( self->regValues, N * sizeof(DValue*) );
@@ -280,24 +282,32 @@ DValue* DaoContext_PutValue( DaoContext *self, DValue value )
 int DaoContext_PutReference( DaoContext *self, DValue *refer )
 {
 	int tm, reg = self->vmc->c;
-	DaoType *tp = self->regTypes[reg];
-	if( self->regValues[reg] == refer ) return 1;
+	DValue *value = self->regValues[reg];
+	DaoType *tp2, *tp = self->regTypes[reg];
+
+	if( self->regModes[reg] != DAO_REG_REFER ){
+		/* not safe to accept a reference */
+		if( DValue_Move( *refer, value, tp ) ==0 ) goto TypeNotMatching;
+		return 0;
+	}
+	if( value == refer ) return 1;
 	if( tp == NULL ){
 		self->regValues[reg] = refer;
 		return 1;
 	}else if( refer->t >= DAO_ARRAY ){
-		return DValue_Move( *refer, self->regValues[ reg ], tp );
+		if( DValue_Move( *refer, value, tp ) ==0 ) goto TypeNotMatching;
+		return 0;
 	}
 	tm = DaoType_MatchValue( tp, *refer, NULL );
 	if( tm == DAO_MT_EQ ){
 		self->regValues[reg] = refer;
 		return 1;
 	}
-	tm = DValue_Move( *refer, self->regValues[ reg ], tp );
-	if( refer->t == DAO_CLASS || refer->t == DAO_OBJECT || refer->t == DAO_CDATA 
-			|| refer->t == DAO_ROUTINE || refer->t == DAO_FUNCTION ){
-		return tm;
-	}
+	if( DValue_Move( *refer, value, tp ) == 0 ) goto TypeNotMatching; 
+	return 0;
+TypeNotMatching:
+	tp2 = DaoNameSpace_GetTypeV( self->nameSpace, *refer );
+	DaoContext_RaiseTypeError( self, tp2, tp, "referencing" );
 	return 0;
 }
 DaoVmProcess* DaoContext_CurrentProcess( DaoContext *self )
@@ -330,17 +340,6 @@ void DaoContext_PrintVmCode( DaoContext *self )
 
 /**/
 
-
-void DValue_SimpleMove2( DValue from, DValue *to )
-{
-	if( from.ndef != DAO_NOCOPYING ){ /* XXX */
-		from.v.p = DaoBase_Duplicate( from.v.p, NULL );
-	}else{
-		from.t = 0;
-	}
-	GC_ShiftRC( from.v.p, to->v.p );
-	*to = from;
-}
 
 dint* DaoContext_PutInteger( DaoContext *self, dint value )
 {
@@ -1568,7 +1567,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 	if( dA.t && dB.t == DAO_TYPE && type->tid == DAO_TYPE ){
 		type = type->nested->items.pType[0];
 		if( dA.t == DAO_OBJECT ) dA.v.object = dA.v.object->that;
-		if( type->tid == DAO_UNION ){
+		if( type->tid == DAO_VARIANT ){
 			int i, mt = 0, id = 0, max = 0;
 			for(i=0; i<type->nested->size; i++){
 				if( dA.t == DAO_TYPE ){
@@ -3655,7 +3654,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		if( DValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
 		dC = dA;
 		break;
-	case DAO_UNION :
+	case DAO_VARIANT :
 		dC = dA;
 		break;
 	default : break;
@@ -3761,7 +3760,7 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 			return;
 		}
 	}
-	if( ct->tid == DAO_UNION ){
+	if( ct->tid == DAO_VARIANT ){
 		at = NULL;
 		mt = DAO_MT_NOT;
 		for(i=0; i<ct->nested->size; i++){
@@ -4125,10 +4124,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		func->pFunc( self, parbuf2, npar );
 		self->thisFunction = NULL;
 		/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
-		for(i=0; i<=rout->parCount; i++){
-			if( parbuf[i].ndef ) continue;
-			DValue_Clear( parbuf+i );
-		}
+		for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf+i );
 
 		if( initbase ){
 			DaoCData *cdata = self->regValues[ vmc->c ]->v.cdata;
@@ -4231,10 +4227,8 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 				self->thisFunction = NULL;
 				ctx->regValues = NULL;
 				/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
-				for(i=0; i<=rout->parCount; i++){
-					if( parbuf[i].ndef ) continue;
-					DValue_Clear( parbuf+i );
-				}
+				for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf+i );
+
 				obj = (DaoObject*) DaoObject_MapChildObject( othis, rout->routHost );
 				sup = DaoClass_FindSuper( obj->myClass, rout->routHost->aux.v.p );
 				if( returned.t == DAO_CDATA ){

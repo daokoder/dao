@@ -1227,11 +1227,11 @@ DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *
 			if( gt < 0 ) goto WrongType;
 			vartype = DaoParser_ParseType( self, start + 2, gt, newpos, types );
 			if( vartype == NULL || *newpos != gt ) goto WrongType;
-			if( vartype->tid == DAO_UNION ){
-				type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_UNION, initype, 
+			if( vartype->tid == DAO_VARIANT ){
+				type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype, 
 						vartype->nested->items.pType, vartype->nested->size );
 			}else{
-				type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_UNION, initype, 
+				type = DaoNameSpace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype, 
 						&vartype, 1 );
 			}
 			*newpos = gt + 1;
@@ -1348,7 +1348,7 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DA
 	}else{
 		DaoType **nested = types->items.pType + count;
 		int i, count2 = types->size - count;
-		type = DaoNameSpace_MakeType( ns, "", DAO_UNION, NULL, nested, count2 );
+		type = DaoNameSpace_MakeType( ns, "", DAO_VARIANT, NULL, nested, count2 );
 		if( type == NULL ) goto InvalidType;
 		for(i=0; i<count2; i++){
 			GC_IncRC( nested[i] );
@@ -2021,6 +2021,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 	DaoClass  *klass = self->hostClass;
 	DaoType  *cdata = self->hostCData;
 	DaoType  *abstype = NULL, *abtp, *tp;
+	DaoType  *type_default = NULL;
 	DArray  *nested = DArray_New(0);
 	DValue  dft = daoNullValue;
 	DString *pname = DString_New(1);
@@ -2091,13 +2092,10 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 			tk = (DaoToken*) DArray_Back( routine->defLocals );
 			DaoToken_Set( tk, 1, 0, routine->parCount, "self" );
 		}
-		dft = daoNullValue;
-		dft.ndef = 1;
-
 		if( self->outParser && self->outParser->isClassBody ){
 			hostype = DaoNameSpace_MakeType( myNS, "@class", DAO_INITYPE, NULL,NULL,0 );
 		}
-
+		dft = daoNullValue;
 		abstype = DaoType_New( "self", DAO_PAR_NAMED, (DaoBase*)hostype, NULL );
 		DArray_Append( nested, (void*) abstype );
 		DRoutine_AddConstValue( (DRoutine*) routine, dft );
@@ -2140,8 +2138,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 
 		j = i;
 		dft = daoNullValue;
-		dft.ndef = 1;
-		abtp = abstype = NULL;
+		type_default = abstype = NULL;
 		if( tki == DTOK_DOTS ){
 			routine->parCount = DAO_MAX_PARAM;
 			self->locRegCount = DAO_MAX_PARAM;
@@ -2182,7 +2179,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 						dft.t = DAO_CDATA;
 						dft.v.cdata = DaoCData_New( abstype->typer, NULL );
 						dft.v.cdata->attribs = 0;
-						abtp = abstype;
+						type_default = abstype;
 						cst = 1;
 					}
 				}
@@ -2198,7 +2195,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 				if( cst ){
 					if( cst > 1 ){
 						dft = DaoParser_GetVariable( defparser, cst );
-						abtp = DaoNameSpace_GetTypeV( myNS, dft );
+						type_default = DaoNameSpace_GetTypeV( myNS, dft );
 					}
 				}else if( self->uplocs ){
 					int loc = routine->routConsts->size;
@@ -2206,14 +2203,14 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 					DArray_Append( self->uplocs, loc );
 					DArray_Append( self->uplocs, i+1 );
 					DArray_Append( self->uplocs, comma-1 );
-					abtp = abstype = DaoType_New( "?", DAO_UDF, 0,0 );
+					type_default = abstype = DaoType_New( "?", DAO_UDF, 0,0 );
 				}else{
 					goto ErrorVariableDefault;
 				}
-				if( abtp == NULL ) goto ErrorInvalidDefault;
+				if( type_default == NULL ) goto ErrorInvalidDefault;
 				if( cst && abstype && DaoType_MatchValue( abstype, dft, NULL ) ==0 )
 					goto ErrorImproperDefault;
-				if( abstype == NULL ) abstype = abtp;
+				if( abstype == NULL ) abstype = type_default;
 				i = comma;
 			}
 		}else if( tokens[i]->type == DTOK_IDENTIFIER ){
@@ -2224,7 +2221,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 		}else{
 			goto ErrorInvalidParam;
 		}
-		if( hasdeft && dft.t ==0 && dft.ndef && self->outParser == NULL ){
+		if( hasdeft && dft.t ==0 && type_default == NULL && self->outParser == NULL ){
 			m1 = hasdeft;  m2 = rb;
 			goto ErrorInvalidDefault;
 		}
@@ -2233,7 +2230,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 		if( routine->type == DAO_ROUTINE && routine->minimal ==0 )
 			MAP_Insert( self->routine->localVarType, regCount, abstype );
 		if( abstype->tid != DAO_PAR_VALIST ){
-			m2 = abtp ? DAO_PAR_DEFAULT : DAO_PAR_NAMED;
+			m2 = type_default ? DAO_PAR_DEFAULT : DAO_PAR_NAMED;
 			abstype = DaoType_New( tok->mbs, m2, (DaoBase*) abstype, NULL );
 		}
 		/* e.g.: spawn( pid :string, src :string, timeout=-1, ... ) */
@@ -2276,7 +2273,6 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 		tt = DaoType_New( "", DAO_PAR_NAMED, (DaoBase*) tt, NULL );
 		DArray_Append( nested, (void*) tt );
 		dft = daoNullValue;
-		dft.ndef = 1;
 		DRoutine_AddConstValue( (DRoutine*) routine, dft );
 		DaoParser_PushRegister( self );
 		routine->parCount ++;
@@ -3697,12 +3693,14 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		DaoType_Delete( abtp );
 	}else{
 		DaoNameSpace_AddType( self->nameSpace, abtp->name, abtp );
+		DaoNameSpace_AddTypeConstant( self->nameSpace, abtp->name, abtp );
 		abtp2 = abtp;
 	}
 	if( alias ){
 		abtp2 = DaoType_Copy( abtp2 );
 		DString_Assign( abtp2->name, alias );
 		DaoNameSpace_AddType( self->nameSpace, abtp2->name, abtp2 );
+		DaoNameSpace_AddTypeConstant( self->nameSpace, abtp2->name, abtp2 );
 	}
 	return rb + 1;
 ErrorEnumDefinition:
@@ -6377,7 +6375,7 @@ static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, 
 
 						opB ++;
 						code = DVM_MCALL;
-						DaoParser_AddCode( self, DVM_LOAD, vmc->a, 0, self->locRegCount, start-3, 0,0 );
+						DaoParser_AddCode( self, DVM_LOAD, vmc->a, DAO_REFER_PARAM, self->locRegCount, start-3, 0,0 );
 						DaoParser_PushRegister( self );
 						mov = self->vmcLast;
 					}
@@ -7122,6 +7120,7 @@ static int DaoParser_MakeArithLeaf( DaoParser *self, int start, int *cst, int re
 			DString_Erase( self->mbs, 0, 1 );
 			DMap_Insert( type->mapNames, self->mbs, (void*)0 );
 			DaoNameSpace_AddType( ns, str, type );
+			DaoNameSpace_AddTypeConstant( ns, str, type );
 		}
 		value = daoNullValue;
 		value.t = DAO_ENUM;
@@ -7259,9 +7258,29 @@ static int DaoParser_MakeArithUnary( DaoParser *self, int oper, int start, int e
 		}
 		return regLast;
 	}else if( oper == DAO_OPER_BIT_AND ){
-		DString_SetMBS( self->mbs, "reference parameter is not supported!" );
-		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->mbs );
-		return -1;
+		int st = 0, up = 0;
+		int ok = 0;
+		if( regFix >=0 && state == EXP_IN_CALL ){
+			if( ! DaoParser_StripParenthesis( self, & start, & end ) ) return -1;
+			reg = -1;
+			if( start == end ){
+				reg = DaoParser_GetRegister( self, self->tokens->items.pToken[start] );
+				st = LOOKUP_ST( reg );
+				up = LOOKUP_UP( reg );
+			}
+			if( reg >=0 && st == DAO_LOCAL_VARIABLE && up ==0
+					&& MAP_Find( self->routine->localVarType, reg ) ){
+				ok = 1;
+				DaoParser_AddCode( self, DVM_LOAD, reg, DAO_REFER_PARAM, regFix, first, 0, last );
+			}
+		}
+		if( ok ==0 ){
+			DString_SetMBS( self->mbs,
+					"reference can only be used for local variables in parameter list!" );
+			DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->mbs );
+			return -1;
+		}
+		return regFix;
 	}else if( oper != DAO_OPER_ADD ){
 		int regLast = self->locRegCount;
 		if( regFix >= 0 ) regLast = regFix;

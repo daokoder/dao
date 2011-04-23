@@ -123,7 +123,9 @@ void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro, 
 DaoMacro* DaoNameSpace_FindMacro( DaoNameSpace *self, DString *name );
 
 DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name );
-int DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );
+void DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );
+void DaoNameSpace_AddTypeConstant( DaoNameSpace *self, DString *name, DaoType *tp );
+
 DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p );
 DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name, 
 		uchar_t basic, DaoBase *pb, DaoType *nest[], int N );

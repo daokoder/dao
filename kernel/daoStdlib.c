@@ -1280,7 +1280,7 @@ static void REFL_Param( DaoContext *ctx, DValue *p[], int N )
 		vtp.v.p = (DaoBase*) nested[i];
 		if( nested[i] ) vtp.t = DAO_TYPE;
 		cst = routine->routConsts->data[i];
-		if( cst.t || cst.ndef == 0 ) num.v.i = 1;
+		if( nested[i]->tid == DAO_PAR_DEFAULT ) num.v.i = 1;
 		DValue_Copy( tuple->items->data, str );
 		DValue_Copy( tuple->items->data + 1, vtp );
 		DValue_Copy( tuple->items->data + 2, num );

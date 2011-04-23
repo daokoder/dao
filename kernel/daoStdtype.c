@@ -1601,6 +1601,8 @@ static void DaoSTR_PFind( DaoContext *ctx, DValue *p[], int N )
 			DVarray_Append( list->items, vtup );
 			if( index ) break;
 		}
+		p[3]->v.i = p1;
+		p[4]->v.i = p2;
 		p1 = p2 + 1;
 		p2 = end;
 	}
@@ -1639,6 +1641,10 @@ static void DaoSTR_Match0( DaoContext *ctx, DValue *p[], int N, int subm )
 	DValue_Copy( tuple->items->data + 1, value );
 	if( p1 >=0 && ( subm || capt ) ) DString_SubString( self, pt, p1, p2-p1+1 );
 	DValue_Copy( tuple->items->data + 2, matched );
+	if( subm ==0 ){
+		p[2]->v.i = p1;
+		p[3]->v.i = p2;
+	}
 	DString_Delete( pt );
 }
 static void DaoSTR_Match( DaoContext *ctx, DValue *p[], int N )
@@ -1742,6 +1748,8 @@ static void DaoSTR_Capture( DaoContext *ctx, DValue *p[], int N )
 		}
 		DVarray_Append( list->items, subs );
 	}
+	p[2]->v.i = p1;
+	p[3]->v.i = p2;
 	DString_Delete( pt );
 }
 static void DaoSTR_Change( DaoContext *ctx, DValue *p[], int N )
@@ -2116,11 +2124,11 @@ static void DaoLIST_Erase2( DaoContext *ctx, DValue *p[], int N )
 		if( id < 0 || id >= self->items->size ) continue;
 		if( id < k ) k = id;
 		DValue_Clear( self->items->data + id );
-		self->items->data[id].sub = 1; /* mark as deleted */
+		self->items->data[id].temp = 1; /* mark as deleted */
 	}
 	for(i=k; i<self->items->size; i++){
 		DValue val = self->items->data[i];
-		if( val.t == 0 && val.sub == 1 ) continue;
+		if( val.t == 0 && val.temp == 1 ) continue;
 		self->items->data[k] = val;
 		k += 1;
 	}

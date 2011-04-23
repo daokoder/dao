@@ -385,7 +385,7 @@ void DValue_Clear( DValue *self )
 		default : GC_DecRC( self->v.p ); break;
 		}
 	}
-	self->t = self->sub = self->cst = self->ndef = 0;
+	self->t = self->cst = self->mode = 0;
 	self->v.d = 0.0;
 }
 void DValue_IncRCs( DValue *v, int n )
@@ -460,8 +460,6 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 		break;
 	}
 	self->t = from.t;
-	self->sub = from.sub;
-	self->ndef = from.ndef;
 	self->cst = 0;
 }
 void DValue_Copy( DValue *self, DValue from )
@@ -535,7 +533,6 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	}
 	/* binary or is OK here: */
 	if( (from.t < DAO_ARRAY) & (to->t < DAO_ARRAY) & (tp->tid < DAO_ARRAY) ){
-		to->sub = from.sub;
 		to->cst = to->ndef = 0;
 		if( from.t != to->t ){
 			switch( to->t ){
@@ -604,7 +601,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		if( DValue_Compare( from, tp->aux ) !=0 ) return 0;
 		DValue_Copy( to, from );
 		return 1;
-	}else if( tp->tid == DAO_UNION ){
+	}else if( tp->tid == DAO_VARIANT ){
 		DaoType *itp = NULL;
 		int j, k, mt = 0;
 		for(j=0; j<tp->nested->size; j++){
@@ -619,8 +616,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	}else if( from.t == 0 ){
 		return 0;
 	}
-	to->sub = from.sub;
-	to->cst = to->ndef = 0;
+	to->cst = to->mode = 0;
 	if( from.t >= DAO_COMPLEX && from.t == to->t && from.v.p == to->v.p ) return 1;
 	if( from.t >= DAO_INTEGER && from.t <= DAO_DOUBLE ){
 		if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto MoveFailed;;

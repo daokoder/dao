@@ -499,7 +499,6 @@ typedef int (*DaoJitFunc)( DValue *locVars, DaoExtraParam *extra );
 
 void DaoContext_AdjustCodes( DaoContext *self, int options );
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t );
-void DValue_SimpleMove2( DValue from, DValue *to );
 
 static void DValue_InitComplex( DValue *value )
 {
@@ -519,9 +518,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoVmCode *vmc=NULL;
 	DaoVmCode *vmcBase;
-	int invokehost = handler && handler->InvokeHost;
-	int i, j, print, retCode, nCycle;
-	int exceptCount = 0;
 	DaoVmFrame *topFrame;
 	DaoContext *topCtx;
 	DaoRoutine *routine;
@@ -553,15 +549,18 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DString *str;
 	complex16 com = {0,0};
 	DaoExtraParam extra = { NULL, NULL, NULL, NULL };
+	size_t size, *dims, *dmac;
+	int invokehost = handler && handler->InvokeHost;
+	int i, j, print, retCode, nCycle;
+	int exceptCount = 0;
 	int gotoCount = 0;
 	dint id;
-	size_t size;
-	ushort_t *range;
-	size_t *dims, *dmac;
 	dint inum=0;
 	float fnum=0;
 	double dnum=0;
 	llong_t lnum = 0;
+	uchar_t *regModes = NULL;
+	ushort_t *range;
 	complex16 acom, bcom;
 	DaoVmFrame *base;
 
@@ -881,6 +880,7 @@ CallEntry:
 	this = topCtx->object;
 	locVars = topCtx->regValues;
 	locTypes = routine->regType->items.pType;
+	regModes = (uchar_t*) routine->regMode->mbs;
 	dataCL[0] = routine->routConsts;
 	dataCG = routine->nameSpace->cstDataTable;
 	dataVG = routine->nameSpace->varDataTable;
@@ -939,8 +939,13 @@ CallEntry:
 			locVars[ vmc->c ] = dataCK->items.pVarray[ vmc->a ]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETCG ){
-			/* ensure no copying here: */
-			locVars[ vmc->c ] = dataCG->items.pVarray[ vmc->a ]->data + vmc->b;
+			value = dataCG->items.pVarray[ vmc->a ]->data + vmc->b;
+			if( regModes[ vmc->c ] == DAO_REG_REFER ){
+				/* ensure no copying here: */
+				locVars[ vmc->c ] = value;
+			}else{
+				DValue_Copy( locVars[ vmc->c ], *value );
+			}
 		}OPNEXT()
 		OPCASE( GETVL ){
 			locVars[ vmc->c ] = dataVL[ vmc->b ];
@@ -952,7 +957,13 @@ CallEntry:
 			locVars[ vmc->c ] = dataVK->items.pVarray[vmc->a]->data + vmc->b;
 		}OPNEXT()
 		OPCASE( GETVG ){
-			locVars[ vmc->c ] = dataVG->items.pVarray[vmc->a]->data + vmc->b;
+			value = dataVG->items.pVarray[vmc->a]->data + vmc->b;
+			if( regModes[ vmc->c ] == DAO_REG_REFER ){
+				/* ensure no copying here: */
+				locVars[ vmc->c ] = value;
+			}else{
+				DValue_Copy( locVars[ vmc->c ], *value );
+			}
 		}OPNEXT()
 		OPCASE( GETI )
 		OPCASE( GETMI ){
@@ -1004,13 +1015,14 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( LOAD ){
-			if( locVars[ vmc->a ]->cst == 0 ){
+			if( locVars[ vmc->a ]->cst == 0 && regModes[ vmc->c ] == DAO_REG_REFER ){
 				locVars[ vmc->c ] = locVars[ vmc->a ];
 			}else{
 				DValue *locBuf = topCtx->regArray->data + vmc->c;
 				DValue_Copy( locBuf, *locVars[ vmc->a ] );
 				locVars[ vmc->c ] = locBuf;
 			}
+			locVars[ vmc->c ]->mode = vmc->b;
 		}OPNEXT()
 		OPCASE( CAST ){
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -1830,7 +1842,11 @@ CallEntry:
 			if( id <0 ) id += list->items->size;
 			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
 			if( abtp && DaoType_MatchValue( abtp, list->items->data[id], NULL ) ==0 ) goto CheckException;
-			locVars[ vmc->c ] = list->items->data + id;
+			if( regModes[ vmc->c ] == DAO_REG_REFER ){
+				locVars[ vmc->c ] = list->items->data + id;
+			}else{
+				DValue_Copy( locVars[ vmc->c ], list->items->data[id] );
+			}
 		}OPNEXT()
 		OPCASE( SETI_LI ){
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
@@ -1852,7 +1868,11 @@ CallEntry:
 				id = locVars[ vmc->b ]->v.i;
 				if( id <0 ) id += list->items->size;
 				if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-				locVars[ vmc->c ] = list->items->data + id;
+				if( regModes[ vmc->c ] == DAO_REG_REFER ){
+					locVars[ vmc->c ] = list->items->data + id;
+				}else{
+					DValue_Copy( locVars[ vmc->c ], list->items->data[id] );
+				}
 			}OPNEXT()
 		OPCASE( SETI_LIII )
 			OPCASE( SETI_LIIF )
@@ -2096,6 +2116,7 @@ CallEntry:
 			abtp = locTypes[ vmc->c ];
 			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
 			if( abtp && DaoType_MatchValue( abtp, tuple->items->data[id], NULL ) ==0 ) goto CheckException;
+			/* reference to tuple items should always be valid: */
 			locVars[ vmc->c ] = tuple->items->data + id;
 		}OPNEXT()
 		OPCASE( SETI_TI ){
@@ -3153,6 +3174,7 @@ void DaoVmProcess_PrintException( DaoVmProcess *self, int clear )
 
 DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 {
+	uchar_t  modes[] = { 0, 0, 0 };
 	DaoType *types[] = { NULL, NULL, NULL };
 	DaoContext *ctx = self->topFrame->context;
 	DaoVmCode *vmc = ctx->vmc;
@@ -3162,6 +3184,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 	dao_fe_clear();
 	ctx->idClearFE = -1;
 	if( ctx->regTypes == NULL ) ctx->regTypes = types;
+	if( ctx->regModes == NULL ) ctx->regModes = modes;
 
 	switch( vmc->code ){
 	case DVM_MOVE :
@@ -3224,6 +3247,8 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 		DaoContext_DoCall( ctx, vmc ); break;
 	default: break;
 	}
+	ctx->regTypes = NULL;
+	ctx->regModes = NULL;
 	DaoContext_CheckFE( ctx );
 	if( self->exceptions->size >0 ){
 		DaoVmProcess_PrintException( self, 1 );
@@ -3241,12 +3266,16 @@ DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmc, int n, Da
 	DaoType **tps = (DaoType**) dao_calloc(1,n*sizeof(DaoType*));
 	DaoContext *ctx = self->topFrame->context;
 	DValue cst;
+
+	ctx->regModes = (uchar_t*) dao_calloc(1,n*sizeof(uchar_t));
 	ctx->regTypes = tps;
 	ctx->regTypes[0] = t;
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = vmc;
 	cst = DaoVmProcess_MakeConst( self );
+	dao_free( ctx->regModes );
 	ctx->regTypes = NULL;
+	ctx->regModes = NULL;
 	dao_free( tps );
 	return cst;
 }
@@ -3256,6 +3285,7 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
 	DaoVmCode vmc = { 0, 1, 2, 0 };
 	DaoContext *ctx = self->topFrame->context;
 	DaoType *types[] = { NULL, NULL, NULL };
+	uchar_t  modes[] = { 0, 0, 0 };
 	DValue res;
 
 	vmc.code = opc;
@@ -3276,9 +3306,11 @@ DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, 
 	DValue_Copy( ctx->regValues[1], a );
 	DValue_Copy( ctx->regValues[2], b );
 	ctx->regTypes = types;
+	ctx->regModes = modes;
 	ctx->vmSpace = self->vmSpace;
 	ctx->vmc = & vmc;
 	res = DaoVmProcess_MakeConst( self );
 	ctx->regTypes = NULL;
+	ctx->regModes = NULL;
 	return res;
 }

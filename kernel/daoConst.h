@@ -41,7 +41,7 @@ enum DaoRTTI
 	DAO_ANY = END_CORE_TYPES, /* a : any */
 	DAO_INITYPE ,  /* a : @t */
 	DAO_VALTYPE ,
-	DAO_UNION , /* disjoint union */
+	DAO_VARIANT , /* variant or disjoint union */
 	DAO_MACRO ,
 	DAO_FUNCURRY ,
 	DAO_CMODULE ,
@@ -60,7 +60,6 @@ enum DaoRTTI
 	DAO_PAR_VALIST , /* ... */
 	END_EXTRA_TYPES ,
 
-	DAO_NOCOPYING , /* not a type! */
 	END_NOT_TYPES
 };
 
@@ -76,6 +75,33 @@ enum DaoBasicStruct
 	D_MAP ,
 	D_VOID2 , /* a pair of pointer */
 	D_NULL
+};
+
+enum DaoValueMode
+{
+	DAO_VALUE_NORMAL ,
+	DAO_REFER_PARAM /* reference parameter */
+};
+
+enum DaoRegisterMode
+{
+	DAO_REG_NORMAL = 0, /* for normal intermediate operands */
+	DAO_REG_VARIABLE = 1, /* for explicit variables */
+	/* Mark a reference safe register, which should be an intermediate register
+	 * and is safe to hold a reference. It is considered safe if it used before
+	 * any operations that might invalidate the reference.
+	 *
+	 * Positive example: alist[i] + c
+	 * here the left operand register is safe to store a reference to "alist[i]",
+	 * because it is immediately used in the add operation and there is no other
+	 * operation before the add that can possibly cause reallocation of items of
+	 * "alist", hence invalidate the reference.
+	 *
+	 * Negative example: alist[i] + func()
+	 * here the left operand register is NOT safe to store the reference,
+	 * because func() may access "alist" and cause reallocation of the items.
+	 */
+	DAO_REG_REFER = 2
 };
 
 /* It is for the typing system, to decide when to specialize a routine.

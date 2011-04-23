@@ -195,7 +195,7 @@ void DaoType_InitDefault( DaoType *self )
 		DValue_MarkConst( & self->value );
 	}else if( self->tid == DAO_VALTYPE ){
 		DValue_Copy( & self->value, self->aux );
-	}else if( self->tid == DAO_UNION ){
+	}else if( self->tid == DAO_VARIANT ){
 		for(i=0; i<count; i++) DaoType_InitDefault( types[i] );
 		if( count ) DValue_Copy( & self->value, types[0]->value );
 	}else if( self->tid == DAO_ROUTINE || self->tid == DAO_INTERFACE ){
@@ -275,11 +275,11 @@ void DaoType_Init()
 
 		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EQ+1;
 		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EQ+1;
-		dao_type_matrix[DAO_UNION][i] = DAO_MT_EQ+1;
-		dao_type_matrix[i][DAO_UNION] = DAO_MT_EQ+1;
+		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EQ+1;
+		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EQ+1;
 	}
 	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_UNION][DAO_UNION] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EQ+1;
 
 	for(i=0; i<END_EXTRA_TYPES; i++){
 		dao_type_matrix[DAO_UDF][i] = DAO_MT_UDF;
@@ -404,7 +404,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt <= DAO_MT_EQ ) return mt;
 	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
-	if( type->tid == DAO_UNION ){
+	if( type->tid == DAO_VARIANT ){
 		mt = DAO_MT_NOT;
 		for(i=0; i<type->nested->size; i++){
 			it2 = type->nested->items.pType[i];
@@ -499,7 +499,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type->tid != DAO_VALTYPE ) return DaoType_MatchValue( type, self->aux, defs );
 		if( DValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EQ + 1;
 		return DAO_MT_NOT;
-	case DAO_UNION :
+	case DAO_VARIANT :
 		mt = DAO_MT_NOT;
 		for(i=0; i<self->nested->size; i++){
 			it1 = self->nested->items.pType[i];
@@ -576,10 +576,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	short i, mt, mt2, it1=0, it2=0;
 	if( self == NULL ) return DAO_MT_NOT;
 	mt = dao_type_matrix[value.t][self->tid];
-	if( value.t == 0 || self->tid == DAO_VALTYPE || self->tid == DAO_UNION ){
+	if( value.t == 0 || self->tid == DAO_VALTYPE || self->tid == DAO_VARIANT ){
 		if( self->tid == DAO_VALTYPE ){
 			if( DValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EQ + 1;
-		}else if( self->tid == DAO_UNION ){
+		}else if( self->tid == DAO_VARIANT ){
 			mt = DAO_MT_NOT;
 			for(i=0; i<self->nested->size; i++){
 				tp = self->nested->items.pType[i];
@@ -812,7 +812,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
 	if( self->nested && DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL ) ){
-		char sep = self->tid == DAO_UNION ? '|' : ',';
+		char sep = self->tid == DAO_VARIANT ? '|' : ',';
 		if( copy->nested == NULL ) copy->nested = DArray_New(0);
 		DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
 		for(i=1; i<self->name->size; i++){
@@ -830,7 +830,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		}
 		GC_IncRCs( copy->nested );
 		/* NOT FOR @T<int|string> kind types, see notes below: */
-		if( self->aux.t == DAO_TYPE && self->tid != DAO_UNION ){
+		if( self->aux.t == DAO_TYPE && self->tid != DAO_VARIANT ){
 			DString_AppendMBS( copy->name, "=>" );
 			copy->aux.v.type = DaoType_DefineTypes( self->aux.v.type, ns, defs );
 			if( copy->aux.v.type ==NULL ) goto DefFailed;
@@ -847,7 +847,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		 * type holder "@T" will be defined to "int", then type inference is
 		 * performed on "alist.sum()", and "@T" will be defined to "@T<int|string>",
 		 * because of the prototype of "sum()"; So a cyclic definition is formed. */
-		if( self->aux.t == DAO_TYPE && self->tid != DAO_UNION ){
+		if( self->aux.t == DAO_TYPE && self->tid != DAO_VARIANT ){
 			copy->aux.v.type = DaoType_DefineTypes( self->aux.v.type, ns, defs );
 			if( copy->aux.v.type ==NULL ) goto DefFailed;
 			GC_IncRC( copy->aux.v.type );
