@@ -18,6 +18,7 @@ extern "C"{
 #include"daoContext.h"
 #include"daoProcess.h"
 #include"daoVmspace.h"
+#include"daoGC.h"
 
 void DaoJIT_Init( DaoVmSpace *vms );
 void DaoJIT_Quit();
@@ -35,8 +36,10 @@ struct DaoJitHandle : public IRBuilder<>
 	Function   *jitFunction;
 	BasicBlock *entryBlock;
 	BasicBlock *activeBlock;
+	BasicBlock *secondBlock; // the block after the entry;
 	BasicBlock *lastBlock;
 
+	Value *localTypes; // context->regTypes: DaoType*[]*
 	Value *localValues; // context->regValues: DValue*[]*
 	Value *localConsts; // routine->routConsts->data: DValue[]*
 
@@ -51,6 +54,7 @@ struct DaoJitHandle : public IRBuilder<>
 	Function* Compile( DaoRoutine *routine, int start, int end );
 
 	Function* NewFunction( DaoRoutine *routine, int id );
+	BasicBlock* NewBlock( int vmc );
 	BasicBlock* NewBlock( DaoVmCodeX *vmc );
 	void SetActiveBlock( BasicBlock *block );
 
@@ -71,6 +75,11 @@ struct DaoJitHandle : public IRBuilder<>
 	void ClearTempOperand( int reg );
 	void ClearTempOperand( DaoVmCodeX *vmc );
 	void StoreTempResult( Value *value, Value *dest, int reg );
+	
+	void AddReturnCodeChecking( Value *retcode, int vmc );
+	// index: dint; size: size_t* or int*;
+	Value* AddIndexChecking( Value *index, Value *size, int vmc );
+
 	Value* GetIntegerOperand( int reg ); // int
 	Value* GetFloatOperand( int reg ); // float
 	Value* GetDoubleOperand( int reg ); // double
@@ -78,7 +87,7 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* GetFloatLeftValue( int reg ); // float*
 	Value* GetDoubleLeftValue( int reg ); // double*
 	Value* GetTuple( int reg ); // Value[]*
-	Value* GetListItem( int reg, int index ); // Value*
+	Value* GetListItem( int reg, int index, int vmc ); // Value*
 	Value* GetClassConstant( int reg, int field ); // Value*
 	Value* GetClassStatic( int reg, int field ); // Value*
 	Value* GetObjectConstant( int reg, int field ); // Value*

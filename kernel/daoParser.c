@@ -7838,6 +7838,68 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 			if( regC == self->locRegCount ) DaoParser_PushRegister( self );
 			DaoParser_AddCode( self, DVM_MOVE, reg1, 0, regC, mid+1, 0, end );
 			return regC;
+		}else if( optype == DAO_OPER_AND && start2 < end ){
+			reg1 = DaoParser_MakeArithTree( self, start, end2, & c1, -1, state );
+			/* regC could have been used by sub expressions, update it: */
+			regC = self->locRegCount;
+			if( regFix >= 0 ) regC = regFix;
+			if( regC == self->locRegCount ) DaoParser_PushRegister( self );
+			DaoParser_AddCode( self, DVM_MOVE, reg1, 0, regC, start, end2, 0 );
+			/* adding another layer of {} to avoid messing up the
+			 * explicit control statements stack */
+			DaoParser_AddCode( self, DVM_LBRA2, 0, 0, 0, start, start+1, 0 );
+			DaoParser_AddCode( self, DVM_IF, reg1, 0, 0, start, 0, mid-1 );
+			DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid-1, mid, 0 );
+			reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
+			DaoParser_AddCode( self, DVM_MOVE, reg2, 0, regC, start2, end, 0 );
+			DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, mid, mid+1, 0 );
+			DaoParser_AddCode( self, DVM_ELSE, 0, 0, 0, mid, 0,0 );
+			DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid, mid+1, 0 );
+			DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, end-1, end, 0 );
+			DaoParser_AddCode( self, DVM_RBRA2, 0, 0, 0, end-1, end, 0 );
+			if( c1 && c2 ){
+				DValue v1 = DaoParser_GetVariable( self, c1 );
+				DValue v2 = DaoParser_GetVariable( self, c2 );
+				if( v1.t == v2.t && v1.t >= DAO_INTEGER && v1.t <= DAO_DOUBLE ){
+					if( DValue_IsZero( & v1 ) ==0 ) v1 = v2;
+					DaoParser_PopCodes( self, front, back );
+					DaoParser_PopRegisters( self, self->locRegCount - oldcount );
+					*cst = DRoutine_AddConstValue( (DRoutine*)self->routine, v1 );
+					*cst = LOOKUP_BIND_LC( *cst );
+					return DaoParser_GetNormRegister( self, *cst, start, 0, end );
+				}
+			}
+			return regC;
+		}else if( optype == DAO_OPER_OR && start2 < end ){
+			reg1 = DaoParser_MakeArithTree( self, start, end2, & c1, -1, state );
+			/* regC could have been used by sub expressions, update it: */
+			regC = self->locRegCount;
+			if( regFix >= 0 ) regC = regFix;
+			if( regC == self->locRegCount ) DaoParser_PushRegister( self );
+			DaoParser_AddCode( self, DVM_MOVE, reg1, 0, regC, start, end2, 0 );
+			DaoParser_AddCode( self, DVM_LBRA2, 0, 0, 0, start, start+1, 0 );
+			DaoParser_AddCode( self, DVM_IF, reg1, 0, 0, start, 0, mid-1 );
+			DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid-1, mid, 0 );
+			DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, mid-1, mid, 0 );
+			DaoParser_AddCode( self, DVM_ELSE, 0, 0, 0, mid, 0,0 );
+			DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid, mid+1, 0 );
+			reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
+			DaoParser_AddCode( self, DVM_MOVE, reg2, 0, regC, start2, end, 0 );
+			DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, end-1, end, 0 );
+			DaoParser_AddCode( self, DVM_RBRA2, 0, 0, 0, end-1, end, 0 );
+			if( c1 && c2 ){
+				DValue v1 = DaoParser_GetVariable( self, c1 );
+				DValue v2 = DaoParser_GetVariable( self, c2 );
+				if( v1.t == v2.t && v1.t >= DAO_INTEGER && v1.t <= DAO_DOUBLE ){
+					if( DValue_IsZero( & v1 ) ) v1 = v2;
+					DaoParser_PopCodes( self, front, back );
+					DaoParser_PopRegisters( self, self->locRegCount - oldcount );
+					*cst = DRoutine_AddConstValue( (DRoutine*)self->routine, v1 );
+					*cst = LOOKUP_BIND_LC( *cst );
+					return DaoParser_GetNormRegister( self, *cst, start, 0, end );
+				}
+			}
+			return regC;
 		}else{
 			if( tokens[end2]->name == DKEY_NOT ){
 				end2 -= 1;
@@ -7860,35 +7922,7 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 			}else{
 				reg1 = DaoParser_MakeArithTree( self, start, end2, & c1, -1, state );
 
-				if( optype == DAO_OPER_AND && start2 == end ){
-					reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
-				}else if( optype == DAO_OPER_OR && start2 == end ){
-					reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
-				}else if( optype == DAO_OPER_AND ){
-					/* adding another layer of {} to avoid messing up the
-					 * explicit control statements stack */
-					DaoParser_AddCode( self, DVM_LBRA2, 0, 0, 0, start, start+1, 0 );
-					DaoParser_AddCode( self, DVM_IF, reg1, 0, 0, start, 0, mid-1 );
-					DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid-1, mid, 0 );
-					reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );
-					DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, mid, mid+1, 0 );
-					DaoParser_AddCode( self, DVM_ELSE, 0, 0, 0, mid, 0,0 );
-					DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid, mid+1, 0 );
-					DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, end-1, end, 0 );
-					DaoParser_AddCode( self, DVM_RBRA2, 0, 0, 0, end-1, end, 0 );
-				}else if( optype == DAO_OPER_OR ){
-					reg2 = self->locRegCount;
-					DaoParser_PushRegister( self );
-					DaoParser_AddCode( self, DVM_LBRA2, 0, 0, 0, start, start+1, 0 );
-					DaoParser_AddCode( self, DVM_IF, reg1, 0, 0, start, 0, mid-1 );
-					DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid-1, mid, 0 );
-					DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, mid-1, mid, 0 );
-					DaoParser_AddCode( self, DVM_ELSE, 0, 0, 0, mid, 0,0 );
-					DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid, mid+1, 0 );
-					reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, reg2, state );
-					DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, end-1, end, 0 );
-					DaoParser_AddCode( self, DVM_RBRA2, 0, 0, 0, end-1, end, 0 );
-				}else if( optype == DAO_OPER_TISA ){
+				if( optype == DAO_OPER_TISA ){
 					int m = 0;
 					DaoType *type = DaoParser_ParseType( self, start2, end, & m, NULL );
 					if( type == NULL || end+1 != m ) goto ParsingError;

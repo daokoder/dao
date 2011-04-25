@@ -172,6 +172,18 @@ int DValue_Compare( DValue left, DValue right )
 	}
 	return 0;
 }
+int DValue_IsZero( DValue *self )
+{
+	switch( self->t ){
+	case DAO_INTEGER : return self->v.i == 0;
+	case DAO_FLOAT  : return self->v.f == 0.0;
+	case DAO_DOUBLE : return self->v.d == 0.0;
+	case DAO_COMPLEX : return self->v.c->real == 0.0 && self->v.c->imag == 0.0;
+	case DAO_LONG : return self->v.l->size == 0 && self->v.l->data[0] ==0;
+	case DAO_ENUM : return self->v.e->value == 0;
+	}
+	return 0;
+}
 llong_t DValue_GetLongLong( DValue self )
 {
 	return (llong_t) DValue_GetDouble( self );

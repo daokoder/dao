@@ -56,6 +56,8 @@ void DValue_SimpleMove( DValue from, DValue *to );
 
 void DValue_MarkConst( DValue *self );
 
+int DValue_IsZero( DValue *self );
+
 llong_t DValue_GetLongLong( DValue val );
 llong_t DValue_GetInteger( DValue val );
 float  DValue_GetFloat( DValue val );

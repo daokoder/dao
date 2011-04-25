@@ -55,6 +55,7 @@ const StructType *dao_class_type = NULL; // DaoClass
 const StructType *dao_object_type = NULL; // DaoObject
 const StructType *dao_routine_type = NULL; // DaoRoutine
 const StructType *dao_context_type = NULL; // DaoContext
+const StructType *dao_type_type = NULL; // DaoType
 
 const PointerType *void_type_p = NULL; // i8*
 
@@ -75,6 +76,7 @@ const PointerType *dao_class_type_p = NULL; // DaoClass*
 const PointerType *dao_object_type_p = NULL; // DaoObject*
 const PointerType *dao_routine_type_p = NULL; // DaoRoutine*
 const PointerType *dao_context_type_p = NULL; // DaoContext*
+const PointerType *dao_type_type_p = NULL; // DaoType*
 
 const PointerType *dao_list_type_pp = NULL; // DaoList**
 const PointerType *dao_tuple_type_pp = NULL; // DaoTuple**
@@ -85,6 +87,9 @@ const ArrayType *dao_value_array_type = NULL; // DValue[]
 const ArrayType *dao_value_ptr_array_type = NULL; // DValue*[]
 const PointerType *dao_value_array_type_p = NULL; // DValue[]*
 const PointerType *dao_value_ptr_array_type_p = NULL; // DValue*[]*
+
+const ArrayType *dao_type_ptr_array_type = NULL; // DaoType*[]
+const PointerType *dao_type_ptr_array_type_p = NULL; // DaoType*[]*
 
 int dao_opcode_compilable[ DVM_NULL ];
 
@@ -112,6 +117,13 @@ Function *dao_string_lt = NULL;
 Function *dao_string_le = NULL;
 Function *dao_string_eq = NULL;
 Function *dao_string_ne = NULL;
+Function *dao_geti_si = NULL;
+Function *dao_seti_sii = NULL;
+Function *dao_seti_li = NULL;
+
+Function *dao_move_pp = NULL;
+Function *dao_dvalue_copy = NULL;
+Function *dao_dvalue_move = NULL;
 
 FunctionType *dao_jit_function_type = NULL;
 
@@ -119,6 +131,17 @@ extern "C"{
 
 double dao_rand( double max ){ return max * rand() / (RAND_MAX+1.0); }
 
+void DValue_Copy2( DValue *self, DValue *from )
+{
+	DValue_Copy( self, *from );
+}
+
+void DaoJIT_MOVE_PP( DValue *dA, DValue *dC )
+{
+	dC->t = dA->t;
+	DaoGC_ShiftRC( dA->v.p, dC->v.p );
+	dC->v.p = dA->v.p;
+}
 void DaoJIT_MOVE_SS( DValue *dA, DValue *dC )
 {
 	if( dC->t ==0 ){
@@ -157,7 +180,43 @@ void DaoJIT_ADD_NE( DValue *dA, DValue *dB, DValue *dC )
 {
 	dC->v.i = (DString_Compare( dA->v.s, dB->v.s ) !=0);
 }
+int DaoJIT_GETI_SI( DValue *dA, DValue *dB, DValue *dC, int vmc )
+{
+	wchar_t *wcs = dA->v.s->wcs;
+	char *mbs = dA->v.s->mbs;
+	dint id = dB->v.i;
+	if( id <0 ) id += (dint)dA->v.s->size;
+	if( id <0 || id >= (dint)dA->v.s->size ) return (DAO_ERROR_INDEX<<16)|vmc;
+	dC->v.i = mbs ? mbs[id] : wcs[id];
+	return 0;
 }
+int DaoJIT_SETI_SII( DValue *dA, DValue *dB, DValue *dC, int vmc )
+{
+	wchar_t *wcs = dC->v.s->wcs;
+	char *mbs = dC->v.s->mbs;
+	dint id = dB->v.i;
+	dint ch = dA->v.i;
+	if( id <0 ) id += (dint)dA->v.s->size;
+	if( id <0 || id >= (dint)dA->v.s->size ) return (DAO_ERROR_INDEX<<16)|vmc;
+	if( mbs ) mbs[id] = ch; else wcs[id] = ch;
+	return 0;
+}
+int DaoJIT_SETI_LI( DValue *dA, DValue *dB, DValue *dC, int vmc )
+{
+	DaoList *list = dC->v.list;
+	DaoType *type = NULL;
+	dint id = dB->v.i;
+	if( dC->cst ) return (DAO_ERROR<<16)|vmc;
+	if( list->unitype && list->unitype->nested->size )
+		type = list->unitype->nested->items.pType[0];
+	if( id <0 ) id += (dint)list->items->size;
+	if( id <0 || id >= (dint)list->items->size ) return (DAO_ERROR_INDEX<<16)|vmc;
+	if( DValue_Move( *dA, list->items->data + id, type ) ==0 ) return (DAO_ERROR_VALUE<<16)|vmc;
+	return 0;
+}
+}
+
+#define CHECK_MODE 8
 
 void DaoJIT_Init( DaoVmSpace *vms )
 {
@@ -168,6 +227,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	for(i=DVM_ADD_SS; i<=DVM_NE_SS; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_GETF_KCI; i<=DVM_SETF_OVDD; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_GETI_TI; i<=DVM_SETF_TSS; i++) dao_opcode_compilable[i] = 1;
+	for(i=DVM_GETI_LII; i<=DVM_GETI_LDI; i++) dao_opcode_compilable[i] = CHECK_MODE;
 	dao_opcode_compilable[ DVM_NOP ] = 1;
 	dao_opcode_compilable[ DVM_GOTO ] = 1;
 	dao_opcode_compilable[ DVM_SWITCH ] = 1;
@@ -177,7 +237,12 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_opcode_compilable[ DVM_TEST_I ] = 1;
 	dao_opcode_compilable[ DVM_TEST_F ] = 1;
 	dao_opcode_compilable[ DVM_TEST_D ] = 1;
-	dao_opcode_compilable[ DVM_GETI_LI ] = 1;
+	dao_opcode_compilable[ DVM_GETI_SI ] = 1;
+	dao_opcode_compilable[ DVM_SETI_SII ] = 1;
+	dao_opcode_compilable[ DVM_GETI_LI ] = CHECK_MODE;
+	dao_opcode_compilable[ DVM_SETI_LI ] = 1;
+	dao_opcode_compilable[ DVM_SETI_TI ] = 1;
+	dao_opcode_compilable[ DVM_SETF_T ] = 1;
 	dao_opcode_compilable[ DVM_MOVE_PP ] = 1;
 	dao_opcode_compilable[ DVM_MOVE_SS ] = 1;
 
@@ -246,6 +311,11 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_base_type = StructType::get( *llvm_context, base_types );
 	dao_base_type_p = PointerType::getUnqual( dao_base_type );
 
+	dao_type_type = StructType::get( *llvm_context, base_types );
+	dao_type_type_p = PointerType::getUnqual( dao_type_type );
+	dao_type_ptr_array_type = ArrayType::get( dao_type_type_p, 0 );
+	dao_type_ptr_array_type_p = PointerType::getUnqual( dao_type_ptr_array_type );
+
 	std::vector<const Type*> enum_types( 1, dao_base_type_p );
 	enum_types.push_back( dint_type );
 	dao_enum_type = StructType::get( *llvm_context, enum_types );
@@ -257,25 +327,26 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	base_types.push_back( void_type_p ); // frame
 	base_types.push_back( void_type_p ); // regArray
 	base_types.push_back( dao_value_ptr_array_type_p ); // regValues
+	base_types.push_back( dao_type_ptr_array_type_p ); // regTypes
 
 	// type { i8, i8, <2 x i8>, i32, i32, i8*, i8*, i8*, i8*, [0 x %1*]* }
 	dao_context_type = StructType::get( *llvm_context, base_types );
 	dao_context_type_p = PointerType::getUnqual( dao_context_type );
 	//dao_context_type->setName( "DaoContext" );
 
-	for(i=0; i<5; i++) base_types.pop_back();
+	while( base_types.size() > 5 ) base_types.pop_back();
 	base_types.push_back( dao_varray_type_p ); // items
 	dao_list_type = StructType::get( *llvm_context, base_types );
 	dao_list_type_p = PointerType::getUnqual( dao_list_type );
 	dao_list_type_pp = PointerType::getUnqual( dao_list_type_p );
 
-	base_types.pop_back();
+	while( base_types.size() > 5 ) base_types.pop_back();
 	base_types.push_back( dao_vatuple_type_p ); // items
 	dao_tuple_type = StructType::get( *llvm_context, base_types );
 	dao_tuple_type_p = PointerType::getUnqual( dao_tuple_type );
 	dao_tuple_type_pp = PointerType::getUnqual( dao_tuple_type_p );
 
-	base_types.pop_back();
+	while( base_types.size() > 5 ) base_types.pop_back();
 	for(i=0; i<12; i++) base_types.push_back( void_type_p );
 	base_types[13] = dao_varray_type_p;
 	base_types[16] = dao_varray_type_p;
@@ -283,7 +354,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_class_type_p = PointerType::getUnqual( dao_class_type );
 	dao_class_type_pp = PointerType::getUnqual( dao_class_type_p );
 
-	for(i=0; i<12; i++) base_types.pop_back();
+	while( base_types.size() > 5 ) base_types.pop_back();
 	base_types.push_back( dao_value_array_type_p ); // objValues
 	base_types.push_back( void_type_p );
 	base_types.push_back( dao_class_type_p );
@@ -291,7 +362,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_object_type_p = PointerType::getUnqual( dao_object_type );
 	dao_object_type_pp = PointerType::getUnqual( dao_object_type_p );
 
-	for(i=0; i<3; i++) base_types.pop_back();
+	while( base_types.size() > 5 ) base_types.pop_back();
 	base_types.push_back( int8_type ); // attribs
 	base_types.push_back( int8_type ); // minimal
 	base_types.push_back( int8_type ); // minParam
@@ -311,11 +382,24 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	// void (context*,routine*)
 	std::vector<const Type*> jitParams( 1, dao_context_type_p );
 	jitParams.push_back( dao_routine_type_p );
-	dao_jit_function_type = FunctionType::get( void_type, jitParams, false );
+	dao_jit_function_type = FunctionType::get( int32_type, jitParams, false );
+
+	std::vector<const Type*> dvalue_params( 1, dao_value_type_p );
+	dvalue_params.push_back( dao_value_type_p );
+	FunctionType *ft0 = FunctionType::get( void_type, dvalue_params, false );
+	dao_dvalue_copy = Function::Create( ft0, Function::ExternalLinkage, "DValue_Copy2", llvm_module );
+
+	dvalue_params.clear();
+	dvalue_params.push_back( dao_value_type );
+	dvalue_params.push_back( dao_value_type_p );
+	dvalue_params.push_back( dao_type_type_p );
+	ft0 = FunctionType::get( int32_type, dvalue_params, false );
+	dao_dvalue_move = Function::Create( ft0, Function::ExternalLinkage, "DValue_Move", llvm_module );
 
 	std::vector<const Type*> value2( 2, dao_value_type_p );
 	FunctionType *ft2 = FunctionType::get( void_type, value2, false );
 	dao_string_move = Function::Create( ft2, Function::ExternalLinkage, "DaoJIT_MOVE_SS", llvm_module );
+	dao_move_pp = Function::Create( ft2, Function::ExternalLinkage, "DaoJIT_MOVE_PP", llvm_module );
 
 	std::vector<const Type*> value3( 3, dao_value_type_p );
 	FunctionType *ft3 = FunctionType::get( void_type, value3, false );
@@ -324,6 +408,12 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_string_le = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_LE", llvm_module );
 	dao_string_eq = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_EQ", llvm_module );
 	dao_string_ne = Function::Create( ft3, Function::ExternalLinkage, "DaoJIT_ADD_NE", llvm_module );
+
+	value3.push_back( int32_type );
+	FunctionType *ft4 = FunctionType::get( int32_type, value3, false );
+	dao_geti_si = Function::Create( ft4, Function::ExternalLinkage, "DaoJIT_GETI_SI", llvm_module );
+	dao_seti_sii = Function::Create( ft4, Function::ExternalLinkage, "DaoJIT_SETI_SII", llvm_module );
+	dao_seti_li = Function::Create( ft4, Function::ExternalLinkage, "DaoJIT_SETI_LI", llvm_module );
 
 	std::vector<const Type*> double2( 2, double_type );
 	FunctionType *funtype = FunctionType::get( double_type, double2, false );
@@ -390,7 +480,8 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 
 	jitFunction = cast<Function>( llvm_module->getOrInsertFunction( name, dao_jit_function_type ) );
 	entryBlock = BasicBlock::Create( *llvm_context, "EntryBlock", jitFunction );
-	lastBlock = activeBlock = entryBlock;
+	secondBlock = BasicBlock::Create( *llvm_context, "Second", jitFunction );
+	lastBlock = activeBlock = secondBlock;
 	SetInsertPoint( entryBlock );
 
 	Argument *ctx = jitFunction->arg_begin();
@@ -398,8 +489,11 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 	ctx->setName("context");
 	rout->setName("routine");
 
-	Value *value = CreateConstGEP2_32( ctx, 0, 9 ); // context->regValues: DValue***
-	localValues = CreateLoad( value ); // context->regValues: DValue**
+	Value *value = CreateConstGEP2_32( ctx, 0, 9 ); // context->regValues: DValue*[]**
+	localValues = CreateLoad( value ); // context->regValues: DValue*[]*
+
+	value = CreateConstGEP2_32( ctx, 0, 10 ); // context->regTypes: DaoType*[]**
+	localTypes = CreateLoad( value ); // context->regTypes: DaoType*[]*
 
 	value = CreateConstGEP2_32( rout, 0, 17 ); // routine->routConsts: DVarray**
 	value = CreateLoad( value ); //routine->routConsts: DVarray*
@@ -421,9 +515,21 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 #endif
 	return jitFunction;
 }
+BasicBlock* DaoJitHandle::NewBlock( int vmc )
+{
+	char name[ 256 ];
+	iplist<BasicBlock> & blist = jitFunction->getBasicBlockList();
+	sprintf( name, "block%i", (unsigned int)blist.size() );
+	activeBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
+	SetInsertPoint( activeBlock );
+	lastBlock = activeBlock;
+	return activeBlock;
+}
 BasicBlock* DaoJitHandle::NewBlock( DaoVmCodeX *vmc )
 {
-	const char *name = getOpcodeName( vmc->code );
+	char name[ 256 ];
+	iplist<BasicBlock> & blist = jitFunction->getBasicBlockList();
+	sprintf( name, "%s%i", getOpcodeName( vmc->code ), (unsigned int)blist.size() );
 	activeBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
 	SetInsertPoint( activeBlock );
 	lastBlock = activeBlock;
@@ -463,6 +569,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 	DaoType **types = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
 	int i, j, m, jump, N = routine->annotCodes->size;
+	char *modes = routine->regMode->mbs;
 	bool compilable, last = false;
 	size_t k;
 	int case_mode = DAO_CASE_UNORDERED;
@@ -482,6 +589,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 		case DVM_GETCL : compilable = vmc->a == 0; break;
 		default : break;
 		}
+		if( compilable == CHECK_MODE ) compilable = modes[ vmc->c ] != DAO_REG_VARIABLE;
 		if( compilable ){
 			if( last ){
 				segments.back().end = i;
@@ -490,6 +598,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 			}
 		}
 		last = compilable;
+		printf( "%3i  %i: ", i, compilable ); DaoVmCodeX_Print( *vmc, NULL );
 	}
 	for(k=0; k<segments.size(); k++) ranges[segments[k]] = 1;
 	for(k=0; k<segments.size(); k++){
@@ -728,8 +837,47 @@ Value* DaoJitHandle::GetTuple( int reg )
 	value = Dereference( value ); // tuple->items->data: DValue[]*
 	return value;
 }
-Value* DaoJitHandle::GetListItem( int reg, int index )
+void DaoJitHandle::AddReturnCodeChecking( Value *retcode, int vmc )
 {
+	BasicBlock *block = activeBlock;
+	Constant *zero = ConstantInt::get( dint_type, 0 );
+	Value *cmp = CreateICmpNE( retcode, zero );
+
+	BasicBlock *bltrue = NewBlock( vmc );
+	BasicBlock *blfalse = NewBlock( vmc );
+	SetInsertPoint( block );
+	CreateCondBr( cmp, bltrue, blfalse );
+	SetInsertPoint( bltrue );
+	CreateRet( retcode );
+	activeBlock = blfalse;
+	lastBlock = activeBlock;
+	SetInsertPoint( activeBlock );
+}
+Value* DaoJitHandle::AddIndexChecking( Value *index, Value *size, int vmc )
+{
+	BasicBlock *block = activeBlock;
+	size = Dereference( size );
+	size = CreateIntCast( size, dint_type, false );
+	Constant *zero = ConstantInt::get( dint_type, 0 );
+	Value *index2 = CreateAdd( index, size );
+	Value *cmp = CreateICmpSLT( index, zero );
+	index = CreateSelect( cmp, index2, index );
+	cmp = CreateOr( CreateICmpSLT( index, zero ), CreateICmpSGE( index, size ) );
+
+	BasicBlock *bltrue = NewBlock( vmc );
+	BasicBlock *blfalse = NewBlock( vmc );
+	SetInsertPoint( block );
+	CreateCondBr( cmp, bltrue, blfalse );
+	SetInsertPoint( bltrue );
+	CreateRet( ConstantInt::get( int32_type, (DAO_ERROR_INDEX<<16)|vmc ) );
+	activeBlock = blfalse;
+	lastBlock = activeBlock;
+	SetInsertPoint( activeBlock );
+	return index;
+}
+Value* DaoJitHandle::GetListItem( int reg, int index, int vmc )
+{
+	Constant *zero = ConstantInt::get( dint_type, 0 );
 	Value *value = GetLocalValueDataPointer( reg );
 	Value *id = GetIntegerOperand( index );
 	SetInsertPoint( activeBlock );
@@ -737,15 +885,13 @@ Value* DaoJitHandle::GetListItem( int reg, int index )
 	value = Dereference( value ); // DValue.v.list: DaoList*
 	value = CreateConstGEP2_32( value, 0, 5 );
 	value = Dereference( value ); // list->items: DVarray*
+
+	Value *size = CreateConstGEP2_32( value, 0, 2 );
+	id = AddIndexChecking( id, size, vmc );
+
 	value = CreateConstGEP2_32( value, 0, 0 );
 	value = Dereference( value ); // list->items->data: DValue[]*
-	Value *idx[2];
-	if( sizeof(void*) == 8 ){
-		idx[0] = getInt64( 0 );
-	}else{
-		idx[0] = getInt32( 0 );
-	}
-	idx[1] = id;
+	Value *idx[2] = { zero, id };
 	value = CreateGEP( value, idx, idx+2 );
 	return value;
 }
@@ -889,12 +1035,14 @@ void DaoJitHandle::StoreTempResult( Value *value, Value *dest, int reg )
 }
 Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 {
+	char *modes = routine->regMode->mbs;
 	DValue *routConsts = routine->routConsts->data;
 	DaoType **types = routine->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->annotCodes->items.pVmc;
 	Function *jitfunc = NewFunction( routine, start );
 	Function *mathfunc = NULL;
 
+	Argument *arg_context = jitFunction->arg_begin();
 	Constant *zero32 = ConstantInt::get( int32_type, 0 );
 	Constant *zero8 = ConstantInt::get( int8_type, 0 );
 	Constant *zero = ConstantInt::get( dint_type, 0 );
@@ -935,6 +1083,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	}
 
 	for(i=start; i<=end; i++){
+		Constant *vmcIndex = ConstantInt::get( int32_type, i );
 		vmc = vmcs[i];
 		code = vmc->code;
 		printf( "%3i ", i ); DaoVmCodeX_Print( *vmc, NULL );
@@ -1461,15 +1610,60 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dC = GetLocalValue( vmc->c );
 			CreateCall2( dao_string_move, dA, dC );
 			break;
-		case DVM_MOVE_PP : // FIXME
+		case DVM_MOVE_PP : 
 			value = GetLocalValue( vmc->a );
 			refer = GetLocalReference( vmc->c );
-			tmp = CreateStore( value, refer );
+			refer = Dereference( refer );
+			CreateCall2( dao_move_pp, value, refer );
 			break;
-		case DVM_GETI_LI : // FIXME
-			value = GetListItem( vmc->a, vmc->b );
+		case DVM_GETI_SI :
+			dA = GetLocalValue( vmc->a );
+			dB = GetLocalValue( vmc->b );
+			dC = GetLocalValue( vmc->c );
+			tmp = CreateCall4( dao_geti_si, dA, dB, dC, vmcIndex );
+			AddReturnCodeChecking( tmp, i );
+			break;
+		case DVM_SETI_SII :
+			dA = GetLocalValue( vmc->a );
+			dB = GetLocalValue( vmc->b );
+			dC = GetLocalValue( vmc->c );
+			tmp = CreateCall4( dao_seti_sii, dA, dB, dC, vmcIndex );
+			AddReturnCodeChecking( tmp, i );
+			break;
+		case DVM_GETI_LI : 
+			value = GetListItem( vmc->a, vmc->b, i );
 			refer = GetLocalReference( vmc->c );
-			tmp = CreateStore( value, refer );
+			if( modes[vmc->c] == DAO_REG_REFER ){
+				tmp = CreateStore( value, refer );
+			}else{
+				refer = Dereference( refer );
+				CreateCall2( dao_dvalue_copy, refer, value );
+			}
+			break;
+		case DVM_SETI_LI : 
+			dA = GetLocalValue( vmc->a );
+			dB = GetLocalValue( vmc->b );
+			dC = GetLocalValue( vmc->c );
+			tmp = CreateCall4( dao_seti_li, dA, dB, dC, vmcIndex );
+			AddReturnCodeChecking( tmp, i );
+			break;
+		case DVM_GETI_LII : case DVM_GETI_LFI : case DVM_GETI_LDI :
+			value = GetListItem( vmc->a, vmc->b, i );
+			refer = GetLocalReference( vmc->c );
+			if( modes[vmc->c] == DAO_REG_REFER ){
+				tmp = CreateStore( value, refer );
+			}else{
+				value = GetValueDataPointer( value );
+				value = Dereference( value );
+				refer = Dereference( refer );
+				refer = GetValueDataPointer( refer );
+				tmp = CreateStore( value, refer );
+			}
+			break;
+		case DVM_GETI_LSI :
+			dA = GetListItem( vmc->a, vmc->b, i );
+			dC = GetLocalValue( vmc->c );
+			CreateCall2( dao_string_move, dA, dC );
 			break;
 		case DVM_GETI_TI :
 			value = GetTuple( vmc->a );
@@ -1488,9 +1682,9 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			refer = GetLocalReference( vmc->c );
 			tmp = CreateStore( value, refer );
 			break;
-		case DVM_SETI_TI : // TODO
+		case DVM_SETI_TI : 
 			break;
-		case DVM_SETF_T : // TODO
+		case DVM_SETF_T : 
 			break;
 		case DVM_SETF_TII :
 		case DVM_SETF_TIF :
@@ -1774,7 +1968,9 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		// store intermediate data, which might be needed by non-jit compiled codes:
 		if( tempRefers[i] and tempValues[i] ) CreateStore( tempValues[i], tempRefers[i] );
 	}
-	CreateRetVoid();
+	CreateRet( zero32 );
+	SetInsertPoint( entryBlock );
+	CreateBr( secondBlock );
 #if 0
 	if( 1 ){
 		BasicBlock::iterator iter;
@@ -1798,11 +1994,11 @@ void DaoJIT_Compile( DaoRoutine *routine )
 	std::vector<IndexRange> segments;
 	DaoJIT_SearchCompilable( routine, segments );
 	for(int i=0, n=segments.size(); i<n; i++){
-		//if( (segments[i].end - segments[i].start) < 10 ) continue;
+		if( (segments[i].end - segments[i].start) < 10 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
-		llvm_func_optimizer->run( *jitfunc );
+		//llvm_func_optimizer->run( *jitfunc );
 
 		DaoVmCode *vmc = routine->vmCodes->codes + segments[i].start;
 		vmc->code = DVM_JITC;
@@ -1811,14 +2007,14 @@ void DaoJIT_Compile( DaoRoutine *routine )
 		jitFunctions.push_back( jitfunc );
 	}
 	if( jitFunctions.size() ) routine->jitData = new std::vector<Function*>( jitFunctions );
-	verifyModule(*llvm_module, PrintMessageAction);
 	PassManager PM;
 	PM.add(createPrintModulePass(&outs()));
 	PM.run(*llvm_module);
+	verifyModule(*llvm_module, PrintMessageAction);
 	return;
 }
 
-typedef void (*DaoJitFunction)( DaoContext *context, DaoRoutine *routine );
+typedef int (*DaoJitFunction)( DaoContext *context, DaoRoutine *routine );
 void DaoJIT_Execute( DaoContext *context, int jitcode )
 {
 	DaoRoutine *routine = context->routine;
@@ -1833,6 +2029,12 @@ void DaoJIT_Execute( DaoContext *context, int jitcode )
 
 	void *fptr = llvm_exe_engine->getPointerToFunction( jitFuncs[jitcode] );
 	DaoJitFunction jitfunc = (DaoJitFunction) fptr;
-	(*jitfunc)( context, routine );
+	int rc = (*jitfunc)( context, routine );
+	if( rc ){
+		int vmc = rc & 0xffff;
+		int ec = rc >> 16;
+		context->vmc = context->codes + vmc;
+		DaoContext_RaiseException( context, ec, "" );
+	}
 }
 
