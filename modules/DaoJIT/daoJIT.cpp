@@ -246,6 +246,11 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	dao_opcode_compilable[ DVM_MOVE_PP ] = 1;
 	dao_opcode_compilable[ DVM_MOVE_SS ] = 1;
 
+	//dao_opcode_compilable[ DVM_AND_III ] = 0;
+	//dao_opcode_compilable[ DVM_OR_III ] = 0;
+	//dao_opcode_compilable[ DVM_LT_III ] = 0;
+	//dao_opcode_compilable[ DVM_LT_FFF ] = 0;
+
 	// TODO: GETCX, GETVX, swith, complex, string, array, tuple, list etc.
 
 	printf( "DaoJIT_Init()\n" );
@@ -589,7 +594,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 		case DVM_GETCL : compilable = vmc->a == 0; break;
 		default : break;
 		}
-		if( compilable == CHECK_MODE ) compilable = modes[ vmc->c ] != DAO_REG_VARIABLE;
+		if( compilable == CHECK_MODE ) compilable = modes[ vmc->c ] > DAO_REG_VARIABLE;
 		if( compilable ){
 			if( last ){
 				segments.back().end = i;
@@ -789,7 +794,7 @@ Value* DaoJitHandle::GetIntegerLeftValue( int reg )
 		C = GetLocalValueDataPointer( reg );
 		SetInsertPoint( activeBlock );
 		C = CastIntegerPointer( C );
-		if( MAP_Find( routine->localVarType, reg ) == NULL ) tempRefers[ reg ] = C;
+		if( routine->regMode->mbs[reg] >= DAO_REG_INTERMED_SU ) tempRefers[ reg ] = C;
 	}
 	return C;
 }
@@ -800,7 +805,7 @@ Value* DaoJitHandle::GetFloatLeftValue( int reg )
 		C = GetLocalValueDataPointer( reg );
 		SetInsertPoint( activeBlock );
 		C = CastFloatPointer( C );
-		if( MAP_Find( routine->localVarType, reg ) == NULL ) tempRefers[ reg ] = C;
+		if( routine->regMode->mbs[reg] >= DAO_REG_INTERMED_SU ) tempRefers[ reg ] = C;
 	}
 	return C;
 }
@@ -810,7 +815,7 @@ Value* DaoJitHandle::GetDoubleLeftValue( int reg )
 	if( C == NULL ){
 		C = GetLocalValueDataPointer( reg );
 		SetInsertPoint( activeBlock );
-		if( MAP_Find( routine->localVarType, reg ) == NULL ) tempRefers[ reg ] = C;
+		if( routine->regMode->mbs[reg] >= DAO_REG_INTERMED_SU ) tempRefers[ reg ] = C;
 	}
 	return C;
 }
@@ -965,15 +970,15 @@ Value* DaoJitHandle::GetObjectVariable( int reg, int field )
 // remove intermediate data from buffers, if it has been used:
 void DaoJitHandle::ClearTempOperand( int reg )
 {
-	if( MAP_Find( routine->localVarType, reg ) == NULL )
+	if( routine->regMode->mbs[reg] >= DAO_REG_INTERMED_SU )
 		tempRefers[ reg ] = tempValues[ reg ] = NULL;
 }
 // remove intermediate data from buffers, if it has been used:
 void DaoJitHandle::ClearTempOperand( DaoVmCodeX *vmc )
 {
-	if( MAP_Find( routine->localVarType, vmc->a ) == NULL )
+	if( routine->regMode->mbs[vmc->a] >= DAO_REG_INTERMED_SU )
 		tempRefers[ vmc->a ] = tempValues[ vmc->a ] = NULL;
-	if( MAP_Find( routine->localVarType, vmc->b ) == NULL )
+	if( routine->regMode->mbs[vmc->b] >= DAO_REG_INTERMED_SU )
 		tempRefers[ vmc->b ] = tempValues[ vmc->b ] = NULL;
 }
 void DaoJitHandle::GetIntegerOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC )
@@ -1025,7 +1030,7 @@ void DaoJitHandle::GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Valu
 }
 void DaoJitHandle::StoreTempResult( Value *value, Value *dest, int reg )
 {
-	if( MAP_Find( routine->localVarType, reg ) == NULL ){
+	if( routine->regMode->mbs[reg] >= DAO_REG_INTERMED_SU ){
 		// Do not store intermediate data yet,
 		// save it in the intermediate data buffer instead:
 		tempValues[ reg ] = value;
@@ -1174,7 +1179,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 				dC = CastFloatPointer( dC );
 				break;
 			}
-			if( MAP_Find( routine->localVarType, vmc->c ) == NULL ) tempRefers[ vmc->c ] = dC;
+			if( routine->regMode->mbs[vmc->c] >= DAO_REG_INTERMED_SU ) tempRefers[ vmc->c ] = dC;
 			ClearTempOperand( vmc->b );
 			StoreTempResult( dB, dC, vmc->c );
 			break;
@@ -1300,9 +1305,10 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_AND_FFF :
 		case DVM_OR_FFF :
 			GetFloatOperands( vmc, & dA, & dB, & dC );
+			tmp = CreateUIToFP( zero, float_type );
 			switch( code ){
-			case DVM_AND_FFF : value = CreateFCmpOEQ( dA, zero ); break;
-			case DVM_OR_FFF  : value = CreateFCmpONE( dA, zero ); break;
+			case DVM_AND_FFF : value = CreateFCmpOEQ( dA, tmp ); break;
+			case DVM_OR_FFF  : value = CreateFCmpONE( dA, tmp ); break;
 			}
 			value = CreateSelect( value, dA, dB );
 			StoreTempResult( value, dC, vmc->c );
@@ -1372,9 +1378,10 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_AND_DDD :
 		case DVM_OR_DDD :
 			GetDoubleOperands( vmc, & dA, & dB, & dC );
+			tmp = CreateUIToFP( zero, double_type );
 			switch( code ){
-			case DVM_AND_DDD : value = CreateFCmpOEQ( dA, zero ); break;
-			case DVM_OR_DDD  : value = CreateFCmpONE( dA, zero ); break;
+			case DVM_AND_DDD : value = CreateFCmpOEQ( dA, tmp ); break;
+			case DVM_OR_DDD  : value = CreateFCmpONE( dA, tmp ); break;
 			}
 			value = CreateSelect( value, dA, dB );
 			StoreTempResult( value, dC, vmc->c );
@@ -1998,7 +2005,7 @@ void DaoJIT_Compile( DaoRoutine *routine )
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
-		//llvm_func_optimizer->run( *jitfunc );
+		llvm_func_optimizer->run( *jitfunc );
 
 		DaoVmCode *vmc = routine->vmCodes->codes + segments[i].start;
 		vmc->code = DVM_JITC;

@@ -1158,6 +1158,14 @@ static DaoType* DaoType_DeepItemType( DaoType *self )
 }
 static void SetupOperand( DaoRoutine *self, int reg, DMap *checks )
 {
+	if( self->regMode->mbs[reg] > DAO_REG_VARIABLE ){
+		/* If the intermediate register has been setup,
+		 * change the register mode to DAO_REG_INTERMED,
+		 * possibly from DAO_REG_INTERMED_SU or DAO_REG_REFER: */
+		self->regMode->mbs[reg] = DAO_REG_INTERMED;
+		MAP_Erase( checks, reg );
+		return;
+	}
 	if( MAP_Find( checks, reg ) ){
 		self->regMode->mbs[reg] = DAO_REG_REFER;
 		MAP_Erase( checks, reg );
@@ -1165,7 +1173,15 @@ static void SetupOperand( DaoRoutine *self, int reg, DMap *checks )
 }
 static void InsertChecking( DaoRoutine *self, int reg, DMap *checks )
 {
-	if( self->regMode->mbs[reg] != DAO_REG_VARIABLE ) MAP_Insert( checks, reg, 0 );
+	/* Only for intermediate register that has not been setup: */
+	if( self->regMode->mbs[reg] == 0 ) MAP_Insert( checks, reg, 0 );
+}
+static void ClearChecking( DaoRoutine *self, DMap *checks )
+{
+	DNode *node = DMap_First( checks );
+	for(; node; node=DMap_Next( checks, node )){
+		self->regMode->mbs[node->key.pInt] = DAO_REG_INTERMED;
+	}
 }
 #define NoCheckingType(t) ((t->tid==DAO_UDF)|(t->tid==DAO_ANY)|(t->tid==DAO_INITYPE))
 static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
@@ -1181,7 +1197,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 
 	checks = DMap_New(0,0);
 	DString_Resize( self->regMode, self->locRegCount );
-	memset( self->regMode->mbs, DAO_REG_NORMAL, self->regMode->size*sizeof(char) );
+	memset( self->regMode->mbs, 0, self->regMode->size*sizeof(char) );
 	node = DMap_First( self->localVarType );
 	for( ; node !=NULL; node = DMap_Next(self->localVarType,node) ){
 		self->regMode->mbs[ node->key.pInt ] = DAO_REG_VARIABLE;
@@ -1211,7 +1227,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_ITER :
 			/* use A and declare C */
 			SetupOperand( self, vmc->a, checks );
-			if( MaybeFunctionCall( types[vmc->a] ) ) DMap_Clear( checks );
+			if( MaybeFunctionCall( types[vmc->a] ) ) ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
 		case DVM_SETI : case DVM_SETMI :
@@ -1219,14 +1235,14 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_CAST : case DVM_MOVE :
 			/* use A */
 			SetupOperand( self, vmc->a, checks );
-			if( MaybeFunctionCall( types[vmc->c] ) ) DMap_Clear( checks );
+			if( MaybeFunctionCall( types[vmc->c] ) ) ClearChecking( self, checks );
 			SetupOperand( self, vmc->c, checks );
 			break;
 		case DVM_GETI : case DVM_GETMI :
 			/* use A and B, declare C */
 			SetupOperand( self, vmc->a, checks );
 			SetupOperand( self, vmc->b, checks );
-			if( MaybeFunctionCall( types[vmc->a] ) ) DMap_Clear( checks );
+			if( MaybeFunctionCall( types[vmc->a] ) ) ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
 		case DVM_ADD : case DVM_SUB : case DVM_MUL :
@@ -1238,8 +1254,8 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			/* use A and B, declare C */
 			SetupOperand( self, vmc->a, checks );
 			SetupOperand( self, vmc->b, checks );
-			if( MaybeFunctionCall( types[vmc->a] ) ) DMap_Clear( checks );
-			if( MaybeFunctionCall( types[vmc->b] ) ) DMap_Clear( checks );
+			if( MaybeFunctionCall( types[vmc->a] ) ) ClearChecking( self, checks );
+			if( MaybeFunctionCall( types[vmc->b] ) ) ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
 		case DVM_PAIR : 
@@ -1266,7 +1282,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_CALL_TC :
 		case DVM_MCALL_TC :
 			for(j=0; j<=vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
-			DMap_Clear( checks );
+			ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
 		case DVM_MATRIX :
@@ -1276,6 +1292,9 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			break;
 		case DVM_SWITCH :
 		case DVM_TEST :
+		case DVM_TEST_I :
+		case DVM_TEST_F :
+		case DVM_TEST_D :
 			SetupOperand( self, vmc->a, checks );
 			break;
 		case DVM_CASE :
@@ -1287,12 +1306,12 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_FUNCT :
 		case DVM_ROUTINE :
 		case DVM_CLASS :
-			DMap_Clear( checks );
+			ClearChecking( self, checks );
 			break;
 		case DVM_RETURN :
 		case DVM_YIELD :
 			for(j=0; j<vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
-			DMap_Clear( checks );
+			ClearChecking( self, checks );
 			break;
 		case DVM_SETVL_II : case DVM_SETVL_IF : case DVM_SETVL_ID :
 		case DVM_SETVL_FI : case DVM_SETVL_FF : case DVM_SETVL_FD :
@@ -1411,6 +1430,10 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		}
 	}
 	DMap_Delete( checks );
+	for(i=0; i<self->locRegCount; i++){
+		if( self->regMode->mbs[i] ==0 ) self->regMode->mbs[i] = DAO_REG_INTERMED_SU;
+		/* printf( "%3i: %2i\n", i, self->regMode->mbs[i] ); */
+	}
 }
 
 enum DaoTypingErrorCode

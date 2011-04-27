@@ -7848,6 +7848,8 @@ static int DaoParser_MakeArithTree2( DaoParser *self, int start, int end,
 			/* adding another layer of {} to avoid messing up the
 			 * explicit control statements stack */
 			DaoParser_AddCode( self, DVM_LBRA2, 0, 0, 0, start, start+1, 0 );
+			/* use regC instead of reg1, for DaoJIT:
+			 * DaoJIT assumes intermediate register reg1 will be used only once. */
 			DaoParser_AddCode( self, DVM_IF, reg1, 0, 0, start, 0, mid-1 );
 			DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, mid-1, mid, 0 );
 			reg2 = DaoParser_MakeArithTree( self, start2, end, & c2, -1, state );

@@ -772,7 +772,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 #endif
 
 
-	if( self->topFrame == NULL ) return 0;
+	if( self->topFrame == NULL ) goto ReturnFalse;
 	base = self->topFrame;
 	self->topFrame->rollback = base;
 	if( self->status == DAO_VMPROC_SUSPENDED ) base = self->firstFrame->next;
@@ -2506,8 +2506,12 @@ FinishProc:
 	self->status = DAO_VMPROC_ABORTED;
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 ReturnFalse :
+	DaoStream_Flush( self->vmSpace->stdStream );
+	fflush( stdout );
 	return 0;
 ReturnTrue :
+	DaoStream_Flush( self->vmSpace->stdStream );
+	fflush( stdout );
 	return 1;
 }
 extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
