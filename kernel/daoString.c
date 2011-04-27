@@ -648,7 +648,6 @@ void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm,
 }
 void DString_Append( DString *self, DString *chs )
 {
-	if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
 	DString_Detach( self );
 	if( self->mbs && chs->mbs ){
 		DMBString_Append( self, chs->mbs, chs->size );
@@ -662,7 +661,6 @@ void DString_Append( DString *self, DString *chs )
 }
 void DString_AppendChar( DString *self, const char ch )
 {
-	if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
 	DString_Detach( self );
 	if( self->mbs ){
 		DMBString_AppendChar( self, ch );
@@ -672,6 +670,10 @@ void DString_AppendChar( DString *self, const char ch )
 }
 void DString_AppendWChar( DString *self, const wchar_t ch )
 {
+	if( self->mbs && ch >=0 && ch <= 0xff ){
+		DString_AppendChar( self, (char)ch );
+		return;
+	}
 	DString_Detach( self );
 	if( self->mbs ){
 		DMBString_AppendWChar( self, ch );
@@ -681,7 +683,6 @@ void DString_AppendWChar( DString *self, const wchar_t ch )
 }
 void DString_AppendDataMBS( DString *self, const char *chs, size_t n )
 {
-	if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
 	DString_Detach( self );
 	if( self->mbs ){
 		DMBString_Append( self, chs, n );
@@ -892,7 +893,6 @@ void DString_Assign( DString *self, DString *chs )
 	size_t *data1, *data2;
 	int share1, share2;
 	int assigned = 0;
-	if( self == NULL ) return; /* in parsing, DaoInode.annot can be NULL */
 	if( self == chs ) return;
 	if( self->data == chs->data ) return;
 

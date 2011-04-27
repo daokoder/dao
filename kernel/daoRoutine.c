@@ -1276,12 +1276,17 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			for(j=0; j<k; j++) SetupOperand( self, vmc->a+j, checks );
 			break;
 		case DVM_CURRY : case DVM_MCURRY :
+			for(j=0; j<=vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
+			ClearChecking( self, checks );
+			InsertChecking( self, vmc->c, checks );
+			break;
 		case DVM_CALL : case DVM_MCALL :
 		case DVM_CALL_CF :
 		case DVM_CALL_CMF :
 		case DVM_CALL_TC :
 		case DVM_MCALL_TC :
-			for(j=0; j<=vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
+			k = vmc->b & 0xff;
+			for(j=0; j<=k; j++) SetupOperand( self, vmc->a+j, checks );
 			ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
