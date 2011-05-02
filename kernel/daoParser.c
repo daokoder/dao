@@ -2096,7 +2096,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 			hostype = DaoNameSpace_MakeType( myNS, "@class", DAO_INITYPE, NULL,NULL,0 );
 		}
 		dft = daoNullValue;
-		abstype = DaoType_New( "self", DAO_PAR_NAMED, (DaoBase*)hostype, NULL );
+		abstype = DaoNameSpace_MakeType( myNS, "self", DAO_PAR_NAMED, (DaoBase*)hostype, NULL, 0 );
 		DArray_Append( nested, (void*) abstype );
 		DRoutine_AddConstValue( (DRoutine*) routine, dft );
 		DString_AppendMBS( pname, abstype->name->mbs );
@@ -2231,7 +2231,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 			MAP_Insert( self->routine->localVarType, regCount, abstype );
 		if( abstype->tid != DAO_PAR_VALIST ){
 			m2 = type_default ? DAO_PAR_DEFAULT : DAO_PAR_NAMED;
-			abstype = DaoType_New( tok->mbs, m2, (DaoBase*) abstype, NULL );
+			abstype = DaoNameSpace_MakeType( myNS, tok->mbs, m2, (DaoBase*) abstype, NULL, 0 );
 		}
 		/* e.g.: spawn( pid :string, src :string, timeout=-1, ... ) */
 		DArray_Append( nested, (void*) abstype );

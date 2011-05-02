@@ -1028,6 +1028,13 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	if( i >=0 ){
 		value = DaoNameSpace_GetConst( ns, i );
 		if( value.t == DAO_ROUTINE ){
+#if 0
+			// testing:
+			DRoutine *rout = (DRoutine*)value.v.routine;
+			int i, n = rout->metaRoutine->routines->size;
+			for(i=0; i<n; i++) DaoMetaRoutine_Add( rout->metaRoutine, rout->metaRoutine->routines->items.pRout[i] );
+#endif
+
 			mainRoutine = value.v.routine;
 			ctx = DaoVmProcess_MakeContext( vmp, mainRoutine );
 			ctx->vmSpace = self;

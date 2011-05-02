@@ -16,7 +16,7 @@
 
 #include"daoType.h"
 
-typedef unsigned int bits_t;
+typedef struct DaoMetaRoutine DaoMetaRoutine;
 
 #define \
 	DAO_ROUT_COMMON \
@@ -33,6 +33,7 @@ DString       *routHelp; \
 DString       *parCodes; \
 DVarray       *routConsts; \
 DArray        *routTable; \
+DaoMetaRoutine *metaRoutine; \
 DaoNameSpace  *nameSpace
 
 struct DRoutine
@@ -145,5 +146,36 @@ struct DaoFunCurry
 	DVarray  *params;
 };
 DaoFunCurry* DaoFunCurry_New( DValue v, DValue o );
+
+typedef struct DMetaParam DMetaParam;
+
+struct DMetaParam
+{
+	DaoType  *type;
+	DArray   *nexts; /* <DMetaParam*> */
+	DRoutine *routine;
+};
+DMetaParam* DMetaParam_New();
+void DMetaParam_Delete( DMetaParam *self );
+
+/* DaoMetaRoutine is a structure to organize overloaded functions into trees,
+ * for fast function resolving based on parameter types. */
+
+struct DaoMetaRoutine
+{
+	DAO_DATA_COMMON;
+
+	DString    *name;
+	DaoType    *host;
+	DMetaParam *tree;
+	DMetaParam *mtree; /* for routines with self parameter */
+	DArray     *routines; /* hold routines from "roots", to simplify GC */
+};
+
+DaoMetaRoutine* DaoMetaRoutine_New();
+void DaoMetaRoutine_Delete( DaoMetaRoutine *self );
+
+DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine );
+DRoutine* DaoMetaRoutine_Lookup( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code );
 
 #endif

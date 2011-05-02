@@ -41,6 +41,7 @@ static void DRoutine_Init( DRoutine *self )
 	self->routConsts = DVarray_New();
 	self->routTable = DArray_New(0);
 	self->nameSpace = NULL;
+	self->metaRoutine = DaoMetaRoutine_New(); // for testing
 }
 DRoutine* DRoutine_New()
 {
@@ -104,6 +105,7 @@ void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout )
 	}else{
 		DArray_PushBack( self->routTable, rout );
 	}
+	DArray_Append( self->metaRoutine->routines, rout ); // for testing
 }
 static int DaoDecorator_CheckType( DaoType *decoType, DValue *csts, DaoType *ts[], int np )
 {
@@ -754,6 +756,12 @@ DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n,
 	int code = cm & 0xffff;
 	int mode = cm >> 16;
 	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
+
+#if 0
+	rout2 = DaoMetaRoutine_Lookup( self->metaRoutine, obj, p, n, mcall ); // testing
+	if( rout2 ) printf( "Lookup: %s\n", rout2->routType->name->mbs );
+#endif
+
 	if( self->routType->name->mbs[0] == '@' )
 		self = (DRoutine*) DaoRoutine_GetDecorator( self->routTable, p, n );
 	else
@@ -5463,4 +5471,217 @@ DaoFunCurry* DaoFunCurry_New( DValue v, DValue o )
 	DValue_Copy( & self->selfobj, o );
 	self->params = DVarray_New();
 	return self;
+}
+
+DMetaParam* DMetaParam_New()
+{
+	DMetaParam *self = (DMetaParam*) dao_calloc( 1, sizeof(DMetaParam) );
+	return self;
+}
+void DMetaParam_Delete( DMetaParam *self )
+{
+	int i, n = self->nexts->size;
+	for(i=0; i<n; i++) DMetaParam_Delete( (DMetaParam*) self->nexts->items.pVoid[i] );
+	if( self->routine ) GC_DecRC( self->routine );
+	if( self->nexts ) DArray_Delete( self->nexts );
+	dao_free( self );
+}
+DaoMetaRoutine* DaoMetaRoutine_New()
+{
+	DaoMetaRoutine *self = (DaoMetaRoutine*) dao_calloc( 1, sizeof(DaoMetaRoutine) );
+	self->name = DString_New(1);
+	self->host = NULL;
+	self->tree = NULL;
+	self->mtree = NULL;
+	self->routines = DArray_New(0);
+	return self;
+}
+void DaoMetaRoutine_Delete( DaoMetaRoutine *self )
+{
+	if( self->tree ) DMetaParam_Delete( self->tree );
+	if( self->mtree ) DMetaParam_Delete( self->mtree );
+	GC_DecRC( self->host );
+	DString_Delete( self->name );
+	DArray_Delete( self->routines );
+	dao_free( self );
+}
+
+DRoutine* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
+{
+	DaoType *type;
+	DString *name = NULL;
+	DMetaParam *param, **items;
+	int m = routine->routType->nested->size;
+	int i, j, n;
+	if( self->nexts == NULL ) self->nexts = DArray_New(0);
+	items = (DMetaParam**) self->nexts->items.pVoid;
+	n = self->nexts->size;
+	if( pid >= m ){
+		/* If a routine with the same parameter signature is found, return it: */
+		for(i=0; i<n; i++) if( items[i]->routine ) return items[i]->routine;
+		param = DMetaParam_New();
+		param->routine = routine;
+		DArray_Append( self->nexts, param ); /* Add as a leaf. */
+		return routine;
+	}
+	type = routine->routType->nested->items.pType[pid];
+	for(i=0; i<n; i++){
+		param = items[i];
+		/* Found a node with the same parameter type: */
+		printf( "%i %p %p %s\n", i, param->type, type, type->name->mbs );
+		if( param->type == type ) return DMetaParam_Add( param, routine, pid+1 );
+	}
+	/* Add a new internal node: */
+	param = DMetaParam_New();
+	param->nexts = DArray_New(0);
+	param->type = type;
+	if( type->tid == DAO_PAR_DEFAULT ){
+		DArray_PushFront( self->nexts, param );
+	}else{
+		DArray_PushBack( self->nexts, param );
+	}
+	return DMetaParam_Add( param, routine, pid+1 );
+}
+DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
+{
+	DRoutine *rout = NULL;
+	if( routine->routType == NULL ){
+		printf( "Error: overloading function \"%s\" without type signature!\n", routine->routName->mbs );
+		return NULL;
+	}
+	DString_Assign( self->name, routine->routName );
+	printf( "Overloading %s(): %s\n", routine->routName->mbs, routine->routType->name->mbs );
+	if( routine->routType->attrib & DAO_TYPE_SELF ){
+		if( self->mtree == NULL ) self->mtree = DMetaParam_New();
+		rout = DMetaParam_Add( self->mtree, routine, 0 );
+	}else{
+		if( self->tree == NULL ) self->tree = DMetaParam_New();
+		rout = DMetaParam_Add( self->tree, routine, 0 );
+	}
+	if( rout == routine ) DArray_Append( self->routines, routine );
+	return rout;
+}
+DMetaParam* DMetaParam_BestNext( DMetaParam *self, DValue *value )
+{
+	DMetaParam *best = NULL;
+	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
+	int i, m, n = self->nexts->size;
+	int max = 0;
+	for(i=0; i<n; i++){
+		DMetaParam *param = items[i];
+		DaoType *type = param->type;
+		if( type == NULL ) continue;
+		if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ) type = type->aux.v.type;
+		m = DaoType_MatchValue( type, *value, NULL );
+		printf( "%i: %i, %i %p %s\n", i, m, value->t, type, type->name->mbs );
+		if( m > max ){
+			best = param;
+			max = m;
+		}
+	}
+	return best;
+}
+DMetaParam* DMetaParam_NextBestByName( DMetaParam *self, DMap *namepar )
+{
+	DNode *node;
+	DMetaParam *best = NULL;
+	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
+	int i, m, n = self->nexts->size;
+	int t, max = 0;
+	if( n == 0 ) return NULL;
+	for(i=0; i<n; i++){
+		DMetaParam *param = items[i];
+		if( param->type == NULL ) continue;
+		t = param->type->tid;
+		if( t != DAO_PAR_NAMED && t != DAO_PAR_DEFAULT ) return NULL;
+		node = MAP_Find( namepar, param->type->fname );
+		printf( "%s = %p\n", param->type->fname->mbs, node );
+		if( node ){
+			m = DaoType_MatchValue( param->type->aux.v.type, *(DValue*)node->value.pVoid, NULL );
+			if( m > max ){
+				best = param;
+				max = m;
+			}
+		}
+	}
+	if( best ){
+		MAP_Erase( namepar, best->type->fname );
+		return best;
+	}
+	if( items[0]->type && items[0]->type->tid == DAO_PAR_DEFAULT ) return items[0];
+	return NULL;
+}
+DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n );
+DRoutine* DMetaParam_LookupByName( DMetaParam *self, DMap *namepar )
+{
+	DMetaParam *param = self;
+	while( param && namepar->size ) param = DMetaParam_NextBestByName( param, namepar );
+	if( param == NULL || namepar->size ) return NULL;
+	if( param->routine ) return param->routine; /* a leaf node. */
+	if( param->nexts == NULL && param->nexts->size ==0 ) return NULL;
+	param = (DMetaParam*) param->nexts->items.pVoid[0];
+	if( param->type == NULL ) return param->routine;
+	if( param->type->tid != DAO_PAR_DEFAULT ) return NULL;
+	return DMetaParam_Lookup( param, NULL, 0 );
+}
+DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n )
+{
+	int i;
+	DMap *namepar;
+	DRoutine *rout = NULL;
+	DMetaParam *param = NULL;
+	printf( "DMetaParam_Lookup: %s %i\n", self->type ? self->type->name->mbs : "", n );
+	if( n == 0 ){
+		if( self->routine ) return self->routine;
+		if( self->nexts == NULL && self->nexts->size ==0 ) return NULL;
+		param = (DMetaParam*)self->nexts->items.pVoid[0];
+		if( param->type == NULL ) return param->routine;
+		if( param->type->tid != DAO_PAR_DEFAULT ) return NULL;
+		return DMetaParam_Lookup( param, NULL, 0 );
+	}
+	if( p[0]->t == DAO_PAR_NAMED ){
+		namepar = DMap_New(D_STRING,0);
+		for(i=0; i<n; i++){
+			DValue *p2 = p[i];
+			DaoNameValue *nameva = p2->v.nameva;
+			if( p2->t != DAO_PAR_NAMED ) break;
+			MAP_Insert( namepar, nameva->name,  & nameva->value );
+		}
+		if( i < n ){
+			DMap_Delete( namepar );
+			return NULL;
+		}
+		rout = DMetaParam_LookupByName( self, namepar );
+		DMap_Delete( namepar );
+		return rout;
+	}
+	param = DMetaParam_BestNext( self, p[0] );
+	if( param == NULL ) return NULL;
+	return DMetaParam_Lookup( param, p+1, n-1 );
+}
+DRoutine* DaoMetaRoutine_Lookup( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code )
+{
+	int mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
+	DMetaParam *param = NULL;
+	DRoutine *rout = NULL;
+	if( obj && obj->t && mcall ==0 ){
+		if( self->mtree ){
+			param = DMetaParam_BestNext( self->mtree, obj );
+			if( param ) rout = DMetaParam_Lookup( param, p, n );
+			if( rout ) return rout;
+		}
+	}
+	if( mcall && self->mtree ){
+		rout = DMetaParam_Lookup( self->mtree, p, n );
+		if( rout ) return rout;
+	}
+	printf( "DaoMetaRoutine_Lookup(): %s %p %i\n", self->name->mbs, self->tree, n );
+	if( self->tree ){
+		if( mcall ){
+			p += 1;
+			n -= 1;
+		}
+		return DMetaParam_Lookup( self->tree, p, n );
+	}
+	return NULL;
 }
