@@ -326,6 +326,9 @@ void DaoType_Init()
 	dao_type_matrix[DAO_ROUTINE][DAO_FUNCTION] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTION][DAO_ROUTINE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTION][DAO_FUNCTION] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_METAROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_METAROUTINE][DAO_FUNCTION] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_METAROUTINE][DAO_METAROUTINE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_VMPROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
 }
 static short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
@@ -444,6 +447,16 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
 		}
+		break;
+	case DAO_METAROUTINE :
+		if( type->tid == DAO_METAROUTINE ) return DAO_MT_EQ * (self == type);
+		if( type->tid == DAO_ROUTINE ){
+			DArray *routines = self->aux.v.metaRoutine->routines;
+			for(i=0; i<routines->size; i++){
+				if( routines->items.pRout2[i]->routType == type ) return DAO_MT_EQ;
+			}
+		}
+		return DAO_MT_NOT;
 		break;
 	case DAO_ROUTINE :
 		if( self->name->mbs[0] != type->name->mbs[0] ) return 0; /* @routine */
@@ -567,7 +580,7 @@ short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 }
 short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 {
-	ullong_t flags = (1<<DAO_UDF)|(1<<DAO_ANY)|(1<<DAO_INITYPE);
+	ullong_t flags = (1<<DAO_UDF)|((ullong_t)1<<DAO_ANY)|((ullong_t)1<<DAO_INITYPE);
 	DaoType *tp;
 	DEnum *other;
 	DNode *node;
@@ -682,6 +695,10 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 			if( search && search->value.pInt != node->value.pInt ) return 0;
 		}
 		return DAO_MT_EQ;
+	case DAO_METAROUTINE :
+		if( self->tid != DAO_METAROUTINE ) return 0;
+		return DAO_MT_EQ * (self == value.v.metaRoutine->unitype);
+		break;
 	case DAO_FUNCTION :
 	case DAO_ROUTINE :
 		tp = value.v.routine->routType;
@@ -953,16 +970,16 @@ DaoInterface* DaoInterface_New( const char *name )
 	GC_IncRC( self->abtype );
 	return self;
 }
-static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
+static int DaoMetaRoutine_IsCompatible( DaoMetaRoutine *self, DaoType *type, DMap *binds )
 {
 	DRoutine *rout;
 	int i, j, k=-1, max = 0;
-	for(i=0; i<self->routTable->size; i++){
-		rout = (DRoutine*) self->routTable->items.pBase[i];
+	for(i=0; i<self->routines->size; i++){
+		rout = (DRoutine*) self->routines->items.pBase[i];
 		if( rout->routType == type ) return 1;
 	}
-	for(i=0; i<self->routTable->size; i++){
-		rout = (DRoutine*) self->routTable->items.pBase[i];
+	for(i=0; i<self->routines->size; i++){
+		rout = (DRoutine*) self->routines->items.pBase[i];
 		j = DaoType_Match( rout->routType, type, NULL, binds );
 		/*
 		   printf( "%3i: %3i  %s  %s\n",i,j,rout->routType->name->mbs,type->name->mbs );
@@ -973,6 +990,13 @@ static int DRoutine_IsCompatible( DRoutine *self, DaoType *type, DMap *binds )
 		}
 	}
 	return (k >= 0);
+}
+static int DRoutine_IsCompatible( DaoBase *self, DaoType *type, DMap *binds )
+{
+	DRoutine *rout = (DRoutine*)self;
+	if( self->type == DAO_METAROUTINE )
+		return DaoMetaRoutine_IsCompatible( (DaoMetaRoutine* )self, type, binds );
+	return DaoType_Match( rout->routType, type, NULL, binds );
 }
 int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds, DArray *fails )
 {
@@ -985,9 +1009,7 @@ int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds, DArray 
 			id = DaoClass_FindConst( klass, rout->routName );
 			if( id <0 ) goto RecordFailA;
 			value = DaoClass_GetConst( klass, id );
-			if( value.t != DAO_ROUTINE && value.t != DAO_FUNCTION ) goto RecordFailA;
-			if( DRoutine_IsCompatible( (DRoutine*) value.v.routine, rout->routType, binds ) ==0 )
-				goto RecordFailA;
+			if( DRoutine_IsCompatible( value.v.p, rout->routType, binds ) ==0 ) goto RecordFailA;
 			continue;
 RecordFailA:
 			if( fails ) DArray_Append( fails, rout );
@@ -996,10 +1018,9 @@ RecordFailA:
 	}else if( type->tid == DAO_CDATA ){
 		for(i=0; i<methods->size; i++){
 			DRoutine *rout = methods->items.pRout2[i];
-			DaoFunction *func = DaoFindFunction( type->typer, rout->routName );
+			DaoBase *func = DaoFindFunction( type->typer, rout->routName );
 			if( func == NULL ) goto RecordFailB;
-			if( DRoutine_IsCompatible( (DRoutine*) func, rout->routType, binds ) ==0 )
-				goto RecordFailB;
+			if( DRoutine_IsCompatible( func, rout->routType, binds ) ==0 ) goto RecordFailB;
 			continue;
 RecordFailB:
 			if( fails ) DArray_Append( fails, rout );
@@ -1110,34 +1131,25 @@ static int DaoInterface_TryBindTo( DaoInterface *self, DaoType *type, DMap *bind
 	if( self->bindany ==0 && it == NULL ) return 0;
 	return DaoInterface_BindTo( self, type, binds, fails );
 }
+void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host );
 void DaoInterface_DeriveMethods( DaoInterface *self )
 {
 	int i, k, N = self->supers->size;
 	DaoInterface *super;
-	DRoutine *rout = NULL, *rout2;
 	DNode *it, *node;
 	for(i=0; i<N; i++){
 		super = (DaoInterface*) self->supers->items.pBase[i];
 		for(it=DMap_First(super->methods); it; it=DMap_Next( super->methods, it )){
-			rout2 = (DRoutine*) it->value.pVoid;
-			node = DMap_Find( self->methods, it->key.pVoid );
-			if( node == NULL ){
-				rout = DRoutine_New(); /* dummy routine */
-				DString_Assign( rout->routName, it->key.pString );
-				rout->routType = rout2->routType;
-				rout->routHost = self->abtype;
-				rout->tidHost = DAO_INTERFACE;
-				rout->nameSpace = rout2->nameSpace;
-				GC_IncRC( rout->routHost );
-				GC_IncRC( rout->routType );
-				GC_IncRC( rout->nameSpace );
-				/* reference count of "rout" is already increased by DRoutine_New() */
-				DMap_Insert( self->methods, it->key.pVoid, rout );
+			if( it->value.pBase->type == DAO_METAROUTINE ){
+				DaoMetaRoutine *meta = (DaoMetaRoutine*) it->value.pVoid;
+				for(k=0; k<meta->routines->size; k++){
+					DRoutine *rout = meta->routines->items.pRout2[i];
+					DaoMethods_Insert( self->methods, rout, self->abtype );
+				}
 			}else{
-				rout = (DRoutine*) node->value.pVoid;
+				DRoutine *rout = (DRoutine*) it->value.pVoid;
+				DaoMethods_Insert( self->methods, rout, self->abtype );
 			}
-			for( k=0; k<rout2->routTable->size; k++)
-				DRoutine_AddOverLoad( rout, rout2->routTable->items.pRout2[k] );
 		}
 	}
 	self->derived = 1;
@@ -1150,10 +1162,18 @@ void DMap_SortMethods( DMap *hash, DArray *methods )
 	DNode *it;
 	int i, n;
 	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-		DRoutine *one = (DRoutine*) it->value.pVoid;
-		n = one->routTable->size;
-		for(i=0; i<n; i++){
-			DRoutine *rout = one->routTable->items.pRout2[i];
+		if( it->value.pBase->type == DAO_METAROUTINE ){
+			DaoMetaRoutine *one = (DaoMetaRoutine*) it->value.pVoid;
+			n = one->routines->size;
+			for(i=0; i<n; i++){
+				DRoutine *rout = one->routines->items.pRout2[i];
+				DString_Assign( name, rout->routName );
+				DString_AppendMBS( name, " " );
+				DString_Append( name, rout->routType->name );
+				DMap_Insert( map, name, (void*)rout );
+			}
+		}else{
+			DRoutine *rout = (DRoutine*) it->value.pBase;
 			DString_Assign( name, rout->routName );
 			DString_AppendMBS( name, " " );
 			DString_Append( name, rout->routType->name );

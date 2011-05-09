@@ -39,7 +39,7 @@ DMap *dao_typing_cache; /* HASH<void*[2],int> */
 DMutex dao_typing_mutex;
 #endif
 
-DaoFunction* DaoFindFunction( DaoTypeBase *typer, DString *name )
+DaoBase* DaoFindFunction( DaoTypeBase *typer, DString *name )
 {
 	DNode *node;
 	if( typer->priv->methods == NULL ){
@@ -47,21 +47,24 @@ DaoFunction* DaoFindFunction( DaoTypeBase *typer, DString *name )
 		if( typer->priv->methods == NULL ) return NULL;
 	}
 	node = DMap_Find( typer->priv->methods, name );
-	if( node ) return (DaoFunction*)node->value.pVoid;
+	if( node ) return node->value.pBase;
 	return NULL;
 }
-DaoFunction* DaoFindFunction2( DaoTypeBase *typer, const char *name )
+DaoBase* DaoFindFunction2( DaoTypeBase *typer, const char *name )
 {
 	DString mbs = DString_WrapMBS( name );
 	return DaoFindFunction( typer, & mbs );
 }
 DValue DaoFindValue( DaoTypeBase *typer, DString *name )
 {
-	DaoFunction *func = DaoFindFunction( typer, name );
-	DValue value = daoNullFunction;
+	DaoBase *func = DaoFindFunction( typer, name );
+	DValue value = daoNullValue;
 	DNode *node;
-	value.v.func = func;
-	if( func ) return value;
+	value.v.p = func;
+	if( func ){
+		value.t = func->type;
+		return value;
+	}
 	if( typer->priv->values == NULL ){
 		DaoNameSpace_SetupValues( typer->priv->nspace, typer );
 		if( typer->priv->values == NULL ) return daoNullValue;
@@ -664,38 +667,26 @@ void DaoBase_SafeSetField( DValue *dbase, DaoContext *ctx, DString *name, DValue
 }
 void DaoBase_GetItem( DValue *self0, DaoContext *ctx, DValue *pid[], int N )
 {
-	DaoTypeBase *typer = DValue_GetTyper( *self0 );
-	DaoFunction *func = NULL;
-	DValue *p[ DAO_MAX_PARAM ];
-	memcpy( p + 1, pid, N*sizeof(DValue*) );
-	p[0] = self0;
-	DString_SetMBS( ctx->process->mbstring, "[]" );
-	func = DaoFindFunction( typer, ctx->process->mbstring );
-	if( func )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, N, 0 );
+	DaoBase *func = DaoFindFunction2( DValue_GetTyper( *self0 ), "[]" );
+	if( func ) func = (DaoBase*) DRoutine_Resolve( func, self0, pid, N, DVM_CALL );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, N+1 );
+	DaoFunction_Call( (DaoFunction*) func, ctx, self0, pid, N );
 }
 void DaoBase_SetItem( DValue *self0, DaoContext *ctx, DValue *pid[], int N, DValue value )
 {
-	DaoTypeBase *typer = DValue_GetTyper( *self0 );
-	DaoFunction *func = NULL;
+	DaoBase *func = DaoFindFunction2( DValue_GetTyper( *self0 ), "[]=" );
 	DValue *p[ DAO_MAX_PARAM ];
-	memcpy( p + 1, pid, N*sizeof(DValue*) );
-	p[0] = self0;
+	memcpy( p, pid, N*sizeof(DValue*) );
 	p[N+1] = & value;
-	DString_SetMBS( ctx->process->mbstring, "[]=" );
-	func = DaoFindFunction( typer, ctx->process->mbstring );
-	if( func )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, N+1, 0 );
+	if( func ) func = (DaoBase*) DRoutine_Resolve( func, self0, p, N+1, DVM_CALL );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, N+2 );
+	DaoFunction_Call( (DaoFunction*) func, ctx, self0, p, N+1 );
 }
 
 /**/
@@ -3454,17 +3445,16 @@ static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
 		return;
 	}
 	if( p.t == 0 ){
-		DaoFunction *func = NULL;
+		DaoBase *func = NULL;
 		DString_SetMBS( ctx->process->mbstring, "." );
 		DString_Append( ctx->process->mbstring, name );
-		p = DaoFindValue( typer, ctx->process->mbstring );
-		if( p.t == DAO_FUNCTION )
-			func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)p.v.p, NULL, & self, 1, 0 );
+		func = DaoFindFunction( typer, ctx->process->mbstring );
+		func = (DaoBase*) DRoutine_Resolve( func, self, NULL, 0, DVM_CALL );
 		if( func == NULL ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
 			return;
 		}
-		func->pFunc( ctx, & self, 1 );
+		((DaoFunction*)func)->pFunc( ctx, & self, 1 );
 	}else{
 		DaoContext_PutValue( ctx, p );
 	}
@@ -3472,11 +3462,9 @@ static void DaoCData_GetField( DValue *self, DaoContext *ctx, DString *name )
 static void DaoCData_SetField( DValue *self, DaoContext *ctx, DString *name, DValue value )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self );
-	DaoFunction *func = NULL;
+	DaoBase *func = NULL;
+	DValue *pval = & value;
 	DValue val;
-	DValue *p[2];
-	p[0] = self;
-	p[1] = & value;
 	DString_SetMBS( ctx->process->mbstring, "." );
 	DString_Append( ctx->process->mbstring, name );
 	DString_AppendMBS( ctx->process->mbstring, "=" );
@@ -3484,14 +3472,13 @@ static void DaoCData_SetField( DValue *self, DaoContext *ctx, DString *name, DVa
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
 		return;
 	}
-	val = DaoFindValue( typer, ctx->process->mbstring );
-	if( val.t == DAO_FUNCTION )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)val.v.p, self, p+1, 1, 0 );
+	func = DaoFindFunction( typer, ctx->process->mbstring );
+	if( func ) func = (DaoBase*) DRoutine_Resolve( func, self, &pval, 1, DVM_CALL );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, 2 );
+	DaoFunction_Call( (DaoFunction*) func, ctx, self, &pval, 1 );
 }
 static void DaoCData_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
@@ -3516,26 +3503,22 @@ static void DaoCData_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 		}
 		DaoContext_PutValue( ctx, *self0 );
 	}else{
-		DaoFunction *func = NULL;
-		DValue *p[ DAO_MAX_PARAM ];
-		p[0] = self0;
-		p[1] = & pid;
-		DString_SetMBS( ctx->process->mbstring, "[]" );
-		func = DaoFindFunction( typer, ctx->process->mbstring );
-		if( func )
-			func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, 1, 0 );
+		DaoBase *func = NULL;
+		DValue *pval = & pid;
+		func = DaoFindFunction2( typer, "[]" );
+		if( func ) func = (DaoBase*) DRoutine_Resolve( func, self0, &pval, 1, DVM_CALL );
 		if( func == NULL ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 			return;
 		}
-		DaoFunction_SimpleCall( func, ctx, p, 2 );
+		DaoFunction_Call( (DaoFunction*) func, ctx, self0, &pval, 1 );
 	}
 }
 static void DaoCData_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValue value )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self0 );
-	DaoFunction *func = NULL;
-	DValue *p[ DAO_MAX_PARAM+2 ];
+	DaoBase *func = NULL;
+	DValue *p[2];
 
 	DString_SetMBS( ctx->process->mbstring, "[]=" );
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
@@ -3544,22 +3527,20 @@ static void DaoCData_SetItem1( DValue *self0, DaoContext *ctx, DValue pid, DValu
 	}
 	func = DaoFindFunction( typer, ctx->process->mbstring );
 	if( func ){
-		p[0] = self0;
-		p[1] = & pid;
-		p[2] = & value;
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self0, p+1, 2, 0 );
+		p[0] = & pid;
+		p[1] = & value;
+		func = (DaoBase*) DRoutine_Resolve( func, self0, p, 2, DVM_CALL );
 	}
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, 3 );
+	DaoFunction_Call( (DaoFunction*) func, ctx, self0, p, 2 );
 }
 static void DaoCData_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self );
-	DaoFunction *func = NULL;
-	DValue *p[ DAO_MAX_PARAM ];
+	DaoBase *func = NULL;
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
 		return;
@@ -3568,22 +3549,18 @@ static void DaoCData_GetItem( DValue *self, DaoContext *ctx, DValue *ids[], int 
 		DaoCData_GetItem1( self, ctx, *ids[0] );
 		return;
 	}
-	memcpy( p + 1, ids, N*sizeof(DValue*) );
-	p[0] = self;
-	DString_SetMBS( ctx->process->mbstring, "[]" );
-	func = DaoFindFunction( typer, ctx->process->mbstring );
-	if( func )
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self, p+1, N, 0 );
+	func = DaoFindFunction2( typer, "[]" );
+	if( func ) func = (DaoBase*) DRoutine_Resolve( func, self, ids, N, DVM_CALL );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, N + 1 );
+	DaoFunction_Call( (DaoFunction*) func, ctx, self, ids, N );
 }
 static void DaoCData_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int N, DValue value )
 {
 	DaoTypeBase *typer = DValue_GetTyper( *self );
-	DaoFunction *func = NULL;
+	DaoBase *func = NULL;
 	DValue *p[ DAO_MAX_PARAM ];
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
@@ -3593,19 +3570,17 @@ static void DaoCData_SetItem( DValue *self, DaoContext *ctx, DValue *ids[], int 
 		DaoCData_SetItem1( self, ctx, *ids[0], value );
 		return;
 	}
-	DString_SetMBS( ctx->process->mbstring, "[]=" );
-	func = DaoFindFunction( typer, ctx->process->mbstring );
+	func = DaoFindFunction2( typer, "[]=" );
 	if( func ){
-		memcpy( p + 1, ids, N*sizeof(DValue*) );
-		p[0] = self;
-		p[N+1] = & value;
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, self, p+1, N+1, 0 );
+		memcpy( p, ids, N*sizeof(DValue*) );
+		p[N] = & value;
+		func = (DaoBase*) DRoutine_Resolve( func, self, p, N+1, DVM_CALL );
 	}
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoFunction_SimpleCall( func, ctx, p, N+2 );
+	DaoFunction_Call( (DaoFunction*) func, ctx, self, p, N+1 );
 }
 
 DaoCDataCore* DaoCDataCore_New()

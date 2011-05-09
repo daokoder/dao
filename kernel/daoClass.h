@@ -48,7 +48,9 @@ struct DaoClass
 	/* They are inserted into cstData, no refCount updating for this. */
 	DMap   *ovldRoutMap; /* <DString*,DaoRoutine*> */
 
-	DaoRoutine *classRoutine; /* Class constructor. */
+	DMap *vtable; /* <DRoutine*,DRoutine*> */
+	DaoRoutine *classRoutine; /* Default class constructor. */
+	DaoMetaRoutine *classRoutines; /* All explicitly defined constructors */
 
 	DString *className;
 	DString *classHelp;
@@ -86,7 +88,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 void DaoClass_AddReference( DaoClass *self, void *reference );
 
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
-void DaoClass_SetName( DaoClass *self, DString *name );
+void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns );
 void DaoClass_DeriveClassData( DaoClass *self );
 void DaoClass_DeriveObjectData( DaoClass *self );
 void DaoClass_ResetAttributes( DaoClass *self );
@@ -115,6 +117,6 @@ int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
 DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );
 
-DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
+DaoBase* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
 
 #endif

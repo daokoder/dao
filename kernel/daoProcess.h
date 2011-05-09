@@ -76,7 +76,6 @@ void DaoVmProcess_PushRoutine( DaoVmProcess *self, DaoRoutine *routine );
 /* Push an initialized context into the calling stack of the VM process */
 void DaoVmProcess_PushContext( DaoVmProcess *self, DaoContext *context );
 DaoContext* DaoVmProcess_MakeContext( DaoVmProcess *self, DaoRoutine *routine );
-void DaoVmProcess_CacheContext( DaoVmProcess *self, DaoContext *ctx );
 void DaoVmProcess_PopContext( DaoVmProcess *self );
 
 int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n );

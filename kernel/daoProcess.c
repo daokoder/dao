@@ -83,7 +83,6 @@ extern void DaoContext_DoBitFlip( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoFastCall( DaoContext *self, DaoVmCode *vmc );
 
 static void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc );
 
@@ -300,6 +299,7 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
 {
 	DaoContext *ctx = self->topFrame->context;
 	DaoVmFrame *frame = self->topFrame->next;
+	DValue **values2;
 	DValue *values;
 	int i, N;
 	if( self->topFrame == self->firstFrame ) return;
@@ -307,16 +307,20 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
 	if( ctx->refCount == 1 ){ /* only referenced once, and by the stack */
 		N = self->topFrame->context->routine->locRegCount;
 		values = self->topFrame->context->regArray->data;
+		values2 = self->topFrame->context->regValues;
 		for(i=0; i<N; i++){
-			if( values[i].t > DAO_DOUBLE ) DValue_Clear( & values[i] );
-			values[i] = daoNullValue;
+			values2[i] = values + i;
+			switch( values[i].t ){
+			case DAO_LONG  : case DAO_STRING :
+			case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
+			case DAO_TUPLE : case DAO_OBJECT : case DAO_CDATA :
+				DValue_Clear( & values[i] );
+				break;
+			}
 		}
 	}
 	self->topFrame->depth = 0;
 	self->topFrame = self->topFrame->prev;
-}
-void DaoVmProcess_CacheContext( DaoVmProcess *self, DaoContext *ctx )
-{
 }
 void DaoVmProcess_PushRoutine( DaoVmProcess *self, DaoRoutine *routine )
 {
@@ -452,14 +456,14 @@ int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *source, in
 	return ns->mainRoutines->size;
 }
 int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n )
-{
+{//XXX handle overloading
 	DaoContext *ctx = DaoVmProcess_MakeContext( self, r );
 	DValue value = daoNullObject;
 	int call = o ? DVM_MCALL : DVM_CALL;
 	value.v.object = o;
 	GC_ShiftRC( o, ctx->object );
 	ctx->object = o;
-	if( DRoutine_FastPassParams( (DRoutine*)r, & value, ctx->regValues, p, n, call ) ==0 ){
+	if( DRoutine_PassParams( (DRoutine*)r, & value, ctx->regValues, p, n, call ) ==0 ){
 		printf( "calling %s failed\n", r->routName->mbs );
 		return 0;
 	}
@@ -485,17 +489,6 @@ DValue DaoVmProcess_GetReturned( DaoVmProcess *self )
 		: (x)->t == DAO_DOUBLE ? (x)->v.d : 0.0 )
 
 int DaoContext_CheckFE( DaoContext *self );
-
-typedef struct DaoExtraParam DaoExtraParam;
-struct DaoExtraParam
-{
-	DaoContext *context;
-	DValue     *glbVars;
-	DValue     *clsVars;
-	DValue     *objVars;
-};
-
-typedef int (*DaoJitFunc)( DValue *locVars, DaoExtraParam *extra );
 
 void DaoContext_AdjustCodes( DaoContext *self, int options );
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t );
@@ -548,7 +541,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DaoList *list;
 	DString *str;
 	complex16 com = {0,0};
-	DaoExtraParam extra = { NULL, NULL, NULL, NULL };
 	size_t size, *dims, *dmac;
 	int invokehost = handler && handler->InvokeHost;
 	int i, j, print, retCode, nCycle;
@@ -704,8 +696,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 
 		&& LAB_GETI_AM , && LAB_SETI_AM ,
 
-		&& LAB_GETF_M ,
-
 		&& LAB_GETF_KC , && LAB_GETF_KG ,
 		&& LAB_GETF_OC , && LAB_GETF_OG , && LAB_GETF_OV ,
 		&& LAB_SETF_KG , && LAB_SETF_OG , && LAB_SETF_OV ,
@@ -728,12 +718,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 		&& LAB_SETF_KGDD , && LAB_SETF_OGDD , && LAB_SETF_OVDD ,
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
-
-		&& LAB_CALL_CF ,
-		&& LAB_CALL_CMF ,
-
-		&& LAB_CALL_TC ,
-		&& LAB_MCALL_TC ,
 
 		&& LAB_SAFE_GOTO
 	};
@@ -799,20 +783,20 @@ CallEntry:
 	}
 #endif
 
-	dao_fe_clear();
+	//XXX dao_fe_clear();
 	topCtx->idClearFE = self->topFrame->entry;
 
-	/*
-	   if( routine->tidHost == DAO_OBJECT )
-	   printf("class name = %s\n", routine->routHost->aux.v.klass->className->mbs);
-	   printf("routine name = %s\n", routine->routName->mbs);
+#if 0
+	if( ROUT_HOST_TID( routine ) == DAO_OBJECT )
+		printf("class name = %s\n", routine->routHost->aux.v.klass->className->mbs);
+	printf("routine name = %s\n", routine->routName->mbs);
 	//printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	printf("number of instruction: %i\n", routine->vmCodes->size );
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 	printf( "vmSpace = %p; nameSpace = %p\n", self->vmSpace, topCtx->nameSpace );
 	printf("routine = %p; context = %p\n", routine, topCtx );
 	printf( "self object = %p\n", topCtx->object );
-	 */
+#endif
 
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
 	if( invokehost ) handler->InvokeHost( handler, topCtx );
@@ -833,15 +817,15 @@ CallEntry:
 		goto FinishCall;
 	}
 
-	/*
-	   printf("==================VM==============================\n");
-	   printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
-	   printf("number of register: %i\n", topCtx->regArray->size );
-	   printf("number of register: %i\n", routine->locRegCount );
-	   printf("number of instruction: %i\n", routine->vmCodes->size );
-	   printf( "VM process: %p\n", self );
-	   printf("==================================================\n");
-	 */
+#if 0
+	printf("==================VM==============================\n");
+	printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
+	printf("number of register: %i\n", topCtx->regArray->size );
+	printf("number of register: %i\n", routine->locRegCount );
+	printf("number of instruction: %i\n", routine->vmCodes->size );
+	printf( "VM process: %p\n", self );
+	printf("==================================================\n");
+#endif
 
 	nCycle = 0;
 	self->stopit = 0;
@@ -882,10 +866,10 @@ CallEntry:
 	locTypes = routine->regType->items.pType;
 	regModes = (uchar_t*) routine->regMode->mbs;
 	dataCL[0] = routine->routConsts;
-	dataCG = routine->nameSpace->cstDataTable;
-	dataVG = routine->nameSpace->varDataTable;
-	typeVG = routine->nameSpace->varTypeTable;
-	if( routine->tidHost == DAO_OBJECT ){
+	dataCG = here->cstDataTable;
+	dataVG = here->varDataTable;
+	typeVG = here->varTypeTable;
+	if( ROUT_HOST_TID( routine ) == DAO_OBJECT ){
 		host = routine->routHost->aux.v.klass;
 		dataCK = host->cstDataTable;
 		dataVK = host->glbDataTable;
@@ -900,13 +884,6 @@ CallEntry:
 		dataVL = routine->upContext->regValues;
 		typeVL = routine->upRoutine->regType;
 	}
-#if 0
-	extra.context = topCtx;
-	extra.glbVars = varValues[ DAO_G ];
-	extra.clsVars = varValues[ DAO_K ];
-	extra.objVars = varValues[ DAO_OV ];
-#endif
-
 
 	OPBEGIN(){
 		OPCASE( NOP ){
@@ -1268,7 +1245,7 @@ CallEntry:
 		OPCASE( RETURN ){
 			topCtx->vmc = vmc;
 			DaoContext_DoReturn( topCtx, vmc );
-			DaoContext_CheckFE( topCtx );
+			//XXX DaoContext_CheckFE( topCtx );
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			goto FinishCall;
 		}OPNEXT()
@@ -2204,16 +2181,6 @@ CallEntry:
 			vA = locVars[ vmc->a ];
 			DString_Assign( tuple->items->data[ vmc->b ].v.s, vA->v.s );
 		}OPNEXT()
-		OPCASE( GETF_M ){
-#if 0
-			if( vmc->dA[0]->type ==0 ) goto RaiseErrorNullObject;
-			if( vmc->dC[0] ==NULL ){
-				p = (DaoBase*) vmc->dA[0]->typer->priv->methods[vmc->b];
-				GC_IncRC( p );
-				vmc->dC[0] = p;
-			}
-#endif
-		}OPNEXT()
 		OPCASE( GETF_KC ){
 			value = locVars[ vmc->a ]->v.klass->cstData->data + vmc->b;
 			abtp = locTypes[ vmc->c ];
@@ -2396,31 +2363,6 @@ CallEntry:
 		OPCASE( TEST_D ){
 			vmc = locVars[ vmc->a ]->v.d ? vmc+1 : vmcBase+vmc->b;
 		}OPJUMP()
-		OPCASE( CALL_CF ){
-			if( self->stopit | vmSpace->stopit ) goto FinishProc;
-			topCtx->vmc= vmc;
-			func = locVars[ vmc->a ]->v.func;
-			topCtx->thisFunction = func;
-			func->pFunc( topCtx, locVars + vmc->a +1, vmc->b );
-			topCtx->thisFunction = NULL;
-			if( self->status == DAO_VMPROC_SUSPENDED )
-				self->topFrame->entry = (short)(vmc - vmcBase);
-			goto CheckException;
-		}OPNEXT()
-		OPCASE( CALL_CMF ){
-			topCtx->vmc= vmc;
-			func = locVars[ vmc->a ]->v.func;
-			topCtx->thisFunction = func;
-			func->pFunc( topCtx, locVars + vmc->a +1, vmc->b );
-			topCtx->thisFunction = NULL;
-		}OPNEXT()
-		OPCASE( CALL_TC )
-			OPCASE( MCALL_TC ){
-				topCtx->vmc = vmc;
-				if( self->stopit | vmSpace->stopit ) goto FinishProc;
-				DaoContext_DoFastCall( topCtx, vmc );
-				goto CheckException;
-			}OPNEXT()
 		OPDEFAULT()
 		{
 			goto CheckException;

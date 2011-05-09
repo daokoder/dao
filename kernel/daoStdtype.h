@@ -27,8 +27,8 @@ void DaoBase_Delete( void *obj );
 
 DValue DaoFindValue( DaoTypeBase *typer, DString *name );
 DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name );
-DaoFunction* DaoFindFunction( DaoTypeBase *typer, DString *name );
-DaoFunction* DaoFindFunction2( DaoTypeBase *typer, const char *name );
+DaoBase* DaoFindFunction( DaoTypeBase *typer, DString *name );
+DaoBase* DaoFindFunction2( DaoTypeBase *typer, const char *name );
 
 DaoTypeBase* DValue_GetTyper( DValue self );
 

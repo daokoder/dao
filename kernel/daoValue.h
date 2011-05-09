@@ -35,6 +35,7 @@ const extern DValue daoNullMap;
 const extern DValue daoNullTuple;
 const extern DValue daoNullClass;
 const extern DValue daoNullObject;
+const extern DValue daoNullMetaRoutine;
 const extern DValue daoNullRoutine;
 const extern DValue daoNullFunction;
 const extern DValue daoNullCData;

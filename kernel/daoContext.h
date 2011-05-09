@@ -53,6 +53,7 @@ struct DaoContext
 
 	DaoContext   *caller;
 	DaoVmProcess *process;
+	DaoRoutine   *lastRoutine;
 
 	/* the currently called wrapped C function,
 	   for exception handling and DaoCLoader module. */

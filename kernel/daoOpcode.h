@@ -87,7 +87,7 @@ enum DaoOpcode
 	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:
 				  A,A+1,..,A+B-2; If B==1, no exception to raise or rescue. */
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
-	DVM_RETURN , /* return A, A+1,.., A+B-1; if B==0, no returns;  */
+	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
 	DVM_DEBUG , /* prompt to debugging mode */
 	DVM_SECT ,   /* indicate the starting of a code subsection, A is the id. */
@@ -311,9 +311,8 @@ enum DaoOpcode
 	DVM_GETI_AM , /* array: get item(s) : C = A[B]; B: integer/float numbers */
 	DVM_SETI_AM , /* set item(s) : C[B] = A;  */
 
-	/* get member of class instance by index instead of name: */
-	DVM_GETF_M , /* get standard method */
 	/* setters and getters */
+	/* get/set member of class instance by index instead of name: */
 	DVM_GETF_KC , /* get class field, const; code: GET Member Field Const*/
 	DVM_GETF_KG , /* get class field, global */
 	DVM_GETF_OC , /* get class instance field, const; code: GET Member Field Const*/
@@ -371,12 +370,6 @@ enum DaoOpcode
 	DVM_TEST_I ,
 	DVM_TEST_F ,
 	DVM_TEST_D ,
-
-	DVM_CALL_CF , /* call C function */
-	DVM_CALL_CMF , /* call C math function: double=func(double), JIT compilable */
-
-	DVM_CALL_TC , /* type checked call, no need to check for overloading */
-	DVM_MCALL_TC ,
 
 	/* increase a count, and perform the normal goto operation 
 	 * if the count does not exceed a safe bound. */

@@ -27,18 +27,21 @@
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 		DaoVmProcess *vmp, DString *name, DaoContext *ctx, DValue *ps[], int N, int ret )
 {
+	DRoutine *meth;
 	DValue value = daoNullValue;
 	DValue selfpar = daoNullObject;
 	int i, errcode = DaoObject_GetData( self, name, & value, thisObject, NULL );
 	if( errcode ) return errcode;
+	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return DAO_ERROR_TYPE;
 	selfpar.v.object = self;
-	if( value.t == DAO_ROUTINE ){
-		DaoRoutine *rout = value.v.routine;
+	meth = DRoutine_Resolve( value.v.p, &selfpar, ps, N, DVM_CALL );
+	if( meth == NULL ) goto InvalidParam;
+	if( meth->type == DAO_ROUTINE ){
+		DaoRoutine *rout = (DaoRoutine*) meth;
 		DaoContext *ctxNew = DaoVmProcess_MakeContext( vmp, rout );
 		GC_ShiftRC( self, ctxNew->object );
 		ctxNew->object = self;
 		DaoContext_Init( ctxNew, rout );
-		DaoContext_InitWithParams( ctxNew, vmp, ps, N );
 		if( DRoutine_PassParams( (DRoutine*) ctxNew->routine, &selfpar, 
 					ctxNew->regValues, ps, N, DVM_CALL ) ){
 			if( STRCMP( name, "_PRINT" ) ==0 ){
@@ -50,19 +53,19 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 			}
 			return 0;
 		}
-		DaoVmProcess_CacheContext( vmp, ctxNew );
-		return DAO_ERROR_PARAM;
-	}else if( value.t == DAO_FUNCTION ){
-		DaoFunction *func = value.v.func;
-		DValue *ps2[ DAO_MAX_PARAM+1 ];
+		goto InvalidParam;
+	}else if( meth->type == DAO_FUNCTION ){
+		DaoFunction *func = (DaoFunction*) meth;
 		DValue self0 = daoNullObject;
-		memcpy( ps2+1, ps, N*sizeof(DValue*) );
-		ps2[0] = & self0;
 		self0.v.object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
 		self0.t = self0.v.object ? self0.v.object->type : 0;
-		func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*) func, &selfpar, ps2, N+1, DVM_MCALL );
-		DaoFunction_SimpleCall( func, ctx, ps2, N+1 );
+		DaoFunction_Call( func, ctx, &self0, ps, N );
+	}else{
+		return DAO_ERROR_TYPE;
 	}
+	return 0;
+InvalidParam:
+	DaoContext_ShowCallError( ctx, value.v.p, & selfpar, ps, N, DVM_CALL );
 	return 0;
 }
 static void DaoObject_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )

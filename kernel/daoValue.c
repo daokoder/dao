@@ -43,6 +43,7 @@ const DValue daoNullMap = { DAO_MAP, 0, 0, 0, {0}};
 const DValue daoNullTuple = { DAO_TUPLE, 0, 0, 0, {0}};
 const DValue daoNullClass = { DAO_CLASS, 0, 0, 0, {0}};
 const DValue daoNullObject = { DAO_OBJECT, 0, 0, 0, {0}};
+const DValue daoNullMetaRoutine = { DAO_METAROUTINE, 0, 0, 0, {0}};
 const DValue daoNullRoutine = { DAO_ROUTINE, 0, 0, 0, {0}};
 const DValue daoNullFunction = { DAO_FUNCTION, 0, 0, 0, {0}};
 const DValue daoNullCData = { DAO_CDATA, 0, 0, 0, {0}};
@@ -551,11 +552,9 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 {
 	DaoBase *dA = from.v.p;
 	int tm = 1;
-	if( tp->tid == DAO_ROUTINE && ( dA->type ==DAO_ROUTINE || dA->type ==DAO_FUNCTION ) ){
+	if( tp->tid == DAO_METAROUTINE && dA->type == DAO_METAROUTINE ){
 		/* XXX pair<objetp,routine<...>> */
-		dA = (DaoBase*) DRoutine_GetOverLoadByType( (DRoutine*)dA, tp );
-		if( dA == NULL ) goto MoveFailed;;
-		/* printf( "dA = %p,  %i  %s  %s\n", dA, tm, tp->name->mbs, from.v.routine->routType->name->mbs ); */
+		if( tp != ((DaoMetaRoutine*)dA)->unitype ) goto MoveFailed;
 	}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && dA->type == DAO_OBJECT){
 		if( ((DaoObject*)dA)->myClass != tp->aux.v.klass ){
 			dA = DaoObject_MapThisObject( ((DaoObject*)dA)->that, tp );
@@ -570,14 +569,14 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 	}else{
 		tm = DaoType_MatchValue( tp, from, NULL );
 	}
-	/*
-	   if( i ==0 ){
-	   printf( "tp = %p; dA = %p, type = %i\n", tp, dA, from.t );
-	   printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
-	   if( from.t == DAO_TUPLE ) printf( "%p\n", from.v.tuple->unitype );
-	   }
-	   printf( "dA->type = %p\n", dA );
-	 */
+#if 0
+	if( tm ==0 ){
+		printf( "tp = %p; dA = %p, type = %i\n", tp, dA, from.t );
+		printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
+		if( from.t == DAO_TUPLE ) printf( "%p\n", from.v.tuple->unitype );
+	}
+	printf( "dA->type = %p\n", dA );
+#endif
 	if( tm == 0 ) goto MoveFailed;;
 	/* composite known types must match exactly. example,
 	 * where it will not work if composite types are allowed to match loosely.
@@ -609,12 +608,18 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 			tm = DaoType_MatchValue( it, data[i], NULL );
 			if( tm < DAO_MT_SIM ) return 1;
 		}
+		/* casting is not necessary if the tuple's field names are a superset of the 
+		 * field names of the target type: */
+		if( tp->mapNames == NULL || tp->mapNames->size ==0 ) return 1;
 		if( names ){
+			int count = 0;
 			for(node=DMap_First(names); node; node=DMap_Next(names,node)){
 				search = DMap_Find( tp->mapNames, node->key.pVoid );
-				if( search == NULL ) return 0;
-				if( node->value.pInt != search->value.pInt ) return 0;
+				if( search && node->value.pInt != search->value.pInt ) return 0;
+				count += search != NULL;
 			}
+			/* be superset of the field names of the target type: */
+			if( count == tp->mapNames->size ) return 1;
 		}
 		tuple = DaoTuple_New( T );
 		for(i=0; i<T; i++){
@@ -636,6 +641,7 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 	return 1;
 MoveFailed:
 	DValue_Clear( to );
+	printf( "debug\n" );
 	return 0;
 }
 int DValue_Move( DValue from, DValue *to, DaoType *tp )
@@ -1299,10 +1305,9 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNameSpace *
 	DValue value = daoNullValue;
 	DValue selfpar = daoNullObject;
 	int i, errcode = DaoObject_GetData( self, & name, & value, NULL, NULL );
-	if( errcode || (value.t != DAO_ROUTINE && value.t != DAO_FUNCTION) ) return 0;
+	if( errcode || value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return 0;
 	selfpar.v.object = self;
-	rt = (DRoutine*) value.v.routine;
-	rt = DRoutine_GetOverLoad( rt, &selfpar, NULL, 0, DVM_CALL );
+	rt = DRoutine_Resolve( value.v.p, &selfpar, NULL, 0, DVM_CALL );
 	if( rt == NULL ) return 0;
 	if( rt->type == DAO_ROUTINE ){
 		DaoRoutine *rout = (DaoRoutine*) rt;
@@ -1316,7 +1321,6 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNameSpace *
 			DaoVmProcess_Execute( proc );
 		}
 	}else if( rt->type == DAO_FUNCTION ){
-		DValue *p = & selfpar;
 		DValue *res = & proc->returned;
 		DaoFunction *func = (DaoFunction*) rt;
 		DaoContext ctx = *proc->topFrame->context;
@@ -1327,7 +1331,7 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNameSpace *
 		ctx.regTypes = types;
 		ctx.vmc = & vmc;
 
-		DaoFunction_SimpleCall( func, & ctx, & p, 1 );
+		DaoFunction_Call( func, & ctx, & selfpar, NULL, 0 );
 	}else{
 		return 0;
 	}
@@ -1341,7 +1345,8 @@ static int DaoCData_Serialize( DaoCData *self, DString *serial, DaoNameSpace *ns
 	DValue selfpar = daoNullCData;
 	DValue *p = & selfpar;
 	DValue *res = & proc->returned;
-	DaoFunction *func = DaoFindFunction2( self->typer, "serialize" );
+	DaoBase *meth = DaoFindFunction2( self->typer, "serialize" );
+	DaoFunction *func = (DaoFunction*) meth;
 	DaoContext ctx = *proc->topFrame->context;
 	DaoVmCode vmc = { 0, 0, 0, 0 };
 	DaoType *types[] = { NULL, NULL, NULL };
@@ -1350,11 +1355,11 @@ static int DaoCData_Serialize( DaoCData *self, DString *serial, DaoNameSpace *ns
 	ctx.regTypes = types;
 	ctx.vmc = & vmc;
 
-	if( func == NULL ) return 0;
+	if( meth == NULL ) return 0;
 	selfpar.v.cdata = self;
-	func = (DaoFunction*)DRoutine_GetOverLoad( (DRoutine*)func, &selfpar, NULL, 0, DVM_CALL );
-	if( func == NULL ) return 0;
-	DaoFunction_SimpleCall( func, & ctx, & p, 1 );
+	func = (DaoFunction*) DRoutine_Resolve( meth, &selfpar, NULL, 0, DVM_CALL );
+	if( func == NULL || func->type != DAO_FUNCTION ) return 0;
+	DaoFunction_Call( func, & ctx, & selfpar, NULL, 0 );
 	type = DaoNameSpace_GetTypeV( ns, proc->returned );
 	DValue_Serialize2( & proc->returned, serial, ns, proc, type, buf );
 	return 1;
@@ -1434,9 +1439,8 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DValue param, DaoVmProcess *proc )
 {
 	DaoContext *ctx;
-	DRoutine *rt = (DRoutine*) self->classRoutine;
 	DValue *p = & param;
-	rt = DRoutine_GetOverLoad( rt, NULL, & p, 1, DVM_CALL );
+	DRoutine *rt = DRoutine_Resolve( (DaoBase*)self->classRoutines, NULL, & p, 1, DVM_CALL );
 	if( rt == NULL || rt->type != DAO_ROUTINE ) return NULL;
 	ctx = DaoVmProcess_MakeContext( proc, (DaoRoutine*) rt );
 	DaoContext_Init( ctx, ctx->routine );
@@ -1454,21 +1458,21 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DValue param, DaoVmProces
 }
 static DaoCData* DaoCData_MakeObject( DaoCData *self, DValue param, DaoVmProcess *proc )
 {
-	DaoFunction *func = DaoFindFunction2( self->typer, self->typer->name );
+	DaoBase *meth = DaoFindFunction2( self->typer, self->typer->name );
+	DaoFunction *func = (DaoFunction*) meth;
 	DaoContext ctx = *proc->topFrame->context;
 	DaoVmCode vmc = { 0, 0, 0, 0 };
 	DaoType *types[] = { self->typer->priv->abtype, NULL, NULL };
-	DRoutine *rt = (DRoutine*) func;
 	DValue *res = & proc->returned;
 	DValue *p = & param;
 
 	ctx.regValues = & res;
 	ctx.regTypes = types;
 	ctx.vmc = & vmc;
-	if( func == NULL ) return NULL;
-	rt = DRoutine_GetOverLoad( rt, NULL, & p, 1, DVM_CALL );
-	if( func == NULL ) return NULL;
-	DaoFunction_SimpleCall( func, & ctx, & p, 1 );
+	if( meth == NULL ) return NULL;
+	func = (DaoFunction*) DRoutine_Resolve( meth, NULL, & p, 1, DVM_CALL );
+	if( func == NULL || func->type != DAO_FUNCTION ) return NULL;
+	DaoFunction_Call( func, & ctx, NULL, & p, 1 );
 	if( proc->returned.t == DAO_CDATA ) return proc->returned.v.cdata;
 	return NULL;
 }

@@ -702,12 +702,11 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) rout->routHost );
 				cycRefCountDecrement( (DaoBase*) rout->nameSpace );
 				cycRefCountDecrementsV( rout->routConsts );
-				cycRefCountDecrements( rout->routTable );
-				if( rout->type == DAO_ROUTINE && rout->minimal ==0 ){
+				if( rout->type == DAO_ROUTINE ){
 					cycRefCountDecrement( (DaoBase*) rout->upRoutine );
 					cycRefCountDecrement( (DaoBase*) rout->upContext );
 					cycRefCountDecrement( (DaoBase*) rout->original );
-					cycRefCountDecrements( rout->specialized );
+					//cycRefCountDecrements( rout->specialized );
 					cycRefCountDecrements( rout->regType );
 					cycRefCountDecrementMapValue( rout->abstypes );
 				}
@@ -899,12 +898,11 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrement( (DaoBase*) rout->routHost );
 				cycRefCountIncrement( (DaoBase*) rout->nameSpace );
 				cycRefCountIncrementsV( rout->routConsts );
-				cycRefCountIncrements( rout->routTable );
-				if( rout->type == DAO_ROUTINE && rout->minimal ==0 ){
+				if( rout->type == DAO_ROUTINE ){
 					cycRefCountIncrement( (DaoBase*) rout->upRoutine );
 					cycRefCountIncrement( (DaoBase*) rout->upContext );
 					cycRefCountIncrement( (DaoBase*) rout->original );
-					cycRefCountIncrements( rout->specialized );
+					//cycRefCountIncrements( rout->specialized );
 					cycRefCountIncrements( rout->regType );
 					cycRefCountIncrementMapValue( rout->abstypes );
 				}
@@ -1098,12 +1096,11 @@ void freeGarbage()
 					GC_BREAK_REF( rout->routType );
 					GC_BREAK_REF( rout->routHost );
 					directRefCountDecrementV( rout->routConsts );
-					directRefCountDecrement( rout->routTable );
-					if( rout->type == DAO_ROUTINE && rout->minimal ==0 ){
+					if( rout->type == DAO_ROUTINE ){
 						GC_BREAK_REF( rout->upRoutine );
 						GC_BREAK_REF( rout->upContext );
 						GC_BREAK_REF( rout->original );
-						directRefCountDecrement( rout->specialized );
+						//directRefCountDecrement( rout->specialized );
 						directRefCountDecrement( rout->regType );
 						directRefCountDecrementMapValue( rout->abstypes );
 					}
@@ -1263,7 +1260,7 @@ void freeGarbage()
 #warning "-------------------- DAO_GC_PROF is turned on."
 	printf("heap[idle] = %i;\theap[work] = %i\n", gcWorker.pool[ idle ]->size, gcWorker.pool[ work ]->size );
 	printf("=======================================\n");
-	printf( "mbs count = %i\n", daoCountMBS );
+	//printf( "mbs count = %i\n", daoCountMBS );
 	printf( "array count = %i\n", daoCountArray );
 	for(i=0; i<100; i++){
 		if( ObjectProfile[i] != 0 ){
@@ -1555,14 +1552,13 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) rout->routHost );
 				cycRefCountDecrement( (DaoBase*) rout->nameSpace );
 				cycRefCountDecrementsV( rout->routConsts );
-				cycRefCountDecrements( rout->routTable );
-				j += rout->routConsts->size + rout->routTable->size;
-				if( rout->type == DAO_ROUTINE && rout->minimal ==0 ){
+				j += rout->routConsts->size;
+				if( rout->type == DAO_ROUTINE ){
 					j += rout->regType->size + rout->abstypes->size;
 					cycRefCountDecrement( (DaoBase*) rout->upRoutine );
 					cycRefCountDecrement( (DaoBase*) rout->upContext );
 					cycRefCountDecrement( (DaoBase*) rout->original );
-					cycRefCountDecrements( rout->specialized );
+					//cycRefCountDecrements( rout->specialized );
 					cycRefCountDecrements( rout->regType );
 					cycRefCountDecrementMapValue( rout->abstypes );
 				}
@@ -1761,17 +1757,16 @@ void cycRefCountIncreScan()
 					cycRefCountIncrement( (DaoBase*) rout->routHost );
 					cycRefCountIncrement( (DaoBase*) rout->nameSpace );
 					cycRefCountIncrementsV( rout->routConsts );
-					cycRefCountIncrements( rout->routTable );
-					if( rout->type == DAO_ROUTINE && rout->minimal ==0 ){
+					if( rout->type == DAO_ROUTINE ){
 						j += rout->abstypes->size;
 						cycRefCountIncrement( (DaoBase*) rout->upRoutine );
 						cycRefCountIncrement( (DaoBase*) rout->upContext );
 						cycRefCountIncrement( (DaoBase*) rout->original );
-						cycRefCountIncrements( rout->specialized );
+						//cycRefCountIncrements( rout->specialized );
 						cycRefCountIncrements( rout->regType );
 						cycRefCountIncrementMapValue( rout->abstypes );
 					}
-					j += rout->routConsts->size + rout->routTable->size;
+					j += rout->routConsts->size;
 					break;
 				}
 			case DAO_CLASS :
@@ -1978,15 +1973,14 @@ void directDecRC()
 					 * in the last cycle */
 					GC_BREAK_REF( rout->routHost );
 
-					j += rout->routConsts->size + rout->routTable->size;
+					j += rout->routConsts->size;
 					directRefCountDecrementV( rout->routConsts );
-					directRefCountDecrement( rout->routTable );
-					if( rout->type == DAO_ROUTINE && rout->minimal ==0 ){
+					if( rout->type == DAO_ROUTINE ){
 						j += rout->abstypes->size;
 						GC_BREAK_REF( rout->upRoutine );
 						GC_BREAK_REF( rout->upContext );
 						GC_BREAK_REF( rout->original );
-						directRefCountDecrement( rout->specialized );
+						//directRefCountDecrement( rout->specialized );
 						directRefCountDecrement( rout->regType );
 						directRefCountDecrementMapValue( rout->abstypes );
 					}
@@ -2167,8 +2161,9 @@ void freeGarbage()
 #ifdef DAO_GC_PROF
 	printf("heap[idle] = %i;\theap[work] = %i\n", gcWorker.pool[ idle ]->size, gcWorker.pool[ work ]->size );
 	printf("=======================================\n");
-	printf( "mbs count = %i\n", daoCountMBS );
+	//printf( "mbs count = %i\n", daoCountMBS );
 	printf( "array count = %i\n", daoCountArray );
+	int k;
 	for(k=0; k<100; k++){
 		if( ObjectProfile[k] > 0 ){
 			printf( "type = %3i; rest = %5i\n", k, ObjectProfile[k] );

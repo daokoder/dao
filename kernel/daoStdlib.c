@@ -152,7 +152,7 @@ static void STD_Callable( DaoContext *ctx, DValue *p[], int N )
 		{
 			DaoCData *plugin = (DaoCData*) p[0]->v.p;
 			DaoTypeBase *tp = plugin->typer;
-			DaoFunction *func;
+			DaoMetaRoutine *func;
 			if( plugin->data == NULL && (plugin->trait & DAO_DATA_CONST) ){
 				func = DaoFindFunction2( tp, tp->name );
 				*res = func != NULL;
@@ -892,6 +892,8 @@ static void REFL_NS( DaoContext *ctx, DValue *p[], int N )
 		res.v.ns = ctx->nameSpace;
 	}else if( p[0]->t == DAO_CLASS ){
 		res.v.ns = p[0]->v.klass->classRoutine->nameSpace;
+	}else if( p[0]->t == DAO_METAROUTINE ){
+		res.v.ns = p[0]->v.metaRoutine->space;
 	}else if( p[0]->t == DAO_ROUTINE || p[0]->t == DAO_FUNCTION ){
 		res.v.ns = p[0]->v.routine->nameSpace;
 	}else{
@@ -1175,15 +1177,15 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 	DaoList *list;
 	DValue item = daoNullValue;
 	int i;
-	if( N ==1 ){
-		DRoutine *rout = (DRoutine*) p[0]->v.p;
+	if( N ==1 ){ // XXX
+		DaoMetaRoutine *rout = p[0]->v.metaRoutine;
 		list = DaoContext_PutList( ctx );
-		if( p[0]->t != DAO_ROUTINE && p[0]->t != DAO_FUNCTION ){
+		if( p[0]->t != DAO_METAROUTINE ){
 			DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
 			return;
 		}
-		for(i=0; i<rout->routTable->size; i++){
-			item.v.p = rout->routTable->items.pBase[i];
+		for(i=0; i<rout->routines->size; i++){
+			item.v.p = rout->routines->items.pBase[i];
 			item.t = item.v.p->type;
 			DaoList_Append( list, item );
 		}
@@ -1193,11 +1195,13 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 }
 static void REFL_Class( DaoContext *ctx, DValue *p[], int N )
 {
+#if 0
 	if( p[0]->t == DAO_ROUTINE && p[0]->v.routine->tidHost == DAO_OBJECT ){
 		DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.routine->routHost->aux.v.klass );
 	}else if( p[0]->t == DAO_OBJECT ){
 		DaoContext_SetResult( ctx, (DaoBase*) p[0]->v.object->myClass );
 	}
+#endif
 	DaoContext_PutValue( ctx, daoNullValue );
 }
 static void REFL_Isa( DaoContext *ctx, DValue *p[], int N )
@@ -1370,7 +1374,7 @@ static void REFL_Doc( DaoContext *ctx, DValue *p[], int N )
 	switch( p[0]->t ){
 	case DAO_CLASS : doc = p[0]->v.klass->classHelp; break;
 	case DAO_OBJECT : doc = p[0]->v.object->myClass->classHelp; break;
-	case DAO_ROUTINE : doc = p[0]->v.routine->routHelp; break;
+	//XXX case DAO_ROUTINE : doc = p[0]->v.routine->routHelp; break;
 	default : break;
 	}
 	if( doc == NULL ){

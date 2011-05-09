@@ -86,7 +86,6 @@ static const char *const vmOperNames[] = {
 	"ADD_CC", "SUB_CC", "MUL_CC", "DIV_CC", 
 	"GETI_ACI", "SETI_ACI",
 	"GETI_AM", "SETI_AM",
-	"GETF_M",
 	"GETF_KC", "GETF_KG", "GETF_OC", "GETF_OG", "GETF_OV", 
 	"SETF_KG", "SETF_OG", "SETF_OV",
 	"GETF_KCI", "GETF_KGI",
@@ -105,7 +104,6 @@ static const char *const vmOperNames[] = {
 	"SETF_KGDF", "SETF_OGDF", "SETF_OVDF",
 	"SETF_KGDD", "SETF_OGDD", "SETF_OVDD",
 	"TEST_I", "TEST_F", "TEST_D",
-	"CALL_CF", "CALL_CMF", "CALL_TC", "MCALL_TC",
 	"GOTO",
 	"???",
 

@@ -119,6 +119,7 @@ extern DaoTypeBase  nsTyper;
 extern DaoTypeBase  cmodTyper;
 extern DaoTypeBase  tupleTyper;
 extern DaoTypeBase  namevaTyper;
+extern DaoTypeBase  mroutineTyper;
 
 extern DaoTypeBase  numarTyper;
 extern DaoTypeBase  comTyper;
@@ -158,9 +159,9 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 #else
 	case DAO_ARRAY  :  return & baseTyper;
 #endif
-					   /*     case DAO_REGEX    :  return & regexTyper; // XXX */
 	case DAO_FUNCURRY : return & curryTyper;
 	case DAO_CDATA   :  return & cdataTyper;
+	case DAO_METAROUTINE : return & mroutineTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_FUNCTION  :  return & funcTyper;
 	case DAO_INTERFACE :  return & interTyper;
@@ -776,7 +777,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 	if( i >=0 ){
 		DValue nkey = DaoNameSpace_GetConst( ns, i );
 		/* It may has not been compiled if it is not called explicitly. */
-		if( nkey.t == DAO_ROUTINE ){
+		if( nkey.t == DAO_ROUTINE ){ // TODO: better handling
 			DaoRoutine_Compile( nkey.v.routine );
 			rout = nkey.v.routine;
 			abtp = rout->routType;
@@ -945,12 +946,8 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 		for( i=ns->cstUser; i<ns->cstData->size; i++){
 			DValue p = ns->cstData->data[i];
 			if( p.t == DAO_ROUTINE && p.v.routine != ns->mainRoutine ){
-				n = p.v.routine->routTable->size;
-				for(j=0; j<n; j++){
-					rout = (DaoRoutine*) p.v.routine->routTable->items.pBase[j];
-					DaoRoutine_Compile( rout );
-					DaoRoutine_PrintCode( rout, self->stdStream );
-				}
+				DaoRoutine_Compile( p.v.routine );
+				DaoRoutine_PrintCode( p.v.routine, self->stdStream );
 			}else if( p.t == DAO_CLASS ){
 				DaoClass_PrintCode( p.v.klass, self->stdStream );
 			}
@@ -1026,29 +1023,25 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DArray_Resize( array, N, NULL );
 	for(j=0; j<N; j++) array->items.pValue[j] = ps + j;
 	if( i >=0 ){
+		DRoutine *unirout = NULL;
 		value = DaoNameSpace_GetConst( ns, i );
-		if( value.t == DAO_ROUTINE ){
-#if 0
-			// testing:
-			DRoutine *rout = (DRoutine*)value.v.routine;
-			int i, n = rout->metaRoutine->routines->size;
-			for(i=0; i<n; i++) DaoMetaRoutine_Add( rout->metaRoutine, rout->metaRoutine->routines->items.pRout[i] );
-#endif
-
-			mainRoutine = value.v.routine;
-			ctx = DaoVmProcess_MakeContext( vmp, mainRoutine );
-			ctx->vmSpace = self;
-			DaoContext_Init( ctx, mainRoutine );
-			if( DaoContext_InitWithParams( ctx, vmp, array->items.pValue, N ) == 0 ){
-				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				if( mainRoutine->routHelp )
-					DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
-				DArray_Delete( array );
-				return 0;
-			}
-			DaoVmProcess_PushContext( vmp, ctx );
+		if( value.t == DAO_METAROUTINE ){
+			DaoMetaRoutine *routine = (DaoMetaRoutine*) value.v.routine;
+			unirout = DaoMetaRoutine_Lookup( routine, NULL, array->items.pValue, N, DVM_CALL );
+		}else if( value.t == DAO_ROUTINE ){
+			unirout = (DRoutine*) value.v.routine;
 		}
-		mainRoutine = ns->mainRoutine;
+		if( unirout == NULL || unirout->type != DAO_ROUTINE ){
+			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
+			if( unirout && unirout->routHelp )
+				DaoStream_WriteString( self->stdStream, unirout->routHelp );
+			DArray_Delete( array );
+			return 0;
+		}
+		ctx = DaoVmProcess_MakeContext( vmp, (DaoRoutine*) unirout );
+		ctx->vmSpace = self;
+		DaoContext_Init( ctx, (DaoRoutine*) unirout );
+		DaoVmProcess_PushContext( vmp, ctx );
 	}
 	DaoVmSpace_ExeCmdArgs( self );
 	/* always execute default ::main() routine first for initialization: */
@@ -1057,19 +1050,16 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		DaoVmProcess_Execute( vmp );
 	}
 	/* check and execute explicitly defined main() routine  */
-	if( i >=0 ){
-		value = DaoNameSpace_GetConst( ns, i );
-		if( value.t == DAO_ROUTINE ){
-			if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
-						array->items.pValue, N, 0 ) ){
-				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
+	if( ctx != NULL ){
+		if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
+					array->items.pValue, N, 0 ) ){
+			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
+			if( ctx->routine->routHelp )
 				DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
-				DaoVmProcess_CacheContext( vmp, ctx );
-				DArray_Delete( array );
-				return 0;
-			}
-			DaoVmProcess_Execute( vmp );
+			DArray_Delete( array );
+			return 0;
 		}
+		DaoVmProcess_Execute( vmp );
 	}
 	DArray_Delete( array );
 	if( ( self->options & DAO_EXEC_INTERUN ) && self->userHandler == NULL )
@@ -1355,7 +1345,8 @@ ExecuteModule :
 			DaoContext_Init( ctx, mainRoutine );
 			if( DaoContext_InitWithParams( ctx, vmp, array->items.pValue, N ) == 0 ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
+				if( mainRoutine->routHelp )
+					DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
 				DArray_Delete( array );
 				return 0;
 			}
@@ -1363,8 +1354,8 @@ ExecuteModule :
 			if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
 						array->items.pValue, N, 0 ) ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
-				DaoVmProcess_CacheContext( vmp, ctx );
+				if( mainRoutine->routHelp )
+					DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
 				DArray_Delete( array );
 				return 0;
 			}

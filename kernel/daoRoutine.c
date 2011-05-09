@@ -29,40 +29,36 @@
 
 static void DRoutine_Init( DRoutine *self )
 {
-	self->minimal = 0;
 	self->attribs = 0;
 	self->parCount = 0;
-	self->tidHost = 0;
+	self->defLine  = 0;
 	self->routHost = NULL;
 	self->routType = NULL;
 	self->routHelp = NULL;
-	self->routName   = DString_New(1);
-	self->parCodes   = DString_New(1);
+	self->routName = DString_New(1);
+	self->parCodes = DString_New(1);
 	self->routConsts = DVarray_New();
-	self->routTable = DArray_New(0);
 	self->nameSpace = NULL;
-	self->metaRoutine = DaoMetaRoutine_New(); // for testing
 }
 DRoutine* DRoutine_New()
 {
 	DRoutine *self = (DRoutine*) dao_calloc( 1, sizeof(DRoutine) );
-	DaoBase_Init( self, DAO_ROUTINE );
+	DaoBase_Init( self, DAO_ABROUTINE );
 	DRoutine_Init( self );
-	self->minimal = 1;
 	return self;
 }
 void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 {
 	int i;
-	self->parCount = from->parCount;
 	self->attribs = from->attribs;
-	self->tidHost = from->tidHost;
+	self->parCount = from->parCount;
+	self->defLine = from->defLine;
 	GC_ShiftRC( from->routHost, self->routHost );
-	GC_ShiftRC( from->nameSpace, self->nameSpace );
 	GC_ShiftRC( from->routType, self->routType );
+	GC_ShiftRC( from->nameSpace, self->nameSpace );
 	self->routHost = from->routHost;
-	self->nameSpace = from->nameSpace;
 	self->routType = from->routType;
+	self->nameSpace = from->nameSpace;
 	DVarray_Assign( self->routConsts, from->routConsts );
 	DString_Assign( self->routName, from->routName );
 	DString_Assign( self->parCodes, from->parCodes );
@@ -70,14 +66,12 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 }
 static void DRoutine_DeleteFields( DRoutine *self )
 {
-	GC_DecRCs( self->routTable );
 	GC_DecRC( self->routHost );
 	GC_DecRC( self->routType );
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
 	DString_Delete( self->parCodes );
 	DVarray_Delete( self->routConsts );
-	DArray_Delete( self->routTable );
 	if( self->routHelp ) DString_Delete( self->routHelp );
 }
 int DRoutine_AddConst( DRoutine *self, DaoBase *dbase )
@@ -97,17 +91,7 @@ int  DRoutine_AddConstValue( DRoutine *self, DValue value )
 	DValue_MarkConst( & self->routConsts->data[self->routConsts->size-1] );
 	return self->routConsts->size-1;
 }
-void DRoutine_AddOverLoad( DRoutine *self, DRoutine *rout )
-{
-	GC_IncRC( rout );
-	if( self->routHost == rout->routHost ){
-		DArray_PushFront( self->routTable, rout );
-	}else{
-		DArray_PushBack( self->routTable, rout );
-	}
-	DArray_Append( self->metaRoutine->routines, rout ); // for testing
-}
-static int DaoDecorator_CheckType( DaoType *decoType, DValue *csts, DaoType *ts[], int np )
+static int DaoDecorator_CheckType( DaoType *decoType, DaoType *ts[], int np )
 {
 	DArray *nested = decoType->nested;
 	DaoType **stypes, **types = nested->items.pType;
@@ -119,8 +103,9 @@ static int DaoDecorator_CheckType( DaoType *decoType, DValue *csts, DaoType *ts[
 	int i, j, k, match;
 
 	if( np ==0 || nested->size ==0 || np > nested->size ) goto CheckFailed;
-	if( csts[0].t == DAO_ROUTINE ) routType = csts[0].v.routine->routType;
-	if( routType == NULL || routType->tid != DAO_ROUTINE ) goto CheckFailed;
+	if( routType == NULL ) goto CheckFailed;
+	if( (k=routType->tid) == DAO_UDF || k == DAO_INITYPE || k == DAO_ANY ) return 1;
+	if( routType->tid != DAO_ROUTINE ) goto CheckFailed;
 	ft = types[0];
 	stypes = routType->nested->items.pType;
 	if( ft->tid != DAO_PAR_NAMED || ft->aux.v.type->tid != DAO_ROUTINE ) goto CheckFailed;
@@ -139,8 +124,6 @@ static int DaoDecorator_CheckType( DaoType *decoType, DValue *csts, DaoType *ts[
 	for(j=0; j<nested->size; j++) parpass[j] = 0;
 	k = 1;
 	for(j=1; j<np; j++){
-		DValue cs = daoNullValue;
-		if( csts && csts[j].t ) cs = csts[j];
 		if( k < nested->size && types[k]->tid == DAO_PAR_VALIST ){
 			for(; k<np; k++) parpass[k] = 1;
 			break;
@@ -156,10 +139,6 @@ static int DaoDecorator_CheckType( DaoType *decoType, DValue *csts, DaoType *ts[
 		if( k >= nested->size || tp ==NULL )  goto CheckFailed;
 		t = nested->items.pType[k];
 		if( t->tid == DAO_PAR_NAMED || t->tid == DAO_PAR_DEFAULT ) t = t->aux.v.type;
-		if( t->tid ==DAO_ROUTINE && ( cs.t ==DAO_ROUTINE || cs.t ==DAO_FUNCTION ) ){
-			DRoutine *rout = DRoutine_GetOverLoadByType( (DRoutine*)cs.v.p, t );
-			tp = rout ? rout->routType : NULL;
-		}
 		match = DaoType_MatchTo( tp, t, defs );
 
 		/*
@@ -193,7 +172,7 @@ CheckFailed:
 	return -1;
 }
 static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *selftype,
-		DValue *csts, DaoType *ts[], int np, int code, int def, int *min, int *spec )
+		DaoType *ts[], int np, int code, int def )
 {
 	int ndef = 0;
 	int i, j, match = 1;
@@ -203,13 +182,11 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 	int selfChecked = 0, selfMatch = 0;
 	DaoType  *abtp, **partypes = routType->nested->items.pType;
 	DaoType **tps = ts;
-	DValue cs = daoNullValue;
 	DRoutine *rout;
 	DNode *node;
 	DMap *defs;
 
-	if( routType->name->mbs[0] == '@' )
-		return DaoDecorator_CheckType( routType, csts, ts, np );
+	if( routType->name->mbs[0] == '@' ) return DaoDecorator_CheckType( routType, ts, np );
 
 	defs = DMap_New(0,0);
 	if( routType->nested ){
@@ -230,24 +207,16 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 	   if( selftype ) printf( "%i\n", routType->name->mbs, ndef, npar, selftype );
 	 */
 
-	*min = DAO_MT_EQ;
-	*spec = 0;
-	if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
-			&& ! ( routType->attrib & DAO_TYPE_SELF ) ){
+	if( code == DVM_MCALL && ! ( routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
 		tps ++;
-	}else if( selftype && ( routType->attrib & DAO_TYPE_SELF)
-			&& code != DVM_MCALL && code != DVM_MCALL_TC ){
+	}else if( selftype && (routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		abtp = partypes[0]->aux.v.type;
 		selfMatch = DaoType_MatchTo( selftype, abtp, defs );
 		if( selfMatch ){
 			selfChecked = 1;
 			parpass[0] = selfMatch;
-			if( selfMatch >= DAO_MT_ANYUDF && selfMatch <= DAO_MT_UDF ){
-				*spec = 1;
-			}
-			if( *min > selfMatch ) *min = selfMatch;
 		}
 	}
 	if( npar == ndef && ndef == 0 ) goto FinishOK;
@@ -264,8 +233,6 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 			for(; ifrom<npar; ifrom++) parpass[ifrom+selfChecked] = 1;
 			break;
 		}
-		cs = daoNullValue;
-		if( csts && csts[ifrom].t ) cs = csts[ifrom];
 		if( tp == NULL ) goto FinishError;
 		if( tp->tid == DAO_PAR_NAMED ){
 			node = DMap_Find( routType->mapNames, tp->fname );
@@ -276,10 +243,6 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 		if( ito >= ndef || tp ==NULL )  goto FinishError;
 		abtp = routType->nested->items.pType[ito];
 		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = abtp->aux.v.type;
-		if( abtp->tid ==DAO_ROUTINE && ( cs.t ==DAO_ROUTINE || cs.t ==DAO_FUNCTION ) ){
-			rout = DRoutine_GetOverLoadByType( (DRoutine*)cs.v.p, abtp );
-			tp = rout ? rout->routType : NULL;
-		}
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 		/*
@@ -294,10 +257,6 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 			else if( tp->tid == DAO_ANY || tp->tid == DAO_UDF )
 				parpass[ito] = DAO_MT_NEGLECT;
 		}
-		if( parpass[ito] >= DAO_MT_ANYUDF && parpass[ito] <= DAO_MT_UDF ){
-			*spec = 1;
-		}
-		if( parpass[ito] < *min ) *min = parpass[ito];
 		if( parpass[ito] == 0 ) goto FinishError;
 		if( def ) tps[ifrom] = DaoType_DefineTypes( tp, ns, defs );
 	}
@@ -323,81 +282,18 @@ FinishError:
 	DMap_Delete( defs );
 	return -1;
 }
-DRoutine* DRoutine_GetOverLoadByType( DRoutine *self, DaoType *type )
+static DRoutine* MatchByParamType( DaoBase *self, DaoType *selftype, DaoType *ts[], int np, int code )
 {
-	DRoutine *rout;
-	int i, j, k=-1, max = 0;
-	for(i=0; i<self->routTable->size; i++){
-		rout = (DRoutine*) self->routTable->items.pBase[i];
-		if( rout->routType == type ) return rout;
-	}
-	for(i=0; i<self->routTable->size; i++){
-		rout = (DRoutine*) self->routTable->items.pBase[i];
-		j = DaoType_MatchTo( rout->routType, type, NULL );
-		if( j && j >= max ){
-			max = j;
-			k = i;
+	DRoutine *rout = DRoutine_ResolveByType( self, selftype, ts, np, code );
+	if( rout == (DRoutine*)self ){ /* parameters not yet checked: */
+		if( DRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, code, 0 ) ==0){
+			rout = NULL;
 		}
 	}
-	if( k >=0 ) return (DRoutine*) self->routTable->items.pBase[k];
-	return NULL;
-}
-static DRoutine* MatchByParamType( DRoutine *self, DaoType *selftype,
-		DValue *csts, DaoType *ts[], int np, int code, int *min, int *spec )
-{
-	int i, match;
-	int best = -1;
-	int max2 = 0;
-	int min3=0, spec3=0;
-	DaoNameSpace *ns = self->nameSpace;
-	DaoRoutine *routine;
-	DRoutine *rout;
-
-	*spec = 0;
-	for(i=0; i<self->routTable->size; i++){
-		rout = (DRoutine*) self->routTable->items.pBase[i];
-		/*
-		   printf( "=====================================\n" );
-		   printf("ovld %i, %p %s : %s\n", i, rout, self->routName->mbs, rout->routType->name->mbs);
-		 */
-		match = DRoutine_CheckType( rout->routType, ns, selftype, csts, ts, np, code, 0, & min3, & spec3 );
-		if( match > max2 ){
-			max2 = match;
-			best = i;
-			*min = min3;
-			*spec = spec3;
-		}
-	}
-	/*
-	   printf("%s : best = %i, spec = %i\n", self->routName->mbs, best, *spec);
-	 */
-	if( best < 0 ) return NULL;
-	rout = (DRoutine*) self->routTable->items.pBase[best];
-	if( rout->type != DAO_ROUTINE || rout->minimal ==1 ) return rout;
-
-	routine = (DaoRoutine*) rout;
-	if( routine->parser ) DaoRoutine_Compile( routine );
-	if( routine->specialized == NULL ) return rout;
-	best = -1;
-	for(i=0; i<routine->specialized->size; i++){
-		rout = (DRoutine*) routine->specialized->items.pBase[i];
-		/*
-		   printf( "=====================================\n" );
-		   printf("ovld %i, %p %s : %s\n", i, rout, self->routName->mbs, rout->routType->name->mbs);
-		 */
-		match = DRoutine_CheckType( rout->routType, ns, selftype, csts, ts, np, code, 0, & min3, & spec3 );
-		if( match > max2 ){
-			max2 = match;
-			best = i;
-			*min = min3;
-			*spec = spec3;
-		}
-	}
-	if( best < 0 ) return (DRoutine*)routine;
-	return (DRoutine*) routine->specialized->items.pBase[best];
+	return rout;
 }
 void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
-		DValue *csts, DaoType *ts[], int np, int code, DMap *defs )
+		DaoType *ts[], int np, int code, DMap *defs )
 {
 	int npar = np;
 	int ndef = self->parCount;
@@ -408,15 +304,12 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
 	DaoType  *abtp, *tp;
 	DNode *node;
 	DMap *mapNames = self->routType->mapNames;
-	DValue cs;
 
 	if( npar == ndef && ndef == 0 ) return;
-	if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
-			&& ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
+	if( code == DVM_MCALL && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
 		tps ++;
-	}else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF)
-			&& code != DVM_MCALL && code != DVM_MCALL_TC ){
+	}else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		abtp = self->routType->nested->items.pType[0]->aux.v.type;
 		if( DaoType_MatchTo( selftype, abtp, defs ) ){
@@ -428,8 +321,6 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
 		ito = ifrom + selfChecked;
 		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ) break;
 		tp = tps[ifrom];
-		cs = daoNullValue;
-		if( csts && csts[ifrom].t ==0 ) cs = csts[ifrom];
 		if( tp == NULL ) break;
 		if( tp->tid == DAO_PAR_NAMED ){
 			node = DMap_Find( mapNames, tp->fname );
@@ -474,7 +365,7 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
 	}
 }
 void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
-		DValue *csts, DaoType *ts[], int np, int code, DMap *defs )
+		DaoType *ts[], int np, int code, DMap *defs )
 {
 	int npar = np;
 	int ndef = self->parCount;
@@ -485,17 +376,14 @@ void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
 	DaoType  *abtp, *tp;
 	DNode *node;
 	DMap *mapNames = self->routType->mapNames;
-	DValue cs;
 	/*
 	printf( "%s %s\n", self->routName->mbs, self->routType->name->mbs );
 	*/
 	if( npar == ndef && ndef == 0 ) return;
-	if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
-			&& ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
+	if( code == DVM_MCALL && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
 		tps ++;
-	}else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF)
-			&& code != DVM_MCALL && code != DVM_MCALL_TC ){
+	}else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		abtp = self->routType->nested->items.pType[0]->aux.v.type;
 		if( DaoType_MatchTo( selftype, abtp, defs ) ) selfChecked = 1;
@@ -504,8 +392,6 @@ void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
 		ito = ifrom + selfChecked;
 		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ) break;
 		tp = tps[ifrom];
-		cs = daoNullValue;
-		if( csts && csts[ifrom].t ==0 ) cs = csts[ifrom];
 		if( tp == NULL ) break;
 		if( tp->tid == DAO_PAR_NAMED ){
 			node = DMap_Find( mapNames, tp->fname );
@@ -524,146 +410,74 @@ void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
 	 */
 	return;
 }
-static DRoutine* DRoutine_GetOverLoadExt(
-		DArray *routTable, DaoClass *filter, DValue *obj, DValue *p[], int n, int code )
+static int DaoDecorator_Check( DaoRoutine *self, DaoRoutine *rout, DValue *p[], int n )
 {
-	float match, max = 0;
-	int i, j, m, sum;
-	int ifrom, ito;
-	int best = -1;
-	int dist = 0;
-	int mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
+	DNode *it, *node;
+	DMap *mapNames, *defs = NULL;
+	DArray *nested = self->routType->nested;
+	DaoType **types = nested->items.pType;
+	DaoType **stypes = rout->routType->nested->items.pType;
+	DaoType *ft, *tp;
+	int i, j, k, match, sum, sum2;
 	int parpass[DAO_MAX_PARAM];
-	DaoRoutine *routine;
-	DaoBase *filter2 = (DaoBase*) filter;
-	DNode *node;
-	DMap *defs = NULL;
-
-#if 0
-	if( self->routTable->size == 1 ){
-		/* self might be a dummy routine created in deriving class methods */
-		self = (DRoutine*) self->routTable->items.pBase[0];
-		return self;
+	if( n > nested->size ) return 0;
+	ft = types[0];
+	if( ft->tid != DAO_PAR_NAMED || ft->aux.v.type->tid != DAO_ROUTINE ) return 0;
+	ft = ft->aux.v.type;
+	if( ft->nested->size > rout->routType->nested->size ) return 0;
+	sum = sum2 = 0;
+	mapNames = ft->mapNames;
+	for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
+		tp = ft->nested->items.pType[it->value.pInt];
+		node = DMap_Find( rout->routType->mapNames, it->key.pVoid );
+		if( node == NULL ) return 0;
+		match = DaoType_MatchTo( tp, stypes[node->value.pInt], NULL );
+		if( match ==0 ) return 0;
+		sum += match;
 	}
-#endif
-#if 0
-	if( strcmp( self->routName->mbs, "expand" ) ==0 ){
-		for(i=0; i<n; i++) printf( "%i  %i\n", i, p[i]->t );
-	}
-#endif
+	if( defs == NULL ) defs = DMap_New(0,0);
+	DMap_Clear( defs );
+	if( mapNames->size ==0 ) sum = 1;
+	for(j=0; j<nested->size; j++) parpass[j] = 0;
+	k = 1;
+	for(j=1; j<n; j++){
+		DValue pv = *p[j];
+		if( k < nested->size && types[k]->tid == DAO_PAR_VALIST ){
+			for(; k<n; k++) parpass[k] = 1;
+			break;
+		}
+		if( pv.t == DAO_PAR_NAMED ){
+			DaoNameValue *nameva = pv.v.nameva;
+			node = DMap_Find( self->routType->mapNames, nameva->name );
+			if( node == NULL ) goto NextDecorator;
+			pv = nameva->value;
+			k = node->value.pInt;
+		}
+		if( k ==0 || k >= nested->size )  goto NextDecorator;
+		match = DaoType_MatchValue( types[k]->aux.v.type, pv, defs );
 
-	i = 0;
-	while( i<routTable->size ){
-		DRoutine *rout = (DRoutine*) routTable->items.pBase[i];
-		DaoType **parType = rout->routType->nested->items.pType;
-		DaoType  *abtp;
-		DMap *mapNames = rout->routType->mapNames;
-		DValue **dpar = p;
-		int is_virtual = rout->attribs & DAO_ROUT_VIRTUAL;
-		int need_self = rout->routType->attrib & DAO_TYPE_SELF;
-		int ndef = rout->parCount;
-		int npar = n;
-		int selfChecked = 0, selfMatch = 0;
-		if( filter && obj && obj->t == DAO_OBJECT ){
-			if( DaoClass_ChildOf( obj->v.object->myClass, filter2 ) ==0 ) goto NextRoutine;
-		}
-		if( defs == NULL ) defs = DMap_New(0,0);
-		/* func();
-		 * obj.func();
-		 * obj::func();
-		 */
-		if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
-				&& ! ( rout->routType->attrib & DAO_TYPE_SELF ) ){
-			npar --;
-			dpar ++;
-		}else if( obj && obj->t && need_self && ! mcall ){
-			/* class DaoClass : CppClass{ cppmethod(); }
-			 * use stdio;
-			 * print(..);
-			 */
-			abtp = parType[0]->aux.v.type;
-			selfMatch = DaoType_MatchValue2( abtp, *obj, defs );
-			if( is_virtual && selfMatch == 0 && obj->t == DAO_OBJECT ){
-				DValue value = *obj;
-				value.v.object = value.v.object->that;
-				selfMatch = DaoType_MatchValue2( abtp, value, defs );
-			}
-			if( selfMatch ){
-				parpass[0] = selfMatch;
-				selfChecked = 1;
-			}
-		}
 		/*
-		   if( strcmp( rout->routName->mbs, "expand" ) ==0 )
-		   printf( "%i, %p, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout, rout->routType->name->mbs, npar, ndef, selfChecked );
+		   printf( "%p %s %p %s\n", tp->aux.v.p, tp->name->mbs, t->aux.v.p, t->name->mbs );
+		   printf( "%i:  %i\n", ito, parpass[ito] );
 		 */
-		sum = 0;
-		if( (npar | ndef) ==0 ){
-			if( max < 1 ){
-				max = selfMatch + 1;
-				best = i;
-			}
-			sum = selfMatch + 1;
-			goto NextRoutine;
-		}
-		if( npar > ndef ) goto NextRoutine;
-		for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
-		for(ifrom=0; ifrom<npar; ifrom++){
-			DValue val = *dpar[ifrom];
-			ito = ifrom + selfChecked;
-			if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ){
-				for(; ifrom<npar; ifrom++) parpass[ifrom+selfChecked] = 1;
-				break;
-			}
-			if( val.t == DAO_PAR_NAMED ){
-				DaoNameValue *nameva = val.v.nameva;
-				val = nameva->value;
-				node = DMap_Find( mapNames, nameva->name );
-				if( node == NULL ) goto NextRoutine;
-				ito = node->value.pInt;
-			}
-			if( ito >= ndef )  goto NextRoutine;
-			abtp = parType[ito]->aux.v.type; /* must be named */
-			parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
-			if( is_virtual && ifrom == 0 && parpass[ito] == 0 && val.t == DAO_OBJECT ){
-				val.v.object = val.v.object->that;
-				parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
-			}
-			/*
-			   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->mbs );
-			 */
-			if( parpass[ito] ==0 ) goto NextRoutine;
-		}
-		for(ito=0; ito<ndef; ito++){
-			m = parType[ito]->tid;
-			if( m == DAO_PAR_VALIST ) break;
-			if( parpass[ito] ) continue;
-			if( m != DAO_PAR_DEFAULT ) goto NextRoutine;
-			parpass[ito] = 1;
-		}
-		sum = selfMatch;
-		for( j=selfChecked; j<ndef; j++ ) sum += parpass[j];
-		if( npar ==0 && ( ndef==0 || parType[0]->tid == DAO_PAR_VALIST ) ) sum = selfMatch + 1;
-		match = sum / (ndef + 1.0);
-		if( match > max ){
-			max = match;
-			best = i;
-		}
-NextRoutine:
-		i ++;
+
+		if( match == 0 ) goto NextDecorator;
+		sum2 += match;
+		parpass[k] = 1;
+		k += 1;
 	}
-	/*
-	   if( strcmp( self->routName->mbs, "expand" ) ==0 )
-	   printf("best = %i\n", best);
-	 */
-	if( defs ) DMap_Delete( defs );
-	if( best < 0 ) return NULL;
-	routine = routTable->items.pRout[best];
-	if( routine->type != DAO_ROUTINE || routine->specialized == NULL )
-		return (DRoutine*)routine;
-	routine = (DaoRoutine*) DRoutine_GetOverLoadExt( routine->specialized, NULL, obj, p, n, code );
-	if( routine ) return (DRoutine*) routine;
-	return (DRoutine*) routTable->items.pBase[best];
+	for(j=1; j<nested->size; j++){
+		k = types[j]->tid;
+		if( k == DAO_PAR_VALIST ) break;
+		if( parpass[j] ) continue;
+		if( k != DAO_PAR_DEFAULT ) goto NextDecorator;
+		parpass[j] = 1;
+		sum2 += 1;
+	}
+	sum = sum / (rout->routType->nested->size + 1) + sum2 / nested->size;
+	return sum;
+NextDecorator:
+	return 0;
 }
 static DaoRoutine* DaoRoutine_GetDecorator( DArray *routTable, DValue *p[], int n )
 {
@@ -747,53 +561,6 @@ NextDecorator:
 	if( defs ) DMap_Delete( defs );
 	return best;
 }
-DRoutine* DRoutine_GetOverLoad( DRoutine *self, DValue *obj, DValue *p[], int n, int cm )
-{
-	DValue value = daoNullValue;
-	DaoClass *filter, *klass = NULL;
-	DaoRoutine *rout;
-	DRoutine *rout2;
-	int code = cm & 0xffff;
-	int mode = cm >> 16;
-	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
-
-#if 0
-	rout2 = DaoMetaRoutine_Lookup( self->metaRoutine, obj, p, n, mcall ); // testing
-	if( rout2 ) printf( "Lookup: %s\n", rout2->routType->name->mbs );
-#endif
-
-	if( self->routType->name->mbs[0] == '@' )
-		self = (DRoutine*) DaoRoutine_GetDecorator( self->routTable, p, n );
-	else
-		self = DRoutine_GetOverLoadExt( self->routTable, NULL, obj, p, n, code );
-	if( self ==NULL || (mode & DAO_CALL_NOVIRT) ) return self;
-	if( !(self->attribs & DAO_ROUT_VIRTUAL) ) return self;
-	if( self->tidHost != DAO_OBJECT ) return self;
-	rout = (DaoRoutine*) self;
-
-	if( obj && obj->t == DAO_OBJECT ){
-		klass = obj->v.object->that->myClass;
-	}else if( mcall && n && p[0]->t == DAO_OBJECT ){
-		klass = p[0]->v.object->that->myClass;
-	}
-
-	/* when,
-	 *   Base::VirtMeth();
-	 * is called in a "Sub" class method, the rout->routHost->aux.v.klass
-	 * will be "Base", but the obj.v.object->myClass will be "Sub". */
-	filter = rout->routHost->aux.v.klass;
-	/* when called with scope resolution operator ::, they are always the same.  */
-	if( klass == NULL || klass == filter ) return self;
-	if( DaoClass_ChildOf( klass, (DaoBase*) filter ) ==0 ) return self;
-	DaoClass_GetData( klass, self->routName, & value, klass, NULL );
-	if( value.t == DAO_ROUTINE ){
-		rout2 = (DRoutine*) value.v.routine;
-		rout2 = DRoutine_GetOverLoadExt( rout2->routTable, filter, obj, p, n, code );
-		/* if( rout2 ) printf( "overload: %s\n", rout2->routType->name->mbs ); */
-		if( rout2 ) return (DRoutine*) rout2;
-	}
-	return self;
-}
 int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 {
 	DaoType *tp, *routype = routine->routType;
@@ -816,8 +583,7 @@ int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], int np, int code )
 {
 	ullong_t passed = 0;
-	int mcall = code == DVM_MCALL || code == DVM_MCALL_TC;
-	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
+	int mcall = code == DVM_MCALL;
 	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	int npar = np;
 	int ifrom, ito;
@@ -849,7 +615,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		}else{
 			DValue o = *obj;
 			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				if( is_virtual ) o.v.object = o.v.object->that; /* for virtual method call */
+				o.v.object = o.v.object->that; /* for virtual method call */
 				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
 				o.t = o.v.p ? o.v.p->type : 0;
 			}
@@ -894,7 +660,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 				continue;
 			}
 		}
-		if( is_virtual && need_self && ifrom ==0 && val2.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
+		if( need_self && ifrom ==0 && val2.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
 			val2.v.object = val2.v.object->that; /* for virtual method call */
 			val2.v.p = DaoObject_MapThisObject( val2.v.object, tp );
 			if( val2.v.p == NULL ) return 0;
@@ -902,63 +668,6 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 		if( DValue_Move2( val2, recv[ito], tp ) ==0 ) return 0;
 	}
 	if( DRoutine_PassDefault( routine, recv, passed ) == 0) return 0;
-	return 1 + npar + selfChecked;
-}
-int DRoutine_FastPassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue *p[], int np, int code )
-{
-	int npar = np;
-	int ndef = routine->parCount;
-	int mcall = code == DVM_MCALL_TC;
-	int is_virtual = routine->attribs & DAO_ROUT_VIRTUAL;
-	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
-	int ifrom, ito;
-	int selfChecked = 0;
-	DaoType *routype = routine->routType;
-	DaoType *tp, **types = routype->nested->items.pType;
-
-	if( mcall && ! need_self ){
-		npar --;
-		p ++;
-	}else if( obj && obj->t && need_self && ! mcall ){
-		/* class DaoClass : CppClass{ cppmethod(); } */
-		tp = types[0]->aux.v.type;
-		if( obj->t < DAO_ARRAY ){
-			if( tp == NULL || DaoType_MatchValue( tp, *obj, NULL ) == DAO_MT_EQ ){
-				recv[0] = obj;
-				selfChecked = 1;
-			}
-		}else{
-			DValue o = *obj;
-			if( o.t == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				if( is_virtual ) o.v.object = o.v.object->that; /* for virtual method call */
-				o.v.p = DaoObject_MapThisObject( o.v.object, tp );
-				o.t = o.v.p ? o.v.p->type : 0;
-			}
-			if( DValue_Move2( o, recv[0], tp ) ) selfChecked = 1;
-		}
-	}
-	/*
-	   printf( "rout = %s; ndef = %i; npar = %i, %i\n", routine->routType->name->mbs, ndef, npar, selfChecked );
-	 */
-	if( (npar|ndef) ==0 ) return 1;
-	for(ifrom=0; ifrom<npar; ifrom++){
-		DValue *val = p[ifrom];
-		ito = ifrom + selfChecked;
-		tp = types[ito]->aux.v.type;
-		if( val->mode == DAO_REFER_PARAM ){ /* self parameter */
-			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
-				recv[ito] = val;
-				continue;
-			}
-		}
-#if 0
-		printf( "ip = %i\n", ip );
-		DaoType *tp = DaoNameSpace_GetTypeV( routine->nameSpace, *pv );
-		printf( "%s\n", parType[ip]->aux.v.type->name->mbs );
-		printf( "%s\n", tp->name->mbs );
-#endif
-		if( ! DValue_Move2( *val, recv[ito], tp ) ) return 0;
-	}
 	return 1 + npar + selfChecked;
 }
 
@@ -973,7 +682,6 @@ DaoRoutine* DaoRoutine_New()
 	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof( DaoRoutine ) );
 	DaoBase_Init( self, DAO_ROUTINE );
 	DRoutine_Init( (DRoutine*)self );
-	DRoutine_AddOverLoad( (DRoutine*)self, (DRoutine*)self );
 	self->source = NULL;
 	self->original = NULL;
 	self->specialized = NULL;
@@ -984,7 +692,7 @@ DaoRoutine* DaoRoutine_New()
 	self->annotCodes = DArray_New(D_VMCODE);
 	self->localVarType = DMap_New(0,0);
 	self->abstypes = DMap_New(D_STRING,0);
-	self->bodyStart = self->bodyEnd = -1;
+	self->bodyStart = self->bodyEnd = 0;
 	self->jitData = NULL;
 	DString_SetSharing( self->regMode, 0 );
 	return self;
@@ -993,7 +701,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 {
 	DNode *n;
 	DRoutine_DeleteFields( (DRoutine*)self );
-	if( self->minimal ==1 ){
+	if( self->type != DAO_ROUTINE ){ /* maybe DAO_ABROUTINE */
 		DaoLateDeleter_Push( self );
 		return;
 	}
@@ -1002,10 +710,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	if( self->upRoutine ) GC_DecRC( self->upRoutine );
 	if( self->upContext ) GC_DecRC( self->upContext );
 	if( self->original ) GC_DecRC( self->original );
-	if( self->specialized ){
-		GC_DecRCs( self->specialized );
-		DArray_Delete( self->specialized );
-	}
+	if( self->specialized ) GC_DecRC( self->specialized );
 	GC_DecRCs( self->regType );
 	DaoVmcArray_Delete( self->vmCodes );
 	DString_Delete( self->regMode );
@@ -1022,7 +727,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 void DaoParser_ClearCodes( DaoParser *self );
 void DaoRoutine_Compile( DaoRoutine *self )
 {
-	if( self->minimal ==1 ) return;
+	if( self->type != DAO_ROUTINE ) return;
 	/* XXX thread safety? */
 	if( self->parser && self->parser->defined ){
 		if( self->parser->parsed == 0 ){
@@ -1070,19 +775,17 @@ void DaoRoutine_Compile( DaoRoutine *self )
 	}
 }
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int overload )
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self )
 {
 	DaoRoutine *copy = NULL;
-	if( self->minimal ){
+	if( self->type != DAO_ROUTINE ){ /* maybe DAO_ABROUTINE */
 		DRoutine *copy2 = DRoutine_New();
 		DRoutine_CopyFields( (DRoutine*) copy2, (DRoutine*) self );
-		if( overload ) DRoutine_AddOverLoad( (DRoutine*) self, (DRoutine*) copy2 );
 		return (DaoRoutine*) copy2;
 	}
 	copy = DaoRoutine_New();
 	DaoRoutine_Compile( self );
 	DRoutine_CopyFields( (DRoutine*) copy, (DRoutine*) self );
-	if( overload ) DRoutine_AddOverLoad( (DRoutine*) self, (DRoutine*) copy );
 	DaoRoutine_CopyFields( copy, self );
 	return copy;
 }
@@ -1092,7 +795,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	DaoRoutine_Compile( other );
 	DVarray_Assign( self->routConsts, other->routConsts );
 	for(i=0; i<other->routConsts->size; i++) DValue_MarkConst( self->routConsts->data + i );
-	if( other->minimal ==1 ) return;
+	if( other->type != DAO_ROUTINE ) return;
 	DMap_Delete( self->localVarType );
 	DArray_Delete( self->annotCodes );
 	self->source = other->source;
@@ -1110,9 +813,10 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	self->bodyEnd = other->bodyEnd;
 	DString_Assign( self->regMode, other->regMode );
 }
+#if 0
 static DaoRoutine* DaoRoutine_Copy2( DaoRoutine *self )
 {
-	DaoRoutine *copy = DaoRoutine_Copy( self, 0 );
+	DaoRoutine *copy = DaoRoutine_Copy( self );
 	if( self->specialized == NULL ) self->specialized = DArray_New(0);
 	GC_IncRC( copy );
 	GC_IncRC( self );
@@ -1120,6 +824,7 @@ static DaoRoutine* DaoRoutine_Copy2( DaoRoutine *self )
 	copy->original = self;
 	return copy;
 }
+#endif
 
 int DaoRoutine_InferTypes( DaoRoutine *self );
 extern void DaoRoutine_JitCompile( DaoRoutine *self );
@@ -1142,7 +847,6 @@ int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes )
 	DaoVmcArray_Assign( self->vmCodes, vmCodes );
 	return DaoRoutine_InferTypes( self );
 }
-DaoFunction* DaoFunction_Copy( DaoFunction *self, int overload );
 
 static DaoType* DaoType_DeepItemType( DaoType *self )
 {
@@ -1289,10 +993,6 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			InsertChecking( self, vmc->c, checks );
 			break;
 		case DVM_CALL : case DVM_MCALL :
-		case DVM_CALL_CF :
-		case DVM_CALL_CMF :
-		case DVM_CALL_TC :
-		case DVM_MCALL_TC :
 			k = vmc->b & 0xff;
 			for(j=0; j<=k; j++) SetupOperand( self, vmc->a+j, checks );
 			ClearChecking( self, checks );
@@ -1409,7 +1109,6 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_GETF_T :
 		case DVM_GETF_TI : case DVM_GETF_TF :
 		case DVM_GETF_TD : case DVM_GETF_TS :
-		case DVM_GETF_M :
 		case DVM_GETF_KC : case DVM_GETF_KG :
 		case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
 		case DVM_GETF_KCI : case DVM_GETF_KGI :
@@ -1806,8 +1505,6 @@ static const char vmcTyping[][7] =
 	{ OT_ABC,  0,  0,  0, -1,  -1,           -1 } , /* DVM_GETI_AM */
 	{ OT_ABC,  0,  0,  0, -1, 'S',           -1 } , /* DVM_SETI_AM */
 
-	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF_M */
-
 	{ OT_AIC,  0, -1,  0, 'C',  -1,  DAO_CLASS  } , /* DVM_GETF_KC */
 	{ OT_AIC,  0, -1,  0, 'G',  -1,  DAO_CLASS  } , /* DVM_GETF_KG */
 	{ OT_AIC,  0, -1,  0, 'C',  -1,  DAO_OBJECT } , /* DVM_GETF_OC */
@@ -1865,11 +1562,6 @@ static const char vmcTyping[][7] =
 	{ OT_AOO, 'F', -1, -1, -1, -1,  -1 } , /* DVM_TEST_F */
 	{ OT_AOO, 'D', -1, -1, -1, -1,  -1 } , /* DVM_TEST_D */
 
-	{ OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_CF */
-	{ OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_CMF */
-	{ OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_CALL_TC */
-	{ OT_EXP, 'A',  0, -1, -1, 'M', -1 } , /* DVM_MCALL_TC */
-
 	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SAFE_GOTO */
 
 	{ OT_OOO, -1, -1, -1, -1, -1, -1 } /* NULL */
@@ -1885,7 +1577,6 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	DRoutine *rout = NULL;
 	DRoutine *rout2 = NULL;
 	DNode *node;
-	int min=0, spec=0;
 	int opa = vmc->a;
 	int opb = vmc->b;
 	int opc = vmc->c;
@@ -1905,7 +1596,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 			rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
 		}
 		if( rout ){
-			rout = MatchByParamType( rout, NULL, NULL, ts+1, 2, DVM_CALL, &min, &spec );
+			rout = MatchByParamType( (DaoBase*) rout, NULL, ts+1, 2, DVM_CALL );
 			/* if the operation is used in the overloaded operator,
 			   do operation by address */
 			if( boolop && rout == (DRoutine*) self ) return inumt;
@@ -1923,13 +1614,13 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	}
 	if( rout ){
 		rout2 = rout;
-		rout = MatchByParamType( rout2, NULL, NULL, ts+1, 2, DVM_CALL, &min, &spec );
+		rout = MatchByParamType( (DaoBase*) rout2, NULL, ts+1, 2, DVM_CALL );
 		/* if the operation is used in the overloaded operator,
 		   do operation by address */
 		if( boolop && rout == (DRoutine*) self ) return inumt;
 		if( rout ) ct = rout->routType->aux.v.type;
 		if( rout == NULL && ct ){
-			rout = MatchByParamType( rout2, NULL, NULL, ts, 3, DVM_CALL, &min, &spec );
+			rout = MatchByParamType( (DaoBase*) rout2, NULL, ts, 3, DVM_CALL );
 		}
 	}else{
 		if( bt->tid == DAO_INTERFACE ){
@@ -1942,13 +1633,13 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		}
 		if( rout == NULL ) return NULL;
 		rout2 = rout;
-		rout = MatchByParamType( rout2, NULL, NULL, ts+1, 2, DVM_CALL, &min, &spec );
+		rout = MatchByParamType( (DaoBase*) rout2, NULL, ts+1, 2, DVM_CALL );
 		/* if the operation is used in the overloaded operator,
 		   do operation by address */
 		if( boolop && rout == (DRoutine*) self ) return inumt;
 		if( rout ) ct = rout->routType->aux.v.type;
 		if( rout == NULL && ct ){
-			rout = MatchByParamType( rout2, NULL, NULL, ts, 3, DVM_CALL, &min, &spec );
+			rout = MatchByParamType( (DaoBase*) rout2, NULL, ts, 3, DVM_CALL );
 		}
 		if( rout == NULL ) return NULL;
 	}
@@ -1977,11 +1668,12 @@ static DString* AppendError( DArray *errors, DRoutine *rout, size_t type )
 	DString_AppendMBS( s, " --- \" " );
 	return s;
 }
-static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *selftype,
-		DValue *csts, DaoType *ts[], int np, int code, DArray *errors )
+void DRoutine_CheckError( DRoutine *self, DaoType *selftype,
+		DaoType *ts[], int np, int code, DArray *errors )
 {
+	DaoNameSpace *ns = self->nameSpace;
 	DaoType *routType = self->routType;
-	DaoStream *stream = self->nameSpace->vmSpace->stdStream;
+	DaoStream *stream = ns->vmSpace->stdStream;
 	int i, j, ndef = 0;
 	int ifrom, ito;
 	int parpass[DAO_MAX_PARAM];
@@ -1992,13 +1684,6 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 	DNode *node;
 	DMap *defs = DMap_New(0,0);
 	DaoType  *abtp, **partypes = routType->nested->items.pType;
-	DaoType **tps = ts;
-	DaoType *tbuf[DAO_MAX_PARAM];
-
-	if( ts == NULL && csts ){
-		tps = ts = tbuf;
-		for(i=0; i<np; i++) tbuf[i] = DaoNameSpace_GetTypeV( ns, csts[i] );
-	}
 
 	if( routType->nested ){
 		ndef = routType->nested->size;
@@ -2008,22 +1693,20 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 		}
 	}
 
-	/*
-	   printf( "=====================================\n" );
-	   printf( "%s\n", self->routName->mbs );
-	   for( j=0; j<npar; j++){
-	   DaoType *tp = tps[j];
-	   if( tp != NULL ) printf( "tp[ %i ]: %s\n", j, tp->name->mbs );
-	   }
-	   printf( "%s %i %i\n", routType->name->mbs, ndef, npar );
-	 */
+#if 0
+	printf( "=====================================\n" );
+	printf( "%s\n", self->routName->mbs );
+	for( j=0; j<npar; j++){
+		DaoType *tp = ts[j];
+		if( tp != NULL ) printf( "tp[ %i ]: %s\n", j, tp->name->mbs );
+	}
+	printf( "%s %i %i\n", routType->name->mbs, ndef, npar );
+#endif
 
-	if( (code == DVM_MCALL  || code == DVM_MCALL_TC)
-			&& ! ( routType->attrib & DAO_TYPE_SELF ) ){
+	if( code == DVM_MCALL && ! ( routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
-		tps ++;
-	}else if( selftype && ( routType->attrib & DAO_TYPE_SELF)
-			&& code != DVM_MCALL && code != DVM_MCALL_TC ){
+		ts ++;
+	}else if( selftype && ( routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		abtp = partypes[0]->aux.v.type;
 		selfMatch = DaoType_MatchTo( selftype, abtp, defs );
@@ -2041,14 +1724,12 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 
 	for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
 	for(ifrom=0; ifrom<npar; ifrom++){
-		DaoType *tp = tps[ifrom];
+		DaoType *tp = ts[ifrom];
 		ito = ifrom + selfChecked;
 		if( ito < ndef && partypes[ito]->tid == DAO_PAR_VALIST ){
 			for(; ifrom<npar; ifrom++) parpass[ifrom+selfChecked] = 1;
 			break;
 		}
-		cs = daoNullValue;
-		if( csts && csts[ifrom].t ==0 ) cs = csts[ifrom];
 		if( tp == NULL ){
 			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
 			DString_AppendMBS( s, "unknown parameter type \";\n" );
@@ -2076,10 +1757,6 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 		}
 		abtp = routType->nested->items.pType[ito];
 		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = abtp->aux.v.type;
-		if( abtp->tid ==DAO_ROUTINE && ( cs.t ==DAO_ROUTINE || cs.t ==DAO_FUNCTION ) ){
-			rout = DRoutine_GetOverLoadByType( (DRoutine*)cs.v.p, abtp );
-			tp = rout ? rout->routType : NULL;
-		}
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 #if 0
@@ -2096,7 +1773,7 @@ static void DRoutine_CheckError( DRoutine *self, DaoNameSpace *ns, DaoType *self
 		}
 		if( parpass[ito] == 0 ){
 			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
-			tp = tps[ifrom];
+			tp = ts[ifrom];
 			abtp = routType->nested->items.pType[ito];
 			DString_AppendChar( s, '\'' );
 			DString_Append( s, tp->name );
@@ -2125,22 +1802,31 @@ FinishOK:
 FinishError:
 	DMap_Delete( defs );
 }
-void DRoutine_ShowError( DRoutine *self, DaoType *selftype,
-		DValue *csts, DaoType *ts[], int np, int code, DArray *errors )
+void DaoMetaRoutine_CheckError( DaoMetaRoutine *self, DaoType *selftype,
+		DaoType *ts[], int np, int code, DArray *errors )
 {
 	int i;
 	DRoutine *rout;
-
-	i = 0;
-	while( i<self->routTable->size ){
-		rout = (DRoutine*) self->routTable->items.pBase[i];
+	for(i=0; i<self->routines->size; i++){
+		rout = (DRoutine*) self->routines->items.pBase[i];
 		/*
 		   printf( "=====================================\n" );
 		   printf("ovld %i, %p %s : %s\n", i, rout, self->routName->mbs, rout->routType->name->mbs);
 		 */
-		DRoutine_CheckError( rout, self->nameSpace, selftype, csts, ts, np, code, errors );
-		i ++;
+		DRoutine_CheckError( rout, selftype, ts, np, code, errors );
 	}
+}
+DRoutine* DaoBase_Check( DaoBase *self, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
+{
+	DRoutine *rout = MatchByParamType( self, selftype, ts, np, code );
+	if( self->type == DAO_METAROUTINE ){ /* parameters checked */
+		DaoMetaRoutine *meta = (DaoMetaRoutine*)self;
+		if( rout == NULL ) DaoMetaRoutine_CheckError( meta, selftype, ts, np, code, errors );
+	}else if( self->type == DAO_ROUTINE || self->type == DAO_FUNCTION ){
+		DRoutine *rout2 = (DRoutine*) self;
+		if( rout == NULL ) DRoutine_CheckError( rout2, selftype, ts, np, code, errors );
+	}
+	return rout;
 }
 
 void DaoPrintCallError( DArray *errors, DaoStream *stdio )
@@ -2242,6 +1928,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	int TT0, TT1, TT2, TT3, TT4, TT5, TT6;
 	int ec = 0, ec_general = 0, ec_specific = 0;
 	int annot_first = 0, annot_last = 0, tid_target = 0;
+	int tidHost = self->routHost ? self->routHost->tid : 0;
 	ushort_t code;
 	ushort_t opa, opb, opc;
 	DaoNameSpace *ns = self->nameSpace;
@@ -2257,8 +1944,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoVmCodeX *vmc;
 	DaoVmCodeX  vmc2;
 	DaoStream  *stdio = ns->vmSpace->stdStream;
+	DaoMetaRoutine *metaRoutine = NULL;
 	DRoutine *rout = NULL, *rout2;
-	DaoClass *hostClass = self->tidHost==DAO_OBJECT ? self->routHost->aux.v.klass:NULL;
+	DaoBase *meth = NULL;
+	DaoClass *hostClass = tidHost==DAO_OBJECT ? self->routHost->aux.v.klass:NULL;
 	DaoClass *klass;
 	DMap       *tmp;
 	DNode      *node;
@@ -2703,47 +2392,34 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}else if( bt->tid != DAO_UDF && bt->tid != DAO_ANY ){
 						goto InvIndex;
 					}
-				}else if( at->tid == DAO_OBJECT && (rout = (DRoutine*) DaoClass_FindOperator( at->aux.v.klass, "[]", hostClass )) ){
-					rout2 = rout;
-					rout = MatchByParamType( rout, at, NULL, & bt, 1, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, at, NULL, & bt, 1, DVM_CALL, errors );
-						goto InvIndex;
-					}
+				}else if( at->tid == DAO_OBJECT && (meth = DaoClass_FindOperator( at->aux.v.klass, "[]", hostClass )) ){
+					rout = DaoBase_Check( meth, at, & bt, 1, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					ct = rout->routType->aux.v.type;
 				}else if( at->tid == DAO_CDATA ){
 					DString_SetMBS( mbs, "[]" );
-					rout2 = rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
-					if( rout == NULL ) goto WrongContainer;
-					rout = MatchByParamType( rout, at, NULL, & bt, 1, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, at, NULL, & bt, 1, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					meth = DaoFindFunction( at->typer, mbs );
+					if( meth == NULL ) goto WrongContainer;
+					rout = DaoBase_Check( meth, at, & bt, 1, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					ct = rout->routType->aux.v.type;
 				}else if( at->tid == DAO_INTERFACE ){
 					DString_SetMBS( mbs, "[]" );
 					node = DMap_Find( at->aux.v.inter->methods, mbs );
 					if( node == NULL ) goto WrongContainer;
-					rout2 = rout = (DRoutine*)node->value.pBase;
-					rout = MatchByParamType( rout, at, NULL, & bt, 1, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, at, NULL, & bt, 1, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					meth = node->value.pBase;
+					rout = DaoBase_Check( meth, at, & bt, 1, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					ct = rout->routType->aux.v.type;
 				}else if( at->tid == DAO_UDF || at->tid == DAO_ANY
 						|| at->tid == DAO_INITYPE ){
 					ct = udf;
 				}else if( at->typer ){
 					DString_SetMBS( mbs, "[]" );
-					rout2 = rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
-					if( rout == NULL ) goto WrongContainer;
-					rout = MatchByParamType( rout, at, NULL, & bt, 1, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, at, NULL, & bt, 1, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					meth = DaoFindFunction( at->typer, mbs );
+					if( meth == NULL ) goto WrongContainer;
+					rout = DaoBase_Check( meth, at, & bt, 1, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					ct = rout->routType->aux.v.type;
 				}else{
 					goto WrongContainer;
@@ -2766,7 +2442,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = at;
-				rout = NULL;
+				meth = NULL;
 				DString_SetMBS( mbs, "[]" );
 				if( opb == 0 ){
 					ct = at;
@@ -2799,27 +2475,23 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						goto InvKey;
 					}
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
-					rout = (DRoutine*) DaoClass_FindOperator( at->aux.v.klass, "[]", hostClass );
-					if( rout == NULL ) goto WrongContainer;
+					meth = DaoClass_FindOperator( at->aux.v.klass, "[]", hostClass );
+					if( meth == NULL ) goto WrongContainer;
 				}else if( at->tid == DAO_CDATA ){
-					rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
-					if( rout == NULL ) goto WrongContainer;
+					meth = DaoFindFunction( at->typer, mbs );
+					if( meth == NULL ) goto WrongContainer;
 				}else if( at->tid == DAO_INTERFACE ){
 					node = DMap_Find( at->aux.v.inter->methods, mbs );
 					if( node == NULL ) goto WrongContainer;
-					rout = (DRoutine*)node->value.pBase;
+					meth = node->value.pBase;
 				}else if( at->typer ){
-					rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
-					if( rout == NULL ) goto WrongContainer;
+					meth = DaoFindFunction( at->typer, mbs );
+					if( meth == NULL ) goto WrongContainer;
 				}
-				if( rout ){
-					rout2 = rout;
+				if( meth ){
 					/* TODO, self type for class? */
-					rout = MatchByParamType( rout, at, NULL, type+opa+1, opb, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, at, NULL, type+opa+1, opb, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					rout = DaoBase_Check( meth, at, & bt, 1, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					ct = rout->routType->aux.v.type;
 				}
 				UpdateType( opc, ct );
@@ -2863,12 +2535,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						DString_Append( mbs, str );
 						node = DMap_Find( at->aux.v.inter->methods, mbs );
 						if( node == NULL ) goto NotExist;
-						rout2 = rout = (DRoutine*)node->value.pBase;
-						rout = MatchByParamType( rout, at, NULL, & bt, 0, DVM_CALL, &min, &spec );
-						if( rout == NULL ){
-							DRoutine_ShowError( rout2, at, NULL, & bt, 0, DVM_CALL, errors );
-							goto NotMatch;
-						}
+						meth = node->value.pBase;
+						rout = DaoBase_Check( meth, at, & bt, 0, DVM_CALL, errors );
+						if( rout == NULL ) goto NotExist;
 						ct = rout->routType->aux.v.type;
 					}
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
@@ -2883,12 +2552,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						if( j==0 && tp == NULL ) ct = DaoNameSpace_GetTypeV( ns, val );
 						if( val.t && ct && ct->tid == DAO_ROUTINE ){
 							rout2 = rout = (DRoutine*) val.v.routine;
-							if( rout == NULL ) goto NotExist;
-							rout = MatchByParamType( rout, at, NULL, & bt, 0, DVM_CALL, &min, &spec );
-							if( rout == NULL ){
-								DRoutine_ShowError( rout2, at, NULL, & bt, 0, DVM_CALL, errors );
-								goto NotMatch;
-							}
+							if( val.v.p == NULL ) goto NotExist;
+							rout = DaoBase_Check( val.v.p, at, & bt, 0, DVM_CALL, errors );
+							if( rout == NULL ) goto NotMatch;
 							ct = rout->routType->aux.v.type;
 							getter = 1;
 							UpdateType( opc, ct );
@@ -2975,22 +2641,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}else if( at->typer ){
 				DaoFunction *func;
 				val = DaoFindValue( at->typer, str );
-				if( val.t == DAO_FUNCTION ){ /* turn off DVM_GETF_M XXX */
+				if( val.t == DAO_FUNCTION ){
 					DaoFunction *func = val.v.func;
-					ct = func->routType; /*XXX*/
-					if( typed_code ){
-#if 0
-						if( 0 ){
-							vmc->code = DVM_GETF_M;
-							for(j=0; j<at->typer->priv->methCount; j++){
-								if( at->typer->priv->methods[j] == func ){
-									vmc->b = j;
-									break;
-								}
-							}
-						}
-#endif
-					}
+					ct = func->routType;
 					csts[opc].v.func = func;
 					csts[opc].t = DAO_FUNCTION;
 				}else if( val.t ){
@@ -2999,13 +2652,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else{
 					DString_SetMBS( mbs, "." );
 					DString_Append( mbs, str );
-					rout2 = rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
-					if( rout == NULL ) goto NotExist;
-					rout = MatchByParamType( rout, at, NULL, & bt, 0, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, at, NULL, & bt, 0, DVM_CALL, errors );
-						goto NotMatch;
-					}
+					meth = DaoFindFunction( at->typer, mbs );
+					if( meth == NULL ) goto NotExist;
+					rout = DaoBase_Check( meth, at, & bt, 0, DVM_CALL, errors );
+					if( rout == NULL ) goto NotMatch;
 					ct = rout->routType->aux.v.type;
 				}
 				if( ct == NULL ) ct = udf;
@@ -3190,7 +2840,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					break;
 				case DAO_CLASS :
 				case DAO_OBJECT :
-					if( (rout=(DRoutine*) DaoClass_FindOperator( ct->aux.v.klass, "[]=", hostClass )) == NULL)
+					if( (meth=DaoClass_FindOperator( ct->aux.v.klass, "[]=", hostClass )) == NULL)
 						goto InvIndex;
 					ts[0] = bt;
 					ts[1] = at;
@@ -3201,17 +2851,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						ts[bt->nested->size] = at;
 						k = bt->nested->size + 1;
 					}
-					rout2 = rout;
-					rout = MatchByParamType( rout, ct, NULL, ts, k, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, ct, NULL, ts, k, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					rout = DaoBase_Check( meth, at, ts, k, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					break;
 				case DAO_CDATA :
 					DString_SetMBS( mbs, "[]=" );
-					rout2 = rout = (DRoutine*) DaoFindFunction( ct->typer, mbs );
-					if( rout == NULL ) goto InvIndex;
+					meth = DaoFindFunction( ct->typer, mbs );
+					if( meth == NULL ) goto InvIndex;
 					ts[0] = bt;
 					ts[1] = at;
 					k = 2;
@@ -3221,11 +2867,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						ts[bt->nested->size] = at;
 						k = bt->nested->size + 1;
 					}
-					rout = MatchByParamType( rout, ct, NULL, ts, k, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, ct, NULL, ts, k, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					rout = DaoBase_Check( meth, at, ts, k, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 					break;
 				default : break;
 				}
@@ -3246,7 +2889,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				container = ct;
 				itemvalue = at;
 				if( NoCheckingType( at ) || NoCheckingType( ct ) ) break;
-				rout = NULL;
+				meth = NULL;
 				DString_SetMBS( mbs, "[]=" );
 				if( ct->tid == DAO_ARRAY ){
 					/* TODO */
@@ -3268,29 +2911,25 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					}
 					AssertTypeMatching( at, t1, defs, 0);
 				}else if( ct->tid == DAO_CLASS || ct->tid == DAO_OBJECT ){
-					rout = (DRoutine*) DaoClass_FindOperator( ct->aux.v.klass, "[]=", hostClass );
-					if( rout == NULL ) goto WrongContainer;
+					meth = DaoClass_FindOperator( ct->aux.v.klass, "[]=", hostClass );
+					if( meth == NULL ) goto WrongContainer;
 				}else if( ct->tid == DAO_CDATA ){
-					rout = (DRoutine*) DaoFindFunction( ct->typer, mbs );
-					if( rout == NULL ) goto WrongContainer;
+					meth = DaoFindFunction( ct->typer, mbs );
+					if( meth == NULL ) goto WrongContainer;
 				}else if( ct->tid == DAO_INTERFACE ){
 					node = DMap_Find( ct->aux.v.inter->methods, mbs );
 					if( node == NULL ) goto WrongContainer;
-					rout = (DRoutine*)node->value.pBase;
+					meth = node->value.pBase;
 				}else if( ct->typer ){
-					rout = (DRoutine*) DaoFindFunction( ct->typer, mbs );
-					if( rout == NULL ) goto WrongContainer;
+					meth = DaoFindFunction( ct->typer, mbs );
+					if( meth == NULL ) goto WrongContainer;
 				}
-				if( rout ){
-					rout2 = rout;
+				if( meth ){
 					memcpy( ts, type+opc+1, opb*sizeof(DaoType*) );
 					ts[opb] = at;
 					/* TODO, self type for class? */
-					rout = MatchByParamType( rout, ct, NULL, ts, opb+1, DVM_CALL, &min, &spec );
-					if( rout == NULL ){
-						DRoutine_ShowError( rout2, ct, NULL, ts, opb+1, DVM_CALL, errors );
-						goto InvIndex;
-					}
+					rout = DaoBase_Check( meth, at, ts, opb+1, DVM_CALL, errors );
+					if( rout == NULL ) goto InvIndex;
 				}
 				break;
 			}
@@ -3349,15 +2988,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							DaoClass_GetData( klass, mbs, & val, hostClass, NULL );
 							if( j==0 && tp == NULL ) ct = DaoNameSpace_GetTypeV( ns, val );
 							if(  ct && ct->tid == DAO_ROUTINE ){
-								rout2 = rout = (DRoutine*) val.v.routine;
+								meth = val.v.p;
 								setter = 1;
 								ts[0] = type[opc];
 								ts[1] = at;
-								rout = MatchByParamType( rout, ct, NULL, ts, 2, DVM_MCALL, &min, &spec );
-								if( rout == NULL ){
-									DRoutine_ShowError( rout2, ct, NULL, ts, 2, DVM_MCALL, errors );
-									goto NotMatch;
-								}
+								rout = DaoBase_Check( meth, at, ts, 2, DVM_MCALL, errors );
+								if( rout == NULL ) goto NotMatch;
 							}
 						}
 						if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
@@ -3439,15 +3075,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
 						DString_AppendMBS( mbs, "=" );
-						rout2 = rout = (DRoutine*) DaoFindFunction( ct->typer, mbs );
-						if( rout == NULL ) goto NotMatch;
+						meth = DaoFindFunction( ct->typer, mbs );
+						if( meth == NULL ) goto NotMatch;
 						ts[0] = ct;
 						ts[1] = at;
-						rout = MatchByParamType( rout, ct, NULL, ts, 2, DVM_MCALL, &min, &spec );
-						if( rout == NULL ){
-							DRoutine_ShowError( rout2, ct, NULL, ts, 2, DVM_MCALL, errors );
-							goto NotMatch;
-						}
+						rout = DaoBase_Check( meth, at, ts, 2, DVM_MCALL, errors );
+						if( rout == NULL ) goto NotMatch;
 						break;
 					}
 				default: goto InvOper;
@@ -3516,21 +3149,17 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				   printf( "%i  %i\n", DAO_MT_SUB, k );
 				 */
 
-				if( csts[opa].t == DAO_ROUTINE && type[opc]
-						&& ( type[opc]->tid ==DAO_ROUTINE || type[opc]->tid ==DAO_FUNCTION ) ){
+				if( csts[opa].t == DAO_METAROUTINE && type[opc] && type[opc]->tid ==DAO_ROUTINE){
 					/* a : routine<a:number,...> = overloaded_function; */
-					rout = DRoutine_GetOverLoadByType( (DRoutine*)csts[opa].v.routine, type[opc] );
-					if( rout == NULL ) goto NotMatch;
+					//XXX rout = DaoMetaRoutine_GetByType( (DRoutine*)csts[opa].v.routine, type[opc] );
+					//if( rout == NULL ) goto NotMatch;
 				}else if( at->tid ==DAO_UDF || at->tid ==DAO_ANY ){
 					/* less strict checking */
 				}else if( code == DVM_MOVE && at != ct && ct->tid == DAO_OBJECT ){
-					rout = rout2 = (DRoutine*)DaoClass_FindOperator( ct->aux.v.klass, "=", hostClass );
-					if( rout ){
-						rout = MatchByParamType( rout, ct, NULL, & at, 1, DVM_CALL, &min, &spec );
-						if( rout == NULL ){
-							DRoutine_ShowError( rout2, at, NULL, & bt, 1, DVM_CALL, errors );
-							goto NotMatch;
-						}
+					meth = DaoClass_FindOperator( ct->aux.v.klass, "=", hostClass );
+					if( meth ){
+						rout = DaoBase_Check( meth, ct, & at, 1, DVM_CALL, errors );
+						if( rout == NULL ) goto NotMatch;
 					}else if( k ==0 ){
 						ErrorTypeNotMatching( 0, at, type[opc] );
 					}
@@ -4191,7 +3820,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				init[opc] = 1;
 				DString_SetMBS( mbs, "__for_iterator__" );
 				ts[0] = dao_type_for_iterator;
-				rout = NULL;
+				meth = NULL;
 				type_source = at;
 				switch( at->tid ){
 				case DAO_CLASS :
@@ -4205,24 +3834,20 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( k == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
 					DaoClass_GetData( klass, mbs, & val, hostClass, NULL );
 					if( val.t != DAO_ROUTINE && val.t != DAO_FUNCTION ) goto NotMatch;
-					rout = (DRoutine*)val.v.routine;
+					meth = val.v.p;
 					break;
 				case DAO_INTERFACE :
 					node = DMap_Find( at->aux.v.inter->methods, mbs );
 					if( node == NULL ) goto NotExist;
-					rout = (DRoutine*)node->value.pBase;
+					meth = node->value.pBase;
 					break;
 				default :
-					if( at->typer ) rout = (DRoutine*) DaoFindFunction( at->typer, mbs );
+					if( at->typer ) meth = DaoFindFunction( at->typer, mbs );
 					break;
 				}
+				if( meth == NULL ) goto NotMatch;
+				rout = DaoBase_Check( meth, at, ts, 1, DVM_MCALL, errors );
 				if( rout == NULL ) goto NotMatch;
-				rout2 = rout;
-				rout = MatchByParamType( rout, at, NULL, ts, 1, DVM_CALL, &min, &spec );
-				if( rout == NULL ){
-					DRoutine_ShowError( rout2, at, NULL, ts, 1, DVM_CALL, errors );
-					goto NotMatch;
-				}
 				ct = dao_type_for_iterator;
 				UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
@@ -4367,7 +3992,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				at = type[opa];
 				bt = ct = NULL;
-				if( code == DVM_CALL && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
+				if( code == DVM_CALL && tidHost == DAO_OBJECT ) bt = hostClass->objType;
 				/*
 				   DaoVmCodeX_Print( *vmc, NULL );
 				   printf( "call: %s\n", type[opa]->name->mbs );
@@ -4376,13 +4001,17 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				ct = type[opa];
 				rout = NULL;
 				if( at->tid == DAO_CLASS ){
-					rout = (DRoutine*) at->aux.v.klass->classRoutine;
+					if( at->aux.v.klass->classRoutines->routines->size ){
+						rout = (DRoutine*) at->aux.v.klass->classRoutines;
+					}else{
+						rout = (DRoutine*) at->aux.v.klass->classRoutine;
+					}
 					ct = at->aux.v.klass->objType;
 				}else if( at->tid == DAO_CTYPE ){
 					val = DaoFindValue( at->typer, at->name );
-					if( val.t != DAO_FUNCTION ) goto ErrorTyping;
+					if( val.t < DAO_METAROUTINE || val.t > DAO_FUNCTION ) goto ErrorTyping;
 					rout = (DRoutine*) val.v.routine;
-				}else if( csts[opa].t == DAO_ROUTINE || csts[opa].t == DAO_FUNCTION ){
+				}else if( csts[opa].t >= DAO_METAROUTINE && csts[opa].t <= DAO_FUNCTION ){
 					rout = (DRoutine*) csts[opa].v.p;
 				}else if( at->tid == DAO_INITYPE || at->tid == DAO_FUNCURRY ){
 					UpdateType( opc, any );
@@ -4416,7 +4045,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( pp[k].t == DAO_ROUTINE ) DaoRoutine_Compile( pp[k].v.routine );
 				}
 				if( rout == NULL ){
-					if( DRoutine_CheckType( at, ns, bt, pp, tp, j, code, 0, &min, &spec ) ==0 ){
+					if( DRoutine_CheckType( at, ns, bt, tp, j, code, 0 ) ==0 ){
 						goto ErrorTyping;
 					}
 					if( at->name->mbs[0] == '@' ){
@@ -4426,22 +4055,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						AssertTypeMatching( ct, type[opc], defs, 0 );
 						break;
 					}
-					DRoutine_CheckType( at, ns, bt, pp, tp, j, code, 1, &min, &spec );
+					DRoutine_CheckType( at, ns, bt, tp, j, code, 1 );
 					ct = type[opa];
 				}else{
-					if( rout->type != DAO_ROUTINE && rout->type != DAO_FUNCTION )
-						goto ErrorTyping;
 					error = rout->routName;
-					rout2 = rout;
-					rout = MatchByParamType( rout, bt, pp, tp, j, code, &min, &spec );
-					if( rout == NULL && at->tid == DAO_CLASS && (j ==0 || (j == 1 && code == DVM_MCALL ) ) ){
-						/* default contstructor */
-						rout = (DRoutine*) at->aux.v.klass->classRoutine;
-					}
-					if( rout ==NULL ){
-						DRoutine_ShowError( rout2, bt, pp, tp, j, code, errors );
-						goto InvParam;
-					}
+					if( rout->type < DAO_METAROUTINE && rout->type > DAO_FUNCTION ) goto ErrorTyping;
+					rout = DaoBase_Check( (DaoBase*) rout, bt, tp, j, code, errors );
+					if( rout == NULL ) goto ErrorTyping;
 					if( rout->routName->mbs[0] == '@' ){
 						ct = tp[0];
 						if( pp[0].t == DAO_ROUTINE ) ct = pp[0].v.routine->routType;
@@ -4456,9 +4076,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					   printf( "CALL: rout = %s %s %i %i %i %i\n", rout->routName->mbs, rout->routType->name->mbs, min, DAO_MT_INIT, DAO_MT_UDF, spec );
 					 */
 					tt = rout->routType;
-					if( tt->aux.v.type == NULL 
-							|| DString_FindChar( tt->name, '@', 0 ) != MAXSIZE
-							|| DString_FindChar( tt->name, '?', 0 ) != MAXSIZE ){
+					if( tt->aux.v.type == NULL || (tt->attrib & DAO_TYPE_NOTDEF) ){
 						if( rout->type == DAO_ROUTINE && ((DaoRoutine*)rout)->parser ){
 							DaoRoutine_Compile( (DaoRoutine*) rout );
 						}
@@ -4466,6 +4084,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					DMap_Clear( defs2 );
 					DMap_Assign( defs2, defs );
 
+#if 0
 					if( (spec && rout->parCount != DAO_MAX_PARAM) || rout->routType->aux.v.type ==NULL
 							/*to infer returned type*/ ){
 						if( rout->type == DAO_ROUTINE && ((DaoRoutine*)rout)->parser ){
@@ -4477,12 +4096,13 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								&& ((DaoRoutine*)rout)->vmCodes->size >0 && notide ){
 							/* rout may has only been declared */
 							rout = (DRoutine*) DaoRoutine_Copy2( (DaoRoutine*) rout );
-							DRoutine_PassParamTypes( rout, bt, pp, tp, j, code, defs2 );
+							DRoutine_PassParamTypes( rout, bt, tp, j, code, defs2 );
 							if( DaoRoutine_InferTypes( (DaoRoutine*) rout ) ==0 ) goto InvParam;
-							MatchByParamType( rout, bt, pp, tp, j, code, &min, &spec );
+							MatchByParamType( rout, bt, tp, j, code, &min, &spec );
 						}
 					}
-					DRoutine_PassParamTypes2( rout, bt, pp, tp, j, code, defs2 );
+#endif
+					DRoutine_PassParamTypes2( rout, bt, tp, j, code, defs2 );
 					if( min >= DAO_MT_SUB ){
 						csts[ opa ].t = rout->type;
 						csts[ opa ].v.routine = (DaoRoutine*) rout;
@@ -4513,40 +4133,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				 */
 
-				if( ! typed_code ) break;
-				if( ct && ct->tid == DAO_FUTURE ) break;
-				at = type[opa];
-				if( at->name->mbs[0] == '@' ) break;
-				if( at->tid != DAO_ROUTINE && at->tid != DAO_FUNCTION ) break;
-				if( rout ) at = rout->routType;
-				if( rout && (rout->attribs & DAO_ROUT_VIRTUAL) ) break;
-				if( rout && (rout->minimal ==1) ) break;
-				if( vmc->b > 0xff || vmc->b == DAO_MAX_PARAM ) break;
-				k = 0;
-				if( code == DVM_CALL || code == DVM_CALL_TC ){
-					if( vmc->b != at->nested->size ) break;
-				}else{
-					if( at->attrib & DAO_TYPE_SELF ){
-						if( vmc->b != at->nested->size ) break;
-					}else{
-						if( vmc->b != at->nested->size+1 ) break;
-						k = 1;
-					}
-				}
-				for(j=k; j<vmc->b; j++){
-					DaoType *t = tp[j];
-					DaoType *p = at->nested->items.pType[j-k];
-					if( t == NULL || p == NULL ) break;
-					if( t->tid == 0 || t->tid == DAO_ANY ) break;
-					if( p->tid == DAO_PAR_VALIST ) break;
-					if( t->tid == DAO_PAR_NAMED || p->tid == DAO_PAR_NAMED ) break;
-				}
-				if( j < vmc->b ) break;
-				if( rout ){
-					UpdateType( opa, rout->routType );
-					csts[opa].v.routine = (DaoRoutine*) rout;
-				}
-				vmc->code += DVM_CALL_TC - DVM_CALL;
 				break;
 			}
 		case DVM_ROUTINE :
@@ -4660,76 +4246,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			}
 #define USE_TYPED_OPCODE 1
 #if USE_TYPED_OPCODE
-		case DVM_CALL_CF :
-		case DVM_CALL_CMF :
-			lastcomp = opc;
-			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
-			init[opc] = 1;
-			pp = csts+opa+1;
-			tp = type+opa+1;
-			j = vmc->b & 0xff;
-			if( j == DAO_CALLER_PARAM ){
-				j = self->parCount;
-				pp = csts;
-				tp = type;
-			}
-			rout2 = rout = (DRoutine*) csts[opa].v.routine;
-			rout = MatchByParamType( rout, NULL, pp, tp, j, code, &min, &spec );
-			if( rout ==NULL ){
-				DRoutine_ShowError( rout2, NULL, pp, tp, j, code, errors );
-				goto InvParam;
-			}
-			if( min != DAO_MT_EQ || (opb&0xff00) !=0 || rout->parCount == DAO_MAX_PARAM )
-				goto ErrorTyping;
-			if( rout->type != DAO_FUNCTION ) goto ErrorTyping;
-			csts[opa].v.p = (DaoBase*) rout;
-			csts[opa].t = rout->type;
-			ct = rout->routType;
-			ct = ct->aux.v.type;
-			if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-			if( ct == NULL ) ct = DaoNameSpace_GetType( ns, & nil );
-			UpdateType( opc, ct );
-			AssertTypeMatching( ct, type[opc], defs, 0 );
-			break;
-		case DVM_CALL_TC :
-		case DVM_MCALL_TC :
-			lastcomp = opc;
-			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
-			init[opc] = 1;
-			at = type[opa];
-			pp = csts+opa+1;
-			tp = type+opa+1;
-			j = vmc->b;
-			if( j == DAO_CALLER_PARAM ){
-				j = self->parCount;
-				pp = csts;
-				tp = type;
-			}
-			if( vmc->b > 0xff ) goto ErrorTyping;
-			rout = (DRoutine*) csts[opa].v.routine;
-			if( code == DVM_CALL_TC && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
-			if( rout ){
-				rout2 = rout;
-				rout = MatchByParamType( rout, NULL, pp, tp, j, code, &min, &spec );
-				if( rout ==NULL ){
-					DRoutine_ShowError( rout2, NULL, pp, tp, j, code, errors );
-					goto InvParam;
-				}
-				csts[opa].v.routine = (DaoRoutine*) rout;
-				UpdateType( opa, rout->routType );
-				ct = rout->routType->aux.v.type;
-			}else if( at->tid == DAO_ROUTINE ){
-				j = DRoutine_CheckType( at, ns, NULL, pp, tp, vmc->b, code,1,&min, &spec );
-				if( j <=0 ) goto ErrorTyping;
-				ct = at->aux.v.type;
-			}else{
-				goto ErrorTyping;
-			}
-			if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-			if( ct == NULL ) ct = DaoNameSpace_GetType( ns, & nil );
-			UpdateType( opc, ct );
-			AssertTypeMatching( ct, type[opc], defs, 0 );
-			break;
 		case DVM_SETVL_II : case DVM_SETVL_IF : case DVM_SETVL_ID :
 		case DVM_SETVL_FI : case DVM_SETVL_FF : case DVM_SETVL_FD :
 		case DVM_SETVL_DI : case DVM_SETVL_DF : case DVM_SETVL_DD :
@@ -4742,7 +4258,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETVO_II : case DVM_SETVO_IF : case DVM_SETVO_ID :
 		case DVM_SETVO_FI : case DVM_SETVO_FF : case DVM_SETVO_FD :
 		case DVM_SETVO_DI : case DVM_SETVO_DF : case DVM_SETVO_DD :
-			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;
+			if( tidHost != DAO_OBJECT ) goto ErrorTyping;
 			tp = typeVO[opc]->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
 			AssertTypeMatching( type[opa], *tp, defs, 0 );
@@ -5017,21 +4533,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( type[opc], cart, defs, 0 );
 				break;
 			}
-		case DVM_GETF_M :
-			{
-				lastcomp = opc;
-				if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
-				init[opc] = 1;
-				at = type[opa];
-				if( at->typer ==NULL ) goto NotMatch;
-#if 0
-				ct = at->typer->priv->methods[opb]->routType; /*XXX*/
-#endif
-				/* XXX csts[opc] = (DaoBase*) at->typer->priv->methods[opb]; */
-				UpdateType( opc, ct );
-				AssertTypeMatching( type[opc], ct, defs, 0 );
-				break;
-			}
 		case DVM_GETF_KC : case DVM_GETF_KG :
 		case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
 		case DVM_GETF_KCI : case DVM_GETF_KGI :
@@ -5189,49 +4690,6 @@ ErrorTyping:
 				DaoStream_WriteMBS( stdio, "Invalid virtual machine instruction --- \" " );
 				DaoStream_WriteMBS( stdio, char200 );
 				DaoStream_WriteMBS( stdio, " \";\n" );
-#if 0
-				if( ec == DTE_TYPE_NOT_INITIALIZED || ec == DTE_TYPE_WRONG_CONTAINER ){
-					DaoStream_WriteMBS( stdio, char50 );
-					if( ec == DTE_TYPE_WRONG_CONTAINER )
-						DaoStream_WriteMBS( stdio, DaoTypingErrorString[DTE_ITEM_WRONG_ACCESS] );
-					else
-						DaoStream_WriteMBS( stdio, DaoTypingErrorString[DTE_OPERATION_NOT_VALID] );
-					DaoStream_WriteMBS( stdio, " --- \" " );
-					DaoTokens_AnnotateCode( self->source, *vmc, mbs, 32 );
-					DaoStream_WriteString( stdio, mbs );
-					DaoStream_WriteMBS( stdio, " \";\n" );
-				}
-				DaoStream_WriteMBS( stdio, char50 );
-				DaoStream_WriteMBS( stdio, DaoTypingErrorString[ec] );
-				DaoStream_WriteMBS( stdio, " --- \" " );
-				if( ec == DTE_TYPE_NOT_INITIALIZED ){
-					DaoVmCodeX vmc2 = *vmc;
-					int t = vmcTyping[ vmc->code ][0];
-					int a = 0, b = 0;
-					if( t == OT_AOO || (t >= OT_AOC && t <= OT_EXP) ){
-						if( init[vmc->a] ==0 || type[vmc->a] == NULL ) a = 1;
-					}
-					if( t == OT_ABC && (init[vmc->b] ==0 || type[vmc->b] == NULL) ) b = 1;
-					if( a == 0 || b == 0 ){
-						if( a ){
-							vmc2.last = vmc2.middle = vmc2.middle - 1;
-						}else if( b ){
-							vmc2.first += vmc2.middle + 1;
-							vmc2.last -= vmc2.middle + 1;
-							vmc2.middle = 0;
-							t = self->source->items.pToken[ vmc2.first - 1 ]->type;
-							if( t == DTOK_LB || t == DTOK_LCB || t == DTOK_LSB ) vmc2.last -= 1;
-						}
-					}
-					DaoTokens_AnnotateCode( self->source, vmc2, mbs, 32 );
-				}else if( ec == DTE_TYPE_WRONG_CONTAINER ){
-					DString_Assign( mbs, container->name );
-				}else{
-					DaoTokens_AnnotateCode( self->source, *vmc, mbs, 32 );
-				}
-				DaoStream_WriteString( stdio, mbs );
-				DaoStream_WriteMBS( stdio, " \";\n" );
-#else
 				if( ec_general == 0 ) ec_general = ec;
 				if( ec_general == 0 ) ec_general = DTE_OPERATION_NOT_VALID;
 				if( ec_general ){
@@ -5271,7 +4729,6 @@ ErrorTyping:
 					DaoStream_WriteString( stdio, mbs );
 					DaoStream_WriteMBS( stdio, " \";\n" );
 				}
-#endif
 				DaoPrintCallError( errors, stdio );
 				DArray_Delete( errors );
 				dao_free( init );
@@ -5301,12 +4758,12 @@ void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNameSpace *ns )
 {
 	DaoToken *tok, token = {0,0,0,0,0,NULL};
 	DArray array = {{NULL},{NULL},D_TOKEN,0,0};
-	DMap *nsTokens = self->nameSpace->tokens;
+	DMap *nsTokens = ns->tokens;
 	DNode *node;
 	DString *ts;
 	int i;
-	DArray_Append( self->nameSpace->sources, & array );
-	self->source = (DArray*) DArray_Back( self->nameSpace->sources );
+	DArray_Append( ns->sources, & array );
+	self->source = (DArray*) DArray_Back( ns->sources );
 	for(i=0; i<tokens->size; i++){
 		tok = tokens->items.pToken[i];
 		node = DMap_Find( nsTokens, tok->string );
@@ -5350,11 +4807,6 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	char buffer[200];
 	int j;
 
-	if( self->type != DAO_ROUTINE || self->minimal == 1 ){
-		for(j=0; j<self->routTable->size; j++)
-			DaoRoutine_PrintCode( self->routTable->items.pRout[j], stream );
-		return;
-	}
 	DaoRoutine_Compile( self );
 
 	DaoStream_WriteMBS( stream, sep1 );
@@ -5396,58 +4848,26 @@ DaoFunction* DaoFunction_New()
 	DaoFunction *self = (DaoFunction*) dao_malloc( sizeof(DaoFunction) );
 	DaoBase_Init( self, DAO_FUNCTION );
 	DRoutine_Init( (DRoutine*)self );
-	DRoutine_AddOverLoad( (DRoutine*)self, (DRoutine*)self );
 	self->pFunc = NULL;
 	self->ffiData = NULL;
 	return self;
 }
-DaoFunction* DaoFunction_Copy( DaoFunction *self, int overload )
+int DaoFunction_Call( DaoFunction *self, DaoContext *ctx, DValue *obj, DValue *p[], int n )
 {
-	DaoFunction *copy = DaoFunction_New();
-	DRoutine_CopyFields( (DRoutine*) copy, (DRoutine*) self );
-	if( overload ) DRoutine_AddOverLoad( (DRoutine*) self, (DRoutine*) copy );
-	copy->pFunc = self->pFunc;
-	copy->ffiData = self->ffiData;
-	return copy;
-}
-void DaoFunction_SimpleCall( DaoFunction *self, DaoContext *ctx, DValue *p[], int N )
-{
-	const int ndef = self->routType->nested->size;
-	DaoType *tp, **types = self->routType->nested->items.pType;
 	DValue buffer[ DAO_MAX_PARAM ];
 	DValue *param[ DAO_MAX_PARAM ];
-	ullong_t passed = 0;
 	int i;
 	memset( buffer, 0, DAO_MAX_PARAM * sizeof(DValue) );
-	for(i=0; i<N; i++){
-		tp = types[i];
-		param[i] = & buffer[i];
-		passed |= 1<<i;
-		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = tp->aux.v.type;
-		if( i ==0 && (self->routType->attrib & DAO_TYPE_SELF) ){
-			/* pass reference for self parameter */
-			if( DaoType_MatchValue( tp, *p[i], NULL ) == DAO_MT_EQ ){
-				param[i] = p[i];
-				continue;
-			}
-		}
-		if( DValue_Move( *p[i], param[i], tp ) ==0 ){
-			printf( "%i  %s\n", p[i]->t, tp->name->mbs );
-			DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "not matching" );
-			return;
-		}
+	for(i=0; i<(n+1); i++) param[i] = & buffer[i];
+	n = DRoutine_PassParams( (DRoutine*)self, obj, param, p, n, DVM_CALL );
+	if( n ==0 ){
+		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "not matching" );
+		return DAO_ERROR_PARAM;
 	}
-	for(i=N; i<ndef; i++) param[i] = & buffer[i];
-	DRoutine_PassDefault( (DRoutine*)self, param, passed );
 	ctx->thisFunction = self;
-	self->pFunc( ctx, param, N );
+	self->pFunc( ctx, param, n-1 );
 	ctx->thisFunction = NULL;
-	for(i=0; i<ndef; i++) DValue_Clear( buffer + i );
-}
-int DaoFunction_Call( DaoFunction *func, DaoCData *self, DValue *p[], int n )
-{
-	printf( "DaoFunction_Call()\n" );
-	/* XXX */
+	for(i=0; i<(n-1); i++) DValue_Clear( buffer + i );
 	return 0;
 }
 
@@ -5480,20 +4900,31 @@ DMetaParam* DMetaParam_New()
 }
 void DMetaParam_Delete( DMetaParam *self )
 {
-	int i, n = self->nexts->size;
-	for(i=0; i<n; i++) DMetaParam_Delete( (DMetaParam*) self->nexts->items.pVoid[i] );
-	if( self->routine ) GC_DecRC( self->routine );
-	if( self->nexts ) DArray_Delete( self->nexts );
+	int i, n;
+	if( self->nexts ){
+		n = self->nexts->size;
+		for(i=0; i<n; i++) DMetaParam_Delete( (DMetaParam*) self->nexts->items.pVoid[i] );
+		DArray_Delete( self->nexts );
+	}
+	if( self->names ) DMap_Delete( self->names );
+	//XXX if( self->routine ) GC_DecRC( self->routine );
 	dao_free( self );
 }
-DaoMetaRoutine* DaoMetaRoutine_New()
+
+
+DaoMetaRoutine* DaoMetaRoutine_New( DaoNameSpace *nameSpace, DString *name )
 {
 	DaoMetaRoutine *self = (DaoMetaRoutine*) dao_calloc( 1, sizeof(DaoMetaRoutine) );
-	self->name = DString_New(1);
+	DaoBase_Init( self, DAO_METAROUTINE );
+	self->space = nameSpace; //XXX GC
+	self->unitype = DaoType_New( "routine", DAO_METAROUTINE, (DaoBase*)self, NULL ); //XXX GC
+	self->name = name ? DString_Copy( name ) : DString_New(1);
 	self->host = NULL;
 	self->tree = NULL;
 	self->mtree = NULL;
 	self->routines = DArray_New(0);
+	if( name && name->size && name->mbs[0] == '@' )
+		DString_InsertChar( self->unitype->name, '@', 0 );
 	return self;
 }
 void DaoMetaRoutine_Delete( DaoMetaRoutine *self )
@@ -5505,11 +4936,15 @@ void DaoMetaRoutine_Delete( DaoMetaRoutine *self )
 	DArray_Delete( self->routines );
 	dao_free( self );
 }
+DaoTypeBase mroutineTyper =
+{
+	"routines", & baseCore, NULL, NULL, {0}, {0},
+	(FuncPtrDel) DaoMetaRoutine_Delete, NULL
+};
 
 DRoutine* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
 {
-	DaoType *type;
-	DString *name = NULL;
+	DaoType *type, *name = NULL;
 	DMetaParam *param, **items;
 	int m = routine->routType->nested->size;
 	int i, j, n;
@@ -5525,32 +4960,39 @@ DRoutine* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
 		return routine;
 	}
 	type = routine->routType->nested->items.pType[pid];
+	if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ){
+		name = type;
+		type = type->aux.v.type;
+	}
+	if( name && self->names == NULL ) self->names = DMap_New(0,0);
 	for(i=0; i<n; i++){
 		param = items[i];
 		/* Found a node with the same parameter type: */
-		printf( "%i %p %p %s\n", i, param->type, type, type->name->mbs );
-		if( param->type == type ) return DMetaParam_Add( param, routine, pid+1 );
+		//printf( "%i %p %p %s\n", i, param->type, type, type->name->mbs );
+		if( param->type == type ){
+			if( name ) MAP_Insert( self->names, name, param );
+			return DMetaParam_Add( param, routine, pid+1 );
+		}
 	}
 	/* Add a new internal node: */
 	param = DMetaParam_New();
 	param->nexts = DArray_New(0);
 	param->type = type;
-	if( type->tid == DAO_PAR_DEFAULT ){
-		DArray_PushFront( self->nexts, param );
-	}else{
+	if( name ) MAP_Insert( self->names, name, param );
+	//if( type->tid == DAO_PAR_DEFAULT ){
+	//	DArray_PushFront( self->nexts, param );
+	//}else{
 		DArray_PushBack( self->nexts, param );
-	}
+	//}
 	return DMetaParam_Add( param, routine, pid+1 );
 }
 DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
 {
 	DRoutine *rout = NULL;
-	if( routine->routType == NULL ){
-		printf( "Error: overloading function \"%s\" without type signature!\n", routine->routName->mbs );
-		return NULL;
-	}
-	DString_Assign( self->name, routine->routName );
-	printf( "Overloading %s(): %s\n", routine->routName->mbs, routine->routType->name->mbs );
+	if( routine->routType == NULL ) return NULL;
+	/* If the name is not set yet, set it: */
+	if( self->name->size ==0 ) DString_Assign( self->name, routine->routName );
+	//printf( "Overloading %s(): %s\n", routine->routName->mbs, routine->routType->name->mbs );
 	if( routine->routType->attrib & DAO_TYPE_SELF ){
 		if( self->mtree == NULL ) self->mtree = DMetaParam_New();
 		rout = DMetaParam_Add( self->mtree, routine, 0 );
@@ -5561,7 +5003,20 @@ DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
 	if( rout == routine ) DArray_Append( self->routines, routine );
 	return rout;
 }
-DMetaParam* DMetaParam_BestNext( DMetaParam *self, DValue *value )
+void DaoMetaRoutine_Import( DaoMetaRoutine *self, DaoMetaRoutine *other )
+{
+	int i, n = other->routines->size;
+	for(i=0; i<n; i++) DaoMetaRoutine_Add( self, other->routines->items.pRout2[i] );
+}
+void DaoMetaRoutine_Compile( DaoMetaRoutine *self )
+{
+	int i, n = self->routines->size;
+	for(i=0; i<n; i++){
+		DaoRoutine *rout = (DaoRoutine*) self->routines->items.pRout2[i];
+		if( rout->type == DAO_ROUTINE ) DaoRoutine_Compile( rout );
+	}
+}
+DMetaParam* DMetaParam_BestNext( DMetaParam *self, DValue *value, int strict )
 {
 	DMetaParam *best = NULL;
 	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
@@ -5571,9 +5026,10 @@ DMetaParam* DMetaParam_BestNext( DMetaParam *self, DValue *value )
 		DMetaParam *param = items[i];
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
-		if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ) type = type->aux.v.type;
-		m = DaoType_MatchValue( type, *value, NULL );
-		printf( "%i: %i, %i %p %s\n", i, m, value->t, type, type->name->mbs );
+		if( strict && value->t != type->tid ) continue;
+		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchValue( type, *value, NULL );
+		if( strict && m != DAO_MT_EQ ) continue;
+		//printf( "%i: %i, %i %p %s\n", i, m, value->t, type, type->name->mbs );
 		if( m > max ){
 			best = param;
 			max = m;
@@ -5581,66 +5037,106 @@ DMetaParam* DMetaParam_BestNext( DMetaParam *self, DValue *value )
 	}
 	return best;
 }
-DMetaParam* DMetaParam_NextBestByName( DMetaParam *self, DMap *namepar )
+DMetaParam* DMetaParam_BestNextByType( DMetaParam *self, DaoType *partype, int strict )
 {
-	DNode *node;
 	DMetaParam *best = NULL;
 	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
 	int i, m, n = self->nexts->size;
-	int t, max = 0;
-	if( n == 0 ) return NULL;
+	int max = 0;
+	//printf( "DMetaParam_NextBestByType: %i\n", n );
 	for(i=0; i<n; i++){
 		DMetaParam *param = items[i];
+		DaoType *type = param->type;
+		if( type == NULL ) continue;
+		if( strict && partype->tid != type->tid ) continue;
+		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchTo( partype, type, NULL );
+		if( strict && m != DAO_MT_EQ ) continue;
+		//printf( "%i: %i, %i %p %s\n", i, m, partype->tid, type, type->name->mbs );
+		if( m > max ){
+			best = param;
+			max = m;
+		}
+	}
+	return best;
+}
+DMetaParam* DMetaParam_NextBestByName( DMetaParam *self, DMap *namepar, int istype, int strict )
+{
+	DNode *it, *node, *best = NULL;
+	int i, t, m = 0, max = 0;
+
+	if( self->names == NULL || self->names->size ==0 ) return NULL;
+	for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
+		DString *name = it->key.pType->fname;
+		DMetaParam *param = (DMetaParam*) it->value.pVoid;
 		if( param->type == NULL ) continue;
-		t = param->type->tid;
-		if( t != DAO_PAR_NAMED && t != DAO_PAR_DEFAULT ) return NULL;
-		node = MAP_Find( namepar, param->type->fname );
-		printf( "%s = %p\n", param->type->fname->mbs, node );
+		node = MAP_Find( namepar, name );
+		//printf( "%s = %p\n", name->mbs, node );
 		if( node ){
-			m = DaoType_MatchValue( param->type->aux.v.type, *(DValue*)node->value.pVoid, NULL );
+			DaoType *type = param->type;
+			if( istype ){
+				if( strict && node->value.pType->tid != type->tid ) continue;
+				m = DaoType_MatchTo( node->value.pType, type, NULL );
+			}else{
+				if( strict && ((DValue*)node->value.pVoid)->t != type->tid ) continue;
+				m = DaoType_MatchValue( type, *(DValue*)node->value.pVoid, NULL );
+			}
+			if( strict && m != DAO_MT_EQ ) continue;
 			if( m > max ){
-				best = param;
+				best = it;
 				max = m;
 			}
 		}
 	}
 	if( best ){
-		MAP_Erase( namepar, best->type->fname );
-		return best;
+		MAP_Erase( namepar, best->key.pType->fname );
+		return (DMetaParam*) best->value.pVoid;
 	}
-	if( items[0]->type && items[0]->type->tid == DAO_PAR_DEFAULT ) return items[0];
+	for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
+		DMetaParam *param = (DMetaParam*) it->value.pVoid;
+		if( param->type == NULL ) continue;
+		if( it->key.pType->tid == DAO_PAR_DEFAULT ) return param;
+	}
 	return NULL;
 }
-DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n );
-DRoutine* DMetaParam_LookupByName( DMetaParam *self, DMap *namepar )
+DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n, int strict );
+DRoutine* DMetaParam_LookupByName( DMetaParam *self, DMap *namepar, int istype, int strict )
 {
 	DMetaParam *param = self;
-	while( param && namepar->size ) param = DMetaParam_NextBestByName( param, namepar );
+	while( param && namepar->size ) param = DMetaParam_NextBestByName( param, namepar, istype, strict );
 	if( param == NULL || namepar->size ) return NULL;
 	if( param->routine ) return param->routine; /* a leaf node. */
 	if( param->nexts == NULL && param->nexts->size ==0 ) return NULL;
 	param = (DMetaParam*) param->nexts->items.pVoid[0];
 	if( param->type == NULL ) return param->routine;
 	if( param->type->tid != DAO_PAR_DEFAULT ) return NULL;
-	return DMetaParam_Lookup( param, NULL, 0 );
+	return DMetaParam_Lookup( param, NULL, 0, strict );
 }
-DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n )
+DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n, int strict )
 {
 	int i;
-	DMap *namepar;
+	DNode *it;
 	DRoutine *rout = NULL;
 	DMetaParam *param = NULL;
-	printf( "DMetaParam_Lookup: %s %i\n", self->type ? self->type->name->mbs : "", n );
+	//printf( "DMetaParam_Lookup: %s %i\n", self->type ? self->type->name->mbs : "", n );
 	if( n == 0 ){
-		if( self->routine ) return self->routine;
-		if( self->nexts == NULL && self->nexts->size ==0 ) return NULL;
-		param = (DMetaParam*)self->nexts->items.pVoid[0];
-		if( param->type == NULL ) return param->routine;
-		if( param->type->tid != DAO_PAR_DEFAULT ) return NULL;
-		return DMetaParam_Lookup( param, NULL, 0 );
+		if( self->routine ) return self->routine; /* a leaf */
+		for(i=0; i<self->nexts->size; i++){
+			param = (DMetaParam*) self->nexts->items.pVoid[i];
+			if( param->type == NULL ) return param->routine; /* a leaf */
+			if( param->type->tid == DAO_PAR_VALIST )
+				return DMetaParam_Lookup( param, NULL, 0, 0 );
+		}
+		if( self->names == NULL || self->names->size ==0 ) return NULL;
+		/* check for routines with default parameters: */
+		for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
+			param = (DMetaParam*) it->value.pVoid;
+			if( param->type == NULL || it->key.pType->tid != DAO_PAR_DEFAULT ) continue;
+			return DMetaParam_Lookup( param, p, 0, 0 );
+		}
+		return NULL;
 	}
 	if( p[0]->t == DAO_PAR_NAMED ){
-		namepar = DMap_New(D_STRING,0);
+		DMap *namepar = DMap_New(D_STRING,0);
 		for(i=0; i<n; i++){
 			DValue *p2 = p[i];
 			DaoNameValue *nameva = p2->v.nameva;
@@ -5651,37 +5147,258 @@ DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n )
 			DMap_Delete( namepar );
 			return NULL;
 		}
-		rout = DMetaParam_LookupByName( self, namepar );
+		rout = DMetaParam_LookupByName( self, namepar, 0, strict );
 		DMap_Delete( namepar );
 		return rout;
 	}
-	param = DMetaParam_BestNext( self, p[0] );
+	param = DMetaParam_BestNext( self, p[0], strict );
 	if( param == NULL ) return NULL;
-	return DMetaParam_Lookup( param, p+1, n-1 );
+	n = (param->type && param->type->tid == DAO_PAR_VALIST) ? 0 : n-1;
+	return DMetaParam_Lookup( param, p+1, n, strict );
 }
-DRoutine* DaoMetaRoutine_Lookup( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code )
+DRoutine* DMetaParam_LookupByType( DMetaParam *self, DaoType *types[], int n, int strict )
 {
-	int mcall = (code == DVM_MCALL  || code == DVM_MCALL_TC);
+	int i;
+	DNode *it;
+	DRoutine *rout = NULL;
+	DMetaParam *param = NULL;
+	//printf( "DMetaParam_LookupByType: %s %i\n", self->type ? self->type->name->mbs : "", n );
+	if( n == 0 ){
+		if( self->routine ) return self->routine; /* a leaf */
+		for(i=0; i<self->nexts->size; i++){
+			param = (DMetaParam*) self->nexts->items.pVoid[i];
+			if( param->type == NULL ) return param->routine; /* a leaf */
+			if( param->type->tid == DAO_PAR_VALIST )
+				return DMetaParam_LookupByType( param, NULL, 0, 0 );
+		}
+		if( self->names == NULL || self->names->size ==0 ) return NULL;
+		/* check for routines with default parameters: */
+		for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
+			param = (DMetaParam*) it->value.pVoid;
+			if( param->type == NULL || it->key.pType->tid != DAO_PAR_DEFAULT ) continue;
+			return DMetaParam_LookupByType( param, types, 0, 0 );
+		}
+		return NULL;
+	}
+	if( types[0]->tid == DAO_PAR_NAMED ){
+		DMap *namepar = DMap_New(D_STRING,0);
+		for(i=0; i<n; i++){
+			DaoType *type = types[i];
+			if( type->tid != DAO_PAR_NAMED ) break;
+			MAP_Insert( namepar, type->fname,  type->aux.v.type );
+		}
+		if( i < n ){
+			DMap_Delete( namepar );
+			return NULL;
+		}
+		rout = DMetaParam_LookupByName( self, namepar, 1, strict );
+		DMap_Delete( namepar );
+		return rout;
+	}
+	param = DMetaParam_BestNextByType( self, types[0], strict );
+	if( param == NULL ) return NULL;
+	n = (param->type && param->type->tid == DAO_PAR_VALIST) ? 0 : n-1;
+	return DMetaParam_LookupByType( param, types+1, n, strict );
+}
+DRoutine* DaoMetaRoutine_Lookup2( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code, int strict )
+{
+	int mcall = code == DVM_MCALL;
 	DMetaParam *param = NULL;
 	DRoutine *rout = NULL;
 	if( obj && obj->t && mcall ==0 ){
 		if( self->mtree ){
-			param = DMetaParam_BestNext( self->mtree, obj );
-			if( param ) rout = DMetaParam_Lookup( param, p, n );
+			param = DMetaParam_BestNext( self->mtree, obj, strict );
+			if( param ) rout = DMetaParam_Lookup( param, p, n, strict );
 			if( rout ) return rout;
 		}
 	}
 	if( mcall && self->mtree ){
-		rout = DMetaParam_Lookup( self->mtree, p, n );
+		rout = DMetaParam_Lookup( self->mtree, p, n, strict );
 		if( rout ) return rout;
 	}
-	printf( "DaoMetaRoutine_Lookup(): %s %p %i\n", self->name->mbs, self->tree, n );
+	//printf( "DaoMetaRoutine_Lookup(): %s %p %i\n", self->name->mbs, self->tree, n );
 	if( self->tree ){
 		if( mcall ){
 			p += 1;
 			n -= 1;
 		}
-		return DMetaParam_Lookup( self->tree, p, n );
+		return DMetaParam_Lookup( self->tree, p, n, strict );
 	}
 	return NULL;
+}
+DRoutine* DaoMetaRoutine_LookupByType2( DaoMetaRoutine *self, DaoType *selftype, DaoType *types[], int n, int code, int strict )
+{
+	int mcall = code == DVM_MCALL;
+	DMetaParam *param = NULL;
+	DRoutine *rout = NULL;
+	//printf( "DaoMetaRoutine_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
+	if( selftype && mcall ==0 ){
+		if( self->mtree ){
+			param = DMetaParam_BestNextByType( self->mtree, selftype, strict );
+			if( param ) rout = DMetaParam_LookupByType( param, types, n, strict );
+			if( rout ) return rout;
+		}
+	}
+	if( mcall && self->mtree ){
+		rout = DMetaParam_LookupByType( self->mtree, types, n, strict );
+		if( rout ) return rout;
+	}
+	//printf( "DaoMetaRoutine_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
+	if( self->tree ){
+		if( mcall ){
+			types += 1;
+			n -= 1;
+		}
+		return DMetaParam_LookupByType( self->tree, types, n, strict );
+	}
+	return NULL;
+}
+DRoutine* DaoMetaRoutine_Lookup( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code )
+{
+	return DaoMetaRoutine_Lookup2( self, obj, p, n, code, 0 );
+}
+DRoutine* DaoMetaRoutine_LookupByType( DaoMetaRoutine *self, DaoType *selftype, DaoType *types[], int n, int code )
+{
+	return DaoMetaRoutine_LookupByType2( self, selftype, types, n, code, 0 );
+}
+DRoutine* DRoutine_Resolve( DaoBase *self, DValue *obj, DValue *p[], int n, int codemode )
+{
+	DaoRoutine *rout;
+	int code = codemode & 0xffff;
+	int mode = codemode >> 16;
+	int mcall = code == DVM_MCALL;
+
+	if( self == NULL ) return NULL;
+	if( self->type == DAO_METAROUTINE ){
+		self = (DaoBase*) DaoMetaRoutine_Lookup( (DaoMetaRoutine*) self, obj, p, n, code );
+		if( self == NULL ) return NULL;
+	}
+	if( self->type == DAO_ABROUTINE || self->type == DAO_FUNCTION ) return (DRoutine*)self;
+	rout = (DaoRoutine*) self;
+	if( (rout->attribs & DAO_ROUT_VIRTUAL) && (mode & DAO_CALL_NOVIRT) ==0 ){
+		DaoClass *klass = NULL;
+		if( obj && obj->t == DAO_OBJECT ){
+			klass = obj->v.object->that->myClass;
+		}else if( mcall && n && p[0]->t == DAO_OBJECT ){
+			klass = p[0]->v.object->that->myClass;
+		}
+		if( klass && klass != rout->routHost->aux.v.klass && klass->vtable ){
+			DNode *node = MAP_Find( klass->vtable, rout );
+			if( node && node->value.pVoid ){
+				rout = (DaoRoutine*) node->value.pVoid;
+				if( rout->type == DAO_ROUTINE ) return (DRoutine*)rout;
+			}
+		}
+	}
+	if( rout->specialized ){
+		/* strict checking for specialized routines: */
+		DRoutine *rt = DaoMetaRoutine_Lookup2( rout->specialized, obj, p, n, code, 1 );
+		if( rt ) return rt;
+	}
+	return (DRoutine*) self;
+}
+DRoutine* DRoutine_ResolveByType( DaoBase *self, DaoType *st, DaoType *t[], int n, int code )
+{
+	DaoRoutine *rout;
+	if( self == NULL ) return NULL;
+	if( self->type == DAO_METAROUTINE ){
+		self = (DaoBase*) DaoMetaRoutine_LookupByType( (DaoMetaRoutine*) self, st, t, n, code );
+		if( self == NULL ) return NULL;
+	}
+	if( self->type == DAO_ABROUTINE || self->type == DAO_FUNCTION ) return (DRoutine*)self;
+	rout = (DaoRoutine*) self;
+	if( rout->specialized ){
+		/* strict checking for specialized routines: */
+		DRoutine *rt = DaoMetaRoutine_LookupByType2( rout->specialized, st, t, n, code, 1 );
+		if( rt ) return rt;
+	}
+	return (DRoutine*) self;
+}
+
+DaoRoutine* DaoDecorator_Resolve( DaoBase *self, DaoBase *rout, DValue *p[], int n )
+{
+	int i;
+	DaoMetaRoutine *decos = (DaoMetaRoutine*) self;
+	DaoRoutine *deco = (DaoRoutine*) self;
+	DValue value = daoNullValue;
+	value.t = rout->type;
+	value.v.p = rout;
+	if( self->type != DAO_METAROUTINE && self->type != DAO_ROUTINE ) return NULL;
+	if( rout->type != DAO_METAROUTINE && rout->type != DAO_ROUTINE ) return NULL;
+	if( decos->type == DAO_METAROUTINE && decos->name->mbs[0] != '@' ) return NULL;
+	if( deco->type == DAO_ROUTINE && deco->routName->mbs[0] != '@' ) return NULL;
+	if( self->type == DAO_ROUTINE && rout->type == DAO_ROUTINE ){
+		if( DaoDecorator_Check( deco, rout, p, n ) ) return deco;
+		return NULL;
+	}else if( self->type == DAO_ROUTINE && rout->type == DAO_METAROUTINE ){
+	}
+}
+DaoRoutine* DaoDecorator_ResolveByType( DaoType *self, DaoType *rout, DaoType *t[], int n )
+{
+}
+
+
+DMetaParam* DMetaParam_BestNextByType2( DMetaParam *self, DaoType *par )
+{
+	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
+	int i, m, n = self->nexts->size;
+	int max = 0;
+	if( par->tid == DAO_PAR_NAMED || par->tid == DAO_PAR_DEFAULT ) par = par->aux.v.type;
+	//printf( "DMetaParam_NextBestByType: %i\n", n );
+	for(i=0; i<n; i++){
+		DMetaParam *param = items[i];
+		if( param->type == par ) return param;
+	}
+	return NULL;
+}
+DRoutine* DMetaParam_LookupByType2( DMetaParam *self, DaoType *types[], int n )
+{
+	int i;
+	DNode *it;
+	DRoutine *rout = NULL;
+	DMetaParam *param = NULL;
+	//printf( "DMetaParam_LookupByType2: %s %i\n", self->type ? self->type->name->mbs : "", n );
+	if( n == 0 ){
+		if( self->routine ) return self->routine; /* a leaf */
+		for(i=0; i<self->nexts->size; i++){
+			param = (DMetaParam*) self->nexts->items.pVoid[i];
+			if( param->type == NULL ) return param->routine; /* a leaf */
+		}
+		return NULL;
+	}
+	param = DMetaParam_BestNextByType2( self, types[0] );
+	if( param == NULL ) return NULL;
+	return DMetaParam_LookupByType2( param, types+1, n-1 );
+}
+void DaoMetaRoutine_UpdateVtable( DaoMetaRoutine *self, DRoutine *routine, DMap *vtable )
+{
+	DNode *node;
+	DRoutine *rout;
+	DaoClass *klass;
+	DaoType *rhost = routine->routHost;
+	DaoType *retype2, *retype = routine->routType->aux.v.type;
+	DaoType **types = routine->routType->nested->items.pType;
+	int i, n, m = routine->routType->nested->size;
+	if( self->host == NULL || routine->routHost == NULL ) return;
+	if( self->host->tid != DAO_OBJECT ) return;
+	if( self->mtree == NULL || self->mtree->nexts == NULL ) return;
+	if( rhost->tid != DAO_OBJECT && rhost->tid != DAO_CDATA ) return;
+	if( ! (routine->routType->attrib & DAO_TYPE_SELF) ) return;
+	klass = self->host->aux.v.klass;
+	if( DaoClass_ChildOf( klass, rhost->aux.v.p ) ==0 ) return;
+	n = self->mtree->nexts->size;
+	//printf( "DaoMetaRoutine_UpdateVtable(): %s %s\n", self->name->mbs, routine->routName->mbs );
+	for(i=0; i<n; i++){
+		DMetaParam *param = (DMetaParam*) self->mtree->nexts->items.pVoid[i];
+		int tid = param->type->tid;
+		if( tid != DAO_OBJECT && tid != DAO_CDATA ) continue;
+		if( DaoClass_ChildOf( klass, param->type->aux.v.p ) ==0 ) continue;
+		rout = DMetaParam_LookupByType2( param, types+1, m-1 );
+		if( rout == NULL ) continue;
+		retype2 = rout->routType->aux.v.type;
+		if( retype->tid && retype != retype2 ) continue;
+		if( ! (rout->attribs & DAO_ROUT_VIRTUAL) ) continue;
+		node = MAP_Find( vtable, rout );
+		if( node ) node->value.pVoid = routine;
+	}
 }
