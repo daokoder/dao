@@ -2747,6 +2747,14 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				return -1;
 			}
 			if( signature->size ) DString_Erase( signature, 0, name->size );
+			if( func->type == DAO_FUNCTION ){
+				DRoutine *rs = (DRoutine*) func;
+				if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){
+					/* printf( "%s\n", rs->parCodes->mbs ); */
+					DaoParser_UseConstructor( self, rs, use, start );
+					return start;
+				}
+			}
 			for(i=0; i<func->routines->size; i++){
 				DRoutine *rs = (DRoutine*) func->routines->items.pRout[i];
 				if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){

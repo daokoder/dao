@@ -186,7 +186,7 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 	DNode *node;
 	DMap *defs;
 
-	if( routType->name->mbs[0] == '@' ) return DaoDecorator_CheckType( routType, ts, np );
+	//XXX if( routType->name->mbs[0] == '@' ) return DaoDecorator_CheckType( routType, ts, np );
 
 	defs = DMap_New(0,0);
 	if( routType->nested ){
@@ -994,6 +994,9 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			break;
 		case DVM_CALL : case DVM_MCALL :
 			k = vmc->b & 0xff;
+			if( k == DAO_CALLER_PARAM ){
+				k = self->parCount - (self->routType->attrib & DAO_TYPE_SELF) != 0;
+			}
 			for(j=0; j<=k; j++) SetupOperand( self, vmc->a+j, checks );
 			ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
@@ -4064,7 +4067,17 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( rout == NULL ) goto ErrorTyping;
 					if( rout->routName->mbs[0] == '@' ){
 						ct = tp[0];
-						if( pp[0].t == DAO_ROUTINE ) ct = pp[0].v.routine->routType;
+						if( pp[0].t == DAO_ROUTINE ){
+							ct = pp[0].v.routine->routType;
+						}else if( pp[0].t == DAO_METAROUTINE ){
+							DaoType *ft = rout->routType->nested->items.pType[0]->aux.v.type;
+							DaoType **pts = ft->nested->items.pType;
+							int nn = ft->nested->size;
+							int cc = DVM_CALL + (ft->attrib & DAO_TYPE_SELF);
+							rout = DaoBase_Check( pp[0].v.p, NULL, pts, nn, cc, errors );
+							if( rout == NULL ) goto ErrorTyping;
+							ct = rout->routType;
+						}
 						UpdateType( opc, ct );
 						AssertTypeMatching( ct, type[opc], defs, 0 );
 						break;
@@ -4916,13 +4929,15 @@ DaoMetaRoutine* DaoMetaRoutine_New( DaoNameSpace *nameSpace, DString *name )
 {
 	DaoMetaRoutine *self = (DaoMetaRoutine*) dao_calloc( 1, sizeof(DaoMetaRoutine) );
 	DaoBase_Init( self, DAO_METAROUTINE );
-	self->space = nameSpace; //XXX GC
-	self->unitype = DaoType_New( "routine", DAO_METAROUTINE, (DaoBase*)self, NULL ); //XXX GC
+	self->space = nameSpace;
+	self->unitype = DaoType_New( "routine", DAO_METAROUTINE, (DaoBase*)self, NULL );
 	self->name = name ? DString_Copy( name ) : DString_New(1);
 	self->host = NULL;
 	self->tree = NULL;
 	self->mtree = NULL;
 	self->routines = DArray_New(0);
+	GC_IncRC( self->space );
+	GC_IncRC( self->unitype );
 	if( name && name->size && name->mbs[0] == '@' )
 		DString_InsertChar( self->unitype->name, '@', 0 );
 	return self;
@@ -4931,6 +4946,8 @@ void DaoMetaRoutine_Delete( DaoMetaRoutine *self )
 {
 	if( self->tree ) DMetaParam_Delete( self->tree );
 	if( self->mtree ) DMetaParam_Delete( self->mtree );
+	GC_DecRC( self->unitype );
+	GC_DecRC( self->space );
 	GC_DecRC( self->host );
 	DString_Delete( self->name );
 	DArray_Delete( self->routines );
@@ -4993,6 +5010,7 @@ DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
 	/* If the name is not set yet, set it: */
 	if( self->name->size ==0 ) DString_Assign( self->name, routine->routName );
 	//printf( "Overloading %s(): %s\n", routine->routName->mbs, routine->routType->name->mbs );
+	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != MAXSIZE;
 	if( routine->routType->attrib & DAO_TYPE_SELF ){
 		if( self->mtree == NULL ) self->mtree = DMetaParam_New();
 		rout = DMetaParam_Add( self->mtree, routine, 0 );
@@ -5000,7 +5018,10 @@ DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
 		if( self->tree == NULL ) self->tree = DMetaParam_New();
 		rout = DMetaParam_Add( self->tree, routine, 0 );
 	}
-	if( rout == routine ) DArray_Append( self->routines, routine );
+	if( rout == routine ){
+		DArray_Append( self->routines, routine );
+		GC_IncRC( rout );
+	}
 	return rout;
 }
 void DaoMetaRoutine_Import( DaoMetaRoutine *self, DaoMetaRoutine *other )
@@ -5016,205 +5037,213 @@ void DaoMetaRoutine_Compile( DaoMetaRoutine *self )
 		if( rout->type == DAO_ROUTINE ) DaoRoutine_Compile( rout );
 	}
 }
-DMetaParam* DMetaParam_BestNext( DMetaParam *self, DValue *value, int strict )
+DRoutine* DMetaParam_GetLeaf( DMetaParam *self, int *ms )
 {
-	DMetaParam *best = NULL;
-	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
-	int i, m, n = self->nexts->size;
-	int max = 0;
-	for(i=0; i<n; i++){
-		DMetaParam *param = items[i];
-		DaoType *type = param->type;
-		if( type == NULL ) continue;
-		if( strict && value->t != type->tid ) continue;
-		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchValue( type, *value, NULL );
-		if( strict && m != DAO_MT_EQ ) continue;
-		//printf( "%i: %i, %i %p %s\n", i, m, value->t, type, type->name->mbs );
-		if( m > max ){
-			best = param;
-			max = m;
+	DMetaParam *param;
+	DRoutine *rout;
+	DNode *it;
+	int i;
+	*ms = 0;
+	if( self->routine ) return self->routine; /* a leaf */
+	for(i=0; i<self->nexts->size; i++){
+		param = (DMetaParam*) self->nexts->items.pVoid[i];
+		if( param->type == NULL ) return param->routine; /* a leaf */
+		if( param->type->tid == DAO_PAR_VALIST ){
+			rout = DMetaParam_GetLeaf( param, ms );
+			*ms += 1;
+			return rout;
 		}
 	}
-	return best;
-}
-DMetaParam* DMetaParam_BestNextByType( DMetaParam *self, DaoType *partype, int strict )
-{
-	DMetaParam *best = NULL;
-	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
-	int i, m, n = self->nexts->size;
-	int max = 0;
-	//printf( "DMetaParam_NextBestByType: %i\n", n );
-	for(i=0; i<n; i++){
-		DMetaParam *param = items[i];
-		DaoType *type = param->type;
-		if( type == NULL ) continue;
-		if( strict && partype->tid != type->tid ) continue;
-		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchTo( partype, type, NULL );
-		if( strict && m != DAO_MT_EQ ) continue;
-		//printf( "%i: %i, %i %p %s\n", i, m, partype->tid, type, type->name->mbs );
-		if( m > max ){
-			best = param;
-			max = m;
-		}
-	}
-	return best;
-}
-DMetaParam* DMetaParam_NextBestByName( DMetaParam *self, DMap *namepar, int istype, int strict )
-{
-	DNode *it, *node, *best = NULL;
-	int i, t, m = 0, max = 0;
-
 	if( self->names == NULL || self->names->size ==0 ) return NULL;
+	/* check for routines with default parameters: */
 	for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
-		DString *name = it->key.pType->fname;
-		DMetaParam *param = (DMetaParam*) it->value.pVoid;
-		if( param->type == NULL ) continue;
-		node = MAP_Find( namepar, name );
-		//printf( "%s = %p\n", name->mbs, node );
-		if( node ){
-			DaoType *type = param->type;
-			if( istype ){
-				if( strict && node->value.pType->tid != type->tid ) continue;
-				m = DaoType_MatchTo( node->value.pType, type, NULL );
-			}else{
-				if( strict && ((DValue*)node->value.pVoid)->t != type->tid ) continue;
-				m = DaoType_MatchValue( type, *(DValue*)node->value.pVoid, NULL );
-			}
-			if( strict && m != DAO_MT_EQ ) continue;
-			if( m > max ){
-				best = it;
-				max = m;
-			}
-		}
-	}
-	if( best ){
-		MAP_Erase( namepar, best->key.pType->fname );
-		return (DMetaParam*) best->value.pVoid;
-	}
-	for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
-		DMetaParam *param = (DMetaParam*) it->value.pVoid;
-		if( param->type == NULL ) continue;
-		if( it->key.pType->tid == DAO_PAR_DEFAULT ) return param;
+		param = (DMetaParam*) it->value.pVoid;
+		if( param->type == NULL || it->key.pType->tid != DAO_PAR_DEFAULT ) continue;
+		rout = DMetaParam_GetLeaf( param, ms );
+		*ms += 1;
+		return rout;
 	}
 	return NULL;
 }
-DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n, int strict );
-DRoutine* DMetaParam_LookupByName( DMetaParam *self, DMap *namepar, int istype, int strict )
+DRoutine* DMetaParam_LookupByName( DMetaParam *self, DValue *p[], int n, int strict, int *ms, DMap *defs )
 {
-	DMetaParam *param = self;
-	while( param && namepar->size ) param = DMetaParam_NextBestByName( param, namepar, istype, strict );
-	if( param == NULL || namepar->size ) return NULL;
-	if( param->routine ) return param->routine; /* a leaf node. */
-	if( param->nexts == NULL && param->nexts->size ==0 ) return NULL;
-	param = (DMetaParam*) param->nexts->items.pVoid[0];
-	if( param->type == NULL ) return param->routine;
-	if( param->type->tid != DAO_PAR_DEFAULT ) return NULL;
-	return DMetaParam_Lookup( param, NULL, 0, strict );
+	DNode *it;
+	DRoutine *rout = NULL, *best = NULL;
+	int i, j, t, k = 0, m = 0, max = 0;
+
+	if( n ==0 ) return DMetaParam_GetLeaf( self, ms );
+	if( self->names == NULL || self->names->size ==0 ) return NULL;
+	for(i=0; i<n; i++){
+		DValue *pval = p[i];
+		DaoNameValue *nameva = pval->v.nameva;
+		if( pval->t != DAO_PAR_NAMED ) return NULL;
+		p[i] = p[0];
+		for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
+			DString *name = it->key.pType->fname;
+			DMetaParam *param = (DMetaParam*) it->value.pVoid;
+			if( param->type == NULL ) continue;
+			if( strict && nameva->value.t != param->type->tid ) continue;
+			if( DString_EQ( name, nameva->name ) ==0 ) continue;
+			m = DaoType_MatchValue( param->type, nameva->value, defs );
+			if( strict && m != DAO_MT_EQ ) continue;
+			if( m == 0 ) continue;
+			rout = DMetaParam_LookupByName( param, p+1, n-1, strict, & k, defs );
+			m += k;
+			if( m > max ){
+				best = rout;
+				max = m;
+			}
+		}
+		p[i] = pval;
+	}
+	*ms = max;
+	return best;
 }
-DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n, int strict )
+DRoutine* DMetaParam_LookupByName2( DMetaParam *self, DaoType *ts[], int n, int strict, int *ms, DMap *defs )
+{
+	DNode *it;
+	DRoutine *rout = NULL, *best = NULL;
+	int i, j, t, k = 0, m = 0, max = 0;
+
+	if( n ==0 ) return DMetaParam_GetLeaf( self, ms );
+	if( self->names == NULL || self->names->size ==0 ) return NULL;
+	for(i=0; i<n; i++){
+		DaoType *ptype = ts[i];
+		DaoType *vtype = ptype->aux.v.type;
+		if( ptype->tid != DAO_PAR_NAMED ) return NULL;
+		ts[i] = ts[0];
+		for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
+			DString *name = it->key.pType->fname;
+			DMetaParam *param = (DMetaParam*) it->value.pVoid;
+			if( param->type == NULL ) continue;
+			if( strict && vtype->tid != param->type->tid ) continue;
+			if( DString_EQ( name, ptype->fname ) ==0 ) continue;
+			m = DaoType_MatchTo( vtype, param->type, defs );
+			if( strict && m != DAO_MT_EQ ) continue;
+			if( m == 0 ) continue;
+			rout = DMetaParam_LookupByName2( param, ts+1, n-1, strict, & k, defs );
+			m += k;
+			if( m > max ){
+				best = rout;
+				max = m;
+			}
+		}
+		ts[i] = ptype;
+	}
+	*ms = max;
+	return best;
+}
+DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n, int strict, int *ms, DMap *defs )
 {
 	int i;
 	DNode *it;
 	DRoutine *rout = NULL;
 	DMetaParam *param = NULL;
 	//printf( "DMetaParam_Lookup: %s %i\n", self->type ? self->type->name->mbs : "", n );
-	if( n == 0 ){
-		if( self->routine ) return self->routine; /* a leaf */
-		for(i=0; i<self->nexts->size; i++){
-			param = (DMetaParam*) self->nexts->items.pVoid[i];
-			if( param->type == NULL ) return param->routine; /* a leaf */
-			if( param->type->tid == DAO_PAR_VALIST )
-				return DMetaParam_Lookup( param, NULL, 0, 0 );
+	*ms = 1;
+	if( n == 0 ) return DMetaParam_GetLeaf( self, ms );
+	if( p[0]->t == DAO_PAR_NAMED ) return DMetaParam_LookupByName( self, p, n, strict, ms, defs );
+	DValue *value = p[0];
+	DRoutine *best = NULL;
+	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
+	int k, m, K = self->nexts->size;
+	int max = 0;
+	for(i=0; i<K; i++){
+		DMetaParam *param = items[i];
+		DaoType *type = param->type;
+		if( type == NULL ) continue;
+		if( strict && value->t != type->tid ) continue;
+		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchValue( type, *value, defs );
+		if( m == 0 ) continue;
+		if( strict && m != DAO_MT_EQ ) continue;
+		k = type->tid == DAO_PAR_VALIST ? 0 : n-1;
+		rout = DMetaParam_Lookup( param, p+1, k, strict, & k, defs );
+		if( rout == NULL ) continue;
+		m += k;
+		//printf( "%i: %i, %i %p %s\n", i, m, value->t, type, type->name->mbs );
+		if( m > max ){
+			best = rout;
+			max = m;
 		}
-		if( self->names == NULL || self->names->size ==0 ) return NULL;
-		/* check for routines with default parameters: */
-		for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
-			param = (DMetaParam*) it->value.pVoid;
-			if( param->type == NULL || it->key.pType->tid != DAO_PAR_DEFAULT ) continue;
-			return DMetaParam_Lookup( param, p, 0, 0 );
-		}
-		return NULL;
 	}
-	if( p[0]->t == DAO_PAR_NAMED ){
-		DMap *namepar = DMap_New(D_STRING,0);
-		for(i=0; i<n; i++){
-			DValue *p2 = p[i];
-			DaoNameValue *nameva = p2->v.nameva;
-			if( p2->t != DAO_PAR_NAMED ) break;
-			MAP_Insert( namepar, nameva->name,  & nameva->value );
-		}
-		if( i < n ){
-			DMap_Delete( namepar );
-			return NULL;
-		}
-		rout = DMetaParam_LookupByName( self, namepar, 0, strict );
-		DMap_Delete( namepar );
-		return rout;
-	}
-	param = DMetaParam_BestNext( self, p[0], strict );
-	if( param == NULL ) return NULL;
-	n = (param->type && param->type->tid == DAO_PAR_VALIST) ? 0 : n-1;
-	return DMetaParam_Lookup( param, p+1, n, strict );
+	*ms = max;
+	return best;
 }
-DRoutine* DMetaParam_LookupByType( DMetaParam *self, DaoType *types[], int n, int strict )
+DRoutine* DMetaParam_LookupByType( DMetaParam *self, DaoType *types[], int n, int strict, int *ms, DMap *defs )
 {
 	int i;
 	DNode *it;
 	DRoutine *rout = NULL;
 	DMetaParam *param = NULL;
 	//printf( "DMetaParam_LookupByType: %s %i\n", self->type ? self->type->name->mbs : "", n );
-	if( n == 0 ){
-		if( self->routine ) return self->routine; /* a leaf */
-		for(i=0; i<self->nexts->size; i++){
-			param = (DMetaParam*) self->nexts->items.pVoid[i];
-			if( param->type == NULL ) return param->routine; /* a leaf */
-			if( param->type->tid == DAO_PAR_VALIST )
-				return DMetaParam_LookupByType( param, NULL, 0, 0 );
+	*ms = 1;
+	if( n == 0 ) return DMetaParam_GetLeaf( self, ms );
+	if( types[0]->tid == DAO_PAR_NAMED )
+		return DMetaParam_LookupByName2( self, types, n, strict, ms, defs );
+	DaoType *partype = types[0];
+	DRoutine *best = NULL;
+	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
+	int m, k, K = self->nexts->size;
+	int max = 0;
+	//printf( "DMetaParam_NextBestByType: %i\n", n );
+	for(i=0; i<K; i++){
+		DMetaParam *param = items[i];
+		DaoType *type = param->type;
+		if( type == NULL ) continue;
+		if( strict && partype->tid != type->tid ) continue;
+		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchTo( partype, type, defs );
+		if( m == 0 ) continue;
+		if( strict && m != DAO_MT_EQ ) continue;
+		k = type->tid == DAO_PAR_VALIST ? 0 : n-1;
+		rout = DMetaParam_LookupByType( param, types+1, k, strict, & k, defs );
+		if( rout == NULL ) continue;
+		m += k;
+		//printf( "%i: %i, %i %p %s\n", i, m, partype->tid, type, type->name->mbs );
+		//if( rout ) printf( "rout = %s %i %i\n", rout->routType->name->mbs, n, m );
+		if( m > max ){
+			best = rout;
+			max = m;
 		}
-		if( self->names == NULL || self->names->size ==0 ) return NULL;
-		/* check for routines with default parameters: */
-		for(it=DMap_First(self->names); it; it=DMap_Next(self->names,it)){
-			param = (DMetaParam*) it->value.pVoid;
-			if( param->type == NULL || it->key.pType->tid != DAO_PAR_DEFAULT ) continue;
-			return DMetaParam_LookupByType( param, types, 0, 0 );
-		}
-		return NULL;
 	}
-	if( types[0]->tid == DAO_PAR_NAMED ){
-		DMap *namepar = DMap_New(D_STRING,0);
-		for(i=0; i<n; i++){
-			DaoType *type = types[i];
-			if( type->tid != DAO_PAR_NAMED ) break;
-			MAP_Insert( namepar, type->fname,  type->aux.v.type );
-		}
-		if( i < n ){
-			DMap_Delete( namepar );
-			return NULL;
-		}
-		rout = DMetaParam_LookupByName( self, namepar, 1, strict );
-		DMap_Delete( namepar );
-		return rout;
-	}
-	param = DMetaParam_BestNextByType( self, types[0], strict );
-	if( param == NULL ) return NULL;
-	n = (param->type && param->type->tid == DAO_PAR_VALIST) ? 0 : n-1;
-	return DMetaParam_LookupByType( param, types+1, n, strict );
+	*ms = max;
+	return best;
 }
+/* XXX:
+ * different routines should have different type holders for the same names
+ * in order to handle them properly in resolving overloaded routines!
+ */
 DRoutine* DaoMetaRoutine_Lookup2( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code, int strict )
 {
+	int i, k, m, score = 0;
 	int mcall = code == DVM_MCALL;
 	DMetaParam *param = NULL;
 	DRoutine *rout = NULL;
+	DMap *defs = NULL;
+	if( self->attribs & DAO_TYPE_NOTDEF ) defs = DHash_New(0,0);
 	if( obj && obj->t && mcall ==0 ){
 		if( self->mtree ){
-			param = DMetaParam_BestNext( self->mtree, obj, strict );
-			if( param ) rout = DMetaParam_Lookup( param, p, n, strict );
-			if( rout ) return rout;
+			DRoutine *rout2 = NULL;
+			for(i=0; i<self->mtree->nexts->size; i++){
+				param = (DMetaParam*) self->mtree->nexts->items.pVoid[i];
+				if( param->type == NULL ) continue;
+				if( strict && param->type->tid != obj->t ) continue;
+				m = DaoType_MatchValue( param->type, *obj, defs );
+				if( strict && m != DAO_MT_EQ ) continue;
+				if( m == 0 ) continue;
+				rout2 = DMetaParam_Lookup( param, p, n, strict, & k, defs );
+				if( rout2 == NULL ) continue;
+				m += k;
+				if( m > score ){
+					rout = rout2;
+					score = m;
+				}
+			}
+			if( rout ) goto Finalize;
 		}
 	}
 	if( mcall && self->mtree ){
-		rout = DMetaParam_Lookup( self->mtree, p, n, strict );
-		if( rout ) return rout;
+		rout = DMetaParam_Lookup( self->mtree, p, n, strict, & score, defs );
+		if( rout ) goto Finalize;
 	}
 	//printf( "DaoMetaRoutine_Lookup(): %s %p %i\n", self->name->mbs, self->tree, n );
 	if( self->tree ){
@@ -5222,26 +5251,45 @@ DRoutine* DaoMetaRoutine_Lookup2( DaoMetaRoutine *self, DValue *obj, DValue *p[]
 			p += 1;
 			n -= 1;
 		}
-		return DMetaParam_Lookup( self->tree, p, n, strict );
+		rout = DMetaParam_Lookup( self->tree, p, n, strict, & score, defs );
 	}
-	return NULL;
+Finalize:
+	if( defs ) DMap_Delete( defs );
+	return rout;
 }
 DRoutine* DaoMetaRoutine_LookupByType2( DaoMetaRoutine *self, DaoType *selftype, DaoType *types[], int n, int code, int strict )
 {
+	int i, k, m, score = 0;
 	int mcall = code == DVM_MCALL;
 	DMetaParam *param = NULL;
 	DRoutine *rout = NULL;
+	DMap *defs = NULL;
 	//printf( "DaoMetaRoutine_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
+	if( self->attribs & DAO_TYPE_NOTDEF ) defs = DHash_New(0,0);
 	if( selftype && mcall ==0 ){
 		if( self->mtree ){
-			param = DMetaParam_BestNextByType( self->mtree, selftype, strict );
-			if( param ) rout = DMetaParam_LookupByType( param, types, n, strict );
-			if( rout ) return rout;
+			DRoutine *rout2 = NULL;
+			for(i=0; i<self->mtree->nexts->size; i++){
+				param = (DMetaParam*) self->mtree->nexts->items.pVoid[i];
+				if( param->type == NULL ) continue;
+				if( strict && param->type->tid != selftype->tid ) continue;
+				m = DaoType_MatchTo( selftype, param->type, defs );
+				if( strict && m != DAO_MT_EQ ) continue;
+				if( m == 0 ) continue;
+				rout2 = DMetaParam_LookupByType( param, types, n, strict, & k, defs );
+				if( rout2 == NULL ) continue;
+				m += k;
+				if( m > score ){
+					rout = rout2;
+					score = m;
+				}
+			}
+			if( rout ) goto Finalize;
 		}
 	}
 	if( mcall && self->mtree ){
-		rout = DMetaParam_LookupByType( self->mtree, types, n, strict );
-		if( rout ) return rout;
+		rout = DMetaParam_LookupByType( self->mtree, types, n, strict, & score, defs );
+		if( rout ) goto Finalize;
 	}
 	//printf( "DaoMetaRoutine_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
 	if( self->tree ){
@@ -5249,9 +5297,11 @@ DRoutine* DaoMetaRoutine_LookupByType2( DaoMetaRoutine *self, DaoType *selftype,
 			types += 1;
 			n -= 1;
 		}
-		return DMetaParam_LookupByType( self->tree, types, n, strict );
+		rout = DMetaParam_LookupByType( self->tree, types, n, strict, & score, defs );
 	}
-	return NULL;
+Finalize:
+	if( defs ) DMap_Delete( defs );
+	return rout;
 }
 DRoutine* DaoMetaRoutine_Lookup( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code )
 {
@@ -5338,7 +5388,7 @@ DaoRoutine* DaoDecorator_ResolveByType( DaoType *self, DaoType *rout, DaoType *t
 }
 
 
-DMetaParam* DMetaParam_BestNextByType2( DMetaParam *self, DaoType *par )
+DMetaParam* DMetaParam_BestNextByType( DMetaParam *self, DaoType *par )
 {
 	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
 	int i, m, n = self->nexts->size;
@@ -5366,7 +5416,7 @@ DRoutine* DMetaParam_LookupByType2( DMetaParam *self, DaoType *types[], int n )
 		}
 		return NULL;
 	}
-	param = DMetaParam_BestNextByType2( self, types[0] );
+	param = DMetaParam_BestNextByType( self, types[0] );
 	if( param == NULL ) return NULL;
 	return DMetaParam_LookupByType2( param, types+1, n-1 );
 }

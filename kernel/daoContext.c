@@ -3882,6 +3882,14 @@ static DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, 
 	DMap *mapids = DMap_New(0,D_STRING);
 	int parpass[DAO_MAX_PARAM];
 	int i, j, k;
+	if( self->type == DAO_METAROUTINE ){
+		DaoMetaRoutine *meta = (DaoMetaRoutine*)self;
+		DaoType *ftype = decotypes[0]->aux.v.type;
+		DaoType **pts = ftype->nested->items.pType;
+		int nn = ftype->nested->size;
+		int code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
+		self = (DaoRoutine*) DRoutine_ResolveByType( meta, NULL, pts, nn, code );
+	}
 	parser->routine = routine;
 	parser->nameSpace = routine->nameSpace = decoFunc->nameSpace;
 	parser->vmSpace = routine->nameSpace->vmSpace;
@@ -4206,10 +4214,17 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		selfpar->t = DAO_OBJECT;
 		selfpar->v.object = self->object;
 	}
-	if( caller.t == DAO_FUNCTION ){
+	if( mode & DAO_CALL_COROUT ){
+		DaoVmProcess *vmp = DaoVmProcess_Create( self, self->regValues + vmc->a, npar+1 );
+		if( vmp == NULL ) return;
+		GC_ShiftRC( self->regTypes[ vmc->c ], vmp->abtype );
+		vmp->abtype = self->regTypes[ vmc->c ];
+		DaoContext_SetResult( self, (DaoBase*) vmp );
+	}else if( caller.t == DAO_FUNCTION ){
 		DaoContext_DoCxxCall( self, vmc, caller.v.func, selfpar, params, npar );
 	}else if( caller.t == DAO_ROUTINE ){
 		rout = DRoutine_Resolve( caller.v.p, selfpar, params, npar, codemode );
+		if( rout == NULL ) goto InvalidParameter;
 		if( rout->routName->mbs[0] == '@' ){
 			rout = DaoRoutine_Decorate( params[0]->v.routine, rout, params+1, npar-1 );
 			DaoContext_SetResult( self, (DaoBase*) rout );
@@ -4228,6 +4243,11 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 			goto InvalidParameter;
 		}
 		if( rout->type == DAO_ROUTINE ){
+			if( rout->routName->mbs[0] == '@' ){
+				rout = DaoRoutine_Decorate( params[0]->v.routine, rout, params+1, npar-1 );
+				DaoContext_SetResult( self, (DaoBase*) rout );
+				return;
+			}
 			ctx = DaoVmProcess_MakeContext( self->process, (DaoRoutine*)rout );
 			DaoContext_PrepareCall( self, vmc, ctx, selfpar, params, npar );
 			if( DaoContext_TrySynCall( self, vmc, ctx ) ) return;

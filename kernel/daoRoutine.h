@@ -155,6 +155,7 @@ struct DaoMetaRoutine
 {
 	DAO_DATA_COMMON;
 
+	unsigned int   attribs;
 	DaoNameSpace  *space;
 	DaoType       *host;
 	DaoType       *unitype;

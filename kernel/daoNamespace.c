@@ -344,7 +344,8 @@ void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host )
 	}else{
 		DRoutine *existed = (DRoutine*) node->value.pBase;
 		DaoMetaRoutine *metaRoutine = DaoMetaRoutine_New( existed->nameSpace, rout->routName );
-		metaRoutine->host = host; // XXX GC
+		GC_IncRC( host );
+		metaRoutine->host = host;
 		DaoMetaRoutine_Add( metaRoutine, (DRoutine*) node->value.pBase );
 		DaoMetaRoutine_Add( metaRoutine, (DRoutine*) rout );
 		GC_IncRC( metaRoutine ); 

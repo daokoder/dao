@@ -698,6 +698,13 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	case DAO_METAROUTINE :
 		if( self->tid != DAO_METAROUTINE ) return 0;
 		return DAO_MT_EQ * (self == value.v.metaRoutine->unitype);
+		if( self->tid == DAO_METAROUTINE ) return DAO_MT_EQ * (self == value.v.metaRoutine->unitype);
+		if( self->tid == DAO_ROUTINE ){
+			DArray *routines = value.v.metaRoutine->routines;
+			for(i=0; i<routines->size; i++){
+				if( routines->items.pRout2[i]->routType == self ) return DAO_MT_EQ;
+			}
+		}
 		break;
 	case DAO_FUNCTION :
 	case DAO_ROUTINE :

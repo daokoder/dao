@@ -436,14 +436,14 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 	DString_SetMBS( str, "default" );
 	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC, -1 );
 
-	value.t = DAO_ROUTINE;
-	value.v.routine = rout;
-	DaoClass_AddConst( self, rout->routName, value, DAO_DATA_PRIVATE, -1 );
-	DString_Delete( str );
-
 	self->classRoutines = DaoMetaRoutine_New( ns, name );
 	self->classRoutines->host = self->objType;
 	GC_IncRC( self->objType );
+
+	value.t = DAO_METAROUTINE;
+	value.v.metaRoutine = self->classRoutines;
+	DaoClass_AddConst( self, rout->routName, value, DAO_DATA_PRIVATE, -1 );
+	DString_Delete( str );
 
 	DArray_Append( self->cstDataTable, self->cstData );
 	DArray_Append( self->glbDataTable, self->glbData );
