@@ -1,7 +1,7 @@
 
 routine @trace( func : routine )
 {
-	reflect.trace();
+	reflect.trace($print);
 	io.writeln( std.about( func ) );
 	return func(...);
 }

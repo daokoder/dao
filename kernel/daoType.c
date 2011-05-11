@@ -451,10 +451,16 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_METAROUTINE :
 		if( type->tid == DAO_METAROUTINE ) return DAO_MT_EQ * (self == type);
 		if( type->tid == DAO_ROUTINE ){
+			DRoutine *rout;
+			DaoType **tps = type->nested->items.pType;
 			DArray *routines = self->aux.v.metaRoutine->routines;
+			int np = type->nested->size;
 			for(i=0; i<routines->size; i++){
 				if( routines->items.pRout2[i]->routType == type ) return DAO_MT_EQ;
 			}
+			rout = DRoutine_ResolveByType( self->aux.v.p, NULL, tps, np, DVM_CALL );
+			if( rout == NULL ) return DAO_MT_NOT;
+			return DaoType_MatchTo( rout->routType, type, defs );
 		}
 		return DAO_MT_NOT;
 		break;
@@ -696,14 +702,18 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		}
 		return DAO_MT_EQ;
 	case DAO_METAROUTINE :
-		if( self->tid != DAO_METAROUTINE ) return 0;
-		return DAO_MT_EQ * (self == value.v.metaRoutine->unitype);
 		if( self->tid == DAO_METAROUTINE ) return DAO_MT_EQ * (self == value.v.metaRoutine->unitype);
 		if( self->tid == DAO_ROUTINE ){
+			DRoutine *rout;
+			DaoType **tps = self->nested->items.pType;
 			DArray *routines = value.v.metaRoutine->routines;
+			int np = self->nested->size;
 			for(i=0; i<routines->size; i++){
 				if( routines->items.pRout2[i]->routType == self ) return DAO_MT_EQ;
 			}
+			rout = DRoutine_ResolveByType( value.v.p, NULL, tps, np, DVM_CALL );
+			if( rout == NULL ) return DAO_MT_NOT;
+			return DaoType_MatchTo( rout->routType, self, defs );
 		}
 		break;
 	case DAO_FUNCTION :

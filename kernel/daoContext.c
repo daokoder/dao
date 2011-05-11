@@ -3872,7 +3872,7 @@ int DaoContext_CheckFE( DaoContext *self )
 	dao_fe_clear();
 	return res;
 }
-static DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue *p[], int n )
+DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue *p[], int n )
 {
 	DArray *nested = decoFunc->routType->nested;
 	DaoType **decotypes = nested->items.pType;
@@ -3882,6 +3882,10 @@ static DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, 
 	DMap *mapids = DMap_New(0,D_STRING);
 	int parpass[DAO_MAX_PARAM];
 	int i, j, k;
+	if( decoFunc->type == DAO_METAROUTINE ){
+		decoFunc = DRoutine_Resolve( (DaoBase*)decoFunc, NULL, p, n, DVM_CALL );
+		if( decoFunc == NULL ) return NULL;
+	}
 	if( self->type == DAO_METAROUTINE ){
 		DaoMetaRoutine *meta = (DaoMetaRoutine*)self;
 		DaoType *ftype = decotypes[0]->aux.v.type;

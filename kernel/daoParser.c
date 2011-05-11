@@ -2794,183 +2794,32 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	DaoNameSpace_AddConst( myNS, str, value, DAO_DATA_PUBLIC );
 	return start;
 }
-static DaoRoutine* DaoRoutine_GetDecorator( DaoRoutine *self, DaoRoutine *deco, DaoTuple *param )
-{
-#if 0
-	DaoRoutine *dc, *best = NULL;
-	DaoType *ft, *tp, **types, **stypes = self->routType->nested->items.pType;
-	DMap *mapNames, *mapids = DMap_New(0,D_STRING);
-	DArray *nested;
-	DNode *it, *node;
-	int parpass[DAO_MAX_PARAM];
-	float sum, sum2, max = 0;
-	int i, j, k, match;
-	for(i=0; i<deco->routTable->size; i++){
-		dc = deco->routTable->items.pRout[i];
-		nested = dc->routType->nested;
-		types = nested->items.pType;
-		if( param && param->items->size >= nested->size ) continue;
-		ft = types[0];
-		if( ft->tid != DAO_PAR_NAMED || ft->aux.v.type->tid != DAO_ROUTINE ) continue;
-		ft = ft->aux.v.type;
-		if( ft->nested->size > self->routType->nested->size ) continue;
-		sum = sum2 = 0;
-		mapNames = ft->mapNames;
-		for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
-			tp = ft->nested->items.pType[it->value.pInt];
-			node = DMap_Find( self->routType->mapNames, it->key.pVoid );
-			if( node == NULL ) goto NextDecorator;
-			match = DaoType_MatchTo( tp, stypes[node->value.pInt], NULL );
-			if( match ==0 ) goto NextDecorator;
-			sum += match;
-		}
-		if( mapNames->size ==0 ) sum = 1;
-		for(j=0; j<nested->size; j++) parpass[j] = 0;
-		if( param ){
-			DMap_Clear( mapids );
-			mapNames = param->unitype->mapNames;
-			for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
-				DMap_Insert( mapids, it->value.pVoid, it->key.pVoid );
-			}
-			k = 1;
-			for(j=0; j<param->items->size; j++){
-				DValue pv = param->items->data[j];
-				node = MAP_Find( mapids, j );
-				if( node ){
-					node = DMap_Find( dc->routType->mapNames, node->value.pString );
-					if( node == NULL ) goto NextDecorator;
-					k = node->value.pInt;
-					if( k ==0 ) goto NextDecorator;
-				}
-				match = DaoType_MatchValue( types[k]->aux.v.type, pv, NULL );
-				if( match ==0 ) goto NextDecorator;
-				sum2 += match;
-				parpass[k] = 1;
-				k += 1;
-			}
-		}
-		for(j=1; j<nested->size; j++){
-			k = types[j]->tid;
-			if( k == DAO_PAR_VALIST ) break;
-			if( parpass[j] ) continue;
-			if( k != DAO_PAR_DEFAULT ) goto NextDecorator;
-			parpass[j] = 1;
-			sum2 += 1;
-		}
-		sum = sum / (self->routType->nested->size + 1) + sum2 / nested->size;
-		if( sum > max ){
-			max = sum;
-			best = dc;
-		}
-NextDecorator:
-		continue;
-	}
-	DMap_Delete( mapids );
-	return best;
-#endif
-	return NULL;
-}
-static void DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoTuple *decoParam )
-{
-#if 0
-	DArray *nested = decoFunc->routType->nested;
-	DaoType *udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
-	DaoType **decotypes = nested->items.pType;
-	DaoParser *parser = DaoParser_New();
-	DaoRoutine *routine = DaoRoutine_New();
-	DaoRoutine tmp = *self;
-	DaoNameSpace *ns = self->nameSpace;
-	DMap *mapids = DMap_New(0,D_STRING);
-	int parpass[DAO_MAX_PARAM];
-	int i, j, k;
-	parser->routine = routine;
-	parser->nameSpace = routine->nameSpace = decoFunc->nameSpace;
-	parser->vmSpace = routine->nameSpace->vmSpace;
-	GC_IncRC( routine->nameSpace );
-	routine->parCount = self->parCount;
-	routine->attribs = self->attribs;
-	routine->tidHost = self->tidHost;
-	GC_ShiftRC( self->routHost, routine->routHost );
-	routine->routHost = self->routHost;
-	routine->routType = DaoNameSpace_MakeRoutType( ns, self->routType, NULL, NULL, udf );
-	GC_IncRC( routine->routType );
-	DString_Assign( routine->routName, self->routName );
-	DString_Assign( routine->parCodes, self->parCodes );
-	for(i=0; i<self->routType->nested->size; i++){
-		DaoType *type = self->routType->nested->items.pType[i];
-		DRoutine_AddConstValue( (DRoutine*)routine, self->routConsts->data[i] );
-		if( type->tid == DAO_PAR_VALIST ) break;
-		MAP_Insert( DArray_Top( parser->localVarMap ), type->fname, i );
-		DArray_Append( routine->defLocals, self->defLocals->items.pToken[i] );
-	}
-	parser->locRegCount = self->parCount;
-	i = DRoutine_AddConst( (DRoutine*)routine, (DaoBase*) routine );
-	MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[0]->fname, i );
-
-	k = 1;
-	for(i=0; i<nested->size; i++) parpass[i] = 0;
-	if( decoParam ){
-		DMap *mapNames = decoParam->unitype->mapNames;
-		DNode *it, *node;
-		for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
-			DMap_Insert( mapids, it->value.pVoid, it->key.pVoid );
-		}
-		for(i=0; i<decoParam->items->size; i++){
-			DValue pv = decoParam->items->data[i];
-			node = MAP_Find( mapids, i );
-			if( node ){
-				it = node;
-				node = DMap_Find( decoFunc->routType->mapNames, node->value.pString );
-				if( node == NULL ) continue;
-				k = node->value.pInt;
-				if( k ==0 ) continue;
-			}
-			j = DRoutine_AddConstValue( (DRoutine*)routine, pv );
-			MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[k]->fname, j );
-			parpass[k] = 1;
-			k += 1;
-		}
-	}
-	for(i=1; i<nested->size; i++){
-		k = decotypes[i]->tid;
-		if( k == DAO_PAR_VALIST ) break;
-		if( parpass[i] ) continue;
-		if( k != DAO_PAR_DEFAULT ) continue;
-		k = DRoutine_AddConstValue( (DRoutine*)routine, decoFunc->routConsts->data[i] );
-		MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[i]->fname, k );
-		parpass[i] = 1;
-	}
-
-	/* if( decoFunc->parser ) DaoRoutine_Compile( decoFunc ); */
-	DArray_Assign( parser->tokens, decoFunc->source );
-	if( DaoParser_ParseRoutine( parser ) ==0 ) goto ErrorDecorator;
-	/* DaoRoutine_PrintCode( routine, self->nameSpace->vmSpace->stdStream ); */
-	*self = *routine;
-	*routine = tmp;
-	nested = self->routTable;
-	self->routTable = routine->routTable;
-	routine->routTable = nested;
-	DaoParser_Delete( parser );
-	return;
-ErrorDecorator:
-	GC_IncRC( routine );
-	GC_DecRC( routine );
-	DaoParser_Delete( parser );
-	DMap_Delete( mapids );
-#endif
-}
+DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue *p[], int n );
 static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
-	int i, count = self->decoFuncs->size;
+	DaoRoutine *rout2;
+	DaoRoutine tmp = *rout;
+	DValue *params[DAO_MAX_PARAM+1]; 
+	DValue value = daoNullRoutine;
+	int i, j, n, count = self->decoFuncs->size;
+
+	value.v.routine = rout;
+	params[0] = & value;
 	for(i=0; i<count; i++){
 		DaoRoutine *decoFunc = self->decoFuncs->items.pRout[i];
-		DaoTuple *decoParam = self->decoParams->items.pTuple[i];
-		decoFunc = DaoRoutine_GetDecorator( rout, decoFunc, decoParam );
+		DaoList *decoParam = self->decoParams->items.pList[i];
+		n = decoParam->items->size;
+		for(j=0; j<n; j++) params[j+1] = decoParam->items->data + j;
+		decoFunc = DRoutine_Resolve( (DaoBase*) decoFunc, NULL, params, n+1, DVM_CALL );
 		if( decoFunc == NULL ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;
 		}
-		DaoRoutine_Decorate( rout, decoFunc, decoParam );
+		rout2 = DaoRoutine_Decorate( rout, decoFunc, params+1, n );
+		*rout = *rout2;
+		*rout2 = tmp;
+		GC_ShiftRC( rout2, rout->routConsts->data[rout->parCount].v.p );
+		rout->routConsts->data[rout->parCount].v.routine = rout2;
 		/* printf( "%s\n", decoFunc->routType->name->mbs ); */
 	}
 }
@@ -3867,38 +3716,44 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		}
 		if( tki == DTOK_ID_INITYPE ){
 			DaoRoutine *decfunc = NULL;
-			DaoTuple *dectup = NULL;
+			DaoList *declist = NULL;
+			DArray *cid = NULL;
 			empty_decos = 0;
 			reg = DaoParser_GetRegister( self, tokens[start] );
 			if( reg < 0 ) goto DecoratorError;
 			if( !(LOOKUP_ST( reg ) & 1) ) goto DecoratorError;
 			value = DaoParser_GetVariable( self, reg );
-			if( value.t != DAO_ROUTINE ) goto DecoratorError;
+			if( value.t != DAO_ROUTINE && value.t != DAO_METAROUTINE ) goto DecoratorError;
 			decfunc = value.v.routine;
+			declist = DaoList_New();
 			if( start+1 <= to && tokens[start+1]->name == DTOK_LB ){
 				rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 				if( rb < 0 ) goto DecoratorError;
-				tokens[start]->name = DKEY_TUPLE;
-				tokens[start+1]->name = tokens[start+1]->type = DTOK_LCB;
-				tokens[rb]->name = tokens[rb]->type = DTOK_RCB;
-				reg = DaoParser_MakeArithTree( self, start, rb, &cst, -1, 0 );
-				tokens[start]->name = DTOK_IDENTIFIER;
-				tokens[start+1]->name = tokens[start+1]->type = DTOK_LB;
-				tokens[rb]->name = tokens[rb]->type = DTOK_RB;
+				cid = DArray_New(0);
+				reg = DaoParser_MakeArithArray( self, start+1, rb, &k, &cst, DTOK_COMMA, 0, cid, 0 );
 				if( reg < 0 ) goto DecoratorError;
 				if( cst ==0 ){
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start+2, rb-1, 0 );
 					goto DecoratorError;
 				}
-				value = DaoParser_GetVariable( self, cst );
-				dectup = value.v.tuple;
+				if( cid->size >= DAO_MAX_PARAM ){
+					DaoParser_Error2( self, DAO_PARAM_TOO_MANY, start+2, rb-1, 0 );
+					goto DecoratorError;
+				}
+				for(k=0; k<cid->size; k++ ){
+					DValue v = DaoParser_GetVariable( self, cid->items.pInt[k] );
+					DaoList_Append( declist, v );
+				}
 				start = rb;
 			}
+			if( cid ) DArray_Delete( cid );
 			DArray_PushFront( self->decoFuncs, decfunc );
-			DArray_PushFront( self->decoParams, dectup );
+			DArray_PushFront( self->decoParams, declist );
 			start ++;
 			continue;
 DecoratorError:
+			if( cid ) DArray_Delete( cid );
+			if( declist ) DaoList_Delete( declist );
 			DaoParser_Error3( self, DAO_CTW_INVA_SYNTAX, start );
 			return 0;
 		}

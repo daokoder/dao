@@ -641,7 +641,6 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 	return 1;
 MoveFailed:
 	DValue_Clear( to );
-	printf( "debug\n" );
 	return 0;
 }
 int DValue_Move( DValue from, DValue *to, DaoType *tp )

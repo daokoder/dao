@@ -91,86 +91,6 @@ int  DRoutine_AddConstValue( DRoutine *self, DValue value )
 	DValue_MarkConst( & self->routConsts->data[self->routConsts->size-1] );
 	return self->routConsts->size-1;
 }
-static int DaoDecorator_CheckType( DaoType *decoType, DaoType *ts[], int np )
-{
-	DArray *nested = decoType->nested;
-	DaoType **stypes, **types = nested->items.pType;
-	DaoType *t, *ft, *tp, *routType = ts[0];
-	DNode *it, *node;
-	DMap *mapNames, *defs = DMap_New(0,0);
-	int parpass[DAO_MAX_PARAM];
-	float sum = 0, sum2 = 0;
-	int i, j, k, match;
-
-	if( np ==0 || nested->size ==0 || np > nested->size ) goto CheckFailed;
-	if( routType == NULL ) goto CheckFailed;
-	if( (k=routType->tid) == DAO_UDF || k == DAO_INITYPE || k == DAO_ANY ) return 1;
-	if( routType->tid != DAO_ROUTINE ) goto CheckFailed;
-	ft = types[0];
-	stypes = routType->nested->items.pType;
-	if( ft->tid != DAO_PAR_NAMED || ft->aux.v.type->tid != DAO_ROUTINE ) goto CheckFailed;
-	ft = ft->aux.v.type;
-	if( ft->nested->size > routType->nested->size ) goto CheckFailed;
-	mapNames = ft->mapNames;
-	for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
-		tp = ft->nested->items.pType[it->value.pInt];
-		node = DMap_Find( routType->mapNames, it->key.pVoid );
-		if( node == NULL ) goto CheckFailed;
-		match = DaoType_MatchTo( tp, stypes[node->value.pInt], NULL );
-		if( match ==0 ) goto CheckFailed;
-		sum += match;
-	}
-	if( mapNames->size ==0 ) sum = 1;
-	for(j=0; j<nested->size; j++) parpass[j] = 0;
-	k = 1;
-	for(j=1; j<np; j++){
-		if( k < nested->size && types[k]->tid == DAO_PAR_VALIST ){
-			for(; k<np; k++) parpass[k] = 1;
-			break;
-		}
-		tp = ts[j];
-		if( tp == NULL ) goto CheckFailed;
-		if( tp->tid == DAO_PAR_NAMED ){
-			node = DMap_Find( decoType->mapNames, tp->fname );
-			if( node == NULL ) goto CheckFailed;
-			k = node->value.pInt;
-			tp = tp->aux.v.type;
-		}
-		if( k >= nested->size || tp ==NULL )  goto CheckFailed;
-		t = nested->items.pType[k];
-		if( t->tid == DAO_PAR_NAMED || t->tid == DAO_PAR_DEFAULT ) t = t->aux.v.type;
-		match = DaoType_MatchTo( tp, t, defs );
-
-		/*
-		   printf( "%p %s %p %s\n", tp->aux.v.p, tp->name->mbs, t->aux.v.p, t->name->mbs );
-		   printf( "%i:  %i\n", k, match );
-		 */
-
-		/* less strict */
-		if( tp && match ==0 ){
-			if( tp->tid == DAO_ANY && t->tid == DAO_ANY )
-				match = DAO_MT_ANY;
-			else if( tp->tid == DAO_ANY || tp->tid == DAO_UDF )
-				match = DAO_MT_NEGLECT;
-		}
-		if( match == 0 ) goto CheckFailed;
-		sum2 += match;
-		parpass[k] = 1;
-		k += 1;
-	}
-	for(j=1; j<nested->size; j++){
-		k = types[j]->tid;
-		if( k == DAO_PAR_VALIST ) break;
-		if( parpass[j] ) continue;
-		if( k != DAO_PAR_DEFAULT ) goto CheckFailed;
-		parpass[j] = 1;
-		sum2 += 1;
-	}
-	sum = sum / (routType->nested->size + 1) + sum2 / nested->size;
-	return 1000*sum;
-CheckFailed:
-	return -1;
-}
 static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *selftype,
 		DaoType *ts[], int np, int code, int def )
 {
@@ -185,8 +105,6 @@ static int DRoutine_CheckType( DaoType *routType, DaoNameSpace *ns, DaoType *sel
 	DRoutine *rout;
 	DNode *node;
 	DMap *defs;
-
-	//XXX if( routType->name->mbs[0] == '@' ) return DaoDecorator_CheckType( routType, ts, np );
 
 	defs = DMap_New(0,0);
 	if( routType->nested ){
@@ -479,88 +397,6 @@ static int DaoDecorator_Check( DaoRoutine *self, DaoRoutine *rout, DValue *p[], 
 NextDecorator:
 	return 0;
 }
-static DaoRoutine* DaoRoutine_GetDecorator( DArray *routTable, DValue *p[], int n )
-{
-	DaoRoutine *rout, *dc, *best = NULL;
-	DaoType *ft, *tp, **types, **stypes;
-	DMap *mapNames, *defs = NULL;
-	DArray *nested;
-	DNode *it, *node;
-	int parpass[DAO_MAX_PARAM];
-	float sum, sum2, max = 0;
-	int i, j, k, match;
-	if( n ==0 || p[0]->t != DAO_ROUTINE ) return NULL;
-	rout = p[0]->v.routine;
-	stypes = rout->routType->nested->items.pType;
-	for(i=0; i<routTable->size; i++){
-		dc = routTable->items.pRout[i];
-		nested = dc->routType->nested;
-		types = nested->items.pType;
-		if( n > nested->size ) continue;
-		ft = types[0];
-		if( ft->tid != DAO_PAR_NAMED || ft->aux.v.type->tid != DAO_ROUTINE ) continue;
-		ft = ft->aux.v.type;
-		if( ft->nested->size > rout->routType->nested->size ) continue;
-		sum = sum2 = 0;
-		mapNames = ft->mapNames;
-		for(it=DMap_First(mapNames); it; it=DMap_Next(mapNames,it)){
-			tp = ft->nested->items.pType[it->value.pInt];
-			node = DMap_Find( rout->routType->mapNames, it->key.pVoid );
-			if( node == NULL ) goto NextDecorator;
-			match = DaoType_MatchTo( tp, stypes[node->value.pInt], NULL );
-			if( match ==0 ) goto NextDecorator;
-			sum += match;
-		}
-		if( defs == NULL ) defs = DMap_New(0,0);
-		DMap_Clear( defs );
-		if( mapNames->size ==0 ) sum = 1;
-		for(j=0; j<nested->size; j++) parpass[j] = 0;
-		k = 1;
-		for(j=1; j<n; j++){
-			DValue pv = *p[j];
-			if( k < nested->size && types[k]->tid == DAO_PAR_VALIST ){
-				for(; k<n; k++) parpass[k] = 1;
-				break;
-			}
-			if( pv.t == DAO_PAR_NAMED ){
-				DaoNameValue *nameva = pv.v.nameva;
-				node = DMap_Find( dc->routType->mapNames, nameva->name );
-				if( node == NULL ) goto NextDecorator;
-				pv = nameva->value;
-				k = node->value.pInt;
-			}
-			if( k ==0 || k >= nested->size )  goto NextDecorator;
-			match = DaoType_MatchValue( types[k]->aux.v.type, pv, defs );
-
-			/*
-			   printf( "%p %s %p %s\n", tp->aux.v.p, tp->name->mbs, t->aux.v.p, t->name->mbs );
-			   printf( "%i:  %i\n", ito, parpass[ito] );
-			 */
-
-			if( match == 0 ) goto NextDecorator;
-			sum2 += match;
-			parpass[k] = 1;
-			k += 1;
-		}
-		for(j=1; j<nested->size; j++){
-			k = types[j]->tid;
-			if( k == DAO_PAR_VALIST ) break;
-			if( parpass[j] ) continue;
-			if( k != DAO_PAR_DEFAULT ) goto NextDecorator;
-			parpass[j] = 1;
-			sum2 += 1;
-		}
-		sum = sum / (rout->routType->nested->size + 1) + sum2 / nested->size;
-		if( sum > max ){
-			max = sum;
-			best = dc;
-		}
-NextDecorator:
-		continue;
-	}
-	if( defs ) DMap_Delete( defs );
-	return best;
-}
 int DRoutine_PassDefault( DRoutine *routine, DValue *recv[], int passed )
 {
 	DaoType *tp, *routype = routine->routType;
@@ -813,18 +649,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	self->bodyEnd = other->bodyEnd;
 	DString_Assign( self->regMode, other->regMode );
 }
-#if 0
-static DaoRoutine* DaoRoutine_Copy2( DaoRoutine *self )
-{
-	DaoRoutine *copy = DaoRoutine_Copy( self );
-	if( self->specialized == NULL ) self->specialized = DArray_New(0);
-	GC_IncRC( copy );
-	GC_IncRC( self );
-	DArray_Append( self->specialized, copy );
-	copy->original = self;
-	return copy;
-}
-#endif
 
 int DaoRoutine_InferTypes( DaoRoutine *self );
 extern void DaoRoutine_JitCompile( DaoRoutine *self );
@@ -5363,28 +5187,6 @@ DRoutine* DRoutine_ResolveByType( DaoBase *self, DaoType *st, DaoType *t[], int 
 		if( rt ) return rt;
 	}
 	return (DRoutine*) self;
-}
-
-DaoRoutine* DaoDecorator_Resolve( DaoBase *self, DaoBase *rout, DValue *p[], int n )
-{
-	int i;
-	DaoMetaRoutine *decos = (DaoMetaRoutine*) self;
-	DaoRoutine *deco = (DaoRoutine*) self;
-	DValue value = daoNullValue;
-	value.t = rout->type;
-	value.v.p = rout;
-	if( self->type != DAO_METAROUTINE && self->type != DAO_ROUTINE ) return NULL;
-	if( rout->type != DAO_METAROUTINE && rout->type != DAO_ROUTINE ) return NULL;
-	if( decos->type == DAO_METAROUTINE && decos->name->mbs[0] != '@' ) return NULL;
-	if( deco->type == DAO_ROUTINE && deco->routName->mbs[0] != '@' ) return NULL;
-	if( self->type == DAO_ROUTINE && rout->type == DAO_ROUTINE ){
-		if( DaoDecorator_Check( deco, rout, p, n ) ) return deco;
-		return NULL;
-	}else if( self->type == DAO_ROUTINE && rout->type == DAO_METAROUTINE ){
-	}
-}
-DaoRoutine* DaoDecorator_ResolveByType( DaoType *self, DaoType *rout, DaoType *t[], int n )
-{
 }
 
 
