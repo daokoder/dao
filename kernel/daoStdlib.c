@@ -221,8 +221,8 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 	DString *input;
 	DArray *tokens;
 	DMap   *cycData;
-	char *chs, *cmd, buffer[100];
-	int i, j;
+	char *chs, *cmd;
+	int i;
 	if( ! (ctx->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
 	input = DString_New(1);
 	if( N > 0 && p[0]->t == DAO_STREAM ){
@@ -955,7 +955,7 @@ static void REFL_Cst1( DaoContext *ctx, DValue *p[], int N )
 	DaoNameSpace *ns, *here = ctx->nameSpace;
 	DMap *index = NULL, *lookup = NULL;
 	DVarray *data;
-	DNode *node, *node2;
+	DNode *node;
 	DValue value;
 	DValue name = daoNullString;
 	DValue vtup = daoNullTuple;

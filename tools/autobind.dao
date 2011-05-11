@@ -1367,9 +1367,9 @@ global qt_put_qobject =
 ';
 
 global ctxput_copycdata =
-'  DaoContext_CopyCData( _ctx, (void*)& $(name), sizeof($(type)), dao_$(type2)_Typer );\n';
+'  DaoContext_CopyCData( _ctx, (void*)& $(name), sizeof($(namespace)$(type)), dao_$(type2)_Typer );\n';
 global ctxput_newcdata =
-'  DaoContext_PutCData( _ctx, (void*)new $(type)( $(name) ), dao_$(type2)_Typer );\n';
+'  DaoContext_PutCData( _ctx, (void*)new $(namespace)$(type)( $(name) ), dao_$(type2)_Typer );\n';
 global ctxput_refcdata =
 '  DaoContext_WrapCData( _ctx, (void*)& $(name), dao_$(type2)_Typer );\n';
 
@@ -4717,12 +4717,12 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	fout_header.write( '#include<string.h>\n' );
 	fout_header.write( '#include<dao.h>\n' );
 	if( lib_name == LibType.LIB_QT ) fout_header.write( '#include<QVector>\n#include<QList>\n' );
-	for( file in file_names ){
-		if( not extfiles.has( file + '.h' ) ){
+	for( file in file_names ; idx in [0:file_names.size()]){
+		if( not extfiles.has( files[idx] ) ){
 			if( dir_input ){
-				fout_header.write( '#include<' + dir_inc + file + '.h>\n' );
+				fout_header.write( '#include<' + dir_inc + files[idx] + '>\n' );
 			}else{
-				fout_header.write( '#include"' + dir_inc + file + '.h"\n' );
+				fout_header.write( '#include"' + dir_inc + files[idx] + '"\n' );
 			}
 		}
 	}

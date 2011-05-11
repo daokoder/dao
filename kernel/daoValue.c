@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
@@ -583,8 +583,8 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 	 * d : list<list<int>> = {};
 	 * e : list<float> = { 1.0 };
 	 * d.append( e );
-	 * 
-	 * but if d is of type list<list<any>>, 
+	 *
+	 * but if d is of type list<list<any>>,
 	 * the matching do not necessary to be exact.
 	 */
 	dA = DaoBase_Duplicate( dA, tp );
@@ -608,7 +608,7 @@ int DValue_Move4( DValue from, DValue *to, DaoType *tp )
 			tm = DaoType_MatchValue( it, data[i], NULL );
 			if( tm < DAO_MT_SIM ) return 1;
 		}
-		/* casting is not necessary if the tuple's field names are a superset of the 
+		/* casting is not necessary if the tuple's field names are a superset of the
 		 * field names of the target type: */
 		if( tp->mapNames == NULL || tp->mapNames->size ==0 ) return 1;
 		if( names ){
@@ -1207,7 +1207,7 @@ static int DValue_Serialize2( DValue*, DString*, DaoNameSpace*, DaoVmProcess*, D
 
 static void DString_Serialize( DString *self, DString *serial, DString *buf )
 {
-	int i, c;
+	int i;
 	unsigned char *mbs;
 
 	DString_Clear( buf );
@@ -1303,7 +1303,7 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNameSpace *
 	DString name = DString_WrapMBS( "serialize" );
 	DValue value = daoNullValue;
 	DValue selfpar = daoNullObject;
-	int i, errcode = DaoObject_GetData( self, & name, & value, NULL, NULL );
+	int errcode = DaoObject_GetData( self, & name, & value, NULL, NULL );
 	if( errcode || value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return 0;
 	selfpar.v.object = self;
 	rt = DRoutine_Resolve( value.v.p, &selfpar, NULL, 0, DVM_CALL );
@@ -1614,7 +1614,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 		}
 		n = array->dimAccum->size;
 		DaoArray_ResizeArray( array, array->dimAccum->items.pSize, n );
-		if( it1->tid == DAO_COMPLEX ) tmp.t == DAO_COMPLEX;
+		if( it1->tid == DAO_COMPLEX ) tmp.t = DAO_COMPLEX;
 		DArray_PushFront( types, it1 );
 		n = 0;
 		for(i=k+1; i<=end; i++){

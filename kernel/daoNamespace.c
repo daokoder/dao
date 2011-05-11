@@ -494,10 +494,7 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 {
 	DaoParser *parser2 = parser;
 	DaoType *abtype;
-	DaoCDataCore *plgCore;
 	DaoCDataCore *hostCore;
-	DString *s;
-	DValue value = daoNullCData;
 
 	if( typer->priv ) return typer->priv->abtype;
 
@@ -718,7 +715,6 @@ DaoTypeBase nsTyper=
 DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 {
 	int i = 0;
-	DNode *node;
 	DValue value = daoNullValue;
 	DString *name = DString_New(1);
 	DaoNameSpace *self = (DaoNameSpace*) dao_malloc( sizeof(DaoNameSpace) );
@@ -813,8 +809,6 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 void DaoNameSpace_Delete( DaoNameSpace *self )
 {
 	/* printf( "DaoNameSpace_Delete  %s\n", self->name->mbs ); */
-	DaoTypeCore *core;
-	DMap *values;
 	DNode *it;
 	int i, j;
 	it = DMap_First( self->localMacros );
@@ -1215,11 +1209,10 @@ static int DaoNameSpace_ImportRoutine( DaoNameSpace *self, DString *name, DValue
 }
 void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImport )
 {
-	DaoNameSpace *upNS;
 	DaoType **vtype = ns->varType->items.pType;
 	DArray *names = DArray_New(D_STRING);
 	DNode *node, *search;
-	int i, k, st, pm, up, id;
+	int k, st, pm, up, id;
 
 	if( varImport && varImport->size > 0 ){
 		for( k=0; k<varImport->size; k++){
@@ -1790,7 +1783,6 @@ DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols )
 {
 	DaoType *type;
 	DString *key, *name = DString_New(1);
-	DNode *node;
 	int n = strlen( symbols );
 	int i, k = 0, t1 = 0, t2 = 0;
 
@@ -2026,7 +2018,7 @@ void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin )
 		DValue value = daoNullValue;
 		int st = DAO_GLOBAL_VARIABLE;
 		int pm = DAO_DATA_PRIVATE;
-		int i, n, id, start = 0;
+		int i, n, start = 0;
 		char *mbs;
 
 		DaoParser_LexCode( parser, line->mbs, 0 );

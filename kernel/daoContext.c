@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
@@ -42,7 +42,7 @@ static DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc );
 
 extern void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc );
 /* binary operation with boolean result. */
-extern void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc ); 
+extern void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoBitLogic( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc );
@@ -167,7 +167,7 @@ void DaoContext_Init( DaoContext *self, DaoRoutine *routine )
 	DaoContext_InitValues( self );
 }
 int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DValue *pars[], int npar )
-{ 
+{
 	DValue *selfpar = NULL;
 	DValue value = daoNullObject;
 	DaoObject *othis = self->object;
@@ -310,7 +310,7 @@ int DaoContext_PutReference( DaoContext *self, DValue *refer )
 		self->regValues[reg] = refer;
 		return 1;
 	}
-	if( DValue_Move( *refer, value, tp ) == 0 ) goto TypeNotMatching; 
+	if( DValue_Move( *refer, value, tp ) == 0 ) goto TypeNotMatching;
 	return 0;
 TypeNotMatching:
 	tp2 = DaoNameSpace_GetTypeV( self->nameSpace, *refer );
@@ -679,9 +679,9 @@ DaoList* DaoContext_GetList( DaoContext *self, DaoVmCode *vmc )
 	/* create a new list in any case. */
 	DaoList *list = DaoList_New();
 	DaoType *tp = self->regTypes[ vmc->c ];
-	if( tp == NULL || tp->tid !=DAO_LIST 
+	if( tp == NULL || tp->tid !=DAO_LIST
 #if 0
-		|| NESTYPE( tp, 0 )->tid == DAO_UDF 
+		|| NESTYPE( tp, 0 )->tid == DAO_UDF
 #endif
 		)
 		tp = dao_list_any;
@@ -948,7 +948,7 @@ void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc )
 		return;
 	}
 	if( ta < DAO_INTEGER || ta >= DAO_ARRAY ){
-		DaoContext_RaiseException( self, DAO_ERROR_VALUE, 
+		DaoContext_RaiseException( self, DAO_ERROR_VALUE,
 				"need data of a primitive type as first value" );
 		return;
 	}
@@ -986,7 +986,7 @@ void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc )
 			complex16 first = * regValues[ opA ]->v.c;
 			complex16 step = {1,0};
 			if( bval >2 ) step = DValue_GetComplex( *regValues[ opA+1 ] );
-			for( i=0; i<num; i++){ 
+			for( i=0; i<num; i++){
 				list->items->data[i].v.c = dao_malloc( sizeof(complex16) );
 				list->items->data[i].v.c->real = first.real + i * step.real;
 				list->items->data[i].v.c->imag = first.imag + i * step.imag;
@@ -1010,7 +1010,7 @@ void DaoContext_DoRange(  DaoContext *self, DaoVmCode *vmc )
 			}
 			list->items->data[0].v.l = DLong_New();
 			DLong_Move( list->items->data[0].v.l, first );
-			for( i=1; i<num; i++){ 
+			for( i=1; i<num; i++){
 				list->items->data[i].v.l = DLong_New();
 				DLong_Add( list->items->data[i].v.l, list->items->data[i-1].v.l, step );
 			}
@@ -1137,21 +1137,21 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
 			case DAO_INTEGER :
 				{
 					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-						array->data.i[ i*a0->size + j] = 
+						array->data.i[ i*a0->size + j] =
 							a0->data.i[j] + i*DaoArray_GetInteger( a1, j );
 					break;
 				}
 			case DAO_FLOAT :
 				{
 					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-						array->data.f[ i*a0->size + j] = 
+						array->data.f[ i*a0->size + j] =
 							a0->data.f[j] + i*DaoArray_GetFloat( a1, j );
 					break;
 				}
 			case DAO_DOUBLE :
 				{
 					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-						array->data.d[ i*a0->size + j] = 
+						array->data.d[ i*a0->size + j] =
 							a0->data.d[j] + i*DaoArray_GetDouble( a1, j );
 					break;
 				}
@@ -1159,14 +1159,14 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
 				{
 					if( a1->numType == DAO_COMPLEX ){
 						for(i=0; i<num; i++) for(j=0; j<a0->size; j++){
-							array->data.c[ i*a0->size + j ].real = 
+							array->data.c[ i*a0->size + j ].real =
 								a0->data.c[j].real + i*a1->data.c[j].real;
-							array->data.c[ i*a0->size + j ].imag = 
+							array->data.c[ i*a0->size + j ].imag =
 								a0->data.c[j].imag + i*a1->data.c[j].imag;
 						}
 					}else{
 						for(i=0; i<num; i++) for(j=0; j<a0->size; j++){
-							array->data.c[ i*a0->size + j ].real = 
+							array->data.c[ i*a0->size + j ].real =
 								a0->data.c[j].real + i*DaoArray_GetDouble( a1, j );
 						}
 					}
@@ -1402,7 +1402,7 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 	if( vmc->code == DVM_MCURRY ){
 		if( p->t == DAO_ROUTINE ){
 			/* here it is not convenient to check attribute for DAO_ROUT_NEEDSELF,
-			 * because the routine may have not been compiled, 
+			 * because the routine may have not been compiled,
 			 * worse it may have overloaded routine, some may NEEDSELF, some may not. */
 			if( ROUT_HOST_TID( p->v.routine ) == DAO_OBJECT ) selfobj = self->regValues[opA+1];
 		}else if( p->t == DAO_ROUTINE || p->t == DAO_FUNCTION ){
@@ -1796,7 +1796,6 @@ void DaoContext_DoSetMetaField( DaoContext *self, DaoVmCode *vmc )
 	DaoMap *meta = DaoGetMetaMap( p, 1 );
 	DValue fname = self->routine->routConsts->data[ vmc->b ];
 	DValue v = *self->regValues[ vmc->a ];
-	DValue *value;
 	int c = 1;
 
 	self->vmc = vmc;
@@ -1834,7 +1833,7 @@ void DaoContext_DoSetMetaField( DaoContext *self, DaoVmCode *vmc )
    }
    }
 
-   3. since "A>B" (or "A>=B") is compiled as "B<A" (or "B<=A"), 
+   3. since "A>B" (or "A>=B") is compiled as "B<A" (or "B<=A"),
    when a DVM_LT or DVM_LE is executed, "operator<()"
    or "operator<=()" will be search first, if not found,
    then "operator>()" or "operator>=()" is searched,
@@ -1963,7 +1962,7 @@ ArithError:
 	DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
 	return 0;
 }
-/* Similar to DaoContext_TryObjectArith(), 
+/* Similar to DaoContext_TryObjectArith(),
    but without consideration for recursion. */
 int DaoContext_TryCDataArith( DaoContext *self, DValue *A, DValue *B, DValue *C )
 {
@@ -2258,7 +2257,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 			nc = DaoContext_GetArray( self, vmc );
 		DaoArray_ArrayArith( nc, na, nb, vmc->code, self );
 #endif
-	}else if( dA.t ==DAO_STRING && dB.t ==DAO_INTEGER && vmc->code ==DVM_ADD 
+	}else if( dA.t ==DAO_STRING && dB.t ==DAO_INTEGER && vmc->code ==DVM_ADD
 			&& vmc->a == vmc->c ){
 		DString_AppendWChar( dA.v.s, (wchar_t) dB.v.i );
 	}else if( dA.t ==DAO_STRING && dB.t ==DAO_STRING && vmc->code ==DVM_ADD ){
@@ -2272,7 +2271,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 			DaoContext_PutValue( self, dA );
 			DString_Delete( dA.v.s );
 		}
-	}else if( dA.t == DAO_ENUM && dB.t == DAO_ENUM 
+	}else if( dA.t == DAO_ENUM && dB.t == DAO_ENUM
 			&& (vmc->code == DVM_ADD || vmc->code == DVM_SUB) ){
 		DaoType *ta = dA.v.e->type;
 		DaoType *tb = dB.v.e->type;
@@ -2363,7 +2362,6 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 	DValue dA = *A, dB = *B;
 	DValue dC = daoZeroInteger;
 	int rc = 0;
-	DLong *lng;
 
 	self->vmc = vmc;
 
@@ -2422,7 +2420,7 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		return;
 	}
 
-	if( dA.t >= DAO_INTEGER && dA.t <= DAO_DOUBLE 
+	if( dA.t >= DAO_INTEGER && dA.t <= DAO_DOUBLE
 			&& dB.t >= DAO_INTEGER && dB.t <= DAO_DOUBLE ){
 		switch( vmc->code ){
 		case DVM_AND: dC = DValue_GetDouble( dA ) ? dB : dA; break;
@@ -2901,7 +2899,7 @@ void DaoContext_DoBitFlip( DaoContext *self, DaoVmCode *vmc )
 	}
 }
 
-static int DaoBase_CheckTypeShape( DValue self, int type, 
+static int DaoBase_CheckTypeShape( DValue self, int type,
 		DArray *shape, unsigned int depth, int check_size )
 {
 	DaoTuple *tuple;
@@ -3309,7 +3307,7 @@ static int ConvertStringToNumber( DaoContext *ctx, DValue dA, DValue *dC )
 	if( imagfirst ) dC->v.c->real = d2; else dC->v.c->imag = d2;
 	return toklen == mbs->size;
 }
-static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA, 
+static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 		complex16 *cb, DLong *lb, DString *sb )
 {
 	DaoNameSpace *ns = ctx->nameSpace;
@@ -3350,7 +3348,7 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 	case DAO_COMPLEX :
 		if( dA.t == DAO_COMPLEX ) goto Rebind;
 		if( dA.t >= DAO_ARRAY ) goto FailConversion;
-		/* do not allocate complex here, 
+		/* do not allocate complex here,
 		 * the caller should not be responsible to free it.
 		 * the same for string. */
 		dC.v.c = cb;
@@ -3714,7 +3712,6 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	if( ct->tid == DAO_STRING && vc->t != DAO_STRING ) vc->v.s = DString_New(1);
 
 	if( ct->tid == DAO_ENUM && va.t == DAO_ENUM ){
-		int i;
 		vc->t = DAO_ENUM;
 		DEnum_SetType( vc->v.e, ct );
 		if( DEnum_SetValue( vc->v.e, va.v.e, NULL ) ==0 ) goto FailConversion;
@@ -3862,7 +3859,7 @@ int DaoContext_CheckFE( DaoContext *self )
 		res = 1;
 #if 0
 	}else if( dao_fe_invalid() ){
-		/* disabled, because some extending modules may easily produce 
+		/* disabled, because some extending modules may easily produce
 		   harmless float point errors */
 		DaoContext_RaiseException( self, DAO_ERROR_FLOAT, "" );
 		res = 1;
@@ -3878,7 +3875,6 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue 
 	DaoType **decotypes = nested->items.pType;
 	DaoParser *parser = DaoParser_New();
 	DaoRoutine *routine = DaoRoutine_New();
-	DaoRoutine tmp = *self;
 	DMap *mapids = DMap_New(0,D_STRING);
 	int parpass[DAO_MAX_PARAM];
 	int i, j, k;
@@ -3892,7 +3888,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue 
 		DaoType **pts = ftype->nested->items.pType;
 		int nn = ftype->nested->size;
 		int code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
-		self = (DaoRoutine*) DRoutine_ResolveByType( meta, NULL, pts, nn, code );
+		self = (DaoRoutine*) DRoutine_ResolveByType( (DaoBase*)meta, NULL, pts, nn, code );
 	}
 	parser->routine = routine;
 	parser->nameSpace = routine->nameSpace = decoFunc->nameSpace;
@@ -3958,7 +3954,7 @@ ErrorDecorator:
 void DaoBase_Check( DaoBase *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
 void DaoPrintCallError( DArray *errors, DaoStream *stdio );
 
-void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout, 
+void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout,
 		DValue *selfobj, DValue *ps[], int np, int code )
 {
 	DaoStream *ss = DaoStream_New();
@@ -3966,7 +3962,7 @@ void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout,
 	DaoType *selftype = selfobj ? DaoNameSpace_GetTypeV( ns, *selfobj ) : NULL;
 	DaoType *ts[DAO_MAX_PARAM];
 	DArray *errors = DArray_New(0);
-	int i, k;
+	int i;
 	for(i=0; i<np; i++) ts[i] = DaoNameSpace_GetTypeV( ns, *ps[i] );
 	DaoBase_Check( (DaoBase*) rout, selftype, ts, np, code, errors );
 	ss->attribs |= DAO_IO_STRING;
@@ -4046,7 +4042,7 @@ static void DaoContext_PrepareCall( DaoContext *self, DaoVmCode *vmc,
 			GC_ShiftRC( obj, ctx->object );
 			ctx->object = obj;
 		}else{
-			/* Only class method that does not use object data 
+			/* Only class method that does not use object data
 			 * will be allowed to be called without object
 			 */
 			DaoContext_RaiseException( self, DAO_ERROR, "need self object" );
@@ -4064,7 +4060,7 @@ static void DaoContext_DoCxxCall( DaoContext *self, DaoVmCode *vmc,
 	for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
 	if( (self->vmSpace->options & DAO_EXEC_SAFE) && (func->attribs & DAO_ROUT_EXTFUNC) ){
 		/* normally this condition will not be satisfied.
-		 * it is possible only if the safe mode is set in C codes 
+		 * it is possible only if the safe mode is set in C codes
 		 * by embedding or extending. */
 		DaoContext_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
@@ -4080,7 +4076,7 @@ static void DaoContext_DoCxxCall( DaoContext *self, DaoVmCode *vmc,
 	 * bar: routine<self:cdata,x:int>
 	 *   obj.bar(1);
 	 * inside: Dao class member method:
-	 *   bar(1); # pass Dao class instances as self 
+	 *   bar(1); # pass Dao class instances as self
 	 */
 	if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
 	/*
@@ -4466,7 +4462,7 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 		}
 		if( (self->vmSpace->options &DAO_EXEC_SAFE) && (rout->attribs &DAO_ROUT_EXTFUNC) ){
 			/* normally this condition will not be satisfied.
-			 * it is possible only if the safe mode is set in C codes 
+			 * it is possible only if the safe mode is set in C codes
 			 * by embedding or extending. */
 			DaoContext_RaiseException( self, DAO_ERROR, "not permitted" );
 			return;
@@ -4482,7 +4478,7 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 		 * bar: routine<self:cdata,x:int>
 		 *   obj.bar(1);
 		 * inside: Dao class member method:
-		 *   bar(1); # pass Dao class instances as self 
+		 *   bar(1); # pass Dao class instances as self
 		 */
 		func = (DaoFunction*)rout;
 		if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) npar --;
@@ -4542,7 +4538,7 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 					ctx->object = obj;
 #endif
 				}else if( rout->attribs & DAO_ROUT_NEEDSELF ){
-					/* Only class method that does not use object data 
+					/* Only class method that does not use object data
 					 * will be allowed to be called without object
 					 */
 					DaoContext_RaiseException( self, DAO_ERROR, "need self object" );
@@ -4755,7 +4751,7 @@ static void DaoContext_MapTypes( DaoContext *self, DMap *deftypes )
 }
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 {
-	DaoType *tp, *tp2;
+	DaoType *tp;
 	DNode *it;
 	int i;
 #if 0
@@ -4784,7 +4780,6 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 }
 int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 {
-	DNode *it;
 	DMap *old = deftypes;
 	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
 	if( tp == NULL ) return 0;
@@ -4884,7 +4879,6 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	DMap *pm_map = DMap_New(D_STRING,0);
 	DMap *st_map = DMap_New(D_STRING,0);
 	DMap *protoValues = NULL;
-	DValue *dest;
 	DNode *it, *node;
 	DEnum pmEnum = {NULL,0};
 	DEnum stEnum = {NULL,0};
@@ -5194,9 +5188,7 @@ static void DaoInitException
 	DaoException *exdat = (DaoException*) except->data;
 	DaoVmCodeX **annotCodes = rout->annotCodes->items.pVmc;
 	DaoVmFrame *frame = ctx->frame->prev;
-	DaoContext *ctx2;
-	DValue *objData;
-	int k, line, line2;
+	int line, line2;
 	int id = (int) (vmc - ctx->codes);
 
 	line = line2 = rout->defLine;
@@ -5281,7 +5273,6 @@ int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc )
 	DaoTypeBase *ext = & dao_Exception_Typer;
 	DaoTypeBase *any = DaoException_GetType( DAO_EXCEPTION_ANY );
 	DaoTypeBase *none = DaoException_GetType( DAO_EXCEPTION_NONE );
-	DaoClass *p, *q;
 	DaoCData *cdata;
 	DValue **excepts = self->regValues + vmc->a;
 	DValue val, val2;
@@ -5352,7 +5343,7 @@ void DaoContext_RaiseException( DaoContext *self, int type, const char *value )
 		/* XXX support warning suppression */
 		cdata = DaoCData_New( typer, DaoException_New( typer ) );
 		DaoInitException( cdata, self, self->vmc, self->idClearFE, value );
-		DaoPrintException( cdata, stdio ); 
+		DaoPrintException( cdata, stdio );
 		typer->Delete( cdata );
 		return;
 	}

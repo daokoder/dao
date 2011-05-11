@@ -2,12 +2,12 @@
   This file is a part of a virtual machine for the Dao programming language.
   Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
-  This software is free software; you can redistribute it and/or modify it under the terms 
-  of the GNU Lesser General Public License as published by the Free Software Foundation; 
+  This software is free software; you can redistribute it and/or modify it under the terms
+  of the GNU Lesser General Public License as published by the Free Software Foundation;
   either version 2.1 of the License, or (at your option) any later version.
 
-  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+  This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
@@ -127,7 +127,7 @@ void DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );
 void DaoNameSpace_AddTypeConstant( DaoNameSpace *self, DString *name, DaoType *tp );
 
 DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p );
-DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name, 
+DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
 		uchar_t basic, DaoBase *pb, DaoType *nest[], int N );
 DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 		DValue *vals, DaoType *types[], DaoType *retp );
@@ -143,6 +143,7 @@ DaoType* DaoNameSpace_SymbolTypeAdd( DaoNameSpace *self, DaoType *t1, DaoType *t
 DaoType* DaoNameSpace_SymbolTypeSub( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value );
 
 int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer );
+void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host );
 int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer );
 DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
 

@@ -621,7 +621,7 @@ static void DLongBuffer_Delete( DLongBuffer *self )
 static void LongCat( DLong *z, DLong *x1, size_t m, DLong *x0 )
 {
 	/* z might be the same object as x1: */
-	int i, n = x1->size;
+	int n = x1->size;
 	if( z->bufSize < n + m + 1 ) DLong_Reserve( z, n + m + 1 );
 	memmove( z->data + m, x1->data, n * sizeof(ushort_t) );
 	memset( z->data, 0, m * sizeof(ushort_t) );
@@ -1813,7 +1813,7 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoContext *ctx, DValue *idx[], i
 {
 	DArray *tmp = DArray_New(0);
 	size_t *dims = self->dims->items.pSize;
-	int i, j, D = self->dims->size;
+	int i, D = self->dims->size;
 	int S = D != 0;
 	/* slice: DArray<DArray<int> > */
 	DArray_Clear( slice );
@@ -1965,7 +1965,7 @@ static void DaoArray_GetItem1( DValue *dbase, DaoContext *ctx, DValue pid )
 {
 	DaoArray *na, *self = dbase->v.array;
 	DValue *vs = & pid;
-	size_t *idm, *dims = self->dims->items.pSize;
+	size_t *dims = self->dims->items.pSize;
 	/* if( self->unitype ) printf( "DaoArray_GetItem: %s\n", self->unitype->name->mbs ); */
 
 	if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
@@ -2282,7 +2282,7 @@ static void DaoArray_GetItem( DValue *vself, DaoContext *ctx, DValue *ids[], int
 }
 static void DaoArray_SetItem( DValue *vself, DaoContext *ctx, DValue *ids[], int N, DValue value )
 {
-	DaoArray *na, *self = vself->v.array;
+	DaoArray *self = vself->v.array;
 	int i;
 	if( N == 0 ){
 		DaoArray_SetItem1( vself, ctx, daoNullValue, value, DVM_MOVE );
@@ -3946,8 +3946,7 @@ int DaoArray_Sliced( DaoArray *self )
 {
 	DaoArray *ref = self->reference;
 	DArray *slice = self->slice;
-	int i, S = 0;
-	size_t k;
+	int S = 0;
 
 	if( slice == NULL || ref == NULL ) goto ReturnFalse;
 	if( self->numType != ref->numType ) goto ReturnFalse;
@@ -4076,7 +4075,7 @@ void DaoArray_number_op_array( DaoArray *C, DValue A, DaoArray *B, short op, Dao
 	DaoArray *rC = C->reference;
 	DaoArray *dB = rB ? rB : B;
 	DaoArray *dC = rC ? rC : C;
-	int bi, i, b, c, N = DaoArray_UpdateShape( C, B );
+	int i, b, c, N = DaoArray_UpdateShape( C, B );
 	double bf, af = DValue_GetDouble( A );
 	complex16 bc, ac = {0.0, 0.0};
 
@@ -4155,7 +4154,7 @@ void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DValue B, short op, Dao
 	DaoArray *rC = C->reference;
 	DaoArray *dA = rA ? rA : A;
 	DaoArray *dC = rC ? rC : C;
-	int ai, i, a, c, N = DaoArray_UpdateShape( C, A );
+	int i, a, c, N = DaoArray_UpdateShape( C, A );
 	double af, bf = DValue_GetDouble( B );
 	complex16 ac, bc = {0.0, 0.0};
 
@@ -4315,7 +4314,6 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoCo
 		complex16 ac, bc;
 		double ad, bd;
 		float af, bf;
-		int ai, bi;
 		c = rC ? DaoArray_IndexFromSlice( rC, C->slice, i ) : i;
 		b = rB ? DaoArray_IndexFromSlice( rB, B->slice, i ) : i;
 		a = A == C ? c : (rA ? DaoArray_IndexFromSlice( rA, A->slice, i ) : i);

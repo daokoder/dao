@@ -232,7 +232,7 @@ DaoType* DaoType_Copy( DaoType *other )
 void DaoType_MapNames( DaoType *self )
 {
 	DaoType *tp;
-	int i, j, k = 0;
+	int i, k = 0;
 	if( self->nested == NULL ) return;
 	if( self->tid != DAO_TUPLE && self->tid != DAO_ROUTINE ) return;
 	if( self->mapNames == NULL ) self->mapNames = DMap_New(D_STRING,0);
@@ -359,7 +359,6 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
 }
 short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
-	DMap *inters;
 	DaoType *it1, *it2;
 	DNode *it, *node = NULL;
 	short i, k, mt2, mt = DAO_MT_NOT;
@@ -590,7 +589,6 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 	DaoType *tp;
 	DEnum *other;
 	DNode *node;
-	DMap *inters;
 	DMap *names;
 	short i, mt, mt2, it1=0, it2=0;
 	if( self == NULL ) return DAO_MT_NOT;
@@ -668,7 +666,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( value.v.map->items->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.map->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( ((1<<it1)&flags) && ((1<<it2)&flags) ){
+		if( (((ullong_t)1<<it1)&flags) && (((ullong_t)1<<it2)&flags) ){
 			if( it1 == DAO_UDF || it2 == DAO_UDF ) return DAO_MT_UDF;
 			if( it1 == DAO_INITYPE || it2 == DAO_INITYPE ) return DAO_MT_INIT;
 			if( it1 == DAO_ANY || it2 == DAO_ANY ) return DAO_MT_ANY;

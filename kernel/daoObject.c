@@ -30,7 +30,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 	DRoutine *meth;
 	DValue value = daoNullValue;
 	DValue selfpar = daoNullObject;
-	int i, errcode = DaoObject_GetData( self, name, & value, thisObject, NULL );
+	int errcode = DaoObject_GetData( self, name, & value, thisObject, NULL );
 	if( errcode ) return errcode;
 	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return DAO_ERROR_TYPE;
 	selfpar.v.object = self;

@@ -491,7 +491,6 @@ void GC_Unlock()
 void DaoGC_DecRC( DaoBase *p )
 {
 	const short idle = gcWorker.idle;
-	DaoTypeBase *typer;
 	if( ! p ) return;
 
 #ifdef DEBUG_TRACE

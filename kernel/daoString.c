@@ -301,7 +301,7 @@ void DString_SetWCS( DString *self, const wchar_t *chs )
 }
 void DString_Reserve( DString *self, size_t size )
 {
-	size_t i, bsize;
+	size_t bsize;
 	DString_Detach( self );
 	if( size <= self->bufSize && 2*size >= self->bufSize ) return;
 	if( self->mbs ){
@@ -1084,7 +1084,7 @@ void DString_Trim( DString *self )
 }
 size_t DString_CheckUTF8( DString *self )
 {
-	size_t i = 0, k, m, size = self->size;
+	size_t i = 0, m, size = self->size;
 	size_t total = 0;
 	size_t valid = 0;
 	unsigned char *mbs;
@@ -1342,7 +1342,7 @@ static int STR_Cipher( DString *self, DString *key, int hex, int flag )
 			}
 			DString_Resize( self, size );
 		}
-		btea( (int*)self->mbs, - (self->size / 4), (int*) ks );
+		btea( (int*)self->mbs, - (int)(self->size / 4), (int*) ks );
 		size = *(int*) self->mbs;
 		DString_Erase( self, 0, 4 );
 		self->size = size;

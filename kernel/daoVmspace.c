@@ -676,7 +676,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 	DValue nkey = daoZeroInteger;
 	DValue skey = daoNullString;
 	DValue sval = daoNullString;
-	size_t i, pk;
+	size_t i;
 	int tk, offset=0, eq=0;
 
 	skey.v.s = key;
@@ -973,7 +973,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DValue *ps;
 	ullong_t tm = 0;
 	size_t N;
-	int i, j, ch, res;
+	int i, j, res;
 
 	if( file == NULL || file->size ==0 || self->evalCmdline ){
 		DArray_PushFront( self->nameLoading, self->pathWorking );
@@ -1071,7 +1071,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 {
 	int slen = strlen( DAO_DLL_SUFFIX );
 	int i, modtype = DAO_MODULE_NONE;
-	size_t k, k2, k3, size;
+	size_t size;
 	DString_ToMBS( fname );
 	size = fname->size;
 	if( size >6 && DString_FindMBS( fname, ".dao.o", 0 ) == size-6 ){
@@ -2230,7 +2230,6 @@ DaoVmSpace* DaoInit()
 {
 	DaoVmSpace *vms;
 	DaoNameSpace *ns;
-	DaoFunction *func;
 	DaoType *type, *type1, *type2, *type3, *type4;
 	DString *mbs;
 	int i;
@@ -2386,7 +2385,6 @@ extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, Dao
 extern DMap *dao_typing_cache;
 void DaoQuit()
 {
-	int i;
 	/* TypeTest(); */
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 	DaoCallServer_Join( mainVmSpace );

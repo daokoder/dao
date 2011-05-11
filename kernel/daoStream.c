@@ -158,7 +158,7 @@ static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
 	DaoStream *self = ctx->vmSpace->stdStream;
 	DaoVmSpace *vms = self->vmSpace;
 	DString *ds = DaoContext_PutMBString( ctx, "" );
-	int ch, count = 0;
+	int count = 0;
 	if( N >0 ) self = p[0]->v.stream;
 	if( N >1 ) count = p[1]->v.i;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
@@ -848,7 +848,7 @@ int DaoFile_ReadLine( FILE *fin, DString *line )
 
 #ifdef WIN32
 #include <windows.h>
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(_stat)
 #define _stat stat
 #endif
 #endif

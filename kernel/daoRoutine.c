@@ -287,7 +287,7 @@ void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
 {
 	int npar = np;
 	int ndef = self->parCount;
-	int j, ifrom, ito;
+	int ifrom, ito;
 	int selfChecked = 0;
 	DaoType **parType = self->routType->nested->items.pType;
 	DaoType **tps = ts;
@@ -475,7 +475,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			for(; ifrom<npar; ifrom++){
 				ito = ifrom + selfChecked;
 				DValue_Move2( *p[ifrom], recv[ito], NULL );
-				passed |= 1<<ito;
+				passed |= (ullong_t)1<<ito;
 			}
 			break;
 		}
@@ -488,7 +488,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			ito = node->value.pInt;
 		}
 		if( ito >= ndef ) return 0;
-		passed |= 1<<ito;
+		passed |= (ullong_t)1<<ito;
 		tp = types[ito]->aux.v.type;
 		if( val->mode == DAO_REFER_PARAM ){ /* self parameter */
 			if( DaoType_MatchValue( tp, *val, NULL ) == DAO_MT_EQ ){
@@ -794,7 +794,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			if( MaybeFunctionCall( types[vmc->b] ) ) ClearChecking( self, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
-		case DVM_PAIR : 
+		case DVM_PAIR :
 		case DVM_CHECK :
 			SetupOperand( self, vmc->a, checks );
 			SetupOperand( self, vmc->b, checks );
@@ -804,7 +804,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			SetupOperand( self, vmc->b, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
-		case DVM_TUPLE : case DVM_MAP : case DVM_HASH : 
+		case DVM_TUPLE : case DVM_MAP : case DVM_HASH :
 			for(j=0; j<vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
 			break;
 		case DVM_LIST : case DVM_ARRAY :
@@ -867,7 +867,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
 			SetupOperand( self, vmc->a, checks );
 			break;
-		case DVM_MOVE_II : case DVM_MOVE_FF : case DVM_MOVE_DD : 
+		case DVM_MOVE_II : case DVM_MOVE_FF : case DVM_MOVE_DD :
 		case DVM_MOVE_CC : case DVM_MOVE_SS : case DVM_MOVE_PP :
 		case DVM_MOVE_IF : case DVM_MOVE_FI :
 		case DVM_MOVE_ID : case DVM_MOVE_FD :
@@ -1394,7 +1394,7 @@ static const char vmcTyping[][7] =
 	{ OT_OOO, -1, -1, -1, -1, -1, -1 } /* NULL */
 };
 
-static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc, 
+static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass,
 		DString *mbs, int setname )
 {
@@ -1472,7 +1472,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	}
 	return ct;
 }
-static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc, 
+static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc,
 		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass, DString *mbs )
 {
 	DaoType *rt = DaoCheckBinArith0( self, vmc, at, bt, ct, hostClass, mbs, 1 );
@@ -1722,7 +1722,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 #define ErrorTypeNotMatching( e1, t1, t2 ) \
 	{ ec_general = e1; ec_specific = DTE_TYPE_NOT_MATCHING; \
 		type_source = t1; type_target = t2; goto ErrorTyping; }
-	
+
 #define AssertTypeIdMatching( source, id, gerror ) \
 	if( source->tid != id ){ \
 		tid_target = id; ErrorTypeNotMatching( gerror, source, NULL ); }
@@ -1794,7 +1794,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray   *typeVK = hostClass ? hostClass->glbTypeTable : NULL;
 	DArray   *dataCG = self->nameSpace->cstDataTable;
 	DArray   *typeVG = self->nameSpace->varTypeTable;
-	DValue    empty = daoNullValue;
 	DValue    val = daoNullValue;
 	DValue   *csts;
 	DValue   *pp;
@@ -2466,7 +2465,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					//  ct = any;
 #endif
 			}else if( at->typer ){
-				DaoFunction *func;
 				val = DaoFindValue( at->typer, str );
 				if( val.t == DAO_FUNCTION ){
 					DaoFunction *func = val.v.func;
@@ -2527,7 +2525,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					/* less strict checking */
 					if( at->tid >= DAO_ARRAY && at->tid !=DAO_ANY ) goto NotMatch;
 
-					if( bt->tid==DAO_TUPLE && bt->nested->size == 2 
+					if( bt->tid==DAO_TUPLE && bt->nested->size == 2
 							&& (at->tid==DAO_STRING || at->tid <= DAO_DOUBLE) ){
 						/* passed */
 						AssertPairNumberType( bt );
@@ -3553,7 +3551,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( DaoType_MatchValue( at, cc, defs ) ==0 ){
 					cid = i + k;
 					vmc = vmcs[i + k];
-					type_source = DaoNameSpace_GetTypeV( ns, cc ); 
+					type_source = DaoNameSpace_GetTypeV( ns, cc );
 					type_target = at;
 					ec_specific = DTE_TYPE_NOT_MATCHING;
 					goto ErrorTyping;
@@ -3584,7 +3582,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( DEnum_SetValue( & em, cc.v.e, NULL ) ==0 ){
 						cid = i + k;
 						vmc = vmcs[i + k];
-						type_source = cc.v.e->type; 
+						type_source = cc.v.e->type;
 						type_target = at;
 						ec_specific = DTE_TYPE_NOT_MATCHING;
 						DMap_Delete( jumps );
@@ -3953,7 +3951,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( ct ) ct = DaoType_DefineTypes( ct, ns, defs2 );
 
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
-				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT 
+				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
 						&& (tp[0]->aux.v.klass->attribs & DAO_CLS_SYNCHRONOUS) ){
 					ct = DaoNameSpace_MakeType( ns, "future", DAO_FUTURE, NULL, &ct, 1 );
 				}
@@ -4597,7 +4595,6 @@ void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNameSpace *ns )
 	DArray array = {{NULL},{NULL},D_TOKEN,0,0};
 	DMap *nsTokens = ns->tokens;
 	DNode *node;
-	DString *ts;
 	int i;
 	DArray_Append( ns->sources, & array );
 	self->source = (DArray*) DArray_Back( ns->sources );
@@ -4641,7 +4638,6 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoVmCodeX **vmCodes;
 	DString *annot;
 	const char *fmt = daoRoutineCodeFormat;
-	char buffer[200];
 	int j;
 
 	DaoRoutine_Compile( self );

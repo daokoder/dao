@@ -1216,10 +1216,8 @@ DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *
 	DaoRoutine *routine = self->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *tok = tokens[start];
-	DValue scope = daoNullValue;
-	DValue value = daoNullValue;
 	DString *tks = tok->string;
-	int i, k, t = tokens[start]->name;
+	int i, t = tokens[start]->name;
 	int gt, tid, count, count2;
 
 #if 0
@@ -1332,7 +1330,6 @@ WrongType:
 	return type;
 InvalidTypeName:
 InvalidTypeForm:
-InvalidType:
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[start]->line, tks->mbs );
 	return NULL;
 }
@@ -1340,7 +1337,7 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DA
 {
 	DaoNameSpace *ns = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
-	DaoType *tp, *type = NULL;
+	DaoType *type = NULL;
 	DArray *old = types;
 	int count;
 	if( types == NULL ) types = DArray_New(0);
@@ -1448,7 +1445,6 @@ static DaoBase* DaoParse_InstantiateType( DaoParser *self, DaoBase *tpl, int sta
 	DaoType *type;
 	DaoBase *inst = NULL;
 	DArray *types = DArray_New(0);
-	DNode *node;
 	int i = start;
 	if( tpl == NULL || (tpl->type != DAO_CLASS && tpl->type != DAO_CTYPE) ) goto FailedInstantiation;
 	if( tpl->type == DAO_CLASS && klass->typeHolders == NULL ) goto FailedInstantiation;
@@ -2432,7 +2428,6 @@ static int DaoParser_Preprocess( DaoParser *self )
 	DaoNameSpace *ns = self->nameSpace;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
-	DNode *node;
 
 	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int bropen1 = 0, bropen2 = 0, bropen3 = 0;
@@ -2857,14 +2852,13 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 {
 	DaoToken *ptok, **tokens = self->tokens->items.pToken;
 	DaoNameSpace *myNS = self->nameSpace;
-	DaoTypeBase *typer;
 	DaoRoutine *rout = NULL;
 	DaoParser *parser = NULL;
 	DaoParser *newparser = NULL;
 	DaoParser *tmpParser = NULL; // XXX free
 	DaoRoutine *tmpRoutine = NULL; // XXX GC
 	DaoClass *klass;
-	DString *str, *mbs = self->mbs;
+	DString *mbs = self->mbs;
 	DString *mbs2 = self->mbs2;
 	DValue value, scope;
 	int perm = self->permission;
@@ -3078,7 +3072,7 @@ InvalidDefinition:
 static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to );
 static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int to, int storeType )
 {
-	DaoToken *ptok, **tokens = self->tokens->items.pToken;
+	DaoToken **tokens = self->tokens->items.pToken;
 	DaoRoutine *routine = self->routine;
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoNameSpace *ns = NULL;
@@ -3186,14 +3180,13 @@ ErrorInterfaceDefinition:
 }
 static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
 {
-	DaoToken *ptok, **tokens = self->tokens->items.pToken;
+	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoNameSpace *ns = NULL;
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *rout = NULL;
 	DaoParser *parser = NULL;
 	DaoClass *klass = NULL;
-	DaoTypeBase *typer;
 	DaoToken *tokName;
 	DString *str, *mbs = self->mbs;
 	DString *className, *ename = NULL;
@@ -3418,7 +3411,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	DaoRoutine *routine = self->routine;
 	DaoType *abtp, *abtp2;
 	DString *str, *alias = NULL;
-	DValue dv, iv = daoZeroInteger;
+	DValue dv = daoZeroInteger;
 	int global = storeType & (DAO_DATA_GLOBAL|DAO_DATA_STATIC);
 	int stat = storeType & DAO_DATA_STATIC;
 	int sep = DTOK_COMMA, value = 0;
@@ -3570,7 +3563,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	DaoToken *ptok;
 	DMap *switchMap;
 	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
-	int i, rbrack, end, temp, temp2, decl;
+	int i, rbrack, end, temp;
 	int rb, reg1, oldcount, topll = 0;
 	int storeType = 0;
 	int storeType2 = 0;
@@ -3580,9 +3573,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	unsigned char tki, tki2;
 	char buffer[512];
 
-	int k, right, start = from;
-	int decStart, decEnd, expStart, expEnd;
-	int colon, eq, decl2;
+	int k, start = from;
+	int colon;
 	int comma, last, errorStart, needName;
 	int empty_decos = 0;
 
@@ -3595,11 +3587,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 	DString *mbs = self->mbs;
 	DString *str;
-	DaoTypeBase *typer;
-	DaoFunction *meth;
 	DaoType  *abtp;
 	DValue    value, scope;
-	DValue    nil = daoNullValue;
 
 	token.string = mbs;
 	self->error = 0;
@@ -3814,7 +3803,7 @@ DecoratorError:
 		}else if( tki == DKEY_BIND ){
 			DaoInterface *inter;
 			DRoutine *fail = NULL;
-			int bl, old = start;
+			int old = start;
 			int ito = DaoParser_FindOpenToken( self, DKEY_TO, start, to, 1 );
 			if( ito <0 || ito >= to ){
 				DaoParser_Error3( self, DAO_INVALID_BINDING, old );
@@ -4683,9 +4672,8 @@ int DaoParser_ParseRoutine( DaoParser *self )
 {
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	DaoInode *it, *it2;
 	const int tokChrCount = self->tokens->size;
-	int rm, id, defLine = routine->defLine;
+	int id, defLine = routine->defLine;
 
 	if( self->parsed ) return 1;
 	GC_ShiftRC( myNS, routine->nameSpace );
@@ -5956,7 +5944,6 @@ static int DaoParser_MakeConst( DaoParser *self, DaoInode *front, DaoInode *back
 }
 static int DaoParser_MakeChain( DaoParser *self, int left, int right, int *cst, int regFix )
 {
-	DaoType *type;
 	DaoInode *vmc = NULL;
 	DaoToken **tokens = self->tokens->items.pToken;
 	unsigned char tki = tokens[left+1]->type;
@@ -7247,7 +7234,6 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 	DaoVmCodeX vmcx = {DVM_RETURN,0,0,0,0,0,0,0,0};
 	DaoVmCode  vmc = {DVM_RETURN,0,0,0};
 	char buf[50];
-	int i;
 
 	sprintf( buf, "AnonymousClass%p", klass );
 	DString_SetMBS( klass->className, buf );

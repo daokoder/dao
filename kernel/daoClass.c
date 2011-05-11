@@ -206,7 +206,7 @@ void DValue_Update( DValue *self, DaoNameSpace *ns, DMap *deftypes )
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
 	DaoNameSpace *ns = other->classRoutine->nameSpace;
-	DaoType *tp, *tp2;
+	DaoType *tp;
 	DArray *parents = DArray_New(0);
 	DArray *offsets = DArray_New(0);
 	DNode *it;
@@ -492,8 +492,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	DNode *search;
 	DString *mbs;
 	DValue value = daoNullValue;
-	DValue value2 = daoNullValue;
-	size_t i, k, id, perm, index;
+	size_t i, id, perm, index;
 
 	mbs = DString_New(1);
 
@@ -511,7 +510,6 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			DaoTypeCore *core = typer->priv;
 			DMap *values = core->values;
 			DMap *methods = core->methods;
-			DNode *it;
 
 			if( values == NULL ){
 				DaoNameSpace_SetupValues( typer->priv->nspace, typer );
@@ -537,7 +535,6 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	for(i=1; i<parents->size; i++){
 		DaoClass *klass = parents->items.pClass[i];
 		DaoCData *cdata = parents->items.pCData[i];
-		DaoTypeBase *typer;
 		if( klass->type == DAO_CLASS ){
 			int up = self->cstDataTable->size;
 			DArray_Append( self->cstDataTable, klass->cstData );
@@ -628,12 +625,11 @@ void DaoClass_DeriveClassData( DaoClass *self )
 void DaoClass_DeriveObjectData( DaoClass *self )
 {
 	DArray *parents, *offsets;
-	DRoutine *rep, *mem;
 	DaoType *type;
 	DNode *search;
 	DString *mbs;
 	DValue value = daoNullValue;
-	size_t i, k, id, perm, index, offset = 0;
+	size_t i, id, perm, index, offset = 0;
 
 	self->objDefCount = self->objDataName->size;
 	offset = self->objDataName->size;
@@ -664,7 +660,6 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	for(i=1; i<parents->size; i++){
 		DaoClass *klass = parents->items.pClass[i];
 		DaoCData *cdata = parents->items.pCData[i];
-		DaoTypeBase *typer;
 		offset = offsets->items.pInt[i]; /* plus self */
 		if( klass->type == DAO_CLASS ){
 			/* For object data: */
@@ -711,7 +706,7 @@ void DaoClass_ResetAttributes( DaoClass *self )
 		for( i=0; i<self->superClass->size; i++){
 			if( self->superClass->items.pBase[i]->type == DAO_CLASS ){
 				DaoClass *klass = self->superClass->items.pClass[i];
-				autodef = autodef && (klass->attribs & DAO_CLS_AUTO_DEFAULT); 
+				autodef = autodef && (klass->attribs & DAO_CLS_AUTO_DEFAULT);
 				if( autodef ==0 ) break;
 			}else{
 				autodef = 0;
@@ -973,7 +968,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DValue data, int s, int ln
 		}
 		return 0;
 	}
-	
+
 	node = MAP_Find( self->deflines, name );
 	if( node ) return DAO_CTW_WAS_DEFINED;
 	return DaoClass_AddConst2( self, name, data, s, ln );

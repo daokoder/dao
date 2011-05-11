@@ -529,13 +529,13 @@ static int InitRegex( DaoRegex *self, DString *ds )
 			}
 		}
 	}
-	if( max > 1E4 ){
-		max -= 1E4;
+	if( max > 10000 ){
+		max -= 10000;
 		for(i=0; i<self->count; i++){
 			patt = self->items + i;
 			if( patt->type == PAT_SPLIT || patt->type == PAT_JOIN ){
-				if( patt->gid > 1E4 ){
-					patt->gid -= 1E4;
+				if( patt->gid > 10000 ){
+					patt->gid -= 10000;
 				}else if( patt->gid ){
 					patt->gid += max;
 				}
@@ -1179,7 +1179,6 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 	size_t start = start2 ? (size_t) *start2 : 0;
 	size_t end = end2 ? (size_t) *end2 : 0;
 	size_t i, n=0, p1=start, p2=end, p3, last;
-	wchar_t ch, ch2;
 	DValue value = daoZeroInteger;
 	DValue matched = daoNullString;
 	DString *tmp = DString_New( source->mbs != NULL );
@@ -1235,7 +1234,6 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
 {
 	size_t start = 0, end = 0;
 	size_t i, n=0, p1=start, p2=end, p3;
-	wchar_t ch, ch2;
 	DValue value = daoZeroInteger;
 	DValue matched = daoNullString;
 	DString *tmp = DString_New( source->mbs != NULL );

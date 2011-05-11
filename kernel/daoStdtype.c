@@ -356,7 +356,6 @@ void DEnum_MakeName( DEnum *self, DString *name )
 {
 	DMap *mapNames;
 	DNode *node;
-	int n;
 	DString_Clear( name );
 	mapNames = self->type->mapNames;
 	for(node=DMap_First(mapNames);node;node=DMap_Next(mapNames,node)){
@@ -2142,7 +2141,6 @@ static void DaoLIST_Resize( DaoContext *ctx, DValue *p[], int N )
 	DaoList *self = p[0]->v.list;
 	size_t size = (size_t)p[1]->v.i;
 	size_t oldSize = self->items->size;
-	size_t i;
 	if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR,
 				"not permitted to create large list in safe running mode" );
@@ -2549,7 +2547,7 @@ static void DaoLIST_Join( DaoContext *ctx, DValue *p[], int N )
 			case DAO_LONG:
 				digits = self->items->data[i].v.l->size;
 				digits = digits > 1 ? (LONG_BITS * (digits - 1) + 1) : 1; /* bits */
-				digits /= log( self->items->data[i].v.l->base ) / log(2); /* digits */
+				digits /= (int)(log( self->items->data[i].v.l->base ) / log(2)); /* digits */
 				size += digits + (data[i].v.l->sign < 0) ? 3 : 2; /* sign + suffix */
 				break;
 			case DAO_ENUM :
@@ -2925,7 +2923,7 @@ static void DaoMAP_Reset( DaoContext *ctx, DValue *p[], int N )
 static void DaoMAP_Erase( DaoContext *ctx, DValue *p[], int N )
 {
 	DMap *self = p[0]->v.map->items;
-	DNode *node, *ml, *mg;
+	DNode *ml, *mg;
 	DArray *keys;
 	N --;
 	switch( N ){
@@ -4391,7 +4389,6 @@ DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 	DaoCDataCore *plgCore;
 	DaoCData *cdata;
 	DaoType *abtype;
-	DString name = DString_WrapMBS( "default" );
 
 	cdata = DaoCData_New( typer, NULL );
 	cdata->type = DAO_CTYPE;

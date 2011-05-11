@@ -2895,7 +2895,7 @@ static void DaoContext_ApplyList( DaoContext *self, DaoVmCode *vmc, int index, i
 	DaoList *list = param.v.list;
 	DaoList *result = NULL;
 	DValue res = daoNullValue;
-	int i, j, count = 0;
+	int i, count = 0;
 	int size = list->items->size;
 
 	for(i=0; i<size; i++){
