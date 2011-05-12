@@ -1899,6 +1899,7 @@ void DaoInitAPI( DaoAPI *api )
 #endif
 
 	api->DaoObject_GetField = DaoObject_GetField;
+	api->DaoObject_GetMethod = DaoObject_GetMethod;
 	api->DaoObject_MapCData = DaoObject_MapCData;
 
 	api->DaoStream_New = DaoStream_New;

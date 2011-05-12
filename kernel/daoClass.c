@@ -407,6 +407,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 	self->classRoutine = rout; /* XXX class<name> */
 	rout->nameSpace = ns;
 	GC_IncRC( ns );
+	GC_IncRC( rout ); // XXX GC scan
 
 	self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoBase*)self, NULL );
 	self->clsType = DaoType_New( name->mbs, DAO_CLASS, (DaoBase*) self, NULL );

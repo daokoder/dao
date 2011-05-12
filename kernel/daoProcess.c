@@ -143,9 +143,6 @@ DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms )
 	self->wcsRegex = NULL;
 	self->returned = daoNullValue;
 	self->pauseType = 0;
-	self->array = NULL;
-	self->parbuf = NULL;
-	self->signature = DArray_New(0);
 	return self;
 }
 
@@ -172,12 +169,9 @@ void DaoVmProcess_Delete( DaoVmProcess *self )
 		dao_free( p );
 	}
 
-	if( self->array ) DArray_Delete( self->array );
-	if( self->parbuf ) DVarray_Delete( self->parbuf );
 	DString_Delete( self->mbstring );
 	DValue_Clear( & self->returned );
 	DVarray_Delete( self->exceptions );
-	DArray_Delete( self->signature );
 	if( self->parResume ) DVarray_Delete( self->parResume );
 	if( self->parYield ) DVarray_Delete( self->parYield );
 	if( self->abtype ) GC_DecRC( self->abtype );
@@ -452,19 +446,28 @@ int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *source, in
 	DaoRoutine *rout;
 	if( DaoVmProcess_Compile( self, ns, source, rpl ) ==0 ) return 0;
 	rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
-	if( DaoVmProcess_Call( self, rout, NULL, NULL, 0 ) ==0 ) return 0;
+	if( DaoVmProcess_Call( self, (DaoBase*) rout, NULL, NULL, 0 ) ==0 ) return 0;
 	return ns->mainRoutines->size;
 }
-int DaoVmProcess_Call( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n )
-{//XXX handle overloading
-	DaoContext *ctx = DaoVmProcess_MakeContext( self, r );
-	DValue value = daoNullObject;
-	int call = o ? DVM_MCALL : DVM_CALL;
-	value.v.object = o;
-	GC_ShiftRC( o, ctx->object );
-	ctx->object = o;
-	if( DRoutine_PassParams( (DRoutine*)r, & value, ctx->regValues, p, n, call ) ==0 ){
-		printf( "calling %s failed\n", r->routName->mbs );
+int DaoVmProcess_Call( DaoVmProcess *self, DaoBase *r, DValue *o, DValue *p[], int n )
+{
+	DRoutine *rout = (DRoutine*) r;
+	DaoContext *ctx;
+
+	if( r && r->type == DAO_METAROUTINE ) rout = DRoutine_Resolve( r, o, p, n, DVM_CALL );
+	if( rout == NULL ) return 0;
+	if( rout->type == DAO_FUNCTION ){
+		ctx = DaoVmProcess_MakeContext( self, (DaoRoutine*) rout );
+		return DaoFunction_Call( (DaoFunction*) rout, ctx, o, p, n );
+	}
+
+	ctx = DaoVmProcess_MakeContext( self, (DaoRoutine*) rout );
+	if( o && o->t == DAO_OBJECT ){
+		GC_ShiftRC( o->v.object, ctx->object );
+		ctx->object = o->v.object;
+	}
+	if( DRoutine_PassParams( rout, o, ctx->regValues, p, n, DVM_CALL ) ==0 ){
+		printf( "calling %s failed\n", rout->routName->mbs );
 		return 0;
 	}
 	/*

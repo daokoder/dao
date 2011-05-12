@@ -2553,14 +2553,16 @@ const cxx_virt_class =
 '$(retype) DaoCxxVirt_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n';
 
 const cxx_get_object_method = 
-'void Dao_Get_Object_Method( DaoCData *cd, DaoObject **ob, DaoRoutine **ro, const char *name )
+'DaoBase* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )
 {
-  DValue va;
-  if( cd == NULL ) return;
-  *ob = DaoCData_GetObject( cd );
-  if( *ob == NULL ) return;
-  va = DaoObject_GetField( *ob, name );
-  if( va.t == DAO_ROUTINE ) *ro = va.v.routine;
+  DValue value;
+  if( cd == NULL ) return NULL;
+  obj->v.object = DaoCData_GetObject( cd );
+  if( obj->v.object == NULL ) return NULL;
+  obj->t = DAO_OBJECT;
+  value = DaoObject_GetMethod( obj->v.object, name );
+  if( value.t != DAO_METAROUTINE && value.t != DAO_ROUTINE ) return NULL;
+  return value.v.p;
 }
 ';
 const qt_get_wrapper1 =
@@ -2578,50 +2580,46 @@ const qt_get_wrapper2 =
 ';
 
 const cxx_virt_call_00 =
-'  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL ) return;
+'  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
-  DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
+  DaoVmProcess_Call( _vmp, _ro, & _obj, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }\n';
 
 const cxx_virt_call_01 =
-'  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL ) return;
-  $(proxy_name)( _ro, _ob, $(parcall) );
+'  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;
+  $(proxy_name)( _ro, & _obj, $(parcall) );
 }\n';
 
 const cxx_virt_call_10 =
-'  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
+'  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   $(vareturn)
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL ) return $(return);
-  return ($(retype))$(proxy_name)( _ro, _ob );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);
+  return ($(retype))$(proxy_name)( _ro, & _obj );
 }\n';
 
 const cxx_virt_call_11 =
-'  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
+'  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   $(vareturn)
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "$(cxxname)" );
-  if( _ro ==NULL || _ob ==NULL ) return $(return);
-  return ($(retype))$(proxy_name)( _ro, _ob, $(parcall) );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);
+  return ($(retype))$(proxy_name)( _ro, & _obj, $(parcall) );
 }\n';
 
 const cxx_proxy_body00 =
-'static void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
+'static void $(proxy_name)( DaoBase *_ro, DValue *_ob )\n{
   if( _ro == NULL ) return;
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }\n';
 const cxx_proxy_body01 =
-'static void $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+'static void $(proxy_name)( DaoBase *_ro, DValue *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
@@ -2633,7 +2631,7 @@ $(cxx2dao)
   DValue_ClearAll( _dp, $(count) );
 }\n';
 const cxx_proxy_body10 =
-'static $(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob )\n{
+'static $(retype) $(proxy_name)( DaoBase *_ro, DValue *_ob )\n{
   DValue _res;
   DaoCData *_cd;
   DaoVmProcess *_vmp;
@@ -2648,7 +2646,7 @@ EndCall:
   return $(return);
 }\n';
 const cxx_proxy_body11 =
-'static $(retype) $(proxy_name)( DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{
+'static $(retype) $(proxy_name)( DaoBase *_ro, DValue *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };

@@ -479,6 +479,7 @@ DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const cha
 	tp = DaoType_Copy( tp );
 	DString_SetMBS( tp->name, type );
 	DaoNameSpace_AddType( self, tp->name, tp );
+	DaoNameSpace_AddTypeConstant( self, tp->name, tp );
 	return tp;
 }
 DaoCDataCore* DaoCDataCore_New();

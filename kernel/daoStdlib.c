@@ -152,7 +152,7 @@ static void STD_Callable( DaoContext *ctx, DValue *p[], int N )
 		{
 			DaoCData *plugin = (DaoCData*) p[0]->v.p;
 			DaoTypeBase *tp = plugin->typer;
-			DaoMetaRoutine *func;
+			DaoBase *func;
 			if( plugin->data == NULL && (plugin->trait & DAO_DATA_CONST) ){
 				func = DaoFindFunction2( tp, tp->name );
 				*res = func != NULL;

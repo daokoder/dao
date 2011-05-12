@@ -180,7 +180,4 @@ void DaoMetaRoutine_Compile( DaoMetaRoutine *self );
 DRoutine* DRoutine_Resolve( DaoBase *self, DValue *obj, DValue *p[], int n, int code );
 DRoutine* DRoutine_ResolveByType( DaoBase *self, DaoType *st, DaoType *t[], int n, int code );
 
-DaoRoutine* DaoDecorator_Resolve( DaoBase *self, DaoBase *rout, DValue *p[], int n );
-DaoRoutine* DaoDecorator_ResolveByType( DaoType *self, DaoType *rout, DaoType *t[], int n );
-
 #endif

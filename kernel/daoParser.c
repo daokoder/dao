@@ -1401,23 +1401,30 @@ DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
 	shortType = DaoNameSpace_TypeDefine( ns, "int", "short" );
 }
 */
-static DaoCData* DaoCData_Instantiate( DaoCData *self, DaoFunction *func, DArray *types, DaoParser *parser )
+static DaoCData* DaoCData_Instantiate( DaoCData *self, DaoBase *fp, DArray *types, DaoParser *parser )
 {
+	DaoFunction *func = (DaoFunction*) fp;
 	DaoContext *ctx = parser->nameSpace->vmpEvalConst->topFrame->context;
 	DaoType *tbuf[] = { NULL, NULL, NULL };
 	DaoVmCode vmc = { 0, 0, 0, 0 };
+	DString name = DString_WrapMBS( "<>" );
 	DValue pbuf[DAO_MAX_PARAM];
 	DValue *pars[DAO_MAX_PARAM];
 	DValue result = daoNullValue;
 	int i, n = types->size;
 	if( n > DAO_MAX_PARAM ){
-		DaoParser_Error( parser, DAO_PARAM_TOO_MANY, func->routName );
+		DaoParser_Error( parser, DAO_PARAM_TOO_MANY, & name );
 		return NULL;
 	}
 	for(i=0; i<n; i++){
 		pbuf[i] = daoNullType;
 		pbuf[i].v.type = types->items.pType[i];
 		pars[i] = & pbuf[i];
+	}
+	if( fp->type == DAO_METAROUTINE ){
+		DRoutine *p = DRoutine_Resolve( fp, NULL, pars, n, DVM_CALL );
+		if( p == NULL || p->type != DAO_FUNCTION ) return NULL;
+		func = (DaoFunction*) p;
 	}
 	if( ctx->regValues == NULL ) ctx->regValues = dao_malloc( sizeof(DValue*) );
 	ctx->regValues[0] = & result;
@@ -1441,7 +1448,7 @@ static DaoBase* DaoParse_InstantiateType( DaoParser *self, DaoBase *tpl, int sta
 	DaoType *cd = self->hostCData;
 	DaoClass *klass = (DaoClass*) tpl;
 	DaoCData *cdata = (DaoCData*) tpl;
-	DaoFunction *func = NULL;
+	DaoBase *func = NULL;
 	DaoType *type;
 	DaoBase *inst = NULL;
 	DArray *types = DArray_New(0);
@@ -2735,7 +2742,8 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				}
 			}
 		}else if( cdata ){
-			DaoMetaRoutine *func = DaoFindFunction( cdata->typer, name );
+			DaoBase *func = DaoFindFunction( cdata->typer, name );
+			DaoMetaRoutine *meta = (DaoMetaRoutine*) func;
 			if( func == NULL ){
 				DaoParser_Error( self, DAO_CONSTR_NOT_DEFINED, name );
 				DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
@@ -2750,8 +2758,8 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 					return start;
 				}
 			}
-			for(i=0; i<func->routines->size; i++){
-				DRoutine *rs = (DRoutine*) func->routines->items.pRout[i];
+			for(i=0; i<meta->routines->size; i++){
+				DRoutine *rs = (DRoutine*) meta->routines->items.pRout[i];
 				if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){
 					/* printf( "%s\n", rs->parCodes->mbs ); */
 					DaoParser_UseConstructor( self, rs, use, start );
@@ -2805,7 +2813,7 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 		DaoList *decoParam = self->decoParams->items.pList[i];
 		n = decoParam->items->size;
 		for(j=0; j<n; j++) params[j+1] = decoParam->items->data + j;
-		decoFunc = DRoutine_Resolve( (DaoBase*) decoFunc, NULL, params, n+1, DVM_CALL );
+		decoFunc = (DaoRoutine*) DRoutine_Resolve( (DaoBase*) decoFunc, NULL, params, n+1, DVM_CALL );
 		if( decoFunc == NULL ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;
@@ -2997,7 +3005,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			if( DString_Compare( rout->routName, klass->className ) == 0 ){
 				/* overloading constructor */
 				rout->attribs |= DAO_ROUT_INITOR;
-				DaoMetaRoutine_Add( klass->classRoutines, rout );
+				DaoMetaRoutine_Add( klass->classRoutines, (DRoutine*)rout );
 			}
 			DaoClass_AddConst( klass, rout->routName, value, perm, rout->defLine );
 		}else if( self->isInterBody ){

@@ -65,7 +65,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 	}
 	return 0;
 InvalidParam:
-	DaoContext_ShowCallError( ctx, value.v.p, & selfpar, ps, N, DVM_CALL );
+	DaoContext_ShowCallError( ctx, (DRoutine*)value.v.p, & selfpar, ps, N, DVM_CALL );
 	return 0;
 }
 static void DaoObject_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
@@ -433,4 +433,14 @@ DValue DaoObject_GetField( DaoObject *self, const char *name )
 	DString str = DString_WrapMBS( name );
 	DaoObject_GetData( self, & str, & res, self, NULL );
 	return res;
+}
+DValue DaoObject_GetMethod( DaoObject *self, const char *name )
+{
+	DValue value;
+	DString str = DString_WrapMBS( name );
+	int id = DaoClass_FindConst( self->myClass, & str );
+	if( id < 0 ) return daoNullValue;
+	value = DaoClass_GetConst( self->myClass, id );
+	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return daoNullValue;
+	return value;
 }

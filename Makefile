@@ -18,12 +18,10 @@ LIB_READLINE = -lreadline -lncurses
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_ASMBC) $(USE_READLINE)
 
 CC        = $(CROSS_COMPILE)gcc
-#CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG) #-DDEBUG -g #-DDAO_GC_PROF
-CFLAGS   += -Wall -Wno-unused -fPIC -DUNIX $(DAO_CONFIG) -DDEBUG -g
+CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG)
 INCPATH   = -I. -Ikernel
-LFLAGS    = -fPIC -g #-s
-LFLAGSDLL = -fPIC -g #-s
-#LFLAGSDLL = -shared -fPIC -s -Wl,--version-script=daolibsym.map
+LFLAGS    = -fPIC -s
+LFLAGSDLL = -fPIC -s
 LIBS      = -L. -ldl -lpthread -lm $(LIB_READLINE)
 
 # dynamic linked Dao interpreter, requires dao.so to run:
@@ -39,8 +37,8 @@ UNAME = $(shell uname)
 
 ifeq ($(UNAME), Linux)
   CFLAGS += -DUNIX
-#  LFLAGS  += -s
-#  LFLAGLIB = -s -fPIC -shared
+  LFLAGS  += -s
+  LFLAGLIB = -s -fPIC -shared
   LFLAGSDLL += -shared -Wl,-soname,libdao.so
 endif
 

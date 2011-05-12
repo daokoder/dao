@@ -590,6 +590,7 @@ struct DaoAPI
 	void  (*DaoArray_SetBuffer)( DaoArray *self, void *buffer, size_t size );
 
 	DValue (*DaoObject_GetField)( DaoObject *self, const char *name );
+	DValue (*DaoObject_GetMethod)( DaoObject *self, const char *name );
 	DaoCData* (*DaoObject_MapCData)( DaoObject *self, DaoTypeBase *typer );
 	/* TODO: DaoObject* DaoObject_MapObject( DaoObject *self, DaoClass *klass ) */
 
@@ -657,7 +658,7 @@ struct DaoAPI
 	DaoVmProcess* (*DaoVmProcess_New)( DaoVmSpace *vms );
 	int (*DaoVmProcess_Compile)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 	int (*DaoVmProcess_Eval)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-	int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoRoutine *r, DaoObject *o, DValue *p[], int n);
+	int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoBase *f, DValue *o, DValue *p[], int n);
 	void (*DaoVmProcess_Stop)( DaoVmProcess *self );
 	DValue (*DaoVmProcess_GetReturned)( DaoVmProcess *self );
 	DaoRegex* (*DaoVmProcess_MakeRegex)( DaoVmProcess *self, DString *patt, int mbs );
@@ -907,6 +908,8 @@ DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
 DAO_DLL DValue DaoObject_GetField( DaoObject *self, const char *name );
+/* return a null value, or a value of DaoMetaRoutine, DaoRoutine or DaoFunction: */
+DAO_DLL DValue DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer );
 
 DAO_DLL DaoStream* DaoStream_New();
@@ -979,8 +982,9 @@ DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *
 
 DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-DAO_DLL int DaoVmProcess_Eval   ( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoRoutine *r, DaoObject *o, DValue *p[], int n );
+DAO_DLL int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+/* f: function to be called, one of DaoMetaRoutine, DaoRoutine and DaoFunction: */
+DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoBase *f, DValue *o, DValue *p[], int n );
 DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
 DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
 DAO_DLL DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *patt, int mbs );
@@ -1231,6 +1235,7 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoArray_SetBuffer( self, buffer, size )  __dao.SetBuffer( self, buffer, size )
 
 #define DaoObject_GetField( self, name )  __dao.DaoObject_GetField( self, name )
+#define DaoObject_GetMethod( self, name )  __dao.DaoObject_GetMethod( self, name )
 #define DaoObject_MapCData( self, typer )  __dao.DaoObject_MapCData( self, typer )
 
 #define DaoStream_New()  __dao.DaoStream_New()
