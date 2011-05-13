@@ -2672,8 +2672,9 @@ const cxx_virt_class2 =
 }\n';
 const cxx_virt_class3 =
 '$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "$(cxxname)" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  if( _ro && _obj.t == DAO_OBJECT ){
     $(return) DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
   }else{
     $(return) $(type)::$(cxxname)( $(parcall) );
@@ -3118,13 +3119,13 @@ class DaoQtObject : public QObjectUserData
 	DaoCData  *cdata;
 
 	void Init( DaoCData *d ){ cdata = d; }
-  static unsigned int RotatingHash( const QByteArray & key ){
-    int i, n = key.size();
-    unsigned long long hash = n;
-    for(i=0; i<n; i++) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
-    return hash % 997;
-  }
-  void Connect( void *sender, const QString & signal, DValue receiver )
+	static unsigned int RotatingHash( const QByteArray & key ){
+		int i, n = key.size();
+		unsigned long long hash = n;
+		for(i=0; i<n; i++) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
+		return hash % 997;
+	}
+	void Connect( void *sender, const QString & signal, DValue receiver )
 	{
 		if( mapNames.find( signal ) == mapNames.end() )
 			mapNames[ signal ] = QHash<void*,DValue>();
@@ -3144,13 +3145,13 @@ class DaoQtObject : public QObjectUserData
 		if( cdata == NULL ) return;
 		DaoObject *daobj = DaoCData_GetObject( cdata );
 		DValue receiver = mp[sender];
-		if( receiver.t == DAO_ROUTINE ){
-      DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
-			DaoVmProcess_Call( vmproc, receiver.v.routine, daobj, (DValue**)msg.p2, msg.count );
-      DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
-		}else if( receiver.t == DAO_FUNCTION ){
-			DaoFunction_Call( receiver.v.func, cdata, (DValue**)msg.p2, msg.count );
+		DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
+		if( receiver.t >= DAO_METAROUTINE && receiver.t <= DAO_FUNCTION ){
+			DValue obj = {DAO_OBJECT,0,0,0,{0}};
+			obj.v.object = daobj;
+			DaoVmProcess_Call( vmproc, receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
 		}
+		DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
 	}
 	void Dispatch( void *sender, void *signal, const DaoQtMessage & msg )
 	{
@@ -3160,13 +3161,13 @@ class DaoQtObject : public QObjectUserData
 		if( cdata == NULL ) return;
 		DaoObject *daobj = DaoCData_GetObject( cdata );
 		DValue receiver = mp[sender];
-		if( receiver.t == DAO_ROUTINE ){
-      DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
-			DaoVmProcess_Call( vmproc, receiver.v.routine, daobj, (DValue**)msg.p2, msg.count );
-      DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
-		}else if( receiver.t == DAO_FUNCTION ){
-			DaoFunction_Call( receiver.v.func, cdata, (DValue**)msg.p2, msg.count );
+		DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
+		if( receiver.t >= DAO_METAROUTINE && receiver.t <= DAO_FUNCTION ){
+			DValue obj = {DAO_OBJECT,0,0,0,{0}};
+			obj.v.object = daobj;
+			DaoVmProcess_Call( vmproc, receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
 		}
+		DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
 	}
 };
 ';

@@ -1,16 +1,18 @@
 #include"dao_greeting.h"
 
-void Dao_Get_Object_Method( DaoCData *cd, DaoObject **ob, DaoRoutine **ro, const char *name )
+DaoBase* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )
 {
-  DValue va;
-  if( cd == NULL ) return;
-  *ob = DaoCData_GetObject( cd );
-  if( *ob == NULL ) return;
-  va = DaoObject_GetField( *ob, name );
-  if( va.t == DAO_ROUTINE ) *ro = va.v.routine;
+  DValue value;
+  if( cd == NULL ) return NULL;
+  obj->v.object = DaoCData_GetObject( cd );
+  if( obj->v.object == NULL ) return NULL;
+  obj->t = DAO_OBJECT;
+  value = DaoObject_GetMethod( obj->v.object, name );
+  if( value.t != DAO_METAROUTINE && value.t != DAO_ROUTINE ) return NULL;
+  return value.v.p;
 }
 
-static otto Function_10007( DaoRoutine *_ro, DaoObject *_ob, const otto &value )
+static otto Function_10007( DaoBase *_ro, DValue *_ob, const otto &value )
 {
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[1] = { _dao_nil };
@@ -39,7 +41,7 @@ EndCall:
   return _test;
 }
 
-static void Function_10005( DaoRoutine *_ro, DaoObject *_ob, const Greeting &g )
+static void Function_10005( DaoBase *_ro, DValue *_ob, const Greeting &g )
 {
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[1] = { _dao_nil };
@@ -53,7 +55,7 @@ static void Function_10005( DaoRoutine *_ro, DaoObject *_ob, const Greeting &g )
   DValue_ClearAll( _dp, 1 );
 }
 
-static void Function_10002( DaoRoutine *_ro, DaoObject *_ob, const char* msg )
+static void Function_10002( DaoBase *_ro, DValue *_ob, const char* msg )
 {
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[1] = { _dao_nil };
@@ -106,24 +108,23 @@ Greeting* DAO_DLL_GREETING Dao_Greeting_Copy( const Greeting &p )
 }
 void DaoCxxVirt_Greeting::DoGreeting( const char* name )
 {
-  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "DoGreeting" );
-  if( _ro ==NULL || _ob ==NULL ) return;
-  Function_10002( _ro, _ob, name );
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "DoGreeting" );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;
+  Function_10002( _ro, & _obj, name );
 }
 void DaoCxxVirt_Greeting::VirtWithDefault( const Greeting &g )
 {
-  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "VirtWithDefault" );
-  if( _ro ==NULL || _ob ==NULL ) return;
-  Function_10005( _ro, _ob, g );
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "VirtWithDefault" );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;
+  Function_10005( _ro, & _obj, g );
 }
 void DaoCxx_Greeting::DoGreeting( const char* name )
 {
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "DoGreeting" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "DoGreeting" );
+  if( _ro && _obj.t == DAO_OBJECT ){
      DaoCxxVirt_Greeting::DoGreeting( name );
   }else{
      Greeting::DoGreeting( name );
@@ -131,8 +132,9 @@ void DaoCxx_Greeting::DoGreeting( const char* name )
 }
 void DaoCxx_Greeting::VirtWithDefault( const Greeting &g )
 {
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "VirtWithDefault" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "VirtWithDefault" );
+  if( _ro && _obj.t == DAO_OBJECT ){
      DaoCxxVirt_Greeting::VirtWithDefault( g );
   }else{
      Greeting::VirtWithDefault( g );
@@ -179,8 +181,9 @@ void DaoCxxVirt_Greeting2::VirtWithDefault( const Greeting &g )
 }
 void DaoCxx_Greeting2::DoGreeting( const char* name )
 {
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "DoGreeting" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "DoGreeting" );
+  if( _ro && _obj.t == DAO_OBJECT ){
      DaoCxxVirt_Greeting2::DoGreeting( name );
   }else{
      Greeting::DoGreeting( name );
@@ -188,8 +191,9 @@ void DaoCxx_Greeting2::DoGreeting( const char* name )
 }
 void DaoCxx_Greeting2::VirtWithDefault( const Greeting &g )
 {
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "VirtWithDefault" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "VirtWithDefault" );
+  if( _ro && _obj.t == DAO_OBJECT ){
      DaoCxxVirt_Greeting2::VirtWithDefault( g );
   }else{
      Greeting::VirtWithDefault( g );
@@ -237,17 +241,17 @@ otto* DAO_DLL_GREETING Dao_otto_Copy( const otto &p )
 }
 otto DaoCxxVirt_otto::test( const otto &value )
 {
-  DaoObject *_ob = NULL;
-  DaoRoutine *_ro = NULL;
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "test" );
   otto _test;
-  Dao_Get_Object_Method( cdata, & _ob, & _ro, "test" );
-  if( _ro ==NULL || _ob ==NULL ) return _test;
-  return (otto)Function_10007( _ro, _ob, value );
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return _test;
+  return (otto)Function_10007( _ro, & _obj, value );
 }
 otto DaoCxx_otto::test( const otto &value )
 {
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "test" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "test" );
+  if( _ro && _obj.t == DAO_OBJECT ){
     return DaoCxxVirt_otto::test( value );
   }else{
     return otto::test( value );
@@ -290,8 +294,9 @@ otto DaoCxxVirt_otto2::test( const otto &value )
 }
 otto DaoCxx_otto2::test( const otto &value )
 {
-  DaoObject *_o = DaoCData_GetObject( cdata );
-  if( _o && DaoObject_GetField( _o, "test" ).t ==DAO_ROUTINE ){
+  DValue _obj = {0,0,0,0,{0}};
+  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "test" );
+  if( _ro && _obj.t == DAO_OBJECT ){
     return DaoCxxVirt_otto2::test( value );
   }else{
     return otto::test( value );

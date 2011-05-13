@@ -1906,8 +1906,6 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoStream_SetFile = DaoStream_SetFile;
 	api->DaoStream_GetFile = DaoStream_GetFile;
 
-	api->DaoFunction_Call = DaoFunction_Call;
-
 	api->DaoCData_New = DaoCData_New;
 	api->DaoCData_Wrap = DaoCData_Wrap;
 	api->DaoCData_IsType = DaoCData_IsType;

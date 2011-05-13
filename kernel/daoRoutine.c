@@ -500,6 +500,7 @@ int DRoutine_PassParams( DRoutine *routine, DValue *obj, DValue *recv[], DValue 
 			val2.v.object = val2.v.object->that; /* for virtual method call */
 			val2.v.p = DaoObject_MapThisObject( val2.v.object, tp );
 			if( val2.v.p == NULL ) return 0;
+			val2.t = val2.v.p->type;
 		}
 		if( DValue_Move2( val2, recv[ito], tp ) ==0 ) return 0;
 	}
@@ -2316,7 +2317,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				if( meth ){
 					/* TODO, self type for class? */
-					rout = DaoBase_Check( meth, at, & bt, 1, DVM_CALL, errors );
+					rout = DaoBase_Check( meth, at, type+opa+1, opb, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
 					ct = rout->routType->aux.v.type;
 				}
@@ -2676,7 +2677,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						ts[bt->nested->size] = at;
 						k = bt->nested->size + 1;
 					}
-					rout = DaoBase_Check( meth, at, ts, k, DVM_CALL, errors );
+					rout = DaoBase_Check( meth, ct, ts, k, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
 					break;
 				case DAO_CDATA :
@@ -2692,7 +2693,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						ts[bt->nested->size] = at;
 						k = bt->nested->size + 1;
 					}
-					rout = DaoBase_Check( meth, at, ts, k, DVM_CALL, errors );
+					rout = DaoBase_Check( meth, ct, ts, k, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
 					break;
 				default : break;
@@ -2753,7 +2754,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					memcpy( ts, type+opc+1, opb*sizeof(DaoType*) );
 					ts[opb] = at;
 					/* TODO, self type for class? */
-					rout = DaoBase_Check( meth, at, ts, opb+1, DVM_CALL, errors );
+					rout = DaoBase_Check( meth, ct, ts, opb+1, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
 				}
 				break;
@@ -2817,7 +2818,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								setter = 1;
 								ts[0] = type[opc];
 								ts[1] = at;
-								rout = DaoBase_Check( meth, at, ts, 2, DVM_MCALL, errors );
+								rout = DaoBase_Check( meth, ct, ts, 2, DVM_MCALL, errors );
 								if( rout == NULL ) goto NotMatch;
 							}
 						}
@@ -2904,7 +2905,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						if( meth == NULL ) goto NotMatch;
 						ts[0] = ct;
 						ts[1] = at;
-						rout = DaoBase_Check( meth, at, ts, 2, DVM_MCALL, errors );
+						rout = DaoBase_Check( meth, ct, ts, 2, DVM_MCALL, errors );
 						if( rout == NULL ) goto NotMatch;
 						break;
 					}
@@ -4013,7 +4014,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( opc == 1 && code == DVM_RETURN ) continue;
 				ct = self->routType->aux.v.type;
 				/*
-				   printf( "%i %s %s\n", self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );
+				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );
 				 */
 				if( vmc->b ==0 ){
 					if( ct && ( ct->tid ==DAO_UDF || ct->tid ==DAO_ANY ) ) continue;
@@ -4022,8 +4023,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					at = type[opa];
 					if( at ==NULL ) goto ErrorTyping;
 					if( vmc->b >1 )
-						at = DaoNameSpace_MakeType( ns, "tuple", DAO_TUPLE,
-								NULL, type+opa, vmc->b);
+						at = DaoNameSpace_MakeType( ns, "tuple", DAO_TUPLE, NULL, type+opa, vmc->b);
 
 					if( retinf && ct->tid != DAO_UDF ){
 						int mac = DaoType_MatchTo( at, ct, defs );

@@ -348,8 +348,8 @@ void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host )
 		metaRoutine->host = host;
 		DaoMetaRoutine_Add( metaRoutine, (DRoutine*) node->value.pBase );
 		DaoMetaRoutine_Add( metaRoutine, (DRoutine*) rout );
-		GC_IncRC( metaRoutine ); 
-		MAP_Insert( methods, rout->routName, metaRoutine );
+		GC_ShiftRC( metaRoutine, node->value.pBase );
+		node->value.pVoid = metaRoutine;
 	}
 }
 int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
@@ -420,7 +420,7 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 					/* skip constructor */
 					if( STRCMP( meta->name, sup->name ) ==0 ) continue;
 					for(k=0; k<meta->routines->size; k++){
-						DRoutine *rout = meta->routines->items.pRout2[i];
+						DRoutine *rout = meta->routines->items.pRout2[k];
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != sup->priv->abtype ) continue;
 						DaoMethods_Insert( methods, rout, hostype );

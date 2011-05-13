@@ -10,6 +10,7 @@ class Test
 	}
 	# conversion to float or string:
 	routine cast( @T<float|string> ) => @T {
+	#operator cast() => @T<float|string> {
 		io.writeln( 'casting to float or string' )
 		switch( @T ?< float|string ){
 		case 1 : return value.sum() * 1.23; # convert to float

@@ -37,6 +37,7 @@ enum DaoTokNames
 	DTOK_BLANK , /*  */
 	DTOK_TAB , /* \t */
 	DTOK_NEWLN , /* \n */
+	DTOK_SEMCO , /* ; */
 	DTOK_LB , /* ( */
 	DTOK_RB , /* ) */
 	DTOK_LCB , /* { */
@@ -47,7 +48,6 @@ enum DaoTokNames
 	DTOK_DOT , /* . */
 	DTOK_COMMA , /* , */
 	DTOK_COLON , /* : */
-	DTOK_SEMCO , /* ; */
 	DTOK_COLON2 , /* :: */
 	DTOK_ADD , /* + */
 	DTOK_SUB , /* - */

@@ -705,7 +705,7 @@ int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end )
 			if( i+1 > end ) break;
 			tk = tokens[i+1]->type;
 			if( tk >= DTOK_IDENTIFIER && tk <= DTOK_WCS ) return i;
-			if( i < end && tokens[i+1]->name == DTOK_LCB ){ /* a=class(){} */
+			if( i < end && tokens[i+1]->name > DTOK_SEMCO ){
 				i++;
 				continue;
 			}
@@ -2952,7 +2952,9 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, r1, 0 );
 			return -1;
 		}
+		k = rout->attribs;
 		DRoutine_CopyFields( (DRoutine*)rout, (DRoutine*)tmpRoutine );
+		rout->attribs = k;
 		tmpRoutine->parser = rout->parser;
 		tmpParser->routine = rout;
 		rout->parser = tmpParser;
@@ -3342,7 +3344,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 				goto ErrorClassDefinition;
 			}
 			super = value.v.klass;
-			if( super->type == DAO_CLASS && ( super->attribs & DAO_CLS_FINAL ) ){
+			if( super->type == DAO_CLASS && (super->attribs & DAO_CLS_FINAL) ){
 				ec = DAO_CLASS_DERIVE_FINAL;
 				goto ErrorClassDefinition;
 			}

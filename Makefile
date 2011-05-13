@@ -20,8 +20,8 @@ DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_AS
 CC        = $(CROSS_COMPILE)gcc
 CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG)
 INCPATH   = -I. -Ikernel
-LFLAGS    = -fPIC -s
-LFLAGSDLL = -fPIC -s
+LFLAGS    = -fPIC
+LFLAGSDLL = -fPIC
 LIBS      = -L. -ldl -lpthread -lm $(LIB_READLINE)
 
 # dynamic linked Dao interpreter, requires dao.so to run:

@@ -4066,7 +4066,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_info, "serialize( self : Exception )=>string" },
-	{ Dao_Exception_Get_info, "cast( self : Exception, @T<string> )=>@T" },
+	//XXX { Dao_Exception_Get_info, "cast( self : Exception, @T<string> )=>@T" },
 	{ NULL, NULL }
 };
 

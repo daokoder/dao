@@ -608,13 +608,37 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				}
 			}
 			for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
-				value.v.func = (DaoFunction*) it->value.pBase;
-				value.t = value.v.func->type;
-				if( value.v.func->routHost != typer->priv->abtype ) continue;
-				if( DString_EQ( value.v.func->routName, core->abtype->name ) ) continue;
-				search = MAP_Find( self->lookupTable, it->key.pVoid );
-				if( search ==NULL ) /* TODO: overload between C and Dao functions */
+				DaoFunction *func = (DaoFunction*) it->value.pBase;
+				DaoFunction **funcs = & func;
+				int k, count = 1;
+				if( it->value.pBase->type == DAO_METAROUTINE ){
+					DaoMetaRoutine *meta = (DaoMetaRoutine*) it->value.pBase;
+					funcs = (DaoFunction**)meta->routines->items.pBase;
+					count = meta->routines->size;
+				}
+				for(k=0; k<count; k++){
+					DaoFunction *func = funcs[k];
+					value.v.func = func;
+					value.t = func->type;
+					if( func->routHost != typer->priv->abtype ) continue;
+					if( DString_EQ( func->routName, core->abtype->name ) ) continue;
 					DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );
+				}
+#if 0
+				if( it->value.pBase->type == DAO_FUNCTION ){
+					DaoFunction *func = (DaoFunction*) it->value.pBase;
+					value.v.func = func;
+					value.t = func->type;
+					if( func->routHost != typer->priv->abtype ) continue;
+					if( DString_EQ( func->routName, core->abtype->name ) ) continue;
+					DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );
+				}else if( it->value.pBase->type == DAO_METAROUTINE ){
+				}
+				//if( DString_EQ( value.v.func->routName, core->abtype->name ) ) continue;
+				//search = MAP_Find( self->lookupTable, it->key.pVoid );
+				//if( search ==NULL ) /* TODO: overload between C and Dao functions */
+				//	DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );
+#endif
 			}
 		}
 	}

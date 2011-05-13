@@ -19,7 +19,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#define DAO_H_VERSION 20110508
+#define DAO_H_VERSION 20110512
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -598,8 +598,6 @@ struct DaoAPI
 	void  (*DaoStream_SetFile)( DaoStream *self, FILE *fd );
 	FILE* (*DaoStream_GetFile)( DaoStream *self );
 
-	int (*DaoFunction_Call)( DaoFunction *self, DaoContext *c, DValue *o, DValue *p[], int n );
-
 	DaoCData* (*DaoCData_New)( DaoTypeBase *typer, void *data );
 	DaoCData* (*DaoCData_Wrap)( DaoTypeBase *typer, void *data );
 	int    (*DaoCData_IsType)( DaoCData *self, DaoTypeBase *typer );
@@ -915,9 +913,6 @@ DAO_DLL DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer );
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
 DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
-
-/* o->func( p, ... ); or func( p, ... ) */
-DAO_DLL int DaoFunction_Call( DaoFunction *self, DaoContext *c, DValue *o, DValue *p[], int n );
 
 /* data will be deleted with the new DaoCData */
 DAO_DLL DaoCData* DaoCData_New( DaoTypeBase *typer, void *data );
@@ -1241,8 +1236,6 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 #define DaoStream_New()  __dao.DaoStream_New()
 #define DaoStream_SetFile( self, fd )  __dao.DaoStream_SetFile( self, fd )
 #define DaoStream_GetFile( self )  __dao.DaoStream_GetFile( self )
-
-#define DaoFunction_Call( self, c, o, p, n )  __dao.DaoFunction_Call( self, c, o, p, n )
 
 #define DaoCData_New( typer, data )  __dao.DaoCData_New( typer, data )
 #define DaoCData_Wrap( typer, data )  __dao.DaoCData_Wrap( typer, data )
