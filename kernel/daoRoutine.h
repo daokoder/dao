@@ -98,9 +98,7 @@ DaoRoutine* DaoRoutine_Copy( DaoRoutine *self );
 void DaoRoutine_Delete( DaoRoutine *self );
 
 void DaoRoutine_Compile( DaoRoutine *self );
-void DaoRoutine_AddOverLoad( DaoRoutine *self, DaoRoutine *rout );
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
-
 void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNameSpace *ns );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );

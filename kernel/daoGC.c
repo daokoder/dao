@@ -27,10 +27,11 @@ void GC_Unlock();
 
 DArray *dao_callback_data = NULL;
 
-DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata )
+DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DValue userdata )
 {
 	DaoCallbackData *self;
-	if( callback == NULL || callback->type != DAO_ROUTINE ) return NULL;
+	if( callback == NULL ) return NULL;
+	if( callback->type < DAO_METAROUTINE || callback->type > DAO_FUNCTION ) return NULL;
 	self = (DaoCallbackData*) calloc( 1, sizeof(DaoCallbackData) );
 	self->callback = callback;
 	if( userdata.t >= DAO_ENUM )
@@ -47,7 +48,7 @@ static void DaoCallbackData_Delete( DaoCallbackData *self )
 	if( self->userdata.t < DAO_ENUM ) DValue_Clear( & self->userdata );
 	dao_free( self );
 }
-static void DaoCallbackData_DeleteByCallback( DaoRoutine *callback )
+static void DaoCallbackData_DeleteByCallback( DaoBase *callback )
 {
 	DaoCallbackData *cd = NULL;
 	int i;
@@ -55,7 +56,7 @@ static void DaoCallbackData_DeleteByCallback( DaoRoutine *callback )
 	GC_Lock();
 	for(i=0; i<dao_callback_data->size; i++){
 		cd = (DaoCallbackData*) dao_callback_data->items.pBase[i];
-		if( cd->callback == callback ){
+		if( cd->callback == (DaoMethod*) callback ){
 			DaoCallbackData_Delete( cd );
 			DArray_Erase( dao_callback_data, i, 1 );
 			i--;
@@ -1277,8 +1278,8 @@ void freeGarbage()
 				   if( dbase->type < DAO_STRING )
 				   if( dbase->type != DAO_CONTEXT )
 				 */
-				if( dbase->type == DAO_ROUTINE )
-					DaoCallbackData_DeleteByCallback( (DaoRoutine*) dbase );
+				if( dbase->type >= DAO_METAROUTINE && dbase->type <= DAO_FUNCTION )
+					DaoCallbackData_DeleteByCallback( dbase );
 				DaoCallbackData_DeleteByUserdata( dbase );
 				typer = DaoBase_GetTyper( dbase );
 				typer->Delete( dbase );
@@ -2209,8 +2210,8 @@ void freeGarbage()
 				   if( dbase->type == DAO_FUNCTION ) printf( "here\n" );
 				   if( dbase->type < DAO_STRING )
 				 */
-				if( dbase->type == DAO_ROUTINE )
-					DaoCallbackData_DeleteByCallback( (DaoRoutine*) dbase );
+				if( dbase->type >= DAO_METAROUTINE && dbase->type <= DAO_FUNCTION )
+					DaoCallbackData_DeleteByCallback( dbase );
 				DaoCallbackData_DeleteByUserdata( dbase );
 				typer = DaoBase_GetTyper( dbase );
 				typer->Delete( dbase );

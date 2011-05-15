@@ -2724,6 +2724,8 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 			DString_Append( signature, name );
 			for(i=start+1; i<=rb; i++) DString_Append( signature, tokens[i]->string );
 			start = rb + 1;
+		}else{
+			start += 1;
 		}
 		if( klass ){
 			if( signature->size ){
@@ -2757,13 +2759,14 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 					DaoParser_UseConstructor( self, rs, use, start );
 					return start;
 				}
-			}
-			for(i=0; i<meta->routines->size; i++){
-				DRoutine *rs = (DRoutine*) meta->routines->items.pRout[i];
-				if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){
-					/* printf( "%s\n", rs->parCodes->mbs ); */
-					DaoParser_UseConstructor( self, rs, use, start );
-					if( signature->size ) break;
+			}else{
+				for(i=0; i<meta->routines->size; i++){
+					DRoutine *rs = (DRoutine*) meta->routines->items.pRout[i];
+					if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){
+						/* printf( "%s\n", rs->parCodes->mbs ); */
+						DaoParser_UseConstructor( self, rs, use, start );
+						if( signature->size ) break;
+					}
 				}
 			}
 		}else{

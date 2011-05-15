@@ -282,6 +282,9 @@ typedef struct DaoType         DaoType;
 typedef struct complex8  { float  real, imag; } complex8;
 typedef struct complex16 { double real, imag; } complex16;
 
+/* Dummy type for functions, casted from DaoRoutine, DaoFunction or DaoMetaRoutine: */
+typedef struct DaoMethod { uchar_t type;  } DaoMethod;
+
 /* Structure for symbol, enum and flag:
  * Storage modes:
  * Symbol: $AA => { type<$AA>, 0 }
@@ -383,8 +386,8 @@ struct DaoTypeBase
 /* Callback data: freed when "callback" or "userdata" is collected by GC. */
 struct DaoCallbackData
 {
-	DaoRoutine  *callback;
-	DValue       userdata;
+	DaoMethod  *callback;
+	DValue      userdata;
 };
 
 /* This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
@@ -589,8 +592,10 @@ struct DaoAPI
 	void* (*DaoArray_GetBuffer)( DaoArray *self );
 	void  (*DaoArray_SetBuffer)( DaoArray *self, void *buffer, size_t size );
 
+	DaoMethod* (*DaoMethod_Resolve)( DaoMethod *self, DValue *o, DValue *p[], int n );
+
 	DValue (*DaoObject_GetField)( DaoObject *self, const char *name );
-	DValue (*DaoObject_GetMethod)( DaoObject *self, const char *name );
+	DaoMethod* (*DaoObject_GetMethod)( DaoObject *self, const char *name );
 	DaoCData* (*DaoObject_MapCData)( DaoObject *self, DaoTypeBase *typer );
 	/* TODO: DaoObject* DaoObject_MapObject( DaoObject *self, DaoClass *klass ) */
 
@@ -656,7 +661,7 @@ struct DaoAPI
 	DaoVmProcess* (*DaoVmProcess_New)( DaoVmSpace *vms );
 	int (*DaoVmProcess_Compile)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 	int (*DaoVmProcess_Eval)( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-	int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoBase *f, DValue *o, DValue *p[], int n);
+	int (*DaoVmProcess_Call)( DaoVmProcess *self, DaoMethod *f, DValue *o, DValue *p[], int n);
 	void (*DaoVmProcess_Stop)( DaoVmProcess *self );
 	DValue (*DaoVmProcess_GetReturned)( DaoVmProcess *self );
 	DaoRegex* (*DaoVmProcess_MakeRegex)( DaoVmProcess *self, DString *patt, int mbs );
@@ -711,7 +716,7 @@ struct DaoAPI
 
 	DaoType* (*DaoType_GetFromTypeStructure)( DaoTypeBase *typer );
 
-	DaoCallbackData* (*DaoCallbackData_New)( DaoRoutine *callback, DValue userdata );
+	DaoCallbackData* (*DaoCallbackData_New)( DaoMethod *callback, DValue userdata );
 };
 
 
@@ -905,9 +910,11 @@ DAO_DLL void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, int N );
 DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
+DAO_DLL DaoMethod* DaoMethod_Resolve( DaoMethod *self, DValue *o, DValue *p[], int n );
+
 DAO_DLL DValue DaoObject_GetField( DaoObject *self, const char *name );
 /* return a null value, or a value of DaoMetaRoutine, DaoRoutine or DaoFunction: */
-DAO_DLL DValue DaoObject_GetMethod( DaoObject *self, const char *name );
+DAO_DLL DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer );
 
 DAO_DLL DaoStream* DaoStream_New();
@@ -979,7 +986,7 @@ DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 DAO_DLL int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 /* f: function to be called, one of DaoMetaRoutine, DaoRoutine and DaoFunction: */
-DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoBase *f, DValue *o, DValue *p[], int n );
+DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoMethod *f, DValue *o, DValue *p[], int n );
 DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
 DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
 DAO_DLL DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *patt, int mbs );
@@ -1055,7 +1062,7 @@ DAO_DLL void DaoGC_DecRC( DaoBase *p );
 
 DAO_DLL DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
 
-DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userdata );
+DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DValue userdata );
 
 #else
 
@@ -1228,6 +1235,8 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DValue userd
 
 #define DaoArray_GetBuffer( self )  __dao.DaoArray_GetBuffer( self )
 #define DaoArray_SetBuffer( self, buffer, size )  __dao.SetBuffer( self, buffer, size )
+
+#define DaoMethod_Resolve( self, o, p, n ) __dao.DaoMethod_Resolve( self, o, p, n )
 
 #define DaoObject_GetField( self, name )  __dao.DaoObject_GetField( self, name )
 #define DaoObject_GetMethod( self, name )  __dao.DaoObject_GetMethod( self, name )

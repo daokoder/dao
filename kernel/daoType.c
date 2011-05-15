@@ -585,14 +585,15 @@ short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 }
 short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 {
-	ullong_t flags = (1<<DAO_UDF)|((ullong_t)1<<DAO_ANY)|((ullong_t)1<<DAO_INITYPE);
+	ullong_t flags;
 	DaoType *tp;
 	DEnum *other;
 	DNode *node;
 	DMap *names;
-	short i, mt, mt2, it1=0, it2=0;
+	short i, mt, mt2, it1, it2;
 	if( self == NULL ) return DAO_MT_NOT;
 	mt = dao_type_matrix[value.t][self->tid];
+	if( mt == DAO_MT_SIM || mt == DAO_MT_EQ ) return mt;
 	if( value.t == 0 || self->tid == DAO_VALTYPE || self->tid == DAO_VARIANT ){
 		if( self->tid == DAO_VALTYPE ){
 			if( DValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EQ + 1;
@@ -623,6 +624,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( value.t < DAO_ARRAY ) return mt;
 	default : break;
 	}
+	it1 = it2 = 0;
 	if( self->nested ){
 		if( self->nested->size ) it1 = self->nested->items.pType[0]->tid;
 		if( self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
@@ -666,6 +668,7 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		if( value.v.map->items->size == 0 ) return DAO_MT_EQ;
 		tp = value.v.map->unitype;
 		if( tp == self ) return DAO_MT_EQ;
+		flags = (1<<DAO_UDF)|((ullong_t)1<<DAO_ANY)|((ullong_t)1<<DAO_INITYPE);
 		if( (((ullong_t)1<<it1)&flags) && (((ullong_t)1<<it2)&flags) ){
 			if( it1 == DAO_UDF || it2 == DAO_UDF ) return DAO_MT_UDF;
 			if( it1 == DAO_INITYPE || it2 == DAO_INITYPE ) return DAO_MT_INIT;

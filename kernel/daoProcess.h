@@ -75,7 +75,7 @@ void DaoVmProcess_PushContext( DaoVmProcess *self, DaoContext *context );
 DaoContext* DaoVmProcess_MakeContext( DaoVmProcess *self, DaoRoutine *routine );
 void DaoVmProcess_PopContext( DaoVmProcess *self );
 
-int DaoVmProcess_Call( DaoVmProcess *self, DaoBase *r, DValue *o, DValue *p[], int n );
+int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DValue *o, DValue *p[], int n );
 /* Execute from the top of the calling stack */
 int DaoVmProcess_Execute( DaoVmProcess *self );
 int DaoVmProcess_ExecuteSection( DaoVmProcess *self, int entry );

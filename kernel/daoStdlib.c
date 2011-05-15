@@ -83,7 +83,7 @@ static void STD_Load( DaoContext *ctx, DValue *p[], int N )
 #if 0
 	if( ns ){ /* in the case that it is cancelled from console */
 		DArray_PushFront( vms->pathLoading, ns->path );
-		res = DaoVmProcess_Call( ctx->process, ns->mainRoutine, NULL, NULL, 0 );
+		res = DaoVmProcess_Call( ctx->process, (DaoMethod*)ns->mainRoutine, NULL, NULL, 0 );
 		if( ctx->process->stopit | vms->stopit )
 			DaoContext_RaiseException( ctx, DAO_ERROR, "loading cancelled" );
 		else if( res == 0 )

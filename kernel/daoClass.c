@@ -443,7 +443,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 
 	value.t = DAO_METAROUTINE;
 	value.v.metaRoutine = self->classRoutines;
-	DaoClass_AddConst( self, rout->routName, value, DAO_DATA_PRIVATE, -1 );
+	DaoClass_AddConst( self, rout->routName, value, DAO_DATA_PUBLIC, -1 ); // XXX
 	DString_Delete( str );
 
 	DArray_Append( self->cstDataTable, self->cstData );

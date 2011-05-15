@@ -1302,11 +1302,15 @@ global dao2cxx_user4 = '  $(namespace)$(type)* $(name)= ($(namespace)$(type)*) '
 'DValue_GetCData2( _p[$(index)] );\n';
 
 global dao2cxx_callback =
-'  DaoRoutine *_ro = _p[$(index)]->v.routine;
+'  DaoMethod *_ro = (DaoMethod*) _p[$(index)]->v.p;
   $(type) *$(name) = Dao_$(type);\n';
 global dao2cxx_userdata =
 '  DValue *_ud = _p[$(index)];
-  DaoCallbackData *$(name) = DaoCallbackData_New( _ro, *_ud );\n';
+  DaoCallbackData *$(name) = DaoCallbackData_New( _ro, *_ud );
+  if( $(name) == NULL ){
+    DaoContext_RaiseException( _ctx, DAO_ERROR_PARAM, "invalid callback" );
+	return;
+  }\n';
 
 
 const cxx2dao = '  _dp[$(index)] = DValue_New';
@@ -2550,19 +2554,20 @@ const cxx_virt_struct =
   DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n';
 
 const cxx_virt_class =
-'$(retype) DaoCxxVirt_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n';
+'$(retype) DaoCxxVirt_$(type)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n';
 
 const cxx_get_object_method = 
-'DaoBase* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )
+'DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )
 {
-  DValue value;
+  DaoMethod *meth;
   if( cd == NULL ) return NULL;
   obj->v.object = DaoCData_GetObject( cd );
   if( obj->v.object == NULL ) return NULL;
   obj->t = DAO_OBJECT;
-  value = DaoObject_GetMethod( obj->v.object, name );
-  if( value.t != DAO_METAROUTINE && value.t != DAO_ROUTINE ) return NULL;
-  return value.v.p;
+  meth = DaoObject_GetMethod( obj->v.object, name );
+  if( meth == NULL ) return NULL;
+  if( meth->type != DAO_METAROUTINE && meth->type != DAO_ROUTINE ) return NULL;
+  return meth;
 }
 ';
 const qt_get_wrapper1 =
@@ -2581,8 +2586,10 @@ const qt_get_wrapper2 =
 
 const cxx_virt_call_00 =
 '  DValue _obj = {0,0,0,0,{0}};
-  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;
+  _ro = DaoMethod_Resolve( _ro, & _obj, NULL, 0 );
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   DaoVmProcess_Call( _vmp, _ro, & _obj, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
@@ -2590,55 +2597,61 @@ const cxx_virt_call_00 =
 
 const cxx_virt_call_01 =
 '  DValue _obj = {0,0,0,0,{0}};
-  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;
-  $(proxy_name)( _ro, & _obj, $(parcall) );
+  $(proxy_name)( & _cs, _ro, & _obj, $(parcall) );
 }\n';
 
 const cxx_virt_call_10 =
 '  DValue _obj = {0,0,0,0,{0}};
-  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   $(vareturn)
   if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);
-  return ($(retype))$(proxy_name)( _ro, & _obj );
+  return ($(retype))$(proxy_name)( & _cs, _ro, & _obj );
 }\n';
 
 const cxx_virt_call_11 =
 '  DValue _obj = {0,0,0,0,{0}};
-  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   $(vareturn)
   if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);
-  return ($(retype))$(proxy_name)( _ro, & _obj, $(parcall) );
+  return ($(retype))$(proxy_name)( & _cs, _ro, & _obj, $(parcall) );
 }\n';
 
 const cxx_proxy_body00 =
-'static void $(proxy_name)( DaoBase *_ro, DValue *_ob )\n{
+'static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{
   if( _ro == NULL ) return;
+  _ro = DaoMethod_Resolve( _ro, _ob, NULL, 0 );
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
-  DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
+  *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }\n';
 const cxx_proxy_body01 =
-'static void $(proxy_name)( DaoBase *_ro, DValue *_ob, $(parlist) )\n{
+'static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
   if( _ro == NULL ) return;
 $(cxx2dao)
+  _ro = DaoMethod_Resolve( _ro, _ob, _dp2, $(count) );
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
-  DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) );
+  *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
   DValue_ClearAll( _dp, $(count) );
 }\n';
 const cxx_proxy_body10 =
-'static $(retype) $(proxy_name)( DaoBase *_ro, DValue *_ob )\n{
+'static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{
   DValue _res;
   DaoCData *_cd;
   DaoVmProcess *_vmp;
   $(vareturn)
   if( _ro == NULL ) goto EndCall;
+  _ro = DaoMethod_Resolve( _ro, _ob, NULL, 0 );
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) goto EndCall;
   _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
-  if( DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 ) ==0 ) goto EndCall;
+  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 )) ==0 ) goto EndCall;
   _res = DaoVmProcess_GetReturned( _vmp );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 $(getreturn)
@@ -2646,7 +2659,7 @@ EndCall:
   return $(return);
 }\n';
 const cxx_proxy_body11 =
-'static $(retype) $(proxy_name)( DaoBase *_ro, DValue *_ob, $(parlist) )\n{
+'static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{
   const DValue _dao_nil = {0,0,0,0,{0}};
   DValue _dp[$(count)] = { $(nils) };
   DValue *_dp2[$(count)] = { $(refs) };
@@ -2656,8 +2669,10 @@ const cxx_proxy_body11 =
   $(vareturn)
   if( _ro == NULL ) goto EndCall;
 $(cxx2dao)
+  _ro = DaoMethod_Resolve( _ro, _ob, _dp2, $(count) );
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) goto EndCall;
   _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
-  if( DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) ) ==0 ) goto EndCall;
+  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) )) ==0 ) goto EndCall;
   _res = DaoVmProcess_GetReturned( _vmp );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 $(getreturn)
@@ -2668,21 +2683,34 @@ EndCall:
 
 const cxx_virt_class2 =
 '$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
-  return DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
+  int _cs = 0;
+  return DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );
 }\n';
 const cxx_virt_class3 =
 '$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
+  int _cs = 0;
   DValue _obj = {0,0,0,0,{0}};
-  DaoBase *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
   if( _ro && _obj.t == DAO_OBJECT ){
-    $(return) DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
-  }else{
-    $(return) $(type)::$(cxxname)( $(parcall) );
+    DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );
+	if( _cs ) return;
   }
+  $(type)::$(cxxname)( $(parcall) );
 }\n';
 const cxx_virt_class4 =
-'$(retype) DaoCxxVirt_$(sub)::$(cxxname)( $(parlist) )$(const)\n{
-  $(return) DaoCxxVirt_$(type)::$(cxxname)( $(parcall) );
+'$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{
+  int _cs = 0;
+  DValue _obj = {0,0,0,0,{0}};
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "$(cxxname)" );
+  if( _ro && _obj.t == DAO_OBJECT ){
+    $(vareturn) = DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );
+	if( _cs ) return $(vareturn2);
+  }
+  return $(type)::$(cxxname)( $(parcall) );
+}\n';
+const cxx_virt_class5 =
+'$(retype) DaoCxxVirt_$(sub)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{
+  $(return) DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );
 }\n';
 
 global dao_callback_proto =
@@ -2692,10 +2720,11 @@ global dao_callback_def =
 '$(retype) Dao_$(type)( $(parlist) )
 {
   DaoCallbackData *_daocallbackdata = (DaoCallbackData*) _ud;
-  DaoRoutine *_ro = _daocallbackdata->callback;
+  DaoMethod *_ro = _daocallbackdata->callback;
   DValueX userdata = _daocallbackdata->userdata;
+  int _cs = 0;
   if( _ro ==NULL ) return;
-  $(proxy_name)( _ro, NULL, $(parcall) );
+  $(proxy_name)( & _cs, _ro, NULL, $(parcall) );
 }
 ';
 
@@ -3002,10 +3031,12 @@ routine Function::Generate()
 	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'count' ] = (string)(parlist.size() - cxx_no_self);
 		kvmap3[ 'parlist' ] = cxxProtoParamVirt;
+		kvmap3[ 'comma' ] = cxxProtoParamVirt ? ',' : '';
 		cxxWrapperVirt = cxx_virt_class.expand( kvmap3 );
 	}else{
 		cxxWrapperVirtProto = cxx_virt_proto.expand( kvmap3 );
 		cxxWrapperVirt = cxx_virt_struct.expand( kvmap3 );
+		cxxWrapperVirt += '  int _cs = 0;\n'
 	}
 	has_return = retype.daotype.size();
 	has_param = parlist.size() - cxx_no_self;
@@ -3060,15 +3091,20 @@ routine Function::Generate()
 	}
 	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'return' ] = 'return';
+		kvmap3[ 'comma' ] = cxxCallParamV ? ',' : '';
 		if( retype.type == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
 		kvmap3[ 'parlist' ] = cxxProtoParam;
 		if( $FUNC_PURE_VIRTUAL in attribs ){
 			cxxWrapperVirt2 = cxx_virt_class2.expand( kvmap3 );
-		}else{
+		}else if( retype.daotype.size() ==0 ){
 			cxxWrapperVirt2 = cxx_virt_class3.expand( kvmap3 );
+		}else{
+			kvmap3['vareturn'] = retype.cxxpar;
+			kvmap3['vareturn2'] = retype.name;
+			cxxWrapperVirt2 = cxx_virt_class4.expand( kvmap3 );
 		}
 		kvmap3[ 'parlist' ] = cxxProtoParamVirt;
-		cxxWrapperVirt3 = cxx_virt_class4.expand( kvmap3 );
+		cxxWrapperVirt3 = cxx_virt_class5.expand( kvmap3 );
 	}
 	# }
 	Clean();
@@ -3633,10 +3669,10 @@ DaoCxx_$(class)* DAO_DLL_$(module) DaoCxx_$(class)_New( $(parlist) )
 global tpl_init_super = '\tDaoCxxVirt_$(super)::DaoInitWrapper( s, d );\n';
 
 global tpl_meth_decl =
-'\t$(retype) $(name)( $(parlist) )$(extra);\n';
+'\t$(retype) $(name)( int &_cs$(comma) $(parlist) )$(extra);\n';
 
 global tpl_meth_decl2 =
-'\t$(retype) $(name)( $(parlist) )$(extra)';
+'\t$(retype) $(name)( $(parlist) )$(extra);\n';
 
 global tpl_meth_decl3 =
 '\t$(retype) DaoWrap_$(name)( $(parlist) )$(extra)';
@@ -3968,7 +4004,7 @@ routine UserType::GenerateType()
 				if( $FUNC_PURE_VIRTUAL in meth.attribs )
 					kmethods += '  ' + meth.source + '{/*XXX 1*/}\n';
 			}else{
-				kmethods += tpl_meth_decl.expand( kvmap );
+				kmethods += tpl_meth_decl2.expand( kvmap );
 			}
 		}
 		tmp = '{ $(return)$(type)::$(cxxname)( $(parcall) ); }\n';
@@ -3983,6 +4019,7 @@ routine UserType::GenerateType()
 			#}
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 			'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
+			kvmap[ 'comma' ] = meth.cxxProtoParamDecl ? ',' : '';
 			if( $FUNC_CONST in meth.attribs) kvmap['extra'] = 'const';
 			kvirtuals += tpl_meth_decl.expand( kvmap );
 			if( $FUNC_VIRTUAL in meth.attribs ){
@@ -4014,7 +4051,7 @@ routine UserType::GenerateType()
 				kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 				'parlist'=>meth.cxxProtoParam, 'extra'=>'' };
 				if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
-				kmethods += tpl_meth_decl.expand( kvmap );
+				kmethods += tpl_meth_decl2.expand( kvmap );
 				tmp2 = meth.cxxWrapperVirt2;
 				tmp2.change( meth.hostType + '::(%w+ %b() %s* ; %s* %} %s* else )', meth.reimplemented + '::%1' );
 				cxxWrapperVirt += tmp2;

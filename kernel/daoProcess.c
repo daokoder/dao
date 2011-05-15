@@ -446,19 +446,30 @@ int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *source, in
 	DaoRoutine *rout;
 	if( DaoVmProcess_Compile( self, ns, source, rpl ) ==0 ) return 0;
 	rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
-	if( DaoVmProcess_Call( self, (DaoBase*) rout, NULL, NULL, 0 ) ==0 ) return 0;
+	if( DaoVmProcess_Call( self, (DaoMethod*) rout, NULL, NULL, 0 ) ==0 ) return 0;
 	return ns->mainRoutines->size;
 }
-int DaoVmProcess_Call( DaoVmProcess *self, DaoBase *r, DValue *o, DValue *p[], int n )
+int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DValue *o, DValue *p[], int n )
 {
+	DaoBase *r = (DaoBase*) f;
 	DRoutine *rout = (DRoutine*) r;
 	DaoContext *ctx;
 
 	if( r && r->type == DAO_METAROUTINE ) rout = DRoutine_Resolve( r, o, p, n, DVM_CALL );
 	if( rout == NULL ) return 0;
 	if( rout->type == DAO_FUNCTION ){
+		DaoVmCode vmc = { 0, 0, 0, 0 };
+		uchar_t mode = 0;
 		ctx = DaoVmProcess_MakeContext( self, (DaoRoutine*) rout );
-		return DaoFunction_Call( (DaoFunction*) rout, ctx, o, p, n );
+		if( ctx->regArray->size ==0 ){
+			DVaTuple_Resize( ctx->regArray, 1, daoNullValue );
+			ctx->regValues = dao_realloc( ctx->regValues, sizeof(DValue*) );
+		}
+		ctx->regValues[0] = & self->returned;
+		ctx->regTypes = & dao_type_any;
+		ctx->regModes = & mode;
+		ctx->vmc = & vmc;
+		return DaoFunction_Call( (DaoFunction*) rout, ctx, o, p, n ) ==0;
 	}
 
 	ctx = DaoVmProcess_MakeContext( self, (DaoRoutine*) rout );
@@ -546,7 +557,7 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	complex16 com = {0,0};
 	size_t size, *dims, *dmac;
 	int invokehost = handler && handler->InvokeHost;
-	int i, j, print, retCode, nCycle;
+	int i, j, print, retCode;
 	int exceptCount = 0;
 	int gotoCount = 0;
 	dint id;
@@ -787,7 +798,7 @@ CallEntry:
 #endif
 
 	//XXX dao_fe_clear();
-	topCtx->idClearFE = self->topFrame->entry;
+	//topCtx->idClearFE = self->topFrame->entry;
 
 #if 0
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT )
@@ -804,13 +815,14 @@ CallEntry:
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
 	if( invokehost ) handler->InvokeHost( handler, topCtx );
 
-	DaoContext_AdjustCodes( topCtx, vmSpace->options );
+	if( (vmSpace->options & DAO_EXEC_DEBUG)|(routine->mode & DAO_EXEC_DEBUG) )
+		DaoContext_AdjustCodes( topCtx, vmSpace->options );
+
 	topCtx->vmSpace = vmSpace;
 	vmcBase = topCtx->codes;
 	id = self->topFrame->entry;
 	if( id >= routine->vmCodes->size ){
 		if( id == 0 ){
-			printf( "%p\n", routine );
 			DString_SetMBS( self->mbstring, "Not implemented function, " );
 			DString_Append( self->mbstring, routine->routName );
 			DString_AppendMBS( self->mbstring, "()" );
@@ -830,7 +842,6 @@ CallEntry:
 	printf("==================================================\n");
 #endif
 
-	nCycle = 0;
 	self->stopit = 0;
 	vmc = vmcBase + id;
 	topCtx->vmc = vmc;
@@ -841,7 +852,7 @@ CallEntry:
 
 	exceptCount = self->exceptions->size;
 	/* Check if an exception has been raisen by a function call: */
-	if( self->exceptions->size > 0 ){ /* yes */
+	if( self->exceptions->size ){ /* yes */
 		if( topFrame->depth == 0 ) goto FinishCall; /* should never happen */
 		/* jump to the proper CRRE instruction to handle the exception,
 		 * or jump to the last RETURN instruction to defer the handling to

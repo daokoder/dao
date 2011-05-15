@@ -389,17 +389,15 @@ void DValue_MarkConst( DValue *self )
 }
 void DValue_Clear( DValue *self )
 {
-	if( self->t >= DAO_COMPLEX ){
-		switch( self->t ){
-		case DAO_COMPLEX : dao_free( self->v.c ); break;
-		case DAO_LONG : DLong_Delete( self->v.l ); break;
-		case DAO_ENUM : DEnum_Delete( self->v.e ); break;
-		case DAO_STRING : DString_Delete( self->v.s ); break;
-		default : GC_DecRC( self->v.p ); break;
-		}
+	switch( self->t ){
+	case DAO_NIL : case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE : break;
+	case DAO_COMPLEX : dao_free( self->v.c ); break;
+	case DAO_LONG : DLong_Delete( self->v.l ); break;
+	case DAO_ENUM : DEnum_Delete( self->v.e ); break;
+	case DAO_STRING : DString_Delete( self->v.s ); break;
+	default : GC_DecRC( self->v.p ); break;
 	}
-	self->t = self->cst = self->mode = 0;
-	self->v.d = 0.0;
+	*self = daoNullValue;
 }
 void DValue_IncRCs( DValue *v, int n )
 {

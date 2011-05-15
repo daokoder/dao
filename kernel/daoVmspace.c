@@ -1898,6 +1898,7 @@ void DaoInitAPI( DaoAPI *api )
 	api->DaoArray_SetBuffer = DaoArray_SetBuffer;
 #endif
 
+	api->DaoMethod_Resolve = DaoMethod_Resolve;
 	api->DaoObject_GetField = DaoObject_GetField;
 	api->DaoObject_GetMethod = DaoObject_GetMethod;
 	api->DaoObject_MapCData = DaoObject_MapCData;

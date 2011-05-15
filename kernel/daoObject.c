@@ -115,11 +115,11 @@ static void DaoObject_Core_SetField( DValue *self0, DaoContext *ctx, DString *na
 	int ec = DaoObject_SetData( self, name, value, ctx->object );
 	int ec2 = ec;
 	if( ec ){
-		DString_SetMBS( ctx->process->mbstring, "." );
-		DString_Append( ctx->process->mbstring, name );
-		DString_AppendMBS( ctx->process->mbstring, "=" );
-		ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-				ctx->process->mbstring, ctx, & par, 1, -1 );
+		DString *mbs = ctx->process->mbstring;
+		DString_SetMBS( mbs, "." );
+		DString_Append( mbs, name );
+		DString_AppendMBS( mbs, "=" );
+		ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process, mbs, ctx, & par, 1, -1 );
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
 	if( ec ) DaoContext_RaiseException( ctx, ec, DString_GetMBS( name ) );
@@ -319,30 +319,34 @@ DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 	}
 	return NULL;
 }
-DaoBase* DaoObject_MapChildObject( DaoObject *self, DaoType *parent )
+DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent )
 {
 	int i;
+	DaoObject *child = NULL;
 	if( parent == NULL ) return NULL;
-	if( self->myClass->objType == parent ) return NULL;
 	if( self->superObject ==NULL ) return NULL;
 	for( i=0; i<self->superObject->size; i++ ){
+		DaoObject *obj = self->superObject->items.pObject[i];
 		DaoBase *sup = self->myClass->superClass->items.pBase[i];
 		if( sup == NULL ) continue;
-		if( sup->type == DAO_CLASS ){
-			if( ((DaoClass*)sup)->objType == parent ) return (DaoBase*) self;
-		}else if( sup->type == DAO_CDATA ){
-			DaoCData *cdata = (DaoCData*)sup;
-			if( DaoCData_ChildOf( cdata->typer, parent->typer ) ) return (DaoBase*) self;
+		if( obj ){
+			if( sup->type == DAO_CLASS ){
+				DaoObject *o = DaoObject_SetParentCData( obj, parent );
+				/* TODO: map to first common child for multiple inheritance: */
+				if( o ) child = o;
+			}
+			continue;
 		}
-		sup = self->superObject->items.pBase[i];
-		if( sup == NULL ) continue;
-		if( sup->type == DAO_OBJECT ){
-			DaoObject *obj = (DaoObject*)sup;
-			if( obj->myClass->objType == parent ) return (DaoBase*) self;
-			return DaoObject_MapChildObject( obj, parent );
+		if( sup->type == DAO_CTYPE ){
+			DaoCData *cdata = (DaoCData*)sup;
+			if( DaoCData_ChildOf( cdata->typer, parent->typer ) ){
+				GC_IncRC( parent );
+				self->superObject->items.pBase[i] = (DaoBase*)parent;
+				return self;
+			}
 		}
 	}
-	return NULL;
+	return child;
 }
 DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer )
 {
@@ -434,13 +438,13 @@ DValue DaoObject_GetField( DaoObject *self, const char *name )
 	DaoObject_GetData( self, & str, & res, self, NULL );
 	return res;
 }
-DValue DaoObject_GetMethod( DaoObject *self, const char *name )
+DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name )
 {
 	DValue value;
 	DString str = DString_WrapMBS( name );
 	int id = DaoClass_FindConst( self->myClass, & str );
-	if( id < 0 ) return daoNullValue;
+	if( id < 0 ) return NULL;
 	value = DaoClass_GetConst( self->myClass, id );
-	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return daoNullValue;
-	return value;
+	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return NULL;
+	return (DaoMethod*) value.v.p;
 }

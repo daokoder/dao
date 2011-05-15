@@ -145,9 +145,11 @@ static void DaoContext_InitValues( DaoContext *self )
 		DaoType *type = types[i];
 		DValue *value = values + i;
 		values2[i] = value;
-		t = type ? type->tid : 0;
-		if( value->t != t ) DValue_Clear( value );
-		if( t <= DAO_DOUBLE ) value->t = t;
+		if( type ){
+			t = type->tid;
+			if( value->t != t ) DValue_Clear( value );
+			if( t <= DAO_DOUBLE ) value->t = t;
+		}
 	}
 	self->lastRoutine = self->routine;
 }
@@ -162,7 +164,7 @@ void DaoContext_Init( DaoContext *self, DaoRoutine *routine )
 	self->routine   = routine;
 	self->nameSpace = routine->nameSpace;
 
-	/* routine could be DaoMethod pushed in at DaoParser_ParseParams() */
+	/* routine could be DaoFunction pushed in at DaoParser_ParseParams() */
 	if( routine->type != DAO_ROUTINE ) return;
 	DaoContext_InitValues( self );
 }
@@ -3840,7 +3842,7 @@ void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc )
 		DValue selfpar = daoNullObject;
 		selfpar.v.object = dC.v.object;
 		if( rout ) rout = (DaoBase*) DRoutine_Resolve( rout, & selfpar, & dA, 1, DVM_CALL );
-		if( rout && DaoVmProcess_Call( self->process, rout, & dC, & dA, 1 ) ) return;
+		if( rout && DaoVmProcess_Call( self->process, (DaoMethod*) rout, & dC, & dA, 1 ) ) return;
 	}
 	DaoMoveAC( self, *self->regValues[vmc->a], self->regValues[vmc->c], ct );
 }
@@ -4012,7 +4014,8 @@ static int DaoContext_InitBase( DaoContext *self, DaoVmCode *vmc, DaoBase *calle
 	int mode = vmc->b & 0xff00;
 	if( (mode & DAO_CALL_INIT) && self->object ){
 		DaoClass *klass = self->object->myClass;
-		if( DString_EQ( self->routine->routName, klass->className ) ){
+		int init = self->routine->attribs & DAO_ROUT_INITOR;
+		if( self->routine->routHost == klass->objType && init ){
 			return DaoClass_FindSuper( klass, caller );
 		}
 	}
@@ -4156,14 +4159,11 @@ static void DaoContext_DoNewCall( DaoContext *self, DaoVmCode *vmc,
 		/* DValue_ClearAll( parbuf, rout->parCount+1 ); */
 		for(i=0; i<=rout->parCount; i++) DValue_Clear( parbuf+i );
 
-		obj = (DaoObject*) DaoObject_MapChildObject( othis, rout->routHost );
-		sup = DaoClass_FindSuper( obj->myClass, rout->routHost->aux.v.p );
 		if( returned.t == DAO_CDATA ){
 			DaoCData *cdata = returned.v.cdata;
-			GC_ShiftRC( cdata, obj->superObject->items.pBase[sup] );
-			obj->superObject->items.pBase[sup] = (DaoBase*) cdata;
-			GC_ShiftRC( obj->that, cdata->daoObject );
-			cdata->daoObject = obj->that;
+			DaoObject_SetParentCData( othis, cdata );
+			GC_ShiftRC( othis, cdata->daoObject );
+			cdata->daoObject = othis;
 		}
 		DaoContext_SetResult( self, (DaoBase*) othis );
 		DValue_Clear( & returned );

@@ -36,7 +36,7 @@ void DaoObject_Delete( DaoObject *self );
 int DaoObject_ChildOf( DaoObject *self, DaoObject *obj );
 
 DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
-DaoBase* DaoObject_MapChildObject( DaoObject *self, DaoType *parent );
+DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent );
 
 void DaoObject_AddData( DaoObject *self, DString *name, DaoBase  *data );
 
