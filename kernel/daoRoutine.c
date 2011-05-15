@@ -2052,7 +2052,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					addCount[i] ++;
 					vmc2.code = DVM_CAST;
 					vmc2.a = opa;
-					vmc2.c = self->locRegCount + addRegType->size -1;
+					vmc2.c = self->locRegCount + addRegType->size;
 					vmc->a = vmc2.c;
 					DArray_Append( addCode, & vmc2 );
 					DArray_Append( addRegType, *tp );
@@ -2229,7 +2229,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							vmc2.code = DVM_CAST;
 							vmc2.a = opb;
 							vmc2.b = 0;
-							vmc2.c = self->locRegCount + addRegType->size -1;
+							vmc2.c = self->locRegCount + addRegType->size;
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
@@ -2673,7 +2673,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							addCount[i] ++;
 							vmc2.code = DVM_CAST;
 							vmc2.a = opb;
-							vmc2.c = self->locRegCount + addRegType->size -1;
+							vmc2.c = self->locRegCount + addRegType->size;
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
@@ -4066,7 +4066,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								vmc2.code = DVM_CAST;
 								vmc2.a = opa;
 								vmc2.b = 0;
-								vmc2.c = self->locRegCount + addRegType->size -1;
+								vmc2.c = self->locRegCount + addRegType->size;
 								vmc->a = vmc2.c;
 								DArray_Append( addCode, & vmc2 );
 								DArray_Append( addRegType, ct );
@@ -4453,12 +4453,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		default : break;
 		}
 	}
-#if 0
-	if( self->regType->size ){
-		GC_DecRC( self->regType->items.pBase[self->regType->size-1] );
-		DArray_PopBack( self->regType );
-	}
-#endif
 	for(i=0; i<addRegType->size; i++){
 		GC_IncRC( addRegType->items.pVoid[i] );
 		DArray_Append( self->regType, addRegType->items.pVoid[i] );

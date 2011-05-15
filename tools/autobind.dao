@@ -3185,7 +3185,7 @@ class DaoQtObject : public QObjectUserData
 		if( receiver.t >= DAO_METAROUTINE && receiver.t <= DAO_FUNCTION ){
 			DValue obj = {DAO_OBJECT,0,0,0,{0}};
 			obj.v.object = daobj;
-			DaoVmProcess_Call( vmproc, receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
+			DaoVmProcess_Call( vmproc, (DaoMethod*)receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
 		}
 		DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
 	}
@@ -3201,7 +3201,7 @@ class DaoQtObject : public QObjectUserData
 		if( receiver.t >= DAO_METAROUTINE && receiver.t <= DAO_FUNCTION ){
 			DValue obj = {DAO_OBJECT,0,0,0,{0}};
 			obj.v.object = daobj;
-			DaoVmProcess_Call( vmproc, receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
+			DaoVmProcess_Call( vmproc, (DaoMethod*)receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
 		}
 		DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
 	}
@@ -4053,7 +4053,7 @@ routine UserType::GenerateType()
 				if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
 				kmethods += tpl_meth_decl2.expand( kvmap );
 				tmp2 = meth.cxxWrapperVirt2;
-				tmp2.change( meth.hostType + '::(%w+ %b() %s* ; %s* %} %s* else )', meth.reimplemented + '::%1' );
+				tmp2.change( meth.hostType + '::(%w+ %( %s+ _cs, %s+ )', meth.reimplemented + '::%1' );
 				cxxWrapperVirt += tmp2;
 			}
 			if( not noWrapping && not meth.excluded && ($FUNC_PROTECTED in meth.attribs) ){
@@ -5016,7 +5016,8 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 	count = 0;
 	for( utp in user_types ){
 		if( utp.snamespace ) skip;
-		fout_source.write( '  typers[', count, '] = dao_' + utp.name + '_Typer,\n' );
+		if( extfiles.has( utp.input_file ) ) skip;
+		fout_source.write( '  typers[', count, '] = dao_' + utp.name + '_Typer;\n' );
 		count = count + 1; # XXX bug with ++count;
 		#++ count;
 	}
