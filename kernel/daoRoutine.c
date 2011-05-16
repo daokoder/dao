@@ -957,12 +957,11 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_GETF_TD : case DVM_GETF_TS :
 		case DVM_GETF_KC : case DVM_GETF_KG :
 		case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
-		case DVM_GETF_KCI : case DVM_GETF_KGI :
-		case DVM_GETF_OCI : case DVM_GETF_OGI : case DVM_GETF_OVI :
-		case DVM_GETF_KCF : case DVM_GETF_KGF :
-		case DVM_GETF_OCF : case DVM_GETF_OGF : case DVM_GETF_OVF :
-		case DVM_GETF_KCD : case DVM_GETF_KGD :
-		case DVM_GETF_OCD : case DVM_GETF_OGD : case DVM_GETF_OVD :
+		case DVM_GETF_KCI : case DVM_GETF_KCF : case DVM_GETF_KCD : 
+		case DVM_GETF_KGI : case DVM_GETF_KGF : case DVM_GETF_KGD :
+		case DVM_GETF_OCI : case DVM_GETF_OCF : case DVM_GETF_OCD : 
+		case DVM_GETF_OGI : case DVM_GETF_OGF : case DVM_GETF_OGD : 
+		case DVM_GETF_OVI : case DVM_GETF_OVF : case DVM_GETF_OVD :
 			SetupOperand( self, vmc->a, checks );
 			InsertChecking( self, vmc->c, checks );
 			break;
@@ -972,15 +971,15 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		case DVM_SETF_TDI : case DVM_SETF_TDF : case DVM_SETF_TDD :
 		case DVM_SETF_TSS :
 		case DVM_SETF_KG : case DVM_SETF_OG : case DVM_SETF_OV :
-		case DVM_SETF_KGII : case DVM_SETF_OGII : case DVM_SETF_OVII :
-		case DVM_SETF_KGIF : case DVM_SETF_OGIF : case DVM_SETF_OVIF :
-		case DVM_SETF_KGID : case DVM_SETF_OGID : case DVM_SETF_OVID :
-		case DVM_SETF_KGFI : case DVM_SETF_OGFI : case DVM_SETF_OVFI :
-		case DVM_SETF_KGFF : case DVM_SETF_OGFF : case DVM_SETF_OVFF :
-		case DVM_SETF_KGFD : case DVM_SETF_OGFD : case DVM_SETF_OVFD :
-		case DVM_SETF_KGDI : case DVM_SETF_OGDI : case DVM_SETF_OVDI :
-		case DVM_SETF_KGDF : case DVM_SETF_OGDF : case DVM_SETF_OVDF :
-		case DVM_SETF_KGDD : case DVM_SETF_OGDD : case DVM_SETF_OVDD :
+		case DVM_SETF_KGII : case DVM_SETF_KGIF : case DVM_SETF_KGID : 
+		case DVM_SETF_KGFI : case DVM_SETF_KGFF : case DVM_SETF_KGFD : 
+		case DVM_SETF_KGDI : case DVM_SETF_KGDF : case DVM_SETF_KGDD : 
+		case DVM_SETF_OGII : case DVM_SETF_OGIF : case DVM_SETF_OGID : 
+		case DVM_SETF_OGFI : case DVM_SETF_OGFF : case DVM_SETF_OGFD : 
+		case DVM_SETF_OGDI : case DVM_SETF_OGDF : case DVM_SETF_OGDD : 
+		case DVM_SETF_OVII : case DVM_SETF_OVIF : case DVM_SETF_OVID :
+		case DVM_SETF_OVFI : case DVM_SETF_OVFF : case DVM_SETF_OVFD :
+		case DVM_SETF_OVDI : case DVM_SETF_OVDF : case DVM_SETF_OVDD :
 			SetupOperand( self, vmc->a, checks );
 			SetupOperand( self, vmc->c, checks );
 			break;
@@ -1039,378 +1038,6 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid parameter name",
 	"Constant should not be modified",
 	"Call to un-implemented function"
-};
-
-enum OprandType
-{
-	OT_OOO = 0,
-	OT_AOO , /* SETVX */
-	OT_OOC , /* GETCX GETVX */
-	OT_AOC , /* LOAD, MOVE, CAST, unary operations... */
-	OT_OBC , /* NAMEVA */
-	OT_ABC , /* binary operations */
-	OT_AIC , /* GETF_X: access field by index */
-	OT_EXP , /* LIST, ARRAY, CALL, ... */
-	OT_END
-};
-
-static const char mapTyping[26] = {
-	'A','B',DAO_COMPLEX, DAO_DOUBLE,'E',DAO_FLOAT,'G','H',DAO_INTEGER,
-	'J','K','L','M','N','O','P','Q','R',DAO_STRING,'T','U','V','W','X','Y','Z'
-};
-
-static const char vmcTyping[][7] =
-{
-	/*  ,  A,  B,  C,    */
-	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_NOP */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_DATA */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETCL */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETCK */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETCG */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVL */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVO */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVK */
-	{ OT_OOC, -1, -1,  0, -1, -1,  -1 } , /* DVM_GETVG */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETI */
-	{      0,  0,  0,  0, -1, -1,  -1 } , /* DVM_GETMI */
-	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETF */
-	{ OT_AIC,  0, -1,  0, -1, -1,  -1 } , /* DVM_GETMF */
-	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVL */
-	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVO */
-	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVK */
-	{ OT_AOO,  0, -1, -1, -1, 'S',  -1 } , /* DVM_SETVG */
-	{ OT_ABC,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETI */
-	{      0,  0,  0,  0, -1, 'S',  -1 } , /* DVM_SETMI */
-	{ OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETF */
-	{ OT_AIC,  0, -1,  0, -1, 'S',  -1 } , /* DVM_SETMF */
-	{ OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_LOAD */
-	{ OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_CAST */
-	{ OT_AOC,  0, -1,  0, -1, 'V',  -1 } , /* DVM_MOVE */
-	{ OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_NOT */
-	{ OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_UNMS */
-	{ OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_BITREV */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_ADD */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_SUB */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MUL */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_DIV */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MOD */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_POW */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_AND */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_OR */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LT */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_LE */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_EQ */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_NE */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_IN */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITAND */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITOR */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITXOR */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITLFT */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_BITRIT */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_CHECK */
-	{ OT_OBC, -1,  0,  0, -1, -1,  -1 } , /* DVM_CHECK */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_PAIR */
-	{ OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_TUPLE */
-	{ OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_LIST */
-	{ OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MAP */
-	{ OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_HASH */
-	{ OT_EXP,  0, 'X', -1, -1, -1,  -1 } , /* DVM_ARRAY */
-	{ OT_EXP,  0,  0 , -1, -1, -1,  -1 } , /* DVM_MATRIX */
-	{ OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_CURRY */
-	{ OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_MCURRY */
-	{ OT_EXP, 'A',  0, -1, -1, -1,  -1 } , /* DVM_ROUTINE */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_CLASS */
-	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_GOTO */
-	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SWITCH */
-	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_CASE */
-	{ OT_AOC,  0, -1,  0, -1, -1,  -1 } , /* DVM_ITER */
-	{ OT_OOO,  0, -1, -1, -1, -1,  -1 } , /* DVM_TEST */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_MATH */
-	{ OT_ABC,  0,  0,  0, -1, -1,  -1 } , /* DVM_FUNCT */
-	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_CALL */
-	{ OT_EXP, 'A',   0, -1, -1, 'M', -1 } , /* DVM_MCALL */
-	{ OT_EXP,   0, 'B', -1, -1, -1,  -1 } , /* DVM_CRRE */
-	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_JITC */
-	{ OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_RETURN */
-	{ OT_EXP,   0,   0, -1, -1, -1,  -1 } , /* DVM_YIELD */
-	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_DEBUG */
-	{ OT_OOO,  -1,  -1, -1, -1, -1,  -1 } , /* DVM_SECT */
-
-	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVL_II */
-	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVL_IF */
-	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVL_ID */
-	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVL_FI */
-	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVL_FF */
-	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVL_FD */
-	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVL_DI */
-	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVL_DF */
-	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVL_DD */
-	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVO_II */
-	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVO_IF */
-	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVO_ID */
-	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVO_FI */
-	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVO_FF */
-	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVO_FD */
-	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVO_DI */
-	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVO_DF */
-	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVO_DD */
-	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVK_II */
-	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVK_IF */
-	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVK_ID */
-	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVK_FI */
-	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVK_FF */
-	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVK_FD */
-	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVK_DI */
-	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVK_DF */
-	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVK_DD */
-	{ OT_AOO, 'I', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVG_II */
-	{ OT_AOO, 'F', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVG_IF */
-	{ OT_AOO, 'D', -1, 'I', 'G', 'S',  -1 } , /* DVM_SETVG_ID */
-	{ OT_AOO, 'I', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVG_FI */
-	{ OT_AOO, 'F', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVG_FF */
-	{ OT_AOO, 'D', -1, 'F', 'G', 'S',  -1 } , /* DVM_SETVG_FD */
-	{ OT_AOO, 'I', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVG_DI */
-	{ OT_AOO, 'F', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVG_DF */
-	{ OT_AOO, 'D', -1, 'D', 'G', 'S',  -1 } , /* DVM_SETVG_DD */
-
-	{ OT_AOC, 'I', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_II */
-	{ OT_AOC, 'F', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_IF */
-	{ OT_AOC, 'D', -1, 'I', -1, 'V', -1 } , /* DVM_MOVE_ID */
-	{ OT_AOC, 'I', -1, 'F', -1, 'V', -1 } , /* DVM_MOVE_FI */
-	{ OT_AOC, 'F', -1, 'F', -1, 'V', -1 } , /* DVM_MOVE_FF */
-	{ OT_AOC, 'D', -1, 'F', -1, 'V', -1 } , /* DVM_MOVE_FD */
-	{ OT_AOC, 'I', -1, 'D', -1, 'V', -1 } , /* DVM_MOVE_DI */
-	{ OT_AOC, 'F', -1, 'D', -1, 'V', -1 } , /* DVM_MOVE_DF */
-	{ OT_AOC, 'D', -1, 'D', -1, 'V', -1 } , /* DVM_MOVE_DD */
-	{ OT_AOC, 'C', -1, 'C', -1, 'V', -1 } , /* DVM_MOVE_CC */
-	{ OT_AOC, 'S', -1, 'S', -1, 'V', -1 } , /* DVM_MOVE_SS */
-	{ OT_AOC, 'P', -1, 'P', -1, 'V', -1 } , /* DVM_MOVE_PP */
-
-	{ OT_AOC, 'I', -1, 'I', -1, -1, -1 } , /* DVM_NOT_I */
-	{ OT_AOC, 'F', -1, 'F', -1, -1, -1 } , /* DVM_NOT_F */
-	{ OT_AOC, 'D', -1, 'D', -1, -1, -1 } , /* DVM_NOT_D */
-	{ OT_AOC, 'I', -1, 'I', -1, -1, -1 } , /* DVM_UNMS_I */
-	{ OT_AOC, 'F', -1, 'F', -1, -1, -1 } , /* DVM_UNMS_F */
-	{ OT_AOC, 'D', -1, 'D', -1, -1, -1 } , /* DVM_UNMS_D */
-	{ OT_AOC, 'I', -1, 'I', -1, -1, -1 } , /* DVM_BITREV_I */
-	{ OT_AOC, 'F', -1, 'F', -1, -1, -1 } , /* DVM_BITREV_F */
-	{ OT_AOC, 'D', -1, 'D', -1, -1, -1 } , /* DVM_BITREV_D */
-	{ OT_AOC, 'C', -1, 'C', -1, -1, -1 } , /* DVM_UNMS_C */
-
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_ADD_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_SUB_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_MUL_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_DIV_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_MOD_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_POW_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_AND_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_OR_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_LT_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_LE_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_EQ_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_NE_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITAND_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITOR_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITXOR_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITLFT_III */
-	{ OT_ABC, 'I', 'I', 'I', -1, -1, -1 } , /* DVM_BITRIT_III */
-
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_ADD_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_SUB_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_MUL_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_DIV_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_MOD_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_POW_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_AND_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_OR_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_LT_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_LE_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_EQ_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_NE_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITAND_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITOR_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITXOR_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITLFT_FFF */
-	{ OT_ABC, 'F', 'F', 'F', -1, -1, -1 } , /* DVM_BITRIT_FFF */
-
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_ADD_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_SUB_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_MUL_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_DIV_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_MOD_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_POW_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_AND_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_OR_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_LT_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_LE_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_EQ_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_NE_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITAND_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITOR_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITXOR_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITLFT_DDD */
-	{ OT_ABC, 'D', 'D', 'D', -1, -1, -1 } , /* DVM_BITRIT_DDD */
-
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_ADD_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_SUB_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_MUL_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_DIV_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_MOD_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_POW_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_AND_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_OR_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_LT_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_LE_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_EQ_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_NE_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_BITLFT_FNN */
-	{ OT_ABC, 0, 0, 'F', -1, -1, -1 } , /* DVM_BITRIT_FNN */
-
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_ADD_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_SUB_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_MUL_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_DIV_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_MOD_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_POW_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_AND_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_OR_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_LT_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_LE_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_EQ_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_NE_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_BITLFT_DNN */
-	{ OT_ABC, 0, 0, 'D', -1, -1, -1 } , /* DVM_BITRIT_DNN */
-
-	{ OT_ABC, 'S', 'S', 'S', -1, -1, -1 } , /* DVM_ADD_SS */
-	{ OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_LT_SS */
-	{ OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_LE_SS */
-	{ OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_EQ_SS */
-	{ OT_ABC, 'S', 'S', 'I', -1, -1, -1 } , /* DVM_NE_SS */
-
-	{ OT_ABC,   0, 'I',   0, -1,  -1, DAO_LIST } , /* DVM_GETI_LI */
-	{ OT_ABC,   0, 'I',   0, -1, 'S', DAO_LIST } , /* DVM_SETI_LI */
-	{ OT_ABC,   0, 'I', 'I', -1,  -1, DAO_STRING } , /* DVM_GETI_SI */
-	{ OT_ABC, 'I', 'I',   0, -1, 'S', DAO_STRING } , /* DVM_SETI_SII */
-	{ OT_ABC, 'I', 'I', 'I', -1,  -1, DAO_LIST } , /* DVM_GETI_LII */
-	{ OT_ABC, 'F', 'I', 'F', -1,  -1, DAO_LIST } , /* DVM_GETI_LFI */
-	{ OT_ABC, 'D', 'I', 'D', -1,  -1, DAO_LIST } , /* DVM_GETI_LDI */
-	{ OT_ABC, 'S', 'I', 'S', -1,  -1, DAO_LIST } , /* DVM_GETI_LSI */
-
-	{ OT_ABC, 'I', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIII */
-	{ OT_ABC, 'F', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIIF */
-	{ OT_ABC, 'D', 'I', 'I', -1, 'S', DAO_LIST } , /* DVM_SETI_LIID */
-	{ OT_ABC, 'I', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFII */
-	{ OT_ABC, 'F', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFIF */
-	{ OT_ABC, 'D', 'I', 'F', -1, 'S', DAO_LIST } , /* DVM_SETI_LFID */
-	{ OT_ABC, 'I', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDII */
-	{ OT_ABC, 'F', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDIF */
-	{ OT_ABC, 'D', 'I', 'D', -1, 'S', DAO_LIST } , /* DVM_SETI_LDID */
-	{ OT_ABC, 'S', 'I', 'S', -1, 'S', DAO_LIST } , /* DVM_SETI_LSIS */
-
-	{ OT_ABC, 'I', 'I', 'I', -1,  -1, DAO_ARRAY } , /* DVM_GETI_AII */
-	{ OT_ABC, 'F', 'I', 'F', -1,  -1, DAO_ARRAY } , /* DVM_GETI_AFI */
-	{ OT_ABC, 'D', 'I', 'D', -1,  -1, DAO_ARRAY } , /* DVM_GETI_ADI */
-
-	{ OT_ABC, 'I', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIII */
-	{ OT_ABC, 'F', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIIF */
-	{ OT_ABC, 'D', 'I', 'I', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AIID */
-	{ OT_ABC, 'I', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFII */
-	{ OT_ABC, 'F', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFIF */
-	{ OT_ABC, 'D', 'I', 'F', -1, 'S', DAO_ARRAY } , /* DVM_SETI_AFID */
-	{ OT_ABC, 'I', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADII */
-	{ OT_ABC, 'F', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADIF */
-	{ OT_ABC, 'D', 'I', 'D', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ADID */
-
-	{ OT_ABC,   0, 'I',   0, -1,  -1, DAO_TUPLE } , /* DVM_GETI_TI */
-	{ OT_ABC,   0, 'I',   0, -1, 'S', DAO_TUPLE } , /* DVM_SETI_TI */
-	{ OT_AIC,   0,  -1,   0, -1,  -1, DAO_TUPLE } , /* DVM_GETF_T */
-	{ OT_AIC,   0,  -1, 'I', -1,  -1, DAO_TUPLE } , /* DVM_GETF_TI */
-	{ OT_AIC,   0,  -1, 'F', -1,  -1, DAO_TUPLE } , /* DVM_GETF_TF */
-	{ OT_AIC,   0,  -1, 'D', -1,  -1, DAO_TUPLE } , /* DVM_GETF_TD */
-	{ OT_AIC,   0,  -1, 'S', -1,  -1, DAO_TUPLE } , /* DVM_GETF_TD */
-	{ OT_AIC,   0,  -1,   0, -1, 'S', DAO_TUPLE } , /* DVM_SETF_T */
-	{ OT_AIC, 'I',  -1, 'I', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TII */
-	{ OT_AIC, 'F',  -1, 'I', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TIF */
-	{ OT_AIC, 'D',  -1, 'I', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TID */
-	{ OT_AIC, 'I',  -1, 'F', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TFI */
-	{ OT_AIC, 'F',  -1, 'F', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TFF */
-	{ OT_AIC, 'D',  -1, 'F', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TFD */
-	{ OT_AIC, 'I',  -1, 'D', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TDI */
-	{ OT_AIC, 'F',  -1, 'D', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TDF */
-	{ OT_AIC, 'D',  -1, 'D', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TDD */
-	{ OT_AIC, 'S',  -1, 'S', -1, 'S', DAO_TUPLE } , /* DVM_SETF_TDD */
-
-	{ OT_ABC, 'C', 'C', 'C', -1, -1,        -1 } , /* DVM_ADD_CC */
-	{ OT_ABC, 'C', 'C', 'C', -1, -1,        -1 } , /* DVM_SUB_CC */
-	{ OT_ABC, 'C', 'C', 'C', -1, -1,        -1 } , /* DVM_MUL_CC */
-	{ OT_ABC, 'C', 'C', 'C', -1, -1,        -1 } , /* DVM_DIV_CC */
-
-	{ OT_ABC, 'C', 'I', 'C', -1,  -1, DAO_ARRAY } , /* DVM_GETI_ACI */
-	{ OT_ABC, 'C', 'I', 'C', -1, 'S', DAO_ARRAY } , /* DVM_SETI_ACI */
-
-	{ OT_ABC,  0,  0,  0, -1,  -1,           -1 } , /* DVM_GETI_AM */
-	{ OT_ABC,  0,  0,  0, -1, 'S',           -1 } , /* DVM_SETI_AM */
-
-	{ OT_AIC,  0, -1,  0, 'C',  -1,  DAO_CLASS  } , /* DVM_GETF_KC */
-	{ OT_AIC,  0, -1,  0, 'G',  -1,  DAO_CLASS  } , /* DVM_GETF_KG */
-	{ OT_AIC,  0, -1,  0, 'C',  -1,  DAO_OBJECT } , /* DVM_GETF_OC */
-	{ OT_AIC,  0, -1,  0, 'G',  -1,  DAO_OBJECT } , /* DVM_GETF_OG */
-	{ OT_AIC,  0, -1,  0, 'V',  -1,  DAO_OBJECT } , /* DVM_GETF_OV */
-	{ OT_AIC,  0, -1,  0, 'C', 'S',  DAO_CLASS  } , /* DVM_SETF_KG */
-	{ OT_AIC,  0, -1,  0, 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OG */
-	{ OT_AIC,  0, -1,  0, 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OV */
-
-	{ OT_AIC,  0, -1, 'I', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCI */
-	{ OT_AIC,  0, -1, 'I', 'G', -1,  DAO_CLASS  } , /* DVM_GETF_KGI */
-	{ OT_AIC,  0, -1, 'I', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCI */
-	{ OT_AIC,  0, -1, 'I', 'G', -1,  DAO_OBJECT } , /* DVM_GETF_OGI */
-	{ OT_AIC,  0, -1, 'I', 'V', -1,  DAO_OBJECT } , /* DVM_GETF_OVI */
-	{ OT_AIC,  0, -1, 'F', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCF */
-	{ OT_AIC,  0, -1, 'F', 'G', -1,  DAO_CLASS  } , /* DVM_GETF_KGF */
-	{ OT_AIC,  0, -1, 'F', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCF */
-	{ OT_AIC,  0, -1, 'F', 'G', -1,  DAO_OBJECT } , /* DVM_GETF_OGF */
-	{ OT_AIC,  0, -1, 'F', 'V', -1,  DAO_OBJECT } , /* DVM_GETF_OVF */
-	{ OT_AIC,  0, -1, 'D', 'C', -1,  DAO_CLASS  } , /* DVM_GETF_KCD */
-	{ OT_AIC,  0, -1, 'D', 'G', -1,  DAO_CLASS  } , /* DVM_GETF_KGD */
-	{ OT_AIC,  0, -1, 'D', 'C', -1,  DAO_OBJECT } , /* DVM_GETF_OCD */
-	{ OT_AIC,  0, -1, 'D', 'G', -1,  DAO_OBJECT } , /* DVM_GETF_OGD */
-	{ OT_AIC,  0, -1, 'D', 'V', -1,  DAO_OBJECT } , /* DVM_GETF_OVD */
-
-	{ OT_AIC, 'I', -1, 'I', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGII */
-	{ OT_AIC, 'I', -1, 'I', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGII */
-	{ OT_AIC, 'I', -1, 'I', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVII */
-	{ OT_AIC, 'F', -1, 'I', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGIF */
-	{ OT_AIC, 'F', -1, 'I', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGIF */
-	{ OT_AIC, 'F', -1, 'I', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVIF */
-	{ OT_AIC, 'D', -1, 'I', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGID */
-	{ OT_AIC, 'D', -1, 'I', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGID */
-	{ OT_AIC, 'D', -1, 'I', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVID */
-	{ OT_AIC, 'I', -1, 'F', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGFI */
-	{ OT_AIC, 'I', -1, 'F', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGFI */
-	{ OT_AIC, 'I', -1, 'F', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVFI */
-	{ OT_AIC, 'F', -1, 'F', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGFF */
-	{ OT_AIC, 'F', -1, 'F', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGFF */
-	{ OT_AIC, 'F', -1, 'F', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVFF */
-	{ OT_AIC, 'D', -1, 'F', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGFD */
-	{ OT_AIC, 'D', -1, 'F', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGFD */
-	{ OT_AIC, 'D', -1, 'F', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVFD */
-	{ OT_AIC, 'I', -1, 'D', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGDI */
-	{ OT_AIC, 'I', -1, 'D', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGDI */
-	{ OT_AIC, 'I', -1, 'D', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVDI */
-	{ OT_AIC, 'F', -1, 'D', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGDF */
-	{ OT_AIC, 'F', -1, 'D', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGDF */
-	{ OT_AIC, 'F', -1, 'D', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVDF */
-	{ OT_AIC, 'D', -1, 'D', 'G', 'S',  DAO_CLASS  } , /* DVM_SETF_KGDD */
-	{ OT_AIC, 'D', -1, 'D', 'G', 'S',  DAO_OBJECT } , /* DVM_SETF_OGDD */
-	{ OT_AIC, 'D', -1, 'D', 'V', 'S',  DAO_OBJECT } , /* DVM_SETF_OVDD */
-
-	{ OT_AOO, 'I', -1, -1, -1, -1,  -1 } , /* DVM_TEST_I */
-	{ OT_AOO, 'F', -1, -1, -1, -1,  -1 } , /* DVM_TEST_F */
-	{ OT_AOO, 'D', -1, -1, -1, -1,  -1 } , /* DVM_TEST_D */
-
-	{ OT_OOO, -1, -1, -1, -1, -1,  -1 } , /* DVM_SAFE_GOTO */
-
-	{ OT_OOO, -1, -1, -1, -1, -1, -1 } /* NULL */
 };
 
 static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
@@ -1942,12 +1569,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		at = opa < M ? type[opa] : NULL;
 		bt = opb < M ? type[opb] : NULL;
 		ct = opc < M ? type[opc] : NULL;
-		TT0 = vmcTyping[code][0]; TT1 = vmcTyping[code][1]; TT2 = vmcTyping[code][2];
-		TT3 = vmcTyping[code][3]; TT4 = vmcTyping[code][4]; TT5 = vmcTyping[code][5];
-		TT6 = vmcTyping[code][6];
-		if( TT1 > 'A' ) TT1 = mapTyping[ TT1 - 'A' ];
-		if( TT2 > 'A' ) TT2 = mapTyping[ TT2 - 'A' ];
-		if( TT3 > 'A' ) TT3 = mapTyping[ TT3 - 'A' ];
 		addCount[i] += i ==0 ? 0 : addCount[i-1];
 		node = DMap_First( defs );
 		while( node !=NULL ){
@@ -2435,7 +2056,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								vmc->code = ak ? DVM_GETF_KGI : DVM_GETF_OGI;
 							else if( k == DAO_OBJECT_VARIABLE )
 								vmc->code = DVM_GETF_OVI;
-							vmc->code += 5 * ( ct->tid - DAO_INTEGER );
+							vmc->code += ct->tid - DAO_INTEGER;
 						}else{
 							if( k == DAO_CLASS_CONSTANT )
 								vmc->code = ak ? DVM_GETF_KC : DVM_GETF_OC;
@@ -2860,8 +2481,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 									vmc->code = ck ? DVM_SETF_KGII : DVM_SETF_OGII;
 								else if( k == DAO_OBJECT_VARIABLE )
 									vmc->code = DVM_SETF_OVII;
-								vmc->code += 9 * ( (*tp)->tid - DAO_INTEGER )
-									+ 3 * ( at->tid - DAO_INTEGER );
+								vmc->code += 3*((*tp)->tid - DAO_INTEGER) + (at->tid - DAO_INTEGER);
 							}else{
 								if( k == DAO_CLASS_VARIABLE )
 									vmc->code = ck ? DVM_SETF_KG : DVM_SETF_OG;
@@ -4108,6 +3728,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETVL_DI : case DVM_SETVL_DF : case DVM_SETVL_DD :
 			tp = typeVL[opc]->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			TT1 = DAO_INTEGER + (code - DVM_SETVL_II) % 3;
+			TT3 = DAO_INTEGER + ((code - DVM_SETVL_II)/3) % 3;
 			AssertTypeMatching( type[opa], *tp, defs, 0 );
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( tp[0], TT3, 0 );
@@ -4118,6 +3740,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			if( tidHost != DAO_OBJECT ) goto ErrorTyping;
 			tp = typeVO[opc]->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			TT1 = DAO_INTEGER + (code - DVM_SETVO_II) % 3;
+			TT3 = DAO_INTEGER + ((code - DVM_SETVO_II)/3) % 3;
 			AssertTypeMatching( type[opa], *tp, defs, 0 );
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( tp[0], TT3, 0 );
@@ -4127,6 +3751,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETVK_DI : case DVM_SETVK_DF : case DVM_SETVK_DD :
 			tp = typeVK->items.pArray[opc]->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			TT1 = DAO_INTEGER + (code - DVM_SETVK_II) % 3;
+			TT3 = DAO_INTEGER + ((code - DVM_SETVK_II)/3) % 3;
 			AssertTypeMatching( type[opa], *tp, defs, 0 );
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( tp[0], TT3, 0 );
@@ -4136,20 +3762,41 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
 			tp = typeVG->items.pArray[opc]->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ) *tp = type[opa];
+			TT1 = DAO_INTEGER + (code - DVM_SETVG_II) % 3;
+			TT3 = DAO_INTEGER + ((code - DVM_SETVG_II)/3) % 3;
 			AssertTypeMatching( type[opa], *tp, defs, 0 );
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( tp[0], TT3, 0 );
 			break;
-		case DVM_MOVE_II : case DVM_NOT_I : case DVM_UNMS_I : case DVM_BITREV_I :
-		case DVM_MOVE_FF : case DVM_NOT_F : case DVM_UNMS_F : case DVM_BITREV_F :
-		case DVM_MOVE_DD : case DVM_NOT_D : case DVM_UNMS_D : case DVM_BITREV_D :
-		case DVM_MOVE_IF : case DVM_MOVE_FI :
-		case DVM_MOVE_ID : case DVM_MOVE_FD :
-		case DVM_MOVE_DI : case DVM_MOVE_DF :
-		case DVM_MOVE_CC : case DVM_UNMS_C :
+		case DVM_MOVE_II : case DVM_MOVE_IF : case DVM_MOVE_ID : 
+		case DVM_MOVE_FI : case DVM_MOVE_FF : case DVM_MOVE_FD :
+		case DVM_MOVE_DI : case DVM_MOVE_DF : case DVM_MOVE_DD : 
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, at );
+			TT1 = DAO_INTEGER + (code - DVM_MOVE_II) % 3;
+			TT3 = DAO_INTEGER + ((code - DVM_MOVE_II)/3) % 3;
+			AssertTypeIdMatching( at, TT1, 0 );
+			AssertTypeIdMatching( type[opc], TT3, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
+		case DVM_NOT_I : case DVM_NOT_F : case DVM_NOT_D : 
+		case DVM_UNMS_I : case DVM_UNMS_F : case DVM_UNMS_D : 
+		case DVM_BITREV_I : case DVM_BITREV_F : case DVM_BITREV_D :
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, at );
+			TT1 = TT3 = DAO_INTEGER + (code - DVM_MOVE_II) % 3;
+			AssertTypeIdMatching( at, TT1, 0 );
+			AssertTypeIdMatching( type[opc], TT3, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
+		case DVM_UNMS_C :
+		case DVM_MOVE_CC :
 		case DVM_MOVE_SS :
 			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, at );
+			TT1 = TT3 = code == DVM_MOVE_SS ? DAO_STRING : DAO_COMPLEX;
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( type[opc], TT3, 0 );
 			init[opc] = 1;
@@ -4169,35 +3816,86 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_LT_III  : case DVM_LE_III  : case DVM_EQ_III : case DVM_NE_III :
 		case DVM_BITAND_III  : case DVM_BITOR_III  : case DVM_BITXOR_III :
 		case DVM_BITLFT_III  : case DVM_BITRIT_III  :
+			if( csts[opc].cst ) goto ModifyConstant;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, inumt );
+			AssertTypeIdMatching( at, DAO_INTEGER, 0 );
+			AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
+			AssertTypeIdMatching( type[opc], DAO_INTEGER, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_ADD_FFF : case DVM_SUB_FFF : case DVM_MUL_FFF : case DVM_DIV_FFF :
 		case DVM_MOD_FFF : case DVM_POW_FFF : case DVM_AND_FFF : case DVM_OR_FFF  :
 		case DVM_LT_FFF  : case DVM_LE_FFF  : case DVM_EQ_FFF :
 		case DVM_BITAND_FFF  : case DVM_BITOR_FFF  : case DVM_BITXOR_FFF :
 		case DVM_BITLFT_FFF  : case DVM_BITRIT_FFF  :
+			if( csts[opc].cst ) goto ModifyConstant;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, fnumt );
+			AssertTypeIdMatching( at, DAO_FLOAT, 0 );
+			AssertTypeIdMatching( bt, DAO_FLOAT, 0 );
+			AssertTypeIdMatching( type[opc], DAO_FLOAT, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_ADD_DDD : case DVM_SUB_DDD : case DVM_MUL_DDD : case DVM_DIV_DDD :
 		case DVM_MOD_DDD : case DVM_POW_DDD : case DVM_AND_DDD : case DVM_OR_DDD  :
 		case DVM_LT_DDD  : case DVM_LE_DDD  : case DVM_EQ_DDD :
 		case DVM_BITAND_DDD  : case DVM_BITOR_DDD  : case DVM_BITXOR_DDD :
 		case DVM_BITLFT_DDD  : case DVM_BITRIT_DDD  :
+			if( csts[opc].cst ) goto ModifyConstant;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, dnumt );
+			AssertTypeIdMatching( at, DAO_DOUBLE, 0 );
+			AssertTypeIdMatching( bt, DAO_DOUBLE, 0 );
+			AssertTypeIdMatching( type[opc], DAO_DOUBLE, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_ADD_CC : case DVM_SUB_CC : case DVM_MUL_CC : case DVM_DIV_CC :
+			if( csts[opc].cst ) goto ModifyConstant;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, comt );
+			AssertTypeIdMatching( at, DAO_COMPLEX, 0 );
+			AssertTypeIdMatching( bt, DAO_COMPLEX, 0 );
+			AssertTypeIdMatching( type[opc], DAO_COMPLEX, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_ADD_SS : case DVM_LT_SS : case DVM_LE_SS :
 		case DVM_EQ_SS : case DVM_NE_SS :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
-				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
-				if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, simtps[TT3] );
-				AssertTypeIdMatching( at, TT1, 0 );
-				AssertTypeIdMatching( bt, TT2, 0 );
-				AssertTypeIdMatching( type[opc], TT3, 0 );
-				init[opc] = 1;
-				lastcomp = opc;
-				break;
-			}
+			if( csts[opc].cst ) goto ModifyConstant;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+			tt = code == DVM_ADD_SS ? strt : inumt;
+			TT3 = code == DVM_ADD_SS ? DAO_STRING : DAO_INTEGER;
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, tt );
+			AssertTypeIdMatching( at, DAO_STRING, 0 );
+			AssertTypeIdMatching( bt, DAO_STRING, 0 );
+			AssertTypeIdMatching( type[opc], TT3, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_ADD_FNN : case DVM_SUB_FNN : case DVM_MUL_FNN : case DVM_DIV_FNN :
 		case DVM_MOD_FNN : case DVM_POW_FNN : case DVM_AND_FNN : case DVM_OR_FNN  :
 		case DVM_LT_FNN  : case DVM_LE_FNN  : case DVM_EQ_FNN :
 		case DVM_BITLFT_FNN  : case DVM_BITRIT_FNN  :
+			if( csts[opc].cst ) goto ModifyConstant;
+			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
+			if( at->tid ==0 || at->tid > DAO_DOUBLE ) goto NotMatch;
+			if( bt->tid ==0 || bt->tid > DAO_DOUBLE ) goto NotMatch;
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, fnumt );
+			if( type[opc]->tid != DAO_FLOAT ) goto NotMatch;
+			AssertTypeIdMatching( type[opc], DAO_FLOAT, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_ADD_DNN : case DVM_SUB_DNN : case DVM_MUL_DNN : case DVM_DIV_DNN :
 		case DVM_MOD_DNN : case DVM_POW_DNN : case DVM_AND_DNN : case DVM_OR_DNN  :
 		case DVM_LT_DNN  : case DVM_LE_DNN  : case DVM_EQ_DNN :
@@ -4207,81 +3905,82 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
 			if( at->tid ==0 || at->tid > DAO_DOUBLE ) goto NotMatch;
 			if( bt->tid ==0 || bt->tid > DAO_DOUBLE ) goto NotMatch;
-			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, simtps[TT3] );
-			if( type[opc]->tid != TT3 ) goto NotMatch;
-			AssertTypeIdMatching( type[opc], TT3, 0 );
+			if( ct ==NULL || ct->tid ==DAO_UDF ) UpdateType( opc, dnumt );
+			if( type[opc]->tid != DAO_DOUBLE ) goto NotMatch;
+			AssertTypeIdMatching( type[opc], DAO_DOUBLE, 0 );
 			init[opc] = 1;
 			lastcomp = opc;
 			break;
 		case DVM_GETI_SI :
-			{
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
-				AssertTypeIdMatching( at, DAO_STRING, 0 );
-				if( code == DVM_GETI_SI && bt->tid != DAO_INTEGER ) goto NotMatch;
-				UpdateType( opc, inumt );
-				AssertTypeIdMatching( type[opc], DAO_INTEGER, 0 );
-				init[opc] = 1;
-				lastcomp = opc;
-				break;
-			}
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+			AssertTypeIdMatching( at, DAO_STRING, 0 );
+			if( code == DVM_GETI_SI && bt->tid != DAO_INTEGER ) goto NotMatch;
+			UpdateType( opc, inumt );
+			AssertTypeIdMatching( type[opc], DAO_INTEGER, 0 );
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_SETI_SII :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
-				AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertTypeIdMatching( at, DAO_INTEGER, 0 );
-				AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
-				AssertTypeIdMatching( ct, DAO_STRING, 0 );
-				break;
-			}
+			if( csts[opc].cst ) goto ModifyConstant;
+			k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+			AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertTypeIdMatching( at, DAO_INTEGER, 0 );
+			AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
+			AssertTypeIdMatching( ct, DAO_STRING, 0 );
+			break;
 		case DVM_GETI_LI :
-			{
-				lastcomp = opc;
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
-				AssertTypeIdMatching( at, DAO_LIST, 0 );
-				AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
-				at = type[opa]->nested->items.pType[0];
-				if( at->tid < DAO_ARRAY || at->tid >= DAO_ANY ) goto NotMatch;
-				UpdateType( opc, at );
-				AssertTypeMatching( at, type[opc], defs, 0 );
-				init[opc] = 1;
-				break;
-			}
+			lastcomp = opc;
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+			AssertTypeIdMatching( at, DAO_LIST, 0 );
+			AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
+			at = type[opa]->nested->items.pType[0];
+			if( at->tid < DAO_ARRAY || at->tid >= DAO_ANY ) goto NotMatch;
+			UpdateType( opc, at );
+			AssertTypeMatching( at, type[opc], defs, 0 );
+			init[opc] = 1;
+			break;
 		case DVM_GETI_LII : case DVM_GETI_LFI : case DVM_GETI_LDI :
 		case DVM_GETI_AII : case DVM_GETI_AFI : case DVM_GETI_ADI :
 		case DVM_GETI_LSI :
-			{
-				lastcomp = opc;
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
-				if( at->tid != TT6 || at->nested->size ==0 ) goto NotMatch;
-				at = at->nested->items.pType[0];
-				if( at ==NULL || at->tid != TT1 ) goto NotMatch;
-				if( bt ==NULL || bt->tid != TT2 ) goto NotMatch;
-				UpdateType( opc, at );
-				AssertTypeIdMatching( type[opc], TT3, 0 );
-				init[opc] = 1;
-				break;
+			lastcomp = opc;
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+			TT1 = TT3 = 0;
+			if( code >= DVM_GETI_AII ){
+				TT3 = DAO_ARRAY;
+				TT1 = DAO_INTEGER + (code - DVM_GETI_AII);
+			}else if( code != DVM_GETI_LSI ){
+				TT3 = DAO_LIST;
+				TT1 = DAO_INTEGER + (code - DVM_GETI_LII);
+			}else{
+				TT3 = DAO_LIST;
+				TT1 = DAO_STRING;
 			}
+			if( at->tid != TT3 || at->nested->size ==0 ) goto NotMatch;
+			at = at->nested->items.pType[0];
+			if( at ==NULL || at->tid != TT1 ) goto NotMatch;
+			if( bt ==NULL || bt->tid != DAO_INTEGER ) goto NotMatch;
+			UpdateType( opc, at );
+			AssertTypeIdMatching( type[opc], TT1, 0 );
+			init[opc] = 1;
+			break;
 		case DVM_SETI_LI :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
-				AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
-				AssertTypeIdMatching( ct, DAO_LIST, 0 );
-				if( at->tid < DAO_ARRAY || at->tid >= DAO_ANY ) goto NotMatch;
-				ct = type[opc]->nested->items.pType[0];
-				if( ct->tid < DAO_ARRAY || ct->tid >= DAO_ANY ) goto NotMatch;
-				AssertTypeMatching( type[opa], ct, defs, 0 );
-				break;
-			}
+			if( csts[opc].cst ) goto ModifyConstant;
+			k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+			AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertTypeIdMatching( bt, DAO_INTEGER, 0 );
+			AssertTypeIdMatching( ct, DAO_LIST, 0 );
+			if( at->tid < DAO_ARRAY || at->tid >= DAO_ANY ) goto NotMatch;
+			ct = type[opc]->nested->items.pType[0];
+			if( ct->tid < DAO_ARRAY || ct->tid >= DAO_ANY ) goto NotMatch;
+			AssertTypeMatching( type[opa], ct, defs, 0 );
+			break;
 		case DVM_SETI_LIII : case DVM_SETI_LIIF : case DVM_SETI_LIID :
 		case DVM_SETI_LFII : case DVM_SETI_LFIF : case DVM_SETI_LFID :
 		case DVM_SETI_LDII : case DVM_SETI_LDIF : case DVM_SETI_LDID :
@@ -4289,166 +3988,226 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_SETI_AFII : case DVM_SETI_AFIF : case DVM_SETI_AFID :
 		case DVM_SETI_ADII : case DVM_SETI_ADIF : case DVM_SETI_ADID :
 		case DVM_SETI_LSIS :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
-				AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				if( ct->tid != TT6 || bt->tid != TT2 || at->tid != TT1 ) goto NotMatch;
-				if( ct->nested->size !=1 || ct->nested->items.pType[0]->tid != TT3 ) goto NotMatch;
-				break;
+			if( csts[opc].cst ) goto ModifyConstant;
+			k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+			AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			TT2 = DAO_INTEGER;
+			TT1 = TT3 = TT6 = 0;
+			if( code >= DVM_SETI_AIII ){
+				TT6 = DAO_ARRAY;
+				TT1 = DAO_INTEGER + (code - DVM_SETI_AIII)%3;
+				TT3 = DAO_INTEGER + (code - DVM_SETI_AIII)/3;
+			}else if( code != DVM_SETI_LSIS ){
+				TT6 = DAO_LIST;
+				TT1 = DAO_INTEGER + (code - DVM_SETI_LIII)%3;
+				TT3 = DAO_INTEGER + (code - DVM_SETI_LIII)/3;
+			}else{
+				TT6 = DAO_LIST;
+				TT1 = TT3 = DAO_STRING;
 			}
+			if( ct->tid != TT6 || bt->tid != TT2 || at->tid != TT1 ) goto NotMatch;
+			if( ct->nested->size !=1 || ct->nested->items.pType[0]->tid != TT3 ) goto NotMatch;
+			break;
 		case DVM_GETI_TI :
-			{
-				lastcomp = opc;
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
-				if( at->tid != TT6 || bt->tid != TT2 ) goto NotMatch;
-				UpdateType( opc, any );
-				init[opc] = 1;
-				break;
-			}
+			lastcomp = opc;
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+			if( at->tid != DAO_TUPLE || bt->tid != DAO_INTEGER ) goto NotMatch;
+			UpdateType( opc, any );
+			init[opc] = 1;
+			break;
 		case DVM_SETI_TI :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
-				AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				if( ct->tid != TT6 || bt->tid != TT2 ) goto NotMatch;
-				break;
-			}
+			if( csts[opc].cst ) goto ModifyConstant;
+			k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+			AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			if( ct->tid != DAO_TUPLE || bt->tid != DAO_INTEGER ) goto NotMatch;
+			break;
 		case DVM_SETF_T :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
-				if( at ==NULL || ct ==NULL || ct->tid != TT6 ) goto NotMatch;
-				if( opb >= ct->nested->size ) goto InvIndex;
-				tt = ct->nested->items.pType[opb];
-				if( tt->tid == DAO_PAR_NAMED ) tt = tt->aux.v.type;
-				AssertTypeMatching( at, tt, defs, 0 );
-				break;
-			}
+			if( csts[opc].cst ) goto ModifyConstant;
+			if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
+			if( at ==NULL || ct ==NULL || ct->tid != DAO_TUPLE ) goto NotMatch;
+			if( opb >= ct->nested->size ) goto InvIndex;
+			tt = ct->nested->items.pType[opb];
+			if( tt->tid == DAO_PAR_NAMED ) tt = tt->aux.v.type;
+			AssertTypeMatching( at, tt, defs, 0 );
+			break;
 		case DVM_GETF_T :
 		case DVM_GETF_TI : case DVM_GETF_TF :
 		case DVM_GETF_TD : case DVM_GETF_TS :
-			{
-				lastcomp = opc;
-				if( init[opa] ==0 ) goto NotInit;
-				if( at ==NULL || at->tid != TT6 ) goto NotMatch;
-				if( opb >= at->nested->size ) goto InvIndex;
-				ct = at->nested->items.pType[opb];
-				if( ct->tid == DAO_PAR_NAMED ) ct = ct->aux.v.type;
-				UpdateType( opc, ct );
-				if( TT3 >0 ){
-					if( ct ==NULL || ct->tid != TT3 ) goto NotMatch;
-					if( type[opc]->tid != TT3 ) goto NotMatch;
-				}else{
-					AssertTypeMatching( ct, type[opc], defs, 0 );
-				}
-				init[opc] = 1;
-				break;
+			lastcomp = opc;
+			if( init[opa] ==0 ) goto NotInit;
+			if( at ==NULL || at->tid != DAO_TUPLE ) goto NotMatch;
+			if( opb >= at->nested->size ) goto InvIndex;
+			ct = at->nested->items.pType[opb];
+			if( ct->tid == DAO_PAR_NAMED ) ct = ct->aux.v.type;
+			UpdateType( opc, ct );
+			if( code != DVM_GETF_T ){
+				TT3 = code == DVM_GETF_TS ? DAO_STRING : DAO_INTEGER + (code - DVM_GETF_TI);
+				if( ct ==NULL || ct->tid != TT3 ) goto NotMatch;
+				if( type[opc]->tid != TT3 ) goto NotMatch;
+			}else{
+				AssertTypeMatching( ct, type[opc], defs, 0 );
 			}
+			init[opc] = 1;
+			break;
 		case DVM_SETF_TII : case DVM_SETF_TIF : case DVM_SETF_TID :
 		case DVM_SETF_TFI : case DVM_SETF_TFF : case DVM_SETF_TFD :
 		case DVM_SETF_TDI : case DVM_SETF_TDF : case DVM_SETF_TDD :
 		case DVM_SETF_TSS :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
-				if( at ==NULL || ct ==NULL ) goto NotMatch;
-				if( ct->tid != TT6 || at->tid != TT1 ) goto NotMatch;
-				if( opb >= ct->nested->size ) goto InvIndex;
-				tt = ct->nested->items.pType[opb];
-				if( tt->tid == DAO_PAR_NAMED ) tt = tt->aux.v.type;
-				if( tt->tid != TT3 ) goto NotMatch;
-				break;
+			if( csts[opc].cst ) goto ModifyConstant;
+			if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
+			if( at ==NULL || ct ==NULL ) goto NotMatch;
+			TT1 = TT3 = 0;
+			if( code == DVM_SETF_TSS ){
+				TT1 = TT3 = DAO_STRING;
+			}else{
+				TT1 = DAO_INTEGER + (code - DVM_SETF_TII)%3;
+				TT3 = DAO_INTEGER + (code - DVM_SETF_TII)/3;
 			}
+			if( ct->tid != DAO_TUPLE || at->tid != TT1 ) goto NotMatch;
+			if( opb >= ct->nested->size ) goto InvIndex;
+			tt = ct->nested->items.pType[opb];
+			if( tt->tid == DAO_PAR_NAMED ) tt = tt->aux.v.type;
+			if( tt->tid != TT3 ) goto NotMatch;
+			break;
 		case DVM_GETI_ACI :
-			{
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
-				AssertTypeMatching( type[opa], cart, defs, 0 );
-				bt = type[opb];
-				if( bt->tid != DAO_INTEGER ) goto NotMatch;
-				UpdateType( opc, comt );
-				if( type[opc]->tid != DAO_COMPLEX ) goto NotMatch;
-				init[opc] = 1;
-				lastcomp = opc;
-				break;
-			}
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+			AssertTypeMatching( type[opa], cart, defs, 0 );
+			bt = type[opb];
+			if( bt->tid != DAO_INTEGER ) goto NotMatch;
+			UpdateType( opc, comt );
+			if( type[opc]->tid != DAO_COMPLEX ) goto NotMatch;
+			init[opc] = 1;
+			lastcomp = opc;
+			break;
 		case DVM_SETI_ACI :
-			{
-				if( csts[opc].cst ) goto ModifyConstant;
-				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
-				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
-				AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				if( type[opa]->tid != DAO_COMPLEX ) goto NotMatch;
-				if( type[opb]->tid != DAO_INTEGER ) goto NotMatch;
-				AssertTypeMatching( type[opc], cart, defs, 0 );
-				break;
-			}
-		case DVM_GETF_KC : case DVM_GETF_KG :
-		case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
-		case DVM_GETF_KCI : case DVM_GETF_KGI :
-		case DVM_GETF_OCI : case DVM_GETF_OGI : case DVM_GETF_OVI :
-		case DVM_GETF_KCF : case DVM_GETF_KGF :
-		case DVM_GETF_OCF : case DVM_GETF_OGF : case DVM_GETF_OVF :
-		case DVM_GETF_KCD : case DVM_GETF_KGD :
-		case DVM_GETF_OCD : case DVM_GETF_OGD : case DVM_GETF_OVD :
-			{
-				lastcomp = opc;
-				if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
-				init[opc] = 1;
-				at = type[opa];
-				klass = at->aux.v.klass;
-				ct = NULL;
-				if( at->tid != TT6 ) goto NotMatch;
-				switch( TT4 ){
-				case 'C' :
-					ct = DaoNameSpace_GetTypeV( ns, klass->cstData->data[ opb ] );
-					break;
-				case 'G' : ct = klass->glbDataType->items.pType[ opb ]; break;
-				case 'V' : ct = klass->objDataType->items.pType[ opb ]; break;
-				default : goto NotMatch;
-				}
-
-				UpdateType( opc, ct );
-				AssertTypeMatching( ct, type[opc], defs, 0 );
-				if( TT3 >0 && ct->tid != TT3 ) goto NotMatch;
-				break;
-			}
-		case DVM_SETF_KG : case DVM_SETF_OG : case DVM_SETF_OV :
-		case DVM_SETF_KGII : case DVM_SETF_OGII : case DVM_SETF_OVII :
-		case DVM_SETF_KGIF : case DVM_SETF_OGIF : case DVM_SETF_OVIF :
-		case DVM_SETF_KGID : case DVM_SETF_OGID : case DVM_SETF_OVID :
-		case DVM_SETF_KGFI : case DVM_SETF_OGFI : case DVM_SETF_OVFI :
-		case DVM_SETF_KGFF : case DVM_SETF_OGFF : case DVM_SETF_OVFF :
-		case DVM_SETF_KGFD : case DVM_SETF_OGFD : case DVM_SETF_OVFD :
-		case DVM_SETF_KGDI : case DVM_SETF_OGDI : case DVM_SETF_OVDI :
-		case DVM_SETF_KGDF : case DVM_SETF_OGDF : case DVM_SETF_OVDF :
-		case DVM_SETF_KGDD : case DVM_SETF_OGDD : case DVM_SETF_OVDD :
-			{
-				ct = (DaoType*) type[opc];
-				if( ct == NULL ) goto ErrorTyping;
-				if( csts[opc].cst ) goto ModifyConstant;
-				if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
-				if( type[opa] ==NULL || type[opc] ==NULL ) goto NotMatch;
-
-				klass = ct->aux.v.klass;
-				if( ct->tid != TT6 ) goto NotMatch;
-				bt = NULL;
-				switch( TT4 ){
-				case 'G' : bt = klass->glbDataType->items.pType[ opb ]; break;
-				case 'V' : bt = klass->objDataType->items.pType[ opb ]; break;
-				default : goto NotMatch;
-				}
-				AssertTypeMatching( at, bt, defs, 0 );
-				if( TT1 > 0 && at->tid != TT1 ) goto NotMatch;
-				if( TT3 > 0 && bt->tid != TT3 ) goto NotMatch;
-			}
+			if( csts[opc].cst ) goto ModifyConstant;
+			k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+			AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
+			AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+			AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+			if( type[opa]->tid != DAO_COMPLEX ) goto NotMatch;
+			if( type[opb]->tid != DAO_INTEGER ) goto NotMatch;
+			AssertTypeMatching( type[opc], cart, defs, 0 );
+			break;
+		case DVM_GETF_KC :
+		case DVM_GETF_KCI : case DVM_GETF_KCF : case DVM_GETF_KCD : 
+			lastcomp = opc;
+			if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+			init[opc] = 1;
+			if( type[opa]->tid != DAO_CLASS ) goto NotMatch;
+			klass = type[opa]->aux.v.klass;
+			ct = DaoNameSpace_GetTypeV( ns, klass->cstData->data[ opb ] );
+			UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
+			if( code == DVM_GETF_KC ) break;
+			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_KCI) ) goto NotMatch;
+			break;
+		case DVM_GETF_KG :
+		case DVM_GETF_KGI : case DVM_GETF_KGF : case DVM_GETF_KGD :
+			lastcomp = opc;
+			if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+			init[opc] = 1;
+			if( type[opa]->tid != DAO_CLASS ) goto NotMatch;
+			klass = type[opa]->aux.v.klass;
+			ct = klass->glbDataType->items.pType[ opb ];
+			UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
+			if( code == DVM_GETF_KG ) break;
+			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_KGI) ) goto NotMatch;
+			break;
+		case DVM_GETF_OC :
+		case DVM_GETF_OCI : case DVM_GETF_OCF : case DVM_GETF_OCD : 
+			lastcomp = opc;
+			if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+			init[opc] = 1;
+			if( type[opa]->tid != DAO_OBJECT ) goto NotMatch;
+			klass = type[opa]->aux.v.klass;
+			ct = DaoNameSpace_GetTypeV( ns, klass->cstData->data[ opb ] );
+			UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
+			if( code == DVM_GETF_OC ) break;
+			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_OCI) ) goto NotMatch;
+			break;
+		case DVM_GETF_OG :
+		case DVM_GETF_OGI : case DVM_GETF_OGF : case DVM_GETF_OGD : 
+			lastcomp = opc;
+			if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+			init[opc] = 1;
+			if( type[opa]->tid != DAO_OBJECT ) goto NotMatch;
+			klass = type[opa]->aux.v.klass;
+			ct = klass->glbDataType->items.pType[ opb ];
+			UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
+			if( code == DVM_GETF_OG ) break;
+			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_OGI) ) goto NotMatch;
+			break;
+		case DVM_GETF_OV :
+		case DVM_GETF_OVI : case DVM_GETF_OVF : case DVM_GETF_OVD :
+			lastcomp = opc;
+			if( init[opa] ==0 || type[opa] == NULL ) goto NotInit;
+			init[opc] = 1;
+			if( type[opa]->tid != DAO_OBJECT ) goto NotMatch;
+			klass = type[opa]->aux.v.klass;
+			ct = klass->objDataType->items.pType[ opb ];
+			UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0 );
+			if( code == DVM_GETF_OV ) break;
+			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_OVI) ) goto NotMatch;
+			break;
+		case DVM_SETF_KG : 
+		case DVM_SETF_KGII : case DVM_SETF_KGIF : case DVM_SETF_KGID : 
+		case DVM_SETF_KGFI : case DVM_SETF_KGFF : case DVM_SETF_KGFD : 
+		case DVM_SETF_KGDI : case DVM_SETF_KGDF : case DVM_SETF_KGDD : 
+			ct = (DaoType*) type[opc];
+			if( ct == NULL ) goto ErrorTyping;
+			if( csts[opc].cst ) goto ModifyConstant;
+			if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
+			if( type[opa] ==NULL || type[opc] ==NULL ) goto NotMatch;
+			if( ct->tid != DAO_CLASS ) goto NotMatch;
+			ct = ct->aux.v.klass->glbDataType->items.pType[ opb ];
+			AssertTypeMatching( at, ct, defs, 0 );
+			if( code == DVM_SETF_KG ) break;
+			if( at->tid != (DAO_INTEGER + (code - DVM_SETF_KGII)%3) ) goto NotMatch;
+			if( ct->tid != (DAO_INTEGER + (code - DVM_SETF_KGII)/3) ) goto NotMatch;
+			break;
+		case DVM_SETF_OG : 
+		case DVM_SETF_OGII : case DVM_SETF_OGIF : case DVM_SETF_OGID : 
+		case DVM_SETF_OGFI : case DVM_SETF_OGFF : case DVM_SETF_OGFD : 
+		case DVM_SETF_OGDI : case DVM_SETF_OGDF : case DVM_SETF_OGDD : 
+			ct = (DaoType*) type[opc];
+			if( ct == NULL ) goto ErrorTyping;
+			if( csts[opc].cst ) goto ModifyConstant;
+			if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
+			if( type[opa] ==NULL || type[opc] ==NULL ) goto NotMatch;
+			if( ct->tid != DAO_OBJECT ) goto NotMatch;
+			ct = ct->aux.v.klass->glbDataType->items.pType[ opb ];
+			AssertTypeMatching( at, ct, defs, 0 );
+			if( code == DVM_SETF_OG ) break;
+			if( at->tid != (DAO_INTEGER + (code - DVM_SETF_OGII)%3) ) goto NotMatch;
+			if( ct->tid != (DAO_INTEGER + (code - DVM_SETF_OGII)/3) ) goto NotMatch;
+			break;
+		case DVM_SETF_OV :
+		case DVM_SETF_OVII : case DVM_SETF_OVIF : case DVM_SETF_OVID :
+		case DVM_SETF_OVFI : case DVM_SETF_OVFF : case DVM_SETF_OVFD :
+		case DVM_SETF_OVDI : case DVM_SETF_OVDF : case DVM_SETF_OVDD :
+			ct = (DaoType*) type[opc];
+			if( ct == NULL ) goto ErrorTyping;
+			if( csts[opc].cst ) goto ModifyConstant;
+			if( init[opa] ==0 || init[opc] ==0 ) goto NotInit;
+			if( type[opa] ==NULL || type[opc] ==NULL ) goto NotMatch;
+			if( ct->tid != DAO_OBJECT ) goto NotMatch;
+			ct = ct->aux.v.klass->objDataType->items.pType[ opb ];
+			AssertTypeMatching( at, ct, defs, 0 );
+			if( code == DVM_SETF_OV ) break;
+			if( at->tid != (DAO_INTEGER + (code - DVM_SETF_OVII)%3) ) goto NotMatch;
+			if( ct->tid != (DAO_INTEGER + (code - DVM_SETF_OVII)/3) ) goto NotMatch;
+			break;
 #endif
 		default : break;
 		}
