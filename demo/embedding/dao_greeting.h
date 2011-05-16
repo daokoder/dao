@@ -41,8 +41,8 @@ class DAO_DLL_GREETING DaoCxxVirt_Greeting
 	void DaoInitWrapper( Greeting *self, DaoCData *d );
 	Greeting *self;
 	DaoCData *cdata;
-	void DoGreeting( const char* name );
-	void VirtWithDefault( const Greeting &g );
+	void DoGreeting( int &_cs, const char* name );
+	void VirtWithDefault( int &_cs, const Greeting &g );
 
 };
 class DAO_DLL_GREETING DaoCxx_Greeting : public Greeting, public DaoCxxVirt_Greeting
@@ -64,8 +64,8 @@ class DAO_DLL_GREETING DaoCxxVirt_Greeting2  : public DaoCxxVirt_Greeting
 	void DaoInitWrapper( Greeting2 *self, DaoCData *d );
 	Greeting2 *self;
 	DaoCData *cdata;
-	void DoGreeting( const char* name );
-	void VirtWithDefault( const Greeting &g );
+	void DoGreeting( int &_cs, const char* name );
+	void VirtWithDefault( int &_cs, const Greeting &g );
 
 };
 class DAO_DLL_GREETING DaoCxx_Greeting2 : public Greeting2, public DaoCxxVirt_Greeting2
@@ -90,7 +90,8 @@ class DAO_DLL_GREETING DaoCxxVirt_otto
 	void DaoInitWrapper( otto *self, DaoCData *d );
 	otto *self;
 	DaoCData *cdata;
-	otto test( const otto &value );
+	otto test( int &_cs, const otto &value );
+	void vtest( int &_cs  );
 
 };
 class DAO_DLL_GREETING DaoCxx_otto : public otto, public DaoCxxVirt_otto
@@ -100,6 +101,7 @@ class DAO_DLL_GREETING DaoCxx_otto : public otto, public DaoCxxVirt_otto
 	~DaoCxx_otto();
 	void DaoInitWrapper();
 	otto test( const otto &value );
+	void vtest(  );
 	otto DaoWrap_test( const otto &value ){ return otto::test( value ); }
 };
 otto* Dao_otto_Copy( const otto &p );
@@ -112,7 +114,7 @@ class DAO_DLL_GREETING DaoCxxVirt_otto2  : public DaoCxxVirt_otto
 	void DaoInitWrapper( otto2 *self, DaoCData *d );
 	otto2 *self;
 	DaoCData *cdata;
-	otto test( const otto &value );
+	otto test( int &_cs, const otto &value );
 
 };
 class DAO_DLL_GREETING DaoCxx_otto2 : public otto2, public DaoCxxVirt_otto2
@@ -121,6 +123,7 @@ class DAO_DLL_GREETING DaoCxx_otto2 : public otto2, public DaoCxxVirt_otto2
 	~DaoCxx_otto2();
 	void DaoInitWrapper();
 	otto test( const otto &value );
+	void vtest(  );
 };
 otto2* Dao_otto2_Copy( const otto2 &p );
 DaoCxx_otto2* DAO_DLL_GREETING DaoCxx_otto2_New(  );

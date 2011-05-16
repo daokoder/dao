@@ -131,13 +131,13 @@ int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
   DaoTypeBase *typers[9];
   const char *aliases[1];
   __daoVmSpace = vms;
-  typers[0] = dao_AutobindTest_Typer,
-  typers[1] = dao_Bool_Typer,
-  typers[2] = dao_Greeting_Typer,
-  typers[3] = dao_Greeting2_Typer,
-  typers[4] = dao_Greeting_Null_Typer,
-  typers[5] = dao_otto_Typer,
-  typers[6] = dao_otto2_Typer,
+  typers[0] = dao_AutobindTest_Typer;
+  typers[1] = dao_Bool_Typer;
+  typers[2] = dao_Greeting_Typer;
+  typers[3] = dao_Greeting2_Typer;
+  typers[4] = dao_Greeting_Null_Typer;
+  typers[5] = dao_otto_Typer;
+  typers[6] = dao_otto2_Typer;
   typers[7] = NULL;
   aliases[0] = NULL;
   DaoNameSpace_TypeDefine( ns, "int", "Enum1" );

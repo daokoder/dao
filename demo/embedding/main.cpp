@@ -153,7 +153,7 @@ int main( int argc, char *argv[] )
 
 	DValue value = DaoNameSpace_FindData( ns, "getSomeString" );
 	if( value.t == DAO_ROUTINE ){
-		DaoVmProcess_Call( vmp, value.v.p, NULL, NULL, 0 );
+		DaoVmProcess_Call( vmp, (DaoMethod*)value.v.p, NULL, NULL, 0 );
 	}
 	value = DaoVmProcess_GetReturned( vmp );
 	printf( "%i %s\n", value.t, DString_GetMBS(  value.v.s ) );

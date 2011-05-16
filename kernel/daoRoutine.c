@@ -4795,7 +4795,7 @@ DaoTypeBase mroutineTyper =
 	(FuncPtrDel) DaoMetaRoutine_Delete, NULL
 };
 
-DRoutine* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
+DMetaParam* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
 {
 	DaoType *type, *name = NULL;
 	DMetaParam *param, **items;
@@ -4806,11 +4806,11 @@ DRoutine* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
 	n = self->nexts->size;
 	if( pid >= m ){
 		/* If a routine with the same parameter signature is found, return it: */
-		for(i=0; i<n; i++) if( items[i]->routine ) return items[i]->routine;
+		for(i=0; i<n; i++) if( items[i]->routine ) return items[i];
 		param = DMetaParam_New();
 		param->routine = routine;
 		DArray_Append( self->nexts, param ); /* Add as a leaf. */
-		return routine;
+		return param;
 	}
 	type = routine->routType->nested->items.pType[pid];
 	if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ){
@@ -4832,16 +4832,13 @@ DRoutine* DMetaParam_Add( DMetaParam *self, DRoutine *routine, int pid )
 	param->nexts = DArray_New(0);
 	param->type = type;
 	if( name ) MAP_Insert( self->names, name, param );
-	//if( type->tid == DAO_PAR_DEFAULT ){
-	//	DArray_PushFront( self->nexts, param );
-	//}else{
-		DArray_PushBack( self->nexts, param );
-	//}
+	DArray_PushBack( self->nexts, param );
 	return DMetaParam_Add( param, routine, pid+1 );
 }
 DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
 {
-	DRoutine *rout = NULL;
+	int i, bl = 0;
+	DMetaParam *param = NULL;
 	if( routine->routType == NULL ) return NULL;
 	/* If the name is not set yet, set it: */
 	if( self->name->size ==0 ) DString_Assign( self->name, routine->routName );
@@ -4849,16 +4846,35 @@ DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine )
 	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != MAXSIZE;
 	if( routine->routType->attrib & DAO_TYPE_SELF ){
 		if( self->mtree == NULL ) self->mtree = DMetaParam_New();
-		rout = DMetaParam_Add( self->mtree, routine, 0 );
+		param = DMetaParam_Add( self->mtree, routine, 0 );
 	}else{
 		if( self->tree == NULL ) self->tree = DMetaParam_New();
-		rout = DMetaParam_Add( self->tree, routine, 0 );
+		param = DMetaParam_Add( self->tree, routine, 0 );
 	}
-	if( rout == routine ){
+	if( routine == param->routine ){
 		DArray_Append( self->routines, routine );
-		GC_IncRC( rout );
+		GC_IncRC( routine );
+	}else if( routine->routHost && param->routine->routHost ){
+		DaoType *t1 = routine->routHost;
+		DaoType *t2 = param->routine->routHost;
+		if( t1->tid == DAO_CDATA && t2->tid == DAO_CDATA ){
+			bl = DaoCData_ChildOf( t1->aux.v.cdata->typer, t2->aux.v.cdata->typer );
+		}else if( t1->tid == DAO_OBJECT && (t2->tid == DAO_OBJECT || t2->tid == DAO_CDATA) ){
+			bl = DaoClass_ChildOf( t1->aux.v.klass, t2->aux.v.p );
+		}
+		if( bl ){
+			for(i=0; i<self->routines->size; i++){
+				if( self->routines->items.pRout2[i] == param->routine ){
+					DArray_Erase( self->routines, i, 1 );
+					break;
+				}
+			}
+			DArray_Append( self->routines, routine );
+			GC_ShiftRC( routine, param->routine );
+			param->routine = routine;
+		}
 	}
-	return rout;
+	return param->routine;
 }
 void DaoMetaRoutine_Import( DaoMetaRoutine *self, DaoMetaRoutine *other )
 {

@@ -11,13 +11,19 @@ class otto
 	virtual ~otto(){};
 	int geta(){ return a; }
 
+	virtual void vtest(){}
+
 protected:
 	virtual otto test(const otto &value){
 		printf( "call protected method\n" );
 		return otto();
 	}
 };
-class otto2 : public otto {};
+class otto2 : public otto
+{
+	public:
+	void vtest(){}
+};
 
 class Greeting
 {

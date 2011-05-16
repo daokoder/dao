@@ -369,12 +369,8 @@ void DaoJIT_Init( DaoVmSpace *vms )
 
 	while( base_types.size() > 5 ) base_types.pop_back();
 	base_types.push_back( int8_type ); // attribs
-	base_types.push_back( int8_type ); // minimal
-	base_types.push_back( int8_type ); // minParam
 	base_types.push_back( int8_type ); // parCount
 	base_types.push_back( int16_type ); // defLine
-	base_types.push_back( int8_type ); // tidHost
-	base_types.push_back( int8_type ); // 
 	base_types.push_back( void_type_p ); // routHost
 	base_types.push_back( void_type_p ); // routType
 	base_types.push_back( void_type_p ); // routName
@@ -500,7 +496,7 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 	value = CreateConstGEP2_32( ctx, 0, 10 ); // context->regTypes: DaoType*[]**
 	localTypes = CreateLoad( value ); // context->regTypes: DaoType*[]*
 
-	value = CreateConstGEP2_32( rout, 0, 17 ); // routine->routConsts: DVarray**
+	value = CreateConstGEP2_32( rout, 0, 13 ); // routine->routConsts: DVarray**
 	value = CreateLoad( value ); //routine->routConsts: DVarray*
 	value = CreateConstGEP2_32( value, 0, 0 ); // routine->routConsts->data: DValue[]**
 	localConsts = CreateLoad( value ); // routine->routConsts->data: DValue[]*
@@ -1074,7 +1070,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			branchings[i] = NULL;
 			labels[i+1] = NULL;
 			labels[vmc->b] = NULL;
-			if( vmc->b ) branchings[vmc->b-1] = NULL;
+			if( vmc->b > start ) branchings[vmc->b-1] = NULL;
 			break;
 		case DVM_SWITCH :
 			branchings[i] = NULL;
@@ -1876,7 +1872,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	}
 	if( labels.find( start ) != labels.end() ){
 		SetInsertPoint( entryBlock );
-		CreateBr( labels[ start ] );
+		CreateBr( secondBlock );
 	}
 	for(iter=branchings.begin(), stop=branchings.end(); iter!=stop; iter++){
 		vmc = vmcs[ iter->first ];
@@ -1892,6 +1888,9 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			labels[end+1] = NewBlock( vmcs[end+1] );
 			break;
 		}
+	}
+	for(iter=labels.begin(), stop=labels.end(); iter!=stop; iter++){
+		printf( "%3i %9p\n", iter->first, iter->second );
 	}
 	for(iter=branchings.begin(), stop=branchings.end(); iter!=stop; iter++){
 		vmc = vmcs[ iter->first ];
@@ -1977,7 +1976,15 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	}
 	CreateRet( zero32 );
 	SetInsertPoint( entryBlock );
-	CreateBr( secondBlock );
+	if( entryBlock->back().isTerminator() == false ) CreateBr( secondBlock );
+	if( secondBlock->size() ==0 or secondBlock->back().isTerminator() == false ){
+		Function::BasicBlockListType & blocks = jitfunc->getBasicBlockList();
+		SetInsertPoint( secondBlock );
+		if( blocks.size() > 2 )
+			CreateBr( ++(++blocks.begin()) );
+		else
+			CreateRet( zero32 );
+	}
 #if 0
 	if( 1 ){
 		BasicBlock::iterator iter;

@@ -338,12 +338,15 @@ static DaoNumItem dao_otto_Nums[] =
 static void dao_otto_otto( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_otto_geta( DaoContext *_ctx, DValue *_p[], int _n );
 static void dao_otto_test( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_otto_vtest__otto( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_otto_vtest( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_otto_Meths[] = 
 {
   { dao_otto_otto, "otto( b : int=123 )=>otto" },
   { dao_otto_geta, "geta( self : otto )=>int" },
   { dao_otto_test, "test( self : otto, value : otto )=>otto" },
+  { dao_otto_vtest, "vtest( self : otto )" },
   { NULL, NULL }
 };
 static void Dao_otto_Delete( void *self )
@@ -387,6 +390,22 @@ static void dao_otto_test( DaoContext *_ctx, DValue *_p[], int _n )
   otto _test = self->DaoWrap_test( *value );
   DaoContext_PutCData( _ctx, (void*)new otto( _test ), dao_otto_Typer );
 }
+/* greeting.h */
+static void dao_otto_vtest__otto( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  otto* self= (otto*) DValue_CastCData( _p[0], dao_otto_Typer );
+  self->otto::vtest(  );
+}
+/* greeting.h */
+static void dao_otto_vtest( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  if( DaoCData_OwnData( _p[0]->v.cdata ) ){
+    dao_otto_vtest__otto( _ctx, _p, _n );
+    return;
+  }
+  otto* self= (otto*) DValue_CastCData( _p[0], dao_otto_Typer );
+  self->vtest(  );
+}
 
 /*  greeting.h */
 
@@ -396,10 +415,12 @@ static DaoNumItem dao_otto2_Nums[] =
   { NULL, 0, 0 }
 };
 static void dao_otto2_otto2( DaoContext *_ctx, DValue *_p[], int _n );
+static void dao_otto2_vtest( DaoContext *_ctx, DValue *_p[], int _n );
 
 static DaoFuncItem dao_otto2_Meths[] = 
 {
   { dao_otto2_otto2, "otto2(  )=>otto2" },
+  { dao_otto2_vtest, "vtest( self : otto2 )" },
   { NULL, NULL }
 };
 static void Dao_otto2_Delete( void *self )
@@ -425,6 +446,12 @@ static void dao_otto2_otto2( DaoContext *_ctx, DValue *_p[], int _n )
 {
 	DaoCxx_otto2 *self = DaoCxx_otto2_New();
 	DaoContext_PutResult( _ctx, (DaoBase*) self->cdata );
+}
+/* greeting.h */
+static void dao_otto2_vtest( DaoContext *_ctx, DValue *_p[], int _n )
+{
+  otto2* self= (otto2*) DValue_CastCData( _p[0], dao_otto2_Typer );
+  self->otto2::vtest(  );
 }
 
 /*  greeting.h */

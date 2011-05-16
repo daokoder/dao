@@ -4053,7 +4053,7 @@ routine UserType::GenerateType()
 				if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
 				kmethods += tpl_meth_decl2.expand( kvmap );
 				tmp2 = meth.cxxWrapperVirt2;
-				tmp2.change( meth.hostType + '::(%w+ %( %s+ _cs, %s+ )', meth.reimplemented + '::%1' );
+				tmp2.change( meth.hostType + '::(%w+ %( %s+ _cs%W )', meth.reimplemented + '::%1' );
 				cxxWrapperVirt += tmp2;
 			}
 			if( not noWrapping && not meth.excluded && ($FUNC_PROTECTED in meth.attribs) ){
