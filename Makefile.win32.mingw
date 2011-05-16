@@ -14,9 +14,8 @@ DAO_SYNCLASS = -DDAO_WITH_SYNCLASS
 #DAO_AFC = -DDAO_WITH_AFC
 
 #DAO_ASMBC = -DDAO_WITH_ASMBC
-#DAO_JIT = -DDAO_WITH_JIT
 
-DAO_CONFIG = $(DAO_MACRO) $(DAO_REGEX) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_MPI) $(DAO_AFC) $(DAO_ASMBC) $(DAO_JIT)
+DAO_CONFIG = $(DAO_MACRO) $(DAO_REGEX) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_MPI) $(DAO_AFC) $(DAO_ASMBC)
 
 CC        = gcc
 CFLAGS    = -Wall -O2 -DWIN32 $(DAO_CONFIG)
@@ -59,7 +58,6 @@ SOURCES = kernel/daoType.c \
 		kernel/daoContext.c \
 		kernel/daoProcess.c \
 		kernel/daoValue.c \
-		kernel/daoJit.c \
 		kernel/daoStdlib.c \
 		kernel/daoArray.c \
 		kernel/daoMap.c \
@@ -78,7 +76,6 @@ OBJECTS = objs/daoType.o \
 		objs/daoProcess.o \
 		objs/daoNamespace.o \
 		objs/daoGC.o \
-		objs/daoJit.o \
 		objs/daoRoutine.o \
 		objs/daoStdlib.o \
 		objs/daoVmspace.o \
@@ -226,9 +223,6 @@ objs/daoAsmbc.o: kernel/daoAsmbc.c kernel/daoAsmbc.h
 
 objs/daoThread.o: kernel/daoThread.c kernel/daoThread.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoThread.o kernel/daoThread.c
-
-objs/daoJit.o: kernel/daoJit.c kernel/daoJit.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoJit.o kernel/daoJit.c
 
 objs/daoValue.o: kernel/daoValue.c kernel/daoValue.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoValue.o kernel/daoValue.c
