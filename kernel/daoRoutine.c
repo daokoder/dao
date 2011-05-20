@@ -4830,7 +4830,7 @@ DRoutine* DaoMetaRoutine_Lookup2( DaoMetaRoutine *self, DValue *obj, DValue *p[]
 	DMetaParam *param = NULL;
 	DRoutine *rout = NULL;
 	DMap *defs = NULL;
-	if( self->attribs & DAO_TYPE_NOTDEF ) defs = DHash_New(0,0);
+	if( self->attribs ) defs = DHash_New(0,0);
 	if( obj && obj->t && mcall ==0 ){
 		if( self->mtree ){
 			DRoutine *rout2 = NULL;
@@ -4876,7 +4876,7 @@ DRoutine* DaoMetaRoutine_LookupByType2( DaoMetaRoutine *self, DaoType *selftype,
 	DRoutine *rout = NULL;
 	DMap *defs = NULL;
 	//printf( "DaoMetaRoutine_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
-	if( self->attribs & DAO_TYPE_NOTDEF ) defs = DHash_New(0,0);
+	if( self->attribs ) defs = DHash_New(0,0);
 	if( selftype && mcall ==0 ){
 		if( self->mtree ){
 			DRoutine *rout2 = NULL;
