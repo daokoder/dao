@@ -140,6 +140,7 @@ ushort_t DLong_UDivDigit( DLong *z, ushort_t digit );
 
 #define DLong_Append  DLong_PushBack
 
+/* Multi-dimensional array stored in row major order: */
 struct DaoArray
 {
 	DAO_DATA_COMMON;

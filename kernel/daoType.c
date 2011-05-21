@@ -452,7 +452,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type->tid == DAO_ROUTINE ){
 			DRoutine *rout;
 			DaoType **tps = type->nested->items.pType;
-			DArray *routines = self->aux.v.metaRoutine->routines;
+			DArray *routines = self->aux.v.mroutine->routines;
 			int np = type->nested->size;
 			for(i=0; i<routines->size; i++){
 				if( routines->items.pRout2[i]->routType == type ) return DAO_MT_EQ;
@@ -703,11 +703,11 @@ short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs )
 		}
 		return DAO_MT_EQ;
 	case DAO_METAROUTINE :
-		if( self->tid == DAO_METAROUTINE ) return DAO_MT_EQ * (self == value.v.metaRoutine->unitype);
+		if( self->tid == DAO_METAROUTINE ) return DAO_MT_EQ * (self == value.v.mroutine->unitype);
 		if( self->tid == DAO_ROUTINE ){
 			DRoutine *rout;
 			DaoType **tps = self->nested->items.pType;
-			DArray *routines = value.v.metaRoutine->routines;
+			DArray *routines = value.v.mroutine->routines;
 			int np = self->nested->size;
 			for(i=0; i<routines->size; i++){
 				if( routines->items.pRout2[i]->routType == self ) return DAO_MT_EQ;

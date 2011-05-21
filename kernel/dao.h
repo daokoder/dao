@@ -175,9 +175,9 @@ enum DaoTypes
 enum DaoVmProcessStatus
 {
 	DAO_VMPROC_FINISHED ,  /* finished normally */
-	DAO_VMPROC_ABORTED ,
+	DAO_VMPROC_ABORTED ,   /* execution aborted */
 	DAO_VMPROC_SUSPENDED , /* suspended, by coroutine.yield() */
-	DAO_VMPROC_RUNNING ,
+	DAO_VMPROC_RUNNING ,   /* currently running */
 	DAO_VMPROC_STACKED     /* new context is pushed onto the stack of the process */
 };
 enum DaoNameSpaceOption
@@ -289,13 +289,13 @@ typedef struct DaoMethod { uchar_t type;  } DaoMethod;
  * Storage modes:
  * Symbol: $AA => { type<$AA>, 0 }
  * Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
- * Enum: MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
- * Flag: MyFlag{ AA=1, BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
+ * Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
+ * Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
  */
 struct DEnum
 {
-	DaoType  *type;
-	dint      value;
+	DaoType  *type;  /* type information structure */
+	dint      value; /* value associated with the symbol(s) or flag(s) */
 };
 
 
@@ -305,33 +305,33 @@ struct DValue
 	uchar_t  cst; /* const */
 	uchar_t  mode; /* value mode */
 	uchar_t  temp; /* for temporary use */
-	union {
-		dint           i; /* int */
-		float          f; /* float */
-		double         d; /* double */
-		complex16     *c; /* complex */
-		DLong         *l; /* long */
-		DString       *s; /* string */
-		DEnum         *e; /* enum */
-		DaoBase       *p; /* NOT one of the above data types */
-		DaoArray      *array;
-		DaoList       *list;
-		DaoMap        *map;
-		DaoTuple      *tuple;
-		DaoMetaRoutine*metaRoutine;
-		DaoRoutine    *routine;
-		DaoFunction   *func;
-		DaoObject     *object;
-		DaoClass      *klass;
-		DaoCData      *cdata;
-		DaoContext    *context;
-		DaoStream     *stream;
-		DaoInterface  *inter;
-		DaoNameSpace  *ns;
-		DaoVmProcess  *vmp;
-		DaoNameValue  *nameva;
-		DaoType       *type;
-	} v ;
+	union { /* union of values: */
+		dint            i; /* int */
+		float           f; /* float */
+		double          d; /* double */
+		complex16       *c; /* complex */
+		DLong           *l; /* long */
+		DString         *s; /* string */
+		DEnum           *e; /* enum */
+		DaoBase         *p; /* pointer to one of the follow structs */
+		DaoArray        *array;
+		DaoList         *list;
+		DaoMap          *map;
+		DaoTuple        *tuple;
+		DaoMetaRoutine  *mroutine;
+		DaoRoutine      *routine;
+		DaoFunction     *func;
+		DaoObject       *object;
+		DaoClass        *klass;
+		DaoCData        *cdata;
+		DaoContext      *context;
+		DaoStream       *stream;
+		DaoInterface    *inter;
+		DaoNameSpace    *ns;
+		DaoVmProcess    *vmp;
+		DaoNameValue    *nameva;
+		DaoType         *type;
+	} v ; /* value */
 };
 
 typedef void (*CallbackOnString)( const char *str );
@@ -348,7 +348,7 @@ typedef struct DaoFuncItem  DaoFuncItem;
 struct DaoNumItem
 {
 	const char *name;
-	int         type;
+	int         type;  /* DAO_INTEGER, DAO_FLOAT or DAO_DOUBLE */
 	double      value;
 };
 struct DaoFuncItem
@@ -726,24 +726,32 @@ struct DaoAPI
 /* Initialize the Dao library */
 DAO_DLL DaoVmSpace* DaoInit();
 /* Wait for unfinished computation and then quit */
-DAO_DLL void        DaoQuit();
+DAO_DLL void DaoQuit();
 
 /* Create basic Dao values */
 DAO_DLL DValue DValue_NewInteger( dint v );
 DAO_DLL DValue DValue_NewFloat( float v );
 DAO_DLL DValue DValue_NewDouble( double v );
+
 /* Values created by the following DValue_NewXyz() and DValue_WrapXyz(),
  * must be cleared by DValue_Clear() to avoid memory leaking: */
+
+/* Create Multi-Byte String (MBS): */
 DAO_DLL DValue DValue_NewMBString( const char *s, int n );
+/* Create Wide Character String (WCS): */
 DAO_DLL DValue DValue_NewWCString( const wchar_t *s, int n );
-DAO_DLL DValue DValue_NewVectorB( char *s, int n );
-DAO_DLL DValue DValue_NewVectorUB( unsigned char *s, int n );
-DAO_DLL DValue DValue_NewVectorS( short *s, int n );
-DAO_DLL DValue DValue_NewVectorUS( unsigned short *s, int n );
-DAO_DLL DValue DValue_NewVectorI( int *s, int n );
-DAO_DLL DValue DValue_NewVectorUI( unsigned int *s, int n );
-DAO_DLL DValue DValue_NewVectorF( float *s, int n );
-DAO_DLL DValue DValue_NewVectorD( double *s, int n );
+
+/* Create [1 x n] vector (DaoArray): */
+DAO_DLL DValue DValue_NewVectorB( char *s, int n ); /* byte */
+DAO_DLL DValue DValue_NewVectorUB( unsigned char *s, int n ); /* unsigned byte */
+DAO_DLL DValue DValue_NewVectorS( short *s, int n ); /* short */
+DAO_DLL DValue DValue_NewVectorUS( unsigned short *s, int n ); /* unsigned short */
+DAO_DLL DValue DValue_NewVectorI( int *s, int n ); /* int */
+DAO_DLL DValue DValue_NewVectorUI( unsigned int *s, int n ); /* unsigned int */
+DAO_DLL DValue DValue_NewVectorF( float *s, int n ); /* float */
+DAO_DLL DValue DValue_NewVectorD( double *s, int n ); /* double */
+
+/* Create [n x m] matrix (DaoArray): */
 DAO_DLL DValue DValue_NewMatrixB( signed char **s, int n, int m );
 DAO_DLL DValue DValue_NewMatrixUB( unsigned char **s, int n, int m );
 DAO_DLL DValue DValue_NewMatrixS( short **s, int n, int m );
@@ -752,19 +760,41 @@ DAO_DLL DValue DValue_NewMatrixI( int **s, int n, int m );
 DAO_DLL DValue DValue_NewMatrixUI( unsigned int **s, int n, int m );
 DAO_DLL DValue DValue_NewMatrixF( float **s, int n, int m );
 DAO_DLL DValue DValue_NewMatrixD( double **s, int n, int m );
+
+/* Create "n" bytes buffer (DaoCData): */
 DAO_DLL DValue DValue_NewBuffer( void *s, int n );
+/* Create io stream object (DaoStream): */
 DAO_DLL DValue DValue_NewStream( FILE *f );
+
+/* Create DaoCData object wrapping the opaque data with given type: */
 /* data will be deleted with the DaoCData structure created by this function */
 DAO_DLL DValue DValue_NewCData( DaoTypeBase *typer, void *data );
+
+/* Create DaoCData object wrapping the opaque data with given type: */
 /* data will NOT be deleted with the DaoCData structure created by this function */
 DAO_DLL DValue DValue_WrapCData( DaoTypeBase *typer, void *data );
+
+/* Get Multi-Byte String (MBS): */
+/* Return NULL if it is not a string; */
+/* If it is a Wide Character String (WCS), convert to MBS first; */
 DAO_DLL char* DValue_GetMBString( DValue *self );
 DAO_DLL wchar_t* DValue_GetWCString( DValue *self );
+
+/* If "self" stores a c data object with type matching to "totyper",
+ * return a pointer to the opaque object that has been properly casted using
+ * the "casts" methods of typer structures (DaoTypeBase).
+ * Otherwise return NULL. */
 DAO_DLL void*  DValue_CastCData( DValue *self, DaoTypeBase *totyper );
+/* Get the pointer to the opaque data: */
 DAO_DLL void*  DValue_GetCData( DValue *self );
 DAO_DLL void** DValue_GetCData2( DValue *self );
+
+/* Copy value from "from" to "self": */
 DAO_DLL void DValue_Copy( DValue *self, DValue from );
+
+/* Clear the data in the value: */
 DAO_DLL void DValue_Clear( DValue *v );
+/* Clear the data in the value array: */
 DAO_DLL void DValue_ClearAll( DValue *v, int n );
 
 /* --------------------------------
@@ -787,34 +817,44 @@ DAO_DLL void DString_ToMBS( DString *self );
 DAO_DLL char* DString_GetMBS( DString *self );
 DAO_DLL wchar_t* DString_GetWCS( DString *self );
 
+/* Erase "n" characters starting from "start": */
 DAO_DLL void DString_Erase( DString *self, size_t start, size_t n );
-/* insert "s" at "i" with "m" characters removed and "n" copied,
+
+/* Insert "s" at "i" with "m" characters removed and "n" copied,
    if "n" is zero, copy all characters of "s" */
 DAO_DLL void DString_Insert( DString *self, DString *s, size_t i, size_t m, size_t n );
 DAO_DLL void DString_InsertChar( DString *self, const char ch, size_t at );
-/* insert "s" at "i" with "m" characters removed and "n" copied,
+
+/* Insert "s" at "i" with "m" characters removed and "n" copied,
    if "n" is zero, consider "s" as null-terminated string. */
 DAO_DLL void DString_InsertMBS( DString *self, const char *s, size_t i, size_t m, size_t n );
 DAO_DLL void DString_InsertWCS( DString *self, const wchar_t *s, size_t i, size_t m, size_t n );
+
 DAO_DLL void DString_Append( DString *self, DString *chs );
 DAO_DLL void DString_AppendChar( DString *self, const char ch );
 DAO_DLL void DString_AppendWChar( DString *self, const wchar_t ch );
 DAO_DLL void DString_AppendMBS( DString *self, const char *chs );
 DAO_DLL void DString_AppendWCS( DString *self, const wchar_t *chs );
-DAO_DLL void DString_AppendDataMBS( DString *self, const char *data, size_t n );
-DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *data,size_t n );
-DAO_DLL void DString_SubString( DString *self, DString *sub, size_t from, size_t n );
+DAO_DLL void DString_AppendDataMBS( DString *self, const char *data, size_t count );
+DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *data,size_t count );
+DAO_DLL void DString_SubString( DString *self, DString *sub, size_t from, size_t count );
 
 DAO_DLL size_t DString_Find( DString *self, DString *chs, size_t start );
-DAO_DLL size_t DString_RFind( DString *self, DString *chs, size_t start );
 DAO_DLL size_t DString_FindMBS( DString *self, const char *ch, size_t start );
-DAO_DLL size_t DString_RFindMBS( DString *self, const char *ch, size_t start );
 DAO_DLL size_t DString_FindChar( DString *self, char ch, size_t start );
 DAO_DLL size_t DString_FindWChar( DString *self, wchar_t ch, size_t start );
+/* Backward searching: */
+DAO_DLL size_t DString_RFind( DString *self, DString *chs, size_t start );
+DAO_DLL size_t DString_RFindMBS( DString *self, const char *ch, size_t start );
 DAO_DLL size_t DString_RFindChar( DString *self, char ch, size_t start );
 
 DAO_DLL DString* DString_Copy( DString *self );
+
+/* Assign/Copy "right" to "left" */
 DAO_DLL void DString_Assign( DString *left, DString *right );
+
+/* Compare and return -1, 0, or 1:
+ * if "left" is found to be less than, equal to or greater than "right": */
 DAO_DLL int  DString_Compare( DString *left, DString *right );
 
 DAO_DLL DaoList* DaoList_New();
@@ -823,7 +863,7 @@ DAO_DLL DValue DaoList_Front( DaoList *self );
 DAO_DLL DValue DaoList_Back( DaoList *self );
 DAO_DLL DValue DaoList_GetItem( DaoList *self, int pos );
 
-/* return 0 if seccessful, 1 if failed: */
+/* The following functions return 0 if seccessful, 1 if failed: */
 DAO_DLL int DaoList_SetItem( DaoList *self, DValue item, int pos );
 DAO_DLL int DaoList_Insert( DaoList *self, DValue item, int pos );
 DAO_DLL int DaoList_PushFront( DaoList *self, DValue item );
@@ -856,19 +896,38 @@ DAO_DLL int  DaoTuple_Size( DaoTuple *self );
 DAO_DLL void   DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );
 DAO_DLL DValue DaoTuple_GetItem( DaoTuple *self, int pos );
 
+/* Create a numeric array with specified numeric type:
+ * which can be DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE or DAO_COMPLEX. */
 DAO_DLL DaoArray* DaoArray_New( int numtype );
 DAO_DLL int  DaoArray_NumType( DaoArray *self );
 DAO_DLL void DaoArray_SetNumType( DaoArray *self, short numtype );
+/* Get the count of elements in the array: */
 DAO_DLL int  DaoArray_Size( DaoArray *self );
+/* Get number of dimensions (2 for vector and matrix): */
 DAO_DLL int  DaoArray_DimCount( DaoArray *self );
+/* Get the size of the given dimension: */
 DAO_DLL int   DaoArray_SizeOfDim( DaoArray *self, int d );
+/* Get the shape as an array of sizes for each dimension: */
 DAO_DLL void  DaoArray_GetShape( DaoArray *self, size_t *dims );
+/* Check the array if it has the specified shape: */
 DAO_DLL int DaoArray_HasShape( DaoArray *self, size_t *dims, int D );
-DAO_DLL int   DaoArray_GetFlatIndex( DaoArray *self, size_t *index );
+
+/* Compute the raw/flat index from multiple indices.
+ * "indices" is expected to contain the same number of indeces 
+ * as the array's number of dimensions. */
+DAO_DLL int   DaoArray_GetFlatIndex( DaoArray *self, size_t *indices );
+
+/* Resize to a vector with "N" elements: */
 DAO_DLL void  DaoArray_ResizeVector( DaoArray *self, int N );
+/* Resize to a array with specified shape: */
 DAO_DLL void  DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
+/* Reshape to a array with specified shape:
+ * return 0 if the array contains different number of elements
+ * from the expected number of element in the target shape;
+ * otherwise, reshaping is done and return 1. */
 DAO_DLL int DaoArray_Reshape( DaoArray *self, size_t *dims, int D );
 
+/* Get raw data as a vector, type conversion may be performed: */
 DAO_DLL signed char* DaoArray_ToByte( DaoArray *self );
 DAO_DLL short*  DaoArray_ToShort( DaoArray *self );
 DAO_DLL int*    DaoArray_ToInt( DaoArray *self );
@@ -884,15 +943,18 @@ DAO_DLL int**    DaoArray_GetMatrixI( DaoArray *self, int row );
 DAO_DLL float**  DaoArray_GetMatrixF( DaoArray *self, int row );
 DAO_DLL double** DaoArray_GetMatrixD( DaoArray *self, int row );
 
-DAO_DLL void  DaoArray_FromByte( DaoArray *self );
-DAO_DLL void  DaoArray_FromShort( DaoArray *self );
-DAO_DLL void  DaoArray_FromInt( DaoArray *self );
-DAO_DLL void  DaoArray_FromFloat( DaoArray *self );
-DAO_DLL void  DaoArray_FromDouble( DaoArray *self );
-DAO_DLL void  DaoArray_FromUByte( DaoArray *self );
-DAO_DLL void  DaoArray_FromUShort( DaoArray *self );
-DAO_DLL void  DaoArray_FromUInt( DaoArray *self );
+/* Re-interprete the raw data as bytes, and convert them to
+ * the current numeric type of the array: */
+DAO_DLL void  DaoArray_FromByte( DaoArray *self ); /* as bytes */
+DAO_DLL void  DaoArray_FromShort( DaoArray *self ); /* as shorts */
+DAO_DLL void  DaoArray_FromInt( DaoArray *self ); /* as ints */
+DAO_DLL void  DaoArray_FromFloat( DaoArray *self ); /* as floats */
+DAO_DLL void  DaoArray_FromDouble( DaoArray *self ); /* as doubles */
+DAO_DLL void  DaoArray_FromUByte( DaoArray *self ); /* as unsigned bytes */
+DAO_DLL void  DaoArray_FromUShort( DaoArray *self ); /* as unsigned shorts */
+DAO_DLL void  DaoArray_FromUInt( DaoArray *self ); /* as unsigned ints */
 
+/* Set data from vector or matrix: */
 DAO_DLL void  DaoArray_SetVectorB( DaoArray *self, char* vec, int N );
 DAO_DLL void  DaoArray_SetVectorS( DaoArray *self, short* vec, int N );
 DAO_DLL void  DaoArray_SetVectorI( DaoArray *self, int* vec, int N );
@@ -910,6 +972,11 @@ DAO_DLL void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, int N );
 DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
+/* Check if "self" is a function or overloaded functions that can be called as:
+ *     func( p[0], ..., p[n] )
+ * Or,
+ *     o->func( p[0], ..., p[n] )
+ * If yes, return the best matched function; otherwise return NULL. */
 DAO_DLL DaoMethod* DaoMethod_Resolve( DaoMethod *self, DValue *o, DValue *p[], int n );
 
 DAO_DLL DValue DaoObject_GetField( DaoObject *self, const char *name );
@@ -983,9 +1050,18 @@ DAO_DLL DaoVmProcess* DaoContext_CurrentProcess( DaoContext *self );
 DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 
 DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
+
+/* Compile source codes in "src", with substitution of escape chars in strings, if rpl != 0 */
 DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+/* Evaluate source codes in "src", with substitution of escape chars in strings, if rpl != 0 */
 DAO_DLL int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+
 /* f: function to be called, one of DaoMetaRoutine, DaoRoutine and DaoFunction: */
+/* Try to call "f" called as:
+ *     f( p[0], ..., p[n] )
+ * Or,
+ *     o->f( p[0], ..., p[n] )
+ * Return 1 if successful, otherwise return 0. */
 DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoMethod *f, DValue *o, DValue *p[], int n );
 DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
 DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );

@@ -893,7 +893,7 @@ static void REFL_NS( DaoContext *ctx, DValue *p[], int N )
 	}else if( p[0]->t == DAO_CLASS ){
 		res.v.ns = p[0]->v.klass->classRoutine->nameSpace;
 	}else if( p[0]->t == DAO_METAROUTINE ){
-		res.v.ns = p[0]->v.metaRoutine->space;
+		res.v.ns = p[0]->v.mroutine->space;
 	}else if( p[0]->t == DAO_ROUTINE || p[0]->t == DAO_FUNCTION ){
 		res.v.ns = p[0]->v.routine->nameSpace;
 	}else{
@@ -1178,7 +1178,7 @@ static void REFL_Routine( DaoContext *ctx, DValue *p[], int N )
 	DValue item = daoNullValue;
 	int i;
 	if( N ==1 ){ // XXX
-		DaoMetaRoutine *rout = p[0]->v.metaRoutine;
+		DaoMetaRoutine *rout = p[0]->v.mroutine;
 		list = DaoContext_PutList( ctx );
 		if( p[0]->t != DAO_METAROUTINE ){
 			DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );

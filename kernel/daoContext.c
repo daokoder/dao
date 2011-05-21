@@ -4221,7 +4221,7 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 	params = parbuf;
 	npar = n;
 	if( caller.t == DAO_METAROUTINE ){
-		DaoMetaRoutine *mroutine = caller.v.metaRoutine;
+		DaoMetaRoutine *mroutine = caller.v.mroutine;
 		rout = DRoutine_Resolve( (DaoBase*)mroutine, selfpar, params, npar, DVM_CALL );
 	}else if( caller.t == DAO_ROUTINE || caller.t == DAO_FUNCTION ){
 		rout = (DRoutine*)caller.v.routine;
@@ -4298,7 +4298,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		DaoContext_TryTailCall( self, vmc, ctx );
 		DaoVmProcess_PushContext( self->process, ctx );
 	}else if( caller.t == DAO_METAROUTINE ){
-		mroutine = caller.v.metaRoutine;
+		mroutine = caller.v.mroutine;
 		rout = DRoutine_Resolve( (DaoBase*)mroutine, selfpar, params, npar, codemode );
 		if( rout == NULL ){
 			rout2 = (DRoutine*) caller.v.routine;
@@ -4666,7 +4666,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 				if( rout->routHost != klass->objType ) DValue_Clear( dest );
 			}
 			if( dest->t == DAO_METAROUTINE ){
-				DaoMetaRoutine_Add( dest->v.metaRoutine, (DRoutine*)newRout );
+				DaoMetaRoutine_Add( dest->v.mroutine, (DRoutine*)newRout );
 			}else{
 				DValue_Move( value, klass->cstData->data+id, NULL );
 			}
@@ -4860,7 +4860,7 @@ InvalidField:
 			id = LOOKUP_ID( node->value.pSize );
 			dest = klass->cstData->data + id;
 			if( dest->t == DAO_METAROUTINE ){
-				DaoMetaRoutine_Add( dest->v.metaRoutine, (DRoutine*)newRout );
+				DaoMetaRoutine_Add( dest->v.mroutine, (DRoutine*)newRout );
 			}
 			continue;
 InvalidMethod:
