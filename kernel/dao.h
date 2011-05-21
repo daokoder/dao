@@ -185,14 +185,14 @@ enum DaoNameSpaceOption
 	/* automatically make variable declared outside {} global, for interactive mode */
 	DAO_NS_AUTO_GLOBAL = (1<<0)
 };
-/* Execution options, combinatable by | */
+/* Execution options, combinable by | */
 enum DaoExecOption
 {
 	DAO_EXEC_HELP      = (1<<0), /* -h, --help:       print this help information; */
 	DAO_EXEC_VINFO     = (1<<1), /* -v, --version:    print version information; */
 	DAO_EXEC_DEBUG     = (1<<2), /* -d, --debug:      run in debug mode; */
 	DAO_EXEC_SAFE      = (1<<3), /* -s, --safe:       run in safe mode; */
-	DAO_EXEC_INTERUN   = (1<<4), /* -i, --ineractive: run in interactive mode; */
+	DAO_EXEC_INTERUN   = (1<<4), /* -i, --interactive: run in interactive mode; */
 	DAO_EXEC_LIST_BC   = (1<<5), /* -l, --list-bc:    print compiled bytecodes; */
 	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:    compile to bytecodes;(TODO) */
 	DAO_EXEC_INCR_COMP = (1<<7), /* -n, --incr-comp:  incremental compiling; */
@@ -313,7 +313,7 @@ struct DValue
 		DLong           *l; /* long */
 		DString         *s; /* string */
 		DEnum           *e; /* enum */
-		DaoBase         *p; /* pointer to one of the follow structs */
+		DaoBase         *p; /* pointer to one of the following structs */
 		DaoArray        *array;
 		DaoList         *list;
 		DaoMap          *map;
@@ -912,10 +912,10 @@ DAO_DLL void  DaoArray_GetShape( DaoArray *self, size_t *dims );
 /* Check the array if it has the specified shape: */
 DAO_DLL int DaoArray_HasShape( DaoArray *self, size_t *dims, int D );
 
-/* Compute the raw/flat index from multiple indices.
- * "indices" is expected to contain the same number of indeces 
+/* Compute the raw/flat index from multiple indexes.
+ * "indexes" is expected to contain the same number of indexes 
  * as the array's number of dimensions. */
-DAO_DLL int   DaoArray_GetFlatIndex( DaoArray *self, size_t *indices );
+DAO_DLL int   DaoArray_GetFlatIndex( DaoArray *self, size_t *indexes );
 
 /* Resize to a vector with "N" elements: */
 DAO_DLL void  DaoArray_ResizeVector( DaoArray *self, int N );
@@ -943,7 +943,7 @@ DAO_DLL int**    DaoArray_GetMatrixI( DaoArray *self, int row );
 DAO_DLL float**  DaoArray_GetMatrixF( DaoArray *self, int row );
 DAO_DLL double** DaoArray_GetMatrixD( DaoArray *self, int row );
 
-/* Re-interprete the raw data as bytes, and convert them to
+/* Re-interpret the raw data as bytes, and convert them to
  * the current numeric type of the array: */
 DAO_DLL void  DaoArray_FromByte( DaoArray *self ); /* as bytes */
 DAO_DLL void  DaoArray_FromShort( DaoArray *self ); /* as shorts */
@@ -1057,7 +1057,7 @@ DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString 
 DAO_DLL int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
 
 /* f: function to be called, one of DaoMetaRoutine, DaoRoutine and DaoFunction: */
-/* Try to call "f" called as:
+/* Try to call "f" as:
  *     f( p[0], ..., p[n] )
  * Or,
  *     o->f( p[0], ..., p[n] )
@@ -1096,7 +1096,7 @@ DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
    types that are cross-used in parameter lists
    (e.g. type A appears in the parameter list of B's methods,
    and type B appears in the parameter list of A's methods),
-   should be wrapd using this function.
+   should be wrapped using this function.
    return the number of failed wrapping.
  */
 DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
