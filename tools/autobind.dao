@@ -4569,7 +4569,8 @@ routine SortFiles( files : list<string>, dir='', subdir='', mod='' )
 }
 
 routine main( inputfiles : string, wrap_name='', lang='c', fixing='',
-del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include='' )
+del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include='',
+onload='DaoOnLoad' )
 {
 	if( lang == 'cpp' ){
 		constNumbers.append( ('', 'DAO_INTEGER', 'false', '0', 0) );
@@ -5005,7 +5006,7 @@ del_tests='', dir_input='', dir_output='', dir_inc='', subdir_input='', include=
 		fout_source.writeln( '\tNULL\n}\n;' );
 	}
 	
-	fout_source.writeln( 'int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )\n{' );
+	fout_source.writef( 'int %s( DaoVmSpace *vms, DaoNameSpace *ns )\n{\n', onload );
 	if( hasNameSpace ) fout_source.writeln( '  DaoNameSpace *ns2;' );
 	fout_source.write( '  DaoTypeBase *typers[', user_types.size()+1, '];\n' );
 	fout_source.write( '  const char *aliases[', nalias, '];\n' );
