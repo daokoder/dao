@@ -50,6 +50,8 @@ struct DaoParser
 	int parStart;
 	int parEnd;
 
+	int curToken;
+
 	DArray  *tokens;
 	DArray  *partoks;
 	DMap    *comments; /* <int,DString*> */
