@@ -840,6 +840,7 @@ CallEntry:
 	printf( "VM process: %p\n", self );
 	printf("==================================================\n");
 #endif
+	DaoRoutine_PrintCode( routine, self->vmSpace->stdStream );
 
 	self->stopit = 0;
 	vmc = vmcBase + id;

@@ -23,12 +23,12 @@ struct DaoInode
 	unsigned short  a, b, c; /* register ids for operands */
 	unsigned short  level; /* lexical level */
 	unsigned short  line; /* line number in source file */
-	unsigned int    first;
-	unsigned short  middle;
-	unsigned short  last;
+	unsigned int    first; /* index of the first token of the expression */
+	unsigned short  middle; /* the middle token, relative to "first" */
+	unsigned short  last; /* the last token, relative to "first" */
 
-	int id;
-	int extra;
+	int index; /* index of the instruction */
+	int unused; /* number of unused instructions before this one */
 
 	DaoInode *jumpTrue;
 	DaoInode *jumpFalse;
@@ -122,7 +122,8 @@ struct DaoParser
 	short defined;
 	short error;
 	short parsed;
-	DArray *scoping; /* <size_t> */
+	DArray *scopeOpenings; /* <DaoInode*> */
+	DArray *scopeClosings; /* <DaoInode*> */
 	DArray *errors;
 	DArray *bindtos;
 	DArray *uplocs;

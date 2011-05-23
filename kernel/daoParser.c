@@ -164,7 +164,7 @@ static void DaoInode_Print( DaoInode *self )
 {
 	const char *name = getOpcodeName( self->code );
 	static const char *fmt = "%3i: %-8s : %5i, %5i, %5i;  [%3i] %9p %9p %9p, %s\n";
-	printf( fmt, self->id, name, self->a, self->b, self->c, self->line,
+	printf( fmt, self->index, name, self->a, self->b, self->c, self->line,
 			self, self->jumpTrue, self->jumpFalse, "" );
 }
 static void DString_AppendToken( DString *self, DaoToken *token )
@@ -204,7 +204,8 @@ DaoParser* DaoParser_New()
 	self->varFunctional = DHash_New(D_STRING,0);
 	self->initTypes = DMap_New(0,0);
 
-	self->scoping = DArray_New(0);
+	self->scopeOpenings = DArray_New(0);
+	self->scopeClosings = DArray_New(0);
 	self->errors = DArray_New(D_TOKEN);
 	self->decoFuncs = DArray_New(0);
 	self->decoParams = DArray_New(0);
@@ -256,7 +257,8 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->routCompilable );
 	DArray_Delete( self->switchMaps );
 	DArray_Delete( self->enumTypes );
-	DArray_Delete( self->scoping );
+	DArray_Delete( self->scopeOpenings );
+	DArray_Delete( self->scopeClosings );
 	DArray_Delete( self->errors );
 	DArray_Delete( self->regLines );
 	DArray_Delete( self->regRefers );
@@ -279,7 +281,7 @@ static void DaoParser_PrintCodes( DaoParser *self )
 	DaoInode *it = self->vmcFirst;
 	int i = 0;
 	while( it ){
-		it->id = i ++;
+		it->index = i ++;
 		DaoInode_Print( it );
 		it = it->next;
 	}
@@ -341,7 +343,7 @@ static void DaoParser_PushFrontCode( DaoParser *self, DaoVmCodeX *vmc )
 	self->vmcFirst = node;
 	self->vmcCount ++;
 }
-static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
+static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last );
 static void DaoParser_PushBackCode( DaoParser *self, DaoVmCodeX *vmc )
 {
@@ -1673,17 +1675,17 @@ static void DaoVmCode_Set( DaoVmCodeX *self, ushort_t code, ushort_t a, ushort_t
 	self->middle = mid;
 	self->last = last;
 }
-static void DaoParser_AddCode( DaoParser *self, ushort_t code,
+static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last )
 {
 	int line = 0;
 	if( first < self->tokens->size ) line = self->tokens->items.pToken[first]->line;
 	else if( self->tokens->size ) line = self->tokens->items.pToken[self->tokens->size-1]->line;
 	if( self->vmcLast->line != line && (self->vmSpace->options & DAO_EXEC_IDE) )
-		DaoParser_AddCode2( self, DVM_NOP, 0,0,0, first, mid, last );
-	DaoParser_AddCode2( self, code, a, b, c, first, mid, last );
+		return DaoParser_AddCode2( self, DVM_NOP, 0,0,0, first, mid, last );
+	return DaoParser_AddCode2( self, code, a, b, c, first, mid, last );
 }
-static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
+static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last )
 {
 	DaoInode *node = DaoInode_New( self );
@@ -1717,223 +1719,7 @@ static void DaoParser_AddCode2( DaoParser *self, ushort_t code,
 	self->vmcLast = node;
 	self->vmcCount ++;
 
-#if 0
-	printf( "stack:\n" );
-	it2 = top;
-	while( it2 ){
-		DaoInode_Print( it2 );
-		it2 = it2->below;
-	}
-	DaoParser_PrintCodes( self );
-#endif
-
-	switch( code ){
-	case DVM_FOR : case DVM_SWITCH : case DVM_DO :
-	case DVM_IF : case DVM_TRY :
-		node->below = top, self->vmcTop = node;
-		break;
-	case DVM_ELIF :
-		if( tc != DVM_IF && tc != DVM_ELIF ) goto ErrorSyntax;
-		node->below = top, self->vmcTop = node;
-		break;
-	case DVM_ELSE :
-		if( tc != DVM_IF && tc != DVM_ELIF ) goto ErrorSyntax;
-		if( tc == DVM_ELSE ) goto ErrorSyntax;
-		node->below = top, self->vmcTop = node;
-		break;
-	case DVM_WHILE :
-		node->below = top, self->vmcTop = node;
-		while( it->code != DVM_WHILE_AUX ) it = it->below;
-		node->jumpTrue = it;
-		break;
-	case DVM_CASETAG :
-		node->below = top, self->vmcTop = node;
-		while( it && it->code != DVM_SWITCH ) it = it->below;
-		/* in IDE mode, DVM_NOP could be added in between DVM_SWITCH and DVM_LBRA */
-		/* if( it == NULL || it->next->code != DVM_LBRA ) goto ErrorSyntax; */
-		node->jumpTrue = it;
-
-		map = self->switchMaps->items.pMap[ it->b ];
-		key = DaoParser_GetVariable( self, LOOKUP_BIND_LC( node->a ) );
-		DMap_Insert( map, & key, node );
-		break;
-	case DVM_DEFAULT :
-		node->below = top, self->vmcTop = node;
-		while( it && it->code != DVM_SWITCH ) it = it->below;
-		/* if( it == NULL || it->next->code != DVM_LBRA ) goto ErrorSyntax; */
-		node->jumpTrue = it;
-		it->jumpTrue = node; /* default */
-		break;
-	case DVM_BREAK :
-	case DVM_SKIP :
-		while( it != self->vmcBase ){
-			if( it->code == DVM_DO || it->code == DVM_FOR
-					|| it->code == DVM_WHILE || it->code == DVM_SWITCH ){
-				node->jumpTrue = it;
-				break;
-			}
-			it = it->below;
-		}
-		if( node->jumpTrue == NULL ) goto ErrorSyntax;
-		break;
-	case DVM_WHILE_AUX :
-	case DVM_FOR_AUX :
-	case DVM_FOR_STEP :
-	case DVM_LBRA :
-	case DVM_LBRA2 :
-	case DVM_SCBEGIN :
-		node->below = top, self->vmcTop = node;
-		break;
-	case DVM_UNTIL :
-		node->jumpTrue = self->vmcTop;
-		self->vmcTop->jumpFalse = node;
-		self->vmcTop = self->vmcTop->below;
-		break;
-	case DVM_RBRA2 :
-		while( top->code != DVM_LBRA2 ) top = top->below;
-		self->vmcTop = top->below;
-		break;
-	case DVM_SCEND :
-		while( top->code != DVM_SCBEGIN || top->a != node->a ) top = top->below;
-		top->jumpTrue = node;
-		break;
-	case DVM_RBRA :
-		node->c = code; /* required by DaoRoutine_OptimizeCSE() */
-		while( top->code != DVM_LBRA ) top = top->below;
-		if( top->code != DVM_LBRA ) goto ErrorSyntax;
-		top->jumpTrue = node;
-		node->jumpTrue = top;
-		self->vmcTop = it = top->below;
-		switch( it->code ){ /* for break/skip */
-		case DVM_FOR : case DVM_WHILE : case DVM_SWITCH :
-			self->vmcTop = it->below; break;
-		default : break;
-		}
-
-		if( it->code == DVM_FOR ){
-			aux = it;
-			while( aux->code != DVM_FOR_AUX ){
-				if( aux->code == DVM_FOR_STEP ) step = aux;
-				aux = aux->below;
-			}
-			if( step ){
-				it2 = it->prev;
-				it->prev = step->prev;
-				step->prev->next = it;
-				it2->next = node;
-				node->prev->next = step;
-				step->prev = node->prev;
-				node->prev = it2;
-				aux->jumpTrue = step;
-			}else{
-				aux->jumpTrue = aux;
-			}
-			it->jumpTrue = aux;
-		}else if( it->code == DVM_SWITCH ){
-			int case_mode = DAO_CASE_ORDERED;
-			min = max = 0;
-			count = 0;
-			map = self->switchMaps->items.pMap[ it->b ];
-			for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
-				key = cst[iter->value.pInode->a];
-				if( key.t == DAO_INTEGER ){
-					if( count == 0 ) min = max = key.v.i;
-					if( min > key.v.i ) min = key.v.i;
-					if( max < key.v.i ) max = key.v.i;
-					count ++;
-				}
-			}
-			if( count == map->size ){
-				case_mode = DAO_CASE_INTS;
-				if( count > 0.75 * (max - min) ){
-					for(i=min+1; i<max; i++){
-						key.v.i = i;
-						if( DMap_Find( map, &key ) ==NULL ) DMap_Insert( map, &key, NULL );
-					}
-					case_mode = DAO_CASE_TABLE;
-				}
-			}
-			it->c = map->size;
-			aux = it;
-			for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
-				it2 = DaoInode_New( self );
-				it2->code = DVM_CASE;
-				if( iter->value.pInode ){
-					it2->a = iter->value.pInode->a;
-					it2->jumpTrue = iter->value.pInode;
-					it2->first = iter->value.pInode->first;
-					it2->middle = iter->value.pInode->middle;
-					it2->last = iter->value.pInode->last;
-				}else{
-					it2->a = DRoutine_AddConstValue( routine, *iter->key.pValue );
-					it2->jumpFalse = node;
-				}
-				/* mark integer jump table */
-				if( aux == it ) it2->c = case_mode;
-				it2->prev = aux;
-				aux->next = it2;
-				it2->next = top;
-				top->prev = it2;
-				aux = it2;
-			}
-			cst = routine->routConsts->data;
-		}
-		switch( it->code ){
-		case DVM_DO :
-			it->jumpTrue = node;
-			node->jumpTrue = it;
-			break;
-		case DVM_FOR :
-			it->jumpFalse = node;
-			node->jumpTrue = it;
-			while( it->code != DVM_FOR_AUX ) it = it->below;
-			break;
-		case DVM_WHILE :
-			it->jumpFalse = node;
-			node->jumpTrue = it;
-			while( it->code != DVM_WHILE_AUX ) it = it->below;
-			break;
-		case DVM_SWITCH :
-			it->jumpFalse = node;
-			node->jumpTrue = it;
-			if( it->jumpTrue == NULL ) it->jumpTrue = node; /* default */
-			break;
-		case DVM_IF : case DVM_ELIF : case DVM_ELSE :
-			it->jumpFalse = node;
-			while( it->code ==DVM_IF || it->code ==DVM_ELIF || it->code ==DVM_ELSE ){
-				it->jumpTrue = node;
-				if( it->code == DVM_IF ) break;
-				it = it->below;
-			}
-			break;
-		case DVM_TRY : case DVM_RESCUE :
-			it->jumpFalse = node;
-			while( it->code ==DVM_TRY || it->code ==DVM_RESCUE ){
-				it->jumpTrue = node;
-				if( it->code == DVM_TRY ) break;
-				it = it->below;
-			}
-			break;
-		default : node->jumpTrue = node; break;
-		}
-		break;
-	case DVM_RETRY :
-	case DVM_RAISE :
-		while( it && it->code != DVM_TRY ) it = it->below;
-		if( code == DVM_RETRY && it == NULL ) goto ErrorSyntax;
-		node->jumpTrue = it;
-		break;
-	case DVM_RESCUE :
-		if( tc != DVM_TRY && tc != DVM_RESCUE ) goto ErrorSyntax;
-		node->below = top, self->vmcTop = node;
-		break;
-	default : break;
-	}
-	return;
-ErrorSyntax:
-	DString_SetMBS( self->mbs, getOpcodeName( code ) );
-	DaoParser_Error( self, DAO_STATEMENT_OUT_OF_CONTEXT, self->mbs );
-	return;
+	return node;
 }
 static void DaoParser_AddNullCode( DaoParser *self, int first, int last )
 {
@@ -2364,50 +2150,96 @@ ErrorParamParsing:
 	return 0;
 }
 
-static void DaoParser_AddScope( DaoParser *self, int type, int start )
+static DaoInode* DaoParser_AddScope( DaoParser *self, int code, DaoInode *closing )
 {
-	int mid = (self->tokens->items.pToken[start]->type != DTOK_LCB);
-	if( mid ) mid += start;
+	printf( "DaoParser_AddScope()\n" );
+	DaoInode *node = DaoParser_AddCode( self, code, 0, 0, 0, 0, 0, 0 );
 	self->lexLevel ++;
-	DArray_Append( self->scoping, type );
+	DArray_Append( self->scopeOpenings, node );
+	DArray_Append( self->scopeClosings, closing );
 	DArray_Append( self->localVarMap, self->lvm );
 	DArray_Append( self->localCstMap, self->lvm );
-	if( type != DVM_UNUSED2 ) DaoParser_AddCode( self, DVM_LBRA, 0, 0, 0, start, mid, 0 );
+	node->jumpFalse = closing;
+	return node;
 }
-static int DaoParser_DelScope( DaoParser *self, int type, int tokid )
+static int DaoParser_AddScope2( DaoParser *self, int at )
 {
-	DaoToken *tok = self->tokens->items.pToken[tokid];
-	int mid = (tok->type != DTOK_RCB);
-	if( mid ) mid += tokid;
+	DaoToken **tokens = self->tokens->items.pToken;
+	int token = at < self->tokens->size ? tokens[at]->name : 0;
+	int code = token == DTOK_LCB ? DVM_LBRA : DVM_NOP;
+	DaoParser_AddScope( self, code, NULL );
+	return token == DTOK_LCB;
+}
+static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
+{
+	//printf( "DaoParser_DelScope() %i %li\n", self->lexLevel, self->scopeOpenings->size );
+	//DaoParser_PrintCodes( self );
+	DaoInode *back = (DaoInode*) DArray_Back( self->scopeOpenings );
 	self->lexLevel --;
-	if( self->lexLevel < 0 || DArray_TopInt( self->scoping ) != type ){
-		DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, tok->string );
-		return 0;
+	if( self->lexLevel < 0 || self->scopeOpenings->size == 0 ) return 0;
+	if( back->code == DVM_LOOP ){
+		DaoInode *branch = back->jumpFalse; /* condition test */
+		branch->jumpTrue = branch->next; // XXX
+		node = DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, 0, 0, 0 );
+		node->jumpTrue = back;
+		node = DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, 0, 0, 0 );
+		branch->jumpFalse = node;
+	}else if( back->code == DVM_BRANCH ){
+		DaoInode *branch = back->jumpFalse; /* condition test */
+		node = DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, 0, 0, 0 );
+		node->jumpTrue = node;
+		node = DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, 0, 0, 0 );
+		branch->jumpTrue = branch->next; // XXX
+		branch->jumpFalse = node;
+		node->jumpFalse = branch; /* remember where the branch come from, for if-else */
+	}else if( back->code == DVM_LBRA ){
+		node = DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, 0, 0, 0 );
+	}
+	back = (DaoInode*) DArray_Back( self->scopeClosings );
+	if( back && back->next ){
+		back->prev->next = back->next;
+		back->next->prev = back->prev;
+		back->prev = self->vmcLast;
+		back->next = NULL;
+		self->vmcLast->next = back;
+		self->vmcLast = back;
 	}
 	DArray_Pop( self->localVarMap );
 	DArray_Pop( self->localCstMap );
-	DArray_Pop( self->scoping );
-	if( type != DVM_UNUSED2 ) DaoParser_AddCode( self, DVM_RBRA, 0,0,0, tokid, mid, 0 );
+	DArray_Pop( self->scopeOpenings );
+	DArray_Pop( self->scopeClosings );
+	//printf( "after\n" );
+	//DaoParser_PrintCodes( self );
 	return 1;
 }
-static int DaoParser_CompleteScope( DaoParser *self, int tokid )
+static int DaoParser_CompleteScope( DaoParser *self, int at )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
-	int tc, tk = (tokid+1 < self->tokens->size) ? tokens[tokid+1]->name : 0;
-	while( self->scoping->size >0 ){
-		dint type = (dint)DArray_Top( self->scoping );
-		if( type == DVM_UNUSED ){
-			if( DaoParser_DelScope( self, DVM_UNUSED, tokid ) == 0 ) return 0;
-		}else if( type == DVM_UNUSED2 ){
-			if( DaoParser_DelScope( self, DVM_UNUSED2, tokid ) == 0 ) return 0;
-		}else{
-			return 1;
-		}
-		tc = self->vmcTop->code;
-		if( tk == DKEY_ELSE && tc == DVM_IF ) return 1;
-		if( tk == DKEY_RESCUE && (tc == DVM_TRY || tc == DVM_RESCUE) ) return 1;
+	int token, next = at + 1;
+	while( next < self->tokens->size && tokens[next]->name == DTOK_SEMCO ) next += 1;
+	token = next < self->tokens->size ? tokens[next]->name : 0;
+	printf( "DaoParser_CompleteScope() %i %s\n", token, token ? tokens[at+1]->string->mbs : "" );
+	while( self->scopeOpenings->size >0 ){
+		DaoInode *back = (DaoInode*) DArray_Back( self->scopeOpenings );
+		DaoInode *close = (DaoInode*) DArray_Back( self->scopeClosings );
+		if( back->code == DVM_LBRA ) break;
+		if( close ) printf( "close = %i %i\n", close->a, token );
+		if( close != NULL && close->a == token ) break;
+		if( DaoParser_DelScope( self, NULL ) ==0 ) return 0;
 	}
+	DaoParser_PrintCodes( self );
 	return 1;
+}
+static DaoInode* DaoParser_GetBreakableScope( DaoParser *self )
+{
+	int i;
+	for(i=(int)self->scopeOpenings->size-1; i>=0; i--){
+		DaoInode *opening = self->scopeOpenings->items.pInode[i];
+		DaoInode *closing = self->scopeClosings->items.pInode[i];
+		printf( "%2i %9p %9p\n", i, opening, closing );
+		if( closing && closing->b ) return opening;
+	}
+	return NULL;
 }
 static void DaoParser_MakeCodes( DaoParser *self, int start, int end, DString *output )
 {
@@ -3597,6 +3429,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 	DaoInode *front = self->vmcFirst;
 	DaoInode *back = self->vmcLast;
+	DaoInode *inode, *opening, *closing;
 
 	DString *mbs = self->mbs;
 	DString *str;
@@ -3888,29 +3721,52 @@ DecoratorError:
 		case DKEY_WHILE :
 			if( self->vmcTop->code == DVM_DO ){
 				if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
-				if( self->scoping->size >0 && DArray_TopInt( self->scoping ) == DVM_DO )
-					if( DaoParser_DelScope( self, DVM_DO, start ) == 0 ) return 0;
+				//if( self->scopeOpening->size >0 && DArray_TopInt( self->scopeOpening ) == DVM_DO )
+				//XXX	if( DaoParser_DelScope( self, DVM_DO, start ) == 0 ) return 0;
 				if( ( rbrack = DaoParser_MakeWhileLogic( self, DVM_DOWHILE, start ) ) <0 ) return 0;
 			}else{
-				DaoParser_AddCode( self, DVM_WHILE_AUX, 0, 0, 0, start, 0,0 );
+				inode = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, start, 0,0 );
+				inode = DaoParser_AddScope( self, DVM_UNUSED, inode );
 				if( ( rbrack = DaoParser_MakeWhileLogic( self, DVM_WHILE, start ) ) <0 ) return 0;
 			}
 			start = rbrack+1;
 			continue;
 		case DKEY_IF :
+			/* Add an auxiliary scope to simplify the handling of branchings.
+			 * Such scoping is marked by an opening inode and a closing inode.
+			 * The closing inode will be moved to the place where the scope is closed. 
+			 *
+			 * closing->a holds the token name that will allow the scope to be extended.
+			 * closing->b indicates if scope is break-able (loop/switch): 0 (no), 1 (yes).
+			 *
+			 * In this case, the "else" keyword will always extend the scope of an "if" block.
+			 * Any other token will end the "if" block, and the closing node will be
+			 * moved to this place to serve a proper branching target! */
+
+			closing = DaoParser_AddCode( self, DVM_LABEL, DKEY_ELSE, 0, 0, start, 0,0 );
+			inode = DaoParser_AddScope( self, DVM_UNUSED, closing );
 			if( ( rbrack = DaoParser_MakeWhileLogic( self, DVM_IF, start ) ) <0 ) return 0;
 			start = rbrack+1;
 			continue;
 		case DKEY_ELSE :
+			if( self->scopeClosings->size ==0 ) goto InvalidIfElse;
+			inode = self->scopeClosings->items.pInode[ self->scopeClosings->size-1 ];
+			/* If not following "if" or "else if", abort with error: */
+			if( inode == NULL || inode->a != DKEY_ELSE ) goto InvalidIfElse;
+			self->vmcLast->prev->jumpTrue = inode; /* vmcLast->prev should be GOTO */
+
 			if( tokens[start+1]->name == DKEY_IF ){
 				if( ( rbrack = DaoParser_MakeWhileLogic( self, DVM_ELIF, start+1 ) ) <0 ) return 0;
 				start = rbrack+1;
 			}else{
-				DaoParser_AddCode( self, DVM_ELSE, 0, self->vmcCount, DVM_ELSE, start, 0,0 );
-				if( tokens[start+1]->name != DTOK_LCB) DaoParser_AddScope( self, DVM_UNUSED, start );
-				start += 1;
+				inode->a = DAO_NOKEY2;
+				start += 1 + DaoParser_AddScope2( self, start+1 );
 			}
 			continue;
+InvalidIfElse:
+			DaoParser_PrintCodes( self );
+			printf( "invalid if-else\n" ); // XXX
+			return 0;
 		case DKEY_FOR :
 			start = DaoParser_MakeForLoop( self, start, to );
 			if( start < 0 ){
@@ -3920,14 +3776,12 @@ DecoratorError:
 			continue;
 		case DKEY_DO :
 			DaoParser_AddCode( self, DVM_DO, 0, 0, 0, start, 0,0 );
-			if( tokens[start+1]->name != DTOK_LCB )
-				DaoParser_AddScope( self, DVM_DO, start );
-			start ++;
+			start += 1 + DaoParser_AddScope2( self, start+1 );
 			continue;
 		case DKEY_UNTIL :
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
-			if( self->scoping->size >0 && DArray_TopInt( self->scoping ) == DVM_DO )
-				if( DaoParser_DelScope( self, DVM_DO, start ) == 0 ) return 0;
+			//if( self->scoping->size >0 && DArray_TopInt( self->scoping ) == DVM_DO )
+			//XXX	if( DaoParser_DelScope( self, DVM_DO, start ) == 0 ) return 0;
 			if( (rbrack = DaoParser_MakeWhileLogic( self, DVM_UNTIL, start )) <0 ) return 0;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start = rbrack+1;
@@ -4017,22 +3871,25 @@ DecoratorError:
 			start += 2;
 			continue;
 		case DKEY_TRY :
+			inode = DaoParser_AddCode( self, DVM_LABEL, 0, 0, DKEY_RESCUE, start, 0,0 );
+			inode = DaoParser_AddScope( self, DVM_UNUSED, inode );
 			DaoParser_AddCode( self, DVM_TRY, 0, self->vmcCount, DVM_TRY, start,0,0 );
-			if( tokens[start+1]->name != DTOK_LCB) DaoParser_AddScope( self, DVM_UNUSED, start );
-			start += 1;
+			start += 1 + DaoParser_AddScope2( self, start+1 );
 			continue;
 		case DKEY_RETRY :
 			DaoParser_AddCode( self, DVM_RETRY, 0, self->vmcCount, DVM_RETRY, start,0,0 );
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start += 1;
 			continue;
-		case DKEY_BREAK :
-			DaoParser_AddCode( self, DVM_BREAK, 0, self->vmcCount, DVM_BREAK, start,0,0 );
-			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
-			start += 1;
-			continue;
-		case DKEY_SKIP : case DKEY_CONTINUE :
-			DaoParser_AddCode( self, DVM_SKIP, 0, self->vmcCount, DVM_SKIP, start,0,0 );
+		case DKEY_BREAK : case DKEY_SKIP : case DKEY_CONTINUE :
+			inode = DaoParser_AddCode( self, DVM_GOTO, 0, 0, tki, start,0,0 );
+			opening = DaoParser_GetBreakableScope( self );
+			if( opening == NULL ){
+				DaoParser_PrintCodes( self );
+				printf( "invalid break\n" ); //XXX
+				return 0;
+			}
+			inode->jumpTrue = tki == DKEY_BREAK ? opening->jumpFalse : opening->next;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start += 1;
 			continue;
@@ -4095,12 +3952,14 @@ DecoratorError:
 						}
 					}
 				}
-				DaoParser_AddScope( self, DVM_LBRA, start );
+				DaoParser_AddScope2( self, start );
 				start++;
 				continue;
 			}
 		}else if( tokens[start]->name == DTOK_RCB ){
-			if( DaoParser_DelScope( self, DVM_LBRA, start ) == 0 ) return 0;
+			//if( DaoParser_DelScope( self, DVM_LBRA, start ) == 0 ) return 0;
+			//if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
+			if( DaoParser_DelScope( self, NULL ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start++;
 			continue;
@@ -4123,11 +3982,13 @@ DecoratorError:
 
 			DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
 			start = end + 1;
+			//if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			continue;
 		}
 		if( ptok->type != DTOK_IDENTIFIER && ptok->type != DTOK_LB ){
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
@@ -4148,6 +4009,7 @@ DecoratorError:
 					return 0;
 				}
 				if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+				//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 				if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 				start = end + 1;
 				continue;
@@ -4252,6 +4114,7 @@ DecoratorError:
 					comma = -1;
 				}
 			}
+			//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
@@ -4261,6 +4124,7 @@ DecoratorError:
 		if( tki != DTOK_IDENTIFIER ){ /* statement */
 			self->warnAssn = 0;
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			start = end + 1;
 			continue;
@@ -4270,6 +4134,7 @@ DecoratorError:
 			self->warnAssn = 0;
 			DaoParser_DeclareVariable( self, tokens[start], 0, NULL );
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			DaoParser_CheckStatementSeparation( self, end, to );
 			start = end + 1;
@@ -4475,6 +4340,7 @@ DecoratorError:
 				DaoParser_PopCodes( self, front, back );
 				DaoParser_PopRegisters( self, self->locRegCount - oldcount );
 			}
+			//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			DaoParser_CheckStatementSeparation( self, end, to );
 			start = end + 1;
@@ -4482,6 +4348,7 @@ DecoratorError:
 		}else{
 			self->warnAssn = 0;
 			if( DaoParser_MakeArithTree( self, start, end, & cst, -1, 0 ) <0 ) return 0;
+			//if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
 			DaoParser_CheckStatementSeparation( self, end, to );
 			start = end + 1;
@@ -4493,7 +4360,7 @@ DecoratorError:
 void DaoParser_SetupBranching( DaoParser *self )
 {
 	DaoInode *it, *it2;
-	int rm, id;
+	int id, unused;
 	if( self->vmcLast->code != DVM_RETURN ){
 		int first = self->vmcLast->first + self->vmcLast->middle + self->vmcLast->last + 1;
 		if( self->vmSpace->options & DAO_EXEC_IDE ){
@@ -4503,46 +4370,32 @@ void DaoParser_SetupBranching( DaoParser *self )
 		DaoParser_AddCode( self, DVM_RETURN, 0, 0, 0, first,0,0 );
 	}
 
+	id = 0;
 	it = self->vmcFirst;
-	rm = 0, id = 0;
 	while( it ){
-		it->id = id ++;
+		it->index = id ++;
 		it = it->next;
 	}
 	it = self->vmcFirst;
 	   DaoParser_PrintCodes( self );
 	/*
 	 */
-	while( it ){
-		if( it->code == DVM_SKIP ){
-			int code = it->jumpTrue->code;
-			if( code == DVM_FOR ){
-				it->jumpTrue = it->jumpTrue->jumpTrue->jumpTrue;
-				it->b = it->jumpTrue->id + 1;
-			}else if( code == DVM_WHILE || code == DVM_SWITCH ){
-				it->jumpTrue = it->jumpTrue->jumpTrue;
-				it->b = it->jumpTrue->id + 1;
-			}else if( code == DVM_DO ){
-				it->b = it->jumpTrue->jumpTrue->id + 1;
-				/* needed for updating ::b after removing unused codes: */
-				it->jumpTrue = it->jumpTrue->jumpTrue;
-			}
-			it->code = DVM_GOTO;
-		}
-		it = it->next;
-	}
 	it = self->vmcFirst;
 	while( it ){
 		/*
 		DaoInode_Print( it );
 		*/
-		it->extra = 0;
+		it->unused = 0;
 		switch( it->code ){
+		case DVM_NOP :
+			it->code = DVM_UNUSED;
+			break;
 		case DVM_GOTO :
-			if( it->b == it->id + 1 ) it->code = DVM_UNUSED;
+			it->b = it->jumpTrue->index;
+			if( it->b == it->index || it->b == it->index + 1 ) it->code = DVM_UNUSED;
 			break;
 		case DVM_SWITCH :
-			it->b = it->jumpTrue->id + 1; /* default */
+			it->b = it->jumpTrue->index + 1; /* default */
 			break;
 		case DVM_CASE :
 			if( it->jumpTrue ){
@@ -4551,25 +4404,25 @@ void DaoParser_SetupBranching( DaoParser *self )
 					it->jumpTrue = it2;
 					it2 = it2->next;
 				}
-				it->b = it2->id;
+				it->b = it2->index;
 			}else{
-				it->b = it->jumpFalse->id + 1; /* filled cases */
+				it->b = it->jumpFalse->index + 1; /* filled cases */
 				it->jumpTrue = it->jumpFalse;
 			}
+			break;
+		case DVM_LABEL :
+		case DVM_LOOP :
+		case DVM_BRANCH :
+			it->code = DVM_UNUSED;
 			break;
 		case DVM_IF :
 		case DVM_ELIF :
 			it2 = it->jumpFalse;
 			it->code = DVM_TEST;
-			it->b = it2->id + 1;
-			it2->code = DVM_GOTO;
-			it2->b = it->jumpTrue->id + 1;
-
-			it2->jumpTrue = it->jumpTrue;
-			it->jumpTrue = it2;
+			it->b = it2->index;
 			break;
 		case DVM_DO :
-			it->code = DVM_NOP;
+			it->code = DVM_UNUSED;
 			break;
 		case DVM_FOR :
 		case DVM_WHILE :
@@ -4578,28 +4431,16 @@ void DaoParser_SetupBranching( DaoParser *self )
 			}else{
 				it->code = DVM_TEST;
 			}
-			it->b = it->jumpFalse->id + 1;
-			it->jumpFalse->code = DVM_GOTO;
-			it->jumpFalse->b = it->jumpTrue->id + 1;
-
-			it->jumpFalse->jumpTrue = it->jumpTrue;
-			it->jumpTrue = it->jumpFalse;
+			it->b = it->jumpFalse->index;
 			break;
 		case DVM_UNTIL :
 			it->code = DVM_TEST;
-			it->b = it->jumpTrue->id;
-			break;
-		case DVM_BREAK :
-			it->code = DVM_GOTO;
-			it->b = it->jumpTrue->jumpFalse->id + 1;
-			it->jumpTrue = it->jumpTrue->jumpFalse;
-			break;
-		case DVM_SKIP :
+			it->b = it->jumpTrue->index;
 			break;
 		case DVM_CASETAG :
 		case DVM_DEFAULT :
 			it->code = DVM_GOTO;
-			it->b = it->jumpTrue->jumpFalse->id + 1;
+			it->b = it->jumpTrue->jumpFalse->index + 1;
 			it->jumpTrue = it->jumpTrue->jumpFalse;
 			id = it->next->code;
 			if( id == DVM_CASETAG || id == DVM_DEFAULT ) it->code = DVM_UNUSED;
@@ -4609,9 +4450,9 @@ void DaoParser_SetupBranching( DaoParser *self )
 			if( it->code == DVM_TRY ) it->a = it->b = 0;
 			it->code = DVM_CRRE;
 			it->jumpFalse->code = DVM_GOTO;
-			it->jumpFalse->b = it->jumpTrue->id + 1;
+			it->jumpFalse->b = it->jumpTrue->index + 1;
 			it->jumpFalse->jumpTrue = it->jumpTrue;
-			it->c = it->jumpFalse->id + 1;
+			it->c = it->jumpFalse->index + 1;
 			it->jumpTrue = it->jumpFalse;
 			break;
 		case DVM_RAISE :
@@ -4619,11 +4460,11 @@ void DaoParser_SetupBranching( DaoParser *self )
 			break;
 		case DVM_RETRY :
 			it->code = DVM_GOTO;
-			it->b = it->jumpTrue->id;
+			it->b = it->jumpTrue->index;
 			break;
 		case DVM_SCBEGIN :
 			it->code = DVM_GOTO;
-			it->b = it->jumpTrue->id + 1;
+			it->b = it->jumpTrue->index + 1;
 			break;
 		case DVM_SCEND :
 			it->code = DVM_RETURN;
@@ -4633,12 +4474,11 @@ void DaoParser_SetupBranching( DaoParser *self )
 			break;
 		case DVM_LBRA :
 		case DVM_LBRA2 :
-			/* NOP for checking cancellation */
-			it->code = it->prev->code == DVM_TEST ? DVM_NOP : DVM_UNUSED;
+			it->code = DVM_UNUSED;
 			break;
 		case DVM_RBRA :
 		case DVM_RBRA2 :
-		case DVM_ELSE : case DVM_WHILE_AUX :
+		case DVM_ELSE : 
 		case DVM_FOR_STEP : case DVM_FOR_AUX :
 			it->code = DVM_UNUSED;
 			break;
@@ -4646,28 +4486,27 @@ void DaoParser_SetupBranching( DaoParser *self )
 		}
 		it = it->next;
 	}
+	   DaoParser_PrintCodes( self );
 	/* DaoParser_PrintCodes( self ); */
 	it = self->vmcFirst;
+	unused = 0;
 	while( it ){
 		/* DaoInode_Print( it ); */
-		if( it->prev ) it->extra = it->prev->extra;
-		if( it->code >= DVM_UNUSED ) it->extra ++;
+		it->unused = unused;
+		if( it->code >= DVM_UNUSED ) unused += 1;
 		it = it->next;
 	}
 	it = self->vmcFirst;
 	while( it ){
-		it->id -= it->extra;
 		switch( it->code ){
-		case DVM_GOTO : case DVM_TEST :
-		case DVM_SWITCH : case DVM_CASE :
-			it->b -= it->jumpTrue->extra;
-			break;
-		case DVM_CRRE :
-			if( it->c ) it->c -= it->jumpTrue->extra;
+		case DVM_GOTO : it->b -= it->jumpTrue->unused; break;
+		case DVM_TEST : it->b -= it->jumpFalse->unused; break;
+		case DVM_SWITCH : 
+		case DVM_CASE : it->b -= it->jumpTrue->unused; break;
+		case DVM_CRRE : if( it->c ) it->c -= it->jumpTrue->unused;
 			break;
 		default : break;
 		}
-		if( it->code >= DVM_UNUSED ) rm ++;
 		it = it->next;
 	}
 	DArray_Clear( self->vmCodes );
@@ -5326,7 +5165,7 @@ int DaoParser_MakeForLoop( DaoParser *self, int start, int end )
 
 	if( (rb < 0 || rb >= end) && in < 0 ) return -1;
 
-	DaoParser_AddScope( self, DVM_UNUSED2, start );
+	DaoParser_AddScope( self, DVM_UNUSED, NULL );
 	if( in >= 0 ){
 		int k, L, elem, semic, regItemt, reg;
 		int first;
@@ -5409,9 +5248,9 @@ int DaoParser_MakeForLoop( DaoParser *self, int start, int end )
 		start = rb+1;
 		if( tokens[rb+1]->name == DTOK_LCB ){
 			start ++;
-			DArray_Append( self->scoping, DVM_LBRA );
+			//XXX DArray_Append( self->scoping, DVM_LBRA );
 		}else{
-			DArray_Append( self->scoping, DVM_UNUSED );
+			//XXX DArray_Append( self->scoping, DVM_UNUSED );
 		}
 		DArray_Delete( regIter0 );
 		DArray_Delete( regItem0 );
@@ -5523,13 +5362,12 @@ CleanUp:
 	DaoParser_AddCode( self, DVM_FOR, reg1, 0, forever, start, semic1, rb );
 
 AddScope:
-
-	if( tokens[rb+1]->name != DTOK_LCB ) DaoParser_AddScope( self, DVM_UNUSED, rb );
-	return rb + 1;
+	return rb + DaoParser_AddScope2( self, rb+1 );
 }
-int DaoParser_MakeWhileLogic( DaoParser *self, ushort_t opcode, int start )
+int DaoParser_MakeWhileLogic( DaoParser *self, ushort_t code, int start )
 {
 	DValue value;
+	DaoInode *node;
 	DaoToken **tokens = self->tokens->items.pToken;
 	int lb = start, rb = -1;
 	int from = self->vmcCount;
@@ -5546,11 +5384,13 @@ int DaoParser_MakeWhileLogic( DaoParser *self, ushort_t opcode, int start )
 
 	/*for(int i=lb;i<=rb;i++) printf( "%s  ", tokChr[i].c_str() ); printf("\n"); */
 
-	DaoParser_AddScope( self, DVM_UNUSED2, start );
+	node = DaoParser_AddScope( self, code == DVM_WHILE ? DVM_LOOP : DVM_BRANCH, NULL );
+	node->c = code;
+	//DaoParser_AddScope( self, DVM_UNUSED2, start );
 	reg = DaoParser_MakeArithTree( self, lb+2, rb-1, & cst, -1, 0 );
 	if( reg < 0 ) return -1;
-	if( opcode == DVM_DOWHILE ){
-		opcode = DVM_UNTIL;
+	if( code == DVM_DOWHILE ){
+		code = DVM_UNTIL;
 		DaoParser_AddCode( self, DVM_NOT, reg, 0, self->locRegCount, lb+2, 0, rb-1 );
 		reg = self->locRegCount;
 		DaoParser_PushRegister( self );
@@ -5560,15 +5400,15 @@ int DaoParser_MakeWhileLogic( DaoParser *self, ushort_t opcode, int start )
 	if( cst && 0 ){ /* XXX */
 		value = DaoParser_GetVariable( self, cst );
 		if( value.t && DValue_GetDouble( value ) ){
-			DaoParser_AddCode( self, opcode+2, reg, from, opcode, start, 0, rb );
+			DaoParser_AddCode( self, code+2, reg, from, code, start, 0, rb );
 		}else{
-			DaoParser_AddCode( self, opcode+1, reg, from, opcode, start, 0, rb );
+			DaoParser_AddCode( self, code+1, reg, from, code, start, 0, rb );
 		}
 	}else{
-		DaoParser_AddCode( self, opcode, reg, from, opcode, start, 0, rb );
+		DaoParser_AddCode( self, code, reg, from, code, start, 0, rb );
 	}
-	if( opcode !=DVM_UNTIL && rb+1<self->tokens->size && tokens[rb+1]->name != DTOK_LCB )
-		DaoParser_AddScope( self, DVM_UNUSED, rb );
+	node->jumpFalse = self->vmcLast;
+	if( code !=DVM_UNTIL ) rb += DaoParser_AddScope2( self, rb+1 );
 
 	return rb;
 }
@@ -5787,7 +5627,8 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 
 		/* ->{ block return expressions } */
 		if( tokens[start]->name != DTOK_LCB ) goto InvalidFunctionalSyntax;
-		DaoParser_AddScope( self, DVM_FUNCT, start );
+		//DaoParser_AddScope( self, DVM_FUNCT, start );
+		DaoParser_AddScope( self, DVM_FUNCT, NULL );
 		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, right );
 		if( rb < 0 ) goto InvalidFunctional;
 		islast = rb+1 >= right || (tokens[rb+1]->name != DTOK_ARROW);
@@ -5883,7 +5724,8 @@ static int DaoParser_MakeFunctional( DaoParser *self, int *left, int rb, int rig
 			}
 			DArray_Append( fregs, p0+i );
 		}
-		DaoParser_DelScope( self, DVM_FUNCT, rb );
+		//DaoParser_DelScope( self, DVM_FUNCT, rb );
+		DaoParser_DelScope( self, NULL );
 	}
 	if( N > 1 ){
 		if( tki != DKEY_MAP && tki != DKEY_ARRAY && tki != DKEY_LIST ) goto InvalidFunctional;
@@ -7267,7 +7109,8 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 	self->hostType = klass->objType;
 	self->isClassBody += 1;
 	self->isDynamicClass += 1;
-	DaoParser_AddScope( self, DVM_UNUSED, start );
+	//DaoParser_AddScope( self, DVM_UNUSED, start );
+	DaoParser_AddScope( self, DVM_UNUSED, NULL );
 	if( DaoParser_ParseCodeSect( self, start, end )==0 ){
 		GC_IncRC( klass );
 		GC_DecRC( klass );
@@ -7989,12 +7832,13 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end,
 	printf("MakeArithTree(): start = %i; end = %i;\n", start, end );
 	for( i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs); printf("\n");
 #if 0
-#endif
 	self->curToken = start;
 	DaoBasicAST ast = DaoParser_ParseExpression( self );
 	int reg = ast.regid;
 	*cst = ast.konst;
-	//int reg = DaoParser_MakeArithTree2( self, start, end, cst, regFix, state );
+#else
+	int reg = DaoParser_MakeArithTree2( self, start, end, cst, regFix, state );
+#endif
 	if( reg <0 && state ==0 ) DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, end, 0 );
 	return reg;
 }

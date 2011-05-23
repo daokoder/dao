@@ -838,7 +838,7 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_GE ]     = doper( DAO_OPER_GE,       0, 0, 7 );
 	daoArithOper[ DTOK_TEQ ]    = doper( DAO_OPER_TEQ,      0, 0, 7 );
 	daoArithOper[ DTOK_TISA ]   = doper( DAO_OPER_TISA,     0, 0, 7 );
-	daoArithOper[ DTOK_MUL ]    = doper( DAO_OPER_MUL,      0, 0, 4 );
+	daoArithOper[ DTOK_MUL ]    = doper( DAO_OPER_MUL,      0, 0, 3 );
 	daoArithOper[ DTOK_DIV ]    = doper( DAO_OPER_DIV,      0, 0, 3 );
 	daoArithOper[ DTOK_MOD ]    = doper( DAO_OPER_MOD,      0, 0, 3 );
 	daoArithOper[ DTOK_POW ]    = doper( DAO_OPER_POW,      0, 0, 2 );

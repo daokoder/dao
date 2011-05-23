@@ -611,7 +611,8 @@ void DaoRoutine_Compile( DaoRoutine *self )
 				}
 				DArray_Swap( self->parser->tokens, tokens );
 				DArray_Clear( self->parser->vmCodes );
-				DArray_Clear( self->parser->scoping );
+				DArray_Clear( self->parser->scopeOpenings );
+				DArray_Clear( self->parser->scopeClosings );
 				DaoParser_ClearCodes( self->parser );
 				self->parser->lexLevel = 0;
 				self->parser->parsed = 0;

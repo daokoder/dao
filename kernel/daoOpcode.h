@@ -392,7 +392,9 @@ enum DaoOpcodeExtra
 	DVM_IF ,
 	DVM_ELIF ,
 	DVM_ELSE ,
-	DVM_WHILE_AUX , /* B=jump_to_exit/break_loop, C=jump_to_skip_loop */
+	DVM_LABEL ,
+	DVM_LOOP ,
+	DVM_BRANCH ,
 	DVM_WHILE ,
 	DVM_FOR_AUX , /* B=jump_to_exit/break_loop, C=jump_to_skip_loop */
 	DVM_FOR_STEP ,
@@ -402,8 +404,6 @@ enum DaoOpcodeExtra
 	DVM_DOWHILE ,
 	DVM_CASETAG ,
 	DVM_DEFAULT ,
-	DVM_BREAK ,
-	DVM_SKIP ,
 	DVM_LBRA ,
 	DVM_RBRA ,
 	DVM_LBRA2 ,
@@ -412,7 +412,6 @@ enum DaoOpcodeExtra
 	DVM_RETRY ,
 	DVM_RAISE ,
 	DVM_RESCUE ,
-	DVM_LABEL ,
 	DVM_SCBEGIN ,
 	DVM_SCEND ,
 	DVM_ENUM ,
