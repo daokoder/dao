@@ -414,13 +414,6 @@ enum DaoOpcodeExtra
 	DVM_RESCUE ,
 	DVM_SCBEGIN ,
 	DVM_SCEND ,
-	DVM_ENUM ,
-	/* XXX: global a = "abc"; a.toupper();
-	   generate DVM_SETVG_AUX after a call invoked by a global object,
-	   remove it in typing system if the object is not a number or string.
-	 */
-	DVM_SETVG_AUX , 
-	DVM_REFER ,
 	DVM_UNUSED ,
 	DVM_UNUSED2
 };

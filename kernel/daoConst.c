@@ -136,9 +136,6 @@ static const char *const vmOperNames[] = {
 	"rescue" ,
 	"scbegin" ,
 	"scend" ,
-	"enum" ,
-	"setvg_aux" ,
-	"refer" ,
 	"unused",
 	"unused2"
 };

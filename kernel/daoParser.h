@@ -35,7 +35,6 @@ struct DaoInode
 
 	DaoInode *prev;
 	DaoInode *next;
-	DaoInode *below;
 };
 DaoInode* DaoInode_New();
 
