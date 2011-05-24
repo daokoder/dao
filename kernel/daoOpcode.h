@@ -396,8 +396,6 @@ enum DaoOpcodeExtra
 	DVM_LOOP ,
 	DVM_BRANCH ,
 	DVM_DO ,
-	DVM_CASETAG ,
-	DVM_DEFAULT ,
 	DVM_LBRA ,
 	DVM_RBRA ,
 	DVM_LBRA2 ,

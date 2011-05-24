@@ -118,8 +118,6 @@ static const char *const vmOperNames[] = {
 	"loop",
 	"branch",
 	"do" ,
-	"casetag" ,
-	"default" ,
 	"lbra" ,
 	"rbra" ,
 	"lbra2" ,

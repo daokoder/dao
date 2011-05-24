@@ -1582,9 +1582,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			node = DMap_Next( defs, node );
 		}
 
-#if 0
 		DaoTokens_AnnotateCode( self->source, vmc2, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, mbs->mbs );
+#if 0
 #endif
 		switch( code ){
 		case DVM_NOP :

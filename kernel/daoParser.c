@@ -2139,7 +2139,62 @@ ErrorParamParsing:
 	DString_Delete( mbs );
 	return 0;
 }
-
+static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
+{
+	DaoInode *closing = opening->jumpFalse;
+	DaoInode *node = opening->jumpTrue;
+	DaoInode *it2, *aux;
+	DMap *map;
+	DNode *iter;
+	DValue key, *cst = self->routine->routConsts->data;
+	int i, min, max, count, direct = 0;
+	min = max = 0;
+	count = 0;
+	map = self->switchMaps->items.pMap[ node->b ];
+	for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
+		key = cst[iter->value.pInode->a];
+		if( key.t == DAO_INTEGER ){
+			if( count == 0 ) min = max = key.v.i;
+			if( min > key.v.i ) min = key.v.i;
+			if( max < key.v.i ) max = key.v.i;
+			count ++;
+		}
+	}
+	if( count == map->size && count > 0.75 * (max - min) ){
+		for(i=min+1; i<max; i++){
+			key.v.i = i;
+			if( DMap_Find( map, &key ) ==NULL ) DMap_Insert( map, &key, NULL );
+		}
+		direct = 1;
+	}
+	node->c = map->size;
+	aux = node;
+	for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
+		it2 = DaoInode_New( self );
+		it2->code = DVM_CASE;
+		if( iter->value.pInode ){
+			it2->a = iter->value.pInode->a;
+			it2->jumpTrue = iter->value.pInode;
+			it2->first = iter->value.pInode->first;
+			it2->middle = iter->value.pInode->middle;
+			it2->last = iter->value.pInode->last;
+		}else{
+			it2->a = DRoutine_AddConstValue( (DRoutine*)self->routine, *iter->key.pValue );
+			it2->jumpTrue = node->jumpFalse; /* jump to default */
+		}
+		it2->prev = aux;
+		it2->next = aux->next;
+		aux->next->prev = it2;
+		aux->next = it2;
+		aux = it2;
+	}
+	/* mark integer jump table */
+	node->next->c = direct ? DAO_CASE_TABLE : DAO_CASE_ORDERED;
+	printf( "..................setup 1\n" );
+	DaoParser_PrintCodes( self );
+	DaoInode_Print( node );
+	printf( "..................setup 2: cases %i\n", map->size );
+}
 static DaoInode* DaoParser_AddScope( DaoParser *self, int code, DaoInode *closing )
 {
 	printf( "DaoParser_AddScope()\n" );
@@ -2169,7 +2224,11 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 	self->lexLevel --;
 	if( self->lexLevel < 0 || self->scopeOpenings->size == 0 ) return 0;
 	printf( "here: %p %p %i %i\n", opening, closing, opening->code, DVM_LOOP );
-	if( opening->code == DVM_BRANCH ){
+	if( opening->code == DVM_BRANCH && closing->c == DVM_SWITCH ){
+		DaoInode *branch = opening->jumpTrue; /* condition test */
+		DaoParser_SetupSwitch( self, opening );
+		if( branch->jumpFalse == NULL ) branch->jumpFalse = closing;
+	}else if( opening->code == DVM_BRANCH ){
 		DaoInode *branch = opening->jumpTrue; /* condition test */
 		branch->jumpFalse = closing;
 	}else if( opening->code == DVM_LOOP ){
@@ -3787,13 +3846,45 @@ InvalidIfElse:
 			if( rb < 0 ) return 0;
 			reg1 = DaoParser_MakeArithTree( self, start+2, rb-1, & cst, -1, 0 );
 			if( reg1 < 0 ) return 0;
+			if( rb + 1 > to || tokens[rb+1]->name != DTOK_LCB ){
+				printf( "expecting {\n" ); //XXX
+				return 0;
+			}
 			switchMap = DMap_New(D_VALUE,0);
+			closing = DaoParser_AddCode( self, DVM_LABEL, 0, 1, DVM_SWITCH, start, 0,0 );
+			opening = DaoParser_AddScope( self, DVM_BRANCH, closing );
 			DaoParser_AddCode( self, DVM_SWITCH, reg1, self->switchMaps->size, 0, start,0,rb );
+			opening->jumpTrue = self->vmcLast;
 			DArray_Append( self->switchMaps, switchMap );
 			DMap_Delete( switchMap );
-			start = rb + 1;
+			start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
 			continue;
 		case DKEY_CASE :
+		case DKEY_DEFAULT :
+			opening = closing = NULL;
+			k = self->scopeOpenings->size;
+			if( k >= 2 && self->scopeOpenings->items.pInode[k-1]->code == DVM_LBRA ){
+				opening = self->scopeOpenings->items.pInode[k-2];
+				closing = self->scopeClosings->items.pInode[k-2];
+			}
+			if( closing == NULL || closing->c != DVM_SWITCH ){
+				printf( "case used out of context\n" ); //XXX
+				DaoParser_PrintCodes( self );
+				return 0;
+			}
+			inode = DaoParser_AddCode( self, DVM_GOTO, 0,0,0, start, 0, 0 );
+			inode->jumpTrue = closing;
+			if( tki == DKEY_DEFAULT ){
+				if( start + 1 > to || tokens[start+1]->name != DTOK_COLON ){
+					printf( "expecting :\n" ); //XXX
+					return 0;
+				}
+				DaoParser_AddCode( self, DVM_NOP, cst, 0, 0, start, 0, 0 );
+				opening->jumpFalse = self->vmcLast;
+				start += 2;
+				continue;
+			}
+			switchMap = self->switchMaps->items.pMap[ opening->jumpTrue->b ];
 			colon = DaoParser_FindOpenToken( self, DTOK_COLON, start, -1, 1 );
 			comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start, colon, 0 );
 			last = start + 1;
@@ -3832,7 +3923,7 @@ InvalidIfElse:
 					v1 = DaoParser_GetVariable( self, c1 );
 					v2 = DaoParser_GetVariable( self, c2 );
 					tuple = DaoNameSpace_MakePair( ns, v1, v2 );
-					cst = DaoRoutine_AddConst( routine, tuple );
+					cst = LOOKUP_BIND_LC( DaoRoutine_AddConst( routine, tuple ) );
 				}
 				if( ! cst ){
 					DaoParser_Error2( self, DAO_CASE_NOT_CONSTANT, last, comma-1, 0 );
@@ -3851,18 +3942,16 @@ InvalidIfElse:
 				   which is neccessary to properly setup switch table: */
 				DaoParser_PopCodes( self, front, back );
 				DaoParser_PopRegisters( self, self->locRegCount - oldcount );
-				DaoParser_AddCode( self, DVM_CASETAG, cst, 0, 0, last, 0, colon );
+				DaoParser_AddCode( self, DVM_NOP, cst, 0, 0, last, 0, colon );
+				value = DaoParser_GetVariable( self, LOOKUP_BIND_LC( cst ) );
+				printf( "case : %i %i\n", value.t, cst );
+				DMap_Insert( switchMap, & value, self->vmcLast );
 				last = comma + 1;
 				comma = DaoParser_FindOpenToken( self, DTOK_COMMA, last, colon, 0 );
 				if( comma < 0 ) comma = colon;
 			}
 			DaoParser_AddCode( self, DVM_UNUSED, 0, 0, 0, start,0,0 );
 			start = colon + 1;
-			continue;
-		case DKEY_DEFAULT :
-			DaoParser_AddCode( self, DVM_DEFAULT, 0, self->vmcCount,
-					tokens[start-1]->name == DTOK_COLON, start,0,0 );
-			start += 2;
 			continue;
 		case DKEY_TRY :
 			inode = DaoParser_AddCode( self, DVM_LABEL, 0, 0, DKEY_RESCUE, start, 0,0 );
@@ -3951,8 +4040,6 @@ InvalidIfElse:
 				continue;
 			}
 		}else if( tokens[start]->name == DTOK_RCB ){
-			//if( DaoParser_DelScope( self, DVM_LBRA, start ) == 0 ) return 0;
-			//if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			if( DaoParser_DelScope( self, NULL ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start++;
@@ -4394,20 +4481,10 @@ void DaoParser_SetupBranching( DaoParser *self )
 			if( it2 && it2->jumpTrue == it->jumpTrue ) it->code = DVM_UNUSED;
 			break;
 		case DVM_SWITCH :
-			it->b = it->jumpTrue->index + 1; /* default */
+			it->b = it->jumpFalse->index; /* default */
 			break;
 		case DVM_CASE :
-			if( it->jumpTrue ){
-				it2 = it->jumpTrue;
-				while( it2->code == DVM_CASETAG ){
-					it->jumpTrue = it2;
-					it2 = it2->next;
-				}
-				it->b = it2->index;
-			}else{
-				it->b = it->jumpFalse->index + 1; /* filled cases */
-				it->jumpTrue = it->jumpFalse;
-			}
+			it->b = it->jumpTrue->index;
 			break;
 		case DVM_LABEL :
 		case DVM_LOOP :
@@ -4419,14 +4496,6 @@ void DaoParser_SetupBranching( DaoParser *self )
 			it2 = it->jumpFalse;
 			it->code = DVM_TEST;
 			it->b = it2->index;
-			break;
-		case DVM_CASETAG :
-		case DVM_DEFAULT :
-			it->code = DVM_GOTO;
-			it->b = it->jumpTrue->jumpFalse->index + 1;
-			it->jumpTrue = it->jumpTrue->jumpFalse;
-			id = it->next->code;
-			if( id == DVM_CASETAG || id == DVM_DEFAULT ) it->code = DVM_UNUSED;
 			break;
 		case DVM_TRY :
 		case DVM_RESCUE :
@@ -4483,7 +4552,7 @@ void DaoParser_SetupBranching( DaoParser *self )
 		switch( it->code ){
 		case DVM_GOTO : it->b -= it->jumpTrue->unused; break;
 		case DVM_TEST : it->b -= it->jumpFalse->unused; break;
-		case DVM_SWITCH : 
+		case DVM_SWITCH : it->b -= it->jumpFalse->unused; break;
 		case DVM_CASE : it->b -= it->jumpTrue->unused; break;
 		case DVM_CRRE : if( it->c ) it->c -= it->jumpTrue->unused;
 			break;
