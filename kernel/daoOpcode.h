@@ -395,13 +395,7 @@ enum DaoOpcodeExtra
 	DVM_LABEL ,
 	DVM_LOOP ,
 	DVM_BRANCH ,
-	DVM_WHILE ,
-	DVM_FOR_AUX , /* B=jump_to_exit/break_loop, C=jump_to_skip_loop */
-	DVM_FOR_STEP ,
-	DVM_FOR ,
 	DVM_DO ,
-	DVM_UNTIL ,
-	DVM_DOWHILE ,
 	DVM_CASETAG ,
 	DVM_DEFAULT ,
 	DVM_LBRA ,
@@ -414,8 +408,7 @@ enum DaoOpcodeExtra
 	DVM_RESCUE ,
 	DVM_SCBEGIN ,
 	DVM_SCEND ,
-	DVM_UNUSED ,
-	DVM_UNUSED2
+	DVM_UNUSED
 };
 
 enum DaoMathFunct

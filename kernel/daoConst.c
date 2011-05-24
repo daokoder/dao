@@ -117,13 +117,7 @@ static const char *const vmOperNames[] = {
 	"label",
 	"loop",
 	"branch",
-	"while" ,
-	"for_aux" ,
-	"for_step" ,
-	"for" ,
 	"do" ,
-	"until" ,
-	"dowhile" ,
 	"casetag" ,
 	"default" ,
 	"lbra" ,
@@ -136,8 +130,7 @@ static const char *const vmOperNames[] = {
 	"rescue" ,
 	"scbegin" ,
 	"scend" ,
-	"unused",
-	"unused2"
+	"unused"
 };
 const char* getOpcodeName( int opc )
 {

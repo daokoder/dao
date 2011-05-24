@@ -63,7 +63,6 @@ struct DaoParser
 	DaoInode *vmcBase;
 	DaoInode *vmcFirst;
 	DaoInode *vmcLast;
-	DaoInode *vmcTop;
 	int vmcCount;
 
 	/* Stack of maps: mapping local variable names to virtual register ids at each level: */
