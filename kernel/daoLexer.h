@@ -167,7 +167,7 @@ enum DaoKeyNames
 	DKEY_TRY ,
 	DKEY_RETRY ,
 	DKEY_CATCH ,
-	DKEY_RESCUE ,
+	DKEY_RESCUE , // XXX remove???
 	DKEY_RAISE ,
 	DKEY_EACH ,
 	DKEY_REPEAT ,

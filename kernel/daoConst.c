@@ -112,7 +112,6 @@ static const char *const vmOperNames[] = {
 	"decr" ,
 	"comma" , 
 	"if" ,
-	"elif" ,
 	"else" ,
 	"label",
 	"loop",
@@ -123,9 +122,8 @@ static const char *const vmOperNames[] = {
 	"lbra2" ,
 	"rbra2" ,
 	"try" ,
-	"retry" ,
 	"raise" ,
-	"rescue" ,
+	"catch" ,
 	"scbegin" ,
 	"scend" ,
 	"unused"

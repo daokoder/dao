@@ -390,7 +390,6 @@ enum DaoOpcodeExtra
 	DVM_DECR ,
 	DVM_COMMA , 
 	DVM_IF ,
-	DVM_ELIF ,
 	DVM_ELSE ,
 	DVM_LABEL ,
 	DVM_LOOP ,
@@ -401,9 +400,8 @@ enum DaoOpcodeExtra
 	DVM_LBRA2 ,
 	DVM_RBRA2 ,
 	DVM_TRY ,
-	DVM_RETRY ,
 	DVM_RAISE ,
-	DVM_RESCUE ,
+	DVM_CATCH ,
 	DVM_SCBEGIN ,
 	DVM_SCEND ,
 	DVM_UNUSED
