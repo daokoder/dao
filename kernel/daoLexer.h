@@ -199,6 +199,7 @@ enum DaoKeyNames
 	DKEY_SQRT ,
 	DKEY_TAN ,
 	DKEY_TANH ,
+	DKEY__INIT , /* fake keyword */
 	DAO_NOKEY2
 };
 

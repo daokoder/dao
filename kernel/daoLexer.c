@@ -205,6 +205,7 @@ DIntStringPair dao_keywords[] =
 	{ 200, "sqrt" } ,
 	{ 200, "tan" } ,
 	{ 200, "tanh" } ,
+	{ 0, "#init" } ,
 	{ 0, NULL }
 };
 
@@ -799,8 +800,8 @@ void DaoInitLexTable()
 
 	memset( daoArithOper, 0, DAO_NOKEY2*sizeof(DOper) );
 
-	daoArithOper[ DTOK_INCR ]   = doper( DAO_OPER_INCR,     1, 1, 0 );
-	daoArithOper[ DTOK_DECR ]   = doper( DAO_OPER_DECR,     1, 1, 0 );
+	daoArithOper[ DTOK_INCR ]   = doper( DAO_OPER_INCR,     1, 0, 0 );
+	daoArithOper[ DTOK_DECR ]   = doper( DAO_OPER_DECR,     1, 0, 0 );
 	daoArithOper[ DTOK_ADD ]    = doper( DAO_OPER_ADD,      1, 0, 6 );
 	daoArithOper[ DTOK_SUB ]    = doper( DAO_OPER_SUB,      1, 0, 5 );
 	daoArithOper[ DTOK_NOT ]    = doper( DAO_OPER_NOT,      1, 0, 0 );
