@@ -809,7 +809,7 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_TILDE ]  = doper( DAO_OPER_TILDE,    1, 0, 0 );
 	daoArithOper[ DTOK_AMAND ]  = doper( DAO_OPER_BIT_AND,  1, 0, 1 );
 	daoArithOper[ DTOK_DOLLAR ] = doper( DAO_OPER_IMAGIN,   0, 1, 0 );
-	daoArithOper[ DTOK_ASSERT ] = doper( DAO_OPER_ASSERT,   0, 1, 10 );
+	daoArithOper[ DTOK_ASSERT ] = doper( DAO_OPER_ASSERT,   0, 0, 10 );
 	daoArithOper[ DTOK_FIELD ]  = doper( DAO_OPER_FIELD,    0, 0, 11 );
 	daoArithOper[ DTOK_ASSN ]   = doper( DAO_OPER_ASSN,     0, 0, 12 );
 	daoArithOper[ DTOK_CASSN ]  = doper( DAO_OPER_ASSN,     0, 0, 12 );
