@@ -534,7 +534,7 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_DOT ,
 	DTOK_AT , /* @ */
 	DTOK_AT2 , /* @@ */
-	DTOK_QUES ,
+	DTOK_QUERY ,
 	DTOK_DOLLAR ,
 	DTOK_TILDE ,
 	DTOK_NONE ,
@@ -820,7 +820,7 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_MODASN ] = doper( DAO_OPER_ASSN_MOD, 0, 0, 11 );
 	daoArithOper[ DTOK_ANDASN ] = doper( DAO_OPER_ASSN_AND, 0, 0, 11 );
 	daoArithOper[ DTOK_ORASN ]  = doper( DAO_OPER_ASSN_OR,  0, 0, 11 );
-	daoArithOper[ DTOK_QUES ]   = doper( DAO_OPER_IF,       0, 0, 10 );
+	daoArithOper[ DTOK_QUERY ]   = doper( DAO_OPER_IF,       0, 0, 10 );
 	daoArithOper[ DTOK_COLON ]  = doper( DAO_OPER_COLON,    0, 0, 9 );
 	daoArithOper[ DTOK_LSHIFT ] = doper( DAO_OPER_LLT,      0, 0, 1 );
 	daoArithOper[ DTOK_RSHIFT ] = doper( DAO_OPER_GGT,      0, 0, 1 );

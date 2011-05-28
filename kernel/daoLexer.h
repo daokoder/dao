@@ -54,7 +54,7 @@ enum DaoTokNames
 	DTOK_MUL , /* * */
 	DTOK_DIV , /* / */
 	DTOK_MOD , /* % */
-	DTOK_QUES , /* ? */
+	DTOK_QUERY , /* ? */
 	DTOK_ASSERT , /* ?? */
 	DTOK_AMAND , /* & */
 	DTOK_PIPE , /* | */
@@ -147,7 +147,7 @@ enum DaoKeyNames
 	DKEY_IN ,
 	DKEY_DO ,
 	DKEY_WHILE ,
-	DKEY_UNTIL ,
+	DKEY_UNTIL , // XXX remove???
 	DKEY_SWITCH ,
 	DKEY_CASE ,
 	DKEY_DEFAULT ,
