@@ -1259,13 +1259,14 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 
 void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max )
 {
-	DaoToken **tokens = self->items.pToken;
-	DaoToken *t1, *t2;
+	DaoToken *t1, *t2, **tokens;
 	int i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
 	int max2 = max/2;
 	if( m < 5 ) m = 5;
 	DString_Clear( annot );
+	if( self == NULL ) return; /* DaoRoutine::source could be null */
 	if( vmc.middle > vmc.last ) return;
+	tokens = self->items.pToken;
 	for(i=0; i<vmc.middle; i++){
 		k = i + vmc.first;
 		if( k >= self->size ) break;

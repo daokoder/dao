@@ -17,26 +17,6 @@
 #include"daoType.h"
 #include"daoLexer.h"
 
-struct DaoInode
-{
-	unsigned short  code; /* opcode */
-	unsigned short  a, b, c; /* register ids for operands */
-	unsigned short  level; /* lexical level */
-	unsigned short  line; /* line number in source file */
-	unsigned int    first; /* index of the first token of the expression */
-	unsigned short  middle; /* the middle token, relative to "first" */
-	unsigned short  last; /* the last token, relative to "first" */
-
-	int index; /* index of the instruction */
-	int unused; /* number of unused instructions before this one */
-
-	DaoInode *jumpTrue;
-	DaoInode *jumpFalse;
-
-	DaoInode *prev;
-	DaoInode *next;
-};
-DaoInode* DaoInode_New();
 
 struct DaoParser
 {

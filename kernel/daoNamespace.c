@@ -781,6 +781,8 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 	value.v.list = DaoList_New();
 	DaoNameSpace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
 
+	self->tempTypes = NULL;
+	self->tempModes = DString_New(1);
 	self->vmpEvalConst = DaoVmProcess_New(vms);
 	self->routEvalConst = DaoRoutine_New();
 	self->routEvalConst->routType = dao_routine;
@@ -831,6 +833,8 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	}
 	DaoList_Delete( self->argParams );
 
+	if( self->tempTypes ) dao_free( self->tempTypes );
+	DString_Delete( self->tempModes );
 	GC_DecRC( self->udfType1 );
 	GC_DecRC( self->udfType2 );
 	GC_DecRCs( self->varType );

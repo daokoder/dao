@@ -3196,7 +3196,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 	case DVM_MATRIX :
 		DaoContext_DoMatrix( ctx, vmc ); break;
 	case DVM_MATH :
-		DaoVM_DoMath( ctx, vmc, dC, *ctx->regValues[2] );
+		DaoVM_DoMath( ctx, vmc, dC, *ctx->regValues[1] );
 		break;
 	case DVM_CURRY :
 	case DVM_MCURRY :
@@ -3220,57 +3220,4 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 	/* avoid GC */
 	/* DVarray_Clear( ctx->regArray ); */
 	return value;
-}
-DValue DaoVmProcess_MakeEnumConst( DaoVmProcess *self, DaoVmCode *vmc, int n, DaoType *t )
-{
-	DaoType **tps = (DaoType**) dao_calloc(1,n*sizeof(DaoType*));
-	DaoContext *ctx = self->topFrame->context;
-	DValue cst;
-
-	ctx->regModes = (uchar_t*) dao_calloc(1,n*sizeof(uchar_t));
-	ctx->regTypes = tps;
-	ctx->regTypes[0] = t;
-	ctx->vmSpace = self->vmSpace;
-	ctx->vmc = vmc;
-	cst = DaoVmProcess_MakeConst( self );
-	dao_free( ctx->regModes );
-	ctx->regTypes = NULL;
-	ctx->regModes = NULL;
-	dao_free( tps );
-	return cst;
-}
-DValue DaoVmProcess_MakeArithConst( DaoVmProcess *self, ushort_t opc, DValue a, DValue b )
-{
-	int i;
-	DaoVmCode vmc = { 0, 1, 2, 0 };
-	DaoContext *ctx = self->topFrame->context;
-	DaoType *types[] = { NULL, NULL, NULL };
-	uchar_t  modes[] = { 0, 0, 0 };
-	DValue res;
-
-	vmc.code = opc;
-	if( opc == DVM_NAMEVA ){
-		vmc.a = DRoutine_AddConstValue( (DRoutine*)ctx->routine, a );
-	}
-
-	/* no need GC */
-	DVaTuple_Clear( ctx->regArray );
-#if 0
-	DVaTuple_Resize( ctx->regArray, 3, daoNullValue );
-	ctx->regValues = ctx->regArray->data;
-#endif
-	DVaTuple_Resize( ctx->regArray, 3, daoNullValue );
-	ctx->regValues = dao_realloc( ctx->regValues, 3 * sizeof(DValue*) );
-	for(i=0; i<3; i++) ctx->regValues[i] = ctx->regArray->data + i;
-
-	DValue_Copy( ctx->regValues[1], a );
-	DValue_Copy( ctx->regValues[2], b );
-	ctx->regTypes = types;
-	ctx->regModes = modes;
-	ctx->vmSpace = self->vmSpace;
-	ctx->vmc = & vmc;
-	res = DaoVmProcess_MakeConst( self );
-	ctx->regTypes = NULL;
-	ctx->regModes = NULL;
-	return res;
 }
