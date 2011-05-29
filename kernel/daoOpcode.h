@@ -385,20 +385,12 @@ typedef enum DaoOpcode DaoOpcode;
  */
 enum DaoOpcodeExtra
 {
-	DVM_IDX = 1000,
-	DVM_INCR ,
-	DVM_DECR ,
-	DVM_COMMA , 
-	DVM_IF ,
-	DVM_ELSE ,
-	DVM_LABEL ,
+	DVM_LABEL = 1000,
 	DVM_LOOP ,
 	DVM_BRANCH ,
 	DVM_DO ,
 	DVM_LBRA ,
 	DVM_RBRA ,
-	DVM_LBRA2 ,
-	DVM_RBRA2 ,
 	DVM_TRY ,
 	DVM_RAISE ,
 	DVM_CATCH ,

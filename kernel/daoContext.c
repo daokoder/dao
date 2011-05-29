@@ -2558,8 +2558,6 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.i = ! dC.v.i; break;
 		case DVM_UNMS : dC.v.i = - dC.v.i; break;
-		case DVM_INCR : dC.v.i ++; break;
-		case DVM_DECR : dC.v.i --; break;
 		default: break;
 		}
 		bl = DaoContext_SetValue( self, vmc->c, dC );
@@ -2567,8 +2565,6 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.f = ! dC.v.f; break;
 		case DVM_UNMS : dC.v.f = - dC.v.f; break;
-		case DVM_INCR : dC.v.f ++; break;
-		case DVM_DECR : dC.v.f --; break;
 		default: break;
 		}
 		bl = DaoContext_SetValue( self, vmc->c, dC );
@@ -2576,8 +2572,6 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.d = ! dC.v.d; break;
 		case DVM_UNMS : dC.v.d = - dC.v.d; break;
-		case DVM_INCR : dC.v.d ++; break;
-		case DVM_DECR : dC.v.d --; break;
 		default: break;
 		}
 		bl = DaoContext_SetValue( self, vmc->c, dC );
@@ -2597,61 +2591,31 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.i = ! dC.v.i; break;
 		case DVM_UNMS : dC.v.i = - dC.v.i; break;
-		case DVM_INCR : dC.v.i ++; break;
-		case DVM_DECR : dC.v.i --; break;
 		default: break;
 		}
-		/*
-		   switch( vmc->code ){
-		   case DVM_NOT :  dC.v.d = ! dC.v.d; break;
-		   case DVM_UNMS : dC.v.d = - dC.v.d; break;
-		   case DVM_INCR : dC.v.d ++; break;
-		   case DVM_DECR : dC.v.d --; break;
-		   default: break;
-		   }
-		 */
 #ifdef DAO_WITH_NUMARRAY
 	}else if( ta==DAO_ARRAY ){
 		DaoArray *array = dA.v.array;
 		size_t i;
 		if( array->numType == DAO_FLOAT ){
-			if( vmc->code == DVM_NOT || vmc->code == DVM_UNMS ){
-				DaoArray *res = DaoContext_GetArray( self, vmc );
-				res->numType = array->numType;
-				DaoArray_ResizeArray( res, array->dims->items.pSize, array->dims->size );
-				if( array->numType == DAO_FLOAT ){
-					float *va = array->data.f;
-					float *vc = res->data.f;
-					if( vmc->code == DVM_NOT ){
-						for(i=0; i<array->size; i++ ) vc[i] = (float) ! va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) vc[i] = - va[i];
-					}
+			DaoArray *res = DaoContext_GetArray( self, vmc );
+			res->numType = array->numType;
+			DaoArray_ResizeArray( res, array->dims->items.pSize, array->dims->size );
+			if( array->numType == DAO_FLOAT ){
+				float *va = array->data.f;
+				float *vc = res->data.f;
+				if( vmc->code == DVM_NOT ){
+					for(i=0; i<array->size; i++ ) vc[i] = (float) ! va[i];
 				}else{
-					double *va = array->data.d;
-					double *vc = res->data.d;
-					if( vmc->code == DVM_NOT ){
-						for(i=0; i<array->size; i++ ) vc[i] = ! va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) vc[i] = - va[i];
-					}
+					for(i=0; i<array->size; i++ ) vc[i] = - va[i];
 				}
 			}else{
-				DaoContext_SetData( self, vmc->c, (DaoBase*)array );
-				if( array->numType == DAO_FLOAT ){
-					float *va = array->data.f;
-					if( vmc->code == DVM_INCR ){
-						for(i=0; i<array->size; i++ ) ++ va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) -- va[i];
-					}
+				double *va = array->data.d;
+				double *vc = res->data.d;
+				if( vmc->code == DVM_NOT ){
+					for(i=0; i<array->size; i++ ) vc[i] = ! va[i];
 				}else{
-					double *va = array->data.d;
-					if( vmc->code == DVM_INCR ){
-						for(i=0; i<array->size; i++ ) ++ va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) -- va[i];
-					}
+					for(i=0; i<array->size; i++ ) vc[i] = - va[i];
 				}
 			}
 		}else if( vmc->code == DVM_UNMS ){

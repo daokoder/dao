@@ -107,20 +107,12 @@ static const char *const vmOperNames[] = {
 	"???",
 
 	/* for compiling only */
-	"idx" ,
-	"incr" ,
-	"decr" ,
-	"comma" , 
-	"if" ,
-	"else" ,
 	"label",
 	"loop",
 	"branch",
 	"do" ,
 	"lbra" ,
 	"rbra" ,
-	"lbra2" ,
-	"rbra2" ,
 	"try" ,
 	"raise" ,
 	"catch" ,
@@ -131,7 +123,7 @@ static const char *const vmOperNames[] = {
 const char* getOpcodeName( int opc )
 {
 	if( opc >= 0 && opc < DVM_NULL ) return vmOperNames[ opc ];
-	if( opc > DVM_NULL && opc <= DVM_UNUSED ) return vmOperNames[ opc-DVM_IDX+DVM_NULL+1 ];
+	if( opc > DVM_NULL && opc <= DVM_UNUSED ) return vmOperNames[ opc-DVM_LABEL+DVM_NULL+1 ];
 	return "???";
 }
 
