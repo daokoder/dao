@@ -656,7 +656,8 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 			if( from >= end ) return -100;
 			switch( unit->type ){
 			case DMACRO_EXP :
-				j = DaoParser_FindPhraseEnd( self, from, -1 ) + 1;
+#warning "need replace for DaoParser_FindPhraseEnd()"
+				//XXX j = DaoParser_FindPhraseEnd( self, from, -1 ) + 1;
 				min = j + unit->stops->size;
 				for(k=0; k<unit->stops->size; k++){
 					DaoToken *stop = unit->stops->items.pToken[k];

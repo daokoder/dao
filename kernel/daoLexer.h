@@ -31,6 +31,7 @@ enum DaoTokNames
 	DTOK_NUMBER_HEX ,
 	DTOK_NUMBER_DEC , /* 123. 123.5 */
 	DTOK_DOUBLE_DEC , /* 345D, 123.25D */
+	DTOK_NUMBER_IMG , /* 123.0$, imaginary part of complex */
 	DTOK_NUMBER_SCI ,
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
@@ -124,6 +125,7 @@ enum DaoKeyNames
 	DKEY_OPERATOR ,
 	DKEY_INTERFACE ,
 	DKEY_SELF ,
+	DKEY_TYPE ,
 	DKEY_INT ,
 	DKEY_FLOAT ,
 	DKEY_DOUBLE ,
@@ -147,7 +149,6 @@ enum DaoKeyNames
 	DKEY_IN ,
 	DKEY_DO ,
 	DKEY_WHILE ,
-	DKEY_UNTIL , // XXX remove???
 	DKEY_SWITCH ,
 	DKEY_CASE ,
 	DKEY_DEFAULT ,
@@ -167,7 +168,6 @@ enum DaoKeyNames
 	DKEY_TRY ,
 	DKEY_RETRY ,
 	DKEY_CATCH ,
-	DKEY_RESCUE , // XXX remove???
 	DKEY_RAISE ,
 	DKEY_EACH ,
 	DKEY_REPEAT ,

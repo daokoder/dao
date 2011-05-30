@@ -86,7 +86,6 @@ struct DaoParser
 	char isDynamicClass;
 	char permission;
 	char warnAssn;
-	char pairLtGt; /* <> */
 
 	DaoInterface *hostInter;
 	DaoClass     *hostClass;
@@ -116,7 +115,6 @@ struct DaoParser
 	DString   *str;
 	DMap      *lvm; /* <DString*,int>, for localVarMap; */
 	DArray    *toks;
-	complex16  combuf;
 	complex16  imgone;
 };
 
