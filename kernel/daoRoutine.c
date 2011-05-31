@@ -663,7 +663,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	DArray_Assign( self->regType, other->regType );
 	GC_ShiftRC( other->nameSpace, self->nameSpace );
 	self->nameSpace = other->nameSpace;
-	self->locRegCount = other->locRegCount;
+	self->regCount = other->regCount;
 	self->defLine = other->defLine;
 	self->bodyStart = other->bodyStart;
 	self->bodyEnd = other->bodyEnd;
@@ -752,7 +752,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 	DNode *node;
 
 	checks = DMap_New(0,0);
-	DString_Resize( self->regMode, self->locRegCount );
+	DString_Resize( self->regMode, self->regCount );
 	memset( self->regMode->mbs, 0, self->regMode->size*sizeof(char) );
 	node = DMap_First( self->localVarType );
 	for( ; node !=NULL; node = DMap_Next(self->localVarType,node) ){
@@ -988,7 +988,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		}
 	}
 	DMap_Delete( checks );
-	for(i=0; i<self->locRegCount; i++){
+	for(i=0; i<self->regCount; i++){
 		if( self->regMode->mbs[i] ==0 ) self->regMode->mbs[i] = DAO_REG_INTERMED_SU;
 		/* printf( "%3i: %2i\n", i, self->regMode->mbs[i] ); */
 	}
@@ -1356,7 +1356,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 
 #define InsertCodeMoveToInteger( opABC, opcode ) \
 	{ vmc2.a = opABC; \
-	opABC = self->locRegCount + addRegType->size -1; \
+	opABC = self->regCount + addRegType->size -1; \
 	addCount[i] ++; \
 	vmc2.code = opcode; \
 	vmc2.c = opABC; \
@@ -1397,7 +1397,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	int typed_code = daoConfig.typedcode;
 	int i, j, k, cid=0, retinf = 0;
 	int N = self->vmCodes->size;
-	int M = self->locRegCount;
+	int M = self->regCount;
 	int min=0, spec=0, lastcomp = 0;
 	int TT0, TT1, TT2, TT3, TT4, TT5, TT6;
 	int ec = 0, ec_general = 0, ec_specific = 0;
@@ -1462,8 +1462,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	if( self->vmCodes->size ==0 ) return 1;
 	defs = DMap_New(0,0);
 	defs2 = DMap_New(0,0);
-	init = dao_malloc( self->locRegCount );
-	memset( init, 0, self->locRegCount );
+	init = dao_malloc( self->regCount );
+	memset( init, 0, self->regCount );
 	addCount = dao_malloc( self->vmCodes->size * sizeof(int) );
 	memset( addCount, 0, self->vmCodes->size * sizeof(int) );
 	vmCodeNew = DArray_New( D_VMCODE );
@@ -1512,8 +1512,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 
 	GC_DecRCs( self->regType );
 	regConst = DVarray_New();
-	DVarray_Resize( regConst, self->locRegCount, daoNullValue );
-	DArray_Resize( self->regType, self->locRegCount, 0 );
+	DVarray_Resize( regConst, self->regCount, daoNullValue );
+	DArray_Resize( self->regType, self->regCount, 0 );
 	type = self->regType->items.pType;
 	csts = regConst->data;
 
@@ -1546,7 +1546,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoGC_IncRCs( self->regType );
 
 	/*
-	   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->locRegCount );
+	   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->regCount );
 	   if( self->routType ) printf( "%p %p\n", hostClass, self->routType->aux.v.p );
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
@@ -1674,7 +1674,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					addCount[i] ++;
 					vmc2.code = DVM_CAST;
 					vmc2.a = opa;
-					vmc2.c = self->locRegCount + addRegType->size;
+					vmc2.c = self->regCount + addRegType->size;
 					vmc->a = vmc2.c;
 					DArray_Append( addCode, & vmc2 );
 					DArray_Append( addRegType, *tp );
@@ -1851,7 +1851,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							vmc2.code = DVM_CAST;
 							vmc2.a = opb;
 							vmc2.b = 0;
-							vmc2.c = self->locRegCount + addRegType->size;
+							vmc2.c = self->regCount + addRegType->size;
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
@@ -2298,7 +2298,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							addCount[i] ++;
 							vmc2.code = DVM_CAST;
 							vmc2.a = opb;
-							vmc2.c = self->locRegCount + addRegType->size;
+							vmc2.c = self->regCount + addRegType->size;
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
@@ -3690,7 +3690,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								vmc2.code = DVM_CAST;
 								vmc2.a = opa;
 								vmc2.b = 0;
-								vmc2.c = self->locRegCount + addRegType->size;
+								vmc2.c = self->regCount + addRegType->size;
 								vmc->a = vmc2.c;
 								DArray_Append( addCode, & vmc2 );
 								DArray_Append( addRegType, ct );
@@ -4220,7 +4220,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		GC_IncRC( addRegType->items.pVoid[i] );
 		DArray_Append( self->regType, addRegType->items.pVoid[i] );
 	}
-	self->locRegCount = self->regType->size;
+	self->regCount = self->regType->size;
 	for(j=0; j<addCount[0]; j++){
 		DArray_Append( vmCodeNew, addCode->items.pVmc[0] );
 		DArray_PopFront( addCode );
@@ -4254,7 +4254,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray_Delete( addCode );
 	DArray_Append( self->regType, any );
 	GC_IncRC( any );
-	self->locRegCount ++;
+	self->regCount ++;
 	/*
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
@@ -4348,7 +4348,7 @@ ErrorTyping:
 				dao_free( init );
 				dao_free( addCount );
 				tmp = DMap_New(0,0);
-				for( i=0; i<self->locRegCount; i++ )
+				for( i=0; i<self->regCount; i++ )
 					if( type[i] && type[i]->refCount ==0 ) DMap_Insert( tmp, type[i], 0 );
 				node = DMap_First( tmp );
 				for(; node !=NULL; node = DMap_Next(tmp, node) )
@@ -4428,7 +4428,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, "type: " );
 	DaoStream_WriteString( stream, self->routType->name );
 	DaoStream_WriteMBS( stream, "\nNumber of register:\n" );
-	DaoStream_WriteInt( stream, (double)self->locRegCount );
+	DaoStream_WriteInt( stream, (double)self->regCount );
 	DaoStream_WriteMBS( stream, "\n" );
 	DaoStream_WriteMBS( stream, sep1 );
 	DaoStream_WriteMBS( stream, "Virtual Machine Code:\n\n" );

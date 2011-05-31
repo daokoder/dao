@@ -299,7 +299,7 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
 	if( self->topFrame == self->firstFrame ) return;
 	if( self->topFrame->context == NULL ) return;
 	if( ctx->refCount == 1 ){ /* only referenced once, and by the stack */
-		N = self->topFrame->context->routine->locRegCount;
+		N = self->topFrame->context->routine->regCount;
 		values = self->topFrame->context->regArray->data;
 		values2 = self->topFrame->context->regValues;
 		for(i=0; i<N; i++){
@@ -835,7 +835,7 @@ CallEntry:
 	printf("==================VM==============================\n");
 	printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	printf("number of register: %i\n", topCtx->regArray->size );
-	printf("number of register: %i\n", routine->locRegCount );
+	printf("number of register: %i\n", routine->regCount );
 	printf("number of instruction: %i\n", routine->vmCodes->size );
 	printf( "VM process: %p\n", self );
 	printf("==================================================\n");

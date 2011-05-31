@@ -272,7 +272,7 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 				}
 				GC_ShiftRC( ns, routine->nameSpace );
 				routine->nameSpace = ns;
-				routine->locRegCount = 20; //XXX
+				routine->regCount = 20; //XXX
 				opa = DaoNameSpace_FindConst( ns, sp );
 				if( opa >=0 ){
 					dbase = DaoNameSpace_GetConst( ns, opa );
@@ -494,8 +494,8 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			printf( "@MAIN: ;%c;\n", *P );
 			P = NextToken( P, tok, 0, NULL );
 			if( *P == '@' ) goto InvalidFormat; 
-			routine->locRegCount = atoi( tok->mbs );
-			if( bc ) AppendSectShort( bc, routine->locRegCount );
+			routine->regCount = atoi( tok->mbs );
+			if( bc ) AppendSectShort( bc, routine->regCount );
 
 		}else if( STRCMP( tok, "@SUB" ) ==0 ){
 			if( bc ) AppendSectHead( bc, SECT_SUB );
@@ -514,8 +514,8 @@ int DaoParseAssembly( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			printf( "@SUB: %s %p ;%c;\n", routine->routName->mbs, routine, *P );
 			if( *P !='\n' ){
 				P = NextToken( P, tok, 0, NULL );
-				routine->locRegCount = atoi( tok->mbs );
-				if( bc ) AppendSectShort( bc, routine->locRegCount );
+				routine->regCount = atoi( tok->mbs );
+				if( bc ) AppendSectShort( bc, routine->regCount );
 			}else goto InvalidFormat; 
 
 		}else if( STRCMP( tok, "@CODE" ) ==0 ){
@@ -758,7 +758,7 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 				printf( "routine %s()\n", sp->mbs );
 				GC_ShiftRC( ns, routine->nameSpace );
 				routine->nameSpace = ns;
-				routine->locRegCount = 20; //XXX
+				routine->regCount = 20; //XXX
 				opa = DaoNameSpace_FindConst( ns, sp );
 				if( opa >=0 ){
 					dbase = DaoNameSpace_GetConst( ns, opa );
@@ -963,11 +963,11 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			routine->nameSpace = ns;
 			ns->mainRoutine = routine;//XXX
 			if( *P ==0 && *(P+1) ==0 ) goto InvalidFormat; 
-			routine->locRegCount = P[0] | (P[1]<<8);
-			printf( "count = %i\n", routine->locRegCount );
+			routine->regCount = P[0] | (P[1]<<8);
+			printf( "count = %i\n", routine->regCount );
 			P += 2;
 			if( asmc ){
-				sprintf( buf, "%i\n", routine->locRegCount );
+				sprintf( buf, "%i\n", routine->regCount );
 				DString_AppendMBS( asmc, buf );
 			}
 			break;
@@ -984,10 +984,10 @@ int DaoParseByteCode( DaoVmSpace *self, DaoNameSpace *ns, DString *src, DString 
 			P += 3;
 			if( routine ==NULL ) goto InvalidFormat;
 			if( *P ==0 && *(P+1) ==0 ) goto InvalidFormat; 
-			routine->locRegCount = P[0] | (P[1]<<8);
+			routine->regCount = P[0] | (P[1]<<8);
 			P += 2;
 			if( asmc ){
-				sprintf( buf, "%i\n", routine->locRegCount );
+				sprintf( buf, "%i\n", routine->regCount );
 				DString_AppendMBS( asmc, buf );
 			}
 			break;

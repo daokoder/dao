@@ -125,7 +125,7 @@ static void DaoContext_InitValues( DaoContext *self )
 	DaoType **types;
 	DValue *values;
 	DValue **values2;
-	int i, t, N = self->routine->locRegCount;
+	int i, t, N = self->routine->regCount;
 	self->entryCode = 0;
 	self->ctxState = 0;
 	self->vmc = NULL;
@@ -3876,7 +3876,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue 
 		MAP_Insert( DArray_Top( parser->localVarMap ), type->fname, i );
 		DArray_Append( routine->defLocals, self->defLocals->items.pToken[i] );
 	}
-	parser->locRegCount = self->parCount;
+	parser->regCount = self->parCount;
 	i = DRoutine_AddConst( (DRoutine*)routine, (DaoBase*) self );
 	MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[0]->fname, i );
 
