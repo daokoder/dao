@@ -1568,8 +1568,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 	dint *res = 0;
 	self->vmc = vmc;
 	res = DaoContext_PutInteger( self, 0 );
-	if( dA.t && dB.t == DAO_TYPE && type->tid == DAO_TYPE ){
-		type = type->nested->items.pType[0];
+	if( dA.t && dB.t == DAO_TYPE ){
 		if( dA.t == DAO_OBJECT ) dA.v.object = dA.v.object->that;
 		if( type->tid == DAO_VARIANT ){
 			int i, mt = 0, id = 0, max = 0;
@@ -4223,7 +4222,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoFunction *func;
 	DaoContext *ctx;
 
-	if( npar == DAO_CALLER_PARAM ){
+	if( npar == 0 && (mode & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
 		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
 		npar = self->parCount - m;
 		params = self->regValues + m;

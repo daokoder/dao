@@ -46,7 +46,7 @@ Test( BB() )
 routine Test2( data : int | float | double | string )
 {
 # get 1-based index of its type in the disjoint union type:
-	switch( data ?< int|float|double|string ){
+	switch( data ?< type(int|float|double|string) ){
 	case 1 : io.writeln( 'handling int' );
 	case 2 : io.writeln( 'handling float' );
 	case 3 : io.writeln( 'handling double' );
@@ -58,6 +58,8 @@ Test2( 1 );
 Test2( 1.0 );
 Test2( 1.0D );
 Test2( 'abc' );
+
+
 
 ####################################
 # Third example:
@@ -103,3 +105,4 @@ io.writeln( s );
 
 s2 = Sum( { 'a', 'b', 'c' } );
 io.writeln( s2 );
+

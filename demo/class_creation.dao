@@ -18,7 +18,7 @@ routine CreateClass( name : string, value = 0 )
 	}
 
 	# klass = class( name, parents, fields, methods ){ core_class_body }
-	klass=class( name, 
+	klass = class( name, 
 			{ 'Alias'=>Base }, 
 			{ ('added', 789, $const, $public) }, 
 			{ (name, init), ('Extra', rout) } )

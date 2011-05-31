@@ -839,8 +839,8 @@ CallEntry:
 	printf("number of instruction: %i\n", routine->vmCodes->size );
 	printf( "VM process: %p\n", self );
 	printf("==================================================\n");
-#endif
 	DaoRoutine_PrintCode( routine, self->vmSpace->stdStream );
+#endif
 
 	self->stopit = 0;
 	vmc = vmcBase + id;

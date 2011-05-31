@@ -838,7 +838,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			break;
 		case DVM_CALL : case DVM_MCALL :
 			k = vmc->b & 0xff;
-			if( k == DAO_CALLER_PARAM ){
+			if( k == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
 				k = self->parCount - (self->routType->attrib & DAO_TYPE_SELF) != 0;
 			}
 			for(j=0; j<=k; j++) SetupOperand( self, vmc->a+j, checks );
@@ -1582,9 +1582,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			node = DMap_Next( defs, node );
 		}
 
+#if 0
 		DaoTokens_AnnotateCode( self->source, vmc2, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, mbs->mbs );
-#if 0
 #endif
 		switch( code ){
 		case DVM_NOP :
@@ -1905,7 +1905,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				csts[opc].cst = csts[opa].cst;
 				lastcomp = opc;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+				for(j=0; j<opb; j++){
+					AssertInitialized( opa+j+1, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+				}
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = at;
@@ -1913,7 +1916,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				DString_SetMBS( mbs, "[]" );
 				if( opb == 0 ){
 					ct = at;
-				}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
+				}else if( NoCheckingType( at ) ){
 					/* allow less strict typing: */
 					ct = udf;
 				}else if( at->tid == DAO_ARRAY ){
@@ -3497,7 +3500,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				pp = csts+opa+1;
 				tp = type+opa+1;
 				j = vmc->b & 0xff;
-				if( j == DAO_CALLER_PARAM ){
+				if( j == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
 					k = (self->routType->attrib & DAO_TYPE_SELF) != 0;
 					j = self->parCount - k;
 					pp = csts + k;
