@@ -2356,16 +2356,16 @@ static void DaoLIST_Top( DaoContext *ctx, DValue *p[], int N )
 /* Quick Sort.
  * Adam Drozdek: Data Structures and Algorithms in C++, 2nd Edition.
  */
-static int Compare( DaoContext *ctx, int entry, int reg0, int reg1, int res, DValue v0, DValue v1 )
+static int Compare( DaoContext *ctx, int entry, int reg0, int reg1, DValue v0, DValue v1 )
 {
 	DValue **locs = ctx->regValues;
 
 	DValue_SimpleMove( v0, locs[ reg0 ] );
 	DValue_SimpleMove( v1, locs[ reg1 ] );
 	DaoVmProcess_ExecuteSection( ctx->process, entry );
-	return DValue_GetInteger( * ctx->regValues[ res ] );
+	return DValue_GetInteger( ctx->process->returned );
 }
-static void PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1, int rr,
+static void PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1,
 		DValue *data, int first, int last, int part )
 {
 	int lower=first+1, upper=last;
@@ -2378,8 +2378,8 @@ static void PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1, int rr
 	pivot = data[ first ];
 
 	while( lower <= upper ){
-		while( lower < last && Compare( ctx, entry, r0, r1, rr, data[lower], pivot ) ) lower ++;
-		while( upper > first && Compare( ctx, entry, r0, r1, rr, pivot, data[upper] ) ) upper --;
+		while( lower < last && Compare( ctx, entry, r0, r1, data[lower], pivot ) ) lower ++;
+		while( upper > first && Compare( ctx, entry, r0, r1, pivot, data[upper] ) ) upper --;
 		if( lower < upper ){
 			val = data[lower];
 			data[lower] = data[upper];
@@ -2391,9 +2391,9 @@ static void PartialQuickSort( DaoContext *ctx, int entry, int r0, int r1, int rr
 	val = data[first];
 	data[first] = data[upper];
 	data[upper] = val;
-	if( first < upper-1 ) PartialQuickSort( ctx, entry, r0, r1, rr, data, first, upper-1, part );
+	if( first < upper-1 ) PartialQuickSort( ctx, entry, r0, r1, data, first, upper-1, part );
 	if( upper >= part ) return;
-	if( upper+1 < last ) PartialQuickSort( ctx, entry, r0, r1, rr, data, upper+1, last, part );
+	if( upper+1 < last ) PartialQuickSort( ctx, entry, r0, r1, data, upper+1, last, part );
 }
 void QuickSort( IndexValue *data, int first, int last, int part, int asc )
 {
@@ -2475,7 +2475,7 @@ static void DaoLIST_Sort( DaoContext *ctx, DValue *p[], int npar )
 	for(i=0; i<N; i++) items[i] = data[i].value;
 	dao_free( data );
 }
-void DaoContext_Sort( DaoContext *ctx, DaoVmCode *vmc, int index, int entry, int last )
+void DaoContext_Sort( DaoContext *ctx, DaoVmCode *vmc, int index, int entry )
 {
 	DaoList *list = NULL;
 	DValue *items = NULL;
@@ -2500,7 +2500,7 @@ void DaoContext_Sort( DaoContext *ctx, DaoVmCode *vmc, int index, int entry, int
 		goto ErrorParam;
 	}
 	DaoContext_PutResult( ctx, (DaoBase*) list );
-	PartialQuickSort( ctx, entry, reg0, reg1, last, items, 0, N-1, nsort );
+	PartialQuickSort( ctx, entry, reg0, reg1, items, 0, N-1, nsort );
 	return;
 ErrorParam :
 	DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "invalid parameter for sort()" );

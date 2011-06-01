@@ -1444,6 +1444,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DValue    val = daoNullValue;
 	DValue   *csts;
 	DValue   *pp;
+	int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int notide = ! (vms->options & DAO_EXEC_IDE);
 	/* To support Edit&Continue in DaoStudio, some of the features
 	 * have to be switched off:
@@ -1582,9 +1583,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			node = DMap_Next( defs, node );
 		}
 
-#if 0
 		DaoTokens_AnnotateCode( self->source, vmc2, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, mbs->mbs );
+#if 0
 #endif
 		switch( code ){
 		case DVM_NOP :
@@ -3321,6 +3322,21 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				break;
 			}
+		case DVM_GOTO :
+			if( print || vms->evalCmdline ){
+				DaoVmCodeX *dest = vmcs[ opb ];
+				if( dest->code == DVM_RETURN ){
+					vmc->code = dest->code;
+					vmc->a = dest->a;
+					vmc->b = dest->b;
+					vmc->c = dest->c;
+					if( vmc->b == 0 ){
+						vmc->a = lastcomp;
+						vmc->b = 1;
+					}
+				}
+			}
+			break;
 		case DVM_TEST :
 			{
 				/* if( init[opa] ==0 ) goto NotInit;  allow null value for testing! */
@@ -3379,7 +3395,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			case DVM_FUNCT_MAP :
 			case DVM_FUNCT_LIST :
 			case DVM_FUNCT_ARRAY :
-				bt = type[ vmcs[i-2]->c ];
+				bt = type[ vmcs[i-2]->a ];
 				if( k == DAO_ARRAY || opa == DVM_FUNCT_ARRAY ){
 					bt = DaoType_DeepItemType( bt );
 					ct = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, & bt, 1 );
@@ -3388,10 +3404,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				break;
 			case DVM_FUNCT_FOLD :
-				ct = type[ vmcs[i-2]->c ];
+				ct = type[ vmcs[i-2]->a ];
 				break;
 			case DVM_FUNCT_UNFOLD :
-				bt = type[ vmcs[i-2]->c ];
+				bt = type[ vmcs[i-2]->a ];
 				ct = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & bt, 1 );
 				break;
 			case DVM_FUNCT_SORT :
@@ -3427,7 +3443,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				ct = bt;
 				if( bt->tid == DAO_ARRAY || bt->tid == DAO_LIST ){
 					if( bt->nested->size != 1 ) goto ErrorTyping;
-					at = type[ vmcs[i-2]->c ];
+					at = type[ vmcs[i-2]->a ];
 					bt = bt->nested->items.pType[0];
 					AssertTypeMatching( at, bt, defs, 0 );
 				}
@@ -3655,9 +3671,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_RETURN :
 		case DVM_YIELD :
 			{
-				if( code == DVM_RETURN ) vmc->c = lastcomp;
+				if( opb == 0 && (opc || print || vms->evalCmdline) ){
+					vmc->a = lastcomp;
+					vmc->b = 1;
+				}
 				if( self->routType == NULL ) continue;
-				if( opc == 1 && code == DVM_RETURN ) continue;
+				if( opc && code == DVM_RETURN ) continue;
 				ct = self->routType->aux.v.type;
 				/*
 				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );

@@ -4363,11 +4363,12 @@ InvalidParameter:
 }
 void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 {
-	short i;
+	int i;
+	DaoVmFrame *topFrame = self->process->topFrame;
 	self->vmc = vmc;
 	//XXX if( DaoContext_CheckFE( self ) ) return;
-	if( self->caller && self->process->topFrame->returning != (ushort_t)-1 ){
-		int regReturn = self->process->topFrame->returning;
+	if( vmc->c == 0 && self->caller && topFrame->returning != (ushort_t)-1 ){
+		int regReturn = topFrame->returning;
 		if( self->ctxState & DVM_MAKE_OBJECT ){
 			DaoContext_SetData( self->caller, regReturn, (DaoBase*)self->object );
 		}else if( vmc->b == 1 ){
