@@ -4163,6 +4163,12 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 	int npar = vmc->b & 0xff;
 	int i, k, n = 0;
 
+	if( npar == 0 && (mode & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
+		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
+		npar = self->parCount - m;
+		params = self->regValues + m;
+		mode &= ~DAO_CALL_EXPAR;
+	}
 	if( self->object && mcall == 0 ){
 		selfpar->t = DAO_OBJECT;
 		selfpar->v.object = self->object;
@@ -4222,11 +4228,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoFunction *func;
 	DaoContext *ctx;
 
-	if( npar == 0 && (mode & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
-		npar = self->parCount - m;
-		params = self->regValues + m;
-	}
 	self->vmc = vmc;
 	if( caller.t ==0 ){
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "null object not callable" );
