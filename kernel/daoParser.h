@@ -65,7 +65,6 @@ struct DaoParser
 	DArray *routCompilable; /* list of defined routines with bodies */
 
 	int    regCount;
-	DMap  *varFunctional; /* <DString*,int>: variables in functional blocks. */
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
 	int nullValue;
@@ -86,6 +85,7 @@ struct DaoParser
 	char isDynamicClass;
 	char permission;
 	char warnAssn;
+	char isFunctional;
 
 	DaoInterface *hostInter;
 	DaoClass     *hostClass;
