@@ -394,6 +394,7 @@ static void DaoParser_PushFrontCode( DaoParser *self, DaoVmCodeX *vmc )
 }
 static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last );
+static DaoInode* DaoParser_InsertCode( DaoParser *self, DaoInode *after, int code, int a, int b, int c, int first );
 static DaoInode* DaoParser_PushBackCode( DaoParser *self, DaoVmCodeX *vmc )
 {
 	DaoInode *node = DaoInode_New( self );
@@ -5188,13 +5189,11 @@ static int DaoParser_AddFieldConst( DaoParser *self, DString *field )
 
 # some auxilary instructions may added here to reserver register
 # or to be used for type checking.
-
 13: SECT       :      5 ,      0 ,     56 ; # code section begin
 11: GETI       :      4 ,      7 ,      8 ; # a[i]
 12: GETI       :      5 ,      7 ,      9 ; # b[i]
 14: ADD        :      8 ,     12 ,     10 ; # x+1
 15: SUB        :      9 ,     13 ,     11 ; # y-10
-
 16: RETURN     :      0 ,      0 ,      1 ;
 17: FUNCT      :      1 ,      6 ,     15 ; # map
 
@@ -5381,19 +5380,8 @@ static int DaoParser_ParseFunctional( DaoParser *self )
 			if( j < fregs->size ){
 				MAP_Insert( varFunctional, tokens[i]->string, fregs->items.pInt[j] );
 			}else if( tki == DKEY_APPLY ){
-				DaoInode *node = DaoInode_New( self );
-				node->code = DVM_DATA;
-				node->a = DAO_INTEGER;
-				node->c = DaoParser_PushRegister( self );
-				node->level = vmcSect->level;
-				node->line = vmcSect->line;
-				node->first = i;
-				node->middle = node->last = 0;
-				vmcSect->prev->next = node;
-				node->prev = vmcSect->prev;
-				vmcSect->prev = node;
-				node->next = vmcSect;
-				MAP_Insert( varFunctional, tokens[i]->string, node->c );
+				int opc = DaoParser_PushRegister( self );
+				DaoParser_InsertCode( self, vmcSect, DVM_DATA, DAO_INTEGER, 0, opc, i );
 			}
 			j ++;
 			if( tokens[i+1]->name == DTOK_PIPE ) break;
@@ -5847,14 +5835,11 @@ static int DaoParser_GetOperPrecedence( DaoParser *self )
 		if( t1->line == t2->line && (t1->cpos+1) == t2->cpos ){
 			/* check for operators: <<, >>, <=, >= */
 			int newtok = 0;
-			if( t1->type == DTOK_LT && t2->type == DTOK_LT ){
-				newtok = DTOK_LSHIFT;
-			}else if( t1->type == DTOK_GT && t2->type == DTOK_GT ){
-				newtok = DTOK_RSHIFT;
-			}else if( t1->type == DTOK_LT && t2->type == DTOK_ASSN ){
-				newtok = DTOK_LE;
-			}else if( t1->type == DTOK_GT && t2->type == DTOK_ASSN ){
-				newtok = DTOK_GE;
+			switch( ((int)t1->type<<8)|t2->type ){
+			case (DTOK_LT<<8)|DTOK_LT : newtok = DTOK_LSHIFT; break;
+			case (DTOK_GT<<8)|DTOK_GT : newtok = DTOK_RSHIFT; break;
+			case (DTOK_LT<<8)|DTOK_ASSN : newtok = DTOK_LE; break;
+			case (DTOK_GT<<8)|DTOK_ASSN : newtok = DTOK_GE; break;
 			}
 			if( newtok ){
 				DString_Insert( t2->string, t1->string, 0, 0, 1 );
@@ -6513,10 +6498,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				self->curToken += 1;
 			}
 			break;
-		default : goto StopParsing;
+		default : return result;
 		}
-		continue;
-StopParsing: break;
 	}
 	return result;
 }
