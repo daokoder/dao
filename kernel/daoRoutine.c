@@ -1398,7 +1398,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	int i, j, k, cid=0, retinf = 0;
 	int N = self->vmCodes->size;
 	int M = self->regCount;
-	int min=0, spec=0, lastcomp = 0;
+	int min=0, spec=0, lastcomp = -1;
 	int TT0, TT1, TT2, TT3, TT4, TT5, TT6;
 	int ec = 0, ec_general = 0, ec_specific = 0;
 	int annot_first = 0, annot_last = 0, tid_target = 0;
@@ -1445,6 +1445,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DValue   *csts;
 	DValue   *pp;
 	int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+	int ismain = self->attribs & DAO_ROUT_MAIN;
+	int autoret = ismain && (print || vms->evalCmdline);
 	int notide = ! (vms->options & DAO_EXEC_IDE);
 	/* To support Edit&Continue in DaoStudio, some of the features
 	 * have to be switched off:
@@ -3323,14 +3325,14 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				break;
 			}
 		case DVM_GOTO :
-			if( print || vms->evalCmdline ){
+			if( autoret ){
 				DaoVmCodeX *dest = vmcs[ opb ];
 				if( dest->code == DVM_RETURN ){
 					vmc->code = dest->code;
 					vmc->a = dest->a;
 					vmc->b = dest->b;
 					vmc->c = dest->c;
-					if( vmc->b == 0 ){
+					if( vmc->b == 0 && lastcomp >= 0 ){
 						vmc->a = lastcomp;
 						vmc->b = 1;
 					}
@@ -3671,7 +3673,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_RETURN :
 		case DVM_YIELD :
 			{
-				if( opb == 0 && (opc || print || vms->evalCmdline) ){
+				if( opb == 0 && lastcomp >= 0 && (opc || autoret) ){
 					vmc->a = lastcomp;
 					vmc->b = 1;
 				}
