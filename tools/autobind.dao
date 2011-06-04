@@ -943,7 +943,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	source.change( ';%s*;[;%s]+', ';' );
 
 	sort( allpats )->{ x[1] < y[1] };
-	for( it in allpats ){
+	for(var it in allpats ){
 		part = (string)it[2];
 		switch( (PatternType) it[0] ){
 		case $pat_struct :
@@ -3773,7 +3773,7 @@ routine UserType::GenerateMeth()
 	overloads = {=>};
 	for( meth in methods ){
 		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
-		overloads[ meth.cxxName ] ++;
+		overloads[ meth.cxxName ] += 1;
 		n = overloads[ meth.cxxName ];
 		if( n >1 ){
 			meth.overload += '_dao_' + (string) n;
@@ -4672,13 +4672,13 @@ onload='DaoOnLoad' )
 	overloads : map<string,int> = {=>};
 	for( meth in functions.funcs ){
 		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
-		overloads[ meth.cxxName ] ++;
+		overloads[ meth.cxxName ] += 1;
 		n = overloads[ meth.cxxName ];
 		if( n >1 ) meth.overload += '_dao_' + (string) n;
 	}
 	count = 0;
 	for( utp in map_user_types.values() )
-	if( utp.name[0] == 'Q'[0] ) count ++;
+	if( utp.name[0] == 'Q'[0] ) count += 1;
 	if( count > map_user_types.size() / 2 ) lib_name = LibType.LIB_QT;
 	
 	io.writeln( 'sorting classes ...' );

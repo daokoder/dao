@@ -266,6 +266,7 @@ enum DaoArithOperType{
 	DAO_OPER_OR ,
 
 	DAO_OPER_IN ,
+	DAO_OPER_NOTIN ,
 
 	DAO_OPER_LT ,
 	DAO_OPER_GT ,

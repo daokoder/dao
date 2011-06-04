@@ -1121,6 +1121,9 @@ static int DaoParser_GetOperPrecedence( DaoParser *self )
 				self->curToken += 1;
 				tki = newtok;
 			}
+		}else if( t1->name == DKEY_NOT && t2->name == DKEY_IN ){
+			self->curToken += 1;
+			tki = DTOK_NOTIN;
 		}
 	}
 	oper = daoArithOper[tki];

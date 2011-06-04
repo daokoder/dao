@@ -68,6 +68,7 @@ enum DaoTokNames
 	DTOK_POW , /* ** */
 	DTOK_AND , /* && */
 	DTOK_OR , /* || */
+	DTOK_NOTIN, /* not in */
 	DTOK_CASSN , /* := */
 	DTOK_ADDASN , /* += */
 	DTOK_SUBASN , /* -= */

@@ -3674,8 +3674,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_YIELD :
 			{
 				if( opb == 0 && lastcomp >= 0 && (opc || autoret) ){
-					vmc->a = lastcomp;
-					vmc->b = 1;
+					vmc->a = opa = lastcomp;
+					vmc->b = opb = 1;
 				}
 				if( self->routType == NULL ) continue;
 				if( opc && code == DVM_RETURN ) continue;
