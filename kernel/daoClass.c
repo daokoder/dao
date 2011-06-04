@@ -560,7 +560,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					DaoMetaRoutine *meta = value.v.mroutine;
 					int k;
 					for(k=0; k<meta->routines->size; k++){
-						DRoutine *rout = meta->routines->items.pRout2[i];
+						DRoutine *rout = meta->routines->items.pRout2[k];
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != klass->objType ) continue;
 						value.t = rout->type;
