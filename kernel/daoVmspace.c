@@ -979,11 +979,16 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		DArray_PushFront( self->nameLoading, self->pathWorking );
 		DArray_PushFront( self->pathLoading, self->pathWorking );
 		if( self->evalCmdline ){
+			DaoRoutine *rout;
 			DString_SetMBS( self->fileName, "command line codes" );
 			DString_SetMBS( self->mainNamespace->name, "command line codes" );
-			DaoVmProcess_Eval( vmp, ns, self->source, 1 );
+			if( DaoVmProcess_Compile( vmp, ns, self->source, 1 ) ==0 ) return 0;
+			DaoVmSpace_ExeCmdArgs( self );
+			rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
+			if( DaoVmProcess_Call( vmp, (DaoMethod*) rout, NULL, NULL, 0 ) ==0 ) return 0;
+		}else{
+			DaoVmSpace_ExeCmdArgs( self );
 		}
-		DaoVmSpace_ExeCmdArgs( self );
 		if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )
 			DaoVmSpace_Interun( self, NULL );
 		return 1;

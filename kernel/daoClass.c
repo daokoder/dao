@@ -285,22 +285,14 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	}
 	for(i=self->cstData->size; i<other->cstData->size; i++){
 		DValue value = other->cstData->data[i];
-		if( value.t == DAO_METAROUTINE ){
-			/* Pass NULL as name, so that its name will be properly by
-			 * DaoMetaRoutine_Add(): */
-			DaoMetaRoutine *meta = DaoMetaRoutine_New( ns, NULL );
-			GC_IncRC( self->objType );
-			meta->host = self->objType;
-			value.v.mroutine = meta;
-			DVarray_Append( self->cstData, value );
-		}if( value.t == DAO_ROUTINE && value.v.routine->routHost == other->objType ){
+		if( value.t == DAO_ROUTINE && value.v.routine->routHost == other->objType ){
 			DaoRoutine *rout = value.v.routine;
 			DString *name = rout->routName;
 			rout = value.v.routine = DaoRoutine_Copy( rout );
-			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) continue;
 #if 0
-			printf( "%p:  %s  %s\n", rout, rout->routName->mbs, rout->routType->name->mbs );
+			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
 #endif
+			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) continue;
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DaoMetaRoutine_Add( self->classRoutines, (DRoutine*)rout );
 			}else if( (it = DMap_Find( other->lookupTable, name )) ){
@@ -313,6 +305,15 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 						DaoMetaRoutine_Add( v2.v.mroutine, (DRoutine*)rout );
 				}
 			}
+			DVarray_Append( self->cstData, value );
+			continue;
+		}else if( value.t >= DAO_METAROUTINE && value.t <= DAO_FUNCTION ){
+			/* Pass NULL as name, so that its name will be properly by
+			 * DaoMetaRoutine_Add(): */
+			DaoMetaRoutine *meta = DaoMetaRoutine_New( ns, NULL );
+			GC_IncRC( self->objType );
+			meta->host = self->objType;
+			value.v.mroutine = meta;
 			DVarray_Append( self->cstData, value );
 			continue;
 		}
