@@ -3745,6 +3745,7 @@ DecoratorError:
 			}
 			continue;
 InvalidIfElse:
+DaoParser_PrintCodes( self );
 			printf( "invalid if-else\n" ); // XXX
 			return 0;
 		case DKEY_FOR :
@@ -4019,7 +4020,7 @@ InvalidIfElse:
 		}
 		end = DaoParser_ParseVarExpressions( self, start, to, 0, storeType, storeType2 );
 		if( end < 0 ) return 0;
-		if( DaoParser_CompleteScope( self, end ) == 0 ) return 0;
+		if( DaoParser_CompleteScope( self, end-1 ) == 0 ) return 0;
 		DaoParser_CheckStatementSeparation( self, end-1, to );
 		start = end;
 	}
@@ -6137,6 +6138,8 @@ ParsingError:
 }
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 {
+	DValue value;
+	DaoBase *dbase;
 	DaoInode *last = self->vmcLast;
 	DaoEnode enode, result = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DaoEnode error = { -1, 0, 1, NULL, NULL, NULL, NULL };
@@ -6562,6 +6565,25 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				self->curToken += 1;
 			}
 			break;
+		case DTOK_LT :
+			if( result.konst == 0 ) return result;
+			value = DaoParser_GetVariable( self, result.konst );
+			if( value.t != DAO_CLASS && value.t != DAO_CTYPE ) return result;
+			rb = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, end );
+			if( rb < 0 ) return result;
+			dbase = DaoParse_InstantiateType( self, value.v.p, start+1, rb-1, NULL );
+			if( dbase ){
+				DaoParser_PopBackCode( self );
+				DaoParser_PopRegister( self );
+				self->curToken = rb + 1;
+				cst = DRoutine_AddConst( (DRoutine*)self->routine, dbase );
+				cst = LOOKUP_BIND_LC( cst );
+				result.konst = cst;
+				result.reg = DaoParser_GetNormRegister( self, cst, start, 0, rb );
+				result.last = result.update = self->vmcLast;
+				break;
+			}
+			return result;
 		default : return result;
 		}
 	}
