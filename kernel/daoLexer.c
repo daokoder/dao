@@ -37,6 +37,7 @@ const char *const dao_oper_tokens[] =
 	"0x0" ,
 	"0.0" ,
 	"0D" ,
+	"0$" ,
 	"0e0" ,
 	"\'\'" ,
 	"\"\"" ,
