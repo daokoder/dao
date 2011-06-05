@@ -195,7 +195,7 @@ class Variable
 	var source = '';
 	var source2 = '';
 	var name = '';
-	var type = '';
+	var typename = '';
 	var type_trans = '';
 	var typeid : CxxTypeID = $CT_USER;
 	var isconst = 0;
@@ -251,7 +251,7 @@ class Variable
 		get_item.clear();
 		set_item.clear();
 	}
-	routine _PRINT( s : stream ){ io.writeln( name, typeid, type ); }
+	routine _PRINT( s : stream ){ io.writeln( name, typeid, typename ); }
 }
 
 global enum FunctionTrait
@@ -579,7 +579,7 @@ attribs=FunctionTrait.FUNC_NONE, snamespace='' )
 		vo.host = host;
 		vo.Parse( input );
 		#if( host == 'QCoreApplication' and func.cxxName == 'processEvents' ) io.writeln( parts[i], var );
-		if( vo.type == 'void' && vo.refer == '' ) skip; # int func(void);
+		if( vo.typename == 'void' && vo.refer == '' ) skip; # int func(void);
 		func.parlist.append( vo );
 	}
 	for( i = 0 : func.parlist.size()-2 ){
@@ -822,26 +822,26 @@ routine UserType::Parse( source='', inExtFile=0 )
 				vo = Variable( part, INDEX_FIELD, src );
 				vo.host = name;
 				vo.Parse( input_file );
-				if( vo.type.pfind( 'struct %s+' ).size() and not map_user_types.has( vo.type ) ) skip;
+				if( vo.typename.pfind( 'struct %s+' ).size() and not map_user_types.has( vo.typename ) ) skip;
 				if( vo.refer == '*' && vo.square.size() ) skip;
 				if( varname ) vo.name = varname;
 				fields.append( vo );
 			}
 			if( not isCppClass and not isCallback ){
-				for( j=0; j<methods.size(); j++ ){
+				for( j=0; j<methods.size(); ++j ){
 					meth = methods[j];
 					haself = 0;
 					for( vo in meth.parlist ){
-						if( vo.type == 'void' && vo.refer =='*' ){
+						if( vo.typename == 'void' && vo.refer =='*' ){
 							for( f in fields ){
-								if( f.type == 'void' && f.refer =='*' && vo.name == f.name ){
+								if( f.typename == 'void' && f.refer =='*' && vo.name == f.name ){
 									vo.name = 'self0';
 									haself = 1;
 									selfields[ f.name ] = 1;
 									break;
 								}
 							}
-						}else if( vo.type == name && vo.refer == '*' ){
+						}else if( vo.typename == name && vo.refer == '*' ){
 							vo.name = 'self0';
 							haself = 1;
 						}else if( vo.name == 'self0' ){
@@ -851,7 +851,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 					if( not haself ){
 						# prevent code generation
 						methods.erase(j);
-						j --;
+						-- j;
 					}
 				}
 				if( methods.size() ==0 ) hasVirtual = 0;
@@ -943,12 +943,12 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	source.change( ';%s*;[;%s]+', ';' );
 
 	sort( allpats )->{ x[1] < y[1] };
-	for( it in allpats ){
+	for(var it in allpats ){
 		part = (string)it[2];
 		switch( (PatternType) it[0] ){
 		case $pat_struct :
 			tks = part.capture( pat_struct );
-			type = tks[1];
+			typename = tks[1];
 			name = tks[3];
 			if( not map_user_types.has( name ) ){
 				utp = UserType{ name => name, input_file => fname };
@@ -958,10 +958,10 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			utp.snamespace = snamespace;
 			utp.input_file = fname;
 			if( snamespace ) map_ns_types[ snamespace + '::' + name ] = utp;
-			if( type == 'namespace' ) utp.isNameSpace = 1;
-			if( type == 'callback' ) utp.isCallback = 1;
-			if( type == 'class' || (type == 'struct' && lang != 'c') ) utp.isCppClass = 1;
-			if( type == 'struct' || type == 'union' ) utp.isStruct = 1;
+			if( typename == 'namespace' ) utp.isNameSpace = 1;
+			if( typename == 'callback' ) utp.isCallback = 1;
+			if( typename == 'class' || (typename == 'struct' && lang != 'c') ) utp.isCppClass = 1;
+			if( typename == 'struct' || typename == 'union' ) utp.isStruct = 1;
 			if( utp.isCppClass ==0 and not utp.isNameSpace and not utp.isCallback ){
 				map_user_types[ 'struct ' + name ] = utp;
 				map_user_types[ 'union ' + name ] = utp;
@@ -972,7 +972,8 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			supers = tks[5].extract( '(private|protected|public) %s+ ([%w:]+)' );
 			for( sup in supers ){
 				tks2 = sup.capture( '(private|protected|public) %s+ ([%w:]+)' );
-				name2 = fullname = tks2[2];
+				fullname = tks2[2];
+				name2 = fullname;
 				name2.change( ':', '_' );
 				if( not map_user_types.has( name2 ) ){
 					utp2 = UserType{ name => name2, fullname=>fullname, input_file => fname };
@@ -1196,7 +1197,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	pat_exclude = '<1>(%w+)_EXCLUDE_ %s* <2>(%b()) <3>([%w%s]*) <4>(=|;|%{)';
 	pat_apply = '%1%2%3:NotImplemented%4';
 	k  = 0;
-	do{ k = source.change( pat_exclude, pat_apply ); } until( k==0 );
+	do{ k = source.change( pat_exclude, pat_apply ); } while( k );
 	
 	#{
 		source.change( 'struct %s* ( %w+ ) ( %s* %b{} %s*; ) (.*) ( typedef %s+ struct %s+ %1 %s+ ( %w+ ) %s* ; )', 'struct %5%2\ntypedef %5 %1;\n%3' );
@@ -1668,7 +1669,7 @@ routine Variable::Parse( fname = '' )
 	if( index == INDEX_RETURN && source.pfind( '^ %s* (%w+) %s* $' ).size() ){
 		name = source;
 		name.trim();
-		type = '';
+		typename = '';
 		type_trans = '';
 		return;
 	}
@@ -1683,7 +1684,7 @@ routine Variable::Parse( fname = '' )
 		name = '_cp_ret';
 	}
 	isconst = ( tks[2].size() !=0 );
-	type = tks[3];
+	typename = tks[3];
 	refer = tks[4];
 	square = tks[6];
 	cxxdefault = tks[7];
@@ -1692,17 +1693,17 @@ routine Variable::Parse( fname = '' )
 	#vdefault.change( '%b()', '' );
 	vdefault.change( '= %s* ([:%w]+) %s* %b()', '=0' );
 	refer.trim();
-	type.change( '%s%s+', ' ' );
+	typename.change( '%s%s+', ' ' );
 	square.change( '%s+', '' );
 	sqsizes = square.extract( '%[ [^%[%]]* %]' );
 	for( i = 0 : sqsizes.size()-1 ){
 		sqsizes[i].change( '( ^ %[ | %] $ | %s+ )', '' );
 		if( sqsizes[i].size() == 0 ) sqsizes[i] = '0';
 	}
-	if( CT_MAP.has( type ) ){
-		typeid = CT_MAP[ type ];
-	}else if( type.pfind( 'enum %s' ) ){
-		tks = type.capture( 'enum %s+ ( %w+ )' );
+	if( CT_MAP.has( typename ) ){
+		typeid = CT_MAP[ typename ];
+	}else if( typename.pfind( 'enum %s' ) ){
+		tks = typename.capture( 'enum %s+ ( %w+ )' );
 		typeid = $CT_INT;
 		tpname = tks[1];
 		enumMap[ tpname ] = 1;
@@ -1710,31 +1711,31 @@ routine Variable::Parse( fname = '' )
 			CT_MAP[ tpname ] = $CT_INT;
 			basic_typedefs.append( ( '', 'int', tpname ) );
 		}
-	}else if( type.find('::') >= 0 and otherClassTypedef.has( type ) ){
-		typeid = otherClassTypedef[ type ];
-	}else if( type.pfind( '^ %w+ $' ).size() and not map_user_types.has( type ) ){
+	}else if( typename.find('::') >= 0 and otherClassTypedef.has( typename ) ){
+		typeid = otherClassTypedef[ typename ];
+	}else if( typename.pfind( '^ %w+ $' ).size() and not map_user_types.has( typename ) ){
 		user = 1;
 		if( map_user_types.has( host ) ){
 			utp = map_user_types[ host ];
-			if( utp.classTypedef.has( type ) ){
-				if( utp.classTypedef[type] > $CT_USER ){
+			if( utp.classTypedef.has( typename ) ){
+				if( utp.classTypedef[typename] > $CT_USER ){
 					user = 0;
 				}else{
-					type = utp.name + '::' + type;
+					typename = utp.name + '::' + typename;
 				}
 			}
 		}
-		if( user and not map_user_types.has( type ) ){
-			utp = UserType{ name => type, input_file => fname, source=>source2 };
-			map_user_types[ type ] = utp;
-			map_user_types[ 'struct ' + type ] = utp;
+		if( user and not map_user_types.has( typename ) ){
+			utp = UserType{ name => typename, input_file => fname, source=>source2 };
+			map_user_types[ typename ] = utp;
+			map_user_types[ 'struct ' + typename ] = utp;
 			if( utp.name[0:0] == '_' ){
 				io.writeln( 'debug:', utp.name, ',', source );
 				#reflect.trace();
 			}
 		}
 	}
-	#io.writeln( name, type, refer, square, sqsizes );
+	#io.writeln( name, typename, refer, square, sqsizes );
 	if( isconst && typeid >=$CT_SHORT && typeid <= $CT_COMPLEX16 && refer == '*' && square == '' ){
 		refer = '';
 		square = '[]';
@@ -1749,62 +1750,62 @@ routine Variable::Parse( fname = '' )
 		sqsizes.append( '0' );
 		sqsizes.append( '0' );
 	}
-	type_trans = type;
-	#io.writeln( name, type, refer, sqsizes.size() );
+	type_trans = typename;
+	#io.writeln( name, typename, refer, sqsizes.size() );
 }
 
 global qt_container = '^ (QList|QVector)(P|)_(%w+) $';
 
 routine Variable::Generate( cxx_no_self =0 )
 {
-	if( type == 'unsigned' ){
-		type = 'unsigned';
+	if( typename == 'unsigned' ){
+		typename = 'unsigned';
 		typeid = $CT_UINT;
-	}else if( type.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
-		tks = type.capture( '^ unsigned %s (%w+) $' );
+	}else if( typename.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
+		tks = typename.capture( '^ unsigned %s (%w+) $' );
 		if( tks.size() ){
-			type = 'unsigned';
+			typename = 'unsigned';
 			typeid = $CT_UINT;
 			name = tks[1];
 		}
 	}
-	type_trans = type;
-	#if( type == 'SectionFlags' ) 
-	#if( type.pfind( 'PaintDeviceMetric' ) ) io.writeln( type, map_user_types.has( type ) );
-	list_item = type.capture( qt_container );
+	type_trans = typename;
+	#if( typename == 'SectionFlags' ) 
+	#if( typename.pfind( 'PaintDeviceMetric' ) ) io.writeln( typename, map_user_types.has( typename ) );
+	list_item = typename.capture( qt_container );
 	isClassEnum = 0;
 	if( typeid == $CT_USER && map_user_types.has( host ) ){
 		utp = map_user_types[ host ];
-		if( utp.classEnum.has( type ) ){
-			v = utp.classEnum[type];
-			type = v[0] + '::' + type;
-			type_trans = type;
+		if( utp.classEnum.has( typename ) ){
+			v = utp.classEnum[typename];
+			typename = v[0] + '::' + typename;
+			type_trans = typename;
 			if( not v[1] ) type_trans = 'int';
 			isClassEnum = 1;
 			typeid = $CT_SCHAR;
-		}else if( utp.classTypedef.has( type ) ){
-			old = type;
-			id = utp.classTypedef[ type ];
-			type = utp.name + '::' + type;
-			type_trans = type;
+		}else if( utp.classTypedef.has( typename ) ){
+			old = typename;
+			id = utp.classTypedef[ typename ];
+			typename = utp.name + '::' + typename;
+			type_trans = typename;
 			if( id > $CT_USER ){
 				typeid = id;
 				#isClassEnum = 1;
 			}
-			if( map_user_types.has(old) ) map_user_types[type] = map_user_types[old];
+			if( map_user_types.has(old) ) map_user_types[typename] = map_user_types[old];
 		}
 	}
 	if( map_user_types.has( host ) ){
-		m = type.capture( 'enum %s+ ( %w+ )' );
+		m = typename.capture( 'enum %s+ ( %w+ )' );
 		# XXX: enum in parent class
 		if( m.size() and map_user_types[ host ].classEnum.has( m[1] ) ){
-			type.change( 'enum %s+ ( %w+ )', 'enum ' + host + '::%1' );
-			type_trans = type;
+			typename.change( 'enum %s+ ( %w+ )', 'enum ' + host + '::%1' );
+			type_trans = typename;
 		}
 	}
-	ispointer = pointer_types.has( type );
+	ispointer = pointer_types.has( typename );
 	sindex = (string) index;
-	kvmap = { 'type'=>type_trans, 'type2'=>type, 'name'=>name, 'refer'=>name,
+	kvmap = { 'type'=>type_trans, 'type2'=>typename, 'name'=>name, 'refer'=>name,
 	'index'=>sindex, 'default'=>vdefault, 'namespace'=>'', 'namespace2'=>'' };
 	kvmap[ 'size' ] = sqsizes.size() ? sqsizes[0] : '0';
 	kvmap[ 'size2' ] = sqsizes.size() >1 ? sqsizes[1] : '0';
@@ -1812,7 +1813,7 @@ routine Variable::Generate( cxx_no_self =0 )
 	kvmap[ 'size' ] = 'self->' + kvmap[ 'size' ][1:];
 	if( kvmap[ 'size2' ][0:0] == '.' )
 	kvmap[ 'size2' ] = 'self->' + kvmap[ 'size2' ][1:];
-	cxxtype = type;
+	cxxtype = typename;
 	cxxcall = name;
 	rescheck = '';
 	tpl_daopar = '';
@@ -1829,7 +1830,7 @@ routine Variable::Generate( cxx_no_self =0 )
 	if( typeid > $CT_USER ){
 		if( refer == '' && square == '' && not ispointer ){
 			daotype = 'int';
-			cxxpar = type + ' ' + name;
+			cxxpar = typename + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int ' + name;
@@ -1882,7 +1883,7 @@ routine Variable::Generate( cxx_no_self =0 )
 		}else if( (refer == '*' || refer =='&' || ispointer) && square == '' ){
 			if( typeid <= $CT_WCHAR and refer == '&' ) typeid = $CT_INT;
 			cxxtype += refer;
-			cxxpar = type + refer + ' ' + name;
+			cxxpar = typename + refer + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int ' + refer + name;
@@ -1997,7 +1998,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				}
 			}
 		}else if( refer == '' && sqsizes.size() == 1 ){
-			cxxpar = type + ' ' + name + '[]';
+			cxxpar = typename + ' ' + name + '[]';
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int ' + name + '[]';
@@ -2104,7 +2105,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_set_item = '';
 			}
 		}else if( refer == '' && sqsizes.size() == 2 ){
-			cxxpar = type + ' *' + name + '[]';
+			cxxpar = typename + ' *' + name + '[]';
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int *' + name + '[]';
@@ -2180,7 +2181,7 @@ routine Variable::Generate( cxx_no_self =0 )
 		}else if( refer == '**' ){
 			cxxcall = '& ' + name;
 			cxxtype += refer;
-			cxxpar = type + refer + ' ' + name;
+			cxxpar = typename + refer + ' ' + name;
 			cxxpar_enum_virt = cxxpar;
 			if( isClassEnum ){
 				cxxpar_enum_virt = 'int ' + refer + name;
@@ -2217,31 +2218,31 @@ routine Variable::Generate( cxx_no_self =0 )
 			if( vdefault2.pfind( '= %s* NULL' ) ) vdefault = '|null=null';
 		}else{
 		}
-	}else if( map_user_types.has( type ) or map_ns_types.has( type ) ){
+	}else if( map_user_types.has( typename ) or map_ns_types.has( typename ) ){
 		utp: UserType;
-		if( map_user_types.has( type ) ){
-			utp = map_user_types[ type ];
+		if( map_user_types.has( typename ) ){
+			utp = map_user_types[ typename ];
 			daotype = utp.name;
 		}else{
-			daotype = type;
-			utp = map_ns_types[ type ];
-			type = utp.name;
+			daotype = typename;
+			utp = map_ns_types[ typename ];
+			typename = utp.name;
 			kvmap[ 'namespace2' ] = utp.snamespace + '::';
 		}
 		if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
 		if( not ispointer ){
-			kvmap[ 'type' ] = type;
+			kvmap[ 'type' ] = typename;
 			kvmap[ 'type2' ] = utp.name;
 		}
 		if( refer == '*' ){
-			cxxtype = type + '*';
-			cxxpar = type + '* ' + name;
+			cxxtype = typename + '*';
+			cxxpar = typename + '* ' + name;
 		}else if( refer == '**' ){
-			cxxtype = type + '**';
-			cxxpar = type + '** ' + name;
+			cxxtype = typename + '**';
+			cxxpar = typename + '** ' + name;
 		}else{
-			cxxtype = type + refer;
-			cxxpar = type + ' ' + refer  + name;
+			cxxtype = typename + refer;
+			cxxpar = typename + ' ' + refer  + name;
 			cxxcall = '*' + name;
 			if( ispointer ) cxxcall = name;
 		}
@@ -2297,8 +2298,8 @@ routine Variable::Generate( cxx_no_self =0 )
 			}
 			cxxcall = name;
 			if( refer == '*' ) cxxcall = '&' + name;
-		}else if(type == 'QChar' ){
-			if(host != type or index >=1 or (index == INDEX_RETURN and host != type) ){
+		}else if(typename == 'QChar' ){
+			if(host != typename or index >=1 or (index == INDEX_RETURN and host != typename) ){
 				daotype = 'int';
 				tpl_daopar = daopar_int;
 				tpl_dao2cxx = dao2cxx_qchar;
@@ -2314,8 +2315,8 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxcall = name;
 				if( refer == '*' ) cxxcall = '&' + name;
 			}
-		}else if(type == 'QByteArray' and refer != '*'  ){
-			if(host != type or index >=1 or (index == INDEX_RETURN and host != type) ){
+		}else if(typename == 'QByteArray' and refer != '*'  ){
+			if(host != typename or index >=1 or (index == INDEX_RETURN and host != typename) ){
 				daotype = 'string';
 				tpl_daopar = daopar_string;
 				tpl_dao2cxx = dao2cxx_qbytearray;
@@ -2326,8 +2327,8 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxcall = name;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|null=null';
 			}
-		}else if( type == 'QString' and refer != '*' ){
-			if(host != type or index >=1 or (index == INDEX_RETURN and host != type) ){
+		}else if( typename == 'QString' and refer != '*' ){
+			if(host != typename or index >=1 or (index == INDEX_RETURN and host != typename) ){
 				daotype = 'string';
 				tpl_daopar = daopar_string;
 				tpl_dao2cxx = dao2cxx_qstring;
@@ -2338,7 +2339,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				cxxcall = name;
 				if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|null=null';
 			}
-		}else if( type == 'QVariant' and vdefault.pfind( '=%s*0' ).size() ){
+		}else if( typename == 'QVariant' and vdefault.pfind( '=%s*0' ).size() ){
 			tpl_dao2cxx += '  QVariant _$(name);\n';
 			tpl_dao2cxx += '  if( $(name) == NULL ) $(name) = & _$(name);\n';
 		}
@@ -2350,7 +2351,7 @@ routine Variable::Generate( cxx_no_self =0 )
 			isCallback = 1;
 		}
 	}else{
-		io.writef( 'warning: unsupported type "%s" in "%s"\n', type, source );
+		io.writef( 'warning: unsupported type "%s" in "%s"\n', typename, source );
 		unsupport = 1;
 	}
 	if( cxxtype2 == '' ) cxxtype2 = cxxtype;
@@ -2837,7 +2838,7 @@ routine Function::Generate()
 		nils += '_dao_nil';
 		refs += '_dp+' + (string)(i-cxx_no_self);
 		if( $QT_SLOT in attribs ){
-			vo.index --;
+			-- vo.index;
 			vo.Generate( cxx_no_self );
 			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
 		}
@@ -2853,9 +2854,9 @@ routine Function::Generate()
 	nowrap = excluded;
 	if( not nowrap and ($FUNC_PROTECTED in attribs) ){
 		nowrap = ($FUNC_STATIC in attribs or $FUNC_PURE_VIRTUAL in attribs);
-		if( retype.type != retype.type_trans ) nowrap = 1;
+		if( retype.typename != retype.type_trans ) nowrap = 1;
 		for( vo in parlist ){
-			if( vo.type != vo.type_trans ) nowrap = 1;
+			if( vo.typename != vo.type_trans ) nowrap = 1;
 		}
 	}
 	signature += ')';
@@ -3009,14 +3010,14 @@ routine Function::Generate()
 		tks = retype.dao2cxx.capture( '= %s* %b()' );
 		if( tks ) vareturn = retype.cxxpar + tks[0] + '0;';
 	}
-	if( retype.type.capture( qt_container ) ) vareturn = retype.cxxpar + ';';
+	if( retype.typename.capture( qt_container ) ) vareturn = retype.cxxpar + ';';
 	kvmap3[ 'vareturn' ] = vareturn;
 	if( retype.daotype.size() ==0 ){
 		kvmap3[ 'vareturn' ] = '';
 		kvmap3[ 'getreturn' ] = '';
 		kvmap3[ 'return' ] = '';
-	}else if( map_user_types.has( retype.type ) ){
-		utp = map_user_types[ retype.type ];
+	}else if( map_user_types.has( retype.typename ) ){
+		utp = map_user_types[ retype.typename ];
 		if( utp.isCppClass ){
 			if( retype.refer == '*' )
 			kvmap3[ 'vareturn' ] = retype.cxxpar + ' = NULL;';
@@ -3092,7 +3093,7 @@ routine Function::Generate()
 	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'return' ] = 'return';
 		kvmap3[ 'comma' ] = cxxCallParamV ? ',' : '';
-		if( retype.type == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
+		if( retype.typename == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
 		kvmap3[ 'parlist' ] = cxxProtoParam;
 		if( $FUNC_PURE_VIRTUAL in attribs ){
 			cxxWrapperVirt2 = cxx_virt_class2.expand( kvmap3 );
@@ -3772,7 +3773,7 @@ routine UserType::GenerateMeth()
 	overloads = {=>};
 	for( meth in methods ){
 		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
-		overloads[ meth.cxxName ] ++;
+		overloads[ meth.cxxName ] += 1;
 		n = overloads[ meth.cxxName ];
 		if( n >1 ){
 			meth.overload += '_dao_' + (string) n;
@@ -4671,13 +4672,13 @@ onload='DaoOnLoad' )
 	overloads : map<string,int> = {=>};
 	for( meth in functions.funcs ){
 		if( not overloads.has( meth.cxxName ) ) overloads[ meth.cxxName ] = 0;
-		overloads[ meth.cxxName ] ++;
+		overloads[ meth.cxxName ] += 1;
 		n = overloads[ meth.cxxName ];
 		if( n >1 ) meth.overload += '_dao_' + (string) n;
 	}
 	count = 0;
 	for( utp in map_user_types.values() )
-	if( utp.name[0] == 'Q'[0] ) count ++;
+	if( utp.name[0] == 'Q'[0] ) count += 1;
 	if( count > map_user_types.size() / 2 ) lib_name = LibType.LIB_QT;
 	
 	io.writeln( 'sorting classes ...' );

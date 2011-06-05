@@ -90,6 +90,8 @@ struct DaoNameSpace
 
 	DaoVmProcess *vmpEvalConst;
 	DaoRoutine   *routEvalConst;
+	DaoType     **tempTypes;
+	DString      *tempModes;
 };
 
 DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );

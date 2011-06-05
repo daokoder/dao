@@ -17,27 +17,6 @@
 #include"daoType.h"
 #include"daoLexer.h"
 
-struct DaoInode
-{
-	unsigned short  code; /* opcode */
-	unsigned short  a, b, c; /* register ids for operands */
-	unsigned short  level; /* lexical level */
-	unsigned short  line; /* line number in source file */
-	unsigned int    first;
-	unsigned short  middle;
-	unsigned short  last;
-
-	int id;
-	int extra;
-
-	DaoInode *jumpTrue;
-	DaoInode *jumpFalse;
-
-	DaoInode *prev;
-	DaoInode *next;
-	DaoInode *below;
-};
-DaoInode* DaoInode_New();
 
 struct DaoParser
 {
@@ -49,6 +28,8 @@ struct DaoParser
 	DaoParser *defParser;
 	int parStart;
 	int parEnd;
+
+	int curToken;
 
 	DArray  *tokens;
 	DArray  *partoks;
@@ -62,7 +43,6 @@ struct DaoParser
 	DaoInode *vmcBase;
 	DaoInode *vmcFirst;
 	DaoInode *vmcLast;
-	DaoInode *vmcTop;
 	int vmcCount;
 
 	/* Stack of maps: mapping local variable names to virtual register ids at each level: */
@@ -84,8 +64,7 @@ struct DaoParser
 
 	DArray *routCompilable; /* list of defined routines with bodies */
 
-	int    locRegCount;
-	DMap  *varFunctional; /* <DString*,int>: variables in functional blocks. */
+	int    regCount;
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
 	int nullValue;
@@ -106,7 +85,7 @@ struct DaoParser
 	char isDynamicClass;
 	char permission;
 	char warnAssn;
-	char pairLtGt; /* <> */
+	char isFunctional;
 
 	DaoInterface *hostInter;
 	DaoClass     *hostClass;
@@ -120,7 +99,8 @@ struct DaoParser
 	short defined;
 	short error;
 	short parsed;
-	DArray *scoping; /* <size_t> */
+	DArray *scopeOpenings; /* <DaoInode*> */
+	DArray *scopeClosings; /* <DaoInode*> */
 	DArray *errors;
 	DArray *bindtos;
 	DArray *uplocs;
@@ -135,7 +115,6 @@ struct DaoParser
 	DString   *str;
 	DMap      *lvm; /* <DString*,int>, for localVarMap; */
 	DArray    *toks;
-	complex16  combuf;
 	complex16  imgone;
 };
 

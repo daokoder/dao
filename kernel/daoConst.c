@@ -107,46 +107,23 @@ static const char *const vmOperNames[] = {
 	"???",
 
 	/* for compiling only */
-	"idx" ,
-	"incr" ,
-	"decr" ,
-	"comma" , 
-	"if" ,
-	"elif" ,
-	"else" ,
-	"while_aux" ,
-	"while" ,
-	"for_aux" ,
-	"for_step" ,
-	"for" ,
+	"label",
+	"loop",
+	"branch",
 	"do" ,
-	"until" ,
-	"dowhile" ,
-	"casetag" ,
-	"default" ,
-	"break" ,
-	"skip" ,
 	"lbra" ,
 	"rbra" ,
-	"lbra2" ,
-	"rbra2" ,
 	"try" ,
-	"retry" ,
 	"raise" ,
-	"rescue" ,
-	"label" ,
+	"catch" ,
 	"scbegin" ,
 	"scend" ,
-	"enum" ,
-	"setvg_aux" ,
-	"refer" ,
-	"unused",
-	"unused2"
+	"unused"
 };
 const char* getOpcodeName( int opc )
 {
 	if( opc >= 0 && opc < DVM_NULL ) return vmOperNames[ opc ];
-	if( opc > DVM_NULL && opc <= DVM_UNUSED ) return vmOperNames[ opc-DVM_IDX+DVM_NULL+1 ];
+	if( opc > DVM_NULL && opc <= DVM_UNUSED ) return vmOperNames[ opc-DVM_LABEL+DVM_NULL+1 ];
 	return "???";
 }
 
@@ -161,6 +138,8 @@ static const char* const daoCtInfo[] =
 	"is not expected",
 	"is not declared",
 	"has been previously defined",
+	"Statements not seperated properly",
+	"Assignment inside expression",
 	"No method to use from",
 	"Symbol possibly undefined",
 	"Symbol not defined",
@@ -172,6 +151,7 @@ static const char* const daoCtInfo[] =
 	"Need bindable type (Dao class or C type)",
 	"Need string token",
 	"Need valid name" ,
+	"Expecting token" ,
 	"Token not found",
 	"Token not expected",
 	"Tokens not paired",
@@ -192,8 +172,10 @@ static const char* const daoCtInfo[] =
 	"Invalid number digit",
 	"Invalid type name",
 	"Invalid type form",
+	"Invalid reference to non-local variable",
 	"Invalid expression",
 	"Invalid statement",
+	"Invalid functional method",
 	"Invalid definition",
 	"Invalid enum definition",
 	"Invalid class definition",
@@ -244,6 +226,8 @@ static const char* const daoCtInfo[] =
 	"Case value not constant",
 	"Cyclic loading detected",
 	"Feature is disabled",
+	"Numeric array is disabled",
+	"Synchronous class is disabled",
 	"default parameter is not const",
 	"invalid parameter list",
 	"parameter number not correct",

@@ -81,8 +81,7 @@ enum DaoOpcode
 	DVM_TEST , /* if A, go to the next one; else, goto B-th instruction; */
 	DVM_MATH , /* C = A( B ); A: sin,cos,...; B: double,complex */
 	DVM_FUNCT , /* C = A( B ); A: map,reduce,...; B: list,tuple */
-	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters;
-				  call with caller's params C = A( 0, 1, ... ), if B==DAO_CALLER_PARAM. */
+	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
 	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
 	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:
 				  A,A+1,..,A+B-2; If B==1, no exception to raise or rescue. */
@@ -385,45 +384,18 @@ typedef enum DaoOpcode DaoOpcode;
  */
 enum DaoOpcodeExtra
 {
-	DVM_IDX = 1000,
-	DVM_INCR ,
-	DVM_DECR ,
-	DVM_COMMA , 
-	DVM_IF ,
-	DVM_ELIF ,
-	DVM_ELSE ,
-	DVM_WHILE_AUX , /* B=jump_to_exit/break_loop, C=jump_to_skip_loop */
-	DVM_WHILE ,
-	DVM_FOR_AUX , /* B=jump_to_exit/break_loop, C=jump_to_skip_loop */
-	DVM_FOR_STEP ,
-	DVM_FOR ,
+	DVM_LABEL = 1000,
+	DVM_LOOP ,
+	DVM_BRANCH ,
 	DVM_DO ,
-	DVM_UNTIL ,
-	DVM_DOWHILE ,
-	DVM_CASETAG ,
-	DVM_DEFAULT ,
-	DVM_BREAK ,
-	DVM_SKIP ,
 	DVM_LBRA ,
 	DVM_RBRA ,
-	DVM_LBRA2 ,
-	DVM_RBRA2 ,
 	DVM_TRY ,
-	DVM_RETRY ,
 	DVM_RAISE ,
-	DVM_RESCUE ,
-	DVM_LABEL ,
+	DVM_CATCH ,
 	DVM_SCBEGIN ,
 	DVM_SCEND ,
-	DVM_ENUM ,
-	/* XXX: global a = "abc"; a.toupper();
-	   generate DVM_SETVG_AUX after a call invoked by a global object,
-	   remove it in typing system if the object is not a number or string.
-	 */
-	DVM_SETVG_AUX , 
-	DVM_REFER ,
-	DVM_UNUSED ,
-	DVM_UNUSED2
+	DVM_UNUSED
 };
 
 enum DaoMathFunct

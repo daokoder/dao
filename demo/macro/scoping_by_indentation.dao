@@ -23,7 +23,7 @@ syntax{ # if : elif : else :
 }as{ # if(){}elif(){}else{}
   if( 1 ){ # extra nesting to avoid the inside messing up with the outside
     if( $EXP_1 ){ \[ $IBL_1 \] }
-    \{ elif( $EXP_2 ){ \[ $IBL_2 \] } \}
+    \{ else if( $EXP_2 ){ \[ $IBL_2 \] } \}
     \[ else{ \[ $IBL_3 \] } \]
   }
 }

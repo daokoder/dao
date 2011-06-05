@@ -611,7 +611,8 @@ void DaoRoutine_Compile( DaoRoutine *self )
 				}
 				DArray_Swap( self->parser->tokens, tokens );
 				DArray_Clear( self->parser->vmCodes );
-				DArray_Clear( self->parser->scoping );
+				DArray_Clear( self->parser->scopeOpenings );
+				DArray_Clear( self->parser->scopeClosings );
 				DaoParser_ClearCodes( self->parser );
 				self->parser->lexLevel = 0;
 				self->parser->parsed = 0;
@@ -662,7 +663,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	DArray_Assign( self->regType, other->regType );
 	GC_ShiftRC( other->nameSpace, self->nameSpace );
 	self->nameSpace = other->nameSpace;
-	self->locRegCount = other->locRegCount;
+	self->regCount = other->regCount;
 	self->defLine = other->defLine;
 	self->bodyStart = other->bodyStart;
 	self->bodyEnd = other->bodyEnd;
@@ -751,7 +752,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 	DNode *node;
 
 	checks = DMap_New(0,0);
-	DString_Resize( self->regMode, self->locRegCount );
+	DString_Resize( self->regMode, self->regCount );
 	memset( self->regMode->mbs, 0, self->regMode->size*sizeof(char) );
 	node = DMap_First( self->localVarType );
 	for( ; node !=NULL; node = DMap_Next(self->localVarType,node) ){
@@ -837,7 +838,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 			break;
 		case DVM_CALL : case DVM_MCALL :
 			k = vmc->b & 0xff;
-			if( k == DAO_CALLER_PARAM ){
+			if( k == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
 				k = self->parCount - (self->routType->attrib & DAO_TYPE_SELF) != 0;
 			}
 			for(j=0; j<=k; j++) SetupOperand( self, vmc->a+j, checks );
@@ -987,7 +988,7 @@ static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
 		}
 	}
 	DMap_Delete( checks );
-	for(i=0; i<self->locRegCount; i++){
+	for(i=0; i<self->regCount; i++){
 		if( self->regMode->mbs[i] ==0 ) self->regMode->mbs[i] = DAO_REG_INTERMED_SU;
 		/* printf( "%3i: %2i\n", i, self->regMode->mbs[i] ); */
 	}
@@ -1355,7 +1356,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 
 #define InsertCodeMoveToInteger( opABC, opcode ) \
 	{ vmc2.a = opABC; \
-	opABC = self->locRegCount + addRegType->size -1; \
+	opABC = self->regCount + addRegType->size -1; \
 	addCount[i] ++; \
 	vmc2.code = opcode; \
 	vmc2.c = opABC; \
@@ -1396,8 +1397,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	int typed_code = daoConfig.typedcode;
 	int i, j, k, cid=0, retinf = 0;
 	int N = self->vmCodes->size;
-	int M = self->locRegCount;
-	int min=0, spec=0, lastcomp = 0;
+	int M = self->regCount;
+	int min=0, spec=0, lastcomp = -1;
 	int TT0, TT1, TT2, TT3, TT4, TT5, TT6;
 	int ec = 0, ec_general = 0, ec_specific = 0;
 	int annot_first = 0, annot_last = 0, tid_target = 0;
@@ -1443,6 +1444,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DValue    val = daoNullValue;
 	DValue   *csts;
 	DValue   *pp;
+	int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+	int ismain = self->attribs & DAO_ROUT_MAIN;
+	int autoret = ismain && (print || vms->evalCmdline);
 	int notide = ! (vms->options & DAO_EXEC_IDE);
 	/* To support Edit&Continue in DaoStudio, some of the features
 	 * have to be switched off:
@@ -1461,8 +1465,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	if( self->vmCodes->size ==0 ) return 1;
 	defs = DMap_New(0,0);
 	defs2 = DMap_New(0,0);
-	init = dao_malloc( self->locRegCount );
-	memset( init, 0, self->locRegCount );
+	init = dao_malloc( self->regCount );
+	memset( init, 0, self->regCount );
 	addCount = dao_malloc( self->vmCodes->size * sizeof(int) );
 	memset( addCount, 0, self->vmCodes->size * sizeof(int) );
 	vmCodeNew = DArray_New( D_VMCODE );
@@ -1511,8 +1515,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 
 	GC_DecRCs( self->regType );
 	regConst = DVarray_New();
-	DVarray_Resize( regConst, self->locRegCount, daoNullValue );
-	DArray_Resize( self->regType, self->locRegCount, 0 );
+	DVarray_Resize( regConst, self->regCount, daoNullValue );
+	DArray_Resize( self->regType, self->regCount, 0 );
 	type = self->regType->items.pType;
 	csts = regConst->data;
 
@@ -1545,7 +1549,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoGC_IncRCs( self->regType );
 
 	/*
-	   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->locRegCount );
+	   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->regCount );
 	   if( self->routType ) printf( "%p %p\n", hostClass, self->routType->aux.v.p );
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
@@ -1673,7 +1677,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					addCount[i] ++;
 					vmc2.code = DVM_CAST;
 					vmc2.a = opa;
-					vmc2.c = self->locRegCount + addRegType->size;
+					vmc2.c = self->regCount + addRegType->size;
 					vmc->a = vmc2.c;
 					DArray_Append( addCode, & vmc2 );
 					DArray_Append( addRegType, *tp );
@@ -1850,7 +1854,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							vmc2.code = DVM_CAST;
 							vmc2.a = opb;
 							vmc2.b = 0;
-							vmc2.c = self->locRegCount + addRegType->size;
+							vmc2.c = self->regCount + addRegType->size;
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
@@ -1904,7 +1908,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				csts[opc].cst = csts[opa].cst;
 				lastcomp = opc;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+				k = DaoTokens_FindLeftPair( self->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
+				for(j=0; j<opb; j++){
+					AssertInitialized( opa+j+1, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+				}
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				ct = at;
@@ -1912,7 +1919,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				DString_SetMBS( mbs, "[]" );
 				if( opb == 0 ){
 					ct = at;
-				}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
+				}else if( NoCheckingType( at ) ){
 					/* allow less strict typing: */
 					ct = udf;
 				}else if( at->tid == DAO_ARRAY ){
@@ -2294,7 +2301,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							addCount[i] ++;
 							vmc2.code = DVM_CAST;
 							vmc2.a = opb;
-							vmc2.c = self->locRegCount + addRegType->size;
+							vmc2.c = self->regCount + addRegType->size;
 							DArray_Append( addCode, & vmc2 );
 							DArray_Append( addRegType, inumt );
 							vmc->b = vmc2.c;
@@ -3317,6 +3324,21 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				break;
 			}
+		case DVM_GOTO :
+			if( autoret ){
+				DaoVmCodeX *dest = vmcs[ opb ];
+				if( dest->code == DVM_RETURN ){
+					vmc->code = dest->code;
+					vmc->a = dest->a;
+					vmc->b = dest->b;
+					vmc->c = dest->c;
+					if( vmc->b == 0 && lastcomp >= 0 ){
+						vmc->a = lastcomp;
+						vmc->b = 1;
+					}
+				}
+			}
+			break;
 		case DVM_TEST :
 			{
 				/* if( init[opa] ==0 ) goto NotInit;  allow null value for testing! */
@@ -3375,7 +3397,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			case DVM_FUNCT_MAP :
 			case DVM_FUNCT_LIST :
 			case DVM_FUNCT_ARRAY :
-				bt = type[ vmcs[i-2]->c ];
+				bt = type[ vmcs[i-2]->a ];
 				if( k == DAO_ARRAY || opa == DVM_FUNCT_ARRAY ){
 					bt = DaoType_DeepItemType( bt );
 					ct = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, & bt, 1 );
@@ -3384,10 +3406,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				break;
 			case DVM_FUNCT_FOLD :
-				ct = type[ vmcs[i-2]->c ];
+				ct = type[ vmcs[i-2]->a ];
 				break;
 			case DVM_FUNCT_UNFOLD :
-				bt = type[ vmcs[i-2]->c ];
+				bt = type[ vmcs[i-2]->a ];
 				ct = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & bt, 1 );
 				break;
 			case DVM_FUNCT_SORT :
@@ -3423,7 +3445,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				ct = bt;
 				if( bt->tid == DAO_ARRAY || bt->tid == DAO_LIST ){
 					if( bt->nested->size != 1 ) goto ErrorTyping;
-					at = type[ vmcs[i-2]->c ];
+					at = type[ vmcs[i-2]->a ];
 					bt = bt->nested->items.pType[0];
 					AssertTypeMatching( at, bt, defs, 0 );
 				}
@@ -3496,7 +3518,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				pp = csts+opa+1;
 				tp = type+opa+1;
 				j = vmc->b & 0xff;
-				if( j == DAO_CALLER_PARAM ){
+				if( j == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
 					k = (self->routType->attrib & DAO_TYPE_SELF) != 0;
 					j = self->parCount - k;
 					pp = csts + k;
@@ -3651,9 +3673,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		case DVM_RETURN :
 		case DVM_YIELD :
 			{
-				if( code == DVM_RETURN ) vmc->c = lastcomp;
+				if( opb == 0 && lastcomp >= 0 && (opc || autoret) ){
+					vmc->a = opa = lastcomp;
+					vmc->b = opb = 1;
+				}
 				if( self->routType == NULL ) continue;
-				if( opc == 1 && code == DVM_RETURN ) continue;
+				if( opc && code == DVM_RETURN ) continue;
 				ct = self->routType->aux.v.type;
 				/*
 				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );
@@ -3686,7 +3711,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								vmc2.code = DVM_CAST;
 								vmc2.a = opa;
 								vmc2.b = 0;
-								vmc2.c = self->locRegCount + addRegType->size;
+								vmc2.c = self->regCount + addRegType->size;
 								vmc->a = vmc2.c;
 								DArray_Append( addCode, & vmc2 );
 								DArray_Append( addRegType, ct );
@@ -4216,7 +4241,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		GC_IncRC( addRegType->items.pVoid[i] );
 		DArray_Append( self->regType, addRegType->items.pVoid[i] );
 	}
-	self->locRegCount = self->regType->size;
+	self->regCount = self->regType->size;
 	for(j=0; j<addCount[0]; j++){
 		DArray_Append( vmCodeNew, addCode->items.pVmc[0] );
 		DArray_PopFront( addCode );
@@ -4250,7 +4275,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray_Delete( addCode );
 	DArray_Append( self->regType, any );
 	GC_IncRC( any );
-	self->locRegCount ++;
+	self->regCount ++;
 	/*
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
@@ -4344,7 +4369,7 @@ ErrorTyping:
 				dao_free( init );
 				dao_free( addCount );
 				tmp = DMap_New(0,0);
-				for( i=0; i<self->locRegCount; i++ )
+				for( i=0; i<self->regCount; i++ )
 					if( type[i] && type[i]->refCount ==0 ) DMap_Insert( tmp, type[i], 0 );
 				node = DMap_First( tmp );
 				for(; node !=NULL; node = DMap_Next(tmp, node) )
@@ -4424,7 +4449,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, "type: " );
 	DaoStream_WriteString( stream, self->routType->name );
 	DaoStream_WriteMBS( stream, "\nNumber of register:\n" );
-	DaoStream_WriteInt( stream, (double)self->locRegCount );
+	DaoStream_WriteInt( stream, (double)self->regCount );
 	DaoStream_WriteMBS( stream, "\n" );
 	DaoStream_WriteMBS( stream, sep1 );
 	DaoStream_WriteMBS( stream, "Virtual Machine Code:\n\n" );

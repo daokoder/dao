@@ -28,7 +28,7 @@
 /* functions defined in daoParser.c */
 extern void DaoParser_Warn( DaoParser *self, int code, DString *ext );
 extern void DaoParser_Error( DaoParser *self, int code, DString *ext );
-extern int DaoParser_FindPhraseEnd( DaoParser *self, int start, int end );
+static int DaoParser_ParseExpression( DaoParser *self, int stop );
 extern int DaoParser_FindOpenToken( DaoParser *self, uchar_t tok, int start, int end/*=-1*/, int warn/*=1*/ );
 extern int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop/*=-1*/ );
 
@@ -656,7 +656,10 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 			if( from >= end ) return -100;
 			switch( unit->type ){
 			case DMACRO_EXP :
-				j = DaoParser_FindPhraseEnd( self, from, -1 ) + 1;
+				self->curToken = from;
+				j = DaoParser_ParseExpression( self, 0 );
+				if( j < 0 ) return -100;
+				j += 1;
 				min = j + unit->stops->size;
 				for(k=0; k<unit->stops->size; k++){
 					DaoToken *stop = unit->stops->items.pToken[k];
@@ -1076,6 +1079,254 @@ Failed :
 	DMap_Delete( tokMap );
 	DMap_Delete( used );
 	return -1;
+}
+
+/* parsing without code generation: */
+extern DOper daoArithOper[DAO_NOKEY2];
+static int DaoParser_CurrentTokenType( DaoParser *self )
+{
+	if( self->curToken >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken]->type;
+}
+static int DaoParser_CurrentTokenName( DaoParser *self )
+{
+	if( self->curToken >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken]->name;
+}
+static int DaoParser_NextTokenName( DaoParser *self )
+{
+	if( (self->curToken+1) >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken+1]->name;
+}
+static int DaoParser_GetOperPrecedence( DaoParser *self )
+{
+	int tki;
+	DOper oper;
+	DaoToken **tokens = self->tokens->items.pToken;
+	if( self->curToken >= self->tokens->size ) return -1;
+	tki = tokens[self->curToken]->name;
+	if( (self->curToken+1) < self->tokens->size ){
+		DaoToken *t1 = tokens[self->curToken];
+		DaoToken *t2 = tokens[self->curToken+1];
+		if( t1->line == t2->line && (t1->cpos+1) == t2->cpos ){
+			/* check for operators: <<, >>, <=, >= */
+			int newtok = 0;
+			switch( ((int)t1->type<<8)|t2->type ){
+			case (DTOK_LT<<8)|DTOK_LT : newtok = DTOK_LSHIFT; break;
+			case (DTOK_GT<<8)|DTOK_GT : newtok = DTOK_RSHIFT; break;
+			case (DTOK_LT<<8)|DTOK_ASSN : newtok = DTOK_LE; break;
+			case (DTOK_GT<<8)|DTOK_ASSN : newtok = DTOK_GE; break;
+			}
+			if( newtok ){
+				self->curToken += 1;
+				tki = newtok;
+			}
+		}else if( t1->name == DKEY_NOT && t2->name == DKEY_IN ){
+			self->curToken += 1;
+			tki = DTOK_NOTIN;
+		}
+	}
+	oper = daoArithOper[tki];
+	if( oper.oper == 0 ) return -1;
+	return 10*(20 - oper.binary);
+}
+static int DaoParser_ParsePrimary( DaoParser *self, int stop );
+static int DaoParser_ParseExpression( DaoParser *self, int stop );
+static int DaoParser_ParseParenthesis( DaoParser *self )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	int start = self->curToken;
+	int end = self->tokens->size-1;
+	int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
+	int comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+1, end, 0 );
+	int newpos = -1;
+
+	if( rb > 0 && rb < end && tokens[start+1]->type == DTOK_IDENTIFIER ){
+		self->curToken = rb + 1;
+		newpos = DaoParser_ParsePrimary( self, 0 );
+		if( newpos >= 0 ) return newpos;//XXX
+	}
+	self->curToken = start + 1;
+	if( rb >=0 && comma >= 0 && comma < rb ){
+		/* tuple enumeration expression */
+		self->curToken = rb + 1;
+		return rb;
+	}
+	newpos = DaoParser_ParseExpression( self, 0 );
+	if( newpos < 0 ) return -1;
+	if( DaoParser_CurrentTokenName( self ) != DTOK_RB ) return -1;
+	self->curToken += 1;
+	return newpos;
+}
+static int DaoParser_ParsePrimary( DaoParser *self, int stop )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	unsigned char tkn, tki, tki2;
+	int size = self->tokens->size;
+	int start = self->curToken;
+	int end = size - 1;
+	int rb, newpos = -1;
+
+	/*
+	   for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
+	 */
+	if( start >= size ) return -1;
+	tkn = tokens[start]->type;
+	tki = tokens[start]->name;
+	tki2 = DaoParser_NextTokenName( self );
+	if( tki == DTOK_IDENTIFIER && tki2 == DTOK_FIELD ){
+		DString *field = tokens[start]->string;
+		if( DaoToken_IsValidName( field->mbs, field->size ) ==0 ) return -1;
+		self->curToken += 2;
+		return DaoParser_ParseExpression( self, stop );
+	}else if( tki == DKEY_TYPE && tki2 == DTOK_LB ){
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki >= DKEY_ARRAY && tki <= DKEY_LIST && tki2 == DTOK_LCB ){
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki == DTOK_LCB ){
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki == DTOK_LSB ){
+		rb = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki == DTOK_LB ){
+		start = DaoParser_ParseParenthesis( self );
+	}else if( tki == DTOK_AT || (tki >= DKEY_CLASS && tki <= DKEY_FUNCTION) ){
+		/* closure/class expression */
+		self->curToken += 1;
+		if( DaoParser_CurrentTokenName( self ) != DTOK_LB ) return -1;
+		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, self->curToken, end );
+		if( rb < 0 || (rb+2) > end ) return -1;
+		if( tokens[rb+1]->type != DTOK_LCB ) return -1;
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, rb+1, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki == DKEY_YIELD ){
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki2 == DTOK_LB && (tki >= DKEY_ABS && tki <= DKEY_TANH) ){
+		/* built-in math functions */
+		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki2 == DTOK_LB && ( (tki >= DKEY_EACH && tki <= DKEY_COUNT) || tki == DKEY_STRING || tki == DKEY_ARRAY || tki == DKEY_LIST || tki == DKEY_MAP ) ){
+		/* built-in functional methods: */
+		if( DaoParser_CurrentTokenName( self ) != DTOK_LB ) return -1;
+		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, self->curToken, end );
+		if( rb < 0 || (rb+3) > end ) return -1;
+		if( tokens[rb+1]->type != DTOK_ARROW ) return -1;
+		if( tokens[rb+2]->type != DTOK_PIPE ){
+			rb += 3;
+			while( rb <= end ){
+				if( tokens[rb]->type != DTOK_IDENTIFIER ) return -1;
+				rb += 1;
+				if( rb > end ) return -1;
+				if( tokens[rb]->type == DTOK_PIPE ) break;
+				if( tokens[rb]->type != DTOK_COMMA ) return -1;
+			}
+		}
+		if( tokens[rb+1]->type != DTOK_LCB ) return -1;
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, rb+1, end );
+		if( rb < 0 ) return -1;
+		start = rb + 1;
+	}else if( tki == DTOK_ID_INITYPE && tki2 == DTOK_LB ){
+		start += 1;
+	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON || tki >= DKEY_EACH || tki == DKEY_SELF ){
+		start += 1;
+	}
+	if( start < 0 ) return -1;
+	self->curToken = start;
+	while( self->curToken < self->tokens->size ){
+		start = self->curToken;
+		switch( DaoParser_CurrentTokenName( self ) ){
+		case DTOK_LB :
+			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
+			if( rb < 0 ) return -1;
+			if( (rb+1) <= end && tokens[rb+1]->name == DKEY__INIT ) rb += 1;
+			self->curToken = rb + 1;
+			break;
+		case DTOK_LCB :
+			rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+			if( rb < 0 ) return -1;
+			self->curToken = rb + 1;
+			break;
+		case DTOK_LSB :
+			rb = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, end );
+			if( rb < 0 ) return -1;
+			self->curToken = rb + 1;
+			break;
+		case DTOK_DOT : case DTOK_COLON2 : case DTOK_ARROW :
+			self->curToken += 1;
+			if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ) return -1;
+			self->curToken += 1;
+			break;
+		default : return self->curToken - 1;
+		}
+	}
+	return self->curToken - 1;
+}
+static int DaoParser_ParseUnary( DaoParser *self, int stop )
+{
+	int tok = DaoParser_CurrentTokenName( self );
+	if( daoArithOper[ tok ].left == 0 ) return DaoParser_ParsePrimary( self, stop );
+	/* parse left hand unary operator */
+	self->curToken += 1;
+	return DaoParser_ParseUnary( self, stop );
+}
+static int DaoParser_ParseOperator( DaoParser *self, int LHS, int prec, int stop )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	int oper, RHS, thisPrec, nextPrec;
+
+	while(1){
+		int pos = self->curToken;
+		if( DaoParser_CurrentTokenName( self ) == stop ) return LHS;
+		thisPrec = DaoParser_GetOperPrecedence( self );
+		if(thisPrec < prec) return LHS;
+
+		oper = daoArithOper[ tokens[self->curToken]->name ].oper;
+		self->curToken += 1; /* eat the operator */
+
+		RHS = DaoParser_ParseUnary( self, stop );
+		if( RHS < 0 ){
+			if( oper != DAO_OPER_COLON || self->curToken > pos + 1 ) return RHS;
+			RHS = self->curToken - 1;
+		}
+		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
+			int RHS1, RHS2, prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
+			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_COLON );
+			if( RHS1 < 0 ) return RHS1;
+			self->curToken += 1;
+			RHS2 = DaoParser_ParseUnary( self, DTOK_COLON );
+			if( RHS2 < 0 ) return RHS2;
+			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_COLON );
+			if( RHS2 < 0 ) return RHS2;
+			LHS = RHS2;
+			continue;
+		}
+		nextPrec = DaoParser_GetOperPrecedence( self );
+		if (thisPrec < nextPrec) {
+			RHS = DaoParser_ParseOperator(self, RHS, thisPrec+1, stop );
+			if( RHS < 0 ) return RHS;
+		}
+		LHS = RHS;
+	}
+	return LHS;
+}
+static int DaoParser_ParseExpression( DaoParser *self, int stop )
+{
+	int LHS = self->curToken;
+	if( DaoParser_CurrentTokenType( self ) != DTOK_COLON )
+		LHS = DaoParser_ParseUnary( self, stop );
+	if( LHS < 0 ) return LHS;
+	return DaoParser_ParseOperator( self, LHS, 0, stop );
 }
 
 #endif

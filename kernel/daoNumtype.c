@@ -4383,7 +4383,7 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoCo
 	}
 }
 
-void DaoContext_Apply( DaoContext *ctx, DaoVmCode *vmc, int index, int vdim, int entry, int last )
+void DaoContext_Apply( DaoContext *ctx, DaoVmCode *vmc, int index, int vdim, int entry )
 {
 	DValue res, param = *ctx->regValues[ vmc->b ];
 	DaoArray *self = param.v.array;
@@ -4405,7 +4405,7 @@ void DaoContext_Apply( DaoContext *ctx, DaoVmCode *vmc, int index, int vdim, int
 		}
 		ctx->regValues[ index ]->v.i = i;
 		DaoVmProcess_ExecuteSection( ctx->process, entry );
-		res = *ctx->regValues[ last ];
+		res = ctx->process->returned;
 		if( res.t ){
 			if( res.t >= DAO_INTEGER && res.t <= DAO_DOUBLE ){
 				double val2 = DValue_GetDouble( res );

@@ -31,6 +31,7 @@ enum DaoTokNames
 	DTOK_NUMBER_HEX ,
 	DTOK_NUMBER_DEC , /* 123. 123.5 */
 	DTOK_DOUBLE_DEC , /* 345D, 123.25D */
+	DTOK_NUMBER_IMG , /* 123.0$, imaginary part of complex */
 	DTOK_NUMBER_SCI ,
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
@@ -54,7 +55,7 @@ enum DaoTokNames
 	DTOK_MUL , /* * */
 	DTOK_DIV , /* / */
 	DTOK_MOD , /* % */
-	DTOK_QUES , /* ? */
+	DTOK_QUERY , /* ? */
 	DTOK_ASSERT , /* ?? */
 	DTOK_AMAND , /* & */
 	DTOK_PIPE , /* | */
@@ -67,6 +68,7 @@ enum DaoTokNames
 	DTOK_POW , /* ** */
 	DTOK_AND , /* && */
 	DTOK_OR , /* || */
+	DTOK_NOTIN, /* not in */
 	DTOK_CASSN , /* := */
 	DTOK_ADDASN , /* += */
 	DTOK_SUBASN , /* -= */
@@ -124,6 +126,7 @@ enum DaoKeyNames
 	DKEY_OPERATOR ,
 	DKEY_INTERFACE ,
 	DKEY_SELF ,
+	DKEY_TYPE ,
 	DKEY_INT ,
 	DKEY_FLOAT ,
 	DKEY_DOUBLE ,
@@ -147,7 +150,6 @@ enum DaoKeyNames
 	DKEY_IN ,
 	DKEY_DO ,
 	DKEY_WHILE ,
-	DKEY_UNTIL ,
 	DKEY_SWITCH ,
 	DKEY_CASE ,
 	DKEY_DEFAULT ,
@@ -167,7 +169,6 @@ enum DaoKeyNames
 	DKEY_TRY ,
 	DKEY_RETRY ,
 	DKEY_CATCH ,
-	DKEY_RESCUE ,
 	DKEY_RAISE ,
 	DKEY_EACH ,
 	DKEY_REPEAT ,
@@ -199,6 +200,7 @@ enum DaoKeyNames
 	DKEY_SQRT ,
 	DKEY_TAN ,
 	DKEY_TANH ,
+	DKEY__INIT , /* fake keyword */
 	DAO_NOKEY2
 };
 

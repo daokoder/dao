@@ -76,7 +76,7 @@ struct DaoRoutine
 
 	int mode;
 
-	ushort_t locRegCount;
+	ushort_t regCount;
 	ushort_t bodyStart;
 	ushort_t bodyEnd;
 

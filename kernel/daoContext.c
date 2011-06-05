@@ -125,7 +125,7 @@ static void DaoContext_InitValues( DaoContext *self )
 	DaoType **types;
 	DValue *values;
 	DValue **values2;
-	int i, t, N = self->routine->locRegCount;
+	int i, t, N = self->routine->regCount;
 	self->entryCode = 0;
 	self->ctxState = 0;
 	self->vmc = NULL;
@@ -1568,8 +1568,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 	dint *res = 0;
 	self->vmc = vmc;
 	res = DaoContext_PutInteger( self, 0 );
-	if( dA.t && dB.t == DAO_TYPE && type->tid == DAO_TYPE ){
-		type = type->nested->items.pType[0];
+	if( dA.t && dB.t == DAO_TYPE ){
 		if( dA.t == DAO_OBJECT ) dA.v.object = dA.v.object->that;
 		if( type->tid == DAO_VARIANT ){
 			int i, mt = 0, id = 0, max = 0;
@@ -2558,8 +2557,6 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.i = ! dC.v.i; break;
 		case DVM_UNMS : dC.v.i = - dC.v.i; break;
-		case DVM_INCR : dC.v.i ++; break;
-		case DVM_DECR : dC.v.i --; break;
 		default: break;
 		}
 		bl = DaoContext_SetValue( self, vmc->c, dC );
@@ -2567,8 +2564,6 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.f = ! dC.v.f; break;
 		case DVM_UNMS : dC.v.f = - dC.v.f; break;
-		case DVM_INCR : dC.v.f ++; break;
-		case DVM_DECR : dC.v.f --; break;
 		default: break;
 		}
 		bl = DaoContext_SetValue( self, vmc->c, dC );
@@ -2576,8 +2571,6 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.d = ! dC.v.d; break;
 		case DVM_UNMS : dC.v.d = - dC.v.d; break;
-		case DVM_INCR : dC.v.d ++; break;
-		case DVM_DECR : dC.v.d --; break;
 		default: break;
 		}
 		bl = DaoContext_SetValue( self, vmc->c, dC );
@@ -2597,61 +2590,31 @@ void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_NOT :  dC.v.i = ! dC.v.i; break;
 		case DVM_UNMS : dC.v.i = - dC.v.i; break;
-		case DVM_INCR : dC.v.i ++; break;
-		case DVM_DECR : dC.v.i --; break;
 		default: break;
 		}
-		/*
-		   switch( vmc->code ){
-		   case DVM_NOT :  dC.v.d = ! dC.v.d; break;
-		   case DVM_UNMS : dC.v.d = - dC.v.d; break;
-		   case DVM_INCR : dC.v.d ++; break;
-		   case DVM_DECR : dC.v.d --; break;
-		   default: break;
-		   }
-		 */
 #ifdef DAO_WITH_NUMARRAY
 	}else if( ta==DAO_ARRAY ){
 		DaoArray *array = dA.v.array;
 		size_t i;
 		if( array->numType == DAO_FLOAT ){
-			if( vmc->code == DVM_NOT || vmc->code == DVM_UNMS ){
-				DaoArray *res = DaoContext_GetArray( self, vmc );
-				res->numType = array->numType;
-				DaoArray_ResizeArray( res, array->dims->items.pSize, array->dims->size );
-				if( array->numType == DAO_FLOAT ){
-					float *va = array->data.f;
-					float *vc = res->data.f;
-					if( vmc->code == DVM_NOT ){
-						for(i=0; i<array->size; i++ ) vc[i] = (float) ! va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) vc[i] = - va[i];
-					}
+			DaoArray *res = DaoContext_GetArray( self, vmc );
+			res->numType = array->numType;
+			DaoArray_ResizeArray( res, array->dims->items.pSize, array->dims->size );
+			if( array->numType == DAO_FLOAT ){
+				float *va = array->data.f;
+				float *vc = res->data.f;
+				if( vmc->code == DVM_NOT ){
+					for(i=0; i<array->size; i++ ) vc[i] = (float) ! va[i];
 				}else{
-					double *va = array->data.d;
-					double *vc = res->data.d;
-					if( vmc->code == DVM_NOT ){
-						for(i=0; i<array->size; i++ ) vc[i] = ! va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) vc[i] = - va[i];
-					}
+					for(i=0; i<array->size; i++ ) vc[i] = - va[i];
 				}
 			}else{
-				DaoContext_SetData( self, vmc->c, (DaoBase*)array );
-				if( array->numType == DAO_FLOAT ){
-					float *va = array->data.f;
-					if( vmc->code == DVM_INCR ){
-						for(i=0; i<array->size; i++ ) ++ va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) -- va[i];
-					}
+				double *va = array->data.d;
+				double *vc = res->data.d;
+				if( vmc->code == DVM_NOT ){
+					for(i=0; i<array->size; i++ ) vc[i] = ! va[i];
 				}else{
-					double *va = array->data.d;
-					if( vmc->code == DVM_INCR ){
-						for(i=0; i<array->size; i++ ) ++ va[i];
-					}else{
-						for(i=0; i<array->size; i++ ) -- va[i];
-					}
+					for(i=0; i<array->size; i++ ) vc[i] = - va[i];
 				}
 			}
 		}else if( vmc->code == DVM_UNMS ){
@@ -3913,7 +3876,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue 
 		MAP_Insert( DArray_Top( parser->localVarMap ), type->fname, i );
 		DArray_Append( routine->defLocals, self->defLocals->items.pToken[i] );
 	}
-	parser->locRegCount = self->parCount;
+	parser->regCount = self->parCount;
 	i = DRoutine_AddConst( (DRoutine*)routine, (DaoBase*) self );
 	MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[0]->fname, i );
 
@@ -4200,6 +4163,12 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 	int npar = vmc->b & 0xff;
 	int i, k, n = 0;
 
+	if( npar == 0 && (mode & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
+		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
+		npar = self->parCount - m;
+		params = self->regValues + m;
+		mode &= ~DAO_CALL_EXPAR;
+	}
 	if( self->object && mcall == 0 ){
 		selfpar->t = DAO_OBJECT;
 		selfpar->v.object = self->object;
@@ -4259,11 +4228,6 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DaoFunction *func;
 	DaoContext *ctx;
 
-	if( npar == DAO_CALLER_PARAM ){
-		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
-		npar = self->parCount - m;
-		params = self->regValues + m;
-	}
 	self->vmc = vmc;
 	if( caller.t ==0 ){
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "null object not callable" );
@@ -4400,11 +4364,12 @@ InvalidParameter:
 }
 void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 {
-	short i;
+	int i;
+	DaoVmFrame *topFrame = self->process->topFrame;
 	self->vmc = vmc;
 	//XXX if( DaoContext_CheckFE( self ) ) return;
-	if( self->caller && self->process->topFrame->returning != (ushort_t)-1 ){
-		int regReturn = self->process->topFrame->returning;
+	if( vmc->c == 0 && self->caller && topFrame->returning != (ushort_t)-1 ){
+		int regReturn = topFrame->returning;
 		if( self->ctxState & DVM_MAKE_OBJECT ){
 			DaoContext_SetData( self->caller, regReturn, (DaoBase*)self->object );
 		}else if( vmc->b == 1 ){
