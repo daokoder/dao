@@ -2729,18 +2729,6 @@ void DaoList_Erase( DaoList *self, int pos )
 	if( pos < 0 || pos >= self->items->size ) return;
 	DVarray_Erase( self->items, pos, 1 );
 }
-void DaoList_FlatList( DaoList *self, DVarray *flat )
-{
-	DValue *data = self->items->data;
-	int i;
-	for(i=0; i<self->items->size; i++){
-		if( data[i].t ==0 && data[i].v.p && data[i].v.p->type == DAO_LIST ){
-			DaoList_FlatList( (DaoList*) data[i].v.p, flat );
-		}else{
-			DVarray_Append( flat, self->items->data[i] );
-		}
-	}
-}
 
 /**/
 static void DaoMap_Print( DValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )

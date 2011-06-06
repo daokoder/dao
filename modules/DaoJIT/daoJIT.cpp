@@ -228,6 +228,7 @@ void DaoJIT_Init( DaoVmSpace *vms )
 	for(i=DVM_GETF_KCI; i<=DVM_SETF_OVDD; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_GETI_TI; i<=DVM_SETF_TSS; i++) dao_opcode_compilable[i] = 1;
 	for(i=DVM_GETI_LII; i<=DVM_GETI_LDI; i++) dao_opcode_compilable[i] = CHECK_MODE;
+	for(i=DVM_SETI_LIII; i<=DVM_SETI_LDID; i++) dao_opcode_compilable[i] = 1;
 	dao_opcode_compilable[ DVM_NOP ] = 1;
 	dao_opcode_compilable[ DVM_GOTO ] = 1;
 	dao_opcode_compilable[ DVM_SWITCH ] = 1;
@@ -501,10 +502,10 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 	value = CreateConstGEP2_32( value, 0, 0 ); // routine->routConsts->data: DValue[]**
 	localConsts = CreateLoad( value ); // routine->routConsts->data: DValue[]*
 
-	localRefers.resize( routine->locRegCount );
-	tempRefers.resize( routine->locRegCount );
-	tempValues.resize( routine->locRegCount );
-	for(i=0; i<routine->locRegCount; i++){
+	localRefers.resize( routine->regCount );
+	tempRefers.resize( routine->regCount );
+	tempValues.resize( routine->regCount );
+	for(i=0; i<routine->regCount; i++){
 		localRefers[i] = NULL;
 		tempRefers[i] = NULL;
 		tempValues[i] = NULL;
@@ -1117,7 +1118,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 				break;
 			case DAO_DOUBLE :
 				value = CreateUIToFP( value, double_type );
-				vdata = CastFloatPointer( vdata );
+				vdata = CastDoublePointer( vdata );
 				break;
 			default: goto Failed;
 			}
@@ -1668,6 +1669,52 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dC = GetLocalValue( vmc->c );
 			CreateCall2( dao_string_move, dA, dC );
 			break;
+		case DVM_SETI_LIII :
+		case DVM_SETI_LIIF :
+		case DVM_SETI_LIID :
+		case DVM_SETI_LFII :
+		case DVM_SETI_LFIF :
+		case DVM_SETI_LFID :
+		case DVM_SETI_LDII :
+		case DVM_SETI_LDIF :
+		case DVM_SETI_LDID :
+			dC = GetListItem( vmc->c, vmc->b, i );
+			switch( types[vmc->a]->tid ){
+			case DAO_INTEGER : dA = GetIntegerOperand( vmc->a ); break;
+			case DAO_FLOAT  : dA = GetFloatOperand( vmc->a ); break;
+			default : dA = GetDoubleOperand( vmc->a ); break;
+			}
+			dC = GetValueDataPointer( dC );
+			switch( code ){
+			case DVM_SETI_LIII :
+			case DVM_SETI_LIIF :
+			case DVM_SETI_LIID :
+				if( code != DVM_SETI_LIII ) dA = CreateFPToSI( dA, dint_type );
+				dC = CastIntegerPointer( dC );
+				break;
+			case DVM_SETI_LFII :
+			case DVM_SETI_LFIF :
+			case DVM_SETI_LFID :
+				switch( code ){
+				case DVM_SETI_LFII : dA = CreateSIToFP( dA, float_type ); break;
+				case DVM_SETI_LFID : dA = CreateFPCast( dA, float_type ); break;
+				}
+				dC = CastFloatPointer( dC );
+				break;
+			case DVM_SETI_LDII :
+			case DVM_SETI_LDIF :
+			case DVM_SETI_LDID :
+				switch( code ){
+				case DVM_SETI_LFII : dA = CreateSIToFP( dA, double_type ); break;
+				case DVM_SETI_LFID : dA = CreateFPCast( dA, double_type ); break;
+				}
+				break;
+			}
+			tmp = CreateStore( dA, dC );
+			ClearTempOperand( vmc->a );
+			ClearTempOperand( vmc->b );
+			ClearTempOperand( vmc->c );
+			break;
 		case DVM_GETI_TI :
 			value = GetTuple( vmc->a );
 			dB = GetIntegerOperand( vmc->b );
@@ -1970,7 +2017,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		}
 	}
 	SetInsertPoint( lastBlock );
-	for(i=0; i<routine->locRegCount; i++){
+	for(i=0; i<routine->regCount; i++){
 		// store intermediate data, which might be needed by non-jit compiled codes:
 		if( tempRefers[i] and tempValues[i] ) CreateStore( tempValues[i], tempRefers[i] );
 	}

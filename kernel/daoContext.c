@@ -753,28 +753,17 @@ void DaoContext_DoList(  DaoContext *self, DaoVmCode *vmc )
 		const int bval = vmc->b ? vmc->b - 10 : 0;
 		DaoList *list = DaoContext_GetList( self, vmc );
 		DVarray_Resize( list->items, bval, daoNullValue );
+		if( bval >0 && self->regTypes[ vmc->c ] ==NULL ){
+			DaoType *abtp = DaoNameSpace_GetTypeV( ns, *regValues[opA] );
+			DaoType *t = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
+			GC_ShiftRC( t, list->unitype );
+			list->unitype = t;
+		}
 		for( i=0; i<bval; i++){
 			DaoList_SetItem( list, *regValues[opA+i], i );
 			if( list->items->data[i].t == 0 && regValues[opA+i]->t !=0 ){
 				DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
 				return;
-			}
-		}
-
-		if( bval >0 && self->regTypes[ vmc->c ] ==NULL ){
-			DValue *data = list->items->data;
-			DaoType *abtp = DaoNameSpace_GetTypeV( ns, data[0] );
-			for(i=1; i<bval; i++){
-				DaoType *tp = DaoNameSpace_GetTypeV( ns, data[i] );
-				if( DaoType_MatchTo( tp, abtp, 0 ) == 0 ){
-					abtp = NULL;
-					break;
-				}
-			}
-			if( abtp ){
-				DaoType *t = DaoNameSpace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
-				GC_ShiftRC( t, list->unitype );
-				list->unitype = t;
 			}
 		}
 	}else{
@@ -786,146 +775,120 @@ void DaoContext_DoArray( DaoContext *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
-	const ushort_t bval = vmc->b - 10;
+	const ushort_t count = vmc->b - 10;
 	int numtype = DAO_INTEGER;
-	size_t i, j, k = 0;
+	size_t i, j, m, k = 0;
 	DaoArray *array = NULL;
-	DVarray *tmpArray;
-	DArray *dim;
-	DValue *telem;
+	DArray *dim = NULL;
 
 	if( vmc->b < 10 ){
 		DaoContext_DoNumRange( self, vmc );
 		return;
 	}
-	dim = DArray_New(0);
-	tmpArray = DVarray_New();
-
-	for( j=0; j<bval; j++){
-		DValue *p = self->regValues[ opA + j ];
-		if( p->t == DAO_LIST ){
-			DaoList_FlatList( p->v.list, tmpArray );
-		}else{
-			DVarray_Append( tmpArray, *p );
+	array = DaoContext_GetArray( self, vmc );
+	if( count && (array->unitype == NULL || array->unitype == dao_array_any) ){
+		DaoNameSpace *ns = self->nameSpace;
+		DValue *p = self->regValues[opA];
+		DaoType *it = DaoNameSpace_GetTypeV( ns, *p );
+		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_LIST, NULL, & it, 1 );
+		switch( p->t ){
+		case DAO_INTEGER :
+		case DAO_FLOAT :
+		case DAO_DOUBLE :
+		case DAO_COMPLEX : array->numType = p->t; break;
+		case DAO_ARRAY : array->numType = p->v.array->numType; break;
+		default : DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid items" ); return;
 		}
+		GC_ShiftRC( type, array->unitype ) ;
+		array->unitype = type;
 	}
-	telem = tmpArray->data;
-	for(j=0; j<tmpArray->size; j++ ){
-		const short type = telem[j].t;
-		DaoArray *na = telem[j].v.array;
-		k +=  ( type == DAO_ARRAY ) ? na->size : 1;
-		if( type == DAO_ARRAY ){
-			/* [ [1, 2], [3, 4] ] */
-			if( j == 0 ){
-				DArray_Assign( dim, na->dims );
-			}else{
-				size_t m;
-				if( dim->size == na->dims->size ){
-					for(m=0; m<dim->size; m++){
-						if( dim->items.pSize[m] != na->dims->items.pSize[m] ){
-							DArray_Delete( dim );
-							dim = NULL;
-							break;
-						}
-					}
-				}else{
-					DArray_Delete( dim );
-					dim = NULL;
-				}
-			}
-		}else if( type == DAO_COMPLEX || (type == DAO_ARRAY && na->numType == DAO_COMPLEX) ){
-			if( numtype < DAO_COMPLEX ) numtype = DAO_COMPLEX;
-		}else if( type ==DAO_INTEGER ||(type ==DAO_ARRAY &&na->numType ==DAO_INTEGER)){
-			if( numtype < DAO_INTEGER ) numtype = DAO_INTEGER;
-		}else if( type == DAO_FLOAT ||(type == DAO_ARRAY &&na->numType == DAO_FLOAT ) ){
-			if( numtype < DAO_FLOAT ) numtype = DAO_FLOAT;
-		}else if( type == DAO_DOUBLE ||(type == DAO_ARRAY &&na->numType == DAO_DOUBLE ) ){
-			if( numtype < DAO_DOUBLE ) numtype = DAO_DOUBLE;
-		}else if( type == DAO_STRING ){
-			numtype = DAO_FLOAT;
-		}else{
-			self->vmc = vmc;
+	for( j=0; j<count; j++){
+		DValue *p = self->regValues[ opA + j ];
+		DaoArray *na = p->v.array;
+		if( p->t != DAO_ARRAY ) continue;
+		if( dim == NULL ) dim = na->dims;
+		if( dim == na->dims ) continue;
+		if( dim->size != na->dims->size ){
 			DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
-			DVarray_Delete( tmpArray );
 			return;
 		}
+		for(m=0; m<dim->size; m++){
+			if( dim->items.pSize[m] != na->dims->items.pSize[m] ){
+				DArray_Delete( dim );
+				dim = NULL;
+				break;
+			}
+		}
 	}
-	array = DaoContext_GetArray( self, vmc );
-	array->numType = numtype;
 	if( dim ){
-		DArray_PushFront( dim, (void*) tmpArray->size );
+		dim = DArray_Copy( dim );
+		DArray_PushFront( dim, (void*) (size_t)count );
 		DaoArray_ResizeArray( array, dim->items.pSize, dim->size );
 		DArray_Delete( dim );
 	}else{
-		DaoArray_ResizeVector( array, k );
+		DaoArray_ResizeVector( array, count );
 	}
-	if( numtype == DAO_INTEGER ){
+	k = 0;
+	if( array->numType == DAO_INTEGER ){
 		int *vals = array->data.i;
-		k = 0;
-		for( j=0; j<tmpArray->size; j++ ){
-			if( telem[j].t == DAO_ARRAY ){
-				DaoArray *array2 = telem[j].v.array;
+		for( j=0; j<count; j++ ){
+			DValue *p = self->regValues[ opA + j ];
+			if( p->t == DAO_ARRAY ){
+				DaoArray *array2 = p->v.array;
 				for(i=0; i<array2->size; i++){
 					vals[k] = DaoArray_GetInteger( array2, i );
 					k++;
 				}
 			}else{
-				vals[k] = DValue_GetInteger( telem[j] );
+				vals[k] = DValue_GetInteger( *p );
 				k ++;
 			}
 		}
-	}else if( numtype == DAO_FLOAT ){
+	}else if( array->numType == DAO_FLOAT ){
 		float *vals = array->data.f;
-		k = 0;
-		for( j=0; j<tmpArray->size; j++ ){
-			if( telem[j].t == DAO_ARRAY ){
-				DaoArray *array2 = telem[j].v.array;
+		for( j=0; j<count; j++ ){
+			DValue *p = self->regValues[ opA + j ];
+			if( p->t == DAO_ARRAY ){
+				DaoArray *array2 = p->v.array;
 				for(i=0; i<array2->size; i++){
 					vals[k] = DaoArray_GetFloat( array2, i );
 					k++;
 				}
 			}else{
-				vals[k] = DValue_GetFloat( telem[j] );
+				vals[k] = DValue_GetFloat( *p );
 				k ++;
 			}
 		}
-	}else if( numtype == DAO_DOUBLE ){
+	}else if( array->numType == DAO_DOUBLE ){
 		double *vals = array->data.d;
-		k = 0;
-		for( j=0; j<tmpArray->size; j++ ){
-			if( telem[j].t == DAO_ARRAY ){
-				DaoArray *array2 = telem[j].v.array;
+		for( j=0; j<count; j++ ){
+			DValue *p = self->regValues[ opA + j ];
+			if( p->t == DAO_ARRAY ){
+				DaoArray *array2 = p->v.array;
 				for(i=0; i<array2->size; i++){
 					vals[k] = DaoArray_GetDouble( array2, i );
 					k++;
 				}
 			}else{
-				vals[k] = DValue_GetDouble( telem[j] );
+				vals[k] = DValue_GetDouble( *p );
 				k ++;
 			}
 		}
 	}else{
 		complex16 *vals = array->data.c;
-		k = 0;
-		for( j=0; j<tmpArray->size; j++ ){
-			if( telem[j].t == DAO_ARRAY ){
-				DaoArray *array2 = telem[j].v.array;
+		for( j=0; j<count; j++ ){
+			DValue *p = self->regValues[ opA + j ];
+			if( p->t == DAO_ARRAY ){
+				DaoArray *array2 = p->v.array;
 				for(i=0; i<array2->size; i++){
 					vals[k] = DaoArray_GetComplex( array2, i );
 					k++;
 				}
 			}else{
-				vals[k] = DValue_GetComplex( telem[j] );
+				vals[k] = DValue_GetComplex( *p );
 				k ++;
 			}
 		}
-	}
-	DVarray_Delete( tmpArray );
-	array->unitype = self->regTypes[ vmc->c ];
-	GC_IncRC( array->unitype );
-	if( array->unitype == NULL ){
-		array->unitype = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
-		GC_IncRC( array->unitype );
 	}
 #else
 	self->vmc = vmc;
@@ -1068,12 +1031,16 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
 		DaoContext_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
-	if( bval==3 && type < regValues[ opA+1 ]->t ) type = regValues[ opA+1 ]->t;
 	array = DaoContext_GetArray( self, vmc );
-	if( type >= DAO_INTEGER && type <= DAO_COMPLEX ){
-		array->numType = type;
-		DaoArray_ResizeVector( array, num );
+	if( array->unitype == NULL || array->unitype == dao_array_any ){
+		DaoNameSpace *ns = self->nameSpace;
+		DaoType *it = DaoNameSpace_GetTypeV( ns, *regValues[opA] );
+		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_LIST, NULL, & it, 1 );
+		GC_ShiftRC( type, array->unitype ) ;
+		array->unitype = type;
+		array->numType = regValues[opA]->t;
 	}
+	DaoArray_ResizeVector( array, num );
 
 	switch( type ){
 	case DAO_INTEGER :
@@ -1223,11 +1190,6 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
 		break;
 	default: break;
 	}
-	if( self->regTypes[ vmc->c ] ==NULL ){
-		DaoType *tp = DaoNameSpace_GetType( self->nameSpace, (DaoBase*)array );
-		GC_ShiftRC( tp, array->unitype );
-		array->unitype = tp;
-	}
 	if( ( self->vmSpace->options & DAO_EXEC_SAFE ) && array->size > 5000 ){
 		DaoContext_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
@@ -1279,7 +1241,7 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
 	const ushort_t bval = ( vmc->b & BITS_LOW12 );
-	int i, size, type = DAO_NIL;
+	int i, size, numtype = DAO_INTEGER;
 	DValue value = daoNullValue;
 	DValue **regv = self->regValues;
 	DaoArray *array = NULL;
@@ -1288,47 +1250,36 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 	dim[0] = (0xff00 & bval)>>8;
 	dim[1] = 0xff & bval;
 	size = dim[0] * dim[1];
-	for( i=0; i<size; i++) if( regv[ opA+i ]->t > type ) type = regv[ opA+i ]->t;
-	if( type == DAO_NIL || type > DAO_COMPLEX ){
-		DaoContext_RaiseException( self, DAO_ERROR, "invalid matrix enumeration" );
-		return;
+	array = DaoContext_GetArray( self, vmc );
+	if( size ){
+		numtype = regv[opA]->t;
+		if( numtype == DAO_NIL || numtype > DAO_COMPLEX ){
+			DaoContext_RaiseException( self, DAO_ERROR, "invalid matrix enumeration" );
+			return;
+		}
 	}
-	if( type == DAO_INTEGER ){
-		int *vec;
-		array = DaoContext_GetArray( self, vmc );
-		array->numType = DAO_INTEGER;
-		DaoArray_ResizeArray( array, dim, 2 );
-		vec = array->data.i;
-		for( i=0; i<size; i++) vec[i] = DValue_GetInteger( *regv[ opA+i ] );
-	}else if( type == DAO_FLOAT ){
-		float *vec;
-		array = DaoContext_GetArray( self, vmc );
-		array->numType = DAO_FLOAT;
-		DaoArray_ResizeArray( array, dim, 2 );
-		vec = array->data.f;
-		for( i=0; i<size; i++) vec[i] = DValue_GetFloat( *regv[ opA+i ] );
-	}else if( type == DAO_DOUBLE ){
-		double *vec;
-		array = DaoContext_GetArray( self, vmc );
-		array->numType = DAO_DOUBLE;
-		DaoArray_ResizeArray( array, dim, 2 );
-		vec = array->data.d;
-		for( i=0; i<size; i++) vec[i] = DValue_GetDouble( *regv[ opA+i ] );
+	if( array->unitype == NULL || array->unitype == dao_array_any ){
+		DaoNameSpace *ns = self->nameSpace;
+		DaoType *it = DaoNameSpace_GetTypeV( ns, *regv[opA] );
+		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_LIST, NULL, & it, 1 );
+		GC_ShiftRC( type, array->unitype ) ;
+		array->unitype = type;
+		array->numType = numtype;
+	}
+	/* TODO: more restrict type checking on elements. */
+	DaoArray_ResizeArray( array, dim, 2 );
+	if( numtype == DAO_INTEGER ){
+		int *vec = array->data.i;
+		for(i=0; i<size; i++) vec[i] = DValue_GetInteger( *regv[ opA+i ] );
+	}else if( numtype == DAO_FLOAT ){
+		float *vec = array->data.f;
+		for(i=0; i<size; i++) vec[i] = DValue_GetFloat( *regv[ opA+i ] );
+	}else if( numtype == DAO_DOUBLE ){
+		double *vec = array->data.d;
+		for(i=0; i<size; i++) vec[i] = DValue_GetDouble( *regv[ opA+i ] );
 	}else{
-		complex16 *vec;
-		array = DaoContext_GetArray( self, vmc );
-		array->numType = DAO_COMPLEX;
-		DaoArray_ResizeArray( array, dim, 2 );
-		vec = array->data.c;
-		for( i=0; i<size; i++) vec[i] = DValue_GetComplex( *regv[ opA+i ] );
-		type = DAO_COMPLEX;
-	}
-	value.t = type;
-	if( self->regTypes[ vmc->c ] ==NULL ){
-		DaoType *tp = DaoNameSpace_GetTypeV( self->nameSpace, value );
-		tp = DaoNameSpace_MakeType( self->nameSpace, "array", DAO_ARRAY, NULL, &tp, 1 );
-		GC_ShiftRC( tp, array->unitype );
-		array->unitype = tp;
+		complex16 *vec = array->data.c;
+		for(i=0; i<size; i++) vec[i] = DValue_GetComplex( *regv[ opA+i ] );
 	}
 #else
 	self->vmc = vmc;

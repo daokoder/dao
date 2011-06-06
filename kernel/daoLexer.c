@@ -1279,7 +1279,7 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 		}else{
 			if( len > m+3 ) len = m;
 		}
-		if( annot->size + len >= max2 ) len = max2 + 1 - annot->size;
+		if( annot->size + len >= max2 ) len = max2 - annot->size;
 		DString_AppendDataMBS( annot, t2->string->mbs, len );
 		if( len != t2->string->size ){
 			DString_AppendMBS( annot, "..." );
