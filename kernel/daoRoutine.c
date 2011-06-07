@@ -3406,7 +3406,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 				break;
 			case DVM_FUNCT_FOLD :
-				ct = type[ vmcs[i-2]->a ];
+				ct = type[ vmcs[ vmcs[i-1]->b + 2 ]->c ];
 				break;
 			case DVM_FUNCT_UNFOLD :
 				bt = type[ vmcs[i-2]->a ];
@@ -3678,7 +3678,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					vmc->b = opb = 1;
 				}
 				if( self->routType == NULL ) continue;
-				if( opc && code == DVM_RETURN ) continue;
+				if( opc && code == DVM_RETURN ) continue; /* return in functional methods */
 				ct = self->routType->aux.v.type;
 				/*
 				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );

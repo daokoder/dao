@@ -2585,6 +2585,13 @@ static void DaoArray_SetValues( DaoArray *self, int i, DaoTuple *tuple )
 	int j, k = i * m;
 	for(j=0; j<m; j++) DaoArray_SetValue( self, k + j, tuple->items->data[j] );
 }
+static void DaoContext_FailedMethod( DaoContext *self )
+{
+	if( self->process->status == DAO_VMPROC_ABORTED )
+		DaoContext_RaiseException( self, DAO_ERROR_VALUE, "functional method failed" );
+	else
+		DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid return value" );
+}
 static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int entry )
 {
 	DValue res = daoNullValue, param = *self->regValues[ vmc->b ];
@@ -2608,11 +2615,13 @@ static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int en
 	for(i=noinit; i<list->items->size; i++){
 		self->regValues[index]->v.i = i;
 		DaoVmProcess_ExecuteSection( self->process, entry );
-		if( self->process->status == DAO_VMPROC_ABORTED ) break;
-		if( DValue_Move( *returned, item, type ) == 0 ) break;
+		if( self->process->status == DAO_VMPROC_ABORTED ) goto MethodFailed;
+		if( DValue_Move( *returned, item, type ) == 0 ) goto MethodFailed;
 	}
 	self->vmc = vmc; /* it is changed! */
 	DaoContext_PutValue( self, self->process->returned );
+	return;
+MethodFailed: DaoContext_FailedMethod( self );
 }
 static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int entry )
 {
@@ -2638,11 +2647,13 @@ static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int e
 	for(i=noinit; i<array->size; i++){
 		self->regValues[index]->v.i = i;
 		DaoVmProcess_ExecuteSection( self->process, entry );
-		if( self->process->status == DAO_VMPROC_ABORTED ) break;
-		if( DValue_Move( *returned, item, type ) == 0 ) break;
+		if( self->process->status == DAO_VMPROC_ABORTED ) goto MethodFailed;
+		if( DValue_Move( *returned, item, type ) == 0 ) goto MethodFailed;
 	}
 	self->vmc = vmc; /* it is changed! */
 	DaoContext_PutValue( self, self->process->returned );
+	return;
+MethodFailed: DaoContext_FailedMethod( self );
 }
 static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int entry )
 {
@@ -2654,18 +2665,21 @@ static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int 
 	DValue_Move( param, init, type );
 	DValue_Clear( & self->process->returned ) ;
 	DaoVmProcess_ExecuteSection( self->process, entry );
-	while( self->process->returned.t ){
-		//XXX if( self->process->status == DAO_VMPROC_ABORTED ) break;
-		init->v.i = DValue_GetInteger( self->process->returned );
-		DaoList_PushBack( result, self->process->returned );
+	int k = 0;
+	while( self->process->returned.t && ++k < 10 ){
+		if( self->process->status == DAO_VMPROC_ABORTED ) goto MethodFailed;
+		if( DaoList_PushBack( result, self->process->returned ) ) goto MethodFailed;
 		DValue_Clear( & self->process->returned ) ;
 		DaoVmProcess_ExecuteSection( self->process, entry );
 	}
+	return;
+MethodFailed: DaoContext_FailedMethod( self );
 }
-static void DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
+static int DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
 {
 	DArray *dims = DArray_Copy( array->dims );
 	int j, k, t, m = 1;
+	int ret = 1;
 	if( type->tid && type->tid <= DAO_COMPLEX ){
 		self->numType = type->tid;
 	}else if( type->tid == DAO_TUPLE && type->nested->size ){
@@ -2675,15 +2689,17 @@ static void DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
 			k = type->nested->items.pType[j]->tid;
 			if( k > t ) t = k;
 		}
-		if( t == 0 || t > DAO_COMPLEX ) t = DAO_DOUBLE; /* XXX warning */
+		if( t == 0 || t > DAO_COMPLEX ) t = DAO_DOUBLE, ret = 0;
 		self->numType = t;
 		if( m > 1 ) DArray_Append( dims, m );
-	}else{ /* XXX warning */
+	}else{
 		self->numType = DAO_DOUBLE;
+		ret = 0;
 	}
 	DaoArray_ResizeVector( self, array->size * m );
 	DaoArray_Reshape( self, dims->items.pSize, dims->size );
 	DArray_Delete( dims );
+	return 1;
 }
 static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, int entry )
 {
@@ -2770,7 +2786,9 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 		if( vmc->a == DVM_FUNCT_MAP ){
 			int last = (vmc-2)->a;
 			result = DaoContext_PutArray( self );
-			DaoArray_TypeShape( result, array, self->regTypes[last] );
+			if( DaoArray_TypeShape( result, array, self->regTypes[last] ) == 0 ){
+				DaoContext_RaiseException( self, DAO_WARNING, "invalid return type" );
+			}
 		}else{
 			list = DaoContext_PutList( self );
 		}
@@ -2821,7 +2839,7 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 	self->vmc = vmc; /* it is changed! */
 	if( vmc->a == DVM_FUNCT_COUNT ) DaoContext_PutInteger( self, count );
 #else
-	DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	DaoContext_RaiseException( self, DAO_DISABLED_NUMARRAY, NULL );
 #endif
 	return 0;
 }
@@ -2935,9 +2953,9 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 	DValue param = *self->regValues[ vmc->b ];
 	DaoTuple *tuple = param.v.tuple;
 	DaoVmCode *vmcs = self->codes;
-	int i, entry = (int)( self->vmc - vmcs );
+	int entry = (int)( self->vmc - vmcs );
 	int index, idc = 0;
-	for(i=entry; i>=0; i--) if( vmcs[i].code == DVM_GOTO && vmcs[i].b == entry ) break;
+	int i = (vmc-1)->b;
 	index = vmcs[i+1].c;
 	if( i >=0 ){
 		for(; i<entry; i++){
@@ -2953,17 +2971,17 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 	entry = i;
 	switch( vmc->a ){
 	case DVM_FUNCT_APPLY :
-#ifdef DAO_WITH_NUMARRAY
-		if( param.t == DAO_ARRAY ){
-			DaoContext_Apply( self, vmc, index, idc-1, entry );
-		} else if( param.t == DAO_LIST ){
+		if( param.t == DAO_LIST ){
 			DaoContext_ApplyList( self, vmc, index, idc-1, entry );
-		} else {
+		}else if( param.t == DAO_ARRAY ){
+#ifdef DAO_WITH_NUMARRAY
+			DaoContext_Apply( self, vmc, index, idc-1, entry );
+#else
+			DaoContext_RaiseException( self, DAO_DISABLED_NUMARRAY, NULL );
+#endif
+		}else{
 			DaoContext_RaiseException( self, DAO_ERROR, "apply currently is only supported for numeric arrays and lists" );
 		}
-#else
-		DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
-#endif
 		break;
 	case DVM_FUNCT_SORT :
 		DaoContext_Sort( self, vmc, index, entry );

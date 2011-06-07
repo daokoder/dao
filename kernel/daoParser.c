@@ -5338,8 +5338,11 @@ static int DaoParser_ParseFunctional( DaoParser *self )
 			DArray_Append( fnames, self->mbs );
 		}
 		/* for type checking: */
-		if( N >1 ) DaoParser_AddCode( self, DVM_MOVE, p0+1, 0, var+1, rb, 0, 0 );
-		DaoParser_AddCode( self, DVM_GETI, p0, mark, var+1, rb, rb+1, 0 );
+		if( N >1 ){
+			DaoParser_AddCode( self, DVM_MOVE, p0+1, 0, var+1, rb, 0, 0 );
+		}else{
+			DaoParser_AddCode( self, DVM_GETI, p0, mark, var+1, rb, rb+1, 0 );
+		}
 		DaoParser_AddCode( self, DVM_SECT, ic, 0, DVM_SECT, rb, rb+1, 0 );
 		DaoParser_AddCode( self, DVM_GETI, p0, mark, var, rb, rb+1, 0 ); /* set x */
 		DaoParser_PushRegisters( self, 2 );
@@ -6650,6 +6653,9 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 			case DVM_GETMF : vmc->code = DVM_SETMF; break;
 			}
 		}
+		result.update = self->vmcLast;
+		/* to prevent the previous instruction from beeing updated by ParseExpressionList(s) */
+		DaoParser_AddCode( self, DVM_UNUSED, 0,0,0, 0,0,0 );
 	}else if( code == DVM_LOAD ){
 		if( result.konst || result.last ){
 			int p0 = result.last->first;
@@ -6666,7 +6672,8 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 	}
 	result.konst = 0;
 	result.prev = back;
-	result.first = result.last = result.update = self->vmcLast;
+	result.first = result.last = self->vmcLast;
+	if( result.update == NULL ) result.update = self->vmcLast;
 	return result;
 ErrorParsing:
 	DaoParser_Error( self, ec, self->tokens->items.pToken[start]->string );
