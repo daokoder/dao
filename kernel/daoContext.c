@@ -3892,12 +3892,8 @@ void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout,
 
 static void DaoContext_TryTailCall( DaoContext *self, DaoVmCode *vmc, DaoContext *ctx )
 {
-	DaoVmCode *p = vmc + 1;
-	int tail;
-
-	while( p->code == DVM_NOP ) p += 1;
-	tail = p->code == DVM_RETURN && p->c ==0 && (p->b ==0 || (p->b ==1 && p->a == vmc->c));
-	if( tail && self->process->topFrame->depth ==0 ){ /* no tail call in try{} */
+	if( (vmc->b & DAO_CALL_TAIL) && self->process->topFrame->depth <=1 ){
+		/* no tail call in try{} */
 		DaoVmFrame *frame = self->frame;
 		DaoVmProcess_PopContext( self->process );
 		ctx->frame = frame;

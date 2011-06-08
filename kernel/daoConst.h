@@ -167,18 +167,17 @@ enum DaoCaseMode
 
 enum DaoCallMode
 {
-	DAO_CALL_INIT = (1<<8),
-	DAO_CALL_EXPAR = (1<<9),
-	DAO_CALL_COROUT = (1<<10),
-	DAO_CALL_NOVIRT = (1<<11)
+	DAO_CALL_INIT = (1<<8), /* call to initialize a parent object */
+	DAO_CALL_TAIL = (1<<9), /* may do tail call */
+	DAO_CALL_NOVIRT = (1<<10), /* call as non-virtual function */
+	DAO_CALL_COROUT = (1<<11), /* call for creating a coroutine vm process */
+	DAO_CALL_EXPAR = (1<<12) /* expand the last parameter of tuple type */
 };
 enum DaoVmProcPauseType
 {
 	DAO_VMP_NOPAUSE ,
-	DAO_VMP_ASYNC ,    /* by join mode of asynchronous call */
-	DAO_VMP_YIELD ,  /* by coroutine */
-	DAO_VMP_SPAWN ,  /* by message passing interface */
-	DAO_VMP_RECEIVE  /* by message passing interface */
+	DAO_VMP_ASYNC ,  /* by join mode of asynchronous call */
+	DAO_VMP_YIELD    /* by coroutine */
 };
 
 enum DaoDataPermission

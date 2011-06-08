@@ -11,7 +11,8 @@
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
-#include"string.h"
+#include<string.h>
+#include<assert.h>
 
 #include"daoConst.h"
 #include"daoRoutine.h"
@@ -1395,7 +1396,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			type[id] = tp; } }
 
 	int typed_code = daoConfig.typedcode;
-	int i, j, k, cid=0, retinf = 0;
+	int i, j, k, m, cid=0, retinf = 0;
 	int N = self->vmCodes->size;
 	int M = self->regCount;
 	int min=0, spec=0, lastcomp = -1;
@@ -1440,6 +1441,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray   *dataCK = hostClass ? hostClass->cstDataTable : NULL;
 	DArray   *typeVK = hostClass ? hostClass->glbTypeTable : NULL;
 	DArray   *dataCG = self->nameSpace->cstDataTable;
+	DArray   *dataVG = self->nameSpace->varDataTable;
 	DArray   *typeVG = self->nameSpace->varTypeTable;
 	DValue    val = daoNullValue;
 	DValue   *csts;
@@ -1669,6 +1671,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( tp[0]->tid >= DAO_INTEGER && tp[0]->tid <= DAO_DOUBLE
 						&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 					if( typed_code ){
+						if( code == DVM_SETVG ) dataVG->items.pVarray[opc]->data[opb].t = at->tid;
 						vmc->code = 3*(tp[0]->tid - DAO_INTEGER) + (at->tid - DAO_INTEGER) + DVM_SETVL_II;
 						vmc->code += 9*(code - DVM_SETVL);
 					}
@@ -3524,12 +3527,28 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					pp = csts + k;
 					tp = type + k;
 				}
+				m = 1;
 				for(k=0; k<j; k++){
 					tt = DaoType_DefineTypes( tp[k], ns, defs );
 					GC_ShiftRC( tt, tp[k] );
 					tp[k] = tt;
 					if( pp[k].t == DAO_ROUTINE ) DaoRoutine_Compile( pp[k].v.routine );
+					assert( i >= (k-1) );
+					m &= vmcs[i-k-1]->code != DVM_LOAD || vmcs[i-k-1]->b != DAO_REFER_PARAM;
 				}
+				if( m ){
+					for(k=i+1; k<N; k++){
+						DaoVmCodeX *ret = vmcs[k];
+						if( ret->code == DVM_NOP ) continue;
+						if( ret->code == DVM_RETURN ){
+							m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
+							break;
+						}
+						m = 0;
+						break;
+					}
+				}
+				if( m ) vmc->b |= DAO_CALL_TAIL;
 				if( at->tid == DAO_METAROUTINE ){
 					rout = MatchByParamType( at->aux.v.p, bt, tp, j, code );
 					if( rout == NULL ) goto ErrorTyping;
