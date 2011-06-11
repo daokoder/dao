@@ -60,8 +60,6 @@ int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *
 void DaoPrintException( DaoCData *except, DaoStream *stream );
 
 
-/**/
-
 DaoTypeBase ctxTyper =
 {
 	"context", & baseCore, NULL, NULL, {0}, {0},
@@ -86,7 +84,6 @@ DaoContext* DaoContext_New()
 	self->vmSpace   = NULL;
 	self->process    = NULL;
 	self->lastRoutine = NULL;
-
 	self->thisFunction = NULL;
 
 	self->parCount = 0;
@@ -331,8 +328,6 @@ void DaoContext_PrintVmCode( DaoContext *self )
 }
 
 /**/
-
-
 dint* DaoContext_PutInteger( DaoContext *self, dint value )
 {
 	DValue *res = DaoContext_SetValue( self, self->vmc->c, daoZeroInteger );
@@ -465,20 +460,16 @@ DaoArray* DaoContext_PutArrayComplex( DaoContext *self, complex16 *array, int N 
 	return res;
 }
 #else
-static void DaoContext_RaiseNoArray( DaoContext *self )
+static DaoArray* NullArray( DaoContext *self )
 {
 	DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	return NULL;
 }
-DaoArray* DaoContext_PutArrayInteger( DaoContext *self, int *array, int N )
-{ DaoContext_RaiseNoArray( self ); return 0; }
-DaoArray* DaoContext_PutArrayShort( DaoContext *self, short *array, int N )
-{ DaoContext_RaiseNoArray( self ); return 0; }
-DaoArray* DaoContext_PutArrayFloat( DaoContext *self, float *array, int N )
-{ DaoContext_RaiseNoArray( self ); return 0; }
-DaoArray* DaoContext_PutArrayDouble( DaoContext *self, double *array, int N )
-{ DaoContext_RaiseNoArray( self ); return 0; }
-DaoArray* DaoContext_PutArrayComplex( DaoContext *self, complex16 *array, int N )
-{ DaoContext_RaiseNoArray( self ); return 0; }
+DaoArray* DaoContext_PutArrayInteger( DaoContext *s, int*, int ){ return NullArray( s ); }
+DaoArray* DaoContext_PutArrayShort( DaoContext *s, int*, int ){ return NullArray( s ); }
+DaoArray* DaoContext_PutArrayFloat( DaoContext *s, int*, int ){ return NullArray( s ); }
+DaoArray* DaoContext_PutArrayDouble( DaoContext *s, int*, int ){ return NullArray( s ); }
+DaoArray* DaoContext_PutArrayComplex( DaoContext *s, int*, int ){ return NullArray( s ); }
 #endif
 DaoList* DaoContext_PutList( DaoContext *self )
 {
@@ -535,11 +526,6 @@ DaoBase* DaoContext_PutResult( DaoContext *self, DaoBase *data )
 }
 
 /**/
-#define STR_LT( x, y ) ( DString_Compare( x, y ) < 0 )
-#define STR_LE( x, y ) ( DString_Compare( x, y ) <= 0 )
-#define STR_EQ( x, y ) ( DString_Compare( x, y ) == 0 )
-#define STR_NE( x, y ) ( DString_Compare( x, y ) != 0 )
-
 DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc )
 {
 	DaoVmCode *mid;
@@ -2299,7 +2285,6 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 	int rc = 0;
 
 	self->vmc = vmc;
-
 	if( dA.t ==0 || dB.t ==0 ){
 		switch( vmc->code ){
 		case DVM_AND: dC = dA.t ? dB : dA; break;
@@ -2368,8 +2353,8 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		}
 	}else if( dA.t == DAO_COMPLEX && dB.t == DAO_COMPLEX ){
 		switch( vmc->code ){
-		case DVM_EQ:  dC.v.i = (dA.v.c->real == dB.v.c->real) && (dA.v.c->imag == dB.v.c->imag); break;
-		case DVM_NE:  dC.v.i = (dA.v.c->real != dB.v.c->real) || (dA.v.c->imag != dB.v.c->imag); break;
+		case DVM_EQ: dC.v.i = (dA.v.c->real == dB.v.c->real) && (dA.v.c->imag == dB.v.c->imag); break;
+		case DVM_NE: dC.v.i = (dA.v.c->real != dB.v.c->real) || (dA.v.c->imag != dB.v.c->imag); break;
 		default: break;
 		}
 	}else if( dA.t == DAO_LONG && dB.t == DAO_LONG ){
@@ -2428,10 +2413,10 @@ void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_AND: dC = DString_Size( dA.v.s ) ? dB : dA; break;
 		case DVM_OR:  dC = DString_Size( dA.v.s ) ? dA : dB; break;
-		case DVM_LT:  dC.v.i = STR_LT( dA.v.s, dB.v.s ); break;
-		case DVM_LE:  dC.v.i = STR_LE( dA.v.s, dB.v.s ); break;
-		case DVM_EQ:  dC.v.i = STR_EQ( dA.v.s, dB.v.s ); break;
-		case DVM_NE:  dC.v.i = STR_NE( dA.v.s, dB.v.s ); break;
+		case DVM_LT:  dC.v.i = DString_Compare( dA.v.s, dB.v.s )<0; break;
+		case DVM_LE:  dC.v.i = DString_Compare( dA.v.s, dB.v.s )<=0; break;
+		case DVM_EQ:  dC.v.i = DString_Compare( dA.v.s, dB.v.s )==0; break;
+		case DVM_NE:  dC.v.i = DString_Compare( dA.v.s, dB.v.s )!=0; break;
 		default: break;
 		}
 	}else if( (dA.t == DAO_ENUM && dB.t == DAO_ENUM)
@@ -3121,7 +3106,7 @@ FailConversion:
 	return 0;
 }
 #endif
-static int ConvertStringToNumber( DaoContext *ctx, DValue dA, DValue *dC )
+int ConvertStringToNumber( DaoContext *ctx, DValue dA, DValue *dC )
 {
 	DString *mbs = ctx->process->mbstring;
 	double d1 = 0.0, d2 = 0.0;

@@ -280,7 +280,6 @@ typedef struct DaoThread       DaoThread;
 typedef struct DaoType         DaoType;
 
 /* Complex type: */
-typedef struct complex8  { float  real, imag; } complex8;
 typedef struct complex16 { double real, imag; } complex16;
 
 /* Dummy type for functions, casted from DaoRoutine, DaoFunction or DaoMetaRoutine: */

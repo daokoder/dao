@@ -15,7 +15,6 @@
 #define DAO_STDTYPE_H
 
 #include"daoConst.h"
-#include"daolib.h"
 #include"daoBase.h"
 #include"daoString.h"
 #include"daoArray.h"
@@ -210,6 +209,7 @@ extern DaoTypeBase cdataTyper;
 extern DaoCData cptrCData;
 
 void DaoCData_DeleteData( DaoCData *self );
+int DaoCData_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 /* DaoNameValue is not data type for general use, it is mainly used for 
  * passing named parameters and fields: */
@@ -232,6 +232,7 @@ struct DaoTuple
 	DaoType   *unitype;
 	unsigned   pair;
 };
+void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );
 
 typedef struct IndexValue IndexValue;

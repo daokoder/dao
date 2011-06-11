@@ -107,4 +107,6 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DaoVmSpace* DaoInit();
 
+DaoTypeBase* DaoVmSpace_GetTyper( short type );
+
 #endif

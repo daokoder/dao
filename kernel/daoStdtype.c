@@ -34,11 +34,6 @@
 #include"daoRegex.h"
 #include"daoSched.h"
 
-DMap *dao_typing_cache; /* HASH<void*[2],int> */
-#ifdef DAO_WITH_THREAD
-DMutex dao_typing_mutex;
-#endif
-
 DaoBase* DaoFindFunction( DaoTypeBase *typer, DString *name )
 {
 	DNode *node;
@@ -1480,76 +1475,13 @@ static void DaoSTR_Tokenize( DaoContext *ctx, DValue *p[], int N )
 	}
 	DString_Delete( str );
 }
-int xBaseInteger( char *first, char *last, int xbase, DaoContext *ctx )
-{
-	register char *p = last;
-	register int m = 1;
-	register int k = 0;
-	register int d;
-	register char c;
-	first --;
-	while( p != first ){
-		c = ( (*p) | 0x20 );
-		d = ( c>='0' && c<='9' ) ? ( c -'0' ) : c - ('a' - 10);
-		if( d >= xbase || d < 0 ){
-			DaoContext_RaiseException( ctx, DAO_ERROR, "invalid digit" );
-			return 0;
-		}
-		k += d*m;
-		m *= xbase;
-		p --;
-	}
-	return k;
-}
-static double xBaseDecimal( char *first, char *last, int xbase, DaoContext *ctx )
-{
-	register char *p = first;
-	register double inv = 1.0 / xbase;
-	register double m = inv;
-	register double k = 0;
-	register int d;
-	register char c;
-	while( p != last ){
-		c = ( (*p) | 0x20 );
-		d = ( c>='0' && c<='9' ) ? ( c -'0' ) : c - ('a' - 10);
-		if( d >= xbase || d < 0 ){
-			DaoContext_RaiseException( ctx, DAO_ERROR, "invalid digit" );
-			return 0;
-		}
-		k += d*m;
-		m *= inv;
-		p ++;
-	}
-	return k;
-}
-static double xBaseNumber( DString *str, int xbase, DaoContext *ctx )
-{
-	char *chs = str->mbs;
-	size_t dot = DString_FindChar( str, '.', 0 );
-	double num = 0;
-	int negat = 0;
-	char *first = chs;
-
-	if( str->size == 0 ) return 0;
-	if( chs[0] == '-' ) negat = 1;
-	if( chs[0] =='+' || chs[0] =='-' ) first ++;
-
-	if( dot != MAXSIZE ){
-		num += xBaseInteger( first, chs+(dot-1), xbase, ctx );
-		if( dot+1 < str->size ) num += xBaseDecimal( chs+dot+1, chs+str->size, xbase, ctx );
-	}else{
-		num += xBaseInteger( first, chs+(str->size-1), xbase, ctx );
-	}
-	if( negat ) num = - num;
-	return num;
-}
+extern int ConvertStringToNumber( DaoContext *ctx, DValue dA, DValue *dC );
 static void DaoSTR_Tonumber( DaoContext *ctx, DValue *p[], int N )
 {
+	DValue value = daoZeroDouble;
 	double *num = DaoContext_PutDouble( ctx, 0.0 );
-	DString *mbs = DString_Copy( p[0]->v.s );
-	DString_ToMBS( mbs );
-	*num = xBaseNumber( mbs, p[1]->v.i, ctx );
-	DString_Delete( mbs );
+	ConvertStringToNumber( ctx, *p[0], & value );
+	*num = value.v.d;
 }
 static void DaoSTR_Tolower( DaoContext *ctx, DValue *p[], int N )
 {
@@ -2587,25 +2519,25 @@ static void DaoLIST_Reverse( DaoContext *ctx, DValue *p[], int npar )
 }
 static DaoFuncItem listMeths[] =
 {
-	{ DaoLIST_Insert,     "insert( self :list<@T>, item : @T, pos=0 )" },
-	{ DaoLIST_Erase,      "erase( self :list<any>, start=0, n=1 )" },
-	{ DaoLIST_Erase2,     "erase( self :list<any>, indices : list<int> )" },
-	{ DaoLIST_Clear,      "clear( self :list<any> )" },
-	{ DaoLIST_Size,       "size( self :list<any> )=>int" },
-	{ DaoLIST_Resize,     "resize( self :list<any>, size :int )" },
-	{ DaoLIST_Max,        "max( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Min,        "min( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Sum,        "sum( self :list<@T<int|long|float|double|complex|string|enum>> )=>@T" },
-	{ DaoLIST_Join,       "join( self :list<int|float|double|long|complex|string|enum>, separator='' )=>string" },
-	{ DaoLIST_PushBack,   "append( self :list<@T>, item :@T )" },
-	{ DaoLIST_Push,       "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
-	{ DaoLIST_Pop,        "pop( self :list<any>, from :enum<front, back> = $back )" },
-	{ DaoLIST_Front,      "front( self :list<@T> )=>@T" },
-	{ DaoLIST_Top,        "back( self :list<@T> )=>@T" },
-	{ DaoLIST_Rank,       "rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
-	{ DaoLIST_Sort,       "sort( self :list<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>list<@T>" },
-	{ DaoLIST_Reverse,    "reverse( self :list<@T> )=>list<@T>" },
-	{ DaoLIST_Iter,       "__for_iterator__( self :list<any>, iter : for_iterator )" },
+	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
+	{ DaoLIST_Erase,    "erase( self :list<any>, start=0, n=1 )" },
+	{ DaoLIST_Erase2,   "erase( self :list<any>, indices : list<int> )" },
+	{ DaoLIST_Clear,    "clear( self :list<any> )" },
+	{ DaoLIST_Size,     "size( self :list<any> )=>int" },
+	{ DaoLIST_Resize,   "resize( self :list<any>, size :int )" },
+	{ DaoLIST_Max,      "max( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
+	{ DaoLIST_Min,      "min( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
+	{ DaoLIST_Sum,      "sum( self :list<@T<int|long|float|double|complex|string|enum>> )=>@T" },
+	{ DaoLIST_Join,     "join( self :list<int|float|double|long|complex|string|enum>, separator='' )=>string" },
+	{ DaoLIST_PushBack, "append( self :list<@T>, item :@T )" },
+	{ DaoLIST_Push,     "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
+	{ DaoLIST_Pop,      "pop( self :list<any>, from :enum<front, back> = $back )" },
+	{ DaoLIST_Front,    "front( self :list<@T> )=>@T" },
+	{ DaoLIST_Top,      "back( self :list<@T> )=>@T" },
+	{ DaoLIST_Rank,     "rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
+	{ DaoLIST_Sort,     "sort( self :list<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>list<@T>" },
+	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
+	{ DaoLIST_Iter,     "__for_iterator__( self :list<any>, iter : for_iterator )" },
 	{ NULL, NULL }
 };
 
@@ -3745,22 +3677,22 @@ static void DaoBuf_SetDouble( DaoContext *ctx, DValue *p[], int N )
 }
 static DaoFuncItem cptrMeths[]=
 {
-	{  DaoBuf_New,         "cdata( size=0 )=>cdata" },
-	{  DaoBuf_Size,        "size( self : cdata )=>int" },
-	{  DaoBuf_Resize,      "resize( self : cdata, size :int )" },
-	{  DaoBuf_CopyData,    "copydata( self : cdata, buf : cdata )" },
-	{  DaoBuf_GetString,   "getstring( self : cdata, type :enum<mbs, wcs> = $mbs )=>string" },
-	{  DaoBuf_SetString,   "setstring( self : cdata, str : string )" },
-	{  DaoBuf_GetByte,     "getbyte( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetShort,    "getshort( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetInt,      "getint( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetFloat,    "getfloat( self : cdata, index : int )=>float" },
-	{  DaoBuf_GetDouble,   "getdouble( self : cdata, index : int )=>double" },
-	{  DaoBuf_SetByte,     "setbyte( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
-	{  DaoBuf_SetShort,    "setshort( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)"},
-	{  DaoBuf_SetInt,      "setint( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
-	{  DaoBuf_SetFloat,    "setfloat( self : cdata, index : int, value : float )" },
-	{  DaoBuf_SetDouble,   "setdouble( self : cdata, index : int, value : double )" },
+	{  DaoBuf_New,       "cdata( size=0 )=>cdata" },
+	{  DaoBuf_Size,      "size( self : cdata )=>int" },
+	{  DaoBuf_Resize,    "resize( self : cdata, size :int )" },
+	{  DaoBuf_CopyData,  "copydata( self : cdata, buf : cdata )" },
+	{  DaoBuf_GetString, "getstring( self : cdata, type :enum<mbs, wcs> = $mbs )=>string" },
+	{  DaoBuf_SetString, "setstring( self : cdata, str : string )" },
+	{  DaoBuf_GetByte,   "getbyte( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
+	{  DaoBuf_GetShort,  "getshort( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
+	{  DaoBuf_GetInt,    "getint( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
+	{  DaoBuf_GetFloat,  "getfloat( self : cdata, index : int )=>float" },
+	{  DaoBuf_GetDouble, "getdouble( self : cdata, index : int )=>double" },
+	{  DaoBuf_SetByte,   "setbyte( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
+	{  DaoBuf_SetShort,  "setshort( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)"},
+	{  DaoBuf_SetInt,    "setint( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
+	{  DaoBuf_SetFloat,  "setfloat( self : cdata, index : int, value : float )" },
+	{  DaoBuf_SetDouble, "setdouble( self : cdata, index : int, value : double )" },
 	{ NULL, NULL },
 };
 
@@ -3972,14 +3904,6 @@ int  DaoTuple_Size( DaoTuple *self )
 {
 	return self->items->size;
 }
-#if 0
-DaoBase* DaoTuple_GetItem( DaoTuple *self, int pos )
-{
-}
-DaoList* DaoTuple_ToList( DaoTuple *self )
-{
-}
-#endif
 void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos )
 {
 	DValue *val;

@@ -552,10 +552,6 @@ DaoType* DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer )
 {
 	if( typer->priv == NULL ) DArray_Append( self->cmodule->ctypers, typer );
 	return DaoNameSpace_WrapType2( self, typer, NULL );
-	/*
-	   if( DaoNameSpace_SetupValues( self, typer ) == 0 ) return 0;
-	   if( setup ) return DaoNameSpace_SetupType( self, typer );
-	 */
 }
 DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer )
 {
@@ -586,13 +582,11 @@ int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typers[] )
 }
 int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] )
 {
-	int ec = 0;
-	if( alias ){
-		int i = 0;
-		while( alias[i] && alias[i+1] ){
-			ec += DaoNameSpace_TypeDefine( self, alias[i], alias[i+1] ) == NULL;
-			i += 2;
-		}
+	int i = 0, ec = 0;
+	if( alias == NULL ) return 0;
+	while( alias[i] && alias[i+1] ){
+		ec += DaoNameSpace_TypeDefine( self, alias[i], alias[i+1] ) == NULL;
+		i += 2;
 	}
 	return ec;
 }

@@ -409,59 +409,6 @@ static void STD_ListMeth( DaoContext *ctx, DValue *p[], int N )
 	}
 	DArray_Delete( array );
 }
-static void STD_Pack1( DaoContext *ctx, DValue *p[], int N )
-{
-	DString *str = DaoContext_PutMBString( ctx, "" );
-	wchar_t v[2] = { 0, 0 };
-	v[0] = (wchar_t) p[0]->v.i;
-	if( v[0] >= 0 || v[0] < 256 )
-		DString_AppendChar( str, (char)v[0] );
-	else
-		DString_AppendWCS( str, v );
-}
-static void STD_Pack2( DaoContext *ctx, DValue *p[], int N )
-{
-	DString *str = DaoContext_PutMBString( ctx, "" );
-	DaoList *list = (DaoList*)p[0]->v.p;
-	DValue val;
-	int wide = 0;
-	int i;
-	for( i=0; i<list->items->size; i++ ){
-		val = list->items->data[i];
-		if( val.t == DAO_INTEGER ){
-			if( val.v.i < 0 || val.v.i > 255 ){
-				wide = 1;
-				break;
-			}
-		}else if( val.t == DAO_FLOAT ){
-			if( val.v.f < 0 || val.v.f > 255 ){
-				wide = 1;
-				break;
-			}
-		}else if( val.t == DAO_DOUBLE ){
-			if( val.v.d < 0 || val.v.d > 255 ){
-				wide = 1;
-				break;
-			}
-		}else{
-			DaoContext_RaiseException( ctx, DAO_WARNING, "need list of all numbers" );
-			return;
-		}
-	}
-	if( wide ){
-		DString_ToWCS( str );
-		for( i=0; i<list->items->size; i++ ){
-			wchar_t ch = (int)DValue_GetDouble( list->items->data[i] );
-			DString_AppendWChar( str, ch );
-		}
-	}else{
-		DString_ToMBS( str );
-		for( i=0; i<list->items->size; i++ ){
-			char ch = (int)DValue_GetDouble( list->items->data[i] );
-			DString_AppendChar( str, ch );
-		}
-	}
-}
 extern int DaoToken_Tokenize( DArray *toks, const char *src, int r, int cmt, int nosp );
 static void STD_Tokenize( DaoContext *ctx, DValue *p[], int N )
 {
@@ -565,8 +512,6 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
 	{ STD_ListMeth,  "listmeth( object )" },
-	{ STD_Pack1,     "pack( i :int )=>string" },
-	{ STD_Pack2,     "pack( ls :list<int> )=>string" },
 	{ STD_Tokenize,  "tokenize( source :string )=>list<string>" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
 	{ STD_Unpack,    "unpack( string :string )=>list<int>" },
@@ -588,23 +533,15 @@ static void SYS_Ctime( DaoContext *ctx, DValue *p[], int N )
 	struct tm *ctime;
 	time_t t = (time_t)p[0]->v.i;
 	DaoTuple *tuple = DaoTuple_New( 7 );
-	DValue val = daoZeroInteger;
 	if( t == 0 ) t = time(NULL);
 	ctime = gmtime( & t );
-	val.v.i = ctime->tm_year + 1900;
-	DValue_Copy( tuple->items->data, val );
-	val.v.i = ctime->tm_mon + 1;
-	DValue_Copy( tuple->items->data + 1, val );
-	val.v.i = ctime->tm_mday;
-	DValue_Copy( tuple->items->data + 2, val );
-	val.v.i = ctime->tm_wday + 1;
-	DValue_Copy( tuple->items->data + 3, val );
-	val.v.i = ctime->tm_hour;
-	DValue_Copy( tuple->items->data + 4, val );
-	val.v.i = ctime->tm_min;
-	DValue_Copy( tuple->items->data + 5, val );
-	val.v.i = ctime->tm_sec;
-	DValue_Copy( tuple->items->data + 6, val );
+	tuple->items->data[0] = DValue_NewInteger( ctime->tm_year + 1900 );
+	tuple->items->data[1] = DValue_NewInteger( ctime->tm_mon + 1 );
+	tuple->items->data[2] = DValue_NewInteger( ctime->tm_mday );
+	tuple->items->data[3] = DValue_NewInteger( ctime->tm_wday + 1 );
+	tuple->items->data[4] = DValue_NewInteger( ctime->tm_hour );
+	tuple->items->data[5] = DValue_NewInteger( ctime->tm_min );
+	tuple->items->data[6] = DValue_NewInteger( ctime->tm_sec );
 	DaoContext_PutResult( ctx, (DaoBase*) tuple );
 }
 static int addStringFromMap( DValue self, DString *S, DaoMap *sym, const char *key, int id )

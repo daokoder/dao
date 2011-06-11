@@ -145,12 +145,11 @@ install:
 	$(HAS_FILE) tools/autobind.dao && $(SYMLINK) $(DAO_TOOL_DIR)/autobind.dao /usr/bin/autobind.dao
 
 	$(COPY_FILE) kernel/*.h $(DAO_INC_DIR)
-	$(COPY_FILE) $(TARGET) $(TARGETDLL) kernel/dao.h kernel/daolib.h dao.conf $(DAO_DIR)
+	$(COPY_FILE) $(TARGET) $(TARGETDLL) kernel/dao.h dao.conf $(DAO_DIR)
 	$(SYMLINK) $(DAO_DIR)/$(TARGET) /usr/bin/$(TARGET)
 	$(SYMLINK) $(DAO_DIR)/$(TARGETDLL) /usr/lib/lib$(TARGETDLL)
 	$(SYMLINK) $(DAO_DIR)/dao.h /usr/include/dao.h
-	$(SYMLINK) $(DAO_DIR)/daolib.h /usr/include/daolib.h
 
 uninstall:
 	@$(HAS_FILE) /usr/bin/autobind.dao && $(DEL_FILE) /usr/bin/autobind.dao
-	$(DEL_FILE) /usr/bin/$(TARGET) /usr/lib/lib$(TARGETDLL) /usr/include/dao.h /usr/include/daolib.h $(DAO_DIR)
+	$(DEL_FILE) /usr/bin/$(TARGET) /usr/lib/lib$(TARGETDLL) /usr/include/dao.h $(DAO_DIR)
