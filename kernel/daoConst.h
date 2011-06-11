@@ -16,9 +16,6 @@
 
 #define DAO_MAX_PARAM  50
 #define DAO_MAX_INDEX  10
-#define DAO_MAX_SPEC_REG  20
-#define DAO_MAX_CTX_CACHES  100
-#define DAO_CALLER_PARAM (DAO_MAX_PARAM+1)
 
 #ifdef UNIX
 #define DAO_PATH "/usr/local/dao"
@@ -32,9 +29,7 @@
 
 #include"dao.h"
 
-#define DAO_UDF DAO_NIL  /* undefined type: for implicitly declared variables */
-
-#define DAO_REG_STACK 1
+#define DAO_UDF DAO_NULL  /* undefined type: for implicitly declared variables */
 
 enum DaoRTTI
 {
@@ -69,7 +64,6 @@ enum DaoBasicStruct
 	D_VALUE = 1, /* for DMap only */
 	D_VMCODE ,
 	D_TOKEN ,   /* for DArray only */
-	D_JITCODE , 
 	D_STRING ,
 	D_VARRAY ,
 	D_ARRAY ,
@@ -188,9 +182,8 @@ enum DaoDataPermission
 };
 enum DaoClassAttrib
 {
-	DAO_CLS_FINAL = 1,
-	DAO_CLS_AUTO_DEFAULT = 2,
-	DAO_CLS_SYNCHRONOUS = 4
+	DAO_CLS_AUTO_DEFAULT = 1,
+	DAO_CLS_SYNCHRONOUS = 2
 };
 enum DaoRoutineAttrib
 {
@@ -205,20 +198,6 @@ enum DaoRoutineAttrib
 
 #define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)
 #define DAO_OPER_OVERLOADED  (DAO_TYPER_PRIV_FREE<<1)
-
-enum DaoIoFormatKeyId
-{
-	DAO_IO_FMT_INT ,
-	DAO_IO_FMT_FLOAT ,
-	DAO_IO_FMT_QUOTES ,
-	DAO_IO_FMT_LIST_BGN ,
-	DAO_IO_FMT_LIST_DEL ,
-	DAO_IO_FMT_LIST_END ,
-	DAO_IO_FMT_MAP_BGN ,
-	DAO_IO_FMT_MAP_PR ,
-	DAO_IO_FMT_MAP_DEL ,
-	DAO_IO_FMT_MAP_END
-};
 
 enum DaoGlbConstShift
 {
@@ -375,7 +354,6 @@ enum DaoCtInfoId
 	DAO_TYPE_PRESENTED ,
 	DAO_TYPE_EXPECTED ,
 	DAO_TYPE_NO_DEFAULT ,
-	DAO_CLASS_DERIVE_FINAL ,
 	DAO_ROUT_NEED_RETURN_TYPE ,
 	DAO_ROUT_INVALID_OPERATOR ,
 	DAO_ROUT_CONSTRU_RETURN ,
@@ -422,8 +400,6 @@ enum DaoCtInfoId
 	DAO_CTW_INVA_MUL_ASSN ,
 	DAO_CTW_INVA_LITERAL ,
 	DAO_CTW_INVA_QUOTES ,
-	DAO_CTW_OPER_UNKNOWN ,
-	DAO_CTW_CHAR_SPEC ,
 	DAO_CTW_ASSIGN_INSIDE ,
 	DAO_CTW_DAO_H_UNMATCH ,
 	DAO_CTW_INVA_EMBED ,
@@ -443,7 +419,6 @@ enum DaoCtInfoId
 	DAO_CTW_INV_TYPE_FORM ,
 	DAO_CTW_INV_TYPE_NAME ,
 	DAO_CTW_INV_CONST_EXPR ,
-	DAO_CTW_DERIVE_FINAL ,
 	DAO_CTW_NO_PERMIT ,
 	DAO_CTW_TYPE_NOMATCH ,
 	DAO_CTW_FAIL_BINDING ,

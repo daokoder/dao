@@ -158,6 +158,7 @@ static void DaoLateDeleter_Init();
 static void DaoLateDeleter_Finish();
 static void DaoLateDeleter_Update();
 
+typedef struct DaoGarbageCollector  DaoGarbageCollector;
 struct DaoGarbageCollector
 {
 	DArray   *pool[2];
@@ -246,7 +247,7 @@ static int DValue_Size( DValue *self, int depth )
 	DNode *it;
 	int i, m, n = 0;
 	switch( self->t ){
-	case DAO_NIL :
+	case DAO_NULL :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 	case DAO_DOUBLE :

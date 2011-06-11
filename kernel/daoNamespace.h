@@ -14,9 +14,8 @@
 #ifndef DAO_NAMESPACE_H
 #define DAO_NAMESPACE_H
 
-#include"daoConst.h"
-#include"daolib.h"
 #include"daoBase.h"
+#include"daoConst.h"
 #include"daoString.h"
 #include"daoArray.h"
 #include"daoMap.h"

@@ -10,12 +10,7 @@ DAO_NUMARRAY = -DDAO_WITH_NUMARRAY
 DAO_THREAD = -DDAO_WITH_THREAD
 DAO_SYNCLASS = -DDAO_WITH_SYNCLASS
 
-#DAO_MPI = -DDAO_WITH_MPI
-#DAO_AFC = -DDAO_WITH_AFC
-
-#DAO_ASMBC = -DDAO_WITH_ASMBC
-
-DAO_CONFIG = $(DAO_MACRO) $(DAO_REGEX) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_MPI) $(DAO_AFC) $(DAO_ASMBC)
+DAO_CONFIG = $(DAO_MACRO) $(DAO_REGEX) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS)
 
 CC        = gcc
 CFLAGS    = -Wall -O2 -DWIN32 $(DAO_CONFIG)
@@ -53,7 +48,6 @@ SOURCES = kernel/daoType.c \
 		kernel/daoLexer.c \
 		kernel/daoParser.c \
 		kernel/daoMacro.c \
-		kernel/daoAsmbc.c \
 		kernel/daoRegex.c \
 		kernel/daoContext.c \
 		kernel/daoProcess.c \
@@ -68,6 +62,7 @@ SOURCES = kernel/daoType.c \
 		kernel/daoSched.c \
 		kernel/daoStream.c \
 		kernel/daoString.c \
+		kernel/daoVmcode.c \
 		kernel/daoVmspace.c
 OBJECTS = objs/daoType.o \
 		objs/daoStdtype.o \
@@ -78,11 +73,11 @@ OBJECTS = objs/daoType.o \
 		objs/daoGC.o \
 		objs/daoRoutine.o \
 		objs/daoStdlib.o \
+		objs/daoVmcode.o \
 		objs/daoVmspace.o \
 		objs/daoLexer.o \
 		objs/daoParser.o \
 		objs/daoMacro.o \
-		objs/daoAsmbc.o \
 		objs/daoThread.o \
 		objs/daoNumtype.o \
 		objs/daoClass.o \
@@ -200,6 +195,9 @@ objs/daoStream.o: kernel/daoStream.c kernel/daoStream.h
 objs/daoString.o: kernel/daoString.c kernel/daoString.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoString.o kernel/daoString.c
 
+objs/daoVmcode.o: kernel/daoVmcode.c kernel/daoVmcode.h 
+	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoVmcode.o kernel/daoVmcode.c
+
 objs/daoVmspace.o: kernel/daoVmspace.c kernel/daoVmspace.h 
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoVmspace.o kernel/daoVmspace.c
 
@@ -217,9 +215,6 @@ objs/daoLexer.o: kernel/daoLexer.c kernel/daoLexer.h
 
 objs/daoParser.o: kernel/daoParser.c kernel/daoParser.h 
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoParser.o kernel/daoParser.c
-
-objs/daoAsmbc.o: kernel/daoAsmbc.c kernel/daoAsmbc.h 
-	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoAsmbc.o kernel/daoAsmbc.c
 
 objs/daoThread.o: kernel/daoThread.c kernel/daoThread.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o objs/daoThread.o kernel/daoThread.c

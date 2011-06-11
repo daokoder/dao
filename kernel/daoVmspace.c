@@ -37,7 +37,6 @@
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoSched.h"
-#include"daoAsmbc.h"
 
 #ifdef DAO_WITH_THREAD
 #include"daoThread.h"
@@ -2200,7 +2199,6 @@ DaoType *dao_storage_enum = NULL;
 
 #ifdef DAO_WITH_THREAD
 extern DMutex mutex_string_sharing;
-extern DMutex dao_typing_mutex;
 extern DMutex dao_vsetup_mutex;
 extern DMutex dao_msetup_mutex;
 extern DMutex dao_cdata_mutex;
@@ -2249,7 +2247,6 @@ DaoVmSpace* DaoInit()
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & mutex_string_sharing );
-	DMutex_Init( & dao_typing_mutex );
 	DMutex_Init( & dao_vsetup_mutex );
 	DMutex_Init( & dao_msetup_mutex );
 	DMutex_Init( & dao_cdata_mutex );
@@ -2387,7 +2384,6 @@ DaoVmSpace* DaoInit()
 	return vms;
 }
 extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout );
-extern DMap *dao_typing_cache;
 void DaoQuit()
 {
 	/* TypeTest(); */
@@ -2441,10 +2437,8 @@ void DaoQuit()
 	 */
 	DaoVmSpace_Delete( mainVmSpace );
 	DaoFinishGC();
-	DMap_Delete( dao_typing_cache );
 	DMap_Delete( dao_cdata_bindings );
 	DArray_Delete( dao_callback_data );
-	dao_typing_cache = NULL;
 	dao_cdata_bindings = NULL;
 	dao_callback_data = NULL;
 	mainVmSpace = NULL;

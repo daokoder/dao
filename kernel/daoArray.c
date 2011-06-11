@@ -102,19 +102,12 @@ static void DaoVmCodeX_Delete( DaoVmCodeX *self )
 {
 	dao_free( self );
 }
-static DaoJitCode* DaoJitCode_Copy( DaoJitCode *self )
-{
-	DaoJitCode* copy = dao_malloc( sizeof(DaoJitCode) );
-	memcpy( copy, self, sizeof(DaoJitCode) );
-	return copy;
-}
 static DVarray* DVarray_Copy( DVarray *self );
 static void* DArray_CopyItem( DArray *self, void *item )
 {
 	switch( self->type ){
 	case D_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
 	case D_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
-	case D_JITCODE : return DaoJitCode_Copy( (DaoJitCode*) item );
 	case D_STRING : return DString_Copy( (DString*) item );
 	case D_VARRAY : return DVarray_Copy( (DVarray*) item );
 	case D_ARRAY  : return DArray_Copy( (DArray*) item );
@@ -127,7 +120,6 @@ static void DArray_DeleteItem( DArray *self, void *item )
 {
 	switch( self->type ){
 	case D_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
-	case D_JITCODE : dao_free( item ); break;
 	case D_TOKEN : DaoToken_Delete( (DaoToken*) item ); break;
 	case D_STRING : DString_Delete( (DString*) item ); break;
 	case D_VARRAY : DVarray_Delete( (DVarray*) item ); break;
@@ -142,7 +134,6 @@ static void DArray_DeleteItems( DArray *self, size_t M, size_t N )
 	switch( self->type ){
 	case D_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
 	case D_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
-	case D_JITCODE: for(i=M; i<N; i++) dao_free( self->items.pJitc[i] ); break;
 	case D_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
 	case D_VARRAY : for(i=M; i<N; i++) DVarray_Delete( self->items.pVarray[i] ); break;
 	case D_ARRAY  : for(i=M; i<N; i++) DArray_Delete( self->items.pArray[i] ); break;

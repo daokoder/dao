@@ -14,9 +14,8 @@
 #ifndef DAO_TYPE_H
 #define DAO_TYPE_H
 
-#include"daoConst.h"
-#include"daolib.h"
 #include"daoBase.h"
+#include"daoConst.h"
 #include"daoString.h"
 #include"daoArray.h"
 #include"daoMap.h"

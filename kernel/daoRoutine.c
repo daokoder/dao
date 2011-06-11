@@ -4559,7 +4559,6 @@ void DMetaParam_Delete( DMetaParam *self )
 		DArray_Delete( self->nexts );
 	}
 	if( self->names ) DMap_Delete( self->names );
-	//XXX if( self->routine ) GC_DecRC( self->routine );
 	dao_free( self );
 }
 

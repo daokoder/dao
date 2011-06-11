@@ -18,7 +18,7 @@
 #include"ctype.h"
 
 #include"daoConst.h"
-#include"daoOpcode.h"
+#include"daoVmcode.h"
 
 #include"daoParser.h"
 #include"daoRegex.h"
@@ -157,32 +157,6 @@ static const DStringIntPair mapCompOptKey[]=
 	{ NULL, 0 }
 };
 
-enum
-{
-	EXP_IN_CALL = 1
-};
-
-/* Binary searching:
- * pairs is assumed to be sorted by keys:
- */
-static int KeyBinSearch( const DStringIntPair pairs[], int size, DString *key )
-{
-	int left = 0;
-	int right = size - 1;
-	int mid, res;
-	while( left <= right ){
-		mid = ( left + right ) / 2;
-		res = strcmp( pairs[ mid ].key, key->mbs );
-		if( res == 0 ){
-			return pairs[ mid ].value;
-		}else if( res > 0){
-			right = mid - 1;
-		}else{
-			left = mid + 1;
-		}
-	}
-	return -1;
-}
 /* Sequential searching: */
 static int KeySeqSearch( const DStringIntPair pairs[], DString *key )
 {
@@ -244,7 +218,6 @@ DaoParser* DaoParser_New()
 	self->allConsts = DHash_New(D_STRING,0);
 
 	self->regLines = DArray_New(0);
-	self->regRefers = DArray_New(0);
 	self->initTypes = DMap_New(0,0);
 
 	self->scopeOpenings = DArray_New(0);
@@ -304,7 +277,6 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->scopeClosings );
 	DArray_Delete( self->errors );
 	DArray_Delete( self->regLines );
-	DArray_Delete( self->regRefers );
 	DArray_Delete( self->vmCodes );
 	DMap_Delete( self->comments );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
@@ -345,14 +317,6 @@ void DaoParser_ClearCodes( DaoParser *self )
 	self->vmcFirst = self->vmcLast = self->vmcBase;
 	self->vmcCount = 0;
 }
-static void DaoParser_PopFrontCode( DaoParser *self )
-{
-	if( self->vmcFirst == NULL || self->vmcFirst == self->vmcBase ) return;
-	self->vmcFirst = self->vmcFirst->next;
-	DaoInode_Delete( self->vmcFirst->prev );
-	self->vmcFirst->prev = NULL;
-	self->vmcCount --;
-}
 static void DaoParser_PopBackCode( DaoParser *self )
 {
 	if( self->vmcLast == NULL || self->vmcLast == self->vmcBase ) return;
@@ -361,11 +325,10 @@ static void DaoParser_PopBackCode( DaoParser *self )
 	self->vmcLast->next = NULL;
 	self->vmcCount --;
 }
-static int DaoParser_PopCodes( DaoParser *self, DaoInode *front, DaoInode *back )
+static int DaoParser_PopCodes( DaoParser *self, DaoInode *back )
 {
 	int count = 0;
 	DaoInode *node = NULL;
-	while( (node=self->vmcFirst) != front ) DaoParser_PopFrontCode( self ), count ++;
 	while( (node=self->vmcLast) != back ) DaoParser_PopBackCode( self ), count ++;
 	return count;
 }
@@ -379,21 +342,6 @@ static void DaoParser_AppendCode( DaoParser *self, DaoInode *inode )
 	inode->prev = self->vmcLast;
 	self->vmcLast->next = inode;
 	self->vmcLast = inode;
-}
-static void DaoParser_PushFrontCode( DaoParser *self, DaoVmCodeX *vmc )
-{
-	DaoInode *node = DaoInode_New( self );
-	DaoInode *second = self->vmcFirst->next;
-	memcpy( node, vmc, sizeof(DaoVmCode) );
-	node->level = vmc->level;
-	node->line = vmc->line;
-	node->first = vmc->first;
-	node->middle = vmc->middle;
-	node->last = vmc->last;
-	node->next = self->vmcFirst;
-	self->vmcFirst->prev= node;
-	self->vmcFirst = node;
-	self->vmcCount ++;
 }
 static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last );
@@ -1826,7 +1774,6 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 	while( i < rb ){
 		int comma;
 		int regCount = self->regCount;
-		DaoInode *front = defparser->vmcFirst;
 		DaoInode *back = defparser->vmcLast;
 
 		m1 = i;
@@ -1957,7 +1904,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 		k = pname->size >0 ? pname->mbs[pname->size-1] : 0;
 		if( k !='<' && k != '(' ) DString_AppendMBS( pname, "," );
 		DString_AppendMBS( pname, abstype->name->mbs );
-		if( self->outParser == NULL ) DaoParser_PopCodes( defparser, front, back );
+		if( self->outParser == NULL ) DaoParser_PopCodes( defparser, back );
 	}
 	i = rb + 1;
 	k = pname->size;
@@ -2265,7 +2212,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 			start ++;
 			continue;
 		}else if( bropen1 ==0 && bropen2 ==0 && bropen3 ==0 ){
-			if( tki == DTOK_AT2 ){
+			if( tki == DTOK_AT2 ){ // TODO remove and add method to std:
 				int from = start;
 				int cmd = start + 1;
 				int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
@@ -3122,10 +3069,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 				goto ErrorClassDefinition;
 			}
 			super = value.v.klass;
-			if( super->type == DAO_CLASS && (super->attribs & DAO_CLS_FINAL) ){
-				ec = DAO_CLASS_DERIVE_FINAL;
-				goto ErrorClassDefinition;
-			}
 			start ++;
 
 			if( tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
@@ -3369,7 +3312,6 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	DaoParser *parser = NULL;
 	DaoRoutine *rout = NULL;
 
-	DaoInode *front = self->vmcFirst;
 	DaoInode *back = self->vmcLast;
 	DaoInode *inode, *opening, *closing;
 
@@ -3802,7 +3744,6 @@ DecoratorError:
 				DaoEnode item = {-1,0,0,NULL,NULL,NULL,NULL};
 				int dots = DaoParser_FindOpenToken( self, DTOK_DOTS, last, comma, 0 );
 				int oldcount = self->regCount;
-				front = self->vmcFirst;
 				back = self->vmcLast;
 				self->curToken = last;
 				if( dots <0 ){
@@ -3838,7 +3779,7 @@ DecoratorError:
 				}
 				/* remove GETC so that CASETAG will be together,
 				   which is neccessary to properly setup switch table: */
-				DaoParser_PopCodes( self, front, back );
+				DaoParser_PopCodes( self, back );
 				DaoParser_PopRegisters( self, self->regCount - oldcount );
 				DaoParser_AddCode( self, DVM_NOP, item.konst, 0, 0, last, 0, colon );
 				value = DaoParser_GetVariable( self, LOOKUP_BIND_LC( item.konst ) );
@@ -4025,7 +3966,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	DaoRoutine *routine = self->routine;
 	DaoClass *hostClass = self->hostClass;
 	DaoToken *ptok, *lastok, **tokens = self->tokens->items.pToken;
-	DaoInode *front = self->vmcFirst, *back = self->vmcLast;
+	DaoInode *back = self->vmcLast;
 	int cons = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int topll = (self->levelBase + self->lexLevel) ==0;
 	int nameStart, oldcount = self->regCount;
@@ -4060,7 +4001,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		ptok = tokens[k];
 	}
 	oldcount = self->regCount;
-	front = self->vmcFirst;
 	back = self->vmcLast;
 	if( self->toks->size == nameStart ){
 		self->curToken = start;
@@ -4276,7 +4216,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	DArray_Erase( self->toks, nameStart, self->toks->size - nameStart );
 	if( cst && remove ){
-		DaoParser_PopCodes( self, front, back );
+		DaoParser_PopCodes( self, back );
 		DaoParser_PopRegisters( self, self->regCount - oldcount );
 	}
 	self->curToken = end;
@@ -5947,7 +5887,6 @@ static DaoInode* DaoParser_AddBinaryCode( DaoParser *self, int code, DaoEnode LH
 DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int lb, int rb )
 {
 	DaoEnode enode, result = { -1, 0, 1, NULL, NULL, NULL, NULL };
-	DaoInode *front = self->vmcFirst;
 	DaoInode *back = self->vmcLast;
 	DaoType *tp = self->enumTypes->size ? self->enumTypes->items.pType[0] : 0;
 	int start = lb - 1 - (etype != 0);
@@ -6437,7 +6376,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		case DTOK_LSB :
 			{
 				/*  map/list/array[ i ] : */
-				DaoInode *front = self->vmcFirst;
 				DaoInode *back = self->vmcLast;
 				int N = 0, isC = 0, regcount = self->regCount;
 
@@ -6595,7 +6533,6 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 {
 	DaoEnode result;
 	DaoNameSpace *ns = self->nameSpace;
-	DaoInode *front = self->vmcFirst;
 	DaoInode *back = self->vmcLast;
 	int oldcount = self->regCount;
 	int tok = DaoParser_CurrentTokenName( self );
@@ -7043,7 +6980,7 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int 
 		DValue v = DaoParser_GetVariable( self, cid->items.pInt[i] );
 		DValue_SimpleMove( v, ctx->regValues[i+1] );
 	}
-	DaoParser_PopCodes( self, self->vmcFirst, enode->prev );
+	DaoParser_PopCodes( self, enode->prev );
 	for(i=regcount; i<self->regCount; i++) MAP_Erase( self->routine->localVarType, i );
 	DaoParser_PopRegisters( self, self->regCount - regcount );
 	/* Execute the instruction to get the const result: */
@@ -7064,7 +7001,7 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DValue a, DValue b
 	int p2 = p1 + self->vmcLast->middle;
 	int p3 = p1 + self->vmcLast->last;
 
-	DaoParser_PopCodes( self, self->vmcFirst, back );
+	DaoParser_PopCodes( self, back );
 	DaoParser_PopRegisters( self, self->regCount - regcount );
 
 	*cst = 0;

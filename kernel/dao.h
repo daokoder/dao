@@ -19,6 +19,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 
+#define DAO_VERSION "1.2"
 #define DAO_H_VERSION 20110512
 
 #if defined(MAC_OSX) && ! defined(UNIX)
@@ -140,7 +141,7 @@ extern int daoProxyPort;
 
 enum DaoTypes
 {
-	DAO_NIL     = 0,
+	DAO_NULL  = 0,
 	DAO_INTEGER ,
 	DAO_FLOAT   ,
 	DAO_DOUBLE  ,

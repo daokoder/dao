@@ -14,18 +14,11 @@
 #ifndef DAO_CONTEXT_H
 #define DAO_CONTEXT_H
 
-#include"daoOpcode.h"
+#include"daoVmcode.h"
 #include"daoType.h"
 #include"time.h"
 #include"stdlib.h"
 
-struct DaoVmcArray
-{
-	DaoVmCode *codes;
-	DaoVmCode *buf;
-	ushort_t   size;
-	ushort_t   bufsize;
-};
 
 /* running time context for dao routine. */
 struct DaoContext

@@ -32,12 +32,6 @@
 #include"daoMacro.h"
 #include"daoRegex.h"
 
-DMap *dao_typing_cache; /* HASH<void*[2],int> */
-size_t dao_typing_version;
-#ifdef DAO_WITH_THREAD
-DMutex dao_typing_mutex;
-#endif
-
 void DaoType_Delete( DaoType *self )
 {
 	DValue_Clear( & self->aux );
@@ -256,8 +250,6 @@ static unsigned char dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
 void DaoType_Init()
 {
 	int i, j;
-	dao_typing_cache = DHash_New(D_VOID2,0);
-	dao_typing_version = 0;
 	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
 	for(i=DAO_INTEGER; i<=DAO_DOUBLE; i++){
 		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
@@ -539,37 +531,11 @@ short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 
 	pvoid[0] = self;
 	pvoid[1] = type;
-	if( dao_late_deleter.safe ==0 || dao_late_deleter.version != dao_typing_version ){
-		if( dao_typing_cache->size ){
-#ifdef DAO_WITH_THREAD
-			DMutex_Lock( & dao_typing_mutex );
-#endif
-			if( dao_typing_cache->size ) DMap_Clear( dao_typing_cache );
-#ifdef DAO_WITH_THREAD
-			DMutex_Unlock( & dao_typing_mutex );
-#endif
-		}
-		mt = DaoType_MatchToX( self, type, defs, binds );
-		if( mt ==0 && binds && DMap_Find( binds, pvoid ) ) return DAO_MT_INIT;
-		return mt;
-	}
 
 	if( self ==NULL || type ==NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
-	node = DMap_Find( dao_typing_cache, pvoid );
-	if( node ) return node->value.pInt;
 
 	mt = DaoType_MatchToX( self, type, defs, binds );
-	if( ((self->attrib|type->attrib) & (DAO_TYPE_NOTDEF|DAO_TYPE_INTER)) ==0 ){
-#ifdef DAO_WITH_THREAD
-		DMutex_Lock( & dao_typing_mutex );
-#endif
-		dao_typing_version = dao_late_deleter.version;
-		MAP_Insert( dao_typing_cache, pvoid, mt );
-#ifdef DAO_WITH_THREAD
-		DMutex_Unlock( & dao_typing_mutex );
-#endif
-	}
 #if 0
 	if( mt ==0 && binds ){
 		printf( "%p  %p\n", pvoid[0], pvoid[1] );

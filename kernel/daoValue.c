@@ -390,7 +390,7 @@ void DValue_MarkConst( DValue *self )
 void DValue_Clear( DValue *self )
 {
 	switch( self->t ){
-	case DAO_NIL : case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE : break;
+	case DAO_NULL : case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE : break;
 	case DAO_COMPLEX : dao_free( self->v.c ); break;
 	case DAO_LONG : DLong_Delete( self->v.l ); break;
 	case DAO_ENUM : DEnum_Delete( self->v.e ); break;
@@ -409,7 +409,7 @@ int DValue_Init( DValue *self, int type )
 	if( self->t == type ) return type;
 	if( self->t ) DValue_Clear( self );
 	switch( type ){
-	case DAO_NIL : break;
+	case DAO_NULL : break;
 	case DAO_INTEGER : *self = daoZeroInteger; break;
 	case DAO_FLOAT   : *self = daoZeroFloat; break;
 	case DAO_DOUBLE  : *self = daoZeroDouble; break;
@@ -431,7 +431,7 @@ void DValue_CopyExt( DValue *self, DValue from, int copy )
 	default : if( self->t >= DAO_ARRAY ) GC_DecRC( self->v.p ); break;
 	}
 	switch( from.t ){
-	case DAO_NIL :
+	case DAO_NULL :
 	case DAO_INTEGER :
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  :
@@ -649,7 +649,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 		return 1;
 	}
 	switch( tp->tid ){
-	case DAO_NIL :
+	case DAO_NULL :
 	case DAO_INITYPE :
 		DValue_Copy( to, from );
 		return 1;
@@ -666,7 +666,7 @@ int DValue_Move( DValue from, DValue *to, DaoType *tp )
 	default : break;
 	}
 	switch( from.t ){
-	case DAO_NIL : return 0;
+	case DAO_NULL : return 0;
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 	case DAO_DOUBLE : break;

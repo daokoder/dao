@@ -34,8 +34,6 @@
 #define FE_ALL_EXCEPT 0xffff
 #endif
 
-#define SEMA_PER_VMPROC  1000
-
 DaoList*  DaoContext_GetList( DaoContext *self, DaoVmCode *vmc );
 static DaoMap*   DaoContext_GetMap( DaoContext *self,  DaoVmCode *vmc );
 static DaoArray* DaoContext_GetArray( DaoContext *self, DaoVmCode *vmc );
@@ -61,21 +59,6 @@ extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
 int DaoVmProcess_Resume2( DaoVmProcess *self, DValue *par[], int N, DaoContext *ret );
 void DaoPrintException( DaoCData *except, DaoStream *stream );
 
-void DaoVmCode_Print( DaoVmCode self, char *buffer )
-{
-	const char *name = getOpcodeName( self.code );
-	static const char *fmt = "%-11s : %6i , %6i , %6i ;\n";
-	if( buffer == NULL )
-		printf( fmt, name, self.a, self.b, self.c );
-	else
-		sprintf( buffer, fmt, name, self.a, self.b, self.c );
-}
-void DaoVmCodeX_Print( DaoVmCodeX self, char *annot )
-{
-	const char *name = getOpcodeName( self.code );
-	static const char *fmt = "%-11s : %6i , %6i , %6i ;  %4i,  %s\n";
-	printf( fmt, name, self.a, self.b, self.c, self.line, annot ? annot : "" );
-}
 
 /**/
 
@@ -1240,7 +1223,7 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
-	const ushort_t bval = ( vmc->b & BITS_LOW12 );
+	const ushort_t bval = vmc->b;
 	int i, size, numtype = DAO_INTEGER;
 	DValue value = daoNullValue;
 	DValue **regv = self->regValues;
@@ -1253,7 +1236,7 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 	array = DaoContext_GetArray( self, vmc );
 	if( size ){
 		numtype = regv[opA]->t;
-		if( numtype == DAO_NIL || numtype > DAO_COMPLEX ){
+		if( numtype == DAO_NULL || numtype > DAO_COMPLEX ){
 			DaoContext_RaiseException( self, DAO_ERROR, "invalid matrix enumeration" );
 			return;
 		}
@@ -1345,7 +1328,7 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 {
 	int i, k;
 	int opA = vmc->a;
-	int bval = ( vmc->b & BITS_LOW12 );
+	int bval = vmc->b;
 	DaoObject *object;
 	DaoType **mtype;
 	const DValue *selfobj = & daoNullValue;

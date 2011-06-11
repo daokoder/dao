@@ -159,11 +159,11 @@ static DArray* MakeIndex( DaoContext *ctx, DValue index, size_t N, size_t *start
 		if( n2 <0 ) n2 += N;
 		*start = n1;
 		*end = n2;
-		if( first.t ==DAO_NIL && second.t ==DAO_NIL ){
+		if( first.t ==DAO_NULL && second.t ==DAO_NULL ){
 			*idtype = IDX_ALL;
-		}else if( first.t ==DAO_NIL ){
+		}else if( first.t ==DAO_NULL ){
 			*idtype = IDX_TO;
-		}else if( second.t ==DAO_NIL ){
+		}else if( second.t ==DAO_NULL ){
 			*idtype = IDX_FROM;
 		}
 		/* when specify an index range, allow out of range: (eg, str[:5]=='abcde') */
@@ -199,7 +199,7 @@ void DaoBase_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycD
 		DaoStream_WriteMBS( stream, coreTypeNames[ self->t ] );
 	else
 		DaoStream_WriteMBS( stream, DValue_GetTyper( * self )->name );
-	if( self->t == DAO_NIL ) return;
+	if( self->t == DAO_NULL ) return;
 	if( self->t == DAO_TYPE ){
 		DaoStream_WriteMBS( stream, "<" );
 		DaoStream_WriteMBS( stream, ((DaoType*)self->v.p)->name->mbs );
@@ -616,7 +616,7 @@ extern DaoTypeBase funcTyper;
 DaoTypeBase* DValue_GetTyper( DValue self )
 {
 	switch( self.t ){
-	case DAO_NIL : return & baseTyper;
+	case DAO_NULL : return & baseTyper;
 	case DAO_INTEGER :
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  : return & numberTyper;
@@ -3864,7 +3864,7 @@ static void DaoTupleCore_GetItem1( DValue *self0, DaoContext *ctx, DValue pid )
 {
 	DaoTuple *self = self0->v.tuple;
 	int ec = DAO_ERROR_INDEX;
-	if( pid.t == DAO_NIL ){
+	if( pid.t == DAO_NULL ){
 		ec = 0;
 		/* return a copy. TODO */
 	}else if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){

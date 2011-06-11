@@ -14,7 +14,7 @@
 #ifndef DAO_PROCESS_H
 #define DAO_PROCESS_H
 
-#include"daoOpcode.h"
+#include"daoVmcode.h"
 #include"daoType.h"
 #include"time.h"
 #include"stdlib.h"

@@ -11,8 +11,10 @@
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
-#ifndef DAO_OPCODE_H
-#define DAO_OPCODE_H
+#ifndef DAO_VMCODE_H
+#define DAO_VMCODE_H
+
+#include"daoBase.h"
 
 enum DaoOpcode
 {
@@ -439,10 +441,23 @@ enum DaoFunctMeth
 	DVM_FUNCT_NULL
 };
 
-#define DVR_MAX       0x70000
+struct DaoVmCode
+{
+	unsigned short  code; /* opcode */
+	unsigned short  a, b, c; /* register ids for operands */
+};
 
-#define BITS_HIGH4 (0xffff<<12)
-#define BITS_LOW12 (0xffff>>4)
-
+struct DaoVmCodeX
+{
+	unsigned short  code; /* opcode */
+	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  level; /* lexical level */
+	unsigned short  line; /* line number in the source file */
+	unsigned int    first; /* first token */
+	unsigned short  middle; /* middle token, with respect to first */
+	unsigned short  last; /* last token, with respect to first */
+};
+void DaoVmCode_Print( DaoVmCode self, char *buffer );
+void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );
 
 #endif

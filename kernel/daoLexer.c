@@ -18,6 +18,7 @@
 #include"ctype.h"
 
 #include"daoConst.h"
+#include"daoVmcode.h"
 #include"daoStream.h"
 #include"daoLexer.h"
 #include<assert.h>

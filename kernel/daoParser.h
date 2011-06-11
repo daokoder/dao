@@ -55,7 +55,6 @@ struct DaoParser
 	 * with respect to the first line in the routine body;
 	 * -1 is used for register for parameters */
 	DArray *regLines; /* <int> : obsolete */
-	DArray *regRefers;
 
 	short levelBase;
 	short lexLevel;

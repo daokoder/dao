@@ -79,48 +79,4 @@ void DValue_IncRCs( DValue *v, int n );
 
 #define DValue_Type( x ) ( (x).t ? (x).t : (x).v.p ? (x).v.p->type : 0 )
 
-struct DVarray
-{
-	DValue   *data;
-	DValue   *buf;
-
-	size_t size;
-	size_t bufsize;
-};
-
-DVarray* DVarray_New();
-void DVarray_Delete( DVarray *self );
-void DVarray_Resize( DVarray *self, size_t size, DValue val );
-void DVarray_Clear( DVarray *self );
-/* for array of int, float and double only */
-void DVarray_FastClear( DVarray *self );
-void DVarray_Insert( DVarray *self, DValue val, size_t id );
-void DVarray_Erase( DVarray *self, size_t start, size_t n );
-void DVarray_PushFront( DVarray *self, DValue val );
-void DVarray_PopFront( DVarray *self );
-void DVarray_PushBack( DVarray *self, DValue val );
-void DVarray_PopBack( DVarray *self );
-void DVarray_Swap( DVarray *left, DVarray *right );
-void DVarray_Assign( DVarray *left, DVarray *right );
-
-DaoBase* DVarray_GetItem( DVarray *self, size_t id );
-void DVarray_SetItem( DVarray *self, DaoBase *it, size_t id );
-void DVarray_AppendItem( DVarray *self, DaoBase *it );
-
-#define DVarray_Append( self, val )   DVarray_PushBack( self, val )
-#define DVarray_Pop( self )           DVarray_PopBack( self )
-#define DVarray_Top( self )           (self)->data[ (self)->size -1 ]
-#define DVarray_TopInt( self )        (self)->data[ (self)->size -1 ]
-
-struct DVaTuple
-{
-	DValue *data;
-	size_t  size;
-};
-
-DVaTuple* DVaTuple_New( size_t size, DValue val );
-void DVaTuple_Delete( DVaTuple *self );
-void DVaTuple_Clear( DVaTuple *self );
-void DVaTuple_Resize( DVaTuple *self, size_t size, DValue val );
-
 #endif

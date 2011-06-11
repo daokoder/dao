@@ -1369,7 +1369,7 @@ DaoType* DaoNameSpace_GetTypeV( DaoNameSpace *self, DValue val )
 {
 	DaoType *abtp = NULL;
 	switch( val.t ){
-	case DAO_NIL :
+	case DAO_NULL :
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
 	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING : 
 		abtp = simpleTypes[ val.t ];

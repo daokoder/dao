@@ -16,8 +16,6 @@
 
 #include"daoBase.h"
 
-struct DaoJitCode;
-
 typedef union DQuadUByte DQuadUByte;
 union DQuadUByte { void *p; struct{ unsigned char a, b, c, d; }X; };
 
@@ -48,8 +46,6 @@ struct DArray
 		struct DVarray      **pVarray;
 		struct DaoInode     **pInode;
 		struct DaoVmCodeX   **pVmc;
-
-		struct DaoJitCode   **pJitc;
 		struct DaoToken     **pToken;
 
 	} buf, items;
@@ -84,6 +80,49 @@ void* DArray_Back( DArray *self );
 #define DArray_Top( self )           DArray_Back( self )
 #define DArray_TopInt( self )        (self)->items.pInt[ (self)->size -1 ]
 
+
+
+struct DVarray
+{
+	DValue   *data;
+	DValue   *buf;
+
+	size_t size;
+	size_t bufsize;
+};
+DVarray* DVarray_New();
+void DVarray_Delete( DVarray *self );
+void DVarray_Resize( DVarray *self, size_t size, DValue val );
+void DVarray_Clear( DVarray *self );
+/* for array of int, float and double only */
+void DVarray_FastClear( DVarray *self );
+void DVarray_Insert( DVarray *self, DValue val, size_t id );
+void DVarray_Erase( DVarray *self, size_t start, size_t n );
+void DVarray_PushFront( DVarray *self, DValue val );
+void DVarray_PopFront( DVarray *self );
+void DVarray_PushBack( DVarray *self, DValue val );
+void DVarray_PopBack( DVarray *self );
+void DVarray_Swap( DVarray *left, DVarray *right );
+void DVarray_Assign( DVarray *left, DVarray *right );
+
+DaoBase* DVarray_GetItem( DVarray *self, size_t id );
+void DVarray_SetItem( DVarray *self, DaoBase *it, size_t id );
+void DVarray_AppendItem( DVarray *self, DaoBase *it );
+
+#define DVarray_Append( self, val )   DVarray_PushBack( self, val )
+#define DVarray_Pop( self )           DVarray_PopBack( self )
+#define DVarray_Top( self )           (self)->data[ (self)->size -1 ]
+#define DVarray_TopInt( self )        (self)->data[ (self)->size -1 ]
+
+
+
+struct DaoVmcArray
+{
+	DaoVmCode *codes;
+	DaoVmCode *buf;
+	ushort_t   size;
+	ushort_t   bufsize;
+};
 DaoVmcArray* DaoVmcArray_New();
 void DaoVmcArray_Delete( DaoVmcArray *self );
 void DaoVmcArray_Clear( DaoVmcArray *self );
@@ -105,6 +144,20 @@ void DArray_CleanupCodes( DArray *self );
 #define DaoVmcArray_Append( self, code )  DaoVmcArray_PushBack( self, code )
 #define DaoVmcArray_Pop( self )  DaoVmcArray_PopBack( self )
 
+
+
+struct DVaTuple
+{
+	DValue *data;
+	size_t  size;
+};
+DVaTuple* DVaTuple_New( size_t size, DValue val );
+void DVaTuple_Delete( DVaTuple *self );
+void DVaTuple_Clear( DVaTuple *self );
+void DVaTuple_Resize( DVaTuple *self, size_t size, DValue val );
+
+
+
 struct DPtrTuple
 {
 	union{
@@ -118,20 +171,10 @@ struct DPtrTuple
 
 	size_t size;
 };
-
 /* See daolib.h */
 DPtrTuple* DPtrTuple_New(  size_t size, void *val );
 void DPtrTuple_Delete( DPtrTuple *self );
 void DPtrTuple_Resize( DPtrTuple *self, size_t size, void *val );
 void DPtrTuple_Clear( DPtrTuple *self );
 
-typedef struct DaoJitCode DaoJitCode;
-struct DaoJitCode
-{
-	short  opcode; /* basic opcode (not encoded) */
-	short  rmsti;  /* reg, mem, stack, (encoded) */
-	short  modsib; /* addressing mode, bit flags */
-	dint   extra; /* displacement, immediate data or SIB byte (encode) */
-	int    vmcID;
-};
 #endif

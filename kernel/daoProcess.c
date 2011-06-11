@@ -905,7 +905,7 @@ CallEntry:
 		OPCASE( DATA ){
 			if( locVars[ vmc->c ]->cst ) goto ModifyConstant;
 			switch( vmc->a ){
-			case DAO_NIL : *locVars[ vmc->c ] = daoNullValue; break;
+			case DAO_NULL : *locVars[ vmc->c ] = daoNullValue; break;
 			case DAO_INTEGER : locVars[ vmc->c ]->v.i = vmc->b; break;
 			case DAO_FLOAT : locVars[ vmc->c ]->v.f = vmc->b; break;
 			case DAO_DOUBLE : locVars[ vmc->c ]->v.d = vmc->b; break;
@@ -1125,7 +1125,7 @@ CallEntry:
 		OPCASE( TEST ){
 			vA2 = *locVars[ vmc->a ];
 			switch( vA2.t ){
-			case DAO_NIL :
+			case DAO_NULL :
 				vmc = vmcBase + vmc->b; break;
 			case DAO_INTEGER :
 				vmc = vA2.v.i ? vmc+1 : vmcBase + vmc->b; break;
