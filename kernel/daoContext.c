@@ -745,7 +745,6 @@ void DaoContext_DoArray( DaoContext *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
 	const ushort_t count = vmc->b - 10;
-	int numtype = DAO_INTEGER;
 	size_t i, j, m, k = 0;
 	DaoArray *array = NULL;
 	DArray *dim = NULL;
@@ -1211,7 +1210,6 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 	const ushort_t opA = vmc->a;
 	const ushort_t bval = vmc->b;
 	int i, size, numtype = DAO_INTEGER;
-	DValue value = daoNullValue;
 	DValue **regv = self->regValues;
 	DaoArray *array = NULL;
 
@@ -3207,7 +3205,6 @@ static DValue DaoTypeCast( DaoContext *ctx, DaoType *ct, DValue dA,
 	DValue dC, key, value = daoNullValue;
 	DValue *data;
 	int i, type, size;
-	int toktype = 0, toklen = 0;
 	if( ct == NULL ) goto FailConversion;
 	dC = value;
 	dC.t = ct->tid;
@@ -3872,8 +3869,8 @@ static void DaoContext_TryTailCall( DaoContext *self, DaoVmCode *vmc, DaoContext
 }
 static int DaoContext_TrySynCall( DaoContext *self, DaoVmCode *vmc, DaoContext *ctx )
 {
-	DaoType *retype = self->regTypes[ self->vmc->c ];
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
+	DaoType *retype = self->regTypes[ self->vmc->c ];
 	if( retype && retype->tid == DAO_FUTURE ){
 		DaoNameSpace *ns = self->nameSpace;
 		DaoFuture *future = DaoCallServer_Add( ctx, NULL, NULL );
@@ -3984,8 +3981,7 @@ static void DaoContext_DoNewCall( DaoContext *self, DaoVmCode *vmc,
 	DaoMetaRoutine *routines = klass->classRoutines;
 	DaoObject *obj, *othis = NULL, *onew = NULL;
 	DValue tmp = daoNullObject;
-	int code = vmc->code;
-	int mcall = code == DVM_MCALL;
+	int i, code = vmc->code;
 	int mode = vmc->b & 0xff00;
 	int codemode = code | (mode<<16);
 	int initbase = DaoContext_InitBase( self, vmc, (DaoBase*) klass );
@@ -4016,7 +4012,7 @@ static void DaoContext_DoNewCall( DaoContext *self, DaoVmCode *vmc,
 		DValue *returned2 = & returned;
 		DValue parbuf[DAO_MAX_PARAM+1];
 		DValue *parbuf2[DAO_MAX_PARAM+1];
-		int i, sup;
+
 		memset( parbuf, 0, (DAO_MAX_PARAM+1)*sizeof(DValue) );
 		for(i=0; i<=DAO_MAX_PARAM; i++) parbuf2[i] = parbuf + i;
 		if( ! DRoutine_PassParams( (DRoutine*)rout, selfpar, parbuf2, params, npar, vmc->code ) ){
@@ -4076,7 +4072,7 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 	int mcall = vmc->code == DVM_MCALL;
 	int mode = vmc->b & 0xff00;
 	int npar = vmc->b & 0xff;
-	int i, k, n = 0;
+	int i, n = 0;
 
 	if( npar == 0 && (mode & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
 		int m = (self->routine->routType->attrib & DAO_TYPE_SELF) != 0;
@@ -4129,8 +4125,8 @@ InvalidParameter:
 }
 void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 {
-	int i, sup = 0, code = vmc->code;
-	int need_self, mcall = code == DVM_MCALL;
+	int sup = 0, code = vmc->code;
+	int mcall = code == DVM_MCALL;
 	int mode = vmc->b & 0xff00;
 	int npar = vmc->b & 0xff;
 	int codemode = code | (mode<<16);
@@ -4361,7 +4357,6 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 }
 int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 {
-	DMap *old = deftypes;
 	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
 	if( tp == NULL ) return 0;
 	GC_ShiftRC( tp, self->routType );

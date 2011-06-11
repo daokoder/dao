@@ -1923,7 +1923,6 @@ static void DaoArray_GetItem1( DValue *dbase, DaoContext *ctx, DValue pid )
 {
 	DaoArray *na, *self = dbase->v.array;
 	DValue *vs = & pid;
-	size_t *dims = self->dims->items.pSize;
 	/* if( self->unitype ) printf( "DaoArray_GetItem: %s\n", self->unitype->name->mbs ); */
 
 	if( pid.t >= DAO_INTEGER && pid.t <= DAO_DOUBLE ){
@@ -2034,26 +2033,6 @@ static void DaoArray_SetOneItem( DaoArray *self, int id, DValue value, int op )
 	default : break;
 	}
 }
-static void DaoArray_SetComplex( DaoArray *self, complex16 c16 )
-{
-	int i, N = self->size;
-	double vd = c16.real;
-	int vi = (int) vd;
-	float vf = (float) vd;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = vi; break;
-	case DAO_FLOAT : for(i=0; i<N; i++) self->data.f[i] = vf; break;
-	case DAO_DOUBLE : for(i=0; i<N; i++) self->data.d[i] = vd; break;
-	case DAO_COMPLEX : for(i=0; i<N; i++) self->data.c[i] = c16; break;
-	default : break;
-	}
-}
-static void DaoArray_SetReal( DaoArray *self, double vd )
-{
-	complex16 c16 = { 0.0, 0.0 };
-	c16.real = vd;
-	DaoArray_SetComplex( self, c16 );
-}
 int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
 {
 	int i, N = self->size;
@@ -2102,7 +2081,7 @@ int DaoArray_Compare( DaoArray *x, DaoArray *y )
 	double *xd = x->data.d, *yd = y->data.d;
 	complex16 *xc = x->data.c, *yc = y->data.c;
 	int min = x->size < y->size ? x->size : y->size;
-	int i = 0, cmp = 0;
+	int i = 0;
 	if( x->numType == DAO_INTEGER && y->numType == DAO_INTEGER ){
 		while( i < min && *xi == *yi ) i++, xi++, yi++;
 		if( i < min ) return *xi < *yi ? -1 : 1;
@@ -2309,8 +2288,8 @@ static void DaoArray_PrintElement( DaoArray *self, DaoStream *stream, int i )
 static void DaoArray_Print( DValue *dbase, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
 	DaoArray *self = dbase->v.array;
-	int i, j, n = self->size * BBITS;
 	size_t *tmp, *dims = self->dims->items.pSize;
+	int i, j;
 
 	if( self->dims->size < 2 ) return;
 	if( self->dims->size==2 && ( dims[0] ==1 || dims[1] ==1 ) ){
@@ -3809,13 +3788,11 @@ int DaoArray_Sliced( DaoArray *self )
 {
 	DaoArray *ref = self->reference;
 	DArray *slice = self->slice;
-	int S = 0;
 
 	if( slice == NULL || ref == NULL ) goto ReturnFalse;
 	if( self->numType != ref->numType ) goto ReturnFalse;
 	if( slice->size != ref->dims->size ) goto ReturnFalse;
 	if( DaoArray_SliceFrom( self, ref, slice ) ==0 ) goto ReturnFalse;
-ReturnTrue:
 	GC_DecRC( self->reference );
 	self->reference = NULL;
 	return 1;

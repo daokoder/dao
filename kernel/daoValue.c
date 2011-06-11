@@ -1341,7 +1341,6 @@ static int DaoCData_Serialize( DaoCData *self, DString *serial, DaoNameSpace *ns
 {
 	DaoType *type;
 	DValue selfpar = daoNullCData;
-	DValue *p = & selfpar;
 	DValue *res = & proc->returned;
 	DaoBase *meth = DaoFindFunction2( self->typer, "serialize" );
 	DaoFunction *func = (DaoFunction*) meth;
@@ -1489,7 +1488,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DValue *value, D
 	DValue tmp = daoNullValue;
 	DValue tmp2 = daoNullValue;
 	char *str;
-	int i, j, k, n, rc = 1;
+	int i, j, k, n;
 	int minus = 0;
 	int next = start + 1;
 	int tok2 = start < end ? tokens[start+1]->type : 0;

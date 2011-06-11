@@ -498,10 +498,6 @@ void DaoStream_SetFile( DaoStream *self, FILE *fd )
 	self->file->rc = 1;
 	self->file->fd = fd;
 }
-static void DaoStream_SetName( DaoStream *self, const char *name )
-{
-	DString_SetMBS( self->fname, name );
-}
 FILE* DaoStream_GetFile( DaoStream *self )
 {
 	if( self->file && self->file->fd ) return self->file->fd;
@@ -801,7 +797,7 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 }
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {
-	int ch, delim = '\n';
+	int ch;
 	char buf[IO_BUF_SIZE];
 	char *start = buf, *end = buf + IO_BUF_SIZE;
 

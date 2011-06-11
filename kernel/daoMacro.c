@@ -1164,8 +1164,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 	unsigned char tkn, tki, tki2;
 	int size = self->tokens->size;
 	int start = self->curToken;
-	int end = size - 1;
-	int rb, newpos = -1;
+	int rb, end = size - 1;
 
 	/*
 	   for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");

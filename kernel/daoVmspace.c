@@ -48,14 +48,16 @@ DAO_DLL DaoAPI __dao;
 
 DaoConfig daoConfig =
 {
-	1,    /*cpu*/
-	0,    /*jit*/
-	0,    /*safe*/
-	1,    /*typedcode*/
-	0,    /*incompile*/
-	0,    /*iscgi*/
-	8,    /*tabspace*/
-	0     /*chindent*/
+	1, /*cpu*/
+	0, /*jit*/
+	0, /*safe*/
+	1, /*typedcode*/
+	0, /*incompile*/
+	0, /*iscgi*/
+	8, /*tabspace*/
+	0, /*chindent*/
+	0, /*mbs*/
+	0  /*wcs*/
 };
 
 DaoVmSpace   *mainVmSpace = NULL;
@@ -459,67 +461,6 @@ void SplitByWhiteSpaces( DString *str, DArray *tokens )
 	if( tok->size > 0 ) DArray_Append( tokens, tok );
 	DString_Delete( tok );
 }
-static void ParseScriptParameters( DString *str, DArray *tokens )
-{
-	size_t i, size = str->size;
-	char quote = 0;
-	const char *chs;
-	DString *tok = DString_New(1);
-	/* The shell may remove quotation marks, to use an arbitrary string as
-	 * a parameter, the string should be enclosed insize \" \" with blackslashes.
-	 * If the string contains ", it should be preceded by 3 blackslashes as,
-	 * dao myscript.dao -m=\"just a message \\\"hello\\\".\"
-	 */
-	/*
-	   printf( "2: %s\n", str->mbs );
-	 */
-
-	DArray_Clear( tokens );
-	DString_ToMBS( str );
-	chs = str->mbs;
-	for( i=0; i<size; i++){
-		if( chs[i] == '\'' || chs[i] == '"' ) quote = chs[i];
-		if( quote ){
-			if( tok->size > 0 ){
-				DArray_Append( tokens, tok );
-				DString_Clear( tok );
-			}
-			i ++;
-			while( i<size && chs[i] != quote ){
-				if( chs[i] == '\\' ){
-					DString_AppendChar( tok, chs[++i] );
-					i ++;
-					continue;
-				}
-				DString_AppendChar( tok, chs[i++] );
-			}
-			DArray_Append( tokens, tok );
-			DString_Clear( tok );
-			quote = 0;
-			continue;
-		}else if( tokens->size && chs[i] == '\\' && i+1 < size ){
-			/* Do NOT remove backslashes for script path:
-			   dao C:\test\hello.dao ... */
-			DString_AppendChar( tok, chs[i+1] );
-			++i;
-			continue;
-		}else if( isspace( chs[i] ) || chs[i] == '=' ){
-			if( tok->size > 0 ){
-				DArray_Append( tokens, tok );
-				DString_Clear( tok );
-			}
-			if( chs[i] == '=' ){
-				DString_AppendChar( tok, chs[i] );
-				DArray_Append( tokens, tok );
-				DString_Clear( tok );
-			}
-			continue;
-		}
-		DString_AppendChar( tok, chs[i] );
-	}
-	if( tok->size > 0 ) DArray_Append( tokens, tok );
-	DString_Delete( tok );
-}
 
 int DaoJIT_TryInit( DaoVmSpace *vms );
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
@@ -690,7 +631,6 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 	i = 1;
 	while( i < array->size ){
 		DString *s = array->items.pString[i];
-		DString *name = NULL, *value = NULL;
 		i ++;
 		nkey.v.i ++;
 		offset = 0;
@@ -914,8 +854,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 {
 	DaoNameSpace *ns = self->mainNamespace;
-	DaoRoutine *rout;
-	size_t i, j, n;
+	size_t i;
 	if( self->options & DAO_EXEC_VINFO ){
 		DaoStream_WriteNewLine( self->stdStream );
 		DaoStream_WriteMBS( self->stdStream, dao_copy_notice );
@@ -1591,22 +1530,6 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 	DString_Delete( pstr );
 }
 
-static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
-{
-	DaoType *it;
-	int i;
-	DString_Clear( sig );
-	DString_ToMBS( sig );
-	for(i=((rt->attrib & DAO_ROUT_PARSELF)!=0); i<rt->nested->size; i++){
-		it = rt->nested->items.pType[i];
-		if( sig->size ) DString_AppendChar( sig, ',' );
-		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
-			DString_Append( sig, it->aux.v.type->name );
-		}else{
-			DString_Append( sig, it->name );
-		}
-	}
-}
 void DaoTypeBase_Free( DaoTypeBase *typer )
 {
 	DaoCDataCore *hostCore;
@@ -1997,6 +1920,12 @@ static void DaoConfigure_FromFile( const char *name )
 			}else if( TOKCMP( tk1, "incompile" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.incompile = yes;
+			}else if( TOKCMP( tk1, "mbs" )==0 ){
+				if( yes <0 ) goto InvalidConfigValue;
+				daoConfig.mbs = yes;
+			}else if( TOKCMP( tk1, "wcs" )==0 ){
+				if( yes <0 ) goto InvalidConfigValue;
+				daoConfig.wcs = yes;
 			}else{
 				goto InvalidConfigName;
 			}
@@ -2078,8 +2007,6 @@ static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DValue *_p[], int _n )
 }
 static void dao_FakeShoftList_SetItem( DaoContext *_ctx, DValue *_p[], int _n )
 {
-  int index = _p[1]->v.i;
-  int value = _p[2]->v.i;
 }
 static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n );
 static DaoFuncItem dao_FakeList_Meths[] = 

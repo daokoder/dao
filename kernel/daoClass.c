@@ -229,7 +229,6 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	for(i=1; i<parents->size; i++){
 		DaoClass *klass = parents->items.pClass[i];
 		if( klass->type == DAO_CLASS ){
-			int up = self->cstDataTable->size;
 			DArray_Append( self->cstDataTable, klass->cstData );
 			DArray_Append( self->glbDataTable, klass->glbData );
 			DArray_Append( self->glbTypeTable, klass->glbDataType );
@@ -334,7 +333,6 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 	DNode *node;
 	DMap *deftypes;
 	size_t lt = DString_FindChar( self->className, '<', 0 );
-	int E = types->size;
 	int i, holders = 0;
 	if( self->typeHolders == NULL || self->typeHolders->size ==0 ) return self;
 	while( types->size < self->typeHolders->size ){
@@ -488,7 +486,6 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 /* assumed to be called before parsing class body */
 void DaoClass_DeriveClassData( DaoClass *self )
 {
-	DaoNameSpace *ns = self->classRoutine->nameSpace;
 	DArray *parents, *offsets;
 	DaoType *type;
 	DNode *search;
@@ -685,7 +682,6 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	}
 	for(i=1; i<parents->size; i++){
 		DaoClass *klass = parents->items.pClass[i];
-		DaoCData *cdata = parents->items.pCData[i];
 		offset = offsets->items.pInt[i]; /* plus self */
 		if( klass->type == DAO_CLASS ){
 			/* For object data: */
@@ -1038,7 +1034,6 @@ DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature )
 }
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 {
-	int j;
 	DNode *node = DMap_First( self->lookupTable );
 	DaoStream_WriteMBS( stream, "class " );
 	DaoStream_WriteString( stream, self->className );

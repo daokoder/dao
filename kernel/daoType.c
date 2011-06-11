@@ -147,8 +147,6 @@ DaoType* DaoType_New( const char *name, short tid, DaoBase *extra, DArray *nest 
 void DaoType_InitDefault( DaoType *self )
 {
 	DaoType **types = self->nested ? self->nested->items.pType : NULL;
-	DaoType *itype1 = types && self->nested->size > 0 ? types[0] : NULL;
-	DaoType *itype2 = types && self->nested->size > 1 ? types[1] : NULL;
 	int i, count = self->nested ? self->nested->size : 0;
 	if( self->value.t && self->value.t != DAO_TUPLE ) return;
 	if( self->value.t == DAO_TUPLE && self->value.v.tuple->items->size == count ) return;
@@ -160,8 +158,9 @@ void DaoType_InitDefault( DaoType *self )
 		self->value.v.e = DEnum_New( self, 0 );
 	}else if( self->tid == DAO_ARRAY ){
 #ifdef DAO_WITH_NUMARRAY
+		DaoType *itype = types && self->nested->size > 0 ? types[0] : NULL;
 		self->value = daoNullArray;
-		self->value.v.array = DaoArray_New( itype1 ? itype1->tid : DAO_INTEGER );
+		self->value.v.array = DaoArray_New( itype ? itype->tid : DAO_INTEGER );
 		self->value.v.array->unitype = self;
 		GC_IncRC( self );
 #endif
@@ -226,7 +225,7 @@ DaoType* DaoType_Copy( DaoType *other )
 void DaoType_MapNames( DaoType *self )
 {
 	DaoType *tp;
-	int i, k = 0;
+	int i;
 	if( self->nested == NULL ) return;
 	if( self->tid != DAO_TUPLE && self->tid != DAO_ROUTINE ) return;
 	if( self->mapNames == NULL ) self->mapNames = DMap_New(D_STRING,0);
@@ -525,7 +524,6 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 }
 short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
-	DNode *node;
 	void *pvoid[2];
 	size_t mt;
 
@@ -1120,7 +1118,7 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 {
 	int i, k, N = self->supers->size;
 	DaoInterface *super;
-	DNode *it, *node;
+	DNode *it;
 	for(i=0; i<N; i++){
 		super = (DaoInterface*) self->supers->items.pBase[i];
 		for(it=DMap_First(super->methods); it; it=DMap_Next( super->methods, it )){

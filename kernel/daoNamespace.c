@@ -242,22 +242,6 @@ void DaoNameSpace_AddConstData( DaoNameSpace *self, const char *name, DaoBase *d
 	DaoNameSpace_AddConst( self, s, value, DAO_DATA_PUBLIC );
 	DString_Delete( s );
 }
-static void DaoRoutine_GetSignature( DaoType *rt, DString *sig )
-{
-	DaoType *it;
-	int i;
-	DString_Clear( sig );
-	DString_ToMBS( sig );
-	for(i=((rt->attrib & DAO_ROUT_PARSELF)!=0); i<rt->nested->size; i++){
-		it = rt->nested->items.pType[i];
-		if( sig->size ) DString_AppendChar( sig, ',' );
-		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
-			DString_Append( sig, it->aux.v.type->name );
-		}else{
-			DString_Append( sig, it->name );
-		}
-	}
-}
 static void DaoTypeBase_Parents( DaoTypeBase *typer, DArray *parents )
 {
 	int i, k;
@@ -360,7 +344,6 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 	DArray *parents;
 	DMap *methods;
 	DMap *supMethods;
-	DNode *node;
 	DNode *it;
 	int i, k, size;
 	if( typer->priv == NULL ){
@@ -709,7 +692,6 @@ DaoTypeBase nsTyper=
 
 DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms )
 {
-	int i = 0;
 	DValue value = daoNullValue;
 	DString *name = DString_New(1);
 	DaoNameSpace *self = (DaoNameSpace*) dao_malloc( sizeof(DaoNameSpace) );
@@ -1001,7 +983,7 @@ int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DValue value, D
 	DaoType *abtp = DaoNameSpace_GetTypeV( self, value );
 	DNode *node = MAP_Find( self->lookupTable, name );
 	DValue *dest;
-	int up, id = 0;
+	int id = 0;
 
 	if( tp && value.t && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
@@ -1208,7 +1190,6 @@ static int DaoNameSpace_ImportRoutine( DaoNameSpace *self, DString *name, DValue
 }
 void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImport )
 {
-	DaoType **vtype = ns->varType->items.pType;
 	DArray *names = DArray_New(D_STRING);
 	DNode *node, *search;
 	int k, st, pm, up, id;
@@ -1751,7 +1732,6 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto, DaoParser *parser )
 {
 	DaoFunction *func = DaoFunction_New();
-	DaoVmSpace *vms = self->vmSpace;
 	DaoParser *defparser;
 	int key = DKEY_OPERATOR;
 

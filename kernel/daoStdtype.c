@@ -409,8 +409,6 @@ int DEnum_SetValue( DEnum *self, DEnum *other, DString *enames )
 	DMap *selfNames = self->type->mapNames;
 	DMap *otherNames = other->type->mapNames;
 	DNode *node, *search;
-	int count = 0;
-	int i = 0;
 
 	if( self->type == other->type ){
 		self->value = other->value;
@@ -458,8 +456,6 @@ int DEnum_AddValue( DEnum *self, DEnum *other, DString *enames )
 	DMap *selfNames = self->type->mapNames;
 	DMap *otherNames = other->type->mapNames;
 	DNode *node, *search;
-	int count = 0;
-	int i = 0;
 
 	if( self->type->flagtype ==0 || self->type->name->mbs[0] == '$' ) return 0;
 
@@ -488,8 +484,6 @@ int DEnum_RemoveValue( DEnum *self, DEnum *other, DString *enames )
 	DMap *selfNames = self->type->mapNames;
 	DMap *otherNames = other->type->mapNames;
 	DNode *node, *search;
-	int count = 0;
-	int i = 0;
 
 	if( self->type->flagtype ==0 || self->type->name->mbs[0] == '$' ) return 0;
 
@@ -2072,7 +2066,6 @@ static void DaoLIST_Resize( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoList *self = p[0]->v.list;
 	size_t size = (size_t)p[1]->v.i;
-	size_t oldSize = self->items->size;
 	if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR,
 				"not permitted to create large list in safe running mode" );
@@ -3382,7 +3375,6 @@ static void DaoCData_SetField( DValue *self, DaoContext *ctx, DString *name, DVa
 	DaoTypeBase *typer = DValue_GetTyper( *self );
 	DaoBase *func = NULL;
 	DValue *pval = & value;
-	DValue val;
 	DString_SetMBS( ctx->process->mbstring, "." );
 	DString_Append( ctx->process->mbstring, name );
 	DString_AppendMBS( ctx->process->mbstring, "=" );

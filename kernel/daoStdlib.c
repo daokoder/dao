@@ -37,6 +37,15 @@
 #include"daoGC.h"
 #include"daoSched.h"
 
+static void STD_Path( DaoContext *ctx, DValue *p[], int N )
+{
+	char *path = DString_GetMBS( p[0]->v.s );
+	switch( p[1]->v.i ){
+	case 0 : DaoVmSpace_SetPath( ctx->vmSpace, path ); break;
+	case 1 : DaoVmSpace_AddPath( ctx->vmSpace, path ); break;
+	case 2 : DaoVmSpace_DelPath( ctx->vmSpace, path ); break;
+	}
+}
 static void STD_Compile( DaoContext *ctx, DValue *p[], int N )
 {
 	DaoVmProcess *vmp = ctx->process;
@@ -294,7 +303,6 @@ void STD_Debug( DaoContext *ctx, DValue *p[], int N )
 		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
 			DaoStream_WriteMBS( stream, help );
 		}else if( strcmp( cmd, "l" ) == 0 || strcmp( cmd, "list" ) == 0 ){
-			DaoVmCodeX **vmCodes = routine->annotCodes->items.pVmc;
 			DString *mbs = DString_New(1);
 			int entry = ctx->vmc - ctx->routine->vmCodes->codes;
 			int start = entry - 10;
@@ -500,6 +508,7 @@ static void STD_Version( DaoContext *ctx, DValue *p[], int N )
 
 static DaoFuncItem stdMeths[]=
 {
+	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
 	{ STD_Eval,      "eval( source :string, replace=0, stream=io, safe=0 )" },
 	{ STD_Load,      "load( file :string, import=1, safe=0 )" },
@@ -1263,7 +1272,6 @@ static void REFL_Trace( DaoContext *ctx, DValue *p[], int N )
 	int print = 0;
 	DaoTuple *entry = NULL;
 	DValue vEntry = daoNullTuple;
-	DaoStream *stream = ctx->vmSpace->stdStream;
 	DValue vRoutType = daoNullType;
 	DValue routName = daoNullString;
 	DValue nsName = daoNullString;

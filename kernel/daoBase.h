@@ -150,6 +150,8 @@ struct DaoConfig
 	short iscgi;     /* is CGI script */
 	short tabspace;  /* number of spaces counted for a tab */
 	short chindent;  /* check indentation */
+	short mbs; /* MBS only */
+	short wcs; /* WCS only */
 };
 
 extern DaoConfig daoConfig;

@@ -443,42 +443,13 @@ extern const char* const daoExceptionInfo[];
 extern const char* getExceptName( int id );
 extern const char* getOpcodeName( int opc );
 
-static const char* const coreTypeNames[] =
-{
-	"?", "int", "float", "double", "complex", "long", "string", 
-	"enum", "array", "list", "map", "tuple", "stream"
-};
-static const char *const daoBitBoolArithOpers[] = {
-	"=", "!", "-", "~", "+", "-", "*", "/", "%", "**", 
-	"&&", "||", "<", "<=", "==", "!=", "in", "&", "|", "^", "<<", ">>"
-};
-static const char *const daoBitBoolArithOpers2[] = {
-	NULL, NULL, NULL, NULL, "+=", "-=", "*=", "/=", "%=", NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, "&=", "|=", "^=", NULL, NULL
-};
+extern const char* const coreTypeNames[];
+extern const char *const daoBitBoolArithOpers[];
+extern const char *const daoBitBoolArithOpers2[];
 
-static const char *daoRoutineCodeHeader =
-"   ID :    OPCODE    :     A ,     B ,     C ;  [ LINE ],  NOTES\n";
-static const char *daoRoutineCodeFormat = "%-11s : %5i , %5i , %5i ;  %4i;   %s\n";
+extern const char *daoRoutineCodeHeader;
+extern const char *daoRoutineCodeFormat;
 
-static const char utf8_markers[256] = 
-{
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 00 - 0F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 10 - 1F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 20 - 2F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 30 - 3F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 40 - 4F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 50 - 5F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 60 - 6F */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 70 - 7F */
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 80 - 8F */
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* 90 - 9F */
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* A0 - AF */
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, /* B0 - BF */
-	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, /* C0 - CF */
-	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, /* D0 - DF */
-	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, /* E0 - EF */
-	4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 7, 7  /* F0 - FF */
-};
+extern const char utf8_markers[256];
 
 #endif

@@ -412,7 +412,6 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 void DString_ToWCS( DString *self )
 {
 	DString tmp = *self;
-	size_t i = 0, size = self->size;
 	int share = self->data != (size_t*)self->mbs;
 
 	if( self->wcs ) return;
@@ -427,7 +426,6 @@ void DString_ToWCS( DString *self )
 void DString_ToMBS( DString *self )
 {
 	DString tmp = *self;
-	size_t i = 0, size = self->size;
 	int share = self->data != (size_t*)self->wcs;
 
 	if( self->mbs ) return;

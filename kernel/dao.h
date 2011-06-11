@@ -200,9 +200,6 @@ enum DaoExecOption
 	DAO_EXEC_JIT       = (1<<8), /* -J, --jit:        enable JIT compiling; */
 	DAO_EXEC_NO_TC     = (1<<9), /* -T, --no-typed-code:   no typed code; */
 
-	DAO_EXEC_MBS_ONLY = (1<<20),
-	DAO_EXEC_WCS_ONLY = (1<<21),
-
 	/* -- disable JIT;
 	 * -- disable function specialization;
 	 * -- insert NOP codes for conveniently setting up break points; */

@@ -104,10 +104,7 @@ static DaoVmFrame* DaoVmFrame_New()
 	DaoVmFrame *self = dao_calloc( 1, sizeof(DaoVmFrame) );
 	return self;
 }
-static void DaoVmFrame_Delete( DaoVmFrame *self )
-{
-	dao_free( self );
-}
+#define DaoVmFrame_Delete( p ) dao_free( p )
 static void DaoVmFrame_PushRange( DaoVmFrame *self, ushort_t from, ushort_t to )
 {
 	assert( self->depth < DVM_MAX_TRY_DEPTH );
@@ -292,7 +289,6 @@ void DaoVmProcess_PushContext( DaoVmProcess *self, DaoContext *ctx )
 void DaoVmProcess_PopContext( DaoVmProcess *self )
 {
 	DaoContext *ctx = self->topFrame->context;
-	DaoVmFrame *frame = self->topFrame->next;
 	DValue **values2;
 	DValue *values;
 	int i, N;
@@ -549,7 +545,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	DValue **locVars;
 	DaoType **locTypes;
 	DaoType *abtp;
-	DaoFunction *func;
 	DaoTuple *tuple;
 	DaoList *list;
 	DString *str;
@@ -2661,7 +2656,6 @@ static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int 
 	DaoList *result = DaoContext_PutList( self );
 	DaoType *type = self->regTypes[ index + 1 ];
 	DValue *init = self->regValues[ index + 1 ];
-	DValue *test = self->regValues[ index ];
 	DValue_Move( param, init, type );
 	DValue_Clear( & self->process->returned ) ;
 	DaoVmProcess_ExecuteSection( self->process, entry );
@@ -2927,12 +2921,9 @@ static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int ind
 static void DaoContext_ApplyList( DaoContext *self, DaoVmCode *vmc, int index, int vdim, int entry )
 {
 	DValue param = *self->regValues[ vmc->b ];
-	DaoTuple *tuple = NULL;
 	DaoList *list = param.v.list;
-	DaoList *result = NULL;
 	DValue res = daoNullValue;
-	int i, count = 0;
-	int size = list->items->size;
+	int i, size = list->items->size;
 
 	for(i=0; i<size; i++){
 		/* Set the iteration variable's value in dao and execute the inline code. */
