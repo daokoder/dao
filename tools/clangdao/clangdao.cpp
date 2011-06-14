@@ -3,6 +3,10 @@
 
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Path.h>
+#include <clang/Lex/Token.h>
+#include <clang/Lex/MacroInfo.h>
+#include <clang/Lex/PPCallbacks.h>
+#include <clang/Lex/Preprocessor.h>
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclGroup.h>
@@ -10,65 +14,168 @@
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Parse/ParseAST.h>
+#include <iostream>
+#include <string>
+#include <vector>
 
-struct CDaoASTConsumer : clang::ASTConsumer
+#include "cdaoModule.hpp"
+
+using namespace llvm;
+using namespace clang;
+
+struct CDaoPPCallbacks : public PPCallbacks
 {
-	void HandleTopLevelDecl(clang::DeclGroupRef group);
-private:
-	void ConsumeVariable(const clang::VarDecl & var) const;
-	void ConsumeFunction(const clang::FunctionDecl & func) const;
+	CompilerInstance *compiler;
+	CDaoModule *module;
+
+	CDaoPPCallbacks( CompilerInstance *cinst, CDaoModule *mod ){
+		compiler = cinst;
+		module = mod;
+	}
+
+	void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
+	void InclusionDirective(SourceLocation Loc, const Token &Tok, StringRef Name, 
+			bool Angled, const FileEntry *File, SourceLocation End);
+	void MacroExpands(const Token &MacroNameTok, const MacroInfo* MI);
 };
 
-void CDaoASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef group)
+void CDaoPPCallbacks::MacroDefined(const Token &MacroNameTok, const MacroInfo *MI)
 {
-	for (clang::DeclGroupRef::iterator it = group.begin(); it != group.end(); ++it) {
-		if (const clang::VarDecl *var = llvm::dyn_cast<clang::VarDecl>(*it)) {
+	llvm::StringRef name = MacroNameTok.getIdentifierInfo()->getName();
+	SourceLocation loc = MI->getDefinitionLoc();
+	if( not compiler->getSourceManager().isFromMainFile( loc ) ) return;
+	if( MI->getNumTokens() != 1 ) return; // number of expansion tokens;
+	if( MI->isObjectLike() && name == "module_name" ){
+		name = MI->getReplacementToken( 0 ).getIdentifierInfo()->getName();
+		outs() << "module name is defined as " << name << "\n";
+		return;
+	}
+	if( not MI->isFunctionLike() ) return;
+	const Token & signature = MI->getReplacementToken( 0 );
+	if( signature.isNot( tok::string_literal ) ) return; // expect string literal;
+	module->AddFunctionHint( name, MI );
+}
+void CDaoPPCallbacks::InclusionDirective(SourceLocation Loc, const Token &Tok, 
+		StringRef Name, bool Angled, const FileEntry *File, SourceLocation End)
+{
+	if( not compiler->getSourceManager().isFromMainFile( Loc ) ) return;
+	outs() << Name << " is included\n";
+	module->AddHeaderFile( Name.str(), File );
+}
+void CDaoPPCallbacks::MacroExpands(const Token &MacroNameTok, const MacroInfo* MI)
+{
+	std::string name( MacroNameTok.getIdentifierInfo()->getNameStart() );
+	if( name == "DAO_MODULE_NAME" ) module->HandleModuleName( MI );
+}
+
+
+
+struct CDaoASTConsumer : public ASTConsumer
+{
+	CompilerInstance *compiler;
+	CDaoModule *module;
+
+	CDaoASTConsumer( CompilerInstance *cinst, CDaoModule *mod ){
+		compiler = cinst;
+		module = mod;
+	}
+
+	void HandleTopLevelDecl(DeclGroupRef group);
+private:
+	void ConsumeVariable(const VarDecl & var) const;
+	void ConsumeFunction(const FunctionDecl & func) const;
+};
+
+void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
+{
+	for (DeclGroupRef::iterator it = group.begin(); it != group.end(); ++it) {
+		if (const VarDecl *var = dyn_cast<VarDecl>(*it)) {
 			ConsumeVariable(*var);
-		}else if (const clang::FunctionDecl *func = llvm::dyn_cast<clang::FunctionDecl>(*it)) {
+		}else if (const FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
 			ConsumeFunction(*func);
 		}
 	}
 }
-void CDaoASTConsumer::ConsumeVariable(const clang::VarDecl & var) const
+void CDaoASTConsumer::ConsumeVariable(const VarDecl & var) const
 {
-	llvm::outs() << var.getNameAsString() << "\n";
+	outs() << var.getNameAsString() << "\n";
 }
-void CDaoASTConsumer::ConsumeFunction(const clang::FunctionDecl & func) const
+void CDaoASTConsumer::ConsumeFunction(const FunctionDecl & func) const
 {
-	llvm::outs() << func.getNameAsString() << " has "<< func.param_size() << " parameters\n";
+	outs() << func.getNameAsString() << " has "<< func.param_size() << " parameters\n";
 }
+
+
+
+static cl::list<std::string> preprocessor_definitions
+("D", cl::value_desc("definitions"), cl::Prefix,
+ cl::desc("Preprocessor definitions from command line arguments"));
+
+static cl::list<std::string> include_paths
+("I", cl::value_desc("includes"), cl::Prefix,
+ cl::desc("Include paths from command line arguments"));
+
+static cl::opt<std::string> main_input_file
+(cl::Positional, cl::desc("<input file>"), cl::Required);
+
+static cl::opt<std::string> hints_file
+("H", cl::desc("hints"), cl::Prefix);
+
+static cl::list<std::string> ignored_arguments(cl::Sink);
+static cl::opt<std::string> dummy("o", cl::desc("dummy for gcc compat"));
+
+
 
 int main(int argc, char *argv[] )
 {
-    clang::CompilerInstance compiler;
-	
-    compiler.createDiagnostics(argc, argv);
-    //compiler.getInvocation().setLangDefaults(clang::IK_CXX);
-    //compiler.getInvocation().setLangDefaults(clang::IK_ObjC);
-    clang::CompilerInvocation::CreateFromArgs( compiler.getInvocation(),
+	size_t i;
+	cl::ParseCommandLineOptions( argc, argv, 
+			"ClangDao: Clang-based automatic binding tool for Dao." );
+
+	if (!ignored_arguments.empty()) {
+		errs() << "Ignoring the following arguments:";
+		copy(ignored_arguments.begin(), ignored_arguments.end(),
+				std::ostream_iterator<std::string>(std::cerr, " "));
+	}
+
+	CompilerInstance compiler;
+	CDaoModule module;
+
+	compiler.createDiagnostics(argc, argv);
+	//compiler.getInvocation().setLangDefaults(IK_CXX);
+	//compiler.getInvocation().setLangDefaults(IK_ObjC);
+	CompilerInvocation::CreateFromArgs( compiler.getInvocation(),
 			argv + 1, argv + argc, compiler.getDiagnostics() );
 
-    const size_t n = compiler.getFrontendOpts().Inputs.size();
-	if( argc == 1 or n != 1 ){
-		llvm::errs() << "Need exactly one C/C++/ObjC source file as input.\n";
-		return 1;
-	}
-	
-    compiler.setTarget( clang::TargetInfo::CreateTargetInfo(
+	compiler.setTarget( TargetInfo::CreateTargetInfo(
 				compiler.getDiagnostics(), compiler.getTargetOpts() ) );
 
-	clang::HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
-	headers.AddPath( "/Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include", clang::frontend::System, false, false, true );
+	// The follow path is needed for Objective-C:
+	// /Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include
 
-    compiler.createFileManager();
-    compiler.createSourceManager(compiler.getFileManager());
-    compiler.createPreprocessor();
-    compiler.createASTContext();
-    compiler.setASTConsumer(new CDaoASTConsumer);
-    compiler.createSema(false, NULL);
-	
-	compiler.InitializeSourceManager( compiler.getFrontendOpts().Inputs[0].second);
-	clang::ParseAST( compiler.getPreprocessor(), &compiler.getASTConsumer(),
-			compiler.getASTContext() );
+#if 0
+	// No need to handle -Iargs here, it was handled by CreateFromArgs().
+	HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
+	for (i = 0; i < include_paths.size(); ++i) {
+		outs() << "adding " << include_paths[i] << "\n";
+		headers.AddPath( include_paths[i], frontend::System, false, false, true );
+	}
+#endif
+
+	compiler.createFileManager();
+	compiler.createSourceManager(compiler.getFileManager());
+	compiler.createPreprocessor();
+	compiler.createASTContext();
+	compiler.setASTConsumer( new CDaoASTConsumer( & compiler, & module ) );
+	compiler.createSema(false, NULL);
+
+	Preprocessor & pp = compiler.getPreprocessor();
+	//pp.setPredefines( "#define DAO_MODULE_NAME( name )\n" );
+	pp.addPPCallbacks( new CDaoPPCallbacks( & compiler, & module ) );
+
+	compiler.InitializeSourceManager( main_input_file );
+	compiler.getDiagnosticClient().BeginSourceFile( compiler.getLangOpts(), & pp );
+	ParseAST( pp, &compiler.getASTConsumer(), compiler.getASTContext() );
+	compiler.getDiagnosticClient().EndSourceFile();
 	return 0;
 }

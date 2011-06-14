@@ -26,7 +26,7 @@ LFLAGS = -fPIC $(CLANG_LIBS) `llvm-config --ldflags --libs`
 
 TARGET = clangdao
 
-OBJECTS = cdaoVariable.o cdaoFunction.o cdaoUserType.o clangdao.o
+OBJECTS = cdaoVariable.o cdaoFunction.o cdaoUserType.o cdaoModule.o clangdao.o
 
 first: all
 
