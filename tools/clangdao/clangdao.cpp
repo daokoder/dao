@@ -36,36 +36,22 @@ struct CDaoPPCallbacks : public PPCallbacks
 	void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
 	void InclusionDirective(SourceLocation Loc, const Token &Tok, StringRef Name, 
 			bool Angled, const FileEntry *File, SourceLocation End);
-	void MacroExpands(const Token &MacroNameTok, const MacroInfo* MI);
 };
 
 void CDaoPPCallbacks::MacroDefined(const Token &MacroNameTok, const MacroInfo *MI)
 {
 	llvm::StringRef name = MacroNameTok.getIdentifierInfo()->getName();
-	SourceLocation loc = MI->getDefinitionLoc();
-	if( not compiler->getSourceManager().isFromMainFile( loc ) ) return;
-	if( MI->getNumTokens() != 1 ) return; // number of expansion tokens;
+	if( MI->getNumTokens() < 1 ) return; // number of expansion tokens;
 	if( MI->isObjectLike() && name == "module_name" ){
-		name = MI->getReplacementToken( 0 ).getIdentifierInfo()->getName();
-		outs() << "module name is defined as " << name << "\n";
+		module->HandleModuleDeclaration( MI );
 		return;
 	}
-	if( not MI->isFunctionLike() ) return;
-	const Token & signature = MI->getReplacementToken( 0 );
-	if( signature.isNot( tok::string_literal ) ) return; // expect string literal;
-	module->AddFunctionHint( name, MI );
+	if( MI->isFunctionLike() ) module->HandleHintDefinition( MI );
 }
 void CDaoPPCallbacks::InclusionDirective(SourceLocation Loc, const Token &Tok, 
 		StringRef Name, bool Angled, const FileEntry *File, SourceLocation End)
 {
-	if( not compiler->getSourceManager().isFromMainFile( Loc ) ) return;
-	outs() << Name << " is included\n";
-	module->AddHeaderFile( Name.str(), File );
-}
-void CDaoPPCallbacks::MacroExpands(const Token &MacroNameTok, const MacroInfo* MI)
-{
-	std::string name( MacroNameTok.getIdentifierInfo()->getNameStart() );
-	if( name == "DAO_MODULE_NAME" ) module->HandleModuleName( MI );
+	module->HandleHeaderInclusion( Loc, Name.str(), File );
 }
 
 
@@ -118,12 +104,10 @@ static cl::list<std::string> include_paths
 static cl::opt<std::string> main_input_file
 (cl::Positional, cl::desc("<input file>"), cl::Required);
 
-static cl::opt<std::string> hints_file
-("H", cl::desc("hints"), cl::Prefix);
-
 static cl::list<std::string> ignored_arguments(cl::Sink);
-static cl::opt<std::string> dummy("o", cl::desc("dummy for gcc compat"));
 
+// TODO:
+// Add -S for specifying file suffixes of module definition files.
 
 
 int main(int argc, char *argv[] )
@@ -139,7 +123,7 @@ int main(int argc, char *argv[] )
 	}
 
 	CompilerInstance compiler;
-	CDaoModule module;
+	CDaoModule module( & compiler, main_input_file );
 
 	compiler.createDiagnostics(argc, argv);
 	//compiler.getInvocation().setLangDefaults(IK_CXX);
@@ -177,5 +161,7 @@ int main(int argc, char *argv[] )
 	compiler.getDiagnosticClient().BeginSourceFile( compiler.getLangOpts(), & pp );
 	ParseAST( pp, &compiler.getASTConsumer(), compiler.getASTContext() );
 	compiler.getDiagnosticClient().EndSourceFile();
+
+	if( module.CheckHeaderDependency() == false ) return 1;
 	return 0;
 }
