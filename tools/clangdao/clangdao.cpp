@@ -7,9 +7,8 @@
 #include <clang/Lex/MacroInfo.h>
 #include <clang/Lex/PPCallbacks.h>
 #include <clang/Lex/Preprocessor.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/AST/ASTConsumer.h>
-#include <clang/AST/Decl.h>
-#include <clang/AST/DeclGroup.h>
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/CompilerInvocation.h>
@@ -46,7 +45,7 @@ void CDaoPPCallbacks::MacroDefined(const Token &MacroNameTok, const MacroInfo *M
 		module->HandleModuleDeclaration( MI );
 		return;
 	}
-	if( MI->isFunctionLike() ) module->HandleHintDefinition( MI );
+	if( MI->isFunctionLike() ) module->HandleHintDefinition( name, MI );
 }
 void CDaoPPCallbacks::InclusionDirective(SourceLocation Loc, const Token &Tok, 
 		StringRef Name, bool Angled, const FileEntry *File, SourceLocation End)
@@ -65,30 +64,22 @@ struct CDaoASTConsumer : public ASTConsumer
 		compiler = cinst;
 		module = mod;
 	}
-
 	void HandleTopLevelDecl(DeclGroupRef group);
-private:
-	void ConsumeVariable(const VarDecl & var) const;
-	void ConsumeFunction(const FunctionDecl & func) const;
 };
 
 void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
 {
+	outs() << "CDaoASTConsumer::HandleTopLevelDecl()\n";
 	for (DeclGroupRef::iterator it = group.begin(); it != group.end(); ++it) {
+		outs() << "handling ...\n";
 		if (const VarDecl *var = dyn_cast<VarDecl>(*it)) {
-			ConsumeVariable(*var);
+			module->HandleVariable( *var );
 		}else if (const FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
-			ConsumeFunction(*func);
+			module->HandleFunction( *func );
+		}else if (const CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
+		}else if (const RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
 		}
 	}
-}
-void CDaoASTConsumer::ConsumeVariable(const VarDecl & var) const
-{
-	outs() << var.getNameAsString() << "\n";
-}
-void CDaoASTConsumer::ConsumeFunction(const FunctionDecl & func) const
-{
-	outs() << func.getNameAsString() << " has "<< func.param_size() << " parameters\n";
 }
 
 
@@ -106,8 +97,10 @@ static cl::opt<std::string> main_input_file
 
 static cl::list<std::string> ignored_arguments(cl::Sink);
 
-// TODO:
-// Add -S for specifying file suffixes of module definition files.
+// Note:
+// The follow path is needed for Objective-C:
+// /Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include
+
 
 
 int main(int argc, char *argv[] )
@@ -133,18 +126,6 @@ int main(int argc, char *argv[] )
 
 	compiler.setTarget( TargetInfo::CreateTargetInfo(
 				compiler.getDiagnostics(), compiler.getTargetOpts() ) );
-
-	// The follow path is needed for Objective-C:
-	// /Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include
-
-#if 0
-	// No need to handle -Iargs here, it was handled by CreateFromArgs().
-	HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
-	for (i = 0; i < include_paths.size(); ++i) {
-		outs() << "adding " << include_paths[i] << "\n";
-		headers.AddPath( include_paths[i], frontend::System, false, false, true );
-	}
-#endif
 
 	compiler.createFileManager();
 	compiler.createSourceManager(compiler.getFileManager());

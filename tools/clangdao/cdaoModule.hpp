@@ -3,8 +3,10 @@
 #ifndef __CDAO_MODULE_H__
 #define __CDAO_MODULE_H__
 
-#include <clang/Lex/MacroInfo.h>
 #include <clang/Basic/FileManager.h>
+#include <clang/Lex/MacroInfo.h>
+#include <clang/AST/Decl.h>
+#include <clang/AST/DeclGroup.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <string>
 #include <vector>
@@ -62,17 +64,21 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
-	CDaoModule( CompilerInstance *com, const string & path ){
-		compiler = com;
-		moduleInfo.path = path;
-	}
+	static map<string,int>  mapExtensions;
 
-	bool MatchToMainFileSuffix( const string & name );
+	CDaoModule( CompilerInstance *com, const string & path );
+
+	int CheckFileExtension( const string & name );
+	bool IsHeaderFile( const string & name );
+	bool IsSourceFile( const string & name );
 	bool CheckHeaderDependency();
 
 	void HandleModuleDeclaration( const MacroInfo *macro );
 	void HandleHeaderInclusion( SourceLocation loc, const string & name, const FileEntry *file );
-	void HandleHintDefinition( const MacroInfo *macro );
+	void HandleHintDefinition( const string & name, const MacroInfo *macro );
+
+	void HandleVariable( const VarDecl & var );
+	void HandleFunction( const FunctionDecl & funcdec );
 };
 
 #endif

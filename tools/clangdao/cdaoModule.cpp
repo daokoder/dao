@@ -7,19 +7,60 @@
 #include <string>
 #include "cdaoModule.hpp"
 
-
-bool CDaoModule::MatchToMainFileSuffix( const string & name )
+enum CDaoFileExtensionType
 {
-	size_t S1 = moduleInfo.path.size();
-	size_t S2 = name.size();
-	size_t M = S1 < S2 ? S1 : S2;
-	size_t i, j;
-	if( M <= 2 ) return false;
-	for(i=S1-1,j=S2-1; i&&j; i--,j--){
-		if( name[j] != moduleInfo.path[i] ) return false;
-		if( name[j] == '.' ) return true;
+	CDAO_FILE_H ,    // .h
+	CDAO_FILE_HH ,   // .hh
+	CDAO_FILE_HPP ,  // .hpp
+	CDAO_FILE_HXX ,  // .hxx
+	CDAO_FILE_C ,    // .c
+	CDAO_FILE_CC ,   // .cc
+	CDAO_FILE_CPP ,  // .cpp
+	CDAO_FILE_CXX ,  // .cxx
+	CDAO_FILE_CXX2 , // .c++
+	CDAO_FILE_M ,    // .m
+	CDAO_FILE_MM ,   // .mm
+	CDAO_FILE_OTHER
+};
+map<string,int> CDaoModule::mapExtensions;
+
+CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
+{
+	compiler = com;
+	moduleInfo.path = path;
+	mapExtensions[ ".h" ] = CDAO_FILE_H;
+	mapExtensions[ ".hh" ] = CDAO_FILE_HH;
+	mapExtensions[ ".hpp" ] = CDAO_FILE_HPP;
+	mapExtensions[ ".hxx" ] = CDAO_FILE_HXX;
+	mapExtensions[ ".c" ] = CDAO_FILE_C;
+	mapExtensions[ ".cc" ] = CDAO_FILE_CC;
+	mapExtensions[ ".cpp" ] = CDAO_FILE_CPP;
+	mapExtensions[ ".cxx" ] = CDAO_FILE_CXX;
+	mapExtensions[ ".c++" ] = CDAO_FILE_CXX2;
+	mapExtensions[ ".m" ] = CDAO_FILE_M;
+	mapExtensions[ ".mm" ] = CDAO_FILE_MM;
+}
+int CDaoModule::CheckFileExtension( const string & name )
+{
+	string ext;
+	size_t i, k;
+	for(i=name.size(), k=0; i; i--, k++){
+		if( name[i-1] == '.' ) break;
+		if( k >= 4 ) return CDAO_FILE_OTHER;
 	}
-	return false;
+	if( i == 0 ) return CDAO_FILE_OTHER;
+	for(i-=1; i<name.size(); i++) ext += tolower( name[i] );
+	if( mapExtensions.find( ext ) == mapExtensions.end() ) return CDAO_FILE_OTHER;
+	return mapExtensions[ext];
+}
+bool CDaoModule::IsHeaderFile( const string & name )
+{
+	return CheckFileExtension( name ) <= CDAO_FILE_HXX;
+}
+bool CDaoModule::IsSourceFile( const string & name )
+{
+	int extype = CheckFileExtension( name );
+	return extype >= CDAO_FILE_C && extype <= CDAO_FILE_MM;
 }
 bool CDaoModule::CheckHeaderDependency()
 {
@@ -70,7 +111,7 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 	FileEntry *entryInclude = (FileEntry*) sourceman.getFileEntryForID( fidInclude );
 
 	inclusions[ CDaoInclusionInfo( entryInclude, entryHeader ) ] = 1;
-	if( MatchToMainFileSuffix( name ) ){
+	if( IsSourceFile( name ) ){
 		if( requiredModules2.find( entryHeader ) != requiredModules2.end() ) return;
 		if( sourceman.isFromMainFile( loc ) ){
 			requiredModules[ entryHeader ] = CDaoModuleInfo();
@@ -84,6 +125,7 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 		}
 		return;
 	}
+	if( not IsHeaderFile( name ) ) return;
 	if( sourceman.isFromMainFile( loc ) ){
 		if( headers.find( entryHeader ) != headers.end() ) return;
 		headers[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
@@ -93,19 +135,39 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 	}
 	outs() << name << " is included\n";
 }
-void CDaoModule::HandleHintDefinition( const MacroInfo *macro )
+void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *macro )
 {
+	Preprocessor & pp = compiler->getPreprocessor();
 	SourceManager & sourceman = compiler->getSourceManager();
 	SourceLocation loc = macro->getDefinitionLoc();
-	if( not sourceman.isFromMainFile( loc ) ) return;
+	FileID fid = sourceman.getFileID( loc );
+	FileEntry *entry = (FileEntry*) sourceman.getFileEntryForID( fid );
+	bool notamodule = requiredModules2.find( entry ) == requiredModules2.end();
+	if( notamodule and not sourceman.isFromMainFile( loc ) ) return;
 
-#if 0
-	std::string tokString;
-	raw_string_ostream ss( tokString );
-	const Token & signature = macro->getReplacementToken( 0 );
-	ss.write( signature.getLiteralData(), signature.getLength() );
-	outs() << name << " is defined\n";
-	outs() << ss.str() << "\n";
-	//outs() << tokString << "\n"; // this alone does not work.
-#endif
+	string proto;
+	vector<string> hints;
+	MacroInfo::arg_iterator argiter;
+	hints.push_back( name );
+	for(argiter=macro->arg_begin(); argiter!=macro->arg_end(); argiter++){
+		hints.push_back( argiter[0]->getNameStart() );
+	}
+	bool lastiden = false;
+	MacroInfo::tokens_iterator tokiter;
+	for(tokiter=macro->tokens_begin(); tokiter!=macro->tokens_end(); tokiter++){
+		Token tok = *tokiter;
+		if( lastiden && tok.isAnyIdentifier() ) proto += " ";
+		lastiden = tok.isAnyIdentifier();
+		proto += pp.getSpelling( tok );
+	}
+	functionHints[ proto ] = hints;
+	outs() << "function hint is defined for \"" << proto << "\"\n";
+}
+void CDaoModule::HandleVariable(const VarDecl & var)
+{
+	outs() << var.getNameAsString() << "\n";
+}
+void CDaoModule::HandleFunction( const FunctionDecl & funcdec )
+{
+	outs() << funcdec.getNameAsString() << " has "<< funcdec.param_size() << " parameters\n";
 }
