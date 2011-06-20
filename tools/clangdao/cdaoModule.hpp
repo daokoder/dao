@@ -8,9 +8,12 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclGroup.h>
 #include <clang/Frontend/CompilerInstance.h>
+#include <ostream>
 #include <string>
 #include <vector>
 #include <map>
+
+#include "cdaoFunction.hpp"
 
 using namespace std;
 using namespace llvm;
@@ -64,21 +67,31 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
+	vector<CDaoFunction> functions;
+
 	static map<string,int>  mapExtensions;
 
 	CDaoModule( CompilerInstance *com, const string & path );
 
+	int Generate();
+
 	int CheckFileExtension( const string & name );
 	bool IsHeaderFile( const string & name );
 	bool IsSourceFile( const string & name );
+	bool IsFromModules( SourceLocation loc );
+	bool IsFromModuleSources( SourceLocation loc );
 	bool CheckHeaderDependency();
 
 	void HandleModuleDeclaration( const MacroInfo *macro );
 	void HandleHeaderInclusion( SourceLocation loc, const string & name, const FileEntry *file );
 	void HandleHintDefinition( const string & name, const MacroInfo *macro );
 
-	void HandleVariable( const VarDecl & var );
-	void HandleFunction( const FunctionDecl & funcdec );
+	void HandleVariable( VarDecl *var );
+	void HandleFunction( FunctionDecl *funcdec );
+
+	void WriteHeaderIncludes( std::ostream & stream );
+
+	string MakeDaoFunctionPrototype( FunctionDecl *funcdec );
 };
 
 #endif

@@ -72,14 +72,42 @@ void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
 	outs() << "CDaoASTConsumer::HandleTopLevelDecl()\n";
 	for (DeclGroupRef::iterator it = group.begin(); it != group.end(); ++it) {
 		outs() << "handling ...\n";
-		if (const VarDecl *var = dyn_cast<VarDecl>(*it)) {
-			module->HandleVariable( *var );
-		}else if (const FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
-			module->HandleFunction( *func );
-		}else if (const CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
-		}else if (const RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
+		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
+			module->HandleVariable( var );
+		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
+			module->HandleFunction( func );
+		}else if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
+		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
 		}
 	}
+}
+
+string cdao_string_fill( const string & tpl, const map<string,string> & subs )
+{
+	string result;
+	size_t i, rb, prev = 0, pos = tpl.find( '$', 0 );
+	while( pos != string::npos ){
+		string gap = tpl.substr( prev, pos - prev );
+		result += gap;
+		if( tpl[pos+1] == '(' and (rb = tpl.find( ')', pos ) ) != string::npos ){
+			string key = tpl.substr( pos+2, rb - pos - 2 );
+			map<string,string>::const_iterator it = subs.find( key );
+			bool fill = it != subs.end();
+			for(i=pos+2; fill and i<rb; i++) fill &= tpl[i] == '_' or isalnum( tpl[i] );
+			if( fill ){
+				result += it->second;
+				prev = rb + 1;
+				pos = tpl.find( '$', prev );
+				continue;
+			}
+		}
+		result += '$';
+		prev = pos + 1;
+		pos = tpl.find( '$', prev );
+	}
+	string gap = tpl.substr( prev, tpl.size() - prev );
+	result += gap;
+	return result;
 }
 
 
@@ -143,6 +171,9 @@ int main(int argc, char *argv[] )
 	ParseAST( pp, &compiler.getASTConsumer(), compiler.getASTContext() );
 	compiler.getDiagnosticClient().EndSourceFile();
 
-	if( module.CheckHeaderDependency() == false ) return 1;
-	return 0;
+	map<string,string> kv;
+	kv[ "aaa" ] = "AAA"; kv[ "abc" ] = "ABC";
+	outs() << cdao_string_fill( "$(aaa)123$(abc)456$(def)", kv ) << "\n";
+
+	return module.Generate();
 }

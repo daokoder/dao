@@ -1,9 +1,11 @@
 
+#include <llvm/ADT/StringExtras.h>
 #include <llvm/Support/raw_ostream.h>
 #include <clang/Basic/IdentifierTable.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include "cdaoModule.hpp"
 
@@ -22,23 +24,29 @@ enum CDaoFileExtensionType
 	CDAO_FILE_MM ,   // .mm
 	CDAO_FILE_OTHER
 };
+const char *const cdao_file_extensions[] = 
+{
+	".h" ,
+	".hh" ,
+	".hpp" ,
+	".hxx" ,
+	".c" ,
+	".cc" ,
+	".cpp" ,
+	".cxx" ,
+	".c++" ,
+	".m" ,
+	".mm" 
+};
+
 map<string,int> CDaoModule::mapExtensions;
 
 CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
 {
 	compiler = com;
 	moduleInfo.path = path;
-	mapExtensions[ ".h" ] = CDAO_FILE_H;
-	mapExtensions[ ".hh" ] = CDAO_FILE_HH;
-	mapExtensions[ ".hpp" ] = CDAO_FILE_HPP;
-	mapExtensions[ ".hxx" ] = CDAO_FILE_HXX;
-	mapExtensions[ ".c" ] = CDAO_FILE_C;
-	mapExtensions[ ".cc" ] = CDAO_FILE_CC;
-	mapExtensions[ ".cpp" ] = CDAO_FILE_CPP;
-	mapExtensions[ ".cxx" ] = CDAO_FILE_CXX;
-	mapExtensions[ ".c++" ] = CDAO_FILE_CXX2;
-	mapExtensions[ ".m" ] = CDAO_FILE_M;
-	mapExtensions[ ".mm" ] = CDAO_FILE_MM;
+	for(int i=CDAO_FILE_H; i<=CDAO_FILE_MM; i++)
+		mapExtensions[ cdao_file_extensions[i] ] = i;
 }
 int CDaoModule::CheckFileExtension( const string & name )
 {
@@ -61,6 +69,24 @@ bool CDaoModule::IsSourceFile( const string & name )
 {
 	int extype = CheckFileExtension( name );
 	return extype >= CDAO_FILE_C && extype <= CDAO_FILE_MM;
+}
+bool CDaoModule::IsFromModules( SourceLocation loc )
+{
+	SourceManager & sourceman = compiler->getSourceManager();
+	FileID fid = sourceman.getFileID( loc );
+	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
+	bool is = e == moduleInfo.entry;
+	is = is or requiredModules2.find( e ) != requiredModules2.end();
+	is = is or headers.find( e ) != headers.end();
+	is = is or extHeaders.find( e ) != extHeaders.end();
+	return is;
+}
+bool CDaoModule::IsFromModuleSources( SourceLocation loc )
+{
+	SourceManager & sourceman = compiler->getSourceManager();
+	FileID fid = sourceman.getFileID( loc );
+	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
+	return e == moduleInfo.entry or requiredModules2.find( e ) != requiredModules2.end();
 }
 bool CDaoModule::CheckHeaderDependency()
 {
@@ -97,9 +123,10 @@ void CDaoModule::HandleModuleDeclaration( const MacroInfo *macro )
 		outs() << "main module \"" << moduleInfo.path << "\" is named as " << name << "\n";
 		return;
 	}else if( requiredModules2.find( entry ) != requiredModules2.end() ){
-		CDaoModuleInfo & mod = requiredModules2[ entry ];
-		mod.name = name;
-		mod.entry = entry;
+		CDaoModuleInfo & mod = requiredModules[ entry ];
+		CDaoModuleInfo & mod2 = requiredModules2[ entry ];
+		mod.name = mod2.name = name;
+		mod.entry = mod2.entry = entry;
 		outs() << "module \"" << mod.path << "\" is named as " << name << "\n";
 	}
 }
@@ -138,12 +165,7 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *macro )
 {
 	Preprocessor & pp = compiler->getPreprocessor();
-	SourceManager & sourceman = compiler->getSourceManager();
-	SourceLocation loc = macro->getDefinitionLoc();
-	FileID fid = sourceman.getFileID( loc );
-	FileEntry *entry = (FileEntry*) sourceman.getFileEntryForID( fid );
-	bool notamodule = requiredModules2.find( entry ) == requiredModules2.end();
-	if( notamodule and not sourceman.isFromMainFile( loc ) ) return;
+	if( not IsFromModuleSources( macro->getDefinitionLoc() ) ) return;
 
 	string proto;
 	vector<string> hints;
@@ -163,11 +185,87 @@ void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *mac
 	functionHints[ proto ] = hints;
 	outs() << "function hint is defined for \"" << proto << "\"\n";
 }
-void CDaoModule::HandleVariable(const VarDecl & var)
+void CDaoModule::HandleVariable( VarDecl *var )
 {
-	outs() << var.getNameAsString() << "\n";
+	outs() << var->getNameAsString() << "\n";
 }
-void CDaoModule::HandleFunction( const FunctionDecl & funcdec )
+void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 {
-	outs() << funcdec.getNameAsString() << " has "<< funcdec.param_size() << " parameters\n";
+	if( not IsFromModules( funcdec->getLocation() ) ) return;
+	outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
+	functions.push_back( CDaoFunction( this, funcdec ) );
+}
+void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
+{
+	string name_macro = UppercaseString( moduleInfo.name );
+
+	fout_header << "#ifndef __DAO_" << name_macro << "_H__\n";
+	fout_header << "#define __DAO_" << name_macro << "_H__\n";
+	fout_header << "#include<stdlib.h>\n";
+	fout_header << "#include<assert.h>\n";
+	fout_header << "#include<string.h>\n";
+	fout_header << "#include<dao.h>\n\n";
+
+	map<FileEntry*,CDaoHeaderInfo>::iterator it, end = headers.end();
+	for(it=headers.begin(); it != end; it++){
+		fout_header << "#include\"" << it->second.path << "\"\n"; // TODO: angular
+	}
+	fout_header << "\n";
+	map<FileEntry*,CDaoModuleInfo>::iterator it2, end2 = requiredModules.end();
+	for(it2=requiredModules.begin(); it2 != end2; it2++){
+		string name_macro2 = UppercaseString( it2->second.name );
+		fout_header << "#ifndef DAO_" << name_macro2 << "_STATIC\n";
+		fout_header << "#define DAO_DLL_" << name_macro2 << " DAO_DLL_IMPORT\n";
+		fout_header << "#include\"dao_" << it2->second.name << ".h\"\n";
+		fout_header << "#else\n";
+		fout_header << "#define DAO_DLL_" << name_macro2 << "\n";
+		fout_header << "#include\"dao_" << it2->second.name + ".h\"\n";
+		fout_header << "#endif\n";
+	}
+	fout_header << "\n#ifndef DAO_" << name_macro << "_STATIC\n";
+	fout_header << "#ifndef DAO_DLL_" << name_macro << "\n";
+	fout_header << "#define DAO_DLL_" << name_macro << " DAO_DLL_EXPORT\n";
+	fout_header << "#endif\n";
+	fout_header << "#else\n";
+	fout_header << "#define DAO_DLL_" << name_macro << "\n";
+	fout_header << "#endif\n\n";
+	fout_header << "extern DaoVmSpace *__daoVmSpace;\n";
+}
+
+const char *ifdef_cpp_open = "#ifdef __cplusplus\nextern \"C\"{\n#endif\n";
+const char *ifdef_cpp_close = "#ifdef __cplusplus\n}\n#endif\n";
+
+int CDaoModule::Generate()
+{
+	if( CheckHeaderDependency() == false ) return 1;
+
+	// TODO: other extension, output dir
+	int fetype = CheckFileExtension( moduleInfo.path );
+	string festring = cdao_file_extensions[fetype];
+	string fname_header = "dao_" + moduleInfo.name + ".h";
+	string fname_source = "dao_" + moduleInfo.name + festring;
+	string fname_source2 = "dao_" + moduleInfo.name + "2" + festring;
+	string fname_source3 = "dao_" + moduleInfo.name + "3" + festring;
+
+	ofstream fout_header( fname_header.c_str() );
+	ofstream fout_source( fname_source.c_str() );
+	ofstream fout_source2( fname_source2.c_str() );
+	ofstream fout_source3( fname_source3.c_str() );
+
+	WriteHeaderIncludes( fout_header );
+
+	fout_source << "#include\"" << fname_header << "\"\n";
+	fout_source2 << "#include\"" << fname_header << "\"\n";
+	fout_source3 << "#include\"" << fname_header << "\"\n";
+
+	fout_source << "DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n";
+
+	int i, n, retcode = 0;
+	for(i=0, n=functions.size(); i<n; i++) retcode |= functions[i].Generate();
+
+	return retcode;
+}
+string CDaoModule::MakeDaoFunctionPrototype( FunctionDecl *funcdec )
+{
+	return "";
 }
