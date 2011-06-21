@@ -73,7 +73,7 @@ bool CDaoModule::IsSourceFile( const string & name )
 bool CDaoModule::IsFromModules( SourceLocation loc )
 {
 	SourceManager & sourceman = compiler->getSourceManager();
-	FileID fid = sourceman.getFileID( loc );
+	FileID fid = sourceman.getFileID( sourceman.getSpellingLoc( loc ) );
 	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
 	bool is = e == moduleInfo.entry;
 	is = is or requiredModules2.find( e ) != requiredModules2.end();
@@ -195,6 +195,13 @@ void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 	outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
 	functions.push_back( CDaoFunction( this, funcdec ) );
 }
+void CDaoModule::HandleUserType( CXXRecordDecl *record )
+{
+	if( not IsFromModules( record->getLocation() ) ) return;
+	outs() << "UserType: " << record->getNameAsString() << "\n";
+	outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
+	usertypes.push_back( CDaoUserType( this, record ) );
+}
 void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 {
 	string name_macro = UppercaseString( moduleInfo.name );
@@ -260,8 +267,14 @@ int CDaoModule::Generate()
 
 	fout_source << "DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n";
 
+	map<string,int> overloads;
 	int i, n, retcode = 0;
-	for(i=0, n=functions.size(); i<n; i++) retcode |= functions[i].Generate();
+	for(i=0, n=functions.size(); i<n; i++){
+		string name = functions[i].funcDecl->getNameAsString();
+		functions[i].index = ++overloads[name];
+		retcode |= functions[i].Generate();
+	}
+	for(i=0, n=usertypes.size(); i<n; i++) retcode |= usertypes[i].Generate();
 
 	return retcode;
 }

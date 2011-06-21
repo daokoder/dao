@@ -4,10 +4,16 @@
 
 #include"first.h"
 
-void second_function( float *array, int n );
+class SecondClass;
+
+void second_function( SecondClass *obj, int n );
 
 class SecondClass : public FirstClass
 {
+	public:
+
+	void Meth( int index );
+	void Meth( int index, SecondClass *obj );
 };
 
 #endif

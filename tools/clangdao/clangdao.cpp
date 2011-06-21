@@ -69,14 +69,13 @@ struct CDaoASTConsumer : public ASTConsumer
 
 void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
 {
-	outs() << "CDaoASTConsumer::HandleTopLevelDecl()\n";
 	for (DeclGroupRef::iterator it = group.begin(); it != group.end(); ++it) {
-		outs() << "handling ...\n";
 		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
 			module->HandleVariable( var );
 		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
 			module->HandleFunction( func );
 		}else if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
+			module->HandleUserType( record );
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
 		}
 	}

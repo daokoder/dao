@@ -27,6 +27,7 @@ struct CDaoVariable
 	int     index;
 	bool    hasNullableHint;
 	bool    hasArrayHint;
+	bool    unsupport;
 	string  name; // name from varDecl, or from hints;
 	string  cxxdefault;
 	string  cxxdefault2; // with macro expansion
@@ -55,6 +56,7 @@ struct CDaoVariable
 	void SetDeclaration( VarDecl *decl );
 	void SetHints( const string & hints );
 	int Generate( int offset = 0 );
+	int Generate2( int offset = 0 );
 	int Generate( const BuiltinType *type, int offset = 0 );
 	int Generate( const PointerType *type, int offset = 0 );
 	int Generate( const ArrayType *type, int offset = 0 );

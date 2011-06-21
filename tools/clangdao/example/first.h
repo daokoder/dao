@@ -18,5 +18,6 @@ typedef int myint;
 int my_func3( myint n=TEST );
 
 int my_func( int vec[], int n );
+int my_func2( int vec3[3], int n );
 
 #endif

@@ -7,6 +7,7 @@
 #include <clang/Lex/MacroInfo.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclGroup.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <ostream>
 #include <string>
@@ -14,6 +15,7 @@
 #include <map>
 
 #include "cdaoFunction.hpp"
+#include "cdaoUserType.hpp"
 
 using namespace std;
 using namespace llvm;
@@ -68,6 +70,7 @@ struct CDaoModule
 	map<string,vector<string> >     functionHints;
 
 	vector<CDaoFunction> functions;
+	vector<CDaoUserType> usertypes;
 
 	static map<string,int>  mapExtensions;
 
@@ -88,6 +91,7 @@ struct CDaoModule
 
 	void HandleVariable( VarDecl *var );
 	void HandleFunction( FunctionDecl *funcdec );
+	void HandleUserType( CXXRecordDecl *record );
 
 	void WriteHeaderIncludes( std::ostream & stream );
 

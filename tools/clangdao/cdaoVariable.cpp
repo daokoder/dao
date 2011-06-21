@@ -1,5 +1,7 @@
 
+#include <llvm/ADT/StringExtras.h>
 #include <clang/AST/Type.h>
+#include <clang/AST/TypeLoc.h>
 #include <clang/AST/Expr.h>
 #include <clang/Lex/Preprocessor.h>
 
@@ -442,12 +444,11 @@ struct CDaoVarTemplates
 	string get_item;
 	string set_item;
 
-	void Generate( CDaoVariable *var, int offset = 0 );
+	void Generate( CDaoVariable *var, map<string,string> & kvmap, int offset = 0 );
 };
-void CDaoVarTemplates::Generate( CDaoVariable *var, int offset )
+void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, int offset )
 {
 	char sindex[50];
-	map<string,string> kvmap;
 	string cdft;
 
 	sprintf( sindex, "%i", var->index - offset );
@@ -476,9 +477,10 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, int offset )
 		kvmap[ "name" ] = "self->" + var->name;
 		var->getter = cdao_string_fill( ctxput, kvmap );
 	}
-	outs() << var->daopar << "\n";
-	outs() << var->dao2cxx << "\n";
-	outs() << var->cxx2dao << "\n";
+	//outs() << var->daopar << "\n";
+	//outs() << var->dao2cxx << "\n";
+	//outs() << var->cxx2dao << "\n";
+	//outs() << var->parset << "\n";
 }
 
 CDaoVariable::CDaoVariable( CDaoModule *mod, VarDecl *decl, int id )
@@ -486,6 +488,9 @@ CDaoVariable::CDaoVariable( CDaoModule *mod, VarDecl *decl, int id )
 	index = id;
 	module = mod;
 	varDecl = NULL;
+	hasNullableHint = false;
+	hasArrayHint = false;
+	unsupport = true;
 	SetDeclaration( decl );
 }
 void CDaoVariable::SetDeclaration( VarDecl *decl )
@@ -493,12 +498,18 @@ void CDaoVariable::SetDeclaration( VarDecl *decl )
 	varDecl = decl;
 	if( decl == NULL ) return;
 	name = decl->getName().str();
-	outs() << "variable: " << name << "\n";
+	//outs() << "variable: " << name << "\n";
 }
 void CDaoVariable::SetHints( const string & hints )
 {
 }
 int CDaoVariable::Generate( int offset )
+{
+	int retcode = Generate2( offset );
+	unsupport = retcode != 0;
+	return retcode;
+}
+int CDaoVariable::Generate2( int offset )
 {
 	const Expr *e = varDecl->getAnyInitializer();
 	if( e ){
@@ -522,18 +533,20 @@ int CDaoVariable::Generate( int offset )
 	}
 #endif
 	outs() << cxxdefault << "  " << cxxdefault2 << "\n";
-	QualType qtype = varDecl->getType();
+	QualType qtype = varDecl->getTypeSourceInfo()->getType();
 	const Type *type = qtype.getTypePtr();
 	string ctypename = qtype.getAsString();
 	cxxtype = ctypename;
 	cxxtype2 = "";
 	cxxcall = name;
-	outs() << type->isPointerType() << " is pointer type\n";
+	//outs() << type->isPointerType() << " is pointer type\n";
+	//outs() << type->isArrayType() << " is array type\n";
+	//outs() << type->isConstantArrayType() << " is constant array type\n";
 	if( type->isBuiltinType() ) return Generate( (const BuiltinType*)type, offset );
 	if( type->isPointerType() and not hasArrayHint )
 		return Generate( (const PointerType*)type, offset );
-	if( type->isArrayType() or type->isIncompleteArrayType() ) return Generate( (const ArrayType*)type, offset );
-	return 0;
+	if( type->isArrayType() ) return Generate( (const ArrayType*)type, offset );
+	return 1;
 }
 int CDaoVariable::Generate( const BuiltinType *type, int offset )
 {
@@ -566,16 +579,16 @@ int CDaoVariable::Generate( const BuiltinType *type, int offset )
 		case BuiltinType::UShort :
 		case BuiltinType::UInt :
 		case BuiltinType::ULong :
-		case BuiltinType::ULongLong :
-		//case BuiltinType::UInt128 :
+		case BuiltinType::ULongLong : // FIXME
+		case BuiltinType::UInt128 : // FIXME
 		case BuiltinType::Char_S :
 		case BuiltinType::SChar :
 		case BuiltinType::WChar_S :
 		case BuiltinType::Short :
 		case BuiltinType::Int :
 		case BuiltinType::Long :
-		case BuiltinType::LongLong :
-		//case BuiltinType::Int128 :
+		case BuiltinType::LongLong : // FIXME
+		case BuiltinType::Int128 : // FIXME
 			break;
 		case BuiltinType::Float :
 			daotype = "float";
@@ -588,6 +601,7 @@ int CDaoVariable::Generate( const BuiltinType *type, int offset )
 			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		case BuiltinType::Double :
+		case BuiltinType::LongDouble : // FIXME
 			daotype = "double";
 			tpl.daopar = daopar_double;
 			tpl.dao2cxx = dao2cxx_double;
@@ -596,11 +610,11 @@ int CDaoVariable::Generate( const BuiltinType *type, int offset )
 			tpl.getres = getres_double;
 			tpl.setter = setter_double;
 			break;
-		//case BuiltinType::LongDouble :
 		default : break;
 		}
 	}
-	tpl.Generate( this, offset );
+	map<string,string> kvmap;
+	tpl.Generate( this, kvmap, offset );
 	return 0;
 }
 int CDaoVariable::Generate( const PointerType *type, int offset )
@@ -608,6 +622,9 @@ int CDaoVariable::Generate( const PointerType *type, int offset )
 	QualType qtype2 = type->getPointeeType();
 	const Type *type2 = qtype2.getTypePtr();
 	string ctypename2 = qtype2.getAsString();
+
+	CXXRecordDecl *decl = type2->getAsCXXRecordDecl();
+	if( decl ) outs() << (void*) decl << " " << (void*) decl->getDefinition() << "\n";
 
 	CDaoVarTemplates tpl;
 	//vdefault2 = vdefault;
@@ -663,12 +680,12 @@ int CDaoVariable::Generate( const PointerType *type, int offset )
 		case BuiltinType::UInt :
 		case BuiltinType::ULong :
 		case BuiltinType::ULongLong :
-		//case BuiltinType::UInt128 :
+		case BuiltinType::UInt128 :
 		case BuiltinType::Short :
 		case BuiltinType::Int :
 		case BuiltinType::Long :
-		case BuiltinType::LongLong :
-		//case BuiltinType::Int128 :
+		case BuiltinType::LongLong :  // FIXME
+		case BuiltinType::Int128 :  // FIXME
 			daotype = "int";
 			tpl.daopar = daopar_int;
 			tpl.dao2cxx = dao2cxx_int;
@@ -703,6 +720,7 @@ int CDaoVariable::Generate( const PointerType *type, int offset )
 			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		case BuiltinType::Double :
+		case BuiltinType::LongDouble : // FIXME
 			daotype = "double";
 			tpl.daopar = daopar_double;
 			tpl.dao2cxx = dao2cxx_double;
@@ -719,15 +737,132 @@ int CDaoVariable::Generate( const PointerType *type, int offset )
 #endif
 			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
-		//case BuiltinType::LongDouble :
 		default : break;
 		}
 	}
-	tpl.Generate( this, offset );
+	map<string,string> kvmap;
+	tpl.Generate( this, kvmap, offset );
 	return 0;
 }
 int CDaoVariable::Generate( const ArrayType *type, int offset )
 {
-	outs() << "ArrayType\n";
+	QualType qtype2 = type->getElementType();
+	const Type *type2 = qtype2.getTypePtr();
+	string ctypename2 = qtype2.getAsString();
+
+	CDaoVarTemplates tpl;
+	//vdefault2 = vdefault;
+	if( type2->isBuiltinType() and type2->isArithmeticType() ){
+		const BuiltinType *type3 = (const BuiltinType*) type2;
+		daotype = "array<int>";
+		dao_itemtype = "int";
+		cxxtype = ctypename2;
+		cxxpar = cxxtype + " " + name;
+		cxxpar_enum_virt = cxxpar;
+		cxxcall = name;
+#if 0
+		if( isClassEnum ){
+			cxxpar_enum_virt = 'int ' + name;
+			cxxtype2 = 'int';
+		}
+#endif
+		tpl.daopar = daopar_ints;
+		tpl.ctxput = ctxput_ints;
+		tpl.parset = parset_ints;
+		tpl.getres = getres_ints;
+		tpl.setter = setter_ints;
+		tpl.get_item = name == "this" ? getitem_int2 : getitem_int;
+		tpl.set_item = name == "this" ? setitem_int2 : setitem_int;
+		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
+		switch( type3->getKind() ){
+		case BuiltinType::Char_S :
+		case BuiltinType::SChar :
+			tpl.dao2cxx = dao2cxx_bytes;
+			tpl.cxx2dao = cxx2dao_bytes;
+			tpl.ctxput = ctxput_bytes;
+			tpl.parset = parset_bytes;
+			tpl.getres = getres_bytes;
+			tpl.setter = setter_string;
+			break;
+		case BuiltinType::Bool :
+		case BuiltinType::Char_U :
+		case BuiltinType::UChar :
+			tpl.dao2cxx = dao2cxx_ubytes;
+			tpl.cxx2dao = cxx2dao_ubytes;
+			tpl.ctxput = ctxput_bytes;
+			tpl.parset = parset_ubytes;
+			tpl.getres = getres_ubytes;
+			tpl.setter = setter_string;
+			break;
+		case BuiltinType::UShort :
+			tpl.dao2cxx = dao2cxx_ushorts;
+			tpl.cxx2dao = cxx2dao_ushorts;
+			tpl.ctxput = ctxput_shorts;
+			tpl.parset = parset_ushorts;
+			tpl.getres = getres_ushorts;
+			tpl.setter = setter_shorts;
+			break;
+		case BuiltinType::Char16 :
+		case BuiltinType::Short :
+			tpl.dao2cxx = dao2cxx_shorts;
+			tpl.cxx2dao = cxx2dao_shorts;
+			tpl.ctxput = ctxput_shorts;
+			tpl.parset = parset_shorts;
+			tpl.getres = getres_shorts;
+			tpl.setter = setter_shorts;
+			break;
+		case BuiltinType::WChar_U : // FIXME: check size
+		case BuiltinType::UInt :
+		case BuiltinType::ULong :
+		case BuiltinType::ULongLong : // FIXME
+		case BuiltinType::UInt128 : // FIXME
+			tpl.dao2cxx = dao2cxx_uints;
+			tpl.cxx2dao = cxx2dao_uints;
+			break;
+		case BuiltinType::WChar_S :
+		case BuiltinType::Char32 :
+		case BuiltinType::Int :
+		case BuiltinType::Long : // FIXME: check size
+		case BuiltinType::LongLong : // FIXME
+		case BuiltinType::Int128 : // FIXME
+			tpl.dao2cxx = dao2cxx_ints;
+			tpl.cxx2dao = cxx2dao_ints;
+			break;
+		case BuiltinType::Float :
+			daotype = "array<float>";
+			dao_itemtype = "float";
+			tpl.daopar = daopar_floats;
+			tpl.dao2cxx = dao2cxx_floats;
+			tpl.cxx2dao = cxx2dao_floats;
+			tpl.ctxput = ctxput_floats;
+			tpl.parset = parset_floats;
+			tpl.getres = getres_floats;
+			tpl.setter = setter_floats;
+			tpl.get_item = name == "this" ? getitem_float2 : getitem_float;
+			tpl.set_item = name == "this" ? setitem_float2 : setitem_float;
+			break;
+		case BuiltinType::Double :
+		case BuiltinType::LongDouble : // FIXME
+			daotype = "array<double>";
+			dao_itemtype = "double";
+			tpl.daopar = daopar_doubles;
+			tpl.dao2cxx = dao2cxx_doubles;
+			tpl.cxx2dao = cxx2dao_doubles;
+			tpl.ctxput = ctxput_doubles;
+			tpl.parset = parset_doubles;
+			tpl.getres = getres_doubles;
+			tpl.setter = setter_doubles;
+			tpl.get_item = name == "this" ? getitem_double2 : getitem_double;
+			tpl.set_item = name == "this" ? setitem_double2 : setitem_double;
+			break;
+		default : break;
+		}
+	}
+	map<string,string> kvmap;
+	if( type->isConstantArrayType() ){
+		ConstantArrayType *at = (ConstantArrayType*) type;
+		kvmap[ "size" ] = at->getSize().toString( 10, false );
+	}
+	tpl.Generate( this, kvmap, offset );
 	return 0;
 }
