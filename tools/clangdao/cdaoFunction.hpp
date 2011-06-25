@@ -3,8 +3,10 @@
 #ifndef __CDAO_FUNCTION_H__
 #define __CDAO_FUNCTION_H__
 
+#include <llvm/ADT/StringExtras.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclGroup.h>
+#include <map>
 
 #include "cdaoVariable.hpp"
 
@@ -23,6 +25,9 @@ struct CDaoFunction
 
 	int   index; // overloading index
 	bool  excluded;
+
+	string  signature;
+	string  signature2;
 
 	string  cxxWrapName; // such as: dao_host_meth;
 	string  cxxWrapper; // wrapper function definition;
@@ -58,6 +63,32 @@ struct CDaoFunction
 	void SetDeclaration( FunctionDecl *decl );
 
 	int Generate();
+};
+
+struct CDaoProxyFunction
+{
+	bool    used;
+	string  name;
+	string  codes;
+
+	static int  proxy_function_index;
+	static map<string,CDaoProxyFunction>  proxy_functions;
+
+	CDaoProxyFunction( int u=0, const string & n = "", const string & c = "" ){
+		used = u;
+		name = n;
+		codes = c;
+	}
+
+	static string NewProxyFunctionName(){
+		return "Func" + utohexstr( proxy_function_index );
+	}
+	static bool IsNotDefined( const string & signature ){
+		return proxy_functions.find( signature ) == proxy_functions.end();
+	}
+	static void Add( const string & signature, const string & name, const string & codes ){
+		proxy_functions[ signature ] = CDaoProxyFunction( 0, name, codes );
+	}
 };
 
 #endif

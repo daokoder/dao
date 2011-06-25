@@ -19,13 +19,13 @@ const string daopar_doubles = "$(name) :array<double>";
 const string daopar_complexs = "$(name) :array<complex>$(default)";
 const string daopar_buffer = "$(name) :cdata$(default)";
 const string daopar_stream = "$(name) :stream$(default)";
-const string daopar_user = "$(name) :$(namespace2)$(type2)$(default)";
+const string daopar_user = "$(name) :$(daotype)$(default)";
 const string daopar_userdata = "$(name) :any$(default)"; // for callback data
 const string daopar_callback = "$(name) :any"; // for callback, no precise type yet! XXX
 
-const string dao2cxx = "  $(namespace)$(type) $(name)= ($(namespace)$(type)) ";
-const string dao2cxx2 = "  $(namespace)$(type)* $(name)= ($(namespace)$(type)*) ";
-const string dao2cxx3 = "  $(namespace)$(type)** $(name)= ($(namespace)$(type)**) ";
+const string dao2cxx = "  $(cxxtype) $(name)= ($(cxxtype)) ";
+const string dao2cxx2 = "  $(cxxtype)* $(name)= ($(cxxtype)*) ";
+const string dao2cxx3 = "  $(cxxtype)** $(name)= ($(cxxtype)**) ";
 
 const string dao2cxx_char = dao2cxx + "DValue_GetMBString( _p[$(index)] )[0];\n";
 const string dao2cxx_wchar = dao2cxx + "DValue_GetWCString( _p[$(index)] )[0];\n";
@@ -58,21 +58,21 @@ const string dao2cxx_stream = dao2cxx2 + "DaoStream_GetFile( _p[$(index)]->v.str
 
 const string dao2cxx_void = dao2cxx2 + 
 "DValue_GetCData( _p[$(index)] );\n";
-const string dao2cxx_void2 = "  $(namespace)$(type) $(name)= ($(namespace)$(type)) "
+const string dao2cxx_void2 = "  $(cxxtype) $(name)= ($(cxxtype)) "
 "DValue_GetCData( _p[$(index)] );\n";
 
 const string dao2cxx_user = dao2cxx2 + 
-"DValue_CastCData( _p[$(index)], dao_$(type2)_Typer );\n";
-const string dao2cxx_user2 = "  $(namespace)$(type) $(name)= ($(namespace)$(type)) "
-"DValue_CastCData( _p[$(index)], dao_$(type2)_Typer );\n";
-const string dao2cxx_user3 = "  $(namespace)$(type)** $(name)= ($(namespace)$(type)**) "
+"DValue_CastCData( _p[$(index)], dao_$(typer)_Typer );\n";
+const string dao2cxx_user2 = "  $(cxxtype) $(name)= ($(cxxtype)) "
+"DValue_CastCData( _p[$(index)], dao_$(typer)_Typer );\n";
+const string dao2cxx_user3 = "  $(cxxtype)** $(name)= ($(cxxtype)**) "
 "DValue_GetCData2( _p[$(index)] );\n";
-const string dao2cxx_user4 = "  $(namespace)$(type)* $(name)= ($(namespace)$(type)*) "
+const string dao2cxx_user4 = "  $(cxxtype)* $(name)= ($(cxxtype)*) "
 "DValue_GetCData2( _p[$(index)] );\n";
 
 const string dao2cxx_callback =
 "  DaoMethod *_ro = (DaoMethod*) _p[$(index)]->v.p;\
-  $(type) *$(name) = Dao_$(type);\n";
+  $(type) *$(name) = Dao_$(typer);\n"; //XXX
 const string dao2cxx_userdata =
 "  DValue *_ud = _p[$(index)];\
   DaoCallbackData *$(name) = DaoCallbackData_New( _ro, *_ud );\
@@ -103,7 +103,7 @@ const string cxx2dao_doubles = cxx2dao + "VectorD( (double*) $(name), $(size) );
 
 const string cxx2dao_stream = cxx2dao + "Stream( (FILE*) $(refer) );\n";
 const string cxx2dao_voidp = "  _dp[$(index)] = DValue_WrapCData( NULL, (void*) $(refer) );\n";
-const string cxx2dao_user = "  _dp[$(index)] = DValue_WrapCData( dao_$(type2)_Typer, (void*) $(refer) );\n";
+const string cxx2dao_user = "  _dp[$(index)] = DValue_WrapCData( dao_$(typer)_Typer, (void*) $(refer) );\n";
 
 const string cxx2dao_userdata = "  DValue_Copy( _dp2[$(index)], $(name) );\n";
 
@@ -127,24 +127,24 @@ const string ctxput_doubles = ctxput + "ArrayDouble( _ctx, (double*) $(name), $(
 
 const string ctxput_stream = ctxput + "File( _ctx, (FILE*) $(name) );\n"; //XXX PutFile
 const string ctxput_voidp = ctxput + "CPointer( _ctx, (void*) $(name), 0 );\n";
-const string ctxput_user = "  DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(type2)_Typer );\n";
-const string qt_ctxput = "  Dao_$(type2)_InitSS( ($(type)*) $(name) );\n";
+const string ctxput_user = "  DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(typer)_Typer );\n";
+const string qt_ctxput = "  Dao_$(typer)_InitSS( ($(type)*) $(name) );\n";
 const string qt_put_qobject =
 "  DaoBase *dbase = DaoQt_Get_Wrapper( $(name) );\
   if( dbase ){\
     DaoContext_PutResult( _ctx, dbase );\
   }else{\
-    Dao_$(type2)_InitSS( ($(type)*) $(name) );\
-    DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(type2)_Typer );\
+    Dao_$(typer)_InitSS( ($(type)*) $(name) );\
+    DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(typer)_Typer );\
   }\
 ";
 
 const string ctxput_copycdata =
-"  DaoContext_CopyCData( _ctx, (void*)& $(name), sizeof($(namespace)$(type)), dao_$(type2)_Typer );\n";
+"  DaoContext_CopyCData( _ctx, (void*)& $(name), sizeof($(cxxtype)), dao_$(typer)_Typer );\n";
 const string ctxput_newcdata =
-"  DaoContext_PutCData( _ctx, (void*)new $(namespace)$(type)( $(name) ), dao_$(type2)_Typer );\n";
+"  DaoContext_PutCData( _ctx, (void*)new $(cxxtype)( $(name) ), dao_$(typer)_Typer );\n";
 const string ctxput_refcdata =
-"  DaoContext_WrapCData( _ctx, (void*)& $(name), dao_$(type2)_Typer );\n";
+"  DaoContext_WrapCData( _ctx, (void*)& $(name), dao_$(typer)_Typer );\n";
 
 #if 0
 const string qt_qlist_decl = 
@@ -364,18 +364,18 @@ const string getres_qstring =
 "  if( _res.t == DAO_STRING ) $(name)= DValue_GetMBString( & _res );\n";
 
 const string getres_cdata = 
-"  if( _res.t == DAO_OBJECT && (_cd = DaoObject_MapCData( _res.v.object, dao_$(type2)_Typer ) ) ){\
+"  if( _res.t == DAO_OBJECT && (_cd = DaoObject_MapCData( _res.v.object, dao_$(typer)_Typer ) ) ){\
     _res.t = DAO_CDATA;\
     _res.v.cdata = _cd;\
   }\
-  if( _res.t == DAO_CDATA && DaoCData_IsType( _res.v.cdata, dao_$(type2)_Typer ) ){\
+  if( _res.t == DAO_CDATA && DaoCData_IsType( _res.v.cdata, dao_$(typer)_Typer ) ){\
 ";
 
 const string getres_user = getres_cdata +
-"    $(name) = ($(namespace)$(type)*) DValue_CastCData( &_res, dao_$(type2)_Typer );\n  }\n";
+"    $(name) = ($(cxxtype)*) DValue_CastCData( &_res, dao_$(typer)_Typer );\n  }\n";
 
 const string getres_user2 = getres_cdata +
-"    $(name) = *($(namespace)$(type)*) DValue_CastCData( &_res, dao_$(type2)_Typer );\n  }\n";
+"    $(name) = *($(cxxtype)*) DValue_CastCData( &_res, dao_$(typer)_Typer );\n  }\n";
 
 
 const string getitem_int = ctxput + "Integer( _ctx, (int) self->$(name)[_p[1]->v.i] );\n";
@@ -444,18 +444,20 @@ struct CDaoVarTemplates
 	string get_item;
 	string set_item;
 
-	void Generate( CDaoVariable *var, map<string,string> & kvmap, int offset = 0 );
+	void Generate( CDaoVariable *var, map<string,string> & kvmap, int daopid, int cxxpid );
 };
-void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, int offset )
+void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, int daopid, int cxxpid )
 {
 	char sindex[50];
-	string cdft;
+	string cdft, typer = var->daotype;
 
-	sprintf( sindex, "%i", var->index - offset );
+	//typer.replace( "::", "_" ); // XXX FIXME
+	sprintf( sindex, "%i", daopid );
 	if( var->cxxdefault.size() ) cdft = " =" + var->cxxdefault;
 
-	kvmap[ "type" ] = var->cxxtype;
-	kvmap[ "type2" ] = var->cxxtype;
+	kvmap[ "daotype" ] = var->daotype;
+	kvmap[ "cxxtype" ] = var->cxxtype;
+	kvmap[ "typer" ] = typer;
 	kvmap[ "name" ] = var->name;
 	kvmap[ "namespace" ] = "";
 	kvmap[ "namespace2" ] = "";
@@ -464,12 +466,14 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 	var->daopar = cdao_string_fill( daopar, kvmap );
 	var->dao2cxx = cdao_string_fill( dao2cxx, kvmap );
 	var->parset = cdao_string_fill( parset, kvmap );
+	sprintf( sindex, "%i", cxxpid );
+	kvmap[ "index" ] = sindex;
 	var->cxx2dao = cdao_string_fill( cxx2dao, kvmap );
-	if( var->index == VAR_INDEX_RETURN ){
+	if( daopid == VAR_INDEX_RETURN ){
 		var->ctxput = cdao_string_fill( ctxput, kvmap );
 		var->getres = cdao_string_fill( getres, kvmap );
-	}else if( var->index == VAR_INDEX_FIELD ){
-		if( not var->varDecl->getType().isConstQualified() ){
+	}else if( daopid == VAR_INDEX_FIELD ){
+		if( not var->qualType.isConstQualified() ){
 			var->setter = cdao_string_fill( setter, kvmap );
 			var->set_item = cdao_string_fill( set_item, kvmap );
 		}
@@ -477,48 +481,49 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 		kvmap[ "name" ] = "self->" + var->name;
 		var->getter = cdao_string_fill( ctxput, kvmap );
 	}
-	//outs() << var->daopar << "\n";
-	//outs() << var->dao2cxx << "\n";
-	//outs() << var->cxx2dao << "\n";
-	//outs() << var->parset << "\n";
+	outs() << var->daopar << "\n";
+	outs() << var->dao2cxx << "\n";
+	outs() << var->cxx2dao << "\n";
+	outs() << var->parset << "\n";
 }
 
-CDaoVariable::CDaoVariable( CDaoModule *mod, VarDecl *decl, int id )
+CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 {
-	index = id;
 	module = mod;
-	varDecl = NULL;
+	initor = NULL;
 	hasNullableHint = false;
 	hasArrayHint = false;
 	unsupport = true;
 	SetDeclaration( decl );
 }
-void CDaoVariable::SetDeclaration( VarDecl *decl )
+void CDaoVariable::SetDeclaration( const VarDecl *decl )
 {
-	varDecl = decl;
 	if( decl == NULL ) return;
 	name = decl->getName().str();
+	outs() << "variable: " << name << " " << decl->getType().getAsString() << "\n";
+	outs() << (void*) decl->getTypeSourceInfo() << "\n";
+	qualType = decl->getTypeSourceInfo()->getType();
+	initor = decl->getAnyInitializer();
 	//outs() << "variable: " << name << "\n";
 }
 void CDaoVariable::SetHints( const string & hints )
 {
 }
-int CDaoVariable::Generate( int offset )
+int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 {
-	int retcode = Generate2( offset );
+	int retcode = Generate2( daopar_index, cxxpar_index );
 	unsupport = retcode != 0;
 	return retcode;
 }
-int CDaoVariable::Generate2( int offset )
+int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 {
-	const Expr *e = varDecl->getAnyInitializer();
-	if( e ){
+	if( initor ){
 		Preprocessor & pp = module->compiler->getPreprocessor();
 		SourceManager & sm = module->compiler->getSourceManager();
-		SourceLocation start = sm.getInstantiationLoc( e->getLocStart() );
-		SourceLocation end = sm.getInstantiationLoc( e->getLocEnd() );
-		SourceLocation start2 = sm.getSpellingLoc( e->getLocStart() );
-		SourceLocation end2 = sm.getSpellingLoc( e->getLocEnd() );
+		SourceLocation start = sm.getInstantiationLoc( initor->getLocStart() );
+		SourceLocation end = sm.getInstantiationLoc( initor->getLocEnd() );
+		SourceLocation start2 = sm.getSpellingLoc( initor->getLocStart() );
+		SourceLocation end2 = sm.getSpellingLoc( initor->getLocEnd() );
 		const char *p = sm.getCharacterData( start );
 		const char *p2 = sm.getCharacterData( start2 );
 		const char *q = sm.getCharacterData( pp.getLocForEndOfToken( end ) );
@@ -533,22 +538,23 @@ int CDaoVariable::Generate2( int offset )
 	}
 #endif
 	outs() << cxxdefault << "  " << cxxdefault2 << "\n";
-	QualType qtype = varDecl->getTypeSourceInfo()->getType();
-	const Type *type = qtype.getTypePtr();
-	string ctypename = qtype.getAsString();
+	const Type *type = qualType.getTypePtr();
+	string ctypename = qualType.getAsString();
 	cxxtype = ctypename;
 	cxxtype2 = "";
 	cxxcall = name;
 	//outs() << type->isPointerType() << " is pointer type\n";
 	//outs() << type->isArrayType() << " is array type\n";
 	//outs() << type->isConstantArrayType() << " is constant array type\n";
-	if( type->isBuiltinType() ) return Generate( (const BuiltinType*)type, offset );
+	if( type->isBuiltinType() )
+		return Generate( (const BuiltinType*)type, daopar_index, cxxpar_index );
 	if( type->isPointerType() and not hasArrayHint )
-		return Generate( (const PointerType*)type, offset );
-	if( type->isArrayType() ) return Generate( (const ArrayType*)type, offset );
+		return Generate( (const PointerType*)type, daopar_index, cxxpar_index );
+	if( type->isArrayType() )
+		return Generate( (const ArrayType*)type, daopar_index, cxxpar_index );
 	return 1;
 }
-int CDaoVariable::Generate( const BuiltinType *type, int offset )
+int CDaoVariable::Generate( const BuiltinType *type, int daopar_index, int cxxpar_index )
 {
 	CDaoVarTemplates tpl;
 	//vdefault2 = vdefault;
@@ -614,17 +620,14 @@ int CDaoVariable::Generate( const BuiltinType *type, int offset )
 		}
 	}
 	map<string,string> kvmap;
-	tpl.Generate( this, kvmap, offset );
+	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 	return 0;
 }
-int CDaoVariable::Generate( const PointerType *type, int offset )
+int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpar_index )
 {
 	QualType qtype2 = type->getPointeeType();
 	const Type *type2 = qtype2.getTypePtr();
 	string ctypename2 = qtype2.getAsString();
-
-	CXXRecordDecl *decl = type2->getAsCXXRecordDecl();
-	if( decl ) outs() << (void*) decl << " " << (void*) decl->getDefinition() << "\n";
 
 	CDaoVarTemplates tpl;
 	//vdefault2 = vdefault;
@@ -739,12 +742,25 @@ int CDaoVariable::Generate( const PointerType *type, int offset )
 			break;
 		default : break;
 		}
+	}else if( CXXRecordDecl *decl = type2->getAsCXXRecordDecl() ){
+		daotype = decl->getQualifiedNameAsString();
+		cxxtype = daotype + "*";
+		decl = decl->getDefinition();
+		tpl.daopar = daopar_user;
+		tpl.ctxput = ctxput_user;
+		tpl.getres = getres_user;
+		if( decl ){
+			outs() << daotype <<"\n";
+			outs() << "cxx: " << (void*)decl << " " << (void*)decl->getDefinition() << "\n";
+			tpl.dao2cxx = dao2cxx_user2;
+			tpl.cxx2dao = cxx2dao_user;
+		}
 	}
 	map<string,string> kvmap;
-	tpl.Generate( this, kvmap, offset );
+	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 	return 0;
 }
-int CDaoVariable::Generate( const ArrayType *type, int offset )
+int CDaoVariable::Generate( const ArrayType *type, int daopar_index, int cxxpar_index )
 {
 	QualType qtype2 = type->getElementType();
 	const Type *type2 = qtype2.getTypePtr();
@@ -863,6 +879,6 @@ int CDaoVariable::Generate( const ArrayType *type, int offset )
 		ConstantArrayType *at = (ConstantArrayType*) type;
 		kvmap[ "size" ] = at->getSize().toString( 10, false );
 	}
-	tpl.Generate( this, kvmap, offset );
+	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 	return 0;
 }

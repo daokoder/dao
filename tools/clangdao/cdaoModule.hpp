@@ -69,8 +69,9 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
-	vector<CDaoFunction> functions;
-	vector<CDaoUserType> usertypes;
+	vector<CDaoFunction>  functions;
+	vector<CDaoUserType>  usertypes;
+	map<RecordDecl*,int>  usertypes2;
 
 	static map<string,int>  mapExtensions;
 

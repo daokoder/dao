@@ -22,13 +22,14 @@ class CDaoModule;
 struct CDaoVariable
 {
 	CDaoModule  *module;
-	VarDecl     *varDecl;
 
-	int     index;
+	QualType     qualType;
+	const Expr  *initor;
+
 	bool    hasNullableHint;
 	bool    hasArrayHint;
 	bool    unsupport;
-	string  name; // name from varDecl, or from hints;
+	string  name;
 	string  cxxdefault;
 	string  cxxdefault2; // with macro expansion
 	string  daodefault;
@@ -51,15 +52,15 @@ struct CDaoVariable
 	string  get_item;
 	string  set_item;
 
-	CDaoVariable( CDaoModule *mod = NULL, VarDecl *decl = NULL, int id = 0 );
+	CDaoVariable( CDaoModule *mod = NULL, const VarDecl *decl = NULL );
 
-	void SetDeclaration( VarDecl *decl );
+	void SetDeclaration( const VarDecl *decl );
 	void SetHints( const string & hints );
-	int Generate( int offset = 0 );
-	int Generate2( int offset = 0 );
-	int Generate( const BuiltinType *type, int offset = 0 );
-	int Generate( const PointerType *type, int offset = 0 );
-	int Generate( const ArrayType *type, int offset = 0 );
+	int Generate( int daopar_index = 0, int cxxpar_index = 0 );
+	int Generate2( int daopar_index = 0, int cxxpar_index = 0 );
+	int Generate( const BuiltinType *type, int daopar_index = 0, int cxxpar_index = 0 );
+	int Generate( const PointerType *type, int daopar_index = 0, int cxxpar_index = 0 );
+	int Generate( const ArrayType *type, int daopar_index = 0, int cxxpar_index = 0 );
 };
 
 #endif

@@ -200,6 +200,7 @@ void CDaoModule::HandleUserType( CXXRecordDecl *record )
 	if( not IsFromModules( record->getLocation() ) ) return;
 	outs() << "UserType: " << record->getNameAsString() << "\n";
 	outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
+	usertypes2[ record ] = usertypes.size();
 	usertypes.push_back( CDaoUserType( this, record ) );
 }
 void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )

@@ -6,14 +6,18 @@
 
 class SecondClass;
 
+namespace NS{
 void second_function( SecondClass *obj, int n );
+};
 
 class SecondClass : public FirstClass
 {
 	public:
+	SecondClass();
 
-	void Meth( int index );
-	void Meth( int index, SecondClass *obj );
+	static void Meth( int index );
+
+	virtual float* Meth2( int index, SecondClass *obj );
 };
 
 #endif

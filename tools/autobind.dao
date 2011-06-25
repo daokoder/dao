@@ -2746,7 +2746,7 @@ global daoqt_sig_slot_code =
   DValue *_dp = _message.p1;
 ';
 global daoqt_sig_slot_emit = 
-'  emit signal_$(ssname)( this, "$(signature)", _message );\n}\n';
+'  emit signal_$(ssname)( _message );\n}\n';
 
 routine NewProxyFunctionName()
 {
@@ -2975,7 +2975,7 @@ routine Function::Generate()
 			qtSlotSlotCode += slot_dao2cxxcodes;
 			qtSlotSlotCode += '  emit signal_' + ssname + '( ' + cxxCallParam + ' );\n}\n';
 		}else if( $QT_SIGNAL in attribs ){
-			qtSignalSignalDecl = '   void signal_' + ssname + '(void*,const QString&,const DaoQtMessage&);\n'
+			qtSignalSignalDecl = '   void signal_' + ssname + '( const DaoQtMessage & );\n'
 			kvmap['parlist'] = cxxprotpars_decl;
 			qtSignalSlotDecl = daoqt_sig_slot_decl.expand( kvmap );
 			kvmap['parlist'] = cxxProtoParam;
@@ -3121,8 +3121,9 @@ routine Function::Generate()
 global daoqt_object_class =
 '#include<QHash>
 
+#ifndef DAOQT_MAX_VALUE
 #define DAOQT_MAX_VALUE 16
-
+#endif
 class DaoQtMessage
 {
   void Init( int n ){
@@ -3144,14 +3145,66 @@ class DaoQtMessage
   }
   ~DaoQtMessage(){ DValue_ClearAll( p1, count ); }
 };
-Q_DECLARE_METATYPE( DaoQtMessage )
+Q_DECLARE_METATYPE( DaoQtMessage );
+
+class DaoQtSlot : public QObject
+{ Q_OBJECT
+
+public:
+	DaoQtSlot(){
+		anySender = NULL;
+		daoReceiver = NULL;
+		daoSignal = NULL;
+		memset( & daoSlot, 0, sizeof(DValue) );
+	}
+	DaoQtSlot( void *p, DaoCData *rev, const QString & sig, const DValue & slot ){
+		anySender = p;
+		daoReceiver = rev;
+		daoSignal = NULL;
+		qtSignal = sig;
+		daoSlot = slot;
+	}
+	DaoQtSlot( void *p, DaoCData *rev, void *sig, const DValue & slot ){
+		anySender = p;
+		daoReceiver = rev;
+		daoSignal = sig;
+		daoSlot = slot;
+	}
+	bool Match( void *sender, const QString & signal, DValue slot ){
+		return anySender == sender && qtSignal == signal && daoSlot.v.p == slot.v.p;
+	}
+	bool Match( void *sender, void *signal, DValue slot ){
+		return anySender == sender && daoSignal == signal && daoSlot.v.p == slot.v.p;
+	}
+
+	void      *anySender;
+	void      *daoSignal;
+	QString    qtSignal;
+
+	DaoCData  *daoReceiver;
+	DValue     daoSlot;
+
+public slots:
+	void slotDaoQt( void*, const QString&, const DaoQtMessage &m ){ slotDao( m ); }
+	void slotDaoDao( void *o, void *s, const DaoQtMessage &m ){
+		if( o == anySender && s == daoSignal ) slotDao( m );
+	}
+	void slotDao( const DaoQtMessage &m ){
+		DaoVmProcess *vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
+		DValue obj = {DAO_OBJECT,0,0,0,{0}};
+		if( daoSlot.t < DAO_METAROUTINE || daoSlot.t > DAO_FUNCTION ) return;
+		obj.v.object = DaoCData_GetObject( daoReceiver );
+		if( obj.v.object == NULL ) obj.t = 0;
+		DaoVmProcess_Call( vmp, (DaoMethod*)daoSlot.v.p, &obj, (DValue**)m.p2, m.count );
+	}
+};
 
 class DaoQtObject : public QObjectUserData
 {
 	public:
+	~DaoQtObject(){ for(int i=0,n=daoSlots.size(); i<n; i++) delete daoSlots[i]; }
 
-	QHash<void*,QHash<void*,DValue> > mapRefers;
-	QHash<QString,QHash<void*,DValue> > mapNames;
+	QList<DaoQtSlot*>  daoSlots;
 
 	DaoCData  *cdata;
 
@@ -3162,62 +3215,34 @@ class DaoQtObject : public QObjectUserData
 		for(i=0; i<n; i++) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
 		return hash % 997;
 	}
-	void Connect( void *sender, const QString & signal, DValue receiver )
-	{
-		if( mapNames.find( signal ) == mapNames.end() )
-			mapNames[ signal ] = QHash<void*,DValue>();
-		mapNames[ signal ][ sender ] = receiver;
-	}
-	void Connect( void *sender, void *signal, DValue receiver )
-	{
-		if( mapRefers.find( signal ) == mapRefers.end() )
-			mapRefers[ signal ] = QHash<void*,DValue>();
-		mapRefers[ signal ][ sender ] = receiver;
-	}
-	void Dispatch( void *sender, const QString &signal, const DaoQtMessage & msg )
-	{
-		if( mapNames.find( signal ) == mapNames.end() ) return;
-		QHash<void*,DValue> & mp = mapNames[signal];
-		if( mp.find( sender ) == mp.end() ) return;
-		if( cdata == NULL ) return;
-		DaoObject *daobj = DaoCData_GetObject( cdata );
-		DValue receiver = mp[sender];
-		DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
-		if( receiver.t >= DAO_METAROUTINE && receiver.t <= DAO_FUNCTION ){
-			DValue obj = {DAO_OBJECT,0,0,0,{0}};
-			obj.v.object = daobj;
-			DaoVmProcess_Call( vmproc, (DaoMethod*)receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
+	DaoQtSlot* Find( void *sender, const QString & signal, DValue & slot ){
+		int i, n = daoSlots.size();
+		for(i=0; i<n; i++){
+			DaoQtSlot *daoslot = daoSlots[i];
+			if( daoslot->Match( sender, signal, slot ) ) return daoslot;
 		}
-		DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
+		return NULL;
 	}
-	void Dispatch( void *sender, void *signal, const DaoQtMessage & msg )
-	{
-		if( mapRefers.find( signal ) == mapRefers.end() ) return;
-		QHash<void*,DValue> & mp = mapRefers[signal];
-		if( mp.find( sender ) == mp.end() ) return;
-		if( cdata == NULL ) return;
-		DaoObject *daobj = DaoCData_GetObject( cdata );
-		DValue receiver = mp[sender];
-		DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );
-		if( receiver.t >= DAO_METAROUTINE && receiver.t <= DAO_FUNCTION ){
-			DValue obj = {DAO_OBJECT,0,0,0,{0}};
-			obj.v.object = daobj;
-			DaoVmProcess_Call( vmproc, (DaoMethod*)receiver.v.p, &obj, (DValue**)msg.p2, msg.count );
+	DaoQtSlot* Find( void *sender, void *signal, DValue & slot ){
+		int i, n = daoSlots.size();
+		for(i=0; i<n; i++){
+			DaoQtSlot *daoslot = daoSlots[i];
+			if( daoslot->Match( sender, signal, slot ) ) return daoslot;
 		}
-		DaoVmSpace_ReleaseProcess( __daoVmSpace, vmproc );
+		return NULL;
+	}
+	DaoQtSlot *Add( void *sender, const QString & signal, DValue & slot ){
+		DaoQtSlot *daoslot = new DaoQtSlot( sender, cdata, signal, slot );
+		daoSlots.append( daoslot );
+		return daoslot;
+	}
+	DaoQtSlot *Add( void *sender, void *signal, DValue & slot ){
+		DaoQtSlot *daoslot = new DaoQtSlot( sender, cdata, signal, slot );
+		daoSlots.append( daoslot );
+		return daoslot;
 	}
 };
 ';
-
-#{
-	virtual void Connect( QObject *sender, const char *signal, const char *slot ){
-		QObject::connect( sender, signal, this, slot );
-	}
-	virtual void Connect( const char *signal, QObject *receiver, const char *slot ){
-		QObject::connect( this, signal, receiver, slot );
-	}
-
-#}
 
 global daoss_class =
 '
@@ -3229,7 +3254,6 @@ public:
 $(Emit)
 
 public slots:
-$(slotDaoQt)
 $(slots)
 
 signals:
@@ -3240,10 +3264,6 @@ $(signals)
 
 global qt_Emit =
 '	void Emit( void *o, void *s, const DaoQtMessage &m ){ emit signalDao( o, s, m ); }\n';
-
-global qt_slotDaoQt =
-'	void slotDaoQt( void*o, const QString&s, const DaoQtMessage &m ){ Dispatch(o,s,m); }
-	void slotDao( void *o, void *s, const DaoQtMessage &m ){ Dispatch( o, s, m ); }\n';
 
 global qt_signalDao =
 '	void signalDao( void *o, void *s, const DaoQtMessage &m );
@@ -3264,16 +3284,6 @@ global qt_make_linker3 =
 
 global qt_virt_emit =
 '	virtual void Emit( void *o, void *s, const DaoQtMessage &m ){}\n';
-
-global qt_signal_slot =
-'
-	void Emit( void *o, void *s, const DaoQtMessage &m ){ emit signalDao( o, s, m ); }
-public slots:
-	void slotDaoQt( void*o, const QString&s, const DaoQtMessage &m ){ Dispatch(o,s,m); }
-	void slotDao( void *o, void *s, const DaoQtMessage &m ){ Dispatch( o, s, m ); }
-signals:
-	void signalDao( void *o, void *s, const DaoQtMessage &m );
-';
 
 global qt_connect_decl =
 'static void dao_QObject_emit( DaoContext *_ctx, DValue *_p[], int _n );
@@ -3323,10 +3333,12 @@ static void dao_QObject_connect_dao( DaoContext *_ctx, DValue *_p[], int _n )
 		s3 += "2signal_" + ssname + "(void*,const QString&,const DaoQtMessage&)";
 		/* signal -> daoqt_signal -> slotDaoQt -> dao */
 		QObject::connect( sender, s2.data(), senderSS, s1.data() );
-		QObject::connect( senderSS, s3.data(),
-				receiverSS, SLOT( slotDaoQt(void*,const QString&,const DaoQtMessage&) ) );
-		receiverSS->Connect( senderSS, name, slot );
-
+		DaoQtSlot *daoSlot = receiverSS->Find( senderSS, name, slot );
+		if( daoSlot == NULL ){
+			daoSlot = receiverSS->Add( senderSS, name, slot );
+			s3 = "2signal_" + ssname + "(const DaoQtMessage&)";
+			QObject::connect( senderSS, s3.data(), daoSlot, SLOT( slotDao(const DaoQtMessage&) ) );
+		}
 	}else if( slot.t == DAO_STRING ){ /* Dao -> Qt */
 		QByteArray name( DString_GetMBS(slot.v.s) );
 		QByteArray size = QString::number( DaoQtObject::RotatingHash( name ) ).toLocal8Bit();
@@ -3341,12 +3353,12 @@ static void dao_QObject_connect_dao( DaoContext *_ctx, DValue *_p[], int _n )
 				receiverSS, s3.data() );
 		QObject::connect( receiverSS, s2.data(), receiver, s1.data() );
 	}else{ /* Dao -> Dao */
-		receiverSS->Connect( senderSS, signal.v.p, slot );
-		/* avoid multiple connection */
-		QObject::disconnect( senderSS, SIGNAL( signalDao(void*,void*,const DaoQtMessage&) ),
-				receiverSS, SLOT( slotDao(void*,void*,const DaoQtMessage&) ) );
-		QObject::connect( senderSS, SIGNAL( signalDao(void*,void*,const DaoQtMessage&) ),
-				receiverSS, SLOT( slotDao(void*,void*,const DaoQtMessage&) ) );
+		DaoQtSlot *daoSlot = receiverSS->Find( senderSS, signal.v.p, slot );
+		if( daoSlot == NULL ){
+			daoSlot = receiverSS->Add( senderSS, signal.v.p, slot );
+			QObject::connect( senderSS, SIGNAL( signalDao(void*,void*,const DaoQtMessage&) ),
+					daoSlot, SLOT( slotDaoDao(void*,void*,const DaoQtMessage&) ) );
+		}
 	}
 }
 ';
@@ -4020,7 +4032,7 @@ routine UserType::GenerateType()
 			#}
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 			'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
-			kvmap[ 'comma' ] = meth.cxxProtoParamDecl ? ',' : '';
+			kvmap[ 'comma' ] = meth.cxxProtoParamVirt ? ',' : '';
 			if( $FUNC_CONST in meth.attribs) kvmap['extra'] = 'const';
 			kvirtuals += tpl_meth_decl.expand( kvmap );
 			if( $FUNC_VIRTUAL in meth.attribs ){
@@ -4104,8 +4116,7 @@ routine UserType::GenerateType()
 		'supers'=>daoc_supers, 'get_supers'=>get_supers,
 		'virtuals'=>kvirtuals, 'methods'=>kmethods,
 		'init_supers'=>init_supers, 'parlist'=>'', 'parcall'=>'', 
-		'Q_OBJECT'=>'', 'qt_signal_slot'=>'', 
-		'qt_init'=>'', 'parents'=>'public QObject',
+		'Q_OBJECT'=>'', 'qt_init'=>'', 'parents'=>'public QObject',
 		'init_parents'=>'', 'qt_make_linker'=>'', 'qt_virt_emit'=>'',
 		'qt_make_linker3'=>''};
 		if( isQObject ){
@@ -4154,13 +4165,11 @@ routine UserType::GenerateType()
 			kvmap['member_wrap'] = '';
 			kvmap['set_wrap'] = '';
 			kvmap['Emit'] = '';
-			kvmap['slotDaoQt'] = '';
 			kvmap['signalDao'] = '';
 			if( isQObjectBase ){
 				kvmap['member_wrap'] = '   ' + name + ' *wrap;\n';
 				kvmap['set_wrap'] = 'wrap = w;';
 				kvmap['Emit'] = qt_Emit;
-				kvmap['slotDaoQt'] = qt_slotDaoQt.expand( kvmap );
 				kvmap['signalDao'] = qt_signalDao;
 			}
 			type_decls += daoss_class.expand( kvmap );
