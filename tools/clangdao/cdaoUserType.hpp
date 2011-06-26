@@ -31,6 +31,11 @@ struct CDaoUserType
 	CDaoModule  *module;
 	RecordDecl  *decl;
 
+	bool noWrapping;
+	bool hasVirtual; // protected or public virtual function;
+	bool isQObject;
+	bool isQObjectBase;
+
 	string  type_decls;
 	string  type_codes;
 	string  meth_decls;
@@ -45,6 +50,8 @@ struct CDaoUserType
 	CDaoUserType( CDaoModule *mod = NULL, RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );
+
+	string GetName()const{ return decl ? decl->getNameAsString() : ""; }
 
 	int Generate();
 	int Generate( CXXRecordDecl *decl );

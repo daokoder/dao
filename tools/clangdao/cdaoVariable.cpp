@@ -518,18 +518,8 @@ int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 {
 	if( initor ){
-		Preprocessor & pp = module->compiler->getPreprocessor();
-		SourceManager & sm = module->compiler->getSourceManager();
-		SourceLocation start = sm.getInstantiationLoc( initor->getLocStart() );
-		SourceLocation end = sm.getInstantiationLoc( initor->getLocEnd() );
-		SourceLocation start2 = sm.getSpellingLoc( initor->getLocStart() );
-		SourceLocation end2 = sm.getSpellingLoc( initor->getLocEnd() );
-		const char *p = sm.getCharacterData( start );
-		const char *p2 = sm.getCharacterData( start2 );
-		const char *q = sm.getCharacterData( pp.getLocForEndOfToken( end ) );
-		const char *q2 = sm.getCharacterData( pp.getLocForEndOfToken( end2 ) );
-		for(; p!=q; p++) cxxdefault += *p;
-		for(; p2!=q2; p2++) cxxdefault2 += *p2;
+		cxxdefault = module->ExtractSource( initor->getSourceRange(), true );
+		cxxdefault2 = module->ExtractSource( initor->getSourceRange(), false );
 	}
 #if 0
 	if( ParmVarDecl *par = dyn_cast<ParmVarDecl>( decl ) ){
@@ -755,6 +745,8 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			tpl.dao2cxx = dao2cxx_user2;
 			tpl.cxx2dao = cxx2dao_user;
 		}
+	}else{
+		return 1;
 	}
 	map<string,string> kvmap;
 	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );

@@ -283,3 +283,27 @@ string CDaoModule::MakeDaoFunctionPrototype( FunctionDecl *funcdec )
 {
 	return "";
 }
+string CDaoModule::ExtractSource( SourceLocation & start, SourceLocation & end, bool original )
+{
+	Preprocessor & pp = compiler->getPreprocessor();
+	SourceManager & sm = compiler->getSourceManager();
+	if( original ){
+		start = sm.getInstantiationLoc( start );
+		end = sm.getInstantiationLoc( end );
+	}else{
+		start = sm.getSpellingLoc( start );
+		end = sm.getSpellingLoc( end );
+	}
+
+	string source;
+	const char *p = sm.getCharacterData( start );
+	const char *q = sm.getCharacterData( pp.getLocForEndOfToken( end ) );
+	for(; p!=q; p++) source += *p;
+	return source;
+}
+string CDaoModule::ExtractSource( const SourceRange & range, bool original )
+{
+	SourceLocation start = range.getBegin();
+	SourceLocation end = range.getEnd();
+	return ExtractSource( start, end, original );
+}

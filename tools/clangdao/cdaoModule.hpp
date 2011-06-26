@@ -97,6 +97,9 @@ struct CDaoModule
 	void WriteHeaderIncludes( std::ostream & stream );
 
 	string MakeDaoFunctionPrototype( FunctionDecl *funcdec );
+
+	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );
+	string ExtractSource( const SourceRange & range, bool original = true );
 };
 
 #endif

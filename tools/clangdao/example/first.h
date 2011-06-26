@@ -8,6 +8,9 @@
 
 class FirstClass
 {
+	public:
+
+	virtual void FirstVirt();
 };
 
 void first_function( int abc=123+456 );

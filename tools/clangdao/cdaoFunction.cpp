@@ -306,7 +306,7 @@ const string cxx_proxy_body11 =
 const string cxx_virt_class2 =
 "$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n"
 "  int _cs = 0;\n"
-"  return DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n"
+"  return ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
 "}\n";
 const string cxx_virt_class3 =
 "$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n"
@@ -314,8 +314,8 @@ const string cxx_virt_class3 =
 "  DValue _obj = {0,0,0,0,{0}};\n"
 "  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
 "  if( _ro && _obj.t == DAO_OBJECT ){\n"
-"    DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n"
-"	if( _cs ) return;\n"
+"    ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
+"    if( _cs ) return;\n"
 "  }\n"
 "  $(type)::$(cxxname)( $(parcall) );\n"
 "}\n";
@@ -325,14 +325,14 @@ const string cxx_virt_class4 =
 "  DValue _obj = {0,0,0,0,{0}};\n"
 "  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
 "  if( _ro && _obj.t == DAO_OBJECT ){\n"
-"    $(vareturn) = DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n"
-"	if( _cs ) return $(vareturn2);\n"
+"    $(vareturn) = ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
+"    if( _cs ) return $(vareturn2);\n"
 "  }\n"
 "  return $(type)::$(cxxname)( $(parcall) );\n"
 "}\n";
 const string cxx_virt_class5 =
 "$(retype) DaoCxxVirt_$(sub)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n"
-"  $(return) DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n"
+"  $(return) ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
 "}\n";
 
 const string dao_callback_proto =
@@ -445,7 +445,7 @@ int CDaoFunction::Generate()
 	vector<IntString> calls_with_defaults;
 	for(i=0; i<n; i++){
 		CDaoVariable & vo = parlist[i];
-		outs() << vo.name << vo.unsupport << "\n";
+		outs() << vo.name << vo.unsupport << "-----------------\n";
 		if( vo.unsupport ){
 			excluded = true;
 			return 1;

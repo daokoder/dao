@@ -4,6 +4,8 @@
 
 #include"first.h"
 
+#define slots
+
 class SecondClass;
 
 namespace NS{
@@ -17,7 +19,11 @@ class SecondClass : public FirstClass
 
 	static void Meth( int index );
 
+	void FirstVirt();
 	virtual float* Meth2( int index, SecondClass *obj );
+	virtual int* Excluded( int excluding[][], void*(*ex)() )const=0;
+	public slots:
+	void t();
 };
 
 #endif
