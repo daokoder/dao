@@ -14,7 +14,7 @@ using namespace std;
 using namespace llvm;
 using namespace clang;
 
-class CDaoModule;
+struct CDaoModule;
 
 struct CDaoFunction
 {
@@ -58,9 +58,18 @@ struct CDaoFunction
 	string  cxxCallParam;
 	string  cxxCallParamV;
 
+	string qtSlotSignalDecl;
+	string qtSignalSignalDecl;
+	string qtSlotSlotDecl;
+	string qtSlotSlotCode;
+	string qtSignalSlotDecl;
+	string qtSignalSlotCode;
+
 	CDaoFunction( CDaoModule *mod = NULL, FunctionDecl *decl = NULL, int idx = 1 );
 
 	void SetDeclaration( FunctionDecl *decl );
+	bool IsFromMainModule();
+	string GetInputFile()const;
 
 	int Generate();
 };
@@ -81,13 +90,19 @@ struct CDaoProxyFunction
 	}
 
 	static string NewProxyFunctionName(){
-		return "Func" + utohexstr( proxy_function_index );
+		return "Func" + utohexstr( proxy_function_index ++ );
+	}
+	static bool IsDefined( const string & signature ){
+		return proxy_functions.find( signature ) != proxy_functions.end();
 	}
 	static bool IsNotDefined( const string & signature ){
 		return proxy_functions.find( signature ) == proxy_functions.end();
 	}
 	static void Add( const string & signature, const string & name, const string & codes ){
 		proxy_functions[ signature ] = CDaoProxyFunction( 0, name, codes );
+	}
+	static void Use( const string & signature ){
+		if( IsDefined( signature ) ) proxy_functions[ signature ].used = true;
 	}
 };
 

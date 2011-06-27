@@ -77,6 +77,8 @@ void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
 		}else if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
 			module->HandleUserType( record );
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
+		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
+			module->HandleNamespace( nsdecl );
 		}
 	}
 }

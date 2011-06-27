@@ -10,7 +10,10 @@ class SecondClass;
 
 namespace NS{
 void second_function( SecondClass *obj, int n );
+
+class Nested{};
 };
+void second_function( SecondClass *obj, int n );
 
 class SecondClass : public FirstClass
 {

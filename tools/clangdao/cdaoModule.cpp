@@ -9,6 +9,29 @@
 #include <string>
 #include "cdaoModule.hpp"
 
+const string cxx_get_object_method = 
+"DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )\n\
+{\n\
+  DaoMethod *meth;\n\
+  if( cd == NULL ) return NULL;\n\
+  obj->v.object = DaoCData_GetObject( cd );\n\
+  if( obj->v.object == NULL ) return NULL;\n\
+  obj->t = DAO_OBJECT;\n\
+  meth = DaoObject_GetMethod( obj->v.object, name );\n\
+  if( meth == NULL ) return NULL;\n\
+  if( meth->type != DAO_METAROUTINE && meth->type != DAO_ROUTINE ) return NULL;\n\
+  return meth;\n\
+}\n";
+
+const string add_number = "  { \"$(name)\", $(type), $(namespace)$(value) },\n";
+const string tpl_typedef = "  DaoNameSpace_TypeDefine( $(ns), \"$(old)\", \"$(new)\" );\n";
+const string add_ccdata = "  DaoNameSpace_AddConstData( $(ns), \"$(name)\", "
+"(DaoBase*)DaoCData_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n";
+
+const string ext_typer = "extern DaoTypeBase *dao_$(type)_Typer;\n";
+const string alias_typer = "DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n";
+
+
 enum CDaoFileExtensionType
 {
 	CDAO_FILE_H ,    // .h
@@ -41,6 +64,8 @@ const char *const cdao_file_extensions[] =
 
 map<string,int> CDaoModule::mapExtensions;
 
+extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
+
 CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
 {
 	compiler = com;
@@ -70,6 +95,13 @@ bool CDaoModule::IsSourceFile( const string & name )
 	int extype = CheckFileExtension( name );
 	return extype >= CDAO_FILE_C && extype <= CDAO_FILE_MM;
 }
+string CDaoModule::GetFileName( SourceLocation loc )
+{
+	SourceManager & sourceman = compiler->getSourceManager();
+	FileID fid = sourceman.getFileID( sourceman.getSpellingLoc( loc ) );
+	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
+	return e->getName();
+}
 bool CDaoModule::IsFromModules( SourceLocation loc )
 {
 	SourceManager & sourceman = compiler->getSourceManager();
@@ -80,6 +112,13 @@ bool CDaoModule::IsFromModules( SourceLocation loc )
 	is = is or headers.find( e ) != headers.end();
 	is = is or extHeaders.find( e ) != extHeaders.end();
 	return is;
+}
+bool CDaoModule::IsFromMainModule( SourceLocation loc )
+{
+	SourceManager & sourceman = compiler->getSourceManager();
+	FileID fid = sourceman.getFileID( sourceman.getSpellingLoc( loc ) );
+	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
+	return e == moduleInfo.entry or headers.find( e ) != headers.end();
 }
 bool CDaoModule::IsFromModuleSources( SourceLocation loc )
 {
@@ -203,6 +242,12 @@ void CDaoModule::HandleUserType( CXXRecordDecl *record )
 	usertypes2[ record ] = usertypes.size();
 	usertypes.push_back( CDaoUserType( this, record ) );
 }
+void CDaoModule::HandleNamespace( NamespaceDecl *nsdecl )
+{
+	if( not IsFromModules( nsdecl->getLocation() ) ) return;
+	if( nsdecl != nsdecl->getOriginalNamespace() ) return;
+	namespaces.push_back( CDaoNamespace( this, nsdecl ) );
+}
 void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 {
 	string name_macro = UppercaseString( moduleInfo.name );
@@ -276,6 +321,71 @@ int CDaoModule::Generate()
 		retcode |= functions[i].Generate();
 	}
 	for(i=0, n=usertypes.size(); i<n; i++) retcode |= usertypes[i].Generate();
+	for(i=0, n=namespaces.size(); i<n; i++) retcode |= namespaces[i].Generate();
+	map<string,string> kvmap;
+	kvmap[ "module" ] = moduleInfo.name;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = usertypes[i];
+		if( utp.isRedundant ) continue;
+		kvmap[ "type" ] = utp.GetName();
+		fout_header << cdao_string_fill( ext_typer, kvmap );
+	}
+	fout_source3 << cxx_get_object_method;
+	map<string,CDaoProxyFunction> & proxy_functions = CDaoProxyFunction::proxy_functions;
+	map<string,CDaoProxyFunction>::iterator pit, pend = proxy_functions.end();
+	for(pit=proxy_functions.begin(); pit!=pend; pit++){
+		CDaoProxyFunction & proxy = pit->second;
+		if( proxy.used ) fout_source3 << proxy.codes;
+	}
+	fout_source2 << ifdef_cpp_open;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = usertypes[i];
+		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		if( utp.type_decls.size() ) fout_header << cdao_string_fill( utp.type_decls, kvmap );
+		fout_source2 << "/* " << utp.GetInputFile() << " */\n";
+		fout_source2 << cdao_string_fill( utp.typer_codes, kvmap );
+		fout_source2 << cdao_string_fill( utp.meth_codes, kvmap );
+		fout_source3 << cdao_string_fill( utp.type_codes, kvmap );
+	}
+	fout_source2 << ifdef_cpp_close;
+
+	string func_decl;
+	string rout_entry;
+	string func_codes;
+	for(i=0, n=functions.size(); i<n; i++){
+		CDaoFunction & func = functions[i];
+		if( func.excluded || not func.IsFromMainModule() ) continue;
+		func_decl += func.cxxProtoCodes + ";\n";
+		func_codes += func.cxxWrapper;
+		rout_entry += func.daoProtoCodes;
+	}
+	fout_source << ifdef_cpp_open;
+	fout_source << "static DaoFuncItem dao_Funcs[] =\n{\n" << rout_entry;
+	fout_source << "  { NULL, NULL }\n};\n";
+	fout_source << func_codes;
+
+	string onload = "DaoOnLoad";
+	fout_source << "int " << onload << "( DaoVmSpace *vms, DaoNameSpace *ns )\n{\n";
+	//XXX if( hasNameSpace ) fout_source.writeln( "  DaoNameSpace *ns2;" );
+	fout_source << "  DaoTypeBase *typers[" << usertypes.size()+1 << "];\n";
+	//fout_source << "  const char *aliases[" << nalias << "];\n";
+	fout_source << "  __daoVmSpace = vms;\n";
+#if 0
+	if( lib_name == LibType.LIB_QT ){
+		fout_source.write( "   qRegisterMetaType<DaoQtMessage>(\"DaoQtMessage\");\n" );
+	}
+#endif
+	int count = 0;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = usertypes[i];
+		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		fout_source << "  typers[" << count << "] = dao_" + utp.GetTyperName() + "_Typer;\n";
+		count = count + 1;
+	}
+	fout_source << "  typers[" << count << "] = NULL;\n";
+	fout_source << "  return 0;\n}\n";
+
+	fout_source << ifdef_cpp_close;
 
 	return retcode;
 }

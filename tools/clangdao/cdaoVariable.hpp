@@ -17,7 +17,7 @@ using namespace std;
 using namespace llvm;
 using namespace clang;
 
-class CDaoModule;
+struct CDaoModule;
 
 struct CDaoVariable
 {

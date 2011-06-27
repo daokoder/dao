@@ -10,30 +10,30 @@ const string cxx_call_proto =
 "  $(retype) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n";
 
 const string cxx_call_proto_d1 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto_d2 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n"
-"  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
+  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto_d3 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n"
-"  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
+  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto_d4 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n"
-"  else if(_n<=$(n4)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist4) );\n"
-"  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
+  else if(_n<=$(n4)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist4) );\n\
+  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto_list[] = 
 {
@@ -48,26 +48,26 @@ const string cxx_call_proto2 =
 "  $(self)$(func_ns)$(cxxname)( $(parlist) );\n";
 
 const string cxx_call_proto2_d1 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto2_d2 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n"
-"  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
+  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto2_d3 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n"
-"  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
+  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_proto2_d4 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n"
-"  else if(_n<=$(n4)) $(self)$(func_ns)$(cxxname)( $(parlist4) );\n"
-"  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
+  else if(_n<=$(n4)) $(self)$(func_ns)$(cxxname)( $(parlist4) );\n\
+  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
 ;
 
 const string cxx_call_proto2_list[] = 
@@ -83,30 +83,30 @@ const string cxx_call_static =
 "  $(retype) $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n";
 
 const string cxx_call_static_d1 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static_d2 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(name) = $(host_qname)::$(cxxname)( $(parlist2) );\n"
-"  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(host_qname)::$(cxxname)( $(parlist2) );\n\
+  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static_d3 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(name) = $(host_qname)::$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(name) = $(host_qname)::$(cxxname)( $(parlist3) );\n"
-"  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(host_qname)::$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(name) = $(host_qname)::$(cxxname)( $(parlist3) );\n\
+  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static_d4 = 
-"  $(retype) $(name);\n"
-"  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(name) = $(host_qname)::$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(name) = $(host_qname)::$(cxxname)( $(parlist3) );\n"
-"  else if(_n<=$(n4)) $(name) = $(host_qname)::$(cxxname)( $(parlist4) );\n"
-"  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  $(retype) $(name);\n\
+  if(_n<=$(n1)) $(name) = $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(host_qname)::$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(name) = $(host_qname)::$(cxxname)( $(parlist3) );\n\
+  else if(_n<=$(n4)) $(name) = $(host_qname)::$(cxxname)( $(parlist4) );\n\
+  else $(name) = $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static_list[] = 
 {
@@ -121,26 +121,26 @@ const string cxx_call_static2 =
 "  $(host_qname)::$(cxxname)( $(parlist) );\n";
 
 const string cxx_call_static2_d1 = 
-"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static2_d2 = 
-"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(host_qname)::$(cxxname)( $(parlist2) );\n"
-"  else $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(host_qname)::$(cxxname)( $(parlist2) );\n\
+  else $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static2_d3 = 
-"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(host_qname)::$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(host_qname)::$(cxxname)( $(parlist3) );\n"
-"  else $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(host_qname)::$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(host_qname)::$(cxxname)( $(parlist3) );\n\
+  else $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static2_d4 = 
-"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n"
-"  else if(_n<=$(n2)) $(host_qname)::$(cxxname)( $(parlist2) );\n"
-"  else if(_n<=$(n3)) $(host_qname)::$(cxxname)( $(parlist3) );\n"
-"  else if(_n<=$(n4)) $(host_qname)::$(cxxname)( $(parlist4) );\n"
-"  else $(host_qname)::$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(host_qname)::$(cxxname)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(host_qname)::$(cxxname)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(host_qname)::$(cxxname)( $(parlist3) );\n\
+  else if(_n<=$(n4)) $(host_qname)::$(cxxname)( $(parlist4) );\n\
+  else $(host_qname)::$(cxxname)( $(parlist) );\n"
 ;
 const string cxx_call_static2_list[] = 
 {
@@ -152,218 +152,204 @@ const string cxx_call_static2_list[] =
 };
 
 const string cxx_call_new = 
-"	$(host_qname) *_self = $(namespace)Dao_$(host_typer)_New( $(parlist) );\n"
-"	DaoContext_PutCData( _ctx, _self, dao_$(host_typer)_Typer );\n";
+"	$(host_qname) *_self = Dao_$(host_typer)_New( $(parlist) );\n\
+	DaoContext_PutCData( _ctx, _self, dao_$(host_typer)_Typer );\n";
 const string cxx_call_new2 = 
-"	DaoCxx_$(host_typer) *_self = $(namespace)DaoCxx_$(host_typer)_New( $(parlist) );\n"
-"	DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );\n";
+"	DaoCxx_$(host_typer) *_self = DaoCxx_$(host_typer)_New( $(parlist) );\n\
+	DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );\n";
 
 const string dao_proto =
 "  { dao_$(host_typer)_$(cxxname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
 
 const string cxx_wrap = 
-"/* $(file) */\n"
 "$(proto)\n{\n$(dao2cxx)\n$(cxxcall)$(parset)$(return)}\n";
 
 const string cxx_virt_proto =
 "static $(retype) Dao_$(type)_$(cxxname)( $(parlist) );\n";
 
 const string cxx_virt_struct =
-"static $(retype) Dao_$(type)_$(cxxname)( $(parlist) )\n"
-"{\n"
-"  Dao_$(type) *self = (Dao_$(type)*) self0;\n"
-"  $(type) *self2 = self->object;\n"
-"  DaoCData *cdata = self->cdata;\n"
-"  DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n";
+"static $(retype) Dao_$(type)_$(cxxname)( $(parlist) )\n\
+{\n\
+  Dao_$(type) *self = (Dao_$(type)*) self0;\n\
+  $(type) *self2 = self->object;\n\
+  DaoCData *cdata = self->cdata;\n\
+  DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n";
 
 const string cxx_virt_class =
 "$(retype) DaoCxxVirt_$(type)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n";
 
-const string cxx_get_object_method = 
-"DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )\n"
-"{\n"
-"  DaoMethod *meth;\n"
-"  if( cd == NULL ) return NULL;\n"
-"  obj->v.object = DaoCData_GetObject( cd );\n"
-"  if( obj->v.object == NULL ) return NULL;\n"
-"  obj->t = DAO_OBJECT;\n"
-"  meth = DaoObject_GetMethod( obj->v.object, name );\n"
-"  if( meth == NULL ) return NULL;\n"
-"  if( meth->type != DAO_METAROUTINE && meth->type != DAO_ROUTINE ) return NULL;\n"
-"  return meth;\n"
-"}\n";
-
 const string qt_get_wrapper1 =
 "DaoBase* DaoQt_Get_Wrapper( const QObject *object );\n";
 const string qt_get_wrapper2 =
-"DaoBase* DaoQt_Get_Wrapper( const QObject *object )\n"
-"{\n"
-"  DaoQtObject *user_data = (DaoQtObject*) ((QObject*)object)->userData(0);\n"
-"  DaoBase *dbase = NULL;\n"
-"  // no need to map to DaoObject, because it will always be mapped back to\n"
-"  // DaoCData when passed to Dao codes.\n"
-"  if( user_data ) dbase = (DaoBase*) user_data->cdata;\n"
-"  return dbase;\n"
-"}\n";
+"DaoBase* DaoQt_Get_Wrapper( const QObject *object )\n\
+{\n\
+  DaoQtObject *user_data = (DaoQtObject*) ((QObject*)object)->userData(0);\n\
+  DaoBase *dbase = NULL;\n\
+  // no need to map to DaoObject, because it will always be mapped back to\n\
+  // DaoCData when passed to Dao codes.\n\
+  if( user_data ) dbase = (DaoBase*) user_data->cdata;\n\
+  return dbase;\n\
+}\n";
 
 const string cxx_virt_call_00 =
-"  DValue _obj = {0,0,0,0,{0}};\n"
-"  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
-"  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;\n"
-"  _ro = DaoMethod_Resolve( _ro, & _obj, NULL, 0 );\n"
-"  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n"
-"  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n"
-"  DaoVmProcess_Call( _vmp, _ro, & _obj, NULL, 0 );\n"
-"  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n"
-"}\n";
+"  DValue _obj = {0,0,0,0,{0}};\n\
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;\n\
+  _ro = DaoMethod_Resolve( _ro, & _obj, NULL, 0 );\n\
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n\
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  DaoVmProcess_Call( _vmp, _ro, & _obj, NULL, 0 );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+}\n";
 
 const string cxx_virt_call_01 =
-"  DValue _obj = {0,0,0,0,{0}};\n"
-"  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
-"  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;\n"
-"  $(proxy_name)( & _cs, _ro, & _obj, $(parcall) );\n"
-"}\n";
+"  DValue _obj = {0,0,0,0,{0}};\n\
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return;\n\
+  $(proxy_name)( & _cs, _ro, & _obj, $(parcall) );\n\
+}\n";
 
 const string cxx_virt_call_10 =
-"  DValue _obj = {0,0,0,0,{0}};\n"
-"  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
-"  $(vareturn)\n"
-"  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);\n"
-"  return ($(retype))$(proxy_name)( & _cs, _ro, & _obj );\n"
-"}\n";
+"  DValue _obj = {0,0,0,0,{0}};\n\
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  $(vareturn)\n\
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);\n\
+  return ($(retype))$(proxy_name)( & _cs, _ro, & _obj );\n\
+}\n";
 
 const string cxx_virt_call_11 =
-"  DValue _obj = {0,0,0,0,{0}};\n"
-"  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
-"  $(vareturn)\n"
-"  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);\n"
-"  return ($(retype))$(proxy_name)( & _cs, _ro, & _obj, $(parcall) );\n"
-"}\n";
+"  DValue _obj = {0,0,0,0,{0}};\n\
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  $(vareturn)\n\
+  if( _ro ==NULL || _obj.t != DAO_OBJECT ) return $(return);\n\
+  return ($(retype))$(proxy_name)( & _cs, _ro, & _obj, $(parcall) );\n\
+}\n";
 
 const string cxx_proxy_body00 =
-"static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{\n"
-"  if( _ro == NULL ) return;\n"
-"  _ro = DaoMethod_Resolve( _ro, _ob, NULL, 0 );\n"
-"  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n"
-"  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n"
-"  *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );\n"
-"  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n"
-"}\n";
+"static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{\n\
+  if( _ro == NULL ) return;\n\
+  _ro = DaoMethod_Resolve( _ro, _ob, NULL, 0 );\n\
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n\
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+}\n";
 const string cxx_proxy_body01 =
-"static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{\n"
-"  const DValue _dao_nil = {0,0,0,0,{0}};\n"
-"  DValue _dp[$(count)] = { $(nils) };\n"
-"  DValue *_dp2[$(count)] = { $(refs) };\n"
-"  if( _ro == NULL ) return;\n"
-"$(cxx2dao)\n"
-"  _ro = DaoMethod_Resolve( _ro, _ob, _dp2, $(count) );\n"
-"  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n"
-"  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n"
-"  *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) );\n"
-"  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n"
-"  DValue_ClearAll( _dp, $(count) );\n"
-"}\n";
+"static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{\n\
+  const DValue _dao_nil = {0,0,0,0,{0}};\n\
+  DValue _dp[$(count)] = { $(nils) };\n\
+  DValue *_dp2[$(count)] = { $(refs) };\n\
+  if( _ro == NULL ) return;\n\
+$(cxx2dao)\n\
+  _ro = DaoMethod_Resolve( _ro, _ob, _dp2, $(count) );\n\
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n\
+  DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+  DValue_ClearAll( _dp, $(count) );\n\
+}\n";
 const string cxx_proxy_body10 =
-"static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{\n"
-"  DValue _res;\n"
-"  DaoCData *_cd;\n"
-"  DaoVmProcess *_vmp;\n"
-"  $(vareturn)\n"
-"  if( _ro == NULL ) goto EndCall;\n"
-"  _ro = DaoMethod_Resolve( _ro, _ob, NULL, 0 );\n"
-"  if( _ro == NULL || _ro->type != DAO_ROUTINE ) goto EndCall;\n"
-"  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n"
-"  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 )) ==0 ) goto EndCall;\n"
-"  _res = DaoVmProcess_GetReturned( _vmp );\n"
-"  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n"
-"$(getreturn)\n"
-"EndCall:\n"
-"  return $(return);\n"
-"}\n";
+"static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{\n\
+  DValue _res;\n\
+  DaoCData *_cd;\n\
+  DaoVmProcess *_vmp;\n\
+  $(vareturn)\n\
+  if( _ro == NULL ) goto EndCall;\n\
+  _ro = DaoMethod_Resolve( _ro, _ob, NULL, 0 );\n\
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) goto EndCall;\n\
+  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 )) ==0 ) goto EndCall;\n\
+  _res = DaoVmProcess_GetReturned( _vmp );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+$(getreturn)\n\
+EndCall:\n\
+  return $(return);\n\
+}\n";
 const string cxx_proxy_body11 =
-"static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{\n"
-"  const DValue _dao_nil = {0,0,0,0,{0}};\n"
-"  DValue _dp[$(count)] = { $(nils) };\n"
-"  DValue *_dp2[$(count)] = { $(refs) };\n"
-"  DValue _res;\n"
-"  DaoCData *_cd;\n"
-"  DaoVmProcess *_vmp;\n"
-"  $(vareturn)\n"
-"  if( _ro == NULL ) goto EndCall;\n"
-"$(cxx2dao)\n"
-"  _ro = DaoMethod_Resolve( _ro, _ob, _dp2, $(count) );\n"
-"  if( _ro == NULL || _ro->type != DAO_ROUTINE ) goto EndCall;\n"
-"  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n"
-"  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) )) ==0 ) goto EndCall;\n"
-"  _res = DaoVmProcess_GetReturned( _vmp );\n"
-"  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n"
-"$(getreturn)\n"
-"EndCall:\n"
-"  DValue_ClearAll( _dp, $(count) );\n"
-"  return $(return);\n"
-"}\n";
+"static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{\n\
+  const DValue _dao_nil = {0,0,0,0,{0}};\n\
+  DValue _dp[$(count)] = { $(nils) };\n\
+  DValue *_dp2[$(count)] = { $(refs) };\n\
+  DValue _res;\n\
+  DaoCData *_cd;\n\
+  DaoVmProcess *_vmp;\n\
+  $(vareturn)\n\
+  if( _ro == NULL ) goto EndCall;\n\
+$(cxx2dao)\n\
+  _ro = DaoMethod_Resolve( _ro, _ob, _dp2, $(count) );\n\
+  if( _ro == NULL || _ro->type != DAO_ROUTINE ) goto EndCall;\n\
+  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, _ob, _dp2, $(count) )) ==0 ) goto EndCall;\n\
+  _res = DaoVmProcess_GetReturned( _vmp );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+$(getreturn)\n\
+EndCall:\n\
+  DValue_ClearAll( _dp, $(count) );\n\
+  return $(return);\n\
+}\n";
 
+//XXX ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)
 const string cxx_virt_class2 =
-"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n"
-"  int _cs = 0;\n"
-"  return ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
-"}\n";
+"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
+  int _cs = 0;\n\
+  return ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+}\n";
 const string cxx_virt_class3 =
-"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n"
-"  int _cs = 0;\n"
-"  DValue _obj = {0,0,0,0,{0}};\n"
-"  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
-"  if( _ro && _obj.t == DAO_OBJECT ){\n"
-"    ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
-"    if( _cs ) return;\n"
-"  }\n"
-"  $(type)::$(cxxname)( $(parcall) );\n"
-"}\n";
+"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
+  int _cs = 0;\n\
+  DValue _obj = {0,0,0,0,{0}};\n\
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  if( _ro && _obj.t == DAO_OBJECT ){\n\
+    ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+    if( _cs ) return;\n\
+  }\n\
+  $(type)::$(cxxname)( $(parcall) );\n\
+}\n";
 const string cxx_virt_class4 =
-"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n"
-"  int _cs = 0;\n"
-"  DValue _obj = {0,0,0,0,{0}};\n"
-"  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n"
-"  if( _ro && _obj.t == DAO_OBJECT ){\n"
-"    $(vareturn) = ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
-"    if( _cs ) return $(vareturn2);\n"
-"  }\n"
-"  return $(type)::$(cxxname)( $(parcall) );\n"
-"}\n";
+"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
+  int _cs = 0;\n\
+  DValue _obj = {0,0,0,0,{0}};\n\
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  if( _ro && _obj.t == DAO_OBJECT ){\n\
+    $(vareturn) = ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+    if( _cs ) return $(vareturn2);\n\
+  }\n\
+  return $(type)::$(cxxname)( $(parcall) );\n\
+}\n";
 const string cxx_virt_class5 =
-"$(retype) DaoCxxVirt_$(sub)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n"
-"  $(return) ((DaoCxxVirt_$(type)*)this)->$(cxxname)( _cs$(comma) $(parcall) );\n"
-"}\n";
+"$(retype) DaoCxxVirt_$(sub)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n\
+  $(return) ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+}\n";
 
 const string dao_callback_proto =
 "$(retype) Dao_$(type)( $(parlist) );";
 
 const string dao_callback_def =
-"$(retype) Dao_$(type)( $(parlist) )\n"
-"{\n"
-"  DaoCallbackData *_daocallbackdata = (DaoCallbackData*) _ud;\n"
-"  DaoMethod *_ro = _daocallbackdata->callback;\n"
-"  DValueX userdata = _daocallbackdata->userdata;\n"
-"  int _cs = 0;\n"
-"  if( _ro ==NULL ) return;\n"
-"  $(proxy_name)( & _cs, _ro, NULL, $(parcall) );\n"
-"}\n";
+"$(retype) Dao_$(type)( $(parlist) )\n\
+{\n\
+  DaoCallbackData *_daocallbackdata = (DaoCallbackData*) _ud;\n\
+  DaoMethod *_ro = _daocallbackdata->callback;\n\
+  DValueX userdata = _daocallbackdata->userdata;\n\
+  int _cs = 0;\n\
+  if( _ro ==NULL ) return;\n\
+  $(proxy_name)( & _cs, _ro, NULL, $(parcall) );\n\
+}\n";
 
 const string daoqt_slot_slot_decl =
 "   void slot_$(ssname)( void*, void*, const DaoQtMessage& );\n";
 const string daoqt_slot_slot_code =
-"void DaoSS_$(host_typer)::slot_$(ssname)( void*, void*, const DaoQtMessage &_msg )\n"
-"{\n"
-"  DValue **_p = (DValue**) _msg.p2;\n"
-"\n";
+"void DaoSS_$(host_typer)::slot_$(ssname)( void*, void*, const DaoQtMessage &_msg )\n\
+{\n\
+  DValue **_p = (DValue**) _msg.p2;\n\
+\n";
 const string daoqt_sig_slot_decl =
 "   void slot_$(ssname)( $(parlist) );\n";
 const string daoqt_sig_slot_code =
-"void DaoSS_$(host_typer)::slot_$(ssname)( $(parlist) )\n"
-"{\n"
-"  DaoQtMessage _message( $(count) );\n"
-"  assert( $(count) <= DAOQT_MAX_VALUE );\n"
-"  DValue *_dp = _message.p1;\n";
+"void DaoSS_$(host_typer)::slot_$(ssname)( $(parlist) )\n\
+{\n\
+  DaoQtMessage _message( $(count) );\n\
+  assert( $(count) <= DAOQT_MAX_VALUE );\n\
+  DValue *_dp = _message.p1;\n";
 const string daoqt_sig_slot_emit = 
 "  emit signal_$(ssname)( this, \"$(signature)\", _message );\n}\n";
 
@@ -392,6 +378,17 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	retype.name = "_" + decl->getNameAsString();
 	retype.qualType = funcDecl->getResultType();
 }
+bool CDaoFunction::IsFromMainModule()
+{
+	if( funcDecl == NULL ) return false;
+	return module->IsFromMainModule( funcDecl->getLocation() );
+}
+string CDaoFunction::GetInputFile()const
+{
+	if( funcDecl == NULL ) return false;
+	return module->GetFileName( funcDecl->getLocation() );
+}
+
 struct IntString{ int i; string s; };
 
 int CDaoFunction::Generate()
@@ -536,9 +533,6 @@ int CDaoFunction::Generate()
 	cxxProtoParamDecl = cxxprotpars_decl;
 	cxxCallParam = cxxcallpars;
 
-	outs() << "cxxProtoParam: " << cxxProtoParam << "\n";
-	outs() << "cxxProtoParamDecl: " << cxxProtoParamDecl << "\n";
-	outs() << "cxxProtoParamDecl: " << cxxCallParam << "\n";
 	outs() << funcDecl->getQualifiedNameAsString() << "\n";
 
 	DeclContext *dectx = funcDecl->getDeclContext();
@@ -580,8 +574,6 @@ int CDaoFunction::Generate()
 
 	daoProtoCodes = cdao_string_fill( dao_proto, kvmap );
 	cxxProtoCodes = cdao_string_fill( cxx_wrap_proto, kvmap );
-	outs() << daoProtoCodes << "\n";
-	outs() << cxxProtoCodes << "\n";
 
 	kvmap[ "retype" ] = retype.cxxtype;
 	kvmap[ "name" ] = retype.name;
@@ -634,7 +626,6 @@ int CDaoFunction::Generate()
 		else
 			cxxCallCodes = cdao_string_fill( cxx_call_proto2_list[ dd ], kvmap );
 	}
-	outs() << cxxCallCodes << "\n";
 #if 0
 	if( lib_name == LibType.LIB_QT and not excluded ){
 		size = (string)RotatingHash( signature );
@@ -674,7 +665,6 @@ int CDaoFunction::Generate()
 	if( retype.daotype.size() ==0 || host_name == cxxName ) kvmap2[ "return" ] = "";
 	//if( hostType == cxxName ) kvmap2[ 'dao2cxx' ] =''; # XXX 
 	cxxWrapper = cdao_string_fill( cxx_wrap, kvmap2 );
-	outs() << cxxWrapper << "\n";
 #if 0
 	if( cxxWrapper.find( 'self->' + hostType + '::' ) >=0 ){
 		daoProtoCodes.change( ', (%s*) \"(%w+%b())', '__' + hostType + ',%1\"' + hostType + '::%2' );
@@ -737,7 +727,6 @@ int CDaoFunction::Generate()
 		cxxWrapperVirt = cdao_string_fill( cxx_virt_struct, kvmap3 );
 		cxxWrapperVirt += "  int _cs = 0;\n";
 	}
-	outs() << cxxWrapperVirtProto << "\n";
 
 	bool has_return = retype.daotype.size() != 0;
 	bool has_param = (parlist.size() - autoself) > 0;
@@ -810,7 +799,6 @@ int CDaoFunction::Generate()
 		kvmap3[ "parlist" ] = cxxProtoParamVirt;
 		cxxWrapperVirt3 = cdao_string_fill( cxx_virt_class5, kvmap3 );
 	}
-	outs() << cxxWrapperVirt << "\n";
 	parlist.clear();
 	return retcode;
 }

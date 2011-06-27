@@ -16,6 +16,7 @@
 
 #include "cdaoFunction.hpp"
 #include "cdaoUserType.hpp"
+#include "cdaoNamespace.hpp"
 
 using namespace std;
 using namespace llvm;
@@ -69,9 +70,10 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
-	vector<CDaoFunction>  functions;
-	vector<CDaoUserType>  usertypes;
-	map<RecordDecl*,int>  usertypes2;
+	vector<CDaoNamespace>  namespaces;
+	vector<CDaoFunction>   functions;
+	vector<CDaoUserType>   usertypes;
+	map<RecordDecl*,int>   usertypes2;
 
 	static map<string,int>  mapExtensions;
 
@@ -83,8 +85,11 @@ struct CDaoModule
 	bool IsHeaderFile( const string & name );
 	bool IsSourceFile( const string & name );
 	bool IsFromModules( SourceLocation loc );
+	bool IsFromMainModule( SourceLocation loc );
 	bool IsFromModuleSources( SourceLocation loc );
 	bool CheckHeaderDependency();
+
+	string GetFileName( SourceLocation );
 
 	void HandleModuleDeclaration( const MacroInfo *macro );
 	void HandleHeaderInclusion( SourceLocation loc, const string & name, const FileEntry *file );
@@ -93,6 +98,7 @@ struct CDaoModule
 	void HandleVariable( VarDecl *var );
 	void HandleFunction( FunctionDecl *funcdec );
 	void HandleUserType( CXXRecordDecl *record );
+	void HandleNamespace( NamespaceDecl *nsdecl );
 
 	void WriteHeaderIncludes( std::ostream & stream );
 

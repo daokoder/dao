@@ -10,21 +10,7 @@ using namespace std;
 using namespace llvm;
 using namespace clang;
 
-class CDaoModule;
-
-struct CDaoMethodDecl
-{
-	const CXXMethodDecl  *decl;
-
-	string  prototype;
-	string  wrapper;
-
-	CDaoMethodDecl( const CXXMethodDecl *d=NULL, const string & p="", const string & w = "" ){
-		decl = d;
-		prototype = p;
-		wrapper = w;
-	}
-};
+struct CDaoModule;
 
 struct CDaoUserType
 {
@@ -35,6 +21,7 @@ struct CDaoUserType
 	bool hasVirtual; // protected or public virtual function;
 	bool isQObject;
 	bool isQObjectBase;
+	bool isRedundant;
 
 	string  type_decls;
 	string  type_codes;
@@ -43,16 +30,19 @@ struct CDaoUserType
 	string  dao_meths;
 	string  alloc_default;
 	string  cxxWrapperVirt;
-
-	map<string,CDaoMethodDecl>  declmeths;
-	map<string,CDaoMethodDecl>  declvirts;
+	string  typer_codes;
 
 	CDaoUserType( CDaoModule *mod = NULL, RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );
 
 	string GetName()const{ return decl ? decl->getNameAsString() : ""; }
+	string GetTyperName()const{ return GetName(); /* XXX */ }
+	string GetInputFile()const;
 
+	void MakeTyperCodes();
+
+	bool IsFromMainModule();
 	int Generate();
 	int Generate( CXXRecordDecl *decl );
 };
