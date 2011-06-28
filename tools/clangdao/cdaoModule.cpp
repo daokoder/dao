@@ -32,6 +32,9 @@ const string ext_typer = "extern DaoTypeBase *dao_$(type)_Typer;\n";
 const string alias_typer = "DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n";
 
 
+extern string cdao_qname_to_idname( const string & qname );
+
+
 enum CDaoFileExtensionType
 {
 	CDAO_FILE_H ,    // .h
@@ -72,6 +75,32 @@ CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
 	moduleInfo.path = path;
 	for(int i=CDAO_FILE_H; i<=CDAO_FILE_MM; i++)
 		mapExtensions[ cdao_file_extensions[i] ] = i;
+}
+CDaoUserType* CDaoModule::NewUserType( RecordDecl *decl )
+{
+	CDaoUserType *ut = new CDaoUserType( this, decl );
+	allUsertypes2[ decl ] = ut;
+	allUsertypes.push_back( ut );
+	return ut;
+}
+CDaoNamespace* CDaoModule::NewNamespace( NamespaceDecl *decl )
+{
+	CDaoNamespace *ns = new CDaoNamespace( this, decl );
+	ns->HandleExtension( decl );
+	allNamespaces[ decl ] = ns;
+	ns->index = allNamespaces.size();
+	return ns;
+}
+CDaoNamespace* CDaoModule::AddNamespace( NamespaceDecl *decl )
+{
+	NamespaceDecl *orins = decl->getOriginalNamespace();
+	if( decl != orins ){
+		map<NamespaceDecl*,CDaoNamespace*>::iterator find = allNamespaces.find( orins );
+		if( find == allNamespaces.end() ) return NULL;
+		find->second->HandleExtension( decl );
+		return NULL;
+	}
+	return NewNamespace( decl );
 }
 int CDaoModule::CheckFileExtension( const string & name )
 {
@@ -239,14 +268,12 @@ void CDaoModule::HandleUserType( CXXRecordDecl *record )
 	if( not IsFromModules( record->getLocation() ) ) return;
 	outs() << "UserType: " << record->getNameAsString() << "\n";
 	outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
-	usertypes2[ record ] = usertypes.size();
-	usertypes.push_back( CDaoUserType( this, record ) );
+	usertypes.push_back( NewUserType( record ) );
 }
 void CDaoModule::HandleNamespace( NamespaceDecl *nsdecl )
 {
-	if( not IsFromModules( nsdecl->getLocation() ) ) return;
-	if( nsdecl != nsdecl->getOriginalNamespace() ) return;
-	namespaces.push_back( CDaoNamespace( this, nsdecl ) );
+	CDaoNamespace *ns = AddNamespace( nsdecl );
+	if( ns ) namespaces.push_back( ns );
 }
 void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 {
@@ -288,6 +315,108 @@ void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 const char *ifdef_cpp_open = "#ifdef __cplusplus\nextern \"C\"{\n#endif\n";
 const char *ifdef_cpp_close = "#ifdef __cplusplus\n}\n#endif\n";
 
+string CDaoModule::MakeHeaderCodes( vector<CDaoUserType*> & usertypes )
+{
+	int i, n;
+	string codes;
+	map<string,string> kvmap;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = *usertypes[i];
+		if( utp.isRedundant ) continue;
+		kvmap[ "type" ] = utp.GetName();
+		codes += cdao_string_fill( ext_typer, kvmap );
+	}
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = *usertypes[i];
+		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		if( utp.type_decls.size() ) codes += cdao_string_fill( utp.type_decls, kvmap );
+	}
+	return codes;
+}
+string CDaoModule::MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns )
+{
+	int i, n;
+	string codes, idname;
+	map<string,string> kvmap;
+	if( ns ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	//codes += ifdef_cpp_open;
+	codes += "static DaoTypeBase *dao_" + idname + "_Typers[] = \n{\n";
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = *usertypes[i];
+		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		codes += "\tdao_" + utp.GetIdName() + "_Typer,\n";
+	}
+	codes += "\tNULL\n};\n";
+	//codes += ifdef_cpp_close;
+	return codes;
+}
+string CDaoModule::MakeSource2Codes( vector<CDaoUserType*> & usertypes )
+{
+	int i, n;
+	string codes;
+	map<string,string> kvmap;
+	
+	codes += ifdef_cpp_open;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = *usertypes[i];
+		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		codes += "/* " + utp.GetInputFile() + " */\n";
+		codes += cdao_string_fill( utp.typer_codes, kvmap );
+		codes += cdao_string_fill( utp.meth_codes, kvmap );
+	}
+	codes += ifdef_cpp_close;
+	return codes;
+}
+string CDaoModule::MakeSource3Codes( vector<CDaoUserType*> & usertypes )
+{
+	int i, n;
+	string codes;
+	map<string,string> kvmap;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = *usertypes[i];
+		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		codes += cdao_string_fill( utp.type_codes, kvmap );
+	}
+	return codes;
+}
+string CDaoModule::MakeOnLoadCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns )
+{
+	string codes, tname, nsname = "ns";
+	if( ns ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	codes += "\tDaoNameSpace_WrapTypes( " + nsname + ", dao_" + tname + "_Typers );\n";
+	return codes;
+}
+string CDaoModule::MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns )
+{
+	int i, n;
+	string func_decl;
+	string rout_entry;
+	string func_codes;
+	string codes, idname;
+	if( ns ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	for(i=0, n=functions.size(); i<n; i++){
+		CDaoFunction & func = functions[i];
+		if( func.excluded || not func.IsFromMainModule() ) continue;
+		func_decl += func.cxxProtoCodes + ";\n";
+		func_codes += func.cxxWrapper;
+		rout_entry += func.daoProtoCodes;
+	}
+	codes += ifdef_cpp_open;
+	codes += func_decl;
+	codes += "static DaoFuncItem *dao_" + idname + "_Funcs[] = \n{\n" + rout_entry;
+	codes += "  { NULL, NULL }\n};\n";
+	codes += func_codes;
+	codes += ifdef_cpp_close;
+	return codes;
+}
+string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns )
+{
+	string codes, tname, nsname = "ns";
+	if( ns ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	codes += "\tDaoNameSpace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
+	return codes;
+}
+
 int CDaoModule::Generate()
 {
 	if( CheckHeaderDependency() == false ) return 1;
@@ -310,26 +439,21 @@ int CDaoModule::Generate()
 	fout_source << "#include\"" << fname_header << "\"\n";
 	fout_source2 << "#include\"" << fname_header << "\"\n";
 	fout_source3 << "#include\"" << fname_header << "\"\n";
-
 	fout_source << "DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n";
 
 	map<string,int> overloads;
 	int i, n, retcode = 0;
+	for(i=0, n=allUsertypes.size(); i<n; i++) retcode |= allUsertypes[i]->Generate();
 	for(i=0, n=functions.size(); i<n; i++){
 		string name = functions[i].funcDecl->getNameAsString();
 		functions[i].index = ++overloads[name];
 		retcode |= functions[i].Generate();
 	}
-	for(i=0, n=usertypes.size(); i<n; i++) retcode |= usertypes[i].Generate();
-	for(i=0, n=namespaces.size(); i<n; i++) retcode |= namespaces[i].Generate();
+	for(i=0, n=namespaces.size(); i<n; i++) retcode |= namespaces[i]->Generate();
 	map<string,string> kvmap;
 	kvmap[ "module" ] = moduleInfo.name;
-	for(i=0, n=usertypes.size(); i<n; i++){
-		CDaoUserType & utp = usertypes[i];
-		if( utp.isRedundant ) continue;
-		kvmap[ "type" ] = utp.GetName();
-		fout_header << cdao_string_fill( ext_typer, kvmap );
-	}
+
+	fout_header << MakeHeaderCodes( usertypes );
 	fout_source3 << cxx_get_object_method;
 	map<string,CDaoProxyFunction> & proxy_functions = CDaoProxyFunction::proxy_functions;
 	map<string,CDaoProxyFunction>::iterator pit, pend = proxy_functions.end();
@@ -337,52 +461,33 @@ int CDaoModule::Generate()
 		CDaoProxyFunction & proxy = pit->second;
 		if( proxy.used ) fout_source3 << proxy.codes;
 	}
-	fout_source2 << ifdef_cpp_open;
-	for(i=0, n=usertypes.size(); i<n; i++){
-		CDaoUserType & utp = usertypes[i];
-		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
-		if( utp.type_decls.size() ) fout_header << cdao_string_fill( utp.type_decls, kvmap );
-		fout_source2 << "/* " << utp.GetInputFile() << " */\n";
-		fout_source2 << cdao_string_fill( utp.typer_codes, kvmap );
-		fout_source2 << cdao_string_fill( utp.meth_codes, kvmap );
-		fout_source3 << cdao_string_fill( utp.type_codes, kvmap );
+	fout_source << MakeSourceCodes( functions );
+	fout_source << MakeSourceCodes( usertypes );
+	fout_source2 << MakeSource2Codes( usertypes );
+	fout_source3 << MakeSource3Codes( usertypes );
+	for(i=0, n=namespaces.size(); i<n; i++){
+		fout_header << namespaces[i]->header;
+		fout_source << namespaces[i]->source;
+		fout_source2 << namespaces[i]->source2;
+		fout_source3 << namespaces[i]->source3;
 	}
-	fout_source2 << ifdef_cpp_close;
 
-	string func_decl;
-	string rout_entry;
-	string func_codes;
-	for(i=0, n=functions.size(); i<n; i++){
-		CDaoFunction & func = functions[i];
-		if( func.excluded || not func.IsFromMainModule() ) continue;
-		func_decl += func.cxxProtoCodes + ";\n";
-		func_codes += func.cxxWrapper;
-		rout_entry += func.daoProtoCodes;
-	}
 	fout_source << ifdef_cpp_open;
-	fout_source << "static DaoFuncItem dao_Funcs[] =\n{\n" << rout_entry;
-	fout_source << "  { NULL, NULL }\n};\n";
-	fout_source << func_codes;
-
 	string onload = "DaoOnLoad";
 	fout_source << "int " << onload << "( DaoVmSpace *vms, DaoNameSpace *ns )\n{\n";
 	//XXX if( hasNameSpace ) fout_source.writeln( "  DaoNameSpace *ns2;" );
-	fout_source << "  DaoTypeBase *typers[" << usertypes.size()+1 << "];\n";
 	//fout_source << "  const char *aliases[" << nalias << "];\n";
 	fout_source << "  __daoVmSpace = vms;\n";
+	fout_source << MakeOnLoadCodes( usertypes );
+	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload;
+	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload2;
+	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload3;
+	fout_source << MakeOnLoadCodes( functions );
 #if 0
 	if( lib_name == LibType.LIB_QT ){
 		fout_source.write( "   qRegisterMetaType<DaoQtMessage>(\"DaoQtMessage\");\n" );
 	}
 #endif
-	int count = 0;
-	for(i=0, n=usertypes.size(); i<n; i++){
-		CDaoUserType & utp = usertypes[i];
-		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
-		fout_source << "  typers[" << count << "] = dao_" + utp.GetTyperName() + "_Typer;\n";
-		count = count + 1;
-	}
-	fout_source << "  typers[" << count << "] = NULL;\n";
 	fout_source << "  return 0;\n}\n";
 
 	fout_source << ifdef_cpp_close;

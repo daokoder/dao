@@ -12,6 +12,8 @@ namespace NS{
 void second_function( SecondClass *obj, int n );
 
 class Nested{};
+
+	namespace NS2{ class Nested{}; }
 };
 void second_function( SecondClass *obj, int n );
 

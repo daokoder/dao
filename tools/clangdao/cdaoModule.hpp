@@ -70,14 +70,21 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
-	vector<CDaoNamespace>  namespaces;
-	vector<CDaoFunction>   functions;
-	vector<CDaoUserType>   usertypes;
-	map<RecordDecl*,int>   usertypes2;
+	vector<CDaoNamespace*>  namespaces;
+	vector<CDaoUserType*>   usertypes;
+	vector<CDaoFunction>    functions;
+
+	vector<CDaoUserType*>               allUsertypes;
+	map<RecordDecl*,CDaoUserType*>      allUsertypes2;
+	map<NamespaceDecl*,CDaoNamespace*>  allNamespaces;
 
 	static map<string,int>  mapExtensions;
 
 	CDaoModule( CompilerInstance *com, const string & path );
+
+	CDaoUserType* NewUserType( RecordDecl *decl );
+	CDaoNamespace* NewNamespace( NamespaceDecl *decl );
+	CDaoNamespace* AddNamespace( NamespaceDecl *decl );
 
 	int Generate();
 
@@ -103,6 +110,15 @@ struct CDaoModule
 	void WriteHeaderIncludes( std::ostream & stream );
 
 	string MakeDaoFunctionPrototype( FunctionDecl *funcdec );
+
+	string MakeHeaderCodes( vector<CDaoUserType*> & usertypes );
+	string MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns = NULL );
+	string MakeSource2Codes( vector<CDaoUserType*> & usertypes );
+	string MakeSource3Codes( vector<CDaoUserType*> & usertypes );
+	string MakeOnLoadCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns = NULL );
+
+	string MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
+	string MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
 
 	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );
 	string ExtractSource( const SourceRange & range, bool original = true );

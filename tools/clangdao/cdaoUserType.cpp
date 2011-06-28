@@ -671,14 +671,14 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	string class_new;
 	string class_decl;
 
-	map<RecordDecl*,int>::iterator find;
+	map<RecordDecl*,CDaoUserType*>::iterator find;
 	CXXRecordDecl::base_class_iterator baseit, baseend = decl->bases_end();
 	for(baseit=decl->bases_begin(); baseit != baseend; baseit++){
 		CXXRecordDecl *p = baseit->getType().getTypePtr()->getAsCXXRecordDecl();
-		find = module->usertypes2.find( p );
-		if( find == module->usertypes2.end() ) continue;
+		find = module->allUsertypes2.find( p );
+		if( find == module->allUsertypes2.end() ) continue;
 
-		CDaoUserType & sup = module->usertypes[ find->second ];
+		CDaoUserType & sup = *find->second;
 		string supname = sup.GetName();
 		bases.push_back( & sup );
 		outs() << "parent: " << p->getNameAsString() << "\n";
@@ -995,7 +995,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	if( not noWrapping ) type_codes += cxxWrapperVirt;
 
 	string parents, casts, cast_funcs;
-	string typer_name = GetTyperName();
+	string typer_name = GetIdName();
 	string qname = decl->getQualifiedNameAsString();
 	kvmap[ "typer" ] = typer_name;
 	kvmap[ "child" ] = qname;
@@ -1004,7 +1004,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	for(i=0,n=bases.size(); i<n; i++){
 		CDaoUserType *sup = bases[i];
 		string supname = sup->GetName();
-		string supname2 = sup->GetTyperName();
+		string supname2 = sup->GetIdName();
 		parents += "dao_" + typer_name + "_Typer, ";
 		casts += "dao_cast_" + typer_name + "_to_" + supname2 + ",";
 		kvmap[ "parent" ] = supname;

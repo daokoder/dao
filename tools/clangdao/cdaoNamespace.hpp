@@ -18,20 +18,24 @@ struct CDaoNamespace
 	CDaoModule     *module;
 	NamespaceDecl  *nsdecl;
 
-	vector<CDaoNamespace>  namespaces;
-	vector<CDaoUserType>   usertypes;
-	vector<CDaoFunction>   functions;
+	int index;
+
+	vector<CDaoNamespace*>  namespaces;
+	vector<CDaoUserType*>   usertypes;
+	vector<CDaoFunction>    functions;
 
 	string  header;
 	string  source;
 	string  source2;
 	string  source3;
 	string  onload;
+	string  onload2;
+	string  onload3;
 
 	CDaoNamespace( CDaoModule *mod = NULL, NamespaceDecl *decl = NULL );
 
-	int Generate();
-	void Extract( NamespaceDecl *nsdecl );
+	int Generate( CDaoNamespace *outer = NULL );
+	void HandleExtension( NamespaceDecl *nsdecl );
 };
 
 #endif

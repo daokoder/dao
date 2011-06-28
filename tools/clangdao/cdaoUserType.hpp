@@ -12,6 +12,8 @@ using namespace clang;
 
 struct CDaoModule;
 
+extern string cdao_qname_to_idname( const string & qname );
+
 struct CDaoUserType
 {
 	CDaoModule  *module;
@@ -37,7 +39,8 @@ struct CDaoUserType
 	void SetDeclaration( RecordDecl *decl );
 
 	string GetName()const{ return decl ? decl->getNameAsString() : ""; }
-	string GetTyperName()const{ return GetName(); /* XXX */ }
+	string GetQName()const{ return decl ? decl->getQualifiedNameAsString() : ""; }
+	string GetIdName()const{ return cdao_qname_to_idname( GetQName() ); }
 	string GetInputFile()const;
 
 	void MakeTyperCodes();

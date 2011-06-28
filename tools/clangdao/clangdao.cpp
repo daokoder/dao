@@ -110,6 +110,17 @@ string cdao_string_fill( const string & tpl, const map<string,string> & subs )
 	result += gap;
 	return result;
 }
+// qualified name to single identifier name:
+string cdao_qname_to_idname( const string & qname )
+{
+	string idname = qname;
+	size_t pos;
+	while( (pos = idname.find( "::" )) != string::npos ) idname.replace( pos, 2, "_0_" );
+	while( (pos = idname.find( "<" )) != string::npos ) idname.replace( pos, 1, "_1_" );
+	while( (pos = idname.find( ">" )) != string::npos ) idname.replace( pos, 1, "_2_" );
+	while( (pos = idname.find( "," )) != string::npos ) idname.replace( pos, 1, "_3_" );
+	return idname;
+}
 
 
 
