@@ -22,6 +22,8 @@ using namespace std;
 using namespace llvm;
 using namespace clang;
 
+extern string cdao_qname_to_idname( const string & qname );
+
 struct CDaoModuleInfo
 {
 	string      name;
@@ -74,15 +76,17 @@ struct CDaoModule
 	vector<CDaoUserType*>   usertypes;
 	vector<CDaoFunction>    functions;
 
-	vector<CDaoUserType*>               allUsertypes;
-	map<RecordDecl*,CDaoUserType*>      allUsertypes2;
-	map<NamespaceDecl*,CDaoNamespace*>  allNamespaces;
+	vector<CDaoUserType*>                     allUsertypes;
+	map<const RecordDecl*,CDaoUserType*>      allUsertypes2;
+	map<const NamespaceDecl*,CDaoNamespace*>  allNamespaces;
 
 	static map<string,int>  mapExtensions;
 
 	CDaoModule( CompilerInstance *com, const string & path );
 
+	CDaoUserType* GetUserType( const RecordDecl *decl );
 	CDaoUserType* NewUserType( RecordDecl *decl );
+	CDaoNamespace* GetNamespace( const NamespaceDecl *decl );
 	CDaoNamespace* NewNamespace( NamespaceDecl *decl );
 	CDaoNamespace* AddNamespace( NamespaceDecl *decl );
 
@@ -122,6 +126,9 @@ struct CDaoModule
 
 	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );
 	string ExtractSource( const SourceRange & range, bool original = true );
+
+	static string GetQName( const NamedDecl *D ){ return D ? D->getQualifiedNameAsString() : ""; }
+	static string GetIdName( const NamedDecl *D ){ return cdao_qname_to_idname( GetQName( D ) ); }
 };
 
 #endif

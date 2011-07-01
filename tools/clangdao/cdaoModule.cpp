@@ -76,6 +76,18 @@ CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
 	for(int i=CDAO_FILE_H; i<=CDAO_FILE_MM; i++)
 		mapExtensions[ cdao_file_extensions[i] ] = i;
 }
+CDaoUserType* CDaoModule::GetUserType( const RecordDecl *decl )
+{
+	map<const RecordDecl*,CDaoUserType*>::iterator it = allUsertypes2.find( decl );
+	if( it == allUsertypes2.end() ) return NULL;
+	return it->second;
+}
+CDaoNamespace* CDaoModule::GetNamespace( const NamespaceDecl *decl )
+{
+	map<const NamespaceDecl*,CDaoNamespace*>::iterator it = allNamespaces.find( decl );
+	if( it == allNamespaces.end() ) return NULL;
+	return it->second;
+}
 CDaoUserType* CDaoModule::NewUserType( RecordDecl *decl )
 {
 	CDaoUserType *ut = new CDaoUserType( this, decl );
@@ -95,7 +107,7 @@ CDaoNamespace* CDaoModule::AddNamespace( NamespaceDecl *decl )
 {
 	NamespaceDecl *orins = decl->getOriginalNamespace();
 	if( decl != orins ){
-		map<NamespaceDecl*,CDaoNamespace*>::iterator find = allNamespaces.find( orins );
+		map<const NamespaceDecl*,CDaoNamespace*>::iterator find = allNamespaces.find( orins );
 		if( find == allNamespaces.end() ) return NULL;
 		find->second->HandleExtension( decl );
 		return NULL;

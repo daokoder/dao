@@ -60,6 +60,7 @@ struct CDaoVariable
 	int Generate2( int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const BuiltinType *type, int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const PointerType *type, int daopar_index = 0, int cxxpar_index = 0 );
+	int Generate( const ReferenceType *type, int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const ArrayType *type, int daopar_index = 0, int cxxpar_index = 0 );
 };
 

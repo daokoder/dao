@@ -20,6 +20,7 @@ struct CDaoUserType
 	RecordDecl  *decl;
 
 	bool noWrapping;
+	bool noConstructor;
 	bool hasVirtual; // protected or public virtual function;
 	bool isQObject;
 	bool isQObjectBase;

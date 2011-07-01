@@ -121,6 +121,51 @@ string cdao_qname_to_idname( const string & qname )
 	while( (pos = idname.find( "," )) != string::npos ) idname.replace( pos, 1, "_3_" );
 	return idname;
 }
+void remove_type_prefix( string & name, const string & key )
+{
+	string key2 = key + " ";
+	size_t klen = key2.size();
+	size_t pos, from = 0;
+	while( (pos = name.find( key2, from )) != string::npos ){
+		if( pos == 0 || (isalnum( name[pos-1] ) ==0 && name[pos-1] != '_') ){
+			name.replace( pos, klen, "" );
+		}else{
+			from = pos + klen;
+		}
+	}
+}
+string normalize_type_name( const string & name0 )
+{
+	string name = name0;
+	size_t pos, from = 0;
+	while( (pos = name.find( "\t" )) != string::npos ) name.replace( pos, 1, "" );
+	while( (pos = name.find( "\n" )) != string::npos ) name.replace( pos, 1, "" );
+	while( (pos = name.find( "  " )) != string::npos ) name.replace( pos, 2, " " );
+	from = 0;
+	while( (pos = name.find( " ", from )) != string::npos ){
+		if( pos == 0 || (pos+1) == name.size() ){
+			name.replace( pos, 1, "" );
+			continue;
+		}
+		from = pos + 1;
+		char prev = name[pos-1], next = name[pos+1];
+		if( (isalnum( prev ) || prev == '_') && (isalnum( next ) || next == '_') ) continue;
+		name.replace( pos, 1, "" );
+	}
+	remove_type_prefix( name, "class" );
+	remove_type_prefix( name, "struct" );
+	remove_type_prefix( name, "enum" );
+	return name;
+	from = 0;
+	while( (pos = name.find( "class ", from )) != string::npos ){
+		if( pos == 0 || (isalnum( name[pos-1] ) ==0 && name[pos-1] != '_') ){
+			name.replace( pos, 6, "" );
+		}else{
+			from = pos + 6;
+		}
+	}
+	return name;
+}
 
 
 
@@ -186,6 +231,9 @@ int main(int argc, char *argv[] )
 	map<string,string> kv;
 	kv[ "aaa" ] = "AAA"; kv[ "abc" ] = "ABC";
 	outs() << cdao_string_fill( "$(aaa)123$(abc)456$(def)", kv ) << "\n";
+
+	outs() << normalize_type_name( "void (class SecondClass *, int)" ) << "\n";
+	//return 0;
 
 	return module.Generate();
 }

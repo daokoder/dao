@@ -1,5 +1,4 @@
 
-#include <llvm/Support/Regex.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Sema/DeclSpec.h>
 #include <map>
@@ -611,7 +610,7 @@ extern string cdao_string_fill( const string & tpl, const map<string,string> & s
 CDaoUserType::CDaoUserType( CDaoModule *mod, RecordDecl *decl )
 {
 	module = mod;
-	noWrapping = hasVirtual = false;
+	noWrapping = hasVirtual = noConstructor = false;
 	isQObject = isQObjectBase = false;
 	isRedundant = true;
 	alloc_default = "NULL";
@@ -671,7 +670,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	string class_new;
 	string class_decl;
 
-	map<RecordDecl*,CDaoUserType*>::iterator find;
+	map<const RecordDecl*,CDaoUserType*>::iterator find;
 	CXXRecordDecl::base_class_iterator baseit, baseend = decl->bases_end();
 	for(baseit=decl->bases_begin(); baseit != baseend; baseit++){
 		CXXRecordDecl *p = baseit->getType().getTypePtr()->getAsCXXRecordDecl();
@@ -715,6 +714,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	}
 
 	bool has_ctor = false;
+	bool has_public_ctor = false;
 	bool has_protected_ctor = false;
 	bool has_private_ctor = false;
 	bool has_private_default_ctor = false;
@@ -731,6 +731,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			has_implicit_default_ctor = false;
 			if( ctorit->getAccess() == AS_private ) has_private_ctor = true;
 			if( ctorit->getAccess() == AS_protected ) has_protected_ctor = true;
+			if( ctorit->getAccess() == AS_public ) has_public_ctor = true;
 			if( ctorit->param_size() == 0 ){
 				has_explicit_default_ctor = true;
 				if( ctorit->getAccess() == AS_private ) has_private_default_ctor = true;
@@ -748,6 +749,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	// no explicit default constructor and explicit private constructor
 	// imply private default constructor:
 	if( has_private_ctor && not has_explicit_default_ctor ) has_private_default_ctor = true;
+	if( has_implicit_default_ctor ) has_public_ctor = true;
+	noConstructor = noWrapping || (has_public_ctor == false && has_protected_ctor == false);
 
 	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
 	kvmap[ "host_typer" ] = name;

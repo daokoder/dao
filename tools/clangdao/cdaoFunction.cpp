@@ -1,39 +1,40 @@
 
 #include <llvm/ADT/StringExtras.h>
+#include <clang/Sema/DeclSpec.h>
 #include "cdaoFunction.hpp"
 #include "cdaoModule.hpp"
 
 const string cxx_wrap_proto 
-= "static void dao_$(host_typer)_$(cxxname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )";
+= "static void dao_$(func_idname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )";
 
 const string cxx_call_proto = 
-"  $(retype) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n";
+"  $(retype) $(name) = $(func_call)( $(parlist) );\n";
 
 const string cxx_call_proto_d1 = 
 "  $(retype) $(name);\n\
-  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+  if(_n<=$(n1)) $(name) = $(func_call)( $(parlist1) );\n\
+  else $(name) = $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto_d2 = 
 "  $(retype) $(name);\n\
-  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
-  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+  if(_n<=$(n1)) $(name) = $(func_call)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(func_call)( $(parlist2) );\n\
+  else $(name) = $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto_d3 = 
 "  $(retype) $(name);\n\
-  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
-  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
-  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+  if(_n<=$(n1)) $(name) = $(func_call)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(func_call)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(name) = $(func_call)( $(parlist3) );\n\
+  else $(name) = $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto_d4 = 
 "  $(retype) $(name);\n\
-  if(_n<=$(n1)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else if(_n<=$(n2)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
-  else if(_n<=$(n3)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
-  else if(_n<=$(n4)) $(name) = $(self)$(func_ns)$(cxxname)( $(parlist4) );\n\
-  else $(name) = $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+  if(_n<=$(n1)) $(name) = $(func_call)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(name) = $(func_call)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(name) = $(func_call)( $(parlist3) );\n\
+  else if(_n<=$(n4)) $(name) = $(func_call)( $(parlist4) );\n\
+  else $(name) = $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto_list[] = 
 {
@@ -45,29 +46,29 @@ const string cxx_call_proto_list[] =
 };
 
 const string cxx_call_proto2 = 
-"  $(self)$(func_ns)$(cxxname)( $(parlist) );\n";
+"  $(func_call)( $(parlist) );\n";
 
 const string cxx_call_proto2_d1 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(func_call)( $(parlist1) );\n\
+  else $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto2_d2 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
-  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(func_call)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(func_call)( $(parlist2) );\n\
+  else $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto2_d3 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
-  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
-  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(func_call)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(func_call)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(func_call)( $(parlist3) );\n\
+  else $(func_call)( $(parlist) );\n"
 ;
 const string cxx_call_proto2_d4 = 
-"  if(_n<=$(n1)) $(self)$(func_ns)$(cxxname)( $(parlist1) );\n\
-  else if(_n<=$(n2)) $(self)$(func_ns)$(cxxname)( $(parlist2) );\n\
-  else if(_n<=$(n3)) $(self)$(func_ns)$(cxxname)( $(parlist3) );\n\
-  else if(_n<=$(n4)) $(self)$(func_ns)$(cxxname)( $(parlist4) );\n\
-  else $(self)$(func_ns)$(cxxname)( $(parlist) );\n"
+"  if(_n<=$(n1)) $(func_call)( $(parlist1) );\n\
+  else if(_n<=$(n2)) $(func_call)( $(parlist2) );\n\
+  else if(_n<=$(n3)) $(func_call)( $(parlist3) );\n\
+  else if(_n<=$(n4)) $(func_call)( $(parlist4) );\n\
+  else $(func_call)( $(parlist) );\n"
 ;
 
 const string cxx_call_proto2_list[] = 
@@ -152,14 +153,14 @@ const string cxx_call_static2_list[] =
 };
 
 const string cxx_call_new = 
-"	$(host_qname) *_self = Dao_$(host_typer)_New( $(parlist) );\n\
-	DaoContext_PutCData( _ctx, _self, dao_$(host_typer)_Typer );\n";
+"	$(host_qname) *_self = Dao_$(host_idname)_New( $(parlist) );\n\
+	DaoContext_PutCData( _ctx, _self, dao_$(host_idname)_Typer );\n";
 const string cxx_call_new2 = 
-"	DaoCxx_$(host_typer) *_self = DaoCxx_$(host_typer)_New( $(parlist) );\n\
+"	DaoCxx_$(host_idname) *_self = DaoCxx_$(host_idname)_New( $(parlist) );\n\
 	DaoContext_PutResult( _ctx, (DaoBase*) _self->cdata );\n";
 
 const string dao_proto =
-"  { dao_$(host_typer)_$(cxxname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
+"  { dao_$(func_idname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
 
 const string cxx_wrap = 
 "$(proto)\n{\n$(dao2cxx)\n$(cxxcall)$(parset)$(return)}\n";
@@ -234,6 +235,7 @@ const string cxx_proxy_body00 =
   *_cs = DaoVmProcess_Call( _vmp, _ro, _ob, NULL, 0 );\n\
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
 }\n";
+
 const string cxx_proxy_body01 =
 "static void $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{\n\
   const DValue _dao_nil = {0,0,0,0,{0}};\n\
@@ -248,6 +250,7 @@ $(cxx2dao)\n\
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
   DValue_ClearAll( _dp, $(count) );\n\
 }\n";
+
 const string cxx_proxy_body10 =
 "static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob )\n{\n\
   DValue _res;\n\
@@ -265,6 +268,7 @@ $(getreturn)\n\
 EndCall:\n\
   return $(return);\n\
 }\n";
+
 const string cxx_proxy_body11 =
 "static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DValue *_ob, $(parlist) )\n{\n\
   const DValue _dao_nil = {0,0,0,0,{0}};\n\
@@ -294,6 +298,7 @@ const string cxx_virt_class2 =
   int _cs = 0;\n\
   return ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
 }\n";
+
 const string cxx_virt_class3 =
 "$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
   int _cs = 0;\n\
@@ -305,6 +310,7 @@ const string cxx_virt_class3 =
   }\n\
   $(type)::$(cxxname)( $(parcall) );\n\
 }\n";
+
 const string cxx_virt_class4 =
 "$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
   int _cs = 0;\n\
@@ -316,6 +322,7 @@ const string cxx_virt_class4 =
   }\n\
   return $(type)::$(cxxname)( $(parcall) );\n\
 }\n";
+
 const string cxx_virt_class5 =
 "$(retype) DaoCxxVirt_$(sub)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n\
   $(return) ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
@@ -337,24 +344,28 @@ const string dao_callback_def =
 
 const string daoqt_slot_slot_decl =
 "   void slot_$(ssname)( void*, void*, const DaoQtMessage& );\n";
+
 const string daoqt_slot_slot_code =
-"void DaoSS_$(host_typer)::slot_$(ssname)( void*, void*, const DaoQtMessage &_msg )\n\
+"void DaoSS_$(host_idname)::slot_$(ssname)( void*, void*, const DaoQtMessage &_msg )\n\
 {\n\
-  DValue **_p = (DValue**) _msg.p2;\n\
-\n";
+  DValue **_p = (DValue**) _msg.p2;\n";
+
 const string daoqt_sig_slot_decl =
 "   void slot_$(ssname)( $(parlist) );\n";
+
 const string daoqt_sig_slot_code =
-"void DaoSS_$(host_typer)::slot_$(ssname)( $(parlist) )\n\
+"void DaoSS_$(host_idname)::slot_$(ssname)( $(parlist) )\n\
 {\n\
   DaoQtMessage _message( $(count) );\n\
   assert( $(count) <= DAOQT_MAX_VALUE );\n\
   DValue *_dp = _message.p1;\n";
+
 const string daoqt_sig_slot_emit = 
 "  emit signal_$(ssname)( this, \"$(signature)\", _message );\n}\n";
 
 
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
+extern string normalize_type_name( const string & name );
 
 CDaoFunction::CDaoFunction( CDaoModule *mod, FunctionDecl *decl, int idx )
 {
@@ -370,13 +381,23 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	funcDecl = decl;
 	parlist.clear();
 	if( decl == NULL ) return;
+	
+	string sig = funcDecl->getNameAsString() + "(";
 	for(i=0, n=decl->param_size(); i<n; i++){
 		ParmVarDecl *pardecl = decl->getParamDecl( i );
-		outs() << i << " " << (void*)pardecl << "\n";
 		parlist.push_back( CDaoVariable( module, pardecl ) );
+		if( i ) sig += ",";
+		sig += pardecl->getTypeSourceInfo()->getType().getAsString();
 	}
 	retype.name = "_" + decl->getNameAsString();
 	retype.qualType = funcDecl->getResultType();
+
+	sig += ")";
+	sig = normalize_type_name( sig );
+	map<string,vector<string> >::iterator it = module->functionHints.find( sig );
+	if( it == module->functionHints.end() ) return;
+	outs() << "hints found for: " << sig << "\n";
+	vector<string> & hints = it->second;
 }
 bool CDaoFunction::IsFromMainModule()
 {
@@ -393,17 +414,19 @@ struct IntString{ int i; string s; };
 
 int CDaoFunction::Generate()
 {
+	bool isconst = false;
 	const CXXMethodDecl *methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
 	const CXXRecordDecl *hostdecl = NULL;
 	ASTContext & ctx = module->compiler->getASTContext();
-	string host_name, host_qname, host_typer;
+	string host_name, host_qname, host_idname;
 	int autoself = 0;
 	if( methdecl ){
 		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( methdecl );
 		hostdecl = methdecl->getParent();
 		host_name = hostdecl->getName().str();
-		host_qname = host_typer = hostdecl->getQualifiedNameAsString();
-		//host_typer.replace( "::", "_" ); // TODO
+		host_qname = CDaoModule::GetQName( hostdecl );
+		host_idname = CDaoModule::GetIdName( hostdecl );
+		isconst = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
 		if( methdecl->isInstance() && ctor == NULL ){
 			parlist.insert( parlist.begin(), CDaoVariable( module ) );
 			parlist.front().qualType = ctx.getPointerType( ctx.getRecordType( hostdecl ) );
@@ -415,7 +438,8 @@ int CDaoFunction::Generate()
 	int retcode = 0;
 	int i, n = parlist.size();
 	for(i=0; i<n; i++) retcode |= parlist[i].Generate( i, i-autoself );
-	retype.Generate( VAR_INDEX_RETURN );
+	retcode |= retype.Generate( VAR_INDEX_RETURN );
+	excluded = retcode != 0;
 
 #if 0
 	if( retype.unsupport or retype.isCallback ) excluded = 1;
@@ -442,7 +466,7 @@ int CDaoFunction::Generate()
 	vector<IntString> calls_with_defaults;
 	for(i=0; i<n; i++){
 		CDaoVariable & vo = parlist[i];
-		outs() << vo.name << vo.unsupport << "-----------------\n";
+		//outs() << vo.name << vo.unsupport << "-----------------\n";
 		if( vo.unsupport ){
 			excluded = true;
 			return 1;
@@ -473,6 +497,7 @@ int CDaoFunction::Generate()
 		signature += vo.cxxtype;
 		signature2 += vo.cxxtype2;
 		//cxxProtoParamVirt += vo.cxxpar_enum_virt;
+		cxxProtoParamVirt += vo.cxxpar;
 		cxxprotpars += vo.cxxpar;
 		cxxprotpars_decl += vo.cxxpar + vo.cxxdefault;
 		cxxcallpars += vo.cxxcall;
@@ -489,14 +514,7 @@ int CDaoFunction::Generate()
 #endif
 	}
 #if 0
-	if( retype.unsupport ) excluded = 1;
 	if( hasCallback and not hasUserData ) excluded = 1;
-	for( i = 0 : pcount-1 ){
-		vo = parlist[i];
-		if( vo.sqsizes.size() >=2 ){
-			dao2cxxcodes += vo.dao2cxx;
-		}
-	}
 	nowrap = excluded;
 	if( not nowrap and ($FUNC_PROTECTED in attribs) ){
 		nowrap = ($FUNC_STATIC in attribs or $FUNC_PURE_VIRTUAL in attribs);
@@ -505,51 +523,32 @@ int CDaoFunction::Generate()
 			if( vo.typename != vo.type_trans ) nowrap = 1;
 		}
 	}
-	signature += ')';
-	signature2 += ')';
-	if( $FUNC_CONST in attribs ){
-		signature += 'const';
-		signature2 += 'const';
-	}
-	if( excluded ){ 
-		// signature might be improperly generated for excluded function
-		// that has complex types
-		parts = source.capture( '^(.*)((%w+) %s* %b() .*)$' );
-		ret = parts[1];
-		par = parts[2];
-		ret.change( '([^%w%s]|^)%s+([^%w%s]|$)', '%1%2' ); // join special letter
-		ret.change( '(%w|^)%s+([^%w%s]|$)', '%1%2' ); // join alnum_ and special
-		par.change( '([^%w%s]|^)%s+(%w|$)', '%1%2' ); // join special and alnum_
-
-		source = ret + ' ' + par;
-		signature = source;
-		signature2 = source;
-		//io.writeln( source );
-	}
 #endif
-	// if( excluded ) return; // can not return here, 
+	signature += ")";
+	signature2 += ")";
+	if( isconst ){
+		signature += "const";
+		signature2 += "const";
+	}
+	outs() << signature << "\n";
+	outs() << signature2 << "\n";
+	outs() << funcDecl->getTypeSourceInfo()->getType().getAsString() << "\n";
+
 	// because C/C++ parameter list is need for constructors!
 	cxxProtoParam = cxxprotpars;
 	cxxProtoParamDecl = cxxprotpars_decl;
 	cxxCallParam = cxxcallpars;
 
-	outs() << funcDecl->getQualifiedNameAsString() << "\n";
-
-	DeclContext *dectx = funcDecl->getDeclContext();
-	outs() << (void*)dectx << "\n";
-	if( dectx && dectx->isNamespace() ){
-		NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>( dectx );
-		outs() << nsdecl->getName().str() << "\n";
-	}
-	
 	string overload;
 	if( index > 1 ) overload = "_dao_" + utostr( index );
 
-	cxxWrapName = "dao_" + host_typer + "_" + cxxName;
+	cxxWrapName = "dao_" + host_idname + "_" + cxxName;
 
 	map<string,string> kvmap;
 	kvmap[ "host_qname" ] = host_qname;
-	kvmap[ "host_typer" ] = host_typer;
+	kvmap[ "host_idname" ] = host_idname;
+	kvmap[ "func_idname" ] = CDaoModule::GetIdName( funcDecl );
+	kvmap[ "func_call" ] = CDaoModule::GetQName( funcDecl );
 	kvmap[ "cxxname" ] = cxxName;
 	kvmap[ "daoname" ] = daoName;
 	kvmap[ "parlist" ] = daoprotpars;
@@ -563,15 +562,6 @@ int CDaoFunction::Generate()
 
 	if( retype.daotype != "" ) kvmap[ "retype" ] = "=>" + retype.daotype;
 
-#if 0
-	kvmap = { 'host'=>hostType, 'cxxname'=>cxxName + nameSuffix,
-	'daoname'=>daoName, 'parlist'=>daoprotpars, 'retype'=>'', 'namespace'=>'',
-	'self'=>'', 'overload'=>overload, 'count'=>(string)(parlist.size()-1), 
-	'nils'=>nils, 'refs'=>refs, 'signature'=>signature, 'file'=>input_file,
-	'func_ns'=>'', 'host_ns'=>'' };
-	if( snamespace ) kvmap[ 'func_ns' ] = snamespace + '::';
-#endif
-
 	daoProtoCodes = cdao_string_fill( dao_proto, kvmap );
 	cxxProtoCodes = cdao_string_fill( cxx_wrap_proto, kvmap );
 
@@ -581,39 +571,27 @@ int CDaoFunction::Generate()
 	
 	if( methdecl ){
 		string ss = "self->";
-
 		if( methdecl->getAccess() != AS_protected && ! methdecl->isPure() ){
 			ss += host_name + "::";
 		}
-		kvmap[ "self" ] = ss;
-		kvmap[ "parlist" ] = cxxCallParamV;
+		kvmap[ "func_call" ] = ss + cxxName;
 	}
-#if 0
-	if( map_user_types.has( hostType ) ){
-		utp = map_user_types[ hostType ];
-		if( utp.snamespace ) kvmap[ 'host_ns' ] = utp.snamespace + '::';
-	}
-#endif
 	int dd = calls_with_defaults.size();
-	//if( dd > 4 ) io.writeln( source );
 	for(i=1; i<=dd; i++){
 		IntString & tup2 = calls_with_defaults[i-1];
 		kvmap[ "n" + utostr(i) ] = utostr( tup2.i );
 		kvmap[ "parlist" + utostr(i) ] = tup2.s;
 	}
-	if( host_name == cxxName and not excluded ){
+	CDaoUserType *usertype = module->GetUserType( hostdecl );
+	if( usertype && host_name == cxxName and not excluded ){
 		//kvmap[ 'parlist' ] = ''; // XXX disable parameters at the moment
-#if 0
-		utp = map_user_types[ hostType ];
-		if( utp.snamespace ) kvmap[ 'namespace' ] = utp.snamespace + '::';
-		if( not utp.noConstructor ){
-			if( utp.hasVirtual ){
-				cxxCallCodes = cxx_call_new2.expand( kvmap );
+		if( not usertype->noConstructor ){
+			if( usertype->hasVirtual ){
+				cxxCallCodes = cdao_string_fill( cxx_call_new2, kvmap );
 			}else{
-				cxxCallCodes = cxx_call_new.expand( kvmap );
+				cxxCallCodes = cdao_string_fill( cxx_call_new, kvmap );
 			}
 		}
-#endif
 		//if( parlist.size() ) cxxCallCodes = ''; // XXX maybe there is no default constru
 	}else if( retype.daotype != "" ){
 		if( methdecl && methdecl->isStatic() )
@@ -651,10 +629,6 @@ int CDaoFunction::Generate()
 	}
 #endif
 	
-#if 0
-	kvmap2 = { 'file'=>input_file, 'proto'=>cxxProtoCodes, 'dao2cxx'=>dao2cxxcodes,
-	'cxxcall'=>cxxCallCodes, 'parset'=>parsetcodes, 'return'=>retype.ctxput };
-#endif
 	map<string,string> kvmap2;
 	kvmap2[ "proto" ] = cxxProtoCodes;
 	kvmap2[ "dao2cxx" ] = dao2cxxcodes;
@@ -671,15 +645,10 @@ int CDaoFunction::Generate()
 		cxxProtoCodes.change( '_(%w+)(%b())', '_%1__' + hostType + '%2' );
 		cxxWrapper.change( '({{static void }}%w+)_(%w+)(%b())', '%1_%2__' + hostType + '%3' );
 	}
-	
-	kvmap3 = { 'retype'=>retype.cxxtype, 'type'=>hostType, 'cxxname'=>cxxName,
-	'parlist'=>cxxProtoParam, 'count'=>(string)parlist.size(), 'nils'=>nils, 
-	'refs'=>refs, 'cxx2dao'=>cxx2daocodes, 'vareturn'=>retype.cxxpar + ' = 0;',
-	'return'=>retype.name, 'getreturn'=>retype.getres, 'const'=>'' };
 #endif
 	map<string,string> kvmap3;
 	kvmap3[ "retype" ] = retype.cxxtype;
-	kvmap3[ "type" ] = host_typer;
+	kvmap3[ "type" ] = host_idname;
 	kvmap3[ "cxxname" ] = cxxName;
 	kvmap3[ "parlist" ] = cxxProtoParam;
 	kvmap3[ "count" ] = utostr( parlist.size() );
@@ -691,31 +660,29 @@ int CDaoFunction::Generate()
 	kvmap3[ "getreturn" ] = retype.getres;
 	kvmap3[ "const" ] = "";
 	
+	string vareturn = retype.cxxpar + " = 0;";
 #if 0
-	vareturn = retype.cxxpar + ' = 0;';
-	if( retype.refer == '' and retype.typeid > $CT_USER ){
-		tks = retype.dao2cxx.capture( '= %s* %b()' );
-		if( tks ) vareturn = retype.cxxpar + tks[0] + '0;';
+	if( retype.refer == "" and retype.typeid > $CT_USER ){
+		tks = retype.dao2cxx.capture( "= %s* %b()" );
+		if( tks ) vareturn = retype.cxxpar + tks[0] + "0;";
 	}
-	if( retype.typename.capture( qt_container ) ) vareturn = retype.cxxpar + ';';
-	kvmap3[ 'vareturn' ] = vareturn;
+	//if( retype.typename.capture( qt_container ) ) vareturn = retype.cxxpar + ";";
 	if( retype.daotype.size() ==0 ){
-		kvmap3[ 'vareturn' ] = '';
-		kvmap3[ 'getreturn' ] = '';
-		kvmap3[ 'return' ] = '';
-	}else if( map_user_types.has( retype.typename ) ){
+		vareturn = "";
+		kvmap3[ "getreturn" ] = "";
+		kvmap3[ "return" ] = "";
+	}else if( retype.varDecl->isPointerType() ){
 		utp = map_user_types[ retype.typename ];
 		if( utp.isCppClass ){
-			if( retype.refer == '*' )
-			kvmap3[ 'vareturn' ] = retype.cxxpar + ' = NULL;';
+			if( retype.refer == "*" )
+				vareturn = retype.cxxpar + " = NULL;";
 			else
-			kvmap3[ 'vareturn' ] = retype.cxxpar + ';';
+				vareturn = retype.cxxpar + ";";
 		}
 	}
-	if( $FUNC_CONST in attribs ) kvmap3[ 'const' ] = 'const';
 #endif
-	
-	//if( attribs & FUNC_VIRTUAL ){
+	kvmap3[ "vareturn" ] = vareturn;
+	if( isconst ) kvmap3[ "const" ] = "const";
 	
 	if( methdecl ){
 		kvmap3[ "count" ] = utostr( parlist.size() - autoself );
@@ -751,8 +718,7 @@ int CDaoFunction::Generate()
 			proxy_codes = cdao_string_fill( cxx_proxy_body00, kvmap3 );
 		}
 		CDaoProxyFunction::Add( signature2, proxy_name, proxy_codes );
-		outs() << proxy_name << "\n" << proxy_codes << "\n";
-		//io.writeln( proxy_name, proxy_codes );
+		//outs() << proxy_name << "\n" << proxy_codes << "\n";
 	}
 	if( has_return or has_param ) proxy_name = CDaoProxyFunction::proxy_functions[ signature2 ].name;
 	kvmap3[ "proxy_name" ] = proxy_name;
