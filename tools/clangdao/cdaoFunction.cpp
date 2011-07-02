@@ -382,7 +382,7 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	parlist.clear();
 	if( decl == NULL ) return;
 	
-	string sig = funcDecl->getNameAsString() + "(";
+	string sig = funcDecl->getQualifiedNameAsString() + "(";
 	for(i=0, n=decl->param_size(); i<n; i++){
 		ParmVarDecl *pardecl = decl->getParamDecl( i );
 		parlist.push_back( CDaoVariable( module, pardecl ) );
@@ -398,6 +398,8 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	if( it == module->functionHints.end() ) return;
 	outs() << "hints found for: " << sig << "\n";
 	vector<string> & hints = it->second;
+	for(i=0, n=parlist.size(); i<n; i++) parlist[i].SetHints( hints[i+1] );
+	retype.SetHints( hints[0] );
 }
 bool CDaoFunction::IsFromMainModule()
 {
@@ -410,7 +412,17 @@ string CDaoFunction::GetInputFile()const
 	return module->GetFileName( funcDecl->getLocation() );
 }
 
-struct IntString{ int i; string s; };
+struct IntString
+{
+	int i;
+	string s;
+
+	public:
+	IntString( int i=0, const string & s = "" ){
+		this->i = i;
+		this->s = s;
+	}
+};
 
 int CDaoFunction::Generate()
 {
@@ -463,7 +475,7 @@ int CDaoFunction::Generate()
 	signature = cxxName + "("; // exclude return type from signature
 	signature2 = retype.cxxtype2 + "(";
 
-	vector<IntString> calls_with_defaults;
+	vector<IntString> unusedDefaults;
 	for(i=0; i<n; i++){
 		CDaoVariable & vo = parlist[i];
 		//outs() << vo.name << vo.unsupport << "-----------------\n";
@@ -477,9 +489,11 @@ int CDaoFunction::Generate()
 		//if( vo.sqsizes.size() <2 ) 
 		dao2cxxcodes += vo.dao2cxx;
 		parsetcodes += vo.parset;
+		if( vo.useDefault == false )
+			unusedDefaults.push_back( IntString(i, cxxcallpars) );
 #if 0
 		if( vo.isconst and vo.refer == '&' and vo.vdefault != '' ){
-			calls_with_defaults.append( (i, cxxcallpars) );
+			unusedDefaults.append( (i, cxxcallpars) );
 		}
 #endif
 		if( i < autoself ) continue;
@@ -576,9 +590,9 @@ int CDaoFunction::Generate()
 		}
 		kvmap[ "func_call" ] = ss + cxxName;
 	}
-	int dd = calls_with_defaults.size();
+	int dd = unusedDefaults.size();
 	for(i=1; i<=dd; i++){
-		IntString & tup2 = calls_with_defaults[i-1];
+		IntString & tup2 = unusedDefaults[i-1];
 		kvmap[ "n" + utostr(i) ] = utostr( tup2.i );
 		kvmap[ "parlist" + utostr(i) ] = tup2.s;
 	}

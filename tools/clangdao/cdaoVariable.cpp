@@ -54,6 +54,10 @@ const string dao2cxx_dmat = dao2cxx3 + "DaoArray_GetMatrixD( _p[$(index)]->v.arr
 const string dao2cxx_c8mat = dao2cxx3 + "(complex8*) DaoArray_GetMatrixF( _p[$(index)]->v.array, $(size) );\n";
 const string dao2cxx_c16mat = dao2cxx3 + "(complex16*) DaoArray_GetMatrixD( _p[$(index)]->v.array, $(size) );\n";
 
+const string dao2cxx_ubmat = dao2cxx_bmat; // TODO:
+const string dao2cxx_usmat = dao2cxx_smat;
+const string dao2cxx_uimat = dao2cxx_imat;
+
 const string dao2cxx_stream = dao2cxx2 + "DaoStream_GetFile( _p[$(index)]->v.stream );\n";
 
 const string dao2cxx_void = dao2cxx2 + 
@@ -100,6 +104,15 @@ const string cxx2dao_ints = cxx2dao + "VectorI( (int*) $(name), $(size) );\n";
 const string cxx2dao_uints = cxx2dao + "VectorUI( (unsigned int*) $(name), $(size) );\n";
 const string cxx2dao_floats = cxx2dao + "VectorF( (float*) $(name), $(size) );\n";
 const string cxx2dao_doubles = cxx2dao + "VectorD( (double*) $(name), $(size) );\n";
+
+const string cxx2dao_bmat = cxx2dao + "MatrixB( (char**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_ubmat = cxx2dao + "MatrixUB( (unsigned char**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_smat = cxx2dao + "MatrixS( (short**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_usmat = cxx2dao + "MatrixUS( (unsigned short**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_imat = cxx2dao + "MatrixI( (int**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_uimat = cxx2dao + "MatrixUI( (unsigned int**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_fmat = cxx2dao + "MatrixF( (float**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_dmat = cxx2dao + "MatrixD( (double**) $(name), $(size), $(size2) );\n";
 
 const string cxx2dao_stream = cxx2dao + "Stream( (FILE*) $(refer) );\n";
 const string cxx2dao_voidp = "  _dp[$(index)] = DValue_WrapCData( NULL, (void*) $(refer) );\n";
@@ -500,11 +513,11 @@ struct CDaoVarTemplates
 };
 void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, int daopid, int cxxpid )
 {
+	string dft, typer = cdao_qname_to_idname( var->daotype );
 	char sindex[50];
-	string cdft, typer = cdao_qname_to_idname( var->daotype );
-
 	sprintf( sindex, "%i", daopid );
-	if( var->cxxdefault.size() ) cdft = " =" + var->cxxdefault;
+	if( var->isNullable ) dft = "|null";
+	if( var->daodefault.size() ) dft += " =" + var->daodefault;
 
 	kvmap[ "daotype" ] = var->daotype;
 	kvmap[ "cxxtype" ] = var->cxxtype;
@@ -513,7 +526,7 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 	kvmap[ "namespace" ] = "";
 	kvmap[ "namespace2" ] = "";
 	kvmap[ "index" ] = sindex;
-	kvmap[ "default" ] = cdft;
+	kvmap[ "default" ] = dft;
 	var->daopar = cdao_string_fill( daopar, kvmap );
 	var->dao2cxx = cdao_string_fill( dao2cxx, kvmap );
 	var->parset = cdao_string_fill( parset, kvmap );
@@ -542,9 +555,10 @@ CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 {
 	module = mod;
 	initor = NULL;
-	hasNullableHint = false;
+	isNullable = false;
 	hasArrayHint = false;
 	unsupport = true;
+	useDefault = true;
 	SetDeclaration( decl );
 }
 void CDaoVariable::SetDeclaration( const VarDecl *decl )
@@ -559,6 +573,47 @@ void CDaoVariable::SetDeclaration( const VarDecl *decl )
 }
 void CDaoVariable::SetHints( const string & hints )
 {
+	size_t pos = hints.find( "_dao_hint_" );
+	string hints2, hint;
+	if( pos == string::npos ) return;
+	name = hints.substr( 0, pos );
+	hints2 = hints.substr( pos+4 );
+	while( hints2.find( "_hint_" ) == 0 ){
+		pos = hints2.find( '_', 6 );
+		if( pos == string::npos ){
+			hint = hints2.substr( 6 );
+		}else{
+			hint = hints2.substr( 6, pos - 6 );
+		}
+		if( hint == "nullable" ){
+			isNullable = true;
+		}else if( hint == "array" ){
+			size_t pos2 = hints2.find( "_hint_", pos );
+			hint = "";
+			if( pos2 != pos ){
+				if( pos2 == string::npos ){
+					hint = hints2.substr( 12 );
+				}else{
+					hint = hints2.substr( 12, pos2 - 12 );
+				}
+			}
+			size_t from = 0;
+			while( (pos = hint.find( '_', from )) < pos2 ){
+				sizes.push_back( hint.substr( from, pos - from ) );
+				from = pos + 1;
+			}
+			if( from < pos2 ){
+				if( pos2 == string::npos ){
+					sizes.push_back( hint.substr( from ) );
+				}else{
+					sizes.push_back( hint.substr( from, pos2 - from ) );
+				}
+			}
+			//outs() << "array hint: " << hint << " " << sizes.size() << "\n";
+			pos = pos2;
+		}
+		hints2.erase( 0, pos );
+	}
 }
 int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 {
@@ -569,8 +624,34 @@ int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 {
 	if( initor ){
-		cxxdefault = module->ExtractSource( initor->getSourceRange(), true );
-		cxxdefault2 = module->ExtractSource( initor->getSourceRange(), false );
+		SourceRange range = initor->getSourceRange();
+		daodefault = cxxdefault = module->ExtractSource( range, true );
+
+		Preprocessor & pp = module->compiler->getPreprocessor();
+		SourceManager & sm = module->compiler->getSourceManager();
+		SourceLocation start = sm.getInstantiationLoc( range.getBegin() );
+		SourceLocation end = sm.getInstantiationLoc( range.getEnd() );
+		const char *p = sm.getCharacterData( start );
+		const char *q = sm.getCharacterData( pp.getLocForEndOfToken( end ) );
+
+		Lexer lexer( start, module->compiler->getLangOpts(), p, p, q );
+		Token token;
+		vector<Token> tokens;
+		while( lexer.getBufferLocation() < q ){
+			lexer.Lex( token );
+			tokens.push_back( token );
+		}
+		if( tokens.size() > 1 ){
+			for(int i=0,n=tokens.size(); i<n; i++){
+				tok::TokenKind kind = tokens[i].getKind();
+				if( kind != tok::raw_identifier && kind != tok::coloncolon ){
+					daodefault = "0";
+					isNullable = true;
+					useDefault = false;
+					break;
+				}
+			}
+		}
 	}
 #if 0
 	if( ParmVarDecl *par = dyn_cast<ParmVarDecl>( decl ) ){
@@ -578,7 +659,7 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		outs() << (range.getBegin() == range.getEnd()) << "\n";
 	}
 #endif
-	outs() << cxxdefault << "  " << cxxdefault2 << "\n";
+	outs() << cxxdefault << "  " << "\n";
 	const Type *type = qualType.getTypePtr();
 	string ctypename = qualType.getAsString();
 	cxxtype = ctypename;
@@ -600,10 +681,8 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		cxxtype2 = cxxtype;
 		daotype = "int";
 		cxxpar = cxxtype + " " + name;
-		cxxpar_enum_virt = cxxpar;
 		CDaoVarTemplates tpl;
 		tpl.SetupIntScalar();
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 		map<string,string> kvmap;
 		tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 		return 0;
@@ -613,13 +692,11 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 int CDaoVariable::Generate( const BuiltinType *type, int daopar_index, int cxxpar_index )
 {
 	CDaoVarTemplates tpl;
-	//vdefault2 = vdefault;
 	if( type->isArithmeticType() ){
 		daotype = "int";
 		cxxpar = cxxtype + " " + name;
-		cxxpar_enum_virt = cxxpar;
+		isNullable = false;
 		tpl.SetupIntScalar();
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 		switch( type->getKind() ){
 		case BuiltinType::Bool :
 		case BuiltinType::Char_U :
@@ -644,7 +721,6 @@ int CDaoVariable::Generate( const BuiltinType *type, int daopar_index, int cxxpa
 		case BuiltinType::Float :
 			daotype = "float";
 			tpl.SetupFloatScalar();
-			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		case BuiltinType::Double :
 		case BuiltinType::LongDouble : // FIXME
@@ -664,17 +740,21 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 	const Type *type2 = qtype2.getTypePtr();
 	string ctypename2 = qtype2.getAsString();
 
+	if( sizes.size() == 1 ) return GenerateForArray( qtype2, sizes[0], daopar_index, cxxpar_index );
+	if( sizes.size() == 2 && type2->isPointerType() ){
+		QualType qtype3 = ((const PointerType*)type2)->getPointeeType();
+		return GenerateForArray( qtype3, sizes[0], sizes[1], daopar_index, cxxpar_index );
+	}
+
 	CDaoVarTemplates tpl;
-	//vdefault2 = vdefault;
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
 		const BuiltinType *type3 = (const BuiltinType*) type2;
 		daotype = "int";
 		cxxtype = ctypename2;
 		cxxpar = cxxtype + " " + name;
-		cxxpar_enum_virt = cxxpar;
 		cxxcall = "&" + name;
+		isNullable = false;
 		tpl.SetupIntScalar();
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 		switch( type3->getKind() ){
 		case BuiltinType::Char_U :
 		case BuiltinType::UChar :
@@ -683,7 +763,7 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			daotype = "string";
 			tpl.SetupMBString();
 			tpl.parset = parset_mbs;
-			//if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
+			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "\'\'";
 			break;
 		case BuiltinType::WChar_U :
 		case BuiltinType::WChar_S :
@@ -692,7 +772,7 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			daotype = "string";
 			tpl.SetupWCString();
 			tpl.parset = parset_wcs;
-			//if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "\"\"";
 			break;
 		case BuiltinType::UShort :
 		case BuiltinType::Bool :
@@ -711,7 +791,6 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			tpl.ctxput = ctxput_ints;
 			tpl.getres = getres_ints;
 			tpl.cxx2dao = cxx2dao_int2;
-			//if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
 			break;
 		case BuiltinType::Float :
 			daotype = "float";
@@ -720,7 +799,6 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			tpl.ctxput = ctxput_floats;
 			tpl.getres = getres_floats;
 			tpl.cxx2dao = cxx2dao_float2;
-			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		case BuiltinType::Double :
 		case BuiltinType::LongDouble : // FIXME
@@ -730,7 +808,6 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			tpl.ctxput = ctxput_doubles;
 			tpl.getres = getres_doubles;
 			tpl.cxx2dao = cxx2dao_double2;
-			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		default : break;
 		}
@@ -739,15 +816,14 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 		cxxtype2 = cxxtype;
 		daotype = "int";
 		cxxpar = cxxtype + " *" + name;
-		cxxpar_enum_virt = cxxpar;
 		cxxcall = "&" + name;
+		isNullable = false;
 
 		tpl.SetupIntScalar();
 		tpl.parset = parset_int;
 		tpl.ctxput = ctxput_ints;
 		tpl.getres = getres_ints;
 		tpl.cxx2dao = cxx2dao_int2;
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 	}else if( CXXRecordDecl *decl = type2->getAsCXXRecordDecl() ){
 		daotype = decl->getQualifiedNameAsString();
 		cxxtype = daotype + "*";
@@ -756,10 +832,12 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 		tpl.ctxput = ctxput_user;
 		tpl.getres = getres_user;
 		if( decl ){
-			outs() << daotype <<"\n";
-			outs() << "cxx: " << (void*)decl << " " << (void*)decl->getDefinition() << "\n";
 			tpl.dao2cxx = dao2cxx_user2;
 			tpl.cxx2dao = cxx2dao_user;
+		}
+		if( daodefault == "0" || daodefault == "NULL" ){
+			daodefault = "null";
+			isNullable = true;
 		}
 	}else{
 		return 1;
@@ -775,35 +853,23 @@ int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxx
 	string ctypename2 = qtype2.getAsString();
 
 	CDaoVarTemplates tpl;
-	//vdefault2 = vdefault;
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
 		const BuiltinType *type3 = (const BuiltinType*) type2;
 		daotype = "int";
 		cxxtype = ctypename2;
 		cxxpar = cxxtype + " &" + name;
-		cxxpar_enum_virt = cxxpar;
 		cxxcall = name;
+		isNullable = false;
 		tpl.SetupIntScalar();
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 		switch( type3->getKind() ){
 		case BuiltinType::Char_U :
 		case BuiltinType::UChar :
 		case BuiltinType::Char_S :
 		case BuiltinType::SChar :
-			daotype = "string";
-			tpl.SetupMBString();
-			tpl.parset = parset_mbs;
-			//if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
-			break;
 		case BuiltinType::WChar_U :
 		case BuiltinType::WChar_S :
 		case BuiltinType::Char16 :
 		case BuiltinType::Char32 :
-			daotype = "string";
-			tpl.SetupWCString();
-			tpl.parset = parset_wcs;
-			//if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
-			break;
 		case BuiltinType::UShort :
 		case BuiltinType::Bool :
 		case BuiltinType::UInt :
@@ -818,20 +884,17 @@ int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxx
 			daotype = "int";
 			tpl.SetupIntScalar();
 			tpl.parset = parset_int;
-			//if( vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
 			break;
 		case BuiltinType::Float :
 			daotype = "float";
 			tpl.SetupFloatScalar();
 			tpl.parset = parset_float;
-			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		case BuiltinType::Double :
 		case BuiltinType::LongDouble : // FIXME
 			daotype = "double";
 			tpl.SetupDoubleScalar();
 			tpl.parset = parset_double;
-			//if( vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
 			break;
 		default : break;
 		}
@@ -840,12 +903,11 @@ int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxx
 		cxxtype2 = cxxtype;
 		daotype = "int";
 		cxxpar = cxxtype + " &" + name;
-		cxxpar_enum_virt = cxxpar;
 		cxxcall = name;
+		isNullable = false;
 
 		tpl.SetupIntScalar();
 		tpl.parset = parset_int;
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
 	}else if( CXXRecordDecl *decl = type2->getAsCXXRecordDecl() ){
 		daotype = decl->getQualifiedNameAsString();
 		cxxtype = daotype + "*";
@@ -855,10 +917,12 @@ int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxx
 		tpl.ctxput = ctxput_user;
 		tpl.getres = getres_user;
 		if( decl ){
-			outs() << daotype <<"\n";
-			outs() << "cxx: " << (void*)decl << " " << (void*)decl->getDefinition() << "\n";
 			tpl.dao2cxx = dao2cxx_user2;
 			tpl.cxx2dao = cxx2dao_user;
+		}
+		if( daodefault == "0" || daodefault == "NULL" ){
+			daodefault = "null";
+			isNullable = true;
 		}
 	}else{
 		return 1;
@@ -869,19 +933,33 @@ int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxx
 }
 int CDaoVariable::Generate( const ArrayType *type, int daopar_index, int cxxpar_index )
 {
-	QualType qtype2 = type->getElementType();
-	const Type *type2 = qtype2.getTypePtr();
-	string ctypename2 = qtype2.getAsString();
-
+	string size;
+	if( type->isConstantArrayType() ){
+		ConstantArrayType *at = (ConstantArrayType*) type;
+		size = at->getSize().toString( 10, false );
+	}
+	return GenerateForArray( type->getElementType(), size, daopar_index, cxxpar_index );
+}
+int CDaoVariable::GenerateForArray( QualType elemtype, string size, int daopar_index, int cxxpar_index )
+{
+	const Type *type2 = elemtype.getTypePtr();
+	string ctypename2 = elemtype.getAsString();
+	if( type2->isArrayType() ){
+		const ArrayType *type3 = (ArrayType*) type2;
+		string size2;
+		if( type2->isConstantArrayType() ){
+			ConstantArrayType *at = (ConstantArrayType*) type2;
+			size2 = at->getSize().toString( 10, false );
+		}
+		return GenerateForArray( type3->getElementType(), size, size2, daopar_index, cxxpar_index );
+	}
 	CDaoVarTemplates tpl;
-	//vdefault2 = vdefault;
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
 		const BuiltinType *type3 = (const BuiltinType*) type2;
 		daotype = "array<int>";
 		dao_itemtype = "int";
 		cxxtype = ctypename2;
 		cxxpar = cxxtype + " " + name;
-		cxxpar_enum_virt = cxxpar;
 		cxxcall = name;
 		tpl.daopar = daopar_ints;
 		tpl.ctxput = ctxput_ints;
@@ -890,7 +968,7 @@ int CDaoVariable::Generate( const ArrayType *type, int daopar_index, int cxxpar_
 		tpl.setter = setter_ints;
 		tpl.get_item = name == "this" ? getitem_int2 : getitem_int;
 		tpl.set_item = name == "this" ? setitem_int2 : setitem_int;
-		//if( vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
+		if( daodefault == "0" || daodefault == "NULL" ) daodefault = "[]";
 		switch( type3->getKind() ){
 		case BuiltinType::Char_S :
 		case BuiltinType::SChar :
@@ -978,10 +1056,119 @@ int CDaoVariable::Generate( const ArrayType *type, int daopar_index, int cxxpar_
 		return 1;
 	}
 	map<string,string> kvmap;
-	if( type->isConstantArrayType() ){
-		ConstantArrayType *at = (ConstantArrayType*) type;
-		kvmap[ "size" ] = at->getSize().toString( 10, false );
+	if( size.size() ) kvmap[ "size" ] = size;
+	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
+	return 0;
+}
+int CDaoVariable::GenerateForArray( QualType elemtype, string size, string size2, int daopar_index, int cxxpar_index )
+{
+	const Type *type2 = elemtype.getTypePtr();
+	string ctypename2 = elemtype.getAsString();
+	CDaoVarTemplates tpl;
+	if( type2->isBuiltinType() and type2->isArithmeticType() ){
+		const BuiltinType *type3 = (const BuiltinType*) type2;
+		daotype = "array<int>";
+		dao_itemtype = "int";
+		cxxtype = ctypename2;
+		cxxpar = cxxtype + " " + name;
+		cxxcall = name;
+		tpl.daopar = daopar_ints;
+		tpl.ctxput = ctxput_ints;
+		tpl.parset = parset_ints;
+		tpl.getres = getres_ints;
+		tpl.setter = setter_ints;
+		tpl.get_item = name == "this" ? getitem_int2 : getitem_int;
+		tpl.set_item = name == "this" ? setitem_int2 : setitem_int;
+		if( daodefault == "0" || daodefault == "NULL" ) daodefault = "[]";
+		switch( type3->getKind() ){
+		case BuiltinType::Char_S :
+		case BuiltinType::SChar :
+			tpl.dao2cxx = dao2cxx_bmat;
+			tpl.cxx2dao = cxx2dao_bmat;
+			tpl.ctxput = ctxput_bytes;
+			tpl.parset = parset_bytes;
+			tpl.getres = getres_bytes;
+			tpl.setter = setter_string;
+			break;
+		case BuiltinType::Bool :
+		case BuiltinType::Char_U :
+		case BuiltinType::UChar :
+			tpl.dao2cxx = dao2cxx_ubmat;
+			tpl.cxx2dao = cxx2dao_ubmat;
+			tpl.ctxput = ctxput_bytes;
+			tpl.parset = parset_ubytes;
+			tpl.getres = getres_ubytes;
+			tpl.setter = setter_string;
+			break;
+		case BuiltinType::UShort :
+			tpl.dao2cxx = dao2cxx_usmat;
+			tpl.cxx2dao = cxx2dao_usmat;
+			tpl.ctxput = ctxput_shorts;
+			tpl.parset = parset_ushorts;
+			tpl.getres = getres_ushorts;
+			tpl.setter = setter_shorts;
+			break;
+		case BuiltinType::Char16 :
+		case BuiltinType::Short :
+			tpl.dao2cxx = dao2cxx_smat;
+			tpl.cxx2dao = cxx2dao_smat;
+			tpl.ctxput = ctxput_shorts;
+			tpl.parset = parset_shorts;
+			tpl.getres = getres_shorts;
+			tpl.setter = setter_shorts;
+			break;
+		case BuiltinType::WChar_U : // FIXME: check size
+		case BuiltinType::UInt :
+		case BuiltinType::ULong :
+		case BuiltinType::ULongLong : // FIXME
+		case BuiltinType::UInt128 : // FIXME
+			tpl.dao2cxx = dao2cxx_uimat;
+			tpl.cxx2dao = cxx2dao_uimat;
+			break;
+		case BuiltinType::WChar_S :
+		case BuiltinType::Char32 :
+		case BuiltinType::Int :
+		case BuiltinType::Long : // FIXME: check size
+		case BuiltinType::LongLong : // FIXME
+		case BuiltinType::Int128 : // FIXME
+			tpl.dao2cxx = dao2cxx_imat;
+			tpl.cxx2dao = cxx2dao_imat;
+			break;
+		case BuiltinType::Float :
+			daotype = "array<float>";
+			dao_itemtype = "float";
+			tpl.daopar = daopar_floats;
+			tpl.dao2cxx = dao2cxx_fmat;
+			tpl.cxx2dao = cxx2dao_fmat;
+			tpl.ctxput = ctxput_floats;
+			tpl.parset = parset_floats;
+			tpl.getres = getres_floats;
+			tpl.setter = setter_floats;
+			tpl.get_item = name == "this" ? getitem_float2 : getitem_float;
+			tpl.set_item = name == "this" ? setitem_float2 : setitem_float;
+			break;
+		case BuiltinType::Double :
+		case BuiltinType::LongDouble : // FIXME
+			daotype = "array<double>";
+			dao_itemtype = "double";
+			tpl.daopar = daopar_doubles;
+			tpl.dao2cxx = dao2cxx_dmat;
+			tpl.cxx2dao = cxx2dao_dmat;
+			tpl.ctxput = ctxput_doubles;
+			tpl.parset = parset_doubles;
+			tpl.getres = getres_doubles;
+			tpl.setter = setter_doubles;
+			tpl.get_item = name == "this" ? getitem_double2 : getitem_double;
+			tpl.set_item = name == "this" ? setitem_double2 : setitem_double;
+			break;
+		default : break;
+		}
+	}else{
+		return 1;
 	}
+	map<string,string> kvmap;
+	if( size.size() ) kvmap[ "size" ] = size;
+	if( size2.size() ) kvmap[ "size2" ] = size2;
 	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 	return 0;
 }

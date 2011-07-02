@@ -10,11 +10,16 @@ class FirstClass
 {
 	public:
 
-	virtual void FirstVirt();
+	virtual void FirstVirt( float *vec, int size );
+	virtual void FirstVirt( float **mat, int n, int m );
+	virtual void FirstVirt( float *mat[3], int n ); // XXX
+	virtual void FirstVirt( float mat[3][4] );
 };
 
 void first_function( int abc=123+456 );
 void* my_func( char *p = NULL );
+void my_func( FirstClass *p );
+void my_func2( FirstClass *p = NULL );
 int my_func2( int *p, int n=TEST );
 
 typedef int myint;

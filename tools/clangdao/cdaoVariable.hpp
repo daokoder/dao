@@ -26,12 +26,12 @@ struct CDaoVariable
 	QualType     qualType;
 	const Expr  *initor;
 
-	bool    hasNullableHint;
+	bool    isNullable;
 	bool    hasArrayHint;
 	bool    unsupport;
+	bool    useDefault;
 	string  name;
 	string  cxxdefault;
-	string  cxxdefault2; // with macro expansion
 	string  daodefault;
 
 	string  daotype;
@@ -40,7 +40,6 @@ struct CDaoVariable
 	string  cxxcall;
 	string  daopar;
 	string  cxxpar;
-	string  cxxpar_enum_virt;
 	string  dao2cxx;
 	string  cxx2dao;
 	string  ctxput;
@@ -52,6 +51,8 @@ struct CDaoVariable
 	string  get_item;
 	string  set_item;
 
+	vector<string>  sizes;
+
 	CDaoVariable( CDaoModule *mod = NULL, const VarDecl *decl = NULL );
 
 	void SetDeclaration( const VarDecl *decl );
@@ -62,6 +63,8 @@ struct CDaoVariable
 	int Generate( const PointerType *type, int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const ReferenceType *type, int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const ArrayType *type, int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForArray( QualType elemtype, string size, int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForArray( QualType elemtype, string size, string size2, int daopar_index = 0, int cxxpar_index = 0 );
 };
 
 #endif

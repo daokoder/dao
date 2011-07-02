@@ -38,6 +38,7 @@ class SecondClass : public FirstClass
 	public slots:
 	void t();
 };
-void second_function2( const SecondClass & obj = SecondClass() );
+//void second_function2( const SecondClass & obj = SecondClass() );
+void second_function2( const FirstClass & obj = FirstClass() );
 
 #endif

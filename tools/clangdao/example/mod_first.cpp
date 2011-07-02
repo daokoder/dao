@@ -5,7 +5,7 @@
 // Wrapping hints for function: void* my_func( char *p );
 // It means the function may take a null pointer as parameter
 // and return a null pointer:
-#define my_func_dao_hint_nullable( p_dao_hint_nullable ) my_func(char*)
+#define my_func_dao_hint_nullable( pp_dao_hint_nullable ) my_func(FirstClass*)
 #undef my_func_dao_hint_nullable
 
 // Wrapping hints for function: int my_func2( int *p, int n );
@@ -13,6 +13,12 @@
 // with number of elements specified by the second parameter:
 #define dao_my_func2( p_dao_hint_array_n_hint_nullable, n ) my_func2(int*,int)
 #undef dao_my_func2
+
+#define dao_FirstClass_FirstVirt( vec_dao_hint_array_size, size ) FirstClass::FirstVirt(float*,int)
+#undef dao_FirstClass_FirstVirt
+
+#define dao_FirstClass_FirstVirt( mat_dao_hint_array_n_m, n, m ) FirstClass::FirstVirt(float**,int,int)
+#undef dao_FirstClass_FirstVirt
 
 // Basically such macros of function hints will do nothing,
 // but their definitions will be used by clangdao to understand
