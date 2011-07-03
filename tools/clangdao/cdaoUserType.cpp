@@ -393,10 +393,10 @@ const string dao_add_extrc_func =
 }\n";
 
 const string dao_proto =
-"  { dao_$(host_typer)_$(cxxname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
+"  { dao_$(host_idname)_$(cxxname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
 
 const string cxx_wrap_proto 
-= "static void dao_$(host_typer)_$(cxxname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )";
+= "static void dao_$(host_idname)_$(cxxname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )";
 
 const string tpl_struct = "$(name)* DAO_DLL_$(module) Dao_$(name)_New();\n";
 
@@ -435,22 +435,22 @@ const string tpl_set_callback = "\tself->$(callback) = Dao_$(name)_$(callback);\
 const string tpl_set_selfield = "\tself->$(field) = wrap;\n";
 
 const string c_wrap_new = 
-"static void dao_$(host)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_$(host_idname)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )\n\
 {\n\
-	Dao_$(host) *self = Dao_$(host)_New();\n\
+	Dao_$(host_idname) *self = Dao_$(host_idname)_New();\n\
 	DaoContext_PutResult( _ctx, (DaoBase*) self->cdata );\n\
 }\n";
 const string cxx_wrap_new = 
-"static void dao_$(host)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_$(host_idname)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )\n\
 {\n\
-	DaoCxx_$(host) *self = DaoCxx_$(host)_New();\n\
+	DaoCxx_$(host_idname) *self = DaoCxx_$(host_idname)_New();\n\
 	DaoContext_PutResult( _ctx, (DaoBase*) self->cdata );\n\
 }\n";
 const string cxx_wrap_alloc2 = 
-"static void dao_$(host)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_$(host_idname)_$(cxxname)( DaoContext *_ctx, DValue *_p[], int _n )\n\
 {\n\
-	$(host) *self = Dao_$(host)_New();\n\
-	DaoContext_PutCData( _ctx, self, dao_$(host)_Typer );\n\
+	$(host_qname) *self = Dao_$(host_idname)_New();\n\
+	DaoContext_PutCData( _ctx, self, dao_$(host_idname)_Typer );\n\
 }\n";
 
 const string tpl_class_def = 
@@ -546,7 +546,7 @@ const string tpl_meth_decl2 =
 "\t$(retype) $(name)( $(parlist) )$(extra);\n";
 
 const string tpl_meth_decl3 =
-"\t$(retype) DaoWrap_$(name)( $(parlist) )$(extra){ $(return)$(type)::$(cxxname)( $(parcall) ); }\n";
+"$(retype) DaoWrap_$(name)( $(parlist) )$(extra){ $(return)$(type)::$(cxxname)( $(parcall) ); }\n";
 
 const string tpl_raise_call_protected =
 "  if( _p[0]->t == DAO_CDATA && DaoCData_GetObject( _p[0]->v.cdata ) == NULL ){\n\
@@ -554,7 +554,11 @@ const string tpl_raise_call_protected =
     return;\n\
   }\n";
 
-const string methlist_code = 
+const string numlist_code = 
+"\n\nstatic DaoNumItem dao_$(typer)_Nums[] = \n\
+{\n$(nums)  { NULL, 0, 0 }\n};\n";
+
+const string methlist_code = numlist_code +
 "\n\n$(decls)\n\
 static DaoFuncItem dao_$(typer)_Meths[] = \n\
 {\n$(meths)  { NULL, NULL }\n};\n";
@@ -637,22 +641,31 @@ string CDaoUserType::GetInputFile()const
 }
 int CDaoUserType::Generate()
 {
+	if( not module->IsFromModules( decl->getLocation() ) ) return 0;
+
 	RecordDecl *dd = decl->getDefinition();
-	outs() << decl->getNameAsString() << ": " << (void*)decl <<" " << (void*)dd << "\n";
-	outs() << decl->getQualifiedNameAsString() << "\n";
+	//outs() << decl->getNameAsString() << ": " << (void*)decl <<" " << (void*)dd << "\n";
+	//outs() << decl->getQualifiedNameAsString() << "\n";
 	isRedundant = dd != NULL && dd != decl;
 	if( isRedundant ) return 0;
+	if( dd == NULL ){
+		noWrapping = noConstructor = true;
+		hasVirtual = false;
+		return 0;
+	}
 	if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(decl)) return Generate( record );
 	return 1;
 }
 int CDaoUserType::Generate( CXXRecordDecl *decl )
 {
+	int i, j, n, m;
 	Preprocessor & pp = module->compiler->getPreprocessor();
 	SourceManager & sm = module->compiler->getSourceManager();
+	string qname = CDaoModule::GetQName( decl );
+	string idname = CDaoModule::GetIdName( decl );
 	string name = decl->getNameAsString();
 	map<string,string> kvmap;
 	map<string,int> overloads;
-	bool has_pure_virtual = false;
 	noWrapping = false;
 	hasVirtual = false; // protected or public virtual function;
 
@@ -670,6 +683,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	string class_new;
 	string class_decl;
 
+	map<CXXMethodDecl*,int>  pvmeths;
+	map<CXXMethodDecl*,int>::iterator pvit, pvend;
 	map<const RecordDecl*,CDaoUserType*>::iterator find;
 	CXXRecordDecl::base_class_iterator baseit, baseend = decl->bases_end();
 	for(baseit=decl->bases_begin(); baseit != baseend; baseit++){
@@ -680,9 +695,10 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoUserType & sup = *find->second;
 		string supname = sup.GetName();
 		bases.push_back( & sup );
-		outs() << "parent: " << p->getNameAsString() << "\n";
+		//outs() << "parent: " << p->getNameAsString() << "\n";
 
 		if( sup.noWrapping or not sup.hasVirtual ) continue;
+		for(i=0,n=sup.pureVirtuals.size(); i<n; i++) pvmeths[ sup.pureVirtuals[i] ] = 1;
 		kvmap[ "super" ] = supname;
 		if( virt_supers.size() ){
 			daoc_supers += ',';
@@ -703,14 +719,19 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	CXXRecordDecl::method_iterator methit, methend = decl->method_end();
 	for(methit=decl->method_begin(); methit!=methend; methit++){
 		string name = methit->getNameAsString();
-		outs() << name << ": " << methit->getAccess() << " ......................\n";
-		outs() << methit->getType().getAsString() << "\n";
+		//outs() << name << ": " << methit->getAccess() << " ......................\n";
+		//outs() << methit->getType().getAsString() << "\n";
 		if( methit->isImplicit() ) continue;
-		if( methit->isPure() ) has_pure_virtual = true;
-		if( methit->getAccess() == AS_private ) continue;
+		if( methit->getAccess() == AS_private && ! methit->isPure() ) continue;
 		if( methit->isVirtual() ) hasVirtual = true;
+		if( dyn_cast<CXXDestructorDecl>( *methit ) ) continue;
 		methods.push_back( CDaoFunction( module, *methit, ++overloads[name] ) );
-		methods.back().Generate();
+		if( methit->isPure() ) pvmeths[ *methit ] = 1;
+		if( methit->isVirtual() ){
+			CXXMethodDecl::method_iterator it2, end2 = methit->end_overridden_methods();
+			for(it2=methit->begin_overridden_methods(); it2!=end2; it2++)
+				pvmeths.erase( (CXXMethodDecl*)*it2 );
+		}
 	}
 
 	bool has_ctor = false;
@@ -720,11 +741,13 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	bool has_private_default_ctor = false;
 	bool has_explicit_default_ctor = false;
 	bool has_implicit_default_ctor = true;
+	bool has_public_destroctor = true;
+	bool has_non_public_copy_ctor = false;
 	CXXRecordDecl::ctor_iterator ctorit, ctorend = decl->ctor_end();
 	for(ctorit=decl->ctor_begin(); ctorit!=ctorend; ctorit++){
 		string name = ctorit->getNameAsString();
-		outs() << name << ": " << ctorit->getAccess() << " ......................\n";
-		outs() << ctorit->getType().getAsString() << "\n";
+		//outs() << name << ": " << ctorit->getAccess() << " ......................\n";
+		//outs() << ctorit->getType().getAsString() << "\n";
 		if( ctorit->isImplicit() ) continue;
 		if( not ctorit->isImplicitlyDefined() ){
 			has_ctor = true;
@@ -732,6 +755,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			if( ctorit->getAccess() == AS_private ) has_private_ctor = true;
 			if( ctorit->getAccess() == AS_protected ) has_protected_ctor = true;
 			if( ctorit->getAccess() == AS_public ) has_public_ctor = true;
+			if( ctorit->isCopyConstructor() && ctorit->getAccess() != AS_public )
+				has_non_public_copy_ctor = true;
 			if( ctorit->param_size() == 0 ){
 				has_explicit_default_ctor = true;
 				if( ctorit->getAccess() == AS_private ) has_private_default_ctor = true;
@@ -739,24 +764,33 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		}
 		if( ctorit->getAccess() == AS_private ) continue;
 		constructors.push_back( CDaoFunction( module, *ctorit, ++overloads[name] ) );
-		constructors.back().Generate();
-		if( ctorit->getAccess() == AS_protected && not hasVirtual ) continue;
-		CDaoFunction & meth = constructors.back();
-		dao_meths += meth.daoProtoCodes;
-		meth_decls += meth.cxxProtoCodes + ";\n";
-		meth_codes += meth.cxxWrapper;
 	}
+	CXXDestructorDecl *destr = decl->getDestructor();
+	if( destr && destr->getAccess() != AS_public ) has_public_destroctor = false;
 	// no explicit default constructor and explicit private constructor
 	// imply private default constructor:
 	if( has_private_ctor && not has_explicit_default_ctor ) has_private_default_ctor = true;
 	if( has_implicit_default_ctor ) has_public_ctor = true;
 	noConstructor = noWrapping || (has_public_ctor == false && has_protected_ctor == false);
 
+	for(i=0,n=methods.size(); i<n; i++) methods[i].Generate();
+	for(i=0,n=constructors.size(); i<n; i++){
+		CDaoFunction & meth = constructors[i];
+		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( meth.funcDecl );
+		meth.Generate();
+		if( ctor->getAccess() == AS_protected && not hasVirtual ) continue;
+		dao_meths += meth.daoProtoCodes;
+		meth_decls += meth.cxxProtoCodes + ";\n";
+		meth_codes += meth.cxxWrapper;
+	}
+
 	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
-	kvmap[ "host_typer" ] = name;
+	kvmap[ "host_qname" ] = qname;
+	kvmap[ "host_idname" ] = idname;
 	kvmap[ "cxxname" ] = name;
 	kvmap[ "daoname" ] = name;
 	kvmap[ "retype" ] = "=>" + name;
+	kvmap[ "overload" ] = "";
 
 	bool implement_default_ctor = hasVirtual && not noWrapping;
 	implement_default_ctor = implement_default_ctor && has_implicit_default_ctor;
@@ -773,7 +807,6 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			meth_codes += cdao_string_fill( cxx_wrap_alloc2, kvmap );
 		}
 	}
-	int i, j, n, m;
 	if( not hasVirtual and not has_protected_ctor and not noWrapping ){
 		kvmap[ "class" ] = name;
 		kvmap[ "name" ] = name;
@@ -791,13 +824,35 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 				type_decls += cdao_string_fill( tpl_class_new_novirt, kvmap );
 			}
 		}else if( not has_private_ctor ){
-			type_decls = cdao_string_fill( tpl_struct, kvmap );
-			type_codes = cdao_string_fill( tpl_struct_alloc2, kvmap );
+			type_decls += cdao_string_fill( tpl_struct, kvmap );
+			type_codes += cdao_string_fill( tpl_struct_alloc2, kvmap );
 		}
 	}
 	string kmethods;
 	string kvirtuals;
-	for(i=0, n = methods.size(); i<n; i++){
+	for(pvit=pvmeths.begin(),pvend=pvmeths.end(); pvit!=pvend; pvit++){
+		CXXMethodDecl *mdec = pvit->first;
+		string name = mdec->getNameAsString();
+		bool isconst = mdec->getTypeQualifiers() & DeclSpec::TQ_const;
+		pureVirtuals.push_back( mdec );
+		if( mdec->getParent() == decl ) continue;
+
+		CDaoFunction func( module, mdec, ++overloads[name] );
+		func.Generate();
+		if( func.excluded ) continue;
+		kvmap[ "name" ] = mdec->getNameAsString();
+		kvmap[ "retype" ] = func.retype.cxxtype;
+		kvmap[ "parlist" ] = func.cxxProtoParamDecl;
+		kvmap[ "extra" ] = isconst ? "const" : "";
+		kmethods += cdao_string_fill( tpl_meth_decl2, kvmap );
+		string wrapper = func.cxxWrapperVirt2;
+		string from = "DaoCxx_" + mdec->getParent()->getNameAsString() + "::";
+		string to = "DaoCxx_" + decl->getNameAsString() + "::";
+		size_t pos = wrapper.find( from );
+		if( pos != string::npos ) wrapper.replace( pos, from.size(), to );
+		cxxWrapperVirt += wrapper;
+	}
+	for(i=0, n=methods.size(); i<n; i++){
 		CDaoFunction & meth = methods[i];
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
 		bool isconst = mdec->getTypeQualifiers() & DeclSpec::TQ_const;
@@ -811,6 +866,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			}
 			continue;
 		}
+		if( dyn_cast<CXXConstructorDecl>( mdec ) ) continue;
 		kvmap[ "name" ] = mdec->getNameAsString();
 		kvmap[ "retype" ] = meth.retype.cxxtype;
 		kvmap[ "parlist" ] = meth.cxxProtoParamDecl;
@@ -823,10 +879,14 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			cxxWrapperVirt += meth.cxxWrapperVirt2;
 		}
 		if( mdec->getAccess() == AS_protected && not noWrapping ){
+			kvmap[ "type" ] = name;
+			kvmap[ "cxxname" ] = mdec->getNameAsString();
 			kvmap[ "parlist" ] = meth.cxxProtoParamDecl;
 			kvmap[ "parcall" ] = meth.cxxCallParamV;
 			kvmap[ "return" ] = kvmap[ "retype" ] == "void" ? "" : "return ";
-			kmethods += cdao_string_fill( tpl_meth_decl3, kvmap );
+			string mcode = cdao_string_fill( tpl_meth_decl3, kvmap );
+			if( mdec->isStatic() ) mcode = "static " + mcode;
+			kmethods += "\t" + mcode;
 		}
 	}
 
@@ -863,7 +923,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		for(i=0, n = constructors.size(); i<n; i++){
 			CDaoFunction & ctor = constructors[i];
 			const CXXConstructorDecl *cdec = dyn_cast<CXXConstructorDecl>( ctor.funcDecl );
-			if( cdec->getAccess() == AS_protected ) continue;
+			if( ctor.excluded ) continue;
+			//if( cdec->getAccess() == AS_protected ) continue;
 			kvmap["parlist"] = ctor.cxxProtoParamDecl;
 			kvmap["parcall"] = ctor.cxxCallParamV;
 			class_decl += cdao_string_fill( tpl_class_decl_constru, kvmap );
@@ -907,7 +968,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			string as = module->ExtractSource( asdec->getSourceRange() );
 			is_pubslot = as.find( "public" ) != string::npos and as.find( "slots" ) != string::npos;
 			is_signal = as.find( "signals" ) != string::npos;
-			outs() << as << " " << is_pubslot << is_signal << " access\n";
+			//outs() << as << " " << is_pubslot << is_signal << " access\n";
 		}
 		for(i=0, n = pubslots.size(); i<n; i++){
 			CDaoFunction *meth = pubslots[i];
@@ -940,15 +1001,13 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	} // isQObject
 	kvmap["constructors"] = class_decl;
 	if( not noWrapping ){
-		bool isPureVirt = has_pure_virtual;
-		bool noCopyConstructor = false; //XXX
-		if( isPureVirt || noCopyConstructor ){
+		//if( decl->isAbstract() || has_non_public_copy_ctor ){
 			type_decls += cdao_string_fill( tpl_class_def, kvmap ) + class_new;
 			type_codes += cdao_string_fill( tpl_class_init, kvmap );
-		}else{
-			type_decls += cdao_string_fill( tpl_class2, kvmap ) + class_new;
-			type_codes += cdao_string_fill( tpl_class_copy, kvmap );
-		}
+		//}else{
+		//	type_decls += cdao_string_fill( tpl_class2, kvmap ) + class_new;
+		//	type_codes += cdao_string_fill( tpl_class_copy, kvmap );
+		//}
 	}
 	for(i=0, n = methods.size(); i<n; i++){
 		CDaoFunction & meth = methods[i];
@@ -975,9 +1034,25 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			dao_meths += meth.daoProtoCodes;
 			meth_decls += meth.cxxProtoCodes + ";\n";
 			meth_codes += meth.cxxWrapper;
-		}else if( hasVirtual && not noWrapping /* && not meth.nowrap */ ){
+		}else if( mdec->getAccess() == AS_protected && hasVirtual && not noWrapping /* && not meth.nowrap */ ){
 			dao_meths += meth.daoProtoCodes;
 			meth_decls += meth.cxxProtoCodes + ";\n";
+			string wrapper = meth.cxxWrapper;
+			string name22 = "DaoCxx_" + name;
+			string from = name + "* self= (" + name + "*)";
+			string to = name22 + "* self= (" + name22 + "*)";
+			string from2 = "self->" + mdec->getNameAsString() + "(";
+			string to2 = "self->DaoWrap_" + mdec->getNameAsString() + "(";
+			string from3 = name + "::" + mdec->getNameAsString() + "(";
+			string to3 = name22 + "::DaoWrap_" + mdec->getNameAsString() + "(";
+			size_t pos;
+			if( (pos = wrapper.find( from )) != string::npos )
+				wrapper.replace( pos, from.size(), to );
+			if( (pos = wrapper.find( from2 )) != string::npos )
+				wrapper.replace( pos, from2.size(), to2 );
+			if( (pos = wrapper.find( from3 )) != string::npos )
+				wrapper.replace( pos, from3.size(), to3 );
+			meth_codes += wrapper;
 #if 0
 			wrapper = meth.cxxWrapper;
 			name22 = "DaoCxx_" + name;
@@ -998,9 +1073,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	if( not noWrapping ) type_codes += cxxWrapperVirt;
 
 	string parents, casts, cast_funcs;
-	string typer_name = GetIdName();
-	string qname = decl->getQualifiedNameAsString();
-	kvmap[ "typer" ] = typer_name;
+	kvmap[ "typer" ] = idname;
 	kvmap[ "child" ] = qname;
 	kvmap[ "parent" ] = "";
 	kvmap[ "parent2" ] = "";
@@ -1008,8 +1081,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoUserType *sup = bases[i];
 		string supname = sup->GetName();
 		string supname2 = sup->GetIdName();
-		parents += "dao_" + typer_name + "_Typer, ";
-		casts += "dao_cast_" + typer_name + "_to_" + supname2 + ",";
+		parents += "dao_" + idname + "_Typer, ";
+		casts += "dao_cast_" + idname + "_to_" + supname2 + ",";
 		kvmap[ "parent" ] = supname;
 		kvmap[ "parent2" ] = supname2;
 		cast_funcs += cdao_string_fill( cast_to_parent, kvmap );
@@ -1017,6 +1090,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "type" ] = name;
 	kvmap[ "qname" ] = qname;
 	kvmap[ "decls" ] = meth_decls;
+	kvmap[ "nums" ] = "";
 	kvmap[ "meths" ] = dao_meths;
 	kvmap[ "parents" ] = parents;
 	kvmap[ "casts" ] = casts;
@@ -1025,9 +1099,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "delete" ] = "NULL";
 	kvmap[ "if_parent" ] = "";
 	kvmap[ "deltest" ] = "NULL";
-	kvmap[ "comment" ] = "";
+	kvmap[ "comment" ] = has_public_destroctor ? "" : "//";
 	//if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );
-	kvmap["delete"] = "Dao_" + typer_name + "_Delete";
+	kvmap["delete"] = "Dao_" + idname + "_Delete";
 	if( name == "QApplication" or name == "QCoreApplication" ) kvmap[ "comment" ] = "//";
 	//if( isQWidget ) kvmap["if_parent"] = "if( ((" + utp.name2 + "*)self)->parentWidget() == NULL )";
 #if 0

@@ -33,12 +33,13 @@ class SecondClass : public FirstClass
 	void FirstVirt();
 	virtual float* Meth2( int index, SecondClass *obj );
 	virtual int* Excluded( int excluding[][], void*(*ex)() )const=0;
+	virtual int Excluded( void*(*callback)() )const=0;
 
 	virtual void Test( NS::Enum1 & e1, NS::Enum1 *e2 );
 	public slots:
 	void t();
 };
 //void second_function2( const SecondClass & obj = SecondClass() );
-void second_function2( const FirstClass & obj = FirstClass() );
+//void second_function2( const FirstClass & obj = FirstClass() );
 
 #endif

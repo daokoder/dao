@@ -182,9 +182,9 @@ bool CDaoModule::CheckHeaderDependency()
 		if( headers.find( includee ) != headers.end() ){
 			if( includer == moduleInfo.entry ) continue;
 			if( headers.find( includer ) != headers.end() ) continue;
-			errs() << "Error: wrapping header file \""<< includee->getName();
+			errs() << "Warning: wrapping header file \""<< includee->getName();
 			errs() << "\" is included by external file \"" << includer->getName() << "\"!\n";
-			return false;
+			//return false;
 		}
 	}
 	return true;
@@ -236,7 +236,11 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 	if( sourceman.isFromMainFile( loc ) ){
 		if( headers.find( entryHeader ) != headers.end() ) return;
 		headers[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
+
+		map<FileEntry*,CDaoHeaderInfo>::iterator it = extHeaders.find( entryHeader );
+		if( it != extHeaders.end() ) extHeaders.erase( it );
 	}else if( requiredModules2.find( entryInclude ) != requiredModules2.end() ){
+		if( headers.find( entryHeader ) != headers.end() ) return;
 		if( extHeaders.find( entryHeader ) != extHeaders.end() ) return;
 		extHeaders[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
 	}
@@ -271,15 +275,13 @@ void CDaoModule::HandleVariable( VarDecl *var )
 }
 void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 {
-	if( not IsFromModules( funcdec->getLocation() ) ) return;
-	outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
+	//outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
 	functions.push_back( CDaoFunction( this, funcdec ) );
 }
 void CDaoModule::HandleUserType( CXXRecordDecl *record )
 {
-	if( not IsFromModules( record->getLocation() ) ) return;
-	outs() << "UserType: " << record->getNameAsString() << "\n";
-	outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
+	//outs() << "UserType: " << record->getNameAsString() << "\n";
+	//outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
 	usertypes.push_back( NewUserType( record ) );
 }
 void CDaoModule::HandleNamespace( NamespaceDecl *nsdecl )
@@ -415,7 +417,7 @@ string CDaoModule::MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamesp
 	}
 	codes += ifdef_cpp_open;
 	codes += func_decl;
-	codes += "static DaoFuncItem *dao_" + idname + "_Funcs[] = \n{\n" + rout_entry;
+	codes += "static DaoFuncItem dao_" + idname + "_Funcs[] = \n{\n" + rout_entry;
 	codes += "  { NULL, NULL }\n};\n";
 	codes += func_codes;
 	codes += ifdef_cpp_close;
@@ -483,6 +485,7 @@ int CDaoModule::Generate()
 		fout_source2 << namespaces[i]->source2;
 		fout_source3 << namespaces[i]->source3;
 	}
+	fout_header << "#endif\n";
 
 	fout_source << ifdef_cpp_open;
 	string onload = "DaoOnLoad";

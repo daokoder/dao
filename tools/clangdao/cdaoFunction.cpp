@@ -296,7 +296,7 @@ EndCall:\n\
 const string cxx_virt_class2 =
 "$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
   int _cs = 0;\n\
-  return ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+  $(return)((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
 }\n";
 
 const string cxx_virt_class3 =
@@ -389,14 +389,14 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 		if( i ) sig += ",";
 		sig += pardecl->getTypeSourceInfo()->getType().getAsString();
 	}
-	retype.name = "_" + decl->getNameAsString();
-	retype.qualType = funcDecl->getResultType();
+	retype.name = "_" + cdao_qname_to_idname( decl->getNameAsString() );
+	retype.SetQualType( funcDecl->getResultType() );
 
 	sig += ")";
 	sig = normalize_type_name( sig );
 	map<string,vector<string> >::iterator it = module->functionHints.find( sig );
 	if( it == module->functionHints.end() ) return;
-	outs() << "hints found for: " << sig << "\n";
+	//outs() << "hints found for: " << sig << "\n";
 	vector<string> & hints = it->second;
 	for(i=0, n=parlist.size(); i<n; i++) parlist[i].SetHints( hints[i+1] );
 	retype.SetHints( hints[0] );
@@ -426,6 +426,8 @@ struct IntString
 
 int CDaoFunction::Generate()
 {
+	if( not module->IsFromModules( funcDecl->getLocation() ) ) return 0;
+
 	bool isconst = false;
 	const CXXMethodDecl *methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
 	const CXXRecordDecl *hostdecl = NULL;
@@ -441,7 +443,7 @@ int CDaoFunction::Generate()
 		isconst = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
 		if( methdecl->isInstance() && ctor == NULL ){
 			parlist.insert( parlist.begin(), CDaoVariable( module ) );
-			parlist.front().qualType = ctx.getPointerType( ctx.getRecordType( hostdecl ) );
+			parlist.front().SetQualType( ctx.getPointerType( ctx.getRecordType( hostdecl ) ) );
 			parlist.front().name = "self";
 			autoself = 1;
 		}
@@ -449,12 +451,21 @@ int CDaoFunction::Generate()
 
 	int retcode = 0;
 	int i, n = parlist.size();
-	for(i=0; i<n; i++) retcode |= parlist[i].Generate( i, i-autoself );
+	for(i=0; i<n; i++){
+		retcode |= parlist[i].Generate( i, i-autoself );
+		if( parlist[i].unsupported ){
+			excluded = true;
+			return 1;
+		}
+	}
 	retcode |= retype.Generate( VAR_INDEX_RETURN );
-	excluded = retcode != 0;
+	if( retype.unsupported ){
+		excluded = true;
+		return 1;
+	}
 
 #if 0
-	if( retype.unsupport or retype.isCallback ) excluded = 1;
+	if( retype.unsupported or retype.isCallback ) excluded = 1;
 	pcount = parlist.size();
 	hasCallback = 0;
 	for( vo in parlist ){
@@ -469,33 +480,23 @@ int CDaoFunction::Generate()
 
 	string cxxName = funcDecl->getNameAsString();
 	string daoName = cxxName;
-	string cxxCallParamV, cxxProtoParamVirt;
 	bool hasUserData = 0;
 
 	signature = cxxName + "("; // exclude return type from signature
-	signature2 = retype.cxxtype2 + "(";
+	signature2 = retype.cxxtype + "(";
 
 	vector<IntString> unusedDefaults;
+	vector<CDaoVariable*> pps;
 	for(i=0; i<n; i++){
 		CDaoVariable & vo = parlist[i];
-		//outs() << vo.name << vo.unsupport << "-----------------\n";
-		if( vo.unsupport ){
-			excluded = true;
-			return 1;
-		}
+		pps.push_back( & vo );
+		//outs() << vo.name << vo.unsupported << "-----------------\n";
 		//if( vo.name == 'userdata' ) hasUserData = 1;
 		if( i ) daoprotpars += ", ";
 		daoprotpars += vo.daopar;
-		//if( vo.sqsizes.size() <2 ) 
-		dao2cxxcodes += vo.dao2cxx;
 		parsetcodes += vo.parset;
 		if( vo.useDefault == false )
 			unusedDefaults.push_back( IntString(i, cxxcallpars) );
-#if 0
-		if( vo.isconst and vo.refer == '&' and vo.vdefault != '' ){
-			unusedDefaults.append( (i, cxxcallpars) );
-		}
-#endif
 		if( i < autoself ) continue;
 		if( i > autoself ){
 			nils += ", ";
@@ -509,7 +510,7 @@ int CDaoFunction::Generate()
 			cxxCallParamV += ", ";
 		}
 		signature += vo.cxxtype;
-		signature2 += vo.cxxtype2;
+		signature2 += vo.cxxtype;
 		//cxxProtoParamVirt += vo.cxxpar_enum_virt;
 		cxxProtoParamVirt += vo.cxxpar;
 		cxxprotpars += vo.cxxpar;
@@ -526,6 +527,22 @@ int CDaoFunction::Generate()
 			if( i ) slot_dao2cxxcodes += vo.dao2cxx;
 		}
 #endif
+	}
+
+	// parameter with array hint may need parameter behind it:
+	// example, for func( int a[][], int n, int m ):
+	// int n= (int) _p[1]->v.i;
+	// float** mat= (float**) DaoArray_GetMatrixF( _p[0]->v.array, n );
+	for(i=n-1; i>=0; i--){
+		CDaoVariable *vo = pps[i];
+		if( vo->sizes.size() ){
+			pps.erase( pps.begin() + i );
+			pps.push_back( vo );
+		}
+	}
+	for(i=0; i<n; i++){
+		CDaoVariable *vo = pps[i];
+		dao2cxxcodes += vo->dao2cxx;
 	}
 #if 0
 	if( hasCallback and not hasUserData ) excluded = 1;
@@ -544,9 +561,9 @@ int CDaoFunction::Generate()
 		signature += "const";
 		signature2 += "const";
 	}
-	outs() << signature << "\n";
-	outs() << signature2 << "\n";
-	outs() << funcDecl->getTypeSourceInfo()->getType().getAsString() << "\n";
+	//outs() << signature << "\n";
+	//outs() << signature2 << "\n";
+	//outs() << funcDecl->getTypeSourceInfo()->getType().getAsString() << "\n";
 
 	// because C/C++ parameter list is need for constructors!
 	cxxProtoParam = cxxprotpars;
@@ -762,7 +779,7 @@ int CDaoFunction::Generate()
 		cxxWrapperVirt += cdao_string_fill( cxx_virt_call_11, kvmap3 );
 	}
 	if( methdecl ){
-		kvmap3[ "return" ] = "return";
+		kvmap3[ "return" ] = "return ";
 		kvmap3[ "comma" ] = cxxCallParamV.size() ? "," : "";
 		//XXX if( retype.cxxtype == "void" && retype.refer == "" ) kvmap3[ "return" ] = "";
 		if( retype.cxxtype == "void" ) kvmap3[ "return" ] = "";

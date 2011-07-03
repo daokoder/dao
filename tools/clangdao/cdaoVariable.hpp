@@ -24,19 +24,20 @@ struct CDaoVariable
 	CDaoModule  *module;
 
 	QualType     qualType;
+	QualType     canoType;
 	const Expr  *initor;
 
 	bool    isNullable;
 	bool    hasArrayHint;
-	bool    unsupport;
+	bool    unsupported;
 	bool    useDefault;
 	string  name;
 	string  cxxdefault;
 	string  daodefault;
 
 	string  daotype;
-	string  cxxtype;
-	string  cxxtype2;
+	string  cxxtype; // original
+	string  cxxtype2; // stripped off pointer, refernce, ...
 	string  cxxcall;
 	string  daopar;
 	string  cxxpar;
@@ -55,8 +56,10 @@ struct CDaoVariable
 
 	CDaoVariable( CDaoModule *mod = NULL, const VarDecl *decl = NULL );
 
+	void SetQualType( QualType qtype );
 	void SetDeclaration( const VarDecl *decl );
 	void SetHints( const string & hints );
+
 	int Generate( int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate2( int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const BuiltinType *type, int daopar_index = 0, int cxxpar_index = 0 );
@@ -64,7 +67,11 @@ struct CDaoVariable
 	int Generate( const ReferenceType *type, int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate( const ArrayType *type, int daopar_index = 0, int cxxpar_index = 0 );
 	int GenerateForArray( QualType elemtype, string size, int daopar_index = 0, int cxxpar_index = 0 );
-	int GenerateForArray( QualType elemtype, string size, string size2, int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForArray( QualType elemtype, string size, string size2, int dpid = 0, int cpid = 0 );
+
+	void MakeCxxParameter( string & prefix, string & suffix );
+	void MakeCxxParameter( QualType qtype, string & prefix, string & suffix );
+	QualType GetStrippedType( QualType qtype );
 };
 
 #endif

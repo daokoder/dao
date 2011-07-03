@@ -35,6 +35,8 @@ struct CDaoUserType
 	string  cxxWrapperVirt;
 	string  typer_codes;
 
+	vector<CXXMethodDecl*>  pureVirtuals;
+
 	CDaoUserType( CDaoModule *mod = NULL, RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );

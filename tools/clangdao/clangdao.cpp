@@ -119,6 +119,10 @@ string cdao_qname_to_idname( const string & qname )
 	while( (pos = idname.find( "<" )) != string::npos ) idname.replace( pos, 1, "_1_" );
 	while( (pos = idname.find( ">" )) != string::npos ) idname.replace( pos, 1, "_2_" );
 	while( (pos = idname.find( "," )) != string::npos ) idname.replace( pos, 1, "_3_" );
+	while( (pos = idname.find( "[" )) != string::npos ) idname.replace( pos, 1, "_4_" );
+	while( (pos = idname.find( "]" )) != string::npos ) idname.replace( pos, 1, "_5_" );
+	while( (pos = idname.find( "(" )) != string::npos ) idname.replace( pos, 1, "_6_" );
+	while( (pos = idname.find( ")" )) != string::npos ) idname.replace( pos, 1, "_7_" );
 	return idname;
 }
 void remove_type_prefix( string & name, const string & key )

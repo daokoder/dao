@@ -6,14 +6,25 @@
 
 #define TEST	(12+34)
 
+typedef float Matrix[4][4];
+typedef unsigned int Fl_Shortcut;
+Fl_Shortcut fl_old_shortcut(const char*);
+
 class FirstClass
 {
 	public:
+	FirstClass( const FirstClass & other );
+	virtual ~FirstClass();
 
 	virtual void FirstVirt( float *vec, int size );
 	virtual void FirstVirt( float **mat, int n, int m );
+	virtual void FirstVirt( char *ss[3] ); // XXX
 	virtual void FirstVirt( float *mat[3], int n ); // XXX
 	virtual void FirstVirt( float mat[3][4] );
+	virtual void FirstVirt2( Matrix mat )=0;
+
+	protected:
+	virtual void FirstVirt3( int )=0;
 };
 
 void first_function( int abc=123+456 );
