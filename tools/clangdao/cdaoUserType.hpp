@@ -50,7 +50,9 @@ struct CDaoUserType
 
 	bool IsFromMainModule();
 	int Generate();
+	int Generate( RecordDecl *decl );
 	int Generate( CXXRecordDecl *decl );
+	int GenerateSimpleTyper();
 };
 
 #endif

@@ -262,8 +262,10 @@ void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *mac
 	MacroInfo::tokens_iterator tokiter;
 	for(tokiter=macro->tokens_begin(); tokiter!=macro->tokens_end(); tokiter++){
 		Token tok = *tokiter;
-		if( lastiden && tok.isAnyIdentifier() ) proto += " ";
-		lastiden = tok.isAnyIdentifier();
+		tok::TokenKind kind = tok.getKind();
+		bool id = kind == tok::identifier || kind >= tok::kw_auto;
+		if( lastiden && id ) proto += " ";
+		lastiden = id;
 		proto += pp.getSpelling( tok );
 	}
 	functionHints[ proto ] = hints;
@@ -273,12 +275,16 @@ void CDaoModule::HandleVariable( VarDecl *var )
 {
 	outs() << var->getNameAsString() << "\n";
 }
+void CDaoModule::HandleEnum( EnumDecl *decl )
+{
+	enums.push_back( decl );
+}
 void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 {
 	//outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
 	functions.push_back( CDaoFunction( this, funcdec ) );
 }
-void CDaoModule::HandleUserType( CXXRecordDecl *record )
+void CDaoModule::HandleUserType( RecordDecl *record )
 {
 	//outs() << "UserType: " << record->getNameAsString() << "\n";
 	//outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
@@ -430,6 +436,32 @@ string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamesp
 	codes += "\tDaoNameSpace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
 	return codes;
 }
+string CDaoModule::MakeEnumConstantItems( vector<EnumDecl*> & enums, const string & qname )
+{
+	int i, n;
+	string qname2 = qname.size() ? qname + "::" : "";
+	string codes;
+	for(i=0, n=enums.size(); i<n; i++){
+		EnumDecl *decl = enums[i];
+		EnumDecl *dd = (EnumDecl*) decl->getDefinition();
+		// TODO: Add type define;
+		if( dd == NULL && not IsFromMainModule( decl->getLocation() ) ) continue;
+		if( not IsFromMainModule( dd->getLocation() ) ) continue;
+		if( dd == NULL ) continue;
+		EnumDecl::enumerator_iterator it, end = dd->enumerator_end();
+		for(it=dd->enumerator_begin(); it!=end; it++){
+			string item = it->getNameAsString();
+			codes += "  { \"" + item + "\", DAO_INTEGER, " + qname2 + item + " },\n";
+		}
+	}
+	return codes;
+}
+string CDaoModule::MakeEnumConstantStruct( vector<EnumDecl*> & enums, const string & qname )
+{
+	string idname = cdao_qname_to_idname( qname );
+	string codes = "static DaoNumItem dao_" + idname + "_Nums[] = \n{\n";
+	return codes + MakeEnumConstantItems( enums, qname ) + "  { NULL, 0, 0 }\n};\n";
+}
 
 int CDaoModule::Generate()
 {
@@ -475,6 +507,7 @@ int CDaoModule::Generate()
 		CDaoProxyFunction & proxy = pit->second;
 		if( proxy.used ) fout_source3 << proxy.codes;
 	}
+	fout_source << MakeEnumConstantStruct( enums );
 	fout_source << MakeSourceCodes( functions );
 	fout_source << MakeSourceCodes( usertypes );
 	fout_source2 << MakeSource2Codes( usertypes );
@@ -492,7 +525,8 @@ int CDaoModule::Generate()
 	fout_source << "int " << onload << "( DaoVmSpace *vms, DaoNameSpace *ns )\n{\n";
 	//XXX if( hasNameSpace ) fout_source.writeln( "  DaoNameSpace *ns2;" );
 	//fout_source << "  const char *aliases[" << nalias << "];\n";
-	fout_source << "  __daoVmSpace = vms;\n";
+	fout_source << "\t__daoVmSpace = vms;\n";
+	fout_source << "\tDaoNameSpace_AddConstNumbers( ns, dao__Nums );\n";
 	fout_source << MakeOnLoadCodes( usertypes );
 	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload;
 	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload2;
@@ -503,7 +537,7 @@ int CDaoModule::Generate()
 		fout_source.write( "   qRegisterMetaType<DaoQtMessage>(\"DaoQtMessage\");\n" );
 	}
 #endif
-	fout_source << "  return 0;\n}\n";
+	fout_source << "\treturn 0;\n}\n";
 
 	fout_source << ifdef_cpp_close;
 

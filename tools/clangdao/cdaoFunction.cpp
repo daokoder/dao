@@ -371,6 +371,8 @@ CDaoFunction::CDaoFunction( CDaoModule *mod, FunctionDecl *decl, int idx )
 {
 	module = mod;
 	funcDecl = NULL;
+	funcType = NULL;
+	fieldDecl = NULL;
 	excluded = false;
 	index = idx;
 	if( decl ) SetDeclaration( decl );
@@ -401,15 +403,46 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	for(i=0, n=parlist.size(); i<n; i++) parlist[i].SetHints( hints[i+1] );
 	retype.SetHints( hints[0] );
 }
+void CDaoFunction::SetCallback( FunctionProtoType *func, FieldDecl *decl )
+{
+	int i, n;
+	funcType = func;
+	fieldDecl = decl;
+	if( func == NULL || decl == NULL ) return;
+
+	string sig = decl->getQualifiedNameAsString() + "(";
+	for(i=0, n=func->getNumArgs(); i<n; i++){
+		QualType partype = func->getArgType( i );
+		parlist.push_back( CDaoVariable( module ) );
+		parlist.back().SetQualType( partype );
+		if( i ) sig += ",";
+		sig += partype.getAsString();
+	}
+	retype.name = "_" + cdao_qname_to_idname( decl->getNameAsString() );
+	retype.SetQualType( func->getResultType() );
+
+	sig += ")";
+	sig = normalize_type_name( sig );
+	outs() << "hints found for: " << sig << "\n";
+
+	map<string,vector<string> >::iterator it = module->functionHints.find( sig );
+	if( it == module->functionHints.end() ) return;
+	//outs() << "hints found for: " << sig << "\n";
+	vector<string> & hints = it->second;
+	for(i=0, n=parlist.size(); i<n; i++) parlist[i].SetHints( hints[i+1] );
+	retype.SetHints( hints[0] );
+}
 bool CDaoFunction::IsFromMainModule()
 {
-	if( funcDecl == NULL ) return false;
-	return module->IsFromMainModule( funcDecl->getLocation() );
+	if( funcDecl ) return module->IsFromMainModule( funcDecl->getLocation() );
+	if( fieldDecl ) return module->IsFromMainModule( fieldDecl->getLocation() );
+	return false;
 }
 string CDaoFunction::GetInputFile()const
 {
-	if( funcDecl == NULL ) return false;
-	return module->GetFileName( funcDecl->getLocation() );
+	if( funcDecl ) return module->GetFileName( funcDecl->getLocation() );
+	if( fieldDecl ) return module->GetFileName( fieldDecl->getLocation() );
+	return "";
 }
 
 struct IntString
@@ -426,20 +459,21 @@ struct IntString
 
 int CDaoFunction::Generate()
 {
-	if( not module->IsFromModules( funcDecl->getLocation() ) ) return 0;
+	DeclaratorDecl *decl = funcDecl;
+	if( decl == NULL ) decl = fieldDecl;
+	if( decl == NULL ) return 1;
+	if( not module->IsFromModules( decl->getLocation() ) ) return 0;
 
+	int autoself = 0;
 	bool isconst = false;
-	const CXXMethodDecl *methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
-	const CXXRecordDecl *hostdecl = NULL;
+	const CXXMethodDecl *methdecl = NULL;
+	const RecordDecl *hostdecl = NULL;
 	ASTContext & ctx = module->compiler->getASTContext();
 	string host_name, host_qname, host_idname;
-	int autoself = 0;
+	if( funcDecl ) methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
 	if( methdecl ){
 		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( methdecl );
 		hostdecl = methdecl->getParent();
-		host_name = hostdecl->getName().str();
-		host_qname = CDaoModule::GetQName( hostdecl );
-		host_idname = CDaoModule::GetIdName( hostdecl );
 		isconst = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
 		if( methdecl->isInstance() && ctor == NULL ){
 			parlist.insert( parlist.begin(), CDaoVariable( module ) );
@@ -447,6 +481,13 @@ int CDaoFunction::Generate()
 			parlist.front().name = "self";
 			autoself = 1;
 		}
+	}else if( fieldDecl ){
+		hostdecl = (RecordDecl*) fieldDecl->getParent();
+	}
+	if( hostdecl ){
+		host_name = hostdecl->getName().str();
+		host_qname = CDaoModule::GetQName( hostdecl );
+		host_idname = CDaoModule::GetIdName( hostdecl );
 	}
 
 	int retcode = 0;
@@ -478,7 +519,7 @@ int CDaoFunction::Generate()
 	string slot_dao2cxxcodes, cxxprotpars_decl;
 	string nils, refs;
 
-	string cxxName = funcDecl->getNameAsString();
+	cxxName = decl->getNameAsString();
 	string daoName = cxxName;
 	bool hasUserData = 0;
 
@@ -578,8 +619,8 @@ int CDaoFunction::Generate()
 	map<string,string> kvmap;
 	kvmap[ "host_qname" ] = host_qname;
 	kvmap[ "host_idname" ] = host_idname;
-	kvmap[ "func_idname" ] = CDaoModule::GetIdName( funcDecl );
-	kvmap[ "func_call" ] = CDaoModule::GetQName( funcDecl );
+	kvmap[ "func_idname" ] = CDaoModule::GetIdName( decl );
+	kvmap[ "func_call" ] = CDaoModule::GetQName( decl );
 	kvmap[ "cxxname" ] = cxxName;
 	kvmap[ "daoname" ] = daoName;
 	kvmap[ "parlist" ] = daoprotpars;

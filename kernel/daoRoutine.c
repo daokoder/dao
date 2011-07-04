@@ -4785,11 +4785,12 @@ DRoutine* DMetaParam_Lookup( DMetaParam *self, DValue *p[], int n, int strict, i
 	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
 	DRoutine *rout = NULL;
 	DRoutine *best = NULL;
-	DValue *value = p[0];
+	DValue *value = NULL;
 	//printf( "DMetaParam_Lookup: %s %i\n", self->type ? self->type->name->mbs : "", n );
 	*ms = 1;
 	if( n == 0 ) return DMetaParam_GetLeaf( self, ms );
 	if( p[0]->t == DAO_PAR_NAMED ) return DMetaParam_LookupByName( self, p, n, strict, ms, defs );
+	value = p[0];
 	for(i=0; i<K; i++){
 		DMetaParam *param = items[i];
 		DaoType *type = param->type;
@@ -4817,13 +4818,14 @@ DRoutine* DMetaParam_LookupByType( DMetaParam *self, DaoType *types[], int n, in
 	DMetaParam **items = (DMetaParam**) self->nexts->items.pVoid;
 	DRoutine *rout = NULL;
 	DRoutine *best = NULL;
-	DaoType *partype = types[0];
+	DaoType *partype = NULL;
 	//printf( "DMetaParam_LookupByType: %s %i\n", self->type ? self->type->name->mbs : "", n );
 	*ms = 1;
 	if( n == 0 ) return DMetaParam_GetLeaf( self, ms );
 	if( types[0]->tid == DAO_PAR_NAMED )
 		return DMetaParam_LookupByName2( self, types, n, strict, ms, defs );
 	//printf( "DMetaParam_NextBestByType: %i\n", n );
+	partype = types[0];
 	for(i=0; i<K; i++){
 		DMetaParam *param = items[i];
 		DaoType *type = param->type;

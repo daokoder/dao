@@ -640,6 +640,7 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		SourceRange range = initor->getSourceRange();
 		daodefault = module->ExtractSource( range, true );
 		cxxdefault = "=" + daodefault;
+		if( daodefault == "0L" ) daodefault = "0";
 
 		Preprocessor & pp = module->compiler->getPreprocessor();
 		SourceManager & sm = module->compiler->getSourceManager();
@@ -747,8 +748,14 @@ int CDaoVariable::Generate( const BuiltinType *type, int daopar_index, int cxxpa
 int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpar_index )
 {
 	QualType qtype2 = type->getPointeeType();
-	const Type *type2 = qtype2.getTypePtr();
 	string ctypename2 = qtype2.getAsString();
+	const Type *type2 = qtype2.getTypePtr();
+	const RecordDecl *decl = type2->getAsCXXRecordDecl();
+	if( decl == NULL ){
+		const RecordType *t = type2->getAsStructureType();
+		if( t == NULL ) t = type2->getAsUnionType();
+		if( t ) decl = t->getDecl();
+	}
 
 	if( sizes.size() == 1 ) return GenerateForArray( qtype2, sizes[0], daopar_index, cxxpar_index );
 	if( sizes.size() == 2 && type2->isPointerType() ){
@@ -831,7 +838,7 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 		tpl.ctxput = ctxput_ints;
 		tpl.getres = getres_ints;
 		tpl.cxx2dao = cxx2dao_int2;
-	}else if( CXXRecordDecl *decl = type2->getAsCXXRecordDecl() ){
+	}else if( decl ){
 		daotype = decl->getQualifiedNameAsString();
 		decl = decl->getDefinition();
 		tpl.daopar = daopar_user;
@@ -854,8 +861,14 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxxpar_index )
 {
 	QualType qtype2 = type->getPointeeType();
-	const Type *type2 = qtype2.getTypePtr();
 	string ctypename2 = qtype2.getAsString();
+	const Type *type2 = qtype2.getTypePtr();
+	const RecordDecl *decl = type2->getAsCXXRecordDecl();
+	if( decl == NULL ){
+		const RecordType *t = type2->getAsStructureType();
+		if( t == NULL ) t = type2->getAsUnionType();
+		if( t ) decl = t->getDecl();
+	}
 
 	CDaoVarTemplates tpl;
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
@@ -908,7 +921,7 @@ int CDaoVariable::Generate( const ReferenceType *type, int daopar_index, int cxx
 
 		tpl.SetupIntScalar();
 		tpl.parset = parset_int;
-	}else if( CXXRecordDecl *decl = type2->getAsCXXRecordDecl() ){
+	}else if( decl ){
 		daotype = decl->getQualifiedNameAsString();
 		decl = decl->getDefinition();
 		cxxcall = "*" + name;
@@ -1177,6 +1190,12 @@ void CDaoVariable::MakeCxxParameter( string & prefix, string & suffix )
 void CDaoVariable::MakeCxxParameter( QualType qtype, string & prefix, string & suffix )
 {
 	const Type *type = qtype.getTypePtr();
+	const RecordDecl *decl = type->getAsCXXRecordDecl();
+	if( decl == NULL ){
+		const RecordType *t = type->getAsStructureType();
+		if( t == NULL ) t = type->getAsUnionType();
+		if( t ) decl = t->getDecl();
+	}
 	if( type->isBuiltinType() ){
 		prefix = qtype.getAsString() + prefix;
 	}else if( type->isPointerType() ){
@@ -1201,7 +1220,7 @@ void CDaoVariable::MakeCxxParameter( QualType qtype, string & prefix, string & s
 		const EnumDecl *edec = type2->getDecl();
 		if( edec && edec->getAccess() != AS_public ) unsupported = true;
 		prefix = normalize_type_name( qtype.getAsString() ) + prefix;
-	}else if( CXXRecordDecl *decl = type->getAsCXXRecordDecl() ){
+	}else if( decl ){
 		// const C & other: const is part of the name, not a qualifier.
 		prefix = normalize_type_name(qtype.getAsString()) + prefix;
 	}

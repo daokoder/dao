@@ -597,14 +597,19 @@ static DaoTypeBase $(typer)_Typer = \n\
 { \"$(type)\", NULL,\n\
   dao_$(typer)_Nums,\n\
   dao_$(typer)_Meths,\n\
-  { $(parents)0 },\n\
-  { $(casts)0 },\n\
+  { $(parents)NULL },\n\
+  { $(casts)NULL },\n\
   $(delete),\n\
   $(deltest)\n\
 };\n\
 DaoTypeBase DAO_DLL_$(module) *dao_$(typer)_Typer = & $(typer)_Typer;\n";
 
-const string usertype_code_none = methlist_code + usertype_code;
+const string usertype_code_none =
+"static DaoTypeBase $(typer)_Typer = \n\
+{ \"$(type)\", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };\n\
+DaoTypeBase DAO_DLL_$(module) *dao_$(typer)_Typer = & $(typer)_Typer;\n";
+
+//const string usertype_code_none = methlist_code + usertype_code;
 const string usertype_code_struct = methlist_code + delete_struct + usertype_code;
 const string usertype_code_class = methlist_code + delete_class + usertype_code;
 const string usertype_code_class2 = methlist_code + delete_class + delete_test + usertype_code;
@@ -629,33 +634,152 @@ bool CDaoUserType::IsFromMainModule()
 {
 	if( decl == NULL ) return false;
 	RecordDecl *dd = decl->getDefinition();
-	if( dd == NULL ) return false;
+	if( dd == NULL ) return module->IsFromMainModule( decl->getLocation() );
 	return module->IsFromMainModule( dd->getLocation() );
 }
 string CDaoUserType::GetInputFile()const
 {
-	if( decl == NULL ) return false;
+	if( decl == NULL ) return "";
 	RecordDecl *dd = decl->getDefinition();
-	if( dd == NULL ) return false;
+	if( dd == NULL ) return module->GetFileName( decl->getLocation() );
 	return module->GetFileName( dd->getLocation() );
+}
+int CDaoUserType::GenerateSimpleTyper()
+{
+	map<string,string> kvmap;
+	string idname = CDaoModule::GetIdName( decl );
+	string name = decl->getNameAsString();
+	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
+	kvmap[ "typer" ] = idname;
+	kvmap[ "type" ] = name;
+	typer_codes = cdao_string_fill( usertype_code_none, kvmap );
+	return 0;
 }
 int CDaoUserType::Generate()
 {
-	if( not module->IsFromModules( decl->getLocation() ) ) return 0;
-
+	RecordDecl *cc = (RecordDecl*) decl->getCanonicalDecl();
 	RecordDecl *dd = decl->getDefinition();
-	//outs() << decl->getNameAsString() << ": " << (void*)decl <<" " << (void*)dd << "\n";
-	//outs() << decl->getQualifiedNameAsString() << "\n";
+	// ignore redundant declarations:
 	isRedundant = dd != NULL && dd != decl;
 	if( isRedundant ) return 0;
+	// simplest wrapping for types declared or defined outsided of the modules:
+	if( cc && not module->IsFromModules( cc->getLocation() ) ) return GenerateSimpleTyper();
+	if( dd && not module->IsFromModules( dd->getLocation() ) ) return GenerateSimpleTyper();
+	if( not module->IsFromModules( decl->getLocation() ) ) return GenerateSimpleTyper();
+
+	//outs() << decl->getNameAsString() << ": " << (void*)decl <<" " << (void*)dd << "\n";
+	//outs() << decl->getQualifiedNameAsString() << "\n";
 	if( dd == NULL ){
 		noWrapping = noConstructor = true;
 		hasVirtual = false;
-		return 0;
+		// simplest wrapping for types declared but not defined:
+		return GenerateSimpleTyper();
 	}
 	if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(decl)) return Generate( record );
-	return 1;
+	return Generate( decl );
 }
+int CDaoUserType::Generate( RecordDecl *decl )
+{
+	int i, j, n, m;
+	vector<CDaoFunction>  callbacks;
+	map<string,string> kvmap;
+	string qname = CDaoModule::GetQName( decl );
+	string idname = CDaoModule::GetIdName( decl );
+	string name = decl->getNameAsString();
+
+	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
+	kvmap[ "host_qname" ] = qname;
+	kvmap[ "host_idname" ] = idname;
+	kvmap[ "cxxname" ] = name;
+	kvmap[ "daoname" ] = name;
+	kvmap[ "name" ] = name;
+
+	outs() << name << " CDaoUserType::Generate( RecordDecl *decl )\n";
+	RecordDecl::field_iterator fit, fend;
+	for(fit=decl->field_begin(),fend=decl->field_end(); fit!=fend; fit++){
+		const Type *type = fit->getTypeSourceInfo()->getType().getTypePtr();
+		const PointerType *pt = dyn_cast<PointerType>( type );
+		if( pt == NULL ) continue;
+		const Type *pt2 = pt->getPointeeType().getTypePtr();
+		const ParenType *pt3 = dyn_cast<ParenType>( pt2 );
+		if( pt3 == NULL ) continue;
+		const Type *pt4 = pt3->getInnerType().getTypePtr();
+		const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( pt4 );
+		if( ft == NULL ) continue;
+		callbacks.push_back( CDaoFunction( module ) );
+		callbacks.back().SetCallback( (FunctionProtoType*) ft, *fit );
+		outs() << pt4->isFunctionType() << pt4->getTypeClassName() << "\n";
+		outs() << fit->getTypeSourceInfo()->getType().getAsString() << "\n";
+		outs() << fit->getNameAsString() << " " << fit->getDeclKindName() << "\n";
+		outs() << pt3->getInnerType().getAsString() << "\n";
+	}
+	kvmap[ "parlist" ] = "";
+	kvmap[ "retype" ] = "=>" + name;
+	kvmap[ "overload" ] = "";
+
+	dao_meths += cdao_string_fill( dao_proto, kvmap );
+	meth_decls += cdao_string_fill( cxx_wrap_proto, kvmap ) + ";\n";
+	meth_codes += cdao_string_fill( c_wrap_new, kvmap );
+	if( callbacks.size() == 0 ){
+		type_decls = cdao_string_fill( tpl_struct, kvmap );
+		type_codes = cdao_string_fill( tpl_struct_alloc, kvmap );
+		return 0;
+	}
+
+	string set_callbacks;
+	string set_fields;
+	kvmap[ "callback" ] = "";
+	for(i=0,n=callbacks.size(); i<n; i++){
+		CDaoFunction & meth = callbacks[i];
+		meth.Generate();
+		kvmap[ "callback" ] = meth.cxxName;
+		set_callbacks += cdao_string_fill( tpl_set_callback, kvmap );
+		type_decls += meth.cxxWrapperVirtProto;
+		type_codes += meth.cxxWrapperVirt;
+		CDaoProxyFunction::Use( meth.signature2 );
+	}
+	kvmap[ "field" ] = "";
+#if 0
+	for( f in selfields.keys() ){
+		kvmap[ 'field' ] = f;
+		setfields += tpl_set_selfield.expand( kvmap );
+	}
+	kvmap = { 'name'=>name, 'callbacks'=>callbacks, 'selfields'=>setfields };
+#endif
+	kvmap[ "callbacks" ] = set_callbacks;
+	kvmap[ "selfields" ] = set_fields;
+	type_decls += cdao_string_fill( tpl_struct_daoc, kvmap );
+	type_codes += cdao_string_fill( tpl_struct_daoc_alloc, kvmap );
+
+	kvmap[ "typer" ] = idname;
+	kvmap[ "child" ] = qname;
+	kvmap[ "parent" ] = "";
+	kvmap[ "parent2" ] = "";
+	kvmap[ "type" ] = name;
+	kvmap[ "qname" ] = qname;
+	kvmap[ "decls" ] = meth_decls;
+	kvmap[ "nums" ] = "";
+	kvmap[ "meths" ] = dao_meths;
+	kvmap[ "parents" ] = "";
+	kvmap[ "casts" ] = "";
+	kvmap[ "cast_funcs" ] = "";
+	kvmap[ "alloc" ] = alloc_default;
+	kvmap[ "delete" ] = "NULL";
+	kvmap[ "if_parent" ] = "";
+	kvmap[ "deltest" ] = "NULL";
+	kvmap[ "comment" ] = "";
+	kvmap["delete"] = "Dao_" + idname + "_Delete";
+#if 0
+	if( del_tests.has( utp.condType ) ){
+		kvmap["condition"] = del_tests[ utp.condType ];
+		kvmap["deltest"] = "Dao_" + utp.name + "_DelTest";
+		return usertype_code_class2.expand( kvmap );
+	}
+#endif
+	typer_codes = cdao_string_fill( usertype_code_class, kvmap );
+	return 0;
+}
+
 int CDaoUserType::Generate( CXXRecordDecl *decl )
 {
 	int i, j, n, m;
@@ -669,6 +793,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	noWrapping = false;
 	hasVirtual = false; // protected or public virtual function;
 
+	vector<EnumDecl*>     enums;
 	vector<CDaoUserType*> bases;
 	vector<CDaoFunction>  methods;
 	vector<CDaoFunction>  constructors;
@@ -715,6 +840,28 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			ss_supers += " public DaoSS_" + supname;
 			ss_init_sup += " DaoSS_" + supname + "()";
 		}
+	}
+	CXXRecordDecl::decl_iterator dit, dend;
+	for(dit=decl->decls_begin(),dend=decl->decls_end(); dit!=dend; dit++){
+		EnumDecl *edec = dyn_cast<EnumDecl>( *dit );
+		if( edec == NULL || dit->getAccess() != AS_public ) continue;
+		enums.push_back( edec );
+	}
+	CXXRecordDecl::field_iterator fit, fend;
+	for(fit=decl->field_begin(),fend=decl->field_end(); fit!=fend; fit++){
+		const Type *type = fit->getTypeSourceInfo()->getType().getTypePtr();
+		const PointerType *pt = dyn_cast<PointerType>( type );
+		if( pt == NULL ) continue;
+		const Type *pt2 = pt->getPointeeType().getTypePtr();
+		const ParenType *pt3 = dyn_cast<ParenType>( pt2 );
+		if( pt3 == NULL ) continue;
+		const Type *pt4 = pt3->getInnerType().getTypePtr();
+		const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( pt4 );
+		if( ft == NULL ) continue;
+		outs() << pt4->isFunctionType() << pt4->getTypeClassName() << "\n";
+		outs() << fit->getTypeSourceInfo()->getType().getAsString() << "\n";
+		outs() << fit->getNameAsString() << " " << fit->getDeclKindName() << "\n";
+		outs() << pt3->getInnerType().getAsString() << "\n";
 	}
 	CXXRecordDecl::method_iterator methit, methend = decl->method_end();
 	for(methit=decl->method_begin(); methit!=methend; methit++){
@@ -951,7 +1098,6 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		string qt_slots;
 		vector<CDaoFunction*> pubslots;
 		vector<CDaoFunction*> protsignals;
-		CXXRecordDecl::decl_iterator dit, dend;
 		bool is_pubslot = false;
 		bool is_signal = false;
 		for(dit=decl->decls_begin(),dend=decl->decls_end(); dit!=dend; dit++){
@@ -1072,16 +1218,16 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	}
 	if( not noWrapping ) type_codes += cxxWrapperVirt;
 
-	string parents, casts, cast_funcs;
 	kvmap[ "typer" ] = idname;
 	kvmap[ "child" ] = qname;
 	kvmap[ "parent" ] = "";
 	kvmap[ "parent2" ] = "";
+	string parents, casts, cast_funcs;
 	for(i=0,n=bases.size(); i<n; i++){
 		CDaoUserType *sup = bases[i];
 		string supname = sup->GetName();
 		string supname2 = sup->GetIdName();
-		parents += "dao_" + idname + "_Typer, ";
+		parents += "dao_" + supname2 + "_Typer, ";
 		casts += "dao_cast_" + idname + "_to_" + supname2 + ",";
 		kvmap[ "parent" ] = supname;
 		kvmap[ "parent2" ] = supname2;
@@ -1090,7 +1236,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "type" ] = name;
 	kvmap[ "qname" ] = qname;
 	kvmap[ "decls" ] = meth_decls;
-	kvmap[ "nums" ] = "";
+	kvmap[ "nums" ] = module->MakeEnumConstantItems( enums, qname );
 	kvmap[ "meths" ] = dao_meths;
 	kvmap[ "parents" ] = parents;
 	kvmap[ "casts" ] = casts;
@@ -1112,5 +1258,5 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	}
 #endif
 	typer_codes = cdao_string_fill( usertype_code_class, kvmap );
-	return 1;
+	return 0;
 }

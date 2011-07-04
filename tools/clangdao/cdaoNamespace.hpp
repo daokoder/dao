@@ -23,6 +23,7 @@ struct CDaoNamespace
 	vector<CDaoNamespace*>  namespaces;
 	vector<CDaoUserType*>   usertypes;
 	vector<CDaoFunction>    functions;
+	vector<EnumDecl*>       enums;
 
 	string  header;
 	string  source;

@@ -4,6 +4,7 @@
 #define __CDAO_FUNCTION_H__
 
 #include <llvm/ADT/StringExtras.h>
+#include <clang/AST/Type.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclGroup.h>
 #include <map>
@@ -20,6 +21,8 @@ struct CDaoFunction
 {
 	CDaoModule           *module;
 	FunctionDecl         *funcDecl;
+	FunctionProtoType    *funcType;
+	FieldDecl            *fieldDecl;
 	CDaoVariable          retype;
 	vector<CDaoVariable>  parlist;
 
@@ -29,6 +32,7 @@ struct CDaoFunction
 	string  signature;
 	string  signature2;
 
+	string  cxxName;
 	string  cxxWrapName; // such as: dao_host_meth;
 	string  cxxWrapper; // wrapper function definition;
 
@@ -68,6 +72,7 @@ struct CDaoFunction
 	CDaoFunction( CDaoModule *mod = NULL, FunctionDecl *decl = NULL, int idx = 1 );
 
 	void SetDeclaration( FunctionDecl *decl );
+	void SetCallback( FunctionProtoType *func, FieldDecl *decl );
 	bool IsFromMainModule();
 	string GetInputFile()const;
 
@@ -90,7 +95,7 @@ struct CDaoProxyFunction
 	}
 
 	static string NewProxyFunctionName(){
-		return "Func" + utohexstr( proxy_function_index ++ );
+		return "DaoPF" + utohexstr( proxy_function_index ++ );
 	}
 	static bool IsDefined( const string & signature ){
 		return proxy_functions.find( signature ) != proxy_functions.end();

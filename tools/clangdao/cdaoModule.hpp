@@ -75,6 +75,7 @@ struct CDaoModule
 	vector<CDaoNamespace*>  namespaces;
 	vector<CDaoUserType*>   usertypes;
 	vector<CDaoFunction>    functions;
+	vector<EnumDecl*>       enums;
 
 	vector<CDaoUserType*>                     allUsertypes;
 	map<const RecordDecl*,CDaoUserType*>      allUsertypes2;
@@ -107,8 +108,9 @@ struct CDaoModule
 	void HandleHintDefinition( const string & name, const MacroInfo *macro );
 
 	void HandleVariable( VarDecl *var );
+	void HandleEnum( EnumDecl *decl );
 	void HandleFunction( FunctionDecl *funcdec );
-	void HandleUserType( CXXRecordDecl *record );
+	void HandleUserType( RecordDecl *record );
 	void HandleNamespace( NamespaceDecl *nsdecl );
 
 	void WriteHeaderIncludes( std::ostream & stream );
@@ -123,6 +125,8 @@ struct CDaoModule
 
 	string MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
 	string MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
+	string MakeEnumConstantItems( vector<EnumDecl*> & enums, const string & name = "" );
+	string MakeEnumConstantStruct( vector<EnumDecl*> & enums, const string & name = "" );
 
 	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );
 	string ExtractSource( const SourceRange & range, bool original = true );

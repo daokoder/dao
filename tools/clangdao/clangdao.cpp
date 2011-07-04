@@ -72,11 +72,12 @@ void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
 	for (DeclGroupRef::iterator it = group.begin(); it != group.end(); ++it) {
 		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
 			module->HandleVariable( var );
+		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
+			module->HandleEnum( e );
 		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
 			module->HandleFunction( func );
-		}else if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
-			module->HandleUserType( record );
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
+			module->HandleUserType( record );
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			module->HandleNamespace( nsdecl );
 		}

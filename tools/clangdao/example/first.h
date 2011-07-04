@@ -23,6 +23,8 @@ class FirstClass
 	virtual void FirstVirt( float mat[3][4] );
 	virtual void FirstVirt2( Matrix mat )=0;
 
+	int (*callback)( FirstClass *context, int test );
+
 	protected:
 	virtual void FirstVirt3( int )=0;
 };

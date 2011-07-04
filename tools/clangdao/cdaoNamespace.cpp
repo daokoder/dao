@@ -14,16 +14,17 @@ CDaoNamespace::CDaoNamespace( CDaoModule *mod, NamespaceDecl *decl )
 }
 void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 {
-	CXXRecordDecl::decl_iterator it, end;
+	NamespaceDecl::decl_iterator it, end;
 	if( not module->IsFromModules( nsdecl->getLocation() ) ) return;
 	for(it=nsdecl->decls_begin(),end=nsdecl->decls_end(); it!=end; it++){
 		if( not module->IsFromModules( (*it)->getLocation() ) ) return;
 		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
+		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
+			enums.push_back( e );
 		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
 			functions.push_back( CDaoFunction( module, func ) );
-		}else if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(*it)) {
-			usertypes.push_back( module->NewUserType( record ) );
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
+			usertypes.push_back( module->NewUserType( record ) );
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			CDaoNamespace *ns = module->AddNamespace( nsdecl );
 			if( ns ) namespaces.push_back( ns );
@@ -49,6 +50,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 
 	string outer_name = outer ? outer->nsdecl->getQualifiedNameAsString() : "ns";
 	string this_name = nsdecl->getQualifiedNameAsString();
+	string qname = this_name;
 
 	outer_name = cdao_qname_to_idname( outer_name );
 	this_name = cdao_qname_to_idname( this_name );
@@ -56,6 +58,12 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
 	onload += outer_name + ", \"" + nsdecl->getNameAsString() + "\" );\n";
 	onload3 += module->MakeOnLoadCodes( functions, this );
+
+	if( enums.size() ){
+		source += module->MakeEnumConstantStruct( enums, qname );
+		onload2 += "\tDaoNameSpace_AddConstNumbers( " + this_name;
+		onload2 += ", dao_" + this_name + "_Nums );\n";
+	}
 
 	for(i=0, n=namespaces.size(); i<n; i++){
 		retcode |= namespaces[i]->Generate( this );
