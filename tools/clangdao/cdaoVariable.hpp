@@ -28,6 +28,8 @@ struct CDaoVariable
 	const Expr  *initor;
 
 	bool    isNullable;
+	bool    isCallback;
+	bool    isUserData; // callback userdata
 	bool    hasArrayHint;
 	bool    unsupported;
 	bool    useDefault;
@@ -52,6 +54,7 @@ struct CDaoVariable
 	string  get_item;
 	string  set_item;
 
+	string          callback;
 	vector<string>  sizes;
 
 	CDaoVariable( CDaoModule *mod = NULL, const VarDecl *decl = NULL );

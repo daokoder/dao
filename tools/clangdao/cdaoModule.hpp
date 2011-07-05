@@ -75,7 +75,11 @@ struct CDaoModule
 	vector<CDaoNamespace*>  namespaces;
 	vector<CDaoUserType*>   usertypes;
 	vector<CDaoFunction>    functions;
+	vector<CDaoFunction*>   callbacks;
 	vector<EnumDecl*>       enums;
+	vector<VarDecl*>        variables;
+
+	map<const FunctionProtoType*,CDaoFunction*> allCallbacks;
 
 	vector<CDaoUserType*>                     allUsertypes;
 	map<const RecordDecl*,CDaoUserType*>      allUsertypes2;
@@ -112,6 +116,7 @@ struct CDaoModule
 	void HandleFunction( FunctionDecl *funcdec );
 	void HandleUserType( RecordDecl *record );
 	void HandleNamespace( NamespaceDecl *nsdecl );
+	void HandleTypeDefine( TypedefDecl *decl );
 
 	void WriteHeaderIncludes( std::ostream & stream );
 
@@ -125,8 +130,8 @@ struct CDaoModule
 
 	string MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
 	string MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
-	string MakeEnumConstantItems( vector<EnumDecl*> & enums, const string & name = "" );
-	string MakeEnumConstantStruct( vector<EnumDecl*> & enums, const string & name = "" );
+	string MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "" );
+	string MakeConstantStruct( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "" );
 
 	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );
 	string ExtractSource( const SourceRange & range, bool original = true );

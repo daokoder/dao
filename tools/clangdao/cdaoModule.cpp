@@ -273,7 +273,8 @@ void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *mac
 }
 void CDaoModule::HandleVariable( VarDecl *var )
 {
-	outs() << var->getNameAsString() << "\n";
+	//outs() << var->getNameAsString() << "\n";
+	variables.push_back( var );
 }
 void CDaoModule::HandleEnum( EnumDecl *decl )
 {
@@ -294,6 +295,28 @@ void CDaoModule::HandleNamespace( NamespaceDecl *nsdecl )
 {
 	CDaoNamespace *ns = AddNamespace( nsdecl );
 	if( ns ) namespaces.push_back( ns );
+}
+void CDaoModule::HandleTypeDefine( TypedefDecl *decl )
+{
+	QualType qtype = decl->getUnderlyingType();
+	QualType qtype2 = qtype.IgnoreParens();
+	if( qtype2->isPointerType() ) qtype2 = qtype2->getPointeeType();
+	qtype2 = qtype2.IgnoreParens();
+	if( const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( qtype2.getTypePtr() ) ){
+		if( allCallbacks.find( ft ) == allCallbacks.end() ){
+			allCallbacks[ ft ] = new CDaoFunction( this );
+
+			CDaoFunction *func = allCallbacks[ ft ];
+			string qname = decl->getNameAsString();
+			func->SetCallback( (FunctionProtoType*)ft, NULL, qname );
+			func->cxxName = cdao_qname_to_idname( qname );
+			if( func->retype.callback == "" ){
+				errs() << "Warning: callback \"" << qname << "\" is not supported!\n";
+				func->excluded = true;
+			}
+			//if( func->excluded == false ) func->Generate();
+		}
+	}
 }
 void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 {
@@ -436,7 +459,7 @@ string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamesp
 	codes += "\tDaoNameSpace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
 	return codes;
 }
-string CDaoModule::MakeEnumConstantItems( vector<EnumDecl*> & enums, const string & qname )
+string CDaoModule::MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & qname )
 {
 	int i, n;
 	string qname2 = qname.size() ? qname + "::" : "";
@@ -454,13 +477,31 @@ string CDaoModule::MakeEnumConstantItems( vector<EnumDecl*> & enums, const strin
 			codes += "  { \"" + item + "\", DAO_INTEGER, " + qname2 + item + " },\n";
 		}
 	}
+	for(i=0, n=vars.size(); i<n; i++){
+		VarDecl *decl = vars[i];
+		QualType qtype = decl->getType();
+		string item = decl->getNameAsString();
+		if( not qtype.isConstQualified() ) continue;
+		qtype = qtype.getCanonicalType();
+		const BuiltinType *type = dyn_cast<BuiltinType>( qtype.getTypePtr() );
+		if( type == NULL ) continue;
+		string tidname;
+		if( type->isInteger() ){
+			tidname = "DAO_INTEGER";
+		}else if( type->getKind() == BuiltinType::Float ){
+			tidname = "DAO_FLOAT";
+		}else if( type->isFloatingPoint() ){
+			tidname = "DAO_DOUBLE";
+		}
+		codes += "  { \"" + item + "\", " + tidname + ", " + qname2 + item + " },\n";
+	}
 	return codes;
 }
-string CDaoModule::MakeEnumConstantStruct( vector<EnumDecl*> & enums, const string & qname )
+string CDaoModule::MakeConstantStruct( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & qname )
 {
 	string idname = cdao_qname_to_idname( qname );
 	string codes = "static DaoNumItem dao_" + idname + "_Nums[] = \n{\n";
-	return codes + MakeEnumConstantItems( enums, qname ) + "  { NULL, 0, 0 }\n};\n";
+	return codes + MakeConstantItems( enums, vars, qname ) + "  { NULL, 0, 0 }\n};\n";
 }
 
 int CDaoModule::Generate()
@@ -489,13 +530,14 @@ int CDaoModule::Generate()
 
 	map<string,int> overloads;
 	int i, n, retcode = 0;
+	for(i=0, n=namespaces.size(); i<n; i++) retcode |= namespaces[i]->Generate();
 	for(i=0, n=allUsertypes.size(); i<n; i++) retcode |= allUsertypes[i]->Generate();
+	for(i=0, n=callbacks.size(); i<n; i++) retcode |= callbacks[i]->Generate();
 	for(i=0, n=functions.size(); i<n; i++){
 		string name = functions[i].funcDecl->getNameAsString();
 		functions[i].index = ++overloads[name];
 		retcode |= functions[i].Generate();
 	}
-	for(i=0, n=namespaces.size(); i<n; i++) retcode |= namespaces[i]->Generate();
 	map<string,string> kvmap;
 	kvmap[ "module" ] = moduleInfo.name;
 
@@ -507,7 +549,17 @@ int CDaoModule::Generate()
 		CDaoProxyFunction & proxy = pit->second;
 		if( proxy.used ) fout_source3 << proxy.codes;
 	}
-	fout_source << MakeEnumConstantStruct( enums );
+	fout_header << ifdef_cpp_open;
+	map<const FunctionProtoType*,CDaoFunction*>::iterator cbit, cbend = allCallbacks.end();
+	for(cbit=allCallbacks.begin(); cbit!=cbend; cbit++){
+		CDaoFunction *func = cbit->second;
+		if( func->excluded ) continue;
+		fout_header << func->cxxWrapperVirtProto;
+		fout_source3 << func->cxxWrapperVirt;
+	}
+	fout_header << ifdef_cpp_close;
+
+	fout_source << MakeConstantStruct( enums, variables );
 	fout_source << MakeSourceCodes( functions );
 	fout_source << MakeSourceCodes( usertypes );
 	fout_source2 << MakeSource2Codes( usertypes );

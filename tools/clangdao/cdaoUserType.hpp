@@ -19,6 +19,7 @@ struct CDaoUserType
 	CDaoModule  *module;
 	RecordDecl  *decl;
 
+	bool generated;
 	bool noWrapping;
 	bool noConstructor;
 	bool hasVirtual; // protected or public virtual function;

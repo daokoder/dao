@@ -80,6 +80,8 @@ void CDaoASTConsumer::HandleTopLevelDecl(DeclGroupRef group)
 			module->HandleUserType( record );
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			module->HandleNamespace( nsdecl );
+		}else if( TypedefDecl *decl = dyn_cast<TypedefDecl>(*it) ){
+			module->HandleTypeDefine( decl );
 		}
 	}
 }
@@ -110,21 +112,6 @@ string cdao_string_fill( const string & tpl, const map<string,string> & subs )
 	string gap = tpl.substr( prev, tpl.size() - prev );
 	result += gap;
 	return result;
-}
-// qualified name to single identifier name:
-string cdao_qname_to_idname( const string & qname )
-{
-	string idname = qname;
-	size_t pos;
-	while( (pos = idname.find( "::" )) != string::npos ) idname.replace( pos, 2, "_0_" );
-	while( (pos = idname.find( "<" )) != string::npos ) idname.replace( pos, 1, "_1_" );
-	while( (pos = idname.find( ">" )) != string::npos ) idname.replace( pos, 1, "_2_" );
-	while( (pos = idname.find( "," )) != string::npos ) idname.replace( pos, 1, "_3_" );
-	while( (pos = idname.find( "[" )) != string::npos ) idname.replace( pos, 1, "_4_" );
-	while( (pos = idname.find( "]" )) != string::npos ) idname.replace( pos, 1, "_5_" );
-	while( (pos = idname.find( "(" )) != string::npos ) idname.replace( pos, 1, "_6_" );
-	while( (pos = idname.find( ")" )) != string::npos ) idname.replace( pos, 1, "_7_" );
-	return idname;
 }
 void remove_type_prefix( string & name, const string & key )
 {
@@ -161,15 +148,24 @@ string normalize_type_name( const string & name0 )
 	remove_type_prefix( name, "struct" );
 	remove_type_prefix( name, "enum" );
 	return name;
-	from = 0;
-	while( (pos = name.find( "class ", from )) != string::npos ){
-		if( pos == 0 || (isalnum( name[pos-1] ) ==0 && name[pos-1] != '_') ){
-			name.replace( pos, 6, "" );
-		}else{
-			from = pos + 6;
-		}
-	}
-	return name;
+}
+// qualified name to single identifier name:
+string cdao_qname_to_idname( const string & qname )
+{
+	string idname = normalize_type_name( qname );
+	size_t pos;
+	while( (pos = idname.find( "::" )) != string::npos ) idname.replace( pos, 2, "_0_" );
+	while( (pos = idname.find( "<" )) != string::npos ) idname.replace( pos, 1, "_1_" );
+	while( (pos = idname.find( ">" )) != string::npos ) idname.replace( pos, 1, "_2_" );
+	while( (pos = idname.find( "," )) != string::npos ) idname.replace( pos, 1, "_3_" );
+	while( (pos = idname.find( "[" )) != string::npos ) idname.replace( pos, 1, "_4_" );
+	while( (pos = idname.find( "]" )) != string::npos ) idname.replace( pos, 1, "_5_" );
+	while( (pos = idname.find( "(" )) != string::npos ) idname.replace( pos, 1, "_6_" );
+	while( (pos = idname.find( ")" )) != string::npos ) idname.replace( pos, 1, "_7_" );
+	while( (pos = idname.find( "*" )) != string::npos ) idname.replace( pos, 1, "_8_" );
+	while( (pos = idname.find( "." )) != string::npos ) idname.replace( pos, 1, "_9_" );
+	while( (pos = idname.find( " " )) != string::npos ) idname.replace( pos, 1, "_10_" );
+	return idname;
 }
 
 

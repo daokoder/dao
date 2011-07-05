@@ -19,6 +19,7 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 	for(it=nsdecl->decls_begin(),end=nsdecl->decls_end(); it!=end; it++){
 		if( not module->IsFromModules( (*it)->getLocation() ) ) return;
 		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
+			variables.push_back( var );
 		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
 			enums.push_back( e );
 		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
@@ -28,6 +29,8 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			CDaoNamespace *ns = module->AddNamespace( nsdecl );
 			if( ns ) namespaces.push_back( ns );
+		}else if( TypedefDecl *decl = dyn_cast<TypedefDecl>(*it) ){
+			module->HandleTypeDefine( decl );
 		}
 	}
 }
@@ -60,7 +63,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	onload3 += module->MakeOnLoadCodes( functions, this );
 
 	if( enums.size() ){
-		source += module->MakeEnumConstantStruct( enums, qname );
+		source += module->MakeConstantStruct( enums, variables, qname );
 		onload2 += "\tDaoNameSpace_AddConstNumbers( " + this_name;
 		onload2 += ", dao_" + this_name + "_Nums );\n";
 	}

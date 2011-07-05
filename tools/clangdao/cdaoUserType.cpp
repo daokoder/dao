@@ -622,6 +622,7 @@ CDaoUserType::CDaoUserType( CDaoModule *mod, RecordDecl *decl )
 	noWrapping = hasVirtual = noConstructor = false;
 	isQObject = isQObjectBase = false;
 	isRedundant = true;
+	generated = false;
 	alloc_default = "NULL";
 	this->decl = NULL;
 	SetDeclaration( decl );
@@ -662,6 +663,8 @@ int CDaoUserType::Generate()
 	// ignore redundant declarations:
 	isRedundant = dd != NULL && dd != decl;
 	if( isRedundant ) return 0;
+	if( generated ) return 0;
+	generated = true;
 	// simplest wrapping for types declared or defined outsided of the modules:
 	if( cc && not module->IsFromModules( cc->getLocation() ) ) return GenerateSimpleTyper();
 	if( dd && not module->IsFromModules( dd->getLocation() ) ) return GenerateSimpleTyper();
@@ -681,7 +684,7 @@ int CDaoUserType::Generate()
 int CDaoUserType::Generate( RecordDecl *decl )
 {
 	int i, j, n, m;
-	vector<CDaoFunction>  callbacks;
+	vector<CDaoFunction> callbacks;
 	map<string,string> kvmap;
 	string qname = CDaoModule::GetQName( decl );
 	string idname = CDaoModule::GetIdName( decl );
@@ -708,10 +711,6 @@ int CDaoUserType::Generate( RecordDecl *decl )
 		if( ft == NULL ) continue;
 		callbacks.push_back( CDaoFunction( module ) );
 		callbacks.back().SetCallback( (FunctionProtoType*) ft, *fit );
-		outs() << pt4->isFunctionType() << pt4->getTypeClassName() << "\n";
-		outs() << fit->getTypeSourceInfo()->getType().getAsString() << "\n";
-		outs() << fit->getNameAsString() << " " << fit->getDeclKindName() << "\n";
-		outs() << pt3->getInnerType().getAsString() << "\n";
 	}
 	kvmap[ "parlist" ] = "";
 	kvmap[ "retype" ] = "=>" + name;
@@ -732,6 +731,7 @@ int CDaoUserType::Generate( RecordDecl *decl )
 	for(i=0,n=callbacks.size(); i<n; i++){
 		CDaoFunction & meth = callbacks[i];
 		meth.Generate();
+		if( meth.excluded ) continue;
 		kvmap[ "callback" ] = meth.cxxName;
 		set_callbacks += cdao_string_fill( tpl_set_callback, kvmap );
 		type_decls += meth.cxxWrapperVirtProto;
@@ -793,6 +793,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	noWrapping = false;
 	hasVirtual = false; // protected or public virtual function;
 
+	vector<VarDecl*>      vars;
 	vector<EnumDecl*>     enums;
 	vector<CDaoUserType*> bases;
 	vector<CDaoFunction>  methods;
@@ -858,10 +859,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		const Type *pt4 = pt3->getInnerType().getTypePtr();
 		const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( pt4 );
 		if( ft == NULL ) continue;
-		outs() << pt4->isFunctionType() << pt4->getTypeClassName() << "\n";
-		outs() << fit->getTypeSourceInfo()->getType().getAsString() << "\n";
-		outs() << fit->getNameAsString() << " " << fit->getDeclKindName() << "\n";
-		outs() << pt3->getInnerType().getAsString() << "\n";
+		// XXX
 	}
 	CXXRecordDecl::method_iterator methit, methend = decl->method_end();
 	for(methit=decl->method_begin(); methit!=methend; methit++){
@@ -1025,7 +1023,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			kvirtuals += cdao_string_fill( tpl_meth_decl, kvmap );
 			cxxWrapperVirt += meth.cxxWrapperVirt2;
 		}
-		if( mdec->getAccess() == AS_protected && not noWrapping ){
+		if( mdec->getAccess() == AS_protected && not noWrapping && not mdec->isPure() ){
 			kvmap[ "type" ] = name;
 			kvmap[ "cxxname" ] = mdec->getNameAsString();
 			kvmap[ "parlist" ] = meth.cxxProtoParamDecl;
@@ -1180,7 +1178,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			dao_meths += meth.daoProtoCodes;
 			meth_decls += meth.cxxProtoCodes + ";\n";
 			meth_codes += meth.cxxWrapper;
-		}else if( mdec->getAccess() == AS_protected && hasVirtual && not noWrapping /* && not meth.nowrap */ ){
+		}else if( mdec->getAccess() == AS_protected && hasVirtual && not mdec->isPure() && not noWrapping /* && not meth.nowrap */ ){
 			dao_meths += meth.daoProtoCodes;
 			meth_decls += meth.cxxProtoCodes + ";\n";
 			string wrapper = meth.cxxWrapper;
@@ -1236,7 +1234,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "type" ] = name;
 	kvmap[ "qname" ] = qname;
 	kvmap[ "decls" ] = meth_decls;
-	kvmap[ "nums" ] = module->MakeEnumConstantItems( enums, qname );
+	kvmap[ "nums" ] = module->MakeConstantItems( enums, vars, qname );
 	kvmap[ "meths" ] = dao_meths;
 	kvmap[ "parents" ] = parents;
 	kvmap[ "casts" ] = casts;

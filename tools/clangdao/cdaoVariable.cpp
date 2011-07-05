@@ -75,11 +75,10 @@ const string dao2cxx_user4 = "  $(cxxtype)* $(name)= ($(cxxtype)*) \
 DValue_GetCData2( _p[$(index)] );\n";
 
 const string dao2cxx_callback =
-"  DaoMethod *_ro = (DaoMethod*) _p[$(index)]->v.p;\
-  $(cxxtype) *$(name) = Dao_$(typer);\n"; //XXX
+"  DaoMethod *_$(name) = (DaoMethod*) _p[$(index)]->v.p;\n\
+  $(cxxtype) $(name) = Dao_$(callback);\n";
 const string dao2cxx_userdata =
-"  DValue *_ud = _p[$(index)];\n\
-  DaoCallbackData *$(name) = DaoCallbackData_New( _ro, *_ud );\n\
+"  DaoCallbackData *$(name) = DaoCallbackData_New( _$(callback), *_p[$(index)] );\n\
   if( $(name) == NULL ){\n\
     DaoContext_RaiseException( _ctx, DAO_ERROR_PARAM, \"invalid callback\" );\n\
 	return;\n\
@@ -528,6 +527,10 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 	kvmap[ "index" ] = sindex;
 	kvmap[ "default" ] = dft;
 	kvmap[ "refer" ] = var->cxxcall;
+	if( var->isCallback ){
+		var->cxxtype = normalize_type_name( var->qualType.getAsString() );
+		kvmap[ "cxxtype" ] = var->cxxtype;
+	}
 	var->daopar = cdao_string_fill( daopar, kvmap );
 	var->dao2cxx = cdao_string_fill( dao2cxx, kvmap );
 	var->parset = cdao_string_fill( parset, kvmap );
@@ -557,6 +560,8 @@ CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 	module = mod;
 	initor = NULL;
 	isNullable = false;
+	isCallback = false;
+	isUserData = false;
 	hasArrayHint = false;
 	unsupported = false;
 	useDefault = true;
@@ -579,8 +584,8 @@ void CDaoVariable::SetHints( const string & hints )
 {
 	size_t pos = hints.find( "_dao_hint_" );
 	string hints2, hint;
-	if( pos == string::npos ) return;
 	name = hints.substr( 0, pos );
+	if( pos == string::npos ) return;
 	hints2 = hints.substr( pos+4 );
 	while( hints2.find( "_hint_" ) == 0 ){
 		pos = hints2.find( '_', 6 );
@@ -593,14 +598,23 @@ void CDaoVariable::SetHints( const string & hints )
 			isNullable = true;
 		}if( hint == "unsupported" ){
 			unsupported = true;
+		}if( hint == "callbackdata" ){
+			isUserData = true;
+			size_t pos2 = hints2.find( "_hint_", pos );
+			if( pos2 == string::npos ){
+				callback = hints2.substr( pos+1 );
+			}else if( pos2 > pos ){
+				callback = hints2.substr( pos+1, pos2 - pos - 1 );
+			}
+			if( callback == "" ) errs() << "Warning: need callback name for \"callbackdata\" hint!\n";
 		}else if( hint == "array" ){
 			size_t pos2 = hints2.find( "_hint_", pos );
 			hint = "";
 			if( pos2 != pos ){
 				if( pos2 == string::npos ){
-					hint = hints2.substr( 12 );
-				}else{
-					hint = hints2.substr( 12, pos2 - 12 );
+					hint = hints2.substr( pos+1 );
+				}else if( pos2 > pos ){
+					hint = hints2.substr( pos+1, pos2 - pos - 1 );
 				}
 			}
 			size_t from = 0;
@@ -764,6 +778,8 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 	}
 
 	CDaoVarTemplates tpl;
+	map<string,string> kvmap;
+	kvmap[ "size" ] = "0";
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
 		const BuiltinType *type3 = (const BuiltinType*) type2;
 		daotype = "int";
@@ -850,11 +866,51 @@ int CDaoVariable::Generate( const PointerType *type, int daopar_index, int cxxpa
 			daodefault = "null";
 			isNullable = true;
 		}
+	}else if( type->isVoidPointerType() ){
+		if( isUserData ){
+			daotype = "any";
+			cxxtype = "DValue";
+			cxxpar = "DValue " + name;
+			cxxcall = name;
+			tpl.daopar = daopar_userdata;
+			tpl.dao2cxx = dao2cxx_userdata;
+			tpl.cxx2dao = cxx2dao_userdata;
+			kvmap[ "callback" ] = callback;
+		}else{
+			daotype = "cdata";
+			tpl.daopar = daopar_buffer;
+			tpl.dao2cxx = dao2cxx_void;
+			tpl.cxx2dao = cxx2dao_voidp;
+			tpl.ctxput = ctxput_voidp;
+		}
+		if( daodefault == "0" || daodefault == "NULL" ){
+			daodefault = "null";
+			isNullable = true;
+		}
+	}else if( const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( type2 ) ){
+		//outs() << "callback: " << qualType.getAsString() << " " << qtype2.getAsString() << "\n";
+		if( module->allCallbacks.find( ft ) == module->allCallbacks.end() ){
+			module->allCallbacks[ ft ] = new CDaoFunction( module );
+			CDaoFunction *func = module->allCallbacks[ ft ];
+			string qname = GetStrippedType( qualType ).getAsString();
+			func->SetCallback( (FunctionProtoType*)ft, NULL, qname );
+			func->cxxName = cdao_qname_to_idname( qname );
+			if( func->retype.callback == "" ){
+				errs() << "Warning: callback \"" << qualType.getAsString() << "\" is not supported!\n";
+				func->excluded = true;
+			}
+		}
+		CDaoFunction *func = module->allCallbacks[ ft ];
+		func->Generate();
+		if( func->excluded ) return 1;
+		daotype = "any";
+		isCallback = true;
+		tpl.daopar = daopar_callback;
+		tpl.dao2cxx = dao2cxx_callback;
+		kvmap[ "callback" ] = func->cxxName; // XXX
 	}else{
 		return 1;
 	}
-	map<string,string> kvmap;
-	kvmap[ "size" ] = "0";
 	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 	return 0;
 }
@@ -1218,7 +1274,8 @@ void CDaoVariable::MakeCxxParameter( QualType qtype, string & prefix, string & s
 	}else if( type->isEnumeralType() ){
 		const EnumType *type2 = (const EnumType*) type;
 		const EnumDecl *edec = type2->getDecl();
-		if( edec && edec->getAccess() != AS_public ) unsupported = true;
+		const DeclContext *parent = edec ? edec->getParent() : NULL;
+		if( parent && parent->isRecord() && edec->getAccess() != AS_public ) unsupported = true;
 		prefix = normalize_type_name( qtype.getAsString() ) + prefix;
 	}else if( decl ){
 		// const C & other: const is part of the name, not a qualifier.
@@ -1230,6 +1287,7 @@ QualType CDaoVariable::GetStrippedType( QualType qtype )
 	const Type *type = qtype.getTypePtr();
 	if( type->isPointerType() ){
 		const PointerType *type2 = (const PointerType*) type;
+		return type2->getPointeeType();
 		return GetStrippedType( type2->getPointeeType() );
 	}else if( type->isReferenceType() ){
 		const ReferenceType *type2 = (const ReferenceType*) type;
@@ -1237,7 +1295,6 @@ QualType CDaoVariable::GetStrippedType( QualType qtype )
 	}else if( type->isArrayType() ){
 		const ArrayType *type2 = (const ArrayType*) type;
 		return GetStrippedType( type2->getElementType() );
-	}else{
-		return qtype;
 	}
+	return qtype;
 }
