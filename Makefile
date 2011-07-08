@@ -16,7 +16,7 @@ LIB_READLINE = -lreadline -lncurses
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_ASMBC) $(USE_READLINE)
 
 CC        = $(CROSS_COMPILE)gcc
-CFLAGS    += -Wall -Wno-unused -fPIC -O2 -DUNIX $(DAO_CONFIG)
+CFLAGS    += -Wall -Wno-unused -fPIC -DUNIX $(DAO_CONFIG)
 INCPATH   = -I. -Ikernel
 LFLAGS    = -fPIC
 LFLAGSDLL = -fPIC
@@ -35,15 +35,12 @@ UNAME = $(shell uname)
 
 ifeq ($(UNAME), Linux)
   CFLAGS += -DUNIX
-  LFLAGS  += -s
-  LFLAGLIB = -s -fPIC -shared
   LFLAGSDLL += -shared -Wl,-soname,libdao.so
 endif
 
 ifeq ($(UNAME), Darwin)
   TARGETDLL	= dao.dylib
   CFLAGS += -DUNIX -DMAC_OSX
-  LFLAGLIB = -fPIC -dynamiclib
   LFLAGSDLL += -dynamiclib -install_name libdao.dylib
   LIBS += -L/usr/local/lib
 endif
@@ -51,6 +48,10 @@ endif
 ifeq ($(CC), gcc)
   ifeq ($(debug),yes)
     CFLAGS += -ggdb -DDEBUG
+    LFLAGS += -ggdb
+  else
+    CFLAGS += -O2
+    LFLAGS += -s
   endif
 endif
 
