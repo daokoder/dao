@@ -41,4 +41,38 @@ int my_func3( myint n=TEST );
 int my_func( int vec[], int n );
 int my_func2( int vec3[3], int n );
 
+#if 0
+template<class T>
+class vector
+{
+	public:
+	vector();
+
+	virtual void test();
+};
+void test( vector<int> vec );
+#else
+#include <vector>
+#include <string>
+void test2( std::vector<FirstClass> a );
+using namespace std;
+template<class T>
+class MyVector : public vector<T>
+{
+	public:
+	MyVector();
+
+	virtual void test();
+};
+void test( MyVector<string> vec );
+void test( vector<int> a );
+void test( vector<FirstClass> a );
+void test_string( std::string *s );
+namespace std{
+void test_string2( string *s );
+}
+#if 0
+#endif
+#endif
+
 #endif

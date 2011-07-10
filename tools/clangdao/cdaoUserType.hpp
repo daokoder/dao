@@ -14,18 +14,28 @@ struct CDaoModule;
 
 extern string cdao_qname_to_idname( const string & qname );
 
+enum CDaoUserTypeWrapType
+{
+	CDAO_WRAP_TYPE_NONE ,   // none wrapping;
+	CDAO_WRAP_TYPE_OPAQUE , // wrap as opaque type;
+	CDAO_WRAP_TYPE_MEMBER , // wrap with member accessing;
+	CDAO_WRAP_TYPE_STRUCT   // wrap as derivable type;
+};
+
 struct CDaoUserType
 {
-	CDaoModule  *module;
-	RecordDecl  *decl;
+	CDaoModule     *module;
+	RecordDecl     *decl;
 
-	bool generated;
-	bool noWrapping;
-	bool noConstructor;
-	bool hasVirtual; // protected or public virtual function;
-	bool isQObject;
-	bool isQObjectBase;
-	bool isRedundant;
+	short  wrapType;
+	bool   isRedundant;
+	bool   isQObject;
+	bool   isQObjectBase;
+
+
+	string  name;
+	string  qname;
+	string  idname;
 
 	string  type_decls;
 	string  type_codes;
@@ -41,6 +51,7 @@ struct CDaoUserType
 	CDaoUserType( CDaoModule *mod = NULL, RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );
+	void UpdateName( const string & writtenName );
 
 	string GetName()const{ return decl ? decl->getNameAsString() : ""; }
 	string GetQName()const{ return decl ? decl->getQualifiedNameAsString() : ""; }
@@ -50,10 +61,12 @@ struct CDaoUserType
 	void MakeTyperCodes();
 
 	bool IsFromMainModule();
+	void Clear();
 	int Generate();
 	int Generate( RecordDecl *decl );
 	int Generate( CXXRecordDecl *decl );
 	int GenerateSimpleTyper();
+	void SetupDefaultMapping( map<string,string> & kvmap );
 };
 
 #endif

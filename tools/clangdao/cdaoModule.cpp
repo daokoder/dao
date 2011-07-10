@@ -3,6 +3,8 @@
 #include <llvm/Support/raw_ostream.h>
 #include <clang/Basic/IdentifierTable.h>
 #include <clang/Lex/Preprocessor.h>
+#include <clang/AST/DeclTemplate.h>
+#include <clang/Sema/Sema.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <iostream>
 #include <fstream>
@@ -37,6 +39,7 @@ extern string cdao_qname_to_idname( const string & qname );
 
 enum CDaoFileExtensionType
 {
+	CDAO_FILE_HEADER , // c++ header without suffix
 	CDAO_FILE_H ,    // .h
 	CDAO_FILE_HH ,   // .hh
 	CDAO_FILE_HPP ,  // .hpp
@@ -52,6 +55,7 @@ enum CDaoFileExtensionType
 };
 const char *const cdao_file_extensions[] = 
 {
+	"",
 	".h" ,
 	".hh" ,
 	".hpp" ,
@@ -69,8 +73,9 @@ map<string,int> CDaoModule::mapExtensions;
 
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
 
-CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
+CDaoModule::CDaoModule( CompilerInstance *com, const string & path ) : topLevelScope( this )
 {
+	finalGenerating = false;
 	compiler = com;
 	moduleInfo.path = path;
 	for(int i=CDAO_FILE_H; i<=CDAO_FILE_MM; i++)
@@ -78,8 +83,8 @@ CDaoModule::CDaoModule( CompilerInstance *com, const string & path )
 }
 CDaoUserType* CDaoModule::GetUserType( const RecordDecl *decl )
 {
-	map<const RecordDecl*,CDaoUserType*>::iterator it = allUsertypes2.find( decl );
-	if( it == allUsertypes2.end() ) return NULL;
+	map<const RecordDecl*,CDaoUserType*>::iterator it = allUsertypes.find( decl );
+	if( it == allUsertypes.end() ) return NULL;
 	return it->second;
 }
 CDaoNamespace* CDaoModule::GetNamespace( const NamespaceDecl *decl )
@@ -91,8 +96,7 @@ CDaoNamespace* CDaoModule::GetNamespace( const NamespaceDecl *decl )
 CDaoUserType* CDaoModule::NewUserType( RecordDecl *decl )
 {
 	CDaoUserType *ut = new CDaoUserType( this, decl );
-	allUsertypes2[ decl ] = ut;
-	allUsertypes.push_back( ut );
+	allUsertypes[ decl ] = ut;
 	return ut;
 }
 CDaoNamespace* CDaoModule::NewNamespace( NamespaceDecl *decl )
@@ -100,7 +104,6 @@ CDaoNamespace* CDaoModule::NewNamespace( NamespaceDecl *decl )
 	CDaoNamespace *ns = new CDaoNamespace( this, decl );
 	ns->HandleExtension( decl );
 	allNamespaces[ decl ] = ns;
-	ns->index = allNamespaces.size();
 	return ns;
 }
 CDaoNamespace* CDaoModule::AddNamespace( NamespaceDecl *decl )
@@ -114,15 +117,47 @@ CDaoNamespace* CDaoModule::AddNamespace( NamespaceDecl *decl )
 	}
 	return NewNamespace( decl );
 }
+CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc )
+{
+	qualtype = qualtype.getLocalUnqualifiedType();
+	QualType canotype = qualtype.getCanonicalType();
+	if( const RecordType *record = dyn_cast<RecordType>( canotype.getTypePtr() ) ){
+		ClassTemplateSpecializationDecl *SD, *DE;
+		//outs()<<">>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
+		if( (SD = dyn_cast<ClassTemplateSpecializationDecl>( record->getDecl() ) ) ){
+			//outs() << (void*)SD << ": " << GetFileName( SD->getLocation() ) << "\n";
+			if( GetUserType( SD ) == NULL ){
+				DE = cast_or_null<ClassTemplateSpecializationDecl>( SD->getDefinition());
+				if( DE == NULL ){
+					TemplateSpecializationKind kind = TSK_ExplicitInstantiationDefinition;
+					Sema & sm = compiler->getSema();
+					sm.InstantiateClassTemplateSpecialization( loc, SD, kind );
+				}
+				SD->setPointOfInstantiation( loc );
+				//outs() << (void*)SD << " " << (void*)DE << "\n";
+
+				CDaoUserType *UT = NewUserType( SD );
+				UT->UpdateName( qualtype.getAsString() );
+
+				if( NamespaceDecl *ND = cast_or_null<NamespaceDecl>( SD->getParent() ) ){
+					CDaoNamespace *NS = GetNamespace( ND );
+					if( NS == NULL ) NS = AddNamespace( ND );
+					NS->AddUserType( UT );
+				}else{
+					topLevelScope.AddUserType( UT );
+				}
+			}
+		}
+		return GetUserType( record->getDecl() );
+	}
+	return NULL;
+}
 int CDaoModule::CheckFileExtension( const string & name )
 {
 	string ext;
-	size_t i, k;
-	for(i=name.size(), k=0; i; i--, k++){
-		if( name[i-1] == '.' ) break;
-		if( k >= 4 ) return CDAO_FILE_OTHER;
-	}
-	if( i == 0 ) return CDAO_FILE_OTHER;
+	size_t i = name.size();
+	while( i && name[i-1] != '.' ) i--;
+	if( i == 0 ) return CDAO_FILE_HEADER;
 	for(i-=1; i<name.size(); i++) ext += tolower( name[i] );
 	if( mapExtensions.find( ext ) == mapExtensions.end() ) return CDAO_FILE_OTHER;
 	return mapExtensions[ext];
@@ -141,6 +176,7 @@ string CDaoModule::GetFileName( SourceLocation loc )
 	SourceManager & sourceman = compiler->getSourceManager();
 	FileID fid = sourceman.getFileID( sourceman.getSpellingLoc( loc ) );
 	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
+	if( e == NULL ) return "";
 	return e->getName();
 }
 bool CDaoModule::IsFromModules( SourceLocation loc )
@@ -170,7 +206,7 @@ bool CDaoModule::IsFromModuleSources( SourceLocation loc )
 }
 bool CDaoModule::CheckHeaderDependency()
 {
-	map<CDaoInclusionInfo,int>::iterator it, end = inclusions.end();
+	map<CDaoInclusionInfo,int>::iterator it, it2, end = inclusions.end();
 	for(it=inclusions.begin(); it!=end; it++){
 		FileEntry *includer = it->first.includer;
 		FileEntry *includee = it->first.includee;
@@ -178,6 +214,18 @@ bool CDaoModule::CheckHeaderDependency()
 		if( includee == moduleInfo.entry ){
 			errs() << "Error: main module file is included by other files!\n";
 			return false;
+		}
+		if( headers.find( includer ) != headers.end() ){
+			string name = includer->getName();
+			string path = includer->getDir()->getName();
+			name.erase( 0, path.size() );
+			it2 = inclusions.find( CDaoInclusionInfo( moduleInfo.entry, includer ) );
+			if( CheckFileExtension( name ) == CDAO_FILE_HEADER && it2 != end ){
+				if( headers.find( includee ) == headers.end() ){
+					headers[ includee ] = CDaoHeaderInfo( "", includee );
+					extHeaders.erase( includee );
+				}
+			}
 		}
 		if( headers.find( includee ) != headers.end() ){
 			if( includer == moduleInfo.entry ) continue;
@@ -244,7 +292,7 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 		if( extHeaders.find( entryHeader ) != extHeaders.end() ) return;
 		extHeaders[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
 	}
-	outs() << name << " is included\n";
+	//outs() << name << " is included\n";
 }
 void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *macro )
 {
@@ -274,27 +322,27 @@ void CDaoModule::HandleHintDefinition( const string & name, const MacroInfo *mac
 void CDaoModule::HandleVariable( VarDecl *var )
 {
 	//outs() << var->getNameAsString() << "\n";
-	variables.push_back( var );
+	topLevelScope.AddVarDecl( var );
 }
 void CDaoModule::HandleEnum( EnumDecl *decl )
 {
-	enums.push_back( decl );
+	topLevelScope.AddEnumDecl( decl );
 }
 void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 {
 	//outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
-	functions.push_back( CDaoFunction( this, funcdec ) );
+	topLevelScope.AddFunction( new CDaoFunction( this, funcdec ) );
 }
 void CDaoModule::HandleUserType( RecordDecl *record )
 {
 	//outs() << "UserType: " << record->getNameAsString() << "\n";
 	//outs() << (void*)record << " " << (void*)record->getDefinition() << "\n";
-	usertypes.push_back( NewUserType( record ) );
+	topLevelScope.AddUserType( NewUserType( record ) );
 }
 void CDaoModule::HandleNamespace( NamespaceDecl *nsdecl )
 {
 	CDaoNamespace *ns = AddNamespace( nsdecl );
-	if( ns ) namespaces.push_back( ns );
+	if( ns ) topLevelScope.AddNamespace( ns );
 }
 void CDaoModule::HandleTypeDefine( TypedefDecl *decl )
 {
@@ -331,6 +379,7 @@ void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 
 	map<FileEntry*,CDaoHeaderInfo>::iterator it, end = headers.end();
 	for(it=headers.begin(); it != end; it++){
+		if( it->second.path == "" ) continue;
 		fout_header << "#include\"" << it->second.path << "\"\n"; // TODO: angular
 	}
 	fout_header << "\n";
@@ -381,7 +430,7 @@ string CDaoModule::MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNames
 	int i, n;
 	string codes, idname;
 	map<string,string> kvmap;
-	if( ns ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	if( ns && ns->nsdecl ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	//codes += ifdef_cpp_open;
 	codes += "static DaoTypeBase *dao_" + idname + "_Typers[] = \n{\n";
 	for(i=0, n=usertypes.size(); i<n; i++){
@@ -425,20 +474,20 @@ string CDaoModule::MakeSource3Codes( vector<CDaoUserType*> & usertypes )
 string CDaoModule::MakeOnLoadCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns )
 {
 	string codes, tname, nsname = "ns";
-	if( ns ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	codes += "\tDaoNameSpace_WrapTypes( " + nsname + ", dao_" + tname + "_Typers );\n";
 	return codes;
 }
-string CDaoModule::MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns )
+string CDaoModule::MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns )
 {
 	int i, n;
 	string func_decl;
 	string rout_entry;
 	string func_codes;
 	string codes, idname;
-	if( ns ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	if( ns && ns->nsdecl ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	for(i=0, n=functions.size(); i<n; i++){
-		CDaoFunction & func = functions[i];
+		CDaoFunction & func = *functions[i];
 		if( func.excluded || not func.IsFromMainModule() ) continue;
 		func_decl += func.cxxProtoCodes + ";\n";
 		func_codes += func.cxxWrapper;
@@ -452,10 +501,10 @@ string CDaoModule::MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamesp
 	codes += ifdef_cpp_close;
 	return codes;
 }
-string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns )
+string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns )
 {
 	string codes, tname, nsname = "ns";
-	if( ns ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
+	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	codes += "\tDaoNameSpace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
 	return codes;
 }
@@ -506,6 +555,7 @@ string CDaoModule::MakeConstantStruct( vector<EnumDecl*> & enums, vector<VarDecl
 
 int CDaoModule::Generate()
 {
+	finalGenerating = true;
 	if( CheckHeaderDependency() == false ) return 1;
 
 	// TODO: other extension, output dir
@@ -530,18 +580,13 @@ int CDaoModule::Generate()
 
 	map<string,int> overloads;
 	int i, n, retcode = 0;
-	for(i=0, n=namespaces.size(); i<n; i++) retcode |= namespaces[i]->Generate();
-	for(i=0, n=allUsertypes.size(); i<n; i++) retcode |= allUsertypes[i]->Generate();
+	topLevelScope.Generate();
 	for(i=0, n=callbacks.size(); i<n; i++) retcode |= callbacks[i]->Generate();
-	for(i=0, n=functions.size(); i<n; i++){
-		string name = functions[i].funcDecl->getNameAsString();
-		functions[i].index = ++overloads[name];
-		retcode |= functions[i].Generate();
-	}
+
 	map<string,string> kvmap;
 	kvmap[ "module" ] = moduleInfo.name;
 
-	fout_header << MakeHeaderCodes( usertypes );
+	fout_header << topLevelScope.header;
 	fout_source3 << cxx_get_object_method;
 	map<string,CDaoProxyFunction> & proxy_functions = CDaoProxyFunction::proxy_functions;
 	map<string,CDaoProxyFunction>::iterator pit, pend = proxy_functions.end();
@@ -559,31 +604,19 @@ int CDaoModule::Generate()
 	}
 	fout_header << ifdef_cpp_close;
 
-	fout_source << MakeConstantStruct( enums, variables );
-	fout_source << MakeSourceCodes( functions );
-	fout_source << MakeSourceCodes( usertypes );
-	fout_source2 << MakeSource2Codes( usertypes );
-	fout_source3 << MakeSource3Codes( usertypes );
-	for(i=0, n=namespaces.size(); i<n; i++){
-		fout_header << namespaces[i]->header;
-		fout_source << namespaces[i]->source;
-		fout_source2 << namespaces[i]->source2;
-		fout_source3 << namespaces[i]->source3;
-	}
+	fout_source << topLevelScope.source;
+	fout_source2 << topLevelScope.source2;
+	fout_source3 << topLevelScope.source3;
 	fout_header << "#endif\n";
 
 	fout_source << ifdef_cpp_open;
 	string onload = "DaoOnLoad";
 	fout_source << "int " << onload << "( DaoVmSpace *vms, DaoNameSpace *ns )\n{\n";
-	//XXX if( hasNameSpace ) fout_source.writeln( "  DaoNameSpace *ns2;" );
-	//fout_source << "  const char *aliases[" << nalias << "];\n";
 	fout_source << "\t__daoVmSpace = vms;\n";
-	fout_source << "\tDaoNameSpace_AddConstNumbers( ns, dao__Nums );\n";
-	fout_source << MakeOnLoadCodes( usertypes );
-	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload;
-	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload2;
-	for(i=0, n=namespaces.size(); i<n; i++) fout_source << namespaces[i]->onload3;
-	fout_source << MakeOnLoadCodes( functions );
+	fout_source << topLevelScope.onload;
+	fout_source << topLevelScope.onload2;
+	fout_source << topLevelScope.onload3;
+
 #if 0
 	if( lib_name == LibType.LIB_QT ){
 		fout_source.write( "   qRegisterMetaType<DaoQtMessage>(\"DaoQtMessage\");\n" );

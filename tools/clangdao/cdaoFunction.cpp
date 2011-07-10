@@ -430,7 +430,7 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 		sig += pardecl->getTypeSourceInfo()->getType().getAsString();
 	}
 	retype.name = "_" + cdao_qname_to_idname( decl->getNameAsString() );
-	retype.SetQualType( funcDecl->getResultType() );
+	retype.SetQualType( funcDecl->getResultType(), funcDecl->getLocation() );
 
 	sig += ")";
 	sig = normalize_type_name( sig );
@@ -539,8 +539,9 @@ int CDaoFunction::Generate()
 		hostdecl = methdecl->getParent();
 		isconst = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
 		if( methdecl->isInstance() && ctor == NULL ){
+			QualType qtype = ctx.getPointerType( ctx.getRecordType( hostdecl ) );
 			parlist.insert( parlist.begin(), CDaoVariable( module ) );
-			parlist.front().SetQualType( ctx.getPointerType( ctx.getRecordType( hostdecl ) ) );
+			parlist.front().SetQualType( qtype, funcDecl->getLocation() );
 			parlist.front().name = "self";
 			autoself = 1;
 		}
@@ -553,6 +554,13 @@ int CDaoFunction::Generate()
 		host_name = hostdecl->getName().str();
 		host_qname = CDaoModule::GetQName( hostdecl );
 		host_idname = CDaoModule::GetIdName( hostdecl );
+
+		CDaoUserType *utp = module->GetUserType( hostdecl );
+		if( utp ){
+			host_name = utp->name;
+			host_qname = utp->qname;
+			host_idname = utp->idname;
+		}
 	}
 
 	int retcode = 0;
@@ -742,12 +750,10 @@ int CDaoFunction::Generate()
 	CDaoUserType *usertype = module->GetUserType( hostdecl );
 	if( usertype && host_name == cxxName and not excluded ){
 		//kvmap[ 'parlist' ] = ''; // XXX disable parameters at the moment
-		if( not usertype->noConstructor ){
-			if( usertype->hasVirtual ){
-				cxxCallCodes = cdao_string_fill( cxx_call_new2, kvmap );
-			}else{
-				cxxCallCodes = cdao_string_fill( cxx_call_new, kvmap );
-			}
+		if( usertype->wrapType == CDAO_WRAP_TYPE_STRUCT ){
+			cxxCallCodes = cdao_string_fill( cxx_call_new2, kvmap );
+		}else if( usertype->wrapType == CDAO_WRAP_TYPE_MEMBER ){
+			cxxCallCodes = cdao_string_fill( cxx_call_new, kvmap );
 		}
 		//if( parlist.size() ) cxxCallCodes = ''; // XXX maybe there is no default constru
 	}else if( retype.daotype != "" ){

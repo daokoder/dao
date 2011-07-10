@@ -45,3 +45,5 @@
 
 // Headers to be wrapped:
 #include "first.h"
+
+#include <vector>

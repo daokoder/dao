@@ -23,9 +23,9 @@ struct CDaoVariable
 {
 	CDaoModule  *module;
 
-	QualType     qualType;
-	QualType     canoType;
-	const Expr  *initor;
+	QualType        qualtype;
+	SourceLocation  location;
+	const Expr     *initor;
 
 	bool    isNullable;
 	bool    isCallback;
@@ -59,16 +59,16 @@ struct CDaoVariable
 
 	CDaoVariable( CDaoModule *mod = NULL, const VarDecl *decl = NULL );
 
-	void SetQualType( QualType qtype );
+	void SetQualType( QualType qtype, SourceLocation loc = SourceLocation() );
 	void SetDeclaration( const VarDecl *decl );
 	void SetHints( const string & hints );
 
 	int Generate( int daopar_index = 0, int cxxpar_index = 0 );
 	int Generate2( int daopar_index = 0, int cxxpar_index = 0 );
-	int Generate( const BuiltinType *type, int daopar_index = 0, int cxxpar_index = 0 );
-	int Generate( const PointerType *type, int daopar_index = 0, int cxxpar_index = 0 );
-	int Generate( const ReferenceType *type, int daopar_index = 0, int cxxpar_index = 0 );
-	int Generate( const ArrayType *type, int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForBuiltin( int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForPointer( int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForReference( int daopar_index = 0, int cxxpar_index = 0 );
+	int GenerateForArray( int daopar_index = 0, int cxxpar_index = 0 );
 	int GenerateForArray( QualType elemtype, string size, int daopar_index = 0, int cxxpar_index = 0 );
 	int GenerateForArray( QualType elemtype, string size, string size2, int dpid = 0, int cpid = 0 );
 

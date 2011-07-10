@@ -61,8 +61,17 @@ struct CDaoInclusionInfo
 
 struct CDaoModule
 {
+	bool  finalGenerating;
+
 	CompilerInstance  *compiler;
 	CDaoModuleInfo     moduleInfo;
+	CDaoNamespace      topLevelScope;
+
+	vector<CDaoFunction*>  callbacks;
+
+	map<const RecordDecl*,CDaoUserType*>         allUsertypes;
+	map<const NamespaceDecl*,CDaoNamespace*>     allNamespaces;
+	map<const FunctionProtoType*,CDaoFunction*>  allCallbacks;
 
 	map<FileEntry*,CDaoModuleInfo>  requiredModules; // directly required modules;
 	map<FileEntry*,CDaoModuleInfo>  requiredModules2; // directly/indirectly required modules;
@@ -72,23 +81,11 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
-	vector<CDaoNamespace*>  namespaces;
-	vector<CDaoUserType*>   usertypes;
-	vector<CDaoFunction>    functions;
-	vector<CDaoFunction*>   callbacks;
-	vector<EnumDecl*>       enums;
-	vector<VarDecl*>        variables;
-
-	map<const FunctionProtoType*,CDaoFunction*> allCallbacks;
-
-	vector<CDaoUserType*>                     allUsertypes;
-	map<const RecordDecl*,CDaoUserType*>      allUsertypes2;
-	map<const NamespaceDecl*,CDaoNamespace*>  allNamespaces;
-
 	static map<string,int>  mapExtensions;
 
 	CDaoModule( CompilerInstance *com, const string & path );
 
+	CDaoUserType* HandleUserType( QualType qualtype, SourceLocation loc );
 	CDaoUserType* GetUserType( const RecordDecl *decl );
 	CDaoUserType* NewUserType( RecordDecl *decl );
 	CDaoNamespace* GetNamespace( const NamespaceDecl *decl );
@@ -128,8 +125,8 @@ struct CDaoModule
 	string MakeSource3Codes( vector<CDaoUserType*> & usertypes );
 	string MakeOnLoadCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns = NULL );
 
-	string MakeSourceCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
-	string MakeOnLoadCodes( vector<CDaoFunction> & functions, CDaoNamespace *ns = NULL );
+	string MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
+	string MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
 	string MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "" );
 	string MakeConstantStruct( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "" );
 

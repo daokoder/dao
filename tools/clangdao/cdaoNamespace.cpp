@@ -10,7 +10,6 @@ CDaoNamespace::CDaoNamespace( CDaoModule *mod, NamespaceDecl *decl )
 {
 	module = mod;
 	nsdecl = decl;
-	index = 0;
 }
 void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 {
@@ -23,9 +22,11 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
 			enums.push_back( e );
 		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
-			functions.push_back( CDaoFunction( module, func ) );
+			functions.push_back( new CDaoFunction( module, func ) );
+			functions.back()->Generate();
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
 			usertypes.push_back( module->NewUserType( record ) );
+			usertypes.back()->Generate();
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			CDaoNamespace *ns = module->AddNamespace( nsdecl );
 			if( ns ) namespaces.push_back( ns );
@@ -36,14 +37,14 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 }
 int CDaoNamespace::Generate( CDaoNamespace *outer )
 {
-	outs() << "namespace: " << nsdecl->getQualifiedNameAsString() << "\n";
-
-	map<string,int> overloads;
 	int i, n, retcode = 0;
+	for(i=0, n=usertypes.size(); i<n; i++) retcode |= usertypes[i]->Generate();
 	for(i=0, n=functions.size(); i<n; i++){
-		string name = functions[i].funcDecl->getNameAsString();
-		functions[i].index = ++overloads[name];
-		retcode |= functions[i].Generate();
+		CDaoFunction *func = functions[i];
+		if( func->generated || func->excluded ) continue;
+		string name = func->funcDecl->getNameAsString();
+		func->index = ++overloads[name];
+		retcode |= func->Generate();
 	}
 	header = module->MakeHeaderCodes( usertypes );
 	source = module->MakeSourceCodes( functions, this );
@@ -51,23 +52,30 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	source2 = module->MakeSource2Codes( usertypes );
 	source3 = module->MakeSource3Codes( usertypes );
 
-	string outer_name = outer ? outer->nsdecl->getQualifiedNameAsString() : "ns";
-	string this_name = nsdecl->getQualifiedNameAsString();
-	string qname = this_name;
+	if( nsdecl ){
+		string outer_name = outer && outer->nsdecl ? outer->nsdecl->getQualifiedNameAsString() : "ns";
+		string this_name = nsdecl->getQualifiedNameAsString();
+		string name = nsdecl->getNameAsString();
+		string qname = this_name;
 
-	outer_name = cdao_qname_to_idname( outer_name );
-	this_name = cdao_qname_to_idname( this_name );
+		outer_name = cdao_qname_to_idname( outer_name );
+		this_name = cdao_qname_to_idname( this_name );
 
-	onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
-	onload += outer_name + ", \"" + nsdecl->getNameAsString() + "\" );\n";
-	onload3 += module->MakeOnLoadCodes( functions, this );
-
-	if( enums.size() ){
-		source += module->MakeConstantStruct( enums, variables, qname );
-		onload2 += "\tDaoNameSpace_AddConstNumbers( " + this_name;
-		onload2 += ", dao_" + this_name + "_Nums );\n";
+		onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
+		onload += outer_name + ", \"" + name + "\" );\n";
+		if( enums.size() ){
+			source += module->MakeConstantStruct( enums, variables, qname );
+			onload2 += "\tDaoNameSpace_AddConstNumbers( " + this_name;
+			onload2 += ", dao_" + this_name + "_Nums );\n";
+		}
+	}else{
+		if( enums.size() ){
+			source += module->MakeConstantStruct( enums, variables );
+			onload2 += "\tDaoNameSpace_AddConstNumbers( ns, dao__Nums );\n";
+		}
 	}
 
+	onload3 += module->MakeOnLoadCodes( functions, this );
 	for(i=0, n=namespaces.size(); i<n; i++){
 		retcode |= namespaces[i]->Generate( this );
 		header += namespaces[i]->header;
