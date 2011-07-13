@@ -597,7 +597,7 @@ const string cast_to_parent =
 const string usertype_code =
 "$(cast_funcs)\n\
 static DaoTypeBase $(typer)_Typer = \n\
-{ \"$(type)\", NULL,\n\
+{ \"$(qname)\", NULL,\n\
   dao_$(typer)_Nums,\n\
   dao_$(typer)_Meths,\n\
   { $(parents)NULL },\n\
@@ -625,6 +625,7 @@ CDaoUserType::CDaoUserType( CDaoModule *mod, RecordDecl *decl )
 	module = mod;
 	isRedundant = true;
 	isQObject = isQObjectBase = false;
+	wrapCount = 0;
 	wrapType = CDAO_WRAP_TYPE_NONE;
 	alloc_default = "NULL";
 	this->decl = NULL;
@@ -644,13 +645,26 @@ void CDaoUserType::SetDeclaration( RecordDecl *decl )
 // name that can still uniquely identify the type.
 void CDaoUserType::UpdateName( const string & writtenName )
 {
+	string wname = normalize_type_name( writtenName );
 	if( writtenName.size() ){
-		outs() << writtenName << ":  " << name << " " << qname << " " << idname << "\n";
-		qname.replace( qname.rfind( name ), name.size(), writtenName );
-		name = normalize_type_name( writtenName );
+		outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
+		if( wname.find( qname ) == 0 ){
+			// Example:
+			// writtenName: std::allocator<char>
+			// name: allocator
+			// qname: std::allocator
+			qname = wname;
+		}else{
+			// Example:
+			// writtenName: string
+			// name: basic_string
+			// qname: std::basic_string
+			qname.replace( qname.rfind( name ), name.size(), wname );
+			name = normalize_type_name( wname );
+		}
 		qname = normalize_type_name( qname );
 		idname = cdao_qname_to_idname( qname );
-		outs() << writtenName << ":  " << name << " " << qname << " " << idname << "\n";
+		outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
 	}
 
 }
@@ -709,8 +723,11 @@ int CDaoUserType::Generate()
 	// ignore redundant declarations:
 	isRedundant = dd != NULL && dd != decl;
 	if( isRedundant ) return 0;
-	if( dd == NULL && wrapType == CDAO_WRAP_TYPE_OPAQUE ) return 0;
-	if( dd == decl && wrapType >= CDAO_WRAP_TYPE_MEMBER ) return 0;
+	if( wrapCount ){
+		if( dd == NULL && wrapType == CDAO_WRAP_TYPE_OPAQUE ) return 0;
+		if( dd == decl && wrapType >= CDAO_WRAP_TYPE_DIRECT ) return 0;
+	}
+	wrapCount = 0;
 	Clear();
 	// simplest wrapping for types declared or defined outsided of the modules:
 	if( not module->IsFromModules( loc ) ) return GenerateSimpleTyper();
@@ -784,7 +801,7 @@ int CDaoUserType::Generate( RecordDecl *decl )
 	vector<CDaoFunction> callbacks;
 	map<string,string> kvmap;
 
-	wrapType = CDAO_WRAP_TYPE_STRUCT;
+	wrapType = CDAO_WRAP_TYPE_PROXY;
 
 	SetupDefaultMapping( kvmap );
 
@@ -823,6 +840,7 @@ int CDaoUserType::Generate( RecordDecl *decl )
 		CDaoFunction & meth = callbacks[i];
 		meth.Generate();
 		if( meth.excluded ) continue;
+		wrapCount += meth.generated;
 		kvmap[ "callback" ] = meth.cxxName;
 		set_callbacks += cdao_string_fill( tpl_set_callback, kvmap );
 		type_decls += meth.cxxWrapperVirtProto;
@@ -866,7 +884,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	map<string,string> kvmap;
 	map<string,int> overloads;
 
-	wrapType = CDAO_WRAP_TYPE_MEMBER;
+	wrapType = CDAO_WRAP_TYPE_DIRECT;
 
 	vector<VarDecl*>      vars;
 	vector<EnumDecl*>     enums;
@@ -899,7 +917,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		bases.push_back( & sup );
 		//outs() << "parent: " << p->getNameAsString() << "\n";
 
-		if( sup.wrapType != CDAO_WRAP_TYPE_STRUCT ) continue;
+		if( sup.wrapType != CDAO_WRAP_TYPE_PROXY ) continue;
 		for(i=0,n=sup.pureVirtuals.size(); i<n; i++) pvmeths[ sup.pureVirtuals[i] ] = 1;
 		kvmap[ "super" ] = supname;
 		if( virt_supers.size() ){
@@ -1022,12 +1040,12 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	// 1. there is a virtual function, so that it can be re-implemented by derived Dao class;
 	// 2. or, there is a protected function, so that it can be accessed by derived Dao class;
 	// 3. or, there is a Qt signal/slot, so that such signal/slot can be connected with Dao.
-	bool structWrapping = has_private_ctor_only == false;
-	structWrapping &= hasVirtual || hasProtected || pubslots.size() || protsignals.size();
+	bool proxyWrapping = has_private_ctor_only == false;
+	proxyWrapping &= hasVirtual || hasProtected || pubslots.size() || protsignals.size();
 
-	wrapType = structWrapping ? CDAO_WRAP_TYPE_STRUCT : CDAO_WRAP_TYPE_MEMBER;
-	if( name == "Fl" ) 
-		outs() << name << ": " << (int)wrapType << " " << has_private_ctor_only << "\n";
+	wrapType = proxyWrapping ? CDAO_WRAP_TYPE_PROXY : CDAO_WRAP_TYPE_DIRECT;
+
+	outs() << name << ": " << (int)wrapType << " " << has_private_ctor_only << "\n";
 
 	SetupDefaultMapping( kvmap );
 
@@ -1036,6 +1054,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( meth.funcDecl );
 		meth.Generate();
 		if( meth.excluded || ctor->getAccess() != AS_public ) continue;
+		wrapCount += meth.generated;
 		dao_meths += meth.daoProtoCodes;
 		meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
 		meth_codes += meth.cxxWrapper;
@@ -1046,6 +1065,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		meth.Generate();
 		if( meth.excluded ) continue;
 		if( mdec->getAccess() != AS_public ) continue;
+		wrapCount += meth.generated;
 		dao_meths += meth.daoProtoCodes;
 		meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
 		meth_codes += meth.cxxWrapper;
@@ -1081,7 +1101,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	if( has_implicit_default_ctor ){
 		dao_meths = cdao_string_fill( dao_proto, kvmap ) + dao_meths;
 		meth_decls = cdao_string_fill( cxx_wrap_proto, kvmap ) + ";\n" + meth_decls;
-		if( wrapType == CDAO_WRAP_TYPE_MEMBER ){
+		if( wrapType == CDAO_WRAP_TYPE_DIRECT ){
 			meth_codes = cdao_string_fill( cxx_wrap_alloc2, kvmap ) + meth_codes;
 			type_decls += cdao_string_fill( tpl_struct, kvmap );
 			type_codes += cdao_string_fill( tpl_struct_alloc2, kvmap );
@@ -1096,7 +1116,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "meths" ] = dao_meths;
 	kvmap["constructors"] = "";
 	//outs()<<qname<<": "<<wrapType<<" "<<has_private_ctor_only<<" "<<hasVirtual<<"\n";
-	if( wrapType == CDAO_WRAP_TYPE_MEMBER ){
+	if( wrapType == CDAO_WRAP_TYPE_DIRECT ){
 		kvmap[ "class" ] = name;
 		kvmap[ "name" ] = name;
 		kvmap[ "qt_make_linker3" ] = "";
@@ -1262,8 +1282,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	string parents, casts, cast_funcs;
 	for(i=0,n=bases.size(); i<n; i++){
 		CDaoUserType *sup = bases[i];
-		string supname = sup->GetName();
-		string supname2 = sup->GetIdName();
+		string supname = sup->qname;
+		string supname2 = sup->idname;
 		parents += "dao_" + supname2 + "_Typer, ";
 		casts += "dao_cast_" + idname + "_to_" + supname2 + ",";
 		kvmap[ "parent" ] = supname;

@@ -123,8 +123,10 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc 
 	QualType canotype = qualtype.getCanonicalType();
 	if( const RecordType *record = dyn_cast<RecordType>( canotype.getTypePtr() ) ){
 		ClassTemplateSpecializationDecl *SD, *DE;
+		RecordDecl *RD = record->getDecl();
+		if( RD->getDefinition() ) RD = RD->getDefinition();
 		//outs()<<">>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
-		if( (SD = dyn_cast<ClassTemplateSpecializationDecl>( record->getDecl() ) ) ){
+		if( (SD = dyn_cast<ClassTemplateSpecializationDecl>( RD ) ) ){
 			//outs() << (void*)SD << ": " << GetFileName( SD->getLocation() ) << "\n";
 			if( GetUserType( SD ) == NULL ){
 				DE = cast_or_null<ClassTemplateSpecializationDecl>( SD->getDefinition());
@@ -142,6 +144,8 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc 
 				if( NamespaceDecl *ND = cast_or_null<NamespaceDecl>( SD->getParent() ) ){
 					CDaoNamespace *NS = GetNamespace( ND );
 					if( NS == NULL ) NS = AddNamespace( ND );
+					if( NS == NULL ) NS = GetNamespace( ND );
+					if( NS == NULL ) NS = & topLevelScope;
 					NS->AddUserType( UT );
 				}else{
 					topLevelScope.AddUserType( UT );
@@ -185,6 +189,7 @@ bool CDaoModule::IsFromModules( SourceLocation loc )
 	FileID fid = sourceman.getFileID( sourceman.getSpellingLoc( loc ) );
 	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
 	bool is = e == moduleInfo.entry;
+	//if( e ) outs() << e->getName() << "\n";
 	is = is or requiredModules2.find( e ) != requiredModules2.end();
 	is = is or headers.find( e ) != headers.end();
 	is = is or extHeaders.find( e ) != extHeaders.end();
@@ -207,6 +212,8 @@ bool CDaoModule::IsFromModuleSources( SourceLocation loc )
 bool CDaoModule::CheckHeaderDependency()
 {
 	map<CDaoInclusionInfo,int>::iterator it, it2, end = inclusions.end();
+	map<string,vector<string> > extras;
+	map<string,vector<string> >::iterator it3;
 	for(it=inclusions.begin(); it!=end; it++){
 		FileEntry *includer = it->first.includer;
 		FileEntry *includee = it->first.includee;
@@ -224,6 +231,7 @@ bool CDaoModule::CheckHeaderDependency()
 				if( headers.find( includee ) == headers.end() ){
 					headers[ includee ] = CDaoHeaderInfo( "", includee );
 					extHeaders.erase( includee );
+					extras[path+name].push_back( includee->getName() );
 				}
 			}
 		}
@@ -234,6 +242,12 @@ bool CDaoModule::CheckHeaderDependency()
 			errs() << "\" is included by external file \"" << includer->getName() << "\"!\n";
 			//return false;
 		}
+	}
+	for(it3=extras.begin(); it3!=extras.end(); it3++){
+		vector<string> & incs = it3->second;
+		errs() << "Warning: the following files included by \"" << it3->first;
+		errs() << "\" will also be wrapped!\n";
+		for(int i=0,n=incs.size(); i<n; i++) errs() << "  " << incs[i] << "\n";
 	}
 	return true;
 }
@@ -415,7 +429,7 @@ string CDaoModule::MakeHeaderCodes( vector<CDaoUserType*> & usertypes )
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
 		if( utp.isRedundant ) continue;
-		kvmap[ "type" ] = utp.GetName();
+		kvmap[ "type" ] = utp.idname;
 		codes += cdao_string_fill( ext_typer, kvmap );
 	}
 	for(i=0, n=usertypes.size(); i<n; i++){
@@ -435,8 +449,9 @@ string CDaoModule::MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNames
 	codes += "static DaoTypeBase *dao_" + idname + "_Typers[] = \n{\n";
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
+		//outs() << utp.GetQName() << " " << utp.IsFromMainModule() << "\n";
 		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
-		codes += "\tdao_" + utp.GetIdName() + "_Typer,\n";
+		codes += "\tdao_" + utp.idname + "_Typer,\n";
 	}
 	codes += "\tNULL\n};\n";
 	//codes += ifdef_cpp_close;

@@ -530,36 +530,39 @@ int CDaoFunction::Generate()
 	int autoself = 0;
 	bool isconst = false;
 	const CXXMethodDecl *methdecl = NULL;
+	const CXXConstructorDecl *ctordecl = NULL;
 	const RecordDecl *hostdecl = NULL;
 	ASTContext & ctx = module->compiler->getASTContext();
 	string host_name, host_qname, host_idname;
-	if( funcDecl ) methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
+	if( funcDecl ){
+		methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
+		ctordecl = dyn_cast<CXXConstructorDecl>( funcDecl );
+	}
 	if( methdecl ){
-		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( methdecl );
 		hostdecl = methdecl->getParent();
 		isconst = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
-		if( methdecl->isInstance() && ctor == NULL ){
+		if( methdecl->isInstance() && ctordecl == NULL ){
 			QualType qtype = ctx.getPointerType( ctx.getRecordType( hostdecl ) );
 			parlist.insert( parlist.begin(), CDaoVariable( module ) );
 			parlist.front().SetQualType( qtype, funcDecl->getLocation() );
 			parlist.front().name = "self";
 			autoself = 1;
 		}
-		if( ctor ) methdecl = NULL;
+		if( ctordecl ) methdecl = NULL;
 	}else if( fieldDecl ){
 		hostdecl = (RecordDecl*) fieldDecl->getParent();
 	}
+	CDaoUserType *hostype = module->GetUserType( hostdecl );
 	if( decl ) cxxName = decl->getNameAsString();
 	if( hostdecl ){
 		host_name = hostdecl->getName().str();
 		host_qname = CDaoModule::GetQName( hostdecl );
 		host_idname = CDaoModule::GetIdName( hostdecl );
-
-		CDaoUserType *utp = module->GetUserType( hostdecl );
-		if( utp ){
-			host_name = utp->name;
-			host_qname = utp->qname;
-			host_idname = utp->idname;
+		if( hostype ){
+			host_name = hostype->name;
+			host_qname = hostype->qname;
+			host_idname = hostype->idname;
+			if( ctordecl ) cxxName = host_name;
 		}
 	}
 
@@ -707,7 +710,7 @@ int CDaoFunction::Generate()
 	string overload;
 	if( index > 1 ) overload = "_dao_" + utostr( index );
 
-	cxxWrapName = "dao_" + host_idname + "_" + cxxName;
+	cxxWrapName = "dao_" + host_idname + "_" + cdao_qname_to_idname( cxxName );
 
 	map<string,string> kvmap;
 	kvmap[ "host_qname" ] = host_qname;
@@ -747,12 +750,11 @@ int CDaoFunction::Generate()
 		kvmap[ "n" + utostr(i) ] = utostr( tup2.i );
 		kvmap[ "parlist" + utostr(i) ] = tup2.s;
 	}
-	CDaoUserType *usertype = module->GetUserType( hostdecl );
-	if( usertype && host_name == cxxName and not excluded ){
+	if( hostype && ctordecl != NULL and not excluded ){
 		//kvmap[ 'parlist' ] = ''; // XXX disable parameters at the moment
-		if( usertype->wrapType == CDAO_WRAP_TYPE_STRUCT ){
+		if( hostype->wrapType == CDAO_WRAP_TYPE_PROXY ){
 			cxxCallCodes = cdao_string_fill( cxx_call_new2, kvmap );
-		}else if( usertype->wrapType == CDAO_WRAP_TYPE_MEMBER ){
+		}else if( hostype->wrapType == CDAO_WRAP_TYPE_DIRECT ){
 			cxxCallCodes = cdao_string_fill( cxx_call_new, kvmap );
 		}
 		//if( parlist.size() ) cxxCallCodes = ''; // XXX maybe there is no default constru

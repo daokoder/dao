@@ -978,7 +978,7 @@ int CDaoVariable::GenerateForReference( int daopar_index, int cxxpar_index )
 		cxxtype2 = UT->qname;
 		cxxcall = "*" + name;
 		tpl.daopar = daopar_user;
-		tpl.ctxput = ctxput_user;
+		tpl.ctxput = ctxput_refcdata;
 		tpl.getres = getres_user;
 		tpl.dao2cxx = dao2cxx_user2;
 		tpl.cxx2dao = cxx2dao_user;
@@ -1235,8 +1235,22 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, string size2
 void CDaoVariable::MakeCxxParameter( string & prefix, string & suffix )
 {
 	const Type *type = qualtype.getTypePtr();
-	if( dyn_cast<TypedefType>( type ) ){
-		prefix = qualtype.getAsString();
+	prefix = "";
+	if( const TypedefType *TDT = dyn_cast<TypedefType>( type ) ){
+		DeclContext *DC = TDT->getDecl()->getDeclContext();
+		if( DC->isNamespace() ){
+			NamespaceDecl *ND = cast_or_null<NamespaceDecl>( DC );
+			prefix = ND->getQualifiedNameAsString() + "::";
+		}else if( DC->isRecord() ){
+			RecordDecl *RD = cast_or_null<RecordDecl>( DC );
+			CDaoUserType *UT = module->GetUserType( RD );
+			if( UT ){
+				prefix = UT->qname + "::";
+			}else{
+				prefix = RD->getQualifiedNameAsString() + "::";
+			}
+		}
+		prefix += qualtype.getAsString();
 	}else{
 		QualType canotype = qualtype.getCanonicalType();
 		MakeCxxParameter( canotype, prefix, suffix );

@@ -18,8 +18,8 @@ enum CDaoUserTypeWrapType
 {
 	CDAO_WRAP_TYPE_NONE ,   // none wrapping;
 	CDAO_WRAP_TYPE_OPAQUE , // wrap as opaque type;
-	CDAO_WRAP_TYPE_MEMBER , // wrap with member accessing;
-	CDAO_WRAP_TYPE_STRUCT   // wrap as derivable type;
+	CDAO_WRAP_TYPE_DIRECT , // wrap for direct member accessing;
+	CDAO_WRAP_TYPE_PROXY    // wrap through a proxy struct or class;
 };
 
 struct CDaoUserType
@@ -28,6 +28,7 @@ struct CDaoUserType
 	RecordDecl     *decl;
 
 	short  wrapType;
+	short  wrapCount;
 	bool   isRedundant;
 	bool   isQObject;
 	bool   isQObjectBase;

@@ -153,18 +153,37 @@ string normalize_type_name( const string & name0 )
 string cdao_qname_to_idname( const string & qname )
 {
 	string idname = normalize_type_name( qname );
-	size_t pos;
-	while( (pos = idname.find( "::" )) != string::npos ) idname.replace( pos, 2, "_0_" );
-	while( (pos = idname.find( "<" )) != string::npos ) idname.replace( pos, 1, "_1_" );
-	while( (pos = idname.find( ">" )) != string::npos ) idname.replace( pos, 1, "_2_" );
-	while( (pos = idname.find( "," )) != string::npos ) idname.replace( pos, 1, "_3_" );
-	while( (pos = idname.find( "[" )) != string::npos ) idname.replace( pos, 1, "_4_" );
-	while( (pos = idname.find( "]" )) != string::npos ) idname.replace( pos, 1, "_5_" );
-	while( (pos = idname.find( "(" )) != string::npos ) idname.replace( pos, 1, "_6_" );
-	while( (pos = idname.find( ")" )) != string::npos ) idname.replace( pos, 1, "_7_" );
-	while( (pos = idname.find( "*" )) != string::npos ) idname.replace( pos, 1, "_8_" );
-	while( (pos = idname.find( "." )) != string::npos ) idname.replace( pos, 1, "_9_" );
-	while( (pos = idname.find( " " )) != string::npos ) idname.replace( pos, 1, "_10_" );
+	size_t pos = 0;
+	while( (pos = idname.find( "::", pos )) != string::npos ) idname.replace( pos, 2, "_0_" );
+	while( (pos = idname.find( "<", pos )) != string::npos ) idname.replace( pos, 1, "_1_" );
+	while( (pos = idname.find( ">", pos )) != string::npos ) idname.replace( pos, 1, "_2_" );
+	while( (pos = idname.find( ",", pos )) != string::npos ) idname.replace( pos, 1, "_3_" );
+	while( (pos = idname.find( "[", pos )) != string::npos ) idname.replace( pos, 1, "_4_" );
+	while( (pos = idname.find( "]", pos )) != string::npos ) idname.replace( pos, 1, "_5_" );
+	while( (pos = idname.find( "(", pos )) != string::npos ) idname.replace( pos, 1, "_6_" );
+	while( (pos = idname.find( ")", pos )) != string::npos ) idname.replace( pos, 1, "_7_" );
+	while( (pos = idname.find( "*", pos )) != string::npos ) idname.replace( pos, 1, "_8_" );
+	while( (pos = idname.find( ".", pos )) != string::npos ) idname.replace( pos, 1, "_9_" );
+	while( (pos = idname.find( " ", pos )) != string::npos ) idname.replace( pos, 1, "_10_" );
+	while( (pos = idname.find( "=", pos )) != string::npos ) idname.replace( pos, 1, "_11_" );
+	while( (pos = idname.find( "+", pos )) != string::npos ) idname.replace( pos, 1, "_12_" );
+	while( (pos = idname.find( "-", pos )) != string::npos ) idname.replace( pos, 1, "_13_" );
+	while( (pos = idname.find( "*", pos )) != string::npos ) idname.replace( pos, 1, "_14_" );
+	while( (pos = idname.find( "/", pos )) != string::npos ) idname.replace( pos, 1, "_15_" );
+	while( (pos = idname.find( "%", pos )) != string::npos ) idname.replace( pos, 1, "_16_" );
+	while( (pos = idname.find( "<", pos )) != string::npos ) idname.replace( pos, 1, "_17_" );
+	while( (pos = idname.find( ">", pos )) != string::npos ) idname.replace( pos, 1, "_18_" );
+	while( (pos = idname.find( "+=", pos )) != string::npos ) idname.replace( pos, 2, "_19_" );
+	while( (pos = idname.find( "-=", pos )) != string::npos ) idname.replace( pos, 2, "_20_" );
+	while( (pos = idname.find( "*=", pos )) != string::npos ) idname.replace( pos, 2, "_21_" );
+	while( (pos = idname.find( "/=", pos )) != string::npos ) idname.replace( pos, 2, "_22_" );
+	while( (pos = idname.find( "%=", pos )) != string::npos ) idname.replace( pos, 2, "_23_" );
+	while( (pos = idname.find( "==", pos )) != string::npos ) idname.replace( pos, 2, "_24_" );
+	while( (pos = idname.find( "!=", pos )) != string::npos ) idname.replace( pos, 2, "_25_" );
+	while( (pos = idname.find( "<=", pos )) != string::npos ) idname.replace( pos, 2, "_26_" );
+	while( (pos = idname.find( ">=", pos )) != string::npos ) idname.replace( pos, 2, "_27_" );
+	while( (pos = idname.find( "<<", pos )) != string::npos ) idname.replace( pos, 2, "_28_" );
+	while( (pos = idname.find( ">>", pos )) != string::npos ) idname.replace( pos, 2, "_29_" );
 	return idname;
 }
 
