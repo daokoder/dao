@@ -525,7 +525,6 @@ int CDaoFunction::Generate()
 	if( decl && not module->IsFromModules( decl->getLocation() ) ) return 0;
 	if( excluded ) return 1;
 	if( generated ) return 0;
-	generated = true;
 
 	int autoself = 0;
 	bool isconst = false;
@@ -569,12 +568,15 @@ int CDaoFunction::Generate()
 	int retcode = 0;
 	int i, n = parlist.size();
 	for(i=0; i<n; i++){
-		retcode |= parlist[i].Generate( i, i-autoself );
-		if( parlist[i].unsupported ){
+		CDaoVariable & var = parlist[i];
+		var.hostype = hostype;
+		retcode |= var.Generate( i, i-autoself );
+		if( var.unsupported ){
 			excluded = true;
 			return 1;
 		}
 	}
+	retype.hostype = hostype;
 	retcode |= retype.Generate( VAR_INDEX_RETURN );
 	if( retype.unsupported ){
 		excluded = true;
@@ -680,6 +682,7 @@ int CDaoFunction::Generate()
 				excluded = true;
 				errs() << "Warning: function \"" << sig << "\" is excluded!\n";
 				errs() << "Warning: callback \"" << vo->cxxpar << "\" has no associated userdata!\n";
+				return 0;
 			}
 		}
 	}
@@ -715,7 +718,7 @@ int CDaoFunction::Generate()
 	map<string,string> kvmap;
 	kvmap[ "host_qname" ] = host_qname;
 	kvmap[ "host_idname" ] = host_idname;
-	kvmap[ "func_idname" ] = CDaoModule::GetIdName( decl );
+	kvmap[ "func_idname" ] = host_idname + "_" + cdao_qname_to_idname( cxxName );
 	kvmap[ "func_call" ] = CDaoModule::GetQName( decl );
 	kvmap[ "cxxname" ] = cxxName;
 	kvmap[ "daoname" ] = daoName;
@@ -949,6 +952,7 @@ int CDaoFunction::Generate()
 		kvmap3[ "parlist" ] = cxxProtoParamVirt;
 		cxxWrapperVirt3 = cdao_string_fill( cxx_virt_class5, kvmap3 );
 	}
+	generated = true;
 	parlist.clear();
 	return retcode;
 }

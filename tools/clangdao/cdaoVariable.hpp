@@ -18,11 +18,12 @@ using namespace llvm;
 using namespace clang;
 
 struct CDaoModule;
+struct CDaoUserType;
 
 struct CDaoVariable
 {
-	CDaoModule  *module;
-
+	CDaoModule     *module;
+	CDaoUserType   *hostype;
 	QualType        qualtype;
 	SourceLocation  location;
 	const Expr     *initor;
@@ -75,6 +76,7 @@ struct CDaoVariable
 	void MakeCxxParameter( string & prefix, string & suffix );
 	void MakeCxxParameter( QualType qtype, string & prefix, string & suffix );
 	QualType GetStrippedType( QualType qtype );
+	string GetStrippedTypeName( QualType qtype );
 };
 
 #endif

@@ -637,6 +637,8 @@ void CDaoUserType::SetDeclaration( RecordDecl *decl )
 	qname = CDaoModule::GetQName( decl );
 	idname = CDaoModule::GetIdName( decl );
 	name = decl->getNameAsString();
+	location = decl->getLocation();
+	if( decl->getDefinition() ) location = decl->getDefinition()->getLocation();
 }
 // For template class type:
 // The canonical types of some template classes has quite long qualified names,
@@ -670,17 +672,11 @@ void CDaoUserType::UpdateName( const string & writtenName )
 }
 bool CDaoUserType::IsFromMainModule()
 {
-	if( decl == NULL ) return false;
-	RecordDecl *dd = decl->getDefinition();
-	if( dd == NULL ) return module->IsFromMainModule( decl->getLocation() );
-	return module->IsFromMainModule( dd->getLocation() );
+	return module->IsFromMainModule( location );
 }
 string CDaoUserType::GetInputFile()const
 {
-	if( decl == NULL ) return "";
-	RecordDecl *dd = decl->getDefinition();
-	if( dd == NULL ) return module->GetFileName( decl->getLocation() );
-	return module->GetFileName( dd->getLocation() );
+	return module->GetFileName( location );
 }
 void CDaoUserType::Clear()
 {
@@ -708,16 +704,7 @@ int CDaoUserType::Generate()
 {
 	RecordDecl *cc = (RecordDecl*) decl->getCanonicalDecl();
 	RecordDecl *dd = decl->getDefinition();
-	SourceLocation loc = decl->getLocation();
-	if( cc ) loc = cc->getLocation();
-	if( dd ) loc = dd->getLocation();
 
-	ClassTemplateSpecializationDecl *SD, *DE;
-	if( (SD = dyn_cast<ClassTemplateSpecializationDecl>(decl)) ){
-		DE = cast_or_null<ClassTemplateSpecializationDecl>( SD->getDefinition());
-		if( DE ) loc = DE->getPointOfInstantiation();
-		dd = DE;
-	}
 	if( module->finalGenerating == false && dd == NULL ) return 0;
 
 	// ignore redundant declarations:
@@ -730,7 +717,7 @@ int CDaoUserType::Generate()
 	wrapCount = 0;
 	Clear();
 	// simplest wrapping for types declared or defined outsided of the modules:
-	if( not module->IsFromModules( loc ) ) return GenerateSimpleTyper();
+	if( not module->IsFromModules( location ) ) return GenerateSimpleTyper();
 
 	// simplest wrapping for types declared but not defined:
 	if( dd == NULL ) return GenerateSimpleTyper();
@@ -839,8 +826,8 @@ int CDaoUserType::Generate( RecordDecl *decl )
 	for(i=0,n=callbacks.size(); i<n; i++){
 		CDaoFunction & meth = callbacks[i];
 		meth.Generate();
-		if( meth.excluded ) continue;
-		wrapCount += meth.generated;
+		if( not meth.generated ) continue;
+		wrapCount += 1;
 		kvmap[ "callback" ] = meth.cxxName;
 		set_callbacks += cdao_string_fill( tpl_set_callback, kvmap );
 		type_decls += meth.cxxWrapperVirtProto;
@@ -1045,7 +1032,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 
 	wrapType = proxyWrapping ? CDAO_WRAP_TYPE_PROXY : CDAO_WRAP_TYPE_DIRECT;
 
-	outs() << name << ": " << (int)wrapType << " " << has_private_ctor_only << "\n";
+	//outs() << name << ": " << (int)wrapType << " " << has_private_ctor_only << "\n";
 
 	SetupDefaultMapping( kvmap );
 
@@ -1053,8 +1040,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoFunction & meth = constructors[i];
 		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( meth.funcDecl );
 		meth.Generate();
-		if( meth.excluded || ctor->getAccess() != AS_public ) continue;
-		wrapCount += meth.generated;
+		if( not meth.generated ) continue;
+		if( ctor->getAccess() != AS_public ) continue;
+		wrapCount += 1;
 		dao_meths += meth.daoProtoCodes;
 		meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
 		meth_codes += meth.cxxWrapper;
@@ -1063,9 +1051,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoFunction & meth = methods[i];
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
 		meth.Generate();
-		if( meth.excluded ) continue;
+		if( not meth.generated ) continue;
 		if( mdec->getAccess() != AS_public ) continue;
-		wrapCount += meth.generated;
+		wrapCount += 1;
 		dao_meths += meth.daoProtoCodes;
 		meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
 		meth_codes += meth.cxxWrapper;
@@ -1124,7 +1112,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		for(i=0, n = constructors.size(); i<n; i++){
 			CDaoFunction & func = constructors[i];
 			const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( func.funcDecl );
-			if( func.excluded ) continue;
+			if( not func.generated ) continue;
 			if( ctor->getAccess() == AS_protected ) continue;
 			kvmap["parlist"] = func.cxxProtoParam;
 			kvmap["parcall"] = func.cxxCallParamV;
@@ -1146,7 +1134,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 
 		CDaoFunction func( module, mdec, ++overloads[name] );
 		func.Generate();
-		if( func.excluded ) continue;
+		if( not func.generated ) continue;
 		kvmap[ "name" ] = mdec->getNameAsString();
 		kvmap[ "retype" ] = func.retype.cxxtype;
 		kvmap[ "parlist" ] = func.cxxProtoParamDecl;
@@ -1163,7 +1151,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoFunction & meth = methods[i];
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
 		bool isconst = mdec->getTypeQualifiers() & DeclSpec::TQ_const;
-		if( meth.excluded ){
+		if( not meth.generated ){
 			if( mdec->isPure() ){
 				TypeLoc typeloc = mdec->getTypeSourceInfo()->getTypeLoc();
 				string source = module->ExtractSource( typeloc.getSourceRange(), true );
@@ -1220,7 +1208,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		for(i=0, n = constructors.size(); i<n; i++){
 			CDaoFunction & ctor = constructors[i];
 			const CXXConstructorDecl *cdec = dyn_cast<CXXConstructorDecl>( ctor.funcDecl );
-			if( ctor.excluded ) continue;
+			if( not ctor.generated ) continue;
 			//if( cdec->getAccess() == AS_protected ) continue;
 			kvmap["parlist"] = ctor.cxxProtoParamDecl;
 			kvmap["parcall"] = ctor.cxxCallParamV;
@@ -1243,7 +1231,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	for(i=0, n = methods.size(); i<n; i++){
 		CDaoFunction & meth = methods[i];
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
-		if( meth.excluded ) continue;
+		if( not meth.generated ) continue;
 		if( mdec->getAccess() == AS_protected && not mdec->isPure() /* && not meth.nowrap */ ){
 			dao_meths += meth.daoProtoCodes;
 			meth_decls += meth.cxxProtoCodes + ";\n";

@@ -3,6 +3,7 @@
 #include <clang/AST/Type.h>
 #include <clang/AST/TypeLoc.h>
 #include <clang/AST/Expr.h>
+#include <clang/AST/DeclTemplate.h>
 #include <clang/Lex/Preprocessor.h>
 
 #include "cdaoVariable.hpp"
@@ -563,6 +564,7 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 {
 	module = mod;
+	hostype = NULL;
 	initor = NULL;
 	isNullable = false;
 	isCallback = false;
@@ -582,6 +584,7 @@ void CDaoVariable::SetDeclaration( const VarDecl *decl )
 	if( decl == NULL ) return;
 	name = decl->getName().str();
 	//outs() << ">>> variable: " << name << " " << decl->getType().getAsString() << "\n";
+	//outs() << ">>> variable: " << name << " " << decl->getTypeSourceInfo()->getType().getAsString() << "\n";
 	SetQualType( decl->getTypeSourceInfo()->getType(), decl->getLocation() );
 	initor = decl->getAnyInitializer();
 }
@@ -695,7 +698,7 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 #endif
 	QualType canotype = qualtype.getCanonicalType();
 	string ctypename = normalize_type_name( canotype.getAsString() );
-	cxxtype2 = normalize_type_name( GetStrippedType( canotype ).getAsString() );
+	cxxtype2 = normalize_type_name( GetStrippedTypeName( canotype ) );
 	cxxtype = ctypename;
 	cxxcall = name;
 	//outs() << cxxtype << " " << cxxdefault << "  " << type->getTypeClassName() << "\n";
@@ -894,7 +897,7 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 		if( module->allCallbacks.find( ft ) == module->allCallbacks.end() ){
 			module->allCallbacks[ ft ] = new CDaoFunction( module );
 			CDaoFunction *func = module->allCallbacks[ ft ];
-			string qname = GetStrippedType( qtype1 ).getAsString();
+			string qname = GetStrippedTypeName( qtype1 );
 			func->SetCallback( (FunctionProtoType*)ft, NULL, qname );
 			func->cxxName = cdao_qname_to_idname( qname );
 			if( func->retype.callback == "" ){
@@ -1239,16 +1242,23 @@ void CDaoVariable::MakeCxxParameter( string & prefix, string & suffix )
 	if( const TypedefType *TDT = dyn_cast<TypedefType>( type ) ){
 		DeclContext *DC = TDT->getDecl()->getDeclContext();
 		if( DC->isNamespace() ){
-			NamespaceDecl *ND = cast_or_null<NamespaceDecl>( DC );
+			NamespaceDecl *ND = dyn_cast<NamespaceDecl>( DC );
 			prefix = ND->getQualifiedNameAsString() + "::";
 		}else if( DC->isRecord() ){
-			RecordDecl *RD = cast_or_null<RecordDecl>( DC );
+			RecordDecl *RD = dyn_cast<RecordDecl>( DC )->getDefinition();
 			CDaoUserType *UT = module->GetUserType( RD );
+			//outs() << RD->getQualifiedNameAsString() << " " << UT << " " << (void*)RD << "\n";
+			if( UT == NULL && hostype && hostype->decl ){
+				RecordDecl *RD2 = hostype->decl;
+				ClassTemplateSpecializationDecl *CTS = dyn_cast<ClassTemplateSpecializationDecl>( RD2 );
+				if( CTS && RD == CTS->getSpecializedTemplate()->getTemplatedDecl() ) UT = hostype;
+			}
 			if( UT ){
 				prefix = UT->qname + "::";
 			}else{
 				prefix = RD->getQualifiedNameAsString() + "::";
 			}
+			//outs() << ">>>>>>>>>>>>>>> " << name <<  " " << prefix << " " << (void*)this << "\n";
 		}
 		prefix += qualtype.getAsString();
 	}else{
@@ -1265,7 +1275,9 @@ void CDaoVariable::MakeCxxParameter( QualType qtype, string & prefix, string & s
 		if( t == NULL ) t = type->getAsUnionType();
 		if( t ) decl = t->getDecl();
 	}
-	if( type->isBuiltinType() ){
+	if( type->isBooleanType() ){
+		prefix = "bool" + prefix;
+	}else if( type->isBuiltinType() ){
 		prefix = qtype.getAsString() + prefix;
 	}else if( type->isPointerType() ){
 		const PointerType *type2 = (const PointerType*) type;
@@ -1310,4 +1322,10 @@ QualType CDaoVariable::GetStrippedType( QualType qtype )
 		return GetStrippedType( type2->getElementType() );
 	}
 	return qtype;
+}
+string CDaoVariable::GetStrippedTypeName( QualType qtype )
+{
+	QualType QT = GetStrippedType( qtype );
+	if( QT->isBooleanType() ) return "bool"; // clang always produces "_Bool"
+	return QT.getAsString();
 }

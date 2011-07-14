@@ -26,13 +26,13 @@ struct CDaoUserType
 {
 	CDaoModule     *module;
 	RecordDecl     *decl;
+	SourceLocation  location;
 
 	short  wrapType;
 	short  wrapCount;
 	bool   isRedundant;
 	bool   isQObject;
 	bool   isQObjectBase;
-
 
 	string  name;
 	string  qname;

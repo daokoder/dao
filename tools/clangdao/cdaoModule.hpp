@@ -85,7 +85,7 @@ struct CDaoModule
 
 	CDaoModule( CompilerInstance *com, const string & path );
 
-	CDaoUserType* HandleUserType( QualType qualtype, SourceLocation loc );
+	CDaoUserType* HandleUserType( QualType qtype, SourceLocation, TypedefDecl *TD=NULL );
 	CDaoUserType* GetUserType( const RecordDecl *decl );
 	CDaoUserType* NewUserType( RecordDecl *decl );
 	CDaoNamespace* GetNamespace( const NamespaceDecl *decl );
