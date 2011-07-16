@@ -205,7 +205,7 @@ DaoNameSpace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name )
 	DString str = DString_WrapMBS( name );
 	DNode *node = DMap_Find( self->nsModules, & str );
 	if( node ) return (DaoNameSpace*) node->value.pBase;
-	ns = DaoNameSpace_New( self );
+	ns = DaoNameSpace_New( self, name );
 	ns->refCount ++;
 	DaoVmSpace_Lock( self );
 	DMap_Insert( self->nsModules, & str, ns );
@@ -319,16 +319,14 @@ DaoVmSpace* DaoVmSpace_New()
 #endif
 
 	self->nsInternal = NULL; /* need to be set for DaoNameSpace_New() */
-	self->nsInternal = DaoNameSpace_New( self );
+	self->nsInternal = DaoNameSpace_New( self, "dao" );
 	self->nsInternal->vmSpace = self;
 	self->nsInternal->refCount += 2;
-	DString_SetMBS( self->nsInternal->name, "dao" );
 	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
 
-	self->mainNamespace = DaoNameSpace_New( self );
+	self->mainNamespace = DaoNameSpace_New( self, "MainNameSpace" );
 	self->mainNamespace->vmSpace = self;
 	self->mainNamespace->refCount ++;
-	DString_SetMBS( self->mainNamespace->name, "MainNameSpace" );
 	self->stdStream->refCount ++;
 
 	self->ReadLine = NULL;
@@ -337,7 +335,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainProcess = DaoVmProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
-	if( mainVmSpace ) DaoNameSpace_Import( self->nsInternal, mainVmSpace->nsInternal, 0 );
+	if( mainVmSpace ) DaoNameSpace_AddParent( self->nsInternal, mainVmSpace->nsInternal );
 	DString_Clear( self->source );
 
 	return self;
@@ -1115,7 +1113,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 		}
 	}
 
-	ns = DaoNameSpace_New( self );
+	ns = DaoNameSpace_New( self, libpath->mbs );
 	ns->time = tm;
 	/*DString_Assign( ns->source, self->source );*/
 	if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
@@ -1141,15 +1139,11 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 	/*
 	   printf("%p : parsing %s\n", self, libpath->mbs );
 	 */
-	DString_Assign( ns->name, libpath );
-	DString_Assign( ns->file, libpath );
 	DArray_PushFront( self->nameLoading, libpath );
 	i = DString_RFindChar( libpath, '/', -1 );
 	if( i != MAXSIZE ){
-		DString_Erase( ns->file, 0, i+1 );
 		DArray_PushFront( self->pathLoading, libpath );
 		DString_Erase( self->pathLoading->items.pString[0], i, -1 );
-		DString_Assign( ns->path, self->pathLoading->items.pString[0] );
 	}
 	parser->nameSpace = ns;
 	bl = DaoParser_ParseScript( parser );
@@ -1277,8 +1271,7 @@ DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 		/* XXX dlclose(  ns->cmodule->libHandle ) */
 		if( handle == ns->cmodule->libHandle ) return ns;
 	}else{
-		ns = DaoNameSpace_New( self );
-		DString_Assign( ns->name, libpath );
+		ns = DaoNameSpace_New( self, libpath->mbs );
 		GC_IncRC( ns );
 		MAP_Insert( self->nsModules, libpath, ns );
 		i = DString_RFindChar( libpath, '/', -1 );
@@ -2222,7 +2215,7 @@ DaoVmSpace* DaoInit()
 	DaoCallServer_Init( vms );
 #endif
 
-	DaoNameSpace_Import( vms->mainNamespace, vms->nsInternal, NULL );
+	DaoNameSpace_AddParent( vms->mainNamespace, vms->nsInternal );
 
 	DaoVmSpace_InitPath( vms );
 	/*

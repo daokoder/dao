@@ -201,7 +201,7 @@ enum DaoRoutineAttrib
 
 enum DaoGlbConstShift
 {
-	DVR_NSC_NIL ,
+	DVR_NSC_NIL = 1 ,
 	DVR_NSC_MAIN 
 };
 enum DaoGlbVarShift

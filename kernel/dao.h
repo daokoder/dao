@@ -663,7 +663,7 @@ struct DaoAPI
 	DValue (*DaoVmProcess_GetReturned)( DaoVmProcess *self );
 	DaoRegex* (*DaoVmProcess_MakeRegex)( DaoVmProcess *self, DString *patt, int mbs );
 
-	DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms );
+	DaoNameSpace* (*DaoNameSpace_New)( DaoVmSpace *vms, const char *name );
 	DaoNameSpace* (*DaoNameSpace_GetNameSpace)( DaoNameSpace *self, const char *name );
 	int  (*DaoNameSpace_AddParent)( DaoNameSpace *self, DaoNameSpace *parent );
 	void (*DaoNameSpace_AddConstNumbers)( DaoNameSpace *self, DaoNumItem *items );
@@ -1064,7 +1064,7 @@ DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
 DAO_DLL DValue DaoVmProcess_GetReturned( DaoVmProcess *self );
 DAO_DLL DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *patt, int mbs );
 
-DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
+DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *name );
 /* get namespace with the name, create if not exits: */
 DAO_DLL DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name );
 DAO_DLL int  DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );

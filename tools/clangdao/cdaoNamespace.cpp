@@ -6,10 +6,10 @@
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
 extern string cdao_qname_to_idname( const string & qname );
 
-CDaoNamespace::CDaoNamespace( CDaoModule *mod, NamespaceDecl *decl )
+CDaoNamespace::CDaoNamespace( CDaoModule *mod, const NamespaceDecl *decl )
 {
 	module = mod;
-	nsdecl = decl;
+	nsdecl = (NamespaceDecl*) decl;
 }
 void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 {
@@ -60,6 +60,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 
 		outer_name = cdao_qname_to_idname( outer_name );
 		this_name = cdao_qname_to_idname( this_name );
+		if( (outer == NULL || outer->nsdecl == NULL) && name == "std" ) name = "stdcxx";
 
 		onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
 		onload += outer_name + ", \"" + name + "\" );\n";

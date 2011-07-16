@@ -1,11 +1,12 @@
 
 #include <llvm/ADT/StringExtras.h>
 #include <clang/Sema/DeclSpec.h>
+#include <clang/AST/DeclTemplate.h>
 #include "cdaoFunction.hpp"
 #include "cdaoModule.hpp"
 
-const string cxx_wrap_proto 
-= "static void dao_$(func_idname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )";
+const string cxx_wrap_proto = 
+"static void dao_$(func_idname)$(overload)( DaoContext *_ctx, DValue *_p[], int _n )";
 
 const string cxx_call_proto = 
 "  $(retype) $(name) = $(func_call)( $(parlist) );\n";
@@ -163,6 +164,7 @@ const string dao_proto =
 "  { dao_$(func_idname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
 
 const string cxx_wrap = 
+"/* $(file) */\n"
 "$(proto)\n{\n$(dao2cxx)\n$(cxxcall)$(parset)$(return)}\n";
 
 const string cxx_virt_proto =
@@ -421,6 +423,10 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	funcDecl = decl;
 	parlist.clear();
 	if( decl == NULL ) return;
+	if( decl->getPrimaryTemplate() ){
+		excluded = true;
+		return;
+	}
 	
 	string sig = funcDecl->getQualifiedNameAsString() + "(";
 	for(i=0, n=decl->param_size(); i<n; i++){
@@ -730,7 +736,12 @@ int CDaoFunction::Generate()
 	kvmap[ "refs" ] = refs;
 	kvmap[ "signature" ] = signature;
 	kvmap[ "overload" ] = overload;
+	kvmap[ "file" ] = decl == NULL ? "" : module->GetFileName( decl->getLocation() );
 
+	if( ctordecl && hostype ){
+		retype.daotype = hostype->qname;
+		if( retype.daotype.find( "std::" ) == 0 ) retype.daotype.replace( 0, 5, "stdcxx::" );
+	}
 	if( retype.daotype != "" ) kvmap[ "retype" ] = "=>" + retype.daotype;
 
 	daoProtoCodes = cdao_string_fill( dao_proto, kvmap );
@@ -803,6 +814,7 @@ int CDaoFunction::Generate()
 	kvmap2[ "cxxcall" ] = cxxCallCodes;
 	kvmap2[ "parset" ] = parsetcodes;
 	kvmap2[ "return" ] = retype.ctxput;
+	kvmap2[ "file" ] = decl == NULL ? "" : module->GetFileName( decl->getLocation() );
 	
 	if( retype.daotype.size() ==0 || host_name == cxxName ) kvmap2[ "return" ] = "";
 	//if( hostType == cxxName ) kvmap2[ 'dao2cxx' ] =''; # XXX 

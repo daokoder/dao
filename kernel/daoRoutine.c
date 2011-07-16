@@ -2622,8 +2622,12 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					//if( rout == NULL ) goto NotMatch;
 				}else if( at->tid ==DAO_UDF || at->tid ==DAO_ANY ){
 					/* less strict checking */
-				}else if( code == DVM_MOVE && at != ct && ct->tid == DAO_OBJECT ){
-					meth = DaoClass_FindOperator( ct->aux.v.klass, "=", hostClass );
+				}else if( code == DVM_MOVE && at != ct && (ct->tid == DAO_OBJECT || ct->tid == DAO_CDATA) ){
+					if( ct->tid == DAO_OBJECT ){
+						meth = DaoClass_FindOperator( ct->aux.v.klass, "=", hostClass );
+					}else{
+						meth = DaoFindFunction2( ct->typer, "=" );
+					}
 					if( meth ){
 						rout = DaoBase_Check( meth, ct, & at, 1, DVM_CALL, errors );
 						if( rout == NULL ) goto NotMatch;

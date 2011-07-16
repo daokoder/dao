@@ -1076,6 +1076,7 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 	DString *tks = tok->string;
 	int i, t = tokens[start]->name;
 	int gt, tid, count, count2;
+	int daons = 0, tokname = 0;
 
 #if 0
 	for(i=start; i<=end; i++) printf("%s  ", tokens[i]->string->mbs); printf("\n\n");
@@ -1116,16 +1117,26 @@ WrongType:
 	}
 	count = types->size;
 	if( tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
+	if( (start+1) < end && tokens[start+1]->type == DTOK_COLON2 ){
+		if( strcmp( tokens[start]->string->mbs, "dao" ) ==0 ){
+			daons = 1;
+			start += 2;
+			ns = self->vmSpace->nsInternal;
+			tok = tokens[start];
+			if( tok->name > DKEY_USE ) tokname = dao_keywords[ tok->name - DKEY_USE ].value;
+			if( tok->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
+		}
+	}
 	if( tokens[start]->name == DTOK_IDENTIFIER && strcmp( tokens[start]->string->mbs, "future" ) !=0 ){
 		/* scoped type or user defined template class */
 		type = DaoParser_ParseUserType( self, start, end, newpos );
 		if( type == NULL ) goto InvalidTypeName;
-	}else if( tokens[start]->name == DKEY_ENUM && tokens[start+1]->name == DTOK_LT ){
+	}else if( start < end && tokens[start]->name == DKEY_ENUM && tokens[start+1]->name == DTOK_LT ){
 		gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );
 		if( gt < 0 ) goto InvalidTypeForm;
 		*newpos = gt + 1;
 		type = DaoParser_ParseEnumTypeItems( self, start+2, gt-1 );
-	}else if( tokens[start+1]->name == DTOK_LT ){
+	}else if( start < end && tokens[start+1]->name == DTOK_LT ){
 		int ecount = self->errors->size;
 		gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );
 		if( gt < 0 ) goto InvalidTypeForm;
@@ -1179,7 +1190,17 @@ WrongType:
 		DArray_Erase( types, count, count2 );
 		GC_IncRC( retype );
 		GC_DecRC( retype );
+	}else if( tokname > 0 && tokname < 100 ){
+		DaoCData *cdata = & cptrCData;
+		DaoBase *pbasic = tok->name == DKEY_CDATA ? (DaoBase*) cdata : NULL;
+		DString *name = DString_New(1);
+		DString_AppendMBS( name, "dao::" );
+		DString_Append( name, tok->string );
+		type = DaoNameSpace_MakeType( ns, name->mbs, tokname, pbasic, 0,0 );
+		DString_Delete( name );
+		*newpos = start + 1;
 	}else if( tokens[start]->type == DTOK_IDENTIFIER ){
+		if( daons ) start -= 2;
 		type = DaoParser_ParsePlainType( self, start, end, newpos );
 		if( type == NULL ) goto InvalidTypeName;
 	}else{
@@ -4606,7 +4627,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 
 	ns = nameSpace;
 	if( modname != NULL ){
-		ns = DaoNameSpace_New( vmSpace );
+		ns = DaoNameSpace_New( vmSpace, DString_GetMBS( modname ) );
 		value.t = DAO_NAMESPACE;
 		value.v.ns = ns;
 		if( hostClass && self->isClassBody ){
@@ -5995,7 +6016,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 			reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
 		}
 		if( reg <0 ) return error;
-		if( cst ){
+		if( cst && tki != DKEY_RAND ){
 			DaoVmProcess *proc = self->nameSpace->vmpEvalConst;
 			DaoContext *ctx = proc->topFrame->context;
 			DaoVmCode vmc = { DVM_MATH, 0, 1, 0 };

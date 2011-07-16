@@ -597,7 +597,7 @@ const string cast_to_parent =
 const string usertype_code =
 "$(cast_funcs)\n\
 static DaoTypeBase $(typer)_Typer = \n\
-{ \"$(qname)\", NULL,\n\
+{ \"$(name2)\", NULL,\n\
   dao_$(typer)_Nums,\n\
   dao_$(typer)_Meths,\n\
   { $(parents)NULL },\n\
@@ -609,7 +609,7 @@ DaoTypeBase DAO_DLL_$(module) *dao_$(typer)_Typer = & $(typer)_Typer;\n";
 
 const string usertype_code_none =
 "static DaoTypeBase $(typer)_Typer = \n\
-{ \"$(type)\", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };\n\
+{ \"$(name2)\", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };\n\
 DaoTypeBase DAO_DLL_$(module) *dao_$(typer)_Typer = & $(typer)_Typer;\n";
 
 //const string usertype_code_none = methlist_code + usertype_code;
@@ -620,23 +620,24 @@ const string usertype_code_class2 = methlist_code + delete_class + delete_test +
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
 extern string normalize_type_name( const string & name );
 
-CDaoUserType::CDaoUserType( CDaoModule *mod, RecordDecl *decl )
+CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
 	module = mod;
 	isRedundant = true;
+	forceOpaque = false;
 	isQObject = isQObjectBase = false;
 	wrapCount = 0;
 	wrapType = CDAO_WRAP_TYPE_NONE;
 	alloc_default = "NULL";
 	this->decl = NULL;
-	SetDeclaration( decl );
+	SetDeclaration( (RecordDecl*) decl );
 }
 void CDaoUserType::SetDeclaration( RecordDecl *decl )
 {
 	this->decl = decl;
 	qname = CDaoModule::GetQName( decl );
 	idname = CDaoModule::GetIdName( decl );
-	name = decl->getNameAsString();
+	name = name2 = decl->getNameAsString();
 	location = decl->getLocation();
 	if( decl->getDefinition() ) location = decl->getDefinition()->getLocation();
 }
@@ -666,6 +667,14 @@ void CDaoUserType::UpdateName( const string & writtenName )
 		}
 		qname = normalize_type_name( qname );
 		idname = cdao_qname_to_idname( qname );
+		name2 = qname;
+		size_t i, n, colon = string::npos;
+		for(i=0,n=name2.size(); i<n; i++){
+			char ch = name2[i];
+			if( ch == ':' ) colon = i;
+			if( isalnum( ch ) ==0 && ch != '_' && ch != ':' ) break;
+		}
+		if( colon != string::npos ) name2.erase( 0, colon+1 );
 		outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
 	}
 
@@ -695,7 +704,7 @@ int CDaoUserType::GenerateSimpleTyper()
 	map<string,string> kvmap;
 	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
 	kvmap[ "typer" ] = idname;
-	kvmap[ "type" ] = name;
+	kvmap[ "name2" ] = name2;
 	typer_codes = cdao_string_fill( usertype_code_none, kvmap );
 	wrapType = CDAO_WRAP_TYPE_OPAQUE;
 	return 0;
@@ -720,7 +729,7 @@ int CDaoUserType::Generate()
 	if( not module->IsFromModules( location ) ) return GenerateSimpleTyper();
 
 	// simplest wrapping for types declared but not defined:
-	if( dd == NULL ) return GenerateSimpleTyper();
+	if( dd == NULL || forceOpaque ) return GenerateSimpleTyper();
 	if (CXXRecordDecl *record = dyn_cast<CXXRecordDecl>(decl)) return Generate( record );
 	return Generate( decl );
 }
@@ -734,6 +743,7 @@ void CDaoUserType::SetupDefaultMapping( map<string,string> & kvmap )
 	kvmap[ "cxxname" ] = name;
 	kvmap[ "daoname" ] = name;
 	kvmap[ "name" ] = name;
+	kvmap[ "name2" ] = name2;
 	kvmap[ "class" ] = name;
 	kvmap[ "type" ] = name;
 
@@ -929,6 +939,13 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		if( edec == NULL || dit->getAccess() != AS_public ) continue;
 		enums.push_back( edec );
 	}
+	CXXRecordDecl::redecl_iterator redit, redend = decl->redecls_end();
+	for(redit=decl->redecls_begin(); redit!=redend; redit++){
+		TypedefDecl *TDD = dyn_cast<TypedefDecl>( *redit );
+		if( TDD == NULL ) continue;
+		QualType qtype = TDD->getUnderlyingType();
+		outs() << "----------------" << TDD->getQualifiedNameAsString() << " " << qtype.getAsString() << "\n";
+	}
 	CXXRecordDecl::field_iterator fit, fend;
 	for(fit=decl->field_begin(),fend=decl->field_end(); fit!=fend; fit++){
 		const Type *type = fit->getTypeSourceInfo()->getType().getTypePtr();
@@ -940,7 +957,6 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		const Type *pt4 = pt3->getInnerType().getTypePtr();
 		const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( pt4 );
 		if( ft == NULL ) continue;
-		// XXX
 	}
 	CXXRecordDecl::method_iterator methit, methend = decl->method_end();
 	for(methit=decl->method_begin(); methit!=methend; methit++){

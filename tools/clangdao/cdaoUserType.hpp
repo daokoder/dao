@@ -30,13 +30,15 @@ struct CDaoUserType
 
 	short  wrapType;
 	short  wrapCount;
+	bool   forceOpaque;
 	bool   isRedundant;
 	bool   isQObject;
 	bool   isQObjectBase;
 
-	string  name;
-	string  qname;
-	string  idname;
+	string  name;  // just name: vector, SomeClass
+	string  name2; // name, with template arguments if any: vector<int>, SomeClass
+	string  qname; // qualified name: std::vector<int>, SomeNamespace::SomeClass
+	string  idname; // identification name: std_0_vector_1_int_2_, SomeNamespace_0_SomeClass
 
 	string  type_decls;
 	string  type_codes;
@@ -49,7 +51,7 @@ struct CDaoUserType
 
 	vector<CXXMethodDecl*>  pureVirtuals;
 
-	CDaoUserType( CDaoModule *mod = NULL, RecordDecl *decl = NULL );
+	CDaoUserType( CDaoModule *mod = NULL, const RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );
 	void UpdateName( const string & writtenName );

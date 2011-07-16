@@ -33,7 +33,7 @@ struct CDaoNamespace
 	string  onload2;
 	string  onload3;
 
-	CDaoNamespace( CDaoModule *mod = NULL, NamespaceDecl *decl = NULL );
+	CDaoNamespace( CDaoModule *mod = NULL, const NamespaceDecl *decl = NULL );
 
 	int Generate( CDaoNamespace *outer = NULL );
 	void HandleExtension( NamespaceDecl *nsdecl );

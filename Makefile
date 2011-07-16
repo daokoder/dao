@@ -16,7 +16,7 @@ LIB_READLINE = -lreadline -lncurses
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SYNCLASS) $(DAO_ASMBC) $(USE_READLINE)
 
 CC        = $(CROSS_COMPILE)gcc
-CFLAGS    += -Wall -Wno-unused -fPIC -DUNIX $(DAO_CONFIG)
+CFLAGS    = -Wall -Wno-unused -fPIC -DUNIX $(DAO_CONFIG)
 INCPATH   = -I. -Ikernel
 LFLAGS    = -fPIC
 LFLAGSDLL = -fPIC

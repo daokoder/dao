@@ -93,7 +93,7 @@ struct DaoNameSpace
 	DString      *tempModes;
 };
 
-DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms );
+DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *name );
 void DaoNameSpace_Delete( DaoNameSpace *self );
 
 void DaoNameSpace_SetName( DaoNameSpace *self, const char *name );

@@ -81,16 +81,19 @@ struct CDaoModule
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
+	map<string,string>  typedefs;
+
 	static map<string,int>  mapExtensions;
 
 	CDaoModule( CompilerInstance *com, const string & path );
 
 	CDaoUserType* HandleUserType( QualType qtype, SourceLocation, TypedefDecl *TD=NULL );
 	CDaoUserType* GetUserType( const RecordDecl *decl );
-	CDaoUserType* NewUserType( RecordDecl *decl );
+	CDaoUserType* NewUserType( const RecordDecl *decl );
 	CDaoNamespace* GetNamespace( const NamespaceDecl *decl );
-	CDaoNamespace* NewNamespace( NamespaceDecl *decl );
-	CDaoNamespace* AddNamespace( NamespaceDecl *decl );
+	CDaoNamespace* GetNamespace2( const NamespaceDecl *decl );
+	CDaoNamespace* NewNamespace( const NamespaceDecl *decl );
+	CDaoNamespace* AddNamespace( const NamespaceDecl *decl );
 
 	int Generate();
 

@@ -3712,15 +3712,20 @@ void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc )
 	int overload = 0;
 	if( dA->t == dC.t && dC.t == DAO_OBJECT ){
 		overload = DaoClass_ChildOf( dA->v.object->myClass, (DaoBase*)dC.v.object->myClass ) == 0;
-	}else if( dC.t == DAO_OBJECT ){
+	}else if( dA->t == dC.t && dC.t == DAO_CDATA ){
+		overload = DaoCData_ChildOf( dA->v.cdata->typer, dC.v.cdata->typer ) == 0;
+	}else if( dC.t == DAO_OBJECT || dC.t == DAO_CDATA ){
 		overload = 1;
 	}
 	if( overload ){
-		DaoClass *scope = self->object ? self->object->myClass : NULL;
-		DaoBase *rout = DaoClass_FindOperator( dC.v.object->myClass, "=", scope );
-		DValue selfpar = daoNullObject;
-		selfpar.v.object = dC.v.object;
-		if( rout ) rout = (DaoBase*) DRoutine_Resolve( rout, & selfpar, & dA, 1, DVM_CALL );
+		DaoBase *rout = NULL;
+		if( dC.t == DAO_OBJECT ){
+			DaoClass *scope = self->object ? self->object->myClass : NULL;
+			rout = DaoClass_FindOperator( dC.v.object->myClass, "=", scope );
+		}else{
+			rout = DaoFindFunction2( dC.v.cdata->typer, "=" );
+		}
+		if( rout ) rout = (DaoBase*) DRoutine_Resolve( rout, & dC, & dA, 1, DVM_CALL );
 		if( rout && DaoVmProcess_Call( self->process, (DaoMethod*) rout, & dC, & dA, 1 ) ) return;
 	}
 	DaoMoveAC( self, *self->regValues[vmc->a], self->regValues[vmc->c], ct );

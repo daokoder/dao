@@ -13,11 +13,11 @@ const string daopar_int = "$(name) :int$(default)";
 const string daopar_float = "$(name) :float$(default)";
 const string daopar_double = "$(name) :double$(default)";
 const string daopar_complex = "$(name) :complex$(default)";
-const string daopar_string = "$(name) :string$(default)";
-const string daopar_ints = "$(name) :array<int>";
-const string daopar_floats = "$(name) :array<float>";
-const string daopar_doubles = "$(name) :array<double>";
-const string daopar_complexs = "$(name) :array<complex>$(default)";
+const string daopar_string = "$(name) :$(dao)string$(default)";
+const string daopar_ints = "$(name) :$(dao)array<int>";
+const string daopar_floats = "$(name) :$(dao)array<float>";
+const string daopar_doubles = "$(name) :$(dao)array<double>";
+const string daopar_complexs = "$(name) :$(dao)array<complex>$(default)";
 const string daopar_buffer = "$(name) :cdata$(default)";
 const string daopar_stream = "$(name) :stream$(default)";
 const string daopar_user = "$(name) :$(daotype)$(default)";
@@ -524,6 +524,7 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 	if( var->isNullable ) dft = "|null";
 	if( var->daodefault.size() ) dft += " =" + var->daodefault;
 
+	if( var->daotype.find( "std::" ) == 0 ) var->daotype.replace( 0, 5, "stdcxx::" );
 	kvmap[ "daotype" ] = var->daotype;
 	kvmap[ "cxxtype" ] = var->cxxtype2;
 	kvmap[ "typer" ] = typer;
@@ -653,6 +654,7 @@ int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 	if( unsupported == false ){
 		MakeCxxParameter( prefix, suffix );
 		cxxpar = prefix + " " + name + suffix;
+		cxxtype = prefix + suffix;
 	}
 	return retcode || unsupported;
 }
@@ -765,6 +767,7 @@ int CDaoVariable::GenerateForBuiltin( int daopar_index, int cxxpar_index )
 			break;
 		default : break;
 		}
+		if( cxxtype != daotype ) module->typedefs[ cxxtype ] = daotype;
 	}
 	map<string,string> kvmap;
 	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
@@ -785,6 +788,7 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 	CDaoVarTemplates tpl;
 	map<string,string> kvmap;
 	kvmap[ "size" ] = "0";
+	kvmap[ "dao" ] = "";
 	if( qtype2->isBuiltinType() and qtype2->isArithmeticType() ){
 		const BuiltinType *type = qtype2->getAs<BuiltinType>();
 		daotype = "int";
@@ -801,6 +805,10 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 			tpl.SetupMBString();
 			tpl.parset = parset_mbs;
 			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "\'\'";
+			if( hostype && hostype->name == "string" ){
+				kvmap[ "dao" ] = "dao::";
+				daotype = "dao::string";
+			}
 			break;
 		case BuiltinType::WChar_U :
 		case BuiltinType::WChar_S :
@@ -811,6 +819,10 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 			tpl.SetupWCString();
 			tpl.parset = parset_wcs;
 			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "\"\"";
+			if( hostype && hostype->name == "string" ){
+				kvmap[ "dao" ] = "dao::";
+				daotype = "dao::string";
+			}
 			break;
 		case BuiltinType::UShort :
 		case BuiltinType::Bool :
@@ -1021,6 +1033,8 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, int daopar_i
 		return GenerateForArray( type3->getElementType(), size, size2, daopar_index, cxxpar_index );
 	}
 	CDaoVarTemplates tpl;
+	map<string,string> kvmap;
+	kvmap[ "dao" ] = "";
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
 		const BuiltinType *type3 = (const BuiltinType*) type2;
 		daotype = "array<int>";
@@ -1117,10 +1131,13 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, int daopar_i
 			break;
 		default : break;
 		}
+		if( hostype && hostype->name == "array" ){
+			kvmap[ "dao" ] = "dao::";
+			daotype = "dao::" + daotype;
+		}
 	}else{
 		return 1;
 	}
-	map<string,string> kvmap;
 	if( size.size() ) kvmap[ "size" ] = size;
 	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 	return 0;
@@ -1130,6 +1147,8 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, string size2
 	const Type *type2 = elemtype.getTypePtr();
 	string ctypename2 = elemtype.getAsString();
 	CDaoVarTemplates tpl;
+	map<string,string> kvmap;
+	kvmap[ "dao" ] = "";
 	if( type2->isBuiltinType() and type2->isArithmeticType() ){
 		const BuiltinType *type3 = (const BuiltinType*) type2;
 		daotype = "array<int>";
@@ -1226,10 +1245,13 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, string size2
 			break;
 		default : break;
 		}
+		if( hostype && hostype->name == "array" ){
+			kvmap[ "dao" ] = "dao::";
+			daotype = "dao::" + daotype;
+		}
 	}else{
 		return 1;
 	}
-	map<string,string> kvmap;
 	if( size.size() ) kvmap[ "size" ] = size;
 	if( size2.size() ) kvmap[ "size2" ] = size2;
 	tpl.Generate( this, kvmap, dpid, cpid );
@@ -1248,7 +1270,7 @@ void CDaoVariable::MakeCxxParameter( string & prefix, string & suffix )
 			RecordDecl *RD = dyn_cast<RecordDecl>( DC )->getDefinition();
 			CDaoUserType *UT = module->GetUserType( RD );
 			//outs() << RD->getQualifiedNameAsString() << " " << UT << " " << (void*)RD << "\n";
-			if( UT == NULL && hostype && hostype->decl ){
+			if( hostype && hostype->decl ){
 				RecordDecl *RD2 = hostype->decl;
 				ClassTemplateSpecializationDecl *CTS = dyn_cast<ClassTemplateSpecializationDecl>( RD2 );
 				if( CTS && RD == CTS->getSpecializedTemplate()->getTemplatedDecl() ) UT = hostype;
