@@ -85,8 +85,8 @@ CDaoUserType* CDaoModule::GetUserType( const RecordDecl *decl )
 {
 	if( decl && decl->getDefinition() ) decl = decl->getDefinition();
 	map<const RecordDecl*,CDaoUserType*>::iterator it = allUsertypes.find( decl );
-	if( it == allUsertypes.end() ) return NULL;
-	return it->second;
+	if( it != allUsertypes.end() ) return it->second;
+	return NULL;
 }
 CDaoNamespace* CDaoModule::GetNamespace( const NamespaceDecl *decl )
 {
@@ -140,6 +140,8 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		if( RD->getDefinition() ) RD = RD->getDefinition();
 		//outs()<<">>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
 		if( (SD = dyn_cast<ClassTemplateSpecializationDecl>( RD ) ) ){
+			if( canotype.getAsString().find( "vtkTypeTraits" ) != string::npos )
+				outs() << canotype.getAsString() << "====================================\n";
 			RD = SD->getSpecializedTemplate()->getTemplatedDecl();
 			if( RD->getDefinition() ) RD = RD->getDefinition();
 			if( GetUserType( RD ) == NULL ){
@@ -152,12 +154,12 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 					topLevelScope.AddUserType( UT );
 				}
 			}
-			CDaoUserType *UT = GetUserType( RD );
-			UT->forceOpaque = true;
+			CDaoUserType *UT2 = GetUserType( RD );
+			UT2->forceOpaque = true;
 			if( GetUserType( SD ) == NULL ){
-				outs()<<">>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
-				outs() << (void*)SD << ": " << GetFileName( SD->getLocation() ) << "\n";
-				outs() << (void*)SD << ": " << GetFileName( loc ) << "\n";
+				//outs()<<">>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
+				//outs() << (void*)SD << ": " << GetFileName( SD->getLocation() ) << "\n";
+				//outs() << (void*)SD << ": " << GetFileName( loc ) << "\n";
 				DE = cast_or_null<ClassTemplateSpecializationDecl>( SD->getDefinition());
 				if( DE == NULL ){
 					TemplateSpecializationKind kind = TSK_ExplicitSpecialization;
@@ -183,7 +185,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 						DC = SD->getParent();
 						// TODO: use the typedef name as nested type.
 						// use the canonical type name:
-						UT->qname = canotype.getAsString();
+						UT->qname = normalize_type_name( canotype.getAsString() );
 						UT->idname = cdao_qname_to_idname( UT->qname );
 						if( NamespaceDecl *ND = dyn_cast<NamespaceDecl>( DC ) ){
 							// specialization of scoped template class:
@@ -206,6 +208,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 						topLevelScope.AddUserType( UT );
 					}
 				}
+				UT->priorUserTypes.push_back( UT2 );
 			}
 		}
 		return GetUserType( record->getDecl() );
@@ -400,6 +403,7 @@ void CDaoModule::HandleEnum( EnumDecl *decl )
 }
 void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 {
+	if( dyn_cast<CXXMethodDecl>( funcdec ) ) return; // inline C++ method;
 	//outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
 	topLevelScope.AddFunction( new CDaoFunction( this, funcdec ) );
 }
@@ -431,6 +435,7 @@ void CDaoModule::HandleTypeDefine( TypedefDecl *decl )
 			string qname = decl->getNameAsString();
 			func->SetCallback( (FunctionProtoType*)ft, NULL, qname );
 			func->cxxName = cdao_qname_to_idname( qname );
+			func->location = decl->getLocation();
 			if( func->retype.callback == "" ){
 				errs() << "Warning: callback \"" << qname << "\" is not supported!\n";
 				func->excluded = true;
@@ -496,7 +501,7 @@ string CDaoModule::MakeHeaderCodes( vector<CDaoUserType*> & usertypes )
 	codes += ifdef_cpp_close;
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
-		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		if( utp.isRedundant || utp.IsFromRequiredModules() ) continue;
 		if( utp.type_decls.size() ) codes += cdao_string_fill( utp.type_decls, kvmap );
 	}
 	return codes;
@@ -512,7 +517,7 @@ string CDaoModule::MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNames
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
 		//outs() << utp.GetQName() << " " << utp.IsFromMainModule() << "\n";
-		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		if( utp.isRedundant || utp.IsFromRequiredModules() ) continue;
 		codes += "\tdao_" + utp.idname + "_Typer,\n";
 	}
 	codes += "\tNULL\n};\n";
@@ -528,7 +533,7 @@ string CDaoModule::MakeSource2Codes( vector<CDaoUserType*> & usertypes )
 	codes += ifdef_cpp_open;
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
-		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		if( utp.isRedundant || utp.IsFromRequiredModules() ) continue;
 		codes += "/* " + utp.GetInputFile() + " */\n";
 		codes += cdao_string_fill( utp.typer_codes, kvmap );
 		codes += cdao_string_fill( utp.meth_codes, kvmap );
@@ -543,12 +548,12 @@ string CDaoModule::MakeSource3Codes( vector<CDaoUserType*> & usertypes )
 	map<string,string> kvmap;
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
-		if( utp.isRedundant || not utp.IsFromMainModule() ) continue;
+		if( utp.isRedundant || utp.IsFromRequiredModules() ) continue;
 		codes += cdao_string_fill( utp.type_codes, kvmap );
 	}
 	return codes;
 }
-string CDaoModule::MakeOnLoadCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns )
+string CDaoModule::MakeOnLoadCodes( CDaoNamespace *ns )
 {
 	string codes, tname, nsname = "ns";
 	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
@@ -630,7 +635,7 @@ string CDaoModule::MakeConstantStruct( vector<EnumDecl*> & enums, vector<VarDecl
 	return codes + MakeConstantItems( enums, vars, qname ) + "  { NULL, 0, 0 }\n};\n";
 }
 
-int CDaoModule::Generate()
+int CDaoModule::Generate( const string & output )
 {
 	finalGenerating = true;
 	if( CheckHeaderDependency() == false ) return 1;
@@ -639,11 +644,12 @@ int CDaoModule::Generate()
 	int fetype = CheckFileExtension( moduleInfo.path );
 	string festring = cdao_file_extensions[fetype];
 	string fname_header = "dao_" + moduleInfo.name + ".h";
-	string fname_source = "dao_" + moduleInfo.name + festring;
-	string fname_source2 = "dao_" + moduleInfo.name + "2" + festring;
-	string fname_source3 = "dao_" + moduleInfo.name + "3" + festring;
+	string fname_source = output + "dao_" + moduleInfo.name + festring;
+	string fname_source2 = output + "dao_" + moduleInfo.name + "2" + festring;
+	string fname_source3 = output + "dao_" + moduleInfo.name + "3" + festring;
+	string fname_header2 = output + fname_header;
 
-	ofstream fout_header( fname_header.c_str() );
+	ofstream fout_header( fname_header2.c_str() );
 	ofstream fout_source( fname_source.c_str() );
 	ofstream fout_source2( fname_source2.c_str() );
 	ofstream fout_source3( fname_source3.c_str() );
@@ -655,15 +661,21 @@ int CDaoModule::Generate()
 	fout_source3 << "#include\"" << fname_header << "\"\n";
 	fout_source << "DAO_INIT_MODULE;\nDaoVmSpace *__daoVmSpace = NULL;\n";
 
+	vector<CDaoUserType*>  sorted;
+	map<CDaoUserType*,int> check;
 	map<string,int> overloads;
 	int i, n, retcode = 0;
+
 	topLevelScope.Generate();
 	for(i=0, n=callbacks.size(); i<n; i++) retcode |= callbacks[i]->Generate();
+	topLevelScope.Sort( sorted, check );
 
 	map<string,string> kvmap;
 	kvmap[ "module" ] = moduleInfo.name;
 
-	fout_header << topLevelScope.header;
+	//fout_header << topLevelScope.header;
+	fout_header << MakeHeaderCodes( sorted );
+
 	fout_source3 << cxx_get_object_method;
 	map<string,CDaoProxyFunction> & proxy_functions = CDaoProxyFunction::proxy_functions;
 	map<string,CDaoProxyFunction>::iterator pit, pend = proxy_functions.end();
@@ -711,10 +723,6 @@ int CDaoModule::Generate()
 	fout_source << ifdef_cpp_close;
 
 	return retcode;
-}
-string CDaoModule::MakeDaoFunctionPrototype( FunctionDecl *funcdec )
-{
-	return "";
 }
 string CDaoModule::ExtractSource( SourceLocation & start, SourceLocation & end, bool original )
 {

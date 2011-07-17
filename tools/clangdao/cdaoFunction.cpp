@@ -168,13 +168,13 @@ const string cxx_wrap =
 "$(proto)\n{\n$(dao2cxx)\n$(cxxcall)$(parset)$(return)}\n";
 
 const string cxx_virt_proto =
-"static $(retype) Dao_$(type)_$(cxxname)( $(parlist) );\n";
+"static $(retype) Dao_$(host_idname)_$(cxxname)( $(parlist) );\n";
 
 const string cxx_virt_struct =
-"static $(retype) Dao_$(type)_$(cxxname)( $(parlist) )\n\
+"static $(retype) Dao_$(host_idname)_$(cxxname)( $(parlist) )\n\
 {\n\
-  Dao_$(type) *self = (Dao_$(type)*) userdata;\n\
-  $(type) *self2 = self->object;\n\
+  Dao_$(host_idname) *self = (Dao_$(host_idname)*) userdata;\n\
+  $(host_qname) *self2 = self->object;\n\
   DaoCData *cdata = self->cdata;\n\
   DaoVmProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n";
 
@@ -215,7 +215,7 @@ const string c_callback_call_11 =
 }\n";
 
 const string cxx_virt_class =
-"$(retype) DaoCxxVirt_$(type)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n";
+"$(retype) DaoCxxVirt_$(host_idname)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n";
 
 const string qt_get_wrapper1 =
 "DaoBase* DaoQt_Get_Wrapper( const QObject *object );\n";
@@ -332,45 +332,45 @@ EndCall:\n\
 
 //XXX ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)
 const string cxx_virt_class2 =
-"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
+"$(retype) DaoCxx_$(host_idname)::$(cxxname)( $(parlist) )$(const)\n{\n\
   int _cs = 0;\n\
-  $(return)((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+  $(return)((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
 }\n";
 
 const string cxx_virt_class3 =
-"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
+"$(retype) DaoCxx_$(host_idname)::$(cxxname)( $(parlist) )$(const)\n{\n\
   int _cs = 0;\n\
   DValue _obj = {0,0,0,0,{0}};\n\
   DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   if( _ro && _obj.t == DAO_OBJECT ){\n\
-    ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+    ((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
     if( _cs ) return;\n\
   }\n\
-  $(type)::$(cxxname)( $(parcall) );\n\
+  $(host_qname)::$(cxxname)( $(parcall) );\n\
 }\n";
 
 const string cxx_virt_class4 =
-"$(retype) DaoCxx_$(type)::$(cxxname)( $(parlist) )$(const)\n{\n\
+"$(retype) DaoCxx_$(host_idname)::$(cxxname)( $(parlist) )$(const)\n{\n\
   int _cs = 0;\n\
   DValue _obj = {0,0,0,0,{0}};\n\
   DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   if( _ro && _obj.t == DAO_OBJECT ){\n\
-    $(vareturn) = ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+    $(vareturn) = ((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
     if( _cs ) return $(vareturn2);\n\
   }\n\
-  return $(type)::$(cxxname)( $(parcall) );\n\
+  return $(host_qname)::$(cxxname)( $(parcall) );\n\
 }\n";
 
 const string cxx_virt_class5 =
 "$(retype) DaoCxxVirt_$(sub)::$(cxxname)( int &_cs$(comma) $(parlist) )$(const)\n{\n\
-  $(return) ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)( _cs$(comma) $(parcall) );\n\
+  $(return) ((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
 }\n";
 
 const string dao_callback_proto =
-"$(retype) Dao_$(type)( $(parlist) );";
+"$(retype) Dao_$(host_idname)( $(parlist) );";
 
 const string dao_callback_def =
-"$(retype) Dao_$(type)( $(parlist) )\n\
+"$(retype) Dao_$(host_idname)( $(parlist) )\n\
 {\n\
   DaoCallbackData *_dao_cbd = (DaoCallbackData*) _ud;\n\
   DaoMethod *_ro = _dao_cbd->callback;\n\
@@ -423,6 +423,7 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 	funcDecl = decl;
 	parlist.clear();
 	if( decl == NULL ) return;
+	location = decl->getLocation();
 	if( decl->getPrimaryTemplate() ){
 		excluded = true;
 		return;
@@ -458,6 +459,7 @@ void CDaoFunction::SetCallback( FunctionProtoType *func, FieldDecl *decl, const 
 	if( decl ){
 		qname = decl->getQualifiedNameAsString();
 		idname = cdao_qname_to_idname( decl->getNameAsString() );
+		location = decl->getLocation();
 	}
 	sig = qname + "(";
 	for(i=0, n=func->getNumArgs(); i<n; i++){
@@ -528,9 +530,13 @@ int CDaoFunction::Generate()
 {
 	DeclaratorDecl *decl = funcDecl;
 	if( decl == NULL ) decl = fieldDecl;
-	if( decl && not module->IsFromModules( decl->getLocation() ) ) return 0;
+	if( decl && not module->IsFromModules( location ) ) return 0;
 	if( excluded ) return 1;
 	if( generated ) return 0;
+	if( decl ){
+		CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>( decl );
+		if( DD && DD->getAccess() == AS_private ) return 1;
+	}
 
 	int autoself = 0;
 	bool isconst = false;
@@ -809,6 +815,8 @@ int CDaoFunction::Generate()
 #endif
 	
 	map<string,string> kvmap2;
+	kvmap2[ "host_qname" ] = host_qname;
+	kvmap2[ "host_idname" ] = host_idname;
 	kvmap2[ "proto" ] = cxxProtoCodes;
 	kvmap2[ "dao2cxx" ] = dao2cxxcodes;
 	kvmap2[ "cxxcall" ] = cxxCallCodes;
@@ -827,6 +835,8 @@ int CDaoFunction::Generate()
 	}
 #endif
 	map<string,string> kvmap3;
+	kvmap3[ "host_qname" ] = host_qname;
+	kvmap3[ "host_idname" ] = host_idname;
 	kvmap3[ "retype" ] = retype.cxxtype;
 	kvmap3[ "type" ] = host_idname;
 	kvmap3[ "cxxname" ] = cxxName;
@@ -883,6 +893,7 @@ int CDaoFunction::Generate()
 
 	bool has_return = retype.daotype.size() != 0;
 	bool has_param = (parlist.size() - autoself) > 0;
+	bool return_ref = retype.qualtype->isReferenceType();
 
 	//    signature2 = signature;
 	//    signature2.change( '^%w+', '' );
@@ -890,7 +901,7 @@ int CDaoFunction::Generate()
 	
 	//io.writeln( signature2 );
 	string proxy_name = "";
-	if( CDaoProxyFunction::IsNotDefined( signature2 ) ){
+	if( ctordecl == NULL && return_ref == false && CDaoProxyFunction::IsNotDefined( signature2 ) ){
 		string proxy_codes = "";
 		string proxy_name = CDaoProxyFunction::NewProxyFunctionName();
 		kvmap3[ "proxy_name" ] = proxy_name;
@@ -963,6 +974,12 @@ int CDaoFunction::Generate()
 		}
 		kvmap3[ "parlist" ] = cxxProtoParamVirt;
 		cxxWrapperVirt3 = cdao_string_fill( cxx_virt_class5, kvmap3 );
+	}
+	if( return_ref ){
+		cxxWrapperVirtProto = "";
+		cxxWrapperVirt = "";
+		cxxWrapperVirt2 = "";
+		cxxWrapperVirt3 = "";
 	}
 	generated = true;
 	parlist.clear();

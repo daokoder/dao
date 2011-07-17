@@ -758,7 +758,7 @@ void DaoContext_DoArray( DaoContext *self, DaoVmCode *vmc )
 		DaoNameSpace *ns = self->nameSpace;
 		DValue *p = self->regValues[opA];
 		DaoType *it = DaoNameSpace_GetTypeV( ns, *p );
-		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_LIST, NULL, & it, 1 );
+		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, & it, 1 );
 		switch( p->t ){
 		case DAO_INTEGER :
 		case DAO_FLOAT :
@@ -1003,7 +1003,7 @@ void DaoContext_DoNumRange( DaoContext *self, DaoVmCode *vmc )
 	if( array->unitype == NULL || array->unitype == dao_array_any ){
 		DaoNameSpace *ns = self->nameSpace;
 		DaoType *it = DaoNameSpace_GetTypeV( ns, *regValues[opA] );
-		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_LIST, NULL, & it, 1 );
+		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, & it, 1 );
 		GC_ShiftRC( type, array->unitype ) ;
 		array->unitype = type;
 		array->numType = regValues[opA]->t;
@@ -1228,7 +1228,7 @@ void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc )
 	if( array->unitype == NULL || array->unitype == dao_array_any ){
 		DaoNameSpace *ns = self->nameSpace;
 		DaoType *it = DaoNameSpace_GetTypeV( ns, *regv[opA] );
-		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_LIST, NULL, & it, 1 );
+		DaoType *type = DaoNameSpace_MakeType( ns, "array", DAO_ARRAY, NULL, & it, 1 );
 		GC_ShiftRC( type, array->unitype ) ;
 		array->unitype = type;
 		array->numType = numtype;

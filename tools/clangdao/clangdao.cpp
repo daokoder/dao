@@ -150,41 +150,34 @@ string normalize_type_name( const string & name0 )
 	remove_type_prefix( name, "enum" );
 	return name;
 }
+const char *const conversions[] =
+{
+	"::", 
+	"<", ">", ",", " ", "[", "]", "(", ")", "*", ".", 
+	"=", "+", "-", "*", "/", "%", "&", "|", "^",
+	NULL
+};
+const char *const conversions2[] =
+{
+	"+=", "-=", "*=", "/=", "%=", "&=", "^=",
+	"==", "!=", "<=", ">=", "<<", ">>", "[]",
+	NULL
+};
 // qualified name to single identifier name:
 string cdao_qname_to_idname( const string & qname )
 {
 	string idname = normalize_type_name( qname );
-	size_t p = 0;
-	while( (p = idname.find( "+=", p )) != string::npos ) idname.replace( p, 2, "_19_" ); p = 0;
-	while( (p = idname.find( "-=", p )) != string::npos ) idname.replace( p, 2, "_20_" ); p = 0;
-	while( (p = idname.find( "*=", p )) != string::npos ) idname.replace( p, 2, "_21_" ); p = 0;
-	while( (p = idname.find( "/=", p )) != string::npos ) idname.replace( p, 2, "_22_" ); p = 0;
-	while( (p = idname.find( "%=", p )) != string::npos ) idname.replace( p, 2, "_23_" ); p = 0;
-	while( (p = idname.find( "==", p )) != string::npos ) idname.replace( p, 2, "_24_" ); p = 0;
-	while( (p = idname.find( "!=", p )) != string::npos ) idname.replace( p, 2, "_25_" ); p = 0;
-	while( (p = idname.find( "<=", p )) != string::npos ) idname.replace( p, 2, "_26_" ); p = 0;
-	while( (p = idname.find( ">=", p )) != string::npos ) idname.replace( p, 2, "_27_" ); p = 0;
-	while( (p = idname.find( "<<", p )) != string::npos ) idname.replace( p, 2, "_28_" ); p = 0;
-	while( (p = idname.find( ">>", p )) != string::npos ) idname.replace( p, 2, "_29_" ); p = 0;
-	while( (p = idname.find( "[]", p )) != string::npos ) idname.replace( p, 2, "_30_" ); p = 0;
-
-	while( (p = idname.find( "::", p )) != string::npos ) idname.replace( p, 2, "_0_" ); p = 0;
-	while( (p = idname.find( "<", p )) != string::npos ) idname.replace( p, 1, "_1_" ); p = 0;
-	while( (p = idname.find( ">", p )) != string::npos ) idname.replace( p, 1, "_2_" ); p = 0;
-	while( (p = idname.find( ",", p )) != string::npos ) idname.replace( p, 1, "_3_" ); p = 0;
-	while( (p = idname.find( "[", p )) != string::npos ) idname.replace( p, 1, "_4_" ); p = 0;
-	while( (p = idname.find( "]", p )) != string::npos ) idname.replace( p, 1, "_5_" ); p = 0;
-	while( (p = idname.find( "(", p )) != string::npos ) idname.replace( p, 1, "_6_" ); p = 0;
-	while( (p = idname.find( ")", p )) != string::npos ) idname.replace( p, 1, "_7_" ); p = 0;
-	while( (p = idname.find( "*", p )) != string::npos ) idname.replace( p, 1, "_8_" ); p = 0;
-	while( (p = idname.find( ".", p )) != string::npos ) idname.replace( p, 1, "_9_" ); p = 0;
-	while( (p = idname.find( " ", p )) != string::npos ) idname.replace( p, 1, "_10_" ); p = 0;
-	while( (p = idname.find( "=", p )) != string::npos ) idname.replace( p, 1, "_11_" ); p = 0;
-	while( (p = idname.find( "+", p )) != string::npos ) idname.replace( p, 1, "_12_" ); p = 0;
-	while( (p = idname.find( "-", p )) != string::npos ) idname.replace( p, 1, "_13_" ); p = 0;
-	while( (p = idname.find( "*", p )) != string::npos ) idname.replace( p, 1, "_14_" ); p = 0;
-	while( (p = idname.find( "/", p )) != string::npos ) idname.replace( p, 1, "_15_" ); p = 0;
-	while( (p = idname.find( "%", p )) != string::npos ) idname.replace( p, 1, "_16_" ); p = 0;
+	int i;
+	for(i=0; conversions2[i]; i++){
+		size_t p = 0;
+		string s = "_" + utostr( 30+i ) + "_";
+		while( (p = idname.find( conversions2[i], p )) != string::npos ) idname.replace( p, 2, s );
+	}
+	for(i=0; conversions[i]; i++){
+		size_t p = 0;
+		string s = "_" + utostr( i ) + "_";
+		while( (p = idname.find( conversions[i], p )) != string::npos ) idname.replace( p, 1+(i==0), s );
+	}
 	return idname;
 }
 
@@ -202,6 +195,8 @@ static cl::opt<std::string> main_input_file
 (cl::Positional, cl::desc("<input file>"), cl::Required);
 
 static cl::list<std::string> ignored_arguments(cl::Sink);
+
+static llvm::cl::opt<std::string> output_dir("o", llvm::cl::desc("output directory"));
 
 // Note:
 // The follow path is needed for Objective-C:
@@ -249,12 +244,5 @@ int main(int argc, char *argv[] )
 	ParseAST( pp, &compiler.getASTConsumer(), compiler.getASTContext() );
 	compiler.getDiagnosticClient().EndSourceFile();
 
-	map<string,string> kv;
-	kv[ "aaa" ] = "AAA"; kv[ "abc" ] = "ABC";
-	outs() << cdao_string_fill( "$(aaa)123$(abc)456$(def)", kv ) << "\n";
-
-	outs() << normalize_type_name( "void (class SecondClass *, int)" ) << "\n";
-	//return 0;
-
-	return module.Generate();
+	return module.Generate( output_dir );
 }

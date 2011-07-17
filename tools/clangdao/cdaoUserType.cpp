@@ -137,10 +137,10 @@ class DaoQtObject : public QObjectUserData\n\
 
 const string daoss_class =
 "\n\
-class DAO_DLL_$(module) DaoSS_$(class) : $(ss_parents)\n\
+class DAO_DLL_$(module) DaoSS_$(idname) : $(ss_parents)\n\
 { Q_OBJECT\n\
 public:\n\
-	DaoSS_$(class)() $(init_parents) {}\n\
+	DaoSS_$(idname)() $(init_parents) {}\n\
 \n\
 $(Emit)\n\
 \n\
@@ -162,12 +162,12 @@ const string qt_signalDao =
 const string qt_init = "";
 
 const string qt_make_linker =
-"   DaoSS_$(class) *linker = new DaoSS_$(class)();\n\
+"   DaoSS_$(idname) *linker = new DaoSS_$(idname)();\n\
    setUserData( 0, linker );\n\
    linker->Init( cdata );\n";
 
 const string qt_make_linker3 =
-"  DaoSS_$(class) *linker = new DaoSS_$(class)();\n\
+"  DaoSS_$(idname) *linker = new DaoSS_$(idname)();\n\
   object->setUserData( 0, linker );\n\
   linker->Init( NULL );\n";
 
@@ -476,7 +476,7 @@ $(methods)\n\
 };\n";
 
 const string tpl_class2 = 
-tpl_class_def + "$(class)* Dao_$(idname)_Copy( const $(qname) &p );\n";
+tpl_class_def + "$(qname)* Dao_$(idname)_Copy( const $(qname) &p );\n";
 
 const string tpl_class_init =
 "void DaoCxxVirt_$(idname)::DaoInitWrapper( $(qname) *s, DaoCData *d )\n\
@@ -549,7 +549,7 @@ const string tpl_meth_decl2 =
 "\t$(retype) $(name)( $(parlist) )$(extra);\n";
 
 const string tpl_meth_decl3 =
-"$(retype) DaoWrap_$(name)( $(parlist) )$(extra){ $(return)$(type)::$(cxxname)( $(parcall) ); }\n";
+"$(retype) DaoWrap_$(name)( $(parlist) )$(extra){ $(return)$(qname)::$(cxxname)( $(parcall) ); }\n";
 
 const string tpl_raise_call_protected =
 "  if( _p[0]->t == DAO_CDATA && DaoCData_GetObject( _p[0]->v.cdata ) == NULL ){\n\
@@ -640,6 +640,11 @@ void CDaoUserType::SetDeclaration( RecordDecl *decl )
 	name = name2 = decl->getNameAsString();
 	location = decl->getLocation();
 	if( decl->getDefinition() ) location = decl->getDefinition()->getLocation();
+	ClassTemplateSpecializationDecl *SD;
+	if( ClassTemplateSpecializationDecl* SD = dyn_cast<ClassTemplateSpecializationDecl>( decl ) ){
+		TypeSourceInfo *TSI = SD->getTypeAsWritten();
+		if( TSI ) UpdateName( TSI->getType().getAsString() );
+	}
 }
 // For template class type:
 // The canonical types of some template classes has quite long qualified names,
@@ -650,7 +655,7 @@ void CDaoUserType::UpdateName( const string & writtenName )
 {
 	string wname = normalize_type_name( writtenName );
 	if( writtenName.size() ){
-		outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
+		//outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
 		if( wname.find( qname ) == 0 ){
 			// Example:
 			// writtenName: std::allocator<char>
@@ -675,13 +680,17 @@ void CDaoUserType::UpdateName( const string & writtenName )
 			if( isalnum( ch ) ==0 && ch != '_' && ch != ':' ) break;
 		}
 		if( colon != string::npos ) name2.erase( 0, colon+1 );
-		outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
+		//outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
 	}
 
 }
 bool CDaoUserType::IsFromMainModule()
 {
 	return module->IsFromMainModule( location );
+}
+bool CDaoUserType::IsFromRequiredModules()
+{
+	return module->IsFromModules( location ) && not module->IsFromMainModule( location );
 }
 string CDaoUserType::GetInputFile()const
 {
@@ -714,6 +723,14 @@ int CDaoUserType::Generate()
 	RecordDecl *cc = (RecordDecl*) decl->getCanonicalDecl();
 	RecordDecl *dd = decl->getDefinition();
 
+	if( qname == "<anonymous>" ){
+		//outs() << module->GetFileName( decl->getLocation() ) << "============\n";
+		//decl->getLocation().print( outs(), module->compiler->getSourceManager() );
+		//outs() << "\n" << decl->isAnonymousStructOrUnion() << "\n\n";
+		return 0;
+	}
+
+	if( decl->isAnonymousStructOrUnion() ) return 0;
 	if( module->finalGenerating == false && dd == NULL ) return 0;
 
 	// ignore redundant declarations:
@@ -744,8 +761,6 @@ void CDaoUserType::SetupDefaultMapping( map<string,string> & kvmap )
 	kvmap[ "daoname" ] = name;
 	kvmap[ "name" ] = name;
 	kvmap[ "name2" ] = name2;
-	kvmap[ "class" ] = name;
-	kvmap[ "type" ] = name;
 
 	kvmap[ "retype" ] = "=>" + name;
 	kvmap[ "overload" ] = "";
@@ -816,6 +831,7 @@ int CDaoUserType::Generate( RecordDecl *decl )
 		if( ft == NULL ) continue;
 		callbacks.push_back( CDaoFunction( module ) );
 		callbacks.back().SetCallback( (FunctionProtoType*) ft, *fit );
+		callbacks.back().location = location;
 	}
 	kvmap[ "parlist" ] = "";
 	kvmap[ "retype" ] = "=>" + name;
@@ -881,7 +897,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	map<string,string> kvmap;
 	map<string,int> overloads;
 
-	wrapType = CDAO_WRAP_TYPE_DIRECT;
+	wrapType = CDAO_WRAP_TYPE_NONE;
 
 	vector<VarDecl*>      vars;
 	vector<EnumDecl*>     enums;
@@ -909,13 +925,17 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		find = module->allUsertypes.find( p );
 		if( find == module->allUsertypes.end() ) continue;
 
-		CDaoUserType & sup = *find->second;
-		string supname = sup.GetName();
-		bases.push_back( & sup );
-		//outs() << "parent: " << p->getNameAsString() << "\n";
+		CDaoUserType *sup = find->second;
+		string supname = sup->idname;
+		bases.push_back( sup );
+		priorUserTypes.push_back( sup );
 
-		if( sup.wrapType != CDAO_WRAP_TYPE_PROXY ) continue;
-		for(i=0,n=sup.pureVirtuals.size(); i<n; i++) pvmeths[ sup.pureVirtuals[i] ] = 1;
+		sup->Generate();
+		if( module->finalGenerating == false && sup->wrapType <= CDAO_WRAP_TYPE_OPAQUE ) return 0;
+		//outs() << "parent: " << qname << "  " << sup->qname << " " << (int)sup->wrapType << "\n";
+		if( sup->wrapType != CDAO_WRAP_TYPE_PROXY ) continue;
+
+		for(i=0,n=sup->pureVirtuals.size(); i<n; i++) pvmeths[ sup->pureVirtuals[i] ] = 1;
 		kvmap[ "super" ] = supname;
 		if( virt_supers.size() ){
 			daoc_supers += ',';
@@ -924,7 +944,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		daoc_supers += " public DaoCxx_" + supname;
 		virt_supers += " public DaoCxxVirt_" + supname;
 		init_supers += cdao_string_fill( tpl_init_super, kvmap );
-		if( sup.isQObject ){
+		if( sup->isQObject ){
 			if( ss_supers.size() ){
 				ss_supers += ',';
 				ss_init_sup += ',';
@@ -969,6 +989,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		if( dyn_cast<CXXDestructorDecl>( *methit ) ) continue;
 		if( methit->getAccess() == AS_protected ) hasProtected = true;
 		methods.push_back( CDaoFunction( module, *methit, ++overloads[name] ) );
+		methods.back().location = location;
 		if( methit->isPure() ) pvmeths[ *methit ] = 1;
 		if( methit->isVirtual() ){
 			CXXMethodDecl::method_iterator it2, end2 = methit->end_overridden_methods();
@@ -984,7 +1005,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	bool has_private_ctor_only = false;
 	bool has_explicit_default_ctor = false;
 	bool has_implicit_default_ctor = true;
-	bool has_public_destroctor = true;
+	bool has_public_destructor = true;
+	bool has_private_destructor = false;
 	bool has_non_public_copy_ctor = false;
 	CXXRecordDecl::ctor_iterator ctorit, ctorend = decl->ctor_end();
 	for(ctorit=decl->ctor_begin(); ctorit!=ctorend; ctorit++){
@@ -1007,9 +1029,13 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		}
 		if( ctorit->getAccess() == AS_private ) continue;
 		constructors.push_back( CDaoFunction( module, *ctorit, ++overloads[name] ) );
+		constructors.back().location = location;
 	}
 	CXXDestructorDecl *destr = decl->getDestructor();
-	if( destr && destr->getAccess() != AS_public ) has_public_destroctor = false;
+	if( destr && destr->getAccess() != AS_public ){
+		has_public_destructor = false;
+		has_private_destructor = destr->getAccess() == AS_private;
+	}
 	if( has_public_ctor || has_protected_ctor ) has_private_ctor_only = false;
 	if( has_implicit_default_ctor ) has_public_ctor = true;
 
@@ -1043,12 +1069,13 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	// 1. there is a virtual function, so that it can be re-implemented by derived Dao class;
 	// 2. or, there is a protected function, so that it can be accessed by derived Dao class;
 	// 3. or, there is a Qt signal/slot, so that such signal/slot can be connected with Dao.
-	bool proxyWrapping = has_private_ctor_only == false;
-	proxyWrapping &= hasVirtual || hasProtected || pubslots.size() || protsignals.size();
+	bool proxyWrapping = has_private_ctor_only == false && has_private_destructor == false;
+	proxyWrapping &= hasVirtual || hasProtected 
+		|| pubslots.size() || protsignals.size() || daoc_supers.size() != 0;
 
 	wrapType = proxyWrapping ? CDAO_WRAP_TYPE_PROXY : CDAO_WRAP_TYPE_DIRECT;
 
-	//outs() << name << ": " << (int)wrapType << " " << has_private_ctor_only << "\n";
+	//outs()<<name<<": "<<(int)wrapType<<" "<<has_private_ctor_only<<" "<<daoc_supers.size()<<"\n";
 
 	SetupDefaultMapping( kvmap );
 
@@ -1119,6 +1146,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "decls" ] = meth_decls;
 	kvmap[ "meths" ] = dao_meths;
 	kvmap["constructors"] = "";
+	kvmap[ "comment" ] = has_public_destructor ? "" : "//";
 	//outs()<<qname<<": "<<wrapType<<" "<<has_private_ctor_only<<" "<<hasVirtual<<"\n";
 	if( wrapType == CDAO_WRAP_TYPE_DIRECT ){
 		kvmap[ "class" ] = name;
@@ -1150,7 +1178,14 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 
 		CDaoFunction func( module, mdec, ++overloads[name] );
 		func.Generate();
-		if( not func.generated ) continue;
+		if( not func.generated ){
+			TypeLoc typeloc = mdec->getTypeSourceInfo()->getTypeLoc();
+			string source = module->ExtractSource( typeloc.getSourceRange(), true );
+			//module->ExtractSource( mdec->getSourceRange(), true ); //with no return type
+			if( isconst ) source += "const";
+			kmethods += "\t" + source + "{/*XXX 1*/}\n";
+			continue;
+		}
 		kvmap[ "name" ] = mdec->getNameAsString();
 		kvmap[ "retype" ] = func.retype.cxxtype;
 		kvmap[ "parlist" ] = func.cxxProtoParamDecl;
@@ -1158,7 +1193,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		kmethods += cdao_string_fill( tpl_meth_decl2, kvmap );
 		string wrapper = func.cxxWrapperVirt2;
 		string from = "DaoCxx_" + mdec->getParent()->getNameAsString() + "::";
-		string to = "DaoCxx_" + decl->getNameAsString() + "::";
+		string to = "DaoCxx_" + idname + "::";
 		size_t pos = wrapper.find( from );
 		if( pos != string::npos ) wrapper.replace( pos, from.size(), to );
 		cxxWrapperVirt += wrapper;
@@ -1182,14 +1217,21 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		kvmap[ "retype" ] = meth.retype.cxxtype;
 		kvmap[ "parlist" ] = meth.cxxProtoParamDecl;
 		kvmap[ "extra" ] = isconst ? "const" : "";
-		if( mdec->isVirtual() ){
+		if( mdec->isPure() && meth.cxxWrapperVirt2.size() == 0 ){
+			TypeLoc typeloc = mdec->getTypeSourceInfo()->getTypeLoc();
+			string source = module->ExtractSource( typeloc.getSourceRange(), true );
+			//module->ExtractSource( mdec->getSourceRange(), true ); //with no return type
+			if( isconst ) source += "const";
+			kmethods += "\t" + source + "{/*XXX 1*/}\n";
+		}
+		if( mdec->isVirtual() && meth.cxxWrapperVirt2.size() ){
 			kmethods += cdao_string_fill( tpl_meth_decl2, kvmap );
 			kvmap[ "parlist" ] = meth.cxxProtoParamVirt;
 			kvmap[ "comma" ] = meth.cxxProtoParamVirt.size() ? "," : "";
 			kvirtuals += cdao_string_fill( tpl_meth_decl, kvmap );
 			cxxWrapperVirt += meth.cxxWrapperVirt2;
 		}
-		if( mdec->getAccess() == AS_protected && not mdec->isPure() ){
+		if( mdec->getAccess() == AS_protected && not mdec->isPure() && not mdec->isOverloadedOperator() ){
 			kvmap[ "type" ] = name;
 			kvmap[ "cxxname" ] = mdec->getNameAsString();
 			kvmap[ "parlist" ] = meth.cxxProtoParamDecl;
@@ -1248,12 +1290,12 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoFunction & meth = methods[i];
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
 		if( not meth.generated ) continue;
-		if( mdec->getAccess() == AS_protected && not mdec->isPure() /* && not meth.nowrap */ ){
+		if( mdec->getAccess() == AS_protected && not mdec->isPure() && not mdec->isOverloadedOperator() ){
 			dao_meths += meth.daoProtoCodes;
 			meth_decls += meth.cxxProtoCodes + ";\n";
 			string wrapper = meth.cxxWrapper;
-			string name22 = "DaoCxx_" + name;
-			string from = name + "* self= (" + name + "*)";
+			string name22 = "DaoCxx_" + idname;
+			string from = qname + "* self= (" + qname + "*)";
 			string to = name22 + "* self= (" + name22 + "*)";
 			string from2 = "self->" + mdec->getNameAsString() + "(";
 			string to2 = "self->DaoWrap_" + mdec->getNameAsString() + "(";
@@ -1268,20 +1310,15 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 				wrapper.replace( pos, from3.size(), to3 );
 			meth_codes += wrapper;
 		}
-		if( mdec->isVirtual() ){
+		if( mdec->isVirtual() && meth.cxxWrapperVirt.size() ){
 			type_decls += meth.cxxWrapperVirtProto;
 			type_codes += meth.cxxWrapperVirt;
 			CDaoProxyFunction::Use( meth.signature2 );
 		}
 	}
-	//if( not hasVirtual and not has_protected_ctor ){
-		//}
-	//}else{
-		type_decls += cdao_string_fill( tpl_class_def, kvmap ) + class_new;
-		type_codes += cdao_string_fill( tpl_class_init, kvmap );
-	//}
-	//if( not noWrapping ) 
-		type_codes += cxxWrapperVirt;
+	type_decls += cdao_string_fill( tpl_class_def, kvmap ) + class_new;
+	type_codes += cdao_string_fill( tpl_class_init, kvmap );
+	type_codes += cxxWrapperVirt;
 
 	string parents, casts, cast_funcs;
 	for(i=0,n=bases.size(); i<n; i++){
@@ -1298,7 +1335,6 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	kvmap[ "casts" ] = casts;
 	kvmap[ "cast_funcs" ] = cast_funcs;
 	kvmap[ "alloc" ] = alloc_default;
-	kvmap[ "comment" ] = has_public_destroctor ? "" : "//";
 	//if( utp.nested != 2 or utp.noDestructor ) return usertype_code_none.expand( kvmap );
 	kvmap["delete"] = "Dao_" + idname + "_Delete";
 	if( name == "QApplication" or name == "QCoreApplication" ) kvmap[ "comment" ] = "//";

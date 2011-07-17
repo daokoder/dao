@@ -49,6 +49,7 @@ struct CDaoUserType
 	string  cxxWrapperVirt;
 	string  typer_codes;
 
+	vector<CDaoUserType*>   priorUserTypes;
 	vector<CXXMethodDecl*>  pureVirtuals;
 
 	CDaoUserType( CDaoModule *mod = NULL, const RecordDecl *decl = NULL );
@@ -64,6 +65,7 @@ struct CDaoUserType
 	void MakeTyperCodes();
 
 	bool IsFromMainModule();
+	bool IsFromRequiredModules();
 	void Clear();
 	int Generate();
 	int Generate( RecordDecl *decl );

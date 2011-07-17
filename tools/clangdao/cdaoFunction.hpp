@@ -23,6 +23,7 @@ struct CDaoFunction
 	FunctionDecl         *funcDecl;
 	FunctionProtoType    *funcType;
 	FieldDecl            *fieldDecl;
+	SourceLocation        location;
 	CDaoVariable          retype;
 	vector<CDaoVariable>  parlist;
 

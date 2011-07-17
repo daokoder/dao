@@ -50,6 +50,9 @@ struct CDaoNamespace
 	}
 	void AddEnumDecl( EnumDecl *one ){ enums.push_back( one ); }
 	void AddVarDecl( VarDecl *one ){ variables.push_back( one ); }
+
+	void Sort( vector<CDaoUserType*> & sorted, map<CDaoUserType*,int> & check );
+	void Sort( CDaoUserType *UT, vector<CDaoUserType*> & sorted, map<CDaoUserType*,int> & check );
 };
 
 #endif

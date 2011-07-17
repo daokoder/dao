@@ -16,7 +16,7 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 	NamespaceDecl::decl_iterator it, end;
 	if( not module->IsFromModules( nsdecl->getLocation() ) ) return;
 	for(it=nsdecl->decls_begin(),end=nsdecl->decls_end(); it!=end; it++){
-		if( not module->IsFromModules( (*it)->getLocation() ) ) return;
+		if( not module->IsFromModules( (*it)->getLocation() ) ) continue;
 		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
 			variables.push_back( var );
 		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
@@ -46,6 +46,14 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		func->index = ++overloads[name];
 		retcode |= func->Generate();
 	}
+	map<string,int> check;
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType *ut = usertypes[i];
+		if( check.find( ut->qname ) != check.end() ) ut->isRedundant = true;
+		if( ut->isRedundant || ut->IsFromRequiredModules() ) continue;
+		check[ut->qname] = 1;
+	}
+
 	header = module->MakeHeaderCodes( usertypes );
 	source = module->MakeSourceCodes( functions, this );
 	source += module->MakeSourceCodes( usertypes, this );
@@ -87,6 +95,27 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		onload2 += namespaces[i]->onload2;
 		onload3 += namespaces[i]->onload3;
 	}
-	onload2 += module->MakeOnLoadCodes( usertypes, this );
+	onload2 += module->MakeOnLoadCodes( this );
 	return retcode;
+}
+void CDaoNamespace::Sort( vector<CDaoUserType*> & sorted, map<CDaoUserType*,int> & check )
+{
+	vector<CDaoUserType*>  sorted2;
+	map<CDaoUserType*,int> check2;
+	int i, n;
+	for(i=0,n=usertypes.size(); i<n; i++){
+		Sort( usertypes[i], sorted, check );
+		Sort( usertypes[i], sorted2, check2 );
+	}
+	for(i=0,n=namespaces.size(); i<n; i++) namespaces[i]->Sort( sorted, check );
+	usertypes.swap( sorted2 );
+}
+void CDaoNamespace::Sort( CDaoUserType *UT, vector<CDaoUserType*> & sorted, map<CDaoUserType*,int> & check )
+{
+	if( check.find( UT ) != check.end() ) return;
+	int i, n = UT->priorUserTypes.size();
+	//if( n ) outs() << n << "  " << UT->qname << "\n";
+	for(i=0; i<n; i++) Sort( UT->priorUserTypes[i], sorted, check );
+	sorted.push_back( UT );
+	check[ UT ] = 1;
 }

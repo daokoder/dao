@@ -22,6 +22,7 @@ using namespace std;
 using namespace llvm;
 using namespace clang;
 
+extern string normalize_type_name( const string & name );
 extern string cdao_qname_to_idname( const string & qname );
 
 struct CDaoModuleInfo
@@ -95,7 +96,7 @@ struct CDaoModule
 	CDaoNamespace* NewNamespace( const NamespaceDecl *decl );
 	CDaoNamespace* AddNamespace( const NamespaceDecl *decl );
 
-	int Generate();
+	int Generate( const string & output = "" );
 
 	int CheckFileExtension( const string & name );
 	bool IsHeaderFile( const string & name );
@@ -120,13 +121,11 @@ struct CDaoModule
 
 	void WriteHeaderIncludes( std::ostream & stream );
 
-	string MakeDaoFunctionPrototype( FunctionDecl *funcdec );
-
 	string MakeHeaderCodes( vector<CDaoUserType*> & usertypes );
 	string MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns = NULL );
 	string MakeSource2Codes( vector<CDaoUserType*> & usertypes );
 	string MakeSource3Codes( vector<CDaoUserType*> & usertypes );
-	string MakeOnLoadCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns = NULL );
+	string MakeOnLoadCodes( CDaoNamespace *ns = NULL );
 
 	string MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
 	string MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
@@ -136,8 +135,12 @@ struct CDaoModule
 	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );
 	string ExtractSource( const SourceRange & range, bool original = true );
 
-	static string GetQName( const NamedDecl *D ){ return D ? D->getQualifiedNameAsString() : ""; }
-	static string GetIdName( const NamedDecl *D ){ return cdao_qname_to_idname( GetQName( D ) ); }
+	static string GetQName( const NamedDecl *D ){
+		return D ? normalize_type_name( D->getQualifiedNameAsString() ) : "";
+	}
+	static string GetIdName( const NamedDecl *D ){
+		return cdao_qname_to_idname( GetQName( D ) );
+	}
 };
 
 #endif
