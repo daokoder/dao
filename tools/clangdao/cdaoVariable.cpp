@@ -484,6 +484,7 @@ const string setter_doubles =
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
 extern string cdao_qname_to_idname( const string & qname );
 extern string normalize_type_name( const string & name );
+extern string cdao_make_dao_template_type_name( const string & name );
 
 struct CDaoVarTemplates
 {
@@ -546,6 +547,7 @@ void CDaoVarTemplates::Generate( CDaoVariable *var, map<string,string> & kvmap, 
 	sprintf( sindex, "%i", daopid );
 	if( var->isNullable ) dft = "|null";
 	if( var->daodefault.size() ) dft += " =" + var->daodefault;
+	if( var->cxxtyper.size() ) typer = var->cxxtyper;
 
 	if( var->daotype.find( "std::" ) == 0 ) var->daotype.replace( 0, 5, "stdcxx::" );
 	kvmap[ "daotype" ] = var->daotype;
@@ -790,7 +792,7 @@ int CDaoVariable::GenerateForBuiltin( int daopar_index, int cxxpar_index )
 			break;
 		default : break;
 		}
-		if( cxxtype != daotype ) module->typedefs[ cxxtype ] = daotype;
+		if( cxxtype != daotype ) module->daoTypedefs[ cxxtype ] = daotype;
 	}
 	map<string,string> kvmap;
 	tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
@@ -906,8 +908,9 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 			tpl.cxx2dao = cxx2dao_stream;
 			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "io";
 		}else{
-			daotype = UT->qname;
+			daotype = cdao_make_dao_template_type_name( UT->qname );
 			cxxtype2 = UT->qname;
+			cxxtyper = UT->idname;
 			tpl.daopar = daopar_user;
 			tpl.ctxput = ctxput_user;
 			tpl.getres = getres_user;
@@ -1026,8 +1029,9 @@ int CDaoVariable::GenerateForReference( int daopar_index, int cxxpar_index )
 		tpl.parset = parset_int;
 	}else if( CDaoUserType *UT = module->HandleUserType( qtype1, location ) ){
 		if( UT->qname == "<anonymous>" ) return 1;
-		daotype = UT->qname;
+		daotype = cdao_make_dao_template_type_name( UT->qname );
 		cxxtype2 = UT->qname;
+		cxxtyper = UT->idname;
 		cxxcall = "*" + name;
 		tpl.daopar = daopar_user;
 		tpl.ctxput = ctxput_refcdata;

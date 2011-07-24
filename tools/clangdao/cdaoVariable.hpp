@@ -41,6 +41,7 @@ struct CDaoVariable
 	string  daotype;
 	string  cxxtype; // original
 	string  cxxtype2; // stripped off pointer, refernce, ...
+	string  cxxtyper; // typer name for user type;
 	string  cxxcall;
 	string  daopar;
 	string  cxxpar;

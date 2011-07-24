@@ -4292,35 +4292,36 @@ DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 {
 	DaoCDataCore *plgCore;
 	DaoCData *cdata;
-	DaoType *abtype;
+	DaoType *ctype_type;
+	DaoType *cdata_type;
 
 	cdata = DaoCData_New( typer, NULL );
 	cdata->type = DAO_CTYPE;
 	cdata->trait |= DAO_DATA_NOCOPY;
-	abtype = DaoType_New( typer->name, DAO_CTYPE, (DaoBase*)cdata, NULL );
-	GC_ShiftRC( abtype, cdata->ctype );
-	cdata->ctype = abtype;
-	abtype->typer = typer;
-	abtype = DaoType_New( typer->name, DAO_CDATA, (DaoBase*)cdata, NULL );
-	abtype->typer = typer;
-	abtype->value = daoNullCData;
+	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoBase*)cdata, NULL );
+	GC_ShiftRC( ctype_type, cdata->ctype );
+	cdata->ctype = ctype_type;
+	ctype_type->typer = typer;
 
+	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoBase*)cdata, NULL );
+	cdata_type->typer = typer;
+	cdata_type->value = daoNullCData;
 	cdata = DaoCData_New( typer, NULL );
-	GC_ShiftRC( abtype, cdata->ctype );
-	cdata->ctype = abtype;
-	abtype->value.v.cdata = cdata;
+	GC_ShiftRC( cdata_type, cdata->ctype );
+	cdata->ctype = cdata_type;
+	cdata_type->value.v.cdata = cdata;
 	cdata->trait |= DAO_DATA_NOCOPY;
 	GC_IncRC( cdata );
-	DValue_MarkConst( & abtype->value );
+	DValue_MarkConst( & cdata_type->value );
 
 	plgCore = DaoCDataCore_New();
-	plgCore->abtype = abtype;
+	plgCore->abtype = cdata_type;
 	plgCore->nspace = ns;
 	plgCore->DelData = typer->Delete;
 	plgCore->DelTest = DaoTypeBase_GetDeleteTest( typer );
 	typer->priv = (DaoTypeCore*)plgCore;
 	DaoTypeCData_SetMethods( typer );
-	return abtype;
+	return ctype_type;
 }
 void DaoException_Setup( DaoNameSpace *ns )
 {

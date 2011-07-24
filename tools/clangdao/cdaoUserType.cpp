@@ -8,6 +8,7 @@
 
 #include "cdaoFunction.hpp"
 #include "cdaoUserType.hpp"
+#include "cdaoNamespace.hpp"
 #include "cdaoModule.hpp"
 
 const string daoqt_object_class =
@@ -597,7 +598,7 @@ const string cast_to_parent =
 const string usertype_code =
 "$(cast_funcs)\n\
 static DaoTypeBase $(typer)_Typer = \n\
-{ \"$(name2)\", NULL,\n\
+{ \"$(daotypename)\", NULL,\n\
   dao_$(typer)_Nums,\n\
   dao_$(typer)_Meths,\n\
   { $(parents)NULL },\n\
@@ -609,7 +610,7 @@ DaoTypeBase DAO_DLL_$(module) *dao_$(typer)_Typer = & $(typer)_Typer;\n";
 
 const string usertype_code_none =
 "static DaoTypeBase $(typer)_Typer = \n\
-{ \"$(name2)\", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };\n\
+{ \"$(daotypename)\", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };\n\
 DaoTypeBase DAO_DLL_$(module) *dao_$(typer)_Typer = & $(typer)_Typer;\n";
 
 //const string usertype_code_none = methlist_code + usertype_code;
@@ -619,6 +620,8 @@ const string usertype_code_class2 = methlist_code + delete_class + delete_test +
 
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
 extern string normalize_type_name( const string & name );
+extern string cdao_make_dao_template_type_name( const string & name );
+extern string cdao_remove_type_scopes( const string & qname );
 
 CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
@@ -635,55 +638,21 @@ CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 void CDaoUserType::SetDeclaration( RecordDecl *decl )
 {
 	this->decl = decl;
+	location = decl->getLocation();
+	if( decl->getDefinition() ) location = decl->getDefinition()->getLocation();
+
 	qname = CDaoModule::GetQName( decl );
 	idname = CDaoModule::GetIdName( decl );
 	name = name2 = decl->getNameAsString();
-	location = decl->getLocation();
-	if( decl->getDefinition() ) location = decl->getDefinition()->getLocation();
-	ClassTemplateSpecializationDecl *SD;
-	if( ClassTemplateSpecializationDecl* SD = dyn_cast<ClassTemplateSpecializationDecl>( decl ) ){
-		TypeSourceInfo *TSI = SD->getTypeAsWritten();
-		if( TSI ) UpdateName( TSI->getType().getAsString() );
-	}
+	size_t pos;
+	if( (pos = name.find( '<' )) != string::npos ) name.erase( pos );
 }
-// For template class type:
-// The canonical types of some template classes has quite long qualified names,
-// to make the generated codes a little bit more pleasant, we use the written
-// name in source codes and the canonical name to make a simplified qualified
-// name that can still uniquely identify the type.
-void CDaoUserType::UpdateName( const string & writtenName )
+void CDaoUserType::SetNamespace( const CDaoNamespace *ns )
 {
-	string wname = normalize_type_name( writtenName );
-	if( writtenName.size() ){
-		//outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
-		if( wname.find( qname ) == 0 ){
-			// Example:
-			// writtenName: std::allocator<char>
-			// name: allocator
-			// qname: std::allocator
-			qname = wname;
-		}else{
-			// Example:
-			// writtenName: string
-			// name: basic_string
-			// qname: std::basic_string
-			qname.replace( qname.rfind( name ), name.size(), wname );
-			name = normalize_type_name( wname );
-		}
-		qname = normalize_type_name( qname );
-		idname = cdao_qname_to_idname( qname );
-		name2 = qname;
-		size_t i, n, colon = string::npos;
-		for(i=0,n=name2.size(); i<n; i++){
-			char ch = name2[i];
-			if( ch == ':' ) colon = i;
-			if( isalnum( ch ) ==0 && ch != '_' && ch != ':' ) break;
-		}
-		if( colon != string::npos ) name2.erase( 0, colon+1 );
-		//outs() << wname << ":  " << name << " " << qname << " " << idname << "\n";
-	}
-
+	nspace = ns->varname;
+	//names.push_back( CDaoWrapName( ns->varname ) );
 }
+
 bool CDaoUserType::IsFromMainModule()
 {
 	return module->IsFromMainModule( location );
@@ -714,6 +683,7 @@ int CDaoUserType::GenerateSimpleTyper()
 	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
 	kvmap[ "typer" ] = idname;
 	kvmap[ "name2" ] = name2;
+	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( name2 );
 	typer_codes = cdao_string_fill( usertype_code_none, kvmap );
 	wrapType = CDAO_WRAP_TYPE_OPAQUE;
 	return 0;
@@ -723,6 +693,8 @@ int CDaoUserType::Generate()
 	RecordDecl *cc = (RecordDecl*) decl->getCanonicalDecl();
 	RecordDecl *dd = decl->getDefinition();
 
+	size_t pos = name.find( '<' );
+	if( pos != string::npos ) name.erase( pos );
 	if( qname == "<anonymous>" ){
 		//outs() << module->GetFileName( decl->getLocation() ) << "============\n";
 		//decl->getLocation().print( outs(), module->compiler->getSourceManager() );
@@ -761,6 +733,7 @@ void CDaoUserType::SetupDefaultMapping( map<string,string> & kvmap )
 	kvmap[ "daoname" ] = name;
 	kvmap[ "name" ] = name;
 	kvmap[ "name2" ] = name2;
+	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( name2 );
 
 	kvmap[ "retype" ] = "=>" + name;
 	kvmap[ "overload" ] = "";
@@ -916,6 +889,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	string class_new;
 	string class_decl;
 
+	outs() << "generating: " << qname << "\n";
+
 	map<CXXMethodDecl*,int>  pvmeths;
 	map<CXXMethodDecl*,int>::iterator pvit, pvend;
 	map<const RecordDecl*,CDaoUserType*>::iterator find;
@@ -923,7 +898,11 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	for(baseit=decl->bases_begin(); baseit != baseend; baseit++){
 		CXXRecordDecl *p = baseit->getType().getTypePtr()->getAsCXXRecordDecl();
 		find = module->allUsertypes.find( p );
-		if( find == module->allUsertypes.end() ) continue;
+		if( find == module->allUsertypes.end() ){
+			module->HandleUserType( baseit->getType(), location );
+			find = module->allUsertypes.find( p );
+			if( find == module->allUsertypes.end() ) continue;
+		}
 
 		CDaoUserType *sup = find->second;
 		string supname = sup->idname;
@@ -959,12 +938,11 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		if( edec == NULL || dit->getAccess() != AS_public ) continue;
 		enums.push_back( edec );
 	}
-	CXXRecordDecl::redecl_iterator redit, redend = decl->redecls_end();
-	for(redit=decl->redecls_begin(); redit!=redend; redit++){
-		TypedefDecl *TDD = dyn_cast<TypedefDecl>( *redit );
+	for(dit=decl->decls_begin(),dend=decl->decls_end(); dit!=dend; dit++){
+		TypedefDecl *TDD = dyn_cast<TypedefDecl>( *dit );
 		if( TDD == NULL ) continue;
 		QualType qtype = TDD->getUnderlyingType();
-		outs() << "----------------" << TDD->getQualifiedNameAsString() << " " << qtype.getAsString() << "\n";
+		//outs() << "---" << TDD->getQualifiedNameAsString() << " " << qtype.getAsString() << "\n";
 	}
 	CXXRecordDecl::field_iterator fit, fend;
 	for(fit=decl->field_begin(),fend=decl->field_end(); fit!=fend; fit++){

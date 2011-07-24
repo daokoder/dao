@@ -404,6 +404,8 @@ const string daoqt_sig_slot_emit =
 
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
 extern string normalize_type_name( const string & name );
+extern string cdao_make_dao_template_type_name( const string & name );
+
 
 CDaoFunction::CDaoFunction( CDaoModule *mod, FunctionDecl *decl, int idx )
 {
@@ -544,7 +546,7 @@ int CDaoFunction::Generate()
 	const CXXConstructorDecl *ctordecl = NULL;
 	const RecordDecl *hostdecl = NULL;
 	ASTContext & ctx = module->compiler->getASTContext();
-	string host_name, host_qname, host_idname;
+	string host_name, host_qname, host_idname, daoName;
 	if( funcDecl ){
 		methdecl = dyn_cast<CXXMethodDecl>( funcDecl );
 		ctordecl = dyn_cast<CXXConstructorDecl>( funcDecl );
@@ -565,6 +567,7 @@ int CDaoFunction::Generate()
 	}
 	CDaoUserType *hostype = module->GetUserType( hostdecl );
 	if( decl ) cxxName = decl->getNameAsString();
+	daoName = cxxName;
 	if( hostdecl ){
 		host_name = hostdecl->getName().str();
 		host_qname = CDaoModule::GetQName( hostdecl );
@@ -573,7 +576,10 @@ int CDaoFunction::Generate()
 			host_name = hostype->name;
 			host_qname = hostype->qname;
 			host_idname = hostype->idname;
-			if( ctordecl ) cxxName = host_name;
+			if( ctordecl ){
+				cxxName = hostype->name2;
+				daoName = hostype->name2;
+			}
 		}
 	}
 
@@ -608,7 +614,6 @@ int CDaoFunction::Generate()
 	string dao2cxxcodes, cxx2daocodes, parsetcodes;
 	string slot_dao2cxxcodes, cxxprotpars_decl;
 	string nils, refs;
-	string daoName = cxxName;
 
 	signature = cxxName + "("; // exclude return type from signature
 	signature2 = retype.cxxtype + "(";
@@ -745,7 +750,8 @@ int CDaoFunction::Generate()
 	kvmap[ "file" ] = decl == NULL ? "" : module->GetFileName( decl->getLocation() );
 
 	if( ctordecl && hostype ){
-		retype.daotype = hostype->qname;
+		retype.daotype = cdao_make_dao_template_type_name( hostype->qname );
+		retype.cxxtyper = hostype->idname;
 		if( retype.daotype.find( "std::" ) == 0 ) retype.daotype.replace( 0, 5, "stdcxx::" );
 	}
 	if( retype.daotype != "" ) kvmap[ "retype" ] = "=>" + retype.daotype;

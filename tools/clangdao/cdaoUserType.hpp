@@ -11,6 +11,7 @@ using namespace llvm;
 using namespace clang;
 
 struct CDaoModule;
+struct CDaoNamespace;
 
 extern string cdao_qname_to_idname( const string & qname );
 
@@ -22,11 +23,29 @@ enum CDaoUserTypeWrapType
 	CDAO_WRAP_TYPE_PROXY    // wrap through a proxy struct or class;
 };
 
+struct CDaoUserTypeAlias
+{
+};
+
+struct CDaoWrapName
+{
+	string  nspace;
+	string  name;
+
+	CDaoWrapName( const string & ns = "", const string & s = "" ){
+		nspace = ns;
+		name = s;
+	}
+};
+
 struct CDaoUserType
 {
 	CDaoModule     *module;
 	RecordDecl     *decl;
 	SourceLocation  location;
+
+	string  nspace;
+	vector<CDaoWrapName>  names;
 
 	short  wrapType;
 	short  wrapCount;
@@ -35,10 +54,10 @@ struct CDaoUserType
 	bool   isQObject;
 	bool   isQObjectBase;
 
-	string  name;  // just name: vector, SomeClass
-	string  name2; // name, with template arguments if any: vector<int>, SomeClass
-	string  qname; // qualified name: std::vector<int>, SomeNamespace::SomeClass
-	string  idname; // identification name: std_0_vector_1_int_2_, SomeNamespace_0_SomeClass
+	string  name;  // just name: vector, SomeClass;
+	string  name2; // name, with template arguments if any: vector<int>, SomeClass;
+	string  qname; // qualified name: std::vector<int>, SomeNamespace::SomeClass;
+	string  idname; // identification name: std_0_vector_1_int_2_, SomeNamespace_0_SomeClass;
 
 	string  type_decls;
 	string  type_codes;
@@ -55,7 +74,7 @@ struct CDaoUserType
 	CDaoUserType( CDaoModule *mod = NULL, const RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );
-	void UpdateName( const string & writtenName );
+	void SetNamespace( const CDaoNamespace *ns );
 
 	string GetName()const{ return decl ? decl->getNameAsString() : ""; }
 	string GetQName()const{ return decl ? decl->getQualifiedNameAsString() : ""; }

@@ -1,15 +1,24 @@
 
 #include <assert.h>
+#include <clang/AST/DeclTemplate.h>
 #include "cdaoModule.hpp"
 #include "cdaoNamespace.hpp"
 
 extern string cdao_string_fill( const string & tpl, const map<string,string> & subs );
+extern string normalize_type_name( const string & name );
 extern string cdao_qname_to_idname( const string & qname );
+extern string cdao_remove_type_scopes( const string & qname );
+extern string cdao_make_dao_template_type_name( const string & name );
 
 CDaoNamespace::CDaoNamespace( CDaoModule *mod, const NamespaceDecl *decl )
 {
 	module = mod;
 	nsdecl = (NamespaceDecl*) decl;
+	varname = "ns";
+	if( nsdecl ){
+		varname = nsdecl->getQualifiedNameAsString();
+		varname = cdao_qname_to_idname( varname );
+	}
 }
 void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 {
@@ -25,7 +34,8 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 			functions.push_back( new CDaoFunction( module, func ) );
 			functions.back()->Generate();
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
-			usertypes.push_back( module->NewUserType( record ) );
+			QualType qtype( record->getTypeForDecl(), 0 );
+			usertypes.push_back( module->HandleUserType( qtype, record->getLocation() ) );
 			usertypes.back()->Generate();
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			CDaoNamespace *ns = module->AddNamespace( nsdecl );
@@ -61,17 +71,20 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	source3 = module->MakeSource3Codes( usertypes );
 
 	if( nsdecl ){
-		string outer_name = outer && outer->nsdecl ? outer->nsdecl->getQualifiedNameAsString() : "ns";
-		string this_name = nsdecl->getQualifiedNameAsString();
+		string this_name = varname;
+		string outer_name = outer ? outer->varname : "ns";
+		string qname = nsdecl->getQualifiedNameAsString();
 		string name = nsdecl->getNameAsString();
-		string qname = this_name;
 
 		outer_name = cdao_qname_to_idname( outer_name );
-		this_name = cdao_qname_to_idname( this_name );
-		if( (outer == NULL || outer->nsdecl == NULL) && name == "std" ) name = "stdcxx";
-
-		onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
-		onload += outer_name + ", \"" + name + "\" );\n";
+		if( outer == NULL || outer->nsdecl == NULL ){
+			if( name == "std" ) name = "stdcxx";
+			onload += "\tDaoNameSpace *" + this_name + " = DaoVmSpace_GetNameSpace( ";
+			onload += "vms, \"" + name + "\" );\n";
+		}else{
+			onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
+			onload += outer_name + ", \"" + name + "\" );\n";
+		}
 		if( enums.size() ){
 			source += module->MakeConstantStruct( enums, variables, qname );
 			onload2 += "\tDaoNameSpace_AddConstNumbers( " + this_name;
@@ -96,6 +109,24 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		onload3 += namespaces[i]->onload3;
 	}
 	onload2 += module->MakeOnLoadCodes( this );
+
+#if 0
+	string code = "\tDaoNameSpace_TypeDefine( " + varname + ", \"";
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType *ut = usertypes[i];
+		if( ut->isRedundant || ut->IsFromRequiredModules() ) continue;
+		if( dyn_cast<ClassTemplateSpecializationDecl>( ut->decl ) == NULL ) continue;
+		QualType qtype = QualType( ut->decl->getTypeForDecl(), 0 ).getCanonicalType();
+		string qname = normalize_type_name( qtype.getAsString() );
+		string name = cdao_remove_type_scopes( qname );
+		string dname = cdao_make_dao_template_type_name( qname );
+		string dname2 = cdao_make_dao_template_type_name( ut->name2 );
+		if( name != ut->name2 ){
+			outs() << ut->qname << " " << ut->name2 << " " << name << "\n";
+			onload2 += code + dname + "\", \"" + dname2 + "\" );\n";
+		}
+	}
+#endif
 	return retcode;
 }
 void CDaoNamespace::Sort( vector<CDaoUserType*> & sorted, map<CDaoUserType*,int> & check )

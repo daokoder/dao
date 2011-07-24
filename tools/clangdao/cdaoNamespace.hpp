@@ -15,6 +15,7 @@ struct CDaoModule;
 
 struct CDaoNamespace
 {
+	string          varname;
 	CDaoModule     *module;
 	NamespaceDecl  *nsdecl;
 
@@ -41,6 +42,7 @@ struct CDaoNamespace
 	void AddNamespace( CDaoNamespace *one ){ namespaces.push_back( one ); }
 	void AddUserType( CDaoUserType *one ){
 		usertypes.push_back( one );
+		one->SetNamespace( this );
 		one->Generate();
 	}
 	void AddFunction( CDaoFunction *one ){

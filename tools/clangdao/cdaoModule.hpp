@@ -68,11 +68,15 @@ struct CDaoModule
 	CDaoModuleInfo     moduleInfo;
 	CDaoNamespace      topLevelScope;
 
+	vector<CDaoUserType*>  usertypes;
 	vector<CDaoFunction*>  callbacks;
 
 	map<const RecordDecl*,CDaoUserType*>         allUsertypes;
 	map<const NamespaceDecl*,CDaoNamespace*>     allNamespaces;
 	map<const FunctionProtoType*,CDaoFunction*>  allCallbacks;
+
+	map<TypedefDecl*,int>  cxxTypedefs;
+	map<string,string>     daoTypedefs;
 
 	map<FileEntry*,CDaoModuleInfo>  requiredModules; // directly required modules;
 	map<FileEntry*,CDaoModuleInfo>  requiredModules2; // directly/indirectly required modules;
@@ -81,8 +85,6 @@ struct CDaoModule
 	map<FileEntry*,CDaoHeaderInfo>  extHeaders; // header files from the required modules;
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
-
-	map<string,string>  typedefs;
 
 	static map<string,int>  mapExtensions;
 

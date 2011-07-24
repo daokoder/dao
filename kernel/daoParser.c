@@ -946,7 +946,7 @@ InvalidTypeName:
 }
 DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 
-static DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types )
+DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types )
 {
 	DaoNameSpace *ns = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -1333,17 +1333,8 @@ static DaoBase* DaoParse_InstantiateType( DaoParser *self, DaoBase *tpl, int sta
 	int i = start;
 	if( tpl == NULL || (tpl->type != DAO_CLASS && tpl->type != DAO_CTYPE) ) goto FailedInstantiation;
 	if( tpl->type == DAO_CLASS && klass->typeHolders == NULL ) goto FailedInstantiation;
-	while( i <= end ){
-		type = DaoParser_ParseType( self, i, end, &i, NULL );
-		if( type == NULL ) goto FailedInstantiation;
-		DArray_Append( types, type );
-		//printf( "%i: %s\n", types->size, type->name->mbs );
-		if( i <= end && tokens[i]->type != DTOK_COMMA ){
-			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, tokens[i]->string );
-			goto FailedInstantiation;
-		}
-		i += 1;
-	}
+	DaoParser_ParseTypeItems( self, start, end, types );
+	if( self->errors->size ) goto FailedInstantiation;
 	if( tpl->type == DAO_CTYPE ){
 		DaoCDataCore *hostCore = (DaoCDataCore*) cdata->typer->priv;
 		if( hostCore->instanceCData ){
@@ -2332,7 +2323,6 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	DaoRoutine *routine = self->routine;
 	DaoType *abtp;
 	DString *str;
-	DValue value;
 	int estart = start;
 	int use = start;
 	start ++;
@@ -2433,13 +2423,11 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
 		return 0;
 	}
-	value.t = DAO_TYPE;
 	abtp = DaoType_Copy( abtp );
-	value.v.p = (DaoBase*) abtp;
 	DString_Assign( abtp->name, str );
 	/*  XXX typedef in routine or class */
 	DaoNameSpace_AddType( myNS, str, abtp );
-	DaoNameSpace_AddConst( myNS, str, value, DAO_DATA_PUBLIC );
+	DaoNameSpace_AddTypeConstant( myNS, str, abtp );
 	return start;
 }
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue *p[], int n );

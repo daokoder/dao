@@ -150,6 +150,54 @@ string normalize_type_name( const string & name0 )
 	remove_type_prefix( name, "enum" );
 	return name;
 }
+static bool is_invalid_dao_type_name( const string & name )
+{
+	int i, n = name.size();
+	for(i=0; i<n; i++){
+		char ch = name[i];
+		if( isalnum( ch ) == 0 && ch != '_' && ch != ':' ) return true;
+	}
+	return false;
+}
+map<string,int> type_for_quoting;
+string cdao_make_dao_template_type_name( const string & name0 )
+{
+	string name = normalize_type_name( name0 );
+	string result, part;
+	int i, n;
+	for(i=0, n = name.size(); i<n; i++){
+		char ch = name[i];
+		if( ch == '<' || ch == '>' || ch == ',' ){
+			if( part != "" && part != " " ){
+				string quote = is_invalid_dao_type_name( part ) ? "'" : "";
+				if( part.find( "std::" ) == 0 ) part.replace( 0, 5, "stdcxx::" );
+				if( type_for_quoting.find( part ) != type_for_quoting.end() ) quote = "'";
+				result += quote + part + quote;
+			}
+			result += ch;
+			part = "";
+		}else{
+			part += ch;
+		}
+	}
+	if( part == "" ) return result;
+	string quote = is_invalid_dao_type_name( part ) ? "'" : "";
+	if( part.find( "std::" ) == 0 ) part.replace( 0, 5, "stdcxx::" );
+	if( type_for_quoting.find( part ) != type_for_quoting.end() ) quote = "'";
+	return result + quote + part + quote;
+}
+string cdao_remove_type_scopes( const string & qname )
+{
+	size_t i, n, colon = string::npos;
+	string name = qname;
+	for(i=0,n=name.size(); i<n; i++){
+		char ch = name[i];
+		if( ch == ':' ) colon = i;
+		if( isalnum( ch ) ==0 && ch != '_' && ch != ':' ) break;
+	}
+	if( colon != string::npos ) name.erase( 0, colon+1 );
+	return name;
+}
 const char *const conversions[] =
 {
 	"::", 
@@ -206,6 +254,21 @@ static llvm::cl::opt<std::string> output_dir("o", llvm::cl::desc("output directo
 
 int main(int argc, char *argv[] )
 {
+	type_for_quoting[ "bool" ] = 1;
+	type_for_quoting[ "char" ] = 1;
+	type_for_quoting[ "wchar_t" ] = 1;
+	type_for_quoting[ "short" ] = 1;
+	type_for_quoting[ "long" ] = 1;
+	type_for_quoting[ "size_t" ] = 1;
+	type_for_quoting[ "int8_t" ] = 1;
+	type_for_quoting[ "int16_t" ] = 1;
+	type_for_quoting[ "int32_t" ] = 1;
+	type_for_quoting[ "int64_t" ] = 1;
+	type_for_quoting[ "uint8_t" ] = 1;
+	type_for_quoting[ "uint16_t" ] = 1;
+	type_for_quoting[ "uint32_t" ] = 1;
+	type_for_quoting[ "uint64_t" ] = 1;
+
 	size_t i;
 	cl::ParseCommandLineOptions( argc, argv, 
 			"ClangDao: Clang-based automatic binding tool for Dao." );
