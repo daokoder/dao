@@ -1328,6 +1328,7 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNameSpace *
 		ctx.regValues = & res;
 		ctx.regTypes = types;
 		ctx.vmc = & vmc;
+		ctx.codes = & vmc;
 
 		DaoFunction_Call( func, & ctx, & selfpar, NULL, 0 );
 	}else{
@@ -1351,6 +1352,7 @@ static int DaoCData_Serialize( DaoCData *self, DString *serial, DaoNameSpace *ns
 	ctx.regValues = & res;
 	ctx.regTypes = types;
 	ctx.vmc = & vmc;
+	ctx.codes = & vmc;
 
 	if( meth == NULL ) return 0;
 	selfpar.v.cdata = self;
@@ -1466,6 +1468,7 @@ static DaoCData* DaoCData_MakeObject( DaoCData *self, DValue param, DaoVmProcess
 	ctx.regValues = & res;
 	ctx.regTypes = types;
 	ctx.vmc = & vmc;
+	ctx.codes = & vmc;
 	if( meth == NULL ) return NULL;
 	func = (DaoFunction*) DRoutine_Resolve( meth, NULL, & p, 1, DVM_CALL );
 	if( func == NULL || func->type != DAO_FUNCTION ) return NULL;

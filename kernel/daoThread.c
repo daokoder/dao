@@ -579,8 +579,8 @@ static void DaoCondV_Lib_BroadCast( DaoContext *ctx, DValue *par[], int N )
 }
 static DaoFuncItem condvMeths[] =
 {
-	{ DaoCondV_Lib_Wait,     "wait( self : condition, mtx : mutex )" },
-	{ DaoCondV_Lib_TimedWait,"timedwait( self : condition, mtx : mutex, seconds :float )=>int" },
+	{ DaoCondV_Lib_Wait,      "wait( self : condition, mtx : mutex )" },
+	{ DaoCondV_Lib_TimedWait, "timedwait( self : condition, mtx : mutex, seconds :float )=>int" },
 	{ DaoCondV_Lib_Signal,    "signal( self : condition )" },
 	{ DaoCondV_Lib_BroadCast, "broadcast( self : condition )" },
 	{ NULL, NULL }

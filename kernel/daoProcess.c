@@ -3149,6 +3149,7 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 {
 	uchar_t  modes[] = { 0, 0, 0 };
 	DaoType *types[] = { NULL, NULL, NULL };
+	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
 	DaoContext *ctx = self->topFrame->context;
 	DaoVmCode *vmc = ctx->vmc;
 	DValue *dC = ctx->regValues[ vmc->c ];
@@ -3156,8 +3157,10 @@ DValue DaoVmProcess_MakeConst( DaoVmProcess *self )
 
 	dao_fe_clear();
 	ctx->idClearFE = -1;
+	ctx->codes = vmc;
 	if( ctx->regTypes == NULL ) ctx->regTypes = types;
 	if( ctx->regModes == NULL ) ctx->regModes = modes;
+	if( ctx->routine->annotCodes->size == 0 ) DArray_Append( ctx->routine->annotCodes, & vmcx );
 
 	switch( vmc->code ){
 	case DVM_MOVE :
