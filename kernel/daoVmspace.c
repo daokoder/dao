@@ -2001,25 +2001,11 @@ static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DValue *_p[], int _n )
 static void dao_FakeShoftList_SetItem( DaoContext *_ctx, DValue *_p[], int _n )
 {
 }
-static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n );
-static DaoFuncItem dao_FakeList_Meths[] = 
-{
-  { dao_FakeList_GetType, "<>( @ITEM )" },
-  //{ dao_FakeList_GetType, "<>( @ITEM )=>FakeList<@ITEM>" },
-  { NULL, NULL }
-};
 static DaoTypeBase FakeList_Typer = 
-{ "FakeList", NULL, NULL, dao_FakeList_Meths, {0}, {0}, NULL, NULL };
+{ "FakeList", NULL, NULL, NULL, {0}, {0}, NULL, NULL };
 DaoTypeBase *dao_FakeList_Typer = & FakeList_Typer;
 
 DaoType *fakeShortType = NULL;
-static void dao_FakeList_GetType( DaoContext *_ctx, DValue *_p[], int _n )
-{
-	if( _p[0]->v.type == fakeShortType ){
-		DaoContext_PutResult( _ctx, (DaoBase*)DaoCData_Wrap( NULL, dao_FakeShoftList_Typer ) );
-	}else{
-	}
-}
 #endif
 
 extern void DaoType_Init();
@@ -2121,22 +2107,22 @@ DaoVmSpace* DaoInit()
 	vms->safeTag = 0;
 	ns = vms->nsInternal;
 
-	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, 0,0 );
+	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, NULL );
 	dao_access_enum = DaoNameSpace_MakeEnumType( ns, "private,protected,public" );
 	dao_storage_enum = DaoNameSpace_MakeEnumType( ns, "const,global,var"  );
 
 	DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
 	DaoNameSpace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
 
-	dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
-	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
-	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
-	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, 0,0 );
+	dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, NULL );
+	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
+	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
+	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, NULL );
 
 #if 0
-	dao_array_empty = DaoParser_ParseTypeName( "array<any>", ns, 0,0 );
-	dao_list_empty = DaoParser_ParseTypeName( "list<any>", ns, 0,0 );
-	dao_map_empty = DaoParser_ParseTypeName( "map<any,any>", ns, 0,0 );
+	dao_array_empty = DaoParser_ParseTypeName( "array<any>", ns, NULL );
+	dao_list_empty = DaoParser_ParseTypeName( "list<any>", ns, NULL );
+	dao_map_empty = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
 #else
 	dao_array_empty = DaoType_Copy( dao_array_any );
 	dao_list_empty = DaoType_Copy( dao_list_any );
@@ -2156,6 +2142,7 @@ DaoVmSpace* DaoInit()
 	fakeShortType = DaoNameSpace_TypeDefine( ns, "int", "short" );
 	DaoNameSpace_WrapType( vms->nsInternal, dao_FakeList_Typer );
 	DaoNameSpace_WrapType( vms->nsInternal, dao_FakeShoftList_Typer );
+	fakeShortType = DaoNameSpace_TypeDefine( ns, "FakeList<short>", "FakeList<int>" );
 #endif
 
 #ifdef DAO_WITH_NUMARRAY
@@ -2225,7 +2212,7 @@ DaoVmSpace* DaoInit()
 	vms->safeTag = 1;
 	return vms;
 }
-extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout );
+extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls );
 void DaoQuit()
 {
 	/* TypeTest(); */

@@ -68,8 +68,9 @@ struct CDaoModule
 	CDaoModuleInfo     moduleInfo;
 	CDaoNamespace      topLevelScope;
 
-	vector<CDaoUserType*>  usertypes;
-	vector<CDaoFunction*>  callbacks;
+	vector<CDaoUserType*>     usertypes;
+	vector<CDaoFunction*>     callbacks;
+	vector<CDaoUserTypeDef*>  typedefs;
 
 	map<const RecordDecl*,CDaoUserType*>         allUsertypes;
 	map<const NamespaceDecl*,CDaoNamespace*>     allNamespaces;

@@ -175,7 +175,7 @@ void DaoNameSpace_AddValue( DaoNameSpace *self, const char *s, DValue v, const c
 		DaoParser *parser = DaoParser_New();
 		parser->nameSpace = self;
 		parser->vmSpace = self->vmSpace;
-		abtp = DaoParser_ParseTypeName( t, self, NULL, NULL ); /* XXX warn */
+		abtp = DaoParser_ParseTypeName( t, self, NULL ); /* XXX warn */
 		DaoParser_Delete( parser );
 	}
 	/*
@@ -435,93 +435,134 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 #endif
 	return 1;
 }
+enum { DAO_DT_FAILED, DAO_DT_SCOPED, DAO_DT_UNSCOPED };
 
+void DaoParser_Error( DaoParser *self, int code, DString *ext );
+void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line );
+void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
+int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
+int DaoParser_ParseScopedName( DaoParser *self, DValue *scope, DValue *value, int start, int local );
+DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
+DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types );
+
+int DaoNameSpace_DefineType( DaoNameSpace *self, const char *name, DaoType *type )
+{
+	DaoToken **tokens;
+	DaoCDataCore *hostCore;
+	DaoParser *parser = DaoParser_New();
+	DValue scope = daoNullValue, value = daoNullValue;
+	int i, k, n, ret = DAO_DT_UNSCOPED;
+
+	parser->vmSpace = self->vmSpace;
+	parser->nameSpace = self;
+	parser->routine = self->routEvalConst;
+	if( ! DaoToken_Tokenize( parser->tokens, name, 0, 0, 0 ) ) goto Error;
+	if( parser->tokens->size == 0 ) goto Error;
+	tokens = parser->tokens->items.pToken;
+	n = parser->tokens->size - 1;
+	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0, 0 )) <0 ) goto Error;
+	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
+	if( k == n ){
+		DaoTypeCore *core;
+		DString *name = tokens[k]->string;
+		DValue vtype = daoNullType;
+		if( value.t ){
+			DaoParser_Error2( parser, DAO_SYMBOL_WAS_DEFINED, k, k, 0 );
+			goto Error;
+		}
+		DString_Assign( type->name, name );
+		switch( scope.t ){
+		case DAO_CTYPE :
+			DaoNameSpace_SetupValues( self, scope.v.cdata->typer );
+			core = scope.v.cdata->typer->priv;
+			if( core->values == NULL ) core->values = DHash_New( D_STRING, D_VALUE );
+			vtype.v.type = type;
+			DMap_Insert( core->values, name, & vtype );
+			break;
+		case DAO_CLASS :
+			DaoClass_AddType( scope.v.klass, name, type );
+			break;
+		case DAO_NAMESPACE :
+			DaoNameSpace_AddType( scope.v.ns, name, type );
+			DaoNameSpace_AddTypeConstant( scope.v.ns, name, type );
+			break;
+		default : DaoParser_Error2( parser, DAO_UNDEFINED_SCOPE_NAME, k-2, k-2, 0 ); goto Error;
+		}
+		return DAO_DT_SCOPED;
+	}
+	ret = k ? DAO_DT_SCOPED : DAO_DT_UNSCOPED;
+	if( value.t != DAO_CTYPE || tokens[k+1]->type != DTOK_LT ) goto Error;
+	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != n ) goto Error;
+	type->nested = DArray_New(0);
+	DaoParser_ParseTypeItems( parser, k+2, n-1, type->nested );
+	if( parser->errors->size ) goto Error;
+	hostCore = (DaoCDataCore*) value.v.cdata->typer->priv;
+	if( hostCore->instanceCData == NULL ) hostCore->instanceCData = DMap_New(D_ARRAY,0);
+	DMap_Insert( hostCore->instanceCData, type->nested, type->aux.v.cdata );
+Finalize:
+	DaoParser_Delete( parser );
+	return ret;
+Error:
+	DaoParser_Error2( parser, DAO_INVALID_TYPE_FORM, 0, parser->tokens->size-1, 0 );
+	DaoParser_PrintError( parser, 0, 0, NULL );
+	DaoParser_Delete( parser );
+	return DAO_DT_FAILED;
+}
 DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type )
 {
 	DaoNameSpace *ns;
-	DaoType *tp;
-	DString *name = DString_New(1);
+	DaoType *tp, *tp2;
+	DString name = DString_WrapMBS( old );
+	DString alias = DString_WrapMBS( type );
 	DNode *node;
 	int i;
-	DString_SetMBS( name, old );
-	tp = DaoNameSpace_FindType( self, name );
-	if( tp == NULL && (i=DString_FindMBS( name, "::", 0 )) != MAXSIZE ){
-		DString_SetDataMBS( name, old, i );
-		ns = DaoNameSpace_FindNameSpace( self, name );
-		if( ns ){
-			DString_SetMBS( name, old + i + 2 );
-			tp = DaoNameSpace_FindType( ns, name );
-		}
-	}
-	if( tp == NULL ) tp = DaoParser_ParseTypeName( old, self, 0, 0 );
+	/* printf( "DaoNameSpace_TypeDefine: %s %s\n", old, type ); */
+	tp = DaoNameSpace_FindType( self, & name );
+	if( tp == NULL ) tp = DaoParser_ParseTypeName( old, self, NULL );
+	tp2 = DaoNameSpace_FindType( self, & alias );
+	if( tp2 == NULL ) tp2 = DaoParser_ParseTypeName( type, self, NULL );
+	if( tp == tp2 ) return tp;
 	/* printf( "ns = %p  tp = %p  name = %s\n", self, tp, type ); */
-	DString_SetMBS( name, type );
-	/* tp2 = DaoNameSpace_FindType( self, name ); */
+	/* tp2 = DaoNameSpace_FindType( self, & name ); */
 	/* Only allow overiding types defined in parent namespaces: */
-	node = MAP_Find( self->abstypes, name );
-	DString_Delete( name );
+	node = MAP_Find( self->abstypes, & alias );
 	if( tp == NULL || node != NULL ) return NULL;
 	tp = DaoType_Copy( tp );
 	DString_SetMBS( tp->name, type );
-	DaoNameSpace_AddType( self, tp->name, tp );
-	DaoNameSpace_AddTypeConstant( self, tp->name, tp );
-	return tp;
+	i = DaoNameSpace_DefineType( self, type, tp );
+	if( i == DAO_DT_UNSCOPED ){
+		DaoNameSpace_AddType( self, tp->name, tp );
+		DaoNameSpace_AddTypeConstant( self, tp->name, tp );
+	}
+	return i != DAO_DT_FAILED ? tp : NULL;
 }
 DaoCDataCore* DaoCDataCore_New();
 DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer );
 void DaoTypeCData_SetMethods( DaoTypeBase *self );
-
-int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
-void DaoParser_Error( DaoParser *self, int code, DString *ext );
-void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
-DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
-DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types );
 
 static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, DaoParser *parser )
 {
 	DaoParser *parser2 = parser;
 	DaoType *ctype_type, *cdata_type;
 	DaoCDataCore *hostCore;
+	int ret;
 
 	if( typer->priv ) return typer->priv->abtype;
 
 	ctype_type = DaoCData_WrapType( self, typer );
 	cdata_type = typer->priv->abtype;
 	typer->priv->attribs |= DAO_TYPER_PRIV_FREE;
-	DaoNameSpace_AddConst( self, ctype_type->name, ctype_type->aux, DAO_DATA_PUBLIC );
-	DaoNameSpace_AddType( self, cdata_type->name, cdata_type );
-
-	//printf( "type wrapping: %s\n", typer->name );
-	if( strchr( typer->name, '<' ) != NULL ){
-		DaoToken **tokens;
-		DValue value;
-		int i, n;
-		if( parser == NULL ) parser = DaoParser_New();
-		parser->vmSpace = self->vmSpace;
-		parser->nameSpace = self;
-		parser->routine = self->routEvalConst;
-		if( ! DaoToken_Tokenize( parser->tokens, typer->name, 0, 0, 0 ) ) goto Error;
-		tokens = parser->tokens->items.pToken;
-		n = parser->tokens->size - 1;
-		if( tokens[0]->type != DTOK_IDENTIFIER || tokens[1]->type != DTOK_LT ) goto Error;
-		if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, 0, -1 ) != n ) goto Error;
-		i = DaoNameSpace_FindConst( self, tokens[0]->string );
-		value = DaoNameSpace_GetConst( self, i ); 
-		if( value.t != DAO_CTYPE ) goto Error;
-		hostCore = (DaoCDataCore*) value.v.cdata->typer->priv;
-		if( hostCore->instanceCData == NULL ) hostCore->instanceCData = DMap_New(D_ARRAY,0);
-		ctype_type->nested = DArray_New(0);
-		DaoParser_ParseTypeItems( parser, 2, n-1, ctype_type->nested );
-		if( parser->errors->size ) goto Error;
-		DMap_Insert( hostCore->instanceCData, ctype_type->nested, ctype_type->aux.v.cdata );
-		if( parser != parser2 ) DaoParser_Delete( parser );
+	ret = DaoNameSpace_DefineType( self, typer->name, ctype_type );
+	if( ret == DAO_DT_FAILED ){
+		printf( "type wrapping failed: %s\n", typer->name );
+		return NULL;
 	}
+	if( ret == DAO_DT_UNSCOPED ){
+		DaoNameSpace_AddConst( self, ctype_type->name, ctype_type->aux, DAO_DATA_PUBLIC );
+		DaoNameSpace_AddType( self, cdata_type->name, cdata_type );
+	}
+	//printf( "type wrapping: %s\n", typer->name );
 	return cdata_type;
-Error:
-	printf( "type wrapping failed: %s\n", typer->name );
-	DaoParser_PrintError( parser, 0, 0, NULL );
-	if( parser != parser2 ) DaoParser_Delete( parser );
-	return NULL;
 }
 DaoType* DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer )
 {

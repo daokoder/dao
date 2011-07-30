@@ -126,6 +126,6 @@ int DaoParser_ParseParams( DaoParser *self, int defkey );
 int DaoParser_ParseScript( DaoParser *self );
 int DaoParser_ParseRoutine( DaoParser *self );
 
-DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls, DaoRoutine *rout );
+DaoType* DaoParser_ParseTypeName( const char *type, DaoNameSpace *ns, DaoClass *cls );
 
 #endif

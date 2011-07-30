@@ -830,10 +830,6 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 			tpl.SetupMBString();
 			tpl.parset = parset_mbs;
 			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "\'\'";
-			if( hostype && hostype->name == "string" ){
-				kvmap[ "dao" ] = "dao::";
-				daotype = "dao::string";
-			}
 			break;
 		case BuiltinType::WChar_U :
 		case BuiltinType::WChar_S :
@@ -844,10 +840,6 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 			tpl.SetupWCString();
 			tpl.parset = parset_wcs;
 			if( daodefault == "0" || daodefault == "NULL" ) daodefault = "\"\"";
-			if( hostype && hostype->name == "string" ){
-				kvmap[ "dao" ] = "dao::";
-				daotype = "dao::string";
-			}
 			break;
 		case BuiltinType::UShort :
 		case BuiltinType::Bool :
@@ -1172,10 +1164,6 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, int daopar_i
 			break;
 		default : break;
 		}
-		if( hostype && hostype->name == "array" ){
-			kvmap[ "dao" ] = "dao::";
-			daotype = "dao::" + daotype;
-		}
 	}else{
 		return 1;
 	}
@@ -1286,10 +1274,6 @@ int CDaoVariable::GenerateForArray( QualType elemtype, string size, string size2
 			tpl.set_item = name == "this" ? setitem_double2 : setitem_double;
 			break;
 		default : break;
-		}
-		if( hostype && hostype->name == "array" ){
-			kvmap[ "dao" ] = "dao::";
-			daotype = "dao::" + daotype;
 		}
 	}else{
 		return 1;
@@ -1403,10 +1387,6 @@ int CDaoVariable::GenerateForArray2( QualType elemtype, string size, string size
 			tpl.set_item = name == "this" ? setitem_double2 : setitem_double;
 			break;
 		default : break;
-		}
-		if( hostype && hostype->name == "array" ){
-			kvmap[ "dao" ] = "dao::";
-			daotype = "dao::" + daotype;
 		}
 	}else{
 		return 1;

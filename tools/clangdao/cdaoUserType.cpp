@@ -623,6 +623,13 @@ extern string normalize_type_name( const string & name );
 extern string cdao_make_dao_template_type_name( const string & name );
 extern string cdao_remove_type_scopes( const string & qname );
 
+string CDaoUserTypeDef::MakeOnLoadCode()
+{
+	string name = ", \"" + cdao_make_dao_template_type_name( this->name );
+	string alias = "\", \"" + cdao_make_dao_template_type_name( this->alias );
+	return "\tDaoNameSpace_TypeDefine( " + nspace + name + alias + "\" );\n";
+}
+
 CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
 	module = mod;
@@ -650,7 +657,6 @@ void CDaoUserType::SetDeclaration( RecordDecl *decl )
 void CDaoUserType::SetNamespace( const CDaoNamespace *ns )
 {
 	nspace = ns->varname;
-	//names.push_back( CDaoWrapName( ns->varname ) );
 }
 
 bool CDaoUserType::IsFromMainModule()
@@ -677,13 +683,17 @@ void CDaoUserType::Clear()
 	typer_codes.clear();
 	pureVirtuals.clear();
 }
+string CDaoUserType::MakeOnLoadCode()
+{
+	return "\tDaoNameSpace_WrapType( " + nspace + ", dao_" + idname + "_Typer );\n";
+}
 int CDaoUserType::GenerateSimpleTyper()
 {
 	map<string,string> kvmap;
 	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
 	kvmap[ "typer" ] = idname;
 	kvmap[ "name2" ] = name2;
-	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( name2 );
+	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( qname );
 	typer_codes = cdao_string_fill( usertype_code_none, kvmap );
 	wrapType = CDAO_WRAP_TYPE_OPAQUE;
 	return 0;
@@ -733,7 +743,7 @@ void CDaoUserType::SetupDefaultMapping( map<string,string> & kvmap )
 	kvmap[ "daoname" ] = name;
 	kvmap[ "name" ] = name;
 	kvmap[ "name2" ] = name2;
-	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( name2 );
+	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( qname );
 
 	kvmap[ "retype" ] = "=>" + name;
 	kvmap[ "overload" ] = "";
@@ -940,7 +950,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	}
 	for(dit=decl->decls_begin(),dend=decl->decls_end(); dit!=dend; dit++){
 		TypedefDecl *TDD = dyn_cast<TypedefDecl>( *dit );
-		if( TDD == NULL ) continue;
+		if( TDD == NULL || dit->getAccess() != AS_public ) continue;
+		//module->HandleTypeDefine( TDD );
 		QualType qtype = TDD->getUnderlyingType();
 		//outs() << "---" << TDD->getQualifiedNameAsString() << " " << qtype.getAsString() << "\n";
 	}

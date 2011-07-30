@@ -23,10 +23,6 @@ enum CDaoUserTypeWrapType
 	CDAO_WRAP_TYPE_PROXY    // wrap through a proxy struct or class;
 };
 
-struct CDaoUserTypeAlias
-{
-};
-
 struct CDaoWrapName
 {
 	string  nspace;
@@ -36,6 +32,15 @@ struct CDaoWrapName
 		nspace = ns;
 		name = s;
 	}
+};
+
+struct CDaoUserTypeDef
+{
+	string  nspace;
+	string  name;
+	string  alias;
+
+	string MakeOnLoadCode();
 };
 
 struct CDaoUserType
@@ -74,13 +79,15 @@ struct CDaoUserType
 	CDaoUserType( CDaoModule *mod = NULL, const RecordDecl *decl = NULL );
 
 	void SetDeclaration( RecordDecl *decl );
-	void SetNamespace( const CDaoNamespace *ns );
+	void SetNamespace( const CDaoNamespace *NS );
 
 	string GetName()const{ return decl ? decl->getNameAsString() : ""; }
 	string GetQName()const{ return decl ? decl->getQualifiedNameAsString() : ""; }
 	string GetIdName()const{ return cdao_qname_to_idname( GetQName() ); }
 	string GetInputFile()const;
 
+	void AddRequiredType( CDaoUserType *UT ){ priorUserTypes.push_back( UT ); }
+	string MakeOnLoadCode();
 	void MakeTyperCodes();
 
 	bool IsFromMainModule();

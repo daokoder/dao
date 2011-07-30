@@ -578,7 +578,7 @@ int CDaoFunction::Generate()
 			host_idname = hostype->idname;
 			if( ctordecl ){
 				cxxName = hostype->name2;
-				daoName = hostype->name2;
+				daoName = cdao_make_dao_template_type_name( hostype->name2 );
 			}
 		}
 	}

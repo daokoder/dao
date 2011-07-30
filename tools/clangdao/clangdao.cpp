@@ -148,6 +148,7 @@ string normalize_type_name( const string & name0 )
 	remove_type_prefix( name, "class" );
 	remove_type_prefix( name, "struct" );
 	remove_type_prefix( name, "enum" );
+	remove_type_prefix( name, "typename" );
 	return name;
 }
 static bool is_invalid_dao_type_name( const string & name )
