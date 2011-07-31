@@ -1278,14 +1278,18 @@ static DaoBase* DaoParse_InstantiateType( DaoParser *self, DaoBase *tpl, int sta
 	DaoClass *klass = (DaoClass*) tpl;
 	DaoCData *cdata = (DaoCData*) tpl;
 	DaoBase *func = NULL;
-	DaoType *type;
 	DaoBase *inst = NULL;
 	DArray *types = DArray_New(0);
-	int i = start;
+	int i;
 	if( tpl == NULL || (tpl->type != DAO_CLASS && tpl->type != DAO_CTYPE) ) goto FailedInstantiation;
 	if( tpl->type == DAO_CLASS && klass->typeHolders == NULL ) goto FailedInstantiation;
 	DaoParser_ParseTypeItems( self, start, end, types );
 	if( self->errors->size ) goto FailedInstantiation;
+	for(i=0; i<types->size; i++){
+		DaoTypeBase *typer = types->items.pType[i]->typer;
+		/* Use C type's canonical type: */
+		if( typer && typer->priv->abtype ) types->items.pType[i] = typer->priv->abtype;
+	}
 	if( tpl->type == DAO_CTYPE ){
 		DaoCDataCore *hostCore = (DaoCDataCore*) cdata->typer->priv;
 		if( hostCore->instanceCData ){
@@ -1297,8 +1301,7 @@ static DaoBase* DaoParse_InstantiateType( DaoParser *self, DaoBase *tpl, int sta
 				goto DoneInstantiation;
 			}
 		}
-		func = DaoFindFunction2( cdata->typer, "<>" );
-		if( func == NULL ) goto FailedInstantiation;
+		goto FailedInstantiation;
 	}
 	if( tpl->type == DAO_CLASS ){
 		klass = DaoClass_Instantiate( klass, types );

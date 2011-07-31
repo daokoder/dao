@@ -623,12 +623,6 @@ extern string normalize_type_name( const string & name );
 extern string cdao_make_dao_template_type_name( const string & name );
 extern string cdao_remove_type_scopes( const string & qname );
 
-string CDaoUserTypeDef::MakeOnLoadCode()
-{
-	string name = ", \"" + cdao_make_dao_template_type_name( this->name );
-	string alias = "\", \"" + cdao_make_dao_template_type_name( this->alias );
-	return "\tDaoNameSpace_TypeDefine( " + nspace + name + alias + "\" );\n";
-}
 
 CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
@@ -656,7 +650,6 @@ void CDaoUserType::SetDeclaration( RecordDecl *decl )
 }
 void CDaoUserType::SetNamespace( const CDaoNamespace *ns )
 {
-	nspace = ns->varname;
 }
 
 bool CDaoUserType::IsFromMainModule()
@@ -682,10 +675,6 @@ void CDaoUserType::Clear()
 	cxxWrapperVirt.clear();
 	typer_codes.clear();
 	pureVirtuals.clear();
-}
-string CDaoUserType::MakeOnLoadCode()
-{
-	return "\tDaoNameSpace_WrapType( " + nspace + ", dao_" + idname + "_Typer );\n";
 }
 int CDaoUserType::GenerateSimpleTyper()
 {

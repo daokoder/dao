@@ -495,10 +495,13 @@ int DaoNameSpace_DefineType( DaoNameSpace *self, const char *name, DaoType *type
 	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != n ) goto Error;
 	type->nested = DArray_New(0);
 	DaoParser_ParseTypeItems( parser, k+2, n-1, type->nested );
+	GC_IncRCs( type->nested );
 	if( parser->errors->size ) goto Error;
 	hostCore = (DaoCDataCore*) value.v.cdata->typer->priv;
 	if( hostCore->instanceCData == NULL ) hostCore->instanceCData = DMap_New(D_ARRAY,0);
 	DMap_Insert( hostCore->instanceCData, type->nested, type->aux.v.cdata );
+	DString_Clear( type->name );
+	while( k < parser->tokens->size ) DString_Append( type->name, tokens[k++]->string );
 Finalize:
 	DaoParser_Delete( parser );
 	return ret;
@@ -553,6 +556,7 @@ static DaoType* DaoNameSpace_WrapType2( DaoNameSpace *self, DaoTypeBase *typer, 
 	cdata_type = typer->priv->abtype;
 	typer->priv->attribs |= DAO_TYPER_PRIV_FREE;
 	ret = DaoNameSpace_DefineType( self, typer->name, ctype_type );
+	DString_Assign( cdata_type->name, ctype_type->name );
 	if( ret == DAO_DT_FAILED ){
 		printf( "type wrapping failed: %s\n", typer->name );
 		return NULL;

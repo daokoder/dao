@@ -23,24 +23,11 @@ enum CDaoUserTypeWrapType
 	CDAO_WRAP_TYPE_PROXY    // wrap through a proxy struct or class;
 };
 
-struct CDaoWrapName
-{
-	string  nspace;
-	string  name;
-
-	CDaoWrapName( const string & ns = "", const string & s = "" ){
-		nspace = ns;
-		name = s;
-	}
-};
-
 struct CDaoUserTypeDef
 {
 	string  nspace;
 	string  name;
 	string  alias;
-
-	string MakeOnLoadCode();
 };
 
 struct CDaoUserType
@@ -48,9 +35,6 @@ struct CDaoUserType
 	CDaoModule     *module;
 	RecordDecl     *decl;
 	SourceLocation  location;
-
-	string  nspace;
-	vector<CDaoWrapName>  names;
 
 	short  wrapType;
 	short  wrapCount;
@@ -87,7 +71,6 @@ struct CDaoUserType
 	string GetInputFile()const;
 
 	void AddRequiredType( CDaoUserType *UT ){ priorUserTypes.push_back( UT ); }
-	string MakeOnLoadCode();
 	void MakeTyperCodes();
 
 	bool IsFromMainModule();

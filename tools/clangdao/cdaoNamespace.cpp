@@ -66,7 +66,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 
 	header = module->MakeHeaderCodes( usertypes );
 	source = module->MakeSourceCodes( functions, this );
-	source += module->MakeSourceCodes( usertypes, this );
+	//source += module->MakeSourceCodes( usertypes, this );
 	source2 = module->MakeSource2Codes( usertypes );
 	source3 = module->MakeSource3Codes( usertypes );
 
@@ -108,7 +108,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		onload2 += namespaces[i]->onload2;
 		onload3 += namespaces[i]->onload3;
 	}
-	onload2 += module->MakeOnLoadCodes( this );
+	//onload2 += module->MakeOnLoadCodes( this );
 
 #if 0
 	string code = "\tDaoNameSpace_TypeDefine( " + varname + ", \"";

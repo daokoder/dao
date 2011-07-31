@@ -4227,7 +4227,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		}
 	}else if( caller.t == DAO_CTYPE ){
 		DaoTypeBase *typer = caller.v.cdata->typer;
-		rout = (DRoutine*) DaoFindFunction2( typer, typer->name );
+		rout = (DRoutine*) DaoFindFunction( typer, typer->priv->abtype->name );
 		if( rout == NULL ){
 			DaoContext_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;

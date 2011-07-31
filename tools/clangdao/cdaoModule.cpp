@@ -182,8 +182,22 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 			DeclContext *DC = SD->getParent();
 			TypeSourceInfo *TSI = SD->getTypeAsWritten();
 			string writtenName = qualtype.getAsString();
-			string canoname = canotype.getAsString();
 			if( TSI ) writtenName = TSI->getType().getAsString();
+
+			string canoname = canotype.getAsString();
+			const TemplateSpecializationType *TST;
+			if( (TST = dyn_cast<TemplateSpecializationType>( qualtype.getTypePtr() ) ) ){
+				const TemplateArgumentList & args = SD->getTemplateArgs();
+				canoname = RD->getQualifiedNameAsString() + "<";
+				for(int i=0, n = TST->getNumArgs(); i<n; i++){
+					if( i ) canoname += ',';
+					canoname += args[i].getAsType().getAsString();
+				}
+				if( canoname[canoname.size()-1] == '>' ) canoname += ' ';
+				canoname += ">";
+				//outs() << canotype.getAsString() << "  " << canoname << "================\n";
+			}
+
 			writtenName = normalize_type_name( writtenName );
 			canoname = normalize_type_name( canoname );
 
@@ -206,21 +220,9 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 				nsname = topLevelScope.varname;
 				//outs() << nsname << " " << qname << " " << canotype.getAsString() << "\n";
 			}
-			if( nsname2.size() ) nsname2 += "::";
-			if( writtenName != qname ){
-				string qname2 = qname;
-				if( qname2.find( nsname2 ) == 0 ) qname2.erase( 0, nsname2.size() );
-				//outs() << qname2 << "  " << writtenName << " ------------------\n";
-				writtenName = cdao_remove_type_scopes( writtenName );
-				UT->names.push_back( CDaoWrapName( nsname, nsname2 + writtenName ) );
-				//outs() << qname2 << "  " << writtenName << " ------------------\n";
-			}
-			//if( canoname != qname ){
-			//	canoname = cdao_remove_type_scopes( canoname );
-			//	UT->names.push_back( CDaoWrapName( nsname, canoname ) );
-			//}
+
 			UT->AddRequiredType( UT2 );
-			const TemplateArgumentList & args = SD->getTemplateInstantiationArgs();
+			const TemplateArgumentList & args = SD->getTemplateArgs();
 			for(int i=0, n = args.size(); i<n; i++){
 				const Type *type = args[i].getAsType().getTypePtr();
 				const RecordType *RT = dyn_cast<RecordType>( type );
@@ -232,7 +234,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 	}
 	CDaoUserType *UT = GetUserType( RD );
 	if( UT == NULL ) UT = NewUserType( RD );
-	if( TD ){
+	if( TD && UT->isRedundant == false ){
 		if( cxxTypedefs.find( TD ) != cxxTypedefs.end() ) return UT;
 
 		CDaoUserTypeDef *UTD = new CDaoUserTypeDef();
@@ -243,9 +245,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		string tdname = TD->getNameAsString();
 		if( NamespaceDecl *ND = dyn_cast<NamespaceDecl>( DC ) ){
 			CDaoNamespace *NS = GetNamespace2( ND );
-			string nsname = ND->getQualifiedNameAsString();
-			// use the type name from the typedef declaration:
-			UT->names.push_back( CDaoWrapName( NS->varname, nsname + "::" + tdname ) );
+			tdname = ND->getQualifiedNameAsString() + "::" + tdname;
 			UTD->nspace = NS->varname;
 		}else if( RecordDecl *RD = dyn_cast<RecordDecl>( DC ) ){
 			CDaoUserType *host = GetUserType( RD );
@@ -255,14 +255,11 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 			if( NamespaceDecl *ND = dyn_cast<NamespaceDecl>( DC ) ){
 				// specialization of scoped template class:
 				CDaoNamespace *NS = GetNamespace2( ND );
-				UT->names.push_back( CDaoWrapName( NS->varname, tdname ) );
 				UTD->nspace = NS->varname;
 			}else{ // unscoped canonical type (unscoped template class):
-				UT->names.push_back( CDaoWrapName( topLevelScope.varname, tdname ) );
 				UTD->nspace = topLevelScope.varname;
 			}
 		}else{ // unscoped typedef
-			UT->names.push_back( CDaoWrapName( topLevelScope.varname, tdname ) );
 			UTD->nspace = topLevelScope.varname;
 		}
 		UTD->name = UT->qname;
@@ -474,24 +471,31 @@ void CDaoModule::HandleNamespace( NamespaceDecl *nsdecl )
 	CDaoNamespace *ns = AddNamespace( nsdecl );
 	if( ns ) topLevelScope.AddNamespace( ns );
 }
-void CDaoModule::HandleTypeDefine( TypedefDecl *decl )
+void CDaoModule::HandleTypeDefine( TypedefDecl *TD )
 {
-	string name = decl->getQualifiedNameAsString();
-	QualType qtype = decl->getUnderlyingType();
+	if( cxxTypedefs.find( TD ) != cxxTypedefs.end() ) return;
+
+	string name = TD->getQualifiedNameAsString();
+	QualType qtype = TD->getUnderlyingType();
 	QualType qtype2 = qtype.IgnoreParens();
+	// class template specialization in typedef is an ElaboratedType!
+	if( const ElaboratedType *ET = dyn_cast<ElaboratedType>( qtype2.getTypePtr() ) )
+		qtype2 = ET->desugar();
 	while( qtype2->isPointerType() ) qtype2 = qtype2->getPointeeType();
-	//outs() << "typedef: " << decl->getQualifiedNameAsString() << " " << qtype2.getAsString() << "\n";
-	if( HandleUserType( qtype2, decl->getLocation(), decl ) ) return;
+	//outs() << "typedef: " << TD->getQualifiedNameAsString() << " " << qtype2.getAsString() << "\n";
+
+	if( HandleUserType( qtype2, TD->getLocation(), TD ) ) return;
+
 	qtype2 = qtype2.IgnoreParens();
 	if( const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( qtype2.getTypePtr() ) ){
 		if( allCallbacks.find( ft ) == allCallbacks.end() ){
 			allCallbacks[ ft ] = new CDaoFunction( this );
 
 			CDaoFunction *func = allCallbacks[ ft ];
-			string qname = decl->getNameAsString();
+			string qname = TD->getNameAsString();
 			func->SetCallback( (FunctionProtoType*)ft, NULL, qname );
 			func->cxxName = cdao_qname_to_idname( qname );
-			func->location = decl->getLocation();
+			func->location = TD->getLocation();
 			if( func->retype.callback == "" ){
 				errs() << "Warning: callback \"" << qname << "\" is not supported!\n";
 				func->excluded = true;
@@ -564,8 +568,6 @@ string CDaoModule::MakeHeaderCodes( vector<CDaoUserType*> & usertypes )
 }
 string CDaoModule::MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNamespace *ns )
 {
-	return "";
-
 	int i, n;
 	string codes, idname;
 	map<string,string> kvmap;
@@ -613,8 +615,6 @@ string CDaoModule::MakeSource3Codes( vector<CDaoUserType*> & usertypes )
 }
 string CDaoModule::MakeOnLoadCodes( CDaoNamespace *ns )
 {
-	return "";
-
 	string codes, tname, nsname = "ns";
 	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	codes += "\tDaoNameSpace_WrapTypes( " + nsname + ", dao_" + tname + "_Typers );\n";
@@ -730,6 +730,20 @@ int CDaoModule::Generate( const string & output )
 	for(i=0, n=callbacks.size(); i<n; i++) retcode |= callbacks[i]->Generate();
 	topLevelScope.Sort( sorted, check );
 
+	topLevelScope.source += MakeSourceCodes( sorted, & topLevelScope );
+	topLevelScope.onload2 += MakeOnLoadCodes( & topLevelScope );
+
+	if( typedefs.size() ){
+		string source = "static const char *dao__Aliases[] = \n{\n";
+		for(i=0, n=typedefs.size(); i<n; i++){
+			CDaoUserTypeDef *td = typedefs[i];
+			source += "\t\"" + cdao_make_dao_template_type_name( td->name );
+			source += "\", \"" + cdao_make_dao_template_type_name( td->alias ) + "\",\n";
+		}
+		topLevelScope.source += source + "\tNULL\n};\n";
+		topLevelScope.onload2 += "\tDaoNameSpace_TypeDefines( ns, dao__Aliases );\n";
+	}
+
 	map<string,string> kvmap;
 	kvmap[ "module" ] = moduleInfo.name;
 
@@ -772,28 +786,6 @@ int CDaoModule::Generate( const string & output )
 #endif
 
 	fout_source << topLevelScope.onload;
-
-	// type wrapping and defining need to be sorted:
-	for(i=0, n=sorted.size(); i<n; i++){
-		CDaoUserType *ut = sorted[i];
-		if( ut->isRedundant || ut->IsFromRequiredModules() ) continue;
-		kvmap[ "ns" ] = ut->nspace;
-		kvmap[ "idname" ] = ut->idname;
-		fout_source << cdao_string_fill( tpl_wraptype, kvmap );
-	}
-	for(i=0, n=sorted.size(); i<n; i++){
-		CDaoUserType *ut = sorted[i];
-		if( ut->isRedundant || ut->IsFromRequiredModules() ) continue;
-		for(j=0, m=ut->names.size(); j<m; j++){
-			CDaoWrapName & wn = ut->names[j];
-			kvmap[ "ns" ] = wn.nspace;
-			kvmap[ "old" ] = cdao_make_dao_template_type_name( ut->qname );
-			kvmap[ "new" ] = cdao_make_dao_template_type_name( wn.name );
-			fout_source << cdao_string_fill( tpl_typedef, kvmap );
-		}
-	}
-#if 0
-#endif
 	fout_source << topLevelScope.onload2;
 	fout_source << topLevelScope.onload3;
 
