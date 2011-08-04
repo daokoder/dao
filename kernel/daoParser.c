@@ -1325,7 +1325,6 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DValue *scope, DValue *value
 	DValue res;
 	DaoToken **tokens = self->tokens->items.pToken;
 	int i, n = self->tokens->size;
-	if( scope ) *scope = *value;
 	if( (start + 1) >= self->tokens->size ) return start - 1;
 	if( tokens[start]->type == DTOK_LT ){
 		i = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, n );
@@ -1342,6 +1341,7 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DValue *scope, DValue *value
 	if( tokens[start]->type == DTOK_COLON2 ){
 		DString *name = tokens[ start+1 ]->string;
 		if( tokens[ start+1 ]->type != DTOK_IDENTIFIER ) return start - 1;
+		if( scope ) *scope = *value;
 		switch( value->t ){
 		case DAO_NAMESPACE :
 			i = DaoNameSpace_FindConst( value->v.ns, name );
@@ -2683,10 +2683,10 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		newparser = NULL;
 	}
 	if( newparser ) DaoParser_Delete( newparser );
-	if( tmpRoutine->refCount == 0 ) DaoRoutine_Delete( tmpRoutine );
+	if( tmpRoutine && tmpRoutine->refCount == 0 ) DaoRoutine_Delete( tmpRoutine );
 	return right+1;
 InvalidDefinition:
-	if( tmpRoutine->refCount == 0 ) DaoRoutine_Delete( tmpRoutine );
+	if( tmpRoutine && tmpRoutine->refCount == 0 ) DaoRoutine_Delete( tmpRoutine );
 	DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
 	return -1;
 }
@@ -5848,8 +5848,7 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 			result.last = result.update = self->vmcLast;
 			return result;
 		}
-		DArray_Erase( self->errors, count, self->errors->size - count );
-		self->error = error;
+		if( self->errors->size > count ) goto ParsingError;
 	}
 	self->curToken = start + 1;
 	if( rb >=0 && comma >= 0 && comma < rb ){
@@ -5864,6 +5863,7 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 	self->curToken += 1;
 	return result;
 ParsingError:
+	self->curToken = start;
 	DaoParser_Error3( self, DAO_INVALID_EXPRESSION, start );
 	result.reg = -1;
 	return result;
@@ -6617,7 +6617,10 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 		LHS = DaoParser_ParseUnary( self, stop );
 	}
 	if( LHS.reg >= 0 ) LHS = DaoParser_ParseOperator( self, LHS, 0, stop, warn );
-	if( LHS.reg < 0 ) DaoParser_Error3( self, DAO_INVALID_EXPRESSION, start );
+	if( LHS.reg < 0 ){
+		self->curToken = start;
+		DaoParser_Error3( self, DAO_INVALID_EXPRESSION, start );
+	}
 	return LHS;
 }
 static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop )

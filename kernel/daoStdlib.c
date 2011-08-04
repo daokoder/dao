@@ -1187,7 +1187,7 @@ static void REFL_Isa( DaoContext *ctx, DValue *p[], int N )
 		}else if( strcmp( tname->mbs, "array" ) ==0 ){
 			if( p[0]->t == DAO_ARRAY && p[0]->v.p ) *res = 1;
 		}else{
-			DaoType *tp = DaoParser_ParseTypeName( tname->mbs, ns, 0,0 );
+			DaoType *tp = DaoParser_ParseTypeName( tname->mbs, ns, 0 );
 			if( tp && DaoType_MatchValue( tp, *p[0], NULL ) ) *res = 1;
 		}
 	}else{

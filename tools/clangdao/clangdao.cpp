@@ -203,7 +203,7 @@ const char *const conversions[] =
 {
 	"::", 
 	"<", ">", ",", " ", "[", "]", "(", ")", "*", ".", 
-	"=", "+", "-", "*", "/", "%", "&", "|", "^",
+	"=", "+", "-", "*", "/", "%", "&", "|", "^", "!", "~",
 	NULL
 };
 const char *const conversions2[] =
@@ -251,6 +251,10 @@ static llvm::cl::opt<std::string> output_dir("o", llvm::cl::desc("output directo
 // The follow path is needed for Objective-C:
 // /Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include
 
+const string predefines = 
+"#define DAO_MODULE_NAME( name )\n"
+"#define DAO_PROPERTY_HINT( hints )\n"
+"#define DAO_FUNCTION_HINT( hints )\n";
 
 
 int main(int argc, char *argv[] )
@@ -300,7 +304,7 @@ int main(int argc, char *argv[] )
 	compiler.createSema(false, NULL);
 
 	Preprocessor & pp = compiler.getPreprocessor();
-	//pp.setPredefines( "#define DAO_MODULE_NAME( name )\n" );
+	pp.setPredefines( pp.getPredefines() + "\n" + predefines );
 	pp.addPPCallbacks( new CDaoPPCallbacks( & compiler, & module ) );
 
 	compiler.InitializeSourceManager( main_input_file );

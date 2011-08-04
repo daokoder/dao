@@ -147,6 +147,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 	ClassTemplateSpecializationDecl *SD, *DE;
 	RecordDecl *RD = record->getDecl();
 	if( RD->getDefinition() ) RD = RD->getDefinition();
+	if( RD->getAccess() == AS_protected || RD->getAccess() == AS_private ) return NULL;
 	CDaoUserType *old = GetUserType( RD );
 	//outs()<<">>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
 	if( (SD = dyn_cast<ClassTemplateSpecializationDecl>( RD ) ) ){
@@ -727,10 +728,18 @@ int CDaoModule::Generate( const string & output )
 	int i, j, m, n, retcode = 0;
 
 	topLevelScope.Generate();
+	for(i=0, n=usertypes.size(); i<n; i++) retcode |= usertypes[i]->Generate();
 	for(i=0, n=callbacks.size(); i<n; i++) retcode |= callbacks[i]->Generate();
-	topLevelScope.Sort( sorted, check );
+
+	// Sorting is necessary, because some CDaoUserType can be added during the call
+	// to Generate(), or during handling of template class handling. The dependency
+	// of these CDaoUserType is not reflect in the order they are added:
+	//topLevelScope.Sort( sorted, check );
+	for(i=0, n=usertypes.size(); i<n; i++) topLevelScope.Sort( usertypes[i], sorted, check );
 
 	topLevelScope.source += MakeSourceCodes( sorted, & topLevelScope );
+	topLevelScope.source2 += MakeSource2Codes( sorted );
+	topLevelScope.source3 += MakeSource3Codes( sorted );
 	topLevelScope.onload2 += MakeOnLoadCodes( & topLevelScope );
 
 	if( typedefs.size() ){

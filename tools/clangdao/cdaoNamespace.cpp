@@ -35,8 +35,7 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 			functions.back()->Generate();
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
 			QualType qtype( record->getTypeForDecl(), 0 );
-			usertypes.push_back( module->HandleUserType( qtype, record->getLocation() ) );
-			usertypes.back()->Generate();
+			AddUserType( module->HandleUserType( qtype, record->getLocation() ) );
 		}else if (NamespaceDecl *nsdecl = dyn_cast<NamespaceDecl>(*it)) {
 			CDaoNamespace *ns = module->AddNamespace( nsdecl );
 			if( ns ) namespaces.push_back( ns );
@@ -56,6 +55,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		func->index = ++overloads[name];
 		retcode |= func->Generate();
 	}
+#if 0
 	map<string,int> check;
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType *ut = usertypes[i];
@@ -63,12 +63,13 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		if( ut->isRedundant || ut->IsFromRequiredModules() ) continue;
 		check[ut->qname] = 1;
 	}
+#endif
 
 	header = module->MakeHeaderCodes( usertypes );
 	source = module->MakeSourceCodes( functions, this );
 	//source += module->MakeSourceCodes( usertypes, this );
-	source2 = module->MakeSource2Codes( usertypes );
-	source3 = module->MakeSource3Codes( usertypes );
+	//source2 = module->MakeSource2Codes( usertypes );
+	//source3 = module->MakeSource3Codes( usertypes );
 
 	if( nsdecl ){
 		string this_name = varname;
@@ -102,8 +103,8 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		retcode |= namespaces[i]->Generate( this );
 		header += namespaces[i]->header;
 		source += namespaces[i]->source;
-		source2 += namespaces[i]->source2;
-		source3 += namespaces[i]->source3;
+		//source2 += namespaces[i]->source2;
+		//source3 += namespaces[i]->source3;
 		onload += namespaces[i]->onload;
 		onload2 += namespaces[i]->onload2;
 		onload3 += namespaces[i]->onload3;

@@ -1316,7 +1316,7 @@ DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name )
 {
 	DNode *node;
 	int i, n = self->parents->size;
-	if( DString_FindChar( name, '?', 0 ) != MAXSIZE ) return NULL;
+	//20110801 if( DString_FindChar( name, '?', 0 ) != MAXSIZE ) return NULL;
 	node = MAP_Find( self->abstypes, name );
 	if( node ) return node->value.pType;
 	for(i=0; i<n; i++){

@@ -25,6 +25,7 @@ struct CDaoNamespace
 	vector<EnumDecl*>       enums;
 	vector<VarDecl*>        variables;
 	map<string,int>         overloads;
+	map<CDaoUserType*,int>  utcheck;
 
 	string  header;
 	string  source;
@@ -41,6 +42,8 @@ struct CDaoNamespace
 
 	void AddNamespace( CDaoNamespace *one ){ namespaces.push_back( one ); }
 	void AddUserType( CDaoUserType *one ){
+		if( utcheck.find( one ) != utcheck.end() ) return;
+		utcheck[ one ] = 1;
 		usertypes.push_back( one );
 		one->SetNamespace( this );
 		one->Generate();
