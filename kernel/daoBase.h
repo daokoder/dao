@@ -93,10 +93,8 @@ typedef   signed long long llong_t;
 typedef unsigned long long ullong_t;
 #endif
 
-typedef struct DVarray    DVarray;
-typedef struct DVaTuple   DVaTuple;
-typedef struct DPtrTuple  DPtrTuple;
-typedef struct DRoutine        DRoutine;
+typedef struct DTuple     DTuple;
+typedef struct DRoutine   DRoutine;
 
 typedef struct DaoThdMaster  DaoThdMaster;
 typedef struct DaoFunCurry   DaoFunCurry;

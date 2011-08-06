@@ -69,12 +69,12 @@ DaoTypeBase ctxTyper =
 DaoContext* DaoContext_New()
 {
 	DaoContext *self = (DaoContext*) dao_malloc( sizeof( DaoContext ) );
-	DaoBase_Init( self, DAO_CONTEXT );
+	DaoValue_Init( self, DAO_CONTEXT );
 
 	self->codes = NULL;
 	self->vmc = NULL;
 	self->frame = NULL;
-	self->regArray = DVaTuple_New( 0, daoNullValue );
+	self->regArray = DTuple_New( 0, NULL );
 	self->regValues = NULL;
 	self->regModes = NULL;
 
@@ -96,15 +96,14 @@ void DaoContext_Delete( DaoContext *self )
 {
 	if( self->object ) GC_DecRC( self->object );
 	if( self->routine ) GC_DecRC( self->routine );
-	if( self->regValues ) dao_free( self->regValues );
-	DVaTuple_Delete( self->regArray );
+	DTuple_DecRC( self->regArray );
+	DTuple_Delete( self->regArray );
 	dao_free( self );
 }
 static void DaoContext_InitValues( DaoContext *self )
 {
 	DaoType **types;
-	DValue *values;
-	DValue **values2;
+	DaoValue **values;
 	int i, t, N = self->routine->regCount;
 	self->entryCode = 0;
 	self->ctxState = 0;
@@ -113,23 +112,25 @@ static void DaoContext_InitValues( DaoContext *self )
 	self->codes = self->routine->vmCodes->codes;
 	self->regTypes = self->routine->regType->items.pType;
 	self->regModes = (uchar_t*) self->routine->regMode->mbs;
-	if( self->regArray->size < N ){
-		DVaTuple_Resize( self->regArray, N, daoNullValue );
-		self->regValues = dao_realloc( self->regValues, N * sizeof(DValue*) );
-	}
+	if( self->regArray->size < N ) DTuple_Resize( self->regArray, N, NULL );
+	self->regValues = self->regArray->items.pValue;
 	if( self->routine->regType->size ==0 ) return; /* DaoTaskThread_New() */
 	types = self->regTypes;
-	values = self->regArray->data;
-	values2 = self->regValues;
+	values = self->regValues;
 	for(i=0; i<N; i++){
 		DaoType *type = types[i];
-		DValue *value = values + i;
-		values2[i] = value;
-		if( type ){
-			t = type->tid;
-			if( value->t != t ) DValue_Clear( value );
-			if( t <= DAO_DOUBLE ) value->t = t;
+		if( type == NULL ) continue;
+		if( values[i] ){
+			if( values[i]->type == type->tid ) continue;
+			GC_DecRC( values[i] );
+			values[i] = NULL;
 		}
+		switch( type->tid ){
+		case DAO_INTEGER : values[i] = DaoInteger_New(0); break;
+		case DAO_FLOAT   : values[i] = DaoFloat_New(0.0); break;
+		case DAO_DOUBLE  : values[i] = DaoDouble_New(0.0); break;
+		}
+		if( values[i] ) GC_IncRC( values[i] );
 	}
 	self->lastRoutine = self->routine;
 }
@@ -148,17 +149,13 @@ void DaoContext_Init( DaoContext *self, DaoRoutine *routine )
 	if( routine->type != DAO_ROUTINE ) return;
 	DaoContext_InitValues( self );
 }
-int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DValue *pars[], int npar )
+int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DaoValue *pars[], int npar )
 {
-	DValue *selfpar = NULL;
-	DValue value = daoNullObject;
 	DaoObject *othis = self->object;
 	DaoRoutine *rout = self->routine;
-	value.v.object = self->object;
-	if( self->object ) selfpar = & value;
 	if( ! self->routine ) return 0;
-	rout = (DaoRoutine*)DRoutine_Resolve( (DaoBase*)rout, selfpar, pars, npar, 0 );
-	if( rout==NULL || rout->type != DAO_ROUTINE ){
+	rout = (DaoRoutine*) DRoutine_Resolve( (DaoValue*)rout, (DaoValue*)othis, pars, npar, 0 );
+	if( rout == NULL || rout->type != DAO_ROUTINE ){
 		DaoContext_RaiseException( self, DAO_ERROR_PARAM, "" );
 		return 0;
 	}
@@ -203,12 +200,6 @@ void DaoContext_AdjustCodes( DaoContext *self, int options )
 	}
 }
 
-int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase );
-
-void DaoContext_SetResult( DaoContext *self, DaoBase *result )
-{
-	DaoContext_SetData( self, self->vmc->c, result );
-}
 int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 {
 	if( ! DValue_Move( A, C, t ) ){
@@ -227,75 +218,48 @@ int DaoMoveAC( DaoContext *self, DValue A, DValue *C, DaoType *t )
 	}
 	return 1;
 }
-static int DaoAssign( DaoContext *self, DaoBase *A, DValue *C, DaoType *t )
-{
-	DValue val = daoNullValue;
-	val.v.p = A;
-	if( A ) val.t = A->type;
-	return DValue_Move( val, C, t );
-}
 
-int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase )
-{
-	DaoType *abtp = self->regTypes[ reg ];
-	int bl;
-	/*
-	   if( dbase && dbase->type == DAO_ARRAY )
-	   printf("type=%i\treg=%i\tdbase=%p\n", dbase ? dbase->type : 0, reg, dbase);
-
-	   DaoArray *array = NULL;
-	   if( self->regValues[reg].t == DAO_ARRAY ){
-	   printf( "set: %i %p\n", self->regValues[reg].v.array->refCount, self->regValues[reg].v.array );
-	   array = self->regValues[reg].v.array;
-	   }
-	 */
-	bl = DaoAssign( self, dbase, self->regValues[ reg ], abtp );
-	if( bl ==0 ){
-		DaoType *type = DaoNameSpace_GetType( self->nameSpace, dbase );
-		DaoContext_RaiseTypeError( self, type, abtp, "moving" );
-		return 0;
-	}
-	return bl;
-}
-DValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DValue value )
+DaoValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DaoValue *value )
 {
 	DaoType *tp = self->regTypes[reg];
-	int res = DValue_Move( value, self->regValues[ reg ], tp );
+	int res = DaoValue_Move( value, self->regValues + reg, tp );
 	if( res ) return self->regValues[ reg ];
 	return NULL;
 }
-DValue* DaoContext_PutValue( DaoContext *self, DValue value )
+DaoValue* DaoContext_PutValue( DaoContext *self, DaoValue *value )
 {
 	return DaoContext_SetValue( self, self->vmc->c, value );
 }
-int DaoContext_PutReference( DaoContext *self, DValue *refer )
+int DaoContext_PutReference( DaoContext *self, DaoValue *refer )
 {
 	int tm, reg = self->vmc->c;
-	DValue *value = self->regValues[reg];
+	DaoValue **value = & self->regValues[reg];
 	DaoType *tp2, *tp = self->regTypes[reg];
 
 	if( self->regModes[reg] != DAO_REG_REFER ){
 		/* not safe to accept a reference */
-		if( DValue_Move( *refer, value, tp ) ==0 ) goto TypeNotMatching;
+		if( DaoValue_Move( refer, value, tp ) ==0 ) goto TypeNotMatching;
 		return 0;
 	}
 	if( value == refer ) return 1;
 	if( tp == NULL ){
-		self->regValues[reg] = refer;
+		GC_ShiftRC( refer, *value );
+		*value = refer;
 		return 1;
 	}else if( refer->t >= DAO_ARRAY ){
-		if( DValue_Move( *refer, value, tp ) ==0 ) goto TypeNotMatching;
+		if( DaoValue_Move( refer, value, tp ) ==0 ) goto TypeNotMatching;
 		return 0;
 	}
-	tm = DaoType_MatchValue( tp, *refer, NULL );
+	tm = DaoType_MatchValue( tp, refer, NULL );
 	if( tm == DAO_MT_EQ ){
-		self->regValues[reg] = refer;
+		GC_ShiftRC( refer, *value );
+		*value = refer;
 		return 1;
 	}
-	if( DValue_Move( *refer, value, tp ) == 0 ) goto TypeNotMatching;
+	if( DValue_Move( refer, value, tp ) == 0 ) goto TypeNotMatching;
 	return 0;
 TypeNotMatching:
-	tp2 = DaoNameSpace_GetTypeV( self->nameSpace, *refer );
+	tp2 = DaoNameSpace_GetType( self->nameSpace, refer );
 	DaoContext_RaiseTypeError( self, tp2, tp, "referencing" );
 	return 0;
 }
@@ -1842,7 +1806,7 @@ TryAgain:
 		if( DString_EQ( name, self->routine->routName ) ) recursive = 1;
 	}
 	if( bothobj && boolres && recursive ) return 0;
-	if( rc || value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ){
+	if( rc || value.t < DAO_FUNCTREE || value.t > DAO_FUNCTION ){
 		if( bothobj && boolres && overloaded ==0 ) return 0;
 		goto ArithError;
 	}
@@ -3764,14 +3728,14 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DValue 
 	DMap *mapids = DMap_New(0,D_STRING);
 	int parpass[DAO_MAX_PARAM];
 	int i, j, k;
-	if( decoFunc->type == DAO_METAROUTINE ){
+	if( decoFunc->type == DAO_FUNCTREE ){
 		decoFunc = (DaoRoutine*) DRoutine_Resolve( (DaoBase*)decoFunc, NULL, p, n, DVM_CALL );
 		if( decoFunc == NULL || decoFunc->type != DAO_ROUTINE ) return NULL;
 		nested = decoFunc->routType->nested;
 		decotypes = nested->items.pType;
 	}
-	if( self->type == DAO_METAROUTINE ){
-		DaoMetaRoutine *meta = (DaoMetaRoutine*)self;
+	if( self->type == DAO_FUNCTREE ){
+		DaoFunctree *meta = (DaoFunctree*)self;
 		DaoType *ftype = decotypes[0]->aux.v.type;
 		DaoType **pts = ftype->nested->items.pType;
 		int nn = ftype->nested->size;
@@ -3983,7 +3947,7 @@ static void DaoContext_DoNewCall( DaoContext *self, DaoVmCode *vmc,
 {
 	DaoContext *ctx;
 	DaoRoutine *rout;
-	DaoMetaRoutine *routines = klass->classRoutines;
+	DaoFunctree *routines = klass->classRoutines;
 	DaoObject *obj, *othis = NULL, *onew = NULL;
 	DValue tmp = daoNullObject;
 	int i, code = vmc->code;
@@ -4105,8 +4069,8 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 	}
 	params = parbuf;
 	npar = n;
-	if( caller.t == DAO_METAROUTINE ){
-		DaoMetaRoutine *mroutine = caller.v.mroutine;
+	if( caller.t == DAO_FUNCTREE ){
+		DaoFunctree *mroutine = caller.v.mroutine;
 		rout = DRoutine_Resolve( (DaoBase*)mroutine, selfpar, params, npar, DVM_CALL );
 	}else if( caller.t == DAO_ROUTINE || caller.t == DAO_FUNCTION ){
 		rout = (DRoutine*)caller.v.routine;
@@ -4140,7 +4104,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 	DValue *selfpar = & selfpar0;
 	DValue **params = self->regValues + vmc->a + 1;
 	DRoutine *rout, *rout2 = NULL;
-	DaoMetaRoutine *mroutine;
+	DaoFunctree *mroutine;
 	DaoFunction *func;
 	DaoContext *ctx;
 
@@ -4177,7 +4141,7 @@ void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc )
 		if( DaoContext_TrySynCall( self, vmc, ctx ) ) return;
 		DaoContext_TryTailCall( self, vmc, ctx );
 		DaoVmProcess_PushContext( self->process, ctx );
-	}else if( caller.t == DAO_METAROUTINE ){
+	}else if( caller.t == DAO_FUNCTREE ){
 		mroutine = caller.v.mroutine;
 		rout = DRoutine_Resolve( (DaoBase*)mroutine, selfpar, params, npar, codemode );
 		if( rout == NULL ){
@@ -4538,15 +4502,15 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 						id = LOOKUP_ID( node->value.pSize );
 						dest = klass->cstData->data + id;
 					}
-					DaoMetaRoutine_Add( klass->classRoutines, (DRoutine*)newRout );
+					DaoFunctree_Add( klass->classRoutines, (DRoutine*)newRout );
 				}
 			}
 			if( dest->t == DAO_ROUTINE ){
 				DaoRoutine *rout = dest->v.routine;
 				if( rout->routHost != klass->objType ) DValue_Clear( dest );
 			}
-			if( dest->t == DAO_METAROUTINE ){
-				DaoMetaRoutine_Add( dest->v.mroutine, (DRoutine*)newRout );
+			if( dest->t == DAO_FUNCTREE ){
+				DaoFunctree_Add( dest->v.mroutine, (DRoutine*)newRout );
 			}else{
 				DValue_Move( value, klass->cstData->data+id, NULL );
 			}
@@ -4727,7 +4691,7 @@ InvalidField:
 			}
 			DString_Assign( newRout->routName, name->v.s );
 			if( DString_EQ( newRout->routName, klass->className ) ){
-				DaoMetaRoutine_Add( klass->classRoutines, (DRoutine*)newRout );
+				DaoFunctree_Add( klass->classRoutines, (DRoutine*)newRout );
 			}
 
 			node = DMap_Find( proto->lookupTable, name->v.s );
@@ -4739,8 +4703,8 @@ InvalidField:
 			if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
 			id = LOOKUP_ID( node->value.pSize );
 			dest = klass->cstData->data + id;
-			if( dest->t == DAO_METAROUTINE ){
-				DaoMetaRoutine_Add( dest->v.mroutine, (DRoutine*)newRout );
+			if( dest->t == DAO_FUNCTREE ){
+				DaoFunctree_Add( dest->v.mroutine, (DRoutine*)newRout );
 			}
 			continue;
 InvalidMethod:

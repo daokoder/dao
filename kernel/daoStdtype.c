@@ -34,56 +34,147 @@
 #include"daoRegex.h"
 #include"daoSched.h"
 
-DaoBase* DaoFindFunction( DaoTypeBase *typer, DString *name )
+int ObjectProfile[100];
+
+void DaoValue_Init( void *value, char type )
 {
-	DNode *node;
-	if( typer->priv->methods == NULL ){
-		DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
-		if( typer->priv->methods == NULL ) return NULL;
-	}
-	node = DMap_Find( typer->priv->methods, name );
-	if( node ) return node->value.pBase;
-	return NULL;
+	DaoValue *self = (DaoValue*) value;
+	self->type = type;
+	self->subtype = self->konst = self->trait = 0;
+	self->gcState[0] = self->gcState[1]  = 0;
+	self->refCount = 0;
+	self->cycRefCount = 0;
+#ifdef DAO_GC_PROF
+	if( type < 100 )  ObjectProfile[(int)type] ++;
+#endif
 }
-DaoBase* DaoFindFunction2( DaoTypeBase *typer, const char *name )
+
+DaoNull* DaoNull_New()
 {
-	DString mbs = DString_WrapMBS( name );
-	return DaoFindFunction( typer, & mbs );
+	DaoNull *self = (DaoNull*) dao_malloc( sizeof(DaoNull) );
+	DaoValue_Init( self, DAO_NULL );
+	return self;
 }
-DValue DaoFindValue( DaoTypeBase *typer, DString *name )
+DaoInteger* DaoInteger_New( dint value )
 {
-	DaoBase *func = DaoFindFunction( typer, name );
-	DValue value = daoNullValue;
-	DNode *node;
-	value.v.p = func;
-	if( func ){
-		value.t = func->type;
-		return value;
-	}
-	if( typer->priv->values == NULL ){
-		DaoNameSpace_SetupValues( typer->priv->nspace, typer );
-		if( typer->priv->values == NULL ) return daoNullValue;
-	}
-	node = DMap_Find( typer->priv->values, name );
-	if( node ) return *node->value.pValue;
-	return daoNullValue;
+	DaoInteger *self = (DaoInteger*) dao_malloc( sizeof(DaoInteger) );
+	DaoValue_Init( self, DAO_INTEGER );
+	self->value = value;
+	return self;
 }
-DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name )
+dint DaoInteger_Get( DaoInteger *self )
 {
-	DValue value = daoNullValue;
-	DNode *node;
-	if( typer->priv->abtype && typer->priv->abtype->aux.v.p ){
-		if( DString_EQ( name, typer->priv->abtype->name ) ){
-			value = typer->priv->abtype->aux;
-		}
-	}
-	if( typer->priv->values == NULL ){
-		DaoNameSpace_SetupValues( typer->priv->nspace, typer );
-		if( typer->priv->values == NULL ) return value;
-	}
-	node = DMap_Find( typer->priv->values, name );
-	if( node ) return *node->value.pValue;
-	return value;
+	return self->value;
+}
+void DaoInteger_Set( DaoInteger *self, dint value )
+{
+	self->value = value;
+}
+
+DaoFloat* DaoFloat_New( float value )
+{
+	DaoFloat *self = (DaoFloat*) dao_malloc( sizeof(DaoFloat) );
+	DaoValue_Init( self, DAO_FLOAT );
+	self->value = value;
+	return self;
+}
+float DaoFloat_Get( DaoFloat *self )
+{
+	return self->value;
+}
+void DaoFloat_Set( DaoFloat *self, float value )
+{
+	self->value = value;
+}
+
+DaoDouble* DaoDouble_New( double value )
+{
+	DaoDouble *self = (DaoDouble*) dao_malloc( sizeof(DaoDouble) );
+	DaoValue_Init( self, DAO_DOUBLE );
+	self->value = value;
+	return self;
+}
+double DaoDouble_Get( DaoDouble *self )
+{
+	return self->value;
+}
+void DaoDouble_Set( DaoDouble *self, double value )
+{
+	self->value = value;
+}
+
+DaoComplex* DaoComplex_New( complex16 value )
+{
+	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
+	DaoValue_Init( self, DAO_COMPLEX );
+	self->value = value;
+	return self;
+}
+complex16   DaoComplex_Get( DaoComplex *self )
+{
+}
+void DaoComplex_Set( DaoComplex *self, complex16 value )
+{
+}
+
+DaoLong* DaoLong_New()
+{
+}
+DLong* DaoLong_Get( DaoLong *self )
+{
+}
+void DaoLong_Set( DaoLong *self, DLong *value )
+{
+}
+
+DaoString* DaoString_New( int mbs )
+{
+	DaoString *self = (DaoString*) dao_malloc( sizeof(DaoString) );
+	DaoValue_Init( self, DAO_STRING );
+	self->data = DString_New( mbs );
+	return self;
+}
+DaoString* DaoString_NewMBS( const char *mbs )
+{
+}
+DaoString* DaoString_NewWCS( const wchar_t *wcs )
+{
+}
+DaoString* DaoString_NewBytes( const char *bytes, int n )
+{
+}
+
+DString* DaoString_Get( DaoString *self )
+{
+}
+const char* DaoString_GetMBS( DaoString *self )
+{
+}
+const wchar_t* DaoString_GetWCS( DaoString *self )
+{
+}
+
+void DaoString_Set( DaoString *self, DString *str )
+{
+}
+void DaoString_SetMBS( DaoString *self, const char *mbs )
+{
+}
+void DaoString_SetWCS( DaoString *self, const wchar_t *wcs )
+{
+}
+void DaoString_SetBytes( DaoString *self, const char *bytes, int n )
+{
+}
+
+DaoEnum* DaoEnum_New()
+{
+}
+float DaoEnum_Get( DaoEnum *self )
+{
+}
+void DaoEnum_Set( DaoEnum *self, float value )
+{
 }
 
 enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE };
@@ -229,20 +320,6 @@ DaoTypeBase baseTyper =
 };
 DaoBase nil = { 0, DAO_DATA_CONST, {0,0}, 1, 0 };
 
-int ObjectProfile[100];
-
-void DaoBase_Init( void *dbase, char type )
-{
-	DaoBase *self = (DaoBase*) dbase;
-	self->type = type;
-	self->trait = 0;
-	self->gcState[0] = self->gcState[1]  = 0;
-	self->refCount = 0;
-	self->cycRefCount = 0;
-#ifdef DAO_GC_PROF
-	if( type < 100 )  ObjectProfile[(int)type] ++;
-#endif
-}
 
 extern void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
 

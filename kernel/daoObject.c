@@ -32,7 +32,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *thisObject,
 	DValue selfpar = daoNullObject;
 	int errcode = DaoObject_GetData( self, name, & value, thisObject, NULL );
 	if( errcode ) return errcode;
-	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return DAO_ERROR_TYPE;
+	if( value.t < DAO_FUNCTREE || value.t > DAO_FUNCTION ) return DAO_ERROR_TYPE;
 	selfpar.v.object = self;
 	meth = DRoutine_Resolve( value.v.p, &selfpar, ps, N, DVM_CALL );
 	if( meth == NULL ) goto InvalidParam;
@@ -230,7 +230,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	}
 	offset += self->myClass->objDefCount;
 	if( klass->superClass->size ){
-		self->superObject = DPtrTuple_New( klass->superClass->size, NULL );
+		self->superObject = DTuple_New( klass->superClass->size, NULL );
 		for(i=0; i<klass->superClass->size; i++){
 			DaoClass *supclass = klass->superClass->items.pClass[i];
 			DaoObject *sup = NULL;
@@ -272,7 +272,7 @@ void DaoObject_Delete( DaoObject *self )
 		int i;
 		for(i=0; i<self->superObject->size; i++)
 			GC_DecRC( self->superObject->items.pBase[i] );
-		DPtrTuple_Delete( self->superObject );
+		DTuple_Delete( self->superObject );
 	}
 	dao_free( self );
 }
@@ -445,6 +445,6 @@ DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name )
 	int id = DaoClass_FindConst( self->myClass, & str );
 	if( id < 0 ) return NULL;
 	value = DaoClass_GetConst( self->myClass, id );
-	if( value.t < DAO_METAROUTINE || value.t > DAO_FUNCTION ) return NULL;
+	if( value.t < DAO_FUNCTREE || value.t > DAO_FUNCTION ) return NULL;
 	return (DaoMethod*) value.v.p;
 }

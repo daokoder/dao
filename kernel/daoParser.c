@@ -2273,7 +2273,7 @@ static void DaoParser_AddToScope( DaoParser *self, DValue scope,
 static int DaoParser_UseConstructor( DaoParser *self, DRoutine *rout, int t1, int t2 )
 {
 	DaoClass *host = self->hostClass;
-	DaoMetaRoutine *classRoutines = host->classRoutines;
+	DaoFunctree *classRoutines = host->classRoutines;
 	DaoType *hostType = host->objType;
 	DString *s1 = DString_Copy( rout->routType->name );
 	DString *s2 = DString_New(1);
@@ -2298,7 +2298,7 @@ static int DaoParser_UseConstructor( DaoParser *self, DRoutine *rout, int t1, in
 			return 0;
 		}
 	}
-	DaoMetaRoutine_Add( host->classRoutines, rout );
+	DaoFunctree_Add( host->classRoutines, rout );
 	DString_Assign( s1, host->className );
 	DString_Append( s1, rout->parCodes );
 	DaoClass_AddOvldRoutine( host, s1, (DaoRoutine*) rout );
@@ -2367,7 +2367,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 			}
 		}else if( cdata ){
 			DaoBase *func = DaoFindFunction( cdata->typer, name );
-			DaoMetaRoutine *meta = (DaoMetaRoutine*) func;
+			DaoFunctree *meta = (DaoFunctree*) func;
 			if( func == NULL ){
 				DaoParser_Error( self, DAO_CONSTR_NOT_DEFINED, name );
 				DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
@@ -2625,7 +2625,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			if( DString_Compare( rout->routName, klass->className ) == 0 ){
 				/* overloading constructor */
 				rout->attribs |= DAO_ROUT_INITOR;
-				DaoMetaRoutine_Add( klass->classRoutines, (DRoutine*)rout );
+				DaoFunctree_Add( klass->classRoutines, (DRoutine*)rout );
 			}
 			DaoClass_AddConst( klass, rout->routName, value, perm, rout->defLine );
 		}else if( self->isInterBody ){
@@ -3309,7 +3309,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			if( reg < 0 ) goto DecoratorError;
 			if( !(LOOKUP_ST( reg ) & 1) ) goto DecoratorError;
 			value = DaoParser_GetVariable( self, reg );
-			if( value.t != DAO_ROUTINE && value.t != DAO_METAROUTINE ) goto DecoratorError;
+			if( value.t != DAO_ROUTINE && value.t != DAO_FUNCTREE ) goto DecoratorError;
 			decfunc = value.v.routine;
 			declist = DaoList_New();
 			if( start+1 <= to && tokens[start+1]->name == DTOK_LB ){

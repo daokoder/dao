@@ -450,7 +450,7 @@ int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DValue *o, DValue *p[],
 	DRoutine *rout = (DRoutine*) r;
 	DaoContext *ctx;
 
-	if( r && r->type == DAO_METAROUTINE ) rout = DRoutine_Resolve( r, o, p, n, DVM_CALL );
+	if( r && r->type == DAO_FUNCTREE ) rout = DRoutine_Resolve( r, o, p, n, DVM_CALL );
 	if( rout == NULL ) return 0;
 	if( rout->type == DAO_FUNCTION ){
 		DaoVmCode vmc = { 0, 0, 0, 0 };

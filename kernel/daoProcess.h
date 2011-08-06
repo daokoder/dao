@@ -48,10 +48,10 @@ struct DaoVmProcess
 	DaoVmSpace *vmSpace;
 	DaoType    *abtype; /* for coroutine */
 
-	DValue    returned;
-	DVarray  *parResume;/* for coroutine */
-	DVarray  *parYield;
-	DVarray  *exceptions;
+	DaoValue *returned;
+	DArray   *parResume;/* for coroutine */
+	DArray   *parYield;
+	DArray   *exceptions;
 
 	char pauseType;
 	char status;

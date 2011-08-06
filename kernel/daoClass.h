@@ -50,7 +50,7 @@ struct DaoClass
 
 	DMap *vtable; /* <DRoutine*,DRoutine*> */
 	DaoRoutine *classRoutine; /* Default class constructor. */
-	DaoMetaRoutine *classRoutines; /* All explicitly defined constructors */
+	DaoFunctree *classRoutines; /* All explicitly defined constructors */
 
 	DString *className;
 	DString *classHelp;

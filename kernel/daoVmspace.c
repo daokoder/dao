@@ -162,7 +162,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 #endif
 	case DAO_FUNCURRY : return & curryTyper;
 	case DAO_CDATA   :  return & cdataTyper;
-	case DAO_METAROUTINE : return & mroutineTyper;
+	case DAO_FUNCTREE : return & mroutineTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_FUNCTION  :  return & funcTyper;
 	case DAO_INTERFACE :  return & interTyper;
@@ -949,9 +949,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	if( i >=0 ){
 		DRoutine *unirout = NULL;
 		value = DaoNameSpace_GetConst( ns, i );
-		if( value.t == DAO_METAROUTINE ){
-			DaoMetaRoutine *routine = (DaoMetaRoutine*) value.v.routine;
-			unirout = DaoMetaRoutine_Lookup( routine, NULL, array->items.pValue, N, DVM_CALL );
+		if( value.t == DAO_FUNCTREE ){
+			DaoFunctree *routine = (DaoFunctree*) value.v.routine;
+			unirout = DaoFunctree_Lookup( routine, NULL, array->items.pValue, N, DVM_CALL );
 		}else if( value.t == DAO_ROUTINE ){
 			unirout = (DRoutine*) value.v.routine;
 		}

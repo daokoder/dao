@@ -322,15 +322,15 @@ void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host )
 	if( node == NULL ){
 		GC_IncRC( rout );
 		DMap_Insert( methods, rout->routName, rout );
-	}else if( node->value.pBase->type == DAO_METAROUTINE ){
-		DaoMetaRoutine_Add( (DaoMetaRoutine*) node->value.pBase, rout );
+	}else if( node->value.pBase->type == DAO_FUNCTREE ){
+		DaoFunctree_Add( (DaoFunctree*) node->value.pBase, rout );
 	}else{
 		DRoutine *existed = (DRoutine*) node->value.pBase;
-		DaoMetaRoutine *mroutine = DaoMetaRoutine_New( existed->nameSpace, rout->routName );
+		DaoFunctree *mroutine = DaoFunctree_New( existed->nameSpace, rout->routName );
 		GC_IncRC( host );
 		mroutine->host = host;
-		DaoMetaRoutine_Add( mroutine, (DRoutine*) node->value.pBase );
-		DaoMetaRoutine_Add( mroutine, (DRoutine*) rout );
+		DaoFunctree_Add( mroutine, (DRoutine*) node->value.pBase );
+		DaoFunctree_Add( mroutine, (DRoutine*) rout );
 		GC_ShiftRC( mroutine, node->value.pBase );
 		node->value.pVoid = mroutine;
 	}
@@ -397,8 +397,8 @@ int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer )
 			DaoTypeBase *sup = (DaoTypeBase*) parents->items.pVoid[i];
 			supMethods = sup->priv->methods;
 			for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
-				if( it->value.pBase->type == DAO_METAROUTINE ){
-					DaoMetaRoutine *meta = (DaoMetaRoutine*) it->value.pVoid;
+				if( it->value.pBase->type == DAO_FUNCTREE ){
+					DaoFunctree *meta = (DaoFunctree*) it->value.pVoid;
 					/* skip constructor */
 					if( STRCMP( meta->name, sup->name ) ==0 ) continue;
 					for(k=0; k<meta->routines->size; k++){
@@ -649,8 +649,8 @@ DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self,
 	}
 	if( func == NULL ) return NULL;
 	val = DaoNameSpace_GetData( self, func->routName );
-	if( val.t == DAO_METAROUTINE ){
-		DaoMetaRoutine_Add( val.v.mroutine, (DRoutine*)func );
+	if( val.t == DAO_FUNCTREE ){
+		DaoFunctree_Add( val.v.mroutine, (DRoutine*)func );
 	}else{
 		val = daoNullFunction;
 		val.v.func = func;
@@ -924,11 +924,11 @@ int DaoNameSpace_FindConst( DaoNameSpace *self, DString *name )
 }
 int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value, int pm )
 {
-	DaoMetaRoutine *mroutine;
+	DaoFunctree *mroutine;
 	DNode *node = MAP_Find( self->lookupTable, name );
 	DValue *dest;
 	int sto, up, id = 0;
-	int isrout = value.t >= DAO_METAROUTINE && value.t <= DAO_FUNCTION;
+	int isrout = value.t >= DAO_FUNCTREE && value.t <= DAO_FUNCTION;
 	int isrout2;
 
 	if( node && LOOKUP_UP( node->value.pSize ) ){ /* override */
@@ -938,7 +938,7 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value, int 
 		assert( up < self->cstDataTable->size );
 		assert( id < self->cstDataTable->items.pVarray[up]->size );
 		dest = self->cstDataTable->items.pVarray[up]->data + id;
-		isrout2 = dest->t >= DAO_METAROUTINE && dest->t <= DAO_FUNCTION;
+		isrout2 = dest->t >= DAO_FUNCTREE && dest->t <= DAO_FUNCTION;
 
 		DMap_EraseNode( self->lookupTable, node );
 		if( sto == DAO_GLOBAL_CONSTANT && isrout && isrout2 ){
@@ -953,7 +953,7 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value, int 
 		if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_CONSTANT ) return -1;
 		assert( id < self->cstData->size );
 		dest = self->cstData->data + id;
-		isrout2 = dest->t >= DAO_METAROUTINE && dest->t <= DAO_FUNCTION;
+		isrout2 = dest->t >= DAO_FUNCTREE && dest->t <= DAO_FUNCTION;
 		/* No overriding, only function overloading: */
 		if( isrout == 0 || isrout2 == 0 ) return -1;
 		if( dest->t == DAO_ROUTINE || dest->t == DAO_FUNCTION ){
@@ -962,26 +962,26 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DValue value, int 
 			DValue_MarkConst( self->cstData->data + self->cstData->size -1 );
 			dest = self->cstData->data + id;
 
-			mroutine = DaoMetaRoutine_New( self, name );
-			DaoMetaRoutine_Add( mroutine, (DRoutine*) dest->v.p );
+			mroutine = DaoFunctree_New( self, name );
+			DaoFunctree_Add( mroutine, (DRoutine*) dest->v.p );
 			GC_ShiftRC( mroutine, dest->v.p );
 			dest->v.mroutine = mroutine;
-			dest->t = DAO_METAROUTINE;
+			dest->t = DAO_FUNCTREE;
 			DValue_MarkConst( dest );
 		}
-		if( value.t == DAO_METAROUTINE ){
-			DaoMetaRoutine_Import( dest->v.mroutine, value.v.mroutine );
+		if( value.t == DAO_FUNCTREE ){
+			DaoFunctree_Import( dest->v.mroutine, value.v.mroutine );
 		}else{
-			DaoMetaRoutine_Add( dest->v.mroutine, (DRoutine*) value.v.p );
+			DaoFunctree_Add( dest->v.mroutine, (DRoutine*) value.v.p );
 			/* Add individual entry for the new function: */
 			DVarray_Append( self->cstData, value );
 			DValue_MarkConst( self->cstData->data + self->cstData->size -1 );
 		}
 		id = node->value.pSize;
 	}else{
-		if( value.t == DAO_METAROUTINE && value.v.mroutine->space != self ){
-			mroutine = DaoMetaRoutine_New( self, name );
-			DaoMetaRoutine_Import( mroutine, value.v.mroutine );
+		if( value.t == DAO_FUNCTREE && value.v.mroutine->space != self ){
+			mroutine = DaoFunctree_New( self, name );
+			DaoFunctree_Import( mroutine, value.v.mroutine );
 			value.v.mroutine = mroutine;
 		}
 		id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->cstData->size );
@@ -1217,7 +1217,7 @@ static int DaoNameSpace_ImportRoutine( DaoNameSpace *self, DString *name, DValue
 {
 	DNode *search = MAP_Find( self->lookupTable, name );
 	if( search == NULL ){
-		if( v1.t >= DAO_METAROUTINE && v1.t <= DAO_FUNCTION ){
+		if( v1.t >= DAO_FUNCTREE && v1.t <= DAO_FUNCTION ){
 			/* To allow function overloading: */
 			DaoNameSpace_AddConst( self, name, v1, pm );
 			return 0;
@@ -1225,8 +1225,8 @@ static int DaoNameSpace_ImportRoutine( DaoNameSpace *self, DString *name, DValue
 		return 1;
 	}else if( LOOKUP_ST( search->value.pSize ) == DAO_GLOBAL_CONSTANT ){
 		DValue v2 = DaoNameSpace_GetConst( self, search->value.pSize );
-		if( v1.t < DAO_METAROUTINE || v1.t > DAO_FUNCTION ) return 0;
-		if( v2.t < DAO_METAROUTINE || v2.t > DAO_FUNCTION ) return 0;
+		if( v1.t < DAO_FUNCTREE || v1.t > DAO_FUNCTION ) return 0;
+		if( v2.t < DAO_FUNCTREE || v2.t > DAO_FUNCTION ) return 0;
 		DaoNameSpace_AddConst( self, name, v1, pm );
 	}
 	return 0;
@@ -1455,8 +1455,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoBase *p )
 	case DAO_CTYPE :
 	case DAO_CDATA :
 		abtp = ((DaoCData*)p)->ctype; break;
-	case DAO_METAROUTINE :
-		abtp = ((DaoMetaRoutine*)p)->unitype; break;
+	case DAO_FUNCTREE :
+		abtp = ((DaoFunctree*)p)->unitype; break;
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
 		rout = (DRoutine*) p;

@@ -24,10 +24,9 @@ typedef union
 	dint       pInt;
 	size_t     pSize;
 	void      *pVoid;
-	DValue    *pValue;
 	DString   *pString;
 	DArray    *pArray;
-	DaoBase   *pBase;
+	DaoValue  *pValue;
 	DaoClass  *pClass;
 	DaoType   *pType;
 	DaoInode  *pInode;

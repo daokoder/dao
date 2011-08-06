@@ -14,58 +14,59 @@
 #ifndef DAO_VALUE_H
 #define DAO_VALUE_H
 
-#include"daoBase.h"
+#include"daoType.h"
 
-/* t = 0, DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE, DAO_COMPLEX, DAO_STRING
- * when t==0, v.p should not be one of these primitive data.
- * t2 should be set to the type of the data.
- */
+union DaoValue
+{
+	uchar_t        type;
+	DaoNull        xNull;
+	DaoInteger     xInteger;
+	DaoFloat       xFloat;
+	DaoDouble      xDouble;
+	DaoComplex     xComplex;
+	DaoLong        xLong;
+	DaoString      xString;
+	DaoEnum        xEnum;
+	DaoArray       xArray;
+	DaoList        xList;
+	DaoMap         xMap;
+	DaoTuple       xTuple;
+	DaoStream      xStream;
+	DaoObject      xObject;
+	DaoCData       xCdata;
+	DaoClass       xClass;
+	DaoCtype       xCtype;
+	DaoInterface   xInterface;
+	DaoFunctree    xFunctree;
+	DaoRoutine     xRoutine;
+	DaoFunction    xFunction;
+	DaoContext     xContext;
+	DaoVmProcess   xProcess;
+	DaoNameSpace   xNamespace;
+	DaoNamedValue  xNamedValue;
+	DaoType        xType;
+};
 
-const extern DValue daoNullValue;
-const extern DValue daoZeroInteger;
-const extern DValue daoZeroFloat;
-const extern DValue daoZeroDouble;
-const extern DValue daoNullComplex;
-const extern DValue daoNullLong;
-const extern DValue daoNullString;
-const extern DValue daoNullEnum;
-const extern DValue daoNullArray;
-const extern DValue daoNullList;
-const extern DValue daoNullMap;
-const extern DValue daoNullTuple;
-const extern DValue daoNullClass;
-const extern DValue daoNullObject;
-const extern DValue daoNullMetaRoutine;
-const extern DValue daoNullRoutine;
-const extern DValue daoNullFunction;
-const extern DValue daoNullCData;
-const extern DValue daoNullStream;
-const extern DValue daoNullType;
+DaoValue* DaoValue_CopyWhenSimple( DaoValue *self );
+DaoValue* DaoValue_CopyWhenConstant( DaoValue *self, DaoType *type );
 
-void DValue_Clear( DValue *self );
-/* initialize self to default value as "type",
- * but it will do nothing if self->t == type.
- * return type if successful, otherwise, 0 */
-int DValue_Init( DValue *self, int type );
-void DValue_CopyExt( DValue *self, DValue from, int copy );
-void DValue_Copy( DValue *self, DValue from );
-int DValue_Compare( DValue left, DValue right );
+int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
-int DValue_Move( DValue from, DValue *to, DaoType *totype );
-int DValue_Move2( DValue from, DValue *to, DaoType *totype );
-void DValue_SimpleMove( DValue from, DValue *to );
+void DaoValue_Copy( DValue *src, DValue **dest );
+int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
+int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype );
+void DaoValue_SimpleMove( DValue *src, DValue **dest );
 
-void DValue_MarkConst( DValue *self );
+void DaoValue_MarkConst( DaoValue *self );
 
-int DValue_IsZero( DValue *self );
-
-llong_t DValue_GetLongLong( DValue val );
-llong_t DValue_GetInteger( DValue val );
-float  DValue_GetFloat( DValue val );
-double DValue_GetDouble( DValue val );
-complex16 DValue_GetComplex( DValue val );
-DLong* DValue_GetLong( DValue val, DLong *lng );
-DString* DValue_GetString( DValue val, DString *str );
+int DaoValue_IsZero( DaoValue *self );
+llong_t DaoValue_GetLongLong( DaoValue *self );
+llong_t DaoValue_GetInteger( DaoValue *self );
+float  DaoValue_GetFloat( DaoValue *self );
+double DaoValue_GetDouble( DaoValue *self );
+complex16 DaoValue_GetComplex( DaoValue *self );
+DLong* DaoValue_GetLong( DaoValue *self, DLong *lng );
+DString* DaoValue_GetString( DaoValue *self, DString *str );
 
 int DValue_FromString( DValue *self, DString *str, int type );
 
@@ -78,5 +79,6 @@ void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycDat
 void DValue_IncRCs( DValue *v, int n );
 
 #define DValue_Type( x ) ( (x).t ? (x).t : (x).v.p ? (x).v.p->type : 0 )
+
 
 #endif

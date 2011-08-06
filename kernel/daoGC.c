@@ -31,7 +31,7 @@ DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DValue userdata )
 {
 	DaoCallbackData *self;
 	if( callback == NULL ) return NULL;
-	if( callback->type < DAO_METAROUTINE || callback->type > DAO_FUNCTION ) return NULL;
+	if( callback->type < DAO_FUNCTREE || callback->type > DAO_FUNCTION ) return NULL;
 	self = (DaoCallbackData*) calloc( 1, sizeof(DaoCallbackData) );
 	self->callback = callback;
 	if( userdata.t >= DAO_ENUM )
@@ -131,9 +131,9 @@ static void directRefCountDecrementValue( DValue *value );
 static void cycRefCountDecrementsV( DVarray * values );
 static void cycRefCountIncrementsV( DVarray * values );
 static void directRefCountDecrementV( DVarray * values );
-static void cycRefCountDecrementsT( DPtrTuple * values );
-static void cycRefCountIncrementsT( DPtrTuple * values );
-static void directRefCountDecrementT( DPtrTuple * values );
+static void cycRefCountDecrementsT( DTuple * values );
+static void cycRefCountIncrementsT( DTuple * values );
+static void directRefCountDecrementT( DTuple * values );
 static void cycRefCountDecrementsVT( DVaTuple * values );
 static void cycRefCountIncrementsVT( DVaTuple * values );
 static void directRefCountDecrementVT( DVaTuple * values );
@@ -695,9 +695,9 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) cdata->ctype );
 				break;
 			}
-		case DAO_METAROUTINE :
+		case DAO_FUNCTREE :
 			{
-				DaoMetaRoutine *meta = (DaoMetaRoutine*) dbase;
+				DaoFunctree *meta = (DaoFunctree*) dbase;
 				cycRefCountDecrement( (DaoBase*) meta->space );
 				cycRefCountDecrement( (DaoBase*) meta->host );
 				cycRefCountDecrement( (DaoBase*) meta->unitype );
@@ -901,9 +901,9 @@ void markAliveObjects( DaoBase *root )
 				cycRefCountIncrement( (DaoBase*) cdata->ctype );
 				break;
 			}
-		case DAO_METAROUTINE :
+		case DAO_FUNCTREE :
 			{
-				DaoMetaRoutine *meta = (DaoMetaRoutine*) dbase;
+				DaoFunctree *meta = (DaoFunctree*) dbase;
 				cycRefCountIncrement( (DaoBase*) meta->space );
 				cycRefCountIncrement( (DaoBase*) meta->host );
 				cycRefCountIncrement( (DaoBase*) meta->unitype );
@@ -1109,9 +1109,9 @@ void freeGarbage()
 					GC_BREAK_REF( cdata->ctype );
 					break;
 				}
-			case DAO_METAROUTINE :
+			case DAO_FUNCTREE :
 				{
-					DaoMetaRoutine *meta = (DaoMetaRoutine*) dbase;
+					DaoFunctree *meta = (DaoFunctree*) dbase;
 					GC_BREAK_REF( meta->space );
 					GC_BREAK_REF( meta->host );
 					GC_BREAK_REF( meta->unitype );
@@ -1279,7 +1279,7 @@ void freeGarbage()
 				   if( dbase->type < DAO_STRING )
 				   if( dbase->type != DAO_CONTEXT )
 				 */
-				if( dbase->type >= DAO_METAROUTINE && dbase->type <= DAO_FUNCTION )
+				if( dbase->type >= DAO_FUNCTREE && dbase->type <= DAO_FUNCTION )
 					DaoCallbackData_DeleteByCallback( dbase );
 				DaoCallbackData_DeleteByUserdata( dbase );
 				typer = DaoBase_GetTyper( dbase );
@@ -1575,9 +1575,9 @@ void cycRefCountDecreScan()
 				cycRefCountDecrement( (DaoBase*) cdata->ctype );
 				break;
 			}
-		case DAO_METAROUTINE :
+		case DAO_FUNCTREE :
 			{
-				DaoMetaRoutine *meta = (DaoMetaRoutine*) dbase;
+				DaoFunctree *meta = (DaoFunctree*) dbase;
 				cycRefCountDecrement( (DaoBase*) meta->space );
 				cycRefCountDecrement( (DaoBase*) meta->host );
 				cycRefCountDecrement( (DaoBase*) meta->unitype );
@@ -1790,9 +1790,9 @@ void cycRefCountIncreScan()
 					cycRefCountIncrement( (DaoBase*) cdata->ctype );
 					break;
 				}
-		case DAO_METAROUTINE :
+		case DAO_FUNCTREE :
 			{
-				DaoMetaRoutine *meta = (DaoMetaRoutine*) dbase;
+				DaoFunctree *meta = (DaoFunctree*) dbase;
 				cycRefCountIncrement( (DaoBase*) meta->space );
 				cycRefCountIncrement( (DaoBase*) meta->host );
 				cycRefCountIncrement( (DaoBase*) meta->unitype );
@@ -2012,9 +2012,9 @@ void directDecRC()
 					GC_BREAK_REF( cdata->ctype );
 					break;
 				}
-			case DAO_METAROUTINE :
+			case DAO_FUNCTREE :
 				{
-					DaoMetaRoutine *meta = (DaoMetaRoutine*) dbase;
+					DaoFunctree *meta = (DaoFunctree*) dbase;
 					j += meta->routines->size;
 					GC_BREAK_REF( meta->space );
 					GC_BREAK_REF( meta->host );
@@ -2211,7 +2211,7 @@ void freeGarbage()
 				   if( dbase->type == DAO_FUNCTION ) printf( "here\n" );
 				   if( dbase->type < DAO_STRING )
 				 */
-				if( dbase->type >= DAO_METAROUTINE && dbase->type <= DAO_FUNCTION )
+				if( dbase->type >= DAO_FUNCTREE && dbase->type <= DAO_FUNCTION )
 					DaoCallbackData_DeleteByCallback( dbase );
 				DaoCallbackData_DeleteByUserdata( dbase );
 				typer = DaoBase_GetTyper( dbase );
@@ -2407,7 +2407,7 @@ void directRefCountDecrementV( DVarray *list )
 	}
 	DVarray_Clear( list );
 }
-void cycRefCountDecrementsT( DPtrTuple *list )
+void cycRefCountDecrementsT( DTuple *list )
 {
 	size_t i;
 	DaoBase **dbases;
@@ -2415,7 +2415,7 @@ void cycRefCountDecrementsT( DPtrTuple *list )
 	dbases = list->items.pBase;
 	for( i=0; i<list->size; i++ ) cycRefCountDecrement( dbases[i] );
 }
-void cycRefCountIncrementsT( DPtrTuple *list )
+void cycRefCountIncrementsT( DTuple *list )
 {
 	size_t i;
 	DaoBase **dbases;
@@ -2423,14 +2423,14 @@ void cycRefCountIncrementsT( DPtrTuple *list )
 	dbases = list->items.pBase;
 	for( i=0; i<list->size; i++ ) cycRefCountIncrement( dbases[i] );
 }
-void directRefCountDecrementT( DPtrTuple *list )
+void directRefCountDecrementT( DTuple *list )
 {
 	size_t i;
 	DaoBase **dbases;
 	if( list ==NULL ) return;
 	dbases = list->items.pBase;
 	for( i=0; i<list->size; i++ ) if( dbases[i] ) dbases[i]->refCount --;
-	DPtrTuple_Clear( list );
+	DTuple_Clear( list );
 }
 void cycRefCountDecrementsVT( DVaTuple *list )
 {

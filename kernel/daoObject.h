@@ -22,8 +22,8 @@ struct DaoObject
 
 	DValue     *objValues;
 	DVaTuple   *objData;
+	DTuple     *superObject; /*DTuple<DaoObject/DaoCData*>*/
 	DaoClass   *myClass;
-	DPtrTuple  *superObject; /*DPtrTuple<DaoObject/DaoCData*>*/
 	DaoObject  *that;
 	DaoMap     *meta;
 };

@@ -29,8 +29,8 @@ struct DaoContext
 	DaoVmCode  *vmc; /* current virtual machine code */
 	DaoVmFrame *frame;
 
-	DVaTuple  *regArray; /* virtual registers for the call */
-	DValue   **regValues;
+	DTuple    *regArray; /* virtual registers for the call */
+	DaoValue **regValues; /* = regArray->items.pValue */
 	DaoType  **regTypes; /* = routine->regType->items.pType; */
 	uchar_t   *regModes; /* = routine->regMode->mbs */
 
@@ -62,20 +62,16 @@ void DaoContext_Delete( DaoContext *self );
 void DaoContext_Init( DaoContext *self, DaoRoutine *routine );
 /* Intialize a context according to overloaed routine with parameter types matching to "pars" */
 /* Must be called after DaoContext_Init() */
-int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DValue *pars[], int npar );
+int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DaoValue *pars[], int npar );
 /* For internal use. */
 void DaoContext_SetArrays( DaoContext *self );
 
-/* Put data at a register */
-int DaoContext_SetData( DaoContext *self, ushort_t reg, DaoBase *dbase );
-DValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DValue value );
+/* Put value at a register */
+DaoValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DaoValue *value );
 
-DaoBase* DaoContext_CreateResult( DaoContext *self, short type );
-
-/* Put result at the result register for current instruction */
-void DaoContext_SetResult( DaoContext *self, DaoBase *result );
-int DaoContext_PutReference( DaoContext *self, DValue *refer );
-DValue* DaoContext_PutValue( DaoContext *self, DValue value );
+/* Put value at the result register for current instruction */
+int DaoContext_PutReference( DaoContext *self, DaoValue *refer );
+DValue* DaoContext_PutValue( DaoContext *self, DaoValue *value );
 
 /* Put a number at the result register, return the number object */
 dint*      DaoContext_PutInteger( DaoContext *self, dint value );

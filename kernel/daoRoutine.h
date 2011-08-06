@@ -26,7 +26,7 @@ DaoType       *routType; \
 DString       *routName; \
 DString       *routHelp; \
 DString       *parCodes; \
-DVarray       *routConsts; \
+DArray        *routConsts; \
 DaoNameSpace  *nameSpace
 
 #define ROUT_HOST_TID( t ) ((t)->routHost ? (t)->routHost->tid : 0)
@@ -39,8 +39,7 @@ struct DRoutine
 
 DRoutine* DRoutine_New();
 void DRoutine_CopyFields( DRoutine *self, DRoutine *from );
-int  DRoutine_AddConst( DRoutine *self, DaoBase *data );
-int  DRoutine_AddConstValue( DRoutine *self, DValue value );
+int  DRoutine_AddConstant( DRoutine *self, DaoValue *value );
 
 /* Return 0 if failed, otherwise return 1 plus number passed parameters: */
 int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], int np, int code );
@@ -83,7 +82,7 @@ struct DaoRoutine
 	DMap *abstypes;
 
 	DaoRoutine     *original;
-	DaoMetaRoutine *specialized;
+	DaoFunctree *specialized;
 
 	DaoRoutine   *upRoutine;
 	DaoContext   *upContext;
@@ -116,7 +115,7 @@ struct DaoFunction
 
 extern DaoFunction* DaoFunction_New();
 void DaoFunction_Delete( DaoFunction *self );
-int DaoFunction_Call( DaoFunction *self, DaoContext *ctx, DValue *obj, DValue *p[], int n );
+int DaoFunction_Call( DaoFunction *self, DaoContext *ctx, DaoValue *obj, DaoValue *p[], int n );
 
 struct DaoFunCurry
 {
@@ -128,28 +127,28 @@ struct DaoFunCurry
 };
 DaoFunCurry* DaoFunCurry_New( DValue v, DValue o );
 
-typedef struct DMetaParam DMetaParam;
+typedef struct DParNode DParNode;
 
-struct DMetaParam
+struct DParNode
 {
 	DaoType  *type;
-	DArray   *nexts; /* <DMetaParam*> */
-	DMap     *names; /* <DaoType*,DMetaParam*> */
+	DArray   *nexts; /* <DParNode*> */
+	DMap     *names; /* <DaoType*,DParNode*> */
 	DRoutine *routine;
 };
-DMetaParam* DMetaParam_New();
-void DMetaParam_Delete( DMetaParam *self );
+DParNode* DParNode_New();
+void DParNode_Delete( DParNode *self );
 
-/* DaoMetaRoutine is a structure to organize overloaded functions into trees,
+/* DaoFunctree is a structure to organize overloaded functions into trees,
  * for fast function resolving based on parameter types. */
 
 /* In data structures for namespace and class,
  * each individual function should have its own entry in these structures,
- * and an additional entry of DaoMetaRoutine should be added for overloaded
+ * and an additional entry of DaoFunctree should be added for overloaded
  * functions. This will simplify some operations such as deriving methods from
  * parent type or instantiating template classes! */
 
-struct DaoMetaRoutine
+struct DaoFunctree
 {
 	DAO_DATA_COMMON;
 
@@ -158,24 +157,24 @@ struct DaoMetaRoutine
 	DaoType       *host;
 	DaoType       *unitype;
 	DString       *name;
-	DMetaParam    *tree;
-	DMetaParam    *mtree; /* for routines with self parameter */
+	DParNode      *tree;
+	DParNode      *mtree; /* for routines with self parameter */
 	DArray        *routines; /* list of overloaded routines on the trees */
 };
 
-DaoMetaRoutine* DaoMetaRoutine_New( DaoNameSpace *nameSpace, DString *name );
-void DaoMetaRoutine_Delete( DaoMetaRoutine *self );
+DaoFunctree* DaoFunctree_New( DaoNameSpace *nameSpace, DString *name );
+void DaoFunctree_Delete( DaoFunctree *self );
 
-void DaoMetaRoutine_UpdateVtable( DaoMetaRoutine *self, DRoutine *routine, DMap *vtable );
-DRoutine* DaoMetaRoutine_Add( DaoMetaRoutine *self, DRoutine *routine );
-DRoutine* DaoMetaRoutine_Lookup( DaoMetaRoutine *self, DValue *obj, DValue *p[], int n, int code );
-DRoutine* DaoMetaRoutine_LookupByType( DaoMetaRoutine *self, DaoType *st, DaoType *t[], int n, int c );
-void DaoMetaRoutine_Import( DaoMetaRoutine *self, DaoMetaRoutine *other );
-void DaoMetaRoutine_Compile( DaoMetaRoutine *self );
+void DaoFunctree_UpdateVtable( DaoFunctree *self, DRoutine *routine, DMap *vtable );
+DRoutine* DaoFunctree_Add( DaoFunctree *self, DRoutine *routine );
+DRoutine* DaoFunctree_Lookup( DaoFunctree *self, DaoValue *obj, DaoValue *p[], int n, int code );
+DRoutine* DaoFunctree_LookupByType( DaoFunctree *self, DaoType *st, DaoType *t[], int n, int c );
+void DaoFunctree_Import( DaoFunctree *self, DaoFunctree *other );
+void DaoFunctree_Compile( DaoFunctree *self );
 
 /* Resolve overloaded, virtual and specialized function: */
-/* "self" must be one of: DRoutine, DaoRoutine, DaoFunction, DaoMetaRoutine. */
-DRoutine* DRoutine_Resolve( DaoBase *self, DValue *obj, DValue *p[], int n, int code );
-DRoutine* DRoutine_ResolveByType( DaoBase *self, DaoType *st, DaoType *t[], int n, int code );
+/* "self" must be one of: DRoutine, DaoRoutine, DaoFunction, DaoFunctree. */
+DRoutine* DRoutine_Resolve( DaoValue *self, DaoValue *obj, DaoValue *p[], int n, int code );
+DRoutine* DRoutine_ResolveByType( DaoValue *self, DaoType *st, DaoType *t[], int n, int code );
 
 #endif

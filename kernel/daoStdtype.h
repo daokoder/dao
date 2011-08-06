@@ -19,78 +19,93 @@
 #include"daoString.h"
 #include"daoArray.h"
 #include"daoMap.h"
+#include"daoNumtype.h"
 
-#define DAO_DATA_COMMON uchar_t type, trait, gcState[2]; int refCount, cycRefCount
+//#define DAO_DATA_COMMON uchar_t type, trait, gcState[2]; int refCount, cycRefCount
 
-void DaoBase_Delete( void *obj );
+#define DAO_DATA_COMMON \
+	uchar_t type, subtype, konst, trait; \
+	int gcState[2]; \
+	int refCount, cycRefCount
 
-DValue DaoFindValue( DaoTypeBase *typer, DString *name );
-DValue DaoFindValueOnly( DaoTypeBase *typer, DString *name );
-DaoBase* DaoFindFunction( DaoTypeBase *typer, DString *name );
-DaoBase* DaoFindFunction2( DaoTypeBase *typer, const char *name );
+void DaoValue_Init( void *dbase, char type );
+void DaoValue_ChangeState( void *dbase, char state, char add );
 
-DaoTypeBase* DValue_GetTyper( DValue self );
-
-struct DaoTypeCore
-{
-	uint_t         attribs;
-	DMap          *values;
-	DMap          *methods;
-	DaoType       *abtype;
-	DaoNameSpace  *nspace;
-
-	void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
-	void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
-	void (*GetItem) ( DValue *self, DaoContext *ctx, DValue *pid[], int N );
-	void (*SetItem) ( DValue *self, DaoContext *ctx, DValue *pid[], int N, DValue value );
-
-	void (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-	DValue (*Copy)(  DValue *self, DaoContext *ctx, DMap *cycData );
-};
-
-extern DaoTypeCore  baseCore;
-
-struct DaoBase
+struct DaoNull
 {
 	DAO_DATA_COMMON;
 };
+struct DaoInteger
+{
+	DAO_DATA_COMMON;
 
-extern DaoBase nil;
+	dint value;
+};
+struct DaoFloat
+{
+	DAO_DATA_COMMON;
 
-void DaoBase_Init( void *dbase, char type );
-void DaoBase_ChangeState( void *dbase, char state, char add );
+	float value;
+};
+struct DaoDouble
+{
+	DAO_DATA_COMMON;
 
-DaoTypeBase* DaoBase_GetTyper( DaoBase *p );
+	double value;
+};
+struct DaoComplex
+{
+	DAO_DATA_COMMON;
 
-DaoBase* DaoBase_Duplicate( void *dbase, DaoType *type );
+	complex16 value;
+};
+struct DaoLong
+{
+	DAO_DATA_COMMON;
 
-void DaoBase_GetField( DValue *self, DaoContext *ctx, DString *name );
-void DaoBase_SetField( DValue *self, DaoContext *ctx, DString *name, DValue value );
-void DaoBase_GetItem( DValue *self, DaoContext *ctx, DValue *pid[], int N );
-void DaoBase_SetItem( DValue *self, DaoContext *ctx, DValue *pid[], int N, DValue value );
-void DaoBase_Print( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-DValue DaoBase_Copy( DValue *self, DaoContext *ctx, DMap *cycData );
+	DLong value;
+};
+struct DaoString
+{
+	DAO_DATA_COMMON;
 
-void DaoBase_SafeGetField( DValue *self, DaoContext *ctx, DString *name );
-void DaoBase_SafeSetField( DValue *self, DaoContext *ctx, DString *name, DValue value );
+	DString  data;
+};
 
-DEnum* DEnum_New( DaoType *type, dint value );
-DEnum* DEnum_Copy( DEnum *self );
-void DEnum_Delete( DEnum *self );
-void DEnum_MakeName( DEnum *self, DString *name );
-void DEnum_SetType( DEnum *self, DaoType *type );
-int DEnum_SetSymbols( DEnum *self, const char *symbols );
-int DEnum_SetValue( DEnum *self, DEnum *other, DString *enames );
-int DEnum_AddValue( DEnum *self, DEnum *other, DString *enames );
-int DEnum_RemoveValue( DEnum *self, DEnum *other, DString *enames );
-int DEnum_AddSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns );
-int DEnum_SubSymbol( DEnum *self, DEnum *s1, DEnum *s2, DaoNameSpace *ns );
+/* Structure for symbol, enum and flag:
+ * Storage modes:
+ * Symbol: $AA => { type<$AA>, 0 }
+ * Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
+ * Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
+ * Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
+ */
+struct DaoEnum
+{
+	DAO_DATA_COMMON;
+
+	DaoType  *etype;  /* type information structure */
+	dint      value; /* value associated with the symbol(s) or flag(s) */
+};
+void DaoBase_Delete( void *obj );
+
+
+DaoEnum* DaoEnum_New( DaoType *type, dint value );
+DaoEnum* DaoEnum_Copy( DaoEnum *self );
+void DaoEnum_Delete( DaoEnum *self );
+void DaoEnum_MakeName( DaoEnum *self, DString *name );
+void DaoEnum_SetType( DaoEnum *self, DaoType *type );
+int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
+int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames );
+int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames );
+int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames );
+int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns );
+int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns );
 
 struct DaoList
 {
 	DAO_DATA_COMMON;
 
-	DVarray  *items;
+	DArray   *items;
 	DaoMap   *meta;
 	DaoType  *unitype;
 };
@@ -125,28 +140,6 @@ void DaoMap_Reset( DaoMap *self );
 int DaoMap_Insert( DaoMap *self, DValue key, DValue value );
 void DaoMap_Erase( DaoMap *self, DValue key );
 
-struct DaoCDataCore
-{
-	uint_t         attribs;
-	DMap          *values;
-	DMap          *methods;
-	DaoType       *abtype;
-	DaoNameSpace  *nspace;
-
-	void (*GetField)( DValue *self, DaoContext *ctx, DString *name );
-	void (*SetField)( DValue *self, DaoContext *ctx, DString *name, DValue value );
-	void (*GetItem)(  DValue *self, DaoContext *ctx, DValue *pid[], int N );
-	void (*SetItem)(  DValue *self, DaoContext *ctx, DValue *pid[], int N, DValue value );
-
-	void   (*Print)( DValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-	DValue (*Copy)(  DValue *self, DaoContext *ctx, DMap *cycData );
-
-	void   (*DelData)( void *data );
-	int    (*DelTest)( void *data );
-
-	DMap *instanceCData;
-};
-DaoCDataCore* DaoCDataCore_New();
 
 enum{
 	DAO_CDATA_FREE = 1
@@ -217,9 +210,9 @@ struct DaoNameValue
 {
 	DAO_DATA_COMMON;
 
-	DString *name;
-	DValue   value;
-	DaoType *unitype;
+	DString   *name;
+	DaoValue  *value;
+	DaoType   *unitype;
 };
 DaoNameValue* DaoNameValue_New( DString *name, DValue value );
 
@@ -227,10 +220,10 @@ struct DaoTuple
 {
 	DAO_DATA_COMMON;
 
-	DVaTuple  *items;
-	DaoMap    *meta;
-	DaoType   *unitype;
-	unsigned   pair;
+	DTuple   *items;
+	DaoMap   *meta;
+	DaoType  *unitype;
+	unsigned  pair;
 };
 void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );

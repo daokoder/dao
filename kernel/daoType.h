@@ -80,13 +80,13 @@ struct DaoType
 	DMap         *interfaces;
 	DaoTypeBase  *typer; /* TYPER of the represented type: built-in or C types */
 	/* Auxiliary data for the type:
-	 * For routine type: aux.v.type is the returned type;
-	 * For named parameter type: aux.v.type is the parameter type;
-	 * For class and object type: aux.v.klass is the class object;
-	 * For wrapped C type: aux.v.cdata is the DaoCData object;
-	 * For constant as type: aux is the constant value. */
-	DValue        aux;
-	DValue        value; /* default value for the type */
+	 * aux can be the returned type in a routine type;
+	 * aux can be the parameter type in a named parameter type;
+	 * aux can be the class object in class or object type;
+	 * aux can be the DaoCData object in wrapped C type;
+	 * aux can be the constant value in a constant value type. */
+	DaoValue      *aux;
+	DaoValue      *value; /* default value for the type */
 };
 extern DaoType *dao_type_udf;
 extern DaoType *dao_type_any;
@@ -103,7 +103,7 @@ extern DaoType *dao_type_for_iterator;
 extern DaoType *dao_access_enum;
 extern DaoType *dao_storage_enum;
 
-DaoType* DaoType_New( const char *name, short tid, DaoBase *pb, DArray *nest );
+DaoType* DaoType_New( const char *name, short tid, DaoValue *pb, DArray *nest );
 DaoType* DaoType_Copy( DaoType *self );
 void DaoType_Delete( DaoType *self );
 
@@ -112,8 +112,8 @@ void DaoType_CheckAttributes( DaoType *self );
 
 /* if "self" match to "type": */
 short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
-short DaoType_MatchValue( DaoType *self, DValue value, DMap *defs );
-short DaoType_MatchValue2( DaoType *self, DValue value, DMap *defs );
+short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
+short DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 /* define @X */
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
 void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
@@ -145,5 +145,69 @@ void DaoInterface_DeriveMethods( DaoInterface *self );
 void DMap_SortMethods( DMap *hash, DArray *methods );
 
 int DaoType_HasInterface( DaoType *self, DaoInterface *inter );
+
+
+DaoValue* DaoFindValue( DaoTypeBase *typer, DString *name );
+DaoValue* DaoFindValueOnly( DaoTypeBase *typer, DString *name );
+DaoValue* DaoFindFunction( DaoTypeBase *typer, DString *name );
+DaoValue* DaoFindFunction2( DaoTypeBase *typer, const char *name );
+
+DaoTypeBase* DaoValue_GetTyper( DaoValue self );
+
+struct DaoTypeCore
+{
+	uint_t         attribs;
+	DMap          *values;
+	DMap          *methods;
+	DaoType       *abtype;
+	DaoNameSpace  *nspace;
+
+	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
+	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue value );
+	void (*GetItem) ( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
+	void (*SetItem) ( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
+	void (*Print)( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+	DaoValue* (*Copy)(  DaoValue *self, DaoContext *ctx, DMap *cycData );
+};
+extern DaoTypeCore  baseCore;
+
+extern DaoValue null;
+
+
+DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
+
+DaoValue* DaoValue_Duplicate( void *dbase, DaoType *type );
+
+void DaoValue_GetField( DaoValue *self, DaoContext *ctx, DString *name );
+void DaoValue_SetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue value );
+void DaoValue_GetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
+void DaoValue_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
+void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+DaoValue* DaoValue_Copy( DaoValue *self, DaoContext *ctx, DMap *cycData );
+
+void DaoValue_SafeGetField( DaoValue *self, DaoContext *ctx, DString *name );
+void DaoValue_SafeSetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
+
+struct DaoCDataCore
+{
+	uint_t         attribs;
+	DMap          *values;
+	DMap          *methods;
+	DaoType       *abtype;
+	DaoNameSpace  *nspace;
+
+	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
+	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
+	void (*GetItem)(  DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
+	void (*SetItem)(  DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
+	void (*Print)( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+	DaoValue* (*Copy)(  DaoValue *self, DaoContext *ctx, DMap *cycData );
+
+	void   (*DelData)( void *data );
+	int    (*DelTest)( void *data );
+
+	DMap *instanceCData;
+};
+DaoCDataCore* DaoCDataCore_New();
 
 #endif
