@@ -43,7 +43,7 @@ union DaoValue
 	DaoContext     xContext;
 	DaoVmProcess   xProcess;
 	DaoNameSpace   xNamespace;
-	DaoNamedValue  xNamedValue;
+	DaoNameValue   xNameValue;
 	DaoType        xType;
 };
 
