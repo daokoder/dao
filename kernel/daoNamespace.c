@@ -157,7 +157,6 @@ DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name )
 		ns = DaoNameSpace_New( self->vmSpace, name );
 		DArray_Append( ns->parents, self );
 		DaoNameSpace_AddConst( self, & mbs, (DaoValue*)ns, DAO_DATA_PUBLIC );
-		GC_IncRC( self );
 		DArray_Append( ns->cstData, self ); /* for GC */
 	}
 	return ns;
@@ -700,9 +699,9 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *nsname )
 	self->options = 0;
 	self->mainRoutine = NULL;
 	self->parents = DArray_New(0);
-	self->cstData  = DArray_New(0);
-	self->varData  = DArray_New(0);
-	self->varType  = DArray_New(0);
+	self->cstData  = DArray_New(D_VALUE);
+	self->varData  = DArray_New(D_VALUE);
+	self->varType  = DArray_New(D_VALUE);
 	self->nsTable = DArray_New(0);
 	self->lookupTable = DHash_New(D_STRING,0);
 	self->cstDataTable = DArray_New(0);
@@ -737,10 +736,9 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNameSpace_SetName( self, nsname );
 	DaoNameSpace_AddConst( self, self->name, (DaoValue*) self, DAO_DATA_PUBLIC );
 
-	value = (DaoValue*) DaoNull_New();
 	DString_SetMBS( name, "null" ); 
-	DaoNameSpace_AddConst( self, name, value, DAO_DATA_PUBLIC );
-	DArray_Append( self->cstData, value ); /* reserved for main */
+	DaoNameSpace_AddConst( self, name, null, DAO_DATA_PUBLIC );
+	DArray_Append( self->cstData, null ); /* reserved for main */
 
 	DString_SetMBS( name, "io" ); 
 	DaoNameSpace_AddConst( self, name, (DaoValue*) vms->stdStream, DAO_DATA_PUBLIC );
@@ -805,9 +803,6 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DString_Delete( self->tempModes );
 	GC_DecRC( self->udfType1 );
 	GC_DecRC( self->udfType2 );
-	GC_DecRCs( self->cstData );
-	GC_DecRCs( self->varData );
-	GC_DecRCs( self->varType );
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->cstData );
 	DArray_Delete( self->varData );
@@ -916,7 +911,7 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, i
 			dest = (DaoValue*) mroutine;
 			dest->konst = 1;
 			self->cstData->items.pValue[id] = dest;
-			GC_IncRC( mroutine );
+			GC_ShiftRC( self->cstData->items.pValue[id], mroutine );
 		}
 		if( value->type == DAO_FUNCTREE ){
 			DaoFunctree_Import( dest->v.mroutine, & value->xFunctree );
@@ -924,7 +919,6 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, i
 			DaoFunctree_Add( dest->v.mroutine, (DRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->cstData, value );
-			GC_IncRC( value );
 			value->konst = 1;
 		}
 		id = node->value.pSize;
@@ -936,8 +930,7 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, i
 		}
 		id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->cstData->size );
 		MAP_Insert( self->lookupTable, name, id ) ;
-		DArray_Append( self->cstData, NULL );
-		DValue_SimpleMove( value, self->cstData->items.pValue + self->cstData->size -1 );
+		DArray_Append( self->cstData, value );
 		DValue_MarkConst( self->cstData->items.pValue[ self->cstData->size -1 ] );
 	}
 	return id;
@@ -1001,7 +994,6 @@ int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DaoValue *value
 		DArray_Append( self->varData, NULL );
 		DaoValue_Move( value, self->varData->items.pValue + self->varData->size -1, tp );
 		DArray_Append( self->varType, (void*)tp );
-		GC_IncRC( tp );
 	}
 	if( abtp->attrib & DAO_TYPE_EMPTY ){
 		switch( value->type ){

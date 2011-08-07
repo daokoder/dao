@@ -42,7 +42,6 @@ struct DArray
 		DString      **pString;
 		DArray       **pArray;
 		DMap         **pMap;
-		DVarray      **pVarray;
 		DaoInode     **pInode;
 		DaoVmCodeX   **pVmc;
 		DaoToken     **pToken;

@@ -171,8 +171,6 @@ struct DaoTypeCore
 };
 extern DaoTypeCore  baseCore;
 
-extern DaoValue null;
-
 
 DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
 

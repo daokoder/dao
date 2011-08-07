@@ -1230,7 +1230,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, int index
 	return DaoRegex_ChangeExt( self, source, target, index, NULL, NULL );
 }
 int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
-		int index, int count, DVarray *packs )
+		int index, int count, DArray *packs )
 {
 	size_t start = 0, end = 0;
 	size_t i, n=0, p1=start, p2=end, p3;

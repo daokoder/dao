@@ -35,6 +35,8 @@ struct DaoNull
 {
 	DAO_DATA_COMMON;
 };
+extern DaoValue *null;
+
 struct DaoInteger
 {
 	DAO_DATA_COMMON;
@@ -115,13 +117,12 @@ void DaoList_Delete( DaoList *self );
 void DaoList_Clear( DaoList *self );
 
 void DaoList_Erase( DaoList *self, int id );
-DValue DaoList_GetValue( DaoList *self, int id );
-int DaoList_SetItem( DaoList *self, DValue it, int id );
-int DaoList_Append( DaoList *self, DValue it );
+int DaoList_SetItem( DaoList *self, DaoValue *it, int id );
+int DaoList_Append( DaoList *self, DaoValue *it );
 
 DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );
 
-void DaoList_FlatList( DaoList *self, DVarray *flat );
+void DaoList_FlatList( DaoList *self, DArray *flat );
 
 struct DaoMap
 {
@@ -137,8 +138,8 @@ void DaoMap_Delete( DaoMap *self );
 void DaoMap_Clear( DaoMap *self );
 void DaoMap_Reset( DaoMap *self );
 
-int DaoMap_Insert( DaoMap *self, DValue key, DValue value );
-void DaoMap_Erase( DaoMap *self, DValue key );
+int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
+void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
 enum{
@@ -214,7 +215,7 @@ struct DaoNameValue
 	DaoValue  *value;
 	DaoType   *unitype;
 };
-DaoNameValue* DaoNameValue_New( DString *name, DValue value );
+DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
 struct DaoTuple
 {
@@ -226,13 +227,13 @@ struct DaoTuple
 	unsigned  pair;
 };
 void DaoTuple_Delete( DaoTuple *self );
-void DaoTuple_SetItem( DaoTuple *self, DValue it, int pos );
+void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 
 typedef struct IndexValue IndexValue;
 struct IndexValue
 {
-	size_t  index;
-	DValue  value;
+	size_t     index;
+	DaoValue  *value;
 };
 void QuickSort( IndexValue *data, int first, int last, int part, int asc );
 
@@ -246,11 +247,11 @@ struct DaoException
 
 	DString  *name;
 	DString  *info;
-	DValue    data;
+	DaoValue *data;
 };
 
 DaoException* DaoException_New( DaoTypeBase *typer );
-DaoException* DaoException_New2( DaoTypeBase *typer, DValue v );
+DaoException* DaoException_New2( DaoTypeBase *typer, DaoValue *v );
 void DaoException_Delete( DaoException *self );
 void DaoException_Setup( DaoNameSpace *ns );
 void DaoException_CleanUp();
@@ -267,7 +268,7 @@ struct DaoFuture
 	DAO_DATA_COMMON;
 
 	int       state;
-	DValue    value;
+	DaoValue *value;
 	DaoType  *unitype;
 
 	DaoFuture     *precondition;

@@ -20,8 +20,8 @@ struct DaoObject
 {
 	DAO_DATA_COMMON;
 
-	DValue     *objValues;
-	DVaTuple   *objData;
+	DaoValue   *objValues;
+	DTuple     *objData;
 	DTuple     *superObject; /*DTuple<DaoObject/DaoCData*>*/
 	DaoClass   *myClass;
 	DaoObject  *that;
@@ -40,7 +40,7 @@ DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent );
 
 void DaoObject_AddData( DaoObject *self, DString *name, DaoBase  *data );
 
-int DaoObject_SetData( DaoObject *self, DString *name, DValue value, DaoObject *objThis );
-int DaoObject_GetData( DaoObject *self, DString *name, DValue *data, DaoObject *objThis, DValue **d2 );
+int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *value, DaoObject *objThis );
+int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *objThis );
 
 #endif

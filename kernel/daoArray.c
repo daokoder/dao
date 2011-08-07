@@ -104,7 +104,9 @@ static void DaoVmCodeX_Delete( DaoVmCodeX *self )
 }
 static void* DArray_CopyItem( DArray *self, void *item )
 {
+	DaoValue *v;
 	switch( self->type ){
+	case D_VALUE  : v = DaoValue_SimpleCopy( (DaoValue*) item ); GC_IncRC( v ); return v;
 	case D_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
 	case D_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
 	case D_STRING : return DString_Copy( (DString*) item );
@@ -117,8 +119,9 @@ static void* DArray_CopyItem( DArray *self, void *item )
 static void DArray_DeleteItem( DArray *self, void *item )
 {
 	switch( self->type ){
+	case D_VALUE  : GC_DecRC( item ); break;
 	case D_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
-	case D_TOKEN : DaoToken_Delete( (DaoToken*) item ); break;
+	case D_TOKEN  : DaoToken_Delete( (DaoToken*) item ); break;
 	case D_STRING : DString_Delete( (DString*) item ); break;
 	case D_ARRAY  : DArray_Delete( (DArray*) item ); break;
 	case D_MAP    : DMap_Delete( (DMap*) item ); break;
@@ -129,6 +132,7 @@ static void DArray_DeleteItems( DArray *self, size_t M, size_t N )
 {
 	size_t i;
 	switch( self->type ){
+	case D_VALUE  : for(i=M; i<N; i++) GC_DecRC( self->items.pValue[i] ); break;
 	case D_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
 	case D_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
 	case D_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
@@ -158,7 +162,7 @@ void DArray_Resize( DArray *self, size_t size, void *val )
 	}
 
 	if( self->type && val != NULL ){
-		for(i=self->size; i<size; i++ ) DArray_CopyItem( self, val );
+		for(i=self->size; i<size; i++ ) self->items.pVoid[i] = DArray_CopyItem( self, val );
 	}else{
 		for(i=self->size; i<size; i++ ) self->items.pVoid[i] = val;
 	}

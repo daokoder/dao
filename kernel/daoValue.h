@@ -47,8 +47,10 @@ union DaoValue
 	DaoType        xType;
 };
 
-DaoValue* DaoValue_CopyWhenSimple( DaoValue *self );
-DaoValue* DaoValue_CopyWhenConstant( DaoValue *self, DaoType *type );
+/* Copy when self is a simple data type (with type <= DAO_ENUM),
+ * or it is a constant array, list, map or tuple. */
+DaoValue* DaoValue_SimpleCopy( DaoValue *self );
+DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *type );
 
 int DaoValue_Compare( DaoValue *left, DaoValue *right );
 

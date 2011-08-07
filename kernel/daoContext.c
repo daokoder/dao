@@ -1229,6 +1229,8 @@ static DaoTuple* DaoContext_GetTuple( DaoContext *self, DaoType *type, int size 
 	DValue_Clear( val );
 	tup = DaoTuple_New( size );
 	tup->unitype = type;
+	if( type ){ // TODO set default values: for simple type only?
+	}
 	GC_IncRC( type );
 	GC_IncRC( tup );
 	val->v.tuple = tup;

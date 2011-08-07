@@ -72,7 +72,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 		int index, size_t *start2, size_t *end2 );
 
 int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
-		int index, int count, DVarray *packs );
+		int index, int count, DArray *packs );
 
 int DaoRegex_Extract( DaoRegex *self, DString *s, DVarray *ls, short tp );
 

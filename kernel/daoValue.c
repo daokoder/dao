@@ -339,19 +339,119 @@ void DaoValue_MarkConst( DaoValue *self )
 	default : break;
 	}
 }
+void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
+
+DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
+{
+	size_t i;
+
+	if( self == NULL ) return (void*) & null;
+#ifdef DAO_WITH_NUMARRAY
+	if( self->type == DAO_ARRAY && self->xArray.reference ){
+		DaoArray_Sliced( (DaoArray*)self );
+		return self;
+	}
+#endif
+	if( self->trait & DAO_DATA_NOCOPY ) return self;
+	if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
+		double value = DaoValue_GetDouble( self );
+		switch( tp->tid ){
+		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( (dint) value );
+		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( value );
+		case DAO_DOUBLE  : return (DaoValue*) DaoDOUBLE_New( value );
+		}
+	}
+	switch( self->type ){
+	case DAO_NULL : return self;
+	case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xInteger.value );
+	case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
+	case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xDouble.value );
+	case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
+	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
+	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum );
+	}
+	if( self->konst == 0 ) return self;
+	switch( self->type ){
+	case DAO_LIST :
+		{
+			DaoList *list = (DaoList*) self;
+			DaoList *copy = DaoList_New();
+			/* no detailed checking of type matching, must be ensured by caller */
+			copy->unitype = (tp && tp->tid == DAO_LIST) ? tp : list->unitype;
+			GC_IncRC( copy->unitype );
+			DArray_Resize( copy->items, list->items->size, NULL );
+			for(i=0; i<list->items->size; i++)
+				DaoList_SetItem( copy, list->items->items.pValue[i], i );
+			return (DaoValue*)copy;
+		}
+	case DAO_MAP :
+		{
+			DaoMap *map = (DaoMap*) self;
+			DaoMap *copy = DaoMap_New( map->items->hashing );
+			DNode *node = DMap_First( map->items );
+			copy->unitype = (tp && tp->tid == DAO_MAP) ? tp : map->unitype;
+			GC_IncRC( copy->unitype );
+			for( ; node !=NULL; node = DMap_Next(map->items, node ))
+				DaoMap_Insert( copy, node->key.pValue, node->value.pValue );
+			return (DaoValue*)copy;
+		}
+	case DAO_TUPLE :
+		{
+			DaoTuple *tuple = (DaoTuple*) self;
+			DaoTuple *copy = DaoTuple_New( tuple->items->size );
+			copy->unitype = (tp && tp->tid == DAO_TUPLE) ? tp : tuple->unitype;
+			GC_IncRC( copy->unitype );
+			for(i=0; i<tuple->items->size; i++)
+				DaoTuple_SetItem( copy, tuple->items->items.pValue[i], i );
+			return (DaoValue*) copy;
+		}
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY :
+		{
+			DaoArray *array = (DaoArray*) self;
+			DaoArray *copy = DaoArray_New( array->numType );
+			copy->unitype = array->unitype;
+			if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
+				int nt = tp->nested->items.pType[0]->tid;
+				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ){
+					copy->unitype = tp;
+					copy->numType = nt;
+				}
+			}
+			GC_IncRC( copy->unitype );
+			DaoArray_ResizeArray( copy, array->dims->items.pSize, array->dims->size );
+			DaoArray_CopyArray( copy, array );
+			return (DaoValue*) copy;
+		}
+#endif
+	default : break;
+	}
+	if( self->type == DAO_OBJECT ){
+		DaoObject *s = (DaoObject*) self;
+		DaoObject *t = DaoObject_New( s->myClass, NULL, 0 );
+		DMap *cyc = DHash_New(0,0);
+		DaoObject_CopyData( t, s, NULL, cyc );
+		return (DaoValue*) t;
+	}
+	return self;
+}
+DaoValue* DaoValue_SimpleCopy( DaoValue *self )
+{
+	return DaoValue_SimpleCopyWithType( self, NULL );
+}
 
 static void DaoValue_CopyExt( DaoValue *src, DaoValue **dest, int copy )
 {
 	DaoValue *dest2 = *dest;
 	if( *dest == NULL ){
-		if( copy ) src = DaoValue_CopyWhenConstant( src, NULL );
+		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_IncRC( src );
 		*dest = src;
 		return;
 	}
 	if( src == *dest ) return;
 	if( src->type != dest2->type || src->type >= DAO_ENUM ){
-		if( copy ) src = DaoValue_CopyWhenConstant( src, NULL );
+		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_ShiftRC( src, dest2 );
 		*dest = src;
 		return;
@@ -479,7 +579,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 	 * but if d is of type list<list<any>>,
 	 * the matching do not necessary to be exact.
 	 */
-	src = DaoValue_CopyWhenConstant( src, tp );
+	src = DaoValue_SimpleCopyWithType( src, tp );
 	GC_ShiftRC( src, *dest );
 	*dest = src;
 	if( src->type == DAO_TUPLE && src->xTuple.unitype != tp && tm >= DAO_MT_SIM ){
