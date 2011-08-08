@@ -121,11 +121,11 @@ struct DaoFunCurry
 {
 	DAO_DATA_COMMON;
 
-	DValue    callable;
-	DValue    selfobj;
-	DVarray  *params;
+	DaoValue  *callable;
+	DaoValue  *selfobj;
+	DArray    *params;
 };
-DaoFunCurry* DaoFunCurry_New( DValue v, DValue o );
+DaoFunCurry* DaoFunCurry_New( DValue *v, DValue *o );
 
 typedef struct DParNode DParNode;
 

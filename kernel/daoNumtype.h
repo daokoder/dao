@@ -105,6 +105,7 @@ struct DLong
 	size_t    bufSize;
 };
 DLong* DLong_New();
+void DLong_Init( DLong *self );
 void DLong_Delete( DLong *self );
 void DLong_Clear( DLong *self );
 void DLong_Resize( DLong *self, size_t size );

@@ -224,10 +224,15 @@ void dao_fft16( complex16 data[], int M, int inv )
 /* multiple precision integer */
 DLong* DLong_New()
 {
-	DLong *self = dao_calloc( 1, sizeof(DLong) );
+	DLong *self = dao_malloc( sizeof(DLong) );
+	DLong_Init( self );
+	return self;
+}
+void DLong_Init( DLong *self )
+{
+	memset( self, 0, sizeof(DLong) );
 	self->sign = 1;
 	self->base = 10;
-	return self;
 }
 void DLong_Delete( DLong *self )
 {

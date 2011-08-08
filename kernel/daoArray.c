@@ -105,6 +105,7 @@ static void DaoVmCodeX_Delete( DaoVmCodeX *self )
 static void* DArray_CopyItem( DArray *self, void *item )
 {
 	DaoValue *v;
+	if( item == NULL ) return NULL;
 	switch( self->type ){
 	case D_VALUE  : v = DaoValue_SimpleCopy( (DaoValue*) item ); GC_IncRC( v ); return v;
 	case D_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );

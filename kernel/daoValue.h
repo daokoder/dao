@@ -52,6 +52,8 @@ union DaoValue
 DaoValue* DaoValue_SimpleCopy( DaoValue *self );
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *type );
 
+void DaoValue_Clear( DaoValue **self );
+
 int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
 void DaoValue_Copy( DValue *src, DValue **dest );

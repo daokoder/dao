@@ -339,6 +339,13 @@ void DaoValue_MarkConst( DaoValue *self )
 	default : break;
 	}
 }
+
+void DaoValue_Clear( DaoValue **self )
+{
+	GC_DecRC( *self );
+	*self = NULL;
+}
+
 void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
 
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )

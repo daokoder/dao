@@ -1356,13 +1356,17 @@ int DString_Decrypt( DString *self, DString *key, int hex )
 	return STR_Cipher( self, key, hex, 0 );
 }
 
-DString DString_WrapMBS( const char *mbs )
+DString DString_WrapBytes( const char *mbs, int n )
 {
 	DString str = { 0, 0, NULL, NULL, NULL };
 	str.mbs = (char*) mbs;
 	str.data = (size_t*) mbs;
-	str.size = str.bufSize = strlen( mbs );
+	str.size = str.bufSize = n;
 	return str;
+}
+DString DString_WrapMBS( const char *mbs )
+{
+	return DString_WrapBytes( mbs, strlen( mbs ) );
 }
 DString DString_WrapWCS( const wchar_t *wcs )
 {

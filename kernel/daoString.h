@@ -34,6 +34,7 @@ struct DString
 };
 
 DString* DString_New( int mbs );
+void DString_Init( DString *self, int mbs );
 void DString_Delete( DString *self );
 void DString_Detach( DString *self );
 
@@ -112,6 +113,7 @@ int DString_Decrypt( DString *self, DString *key, int hex );
 size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
 		uint_t esc0, size_t start, size_t end, int countonly );
 
+DString DString_WrapBytes( const char *mbs, int n );
 DString DString_WrapMBS( const char *mbs );
 DString DString_WrapWCS( const wchar_t *wcs );
 
