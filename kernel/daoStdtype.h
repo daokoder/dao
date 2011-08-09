@@ -65,13 +65,13 @@ struct DaoLong
 {
 	DAO_DATA_COMMON;
 
-	DLong value;
+	DLong  *value;
 };
 struct DaoString
 {
 	DAO_DATA_COMMON;
 
-	DString  data;
+	DString  *data;
 };
 
 /* Structure for symbol, enum and flag:

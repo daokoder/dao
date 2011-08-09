@@ -107,8 +107,8 @@ struct DaoParser
 	DArray *decoParams;
 
 	/* members for convenience */
+	DaoEnum   *denum;
 	DLong     *bigint;
-	DEnum     *denum;
 	DString   *mbs;
 	DString   *mbs2;
 	DString   *str;

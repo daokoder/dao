@@ -911,6 +911,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s, int
 	int sto, up, id;
 	DaoValue *dest;
 	DNode *node;
+	// TODO : handle NULL
 	if( data->type >= DAO_FUNCTREE && data->type <= DAO_FUNCTION ){
 		node = MAP_Find( self->lookupTable, name );
 		/* add as new constant: */

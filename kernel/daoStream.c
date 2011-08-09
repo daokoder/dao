@@ -31,7 +31,7 @@ void DaoStream_Flush( DaoStream *self )
 		fflush( stdout );
 	}
 }
-static void DaoIO_Write0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Write0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int N )
 {
 	DMap *cycData;
 	int i;
@@ -40,23 +40,23 @@ static void DaoIO_Write0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
 		return;
 	}
 	cycData = DMap_New(0,0);
-	for(i=0; i<N; i++) DValue_Print( *p[i], ctx, self, cycData );
+	for(i=0; i<N; i++) DaoValue_Print( *p[i], ctx, self, cycData );
 	DMap_Delete( cycData );
 }
-static void DaoIO_Write( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Write( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not writable" );
 		return;
 	}
 	DaoIO_Write0( self, ctx, p+1, N-1 );
 }
-static void DaoIO_Write2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Write2( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoIO_Write0( ctx->vmSpace->stdStream, ctx, p, N );
 }
-static void DaoIO_Writeln0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writeln0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int N )
 {
 	DMap *cycData;
 	int i;
@@ -66,26 +66,26 @@ static void DaoIO_Writeln0( DaoStream *self, DaoContext *ctx, DValue *p[], int N
 	}
 	cycData = DMap_New(0,0);
 	for(i=0; i<N; i++){
-		DValue_Print( *p[i], ctx, self, cycData );
+		DaoValue_Print( *p[i], ctx, self, cycData );
 		if( i+1<N ) DaoStream_WriteMBS( self, " ");
 	}
 	DMap_Delete( cycData );
 	DaoStream_WriteMBS( self, "\n");
 }
-static void DaoIO_Writeln( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writeln( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not writable" );
 		return;
 	}
 	DaoIO_Writeln0( self, ctx, p+1, N-1 );
 }
-static void DaoIO_Writeln2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writeln2( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoIO_Writeln0( ctx->vmSpace->stdStream, ctx, p, N );
 }
-static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int N )
 {
 	DString *mbs;
 	DMap *cycData;
@@ -122,7 +122,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
 				ch = s[1];
 				s[1] = 0;
 				self->format = fmt;
-				if( j < N ) DValue_Print( *p[j], ctx, self, cycData );
+				if( j < N ) DaoValue_Print( *p[j], ctx, self, cycData );
 				j ++;
 				self->format = NULL;
 				s[1] = ch;
@@ -135,32 +135,32 @@ static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DValue *p[], int N 
 	DString_Delete( mbs );
 	DMap_Delete( cycData );
 }
-static void DaoIO_Writef( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writef( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not writable" );
 		return;
 	}
 	DaoIO_Writef0( self, ctx, p+1, N-1 );
 }
-static void DaoIO_Writef2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Writef2( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoIO_Writef0( ctx->vmSpace->stdStream, ctx, p, N );
 }
-static void DaoIO_Flush( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Flush( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	DaoStream_Flush( self );
 }
-static void DaoIO_Read( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Read( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *self = ctx->vmSpace->stdStream;
 	DaoVmSpace *vms = self->vmSpace;
 	DString *ds = DaoContext_PutMBString( ctx, "" );
 	int count = 0;
-	if( N >0 ) self = p[0]->v.stream;
-	if( N >1 ) count = p[1]->v.i;
+	if( N >0 ) self = & p[0]->xStream;
+	if( N >1 ) count = p[1]->xInteger.value;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "stream is not open!" );
 		return;
@@ -212,11 +212,11 @@ static void DaoIO_MakePath( DaoContext *ctx, DString *path )
 	DString_Erase( path, 0, 1 );
 	Dao_MakePath( ctx->vmSpace->pathWorking, path );
 }
-static void DaoIO_ReadFile( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_ReadFile( DaoContext *ctx, DaoValue *p[], int N )
 {
 	char buf[IO_BUF_SIZE];
 	DString *res = DaoContext_PutMBString( ctx, "" );
-	dint silent = p[1]->v.i;
+	dint silent = p[1]->xInteger.value;
 	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
 		return;
@@ -248,7 +248,7 @@ static void DaoIO_ReadFile( DaoContext *ctx, DValue *p[], int N )
 		fclose( fin );
 	}
 }
-static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Open( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *stream = NULL;
 	char *mode;
@@ -296,66 +296,66 @@ static void DaoIO_Open( DaoContext *ctx, DValue *p[], int N )
 	}
 	DaoContext_SetResult( ctx, (DaoBase*)stream );
 }
-static void DaoIO_Close( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Close( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	DaoStream_Close( self );
 }
-static void DaoIO_Eof( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Eof( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	dint *num = DaoContext_PutInteger( ctx, 0 );
 	*num = 1;
 	if( self->file ) *num = feof( self->file->fd );
 }
-static void DaoIO_Isopen( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Isopen( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	DaoContext_PutInteger( ctx, (self->file != NULL) );
 }
-static void DaoIO_Seek( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Seek( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	int options[] = { SEEK_SET, SEEK_CUR, SEEK_END };
-	int where = options[ p[2]->v.e->value ];
+	int where = options[ p[2]->xEnum.value ];
 	if( self->file == NULL ) return;
-	fseek( self->file->fd, p[1]->v.i, where );
+	fseek( self->file->fd, p[1]->xInteger.value, where );
 }
-static void DaoIO_Tell( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Tell( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	dint *num = DaoContext_PutInteger( ctx, 0 );
 	if( self->file == NULL ) return;
 	*num = ftell( self->file->fd );
 }
-static void DaoIO_FileNO( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_FileNO( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	dint *num = DaoContext_PutInteger( ctx, 0 );
 	if( self->file == NULL ) return;
 	*num = fileno( self->file->fd );
 }
-static void DaoIO_Name( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Name( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	DString *res = DaoContext_PutMBString( ctx, "" );
 	DString_Assign( res, self->fname );
 }
-static void DaoIO_SStream( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_SStream( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *stream = DaoStream_New();
-	if( p[0]->v.e->value == 1 ) DString_ToWCS( stream->streamString );
+	if( p[0]->xEnum.value == 1 ) DString_ToWCS( stream->streamString );
 	stream->attribs |= DAO_IO_STRING;
 	DaoContext_SetResult( ctx, (DaoBase*)stream );
 }
-static void DaoIO_GetString( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_GetString( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	DString *res = DaoContext_PutMBString( ctx, "" );
 	DString_Assign( res, self->streamString );
 	DString_Clear( self->streamString );
 }
-static void DaoIO_Popen( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Popen( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *stream = NULL;
 	char *mode;
@@ -392,43 +392,41 @@ static void DaoIO_Popen( DaoContext *ctx, DValue *p[], int N )
 	}
 	DaoContext_SetResult( ctx, (DaoBase*)stream );
 }
-static void DaoIO_Iter( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Iter( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
-	DValue *tuple = p[1]->v.tuple->items->data;
-	tuple[0].v.i = 1;
+	DaoStream *self = & p[0]->xStream;
+	DaoValue **tuple = p[1]->v.tuple->items->items.pValue;
+	tuple[0]->xInteger.value = 1;
 	if( self->file && self->file->fd ){
 		fseek( self->file->fd, 0, SEEK_SET );
-		tuple[0].v.i = ! feof( self->file->fd );
+		tuple[0]->xInteger.value = ! feof( self->file->fd );
 	}
 }
-static void DaoIO_GetItem( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_GetItem( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
-	DValue *tuple = p[1]->v.tuple->items->data;
+	DaoStream *self = & p[0]->xStream;
+	DaoValue **tuple = p[1]->v.tuple->items->items.pValue;
 	DaoIO_Read( ctx, p, 1 );
-	tuple[0].v.i = 0;
-	if( self->file && self->file->fd ) tuple[0].v.i = ! feof( self->file->fd );
+	tuple[0]->xInteger.value = 0;
+	if( self->file && self->file->fd ) tuple[0]->xInteger.value = ! feof( self->file->fd );
 }
 
-static void DaoIO_Read2( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Read2( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DValue p0 = daoNullStream;
-	DValue p1 = daoZeroInteger;
-	DValue *params[2] = {&p0, &p1};
-	p0.v.stream = p[0]->v.stream;
-	p1.v.i = ( p[1]->v.e->value == 0 )? 0 : -1;
+	DaoInteger mode = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
+	DaoValue *params[2] = { NULL, NULL };
+	params[0] = p[0];
+	params[1] = (DaoValue*) & mode;
+	mode.xInteger.value = ( p[1]->xEnum.value == 0 )? 0 : -1;
 	DaoIO_Read( ctx, params, N );
 }
 
-static void DaoIO_Mode( DaoContext *ctx, DValue *p[], int N )
+static void DaoIO_Mode( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoStream *self = p[0]->v.stream;
+	DaoStream *self = & p[0]->xStream;
 	char buf[10] = {0};
-	if( self->mode & DAO_IO_READ )
-		strcat( buf, "$read" );
-	if( self->mode & DAO_IO_WRITE )
-		strcat( buf, "$write" );
+	if( self->mode & DAO_IO_READ ) strcat( buf, "$read" );
+	if( self->mode & DAO_IO_WRITE ) strcat( buf, "$write" );
 	DaoContext_PutEnum( ctx, buf );
 }
 
@@ -463,10 +461,9 @@ static DaoFuncItem streamMeths[] =
 	{ NULL, NULL }
 };
 
-static DValue DaoStream_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
+static DaoValue* DaoStream_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycData )
 {
-	DValue val = daoNullStream;
-	DaoStream *self = self0->v.stream;
+	DaoStream *self = & self0->xStream;
 	DaoStream *stream = DaoStream_New();
 	stream->vmSpace = self->vmSpace;
 	if( self->file ){
@@ -474,8 +471,7 @@ static DValue DaoStream_Copy( DValue *self0, DaoContext *ctx, DMap *cycData )
 		self->file->rc ++;
 	}
 	stream->attribs = self->attribs;
-	val.v.stream = stream;
-	return val;
+	return (DaoValue*) stream;
 }
 static DaoTypeCore streamCore =
 {
@@ -490,10 +486,8 @@ static DaoTypeCore streamCore =
 
 void DaoStream_SetFile( DaoStream *self, FILE *fd )
 {
-	DValue p = daoNullStream;
-	DValue *p2 = & p;
-	p.v.stream = self;
-	DaoIO_Close( NULL, & p2, 1 );
+	DaoValue *p = (DaoValue*) self;
+	DaoIO_Close( NULL, & p, 1 );
 	self->file = (DFile*)dao_malloc( sizeof(DFile) );
 	self->file->rc = 1;
 	self->file->fd = fd;

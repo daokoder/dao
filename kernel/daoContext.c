@@ -3036,7 +3036,7 @@ int ConvertStringToNumber( DaoContext *ctx, DaoValue *dA, DaoValue *dC )
 	int toktype, toklen = 0;
 	int tid = dC->type;
 	int imagfirst = 0;
-	int sign = 1;
+	int ec, sign = 1;
 	if( dA->type != DAO_STRING || tid ==0 || tid > DAO_LONG ) return 0;
 	if( dA->xString.data->mbs ){
 		DString_SetDataMBS( mbs, dA->xString.data->mbs, dA->xString.data->size );
@@ -3064,7 +3064,8 @@ int ConvertStringToNumber( DaoContext *ctx, DaoValue *dA, DaoValue *dC )
 			dC->xDouble.value = strtod( mbs->mbs, 0 );
 			if( sign <0 ) dC->xDouble.value = - dC->xDouble.value;
 		}else{ /* DAO_LONG */
-			char ec = DLong_FromString( dC->xLong.value, mbs );
+			dC->xLong.value = 
+			ec = DLong_FromString( dC->xLong.value, mbs );
 			if( ec ){
 				const char *msg = ec == 'L' ? "invalid radix" : "invalid digit";
 				DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, msg );
@@ -3109,7 +3110,18 @@ int ConvertStringToNumber( DaoContext *ctx, DaoValue *dA, DaoValue *dC )
 	if( imagfirst ) dC->xComplex.value.real = d2; else dC->xComplex.value.imag = d2;
 	return toklen == mbs->size;
 }
-static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoValue *dC )
+typedef struct CastBuffer CastBuffer;
+struct CastBuffer
+{
+	DLong    *lng;
+	DString  *str;
+};
+void CastBuffer_Clear( CastBuffer *self )
+{
+	if( self->lng ) DLong_Delete( self->lng );
+	if( self->str ) DString_Delete( self->str );
+}
+static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoValue *dC, CastBuffer *b1, CastBuffer *b2 )
 {
 	DaoNameSpace *ns = ctx->nameSpace;
 	DaoTuple *tuple = NULL;
@@ -3118,7 +3130,7 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 	DaoType *tp = NULL, *tp2 = NULL;
 	DaoArray *array = NULL, *array2 = NULL;
 	DaoValue **data, **data2, *K, *V, key, value;
-	DString *str, *wcs = DString_New(0);
+	DString *str, *wcs = NULL;
 	DArray *shape = NULL;
 	DNode *node;
 	int i, type, size;
@@ -3154,7 +3166,8 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 	case DAO_LONG :
 		if( dA->type == DAO_LONG ) goto Rebind;
 		if( dA->type >= DAO_ARRAY ) goto FailConversion;
-		DLong_Init( & dC->xLong.value );
+		if( b1->lng == NULL ) b1->lng = DLong_New();
+		dC->xLong.value = b1->lng;
 		switch( dA->type ){
 		case DAO_INTEGER :
 			DLong_FromInteger( & dC->xLong.value, DaoValue_GetInteger( dA ) );
@@ -3172,8 +3185,10 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 		break;
 	case DAO_STRING :
 		if( dA->type == DAO_STRING ) goto Rebind;
-		DString_Init( & dC->xString.data );
-		str = & dC->xString.data;
+		if( b1->str == NULL ) b1->str = DString_New(1);
+		dC->xLong.value = b1->str;
+		str = dC->xString.data;
+		wcs = DString_New(0);
 		if( dA->type < DAO_ARRAY ){
 			DaoValue_GetString( dA, str );
 #ifdef DAO_WITH_NUMARRAY
@@ -3329,7 +3344,7 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 			data = list->items->items.pValue;
 			data2 = list2->items->items.pValue;
 			for(i=0; i<list2->items->size; i++ ){
-				V = DaoTypeCast( ctx, tp, data2[i], & value );
+				V = DaoTypeCast( ctx, tp, data2[i], & value, b1, b2 );
 				if( V == NULL || V->type ==0 ) goto FailConversion;
 				DaoValue_Copy( V, data + i );
 			}
@@ -3352,8 +3367,8 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 		if( tp == NULL || tp2 == NULL ) goto FailConversion;
 		node = DMap_First( map2->items );
 		for(; node!=NULL; node=DMap_Next(map2->items,node) ){
-			K = DaoTypeCast( ctx, tp, node->key.pValue, & key );
-			V = DaoTypeCast( ctx, tp2, node->value.pValue, & value );
+			K = DaoTypeCast( ctx, tp, node->key.pValue, & key, b1, b2 );
+			V = DaoTypeCast( ctx, tp2, node->value.pValue, & value, b2, b1 );
 			if( K ==NULL || V ==NULL || K->type ==0 || V->type ==0 ) goto FailConversion;
 			DMap_Insert( map->items, K, V );
 		}
@@ -3383,7 +3398,7 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 					tp2 = ct->nested->items.pType[i];
 					if( tp2->tid == DAO_PAR_NAMED ) tp2 = tp2->aux.v.type;
 					/* if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion; */
-					V = DaoTypeCast( ctx, tp2, & value );
+					V = DaoTypeCast( ctx, tp2, & value, b1 );
 				}
 				if( V == NULL || V->type == 0 ) goto FailConversion;
 				DaoValue_Copy( V, tuple->items->items.pValue + i );
@@ -3401,7 +3416,7 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 				}else{
 					tp2 = ct->nested->items.pType[i];
 					if( node->key.pValue->type != DAO_STRING ) goto FailConversion;
-					V = DaoTypeCast( ctx, tp2, node->value.pValue, & value );
+					V = DaoTypeCast( ctx, tp2, node->value.pValue, & value, b1 );
 					if( V == NULL || V->type ==0 ) goto FailConversion;
 					DaoValue_Copy( V, tuple->items->items.pValue + i );
 				}
@@ -3471,6 +3486,8 @@ FailConversion :
 }
 void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 {
+	CastBuffer buffer1 = {NULL, NULL};
+	CastBuffer buffer2 = {NULL, NULL};
 	DaoType *at, *ct = self->regTypes[ vmc->c ];
 	DaoValue *va = self->regValues[ vmc->a ];
 	DaoValue *vc = self->regValues[ vmc->c ];
@@ -3504,8 +3521,8 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 		case DAO_FLOAT   : vc->xFloat.value = DaoValue_GetFloat( va ); return;
 		case DAO_DOUBLE  : vc->xDouble.value = DaoValue_GetDouble( va ); return;
 		case DAO_COMPLEX : vc->xComplex.value = DaoValue_GetComplex( va ); return;
-		case DAO_LONG    : DaoValue_GetLong( va, & vc->xLong.value ); return;
-		case DAO_STRING  : DaoValue_GetString( va, & vc->xString.data ); return;
+		case DAO_LONG    : DaoValue_GetLong( va, vc->xLong.value ); return;
+		case DAO_STRING  : DaoValue_GetString( va, vc->xString.data ); return;
 		}
 	}
 
@@ -3587,13 +3604,17 @@ void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc )
 	}
 NormalCasting:
 	memset( & value, 0, sizeof(DaoValue) );
-	va = DaoTypeCast( self, ct, va, & value );
+	va = DaoTypeCast( self, ct, va, & value, & buffer1, & buffer2 );
 	if( va == NULL || va->type == 0 ) goto FailConversion;
 	DaoValue_Copy( va, vc2 );
+	CastBuffer_Clear( & buffer1 );
+	CastBuffer_Clear( & buffer2 );
 	return;
 FailConversion :
 	at = DaoNameSpace_GetType( self->nameSpace, self->regValues[ vmc->a ] );
 	DaoContext_RaiseTypeError( self, at, ct, "casting" );
+	CastBuffer_Clear( & buffer1 );
+	CastBuffer_Clear( & buffer2 );
 }
 void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc )
 {

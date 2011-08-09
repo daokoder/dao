@@ -79,6 +79,7 @@ static void DRoutine_DeleteFields( DRoutine *self )
 }
 int DRoutine_AddConstant( DRoutine *self, DaoValue *value )
 {
+	// TODO: handle NULL
 	value = DaoValue_SimpleCopy( value );
 	DArray_Append( self->routConsts, value );
 	DaoValue_MarkConst( self->routConsts->items.pValue[self->routConsts->size-1] );

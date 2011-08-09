@@ -75,25 +75,25 @@ void DaoVmProcess_PushContext( DaoVmProcess *self, DaoContext *context );
 DaoContext* DaoVmProcess_MakeContext( DaoVmProcess *self, DaoRoutine *routine );
 void DaoVmProcess_PopContext( DaoVmProcess *self );
 
-int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DValue *o, DValue *p[], int n );
+int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 /* Execute from the top of the calling stack */
 int DaoVmProcess_Execute( DaoVmProcess *self );
 int DaoVmProcess_ExecuteSection( DaoVmProcess *self, int entry );
 
-DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DValue *par[], int N );
+DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DaoValue *par[], int N );
 
 /* Resume a coroutine */
 /* coroutine.yeild( a, b, ... ); store object a,b,... in "DaoList *list"
  * 
- * param = coroutine.resume( corout, a, b, ... ); pass "DValue par[]" as a,b,...
+ * param = coroutine.resume( corout, a, b, ... ); pass "DaoValue par[]" as a,b,...
  * they become addition result from yeild().
  */
-int DaoVmProcess_Resume( DaoVmProcess *self, DValue *par[], int N, DaoList *list );
-void DaoVmProcess_Yield( DaoVmProcess *self, DValue *par[], int N, DaoList *list );
+int DaoVmProcess_Resume( DaoVmProcess *self, DaoValue *par[], int N, DaoList *list );
+void DaoVmProcess_Yield( DaoVmProcess *self, DaoValue *par[], int N, DaoList *list );
 
 void DaoVmProcess_PrintException( DaoVmProcess *self, int clear );
 
-DValue DaoVmProcess_MakeConst( DaoVmProcess *self );
+DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self );
 
 
 typedef struct DaoJIT DaoJIT;
