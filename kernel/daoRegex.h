@@ -74,6 +74,6 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
 		int index, int count, DArray *packs );
 
-int DaoRegex_Extract( DaoRegex *self, DString *s, DVarray *ls, short tp );
+int DaoRegex_Extract( DaoRegex *self, DString *s, DArray *ls, short tp );
 
 #endif

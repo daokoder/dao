@@ -23,18 +23,18 @@ extern void DaoStartGC();
 
 void DaoFinishGC();
 
-extern void DaoGC_IncRC( DaoBase *dbase );
-extern void DaoGC_DecRC( DaoBase *dbase );
-extern void DaoGC_ShiftRC( DaoBase *up, DaoBase *down );
+extern void DaoGC_IncRC( DaoValue *dbase );
+extern void DaoGC_DecRC( DaoValue *dbase );
+extern void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
 
 extern void DaoGC_IncRCs( DArray *dbases );
 extern void DaoGC_DecRCs( DArray *dbases );
 
-#define GC_IncRC( p )        DaoGC_IncRC( (DaoBase*)(p) )
-#define GC_DecRC( p )        DaoGC_DecRC( (DaoBase*)(p) )
+#define GC_IncRC( p )        DaoGC_IncRC( (DaoValue*)(p) )
+#define GC_DecRC( p )        DaoGC_DecRC( (DaoValue*)(p) )
 #define GC_ShiftRC(up,down) \
-	if( (DaoBase*)(up) != (DaoBase*)(down) )\
-DaoGC_ShiftRC( (DaoBase*)(up), (DaoBase*)(down) )
+	if( (DaoValue*)(up) != (DaoValue*)(down) )\
+DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 
 #define GC_IncRCs( p )  DaoGC_IncRCs( p )
 #define GC_DecRCs( p )  DaoGC_DecRCs( p )

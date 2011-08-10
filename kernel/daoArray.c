@@ -17,9 +17,11 @@
 
 #include"daoArray.h"
 #include"daoType.h"
+#include"daoValue.h"
 #include"daoNumtype.h"
 #include"daoContext.h"
 #include"daoParser.h"
+#include"daoGC.h"
 
 void* dao_malloc( size_t size )
 {

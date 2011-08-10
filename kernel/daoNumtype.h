@@ -14,7 +14,7 @@
 #ifndef DAO_NUMERIC_H
 #define DAO_NUMERIC_H
 
-#include"daoType.h"
+#include"daoStdtype.h"
 
 #define BBITS    (sizeof(unsigned short) * 8)
 #define BSIZE(x)  (((x) / 8) + sizeof(unsigned int))

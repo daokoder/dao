@@ -120,7 +120,7 @@ one:  $(OBJECTS) kernel/daoMainv.o
 	$(CC) $(LFLAGS) -o daov $(OBJECTS) kernel/daoMainv.o $(LIBS)
 
 $(TARGET):  kernel/daoMaindl.o
-	$(CC) $(LFLAGS) -o $(TARGET) kernel/daoMaindl.o $(LIBS)
+	$(CC) $(LFLAGS) -o $(TARGET) kernel/daoMaindl.o $(LIBS) -ldao
 
 $(TARGETDLL):  $(OBJECTS)
 	$(CC) $(LFLAGSDLL) -o $(TARGETDLL) $(OBJECTS) $(LIBS)

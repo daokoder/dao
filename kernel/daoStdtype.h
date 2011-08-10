@@ -19,7 +19,6 @@
 #include"daoString.h"
 #include"daoArray.h"
 #include"daoMap.h"
-#include"daoNumtype.h"
 
 //#define DAO_DATA_COMMON uchar_t type, trait, gcState[2]; int refCount, cycRefCount
 
@@ -67,12 +66,16 @@ struct DaoLong
 
 	DLong  *value;
 };
+void DaoLong_Delete( DaoLong *self );
+
 struct DaoString
 {
 	DAO_DATA_COMMON;
 
 	DString  *data;
 };
+DaoString* DaoString_Copy( DaoString *self );
+void DaoString_Delete( DaoString *self );
 
 /* Structure for symbol, enum and flag:
  * Storage modes:

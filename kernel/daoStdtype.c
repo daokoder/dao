@@ -33,12 +33,13 @@
 #include"daoMacro.h"
 #include"daoRegex.h"
 #include"daoSched.h"
+#include"daoValue.h"
 
 int ObjectProfile[100];
 
 void DaoValue_Init( void *value, char type )
 {
-	DaoValue *self = (DaoValue*) value;
+	DaoNull *self = (DaoNull*) value;
 	self->type = type;
 	self->subtype = self->konst = self->trait = 0;
 	self->gcState[0] = self->gcState[1]  = 0;
@@ -123,6 +124,11 @@ DaoLong* DaoLong_New()
 DLong* DaoLong_Get( DaoLong *self )
 {
 }
+void DaoLong_Delete( DaoLong *self )
+{
+	DLong_Delete( self->value );
+	dao_free( self );
+}
 void DaoLong_Set( DaoLong *self, DLong *value )
 {
 }
@@ -143,7 +149,18 @@ DaoString* DaoString_NewWCS( const wchar_t *wcs )
 DaoString* DaoString_NewBytes( const char *bytes, int n )
 {
 }
-
+DaoString* DaoString_Copy( DaoString *self )
+{
+	DaoString *copy = (DaoString*) dao_malloc( sizeof(DaoString) );
+	DaoValue_Init( copy, DAO_STRING );
+	copy->data = DString_Copy( self->data );
+	return copy;
+}
+void DaoString_Delete( DaoString *self )
+{
+	DString_Delete( self->data );
+	dao_free( self );
+}
 DString* DaoString_Get( DaoString *self )
 {
 }
@@ -172,7 +189,7 @@ enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE };
 static DaoValue* DaoValue_MakeCopy( DaoValue *self, DaoContext *ctx, DMap *cycData )
 {
 	DaoTypeBase *typer;
-	if( self.t <= DAO_COMPLEX ) return self;
+	if( self->type <= DAO_COMPLEX ) return self;
 	typer = DaoValue_GetTyper( self );
 	return typer->priv->Copy( self, ctx, cycData );
 }
@@ -268,6 +285,7 @@ static DArray* MakeIndex( DaoContext *ctx, DaoValue *index, size_t N, size_t *st
 
 void DaoValue_Delete( void *self ){ dao_free( self ); }
 
+#if 0
 void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
 	DaoType *type = DaoNameSpace_GetType( ctx->nameSpace, self );
@@ -278,7 +296,7 @@ void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *c
 	if( self->type == DAO_NULL ) return;
 	if( self->type == DAO_TYPE ){
 		DaoStream_WriteMBS( stream, "<" );
-		DaoStream_WriteMBS( stream, self->xTuple.name->mbs );
+		DaoStream_WriteMBS( stream, self->xType.name->mbs );
 		DaoStream_WriteMBS( stream, ">" );
 	}
 	DaoStream_WriteMBS( stream, "_" );
@@ -288,7 +306,8 @@ void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *c
 	if( self->type < DAO_STREAM ) return;
 	if( type && self == type->value ) DaoStream_WriteMBS( stream, "[default]" );
 }
-DaoValue* DaoValue_Copy( DaoValue *self, DaoContext *ctx, DMap *cycData )
+#endif
+DaoValue* DaoValue_NoCopy( DaoValue *self, DaoContext *ctx, DMap *cycData )
 {
 	return self;
 }
@@ -301,13 +320,14 @@ DaoTypeCore baseCore =
 	DaoValue_GetItem,
 	DaoValue_SetItem,
 	DaoValue_Print,
-	DaoValue_Copy,
+	DaoValue_NoCopy,
 };
 DaoTypeBase baseTyper =
 {
 	"null", & baseCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
 };
-DaoNull null = { 0, 0, DAO_DATA_CONST, 0, {0,0}, 1, 0 };
+DaoNull null0 = { 0, 0, DAO_DATA_CONST, 0, {0,0}, 1, 0 };
+DaoValue *null = (DaoValue*) & null0;
 
 
 extern DaoTypeBase numberTyper;
@@ -320,17 +340,17 @@ DaoEnum* DaoEnum_New( DaoType *type, dint value )
 	DaoEnum *self = (DaoEnum*) dao_malloc( sizeof(DaoEnum) );
 	DaoValue_Init( self, DAO_ENUM );
 	self->value = value;
-	self->type = type;
+	self->etype = type;
 	if( type ) GC_IncRC( type );
 	return self;
 }
 DaoEnum* DaoEnum_Copy( DaoEnum *self )
 {
-	return DaoEnum_New( self->type, self->value );
+	return DaoEnum_New( self->etype, self->value );
 }
 void DaoEnum_Delete( DaoEnum *self )
 {
-	if( self->type ) GC_DecRC( self->type );
+	if( self->etype ) GC_DecRC( self->etype );
 	dao_free( self );
 }
 void DaoEnum_MakeName( DaoEnum *self, DString *name )
@@ -338,9 +358,9 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 	DMap *mapNames;
 	DNode *node;
 	DString_Clear( name );
-	mapNames = self->type->mapNames;
+	mapNames = self->etype->mapNames;
 	for(node=DMap_First(mapNames);node;node=DMap_Next(mapNames,node)){
-		if( self->type->flagtype ){
+		if( self->etype->flagtype ){
 			if( !(node->value.pInt & self->value) ) continue;
 		}else if( node->value.pInt != self->value ){
 			continue;
@@ -351,9 +371,9 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 }
 void DaoEnum_SetType( DaoEnum *self, DaoType *type )
 {
-	if( self->type == type ) return;
-	GC_ShiftRC( type, self->type );
-	self->type = type;
+	if( self->etype == type ) return;
+	GC_ShiftRC( type, self->etype );
+	self->etype = type;
 	self->value = type->mapNames->root->value.pInt;
 }
 int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
@@ -363,7 +383,7 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	dint value = 0;
 	int notfound = 0;
 	int i, k = 0;
-	if( self->type->name->mbs[0] == '$' ) return 0;
+	if( self->etype->name->mbs[0] == '$' ) return 0;
 	names = DString_New(1);
 	DString_SetMBS( names, symbols );
 	for(i=0; i<names->size; i++) if( names->mbs[i] == '$' ) names->mbs[i] = 0;
@@ -371,7 +391,7 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	if( names->mbs[0] == '\0' ) i += 1;
 	do{ /* for multiple symbols */
 		DString name = DString_WrapMBS( names->mbs + i );
-		DNode *node = DMap_Find( self->type->mapNames, &name );
+		DNode *node = DMap_Find( self->etype->mapNames, &name );
 		if( node ){
 			if( ! k ) first = node->value.pInt;
 			value |= node->value.pInt;
@@ -383,7 +403,7 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	}while( i < names->size );
 	DString_Delete( names );
 	if( k == 0 ) return 0;
-	if( self->type->flagtype ==0 && k > 1 ){
+	if( self->etype->flagtype ==0 && k > 1 ){
 		self->value = first;
 		return 0;
 	}
@@ -392,32 +412,32 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 }
 int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
 {
-	DMap *selfNames = self->type->mapNames;
-	DMap *otherNames = other->type->mapNames;
+	DMap *selfNames = self->etype->mapNames;
+	DMap *otherNames = other->etype->mapNames;
 	DNode *node, *search;
 
-	if( self->type == other->type ){
+	if( self->etype == other->etype ){
 		self->value = other->value;
 		return 1;
 	}
-	if( self->type->name->mbs[0] == '$' ) return 0;
+	if( self->etype->name->mbs[0] == '$' ) return 0;
 
 	self->value = 0;
-	if( self->type->flagtype && other->type->flagtype ){
+	if( self->etype->flagtype && other->etype->flagtype ){
 		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
 			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
 			self->value |= search->value.pInt;
 		}
-	}else if( self->type->flagtype ){
+	}else if( self->etype->flagtype ){
 		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
 			if( node->value.pInt != other->value ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
 			self->value |= search->value.pInt;
 		}
-	}else if( other->type->flagtype ){
+	}else if( other->etype->flagtype ){
 		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
 			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
@@ -435,20 +455,20 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
 			break;
 		}
 	}
-	return other->type->name->mbs[0] == '$';
+	return other->etype->name->mbs[0] == '$';
 }
 int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames )
 {
-	DMap *selfNames = self->type->mapNames;
-	DMap *otherNames = other->type->mapNames;
+	DMap *selfNames = self->etype->mapNames;
+	DMap *otherNames = other->etype->mapNames;
 	DNode *node, *search;
 
-	if( self->type->flagtype ==0 || self->type->name->mbs[0] == '$' ) return 0;
+	if( self->etype->flagtype ==0 || self->etype->name->mbs[0] == '$' ) return 0;
 
-	if( self->type == other->type ){
+	if( self->etype == other->etype ){
 		self->value |= other->value;
 		return 1;
-	}else if( other->type->flagtype ){
+	}else if( other->etype->flagtype ){
 		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
 			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
@@ -463,20 +483,20 @@ int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames )
 			self->value |= search->value.pInt;
 		}
 	}
-	return other->type->name->mbs[0] == '$';
+	return other->etype->name->mbs[0] == '$';
 }
 int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames )
 {
-	DMap *selfNames = self->type->mapNames;
-	DMap *otherNames = other->type->mapNames;
+	DMap *selfNames = self->etype->mapNames;
+	DMap *otherNames = other->etype->mapNames;
 	DNode *node, *search;
 
-	if( self->type->flagtype ==0 || self->type->name->mbs[0] == '$' ) return 0;
+	if( self->etype->flagtype ==0 || self->etype->name->mbs[0] == '$' ) return 0;
 
-	if( self->type == other->type ){
+	if( self->etype == other->etype ){
 		self->value &= ~ other->value;
 		return 1;
-	}else if( other->type->flagtype ){
+	}else if( other->etype->flagtype ){
 		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
 			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
@@ -491,18 +511,18 @@ int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames )
 			self->value &= ~search->value.pInt;
 		}
 	}
-	return other->type->name->mbs[0] == '$';
+	return other->etype->name->mbs[0] == '$';
 }
 int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns )
 {
 	DaoType *type;
-	DMap *names1 = s1->type->mapNames;
-	DMap *names2 = s2->type->mapNames;
+	DMap *names1 = s1->etype->mapNames;
+	DMap *names2 = s2->etype->mapNames;
 	DMap *mapNames;
 	DNode *node;
 	DString *name;
 	dint value = 0;
-	if( s1->type->name->mbs[0] != '$' && s2->type->name->mbs[0] != '$' ) return 0;
+	if( s1->etype->name->mbs[0] != '$' && s2->etype->name->mbs[0] != '$' ) return 0;
 	name = DString_New(1);
 	for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
 		DString_AppendChar( name, '$' );
@@ -538,14 +558,14 @@ int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns
 int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns )
 {
 	DaoType *type;
-	DMap *names1 = s1->type->mapNames;
-	DMap *names2 = s2->type->mapNames;
+	DMap *names1 = s1->etype->mapNames;
+	DMap *names2 = s2->etype->mapNames;
 	DMap *mapNames;
 	DNode *node;
 	DString *name;
 	dint value = 0;
 	int count = 0;
-	if( s1->type->name->mbs[0] != '$' && s2->type->name->mbs[0] != '$' ) return 0;
+	if( s1->etype->name->mbs[0] != '$' && s2->etype->name->mbs[0] != '$' ) return 0;
 	name = DString_New(1);
 	for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
 		if( DMap_Find( names2, node->key.pVoid ) ) continue;
@@ -581,15 +601,10 @@ DaoTypeBase enumTyper=
 	"enum", & baseCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
 
-DaoTypeBase* DaoValue_GetTyper( DaoValue *p )
-{
-	if( p ==NULL ) return & baseTyper;
-	if( p->type == DAO_CDATA || p->type == DAO_CTYPE ) return ((DaoCData*)p)->typer;
-	return DaoVmSpace_GetTyper( p->type );
-}
 extern DaoTypeBase funcTyper;
 DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 {
+	if( self == NULL ) return & baseTyper;
 	switch( self->type ){
 	case DAO_NULL : return & baseTyper;
 	case DAO_INTEGER :
@@ -609,7 +624,7 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 
 void DaoValue_GetField( DaoValue *self, DaoContext *ctx, DString *name )
 {
-	DaoTypeBase *typer = DaoValue_GetTyper( *self );
+	DaoTypeBase *typer = DaoValue_GetTyper( self );
 	DaoValue *p = DaoFindValue( typer, name );
 	if( p == NULL ){
 		DString *mbs = DString_New(1);
@@ -654,7 +669,7 @@ void DaoValue_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, 
 	DaoValue *func = DaoFindFunction2( DaoValue_GetTyper( self ), "[]=" );
 	DaoValue *p[ DAO_MAX_PARAM ];
 	memcpy( p, pid, N*sizeof(DaoValue*) );
-	p[N+1] = & value;
+	p[N+1] = value;
 	if( func ) func = (DaoValue*) DRoutine_Resolve( func, self, p, N+1, DVM_CALL );
 	if( func == NULL ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, "" );
@@ -728,7 +743,7 @@ static DaoTypeCore numberCore=
 	DaoNumber_GetItem,
 	DaoNumber_SetItem,
 	DaoNumber_Print,
-	DaoValue_Copy,
+	DaoValue_NoCopy,
 };
 
 DaoTypeBase numberTyper=
@@ -874,7 +889,7 @@ static DaoTypeCore stringCore=
 	DaoString_GetItem,
 	DaoString_SetItem,
 	DaoString_Print,
-	DaoValue_Copy,
+	DaoValue_NoCopy,
 };
 
 static void DaoSTR_Size( DaoContext *ctx, DaoValue *p[], int N )
@@ -1159,7 +1174,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DaoValue *p[], int N )
 					if( node ){
 						if( tup ){
 							i = node->value.pInt;
-							DaoValue_GetString( tup->items->data[i], key->data );
+							DaoValue_GetString( tup->items->items.pValue[i], key->data );
 							val = key->data;
 						}else{
 							val = node->value.pValue->xString.data;
@@ -1211,7 +1226,7 @@ static void DaoSTR_Expand( DaoContext *ctx, DaoValue *p[], int N )
 					if( node ){
 						if( tup ){
 							i = node->value.pInt;
-							DaoValue_GetString( tup->items->data[i], key->data );
+							DaoValue_GetString( tup->items->items.pValue[i], key->data );
 							val = key->data;
 						}else{
 							val = node->value.pValue->xString.data;
@@ -1547,8 +1562,8 @@ static void DaoSTR_Extract( DaoContext *ctx, DaoValue *p[], int N )
 	DaoList *list = DaoContext_PutList( ctx );
 	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
 	DaoRegex *ptmask = NULL;
-	DString_Delete( subs.data );
-	pt = subs.data = DString_Copy( pt );
+	DString_Delete( subs->data );
+	pt = subs->data = DString_Copy( pt );
 	if( size == 0 ) goto DoNothing;
 	if( DString_Size( mask ) ==0 ) mask = NULL;
 	if( mask ){
@@ -1616,8 +1631,8 @@ static void DaoSTR_Capture( DaoContext *ctx, DaoValue *p[], int N )
 	if( patt ==NULL ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & p1, & p2 ) ==0 ) return;
-	DString_Delete( subs.data );
-	pt = subs.data = DString_Copy( pt );
+	DString_Delete( subs->data );
+	pt = subs->data = DString_Copy( pt );
 	for( gid=0; gid<=patt->group; gid++ ){
 		DString_Clear( pt );
 		if( DaoRegex_SubMatch( patt, gid, & p1, & p2 ) ){
@@ -1656,7 +1671,7 @@ static void DaoSTR_Mpack( DaoContext *ctx, DaoValue *p[], int N )
 		DArray *packs = DArray_New(D_VALUE);
 		DaoRegex_MatchAndPack( patt, self, str, index, 1, packs );
 		if( packs->size ){
-			DaoContext_PutValue( ctx, packs->data[0] );
+			DaoContext_PutValue( ctx, packs->items.pValue[0] );
 		}else{
 			DaoContext_PutMBString( ctx, "" );
 		}
@@ -1684,7 +1699,7 @@ static void DaoSTR_Iter( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DaoTuple *tuple = & p[1]->xTuple;
-	DaoValue *data = tuple->items->data;
+	DaoValue **data = tuple->items->items.pValue;
 	DaoValue *iter = DaoValue_NewInteger(0);
 	data[0]->xInteger.value = self->size >0;
 	DaoValue_Copy( iter, & data[1] );
@@ -1765,12 +1780,12 @@ static void DaoListCore_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stre
 	char *lb = "{ ";
 	char *rb = " }";
 	if( self->type == DAO_TUPLE ){
-		data = self0->xTuple.items->data;
+		data = self0->xTuple.items->items.pValue;
 		size = self0->xTuple.items->size;
 		lb = "( ";
 		rb = " )";
 	}else{
-		data = self->items->data;
+		data = self->items->items.pValue;
 		size = self->items->size;
 	}
 
@@ -1810,7 +1825,7 @@ static void DaoListCore_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pi
 	case IDX_SINGLE :
 		/* scalar duplicated in DaoMoveAC() */
 		if( start >=0 && start <size )
-			DaoContext_PutReference( ctx, self->items->data + start );
+			DaoContext_PutReference( ctx, self->items->items.pValue[start] );
 		else DaoContext_RaiseException( ctx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 		break;
 	case IDX_FROM :
@@ -1836,7 +1851,7 @@ static void DaoListCore_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pi
 		break;
 	case IDX_ALL :
 		res = DaoList_Copy( self, NULL );
-		DaoContext_SetResult( ctx, (DaoValue*) res );
+		DaoContext_PutValue( ctx, (DaoValue*) res );
 		break;
 	case IDX_MULTIPLE :
 		res = DaoContext_PutList( ctx );
@@ -1910,7 +1925,7 @@ void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoContext *ctx, DM
 	int i;
 	for(i=0; i<N; i++){
 		if( data[i]->type <= DAO_ENUM ){
-			DaoMove( data[i], copy+i, NULL );
+			DaoValue_Move( data[i], copy+i, NULL );
 		}else{
 			DaoValue *src = data[i];
 			if( cycData ){
@@ -1926,7 +1941,7 @@ void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoContext *ctx, DM
 static DaoValue* DaoListCore_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycData )
 {
 	DaoList *copy, *self = & self0->xList;
-	DaoValue **data = self->items->items->pValue;
+	DaoValue **data = self->items->items.pValue;
 
 	if( cycData ){
 		DNode *node = MAP_Find( cycData, self );
@@ -1944,7 +1959,7 @@ static DaoValue* DaoListCore_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycDa
 }
 DaoList* DaoList_Copy( DaoList *self, DMap *cycData )
 {
-	return DaoListCore_Copy( (DaoValue*)self, NULL, cycData );
+	return (DaoList*) DaoListCore_Copy( (DaoValue*)self, NULL, cycData );
 }
 static DaoTypeCore listCore=
 {
@@ -1959,9 +1974,9 @@ static DaoTypeCore listCore=
 
 static void DaoLIST_Insert( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoList *self = p[0]->xList;
+	DaoList *self = & p[0]->xList;
 	int size = self->items->size;
-	DaoList_Insert( self, *p[1], p[2]->xInteger.value );
+	DaoList_Insert( self, p[1], p[2]->xInteger.value );
 	if( size == self->items->size )
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "value type" );
 }
@@ -1988,7 +2003,7 @@ static void DaoLIST_Erase2( DaoContext *ctx, DaoValue *p[], int N )
 	for(i=k; i<self->items->size; i++){
 		DaoValue *val = self->items->items.pValue[i];
 		if( val == NULL ) continue;
-		self->items->data[k] = val;
+		self->items->items.pValue[k] = val;
 		k += 1;
 	}
 	self->items->size = k;
@@ -2048,10 +2063,10 @@ static void DaoList_PutDefault( DaoContext *ctx, DaoValue *p[], int N )
 		case DAO_DOUBLE  : DaoContext_PutDouble( ctx, 0.0 ); break;
 		case DAO_COMPLEX : DaoContext_PutComplex( ctx, com ); break;
 		case DAO_STRING  : DaoContext_PutMBString( ctx, "" ); break;
-		default : DaoContext_SetResult( ctx, NULL ); break;
+		default : DaoContext_PutValue( ctx, NULL ); break;
 		}
 	}else{
-		DaoContext_SetResult( ctx, NULL );
+		DaoContext_PutValue( ctx, NULL );
 	}
 }
 #endif
@@ -2062,7 +2077,7 @@ static void DaoLIST_Max( DaoContext *ctx, DaoValue *p[], int N )
 	DaoValue *res, **data = self->items->items.pValue;
 	size_t i, imax, type, size = self->items->size;
 
-	tuple->items->data[1]->xInteger.value = -1;
+	tuple->items->items.pValue[1]->xInteger.value = -1;
 	type = DaoList_CheckType( self, ctx );
 	if( type == 0 ){
 		/* DaoList_PutDefault( ctx, p, N ); */
@@ -2076,7 +2091,7 @@ static void DaoLIST_Max( DaoContext *ctx, DaoValue *p[], int N )
 			res = data[i];
 		}
 	}
-	tuple->items->data[1]->xInteger.value = imax;
+	tuple->items->items.pValue[1]->xInteger.value = imax;
 	DaoTuple_SetItem( tuple, res, 0 );
 }
 static void DaoLIST_Min( DaoContext *ctx, DaoValue *p[], int N )
@@ -2086,7 +2101,7 @@ static void DaoLIST_Min( DaoContext *ctx, DaoValue *p[], int N )
 	DaoValue *res, **data = self->items->items.pValue;
 	size_t i, imin, type, size = self->items->size;
 
-	tuple->items->data[1]->xInteger.value = -1;
+	tuple->items->items.pValue[1]->xInteger.value = -1;
 	type = DaoList_CheckType( self, ctx );
 	if( type == 0 ){
 		/* DaoList_PutDefault( ctx, p, N ); */
@@ -2100,11 +2115,11 @@ static void DaoLIST_Min( DaoContext *ctx, DaoValue *p[], int N )
 			res = data[i];
 		}
 	}
-	tuple->items->data[1]->xInteger.value = imin;
+	tuple->items->items.pValue[1]->xInteger.value = imin;
 	DaoTuple_SetItem( tuple, res, 0 );
 }
 extern DLong* DaoContext_GetLong( DaoContext *self, DaoVmCode *vmc );
-extern DEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc );
+extern DaoEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc );
 static void DaoLIST_Sum( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
@@ -2154,7 +2169,7 @@ static void DaoLIST_Sum( DaoContext *ctx, DaoValue *p[], int N )
 		{
 			/* XXX */
 			DaoEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
-			for(i=0; i<self->items->size; i++) denum->value += data[i].xEnum.value;
+			for(i=0; i<self->items->size; i++) denum->value += data[i]->xEnum.value;
 			break;
 		}
 	case DAO_STRING :
@@ -2201,21 +2216,21 @@ static void DaoLIST_Front( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
 	if( self->items->size == 0 ){
-		DaoContext_SetResult( ctx, & nil );
+		DaoContext_PutValue( ctx, null );
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "list is empty" );
 		return;
 	}
-	DaoContext_PutReference( ctx, self->items->data );
+	DaoContext_PutReference( ctx, self->items->items.pValue[0] );
 }
 static void DaoLIST_Top( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
 	if( self->items->size == 0 ){
-		DaoContext_SetResult( ctx, & nil );
+		DaoContext_PutValue( ctx, null );
 		DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "list is empty" );
 		return;
 	}
-	DaoContext_PutReference( ctx, self->items->data + (self->items->size -1) );
+	DaoContext_PutReference( ctx, self->items->items.pValue[ self->items->size -1 ] );
 }
 /* Quick Sort.
  * Adam Drozdek: Data Structures and Algorithms in C++, 2nd Edition.
@@ -2297,14 +2312,14 @@ static void DaoLIST_Rank( DaoContext *ctx, DaoValue *p[], int npar)
 	DaoList *list = & p[0]->xList;
 	DaoList *res = DaoContext_PutList( ctx );
 	DaoValue **items = list->items->items.pValue;
-	DaoValue *ids;
+	DaoValue **ids;
 	IndexValue *data;
 	dint part = p[2]->xInteger.value;
 	size_t i, N;
 
 	N = list->items->size;
-	DArray_Resize( res->items, N, daoZeroInteger );
-	ids  = res->items->data;
+	DArray_Resize( res->items, N, p[2] ); /* init to be integers */
+	ids = res->items->items.pValue;
 	for(i=0; i<N; i++) ids[i]->xInteger.value = i;
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
@@ -2372,7 +2387,7 @@ static void DaoLIST_Iter( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
 	DaoTuple *tuple = & p[1]->xTuple;
-	DaoValue *data = tuple->items->data;
+	DaoValue **data = tuple->items->items.pValue;
 	DaoValue *iter = DaoValue_NewInteger(0);
 	data[0]->xInteger.value = self->items->size >0;
 	DaoValue_Copy( iter, & data[1] );
@@ -2389,7 +2404,7 @@ static void DaoLIST_Join( DaoContext *ctx, DaoValue *p[], int N )
 	int digits, mbs = 1;
 	wchar_t ewcs[] = {0};
 	for( i = 0; i < self->items->size; i++ ){
-		switch( data[i].t ){
+		switch( data[i]->type ){
 		case DAO_STRING:
 			if( data[i]->xString.data->mbs == NULL ) mbs = 0;
 			size += data[i]->xString.data->size;
@@ -2404,12 +2419,12 @@ static void DaoLIST_Join( DaoContext *ctx, DaoValue *p[], int N )
 			size += ( data[i]->xDouble.value < 0 ) ? 2 : 1;
 			break;
 		case DAO_COMPLEX:
-			size += ( data[i].v.c->real < 0 ) ? 5 : 4;
+			size += ( data[i]->xComplex.value.real < 0 ) ? 5 : 4;
 			break;
 		case DAO_LONG:
-			digits = self->items->data[i]->xLong.value->size;
+			digits = self->items->items.pValue[i]->xLong.value->size;
 			digits = digits > 1 ? (LONG_BITS * (digits - 1) + 1) : 1; /* bits */
-			digits /= (int)(log( self->items->data[i]->xLong.value->base ) / log(2)); /* digits */
+			digits /= (int)(log( self->items->items.pValue[i]->xLong.value->base ) / log(2)); /* digits */
 			size += digits + (data[i]->xLong.value->sign < 0) ? 3 : 2; /* sign + suffix */
 			break;
 		case DAO_ENUM :
@@ -2427,10 +2442,10 @@ static void DaoLIST_Join( DaoContext *ctx, DaoValue *p[], int N )
 	if( self->items->size != 0 ){
 		DString_Reserve( res, size + ( self->items->size - 1 ) * sep->size );
 		for( i = 0; i < self->items->size - 1; i++ ){
-			DString_Append( res, DaoValue_GetString( self->items->data[i], buf ) );
+			DString_Append( res, DaoValue_GetString( self->items->items.pValue[i], buf ) );
 			if( sep->size != 0 ) DString_Append( res, sep );
 		}
-		DString_Append( res, DaoValue_GetString( self->items->data[i], buf ) );
+		DString_Append( res, DaoValue_GetString( self->items->items.pValue[i], buf ) );
 	}
 	DString_Delete( buf );
 }
@@ -2442,7 +2457,7 @@ static void DaoLIST_Reverse( DaoContext *ctx, DaoValue *p[], int npar )
 
 	DaoContext_PutReference( ctx, p[0] );
 	for(i=0; i<N/2; i++){
-		DaoValue tmp = items[N-i-1];
+		DaoValue *tmp = items[N-i-1];
 		items[N-i-1] = items[i];
 		items[i] = tmp;
 	}
@@ -2477,17 +2492,17 @@ int DaoList_Size( DaoList *self )
 }
 DaoValue* DaoList_Front( DaoList *self )
 {
-	if( self->items->size == 0 ) return daoNullValue;
+	if( self->items->size == 0 ) return NULL;
 	return self->items->items.pValue[0];
 }
 DaoValue* DaoList_Back( DaoList *self )
 {
-	if( self->items->size == 0 ) return daoNullValue;
+	if( self->items->size == 0 ) return NULL;
 	return self->items->items.pValue[ self->items->size-1 ];
 }
 DaoValue* DaoList_GetItem( DaoList *self, int pos )
 {
-	if( pos <0 || pos >= self->items->size ) return daoNullValue;
+	if( pos <0 || pos >= self->items->size ) return NULL;
 	return self->items->items.pValue[pos];
 }
 DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
@@ -2520,7 +2535,7 @@ int DaoList_Insert( DaoList *self, DaoValue *item, int pos )
 	self->items->items.pValue[ pos ] = temp;
 	return 0;
 }
-int DaoList_PushFront( DaoList *self, DaoValue item )
+int DaoList_PushFront( DaoList *self, DaoValue *item )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
@@ -2532,7 +2547,7 @@ int DaoList_PushFront( DaoList *self, DaoValue item )
 	self->items->items.pValue[ 0 ] = temp;
 	return 0;
 }
-int DaoList_PushBack( DaoList *self, DaoValue item )
+int DaoList_PushBack( DaoList *self, DaoValue *item )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
@@ -2547,12 +2562,12 @@ int DaoList_PushBack( DaoList *self, DaoValue item )
 void DaoList_PopFront( DaoList *self )
 {
 	if( self->items->size ==0 ) return;
-	DVarray_PopFront( self->items );
+	DArray_PopFront( self->items );
 }
 void DaoList_PopBack( DaoList *self )
 {
 	if( self->items->size ==0 ) return;
-	DVarray_PopBack( self->items );
+	DArray_PopBack( self->items );
 }
 
 DaoTypeBase listTyper=
@@ -2582,7 +2597,7 @@ void DaoList_Clear( DaoList *self )
 {
 	DArray_Clear( self->items );
 }
-int DaoList_Append( DaoList *self, DaoValue value )
+int DaoList_Append( DaoList *self, DaoValue *value )
 {
 	return DaoList_PushBack( self, value );
 }
@@ -2612,9 +2627,9 @@ static void DaoMap_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream, D
 	node = DMap_First( self->items );
 	for( ; node!=NULL; node=DMap_Next(self->items,node) ){
 		stream->useQuote = 1;
-		DaoValue_Print( node->key.pValue[0], ctx, stream, cycData );
+		DaoValue_Print( node->key.pValue, ctx, stream, cycData );
 		DaoStream_WriteMBS( stream, kvsym );
-		DaoValue_Print( node->value.pValue[0], ctx, stream, cycData );
+		DaoValue_Print( node->value.pValue, ctx, stream, cycData );
 		stream->useQuote = 0;
 		if( i+1<size ) DaoStream_WriteMBS( stream, ", " );
 		i++;
@@ -2629,11 +2644,11 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid )
 	if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
 		DaoTuple *iter = & pid->xTuple;
 		DaoTuple *tuple = DaoTuple_New( 2 );
-		DNode *node = (DNode*) iter->items->data[1].v.p;
+		DNode *node = (DNode*) iter->items->items.pValue[1]; // XXX Fix:
 		DaoContext_PutValue( ctx, (DaoValue*) tuple );
 		if( node == NULL ) return;
-		DaoValue_Copy( node->key.pValue[0], tuple->items->items.pValue );
-		DaoValue_Copy( node->value.pValue[0], tuple->items->items.pValue + 1 );
+		DaoValue_Copy( node->key.pValue, tuple->items->items.pValue );
+		DaoValue_Copy( node->value.pValue, tuple->items->items.pValue + 1 );
 		node = DMap_Next( self->items, node );
 		iter->items->items.pValue[0]->xInteger.value = node != NULL;
 		//XXX iter->items->items.pValue[1].v.p = (DaoValue*) node;
@@ -2667,7 +2682,7 @@ static void DaoMap_GetItem2( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], 
 	if( ids[1]->type ) node2 = MAP_FindLE( self->items, ids[1] );
 	if( node2 ) node2 = DMap_Next(self->items, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
-		DaoMap_Insert( map, node1->key.pValue[0], node1->value.pValue[0] );
+		DaoMap_Insert( map, node1->key.pValue, node1->value.pValue );
 }
 static void DaoMap_GetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids[], int N )
 {
@@ -2706,7 +2721,7 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], 
 	if( ids[1]->type ) node2 = MAP_FindLE( self->items, ids[1] );
 	if( node2 ) node2 = DMap_Next(self->items, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->items, node1 ) )
-		DaoValue_Move( value, node1->value.pValue, tp2 );
+		DaoValue_Move( value, & node1->value.pValue, tp2 );
 }
 static void DaoMap_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids[], int N, DaoValue *value )
 {
@@ -2761,11 +2776,11 @@ static DaoTypeCore mapCore =
 
 static void DaoMAP_Clear( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoMap_Clear( & p[0]->xMap.items );
+	DaoMap_Clear( & p[0]->xMap );
 }
 static void DaoMAP_Reset( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoMap_Reset( & p[0]->xMap.items );
+	DaoMap_Reset( & p[0]->xMap );
 }
 static void DaoMAP_Erase( DaoContext *ctx, DaoValue *p[], int N )
 {
@@ -2858,7 +2873,7 @@ static void DaoMAP_Key( DaoContext *ctx, DaoValue *p[], int N )
 	}
 	if( mg == NULL ) return;
 	for( node=mg; node != ml; node = DMap_Next( self->items, node ) )
-		DaoList_Append( list, node->key.pValue[0] );
+		DaoList_Append( list, node->key.pValue );
 }
 static void DaoMAP_Value( DaoContext *ctx, DaoValue *p[], int N )
 {
@@ -2883,7 +2898,7 @@ static void DaoMAP_Value( DaoContext *ctx, DaoValue *p[], int N )
 	}
 	if( mg == NULL ) return;
 	for( node=mg; node != ml; node = DMap_Next( self->items, node ) ){
-		DaoList_Append( list, node->value.pValue[0] );
+		DaoList_Append( list, node->value.pValue );
 	}
 }
 static void DaoMAP_Has( DaoContext *ctx, DaoValue *p[], int N )
@@ -2902,7 +2917,7 @@ static void DaoMAP_Iter( DaoContext *ctx, DaoValue *p[], int N )
 	DaoTuple *tuple = & p[1]->xTuple;
 	DaoValue **data = tuple->items->items.pValue;
 	data[0]->xInteger.value = self->items->size >0;
-	//data[1].t = 0;
+	//data[1]->type = 0;
 	//XXX iter data: data[1].v.p = (DaoValue*) DMap_First( self->items );
 }
 static DaoFuncItem mapMeths[] =
@@ -2931,48 +2946,48 @@ int DaoMap_Size( DaoMap *self )
 {
 	return self->items->size;
 }
-DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue key  )
+DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  )
 {
 	DNode *node = MAP_Find( self->items, & key );
 	if( node ) return node->value.pValue;
-	return daoNullValue;
+	return NULL;
 }
 int DaoMap_InsertMBS( DaoMap *self, const char *key, DaoValue *value )
 {
 	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
 	DString str = DString_WrapMBS( key );
-	vkey.xString.data = str;
+	vkey.data = & str;
 	return DaoMap_Insert( self, (DaoValue*) & vkey, value );
 }
 int DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DaoValue *value )
 {
 	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
 	DString str = DString_WrapWCS( key );
-	vkey.xString.data = str;
-	return DaoMap_Insert( self, vkey, value );
+	vkey.data = & str;
+	return DaoMap_Insert( self, (DaoValue*) & vkey, value );
 }
 void DaoMap_EraseMBS ( DaoMap *self, const char *key )
 {
 	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
 	DString str = DString_WrapMBS( key );
-	vkey.xString.data = str;
-	DaoMap_Erase( self, vkey );
+	vkey.data = & str;
+	DaoMap_Erase( self, (DaoValue*) & vkey );
 }
 void DaoMap_EraseWCS ( DaoMap *self, const wchar_t *key )
 {
 	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
 	DString str = DString_WrapWCS( key );
-	vkey.xString.data = str;
-	DaoMap_Erase( self, vkey );
+	vkey.data = & str;
+	DaoMap_Erase( self, (DaoValue*) & vkey );
 }
 DaoValue* DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 {
 	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
 	DString str = DString_WrapMBS( key );
 	DNode *node;
-	vkey.xString.data = str;
-	node = MAP_Find( self->items, & vkey );
-	if( node ) return node->value.pValue[0];
+	vkey.data = & str;
+	node = MAP_Find( self->items, (DaoValue*) &  vkey );
+	if( node ) return node->value.pValue;
 	return NULL;
 }
 DaoValue* DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
@@ -2980,9 +2995,9 @@ DaoValue* DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
 	DString str = DString_WrapWCS( key );
 	DNode *node;
-	vkey.xString.data = str;
-	node = MAP_Find( self->items, & vkey );
-	if( node ) return node->value.pValue[0];
+	vkey.data = & str;
+	node = MAP_Find( self->items, (DaoValue*) &  vkey );
+	if( node ) return node->value.pValue;
 	return NULL;
 }
 
@@ -3063,9 +3078,9 @@ int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 	GC_DecRC( value2 );
 	return 0;
 }
-void DaoMap_Erase( DaoMap *self, DaoValue key )
+void DaoMap_Erase( DaoMap *self, DaoValue *key )
 {
-	MAP_Erase( self->items, & key );
+	MAP_Erase( self->items, key );
 }
 DNode* DaoMap_First( DaoMap *self )
 {
@@ -3329,7 +3344,7 @@ static void DaoCData_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid )
 		}else{
 			self->data = ((void**)self->buffer)[id];
 		}
-		DaoContext_PutValue( ctx, *self0 );
+		DaoContext_PutValue( ctx, self0 );
 	}else{
 		DaoValue *func = NULL;
 		func = DaoFindFunction2( typer, "[]" );
@@ -3418,7 +3433,7 @@ DaoCDataCore* DaoCDataCore_New()
 	self->GetItem = DaoCData_GetItem;
 	self->SetItem = DaoCData_SetItem;
 	self->Print = DaoValue_Print;
-	self->Copy = DaoValue_Copy;
+	self->Copy = DaoValue_NoCopy;
 	return self;
 }
 void DaoTypeCData_SetMethods( DaoTypeBase *self )
@@ -3443,7 +3458,7 @@ static void DaoBuf_New( DaoContext *ctx, DaoValue *p[], int N )
 	int size = p[0]->xInteger.value;
 	DaoCData *self = DaoCData_New( NULL, NULL );
 	self->attribs |= DAO_CDATA_FREE;
-	DaoContext_SetResult( ctx, (DaoValue*) self );
+	DaoContext_PutValue( ctx, (DaoValue*) self );
 	if( ( ctx->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR,
 				"not permitted to create large buffer object in safe running mode" );
@@ -3469,7 +3484,7 @@ static void DaoBuf_Resize( DaoContext *ctx, DaoValue *p[], int N )
 static void DaoBuf_CopyData( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoCData *self = & p[0]->xCdata;
-	DaoCData *cdat = p[1]->v.cdata;
+	DaoCData *cdat = & p[1]->xCdata;
 	if( cdat->bufsize == 0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "invalid value" );
 		return;
@@ -3610,7 +3625,7 @@ DaoTypeBase cdataTyper =
 	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0}, {0},
 	(FuncPtrDel)DaoCData_Delete, NULL
 };
-DaoCData cptrCData = { DAO_CDATA, DAO_DATA_CONST, { 0, 0 }, 1, 0, 
+DaoCData cptrCData = { DAO_CDATA, 0, DAO_DATA_CONST, 0, { 0, 0 }, 1, 0, 
 	NULL, NULL, NULL, NULL, NULL, NULL, 0,0,0,0,0 };
 
 void DaoNameValue_Delete( DaoNameValue *self )
@@ -3622,7 +3637,7 @@ void DaoNameValue_Delete( DaoNameValue *self )
 }
 static DaoValue* DaoNameValue_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycData )
 {
-	DaoNameValue *self = self0->v.nameva;
+	DaoNameValue *self = & self0->xNameValue;
 	DaoNameValue *copy = DaoNameValue_New( self->name, self->value );
 	copy->unitype = self->unitype;
 	GC_IncRC( self->unitype );
@@ -3630,7 +3645,7 @@ static DaoValue* DaoNameValue_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycD
 }
 static void DaoNameValue_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
-	DaoNameValue *self = self0->v.nameva;
+	DaoNameValue *self = & self0->xNameValue;
 	DaoStream_WriteString( stream, self->name );
 	DaoStream_WriteMBS( stream, "=>" );
 	DaoValue_Print( self->value, ctx, stream, cycData );
@@ -3685,7 +3700,7 @@ static void DaoTupleCore_GetField( DaoValue *self0, DaoContext *ctx, DString *na
 	DaoTuple *self = & self0->xTuple;
 	int id = DaoTuple_GetIndex( self, ctx, name );
 	if( id <0 ) return;
-	DaoContext_PutReference( ctx, self->items->data + id );
+	DaoContext_PutReference( ctx, self->items->items.pValue[id] );
 }
 static void DaoTupleCore_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoValue *value )
 {
@@ -3694,7 +3709,7 @@ static void DaoTupleCore_SetField( DaoValue *self0, DaoContext *ctx, DString *na
 	int id = DaoTuple_GetIndex( self, ctx, name );
 	if( id <0 ) return;
 	t = type[id];
-	if( t->tid == DAO_PAR_NAMED ) t = & t->aux.xTuple;
+	if( t->tid == DAO_PAR_NAMED ) t = & t->aux->xType;
 	if( DaoValue_Move( value, self->items->items.pValue + id, t ) ==0)
 		DaoContext_RaiseException( ctx, DAO_ERROR, "type not matching" );
 }
@@ -3708,7 +3723,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *p
 	}else if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
 		int id = DaoValue_GetInteger( pid );
 		if( id >=0 && id < self->items->size ){
-			DaoContext_PutReference( ctx, self->items->items.pValue + id );
+			DaoContext_PutReference( ctx, self->items->items.pValue[id] );
 			ec = 0;
 		}else{
 			ec = DAO_ERROR_INDEX_OUTOFRANGE;
@@ -3743,7 +3758,7 @@ static void DaoTupleCore_GetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids
 	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
-static void DaoTupleCore_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids[], int N, DaoValue value )
+static void DaoTupleCore_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids[], int N, DaoValue *value )
 {
 	switch( N ){
 	case 0 : DaoTupleCore_SetItem1( self, ctx, null, value ); break;
@@ -3751,7 +3766,7 @@ static void DaoTupleCore_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids
 	default : DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not supported" );
 	}
 }
-static DaoValue DaoTupleCore_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycData )
+static DaoValue* DaoTupleCore_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycData )
 {
 	DaoTuple *copy, *self = & self0->xTuple;
 	DaoValue **data = self->items->items.pValue;
@@ -3818,9 +3833,9 @@ void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos )
 		DaoValue_Copy( it, val );
 	}
 }
-DaoValue DaoTuple_GetItem( DaoTuple *self, int pos )
+DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos )
 {
-	if( pos <0 || pos >= self->items->size ) return daoNullValue;
+	if( pos <0 || pos >= self->items->size ) return NULL;
 	return self->items->items.pValue[pos];
 }
 
@@ -3842,7 +3857,7 @@ DaoException* DaoException_New( DaoTypeBase *typer )
 	DaoException_Init( self, typer );
 	return self;
 }
-DaoException* DaoException_New2( DaoTypeBase *typer, DaoValue v )
+DaoException* DaoException_New2( DaoTypeBase *typer, DaoValue *v )
 {
 	DaoException *self = DaoException_New( typer );
 	DaoValue_Move( v, & self->data, NULL );
@@ -4218,7 +4233,7 @@ DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 	GC_ShiftRC( cdata_type, cdata->ctype );
 	cdata->ctype = cdata_type;
 	cdata_type->value = (DaoValue*) cdata;
-	cdata_type->value->konst = 1;
+	cdata->konst = 1;
 	cdata->trait |= DAO_DATA_NOCOPY;
 	GC_IncRC( cdata );
 
@@ -4398,7 +4413,7 @@ void DaoException_Init( DaoException *self, DaoTypeBase *typer )
 static void DaoFuture_Lib_Value( DaoContext *ctx, DaoValue *par[], int N )
 {
 	DaoVmProcess *proc = ctx->process;
-	DaoFuture *self = (DaoFuture*) par[0]->v.p;
+	DaoFuture *self = (DaoFuture*) par[0];
 	if( self->state == DAO_CALL_FINISHED ){
 		DaoContext_PutValue( ctx, self->value );
 		return;
@@ -4432,7 +4447,7 @@ static DaoTypeCore futureCore =
 	DaoValue_GetItem,
 	DaoValue_SetItem,
 	DaoValue_Print,
-	DaoValue_Copy,
+	DaoValue_NoCopy,
 };
 DaoTypeBase futureTyper =
 {

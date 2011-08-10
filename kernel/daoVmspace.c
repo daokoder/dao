@@ -37,14 +37,13 @@
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoSched.h"
+#include"daoValue.h"
 
 #ifdef DAO_WITH_THREAD
 #include"daoThread.h"
 #endif
 
 extern int ObjectProfile[100];
-
-DAO_DLL DaoAPI __dao;
 
 DaoConfig daoConfig =
 {
@@ -204,7 +203,7 @@ DaoNameSpace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name )
 	DaoNameSpace *ns;
 	DString str = DString_WrapMBS( name );
 	DNode *node = DMap_Find( self->nsModules, & str );
-	if( node ) return (DaoNameSpace*) node->value.pBase;
+	if( node ) return (DaoNameSpace*) node->value.pValue;
 	ns = DaoNameSpace_New( self, name );
 	ns->refCount ++;
 	DaoVmSpace_Lock( self );
@@ -287,7 +286,7 @@ static DaoTypeBase vmsTyper=
 DaoVmSpace* DaoVmSpace_New()
 {
 	DaoVmSpace *self = (DaoVmSpace*) dao_malloc( sizeof(DaoVmSpace) );
-	DaoBase_Init( self, DAO_VMSPACE );
+	DaoValue_Init( self, DAO_VMSPACE );
 	self->stdStream = DaoStream_New();
 	self->stdStream->vmSpace = self;
 	self->source = DString_New(1);
@@ -348,10 +347,10 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 #endif
 	for( ; node!=NULL; node = DMap_Next( self->nsModules, node ) ){
 #if 0
-		printf( "%i  %i  %s\n", node->value.pBase->refCount,
-				((DaoNameSpace*)node->value.pBase)->cmethods->size, node->key.pString->mbs );
+		printf( "%i  %i  %s\n", node->value.pValue->refCount,
+				((DaoNameSpace*)node->value.pValue)->cmethods->size, node->key.pString->mbs );
 #endif
-		GC_DecRC( node->value.pBase );
+		GC_DecRC( node->value.pValue );
 	}
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
@@ -726,7 +725,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 		 */
 		DString_Assign( val, argValues->items.pString[i] );
 		if( abtp->nested->size > i ){
-			if( abtp->nested->items.pBase[i] ){
+			if( abtp->nested->items.pValue[i] ){
 				int k = abtp->nested->items.pType[i]->tid;
 				char *chars = argValues->items.pString[i]->mbs;
 				if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
@@ -886,7 +885,6 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DaoContext *ctx = NULL;
 	DaoRoutine *mainRoutine;
 	DString *name;
-	DArray *array;
 	DArray *argNames;
 	DArray *argValues;
 	DaoValue *value;
@@ -942,7 +940,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	i = DaoNameSpace_FindConst( ns, name );
 	DString_Delete( name );
 
-	ps = ns->argParams->items->data;
+	ps = ns->argParams->items->items.pValue;
 	N = ns->argParams->items->size;
 	if( i >=0 ){
 		DRoutine *unirout = NULL;
@@ -972,17 +970,14 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	}
 	/* check and execute explicitly defined main() routine  */
 	if( ctx != NULL ){
-		if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues,
-					array->items.pValue, N, 0 ) ){
+		if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues, ps, N, 0 ) ){
 			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
 			if( ctx->routine->routHelp )
 				DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
-			DArray_Delete( array );
 			return 0;
 		}
 		DaoVmProcess_Execute( vmp );
 	}
-	DArray_Delete( array );
 	if( ( self->options & DAO_EXEC_INTERUN ) && self->userHandler == NULL )
 		DaoVmSpace_Interun( self, NULL );
 
@@ -1102,7 +1097,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 	tm = FileChangedTime( libpath->mbs );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->mbs, node ); */
 	if( node ){
-		ns = (DaoNameSpace*)node->value.pBase;
+		ns = (DaoNameSpace*)node->value.pValue;
 		if( ns->time >= tm ){
 			if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 			DaoParser_Delete( parser );
@@ -1117,7 +1112,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 
 	GC_IncRC( ns );
 	node = MAP_Find( self->nsModules, libpath );
-	if( node ) GC_DecRC( node->value.pBase );
+	if( node ) GC_DecRC( node->value.pValue );
 	MAP_Insert( self->nsModules, libpath, ns );
 
 #if 0
@@ -1188,7 +1183,7 @@ ExecuteModule :
 			DArray_Delete( argValues );
 			argNames = argValues = NULL;
 		}
-		if( value.t == DAO_ROUTINE ){
+		if( value && value->type == DAO_ROUTINE ){
 			int j, N = ns->argParams->items->size;
 			DaoValue **ps = ns->argParams->items->items.pValue;
 			DaoVmProcess *vmp = self->mainProcess;
@@ -1232,7 +1227,6 @@ static void* DaoGetSymbolAddress( void *handle, const char *name );
 DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArray *reqns )
 {
 	DaoNameSpace *ns;
-	DaoAPI *api;
 	DNode *node;
 	typedef void (*FuncType)( DaoVmSpace *, DaoNameSpace * );
 	void (*funpter)( DaoVmSpace *, DaoNameSpace * );
@@ -1256,7 +1250,7 @@ DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 
 	node = MAP_Find( self->nsModules, libpath );
 	if( node ){
-		ns = (DaoNameSpace*) node->value.pBase;
+		ns = (DaoNameSpace*) node->value.pValue;
 		/* XXX dlclose(  ns->cmodule->libHandle ) */
 		if( handle == ns->cmodule->libHandle ) return ns;
 	}else{
@@ -1275,9 +1269,9 @@ DaoNameSpace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 				node = MAP_Find( self->modRequire, reqns->items.pString[i] );
 				/* printf( "requiring:  %p  %s\n", node, reqns->items.pString[i]->mbs ); */
 				/*
-				if( node ) DaoNameSpace_Import( ns, (DaoNameSpace*)node->value.pBase, NULL );
+				if( node ) DaoNameSpace_Import( ns, (DaoNameSpace*)node->value.pValue, NULL );
 				*/
-				if( node ) DaoNameSpace_AddParent( ns, (DaoNameSpace*)node->value.pBase );
+				if( node ) DaoNameSpace_AddParent( ns, (DaoNameSpace*)node->value.pValue );
 			}
 		}
 		/* MAP_Insert( self->modRequire, libpath, ns ); */
@@ -1519,7 +1513,7 @@ void DaoTypeBase_Free( DaoTypeBase *typer )
 	hs = typer->priv->methods;
 	if( hs ){
 		for( it=DMap_First(hs); it; it=DMap_Next(hs,it)){
-			GC_DecRC( it->value.pBase );
+			GC_DecRC( it->value.pValue );
 		}
 		DMap_Delete( hs );
 	}
@@ -1785,8 +1779,8 @@ DaoVmSpace* DaoInit()
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
-	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoBase*)dao_type_udf, NULL );
-	dao_class_any = DaoType_New( "class", DAO_CLASS, (DaoBase*)DaoClass_New(), NULL );
+	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
+	dao_class_any = DaoType_New( "class", DAO_CLASS, (DaoValue*)DaoClass_New(), NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;
@@ -1958,10 +1952,10 @@ void DaoQuit()
 DaoNameSpace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {
 	DNode *node = MAP_Find( self->nsModules, fname );
-	if( node ) return (DaoNameSpace*) node->value.pBase;
+	if( node ) return (DaoNameSpace*) node->value.pValue;
 	DaoVmSpace_CompleteModuleName( self, fname );
 	node = MAP_Find( self->nsModules, fname );
-	if( node ) return (DaoNameSpace*) node->value.pBase;
+	if( node ) return (DaoNameSpace*) node->value.pValue;
 	return NULL;
 }
 DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns )

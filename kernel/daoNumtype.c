@@ -18,6 +18,7 @@
 #include"daoVmspace.h"
 #include"daoRoutine.h"
 #include"daoNumtype.h"
+#include"daoValue.h"
 #include"assert.h"
 #include"math.h"
 #include"stdlib.h"
@@ -39,10 +40,10 @@ static DaoValue* DaoComplex_Copy( DaoValue *self, DaoContext *ctx, DMap *cycData
 static DaoTypeCore comCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_GetField,
-	DaoBase_SetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
+	DaoValue_GetField,
+	DaoValue_SetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
 	DaoComplex_Print,
 	DaoComplex_Copy,
 };
@@ -1394,7 +1395,7 @@ const int base_bits[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
 const int base_masks[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
 static void DaoLong_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid )
 {
-	DLong *self = & self0->xLong.value;
+	DLong *self = self0->xLong.value;
 	dint id = DaoValue_GetInteger( pid );
 	int w = base_bits[self->base];
 	int n = self->size;
@@ -1436,7 +1437,7 @@ static void DaoLong_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid )
 }
 static void DaoLong_SetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid, DaoValue *value )
 {
-	DLong *self = & self0->xLong.value;
+	DLong *self = self0->xLong.value;
 	dint id = DaoValue_GetInteger( pid );
 	dint digit = DaoValue_GetInteger( value );
 	int i, n = self->size;
@@ -1514,16 +1515,16 @@ static void DaoLong_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *ids[], i
 static DaoTypeCore longCore=
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_GetField,
-	DaoBase_SetField,
+	DaoValue_GetField,
+	DaoValue_SetField,
 	DaoLong_GetItem,
 	DaoLong_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
+	DaoValue_Print,
+	DaoValue_NoCopy,
 };
 static void DaoLong_Size( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DLong *self = & p[0]->xLong.value;
+	DLong *self = p[0]->xLong.value;
 	size_t size = self->size;
 	if( self->base ==2 ){
 		DaoContext_PutInteger( ctx, size*LONG_BITS );
@@ -1535,10 +1536,10 @@ static void DaoLong_Size( DaoContext *ctx, DaoValue *p[], int N )
 }
 static void DaoLong_Sqrt( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DLong *z = & p[0]->xLong.value;
+	DLong *z = p[0]->xLong.value;
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );//DaoTuple_New( 2 );
 	DaoValue **items = tuple->items->items.pValue;
-	//DaoContext_SetResult( ctx, (DaoBase*) tuple );
+	//DaoContext_PutValue( ctx, (DaoValue*) tuple );
 	//tuple->items->items.pValue[0].v.l = DLong_New();
 	//tuple->items->items.pValue[1].v.l = DLong_New();
 	//tuple->items->items.pValue[0]->type = tuple->items->items.pValue[1]->type = DAO_LONG;
@@ -1710,7 +1711,7 @@ static void MakeSlice( DaoContext *ctx, DaoValue *pid, int N, DArray *slice )
 		}
 	case DAO_TUPLE :
 		{
-			DaoValue *data = pid->xTuple.items->items.pValue;
+			DaoValue **data = pid->xTuple.items->items.pValue;
 			DArray_Clear( slice );
 			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
 				if( pid->xTuple.unitype == dao_type_for_iterator ){
@@ -1923,11 +1924,11 @@ int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
 void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoContext *ctx );
 void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoContext *ctx );
 void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoContext *c );
-static void DaoArray_Print( DaoValue *dbase, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+static void DaoArray_Print( DaoValue *value, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 
-static void DaoArray_GetItem1( DaoValue *dbase, DaoContext *ctx, DaoValue *pid )
+static void DaoArray_GetItem1( DaoValue *value, DaoContext *ctx, DaoValue *pid )
 {
-	DaoArray *na, *self = & dbase->xArray;
+	DaoArray *na, *self = & value->xArray;
 	/* if( self->unitype ) printf( "DaoArray_GetItem: %s\n", self->unitype->name->mbs ); */
 
 	if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
@@ -1947,7 +1948,7 @@ static void DaoArray_GetItem1( DaoValue *dbase, DaoContext *ctx, DaoValue *pid )
 		return;
 	}else if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
 		DaoArray *array = self;
-		DaoValue *data = pid->xTuple.items->items.pValue;
+		DaoValue **data = pid->xTuple.items->items.pValue;
 		int size = self->size;
 		int id = data[1]->xInteger.value;
 		if( self->reference && self->slice ){
@@ -2141,7 +2142,7 @@ void DaoArray_SetItem1( DaoValue *va, DaoContext *ctx, DaoValue *pid, DaoValue *
 		if( value->type >= DAO_INTEGER && value->type <= DAO_COMPLEX ){
 			DaoArray_array_op_number( self, self, value, op, ctx );
 		}else if( value->type == DAO_ARRAY ){
-			DaoArray_ArrayArith( self, self, value.v.array, op, ctx );
+			DaoArray_ArrayArith( self, self, & value->xArray, op, ctx );
 		}else{
 			DaoContext_RaiseException( ctx, DAO_ERROR_VALUE, "" );
 		}
@@ -2160,7 +2161,7 @@ void DaoArray_SetItem1( DaoValue *va, DaoContext *ctx, DaoValue *pid, DaoValue *
 	self->subSize = DaoArray_MakeSlice( self, ctx, & pid, 1, self->slice );
 	self->reference = self;
 	if( value->type == DAO_ARRAY ){
-		DaoArray *na = value.v.array;
+		DaoArray *na = & value->xArray;
 		DaoArray_ArrayArith( self, self, na, op, ctx );
 	}else{
 		DaoArray_array_op_number( self, self, value, op, ctx );
@@ -2172,8 +2173,8 @@ static void DaoArray_GetItem( DaoValue *vself, DaoContext *ctx, DaoValue *ids[],
 	DaoArray *na, *self = & vself->xArray;
 	int i;
 	if( N == 0 ){
-		vself->v.array = DaoArray_Copy( self );
-		DaoContext_PutValue( ctx, *vself );
+		vself = (DaoValue*) DaoArray_Copy( self );
+		DaoContext_PutValue( ctx, vself );
 		return;
 	}else if( N == 1 ){
 		DaoArray_GetItem1( vself, ctx, ids[0] );
@@ -2184,7 +2185,7 @@ static void DaoArray_GetItem( DaoValue *vself, DaoContext *ctx, DaoValue *ids[],
 		size_t *dims = self->dims->items.pSize;
 		size_t *dimAccum = self->dimAccum->items.pSize;
 		for(i=0; i<N; i++){
-			if( ids[i]->t < DAO_INTEGER || ids[i]->t > DAO_DOUBLE ){
+			if( ids[i]->type < DAO_INTEGER || ids[i]->type > DAO_DOUBLE ){
 				allNumbers = 0;
 				break;
 			}
@@ -2237,7 +2238,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoContext *ctx, DaoValue *ids[],
 		int allNumbers = 1;
 		int k, idFlat = 0;
 		for(i=0; i<N; i++){
-			if( ids[i]->t < DAO_INTEGER || ids[i]->t > DAO_DOUBLE ){
+			if( ids[i]->type < DAO_INTEGER || ids[i]->type > DAO_DOUBLE ){
 				allNumbers = 0;
 				break;
 			}
@@ -2261,7 +2262,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoContext *ctx, DaoValue *ids[],
 	self->subSize = DaoArray_MakeSlice( self, ctx, ids, N, self->slice );
 	self->reference = self;
 	if( value->type == DAO_ARRAY ){
-		DaoArray *na = value.v.array;
+		DaoArray *na = & value->xArray;
 		DaoArray_ArrayArith( self, self, na, DVM_MOVE, ctx );
 	}else{
 		DaoArray_array_op_number( self, self, value, DVM_MOVE, ctx );
@@ -2289,9 +2290,9 @@ static void DaoArray_PrintElement( DaoArray *self, DaoStream *stream, int i )
 	default : break;
 	}
 }
-static void DaoArray_Print( DaoValue *dbase, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+static void DaoArray_Print( DaoValue *value, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
-	DaoArray *self = dbase->v.array;
+	DaoArray *self = & value->xArray;
 	size_t *tmp, *dims = self->dims->items.pSize;
 	int i, j;
 
@@ -2332,18 +2333,16 @@ static void DaoArray_Print( DaoValue *dbase, DaoContext *ctx, DaoStream *stream,
 		DArray_Delete( tmpArray );
 	}
 }
-static DaoValue DaoNA_Copy( DaoValue *dbase, DaoContext *ctx, DMap *cycData )
+static DaoValue* DaoNA_Copy( DaoValue *value, DaoContext *ctx, DMap *cycData )
 {
-	DaoValue val = daoNullArray;
-	val.v.array = DaoArray_Copy( dbase->v.array );
-	return val;
+	return (DaoValue*) DaoArray_Copy( & value->xArray );
 }
 
 static DaoTypeCore numarrCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_GetField,
-	DaoBase_SetField,
+	DaoValue_GetField,
+	DaoValue_SetField,
 	DaoArray_GetItem,
 	DaoArray_SetItem,
 	DaoArray_Print,
@@ -2415,7 +2414,7 @@ static void DaoArray_Lib_Resize( DaoContext *ctx, DaoValue *par[], int N )
 		dims[i] = DaoArray_GetInteger( nad, i );
 		size *= dims[i];
 	}
-	DaoContext_SetResult( ctx, (DaoBase*)self );
+	DaoContext_PutValue( ctx, (DaoValue*)self );
 	if( (ctx->vmSpace->options & DAO_EXEC_SAFE) && size > 1000 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
 		DArray_Delete( ad );
@@ -2455,7 +2454,7 @@ static void DaoArray_Lib_Reshape( DaoContext *ctx, DaoValue *par[], int N )
 	DArray_Resize( self->dims, ad->size, 0 );
 	memcpy( self->dims->items.pSize, dims, ad->size * sizeof(size_t) );
 	DaoArray_UpdateDimAccum( self );
-	DaoContext_SetResult( ctx, (DaoBase*)self );
+	DaoContext_PutValue( ctx, (DaoValue*)self );
 	DArray_Delete( ad );
 }
 static void DaoArray_Lib_Index( DaoContext *ctx, DaoValue *par[], int N )
@@ -2484,7 +2483,7 @@ static void DaoArray_Lib_max( DaoContext *ctx, DaoValue *par[], int N )
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );
 	DaoArray *self = & par[0]->xArray;
 	int i, k, size, cmp=0, imax = -1;
-#warn __FILE__ ": Need testing!"
+#warning ": Need testing!"
 	//tuple->items->items.pValue[0]->type = self->numType;
 	//tuple->items->items.pValue[1]->type = DAO_INTEGER;
 	//tuple->items->items.pValue[1]->xInteger.value = -1;
@@ -2531,7 +2530,7 @@ static void DaoArray_Lib_min( DaoContext *ctx, DaoValue *par[], int N )
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );
 	DaoArray *self = & par[0]->xArray;
 	int i, k, size, cmp=0, imax = -1;
-#warn __FILE__ ": Need testing!"
+#warning ": Need testing!"
 	//tuple->items->items.pValue[0]->type = self->numType;
 	//tuple->items->items.pValue[1]->type = DAO_INTEGER;
 	//tuple->items->items.pValue[1]->xInteger.value = -1;
@@ -2800,7 +2799,7 @@ static void DaoArray_Lib_rank( DaoContext *ctx, DaoValue *par[], int npar )
 		index[i] = i;
 		ids[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
 	}
-	QuickSort2( ref ? ref : array, ids, index, 0, N-1, part, ( par[1]->v.e->value == 0 ) ? 1 : 0 );
+	QuickSort2( ref ? ref : array, ids, index, 0, N-1, part, ( par[1]->xEnum.value == 0 ) ? 1 : 0 );
 	for(i=0; i<N; i++) ids[i] = index[i];
 	dao_free( index );
 }
@@ -2813,12 +2812,12 @@ static void DaoArray_Lib_sort( DaoContext *ctx, DaoValue *par[], int npar )
 	int i, N = DaoArray_SliceSize( array );
 	int *index;
 
-	DaoContext_PutValue( ctx, *par[0] );
+	DaoContext_PutValue( ctx, par[0] );
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
 	index = dao_malloc( N * sizeof(int) );
 	for(i=0; i<N; i++) index[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
-	QuickSort2( ref ? ref : array, index, NULL, 0, N-1, part, ( par[1]->v.e->value == 0 ) ? 1 : 0 );
+	QuickSort2( ref ? ref : array, index, NULL, 0, N-1, part, ( par[1]->xEnum.value == 0 ) ? 1 : 0 );
 	dao_free( index );
 }
 
@@ -2855,7 +2854,7 @@ static void DaoArray_Lib_Transpose( DaoContext *ctx, DaoValue *par[], int npar )
 static void DaoArray_Lib_FFT( DaoContext *ctx, DaoValue *par[], int npar )
 {
 	DaoArray *self = & par[0]->xArray;
-	int inv = ( par[1]->v.e->value == 0 )? -1 : 1;
+	int inv = ( par[1]->xEnum.value == 0 )? -1 : 1;
 	int size = self->size;
 	int m = 0;
 	if( self->numType != DAO_COMPLEX ) return;
@@ -3656,7 +3655,7 @@ DaoArray* DaoArray_New( int numType )
 {
 	DaoArray* self = (DaoArray*) dao_malloc( sizeof( DaoArray ) );
 	self->data.p = NULL;
-	DaoBase_Init( self, DAO_ARRAY );
+	DaoValue_Init( self, DAO_ARRAY );
 	self->numType = numType;
 	self->meta = NULL;
 	self->unitype = NULL;

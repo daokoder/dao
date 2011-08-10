@@ -20,7 +20,7 @@ struct DaoObject
 {
 	DAO_DATA_COMMON;
 
-	DaoValue   *objValues;
+	DaoValue  **objValues;
 	DTuple     *objData;
 	DTuple     *superObject; /*DTuple<DaoObject/DaoCData*>*/
 	DaoClass   *myClass;
@@ -35,10 +35,10 @@ void DaoObject_Delete( DaoObject *self );
 
 int DaoObject_ChildOf( DaoObject *self, DaoObject *obj );
 
-DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
+DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
 DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent );
 
-void DaoObject_AddData( DaoObject *self, DString *name, DaoBase  *data );
+void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
 
 int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *value, DaoObject *objThis );
 int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *objThis );

@@ -42,13 +42,7 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from );
 int  DRoutine_AddConstant( DRoutine *self, DaoValue *value );
 
 /* Return 0 if failed, otherwise return 1 plus number passed parameters: */
-int DRoutine_PassParams( DRoutine *rout, DValue *obj, DValue *recv[], DValue *p[], int np, int code );
-
-#define DaoRoutine_AddConst(f,d) DRoutine_AddConst((DRoutine*)(f),(DaoBase*)(d))
-#define DaoRoutine_AddConstValue(f,v) DRoutine_AddConstValue((DRoutine*)(f),v)
-#define DaoRoutine_PassParams(f,o,r,p,n,c) DRoutine_PassParam((DRoutine*)(f),o,r,p,n,c)
-
-#define DaoFunction_PassParams(f,o,r,p,n,c) DRoutine_PassParam((DRoutine*)(f),o,r,p,n,c)
+int DRoutine_PassParams( DRoutine *rout, DaoValue *obj, DaoValue *recv[], DaoValue *p[], int np, int code );
 
 struct DaoRoutine
 {
@@ -125,7 +119,7 @@ struct DaoFunCurry
 	DaoValue  *selfobj;
 	DArray    *params;
 };
-DaoFunCurry* DaoFunCurry_New( DValue *v, DValue *o );
+DaoFunCurry* DaoFunCurry_New( DaoValue *v, DaoValue *o );
 
 typedef struct DParNode DParNode;
 

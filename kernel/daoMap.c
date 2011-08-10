@@ -21,75 +21,21 @@
 #include"daoArray.h"
 #include"daoString.h"
 #include"daoNumtype.h"
+#include"daoValue.h"
+#include"daoGC.h"
 
 #define RB_RED    0
 #define RB_BLACK  1
 
-struct DNodeV1
-{
-	unsigned int color :  1;
-	unsigned int hash  : 31;
-
-	DNode  *parent;
-	DNode  *left;
-	DNode  *right;
-	DNode  *next;
-
-	DNodeData key;
-	DNodeData value;
-
-	DValue value1;
-};
-struct DNodeV2
-{
-	unsigned int color :  1;
-	unsigned int hash  : 31;
-
-	DNode  *parent;
-	DNode  *left;
-	DNode  *right;
-	DNode  *next;
-
-	DNodeData key;
-	DNodeData value;
-
-	DValue value1;
-	DValue value2;
-};
-
 static DNode* DNode_New( DMap *map, int keytype, int valtype )
 {
-	struct DNodeV2 *nodev2;
-	struct DNodeV1 *nodev1;
-	DNode *self;
 	if( map->first && map->keytype == keytype && map->valtype == valtype ){
 		DNode *node = map->first;
 		map->first = map->first->next;
 		node->next = NULL;
 		return node;
 	}
-	if( keytype != D_VALUE ) keytype = 0;
-	if( valtype != D_VALUE ) valtype = 0;
-	switch( (keytype<<8) | valtype ){
-	case (D_VALUE<<8)|D_VALUE :
-		nodev2 = (struct DNodeV2*) dao_calloc( 1, sizeof(struct DNodeV2) );
-		nodev2->key.pValue = & nodev2->value1;
-		nodev2->value.pValue = & nodev2->value2;
-		self = (DNode*) nodev2;
-		break;
-	case (D_VALUE<<8) :
-		nodev1 = (struct DNodeV1*) dao_calloc( 1, sizeof(struct DNodeV1) );
-		nodev1->key.pValue = & nodev1->value1;
-		self = (DNode*) nodev1;
-		break;
-	case D_VALUE :
-		nodev1 = (struct DNodeV1*) dao_calloc( 1, sizeof(struct DNodeV1) );
-		nodev1->value.pValue = & nodev1->value1;
-		self = (DNode*) nodev1;
-		break;
-	default: self = (DNode*) dao_calloc( 1, sizeof(DNode) ); break;
-	}
-	return self;
+	return (DNode*) dao_calloc( 1, sizeof(DNode) );
 }
 DNode* DNode_First( DNode *self )
 {
@@ -121,11 +67,11 @@ void* DNode_GetValue( DNode *self )
 {
 	return self->value.pVoid;
 }
-DValue* DNode_Key( DNode *self )
+DaoValue* DNode_Key( DNode *self )
 {
 	return self->key.pValue;
 }
-DValue* DNode_Value( DNode *self )
+DaoValue* DNode_Value( DNode *self )
 {
 	return self->value.pValue;
 }
@@ -158,42 +104,42 @@ dint DLong_ToInteger( DLong *self );
 #define HASH_SEED  0xda0
 unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed );
 
-static int DValue_Hash( DValue self, unsigned int buf[], int id, int max )
+static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
 {
 	void *data = NULL;
 	int i, len = 0;
 	int id2 = id;
 	unsigned int hash = 0;
-	switch( self.t ){
+	switch( self->type ){
 	case DAO_INTEGER :
-		data = & self.v.i;  len = sizeof(dint);  break;
+		data = & self->xInteger.value;  len = sizeof(dint);  break;
 	case DAO_FLOAT   : 
-		data = & self.v.f;  len = sizeof(float);  break;
+		data = & self->xFloat.value;  len = sizeof(float);  break;
 	case DAO_DOUBLE  : 
-		data = & self.v.d;  len = sizeof(double);  break;
+		data = & self->xDouble.value;  len = sizeof(double);  break;
 	case DAO_COMPLEX : 
-		data = self.v.c;  len = sizeof(complex16);  break;
+		data = & self->xComplex.value;  len = sizeof(complex16);  break;
 	case DAO_LONG : 
-		data = self.v.l->data;
-		len = self.v.l->size*sizeof(short);
+		data = self->xLong.value->data;
+		len = self->xLong.value->size*sizeof(short);
 		break;
 	case DAO_ENUM  : 
-		data = self.v.e->type->name->mbs; /* XXX */
-		len = self.v.e->type->name->size;
+		data = self->xEnum.etype->name->mbs; /* XXX */
+		len = self->xEnum.etype->name->size;
 		break;
 	case DAO_STRING  : 
-		if( self.v.s->mbs ){
-			data = self.v.s->mbs;
-			len = self.v.s->size;
+		if( self->xString.data->mbs ){
+			data = self->xString.data->mbs;
+			len = self->xString.data->size;
 		}else{
-			data = self.v.s->wcs;
-			len = self.v.s->size * sizeof(wchar_t);
+			data = self->xString.data->wcs;
+			len = self->xString.data->size * sizeof(wchar_t);
 		}
 		break;
 	case DAO_ARRAY :
-		data = self.v.array->data.p;
-		len = self.v.array->size;
-		switch( self.v.array->numType ){
+		data = self->xArray.data.p;
+		len = self->xArray.size;
+		switch( self->xArray.numType ){
 		case DAO_INTEGER : len *= sizeof(int); break;
 		case DAO_FLOAT   : len *= sizeof(float); break;
 		case DAO_DOUBLE  : len *= sizeof(double); break;
@@ -202,8 +148,8 @@ static int DValue_Hash( DValue self, unsigned int buf[], int id, int max )
 		}
 		break;
 	case DAO_TUPLE :
-		for(i=0; i<self.v.tuple->items->size; i++){
-			id = DValue_Hash( self.v.tuple->items->data[i], buf, id, max );
+		for(i=0; i<self->xTuple.items->size; i++){
+			id = DaoValue_Hash( self->xTuple.items->items.pValue[i], buf, id, max );
 			if( id >= max ) break;
 		}
 		break;
@@ -242,7 +188,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 		id = MurmurHash2( data, m, HASH_SEED) % T;
 		break;
 	case D_VALUE :
-		m = DValue_Hash( *(DValue*) key, buf, 0, HASH_MAX );
+		m = DaoValue_Hash( (DaoValue*) key, buf, 0, HASH_MAX );
 		if( m ==1 ){
 			id = buf[0] % T;
 		}else{
@@ -327,52 +273,15 @@ void DMap_Delete( DMap *self )
 static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )
 {
 	void *key, *value;
-	DValue value1, value2;
-	struct DNodeV1 *nodev1 = (struct DNodeV1*) node;
-	struct DNodeV2 *nodev2 = (struct DNodeV2*) node;
-	struct DNodeV1 *extremev1 = (struct DNodeV1*) extreme;
-	struct DNodeV2 *extremev2 = (struct DNodeV2*) extreme;
 	int hash = extreme->hash;
-	int keytype = self->keytype;
-	int valtype = self->valtype;
-	if( keytype != D_VALUE ) keytype = 0;
-	if( valtype != D_VALUE ) valtype = 0;
+	key = extreme->key.pVoid;
+	value = extreme->value.pVoid;
 	extreme->hash = node->hash;
+	extreme->key.pVoid = node->key.pVoid;
+	extreme->value.pVoid = node->value.pVoid;
 	node->hash = hash;
-	switch( (self->keytype<<8) | self->valtype ){
-	case (D_VALUE<<8)|D_VALUE :
-		value1 = extremev2->value1;
-		value2 = extremev2->value2;
-		extremev2->value1 = nodev2->value1;
-		extremev2->value2 = nodev2->value2;
-		nodev2->value1 = value1;
-		nodev2->value2 = value2;
-		break;
-	case (D_VALUE<<8) :
-		value1 = extremev1->value1;
-		extremev1->value1 = nodev1->value1;
-		nodev1->value1 = value1;
-		value = extremev1->value.pVoid;
-		extremev1->value.pVoid = nodev1->value.pVoid;
-		nodev1->value.pVoid = value;
-		break;
-	case D_VALUE :
-		value1 = extremev1->value1;
-		extremev1->value1 = nodev1->value1;
-		nodev1->value1 = value1;
-		key = extremev1->key.pVoid;
-		extremev1->key.pVoid = nodev1->key.pVoid;
-		nodev1->key.pVoid = key;
-		break;
-	default:
-		key = extreme->key.pVoid;
-		value = extreme->value.pVoid;
-		extreme->key.pVoid = node->key.pVoid;
-		extreme->value.pVoid = node->value.pVoid;
-		node->key.pVoid = key;
-		node->value.pVoid = value;
-		break;
-	}
+	node->key.pVoid = key;
+	node->value.pVoid = value;
 }
 static void DMap_CopyItem( void **dest, void *item, short type )
 {
@@ -391,7 +300,7 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		case D_STRING : DString_Assign( (DString*)(*dest), (DString*) item ); break;
 		case D_ARRAY  : DArray_Assign( (DArray*)(*dest), (DArray*) item ); break;
 		case D_MAP    : DMap_Assign( (DMap*)(*dest), (DMap*) item ); break;
-		case D_VALUE  : DValue_Copy( (DValue*)(*dest), *(DValue*) item ); break;
+		case D_VALUE  : DaoValue_Copy( (DaoValue*) item, (DaoValue**) dest ); break;
 		case D_VOID2  : memcpy(*dest, item, n); break;
 		default : *dest = item; break;
 		}
@@ -403,7 +312,7 @@ static void DMap_DeleteItem( void *item, short type )
 	case D_STRING : DString_Delete( (DString*) item ); break;
 	case D_ARRAY  : DArray_Delete( (DArray*) item ); break;
 	case D_MAP    : DMap_Delete( (DMap*) item ); break;
-	case D_VALUE  : DValue_Clear( (DValue*) item ); break;
+	case D_VALUE  : GC_DecRC( (DaoValue*) item ); break;
 	case D_VOID2  : dao_free( item ); break;
 	default : break;
 	}
@@ -698,7 +607,7 @@ static int DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 {
 	switch( self->keytype ){
 	case D_STRING : return DString_Compare( (DString*) k1, (DString*) k2 );
-	case D_VALUE  : return DValue_Compare( *(DValue*) k1, *(DValue*) k2 );
+	case D_VALUE  : return DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );
 	case D_ARRAY  : return DArray_Compare( (DArray*) k1, (DArray*) k2 );
 	case D_VOID2  : return DVoid2_Compare( (void**) k1, (void**) k2 );
 	default : return (int)( (size_t)k1 - (size_t)k2 );

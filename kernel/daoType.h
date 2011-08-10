@@ -152,8 +152,6 @@ DaoValue* DaoFindValueOnly( DaoTypeBase *typer, DString *name );
 DaoValue* DaoFindFunction( DaoTypeBase *typer, DString *name );
 DaoValue* DaoFindFunction2( DaoTypeBase *typer, const char *name );
 
-DaoTypeBase* DaoValue_GetTyper( DaoValue self );
-
 struct DaoTypeCore
 {
 	uint_t         attribs;
@@ -163,7 +161,7 @@ struct DaoTypeCore
 	DaoNameSpace  *nspace;
 
 	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
-	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue value );
+	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
 	void (*GetItem) ( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
 	void (*SetItem) ( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
 	void (*Print)( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
@@ -177,11 +175,11 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
 DaoValue* DaoValue_Duplicate( void *dbase, DaoType *type );
 
 void DaoValue_GetField( DaoValue *self, DaoContext *ctx, DString *name );
-void DaoValue_SetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue value );
+void DaoValue_SetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
 void DaoValue_GetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
 void DaoValue_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
 void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-DaoValue* DaoValue_Copy( DaoValue *self, DaoContext *ctx, DMap *cycData );
+DaoValue* DaoValue_NoCopy( DaoValue *self, DaoContext *ctx, DMap *cycData );
 
 void DaoValue_SafeGetField( DaoValue *self, DaoContext *ctx, DString *name );
 void DaoValue_SafeSetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );

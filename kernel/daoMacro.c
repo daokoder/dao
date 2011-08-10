@@ -131,7 +131,7 @@ DaoTypeBase macroTyper=
 DaoMacro* DaoMacro_New()
 {
 	DaoMacro *self = (DaoMacro*) dao_malloc( sizeof(DaoMacro) );
-	DaoBase_Init( self, DAO_MACRO );
+	DaoValue_Init( self, DAO_MACRO );
 	self->keyListApply = DArray_New(D_STRING);
 	self->macroList = DArray_New(0);
 	self->firstMacro = self;

@@ -1133,10 +1133,10 @@ int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end )
 	return 1;
 }
 #include"daoValue.h"
-static void Dao_ParseTarget( DString *target, DVarray *parts, DValue sval )
+static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
 {
-	DString *tmp = sval.v.s;
-	DValue ival = daoZeroInteger;
+	DString *tmp = sval->xString.data;
+	DaoInteger ival = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
 	size_t i, n = DString_Size( target );
 	int ch, ch2;
 	DString_Clear( tmp );
@@ -1149,10 +1149,10 @@ static void Dao_ParseTarget( DString *target, DVarray *parts, DValue sval )
 			ch2 = target->wcs[i+1];
 		}
 		if( ch == L'%' && iswdigit( ch2 ) ){
-			DVarray_PushBack( parts, sval );
+			DArray_PushBack( parts, sval );
 			DString_Clear( tmp );
-			ival.v.i = ch2 - L'0';
-			DVarray_PushBack( parts, ival );
+			ival.value = ch2 - L'0';
+			DArray_PushBack( parts, (DaoValue*) & ival );
 			i ++;
 		}else if( ch == L'%' ){
 			if( i+1 < n ){
@@ -1171,7 +1171,7 @@ static void Dao_ParseTarget( DString *target, DVarray *parts, DValue sval )
 			}
 		}
 	}
-	DVarray_PushBack( parts, sval );
+	DArray_PushBack( parts, sval );
 }
 int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
 		int index, size_t *start2, size_t *end2 )
@@ -1179,14 +1179,14 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 	size_t start = start2 ? (size_t) *start2 : 0;
 	size_t end = end2 ? (size_t) *end2 : 0;
 	size_t i, n=0, p1=start, p2=end, p3, last;
-	DValue value = daoZeroInteger;
-	DValue matched = daoNullString;
+	DaoValue *value = NULL;
+	DaoString matched = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
 	DString *tmp = DString_New( source->mbs != NULL );
 	DString *replace = DString_New( source->mbs != NULL );
-	DVarray *array = DVarray_New();
+	DArray *array = DArray_New(D_VALUE);
 	if( self ==NULL ) goto DoNothing;
-	matched.v.s = tmp;
-	Dao_ParseTarget( target, array, matched );
+	matched.data = tmp;
+	Dao_ParseTarget( target, array, (DaoValue*) & matched );
 	if( end == 0 ) p2 = end = DString_Size( source );
 	n = last = 0;
 	target = DString_Copy( target );
@@ -1197,14 +1197,14 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 			DString_Append( replace, target );
 			DString_Clear( tmp );
 			for(i=0; i<array->size; i++){
-				value = array->data[i];
-				if( value.t == DAO_INTEGER ){
-					if( DaoRegex_SubMatch( self, value.v.i, & p1, & p3 ) ){
+				value = array->items.pValue[i];
+				if( value->type == DAO_INTEGER ){
+					if( DaoRegex_SubMatch( self, value->xInteger.value, & p1, & p3 ) ){
 						DString_SubString( source, target, p1, p3-p1 + 1 );
 						DString_Append( tmp, target );
 					}
 				}else{
-					DString_Append( tmp, value.v.s );
+					DString_Append( tmp, value->xString.data );
 				}
 			}
 			DString_Append( replace, tmp );
@@ -1222,7 +1222,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 DoNothing:
 	DString_Delete( tmp );
 	DString_Delete( replace );
-	DVarray_Delete( array );
+	DArray_Delete( array );
 	return n;
 }
 int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, int index )
@@ -1234,14 +1234,14 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
 {
 	size_t start = 0, end = 0;
 	size_t i, n=0, p1=start, p2=end, p3;
-	DValue value = daoZeroInteger;
-	DValue matched = daoNullString;
+	DaoValue *value = NULL;
+	DaoString matched = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
 	DString *tmp = DString_New( source->mbs != NULL );
 	DString *tmp2 = DString_New( source->mbs != NULL );
-	DVarray *array = DVarray_New();
+	DArray *array = DArray_New(D_VALUE);
 	if( self ==NULL ) goto DoNothing;
-	matched.v.s = tmp;
-	Dao_ParseTarget( target, array, matched );
+	matched.data = tmp;
+	Dao_ParseTarget( target, array, (DaoValue*) & matched );
 	if( end == 0 ) p2 = end = DString_Size( source );
 	n = 0;
 	while( DaoRegex_Match( self, source, & p1, & p2 ) ){
@@ -1249,17 +1249,17 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
 		if( index ==0 || n == index ){
 			DString_Clear( tmp );
 			for(i=0; i<array->size; i++){
-				value = array->data[i];
-				if( value.t == DAO_INTEGER ){
-					if( DaoRegex_SubMatch( self, value.v.i, & p1, & p3 ) ){
+				value = array->items.pValue[i];
+				if( value->type == DAO_INTEGER ){
+					if( DaoRegex_SubMatch( self, value->xInteger.value, & p1, & p3 ) ){
 						DString_SubString( source, tmp2, p1, p3-p1 + 1 );
 						DString_Append( tmp, tmp2 );
 					}
 				}else{
-					DString_Append( tmp, value.v.s );
+					DString_Append( tmp, value->xString.data );
 				}
 			}
-			DVarray_Append( packs, matched );
+			DArray_Append( packs, (DaoValue*) & matched );
 		}
 		p1 = p2 + 1;
 		p2 = end;
@@ -1269,11 +1269,11 @@ int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
 DoNothing:
 	DString_Delete( tmp );
 	DString_Delete( tmp2 );
-	DVarray_Delete( array );
+	DArray_Delete( array );
 	return n;
 }
 
-int DaoRegex_Extract( DaoRegex *self, DString *s, DVarray *ls, short tp )
+int DaoRegex_Extract( DaoRegex *self, DString *s, DArray *ls, short tp )
 {
 	size_t size;
 	if( self->mbs ){

@@ -71,7 +71,7 @@ DaoValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DaoValue *value )
 
 /* Put value at the result register for current instruction */
 int DaoContext_PutReference( DaoContext *self, DaoValue *refer );
-DValue* DaoContext_PutValue( DaoContext *self, DaoValue *value );
+DaoValue* DaoContext_PutValue( DaoContext *self, DaoValue *value );
 
 /* Put a number at the result register, return the number object */
 dint*      DaoContext_PutInteger( DaoContext *self, dint value );
@@ -82,7 +82,7 @@ DString*   DaoContext_PutMBString( DaoContext *self, const char *mbs );
 DString*   DaoContext_PutWCString( DaoContext *self, const wchar_t *wcs );
 DString*   DaoContext_PutString( DaoContext *self, DString *str );
 DString*   DaoContext_PutBytes( DaoContext *self, const char *bytes, int N );
-DEnum*     DaoContext_PutEnum( DaoContext *self, const char *symbols );
+DaoEnum*   DaoContext_PutEnum( DaoContext *self, const char *symbols );
 DaoArray*  DaoContext_PutArrayInteger( DaoContext *self, int *array, int N );
 DaoArray*  DaoContext_PutArrayShort( DaoContext *self, short *array, int N );
 DaoArray*  DaoContext_PutArrayFloat( DaoContext *self, float *array, int N );
@@ -99,7 +99,7 @@ DaoCData*  DaoContext_CopyCData( DaoContext *self, void *data, int n, DaoTypeBas
 void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 void DaoContext_RaiseTypeError( DaoContext *self, DaoType *from, DaoType *to, const char *op );
 /**/
-void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout, DValue *selfobj, DValue *ps[], int np, int code );
+void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
 void DaoContext_Print( DaoContext *self, const char *chs );
 void DaoContext_PrintInfo( DaoContext *self, const char *head, const char *info );
 void DaoContext_PrintVmCode( DaoContext *self );

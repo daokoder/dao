@@ -15,6 +15,7 @@
 #include"stdio.h"
 #include"time.h"
 #include"daoType.h"
+#include"daoValue.h"
 #include"daoThread.h"
 #include"daoRoutine.h"
 #include"daoObject.h"
@@ -180,10 +181,10 @@ void DaoCallThread_Run( DaoCallThread *self )
 			DaoVmProcess_PushContext( proc, ctx );
 			DaoVmProcess_Execute( proc );
 		}else if( future->state == DAO_CALL_PAUSED ){
-			DValue *pars[1] = { NULL };
+			DaoValue *pars[1] = { NULL };
 			int npar = 0;
 			if( future->precondition ){
-				pars[0] = & future->precondition->value;
+				pars[0] = future->precondition->value;
 				npar = 1;
 			}
 			DaoVmProcess_Resume( future->process, pars, npar, NULL );
@@ -202,7 +203,7 @@ void DaoCallThread_Run( DaoCallThread *self )
 		case DAO_VMPROC_FINISHED :
 		case DAO_VMPROC_ABORTED :
 			future->state = DAO_CALL_FINISHED;
-			DValue_Move( proc->returned, & future->value, type );
+			DaoValue_Move( proc->returned, & future->value, type );
 			break;
 		case DAO_VMPROC_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
 		case DAO_VMPROC_RUNNING :

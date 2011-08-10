@@ -19,6 +19,7 @@
 #include"daoProcess.h"
 #include"daoNumtype.h"
 #include"daoNamespace.h"
+#include"daoValue.h"
 
 void DaoStream_Flush( DaoStream *self )
 {
@@ -40,7 +41,7 @@ static void DaoIO_Write0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int N
 		return;
 	}
 	cycData = DMap_New(0,0);
-	for(i=0; i<N; i++) DaoValue_Print( *p[i], ctx, self, cycData );
+	for(i=0; i<N; i++) DaoValue_Print( p[i], ctx, self, cycData );
 	DMap_Delete( cycData );
 }
 static void DaoIO_Write( DaoContext *ctx, DaoValue *p[], int N )
@@ -66,7 +67,7 @@ static void DaoIO_Writeln0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int
 	}
 	cycData = DMap_New(0,0);
 	for(i=0; i<N; i++){
-		DaoValue_Print( *p[i], ctx, self, cycData );
+		DaoValue_Print( p[i], ctx, self, cycData );
 		if( i+1<N ) DaoStream_WriteMBS( self, " ");
 	}
 	DMap_Delete( cycData );
@@ -90,7 +91,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int 
 	DString *mbs;
 	DMap *cycData;
 	const char *convs = "diouxXfeEgGaAcCsSpm";
-	char *s, *fmt, *format = DString_GetMBS( p[0]->v.s );
+	char *s, *fmt, *format = DString_GetMBS( p[0]->xString.data );
 	char ch;
 	int i, j;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
@@ -122,7 +123,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoContext *ctx, DaoValue *p[], int 
 				ch = s[1];
 				s[1] = 0;
 				self->format = fmt;
-				if( j < N ) DaoValue_Print( *p[j], ctx, self, cycData );
+				if( j < N ) DaoValue_Print( p[j], ctx, self, cycData );
 				j ++;
 				self->format = NULL;
 				s[1] = ch;
@@ -221,14 +222,14 @@ static void DaoIO_ReadFile( DaoContext *ctx, DaoValue *p[], int N )
 		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
 		return;
 	}
-	if( DString_Size( p[0]->v.s ) ==0 ){
+	if( DString_Size( p[0]->xString.data ) ==0 ){
 		while(1){
 			size_t count = fread( buf, 1, IO_BUF_SIZE, stdin );
 			if( count ==0 ) break;
 			DString_AppendDataMBS( res, buf, count );
 		}
 	}else{
-		DString *fname = DString_Copy( p[0]->v.s );
+		DString *fname = DString_Copy( p[0]->xString.data );
 		FILE *fin;
 		DString_ToMBS( fname );
 		DaoIO_MakePath( ctx, fname );
@@ -236,7 +237,7 @@ static void DaoIO_ReadFile( DaoContext *ctx, DaoValue *p[], int N )
 		DString_Delete( fname );
 		if( fin == NULL ){
 			if( silent ) return;
-			snprintf( buf, IO_BUF_SIZE, "file not exist: %s", DString_GetMBS( p[0]->v.s ) );
+			snprintf( buf, IO_BUF_SIZE, "file not exist: %s", DString_GetMBS( p[0]->xString.data ) );
 			DaoContext_RaiseException( ctx, DAO_ERROR, buf );
 			return;
 		}
@@ -269,12 +270,12 @@ static void DaoIO_Open( DaoContext *ctx, DaoValue *p[], int N )
 	}else{
 		char buf[100];
 		DString *fname = stream->fname;
-		DString_Assign( fname, p[0]->v.s );
+		DString_Assign( fname, p[0]->xString.data );
 		DString_ToMBS( fname );
 		snprintf( buf, 99, "file opening, %s", fname->mbs );
 		if( DString_Size( fname ) >0 ){
 			DaoIO_MakePath( ctx, fname );
-			mode = DString_GetMBS( p[1]->v.s );
+			mode = DString_GetMBS( p[1]->xString.data );
 			stream->file->fd = fopen( DString_GetMBS( fname ), mode );
 			if( stream->file->fd == NULL ){
 				dao_free( stream->file );
@@ -294,7 +295,7 @@ static void DaoIO_Open( DaoContext *ctx, DaoValue *p[], int N )
 			DaoContext_RaiseException( ctx, DAO_ERROR, buf );
 		}
 	}
-	DaoContext_SetResult( ctx, (DaoBase*)stream );
+	DaoContext_PutValue( ctx, (DaoValue*)stream );
 }
 static void DaoIO_Close( DaoContext *ctx, DaoValue *p[], int N )
 {
@@ -346,7 +347,7 @@ static void DaoIO_SStream( DaoContext *ctx, DaoValue *p[], int N )
 	DaoStream *stream = DaoStream_New();
 	if( p[0]->xEnum.value == 1 ) DString_ToWCS( stream->streamString );
 	stream->attribs |= DAO_IO_STRING;
-	DaoContext_SetResult( ctx, (DaoBase*)stream );
+	DaoContext_PutValue( ctx, (DaoValue*)stream );
 }
 static void DaoIO_GetString( DaoContext *ctx, DaoValue *p[], int N )
 {
@@ -369,9 +370,9 @@ static void DaoIO_Popen( DaoContext *ctx, DaoValue *p[], int N )
 	stream->file->rc = 1;
 	stream->attribs |= DAO_IO_PIPE;
 	fname = stream->fname;
-	DString_Assign( fname, p[0]->v.s );
+	DString_Assign( fname, p[0]->xString.data );
 	if( DString_Size( fname ) >0 ){
-		mode = DString_GetMBS( p[1]->v.s );
+		mode = DString_GetMBS( p[1]->xString.data );
 		stream->file->fd = popen( DString_GetMBS( fname ), mode );
 		if( stream->file->fd == NULL ){
 			dao_free( stream->file );
@@ -390,12 +391,12 @@ static void DaoIO_Popen( DaoContext *ctx, DaoValue *p[], int N )
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "pipe opening" );
 	}
-	DaoContext_SetResult( ctx, (DaoBase*)stream );
+	DaoContext_PutValue( ctx, (DaoValue*)stream );
 }
 static void DaoIO_Iter( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	DaoValue **tuple = p[1]->v.tuple->items->items.pValue;
+	DaoValue **tuple = p[1]->xTuple.items->items.pValue;
 	tuple[0]->xInteger.value = 1;
 	if( self->file && self->file->fd ){
 		fseek( self->file->fd, 0, SEEK_SET );
@@ -405,7 +406,7 @@ static void DaoIO_Iter( DaoContext *ctx, DaoValue *p[], int N )
 static void DaoIO_GetItem( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	DaoValue **tuple = p[1]->v.tuple->items->items.pValue;
+	DaoValue **tuple = p[1]->xTuple.items->items.pValue;
 	DaoIO_Read( ctx, p, 1 );
 	tuple[0]->xInteger.value = 0;
 	if( self->file && self->file->fd ) tuple[0]->xInteger.value = ! feof( self->file->fd );
@@ -417,7 +418,7 @@ static void DaoIO_Read2( DaoContext *ctx, DaoValue *p[], int N )
 	DaoValue *params[2] = { NULL, NULL };
 	params[0] = p[0];
 	params[1] = (DaoValue*) & mode;
-	mode.xInteger.value = ( p[1]->xEnum.value == 0 )? 0 : -1;
+	mode.value = ( p[1]->xEnum.value == 0 )? 0 : -1;
 	DaoIO_Read( ctx, params, N );
 }
 
@@ -476,11 +477,11 @@ static DaoValue* DaoStream_Copy( DaoValue *self0, DaoContext *ctx, DMap *cycData
 static DaoTypeCore streamCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_GetField,
-	DaoBase_SetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
+	DaoValue_GetField,
+	DaoValue_SetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
 	DaoStream_Copy,
 };
 
@@ -507,7 +508,7 @@ DaoTypeBase streamTyper =
 DaoStream* DaoStream_New()
 {
 	DaoStream *self = (DaoStream*) dao_calloc( 1, sizeof(DaoStream) );
-	DaoBase_Init( self, DAO_STREAM );
+	DaoValue_Init( self, DAO_STREAM );
 	self->streamString = DString_New(1);
 	self->fname = DString_New(1);
 	self->mode = DAO_IO_READ | DAO_IO_WRITE;

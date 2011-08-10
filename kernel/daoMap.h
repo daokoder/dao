@@ -15,7 +15,6 @@
 #define DAO_MAP_H
 
 #include"daoBase.h"
-#include"daoValue.h"
 
 typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 

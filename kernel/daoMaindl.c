@@ -62,9 +62,6 @@ int main( int argc, char **argv )
 	DString *opts, *args;
 	int i, k, idsrc;
 
-#ifndef DAO_DIRECT_API
-	if( DaoInitLibrary( argv[0] ) ==0 ) return 1;
-#endif
 	vmSpace = DaoInit();
 
 	opts = DString_New(1);

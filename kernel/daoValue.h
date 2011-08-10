@@ -15,6 +15,15 @@
 #define DAO_VALUE_H
 
 #include"daoType.h"
+#include"daoStdtype.h"
+#include"daoNumtype.h"
+#include"daoStream.h"
+#include"daoClass.h"
+#include"daoObject.h"
+#include"daoRoutine.h"
+#include"daoNamespace.h"
+#include"daoProcess.h"
+#include"daoContext.h"
 
 union DaoValue
 {
@@ -35,7 +44,6 @@ union DaoValue
 	DaoObject      xObject;
 	DaoCData       xCdata;
 	DaoClass       xClass;
-	DaoCtype       xCtype;
 	DaoInterface   xInterface;
 	DaoFunctree    xFunctree;
 	DaoRoutine     xRoutine;
@@ -45,6 +53,8 @@ union DaoValue
 	DaoNameSpace   xNamespace;
 	DaoNameValue   xNameValue;
 	DaoType        xType;
+
+	struct { DAO_DATA_COMMON; } xGC;
 };
 
 /* Copy when self is a simple data type (with type <= DAO_ENUM),
@@ -56,10 +66,10 @@ void DaoValue_Clear( DaoValue **self );
 
 int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
-void DaoValue_Copy( DValue *src, DValue **dest );
+void DaoValue_Copy( DaoValue *src, DaoValue **dest );
 int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
 int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype );
-void DaoValue_SimpleMove( DValue *src, DValue **dest );
+void DaoValue_SimpleMove( DaoValue *src, DaoValue **dest );
 
 void DaoValue_MarkConst( DaoValue *self );
 
@@ -72,17 +82,15 @@ complex16 DaoValue_GetComplex( DaoValue *self );
 DLong* DaoValue_GetLong( DaoValue *self, DLong *lng );
 DString* DaoValue_GetString( DaoValue *self, DString *str );
 
-int DValue_FromString( DValue *self, DString *str, int type );
+int DaoValue_FromString( DaoValue *self, DString *str, int type );
 
-int DValue_Serialize( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
-int DValue_Deserialize( DValue *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
+int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
+int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
 
-int DValue_IsNumber( DValue self );
-void DValue_Print( DValue self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+int DaoValue_IsNumber( DaoValue *self );
+void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
 
-void DValue_IncRCs( DValue *v, int n );
-
-#define DValue_Type( x ) ( (x).t ? (x).t : (x).v.p ? (x).v.p->type : 0 )
+void DaoValue_IncRCs( DaoValue *v, int n );
 
 
 #endif

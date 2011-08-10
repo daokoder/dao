@@ -23,6 +23,7 @@
 #include"daoRoutine.h"
 #include"daoObject.h"
 #include"daoClass.h"
+#include"daoValue.h"
 
 #ifdef DAO_WITH_THREAD
 /* Basic threading interfaces */
@@ -456,19 +457,19 @@ static DaoThread* GetThisThread( DaoThdMaster *thdMaster )
 	}
 	return NULL;
 }
-static void DaoMutex_Lib_Lock( DaoContext *ctx, DValue *par[], int N )
+static void DaoMutex_Lib_Lock( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoMutex *self = (DaoMutex*) par[0]->v.p;
+	DaoMutex *self = (DaoMutex*) par[0];
 	DaoMutex_Lock( self );
 }
-static void DaoMutex_Lib_Unlock( DaoContext *ctx, DValue *par[], int N )
+static void DaoMutex_Lib_Unlock( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoMutex *self = (DaoMutex*) par[0]->v.p;
+	DaoMutex *self = (DaoMutex*) par[0];
 	DaoMutex_Unlock( self );
 }
-static void DaoMutex_Lib_TryLock( DaoContext *ctx, DValue *par[], int N )
+static void DaoMutex_Lib_TryLock( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoMutex *self = (DaoMutex*) par[0]->v.p;
+	DaoMutex *self = (DaoMutex*) par[0];
 	DaoContext_PutInteger( ctx, DaoMutex_TryLock( self ) );
 }
 static DaoFuncItem mutexMeths[] =
@@ -486,12 +487,12 @@ static void DaoMutex_Delete( DaoMutex *self )
 static DaoTypeCore mutexCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_SafeGetField,
-	DaoBase_SafeSetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
+	DaoValue_SafeGetField,
+	DaoValue_SafeSetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
+	DaoValue_NoCopy,
 };
 DaoTypeBase mutexTyper =
 {
@@ -502,7 +503,7 @@ DaoTypeBase mutexTyper =
 DaoMutex* DaoMutex_New( DaoVmSpace *vms )
 {
 	DaoMutex* self = (DaoMutex*) dao_malloc( sizeof(DaoMutex) );
-	DaoBase_Init( self, DAO_MUTEX );
+	DaoValue_Init( self, DAO_MUTEX );
 	DMutex_Init( & self->myMutex );
 	self->thdMaster = NULL;
 	if( vms ) self->thdMaster = vms->thdMaster;
@@ -546,35 +547,35 @@ int DaoMutex_TryLock( DaoMutex *self )
 	return locked;
 }
 /* Condition variable */
-static void DaoCondV_Lib_Wait( DaoContext *ctx, DValue *par[], int N )
+static void DaoCondV_Lib_Wait( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoCondVar *self = (DaoCondVar*) par[0]->v.p;
-	DaoMutex *mutex = (DaoMutex*) par[1]->v.p;
+	DaoCondVar *self = (DaoCondVar*) par[0];
+	DaoMutex *mutex = (DaoMutex*) par[1];
 	if( mutex->type != DAO_MUTEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "need mutex" );
 		return;
 	}
 	DCondVar_Wait( & self->myCondVar, & mutex->myMutex );
 }
-static void DaoCondV_Lib_TimedWait( DaoContext *ctx, DValue *par[], int N )
+static void DaoCondV_Lib_TimedWait( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoCondVar *self = (DaoCondVar*) par[0]->v.p;
-	DaoMutex *mutex = (DaoMutex*) par[1]->v.p;
+	DaoCondVar *self = (DaoCondVar*) par[0];
+	DaoMutex *mutex = (DaoMutex*) par[1];
 	if( mutex->type != DAO_MUTEX ){
 		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "need mutex" );
 		return;
 	}
 	DaoContext_PutInteger( ctx, 
-			DCondVar_TimedWait( & self->myCondVar, & mutex->myMutex, par[2]->v.i ) );
+			DCondVar_TimedWait( & self->myCondVar, & mutex->myMutex, par[2]->xFloat.value ) );
 }
-static void DaoCondV_Lib_Signal( DaoContext *ctx, DValue *par[], int N )
+static void DaoCondV_Lib_Signal( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoCondVar *self = (DaoCondVar*) par[0]->v.p;
+	DaoCondVar *self = (DaoCondVar*) par[0];
 	DCondVar_Signal( & self->myCondVar );
 }
-static void DaoCondV_Lib_BroadCast( DaoContext *ctx, DValue *par[], int N )
+static void DaoCondV_Lib_BroadCast( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoCondVar *self = (DaoCondVar*) par[0]->v.p;
+	DaoCondVar *self = (DaoCondVar*) par[0];
 	DCondVar_BroadCast( & self->myCondVar );
 }
 static DaoFuncItem condvMeths[] =
@@ -589,12 +590,12 @@ static DaoFuncItem condvMeths[] =
 static DaoTypeCore condvCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_SafeGetField,
-	DaoBase_SafeSetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
+	DaoValue_SafeGetField,
+	DaoValue_SafeSetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
+	DaoValue_NoCopy,
 };
 DaoTypeBase condvTyper =
 {
@@ -604,7 +605,7 @@ DaoTypeBase condvTyper =
 DaoCondVar* DaoCondVar_New( DaoThdMaster *thdm )
 {
 	DaoCondVar* self = (DaoCondVar*) dao_malloc( sizeof(DaoCondVar) );
-	DaoBase_Init( self, DAO_CONDVAR );
+	DaoValue_Init( self, DAO_CONDVAR );
 	DCondVar_Init( & self->myCondVar );
 	self->thdMaster = thdm;
 	return self;
@@ -632,24 +633,24 @@ void DaoCondVar_BroadCast( DaoCondVar *self )
 	DCondVar_BroadCast( & self->myCondVar );
 }
 /* Semaphore */
-static void DaoSema_Lib_Wait( DaoContext *ctx, DValue *par[], int N )
+static void DaoSema_Lib_Wait( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoSema *self = (DaoSema*) par[0]->v.p;
+	DaoSema *self = (DaoSema*) par[0];
 	DSema_Wait( & self->mySema );
 }
-static void DaoSema_Lib_Post( DaoContext *ctx, DValue *par[], int N )
+static void DaoSema_Lib_Post( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoSema *self = (DaoSema*) par[0]->v.p;
+	DaoSema *self = (DaoSema*) par[0];
 	DSema_Post( & self->mySema );
 }
-static void DaoSema_Lib_SetValue( DaoContext *ctx, DValue *par[], int N )
+static void DaoSema_Lib_SetValue( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoSema *self = (DaoSema*) par[0]->v.p;
-	DSema_SetValue( & self->mySema, par[1]->v.i );
+	DaoSema *self = (DaoSema*) par[0];
+	DSema_SetValue( & self->mySema, par[1]->xInteger.value );
 }
-static void DaoSema_Lib_GetValue( DaoContext *ctx, DValue *par[], int N )
+static void DaoSema_Lib_GetValue( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoSema *self = (DaoSema*) par[0]->v.p;
+	DaoSema *self = (DaoSema*) par[0];
 	DaoContext_PutInteger( ctx, DSema_GetValue( & self->mySema ) );
 }
 static DaoFuncItem semaMeths[] =
@@ -663,12 +664,12 @@ static DaoFuncItem semaMeths[] =
 static DaoTypeCore semaCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_SafeGetField,
-	DaoBase_SafeSetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
+	DaoValue_SafeGetField,
+	DaoValue_SafeSetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
+	DaoValue_NoCopy,
 };
 DaoTypeBase semaTyper =
 {
@@ -678,7 +679,7 @@ DaoTypeBase semaTyper =
 DaoSema* DaoSema_New( int n )
 {
 	DaoSema* self = (DaoSema*) dao_malloc( sizeof(DaoSema) );
-	DaoBase_Init( self, DAO_SEMA );
+	DaoValue_Init( self, DAO_SEMA );
 	DSema_Init( & self->mySema, n );
 	return self;
 }
@@ -721,24 +722,24 @@ static void DaoCleanThread( void *arg )
 	self->isRunning = 0;
 }
 
-static void DaoThread_Lib_MyData( DaoContext *ctx, DValue *par[], int N )
+static void DaoThread_Lib_MyData( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThread *self = (DaoThread*) par[0]->v.p;
-	DaoContext_SetResult( ctx, (DaoBase*)self->myMap );
+	DaoThread *self = (DaoThread*) par[0];
+	DaoContext_PutValue( ctx, (DaoValue*)self->myMap );
 }
-static void DaoThread_Lib_Join( DaoContext *ctx, DValue *par[], int N )
+static void DaoThread_Lib_Join( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThread *self = (DaoThread*) par[0]->v.p;
+	DaoThread *self = (DaoThread*) par[0];
 	DThread_Join( & self->myThread );
 }
-static void DaoThread_Lib_Detach( DaoContext *ctx, DValue *par[], int N )
+static void DaoThread_Lib_Detach( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThread *self = (DaoThread*) par[0]->v.p;
+	DaoThread *self = (DaoThread*) par[0];
 	DThread_Detach( & self->myThread );
 }
-static void DaoThread_Lib_Cancel( DaoContext *ctx, DValue *par[], int N )
+static void DaoThread_Lib_Cancel( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThread *self = (DaoThread*) par[0]->v.p;
+	DaoThread *self = (DaoThread*) par[0];
 	DThread_Cancel( & self->myThread );
 }
 static DaoFuncItem threadMeths[] =
@@ -755,12 +756,12 @@ static void DaoThread_Delete( DaoThread *self );
 static DaoTypeCore threadCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_SafeGetField,
-	DaoBase_SafeSetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
+	DaoValue_SafeGetField,
+	DaoValue_SafeSetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
+	DaoValue_NoCopy,
 };
 DaoTypeBase threadTyper =
 {
@@ -771,7 +772,7 @@ DaoTypeBase threadTyper =
 DaoThread* DaoThread_New( DaoThdMaster *thdm )
 {
 	DaoThread* self = (DaoThread*) dao_malloc( sizeof(DaoThread) );
-	DaoBase_Init( self, DAO_THREAD );
+	DaoValue_Init( self, DAO_THREAD );
 	DThread_Init( & self->myThread );
 	self->process = NULL;
 	self->thdMaster = thdm;
@@ -815,21 +816,21 @@ struct DaoCFunctionCallData
 {
 	DaoContext  *context;
 	DaoFunction *function;
-	DValue selfpar;
-	DValue par[DAO_MAX_PARAM];
-	DValue *par2[DAO_MAX_PARAM];
+	DaoValue *selfpar;
+	DaoValue *par[DAO_MAX_PARAM];
 	int npar;
 };
 static void DaoCFunction_Execute( DaoCFunctionCallData *self )
 {
 	int i, npar = self->npar;
-	if( self->selfpar.t && (self->function->attribs & DAO_ROUT_PARSELF) ) npar ++;
+	if( self->selfpar && (self->function->attribs & DAO_ROUT_PARSELF) ) npar ++;
 	self->context->thisFunction = self->function;
-	self->function->pFunc( self->context, self->par2, npar );
+	self->function->pFunc( self->context, self->par, npar );
 	self->context->thisFunction = NULL;
-	for(i=0; i<npar; i++) DValue_Clear( self->par + i );
-	DValue_Clear( & self->selfpar );
+	for(i=0; i<npar; i++) DaoValue_Clear( self->par + i );
 	DaoVmProcess_Delete( self->context->process );
+	DaoValue_ClearAll( self->par, npar );
+	GC_DecRC( self->selfpar );
 	GC_DecRC( self->context );
 	GC_DecRC( self->function );
 	dao_free( self );
@@ -841,58 +842,53 @@ static void DaoVmProcess_Execute2( DaoVmProcess *self )
 }
 
 /* thread master */
-static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 { 
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoThread *thread;
 	DaoVmProcess *vmProc;
 	DaoContext *thdCtx = 0;
-	DaoObject *obj;
 	DRoutine *rout;
-	DValue *buffer[DAO_MAX_PARAM];
-	DValue **params = par + 2;
-	DValue rov = *par[1];
-	DValue selfobj = daoNullValue;
+	DaoValue **params = par + 2;
+	DaoValue *rov = par[1];
+	DaoValue *selfobj = NULL;
 	int i;
 
 	N -= 2;
-	if( rov.t == DAO_FUNCURRY ){
-		DaoFunCurry *curry = (DaoFunCurry*) rov.v.p;
+	if( rov && rov->type == DAO_FUNCURRY ){
+		DaoFunCurry *curry = (DaoFunCurry*) rov;
 		selfobj = curry->selfobj;
 		rov = curry->callable;
 		N = curry->params->size;
 		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
-		for(i=0; i<N; i++) buffer[i] = curry->params->data + i;
-		params = buffer;
+		params = curry->params->items.pValue;
 	}
-	if( rov.t < DAO_FUNCTREE && rov.t > DAO_FUNCTION ) goto ErrorParam;
-	rout = DRoutine_Resolve( rov.v.p, & selfobj, params, N, DVM_CALL );
+	if( rov == NULL || (rov->type < DAO_FUNCTREE && rov->type > DAO_FUNCTION) ) goto ErrorParam;
+	rout = DRoutine_Resolve( rov, selfobj, params, N, DVM_CALL );
 	if( rout == NULL ) goto ErrorParam;
 	if( rout->type == DAO_ROUTINE ){
 		DaoRoutine *drout = (DaoRoutine*) rout;
 		if( drout->parser ) DaoRoutine_Compile( drout );
 		if( rout->attribs & DAO_ROUT_NEEDSELF ){
-			if( selfobj.t != DAO_OBJECT || drout->routHost ==NULL ) goto ErrorParam;
-			obj = selfobj.v.object;
-			if( ! DaoClass_ChildOf( obj->myClass, drout->routHost->aux.v.p ) ) goto ErrorParam;
+			if( selfobj == NULL || selfobj->type != DAO_OBJECT || drout->routHost ==NULL ) goto ErrorParam;
+			if( ! DaoClass_ChildOf( selfobj->xObject.myClass, drout->routHost->aux ) ) goto ErrorParam;
 		}
 	}
 	thread = DaoThread_New( self );
 	vmProc = DaoVmProcess_New( ctx->vmSpace );
-	DaoContext_SetResult( ctx, (DaoBase*)thread );
+	DaoContext_PutValue( ctx, (DaoValue*)thread );
 	thdCtx = DaoContext_New();
 	thread->process = vmProc;
 	thdCtx->vmSpace = ctx->vmSpace;
 	if( rout->attribs & DAO_ROUT_NEEDSELF ){
-		thdCtx->object = selfobj.v.object;
+		thdCtx->object = (DaoObject*)selfobj;
 		GC_IncRC( thdCtx->object );
 	}
 	DaoContext_Init( thdCtx, (DaoRoutine*) rout );
 	thdCtx->process = vmProc;
 	if( rout->type == DAO_ROUTINE ){
 		DaoVmProcess_PushContext( vmProc, thdCtx );
-		if( ! DRoutine_PassParams( (DRoutine*)rout, & selfobj, 
-					thdCtx->regValues, params, N, DVM_CALL ) ){
+		if( ! DRoutine_PassParams( (DRoutine*)rout, selfobj, thdCtx->regValues, params, N, DVM_CALL ) ){
 			DaoVmProcess_Delete( vmProc );
 			goto ErrorParam;
 		}
@@ -901,17 +897,15 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DValue *par[], int N )
 		DaoThread_Start( thread, (DThreadTask) DaoVmProcess_Execute2, vmProc );
 	}else if( rout->type == DAO_FUNCTION ){
 		DaoCFunctionCallData *calldata = dao_calloc( 1, sizeof(DaoCFunctionCallData) );
-		for(i=0; i<DAO_MAX_PARAM; i++) calldata->par2[i] = calldata->par + i;
 		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
 		calldata->npar = N;
-		if( ! DRoutine_PassParams( (DRoutine*)rout, & selfobj, 
-					calldata->par2, params, N, DVM_CALL ) ){
-			DValue_ClearAll( calldata->par, N );
+		if( ! DRoutine_PassParams( (DRoutine*)rout, selfobj, calldata->par, params, N, DVM_CALL ) ){
+			DaoValue_ClearAll( calldata->par, N );
 			DaoVmProcess_Delete( vmProc );
 			dao_free( calldata );
 			goto ErrorParam;
 		}
-		DValue_Copy( & calldata->selfpar, selfobj );
+		DaoValue_Copy( selfobj, & calldata->selfpar );
 		calldata->function = (DaoFunction*) rout;
 		calldata->context = thdCtx;
 		GC_IncRC( rout );
@@ -925,44 +919,44 @@ ErrorParam:
 	DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "invalid parameter for creating thread" );
 	return;
 }
-static void DaoThdMaster_Lib_Exit( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_Exit( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoThread *thread = GetThisThread( self );
 	DThread_Exit( & thread->myThread );
 }
-static void DaoThdMaster_Lib_TestCancel( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_TestCancel( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoThread *thread = GetThisThread( self );
 	DThread_TestCancel( & thread->myThread );
 }
-static void DaoThdMaster_Lib_Self( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_Self( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
-	DaoContext_SetResult( ctx, (DaoBase*)GetThisThread( self ) );
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
+	DaoContext_PutValue( ctx, (DaoValue*)GetThisThread( self ) );
 }
-static void DaoThdMaster_Lib_MyData( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_MyData( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoThread *thread = GetThisThread( self );
-	DaoContext_SetResult( ctx, (DaoBase*)thread->myMap );
+	DaoContext_PutValue( ctx, (DaoValue*)thread->myMap );
 }
-static void DaoThdMaster_Lib_Mutex( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_Mutex( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoMutex *mutex = DaoMutex_New( NULL );
 	mutex->thdMaster = self;
-	DaoContext_SetResult( ctx, (DaoBase*) mutex );
+	DaoContext_PutValue( ctx, (DaoValue*) mutex );
 }
-static void DaoThdMaster_Lib_CondVar( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_CondVar( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0]->v.p;
-	DaoContext_SetResult( ctx, (DaoBase*)DaoCondVar_New( self ) );
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
+	DaoContext_PutValue( ctx, (DaoValue*)DaoCondVar_New( self ) );
 }
-static void DaoThdMaster_Lib_Sema( DaoContext *ctx, DValue *par[], int N )
+static void DaoThdMaster_Lib_Sema( DaoContext *ctx, DaoValue *par[], int N )
 {
-	DaoContext_SetResult( ctx, (DaoBase*)DaoSema_New( 0 ) );
+	DaoContext_PutValue( ctx, (DaoValue*)DaoSema_New( 0 ) );
 }
 
 static DaoFuncItem thdMasterMeths[] =
@@ -983,12 +977,12 @@ static void DaoThdMaster_Delete( DaoThdMaster *self );
 static DaoTypeCore thdMasterCore =
 {
 	0, NULL, NULL, NULL, NULL,
-	DaoBase_SafeGetField,
-	DaoBase_SafeSetField,
-	DaoBase_GetItem,
-	DaoBase_SetItem,
-	DaoBase_Print,
-	DaoBase_Copy,
+	DaoValue_SafeGetField,
+	DaoValue_SafeSetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
+	DaoValue_NoCopy,
 };
 DaoTypeBase thdMasterTyper =
 {
@@ -999,7 +993,7 @@ DaoTypeBase thdMasterTyper =
 DaoThdMaster* DaoThdMaster_New()
 {
 	DaoThdMaster *self = (DaoThdMaster*) dao_malloc( sizeof(DaoThdMaster) );
-	DaoBase_Init( (DaoBase*)self, DAO_THDMASTER );
+	DaoValue_Init( (DaoValue*)self, DAO_THDMASTER );
 	DMutex_Init( & self->recordMutex );
 	self->thdRecords = DArray_New(0);
 	return self;

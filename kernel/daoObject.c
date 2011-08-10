@@ -23,6 +23,7 @@
 #include"daoGC.h"
 #include"daoStream.h"
 #include"daoNumtype.h"
+#include"daoValue.h"
 
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoVmProcess *vmp, 
 		DString *name, DaoContext *ctx, DaoValue *ps[], int N, int ret )
@@ -55,13 +56,13 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoVmProcess *vmp
 	}else if( meth->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) meth;
 		DaoObject *object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
-		DaoFunction_Call( func, ctx, &object, ps, N );
+		DaoFunction_Call( func, ctx, (DaoValue*) object, ps, N );
 	}else{
 		return DAO_ERROR_TYPE;
 	}
 	return 0;
 InvalidParam:
-	DaoContext_ShowCallError( ctx, (DRoutine*)value.v.p, & selfpar, ps, N, DVM_CALL );
+	DaoContext_ShowCallError( ctx, (DRoutine*)V, (DaoValue*)self, ps, N, DVM_CALL );
 	return 0;
 }
 static void DaoObject_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
@@ -69,7 +70,7 @@ static void DaoObject_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream
 	DaoObject *self = & self0->xObject;
 	DaoValue *vs = (DaoValue*) stream;
 	int ec;
-	if( self == self->myClass->objType->value.v.object ){
+	if( self0 == self->myClass->objType->value ){
 		DaoStream_WriteString( stream, self->myClass->className );
 		DaoStream_WriteMBS( stream, "[default]" );
 		return;
@@ -97,13 +98,13 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoContext *ctx, DString *
 		rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
 				ctx->process->mbstring, ctx, NULL, 0, -100 );
 	}else{
-		DaoContext_PutReference( ctx, value ); //XXX
+		DaoContext_PutReference( ctx, value );
 	}
 	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( name ) );
 }
 static void DaoObject_Core_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoValue *value )
 {
-	DaoObject *self = self0->v.object;
+	DaoObject *self = & self0->xObject;
 	int ec = DaoObject_SetData( self, name, value, ctx->object );
 	int ec2 = ec;
 	if( ec ){
@@ -188,7 +189,7 @@ DaoTypeBase objTyper=
 DaoObject* DaoObject_Allocate( DaoClass *klass )
 {
 	DaoObject *self = (DaoObject*) dao_malloc( sizeof( DaoObject ) );
-	DaoBase_Init( self, DAO_OBJECT );
+	DaoValue_Init( self, DAO_OBJECT );
 	self->myClass = klass;
 	self->objData = NULL;
 	self->superObject = NULL;
@@ -242,11 +243,11 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		DaoValue **value = self->objValues + i;
 		/* for data type such as list/map/array, 
 		 * its .unitype may need to be set properaly */
-		if( klass->objDataDefault->data[i] ){
-			DValue_Move( klass->objDataDefault->items.pValue[i], value, type );
+		if( klass->objDataDefault->items.pValue[i] ){
+			DaoValue_Move( klass->objDataDefault->items.pValue[i], value, type );
 			continue;
-		}else if( value->t == 0 && type && type->value ){
-			DValue_Move( type->value, value, type );
+		}else if( *value == NULL && type && type->value ){
+			DaoValue_Move( type->value, value, type );
 		}
 	}
 }
@@ -258,7 +259,7 @@ void DaoObject_Delete( DaoObject *self )
 	if( self->superObject ){
 		int i;
 		for(i=0; i<self->superObject->size; i++)
-			GC_DecRC( self->superObject->items.pBase[i] );
+			GC_DecRC( self->superObject->items.pValue[i] );
 		DTuple_Delete( self->superObject );
 	}
 	dao_free( self );
@@ -289,11 +290,11 @@ int DaoObject_ChildOf( DaoObject *self, DaoObject *obj )
 }
 extern int DaoCData_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
-DaoBase* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
+DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 {
 	int i;
 	if( host == NULL ) return NULL;
-	if( self->myClass->objType == host ) return (DaoBase*) self;
+	if( self->myClass->objType == host ) return (DaoValue*) self;
 	if( self->superObject ==NULL ) return NULL;
 	for( i=0; i<self->superObject->size; i++ ){
 		DaoValue *sup = self->superObject->items.pValue[i];
@@ -328,7 +329,7 @@ DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent )
 			DaoCData *cdata = (DaoCData*)sup;
 			if( DaoCData_ChildOf( cdata->typer, parent->typer ) ){
 				GC_IncRC( parent );
-				self->superObject->items.pBase[i] = (DaoBase*)parent;
+				self->superObject->items.pValue[i] = (DaoValue*)parent;
 				return self;
 			}
 		}
@@ -337,7 +338,7 @@ DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent )
 }
 DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer )
 {
-	DaoBase *p = NULL;
+	DaoValue *p = NULL;
 	if( typer && typer->priv && typer->priv->abtype )
 		p = DaoObject_MapThisObject( self, typer->priv->abtype );
 	if( p && p->type == DAO_CDATA ) return (DaoCData*) p;
@@ -364,19 +365,19 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	st = LOOKUP_ST( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
-	if( self == dft && sto == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
+	if( self == dft && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
 	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
-	if( sto == DAO_OBJECT_VARIABLE ){
+	if( st == DAO_OBJECT_VARIABLE ){
 		if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 		type = klass->objDataType->items.pType[ id ];
 		value = self->objValues + id;
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
-	}else if( sto == DAO_CLASS_VARIABLE ){
+	}else if( st == DAO_CLASS_VARIABLE ){
 		value = klass->glbDataTable->items.pArray[up]->items.pValue + id;
 		type = klass->glbTypeTable->items.pArray[up]->items.pType[ id ];
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
-	}else if( sto == DAO_CLASS_CONSTANT ){
+	}else if( st == DAO_CLASS_CONSTANT ){
 		return DAO_ERROR_FIELD;
 	}else{
 		return DAO_ERROR_FIELD;
@@ -392,7 +393,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	int child = othis && DaoObject_ChildOf( othis, self );
 	int id, st, up, pm, access;
 
-	*data = daoNullValue;
+	*data = NULL;
 	node = DMap_Find( self->myClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
@@ -400,10 +401,10 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	st = LOOKUP_ST( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
-	if( self == dft && sto == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
+	if( self == dft && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
 	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
-	switch( sto ){
+	switch( st ){
 	case DAO_OBJECT_VARIABLE : p = self->objValues[id]; break;
 	case DAO_CLASS_VARIABLE  : p = klass->glbDataTable->items.pArray[up]->items.pValue[id]; break;
 	case DAO_CLASS_CONSTANT  : p = klass->cstDataTable->items.pArray[up]->items.pValue[id]; break;
