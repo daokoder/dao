@@ -187,6 +187,7 @@ void DaoType_InitDefault( DaoType *self )
 		for(i=0; i<count; i++) DaoType_InitDefault( types[i] );
 		if( count ) value = types[0]->value;
 		break;
+	case DAO_UDF :
 	case DAO_ANY :
 	case DAO_ROUTINE :
 	case DAO_INTERFACE : value = null; break;
@@ -658,7 +659,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			/* for C functions that returns a tuple:
 			 * the tuple may be assigned to a context value before
 			 * its values are set properly! */
-			if( value->xTuple.items->items.pValue[i]->type == 0 ) continue;
+			if( value->xTuple.items->items.pValue[i] == NULL ) continue;
 			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) continue;
 
 			mt = DaoType_MatchValue( tp, value->xTuple.items->items.pValue[i], defs );
@@ -775,7 +776,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 {
 	int i;
 	DaoType *nest;
-	DaoType *copy;
+	DaoType *copy = NULL;
 	DNode *node;
 
 	if( self == NULL ) return NULL;
@@ -810,6 +811,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	copy->attrib = self->attrib;
 	copy->ffitype = self->ffitype;
 	copy->attrib &= ~ DAO_TYPE_EMPTY; /* not any more empty */
+	GC_IncRC( copy );
 	DMap_Insert( defs, self, copy );
 	if( self->mapNames ){
 		if( copy->mapNames ) DMap_Delete( copy->mapNames );
@@ -874,7 +876,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		DaoClass *klass = & self->aux->xClass;
 		klass = DaoClass_Instantiate( klass, copy->nested );
 		DMap_Erase2( defs, copy );
-		DaoType_Delete( copy );
+		GC_DecRC( copy );
 		return klass->objType;
 	}
 	node = DMap_Find( ns->abstypes, copy->name );
@@ -887,7 +889,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 #endif
 	if( node ){
 		DMap_Erase2( defs, copy );
-		DaoType_Delete( copy );
+		GC_DecRC( copy );
 		return node->value.pType;
 	}else{
 		GC_IncRC( copy );
@@ -898,6 +900,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 	DaoType_InitDefault( copy );
 	return copy;
 DefFailed:
+	GC_DecRC( copy );
 	printf( "redefine failed\n" );
 	return NULL;
 }

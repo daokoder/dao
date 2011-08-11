@@ -120,8 +120,12 @@ void DaoComplex_Set( DaoComplex *self, complex16 value )
 
 DaoLong* DaoLong_New()
 {
+	return NULL;
 }
 DLong* DaoLong_Get( DaoLong *self )
+{
+}
+DaoLong* DaoLong_Copy( DaoLong *self )
 {
 }
 void DaoLong_Delete( DaoLong *self )
@@ -285,28 +289,6 @@ static DArray* MakeIndex( DaoContext *ctx, DaoValue *index, size_t N, size_t *st
 
 void DaoValue_Delete( void *self ){ dao_free( self ); }
 
-#if 0
-void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
-{
-	DaoType *type = DaoNameSpace_GetType( ctx->nameSpace, self );
-	if( self->type <= DAO_STREAM )
-		DaoStream_WriteMBS( stream, coreTypeNames[ self->type ] );
-	else
-		DaoStream_WriteMBS( stream, DaoValue_GetTyper( self )->name );
-	if( self->type == DAO_NULL ) return;
-	if( self->type == DAO_TYPE ){
-		DaoStream_WriteMBS( stream, "<" );
-		DaoStream_WriteMBS( stream, self->xType.name->mbs );
-		DaoStream_WriteMBS( stream, ">" );
-	}
-	DaoStream_WriteMBS( stream, "_" );
-	DaoStream_WriteInt( stream, self->type );
-	DaoStream_WriteMBS( stream, "_" );
-	DaoStream_WritePointer( stream, self );
-	if( self->type < DAO_STREAM ) return;
-	if( type && self == type->value ) DaoStream_WriteMBS( stream, "[default]" );
-}
-#endif
 DaoValue* DaoValue_NoCopy( DaoValue *self, DaoContext *ctx, DMap *cycData )
 {
 	return self;
@@ -598,7 +580,8 @@ int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns
 
 DaoTypeBase enumTyper=
 {
-	"enum", & baseCore, NULL, NULL, {0}, {0}, NULL, NULL
+	"enum", & baseCore, NULL, NULL, {0}, {0},
+	(FuncPtrDel) DaoEnum_Delete, NULL
 };
 
 extern DaoTypeBase funcTyper;
@@ -748,7 +731,7 @@ static DaoTypeCore numberCore=
 
 DaoTypeBase numberTyper=
 {
-	"double", & numberCore, NULL, NULL, {0}, {0}, NULL, NULL
+	"double", & numberCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
 };
 
 /**/
@@ -1767,7 +1750,8 @@ static DaoFuncItem stringMeths[] =
 
 DaoTypeBase stringTyper=
 {
-	"string", & stringCore, NULL, (DaoFuncItem*) stringMeths, {0}, {0}, NULL, NULL
+	"string", & stringCore, NULL, (DaoFuncItem*) stringMeths, {0}, {0}, 
+	(FuncPtrDel) DaoString_Delete, NULL
 };
 
 /* also used for printing tuples */
@@ -2513,7 +2497,7 @@ DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
 int DaoList_SetItem( DaoList *self, DaoValue *it, int pos )
 {
 	DaoValue **val;
-	if( pos <0 || pos >= self->items->size ) return 0;
+	if( pos <0 || pos >= self->items->size ) return 1;
 	val = self->items->items.pValue + pos;
 	if( self->unitype && self->unitype->nested->size ){
 		return DaoValue_Move( it, val, self->unitype->nested->items.pType[0] ) == 0;
@@ -2643,15 +2627,14 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid )
 	DaoMap *self = & self0->xMap;
 	if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
 		DaoTuple *iter = & pid->xTuple;
-		DaoTuple *tuple = DaoTuple_New( 2 );
-		DNode *node = (DNode*) iter->items->items.pValue[1]; // XXX Fix:
-		DaoContext_PutValue( ctx, (DaoValue*) tuple );
-		if( node == NULL ) return;
+		DaoTuple *tuple = DaoContext_PutTuple( ctx );
+		DNode *node = (DNode*) iter->items->items.pValue[1]->xCdata.data;
+		if( node == NULL || tuple->items->size != 2 ) return;
 		DaoValue_Copy( node->key.pValue, tuple->items->items.pValue );
 		DaoValue_Copy( node->value.pValue, tuple->items->items.pValue + 1 );
 		node = DMap_Next( self->items, node );
 		iter->items->items.pValue[0]->xInteger.value = node != NULL;
-		//XXX iter->items->items.pValue[1].v.p = (DaoValue*) node;
+		iter->items->items.pValue[1]->xCdata.data = node;
 	}else{
 		DNode *node = MAP_Find( self->items, & pid );
 		if( node ==NULL ){
@@ -2916,9 +2899,15 @@ static void DaoMAP_Iter( DaoContext *ctx, DaoValue *p[], int N )
 	DaoMap *self = & p[0]->xMap;
 	DaoTuple *tuple = & p[1]->xTuple;
 	DaoValue **data = tuple->items->items.pValue;
+	DNode *node = DMap_First( self->items );
 	data[0]->xInteger.value = self->items->size >0;
-	//data[1]->type = 0;
-	//XXX iter data: data[1].v.p = (DaoValue*) DMap_First( self->items );
+	if( data[1]->type != DAO_CDATA || data[1]->xCdata.typer != & cdataTyper ){
+		DaoCData *it = DaoCData_New( & cdataTyper, node );
+		GC_ShiftRC( it, data[1] );
+		data[1] = (DaoValue*) it;
+	}else{
+		data[1]->xCdata.data = node;
+	}
 }
 static DaoFuncItem mapMeths[] =
 {
@@ -4298,27 +4287,27 @@ void DaoException_Setup( DaoNameSpace *ns )
 	DaoNameSpace_SetupValues( ns, & dao_WarningValue_Typer );
 
 	/* setup hierarchicy of exception types: */
-	DMap_Insert( exception->typer->priv->values, none->name, & none->aux );
-	DMap_Insert( exception->typer->priv->values, any->name, & any->aux );
-	DMap_Insert( exception->typer->priv->values, warning->name, & warning->aux );
-	DMap_Insert( exception->typer->priv->values, error->name, & error->aux );
-	DMap_Insert( error->typer->priv->values, field->name, & field->aux );
-	DMap_Insert( field->typer->priv->values, fdnotexist->name, & fdnotexist->aux );
-	DMap_Insert( field->typer->priv->values, fdnotperm->name, & fdnotperm->aux );
-	DMap_Insert( error->typer->priv->values, tfloat->name, & tfloat->aux );
-	DMap_Insert( tfloat->typer->priv->values, fltzero->name, & fltzero->aux );
-	DMap_Insert( tfloat->typer->priv->values, fltoflow->name, & fltoflow->aux );
-	DMap_Insert( tfloat->typer->priv->values, fltuflow->name, & fltuflow->aux );
-	DMap_Insert( error->typer->priv->values, index->name, & index->aux );
-	DMap_Insert( index->typer->priv->values, idorange->name, & idorange->aux );
-	DMap_Insert( error->typer->priv->values, key->name, & key->aux );
-	DMap_Insert( key->typer->priv->values, keynotexist->name, & keynotexist->aux );
-	DMap_Insert( error->typer->priv->values, param->name, & param->aux );
-	DMap_Insert( error->typer->priv->values, esyntax->name, & esyntax->aux );
-	DMap_Insert( error->typer->priv->values, evalue->name, & evalue->aux );
-	DMap_Insert( error->typer->priv->values, type->name, & type->aux );
-	DMap_Insert( warning->typer->priv->values, wsyntax->name, & wsyntax->aux );
-	DMap_Insert( warning->typer->priv->values, wvalue->name, & wvalue->aux );
+	DMap_Insert( exception->typer->priv->values, none->name, none->aux );
+	DMap_Insert( exception->typer->priv->values, any->name, any->aux );
+	DMap_Insert( exception->typer->priv->values, warning->name, warning->aux );
+	DMap_Insert( exception->typer->priv->values, error->name, error->aux );
+	DMap_Insert( error->typer->priv->values, field->name, field->aux );
+	DMap_Insert( field->typer->priv->values, fdnotexist->name, fdnotexist->aux );
+	DMap_Insert( field->typer->priv->values, fdnotperm->name, fdnotperm->aux );
+	DMap_Insert( error->typer->priv->values, tfloat->name, tfloat->aux );
+	DMap_Insert( tfloat->typer->priv->values, fltzero->name, fltzero->aux );
+	DMap_Insert( tfloat->typer->priv->values, fltoflow->name, fltoflow->aux );
+	DMap_Insert( tfloat->typer->priv->values, fltuflow->name, fltuflow->aux );
+	DMap_Insert( error->typer->priv->values, index->name, index->aux );
+	DMap_Insert( index->typer->priv->values, idorange->name, idorange->aux );
+	DMap_Insert( error->typer->priv->values, key->name, key->aux );
+	DMap_Insert( key->typer->priv->values, keynotexist->name, keynotexist->aux );
+	DMap_Insert( error->typer->priv->values, param->name, param->aux );
+	DMap_Insert( error->typer->priv->values, esyntax->name, esyntax->aux );
+	DMap_Insert( error->typer->priv->values, evalue->name, evalue->aux );
+	DMap_Insert( error->typer->priv->values, type->name, type->aux );
+	DMap_Insert( warning->typer->priv->values, wsyntax->name, wsyntax->aux );
+	DMap_Insert( warning->typer->priv->values, wvalue->name, wvalue->aux );
 
 	DaoNameSpace_SetupMethods( ns, & dao_Exception_Typer );
 	DaoNameSpace_SetupMethods( ns, & dao_ExceptionNone_Typer );

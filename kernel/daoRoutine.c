@@ -39,7 +39,7 @@ static void DRoutine_Init( DRoutine *self )
 	self->routHelp = NULL;
 	self->routName = DString_New(1);
 	self->parCodes = DString_New(1);
-	self->routConsts = DArray_New(0);
+	self->routConsts = DArray_New(D_VALUE);
 	self->nameSpace = NULL;
 }
 DRoutine* DRoutine_New()
@@ -72,7 +72,6 @@ static void DRoutine_DeleteFields( DRoutine *self )
 	GC_DecRC( self->routHost );
 	GC_DecRC( self->routType );
 	GC_DecRC( self->nameSpace );
-	GC_DecRCs( self->routConsts );
 	DString_Delete( self->routName );
 	DString_Delete( self->parCodes );
 	DArray_Delete( self->routConsts );
@@ -81,7 +80,6 @@ static void DRoutine_DeleteFields( DRoutine *self )
 int DRoutine_AddConstant( DRoutine *self, DaoValue *value )
 {
 	// TODO: handle NULL
-	value = DaoValue_SimpleCopy( value );
 	DArray_Append( self->routConsts, value );
 	DaoValue_MarkConst( self->routConsts->items.pValue[self->routConsts->size-1] );
 	return self->routConsts->size-1;
@@ -526,7 +524,6 @@ DaoRoutine* DaoRoutine_New()
 	self->original = NULL;
 	self->specialized = NULL;
 	self->vmCodes = DaoVmcArray_New();
-	self->regMode = DString_New(1);
 	self->regType = DArray_New(0);
 	self->defLocals = DArray_New(D_TOKEN);
 	self->annotCodes = DArray_New(D_VMCODE);
@@ -534,7 +531,6 @@ DaoRoutine* DaoRoutine_New()
 	self->abstypes = DMap_New(D_STRING,0);
 	self->bodyStart = self->bodyEnd = 0;
 	self->jitData = NULL;
-	DString_SetSharing( self->regMode, 0 );
 	return self;
 }
 void DaoRoutine_Delete( DaoRoutine *self )
@@ -553,7 +549,6 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	if( self->specialized ) GC_DecRC( self->specialized );
 	GC_DecRCs( self->regType );
 	DaoVmcArray_Delete( self->vmCodes );
-	DString_Delete( self->regMode );
 	DArray_Delete( self->regType );
 	DArray_Delete( self->defLocals );
 	DArray_Delete( self->annotCodes );
@@ -648,7 +643,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	self->defLine = other->defLine;
 	self->bodyStart = other->bodyStart;
 	self->bodyEnd = other->bodyEnd;
-	DString_Assign( self->regMode, other->regMode );
 }
 
 int DaoRoutine_InferTypes( DaoRoutine *self );
@@ -692,287 +686,6 @@ static DaoType* DaoType_DeepItemType( DaoType *self )
 	default: break;
 	}
 	return type;
-}
-static void SetupOperand( DaoRoutine *self, int reg, DMap *checks )
-{
-	if( self->regMode->mbs[reg] > DAO_REG_VARIABLE ){
-		/* If the intermediate register has been setup,
-		 * change the register mode to DAO_REG_INTERMED,
-		 * possibly from DAO_REG_INTERMED_SU or DAO_REG_REFER: */
-		self->regMode->mbs[reg] = DAO_REG_INTERMED;
-		MAP_Erase( checks, reg );
-		return;
-	}
-	if( MAP_Find( checks, reg ) ){
-		self->regMode->mbs[reg] = DAO_REG_REFER;
-		MAP_Erase( checks, reg );
-	}
-}
-static void InsertChecking( DaoRoutine *self, int reg, DMap *checks )
-{
-	/* Only for intermediate register that has not been setup: */
-	if( self->regMode->mbs[reg] == 0 ) MAP_Insert( checks, reg, 0 );
-}
-static void ClearChecking( DaoRoutine *self, DMap *checks )
-{
-	DNode *node = DMap_First( checks );
-	for(; node; node=DMap_Next( checks, node )){
-		self->regMode->mbs[node->key.pInt] = DAO_REG_INTERMED;
-	}
-}
-#define NoCheckingType(t) ((t->tid==DAO_UDF)|(t->tid==DAO_ANY)|(t->tid==DAO_INITYPE))
-static void DaoRoutine_SetupRegisterModes( DaoRoutine *self )
-{
-#define MaybeFunctionCall(t) (NoCheckingType(t)|(t->tid==DAO_CDATA)|(t->tid==DAO_OBJECT))
-
-	int i, j, k, m, N = self->vmCodes->size;
-	DaoType **types = self->regType->items.pType;
-	DaoVmCodeX **vmcs = self->annotCodes->items.pVmc;
-	DaoVmCodeX *vmc;
-	DMap *checks;
-	DNode *node;
-
-	checks = DMap_New(0,0);
-	DString_Resize( self->regMode, self->regCount );
-	memset( self->regMode->mbs, 0, self->regMode->size*sizeof(char) );
-	node = DMap_First( self->localVarType );
-	for( ; node !=NULL; node = DMap_Next(self->localVarType,node) ){
-		self->regMode->mbs[ node->key.pInt ] = DAO_REG_VARIABLE;
-	}
-	for(i=0; i<N; i++){
-		vmc = vmcs[i];
-		switch( vmc->code ){
-		case DVM_NOP :
-		case DVM_DEBUG :
-			break;
-		case DVM_DATA :
-		case DVM_GETCL : case DVM_GETCK : case DVM_GETCG :
-		case DVM_GETVL : case DVM_GETVO : case DVM_GETVK : case DVM_GETVG :
-			/* declare C */
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_SETVL : case DVM_SETVO : case DVM_SETVK : case DVM_SETVG :
-			SetupOperand( self, vmc->a, checks );
-			break;
-		case DVM_LOAD :
-			/* use A and declare C */
-			SetupOperand( self, vmc->a, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_GETF : case DVM_GETMF :
-		case DVM_NOT : case DVM_UNMS : case DVM_BITREV :
-		case DVM_ITER :
-			/* use A and declare C */
-			SetupOperand( self, vmc->a, checks );
-			if( MaybeFunctionCall( types[vmc->a] ) ) ClearChecking( self, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_SETI : case DVM_SETMI :
-		case DVM_SETF : case DVM_SETMF :
-		case DVM_CAST : case DVM_MOVE :
-			/* use A */
-			SetupOperand( self, vmc->a, checks );
-			if( MaybeFunctionCall( types[vmc->c] ) ) ClearChecking( self, checks );
-			SetupOperand( self, vmc->c, checks );
-			break;
-		case DVM_GETI : case DVM_GETMI :
-			/* use A and B, declare C */
-			SetupOperand( self, vmc->a, checks );
-			SetupOperand( self, vmc->b, checks );
-			if( MaybeFunctionCall( types[vmc->a] ) ) ClearChecking( self, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_ADD : case DVM_SUB : case DVM_MUL :
-		case DVM_DIV : case DVM_MOD : case DVM_POW :
-		case DVM_AND : case DVM_OR : case DVM_LT :
-		case DVM_LE :  case DVM_EQ : case DVM_NE : case DVM_IN :
-		case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
-		case DVM_BITLFT : case DVM_BITRIT :
-			/* use A and B, declare C */
-			SetupOperand( self, vmc->a, checks );
-			SetupOperand( self, vmc->b, checks );
-			if( MaybeFunctionCall( types[vmc->a] ) ) ClearChecking( self, checks );
-			if( MaybeFunctionCall( types[vmc->b] ) ) ClearChecking( self, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_PAIR :
-		case DVM_CHECK :
-			SetupOperand( self, vmc->a, checks );
-			SetupOperand( self, vmc->b, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_NAMEVA :
-			SetupOperand( self, vmc->b, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_TUPLE : case DVM_MAP : case DVM_HASH :
-			for(j=0; j<vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
-			break;
-		case DVM_LIST : case DVM_ARRAY :
-			k = (vmc->b >= 10) ? (vmc->b - 10) : vmc->b;
-			for(j=0; j<k; j++) SetupOperand( self, vmc->a+j, checks );
-			break;
-		case DVM_CURRY : case DVM_MCURRY :
-			for(j=0; j<=vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
-			ClearChecking( self, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_CALL : case DVM_MCALL :
-			k = vmc->b & 0xff;
-			if( k == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-				k = self->parCount - (self->routType->attrib & DAO_TYPE_SELF) != 0;
-			}
-			for(j=0; j<=k; j++) SetupOperand( self, vmc->a+j, checks );
-			ClearChecking( self, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_MATRIX :
-			k = vmc->b & 0xff;
-			m = vmc->b >> 8;
-			for(j=0; j<(k*m); j++) SetupOperand( self, vmc->a+j, checks );
-			break;
-		case DVM_SWITCH :
-		case DVM_TEST :
-		case DVM_TEST_I :
-		case DVM_TEST_F :
-		case DVM_TEST_D :
-			SetupOperand( self, vmc->a, checks );
-			break;
-		case DVM_CASE :
-			break;
-		case DVM_MATH :
-			SetupOperand( self, vmc->a, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_FUNCT :
-		case DVM_ROUTINE :
-		case DVM_CLASS :
-			ClearChecking( self, checks );
-			break;
-		case DVM_RETURN :
-		case DVM_YIELD :
-			for(j=0; j<vmc->b; j++) SetupOperand( self, vmc->a+j, checks );
-			ClearChecking( self, checks );
-			break;
-		case DVM_SETVL_II : case DVM_SETVL_IF : case DVM_SETVL_ID :
-		case DVM_SETVL_FI : case DVM_SETVL_FF : case DVM_SETVL_FD :
-		case DVM_SETVL_DI : case DVM_SETVL_DF : case DVM_SETVL_DD :
-		case DVM_SETVO_II : case DVM_SETVO_IF : case DVM_SETVO_ID :
-		case DVM_SETVO_FI : case DVM_SETVO_FF : case DVM_SETVO_FD :
-		case DVM_SETVO_DI : case DVM_SETVO_DF : case DVM_SETVO_DD :
-		case DVM_SETVK_II : case DVM_SETVK_IF : case DVM_SETVK_ID :
-		case DVM_SETVK_FI : case DVM_SETVK_FF : case DVM_SETVK_FD :
-		case DVM_SETVK_DI : case DVM_SETVK_DF : case DVM_SETVK_DD :
-		case DVM_SETVG_II : case DVM_SETVG_IF : case DVM_SETVG_ID :
-		case DVM_SETVG_FI : case DVM_SETVG_FF : case DVM_SETVG_FD :
-		case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
-			SetupOperand( self, vmc->a, checks );
-			break;
-		case DVM_MOVE_II : case DVM_MOVE_FF : case DVM_MOVE_DD :
-		case DVM_MOVE_CC : case DVM_MOVE_SS : case DVM_MOVE_PP :
-		case DVM_MOVE_IF : case DVM_MOVE_FI :
-		case DVM_MOVE_ID : case DVM_MOVE_FD :
-		case DVM_MOVE_DI : case DVM_MOVE_DF :
-			SetupOperand( self, vmc->a, checks );
-			break;
-		case DVM_NOT_I : case DVM_UNMS_I : case DVM_BITREV_I :
-		case DVM_NOT_F : case DVM_UNMS_F : case DVM_BITREV_F :
-		case DVM_NOT_D : case DVM_UNMS_D : case DVM_BITREV_D :
-		case DVM_UNMS_C :
-			SetupOperand( self, vmc->a, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_ADD_III : case DVM_SUB_III : case DVM_MUL_III : case DVM_DIV_III :
-		case DVM_MOD_III : case DVM_POW_III : case DVM_AND_III : case DVM_OR_III  :
-		case DVM_LT_III  : case DVM_LE_III  : case DVM_EQ_III : case DVM_NE_III :
-		case DVM_BITAND_III  : case DVM_BITOR_III  : case DVM_BITXOR_III :
-		case DVM_BITLFT_III  : case DVM_BITRIT_III  :
-		case DVM_ADD_FFF : case DVM_SUB_FFF : case DVM_MUL_FFF : case DVM_DIV_FFF :
-		case DVM_MOD_FFF : case DVM_POW_FFF : case DVM_AND_FFF : case DVM_OR_FFF  :
-		case DVM_LT_FFF  : case DVM_LE_FFF  : case DVM_EQ_FFF :
-		case DVM_BITAND_FFF  : case DVM_BITOR_FFF  : case DVM_BITXOR_FFF :
-		case DVM_BITLFT_FFF  : case DVM_BITRIT_FFF  :
-		case DVM_ADD_DDD : case DVM_SUB_DDD : case DVM_MUL_DDD : case DVM_DIV_DDD :
-		case DVM_MOD_DDD : case DVM_POW_DDD : case DVM_AND_DDD : case DVM_OR_DDD  :
-		case DVM_LT_DDD  : case DVM_LE_DDD  : case DVM_EQ_DDD :
-		case DVM_BITAND_DDD  : case DVM_BITOR_DDD  : case DVM_BITXOR_DDD :
-		case DVM_BITLFT_DDD  : case DVM_BITRIT_DDD  :
-		case DVM_ADD_CC : case DVM_SUB_CC : case DVM_MUL_CC : case DVM_DIV_CC :
-		case DVM_ADD_SS : case DVM_LT_SS : case DVM_LE_SS :
-		case DVM_EQ_SS : case DVM_NE_SS :
-		case DVM_ADD_FNN : case DVM_SUB_FNN : case DVM_MUL_FNN : case DVM_DIV_FNN :
-		case DVM_MOD_FNN : case DVM_POW_FNN : case DVM_AND_FNN : case DVM_OR_FNN  :
-		case DVM_LT_FNN  : case DVM_LE_FNN  : case DVM_EQ_FNN :
-		case DVM_BITLFT_FNN  : case DVM_BITRIT_FNN  :
-		case DVM_ADD_DNN : case DVM_SUB_DNN : case DVM_MUL_DNN : case DVM_DIV_DNN :
-		case DVM_MOD_DNN : case DVM_POW_DNN : case DVM_AND_DNN : case DVM_OR_DNN  :
-		case DVM_LT_DNN  : case DVM_LE_DNN  : case DVM_EQ_DNN :
-		case DVM_BITLFT_DNN  : case DVM_BITRIT_DNN  :
-		case DVM_GETI_SI :
-		case DVM_GETI_LI :
-		case DVM_GETI_LII : case DVM_GETI_LFI : case DVM_GETI_LDI :
-		case DVM_GETI_AII : case DVM_GETI_AFI : case DVM_GETI_ADI :
-		case DVM_GETI_LSI :
-		case DVM_GETI_TI :
-		case DVM_GETI_ACI :
-			SetupOperand( self, vmc->a, checks );
-			SetupOperand( self, vmc->b, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_SETI_SII :
-		case DVM_SETI_LI :
-		case DVM_SETI_LIII : case DVM_SETI_LIIF : case DVM_SETI_LIID :
-		case DVM_SETI_LFII : case DVM_SETI_LFIF : case DVM_SETI_LFID :
-		case DVM_SETI_LDII : case DVM_SETI_LDIF : case DVM_SETI_LDID :
-		case DVM_SETI_AIII : case DVM_SETI_AIIF : case DVM_SETI_AIID :
-		case DVM_SETI_AFII : case DVM_SETI_AFIF : case DVM_SETI_AFID :
-		case DVM_SETI_ADII : case DVM_SETI_ADIF : case DVM_SETI_ADID :
-		case DVM_SETI_LSIS :
-		case DVM_SETI_TI :
-		case DVM_SETI_ACI :
-			SetupOperand( self, vmc->a, checks );
-			SetupOperand( self, vmc->b, checks );
-			SetupOperand( self, vmc->c, checks );
-			break;
-		case DVM_GETF_T :
-		case DVM_GETF_TI : case DVM_GETF_TF :
-		case DVM_GETF_TD : case DVM_GETF_TS :
-		case DVM_GETF_KC : case DVM_GETF_KG :
-		case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
-		case DVM_GETF_KCI : case DVM_GETF_KCF : case DVM_GETF_KCD : 
-		case DVM_GETF_KGI : case DVM_GETF_KGF : case DVM_GETF_KGD :
-		case DVM_GETF_OCI : case DVM_GETF_OCF : case DVM_GETF_OCD : 
-		case DVM_GETF_OGI : case DVM_GETF_OGF : case DVM_GETF_OGD : 
-		case DVM_GETF_OVI : case DVM_GETF_OVF : case DVM_GETF_OVD :
-			SetupOperand( self, vmc->a, checks );
-			InsertChecking( self, vmc->c, checks );
-			break;
-		case DVM_SETF_T :
-		case DVM_SETF_TII : case DVM_SETF_TIF : case DVM_SETF_TID :
-		case DVM_SETF_TFI : case DVM_SETF_TFF : case DVM_SETF_TFD :
-		case DVM_SETF_TDI : case DVM_SETF_TDF : case DVM_SETF_TDD :
-		case DVM_SETF_TSS :
-		case DVM_SETF_KG : case DVM_SETF_OG : case DVM_SETF_OV :
-		case DVM_SETF_KGII : case DVM_SETF_KGIF : case DVM_SETF_KGID : 
-		case DVM_SETF_KGFI : case DVM_SETF_KGFF : case DVM_SETF_KGFD : 
-		case DVM_SETF_KGDI : case DVM_SETF_KGDF : case DVM_SETF_KGDD : 
-		case DVM_SETF_OGII : case DVM_SETF_OGIF : case DVM_SETF_OGID : 
-		case DVM_SETF_OGFI : case DVM_SETF_OGFF : case DVM_SETF_OGFD : 
-		case DVM_SETF_OGDI : case DVM_SETF_OGDF : case DVM_SETF_OGDD : 
-		case DVM_SETF_OVII : case DVM_SETF_OVIF : case DVM_SETF_OVID :
-		case DVM_SETF_OVFI : case DVM_SETF_OVFF : case DVM_SETF_OVFD :
-		case DVM_SETF_OVDI : case DVM_SETF_OVDF : case DVM_SETF_OVDD :
-			SetupOperand( self, vmc->a, checks );
-			SetupOperand( self, vmc->c, checks );
-			break;
-		default: break;
-		}
-	}
-	DMap_Delete( checks );
-	for(i=0; i<self->regCount; i++){
-		if( self->regMode->mbs[i] ==0 ) self->regMode->mbs[i] = DAO_REG_INTERMED_SU;
-		/* printf( "%3i: %2i\n", i, self->regMode->mbs[i] ); */
-	}
 }
 
 enum DaoTypingErrorCode
@@ -1316,6 +1029,8 @@ void DaoPrintCallError( DArray *errors, DaoStream *stdio )
 }
 int DaoRoutine_InferTypes( DaoRoutine *self )
 {
+#define NoCheckingType(t) ((t->tid==DAO_UDF)|(t->tid==DAO_ANY)|(t->tid==DAO_INITYPE))
+
 #define AssertPairNumberType( tp ) \
 	{ itp = (tp)->nested->items.pType[0]; \
 	if( itp->tid == DAO_PAR_NAMED ) itp = & itp->aux->xType; \
@@ -4269,7 +3984,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	/*
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
-	DaoRoutine_SetupRegisterModes( self );
 	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self );
 
 	DArray_Delete( regConst );

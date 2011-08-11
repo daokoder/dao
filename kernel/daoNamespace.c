@@ -246,7 +246,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 
 		values = DHash_New( D_STRING, D_VALUE );
 		typer->priv->values = values;
-		if( abtype && abtype->value ) DMap_Insert( values, & defname, & abtype->value );
+		if( abtype && abtype->value ) DMap_Insert( values, & defname, abtype->value );
 		for(i=0; i<valCount; i++){
 			DString name = DString_WrapMBS( typer->numItems[i].name );
 			double dv = typer->numItems[i].value;
@@ -257,7 +257,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 			case DAO_DOUBLE : value->xDouble.value = dv; break;
 			default : continue;
 			}
-			DMap_Insert( values, & name, & value );
+			DMap_Insert( values, & name, value );
 		}
 		parents = DArray_New(0);
 		DaoTypeBase_Parents( typer, parents );
@@ -463,7 +463,7 @@ int DaoNameSpace_DefineType( DaoNameSpace *self, const char *name, DaoType *type
 	if( parser->errors->size ) goto Error;
 	hostCore = (DaoCDataCore*) value->xCdata.typer->priv;
 	if( hostCore->instanceCData == NULL ) hostCore->instanceCData = DMap_New(D_ARRAY,0);
-	DMap_Insert( hostCore->instanceCData, type->nested, & type->aux->xCdata );
+	DMap_Insert( hostCore->instanceCData, type->nested, type->aux );
 	DString_Clear( type->name );
 	while( k < parser->tokens->size ) DString_Append( type->name, tokens[k++]->string );
 Finalize:
@@ -753,7 +753,6 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNameSpace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
 
 	self->tempTypes = NULL;
-	self->tempModes = DString_New(1);
 	self->vmpEvalConst = DaoVmProcess_New(vms);
 	self->routEvalConst = DaoRoutine_New();
 	self->routEvalConst->routType = dao_routine;
@@ -801,7 +800,6 @@ void DaoNameSpace_Delete( DaoNameSpace *self )
 	DaoList_Delete( self->argParams );
 
 	if( self->tempTypes ) dao_free( self->tempTypes );
-	DString_Delete( self->tempModes );
 	GC_DecRC( self->udfType1 );
 	GC_DecRC( self->udfType2 );
 	DMap_Delete( self->lookupTable );
@@ -1632,7 +1630,7 @@ DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
 			tp2 = & tp->aux->xType;
 		}
 		if( tp2 && tp2->tid ==DAO_UDF ){
-			if( vals ){
+			if( vals && vals[i] ){
 				tp2 = DaoNameSpace_GetType( self, vals[i] );
 			}else if( types && types[i] ){
 				tp2 = types[i];

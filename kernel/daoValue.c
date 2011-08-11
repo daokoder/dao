@@ -138,7 +138,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	}
 	switch( left->type ){
 	case DAO_NULL : return 0;
-	case DAO_INTEGER : return right->xInteger.value - left->xInteger.value;
+	case DAO_INTEGER : return left->xInteger.value - right->xInteger.value;
 	case DAO_FLOAT   : return float_compare( left->xFloat.value, right->xFloat.value );
 	case DAO_DOUBLE  : return float_compare( left->xDouble.value, right->xDouble.value );
 	case DAO_LONG    : return DLong_Compare( left->xLong.value, right->xLong.value );
@@ -147,7 +147,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
 	case DAO_CTYPE :
-	case DAO_CDATA : return (int)( (size_t)right->xCdata.data - (size_t)left->xCdata.data ); 
+	case DAO_CDATA : return (int)( (size_t)left->xCdata.data - (size_t)right->xCdata.data ); 
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
@@ -221,6 +221,26 @@ int DaoValue_IsNumber( DaoValue *self )
 	if( self->type >= DAO_INTEGER && self->type <= DAO_DOUBLE ) return 1;
 	return 0;
 }
+static void DaoValue_BasicPrint( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+{
+	DaoType *type = DaoNameSpace_GetType( ctx->nameSpace, self );
+	if( self->type <= DAO_STREAM )
+		DaoStream_WriteMBS( stream, coreTypeNames[ self->type ] );
+	else
+		DaoStream_WriteMBS( stream, DaoValue_GetTyper( self )->name );
+	if( self->type == DAO_NULL ) return;
+	if( self->type == DAO_TYPE ){
+		DaoStream_WriteMBS( stream, "<" );
+		DaoStream_WriteMBS( stream, self->xType.name->mbs );
+		DaoStream_WriteMBS( stream, ">" );
+	}
+	DaoStream_WriteMBS( stream, "_" );
+	DaoStream_WriteInt( stream, self->type );
+	DaoStream_WriteMBS( stream, "_" );
+	DaoStream_WritePointer( stream, self );
+	if( self->type < DAO_STREAM ) return;
+	if( type && self == type->value ) DaoStream_WriteMBS( stream, "[default]" );
+}
 void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
 {
 	DString *name;
@@ -258,6 +278,10 @@ void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *c
 		DaoStream_WriteString( stream, self->xString.data ); break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
+		if( typer->priv->Print == DaoValue_Print ){
+			DaoValue_BasicPrint( self, ctx, stream, cycData );
+			break;
+		}
 		typer->priv->Print( self, ctx, stream, cycData );
 		break;
 	}
@@ -310,7 +334,7 @@ void DaoValue_MarkConst( DaoValue *self )
 	DMap *map;
 	DNode *it;
 	int i, n;
-	if( self->xNull.konst ) return;
+	if( self == NULL || self->xNull.konst ) return;
 	self->xNull.konst = 1;
 	switch( self->type ){
 	case DAO_LIST :
@@ -354,7 +378,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 {
 	size_t i;
 
-	if( self == NULL ) return (void*) & null;
+	if( self == NULL ) return null;
 #ifdef DAO_WITH_NUMARRAY
 	if( self->type == DAO_ARRAY && self->xArray.reference ){
 		DaoArray_Sliced( (DaoArray*)self );
@@ -376,6 +400,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
 	case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xDouble.value );
 	case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
+	case DAO_LONG    : return (DaoValue*) DaoLong_Copy( & self->xLong );
 	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
 	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum );
 	}
@@ -643,6 +668,11 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 {
 	DaoValue *D2;
+	if( S == NULL ){
+		GC_DecRC( *D );
+		*D = NULL;
+		return 0;
+	}
 	if( T == NULL ){
 		DaoValue_Copy( S, D );
 		return 1;
@@ -1586,7 +1616,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 			DArray_PushFront( types, it2 );
 			i = DaoParser_Deserialize( self, i, end, &tmp2, types, ns, proc );
 			DArray_PopFront( types );
-			node = DMap_Insert( map->items, (void*)&tmp, (void*)&tmp2 );
+			node = DMap_Insert( map->items, (void*) tmp, (void*) tmp2 );
 			i -= 1;
 			n += 1;
 		}
@@ -1617,6 +1647,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		if( object == NULL ) break;
 		GC_ShiftRC( object, value );
 		value = (DaoValue*) object;
+		DaoValue_Copy( value, value2 );
 		break;
 	case DAO_CDATA :
 		DArray_PushFront( types, NULL );
@@ -1627,6 +1658,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		if( cdata == NULL ) break;
 		GC_ShiftRC( cdata, value );
 		value = (DaoValue*) cdata;
+		DaoValue_Copy( value, value2 );
 		break;
 	}
 	DaoValue_Clear( & tmp );

@@ -291,7 +291,7 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		case D_STRING : *dest = DString_Copy( (DString*) item ); break;
 		case D_ARRAY  : *dest = DArray_Copy( (DArray*) item ); break;
 		case D_MAP    : *dest = DMap_Copy( (DMap*) item ); break;
-		case D_VALUE  : assert( *dest != NULL ); break; /* should never happen */
+		case D_VALUE  : DaoValue_Copy( (DaoValue*)item, (DaoValue**) dest ); break;
 		case D_VOID2  : *dest = dao_malloc(n); memcpy(*dest, item, n); break;
 		default : *dest = item; break;
 		}

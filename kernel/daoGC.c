@@ -249,6 +249,8 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 	const short idle = gcWorker.idle;
 	const short work = gcWorker.work;
 	int i, n;
+
+	if( p == NULL ) return;
 	p->xGC.refCount += change;
 
 	if( p->xGC.refCount == 0 ){
@@ -277,6 +279,7 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 				list->unitype = NULL;
 				list->meta = NULL;
 				list->items->size = 0;
+				if( list->gcState[ idle ] & GC_IN_POOL ) break;
 				DaoList_Delete( list );
 				return;
 			}
@@ -291,6 +294,7 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 				tuple->unitype = NULL;
 				tuple->meta = NULL;
 				tuple->items->size = 0;
+				if( tuple->gcState[ idle ] & GC_IN_POOL ) break;
 				DaoTuple_Delete( tuple );
 				return;
 			}
@@ -307,10 +311,12 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 				}
 				map->items->keytype = 0;
 				map->items->valtype = 0;
+				DMap_Clear( map->items );
 				DaoGC_DecRC2( (DaoValue*) map->unitype, -1 );
 				DaoGC_DecRC2( (DaoValue*) map->meta, -1 );
 				map->unitype = NULL;
 				map->meta = NULL;
+				if( map->gcState[ idle ] & GC_IN_POOL ) break;
 				DaoMap_Delete( map );
 				return;
 			}
@@ -963,6 +969,7 @@ void freeGarbage()
 						DaoGC_DeleteSimpleData( node->key.pValue );
 						DaoGC_DeleteSimpleData( node->value.pValue );
 					}
+					map->items->keytype = map->items->valtype = 0;
 					DMap_Clear( map->items );
 					directRefCountDecrement( (DaoValue**) & map->unitype );
 					directRefCountDecrement( (DaoValue**) & map->meta );
@@ -1799,12 +1806,13 @@ void directDecRC()
 					DaoMap *map = (DaoMap*) value;
 					node = DMap_First( map->items );
 					for( ; node != NULL; node = DMap_Next( map->items, node ) ){
-						node->key.pValue->refCount --;
-						node->value.pValue->refCount --;
+						node->key.pValue->xGC.refCount --;
+						node->value.pValue->xGC.refCount --;
 						DaoGC_DeleteSimpleData( node->key.pValue );
 						DaoGC_DeleteSimpleData( node->value.pValue );
 					}
 					j += map->items->size;
+					map->items->keytype = map->items->valtype = 0;
 					DMap_Clear( map->items );
 					directRefCountDecrement( (DaoValue**) & map->unitype );
 					directRefCountDecrement( (DaoValue**) & map->meta );
@@ -1983,7 +1991,7 @@ void freeGarbage()
 		j ++;
 		if( value->xGC.cycRefCount==0 ){
 			if( value->xGC.refCount !=0 ){
-				printf(" refCount not zero %p %i: %i, %i\n", value, value->type, value->xGC.refCount, value->trait);
+				printf(" refCount not zero %p %i: %i, %i\n", value, value->type, value->xGC.refCount, value->xGC.trait);
 #if DEBUG
 				if( value->type == DAO_FUNCTION ){
 					DaoFunction *func = (DaoFunction*)value;
@@ -2119,6 +2127,7 @@ void directRefCountDecrements( DArray *list )
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
 	}
+	list->size = 0;
 	DArray_Clear( list );
 }
 void cycRefCountDecrementMapValue( DMap *dmap )
@@ -2145,6 +2154,7 @@ void directRefCountDecrementMapValue( DMap *dmap )
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
 	}
+	dmap->valtype = 0;
 	DMap_Clear( dmap );
 }
 void cycRefCountDecrementsT( DTuple *list )
@@ -2175,6 +2185,7 @@ void directRefCountDecrementT( DTuple *list )
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
 	}
+	list->size = 0;
 	DTuple_Clear( list );
 }
 

@@ -898,7 +898,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	int t, k = DaoParser_FindScopedConstant( self, &value, start, NULL );
 	if( k <0 ) k = start;
 	*newpos = k + 1;
-	switch( value->type ){
+	switch( value ? value->type : 0 ){
 	case DAO_CLASS : type = value->xClass.objType; break;
 	case DAO_CTYPE : type = value->xCdata.typer->priv->abtype; break;
 	case DAO_TYPE  : type = & value->xType; break;
@@ -908,7 +908,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	if( type ) return type;
 	type = DaoType_FindType( name, ns, self->hostCData, self->hostClass, self->routine );
 	if( type ) return type;
-	if( value->xNull.konst ==0 ) return NULL;
+	if( value == NULL ) return NULL;
 	return DaoNameSpace_MakeValueType( ns, value );
 }
 static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, int *newpos )
@@ -2244,10 +2244,10 @@ static void DaoParser_AddToScope( DaoParser *self, DaoValue *scope,
 	DaoNameSpace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	int perm = self->permission;
-	if( scope->type == DAO_CLASS ){
+	if( scope && scope->type == DAO_CLASS ){
 		DaoClass_AddType( & scope->xClass, name, abtype );
 		DaoClass_AddConst( & scope->xClass, name, value, perm, line );
-	}else if( scope->type == DAO_NAMESPACE ){
+	}else if( scope && scope->type == DAO_NAMESPACE ){
 		DaoNameSpace_AddType( & scope->xNamespace, name, abtype );
 		DaoNameSpace_AddConst( & scope->xNamespace, name, value, perm );
 	}else{
@@ -3617,7 +3617,7 @@ DecoratorError:
 				DaoParser_PopRegisters( self, self->regCount - oldcount );
 				DaoParser_AddCode( self, DVM_NOP, item.konst, 0, 0, last, 0, colon );
 				value = DaoParser_GetVariable( self, LOOKUP_BIND_LC( item.konst ) );
-				DMap_Insert( switchMap, & value, self->vmcLast );
+				DMap_Insert( switchMap, value, self->vmcLast );
 				if( self->curToken == colon ) break;
 				if( tokens[self->curToken]->name != DTOK_COMMA ){
 					DaoParser_Error2( self, DAO_CASE_NOT_VALID, start, colon, 1 );
@@ -4260,11 +4260,11 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 				int ln = tok->line;
 				int ec = 0;
 				if( storeType & DAO_DATA_CONST ){
-					ec = DaoClass_AddConst( hostClass, name, NULL, perm, ln );
+					ec = DaoClass_AddConst( hostClass, name, null, perm, ln );
 				}else if( storeType & DAO_DATA_STATIC ){
-					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm, ln );
+					ec = DaoClass_AddGlobalVar( hostClass, name, null, abtp, perm, ln );
 				}else{
-					ec = DaoClass_AddObjectVar( hostClass, name, NULL, abtp, perm, ln );
+					ec = DaoClass_AddObjectVar( hostClass, name, null, abtp, perm, ln );
 					routine->attribs |= DAO_ROUT_NEEDSELF;
 				}
 				if( ec ) DaoParser_Warn( self, ec, name );
@@ -5228,7 +5228,7 @@ static void DaoParser_PushItemType( DaoParser *self, DaoType *type, int id, ucha
 		DArray_PushFront( self->enumTypes, NULL );
 	}
 }
-static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoLong *buffer )
+static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buffer )
 {
 	char *str = tok->string->mbs;
 	DaoValue *value = (DaoValue*) buffer;
@@ -5246,17 +5246,17 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoLong *buffer
 		/*errno = 0;*/
 		value->xDouble.value = strtod( str, 0 );
 	}else if( tok->name == DTOK_NUMBER_IMG ){
-		value->type = DAO_COMPLEX;
 		str[tok->string->size-1] = '\0';
-		str[tok->string->size-1] = '$';
+		value->type = DAO_COMPLEX;
 		value->xComplex.value.real = 0;
 		value->xComplex.value.imag = strtod( str, 0 );
+		str[tok->string->size-1] = '$';
 	}else if( tok->name == DTOK_NUMBER_DEC ){
 		value->type = DAO_FLOAT;
 		value->xFloat.value = strtod( str, 0 );
 	}else if( (pl = DString_FindChar(tok->string, 'L', 0)) != MAXSIZE ){
 		char ec;
-		buffer->value = self->bigint;
+		value->xLong.value = self->bigint;
 		ec = DLong_FromString( value->xLong.value, tok->string );
 		if( ec ){
 			if( ec == 'L' ){
@@ -5279,7 +5279,7 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoLong *buffer
 }
 static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst )
 {
-	DaoLong buffer = {0,0,1,0,{0,0},0,0,NULL};
+	DaoComplex buffer = {0,0,1,0,{0,0},0,0,{0.0,0.0}};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNameSpace *ns = self->nameSpace;
 	DaoRoutine *routine = self->routine;
@@ -5311,7 +5311,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 			DaoString dummy = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
 			dummy.data = self->str;
 			DString_ToMBS( self->str );
-			DString_SetDataMBS( self->str, tok + 1, self->str->size-2 );
+			DString_SetDataMBS( self->str, tok + 1, str->size-2 );
 			if( daoConfig.mbs == 0 && tok[0] == '"' ) DString_ToWCS( self->str );
 			if( daoConfig.wcs ) DString_ToWCS( self->str );
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
@@ -5352,7 +5352,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 	}else if( tki == DTOK_COLON ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			DaoTuple *tuple = DaoNameSpace_MakePair( ns, null, null );
-			tuple->trait |= DAO_DATA_CONST;
+			tuple->konst = 0;
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConstant( (DRoutine*)routine, (DaoValue*) tuple );
 		}
@@ -5363,7 +5363,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, str );
 		return -1;
 	}
-	if( value->type == DAO_INTEGER && value->xInteger.value >=0 && value->xInteger.value <= 0xffff ){
+	if( value && value->type == DAO_INTEGER && value->xInteger.value >=0 && value->xInteger.value <= 0xffff ){
 		varReg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, value->xInteger.value, varReg, start, 0, 0 );
 	}
@@ -6733,13 +6733,11 @@ void DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
 	DaoContext *ctx = ns->vmpEvalConst->topFrame->context;
 	int i;
 	if( ctx->regArray->size < N ){
-		DString_Resize( ns->tempModes, N );
 		DTuple_Resize( ctx->regArray, N, NULL );
 		ns->tempTypes = (DaoType**) dao_realloc( ns->tempTypes, N*sizeof(DaoType*) );
 		ctx->regValues = ctx->regArray->items.pValue;
 	}
 	ctx->regTypes = ns->tempTypes;
-	ctx->regModes = (uchar_t*) ns->tempModes->mbs;
 	memset( ctx->regTypes, 0, N*sizeof(DaoType*) );
 }
 int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int regcount )

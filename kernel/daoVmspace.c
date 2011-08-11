@@ -749,8 +749,8 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 		}
 		if( argNames->items.pString[i]->size ){
 			DaoNameValue *nameva = DaoNameValue_New( argNames->items.pString[i], nkey );
-			nameva->trait |= DAO_DATA_CONST;
 			DaoList_Append( ns->argParams, (DaoValue*) nameva );
+			nameva->konst = 1;
 		}else{
 			DaoList_Append( ns->argParams, nkey );
 		}
@@ -1665,12 +1665,12 @@ DaoTypeBase *dao_FakeShoftList_Typer = & FakeShoftList_Typer;
 
 static void dao_FakeShoftList_FakeShoftList( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-  int size = _p[0]->v.i;
+  int size = _p[0]->xInteger.value;
   DaoContext_PutCData( _ctx, (void*)(size_t)size, dao_FakeShoftList_Typer );
 }
 static void dao_FakeShoftList_Size( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-  dint size = (dint) DaoCData_GetData( _p[0]->v.cdata );
+  dint size = (dint) DaoCData_GetData( & _p[0]->xCdata );
   DaoContext_PutInteger( _ctx, size );
 }
 static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DaoValue *_p[], int _n )
@@ -1911,6 +1911,7 @@ void DaoQuit()
 	DaoTypeBase_Free( & mapTyper );
 
 	DaoTypeBase_Free( & streamTyper );
+	GC_DecRC( cptrCData.ctype );
 
 #ifdef DAO_WITH_THREAD
 	DaoTypeBase_Free( & mutexTyper );

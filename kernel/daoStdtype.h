@@ -66,6 +66,7 @@ struct DaoLong
 
 	DLong  *value;
 };
+DaoLong* DaoLong_Copy( DaoLong *self );
 void DaoLong_Delete( DaoLong *self );
 
 struct DaoString

@@ -78,30 +78,6 @@ enum DaoValueMode
 	DAO_REFER_PARAM /* reference parameter */
 };
 
-enum DaoRegisterMode
-{
-	DAO_REG_VARIABLE = 1, /* explicit variables */
-	DAO_REG_INTERMED = 2, /* intermediate operands */
-	DAO_REG_INTERMED_SU = 3, /* single-use intermediate operands */
-	/* Mark a reference safe register, which should be an intermediate register
-	 * and is safe to hold a reference. It is considered safe if it used before
-	 * any operations that might invalidate the reference.
-	 *
-	 * Positive example: alist[i] + c
-	 * here the left operand register is safe to store a reference to "alist[i]",
-	 * because it is immediately used in the add operation and there is no other
-	 * operation before the add that can possibly cause reallocation of items of
-	 * "alist", hence invalidate the reference.
-	 *
-	 * Negative example: alist[i] + func()
-	 * here the left operand register is NOT safe to store the reference,
-	 * because func() may access "alist" and cause reallocation of the items.
-	 */
-	DAO_REG_REFER = 4
-	/* single-use and reference-safe intermediate operands can be used for
-	 * some basic optimizations (particularly for DaoJIT). */
-};
-
 /* It is for the typing system, to decide when to specialize a routine.
  * when any or ? match to @X in parameter list, no routine specialization.
  *   ls = {};

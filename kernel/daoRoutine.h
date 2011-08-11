@@ -52,9 +52,6 @@ struct DaoRoutine
 	/* virtual machine codes: */
 	DaoVmcArray *vmCodes;
 
-	/* modes of each virtual register */
-	DString *regMode;
-
 	/* data type for local registers: */
 	DArray *regType; /* <DaoType*> */
 

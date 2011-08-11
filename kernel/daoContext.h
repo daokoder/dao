@@ -32,7 +32,6 @@ struct DaoContext
 	DTuple    *regArray; /* virtual registers for the call */
 	DaoValue **regValues; /* = regArray->items.pValue */
 	DaoType  **regTypes; /* = routine->regType->items.pType; */
-	uchar_t   *regModes; /* = routine->regMode->mbs */
 
 	ushort_t  entryCode;
 	ushort_t  idClearFE;

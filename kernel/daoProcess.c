@@ -298,6 +298,7 @@ void DaoVmProcess_PopContext( DaoVmProcess *self )
 		N = self->topFrame->context->routine->regCount;
 		values = self->topFrame->context->regValues;
 		for(i=0; i<N; i++){
+			if( values[i] == NULL ) continue;
 			switch( values[i]->type ){
 			case DAO_LONG  : case DAO_STRING :
 			case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
@@ -449,12 +450,10 @@ int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DaoValue *o, DaoValue *
 	if( rout == NULL ) return 0;
 	if( rout->type == DAO_FUNCTION ){
 		DaoVmCode vmc = { 0, 0, 0, 0 };
-		uchar_t mode = 0;
 		ctx = DaoVmProcess_MakeContext( self, (DaoRoutine*) rout );
 		if( ctx->regArray->size ==0 ) DTuple_Resize( ctx->regArray, 1, NULL );
 		ctx->regValues = ctx->regArray->items.pValue;
 		ctx->regTypes = & dao_type_any;
-		ctx->regModes = & mode;
 		ctx->vmc = & vmc;
 		return DaoFunction_Call( (DaoFunction*) rout, ctx, o, p, n ) ==0;
 	}
@@ -558,7 +557,6 @@ int DaoVmProcess_Execute( DaoVmProcess *self )
 	float fnum=0;
 	double AA, BB, dnum=0;
 	llong_t lnum = 0;
-	uchar_t *regModes = NULL;
 	ushort_t *range;
 	complex16 acom, bcom;
 	DaoVmFrame *base;
@@ -871,7 +869,6 @@ CallEntry:
 	this = topCtx->object;
 	locVars = topCtx->regValues;
 	locTypes = routine->regType->items.pType;
-	regModes = (uchar_t*) routine->regMode->mbs;
 	dataCL[0] = routine->routConsts;
 	dataCG = here->cstDataTable;
 	dataVG = here->varDataTable;
@@ -897,53 +894,55 @@ CallEntry:
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 		}OPNEXT()
 		OPCASE( DATA ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			switch( vmc->a ){
 			case DAO_COMPLEX :
 				ComplexOperand( vmc->c ).real = 0.0;
 				ComplexOperand( vmc->c ).imag = vmc->b;
 				break;
-			case DAO_NULL : locVars[ vmc->c ] = null; break;
+			case DAO_NULL :
+				GC_ShiftRC( null, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = null;
+				break;
 			case DAO_INTEGER : IntegerOperand( vmc->c ) = vmc->b; break;
-			case DAO_FLOAT : FloatOperand( vmc->c ) = vmc->b; break;
+			case DAO_FLOAT  : FloatOperand( vmc->c ) = vmc->b; break;
 			case DAO_DOUBLE : DoubleOperand( vmc->c ) = vmc->b; break;
 			default : break;
 			}
 		}OPNEXT()
 		OPCASE( GETCL ){
-			/* ensure no copying here: */
-			locVars[ vmc->c ] = dataCL[ vmc->a ]->items.pValue[ vmc->b ];
+			/* All GETX instructions assume the C regisgter is an intermediate register! */
+			value = dataCL[ vmc->a ]->items.pValue[ vmc->b ];
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETCK ){
-			/* ensure no copying here: */
-			locVars[ vmc->c ] = dataCK->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = dataCK->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETCG ){
 			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
-			if( regModes[ vmc->c ] == DAO_REG_REFER ){
-				/* ensure no copying here: */
-				locVars[ vmc->c ] = value;
-			}else{
-				DaoValue_Copy( value, & locVars[ vmc->c ] );
-			}
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETVL ){
+			GC_ShiftRC( dataVL[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVL[ vmc->b ];
 		}OPNEXT()
 		OPCASE( GETVO ){
+			GC_ShiftRC( dataVO[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVO[ vmc->b ];
 		}OPNEXT()
 		OPCASE( GETVK ){
-			locVars[ vmc->c ] = dataVK->items.pArray[vmc->a]->items.pValue[ vmc->b ];
+			value = dataVK->items.pArray[vmc->a]->items.pValue[ vmc->b ];
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETVG ){
 			value = dataVG->items.pArray[vmc->a]->items.pValue[ vmc->b ];
-			if( regModes[ vmc->c ] == DAO_REG_REFER ){
-				/* ensure no copying here: */
-				locVars[ vmc->c ] = value;
-			}else{
-				DaoValue_Copy( value, & locVars[ vmc->c ] );
-			}
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETI )
 		OPCASE( GETMI ){
@@ -980,31 +979,30 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( SETI )
 		OPCASE( SETMI ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			DaoContext_DoSetItem( topCtx, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETF ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			DaoContext_DoSetField( topCtx, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETMF ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			DaoContext_DoSetMetaField( topCtx, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( LOAD ){
-			if( locVars[ vmc->a ]->xNull.konst == 0 && regModes[ vmc->c ] == DAO_REG_REFER ){
+			if( locVars[ vmc->a ]->xNull.konst == 0 ){
+				GC_ShiftRC( locVars[ vmc->a ], locVars[ vmc->c ] );
 				locVars[ vmc->c ] = locVars[ vmc->a ];
 			}else{
-				vref = topCtx->regArray->items.pValue + vmc->c;
-				DaoValue_Copy( locVars[ vmc->a ], vref );
+				DaoValue_Copy( locVars[ vmc->a ], & locVars[ vmc->c ] );
 			}
-			//XXX locVars[ vmc->c ]->mode = vmc->b;
 		}OPNEXT()
 		OPCASE( CAST ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			topCtx->vmc = vmc;
 			DaoContext_DoCast( topCtx, vmc );
 			goto CheckException;
@@ -1718,13 +1716,15 @@ CallEntry:
 		OPCASE( ADD_SS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			vC = locVars[ vmc->c ];
-			vC->type = DAO_STRING;
 			if( vmc->a == vmc->c ){
 				DString_Append( vA->xString.data, vB->xString.data );
 			}else if( vmc->b == vmc->c ){
 				DString_Insert( vB->xString.data, vA->xString.data, 0, 0, 0 );
+			}else if( vC == NULL ){
+				vC = locVars[ vmc->c ] = (DaoValue*) DaoString_Copy( & vA->xString );
+				GC_IncRC( locVars[ vmc->c ] );
+				DString_Append( vC->xString.data, vB->xString.data );
 			}else{
-				if( vC->xString.data == NULL ) vC->xString.data = DString_Copy( vA->xString.data );
 				DString_Assign( vC->xString.data, vA->xString.data );
 				DString_Append( vC->xString.data, vB->xString.data );
 			}
@@ -1769,8 +1769,10 @@ CallEntry:
 		OPCASE( MOVE_SS ){
 			vC = locVars[ vmc->c ];
 			if( vC == NULL ){
-				locVars[ vmc->c ] = (DaoValue*) DaoString_Copy( & locVars[ vmc->a ]->xString );
-				GC_IncRC( locVars[ vmc->c ] );
+				printf( "%p\n", locVars[ vmc->a ] );
+				value = (DaoValue*) DaoString_Copy( & locVars[ vmc->a ]->xString );
+				GC_ShiftRC( value, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = value;
 			}else{
 				DString_Assign( vC->xString.data, locVars[ vmc->a ]->xString.data );
 			}
@@ -1824,7 +1826,7 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( SETI_SII ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			str = locVars[ vmc->c ]->xString.data;
 			id = IntegerOperand( vmc->b );
 			inum = IntegerOperand( vmc->a );
@@ -1839,18 +1841,16 @@ CallEntry:
 		OPCASE( GETI_LI ){
 			list = & locVars[ vmc->a ]->xList;
 			id = IntegerOperand( vmc->b );
-			abtp = locTypes[ vmc->c ];
 			if( id <0 ) id += list->items->size;
 			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-			if( abtp && DaoType_MatchValue( abtp, list->items->items.pValue[id], NULL ) ==0 ) goto CheckException;
-			if( regModes[ vmc->c ] == DAO_REG_REFER ){
-				locVars[ vmc->c ] = list->items->items.pValue[id];
-			}else{
-				DaoValue_Copy( list->items->items.pValue[id], & locVars[ vmc->c ] );
-			}
+			/* All GETX instructions assume the C regisgter is an intermediate register! */
+			/* So no type checking is necessary here! */
+			value = list->items->items.pValue[id];
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( SETI_LI ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			list = & locVars[ vmc->c ]->xList;
 			id = IntegerOperand( vmc->b );
 			abtp = NULL;
@@ -1869,16 +1869,14 @@ CallEntry:
 				id = IntegerOperand( vmc->b );
 				if( id <0 ) id += list->items->size;
 				if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-				if( regModes[ vmc->c ] == DAO_REG_REFER ){
-					locVars[ vmc->c ] = list->items->items.pValue[id];
-				}else{
-					DaoValue_Copy( list->items->items.pValue[id], & locVars[ vmc->c ] );
-				}
+				value = list->items->items.pValue[id];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( SETI_LIII )
 			OPCASE( SETI_LIIF )
 			OPCASE( SETI_LIID ){
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+				if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				list = & locVars[ vmc->c ]->xList;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1895,7 +1893,7 @@ CallEntry:
 		OPCASE( SETI_LFII )
 			OPCASE( SETI_LFIF )
 			OPCASE( SETI_LFID ){
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+				if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				list = & locVars[ vmc->c ]->xList;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1912,7 +1910,7 @@ CallEntry:
 		OPCASE( SETI_LDII )
 			OPCASE( SETI_LDIF )
 			OPCASE( SETI_LDID ){
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+				if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				list = & locVars[ vmc->c ]->xList;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1927,7 +1925,7 @@ CallEntry:
 				list->items->items.pValue[id]->xDouble.value = dnum;
 			}OPNEXT()
 		OPCASE( SETI_LSIS ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			list = & locVars[ vmc->c ]->xList;
 			vA = locVars[ vmc->a ];
 			id = IntegerOperand( vmc->b );
@@ -1960,7 +1958,7 @@ CallEntry:
 		OPCASE( SETI_AIII )
 			OPCASE( SETI_AIIF )
 			OPCASE( SETI_AIID ){
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+				if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				array = & locVars[ vmc->c ]->xArray;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1977,7 +1975,7 @@ CallEntry:
 		OPCASE( SETI_AFII )
 			OPCASE( SETI_AFIF )
 			OPCASE( SETI_AFID ){
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+				if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				array = & locVars[ vmc->c ]->xArray;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1994,7 +1992,7 @@ CallEntry:
 		OPCASE( SETI_ADII )
 			OPCASE( SETI_ADIF )
 			OPCASE( SETI_ADID ){
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+				if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				array = & locVars[ vmc->c ]->xArray;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -2016,7 +2014,7 @@ CallEntry:
 			locVars[ vmc->c ]->xComplex.value = array->data.c[ id ];
 		}OPNEXT()
 		OPCASE( SETI_ACI ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			id = IntegerOperand( vmc->b );
 			if( id <0 ) id += array->size;
@@ -2050,7 +2048,7 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( SETI_AM ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			list = & locVars[ vmc->b ]->xList;
 			if( array->dims->size == list->items->size ){
@@ -2109,14 +2107,13 @@ CallEntry:
 		OPCASE( GETI_TI ){
 			tuple = & locVars[ vmc->a ]->xTuple;
 			id = IntegerOperand( vmc->b );
-			abtp = locTypes[ vmc->c ];
 			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
-			if( abtp && DaoType_MatchValue( abtp, tuple->items->items.pValue[id], NULL ) ==0 ) goto CheckException;
-			/* reference to tuple items should always be valid: */
-			locVars[ vmc->c ] = tuple->items->items.pValue[id];
+			value = tuple->items->items.pValue[id];
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( SETI_TI ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			id = IntegerOperand( vmc->b );
 			abtp = NULL;
@@ -2128,13 +2125,12 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( GETF_T ){
 			tuple = & locVars[ vmc->a ]->xTuple;
-			id = vmc->b;
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, tuple->items->items.pValue[id], NULL ) ==0 ) goto CheckException;
-			locVars[ vmc->c ] = tuple->items->items.pValue[id];
+			value = tuple->items->items.pValue[ vmc->b ];
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( SETF_T ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
@@ -2147,113 +2143,114 @@ CallEntry:
 			OPCASE( GETF_TD )
 			OPCASE( GETF_TS ){
 				tuple = & locVars[ vmc->a ]->xTuple;
-				locVars[ vmc->c ] = tuple->items->items.pValue[ vmc->b ];
+				value = tuple->items->items.pValue[ vmc->b ];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( SETF_TII ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TIF ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TID ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TFI ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TFF ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TFD ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TDI ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TDF ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TDD ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items->items.pValue[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TSS ){
-			if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			vA = locVars[ vmc->a ];
 			DString_Assign( tuple->items->items.pValue[ vmc->b ]->xString.data, vA->xString.data );
 		}OPNEXT()
 		OPCASE( GETF_KC ){
 			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, value, NULL ) ==0 ) goto CheckException;
+			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_KG ){
 			value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, value, NULL ) ==0 ) goto CheckException;
+			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OC ){
 			value = locVars[ vmc->a ]->xObject.myClass->cstData->items.pValue[ vmc->b ];
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, value, NULL ) ==0 ) goto CheckException;
+			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OG ){
 			value = locVars[ vmc->a ]->xObject.myClass->glbData->items.pValue[ vmc->b ];
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, value, NULL ) ==0 ) goto CheckException;
+			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OV ){
 			object = & locVars[ vmc->a ]->xObject;
 			if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
 			value = object->objValues[ vmc->b ];
-			abtp = locTypes[ vmc->c ];
-			if( abtp && DaoType_MatchValue( abtp, value, NULL ) ==0 ) goto CheckException;
+			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_KCI )
 			OPCASE( GETF_KCF )
 			OPCASE( GETF_KCD ){
 				value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( GETF_KGI )
 			OPCASE( GETF_KGF )
 			OPCASE( GETF_KGD ){
 				value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( GETF_OCI )
 			OPCASE( GETF_OCF )
 			OPCASE( GETF_OCD ){
 				value = locVars[ vmc->a ]->xObject.myClass->cstData->items.pValue[ vmc->b ];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( GETF_OGI )
 			OPCASE( GETF_OGF )
 			OPCASE( GETF_OGD ){
 				value = locVars[ vmc->a ]->xObject.myClass->glbData->items.pValue[ vmc->b ];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( GETF_OVI )
@@ -2261,7 +2258,9 @@ CallEntry:
 			OPCASE( GETF_OVD ){
 				object = & locVars[ vmc->a ]->xObject;
 				if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
-				locVars[ vmc->c ] = object->objValues[ vmc->b ];
+				value = object->objValues[ vmc->b ];
+				GC_ShiftRC( value, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( SETF_KG ){
 			klass = & locVars[ vmc->c ]->xClass;
@@ -2279,7 +2278,6 @@ CallEntry:
 					abtp = klass->glbDataType->items.pType[ vmc->b ];
 				}else{
 					if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
-					if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 					vC2 = object->objValues + vmc->b;
 					abtp = object->myClass->objDataType->items.pType[ vmc->b ];
 				}
@@ -2345,7 +2343,6 @@ CallEntry:
 			OPCASE( SETF_OVDD ){
 				object = & locVars[ vmc->c ]->xObject;
 				if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
-				if( locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 				vC =  object->objValues[ vmc->b ];
 				switch( vmc->code ){
 				case DVM_SETF_OVII : vC->xInteger.value = IntegerOperand( vmc->a ); break;
@@ -2446,7 +2443,7 @@ FinishCall:
 	}
 	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 	if( print || vmSpace->evalCmdline ){
-		if( self->returned->type ){
+		if( self->returned && self->returned->type ){
 			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
 			DaoValue_Print( self->returned, topCtx, vmSpace->stdStream, NULL );
 			DaoStream_WriteNewLine( vmSpace->stdStream );
@@ -3070,7 +3067,7 @@ void DaoPrintException( DaoCData *except, DaoStream *stream )
 	DaoStream_WriteString( stream, sstring );
 	DString_Clear( sstring );
 
-	if( ex->data->type == DAO_STRING ){
+	if( ex->data && ex->data->type == DAO_STRING ){
 		DaoStream_WriteString( ss, ex->data->xString.data );
 		if( DString_RFindChar( sstring, '\n', -1 ) != sstring->size-1 )
 			DaoStream_WriteNewLine( ss );
@@ -3160,13 +3157,11 @@ DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self )
 	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
 	DaoContext *ctx = self->topFrame->context;
 	DaoVmCode *vmc = ctx->vmc;
-	DaoValue *dC = ctx->regValues[ vmc->c ];
 
 	dao_fe_clear();
 	ctx->idClearFE = -1;
 	ctx->codes = vmc;
 	if( ctx->regTypes == NULL ) ctx->regTypes = types;
-	if( ctx->regModes == NULL ) ctx->regModes = modes;
 	if( ctx->routine->annotCodes->size == 0 ) DArray_Append( ctx->routine->annotCodes, & vmcx );
 
 	switch( vmc->code ){
@@ -3219,7 +3214,7 @@ DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self )
 	case DVM_MATRIX :
 		DaoContext_DoMatrix( ctx, vmc ); break;
 	case DVM_MATH :
-		DaoVM_DoMath( ctx, vmc, dC, ctx->regValues[1] );
+		DaoVM_DoMath( ctx, vmc, & ctx->regValues[ vmc->c ], ctx->regValues[1] );
 		break;
 	case DVM_CURRY :
 	case DVM_MCURRY :
@@ -3231,7 +3226,6 @@ DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self )
 	default: break;
 	}
 	ctx->regTypes = NULL;
-	ctx->regModes = NULL;
 	DaoContext_CheckFE( ctx );
 	if( self->exceptions->size >0 ){
 		DaoVmProcess_PrintException( self, 1 );
@@ -3241,5 +3235,5 @@ DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self )
 
 	/* avoid GC */
 	/* DArray_Clear( ctx->regArray ); */
-	return dC;
+	return ctx->regValues[ vmc->c ];
 }

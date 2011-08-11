@@ -25,11 +25,6 @@
 #include"daoValue.h"
 #include"daoNamespace.h"
 
-static void DaoClass_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
-{
-	DaoValue_Print( self, ctx, stream, cycData );
-}
-
 static void DaoClass_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
 {
 	int tid = ctx->routine->routHost ? ctx->routine->routHost->tid : 0;
@@ -83,7 +78,7 @@ static DaoTypeCore classCore=
 	DaoClass_SetField,
 	DaoClass_GetItem,
 	DaoClass_SetItem,
-	DaoClass_Print,
+	DaoValue_Print,
 	DaoClass_Copy
 };
 
@@ -123,7 +118,7 @@ DaoClass* DaoClass_New()
 	self->glbDataName  = DArray_New(D_STRING);
 	self->superAlias   = DArray_New(D_STRING);
 	self->superClass   = DArray_New(D_VALUE);
-	self->objDataDefault  = DArray_New(D_VALUE);
+	self->objDataDefault = DArray_New(D_VALUE);
 	self->protoValues = NULL;
 	self->typeHolders = NULL;
 	self->typeDefaults = NULL;
@@ -184,7 +179,7 @@ void DaoValue_Update( DaoValue **self, DaoNameSpace *ns, DMap *deftypes )
 	DaoObject *obj = & value->xObject;
 	DaoType *tp, *tp2;
 
-	if( value->type < DAO_ARRAY ) return;
+	if( value == NULL || value->type < DAO_ARRAY ) return;
 	tp = DaoNameSpace_GetType( ns, value );
 	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 	if( tp == tp2 ) return;
@@ -415,7 +410,8 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 	DaoClass_AddConst( self, name, (DaoValue*) self, DAO_DATA_PUBLIC, -1 );
 
 	self->objType->value = (DaoValue*) DaoObject_Allocate( self );
-	self->objType->value->xObject.trait |= DAO_DATA_NOCOPY | DAO_DATA_CONST;
+	self->objType->value->xObject.trait |= DAO_DATA_NOCOPY;
+	self->objType->value->xObject.konst = 1;
 	GC_IncRC( self->objType->value );
 	DString_SetMBS( str, "default" );
 	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC, -1 );
@@ -424,7 +420,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 	self->classRoutines->host = self->objType;
 	GC_IncRC( self->objType );
 
-	DaoClass_AddConst( self, rout->routName, (DaoValue*)self->classRoutines, DAO_DATA_PUBLIC, -1 ); // XXX
+	DaoClass_AddConst( self, rout->routName, (DaoValue*)self->classRoutines, DAO_DATA_PUBLIC, -1 );
 	DString_Delete( str );
 
 	DArray_Append( self->cstDataTable, self->cstData );
@@ -938,7 +934,8 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s, int
 			mroutine->host = self->objType;
 			GC_IncRC( mroutine->host );
 			GC_ShiftRC( mroutine, dest );
-			self->cstData->items.pValue[id] = (DaoValue*) mroutine;
+			dest = (DaoValue*) mroutine;
+			self->cstData->items.pValue[id] = dest;
 		}
 		if( data->type == DAO_FUNCTREE ){
 			DaoFunctree_Import( & dest->xFunctree, & data->xFunctree );

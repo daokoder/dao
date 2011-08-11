@@ -161,7 +161,7 @@ static void STD_Callable( DaoContext *ctx, DaoValue *p[], int N )
 			DaoCData *plugin = (DaoCData*) p[0];
 			DaoTypeBase *tp = plugin->typer;
 			DaoValue *func;
-			if( plugin->data == NULL && (plugin->trait & DAO_DATA_CONST) ){
+			if( plugin->data == NULL && plugin->konst ){
 				func = DaoFindFunction2( tp, tp->name );
 				*res = func != NULL;
 			}else{
@@ -472,6 +472,7 @@ static void STD_Deserialize( DaoContext *ctx, DaoValue *p[], int N )
 	DaoValue *value = NULL;
 	DaoValue_Deserialize( & value, p[0]->xString.data, ctx->nameSpace, ctx->process );
 	DaoContext_PutValue( ctx, value );
+	GC_DecRC( value );
 }
 static void STD_Backup( DaoContext *ctx, DaoValue *p[], int N )
 {
