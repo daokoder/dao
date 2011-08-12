@@ -98,7 +98,7 @@ extern void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc );
 extern void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc );
 
-static int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *c, DaoValue *p );
+static int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
 static DaoVmFrame* DaoVmFrame_New()
 {
@@ -894,7 +894,7 @@ CallEntry:
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 		}OPNEXT()
 		OPCASE( DATA ){
-			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			switch( vmc->a ){
 			case DAO_COMPLEX :
 				ComplexOperand( vmc->c ).real = 0.0;
@@ -1010,9 +1010,6 @@ CallEntry:
 		OPCASE( MOVE ){
 			topCtx->vmc = vmc;
 			DaoContext_DoMove( topCtx, vmc );
-			vA = locVars[ vmc->a ];
-			/* assigning no-duplicated constant:
-			   routine Func( a : const list<int> ){ b = a; } */
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( ADD )
@@ -1769,9 +1766,8 @@ CallEntry:
 		OPCASE( MOVE_SS ){
 			vC = locVars[ vmc->c ];
 			if( vC == NULL ){
-				printf( "%p\n", locVars[ vmc->a ] );
 				value = (DaoValue*) DaoString_Copy( & locVars[ vmc->a ]->xString );
-				GC_ShiftRC( value, locVars[ vmc->c ] );
+				value->xGC.refCount = 1;
 				locVars[ vmc->c ] = value;
 			}else{
 				DString_Assign( vC->xString.data, locVars[ vmc->a ]->xString.data );
@@ -2443,7 +2439,7 @@ FinishCall:
 	}
 	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 	if( print || vmSpace->evalCmdline ){
-		if( self->returned && self->returned->type ){
+		if( self->returned ){
 			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
 			DaoValue_Print( self->returned, topCtx, vmSpace->stdStream, NULL );
 			DaoStream_WriteNewLine( vmSpace->stdStream );
@@ -2469,15 +2465,15 @@ ReturnTrue :
 	return 1;
 }
 extern void DaoVmProcess_Trace( DaoVmProcess *self, int depth );
-int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *c, DaoValue *p )
+int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 {
 	DaoNameSpace *ns = self->nameSpace;
 	DaoType *type = self->regTypes[vmc->c];
 	DaoComplex tmp = {DAO_COMPLEX};
 	int func = vmc->a;
 	self->vmc = vmc;
-	if( p->type == DAO_COMPLEX ){
-		complex16 par = p->xComplex.value;
+	if( A->type == DAO_COMPLEX ){
+		complex16 par = A->xComplex.value;
 		complex16 cres = {0.0,0.0};
 		double rres = 0.0;
 		int isreal = 0;
@@ -2503,22 +2499,22 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *c, DaoValue *p )
 		if( isreal ){
 			tmp.type = DAO_DOUBLE;
 			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetType( ns, (DaoValue*) & tmp );
-			if( c->type == DAO_DOUBLE ){
-				c->xDouble.value = rres;
+			if( C && C->type == DAO_DOUBLE ){
+				C->xDouble.value = rres;
 			}else{
 				return DaoContext_PutDouble( self, rres ) == NULL;
 			}
 		}else{
 			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetType( ns, (DaoValue*) & tmp );
-			if( c->type == DAO_COMPLEX ){
-				c->xComplex.value = cres;
+			if( C && C->type == DAO_COMPLEX ){
+				C->xComplex.value = cres;
 			}else{
 				return DaoContext_PutComplex( self, cres ) == NULL;
 			}
 		}
 		return 0;
-	}else if( p->type && p->type <= DAO_DOUBLE ){
-		double par = DaoValue_GetDouble( p );
+	}else if( A->type && A->type <= DAO_DOUBLE ){
+		double par = DaoValue_GetDouble( A );
 		double res = 0.0;
 		switch( func ){
 		case DVM_MATH_ABS  : res = fabs( par );  break;
@@ -2540,15 +2536,15 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *c, DaoValue *p )
 		default : return 1;
 		}
 		if( func == DVM_MATH_RAND ){
-			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetType( ns, p );
-			switch( p->type ){
+			if( type == NULL ) self->regTypes[vmc->c] = DaoNameSpace_GetType( ns, A );
+			switch( A->type ){
 			case DAO_INTEGER : return DaoContext_PutInteger( self, res ) == NULL;
 			case DAO_FLOAT  : return DaoContext_PutFloat( self, res ) == NULL;
 			case DAO_DOUBLE : return DaoContext_PutDouble( self, res ) == NULL;
 			default : break;
 			}
-		}else if( c->type == DAO_DOUBLE ){
-			c->xDouble.value = res;
+		}else if( C && C->type == DAO_DOUBLE ){
+			C->xDouble.value = res;
 			return 0;
 		}else{
 			tmp.type = DAO_DOUBLE;
@@ -3214,7 +3210,7 @@ DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self )
 	case DVM_MATRIX :
 		DaoContext_DoMatrix( ctx, vmc ); break;
 	case DVM_MATH :
-		DaoVM_DoMath( ctx, vmc, & ctx->regValues[ vmc->c ], ctx->regValues[1] );
+		DaoVM_DoMath( ctx, vmc, ctx->regValues[ vmc->c ], ctx->regValues[1] );
 		break;
 	case DVM_CURRY :
 	case DVM_MCURRY :

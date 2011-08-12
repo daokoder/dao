@@ -1907,11 +1907,11 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 		node = MAP_Find( routine->routType->mapNames, mbs );
 		if( node && node->value.pInt == 0 ) routine->routType->attrib |= DAO_TYPE_SELF;
 	}
+	//printf( "%p  %p  %i  %i  %p  %s  %s\n", routine, routine->routType, routine->parCount, routine->routType->nested->size, routine->routType->nested->items.pValue, routine->routName->mbs, routine->routType->name->mbs );
 	/* printf( "%i  %s\n", routine->parCount, routine->routType->name->mbs ); */
 	/* for(j=0; j<nested->size; j++) printf( "%s\n", nested->items.pType[j]->name->mbs ); */
 	if( routine->attribs & DAO_ROUT_PARSELF ) routine->routType->attrib |= DAO_ROUT_PARSELF;
 	GC_IncRC( routine->routType );
-	DArray_Append( nested, (void*) abstype );
 	if( self == defparser ) DArray_Swap( self->partoks, self->tokens );
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( self );
@@ -1933,6 +1933,7 @@ Finalizing:
 	   printf( "abtp: %i %s\n", nested->items.pType[i]->refCount,
 	   nested->items.pType[i]->name->mbs );
 	 */
+	GC_DecRC( abstype );
 	GC_DecRCs( nested );
 	DArray_Delete( nested );
 	DString_Delete( pname );

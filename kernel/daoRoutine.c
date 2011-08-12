@@ -69,6 +69,7 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 }
 static void DRoutine_DeleteFields( DRoutine *self )
 {
+	//printf( "DRoutine_DeleteFields: %p %s\n", self, self->routName->mbs );
 	GC_DecRC( self->routHost );
 	GC_DecRC( self->routType );
 	GC_DecRC( self->nameSpace );
@@ -4510,13 +4511,13 @@ DRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, int
 		if( type == NULL ) continue;
 		if( strict && value->type != type->tid ) continue;
 		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchValue( type, value, defs );
+		//printf( "%i: %i, %i %p %s\n", i, m, value->type, type, type->name->mbs );
 		if( m == 0 ) continue;
 		if( strict && m != DAO_MT_EQ ) continue;
 		k = type->tid == DAO_PAR_VALIST ? 0 : n-1;
 		rout = DParNode_Lookup( param, p+1, k, strict, & k, defs );
 		if( rout == NULL ) continue;
 		m += k;
-		//printf( "%i: %i, %i %p %s\n", i, m, value->type, type, type->name->mbs );
 		if( m > max ){
 			best = rout;
 			max = m;

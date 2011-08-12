@@ -1209,6 +1209,7 @@ static DaoTuple* DaoContext_GetTuple( DaoContext *self, DaoType *type, int size 
 	if( tup && tup->refCount ==1 && tup->unitype == type ) return tup;
 
 	tup = DaoTuple_New( size );
+	GC_IncRC( type );
 	tup->unitype = type;
 	if( type && type->nested->size == size ){
 		DaoType **types = type->nested->items.pType;
@@ -1220,7 +1221,6 @@ static DaoTuple* DaoContext_GetTuple( DaoContext *self, DaoType *type, int size 
 			DaoValue_Move( tp->value, tup->items->items.pValue + i, tp );
 		}
 	}
-	GC_IncRC( type );
 	GC_ShiftRC( tup, val );
 	self->regValues[ self->vmc->c ] = (DaoValue*) tup;
 	return tup;
@@ -1752,22 +1752,21 @@ int DaoContext_TryObjectArith( DaoContext *self, DaoValue *A, DaoValue *B, DaoVa
 	int overloaded = 0;
 	int compo = 0; /* try composite operator */
 	int nopac = 0; /* do not pass C as parameter */
-	int npar = 2;
+	int npar = 3;
 	int rc, n;
 
+	/* C = A + B */
 	par[0] = C;
 	par[1] = A;
 	par[2] = B;
 	if( C == A && B && daoBitBoolArithOpers2[ code-DVM_MOVE ] ){
 		/* C += B, or C = C + B */
 		par[1] = B;
+		npar = 2;
 		compo = 1;
-	}else if( C && B && A ){ /* C = A + B */
-		par[1] = A;
-		par[2] = B;
-		npar = 3;
 	}else if( B == NULL ){ /* C = ! A */
 		par[1] = A;
+		npar = 2;
 	}
 	nopac = C == NULL || C->xNull.refCount > 1;
 	p = par;
@@ -1851,21 +1850,20 @@ int DaoContext_TryCDataArith( DaoContext *self, DaoValue *A, DaoValue *B, DaoVal
 	int overloaded = 0;
 	int compo = 0; /* try composite operator */
 	int nopac = 0; /* do not pass C as parameter */
-	int n, npar = 2;
+	int n, npar = 3;
 
+	/* C = A + B */
 	par[0] = C;
 	par[1] = A;
 	par[2] = B;
 	if( C == A && B && daoBitBoolArithOpers2[ code-DVM_MOVE ] ){
 		/* C += B, or C = C + B */
 		par[1] = B;
+		npar = 2;
 		compo = 1;
-	}else if( C && B && A ){ /* C = A + B */
-		par[1] = A;
-		par[2] = B;
-		npar = 3;
 	}else if( B == NULL ){ /* C = ! A */
 		par[1] = A;
+		npar = 2;
 	}
 	nopac = C == NULL || C->xNull.refCount > 1;
 	p = par;

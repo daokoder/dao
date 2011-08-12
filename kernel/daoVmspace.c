@@ -163,6 +163,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_CDATA   :  return & cdataTyper;
 	case DAO_FUNCTREE : return & mroutineTyper;
 	case DAO_ROUTINE   :  return & routTyper;
+	case DAO_ABROUTINE :  return & routTyper;
 	case DAO_FUNCTION  :  return & funcTyper;
 	case DAO_INTERFACE :  return & interTyper;
 	case DAO_CLASS     :  return & classTyper;

@@ -231,7 +231,6 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 				sup->refCount ++;
 				offset += sup->myClass->objDataName->size;
 			}
-			GC_IncRC( sup );
 			self->superObject->items.pObject[i] = sup;
 		}
 	}

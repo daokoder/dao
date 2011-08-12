@@ -35,6 +35,12 @@
 
 void DaoType_Delete( DaoType *self )
 {
+	//printf( "DaoType_Delete: %p\n", self );
+	if( self->refCount ){ /* likely to be referenced by its default value */
+		GC_IncRC( self );
+		GC_DecRC( self );
+		return;
+	}
 	GC_DecRC( self->aux );
 	GC_DecRC( self->value );
 	GC_DecRCs( self->nested );
@@ -320,12 +326,10 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_ABROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_ROUTINE][DAO_FUNCTION] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTION][DAO_ROUTINE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_FUNCTION][DAO_FUNCTION] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTREE][DAO_ROUTINE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_FUNCTREE][DAO_FUNCTION] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTREE][DAO_FUNCTREE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_VMPROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
 }
@@ -690,6 +694,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		break;
 	case DAO_FUNCTION :
 	case DAO_ROUTINE :
+	case DAO_ABROUTINE :
 		tp = value->xRoutine.routType;
 		if( tp == self ) return DAO_MT_EQ;
 		if( tp ) return DaoType_MatchTo( tp, self, NULL );
@@ -892,7 +897,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs )
 		GC_DecRC( copy );
 		return node->value.pType;
 	}else{
-		GC_IncRC( copy );
+		//GC_IncRC( copy );
+		/* reference count already increased */
 		DMap_Insert( ns->abstypes, copy->name, copy );
 		DMap_Insert( defs, self, copy );
 	}
@@ -1068,12 +1074,12 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
 		}
 
 		GC_IncRC( inter );
-		DMap_Insert( type->interfaces, inter, NULL );
+		DMap_Insert( type->interfaces, inter, inter );
 		for(j=0; j<inter->supers->size; j++){
 			DaoInterface *super = (DaoInterface*) inter->supers->items.pValue[j];
 			if( DMap_Find( type->interfaces, super ) ) continue;
 			GC_IncRC( super );
-			DMap_Insert( type->interfaces, super, NULL );
+			DMap_Insert( type->interfaces, super, super );
 		}
 	}
 	DMap_Delete( binds );
@@ -1099,12 +1105,12 @@ int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray 
 	if( newbinds ) DMap_Delete( newbinds );
 	if( bl ==0 ) return 0;
 	GC_IncRC( self );
-	DMap_Insert( type->interfaces, self, NULL );
+	DMap_Insert( type->interfaces, self, self );
 	for(i=0; i<self->supers->size; i++){
 		DaoInterface *super = (DaoInterface*) self->supers->items.pValue[i];
 		if( DMap_Find( type->interfaces, super ) ) continue;
 		GC_IncRC( super );
-		DMap_Insert( type->interfaces, super, NULL );
+		DMap_Insert( type->interfaces, super, super );
 	}
 	return 1;
 }

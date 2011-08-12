@@ -179,7 +179,7 @@ void DaoValue_Update( DaoValue **self, DaoNameSpace *ns, DMap *deftypes )
 	DaoObject *obj = & value->xObject;
 	DaoType *tp, *tp2;
 
-	if( value == NULL || value->type < DAO_ARRAY ) return;
+	if( value == NULL || value->type < DAO_ENUM ) return;
 	tp = DaoNameSpace_GetType( ns, value );
 	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 	if( tp == tp2 ) return;
@@ -190,9 +190,7 @@ void DaoValue_Update( DaoValue **self, DaoNameSpace *ns, DMap *deftypes )
 			return;
 		}
 	}
-	DaoValue_Move( *self, & value, tp2 );
-	GC_ShiftRC( value, *self );
-	*self = value;
+	DaoValue_Move( value, self, tp2 );
 }
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {

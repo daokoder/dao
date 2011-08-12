@@ -246,6 +246,10 @@ void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *c
 	DString *name;
 	DaoTypeBase *typer;
 	DMap *cd = cycData;
+	if( self == NULL ){
+		DaoStream_WriteMBS( stream, "null[0x0]" );
+		return;
+	}
 	if( cycData == NULL ) cycData = DMap_New(0,0);
 	switch( self->type ){
 	case DAO_INTEGER :
@@ -368,8 +372,9 @@ void DaoValue_MarkConst( DaoValue *self )
 
 void DaoValue_Clear( DaoValue **self )
 {
-	GC_DecRC( *self );
+	DaoValue *value = *self;
 	*self = NULL;
+	GC_DecRC( value );
 }
 
 void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
@@ -484,7 +489,7 @@ static void DaoValue_CopyExt( DaoValue *src, DaoValue **dest, int copy )
 		return;
 	}
 	if( src == *dest ) return;
-	if( src->type != dest2->type || src->type >= DAO_ENUM ){
+	if( src->type != dest2->type || src->type > DAO_ENUM ){
 		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_ShiftRC( src, dest2 );
 		*dest = src;

@@ -909,8 +909,8 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, i
 			DaoFunctree_Add( mroutine, (DRoutine*) dest );
 			dest = (DaoValue*) mroutine;
 			dest->xNull.konst = 1;
+			GC_ShiftRC( mroutine, self->cstData->items.pValue[id] );
 			self->cstData->items.pValue[id] = dest;
-			GC_ShiftRC( self->cstData->items.pValue[id], mroutine );
 		}
 		if( value->type == DAO_FUNCTREE ){
 			DaoFunctree_Import( & dest->xFunctree, & value->xFunctree );

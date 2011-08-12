@@ -86,8 +86,8 @@ static void DaoCallbackData_DeleteByUserdata( DaoValue *userdata )
 
 #if DEBUG
 #if 0
-#define DEBUG_TRACE
 #endif
+#define DEBUG_TRACE
 #endif
 
 #ifdef DEBUG_TRACE
@@ -401,12 +401,6 @@ void DaoGC_DecRC( DaoValue *p )
 	const short idle = gcWorker.idle;
 	if( ! p ) return;
 
-#ifdef DEBUG_TRACE
-	if( p == 0x2531c40 ){
-		print_trace();
-		printf( "rc: %i\n", p->xGC.refCount );
-	}
-#endif
 	DMutex_Lock( & gcWorker.mutex_switch_heap );
 
 	DaoGC_DecRC2( p, -1 );
@@ -431,9 +425,6 @@ void DaoFinishGC()
 void DaoGC_IncRC( DaoValue *p )
 {
 	if( ! p ) return;
-#ifdef DEBUG_TRACE
-	if( p == 0x1011a0 ) print_trace();
-#endif
 	if( p->xGC.refCount == 0 ){
 		p->xGC.refCount ++;
 		return;
@@ -612,6 +603,7 @@ void cycRefCountDecreScan()
 			}
 		case DAO_ROUTINE :
 		case DAO_FUNCTION :
+		case DAO_ABROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*)value;
 				cycRefCountDecrement( (DaoValue*) rout->routType );
@@ -814,6 +806,7 @@ void markAliveObjects( DaoValue *root )
 			}
 		case DAO_ROUTINE :
 		case DAO_FUNCTION :
+		case DAO_ABROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*) value;
 				cycRefCountIncrement( (DaoValue*) rout->routType );
@@ -1003,6 +996,7 @@ void freeGarbage()
 				}
 			case DAO_ROUTINE :
 			case DAO_FUNCTION :
+			case DAO_ABROUTINE :
 				{
 					DaoRoutine *rout = (DaoRoutine*)value;
 					directRefCountDecrement( (DaoValue**) & rout->nameSpace );
@@ -1198,11 +1192,6 @@ void DaoGC_IncRC( DaoValue *p )
 {
 	const short work = gcWorker.work;
 	if( ! p ) return;
-#ifdef DEBUG_TRACE
-	if( p == 0x736d010 ){
-		print_trace();
-	}
-#endif
 	if( p->xGC.refCount == 0 ){
 		p->xGC.refCount ++;
 		return;
@@ -1211,8 +1200,10 @@ void DaoGC_IncRC( DaoValue *p )
 	p->xGC.refCount ++;
 	p->xGC.cycRefCount ++;
 	if( ! ( p->xGC.gcState[work] & GC_IN_POOL ) && gcWorker.workType == GC_INC_RC ){
-		DArray_Append( gcWorker.pool[work], p );
-		p->xGC.gcState[work] = GC_IN_POOL;
+		if( p->type >= DAO_ENUM ){
+			DArray_Append( gcWorker.pool[work], p );
+			p->xGC.gcState[work] = GC_IN_POOL;
+		}
 	}
 }
 static int counts = 100;
@@ -1221,9 +1212,6 @@ void DaoGC_DecRC( DaoValue *p )
 	const short idle = gcWorker.idle;
 	if( ! p ) return;
 
-#ifdef DEBUG_TRACE
-	if( p == 0x27aed90 ) print_trace();
-#endif
 #if 0
 	if( p->type == DAO_TYPE ){
 		DaoType *abtp = (DaoType*) p;
@@ -1426,6 +1414,7 @@ void cycRefCountDecreScan()
 			}
 		case DAO_ROUTINE :
 		case DAO_FUNCTION :
+		case DAO_ABROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*)value;
 				cycRefCountDecrement( (DaoValue*) rout->routType );
@@ -1637,6 +1626,7 @@ void cycRefCountIncreScan()
 			}
 			case DAO_ROUTINE :
 			case DAO_FUNCTION :
+			case DAO_ABROUTINE :
 				{
 					DaoRoutine *rout = (DaoRoutine*) value;
 					cycRefCountIncrement( (DaoValue*) rout->routType );
@@ -1849,6 +1839,7 @@ void directDecRC()
 				}
 			case DAO_ROUTINE :
 			case DAO_FUNCTION :
+			case DAO_ABROUTINE :
 				{
 					DaoRoutine *rout = (DaoRoutine*)value;
 					directRefCountDecrement( (DaoValue**) & rout->nameSpace );
@@ -2079,6 +2070,7 @@ void cycRefCountDecrement( DaoValue *value )
 		value->xGC.cycRefCount = 0;
 	}
 }
+#if 0
 void cycRefCountIncrement( DaoValue *value )
 {
 	const short work = gcWorker.work;
@@ -2088,6 +2080,21 @@ void cycRefCountIncrement( DaoValue *value )
 	value->xGC.cycRefCount++;
 	if( ! ( value->xGC.gcState[work] & GC_MARKED ) ){
 		value->xGC.gcState[work] |= GC_MARKED;
+		DArray_Append( gcWorker.objAlive, value );
+	}
+}
+#endif
+void cycRefCountIncrement( DaoValue *value )
+{
+	const short work = gcWorker.work;
+	if( value == NULL ) return;
+	/* do not scan simple data types, as they cannot from cyclic structure: */
+	if( value->type < DAO_ENUM ) return;
+	value->xGC.cycRefCount++;
+	if( ! ( value->xGC.gcState[work] & GC_MARKED ) ){
+		/* value->xGC.gcState[work] |= GC_MARKED; */
+		/* We cannot mark it here, because the references 
+		 * contained in this object are not scanned yet: */
 		DArray_Append( gcWorker.objAlive, value );
 	}
 }

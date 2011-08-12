@@ -120,13 +120,21 @@ void DaoComplex_Set( DaoComplex *self, complex16 value )
 
 DaoLong* DaoLong_New()
 {
-	return NULL;
+	DaoLong *self = (DaoLong*) dao_malloc( sizeof(DaoLong) );
+	DaoValue_Init( self, DAO_LONG );
+	self->value = DLong_New();
+	return self;
 }
 DLong* DaoLong_Get( DaoLong *self )
 {
 }
 DaoLong* DaoLong_Copy( DaoLong *self )
 {
+	DaoLong *copy = (DaoLong*) dao_malloc( sizeof(DaoLong) );
+	DaoValue_Init( copy, DAO_LONG );
+	copy->value = DLong_New();
+	DLong_Move( copy->value, self->value );
+	return copy;
 }
 void DaoLong_Delete( DaoLong *self )
 {
@@ -3799,8 +3807,10 @@ DaoTuple* DaoTuple_New( int size )
 }
 void DaoTuple_Delete( DaoTuple *self )
 {
+	int i;
 	if( self->meta ) GC_DecRC( self->meta );
-	DTuple_Delete( self->items ); // XXX GC
+	for(i=0; i<self->items->size; i++) GC_DecRC( self->items->items.pValue[i] );
+	DTuple_Delete( self->items );
 	GC_DecRC( self->unitype );
 	dao_free( self );
 }
