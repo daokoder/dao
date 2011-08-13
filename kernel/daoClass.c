@@ -965,7 +965,7 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoTyp
 	DArray_Append( self->glbData, NULL );
 	DArray_Append( self->glbDataType, (void*)t );
 	DArray_Append( self->glbDataName, (void*)name );
-	if( data && DaoValue_Move( data, self->glbData->items.pValue + size -1, t ) ==0 )
+	if( data && DaoValue_Move( data, self->glbData->items.pValue + size, t ) ==0 )
 		return DAO_CTW_TYPE_NOMATCH;
 	return 0;
 }

@@ -1774,10 +1774,8 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( MOVE_PP ){
-			vA = locVars[ vmc->a ];
-			topCtx->vmc = vmc;
-			if( DaoMoveAC( topCtx, vA, locVars + vmc->c, locTypes[ vmc->c ] ) ==0 )
-				goto CheckException;
+			GC_ShiftRC( locVars[ vmc->a ], locVars[ vmc->c ] );
+			locVars[ vmc->c ] = locVars[ vmc->a ];
 		}OPNEXT()
 		OPCASE( UNMS_C ){
 			acom = ComplexOperand( vmc->a );

@@ -246,7 +246,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 			DaoValue_Move( klass->objDataDefault->items.pValue[i], value, type );
 			continue;
 		}else if( *value == NULL && type && type->value ){
-			DaoValue_Move( type->value, value, type );
+			DaoValue_Copy( type->value, value );
 		}
 	}
 }

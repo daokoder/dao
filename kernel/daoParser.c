@@ -6154,6 +6154,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					}
 					enode.prev = extra ? extra->prev : back;
 					regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
+					if( regLast >=0 ) result.first = self->vmcLast;
 				}
 				DArray_Delete( cid );
 				result.reg = regLast;

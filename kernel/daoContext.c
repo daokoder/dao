@@ -119,20 +119,23 @@ static void DaoContext_InitValues( DaoContext *self )
 	types = self->regTypes;
 	values = self->regValues;
 	for(i=0; i<N; i++){
+		DaoValue *value = values[i];
 		DaoType *type = types[i];
 		if( type == NULL ) continue;
-		if( values[i] ){
-			if( values[i]->type == type->tid ) continue;
-			GC_DecRC( values[i] );
-			values[i] = NULL;
+		if( value ){
+			if( value->type == type->tid && value->xGC.refCount == 1 ) continue;
+			GC_DecRC( value );
+			value = values[i] = NULL;
 		}
 		switch( type->tid ){
-		case DAO_INTEGER : values[i] = (DaoValue*) DaoInteger_New(0); break;
-		case DAO_FLOAT   : values[i] = (DaoValue*) DaoFloat_New(0.0); break;
-		case DAO_DOUBLE  : values[i] = (DaoValue*) DaoDouble_New(0.0); break;
-		case DAO_COMPLEX : values[i] = (DaoValue*) DaoComplex_New(com); break;
+		case DAO_INTEGER : value = (DaoValue*) DaoInteger_New(0); break;
+		case DAO_FLOAT   : value = (DaoValue*) DaoFloat_New(0.0); break;
+		case DAO_DOUBLE  : value = (DaoValue*) DaoDouble_New(0.0); break;
+		case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New(com); break;
 		}
-		if( values[i] ) values[i]->xGC.refCount = 1;
+		if( value == NULL ) continue;
+		value->xGC.refCount = 1;
+		values[i] = value;
 	}
 	self->lastRoutine = self->routine;
 }
