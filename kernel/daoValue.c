@@ -563,10 +563,6 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 	default : break;
 	}
 }
-void DaoValue_SimpleMove( DaoValue *src, DaoValue **dest )
-{
-	DaoValue_CopyExt( src, dest, 0 );
-}
 static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	DaoType *itp = NULL;
@@ -604,7 +600,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 	if( tm ==0 ){
 		printf( "tp = %p; src = %p, type = %i\n", tp, src, src->type );
 		printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
-		if( src->type == DAO_TUPLE ) printf( "%p\n", from.xTuple.unitype );
+		if( src->type == DAO_TUPLE ) printf( "%p\n", src->xTuple.unitype );
 	}
 	printf( "src->type = %p\n", src );
 #endif

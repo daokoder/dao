@@ -107,7 +107,7 @@ void print_trace( const char *info )
 		fprintf (debug,"%s\n", strings[i]);
 	}
 	/* comment this to cause leaking, so that valgrind will print the trace with line numbers */
-	free (strings);
+	//free (strings);
 	fflush( debug );
 	fclose( debug );
 	fflush( stdout );
@@ -2092,7 +2092,7 @@ void cycRefCountDecrement( DaoValue *value )
 	value->xGC.cycRefCount --;
 
 	if( value->xGC.cycRefCount<0 ){
-		   printf("cycRefCount<0 : %i\n", value->type);
+		   printf( "cycRefCount<0 : %2i %p\n", value->type, value );
 		/*
 		 */
 		value->xGC.cycRefCount = 0;

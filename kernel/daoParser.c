@@ -1692,6 +1692,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 	routine->parCount = 0;
 	if( tki == DKEY_SELF ){
 		routine->attribs |= DAO_ROUT_PARSELF;
+		routine->refParams = 1;
 		selfpar = 1;
 	}
 
@@ -1722,12 +1723,17 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 			MAP_Insert( self->routine->localVarType, self->regCount, abstype );
 		DaoParser_PushRegister( self );
 		routine->parCount ++;
+		routine->refParams = 1;
 	}
 	while( i < rb ){
 		int comma;
 		int regCount = self->regCount;
 		DaoInode *back = defparser->vmcLast;
 
+		if( tokens[i]->type == DTOK_AMAND && tokens[i+1]->type == DTOK_IDENTIFIER ){
+			routine->refParams |= 1<<routine->parCount;
+			i += 1;
+		}
 		m1 = i;
 		m2 = rb;
 		self->curLine = defparser->curLine = tokens[i]->line;
@@ -2435,8 +2441,10 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 			return;
 		}
 		rout2 = DaoRoutine_Decorate( rout, decoFunc, params+1, n );
-		*rout = *rout2;
-		*rout2 = tmp;
+		j = sizeof(DaoNull);
+		/* Do NOT copy GC information: */
+		memcpy( (char*)rout + j, (char*)rout2 + j, sizeof(DaoRoutine) - j );
+		memcpy( (char*)rout2 + j, (char*)&tmp + j, sizeof(DaoRoutine) - j );
 		GC_ShiftRC( rout2, rout->routConsts->items.pValue[rout->parCount] );
 		rout->routConsts->items.pValue[rout->parCount] = (DaoValue*) rout2;
 		/* printf( "%s\n", decoFunc->routType->name->mbs ); */
@@ -3970,7 +3978,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}
 			}else{
 				id = LOOKUP_ID( DaoParser_GetRegister( self, varTok) );
-				DaoValue_SimpleMove( value, routine->routConsts->items.pValue + id );
+				DaoValue_Copy( value, routine->routConsts->items.pValue + id );
 				DaoValue_MarkConst( routine->routConsts->items.pValue[id] );
 			}
 		}else{
@@ -4004,7 +4012,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 						return -1;
 					}
 					remove = 1;
-					DaoValue_SimpleMove( value, hostClass->objDataDefault->items.pValue + id );
+					DaoValue_Copy( value, hostClass->objDataDefault->items.pValue + id );
 					DaoValue_MarkConst( hostClass->objDataDefault->items.pValue[id] );
 				}else if( isdecl && self->isDynamicClass ){
 					if( reg < 0 ) continue;
@@ -4282,7 +4290,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	if( (storeType & DAO_DATA_GLOBAL) && (storeType & DAO_DATA_CONST) ){
 		DaoNameSpace_AddConst( nameSpace, name, null, perm );
 	}else if( storeType & DAO_DATA_GLOBAL ){
-		DaoNameSpace_AddVariable( nameSpace, name, null, abtp, perm );
+		DaoNameSpace_AddVariable( nameSpace, name, NULL, abtp, perm );
 	}else{
 		int id = 0;
 		DArray_Append( self->routine->defLocals, tok );
@@ -6762,7 +6770,7 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int 
 		/* printf( "reg = %i\n", cid->items.pInt[i] ); */
 		/* No need GC here: */
 		DaoValue *v = DaoParser_GetVariable( self, cid->items.pInt[i] );
-		DaoValue_SimpleMove( v, & ctx->regValues[i+1] );
+		DaoValue_Copy( v, & ctx->regValues[i+1] );
 	}
 	DaoParser_PopCodes( self, enode->prev );
 	for(i=regcount; i<self->regCount; i++) MAP_Erase( self->routine->localVarType, i );

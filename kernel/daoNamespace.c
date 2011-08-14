@@ -943,7 +943,7 @@ void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DaoValue *value )
 	if( up >= self->cstDataTable->size ) return;
 	if( id >= self->cstDataTable->items.pArray[up]->size ) return;
 	dest = self->cstDataTable->items.pArray[up]->items.pValue + id;
-	DaoValue_SimpleMove( value, dest );
+	DaoValue_Copy( value, dest );
 	DaoValue_MarkConst( *dest );
 }
 DaoValue* DaoNameSpace_GetConst( DaoNameSpace *self, int index )
@@ -971,7 +971,7 @@ int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DaoValue *value
 	DaoValue **dest;
 	int id = 0;
 
-	if( abtp == NULL ) abtp = dao_type_any;
+	if( abtp == NULL ) abtp = dao_type_udf;
 	if( tp && value && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
 	if( value == NULL && tp ) value = tp->value;

@@ -2135,10 +2135,8 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 		}else if( vmc->b == vmc->c ){
 			DString_Insert( B->xString.data, A->xString.data, 0, 0, 0 );
 		}else{
-			A->xString.data = DString_Copy( A->xString.data );
-			DString_Append( A->xString.data, B->xString.data );
-			DaoContext_PutValue( self, A );
-			DString_Delete( A->xString.data );
+			DaoValue *C = DaoContext_PutValue( self, A );
+			DString_Append( C->xString.data, B->xString.data );
 		}
 	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM
 			&& (vmc->code == DVM_ADD || vmc->code == DVM_SUB) ){

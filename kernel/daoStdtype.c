@@ -1481,8 +1481,6 @@ static void DaoSTR_PFind( DaoContext *ctx, DaoValue *p[], int N )
 	if( end == 0 ) p2 = end = DString_Size( self );
 	i = 0;
 	while( DaoRegex_Match( patt, self, & p1, & p2 ) ){
-		p[3]->xInteger.value = p1;
-		p[4]->xInteger.value = p2;
 		if( index ==0 || (++i) == index ){
 			tuple = DaoTuple_New( 2 );
 			GC_IncRC( itp );
@@ -1524,10 +1522,6 @@ static void DaoSTR_Match0( DaoContext *ctx, DaoValue *p[], int N, int subm )
 	tuple->items->items.pValue[1]->xInteger.value = p2;
 	if( p1 >=0 && ( subm || capt ) ) DString_SubString( self, pt, p1, p2-p1+1 );
 	DString_Assign( tuple->items->items.pValue[2]->xString.data, pt );
-	if( subm ==0 ){
-		p[2]->xInteger.value = p1;
-		p[3]->xInteger.value = p2;
-	}
 	DString_Delete( pt );
 }
 static void DaoSTR_Match( DaoContext *ctx, DaoValue *p[], int N )
@@ -1631,8 +1625,6 @@ static void DaoSTR_Capture( DaoContext *ctx, DaoValue *p[], int N )
 		}
 		DArray_Append( list->items, (DaoValue*) subs );
 	}
-	p[2]->xInteger.value = p1;
-	p[3]->xInteger.value = p2;
 	DString_Delete( pt );
 }
 static void DaoSTR_Change( DaoContext *ctx, DaoValue *p[], int N )
@@ -1644,6 +1636,7 @@ static void DaoSTR_Change( DaoContext *ctx, DaoValue *p[], int N )
 	size_t end = (size_t)p[5]->xInteger.value;
 	dint n, index = p[3]->xInteger.value;
 	DaoRegex *patt = DaoVmProcess_MakeRegex( ctx->process, pt, self->wcs ==NULL );
+	size_t size = self->size;
 	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoContext_PutInteger( ctx, n );
 }
@@ -2230,8 +2223,8 @@ static void DaoLIST_Top( DaoContext *ctx, DaoValue *p[], int N )
 static int Compare( DaoContext *ctx, int entry, int reg0, int reg1, DaoValue *v0, DaoValue *v1 )
 {
 	DaoValue **locs = ctx->regValues;
-	DaoValue_SimpleMove( v0, locs + reg0 );
-	DaoValue_SimpleMove( v1, locs + reg1 );
+	DaoValue_Copy( v0, locs + reg0 );
+	DaoValue_Copy( v1, locs + reg1 );
 	DaoVmProcess_ExecuteSection( ctx->process, entry );
 	return DaoValue_GetInteger( ctx->process->returned );
 }
@@ -2644,7 +2637,7 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoContext *ctx, DaoValue *pid )
 		iter->items->items.pValue[0]->xInteger.value = node != NULL;
 		iter->items->items.pValue[1]->xCdata.data = node;
 	}else{
-		DNode *node = MAP_Find( self->items, & pid );
+		DNode *node = MAP_Find( self->items, pid );
 		if( node ==NULL ){
 			DaoContext_RaiseException( ctx, DAO_ERROR_KEY, NULL );
 			return;

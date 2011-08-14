@@ -21,6 +21,7 @@
 uchar_t        attribs; \
 uchar_t        parCount; \
 ushort_t       defLine; \
+uint_t         refParams; \
 DaoType       *routHost; \
 DaoType       *routType; \
 DString       *routName; \

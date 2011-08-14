@@ -34,6 +34,7 @@ static void DRoutine_Init( DRoutine *self )
 	self->attribs = 0;
 	self->parCount = 0;
 	self->defLine  = 0;
+	self->refParams = 0;
 	self->routHost = NULL;
 	self->routType = NULL;
 	self->routHelp = NULL;
@@ -55,6 +56,7 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 	self->attribs = from->attribs;
 	self->parCount = from->parCount;
 	self->defLine = from->defLine;
+	self->refParams = from->refParams;
 	GC_ShiftRC( from->routHost, self->routHost );
 	GC_ShiftRC( from->routType, self->routType );
 	GC_ShiftRC( from->nameSpace, self->nameSpace );
@@ -490,15 +492,13 @@ int DRoutine_PassParams( DRoutine *routine, DaoValue *obj, DaoValue *recv[], Dao
 		if( ito >= ndef ) return 0;
 		passed |= (ullong_t)1<<ito;
 		tp = & types[ito]->aux->xType;
-#if 0
-		XXX
-		if( val->mode == DAO_REFER_PARAM ){ /* self parameter */
+		if( routine->refParams & (1<<ito) ){
 			if( DaoType_MatchValue( tp, val, NULL ) == DAO_MT_EQ ){
+				GC_ShiftRC( val, recv[ito] );
 				recv[ito] = val;
 				continue;
 			}
 		}
-#endif
 		if( need_self && ifrom ==0 && val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
 			/* for virtual method call */
 			val = (DaoValue*) DaoObject_MapThisObject( val->xObject.that, tp );
@@ -2344,7 +2344,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					vmc->code = DVM_CAST;
 					break;
 				}
-				if( typed_code && code != DVM_LOAD ){
+				if( typed_code && code != DVM_LOAD && k == DAO_MT_EQ ){
 					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE
 							&& ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
 						vmc->code = DVM_MOVE_II + 3 * ( ct->tid - DAO_INTEGER )
@@ -2355,10 +2355,15 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						vmc->code = DVM_MOVE_SS;
 					}else if( at->tid >= DAO_ARRAY && at->tid < DAO_ANY
 							&& at->tid != DAO_ROUTINE && at->tid != DAO_CLASS ){
-						if( DString_EQ( at->name, ct->name ) ){
-							if( DString_FindChar( at->name, '?', 0 ) == MAXSIZE ){
-								vmc->code = DVM_MOVE_PP;
-							}
+						/* Do not use simple move when moving a constant to a variable,
+						 * which requires copying and possibly proper setting of type
+						 * fields (such as DaoList::unitype ect). */
+						if( csts[opa] ){
+							DaoType *t = DaoNameSpace_GetType( ns, csts[opa] );
+							k = DaoType_MatchTo( t, ct, defs );
+						}
+						if( k == DAO_MT_EQ && DString_FindChar( at->name, '?', 0 ) == MAXSIZE ){
+							vmc->code = DVM_MOVE_PP;
 						}
 					}
 				}
@@ -2911,7 +2916,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				vmc->code = DVM_GOTO;
 				vmc->b = jump;
 			}else if( at->tid == DAO_ENUM && at->name->mbs[0] != '$' && j == opc ){
-				DaoEnum denum;
+				DaoEnum denum = {DAO_ENUM,0,1,0,{0,0},0,0,NULL,0};
 				DMap *jumps = DMap_New(D_VALUE,0);
 				DNode *it, *find;
 				int max=0, min=0;
@@ -3208,6 +3213,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid != DAO_ROUTINE && at->tid != DAO_FUNCTREE ){
 					goto ErrorTyping;
 				}
+				m = 0;
 				pp = csts+opa+1;
 				tp = type+opa+1;
 				j = vmc->b & 0xff;
@@ -3216,15 +3222,16 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					j = self->parCount - k;
 					pp = csts + k;
 					tp = type + k;
-				}
-				m = 1;
-				for(k=0; k<j; k++){
-					tt = DaoType_DefineTypes( tp[k], ns, defs );
-					GC_ShiftRC( tt, tp[k] );
-					tp[k] = tt;
-					if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
-					assert( i >= (k-1) );
-					m &= vmcs[i-k-1]->code != DVM_LOAD || vmcs[i-k-1]->b != DAO_REFER_PARAM;
+				}else{
+					m = 1;
+					for(k=0; k<j; k++){
+						tt = DaoType_DefineTypes( tp[k], ns, defs );
+						GC_ShiftRC( tt, tp[k] );
+						tp[k] = tt;
+						if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
+						assert( i >= (k+1) );
+						m &= vmcs[i-k-1]->code != DVM_LOAD || vmcs[i-k-1]->b != DAO_REFER_PARAM;
+					}
 				}
 				if( m ){
 					for(k=i+1; k<N; k++){
