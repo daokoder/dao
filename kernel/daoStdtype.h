@@ -228,7 +228,6 @@ struct DaoTuple
 	DTuple   *items;
 	DaoMap   *meta;
 	DaoType  *unitype;
-	unsigned  pair;
 };
 void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );

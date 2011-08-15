@@ -513,7 +513,7 @@ DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc )
 		mid = vmc + id;
 		cmp = DaoValue_Compare( opa, cst[ mid->a ] );
 		if( cmp ==0 ){
-			if( cst[mid->a]->type== DAO_TUPLE && cst[mid->a]->xTuple.pair ){
+			if( cst[mid->a]->type== DAO_TUPLE && cst[mid->a]->xTuple.subtype == DAO_PAIR ){
 				while( id > first && DaoValue_Compare( opa, cst[ vmc[id-1].a ] ) ==0 ) id --;
 				mid = vmc + id;
 			}
@@ -2573,7 +2573,7 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
 		}
 		*C = DMap_Find( B->xMap.items, & A ) != NULL;
-	}else if( B->type == DAO_TUPLE && B->xTuple.pair ){
+	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){
 		int c1 = DaoValue_Compare( B->xTuple.items->items.pValue[0], A );
 		int c2 = DaoValue_Compare( A, B->xTuple.items->items.pValue[1] );
 		*C = c1 <=0 && c2 <= 0;

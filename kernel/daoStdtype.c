@@ -3795,7 +3795,6 @@ DaoTuple* DaoTuple_New( int size )
 	self->items = DTuple_New( size, NULL );
 	self->meta = NULL;
 	self->unitype = NULL;
-	self->pair = 0;
 	return self;
 }
 void DaoTuple_Delete( DaoTuple *self )

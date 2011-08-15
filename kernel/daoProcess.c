@@ -506,9 +506,9 @@ void DaoContext_AdjustCodes( DaoContext *self, int options );
 int DaoMoveAC( DaoContext *self, DaoValue *A, DaoValue **C, DaoType *t );
 
 #if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
+#define HAS_VARLABEL
 #endif
 #if 0
-#define HAS_VARLABEL
 #endif
 
 int DaoVmProcess_Execute( DaoVmProcess *self )

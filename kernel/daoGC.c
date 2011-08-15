@@ -245,6 +245,7 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 		break;
 	}
 }
+
 static void DaoGC_DecRC2( DaoValue *p, int change )
 {
 	DNode *node;
@@ -257,107 +258,17 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 
 	if( p->xGC.refCount == 0 ){
 		switch( p->xGC.type ){
+		case DAO_NULL :
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
-		case DAO_COMPLEX :
-			dao_free( p );
-			return;
-		case DAO_LONG :
-			DaoLong_Delete( & p->xLong );
-			return;
-		case DAO_STRING :
-			DaoString_Delete( & p->xString );
-			return;
-		case DAO_ENUM : break;
-		case DAO_LIST :
-			{
-				DaoList *list = (DaoList*) p;
-				if( list->gcState[ work ] & GC_IN_POOL ) break;
-				n = list->items->size;
-				for(i=0; i<n; i++) DaoGC_DecRC2( list->items->items.pValue[i], -1 );
-				DaoGC_DecRC2( (DaoValue*) list->unitype, -1 );
-				DaoGC_DecRC2( (DaoValue*) list->meta, -1 );
-				list->unitype = NULL;
-				list->meta = NULL;
-				list->items->size = 0;
-				if( list->gcState[ idle ] & GC_IN_POOL ) break;
-				DaoList_Delete( list );
-				return;
-			}
-		case DAO_TUPLE :
-			{
-				DaoTuple *tuple = (DaoTuple*) p;
-				if( tuple->gcState[ work ] & GC_IN_POOL ) break;
-				n = tuple->items->size;
-				for(i=0; i<n; i++) DaoGC_DecRC2( tuple->items->items.pValue[i], -1 );
-				DaoGC_DecRC2( (DaoValue*) tuple->unitype, -1 );
-				DaoGC_DecRC2( (DaoValue*) tuple->meta, -1 );
-				tuple->unitype = NULL;
-				tuple->meta = NULL;
-				tuple->items->size = 0;
-				if( tuple->gcState[ idle ] & GC_IN_POOL ) break;
-				DaoTuple_Delete( tuple );
-				return;
-			}
-		case DAO_MAP :
-			{
-				DaoMap *map = (DaoMap*) p;
-				if( map->gcState[ work ] & GC_IN_POOL ) break;
-				node = DMap_First( map->items );
-				i = 0;
-				for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
-					DaoGC_DecRC2( node->key.pValue, -1 );
-					DaoGC_DecRC2( node->value.pValue, -1 );
-					node->key.pInt = ++i; /* keep key ordering */
-				}
-				map->items->keytype = 0;
-				map->items->valtype = 0;
-				DMap_Clear( map->items );
-				DaoGC_DecRC2( (DaoValue*) map->unitype, -1 );
-				DaoGC_DecRC2( (DaoValue*) map->meta, -1 );
-				map->unitype = NULL;
-				map->meta = NULL;
-				if( map->gcState[ idle ] & GC_IN_POOL ) break;
-				DaoMap_Delete( map );
-				return;
-			}
-		case DAO_ARRAY :
-			{
-#ifdef DAO_WITH_NUMARRAY
-				DaoArray *array = (DaoArray*) p;
-				DaoArray_ResizeVector( array, 0 );
-#endif
-				break;
-			}
-#if 0
-		case DAO_OBJECT :
-			{
-				DaoObject *object = (DaoObject*) p;
-				if( object->objData == NULL ) break;
-				n = object->objData->size;
-				m = 0;
-				for(i=0; i<n; i++){
-					DValue *it = object->objValues + i;
-					if( it->t && it->t < DAO_ARRAY ){
-						DValue_Clear( it );
-						m ++;
-					}
-				}
-				if( m == n ) DVaTuple_Clear( object->objData );
-				break;
-			}
-#endif
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*) p;
-				if( ctx->gcState[ work ] & GC_IN_POOL ) break;
-				n = ctx->regArray->size;
-				for(i=0; i<n; i++) DaoGC_DecRC2( ctx->regArray->items.pValue[i], -1 );
-				ctx->regArray->size = 0;
-				break;
-			}
+		case DAO_COMPLEX : dao_free( p ); return;
+		case DAO_LONG : DaoLong_Delete( & p->xLong ); return;
+		case DAO_STRING : DaoString_Delete( & p->xString ); return;
+		case DAO_ARRAY : DaoArray_ResizeVector( & p->xArray, 0 ); break;
 		default : break;
+		/* No safe way to delete other types of objects here, since they might be
+		 * being concurrently scanned by the GC! */
 		}
 	}
 	/* never push simple data types into GC queue,
@@ -1189,8 +1100,6 @@ static void directDecRC();
 static void SwitchGC();
 static void ContinueGC();
 
-#include"daoVmspace.h"
-extern DaoVmSpace *mainVmSpace;
 void DaoGC_IncRC( DaoValue *p )
 {
 	const short work = gcWorker.work;
@@ -2112,19 +2021,15 @@ void cycRefCountIncrement( DaoValue *value )
 }
 void cycRefCountDecrements( DArray *list )
 {
-	DaoValue **values;
 	size_t i;
 	if( list == NULL ) return;
-	values = list->items.pValue;
-	for( i=0; i<list->size; i++ ) cycRefCountDecrement( values[i] );
+	for( i=0; i<list->size; i++ ) cycRefCountDecrement( list->items.pValue[i] );
 }
 void cycRefCountIncrements( DArray *list )
 {
-	DaoValue **values;
 	size_t i;
 	if( list == NULL ) return;
-	values = list->items.pValue;
-	for( i=0; i<list->size; i++ ) cycRefCountIncrement( values[i] );
+	for( i=0; i<list->size; i++ ) cycRefCountIncrement( list->items.pValue[i] );
 }
 void directRefCountDecrement( DaoValue **value )
 {
@@ -2136,12 +2041,10 @@ void directRefCountDecrement( DaoValue **value )
 }
 void directRefCountDecrements( DArray *list )
 {
-	DaoValue **values;
 	size_t i;
 	if( list == NULL ) return;
-	values = list->items.pValue;
 	for( i=0; i<list->size; i++ ){
-		DaoValue *p = values[i];
+		DaoValue *p = list->items.pValue[i];
 		if( p == NULL ) continue;
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
@@ -2176,36 +2079,30 @@ void directRefCountDecrementMapValue( DMap *dmap )
 	dmap->valtype = 0;
 	DMap_Clear( dmap );
 }
-void cycRefCountDecrementsT( DTuple *list )
+void cycRefCountDecrementsT( DTuple *tuple )
 {
 	size_t i;
-	DaoValue **values;
-	if( list ==NULL ) return;
-	values = list->items.pValue;
-	for( i=0; i<list->size; i++ ) cycRefCountDecrement( values[i] );
+	if( tuple ==NULL ) return;
+	for( i=0; i<tuple->size; i++ ) cycRefCountDecrement( tuple->items.pValue[i] );
 }
-void cycRefCountIncrementsT( DTuple *list )
+void cycRefCountIncrementsT( DTuple *tuple )
 {
 	size_t i;
-	DaoValue **values;
-	if( list ==NULL ) return;
-	values = list->items.pValue;
-	for( i=0; i<list->size; i++ ) cycRefCountIncrement( values[i] );
+	if( tuple ==NULL ) return;
+	for( i=0; i<tuple->size; i++ ) cycRefCountIncrement( tuple->items.pValue[i] );
 }
-void directRefCountDecrementT( DTuple *list )
+void directRefCountDecrementT( DTuple *tuple )
 {
 	size_t i;
-	DaoValue **values;
-	if( list ==NULL ) return;
-	values = list->items.pValue;
-	for( i=0; i<list->size; i++ ){
-		DaoValue *p = values[i];
+	if( tuple ==NULL ) return;
+	for( i=0; i<tuple->size; i++ ){
+		DaoValue *p = tuple->items.pValue[i];
 		if( p == NULL ) continue;
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
 	}
-	list->size = 0;
-	DTuple_Clear( list );
+	tuple->size = 0;
+	DTuple_Clear( tuple );
 }
 
 DaoLateDeleter dao_late_deleter;

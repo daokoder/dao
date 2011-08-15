@@ -1867,7 +1867,7 @@ DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DaoValue *first, DaoValue *
 	GC_IncRC( tuple->unitype );
 	DaoValue_Copy( first, & tuple->items->items.pValue[0] );
 	DaoValue_Copy( second, & tuple->items->items.pValue[1] );
-	tuple->pair = 1;
+	tuple->subtype = DAO_PAIR;
 	return tuple;
 }
 

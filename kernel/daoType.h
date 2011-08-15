@@ -26,26 +26,26 @@
  * 
  * for core types: number, string, complex, list, map, array
  * eg:DaoType.name = "int", "float", "string", ...
- *    DaoType.count = 0; DaoType.pbasic = NULL;
+ *    DaoType.count = 0; DaoType.aux = NULL;
  *    DaoType.basic = DAO_INTEGER, DAO_STRING, ...
  *
  * for Dao class and routine types:
  *    DaoType.name = "foo", "bar", ...
  *    DaoType.count = 0;
  *    DaoType.basic = DAO_CLASS, DAO_CDATA,
- *    DaoType.pbasic = the Dao class or C type
+ *    DaoType.aux = the Dao class or C type
  *
  * for nested type: list<float>, map<string,float>, ...
  *    DaoType.name = "list<float>", "map<string,float>", ...
  *    DaoType.basic = DAO_LIST, DAO_MAP
- *    DaoType.pbasic = NULL;
+ *    DaoType.aux = NULL;
  *    DaoType.count = 1, or 2, or more for routine and tuple etc. types
  *    DaoType.nested[] = nested DaoType(s) : X<nested[0],nested[1],...>
  *
  * for routine type: routine(float,string):float
  *    DaoType.name = "routine<float,string=>float>"
  *    DaoType.basic = DAO_ROUTINE
- *    DaoType.pbasic = XXX
+ *    DaoType.aux = XXX
  *    DaoType.count = parameter count + 1
  *    DaoType.nested[] = parameter DaoType(s) : (<nested[0],...) : returned
  *
