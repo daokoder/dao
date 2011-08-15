@@ -324,7 +324,9 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 void DaoGC_Finish()
 {
 	if( gcWorker.concurrent ){
+#ifdef DAO_WITH_THREAD
 		DaoCGC_Finish();
+#endif
 	}else{
 		DaoIGC_Finish();
 	}
@@ -335,56 +337,73 @@ void DaoGC_Finish()
 	DaoLateDeleter_Finish();
 	gcWorker.objAlive = NULL;
 }
+
+#ifdef DAO_WITH_THREAD
 void DaoGC_IncRC( DaoValue *value )
 {
-#ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
 		DaoCGC_IncRC( value );
 		return;
 	}
-#endif
 	DaoIGC_IncRC( value );
 }
 void DaoGC_DecRC( DaoValue *value )
 {
-#ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
 		DaoCGC_DecRC( value );
 		return;
 	}
-#endif
 	DaoIGC_DecRC( value );
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
-#ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
 		DaoCGC_ShiftRC( up, down );
 		return;
 	}
-#endif
 	DaoIGC_ShiftRC( up, down );
 }
 void DaoGC_IncRCs( DArray *values )
 {
-#ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
 		DaoCGC_IncRCs( values );
 		return;
 	}
-#endif
 	DaoIGC_IncRCs( values );
 }
 void DaoGC_DecRCs( DArray *values )
 {
-#ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
 		DaoCGC_DecRCs( values );
 		return;
 	}
-#endif
 	DaoIGC_DecRCs( values );
 }
+#else
+
+void DaoGC_IncRC( DaoValue *value )
+{
+	DaoIGC_IncRC( value );
+}
+void DaoGC_DecRC( DaoValue *value )
+{
+	DaoIGC_DecRC( value );
+}
+void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
+{
+	DaoIGC_ShiftRC( up, down );
+}
+void DaoGC_IncRCs( DArray *values )
+{
+	DaoIGC_IncRCs( values );
+}
+void DaoGC_DecRCs( DArray *values )
+{
+	DaoIGC_DecRCs( values );
+}
+#endif
+
+
 
 #ifdef DAO_WITH_THREAD
 
