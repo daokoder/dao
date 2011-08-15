@@ -16,19 +16,19 @@
 
 #include"daoType.h"
 
-extern int DaoGC_Min( int n /*=-1*/ );
-extern int DaoGC_Max( int n /*=-1*/ );
+int DaoGC_Min( int n /*=-1*/ );
+int DaoGC_Max( int n /*=-1*/ );
 
-extern void DaoStartGC();
+void DaoGC_Start();
+void DaoGC_Finish();
+void DaoCGC_Start();
 
-void DaoFinishGC();
+void DaoGC_IncRC( DaoValue *dbase );
+void DaoGC_DecRC( DaoValue *dbase );
+void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
 
-extern void DaoGC_IncRC( DaoValue *dbase );
-extern void DaoGC_DecRC( DaoValue *dbase );
-extern void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
-
-extern void DaoGC_IncRCs( DArray *dbases );
-extern void DaoGC_DecRCs( DArray *dbases );
+void DaoGC_IncRCs( DArray *dbases );
+void DaoGC_DecRCs( DArray *dbases );
 
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoValue*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoValue*)(p) )

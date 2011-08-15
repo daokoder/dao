@@ -1776,7 +1776,7 @@ DaoVmSpace* DaoInit()
 	DaoInitThread();
 #endif
 
-	DaoStartGC();
+	DaoGC_Start();
 
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
@@ -1936,7 +1936,7 @@ void DaoQuit()
 #endif
 
 	DaoVmSpace_Delete( mainVmSpace );
-	DaoFinishGC();
+	DaoGC_Finish();
 	DMap_Delete( dao_cdata_bindings );
 	DArray_Delete( dao_callback_data );
 	dao_cdata_bindings = NULL;

@@ -854,6 +854,8 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 	DaoValue *selfobj = NULL;
 	int i;
 
+	DaoCGC_Start();
+
 	N -= 2;
 	if( rov && rov->type == DAO_FUNCURRY ){
 		DaoFunCurry *curry = (DaoFunCurry*) rov;

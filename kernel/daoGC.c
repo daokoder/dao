@@ -117,27 +117,44 @@ void print_trace( const char *info )
 static void DaoGC_DecRC2( DaoValue *p, int change );
 static void cycRefCountDecrement( DaoValue *value );
 static void cycRefCountIncrement( DaoValue *value );
-static void cycRefCountDecrements( DArray * values );
-static void cycRefCountIncrements( DArray * values );
+static void cycRefCountDecrements( DArray *values );
+static void cycRefCountIncrements( DArray *values );
 static void directRefCountDecrement( DaoValue **value );
-static void directRefCountDecrements( DArray * values );
-static void cycRefCountDecrementsT( DTuple * values );
-static void cycRefCountIncrementsT( DTuple * values );
-static void directRefCountDecrementT( DTuple * values );
+static void directRefCountDecrements( DArray *values );
+static void cycRefCountDecrementsT( DTuple *values );
+static void cycRefCountIncrementsT( DTuple *values );
+static void directRefCountDecrementT( DTuple *values );
 static void cycRefCountDecrementMapValue( DMap *dmap );
 static void cycRefCountIncrementMapValue( DMap *dmap );
 static void directRefCountDecrementMapValue( DMap *dmap );
-static void cycRefCountDecreScan();
-static void cycRefCountIncreScan();
-static void freeGarbage();
-static void InitGC();
+
+static void DaoCGC_DecRC( DaoValue *p );
+static void DaoCGC_IncRC( DaoValue *p );
+static void DaoCGC_ShiftRC( DaoValue *up, DaoValue *down );
+static void DaoCGC_DecRCs( DArray *list );
+static void DaoCGC_IncRCs( DArray *list );
+static void DaoCGC_CycRefCountDecScan();
+static void DaoCGC_CycRefCountIncScan();
+static int  DaoCGC_AliveObjectScan();
+static void DaoCGC_FreeGarbage();
+static void DaoCGC_Finish();
+
+static void DaoIGC_DecRC( DaoValue *p );
+static void DaoIGC_IncRC( DaoValue *p );
+static void DaoIGC_ShiftRC( DaoValue *up, DaoValue *down );
+static void DaoIGC_DecRCs( DArray *list );
+static void DaoIGC_IncRCs( DArray *list );
+static void DaoIGC_CycRefCountDecScan();
+static void DaoIGC_CycRefCountIncScan();
+static int  DaoIGC_AliveObjectScan();
+static void DaoIGC_FreeGarbage();
+static void DaoIGC_Finish();
+
+static void DaoGC_Init();
 
 #ifdef DAO_WITH_THREAD
-static void markAliveObjects( DaoValue *root );
-static void recycleGarbage( void * );
-static void tryInvoke();
-#else
-static int markAliveObjects();
+static void DaoCGC_Recycle( void * );
+static void DaoCGC_TryInvoke();
 #endif
 
 static void DaoLateDeleter_Init();
@@ -158,6 +175,7 @@ struct DaoGarbageCollector
 	short     locked;
 	short     workType;
 	short     finalizing;
+	short     concurrent;
 
 #ifdef DAO_WITH_THREAD
 	DThread   thread;
@@ -189,7 +207,7 @@ int DaoGC_Max( int n /*=-1*/ )
 	return prev;
 }
 
-void InitGC()
+void DaoGC_Init()
 {
 	if( gcWorker.objAlive != NULL ) return;
 	DaoLateDeleter_Init();
@@ -210,7 +228,15 @@ void InitGC()
 	gcWorker.jj = 0;
 	gcWorker.busy = 0;
 	gcWorker.locked = 0;
-
+	gcWorker.concurrent = 0;
+}
+void DaoGC_Start()
+{
+	DaoGC_Init();
+}
+void DaoCGC_Start()
+{
+	if( gcWorker.concurrent ) return;
 #ifdef DAO_WITH_THREAD
 	DThread_Init( & gcWorker.thread );
 	DMutex_Init( & gcWorker.mutex_switch_heap );
@@ -218,13 +244,11 @@ void InitGC()
 	DMutex_Init( & gcWorker.mutex_block_mutator );
 	DCondVar_Init( & gcWorker.condv_start_gc );
 	DCondVar_Init( & gcWorker.condv_block_mutator );
-#endif
-}
-void DaoStartGC()
-{
-	InitGC();
-#ifdef DAO_WITH_THREAD
-	DThread_Start( & gcWorker.thread, recycleGarbage, NULL );
+	DThread_Start( & gcWorker.thread, DaoCGC_Recycle, NULL );
+	gcWorker.concurrent = 1;
+	DaoIGC_Finish();
+	gcWorker.idle = 0;
+	gcWorker.work = 1;
 #endif
 }
 static void DaoGC_DeleteSimpleData( DaoValue *value )
@@ -296,6 +320,72 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 	default: gcWorker.count += 1; break;
 	}
 }
+
+void DaoGC_Finish()
+{
+	if( gcWorker.concurrent ){
+		DaoCGC_Finish();
+	}else{
+		DaoIGC_Finish();
+	}
+
+	DArray_Delete( gcWorker.pool[0] );
+	DArray_Delete( gcWorker.pool[1] );
+	DArray_Delete( gcWorker.objAlive );
+	DaoLateDeleter_Finish();
+	gcWorker.objAlive = NULL;
+}
+void DaoGC_IncRC( DaoValue *value )
+{
+#ifdef DAO_WITH_THREAD
+	if( gcWorker.concurrent ){
+		DaoCGC_IncRC( value );
+		return;
+	}
+#endif
+	DaoIGC_IncRC( value );
+}
+void DaoGC_DecRC( DaoValue *value )
+{
+#ifdef DAO_WITH_THREAD
+	if( gcWorker.concurrent ){
+		DaoCGC_DecRC( value );
+		return;
+	}
+#endif
+	DaoIGC_DecRC( value );
+}
+void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
+{
+#ifdef DAO_WITH_THREAD
+	if( gcWorker.concurrent ){
+		DaoCGC_ShiftRC( up, down );
+		return;
+	}
+#endif
+	DaoIGC_ShiftRC( up, down );
+}
+void DaoGC_IncRCs( DArray *values )
+{
+#ifdef DAO_WITH_THREAD
+	if( gcWorker.concurrent ){
+		DaoCGC_IncRCs( values );
+		return;
+	}
+#endif
+	DaoIGC_IncRCs( values );
+}
+void DaoGC_DecRCs( DArray *values )
+{
+#ifdef DAO_WITH_THREAD
+	if( gcWorker.concurrent ){
+		DaoCGC_DecRCs( values );
+		return;
+	}
+#endif
+	DaoIGC_DecRCs( values );
+}
+
 #ifdef DAO_WITH_THREAD
 
 void GC_Lock()
@@ -309,7 +399,7 @@ void GC_Unlock()
 
 /* Concurrent Garbage Collector */
 
-void DaoGC_DecRC( DaoValue *p )
+void DaoCGC_DecRC( DaoValue *p )
 {
 	const short idle = gcWorker.idle;
 	if( ! p ) return;
@@ -320,22 +410,9 @@ void DaoGC_DecRC( DaoValue *p )
 
 	DMutex_Unlock( & gcWorker.mutex_switch_heap );
 
-	if( gcWorker.pool[ idle ]->size > gcWorker.gcMin ) tryInvoke();
+	if( gcWorker.pool[ idle ]->size > gcWorker.gcMin ) DaoCGC_TryInvoke();
 }
-void DaoFinishGC()
-{
-	gcWorker.gcMin = 0;
-	gcWorker.finalizing = 1;
-	tryInvoke();
-	DThread_Join( & gcWorker.thread );
-
-	DArray_Delete( gcWorker.pool[0] );
-	DArray_Delete( gcWorker.pool[1] );
-	DArray_Delete( gcWorker.objAlive );
-	DaoLateDeleter_Finish();
-	gcWorker.objAlive = NULL;
-}
-void DaoGC_IncRC( DaoValue *p )
+void DaoCGC_IncRC( DaoValue *p )
 {
 	if( ! p ) return;
 	if( p->xGC.refCount == 0 ){
@@ -348,7 +425,7 @@ void DaoGC_IncRC( DaoValue *p )
 	p->xGC.cycRefCount ++;
 	DMutex_Unlock( & gcWorker.mutex_switch_heap );
 }
-void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
+void DaoCGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	const short idle = gcWorker.idle;
 	if( up == down ) return;
@@ -363,10 +440,10 @@ void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 
 	DMutex_Unlock( & gcWorker.mutex_switch_heap );
 
-	if( down && gcWorker.pool[ idle ]->size > gcWorker.gcMin ) tryInvoke();
+	if( down && gcWorker.pool[ idle ]->size > gcWorker.gcMin ) DaoCGC_TryInvoke();
 }
 
-void DaoGC_IncRCs( DArray *list )
+void DaoCGC_IncRCs( DArray *list )
 {
 	size_t i;
 	DaoValue **values;
@@ -382,7 +459,7 @@ void DaoGC_IncRCs( DArray *list )
 	}
 	DMutex_Unlock( & gcWorker.mutex_switch_heap );
 }
-void DaoGC_DecRCs( DArray *list )
+void DaoCGC_DecRCs( DArray *list )
 {
 	size_t i;
 	DaoValue **values;
@@ -392,10 +469,17 @@ void DaoGC_DecRCs( DArray *list )
 	DMutex_Lock( & gcWorker.mutex_switch_heap );
 	for( i=0; i<list->size; i++) if( values[i] ) DaoGC_DecRC2( values[i], -1 );
 	DMutex_Unlock( & gcWorker.mutex_switch_heap );
-	if( gcWorker.pool[ idle ]->size > gcWorker.gcMin ) tryInvoke();
+	if( gcWorker.pool[ idle ]->size > gcWorker.gcMin ) DaoCGC_TryInvoke();
+}
+void DaoCGC_Finish()
+{
+	gcWorker.gcMin = 0;
+	gcWorker.finalizing = 1;
+	DaoCGC_TryInvoke();
+	DThread_Join( & gcWorker.thread );
 }
 
-void tryInvoke()
+void DaoCGC_TryInvoke()
 {
 	DMutex_Lock( & gcWorker.mutex_start_gc );
 	if( gcWorker.count >= gcWorker.gcMin ) DCondVar_Signal( & gcWorker.condv_start_gc );
@@ -410,7 +494,7 @@ void tryInvoke()
 	DMutex_Unlock( & gcWorker.mutex_block_mutator );
 }
 
-void recycleGarbage( void *p )
+void DaoCGC_Recycle( void *p )
 {
 	while(1){
 		if( gcWorker.finalizing && (gcWorker.pool[0]->size + gcWorker.pool[1]->size) ==0 ) break;
@@ -432,15 +516,15 @@ void recycleGarbage( void *p )
 		gcWorker.idle = ! gcWorker.work;
 		DMutex_Unlock( & gcWorker.mutex_switch_heap );
 
-		cycRefCountDecreScan();
-		cycRefCountIncreScan();
-		freeGarbage();
+		DaoCGC_CycRefCountDecScan();
+		DaoCGC_CycRefCountIncScan();
+		DaoCGC_FreeGarbage();
 
 	}
 	DThread_Exit( & gcWorker.thread );
 }
 
-void cycRefCountDecreScan()
+void DaoCGC_CycRefCountDecScan()
 {
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
 	DNode *node;
@@ -618,11 +702,12 @@ void cycRefCountDecreScan()
 		}
 	}
 }
-void cycRefCountIncreScan()
+void DaoCGC_CycRefCountIncScan()
 {
 	size_t i, j;
 	const short work = gcWorker.work;
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
+	DArray *objAlive = gcWorker.objAlive;
 
 	for(j=0; j<2; j++){
 		for( i=0; i<pool->size; i++ ){
@@ -637,20 +722,21 @@ void cycRefCountIncreScan()
 				if( core->DelTest( cdata->data ) ) continue;
 				DaoCData_SetExtReference( cdata, 1 );
 			}
-			if( value->xGC.cycRefCount >0 ) markAliveObjects( value );
+			if( value->xGC.cycRefCount >0 ){
+				objAlive->size = 0;
+				value->xGC.gcState[work] |= GC_MARKED;
+				DArray_Append( objAlive, value );
+				DaoCGC_AliveObjectScan();
+			}
 		}
 	}
 }
-void markAliveObjects( DaoValue *root )
+int DaoCGC_AliveObjectScan()
 {
 	size_t i, k;
 	const short work = gcWorker.work;
 	DArray *objAlive = gcWorker.objAlive;
 	DNode *node;
-
-	objAlive->size = 0;
-	root->xGC.gcState[work] |= GC_MARKED;
-	DArray_Append( objAlive, root );
 
 	for( i=0; i<objAlive->size; i++){
 		DaoValue *value = objAlive->items.pValue[i];
@@ -821,9 +907,10 @@ void markAliveObjects( DaoValue *root )
 		default: break;
 		}
 	}
+	return objAlive->size;
 }
 
-void freeGarbage()
+void DaoCGC_FreeGarbage()
 {
 	DaoTypeBase *typer;
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
@@ -1084,10 +1171,12 @@ void freeGarbage()
 void GC_Lock(){}
 void GC_Unlock(){}
 
+#endif
+
 /* Incremental Garbage Collector */
 enum DaoGCWorkType
 {
-	GC_INIT_RC ,
+	GC_RESET_RC ,
 	GC_DEC_RC ,
 	GC_INC_RC ,
 	GC_INC_RC2 ,
@@ -1095,12 +1184,12 @@ enum DaoGCWorkType
 	GC_FREE
 };
 
-static void InitRC();
-static void directDecRC();
-static void SwitchGC();
-static void ContinueGC();
+static void DaoIGC_Reset();
+static void DaoIGC_Switch();
+static void DaoIGC_Continue();
+static void DaoIGC_RefCountDecScan();
 
-void DaoGC_IncRC( DaoValue *p )
+void DaoIGC_IncRC( DaoValue *p )
 {
 	const short work = gcWorker.work;
 	if( ! p ) return;
@@ -1120,23 +1209,10 @@ void DaoGC_IncRC( DaoValue *p )
 	}
 }
 static int counts = 100;
-void DaoGC_DecRC( DaoValue *p )
+void DaoIGC_DecRC( DaoValue *p )
 {
 	const short idle = gcWorker.idle;
 	if( ! p ) return;
-
-#if 0
-	if( p->type == DAO_TYPE ){
-		DaoType *abtp = (DaoType*) p;
-		if( abtp->tid == DAO_LIST )
-			return;
-	}
-
-#include"assert.h"
-	printf( "DaoGC_DecRC: %i\n", p->type );
-	assert( p->type != 48 );
-	printf( "here: %i %i\n", gcWorker.pool[ ! idle ]->size, gcWorker.pool[ idle ]->size );
-#endif
 
 	DaoGC_DecRC2( p, -1 );
 
@@ -1151,11 +1227,11 @@ void DaoGC_DecRC( DaoValue *p )
 	}
 
 	if( gcWorker.pool[ ! idle ]->size )
-		ContinueGC();
+		DaoIGC_Continue();
 	else if( gcWorker.pool[ idle ]->size > gcWorker.gcMin )
-		SwitchGC();
+		DaoIGC_Switch();
 }
-void DaoGC_IncRCs( DArray *list )
+void DaoIGC_IncRCs( DArray *list )
 {
 	size_t i;
 	DaoValue **data;
@@ -1163,7 +1239,7 @@ void DaoGC_IncRCs( DArray *list )
 	data = list->items.pValue;
 	for( i=0; i<list->size; i++) DaoGC_IncRC( data[i] );
 }
-void DaoGC_DecRCs( DArray *list )
+void DaoIGC_DecRCs( DArray *list )
 {
 	size_t i;
 	DaoValue **data;
@@ -1171,14 +1247,14 @@ void DaoGC_DecRCs( DArray *list )
 	data = list->items.pValue;
 	for( i=0; i<list->size; i++) DaoGC_DecRC( data[i] );
 }
-void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
+void DaoIGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	if( up == down ) return;
 	if( up ) DaoGC_IncRC( up );
 	if( down ) DaoGC_DecRC( down );
 }
 
-void SwitchGC()
+void DaoIGC_Switch()
 {
 	if( gcWorker.busy ) return;
 	gcWorker.work = gcWorker.idle;
@@ -1186,51 +1262,45 @@ void SwitchGC()
 	gcWorker.workType = 0;
 	gcWorker.ii = 0;
 	gcWorker.jj = 0;
-	ContinueGC();
+	DaoIGC_Continue();
 }
-void ContinueGC()
+void DaoIGC_Continue()
 {
 	if( gcWorker.busy ) return;
 	gcWorker.busy = 1;
 	switch( gcWorker.workType ){
-	case GC_INIT_RC :
+	case GC_RESET_RC :
 		DaoLateDeleter_Update();
-		InitRC();
+		DaoIGC_Reset();
 		break;
 	case GC_DEC_RC :
-		cycRefCountDecreScan();
+		DaoIGC_CycRefCountDecScan();
 		break;
 	case GC_INC_RC :
 	case GC_INC_RC2 :
-		cycRefCountIncreScan();
+		DaoIGC_CycRefCountIncScan();
 		break;
 	case GC_DIR_DEC_RC :
-		directDecRC();
+		DaoIGC_RefCountDecScan();
 		break;
 	case GC_FREE :
-		freeGarbage();
+		DaoIGC_FreeGarbage();
 		break;
 	default : break;
 	}
 	gcWorker.busy = 0;
 }
-void DaoFinishGC()
+void DaoIGC_Finish()
 {
 	short idle = gcWorker.idle;
 	while( gcWorker.pool[ idle ]->size || gcWorker.pool[ ! idle ]->size ){
-		while( gcWorker.pool[ ! idle ]->size ) ContinueGC();
-		if( gcWorker.pool[ idle ]->size ) SwitchGC();
+		while( gcWorker.pool[ ! idle ]->size ) DaoIGC_Continue();
+		if( gcWorker.pool[ idle ]->size ) DaoIGC_Switch();
 		idle = gcWorker.idle;
-		while( gcWorker.pool[ ! idle ]->size ) ContinueGC();
+		while( gcWorker.pool[ ! idle ]->size ) DaoIGC_Continue();
 	}
-
-	DArray_Delete( gcWorker.pool[0] );
-	DArray_Delete( gcWorker.pool[1] );
-	DArray_Delete( gcWorker.objAlive );
-	DaoLateDeleter_Finish();
-	gcWorker.objAlive = NULL;
 }
-void InitRC()
+void DaoIGC_Reset()
 {
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
 	size_t i = gcWorker.ii;
@@ -1246,7 +1316,7 @@ void InitRC()
 		gcWorker.ii = i+1;
 	}
 }
-void cycRefCountDecreScan()
+void DaoIGC_CycRefCountDecScan()
 {
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
 	DNode *node;
@@ -1446,7 +1516,7 @@ void cycRefCountDecreScan()
 		gcWorker.ii = i+1;
 	}
 }
-void cycRefCountIncreScan()
+void DaoIGC_CycRefCountIncScan()
 {
 	size_t k = 0;
 	size_t i = gcWorker.ii;
@@ -1455,7 +1525,7 @@ void cycRefCountIncreScan()
 	DArray *objAlive = gcWorker.objAlive;
 
 	if( gcWorker.jj ){
-		k += markAliveObjects();
+		k += DaoIGC_AliveObjectScan();
 		if( gcWorker.jj ) return;
 	}
 
@@ -1475,7 +1545,7 @@ void cycRefCountIncreScan()
 			objAlive->size = 0;
 			value->xGC.gcState[work] |= GC_MARKED;
 			DArray_Append( objAlive, value );
-			k += markAliveObjects();
+			k += DaoIGC_AliveObjectScan();
 			if( gcWorker.jj || k >= gcWorker.gcMin ) break;
 		}
 	}
@@ -1486,7 +1556,7 @@ void cycRefCountIncreScan()
 		gcWorker.ii = i+1;
 	}
 }
-int markAliveObjects()
+int DaoIGC_AliveObjectScan()
 {
 	size_t i, k = 9;
 	size_t j = gcWorker.jj;
@@ -1687,7 +1757,7 @@ int markAliveObjects()
 	}
 	return k;
 }
-void directDecRC()
+void DaoIGC_RefCountDecScan()
 {
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
 	DNode *node;
@@ -1904,7 +1974,7 @@ void directDecRC()
 	}
 }
 
-void freeGarbage()
+void DaoIGC_FreeGarbage()
 {
 	DArray *pool = gcWorker.pool[ gcWorker.work ];
 	DaoTypeBase *typer;
@@ -1979,14 +2049,13 @@ void freeGarbage()
 #endif
 	if( i >= pool->size ){
 		gcWorker.ii = 0;
-		gcWorker.workType = 0;
+		gcWorker.workType = GC_RESET_RC;
 		gcWorker.count = 0;
 		DArray_Clear( pool );
 	}else{
 		gcWorker.ii = i+1;
 	}
 }
-#endif
 void cycRefCountDecrement( DaoValue *value )
 {
 	const short work = gcWorker.work;
