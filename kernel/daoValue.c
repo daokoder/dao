@@ -152,7 +152,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
 	}
-	return 0;
+	return 1;
 }
 int DaoValue_IsZero( DaoValue *self )
 {
@@ -1006,27 +1006,165 @@ DaoValue* DaoValue_WrapCData( DaoTypeBase *typer, void *data )
 {
 	return (DaoValue*) DaoCData_Wrap( typer, data );
 }
-char* DaoValue_GetMBString( DaoValue *self )
+
+DaoInteger* DaoValue_CastInteger( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_INTEGER ) return NULL;
+	return (DaoInteger*) self;
+}
+DaoFloat* DaoValue_CastFloat( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_FLOAT ) return NULL;
+	return (DaoFloat*) self;
+}
+DaoDouble* DaoValue_CastDouble( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_DOUBLE ) return NULL;
+	return (DaoDouble*) self;
+}
+DaoComplex* DaoValue_CastComplex( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_COMPLEX ) return NULL;
+	return (DaoComplex*) self;
+}
+DaoLong* DaoValue_CastLong( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_LONG ) return NULL;
+	return (DaoLong*) self;
+}
+DaoString* DaoValue_CastString( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_STRING ) return NULL;
+	return (DaoString*) self;
+}
+DaoEnum* DaoValue_CastEnum( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_ENUM ) return NULL;
+	return (DaoEnum*) self;
+}
+DaoArray* DaoValue_CastArray( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_ARRAY ) return NULL;
+	return (DaoArray*) self;
+}
+DaoList* DaoValue_CastList( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_LIST ) return NULL;
+	return (DaoList*) self;
+}
+DaoMap* DaoValue_CastMap( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_MAP ) return NULL;
+	return (DaoMap*) self;
+}
+DaoTuple* DaoValue_CastTuple( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_TUPLE ) return NULL;
+	return (DaoTuple*) self;
+}
+DaoStream* DaoValue_CastStream( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_STREAM ) return NULL;
+	return (DaoStream*) self;
+}
+DaoObject* DaoValue_CastObject( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_OBJECT ) return NULL;
+	return (DaoObject*) self;
+}
+DaoCData* DaoValue_CastCData( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_CDATA ) return NULL;
+	return (DaoCData*) self;
+}
+DaoClass* DaoValue_CastClass( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_CLASS ) return NULL;
+	return (DaoClass*) self;
+}
+DaoInterface* DaoValue_CastInterface( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_INTERFACE ) return NULL;
+	return (DaoInterface*) self;
+}
+DaoFunctree* DaoValue_CastFunctree( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_FUNCTREE ) return NULL;
+	return (DaoFunctree*) self;
+}
+DaoRoutine* DaoValue_CastRoutine( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_ROUTINE ) return NULL;
+	return (DaoRoutine*) self;
+}
+DaoFunction* DaoValue_CastFunction( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_FUNCTION ) return NULL;
+	return (DaoFunction*) self;
+}
+DaoContext* DaoValue_CastContext( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_CONTEXT ) return NULL;
+	return (DaoContext*) self;
+}
+DaoVmProcess* DaoValue_CastVmProcess( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_VMPROCESS ) return NULL;
+	return (DaoVmProcess*) self;
+}
+DaoNameSpace* DaoValue_CastNameSpace( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_NAMESPACE ) return NULL;
+	return (DaoNameSpace*) self;
+}
+DaoType* DaoValue_CastType( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_TYPE ) return NULL;
+	return (DaoType*) self;
+}
+
+dint DaoValue_TryGetInteger( DaoValue *self )
+{
+	if( self->type != DAO_INTEGER ) return 0;
+	return self->xInteger.value;
+}
+float DaoValue_TryGetFloat( DaoValue *self )
+{
+	if( self->type != DAO_FLOAT ) return 0.0;
+	return self->xFloat.value;
+}
+double DaoValue_TryGetDouble( DaoValue *self )
+{
+	if( self->type != DAO_DOUBLE ) return 0.0;
+	return self->xDouble.value;
+}
+complex16 DaoValue_TryGetComplex( DaoValue *self )
+{
+	complex16 com = {0.0,0.0};
+	if( self->type != DAO_COMPLEX ) return com;
+	return self->xComplex.value;
+}
+char* DaoValue_TryGetMBString( DaoValue *self )
 {
 	if( self->type != DAO_STRING ) return NULL;
 	return DString_GetMBS( self->xString.data );
 }
-wchar_t* DaoValue_GetWCString( DaoValue *self )
+wchar_t* DaoValue_TryGetWCString( DaoValue *self )
 {
 	if( self->type != DAO_STRING ) return NULL;
 	return DString_GetWCS( self->xString.data );
 }
-void* DaoValue_CastCDataData( DaoValue *self, DaoTypeBase *typer )
+void* DaoValue_TryCastCData( DaoValue *self, DaoTypeBase *typer )
 {
 	if( self->type != DAO_CDATA ) return NULL;
 	return DaoCData_CastData( & self->xCdata, typer );
 }
-void* DaoValue_GetCDataData( DaoValue *self )
+void* DaoValue_TryGetCData( DaoValue *self )
 {
 	if( self->type != DAO_CDATA ) return NULL;
 	return self->xCdata.data;
 }
-void** DaoValue_GetCDataData2( DaoValue *self )
+void** DaoValue_TryGetCData2( DaoValue *self )
 {
 	if( self->type != DAO_CDATA ) return NULL;
 	return & self->xCdata.data;
@@ -1646,9 +1784,9 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		if( tmp == NULL ) break;
 		object = DaoClass_MakeObject( & type->aux->xClass, tmp, proc );
 		if( object == NULL ) break;
-		GC_ShiftRC( object, value );
 		value = (DaoValue*) object;
 		DaoValue_Copy( value, value2 );
+		if( *value2 != value ) GC_IncRC( value ), GC_DecRC( value );
 		break;
 	case DAO_CDATA :
 		DArray_PushFront( types, NULL );
@@ -1657,9 +1795,9 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		if( tmp == NULL ) break;
 		cdata = DaoCData_MakeObject( & type->aux->xCdata, tmp, proc );
 		if( cdata == NULL ) break;
-		GC_ShiftRC( cdata, value );
 		value = (DaoValue*) cdata;
 		DaoValue_Copy( value, value2 );
+		if( *value2 != value ) GC_IncRC( value ), GC_DecRC( value );
 		break;
 	}
 	DaoValue_Clear( & tmp );

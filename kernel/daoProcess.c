@@ -984,7 +984,8 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETF ){
-			if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			// class::static_member = XXX
+			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
 			DaoContext_DoSetField( topCtx, vmc );
 			goto CheckException;
 		}OPNEXT()

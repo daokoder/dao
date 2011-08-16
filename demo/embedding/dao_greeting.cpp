@@ -1,89 +1,92 @@
-#include"dao_greeting.h"
-
+#include"dao_Greeting.h"
 DAO_INIT_MODULE;
 DaoVmSpace *__daoVmSpace = NULL;
-
 #ifdef __cplusplus
 extern "C"{
 #endif
-
-static DaoNumItem constNumbers[] =
+static void dao_GetGreetingObject_GetGreetingObject_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_Testing_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static DaoFuncItem dao__Funcs[] = 
 {
-
-  { "AA", DAO_INTEGER, AA },
-  { "BB", DAO_INTEGER, BB },
-  { "CC", DAO_INTEGER, CC },
-  { "false", DAO_INTEGER, 0 },
-  { "true", DAO_INTEGER, 1 },
-  { NULL, 0, 0 }
-};
-static DaoNumItem dao_CxxNS_Nums[] =
-{
-  { "AA", DAO_INTEGER, CxxNS::AA },
-  { "BB", DAO_INTEGER, CxxNS::BB },
-  { "CC", DAO_INTEGER, CxxNS::CC },
-  { "FALSE", DAO_INTEGER, CxxNS::FALSE },
-  { "TRUE", DAO_INTEGER, CxxNS::TRUE },
-  { NULL, 0, 0 }
-};
-static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__Testing( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__Testing_dao_2( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__Testing_dao_3( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__Testing2( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__Testing_dao_4( DaoContext *_ctx, DValue *_p[], int _n );
-static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n );
-
-static DaoFuncItem dao_Funcs[] =
-{
-  { dao__GetGreetingObject, "GetGreetingObject(  )=>Greeting" },
-  { dao__Testing_dao_4, "Testing( bl : int=CxxNS::FALSE  )" },
+  { dao_GetGreetingObject_GetGreetingObject_dao_2, "GetGreetingObject(  )=>Greeting" },
+  { dao_Testing_Testing_dao_2, "Testing(  )" },
   { NULL, NULL }
 };
-/* greeting.h */
-static void dao__GetGreetingObject( DaoContext *_ctx, DValue *_p[], int _n )
+/* ./greeting.h */
+static void dao_GetGreetingObject_GetGreetingObject_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
 
   Greeting* _GetGreetingObject = GetGreetingObject(  );
   DaoContext_WrapCData( _ctx, (void*) _GetGreetingObject, dao_Greeting_Typer );
 }
-/* greeting.h */
-static void dao__Testing( DaoContext *_ctx, DValue *_p[], int _n )
+/* ./greeting.h */
+static void dao_Testing_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-  Greeting* greeting= (Greeting*) DValue_CastCData( _p[0], dao_Greeting_Typer );
-  CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
+
+  Testing(  );
+}
+#ifdef __cplusplus
+}
+#endif
+static DaoNumItem dao__Nums[] = 
+{
+  { "AA", DAO_INTEGER, AA },
+  { "BB", DAO_INTEGER, BB },
+  { "CC", DAO_INTEGER, CC },
+  { NULL, 0, 0 }
+};
+#ifdef __cplusplus
+extern "C"{
+#endif
+static void dao_CxxNS_Testing( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing_dao_3( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static DaoFuncItem dao_CxxNS_Funcs[] = 
+{
+  { dao_CxxNS_Testing, "Testing( greeting :Greeting, bl :int =FALSE )" },
+  { dao_CxxNS_Testing_dao_2, "Testing( a :int, bl :int =FALSE )" },
+  { dao_CxxNS_Testing_dao_3, "Testing( t :CxxNS::Test, b :int =0, o :CxxNS::Test|null =null, g :CxxNS::Test|null =null, c :int =0 )" },
+  { dao_CxxNS_Testing2, "Testing2( t :CxxNS::Test, b :int =0, o :CxxNS::Test|null =null, g :CxxNS::Test|null =null, c :int =0 )=>int" },
+  { NULL, NULL }
+};
+/* ./greeting.h */
+static void dao_CxxNS_Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  Greeting* greeting= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
+  CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[1] );
 
   CxxNS::Testing( greeting, bl );
 }
-/* greeting.h */
-static void dao__Testing_dao_2( DaoContext *_ctx, DValue *_p[], int _n )
+/* ./greeting.h */
+static void dao_CxxNS_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-  int a= (int) _p[0]->v.i;
-  CxxNS::Bool2 bl= (CxxNS::Bool2) _p[1]->v.i;
+  int a = (int) DaoValue_TryGetInteger( _p[0] );
+  CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[1] );
 
   CxxNS::Testing( a, bl );
 }
-/* greeting.h */
-static void dao__Testing_dao_3( DaoContext *_ctx, DValue *_p[], int _n )
+/* ./greeting.h */
+static void dao_CxxNS_Testing_dao_3( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-  CxxNS::Test* t= (CxxNS::Test*) DValue_CastCData( _p[0], dao_Test_Typer );
-  int b= (int) _p[1]->v.i;
-  CxxNS::Test* o= (CxxNS::Test*) DValue_CastCData( _p[2], dao_Test_Typer );
-  CxxNS::Test* g= (CxxNS::Test*) DValue_CastCData( _p[3], dao_Test_Typer );
-  int c= (int) _p[4]->v.i;
+  CxxNS::Test* t= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  int b = (int) DaoValue_TryGetInteger( _p[1] );
+  CxxNS::Test* o= (CxxNS::Test*) DaoValue_TryCastCData( _p[2], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* g= (CxxNS::Test*) DaoValue_TryCastCData( _p[3], dao_CxxNS_0_Test_Typer );
+  int c = (int) DaoValue_TryGetInteger( _p[4] );
 
   if(_n<=2) CxxNS::Testing( t, b );
   else if(_n<=3) CxxNS::Testing( t, b, *o );
   else CxxNS::Testing( t, b, *o, *g, c );
 }
-/* greeting.h */
-static void dao__Testing2( DaoContext *_ctx, DValue *_p[], int _n )
+/* ./greeting.h */
+static void dao_CxxNS_Testing2( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-  CxxNS::Test* t= (CxxNS::Test*) DValue_CastCData( _p[0], dao_Test_Typer );
-  int b= (int) _p[1]->v.i;
-  CxxNS::Test* o= (CxxNS::Test*) DValue_CastCData( _p[2], dao_Test_Typer );
-  CxxNS::Test* g= (CxxNS::Test*) DValue_CastCData( _p[3], dao_Test_Typer );
-  int c= (int) _p[4]->v.i;
+  CxxNS::Test* t= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  int b = (int) DaoValue_TryGetInteger( _p[1] );
+  CxxNS::Test* o= (CxxNS::Test*) DaoValue_TryCastCData( _p[2], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* g= (CxxNS::Test*) DaoValue_TryCastCData( _p[3], dao_CxxNS_0_Test_Typer );
+  int c = (int) DaoValue_TryGetInteger( _p[4] );
 
   int _Testing2;
   if(_n<=2) _Testing2 = CxxNS::Testing2( t, b );
@@ -91,75 +94,131 @@ static void dao__Testing2( DaoContext *_ctx, DValue *_p[], int _n )
   else _Testing2 = CxxNS::Testing2( t, b, *o, *g, c );
   DaoContext_PutInteger( _ctx, (int) _Testing2 );
 }
-/* greeting.h */
-static void dao__Testing_dao_4( DaoContext *_ctx, DValue *_p[], int _n )
-{
-  CxxNS::Bool bl= (CxxNS::Bool) _p[0]->v.i;
-
-  Testing( bl );
+#ifdef __cplusplus
 }
-/* greeting.h */
-static void dao__Testing_dao_5( DaoContext *_ctx, DValue *_p[], int _n )
+#endif
+static DaoNumItem dao_CxxNS_Nums[] = 
 {
-  CxxNS::Test* test= (CxxNS::Test*) DValue_CastCData( _p[0], dao_Test_Typer );
-  CxxNS::Bool bl= (CxxNS::Bool) _p[1]->v.i;
-
-  CxxNS2::Testing( test, bl );
-}
-
-static DaoFuncItem dao_CxxNS_Funcs[] = 
-{
-  { dao__Testing, "Testing( greeting : Greeting, bl : int=FALSE  )" },
-  { dao__Testing_dao_2, "Testing( a : int, bl : int=FALSE  )" },
-  { dao__Testing_dao_3, "Testing( t : Test, b : int=0, o : Test|null=null, g : Test|null=null, c : int=0  )" },
-  { dao__Testing2, "Testing2( t : Test, b : int=0, o : Test|null=null, g : Test|null=null, c : int=0  )=>int" },
-	{ NULL, NULL }
+  { "FALSE", DAO_INTEGER, CxxNS::FALSE },
+  { "TRUE", DAO_INTEGER, CxxNS::TRUE },
+  { "AA", DAO_INTEGER, CxxNS::AA },
+  { "BB", DAO_INTEGER, CxxNS::BB },
+  { "CC", DAO_INTEGER, CxxNS::CC },
+  { NULL, 0, 0 }
 };
+#ifdef __cplusplus
+extern "C"{
+#endif
+static void dao_CxxNS2_Testing( DaoContext *_ctx, DaoValue *_p[], int _n );
 static DaoFuncItem dao_CxxNS2_Funcs[] = 
 {
-  { dao__Testing_dao_5, "Testing( test : CxxNS::Test, bl : int=CxxNS::FALSE  )" },
-	{ NULL, NULL }
+  { dao_CxxNS2_Testing, "Testing( test :CxxNS::Test, bl :int =CxxNS::FALSE )" },
+  { NULL, NULL }
 };
-static DaoTypeBase *dao_CxxNS_Types[2] = 
+/* ./greeting.h */
+static void dao_CxxNS2_Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
-	dao_Test_Typer,
-	NULL
-};
-int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
-{
-  DaoNameSpace *ns2;
-  DaoTypeBase *typers[9];
-  const char *aliases[1];
-  __daoVmSpace = vms;
-  typers[0] = dao_AutobindTest_Typer;
-  typers[1] = dao_Bool_Typer;
-  typers[2] = dao_Greeting_Typer;
-  typers[3] = dao_Greeting2_Typer;
-  typers[4] = dao_Greeting_Null_Typer;
-  typers[5] = dao_otto_Typer;
-  typers[6] = dao_otto2_Typer;
-  typers[7] = NULL;
-  aliases[0] = NULL;
-  DaoNameSpace_TypeDefine( ns, "int", "Enum1" );
-  ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
-  DaoNameSpace_TypeDefine( ns2, "int", "Bool" );
-  DaoNameSpace_TypeDefine( ns2, "int", "Enum2" );
-  DaoNameSpace_AddConstNumbers( ns, constNumbers );
-  DaoNameSpace_WrapTypes( ns, typers );
-  ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
-  DaoNameSpace_AddConstNumbers( ns2, dao_CxxNS_Nums );
-  DaoNameSpace_WrapTypes( ns2, dao_CxxNS_Types );
-  ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS2" );
-  ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
-  DaoNameSpace_WrapFunctions( ns2, dao_CxxNS_Funcs );
-  ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS2" );
-  DaoNameSpace_WrapFunctions( ns2, dao_CxxNS2_Funcs );
-  DaoNameSpace_WrapFunctions( ns, dao_Funcs );
-  DaoNameSpace_TypeDefine( ns, "CxxNS::Test", "Test2" );
-  ns2 = DaoNameSpace_GetNameSpace( ns, "CxxNS" );
-  return 0;
+  CxxNS::Test* test= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[1] );
+
+  CxxNS2::Testing( test, bl );
 }
 #ifdef __cplusplus
 }
 #endif
-
+static DaoTypeBase *dao__Typers[] = 
+{
+	dao___va_list_tag_Typer,
+	dao___darwin_pthread_handler_rec_Typer,
+	dao__opaque_pthread_attr_t_Typer,
+	dao__opaque_pthread_cond_t_Typer,
+	dao__opaque_pthread_condattr_t_Typer,
+	dao__opaque_pthread_mutex_t_Typer,
+	dao__opaque_pthread_mutexattr_t_Typer,
+	dao__opaque_pthread_once_t_Typer,
+	dao__opaque_pthread_rwlock_t_Typer,
+	dao__opaque_pthread_rwlockattr_t_Typer,
+	dao__opaque_pthread_t_Typer,
+	dao___sbuf_Typer,
+	dao___sFILEX_Typer,
+	dao___sFILE_Typer,
+	dao___darwin_i386_thread_state_Typer,
+	dao___darwin_fp_control_Typer,
+	dao___darwin_fp_status_Typer,
+	dao___darwin_mmst_reg_Typer,
+	dao___darwin_xmm_reg_Typer,
+	dao___darwin_i386_float_state_Typer,
+	dao___darwin_i386_exception_state_Typer,
+	dao___darwin_x86_debug_state32_Typer,
+	dao___darwin_x86_thread_state64_Typer,
+	dao___darwin_x86_float_state64_Typer,
+	dao___darwin_x86_exception_state64_Typer,
+	dao___darwin_x86_debug_state64_Typer,
+	dao___darwin_mcontext32_Typer,
+	dao___darwin_mcontext64_Typer,
+	dao___darwin_sigaltstack_Typer,
+	dao___darwin_ucontext_Typer,
+	dao_sigval_Typer,
+	dao_sigevent_Typer,
+	dao___siginfo_Typer,
+	dao___sigaction_u_Typer,
+	dao___sigaction_Typer,
+	dao_sigaction_Typer,
+	dao_sigvec_Typer,
+	dao_sigstack_Typer,
+	dao_timeval_Typer,
+	dao_rusage_Typer,
+	dao_rlimit_Typer,
+	dao_wait_Typer,
+	dao_otto_Typer,
+	dao_otto2_Typer,
+	dao_Greeting_Typer,
+	dao_Greeting_0_Null_Typer,
+	dao_Greeting2_Typer,
+	dao_AutobindTest_Typer,
+	dao_CxxNS_0_Test_Typer,
+	NULL
+};
+static const char *dao__Aliases[] = 
+{
+	"__va_list_tag", "__va_list_tag",
+	"_opaque_pthread_attr_t", "__darwin_pthread_attr_t",
+	"_opaque_pthread_cond_t", "__darwin_pthread_cond_t",
+	"_opaque_pthread_condattr_t", "__darwin_pthread_condattr_t",
+	"_opaque_pthread_mutex_t", "__darwin_pthread_mutex_t",
+	"_opaque_pthread_mutexattr_t", "__darwin_pthread_mutexattr_t",
+	"_opaque_pthread_once_t", "__darwin_pthread_once_t",
+	"_opaque_pthread_rwlock_t", "__darwin_pthread_rwlock_t",
+	"_opaque_pthread_rwlockattr_t", "__darwin_pthread_rwlockattr_t",
+	"_opaque_pthread_t", "__darwin_pthread_t",
+	"__sFILE", "FILE",
+	"__darwin_fp_control", "__darwin_fp_control_t",
+	"__darwin_fp_status", "__darwin_fp_status_t",
+	"__darwin_mcontext64", "mcontext_t",
+	"__darwin_sigaltstack", "stack_t",
+	"__darwin_ucontext", "ucontext_t",
+	"_opaque_pthread_attr_t", "pthread_attr_t",
+	"__siginfo", "siginfo_t",
+	"CxxNS::Test", "Test2",
+	NULL
+};
+#ifdef __cplusplus
+extern "C"{
+#endif
+int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
+{
+	__daoVmSpace = vms;
+	DaoNameSpace *CxxNS = DaoVmSpace_GetNameSpace( vms, "CxxNS" );
+	DaoNameSpace *CxxNS2 = DaoVmSpace_GetNameSpace( vms, "CxxNS2" );
+	DaoNameSpace_AddConstNumbers( ns, dao__Nums );
+	DaoNameSpace_AddConstNumbers( CxxNS, dao_CxxNS_Nums );
+	DaoNameSpace_WrapTypes( ns, dao__Typers );
+	DaoNameSpace_TypeDefines( ns, dao__Aliases );
+	DaoNameSpace_WrapFunctions( ns, dao__Funcs );
+	DaoNameSpace_WrapFunctions( CxxNS, dao_CxxNS_Funcs );
+	DaoNameSpace_WrapFunctions( CxxNS2, dao_CxxNS2_Funcs );
+	return 0;
+}
+#ifdef __cplusplus
+}
+#endif

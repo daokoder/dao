@@ -3,7 +3,7 @@ CXX = g++ # -ggdb -fPIC -I. -shared
 
 # UNIX, MAC_OSX, or WIN32 must be defined for corresponding OS.
 CFLG = -DMAC_OSX -DDAO_DIRECT_API
-CFLG = -g -DMAC_OSX -DDAO_DIRECT_API
+CFLG = -ggdb -DMAC_OSX -DDAO_DIRECT_API
 
 WRAP = dao_greeting.o dao_greeting2.o dao_greeting3.o
 

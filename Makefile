@@ -111,7 +111,7 @@ first: all
 
 ####### Build rules
 
-all: Makefile $(TARGET) $(TARGETDLL) $(ARCHIVE)
+all: Makefile $(TARGETDLL) $(TARGET) $(ARCHIVE)
 
 static:  $(OBJECTS) kernel/daoMain.o
 	$(CC) $(LFLAGS) -o dao $(OBJECTS) kernel/daoMain.o $(LIBS)

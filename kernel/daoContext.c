@@ -97,7 +97,8 @@ void DaoContext_Delete( DaoContext *self )
 	int i;
 	if( self->object ) GC_DecRC( self->object );
 	if( self->routine ) GC_DecRC( self->routine );
-	for(i=0; i<self->regArray->size; i++) GC_DecRC( self->regValues[i] );
+	/* self->regValues might be set to something else. */
+	for(i=0; i<self->regArray->size; i++) GC_DecRC( self->regArray->items.pValue[i] );
 	DTuple_Delete( self->regArray );
 	dao_free( self );
 }
@@ -1277,15 +1278,7 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 	DNode *node;
 
 	if( vmc->code == DVM_MCURRY ){
-		if( p->type == DAO_ROUTINE ){
-			/* XXX here it is not convenient to check attribute for DAO_ROUT_NEEDSELF,
-			 * because the routine may have not been compiled,
-			 * worse it may have overloaded routine, some may NEEDSELF, some may not. */
-			if( ROUT_HOST_TID( & p->xRoutine ) == DAO_OBJECT ) selfobj = self->regValues[opA+1];
-		}else if( p->type == DAO_ROUTINE || p->type == DAO_FUNCTION ){
-			DRoutine *rout = (DRoutine*) p;
-			if( rout->attribs & DAO_ROUT_PARSELF ) selfobj = self->regValues[opA+1];
-		}
+		selfobj = self->regValues[opA+1];
 		opA ++;
 		bval --;
 	}
@@ -1325,6 +1318,7 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 		}
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
+	case DAO_FUNCTREE :
 	case DAO_CONTEXT :
 		{
 			DaoFunCurry *curry = DaoFunCurry_New( p, selfobj );

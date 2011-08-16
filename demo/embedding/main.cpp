@@ -151,12 +151,12 @@ int main( int argc, char *argv[] )
 	DString_SetMBS( src, dao_source3 );
 	DaoVmProcess_Eval( vmp, ns, src, 1 );
 
-	DValue value = DaoNameSpace_FindData( ns, "getSomeString" );
-	if( value.t == DAO_ROUTINE ){
-		DaoVmProcess_Call( vmp, (DaoMethod*)value.v.p, NULL, NULL, 0 );
+	DaoValue *value = DaoNameSpace_FindData( ns, "getSomeString" );
+	if( DaoValue_CastRoutine( value ) ){
+		DaoVmProcess_Call( vmp, (DaoMethod*)value, NULL, NULL, 0 );
 	}
 	value = DaoVmProcess_GetReturned( vmp );
-	printf( "%i %s\n", value.t, DString_GetMBS(  value.v.s ) );
+	printf( "%i %s\n", DaoValue_Type( value ), DaoString_GetMBS(  (DaoString*) value ) );
 
 	DString_Delete( src );
 	DaoQuit(); // Finalizing

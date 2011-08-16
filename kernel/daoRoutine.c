@@ -450,6 +450,7 @@ int DRoutine_PassParams( DRoutine *routine, DaoValue *obj, DaoValue *recv[], Dao
 		tp = & types[0]->aux->xType;
 		if( obj->type < DAO_ARRAY ){
 			if( tp == NULL || DaoType_MatchValue( tp, obj, NULL ) == DAO_MT_EQ ){
+				GC_ShiftRC( obj, recv[0] );
 				recv[0] = obj;
 				selfChecked = 1;
 				passed = 1;
@@ -2115,7 +2116,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				int ck;
 				ct = type[opc];
 				at = type[opa];
-				if( csts[opc] ) goto ModifyConstant;
+				if( csts[opc] && csts[opc]->type != DAO_CLASS && csts[opc]->type != DAO_NAMESPACE ) goto ModifyConstant;
 				AssertInitialized( opa, 0, vmc->middle + 1, vmc->last );
 				AssertInitialized( opc, 0, 0, vmc->middle - 1 );
 				/*
@@ -2852,7 +2853,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				at = type[opa];
 				ct = NULL;
 				if( at->tid == DAO_TYPE ) at = at->nested->items.pType[0];
-				if( at->tid == DAO_ROUTINE ){
+				if( at->tid == DAO_ROUTINE || at->tid == DAO_FUNCTREE ){
 					ct = DaoNameSpace_MakeType( ns, "curry", DAO_FUNCURRY, NULL, NULL, 0 );
 				}else if( at->tid == DAO_CLASS ){
 					if( csts[opa] == NULL ) goto NotInit;

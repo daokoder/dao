@@ -12,23 +12,22 @@
 #include "cdaoModule.hpp"
 
 const string cxx_get_object_method = 
-"DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DValue *obj, const char *name )\n\
+"DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DaoObject **obj, const char *name )\n\
 {\n\
   DaoMethod *meth;\n\
   if( cd == NULL ) return NULL;\n\
-  obj->v.object = DaoCData_GetObject( cd );\n\
-  if( obj->v.object == NULL ) return NULL;\n\
-  obj->t = DAO_OBJECT;\n\
-  meth = DaoObject_GetMethod( obj->v.object, name );\n\
+  *obj = DaoCData_GetObject( cd );\n\
+  if( *obj == NULL ) return NULL;\n\
+  meth = DaoObject_GetMethod( *obj, name );\n\
   if( meth == NULL ) return NULL;\n\
-  if( meth->type != DAO_METAROUTINE && meth->type != DAO_ROUTINE ) return NULL;\n\
+  if( DaoValue_CastFunction( (DaoValue*)meth ) ) return NULL; /*do not call C function*/\n\
   return meth;\n\
 }\n";
 
 const string add_number = "  { \"$(name)\", $(type), $(namespace)$(value) },\n";
 const string tpl_typedef = "\tDaoNameSpace_TypeDefine( ns, \"$(old)\", \"$(new)\" );\n";
 const string add_ccdata = "  DaoNameSpace_AddConstData( $(ns), \"$(name)\", "
-"(DaoBase*)DaoCData_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n";
+"(DaoValue*)DaoCData_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n";
 
 const string ext_typer = "extern DaoTypeBase *dao_$(type)_Typer;\n";
 const string alias_typer = "DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n";

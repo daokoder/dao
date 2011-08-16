@@ -868,12 +868,12 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 	if( rov == NULL || (rov->type < DAO_FUNCTREE && rov->type > DAO_FUNCTION) ) goto ErrorParam;
 	rout = DRoutine_Resolve( rov, selfobj, params, N, DVM_CALL );
 	if( rout == NULL ) goto ErrorParam;
-	if( rout->type == DAO_ROUTINE ){
-		DaoRoutine *drout = (DaoRoutine*) rout;
-		if( drout->parser ) DaoRoutine_Compile( drout );
-		if( rout->attribs & DAO_ROUT_NEEDSELF ){
-			if( selfobj == NULL || selfobj->type != DAO_OBJECT || drout->routHost ==NULL ) goto ErrorParam;
-			if( ! DaoClass_ChildOf( selfobj->xObject.myClass, drout->routHost->aux ) ) goto ErrorParam;
+	if( rout->routHost ){
+		if( selfobj == NULL ) goto ErrorParam;
+		if( DaoType_MatchValue( rout->routHost, selfobj, NULL ) == 0 ) goto ErrorParam;
+		if( rout->routHost->tid == DAO_OBJECT ){
+			selfobj = DaoObject_MapThisObject( (DaoObject*) selfobj, rout->routHost );
+			if( selfobj == NULL ) goto ErrorParam;
 		}
 	}
 	thread = DaoThread_New( self );
@@ -882,7 +882,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 	thdCtx = DaoContext_New();
 	thread->process = vmProc;
 	thdCtx->vmSpace = ctx->vmSpace;
-	if( rout->attribs & DAO_ROUT_NEEDSELF ){
+	if( rout->routHost && rout->routHost->tid == DAO_OBJECT ){
 		thdCtx->object = (DaoObject*)selfobj;
 		GC_IncRC( thdCtx->object );
 	}

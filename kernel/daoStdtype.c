@@ -111,11 +111,13 @@ DaoComplex* DaoComplex_New( complex16 value )
 	self->value = value;
 	return self;
 }
-complex16   DaoComplex_Get( DaoComplex *self )
+complex16  DaoComplex_Get( DaoComplex *self )
 {
+	return self->value;
 }
 void DaoComplex_Set( DaoComplex *self, complex16 value )
 {
+	self->value = value;
 }
 
 DaoLong* DaoLong_New()
@@ -127,6 +129,7 @@ DaoLong* DaoLong_New()
 }
 DLong* DaoLong_Get( DaoLong *self )
 {
+	return self->value;
 }
 DaoLong* DaoLong_Copy( DaoLong *self )
 {
@@ -143,6 +146,7 @@ void DaoLong_Delete( DaoLong *self )
 }
 void DaoLong_Set( DaoLong *self, DLong *value )
 {
+	DLong_Move( self->value, value );
 }
 
 DaoString* DaoString_New( int mbs )
@@ -154,12 +158,21 @@ DaoString* DaoString_New( int mbs )
 }
 DaoString* DaoString_NewMBS( const char *mbs )
 {
+	DaoString *self = DaoString_New(1);
+	DString_SetMBS( self->data, mbs );
+	return self;
 }
 DaoString* DaoString_NewWCS( const wchar_t *wcs )
 {
+	DaoString *self = DaoString_New(0);
+	DString_SetWCS( self->data, wcs );
+	return self;
 }
 DaoString* DaoString_NewBytes( const char *bytes, int n )
 {
+	DaoString *self = DaoString_New(1);
+	DString_SetDataMBS( self->data, bytes, n );
+	return self;
 }
 DaoString* DaoString_Copy( DaoString *self )
 {
@@ -173,27 +186,38 @@ void DaoString_Delete( DaoString *self )
 	DString_Delete( self->data );
 	dao_free( self );
 }
+size_t  DaoString_Size( DaoString *self )
+{
+	return self->data->size;
+}
 DString* DaoString_Get( DaoString *self )
 {
+	return self->data;
 }
 const char* DaoString_GetMBS( DaoString *self )
 {
+	return DString_GetMBS( self->data );
 }
 const wchar_t* DaoString_GetWCS( DaoString *self )
 {
+	return DString_GetWCS( self->data );
 }
 
 void DaoString_Set( DaoString *self, DString *str )
 {
+	DString_Assign( self->data, str );
 }
 void DaoString_SetMBS( DaoString *self, const char *mbs )
 {
+	DString_SetMBS( self->data, mbs );
 }
 void DaoString_SetWCS( DaoString *self, const wchar_t *wcs )
 {
+	DString_SetWCS( self->data, wcs );
 }
 void DaoString_SetBytes( DaoString *self, const char *bytes, int n )
 {
+	DString_SetDataMBS( self->data, bytes, n );
 }
 
 enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE };

@@ -262,7 +262,6 @@ typedef struct DaoNameSpace    DaoNameSpace;
 typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoContext      DaoContext;
 typedef struct DaoVmProcess    DaoVmProcess;
-typedef struct DaoNameValue    DaoNameValue;
 typedef struct DaoMutex        DaoMutex;
 typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
@@ -402,21 +401,25 @@ DAO_DLL DaoObject*   DaoValue_CastObject( DaoValue *self );
 DAO_DLL DaoCData*    DaoValue_CastCData( DaoValue *self );
 DAO_DLL DaoClass*    DaoValue_CastClass( DaoValue *self );
 
-DAO_DLL DaoInterface*    DaoValue_CastInterface( DaoValue *self );
-DAO_DLL DaoFunctree*     DaoValue_CastFunctree( DaoValue *self );
-DAO_DLL DaoRoutine*      DaoValue_CastRoutine( DaoValue *self );
-DAO_DLL DaoFunction*     DaoValue_CastFunction( DaoValue *self );
-DAO_DLL DaoContext*      DaoValue_CastContext( DaoValue *self );
-DAO_DLL DaoVmProcess*    DaoValue_CastVmProcess( DaoValue *self );
-DAO_DLL DaoNameSpace*    DaoValue_CastNameSpace( DaoValue *self );
-DAO_DLL DaoNameValue*    DaoValue_CastNameValue( DaoValue *self );
-DAO_DLL DaoType*         DaoValue_CastType( DaoValue *self );
+DAO_DLL DaoInterface*  DaoValue_CastInterface( DaoValue *self );
+DAO_DLL DaoFunctree*   DaoValue_CastFunctree( DaoValue *self );
+DAO_DLL DaoRoutine*    DaoValue_CastRoutine( DaoValue *self );
+DAO_DLL DaoFunction*   DaoValue_CastFunction( DaoValue *self );
+DAO_DLL DaoContext*    DaoValue_CastContext( DaoValue *self );
+DAO_DLL DaoVmProcess*  DaoValue_CastVmProcess( DaoValue *self );
+DAO_DLL DaoNameSpace*  DaoValue_CastNameSpace( DaoValue *self );
+DAO_DLL DaoType*       DaoValue_CastType( DaoValue *self );
 
-DAO_DLL char* DaoValue_GetMBString( DaoValue *self );
-DAO_DLL wchar_t* DaoValue_GetWCString( DaoValue *self );
-DAO_DLL void*  DaoValue_CastCDataData( DaoValue *self, DaoTypeBase *totyper );
-DAO_DLL void*  DaoValue_GetCDataData( DaoValue *self );
-DAO_DLL void** DaoValue_GetCDataData2( DaoValue *self );
+DAO_DLL dint DaoValue_TryGetInteger( DaoValue *self );
+DAO_DLL float DaoValue_TryGetFloat( DaoValue *self );
+DAO_DLL double DaoValue_TryGetDouble( DaoValue *self );
+DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
+DAO_DLL char* DaoValue_TryGetMBString( DaoValue *self );
+DAO_DLL wchar_t* DaoValue_TryGetWCString( DaoValue *self );
+DAO_DLL void*  DaoValue_TryCastCData( DaoValue *self, DaoTypeBase *totyper );
+DAO_DLL void*  DaoValue_TryGetCData( DaoValue *self );
+DAO_DLL void** DaoValue_TryGetCData2( DaoValue *self );
+
 DAO_DLL void DaoValue_Copy( DaoValue *source, DaoValue **dest );
 //DAO_DLL void DaoValue_Clear( DaoValue *v );
 DAO_DLL void DaoValue_ClearAll( DaoValue *v[], int n );
@@ -484,8 +487,10 @@ DAO_DLL DaoString*  DaoString_NewMBS( const char *mbs );
 DAO_DLL DaoString*  DaoString_NewWCS( const wchar_t *wcs );
 DAO_DLL DaoString*  DaoString_NewBytes( const char *bytes, int n );
 
-DAO_DLL DString*       DaoString_Get( DaoString *self );
-DAO_DLL const char*    DaoString_GetMBS( DaoString *self );
+DAO_DLL size_t  DaoString_Size( DaoString *self );
+
+DAO_DLL DString*  DaoString_Get( DaoString *self );
+DAO_DLL const char*  DaoString_GetMBS( DaoString *self );
 DAO_DLL const wchar_t* DaoString_GetWCS( DaoString *self );
 
 DAO_DLL void  DaoString_Set( DaoString *self, DString *str );
@@ -791,7 +796,6 @@ DaoFunction*     DaoValue_CastFunction( DaoValue *self );
 DaoContext*      DaoValue_CastContext( DaoValue *self );
 DaoVmProcess*    DaoValue_CastVmProcess( DaoValue *self );
 DaoNameSpace*    DaoValue_CastNameSpace( DaoValue *self );
-DaoNameValue*    DaoValue_CastNameValue( DaoValue *self );
 DaoType*         DaoValue_CastType( DaoValue *self );
 
  Get Multi-Byte String (MBS): 

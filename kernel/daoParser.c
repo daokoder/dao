@@ -1355,7 +1355,7 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DaoValue **scope, DaoValue *
 			break;
 		case DAO_CTYPE :
 			res = DaoFindValueOnly( (*value)->xCdata.typer, name );
-			if( res->type == 0 ) return start - 1;
+			if( res == NULL ) return start - 1;
 			*value = res;
 			break;
 		default : return start - 1;
@@ -1380,16 +1380,29 @@ int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **val
 	int i, n = self->tokens->size;
 	/* To allow redefinition of type names, through C interfaces: */
 	if( tokens[start]->type != DTOK_IDENTIFIER ) return -1;
-	i = DaoParser_GetRegister( self, tokens[start] );
-	if( i <0 ){
-		DNode *node;
-		if( local || (start+1) >= n || tokens[start+1]->type != DTOK_COLON2 ) goto HandleName;
-		node = DMap_Find( self->vmSpace->nsModules, tokens[start]->string );
-		if( node == NULL ) goto HandleName;
-		*value = node->value.pValue;
+	if( local && self->isClassBody ){
+		i = DaoClass_FindConst( self->hostClass, tokens[start]->string );
+		/* No need to set scope, DaoParser_AddToScope() will properly handle this: */
+		if( i < 0 ) return start;
+		*value = DaoClass_GetConst( self->hostClass, i );
+	}else if( local && (self->levelBase + self->lexLevel) != 0 ){
+		DMap *lmap = self->localCstMap->items.pMap[self->lexLevel];
+		DNode *node = MAP_Find( lmap, tokens[start]->string );
+		/* No need to set scope, DaoParser_AddToScope() will properly handle this: */
+		if( node == NULL ) return start;
+		*value = self->routine->routConsts->items.pValue[node->value.pInt];
 	}else{
-		if( (LOOKUP_ST(i) & 1) == 0 ) goto ErrorWasDefined;
-		*value = DaoParser_GetVariable( self, i );
+		i = DaoParser_GetRegister( self, tokens[start] );
+		if( i <0 ){
+			DNode *node;
+			if( local || (start+1) >= n || tokens[start+1]->type != DTOK_COLON2 ) goto HandleName;
+			node = DMap_Find( self->vmSpace->nsModules, tokens[start]->string );
+			if( node == NULL ) goto HandleName;
+			*value = node->value.pValue;
+		}else{
+			if( (LOOKUP_ST(i) & 1) == 0 ) goto ErrorWasDefined;
+			*value = DaoParser_GetVariable( self, i );
+		}
 	}
 	start = DaoParser_ParseScopedConstant( self, scope, value, start + 1 );
 	if( (start+1) >= n || tokens[start+1]->type != DTOK_COLON2 ) return start;
@@ -4271,7 +4284,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 				if( storeType & DAO_DATA_CONST ){
 					ec = DaoClass_AddConst( hostClass, name, null, perm, ln );
 				}else if( storeType & DAO_DATA_STATIC ){
-					ec = DaoClass_AddGlobalVar( hostClass, name, null, abtp, perm, ln );
+					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm, ln );
 				}else{
 					ec = DaoClass_AddObjectVar( hostClass, name, null, abtp, perm, ln );
 					routine->attribs |= DAO_ROUT_NEEDSELF;
@@ -6271,6 +6284,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					regLast = DaoParser_GetNormRegister( self, cst, start, 0, next );
 					result.konst = cst;
 				}else{
+					result.konst = 0;
 					regB = DaoParser_AddFieldConst( self, name );
 					regLast = DaoParser_PushRegister( self );
 					DaoParser_AddCode( self, DVM_GETF, result.reg, regB, regLast, postart, start, next );

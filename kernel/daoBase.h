@@ -110,6 +110,7 @@ typedef struct DaoVmcArray   DaoVmcArray;
 
 typedef struct DaoCModule    DaoCModule;
 typedef struct DaoException  DaoException;
+typedef struct DaoNameValue  DaoNameValue;
 
 typedef struct DaoMacro      DaoMacro;
 typedef struct DaoParser     DaoParser;

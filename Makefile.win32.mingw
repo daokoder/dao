@@ -117,10 +117,10 @@ first: all
 
 ####### Build rules
 
-all: Makefile $(TARGET) $(TARGETDLL) $(ARCHIVE)
+all: Makefile $(TARGETDLL) $(TARGET) $(ARCHIVE)
 
 $(TARGET):  objs/daoMaindl.o
-	$(CC) $(LFLAGS) -o $(TARGET) objs/daoMaindl.o $(LIBS) $(LIB_READLINE)
+	$(CC) $(LFLAGS) -o $(TARGET) objs/daoMaindl.o $(LIBS) $(LIB_READLINE) -ldao
 	
 static:  $(OBJECTS) objs/daoMain.o
 	$(CC) $(LFLAGS) -o $(TARGET) objs/daoMain.o $(OBJECTS) $(LIBS)
