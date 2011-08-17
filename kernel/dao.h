@@ -413,6 +413,7 @@ DAO_DLL DaoType*       DaoValue_CastType( DaoValue *self );
 DAO_DLL dint DaoValue_TryGetInteger( DaoValue *self );
 DAO_DLL float DaoValue_TryGetFloat( DaoValue *self );
 DAO_DLL double DaoValue_TryGetDouble( DaoValue *self );
+DAO_DLL dint DaoValue_TryGetEnum( DaoValue *self );
 DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
 DAO_DLL char* DaoValue_TryGetMBString( DaoValue *self );
 DAO_DLL wchar_t* DaoValue_TryGetWCString( DaoValue *self );

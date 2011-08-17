@@ -19,13 +19,11 @@
 #include<sys/stat.h>
 
 #include"dao.h"
-DAO_INIT_MODULE;
+DAO_INIT_MODULE
 
 #define dao_malloc malloc
 #define dao_free free
 #define dao_realloc realloc
-
-const DValue daoNullCData = { DAO_CDATA, 0, 0, 0, {0}};
 
 #ifdef WIN32
 
@@ -311,7 +309,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 	handle = _findfirst( buffer, &finfo );
 	if (handle != -1){
 		DString *str = DString_New( 1 );
-		DValue value = daoNullCData;
+		DaoValue *value;
 		DInode *inode;
 		do
 			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
@@ -323,7 +321,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 					return res;
 				}
 				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
-					value.v.cdata = DaoCData_New( &inodeTyper, inode );
+					value = DaoValue_NewCData( &inodeTyper, inode );
 					DaoList_PushBack( dest, value );
 				}
 				else
@@ -340,7 +338,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 		strcpy( buffer + len++,  "/");
 	if( handle ){
 		DString *str = DString_New( 1 );
-		DValue value = daoNullCData;
+		DaoValue *value;
 		DInode *inode;
 		while( ( finfo = readdir( handle ) ) )
 			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
@@ -352,7 +350,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 					return res;
 				}
 				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
-					value.v.cdata = DaoCData_New( &inodeTyper, inode );
+					value = DaoValue_NewCData( &inodeTyper, inode );
 					DaoList_PushBack( dest, value );
 				}
 				else
@@ -419,12 +417,12 @@ static void GetErrorMessage( char *buffer, int code, int special )
 	}
 }
 
-static void DaoInode_Open( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Open( DaoContext *ctx, DaoValue *p[], int N )
 {
 	char errbuf[MAX_ERRMSG];
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	int res;
-	if( ( res = DInode_Open( self, DString_GetMBS( p[1]->v.s ) ) ) != 0 ){
+	if( ( res = DInode_Open( self, DaoValue_TryGetMBString( p[1] ) ) ) != 0 ){
 		if( res == 1 )
 			strcpy( errbuf, "Trying to open something which is not a file/directory" );
 		else if( res == -1 )
@@ -436,33 +434,33 @@ static void DaoInode_Open( DaoContext *ctx, DValue *p[], int N )
 	}
 }
 
-static void DaoInode_Isopen( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Isopen( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoContext_PutInteger( ctx, ((DInode*)DaoCData_GetData(p[0]->v.cdata))->path ? 1 : 0 );
+	DaoContext_PutInteger( ctx, ((DInode*)DaoValue_TryGetCData( p[0] ))->path ? 1 : 0 );
 }
 
-static void DaoInode_Close( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Close( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	DInode_Close( self );
 }
 
-static void DaoInode_Path( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Path( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	DaoContext_PutMBString( ctx, self->path );
 }
 
-static void DaoInode_Name( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Name( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	int i;
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	for (i = strlen( self->path ) - 1; i >= 0; i--)
@@ -474,14 +472,14 @@ static void DaoInode_Name( DaoContext *ctx, DValue *p[], int N )
 		DaoContext_PutMBString( ctx, self->path + i + 1 );
 }
 
-static void DaoInode_Parent( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Parent( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	DInode *par;
 	char path[MAX_PATH + 1];
 	int res = 0;
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	par = DInode_New();
@@ -497,26 +495,26 @@ static void DaoInode_Parent( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutCData( ctx, (void*)par, &inodeTyper );
 }
 
-static void DaoInode_Type( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Type( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	DaoContext_PutEnum( ctx, self->type == 1 ? "file" : "dir" );
 }
 
-static void DaoInode_Rename( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Rename( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	int res;
 	char errbuf[MAX_ERRMSG];
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
-	if ( (res = DInode_Rename( self, DString_GetMBS( p[1]->v.s ) ) ) != 0 ){
+	if ( (res = DInode_Rename( self, DaoValue_TryGetMBString( p[1] ) ) ) != 0 ){
 		if( res == -1 )
 			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
 		else if( res == 1 )
@@ -528,13 +526,13 @@ static void DaoInode_Rename( DaoContext *ctx, DValue *p[], int N )
 	}
 }
 
-static void DaoInode_Remove( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Remove( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	int res;
 	char errbuf[MAX_ERRMSG];
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if ( (res = DInode_Remove( self ) ) != 0 ){
@@ -544,32 +542,32 @@ static void DaoInode_Remove( DaoContext *ctx, DValue *p[], int N )
 	}
 }
 
-static void DaoInode_Ctime( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Ctime( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	DaoContext_PutInteger( ctx, self->ctime );
 }
 
-static void DaoInode_Mtime( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Mtime( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	DaoContext_PutInteger( ctx, self->mtime );
 }
 
-static void DaoInode_Access( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Access( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	char res[20] = {0};
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if( self->pread )
@@ -581,14 +579,14 @@ static void DaoInode_Access( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutEnum( ctx, res );
 }
 
-static void DaoInode_Makefile( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Makefile( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	DInode *child;
 	char errbuf[MAX_ERRMSG];
 	int res;
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
@@ -596,7 +594,7 @@ static void DaoInode_Makefile( DaoContext *ctx, DValue *p[], int N )
 		return;
 	}
 	child = DInode_New();
-	if( ( res = DInode_Append( self, DString_GetMBS( p[1]->v.s ), 0, child ) ) != 0 ){
+	if( ( res = DInode_Append( self, DaoValue_TryGetMBString( p[1] ), 0, child ) ) != 0 ){
 		DInode_Delete( child );
 		if( res == 1 )
 			strcpy( errbuf, "The inode's name is invalid (EINVAL)" );
@@ -610,14 +608,14 @@ static void DaoInode_Makefile( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutCData( ctx, (void*)child, &inodeTyper );
 }
 
-static void DaoInode_Makedir( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Makedir( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	DInode *child;
 	char errbuf[MAX_ERRMSG];
 	int res;
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
@@ -625,7 +623,7 @@ static void DaoInode_Makedir( DaoContext *ctx, DValue *p[], int N )
 		return;
 	}
 	child = DInode_New();
-	if( ( res = DInode_Append( self, DString_GetMBS( p[1]->v.s ), 1, child ) ) != 0 ){
+	if( ( res = DInode_Append( self, DaoValue_TryGetMBString( p[1] ), 1, child ) ) != 0 ){
 		DInode_Delete( child );
 		if( res == 1 )
 			strcpy( errbuf, "The inode's name is invalid (EINVAL)" );
@@ -639,24 +637,24 @@ static void DaoInode_Makedir( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutCData( ctx, (void*)child, &inodeTyper );
 }
 
-static void DaoInode_Isroot( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Isroot( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	if( self->path == NULL ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	DaoContext_PutInteger( ctx, IS_PATH_SEP( self->path[strlen( self->path ) - 1] ) ? 1 : 0 );
 }
 
-static void DaoInode_Child( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Child( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
 	DInode *child;
 	char path[MAX_PATH + 1], *str;
 	int res;
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
@@ -666,7 +664,7 @@ static void DaoInode_Child( DaoContext *ctx, DValue *p[], int N )
 	child = DInode_New();
 	strcpy( path, self->path );
 	strcat( path, STD_PATH_SEP );
-	str = DString_GetMBS( p[1]->v.s );
+	str = DaoValue_TryGetMBString( p[1] );
 	if( strlen( path ) + strlen( str ) > MAX_PATH ){
 		GetErrorMessage( path, ENAMETOOLONG, 0 );
 		DaoContext_RaiseException( ctx, DAO_ERROR, path );
@@ -695,7 +693,7 @@ static void DInode_Children( DInode *self, DaoContext *ctx, int type, DString *p
 	DString *strbuf;
 	DaoRegex *pattern;
 	if( !self->path ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
@@ -769,30 +767,31 @@ static void DInode_Children( DInode *self, DaoContext *ctx, int type, DString *p
 	}
 }
 
-static void DaoInode_Children( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Children( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
-	DInode_Children( self, ctx, p[1]->v.e->value, p[2]->v.s, p[3]->v.e->value );
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
+	DInode_Children( self, ctx, DaoValue_TryGetEnum( p[1] ), DaoString_Get( DaoValue_CastString( p[2] ) ),
+					 DaoValue_TryGetEnum( p[3] ) );
 }
 
-static void DaoInode_Files( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Files( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
-	DInode_Children( self, ctx, 1, p[1]->v.s, p[2]->v.e->value );
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
+	DInode_Children( self, ctx, 1, DaoString_Get( DaoValue_CastString( p[1] ) ), DaoValue_TryGetEnum( p[2] ) );
 }
 
-static void DaoInode_Dirs( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_Dirs( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *self = (DInode*)DaoCData_GetData(p[0]->v.cdata);
-	DInode_Children( self, ctx, 2, p[1]->v.s, p[2]->v.e->value );
+	DInode *self = (DInode*)DaoValue_TryGetCData( p[0] );
+	DInode_Children( self, ctx, 2, DaoString_Get( DaoValue_CastString( p[1] ) ), DaoValue_TryGetEnum( p[2] ) );
 }
 
-static void DaoInode_New( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_New( DaoContext *ctx, DaoValue *p[], int N )
 {
 	char errbuf[MAX_ERRMSG];
 	DInode *inode = DInode_New();
 	int res;
-	if( ( res = DInode_Open( inode, DString_GetMBS( p[0]->v.s ) ) ) != 0 ){
+	if( ( res = DInode_Open( inode, DaoString_GetMBS( DaoValue_CastString( p[0] ) ) ) ) != 0 ){
 		if( res == 1 )
 			strcpy( errbuf, "Trying to open something which is not a file/directory" );
 		else if( res == -1 )
@@ -805,7 +804,7 @@ static void DaoInode_New( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutCData( ctx, (void*)inode, &inodeTyper );
 }
 
-static void DaoInode_GetCWD( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_GetCWD( DaoContext *ctx, DaoValue *p[], int N )
 {
 	char buf[MAX_PATH + 1];
 	int res = 0;
@@ -819,12 +818,12 @@ static void DaoInode_GetCWD( DaoContext *ctx, DValue *p[], int N )
 	DaoContext_PutCData( ctx, (void*)inode, &inodeTyper );
 }
 
-static void DaoInode_SetCWD( DaoContext *ctx, DValue *p[], int N )
+static void DaoInode_SetCWD( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DInode *inode = (DInode*)DaoCData_GetData(p[0]->v.cdata);
+	DInode *inode = (DInode*)DaoValue_TryGetCData( p[0] );
 	char errbuf[MAX_PATH + 1];
 	if( inode->path == NULL ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not opened" );
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open" );
 		return;
 	}
 	if( inode->type != 0 ){

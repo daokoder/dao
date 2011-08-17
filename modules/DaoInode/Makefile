@@ -1,7 +1,7 @@
 
 CC = gcc
 INCLUDE = -I. -I../../kernel
-LIB =
+LIB = dao.dll
 CFLAG = -c -Wall -O2 -fPIC
 LFLAG = -s -shared 
 

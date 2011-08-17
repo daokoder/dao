@@ -1138,6 +1138,11 @@ double DaoValue_TryGetDouble( DaoValue *self )
 	if( self->type != DAO_DOUBLE ) return 0.0;
 	return self->xDouble.value;
 }
+dint DaoValue_TryGetEnum(DaoValue *self)
+{
+	if( self->type != DAO_ENUM ) return 0;
+	return self->xEnum.value;
+}
 complex16 DaoValue_TryGetComplex( DaoValue *self )
 {
 	complex16 com = {0.0,0.0};

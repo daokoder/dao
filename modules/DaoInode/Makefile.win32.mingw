@@ -1,7 +1,7 @@
 
 CC = gcc
 INCLUDE = -I.
-LIB =
+LIB = dao.dll
 CFLAG = -c -Wall -O2
 LFLAG = -s -shared 
 
