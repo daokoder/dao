@@ -82,6 +82,7 @@ class DAO_DLL_GREETING DaoCxxVirt_otto
 	DaoCData *cdata;
 
 	void vtest( int &_cs  );
+	otto test( int &_cs, const otto& value );
 
 
 };
@@ -95,6 +96,8 @@ class DAO_DLL_GREETING DaoCxx_otto : public otto, public DaoCxxVirt_otto
 	void DaoInitWrapper();
 
 	void vtest(  );
+	otto test( const otto& value );
+	otto DaoWrap_test( const otto& value ){ return otto::test( value ); }
 
 };
 

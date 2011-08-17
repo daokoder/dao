@@ -411,6 +411,7 @@ CDaoFunction::CDaoFunction( CDaoModule *mod, FunctionDecl *decl, int idx )
 	fieldDecl = NULL;
 	excluded = false;
 	generated = false;
+	constQualified = false;
 	index = idx;
 	retype.module = module;
 	if( decl ) SetDeclaration( decl );
@@ -537,7 +538,6 @@ int CDaoFunction::Generate()
 	}
 
 	int autoself = 0;
-	bool isconst = false;
 	const CXXMethodDecl *methdecl = NULL;
 	const CXXConstructorDecl *ctordecl = NULL;
 	const RecordDecl *hostdecl = NULL;
@@ -549,7 +549,7 @@ int CDaoFunction::Generate()
 	}
 	if( methdecl ){
 		hostdecl = methdecl->getParent();
-		isconst = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
+		constQualified = methdecl->getTypeQualifiers() & DeclSpec::TQ_const;
 		if( methdecl->isInstance() && ctordecl == NULL ){
 			QualType qtype = ctx.getPointerType( ctx.getRecordType( hostdecl ) );
 			parlist.insert( parlist.begin(), CDaoVariable( module ) );
@@ -566,7 +566,11 @@ int CDaoFunction::Generate()
 	daoName = cxxName;
 	host_qname = CDaoModule::GetQName( decl );
 	size_t pos = host_qname.rfind( "::" );
-	if( pos != string::npos ) host_qname.erase( pos );
+	if( pos != string::npos ){
+		host_qname.erase( pos );
+	}else{
+		host_qname = "";
+	}
 	host_idname = cdao_qname_to_idname( host_qname );
 	if( hostype ){
 		host_name = hostype->name;
@@ -664,7 +668,7 @@ int CDaoFunction::Generate()
 	}
 	signature += ")";
 	signature2 += ")";
-	if( isconst ){
+	if( constQualified ){
 		signature += "const";
 		signature2 += "const";
 	}
@@ -874,7 +878,7 @@ int CDaoFunction::Generate()
 	}
 #endif
 	kvmap3[ "vareturn" ] = vareturn;
-	if( isconst ) kvmap3[ "const" ] = "const";
+	if( constQualified ) kvmap3[ "const" ] = "const";
 	
 	if( methdecl ){
 		kvmap3[ "count" ] = utostr( parlist.size() - autoself );
@@ -983,7 +987,7 @@ int CDaoFunction::Generate()
 		cxxWrapperVirt3 = "";
 	}
 	generated = true;
-	parlist.clear();
+	//parlist.clear();
 	return retcode;
 }
 

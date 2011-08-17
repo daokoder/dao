@@ -30,6 +30,7 @@ struct CDaoFunction
 	int   index; // overloading index
 	bool  excluded;
 	bool  generated;
+	bool  constQualified;
 
 	string  signature;
 	string  signature2;
@@ -76,6 +77,8 @@ struct CDaoFunction
 	void SetDeclaration( FunctionDecl *decl );
 	void SetCallback( FunctionProtoType *func, FieldDecl *decl, const string & name="" );
 	void SetHints( const vector<string> & hints, const string & sig = "" );
+
+	bool ConstQualified()const{ return constQualified; }
 	bool IsFromMainModule();
 	string GetInputFile()const;
 

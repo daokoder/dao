@@ -4,26 +4,27 @@ DaoVmSpace *__daoVmSpace = NULL;
 #ifdef __cplusplus
 extern "C"{
 #endif
-static void dao_GetGreetingObject_GetGreetingObject_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Testing_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao__GetGreetingObject( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao__Testing( DaoContext *_ctx, DaoValue *_p[], int _n );
 static DaoFuncItem dao__Funcs[] = 
 {
-  { dao_GetGreetingObject_GetGreetingObject_dao_2, "GetGreetingObject(  )=>Greeting" },
-  { dao_Testing_Testing_dao_2, "Testing(  )" },
+  { dao__GetGreetingObject, "GetGreetingObject(  )=>Greeting" },
+  { dao__Testing, "Testing( bl :int =CxxNS::FALSE )" },
   { NULL, NULL }
 };
 /* ./greeting.h */
-static void dao_GetGreetingObject_GetGreetingObject_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao__GetGreetingObject( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
 
   Greeting* _GetGreetingObject = GetGreetingObject(  );
   DaoContext_WrapCData( _ctx, (void*) _GetGreetingObject, dao_Greeting_Typer );
 }
 /* ./greeting.h */
-static void dao_Testing_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao__Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
+  CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[0] );
 
-  Testing(  );
+  Testing( bl );
 }
 #ifdef __cplusplus
 }

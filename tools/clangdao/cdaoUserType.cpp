@@ -555,6 +555,33 @@ const string tpl_raise_call_protected =
     return;\n\
   }\n";
 
+const string cxx_getter_proto = 
+"static void dao_$(host_idname)_GETF_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+
+const string cxx_setter_proto = 
+"static void dao_$(host_idname)_SETF_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+
+const string cxx_get_item_proto = 
+"static void dao_$(host_idname)_GETI_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+
+const string cxx_set_item_proto = 
+"static void dao_$(host_idname)_SETI_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+
+const string cxx_gs_user =
+"  $(host_qname) *self = ($(host_qname)*)DaoValue_TryCastCData(_p[0],dao_$(typer)_Typer);\n";
+
+const string dao_getter_proto = 
+"  { dao_$(host_idname)_GETF_$(name), \".$(name)( self :$(daoname) )=>$(ftype)\" },\n";
+
+const string dao_setter_proto = 
+"  { dao_$(host_idname)_SETF_$(name), \".$(name)=( self :$(daoname), $(name) :$(ftype) )\" },\n";
+
+const string dao_get_item_proto = 
+"  { dao_$(host_idname)_GETI_$(name), \"[]( self :$(daoname), i :int )=>$(itype)\" },\n";
+
+const string dao_set_item_proto = 
+"  { dao_$(host_idname)_SETI_$(name), \"[]=( self :$(daoname), i :int, value :$(itype) )\" },\n";
+
 const string numlist_code = 
 "\n\nstatic DaoNumItem dao_$(typer)_Nums[] = \n\
 {\n$(nums)  { NULL, 0, 0 }\n};\n";
@@ -886,6 +913,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	string class_decl;
 
 	outs() << "generating: " << qname << "\n";
+	SetupDefaultMapping( kvmap );
 
 	map<CXXMethodDecl*,int>  pvmeths;
 	map<CXXMethodDecl*,int>::iterator pvit, pvend;
@@ -943,15 +971,24 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	}
 	CXXRecordDecl::field_iterator fit, fend;
 	for(fit=decl->field_begin(),fend=decl->field_end(); fit!=fend; fit++){
-		const Type *type = fit->getTypeSourceInfo()->getType().getTypePtr();
-		const PointerType *pt = dyn_cast<PointerType>( type );
-		if( pt == NULL ) continue;
-		const Type *pt2 = pt->getPointeeType().getTypePtr();
-		const ParenType *pt3 = dyn_cast<ParenType>( pt2 );
-		if( pt3 == NULL ) continue;
-		const Type *pt4 = pt3->getInnerType().getTypePtr();
-		const FunctionProtoType *ft = dyn_cast<FunctionProtoType>( pt4 );
-		if( ft == NULL ) continue;
+		if( fit->getAccess() != AS_public ) continue;
+		CDaoVariable field( module );
+		field.SetQualType( fit->getTypeSourceInfo()->getType(), location );
+		field.name = fit->getNameAsString();
+		field.Generate( VAR_INDEX_FIELD );
+		if( field.unsupported ) continue;
+		kvmap[ "name" ] = field.name;
+		kvmap[ "ftype" ] = field.daotype;
+		kvmap[ "itype" ] = field.dao_itemtype;
+		string cxxproto = cdao_string_fill( cxx_getter_proto, kvmap );
+		dao_meths += cdao_string_fill( dao_getter_proto, kvmap );
+		meth_decls += cxxproto + ";\n";
+		meth_codes += cxxproto + "\n{\n" + cdao_string_fill( cxx_gs_user, kvmap ) + field.getter + "}\n";
+		if( field.setter == "" ) continue;
+		cxxproto = cdao_string_fill( cxx_setter_proto, kvmap );
+		dao_meths += cdao_string_fill( dao_setter_proto, kvmap );
+		meth_decls += cxxproto + ";\n";
+		meth_codes += cxxproto + "\n{\n" + cdao_string_fill( cxx_gs_user, kvmap ) + field.setter + "}\n";
 	}
 	CXXRecordDecl::method_iterator methit, methend = decl->method_end();
 	for(methit=decl->method_begin(); methit!=methend; methit++){
@@ -1052,8 +1089,6 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 
 	//outs()<<name<<": "<<(int)wrapType<<" "<<has_private_ctor_only<<" "<<daoc_supers.size()<<"\n";
 
-	SetupDefaultMapping( kvmap );
-
 	for(i=0,n=constructors.size(); i<n; i++){
 		CDaoFunction & meth = constructors[i];
 		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( meth.funcDecl );
@@ -1070,11 +1105,60 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
 		meth.Generate();
 		if( not meth.generated ) continue;
+		if( mdec->getAccess() == AS_protected && not mdec->isPure() && not mdec->isOverloadedOperator() ){
+			if( wrapType == CDAO_WRAP_TYPE_PROXY ){
+				wrapCount += 1;
+				dao_meths += meth.daoProtoCodes;
+				meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
+			}
+		}
 		if( mdec->getAccess() != AS_public ) continue;
 		wrapCount += 1;
 		dao_meths += meth.daoProtoCodes;
 		meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
 		meth_codes += meth.cxxWrapper;
+		if( meth.cxxName == "operator[]" && meth.retype.qualtype->isReferenceType() ){
+			int k, m = meth.parlist.size();
+			QualType canotype = meth.retype.qualtype.getCanonicalType();
+			if( meth.ConstQualified() ) continue;
+			//if( canotype.getCVRQualifiers() & Qualifiers::Const ) continue;
+			//if( canotype.isConstQualified() ) continue;
+
+			CDaoVariable value( module );
+			value.SetQualType( canotype, location );
+			value.name = "_value";
+			value.Generate( m, m-1 );
+			string dao2cxxcodes;
+			for(k=0; k<m; k++){
+				CDaoVariable & vo = meth.parlist[k];
+				dao2cxxcodes += vo.dao2cxx;
+			}
+			size_t start = meth.cxxWrapper.find( dao2cxxcodes );
+			if( start == string::npos ) continue;
+			start = meth.cxxWrapper.find( '=', start + dao2cxxcodes.size() );
+			size_t end = meth.cxxWrapper.find( ';', start );
+			string call = meth.cxxWrapper.substr( start + 1, end - start - 1 );
+			dao2cxxcodes += value.dao2cxx;
+
+			string daoproto = meth.daoProtoCodes;
+			start = daoproto.find( "operator_43" );
+			daoproto.replace( start, 11, "SETI" );
+			start = daoproto.find( "=>" );
+			daoproto.erase( start-1 );
+			daoproto += ", _value :" + value.daotype + " )\" },\n";
+			start = daoproto.find( '(' );
+			daoproto.insert( start, "=" );
+
+			string cxxproto = meth.cxxProtoCodes;
+			start = cxxproto.find( "operator_43" );
+			cxxproto.replace( start, 11, "SETI" );
+			string codes = cxxproto + "\n{\n" + dao2cxxcodes;
+			codes += " " + call + " = " + value.cxxcall + ";\n}\n";
+
+			dao_meths += daoproto;
+			meth_decls += cxxproto + (cxxproto.size() ? ";\n" : "");
+			meth_codes += codes;
+		}
 	}
 	if( isQObject ){
 		string qt_signals;

@@ -183,6 +183,9 @@ static void dao_otto_otto_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
 static void dao_otto_otto( DaoContext *_ctx, DaoValue *_p[], int _n );
 static void dao_otto_geta( DaoContext *_ctx, DaoValue *_p[], int _n );
 static void dao_otto_vtest( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_otto_operator_43_( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_otto_SETI_( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_otto_test( DaoContext *_ctx, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_otto_Meths[] = 
 {
@@ -190,6 +193,9 @@ static DaoFuncItem dao_otto_Meths[] =
   { dao_otto_otto, "otto( b :int =123 )=>otto" },
   { dao_otto_geta, "geta( self :otto )=>int" },
   { dao_otto_vtest, "vtest( self :otto )" },
+  { dao_otto_operator_43_, "operator[]( self :otto, i :int )=>int" },
+  { dao_otto_SETI_, "operator[]=( self :otto, i :int , _value :int )" },
+  { dao_otto_test, "test( self :otto, value :otto )=>otto" },
   { NULL, NULL }
 };
 static void Dao_otto_Delete( void *self )
@@ -237,6 +243,31 @@ static void dao_otto_vtest( DaoContext *_ctx, DaoValue *_p[], int _n )
   otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
 
   self->otto::vtest(  );
+}
+/* ./greeting.h */
+static void dao_otto_operator_43_( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  int i = (int) DaoValue_TryGetInteger( _p[1] );
+
+  int& _operator_43_ = self->otto::operator[]( i );
+  DaoContext_PutInteger( _ctx, (int) _operator_43_ );
+}
+static void dao_otto_SETI_( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  int i = (int) DaoValue_TryGetInteger( _p[1] );
+  int _value = (int) DaoValue_TryGetInteger( _p[2] );
+  self->otto::operator[]( i ) = _value;
+}
+/* ./greeting.h */
+static void dao_otto_test( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  DaoCxx_otto* self= (DaoCxx_otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  otto* value= (otto*) DaoValue_TryCastCData( _p[1], dao_otto_Typer );
+
+  otto _test = self->DaoWrap_test( *value );
+  DaoContext_PutCData( _ctx, (void*)new otto( _test ), dao_otto_Typer );
 }
 /* ./greeting.h */
 
@@ -303,6 +334,7 @@ static void dao_Greeting_PrintMessage( DaoContext *_ctx, DaoValue *_p[], int _n 
 static void dao_Greeting_DoGreeting( DaoContext *_ctx, DaoValue *_p[], int _n );
 static void dao_Greeting_TestGreeting( DaoContext *_ctx, DaoValue *_p[], int _n );
 static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_Greeting_TestNull( DaoContext *_ctx, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting_Meths[] = 
 {
@@ -313,6 +345,7 @@ static DaoFuncItem dao_Greeting_Meths[] =
   { dao_Greeting_DoGreeting, "DoGreeting( self :Greeting, name :string )" },
   { dao_Greeting_TestGreeting, "TestGreeting( self :Greeting, g :Greeting, name :string )" },
   { dao_Greeting_VirtWithDefault, "VirtWithDefault( self :Greeting, g :Greeting|null =null )" },
+  { dao_Greeting_TestNull, "TestNull( self :Greeting, _p1 :Greeting::Null )=>Greeting::Null" },
   { NULL, NULL }
 };
 static void Dao_Greeting_Delete( void *self )
@@ -391,6 +424,15 @@ static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DaoValue *_p[], int 
 
   if(_n<=1) self->Greeting::VirtWithDefault(  );
   else self->Greeting::VirtWithDefault( *g );
+}
+/* ./greeting.h */
+static void dao_Greeting_TestNull( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
+  Greeting::Null* _p1= (Greeting::Null*) DaoValue_TryCastCData( _p[1], dao_Greeting_0_Null_Typer );
+
+  Greeting::Null _TestNull = self->Greeting::TestNull( *_p1 );
+  DaoContext_PutCData( _ctx, (void*)new Greeting::Null( _TestNull ), dao_Greeting_0_Null_Typer );
 }
 /* ./greeting.h */
 
@@ -514,11 +556,19 @@ static DaoNumItem dao_CxxNS_0_Test_Nums[] =
 
 
 static void dao_CxxNS_0_Test_Test( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_GETF_index( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_SETF_index( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_GETF_value( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_SETF_value( DaoContext *_ctx, DaoValue *_p[], int _n );
 static void dao_CxxNS_0_Test_Print( DaoContext *_ctx, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_CxxNS_0_Test_Meths[] = 
 {
   { dao_CxxNS_0_Test_Test, "Test(  )=>Test" },
+  { dao_CxxNS_0_Test_GETF_index, ".index( self :Test )=>int" },
+  { dao_CxxNS_0_Test_SETF_index, ".index=( self :Test, index :int )" },
+  { dao_CxxNS_0_Test_GETF_value, ".value( self :Test )=>double" },
+  { dao_CxxNS_0_Test_SETF_value, ".value=( self :Test, value :double )" },
   { dao_CxxNS_0_Test_Print, "Print( self :CxxNS::Test )" },
   { NULL, NULL }
 };
@@ -541,6 +591,26 @@ static void dao_CxxNS_0_Test_Test( DaoContext *_ctx, DaoValue *_p[], int _n )
 {
 	CxxNS::Test *self = Dao_CxxNS_0_Test_New();
 	DaoContext_PutCData( _ctx, self, dao_CxxNS_0_Test_Typer );
+}
+static void dao_CxxNS_0_Test_GETF_index( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
+  DaoContext_PutInteger( _ctx, (int) self->index );
+}
+static void dao_CxxNS_0_Test_SETF_index( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
+  self->index = (int) DaoValue_TryGetInteger(_p[1]);
+}
+static void dao_CxxNS_0_Test_GETF_value( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
+  DaoContext_PutDouble( _ctx, (double) self->value );
+}
+static void dao_CxxNS_0_Test_SETF_value( DaoContext *_ctx, DaoValue *_p[], int _n )
+{
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
+  self->value = (double) DaoValue_TryGetDouble(_p[1]);
 }
 /* ./greeting.h */
 static void dao_CxxNS_0_Test_Print( DaoContext *_ctx, DaoValue *_p[], int _n )

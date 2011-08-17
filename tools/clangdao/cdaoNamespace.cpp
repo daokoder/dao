@@ -31,8 +31,7 @@ void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
 			enums.push_back( e );
 		}else if (FunctionDecl *func = dyn_cast<FunctionDecl>(*it)) {
-			functions.push_back( new CDaoFunction( module, func ) );
-			//functions.back()->Generate();
+			AddFunction( new CDaoFunction( module, func ) );
 		}else if (RecordDecl *record = dyn_cast<RecordDecl>(*it)) {
 			QualType qtype( record->getTypeForDecl(), 0 );
 			AddUserType( module->HandleUserType( qtype, record->getLocation() ) );
@@ -50,10 +49,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	for(i=0, n=usertypes.size(); i<n; i++) retcode |= usertypes[i]->Generate();
 	for(i=0, n=functions.size(); i<n; i++){
 		CDaoFunction *func = functions[i];
-		string name = func->funcDecl->getNameAsString();
-		if( func->excluded ) continue;
-		func->generated = false;
-		func->index = ++overloads[name];
+		if( func->generated || func->excluded ) continue;
 		retcode |= func->Generate();
 	}
 #if 0

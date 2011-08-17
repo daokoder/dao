@@ -10,6 +10,31 @@ DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DaoObject **obj, const char *nam
   if( DaoValue_CastFunction( (DaoValue*)meth ) ) return NULL; /*do not call C function*/
   return meth;
 }
+static otto DaoPF10002( int *_cs, DaoMethod *_ro, DaoObject *_ob, const otto& value )
+{
+  DaoValue *_dp[1] = { NULL };
+  DaoValue *_res;
+  DaoCData *_cd;
+  DaoVmProcess *_vmp;
+  otto _test = 0;
+  if( _ro == NULL ) goto EndCall;
+  _dp[0] = DaoValue_WrapCData( dao_otto_Typer, (void*) &value );
+
+  _ro = DaoMethod_Resolve( _ro, (DaoValue*)_ob, _dp, 1 );
+  if( DaoValue_CastRoutine( (DaoValue*)_ro ) == NULL ) goto EndCall;
+  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
+  if( (*_cs = DaoVmProcess_Call( _vmp, _ro, (DaoValue*)_ob, _dp, 1 )) ==0 ) goto EndCall;
+  _res = DaoVmProcess_GetReturned( _vmp );
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
+  if( DaoValue_CastObject(_res) ) _res = (DaoValue*)DaoObject_MapCData( (DaoObject*)_res, dao_otto_Typer );
+  if( DaoValue_CastCData(_res) && DaoCData_IsType( (DaoCData*)_res, dao_otto_Typer ) ){
+    _test = *(otto*) DaoValue_TryCastCData( _res, dao_otto_Typer );
+  }
+
+EndCall:
+  DaoValue_ClearAll( _dp, 1 );
+  return _test;
+}
 static void DaoPF10001( int *_cs, DaoMethod *_ro, DaoObject *_ob )
 {
   if( _ro == NULL ) return;
@@ -19,7 +44,7 @@ static void DaoPF10001( int *_cs, DaoMethod *_ro, DaoObject *_ob )
   *_cs = DaoVmProcess_Call( _vmp, _ro, (DaoValue*)_ob, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
 }
-static void DaoPF10003( int *_cs, DaoMethod *_ro, DaoObject *_ob, const Greeting& g )
+static void DaoPF10004( int *_cs, DaoMethod *_ro, DaoObject *_ob, const Greeting& g )
 {
   DaoValue *_dp[1] = { NULL };
   if( _ro == NULL ) return;
@@ -49,6 +74,14 @@ void DaoCxxVirt_otto::vtest( int &_cs  )
   DaoVmProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );
   DaoVmProcess_Call( _vmp, _ro, (DaoValue*)_obj, NULL, 0 );
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );
+}
+otto DaoCxxVirt_otto::test( int &_cs, const otto& value )
+{
+  DaoObject *_obj = NULL;
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "test" );
+  otto _test = 0;
+  if( _ro == NULL || _obj == NULL ) return _test;
+  return (otto)DaoPF10002( & _cs, _ro, _obj, value );
 }
 void DaoCxxVirt_otto::DaoInitWrapper( otto *s, DaoCData *d )
 {
@@ -80,6 +113,17 @@ void DaoCxx_otto::vtest(  )
     if( _cs ) return;
   }
   otto::vtest(  );
+}
+otto DaoCxx_otto::test( const otto& value )
+{
+  int _cs = 0;
+  DaoObject *_obj = NULL;
+  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "test" );
+  if( _ro && _obj ){
+    otto _test = ((DaoCxxVirt_otto*)this)->DaoCxxVirt_otto::test( _cs, value );
+    if( _cs ) return _test;
+  }
+  return otto::test( value );
 }
 
 DaoCxx_otto2* DAO_DLL_GREETING DaoCxx_otto2_New(  )
@@ -151,7 +195,7 @@ void DaoCxxVirt_Greeting::VirtWithDefault( int &_cs, const Greeting& g )
   DaoObject *_obj = NULL;
   DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, "VirtWithDefault" );
   if( _ro == NULL || _obj == NULL ) return;
-  DaoPF10003( & _cs, _ro, _obj, g );
+  DaoPF10004( & _cs, _ro, _obj, g );
 }
 void DaoCxxVirt_Greeting::DaoInitWrapper( Greeting *s, DaoCData *d )
 {

@@ -13,6 +13,8 @@ class otto
 
 	virtual void vtest(){}
 
+	int& operator[](int i){ return a; }
+
 protected:
 	virtual otto test(const otto &value){
 		printf( "call protected method\n" );

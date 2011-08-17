@@ -411,7 +411,7 @@ const string getres_qstring =
 
 const string getres_cdata = 
 "  if( DaoValue_CastObject(_res) ) _res = (DaoValue*)DaoObject_MapCData( (DaoObject*)_res, dao_$(typer)_Typer );\n\
-  if( DaoValue_CastCData(_res) ) && DaoCData_IsType( (DaoCData*)_res, dao_$(typer)_Typer ) ){\n";
+  if( DaoValue_CastCData(_res) && DaoCData_IsType( (DaoCData*)_res, dao_$(typer)_Typer ) ){\n";
 
 const string getres_user = getres_cdata +
 "    $(name) = ($(cxxtype)*) DaoValue_TryCastCData( _res, dao_$(typer)_Typer );\n  }\n";
@@ -678,6 +678,7 @@ int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 		cxxpar = prefix + " " + name + suffix;
 		cxxtype = prefix + suffix;
 	}
+	if( unsupported ) outs()<<"unsupported: "<<cxxtype<<" "<<name<<"\n";
 	return retcode || unsupported;
 }
 int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
@@ -730,6 +731,10 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 	//outs() << type->isPointerType() << " is pointer type\n";
 	//outs() << type->isArrayType() << " is array type\n";
 	//outs() << type->isConstantArrayType() << " is constant array type\n";
+
+	CDaoVarTemplates tpl;
+	tpl.SetupIntScalar();
+	map<string,string> kvmap;
 	if( canotype->isBuiltinType() ){
 		return GenerateForBuiltin( daopar_index, cxxpar_index );
 	}else if( canotype->isPointerType() and not hasArrayHint ){
@@ -740,9 +745,29 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		return GenerateForArray( daopar_index, cxxpar_index );
 	}else if( canotype->isEnumeralType() ){
 		daotype = "int";
-		CDaoVarTemplates tpl;
-		tpl.SetupIntScalar();
-		map<string,string> kvmap;
+		tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
+		return 0;
+	}else if( CDaoUserType *UT = module->HandleUserType( canotype, location ) ){
+		if( UT->qname == "<anonymous>" ) return 1;
+		daotype = cdao_make_dao_template_type_name( UT->qname );
+		cxxtype2 = UT->qname;
+		cxxtyper = UT->idname;
+		cxxcall = "*" + name;
+		if( daodefault.size() ) useDefault = false;
+		tpl.daopar = daopar_user;
+		tpl.getres = getres_user2;
+		tpl.dao2cxx = dao2cxx_user2;
+		tpl.cxx2dao = cxx2dao_user;
+		tpl.setter = "";
+		if( dyn_cast<CXXRecordDecl>( UT->decl ) ){
+			tpl.ctxput = ctxput_newcdata;
+		}else{
+			tpl.ctxput = ctxput_copycdata;
+		}
+		if( daodefault == "0" || daodefault == "NULL" ){
+			daodefault = "null";
+			isNullable = true;
+		}
 		tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 		return 0;
 	}
