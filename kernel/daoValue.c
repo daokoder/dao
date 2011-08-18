@@ -873,7 +873,7 @@ DaoValue* DaoValue_NewMatrixB( signed char **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixB( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -887,7 +887,7 @@ DaoValue* DaoValue_NewMatrixUB( unsigned char **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixUB( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -898,7 +898,7 @@ DaoValue* DaoValue_NewMatrixS( short **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixS( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -909,7 +909,7 @@ DaoValue* DaoValue_NewMatrixUS( unsigned short **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixUS( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -920,7 +920,7 @@ DaoValue* DaoValue_NewMatrixI( int **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixI( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -931,7 +931,7 @@ DaoValue* DaoValue_NewMatrixUI( unsigned int **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixUI( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -942,7 +942,7 @@ DaoValue* DaoValue_NewMatrixF( float **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_FLOAT );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixF( res, s, n, m );
 	}
 	GC_IncRC( res );
@@ -953,7 +953,7 @@ DaoValue* DaoValue_NewMatrixD( double **s, int n, int m )
 	DaoArray *res = DaoArray_New( DAO_DOUBLE );
 	if( s && n == 0 ){
 		DaoArray_UseData( res, s );
-	}else{
+	}else if( s ){
 		DaoArray_SetMatrixD( res, s, n, m );
 	}
 	GC_IncRC( res );
