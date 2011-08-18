@@ -181,11 +181,11 @@ const string qt_put_qobject =
 ";
 
 const string ctxput_copycdata =
-"  DaoContext_CopyCData( _ctx, (void*)& $(name), sizeof($(cxxtype)), dao_$(typer)_Typer );\n";
+"  DaoContext_CopyCData( _ctx, (void*)&$(name), sizeof($(cxxtype)), dao_$(typer)_Typer );\n";
 const string ctxput_newcdata =
 "  DaoContext_PutCData( _ctx, (void*)new $(cxxtype)( $(name) ), dao_$(typer)_Typer );\n";
 const string ctxput_refcdata =
-"  DaoContext_WrapCData( _ctx, (void*)& $(name), dao_$(typer)_Typer );\n";
+"  DaoContext_WrapCData( _ctx, (void*)&$(name), dao_$(typer)_Typer );\n";
 
 #if 0
 const string qt_qlist_decl = 
@@ -759,10 +759,14 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		tpl.dao2cxx = dao2cxx_user2;
 		tpl.cxx2dao = cxx2dao_user;
 		tpl.setter = "";
-		if( dyn_cast<CXXRecordDecl>( UT->decl ) ){
-			tpl.ctxput = ctxput_newcdata;
+		if( daopar_index == VAR_INDEX_RETURN ){
+			if( dyn_cast<CXXRecordDecl>( UT->decl ) ){
+				tpl.ctxput = ctxput_newcdata;
+			}else{
+				tpl.ctxput = ctxput_copycdata;
+			}
 		}else{
-			tpl.ctxput = ctxput_copycdata;
+			tpl.ctxput = ctxput_refcdata;
 		}
 		if( daodefault == "0" || daodefault == "NULL" ){
 			daodefault = "null";
@@ -900,6 +904,7 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 			break;
 		default : break;
 		}
+		tpl.setter = "";
 	}else if( qtype2->isEnumeralType() ){
 		daotype = "int";
 		cxxcall = "&" + name;
@@ -910,6 +915,7 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 		tpl.ctxput = ctxput_ints;
 		tpl.getres = getres_ints;
 		tpl.cxx2dao = cxx2dao_int2;
+		tpl.setter = "";
 	}else if( CDaoUserType *UT = module->HandleUserType( qtype1, location ) ){
 		if( UT->qname == "<anonymous>" ) return 1;
 		if( qtype1.getAsString() == "FILE" ){

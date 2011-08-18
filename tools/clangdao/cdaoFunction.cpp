@@ -646,9 +646,9 @@ int CDaoFunction::Generate()
 		cxxcallpars += vo.cxxcall;
 		cxxProtoParamVirt += vo.cxxpar;
 		if( retype.isUserData && retype.callback == vo.name ){
-			signature2 += "DValue";
-			cxxprotpars += "DValue " + vo.name;
-			cxx2daocodes += "  _dp2[" + sindex + "] = & " + vo.name + ";\n";
+			signature2 += "DaoValue";
+			cxxprotpars += "DaoValue *" + vo.name;
+			cxx2daocodes += "  _dp[" + sindex + "] = " + vo.name + ";\n";
 			cxxCallParamV += "_dao_cbd->userdata";
 		}else{
 			signature2 += vo.cxxtype;

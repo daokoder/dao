@@ -1002,8 +1002,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		if( methit->getAccess() == AS_protected ) hasProtected = true;
 		methods.push_back( CDaoFunction( module, *methit, ++overloads[name] ) );
 		methods.back().location = location;
-		if( methit->isPure() ) pvmeths[ *methit ] = 1;
+		//if( methit->isPure() ) pvmeths[ *methit ] = 1;
 		if( methit->isVirtual() ){
+			pvmeths[ *methit ] = 1;
 			CXXMethodDecl::method_iterator it2, end2 = methit->end_overridden_methods();
 			for(it2=methit->begin_overridden_methods(); it2!=end2; it2++)
 				pvmeths.erase( (CXXMethodDecl*)*it2 );

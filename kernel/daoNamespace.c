@@ -1320,6 +1320,8 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoValue *p )
 
 	switch( p->type ){
 	case DAO_NULL :
+		abtp = DaoNameSpace_MakeValueType( self, null );
+		break;
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
 	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING : 
 		abtp = simpleTypes[ p->type ];
@@ -1843,7 +1845,7 @@ DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DaoValue *value )
 DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DaoType *first, DaoType *second )
 {
 	DaoType *types[2] = {NULL, NULL};
-	DaoType *nullType = DaoNameSpace_MakeType( self, "null", DAO_VALTYPE, 0, 0, 0 );
+	DaoType *nullType = DaoNameSpace_MakeValueType( self, null );
 	if( first == NULL ) first = nullType;
 	if( second == NULL ) second = nullType;
 	types[0] = DaoNameSpace_MakeType( self, "first", DAO_PAR_NAMED, (DaoValue*)first, 0, 0 );
