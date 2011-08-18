@@ -40,7 +40,7 @@ typedef size_t socklen_t;
 #endif
 
 #include"dao.h"
-DAO_INIT_MODULE;
+DAO_INIT_MODULE
 
 #define dao_malloc malloc
 #define dao_free free
@@ -345,14 +345,14 @@ static int DaoNetwork_SendFloat( int sockfd, float value )
 	packet.size = htons( length );
 	return LoopSend( sockfd, (char*)&packet, length, 0);
 }
-static int DaoNetwork_SendNumber( int sockfd, DValue data )
+static int DaoNetwork_SendNumber( int sockfd, DaoValue *data )
 {
-	if( data.t == DAO_INTEGER )
-		return DaoNetwork_SendInteger( sockfd, data.v.i );
-	else if( data.t == DAO_FLOAT )
-		return DaoNetwork_SendFloat( sockfd, data.v.f );
+	if( DaoValue_Type( data ) == DAO_INTEGER )
+		return DaoNetwork_SendInteger( sockfd, DaoValue_TryGetInteger( data ) );
+	else if(  DaoValue_Type( data ) == DAO_FLOAT )
+		return DaoNetwork_SendFloat( sockfd, DaoValue_TryGetFloat( data ) );
 	else
-		return DaoNetwork_SendFloat( sockfd, data.v.d );
+		return DaoNetwork_SendFloat( sockfd, DaoValue_TryGetDouble( data ) );
 }
 static int DaoNetwork_SendChars( int sockfd, const char *mbs, int len )
 {
@@ -464,25 +464,25 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 	packet.size = htons( offset + length );
 	return LoopSend( sockfd, (char*) &packet, offset + length, 0);
 }
-int DaoNetwork_SendExt( int sockfd, DValue *data[], int size )
+int DaoNetwork_SendExt( int sockfd, DaoValue *data[], int size )
 {
 	int i;
 	for( i=0; i<size; i++ ){
-		DValue item = *data[i];
-		switch( item.t ){
+		DaoValue *item = data[i];
+		switch( DaoValue_Type( item ) ){
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
 			DaoNetwork_SendNumber( sockfd, item );
 			break;
 		case DAO_STRING :
-			DaoNetwork_SendString( sockfd, item.v.s );
+			DaoNetwork_SendString( sockfd, DaoString_Get( DaoValue_CastString( item ) ) );
 			break;
 		case DAO_COMPLEX :
-			DaoNetwork_SendComplex( sockfd, * item.v.c );
+			DaoNetwork_SendComplex( sockfd, DaoComplex_Get( DaoValue_CastComplex( item ) ) );
 			break;
 		case DAO_ARRAY :
-			DaoNetwork_SendArray( sockfd, item.v.array );
+			DaoNetwork_SendArray( sockfd, DaoValue_CastArray( item ) );
 			break;
 		default : break;
 		}
@@ -496,9 +496,9 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 	char *buf2 = buf;
 	short numtype;
 	complex16  com;
-	DValue item = {0,0,0,0,{(double)0.0}};
-	DString  *str = DString_New(1);
 	DaoArray *arr = NULL;
+	DaoValue *item;
+	DString  *str = DString_New(1);
 	float *fv = NULL;
 	double *dv = NULL;
 	DaoDataPacket *inpack;
@@ -543,35 +543,40 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 				continue;
 			}
 			buf2 = inpack->data;
-			item.t = inpack->type;
 			/* printf( "type = %i\n", inpack->type ); */
 			switch( inpack->type ){
 			case DAO_INTEGER :
-				item.v.i = DaoParseNumber32( inpack->data );
+				item = DaoValue_NewInteger( DaoParseNumber32( inpack->data ) );
 				DaoList_PushBack( data, item );
+				DaoGC_DecRC( item );
 				break;
 			case DAO_FLOAT :
-				item.v.f = DaoParseNumber32( inpack->data );
+				item = DaoValue_NewFloat( DaoParseNumber32( inpack->data ) );
 				/* printf( "number: %s %g\n", inpack->data, num->item.f ); */
 				DaoList_PushBack( data, item );
+				DaoGC_DecRC( item );
 				break;
 			case DAO_DOUBLE :
-				item.v.d = DaoParseNumber32( inpack->data );
+				item = DaoValue_NewDouble( DaoParseNumber32( inpack->data ) );
 				DaoList_PushBack( data, item );
+				DaoGC_DecRC( item );
 				break;
 			case DAO_STRING :
-				item.v.s = str;
 				if( inpack->tag == 0 ) DString_Clear( str );
 				DString_AppendMBS( str, inpack->data );
+				item = DaoValue_NewMBString(NULL, 0);
+				DaoString_Set( DaoValue_CastString( item ), str );
 				/* printf( "string: %s\n", inpack->data ); */
 				if( inpack->tag ==2 || size <= MAX_DATA ) DaoList_PushBack( data, item );
+				DaoGC_DecRC( item );
 				break;
 			case DAO_COMPLEX :
 				com.real = DaoParseNumber32( buf2 );
 				while( *buf2 ) buf2 ++;
 				com.imag = DaoParseNumber32( buf2+1 );
-				item.v.c = & com;
+				item = DaoValue_NewComplex( com );
 				DaoList_PushBack( data, item );
+				DaoGC_DecRC( item );
 				break;
 			case DAO_ARRAY :
 				numtype = inpack->tag;
@@ -579,11 +584,12 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 				j = ntohl( inpack->dataI2 );
 				/* printf( "ARRAY: M=%i; j=%i\n", M, j ); */
 				if( j == 0 ){
-					arr = DaoArray_New( DAO_INTEGER );
-					item.v.array = arr;
+					item = DaoValue_NewArray( DAO_INTEGER );
+					arr = DaoValue_CastArray( item );
 					DaoArray_SetNumType( arr, numtype );
 					DaoArray_ResizeVector( arr, M );
 					DaoList_PushBack( data, item );
+					DaoGC_DecRC( item );
 				}
 				if( numtype == DAO_INTEGER ){
 					int *iv = DaoArray_ToInt( arr );
@@ -686,30 +692,30 @@ static int DaoSocket_Connect( DaoSocket *self, DString *host, int port )
 	return self->id;
 }
 
-static void DaoSocket_Lib_Close( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Close( DaoContext *ctx, DaoValue *par[], int N  )
 {
-	DaoSocket_Close( (DaoSocket*)DaoCData_GetData(par[0]->v.cdata) );
+	DaoSocket_Close( (DaoSocket*)DaoValue_TryGetCData( par[0] ) );
 }
 
-static void DaoSocket_Lib_Bind( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Bind( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	if( DaoSocket_Bind( self, par[1]->v.i ) == -1 ){
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
+	if( DaoSocket_Bind( self, DaoValue_TryGetInteger( par[1] ) ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 	}
 }
 
-static void DaoSocket_Lib_Listen( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Listen( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	if( self->state != SOCKET_BOUND ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not bound" );
 		return;
 	}
-	if( DaoNetwork_Listen( self->id, par[1]->v.i ) == -1 ){
+	if( DaoNetwork_Listen( self->id, DaoValue_TryGetInteger( par[1] ) ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
@@ -717,10 +723,10 @@ static void DaoSocket_Lib_Listen( DaoContext *ctx, DValue *par[], int N  )
 	self->state = SOCKET_LISTENING;
 }
 
-static void DaoSocket_Lib_Accept( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Accept( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	DaoSocket *sock;
 	if( self->state != SOCKET_LISTENING ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not in the listening state" );
@@ -737,26 +743,26 @@ static void DaoSocket_Lib_Accept( DaoContext *ctx, DValue *par[], int N  )
 	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
 
-static void DaoSocket_Lib_Connect( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Connect( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
-	if( DaoSocket_Connect( self, par[1]->v.s, par[2]->v.i ) == -1 ){
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
+	if( DaoSocket_Connect( self, DaoString_Get( DaoValue_CastString( par[1] ) ), DaoValue_TryGetInteger( par[2] ) ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 	}
 }
 
-static void DaoSocket_Lib_Send( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Send( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	int n;
 	if( self->state != SOCKET_CONNECTED ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
 		return;
 	}
-	n = DaoNetwork_Send( self->id, par[1]->v.s );
+	n = DaoNetwork_Send( self->id, DaoString_Get( DaoValue_CastString( par[1] ) ) );
 	if( n == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
@@ -764,26 +770,26 @@ static void DaoSocket_Lib_Send( DaoContext *ctx, DValue *par[], int N  )
 	DaoContext_PutInteger( ctx, n );
 }
 
-static void DaoSocket_Lib_Receive( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Receive( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	if( self->state != SOCKET_CONNECTED ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
 		return;
 	}
 	DString *mbs = DaoContext_PutMBString( ctx, "" );
-	if( DaoNetwork_Receive( self->id, mbs, par[1]->v.i ) == -1 ){
+	if( DaoNetwork_Receive( self->id, mbs, DaoValue_TryGetInteger( par[1] ) ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 	}
 }
 
-static void DaoSocket_Lib_SendDao( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_SendDao( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
 	int n;
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	if( self->state != SOCKET_CONNECTED ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
 		return;
@@ -797,10 +803,10 @@ static void DaoSocket_Lib_SendDao( DaoContext *ctx, DValue *par[], int N  )
 	DaoContext_PutInteger( ctx, n );
 }
 
-static void DaoSocket_Lib_ReceiveDao( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_ReceiveDao( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	if( self->state != SOCKET_CONNECTED ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "The socket is not connected" );
 		return;
@@ -812,15 +818,15 @@ static void DaoSocket_Lib_ReceiveDao( DaoContext *ctx, DValue *par[], int N  )
 	}
 }
 
-static void DaoSocket_Lib_Id( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_Id( DaoContext *ctx, DaoValue *par[], int N  )
 {
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	DaoContext_PutInteger( ctx, self->id );
 }
 
-static void DaoSocket_Lib_State( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_State( DaoContext *ctx, DaoValue *par[], int N  )
 {
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	char buffer[10];
 	switch( self->state ){
 	case 0:                strcpy( buffer, "closed" ); break;
@@ -831,10 +837,10 @@ static void DaoSocket_Lib_State( DaoContext *ctx, DValue *par[], int N  )
 	DaoContext_PutEnum( ctx, buffer );
 }
 
-static void DaoSocket_Lib_GetPeerName( DaoContext *ctx, DValue *par[], int N  )
+static void DaoSocket_Lib_GetPeerName( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
-	DaoSocket *self = (DaoSocket*)DaoCData_GetData(par[0]->v.cdata);
+	DaoSocket *self = (DaoSocket*)DaoValue_TryGetCData( par[0] );
 	struct sockaddr_in addr;
 #ifdef WIN32
 	int size = sizeof( struct sockaddr_in );
@@ -875,40 +881,39 @@ DaoTypeBase socketTyper = {
 	"socket", NULL, NULL, socketMeths, {0}, {0}, (FuncPtrDel)DaoSocket_Delete, NULL
 };
 
-static void DaoNetLib_Bind( DaoContext *ctx, DValue *par[], int N  )
+static void DaoNetLib_Bind( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
 	DaoSocket *sock = DaoSocket_New(  );
-	if( DaoSocket_Bind( sock, par[0]->v.i ) == -1 ){
+	if( DaoSocket_Bind( sock, DaoValue_TryGetInteger( par[0] ) ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
 	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
-static void DaoNetLib_Connect( DaoContext *ctx, DValue *p[], int N  )
+static void DaoNetLib_Connect( DaoContext *ctx, DaoValue *p[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
 	DaoSocket *sock = DaoSocket_New(  );
-	if( DaoSocket_Connect( sock, p[0]->v.s, p[1]->v.i ) == -1 ){
+	if( DaoSocket_Connect( sock, DaoString_Get( DaoValue_CastString( p[0] ) ), DaoValue_TryGetInteger( p[1] ) ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
 	DaoContext_PutCData( ctx, (void*)sock, &socketTyper );
 }
-static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
+static void DaoNetLib_GetHost( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
 	struct hostent *hent;
 	struct sockaddr_in addr;
 	struct in_addr id;
 	size_t size = sizeof( struct sockaddr_in );
-	const char *host = DString_GetMBS( par[0]->v.s );
+	const char *host = DaoString_GetMBS( DaoValue_CastString( par[0] ) );
 	DaoMap *res = DaoContext_PutMap( ctx );
-	DString *str;
-	DValue value = {DAO_STRING,0,0,0,{(double)0.0}};
-	if( DString_Size( par[0]->v.s ) ==0 ) return;
+	DaoValue *value;
+	if( DaoString_Size( DaoValue_CastString( par[0] ) ) ==0 ) return;
 	if( host[0] >= '0' && host[0] <= '9' ){
 #ifdef UNIX
 		if( inet_aton( host, & id ) == 0 ) return;
@@ -927,36 +932,31 @@ static void DaoNetLib_GetHost( DaoContext *ctx, DValue *par[], int N  )
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
-	str = value.v.s = DString_New(1);
 	if( hent->h_addrtype == AF_INET ){
 		char **p = hent->h_aliases;
 		char **q = hent->h_addr_list;
 		while( *p ){
-			DString_SetMBS( str, inet_ntoa( *(struct in_addr*) (*q) ) );
+			value = DaoValue_NewMBString( inet_ntoa( *(struct in_addr*) (*q) ), 0 );
 			DaoMap_InsertMBS( res, *p, value );
+			DaoGC_DecRC( value );
 			p ++;
 			q ++;
 		}
 	}else{ /* AF_INET6 */
 	}
-	DString_Delete( str );
 }
 
-const DValue daoNullTuple = { DAO_TUPLE, 0, 0, 0, {0}};
-const DValue daoZeroInt = { DAO_INTEGER, 0, 0, 0, {0}};
-const DValue daoNullList = { DAO_LIST, 0, 0, 0, {0}};
-
-static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
+static void DaoNetLib_Select( DaoContext *ctx, DaoValue *par[], int N  )
 {
 	char errbuf[MAX_ERRMSG];
 	struct timeval tv;
 	int i;
 	fd_set set1, set2;
-	DaoList *list1 = par[0]->v.list;
-	DaoList *list2 = par[1]->v.list;
+	DaoList *list1 = DaoValue_CastList( par[0] );
+	DaoList *list2 = DaoValue_CastList( par[1] );
 	DaoList *reslist;
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );
-	DValue value;
+	DaoValue *value;
 	DaoSocket *socket;
 	FILE *file;
 	if( DaoList_Size( list1 ) == 0 && DaoList_Size( list2 ) == 0 ){
@@ -967,15 +967,15 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	FD_ZERO( &set2 );
 	for( i = 0; i < DaoList_Size( list1 ); i++ ){
 		value = DaoList_GetItem( list1, i );
-		if( value.t == DAO_STREAM ){
-			file = DaoStream_GetFile( value.v.stream );
+		if( DaoValue_Type( value ) == DAO_STREAM ){
+			file = DaoStream_GetFile( DaoValue_CastStream( value ) );
 			if( file == NULL ){
 				DaoContext_RaiseException( ctx, DAO_ERROR, "The read list contains a stream not associated with a file" );
 				return;
 			}
 			FD_SET( (int)file, &set1 );
 		}else{
-			socket = (DaoSocket*)DaoCData_GetData( value.v.cdata );
+			socket = (DaoSocket*)DaoValue_TryGetCData( value );
 			if( socket->id == -1 ){
 				DaoContext_RaiseException( ctx, DAO_ERROR, "The read list contains a closed socket" );
 				return;
@@ -985,15 +985,15 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 	}
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
 		value = DaoList_GetItem( list2, i );
-		if( value.t == DAO_STREAM ){
-			file = DaoStream_GetFile( value.v.stream );
+		if( DaoValue_Type( value ) == DAO_STREAM ){
+			file = DaoStream_GetFile( DaoValue_CastStream( value ) );
 			if( file == NULL ){
 				DaoContext_RaiseException( ctx, DAO_ERROR, "The write list contains a stream not associated with a file" );
 				return;
 			}
 			FD_SET( (int)file, &set2 );
 		}else{
-			socket = (DaoSocket*)DaoCData_GetData( value.v.cdata );
+			socket = (DaoSocket*)DaoValue_TryGetCData( value );
 			if( socket->id == -1 ){
 				DaoContext_RaiseException( ctx, DAO_ERROR, "The write list contains a closed socket" );
 				return;
@@ -1001,35 +1001,35 @@ static void DaoNetLib_Select( DaoContext *ctx, DValue *par[], int N  )
 			FD_SET( socket->id, &set2 );
 		}
 	}
-	tv.tv_sec = (int)par[2]->v.f;
-	tv.tv_usec = ( par[2]->v.f - tv.tv_sec ) * 1E6;
+	tv.tv_sec = (int)DaoValue_TryGetFloat( par[2] );
+	tv.tv_usec = ( DaoValue_TryGetFloat( par[2] )- tv.tv_sec ) * 1E6;
 	if( select( FD_SETSIZE, &set1, &set2, NULL, & tv ) == -1 ){
 		GetErrorMessage( errbuf, GetError() );
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
-	reslist = DaoList_New();
-	value = daoNullList;
-	value.v.list = reslist;
+	value = DaoValue_NewList();
+	reslist = DaoValue_CastList( value );
 	DaoTuple_SetItem( tuple, value, 0 );
+	DaoGC_DecRC( value );
 	for( i = 0; i < DaoList_Size( list1 ); i++ ){
 		value = DaoList_GetItem( list1, i );
-		if( value.t == DAO_STREAM ){
-			if( FD_ISSET( (int)DaoStream_GetFile( value.v.stream ), &set1 ) )
+		if( DaoValue_Type( value ) == DAO_STREAM ){
+			if( FD_ISSET( (int)DaoStream_GetFile( DaoValue_CastStream( value ) ), &set1 ) )
 				DaoList_PushBack( reslist, value );
-		}else if( FD_ISSET( ((DaoSocket*)DaoCData_GetData( value.v.cdata ))->id, &set1 ) )
+		}else if( FD_ISSET( ((DaoSocket*)DaoValue_TryGetCData( value ))->id, &set1 ) )
 			DaoList_PushBack( reslist, value );
 	}
-	reslist = DaoList_New();
-	value = daoNullList;
-	value.v.list = reslist;
+	value = DaoValue_NewList();
+	reslist = DaoValue_CastList( value );
 	DaoTuple_SetItem( tuple, value, 1 );
+	DaoGC_DecRC( value );
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
 		value = DaoList_GetItem( list2, i );
-		if( value.t == DAO_STREAM ){
-			if( FD_ISSET( (int)DaoStream_GetFile( value.v.stream ), &set2 ) )
+		if( DaoValue_Type( value ) == DAO_STREAM ){
+			if( FD_ISSET( (int)DaoStream_GetFile( DaoValue_CastStream( value ) ), &set2 ) )
 				DaoList_PushBack( reslist, value );
-		}else if( FD_ISSET( ((DaoSocket*)DaoCData_GetData( value.v.cdata ))->id, &set2 ) )
+		}else if( FD_ISSET( ((DaoSocket*)DaoValue_TryGetCData( value ))->id, &set2 ) )
 			DaoList_PushBack( reslist, value );
 	}
 }

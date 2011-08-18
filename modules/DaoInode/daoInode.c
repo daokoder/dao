@@ -323,6 +323,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
 					value = DaoValue_NewCData( &inodeTyper, inode );
 					DaoList_PushBack( dest, value );
+					DaoGC_DecRC( value );
 				}
 				else
 					DInode_Delete( inode );
@@ -352,6 +353,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
 					value = DaoValue_NewCData( &inodeTyper, inode );
 					DaoList_PushBack( dest, value );
+					DaoGC_DecRC( value );
 				}
 				else
 					DInode_Delete( inode );

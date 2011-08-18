@@ -756,6 +756,13 @@ DaoValue* DaoValue_NewDouble( double v )
 	GC_IncRC( res );
 	return (DaoValue*) res;
 }
+DaoValue* DaoValue_NewComplex( complex16 v )
+{
+	DaoComplex *res = DaoComplex_New( v );
+	GC_IncRC( res );
+	return (DaoValue*) res;
+}
+
 DaoValue* DaoValue_NewMBString( const char *s, int n )
 {
 	DaoString *res = DaoString_New(1);
@@ -776,6 +783,18 @@ DaoValue* DaoValue_NewWCString( const wchar_t *s, int n )
 	}else{
 		DString_SetWCS( res->data, s );
 	}
+	GC_IncRC( res );
+	return (DaoValue*) res;
+}
+DaoValue* DaoValue_NewList()
+{
+	DaoList *res = DaoList_New();
+	GC_IncRC( res );
+	return (DaoValue*) res;
+}
+DaoValue* DaoValue_NewArray( int type )
+{
+	DaoList *res = DaoArray_New( type );
 	GC_IncRC( res );
 	return (DaoValue*) res;
 }
