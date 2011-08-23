@@ -161,7 +161,7 @@ static void STD_Callable( DaoContext *ctx, DaoValue *p[], int N )
 			DaoCData *plugin = (DaoCData*) p[0];
 			DaoTypeBase *tp = plugin->typer;
 			DaoValue *func;
-			if( plugin->data == NULL && plugin->konst ){
+			if( plugin->data == NULL && (plugin->trait & DAO_DATA_CONST) ){
 				func = DaoFindFunction2( tp, tp->name );
 				*res = func != NULL;
 			}else{
@@ -443,7 +443,7 @@ static void STD_SubType( DaoContext *ctx, DaoValue *p[], int N )
 }
 static void STD_Unpack( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoInteger zero = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
+	DaoInteger zero = {DAO_INTEGER,0,0,0,0,0,0};
 	DaoList *list = DaoContext_PutList( ctx );
 	DString *str = p[0]->xString.data;
 	DaoValue **data;
@@ -891,7 +891,7 @@ static void REFL_Cst1( DaoContext *ctx, DaoValue *p[], int N )
 	DNode *node;
 	DaoValue *value;
 	DaoValue *vabtp = NULL;
-	DaoString name = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+	DaoString name = {DAO_STRING,0,0,0,0,0,NULL};
 	int restri = p[1]->xInteger.value;
 	name.data = DString_New(1);
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
@@ -942,7 +942,7 @@ static void REFL_Var1( DaoContext *ctx, DaoValue *p[], int N )
 	DNode *node;
 	DaoValue *value;
 	DaoValue *vabtp = NULL;
-	DaoString name = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+	DaoString name = {DAO_STRING,0,0,0,0,0,NULL};
 	int restri = p[1]->xInteger.value;
 	name.data = DString_New(1);
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
@@ -1182,8 +1182,8 @@ static void REFL_Param( DaoContext *ctx, DaoValue *p[], int N )
 	DaoType **nested = routype->nested->items.pType;
 	DString *mbs = DString_New(1);
 	DNode *node;
-	DaoString str = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
-	DaoInteger num = {DAO_INTEGER,0,1,0,{0,0},0,0,1};
+	DaoString str = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoInteger num = {DAO_INTEGER,0,0,0,0,0,1};
 	int i;
 	str.data = mbs;
 	for(i=0; i<routine->parCount; i++){
@@ -1234,10 +1234,10 @@ static void REFL_Trace( DaoContext *ctx, DaoValue *p[], int N )
 	int print = 0;
 	DaoTuple *entry = NULL;
 	DaoValue *vRoutType;
-	DaoString routName = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
-	DaoString nsName = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
-	DaoInteger line = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
-	DaoInteger inst = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
+	DaoString routName = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString nsName = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoInteger line = {DAO_INTEGER,0,0,0,0,0,0};
+	DaoInteger inst = {DAO_INTEGER,0,0,0,0,0,0};
 
 	if( N >=1 ) print = p[0]->xEnum.value;
 	if( N ==2 ) maxDepth = p[1]->xInteger.value;

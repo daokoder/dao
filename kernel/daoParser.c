@@ -2007,7 +2007,7 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 		}
 	}
 	if( count == map->size && count > 0.75 * (max - min) ){
-		DaoInteger tmp = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
+		DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0,0};
 		key = (DaoValue*) & tmp;
 		for(i=min+1; i<max; i++){
 			key->xInteger.value = i;
@@ -3156,7 +3156,7 @@ static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
 	if( type->value == NULL ) return 0;
 	if( type->value->type == DAO_CTYPE || type->value->type == DAO_CDATA ){
 		mt = DaoType_MatchTo( type->value->xCdata.ctype, type, NULL );
-	}else if( type->value->type ==0 && type->value->xNull.konst ){
+	}else if( type->value->type ==0 ){
 		mt = 1;
 	}else{
 		mt = DaoType_MatchValue( type, type->value, NULL );
@@ -4235,7 +4235,7 @@ static int DaoParser_IntegerZero( DaoParser *self, int start )
 static int DaoParser_IntegerOne( DaoParser *self, int start )
 {
 	int cst;
-	DaoInteger one = {DAO_INTEGER,0,1,0,{0,0},0,0,1};
+	DaoInteger one = {DAO_INTEGER,0,0,0,0,0,1};
 	/* if( self->integerOne >= 0 ) return self->integerOne; */
 	self->integerOne = self->regCount;
 	cst = DRoutine_AddConstant( (DRoutine*) self->routine, (DaoValue*) & one );
@@ -4398,9 +4398,9 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 	}
 	return -1;
 }
-DaoInteger daoIntegerZero = {DAO_INTEGER,0,1,0,{0,0},1,1,0};
-DaoInteger daoIntegerOne  = {DAO_INTEGER,0,1,0,{0,0},1,1,1};
-DaoComplex daoComplexImag = {DAO_COMPLEX,0,1,0,{0,0},1,1,{0.0,1.0}};
+DaoInteger daoIntegerZero = {DAO_INTEGER,0,0,0,1,1,0};
+DaoInteger daoIntegerOne  = {DAO_INTEGER,0,0,0,1,1,1};
+DaoComplex daoComplexImag = {DAO_COMPLEX,0,0,0,1,1,{0.0,1.0}};
 DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 {
 	DaoNameSpace *ns = self->nameSpace;
@@ -4947,7 +4947,7 @@ static int DaoParser_AddFieldConst( DaoParser *self, DString *field )
 	DString_SetMBS( self->mbs, "." );
 	DString_Append( self->mbs, field );
 	if( MAP_Find( self->allConsts, self->mbs )==NULL ){
-		DaoString str = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+		DaoString str = {DAO_STRING,0,0,0,0,0,NULL};
 		str.data = field;
 		MAP_Insert( self->allConsts, self->mbs, self->routine->routConsts->size );
 		DRoutine_AddConstant( (DRoutine*)self->routine, (DaoValue*) & str );
@@ -5301,7 +5301,7 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buf
 }
 static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst )
 {
-	DaoComplex buffer = {0,0,1,0,{0,0},0,0,{0.0,0.0}};
+	DaoComplex buffer = {0,0,0,0,0,0,{0.0,0.0}};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNameSpace *ns = self->nameSpace;
 	DaoRoutine *routine = self->routine;
@@ -5330,7 +5330,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		 */
 	}else if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
-			DaoString dummy = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+			DaoString dummy = {DAO_STRING,0,0,0,0,0,NULL};
 			dummy.data = self->str;
 			DString_ToMBS( self->str );
 			DString_SetDataMBS( self->str, tok + 1, str->size-2 );
@@ -5374,7 +5374,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 	}else if( tki == DTOK_COLON ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			DaoTuple *tuple = DaoNameSpace_MakePair( ns, null, null );
-			tuple->konst = 0;
+			tuple->trait = 0;
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConstant( (DRoutine*)routine, (DaoValue*) tuple );
 		}
@@ -5915,7 +5915,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.last = result.update = self->vmcLast;
 		start = pos + 1;
 	}else if( tki == DTOK_IDENTIFIER && tki2 == DTOK_FIELD ){
-		DaoString ds = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+		DaoString ds = {DAO_STRING,0,0,0,0,0,NULL};
 		DaoValue *value = (DaoValue*) & ds;
 		DString *field = tokens[start]->string;
 		DString_Assign( mbs, field );

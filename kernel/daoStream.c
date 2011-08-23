@@ -414,7 +414,7 @@ static void DaoIO_GetItem( DaoContext *ctx, DaoValue *p[], int N )
 
 static void DaoIO_Read2( DaoContext *ctx, DaoValue *p[], int N )
 {
-	DaoInteger mode = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
+	DaoInteger mode = {DAO_INTEGER,0,0,0,0,0,0};
 	DaoValue *params[2] = { NULL, NULL };
 	params[0] = p[0];
 	params[1] = (DaoValue*) & mode;

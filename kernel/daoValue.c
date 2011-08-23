@@ -338,8 +338,8 @@ void DaoValue_MarkConst( DaoValue *self )
 	DMap *map;
 	DNode *it;
 	int i, n;
-	if( self == NULL || self->xNull.konst ) return;
-	self->xNull.konst = 1;
+	if( self == NULL || (self->xNull.trait & DAO_DATA_CONST) ) return;
+	self->xNull.trait |= DAO_DATA_CONST;
 	switch( self->type ){
 	case DAO_LIST :
 		for(i=0; i<self->xList.items->size; i++)
@@ -409,7 +409,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
 	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum );
 	}
-	if( self->xNull.konst == 0 ) return self;
+	if( (self->xNull.trait & DAO_DATA_CONST) == 0 ) return self;
 	switch( self->type ){
 	case DAO_LIST :
 		{
@@ -438,6 +438,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		{
 			DaoTuple *tuple = (DaoTuple*) self;
 			DaoTuple *copy = DaoTuple_New( tuple->items->size );
+			copy->subtype = tuple->subtype;
 			copy->unitype = (tp && tp->tid == DAO_TUPLE) ? tp : tuple->unitype;
 			GC_IncRC( copy->unitype );
 			for(i=0; i<tuple->items->size; i++)
@@ -794,7 +795,7 @@ DaoValue* DaoValue_NewList()
 }
 DaoValue* DaoValue_NewArray( int type )
 {
-	DaoList *res = DaoArray_New( type );
+	DaoArray *res = DaoArray_New( type );
 	GC_IncRC( res );
 	return (DaoValue*) res;
 }
@@ -1388,7 +1389,7 @@ static void DString_Serialize( DString *self, DString *serial, DString *buf )
 }
 static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 {
-	DaoInteger intmp = {DAO_INTEGER,0,0,0,{0,0},0,0,0};
+	DaoInteger intmp = {DAO_INTEGER,0,0,0,0,0,0};
 	DaoValue *value = (DaoValue*) & intmp;
 	int i;
 	DString_AppendChar( serial, '[' );

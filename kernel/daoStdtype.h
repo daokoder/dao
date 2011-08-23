@@ -20,12 +20,7 @@
 #include"daoArray.h"
 #include"daoMap.h"
 
-//#define DAO_DATA_COMMON uchar_t type, trait, gcState[2]; int refCount, cycRefCount
-
-#define DAO_DATA_COMMON \
-	uchar_t type, subtype, konst, trait; \
-	int gcState[2]; \
-	int refCount, cycRefCount
+#define DAO_DATA_COMMON uchar_t type, subtype, trait, mark; int refCount, cycRefCount
 
 void DaoValue_Init( void *dbase, char type );
 void DaoValue_ChangeState( void *dbase, char state, char add );

@@ -208,7 +208,7 @@ void DaoType_InitDefault( DaoType *self )
 	}
 	GC_ShiftRC( value, self->value );
 	self->value = value;
-	if( value ) value->xNull.konst = 1;
+	if( value ) value->xNull.trait |= DAO_DATA_CONST;
 }
 DaoType* DaoType_Copy( DaoType *other )
 {

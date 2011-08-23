@@ -408,8 +408,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
 	DaoClass_AddConst( self, name, (DaoValue*) self, DAO_DATA_PUBLIC, -1 );
 
 	self->objType->value = (DaoValue*) DaoObject_Allocate( self );
-	self->objType->value->xObject.trait |= DAO_DATA_NOCOPY;
-	self->objType->value->xObject.konst = 1;
+	self->objType->value->xObject.trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
 	GC_IncRC( self->objType->value );
 	DString_SetMBS( str, "default" );
 	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC, -1 );
@@ -671,7 +670,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
 	DaoObject_Init( & self->objType->value->xObject, NULL, 0 );
-	self->objType->value->xObject.konst = 0;
+	self->objType->value->xObject.trait &= ~DAO_DATA_CONST;
 	DaoValue_MarkConst( self->objType->value );
 	DaoValue_MarkConst( self->cstData->items.pValue[1] ); /* ::default */
 }
@@ -928,7 +927,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s, int
 			}
 
 			DaoFunctree_Add( mroutine, (DRoutine*) dest );
-			mroutine->konst = 1;
+			mroutine->trait |= DAO_DATA_CONST;
 			mroutine->host = self->objType;
 			GC_IncRC( mroutine->host );
 			GC_ShiftRC( mroutine, dest );

@@ -1130,7 +1130,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray  *dataCG = self->nameSpace->cstDataTable;
 	DArray  *dataVG = self->nameSpace->varDataTable;
 	DArray  *typeVG = self->nameSpace->varTypeTable;
-	DaoNull  dummy = {0,0,0,0,{0,0},0,0};
+	DaoNull  dummy = {0,0,0,0,0,0};
 	DaoValue  *constag = (DaoValue*) & dummy;
 	DaoValue  *val = NULL;
 	DaoValue **csts;
@@ -1393,7 +1393,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				indexkey = bt;
 				val = csts[opb];
 				k = at->tid != DAO_CLASS && at->tid != DAO_OBJECT && at->tid != DAO_CDATA;
-				if( val && val->type == 0 && val->xNull.konst && k && bt->tid == 0 ){ /* a[] */
+				if( val && val->type == 0 && k && bt->tid == 0 ){ /* a[] */
 					ct = at;
 				}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 					/* allow less strict typing: */
@@ -2917,7 +2917,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				vmc->code = DVM_GOTO;
 				vmc->b = jump;
 			}else if( at->tid == DAO_ENUM && at->name->mbs[0] != '$' && j == opc ){
-				DaoEnum denum = {DAO_ENUM,0,1,0,{0,0},0,0,NULL,0};
+				DaoEnum denum = {DAO_ENUM,0,0,0,0,0,NULL,0};
 				DMap *jumps = DMap_New(D_VALUE,0);
 				DNode *it, *find;
 				int max=0, min=0;

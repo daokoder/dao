@@ -182,7 +182,7 @@ DaoValue* DaoNameSpace_FindData( DaoNameSpace *self, const char *name )
 }
 void DaoNameSpace_AddConstNumbers( DaoNameSpace *self, DaoNumItem *items )
 {
-	DaoDouble buf = {0,0,1,0,{0,0},0,0,0.0};
+	DaoDouble buf = {0,0,0,0,0,0,0.0};
 	DaoValue *value = (DaoValue*) & buf;
 	int i = 0;
 	while( items[i].name != NULL ){
@@ -240,7 +240,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 #endif
 	if( typer->priv->values == NULL ){
 		DString defname = DString_WrapMBS( "default" );
-		DaoDouble buf = {0,0,1,0,{0,0},0,0,0.0};
+		DaoDouble buf = {0,0,0,0,0,0,0.0};
 		DaoValue *value = (DaoValue*) & buf;
 		DaoType *abtype = typer->priv->abtype;
 
@@ -760,9 +760,9 @@ DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *nsname )
 	GC_IncRC( dao_routine );
 	GC_IncRC( self );
 	DaoVmProcess_PushRoutine( self->vmpEvalConst, self->routEvalConst );
-	self->vmpEvalConst->topFrame->context->konst = 1;
-	self->routEvalConst->konst = 1;
-	self->vmpEvalConst->konst = 1;
+	self->vmpEvalConst->topFrame->context->trait |= DAO_DATA_CONST;
+	self->routEvalConst->trait |= DAO_DATA_CONST;
+	self->vmpEvalConst->trait |= DAO_DATA_CONST;
 	DArray_Append( self->cstData, (DaoValue*) self->routEvalConst );
 	DArray_Append( self->cstData, (DaoValue*) self->vmpEvalConst );
 	DString_Delete( name );
@@ -908,7 +908,7 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, i
 			mroutine = DaoFunctree_New( self, name );
 			DaoFunctree_Add( mroutine, (DRoutine*) dest );
 			dest = (DaoValue*) mroutine;
-			dest->xNull.konst = 1;
+			dest->xNull.trait |= DAO_DATA_CONST;
 			GC_ShiftRC( mroutine, self->cstData->items.pValue[id] );
 			self->cstData->items.pValue[id] = dest;
 		}
@@ -918,7 +918,7 @@ int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, i
 			DaoFunctree_Add( & dest->xFunctree, (DRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->cstData, value );
-			value->xNull.konst = 1;
+			value->xNull.trait |= DAO_DATA_CONST;
 		}
 		id = node->value.pSize;
 	}else{
@@ -1128,7 +1128,7 @@ int DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent )
 	for(i=0; i<self->parents->size; i++){
 		if( self->parents->items.pNS[i] == parent ) return 1;
 	}
-	parent->konst = 1;
+	parent->trait |= DAO_DATA_CONST;
 	DArray_Append( self->cstData, parent );
 	DArray_Append( self->parents, parent );
 	for(i=0; i<parent->parents->size; i++){
@@ -1829,7 +1829,7 @@ DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DaoValue *value )
 {
 	DaoType *type;
 	DString *name;
-	if( value->xNull.konst == 0 || value->type >= DAO_ARRAY ) return NULL;
+	if( value->type >= DAO_ARRAY ) return NULL;
 	name = DString_New(1);
 	DaoValue_GetString( value, name );
 	if( value->type == DAO_STRING ){
@@ -1855,7 +1855,6 @@ DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DaoType *first, DaoType 
 DaoType* DaoNameSpace_MakePairValueType( DaoNameSpace *self, DaoValue *first, DaoValue *second )
 {
 	DaoType *tp1, *tp2;
-	first->xNull.konst = second->xNull.konst = 1;
 	tp1 = DaoNameSpace_MakeValueType( self, first );
 	tp2 = DaoNameSpace_MakeValueType( self, second );
 	return DaoNameSpace_MakePairType( self, tp1, tp2 );

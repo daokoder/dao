@@ -595,9 +595,9 @@ static DaoNameSpace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, 
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 		DString *file, DArray *args, DArray *argNames, DArray *argValues )
 {
-	DaoInteger ival = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
-	DaoString sval1 = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
-	DaoString sval2 = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+	DaoInteger ival = {DAO_INTEGER,0,0,0,0,0,0};
+	DaoString sval1 = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString sval2 = {DAO_STRING,0,0,0,0,0,NULL};
 	DaoValue *nkey = (DaoValue*) & ival;
 	DaoValue *skey = (DaoValue*) & sval1;
 	DaoValue *sval = (DaoValue*) & sval2;
@@ -687,9 +687,9 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNameSpace *ns,
 }
 static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DArray *argValues )
 {
-	DaoInteger ival = {DAO_INTEGER,0,1,0,{0,0},0,0,0};
-	DaoString sval1 = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
-	DaoString sval2 = {DAO_STRING,0,1,0,{0,0},0,0,NULL};
+	DaoInteger ival = {DAO_INTEGER,0,0,0,0,0,0};
+	DaoString sval1 = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString sval2 = {DAO_STRING,0,0,0,0,0,NULL};
 	DaoValue *nkey = (DaoValue*) & ival;
 	DaoValue *skey = (DaoValue*) & sval1;
 	DaoValue *sval = (DaoValue*) & sval2;
@@ -743,7 +743,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 					}
 				}
 				if( k >0 && k <= DAO_DOUBLE && DaoToken_IsNumber( chars, 0 ) ){
-					DaoDouble tmp = {0,0,1,0,{0,0},0,0,0.0};
+					DaoDouble tmp = {0,0,0,0,0,0,0.0};
 					nkey = DaoParseNumber( chars, (DaoValue*) & tmp );
 				}
 			}
@@ -751,7 +751,7 @@ static void DaoVmSpace_ConvertArguments( DaoNameSpace *ns, DArray *argNames, DAr
 		if( argNames->items.pString[i]->size ){
 			DaoNameValue *nameva = DaoNameValue_New( argNames->items.pString[i], nkey );
 			DaoList_Append( ns->argParams, (DaoValue*) nameva );
-			nameva->konst = 1;
+			nameva->trait |= DAO_DATA_CONST;
 		}else{
 			DaoList_Append( ns->argParams, nkey );
 		}

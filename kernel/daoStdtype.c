@@ -41,10 +41,8 @@ void DaoValue_Init( void *value, char type )
 {
 	DaoNull *self = (DaoNull*) value;
 	self->type = type;
-	self->subtype = self->konst = self->trait = 0;
-	self->gcState[0] = self->gcState[1]  = 0;
-	self->refCount = 0;
-	self->cycRefCount = 0;
+	self->subtype = self->trait = self->mark = 0;
+	self->refCount = self->cycRefCount = 0;
 #ifdef DAO_GC_PROF
 	if( type < 100 )  ObjectProfile[(int)type] ++;
 #endif
@@ -340,7 +338,7 @@ DaoTypeBase baseTyper =
 {
 	"null", & baseCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
 };
-DaoNull null0 = { 0, 0, DAO_DATA_CONST, 0, {0,0}, 1, 0 };
+DaoNull null0 = {0,0,DAO_DATA_CONST,0,1,0};
 DaoValue *null = (DaoValue*) & null0;
 
 
@@ -2968,35 +2966,35 @@ DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  )
 }
 int DaoMap_InsertMBS( DaoMap *self, const char *key, DaoValue *value )
 {
-	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
+	DaoString vkey = { DAO_STRING,0,0,0,1,0,NULL};
 	DString str = DString_WrapMBS( key );
 	vkey.data = & str;
 	return DaoMap_Insert( self, (DaoValue*) & vkey, value );
 }
 int DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DaoValue *value )
 {
-	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
+	DaoString vkey = { DAO_STRING,0,0,0,1,0,NULL};
 	DString str = DString_WrapWCS( key );
 	vkey.data = & str;
 	return DaoMap_Insert( self, (DaoValue*) & vkey, value );
 }
 void DaoMap_EraseMBS ( DaoMap *self, const char *key )
 {
-	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
+	DaoString vkey = { DAO_STRING,0,0,0,1,0,NULL};
 	DString str = DString_WrapMBS( key );
 	vkey.data = & str;
 	DaoMap_Erase( self, (DaoValue*) & vkey );
 }
 void DaoMap_EraseWCS ( DaoMap *self, const wchar_t *key )
 {
-	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
+	DaoString vkey = { DAO_STRING,0,0,0,1,0,NULL};
 	DString str = DString_WrapWCS( key );
 	vkey.data = & str;
 	DaoMap_Erase( self, (DaoValue*) & vkey );
 }
 DaoValue* DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 {
-	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
+	DaoString vkey = { DAO_STRING,0,0,0,1,0,NULL};
 	DString str = DString_WrapMBS( key );
 	DNode *node;
 	vkey.data = & str;
@@ -3006,7 +3004,7 @@ DaoValue* DaoMap_GetValueMBS( DaoMap *self, const char *key  )
 }
 DaoValue* DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  )
 {
-	DaoString vkey = { DAO_STRING,0,1,0,{0,0},1,0};
+	DaoString vkey = { DAO_STRING,0,0,0,1,0,NULL};
 	DString str = DString_WrapWCS( key );
 	DNode *node;
 	vkey.data = & str;
@@ -3053,8 +3051,8 @@ int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 	DaoType *tp1=NULL, *tp2=NULL;
 	DaoValue *key2 = NULL;
 	DaoValue *value2 = NULL;
-	DaoEnum ekey = {DAO_ENUM,0,1,0,{0,0},1,0,NULL,0};
-	DaoEnum evalue = {DAO_ENUM,0,1,0,{0,0},1,0,NULL,0};
+	DaoEnum ekey = {DAO_ENUM,0,0,0,1,0,NULL,0};
+	DaoEnum evalue = {DAO_ENUM,0,0,0,1,0,NULL,0};
 	DNode *node;
 	if( tp ){
 		if( tp->nested->size >=2 ){
@@ -3639,7 +3637,7 @@ DaoTypeBase cdataTyper =
 	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0}, {0},
 	(FuncPtrDel)DaoCData_Delete, NULL
 };
-DaoCData cptrCData = { DAO_CDATA, 0, DAO_DATA_CONST, 0, { 0, 0 }, 1, 0, 
+DaoCData cptrCData = { DAO_CDATA, 0, DAO_DATA_CONST, 0, 1, 0, 
 	NULL, NULL, NULL, NULL, NULL, NULL, 0,0,0,0,0 };
 
 void DaoNameValue_Delete( DaoNameValue *self )
@@ -4248,8 +4246,7 @@ DaoType* DaoCData_WrapType( DaoNameSpace *ns, DaoTypeBase *typer )
 	GC_ShiftRC( cdata_type, cdata->ctype );
 	cdata->ctype = cdata_type;
 	cdata_type->value = (DaoValue*) cdata;
-	cdata->konst = 1;
-	cdata->trait |= DAO_DATA_NOCOPY;
+	cdata->trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
 	GC_IncRC( cdata );
 
 	plgCore = DaoCDataCore_New();
