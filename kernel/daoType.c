@@ -159,7 +159,7 @@ void DaoType_InitDefault( DaoType *self )
 	int i, count = self->nested ? self->nested->size : 0;
 
 	if( self->value && self->value->type != DAO_TUPLE ) return;
-	if( self->value && self->value->xTuple.items->size == count ) return;
+	if( self->value && self->value->xTuple.size == count ) return;
 
 	switch( self->tid ){
 #ifdef DAO_WITH_NUMARRAY
@@ -186,7 +186,7 @@ void DaoType_InitDefault( DaoType *self )
 		GC_IncRC( self );
 		for(i=0; i<count; i++){
 			DaoType_InitDefault( types[i] );
-			DaoValue_Copy( types[i]->value, & value->xTuple.items->items.pValue[i] );
+			DaoValue_Copy( types[i]->value, & value->xTuple.items[i] );
 		}
 		break;
 	case DAO_VARIANT :
@@ -654,7 +654,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_TUPLE :
 		tp = value->xTuple.unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( value->xTuple.items->size != self->nested->size ) return DAO_MT_NOT;
+		if( value->xTuple.size != self->nested->size ) return DAO_MT_NOT;
 
 		for(i=0; i<self->nested->size; i++){
 			tp = self->nested->items.pType[i];
@@ -663,10 +663,10 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			/* for C functions that returns a tuple:
 			 * the tuple may be assigned to a context value before
 			 * its values are set properly! */
-			if( value->xTuple.items->items.pValue[i] == NULL ) continue;
+			if( value->xTuple.items[i] == NULL ) continue;
 			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) continue;
 
-			mt = DaoType_MatchValue( tp, value->xTuple.items->items.pValue[i], defs );
+			mt = DaoType_MatchValue( tp, value->xTuple.items[i], defs );
 			if( mt < DAO_MT_SIM ) return 0;
 		}
 		if( value->xTuple.unitype == NULL ) return DAO_MT_EQ;

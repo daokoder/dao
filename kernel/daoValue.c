@@ -77,12 +77,12 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 {
 	int i, lb, rb, res;
-	if( lt->items->size < rt->items->size ) return -1;
-	if( lt->items->size > rt->items->size ) return 1;
+	if( lt->size < rt->size ) return -1;
+	if( lt->size > rt->size ) return 1;
 
-	for(i=0; i<lt->items->size; i++){
-		DaoValue *lv = lt->items->items.pValue[i];
-		DaoValue *rv = rt->items->items.pValue[i];
+	for(i=0; i<lt->size; i++){
+		DaoValue *lv = lt->items[i];
+		DaoValue *rv = rt->items[i];
 		int lb = lv ? lv->type : 0;
 		int rb = rv ? rv->type : 0;
 		if( lb == rb && lb == DAO_TUPLE ){
@@ -123,10 +123,10 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	if( left == NULL || right == NULL ) return left < right ? -1 : 1;
 	if( left->type != right->type ){
 		res = left->type < right->type ? -1 : 1;
-		if( right->type == DAO_TUPLE && right->xTuple.items->size == 2 ){
-			res = DaoValue_Compare( left, right->xTuple.items->items.pValue[0] );
+		if( right->type == DAO_TUPLE && right->xTuple.size == 2 ){
+			res = DaoValue_Compare( left, right->xTuple.items[0] );
 			if( res <= 0 ) return res;
-			res = DaoValue_Compare( left, right->xTuple.items->items.pValue[1] );
+			res = DaoValue_Compare( left, right->xTuple.items[1] );
 			if( res >= 0 ) return res;
 			return 0;
 		}
@@ -346,8 +346,8 @@ void DaoValue_MarkConst( DaoValue *self )
 			DaoValue_MarkConst( self->xList.items->items.pValue[i] );
 		break;
 	case DAO_TUPLE :
-		for(i=0; i<self->xTuple.items->size; i++)
-			DaoValue_MarkConst( self->xTuple.items->items.pValue[i] );
+		for(i=0; i<self->xTuple.size; i++)
+			DaoValue_MarkConst( self->xTuple.items[i] );
 		break;
 	case DAO_MAP :
 		map = self->xMap.items;
@@ -437,12 +437,11 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_TUPLE :
 		{
 			DaoTuple *tuple = (DaoTuple*) self;
-			DaoTuple *copy = DaoTuple_New( tuple->items->size );
+			DaoTuple *copy = DaoTuple_New( tuple->size );
 			copy->subtype = tuple->subtype;
 			copy->unitype = (tp && tp->tid == DAO_TUPLE) ? tp : tuple->unitype;
 			GC_IncRC( copy->unitype );
-			for(i=0; i<tuple->items->size; i++)
-				DaoTuple_SetItem( copy, tuple->items->items.pValue[i], i );
+			for(i=0; i<tuple->size; i++) DaoTuple_SetItem( copy, tuple->items[i], i );
 			return (DaoValue*) copy;
 		}
 #ifdef DAO_WITH_NUMARRAY
@@ -622,7 +621,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 		DaoTuple *tuple;
 		DaoType **item_types = tp->nested->items.pType;
 		DaoType *totype = src->xTuple.unitype;
-		DaoValue **data = src->xTuple.items->items.pValue;
+		DaoValue **data = src->xTuple.items;
 		DMap *names = totype ? totype->mapNames : NULL;
 		DNode *node, *search;
 		int i, T = tp->nested->size;
@@ -652,7 +651,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 		for(i=0; i<T; i++){
 			DaoType *it = item_types[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
-			DaoValue_Move( data[i], tuple->items->items.pValue+i, it );
+			DaoValue_Move( data[i], tuple->items+i, it );
 		}
 		GC_IncRC( tp );
 		tuple->unitype = tp;
@@ -1451,15 +1450,15 @@ static int DaoTuple_Serialize( DaoTuple *self, DString *serial, DaoNameSpace *ns
 {
 	DArray *nested = self->unitype ? self->unitype->nested : NULL;
 	int i, rc = 1;
-	for(i=0; i<self->items->size; i++){
+	for(i=0; i<self->size; i++){
 		DaoType *type = NULL;
 		DaoType *it = NULL;
 		if( nested && nested->size > i ) type = nested->items.pType[i];
 		if( type && type->tid == DAO_PAR_NAMED ) type = & type->aux->xType;
 		if( type && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
-		if( type == NULL ) it = DaoNameSpace_GetType( ns, self->items->items.pValue[i] );
+		if( type == NULL ) it = DaoNameSpace_GetType( ns, self->items[i] );
 		if( i ) DString_AppendChar( serial, ',' );
-		rc &= DaoValue_Serialize2( self->items->items.pValue[i], serial, ns, proc, it, buf );
+		rc &= DaoValue_Serialize2( self->items[i], serial, ns, proc, it, buf );
 	}
 	return rc;
 }
@@ -1845,7 +1844,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 				if( it1 && it1->tid == DAO_PAR_NAMED ) it1 = & it1->aux->xType;
 			}
 			DArray_PushFront( types, it1 );
-			i = DaoParser_Deserialize( self, i, end, tuple->items->items.pValue + n, types, ns, proc );
+			i = DaoParser_Deserialize( self, i, end, tuple->items + n, types, ns, proc );
 			DArray_PopFront( types );
 			i -= 1;
 			n += 1;

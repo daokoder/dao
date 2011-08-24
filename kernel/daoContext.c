@@ -546,7 +546,7 @@ void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc )
 	}
 
 	iter = & vc->xTuple;
-	iter->items->items.pValue[0]->xInteger.value = 0;
+	iter->items[0]->xInteger.value = 0;
 
 	DString_SetMBS( name, "__for_iterator__" );
 	if( va->type == DAO_OBJECT ){
@@ -1222,7 +1222,7 @@ static DaoTuple* DaoContext_GetTuple( DaoContext *self, DaoType *type, int size 
 			DaoType *tp = types[i];
 			if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = & tp->aux->xType;
 			if( tp->tid > DAO_ENUM && tp->tid != DAO_ANY && tp->tid != DAO_INITYPE ) continue;
-			DaoValue_Move( tp->value, tup->items->items.pValue + i, tp );
+			DaoValue_Move( tp->value, tup->items + i, tp );
 		}
 	}
 	GC_ShiftRC( tup, val );
@@ -1260,7 +1260,7 @@ void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DaoValue *its[], i
 		}
 		tp = ct->nested->items.pType[i];
 		if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = & tp->aux->xType;
-		if( DaoValue_Move( val, tuple->items->items.pValue + i, tp ) == 0){
+		if( DaoValue_Move( val, tuple->items + i, tp ) == 0){
 			DaoContext_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );
 			return;
 		}
@@ -1375,8 +1375,8 @@ void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc )
 	if( tp == NULL ) tp = DaoNameSpace_MakePairValueType( ns, dA, dB );
 	tuple->unitype = tp;
 	GC_IncRC( tuple->unitype );
-	DaoValue_Copy( dA, & tuple->items->items.pValue[0] );
-	DaoValue_Copy( dB, & tuple->items->items.pValue[1] );
+	DaoValue_Copy( dA, & tuple->items[0] );
+	DaoValue_Copy( dB, & tuple->items[1] );
 	DaoContext_SetValue( self, vmc->c, (DaoValue*) tuple );
 }
 void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc )
@@ -1549,7 +1549,7 @@ static DaoMap* DaoGetMetaMap( DaoValue *self, int create )
 	switch( self->type ){
 	case DAO_ARRAY : meta = self->xArray.meta; break;
 	case DAO_LIST  : meta = self->xList.meta; break;
-	case DAO_TUPLE : meta = self->xTuple.meta; break;
+	//case DAO_TUPLE : meta = self->xTuple.meta; break;
 	case DAO_MAP   : meta = self->xMap.meta; break;
 	case DAO_CTYPE :
 	case DAO_CDATA : meta = self->xCdata.meta; break;
@@ -1560,7 +1560,7 @@ static DaoMap* DaoGetMetaMap( DaoValue *self, int create )
 	switch( self->type ){
 	case DAO_ARRAY : meta = self->xArray.meta = DaoMap_New(1); break;
 	case DAO_LIST  : meta = self->xList.meta = DaoMap_New(1); break;
-	case DAO_TUPLE : meta = self->xTuple.meta = DaoMap_New(1); break;
+	//case DAO_TUPLE : meta = self->xTuple.meta = DaoMap_New(1); break;
 	case DAO_MAP   : meta = self->xMap.meta = DaoMap_New(1); break;
 	case DAO_CTYPE :
 	case DAO_CDATA : meta = self->xCdata.meta = DaoMap_New(1); break;
@@ -2568,8 +2568,8 @@ void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc )
 		}
 		*C = DMap_Find( B->xMap.items, & A ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){
-		int c1 = DaoValue_Compare( B->xTuple.items->items.pValue[0], A );
-		int c2 = DaoValue_Compare( A, B->xTuple.items->items.pValue[1] );
+		int c1 = DaoValue_Compare( B->xTuple.items[0], A );
+		int c2 = DaoValue_Compare( A, B->xTuple.items[1] );
 		*C = c1 <=0 && c2 <= 0;
 	}else{
 		DaoContext_RaiseException( self, DAO_ERROR_TYPE, "" );
@@ -2757,11 +2757,11 @@ static int DaoValue_CheckTypeShape( DaoValue *self, int type,
 		break;
 	case DAO_TUPLE :
 		tuple = & self->xTuple;
-		if( shape->size <= depth ) DArray_Append( shape, (void*)(size_t)tuple->items->size );
-		if( check_size && tuple->items->size != shape->items.pSize[depth] ) return -1;
+		if( shape->size <= depth ) DArray_Append( shape, (void*)(size_t)tuple->size );
+		if( check_size && tuple->size != shape->items.pSize[depth] ) return -1;
 		depth ++;
-		data = tuple->items->items.pValue;
-		for(i=0; i<tuple->items->size; i++){
+		data = tuple->items;
+		for(i=0; i<tuple->size; i++){
 			type = DaoValue_CheckTypeShape( data[i], type, shape, depth, check_size );
 			if( type < 0 ) break;
 		}
@@ -2824,8 +2824,8 @@ static int DaoValue_ExportValue( DaoValue *self, DaoArray *array, int k )
 		break;
 	case DAO_TUPLE :
 		tup = & self->xTuple;
-		items = tup->items->items.pValue;
-		for(i=0; i<tup->items->size; i++) k = DaoValue_ExportValue( items[i], array, k );
+		items = tup->items;
+		for(i=0; i<tup->size; i++) k = DaoValue_ExportValue( items[i], array, k );
 		break;
 	default : break;
 	}
@@ -3375,8 +3375,8 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 				size = dA->xList.items->size;
 				items = dA->xList.items->items.pValue;
 			}else{
-				size = dA->xTuple.items->size;
-				items = dA->xTuple.items->items.pValue;
+				size = dA->xTuple.size;
+				items = dA->xTuple.items;
 			}
 			if( size < tsize ) goto FailConversion;
 			if( tsize ) size = tsize;
@@ -3394,7 +3394,7 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 					V = DaoTypeCast( ctx, tp2, V, & value, b1, b2 );
 				}
 				if( V == NULL || V->type == 0 ) goto FailConversion;
-				DaoValue_Copy( V, tuple->items->items.pValue + i );
+				DaoValue_Copy( V, tuple->items + i );
 			}
 		}else if( dA->type == DAO_MAP ){
 			i = 0;
@@ -3405,13 +3405,13 @@ static DaoValue* DaoTypeCast( DaoContext *ctx, DaoType *ct, DaoValue *dA, DaoVal
 			node = DMap_First( dA->xMap.items );
 			for(; node!=NULL; node=DMap_Next(dA->xMap.items,node) ){
 				if( i >= ct->nested->size ){
-					DaoValue_Copy( node->value.pValue, tuple->items->items.pValue + i );
+					DaoValue_Copy( node->value.pValue, tuple->items + i );
 				}else{
 					tp2 = ct->nested->items.pType[i];
 					if( node->key.pValue->type != DAO_STRING ) goto FailConversion;
 					V = DaoTypeCast( ctx, tp2, node->value.pValue, & value, b1, b2 );
 					if( V == NULL || V->type ==0 ) goto FailConversion;
-					DaoValue_Copy( V, tuple->items->items.pValue + i );
+					DaoValue_Copy( V, tuple->items + i );
 				}
 				i ++;
 			}
@@ -4000,7 +4000,7 @@ void DaoContext_DoCall2( DaoContext *self, DaoVmCode *vmc )
 		if( npar > mcall && params[npar-1]->type == DAO_TUPLE ){
 			DaoTuple *tup = & params[npar-1]->xTuple;
 			n -= 1;
-			for(i=0; i<tup->items->size; i++) parbuf[n++] = tup->items->items.pValue[i];
+			for(i=0; i<tup->size; i++) parbuf[n++] = tup->items[i];
 		}
 	}
 	params = parbuf;
@@ -4187,7 +4187,7 @@ void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 			DaoContext_SetValue( self->caller, regReturn, self->regValues[ vmc->a ] );
 		}else if( vmc->b > 1 ){
 			DaoTuple *tuple = DaoTuple_New( vmc->b );
-			DaoValue **items = tuple->items->items.pValue;
+			DaoValue **items = tuple->items;
 			for(i=0; i<vmc->b; i++) DaoValue_Copy( self->regValues[ vmc->a+i ], items + i );
 			DaoContext_SetValue( self->caller, regReturn, (DaoValue*) tuple );
 		}else if( ! ( self->process->topFrame->state & DVM_SPEC_RUN ) ){
@@ -4202,7 +4202,7 @@ void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc )
 			DaoValue_Move( self->regValues[ vmc->a ], & self->process->returned, NULL );
 		}else if( vmc->b > 1 ){
 			DaoTuple *tuple = DaoTuple_New( vmc->b );
-			DaoValue **items = tuple->items->items.pValue;
+			DaoValue **items = tuple->items;
 			DaoValue_Clear( & self->process->returned );
 			GC_IncRC( tuple );
 			self->process->returned = (DaoValue*) tuple;
@@ -4347,8 +4347,7 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	DaoList *fields = NULL;
 	DaoList *methods = NULL;
 	DString *name = NULL;
-	DTuple *items = tuple->items;
-	DaoValue **data = tuple->items->items.pValue;
+	DaoValue **data = tuple->items;
 	DMap *keys = tuple->unitype->mapNames;
 	DMap *deftypes = DMap_New(0,0);
 	DMap *pm_map = DMap_New(D_STRING,0);
@@ -4382,13 +4381,13 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 	it = MAP_Find( keys, "methods" );
 	if( it && data[it->value.pInt]->type == DAO_LIST ) methods = & data[it->value.pInt]->xList;
 
-	if( name ==NULL && items->size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
-	if( parents ==NULL && parents2 == NULL && items->size >1 ){
+	if( name ==NULL && tuple->size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+	if( parents ==NULL && parents2 == NULL && tuple->size >1 ){
 		if( data[1]->type == DAO_LIST ) parents = & data[1]->xList;
 		if( data[1]->type == DAO_MAP ) parents2 = & data[1]->xMap;
 	}
-	if( fields ==NULL && items->size >2 && data[2]->type == DAO_LIST ) fields = & data[2]->xList;
-	if( methods ==NULL && items->size >3 && data[3]->type == DAO_LIST ) methods = & data[3]->xList;
+	if( fields ==NULL && tuple->size >2 && data[2]->type == DAO_LIST ) fields = & data[2]->xList;
+	if( methods ==NULL && tuple->size >3 && data[3]->type == DAO_LIST ) methods = & data[3]->xList;
 
 	if( name == NULL || name->size ==0 ){
 		sprintf( buf, "AnonymousClass%p", klass );
@@ -4486,8 +4485,8 @@ void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc )
 			if( fields->items->items.pValue[i]->type != DAO_TUPLE ) continue;
 			field = & fields->items->items.pValue[i]->xTuple;
 			keys = field->unitype->mapNames;
-			data = field->items->items.pValue;
-			size = field->items->size;
+			data = field->items;
+			size = field->size;
 			st = DAO_OBJECT_VARIABLE;
 			pm = DAO_DATA_PUBLIC;
 
@@ -4575,8 +4574,8 @@ InvalidField:
 
 			if( methods->items->items.pValue[i]->type != DAO_TUPLE ) continue;
 			tuple = & methods->items->items.pValue[i]->xTuple;
-			data = tuple->items->items.pValue;
-			size = tuple->items->size;
+			data = tuple->items;
+			size = tuple->size;
 			pm = DAO_DATA_PUBLIC;
 
 			id = (it = MAP_Find( keys, "name" )) ? it->value.pInt : -1;

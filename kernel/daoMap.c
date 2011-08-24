@@ -148,8 +148,8 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
 		}
 		break;
 	case DAO_TUPLE :
-		for(i=0; i<self->xTuple.items->size; i++){
-			id = DaoValue_Hash( self->xTuple.items->items.pValue[i], buf, id, max );
+		for(i=0; i<self->xTuple.size; i++){
+			id = DaoValue_Hash( self->xTuple.items[i], buf, id, max );
 			if( id >= max ) break;
 		}
 		break;

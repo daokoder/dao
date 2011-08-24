@@ -20,7 +20,7 @@
 #include"daoArray.h"
 #include"daoMap.h"
 
-#define DAO_DATA_COMMON uchar_t type, subtype, trait, mark; int refCount, cycRefCount
+#define DAO_DATA_COMMON uchar_t type, subtype, trait, marks; int refCount, cycRefCount
 
 void DaoValue_Init( void *dbase, char type );
 void DaoValue_ChangeState( void *dbase, char state, char add );
@@ -220,9 +220,10 @@ struct DaoTuple
 {
 	DAO_DATA_COMMON;
 
-	DTuple   *items;
-	DaoMap   *meta;
-	DaoType  *unitype;
+	int         size;
+	DaoValue  **items;
+	//DaoMap     *meta; // TODO: put meta field somewhere else!
+	DaoType    *unitype;
 };
 void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );

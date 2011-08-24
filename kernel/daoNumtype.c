@@ -1538,11 +1538,11 @@ static void DaoLong_Sqrt( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DLong *z = p[0]->xLong.value;
 	DaoTuple *tuple = DaoContext_PutTuple( ctx );//DaoTuple_New( 2 );
-	DaoValue **items = tuple->items->items.pValue;
+	DaoValue **items = tuple->items;
 	//DaoContext_PutValue( ctx, (DaoValue*) tuple );
-	//tuple->items->items.pValue[0].v.l = DLong_New();
-	//tuple->items->items.pValue[1].v.l = DLong_New();
-	//tuple->items->items.pValue[0]->type = tuple->items->items.pValue[1]->type = DAO_LONG;
+	//tuple->items[0].v.l = DLong_New();
+	//tuple->items[1].v.l = DLong_New();
+	//tuple->items[0]->type = tuple->items[1]->type = DAO_LONG;
 	if( z->sign <0 ){
 		DaoContext_RaiseException( ctx, DAO_ERROR, "need positive long integer" );
 		return;
@@ -1711,7 +1711,7 @@ static void MakeSlice( DaoContext *ctx, DaoValue *pid, int N, DArray *slice )
 		}
 	case DAO_TUPLE :
 		{
-			DaoValue **data = pid->xTuple.items->items.pValue;
+			DaoValue **data = pid->xTuple.items;
 			DArray_Clear( slice );
 			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
 				if( pid->xTuple.unitype == dao_type_for_iterator ){
@@ -1948,7 +1948,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoContext *ctx, DaoValue *pid )
 		return;
 	}else if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
 		DaoArray *array = self;
-		DaoValue **data = pid->xTuple.items->items.pValue;
+		DaoValue **data = pid->xTuple.items;
 		int size = self->size;
 		int id = data[1]->xInteger.value;
 		if( self->reference && self->slice ){
@@ -2484,9 +2484,9 @@ static void DaoArray_Lib_max( DaoContext *ctx, DaoValue *par[], int N )
 	DaoArray *self = & par[0]->xArray;
 	int i, k, size, cmp=0, imax = -1;
 #warning ": Need testing!"
-	//tuple->items->items.pValue[0]->type = self->numType;
-	//tuple->items->items.pValue[1]->type = DAO_INTEGER;
-	//tuple->items->items.pValue[1]->xInteger.value = -1;
+	//tuple->items[0]->type = self->numType;
+	//tuple->items[1]->type = DAO_INTEGER;
+	//tuple->items[1]->xInteger.value = -1;
 	if( self->numType == DAO_COMPLEX ) return;/* no exception, guaranteed by the typing system */
 	if( DaoArray_SliceSize( self ) == 0 ) return;
 	if( self->reference && self->slice ){
@@ -2517,11 +2517,11 @@ static void DaoArray_Lib_max( DaoContext *ctx, DaoValue *par[], int N )
 			if( cmp ) imax = i;
 		}
 	}
-	tuple->items->items.pValue[1]->xInteger.value = imax;
+	tuple->items[1]->xInteger.value = imax;
 	switch( self->numType ){
-	case DAO_INTEGER : tuple->items->items.pValue[0]->xInteger.value = self->data.i[imax]; break;
-	case DAO_FLOAT  : tuple->items->items.pValue[0]->xFloat.value = self->data.f[imax]; break;
-	case DAO_DOUBLE : tuple->items->items.pValue[0]->xDouble.value = self->data.d[imax]; break;
+	case DAO_INTEGER : tuple->items[0]->xInteger.value = self->data.i[imax]; break;
+	case DAO_FLOAT  : tuple->items[0]->xFloat.value = self->data.f[imax]; break;
+	case DAO_DOUBLE : tuple->items[0]->xDouble.value = self->data.d[imax]; break;
 	default : break;
 	}
 }
@@ -2531,9 +2531,9 @@ static void DaoArray_Lib_min( DaoContext *ctx, DaoValue *par[], int N )
 	DaoArray *self = & par[0]->xArray;
 	int i, k, size, cmp=0, imax = -1;
 #warning ": Need testing!"
-	//tuple->items->items.pValue[0]->type = self->numType;
-	//tuple->items->items.pValue[1]->type = DAO_INTEGER;
-	//tuple->items->items.pValue[1]->xInteger.value = -1;
+	//tuple->items[0]->type = self->numType;
+	//tuple->items[1]->type = DAO_INTEGER;
+	//tuple->items[1]->xInteger.value = -1;
 	if( self->numType == DAO_COMPLEX ) return;
 	if( DaoArray_SliceSize( self ) == 0 ) return;
 	if( self->reference && self->slice ){
@@ -2564,11 +2564,11 @@ static void DaoArray_Lib_min( DaoContext *ctx, DaoValue *par[], int N )
 			if( cmp ) imax = i;
 		}
 	}
-	tuple->items->items.pValue[1]->xInteger.value = imax;
+	tuple->items[1]->xInteger.value = imax;
 	switch( self->numType ){
-	case DAO_INTEGER : tuple->items->items.pValue[0]->xInteger.value = self->data.i[imax]; break;
-	case DAO_FLOAT  : tuple->items->items.pValue[0]->xFloat.value = self->data.f[imax]; break;
-	case DAO_DOUBLE : tuple->items->items.pValue[0]->xDouble.value = self->data.d[imax]; break;
+	case DAO_INTEGER : tuple->items[0]->xInteger.value = self->data.i[imax]; break;
+	case DAO_FLOAT  : tuple->items[0]->xFloat.value = self->data.f[imax]; break;
+	case DAO_DOUBLE : tuple->items[0]->xDouble.value = self->data.d[imax]; break;
 	default : break;
 	}
 }
@@ -2868,7 +2868,7 @@ static void DaoArray_Lib_Iter( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoArray *self = & p[0]->xArray;
 	DaoTuple *tuple = & p[1]->xTuple;
-	DaoValue **data = tuple->items->items.pValue;
+	DaoValue **data = tuple->items;
 	DaoValue *iter = DaoValue_NewInteger(0);
 	data[0]->xInteger.value = DaoArray_SliceSize( self ) >0;
 	DaoValue_Copy( iter, & data[1] );

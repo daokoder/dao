@@ -396,7 +396,7 @@ static void DaoIO_Popen( DaoContext *ctx, DaoValue *p[], int N )
 static void DaoIO_Iter( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	DaoValue **tuple = p[1]->xTuple.items->items.pValue;
+	DaoValue **tuple = p[1]->xTuple.items;
 	tuple[0]->xInteger.value = 1;
 	if( self->file && self->file->fd ){
 		fseek( self->file->fd, 0, SEEK_SET );
@@ -406,7 +406,7 @@ static void DaoIO_Iter( DaoContext *ctx, DaoValue *p[], int N )
 static void DaoIO_GetItem( DaoContext *ctx, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	DaoValue **tuple = p[1]->xTuple.items->items.pValue;
+	DaoValue **tuple = p[1]->xTuple.items;
 	DaoIO_Read( ctx, p, 1 );
 	tuple[0]->xInteger.value = 0;
 	if( self->file && self->file->fd ) tuple[0]->xInteger.value = ! feof( self->file->fd );

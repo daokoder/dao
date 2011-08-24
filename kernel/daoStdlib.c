@@ -541,13 +541,13 @@ static void SYS_Ctime( DaoContext *ctx, DaoValue *p[], int N )
 	DaoTuple *tuple = DaoTuple_New( 7 );
 	if( t == 0 ) t = time(NULL);
 	ctime = gmtime( & t );
-	tuple->items->items.pValue[0] = DaoValue_NewInteger( ctime->tm_year + 1900 );
-	tuple->items->items.pValue[1] = DaoValue_NewInteger( ctime->tm_mon + 1 );
-	tuple->items->items.pValue[2] = DaoValue_NewInteger( ctime->tm_mday );
-	tuple->items->items.pValue[3] = DaoValue_NewInteger( ctime->tm_wday + 1 );
-	tuple->items->items.pValue[4] = DaoValue_NewInteger( ctime->tm_hour );
-	tuple->items->items.pValue[5] = DaoValue_NewInteger( ctime->tm_min );
-	tuple->items->items.pValue[6] = DaoValue_NewInteger( ctime->tm_sec );
+	tuple->items[0] = DaoValue_NewInteger( ctime->tm_year + 1900 );
+	tuple->items[1] = DaoValue_NewInteger( ctime->tm_mon + 1 );
+	tuple->items[2] = DaoValue_NewInteger( ctime->tm_mday );
+	tuple->items[3] = DaoValue_NewInteger( ctime->tm_wday + 1 );
+	tuple->items[4] = DaoValue_NewInteger( ctime->tm_hour );
+	tuple->items[5] = DaoValue_NewInteger( ctime->tm_min );
+	tuple->items[6] = DaoValue_NewInteger( ctime->tm_sec );
 	DaoContext_PutValue( ctx, (DaoValue*) tuple );
 }
 static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char *key, int id )
@@ -732,7 +732,7 @@ static void SYS_Time2( DaoContext *ctx, DaoValue *p[], int N )
 	/* extern long timezone; */
 	/* extern int daylight; // not on WIN32 */
 	struct tm ctime;
-	DaoValue **tup = p[0]->xTuple.items->items.pValue;
+	DaoValue **tup = p[0]->xTuple.items;
 	memset( & ctime, 0, sizeof( struct tm ) );
 	ctime.tm_year = tup[0]->xInteger.value - 1900;
 	ctime.tm_mon = tup[1]->xInteger.value - 1;
@@ -923,8 +923,8 @@ static void REFL_Cst1( DaoContext *ctx, DaoValue *p[], int N )
 		GC_IncRC( tp );
 		value = data->items.pValue[ id ];
 		vabtp = (DaoValue*) DaoNameSpace_GetType( here, value );
-		DaoValue_Copy( value, tuple->items->items.pValue );
-		DaoValue_Copy( vabtp, tuple->items->items.pValue + 1 );
+		DaoValue_Copy( value, tuple->items );
+		DaoValue_Copy( vabtp, tuple->items + 1 );
 		DString_Assign( name.data, node->key.pString );
 		DaoMap_Insert( map, (DaoValue*) & name, (DaoValue*) & tuple );
 	}
@@ -989,8 +989,8 @@ static void REFL_Var1( DaoContext *ctx, DaoValue *p[], int N )
 			value = ns->varData->items.pValue[id];
 			vabtp = ns->varType->items.pValue[ id ];
 		}
-		DaoValue_Copy( value, tuple->items->items.pValue );
-		DaoValue_Copy( vabtp, tuple->items->items.pValue + 1 );
+		DaoValue_Copy( value, tuple->items );
+		DaoValue_Copy( vabtp, tuple->items + 1 );
 		DString_Assign( name.data, node->key.pString );
 		DaoMap_Insert( map, (DaoValue*) & name, (DaoValue*) & tuple );
 	}
@@ -1024,8 +1024,8 @@ static void REFL_Cst2( DaoContext *ctx, DaoValue *p[], int N )
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
 	}
-	DaoValue_Copy( *value, tuple->items->items.pValue );
-	DaoValue_Copy( type, tuple->items->items.pValue + 1 );
+	DaoValue_Copy( *value, tuple->items );
+	DaoValue_Copy( type, tuple->items + 1 );
 	DaoContext_PutValue( ctx, (DaoValue*) tuple );
 	if( N >2 ){
 		DaoType *tp = DaoNameSpace_GetType( ns, p[2] );
@@ -1073,8 +1073,8 @@ static void REFL_Var2( DaoContext *ctx, DaoValue *p[], int N )
 	}else{
 		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
 	}
-	DaoValue_Copy( *value, tuple->items->items.pValue );
-	DaoValue_Copy( type, tuple->items->items.pValue + 1 );
+	DaoValue_Copy( *value, tuple->items );
+	DaoValue_Copy( type, tuple->items + 1 );
 	DaoContext_PutValue( ctx, (DaoValue*) tuple );
 	if( N >2 ){
 		DaoType *tp = DaoNameSpace_GetType( ns, p[2] );
@@ -1193,10 +1193,10 @@ static void REFL_Param( DaoContext *ctx, DaoValue *p[], int N )
 		GC_IncRC( itp );
 		num.value = 0;
 		if( nested[i]->tid == DAO_PAR_DEFAULT ) num.value = 1;
-		DaoValue_Copy( (DaoValue*) & str, & tuple->items->items.pValue[0] );
-		DaoValue_Copy( (DaoValue*) nested[i], & tuple->items->items.pValue[1] );
-		DaoValue_Copy( (DaoValue*) & num, & tuple->items->items.pValue[2] );
-		DaoValue_Copy( routine->routConsts->items.pValue[i], & tuple->items->items.pValue[3] );
+		DaoValue_Copy( (DaoValue*) & str, & tuple->items[0] );
+		DaoValue_Copy( (DaoValue*) nested[i], & tuple->items[1] );
+		DaoValue_Copy( (DaoValue*) & num, & tuple->items[2] );
+		DaoValue_Copy( routine->routConsts->items.pValue[i], & tuple->items[3] );
 		DaoList_Append( list, (DaoValue*) tuple );
 	}
 	DString_Delete( mbs );
@@ -1204,7 +1204,7 @@ static void REFL_Param( DaoContext *ctx, DaoValue *p[], int N )
 		node = DMap_First( routype->mapNames );
 		for( ; node !=NULL; node = DMap_Next( routype->mapNames, node ) ){
 			i = node->value.pInt;
-			mbs = list->items->items.pValue[i]->xTuple.items->items.pValue[0]->xString.data;
+			mbs = list->items->items.pValue[i]->xTuple.items[0]->xString.data;
 			DString_Assign( mbs, node->key.pString );
 		}
 	}

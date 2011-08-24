@@ -1132,7 +1132,7 @@ CallEntry:
 			case DAO_STRING  :
 				vmc = vA->xString.data->size ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_TUPLE :
-				if( vA->xTuple.unitype == dao_type_for_iterator && vA->xTuple.items->items.pValue[0]->xInteger.value ){
+				if( vA->xTuple.unitype == dao_type_for_iterator && vA->xTuple.items[0]->xInteger.value ){
 					vmc = vmc + 1;
 				}else{
 					vmc = vmcBase + vmc->b;
@@ -1152,7 +1152,7 @@ CallEntry:
 					break;
 #endif
 				case DAO_TUPLE :
-					vmc = vA->xTuple.items->size ? vmc+1 : vmcBase + vmc->b;
+					vmc = vA->xTuple.size ? vmc+1 : vmcBase + vmc->b;
 					break;
 				case DAO_CTYPE :
 				case DAO_CDATA :
@@ -2020,12 +2020,12 @@ CallEntry:
 			array = & locVars[ vmc->a ]->xArray;
 			tuple = & locVars[ vmc->b ]->xTuple;
 			vC = locVars[ vmc->c ];
-			if( array->dims->size == tuple->items->size ){
+			if( array->dims->size == tuple->size ){
 				dims = array->dims->items.pSize;
 				dmac = array->dimAccum->items.pSize;
 				id = 0;
 				for(i=0; i<array->dims->size; i++){
-					j = DaoValue_GetInteger( tuple->items->items.pValue[i] );
+					j = DaoValue_GetInteger( tuple->items[i] );
 					if( j <0 ) j += dims[i];
 					if( j <0 || j >= dims[i] ) goto RaiseErrorIndexOutOfRange;
 					id += j * dmac[i];
@@ -2102,8 +2102,8 @@ CallEntry:
 		OPCASE( GETI_TI ){
 			tuple = & locVars[ vmc->a ]->xTuple;
 			id = IntegerOperand( vmc->b );
-			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
-			value = tuple->items->items.pValue[id];
+			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
+			value = tuple->items[id];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
@@ -2112,15 +2112,15 @@ CallEntry:
 			tuple = & locVars[ vmc->c ]->xTuple;
 			id = IntegerOperand( vmc->b );
 			abtp = NULL;
-			if( id <0 || id >= tuple->items->size ) goto RaiseErrorIndexOutOfRange;
+			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
 			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], tuple->items->items.pValue + id, abtp ) ==0 )
+			if( DaoMoveAC( topCtx, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETF_T ){
 			tuple = & locVars[ vmc->a ]->xTuple;
-			value = tuple->items->items.pValue[ vmc->b ];
+			value = tuple->items[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
@@ -2130,7 +2130,7 @@ CallEntry:
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], tuple->items->items.pValue + id, abtp ) ==0 )
+			if( DaoMoveAC( topCtx, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETF_TI )
@@ -2138,60 +2138,60 @@ CallEntry:
 			OPCASE( GETF_TD )
 			OPCASE( GETF_TS ){
 				tuple = & locVars[ vmc->a ]->xTuple;
-				value = tuple->items->items.pValue[ vmc->b ];
+				value = tuple->items[ vmc->b ];
 				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( SETF_TII ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
+			tuple->items[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TIF ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
+			tuple->items[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TID ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
+			tuple->items[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TFI ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
+			tuple->items[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TFF ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
+			tuple->items[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TFD ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
+			tuple->items[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TDI ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
+			tuple->items[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TDF ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
+			tuple->items[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TDD ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items->items.pValue[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
+			tuple->items[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_TSS ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			vA = locVars[ vmc->a ];
-			DString_Assign( tuple->items->items.pValue[ vmc->b ]->xString.data, vA->xString.data );
+			DString_Assign( tuple->items[ vmc->b ]->xString.data, vA->xString.data );
 		}OPNEXT()
 		OPCASE( GETF_KC ){
 			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
@@ -2579,9 +2579,9 @@ static void DaoArray_SetValue( DaoArray *self, int i, DaoValue *value )
 }
 static void DaoArray_SetValues( DaoArray *self, int i, DaoTuple *tuple )
 {
-	int m = tuple->items->size;
+	int m = tuple->size;
 	int j, k = i * m;
-	for(j=0; j<m; j++) DaoArray_SetValue( self, k + j, tuple->items->items.pValue[j] );
+	for(j=0; j<m; j++) DaoArray_SetValue( self, k + j, tuple->items[j] );
 }
 static void DaoContext_FailedMethod( DaoContext *self )
 {
@@ -2600,10 +2600,10 @@ static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int en
 	DaoValue *returned = self->process->returned;
 	int i, noinit=1;
 	if( param->type == DAO_TUPLE ){
-		if( tuple->items->size ==0 ) return;
-		list = & tuple->items->items.pValue[0]->xList;
-		if( tuple->items->size >1 ){
-			res = tuple->items->items.pValue[1];
+		if( tuple->size ==0 ) return;
+		list = & tuple->items[0]->xList;
+		if( tuple->size >1 ){
+			res = tuple->items[1];
 			noinit = 0;
 		}
 	}
@@ -2632,10 +2632,10 @@ static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int e
 	DaoType *type = self->regTypes[ index + 2 ];
 	int i, noinit=1;
 	if( param->type == DAO_TUPLE ){
-		if( tuple->items->size ==0 ) return;
-		array = & tuple->items->items.pValue[0]->xArray;
-		if( tuple->items->size >1 ){
-			res = tuple->items->items.pValue[1];
+		if( tuple->size ==0 ) return;
+		array = & tuple->items[0]->xArray;
+		if( tuple->size >1 ){
+			res = tuple->items[1];
 			noinit = 0;
 		}
 	}
@@ -2709,10 +2709,10 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
 	int size = 0;
 	if( param->type == DAO_TUPLE ){
 		tuple = & param->xTuple;
-		list = & tuple->items->items.pValue[0]->xList;
+		list = & tuple->items[0]->xList;
 		size = list->items->size;
-		for( j=1; j<tuple->items->size; j++ )
-			if( size != tuple->items->items.pValue[j]->xList.items->size ) return 1;
+		for( j=1; j<tuple->size; j++ )
+			if( size != tuple->items[j]->xList.items->size ) return 1;
 	}
 	size = list->items->size;
 	if( vmc->a != DVM_FUNCT_COUNT && vmc->a != DVM_FUNCT_EACH ) result = DaoContext_PutList( self );
@@ -2728,10 +2728,10 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
 		case DVM_FUNCT_SELECT :
 			if( DaoValue_GetInteger( res ) ){
 				if( tuple ){
-					DaoTuple *tup = DaoTuple_New( tuple->items->size );
-					for( j=0; j<tuple->items->size; j++ ){
-						list = & tuple->items->items.pValue[j]->xList;
-						DaoValue_Move( list->items->items.pValue[i], tup->items->items.pValue + j, NULL );
+					DaoTuple *tup = DaoTuple_New( tuple->size );
+					for( j=0; j<tuple->size; j++ ){
+						list = & tuple->items[j]->xList;
+						DaoValue_Move( list->items->items.pValue[i], tup->items + j, NULL );
 					}
 					DaoList_PushBack( result, (DaoValue*)tup );
 				}else{
@@ -2771,10 +2771,10 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 	int size = 0;
 	if( param->type == DAO_TUPLE ){
 		tuple = & param->xTuple;
-		array = & tuple->items->items.pValue[0]->xArray;
+		array = & tuple->items[0]->xArray;
 		size = array->size;
-		for( j=1; j<tuple->items->size; j++ )
-			if( size != tuple->items->items.pValue[j]->xArray.size ) return 1;
+		for( j=1; j<tuple->size; j++ )
+			if( size != tuple->items[j]->xArray.size ) return 1;
 	}
 	size = array->size;
 	if( vmc->a != DVM_FUNCT_COUNT && vmc->a != DVM_FUNCT_EACH ){
@@ -2796,7 +2796,7 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 		res = self->process->returned;
 		switch( vmc->a ){
 		case DVM_FUNCT_MAP :
-			if( res->type == DAO_TUPLE && res->xTuple.items->size )
+			if( res->type == DAO_TUPLE && res->xTuple.size )
 				DaoArray_SetValues( result, i, & res->xTuple );
 			else
 				DaoArray_SetValue( result, i, res );
@@ -2804,11 +2804,11 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 		case DVM_FUNCT_SELECT :
 			if( DaoValue_GetInteger( res ) ){
 				if( tuple ){
-					DaoTuple *tup = DaoTuple_New( tuple->items->size );
-					for( j=0; j<tuple->items->size; j++ ){
-						array = & tuple->items->items.pValue[j]->xArray;
+					DaoTuple *tup = DaoTuple_New( tuple->size );
+					for( j=0; j<tuple->size; j++ ){
+						array = & tuple->items[j]->xArray;
 						nval = DaoArray_GetValue( array, i, & tmp );
-						DaoValue_Move( nval, tup->items->items.pValue + j, NULL );
+						DaoValue_Move( nval, tup->items + j, NULL );
 					}
 					DaoList_PushBack( list, (DaoValue*) tup );
 				}else{
@@ -2847,8 +2847,8 @@ static void DaoContext_MapSIC( DaoContext *self, DaoVmCode *vmc, int index, int 
 	}else if( param->type == DAO_ARRAY ){
 		DaoContext_ArrayMapSIC( self, vmc, index, entry );
 	}else if( param->type == DAO_TUPLE ){
-		k = tuple->items->items.pValue[0]->type;
-		for( j=1; j<tuple->items->size; j++ ) if( k != tuple->items->items.pValue[j]->type ) goto InvalidParam;
+		k = tuple->items[0]->type;
+		for( j=1; j<tuple->size; j++ ) if( k != tuple->items[j]->type ) goto InvalidParam;
 		if( k == DAO_ARRAY ){
 			if( DaoContext_ArrayMapSIC( self, vmc, index, entry ) ) goto InvalidParam;
 		}else if( k == DAO_LIST ){
@@ -2983,10 +2983,10 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 			break;
 		}
 		if( param->type == DAO_TUPLE ){
-			if( tuple->items->size ==0 ) break;
-			if( tuple->items->items.pValue[0]->type == DAO_LIST )
+			if( tuple->size ==0 ) break;
+			if( tuple->items[0]->type == DAO_LIST )
 				DaoContext_Fold( self, vmc, index, entry );
-			else if( tuple->items->items.pValue[0]->type == DAO_ARRAY )
+			else if( tuple->items[0]->type == DAO_ARRAY )
 				DaoContext_Fold2( self, vmc, index, entry );
 		}else if( param->type == DAO_ARRAY ){
 			DaoContext_Fold2( self, vmc, index, entry );

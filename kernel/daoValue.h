@@ -54,7 +54,17 @@ union DaoValue
 	DaoNameValue   xNameValue;
 	DaoType        xType;
 
-	struct { DAO_DATA_COMMON; } xGC;
+	struct {
+		uchar_t  type;
+		uchar_t  subtype;
+		uchar_t  trait;
+		uchar_t  idle  : 2;
+		uchar_t  work  : 2;
+		uchar_t  alive : 2;
+		uchar_t  dummy : 2;
+		int  refCount;
+		int  cycRefCount;
+	} xGC;
 };
 
 /* Copy when self is a simple data type (with type <= DAO_ENUM),

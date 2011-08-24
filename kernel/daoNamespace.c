@@ -1433,11 +1433,11 @@ DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoValue *p )
 		}else if( p->type == DAO_TUPLE ){
 			DString_SetMBS( mbs, "tuple<" );
 			nested = DArray_New(0);
-			for(i=0; i<tuple->items->size; i++){
-				itp = DaoNameSpace_GetType( self, tuple->items->items.pValue[i] );
+			for(i=0; i<tuple->size; i++){
+				itp = DaoNameSpace_GetType( self, tuple->items[i] );
 				DArray_Append( nested, itp );
 				DString_Append( mbs, itp->name );
-				if( i+1 < tuple->items->size ) DString_AppendMBS( mbs, "," );
+				if( i+1 < tuple->size ) DString_AppendMBS( mbs, "," );
 			}
 			DString_AppendMBS( mbs, ">" );
 		}
@@ -1866,8 +1866,8 @@ DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DaoValue *first, DaoValue *
 	DaoType *type2 = DaoNameSpace_MakeValueType( self, second );
 	tuple->unitype = DaoNameSpace_MakePairType( self, type1, type2 );
 	GC_IncRC( tuple->unitype );
-	DaoValue_Copy( first, & tuple->items->items.pValue[0] );
-	DaoValue_Copy( second, & tuple->items->items.pValue[1] );
+	DaoValue_Copy( first, & tuple->items[0] );
+	DaoValue_Copy( second, & tuple->items[1] );
 	tuple->subtype = DAO_PAIR;
 	return tuple;
 }
