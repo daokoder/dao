@@ -292,7 +292,7 @@ void DaoContext_PrintVmCode( DaoContext *self )
 /**/
 dint* DaoContext_PutInteger( DaoContext *self, dint value )
 {
-	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0,0};
+	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
 	res->xInteger.value = value;
@@ -300,7 +300,7 @@ dint* DaoContext_PutInteger( DaoContext *self, dint value )
 }
 float* DaoContext_PutFloat( DaoContext *self, float value )
 {
-	DaoFloat tmp = {DAO_FLOAT,0,0,0,0,0,0.0};
+	DaoFloat tmp = {DAO_FLOAT,0,0,0,0,0.0};
 	DaoValue *res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
 	res->xFloat.value = value;
@@ -308,7 +308,7 @@ float* DaoContext_PutFloat( DaoContext *self, float value )
 }
 double* DaoContext_PutDouble( DaoContext *self, double value )
 {
-	DaoDouble tmp = {DAO_DOUBLE,0,0,0,0,0,0.0};
+	DaoDouble tmp = {DAO_DOUBLE,0,0,0,0,0.0};
 	DaoValue *res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
 	res->xDouble.value = value;
@@ -316,7 +316,7 @@ double* DaoContext_PutDouble( DaoContext *self, double value )
 }
 complex16* DaoContext_PutComplex( DaoContext *self, complex16 value )
 {
-	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,0,{0.0,0.0}};
+	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 	DaoValue *res;
 	tmp.value = value;
 	res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
@@ -326,7 +326,7 @@ complex16* DaoContext_PutComplex( DaoContext *self, complex16 value )
 DString* DaoContext_PutMBString( DaoContext *self, const char *mbs )
 {
 	DString str = DString_WrapMBS( mbs );
-	DaoString tmp = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
 	tmp.data = & str;
 	res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
@@ -336,7 +336,7 @@ DString* DaoContext_PutMBString( DaoContext *self, const char *mbs )
 DString* DaoContext_PutWCString( DaoContext *self, const wchar_t *wcs )
 {
 	DString str = DString_WrapWCS( wcs );
-	DaoString tmp = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
 	tmp.data = & str;
 	res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
@@ -345,7 +345,7 @@ DString* DaoContext_PutWCString( DaoContext *self, const wchar_t *wcs )
 }
 DString*   DaoContext_PutString( DaoContext *self, DString *str )
 {
-	DaoString tmp = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
 	tmp.data = str;
 	res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
@@ -355,7 +355,7 @@ DString*   DaoContext_PutString( DaoContext *self, DString *str )
 DString* DaoContext_PutBytes( DaoContext *self, const char *bytes, int N )
 {
 	DString str = DString_WrapBytes( bytes, N );
-	DaoString tmp = {DAO_STRING,0,0,0,0,0,NULL};
+	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
 	tmp.data = & str;
 	res = DaoContext_SetValue( self, self->vmc->c, (DaoValue*) & tmp );
@@ -1341,7 +1341,6 @@ void DaoContext_DoCurry( DaoContext *self, DaoVmCode *vmc )
 				DaoContext_RaiseException( self, DAO_ERROR, "invalid enumeration" );
 				break;
 			}
-			DaoContext_SetValue( self, vmc->c, (DaoValue*) tuple );
 			DaoContext_MakeTuple( self, tuple, self->regValues + vmc->a +1, vmc->b );
 			break;
 		}
@@ -1506,7 +1505,7 @@ void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc )
 		}
 #ifdef DAO_WITH_NUMARRAY
 	}else if( A->type == DAO_ARRAY && (B->type >=DAO_INTEGER && B->type <=DAO_DOUBLE )){
-		DaoDouble tmp = {0,0,0,0,0,0,0.0};
+		DaoDouble tmp = {0,0,0,0,0,0.0};
 		DaoValue *C = (DaoValue*) & tmp;
 		DaoArray *na = & A->xArray;
 		id = DaoValue_GetInteger( B );
@@ -1960,7 +1959,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 
 	if( A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
 		DaoValue *val;
-		DaoDouble buf = {DAO_DOUBLE,0,0,0,0,0,0.0};
+		DaoDouble buf = {DAO_DOUBLE,0,0,0,0,0.0};
 		int type = A->type > B->type ? A->type : B->type;
 		double res = 0;
 		llong_t ib;
@@ -1991,7 +1990,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 		DaoContext_SetValue( self, vmc->c, val );
 		return;
 	}else if( B->type >=DAO_INTEGER && B->type <=DAO_DOUBLE && A->type ==DAO_COMPLEX ){
-		DaoComplex res = {DAO_COMPLEX,0,0,0,0,0,{0.0,0.0}};
+		DaoComplex res = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 		double f = DaoValue_GetDouble( B );
 		res.value.real = A->xComplex.value.real;
 		res.value.imag = A->xComplex.value.imag;
@@ -2004,7 +2003,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 		}
 		DaoContext_SetValue( self, vmc->c, (DaoValue*) & res );
 	}else if( A->type >=DAO_INTEGER && A->type <=DAO_DOUBLE && B->type ==DAO_COMPLEX ){
-		DaoComplex res = {DAO_COMPLEX,0,0,0,0,0,{0.0,0.0}};
+		DaoComplex res = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 		double n, f = DaoValue_GetDouble( A );
 		double real = B->xComplex.value.real;
 		double imag = B->xComplex.value.imag;
@@ -2021,7 +2020,7 @@ void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc )
 		}
 		DaoContext_SetValue( self, vmc->c, (DaoValue*) & res );
 	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
-		DaoComplex res = {DAO_COMPLEX,0,0,0,0,0,{0.0,0.0}};
+		DaoComplex res = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 		double AR = A->xComplex.value.real;
 		double AI = A->xComplex.value.imag;
 		double BR = B->xComplex.value.real;
@@ -2865,7 +2864,7 @@ static void DaoArray_ToWCString( DaoArray *self, DString *str, int offset, int s
 static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 		int dim, int offset )
 {
-	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,0,{0.0,0.0}};
+	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 	DaoValue *value = (DaoValue*) & tmp;
 	DaoList *ls;
 	size_t *ds = self->dims->items.pSize;

@@ -734,6 +734,8 @@ ErrorRoutine:
 	if( init ) DArray_Delete( init );
 	return -1;
 }
+DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
+
 int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start )
 {
 	DaoRoutine *routine = module->routine;
@@ -751,6 +753,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	GC_ShiftRC( self->nameSpace, routine->nameSpace );
 	module->nameSpace = self->nameSpace;
 	routine->nameSpace = self->nameSpace;
+	self->returnType = NULL;
 	if( start + 2 >= size ) return -1;
 	start ++;
 	if( key == DKEY_OPERATOR ){
@@ -789,26 +792,12 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	e1 = e2 = right + 1;
 	if( right+1 >= size ) return right;
 	if( tokens[right+1]->name == DTOK_FIELD ){
+		start = right + 1;
 		if( isconstru ) goto ErrorConstructorReturn; /* class constructor should not return a value */
-		right ++;
-		DArray_Append( module->partoks, tokens[right] );
-		e2 = right + 1;
-		if( right+1 >= size || tokens[right+1]->name == DTOK_LCB ) goto ErrorNeedReturnType;
-		right ++;
-		DArray_Append( module->partoks, tokens[right] );
-		while( right+2 < size && tokens[right+1]->name == DTOK_COLON2 ){ /* scoping */
-			e2 = right + 2;
-			if( tokens[right+2]->type != DTOK_IDENTIFIER ) goto ErrorInvalidTypeForm;
-			DArray_Append( module->partoks, tokens[right+1] );
-			DArray_Append( module->partoks, tokens[right+2] );
-			right += 2;
-		}
-		if( tokens[right]->type != DTOK_IDENTIFIER ) goto ErrorInvalidTypeForm;
-		if( right+1 < size && tokens[right+1]->name == DTOK_LT ){
-			start = right + 1;
-			right = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, right, -1 );
-			for( i=start; i<=right; i++ ) DArray_Append( module->partoks, tokens[i] );
-		}
+		module->returnType = DaoParser_ParseType( self, right+2, size-1, & right, NULL );
+		if( module->returnType == NULL ) goto ErrorInvalidTypeForm;
+		right -= 1;
+		for(i=start; i<=right; i++) DArray_Append( module->partoks, tokens[i] );
 	}
 	module->parEnd = right;
 	if( routine->type == DAO_FUNCTION ) return right;
@@ -955,7 +944,6 @@ InvalidTypeName:
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_NAME, tokens[start]->line, tokens[start]->string->mbs );
 	return NULL;
 }
-DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types )
 {
@@ -1684,7 +1672,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 	tokArray = self->tokens;
 
 	/*
-	   printf("routine proto, size: %i ; %i\n", self->tokens->size, self->tokens->size );
+	   printf("routine proto, size: %i ; %i %i\n", self->partoks->size, start, end );
 	   for(i=start; i<=end; i++) printf("%s  ", tokens[i]->string->mbs); printf("\n\n");
 	 */
 	if( start >= end ) goto ErrorParamParsing;
@@ -1879,7 +1867,11 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 	i = rb + 1;
 	k = pname->size;
 	abstype = NULL;
-	if( i <= end ){
+	if( self->returnType ){ /* parsed by DaoParser_ParsePrototype() */
+		abstype = self->returnType;
+		DString_AppendMBS( pname, "=>" );
+		DString_Append( pname, abstype->name );
+	}else if( i <= end ){
 		m1 = i;
 		m2 = end;
 		if( tokens[i]->name != DTOK_FIELD || i+1 > end ) goto ErrorInvalidReturn;
@@ -2007,7 +1999,7 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 		}
 	}
 	if( count == map->size && count > 0.75 * (max - min) ){
-		DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0,0};
+		DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0};
 		key = (DaoValue*) & tmp;
 		for(i=min+1; i<max; i++){
 			key->xInteger.value = i;
@@ -4235,7 +4227,7 @@ static int DaoParser_IntegerZero( DaoParser *self, int start )
 static int DaoParser_IntegerOne( DaoParser *self, int start )
 {
 	int cst;
-	DaoInteger one = {DAO_INTEGER,0,0,0,0,0,1};
+	DaoInteger one = {DAO_INTEGER,0,0,0,0,1};
 	/* if( self->integerOne >= 0 ) return self->integerOne; */
 	self->integerOne = self->regCount;
 	cst = DRoutine_AddConstant( (DRoutine*) self->routine, (DaoValue*) & one );
@@ -4398,9 +4390,9 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 	}
 	return -1;
 }
-DaoInteger daoIntegerZero = {DAO_INTEGER,0,0,0,1,1,0};
-DaoInteger daoIntegerOne  = {DAO_INTEGER,0,0,0,1,1,1};
-DaoComplex daoComplexImag = {DAO_COMPLEX,0,0,0,1,1,{0.0,1.0}};
+DaoInteger daoIntegerZero = {DAO_INTEGER,0,0,0,1,0};
+DaoInteger daoIntegerOne  = {DAO_INTEGER,0,0,0,1,1};
+DaoComplex daoComplexImag = {DAO_COMPLEX,0,0,0,1,{0.0,1.0}};
 DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 {
 	DaoNameSpace *ns = self->nameSpace;
@@ -4947,7 +4939,7 @@ static int DaoParser_AddFieldConst( DaoParser *self, DString *field )
 	DString_SetMBS( self->mbs, "." );
 	DString_Append( self->mbs, field );
 	if( MAP_Find( self->allConsts, self->mbs )==NULL ){
-		DaoString str = {DAO_STRING,0,0,0,0,0,NULL};
+		DaoString str = {DAO_STRING,0,0,0,0,NULL};
 		str.data = field;
 		MAP_Insert( self->allConsts, self->mbs, self->routine->routConsts->size );
 		DRoutine_AddConstant( (DRoutine*)self->routine, (DaoValue*) & str );
@@ -5301,7 +5293,7 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buf
 }
 static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst )
 {
-	DaoComplex buffer = {0,0,0,0,0,0,{0.0,0.0}};
+	DaoComplex buffer = {0,0,0,0,0,{0.0,0.0}};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNameSpace *ns = self->nameSpace;
 	DaoRoutine *routine = self->routine;
@@ -5330,7 +5322,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		 */
 	}else if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
-			DaoString dummy = {DAO_STRING,0,0,0,0,0,NULL};
+			DaoString dummy = {DAO_STRING,0,0,0,0,NULL};
 			dummy.data = self->str;
 			DString_ToMBS( self->str );
 			DString_SetDataMBS( self->str, tok + 1, str->size-2 );
@@ -5915,7 +5907,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.last = result.update = self->vmcLast;
 		start = pos + 1;
 	}else if( tki == DTOK_IDENTIFIER && tki2 == DTOK_FIELD ){
-		DaoString ds = {DAO_STRING,0,0,0,0,0,NULL};
+		DaoString ds = {DAO_STRING,0,0,0,0,NULL};
 		DaoValue *value = (DaoValue*) & ds;
 		DString *field = tokens[start]->string;
 		DString_Assign( mbs, field );

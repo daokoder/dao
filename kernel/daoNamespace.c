@@ -182,7 +182,7 @@ DaoValue* DaoNameSpace_FindData( DaoNameSpace *self, const char *name )
 }
 void DaoNameSpace_AddConstNumbers( DaoNameSpace *self, DaoNumItem *items )
 {
-	DaoDouble buf = {0,0,0,0,0,0,0.0};
+	DaoDouble buf = {0,0,0,0,0,0.0};
 	DaoValue *value = (DaoValue*) & buf;
 	int i = 0;
 	while( items[i].name != NULL ){
@@ -240,7 +240,7 @@ int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer )
 #endif
 	if( typer->priv->values == NULL ){
 		DString defname = DString_WrapMBS( "default" );
-		DaoDouble buf = {0,0,0,0,0,0,0.0};
+		DaoDouble buf = {0,0,0,0,0,0.0};
 		DaoValue *value = (DaoValue*) & buf;
 		DaoType *abtype = typer->priv->abtype;
 

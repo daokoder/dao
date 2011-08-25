@@ -2741,7 +2741,7 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
 			break;
 		case DVM_FUNCT_INDEX :
 			if( DaoValue_GetInteger( res ) ){
-				DaoInteger di = {DAO_INTEGER,0,0,0,0,0,0};
+				DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
 				di.value = i;
 				DaoList_PushBack( result, (DaoValue*) & di );
 			}

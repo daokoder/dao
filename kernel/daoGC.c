@@ -137,14 +137,11 @@ static void DaoGC_PrintProfile()
 static void DaoGC_PrintValueInfo( DaoValue *value )
 {
 	if( value->type == DAO_FUNCTION ){
-		DaoFunction *func = (DaoFunction*)value;
-		printf( "%s\n", func->routName->mbs );
+		printf( "%s\n", value->xFunction.routName->mbs );
 	}else if( value->type == DAO_TYPE ){
-		DaoType *func = (DaoType*)value;
-		printf( "%s\n", func->name->mbs );
+		printf( "%s\n", value->xType.name->mbs );
 	}else if( value->type == DAO_CDATA ){
-		DaoCData *cdata = (DaoCData*) value;
-		printf( "%s\n", cdata->typer->name );
+		printf( "%s\n", value->xCdata.typer->name );
 	}
 }
 #else
@@ -485,7 +482,7 @@ void DaoCGC_IncRC( DaoValue *p )
 
 	DMutex_Lock( & gcWorker.mutex_idle_list );
 	p->xGC.refCount ++;
-	p->xGC.cycRefCount ++;
+	if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
 }
 void DaoCGC_ShiftRC( DaoValue *up, DaoValue *down )
@@ -496,7 +493,7 @@ void DaoCGC_ShiftRC( DaoValue *up, DaoValue *down )
 
 	if( up ){
 		up->xGC.refCount ++;
-		up->xGC.cycRefCount ++;
+		if( up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	}
 	if( down ) DaoGC_DecRC2( down, -1 );
 
@@ -516,7 +513,7 @@ void DaoCGC_IncRCs( DArray *list )
 	for( i=0; i<list->size; i++){
 		if( values[i] ){
 			values[i]->xGC.refCount ++;
-			values[i]->xGC.cycRefCount ++;
+			if( values[i]->type >= DAO_ENUM ) values[i]->xGC.cycRefCount ++;
 		}
 	}
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
@@ -611,6 +608,7 @@ void DaoGC_PrepareCandidates()
 		value->xGC.cycRefCount = value->xGC.refCount;
 		value->xGC.work = 1;
 		value->xGC.idle = 0;
+		value->xGC.alive = 0;
 	}
 	workList->size = k;
 	DaoCGC_MarkIdleItems();
@@ -1251,13 +1249,9 @@ static void DaoIGC_RefCountDecScan();
 void DaoIGC_IncRC( DaoValue *p )
 {
 	if( ! p ) return;
-	if( p->xGC.refCount == 0 ){
-		p->xGC.refCount ++;
-		return;
-	}
 
 	p->xGC.refCount ++;
-	p->xGC.cycRefCount ++;
+	if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
 }
 static int counts = 100;
 void DaoIGC_DecRC( DaoValue *p )

@@ -228,7 +228,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 				}else{
 					sup = DaoObject_New( supclass, self->that, offset );
 				}
-				sup->refCount ++;
+				GC_IncRC( sup );
 				offset += sup->myClass->objDataName->size;
 			}
 			self->superObject->items.pObject[i] = sup;

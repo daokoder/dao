@@ -1388,7 +1388,7 @@ static void DString_Serialize( DString *self, DString *serial, DString *buf )
 }
 static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 {
-	DaoInteger intmp = {DAO_INTEGER,0,0,0,0,0,0};
+	DaoInteger intmp = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *value = (DaoValue*) & intmp;
 	int i;
 	DString_AppendChar( serial, '[' );

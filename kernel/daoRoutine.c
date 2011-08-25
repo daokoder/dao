@@ -1130,7 +1130,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray  *dataCG = self->nameSpace->cstDataTable;
 	DArray  *dataVG = self->nameSpace->varDataTable;
 	DArray  *typeVG = self->nameSpace->varTypeTable;
-	DaoNull  dummy = {0,0,0,0,0,0};
+	DaoNull  dummy = {0,0,0,0,0};
 	DaoValue  *constag = (DaoValue*) & dummy;
 	DaoValue  *val = NULL;
 	DaoValue **csts;

@@ -20,44 +20,45 @@
 #include"daoArray.h"
 #include"daoMap.h"
 
-#define DAO_DATA_COMMON uchar_t type, subtype, trait, marks; int refCount, cycRefCount
+#define DAO_DATA_CORE    uchar_t type, subtype, trait, marks; int refCount
+#define DAO_DATA_COMMON  DAO_DATA_CORE; int cycRefCount
 
 void DaoValue_Init( void *dbase, char type );
 void DaoValue_ChangeState( void *dbase, char state, char add );
 
 struct DaoNull
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 };
 extern DaoValue *null;
 
 struct DaoInteger
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 
 	dint value;
 };
 struct DaoFloat
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 
 	float value;
 };
 struct DaoDouble
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 
 	double value;
 };
 struct DaoComplex
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 
 	complex16 value;
 };
 struct DaoLong
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 
 	DLong  *value;
 };
@@ -66,7 +67,7 @@ void DaoLong_Delete( DaoLong *self );
 
 struct DaoString
 {
-	DAO_DATA_COMMON;
+	DAO_DATA_CORE;
 
 	DString  *data;
 };

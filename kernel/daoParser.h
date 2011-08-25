@@ -92,6 +92,8 @@ struct DaoParser
 	DaoType      *hostType;
 	DaoParser    *outParser;
 
+	DaoType      *returnType;
+
 	int curLine;
 	int lineCount;
 	short indent;
