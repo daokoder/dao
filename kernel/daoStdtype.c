@@ -3813,10 +3813,9 @@ DaoTypeBase tupleTyper=
 };
 DaoTuple* DaoTuple_New( int size )
 {
-	DaoTuple *self = (DaoTuple*) dao_malloc( sizeof(DaoTuple) );
+	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + (size-1)*sizeof(DaoValue*) );
 	DaoValue_Init( self, DAO_TUPLE );
 	self->size = size;
-	self->items = dao_calloc( size, sizeof(DaoValue*) );
 	//self->meta = NULL;
 	self->unitype = NULL;
 	return self;
@@ -3827,7 +3826,6 @@ void DaoTuple_Delete( DaoTuple *self )
 	//if( self->meta ) GC_DecRC( self->meta );
 	for(i=0; i<self->size; i++) GC_DecRC( self->items[i] );
 	GC_DecRC( self->unitype );
-	dao_free( self->items );
 	dao_free( self );
 }
 

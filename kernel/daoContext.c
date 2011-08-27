@@ -1448,6 +1448,7 @@ void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc )
 					max = mt;
 					id = i + 1;
 				}
+				if( max == DAO_MT_EQ ) break;
 			}
 			*res = id;
 			return;

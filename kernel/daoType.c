@@ -414,6 +414,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it2 = type->nested->items.pType[i];
 			mt2 = DaoType_MatchTo( self, it2, defs );
 			if( mt2 > mt ) mt = mt2;
+			if( mt == DAO_MT_EQ ) break;
 		}
 		if( mt && defs && type->aux && type->aux->type == DAO_TYPE )
 			MAP_Insert( defs, type->aux, self );
@@ -525,6 +526,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			mt2 = DaoType_MatchTo( it1, type, defs );
 			if( mt2 > mt ) mt = mt2;
+			if( mt == DAO_MT_EQ ) break;
 		}
 		return mt;
 		break;
@@ -578,6 +580,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 				tp = self->nested->items.pType[i];
 				mt2 = DaoType_MatchValue( tp, value, defs );
 				if( mt2 > mt ) mt = mt2;
+				if( mt == DAO_MT_EQ ) break;
 			}
 			return mt;
 		}else if( self->tid == DAO_ANY || self->tid == DAO_INITYPE ){

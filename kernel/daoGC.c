@@ -116,10 +116,11 @@ extern int daoCountMBS;
 extern int daoCountArray;
 
 #ifdef DAO_GC_PROF
-static void DaoGC_PrintProfile()
+static void DaoGC_PrintProfile( DArray *idleList, DArray *workList )
 {
+	int i;
 #warning "-------------------- DAO_GC_PROF is turned on."
-	printf("heap[idle] = %zi;\theap[work] = %zi\n", gcWorker.idleList->size, gcWorker.workList->size );
+	printf("heap[idle] = %zi;\theap[work] = %zi\n", idleList->bufsize, workList->bufsize );
 	printf("=======================================\n");
 	//printf( "mbs count = %i\n", daoCountMBS );
 	printf( "array count = %i\n", daoCountArray );
@@ -130,7 +131,7 @@ static void DaoGC_PrintProfile()
 	}
 }
 #else
-#define DaoGC_PrintProfile() (1==1)
+#define DaoGC_PrintProfile(x,y) (1==1)
 #endif
 
 #if DEBUG
@@ -1220,7 +1221,7 @@ static void DaoCGC_FreeGarbage()
 		typer = DaoValue_GetTyper( value );
 		typer->Delete( value );
 	}
-	DaoGC_PrintProfile();
+	DaoGC_PrintProfile( idleList, workList );
 	workList->size = 0;
 }
 
@@ -1586,6 +1587,7 @@ void DaoIGC_CycRefCountIncScan()
 	if( i >= workList->size ){
 		gcWorker.ii = 0;
 		gcWorker.workType ++;
+		if( gcWorker.workType == GC_DIR_DEC_RC ) DaoGC_PrintProfile( gcWorker.idleList, gcWorker.workList );
 	}else{
 		gcWorker.ii = i+1;
 	}
@@ -2035,7 +2037,6 @@ void DaoIGC_FreeGarbage()
 		if( old != gcWorker.idleList->size ) DaoIGC_MarkIdleItems();
 		if( j >= gcWorker.gcMin ) break;
 	}
-	DaoGC_PrintProfile();
 	if( i >= workList->size ){
 		gcWorker.ii = 0;
 		gcWorker.workType = GC_RESET_RC;

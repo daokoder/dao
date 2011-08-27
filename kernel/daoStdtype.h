@@ -221,10 +221,10 @@ struct DaoTuple
 {
 	DAO_DATA_COMMON;
 
-	int         size;
-	DaoValue  **items;
-	//DaoMap     *meta; // TODO: put meta field somewhere else!
+	int         size; /* packed with the previous field in 64-bits system */
 	DaoType    *unitype;
+	DaoValue   *items[1];
+	//DaoMap     *meta; // TODO: put meta field somewhere else!
 };
 void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
