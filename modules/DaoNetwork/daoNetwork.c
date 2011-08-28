@@ -584,10 +584,12 @@ int DaoNetwork_ReceiveExt( int sockfd, DaoList *data )
 				j = ntohl( inpack->dataI2 );
 				/* printf( "ARRAY: M=%i; j=%i\n", M, j ); */
 				if( j == 0 ){
-					arr = DaoArray_New( DAO_INTEGER );
+					item = DaoValue_NewArray( DAO_INTEGER );
+					arr = DaoValue_CastArray( item );
 					DaoArray_SetNumType( arr, numtype );
 					DaoArray_ResizeVector( arr, M );
-					DaoList_PushBack( data, (DaoValue*)arr );
+					DaoList_PushBack( data, item );
+					DaoGC_DecRC( item );
 				}
 				if( numtype == DAO_INTEGER ){
 					int *iv = DaoArray_ToInt( arr );
@@ -1006,8 +1008,10 @@ static void DaoNetLib_Select( DaoContext *ctx, DaoValue *par[], int N  )
 		DaoContext_RaiseException( ctx, DAO_ERROR, errbuf );
 		return;
 	}
-	reslist = DaoList_New();
-	DaoTuple_SetItem( tuple, (DaoValue*)reslist, 0 );
+	value = DaoValue_NewList();
+	DaoTuple_SetItem( tuple, value, 0 );
+	DaoGC_DecRC( value );
+	reslist = DaoValue_CastList( DaoTuple_GetItem( tuple, 0 ) );
 	for( i = 0; i < DaoList_Size( list1 ); i++ ){
 		value = DaoList_GetItem( list1, i );
 		if( DaoValue_Type( value ) == DAO_STREAM ){
@@ -1016,8 +1020,10 @@ static void DaoNetLib_Select( DaoContext *ctx, DaoValue *par[], int N  )
 		}else if( FD_ISSET( ((DaoSocket*)DaoValue_TryGetCdata( value ))->id, &set1 ) )
 			DaoList_PushBack( reslist, value );
 	}
-	reslist = DaoList_New();
-	DaoTuple_SetItem( tuple, (DaoValue*)reslist, 1 );
+	value = DaoValue_NewList();
+	DaoTuple_SetItem( tuple, value, 1 );
+	DaoGC_DecRC( value );
+	reslist = DaoValue_CastList( DaoTuple_GetItem( tuple, 1 ) );
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
 		value = DaoList_GetItem( list2, i );
 		if( DaoValue_Type( value ) == DAO_STREAM ){
