@@ -42,15 +42,15 @@ union DaoValue
 	DaoTuple       xTuple;
 	DaoStream      xStream;
 	DaoObject      xObject;
-	DaoCData       xCdata;
+	DaoCdata       xCdata;
 	DaoClass       xClass;
 	DaoInterface   xInterface;
 	DaoFunctree    xFunctree;
 	DaoRoutine     xRoutine;
 	DaoFunction    xFunction;
 	DaoContext     xContext;
-	DaoVmProcess   xProcess;
-	DaoNameSpace   xNamespace;
+	DaoProcess     xProcess;
+	DaoNamespace   xNamespace;
 	DaoNameValue   xNameValue;
 	DaoType        xType;
 
@@ -94,8 +94,8 @@ DString* DaoValue_GetString( DaoValue *self, DString *str );
 
 int DaoValue_FromString( DaoValue *self, DString *str, int type );
 
-int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
-int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNameSpace *ns, DaoVmProcess *proc );
+int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
+int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
 
 int DaoValue_IsNumber( DaoValue *self );
 void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );

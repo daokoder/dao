@@ -22,7 +22,7 @@ struct DaoObject
 
 	DaoValue  **objValues;
 	DTuple     *objData;
-	DTuple     *superObject; /*DTuple<DaoObject/DaoCData*>*/
+	DTuple     *superObject; /*DTuple<DaoObject/DaoCdata*>*/
 	DaoClass   *myClass;
 	DaoObject  *that;
 	DaoMap     *meta;
@@ -36,7 +36,7 @@ void DaoObject_Delete( DaoObject *self );
 int DaoObject_ChildOf( DaoObject *self, DaoObject *obj );
 
 DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
-DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent );
+DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );
 
 void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
 

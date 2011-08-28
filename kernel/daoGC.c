@@ -671,7 +671,7 @@ void DaoCGC_CycRefCountDecScan()
 			}
 		case DAO_CDATA : case DAO_CTYPE :
 			{
-				DaoCData *cdata = (DaoCData*) value;
+				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountDecrement( (DaoValue*) cdata->meta );
 				cycRefCountDecrement( (DaoValue*) cdata->daoObject );
 				cycRefCountDecrement( (DaoValue*) cdata->ctype );
@@ -738,7 +738,7 @@ void DaoCGC_CycRefCountDecScan()
 			}
 		case DAO_NAMESPACE :
 			{
-				DaoNameSpace *ns = (DaoNameSpace*) value;
+				DaoNamespace *ns = (DaoNamespace*) value;
 				cycRefCountDecrements( ns->cstData );
 				cycRefCountDecrements( ns->varData );
 				cycRefCountDecrements( ns->varType );
@@ -772,10 +772,10 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) future->precondition );
 				break;
 			}
-		case DAO_VMPROCESS :
+		case DAO_PROCESS :
 			{
-				DaoVmProcess *vmp = (DaoVmProcess*) value;
-				DaoVmFrame *frame = vmp->firstFrame;
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountDecrement( vmp->returned );
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
@@ -802,13 +802,13 @@ void DaoCGC_CycRefCountIncScan()
 			DaoValue *value = workList->items.pValue[i];
 			if( value->xGC.alive ) continue;
 			if( value->type == DAO_CDATA && (value->xGC.refCount ==0 || value->xGC.cycRefCount ==0) ){
-				DaoCData *cdata = (DaoCData*) value;
-				DaoCDataCore *core = (DaoCDataCore*)cdata->typer->priv;
+				DaoCdata *cdata = (DaoCdata*) value;
+				DaoCdataCore *core = (DaoCdataCore*)cdata->typer->priv;
 				if( !(cdata->attribs & DAO_CDATA_FREE) ) continue;
 				if( cdata->data == NULL || core == NULL ) continue;
 				if( core->DelTest == NULL ) continue;
 				if( core->DelTest( cdata->data ) ) continue;
-				DaoCData_SetExtReference( cdata, 1 );
+				DaoCdata_SetExtReference( cdata, 1 );
 			}
 			if( value->xGC.cycRefCount >0 ){
 				auxList->size = 0;
@@ -877,7 +877,7 @@ int DaoCGC_AliveObjectScan()
 			}
 		case DAO_CDATA : case DAO_CTYPE :
 			{
-				DaoCData *cdata = (DaoCData*) value;
+				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountIncrement( (DaoValue*) cdata->meta );
 				cycRefCountIncrement( (DaoValue*) cdata->daoObject );
 				cycRefCountIncrement( (DaoValue*) cdata->ctype );
@@ -944,7 +944,7 @@ int DaoCGC_AliveObjectScan()
 			}
 		case DAO_NAMESPACE :
 			{
-				DaoNameSpace *ns = (DaoNameSpace*) value;
+				DaoNamespace *ns = (DaoNamespace*) value;
 				cycRefCountIncrements( ns->cstData );
 				cycRefCountIncrements( ns->varData );
 				cycRefCountIncrements( ns->varType );
@@ -978,10 +978,10 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) future->precondition );
 				break;
 			}
-		case DAO_VMPROCESS :
+		case DAO_PROCESS :
 			{
-				DaoVmProcess *vmp = (DaoVmProcess*) value;
-				DaoVmFrame *frame = vmp->firstFrame;
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountIncrement( vmp->returned );
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
@@ -1065,7 +1065,7 @@ void DaoCGC_RefCountDecScan()
 			}
 		case DAO_CDATA : case DAO_CTYPE :
 			{
-				DaoCData *cdata = (DaoCData*) value;
+				DaoCdata *cdata = (DaoCdata*) value;
 				directRefCountDecrement( (DaoValue**) & cdata->meta );
 				directRefCountDecrement( (DaoValue**) & cdata->daoObject );
 				directRefCountDecrement( (DaoValue**) & cdata->ctype );
@@ -1132,7 +1132,7 @@ void DaoCGC_RefCountDecScan()
 			}
 		case DAO_NAMESPACE :
 			{
-				DaoNameSpace *ns = (DaoNameSpace*) value;
+				DaoNamespace *ns = (DaoNamespace*) value;
 				directRefCountDecrements( ns->cstData );
 				directRefCountDecrements( ns->varData );
 				directRefCountDecrements( ns->varType );
@@ -1166,10 +1166,10 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & future->precondition );
 				break;
 			}
-		case DAO_VMPROCESS :
+		case DAO_PROCESS :
 			{
-				DaoVmProcess *vmp = (DaoVmProcess*) value;
-				DaoVmFrame *frame = vmp->firstFrame;
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
 				directRefCountDecrement( (DaoValue**) & vmp->returned );
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
@@ -1416,7 +1416,7 @@ void DaoIGC_CycRefCountDecScan()
 			}
 		case DAO_CDATA : case DAO_CTYPE :
 			{
-				DaoCData *cdata = (DaoCData*) value;
+				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountDecrement( (DaoValue*) cdata->meta );
 				cycRefCountDecrement( (DaoValue*) cdata->daoObject );
 				cycRefCountDecrement( (DaoValue*) cdata->ctype );
@@ -1492,7 +1492,7 @@ void DaoIGC_CycRefCountDecScan()
 			}
 		case DAO_NAMESPACE :
 			{
-				DaoNameSpace *ns = (DaoNameSpace*) value;
+				DaoNamespace *ns = (DaoNamespace*) value;
 				cycRefCountDecrements( ns->cstData );
 				cycRefCountDecrements( ns->varData );
 				cycRefCountDecrements( ns->varType );
@@ -1527,10 +1527,10 @@ void DaoIGC_CycRefCountDecScan()
 				break;
 			}
 			}
-		case DAO_VMPROCESS :
+		case DAO_PROCESS :
 			{
-				DaoVmProcess *vmp = (DaoVmProcess*) value;
-				DaoVmFrame *frame = vmp->firstFrame;
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountDecrement( vmp->returned );
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
@@ -1568,13 +1568,13 @@ void DaoIGC_CycRefCountIncScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
 		if( value->type == DAO_CDATA && (value->xGC.refCount ==0 || value->xGC.cycRefCount ==0) ){
-			DaoCData *cdata = (DaoCData*) value;
-			DaoCDataCore *core = (DaoCDataCore*)cdata->typer->priv;
+			DaoCdata *cdata = (DaoCdata*) value;
+			DaoCdataCore *core = (DaoCdataCore*)cdata->typer->priv;
 			if( !(cdata->attribs & DAO_CDATA_FREE) ) continue;
 			if( cdata->data == NULL || core == NULL ) continue;
 			if( core->DelTest == NULL ) continue;
 			if( core->DelTest( cdata->data ) ) continue;
-			DaoCData_SetExtReference( cdata, 1 );
+			DaoCdata_SetExtReference( cdata, 1 );
 		}
 		if( value->xGC.cycRefCount >0 ){
 			auxList->size = 0;
@@ -1655,7 +1655,7 @@ int DaoIGC_AliveObjectScan()
 			}
 		case DAO_CDATA : case DAO_CTYPE :
 			{
-				DaoCData *cdata = (DaoCData*) value;
+				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountIncrement( (DaoValue*) cdata->meta );
 				cycRefCountIncrement( (DaoValue*) cdata->daoObject );
 				cycRefCountIncrement( (DaoValue*) cdata->ctype );
@@ -1731,7 +1731,7 @@ int DaoIGC_AliveObjectScan()
 			}
 		case DAO_NAMESPACE :
 			{
-				DaoNameSpace *ns = (DaoNameSpace*) value;
+				DaoNamespace *ns = (DaoNamespace*) value;
 				cycRefCountIncrements( ns->cstData );
 				cycRefCountIncrements( ns->varData );
 				cycRefCountIncrements( ns->varType );
@@ -1766,10 +1766,10 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) future->precondition );
 				break;
 			}
-		case DAO_VMPROCESS :
+		case DAO_PROCESS :
 			{
-				DaoVmProcess *vmp = (DaoVmProcess*) value;
-				DaoVmFrame *frame = vmp->firstFrame;
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountIncrement( vmp->returned );
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
@@ -1861,7 +1861,7 @@ void DaoIGC_RefCountDecScan()
 			}
 		case DAO_CDATA : case DAO_CTYPE :
 			{
-				DaoCData *cdata = (DaoCData*) value;
+				DaoCdata *cdata = (DaoCdata*) value;
 				directRefCountDecrement( (DaoValue**) & cdata->meta );
 				directRefCountDecrement( (DaoValue**) & cdata->daoObject );
 				directRefCountDecrement( (DaoValue**) & cdata->ctype );
@@ -1943,7 +1943,7 @@ void DaoIGC_RefCountDecScan()
 			}
 		case DAO_NAMESPACE :
 			{
-				DaoNameSpace *ns = (DaoNameSpace*) value;
+				DaoNamespace *ns = (DaoNamespace*) value;
 				j += ns->cstData->size + ns->varData->size + ns->abstypes->size;
 				directRefCountDecrements( ns->cstData );
 				directRefCountDecrements( ns->varData );
@@ -1978,10 +1978,10 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & future->precondition );
 				break;
 			}
-		case DAO_VMPROCESS :
+		case DAO_PROCESS :
 			{
-				DaoVmProcess *vmp = (DaoVmProcess*) value;
-				DaoVmFrame *frame = vmp->firstFrame;
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
 				directRefCountDecrement( (DaoValue**) & vmp->returned );
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );

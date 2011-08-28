@@ -88,7 +88,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 void DaoClass_AddReference( DaoClass *self, void *reference );
 
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
-void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns );
+void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
 void DaoClass_DeriveClassData( DaoClass *self );
 void DaoClass_DeriveObjectData( DaoClass *self );
 void DaoClass_ResetAttributes( DaoClass *self );

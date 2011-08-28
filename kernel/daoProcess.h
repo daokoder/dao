@@ -24,7 +24,7 @@
 
 #define DVM_MAX_TRY_DEPTH 16
 
-struct DaoVmFrame
+struct DaoStackFrame
 {
 	ushort_t    entry;     /* entry code id */
 	ushort_t    state;     /* context state */
@@ -32,23 +32,30 @@ struct DaoVmFrame
 	ushort_t    depth;
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2];
 
+	size_t      stackBase;
+	DaoRoutine *routine;
 	DaoContext *context;
-	DaoVmFrame *prev;
-	DaoVmFrame *next;
-	DaoVmFrame *rollback;
+
+	DaoStackFrame *prev;
+	DaoStackFrame *next;
+	DaoStackFrame *rollback;
 };
 
-struct DaoVmProcess
+struct DaoProcess
 {
 	DAO_DATA_COMMON;
 
-	DaoVmFrame *firstFrame; /* the first frame, never active */
-	DaoVmFrame *topFrame; /* top call frame */
-
 	DaoVmSpace *vmSpace;
-	DaoType    *abtype; /* for coroutine */
+
+	DaoStackFrame *firstFrame; /* the first frame, never active */
+	DaoStackFrame *topFrame; /* top call frame */
+
+	DaoValue  **stackValues;
+	size_t      stackSize;
+	size_t      stackTop;
 
 	DaoValue *returned;
+	DaoType  *abtype; /* for coroutine */
 	DArray   *parResume;/* for coroutine */
 	DArray   *parYield;
 	DArray   *exceptions;
@@ -65,22 +72,22 @@ struct DaoVmProcess
 };
 
 /* Create a new virtual machine process */
-DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
-void DaoVmProcess_Delete( DaoVmProcess *self );
+DaoProcess* DaoProcess_New( DaoVmSpace *vms );
+void DaoProcess_Delete( DaoProcess *self );
 
 /* Push a routine into the calling stack of the VM process, new context is created */
-void DaoVmProcess_PushRoutine( DaoVmProcess *self, DaoRoutine *routine );
+void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine );
 /* Push an initialized context into the calling stack of the VM process */
-void DaoVmProcess_PushContext( DaoVmProcess *self, DaoContext *context );
-DaoContext* DaoVmProcess_MakeContext( DaoVmProcess *self, DaoRoutine *routine );
-void DaoVmProcess_PopContext( DaoVmProcess *self );
+void DaoProcess_PushContext( DaoProcess *self, DaoContext *context );
+DaoContext* DaoProcess_MakeContext( DaoProcess *self, DaoRoutine *routine );
+void DaoProcess_PopContext( DaoProcess *self );
 
-int DaoVmProcess_Call( DaoVmProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 /* Execute from the top of the calling stack */
-int DaoVmProcess_Execute( DaoVmProcess *self );
-int DaoVmProcess_ExecuteSection( DaoVmProcess *self, int entry );
+int DaoProcess_Execute( DaoProcess *self );
+int DaoProcess_ExecuteSection( DaoProcess *self, int entry );
 
-DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DaoValue *par[], int N );
+DaoProcess* DaoProcess_Create( DaoContext *ctx, DaoValue *par[], int N );
 
 /* Resume a coroutine */
 /* coroutine.yeild( a, b, ... ); store object a,b,... in "DaoList *list"
@@ -88,12 +95,12 @@ DaoVmProcess* DaoVmProcess_Create( DaoContext *ctx, DaoValue *par[], int N );
  * param = coroutine.resume( corout, a, b, ... ); pass "DaoValue par[]" as a,b,...
  * they become addition result from yeild().
  */
-int DaoVmProcess_Resume( DaoVmProcess *self, DaoValue *par[], int N, DaoList *list );
-void DaoVmProcess_Yield( DaoVmProcess *self, DaoValue *par[], int N, DaoList *list );
+int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoList *list );
+void DaoProcess_Yield( DaoProcess *self, DaoValue *par[], int N, DaoList *list );
 
-void DaoVmProcess_PrintException( DaoVmProcess *self, int clear );
+void DaoProcess_PrintException( DaoProcess *self, int clear );
 
-DaoValue* DaoVmProcess_MakeConst( DaoVmProcess *self );
+DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 
 typedef struct DaoJIT DaoJIT;

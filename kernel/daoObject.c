@@ -25,7 +25,7 @@
 #include"daoNumtype.h"
 #include"daoValue.h"
 
-int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoVmProcess *vmp, 
+int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *vmp, 
 		DString *name, DaoContext *ctx, DaoValue *ps[], int N, int ret )
 {
 	DRoutine *meth;
@@ -37,17 +37,17 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoVmProcess *vmp
 	if( meth == NULL ) goto InvalidParam;
 	if( meth->type == DAO_ROUTINE ){
 		DaoRoutine *rout = (DaoRoutine*) meth;
-		DaoContext *ctxNew = DaoVmProcess_MakeContext( vmp, rout );
+		DaoContext *ctxNew = DaoProcess_MakeContext( vmp, rout );
 		GC_ShiftRC( self, ctxNew->object );
 		ctxNew->object = self;
 		DaoContext_Init( ctxNew, rout );
 		if( DRoutine_PassParams( (DRoutine*) ctxNew->routine, (DaoValue*)self, 
 					ctxNew->regValues, ps, N, DVM_CALL ) ){
 			if( STRCMP( name, "_PRINT" ) ==0 ){
-				DaoVmProcess_PushContext( ctx->process, ctxNew );
-				DaoVmProcess_Execute( ctx->process );
+				DaoProcess_PushContext( ctx->process, ctxNew );
+				DaoProcess_Execute( ctx->process );
 			}else{
-				DaoVmProcess_PushContext( ctx->process, ctxNew );
+				DaoProcess_PushContext( ctx->process, ctxNew );
 				if( ret > -10 ) ctx->process->topFrame->returning = (ushort_t) ret;
 			}
 			return 0;
@@ -147,7 +147,7 @@ void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap
 	DaoValue **fromValues = from->objValues;
 	int i, selfSize = self->myClass->objDataDefault->size;
 	DaoCopyValues( selfValues + 1, fromValues + 1, selfSize-1, ctx, cycData );
-	/*  XXX super might be CData: */
+	/*  XXX super might be Cdata: */
 	if( from->superObject ==NULL ) return;
 	selfSups = self->superObject->items.pObject;
 	fromSups = from->superObject->items.pObject;
@@ -274,9 +274,9 @@ int DaoObject_ChildOf( DaoObject *self, DaoObject *obj )
 	if( obj == self ) return 1;
 	if( self->type == DAO_CDATA ){
 		if( obj->type == DAO_CDATA ){
-			DaoCData *cdata1 = (DaoCData*) self;
-			DaoCData *cdata2 = (DaoCData*) obj;
-			if( DaoCData_ChildOf( cdata1->typer, cdata2->typer ) ) return 1;
+			DaoCdata *cdata1 = (DaoCdata*) self;
+			DaoCdata *cdata2 = (DaoCdata*) obj;
+			if( DaoCdata_ChildOf( cdata1->typer, cdata2->typer ) ) return 1;
 		}
 		return 0;
 	}
@@ -287,7 +287,7 @@ int DaoObject_ChildOf( DaoObject *self, DaoObject *obj )
 	}
 	return 0;
 }
-extern int DaoCData_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
+extern int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 {
@@ -301,12 +301,12 @@ DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 		if( sup->type == DAO_OBJECT ){
 			if( (sup = DaoObject_MapThisObject( & sup->xObject, host ) ) ) return sup;
 		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
-			if( DaoCData_ChildOf( sup->xCdata.typer, host->typer ) ) return sup;
+			if( DaoCdata_ChildOf( sup->xCdata.typer, host->typer ) ) return sup;
 		}
 	}
 	return NULL;
 }
-DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent )
+DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 {
 	int i;
 	DaoObject *child = NULL;
@@ -318,15 +318,15 @@ DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent )
 		if( sup == NULL ) continue;
 		if( obj ){
 			if( sup->type == DAO_CLASS ){
-				DaoObject *o = DaoObject_SetParentCData( obj, parent );
+				DaoObject *o = DaoObject_SetParentCdata( obj, parent );
 				/* TODO: map to first common child for multiple inheritance: */
 				if( o ) child = o;
 			}
 			continue;
 		}
 		if( sup->type == DAO_CTYPE ){
-			DaoCData *cdata = (DaoCData*)sup;
-			if( DaoCData_ChildOf( cdata->typer, parent->typer ) ){
+			DaoCdata *cdata = (DaoCdata*)sup;
+			if( DaoCdata_ChildOf( cdata->typer, parent->typer ) ){
 				GC_IncRC( parent );
 				self->superObject->items.pValue[i] = (DaoValue*)parent;
 				return self;
@@ -335,12 +335,12 @@ DaoObject* DaoObject_SetParentCData( DaoObject *self, DaoCData *parent )
 	}
 	return child;
 }
-DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer )
+DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer )
 {
 	DaoValue *p = NULL;
 	if( typer && typer->priv && typer->priv->abtype )
 		p = DaoObject_MapThisObject( self, typer->priv->abtype );
-	if( p && p->type == DAO_CDATA ) return (DaoCData*) p;
+	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
 	return NULL;
 }
 

@@ -83,7 +83,7 @@ struct DaoType
 	 * aux can be the returned type in a routine type;
 	 * aux can be the parameter type in a named parameter type;
 	 * aux can be the class object in class or object type;
-	 * aux can be the DaoCData object in wrapped C type;
+	 * aux can be the DaoCdata object in wrapped C type;
 	 * aux can be the constant value in a constant value type. */
 	DaoValue      *aux;
 	DaoValue      *value; /* default value for the type */
@@ -115,8 +115,8 @@ short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
 short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
 short DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 /* define @X */
-DaoType* DaoType_DefineTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
-void DaoType_RenewTypes( DaoType *self, DaoNameSpace *ns, DMap *defs );
+DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
+void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 
 /* all DAO_INITYPE: @T ... */
 void DaoType_GetTypes( DaoType *self, DMap *types );
@@ -158,7 +158,7 @@ struct DaoTypeCore
 	DMap          *values;
 	DMap          *methods;
 	DaoType       *abtype;
-	DaoNameSpace  *nspace;
+	DaoNamespace  *nspace;
 
 	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
 	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
@@ -184,13 +184,13 @@ DaoValue* DaoValue_NoCopy( DaoValue *self, DaoContext *ctx, DMap *cycData );
 void DaoValue_SafeGetField( DaoValue *self, DaoContext *ctx, DString *name );
 void DaoValue_SafeSetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
 
-struct DaoCDataCore
+struct DaoCdataCore
 {
 	uint_t         attribs;
 	DMap          *values;
 	DMap          *methods;
 	DaoType       *abtype;
-	DaoNameSpace  *nspace;
+	DaoNamespace  *nspace;
 
 	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
 	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
@@ -202,8 +202,8 @@ struct DaoCDataCore
 	void   (*DelData)( void *data );
 	int    (*DelTest)( void *data );
 
-	DMap *instanceCData;
+	DMap *instanceCdata;
 };
-DaoCDataCore* DaoCDataCore_New();
+DaoCdataCore* DaoCdataCore_New();
 
 #endif

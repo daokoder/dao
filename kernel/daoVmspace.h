@@ -34,13 +34,13 @@ struct DaoVmSpace
 
     /* To run the main script specified in the commad line (or the first loaded one),
      * or scripts from an interactive console. */
-    DaoVmProcess  *mainProcess;
+    DaoProcess  *mainProcess;
     /* To store globals in the main script,
      * or scripts from an interactive console. */
-    DaoNameSpace  *mainNamespace;
+    DaoNamespace  *mainNamespace;
 
     /* for some internal scripts and predefined objects or types */
-    DaoNameSpace  *nsInternal;
+    DaoNamespace  *nsInternal;
 
     DaoThdMaster  *thdMaster;
     DaoStream     *stdStream;
@@ -92,12 +92,12 @@ void DaoVmSpace_Unlock( DaoVmSpace *self );
 
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
 
-int DaoVmSpace_Compile( DaoVmSpace *self, DaoNameSpace *ns, DString *src, int rpl );
+int DaoVmSpace_Compile( DaoVmSpace *self, DaoNamespace *ns, DString *src, int rpl );
 int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 
-DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
-DaoNameSpace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
-DaoNameSpace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
+DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
+DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
+DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 
 void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check );
 

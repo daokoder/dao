@@ -493,7 +493,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start, int local )
 	DMacroGroup_FindVariables( macro->macroMatch );
 	DArray_Clear( stops );
 	DMacroGroup_SetStop( macro->macroApply, stops );
-	DaoNameSpace_AddMacro( self->nameSpace, toks[start+2]->string, macro, local );
+	DaoNamespace_AddMacro( self->nameSpace, toks[start+2]->string, macro, local );
 	DArray_Delete( stops );
 	DMap_Delete( markers );
 	return rb2;

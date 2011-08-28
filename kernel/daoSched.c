@@ -29,7 +29,7 @@
 typedef struct DaoCallThread   DaoCallThread;
 typedef struct DaoCallServer   DaoCallServer;
 
-extern DaoVmProcess *mainVmProcess;
+extern DaoProcess *mainVmProcess;
 
 struct DaoCallThread
 {
@@ -81,7 +81,7 @@ int DaoCallServer_MapStop( DaoCallServer *self )
 	return 1;
 }
 
-DaoFuture* DaoCallServer_Add( DaoContext *ctx, DaoVmProcess *proc, DaoFuture *pre )
+DaoFuture* DaoCallServer_Add( DaoContext *ctx, DaoProcess *proc, DaoFuture *pre )
 {
 	DaoFuture *future = NULL;
 #if 0
@@ -141,7 +141,7 @@ DaoFuture* DaoFutures_GetFirstExecutable( DArray *pending, DMap *active )
 void DaoCallThread_Run( DaoCallThread *self )
 {
 	DaoContext *ctx = NULL;
-	DaoVmProcess *proc = NULL;
+	DaoProcess *proc = NULL;
 	DaoCallServer *server = daoCallServer;
 	DaoFuture *future = NULL;
 	DaoType *type = NULL;
@@ -175,11 +175,11 @@ void DaoCallThread_Run( DaoCallThread *self )
 			proc = future->process;
 			ctx = future->context;
 			if( proc == NULL ){
-				proc = future->process = DaoVmProcess_New( ctx->vmSpace );
+				proc = future->process = DaoProcess_New( ctx->vmSpace );
 				GC_IncRC( proc );
 			}
-			DaoVmProcess_PushContext( proc, ctx );
-			DaoVmProcess_Execute( proc );
+			DaoProcess_PushContext( proc, ctx );
+			DaoProcess_Execute( proc );
 		}else if( future->state == DAO_CALL_PAUSED ){
 			DaoValue *pars[1] = { NULL };
 			int npar = 0;
@@ -187,7 +187,7 @@ void DaoCallThread_Run( DaoCallThread *self )
 				pars[0] = future->precondition->value;
 				npar = 1;
 			}
-			DaoVmProcess_Resume( future->process, pars, npar, NULL );
+			DaoProcess_Resume( future->process, pars, npar, NULL );
 			proc = future->process;
 			ctx = future->context;
 		}

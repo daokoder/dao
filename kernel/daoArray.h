@@ -35,9 +35,9 @@ struct DArray
 		DaoObject    **pObject;
 		DaoRoutine   **pRout;
 		DRoutine     **pRout2;
-		DaoCData     **pCData;
+		DaoCdata     **pCdata;
 		DaoType      **pType;
-		DaoNameSpace **pNS;
+		DaoNamespace **pNS;
 
 		DString      **pString;
 		DArray       **pArray;

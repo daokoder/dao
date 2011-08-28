@@ -191,7 +191,7 @@ struct DaoThread
 	short          exitRefCount;
 	short          isRunning;
 
-	DaoVmProcess  *process;
+	DaoProcess    *process;
 	DaoThdMaster  *thdMaster;
 	DMap          *mutexUsed; /* <DaoMutex*,int> */
 	DaoMap        *myMap;

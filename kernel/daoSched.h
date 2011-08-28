@@ -18,6 +18,6 @@
 
 void DaoCallServer_Init( DaoVmSpace *vms );
 void DaoCallServer_Join( DaoVmSpace *vms );
-DaoFuture* DaoCallServer_Add( DaoContext *ctx, DaoVmProcess *proc, DaoFuture *pre );
+DaoFuture* DaoCallServer_Add( DaoContext *ctx, DaoProcess *proc, DaoFuture *pre );
 
 #endif

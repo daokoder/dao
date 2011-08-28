@@ -28,7 +28,7 @@ DString       *routName; \
 DString       *routHelp; \
 DString       *parCodes; \
 DArray        *routConsts; \
-DaoNameSpace  *nameSpace
+DaoNamespace  *nameSpace
 
 #define ROUT_HOST_TID( t ) ((t)->routHost ? (t)->routHost->tid : 0)
 
@@ -90,7 +90,7 @@ void DaoRoutine_Delete( DaoRoutine *self );
 
 void DaoRoutine_Compile( DaoRoutine *self );
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
-void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNameSpace *ns );
+void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 
@@ -145,7 +145,7 @@ struct DaoFunctree
 	DAO_DATA_COMMON;
 
 	unsigned int   attribs;
-	DaoNameSpace  *space;
+	DaoNamespace  *space;
 	DaoType       *host;
 	DaoType       *unitype;
 	DString       *name;
@@ -154,7 +154,7 @@ struct DaoFunctree
 	DArray        *routines; /* list of overloaded routines on the trees */
 };
 
-DaoFunctree* DaoFunctree_New( DaoNameSpace *nameSpace, DString *name );
+DaoFunctree* DaoFunctree_New( DaoNamespace *nameSpace, DString *name );
 void DaoFunctree_Delete( DaoFunctree *self );
 
 void DaoFunctree_UpdateVtable( DaoFunctree *self, DRoutine *routine, DMap *vtable );

@@ -113,7 +113,7 @@ typedef unsigned long       uint_t;
     DAO_INIT_MODULE \
 DAO_EXTC_OPEN \
 DAO_DLL int DaoH_Version = DAO_H_VERSION; \
-DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNameSpace *ns ); \
+DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns ); \
 DAO_EXTC_CLOSE
 
 
@@ -150,7 +150,7 @@ enum DaoTypes
 	DAO_ROUTINE   ,
 	DAO_FUNCTION  ,
 	DAO_CONTEXT   ,
-	DAO_VMPROCESS ,
+	DAO_PROCESS ,
 	DAO_NAMESPACE ,
 	DAO_VMSPACE   ,
 	DAO_MUTEX ,
@@ -160,7 +160,7 @@ enum DaoTypes
 	DAO_TYPE ,
 	END_CORE_TYPES
 };
-enum DaoVmProcessStatus
+enum DaoProcessStatus
 {
 	DAO_VMPROC_FINISHED ,  /* finished normally */
 	DAO_VMPROC_ABORTED ,   /* execution aborted */
@@ -168,7 +168,7 @@ enum DaoVmProcessStatus
 	DAO_VMPROC_RUNNING ,   /* currently running */
 	DAO_VMPROC_STACKED     /* new context is pushed onto the stack of the process */
 };
-enum DaoNameSpaceOption
+enum DaoNamespaceOption
 {
 	/* automatically make variable declared outside {} global, for interactive mode */
 	DAO_NS_AUTO_GLOBAL = (1<<0)
@@ -249,19 +249,19 @@ typedef struct DaoArray        DaoArray;
 typedef struct DaoList         DaoList;
 typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
-typedef struct DaoFunctree  DaoFunctree;
+typedef struct DaoFunctree     DaoFunctree;
 typedef struct DaoRoutine      DaoRoutine;
 typedef struct DaoFunction     DaoFunction;
 typedef struct DaoInterface    DaoInterface;
 typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;
-typedef struct DaoCData        DaoCData;
+typedef struct DaoCdata        DaoCdata;
 typedef struct DaoRegex        DaoRegex;
-typedef struct DaoNameSpace    DaoNameSpace;
+typedef struct DaoNamespace    DaoNamespace;
 typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoContext      DaoContext;
-typedef struct DaoVmProcess    DaoVmProcess;
+typedef struct DaoProcess      DaoProcess;
 typedef struct DaoMutex        DaoMutex;
 typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
@@ -317,7 +317,7 @@ struct DaoTypeBase
 	FuncPtrCast    casts[ DAO_MAX_CDATA_SUPER ];
 
 	/* function to free data:
-	 * only for DaoCData created by DaoValue_NewCData() or DaoCData_New() */
+	 * only for DaoCdata created by DaoValue_NewCdata() or DaoCdata_New() */
 	void   (*Delete)( void *data );
 	/* test if the data is deletable by Dao: called by gc before deletion. */
 	int    (*DelTest)( void *data );
@@ -385,8 +385,8 @@ DAO_DLL DaoValue* DaoValue_NewMatrixF( float **s, int n, int m );
 DAO_DLL DaoValue* DaoValue_NewMatrixD( double **s, int n, int m );
 DAO_DLL DaoValue* DaoValue_NewBuffer( void *s, int n );
 DAO_DLL DaoValue* DaoValue_NewStream( FILE *f );
-DAO_DLL DaoValue* DaoValue_NewCData( DaoTypeBase *typer, void *data );
-DAO_DLL DaoValue* DaoValue_WrapCData( DaoTypeBase *typer, void *data );
+DAO_DLL DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data );
+DAO_DLL DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data );
 
 DAO_DLL DaoInteger*  DaoValue_CastInteger( DaoValue *self );
 DAO_DLL DaoFloat*    DaoValue_CastFloat( DaoValue *self );
@@ -401,7 +401,7 @@ DAO_DLL DaoMap*      DaoValue_CastMap( DaoValue *self );
 DAO_DLL DaoTuple*    DaoValue_CastTuple( DaoValue *self );
 DAO_DLL DaoStream*   DaoValue_CastStream( DaoValue *self );
 DAO_DLL DaoObject*   DaoValue_CastObject( DaoValue *self );
-DAO_DLL DaoCData*    DaoValue_CastCData( DaoValue *self );
+DAO_DLL DaoCdata*    DaoValue_CastCdata( DaoValue *self );
 DAO_DLL DaoClass*    DaoValue_CastClass( DaoValue *self );
 
 DAO_DLL DaoInterface*  DaoValue_CastInterface( DaoValue *self );
@@ -409,8 +409,8 @@ DAO_DLL DaoFunctree*   DaoValue_CastFunctree( DaoValue *self );
 DAO_DLL DaoRoutine*    DaoValue_CastRoutine( DaoValue *self );
 DAO_DLL DaoFunction*   DaoValue_CastFunction( DaoValue *self );
 DAO_DLL DaoContext*    DaoValue_CastContext( DaoValue *self );
-DAO_DLL DaoVmProcess*  DaoValue_CastVmProcess( DaoValue *self );
-DAO_DLL DaoNameSpace*  DaoValue_CastNameSpace( DaoValue *self );
+DAO_DLL DaoProcess*  DaoValue_CastVmProcess( DaoValue *self );
+DAO_DLL DaoNamespace*  DaoValue_CastNameSpace( DaoValue *self );
 DAO_DLL DaoType*       DaoValue_CastType( DaoValue *self );
 
 DAO_DLL dint DaoValue_TryGetInteger( DaoValue *self );
@@ -420,9 +420,9 @@ DAO_DLL dint DaoValue_TryGetEnum( DaoValue *self );
 DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
 DAO_DLL char* DaoValue_TryGetMBString( DaoValue *self );
 DAO_DLL wchar_t* DaoValue_TryGetWCString( DaoValue *self );
-DAO_DLL void*  DaoValue_TryCastCData( DaoValue *self, DaoTypeBase *totyper );
-DAO_DLL void*  DaoValue_TryGetCData( DaoValue *self );
-DAO_DLL void** DaoValue_TryGetCData2( DaoValue *self );
+DAO_DLL void*  DaoValue_TryCastCdata( DaoValue *self, DaoTypeBase *totyper );
+DAO_DLL void*  DaoValue_TryGetCdata( DaoValue *self );
+DAO_DLL void** DaoValue_TryGetCdata2( DaoValue *self );
 
 DAO_DLL void DaoValue_Copy( DaoValue *source, DaoValue **dest );
 //DAO_DLL void DaoValue_Clear( DaoValue *v );
@@ -601,26 +601,26 @@ DAO_DLL DaoMethod* DaoMethod_Resolve( DaoMethod *self, DaoValue *o, DaoValue *p[
 
 DAO_DLL DaoValue* DaoObject_GetField( DaoObject *self, const char *name );
 DAO_DLL DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
-DAO_DLL DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer );
+DAO_DLL DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
 DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
 
-DAO_DLL DaoCData* DaoCData_New( DaoTypeBase *typer, void *data );
-DAO_DLL DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data );
-DAO_DLL int    DaoCData_IsType( DaoCData *self, DaoTypeBase *typer );
-DAO_DLL int    DaoCData_OwnData( DaoCData *self );
-DAO_DLL void   DaoCData_SetExtReference( DaoCData *self, int bl );
-DAO_DLL void   DaoCData_SetData( DaoCData *self, void *data );
-DAO_DLL void   DaoCData_SetBuffer( DaoCData *self, void *data, size_t size );
-DAO_DLL void   DaoCData_SetArray( DaoCData *self, void *data, size_t size, int itsize );
-DAO_DLL void*  DaoCData_CastData( DaoCData *self, DaoTypeBase *totyper );
-DAO_DLL void*  DaoCData_GetData( DaoCData *self );
-DAO_DLL void*  DaoCData_GetBuffer( DaoCData *self );
-DAO_DLL void** DaoCData_GetData2( DaoCData *self );
-DAO_DLL DaoObject* DaoCData_GetObject( DaoCData *self );
-DAO_DLL DaoTypeBase* DaoCData_GetTyper( DaoCData *self );
+DAO_DLL DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data );
+DAO_DLL DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data );
+DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoTypeBase *typer );
+DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
+DAO_DLL void   DaoCdata_SetExtReference( DaoCdata *self, int bl );
+DAO_DLL void   DaoCdata_SetData( DaoCdata *self, void *data );
+DAO_DLL void   DaoCdata_SetBuffer( DaoCdata *self, void *data, size_t size );
+DAO_DLL void   DaoCdata_SetArray( DaoCdata *self, void *data, size_t size, int itsize );
+DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoTypeBase *totyper );
+DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
+DAO_DLL void*  DaoCdata_GetBuffer( DaoCdata *self );
+DAO_DLL void** DaoCdata_GetData2( DaoCdata *self );
+DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
+DAO_DLL DaoTypeBase* DaoCdata_GetTyper( DaoCdata *self );
 
 DAO_DLL DaoRegex* DaoRegex_New( DString *pattern );
 DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
@@ -651,39 +651,39 @@ DAO_DLL DaoMap*    DaoContext_PutMap( DaoContext *self );
 DAO_DLL DaoArray*  DaoContext_PutArray( DaoContext *self );
 DAO_DLL DaoTuple*  DaoContext_PutTuple( DaoContext *self );
 DAO_DLL DaoStream* DaoContext_PutFile( DaoContext *self, FILE *file );
-DAO_DLL DaoCData*  DaoContext_PutCData( DaoContext *self, void *data, DaoTypeBase *typer );
-DAO_DLL DaoCData*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
-DAO_DLL DaoCData*  DaoContext_WrapCData( DaoContext *self, void *data, DaoTypeBase *typer );
-DAO_DLL DaoCData*  DaoContext_CopyCData( DaoContext *self, void *d, int n, DaoTypeBase *t );
+DAO_DLL DaoCdata*  DaoContext_PutCdata( DaoContext *self, void *data, DaoTypeBase *typer );
+DAO_DLL DaoCdata*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
+DAO_DLL DaoCdata*  DaoContext_WrapCdata( DaoContext *self, void *data, DaoTypeBase *typer );
+DAO_DLL DaoCdata*  DaoContext_CopyCdata( DaoContext *self, void *d, int n, DaoTypeBase *t );
 DAO_DLL DaoValue*  DaoContext_PutValue( DaoContext *self, DaoValue *value );
 
-DAO_DLL DaoVmProcess* DaoContext_CurrentProcess( DaoContext *self );
+DAO_DLL DaoProcess* DaoContext_CurrentProcess( DaoContext *self );
 DAO_DLL void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 
-DAO_DLL DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
-DAO_DLL int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-DAO_DLL int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
-DAO_DLL int DaoVmProcess_Call( DaoVmProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
-DAO_DLL void  DaoVmProcess_Stop( DaoVmProcess *self );
-DAO_DLL DaoValue* DaoVmProcess_GetReturned( DaoVmProcess *self );
-DAO_DLL DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *patt, int mbs );
+DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
+DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
+DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
+DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL void  DaoProcess_Stop( DaoProcess *self );
+DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
+DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
 
-DAO_DLL DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *name );
-DAO_DLL DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name );
-DAO_DLL int  DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
-DAO_DLL void DaoNameSpace_AddConstNumbers( DaoNameSpace *self, DaoNumItem *items );
-DAO_DLL void DaoNameSpace_AddConstValue( DaoNameSpace *self, const char *name, DaoValue *data );
-DAO_DLL void DaoNameSpace_AddValue( DaoNameSpace *self, const char *name, DaoValue *d, const char *type);
-DAO_DLL DaoValue* DaoNameSpace_FindData( DaoNameSpace *self, const char *name );
-DAO_DLL DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type );
-DAO_DLL DaoType* DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
-DAO_DLL DaoFunction* DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
-DAO_DLL int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
-DAO_DLL int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
-DAO_DLL int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items );
-DAO_DLL int DaoNameSpace_Load( DaoNameSpace *self, const char *file );
-DAO_DLL int DaoNameSpace_GetOptions( DaoNameSpace *self );
-DAO_DLL void DaoNameSpace_SetOptions( DaoNameSpace *self, int options );
+DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
+DAO_DLL DaoNamespace* DaoNamespace_GetNameSpace( DaoNamespace *self, const char *name );
+DAO_DLL int  DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
+DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
+DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue *data );
+DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
+DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
+DAO_DLL DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
+DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer );
+DAO_DLL DaoFunction* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
+DAO_DLL int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );
+DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
+DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
+DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file );
+DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );
+DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
@@ -691,12 +691,12 @@ DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
-DAO_DLL DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
-DAO_DLL DaoNameSpace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
-DAO_DLL DaoNameSpace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
-DAO_DLL DaoVmProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
-DAO_DLL DaoVmProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
-DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoVmProcess *proc );
+DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
+DAO_DLL DaoNamespace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
+DAO_DLL DaoNamespace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
+DAO_DLL DaoProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
+DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
 DAO_DLL void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
@@ -765,18 +765,18 @@ DaoValue* DaoValue_NewMatrixUI( unsigned int **s, int n, int m );
 DaoValue* DaoValue_NewMatrixF( float **s, int n, int m );
 DaoValue* DaoValue_NewMatrixD( double **s, int n, int m );
 
- Create "n" bytes buffer (DaoCData): 
+ Create "n" bytes buffer (DaoCdata): 
 DaoValue* DaoValue_NewBuffer( void *s, int n );
  Create io stream object (DaoStream): 
 DaoValue* DaoValue_NewStream( FILE *f );
 
- Create DaoCData object wrapping the opaque data with given type: 
- data will be deleted with the DaoCData structure created by this function 
-DaoValue* DaoValue_NewCData( DaoTypeBase *typer, void *data );
+ Create DaoCdata object wrapping the opaque data with given type: 
+ data will be deleted with the DaoCdata structure created by this function 
+DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data );
 
- Create DaoCData object wrapping the opaque data with given type: 
- data will NOT be deleted with the DaoCData structure created by this function 
-DaoValue* DaoValue_WrapCData( DaoTypeBase *typer, void *data );
+ Create DaoCdata object wrapping the opaque data with given type: 
+ data will NOT be deleted with the DaoCdata structure created by this function 
+DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data );
 
 DaoInteger*      DaoValue_CastInteger( DaoValue *self );
 DaoFloat*        DaoValue_CastFloat( DaoValue *self );
@@ -791,15 +791,15 @@ DaoMap*          DaoValue_CastMap( DaoValue *self );
 DaoTuple*        DaoValue_CastTuple( DaoValue *self );
 DaoStream*       DaoValue_CastStream( DaoValue *self );
 DaoObject*       DaoValue_CastObject( DaoValue *self );
-DaoCData*        DaoValue_CastCData( DaoValue *self );
+DaoCdata*        DaoValue_CastCdata( DaoValue *self );
 DaoClass*        DaoValue_CastClass( DaoValue *self );
 DaoInterface*    DaoValue_CastInterface( DaoValue *self );
 DaoFunctree*     DaoValue_CastFunctree( DaoValue *self );
 DaoRoutine*      DaoValue_CastRoutine( DaoValue *self );
 DaoFunction*     DaoValue_CastFunction( DaoValue *self );
 DaoContext*      DaoValue_CastContext( DaoValue *self );
-DaoVmProcess*    DaoValue_CastVmProcess( DaoValue *self );
-DaoNameSpace*    DaoValue_CastNameSpace( DaoValue *self );
+DaoProcess*    DaoValue_CastVmProcess( DaoValue *self );
+DaoNamespace*    DaoValue_CastNameSpace( DaoValue *self );
 DaoType*         DaoValue_CastType( DaoValue *self );
 
  Get Multi-Byte String (MBS): 
@@ -812,10 +812,10 @@ wchar_t* DaoValue_GetWCString( DaoValue *self );
  * return a pointer to the opaque object that has been properly casted using
  * the "casts" methods of typer structures (DaoTypeBase).
  * Otherwise return NULL. 
-void*  DaoValue_CastCDataData( DaoValue *self, DaoTypeBase *totyper );
+void*  DaoValue_CastCdataData( DaoValue *self, DaoTypeBase *totyper );
  Get the pointer to the opaque data: 
-void*  DaoValue_GetCDataData( DaoValue *self );
-void** DaoValue_GetCDataData2( DaoValue *self );
+void*  DaoValue_GetCdataData( DaoValue *self );
+void** DaoValue_GetCdataData2( DaoValue *self );
 
  Copy value from "from" to "self": 
 void DaoValue_Copy( DaoValue *self, DaoValue from );
@@ -1047,30 +1047,30 @@ DaoMethod* DaoMethod_Resolve( DaoMethod *self, DaoValue *o, DaoValue *p[], int n
 DaoValue DaoObject_GetField( DaoObject *self, const char *name );
  return a null value, or a value of DaoFunctree, DaoRoutine or DaoFunction: 
 DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
-DaoCData* DaoObject_MapCData( DaoObject *self, DaoTypeBase *typer );
+DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
 
 DaoStream* DaoStream_New();
 void DaoStream_SetFile( DaoStream *self, FILE *fd );
 FILE* DaoStream_GetFile( DaoStream *self );
 
- data will be deleted with the new DaoCData 
-DaoCData* DaoCData_New( DaoTypeBase *typer, void *data );
- data will not be deleted with the new DaoCData 
-DaoCData* DaoCData_Wrap( DaoTypeBase *typer, void *data );
-int    DaoCData_IsType( DaoCData *self, DaoTypeBase *typer );
- return 1 if the data will be deleted with the DaoCData, otherwise 0 
-int    DaoCData_OwnData( DaoCData *self );
+ data will be deleted with the new DaoCdata 
+DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data );
+ data will not be deleted with the new DaoCdata 
+DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data );
+int    DaoCdata_IsType( DaoCdata *self, DaoTypeBase *typer );
+ return 1 if the data will be deleted with the DaoCdata, otherwise 0 
+int    DaoCdata_OwnData( DaoCdata *self );
  tell daovm that self->data has external reference 
-void   DaoCData_SetExtReference( DaoCData *self, int bl );
-void   DaoCData_SetData( DaoCData *self, void *data );
-void   DaoCData_SetBuffer( DaoCData *self, void *data, size_t size );
-void   DaoCData_SetArray( DaoCData *self, void *data, size_t size, int itsize );
-void*  DaoCData_CastData( DaoValue *self, DaoTypeBase *totyper );
-void*  DaoCData_GetData( DaoCData *self );
-void*  DaoCData_GetBuffer( DaoCData *self );
-void** DaoCData_GetData2( DaoCData *self );
-DaoObject* DaoCData_GetObject( DaoCData *self );
-DaoTypeBase* DaoCData_GetTyper( DaoCData *self );
+void   DaoCdata_SetExtReference( DaoCdata *self, int bl );
+void   DaoCdata_SetData( DaoCdata *self, void *data );
+void   DaoCdata_SetBuffer( DaoCdata *self, void *data, size_t size );
+void   DaoCdata_SetArray( DaoCdata *self, void *data, size_t size, int itsize );
+void*  DaoCdata_CastData( DaoValue *self, DaoTypeBase *totyper );
+void*  DaoCdata_GetData( DaoCdata *self );
+void*  DaoCdata_GetBuffer( DaoCdata *self );
+void** DaoCdata_GetData2( DaoCdata *self );
+DaoObject* DaoCdata_GetObject( DaoCdata *self );
+DaoTypeBase* DaoCdata_GetTyper( DaoCdata *self );
 
 DaoRegex* DaoRegex_New( DString *pattern );
 int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
@@ -1102,24 +1102,24 @@ DaoArray*  DaoContext_PutArray( DaoContext *self );
 DaoTuple*  DaoContext_PutTuple( DaoContext *self );
 DaoStream* DaoContext_PutFile( DaoContext *self, FILE *file );
 DaoValue* DaoContext_PutValue( DaoContext *self, DaoValue value );
- data will be deleted with the new DaoCData 
-DaoCData*  DaoContext_PutCData( DaoContext *self, void *data, DaoTypeBase *typer );
-DaoCData*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
+ data will be deleted with the new DaoCdata 
+DaoCdata*  DaoContext_PutCdata( DaoContext *self, void *data, DaoTypeBase *typer );
+DaoCdata*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
 DaoBase*   DaoContext_PutResult( DaoContext *self, DaoBase *data );
- data will not be deleted with the new DaoCData 
-DaoCData*  DaoContext_WrapCData( DaoContext *self, void *data, DaoTypeBase *typer );
- data will be deleted with the new DaoCData 
-DaoCData*  DaoContext_CopyCData( DaoContext *self, void *d, int n, DaoTypeBase *t );
+ data will not be deleted with the new DaoCdata 
+DaoCdata*  DaoContext_WrapCdata( DaoContext *self, void *data, DaoTypeBase *typer );
+ data will be deleted with the new DaoCdata 
+DaoCdata*  DaoContext_CopyCdata( DaoContext *self, void *d, int n, DaoTypeBase *t );
 
-DaoVmProcess* DaoContext_CurrentProcess( DaoContext *self );
+DaoProcess* DaoContext_CurrentProcess( DaoContext *self );
 void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 
-DaoVmProcess* DaoVmProcess_New( DaoVmSpace *vms );
+DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 
  Compile source codes in "src", with substitution of escape chars in strings, if rpl != 0 
-int DaoVmProcess_Compile( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
  Evaluate source codes in "src", with substitution of escape chars in strings, if rpl != 0 
-int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int rpl );
+int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 
  f: function to be called, one of DaoFunctree, DaoRoutine and DaoFunction: 
  Try to call "f" as:
@@ -1127,36 +1127,36 @@ int DaoVmProcess_Eval( DaoVmProcess *self, DaoNameSpace *ns, DString *src, int r
  * Or,
  *     o->f( p[0], ..., p[n] )
  * Return 1 if successful, otherwise return 0. 
-int DaoVmProcess_Call( DaoVmProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
-void  DaoVmProcess_Stop( DaoVmProcess *self );
-DaoValue DaoVmProcess_GetReturned( DaoVmProcess *self );
-DaoRegex* DaoVmProcess_MakeRegex( DaoVmProcess *self, DString *patt, int mbs );
+int DaoProcess_Call( DaoProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+void  DaoProcess_Stop( DaoProcess *self );
+DaoValue DaoProcess_GetReturned( DaoProcess *self );
+DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
 
-DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *name );
+DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
  get namespace with the name, create if not exits: 
-DaoNameSpace* DaoNameSpace_GetNameSpace( DaoNameSpace *self, const char *name );
-int  DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
-void DaoNameSpace_AddConstNumbers( DaoNameSpace *self0, DaoNumItem *items );
-void DaoNameSpace_AddConstValue( DaoNameSpace *self, const char *s, DaoValue v );
-void DaoNameSpace_AddConstData( DaoNameSpace *self, const char *name, DaoBase *data );
-void DaoNameSpace_AddData( DaoNameSpace *self, const char *name, DaoBase *data, const char *type);
-void DaoNameSpace_AddValue( DaoNameSpace *self, const char *name, DaoValue data, const char *type);
-DaoValue DaoNameSpace_FindData( DaoNameSpace *self, const char *name );
+DaoNamespace* DaoNamespace_GetNameSpace( DaoNamespace *self, const char *name );
+int  DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
+void DaoNamespace_AddConstNumbers( DaoNamespace *self0, DaoNumItem *items );
+void DaoNamespace_AddConstValue( DaoNamespace *self, const char *s, DaoValue v );
+void DaoNamespace_AddConstData( DaoNamespace *self, const char *name, DaoBase *data );
+void DaoNamespace_AddData( DaoNamespace *self, const char *name, DaoBase *data, const char *type);
+void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue data, const char *type);
+DaoValue DaoNamespace_FindData( DaoNamespace *self, const char *name );
 
  equivalent to: typedef old type; in scripts 
  return NULL if failed 
-DaoType* DaoNameSpace_TypeDefine( DaoNameSpace *self, const char *old, const char *type );
+DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
  wrap c type, return NULL if failed 
-DaoType* DaoNameSpace_WrapType( DaoNameSpace *self, DaoTypeBase *typer );
+DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer );
  wrap c function, return NULL if failed 
-DaoFunction* DaoNameSpace_WrapFunction( DaoNameSpace *self, DaoFuncPtr fp, const char *proto );
+DaoFunction* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
 
    parameters alias[] is an array of type name aliases,
    used as typedefs like: typedef alias[2*i] alias[2*i+1];
    the last item in alias[] should also be NULL.
    return the number of failed typedefs.
  
-int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
+int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );
  wrap c types, the last item in typer[] should be NULL;
    types that are cross-used in parameter lists
    (e.g. type A appears in the parameter list of B's methods,
@@ -1164,13 +1164,13 @@ int DaoNameSpace_TypeDefines( DaoNameSpace *self, const char *alias[] );
    should be wrapped using this function.
    return the number of failed wrapping.
  
-int DaoNameSpace_WrapTypes( DaoNameSpace *self, DaoTypeBase *typer[] );
+int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
  wrap c functions, return the number of failed wrapping. 
-int DaoNameSpace_WrapFunctions( DaoNameSpace *self, DaoFuncItem *items );
+int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
  load the scripts in "file" to the namespace 
-int DaoNameSpace_Load( DaoNameSpace *self, const char *file );
-int DaoNameSpace_GetOptions( DaoNameSpace *self );
-void DaoNameSpace_SetOptions( DaoNameSpace *self, int options );
+int DaoNamespace_Load( DaoNamespace *self, const char *file );
+int DaoNamespace_GetOptions( DaoNamespace *self );
+void DaoNamespace_SetOptions( DaoNamespace *self, int options );
 
 DaoVmSpace* DaoVmSpace_New();
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
@@ -1178,14 +1178,14 @@ void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
-DaoNameSpace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
-DaoNameSpace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
-DaoNameSpace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
-DaoVmProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
+DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
+DaoNamespace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
+DaoNamespace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
+DaoProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
  get a process object from a pool 
-DaoVmProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
+DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
  return a process object from a pool 
-void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoVmProcess *proc );
+void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
 void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
 void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );

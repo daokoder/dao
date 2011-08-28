@@ -828,17 +828,17 @@ static void DaoCFunction_Execute( DaoCFunctionCallData *self )
 	self->function->pFunc( self->context, self->par, npar );
 	self->context->thisFunction = NULL;
 	for(i=0; i<npar; i++) DaoValue_Clear( self->par + i );
-	DaoVmProcess_Delete( self->context->process );
+	DaoProcess_Delete( self->context->process );
 	DaoValue_ClearAll( self->par, npar );
 	GC_DecRC( self->selfpar );
 	GC_DecRC( self->context );
 	GC_DecRC( self->function );
 	dao_free( self );
 }
-static void DaoVmProcess_Execute2( DaoVmProcess *self )
+static void DaoProcess_Execute2( DaoProcess *self )
 {
-	DaoVmProcess_Execute( self );
-	DaoVmProcess_Delete( self );
+	DaoProcess_Execute( self );
+	DaoProcess_Delete( self );
 }
 
 /* thread master */
@@ -846,7 +846,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 { 
 	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoThread *thread;
-	DaoVmProcess *vmProc;
+	DaoProcess *vmProc;
 	DaoContext *thdCtx = 0;
 	DRoutine *rout;
 	DaoValue **params = par + 2;
@@ -877,7 +877,7 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 		}
 	}
 	thread = DaoThread_New( self );
-	vmProc = DaoVmProcess_New( ctx->vmSpace );
+	vmProc = DaoProcess_New( ctx->vmSpace );
 	DaoContext_PutValue( ctx, (DaoValue*)thread );
 	thdCtx = DaoContext_New();
 	thread->process = vmProc;
@@ -889,21 +889,21 @@ static void DaoThdMaster_Lib_Create( DaoContext *ctx, DaoValue *par[], int N )
 	DaoContext_Init( thdCtx, (DaoRoutine*) rout );
 	thdCtx->process = vmProc;
 	if( rout->type == DAO_ROUTINE ){
-		DaoVmProcess_PushContext( vmProc, thdCtx );
+		DaoProcess_PushContext( vmProc, thdCtx );
 		if( ! DRoutine_PassParams( (DRoutine*)rout, selfobj, thdCtx->regValues, params, N, DVM_CALL ) ){
-			DaoVmProcess_Delete( vmProc );
+			DaoProcess_Delete( vmProc );
 			goto ErrorParam;
 		}
 		GC_IncRC( thread );
 		thread->exitRefCount = 1;
-		DaoThread_Start( thread, (DThreadTask) DaoVmProcess_Execute2, vmProc );
+		DaoThread_Start( thread, (DThreadTask) DaoProcess_Execute2, vmProc );
 	}else if( rout->type == DAO_FUNCTION ){
 		DaoCFunctionCallData *calldata = dao_calloc( 1, sizeof(DaoCFunctionCallData) );
 		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
 		calldata->npar = N;
 		if( ! DRoutine_PassParams( (DRoutine*)rout, selfobj, calldata->par, params, N, DVM_CALL ) ){
 			DaoValue_ClearAll( calldata->par, N );
-			DaoVmProcess_Delete( vmProc );
+			DaoProcess_Delete( vmProc );
 			dao_free( calldata );
 			goto ErrorParam;
 		}

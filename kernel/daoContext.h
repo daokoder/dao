@@ -25,9 +25,10 @@ struct DaoContext
 {
 	DAO_DATA_COMMON;
 
+	DaoStackFrame *frame;
+
 	DaoVmCode  *codes;
 	DaoVmCode  *vmc; /* current virtual machine code */
-	DaoVmFrame *frame;
 
 	DTuple    *regArray; /* virtual registers for the call */
 	DaoValue **regValues; /* = regArray->items.pValue */
@@ -40,11 +41,11 @@ struct DaoContext
 
 	DaoRoutine   *routine; /* routine prototype */
 	DaoObject    *object; /* self object */
-	DaoNameSpace *nameSpace;
+	DaoNamespace *nameSpace;
 	DaoVmSpace   *vmSpace;
 
 	DaoContext   *caller;
-	DaoVmProcess *process;
+	DaoProcess   *process;
 	DaoRoutine   *lastRoutine;
 
 	/* the currently called wrapped C function,
@@ -61,7 +62,7 @@ void DaoContext_Delete( DaoContext *self );
 void DaoContext_Init( DaoContext *self, DaoRoutine *routine );
 /* Intialize a context according to overloaed routine with parameter types matching to "pars" */
 /* Must be called after DaoContext_Init() */
-int DaoContext_InitWithParams( DaoContext *self, DaoVmProcess *vmp, DaoValue *pars[], int npar );
+int DaoContext_InitWithParams( DaoContext *self, DaoProcess *vmp, DaoValue *pars[], int npar );
 /* For internal use. */
 void DaoContext_SetArrays( DaoContext *self );
 
@@ -91,9 +92,9 @@ DaoTuple*  DaoContext_PutTuple( DaoContext *self );
 DaoList*   DaoContext_PutList( DaoContext *self );
 DaoMap*    DaoContext_PutMap( DaoContext *self );
 DaoArray*  DaoContext_PutArray( DaoContext *self );
-DaoCData*  DaoContext_PutCData( DaoContext *self, void *data, DaoTypeBase *plgTyper );
-DaoCData*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
-DaoCData*  DaoContext_CopyCData( DaoContext *self, void *data, int n, DaoTypeBase *t );
+DaoCdata*  DaoContext_PutCData( DaoContext *self, void *data, DaoTypeBase *plgTyper );
+DaoCdata*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
+DaoCdata*  DaoContext_CopyCData( DaoContext *self, void *data, int n, DaoTypeBase *t );
 
 void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
 void DaoContext_RaiseTypeError( DaoContext *self, DaoType *from, DaoType *to, const char *op );

@@ -100,8 +100,8 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
 int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames );
 int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames );
 int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames );
-int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns );
-int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNameSpace *ns );
+int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
+int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
 
 struct DaoList
 {
@@ -146,7 +146,7 @@ enum{
 	DAO_CDATA_FREE = 1
 };
 
-/* DaoCData stores a pointer to a C/C++ object or to a memory buffer:
+/* DaoCdata stores a pointer to a C/C++ object or to a memory buffer:
  * XXX possible changes:
  * The following restriction should be imposed?
  * 1. If it is a memory buffer, the size and the memory pointer should
@@ -177,7 +177,7 @@ enum{
  *    "data" field is a pointer with some offset from "buffer", so "buffer" should 
  *    be freed, not "data".
  */
-struct DaoCData
+struct DaoCdata
 {
 	DAO_DATA_COMMON;
 
@@ -200,10 +200,10 @@ struct DaoCData
 };
 
 extern DaoTypeBase cdataTyper;
-extern DaoCData cptrCData;
+extern DaoCdata cptrCdata;
 
-void DaoCData_DeleteData( DaoCData *self );
-int DaoCData_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
+void DaoCdata_DeleteData( DaoCdata *self );
+int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 /* DaoNameValue is not data type for general use, it is mainly used for 
  * passing named parameters and fields: */
@@ -253,7 +253,7 @@ struct DaoException
 DaoException* DaoException_New( DaoTypeBase *typer );
 DaoException* DaoException_New2( DaoTypeBase *typer, DaoValue *v );
 void DaoException_Delete( DaoException *self );
-void DaoException_Setup( DaoNameSpace *ns );
+void DaoException_Setup( DaoNamespace *ns );
 void DaoException_CleanUp();
 
 DaoTypeBase* DaoException_GetType( int type );
@@ -271,9 +271,9 @@ struct DaoFuture
 	DaoValue *value;
 	DaoType  *unitype;
 
-	DaoFuture     *precondition;
-	DaoContext    *context;
-	DaoVmProcess  *process;
+	DaoFuture   *precondition;
+	DaoContext  *context;
+	DaoProcess  *process;
 };
 DaoFuture* DaoFuture_New();
 

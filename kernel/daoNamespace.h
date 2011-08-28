@@ -36,7 +36,7 @@ struct DaoCModule
 DaoCModule* DaoCModule_New();
 void DaoCModule_Delete( DaoCModule *self );
 
-struct DaoNameSpace
+struct DaoNamespace
 {
 	DAO_DATA_COMMON;
 
@@ -46,7 +46,7 @@ struct DaoNameSpace
 	/* 1. vmSpace.nsInternal; */
 	/* 2. loaded namespaces by: load name, without "import" or "as" etc. */
 	/* No GC, these namespaces are also referenced by ::cstData. */
-	DArray *parents; /* DArray<DaoNameSpace*> */
+	DArray *parents; /* DArray<DaoNamespace*> */
 
 	DMap   *lookupTable; /* <DString*,size_t> */
 	DArray *cstDataTable;
@@ -86,69 +86,69 @@ struct DaoNameSpace
 	DMap    *tokens; /* hash<DString,int> */
 	ullong_t time;
 
-	DaoVmProcess *vmpEvalConst;
+	DaoProcess *vmpEvalConst;
 	DaoRoutine   *routEvalConst;
 	DaoType     **tempTypes;
 };
 
-DaoNameSpace* DaoNameSpace_New( DaoVmSpace *vms, const char *name );
-void DaoNameSpace_Delete( DaoNameSpace *self );
+DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
+void DaoNamespace_Delete( DaoNamespace *self );
 
-void DaoNameSpace_SetName( DaoNameSpace *self, const char *name );
+void DaoNamespace_SetName( DaoNamespace *self, const char *name );
 
-int DaoNameSpace_FindConst( DaoNameSpace *self, DString *name );
-int DaoNameSpace_AddConst( DaoNameSpace *self, DString *name, DaoValue *value, int pm );
-void DaoNameSpace_SetConst( DaoNameSpace *self, int index, DaoValue *value );
-DaoValue* DaoNameSpace_GetConst( DaoNameSpace *self, int i );
+int DaoNamespace_FindConst( DaoNamespace *self, DString *name );
+int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, int pm );
+void DaoNamespace_SetConst( DaoNamespace *self, int index, DaoValue *value );
+DaoValue* DaoNamespace_GetConst( DaoNamespace *self, int i );
 
-int DaoNameSpace_FindVariable( DaoNameSpace *self, DString *name );
-int DaoNameSpace_AddVariable( DaoNameSpace *self, DString *name, DaoValue *var, DaoType *tp, int pm );
-int DaoNameSpace_SetVariable( DaoNameSpace *self, int index, DaoValue *var );
-DaoValue* DaoNameSpace_GetVariable( DaoNameSpace *self, int i );
-DaoType* DaoNameSpace_GetVariableType( DaoNameSpace *self, int i );
+int DaoNamespace_FindVariable( DaoNamespace *self, DString *name );
+int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *var, DaoType *tp, int pm );
+int DaoNamespace_SetVariable( DaoNamespace *self, int index, DaoValue *var );
+DaoValue* DaoNamespace_GetVariable( DaoNamespace *self, int i );
+DaoType* DaoNamespace_GetVariableType( DaoNamespace *self, int i );
 
-void DaoNameSpace_SetData( DaoNameSpace *self, DString *name, DaoValue *value );
-DaoValue* DaoNameSpace_GetData( DaoNameSpace *self, DString *name );
+void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value );
+DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name );
 
-DaoClass* DaoNameSpace_FindClass( DaoNameSpace *self, DString *name );
-DaoNameSpace* DaoNameSpace_FindNameSpace( DaoNameSpace *self, DString *name );
+DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name );
+DaoNamespace* DaoNamespace_FindNameSpace( DaoNamespace *self, DString *name );
 
-int DaoNameSpace_AddParent( DaoNameSpace *self, DaoNameSpace *parent );
-void DaoNameSpace_Import( DaoNameSpace *self, DaoNameSpace *ns, DArray *varImport );
+int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
+void DaoNamespace_Import( DaoNamespace *self, DaoNamespace *ns, DArray *varImport );
 
-void DaoNameSpace_AddConstNumbers( DaoNameSpace *self, DaoNumItem *items );
+void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
 
-void DaoNameSpace_AddMacro( DaoNameSpace *self, DString *name, DaoMacro *macro, int local );
-DaoMacro* DaoNameSpace_FindMacro( DaoNameSpace *self, DString *name );
+void DaoNamespace_AddMacro( DaoNamespace *self, DString *name, DaoMacro *macro, int local );
+DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *name );
 
-DaoType* DaoNameSpace_FindType( DaoNameSpace *self, DString *name );
-void DaoNameSpace_AddType( DaoNameSpace *self, DString *name, DaoType *tp );
-void DaoNameSpace_AddTypeConstant( DaoNameSpace *self, DString *name, DaoType *tp );
+DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name );
+void DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *tp );
+void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *tp );
 
-DaoType* DaoNameSpace_GetType( DaoNameSpace *self, DaoValue *p );
-DaoType* DaoNameSpace_MakeType( DaoNameSpace *self, const char *name,
+DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p );
+DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		uchar_t basic, DaoValue *pb, DaoType *nest[], int N );
-DaoType* DaoNameSpace_MakeRoutType( DaoNameSpace *self, DaoType *routype,
+DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		DaoValue *vals[], DaoType *types[], DaoType *retp );
 
-DaoType* DaoNameSpace_MakeValueType( DaoNameSpace *self, DaoValue *value );
-DaoType* DaoNameSpace_MakePairType( DaoNameSpace *self, DaoType *first, DaoType *second );
-DaoType* DaoNameSpace_MakePairValueType( DaoNameSpace *self, DaoValue *first, DaoValue *second );
-DaoTuple* DaoNameSpace_MakePair( DaoNameSpace *self, DaoValue *first, DaoValue *second );
+DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value );
+DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType *second );
+DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, DaoValue *second );
+DaoTuple* DaoNamespace_MakePair( DaoNamespace *self, DaoValue *first, DaoValue *second );
 
-DaoType* DaoNameSpace_MakeEnumType( DaoNameSpace *self, const char *symbols );
-DaoType* DaoNameSpace_SymbolTypeAdd( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value );
-DaoType* DaoNameSpace_SymbolTypeSub( DaoNameSpace *self, DaoType *t1, DaoType *t2, dint *value );
+DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols );
+DaoType* DaoNamespace_SymbolTypeAdd( DaoNamespace *self, DaoType *t1, DaoType *t2, dint *value );
+DaoType* DaoNamespace_SymbolTypeSub( DaoNamespace *self, DaoType *t1, DaoType *t2, dint *value );
 
-int DaoNameSpace_SetupValues( DaoNameSpace *self, DaoTypeBase *typer );
+int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer );
 void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host );
-int DaoNameSpace_SetupMethods( DaoNameSpace *self, DaoTypeBase *typer );
-DaoType* DaoNameSpace_SetupType( DaoNameSpace *self, DaoTypeBase *typer );
+int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer );
+DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer );
 
-DaoFunction* DaoNameSpace_ParsePrototype( DaoNameSpace *self, const char *proto, DaoParser *parser );
-DaoFunction* DaoNameSpace_MakeFunction( DaoNameSpace *self, const char *proto, DaoParser *parser );
+DaoFunction* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, DaoParser *parser );
+DaoFunction* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser );
 
-void DaoNameSpace_Backup( DaoNameSpace *self, DaoVmProcess *proc, FILE *fout, int limit );
-void DaoNameSpace_Restore( DaoNameSpace *self, DaoVmProcess *proc, FILE *fin );
+void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int limit );
+void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin );
 
 #endif

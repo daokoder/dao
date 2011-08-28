@@ -4230,7 +4230,7 @@ void DaoContext_Apply( DaoContext *ctx, DaoVmCode *vmc, int index, int vdim, int
 			}
 		}
 		ctx->regValues[ index ]->xInteger.value = i;
-		DaoVmProcess_ExecuteSection( ctx->process, entry );
+		DaoProcess_ExecuteSection( ctx->process, entry );
 		res = ctx->process->returned;
 		if( res->type ){
 			if( res->type >= DAO_INTEGER && res->type <= DAO_DOUBLE ){

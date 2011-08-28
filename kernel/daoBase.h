@@ -98,14 +98,13 @@ typedef struct DRoutine   DRoutine;
 
 typedef struct DaoThdMaster  DaoThdMaster;
 typedef struct DaoFunCurry   DaoFunCurry;
-typedef struct DaoCDataCore  DaoCDataCore;
+typedef struct DaoCdataCore  DaoCdataCore;
 
 typedef struct DaoToken      DaoToken;
 typedef struct DaoInode      DaoInode;
 
 typedef struct DaoVmCode     DaoVmCode;
 typedef struct DaoVmCodeX    DaoVmCodeX;
-typedef struct DaoVmFrame    DaoVmFrame;
 typedef struct DaoVmcArray   DaoVmcArray;
 
 typedef struct DaoCModule    DaoCModule;
@@ -115,6 +114,7 @@ typedef struct DaoNameValue  DaoNameValue;
 typedef struct DaoMacro      DaoMacro;
 typedef struct DaoParser     DaoParser;
 
+typedef struct DaoStackFrame    DaoStackFrame;
 
 #define STRCMP( x, y ) strcmp( (x)->mbs, y )
 #define TOKCMP( x, y ) strcmp( (x)->string->mbs, y )

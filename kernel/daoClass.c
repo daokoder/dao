@@ -173,14 +173,14 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int  DaoRoutine_InferTypes( DaoRoutine *self );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
-void DaoValue_Update( DaoValue **self, DaoNameSpace *ns, DMap *deftypes )
+void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 {
 	DaoValue *value = *self;
 	DaoObject *obj = & value->xObject;
 	DaoType *tp, *tp2;
 
 	if( value == NULL || value->type < DAO_ENUM ) return;
-	tp = DaoNameSpace_GetType( ns, value );
+	tp = DaoNamespace_GetType( ns, value );
 	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 	if( tp == tp2 ) return;
 	if( value->type == DAO_OBJECT && obj == & obj->myClass->objType->value->xObject ){
@@ -194,7 +194,7 @@ void DaoValue_Update( DaoValue **self, DaoNameSpace *ns, DMap *deftypes )
 }
 void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
-	DaoNameSpace *ns = other->classRoutine->nameSpace;
+	DaoNamespace *ns = other->classRoutine->nameSpace;
 	DaoType *tp;
 	DArray *parents = DArray_New(0);
 	DArray *offsets = DArray_New(0);
@@ -370,7 +370,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 	DString_Delete( name );
 	return klass;
 }
-void DaoClass_SetName( DaoClass *self, DString *name, DaoNameSpace *ns )
+void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 {
 	DaoRoutine *rout;
 	DString *str;
@@ -429,7 +429,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 {
 	DaoValue *dbase;
 	DaoClass *klass;
-	DaoCData *cdata;
+	DaoCdata *cdata;
 	DaoTypeBase *typer;
 	int i, j, offset;
 	DArray_Clear( parents );
@@ -448,7 +448,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 				offset += (cls->type == DAO_CLASS) ? cls->objDataName->size : 0;
 			}
 		}else if( dbase->type == DAO_CTYPE ){
-			cdata = (DaoCData*) dbase;
+			cdata = (DaoCdata*) dbase;
 			typer = cdata->typer;
 			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
 				if( typer->supers[j] == NULL ) break;
@@ -485,11 +485,11 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			DMap *methods = core->methods;
 
 			if( values == NULL ){
-				DaoNameSpace_SetupValues( typer->priv->nspace, typer );
+				DaoNamespace_SetupValues( typer->priv->nspace, typer );
 				values = core->values;
 			}
 			if( methods == NULL ){
-				DaoNameSpace_SetupMethods( typer->priv->nspace, typer );
+				DaoNamespace_SetupMethods( typer->priv->nspace, typer );
 				methods = core->methods;
 			}
 
@@ -505,7 +505,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	DaoClass_Parents( self, parents, offsets );
 	for(i=1; i<parents->size; i++){
 		DaoClass *klass = parents->items.pClass[i];
-		DaoCData *cdata = parents->items.pCData[i];
+		DaoCdata *cdata = parents->items.pCdata[i];
 		if( klass->type == DAO_CLASS ){
 			int up = self->cstDataTable->size;
 			DArray_Append( self->cstDataTable, klass->cstData );
@@ -723,31 +723,31 @@ int  DaoClass_FindSuper( DaoClass *self, DaoValue *super )
 	return -1;
 }
 
-int DaoCData_ChildOf( DaoTypeBase *self, DaoTypeBase *super )
+int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super )
 {
 	int i;
 	if( self == super ) return 1;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		if( self->supers[i] ==NULL ) break;
-		if( DaoCData_ChildOf( self->supers[i], super ) ) return 1;
+		if( DaoCdata_ChildOf( self->supers[i], super ) ) return 1;
 	}
 	return 0;
 }
 int  DaoClass_ChildOf( DaoClass *self, DaoValue *klass )
 {
-	DaoCData *cdata = (DaoCData*) klass;
+	DaoCdata *cdata = (DaoCdata*) klass;
 	int i;
 	if( self == NULL ) return 0;
 	if( klass == (DaoValue*) self ) return 1;
 	for( i=0; i<self->superClass->size; i++ ){
 		DaoClass *dsup = self->superClass->items.pClass[i];
-		DaoCData *csup = self->superClass->items.pCData[i];
+		DaoCdata *csup = self->superClass->items.pCdata[i];
 		if( dsup == NULL ) continue;
 		if( klass == self->superClass->items.pValue[i] ) return 1;
 		if( dsup->type == DAO_CLASS && DaoClass_ChildOf( dsup,  klass ) ){
 			return 1;
 		}else if( csup->type == DAO_CTYPE && klass->type == DAO_CTYPE ){
-			if( DaoCData_ChildOf( csup->typer, cdata->typer ) )
+			if( DaoCdata_ChildOf( csup->typer, cdata->typer ) )
 				return 1;
 		}
 	}
@@ -766,7 +766,7 @@ DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent )
 			if( (sup = DaoClass_MapToParent( (DaoClass*)sup, parent ) ) ) return sup;
 		}else if( sup->type == DAO_CTYPE && parent->tid == DAO_CDATA ){
 			/* cdata is accessible as cdata type, not ctype type. */
-			if( DaoCData_ChildOf( sup->xCdata.typer, parent->typer ) ) return sup;
+			if( DaoCdata_ChildOf( sup->xCdata.typer, parent->typer ) ) return sup;
 		}
 	}
 	return NULL;
@@ -886,7 +886,7 @@ static void DaoClass_AddConst3( DaoClass *self, DString *name, DaoValue *data )
 }
 static int DaoClass_AddConst2( DaoClass *self, DString *name, DaoValue *data, int s, int ln )
 {
-	DaoNameSpace *ns = self->classRoutine->nameSpace;
+	DaoNamespace *ns = self->classRoutine->nameSpace;
 	if( data->type == DAO_FUNCTREE && data->xFunctree.host != self->objType ){
 		DaoFunctree *mroutine = DaoFunctree_New( ns, name );
 		GC_IncRC( self->objType );
@@ -918,7 +918,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s, int
 		dest = self->cstData->items.pValue[id];
 		if( dest->type < DAO_FUNCTREE || dest->type > DAO_FUNCTION ) return DAO_CTW_WAS_DEFINED;
 		if( dest->type == DAO_ROUTINE || dest->type == DAO_FUNCTION ){
-			DaoNameSpace *ns = self->classRoutine->nameSpace;
+			DaoNamespace *ns = self->classRoutine->nameSpace;
 			DaoFunctree *mroutine = DaoFunctree_New( ns, name );
 
 			if( dest->xRoutine.routHost == self->objType ){
