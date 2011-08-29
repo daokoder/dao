@@ -51,11 +51,11 @@ void DaoType_Delete( DaoType *self )
 	if( self->interfaces ) DMap_Delete( self->interfaces );
 	DaoLateDeleter_Push( self );
 }
-extern DaoEnum* DaoContext_GetEnum( DaoContext *self, DaoVmCode *vmc );
-static void DaoType_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
+extern DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc );
+static void DaoType_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 {
 	DaoType *self = & self0->xType;
-	DaoEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
+	DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
 	DNode *node;
 	if( self->mapNames == NULL ) goto ErrorNotExist;
 	node = DMap_Find( self->mapNames, name );
@@ -65,12 +65,12 @@ static void DaoType_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
 	denum->value = node->value.pInt;
 	return;
 ErrorNotExist:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, DString_GetMBS( name ) );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, DString_GetMBS( name ) );
 }
-static void DaoType_GetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N )
+static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
 	DaoType *self = & self0->xType;
-	DaoEnum *denum = DaoContext_GetEnum( ctx, ctx->vmc );
+	DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
 	DNode *node;
 	if( self->mapNames == NULL || N != 1 || ids[0]->type != DAO_INTEGER ) goto ErrorNotExist;
 	for(node=DMap_First(self->mapNames);node;node=DMap_Next(self->mapNames,node)){
@@ -82,7 +82,7 @@ static void DaoType_GetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], 
 		}
 	}
 ErrorNotExist:
-	DaoContext_RaiseException( ctx, DAO_ERROR_INDEX, "not valid" );
+	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not valid" );
 }
 static DaoTypeCore typeCore=
 {

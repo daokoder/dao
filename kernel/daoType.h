@@ -160,12 +160,12 @@ struct DaoTypeCore
 	DaoType       *abtype;
 	DaoNamespace  *nspace;
 
-	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
-	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
-	void (*GetItem) ( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
-	void (*SetItem) ( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
-	void (*Print)( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-	DaoValue* (*Copy)(  DaoValue *self, DaoContext *ctx, DMap *cycData );
+	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
+	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
+	void (*GetItem) ( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
+	void (*SetItem) ( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
+	void (*Print)( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
+	DaoValue* (*Copy)(  DaoValue *self, DaoProcess *proc, DMap *cycData );
 };
 extern DaoTypeCore  baseCore;
 
@@ -174,15 +174,15 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
 
 DaoValue* DaoValue_Duplicate( void *dbase, DaoType *type );
 
-void DaoValue_GetField( DaoValue *self, DaoContext *ctx, DString *name );
-void DaoValue_SetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
-void DaoValue_GetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
-void DaoValue_SetItem( DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
-void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-DaoValue* DaoValue_NoCopy( DaoValue *self, DaoContext *ctx, DMap *cycData );
+void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name );
+void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
+void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
+void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
+void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
+DaoValue* DaoValue_NoCopy( DaoValue *self, DaoProcess *proc, DMap *cycData );
 
-void DaoValue_SafeGetField( DaoValue *self, DaoContext *ctx, DString *name );
-void DaoValue_SafeSetField( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
+void DaoValue_SafeGetField( DaoValue *self, DaoProcess *proc, DString *name );
+void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
 
 struct DaoCdataCore
 {
@@ -192,12 +192,12 @@ struct DaoCdataCore
 	DaoType       *abtype;
 	DaoNamespace  *nspace;
 
-	void (*GetField)( DaoValue *self, DaoContext *ctx, DString *name );
-	void (*SetField)( DaoValue *self, DaoContext *ctx, DString *name, DaoValue *value );
-	void (*GetItem)(  DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N );
-	void (*SetItem)(  DaoValue *self, DaoContext *ctx, DaoValue *pid[], int N, DaoValue *value );
-	void (*Print)( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
-	DaoValue* (*Copy)(  DaoValue *self, DaoContext *ctx, DMap *cycData );
+	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
+	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
+	void (*GetItem)(  DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
+	void (*SetItem)(  DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
+	void (*Print)( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
+	DaoValue* (*Copy)(  DaoValue *self, DaoProcess *proc, DMap *cycData );
 
 	void   (*DelData)( void *data );
 	int    (*DelTest)( void *data );

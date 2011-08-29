@@ -98,7 +98,7 @@ int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoPr
 int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
 
 int DaoValue_IsNumber( DaoValue *self );
-void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData );
+void DaoValue_Print( DaoValue *self, DaoProcess *ctx, DaoStream *stream, DMap *cycData );
 
 void DaoValue_IncRCs( DaoValue *v, int n );
 

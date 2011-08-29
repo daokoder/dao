@@ -38,71 +38,70 @@
 #include"daoSched.h"
 #include"daoValue.h"
 
-static void STD_Path( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *path = DString_GetMBS( p[0]->xString.data );
 	switch( p[1]->xInteger.value ){
-	case 0 : DaoVmSpace_SetPath( ctx->vmSpace, path ); break;
-	case 1 : DaoVmSpace_AddPath( ctx->vmSpace, path ); break;
-	case 2 : DaoVmSpace_DelPath( ctx->vmSpace, path ); break;
+	case 0 : DaoVmSpace_SetPath( proc->vmSpace, path ); break;
+	case 1 : DaoVmSpace_AddPath( proc->vmSpace, path ); break;
+	case 2 : DaoVmSpace_DelPath( proc->vmSpace, path ); break;
 	}
 }
-static void STD_Compile( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess *vmp = ctx->process;
-	DaoNamespace *ns = ctx->nameSpace;
-	if( DaoProcess_Compile( vmp, ns, p[0]->xString.data, p[1]->xInteger.value ) ==0 ){
-		DaoContext_PutValue( ctx, null );
+	DaoNamespace *ns = proc->activeNamespace;
+	if( DaoProcess_Compile( proc, ns, p[0]->xString.data, p[1]->xInteger.value ) ==0 ){
+		DaoProcess_PutValue( proc, null );
 		return;
 	}
-	DaoContext_PutValue( ctx, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ] );
+	DaoProcess_PutValue( proc, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ] );
 }
-static void STD_Eval( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoVmSpace *vms = ctx->vmSpace;
-	DaoNamespace *ns = ctx->nameSpace;
+	DaoVmSpace *vms = proc->vmSpace;
+	DaoNamespace *ns = proc->activeNamespace;
 	DaoStream *prevStream = vms->stdStream->redirect;
 	DaoStream *redirect = (DaoStream*) p[2];
-	dint *num = DaoContext_PutInteger( ctx, 0 );
+	dint *num = DaoProcess_PutInteger( proc, 0 );
 	int safe = p[3]->xInteger.value;
 	int wasProt = 0;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
 	if( redirect != prevStream ) vms->stdStream->redirect = redirect;
 
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
-	*num = DaoProcess_Eval( ctx->process, ns, p[0]->xString.data, p[1]->xInteger.value );
+	*num = DaoProcess_Eval( proc, ns, p[0]->xString.data, p[1]->xInteger.value );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 	if( redirect != prevStream ) vms->stdStream->redirect = prevStream;
 }
-static void STD_Load( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *name = p[0]->xString.data;
 	int import = p[1]->xInteger.value;
 	int safe = p[2]->xInteger.value;
 	int wasProt = 0;
 	int res = 0;
-	DaoVmSpace *vms = ctx->vmSpace;
+	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns;
 	DString_ToMBS( name );
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
-	DArray_PushFront( vms->pathLoading, ctx->nameSpace->path );
+	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_Load( vms, name );
-	DaoContext_PutValue( ctx, (DaoValue*) ns );
+	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 #if 0
 	if( ns ){ /* in the case that it is cancelled from console */
 		DArray_PushFront( vms->pathLoading, ns->path );
-		res = DaoProcess_Call( ctx->process, (DaoMethod*)ns->mainRoutine, NULL, NULL, 0 );
-		if( ctx->process->stopit | vms->stopit )
-			DaoContext_RaiseException( ctx, DAO_ERROR, "loading cancelled" );
+		res = DaoProcess_Call( proc, (DaoMethod*)ns->mainRoutine, NULL, NULL, 0 );
+		if( proc->stopit | vms->stopit )
+			DaoProcess_RaiseException( proc, DAO_ERROR, "loading cancelled" );
 		else if( res == 0 )
-			DaoContext_RaiseException( ctx, DAO_ERROR, "loading failed" );
+			DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
 		DArray_PopFront( vms->pathLoading );
 	}
 #endif
 	DArray_PopFront( vms->pathLoading );
-	if( import && ns ) DaoNamespace_Import( ctx->nameSpace, ns, NULL );
+	if( import && ns ) DaoNamespace_Import( proc->activeNamespace, ns, NULL );
 }
 static void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 {
@@ -125,15 +124,15 @@ static void Dao_AboutVars( DaoNamespace *ns, DaoValue *par[], int N, DString *st
 		if( i+1<N ) DString_AppendMBS( str, " " );
 	}
 }
-static void STD_About( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_About( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *str = DaoContext_PutMBString( ctx, "" );
-	Dao_AboutVars( ctx->nameSpace, p, N, str );
+	DString *str = DaoProcess_PutMBString( proc, "" );
+	Dao_AboutVars( proc->activeNamespace, p, N, str );
 }
-static void STD_Callable( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *p0 = p[0];
-	dint *res = DaoContext_PutInteger( ctx, 0 );
+	dint *res = DaoProcess_PutInteger( proc, 0 );
 	if( p0 == NULL || p0->type == 0 ){
 		*res = 0;
 		return;
@@ -150,7 +149,7 @@ static void STD_Callable( DaoContext *ctx, DaoValue *p[], int N )
 			DaoObject *object = & p0->xObject;
 			DString *mbs = DString_New(1);
 			DString_SetMBS( mbs, "()" );
-			DaoObject_GetData( object, mbs, & p0, ctx->object );
+			DaoObject_GetData( object, mbs, & p0, proc->activeObject );
 			DString_Delete( mbs );
 			if( p0 && p0->type == DAO_ROUTINE ) *res = 1;
 			break;
@@ -173,11 +172,11 @@ static void STD_Callable( DaoContext *ctx, DaoValue *p[], int N )
 	default : break;
 	}
 }
-static void STD_Copy( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Copy( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DMap *cycData = DMap_New(0,0);
 	DaoTypeBase *typer = DaoValue_GetTyper( p[0] );
-	DaoContext_PutValue( ctx, typer->priv->Copy( p[0], ctx, cycData ) );
+	DaoProcess_PutValue( proc, typer->priv->Copy( p[0], proc, cycData ) );
 	DMap_Delete( cycData );
 }
 
@@ -197,41 +196,45 @@ static const char *const help =
 
 void DaoProcess_Trace( DaoProcess *self, int depth )
 {
-	DaoContext *ctx2, *ctx = self->topFrame->context;
-	DaoStream *stream = ctx->vmSpace->stdStream;
+	DaoStream *stream = self->vmSpace->stdStream;
 	DaoStackFrame *frame = self->topFrame;
 	int k, i = 0;
-	while( frame && frame->context ){
+	while( frame && (frame->routine || frame->function) ){
+		DRoutine *routine = (DRoutine*) frame->routine;
+		if( routine == NULL ) routine = (DRoutine*) frame->function;
 		if( depth && ++i > depth ) break;
-		k = (i==1) ? (int)( ctx->vmc - ctx->codes ) : frame->entry;
-		ctx2 = frame->context;
-		frame = frame->prev;
 
-		DaoStream_WriteString( stream, ctx2->routine->routName );
+		DaoStream_WriteString( stream, routine->routName );
 		DaoStream_WriteMBS( stream, "(): " );
-		if( ctx2->routine->routType ) DaoStream_WriteString( stream, ctx2->routine->routType->name );
-		DaoStream_WriteMBS( stream, ", instruction " );
-		DaoStream_WriteInt( stream, k );
-		DaoStream_WriteMBS( stream, " at line " );
-		DaoStream_WriteInt( stream, ctx2->routine->annotCodes->items.pVmc[k]->line );
+		if( routine->routType ) DaoStream_WriteString( stream, routine->routType->name );
+
+		if( frame->routine ){
+			k = (i==1) ? (int)( self->activeCode - frame->codes ) : frame->entry;
+			DaoStream_WriteMBS( stream, ", instruction " );
+			DaoStream_WriteInt( stream, k );
+			DaoStream_WriteMBS( stream, " at line " );
+			DaoStream_WriteInt( stream, frame->routine->annotCodes->items.pVmc[k]->line );
+		}
+
 		DaoStream_WriteMBS( stream, " in " );
-		DaoStream_WriteString( stream, ctx2->nameSpace->name );
+		DaoStream_WriteString( stream, routine->nameSpace->name );
 		DaoStream_WriteMBS( stream, ";" );
 		DaoStream_WriteNewLine( stream );
+		frame = frame->prev;
 	}
 }
 void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output );
-void STD_Debug( DaoContext *ctx, DaoValue *p[], int N )
+void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoUserHandler *handler = ctx->vmSpace->userHandler;
-	DaoRoutine *routine = ctx->routine;
-	DaoStream *stream = ctx->vmSpace->stdStream;
+	DaoUserHandler *handler = proc->vmSpace->userHandler;
+	DaoRoutine *routine = proc->activeRoutine;
+	DaoStream *stream = proc->vmSpace->stdStream;
 	DString *input;
 	DArray *tokens;
 	DMap   *cycData;
 	char *chs, *cmd;
 	int i;
-	if( ! (ctx->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
+	if( ! (proc->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
 	input = DString_New(1);
 	if( N > 0 && p[0]->type == DAO_STREAM ){
 		stream = (DaoStream*)p[0];
@@ -239,26 +242,26 @@ void STD_Debug( DaoContext *ctx, DaoValue *p[], int N )
 		N --;
 	}
 	if( N > 0 ){
-		Dao_AboutVars( ctx->nameSpace, p, N, input );
+		Dao_AboutVars( proc->activeNamespace, p, N, input );
 		DaoStream_WriteString( stream, input );
 		DaoStream_WriteMBS( stream, "\n" );
 		DString_Delete( input );
 		return;
 	}
 	if( handler && handler->StdlibDebug ){
-		handler->StdlibDebug( handler, ctx );
+		handler->StdlibDebug( handler, proc );
 		return;
 	}
 	tokens = DArray_New(D_STRING);
 	cycData = DMap_New(0,0);
 	while(1){
-		if( ctx->vmSpace->ReadLine ){
-			chs = ctx->vmSpace->ReadLine( "(debug) " );
+		if( proc->vmSpace->ReadLine ){
+			chs = proc->vmSpace->ReadLine( "(debug) " );
 			if( chs ){
 				DString_SetMBS( input, chs );
 				DString_Trim( input );
-				if( input->size && ctx->vmSpace->AddHistory )
-					ctx->vmSpace->AddHistory( chs );
+				if( input->size && proc->vmSpace->AddHistory )
+					proc->vmSpace->AddHistory( chs );
 				dao_free( chs );
 			}
 		}else{
@@ -272,14 +275,14 @@ void STD_Debug( DaoContext *ctx, DaoValue *p[], int N )
 		if( strcmp( cmd, "q" ) == 0 || strcmp( cmd, "quit" ) == 0 ){
 			break;
 		}else if( strcmp( cmd, "k" ) == 0 || strcmp( cmd, "kill" ) == 0 ){
-			ctx->process->status = DAO_VMPROC_ABORTED;
+			proc->status = DAO_VMPROC_ABORTED;
 			break;
 		}else if( strcmp( cmd, "a" ) == 0 || strcmp( cmd, "about" ) == 0 ){
 			if( tokens->size > 1 ){
 				ushort_t reg = (ushort_t)strtod( tokens->items.pString[1]->mbs, 0 );
-				DaoType *tp = ctx->routine->regType->items.pType[ reg ];
+				DaoType *tp = proc->activeTypes[ reg ];
 				DString_Clear( input );
-				Dao_AboutVar( ctx->nameSpace, ctx->regValues[reg], input );
+				Dao_AboutVar( proc->activeNamespace, proc->activeValues[reg], input );
 				DaoStream_WriteMBS( stream, "type: " );
 				if( tp )
 					DaoStream_WriteString( stream, tp->name );
@@ -292,18 +295,18 @@ void STD_Debug( DaoContext *ctx, DaoValue *p[], int N )
 		}else if( strcmp( cmd, "g" ) == 0 || strcmp( cmd, "goto" ) == 0 ){
 			if( tokens->size > 1 ){
 				int n = atoi( tokens->items.pString[1]->mbs );
-				int entry = ctx->vmc - ctx->routine->vmCodes->codes;
+				int entry = proc->activeCode - proc->activeRoutine->vmCodes->codes;
 				if( n < 0 ) n = entry - n;
 				if( n >= routine->vmCodes->size ) n = routine->vmCodes->size -1;
-				ctx->process->topFrame->entry = n;
-				ctx->process->status = DAO_VMPROC_STACKED;
+				proc->topFrame->entry = n;
+				proc->status = DAO_VMPROC_STACKED;
 				return;
 			}
 		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
 			DaoStream_WriteMBS( stream, help );
 		}else if( strcmp( cmd, "l" ) == 0 || strcmp( cmd, "list" ) == 0 ){
 			DString *mbs = DString_New(1);
-			int entry = ctx->vmc - ctx->routine->vmCodes->codes;
+			int entry = proc->activeCode - proc->activeRoutine->vmCodes->codes;
 			int start = entry - 10;
 			int end = entry;
 			if( tokens->size >1 ){
@@ -331,13 +334,13 @@ void STD_Debug( DaoContext *ctx, DaoValue *p[], int N )
 		}else if( strcmp( cmd, "p" ) == 0 || strcmp( cmd, "print" ) == 0 ){
 			if( tokens->size > 1 ){
 				ushort_t reg = (ushort_t)atoi( tokens->items.pString[1]->mbs );
-				DaoValue_Print( ctx->regValues[reg], ctx, stream, cycData );
+				DaoValue_Print( proc->activeValues[reg], proc, stream, cycData );
 				DaoStream_WriteMBS( stream, "\n" );
 			}
 		}else if( strcmp( cmd, "t" ) == 0 || strcmp( cmd, "trace" ) == 0 ){
 			int depth = 1;
 			if( tokens->size >1 ) depth = atoi( tokens->items.pString[1]->mbs );
-			DaoProcess_Trace( ctx->process, depth );
+			DaoProcess_Trace( proc, depth );
 		}else{
 			DaoStream_WriteMBS( stream, "Unknown debugging command.\n" );
 		}
@@ -345,11 +348,11 @@ void STD_Debug( DaoContext *ctx, DaoValue *p[], int N )
 	DString_Delete( input );
 	DArray_Delete( tokens );
 }
-static void STD_Error( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_RaiseException( ctx, DAO_ERROR, DString_GetMBS( p[0]->xString.data ) );
+	DaoProcess_RaiseException( proc, DAO_ERROR, DString_GetMBS( p[0]->xString.data ) );
 }
-static void STD_Log( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Log( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *info = p[0]->xString.data;
 	FILE *fout = fopen( "dao.log", "a" );
@@ -357,25 +360,25 @@ static void STD_Log( DaoContext *ctx, DaoValue *p[], int N )
 	fprintf( fout, "%s\n", info->mbs );
 	fclose( fout );
 }
-static void STD_Gcmax( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutInteger( ctx, DaoGC_Max( -1 ) );
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		if( N == 1 ) DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+	DaoProcess_PutInteger( proc, DaoGC_Max( -1 ) );
+	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+		if( N == 1 ) DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
 	if( N == 1 ) DaoGC_Max( (int)p[0]->xInteger.value );
 }
-static void STD_Gcmin( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Gcmin( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutInteger( ctx, DaoGC_Min( -1 ) );
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		if( N == 1 ) DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+	DaoProcess_PutInteger( proc, DaoGC_Min( -1 ) );
+	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+		if( N == 1 ) DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
 	if( N == 1 ) DaoGC_Min( (int)p[0]->xInteger.value );
 }
-static void STD_ListMeth( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_ListMeth( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoTypeBase *typer = DaoValue_GetTyper( p[0] );
 	DaoFunction **meths;
@@ -396,31 +399,31 @@ static void STD_ListMeth( DaoContext *ctx, DaoValue *p[], int N )
 	if( typer->priv->methods ) DMap_SortMethods( typer->priv->methods, array );
 	meths = (DaoFunction**) array->items.pVoid;
 	methCount = array->size;
-	DaoContext_Print( ctx, "======================================\nConsts, methods of type \"" );
-	DaoContext_Print( ctx, typer->name );
-	DaoContext_Print( ctx, "\":\n======================================\n" );
+	DaoProcess_Print( proc, "======================================\nConsts, methods of type \"" );
+	DaoProcess_Print( proc, typer->name );
+	DaoProcess_Print( proc, "\":\n======================================\n" );
 	if( typer->priv->values ){
 		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-			DaoContext_Print( ctx, it->key.pString->mbs );
-			DaoContext_Print( ctx, "\n" );
+			DaoProcess_Print( proc, it->key.pString->mbs );
+			DaoProcess_Print( proc, "\n" );
 		}
 	}
 	if( typer->priv->methods ){
 		for(i=0; i<methCount; i++ ){
-			DaoContext_Print( ctx, meths[i]->routName->mbs );
-			DaoContext_Print( ctx, ": " );
-			for(j=meths[i]->routName->size; j<20; j++) DaoContext_Print( ctx, " " );
-			DaoContext_Print( ctx, meths[i]->routType->name->mbs );
-			DaoContext_Print( ctx, "\n" );
+			DaoProcess_Print( proc, meths[i]->routName->mbs );
+			DaoProcess_Print( proc, ": " );
+			for(j=meths[i]->routName->size; j<20; j++) DaoProcess_Print( proc, " " );
+			DaoProcess_Print( proc, meths[i]->routType->name->mbs );
+			DaoProcess_Print( proc, "\n" );
 		}
 	}
 	DArray_Delete( array );
 }
 extern int DaoToken_Tokenize( DArray *toks, const char *src, int r, int cmt, int nosp );
-static void STD_Tokenize( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *source = p[0]->xString.data;
-	DaoList *list = DaoContext_PutList( ctx );
+	DaoList *list = DaoProcess_PutList( proc );
 	DArray *tokens = DArray_New(D_TOKEN);
 	int i, rc = 0;
 	DString_ToMBS( source );
@@ -435,16 +438,16 @@ static void STD_Tokenize( DaoContext *ctx, DaoValue *p[], int N )
 	}
 	DArray_Delete( tokens );
 }
-static void STD_SubType( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_SubType( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoType *tp1 = DaoNamespace_GetType( ctx->nameSpace, p[0] );
-	DaoType *tp2 = DaoNamespace_GetType( ctx->nameSpace, p[1] );
-	DaoContext_PutInteger( ctx, DaoType_MatchTo( tp1, tp2, NULL ) );
+	DaoType *tp1 = DaoNamespace_GetType( proc->activeNamespace, p[0] );
+	DaoType *tp2 = DaoNamespace_GetType( proc->activeNamespace, p[1] );
+	DaoProcess_PutInteger( proc, DaoType_MatchTo( tp1, tp2, NULL ) );
 }
-static void STD_Unpack( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Unpack( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger zero = {DAO_INTEGER,0,0,0,0,0};
-	DaoList *list = DaoContext_PutList( ctx );
+	DaoList *list = DaoProcess_PutList( proc );
 	DString *str = p[0]->xString.data;
 	DaoValue **data;
 	int i;
@@ -462,45 +465,45 @@ static void STD_Unpack( DaoContext *ctx, DaoValue *p[], int N )
 		}
 	}
 }
-static void STD_Serialize( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Serialize( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *mbs = DaoContext_PutMBString( ctx, "" );
-	DaoValue_Serialize( p[0], mbs, ctx->nameSpace, ctx->process );
+	DString *mbs = DaoProcess_PutMBString( proc, "" );
+	DaoValue_Serialize( p[0], mbs, proc->activeNamespace, proc );
 }
-static void STD_Deserialize( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *value = NULL;
-	DaoValue_Deserialize( & value, p[0]->xString.data, ctx->nameSpace, ctx->process );
-	DaoContext_PutValue( ctx, value );
+	DaoValue_Deserialize( & value, p[0]->xString.data, proc->activeNamespace, proc );
+	DaoProcess_PutValue( proc, value );
 	GC_DecRC( value );
 }
-static void STD_Backup( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Backup( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fout = fopen( DString_GetMBS( p[0]->xString.data ), "w+" );
 	if( fout == NULL ){
-		DaoContext_RaiseException( ctx,DAO_ERROR_FILE, DString_GetMBS( p[0]->xString.data ) );
+		DaoProcess_RaiseException( proc,DAO_ERROR_FILE, DString_GetMBS( p[0]->xString.data ) );
 		return;
 	}
-	DaoNamespace_Backup( ctx->nameSpace, ctx->process, fout, p[1]->xInteger.value );
+	DaoNamespace_Backup( proc->activeNamespace, proc, fout, p[1]->xInteger.value );
 	fclose( fout );
 }
-static void STD_Restore( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Restore( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin = fopen( DString_GetMBS( p[0]->xString.data ), "r" );
 	if( fin == NULL ){
-		DaoContext_RaiseException( ctx,DAO_ERROR_FILE, DString_GetMBS( p[0]->xString.data ) );
+		DaoProcess_RaiseException( proc,DAO_ERROR_FILE, DString_GetMBS( p[0]->xString.data ) );
 		return;
 	}
-	DaoNamespace_Restore( ctx->nameSpace, ctx->process, fin );
+	DaoNamespace_Restore( proc->activeNamespace, proc, fin );
 	fclose( fin );
 }
-static void STD_Warn( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Warn( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_RaiseException( ctx, DAO_WARNING, DString_GetMBS( p[0]->xString.data ) );
+	DaoProcess_RaiseException( proc, DAO_WARNING, DString_GetMBS( p[0]->xString.data ) );
 }
-static void STD_Version( DaoContext *ctx, DaoValue *p[], int N )
+static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutMBString( ctx, DAO_VERSION );
+	DaoProcess_PutMBString( proc, DAO_VERSION );
 }
 
 static DaoFuncItem stdMeths[]=
@@ -534,7 +537,7 @@ DaoTypeBase libStandardTyper = {
 	"std", NULL, NULL, stdMeths, {0}, {0}, NULL, NULL
 };
 
-static void SYS_Ctime( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Ctime( DaoProcess *proc, DaoValue *p[], int N )
 {
 	struct tm *ctime;
 	time_t t = (time_t)p[0]->xInteger.value;
@@ -548,7 +551,7 @@ static void SYS_Ctime( DaoContext *ctx, DaoValue *p[], int N )
 	tuple->items[4] = DaoValue_NewInteger( ctime->tm_hour );
 	tuple->items[5] = DaoValue_NewInteger( ctime->tm_min );
 	tuple->items[6] = DaoValue_NewInteger( ctime->tm_sec );
-	DaoContext_PutValue( ctx, (DaoValue*) tuple );
+	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 }
 static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char *key, int id )
 {
@@ -569,7 +572,7 @@ static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char
 	}
 	return 0;
 }
-static void SYS_Ctimef( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Ctimef( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int  i;
 	int halfday = 0;
@@ -592,7 +595,7 @@ static void SYS_Ctimef( DaoContext *ctx, DaoValue *p[], int N )
 		sym = (DaoMap*)p[2];
 		if( sym->items->size == 0 ) sym = NULL;
 	}
-	S = DaoContext_PutMBString( ctx, "" );
+	S = DaoProcess_PutMBString( proc, "" );
 
 	for( i=0; i+1<size; i++ ){
 		if( format[i] == '%' && ( format[i+1] == 'a' || format[i+1] == 'A' ) ){
@@ -676,7 +679,7 @@ static void SYS_Ctimef( DaoContext *ctx, DaoValue *p[], int N )
 	if( i+1 == size ) DString_AppendChar( S, format[i] );
 	DaoString_Delete( ds );
 }
-static void SYS_Sleep( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Sleep( DaoProcess *proc, DaoValue *p[], int N )
 {
 #ifdef DAO_WITH_THREAD
 	DMutex    mutex;
@@ -684,12 +687,12 @@ static void SYS_Sleep( DaoContext *ctx, DaoValue *p[], int N )
 #endif
 
 	double s = p[0]->xFloat.value;
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
 	if( s < 0 ){
-		DaoContext_RaiseException( ctx, DAO_WARNING_VALUE, "expecting positive value" );
+		DaoProcess_RaiseException( proc, DAO_WARNING_VALUE, "expecting positive value" );
 		return;
 	}
 #ifdef DAO_WITH_THREAD
@@ -707,27 +710,27 @@ static void SYS_Sleep( DaoContext *ctx, DaoValue *p[], int N )
 	Sleep( s * 1000 );
 #endif
 }
-static void SYS_Exit( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Exit( DaoProcess *proc, DaoValue *p[], int N )
 {
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
 	exit( (int)p[0]->xInteger.value );
 }
-static void SYS_System( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_System( DaoProcess *proc, DaoValue *p[], int N )
 {
-	if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
-	DaoContext_PutInteger( ctx, system( DString_GetMBS( p[0]->xString.data ) ) );
+	DaoProcess_PutInteger( proc, system( DString_GetMBS( p[0]->xString.data ) ) );
 }
-static void SYS_Time( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Time( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutInteger( ctx, time( NULL ) );
+	DaoProcess_PutInteger( proc, time( NULL ) );
 }
-static void SYS_Time2( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Time2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	/* extern long timezone; */
 	/* extern int daylight; // not on WIN32 */
@@ -741,18 +744,18 @@ static void SYS_Time2( DaoContext *ctx, DaoValue *p[], int N )
 	ctime.tm_min = tup[5]->xInteger.value;
 	ctime.tm_sec = tup[6]->xInteger.value;
 	ctime.tm_isdst = 0;
-	DaoContext_PutInteger( ctx, (int) mktime( & ctime ) );
+	DaoProcess_PutInteger( proc, (int) mktime( & ctime ) );
 }
-static void SYS_SetLocale( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int category = p[0]->xInteger.value;
 	const char *locale = DString_GetMBS( p[1]->xString.data );
 	char* old = setlocale(category,locale);
-	if (old) DaoContext_PutMBString(ctx,old);
+	if (old) DaoProcess_PutMBString(proc,old);
 }
-static void SYS_Clock( DaoContext *ctx, DaoValue *p[], int N )
+static void SYS_Clock( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutFloat( ctx, ((float)clock())/CLOCKS_PER_SEC );
+	DaoProcess_PutFloat( proc, ((float)clock())/CLOCKS_PER_SEC );
 }
 
 static DaoFuncItem sysMeths[]=
@@ -784,52 +787,43 @@ DaoTypeBase libSystemTyper = {
 	"sys", NULL, sysConsts, sysMeths, {0}, {0}, NULL, NULL
 };
 
-DaoProcess* DaoProcess_Create( DaoContext *ctx, DaoValue *par[], int N )
+DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoContext *coCtx = NULL;
 	DaoProcess *vmProc;
+	DaoRoutine *routine;
 	DaoValue *val = par[0];
-	int newed = 0;
-	if( val->type == DAO_STRING ) val = DaoNamespace_GetData( ctx->nameSpace, val->xString.data );
-
-	if( val->type == DAO_ROUTINE ){
-		newed = 1;
-		coCtx = DaoContext_New();
-		coCtx->vmSpace = ctx->vmSpace;
-		DaoContext_Init( coCtx, & val->xRoutine );
-		/* temporary, for exception handling. */
-		coCtx->process = ctx->process;
-	}else if( val->type == DAO_CONTEXT ){
-		coCtx = & val->xContext;
-	}else{
-		DaoContext_PutValue( ctx, NULL );
-		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "not matched" );
+	DRoutine *rout;
+	int i, passed = 0;
+	if( val->type == DAO_STRING ) val = DaoNamespace_GetData( proc->activeNamespace, val->xString.data );
+	if( val == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
 		return NULL;
 	}
-	DaoContext_InitWithParams( coCtx, ctx->process, par+1, N-1 );
-	if( ctx->process->exceptions->size > 0 ){
-		if( newed ) DaoContext_Delete( coCtx );
-		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "need more parameters." );
+	rout = (DRoutine*)DRoutine_Resolve( (DaoValue*)rout, NULL, par+1, N-1, DVM_CALL );
+	if( rout ) passed = DRoutine_PassParams( rout, NULL, proc->paramValues, par+1, N-1, DVM_CALL );
+	if( passed == 0 || rout == NULL || rout->type != DAO_ROUTINE ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
 		return NULL;
 	}
-	if( ! DRoutine_PassParams( (DRoutine*)coCtx->routine, NULL, coCtx->regValues, par+1, N-1, DVM_CALL ) ){
-		DaoContext_PutValue( ctx, NULL );
-		if( newed ) DaoContext_Delete( coCtx );
-		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "not matched" );
-		return NULL;
+	routine = (DaoRoutine*) rout;
+	vmProc = DaoProcess_New( proc->vmSpace );
+	DaoProcess_PushFrame( vmProc, routine->regCount );
+	DaoProcess_InitTopFrame( vmProc, routine, NULL, DVM_CALL );
+	vmProc->activeValues = vmProc->stackValues + vmProc->topFrame->stackBase;
+	for(i=0; i<routine->parCount; i++){
+		vmProc->activeValues[i] = proc->paramValues[i];
+		GC_IncRC( vmProc->activeValues[i] );
 	}
-	vmProc = DaoProcess_New( ctx->vmSpace );
-	DaoProcess_PushContext( vmProc, coCtx );
 	vmProc->status = DAO_VMPROC_SUSPENDED;
 	return vmProc;
 }
 
 /**/
-static void REFL_NS( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_NS( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoNamespace *res = ctx->nameSpace;
+	DaoNamespace *res = proc->activeNamespace;
 	if( N == 0 ){
-		res = ctx->nameSpace;
+		res = proc->activeNamespace;
 	}else if( p[0]->type == DAO_CLASS ){
 		res = p[0]->xClass.classRoutine->nameSpace;
 	}else if( p[0]->type == DAO_FUNCTREE ){
@@ -837,11 +831,11 @@ static void REFL_NS( DaoContext *ctx, DaoValue *p[], int N )
 	}else if( p[0]->type == DAO_ROUTINE || p[0]->type == DAO_FUNCTION ){
 		res = p[0]->xRoutine.nameSpace;
 	}
-	DaoContext_PutValue( ctx, (DaoValue*) res );
+	DaoProcess_PutValue( proc, (DaoValue*) res );
 }
-static void REFL_Name( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Name( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *str = DaoContext_PutMBString( ctx, "" );
+	DString *str = DaoProcess_PutMBString( proc, "" );
 	switch( p[0]->type ){
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
@@ -856,9 +850,9 @@ static void REFL_Name( DaoContext *ctx, DaoValue *p[], int N )
 	default : break;
 	}
 }
-static void REFL_Base( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Base( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoList *ls = DaoContext_PutList( ctx );
+	DaoList *ls = DaoProcess_PutList( proc );
 	int i;
 	if( p[0]->type == DAO_CLASS ){
 		DaoClass *k = & p[0]->xClass;
@@ -872,20 +866,20 @@ static void REFL_Base( DaoContext *ctx, DaoValue *p[], int N )
 		}
 	}
 }
-static void REFL_Type( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Type( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoType *tp = DaoNamespace_GetType( ctx->nameSpace, p[0] );
-	DaoContext_PutValue( ctx, (DaoValue*) tp );
+	DaoType *tp = DaoNamespace_GetType( proc->activeNamespace, p[0] );
+	DaoProcess_PutValue( proc, (DaoValue*) tp );
 }
 
-static void REFL_Cst1( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMap *map = DaoContext_PutMap( ctx );
+	DaoMap *map = DaoProcess_PutMap( proc );
 	DaoTuple *tuple;
 	DaoClass *klass;
 	DaoObject *object;
 	DaoType *tp = map->unitype->nested->items.pType[1];
-	DaoNamespace *ns, *here = ctx->nameSpace;
+	DaoNamespace *ns, *here = proc->activeNamespace;
 	DMap *index = NULL, *lookup = NULL;
 	DArray *data;
 	DNode *node;
@@ -908,7 +902,7 @@ static void REFL_Cst1( DaoContext *ctx, DaoValue *p[], int N )
 		//index = ns->cstIndex; XXX
 		data = ns->cstData;
 	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 		DString_Delete( name.data );
 		return;
 	}
@@ -930,9 +924,9 @@ static void REFL_Cst1( DaoContext *ctx, DaoValue *p[], int N )
 	}
 	DString_Delete( name.data );
 }
-static void REFL_Var1( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Var1( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMap *map = DaoContext_PutMap( ctx );
+	DaoMap *map = DaoProcess_PutMap( proc );
 	DaoTuple *tuple;
 	DaoClass *klass = NULL;
 	DaoObject *object = NULL;
@@ -957,7 +951,7 @@ static void REFL_Var1( DaoContext *ctx, DaoValue *p[], int N )
 		ns = & p[0]->xNamespace;
 		//index = ns->varIndex; XXX
 	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 		DString_Delete( name.data );
 		return;
 	}
@@ -996,10 +990,10 @@ static void REFL_Var1( DaoContext *ctx, DaoValue *p[], int N )
 	}
 	DString_Delete( name.data );
 }
-static void REFL_Cst2( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoTuple *tuple = DaoTuple_New( 2 );
-	DaoNamespace *ns = ctx->nameSpace;
+	DaoNamespace *ns = proc->activeNamespace;
 	DaoClass *klass = NULL;
 	DNode *node;
 	DString *name = p[1]->xString.data;
@@ -1022,30 +1016,30 @@ static void REFL_Cst2( DaoContext *ctx, DaoValue *p[], int N )
 			type = (DaoValue*) DaoNamespace_GetType( ns, *value );
 		}
 	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 	}
 	DaoValue_Copy( *value, tuple->items );
 	DaoValue_Copy( type, tuple->items + 1 );
-	DaoContext_PutValue( ctx, (DaoValue*) tuple );
+	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 	if( N >2 ){
 		DaoType *tp = DaoNamespace_GetType( ns, p[2] );
-		if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-			DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+			DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 			return;
 		}
 		if( type ){
 			if( DaoType_MatchTo( tp, (DaoType*) type, NULL ) ==0 ){
-				DaoContext_RaiseException( ctx, DAO_ERROR, "type not matched" );
+				DaoProcess_RaiseException( proc, DAO_ERROR, "type not matched" );
 				return;
 			}
 		}
 		DaoValue_Copy( p[2], value );
 	}
 }
-static void REFL_Var2( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Var2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoTuple *tuple = DaoTuple_New( 2 );
-	DaoNamespace *ns = ctx->nameSpace;
+	DaoNamespace *ns = proc->activeNamespace;
 	DaoClass *klass = NULL;
 	DNode *node;
 	DString *name = p[1]->xString.data;
@@ -1071,36 +1065,36 @@ static void REFL_Var2( DaoContext *ctx, DaoValue *p[], int N )
 			type = ns2->varType->items.pValue[ node->value.pInt ];
 		}
 	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 	}
 	DaoValue_Copy( *value, tuple->items );
 	DaoValue_Copy( type, tuple->items + 1 );
-	DaoContext_PutValue( ctx, (DaoValue*) tuple );
+	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 	if( N >2 ){
 		DaoType *tp = DaoNamespace_GetType( ns, p[2] );
-		if( ctx->vmSpace->options & DAO_EXEC_SAFE ){
-			DaoContext_RaiseException( ctx, DAO_ERROR, "not permitted" );
+		if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+			DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 			return;
 		}
 		if( type ){
 			if( DaoType_MatchTo( tp, (DaoType*) type, NULL ) ==0 ){
-				DaoContext_RaiseException( ctx, DAO_ERROR, "type not matched" );
+				DaoProcess_RaiseException( proc, DAO_ERROR, "type not matched" );
 				return;
 			}
 		}
 		DaoValue_Copy( p[2], value );
 	}
 }
-static void REFL_Routine( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Routine( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *list;
 	DaoValue *item;
 	int i;
 	if( N ==1 ){ // XXX
 		DaoFunctree *rout = & p[0]->xFunctree;
-		list = DaoContext_PutList( ctx );
+		list = DaoProcess_PutList( proc );
 		if( p[0]->type != DAO_FUNCTREE ){
-			DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
+			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 			return;
 		}
 		for(i=0; i<rout->routines->size; i++){
@@ -1108,24 +1102,24 @@ static void REFL_Routine( DaoContext *ctx, DaoValue *p[], int N )
 			DaoList_Append( list, item );
 		}
 	}else{
-		DaoContext_PutValue( ctx, (DaoValue*) ctx->routine );
+		DaoProcess_PutValue( proc, (DaoValue*) proc->activeRoutine );
 	}
 }
-static void REFL_Class( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Class( DaoProcess *proc, DaoValue *p[], int N )
 {
 #if 0
 	if( p[0]->type == DAO_ROUTINE && p[0]->v.routine->tidHost == DAO_OBJECT ){
-		DaoContext_PutValue( ctx, (DaoValue*) p[0]->v.routine->routHost->aux.v.klass );
+		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.routine->routHost->aux.v.klass );
 	}else if( p[0]->type == DAO_OBJECT ){
-		DaoContext_PutValue( ctx, (DaoValue*) p[0]->v.object->myClass );
+		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.object->myClass );
 	}
 #endif
-	DaoContext_PutValue( ctx, null );
+	DaoProcess_PutValue( proc, null );
 }
-static void REFL_Isa( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoNamespace *ns = ctx->nameSpace;
-	dint *res = DaoContext_PutInteger( ctx, 0 );
+	DaoNamespace *ns = proc->activeNamespace;
+	dint *res = DaoProcess_PutInteger( proc, 0 );
 	if( p[1]->type == DAO_TYPE ){
 		if( DaoType_MatchValue( & p[1]->xType, p[0], NULL ) ) *res = 1;
 	}else if( p[1]->type == DAO_CLASS ){
@@ -1162,20 +1156,20 @@ static void REFL_Isa( DaoContext *ctx, DaoValue *p[], int N )
 			if( tp && DaoType_MatchValue( tp, p[0], NULL ) ) *res = 1;
 		}
 	}else{
-		DaoContext_RaiseException( ctx, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 	}
 }
-static void REFL_Self( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Self( DaoProcess *proc, DaoValue *p[], int N )
 {
 	if( p[0]->type == DAO_OBJECT )
-		DaoContext_PutValue( ctx, (DaoValue*) p[0]->xObject.that );
+		DaoProcess_PutValue( proc, (DaoValue*) p[0]->xObject.that );
 	else
-		DaoContext_PutValue( ctx, null );
+		DaoProcess_PutValue( proc, null );
 }
-static void REFL_Param( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Param( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DRoutine *routine = (DRoutine*) p[0];
-	DaoList *list = DaoContext_PutList( ctx );
+	DaoList *list = DaoProcess_PutList( proc );
 	DaoTuple *tuple;
 	DaoType *routype = routine->routType;
 	DaoType *itp = list->unitype->nested->items.pType[0];
@@ -1209,26 +1203,27 @@ static void REFL_Param( DaoContext *ctx, DaoValue *p[], int N )
 		}
 	}
 }
-static void REFL_Argc( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Argc( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutInteger( ctx, ctx->parCount );
+	DaoProcess_PutInteger( proc, proc->topFrame->parCount );
 }
-static void REFL_Argv( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Argv( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int i;
 	if( N ==0 ){
-		DaoList *list = DaoContext_PutList( ctx );
-		for(i=0; i<ctx->parCount; i++) DaoList_Append( list, ctx->regValues[i] );
+		DaoList *list = DaoProcess_PutList( proc );
+		for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
 	}else{
 		DaoValue *val = null;
-		if( p[0]->xInteger.value < ctx->parCount ) val = ctx->regValues[ p[0]->xInteger.value ];
-		DaoContext_PutValue( ctx, val );
+		if( p[0]->xInteger.value < proc->topFrame->parCount )
+			val = proc->activeValues[ p[0]->xInteger.value ];
+		DaoProcess_PutValue( proc, val );
 	}
 }
-static void REFL_Trace( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Trace( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoList *backtrace = DaoContext_PutList( ctx );
-	DaoStackFrame *frame = ctx->frame;
+	DaoList *backtrace = DaoProcess_PutList( proc );
+	DaoStackFrame *frame = proc->topFrame;
 	int instr = 0, depth = 1;
 	int maxDepth = 0;
 	int print = 0;
@@ -1243,17 +1238,18 @@ static void REFL_Trace( DaoContext *ctx, DaoValue *p[], int N )
 	if( N ==2 ) maxDepth = p[1]->xInteger.value;
 
 	if( print ){
-		DaoProcess_Trace( ctx->process, maxDepth );
+		DaoProcess_Trace( proc, maxDepth );
 		return;
 	}
 
+#if 0
 	for( ; frame && frame->context ; frame = frame->prev, ++depth ){
 		/* Check if we got deeper than requested */
 		if( depth > maxDepth && maxDepth > 0 ) break;
 
 		/* Gather some of the informations we need. */
 		vRoutType = (DaoValue*) frame->context->routine->routType;
-		inst.value = (depth==1) ? (int)( ctx->vmc - ctx->codes ) : frame->entry;
+		inst.value = (depth==1) ? (int)( proc->activeCode - proc->codes ) : frame->entry;
 		line.value = frame->context->routine->annotCodes->items.pVmc[inst.value]->line;
 		routName.data = frame->context->routine->routName;
 		nsName.data = frame->context->nameSpace->name;
@@ -1273,8 +1269,9 @@ static void REFL_Trace( DaoContext *ctx, DaoValue *p[], int N )
 
 		DaoList_PushBack( backtrace, (DaoValue*) entry );
 	}
+#endif
 }
-static void REFL_Doc( DaoContext *ctx, DaoValue *p[], int N )
+static void REFL_Doc( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *doc = NULL;
 	switch( p[0]->type ){
@@ -1284,10 +1281,10 @@ static void REFL_Doc( DaoContext *ctx, DaoValue *p[], int N )
 	default : break;
 	}
 	if( doc == NULL ){
-		DaoContext_RaiseException( ctx, DAO_ERROR, "documentation not available" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "documentation not available" );
 		return;
 	}
-	DaoContext_PutMBString( ctx, doc->mbs );
+	DaoProcess_PutMBString( proc, doc->mbs );
 	if( N >1 ){
 		DString_Clear( doc );
 		DString_Append( doc, p[1]->xString.data );
@@ -1338,37 +1335,37 @@ DaoTypeBase libReflectTyper = {
 	"reflect", NULL, NULL, reflMeths, {0}, {0}, NULL, NULL
 };
 
-static void Corout_Create( DaoContext *ctx, DaoValue *p[], int N )
+static void Corout_Create( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess *vmp = DaoProcess_Create( ctx, p, N );
+	DaoProcess *vmp = DaoProcess_Create( proc, p, N );
 	if( vmp == NULL ) return;
 	vmp->parResume = DArray_New(D_VALUE);
 	vmp->parYield = DArray_New(D_VALUE);
-	DaoContext_PutValue( ctx, (DaoValue*) vmp );
+	DaoProcess_PutValue( proc, (DaoValue*) vmp );
 }
-static void Corout_Resume( DaoContext *ctx, DaoValue *p[], int N )
+static void Corout_Resume( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoList *list = DaoContext_PutList( ctx );
+	DaoList *list = DaoProcess_PutList( proc );
 	DaoProcess *self = (DaoProcess*) p[0];
 	if( self->type != DAO_PROCESS || self->parResume == NULL ){
-		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "need coroutine object" );
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "need coroutine object" );
 		return;
 	}else if( self->status == DAO_VMPROC_FINISHED ){
-		DaoContext_RaiseException( ctx, DAO_WARNING, "coroutine execution is finished." );
+		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine execution is finished." );
 		return;
 	}
 
 	DaoProcess_Resume( self, p+1, N-1, list );
 	if( self->status == DAO_VMPROC_ABORTED )
-		DaoContext_RaiseException( ctx, DAO_ERROR, "coroutine execution is aborted." );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "coroutine execution is aborted." );
 }
-static void Corout_Status( DaoContext *ctx, DaoValue *p[], int N )
+static void Corout_Status( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess *self = (DaoProcess*) p[0];
-	DString *res = DaoContext_PutMBString( ctx, "" );
+	DString *res = DaoProcess_PutMBString( proc, "" );
 	if( self->type != DAO_PROCESS || self->parResume == NULL ){
 		DString_SetMBS( res, "not_a_coroutine" );
-		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "need coroutine object" );
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "need coroutine object" );
 		return;
 	}
 
@@ -1380,10 +1377,10 @@ static void Corout_Status( DaoContext *ctx, DaoValue *p[], int N )
 	default : break;
 	}
 }
-static void Corout_Yield( DaoContext *ctx, DaoValue *p[], int N )
+static void Corout_Yield( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_Yield( ctx->process, p, N, DaoContext_PutList( ctx ) );
-	ctx->process->pauseType = DAO_VMP_YIELD;
+	DaoProcess_Yield( proc, p, N, DaoProcess_PutList( proc ) );
+	proc->pauseType = DAO_VMP_YIELD;
 }
 static DaoFuncItem coroutMeths[]=
 {
@@ -1399,75 +1396,75 @@ DaoTypeBase coroutTyper = {
 };
 
 /**/
-static void MATH_abs( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_abs( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, fabs( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, fabs( p[0]->xDouble.value ) );
 }
-static void MATH_acos( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_acos( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, acos( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, acos( p[0]->xDouble.value ) );
 }
-static void MATH_asin( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_asin( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, asin( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, asin( p[0]->xDouble.value ) );
 }
-static void MATH_atan( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_atan( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, atan( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, atan( p[0]->xDouble.value ) );
 }
-static void MATH_ceil( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_ceil( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, ceil( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, ceil( p[0]->xDouble.value ) );
 }
-static void MATH_cos( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_cos( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, cos( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, cos( p[0]->xDouble.value ) );
 }
-static void MATH_cosh( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_cosh( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, cosh( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, cosh( p[0]->xDouble.value ) );
 }
-static void MATH_exp( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_exp( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, exp( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, exp( p[0]->xDouble.value ) );
 }
-static void MATH_floor( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_floor( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, floor( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, floor( p[0]->xDouble.value ) );
 }
-static void MATH_log( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_log( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, log( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, log( p[0]->xDouble.value ) );
 }
-static void MATH_sin( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_sin( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, sin( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, sin( p[0]->xDouble.value ) );
 }
-static void MATH_sinh( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_sinh( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, sinh( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, sinh( p[0]->xDouble.value ) );
 }
-static void MATH_sqrt( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_sqrt( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, sqrt( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, sqrt( p[0]->xDouble.value ) );
 }
-static void MATH_tan( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_tan( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, tan( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, tan( p[0]->xDouble.value ) );
 }
-static void MATH_tanh( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_tanh( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, tanh( p[0]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, tanh( p[0]->xDouble.value ) );
 }
-static void MATH_rand( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_rand( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, p[0]->xDouble.value * rand() / ( RAND_MAX + 1.0 ) );
+	DaoProcess_PutDouble( proc, p[0]->xDouble.value * rand() / ( RAND_MAX + 1.0 ) );
 }
-static void MATH_srand( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_srand( DaoProcess *proc, DaoValue *p[], int N )
 {
 	srand( (unsigned int)p[0]->xDouble.value );
 }
-static void MATH_rand_gaussian( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_rand_gaussian( DaoProcess *proc, DaoValue *p[], int N )
 {
 	static int iset = 0;
 	static double gset;
@@ -1483,125 +1480,125 @@ static void MATH_rand_gaussian( DaoContext *ctx, DaoValue *p[], int N )
 		fac = sqrt( -2.0 * log( rsq ) / rsq );
 		gset = v1*fac;
 		iset = 1;
-		DaoContext_PutDouble( ctx, R*v2*fac );
+		DaoProcess_PutDouble( proc, R*v2*fac );
 	} else {
 		iset = 0;
-		DaoContext_PutDouble( ctx, R*gset );
+		DaoProcess_PutDouble( proc, R*gset );
 	}
 }
-static void MATH_pow( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_pow( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, pow( p[0]->xDouble.value, p[1]->xDouble.value ) );
+	DaoProcess_PutDouble( proc, pow( p[0]->xDouble.value, p[1]->xDouble.value ) );
 }
 
 /**/
-static void MATH_abs_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_abs_c( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = p[0]->xComplex.value;
-	DaoContext_PutDouble( ctx, sqrt( com.real * com.real + com.imag * com.imag ) );
+	DaoProcess_PutDouble( proc, sqrt( com.real * com.real + com.imag * com.imag ) );
 }
-static void MATH_arg_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_arg_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, arg_c( p[0]->xComplex.value ) );
+	DaoProcess_PutDouble( proc, arg_c( p[0]->xComplex.value ) );
 }
-static void MATH_norm_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_norm_c( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = p[0]->xComplex.value;
-	DaoContext_PutDouble( ctx, com.real * com.real + com.imag * com.imag );
+	DaoProcess_PutDouble( proc, com.real * com.real + com.imag * com.imag );
 }
-static void MATH_imag_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_imag_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, p[0]->xComplex.value.imag );
+	DaoProcess_PutDouble( proc, p[0]->xComplex.value.imag );
 }
-static void MATH_real_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_real_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutDouble( ctx, p[0]->xComplex.value.real );
+	DaoProcess_PutDouble( proc, p[0]->xComplex.value.real );
 }
 
-static void MATH_cos_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_cos_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, cos_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, cos_c( p[0]->xComplex.value ) );
 }
-static void MATH_cosh_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_cosh_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, cosh_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, cosh_c( p[0]->xComplex.value ) );
 }
-static void MATH_exp_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_exp_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, exp_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, exp_c( p[0]->xComplex.value ) );
 }
-static void MATH_log_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_log_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, log_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, log_c( p[0]->xComplex.value ) );
 }
-static void MATH_sin_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_sin_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, sin_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, sin_c( p[0]->xComplex.value ) );
 }
-static void MATH_sinh_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_sinh_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, sinh_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, sinh_c( p[0]->xComplex.value ) );
 }
-static void MATH_sqrt_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_sqrt_c( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoContext_PutComplex( ctx, sqrt_c( p[0]->xComplex.value ) );
+	DaoProcess_PutComplex( proc, sqrt_c( p[0]->xComplex.value ) );
 }
-static void MATH_tan_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_tan_c( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = p[0]->xComplex.value;
-	complex16 *res = DaoContext_PutComplex( ctx, com );
+	complex16 *res = DaoProcess_PutComplex( proc, com );
 	complex16 R = sin_c( com );
 	complex16 L = cos_c( com );
 	res->real = ( L.real*R.real + L.imag*R.imag ) / ( R.real*R.real + R.imag*R.imag );
 	res->imag = ( L.imag*R.real - L.real*R.imag ) / ( R.real*R.real + R.imag*R.imag );
 }
-static void MATH_tanh_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_tanh_c( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = p[0]->xComplex.value;
-	complex16 *res = DaoContext_PutComplex( ctx, com );
+	complex16 *res = DaoProcess_PutComplex( proc, com );
 	complex16 R = sinh_c( com );
 	complex16 L = cosh_c( com );
 	res->real = ( L.real*R.real + L.imag*R.imag ) / ( R.real*R.real + R.imag*R.imag );
 	res->imag = ( L.imag*R.real - L.real*R.imag ) / ( R.real*R.real + R.imag*R.imag );
 }
-static void MATH_ceil_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_ceil_c( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = p[0]->xComplex.value;
-	complex16 *res = DaoContext_PutComplex( ctx, com );
+	complex16 *res = DaoProcess_PutComplex( proc, com );
 	res->real = ceil( com.real );
 	res->imag = ceil( com.imag );
 }
-static void MATH_floor_c( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_floor_c( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = p[0]->xComplex.value;
-	complex16 *res = DaoContext_PutComplex( ctx, com );
+	complex16 *res = DaoProcess_PutComplex( proc, com );
 	res->real = floor( com.real );
 	res->imag = floor( com.imag );
 }
 
-static void MATH_pow_rc( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_pow_rc( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com = { 0, 0 };
-	complex16 *res = DaoContext_PutComplex( ctx, com );
+	complex16 *res = DaoProcess_PutComplex( proc, com );
 	double lg = log( p[0]->xDouble.value );
 	com.real = lg * p[1]->xComplex.value.real;
 	com.imag = lg * p[1]->xComplex.value.imag;
 	*res = exp_c( com );
 }
-static void MATH_pow_cr( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_pow_cr( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com2 = { 0, 0 };
-	complex16 *res = DaoContext_PutComplex( ctx, com2 );
+	complex16 *res = DaoProcess_PutComplex( proc, com2 );
 	complex16 com = log_c( p[0]->xComplex.value );
 	double v = p[1]->xDouble.value;
 	com2.real = v * com.real;
 	com2.imag = v * com.imag;
 	*res = exp_c( com2 );
 }
-static void MATH_pow_cc( DaoContext *ctx, DaoValue *p[], int N )
+static void MATH_pow_cc( DaoProcess *proc, DaoValue *p[], int N )
 {
 	complex16 com2 = {0,0};
-	complex16 *res = DaoContext_PutComplex( ctx, com2 );
+	complex16 *res = DaoProcess_PutComplex( proc, com2 );
 	complex16 com = log_c( p[0]->xComplex.value );
 	COM_MUL( com2, com, p[1]->xComplex.value );
 	*res = exp_c( com2 );

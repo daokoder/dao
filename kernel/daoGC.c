@@ -16,7 +16,6 @@
 #include"daoClass.h"
 #include"daoObject.h"
 #include"daoNumtype.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoRoutine.h"
 #include"daoNamespace.h"
@@ -358,7 +357,6 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 	case DAO_ARRAY : gcWorker.count += p->xArray.size + 1; break;
 #endif
 	case DAO_TUPLE : gcWorker.count += p->xTuple.size; break;
-	case DAO_CONTEXT : gcWorker.count += p->xContext.regArray->size; break;
 	default: gcWorker.count += 1; break;
 	}
 }
@@ -447,6 +445,23 @@ void DaoGC_DecRCs( DArray *values )
 #endif
 
 
+void DaoGC_PrepareCandidates()
+{
+	DaoValue *value;
+	DArray *workList = gcWorker.workList;
+	size_t i, k = 0;
+	/* Remove possible redundant items: */
+	for(i=0; i<workList->size; i++){
+		value = workList->items.pValue[i];
+		if( value->xGC.work ) continue;
+		workList->items.pValue[k++] = value;
+		value->xGC.cycRefCount = value->xGC.refCount;
+		value->xGC.work = 1;
+		value->xGC.idle = 0;
+		value->xGC.alive = 0;
+	}
+	workList->size = k;
+}
 
 #ifdef DAO_WITH_THREAD
 
@@ -579,6 +594,7 @@ void DaoCGC_Recycle( void *p )
 
 		gcWorker.kk = 0;
 		DaoGC_PrepareCandidates();
+		DaoCGC_MarkIdleItems();
 		DaoCGC_CycRefCountDecScan();
 		DaoCGC_CycRefCountIncScan();
 		DaoCGC_RefCountDecScan();
@@ -595,24 +611,6 @@ static size_t DaoCGC_MarkIdleItems()
 	gcWorker.kk = n;
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
 	return n;
-}
-void DaoGC_PrepareCandidates()
-{
-	DaoValue *value;
-	DArray *workList = gcWorker.workList;
-	size_t i, k = 0;
-	/* Remove possible redundant items: */
-	for(i=0; i<workList->size; i++){
-		value = workList->items.pValue[i];
-		if( value->xGC.work ) continue;
-		workList->items.pValue[k++] = value;
-		value->xGC.cycRefCount = value->xGC.refCount;
-		value->xGC.work = 1;
-		value->xGC.idle = 0;
-		value->xGC.alive = 0;
-	}
-	workList->size = k;
-	DaoCGC_MarkIdleItems();
 }
 void DaoCGC_CycRefCountDecScan()
 {
@@ -728,14 +726,6 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) inter->abtype );
 				break;
 			}
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*)value;
-				cycRefCountDecrement( (DaoValue*) ctx->object );
-				cycRefCountDecrement( (DaoValue*) ctx->routine );
-				cycRefCountDecrementsT( ctx->regArray );
-				break;
-			}
 		case DAO_NAMESPACE :
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
@@ -776,12 +766,11 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
-				cycRefCountDecrement( vmp->returned );
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
 				while( frame ){
-					cycRefCountDecrement( (DaoValue*) frame->context );
+					//cycRefCountDecrement( (DaoValue*) frame->context );
 					frame = frame->next;
 				}
 				break;
@@ -934,14 +923,6 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) inter->abtype );
 				break;
 			}
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*)value;
-				cycRefCountIncrement( (DaoValue*) ctx->object );
-				cycRefCountIncrement( (DaoValue*) ctx->routine );
-				cycRefCountIncrementsT( ctx->regArray );
-				break;
-			}
 		case DAO_NAMESPACE :
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
@@ -982,12 +963,11 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
-				cycRefCountIncrement( vmp->returned );
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
 				while( frame ){
-					cycRefCountIncrement( (DaoValue*) frame->context );
+					//cycRefCountIncrement( (DaoValue*) frame->context );
 					frame = frame->next;
 				}
 				break;
@@ -1122,14 +1102,6 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & inter->abtype );
 				break;
 			}
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*)value;
-				directRefCountDecrement( (DaoValue**) & ctx->object );
-				directRefCountDecrement( (DaoValue**) & ctx->routine );
-				directRefCountDecrementT( ctx->regArray );
-				break;
-			}
 		case DAO_NAMESPACE :
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
@@ -1170,13 +1142,12 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
-				directRefCountDecrement( (DaoValue**) & vmp->returned );
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
 				while( frame ){
-					if( frame->context ) frame->context->refCount --;
-					frame->context = NULL;
+					//if( frame->context ) frame->context->refCount --;
+					//frame->context = NULL;
 					frame = frame->next;
 				}
 				break;
@@ -1481,15 +1452,6 @@ void DaoIGC_CycRefCountDecScan()
 				j += inter->supers->size + inter->methods->size;
 				break;
 			}
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*)value;
-				cycRefCountDecrement( (DaoValue*) ctx->object );
-				cycRefCountDecrement( (DaoValue*) ctx->routine );
-				cycRefCountDecrementsT( ctx->regArray );
-				j += ctx->regArray->size + 3;
-				break;
-			}
 		case DAO_NAMESPACE :
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
@@ -1531,12 +1493,11 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
-				cycRefCountDecrement( vmp->returned );
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
 				while( frame ){
-					cycRefCountDecrement( (DaoValue*) frame->context );
+					//cycRefCountDecrement( (DaoValue*) frame->context );
 					frame = frame->next;
 				}
 				break;
@@ -1720,15 +1681,6 @@ int DaoIGC_AliveObjectScan()
 				k += inter->supers->size + inter->methods->size;
 				break;
 			}
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*)value;
-				cycRefCountIncrement( (DaoValue*) ctx->object );
-				cycRefCountIncrement( (DaoValue*) ctx->routine );
-				cycRefCountIncrementsT( ctx->regArray );
-				k += ctx->regArray->size + 3;
-				break;
-			}
 		case DAO_NAMESPACE :
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
@@ -1770,12 +1722,11 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
-				cycRefCountIncrement( vmp->returned );
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
 				while( frame ){
-					cycRefCountIncrement( (DaoValue*) frame->context );
+					//cycRefCountIncrement( (DaoValue*) frame->context );
 					frame = frame->next;
 				}
 				break;
@@ -1932,15 +1883,6 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & inter->abtype );
 				break;
 			}
-		case DAO_CONTEXT :
-			{
-				DaoContext *ctx = (DaoContext*)value;
-				directRefCountDecrement( (DaoValue**) & ctx->object );
-				directRefCountDecrement( (DaoValue**) & ctx->routine );
-				j += ctx->regArray->size + 3;
-				directRefCountDecrementT( ctx->regArray );
-				break;
-			}
 		case DAO_NAMESPACE :
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
@@ -1982,13 +1924,12 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
-				directRefCountDecrement( (DaoValue**) & vmp->returned );
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
 				while( frame ){
-					if( frame->context ) frame->context->refCount --;
-					frame->context = NULL;
+					//if( frame->context ) frame->context->refCount --;
+					//frame->context = NULL;
 					frame = frame->next;
 				}
 				break;

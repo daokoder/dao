@@ -96,13 +96,13 @@ DaoCdata*  DaoContext_PutCData( DaoContext *self, void *data, DaoTypeBase *plgTy
 DaoCdata*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
 DaoCdata*  DaoContext_CopyCData( DaoContext *self, void *data, int n, DaoTypeBase *t );
 
-void DaoContext_RaiseException( DaoContext *self, int type, const char *value );
-void DaoContext_RaiseTypeError( DaoContext *self, DaoType *from, DaoType *to, const char *op );
+void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
+void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op );
 /**/
-void DaoContext_ShowCallError( DaoContext *self, DRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
-void DaoContext_Print( DaoContext *self, const char *chs );
-void DaoContext_PrintInfo( DaoContext *self, const char *head, const char *info );
-void DaoContext_PrintVmCode( DaoContext *self );
+void DaoProcess_ShowCallError( DaoProcess *self, DRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
+void DaoProcess_Print( DaoProcess *self, const char *chs );
+void DaoProcess_PrintInfo( DaoProcess *self, const char *head, const char *info );
+void DaoProcess_PrintVmCode( DaoProcess *self );
 
 
 #endif

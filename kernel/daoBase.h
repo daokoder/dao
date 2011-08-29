@@ -99,6 +99,7 @@ typedef struct DRoutine   DRoutine;
 typedef struct DaoThdMaster  DaoThdMaster;
 typedef struct DaoFunCurry   DaoFunCurry;
 typedef struct DaoCdataCore  DaoCdataCore;
+typedef struct DaoContext      DaoContext;
 
 typedef struct DaoToken      DaoToken;
 typedef struct DaoInode      DaoInode;

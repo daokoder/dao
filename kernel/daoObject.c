@@ -25,47 +25,40 @@
 #include"daoNumtype.h"
 #include"daoValue.h"
 
-int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *vmp, 
-		DString *name, DaoContext *ctx, DaoValue *ps[], int N, int ret )
+int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc, 
+		DString *name, DaoValue *P[], int N, int ret )
 {
 	DRoutine *meth;
 	DaoValue *V = NULL;
-	int errcode = DaoObject_GetData( self, name, &V, othis );
+	DaoValue *O = (DaoValue*)self;
+	int M, errcode = DaoObject_GetData( self, name, &V, othis );
 	if( errcode ) return errcode;
 	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return DAO_ERROR_TYPE;
-	meth = DRoutine_Resolve( V, (DaoValue*)self, ps, N, DVM_CALL );
-	if( meth == NULL ) goto InvalidParam;
+	if( (meth = DRoutine_Resolve( V, O, P, N, DVM_CALL )) == NULL ) goto InvalidParam;
+	if( (M = DRoutine_PassParams( meth, O, proc->paramValues, P, N, DVM_CALL )) ==0 ) goto InvalidParam;
 	if( meth->type == DAO_ROUTINE ){
 		DaoRoutine *rout = (DaoRoutine*) meth;
-		DaoContext *ctxNew = DaoProcess_MakeContext( vmp, rout );
-		GC_ShiftRC( self, ctxNew->object );
-		ctxNew->object = self;
-		DaoContext_Init( ctxNew, rout );
-		if( DRoutine_PassParams( (DRoutine*) ctxNew->routine, (DaoValue*)self, 
-					ctxNew->regValues, ps, N, DVM_CALL ) ){
-			if( STRCMP( name, "_PRINT" ) ==0 ){
-				DaoProcess_PushContext( ctx->process, ctxNew );
-				DaoProcess_Execute( ctx->process );
-			}else{
-				DaoProcess_PushContext( ctx->process, ctxNew );
-				if( ret > -10 ) ctx->process->topFrame->returning = (ushort_t) ret;
-			}
-			return 0;
+		DaoProcess_PushFrame( proc, rout->regCount );
+		DaoProcess_InitTopFrame( proc, rout, self, DVM_CALL );
+		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
+		if( STRCMP( name, "_PRINT" ) ==0 ){
+			DaoProcess_Execute( proc );
+		}else{
+			proc->status = DAO_VMPROC_STACKED;
 		}
-		goto InvalidParam;
 	}else if( meth->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) meth;
-		DaoObject *object = (DaoObject*) DaoObject_MapThisObject( self, func->routHost );
-		DaoFunction_Call( func, ctx, (DaoValue*) object, ps, N );
-	}else{
-		return DAO_ERROR_TYPE;
+		DaoProcess_PushFrame( proc, M-1 );
+		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
+		func->pFunc( proc, proc->paramValues, M-1 );
+		DaoProcess_PopFrame( proc );
 	}
 	return 0;
 InvalidParam:
-	DaoContext_ShowCallError( ctx, (DRoutine*)V, (DaoValue*)self, ps, N, DVM_CALL );
+	DaoProcess_ShowCallError( proc, (DRoutine*)V, O, P, N, DVM_CALL );
 	return 0;
 }
-static void DaoObject_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DaoObject *self = & self0->xObject;
 	DaoValue *vs = (DaoValue*) stream;
@@ -75,11 +68,10 @@ static void DaoObject_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream
 		DaoStream_WriteMBS( stream, "[default]" );
 		return;
 	}
-	DString_SetMBS( ctx->process->mbstring, "_PRINT" );
-	ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-			ctx->process->mbstring, ctx, & vs, 1, -1 );
+	DString_SetMBS( proc->mbstring, "_PRINT" );
+	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, & vs, 1, -1 );
 	if( ec && ec != DAO_ERROR_FIELD_NOTEXIST ){
-		DaoContext_RaiseException( ctx, ec, DString_GetMBS( ctx->process->mbstring ) );
+		DaoProcess_RaiseException( proc, ec, DString_GetMBS( proc->mbstring ) );
 	}else if( ec == DAO_ERROR_FIELD_NOTEXIST ){
 		char buf[50];
 		sprintf( buf, "[%p]", self );
@@ -87,74 +79,71 @@ static void DaoObject_Print( DaoValue *self0, DaoContext *ctx, DaoStream *stream
 		DaoStream_WriteMBS( stream, buf );
 	}
 }
-static void DaoObject_Core_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
+static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 {
 	DaoObject *self = & self0->xObject;
 	DaoValue *value = NULL;
-	int rc = DaoObject_GetData( self, name, & value, ctx->object );
+	int rc = DaoObject_GetData( self, name, & value, proc->activeObject );
 	if( rc ){
-		DString_SetMBS( ctx->process->mbstring, "." );
-		DString_Append( ctx->process->mbstring, name );
-		rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-				ctx->process->mbstring, ctx, NULL, 0, -100 );
+		DString_SetMBS( proc->mbstring, "." );
+		DString_Append( proc->mbstring, name );
+		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL, 0, -100 );
 	}else{
-		DaoContext_PutReference( ctx, value );
+		DaoProcess_PutReference( proc, value );
 	}
-	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( name ) );
+	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( name ) );
 }
-static void DaoObject_Core_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoValue *value )
+static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
 {
 	DaoObject *self = & self0->xObject;
-	int ec = DaoObject_SetData( self, name, value, ctx->object );
+	int ec = DaoObject_SetData( self, name, value, proc->activeObject );
 	int ec2 = ec;
 	if( ec ){
-		DString *mbs = ctx->process->mbstring;
+		DString *mbs = proc->mbstring;
 		DString_SetMBS( mbs, "." );
 		DString_Append( mbs, name );
 		DString_AppendMBS( mbs, "=" );
-		ec = DaoObject_InvokeMethod( self, ctx->object, ctx->process, mbs, ctx, & value, 1, -1 );
+		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1, -1 );
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
-	if( ec ) DaoContext_RaiseException( ctx, ec, DString_GetMBS( name ) );
+	if( ec ) DaoProcess_RaiseException( proc, ec, DString_GetMBS( name ) );
 }
-static void DaoObject_GetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N )
+static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
 	DaoObject *self = & self0->xObject;
 	int rc = 0;
-	DString_SetMBS( ctx->process->mbstring, "[]" );
-	rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-			ctx->process->mbstring, ctx, ids, N, -100 );
-	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( ctx->process->mbstring ) );
+	DString_SetMBS( proc->mbstring, "[]" );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ids, N, -100 );
+	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( proc->mbstring ) );
 }
-static void DaoObject_SetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N, DaoValue *value )
+static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
 	DaoObject *self = & self0->xObject;
 	DaoValue *ps[ DAO_MAX_PARAM ];
 	int rc;
 	memcpy( ps, ids, N*sizeof(DaoValue*) );
 	ps[N] = value;
-	DString_SetMBS( ctx->process->mbstring, "[]=" );
-	rc = DaoObject_InvokeMethod( self, ctx->object, ctx->process,
-			ctx->process->mbstring, ctx, ps, N+1, -1 );
-	if( rc ) DaoContext_RaiseException( ctx, rc, DString_GetMBS( ctx->process->mbstring ) );
+	DString_SetMBS( proc->mbstring, "[]=" );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1, -1 );
+	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( proc->mbstring ) );
 }
-extern void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoContext *ctx, DMap *cycData );
-void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cycData )
+extern void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, DMap *cycData );
+void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMap *cycData )
 {
 	DaoObject **selfSups = NULL;
 	DaoObject **fromSups = NULL;
 	DaoValue **selfValues = self->objValues;
 	DaoValue **fromValues = from->objValues;
 	int i, selfSize = self->myClass->objDataDefault->size;
-	DaoCopyValues( selfValues + 1, fromValues + 1, selfSize-1, ctx, cycData );
+	DaoCopyValues( selfValues + 1, fromValues + 1, selfSize-1, proc, cycData );
 	/*  XXX super might be Cdata: */
 	if( from->superObject ==NULL ) return;
 	selfSups = self->superObject->items.pObject;
 	fromSups = from->superObject->items.pObject;
 	for( i=0; i<from->superObject->size; i++ )
-		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], ctx, cycData );
+		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], proc, cycData );
 }
-static DaoValue* DaoObject_Copy(  DaoValue *value, DaoContext *ctx, DMap *cycData )
+static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycData )
 {
 	DaoObject *pnew, *self = & value->xObject;
 	DNode *node = DMap_Find( cycData, self );
@@ -164,7 +153,7 @@ static DaoValue* DaoObject_Copy(  DaoValue *value, DaoContext *ctx, DMap *cycDat
 	pnew = DaoObject_Allocate( self->myClass );
 	DMap_Insert( cycData, self, pnew );
 	DaoObject_Init( pnew, NULL, 0 );
-	DaoObject_CopyData( pnew, self, ctx, cycData );
+	DaoObject_CopyData( pnew, self, proc, cycData );
 
 	return (DaoValue*) pnew;
 }

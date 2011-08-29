@@ -107,7 +107,6 @@ struct DaoFunction
 
 extern DaoFunction* DaoFunction_New();
 void DaoFunction_Delete( DaoFunction *self );
-int DaoFunction_Call( DaoFunction *self, DaoContext *ctx, DaoValue *obj, DaoValue *p[], int n );
 
 struct DaoFunCurry
 {

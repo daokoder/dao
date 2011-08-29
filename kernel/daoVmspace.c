@@ -883,13 +883,13 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 {
 	DaoNamespace *ns = self->mainNamespace;
 	DaoProcess *vmp = self->mainProcess;
-	DaoContext *ctx = NULL;
 	DaoRoutine *mainRoutine;
+	DRoutine *unirout = NULL;
+	DaoMethod *meth = NULL;
+	DaoValue **ps;
 	DString *name;
 	DArray *argNames;
 	DArray *argValues;
-	DaoValue *value;
-	DaoValue **ps;
 	ullong_t tm = 0;
 	size_t N;
 	int i, j, res;
@@ -944,24 +944,17 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	ps = ns->argParams->items->items.pValue;
 	N = ns->argParams->items->size;
 	if( i >=0 ){
-		DRoutine *unirout = NULL;
-		value = DaoNamespace_GetConst( ns, i );
-		if( value->type == DAO_FUNCTREE ){
-			DaoFunctree *routine = (DaoFunctree*) value;
-			unirout = DaoFunctree_Lookup( routine, NULL, ps, N, DVM_CALL );
-		}else if( value->type == DAO_ROUTINE ){
-			unirout = (DRoutine*) value;
+		DaoValue *value = DaoNamespace_GetConst( ns, i );
+		if( value->type == DAO_FUNCTREE || value->type == DAO_ROUTINE ){
+			meth = (DaoMethod*) DRoutine_Resolve( value, NULL, ps, N, DVM_CALL );
+			unirout = (DRoutine*) meth;
 		}
-		if( unirout == NULL || unirout->type != DAO_ROUTINE ){
+		if( meth == NULL ){
 			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
 			if( unirout && unirout->routHelp )
 				DaoStream_WriteString( self->stdStream, unirout->routHelp );
 			return 0;
 		}
-		ctx = DaoProcess_MakeContext( vmp, (DaoRoutine*) unirout );
-		ctx->vmSpace = self;
-		DaoContext_Init( ctx, (DaoRoutine*) unirout );
-		DaoProcess_PushContext( vmp, ctx );
 	}
 	DaoVmSpace_ExeCmdArgs( self );
 	/* always execute default ::main() routine first for initialization: */
@@ -970,11 +963,10 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		DaoProcess_Execute( vmp );
 	}
 	/* check and execute explicitly defined main() routine  */
-	if( ctx != NULL ){
-		if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues, ps, N, 0 ) ){
+	if( meth != NULL ){
+		if( DaoProcess_Call( vmp, meth, NULL, ps, N ) ){
 			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-			if( ctx->routine->routHelp )
-				DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
+			if( unirout->routHelp ) DaoStream_WriteString( self->stdStream, unirout->routHelp );
 			return 0;
 		}
 		DaoProcess_Execute( vmp );
@@ -1185,27 +1177,18 @@ ExecuteModule :
 			argNames = argValues = NULL;
 		}
 		if( value && value->type == DAO_ROUTINE ){
-			int j, N = ns->argParams->items->size;
+			int ret, N = ns->argParams->items->size;
 			DaoValue **ps = ns->argParams->items->items.pValue;
 			DaoProcess *vmp = self->mainProcess;
 			DaoRoutine *mainRoutine = & value->xRoutine;
-			DaoContext *ctx = DaoProcess_MakeContext( vmp, mainRoutine );
-			ctx->vmSpace = self;
-			DaoContext_Init( ctx, mainRoutine );
-			if( DaoContext_InitWithParams( ctx, vmp, ps, N ) == 0 ){
+			ret = DaoProcess_Call( vmp, (DaoMethod*)mainRoutine, NULL, ps, N );
+			if( ret == DAO_ERROR_PARAM ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
 				if( mainRoutine->routHelp )
 					DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
 				return 0;
 			}
-			DaoProcess_PushContext( vmp, ctx );
-			if( ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL, ctx->regValues, ps, N, 0 ) ){
-				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				if( mainRoutine->routHelp )
-					DaoStream_WriteString( self->stdStream, ctx->routine->routHelp );
-				return 0;
-			}
-			DaoProcess_Execute( vmp );
+			if( ret ) return 0;
 		}
 	}
 	if( argNames ) DArray_Delete( argNames );
@@ -1646,10 +1629,10 @@ static void DaoConfigure()
 }
 
 #ifdef DEBUG
-static void dao_FakeShoftList_FakeShoftList( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_FakeShoftList_Size( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_FakeShoftList_SetItem( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_FakeShoftList_FakeShoftList( DaoProcess *_ctx, DaoValue *_p[], int _n );
+static void dao_FakeShoftList_Size( DaoProcess *_ctx, DaoValue *_p[], int _n );
+static void dao_FakeShoftList_GetItem( DaoProcess *_ctx, DaoValue *_p[], int _n );
+static void dao_FakeShoftList_SetItem( DaoProcess *_ctx, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_FakeShoftList_Meths[] = 
 {
@@ -1664,21 +1647,21 @@ static DaoTypeBase FakeShoftList_Typer =
 { "FakeList<short>", NULL, NULL, dao_FakeShoftList_Meths, {0}, {0}, Dao_FakeShoftList_Delete, NULL };
 DaoTypeBase *dao_FakeShoftList_Typer = & FakeShoftList_Typer;
 
-static void dao_FakeShoftList_FakeShoftList( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_FakeShoftList_FakeShoftList( DaoProcess *_ctx, DaoValue *_p[], int _n )
 {
   int size = _p[0]->xInteger.value;
-  DaoContext_PutCdata( _ctx, (void*)(size_t)size, dao_FakeShoftList_Typer );
+  DaoProcess_PutCdata( _ctx, (void*)(size_t)size, dao_FakeShoftList_Typer );
 }
-static void dao_FakeShoftList_Size( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_FakeShoftList_Size( DaoProcess *_ctx, DaoValue *_p[], int _n )
 {
   dint size = (dint) DaoCdata_GetData( & _p[0]->xCdata );
-  DaoContext_PutInteger( _ctx, size );
+  DaoProcess_PutInteger( _ctx, size );
 }
-static void dao_FakeShoftList_GetItem( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_FakeShoftList_GetItem( DaoProcess *_ctx, DaoValue *_p[], int _n )
 {
-  DaoContext_PutInteger( _ctx, 123 );
+  DaoProcess_PutInteger( _ctx, 123 );
 }
-static void dao_FakeShoftList_SetItem( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_FakeShoftList_SetItem( DaoProcess *_ctx, DaoValue *_p[], int _n )
 {
 }
 static DaoTypeBase FakeList_Typer = 

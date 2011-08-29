@@ -221,9 +221,9 @@ int DaoValue_IsNumber( DaoValue *self )
 	if( self->type >= DAO_INTEGER && self->type <= DAO_DOUBLE ) return 1;
 	return 0;
 }
-static void DaoValue_BasicPrint( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	DaoType *type = DaoNamespace_GetType( ctx->nameSpace, self );
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	if( self->type <= DAO_STREAM )
 		DaoStream_WriteMBS( stream, coreTypeNames[ self->type ] );
 	else
@@ -241,7 +241,7 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoContext *ctx, DaoStream *str
 	if( self->type < DAO_STREAM ) return;
 	if( type && self == type->value ) DaoStream_WriteMBS( stream, "[default]" );
 }
-void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *cycData )
+void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DString *name;
 	DaoTypeBase *typer;
@@ -283,10 +283,10 @@ void DaoValue_Print( DaoValue *self, DaoContext *ctx, DaoStream *stream, DMap *c
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
 		if( typer->priv->Print == DaoValue_Print ){
-			DaoValue_BasicPrint( self, ctx, stream, cycData );
+			DaoValue_BasicPrint( self, proc, stream, cycData );
 			break;
 		}
-		typer->priv->Print( self, ctx, stream, cycData );
+		typer->priv->Print( self, proc, stream, cycData );
 		break;
 	}
 	if( cycData != cd ) DMap_Delete( cycData );
@@ -377,7 +377,7 @@ void DaoValue_Clear( DaoValue **self )
 	GC_DecRC( value );
 }
 
-void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoContext *ctx, DMap *cyc );
+void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *ctx, DMap *cyc );
 
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 {
@@ -1170,11 +1170,6 @@ DaoFunction* DaoValue_CastFunction( DaoValue *self )
 	if( self == NULL || self->type != DAO_FUNCTION ) return NULL;
 	return (DaoFunction*) self;
 }
-DaoContext* DaoValue_CastContext( DaoValue *self )
-{
-	if( self == NULL || self->type != DAO_CONTEXT ) return NULL;
-	return (DaoContext*) self;
-}
 DaoProcess* DaoValue_CastVmProcess( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_PROCESS ) return NULL;
@@ -1471,36 +1466,9 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *
 	DaoValue *selfpar = (DaoValue*) self;
 	int errcode = DaoObject_GetData( self, & name, & value, NULL );
 	if( errcode || value == NULL || value->type < DAO_FUNCTREE || value->type > DAO_FUNCTION ) return 0;
-	rt = DRoutine_Resolve( value, selfpar, NULL, 0, DVM_CALL );
-	if( rt == NULL ) return 0;
-	if( rt->type == DAO_ROUTINE ){
-		DaoRoutine *rout = (DaoRoutine*) rt;
-		DaoContext *ctx = DaoProcess_MakeContext( proc, rout );
-		GC_ShiftRC( self, ctx->object );
-		ctx->object = self;
-		DaoContext_Init( ctx, rout );
-		if( DRoutine_PassParams( rt, selfpar, ctx->regValues, NULL, 0, DVM_CALL ) ){
-			DaoProcess_PushContext( proc, ctx );
-			proc->topFrame->returning = -1;
-			DaoProcess_Execute( proc );
-		}
-	}else if( rt->type == DAO_FUNCTION ){
-		DaoFunction *func = (DaoFunction*) rt;
-		DaoContext ctx = *proc->topFrame->context;
-		DaoVmCode vmc = { 0, 0, 0, 0 };
-		DaoType *types[] = { NULL, NULL, NULL };
-
-		ctx.regValues = & proc->returned;
-		ctx.regTypes = types;
-		ctx.vmc = & vmc;
-		ctx.codes = & vmc;
-
-		DaoFunction_Call( func, & ctx, selfpar, NULL, 0 );
-	}else{
-		return 0;
-	}
-	type = DaoNamespace_GetType( ns, proc->returned );
-	DaoValue_Serialize2( proc->returned, serial, ns, proc, type, buf );
+	if( DaoProcess_Call( proc, (DaoMethod*)value, selfpar, NULL, 0 ) ) return 0;
+	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
+	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
 	return 1;
 }
 static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf )
@@ -1508,22 +1476,10 @@ static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns
 	DaoType *type;
 	DaoValue *selfpar = (DaoValue*) self;
 	DaoValue *meth = DaoFindFunction2( self->typer, "serialize" );
-	DaoFunction *func = (DaoFunction*) meth;
-	DaoContext ctx = *proc->topFrame->context;
-	DaoVmCode vmc = { 0, 0, 0, 0 };
-	DaoType *types[] = { NULL, NULL, NULL };
-
-	ctx.regValues = & proc->returned;
-	ctx.regTypes = types;
-	ctx.vmc = & vmc;
-	ctx.codes = & vmc;
-
 	if( meth == NULL ) return 0;
-	func = (DaoFunction*) DRoutine_Resolve( meth, selfpar, NULL, 0, DVM_CALL );
-	if( func == NULL || func->type != DAO_FUNCTION ) return 0;
-	DaoFunction_Call( func, & ctx, selfpar, NULL, 0 );
-	type = DaoNamespace_GetType( ns, proc->returned );
-	DaoValue_Serialize2( proc->returned, serial, ns, proc, type, buf );
+	if( DaoProcess_Call( proc, (DaoMethod*)meth, selfpar, NULL, 0 ) ) return 0;
+	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
+	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
 	return 1;
 }
 int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DaoType *type, DString *buf )
@@ -1600,40 +1556,28 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoContext *ctx;
-	DRoutine *rt = DRoutine_Resolve( (DaoValue*)self->classRoutines, NULL, & param, 1, DVM_CALL );
-	if( rt == NULL || rt->type != DAO_ROUTINE ) return NULL;
-	ctx = DaoProcess_MakeContext( proc, (DaoRoutine*) rt );
-	DaoContext_Init( ctx, ctx->routine );
-	if( DRoutine_PassParams( rt, NULL, ctx->regValues, & param, 1, DVM_CALL ) ){
-		DaoObject *object = DaoObject_New( self, NULL, 0 );
-		GC_ShiftRC( object, ctx->object );
-		ctx->object = object;
-		ctx->ctxState = DVM_MAKE_OBJECT;
-		DaoProcess_PushContext( proc, ctx );
-		proc->topFrame->returning = -1;
-		DaoProcess_Execute( proc );
-		return object;
-	}
-	return NULL;
+	int passed;
+	DaoObject *object;
+	DRoutine *R = DRoutine_Resolve( (DaoValue*)self->classRoutines, NULL, & param, 1, DVM_CALL );
+	if( R == NULL || R->type != DAO_ROUTINE ) return NULL;
+	passed = DRoutine_PassParams( R, NULL, proc->paramValues, & param, 1, DVM_CALL );
+	if( passed == 0 ) return NULL;
+	object = DaoObject_New( self, NULL, 0 );
+	DaoProcess_PushFrame( proc, ((DaoRoutine*)R)->regCount );
+	DaoProcess_InitTopFrame( proc, (DaoRoutine*)R, object, DVM_CALL );
+	proc->topFrame->state = DVM_MAKE_OBJECT;
+	proc->topFrame->parCount = passed;
+	proc->topFrame->returning = -1;
+	if( DaoProcess_Execute( proc ) ==0 ) return NULL;
+	return object;
 }
 static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoValue *meth = DaoFindFunction2( self->typer, self->typer->name );
-	DaoFunction *func = (DaoFunction*) meth;
-	DaoContext ctx = *proc->topFrame->context;
-	DaoVmCode vmc = { 0, 0, 0, 0 };
-	DaoType *types[] = { self->typer->priv->abtype, NULL, NULL };
-
-	ctx.regValues = & proc->returned;
-	ctx.regTypes = types;
-	ctx.vmc = & vmc;
-	ctx.codes = & vmc;
-	if( meth == NULL ) return NULL;
-	func = (DaoFunction*) DRoutine_Resolve( meth, NULL, & param, 1, DVM_CALL );
-	if( func == NULL || func->type != DAO_FUNCTION ) return NULL;
-	DaoFunction_Call( func, & ctx, NULL, & param, 1 );
-	if( proc->returned && proc->returned->type == DAO_CDATA ) return & proc->returned->xCdata;
+	DaoValue *value = DaoFindFunction2( self->typer, self->typer->name );
+	if( value == NULL ) return NULL;
+	if( DaoProcess_Call( proc, (DaoMethod*)value, NULL, & param, 1 ) ) return NULL;
+	value = proc->stackValues[0];
+	if( value && value->type == DAO_CDATA ) return & value->xCdata;
 	return NULL;
 }
 

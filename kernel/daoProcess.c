@@ -46,59 +46,58 @@
 struct DaoJIT dao_jit = { NULL, NULL, NULL, NULL };
 
 
-extern DaoList*  DaoContext_GetList( DaoContext *self, DaoVmCode *vmc );
+extern DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc );
 
-extern void DaoContext_DoList(  DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoMap(   DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoArray(   DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoMatrix( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoCurry(  DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoPair( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoTuple( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoCheck( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_BindNameValue( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoList( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc );
 
-extern void DaoContext_DoGetItem( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoSetItem( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoGetField( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoSetField( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoGetMetaField( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoSetMetaField( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoGetMetaField( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc );
 
-extern DaoVmCode* DaoContext_DoSwitch( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoIter( DaoContext *self, DaoVmCode *vmc );
+extern DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc );
 
-extern int DaoContext_TryObjectArith( DaoContext *self, DaoValue *dA, DaoValue *dB );
-extern int DaoContext_TryCdataArith( DaoContext *self, DaoValue *dA, DaoValue *dB );
+extern int DaoProcess_TryObjectArith( DaoProcess *self, DaoValue *dA, DaoValue *dB );
+extern int DaoProcess_TryCdataArith( DaoProcess *self, DaoValue *dA, DaoValue *dB );
 
-extern void DaoContext_DoInTest( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoBinArith( DaoContext *self, DaoVmCode *vmc );
-/* binary operation with boolean result. */
-extern void DaoContext_DoBinBool(  DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoUnaArith( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoBitLogic( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoBitShift( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoBitFlip( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoBitFlip( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc );
 
-extern void DaoContext_DoCast( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoMove( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_DoCall( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc );
 
-static void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoFunctional( DaoProcess *self, DaoVmCode *vmc );
 
 /* if return TRUE, there is exception, and look for the next rescue point. */
-extern int DaoContext_DoCheckExcept( DaoContext *self, DaoVmCode *vmc );
+extern int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc );
 /* if return DAO_STATUS_EXCEPTION, real exception is rose, and look for the next rescue point. */
-extern void DaoContext_DoRaiseExcept( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc );
 /* return TRUE, if some exceptions can be rescued */
-extern int DaoContext_DoRescueExcept( DaoContext *self, DaoVmCode *vmc );
+extern int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc );
 
-extern void DaoContext_DoReturn( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_MakeRoutine( DaoContext *self, DaoVmCode *vmc );
-extern void DaoContext_MakeClass( DaoContext *self, DaoVmCode *vmc );
+extern void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc );
+extern void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc );
 
-static int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
+static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
 static DaoStackFrame* DaoStackFrame_New()
 {
@@ -131,14 +130,25 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->stackTop = 0;
 	self->stackSize = 0;
 	self->stackValues = NULL;
+	self->activeValues = NULL;
+	self->activeTypes = NULL;
+	self->activeRoutine = NULL;
+	self->activeObject = NULL;
+	self->activeNamespace = NULL;
+	self->activeCode = NULL;
 	self->firstFrame = NULL;
 	self->topFrame = NULL;
-	self->returned = NULL;
 	self->parResume = NULL;
 	self->parYield = NULL;
 	self->abtype = NULL;
 	self->future = NULL;
 	self->exceptions = DArray_New(D_VALUE);
+
+	self->firstFrame = self->topFrame = DaoStackFrame_New();
+	self->stackValues = (DaoValue**)dao_calloc( 1+DAO_MAX_PARAM, sizeof(DaoValue*) );
+	self->stackSize = 1+DAO_MAX_PARAM;
+	self->stackTop = 1;
+	self->paramValues = self->stackValues + 1;
 
 	self->mbstring = DString_New(1);
 	self->mbsRegex = NULL;
@@ -167,12 +177,11 @@ void DaoProcess_Delete( DaoProcess *self )
 	while( frame ){
 		DaoStackFrame *p = frame;
 		frame = frame->next;
-		if( p->context ) GC_DecRC( p->context );
+		//XXX if( p->context ) GC_DecRC( p->context );
 		dao_free( p );
 	}
 
 	DString_Delete( self->mbstring );
-	DaoValue_Clear( & self->returned );
 	DArray_Delete( self->exceptions );
 	if( self->parResume ) DArray_Delete( self->parResume );
 	if( self->parYield ) DArray_Delete( self->parYield );
@@ -182,7 +191,6 @@ void DaoProcess_Delete( DaoProcess *self )
 
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 {
-	DaoContext *ctx = NULL;
 	DaoRegex *pat = NULL;
 	DaoRgxItem *it;
 	DNode *node;
@@ -202,129 +210,122 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 		pat = DaoRegex_New( src );
 		DMap_Insert( self->wcsRegex, src, pat );
 	}
-	if( self->topFrame == NULL || self->topFrame == self->firstFrame )
-		ctx = self->topFrame->context;
 	for( i=0; i<pat->count; i++ ){
 		it = pat->items + i;
 		if( it->type ==0 ){
 			char buf[50];
 			sprintf( buf, "incorrect pattern, at char %i.", it->length );
-			if( ctx ) DaoContext_RaiseException( ctx, DAO_ERROR, buf );
+			DaoProcess_RaiseException( self, DAO_ERROR, buf );
 			return NULL;
 		}
 	}
 	return pat;
 }
 
-static DaoStackFrame* DaoProcess_NextFrame( DaoProcess *self )
+DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
-	DaoStackFrame *frame = NULL;
-	if( self->topFrame && self->topFrame->next ) return self->topFrame->next;
-
-	frame = DaoStackFrame_New();
-	if( self->topFrame ){
+	size_t i, N = self->stackTop + size + DAO_MAX_PARAM;
+	DaoStackFrame *frame = self->topFrame->next;
+	if( N > self->stackSize ){
+		size_t offset = self->activeValues - self->stackValues;
+		self->stackValues = (DaoValue**)dao_realloc( self->stackValues, N*sizeof(DaoValue*) );
+		memset( self->stackValues + self->stackSize, 0, (N-self->stackSize)*sizeof(DaoValue*) );
+		if( self->activeValues ) self->activeValues = self->stackValues +  offset;
+		self->stackSize = N;
+	}
+	if( frame == NULL ){
+		frame = DaoStackFrame_New();
 		self->topFrame->next = frame;
 		frame->prev = self->topFrame;
 	}
-	if( self->firstFrame == NULL ){
-		self->firstFrame = frame;
-		self->topFrame = frame;
-		frame->rollback = frame;
-		/* the first frame will not be used for execution */
-		return DaoProcess_NextFrame( self );
-	}
-	return frame;
-}
-DaoContext* DaoProcess_MakeContext( DaoProcess *self, DaoRoutine *routine )
-{
-	DaoStackFrame *frame = DaoProcess_NextFrame( self );
-	DaoContext *ctx = frame->context;
-	if( ctx && ctx->refCount >1 ){
-		/* this should never happen in the current implementation.
-		 * it is added just in case if something may change in the future. */
-		/* this may actually happen, for asynchronous method call */
-		GC_DecRC( ctx );
-		ctx = frame->context = NULL;
-	}
-	if( ctx == NULL ){
-		ctx = DaoContext_New();
-		GC_IncRC( ctx );
-		ctx->process = self;
-		ctx->vmSpace = self->vmSpace;
-		ctx->frame = frame;
-		frame->context = ctx;
-	}
-	DaoContext_Init( ctx, routine );
-	return ctx;
-}
-void DaoProcess_PushContext( DaoProcess *self, DaoContext *ctx )
-{
-	DaoContext *topCtx = NULL;
-	DaoStackFrame *frame = DaoProcess_NextFrame( self );
-	/* assert( frame->context == ctx ); */
-	if( frame->context != ctx ){
-		/* this should never happen in the current implementation.
-		 * it is added just in case if something may change in the future. */
-		DaoStackFrame *next = frame;
-		self->topFrame->next = NULL; /* cause to add a new empty frame */
-		frame = DaoProcess_NextFrame( self );
-		next->prev = frame; /* append frames from "next" to the new frame */
-		frame->next = next;
-		frame->context = ctx;
-		GC_IncRC( ctx );
-		ctx->frame = frame;
-		ctx->process = self;
-		ctx->vmSpace = self->vmSpace;
-	}
-	frame->entry = ctx->entryCode;
-	frame->state = ctx->ctxState;
+	frame->stackBase = self->stackTop;
+	frame->entry = 0;
+	frame->state = 0;
 	frame->rollback = NULL;
 	frame->returning = -1;
-	self->status = DAO_VMPROC_STACKED;
-	if( self->topFrame != self->firstFrame ){
-		topCtx = self->topFrame->context;
-		if( topCtx->vmc ){ /* maybe topCtx is pushed in, but never executed */
-			self->topFrame->entry = (int)( topCtx->vmc - topCtx->codes ) + 1;
-			frame->returning = topCtx->vmc->c;
-		}
+	if( self->activeRoutine && self->activeCode ){
+		self->topFrame->entry = (int)(self->activeCode - self->topFrame->codes) + 1;
+		frame->returning = self->activeCode->c;
 	}
-	if( ctx != topCtx ) ctx->caller = topCtx;
 	self->topFrame = frame;
+	self->stackTop += size;
+	self->paramValues = self->stackValues + self->stackTop;
+	return frame;
 }
-void DaoProcess_PopContext( DaoProcess *self )
+void DaoProcess_PopFrame( DaoProcess *self )
 {
-	DaoContext *ctx = self->topFrame->context;
-	DaoValue **values;
-	int i, N;
-	if( self->topFrame == self->firstFrame ) return;
-	if( self->topFrame->context == NULL ) return;
-	if( ctx->refCount == 1 ){ /* only referenced once, and by the stack */
-		N = self->topFrame->context->routine->regCount;
-		values = self->topFrame->context->regValues;
-		for(i=0; i<N; i++){
-			if( values[i] == NULL ) continue;
-			switch( values[i]->type ){
-			case DAO_LONG  : case DAO_STRING :
-			case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
-			case DAO_TUPLE : case DAO_OBJECT : case DAO_CDATA :
-				DaoValue_Clear( & values[i] );
-				break;
-			}
-		}
+	if( self->activeRoutine == self->topFrame->routine ){
+		self->activeNamespace = NULL;
+		self->activeRoutine = NULL;
+		self->activeValues = NULL;
+		self->activeTypes = NULL;
+		self->activeCode = NULL;
 	}
 	self->topFrame->depth = 0;
+	self->stackTop = self->topFrame->stackBase;
 	self->topFrame = self->topFrame->prev;
+	self->paramValues = self->stackValues + self->stackTop;
+}
+void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object, int call )
+{
+	DaoStackFrame *frame = self->topFrame;
+	DaoValue **values = self->stackValues + frame->stackBase;
+	DaoType **types = routine->regType->items.pType;
+	int i, need_self = routine->routType->attrib & DAO_TYPE_SELF;
+	complex16 com = {0.0,0.0};
+
+	GC_ShiftRC( routine, frame->routine );
+	GC_ShiftRC( object, frame->object );
+	frame->routine = routine;
+	frame->object = object;
+	frame->codes = routine->vmCodes->codes;
+	for(i=routine->parCount; i<routine->regCount; i++){
+		DaoValue *value = values[i], *value2 = NULL;
+		DaoType *type = types[i];
+		if( type == NULL ) continue;
+		if( value && value->type == type->tid && value->xGC.refCount == 1 ) continue;
+		switch( type->tid ){
+		case DAO_INTEGER : value2 = (DaoValue*) DaoInteger_New(0); break;
+		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
+		case DAO_DOUBLE  : value2 = (DaoValue*) DaoDouble_New(0.0); break;
+		case DAO_COMPLEX : value2 = (DaoValue*) DaoComplex_New(com); break;
+		}
+		if( value2 == NULL ) continue;
+		GC_ShiftRC( value2, value );
+		values[i] = value2;
+	}
+	if( need_self && ROUT_HOST_TID( routine ) == DAO_OBJECT ){
+		if( call == DVM_MCALL && values[0]->type == DAO_OBJECT ) object = & values[0]->xObject;
+		if( object ) object = (DaoObject*) DaoObject_MapThisObject( object->that, routine->routHost );
+		if( object == NULL ) DaoProcess_RaiseException( self, DAO_ERROR, "need self object" );
+		GC_ShiftRC( object, frame->object );
+		frame->object = object;
+	}
+}
+void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame )
+{
+	self->activeObject = frame->object;
+	self->activeValues = self->stackValues + frame->stackBase;
+	if( frame->routine ){
+		self->activeRoutine = frame->routine;
+		self->activeNamespace = frame->routine->nameSpace;
+		self->activeTypes = frame->routine->regType->items.pType;
+	}else if( frame->function ){
+		self->activeNamespace = frame->function->nameSpace;
+		self->activeTypes = frame->function->routType->nested->items.pType;
+	}
 }
 void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine )
 {
-	DaoContext *ctx = DaoProcess_MakeContext( self, routine );
-	DaoProcess_PushContext( self, ctx );
+	DaoStackFrame *frame = DaoProcess_PushFrame( self, routine->regCount );
+	DaoProcess_InitTopFrame( self, routine, NULL, DVM_CALL );
+	self->status = DAO_VMPROC_STACKED;
 }
 static void DaoProcess_CleanProcess( DaoProcess *self )
 {
 	while( self->topFrame && self->topFrame->rollback != self->topFrame )
-		DaoProcess_PopContext( self );
-	DaoProcess_PopContext( self );
+		DaoProcess_PopFrame( self );
+	DaoProcess_PopFrame( self );
 }
 int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoList *list )
 {
@@ -354,47 +355,50 @@ void DaoProcess_Yield( DaoProcess *self, DaoValue *par[], int N, DaoList *list )
 	}
 	self->status = DAO_VMPROC_SUSPENDED;
 }
-void DaoContext_MakeTuple( DaoContext *self, DaoTuple *tuple, DaoValue *its[], int N );
-int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoContext *ret )
+void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N );
+int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret )
 {
-	DaoContext *ctx = self->topFrame->context;
 	DaoType *tp;
 	DaoVmCode *vmc;
 	DaoTuple *tuple;
 	if( self->status != DAO_VMPROC_SUSPENDED ) return 0;
-	if( ctx->vmc && ctx->vmc->code == DVM_YIELD ){
-		tp = ctx->regTypes[ ctx->vmc->c ];
+	if( self->activeCode && self->activeCode->code == DVM_YIELD ){
+		tp = self->activeTypes[ self->activeCode->c ];
 		if( N == 1 ){
-			DaoContext_PutValue( ctx, par[0] );
+			DaoProcess_PutValue( self, par[0] );
 		}else if( N ){
 			tuple = DaoTuple_New( N );
 			tuple->unitype = tp;
 			GC_IncRC( tuple->unitype );
-			DaoContext_MakeTuple( ctx, tuple, par, N );
-			DaoContext_PutValue( ctx, (DaoValue*) tuple );
+			DaoProcess_MakeTuple( self, tuple, par, N );
+			DaoProcess_PutValue( self, (DaoValue*) tuple );
 		}
 		self->topFrame->entry ++;
-	}else if( N && ! DRoutine_PassParams( (DRoutine*)ctx->routine, NULL,
-				ctx->regValues, par, N, DVM_CALL ) ){
-		DaoContext_RaiseException( ret, DAO_ERROR, "invalid parameters." );
-		return 0;
+	}else if( N ){
+		int m = 0;
+		DRoutine *rout = (DRoutine*)self->topFrame->routine;
+		DaoValue **values = self->stackValues + self->topFrame->stackBase;
+		if( rout ) m = DRoutine_PassParams( rout, NULL, values, par, N, DVM_CALL );
+		if( m ==0 ){
+			DaoProcess_RaiseException( ret, DAO_ERROR, "invalid parameters." );
+			return 0;
+		}
 	}
 	DaoProcess_Execute( self );
-	if( self->topFrame && self->topFrame != self->firstFrame ){ /* yield */
-		ctx = self->topFrame->context;
-		vmc = ctx->vmc;
-		tp = ret->regTypes[ ret->vmc->c ];
+	if( self->activeRoutine && ret->activeCode ){ /* yield */
+		vmc = self->activeCode;
+		tp = self->activeTypes[ ret->activeCode->c ];
 		if( vmc->b ==1 ){
-			DaoContext_PutValue( ret, ctx->regValues[ vmc->a ] );
+			DaoProcess_PutValue( ret, self->activeValues[ vmc->a ] );
 		}else if( vmc->b ){
 			tuple = DaoTuple_New( vmc->b );
 			tuple->unitype = tp;
 			GC_IncRC( tuple->unitype );
-			DaoContext_MakeTuple( ret, tuple, ctx->regValues + vmc->a, vmc->b );
-			DaoContext_PutValue( ret, (DaoValue*) tuple );
+			DaoProcess_MakeTuple( ret, tuple, self->activeValues + vmc->a, vmc->b );
+			DaoProcess_PutValue( ret, (DaoValue*) tuple );
 		}
 	}else{ /* return */
-		DaoContext_PutValue( ret, self->returned );
+		DaoProcess_PutValue( ret, self->stackValues[0] );
 	}
 	return 1;
 }
@@ -405,7 +409,7 @@ int DaoProcess_ExecuteSection( DaoProcess *self, int entry )
 	int depth = self->topFrame->depth;
 	int ret = 0, old = 0;
 	if( entry <0 ) return DAO_VMPROC_ABORTED;
-	if( self->topFrame->context->codes[entry].code != DVM_SECT ) return DAO_VMPROC_ABORTED;
+	if( self->topFrame->codes[entry].code != DVM_SECT ) return DAO_VMPROC_ABORTED;
 	old = self->topFrame->state;
 	self->topFrame->entry = entry + 1;
 	self->topFrame->state = DVM_SPEC_RUN;
@@ -441,43 +445,47 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *source, int rp
 	DaoRoutine *rout;
 	if( DaoProcess_Compile( self, ns, source, rpl ) ==0 ) return 0;
 	rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
-	if( DaoProcess_Call( self, (DaoMethod*) rout, NULL, NULL, 0 ) ==0 ) return 0;
+	if( DaoProcess_Call( self, (DaoMethod*) rout, NULL, NULL, 0 ) ) return 0;
 	return ns->mainRoutines->size;
 }
-int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n )
+int DaoProcess_TryCall( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N )
 {
-	DaoValue *r = (DaoValue*) f;
-	DRoutine *rout = (DRoutine*) r;
-	DaoContext *ctx;
+	DRoutine *R = (DRoutine*) M;
+	DaoRoutine *rout;
+	int passed = 0;
 
-	if( r && r->type == DAO_FUNCTREE ) rout = DRoutine_Resolve( r, o, p, n, DVM_CALL );
-	if( rout == NULL ) return 0;
-	if( rout->type == DAO_FUNCTION ){
-		DaoVmCode vmc = { 0, 0, 0, 0 };
-		ctx = DaoProcess_MakeContext( self, (DaoRoutine*) rout );
-		if( ctx->regArray->size ==0 ) DTuple_Resize( ctx->regArray, 1, NULL );
-		ctx->regValues = ctx->regArray->items.pValue;
-		ctx->regTypes = & dao_type_any;
-		ctx->vmc = & vmc;
-		return DaoFunction_Call( (DaoFunction*) rout, ctx, o, p, n ) ==0;
+	if( M == NULL ) return DAO_ERROR;
+	if( M->type == DAO_FUNCTREE ) R = DRoutine_Resolve( M, O, P, N, DVM_CALL );
+	if( R ) passed = DRoutine_PassParams( R, O, self->paramValues, P, N, DVM_CALL );
+	if( passed == 0 ) return DAO_ERROR_PARAM;
+	passed --;
+	if( R->type == DAO_ROUTINE ){
+		rout = (DaoRoutine*) R;
+		DaoProcess_PushFrame( self, rout->regCount );
+		DaoProcess_InitTopFrame( self, rout, (DaoObject*)O, DVM_CALL ); //XXX object
+		self->topFrame->parCount = passed;
+		self->status = DAO_VMPROC_STACKED;
+	}else if( R->type == DAO_FUNCTION ){
+		DaoFunction *func = (DaoFunction*) R;
+		DaoProcess_PushFrame( self, passed );
+		self->topFrame->parCount = passed;
+		//ctx->thisFunction = func;
+		func->pFunc( self, self->stackValues + self->topFrame->stackBase, passed );
+		//ctx->thisFunction = NULL;
+		DaoProcess_PopFrame( self );
+	}else{
+		return DAO_ERROR;
 	}
-
-	ctx = DaoProcess_MakeContext( self, (DaoRoutine*) rout );
-	if( o && o->type == DAO_OBJECT ){
-		GC_ShiftRC( o, ctx->object );
-		ctx->object = & o->xObject;
-	}
-	if( DRoutine_PassParams( rout, o, ctx->regValues, p, n, DVM_CALL ) ==0 ){
-		printf( "calling %s failed\n", rout->routName->mbs );
-		return 0;
-	}
-	/*
-	   if( db ) printf( "%i  %p\n", db->refCount, db );
-	 */
-	DaoProcess_PushContext( self, ctx );
-	/* no return value to the previous stack top context */
+	return 0;
+}
+// XXX return value changed!!
+int DaoProcess_Call( DaoProcess *self, DaoMethod *M, DaoValue *O, DaoValue *P[], int N )
+{
+	int ret = DaoProcess_TryCall( self, (DaoValue*)M, O, P, N );
+	if( ret || self->status != DAO_VMPROC_STACKED ) return ret;
+	/* no return value to the previous stack frame */
 	self->topFrame->returning = -1;
-	return DaoProcess_Execute( self );
+	return DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
 }
 void DaoProcess_Stop( DaoProcess *self )
 {
@@ -485,7 +493,7 @@ void DaoProcess_Stop( DaoProcess *self )
 }
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
-	return self->returned;
+	return self->stackValues[0];
 }
 
 #define IntegerOperand( i ) locVars[i]->xInteger.value
@@ -504,10 +512,11 @@ case DAO_DOUBLE  : x = v->xDouble.value; break; \
 
 #define ArrayArrayValue( array, up, id ) array->items.pArray[ up ]->items.pValue[ id ]
 
-int DaoContext_CheckFE( DaoContext *self );
+int DaoProcess_CheckFE( DaoProcess *self );
 
-void DaoContext_AdjustCodes( DaoContext *self, int options );
-int DaoMoveAC( DaoContext *self, DaoValue *A, DaoValue **C, DaoType *t );
+//void DaoContext_AdjustCodes( DaoContext *self, int options );
+
+int DaoMoveAC( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 
 #if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
 #define HAS_VARLABEL
@@ -522,7 +531,6 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoVmCode *vmc=NULL;
 	DaoVmCode *vmcBase;
 	DaoStackFrame *topFrame;
-	DaoContext *topCtx;
 	DaoRoutine *routine;
 	DaoNamespace *here = NULL;
 	DaoClass *host = NULL;
@@ -758,13 +766,13 @@ int DaoProcess_Execute( DaoProcess *self )
 #define OPEND() vmc++; }
 
 #if 0
-#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topCtx->routine->annotCodes->items.pVmc[i], NULL ); switch( vmc->code )
+#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->annotCodes->items.pVmc[i], NULL ); switch( vmc->code )
 #endif
 
 #endif
 
 
-	if( self->topFrame == NULL ) goto ReturnFalse;
+	if( self->topFrame == NULL || self->topFrame == self->firstFrame ) goto ReturnFalse;
 	base = self->topFrame;
 	self->topFrame->rollback = base;
 	if( self->status == DAO_VMPROC_SUSPENDED ) base = self->firstFrame->next;
@@ -781,11 +789,10 @@ CallEntry:
 		goto ReturnTrue;
 	}
 	topFrame = self->topFrame;
-	topCtx = topFrame->context;
-	routine = topCtx->routine;
+	routine = topFrame->routine;
 #if 0
 	if( (vmSpace->options & DAO_EXEC_SAFE) && self->topFrame->index >= 100 ){
-		DaoContext_RaiseException( topCtx, DAO_ERROR,
+		DaoProcess_RaiseException( self, DAO_ERROR,
 				"too deep recursion for safe running mode." );
 		goto FinishProc;
 	}
@@ -807,20 +814,19 @@ CallEntry:
 #endif
 
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
-	if( invokehost ) handler->InvokeHost( handler, topCtx );
+	//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 
-	if( (vmSpace->options & DAO_EXEC_DEBUG)|(routine->mode & DAO_EXEC_DEBUG) )
-		DaoContext_AdjustCodes( topCtx, vmSpace->options );
+	//XXX if( (vmSpace->options & DAO_EXEC_DEBUG)|(routine->mode & DAO_EXEC_DEBUG) )
+	//XXX	DaoContext_AdjustCodes( topCtx, vmSpace->options );
 
-	topCtx->vmSpace = vmSpace;
-	vmcBase = topCtx->codes;
+	vmcBase = topFrame->codes;
 	id = self->topFrame->entry;
 	if( id >= routine->vmCodes->size ){
 		if( id == 0 ){
 			DString_SetMBS( self->mbstring, "Not implemented function, " );
 			DString_Append( self->mbstring, routine->routName );
 			DString_AppendMBS( self->mbstring, "()" );
-			DaoContext_RaiseException( topCtx, DAO_ERROR, self->mbstring->mbs );
+			DaoProcess_RaiseException( self, DAO_ERROR, self->mbstring->mbs );
 			goto FinishProc;
 		}
 		goto FinishCall;
@@ -837,13 +843,16 @@ CallEntry:
 	DaoRoutine_PrintCode( routine, self->vmSpace->stdStream );
 #endif
 
-	self->stopit = 0;
 	vmc = vmcBase + id;
-	topCtx->vmc = vmc;
-	if( id ==0 ){
-		/* ( 0, routine->vmCodes->size-1 ) */
-		DaoStackFrame_PushRange( topFrame, 0, (routine->vmCodes->size-1) );
-	}
+	self->stopit = 0;
+	self->activeCode = vmc;
+	self->activeRoutine = routine;
+	self->activeValues = self->stackValues + topFrame->stackBase;
+	self->activeTypes = routine->regType->items.pType;
+	self->activeNamespace = routine->nameSpace;
+
+	/* range ( 0, routine->vmCodes->size-1 ) */
+	if( id ==0 ) DaoStackFrame_PushRange( topFrame, 0, (routine->vmCodes->size-1) );
 
 	exceptCount = self->exceptions->size;
 	/* Check if an exception has been raisen by a function call: */
@@ -858,11 +867,11 @@ CallEntry:
 	if( self->status == DAO_VMPROC_SUSPENDED &&
 			( vmc->code ==DVM_CALL || vmc->code ==DVM_MCALL || vmc->code ==DVM_YIELD ) ){
 		if( self->parResume && self->pauseType != DAO_VMP_ASYNC ){
-			DaoList *list = DaoContext_GetList( topCtx, vmc );
+			DaoList *list = DaoProcess_GetList( self, vmc );
 			for(i=0; i<self->parResume->size; i++)
 				DaoList_Append( list, self->parResume->items.pValue[i] );
 		}else if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
-			DaoContext_PutValue( topCtx, self->future->precondition->value );
+			DaoProcess_PutValue( self, self->future->precondition->value );
 		}
 		vmc ++;
 	}
@@ -870,9 +879,9 @@ CallEntry:
 	self->pauseType = DAO_VMP_NOPAUSE;
 	host = NULL;
 	here = routine->nameSpace;
-	this = topCtx->object;
-	locVars = topCtx->regValues;
-	locTypes = routine->regType->items.pType;
+	this = topFrame->object;
+	locVars = self->activeValues;
+	locTypes = self->activeTypes;
 	dataCL[0] = routine->routConsts;
 	dataCG = here->cstDataTable;
 	dataVG = here->varDataTable;
@@ -950,52 +959,52 @@ CallEntry:
 		}OPNEXT()
 		OPCASE( GETI )
 		OPCASE( GETMI ){
-			DaoContext_DoGetItem( topCtx, vmc );
+			DaoProcess_DoGetItem( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( GETF ){
-			DaoContext_DoGetField( topCtx, vmc );
+			DaoProcess_DoGetField( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( GETMF ){
-			DaoContext_DoGetMetaField( topCtx, vmc );
+			DaoProcess_DoGetMetaField( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVL ){
 			abtp = typeVL->items.pType[ vmc->b ];
-			if( DaoMoveAC( topCtx, locVars[vmc->a], dataVL + vmc->b, abtp ) ==0 )
+			if( DaoMoveAC( self, locVars[vmc->a], dataVL + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVO ){
 			abtp = typeVO->items.pType[ vmc->b ];
-			if( DaoMoveAC( topCtx, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
+			if( DaoMoveAC( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVK ){
 			abtp = typeVK->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
 			vref = dataVK->items.pArray[vmc->c]->items.pValue + vmc->b;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
+			if( DaoMoveAC( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
 		OPCASE( SETVG ){
 			abtp = typeVG->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
 			vref = dataVG->items.pArray[vmc->c]->items.pValue + vmc->b;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
+			if( DaoMoveAC( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT()
 		OPCASE( SETI )
 		OPCASE( SETMI ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
-			DaoContext_DoSetItem( topCtx, vmc );
+			DaoProcess_DoSetItem( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETF ){
 			// class::static_member = XXX
 			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
-			DaoContext_DoSetField( topCtx, vmc );
+			DaoProcess_DoSetField( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( SETMF ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
-			DaoContext_DoSetMetaField( topCtx, vmc );
+			DaoProcess_DoSetMetaField( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( LOAD ){
@@ -1007,15 +1016,15 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( CAST ){
-			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST) )
-				goto ModifyConstant;
-			topCtx->vmc = vmc;
-			DaoContext_DoCast( topCtx, vmc );
+			//if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST) )
+			//	goto ModifyConstant;
+			self->activeCode = vmc;
+			DaoProcess_DoCast( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( MOVE ){
-			topCtx->vmc = vmc;
-			DaoContext_DoMove( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_DoMove( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( ADD )
@@ -1024,8 +1033,8 @@ CallEntry:
 			OPCASE( DIV )
 			OPCASE( MOD )
 			OPCASE( POW ){
-				topCtx->vmc = vmc;
-				DaoContext_DoBinArith( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoBinArith( self, vmc );
 				goto CheckException;
 			}OPNEXT()
 		OPCASE( AND )
@@ -1034,82 +1043,82 @@ CallEntry:
 			OPCASE( LE )
 			OPCASE( EQ )
 			OPCASE( NE ){
-				topCtx->vmc = vmc;
-				DaoContext_DoBinBool( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoBinBool( self, vmc );
 				goto CheckException;
 			}OPNEXT()
 		OPCASE( IN ){
-				topCtx->vmc = vmc;
-				DaoContext_DoInTest( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoInTest( self, vmc );
 				goto CheckException;
 			}OPNEXT()
 		OPCASE( NOT )
 			OPCASE( UNMS ){
-				topCtx->vmc = vmc;
-				DaoContext_DoUnaArith( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoUnaArith( self, vmc );
 				goto CheckException;
 			}OPNEXT()
 		OPCASE( BITAND )
 			OPCASE( BITOR )
 			OPCASE( BITXOR ){
-				topCtx->vmc = vmc;
-				DaoContext_DoBitLogic( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoBitLogic( self, vmc );
 				goto CheckException;
 			}OPNEXT()
 		OPCASE( BITLFT )
 			OPCASE( BITRIT ){
-				topCtx->vmc = vmc;
-				DaoContext_DoBitShift( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoBitShift( self, vmc );
 				goto CheckException;
 			}OPNEXT()
 		OPCASE( BITREV ){
-			topCtx->vmc = vmc;
-			DaoContext_DoBitFlip( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_DoBitFlip( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( CHECK ){
-			DaoContext_DoCheck( topCtx, vmc );
+			DaoProcess_DoCheck( self, vmc );
 		}OPNEXT()
 		OPCASE( NAMEVA ){
-			DaoContext_BindNameValue( topCtx, vmc );
+			DaoProcess_BindNameValue( self, vmc );
 		}OPNEXT()
 		OPCASE( PAIR ){
-			topCtx->vmc = vmc;
-			DaoContext_DoPair( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_DoPair( self, vmc );
 		}OPNEXT()
 		OPCASE( TUPLE ){
-			topCtx->vmc = vmc;
-			DaoContext_DoTuple( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_DoTuple( self, vmc );
 		}OPNEXT()
 		OPCASE( LIST ){
-			topCtx->vmc = vmc;
-			DaoContext_DoList( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_DoList( self, vmc );
 		}OPNEXT()
 		OPCASE( MAP )
 			OPCASE( HASH ){
-				topCtx->vmc = vmc;
-				DaoContext_DoMap( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoMap( self, vmc );
 			}OPNEXT()
 		OPCASE( ARRAY ){
-			DaoContext_DoArray( topCtx, vmc );
+			DaoProcess_DoArray( self, vmc );
 		}OPNEXT()
 		OPCASE( MATRIX ){
-			DaoContext_DoMatrix( topCtx, vmc );
+			DaoProcess_DoMatrix( self, vmc );
 		}OPNEXT()
 		OPCASE( CURRY )
 			OPCASE( MCURRY ){
-				DaoContext_DoCurry( topCtx, vmc );
+				DaoProcess_DoCurry( self, vmc );
 			}OPNEXT()
 		OPCASE( CASE )
 			OPCASE( GOTO ){
 				vmc = vmcBase + vmc->b;
 			}OPJUMP()
 		OPCASE( SWITCH ){
-			vmc = DaoContext_DoSwitch( topCtx, vmc );
+			vmc = DaoProcess_DoSwitch( self, vmc );
 		}OPJUMP()
 		OPCASE( ITER ){
-			topCtx->vmc = vmc;
-			DaoContext_DoIter( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_DoIter( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( TEST ){
@@ -1170,41 +1179,41 @@ CallEntry:
 			}
 		}OPJUMP()
 		OPCASE( MATH ){
-			if( DaoVM_DoMath( topCtx, vmc, locVars[ vmc->c ], locVars[vmc->b] ) )
+			if( DaoVM_DoMath( self, vmc, locVars[ vmc->c ], locVars[vmc->b] ) )
 				goto RaiseErrorInvalidOperation;
 		}OPNEXT()
 		OPCASE( FUNCT ){
-			topCtx->vmc = vmc;
+			self->activeCode = vmc;
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
-			DaoContext_DoFunctional( topCtx, vmc );
+			DaoProcess_DoFunctional( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( CALL )
 			OPCASE( MCALL ){
-				topCtx->vmc = vmc;
+				self->activeCode = vmc;
 				if( self->stopit | vmSpace->stopit ) goto FinishProc;
-				DaoContext_DoCall( topCtx, vmc );
+				DaoProcess_DoCall( self, vmc );
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( ROUTINE ){
-			topCtx->vmc = vmc;
-			DaoContext_MakeRoutine( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_MakeRoutine( self, vmc );
 		}OPNEXT()
 		OPCASE( CLASS ){
-			topCtx->vmc = vmc;
-			DaoContext_MakeClass( topCtx, vmc );
+			self->activeCode = vmc;
+			DaoProcess_MakeClass( self, vmc );
 		}OPNEXT()
 		OPCASE( CRRE ){
-			DaoContext_CheckFE( topCtx );
+			DaoProcess_CheckFE( self );
 			exceptCount = self->exceptions->size;
-			topCtx->vmc = vmc;
+			self->activeCode = vmc;
 			size = (size_t)(vmc - vmcBase);
 			range = topFrame->ranges[ topFrame->depth-1 ];
 			if( vmc->b == 0 ){ /* check exception: */
 				int exceptFrom = range[0];
 				/* remove a pair of exception scope, when it becomes invalid: */
 				if( size <= exceptFrom && topFrame->depth >0 ) topFrame->depth --;
-				if( DaoContext_DoCheckExcept( topCtx, vmc ) ){
+				if( DaoProcess_DoCheckExcept( self, vmc ) ){
 					/* exception has happened before, jump to the proper handling point: */
 					if( topFrame->depth ==0 ) goto FinishCall;
 					vmc = vmcBase + range[1];
@@ -1221,11 +1230,11 @@ CallEntry:
 					topFrame->depth --;
 				}
 			}else if( vmc->c == 0 ){
-				topCtx->vmc = vmc;
-				DaoContext_DoRaiseExcept( topCtx, vmc );
+				self->activeCode = vmc;
+				DaoProcess_DoRaiseExcept( self, vmc );
 				goto CheckException;
 			}else{
-				retCode = DaoContext_DoRescueExcept( topCtx, vmc );
+				retCode = DaoProcess_DoRescueExcept( self, vmc );
 				exceptCount = self->exceptions->size;
 				/* remove a pair of exception scope, when it becomes invalid: */
 				if( topFrame->depth >0 && size >= range[1] ) topFrame->depth --;
@@ -1236,7 +1245,7 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( JITC ){
-			dao_jit.Execute( topCtx, vmc->a );
+			dao_jit.Execute( self, vmc->a );
 			if( self->exceptions->size > exceptCount ) goto CheckException;
 			vmc += vmc->b;
 			OPJUMP()
@@ -1246,14 +1255,14 @@ CallEntry:
 				 */
 		}OPNEXT()
 		OPCASE( RETURN ){
-			topCtx->vmc = vmc;
-			DaoContext_DoReturn( topCtx, vmc );
-			//XXX DaoContext_CheckFE( topCtx );
+			self->activeCode = vmc;
+			DaoProcess_DoReturn( self, vmc );
+			//XXX DaoProcess_CheckFE( self );
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			goto FinishCall;
 		}OPNEXT()
 		OPCASE( YIELD ){
-			topCtx->vmc = vmc;
+			self->activeCode = vmc;
 			self->status = DAO_VMPROC_SUSPENDED;
 			self->pauseType = DAO_VMP_YIELD;
 			self->topFrame->entry = (short)(vmc - vmcBase);
@@ -1261,8 +1270,8 @@ CallEntry:
 		}OPCASE( DEBUG ){
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			if( (vmSpace->options & DAO_EXEC_DEBUG ) ){
-				topCtx->vmc = vmc;
-				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, topCtx );
+				self->activeCode = vmc;
+				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, self );
 				goto CheckException;
 			}
 		}OPNEXT()
@@ -1857,7 +1866,7 @@ CallEntry:
 				abtp = list->unitype->nested->items.pType[0];
 			if( id <0 ) id += list->items->size;
 			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], list->items->items.pValue + id, abtp ) ==0 )
+			if( DaoMoveAC( self, locVars[vmc->a], list->items->items.pValue + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETI_LII )
@@ -2042,7 +2051,7 @@ CallEntry:
 				default : break;
 				}
 			}else{
-				DaoContext_DoGetItem( topCtx, vmc );
+				DaoProcess_DoGetItem( self, vmc );
 				goto CheckException;
 			}
 		}OPNEXT()
@@ -2078,7 +2087,7 @@ CallEntry:
 				default : break;
 				}
 			}else{
-				DaoContext_DoSetItem( topCtx, vmc );
+				DaoProcess_DoSetItem( self, vmc );
 				goto CheckException;
 			}
 		}OPNEXT()
@@ -2099,8 +2108,8 @@ CallEntry:
 			OPCASE( SETI_ACI )
 			OPCASE( GETI_AM )
 			OPCASE( SETI_AM ){
-				topCtx->vmc = vmc;
-				DaoContext_RaiseException( topCtx, DAO_ERROR, "numeric array is disabled" );
+				self->activeCode = vmc;
+				DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
 			}OPNEXT()
 #endif
 		OPCASE( GETI_TI ){
@@ -2119,7 +2128,7 @@ CallEntry:
 			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
 			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
+			if( DaoMoveAC( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETF_T ){
@@ -2134,7 +2143,7 @@ CallEntry:
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoMoveAC( topCtx, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
+			if( DaoMoveAC( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETF_TI )
@@ -2265,7 +2274,7 @@ CallEntry:
 			klass = & locVars[ vmc->c ]->xClass;
 			vC2 = klass->glbData->items.pValue + vmc->b;
 			abtp = klass->glbDataType->items.pType[ vmc->b ];
-			if( DaoMoveAC( topCtx, locVars[vmc->a], vC2, abtp ) ==0 )
+			if( DaoMoveAC( self, locVars[vmc->a], vC2, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETF_OG )
@@ -2280,7 +2289,7 @@ CallEntry:
 					vC2 = object->objValues + vmc->b;
 					abtp = object->myClass->objDataType->items.pType[ vmc->b ];
 				}
-				if( DaoMoveAC( topCtx, locVars[vmc->a], vC2, abtp ) ==0 )
+				if( DaoMoveAC( self, locVars[vmc->a], vC2, abtp ) ==0 )
 					goto CheckException;
 			}OPNEXT()
 		OPCASE( SETF_KGII )
@@ -2360,8 +2369,8 @@ CallEntry:
 			if( ( self->vmSpace->options & DAO_EXEC_SAFE ) ){
 				gotoCount ++;
 				if( gotoCount > 1E6 ){
-					topCtx->vmc = vmc;
-					DaoContext_RaiseException( topCtx, DAO_ERROR,
+					self->activeCode = vmc;
+					DaoProcess_RaiseException( self, DAO_ERROR,
 							"too many goto operations for safe running mode." );
 					goto CheckException;
 				}
@@ -2381,36 +2390,36 @@ CallEntry:
 		{
 			goto CheckException;
 RaiseErrorIndexOutOfRange:
-			topCtx->vmc = vmc;
-			DaoContext_RaiseException( topCtx, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+			self->activeCode = vmc;
+			DaoProcess_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			goto CheckException;
 RaiseErrorDivByZero:
-			topCtx->vmc = vmc;
-			topCtx->idClearFE = vmc - vmcBase;
-			DaoContext_RaiseException( topCtx, DAO_ERROR_FLOAT_DIVBYZERO, "" );
+			self->activeCode = vmc;
+			//XXX topCtx->idClearFE = vmc - vmcBase;
+			DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
 			goto CheckException;
 RaiseErrorInvalidOperation:
-			topCtx->vmc = vmc;
-			DaoContext_RaiseException( topCtx, DAO_ERROR, "invalid operation" );
+			self->activeCode = vmc;
+			DaoProcess_RaiseException( self, DAO_ERROR, "invalid operation" );
 			goto CheckException;
 ModifyConstant:
-			topCtx->vmc = vmc;
-			DaoContext_RaiseException( topCtx, DAO_ERROR, "attempt to modify a constant" );
+			self->activeCode = vmc;
+			DaoProcess_RaiseException( self, DAO_ERROR, "attempt to modify a constant" );
 			goto CheckException;
 AccessDefault:
-			topCtx->vmc = vmc;
-			DaoContext_RaiseException( topCtx, DAO_ERROR, "invalid field access for default object" );
+			self->activeCode = vmc;
+			DaoProcess_RaiseException( self, DAO_ERROR, "invalid field access for default object" );
 			goto CheckException;
 #if 0
 RaiseErrorNullObject:
-			topCtx->vmc = vmc;
-			DaoContext_RaiseException( topCtx, DAO_ERROR, "operate on null object" );
+			self->activeCode = vmc;
+			DaoProcess_RaiseException( self, DAO_ERROR, "operate on null object" );
 			goto CheckException;
 #endif
 CheckException:
 
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
-			if( invokehost ) handler->InvokeHost( handler, topCtx );
+			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
 				size = (size_t)( vmc - vmcBase );
 				if( topFrame->depth == 0 ) goto FinishCall;
@@ -2442,13 +2451,13 @@ FinishCall:
 	}
 	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 	if( print || vmSpace->evalCmdline ){
-		if( self->returned ){
+		if( self->stackValues[0] ){
 			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
-			DaoValue_Print( self->returned, topCtx, vmSpace->stdStream, NULL );
+			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );
 			DaoStream_WriteNewLine( vmSpace->stdStream );
 		}
 	}
-	DaoProcess_PopContext( self );
+	DaoProcess_PopFrame( self );
 	goto CallEntry;
 
 FinishProc:
@@ -2468,13 +2477,13 @@ ReturnTrue :
 	return 1;
 }
 extern void DaoProcess_Trace( DaoProcess *self, int depth );
-int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
+int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 {
-	DaoNamespace *ns = self->nameSpace;
-	DaoType *type = self->regTypes[vmc->c];
+	DaoNamespace *ns = self->activeRoutine->nameSpace;
+	DaoType *type = self->activeTypes[vmc->c];
 	DaoComplex tmp = {DAO_COMPLEX};
 	int func = vmc->a;
-	self->vmc = vmc;
+	self->activeCode = vmc;
 	if( A->type == DAO_COMPLEX ){
 		complex16 par = A->xComplex.value;
 		complex16 cres = {0.0,0.0};
@@ -2501,18 +2510,18 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		}
 		if( isreal ){
 			tmp.type = DAO_DOUBLE;
-			if( type == NULL ) self->regTypes[vmc->c] = DaoNamespace_GetType( ns, (DaoValue*) & tmp );
+			if( type == NULL ) self->activeTypes[vmc->c] = DaoNamespace_GetType( ns, (DaoValue*) & tmp );
 			if( C && C->type == DAO_DOUBLE ){
 				C->xDouble.value = rres;
 			}else{
-				return DaoContext_PutDouble( self, rres ) == NULL;
+				return DaoProcess_PutDouble( self, rres ) == NULL;
 			}
 		}else{
-			if( type == NULL ) self->regTypes[vmc->c] = DaoNamespace_GetType( ns, (DaoValue*) & tmp );
+			if( type == NULL ) self->activeTypes[vmc->c] = DaoNamespace_GetType( ns, (DaoValue*) & tmp );
 			if( C && C->type == DAO_COMPLEX ){
 				C->xComplex.value = cres;
 			}else{
-				return DaoContext_PutComplex( self, cres ) == NULL;
+				return DaoProcess_PutComplex( self, cres ) == NULL;
 			}
 		}
 		return 0;
@@ -2539,11 +2548,11 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		default : return 1;
 		}
 		if( func == DVM_MATH_RAND ){
-			if( type == NULL ) self->regTypes[vmc->c] = DaoNamespace_GetType( ns, A );
+			if( type == NULL ) self->activeTypes[vmc->c] = DaoNamespace_GetType( ns, A );
 			switch( A->type ){
-			case DAO_INTEGER : return DaoContext_PutInteger( self, res ) == NULL;
-			case DAO_FLOAT  : return DaoContext_PutFloat( self, res ) == NULL;
-			case DAO_DOUBLE : return DaoContext_PutDouble( self, res ) == NULL;
+			case DAO_INTEGER : return DaoProcess_PutInteger( self, res ) == NULL;
+			case DAO_FLOAT  : return DaoProcess_PutFloat( self, res ) == NULL;
+			case DAO_DOUBLE : return DaoProcess_PutDouble( self, res ) == NULL;
 			default : break;
 			}
 		}else if( C && C->type == DAO_DOUBLE ){
@@ -2551,14 +2560,14 @@ int DaoVM_DoMath( DaoContext *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 			return 0;
 		}else{
 			tmp.type = DAO_DOUBLE;
-			if( type == NULL ) self->regTypes[vmc->c] = DaoNamespace_GetType( ns, (DaoValue*) & tmp );
-			return DaoContext_PutDouble( self, res ) == NULL;
+			if( type == NULL ) self->activeTypes[vmc->c] = DaoNamespace_GetType( ns, (DaoValue*) & tmp );
+			return DaoProcess_PutDouble( self, res ) == NULL;
 		}
 	}
 	return 1;
 }
-void DaoContext_Sort( DaoContext *self, DaoVmCode *vmc, int index, int entry );
-void DaoContext_Apply( DaoContext *self, DaoVmCode *vmc, int index, int dim, int entry );
+void DaoProcess_Sort( DaoProcess *self, DaoVmCode *vmc, int index, int entry );
+void DaoProcess_Apply( DaoProcess *self, DaoVmCode *vmc, int index, int dim, int entry );
 static DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res )
 {
 	res->type = self->numType;
@@ -2587,14 +2596,15 @@ static void DaoArray_SetValues( DaoArray *self, int i, DaoTuple *tuple )
 	int j, k = i * m;
 	for(j=0; j<m; j++) DaoArray_SetValue( self, k + j, tuple->items[j] );
 }
-static void DaoContext_FailedMethod( DaoContext *self )
+static void DaoProcess_FailedMethod( DaoProcess *self )
 {
-	if( self->process->status == DAO_VMPROC_ABORTED )
-		DaoContext_RaiseException( self, DAO_ERROR_VALUE, "functional method failed" );
+	if( self->status == DAO_VMPROC_ABORTED )
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "functional method failed" );
 	else
-		DaoContext_RaiseException( self, DAO_ERROR_VALUE, "invalid return value" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid return value" );
 }
-static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+#if 0
+static void DaoProcess_Fold( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 	DaoValue *res = NULL, *param = self->regValues[ vmc->b ];
 	DaoTuple *tuple = & param->xTuple;
@@ -2621,11 +2631,11 @@ static void DaoContext_Fold( DaoContext *self, DaoVmCode *vmc, int index, int en
 		if( DaoValue_Move( returned, item, type ) == 0 ) goto MethodFailed;
 	}
 	self->vmc = vmc; /* it is changed! */
-	DaoContext_PutValue( self, self->process->returned );
+	DaoProcess_PutValue( self, self->process->returned );
 	return;
-MethodFailed: DaoContext_FailedMethod( self );
+MethodFailed: DaoProcess_FailedMethod( self );
 }
-static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+static void DaoProcess_Fold2( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 	DaoValue tmp;
 	DaoValue *returned = self->process->returned;
@@ -2653,14 +2663,14 @@ static void DaoContext_Fold2( DaoContext *self, DaoVmCode *vmc, int index, int e
 		if( DaoValue_Move( returned, item, type ) == 0 ) goto MethodFailed;
 	}
 	self->vmc = vmc; /* it is changed! */
-	DaoContext_PutValue( self, self->process->returned );
+	DaoProcess_PutValue( self, self->process->returned );
 	return;
-MethodFailed: DaoContext_FailedMethod( self );
+MethodFailed: DaoProcess_FailedMethod( self );
 }
-static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+static void DaoProcess_Unfold( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 	DaoValue *param = self->regValues[ vmc->b ];
-	DaoList *result = DaoContext_PutList( self );
+	DaoList *result = DaoProcess_PutList( self );
 	DaoType *type = self->regTypes[ index + 1 ];
 	DaoValue **init = & self->regValues[ index + 1 ];
 	DaoValue_Move( param, init, type );
@@ -2674,7 +2684,7 @@ static void DaoContext_Unfold( DaoContext *self, DaoVmCode *vmc, int index, int 
 		DaoProcess_ExecuteSection( self->process, entry );
 	}
 	return;
-MethodFailed: DaoContext_FailedMethod( self );
+MethodFailed: DaoProcess_FailedMethod( self );
 }
 static int DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
 {
@@ -2702,7 +2712,7 @@ static int DaoArray_TypeShape( DaoArray *self, DaoArray *array, DaoType *type )
 	DArray_Delete( dims );
 	return 1;
 }
-static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+static int DaoProcess_ListMapSIC( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 	DaoValue *res = NULL;
 	DaoValue *param = self->regValues[ vmc->b ];
@@ -2719,7 +2729,7 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
 			if( size != tuple->items[j]->xList.items->size ) return 1;
 	}
 	size = list->items->size;
-	if( vmc->a != DVM_FUNCT_COUNT && vmc->a != DVM_FUNCT_EACH ) result = DaoContext_PutList( self );
+	if( vmc->a != DVM_FUNCT_COUNT && vmc->a != DVM_FUNCT_EACH ) result = DaoProcess_PutList( self );
 	for(i=0; i<size; i++){
 		self->regValues[index]->xInteger.value = i;
 		DaoProcess_ExecuteSection( self->process, entry );
@@ -2757,10 +2767,10 @@ static int DaoContext_ListMapSIC( DaoContext *self, DaoVmCode *vmc, int index, i
 		}
 	}
 	self->vmc = vmc; /* it is changed! */
-	if( vmc->a == DVM_FUNCT_COUNT ) DaoContext_PutInteger( self, count );
+	if( vmc->a == DVM_FUNCT_COUNT ) DaoProcess_PutInteger( self, count );
 	return 0;
 }
-static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+static int DaoProcess_ArrayMapSIC( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 #ifdef DAO_WITH_NUMARRAY
 	DaoValue *param = self->regValues[ vmc->b ];
@@ -2784,12 +2794,12 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 	if( vmc->a != DVM_FUNCT_COUNT && vmc->a != DVM_FUNCT_EACH ){
 		if( vmc->a == DVM_FUNCT_MAP ){
 			int last = (vmc-2)->a;
-			result = DaoContext_PutArray( self );
+			result = DaoProcess_PutArray( self );
 			if( DaoArray_TypeShape( result, array, self->regTypes[last] ) == 0 ){
-				DaoContext_RaiseException( self, DAO_WARNING, "invalid return type" );
+				DaoProcess_RaiseException( self, DAO_WARNING, "invalid return type" );
 			}
 		}else{
-			list = DaoContext_PutList( self );
+			list = DaoProcess_PutList( self );
 		}
 	}
 	memset( & tmp, 0, sizeof(DaoValue) );
@@ -2835,38 +2845,38 @@ static int DaoContext_ArrayMapSIC( DaoContext *self, DaoVmCode *vmc, int index, 
 		}
 	}
 	self->vmc = vmc; /* it is changed! */
-	if( vmc->a == DVM_FUNCT_COUNT ) DaoContext_PutInteger( self, count );
+	if( vmc->a == DVM_FUNCT_COUNT ) DaoProcess_PutInteger( self, count );
 #else
-	DaoContext_RaiseException( self, DAO_DISABLED_NUMARRAY, NULL );
+	DaoProcess_RaiseException( self, DAO_DISABLED_NUMARRAY, NULL );
 #endif
 	return 0;
 }
-static void DaoContext_MapSIC( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+static void DaoProcess_MapSIC( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 	DaoValue *param = self->regValues[ vmc->b ];
 	DaoTuple *tuple = & param->xTuple;
 	int j, k;
 	if( param->type == DAO_LIST ){
-		DaoContext_ListMapSIC( self, vmc, index, entry );
+		DaoProcess_ListMapSIC( self, vmc, index, entry );
 	}else if( param->type == DAO_ARRAY ){
-		DaoContext_ArrayMapSIC( self, vmc, index, entry );
+		DaoProcess_ArrayMapSIC( self, vmc, index, entry );
 	}else if( param->type == DAO_TUPLE ){
 		k = tuple->items[0]->type;
 		for( j=1; j<tuple->size; j++ ) if( k != tuple->items[j]->type ) goto InvalidParam;
 		if( k == DAO_ARRAY ){
-			if( DaoContext_ArrayMapSIC( self, vmc, index, entry ) ) goto InvalidParam;
+			if( DaoProcess_ArrayMapSIC( self, vmc, index, entry ) ) goto InvalidParam;
 		}else if( k == DAO_LIST ){
-			if( DaoContext_ListMapSIC( self, vmc, index, entry ) ) goto InvalidParam;
+			if( DaoProcess_ListMapSIC( self, vmc, index, entry ) ) goto InvalidParam;
 		}else goto InvalidParam;
 	}else{
 		goto InvalidParam;
 	}
 	return;
 InvalidParam:
-	DaoContext_RaiseException( self, DAO_ERROR, "invalid parameter" );
+	DaoProcess_RaiseException( self, DAO_ERROR, "invalid parameter" );
 }
 int DaoArray_FromList( DaoArray *self, DaoList *list, DaoType *tp );
-static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int index, int entry )
+static void DaoProcess_DataFunctional( DaoProcess *self, DaoVmCode *vmc, int index, int entry )
 {
 	int count = DaoValue_GetInteger( self->regValues[ vmc->b ] );
 	int i, stype=1, isconst = 0;
@@ -2884,10 +2894,10 @@ static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int ind
 	switch( vmc->a ){
 	case DVM_FUNCT_ARRAY :
 		list = DaoList_New();
-		array = DaoContext_PutArray( self );
+		array = DaoProcess_PutArray( self );
 		break;
-	case DVM_FUNCT_STRING : string = DaoContext_PutMBString( self, "" ); break;
-	case DVM_FUNCT_LIST : list = DaoContext_PutList( self ); break;
+	case DVM_FUNCT_STRING : string = DaoProcess_PutMBString( self, "" ); break;
+	case DVM_FUNCT_LIST : list = DaoProcess_PutList( self ); break;
 	default : break;
 	}
 	for(i=0; i<count; i++){
@@ -2912,17 +2922,17 @@ static void DaoContext_DataFunctional( DaoContext *self, DaoVmCode *vmc, int ind
 #ifdef DAO_WITH_NUMARRAY
 	if( vmc->a == DVM_FUNCT_ARRAY ){
 		if( DaoArray_FromList( array, list, self->regTypes[ vmc->c ] ) ==0 ){
-			DaoContext_RaiseException( self, DAO_ERROR, "invalid array()" );
+			DaoProcess_RaiseException( self, DAO_ERROR, "invalid array()" );
 		}
 		DaoList_Delete( list );
 	}
 #else
 	if( vmc->a == DVM_FUNCT_ARRAY ){
-		DaoContext_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+		DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
 	}
 #endif
 }
-static void DaoContext_ApplyList( DaoContext *self, DaoVmCode *vmc, int index, int vdim, int entry )
+static void DaoProcess_ApplyList( DaoProcess *self, DaoVmCode *vmc, int index, int vdim, int entry )
 {
 	DaoValue *res = NULL;
 	DaoValue *param = self->regValues[ vmc->b ];
@@ -2943,8 +2953,10 @@ static void DaoContext_ApplyList( DaoContext *self, DaoVmCode *vmc, int index, i
 	}
 	self->vmc = vmc; /* it is changed! */
 }
-void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
+#endif
+void DaoProcess_DoFunctional( DaoProcess *self, DaoVmCode *vmc )
 {
+#if 0
 	DaoValue *param = self->regValues[ vmc->b ];
 	DaoTuple *tuple = & param->xTuple;
 	DaoVmCode *vmcs = self->codes;
@@ -2960,64 +2972,65 @@ void DaoContext_DoFunctional( DaoContext *self, DaoVmCode *vmc )
 		}
 	}
 	if( i <0 || i >= entry ){
-		DaoContext_RaiseException( self, DAO_ERROR, "code block not found" );
+		DaoProcess_RaiseException( self, DAO_ERROR, "code block not found" );
 		return;
 	}
 	entry = i;
 	switch( vmc->a ){
 	case DVM_FUNCT_APPLY :
 		if( param->type == DAO_LIST ){
-			DaoContext_ApplyList( self, vmc, index, idc-1, entry );
+			DaoProcess_ApplyList( self, vmc, index, idc-1, entry );
 		}else if( param->type == DAO_ARRAY ){
 #ifdef DAO_WITH_NUMARRAY
-			DaoContext_Apply( self, vmc, index, idc-1, entry );
+			DaoProcess_Apply( self, vmc, index, idc-1, entry );
 #else
-			DaoContext_RaiseException( self, DAO_DISABLED_NUMARRAY, NULL );
+			DaoProcess_RaiseException( self, DAO_DISABLED_NUMARRAY, NULL );
 #endif
 		}else{
-			DaoContext_RaiseException( self, DAO_ERROR, "apply currently is only supported for numeric arrays and lists" );
+			DaoProcess_RaiseException( self, DAO_ERROR, "apply currently is only supported for numeric arrays and lists" );
 		}
 		break;
 	case DVM_FUNCT_SORT :
-		DaoContext_Sort( self, vmc, index, entry );
+		DaoProcess_Sort( self, vmc, index, entry );
 		break;
 	case DVM_FUNCT_FOLD :
 		if( param->type != DAO_ARRAY && param->type != DAO_LIST && param->type != DAO_TUPLE ){
-			DaoContext_RaiseException( self, DAO_ERROR, "invalid fold/reduce()" );
+			DaoProcess_RaiseException( self, DAO_ERROR, "invalid fold/reduce()" );
 			break;
 		}
 		if( param->type == DAO_TUPLE ){
 			if( tuple->size ==0 ) break;
 			if( tuple->items[0]->type == DAO_LIST )
-				DaoContext_Fold( self, vmc, index, entry );
+				DaoProcess_Fold( self, vmc, index, entry );
 			else if( tuple->items[0]->type == DAO_ARRAY )
-				DaoContext_Fold2( self, vmc, index, entry );
+				DaoProcess_Fold2( self, vmc, index, entry );
 		}else if( param->type == DAO_ARRAY ){
-			DaoContext_Fold2( self, vmc, index, entry );
+			DaoProcess_Fold2( self, vmc, index, entry );
 		}else{
-			DaoContext_Fold( self, vmc, index, entry );
+			DaoProcess_Fold( self, vmc, index, entry );
 		}
 		break;
 	case DVM_FUNCT_UNFOLD :
-		DaoContext_Unfold( self, vmc, index, entry );
+		DaoProcess_Unfold( self, vmc, index, entry );
 		break;
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
 	case DVM_FUNCT_INDEX :
 	case DVM_FUNCT_COUNT :
 	case DVM_FUNCT_EACH :
-		DaoContext_MapSIC( self, vmc, index, entry );
+		DaoProcess_MapSIC( self, vmc, index, entry );
 		break;
 	case DVM_FUNCT_REPEAT :
 	case DVM_FUNCT_STRING :
 	case DVM_FUNCT_ARRAY :
 	case DVM_FUNCT_LIST :
-		DaoContext_DataFunctional( self, vmc, index, entry );
+		DaoProcess_DataFunctional( self, vmc, index, entry );
 		break;
 	default : break;
 	}
 	self->process->status = DAO_VMPROC_RUNNING;
 	self->vmc = vmc; /* it is changed! */
+#endif
 }
 static void DaoType_WriteMainName( DaoType *self, DaoStream *stream )
 {
@@ -3151,88 +3164,86 @@ void DaoProcess_PrintException( DaoProcess *self, int clear )
 
 DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 {
-	uchar_t  modes[] = { 0, 0, 0 };
 	DaoType *types[] = { NULL, NULL, NULL };
 	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
-	DaoContext *ctx = self->topFrame->context;
-	DaoVmCode *vmc = ctx->vmc;
+	DaoVmCode *vmc = self->activeCode;
 
 	dao_fe_clear();
-	ctx->idClearFE = -1;
-	ctx->codes = vmc;
-	if( ctx->regTypes == NULL ) ctx->regTypes = types;
-	if( ctx->routine->annotCodes->size == 0 ) DArray_Append( ctx->routine->annotCodes, & vmcx );
+	//self->idClearFE = -1;
+	self->activeValues = self->stackValues;
+	if( self->activeTypes == NULL ) self->activeTypes = types;
+	if( self->activeRoutine->annotCodes->size == 0 )
+		DArray_Append( self->activeRoutine->annotCodes, & vmcx );
 
 	switch( vmc->code ){
 	case DVM_MOVE :
-		DaoContext_DoMove( ctx, vmc ); break;
+		DaoProcess_DoMove( self, vmc ); break;
 	case DVM_ADD : case DVM_SUB : case DVM_MUL :
 	case DVM_DIV : case DVM_MOD : case DVM_POW :
-		DaoContext_DoBinArith( ctx, vmc );
+		DaoProcess_DoBinArith( self, vmc );
 		break;
 	case DVM_AND : case DVM_OR : case DVM_LT :
 	case DVM_LE :  case DVM_EQ : case DVM_NE :
-		DaoContext_DoBinBool( ctx, vmc );
+		DaoProcess_DoBinBool( self, vmc );
 		break;
 	case DVM_IN :
-		DaoContext_DoInTest( ctx, vmc );
+		DaoProcess_DoInTest( self, vmc );
 		break;
 	case DVM_NOT : case DVM_UNMS :
-		DaoContext_DoUnaArith( ctx, vmc ); break;
+		DaoProcess_DoUnaArith( self, vmc ); break;
 	case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
-		DaoContext_DoBitLogic( ctx, vmc ); break;
+		DaoProcess_DoBitLogic( self, vmc ); break;
 	case DVM_BITLFT : case DVM_BITRIT :
-		DaoContext_DoBitShift( ctx, vmc ); break;
+		DaoProcess_DoBitShift( self, vmc ); break;
 	case DVM_BITREV :
-		DaoContext_DoBitFlip( ctx, vmc ); break;
+		DaoProcess_DoBitFlip( self, vmc ); break;
 	case DVM_CHECK :
-		DaoContext_DoCheck( ctx, vmc ); break;
+		DaoProcess_DoCheck( self, vmc ); break;
 	case DVM_NAMEVA :
-		DaoContext_BindNameValue( ctx, vmc ); break;
+		DaoProcess_BindNameValue( self, vmc ); break;
 	case DVM_PAIR :
-		DaoContext_DoPair( ctx, vmc ); break;
+		DaoProcess_DoPair( self, vmc ); break;
 	case DVM_TUPLE :
-		DaoContext_DoTuple( ctx, vmc ); break;
+		DaoProcess_DoTuple( self, vmc ); break;
 	case DVM_GETI :
 	case DVM_GETMI :
-		DaoContext_DoGetItem( ctx, vmc ); break;
+		DaoProcess_DoGetItem( self, vmc ); break;
 	case DVM_GETF :
-		DaoContext_DoGetField( ctx, vmc ); break;
+		DaoProcess_DoGetField( self, vmc ); break;
 	case DVM_SETI :
 	case DVM_SETMI :
-		DaoContext_DoSetItem( ctx, vmc ); break;
+		DaoProcess_DoSetItem( self, vmc ); break;
 	case DVM_SETF :
-		DaoContext_DoSetField( ctx, vmc ); break;
+		DaoProcess_DoSetField( self, vmc ); break;
 	case DVM_LIST :
-		DaoContext_DoList( ctx, vmc ); break;
+		DaoProcess_DoList( self, vmc ); break;
 	case DVM_MAP :
 	case DVM_HASH :
-		DaoContext_DoMap( ctx, vmc ); break;
+		DaoProcess_DoMap( self, vmc ); break;
 	case DVM_ARRAY :
-		DaoContext_DoArray( ctx, vmc ); break;
+		DaoProcess_DoArray( self, vmc ); break;
 	case DVM_MATRIX :
-		DaoContext_DoMatrix( ctx, vmc ); break;
+		DaoProcess_DoMatrix( self, vmc ); break;
 	case DVM_MATH :
-		DaoVM_DoMath( ctx, vmc, ctx->regValues[ vmc->c ], ctx->regValues[1] );
+		DaoVM_DoMath( self, vmc, self->activeValues[ vmc->c ], self->activeValues[1] );
 		break;
 	case DVM_CURRY :
 	case DVM_MCURRY :
-		DaoContext_DoCurry( ctx, vmc );
+		DaoProcess_DoCurry( self, vmc );
 		break;
 	case DVM_CALL :
 	case DVM_MCALL :
-		DaoContext_DoCall( ctx, vmc ); break;
+		DaoProcess_DoCall( self, vmc ); break;
 	default: break;
 	}
-	ctx->regTypes = NULL;
-	DaoContext_CheckFE( ctx );
+	self->activeTypes = NULL;
+	DaoProcess_CheckFE( self );
 	if( self->exceptions->size >0 ){
 		DaoProcess_PrintException( self, 1 );
-		DTuple_Clear( ctx->regArray );
 		return NULL;
 	}
 
 	/* avoid GC */
-	/* DArray_Clear( ctx->regArray ); */
-	return ctx->regValues[ vmc->c ];
+	/* DArray_Clear( self->regArray ); */
+	return self->stackValues[ vmc->c ];
 }

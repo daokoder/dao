@@ -86,9 +86,9 @@ struct DaoNamespace
 	DMap    *tokens; /* hash<DString,int> */
 	ullong_t time;
 
-	DaoProcess *vmpEvalConst;
-	DaoRoutine   *routEvalConst;
-	DaoType     **tempTypes;
+	DaoProcess  *constEvalProcess;
+	DaoRoutine  *constEvalRoutine;
+	DArray      *tempTypes;
 };
 
 DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );

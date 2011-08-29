@@ -71,7 +71,7 @@ void DaoCModule_Delete( DaoCModule *self )
 	dao_free( self );
 }
 
-static void DNS_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
+static void DNS_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 {
 	DaoNamespace *self = & self0->xNamespace;
 	DNode *node = NULL;
@@ -82,25 +82,25 @@ static void DNS_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
 	pm = LOOKUP_PM( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
-	if( pm == DAO_DATA_PRIVATE && self != ctx->nameSpace ) goto FieldNoPermit;
+	if( pm == DAO_DATA_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
 	if( st == DAO_GLOBAL_CONSTANT ){
 		if( up >= self->cstDataTable->size ) goto InvalidField;
-		DaoContext_PutValue( ctx, self->cstDataTable->items.pArray[up]->items.pValue[id] );
+		DaoProcess_PutValue( proc, self->cstDataTable->items.pArray[up]->items.pValue[id] );
 	}else{
 		if( up >= self->varDataTable->size ) goto InvalidField;
-		DaoContext_PutValue( ctx, self->varDataTable->items.pArray[up]->items.pValue[id] );
+		DaoProcess_PutValue( proc, self->varDataTable->items.pArray[up]->items.pValue[id] );
 	}
 	return;
 FieldNotExist:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 	return;
 FieldNoPermit:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTPERMIT, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->mbs );
 	return;
 InvalidField:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->mbs );
 }
-static void DNS_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoValue *value )
+static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
 {
 	DaoNamespace *self = & self0->xNamespace;
 	DaoType *type;
@@ -113,7 +113,7 @@ static void DNS_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoVa
 	pm = LOOKUP_PM( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
-	if( pm == DAO_DATA_PRIVATE && self != ctx->nameSpace ) goto FieldNoPermit;
+	if( pm == DAO_DATA_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
 	if( st == DAO_GLOBAL_CONSTANT ) goto FieldNoPermit;
 	if( up >= self->varDataTable->size ) goto InvalidField;
 	type = self->varDataTable->items.pArray[up]->items.pType[id];
@@ -121,21 +121,21 @@ static void DNS_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoVa
 	if( DaoValue_Move( value, dest, type ) ==0 ) goto TypeNotMatching;
 	return;
 FieldNotExist:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 	return;
 FieldNoPermit:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD_NOTPERMIT, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->mbs );
 	return;
 TypeNotMatching:
-	DaoContext_RaiseException( ctx, DAO_ERROR_TYPE, "not matching" );
+	DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "not matching" );
 	return;
 InvalidField:
-	DaoContext_RaiseException( ctx, DAO_ERROR_FIELD, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->mbs );
 }
-static void DNS_GetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N )
+static void DNS_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
 }
-static void DNS_SetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N, DaoValue *value )
+static void DNS_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
 }
 static DaoTypeCore nsCore =
@@ -336,7 +336,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->hostCdata = hostype;
-		defparser->routine = self->routEvalConst;
+		defparser->routine = self->constEvalRoutine;
 
 		if( typer->funcItems != NULL ){
 			while( typer->funcItems[ size ].proto != NULL ) size ++;
@@ -418,7 +418,7 @@ int DaoNamespace_DefineType( DaoNamespace *self, const char *name, DaoType *type
 
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
-	parser->routine = self->routEvalConst;
+	parser->routine = self->constEvalRoutine;
 	if( ! DaoToken_Tokenize( parser->tokens, name, 0, 0, 0 ) ) goto Error;
 	if( parser->tokens->size == 0 ) goto Error;
 	tokens = parser->tokens->items.pToken;
@@ -604,7 +604,7 @@ DaoFunction* DaoNamespace_MakeFunction( DaoNamespace *self,
 		parser->defParser = defparser = DaoParser_New();
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
-		defparser->routine = self->routEvalConst;
+		defparser->routine = self->constEvalRoutine;
 	}
 	func = DaoNamespace_ParsePrototype( self, proto, parser );
 	if( old == NULL ){
@@ -639,7 +639,7 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 	parser->defParser = defparser = DaoParser_New();
 	defparser->vmSpace = self->vmSpace;
 	defparser->nameSpace = self;
-	defparser->routine = self->routEvalConst;
+	defparser->routine = self->constEvalRoutine;
 	while( items[i].fpter != NULL ){
 		func = DaoNamespace_MakeFunction( self, items[i].proto, parser );
 		if( func ) func->pFunc = (DaoFuncPtr)items[i].fpter;
@@ -752,19 +752,19 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	value = (DaoValue*) DaoList_New();
 	DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
 
-	self->tempTypes = NULL;
-	self->vmpEvalConst = DaoProcess_New(vms);
-	self->routEvalConst = DaoRoutine_New();
-	self->routEvalConst->routType = dao_routine;
-	self->routEvalConst->nameSpace = self;
+	self->tempTypes = DArray_New(0);
+	self->constEvalProcess = DaoProcess_New(vms);
+	self->constEvalRoutine = DaoRoutine_New();
+	self->constEvalRoutine->routType = dao_routine;
+	self->constEvalRoutine->nameSpace = self;
+	self->constEvalProcess->activeNamespace = self;
 	GC_IncRC( dao_routine );
 	GC_IncRC( self );
-	DaoProcess_PushRoutine( self->vmpEvalConst, self->routEvalConst );
-	self->vmpEvalConst->topFrame->context->trait |= DAO_DATA_CONST;
-	self->routEvalConst->trait |= DAO_DATA_CONST;
-	self->vmpEvalConst->trait |= DAO_DATA_CONST;
-	DArray_Append( self->cstData, (DaoValue*) self->routEvalConst );
-	DArray_Append( self->cstData, (DaoValue*) self->vmpEvalConst );
+	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL, DVM_CALL );
+	self->constEvalRoutine->trait |= DAO_DATA_CONST;
+	self->constEvalProcess->trait |= DAO_DATA_CONST;
+	DArray_Append( self->cstData, (DaoValue*) self->constEvalRoutine );
+	DArray_Append( self->cstData, (DaoValue*) self->constEvalProcess );
 	DString_Delete( name );
 	self->cstUser = self->cstData->size;
 
@@ -799,10 +799,10 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	}
 	DaoList_Delete( self->argParams );
 
-	if( self->tempTypes ) dao_free( self->tempTypes );
 	GC_DecRC( self->udfType1 );
 	GC_DecRC( self->udfType2 );
 	DMap_Delete( self->lookupTable );
+	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->cstData );
 	DArray_Delete( self->varData );
 	DArray_Delete( self->varType );
@@ -1526,7 +1526,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		}
 	}
 	/* abtp might be rout->routType, which might be NULL,
-	 * in case rout is DaoNamespace.routEvalConst */
+	 * in case rout is DaoNamespace.constEvalRoutine */
 	if( abtp && abtp->typer ==NULL ) abtp->typer = DaoValue_GetTyper( p );
 	DString_Delete( mbs );
 	if( nested ) DArray_Delete( nested );

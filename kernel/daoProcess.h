@@ -32,14 +32,42 @@ struct DaoStackFrame
 	ushort_t    depth;
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2];
 
-	size_t      stackBase;
-	DaoRoutine *routine;
-	DaoContext *context;
+	ushort_t      parCount;
+	size_t        stackBase;
+	DaoVmCode    *codes; /* = routine->vmCodes->codes */
+	DaoRoutine   *routine;
+	DaoFunction  *function;
+	DaoObject    *object;
 
-	DaoStackFrame *prev;
-	DaoStackFrame *next;
-	DaoStackFrame *rollback;
+	DaoStackFrame  *prev;
+	DaoStackFrame  *next;
+	DaoStackFrame  *rollback;
 };
+
+/*
+   The stack structure of a Dao virtual machine process:
+
+   1. The call/stack frames are organized into a linked list structure;
+
+   2. The first frame is auxialiary frame that contains one stack value,
+   which will be used to hold the returned value of the process (when the 
+   DVM_RETURN instruction is executed while the_current_frame->returning==-1); 
+
+   3. The stack values are stored in a dynamic array which can grow when
+   a new frame is pushed into the stack;
+
+   4. When the value stack grows, it must have extra space that can hold
+   the maximum number of parameters (namely, @stackSize > @stackTop + DAO_MAX_PARAM); 
+
+   5. When a Dao function or C function is called, the parameters must be
+   passed to the stack values starting from @stackTop, then a new frame can
+   be push. In this way, it will avoid of the problem of invalidating some of
+   the pointers when the stack is growed;
+
+   6. After the value stack is expanded, the expanded part should be set to zero;
+   the rest should be kept intact. The values from @stackTop to @stackSize can be
+   collected when it is convenient, not each time when a frame is popped off.
+ */
 
 struct DaoProcess
 {
@@ -50,11 +78,19 @@ struct DaoProcess
 	DaoStackFrame *firstFrame; /* the first frame, never active */
 	DaoStackFrame *topFrame; /* top call frame */
 
-	DaoValue  **stackValues;
-	size_t      stackSize;
-	size_t      stackTop;
+	DaoVmCode     *activeCode;
+	DaoRoutine    *activeRoutine;
+	DaoObject     *activeObject;
+	DaoNamespace  *activeNamespace;
 
-	DaoValue *returned;
+	DaoType   **activeTypes;
+	DaoValue  **activeValues;
+
+	DaoValue  **paramValues; /* = stackValues + stackTop */
+	DaoValue  **stackValues;
+	size_t      stackSize; /* maximum number of values that can be hold by stackValues; */
+	size_t      stackTop; /* one past the last active stack value; */
+
 	DaoType  *abtype; /* for coroutine */
 	DArray   *parResume;/* for coroutine */
 	DArray   *parYield;
@@ -75,19 +111,21 @@ struct DaoProcess
 DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 void DaoProcess_Delete( DaoProcess *self );
 
-/* Push a routine into the calling stack of the VM process, new context is created */
-void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine );
-/* Push an initialized context into the calling stack of the VM process */
-void DaoProcess_PushContext( DaoProcess *self, DaoContext *context );
-DaoContext* DaoProcess_MakeContext( DaoProcess *self, DaoRoutine *routine );
-void DaoProcess_PopContext( DaoProcess *self );
+DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
+void DaoProcess_PopFrame( DaoProcess *self );
+void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object, int call );
+void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
 
+/* Push a routine into the calling stack of the VM process, new frame is created */
+void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine );
+
+int DaoProcess_TryCall( DaoProcess *self, DaoValue *f, DaoValue *o, DaoValue *p[], int n );
 int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 /* Execute from the top of the calling stack */
 int DaoProcess_Execute( DaoProcess *self );
 int DaoProcess_ExecuteSection( DaoProcess *self, int entry );
 
-DaoProcess* DaoProcess_Create( DaoContext *ctx, DaoValue *par[], int N );
+DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
 
 /* Resume a coroutine */
 /* coroutine.yeild( a, b, ... ); store object a,b,... in "DaoList *list"
@@ -108,14 +146,14 @@ typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
 typedef void (*DaoJIT_QuitFPT)();
 typedef void (*DaoJIT_FreeFPT)( DaoRoutine *routine );
 typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
-typedef void (*DaoJIT_ExecuteFPT)( DaoContext *context, int jitcode );
+typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *context, int jitcode );
 
 struct DaoJIT
 {
 	void (*Quit)();
 	void (*Free)( DaoRoutine *routine );
 	void (*Compile)( DaoRoutine *routine );
-	void (*Execute)( DaoContext *context, int jitcode );
+	void (*Execute)( DaoProcess *context, int jitcode );
 };
 
 extern struct DaoJIT dao_jit;

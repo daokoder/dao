@@ -25,10 +25,10 @@
 #include"daoValue.h"
 #include"daoNamespace.h"
 
-static void DaoClass_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
+static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 {
-	int tid = ctx->routine->routHost ? ctx->routine->routHost->tid : 0;
-	DaoType *type = ctx->routine->routHost;
+	int tid = proc->activeRoutine->routHost ? proc->activeRoutine->routHost->tid : 0;
+	DaoType *type = proc->activeRoutine->routHost;
 	DaoClass *host = tid == DAO_OBJECT ? & type->aux->xClass : NULL;
 	DaoClass *self = & self0->xClass;
 	DString *mbs = DString_New(1);
@@ -38,13 +38,13 @@ static void DaoClass_GetField( DaoValue *self0, DaoContext *ctx, DString *name )
 		DString_SetMBS( mbs, DString_GetMBS( self->className ) );
 		DString_AppendMBS( mbs, "." );
 		DString_Append( mbs, name );
-		DaoContext_RaiseException( ctx, rc, mbs->mbs );
+		DaoProcess_RaiseException( proc, rc, mbs->mbs );
 	}else{
-		DaoContext_PutReference( ctx, value );
+		DaoProcess_PutReference( proc, value );
 	}
 	DString_Delete( mbs );
 }
-static void DaoClass_SetField( DaoValue *self0, DaoContext *ctx, DString *name, DaoValue *value )
+static void DaoClass_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
 {
 	DaoClass *self = & self0->xClass;
 	DNode *node = DMap_Find( self->lookupTable, name );
@@ -54,19 +54,19 @@ static void DaoClass_SetField( DaoValue *self0, DaoContext *ctx, DString *name, 
 		DaoValue **dt = self->glbDataTable->items.pArray[up]->items.pValue + id;
 		DaoType *tp = self->glbTypeTable->items.pArray[up]->items.pType[ id ];
 		if( DaoValue_Move( value, dt, tp ) ==0 )
-			DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "not matched" );
+			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
 	}else{
 		/* XXX permission */
-		DaoContext_RaiseException( ctx, DAO_ERROR_FIELD, "not exist" );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, "not exist" );
 	}
 }
-static void DaoClass_GetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N )
+static void DaoClass_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
 }
-static void DaoClass_SetItem( DaoValue *self0, DaoContext *ctx, DaoValue *ids[], int N, DaoValue *value )
+static void DaoClass_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
 }
-static DaoValue* DaoClass_Copy(  DaoValue *self, DaoContext *ctx, DMap *cycData )
+static DaoValue* DaoClass_Copy(  DaoValue *self, DaoProcess *proc, DMap *cycData )
 {
 	return self;
 }

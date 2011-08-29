@@ -4219,22 +4219,6 @@ DaoFunction* DaoFunction_New()
 	self->ffiData = NULL;
 	return self;
 }
-int DaoFunction_Call( DaoFunction *self, DaoContext *ctx, DaoValue *obj, DaoValue *p[], int n )
-{
-	DaoValue *buffer[ DAO_MAX_PARAM ];
-	int i;
-	memset( buffer, 0, DAO_MAX_PARAM * sizeof(DaoValue*) );
-	n = DRoutine_PassParams( (DRoutine*)self, obj, buffer, p, n, DVM_CALL );
-	if( n ==0 ){
-		DaoContext_RaiseException( ctx, DAO_ERROR_PARAM, "not matching" );
-		return DAO_ERROR_PARAM;
-	}
-	ctx->thisFunction = self;
-	self->pFunc( ctx, buffer, n-1 );
-	ctx->thisFunction = NULL;
-	DaoValue_ClearAll( buffer, n-1 );
-	return 0;
-}
 
 void DaoFunCurry_Delete( DaoFunCurry *self )
 {
