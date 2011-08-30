@@ -175,7 +175,7 @@ void DaoCallThread_Run( DaoCallThread *self )
 			proc = future->process;
 			ctx = future->context;
 			if( proc == NULL ){
-				proc = future->process = DaoProcess_New( ctx->vmSpace );
+				proc = future->process = DaoProcess_New( ctx->vmSpace, 0 );
 				GC_IncRC( proc );
 			}
 			DaoProcess_PushContext( proc, ctx );

@@ -3033,7 +3033,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	DaoType *abtp, *abtp2;
 	DString *str, *alias = NULL;
 	DaoValue *dv = NULL;
-	int global = storeType & (DAO_DATA_GLOBAL|DAO_DATA_STATIC);
+	int global = storeType & (DAO_DECL_GLOBAL|DAO_DECL_STATIC);
 	int sep = DTOK_COMMA, value = 0;
 	int id, rb, comma, semco, explicit=0;
 	int reg, cst = 0;
@@ -3236,41 +3236,41 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		storeType2 = 0;
 		needName = 0;
 		while( tki >= DKEY_CONST && tki <= DKEY_VAR ){
-			int comb = ( storeType & DAO_DATA_VAR );
+			int comb = ( storeType & DAO_DECL_VAR );
 			needName = 1;
 			switch( tki ){
 			case DKEY_CONST :
-				storeType |= DAO_DATA_CONST;
-				storeType2 |= DAO_DATA_CONST;
-				if( ! (storeType & DAO_DATA_LOCAL) ){
-					if( self->levelBase + self->lexLevel ==0 ) storeType |= DAO_DATA_GLOBAL;
-					else if( self->isClassBody ) storeType |= DAO_DATA_MEMBER;
+				storeType |= DAO_DECL_CONST;
+				storeType2 |= DAO_DECL_CONST;
+				if( ! (storeType & DAO_DECL_LOCAL) ){
+					if( self->levelBase + self->lexLevel ==0 ) storeType |= DAO_DECL_GLOBAL;
+					else if( self->isClassBody ) storeType |= DAO_DECL_MEMBER;
 				}
 				break;
 			case DKEY_GLOBAL :
-				comb |= ( storeType & (DAO_DATA_LOCAL|DAO_DATA_CONST) );
-				storeType |= DAO_DATA_GLOBAL;
-				storeType2 |= DAO_DATA_GLOBAL;
+				comb |= ( storeType & (DAO_DECL_LOCAL|DAO_DECL_CONST) );
+				storeType |= DAO_DECL_GLOBAL;
+				storeType2 |= DAO_DECL_GLOBAL;
 				break;
 			case DKEY_STATIC :
-				comb |= ( storeType & (DAO_DATA_LOCAL|DAO_DATA_CONST) );
-				storeType |= DAO_DATA_STATIC;
-				storeType2 |= DAO_DATA_STATIC;
-				if( self->levelBase ==0 ) storeType |= DAO_DATA_GLOBAL;
-				if( self->isClassBody ) storeType |= DAO_DATA_MEMBER;
+				comb |= ( storeType & (DAO_DECL_LOCAL|DAO_DECL_CONST) );
+				storeType |= DAO_DECL_STATIC;
+				storeType2 |= DAO_DECL_STATIC;
+				if( self->levelBase ==0 ) storeType |= DAO_DECL_GLOBAL;
+				if( self->isClassBody ) storeType |= DAO_DECL_MEMBER;
 				break;
 			case DKEY_VAR :
 				comb |= storeType;
-				storeType |= DAO_DATA_VAR;
-				storeType2 |= DAO_DATA_VAR;
+				storeType |= DAO_DECL_VAR;
+				storeType2 |= DAO_DECL_VAR;
 				if( self->isClassBody )
-					storeType |= DAO_DATA_MEMBER;
+					storeType |= DAO_DECL_MEMBER;
 				else
-					storeType |= DAO_DATA_LOCAL;
+					storeType |= DAO_DECL_LOCAL;
 				break;
 			default : break;
 			}
-			if( comb || ((storeType & DAO_DATA_STATIC) && ! self->isClassBody) ){
+			if( comb || ((storeType & DAO_DECL_STATIC) && ! self->isClassBody) ){
 				if( comb ==0 ) DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
 				DaoParser_Error2( self, DAO_INVALID_STORAGE, errorStart, start, 0 );
 				return 0;
@@ -3280,16 +3280,16 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			tki = ptok->name;
 		}
 		if( ns->options & DAO_NS_AUTO_GLOBAL ){
-			if( self->levelBase + self->lexLevel ==0 && !(storeType & DAO_DATA_LOCAL) ){
-				storeType |= DAO_DATA_GLOBAL;
+			if( self->levelBase + self->lexLevel ==0 && !(storeType & DAO_DECL_LOCAL) ){
+				storeType |= DAO_DECL_GLOBAL;
 			}
 		}
 		if( self->isClassBody ){
 			if( hostClass->attribs & DAO_CLS_SYNCHRONOUS ){
-				if( storeType & DAO_DATA_STATIC ){
+				if( storeType & DAO_DECL_STATIC ){
 					DaoParser_Error2( self, DAO_INVALID_ACCESS, errorStart, start, 0 );
 				}
-				if( (storeType & DAO_DATA_VAR) && self->permission == DAO_DATA_PUBLIC ){
+				if( (storeType & DAO_DECL_VAR) && self->permission == DAO_DATA_PUBLIC ){
 					DaoParser_Error2( self, DAO_INVALID_STORAGE, errorStart, start, 0 );
 				}
 				if( self->errors->size ) return 0;
@@ -3299,7 +3299,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
 		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM 
 						&& tki > DAO_NOKEY1 && tki < DKEY_EACH )) ){
-			if( tki < DKEY_SUB || tki > DKEY_OPERATOR || storeType2 != DAO_DATA_STATIC ){
+			if( tki < DKEY_SUB || tki > DKEY_OPERATOR || storeType2 != DAO_DECL_STATIC ){
 				DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
 				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 				return 0;
@@ -3933,7 +3933,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	reg = enode.reg;
 	cst = enode.konst;
-	if( cst == 0 && (store & DAO_DATA_CONST) && ! self->isDynamicClass ){
+	if( cst == 0 && (store & DAO_DECL_CONST) && ! self->isDynamicClass ){
 		DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start + 1, end, 0 );
 		return -1;
 	}
@@ -3946,7 +3946,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		}
 	}
 	if( abtp ==0 && value ) abtp = DaoNamespace_GetType( ns, value );
-	if( reg < 0 && abtp && (store == 0 || store == DAO_DATA_LOCAL) ){
+	if( reg < 0 && abtp && (store == 0 || store == DAO_DECL_LOCAL) ){
 		/* prepare default value for local variables */
 		int id = DRoutine_AddConstant( (DRoutine*) self->routine, abtp->value );
 		if( DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ) return -1;
@@ -3961,8 +3961,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		int id = 0;
 		/* printf( "declaring %s\n", varTok->string->mbs ); */
 		DaoParser_DeclareVariable( self, varTok, store, abtp );
-		if( store & DAO_DATA_CONST ){
-			if( store & DAO_DATA_GLOBAL ){
+		if( store & DAO_DECL_CONST ){
+			if( store & DAO_DECL_GLOBAL ){
 				id = DaoNamespace_FindConst( ns, varTok->string );
 				if( id < 0 ){
 					DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, varTok->string );
@@ -3990,7 +3990,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			int st = LOOKUP_ST( regC );
 			int up = LOOKUP_UP( regC );
 			int id = LOOKUP_ID( regC );
-			int isdecl = self->isClassBody && (store & DAO_DATA_MEMBER);
+			int isdecl = self->isClassBody && (store & DAO_DECL_MEMBER);
 			int first = varTok->index;
 			int mid = eq >= 0 ? eq : 0;
 			remove = 0;
@@ -4255,14 +4255,14 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		return;
 	}
 
-	if( storeType & DAO_DATA_LOCAL ){
+	if( storeType & DAO_DECL_LOCAL ){
 		if( MAP_Find( DArray_Top( self->localVarMap ), name ) == NULL ){
 			int id = self->regCount;
 			MAP_Insert( self->routine->localVarType, id, abtp );
 			MAP_Insert( DArray_Top( self->localVarMap ), name, id );
 			DaoParser_PushRegister( self );
 		}
-	}else if( storeType & DAO_DATA_MEMBER ){
+	}else if( storeType & DAO_DECL_MEMBER ){
 		if( self->hostClass ){
 			DaoClass *hostClass = self->hostClass;
 			DNode *node = MAP_Find( hostClass->deflines, name );
@@ -4272,9 +4272,9 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 			}else if( self->isClassBody ){
 				int ln = tok->line;
 				int ec = 0;
-				if( storeType & DAO_DATA_CONST ){
+				if( storeType & DAO_DECL_CONST ){
 					ec = DaoClass_AddConst( hostClass, name, null, perm, ln );
-				}else if( storeType & DAO_DATA_STATIC ){
+				}else if( storeType & DAO_DECL_STATIC ){
 					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm, ln );
 				}else{
 					ec = DaoClass_AddObjectVar( hostClass, name, null, abtp, perm, ln );
@@ -4291,14 +4291,14 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	found = DaoParser_GetRegister( self, tok );
 	if( found >= 0 ) return;
 
-	if( (storeType & DAO_DATA_GLOBAL) && (storeType & DAO_DATA_CONST) ){
+	if( (storeType & DAO_DECL_GLOBAL) && (storeType & DAO_DECL_CONST) ){
 		DaoNamespace_AddConst( nameSpace, name, null, perm );
-	}else if( storeType & DAO_DATA_GLOBAL ){
+	}else if( storeType & DAO_DECL_GLOBAL ){
 		DaoNamespace_AddVariable( nameSpace, name, NULL, abtp, perm );
 	}else{
 		int id = 0;
 		DArray_Append( self->routine->defLocals, tok );
-		if( storeType & DAO_DATA_CONST ){
+		if( storeType & DAO_DECL_CONST ){
 			id = routine->routConsts->size;
 			MAP_Insert( DArray_Top( self->localCstMap ), name, id );
 			DRoutine_AddConstant( (DRoutine*) routine, null );
@@ -4309,7 +4309,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 			DaoParser_PushRegister( self );
 		}
 		tok = (DaoToken*) DArray_Back( self->routine->defLocals );
-		DaoToken_Set( tok, !(storeType & DAO_DATA_CONST), self->lexLevel, id, NULL );
+		DaoToken_Set( tok, !(storeType & DAO_DECL_CONST), self->lexLevel, id, NULL );
 	}
 }
 int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
@@ -4716,7 +4716,7 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 	if( rb >= 0 ) in = DaoParser_FindOpenToken( self, DKEY_IN, start+2, rb, 0 );
 	if( (rb < 0 || rb >= end) && in < 0 ) return -1;
 	if( tokens[start+2]->name == DKEY_VAR ){
-		store = DAO_DATA_LOCAL;
+		store = DAO_DECL_LOCAL;
 		start += 1;
 	}
 

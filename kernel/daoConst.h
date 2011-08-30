@@ -100,17 +100,16 @@ enum DaoMatchType
 	DAO_MT_EQ
 };
 
-enum DaoDataState
+enum DaoVarDeclaration
 {
-	DAO_DATA_LOCAL      = (1<<0), /* for compiling only */
-	DAO_DATA_MEMBER     = (1<<1), /* for compiling only */
-	DAO_DATA_GLOBAL     = (1<<2), /* for compiling only */
-	DAO_DATA_STATIC     = (1<<3), /* for compiling only */
-	DAO_DATA_VAR        = (1<<4), /* for compiling only */
-	DAO_DATA_NOCOPY     = (1<<6), /* data not for copying */
-	DAO_DATA_CONST      = (1<<7)  /* using the highest bit in the trait field */
+	DAO_DECL_LOCAL      = (1<<0), /* for compiling only */
+	DAO_DECL_MEMBER     = (1<<1), /* for compiling only */
+	DAO_DECL_GLOBAL     = (1<<2), /* for compiling only */
+	DAO_DECL_STATIC     = (1<<3), /* for compiling only */
+	DAO_DECL_VAR        = (1<<4), /* for compiling only */
+	DAO_DECL_CONST      = (1<<7)  /* using the highest bit in the trait field */
 };
-enum DaoDataStorage
+enum DaoVarStorage
 {
 	DAO_LOCAL_VARIABLE = 0,
 	DAO_LOCAL_CONSTANT = 1, /* lowest bit set to 1 for constant */
@@ -122,6 +121,13 @@ enum DaoDataStorage
 	DAO_LAST_REGISTER
 };
 
+enum DaoDataTrait
+{
+	DAO_DATA_CONST   = (1<<1), /* using the highest bit in the trait field */
+	DAO_DATA_NOCOPY  = (1<<2), /* data not for copying */
+	DAO_DATA_STACK   = (1<<3), /* stack data from a process */
+	DAO_DATA_CACHE   = (1<<4)  /* cache data from gc */
+};
 enum DaoTypeAttribs
 {
 	DAO_TYPE_EMPTY = (1<<0),

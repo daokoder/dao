@@ -753,7 +753,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
 
 	self->tempTypes = DArray_New(0);
-	self->constEvalProcess = DaoProcess_New(vms);
+	self->constEvalProcess = DaoProcess_New(vms,0);
 	self->constEvalRoutine = DaoRoutine_New();
 	self->constEvalRoutine->routType = dao_routine;
 	self->constEvalRoutine->nameSpace = self;

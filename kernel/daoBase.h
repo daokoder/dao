@@ -82,7 +82,6 @@
 #define pclose _pclose
 #endif
 
-typedef unsigned short ushort_t;
 typedef unsigned long ulong_t;
 
 #ifdef __STRICT_ANSI__

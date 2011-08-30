@@ -800,18 +800,18 @@ DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 		return NULL;
 	}
 	rout = (DRoutine*)DRoutine_Resolve( (DaoValue*)rout, NULL, par+1, N-1, DVM_CALL );
-	if( rout ) passed = DRoutine_PassParams( rout, NULL, proc->paramValues, par+1, N-1, DVM_CALL );
+	if( rout ) passed = DRoutine_PassParams( rout, NULL, proc->freeValues, par+1, N-1, DVM_CALL );
 	if( passed == 0 || rout == NULL || rout->type != DAO_ROUTINE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
 		return NULL;
 	}
 	routine = (DaoRoutine*) rout;
-	vmProc = DaoProcess_New( proc->vmSpace );
+	vmProc = DaoProcess_New( proc->vmSpace, DVM_COROUTINE_PROC_CACHE );
 	DaoProcess_PushFrame( vmProc, routine->regCount );
 	DaoProcess_InitTopFrame( vmProc, routine, NULL, DVM_CALL );
 	vmProc->activeValues = vmProc->stackValues + vmProc->topFrame->stackBase;
 	for(i=0; i<routine->parCount; i++){
-		vmProc->activeValues[i] = proc->paramValues[i];
+		vmProc->activeValues[i] = proc->freeValues[i];
 		GC_IncRC( vmProc->activeValues[i] );
 	}
 	vmProc->status = DAO_VMPROC_SUSPENDED;

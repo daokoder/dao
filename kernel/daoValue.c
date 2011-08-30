@@ -1560,7 +1560,7 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProce
 	DaoObject *object;
 	DRoutine *R = DRoutine_Resolve( (DaoValue*)self->classRoutines, NULL, & param, 1, DVM_CALL );
 	if( R == NULL || R->type != DAO_ROUTINE ) return NULL;
-	passed = DRoutine_PassParams( R, NULL, proc->paramValues, & param, 1, DVM_CALL );
+	passed = DRoutine_PassParams( R, NULL, proc->freeValues, & param, 1, DVM_CALL );
 	if( passed == 0 ) return NULL;
 	object = DaoObject_New( self, NULL, 0 );
 	DaoProcess_PushFrame( proc, ((DaoRoutine*)R)->regCount );
@@ -1573,9 +1573,23 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProce
 }
 static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProcess *proc )
 {
+	int m = 0;
+	DaoVmCode vmc = {0,0,0,0};
+	DaoType *type = self->typer->priv->abtype;
 	DaoValue *value = DaoFindFunction2( self->typer, self->typer->name );
-	if( value == NULL ) return NULL;
-	if( DaoProcess_Call( proc, (DaoMethod*)value, NULL, & param, 1 ) ) return NULL;
+	DaoFunction *func = (DaoFunction*) DRoutine_Resolve( value, NULL, & param, 1, DVM_CALL );
+	if( func == NULL || func->type != DAO_FUNCTION ) return NULL;
+	m = DRoutine_PassParams( (DRoutine*) func, NULL, proc->freeValues, & param, 1, DVM_CALL );
+	if( m == 0 ) return NULL;
+	DaoProcess_PushFrame( proc, m-1 );
+	proc->topFrame->parCount = m-1;
+	proc->activeValues = proc->stackValues;
+	proc->activeTypes = & type;
+	proc->activeCode = & vmc;
+	//ctx->thisFunction = func;
+	func->pFunc( proc, proc->stackValues + proc->topFrame->stackBase, m-1 );
+	//ctx->thisFunction = NULL;
+	DaoProcess_PopFrame( proc );
 	value = proc->stackValues[0];
 	if( value && value->type == DAO_CDATA ) return & value->xCdata;
 	return NULL;

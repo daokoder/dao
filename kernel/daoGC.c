@@ -1221,7 +1221,6 @@ static void DaoIGC_RefCountDecScan();
 void DaoIGC_IncRC( DaoValue *p )
 {
 	if( ! p ) return;
-
 	p->xGC.refCount ++;
 	if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
 }
@@ -1253,7 +1252,7 @@ void DaoIGC_IncRCs( DArray *list )
 	DaoValue **data;
 	if( list->size == 0 ) return;
 	data = list->items.pValue;
-	for( i=0; i<list->size; i++) DaoGC_IncRC( data[i] );
+	for( i=0; i<list->size; i++) DaoIGC_IncRC( data[i] );
 }
 void DaoIGC_DecRCs( DArray *list )
 {
@@ -1261,13 +1260,13 @@ void DaoIGC_DecRCs( DArray *list )
 	DaoValue **data;
 	if( list == NULL || list->size == 0 ) return;
 	data = list->items.pValue;
-	for( i=0; i<list->size; i++) DaoGC_DecRC( data[i] );
+	for( i=0; i<list->size; i++) DaoIGC_DecRC( data[i] );
 }
 void DaoIGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	if( up == down ) return;
-	if( up ) DaoGC_IncRC( up );
-	if( down ) DaoGC_DecRC( down );
+	if( up ) DaoIGC_IncRC( up );
+	if( down ) DaoIGC_DecRC( down );
 }
 
 static void DaoIGC_MarkIdleItems()

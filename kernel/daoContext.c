@@ -459,7 +459,7 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 
 	DString_SetMBS( name, "__for_iterator__" );
 	if( va->type == DAO_OBJECT ){
-		rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, vmc->c );
+		rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, -1 );
 	}else{
 		DaoValue *meth = DaoFindFunction( typer, name );
 		if( meth ) rc = DaoProcess_Call( self, (DaoMethod*)meth, va, &vc, 1 );
@@ -3677,7 +3677,7 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout, 
 		DaoValue *selfpar, DaoValue *P[], int N, int code )
 {
-	N = DRoutine_PassParams( (DRoutine*)rout, selfpar, self->paramValues, P, N, code );
+	N = DRoutine_PassParams( (DRoutine*)rout, selfpar, self->freeValues, P, N, code );
 	if( N ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 		return;
@@ -3698,7 +3698,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
-	if( DRoutine_PassParams( (DRoutine*)func, selfpar, self->paramValues, P, N, code ) ==0 ){
+	if( DRoutine_PassParams( (DRoutine*)func, selfpar, self->freeValues, P, N, code ) ==0 ){
 		//rout2 = (DRoutine*) rout;
 		DaoProcess_ShowCallError( self, (DRoutine*)func, selfpar, P, N, code );
 		return;
@@ -3756,7 +3756,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 	}
 	if( rout->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) rout;
-		npar = DRoutine_PassParams( rout, selfpar, self->paramValues, params, npar, vmc->code );
+		npar = DRoutine_PassParams( rout, selfpar, self->freeValues, params, npar, vmc->code );
 		if( npar == 0 ){
 			//rout2 = (DRoutine*) rout;
 			//XXX goto InvalidParameter;
@@ -3781,6 +3781,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		obj = othis;
 		if( initbase >= 0 ){
 			obj = (DaoObject*) DaoObject_MapThisObject( obj, rout->routHost );
+		}else{
 			self->topFrame->state = DVM_MAKE_OBJECT;
 		}
 		GC_ShiftRC( obj, self->topFrame->object );

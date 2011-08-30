@@ -41,7 +41,7 @@ io.writeln( objects, object.index, object.name );
 
 e = Exception( 'serialization test' );
 ss = std.serialize( e );
-io.writeln( ss );
+io.writeln( ss, std.about(ss) );
 e = std.deserialize( ss )
 io.writeln( e, e.info );
 

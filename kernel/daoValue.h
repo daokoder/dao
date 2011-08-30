@@ -54,6 +54,7 @@ union DaoValue
 	DaoNameValue   xNameValue;
 	DaoType        xType;
 
+	struct { DAO_DATA_CORE; } xCore;
 	struct {
 		uchar_t  type;
 		uchar_t  subtype;

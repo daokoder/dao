@@ -35,7 +35,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 	if( errcode ) return errcode;
 	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return DAO_ERROR_TYPE;
 	if( (meth = DRoutine_Resolve( V, O, P, N, DVM_CALL )) == NULL ) goto InvalidParam;
-	if( (M = DRoutine_PassParams( meth, O, proc->paramValues, P, N, DVM_CALL )) ==0 ) goto InvalidParam;
+	if( (M = DRoutine_PassParams( meth, O, proc->freeValues, P, N, DVM_CALL )) ==0 ) goto InvalidParam;
 	if( meth->type == DAO_ROUTINE ){
 		DaoRoutine *rout = (DaoRoutine*) meth;
 		DaoProcess_PushFrame( proc, rout->regCount );
@@ -50,7 +50,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 		DaoFunction *func = (DaoFunction*) meth;
 		DaoProcess_PushFrame( proc, M-1 );
 		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
-		func->pFunc( proc, proc->paramValues, M-1 );
+		func->pFunc( proc, proc->stackValues + proc->topFrame->stackBase, M-1 );
 		DaoProcess_PopFrame( proc );
 	}
 	return 0;
