@@ -675,7 +675,7 @@ void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N 
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoProcess_Call( proc, (DaoMethod*) func, self, pid, N );
+	DaoProcess_PushCallable( proc, func, self, pid, N );
 }
 void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
 {
@@ -687,7 +687,7 @@ void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N,
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoProcess_Call( proc, (DaoMethod*) func, self, p, N+1 );
+	DaoProcess_PushCallable( proc, func, self, p, N+1 );
 }
 
 /**/
@@ -3331,7 +3331,7 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 		return;
 	}
-	DaoProcess_Call( proc, (DaoMethod*) func, self, & value, 1 );
+	DaoProcess_PushCallable( proc, func, self, & value, 1 );
 }
 static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
@@ -3362,7 +3362,7 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 			return;
 		}
-		DaoProcess_Call( proc, (DaoMethod*) func, self0, & pid, 1 );
+		DaoProcess_PushCallable( proc, func, self0, & pid, 1 );
 	}
 }
 static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
@@ -3383,7 +3383,7 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 	}
 	p[0] = pid;
 	p[1] = value;
-	DaoProcess_Call( proc, (DaoMethod*) func, self0, p, 2 );
+	DaoProcess_PushCallable( proc, func, self0, p, 2 );
 }
 static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -3402,7 +3402,7 @@ static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	DaoProcess_Call( proc, (DaoMethod*) func, self, ids, N );
+	DaoProcess_PushCallable( proc, func, self, ids, N );
 }
 static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
@@ -3424,7 +3424,7 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 	}
 	memcpy( p, ids, N*sizeof(DaoValue*) );
 	p[N] = value;
-	DaoProcess_Call( proc, (DaoMethod*) func, self, p, N+1 );
+	DaoProcess_PushCallable( proc, func, self, p, N+1 );
 }
 
 DaoCdataCore* DaoCdataCore_New()
@@ -3937,14 +3937,16 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer;
+	/* DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer; */
+	DaoTypeBase *typer = proc->topFrame->function->routHost->typer;
 	DaoException *self = (DaoException*)DaoException_New( typer );
 	if( n ) DString_Assign( self->info, p[0]->xString.data );
 	DaoProcess_PutCdata( proc, self, typer );
 }
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer;
+	/* DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer; */
+	DaoTypeBase *typer = proc->topFrame->function->routHost->typer;
 	DaoException *self = (DaoException*)DaoException_New2( typer, p[0] );
 	DaoProcess_PutCdata( proc, self, typer );
 }

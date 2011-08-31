@@ -54,48 +54,6 @@ struct DaoContext
 
 };
 
-/* Create a new context, must be initialized by DaoContext_Init() */
-DaoContext* DaoContext_New();
-void DaoContext_Delete( DaoContext *self );
-
-/* Intialize a context according to routine */
-void DaoContext_Init( DaoContext *self, DaoRoutine *routine );
-/* Intialize a context according to overloaed routine with parameter types matching to "pars" */
-/* Must be called after DaoContext_Init() */
-int DaoContext_InitWithParams( DaoContext *self, DaoProcess *vmp, DaoValue *pars[], int npar );
-/* For internal use. */
-void DaoContext_SetArrays( DaoContext *self );
-
-/* Put value at a register */
-DaoValue* DaoContext_SetValue( DaoContext *self, ushort_t reg, DaoValue *value );
-
-/* Put value at the result register for current instruction */
-int DaoContext_PutReference( DaoContext *self, DaoValue *refer );
-DaoValue* DaoContext_PutValue( DaoContext *self, DaoValue *value );
-
-/* Put a number at the result register, return the number object */
-dint*      DaoContext_PutInteger( DaoContext *self, dint value );
-float*     DaoContext_PutFloat( DaoContext *self, float value );
-double*    DaoContext_PutDouble( DaoContext *self, double value );
-complex16* DaoContext_PutComplex( DaoContext *self, complex16 value );
-DString*   DaoContext_PutMBString( DaoContext *self, const char *mbs );
-DString*   DaoContext_PutWCString( DaoContext *self, const wchar_t *wcs );
-DString*   DaoContext_PutString( DaoContext *self, DString *str );
-DString*   DaoContext_PutBytes( DaoContext *self, const char *bytes, int N );
-DaoEnum*   DaoContext_PutEnum( DaoContext *self, const char *symbols );
-DaoArray*  DaoContext_PutArrayInteger( DaoContext *self, int *array, int N );
-DaoArray*  DaoContext_PutArrayShort( DaoContext *self, short *array, int N );
-DaoArray*  DaoContext_PutArrayFloat( DaoContext *self, float *array, int N );
-DaoArray*  DaoContext_PutArrayDouble( DaoContext *self, double *array, int N );
-DaoArray*  DaoContext_PutArrayComplex( DaoContext *self, complex16 *array, int N );
-DaoTuple*  DaoContext_PutTuple( DaoContext *self );
-DaoList*   DaoContext_PutList( DaoContext *self );
-DaoMap*    DaoContext_PutMap( DaoContext *self );
-DaoArray*  DaoContext_PutArray( DaoContext *self );
-DaoCdata*  DaoContext_PutCData( DaoContext *self, void *data, DaoTypeBase *plgTyper );
-DaoCdata*  DaoContext_PutCPointer( DaoContext *self, void *data, int size );
-DaoCdata*  DaoContext_CopyCData( DaoContext *self, void *data, int n, DaoTypeBase *t );
-
 void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op );
 /**/

@@ -136,7 +136,6 @@ extern DaoTypeBase thdMasterTyper;
 
 extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
-extern DaoTypeBase ctxTyper;
 extern DaoTypeBase vmpTyper;
 static DaoTypeBase vmsTyper;
 
@@ -171,7 +170,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_STREAM    :  return & streamTyper;
 	case DAO_NAMESPACE :  return & nsTyper;
 	case DAO_CMODULE   :  return & cmodTyper;
-	case DAO_CONTEXT   :  return & ctxTyper;
 	case DAO_PROCESS   :  return & vmpTyper;
 	case DAO_VMSPACE   :  return & vmsTyper;
 	case DAO_TYPE      :  return & abstypeTyper;
@@ -959,7 +957,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DaoVmSpace_ExeCmdArgs( self );
 	/* always execute default ::main() routine first for initialization: */
 	if( mainRoutine ){
-		DaoProcess_PushRoutine( vmp, mainRoutine );
+		DaoProcess_PushRoutine( vmp, mainRoutine, NULL );
 		DaoProcess_Execute( vmp );
 	}
 	/* check and execute explicitly defined main() routine  */
@@ -1153,7 +1151,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 		GC_IncRC( vmProc );
 		DArray_PushFront( self->nameLoading, ns->path );
 		DArray_PushFront( self->pathLoading, ns->path );
-		DaoProcess_PushRoutine( vmProc, ns->mainRoutine );
+		DaoProcess_PushRoutine( vmProc, ns->mainRoutine, NULL );
 		if( ! DaoProcess_Execute( vmProc ) ){
 			GC_DecRC( vmProc );
 			DArray_PopFront( self->nameLoading );

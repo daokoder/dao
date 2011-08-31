@@ -634,7 +634,7 @@ DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize );
 DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
-DAO_DLL void  DaoProcess_Stop( DaoProcess *self );
+DAO_DLL void DaoProcess_Stop( DaoProcess *self );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );

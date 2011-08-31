@@ -141,7 +141,6 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 	case DAO_CLASS :
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
-	case DAO_CONTEXT :
 		*res = 1;
 		break;
 	case DAO_OBJECT :
@@ -799,7 +798,7 @@ DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
 		return NULL;
 	}
-	rout = (DRoutine*)DRoutine_Resolve( (DaoValue*)rout, NULL, par+1, N-1, DVM_CALL );
+	rout = (DRoutine*)DRoutine_Resolve( val, NULL, par+1, N-1, DVM_CALL );
 	if( rout ) passed = DRoutine_PassParams( rout, NULL, proc->freeValues, par+1, N-1, DVM_CALL );
 	if( passed == 0 || rout == NULL || rout->type != DAO_ROUTINE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
@@ -807,8 +806,7 @@ DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 	}
 	routine = (DaoRoutine*) rout;
 	vmProc = DaoProcess_New( proc->vmSpace, DVM_COROUTINE_PROC_CACHE );
-	DaoProcess_PushFrame( vmProc, routine->regCount );
-	DaoProcess_InitTopFrame( vmProc, routine, NULL, DVM_CALL );
+	DaoProcess_PushRoutine( vmProc, routine, NULL );
 	vmProc->activeValues = vmProc->stackValues + vmProc->topFrame->stackBase;
 	for(i=0; i<routine->parCount; i++){
 		vmProc->activeValues[i] = proc->freeValues[i];

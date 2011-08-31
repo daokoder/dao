@@ -570,6 +570,16 @@ void DaoCGC_TryInvoke()
 	DMutex_Unlock( & gcWorker.mutex_block_mutator );
 }
 
+static size_t DaoCGC_MarkIdleItems()
+{
+	DArray *idleList = gcWorker.idleList;
+	size_t i, n = idleList->size;
+	DMutex_Lock( & gcWorker.mutex_idle_list );
+	for(i=gcWorker.kk; i<n; i++) idleList->items.pValue[i]->xGC.idle = 1;
+	gcWorker.kk = n;
+	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	return n;
+}
 void DaoCGC_Recycle( void *p )
 {
 	while(1){
@@ -601,16 +611,6 @@ void DaoCGC_Recycle( void *p )
 		DaoCGC_FreeGarbage();
 	}
 	DThread_Exit( & gcWorker.thread );
-}
-static size_t DaoCGC_MarkIdleItems()
-{
-	DArray *idleList = gcWorker.idleList;
-	size_t i, n = idleList->size;
-	DMutex_Lock( & gcWorker.mutex_idle_list );
-	for(i=gcWorker.kk; i<n; i++) idleList->items.pValue[i]->xGC.idle = 1;
-	gcWorker.kk = n;
-	DMutex_Unlock( & gcWorker.mutex_idle_list );
-	return n;
 }
 void DaoCGC_CycRefCountDecScan()
 {

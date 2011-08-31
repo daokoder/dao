@@ -38,17 +38,12 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 	if( (M = DRoutine_PassParams( meth, O, proc->freeValues, P, N, DVM_CALL )) ==0 ) goto InvalidParam;
 	if( meth->type == DAO_ROUTINE ){
 		DaoRoutine *rout = (DaoRoutine*) meth;
-		DaoProcess_PushFrame( proc, rout->regCount );
-		DaoProcess_InitTopFrame( proc, rout, self, DVM_CALL );
+		DaoProcess_PushRoutine( proc, rout, self );
 		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
-		if( STRCMP( name, "_PRINT" ) ==0 ){
-			DaoProcess_Execute( proc );
-		}else{
-			proc->status = DAO_VMPROC_STACKED;
-		}
+		if( STRCMP( name, "_PRINT" ) ==0 ) DaoProcess_Execute( proc );
 	}else if( meth->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) meth;
-		DaoProcess_PushFrame( proc, M-1 );
+		DaoProcess_PushFunction( proc, func );
 		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
 		func->pFunc( proc, proc->stackValues + proc->topFrame->stackBase, M-1 );
 		DaoProcess_PopFrame( proc );

@@ -760,7 +760,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->constEvalProcess->activeNamespace = self;
 	GC_IncRC( dao_routine );
 	GC_IncRC( self );
-	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL, DVM_CALL );
+	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
 	self->constEvalRoutine->trait |= DAO_DATA_CONST;
 	self->constEvalProcess->trait |= DAO_DATA_CONST;
 	DArray_Append( self->cstData, (DaoValue*) self->constEvalRoutine );

@@ -48,7 +48,6 @@ union DaoValue
 	DaoFunctree    xFunctree;
 	DaoRoutine     xRoutine;
 	DaoFunction    xFunction;
-	DaoContext     xContext;
 	DaoProcess     xProcess;
 	DaoNamespace   xNamespace;
 	DaoNameValue   xNameValue;

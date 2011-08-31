@@ -62,57 +62,6 @@ int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *re
 void DaoPrintException( DaoCdata *except, DaoStream *stream );
 
 
-DaoTypeBase ctxTyper =
-{
-	"context", & baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoContext_Delete, NULL
-};
-
-DaoContext* DaoContext_New()
-{
-	DaoContext *self = (DaoContext*) dao_malloc( sizeof( DaoContext ) );
-	DaoValue_Init( self, DAO_CONTEXT );
-
-	self->codes = NULL;
-	self->vmc = NULL;
-	self->frame = NULL;
-	self->regArray = DTuple_New( 0, NULL );
-	self->regValues = NULL;
-
-	self->routine   = NULL;
-	self->object    = NULL;
-	self->nameSpace = NULL;
-	self->vmSpace   = NULL;
-	self    = NULL;
-	self->lastRoutine = NULL;
-	self->thisFunction = NULL;
-
-	self->parCount = 0;
-	self->entryCode = 0;
-	self->ctxState = 0;
-	return self;
-}
-
-void DaoContext_Delete( DaoContext *self )
-{
-	int i;
-	if( self->object ) GC_DecRC( self->object );
-	if( self->routine ) GC_DecRC( self->routine );
-	/* self->regValues might be set to something else. */
-	for(i=0; i<self->regArray->size; i++) GC_DecRC( self->regArray->items.pValue[i] );
-	DTuple_Delete( self->regArray );
-	dao_free( self );
-}
-static void DaoContext_InitValues( DaoContext *self )
-{
-}
-void DaoContext_Init( DaoContext *self, DaoRoutine *routine )
-{
-}
-int DaoContext_InitWithParams( DaoContext *self, DaoProcess *vmp, DaoValue *pars[], int npar )
-{
-	return 1;
-}
 void DaoContext_AdjustCodes( DaoContext *self, int options )
 {
 	DaoUserHandler *handler = self->vmSpace->userHandler;
@@ -1223,7 +1172,6 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
 	case DAO_FUNCTREE :
-	case DAO_CONTEXT :
 		{
 			DaoFunCurry *curry = DaoFunCurry_New( p, selfobj );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)curry );
@@ -1703,7 +1651,7 @@ TryAgain:
 		p = par + nopac;
 		n = npar - nopac;
 	}
-	if( DaoProcess_TryCall( self, value, NULL, p, n ) == DAO_ERROR_PARAM ) goto ArithError;
+	if( DaoProcess_PushCallable( self, value, NULL, p, n ) == DAO_ERROR_PARAM ) goto ArithError;
 
 	return 1;
 ArithError:
@@ -1782,7 +1730,7 @@ TryAgain:
 		p = par + nopac;
 		n = npar - nopac;
 	}
-	if( DaoProcess_TryCall( self, func, NULL, p, n ) == DAO_ERROR_PARAM ) goto ArithError;
+	if( DaoProcess_PushCallable( self, func, NULL, p, n ) == DAO_ERROR_PARAM ) goto ArithError;
 
 	return 1;
 ArithError:
@@ -3467,12 +3415,12 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		DaoClass *scope = self->activeObject ? self->activeObject->myClass : NULL;
 		DaoValue *tpar = (DaoValue*) ct;
 		meth = DaoClass_FindOperator( va->xObject.myClass, "cast", scope );
-		if( meth && DaoProcess_TryCall( self, meth, va, & tpar, 1 ) ==0 ) return;
+		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}else if( va->type == DAO_CDATA ){
 		DaoCdata *cdata = & va->xCdata;
 		DaoValue *tpar = (DaoValue*) ct;
 		meth = DaoFindFunction2( (DaoTypeBase*) cdata->typer, "cast" );
-		if( meth && DaoProcess_TryCall( self, meth, va, & tpar, 1 ) ==0 ) return;
+		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}
 NormalCasting:
 	memset( & value, 0, sizeof(DaoValue) );
@@ -3510,7 +3458,7 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 			}else{
 				rout = DaoFindFunction2( C->xCdata.typer, "=" );
 			}
-			if( rout && DaoProcess_TryCall( self, rout, C, & A, 1 ) ) return;
+			if( rout && DaoProcess_PushCallable( self, rout, C, & A, 1 ) == 0 ) return;
 		}
 	}
 	DaoMoveAC( self, A, & self->activeValues[vmc->c], ct );
@@ -3675,17 +3623,27 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 	return -1;
 }
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout, 
-		DaoValue *selfpar, DaoValue *P[], int N, int code )
+		DaoValue *selfpar, DaoValue *P[], int N, DaoVmCode *vmc )
 {
-	N = DRoutine_PassParams( (DRoutine*)rout, selfpar, self->freeValues, P, N, code );
-	if( N ==0 ){
+	int i, M = DRoutine_PassParams( (DRoutine*)rout, selfpar, self->freeValues, P, N, vmc->code );
+	if( M ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 		return;
 	}
-	DaoProcess_PushFrame( self, rout->regCount );
-	DaoProcess_InitTopFrame( self, rout, DaoValue_CastObject( selfpar ), code );
-	self->topFrame->parCount = N - 1;
-	self->status = DAO_VMPROC_STACKED;
+	/* no tail call inside try{} */
+	if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ){
+		if( self->topFrame->state == 0 ){
+			DaoValue **params = self->freeValues;
+			DaoProcess_PopFrame( self );
+			for(i=0; i<rout->parCount; i++){
+				DaoValue *value = self->freeValues[i];
+				self->freeValues[i] = params[i];
+				params[i] = value;
+			}
+		}
+	}
+	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( selfpar ) );//, code );
+	self->topFrame->parCount = M - 1;
 }
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoFunction *func, DaoValue *selfpar, DaoValue *P[], int N )
@@ -3713,12 +3671,10 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	 */
 	if( vmc->code == DVM_MCALL && ! (func->attribs & DAO_ROUT_PARSELF)) N --;
 	/*
-	   printf( "call: %s %i\n", rout->routName->mbs, npar );
+	   printf( "call: %s %i\n", func->routName->mbs, N );
 	 */
-	DaoProcess_PushFrame( self, N+1 );
-	//self->thisFunction = func;
+	DaoProcess_PushFunction( self, func );
 	func->pFunc( self, self->stackValues + self->topFrame->stackBase, N );
-	//self->thisFunction = NULL;
 	DaoProcess_PopFrame( self );
 
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
@@ -3762,11 +3718,10 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 			//XXX goto InvalidParameter;
 			return;
 		}
-		DaoProcess_PushFrame( self, npar-1 );
-		self->topFrame->returning = -1;
-		//self->thisFunction = func;
+		DaoProcess_PushFunction( self, func );
+		DaoProcess_SetActiveFrame( self, self->firstFrame ); /* return value in stackValues[0] */
+		self->topFrame->active = self->firstFrame;
 		func->pFunc( self, self->stackValues + self->topFrame->stackBase, npar );
-		//self->thisFunction = NULL;
 		DaoProcess_PopFrame( self );
 
 		if( self->stackValues[0] && self->stackValues[0]->type == DAO_CDATA ){
@@ -3777,7 +3732,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		}
 		DaoProcess_PutValue( self, (DaoValue*) othis );
 	}else if( rout != NULL ){
-		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc->code );
+		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 		obj = othis;
 		if( initbase >= 0 ){
 			obj = (DaoObject*) DaoObject_MapThisObject( obj, rout->routHost );
@@ -3834,8 +3789,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( rout == NULL ) goto InvalidParameter;
 	if( rout->type == DAO_ROUTINE ){
-		if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ) DaoProcess_PopFrame( self );
-		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc->code );
+		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 		//XXX if( DaoProcess_TrySynCall( self, vmc, proc ) ) return;
 	}else if( rout->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) rout;
@@ -3886,9 +3840,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_PutValue( self, (DaoValue*) drout );
 			return;
 		}
-		/* no tail call inside try{} */
-		if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ) DaoProcess_PopFrame( self );
-		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc->code );
+		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 		//if( DaoProcess_TrySynCall( self, vmc, proc ) ) return;
 	}else if( caller->type == DAO_FUNCTREE ){
 		rout = DRoutine_Resolve( caller, selfpar, params, npar, codemode );
@@ -3903,9 +3855,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 				DaoProcess_PutValue( self, (DaoValue*) drout );
 				return;
 			}
-			/* no tail call inside try{} */
-			if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ) DaoProcess_PopFrame( self );
-			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc->code );
+			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 			//if( DaoProcess_TrySynCall( self, vmc, proc ) ) return;
 		}else if( rout->type == DAO_FUNCTION ){
 			func = (DaoFunction*) rout;
@@ -3927,9 +3877,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			return; //XXX
 		}
 		if( rout->type == DAO_ROUTINE ){
-			/* no tail call inside try{} */
-			if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ) DaoProcess_PopFrame( self );
-			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc->code );
+			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 		}else if( rout->type == DAO_FUNCTION ){
 			func = (DaoFunction*) rout;
 			DaoProcess_DoCxxCall( self, vmc, func, caller, params, npar );

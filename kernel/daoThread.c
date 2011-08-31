@@ -787,6 +787,10 @@ DaoThread* DaoThread_New( DaoThdMaster *thdm )
 void DaoThread_Delete( DaoThread *self )
 {
 	DThread_Destroy( & self->myThread );
+	GC_DecRC( self->process );
+	GC_DecRC( self->myMap );
+	DMap_Delete( self->mutexUsed );
+	dao_free( self );
 }
 
 static void DaoThdMaster_InsertRecord( DaoThdMaster *self, DaoThread *thd );
@@ -811,115 +815,46 @@ void DaoThread_TestCancel( DaoThread *self )
 	DThread_TestCancel( & self->myThread );
 }
 
-typedef struct DaoCFunctionCallData DaoCFunctionCallData;
-struct DaoCFunctionCallData
-{
-	DaoProcess  *context;
-	DaoFunction *function;
-	DaoValue *selfpar;
-	DaoValue *par[DAO_MAX_PARAM];
-	int npar;
-};
-static void DaoCFunction_Execute( DaoCFunctionCallData *self )
-{
-	int i, npar = self->npar;
-	if( self->selfpar && (self->function->attribs & DAO_ROUT_PARSELF) ) npar ++;
-	self->context->thisFunction = self->function;
-	self->function->pFunc( self->context, self->par, npar );
-	self->context->thisFunction = NULL;
-	for(i=0; i<npar; i++) DaoValue_Clear( self->par + i );
-	DaoProcess_Delete( self->context->process );
-	DaoValue_ClearAll( self->par, npar );
-	GC_DecRC( self->selfpar );
-	GC_DecRC( self->context );
-	GC_DecRC( self->function );
-	dao_free( self );
-}
 static void DaoProcess_Execute2( DaoProcess *self )
 {
 	DaoProcess_Execute( self );
-	DaoProcess_Delete( self );
 }
 
 /* thread master */
 static void DaoThdMaster_Lib_Create( DaoProcess *proc, DaoValue *par[], int N )
 { 
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
 	DaoThread *thread;
-	DaoProcess *vmProc;
-	DaoProcess *thdCtx = 0;
-	DRoutine *rout;
+	DaoThdMaster *self = (DaoThdMaster*) par[0];
+	DaoProcess *vmProc = NULL;
 	DaoValue **params = par + 2;
-	DaoValue *rov = par[1];
+	DaoValue *callable = par[1];
 	DaoValue *selfobj = NULL;
+	DRoutine *rout;
 	int i;
 
 	DaoCGC_Start();
 
 	N -= 2;
-	if( rov && rov->type == DAO_FUNCURRY ){
-		DaoFunCurry *curry = (DaoFunCurry*) rov;
+	if( callable && callable->type == DAO_FUNCURRY ){
+		DaoFunCurry *curry = (DaoFunCurry*) callable;
 		selfobj = curry->selfobj;
-		rov = curry->callable;
+		callable = curry->callable;
 		N = curry->params->size;
 		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
 		params = curry->params->items.pValue;
 	}
-	if( rov == NULL || (rov->type < DAO_FUNCTREE && rov->type > DAO_FUNCTION) ) goto ErrorParam;
-	rout = DRoutine_Resolve( rov, selfobj, params, N, DVM_CALL );
-	if( rout == NULL ) goto ErrorParam;
-	if( rout->routHost ){
-		if( selfobj == NULL ) goto ErrorParam;
-		if( DaoType_MatchValue( rout->routHost, selfobj, NULL ) == 0 ) goto ErrorParam;
-		if( rout->routHost->tid == DAO_OBJECT ){
-			selfobj = DaoObject_MapThisObject( (DaoObject*) selfobj, rout->routHost );
-			if( selfobj == NULL ) goto ErrorParam;
-		}
+	vmProc = DaoProcess_New( proc->vmSpace, DVM_THREAD_PROC_CACHE );
+	GC_IncRC( vmProc );
+	if( DaoProcess_PushCallable( vmProc, callable, selfobj, params, N ) ){
+		GC_DecRC( vmProc );
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid parameter for creating thread" );
+		return;
 	}
 	thread = DaoThread_New( self );
-	vmProc = DaoProcess_New( proc->vmSpace );
-	DaoProcess_PutValue( proc, (DaoValue*)thread );
-	thdCtx = DaoProcess_New();
 	thread->process = vmProc;
-	thdCtx->vmSpace = proc->vmSpace;
-	if( rout->routHost && rout->routHost->tid == DAO_OBJECT ){
-		thdCtx->object = (DaoObject*)selfobj;
-		GC_IncRC( thdCtx->object );
-	}
-	DaoProcess_Init( thdCtx, (DaoRoutine*) rout );
-	thdCtx->process = vmProc;
-	if( rout->type == DAO_ROUTINE ){
-		DaoProcess_PushContext( vmProc, thdCtx );
-		if( ! DRoutine_PassParams( (DRoutine*)rout, selfobj, thdCtx->regValues, params, N, DVM_CALL ) ){
-			DaoProcess_Delete( vmProc );
-			goto ErrorParam;
-		}
-		GC_IncRC( thread );
-		thread->exitRefCount = 1;
-		DaoThread_Start( thread, (DThreadTask) DaoProcess_Execute2, vmProc );
-	}else if( rout->type == DAO_FUNCTION ){
-		DaoCFunctionCallData *calldata = dao_calloc( 1, sizeof(DaoCFunctionCallData) );
-		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
-		calldata->npar = N;
-		if( ! DRoutine_PassParams( (DRoutine*)rout, selfobj, calldata->par, params, N, DVM_CALL ) ){
-			DaoValue_ClearAll( calldata->par, N );
-			DaoProcess_Delete( vmProc );
-			dao_free( calldata );
-			goto ErrorParam;
-		}
-		DaoValue_Copy( selfobj, & calldata->selfpar );
-		calldata->function = (DaoFunction*) rout;
-		calldata->context = thdCtx;
-		GC_IncRC( rout );
-		GC_IncRC( thdCtx );
-		GC_IncRC( thread );
-		thread->exitRefCount = 1;
-		DaoThread_Start( thread, (DThreadTask) DaoCFunction_Execute, calldata );
-	}
-	return;
-ErrorParam:
-	DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid parameter for creating thread" );
-	return;
+	thread->exitRefCount = 1;
+	DaoProcess_PutValue( proc, (DaoValue*)thread );
+	DaoThread_Start( thread, (DThreadTask) DaoProcess_Execute2, vmProc );
 }
 static void DaoThdMaster_Lib_Exit( DaoProcess *proc, DaoValue *par[], int N )
 {

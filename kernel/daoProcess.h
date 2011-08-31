@@ -39,16 +39,15 @@ struct DaoStackFrame
 	ushort_t      parCount;
 	ushort_t      cacheBase;
 	size_t        stackBase;
-	DaoType     **types; /* TODO */
+	DaoType     **types;
 	DaoVmCode    *codes; /* = routine->vmCodes->codes */
 	DaoRoutine   *routine;
 	DaoFunction  *function;
 	DaoObject    *object;
 
-	DaoStackFrame  *active; /* TODO: the active frame for putting result; */
+	DaoStackFrame  *active;
 	DaoStackFrame  *prev;
 	DaoStackFrame  *next;
-	DaoStackFrame  *rollback; /* TODO: remove it, and add DaoProcess_PopFrames( self, rollback ); */
 };
 
 /*
@@ -82,9 +81,7 @@ struct DaoProcess
 
 	DaoVmSpace *vmSpace;
 
-	/* TODO: prepare the first frame as the active frame for function frames
-	 * to return values to the first stack value: */
-	DaoStackFrame *firstFrame; /* the first frame, never active */
+	DaoStackFrame *firstFrame; /* the first frame */
 	DaoStackFrame *topFrame; /* top call frame */
 
 	DaoVmCode     *activeCode;
@@ -115,6 +112,9 @@ struct DaoProcess
 
 	DaoFuture *future;
 
+	DaoType   *dummyType;
+	DaoVmCode  dummyCode;
+
 	DString *mbstring;
 	DMap    *mbsRegex; /* <DString*,DString*> */
 	DMap    *wcsRegex; /* <DString*,DString*> */
@@ -125,28 +125,18 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize );
 void DaoProcess_Delete( DaoProcess *self );
 
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
-/* TODO */
-void DaoProcess_PushRoutineFrame( DaoProcess *self, DaoRoutine *routine );
-/* TODO */
-void DaoProcess_PushFunctionFrame( DaoProcess *self, DaoFunction *function );
-/* TODO */
-/* If the callable is a constructor, and O is a derived type of the constructor's type,
- * cast O to the constructor's type and then call the constructor on the casted object: */
-void DaoProcess_PushCallableFrame( DaoProcess *self, DaoValue *C, DaoValue *O, DaoValue *P[], int N );
-
 void DaoProcess_PopFrame( DaoProcess *self );
-/* TODO */
 void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback );
 
-void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object, int call );
+void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
 void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
 
+void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
+void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
+int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
 
-/* Push a routine into the calling stack of the VM process, new frame is created */
-void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine );
-
-int DaoProcess_TryCall( DaoProcess *self, DaoValue *f, DaoValue *o, DaoValue *p[], int n );
 int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+
 /* Execute from the top of the calling stack */
 int DaoProcess_Execute( DaoProcess *self );
 int DaoProcess_ExecuteSection( DaoProcess *self, int entry );
