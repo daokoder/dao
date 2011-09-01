@@ -1459,11 +1459,10 @@ static int DaoTuple_Serialize( DaoTuple *self, DString *serial, DaoNamespace *ns
 }
 static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf )
 {
-	DRoutine *rt;
 	DaoType *type;
-	DString name = DString_WrapMBS( "serialize" );
 	DaoValue *value = NULL;
 	DaoValue *selfpar = (DaoValue*) self;
+	DString name = DString_WrapMBS( "serialize" );
 	int errcode = DaoObject_GetData( self, & name, & value, NULL );
 	if( errcode || value == NULL || value->type < DAO_FUNCTREE || value->type > DAO_FUNCTION ) return 0;
 	if( DaoProcess_Call( proc, (DaoMethod*)value, selfpar, NULL, 0 ) ) return 0;

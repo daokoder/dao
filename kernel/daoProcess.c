@@ -368,7 +368,6 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function )
 int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N )
 {
 	DRoutine *R = (DRoutine*) M;
-	DaoRoutine *rout;
 	int passed = 0;
 
 	if( M == NULL ) return DAO_ERROR;
@@ -386,6 +385,15 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValu
 		return DAO_ERROR;
 	}
 	return 0;
+}
+void DaoProcess_InterceptReturnValue( DaoProcess *self )
+{
+	if( self->topFrame->routine ){
+		self->topFrame->returning = -1;
+	}else if( self->topFrame->function ){
+		self->topFrame->active = self->firstFrame;
+		DaoProcess_SetActiveFrame( self, self->firstFrame );
+	}
 }
 int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoList *list )
 {
@@ -514,12 +522,7 @@ int DaoProcess_Call( DaoProcess *self, DaoMethod *M, DaoValue *O, DaoValue *P[],
 	int ret = DaoProcess_PushCallable( self, (DaoValue*)M, O, P, N );
 	if( ret ) return ret;
 	/* no return value to the previous stack frame */
-	if( self->topFrame->routine ){
-		self->topFrame->returning = -1;
-	}else if( self->topFrame->function ){
-		self->topFrame->active = self->firstFrame;
-		DaoProcess_SetActiveFrame( self, self->firstFrame );
-	}
+	DaoProcess_InterceptReturnValue( self );
 	return DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
 }
 void DaoProcess_Stop( DaoProcess *self )
@@ -610,7 +613,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoStackFrame *base;
 
 #ifdef HAS_VARLABEL
-	const void *labels[] = {
+	static void *labels[] = {
 		&& LAB_NOP ,
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
@@ -940,7 +943,7 @@ CallEntry:
 	}
 	if( routine->upRoutine ){
 		dataCL[1] = routine->upRoutine->routConsts;
-		dataVL = routine->upContext->regValues;
+		dataVL = routine->upContext->stackValues + 1;
 		typeVL = routine->upRoutine->regType;
 	}
 
@@ -1240,10 +1243,12 @@ CallEntry:
 		OPCASE( ROUTINE ){
 			self->activeCode = vmc;
 			DaoProcess_MakeRoutine( self, vmc );
+			goto CheckException;
 		}OPNEXT()
 		OPCASE( CLASS ){
 			self->activeCode = vmc;
 			DaoProcess_MakeClass( self, vmc );
+			goto CheckException;
 		}OPNEXT()
 		OPCASE( CRRE ){
 			DaoProcess_CheckFE( self );
@@ -2493,7 +2498,7 @@ FinishCall:
 		goto ReturnTrue;
 	}
 	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
-	if( print || vmSpace->evalCmdline ){
+	if( self->topFrame == self->firstFrame && (print || vmSpace->evalCmdline) ){
 		if( self->stackValues[0] ){
 			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
 			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );

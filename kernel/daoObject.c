@@ -26,28 +26,16 @@
 #include"daoValue.h"
 
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc, 
-		DString *name, DaoValue *P[], int N, int ret )
+		DString *name, DaoValue *P[], int N, int ignore_return, int execute )
 {
-	DRoutine *meth;
 	DaoValue *V = NULL;
 	DaoValue *O = (DaoValue*)self;
-	int M, errcode = DaoObject_GetData( self, name, &V, othis );
+	int errcode = DaoObject_GetData( self, name, &V, othis );
 	if( errcode ) return errcode;
 	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return DAO_ERROR_TYPE;
-	if( (meth = DRoutine_Resolve( V, O, P, N, DVM_CALL )) == NULL ) goto InvalidParam;
-	if( (M = DRoutine_PassParams( meth, O, proc->freeValues, P, N, DVM_CALL )) ==0 ) goto InvalidParam;
-	if( meth->type == DAO_ROUTINE ){
-		DaoRoutine *rout = (DaoRoutine*) meth;
-		DaoProcess_PushRoutine( proc, rout, self );
-		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
-		if( STRCMP( name, "_PRINT" ) ==0 ) DaoProcess_Execute( proc );
-	}else if( meth->type == DAO_FUNCTION ){
-		DaoFunction *func = (DaoFunction*) meth;
-		DaoProcess_PushFunction( proc, func );
-		if( ret > -10 ) proc->topFrame->returning = (ushort_t) ret;
-		func->pFunc( proc, proc->stackValues + proc->topFrame->stackBase, M-1 );
-		DaoProcess_PopFrame( proc );
-	}
+	if( DaoProcess_PushCallable( proc, V, O, P, N ) ) goto InvalidParam;
+	if( ignore_return ) DaoProcess_InterceptReturnValue( proc );
+	if( execute ) DaoProcess_Execute( proc );
 	return 0;
 InvalidParam:
 	DaoProcess_ShowCallError( proc, (DRoutine*)V, O, P, N, DVM_CALL );
@@ -55,23 +43,25 @@ InvalidParam:
 }
 static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	DaoObject *self = & self0->xObject;
-	DaoValue *vs = (DaoValue*) stream;
 	int ec;
+	DaoObject *self = & self0->xObject;
 	if( self0 == self->myClass->objType->value ){
 		DaoStream_WriteString( stream, self->myClass->className );
 		DaoStream_WriteMBS( stream, "[default]" );
 		return;
 	}
-	DString_SetMBS( proc->mbstring, "_PRINT" );
-	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, & vs, 1, -1 );
+	DString_SetMBS( proc->mbstring, "serialize" );
+	DaoValue_Clear( & proc->stackValues[0] );
+	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL,0,1,1 );
 	if( ec && ec != DAO_ERROR_FIELD_NOTEXIST ){
 		DaoProcess_RaiseException( proc, ec, DString_GetMBS( proc->mbstring ) );
-	}else if( ec == DAO_ERROR_FIELD_NOTEXIST ){
+	}else if( ec == DAO_ERROR_FIELD_NOTEXIST || proc->stackValues[0] == NULL ){
 		char buf[50];
 		sprintf( buf, "[%p]", self );
 		DaoStream_WriteString( stream, self->myClass->className );
 		DaoStream_WriteMBS( stream, buf );
+	}else{
+		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}
 }
 static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
@@ -82,7 +72,7 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString 
 	if( rc ){
 		DString_SetMBS( proc->mbstring, "." );
 		DString_Append( proc->mbstring, name );
-		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL, 0, -100 );
+		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL,0,0,0 );
 	}else{
 		DaoProcess_PutReference( proc, value );
 	}
@@ -98,7 +88,7 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 		DString_SetMBS( mbs, "." );
 		DString_Append( mbs, name );
 		DString_AppendMBS( mbs, "=" );
-		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1, -1 );
+		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
 	if( ec ) DaoProcess_RaiseException( proc, ec, DString_GetMBS( name ) );
@@ -108,7 +98,7 @@ static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	DaoObject *self = & self0->xObject;
 	int rc = 0;
 	DString_SetMBS( proc->mbstring, "[]" );
-	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ids, N, -100 );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ids, N,0,0 );
 	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( proc->mbstring ) );
 }
 static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -119,7 +109,7 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	memcpy( ps, ids, N*sizeof(DaoValue*) );
 	ps[N] = value;
 	DString_SetMBS( proc->mbstring, "[]=" );
-	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1, -1 );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1,1,0 );
 	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( proc->mbstring ) );
 }
 extern void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, DMap *cycData );

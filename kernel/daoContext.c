@@ -385,8 +385,8 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}
 	return self->topFrame->codes + vmc->b;
 }
-int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis,
-		DaoProcess *vmp, DString *name, DaoValue *par[], int N, int ret );
+int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc, 
+		DString *name, DaoValue *P[], int N, int ignore_return, int execute );
 void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 {
 	DString *name = self->mbstring;
@@ -408,7 +408,7 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 
 	DString_SetMBS( name, "__for_iterator__" );
 	if( va->type == DAO_OBJECT ){
-		rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, -1 );
+		rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
 	}else{
 		DaoValue *meth = DaoFindFunction( typer, name );
 		if( meth ) rc = DaoProcess_Call( self, (DaoMethod*)meth, va, &vc, 1 );
@@ -2054,6 +2054,8 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 	int D = 0, rc = 0;
 
 	self->activeCode = vmc;
+	if( A == NULL ) A = null;
+	if( B == NULL ) B = null;
 	if( A->type ==0 || B->type ==0 ){
 		switch( vmc->code ){
 		case DVM_AND: C = A->type ? B : A; break;
@@ -4058,10 +4060,22 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 
 	closure = DaoRoutine_Copy( proto );
 	if( proto->upRoutine ){
+		DMap *map = DHash_New(0,0);
+		DaoProcess *proc = DaoProcess_New( self->vmSpace, DVM_THREAD_PROC_CACHE );
 		closure->upRoutine = self->activeRoutine;
-		closure->upContext = self;
-		GC_IncRC( self );
+		closure->upContext = proc;
 		GC_IncRC( self->activeRoutine );
+		GC_IncRC( proc );
+		proc->cacheSize = 0; /* avoid using stack caches for upvalues; */
+		DaoProcess_PushRoutine( proc, self->activeRoutine, self->activeObject );
+		DaoProcess_SetActiveFrame( proc, proc->topFrame );
+		for(i=0; i<self->activeRoutine->regCount; i++){
+			DaoValue *value = self->activeValues[i];
+			DNode *node = DMap_Find( map, value );
+			if( node == NULL ) node = DMap_Insert( map, value, DaoValue_SimpleCopy( value ) );
+			GC_IncRC( node->value.pValue );
+			proc->activeValues[i] = node->value.pValue;
+		}
 	}
 	pp2 = closure->routConsts->items.pValue;
 	for(i=0; i<vmc->b; i+=2) DaoValue_Copy( pp[i+1], pp2 + pp[i+2]->xInteger.value );
@@ -4080,6 +4094,19 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	DArray_Assign( closure->annotCodes, proto->annotCodes );
 	if( DaoRoutine_SetVmCodes2( closure, proto->vmCodes ) ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "function creation failed" );
+	}else if( closure->upContext ){
+		DaoProcess_SetValue( closure->upContext, vmc->c, (DaoValue*) closure );
+		closure->upContext->topFrame->entry = 1 + vmc - self->topFrame->codes;
+		/* allow using stack caches for other routines: */
+		closure->upContext->cacheSize = DVM_THREAD_PROC_CACHE;
+		DaoProcess_Execute( closure->upContext );
+		/* now free the stack caches, since they will no longer be used: */
+		dao_free( closure->upContext->cacheNumbers );
+		closure->upContext->cacheNumbers = NULL;
+		closure->upContext->cacheSize = 0;
+		DaoProcess_PopFrame( self );
+		self->status = DAO_VMPROC_STACKED;
+		return;
 	}
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) closure );
 	/*
@@ -4432,7 +4459,7 @@ static void DaoInitException( DaoCdata *except, DaoProcess *proc, DaoVmCode *vmc
 	DaoVmCodeX **annotCodes = rout->annotCodes->items.pVmc;
 	DaoStackFrame *frame = proc->topFrame->prev;
 	int line, line2;
-	int id = (int) (vmc - proc->topFrame->codes);
+	int id = (int) (vmc - proc->topFrame->active->codes);
 
 	line = line2 = rout->defLine;
 	if( vmc && rout->vmCodes->size ) line = annotCodes[id]->line;

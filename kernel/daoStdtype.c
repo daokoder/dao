@@ -3426,6 +3426,29 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 	p[N] = value;
 	DaoProcess_PushCallable( proc, func, self, p, N+1 );
 }
+static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+{
+	int ec;
+	DaoValue *meth;
+	DaoCdata *self = & self0->xCdata;
+	if( self0 == self->ctype->value ){
+		DaoStream_WriteString( stream, self->ctype->name );
+		DaoStream_WriteMBS( stream, "[default]" );
+		return;
+	}
+	DaoValue_Clear( & proc->stackValues[0] );
+	meth = DaoFindFunction2( self->typer, "serialize" );
+	if( meth && (ec = DaoProcess_Call( proc, (DaoMethod*)meth, NULL, &self0, 1 )) ){
+		DaoProcess_RaiseException( proc, ec, DString_GetMBS( proc->mbstring ) );
+	}else if( meth == NULL || proc->stackValues[0] == NULL ){
+		char buf[50];
+		sprintf( buf, "[%p]", self );
+		DaoStream_WriteString( stream, self->ctype->name );
+		DaoStream_WriteMBS( stream, buf );
+	}else{
+		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
+	}
+}
 
 DaoCdataCore* DaoCdataCore_New()
 {
@@ -3434,7 +3457,7 @@ DaoCdataCore* DaoCdataCore_New()
 	self->SetField = DaoCdata_SetField;
 	self->GetItem = DaoCdata_GetItem;
 	self->SetItem = DaoCdata_SetItem;
-	self->Print = DaoValue_Print;
+	self->Print = DaoCdata_Print;
 	self->Copy = DaoValue_NoCopy;
 	return self;
 }

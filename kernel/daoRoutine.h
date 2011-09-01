@@ -73,11 +73,11 @@ struct DaoRoutine
 
 	DMap *abstypes;
 
-	DaoRoutine     *original;
-	DaoFunctree *specialized;
+	DaoRoutine   *original;
+	DaoFunctree  *specialized;
 
 	DaoRoutine   *upRoutine;
-	DaoContext   *upContext;
+	DaoProcess   *upContext;
 	DaoParser    *parser;
 	DaoRoutine   *revised; /* to support edit & continue */
 

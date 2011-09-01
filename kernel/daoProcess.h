@@ -135,6 +135,8 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
 int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
 
+void DaoProcess_InterceptReturnValue( DaoProcess *self );
+
 int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 
 /* Execute from the top of the calling stack */
