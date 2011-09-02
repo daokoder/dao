@@ -1348,7 +1348,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = array->unitype; break;
 #endif
 	case DAO_OBJECT :
-		abtp = ((DaoObject*)p)->myClass->objType; break;
+		abtp = ((DaoObject*)p)->defClass->objType; break;
 	case DAO_CLASS :
 		abtp = ((DaoClass*)p)->clsType; break;
 	case DAO_CTYPE :

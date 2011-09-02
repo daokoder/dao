@@ -116,7 +116,7 @@ static int DRoutine_Check( DRoutine *self, DaoValue *obj, DaoValue *p[], int n, 
 		abtp = & parType[0]->aux->xType;
 		selfMatch = DaoType_MatchValue2( abtp, obj, defs );
 		if( is_virtual && selfMatch == 0 && obj->type == DAO_OBJECT ){
-			selfMatch = DaoType_MatchValue2( abtp, (DaoValue*) obj->xObject.that, defs );
+			selfMatch = DaoType_MatchValue2( abtp, (DaoValue*) obj->xObject.rootObject, defs );
 		}
 		if( selfMatch ){
 			parpass[0] = selfMatch;
@@ -149,7 +149,7 @@ static int DRoutine_Check( DRoutine *self, DaoValue *obj, DaoValue *p[], int n, 
 		abtp = & parType[ito]->aux->xType; /* must be named */
 		parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
 		if( is_virtual && ifrom == 0 && parpass[ito] == 0 && val->type == DAO_OBJECT ){
-			parpass[ito] = DaoType_MatchValue2( abtp, (DaoValue*) val->xObject.that, defs );
+			parpass[ito] = DaoType_MatchValue2( abtp, (DaoValue*) val->xObject.rootObject, defs );
 		}
 		/*
 		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->mbs );
@@ -458,7 +458,7 @@ int DRoutine_PassParams( DRoutine *routine, DaoValue *obj, DaoValue *recv[], Dao
 		}else{
 			DaoValue *o = obj;
 			if( o->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				o = DaoObject_MapThisObject( o->xObject.that, tp ); /* for virtual method call */
+				o = DaoObject_MapThisObject( o->xObject.rootObject, tp ); /* for virtual method call */
 			}
 			if( DaoValue_Move2( o, & recv[0], tp ) ){
 				selfChecked = 1;
@@ -502,7 +502,7 @@ int DRoutine_PassParams( DRoutine *routine, DaoValue *obj, DaoValue *recv[], Dao
 		}
 		if( need_self && ifrom ==0 && val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
 			/* for virtual method call */
-			val = (DaoValue*) DaoObject_MapThisObject( val->xObject.that, tp );
+			val = (DaoValue*) DaoObject_MapThisObject( val->xObject.rootObject, tp );
 			if( val == NULL ) return 0;
 		}
 		if( DaoValue_Move2( val, & recv[ito], tp ) ==0 ) return 0;
@@ -4674,9 +4674,9 @@ DRoutine* DRoutine_Resolve( DaoValue *self, DaoValue *obj, DaoValue *p[], int n,
 	if( (rout->attribs & DAO_ROUT_VIRTUAL) && (mode & DAO_CALL_NOVIRT) ==0 ){
 		DaoClass *klass = NULL;
 		if( obj && obj->type == DAO_OBJECT ){
-			klass = obj->xObject.that->myClass;
+			klass = obj->xObject.rootObject->defClass;
 		}else if( mcall && n && p[0]->type == DAO_OBJECT ){
-			klass = p[0]->xObject.that->myClass;
+			klass = p[0]->xObject.rootObject->defClass;
 		}
 		if( klass && klass != & rout->routHost->aux->xClass && klass->vtable ){
 			DNode *node = MAP_Find( klass->vtable, rout );

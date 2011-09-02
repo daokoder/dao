@@ -328,7 +328,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	}
 	if( need_self && ROUT_HOST_TID( routine ) == DAO_OBJECT ){
 		if( object == NULL && values[0]->type == DAO_OBJECT ) object = & values[0]->xObject;
-		if( object ) object = (DaoObject*) DaoObject_MapThisObject( object->that, routine->routHost );
+		if( object ) object = (DaoObject*) DaoObject_MapThisObject( object->rootObject, routine->routHost );
 		if( object == NULL ) DaoProcess_RaiseException( self, DAO_ERROR, "need self object" );
 		GC_ShiftRC( object, frame->object );
 		frame->object = object;
@@ -2264,18 +2264,18 @@ CallEntry:
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OC ){
-			value = locVars[ vmc->a ]->xObject.myClass->cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OG ){
-			value = locVars[ vmc->a ]->xObject.myClass->glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT()
 		OPCASE( GETF_OV ){
 			object = & locVars[ vmc->a ]->xObject;
-			if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
+			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 			value = object->objValues[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
@@ -2297,14 +2297,14 @@ CallEntry:
 		OPCASE( GETF_OCI )
 			OPCASE( GETF_OCF )
 			OPCASE( GETF_OCD ){
-				value = locVars[ vmc->a ]->xObject.myClass->cstData->items.pValue[ vmc->b ];
+				value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
 				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
 		OPCASE( GETF_OGI )
 			OPCASE( GETF_OGF )
 			OPCASE( GETF_OGD ){
-				value = locVars[ vmc->a ]->xObject.myClass->glbData->items.pValue[ vmc->b ];
+				value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
 				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
@@ -2312,7 +2312,7 @@ CallEntry:
 			OPCASE( GETF_OVF )
 			OPCASE( GETF_OVD ){
 				object = & locVars[ vmc->a ]->xObject;
-				if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
+				if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 				value = object->objValues[ vmc->b ];
 				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
@@ -2328,13 +2328,13 @@ CallEntry:
 			OPCASE( SETF_OV ){
 				object = & locVars[ vmc->c ]->xObject;
 				if( vmc->code == DVM_SETF_OG ){
-					klass = ((DaoObject*)klass)->myClass;
+					klass = ((DaoObject*)klass)->defClass;
 					vC2 = klass->glbData->items.pValue + vmc->b;
 					abtp = klass->glbDataType->items.pType[ vmc->b ];
 				}else{
-					if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
+					if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 					vC2 = object->objValues + vmc->b;
-					abtp = object->myClass->objDataType->items.pType[ vmc->b ];
+					abtp = object->defClass->objDataType->items.pType[ vmc->b ];
 				}
 				if( DaoMoveAC( self, locVars[vmc->a], vC2, abtp ) ==0 )
 					goto CheckException;
@@ -2372,7 +2372,7 @@ CallEntry:
 			OPCASE( SETF_OGDI )
 			OPCASE( SETF_OGDF )
 			OPCASE( SETF_OGDD ){
-				klass = locVars[ vmc->c ]->xObject.myClass;
+				klass = locVars[ vmc->c ]->xObject.defClass;
 				vC = klass->glbData->items.pValue[ vmc->b ];
 				switch( vmc->code ){
 				case DVM_SETF_OGII : vC->xInteger.value = IntegerOperand( vmc->a ); break;
@@ -2397,7 +2397,7 @@ CallEntry:
 			OPCASE( SETF_OVDF )
 			OPCASE( SETF_OVDD ){
 				object = & locVars[ vmc->c ]->xObject;
-				if( object == & object->myClass->objType->value->xObject ) goto AccessDefault;
+				if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 				vC =  object->objValues[ vmc->b ];
 				switch( vmc->code ){
 				case DVM_SETF_OVII : vC->xInteger.value = IntegerOperand( vmc->a ); break;
@@ -2498,7 +2498,7 @@ FinishCall:
 		goto ReturnTrue;
 	}
 	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
-	if( self->topFrame == self->firstFrame && (print || vmSpace->evalCmdline) ){
+	if( self->topFrame->prev == self->firstFrame && (print || vmSpace->evalCmdline) ){
 		if( self->stackValues[0] ){
 			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
 			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );

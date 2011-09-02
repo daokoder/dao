@@ -45,8 +45,8 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 {
 	int ec;
 	DaoObject *self = & self0->xObject;
-	if( self0 == self->myClass->objType->value ){
-		DaoStream_WriteString( stream, self->myClass->className );
+	if( self0 == self->defClass->objType->value ){
+		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteMBS( stream, "[default]" );
 		return;
 	}
@@ -58,7 +58,7 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	}else if( ec == DAO_ERROR_FIELD_NOTEXIST || proc->stackValues[0] == NULL ){
 		char buf[50];
 		sprintf( buf, "[%p]", self );
-		DaoStream_WriteString( stream, self->myClass->className );
+		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteMBS( stream, buf );
 	}else{
 		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
@@ -119,13 +119,12 @@ void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMa
 	DaoObject **fromSups = NULL;
 	DaoValue **selfValues = self->objValues;
 	DaoValue **fromValues = from->objValues;
-	int i, selfSize = self->myClass->objDataDefault->size;
+	int i, selfSize = self->defClass->objDataDefault->size;
 	DaoCopyValues( selfValues + 1, fromValues + 1, selfSize-1, proc, cycData );
 	/*  XXX super might be Cdata: */
-	if( from->superObject ==NULL ) return;
-	selfSups = self->superObject->items.pObject;
-	fromSups = from->superObject->items.pObject;
-	for( i=0; i<from->superObject->size; i++ )
+	selfSups = self->parents;
+	fromSups = from->parents;
+	for( i=0; i<from->baseCount; i++ )
 		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], proc, cycData );
 }
 static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycData )
@@ -135,9 +134,8 @@ static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycDa
 	if( node ) return node->value.pValue;
 	if( self->trait & DAO_DATA_NOCOPY ) return value;
 
-	pnew = DaoObject_Allocate( self->myClass );
+	pnew = DaoObject_New( self->defClass );
 	DMap_Insert( cycData, self, pnew );
-	DaoObject_Init( pnew, NULL, 0 );
 	DaoObject_CopyData( pnew, self, proc, cycData );
 
 	return (DaoValue*) pnew;
@@ -160,57 +158,69 @@ DaoTypeBase objTyper=
 	(FuncPtrDel) DaoObject_Delete, NULL
 };
 
-DaoObject* DaoObject_Allocate( DaoClass *klass )
+DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 {
-	DaoObject *self = (DaoObject*) dao_malloc( sizeof( DaoObject ) );
+	int parent_count = klass->superClass->size;
+	int extra = (parent_count + value_count - 1)*sizeof(DaoValue*);
+	DaoObject *self = (DaoObject*) dao_calloc( 1, sizeof(DaoObject) + extra );
+
 	DaoValue_Init( self, DAO_OBJECT );
-	self->myClass = klass;
-	self->objData = NULL;
-	self->superObject = NULL;
-	self->meta = NULL;
 	GC_IncRC( klass );
+	self->defClass = klass;
+	self->isRoot = 0;
+	self->isDefault = 0;
+	self->baseCount = parent_count;
+	self->valueCount = value_count;
+	self->objValues = self->parents + parent_count;
+	memset( self->parents, 0, (parent_count + value_count)*sizeof(DaoValue*) );
 	return self;
 }
-DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset )
+DaoObject* DaoObject_New( DaoClass *klass )
 {
-	DaoObject *self = DaoObject_Allocate( klass );
-	DaoObject_Init( self, that, offset );
+	DaoObject *self = DaoObject_Allocate( klass, klass->objDataName->size );
+	GC_IncRC( self );
+	self->rootObject = self;
+	self->isRoot = 1;
+	DaoObject_Init( self, NULL, 0 );
 	return self;
 }
 void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 {
-	DaoClass *klass = self->myClass;
-	int i, defobj = self == & klass->objType->value->xObject;
+	DaoClass *klass = self->defClass;
+	int i;
 
 	if( that ){
-		self->that = that;
-		self->objValues = that->objData->items.pValue + offset;
-	}else{
-		self->that = self;
-		self->objData = DTuple_New( klass->objDataName->size, NULL );
-		self->objValues = self->objData->items.pValue;
-	}
-	offset += self->myClass->objDefCount;
-	if( klass->superClass->size ){
-		self->superObject = DTuple_New( klass->superClass->size, NULL );
-		for(i=0; i<klass->superClass->size; i++){
-			DaoClass *supclass = klass->superClass->items.pClass[i];
-			DaoObject *sup = NULL;
-			if( supclass->type == DAO_CLASS ){
-				if( defobj ){
-					sup = & supclass->objType->value->xObject;
-				}else{
-					sup = DaoObject_New( supclass, self->that, offset );
-				}
-				GC_IncRC( sup );
-				offset += sup->myClass->objDataName->size;
-			}
-			self->superObject->items.pObject[i] = sup;
+		GC_ShiftRC( that, self->rootObject );
+		self->rootObject = that;
+		self->objValues = that->objValues + offset;
+	}else if( self->rootObject == NULL ){
+		GC_IncRC( self );
+		self->rootObject = self;
+		if( self->isDefault ){ /* no value space is allocated for default object yet! */
+			self->baseCount = klass->superClass->size;
+			self->valueCount = klass->objDataName->size;
+			self->objValues = (DaoValue**) dao_calloc( self->valueCount, sizeof(DaoValue*) );
 		}
+	}
+	offset += self->defClass->objDefCount;
+	for(i=0; i<klass->superClass->size; i++){
+		DaoClass *supclass = klass->superClass->items.pClass[i];
+		DaoObject *sup = NULL;
+		if( supclass->type == DAO_CLASS ){
+			if( self->isDefault ){
+				sup = & supclass->objType->value->xObject;
+			}else{
+				sup = DaoObject_Allocate( supclass, 0 );
+				DaoObject_Init( sup, self->rootObject, offset );
+			}
+			GC_IncRC( sup );
+			offset += sup->defClass->objDataName->size;
+		}
+		self->parents[i] = (DaoValue*)sup;
 	}
 	self->objValues[0] = (DaoValue*) self;
 	GC_IncRC( self );
-	if( self->objData == NULL ) return;
+	if( self->isRoot == 0 ) return;
 	for(i=1; i<klass->objDataDefault->size; i++){
 		DaoType *type = klass->objDataType->items.pType[i];
 		DaoValue **value = self->objValues + i;
@@ -226,23 +236,20 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 }
 void DaoObject_Delete( DaoObject *self )
 {
-	if( self->myClass ) GC_DecRC( self->myClass );
-	if( self->meta ) GC_DecRC( self->meta );
-	if( self->objData ) DTuple_Delete( self->objData );
-	if( self->superObject ){
-		int i;
-		for(i=0; i<self->superObject->size; i++)
-			GC_DecRC( self->superObject->items.pValue[i] );
-		DTuple_Delete( self->superObject );
-	}
+	int i;
+	//if( self->meta ) GC_DecRC( self->meta );
+	GC_DecRC( self->defClass );
+	for(i=0; i<self->baseCount; i++) GC_DecRC( self->parents[i] );
+	if( self->isRoot )for(i=0; i<self->valueCount; i++) GC_DecRC( self->objValues[i] );
+	if( self->isDefault ) dao_free( self->objValues );
 	dao_free( self );
 }
 
 DaoClass* DaoObject_MyClass( DaoObject *self )
 {
-	return self->myClass;
+	return self->defClass;
 }
-int DaoObject_ChildOf( DaoObject *self, DaoObject *obj )
+int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 {
 	int i;
 	if( obj == self ) return 1;
@@ -254,10 +261,10 @@ int DaoObject_ChildOf( DaoObject *self, DaoObject *obj )
 		}
 		return 0;
 	}
-	if( self->superObject ==NULL ) return 0;
-	for( i=0; i<self->superObject->size; i++ ){
-		if( obj == self->superObject->items.pObject[i] ) return 1;
-		if( DaoObject_ChildOf( self->superObject->items.pObject[i], obj ) ) return 1;
+	if( self->type != DAO_OBJECT ) return 0;
+	for(i=0; i<self->xObject.baseCount; i++){
+		if( obj == self->xObject.parents[i] ) return 1;
+		if( DaoObject_ChildOf( self->xObject.parents[i], obj ) ) return 1;
 	}
 	return 0;
 }
@@ -267,10 +274,9 @@ DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 {
 	int i;
 	if( host == NULL ) return NULL;
-	if( self->myClass->objType == host ) return (DaoValue*) self;
-	if( self->superObject ==NULL ) return NULL;
-	for( i=0; i<self->superObject->size; i++ ){
-		DaoValue *sup = self->superObject->items.pValue[i];
+	if( self->defClass->objType == host ) return (DaoValue*) self;
+	for(i=0; i<self->baseCount; i++){
+		DaoValue *sup = self->parents[i];
 		if( sup == NULL ) return NULL;
 		if( sup->type == DAO_OBJECT ){
 			if( (sup = DaoObject_MapThisObject( & sup->xObject, host ) ) ) return sup;
@@ -285,10 +291,9 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 	int i;
 	DaoObject *child = NULL;
 	if( parent == NULL ) return NULL;
-	if( self->superObject ==NULL ) return NULL;
-	for( i=0; i<self->superObject->size; i++ ){
-		DaoObject *obj = self->superObject->items.pObject[i];
-		DaoValue *sup = self->myClass->superClass->items.pValue[i];
+	for(i=0; i<self->baseCount; i++){
+		DaoObject *obj = (DaoObject*) self->parents[i];
+		DaoValue *sup = self->defClass->superClass->items.pValue[i];
 		if( sup == NULL ) continue;
 		if( obj ){
 			if( sup->type == DAO_CLASS ){
@@ -302,7 +307,7 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 			DaoCdata *cdata = (DaoCdata*)sup;
 			if( DaoCdata_ChildOf( cdata->typer, parent->typer ) ){
 				GC_IncRC( parent );
-				self->superObject->items.pValue[i] = (DaoValue*)parent;
+				self->parents[i] = (DaoValue*)parent;
 				return self;
 			}
 		}
@@ -326,12 +331,12 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	DNode *node;
 	DaoType *type;
 	DaoValue **value ;
-	DaoClass *klass = self->myClass;
+	DaoClass *klass = self->defClass;
 	DaoObject *dft = & klass->objType->value->xObject;
-	int child = othis && DaoObject_ChildOf( othis, self );
+	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
 	int id, st, up, pm, access;
 
-	node = DMap_Find( self->myClass->lookupTable, name );
+	node = DMap_Find( self->defClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
 	pm = LOOKUP_PM( node->value.pSize );
@@ -361,13 +366,13 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 {
 	DNode *node;
 	DaoValue *p = NULL;
-	DaoClass *klass = self->myClass;
+	DaoClass *klass = self->defClass;
 	DaoObject *dft = & klass->objType->value->xObject;
-	int child = othis && DaoObject_ChildOf( othis, self );
+	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
 	int id, st, up, pm, access;
 
 	*data = NULL;
-	node = DMap_Find( self->myClass->lookupTable, name );
+	node = DMap_Find( self->defClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
 	pm = LOOKUP_PM( node->value.pSize );
@@ -398,9 +403,9 @@ DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name )
 {
 	DaoValue *V;
 	DString str = DString_WrapMBS( name );
-	int id = DaoClass_FindConst( self->myClass, & str );
+	int id = DaoClass_FindConst( self->defClass, & str );
 	if( id < 0 ) return NULL;
-	V = DaoClass_GetConst( self->myClass, id );
+	V = DaoClass_GetConst( self->defClass, id );
 	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return NULL;
 	return (DaoMethod*) V;
 }

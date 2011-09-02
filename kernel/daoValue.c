@@ -357,11 +357,10 @@ void DaoValue_MarkConst( DaoValue *self )
 		}
 		break;
 	case DAO_OBJECT :
-		n = self->xObject.myClass->objDataDefault->size;
+		n = self->xObject.defClass->objDataDefault->size;
 		for(i=1; i<n; i++) DaoValue_MarkConst( self->xObject.objValues[i] );
-		if( self->xObject.superObject == NULL ) break;
-		for(i=0; i<self->xObject.superObject->size; i++){
-			DaoValue *obj = self->xObject.superObject->items.pValue[i];
+		for(i=0; i<self->xObject.baseCount; i++){
+			DaoValue *obj = (DaoValue*) self->xObject.parents[i];
 			if( obj == NULL || obj->type != DAO_OBJECT ) continue;
 			DaoValue_MarkConst( obj );
 		}
@@ -467,7 +466,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	}
 	if( self->type == DAO_OBJECT ){
 		DaoObject *s = (DaoObject*) self;
-		DaoObject *t = DaoObject_New( s->myClass, NULL, 0 );
+		DaoObject *t = DaoObject_New( s->defClass );
 		DMap *cyc = DHash_New(0,0);
 		DaoObject_CopyData( t, s, NULL, cyc );
 		return (DaoValue*) t;
@@ -584,8 +583,8 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 		/* XXX pair<objetp,routine<...>> */
 		if( tp != src->xFunctree.unitype ) return 0;
 	}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
-		if( src->xObject.myClass != & tp->aux->xClass ){
-			src = DaoObject_MapThisObject( src->xObject.that, tp );
+		if( src->xObject.defClass != & tp->aux->xClass ){
+			src = DaoObject_MapThisObject( src->xObject.rootObject, tp );
 			tm = (src != NULL);
 		}
 	}else if( src->type == DAO_CLASS && tp->tid == DAO_CLASS && src->xClass.typeHolders ){
@@ -1555,7 +1554,7 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoObject *object = DaoObject_New( self, NULL, 0 );
+	DaoObject *object = DaoObject_New( self );
 	if( DaoProcess_PushCallable( proc, (DaoValue*)self->classRoutines, object, & param, 1 ) ==0 ){
 		proc->topFrame->returning = -1;
 		if( DaoProcess_Execute( proc ) ) return object;

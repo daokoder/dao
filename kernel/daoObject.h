@@ -20,20 +20,24 @@ struct DaoObject
 {
 	DAO_DATA_COMMON;
 
-	DaoValue  **objValues;
-	DTuple     *objData;
-	DTuple     *superObject; /*DTuple<DaoObject/DaoCdata*>*/
-	DaoClass   *myClass;
-	DaoObject  *that;
-	DaoMap     *meta;
+	uchar_t     isRoot    : 4;
+	uchar_t     isDefault : 4;
+	uchar_t     baseCount;
+	ushort_t    valueCount;
+
+	DaoClass   *defClass; /* definition class; */
+	DaoObject  *rootObject; /* root object for safe down-casting; */
+	DaoValue  **objValues; /* instance variable values; */
+	DaoValue   *parents[1]; /* the actual size is equal to ::baseCount; */
+	//DaoMap     *meta; /* TODO */
 };
 
-DaoObject* DaoObject_Allocate( DaoClass *klass );
-DaoObject* DaoObject_New( DaoClass *klass, DaoObject *that, int offset );
+DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count );
+DaoObject* DaoObject_New( DaoClass *klass );
 void DaoObject_Init( DaoObject *self, DaoObject *that, int offset );
 void DaoObject_Delete( DaoObject *self );
 
-int DaoObject_ChildOf( DaoObject *self, DaoObject *obj );
+int DaoObject_ChildOf( DaoValue *self, DaoValue *obj );
 
 DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
 DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );

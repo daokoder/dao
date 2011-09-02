@@ -183,7 +183,7 @@ void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 	tp = DaoNamespace_GetType( ns, value );
 	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 	if( tp == tp2 ) return;
-	if( value->type == DAO_OBJECT && obj == & obj->myClass->objType->value->xObject ){
+	if( value->type == DAO_OBJECT && obj == & obj->defClass->objType->value->xObject ){
 		if( tp2->tid == DAO_OBJECT ){
 			GC_ShiftRC( tp2->value, obj );
 			*self = tp2->value;
@@ -407,8 +407,9 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	rout->attribs |= DAO_ROUT_INITOR;
 	DaoClass_AddConst( self, name, (DaoValue*) self, DAO_DATA_PUBLIC, -1 );
 
-	self->objType->value = (DaoValue*) DaoObject_Allocate( self );
+	self->objType->value = (DaoValue*) DaoObject_Allocate( self, DAO_MAX_PARENT );
 	self->objType->value->xObject.trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
+	self->objType->value->xObject.isDefault = 1;
 	GC_IncRC( self->objType->value );
 	DString_SetMBS( str, "default" );
 	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC, -1 );
@@ -774,6 +775,11 @@ DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent )
 void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super, DString *alias )
 {
 	/* XXX if( alias == NULL ) alias = super->className; */
+	if( self->superClass->size >= DAO_MAX_PARENT ){
+		printf( "Error: too many parents (max. %i allowed) for the class: %s\n",
+				DAO_MAX_PARENT, self->className->mbs );
+		return;
+	}
 	DArray_Append( self->superClass, super );
 	DArray_Append( self->superAlias, alias );
 }

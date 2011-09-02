@@ -1141,10 +1141,10 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_CLASS :
 		{
 			DaoClass *klass = & p->xClass;
-			object = DaoObject_New( klass, NULL, 0 );
+			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
 			mtype = klass->objDataType->items.pType;
-			if( bval >= object->objData->size ){
+			if( bval >= object->valueCount ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "enumerating too many members" );
 				break;
 			}
@@ -1287,7 +1287,7 @@ void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	res = DaoProcess_PutInteger( self, 0 );
 	if( dA->type && dB->type == DAO_TYPE ){
-		if( dA->type == DAO_OBJECT ) dA = (DaoValue*) dA->xObject.that;
+		if( dA->type == DAO_OBJECT ) dA = (DaoValue*) dA->xObject.rootObject;
 		if( type->tid == DAO_VARIANT ){
 			int i, mt = 0, id = 0, max = 0;
 			for(i=0; i<type->nested->size; i++){
@@ -1313,7 +1313,7 @@ void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc )
 	}else if( dA->type == dB->type ){
 		*res = 1;
 		if( dA->type == DAO_OBJECT ){
-			*res = dA->xObject.that->myClass == dB->xObject.that->myClass;
+			*res = dA->xObject.rootObject->defClass == dB->xObject.rootObject->defClass;
 		}else if( dA->type == DAO_CDATA ){
 			*res = dA->xCdata.ctype == dB->xCdata.ctype;
 		}else if( dA->type >= DAO_ARRAY && dA->type <= DAO_TUPLE ){
@@ -1405,7 +1405,7 @@ static DaoMap* DaoGetMetaMap( DaoValue *self, int create )
 	case DAO_MAP   : meta = self->xMap.meta; break;
 	case DAO_CTYPE :
 	case DAO_CDATA : meta = self->xCdata.meta; break;
-	case DAO_OBJECT : meta = self->xObject.meta; break;
+	//case DAO_OBJECT : meta = self->xObject.meta; break;
 	default : break;
 	}
 	if( meta || create ==0 ) return meta;
@@ -1416,7 +1416,7 @@ static DaoMap* DaoGetMetaMap( DaoValue *self, int create )
 	case DAO_MAP   : meta = self->xMap.meta = DaoMap_New(1); break;
 	case DAO_CTYPE :
 	case DAO_CDATA : meta = self->xCdata.meta = DaoMap_New(1); break;
-	case DAO_OBJECT : meta = self->xObject.meta = DaoMap_New(1); break;
+	//case DAO_OBJECT : meta = self->xObject.meta = DaoMap_New(1); break;
 	default : break;
 	}
 	if( meta ){
@@ -1627,7 +1627,7 @@ TryAgain:
 	if( DString_EQ( name, self->activeRoutine->routName ) ) recursive = 1;
 
 	object = A->type == DAO_OBJECT ? & A->xObject : & B->xObject;
-	klass = object->myClass;
+	klass = object->defClass;
 	overloaded = klass->attribs & DAO_OPER_OVERLOADED;
 
 	rc = DaoObject_GetData( object, name, & value,  self->activeObject );
@@ -3414,9 +3414,9 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( va->type == DAO_OBJECT ){
-		DaoClass *scope = self->activeObject ? self->activeObject->myClass : NULL;
+		DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
 		DaoValue *tpar = (DaoValue*) ct;
-		meth = DaoClass_FindOperator( va->xObject.myClass, "cast", scope );
+		meth = DaoClass_FindOperator( va->xObject.defClass, "cast", scope );
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}else if( va->type == DAO_CDATA ){
 		DaoCdata *cdata = & va->xCdata;
@@ -3446,7 +3446,7 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 	int overload = 0;
 	if( C ){
 		if( A->type == C->type && C->type == DAO_OBJECT ){
-			overload = DaoClass_ChildOf( A->xObject.myClass, (DaoValue*)C->xObject.myClass ) == 0;
+			overload = DaoClass_ChildOf( A->xObject.defClass, (DaoValue*)C->xObject.defClass ) == 0;
 		}else if( A->type == C->type && C->type == DAO_CDATA ){
 			overload = DaoCdata_ChildOf( A->xCdata.typer, C->xCdata.typer ) == 0;
 		}else if( C->type == DAO_OBJECT || C->type == DAO_CDATA ){
@@ -3455,8 +3455,8 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 		if( overload ){
 			DaoValue *rout = NULL;
 			if( C->type == DAO_OBJECT ){
-				DaoClass *scope = self->activeObject ? self->activeObject->myClass : NULL;
-				rout = DaoClass_FindOperator( C->xObject.myClass, "=", scope );
+				DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
+				rout = DaoClass_FindOperator( C->xObject.defClass, "=", scope );
 			}else{
 				rout = DaoFindFunction2( C->xCdata.typer, "=" );
 			}
@@ -3616,7 +3616,7 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 {
 	int mode = vmc->b & 0xff00;
 	if( (mode & DAO_CALL_INIT) && self->activeObject ){
-		DaoClass *klass = self->activeObject->myClass;
+		DaoClass *klass = self->activeObject->defClass;
 		int init = self->activeRoutine->attribs & DAO_ROUT_INITOR;
 		if( self->activeRoutine->routHost == klass->objType && init ){
 			return DaoClass_FindSuper( klass, caller );
@@ -3696,7 +3696,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 	if( initbase >= 0 ){
 		othis = self->activeObject;
 	}else{
-		othis = onew = DaoObject_New( klass, NULL, 0 );
+		othis = onew = DaoObject_New( klass );
 	}
 	rout = DRoutine_Resolve( (DaoValue*)routines, selfpar, params, npar, codemode );
 	if( rout == NULL ){
@@ -3868,8 +3868,8 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	}else if( caller->type == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, npar );
 	}else if( caller->type == DAO_OBJECT ){
-		DaoClass *host = self->activeObject ? self->activeObject->myClass : NULL;
-		rout = (DRoutine*) DaoClass_FindOperator( caller->xObject.myClass, "()", host );
+		DaoClass *host = self->activeObject ? self->activeObject->defClass : NULL;
+		rout = (DRoutine*) DaoClass_FindOperator( caller->xObject.defClass, "()", host );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "class instance not callable" );
 			return;
@@ -3902,10 +3902,10 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		if( caller->type == DAO_CTYPE && sup >= 0 ){
 			DaoCdata *cdata = & self->activeValues[ vmc->c ]->xCdata;
 			if( cdata && cdata->type == DAO_CDATA ){
-				GC_ShiftRC( cdata, self->activeObject->superObject->items.pValue[sup] );
-				self->activeObject->superObject->items.pValue[sup] = (DaoValue*) cdata;
-				GC_ShiftRC( self->activeObject->that, cdata->daoObject );
-				cdata->daoObject = self->activeObject->that;
+				GC_ShiftRC( cdata, self->activeObject->parents[sup] );
+				self->activeObject->parents[sup] = (DaoValue*) cdata;
+				GC_ShiftRC( self->activeObject->rootObject, cdata->daoObject );
+				cdata->daoObject = self->activeObject->rootObject;
 			}
 		}
 	}else if( caller->type == DAO_CDATA ){
@@ -4576,7 +4576,7 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 				for(j=0; j<self->exceptions->size; j++){
 					val2 = self->exceptions->items.pValue[j];
 					if( val->type == DAO_CLASS && val2->type == DAO_OBJECT ){
-						if( DaoClass_ChildOf( val2->xObject.myClass, val ) ){
+						if( DaoClass_ChildOf( val2->xObject.defClass, val ) ){
 							canRescue = 1;
 							DArray_Append( list->items, val2 );
 							DArray_Erase( self->exceptions, j, 1 );

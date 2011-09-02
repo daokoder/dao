@@ -16,6 +16,8 @@
 
 #include"daoType.h"
 
+#define DAO_MAX_PARENT 32
+
 struct DaoClass
 {
 	DAO_DATA_COMMON;

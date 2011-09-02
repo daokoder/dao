@@ -859,9 +859,7 @@ static void REFL_Base( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}else if( p[0]->type == DAO_OBJECT ){
 		DaoObject *k = & p[0]->xObject;
-		for( i=0; i<k->superObject->size; i++ ){
-			DaoList_Append( ls, k->superObject->items.pValue[i] );
-		}
+		for( i=0; i<k->baseCount; i++ ) DaoList_Append( ls, k->parents[i] );
 	}
 }
 static void REFL_Type( DaoProcess *proc, DaoValue *p[], int N )
@@ -890,7 +888,7 @@ static void REFL_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		klass = & p[0]->xClass;
 		if( p[0]->type == DAO_OBJECT ){
 			object = & p[0]->xObject;
-			klass = object->myClass;
+			klass = object->defClass;
 		}
 		lookup = klass->lookupTable;
 		index = klass->lookupTable;
@@ -941,7 +939,7 @@ static void REFL_Var1( DaoProcess *proc, DaoValue *p[], int N )
 		klass = & p[0]->xClass;
 		if( p[0]->type == DAO_OBJECT ){
 			object = & p[0]->xObject;
-			klass = object->myClass;
+			klass = object->defClass;
 		}
 		lookup = klass->lookupTable;
 		index = klass->lookupTable;
@@ -999,7 +997,7 @@ static void REFL_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue **value = NULL;
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
 		klass = & p[0]->xClass;
-		if( p[0]->type == DAO_OBJECT ) klass = p[0]->xObject.myClass;
+		if( p[0]->type == DAO_OBJECT ) klass = p[0]->xObject.defClass;
 		node = DMap_Find( klass->lookupTable, name );
 		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_CONSTANT ){
 			value = klass->cstData->items.pValue + LOOKUP_ID( node->value.pSize );
@@ -1044,15 +1042,21 @@ static void REFL_Var2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *type = NULL;
 	DaoValue **value = NULL;
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
+		DaoObject *object = NULL;
 		klass = & p[0]->xClass;
-		if( p[0]->type == DAO_OBJECT ) klass = p[0]->xObject.myClass;
+		if( p[0]->type == DAO_OBJECT ){
+			klass = p[0]->xObject.defClass;
+		}
 		node = DMap_Find( klass->lookupTable, name );
 		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_VARIABLE ){
 			value = klass->cstData->items.pValue + LOOKUP_ID( node->value.pSize );
 			type = klass->glbDataType->items.pValue[ LOOKUP_ID( node->value.pSize ) ];
-		}else if( node && LOOKUP_ST( node->value.pSize ) == DAO_OBJECT_VARIABLE ){
-			value = p[0]->xObject.objData->items.pValue + LOOKUP_ID( node->value.pSize );
+		}else if( object && node && LOOKUP_ST( node->value.pSize ) == DAO_OBJECT_VARIABLE ){
+			value = object->objValues + LOOKUP_ID( node->value.pSize );
 			type = klass->objDataType->items.pValue[ LOOKUP_ID( node->value.pSize ) ];
+		}else{
+			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid field" );
+			return;
 		}
 	}else if( p[0]->type == DAO_NAMESPACE ){
 		DaoNamespace *ns2 = & p[0]->xNamespace;
@@ -1064,6 +1068,7 @@ static void REFL_Var2( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+		return;
 	}
 	DaoValue_Copy( *value, tuple->items );
 	DaoValue_Copy( type, tuple->items + 1 );
@@ -1109,7 +1114,7 @@ static void REFL_Class( DaoProcess *proc, DaoValue *p[], int N )
 	if( p[0]->type == DAO_ROUTINE && p[0]->v.routine->tidHost == DAO_OBJECT ){
 		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.routine->routHost->aux.v.klass );
 	}else if( p[0]->type == DAO_OBJECT ){
-		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.object->myClass );
+		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.object->defClass );
 	}
 #endif
 	DaoProcess_PutValue( proc, null );
@@ -1122,10 +1127,10 @@ static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
 		if( DaoType_MatchValue( & p[1]->xType, p[0], NULL ) ) *res = 1;
 	}else if( p[1]->type == DAO_CLASS ){
 		if( p[0]->type != DAO_OBJECT ) return;
-		*res = DaoClass_ChildOf( p[0]->xObject.that->myClass, p[1] );
+		*res = DaoClass_ChildOf( p[0]->xObject.rootObject->defClass, p[1] );
 	}else if( p[1]->type == DAO_CDATA ){
 		if( p[0]->type == DAO_OBJECT )
-			*res = DaoClass_ChildOf( p[0]->xObject.that->myClass, p[1] );
+			*res = DaoClass_ChildOf( p[0]->xObject.rootObject->defClass, p[1] );
 		else if( p[0]->type == DAO_CDATA )
 			*res = DaoCdata_ChildOf( p[0]->xCdata.typer, p[1]->xCdata.typer );
 	}else if( p[1]->type == DAO_STRING ){
@@ -1160,7 +1165,7 @@ static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
 static void REFL_Self( DaoProcess *proc, DaoValue *p[], int N )
 {
 	if( p[0]->type == DAO_OBJECT )
-		DaoProcess_PutValue( proc, (DaoValue*) p[0]->xObject.that );
+		DaoProcess_PutValue( proc, (DaoValue*) p[0]->xObject.rootObject );
 	else
 		DaoProcess_PutValue( proc, null );
 }
@@ -1274,7 +1279,7 @@ static void REFL_Doc( DaoProcess *proc, DaoValue *p[], int N )
 	DString *doc = NULL;
 	switch( p[0]->type ){
 	case DAO_CLASS : doc = p[0]->xClass.classHelp; break;
-	case DAO_OBJECT : doc = p[0]->xObject.myClass->classHelp; break;
+	case DAO_OBJECT : doc = p[0]->xObject.defClass->classHelp; break;
 	//XXX case DAO_ROUTINE : doc = p[0]->v.routine->routHelp; break;
 	default : break;
 	}

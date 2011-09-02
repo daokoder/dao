@@ -713,13 +713,13 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( DaoClass_ChildOf( & value->xClass, self->aux ) ) return DAO_MT_SUB;
 		break;
 	case DAO_OBJECT :
-		if( self->aux == (DaoValue*) value->xObject.myClass ) return DAO_MT_EQ;
-		tp = value->xObject.myClass->objType;
+		if( self->aux == (DaoValue*) value->xObject.defClass ) return DAO_MT_EQ;
+		tp = value->xObject.defClass->objType;
 		if( self->tid == DAO_INTERFACE ){
 			if( DaoType_HasInterface( tp, & self->aux->xInterface ) ) return DAO_MT_SUB;
 			if( DaoInterface_TryBindTo( & self->aux->xInterface, tp, NULL, NULL ) ) return DAO_MT_SUB;
 		}
-		if( DaoClass_ChildOf( value->xObject.myClass, self->aux ) ) return DAO_MT_SUB;
+		if( DaoClass_ChildOf( value->xObject.defClass, self->aux ) ) return DAO_MT_SUB;
 		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :

@@ -349,7 +349,7 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 #endif
 	switch( p->type ){
 	case DAO_OBJECT :
-		if( p->xObject.objData ) gcWorker.count += p->xObject.objData->size + 1;
+		if( p->xObject.isRoot ) gcWorker.count += p->xObject.valueCount + 1;
 		break;
 	case DAO_LIST : gcWorker.count += p->xList.items->size + 1; break;
 	case DAO_MAP  : gcWorker.count += p->xMap.items->size + 1; break;
@@ -661,10 +661,11 @@ void DaoCGC_CycRefCountDecScan()
 		case DAO_OBJECT :
 			{
 				DaoObject *obj = (DaoObject*) value;
-				cycRefCountDecrementsT( obj->superObject );
-				cycRefCountDecrementsT( obj->objData );
-				cycRefCountDecrement( (DaoValue*) obj->meta );
-				cycRefCountDecrement( (DaoValue*) obj->myClass );
+				if( obj->isRoot ) DaoGC_CycRefCountDecrements( obj->objValues, obj->valueCount );
+				DaoGC_CycRefCountDecrements( obj->parents, obj->baseCount );
+				cycRefCountDecrement( (DaoValue*) obj->rootObject );
+				cycRefCountDecrement( (DaoValue*) obj->defClass );
+				//cycRefCountDecrement( (DaoValue*) obj->meta );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -858,10 +859,10 @@ int DaoCGC_AliveObjectScan()
 		case DAO_OBJECT :
 			{
 				DaoObject *obj = (DaoObject*) value;
-				cycRefCountIncrementsT( obj->superObject );
-				cycRefCountIncrementsT( obj->objData );
-				cycRefCountIncrement( (DaoValue*) obj->meta );
-				cycRefCountIncrement( (DaoValue*) obj->myClass );
+				if( obj->isRoot ) DaoGC_CycRefCountIncrements( obj->objValues, obj->valueCount );
+				DaoGC_CycRefCountIncrements( obj->parents, obj->baseCount );
+				cycRefCountIncrement( (DaoValue*) obj->rootObject );
+				cycRefCountIncrement( (DaoValue*) obj->defClass );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -1037,10 +1038,10 @@ void DaoCGC_RefCountDecScan()
 		case DAO_OBJECT :
 			{
 				DaoObject *obj = (DaoObject*) value;
-				directRefCountDecrementT( obj->superObject );
-				directRefCountDecrementT( obj->objData );
-				directRefCountDecrement( (DaoValue**) & obj->meta );
-				directRefCountDecrement( (DaoValue**) & obj->myClass );
+				if( obj->isRoot ) DaoGC_RefCountDecrements( obj->objValues, obj->valueCount );
+				DaoGC_RefCountDecrements( obj->parents, obj->baseCount );
+				directRefCountDecrement( (DaoValue**) & obj->rootObject );
+				directRefCountDecrement( (DaoValue**) & obj->defClass );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -1376,12 +1377,14 @@ void DaoIGC_CycRefCountDecScan()
 		case DAO_OBJECT :
 			{
 				DaoObject *obj = (DaoObject*) value;
-				cycRefCountDecrementsT( obj->superObject );
-				cycRefCountDecrementsT( obj->objData );
-				if( obj->superObject ) j += obj->superObject->size;
-				if( obj->objData ) j += obj->objData->size;
-				cycRefCountDecrement( (DaoValue*) obj->meta );
-				cycRefCountDecrement( (DaoValue*) obj->myClass );
+				if( obj->isRoot ){
+					DaoGC_CycRefCountDecrements( obj->objValues, obj->valueCount );
+					j += obj->valueCount;
+				}
+				j += obj->baseCount;
+				DaoGC_CycRefCountDecrements( obj->parents, obj->baseCount );
+				cycRefCountDecrement( (DaoValue*) obj->rootObject );
+				cycRefCountDecrement( (DaoValue*) obj->defClass );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -1605,12 +1608,14 @@ int DaoIGC_AliveObjectScan()
 		case DAO_OBJECT :
 			{
 				DaoObject *obj = (DaoObject*) value;
-				cycRefCountIncrementsT( obj->superObject );
-				cycRefCountIncrementsT( obj->objData );
-				cycRefCountIncrement( (DaoValue*) obj->meta );
-				cycRefCountIncrement( (DaoValue*) obj->myClass );
-				if( obj->superObject ) k += obj->superObject->size;
-				if( obj->objData ) k += obj->objData->size;
+				if( obj->isRoot ){
+					DaoGC_CycRefCountIncrements( obj->objValues, obj->valueCount );
+					k += obj->valueCount;
+				}
+				k += obj->baseCount;
+				DaoGC_CycRefCountIncrements( obj->parents, obj->baseCount );
+				cycRefCountIncrement( (DaoValue*) obj->rootObject );
+				cycRefCountIncrement( (DaoValue*) obj->defClass );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -1801,12 +1806,14 @@ void DaoIGC_RefCountDecScan()
 		case DAO_OBJECT :
 			{
 				DaoObject *obj = (DaoObject*) value;
-				if( obj->superObject ) j += obj->superObject->size;
-				if( obj->objData ) j += obj->objData->size;
-				directRefCountDecrementT( obj->superObject );
-				directRefCountDecrementT( obj->objData );
-				directRefCountDecrement( (DaoValue**) & obj->meta );
-				directRefCountDecrement( (DaoValue**) & obj->myClass );
+				if( obj->isRoot ){
+					DaoGC_RefCountDecrements( obj->objValues, obj->valueCount );
+					j += obj->valueCount;
+				}
+				j += obj->baseCount;
+				DaoGC_RefCountDecrements( obj->parents, obj->baseCount );
+				directRefCountDecrement( (DaoValue**) & obj->rootObject );
+				directRefCountDecrement( (DaoValue**) & obj->defClass );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -2037,6 +2044,7 @@ void DaoGC_RefCountDecrements( DaoValue **values, size_t size )
 		if( p == NULL ) continue;
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
+		values[i] = 0;
 	}
 }
 void cycRefCountDecrements( DArray *list )

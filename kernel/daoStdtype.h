@@ -221,9 +221,9 @@ struct DaoTuple
 {
 	DAO_DATA_COMMON;
 
-	int         size; /* packed with the previous field in 64-bits system */
+	int         size; /* packed with the previous field in 64-bits system; */
 	DaoType    *unitype;
-	DaoValue   *items[1];
+	DaoValue   *items[1]; /* the actual number of items is in ::size; */
 	//DaoMap     *meta; // TODO: put meta field somewhere else!
 };
 void DaoTuple_Delete( DaoTuple *self );
