@@ -786,6 +786,18 @@ static void DaoInode_Dirs( DaoContext *ctx, DaoValue *p[], int N )
 	DInode_Children( self, ctx, 2, DaoString_Get( DaoValue_CastString( p[1] ) ), DaoValue_TryGetEnum( p[2] ) );
 }
 
+static void DaoInode_Suffix( DaoContext *ctx, DaoValue *p[], int N )
+{
+	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
+	char *pos;
+	if( !self->path ){
+		DaoContext_RaiseException( ctx, DAO_ERROR, "The inode is not open!" );
+		return;
+	}
+	pos = strrchr( self->path, '.' );
+	DaoContext_PutMBString( ctx, pos? pos + 1 : "" );
+}
+
 static void DaoInode_New( DaoContext *ctx, DaoValue *p[], int N )
 {
 	char errbuf[MAX_ERRMSG];
@@ -846,6 +858,7 @@ static DaoFuncItem inodeMeths[] =
 	{ DaoInode_Path,     "path( self : inode )=>string" },
 	{ DaoInode_Name,     "name( self : inode )=>string" },
 	{ DaoInode_Type,     "type( self : inode )=>enum<file, dir>" },
+	{ DaoInode_Suffix,   "suffix( self: inode )=>string" },
 	{ DaoInode_Parent,   "parent( self : inode )=>inode" },
 	{ DaoInode_Ctime,    "ctime( self : inode )=>int" },
 	{ DaoInode_Mtime,    "mtime( self : inode )=>int" },
