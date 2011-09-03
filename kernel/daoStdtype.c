@@ -3828,10 +3828,54 @@ DaoTuple* DaoTuple_New( int size )
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + (size-1)*sizeof(DaoValue*) );
 	DaoValue_Init( self, DAO_TUPLE );
 	self->size = size;
-	//self->meta = NULL;
 	self->unitype = NULL;
 	return self;
 }
+#if 0
+DaoTuple* DaoTuple_Create( DaoType *type )
+{
+	int i, size = type->nested->size;
+	DaoType **types = type->nested->items.pType;
+	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + (size-1)*sizeof(DaoValue*) );
+	DaoValue_Init( self, DAO_TUPLE );
+	for(i=0; i<size; i++){
+		DaoType *it = types[i];
+		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+		if( it->tid > DAO_ENUM && it->tid != DAO_ANY && it->tid != DAO_INITYPE ) continue;
+		DaoValue_Move( it->value, self->items + i, it );
+	}
+	GC_IncRC( type );
+	self->size = size;
+	self->unitype = type;
+	return self;
+}
+#else
+DaoTuple* DaoTuple_Create( DaoType *type )
+{
+	int i, size = type->nested->size;
+	int extra = (size-1)*sizeof(DaoValue*) + type->rntcount*sizeof(DaoDouble);
+	DaoType **types = type->nested->items.pType;
+	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra );
+	DaoDouble *buffer = (DaoDouble*)(self->items + size);
+	DaoValue_Init( self, DAO_TUPLE );
+	for(i=0; i<size; i++){
+		DaoType *it = types[i];
+		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+		if( it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE ){
+			self->items[i] = (DaoValue*)buffer;
+			buffer->type = it->tid;
+			buffer->refCount = 2;
+			buffer ++;
+		}else if( it->tid >= DAO_COMPLEX && it->tid <= DAO_ENUM ){
+			DaoValue_Move( it->value, self->items + i, it );
+		}
+	}
+	GC_IncRC( type );
+	self->size = size;
+	self->unitype = type;
+	return self;
+}
+#endif
 void DaoTuple_Delete( DaoTuple *self )
 {
 	int i;

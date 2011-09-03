@@ -63,6 +63,8 @@ struct DaoRoutine
 	DArray *defLocals; /* <DaoToken*> */
 	DArray *source; /* <DaoToken*> */
 
+	DArray *simple;
+
 	DMap *localVarType; /* <int,DaoType*> local variable types */
 
 	int mode;

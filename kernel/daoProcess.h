@@ -97,9 +97,9 @@ struct DaoProcess
 	size_t      stackSize; /* maximum number of values that can be hold by stackValues; */
 	size_t      stackTop; /* one past the last active stack value; */
 
-	DaoComplex  *cacheNumbers;
-	ushort_t     cacheSize;
-	ushort_t     cacheTop;
+	DaoDouble  *cacheNumbers;
+	ushort_t    cacheSize;
+	ushort_t    cacheTop;
 
 	DaoType  *abtype; /* for coroutine */
 	DArray   *parResume;/* for coroutine */

@@ -1065,6 +1065,14 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size 
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
 	if( tup && tup->refCount ==1 && tup->unitype == type ) return tup;
 
+	if( type ){
+		tup = DaoTuple_Create( type );
+	}else{
+		tup = DaoTuple_New( size );
+		GC_IncRC( type );
+		tup->unitype = type;
+	}
+#if 0
 	tup = DaoTuple_New( size );
 	GC_IncRC( type );
 	tup->unitype = type;
@@ -1078,6 +1086,7 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size 
 			DaoValue_Move( tp->value, tup->items + i, tp );
 		}
 	}
+#endif
 	GC_ShiftRC( tup, val );
 	self->activeValues[ self->activeCode->c ] = (DaoValue*) tup;
 	return tup;

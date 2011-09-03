@@ -94,6 +94,32 @@ enum DaoOpcode
 	DVM_SECT ,   /* indicate the starting of a code subsection, A is the id. */
 
 	/* optimized opcodes: */
+	DVM_DATA_I ,
+	DVM_DATA_F ,
+	DVM_DATA_D ,
+	DVM_GETCL_I , 
+	DVM_GETCL_F , 
+	DVM_GETCL_D , 
+	DVM_GETCK_I , 
+	DVM_GETCK_F , 
+	DVM_GETCK_D , 
+	DVM_GETCG_I , 
+	DVM_GETCG_F , 
+	DVM_GETCG_D , 
+
+	DVM_GETVL_I , 
+	DVM_GETVL_F , 
+	DVM_GETVL_D , 
+	DVM_GETVO_I , 
+	DVM_GETVO_F , 
+	DVM_GETVO_D , 
+	DVM_GETVK_I , 
+	DVM_GETVK_F , 
+	DVM_GETVK_D , 
+	DVM_GETVG_I , 
+	DVM_GETVG_F , 
+	DVM_GETVG_D , 
+
 	DVM_SETVL_II , 
 	DVM_SETVL_IF , 
 	DVM_SETVL_ID , 

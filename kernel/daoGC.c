@@ -467,11 +467,11 @@ void DaoGC_PrepareCandidates()
 
 void GC_Lock()
 {
-	DMutex_Lock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.mutex_idle_list );
 }
 void GC_Unlock()
 {
-	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.mutex_idle_list );
 }
 
 /* Concurrent Garbage Collector */

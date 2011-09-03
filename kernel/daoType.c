@@ -113,6 +113,16 @@ void DaoType_CheckAttributes( DaoType *self )
 		self->attrib |= DAO_TYPE_INTER;
 	else
 		self->attrib &= ~DAO_TYPE_INTER;
+
+	if( self->tid == DAO_TUPLE ){
+		int i;
+		self->rntcount = 0;
+		for(i=0; i<self->nested->size; i++){
+			DaoType *it = self->nested->items.pType[i];
+			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+			self->rntcount += it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE;
+		}
+	}
 }
 DaoType* DaoType_New( const char *name, short tid, DaoValue *extra, DArray *nest )
 {

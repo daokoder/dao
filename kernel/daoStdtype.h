@@ -226,6 +226,7 @@ struct DaoTuple
 	DaoValue   *items[1]; /* the actual number of items is in ::size; */
 	//DaoMap     *meta; // TODO: put meta field somewhere else!
 };
+DaoTuple* DaoTuple_Create( DaoType *type );
 void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 
