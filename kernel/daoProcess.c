@@ -1310,23 +1310,23 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVL_D ){
 			locVars[ vmc->c ]->xDouble.value = dataVL[ vmc->b ]->xDouble.value;
 		}OPNEXT() OPCASE( GETVO_I ){
-			locVars[ vmc->c ]->xInteger.value = dataVL[ vmc->b ]->xInteger.value;
+			locVars[ vmc->c ]->xInteger.value = dataVO[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETVO_F ){
-			locVars[ vmc->c ]->xFloat.value = dataVL[ vmc->b ]->xFloat.value;
+			locVars[ vmc->c ]->xFloat.value = dataVO[ vmc->b ]->xFloat.value;
 		}OPNEXT() OPCASE( GETVO_D ){
-			locVars[ vmc->c ]->xDouble.value = dataVL[ vmc->b ]->xDouble.value;
+			locVars[ vmc->c ]->xDouble.value = dataVO[ vmc->b ]->xDouble.value;
 		}OPNEXT() OPCASE( GETVK_I ){
-			locVars[ vmc->c ]->xInteger.value = dataVL[ vmc->b ]->xInteger.value;
+			IntegerOperand( vmc->c ) = ArrayArrayValue( dataVK, vmc->a, vmc->b )->xInteger.value;
 		}OPNEXT() OPCASE( GETVK_F ){
-			locVars[ vmc->c ]->xFloat.value = dataVL[ vmc->b ]->xFloat.value;
+			FloatOperand( vmc->c ) = ArrayArrayValue( dataVK, vmc->a, vmc->b )->xFloat.value;
 		}OPNEXT() OPCASE( GETVK_D ){
-			locVars[ vmc->c ]->xDouble.value = dataVL[ vmc->b ]->xDouble.value;
+			DoubleOperand( vmc->c ) = ArrayArrayValue( dataVK, vmc->a, vmc->b )->xDouble.value;
 		}OPNEXT() OPCASE( GETVG_I ){
-			locVars[ vmc->c ]->xInteger.value = dataVL[ vmc->b ]->xInteger.value;
+			IntegerOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xInteger.value;
 		}OPNEXT() OPCASE( GETVG_F ){
-			locVars[ vmc->c ]->xFloat.value = dataVL[ vmc->b ]->xFloat.value;
+			FloatOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xFloat.value;
 		}OPNEXT() OPCASE( GETVG_D ){
-			locVars[ vmc->c ]->xDouble.value = dataVL[ vmc->b ]->xDouble.value;
+			DoubleOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xDouble.value;
 		}OPNEXT() OPCASE( SETVL_II ){
 			dataVL[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVL_IF ){

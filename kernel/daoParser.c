@@ -5801,9 +5801,12 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	}
 	if( enode.konst == enode.count ){
 		regC = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
-	}else if( self->enumTypes->size ){
-		tp = self->enumTypes->items.pType[0];
-		if( tp && tp->tid != DAO_ANY ) MAP_Insert( self->routine->localVarType, regC, tp );
+	}else{
+		enode.konst = 0;
+		if( self->enumTypes->size ){
+			tp = self->enumTypes->items.pType[0];
+			if( tp && tp->tid != DAO_ANY ) MAP_Insert( self->routine->localVarType, regC, tp );
+		}
 	}
 	result.reg = regC;
 	result.konst = enode.konst;

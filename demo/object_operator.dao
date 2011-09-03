@@ -58,7 +58,7 @@ class Integer
   }
 #{
 #}
-  routine _PRINT( s : stream ){ s.write( value ) }
+  routine serialize(){ return value; }
 }
 
 n1 = Integer(10);
