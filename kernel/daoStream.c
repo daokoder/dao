@@ -117,6 +117,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 				s ++;
 			}
 			if( *s == 'l' ) s ++;
+			if( *s == 'l' ) s ++;
 			if( strchr( convs, *s ) ==NULL ){
 				DaoProcess_RaiseException( proc, DAO_WARNING, "invalid format conversion" );
 			}else{
