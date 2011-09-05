@@ -20,6 +20,7 @@
 #include"stdlib.h"
 
 
+typedef struct DaoContext  DaoContext;
 /* running time context for dao routine. */
 struct DaoContext
 {

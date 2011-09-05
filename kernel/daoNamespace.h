@@ -21,20 +21,6 @@
 #include"daoMap.h"
 #include"daoType.h"
 
-struct DaoCModule
-{
-	DAO_DATA_COMMON;
-
-	void    *libHandle;
-
-	DArray  *ctypers;
-
-	/* The methods of C types loaded from a C module,
-	 * used for the purpose of GC. */
-	DArray  *cmethods; /* <DaoFunction*> */
-};
-DaoCModule* DaoCModule_New();
-void DaoCModule_Delete( DaoCModule *self );
 
 struct DaoNamespace
 {
@@ -69,7 +55,7 @@ struct DaoNamespace
 
 	DArray *nsLoaded; /* loaded modules as namespaces */
 
-	DaoCModule *cmodule;
+	void  *libHandle;
 
 	DMap   *localMacros; /* <DString*,DaoMacro*> */
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
@@ -84,7 +70,7 @@ struct DaoNamespace
 	DString *inputs; /* interactive inputs (load statements and some definitions) */
 	DArray  *sources;
 	DMap    *tokens; /* hash<DString,int> */
-	ullong_t time;
+	ulong_t  time;
 
 	DaoProcess  *constEvalProcess;
 	DaoRoutine  *constEvalRoutine;

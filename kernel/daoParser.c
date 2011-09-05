@@ -656,7 +656,7 @@ static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, 
 		DaoCdata *cdata = (DaoCdata*) klass->superClass->items.pValue[i];
 		if( flags & (1<<i) ) continue;
 		if( cdata->type == DAO_CTYPE ){
-			DaoValue *func = DaoFindFunction( cdata->typer, sup );
+			DaoValue *func = DaoTypeBase_FindFunction( cdata->typer, sup );
 			if( func ) func = (DaoValue*) DRoutine_Resolve( func, NULL, NULL, 0, DVM_CALL );
 			if( func ) goto AppendInitSuper;
 			info = DaoTokens_AddRaiseStatement( self, "Error", "", line );
@@ -789,9 +789,11 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	module->parEnd = right;
 	if( right+1 >= size ) return right;
 	module->parEnd = right;
-	e1 = e2 = right + 1;
+	e1 = right + 1;
+	e2 = size - 1;
 	if( right+1 >= size ) return right;
 	if( tokens[right+1]->name == DTOK_FIELD ){
+		e1 += 1;
 		start = right + 1;
 		if( isconstru ) goto ErrorConstructorReturn; /* class constructor should not return a value */
 		module->returnType = DaoParser_ParseType( self, right+2, size-1, & right, NULL );
@@ -857,8 +859,8 @@ static DaoType* DaoType_FindType( DString *name, DaoNamespace *ns, DaoType *ctyp
 	DNode *node = NULL;
 	if( rout && rout->type == DAO_ROUTINE ) node = MAP_Find( rout->abstypes, name );
 	if( node == NULL && klass ) node = MAP_Find( klass->abstypes, name );
-	if( node == NULL && ctype && ctype->typer && ctype->typer->priv && ctype->typer->priv->values ){
-		node = MAP_Find( ctype->typer->priv->values, name );
+	if( node == NULL && ctype && ctype->kernel && ctype->kernel->values ){
+		node = MAP_Find( ctype->kernel->values, name );
 		if( node && node->value.pValue->type == DAO_TYPE ) return node->value.pType;
 		node = NULL;
 	}
@@ -889,7 +891,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	*newpos = k + 1;
 	switch( value ? value->type : 0 ){
 	case DAO_CLASS : type = value->xClass.objType; break;
-	case DAO_CTYPE : type = value->xCdata.typer->priv->abtype; break;
+	case DAO_CTYPE : type = value->xCdata.ctype; break;
 	case DAO_TYPE  : type = & value->xType; break;
 	case DAO_INTERFACE : type = value->xInterface.abtype; break;
 	default : break;
@@ -1275,18 +1277,18 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DaoParser_ParseTypeItems( self, start, end, types );
 	if( self->errors->size ) goto FailedInstantiation;
 	for(i=0; i<types->size; i++){
-		DaoTypeBase *typer = types->items.pType[i]->typer;
+		DaoTypeKernel *kernel = types->items.pType[i]->kernel;
 		/* Use C type's canonical type: */
-		if( typer && typer->priv->abtype ) types->items.pType[i] = typer->priv->abtype;
+		if( kernel && kernel->abtype ) types->items.pType[i] = kernel->abtype;
 	}
 	if( tpl->type == DAO_CTYPE ){
-		DaoCdataCore *hostCore = (DaoCdataCore*) cdata->typer->priv;
-		if( hostCore->instanceCdata ){
-			DNode *node = MAP_Find( hostCore->instanceCdata, types );
+		DaoCdataCore *hostCore = (DaoCdataCore*) cdata->typer->core;
+		if( hostCore->kernel->instances ){
+			DNode *node = MAP_Find( hostCore->kernel->instances, types );
 			if( node && node->value.pValue->type == DAO_CTYPE ){
 				inst = node->value.pValue;
 				cdata = (DaoCdata*) inst;
-				if( cdata && fullname ) DString_SetMBS( fullname, cdata->typer->name );
+				if( cdata && fullname ) DString_Assign( fullname, cdata->ctype->name );
 				goto DoneInstantiation;
 			}
 		}
@@ -1342,7 +1344,7 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DaoValue **scope, DaoValue *
 			*value = DaoClass_GetConst( & (*value)->xClass, i );
 			break;
 		case DAO_CTYPE :
-			res = DaoFindValueOnly( (*value)->xCdata.typer, name );
+			res = DaoTypeBase_FindValueOnly( (*value)->xCdata.typer, name );
 			if( res == NULL ) return start - 1;
 			*value = res;
 			break;
@@ -1684,7 +1686,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 
 	if( inter ) hostname = inter->abtype->name->mbs;
 	else if( klass ) hostname = klass->className->mbs;
-	else if( cdata ) hostname = cdata->typer->name;
+	else if( cdata ) hostname = cdata->name->mbs;
 
 	if( routine->routName->mbs[0] == '@' ) DString_AppendChar( pname, '@' );
 	DString_AppendMBS( pname, "routine<" );
@@ -2341,7 +2343,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				if( klass ) break;
 			}else if( host->superClass->items.pValue[i]->type == DAO_CTYPE ){
 				cdata = host->superClass->items.pCdata[i];
-				if( strcmp( cdata->typer->name, name->mbs ) !=0 ) cdata = NULL;
+				if( ! DString_EQ( cdata->ctype->name, name ) ) cdata = NULL;
 				if( cdata ) break;
 			}
 		}
@@ -2372,7 +2374,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				}
 			}
 		}else if( cdata ){
-			DaoValue *func = DaoFindFunction( cdata->typer, name );
+			DaoValue *func = DaoTypeBase_FindFunction( cdata->typer, name );
 			DaoFunctree *meta = (DaoFunctree*) func;
 			if( func == NULL ){
 				DaoParser_Error( self, DAO_CONSTR_NOT_DEFINED, name );
@@ -3410,7 +3412,7 @@ DecoratorError:
 				DArray_Append( self->bindtos, 0 );
 			}else if( value->type == DAO_CTYPE ){
 				DArray_Append( self->bindtos, inter );
-				DArray_Append( self->bindtos, value->xCdata.typer->priv->abtype );
+				DArray_Append( self->bindtos, value->xCdata.ctype );
 				DArray_Append( self->bindtos, old );
 				DArray_Append( self->bindtos, start );
 				DArray_Append( self->bindtos, 0 );
@@ -4322,7 +4324,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 
 	if( self->hostCdata ){
 		/* QStyleOption( version : int = QStyleOption::Version, ... ) */
-		DaoValue *it = DaoFindValueOnly( self->hostCdata->typer, name );
+		DaoValue *it = DaoTypeBase_FindValueOnly( self->hostCdata->typer, name );
 		if( it ){
 			i = routine->routConsts->size;
 			MAP_Insert( DArray_Top( self->localCstMap ), name, i );
@@ -6267,7 +6269,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 						break;
 					default :
 						typer = DaoValue_GetTyper( ov );
-						it = DaoFindValueOnly( typer, name ); /* do not get method */
+						/* do not get method */
+						it = DaoTypeBase_FindValueOnly( typer, name );
 						break;
 					}
 				}

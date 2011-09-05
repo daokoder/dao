@@ -477,7 +477,7 @@ static DaoValue* DaoStream_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycDat
 }
 static DaoTypeCore streamCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoValue_GetItem,
@@ -845,9 +845,9 @@ int DaoFile_ReadLine( FILE *fin, DString *line )
 #endif
 #endif
 
-ullong_t FileChangedTime( const char *file )
+ulong_t FileChangedTime( const char *file )
 {
 	struct stat st;
-	if( stat( file, &st ) ==0 ) return (ullong_t) st.st_mtime;
+	if( stat( file, &st ) ==0 ) return (ulong_t) st.st_mtime;
 	return 0;
 }

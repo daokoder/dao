@@ -143,7 +143,7 @@ static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycDa
 
 static DaoTypeCore objCore = 
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoObject_Core_GetField,
 	DaoObject_Core_SetField,
 	DaoObject_GetItem,
@@ -257,7 +257,7 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 		if( obj->type == DAO_CDATA ){
 			DaoCdata *cdata1 = (DaoCdata*) self;
 			DaoCdata *cdata2 = (DaoCdata*) obj;
-			if( DaoCdata_ChildOf( cdata1->typer, cdata2->typer ) ) return 1;
+			if( DaoCdata_ChildOf( cdata1->ctype->kernel->typer, cdata2->ctype->kernel->typer ) ) return 1;
 		}
 		return 0;
 	}
@@ -317,8 +317,8 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer )
 {
 	DaoValue *p = NULL;
-	if( typer && typer->priv && typer->priv->abtype )
-		p = DaoObject_MapThisObject( self, typer->priv->abtype );
+	if( typer && typer->core && typer->core->kernel->abtype )
+		p = DaoObject_MapThisObject( self, typer->core->kernel->abtype );
 	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
 	return NULL;
 }

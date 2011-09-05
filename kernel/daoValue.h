@@ -84,8 +84,7 @@ void DaoValue_SimpleMove( DaoValue *src, DaoValue **dest );
 void DaoValue_MarkConst( DaoValue *self );
 
 int DaoValue_IsZero( DaoValue *self );
-llong_t DaoValue_GetLongLong( DaoValue *self );
-llong_t DaoValue_GetInteger( DaoValue *self );
+long_t DaoValue_GetInteger( DaoValue *self );
 float  DaoValue_GetFloat( DaoValue *self );
 double DaoValue_GetDouble( DaoValue *self );
 complex16 DaoValue_GetComplex( DaoValue *self );
@@ -101,6 +100,5 @@ int DaoValue_IsNumber( DaoValue *self );
 void DaoValue_Print( DaoValue *self, DaoProcess *ctx, DaoStream *stream, DMap *cycData );
 
 void DaoValue_IncRCs( DaoValue *v, int n );
-
 
 #endif

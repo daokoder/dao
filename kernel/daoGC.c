@@ -141,7 +141,9 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 	}else if( value->type == DAO_TYPE ){
 		printf( "%s\n", value->xType.name->mbs );
 	}else if( value->type == DAO_CDATA ){
-		printf( "%s\n", value->xCdata.typer->name );
+		printf( "%s\n", value->xCdata.ctype->name->mbs );
+	}else if( value->type == DAO_TYPEKERNEL ){
+		printf( "%s\n", ((DaoTypeKernel*)value)->typer->name );
 	}
 }
 #else
@@ -161,9 +163,9 @@ static void directRefCountDecrements( DArray *values );
 static void cycRefCountDecrementsT( DTuple *values );
 static void cycRefCountIncrementsT( DTuple *values );
 static void directRefCountDecrementT( DTuple *values );
-static void cycRefCountDecrementMapValue( DMap *dmap );
-static void cycRefCountIncrementMapValue( DMap *dmap );
-static void directRefCountDecrementMapValue( DMap *dmap );
+static int cycRefCountDecrementMapValue( DMap *dmap );
+static int cycRefCountIncrementMapValue( DMap *dmap );
+static int directRefCountDecrementMapValue( DMap *dmap );
 
 static void DaoGC_PrepareCandidates();
 
@@ -319,6 +321,7 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 
 	if( p == NULL ) return;
 	p->xGC.refCount += change;
+	//if( p == 0xa0a3c0 ) dao_free(123);
 
 	if( p->xGC.refCount == 0 ){
 #ifdef DAO_GC_PROF
@@ -671,8 +674,7 @@ void DaoCGC_CycRefCountDecScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				cycRefCountDecrement( (DaoValue*) cdata->meta );
-				cycRefCountDecrement( (DaoValue*) cdata->daoObject );
+				cycRefCountDecrement( (DaoValue*) cdata->object );
 				cycRefCountDecrement( (DaoValue*) cdata->ctype );
 				break;
 			}
@@ -733,15 +735,8 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrements( ns->cstData );
 				cycRefCountDecrements( ns->varData );
 				cycRefCountDecrements( ns->varType );
-				cycRefCountDecrements( ns->cmodule->cmethods );
 				cycRefCountDecrements( ns->mainRoutines );
 				cycRefCountDecrementMapValue( ns->abstypes );
-				for(k=0; k<ns->cmodule->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pValue[k];
-					if( typer->priv == NULL ) continue;
-					cycRefCountDecrementMapValue( typer->priv->values );
-					cycRefCountDecrementMapValue( typer->priv->methods );
-				}
 				break;
 			}
 		case DAO_TYPE :
@@ -749,8 +744,19 @@ void DaoCGC_CycRefCountDecScan()
 				DaoType *abtp = (DaoType*) value;
 				cycRefCountDecrement( abtp->aux );
 				cycRefCountDecrement( abtp->value );
+				cycRefCountDecrement( (DaoValue*) abtp->kernel );
 				cycRefCountDecrements( abtp->nested );
 				cycRefCountDecrementMapValue( abtp->interfaces );
+				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				cycRefCountDecrement( (DaoValue*) kernel->abtype );
+				cycRefCountDecrement( (DaoValue*) kernel->nspace );
+				cycRefCountDecrementMapValue( kernel->values );
+				cycRefCountDecrementMapValue( kernel->methods );
+				cycRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -770,8 +776,11 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
+				DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
-					//cycRefCountDecrement( (DaoValue*) frame->context );
+					cycRefCountDecrement( (DaoValue*) frame->routine );
+					cycRefCountDecrement( (DaoValue*) frame->function );
+					cycRefCountDecrement( (DaoValue*) frame->object );
 					frame = frame->next;
 				}
 				break;
@@ -793,7 +802,7 @@ void DaoCGC_CycRefCountIncScan()
 			if( value->xGC.alive ) continue;
 			if( value->type == DAO_CDATA && (value->xGC.refCount ==0 || value->xGC.cycRefCount ==0) ){
 				DaoCdata *cdata = (DaoCdata*) value;
-				DaoCdataCore *core = (DaoCdataCore*)cdata->typer->priv;
+				DaoCdataCore *core = (DaoCdataCore*)cdata->ctype->kernel->core;
 				if( !(cdata->attribs & DAO_CDATA_FREE) ) continue;
 				if( cdata->data == NULL || core == NULL ) continue;
 				if( core->DelTest == NULL ) continue;
@@ -868,8 +877,7 @@ int DaoCGC_AliveObjectScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				cycRefCountIncrement( (DaoValue*) cdata->meta );
-				cycRefCountIncrement( (DaoValue*) cdata->daoObject );
+				cycRefCountIncrement( (DaoValue*) cdata->object );
 				cycRefCountIncrement( (DaoValue*) cdata->ctype );
 				break;
 			}
@@ -930,15 +938,8 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrements( ns->cstData );
 				cycRefCountIncrements( ns->varData );
 				cycRefCountIncrements( ns->varType );
-				cycRefCountIncrements( ns->cmodule->cmethods );
 				cycRefCountIncrements( ns->mainRoutines );
 				cycRefCountIncrementMapValue( ns->abstypes );
-				for(k=0; k<ns->cmodule->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pValue[k];
-					if( typer->priv == NULL ) continue;
-					cycRefCountIncrementMapValue( typer->priv->values );
-					cycRefCountIncrementMapValue( typer->priv->methods );
-				}
 				break;
 			}
 		case DAO_TYPE :
@@ -946,8 +947,19 @@ int DaoCGC_AliveObjectScan()
 				DaoType *abtp = (DaoType*) value;
 				cycRefCountIncrement( abtp->aux );
 				cycRefCountIncrement( abtp->value );
+				cycRefCountDecrement( (DaoValue*) abtp->kernel );
 				cycRefCountIncrements( abtp->nested );
 				cycRefCountIncrementMapValue( abtp->interfaces );
+				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				cycRefCountIncrement( (DaoValue*) kernel->abtype );
+				cycRefCountIncrement( (DaoValue*) kernel->nspace );
+				cycRefCountIncrementMapValue( kernel->values );
+				cycRefCountIncrementMapValue( kernel->methods );
+				cycRefCountIncrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -967,8 +979,11 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
+				DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
-					//cycRefCountIncrement( (DaoValue*) frame->context );
+					cycRefCountIncrement( (DaoValue*) frame->routine );
+					cycRefCountIncrement( (DaoValue*) frame->function );
+					cycRefCountIncrement( (DaoValue*) frame->object );
 					frame = frame->next;
 				}
 				break;
@@ -1047,8 +1062,7 @@ void DaoCGC_RefCountDecScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				directRefCountDecrement( (DaoValue**) & cdata->meta );
-				directRefCountDecrement( (DaoValue**) & cdata->daoObject );
+				directRefCountDecrement( (DaoValue**) & cdata->object );
 				directRefCountDecrement( (DaoValue**) & cdata->ctype );
 				break;
 			}
@@ -1109,15 +1123,8 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrements( ns->cstData );
 				directRefCountDecrements( ns->varData );
 				directRefCountDecrements( ns->varType );
-				directRefCountDecrements( ns->cmodule->cmethods );
 				directRefCountDecrements( ns->mainRoutines );
 				directRefCountDecrementMapValue( ns->abstypes );
-				for(k=0; k<ns->cmodule->ctypers->size; k++){
-					typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pValue[k];
-					if( typer->priv == NULL ) continue;
-					directRefCountDecrementMapValue( typer->priv->values );
-					directRefCountDecrementMapValue( typer->priv->methods );
-				}
 				break;
 			}
 		case DAO_TYPE :
@@ -1126,7 +1133,18 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrements( abtp->nested );
 				directRefCountDecrement( (DaoValue**) & abtp->aux );
 				directRefCountDecrement( (DaoValue**) & abtp->value );
+				directRefCountDecrement( (DaoValue**) & abtp->kernel );
 				directRefCountDecrementMapValue( abtp->interfaces );
+				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				directRefCountDecrement( (DaoValue**) & kernel->abtype );
+				directRefCountDecrement( (DaoValue**) & kernel->nspace );
+				directRefCountDecrementMapValue( kernel->values );
+				directRefCountDecrementMapValue( kernel->methods );
+				directRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1146,9 +1164,14 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
+				DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
-					//if( frame->context ) frame->context->refCount --;
-					//frame->context = NULL;
+					if( frame->routine ) frame->routine->refCount --;
+					if( frame->function ) frame->function->refCount --;
+					if( frame->object ) frame->object->refCount --;
+					frame->routine = NULL;
+					frame->function = NULL;
+					frame->object = NULL;
 					frame = frame->next;
 				}
 				break;
@@ -1390,8 +1413,7 @@ void DaoIGC_CycRefCountDecScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				cycRefCountDecrement( (DaoValue*) cdata->meta );
-				cycRefCountDecrement( (DaoValue*) cdata->daoObject );
+				cycRefCountDecrement( (DaoValue*) cdata->object );
 				cycRefCountDecrement( (DaoValue*) cdata->ctype );
 				break;
 			}
@@ -1448,9 +1470,9 @@ void DaoIGC_CycRefCountDecScan()
 		case DAO_INTERFACE :
 			{
 				DaoInterface *inter = (DaoInterface*)value;
-				cycRefCountDecrementMapValue( inter->methods );
 				cycRefCountDecrements( inter->supers );
 				cycRefCountDecrement( (DaoValue*) inter->abtype );
+				j += cycRefCountDecrementMapValue( inter->methods );
 				j += inter->supers->size + inter->methods->size;
 				break;
 			}
@@ -1460,16 +1482,9 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrements( ns->cstData );
 				cycRefCountDecrements( ns->varData );
 				cycRefCountDecrements( ns->varType );
-				cycRefCountDecrements( ns->cmodule->cmethods );
 				cycRefCountDecrements( ns->mainRoutines );
+				j += cycRefCountDecrementMapValue( ns->abstypes );
 				j += ns->cstData->size + ns->varData->size + ns->abstypes->size;
-				cycRefCountDecrementMapValue( ns->abstypes );
-				for(k=0; k<ns->cmodule->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pValue[k];
-					if( typer->priv == NULL ) continue;
-					cycRefCountDecrementMapValue( typer->priv->values );
-					cycRefCountDecrementMapValue( typer->priv->methods );
-				}
 				break;
 			}
 		case DAO_TYPE :
@@ -1477,9 +1492,21 @@ void DaoIGC_CycRefCountDecScan()
 				DaoType *abtp = (DaoType*) value;
 				cycRefCountDecrement( abtp->aux );
 				cycRefCountDecrement( abtp->value );
+				cycRefCountDecrement( (DaoValue*) abtp->kernel );
 				cycRefCountDecrements( abtp->nested );
-				cycRefCountDecrementMapValue( abtp->interfaces );
+				j += cycRefCountDecrementMapValue( abtp->interfaces );
 				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				cycRefCountDecrement( (DaoValue*) kernel->abtype );
+				cycRefCountDecrement( (DaoValue*) kernel->nspace );
+				j += cycRefCountDecrementMapValue( kernel->values );
+				j += cycRefCountDecrementMapValue( kernel->methods );
+				j += cycRefCountDecrementMapValue( kernel->instances );
+				break;
+			}
 		case DAO_FUTURE :
 			{
 				DaoFuture *future = (DaoFuture*) value;
@@ -1490,7 +1517,6 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) future->precondition );
 				break;
 			}
-			}
 		case DAO_PROCESS :
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
@@ -1498,8 +1524,13 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
+				DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
+				j += vmp->stackSize;
 				while( frame ){
-					//cycRefCountDecrement( (DaoValue*) frame->context );
+					j += 3;
+					cycRefCountDecrement( (DaoValue*) frame->routine );
+					cycRefCountDecrement( (DaoValue*) frame->function );
+					cycRefCountDecrement( (DaoValue*) frame->object );
 					frame = frame->next;
 				}
 				break;
@@ -1532,7 +1563,7 @@ void DaoIGC_CycRefCountIncScan()
 		if( value->xGC.alive ) continue;
 		if( value->type == DAO_CDATA && (value->xGC.refCount ==0 || value->xGC.cycRefCount ==0) ){
 			DaoCdata *cdata = (DaoCdata*) value;
-			DaoCdataCore *core = (DaoCdataCore*)cdata->typer->priv;
+			DaoCdataCore *core = (DaoCdataCore*)cdata->ctype->kernel->core;
 			if( !(cdata->attribs & DAO_CDATA_FREE) ) continue;
 			if( cdata->data == NULL || core == NULL ) continue;
 			if( core->DelTest == NULL ) continue;
@@ -1621,8 +1652,7 @@ int DaoIGC_AliveObjectScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				cycRefCountIncrement( (DaoValue*) cdata->meta );
-				cycRefCountIncrement( (DaoValue*) cdata->daoObject );
+				cycRefCountIncrement( (DaoValue*) cdata->object );
 				cycRefCountIncrement( (DaoValue*) cdata->ctype );
 				break;
 			}
@@ -1691,16 +1721,9 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrements( ns->cstData );
 				cycRefCountIncrements( ns->varData );
 				cycRefCountIncrements( ns->varType );
-				cycRefCountIncrements( ns->cmodule->cmethods );
 				cycRefCountIncrements( ns->mainRoutines );
+				k += cycRefCountIncrementMapValue( ns->abstypes );
 				k += ns->cstData->size + ns->varData->size + ns->abstypes->size;
-				cycRefCountIncrementMapValue( ns->abstypes );
-				for(k=0; k<ns->cmodule->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pValue[k];
-					if( typer->priv == NULL ) continue;
-					cycRefCountIncrementMapValue( typer->priv->values );
-					cycRefCountIncrementMapValue( typer->priv->methods );
-				}
 				break;
 			}
 		case DAO_TYPE :
@@ -1708,8 +1731,19 @@ int DaoIGC_AliveObjectScan()
 				DaoType *abtp = (DaoType*) value;
 				cycRefCountIncrement( abtp->aux );
 				cycRefCountIncrement( abtp->value );
+				cycRefCountIncrement( (DaoValue*) abtp->kernel );
 				cycRefCountIncrements( abtp->nested );
-				cycRefCountIncrementMapValue( abtp->interfaces );
+				k += cycRefCountIncrementMapValue( abtp->interfaces );
+				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				cycRefCountIncrement( (DaoValue*) kernel->abtype );
+				cycRefCountIncrement( (DaoValue*) kernel->nspace );
+				k += cycRefCountIncrementMapValue( kernel->values );
+				k += cycRefCountIncrementMapValue( kernel->methods );
+				k += cycRefCountIncrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1729,8 +1763,13 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
+				DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
+				k += vmp->stackSize;
 				while( frame ){
-					//cycRefCountIncrement( (DaoValue*) frame->context );
+					k += 3;
+					cycRefCountIncrement( (DaoValue*) frame->routine );
+					cycRefCountIncrement( (DaoValue*) frame->function );
+					cycRefCountIncrement( (DaoValue*) frame->object );
 					frame = frame->next;
 				}
 				break;
@@ -1819,8 +1858,7 @@ void DaoIGC_RefCountDecScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				directRefCountDecrement( (DaoValue**) & cdata->meta );
-				directRefCountDecrement( (DaoValue**) & cdata->daoObject );
+				directRefCountDecrement( (DaoValue**) & cdata->object );
 				directRefCountDecrement( (DaoValue**) & cdata->ctype );
 				break;
 			}
@@ -1868,9 +1906,9 @@ void DaoIGC_RefCountDecScan()
 				j += klass->superClass->size + klass->abstypes->size;
 				j += klass->objDataType->size + klass->glbDataType->size;
 				j += klass->references->size + klass->abstypes->size;
+				j += directRefCountDecrementMapValue( klass->abstypes );
 				directRefCountDecrement( (DaoValue**) & klass->clsType );
 				directRefCountDecrement( (DaoValue**) & klass->classRoutine );
-				directRefCountDecrementMapValue( klass->abstypes );
 				directRefCountDecrements( klass->cstData );
 				directRefCountDecrements( klass->glbData );
 				directRefCountDecrements( klass->objDataDefault );
@@ -1884,7 +1922,7 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoInterface *inter = (DaoInterface*)value;
 				j += inter->supers->size + inter->methods->size;
-				directRefCountDecrementMapValue( inter->methods );
+				j += directRefCountDecrementMapValue( inter->methods );
 				directRefCountDecrements( inter->supers );
 				directRefCountDecrement( (DaoValue**) & inter->abtype );
 				break;
@@ -1893,18 +1931,11 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoNamespace *ns = (DaoNamespace*) value;
 				j += ns->cstData->size + ns->varData->size + ns->abstypes->size;
+				j += directRefCountDecrementMapValue( ns->abstypes );
 				directRefCountDecrements( ns->cstData );
 				directRefCountDecrements( ns->varData );
 				directRefCountDecrements( ns->varType );
-				directRefCountDecrements( ns->cmodule->cmethods );
 				directRefCountDecrements( ns->mainRoutines );
-				directRefCountDecrementMapValue( ns->abstypes );
-				for(k=0; k<ns->cmodule->ctypers->size; k++){
-					DaoTypeBase *typer = (DaoTypeBase*)ns->cmodule->ctypers->items.pValue[k];
-					if( typer->priv == NULL ) continue;
-					directRefCountDecrementMapValue( typer->priv->values );
-					directRefCountDecrementMapValue( typer->priv->methods );
-				}
 				break;
 			}
 		case DAO_TYPE :
@@ -1913,7 +1944,18 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrements( abtp->nested );
 				directRefCountDecrement( (DaoValue**) & abtp->aux );
 				directRefCountDecrement( (DaoValue**) & abtp->value );
-				directRefCountDecrementMapValue( abtp->interfaces );
+				directRefCountDecrement( (DaoValue**) & abtp->kernel );
+				j += directRefCountDecrementMapValue( abtp->interfaces );
+				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				directRefCountDecrement( (DaoValue**) & kernel->abtype );
+				directRefCountDecrement( (DaoValue**) & kernel->nspace );
+				j += directRefCountDecrementMapValue( kernel->values );
+				j += directRefCountDecrementMapValue( kernel->methods );
+				j += directRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1933,9 +1975,16 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
+				DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
+				j += vmp->stackSize;
 				while( frame ){
-					//if( frame->context ) frame->context->refCount --;
-					//frame->context = NULL;
+					j += 3;
+					if( frame->routine ) frame->routine->refCount --;
+					if( frame->function ) frame->function->refCount --;
+					if( frame->object ) frame->object->refCount --;
+					frame->routine = NULL;
+					frame->function = NULL;
+					frame->object = NULL;
 					frame = frame->next;
 				}
 				break;
@@ -2008,7 +2057,10 @@ void cycRefCountDecrement( DaoValue *value )
 	value->xGC.cycRefCount --;
 
 	if( value->xGC.cycRefCount<0 ){
-		   printf( "cycRefCount<0 : %2i %p\n", value->type, value );
+#if DEBUG
+		printf( "cycRefCount<0 : %2i %p\n", value->type, value );
+		DaoGC_PrintValueInfo( value );
+#endif
 		/*
 		 */
 		value->xGC.cycRefCount = 0;
@@ -2071,32 +2123,37 @@ void directRefCountDecrements( DArray *list )
 	DaoGC_RefCountDecrements( list->items.pValue, list->size );
 	list->size = 0;
 }
-void cycRefCountDecrementMapValue( DMap *dmap )
+int cycRefCountDecrementMapValue( DMap *dmap )
 {
 	DNode *it;
-	if( dmap == NULL ) return;
-	for( it = DMap_First( dmap ); it != NULL; it = DMap_Next( dmap, it ) )
+	if( dmap == NULL ) return 0;
+	for(it = DMap_First( dmap ); it != NULL; it = DMap_Next( dmap, it ) )
 		cycRefCountDecrement( it->value.pValue );
+	return dmap->size;
 }
-void cycRefCountIncrementMapValue( DMap *dmap )
+int cycRefCountIncrementMapValue( DMap *dmap )
 {
 	DNode *it;
-	if( dmap == NULL ) return;
+	if( dmap == NULL ) return 0;
 	for( it = DMap_First( dmap ); it != NULL; it = DMap_Next( dmap, it ) )
 		cycRefCountIncrement( it->value.pValue );
+	return dmap->size;
 }
-void directRefCountDecrementMapValue( DMap *dmap )
+int directRefCountDecrementMapValue( DMap *dmap )
 {
+	int n;
 	DNode *it;
-	if( dmap == NULL ) return;
+	if( dmap == NULL ) return 0;
 	for( it = DMap_First( dmap ); it != NULL; it = DMap_Next( dmap, it ) ){
 		DaoValue *p = it->value.pValue;
 		if( p == NULL ) continue;
 		p->xGC.refCount --;
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
 	}
+	n = dmap->size;
 	dmap->valtype = 0;
 	DMap_Clear( dmap );
+	return n;
 }
 void cycRefCountDecrementsT( DTuple *tuple )
 {

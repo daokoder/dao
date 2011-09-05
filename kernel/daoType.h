@@ -26,28 +26,25 @@
  * 
  * for core types: number, string, complex, list, map, array
  * eg:DaoType.name = "int", "float", "string", ...
- *    DaoType.count = 0; DaoType.aux = NULL;
- *    DaoType.basic = DAO_INTEGER, DAO_STRING, ...
+ *    DaoType.tid = DAO_INTEGER, DAO_STRING, ...
  *
  * for Dao class and routine types:
  *    DaoType.name = "foo", "bar", ...
  *    DaoType.count = 0;
- *    DaoType.basic = DAO_CLASS, DAO_CDATA,
+ *    DaoType.tid = DAO_CLASS, DAO_CDATA,
  *    DaoType.aux = the Dao class or C type
  *
  * for nested type: list<float>, map<string,float>, ...
  *    DaoType.name = "list<float>", "map<string,float>", ...
- *    DaoType.basic = DAO_LIST, DAO_MAP
+ *    DaoType.tid = DAO_LIST, DAO_MAP
  *    DaoType.aux = NULL;
- *    DaoType.count = 1, or 2, or more for routine and tuple etc. types
  *    DaoType.nested[] = nested DaoType(s) : X<nested[0],nested[1],...>
  *
  * for routine type: routine(float,string):float
  *    DaoType.name = "routine<float,string=>float>"
- *    DaoType.basic = DAO_ROUTINE
- *    DaoType.aux = XXX
- *    DaoType.count = parameter count + 1
- *    DaoType.nested[] = parameter DaoType(s) : (<nested[0],...) : returned
+ *    DaoType.tid = DAO_ROUTINE
+ *    DaoType.aux = returned type
+ *    DaoType.nested[] = parameter DaoType(s) : (<nested[0],...)
  *
  *    e.g.:
  *        routine<float=>?>: foo( a : float ){}
@@ -60,35 +57,37 @@
  *        routine<a:float,b:?=>?>: foo( a : float, b ) : @b{}
  *
  * for named parameter passing: name => value
- *    DaoType.name = "pair<string,X>"
- *    DaoType.basic = DAO_PARNAME
- *    DaoType.count = 2
- *    DaoType.nested[] = string, X
+ *    DaoType.name = "string:type" or "string=type"
+ *    DaoType.tid = DAO_PAR_NAMED or DAO_PAR_DEFAULT
+ *    DaoType.aux = actual type
  */
 struct DaoType
 {
 	DAO_DATA_COMMON;
 
-	uchar_t       tid; /* type id */
-	uchar_t       attrib;
-	uchar_t       flagtype : 1; /* for enum type */
-	uchar_t       simtype : 1; /* if the nested contains only simple types */
-	uchar_t       ffitype : 6; /* for DaoCLoader module */
-	uchar_t       rntcount; /* real number type count */
-	DString      *name; /* type name */
-	DString      *fname; /* field name, or parameter name */
-	DArray       *nested;
-	DMap         *mapNames;
-	DMap         *interfaces;
-	DaoTypeBase  *typer; /* TYPER of the represented type: built-in or C types */
+	uchar_t   tid; /* type id */
+	uchar_t   attrib;
+	uchar_t   flagtype : 1; /* for enum type */
+	uchar_t   simtype : 1; /* if the nested contains only simple types */
+	uchar_t   ffitype : 6; /* for DaoCLoader module */
+	uchar_t   rntcount; /* real number type count */
+	DString  *name; /* type name */
+	DString  *fname; /* field name, or parameter name */
+	DArray   *nested;
+	DMap     *mapNames;
+	DMap     *interfaces;
+
 	/* Auxiliary data for the type:
 	 * aux can be the returned type in a routine type;
 	 * aux can be the parameter type in a named parameter type;
 	 * aux can be the class object in class or object type;
 	 * aux can be the DaoCdata object in wrapped C type;
 	 * aux can be the constant value in a constant value type. */
-	DaoValue      *aux;
-	DaoValue      *value; /* default value for the type */
+	DaoValue  *aux;
+	DaoValue  *value; /* default value for the type */
+
+	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
+	DaoTypeBase    *typer;
 };
 extern DaoType *dao_type_udf;
 extern DaoType *dao_type_any;
@@ -123,6 +122,7 @@ void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 /* all DAO_INITYPE: @T ... */
 void DaoType_GetTypes( DaoType *self, DMap *types );
 
+
 #define NESTYPE(t,i) ((t)->nested->items.pType[i])
 
 struct DaoInterface
@@ -149,18 +149,32 @@ void DMap_SortMethods( DMap *hash, DArray *methods );
 int DaoType_HasInterface( DaoType *self, DaoInterface *inter );
 
 
-DaoValue* DaoFindValue( DaoTypeBase *typer, DString *name );
-DaoValue* DaoFindValueOnly( DaoTypeBase *typer, DString *name );
-DaoValue* DaoFindFunction( DaoTypeBase *typer, DString *name );
-DaoValue* DaoFindFunction2( DaoTypeBase *typer, const char *name );
-
-struct DaoTypeCore
+/* Structure DaoTypeKernel will contain generated wrapping data for the type.
+ * It is GC collectable, so that it will be automatically deleted once it is
+ * no longer used, which make it possible to unload external modules automatically.
+ * Its reference counting is handled and only handled by DaoType. */
+struct DaoTypeKernel
 {
+	DAO_DATA_COMMON;
+
 	uint_t         attribs;
 	DMap          *values;
 	DMap          *methods;
+	DMap          *instances; /* for C data; */
 	DaoType       *abtype;
 	DaoNamespace  *nspace;
+	DaoTypeCore   *core;
+	DaoTypeBase   *typer;
+};
+DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
+
+
+/* The separation of DaoTypeKernel from DaoTypeCore will make it simpler 
+ * to create DaoTypeCore structures, and also make it unnecessary to change
+ * the DaoTypeCore definitions when DaoTypeKernel needs to be changed. */
+struct DaoTypeCore
+{
+	DaoTypeKernel  *kernel;
 
 	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
 	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
@@ -188,11 +202,7 @@ void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, Dao
 
 struct DaoCdataCore
 {
-	uint_t         attribs;
-	DMap          *values;
-	DMap          *methods;
-	DaoType       *abtype;
-	DaoNamespace  *nspace;
+	DaoTypeKernel  *kernel;
 
 	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
 	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
@@ -203,9 +213,11 @@ struct DaoCdataCore
 
 	void   (*DelData)( void *data );
 	int    (*DelTest)( void *data );
-
-	DMap *instanceCdata;
 };
-DaoCdataCore* DaoCdataCore_New();
+
+DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
+DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
+DaoValue* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
+DaoValue* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
 
 #endif

@@ -90,15 +90,21 @@
 
 #endif /* WIN32 */
 
+#if defined(__STRICT_ANSI__) && defined(DAO_USE_INT64)
+#undef DAO_USE_INT64
+#endif
+
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
 #ifdef DAO_USE_INT64
 typedef long long           dint;
-typedef unsigned long long  uint_t;
+typedef long long           long_t;
+typedef unsigned long long  ulong_t;
 #else
 typedef long                dint;
-typedef unsigned long       uint_t;
-#endif /* defined() */
+typedef long                long_t;
+typedef unsigned long       ulong_t;
+#endif /* DAO_USE_INT64 */
 
 #ifdef __cplusplus
 #define DAO_EXTC_OPEN extern "C"{
@@ -224,6 +230,7 @@ enum DaoExceptionType
 
 typedef unsigned char  uchar_t;
 typedef unsigned short ushort_t;
+typedef unsigned int   uint_t;
 
 typedef struct DString     DString;
 typedef struct DArray      DArray;
@@ -300,7 +307,7 @@ struct DaoFuncItem
 struct DaoTypeBase
 {
 	const char    *name; /* type name; */
-	DaoTypeCore   *priv; /* data used internally; */
+	DaoTypeCore   *core; /* data used internally; */
 	DaoNumItem    *numItems; /* constant number list */
 	DaoFuncItem   *funcItems; /* method list: should end with a null item */
 

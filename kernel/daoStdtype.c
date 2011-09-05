@@ -226,13 +226,13 @@ static DaoValue* DaoValue_MakeCopy( DaoValue *self, DaoProcess *proc, DMap *cycD
 	DaoTypeBase *typer;
 	if( self->type <= DAO_COMPLEX ) return self;
 	typer = DaoValue_GetTyper( self );
-	return typer->priv->Copy( self, proc, cycData );
+	return typer->core->Copy( self, proc, cycData );
 }
 
 static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, size_t N, size_t *start, size_t *end, int *idtype )
 {
 	size_t i;
-	llong_t n1, n2;
+	long_t n1, n2;
 	DaoValue **items;
 	DaoValue *first, *second;
 	DArray *array;
@@ -252,14 +252,14 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, size_t N, size_t *s
 		break;
 	case DAO_FLOAT :
 		*idtype = IDX_SINGLE;
-		n1 = (llong_t)(index->xFloat.value);
+		n1 = (long_t)(index->xFloat.value);
 		if( n1 <0 ) n1 += N;
 		*start = n1;
 		*end = n1;
 		break;
 	case DAO_DOUBLE :
 		*idtype = IDX_SINGLE;
-		n1 = (llong_t)(index->xDouble.value);
+		n1 = (long_t)(index->xDouble.value);
 		if( n1 <0 ) n1 += N;
 		*start = n1;
 		*end = n1;
@@ -327,7 +327,7 @@ DaoValue* DaoValue_NoCopy( DaoValue *self, DaoProcess *proc, DMap *cycData )
 
 DaoTypeCore baseCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoValue_GetItem,
@@ -639,7 +639,7 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
 	DaoTypeBase *typer = DaoValue_GetTyper( self );
-	DaoValue *p = DaoFindValue( typer, name );
+	DaoValue *p = DaoTypeBase_FindValue( typer, name );
 	if( p == NULL ){
 		DString *mbs = DString_New(1);
 		DString_Append( mbs, name );
@@ -670,7 +670,8 @@ void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, Dao
 }
 void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
 {
-	DaoValue *func = DaoFindFunction2( DaoValue_GetTyper( self ), "[]" );
+	DaoTypeBase *typer = DaoValue_GetTyper( self );
+	DaoValue *func = DaoTypeBase_FindFunctionMBS( typer, "[]" );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
@@ -679,7 +680,8 @@ void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N 
 }
 void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
 {
-	DaoValue *func = DaoFindFunction2( DaoValue_GetTyper( self ), "[]=" );
+	DaoTypeBase *typer = DaoValue_GetTyper( self );
+	DaoValue *func = DaoTypeBase_FindFunctionMBS( typer, "[]=" );
 	DaoValue *p[ DAO_MAX_PARAM ];
 	memcpy( p, pid, N*sizeof(DaoValue*) );
 	p[N+1] = value;
@@ -701,8 +703,8 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 }
 static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid )
 {
-	uint_t bits = (uint_t) DaoValue_GetDouble( self );
-	size_t size = 8*sizeof(uint_t);
+	ulong_t bits = (ulong_t) DaoValue_GetDouble( self );
+	size_t size = 8*sizeof(ulong_t);
 	size_t start, end;
 	int idtype;
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
@@ -716,9 +718,9 @@ static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid 
 }
 static void DaoNumber_SetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
-	uint_t bits = (uint_t) DaoValue_GetDouble( self );
-	uint_t val = (uint_t) DaoValue_GetDouble( value );
-	size_t size = 8*sizeof(uint_t);
+	ulong_t bits = (ulong_t) DaoValue_GetDouble( self );
+	ulong_t val = (ulong_t) DaoValue_GetDouble( value );
+	size_t size = 8*sizeof(ulong_t);
 	size_t start, end;
 	int idtype;
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
@@ -749,7 +751,7 @@ static void DaoNumber_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[]
 
 static DaoTypeCore numberCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoNumber_GetItem,
@@ -895,7 +897,7 @@ static void DaoString_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[]
 }
 static DaoTypeCore stringCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoString_GetItem,
@@ -1937,7 +1939,7 @@ void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, D
 			if( cycData ){
 				/* deep copy */
 				DaoTypeBase *typer = DaoValue_GetTyper( data[i] );
-				src = typer->priv->Copy( data[i], proc, cycData );
+				src = typer->core->Copy( data[i], proc, cycData );
 			}
 			GC_ShiftRC( src, copy[i] );
 			copy[i] = src;
@@ -1969,7 +1971,7 @@ DaoList* DaoList_Copy( DaoList *self, DMap *cycData )
 }
 static DaoTypeCore listCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoListCore_GetItem,
@@ -2770,7 +2772,7 @@ static DaoValue* DaoMap_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
 }
 static DaoTypeCore mapCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoMap_GetItem,
@@ -3149,19 +3151,16 @@ DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data )
 	self->extref = 0;
 	self->data = data;
 	self->typer = typer;
-	if( typer && typer->priv ) self->ctype = typer->priv->abtype;
 	if( typer == NULL ){
-		self->ctype = cdataTyper.priv->abtype;
 		self->typer = & cdataTyper;
 		self->buffer = data;
 	}else if( data ){
 		DaoCdataBindings_Insert( data, self );
 	}
-	if( typer && typer->priv ){
-		self->cmodule = typer->priv->nspace->cmodule;
-		GC_IncRC( self->cmodule );
+	if( self->typer->core && self->typer->core->kernel ){
+		self->ctype = self->typer->core->kernel->abtype;
+		if( self->ctype ) GC_IncRC( self->ctype );
 	}
-	if( self->ctype ) GC_IncRC( self->ctype );
 	return self;
 }
 DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data )
@@ -3179,16 +3178,12 @@ static void DaoCdata_Delete( DaoCdata *self )
 }
 void DaoCdata_DeleteData( DaoCdata *self )
 {
-	DaoCdataCore *c = (DaoCdataCore*)self->typer->priv;
+	DaoCdataCore *c = (DaoCdataCore*)self->typer->core;
 	void (*fdel)(void*) = (void (*)(void *))DaoCdata_Delete;
 	if( self->buffer == NULL ) DaoCdataBindings_Erase( self->data );
 	if( self->ctype ) GC_DecRC( self->ctype );
-	if( self->meta ) GC_DecRC( self->meta );
-	if( self->daoObject ) GC_DecRC( self->daoObject );
-	if( self->cmodule ) GC_DecRC( self->cmodule );
-	self->meta = NULL;
-	self->daoObject = NULL;
-	self->cmodule = NULL;
+	if( self->object ) GC_DecRC( self->object );
+	self->object = NULL;
 	self->ctype = NULL;
 	if( !(self->attribs & DAO_CDATA_FREE) ) return;
 	if( self->buffer ){
@@ -3197,7 +3192,7 @@ void DaoCdata_DeleteData( DaoCdata *self )
 		if( c && c->DelData && c->DelData != fdel ){
 			c->DelData( self->data );
 		}else if( c ==0 && self->typer->Delete && self->typer->Delete != fdel ){
-			/* if the methods of typer has not been setup, typer->priv would be NULL */
+			/* if the methods of typer has not been setup, typer->core would be NULL */
 			self->typer->Delete( self->data );
 		}else if( self->bufsize > 0 ){
 			dao_free( self->data );
@@ -3265,7 +3260,7 @@ void** DaoCdata_GetData2( DaoCdata *self )
 }
 DaoObject* DaoCdata_GetObject( DaoCdata *self )
 {
-	return (DaoObject*)self->daoObject;
+	return (DaoObject*)self->object;
 }
 DaoTypeBase* DaoCdata_GetTyper(DaoCdata *self )
 {
@@ -3285,186 +3280,14 @@ void* DaoCdata_CastData( DaoCdata *self, DaoTypeBase *totyper )
 			return self->data;
 		}
 		if( typer->casts[i] ) tmp.data = (*typer->casts[i])( self->data );
-		tmp.ctype = typer->supers[i]->priv->abtype;
+		tmp.ctype = typer->supers[i]->core->kernel->abtype;
 		tmp.typer = typer->supers[i];
 		data = DaoCdata_CastData( & tmp, totyper );
 		if( data ) return data;
 	}
 	return NULL;
 }
-static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
-{
-	DaoTypeBase *typer = self->xCdata.typer;
-	DaoValue *p = DaoFindValue( typer, name );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	if( p == NULL ){
-		DaoValue *func = NULL;
-		DString_SetMBS( proc->mbstring, "." );
-		DString_Append( proc->mbstring, name );
-		func = DaoFindFunction( typer, proc->mbstring );
-		func = (DaoValue*) DRoutine_Resolve( func, self, NULL, 0, DVM_CALL );
-		if( func == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
-			return;
-		}
-		func->xFunction.pFunc( proc, & self, 1 );
-	}else{
-		DaoProcess_PutValue( proc, p );
-	}
-}
-static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
-{
-	DaoTypeBase *typer = self->xCdata.typer;
-	DaoValue *func = NULL;
-	DString_SetMBS( proc->mbstring, "." );
-	DString_Append( proc->mbstring, name );
-	DString_AppendMBS( proc->mbstring, "=" );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	func = DaoFindFunction( typer, proc->mbstring );
-	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self, & value, 1 );
-}
-static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
-{
-	DaoTypeBase *typer = self0->xCdata.typer;
-	DaoCdata *self = & self0->xCdata;
 
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	if( self->buffer && pid->type >=DAO_INTEGER && pid->type <=DAO_DOUBLE){
-		int id = DaoValue_GetInteger( pid );
-		self->data = self->buffer;
-		if( self->size && ( id <0 || id > self->size ) ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "index out of range" );
-			return;
-		}
-		if( self->memsize ){
-			self->data = (void*)( (char*)self->buffer + id * self->memsize );
-		}else{
-			self->data = ((void**)self->buffer)[id];
-		}
-		DaoProcess_PutValue( proc, self0 );
-	}else{
-		DaoValue *func = NULL;
-		func = DaoFindFunction2( typer, "[]" );
-		if( func == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
-			return;
-		}
-		DaoProcess_PushCallable( proc, func, self0, & pid, 1 );
-	}
-}
-static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
-{
-	DaoTypeBase *typer = self0->xCdata.typer;
-	DaoValue *func = NULL;
-	DaoValue *p[2];
-
-	DString_SetMBS( proc->mbstring, "[]=" );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	func = DaoFindFunction( typer, proc->mbstring );
-	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
-		return;
-	}
-	p[0] = pid;
-	p[1] = value;
-	DaoProcess_PushCallable( proc, func, self0, p, 2 );
-}
-static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	DaoTypeBase *typer = self->xCdata.typer;
-	DaoValue *func = NULL;
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	if( N == 1 ){
-		DaoCdata_GetItem1( self, proc, ids[0] );
-		return;
-	}
-	func = DaoFindFunction2( typer, "[]" );
-	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self, ids, N );
-}
-static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-	DaoTypeBase *typer = self->xCdata.typer;
-	DaoValue *func = NULL;
-	DaoValue *p[ DAO_MAX_PARAM ];
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	if( N == 1 ){
-		DaoCdata_SetItem1( self, proc, ids[0], value );
-		return;
-	}
-	func = DaoFindFunction2( typer, "[]=" );
-	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
-		return;
-	}
-	memcpy( p, ids, N*sizeof(DaoValue*) );
-	p[N] = value;
-	DaoProcess_PushCallable( proc, func, self, p, N+1 );
-}
-static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	int ec;
-	DaoValue *meth;
-	DaoCdata *self = & self0->xCdata;
-	if( self0 == self->ctype->value ){
-		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteMBS( stream, "[default]" );
-		return;
-	}
-	DaoValue_Clear( & proc->stackValues[0] );
-	meth = DaoFindFunction2( self->typer, "serialize" );
-	if( meth && (ec = DaoProcess_Call( proc, (DaoMethod*)meth, NULL, &self0, 1 )) ){
-		DaoProcess_RaiseException( proc, ec, DString_GetMBS( proc->mbstring ) );
-	}else if( meth == NULL || proc->stackValues[0] == NULL ){
-		char buf[50];
-		sprintf( buf, "[%p]", self );
-		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteMBS( stream, buf );
-	}else{
-		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
-	}
-}
-
-DaoCdataCore* DaoCdataCore_New()
-{
-	DaoCdataCore *self = (DaoCdataCore*) dao_calloc( 1, sizeof(DaoCdataCore) );
-	self->GetField = DaoCdata_GetField;
-	self->SetField = DaoCdata_SetField;
-	self->GetItem = DaoCdata_GetItem;
-	self->SetItem = DaoCdata_SetItem;
-	self->Print = DaoCdata_Print;
-	self->Copy = DaoValue_NoCopy;
-	return self;
-}
-void DaoTypeCdata_SetMethods( DaoTypeBase *self )
-{
-	self->Delete = (FuncPtrDel)DaoCdata_Delete;
-}
 
 void DaoBuffer_Resize( DaoCdata *self, int size )
 {
@@ -3650,8 +3473,7 @@ DaoTypeBase cdataTyper =
 	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
 };
-DaoCdata cptrCdata = { DAO_CDATA, 0, DAO_DATA_CONST, 0, 1, 0, 
-	NULL, NULL, NULL, NULL, NULL, NULL, 0,0,0,0,0 };
+DaoCdata cptrCdata = {DAO_CDATA,0,DAO_DATA_CONST,0,1,0,NULL,NULL,NULL,NULL,0,0,0,0,0};
 
 void DaoNameValue_Delete( DaoNameValue *self )
 {
@@ -3677,7 +3499,7 @@ static void DaoNameValue_Print( DaoValue *self0, DaoProcess *proc, DaoStream *st
 }
 static DaoTypeCore namevaCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoValue_GetItem,
@@ -3811,7 +3633,7 @@ static DaoValue* DaoTupleCore_Copy( DaoValue *self0, DaoProcess *proc, DMap *cyc
 }
 static DaoTypeCore tupleCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoTupleCore_GetField,
 	DaoTupleCore_SetField,
 	DaoTupleCore_GetItem,
@@ -4005,7 +3827,7 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 {
 	/* DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer; */
-	DaoTypeBase *typer = proc->topFrame->function->routHost->typer;
+	DaoTypeBase *typer = proc->topFrame->function->routHost->kernel->typer;
 	DaoException *self = (DaoException*)DaoException_New( typer );
 	if( n ) DString_Assign( self->info, p[0]->xString.data );
 	DaoProcess_PutCdata( proc, self, typer );
@@ -4013,7 +3835,7 @@ static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 {
 	/* DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer; */
-	DaoTypeBase *typer = proc->topFrame->function->routHost->typer;
+	DaoTypeBase *typer = proc->topFrame->function->routHost->kernel->typer;
 	DaoException *self = (DaoException*)DaoException_New2( typer, p[0] );
 	DaoProcess_PutCdata( proc, self, typer );
 }
@@ -4283,37 +4105,46 @@ static FuncPtrTest DaoTypeBase_GetDeleteTest( DaoTypeBase *typer )
 	}
 	return NULL;
 }
-DaoType* DaoCdata_WrapType( DaoNamespace *ns, DaoTypeBase *typer )
+DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer )
 {
-	DaoCdataCore *plgCore;
+	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
+	DaoCdataCore *core = (DaoCdataCore*) kernel->core;
+	DaoCdata *ctype;
 	DaoCdata *cdata;
 	DaoType *ctype_type;
 	DaoType *cdata_type;
 
 	cdata = DaoCdata_New( typer, NULL );
-	cdata->type = DAO_CTYPE;
-	cdata->trait |= DAO_DATA_NOCOPY;
-	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoValue*)cdata, NULL );
-	GC_ShiftRC( ctype_type, cdata->ctype );
-	cdata->ctype = ctype_type;
-	ctype_type->typer = typer;
-
-	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)cdata, NULL );
-	cdata_type->typer = typer;
-	cdata = DaoCdata_New( typer, NULL );
-	GC_ShiftRC( cdata_type, cdata->ctype );
-	cdata->ctype = cdata_type;
-	cdata_type->value = (DaoValue*) cdata;
+	ctype = DaoCdata_New( typer, NULL );
+	ctype->type = DAO_CTYPE;
+	ctype->trait |= DAO_DATA_NOCOPY;
 	cdata->trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
-	GC_IncRC( cdata );
 
-	plgCore = DaoCdataCore_New();
-	plgCore->abtype = cdata_type;
-	plgCore->nspace = ns;
-	plgCore->DelData = typer->Delete;
-	plgCore->DelTest = DaoTypeBase_GetDeleteTest( typer );
-	typer->priv = (DaoTypeCore*)plgCore;
-	DaoTypeCdata_SetMethods( typer );
+	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoValue*)ctype, NULL );
+	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );
+	GC_IncRC( cdata );
+	cdata_type->value = (DaoValue*) cdata;
+	GC_ShiftRC( ctype_type, ctype->ctype );
+	GC_ShiftRC( cdata_type, cdata->ctype );
+	ctype->ctype = ctype_type;
+	cdata->ctype = cdata_type;
+	ctype->typer = typer;
+	cdata->typer = typer;
+	ctype_type->typer = typer;
+	cdata_type->typer = typer;
+
+	GC_IncRC( nspace );
+	GC_IncRC( cdata_type );
+	kernel->nspace = nspace;
+	kernel->abtype = cdata_type;
+	GC_ShiftRC( kernel, ctype_type->kernel );
+	GC_ShiftRC( kernel, cdata_type->kernel );
+	ctype_type->kernel = kernel;
+	cdata_type->kernel = kernel;
+	core->DelData = typer->Delete;
+	core->DelTest = DaoTypeBase_GetDeleteTest( typer );
+	typer->Delete = (FuncPtrDel)DaoCdata_Delete;
+	typer->core = (DaoTypeCore*)core;
 	return ctype_type;
 }
 void DaoException_Setup( DaoNamespace *ns )
@@ -4368,27 +4199,27 @@ void DaoException_Setup( DaoNamespace *ns )
 	DaoNamespace_SetupValues( ns, & dao_WarningValue_Typer );
 
 	/* setup hierarchicy of exception types: */
-	DMap_Insert( exception->typer->priv->values, none->name, none->aux );
-	DMap_Insert( exception->typer->priv->values, any->name, any->aux );
-	DMap_Insert( exception->typer->priv->values, warning->name, warning->aux );
-	DMap_Insert( exception->typer->priv->values, error->name, error->aux );
-	DMap_Insert( error->typer->priv->values, field->name, field->aux );
-	DMap_Insert( field->typer->priv->values, fdnotexist->name, fdnotexist->aux );
-	DMap_Insert( field->typer->priv->values, fdnotperm->name, fdnotperm->aux );
-	DMap_Insert( error->typer->priv->values, tfloat->name, tfloat->aux );
-	DMap_Insert( tfloat->typer->priv->values, fltzero->name, fltzero->aux );
-	DMap_Insert( tfloat->typer->priv->values, fltoflow->name, fltoflow->aux );
-	DMap_Insert( tfloat->typer->priv->values, fltuflow->name, fltuflow->aux );
-	DMap_Insert( error->typer->priv->values, index->name, index->aux );
-	DMap_Insert( index->typer->priv->values, idorange->name, idorange->aux );
-	DMap_Insert( error->typer->priv->values, key->name, key->aux );
-	DMap_Insert( key->typer->priv->values, keynotexist->name, keynotexist->aux );
-	DMap_Insert( error->typer->priv->values, param->name, param->aux );
-	DMap_Insert( error->typer->priv->values, esyntax->name, esyntax->aux );
-	DMap_Insert( error->typer->priv->values, evalue->name, evalue->aux );
-	DMap_Insert( error->typer->priv->values, type->name, type->aux );
-	DMap_Insert( warning->typer->priv->values, wsyntax->name, wsyntax->aux );
-	DMap_Insert( warning->typer->priv->values, wvalue->name, wvalue->aux );
+	DMap_Insert( exception->kernel->values, none->name, none->aux );
+	DMap_Insert( exception->kernel->values, any->name, any->aux );
+	DMap_Insert( exception->kernel->values, warning->name, warning->aux );
+	DMap_Insert( exception->kernel->values, error->name, error->aux );
+	DMap_Insert( error->kernel->values, field->name, field->aux );
+	DMap_Insert( field->kernel->values, fdnotexist->name, fdnotexist->aux );
+	DMap_Insert( field->kernel->values, fdnotperm->name, fdnotperm->aux );
+	DMap_Insert( error->kernel->values, tfloat->name, tfloat->aux );
+	DMap_Insert( tfloat->kernel->values, fltzero->name, fltzero->aux );
+	DMap_Insert( tfloat->kernel->values, fltoflow->name, fltoflow->aux );
+	DMap_Insert( tfloat->kernel->values, fltuflow->name, fltuflow->aux );
+	DMap_Insert( error->kernel->values, index->name, index->aux );
+	DMap_Insert( index->kernel->values, idorange->name, idorange->aux );
+	DMap_Insert( error->kernel->values, key->name, key->aux );
+	DMap_Insert( key->kernel->values, keynotexist->name, keynotexist->aux );
+	DMap_Insert( error->kernel->values, param->name, param->aux );
+	DMap_Insert( error->kernel->values, esyntax->name, esyntax->aux );
+	DMap_Insert( error->kernel->values, evalue->name, evalue->aux );
+	DMap_Insert( error->kernel->values, type->name, type->aux );
+	DMap_Insert( warning->kernel->values, wsyntax->name, wsyntax->aux );
+	DMap_Insert( warning->kernel->values, wvalue->name, wvalue->aux );
 
 	DaoNamespace_SetupMethods( ns, & dao_Exception_Typer );
 	DaoNamespace_SetupMethods( ns, & dao_ExceptionNone_Typer );
@@ -4510,7 +4341,7 @@ static void DaoFuture_Delete( DaoFuture *self )
 
 static DaoTypeCore futureCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_SafeGetField,
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,

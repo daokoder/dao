@@ -168,11 +168,7 @@ int DaoValue_IsZero( DaoValue *self )
 	}
 	return 0;
 }
-llong_t DaoValue_GetLongLong( DaoValue *self )
-{
-	return (llong_t) DaoValue_GetDouble( self );
-}
-llong_t DString_ToInteger( DString *self )
+long_t DString_ToInteger( DString *self )
 {
 	if( self->mbs ) return strtoll( self->mbs, NULL, 0 );
 	return wcstoll( self->wcs, NULL, 0 );
@@ -182,7 +178,7 @@ double DString_ToDouble( DString *self )
 	if( self->mbs ) return strtod( self->mbs, 0 );
 	return wcstod( self->wcs, 0 );
 }
-llong_t DaoValue_GetInteger( DaoValue *self )
+long_t DaoValue_GetInteger( DaoValue *self )
 {
 	switch( self->type ){
 	case DAO_INTEGER : return self->xInteger.value;
@@ -282,11 +278,11 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DaoStream_WriteString( stream, self->xString.data ); break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
-		if( typer->priv->Print == DaoValue_Print ){
+		if( typer->core->Print == DaoValue_Print ){
 			DaoValue_BasicPrint( self, proc, stream, cycData );
 			break;
 		}
-		typer->priv->Print( self, proc, stream, cycData );
+		typer->core->Print( self, proc, stream, cycData );
 		break;
 	}
 	if( cycData != cd ) DMap_Delete( cycData );
@@ -732,6 +728,7 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T )
 	}
 	return rc;
 }
+
 
 int DaoValue_Type( DaoValue *self )
 {
@@ -1473,7 +1470,7 @@ static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns
 {
 	DaoType *type;
 	DaoValue *selfpar = (DaoValue*) self;
-	DaoValue *meth = DaoFindFunction2( self->typer, "serialize" );
+	DaoValue *meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" );
 	if( meth == NULL ) return 0;
 	if( DaoProcess_Call( proc, (DaoMethod*)meth, selfpar, NULL, 0 ) ) return 0;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
@@ -1554,8 +1551,9 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProcess *proc )
 {
+	DaoValue *cst = (DaoValue*)self->classRoutines;
 	DaoObject *object = DaoObject_New( self );
-	if( DaoProcess_PushCallable( proc, (DaoValue*)self->classRoutines, object, & param, 1 ) ==0 ){
+	if( DaoProcess_PushCallable( proc, cst, (DaoValue*)object, & param, 1 ) ==0 ){
 		proc->topFrame->returning = -1;
 		if( DaoProcess_Execute( proc ) ) return object;
 	}
@@ -1564,7 +1562,7 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProce
 }
 static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoValue *value = DaoFindFunction2( self->typer, self->typer->name );
+	DaoValue *value = DaoTypeBase_FindFunction( self->typer, self->ctype->name );
 	if( DaoProcess_PushCallable( proc, value, NULL, & param, 1 ) ) return NULL;
 	proc->topFrame->active = proc->firstFrame;
 	DaoProcess_SetActiveFrame( proc, proc->firstFrame ); /* return value in stackValues[0] */

@@ -39,7 +39,7 @@ static DaoValue* DaoComplex_Copy( DaoValue *self, DaoProcess *proc, DMap *cycDat
 }
 static DaoTypeCore comCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoValue_GetItem,
@@ -735,7 +735,7 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 	size_t ny = y->size;
 	size_t max = nx > ny ? nx : ny;
 	size_t i, nc = 1;
-	llong_t c = 0; 
+	long_t c = 0; 
 	int mc = 0;
 	while( (nc>>1) < max ) nc <<= 1, mc ++;
 	/* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
@@ -755,7 +755,7 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 	DLong_Resize( z, nc );
 	memset( z->data, nc, sizeof(short) );
 	for(i=0; i<nc; i++){
-		c += (llong_t)(cx[i].real / nc + 0.5);
+		c += (long_t)(cx[i].real / nc + 0.5);
 		z->data[i] = c & LONG_MASK;
 		c = c >> LONG_BITS;
 	}
@@ -873,7 +873,7 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 	size_t nx = x->size;
 	size_t nz = z->size;
 	size_t nr;
-	llong_t hr;
+	long_t hr;
 	int cmp, hx;
 	ushort_t d;
 
@@ -910,7 +910,7 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 		assert( (r->size-1) <= nx );
 		nr = r->size;
 		hr = (r->data[nx-1] << LONG_BITS) | r->data[nx-2];
-		if( nr > nx ) hr |= ((llong_t)r->data[nx]) << (LONG_BITS<<1);
+		if( nr > nx ) hr |= ((long_t)r->data[nx]) << (LONG_BITS<<1);
 		/* using the first two digits of the divisor to guess the quotient */
 		d = hr / hx;
 		DLong_UMulDigitX( mul, x, d );
@@ -1514,7 +1514,7 @@ static void DaoLong_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], 
 }
 static DaoTypeCore longCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoLong_GetItem,
@@ -2340,7 +2340,7 @@ static DaoValue* DaoNA_Copy( DaoValue *value, DaoProcess *proc, DMap *cycData )
 
 static DaoTypeCore numarrCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
 	DaoArray_GetItem,

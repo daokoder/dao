@@ -184,19 +184,17 @@ struct DaoCdata
 	void  *data;
 	void  *buffer;
 
-	DaoMap       *meta;
-	DaoObject    *daoObject;
-	DaoCModule   *cmodule;
-	DaoTypeBase  *typer;
+	DaoObject    *object;
 	DaoType      *ctype;
+	DaoTypeBase  *typer;
 
 	uchar_t   attribs;
 	uchar_t   extref;
 	ushort_t  memsize; /* size of single C/C++ object */
 
 	/* in case it is a memory buffer: */
-	size_t  size;
-	size_t  bufsize;
+	uint_t  size;
+	uint_t  bufsize;
 };
 
 extern DaoTypeBase cdataTyper;
@@ -273,7 +271,7 @@ struct DaoFuture
 	DaoType  *unitype;
 
 	DaoFuture   *precondition;
-	DaoContext  *context;
+	DaoProcess  *context; // XXX
 	DaoProcess  *process;
 };
 DaoFuture* DaoFuture_New();

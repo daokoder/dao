@@ -73,7 +73,7 @@ static DaoValue* DaoClass_Copy(  DaoValue *self, DaoProcess *proc, DMap *cycData
 
 static DaoTypeCore classCore=
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoClass_GetField,
 	DaoClass_SetField,
 	DaoClass_GetItem,
@@ -450,10 +450,10 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 			}
 		}else if( dbase->type == DAO_CTYPE ){
 			cdata = (DaoCdata*) dbase;
-			typer = cdata->typer;
+			typer = cdata->ctype->kernel->typer;
 			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
 				if( typer->supers[j] == NULL ) break;
-				DArray_Append( parents, typer->supers[j]->priv->abtype->aux );
+				DArray_Append( parents, typer->supers[j]->core->kernel->abtype->aux );
 				DArray_Append( offsets, (size_t) offset );
 			}
 		}
@@ -480,23 +480,22 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 		}else if( self->superClass->items.pValue[i]->type == DAO_CTYPE ){
 			DaoValue *cdata = self->superClass->items.pValue[i];
-			DaoTypeBase *typer = cdata->xCdata.typer;
-			DaoTypeCore *core = typer->priv;
-			DMap *values = core->values;
-			DMap *methods = core->methods;
+			DaoTypeKernel *kernel = cdata->xCdata.ctype->kernel;
+			DMap *values = kernel->values;
+			DMap *methods = kernel->methods;
 
 			if( values == NULL ){
-				DaoNamespace_SetupValues( typer->priv->nspace, typer );
-				values = core->values;
+				DaoNamespace_SetupValues( kernel->nspace, kernel->typer );
+				values = kernel->values;
 			}
 			if( methods == NULL ){
-				DaoNamespace_SetupMethods( typer->priv->nspace, typer );
-				methods = core->methods;
+				DaoNamespace_SetupMethods( kernel->nspace, kernel->typer );
+				methods = kernel->methods;
 			}
 
-			DString_SetMBS( mbs, typer->name );
+			DString_SetMBS( mbs, kernel->typer->name );
 			DaoClass_AddConst( self, mbs, cdata, DAO_DATA_PRIVATE, -1 );
-			if( strcmp( typer->name, alias->mbs ) ){
+			if( strcmp( kernel->typer->name, alias->mbs ) ){
 				DaoClass_AddConst( self, alias, cdata, DAO_DATA_PRIVATE, -1 );
 			}
 		}
@@ -561,10 +560,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				}
 			}
 		}else if( cdata->type == DAO_CTYPE ){
-			DaoTypeBase *typer = cdata->typer;
-			DaoTypeCore *core = typer->priv;
-			DMap *values = core->values;
-			DMap *methods = core->methods;
+			DaoTypeKernel *kernel = cdata->ctype->kernel;
+			DaoTypeBase *typer = kernel->typer;
+			DMap *values = kernel->values;
+			DMap *methods = kernel->methods;
 			DNode *it;
 			int j;
 
@@ -587,8 +586,8 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				}
 				for(k=0; k<count; k++){
 					DaoFunction *func = funcs[k];
-					if( func->routHost != typer->priv->abtype ) continue;
-					if( DString_EQ( func->routName, core->abtype->name ) ) continue;
+					if( func->routHost != kernel->abtype ) continue;
+					if( DString_EQ( func->routName, kernel->abtype->name ) ) continue;
 					DaoClass_AddConst( self, it->key.pString, (DaoValue*)func, DAO_DATA_PUBLIC, -1 );
 				}
 #if 0
@@ -596,7 +595,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					DaoFunction *func = (DaoFunction*) it->value.pValue;
 					value.v.func = func;
 					value.t = func->type;
-					if( func->routHost != typer->priv->abtype ) continue;
+					if( func->routHost != typer->core->abtype ) continue;
 					if( DString_EQ( func->routName, core->abtype->name ) ) continue;
 					DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );
 				}else if( it->value.pValue->type == DAO_FUNCTREE ){
@@ -748,7 +747,7 @@ int  DaoClass_ChildOf( DaoClass *self, DaoValue *klass )
 		if( dsup->type == DAO_CLASS && DaoClass_ChildOf( dsup,  klass ) ){
 			return 1;
 		}else if( csup->type == DAO_CTYPE && klass->type == DAO_CTYPE ){
-			if( DaoCdata_ChildOf( csup->typer, cdata->typer ) )
+			if( DaoCdata_ChildOf( csup->ctype->kernel->typer, cdata->ctype->kernel->typer ) )
 				return 1;
 		}
 	}
@@ -767,7 +766,7 @@ DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent )
 			if( (sup = DaoClass_MapToParent( (DaoClass*)sup, parent ) ) ) return sup;
 		}else if( sup->type == DAO_CTYPE && parent->tid == DAO_CDATA ){
 			/* cdata is accessible as cdata type, not ctype type. */
-			if( DaoCdata_ChildOf( sup->xCdata.typer, parent->typer ) ) return sup;
+			if( DaoCdata_ChildOf( sup->xCdata.ctype->kernel->typer, parent->kernel->typer ) ) return sup;
 		}
 	}
 	return NULL;

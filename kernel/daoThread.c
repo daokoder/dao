@@ -486,7 +486,7 @@ static void DaoMutex_Delete( DaoMutex *self )
 
 static DaoTypeCore mutexCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_SafeGetField,
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,
@@ -589,7 +589,7 @@ static DaoFuncItem condvMeths[] =
 
 static DaoTypeCore condvCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_SafeGetField,
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,
@@ -663,7 +663,7 @@ static DaoFuncItem semaMeths[] =
 };
 static DaoTypeCore semaCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_SafeGetField,
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,
@@ -755,7 +755,7 @@ static void DaoThread_Delete( DaoThread *self );
 
 static DaoTypeCore threadCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_SafeGetField,
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,
@@ -913,7 +913,7 @@ static void DaoThdMaster_Delete( DaoThdMaster *self );
 
 static DaoTypeCore thdMasterCore =
 {
-	0, NULL, NULL, NULL, NULL,
+	NULL,
 	DaoValue_SafeGetField,
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,

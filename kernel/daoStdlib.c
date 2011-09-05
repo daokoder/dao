@@ -154,18 +154,15 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 			break;
 		}
 	case DAO_CTYPE :
+		{
+			DaoTypeBase *typer = p0->xCdata.typer;
+			*res = DaoTypeBase_FindFunction( typer, p0->xCdata.ctype->name ) != NULL;
+			break;
+		}
 	case DAO_CDATA :
 		{
-			DaoCdata *plugin = (DaoCdata*) p[0];
-			DaoTypeBase *tp = plugin->typer;
-			DaoValue *func;
-			if( plugin->data == NULL && (plugin->trait & DAO_DATA_CONST) ){
-				func = DaoFindFunction2( tp, tp->name );
-				*res = func != NULL;
-			}else{
-				func = DaoFindFunction2( tp, "()" );
-				if( func ) *res = 1;
-			}
+			DaoTypeBase *typer = p0->xCdata.typer;
+			*res = DaoTypeBase_FindFunctionMBS( typer, "()" ) != NULL;
 			break;
 		}
 	default : break;
@@ -175,7 +172,7 @@ static void STD_Copy( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DMap *cycData = DMap_New(0,0);
 	DaoTypeBase *typer = DaoValue_GetTyper( p[0] );
-	DaoProcess_PutValue( proc, typer->priv->Copy( p[0], proc, cycData ) );
+	DaoProcess_PutValue( proc, typer->core->Copy( p[0], proc, cycData ) );
 	DMap_Delete( cycData );
 }
 
@@ -385,29 +382,29 @@ static void STD_ListMeth( DaoProcess *proc, DaoValue *p[], int N )
 	DMap *hash;
 	DNode *it;
 	int i, j, methCount;
-	if( typer == NULL || typer->priv == NULL ) return;
+	if( typer == NULL || typer->core == NULL ) return;
 	array = DArray_New(0);
-	hash = typer->priv->values;
+	hash = typer->core->kernel->values;
 	if( hash == NULL ){
-		DaoNamespace_SetupValues( typer->priv->nspace, typer );
-		hash = typer->priv->values;
+		DaoNamespace_SetupValues( typer->core->kernel->nspace, typer );
+		hash = typer->core->kernel->values;
 	}
-	if( typer->priv->methods == NULL ){
-		DaoNamespace_SetupMethods( typer->priv->nspace, typer );
+	if( typer->core->kernel->methods == NULL ){
+		DaoNamespace_SetupMethods( typer->core->kernel->nspace, typer );
 	}
-	if( typer->priv->methods ) DMap_SortMethods( typer->priv->methods, array );
+	if( typer->core->kernel->methods ) DMap_SortMethods( typer->core->kernel->methods, array );
 	meths = (DaoFunction**) array->items.pVoid;
 	methCount = array->size;
 	DaoProcess_Print( proc, "======================================\nConsts, methods of type \"" );
 	DaoProcess_Print( proc, typer->name );
 	DaoProcess_Print( proc, "\":\n======================================\n" );
-	if( typer->priv->values ){
+	if( typer->core->kernel->values ){
 		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
 			DaoProcess_Print( proc, it->key.pString->mbs );
 			DaoProcess_Print( proc, "\n" );
 		}
 	}
-	if( typer->priv->methods ){
+	if( typer->core->kernel->methods ){
 		for(i=0; i<methCount; i++ ){
 			DaoProcess_Print( proc, meths[i]->routName->mbs );
 			DaoProcess_Print( proc, ": " );
@@ -1129,10 +1126,11 @@ static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
 		if( p[0]->type != DAO_OBJECT ) return;
 		*res = DaoClass_ChildOf( p[0]->xObject.rootObject->defClass, p[1] );
 	}else if( p[1]->type == DAO_CDATA ){
-		if( p[0]->type == DAO_OBJECT )
+		if( p[0]->type == DAO_OBJECT ){
 			*res = DaoClass_ChildOf( p[0]->xObject.rootObject->defClass, p[1] );
-		else if( p[0]->type == DAO_CDATA )
-			*res = DaoCdata_ChildOf( p[0]->xCdata.typer, p[1]->xCdata.typer );
+		}else if( p[0]->type == DAO_CDATA ){
+			*res = DaoCdata_ChildOf( p[0]->xCdata.ctype->kernel->typer, p[1]->xCdata.ctype->kernel->typer );
+		}
 	}else if( p[1]->type == DAO_STRING ){
 		DString *tname = p[1]->xString.data;
 		DString_ToMBS( tname );

@@ -603,7 +603,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	dint inum=0;
 	float fnum=0;
 	double AA, BB, dnum=0;
-	llong_t lnum = 0;
+	long_t lnum = 0;
 	ushort_t *range;
 	complex16 acom, bcom;
 	DaoStackFrame *base;
@@ -1436,17 +1436,17 @@ CallEntry:
 		}OPNEXT() OPCASE( NE_III ){
 			IntegerOperand( vmc->c ) = IntegerOperand( vmc->a ) != IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITAND_III ){
-			IntegerOperand( vmc->c ) = (uint_t)IntegerOperand( vmc->a ) & (uint_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) & (ulong_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITOR_III ){
-			IntegerOperand( vmc->c ) = (uint_t)IntegerOperand( vmc->a ) | (uint_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) | (ulong_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITXOR_III ){
-			IntegerOperand( vmc->c ) = (uint_t)IntegerOperand( vmc->a ) ^ (uint_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) ^ (ulong_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITLFT_III ){
-			IntegerOperand( vmc->c ) = (uint_t)IntegerOperand( vmc->a ) << (uint_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) << (ulong_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_III ){
-			IntegerOperand( vmc->c ) = (uint_t)IntegerOperand( vmc->a ) >> (uint_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) >> (ulong_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITREV_I ){
-			IntegerOperand( vmc->c ) = ~ (uint_t) IntegerOperand( vmc->a );
+			IntegerOperand( vmc->c ) = ~ (ulong_t) IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_FF ){
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_FFF ){
@@ -1480,17 +1480,17 @@ CallEntry:
 		}OPNEXT() OPCASE( NE_FFF ){
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) != FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITAND_FFF ){
-			FloatOperand( vmc->c ) = (ullong_t)FloatOperand( vmc->a ) & (ullong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) & (ulong_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITOR_FFF ){
-			FloatOperand( vmc->c ) = (ullong_t)FloatOperand( vmc->a ) | (ullong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) | (ulong_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITXOR_FFF ){
-			FloatOperand( vmc->c ) = (ullong_t)FloatOperand( vmc->a ) ^ (ullong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) ^ (ulong_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITLFT_FFF ){
-			FloatOperand( vmc->c ) = (ullong_t)FloatOperand( vmc->a ) << (ullong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) << (ulong_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_FFF ){
-			FloatOperand( vmc->c ) = (ullong_t)FloatOperand( vmc->a ) >> (ullong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) >> (ulong_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITREV_F ){
-			FloatOperand( vmc->c ) = ~ (ullong_t) FloatOperand( vmc->a );
+			FloatOperand( vmc->c ) = ~ (ulong_t) FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_DD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_DDD ){
@@ -1502,9 +1502,9 @@ CallEntry:
 		}OPNEXT() OPCASE( DIV_DDD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) / DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( MOD_DDD ){
-			lnum = (llong_t) DoubleOperand( vmc->b );
+			lnum = (long_t) DoubleOperand( vmc->b );
 			if( lnum ==0 ) goto RaiseErrorDivByZero;
-			DoubleOperand( vmc->c )=(llong_t)DoubleOperand( vmc->a ) % lnum;
+			DoubleOperand( vmc->c )=(long_t)DoubleOperand( vmc->a ) % lnum;
 		}OPNEXT() OPCASE( POW_DDD ){
 			DoubleOperand( vmc->c ) = pow( DoubleOperand( vmc->a ), DoubleOperand( vmc->b ) );
 		}OPNEXT() OPCASE( AND_DDD ){
@@ -1524,17 +1524,17 @@ CallEntry:
 		}OPNEXT() OPCASE( NE_DDD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) != DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITAND_DDD ){
-			DoubleOperand( vmc->c ) = (ullong_t)DoubleOperand( vmc->a ) & (ullong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) & (ulong_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITOR_DDD ){
-			DoubleOperand( vmc->c ) = (ullong_t)DoubleOperand( vmc->a ) | (ullong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) | (ulong_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITXOR_DDD ){
-			DoubleOperand( vmc->c ) = ((ullong_t)DoubleOperand( vmc->a )) ^ (ullong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = ((ulong_t)DoubleOperand( vmc->a )) ^ (ulong_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITLFT_DDD ){
-			DoubleOperand( vmc->c ) = (ullong_t)DoubleOperand( vmc->a ) << (ullong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) << (ulong_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_DDD ){
-			DoubleOperand( vmc->c ) = (ullong_t)DoubleOperand( vmc->a ) >> (ullong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) >> (ulong_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITREV_D ){
-			DoubleOperand( vmc->c ) = ~ (ullong_t) DoubleOperand( vmc->a );
+			DoubleOperand( vmc->c ) = ~ (ulong_t) DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1554,7 +1554,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MOD_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (llong_t)AA % (llong_t)BB;
+			FloatOperand( vmc->c ) = (long_t)AA % (long_t)BB;
 		}OPNEXT() OPCASE( POW_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1586,11 +1586,11 @@ CallEntry:
 		}OPNEXT() OPCASE( BITLFT_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (ullong_t)AA << (ullong_t)BB;
+			FloatOperand( vmc->c ) = (ulong_t)AA << (ulong_t)BB;
 		}OPNEXT() OPCASE( BITRIT_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (ullong_t)AA >> (ullong_t)BB;
+			FloatOperand( vmc->c ) = (ulong_t)AA >> (ulong_t)BB;
 		}OPNEXT() OPCASE( ADD_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1610,7 +1610,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MOD_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = (llong_t)AA % (llong_t)BB;
+			DoubleOperand( vmc->c ) = (long_t)AA % (long_t)BB;
 		}OPNEXT() OPCASE( POW_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1642,11 +1642,11 @@ CallEntry:
 		}OPNEXT() OPCASE( BITLFT_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = ((ullong_t)AA) << (ullong_t)BB;
+			DoubleOperand( vmc->c ) = ((ulong_t)AA) << (ulong_t)BB;
 		}OPNEXT() OPCASE( BITRIT_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = ((ullong_t)AA) >> (ullong_t)BB;
+			DoubleOperand( vmc->c ) = ((ulong_t)AA) >> (ulong_t)BB;
 		}OPNEXT() OPCASE( ADD_SS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			vC = locVars[ vmc->c ];
@@ -3031,7 +3031,7 @@ void DaoPrintException( DaoCdata *except, DaoStream *stream )
 }
 void DaoProcess_PrintException( DaoProcess *self, int clear )
 {
-	DaoType *extype = dao_Exception_Typer.priv->abtype;
+	DaoType *extype = dao_Exception_Typer.core->kernel->abtype;
 	DaoStream *stdio = self->vmSpace->stdStream;
 	DaoValue **excobjs = self->exceptions->items.pValue;
 	int i;

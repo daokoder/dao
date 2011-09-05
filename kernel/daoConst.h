@@ -14,17 +14,13 @@
 #ifndef DAO_CONST_H
 #define DAO_CONST_H
 
-#define DAO_MAX_PARAM  50
+#define DAO_MAX_PARAM  30
 #define DAO_MAX_INDEX  10
 
 #ifdef UNIX
 #define DAO_PATH "/usr/local/dao"
 #elif WIN32
 #define DAO_PATH "C:\\dao"
-#endif
-
-#ifndef DAO_DIRECT_API
-#define DAO_DIRECT_API
 #endif
 
 #include"dao.h"
@@ -40,10 +36,10 @@ enum DaoRTTI
 	DAO_MACRO ,
 	DAO_ABROUTINE , /* abstract routine in interface */
 	DAO_FUNCURRY ,
-	DAO_CMODULE ,
 	DAO_THDMASTER ,
 	DAO_THREADID ,
 	DAO_FUTURE ,
+	DAO_TYPEKERNEL ,
 
 	DAO_PAIR ,
 	DAO_LIST_EMPTY ,

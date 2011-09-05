@@ -64,7 +64,7 @@ DaoProcess *mainVmProcess = NULL;
 
 static int TestPath( DaoVmSpace *vms, DString *fname );
 
-extern ullong_t FileChangedTime( const char *file );
+extern ulong_t FileChangedTime( const char *file );
 
 static const char* const daoFileSuffix[] = { ".dao.o", ".dao.s", ".dao", DAO_DLL_SUFFIX };
 enum{
@@ -116,7 +116,6 @@ extern DaoTypeBase  interTyper;
 extern DaoTypeBase  classTyper;
 extern DaoTypeBase  objTyper;
 extern DaoTypeBase  nsTyper;
-extern DaoTypeBase  cmodTyper;
 extern DaoTypeBase  tupleTyper;
 extern DaoTypeBase  namevaTyper;
 extern DaoTypeBase  mroutineTyper;
@@ -137,6 +136,7 @@ extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
 extern DaoTypeBase vmpTyper;
+extern DaoTypeBase typeKernelTyper;
 static DaoTypeBase vmsTyper;
 
 DaoTypeBase* DaoVmSpace_GetTyper( short type )
@@ -169,10 +169,10 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_OBJECT    :  return & objTyper;
 	case DAO_STREAM    :  return & streamTyper;
 	case DAO_NAMESPACE :  return & nsTyper;
-	case DAO_CMODULE   :  return & cmodTyper;
 	case DAO_PROCESS   :  return & vmpTyper;
 	case DAO_VMSPACE   :  return & vmsTyper;
 	case DAO_TYPE      :  return & abstypeTyper;
+	case DAO_TYPEKERNEL : return & typeKernelTyper;
 #ifdef DAO_WITH_MACRO
 	case DAO_MACRO     :  return & macroTyper;
 #endif
@@ -888,7 +888,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DString *name;
 	DArray *argNames;
 	DArray *argValues;
-	ullong_t tm = 0;
+	ulong_t tm = 0;
 	size_t N;
 	int i, j, res;
 
@@ -1060,7 +1060,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 	DaoNamespace *ns;
 	DString name;
 	DNode *node;
-	ullong_t tm = 0;
+	ulong_t tm = 0;
 	size_t i = DString_FindMBS( libpath, "/addpath.dao", 0 );
 	size_t j = DString_FindMBS( libpath, "/delpath.dao", 0 );
 	int bl, m;
@@ -1234,7 +1234,7 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 	if( node ){
 		ns = (DaoNamespace*) node->value.pValue;
 		/* XXX dlclose(  ns->cmodule->libHandle ) */
-		if( handle == ns->cmodule->libHandle ) return ns;
+		if( handle == ns->libHandle ) return ns;
 	}else{
 		ns = DaoNamespace_New( self, libpath->mbs );
 		GC_IncRC( ns );
@@ -1258,7 +1258,7 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 		}
 		/* MAP_Insert( self->modRequire, libpath, ns ); */
 	}
-	ns->cmodule->libHandle = handle;
+	ns->libHandle = handle;
 
 	dhv = (long*) DaoGetSymbolAddress( handle, "DaoH_Version" );
 	if( dhv == NULL ){
@@ -1488,26 +1488,23 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 
 void DaoTypeBase_Free( DaoTypeBase *typer )
 {
+#if 0
 	DaoCdataCore *hostCore;
 	DMap *hs;
 	DNode *it;
-	if( typer->priv == NULL ) return;
-	hs = typer->priv->methods;
-	if( hs ){
-		for( it=DMap_First(hs); it; it=DMap_Next(hs,it)){
-			GC_DecRC( it->value.pValue );
-		}
-		DMap_Delete( hs );
-	}
-	if( typer->priv->values ) DMap_Delete( typer->priv->values );
-	typer->priv->values = NULL;
-	typer->priv->methods = NULL;
-	if( typer->priv->attribs & DAO_TYPER_PRIV_FREE ){
-		hostCore = (DaoCdataCore*) typer->priv;
+	if( typer->core == NULL ) return;
+	if( typer->core->methods ) DMap_Delete( typer->core->methods );
+	if( typer->core->values ) DMap_Delete( typer->core->values );
+	typer->core->values = NULL;
+	typer->core->methods = NULL;
+	if( typer->core->attribs & DAO_TYPER_PRIV_FREE ){
+		hostCore = (DaoCdataCore*) typer->core;
 		if( hostCore->instanceCdata ) DMap_Delete( hostCore->instanceCdata );
-		dao_free( typer->priv );
-		typer->priv = NULL;
+		dao_free( typer->core );
+		typer->core = NULL;
 	}
+	return;
+#endif
 }
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libSystemTyper;

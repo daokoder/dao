@@ -82,15 +82,6 @@
 #define pclose _pclose
 #endif
 
-typedef unsigned long ulong_t;
-
-#ifdef __STRICT_ANSI__
-typedef   signed long llong_t;
-typedef unsigned long ullong_t;
-#else
-typedef   signed long long llong_t;
-typedef unsigned long long ullong_t;
-#endif
 
 typedef struct DTuple     DTuple;
 typedef struct DRoutine   DRoutine;
@@ -98,7 +89,7 @@ typedef struct DRoutine   DRoutine;
 typedef struct DaoThdMaster  DaoThdMaster;
 typedef struct DaoFunCurry   DaoFunCurry;
 typedef struct DaoCdataCore  DaoCdataCore;
-typedef struct DaoContext      DaoContext;
+typedef struct DaoTypeKernel DaoTypeKernel;
 
 typedef struct DaoToken      DaoToken;
 typedef struct DaoInode      DaoInode;
@@ -107,7 +98,6 @@ typedef struct DaoVmCode     DaoVmCode;
 typedef struct DaoVmCodeX    DaoVmCodeX;
 typedef struct DaoVmcArray   DaoVmcArray;
 
-typedef struct DaoCModule    DaoCModule;
 typedef struct DaoException  DaoException;
 typedef struct DaoNameValue  DaoNameValue;
 
