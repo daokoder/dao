@@ -1297,6 +1297,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	if( tpl->type == DAO_CLASS ){
 		klass = DaoClass_Instantiate( klass, types );
 		inst = (DaoValue*) klass;
+		if( klass == NULL ) goto FailedInstantiation;
 		if( klass && fullname ) DString_Assign( fullname, klass->objType->name );
 	}
 DoneInstantiation:
@@ -1308,6 +1309,7 @@ FailedInstantiation:
 	GC_IncRCs( types );
 	GC_DecRCs( types );
 	DArray_Delete( types );
+	/* Error should be raised here, see comments in DaoParser_ParseScopedConstant(). */
 	return NULL;
 }
 
@@ -1321,6 +1323,9 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DaoValue **scope, DaoValue *
 		i = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, n );
 		if( i >=0 && ((*value)->type == DAO_CLASS || (*value)->type == DAO_CTYPE) ){
 			DaoValue *p = DaoParse_InstantiateType( self, *value, start+1, i-1, NULL );
+			/* Failed instantiation should not raise an error here,
+			 * because this function may be called (directly or indirectly)
+			 * to simply parse a type name as in DaoNamespace_DefineType(). */
 			if( p ){
 				*value = p;
 				start = i + 1;
@@ -4030,6 +4035,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					return -1;
 				}else if( abtp && DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ){
+					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
 				}
 				break;
@@ -4049,6 +4055,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					return -1;
 				}else if( abtp && DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ){
+					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
 				}
 				break;
@@ -6327,6 +6334,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				result.reg = DaoParser_GetNormRegister( self, cst, start, 0, rb );
 				result.last = result.update = self->vmcLast;
 				break;
+			}else{
+				DaoParser_Error2( self, DAO_FAILED_INSTANTIATION, start-1, rb, 0 );
 			}
 			return result;
 		default : return result;

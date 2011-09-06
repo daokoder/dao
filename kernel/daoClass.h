@@ -69,7 +69,7 @@ struct DaoClass
 	 * this proto-class. */
 	DMap     *protoValues; /* <int,DString*> */
 
-	/* for template class: class name[@S,@T=some_type] */
+	/* for template class: class name<@S,@T=some_type> */
 	DArray   *typeHolders; /* @S, @T */
 	DArray   *typeDefaults; /* some_type */
 	DMap     *instanceClasses; /* instantiated classes */
@@ -89,7 +89,7 @@ void DaoClass_Delete( DaoClass *self );
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 void DaoClass_AddReference( DaoClass *self, void *reference );
 
-void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
+int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
 void DaoClass_DeriveClassData( DaoClass *self );
 void DaoClass_DeriveObjectData( DaoClass *self );

@@ -257,7 +257,7 @@ void DLong_Resize( DLong *self, size_t size )
 	}
 	if( size >= self->bufSize || size < self->bufSize /2 ){
 		self->bufSize = size + 1;
-		self->pbuf = (ushort_t*)dao_realloc( self->pbuf, (self->bufSize+1)*sizeof(short) );
+		self->pbuf = (uchar_t*)dao_realloc( self->pbuf, (self->bufSize+1)*sizeof(short) );
 		self->data = self->pbuf;
 	}
 	for(i=self->size; i<self->bufSize; i++ ) self->data[i] = 0;
@@ -268,24 +268,24 @@ void DLong_Reserve( DLong *self, size_t size )
 {
 	size_t i, d = self->data - self->pbuf;
 	if( self->bufSize - d >= size ) return;
-	self->pbuf = (ushort_t*)dao_realloc( self->pbuf, (size+d+1)*sizeof(short) );
+	self->pbuf = (uchar_t*)dao_realloc( self->pbuf, (size+d+1)*sizeof(short) );
 	for(i=self->bufSize; i<size+d; i++ ) self->pbuf[i] = 0;
 	self->data = self->pbuf + d;
 	self->bufSize = size + d;
 }
-void DLong_PushBack( DLong *self, ushort_t it )
+void DLong_PushBack( DLong *self, uchar_t it )
 {
 	size_t d = self->data - self->pbuf;
 	if( self->size + d + 1 >= self->bufSize ){
 		self->bufSize += self->bufSize/5 + 5;
-		self->pbuf = (ushort_t*)dao_realloc( self->pbuf, (self->bufSize+1)*sizeof(short) );
+		self->pbuf = (uchar_t*)dao_realloc( self->pbuf, (self->bufSize+1)*sizeof(short) );
 		self->data = self->pbuf + d;
 	}
 	self->data[ self->size ] = it;
 	self->size ++;
 	self->data[ self->size ] = 0;
 }
-void DLong_PushFront( DLong *self, ushort_t it )
+void DLong_PushFront( DLong *self, uchar_t it )
 {
 	if( self->data == self->pbuf ){
 		size_t from = self->bufSize/5 + 5;
@@ -314,8 +314,8 @@ int DLong_UCompare( DLong *x, DLong *y )
 {
 	int nx = x->size -1;
 	int ny = y->size -1;
-	ushort_t *dx = x->data;
-	ushort_t *dy = y->data;
+	uchar_t *dx = x->data;
+	uchar_t *dy = y->data;
 	while( nx >=0 && dx[nx] ==0 ) nx --;
 	while( ny >=0 && dy[ny] ==0 ) ny --;
 	if( nx > ny ) return 1; else if( nx < ny ) return -1;
@@ -346,7 +346,7 @@ int DLong_CompareToInteger( DLong *self, dint x )
 	if( n > m ) return self->sign;
 	if( n < m ) return - self->sign;
 	for(i=m; i>=0; i--){
-		ushort_t d = (x>>(i*LONG_BITS)) & LONG_MASK;
+		uchar_t d = (x>>(i*LONG_BITS)) & LONG_MASK;
 		if( self->data[i] > d ) return self->sign;
 		if( self->data[i] < d ) return - self->sign;
 	}
@@ -392,14 +392,14 @@ void DLong_Move( DLong *z, DLong *x )
 	if( nx+nx < nz || nz < nx ) DLong_Resize( z, nx );
 	z->sign = x->sign;
 	z->base = x->base;
-	memmove( z->data, x->data, nx * sizeof(ushort_t) );
+	memmove( z->data, x->data, nx * sizeof(uchar_t) );
 	z->size = nx;
 	if( x->base != 2 ) DLong_Normalize2( z );
 }
 
 static void LongAdd2( DLong *z, DLong *x, DLong *y, int base )
 {
-	ushort_t *dx, *dy, *dz;
+	uchar_t *dx, *dy, *dz;
 	size_t nx = x->size;
 	size_t ny = y->size;
 	int i, sum = 0;
@@ -431,7 +431,7 @@ static void LongAdd2( DLong *z, DLong *x, DLong *y, int base )
 }
 static void DLong_UAdd( DLong *z, DLong *x, DLong *y )
 {
-	ushort_t *dx, *dy, *dz;
+	uchar_t *dx, *dy, *dz;
 	size_t nx = x->size;
 	size_t ny = y->size;
 	int i, sum = 0;
@@ -464,9 +464,9 @@ static void DLong_UAdd( DLong *z, DLong *x, DLong *y )
 /* x must be larger than y: */
 static void LongSub3( DLong *z, DLong *x, DLong *y )
 {
-	ushort_t *dz = z->data;
-	ushort_t *dx = x->data;
-	ushort_t *dy = y->data;
+	uchar_t *dz = z->data;
+	uchar_t *dx = x->data;
+	uchar_t *dy = y->data;
 	size_t nx = x->size;
 	size_t ny = y->size;
 	int i, sub = 1;
@@ -521,8 +521,8 @@ void DLong_Sub( DLong *z, DLong *x, DLong *y )
 		z->sign = -1;
 	}
 }
-static void DLong_MulAdd( DLong *z, DLong *x, ushort_t y, short m );
-void DLong_UMulDigitX( DLong *z, DLong *x, ushort_t digit );
+static void DLong_MulAdd( DLong *z, DLong *x, uchar_t y, short m );
+void DLong_UMulDigitX( DLong *z, DLong *x, uchar_t digit );
 static void DLong_UMulSimple( DLong *z, DLong *x, DLong *y )
 {
 	int i, n = x->size + y->size;
@@ -567,8 +567,8 @@ static DLongBuffer* DLongBuffer_New( int max )
 static void DLong_Split( DLong *x, DLong *x1, DLong *x0, size_t m )
 {
 	int size = x->size;
-	memmove( x0->data, x->data, m * sizeof(ushort_t) );
-	memmove( x1->data, x->data + m, (size-m) * sizeof(ushort_t) );
+	memmove( x0->data, x->data, m * sizeof(uchar_t) );
+	memmove( x1->data, x->data + m, (size-m) * sizeof(uchar_t) );
 	x0->size = m;
 	x1->size = size - m;
 }
@@ -588,8 +588,8 @@ static void LongCat( DLong *z, DLong *x1, size_t m, DLong *x0 )
 	/* z might be the same object as x1: */
 	int n = x1->size;
 	if( z->bufSize < n + m + 1 ) DLong_Reserve( z, n + m + 1 );
-	memmove( z->data + m, x1->data, n * sizeof(ushort_t) );
-	memset( z->data, 0, m * sizeof(ushort_t) );
+	memmove( z->data + m, x1->data, n * sizeof(uchar_t) );
+	memset( z->data, 0, m * sizeof(uchar_t) );
 	z->size = m + n;
 	DLong_UAdd( z, z, x0 );
 }
@@ -612,9 +612,9 @@ static void LongZ1( DLong *z1, DLong *z0, DLong *z2 )
 	int nz1 = z1->size;
 	int nz0 = z0->size;
 	int nz2 = z2->size;
-	ushort_t *dz1 = z1->data;
-	ushort_t *dz0 = z0->data;
-	ushort_t *dz2 = z2->data;
+	uchar_t *dz1 = z1->data;
+	uchar_t *dz0 = z0->data;
+	uchar_t *dz2 = z2->data;
 	if( nz0 < nz2 ){
 		nz0 = z2->size;
 		nz2 = z0->size;
@@ -646,8 +646,8 @@ static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int d
 	DLongBuffer  *buf;
 	DLong *x0, *x1, *y0, *y1;
 	DLong *z0, *z1, *z2;
-	ushort_t *dx = x->data;
-	ushort_t *dy = y->data;
+	uchar_t *dx = x->data;
+	uchar_t *dy = y->data;
 	size_t nx = x->size;
 	size_t ny = y->size;
 	size_t m = 0;
@@ -729,8 +729,8 @@ static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int d
 void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 {
 	complex16 *cx, *cy = NULL;
-	ushort_t *dx = x->data;
-	ushort_t *dy = y->data;
+	uchar_t *dx = x->data;
+	uchar_t *dy = y->data;
 	size_t nx = x->size;
 	size_t ny = y->size;
 	size_t max = nx > ny ? nx : ny;
@@ -765,8 +765,8 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 }
 void DLong_UMul( DLong *z, DLong *x, DLong *y )
 {
-	ushort_t *dx = x->data;
-	ushort_t *dy = y->data;
+	uchar_t *dx = x->data;
+	uchar_t *dy = y->data;
 	size_t nx = x->size;
 	size_t ny = y->size;
 	/*
@@ -827,9 +827,9 @@ static size_t DLong_NormCount( DLong *self )
 	for(i=1; d && (i<LONG_BITS); i++) d >>= 1;
 	return self->size * LONG_BITS + i - LONG_BITS;
 }
-void DLong_UMulDigitX( DLong *z, DLong *x, ushort_t digit )
+void DLong_UMulDigitX( DLong *z, DLong *x, uchar_t digit )
 {
-	ushort_t *dz, *dx = x->data;
+	uchar_t *dz, *dx = x->data;
 	size_t nx = x->size;
 	int i, carray = 0;
 	if( digit == 0 ){
@@ -850,7 +850,7 @@ void DLong_UMulDigitX( DLong *z, DLong *x, ushort_t digit )
 	}
 	if( carray ) DLong_Append( z, carray );
 }
-ushort_t DLong_UDivDigit( DLong *z, ushort_t digit )
+uchar_t DLong_UDivDigit( DLong *z, uchar_t digit )
 {
 	size_t nz = z->size;
 	int i, carray = 0;
@@ -869,13 +869,13 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 {
 	DLong *mul;
 	DLong *r2;
-	ushort_t *pbase;
+	uchar_t *pbase;
 	size_t nx = x->size;
 	size_t nz = z->size;
 	size_t nr;
 	long_t hr;
 	int cmp, hx;
-	ushort_t d;
+	uchar_t d;
 
 	while(nx >0 && x->data[nx-1] ==0 ) nx--;
 	while(nz >0 && z->data[nz-1] ==0 ) nz--;
@@ -1023,8 +1023,8 @@ void DLong_Sqrt( DLong *z, DLong *x, DLong *r )
 }
 static void LongMulInt( DLong *z, DLong *x, int y, int base )
 {
-	ushort_t *dz = z->data;
-	ushort_t *dx = x->data;
+	uchar_t *dz = z->data;
+	uchar_t *dx = x->data;
 	long i, sum = 0, nx = x->size;
 	for(i=0; i<nx; i++){
 		sum += dx[i] * y;
@@ -1040,7 +1040,7 @@ static void LongMulInt( DLong *z, DLong *x, int y, int base )
 void DLong_AddInt( DLong *z, DLong *x, dint y, DLong *buf )
 {
 }
-void DLong_MulAdd( DLong *z, DLong *x, ushort_t y, short m )
+void DLong_MulAdd( DLong *z, DLong *x, uchar_t y, short m )
 {
 	int i, carray = 0;
 	if( z->bufSize < x->size + m ) DLong_Reserve( z, x->size + m );
@@ -1083,7 +1083,7 @@ void DLong_MulInt( DLong *z, DLong *x, dint y )
 void DLong_BitAND( DLong *z, DLong *x, DLong *y )
 {
 	size_t i, min = x->size < y->size ? x->size : y->size;
-	ushort_t *dx, *dy, *dz;
+	uchar_t *dx, *dy, *dz;
 	DLong_Resize( z, min );
 	dx = x->data; dy = y->data; dz = z->data;
 	for(i=0; i<min; i++) dz[i] = dx[i] & dy[i];
@@ -1091,7 +1091,7 @@ void DLong_BitAND( DLong *z, DLong *x, DLong *y )
 void DLong_BitOR( DLong *z, DLong *x, DLong *y )
 {
 	size_t i, max = x->size > y->size ? x->size : y->size;
-	ushort_t *dx, *dy, *dz;
+	uchar_t *dx, *dy, *dz;
 	DLong_Resize( z, max );
 	dx = x->data; dy = y->data; dz = z->data;
 	if( max == x->size ){
@@ -1105,7 +1105,7 @@ void DLong_BitOR( DLong *z, DLong *x, DLong *y )
 void DLong_BitXOR( DLong *z, DLong *x, DLong *y )
 {
 	size_t i, max = x->size > y->size ? x->size : y->size;
-	ushort_t *dx, *dy, *dz;
+	uchar_t *dx, *dy, *dz;
 	DLong_Resize( z, max );
 	dx = x->data; dy = y->data; dz = z->data;
 	if( max == x->size ){
@@ -1118,17 +1118,17 @@ void DLong_BitXOR( DLong *z, DLong *x, DLong *y )
 }
 void DLong_ShiftLeft( DLong *z, int bits )
 {
-	ushort_t *dz = z->data;
+	uchar_t *dz = z->data;
 	int i, k, nz = z->size;
 	k = bits / LONG_BITS;
 	if( k && z->data >= z->pbuf + k ){
 		z->data -= k;
 		z->size += k;
-		memset( z->data, 0, k * sizeof(ushort_t) );
+		memset( z->data, 0, k * sizeof(uchar_t) );
 	}else if( k ){
 		DLong_Resize( z, nz + k + 1 );
-		memmove( z->data + k, z->data, nz * sizeof(ushort_t) );
-		memset( z->data, 0, k * sizeof(ushort_t) );
+		memmove( z->data + k, z->data, nz * sizeof(uchar_t) );
+		memset( z->data, 0, k * sizeof(uchar_t) );
 		z->size --;
 		dz = z->data;
 		nz = z->size;
@@ -1143,7 +1143,7 @@ void DLong_ShiftLeft( DLong *z, int bits )
 }
 void DLong_ShiftRight( DLong *z, int bits )
 {
-	ushort_t *dz = z->data;
+	uchar_t *dz = z->data;
 	int i, k, nz = z->size;
 	if( bits >= nz * LONG_BITS ){
 		DLong_Clear( z );
@@ -1153,7 +1153,7 @@ void DLong_ShiftRight( DLong *z, int bits )
 	if( k && (k + z->data - z->pbuf ) < z->size/10 ){
 		z->data += k;
 	}else if( k ){
-		memmove( z->data, z->data + k, (nz-k) * sizeof(ushort_t) );
+		memmove( z->data, z->data + k, (nz-k) * sizeof(uchar_t) );
 		DLong_Resize( z, nz-k );
 		dz = z->data;
 		nz = z->size;
@@ -1328,7 +1328,7 @@ void DLong_FromDouble( DLong *self, double value )
 	/* convert base by base: */
 	while( value ){
 		double y = floor( value / LONG_BASE );
-		ushort_t r = (ushort_t)(value - y * LONG_BASE);
+		uchar_t r = (uchar_t)(value - y * LONG_BASE);
 		DLong_Append( self, r );
 		value = y;
 	}
@@ -1444,7 +1444,7 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 	int w = base_bits[self->base];
 	if( self->base == 2 ){
 		if( pid->type == 0 ){
-			ushort_t bits = digit ? LONG_BASE-1 : 0;
+			uchar_t bits = digit ? LONG_BASE-1 : 0;
 			for(i=0; i<self->size; i++) self->data[i] = bits;
 		}else{
 			if( digit )
@@ -1466,7 +1466,7 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 		return;
 	}
 	if( pid->type == 0 ){
-		ushort_t bits = digit;
+		uchar_t bits = digit;
 		if( self->base == 2 ) bits = digit ? LONG_BASE-1 : 0;
 		for(i=0; i<self->size; i++) self->data[i] = bits;
 	}else{
@@ -1537,12 +1537,8 @@ static void DaoLong_Size( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoLong_Sqrt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DLong *z = p[0]->xLong.value;
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );//DaoTuple_New( 2 );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc );
 	DaoValue **items = tuple->items;
-	//DaoProcess_PutValue( proc, (DaoValue*) tuple );
-	//tuple->items[0].v.l = DLong_New();
-	//tuple->items[1].v.l = DLong_New();
-	//tuple->items[0]->type = tuple->items[1]->type = DAO_LONG;
 	if( z->sign <0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "need positive long integer" );
 		return;
@@ -2483,10 +2479,7 @@ static void DaoArray_Lib_max( DaoProcess *proc, DaoValue *par[], int N )
 	DaoTuple *tuple = DaoProcess_PutTuple( proc );
 	DaoArray *self = & par[0]->xArray;
 	int i, k, size, cmp=0, imax = -1;
-#warning ": Need testing!"
-	//tuple->items[0]->type = self->numType;
-	//tuple->items[1]->type = DAO_INTEGER;
-	//tuple->items[1]->xInteger.value = -1;
+
 	if( self->numType == DAO_COMPLEX ) return;/* no exception, guaranteed by the typing system */
 	if( DaoArray_SliceSize( self ) == 0 ) return;
 	if( self->reference && self->slice ){
@@ -2530,10 +2523,7 @@ static void DaoArray_Lib_min( DaoProcess *proc, DaoValue *par[], int N )
 	DaoTuple *tuple = DaoProcess_PutTuple( proc );
 	DaoArray *self = & par[0]->xArray;
 	int i, k, size, cmp=0, imax = -1;
-#warning ": Need testing!"
-	//tuple->items[0]->type = self->numType;
-	//tuple->items[1]->type = DAO_INTEGER;
-	//tuple->items[1]->xInteger.value = -1;
+
 	if( self->numType == DAO_COMPLEX ) return;
 	if( DaoArray_SliceSize( self ) == 0 ) return;
 	if( self->reference && self->slice ){

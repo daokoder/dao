@@ -176,23 +176,24 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 {
 	DaoValue *value = *self;
-	DaoObject *obj = & value->xObject;
 	DaoType *tp, *tp2;
 
 	if( value == NULL || value->type < DAO_ENUM ) return;
 	tp = DaoNamespace_GetType( ns, value );
 	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 	if( tp == tp2 ) return;
-	if( value->type == DAO_OBJECT && obj == & obj->defClass->objType->value->xObject ){
-		if( tp2->tid == DAO_OBJECT ){
-			GC_ShiftRC( tp2->value, obj );
-			*self = tp2->value;
-			return;
-		}
+	if( tp2->tid == DAO_OBJECT && value->type == DAO_OBJECT && value->xObject.isDefault ){
+		GC_ShiftRC( tp2->value, value );
+		*self = tp2->value;
+		return;
+	}else if( tp2->tid == DAO_CLASS && value->type == DAO_CLASS ){
+		GC_ShiftRC( tp2->aux, value );
+		*self = tp2->aux;
+		return;
 	}
 	DaoValue_Move( value, self, tp2 );
 }
-void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
+int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
 	DaoNamespace *ns = other->classRoutine->nameSpace;
 	DaoType *tp;
@@ -226,7 +227,6 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 
 	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine );
 	DaoRoutine_MapTypes( self->classRoutine, deftypes );
-	DaoRoutine_InferTypes( self->classRoutine );
 	for(it=DMap_First(other->lookupTable);it;it=DMap_Next(other->lookupTable,it)){
 		st = LOOKUP_ST( it->value.pSize );
 		up = LOOKUP_UP( it->value.pSize );
@@ -273,7 +273,7 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 #if 0
 			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
 #endif
-			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) continue;
+			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) return 0;
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DaoFunctree_Add( self->classRoutines, (DRoutine*)rout );
 			}else if( (it = DMap_Find( other->lookupTable, name )) ){
@@ -304,6 +304,7 @@ void DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DArray_Erase( self->glbTypeTable, 1, MAXSIZE );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
+	return DaoRoutine_InferTypes( self->classRoutine );
 }
 DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 {
@@ -349,7 +350,11 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		klass->objType->nested = DArray_New(0);
 		DArray_Swap( klass->objType->nested, types );
 		GC_IncRCs( klass->objType->nested );
-		DaoClass_CopyField( klass, self, deftypes );
+		if( DaoClass_CopyField( klass, self, deftypes ) == 0 ){
+			DString_Delete( name );
+			GC_IncRC( klass ); GC_DecRC( klass );
+			return NULL;
+		}
 		DaoClass_DeriveClassData( klass );
 		DaoClass_DeriveObjectData( klass );
 		DaoClass_ResetAttributes( klass );

@@ -92,7 +92,7 @@ void DaoBase_Delete( void *obj );
 
 
 DaoEnum* DaoEnum_New( DaoType *type, dint value );
-DaoEnum* DaoEnum_Copy( DaoEnum *self );
+DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type );
 void DaoEnum_Delete( DaoEnum *self );
 void DaoEnum_MakeName( DaoEnum *self, DString *name );
 void DaoEnum_SetType( DaoEnum *self, DaoType *type );

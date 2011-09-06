@@ -357,9 +357,14 @@ DaoEnum* DaoEnum_New( DaoType *type, dint value )
 	if( type ) GC_IncRC( type );
 	return self;
 }
-DaoEnum* DaoEnum_Copy( DaoEnum *self )
+DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type )
 {
-	return DaoEnum_New( self->etype, self->value );
+	DaoEnum *copy = DaoEnum_New( self->etype, self->value );
+	if( self->etype != type && type ){
+		DaoEnum_SetType( copy, type );
+		DaoEnum_SetValue( copy, self, NULL );
+	}
+	return copy;
 }
 void DaoEnum_Delete( DaoEnum *self )
 {

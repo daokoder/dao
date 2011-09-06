@@ -154,12 +154,6 @@ DaoType* DaoType_New( const char *name, short tid, DaoValue *extra, DArray *nest
 	if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
 	DaoType_CheckAttributes( self );
 	DaoType_InitDefault( self );
-#if 0
-	if( strstr( self->name->mbs, "map<" ) ){
-		printf( "%s  %p\n", self->name->mbs, self );
-		print_trace();
-	}
-#endif
 	return self;
 }
 void DaoType_InitDefault( DaoType *self )
@@ -206,6 +200,7 @@ void DaoType_InitDefault( DaoType *self )
 		break;
 	case DAO_UDF :
 	case DAO_ANY :
+	case DAO_INITYPE :
 	case DAO_ROUTINE :
 	case DAO_INTERFACE : value = null; break;
 	case DAO_VALTYPE : value = self->aux; break;

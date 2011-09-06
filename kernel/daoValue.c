@@ -376,6 +376,7 @@ void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *ctx, DMap
 
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 {
+	DaoEnum *e;
 	size_t i;
 
 	if( self == NULL ) return null;
@@ -402,7 +403,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
 	case DAO_LONG    : return (DaoValue*) DaoLong_Copy( & self->xLong );
 	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
-	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum );
+	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
 	}
 	if( (self->xNull.trait & DAO_DATA_CONST) == 0 ) return self;
 	switch( self->type ){

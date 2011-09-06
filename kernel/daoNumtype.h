@@ -86,19 +86,14 @@ complex16 tanh_c( const complex16 com );
 complex16 ceil_c( const complex16 com );
 complex16 floor_c( const complex16 com );
 
-#ifdef __STRICT_ANSI__
-#define LONG_BITS 7
-#else
-#define LONG_BITS 15
-#endif
-
-#define LONG_BASE (1<<LONG_BITS)
-#define LONG_MASK ((int)(LONG_BASE-1))
+#define LONG_BITS 8
+#define LONG_BASE 256
+#define LONG_MASK 255
 
 struct DLong
 {
-	ushort_t *data;
-	ushort_t *pbuf;
+	uchar_t  *data;
+	uchar_t  *pbuf;
 	short     sign;
 	short     base;
 	size_t    size;
@@ -109,8 +104,8 @@ void DLong_Init( DLong *self );
 void DLong_Delete( DLong *self );
 void DLong_Clear( DLong *self );
 void DLong_Resize( DLong *self, size_t size );
-void DLong_PushBack( DLong *self, ushort_t it );
-void DLong_PushFront( DLong *self, ushort_t it );
+void DLong_PushBack( DLong *self, uchar_t it );
+void DLong_PushFront( DLong *self, uchar_t it );
 int DLong_UCompare( DLong *x, DLong *y );
 int DLong_Compare( DLong *x, DLong *y );
 void DLong_Move( DLong *z, DLong *x );
@@ -137,7 +132,7 @@ int DLong_CompareToZero( DLong *self );
 int DLong_CompareToInteger( DLong *self, dint x );
 int DLong_CompareToDouble( DLong *self, double x );
 
-ushort_t DLong_UDivDigit( DLong *z, ushort_t digit );
+uchar_t DLong_UDivDigit( DLong *z, uchar_t digit );
 
 #define DLong_Append  DLong_PushBack
 
