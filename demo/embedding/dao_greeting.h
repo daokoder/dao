@@ -20,7 +20,6 @@ extern DaoVmSpace *__daoVmSpace;
 #ifdef __cplusplus
 extern "C"{
 #endif
-extern DaoTypeBase *dao___va_list_tag_Typer;
 extern DaoTypeBase *dao___darwin_pthread_handler_rec_Typer;
 extern DaoTypeBase *dao__opaque_pthread_attr_t_Typer;
 extern DaoTypeBase *dao__opaque_pthread_cond_t_Typer;
@@ -76,10 +75,10 @@ class DAO_DLL_GREETING DaoCxxVirt_otto
 {
 	public:
 	DaoCxxVirt_otto(){ self = 0; cdata = 0; }
-	void DaoInitWrapper( otto *self, DaoCData *d );
+	void DaoInitWrapper( otto *self, DaoCdata *d );
 
 	otto *self;
-	DaoCData *cdata;
+	DaoCdata *cdata;
 
 	void vtest( int &_cs  );
 	otto test( int &_cs, const otto& value );
@@ -106,10 +105,10 @@ class DAO_DLL_GREETING DaoCxxVirt_otto2  : public DaoCxxVirt_otto
 {
 	public:
 	DaoCxxVirt_otto2(){ self = 0; cdata = 0; }
-	void DaoInitWrapper( otto2 *self, DaoCData *d );
+	void DaoInitWrapper( otto2 *self, DaoCdata *d );
 
 	otto2 *self;
-	DaoCData *cdata;
+	DaoCdata *cdata;
 
 	void vtest( int &_cs  );
 
@@ -123,6 +122,7 @@ class DAO_DLL_GREETING DaoCxx_otto2 : public otto2, public DaoCxxVirt_otto2
 	~DaoCxx_otto2();
 	void DaoInitWrapper();
 
+	otto test( const otto& value );
 	void vtest(  );
 
 };
@@ -132,10 +132,10 @@ class DAO_DLL_GREETING DaoCxxVirt_Greeting
 {
 	public:
 	DaoCxxVirt_Greeting(){ self = 0; cdata = 0; }
-	void DaoInitWrapper( Greeting *self, DaoCData *d );
+	void DaoInitWrapper( Greeting *self, DaoCdata *d );
 
 	Greeting *self;
-	DaoCData *cdata;
+	DaoCdata *cdata;
 
 	void DoGreeting( int &_cs, const char* name );
 	void VirtWithDefault( int &_cs, const Greeting& g );
@@ -162,10 +162,10 @@ class DAO_DLL_GREETING DaoCxxVirt_Greeting2  : public DaoCxxVirt_Greeting
 {
 	public:
 	DaoCxxVirt_Greeting2(){ self = 0; cdata = 0; }
-	void DaoInitWrapper( Greeting2 *self, DaoCData *d );
+	void DaoInitWrapper( Greeting2 *self, DaoCdata *d );
 
 	Greeting2 *self;
-	DaoCData *cdata;
+	DaoCdata *cdata;
 
 
 
@@ -178,6 +178,8 @@ class DAO_DLL_GREETING DaoCxx_Greeting2 : public Greeting2, public DaoCxxVirt_Gr
 	~DaoCxx_Greeting2();
 	void DaoInitWrapper();
 
+	void DoGreeting( const char* name );
+	void VirtWithDefault( const Greeting& g=Greeting() );
 
 };
 

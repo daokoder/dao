@@ -60,7 +60,7 @@ class Greeting
   virtual void VirtWithDefault( const Greeting & g = Greeting() ){}
 
   class Null{};
-  Null TestNull( const Null & ){}
+  Null TestNull( const Null & ){ return Null(); }
 };
 class Greeting2 : public Greeting{};
 

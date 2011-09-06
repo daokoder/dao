@@ -17,7 +17,7 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-extern int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns );
+extern int DaoOnLoad( DaoVmSpace *vms, DaoNamespace *ns );
 #ifdef __cplusplus
 }
 #endif
@@ -87,9 +87,9 @@ int main( int argc, char *argv[] )
 {
 	DString *src;
 	DaoVmSpace *vms;
-	DaoNameSpace *ns;
-	DaoNameSpace *ns2;
-	DaoVmProcess *vmp;
+	DaoNamespace *ns;
+	DaoNamespace *ns2;
+	DaoProcess *vmp;
 
 	// Search and load the Dao library.
 	// DaoInitLibrary() can take a parameter which is the path
@@ -112,12 +112,12 @@ int main( int argc, char *argv[] )
 	vms = DaoInit();
 
 	// Get the main namespace of an DaoVmSpace object.
-	// You can also call DaoNameSpace_New( vms ) to create one.
+	// You can also call DaoNamespace_New( vms ) to create one.
 	ns  = DaoVmSpace_MainNameSpace( vms );
 	ns2  = DaoVmSpace_GetNameSpace( vms, "dao" );
 
 	// Get the main virtual machine process of an DaoVmSpace object.
-	// You can also call DaoVmProcess_New( vms ) to create one.
+	// You can also call DaoProcess_New( vms ) to create one.
 	vmp = DaoVmSpace_MainVmProcess( vms );
 
 	// Call the entry function to import the type wrapping Greeting
@@ -139,23 +139,23 @@ int main( int argc, char *argv[] )
 	// Since the wrapped functions and types are imported into
 	// namespace ns, it is need to access the wrapped functions and types
 	// in the Dao scripts when it is executed:
-	DaoVmProcess_Eval( vmp, ns, src, 1 );
+	DaoProcess_Eval( vmp, ns, src, 1 );
 
 	DString_SetMBS( src, dao_source2 );
-	DaoVmProcess_Eval( vmp, ns, src, 1 );
+	DaoProcess_Eval( vmp, ns, src, 1 );
 
 	// Check if the Dao scripts have indeed modified the C++ object.
 	Greeting *obj = GetGreetingObject();
 	obj->PrintMessage();
 
 	DString_SetMBS( src, dao_source3 );
-	DaoVmProcess_Eval( vmp, ns, src, 1 );
+	DaoProcess_Eval( vmp, ns, src, 1 );
 
-	DaoValue *value = DaoNameSpace_FindData( ns, "getSomeString" );
+	DaoValue *value = DaoNamespace_FindData( ns, "getSomeString" );
 	if( DaoValue_CastRoutine( value ) ){
-		DaoVmProcess_Call( vmp, (DaoMethod*)value, NULL, NULL, 0 );
+		DaoProcess_Call( vmp, (DaoMethod*)value, NULL, NULL, 0 );
 	}
-	value = DaoVmProcess_GetReturned( vmp );
+	value = DaoProcess_GetReturned( vmp );
 	printf( "%i %s\n", DaoValue_Type( value ), DaoString_GetMBS(  (DaoString*) value ) );
 
 	DString_Delete( src );

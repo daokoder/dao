@@ -3199,7 +3199,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( code == DVM_CALL && tidHost == DAO_OBJECT ) bt = hostClass->objType;
 				/*
 				   DaoVmCodeX_Print( *vmc, NULL );
-				   printf( "call: %s\n", type[opa]->name->mbs );
+				   printf( "call: %s %i\n", type[opa]->name->mbs, type[opa]->tid );
 				   if(bt) printf( "self: %s\n", bt->name->mbs );
 				 */
 				ct = type[opa];

@@ -47,14 +47,14 @@ public:\n\
 		daoSignal = NULL;\n\
 		daoSlot = NULL;\n\
 	}\n\
-	DaoQtSlot( void *p, DaoCData *rev, const QString & sig, DaoValue *slot ){\n\
+	DaoQtSlot( void *p, DaoCdata *rev, const QString & sig, DaoValue *slot ){\n\
 		anySender = p;\n\
 		daoReceiver = rev;\n\
 		daoSignal = NULL;\n\
 		qtSignal = sig;\n\
 		daoSlot = slot;\n\
 	}\n\
-	DaoQtSlot( void *p, DaoCData *rev, void *sig, DaoValue *slot ){\n\
+	DaoQtSlot( void *p, DaoCdata *rev, void *sig, DaoValue *slot ){\n\
 		anySender = p;\n\
 		daoReceiver = rev;\n\
 		daoSignal = sig;\n\
@@ -71,7 +71,7 @@ public:\n\
 	void      *daoSignal;\n\
 	QString    qtSignal;\n\
 	\n\
-	DaoCData  *daoReceiver;\n\
+	DaoCdata  *daoReceiver;\n\
 	DaoValue  *daoSlot;\n\
 	\n\
 public slots:\n\
@@ -80,11 +80,11 @@ public slots:\n\
 		if( o == anySender && s == daoSignal ) slotDao( m );\n\
 	}\n\
 	void slotDao( const DaoQtMessage &m ){\n\
-		DaoVmProcess *vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+		DaoProcess *vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
 		DaoValue *obj = NULL;\n\
 		if( daoSlot.t < DAO_METAROUTINE || daoSlot.t > DAO_FUNCTION ) return;\n\
-		obj = DaoCData_GetObject( daoReceiver );\n\
-		DaoVmProcess_Call( vmp, (DaoMethod*)daoSlot, obj, m.values, m.count );\n\
+		obj = DaoCdata_GetObject( daoReceiver );\n\
+		DaoProcess_Call( vmp, (DaoMethod*)daoSlot, obj, m.values, m.count );\n\
 	}\n\
 };\n\
 \n\
@@ -95,9 +95,9 @@ class DaoQtObject : public QObjectUserData\n\
 	\n\
 	QList<DaoQtSlot*>  daoSlots;\n\
 	\n\
-	DaoCData  *cdata;\n\
+	DaoCdata  *cdata;\n\
 	\n\
-	void Init( DaoCData *d ){ cdata = d; }\n\
+	void Init( DaoCdata *d ){ cdata = d; }\n\
 	static unsigned int RotatingHash( const QByteArray & key ){\n\
 		int i, n = key.size();\n\
 		unsigned long long hash = n;\n\
@@ -173,17 +173,17 @@ const string qt_virt_emit =
 "	virtual void Emit( void *o, void *s, const DaoQtMessage &m ){}\n";
 
 const string qt_connect_decl =
-"static void dao_QObject_emit( DaoContext *_ctx, DaoValue *_p[], int _n );\n\
-static void dao_QObject_connect_dao( DaoContext *_ctx, DaoValue *_p[], int _n );\n";
+"static void dao_QObject_emit( DaoProcess *_proc, DaoValue *_p[], int _n );\n\
+static void dao_QObject_connect_dao( DaoProcess *_proc, DaoValue *_p[], int _n );\n";
 
 const string qt_connect_dao =
 "  { dao_QObject_emit, \"emit( self : QObject, signal : any, ... )\" },\n\
   { dao_QObject_connect_dao, \"connect( sender : QObject, signal : any, receiver : QObject, slot : any )\" },\n";
 
 const string qt_connect_func =
-"static void dao_QObject_emit( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+"static void dao_QObject_emit( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
-	QObject* self = (QObject*) DaoValue_TryCastCData(_p[0], dao_QObject_Typer );\n\
+	QObject* self = (QObject*) DaoValue_TryCastCdata(_p[0], dao_QObject_Typer );\n\
 	DaoSS_QObject *linker = (DaoSS_QObject*) self->userData(0);\n\
 	DaoValue *signal = _p[1];\n\
 	if( self == NULL || linker == NULL ) return;\n\
@@ -191,10 +191,10 @@ const string qt_connect_func =
   for(int i=0; i<_n-2; i++) DaoValue_Copy( _p[i+2], & msg.values[i] );\n\
 	linker->Emit( linker, signal->v.p, msg );\n\
 }\n\
-static void dao_QObject_connect_dao( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+static void dao_QObject_connect_dao( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
-	QObject *sender = (QObject*) DaoValue_TryCastCData(_p[0], dao_QObject_Typer );\n\
-	QObject *receiver = (QObject*) DaoValue_TryCastCData(_p[2], dao_QObject_Typer);\n\
+	QObject *sender = (QObject*) DaoValue_TryCastCdata(_p[0], dao_QObject_Typer );\n\
+	QObject *receiver = (QObject*) DaoValue_TryCastCdata(_p[2], dao_QObject_Typer);\n\
 	DaoSS_QObject *senderSS = (DaoSS_QObject*) sender->userData(0);\n\
 	DaoSS_QObject *receiverSS = (DaoSS_QObject*) receiver->userData(0);\n\
 	DaoValue *signal = _p[1];\n\
@@ -251,30 +251,30 @@ static void dao_QObject_connect_dao( DaoContext *_ctx, DaoValue *_p[], int _n )\
 }\n";
 
 const string qt_qstringlist_decl =
-"static void dao_QStringList_fromDaoList( DaoContext *_ctx, DaoValue *_p[], int _n );\n\
-static void dao_QStringList_toDaoList( DaoContext *_ctx, DaoValue *_p[], int _n );\n";
+"static void dao_QStringList_fromDaoList( DaoProcess *_proc, DaoValue *_p[], int _n );\n\
+static void dao_QStringList_toDaoList( DaoProcess *_proc, DaoValue *_p[], int _n );\n";
 
 const string qt_qstringlist_dao =
 "  { dao_QStringList_fromDaoList, \"QStringList( dslist : list<string> )=>QStringList\" },\n\
   { dao_QStringList_toDaoList, \"toDaoList( self : QStringList )=>list<string>\" },\n";
 
 const string qt_qstringlist_func =
-"static void dao_QStringList_fromDaoList( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+"static void dao_QStringList_fromDaoList( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
 	QStringList *_self = new QStringList();\n\
 	DaoList *dlist = _p[0]->v.list;\n\
 	int i, m = DaoList_Size( dlist );\n\
-	DaoContext_PutCData( _ctx, _self, dao_QStringList_Typer );\n\
+	DaoProcess_PutCdata( _proc, _self, dao_QStringList_Typer );\n\
 	for(i=0; i<m; i++){\n\
 		DaoValue *it = DaoList_GetItem( dlist, i );\n\
 		if( it.t != DAO_STRING ) continue;\n\
 		_self->append( QString( DString_GetMBS( it.v.s ) ) );\n\
 	}\n\
 }\n\
-static void dao_QStringList_toDaoList( DaoContext *_ctx, DValue *_p[], int _n )\n\
+static void dao_QStringList_toDaoList( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-	QStringList* self= (QStringList*) DaoValue_TryCastCData( _p[0], dao_QStringList_Typer );\n\
-	DaoList *dlist = DaoContext_PutList( _ctx );\n\
+	QStringList* self= (QStringList*) DaoValue_TryCastCdata( _p[0], dao_QStringList_Typer );\n\
+	DaoList *dlist = DaoProcess_PutList( _proc );\n\
 	DValue it = DValue_NewMBString( \"\", 0 );\n\
 	int i, m = self->size();\n\
 	for(i=0; i<m; i++){\n\
@@ -285,44 +285,44 @@ static void dao_QStringList_toDaoList( DaoContext *_ctx, DValue *_p[], int _n )\
 }\n";
 
 const string qt_qobject_cast_decl =
-"static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n );\n";
+"static void dao_$(host)_qobject_cast( DaoProcess *_proc, DValue *_p[], int _n );\n";
 
 const string qt_qobject_cast_dao =
 "  { dao_$(host)_qobject_cast, \"qobject_cast( object : QObject )=>$(host)\" },\n";
 
 const string qt_qobject_cast_func =
-"static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_$(host)_qobject_cast( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QObject *from = (QObject*)DaoValue_TryCastCData( _p[0], dao_QObject_Typer );\n\
+  QObject *from = (QObject*)DaoValue_TryCastCdata( _p[0], dao_QObject_Typer );\n\
   $(host) *to = qobject_cast<$(host)*>( from );\n\
-  DaoContext_WrapCData( _ctx, to, dao_$(host)_Typer );\n\
+  DaoProcess_WrapCdata( _proc, to, dao_$(host)_Typer );\n\
 }\n";
 
 const string qt_qobject_cast_func2 =
-"static void dao_$(host)_qobject_cast( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_$(host)_qobject_cast( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QObject *from = (QObject*)DaoValue_TryCastCData(_p[0], dao_QObject_Typer);\n\
+  QObject *from = (QObject*)DaoValue_TryCastCdata(_p[0], dao_QObject_Typer);\n\
   DaoValue *to = DaoQt_Get_Wrapper( from );\n\
   if( to ){\n\
-    DaoContext_PutValue( _ctx, to );\n\
+    DaoProcess_PutValue( _proc, to );\n\
     return;\n\
   }\n\
   $(host) *to2 = qobject_cast<$(host)*>( from );\n\
-  DaoContext_WrapCData( _ctx, to2, dao_$(host)_Typer );\n\
+  DaoProcess_WrapCdata( _proc, to2, dao_$(host)_Typer );\n\
 }\n";
 
 const string qt_application_decl =
-"static void dao_QApplication_DaoApp( DaoContext *_ctx, DValue *_p[], int _n );\n";
+"static void dao_QApplication_DaoApp( DaoProcess *_proc, DValue *_p[], int _n );\n";
 
 const string qt_application_dao =
 "  { dao_QApplication_DaoApp, \"QApplication( name : string )=>QApplication\" },\n";
 
 const string qt_application_func =
-"static void dao_QApplication_DaoApp( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_QApplication_DaoApp( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
   QApplication *app = (QApplication*) QApplication::instance();\n\
   if( app ){\n\
-    DaoContext_WrapCData( _ctx, app, dao_QApplication_Typer );\n\
+    DaoProcess_WrapCdata( _proc, app, dao_QApplication_Typer );\n\
     return;\n\
   }\n\
   static int argc = 1;\n\
@@ -331,15 +331,15 @@ const string qt_application_func =
   DString_SetMBS( str, argv );\n\
   argv = DString_GetMBS( str );\n\
   DaoCxx_QApplication *_self = DaoCxx_QApplication_New( argc, & argv, QT_VERSION );\n\
-  DaoContext_PutValue( _ctx, (DaoValue*) _self->cdata );\n\
+  DaoProcess_PutValue( _proc, (DaoValue*) _self->cdata );\n\
 }\n";
 
 const string qt_qstream_decl =
-"static void dao_QTextStream_Write1( DaoContext *_ctx, DValue *_p[], int _n );\n\
-static void dao_QTextStream_Write2( DaoContext *_ctx, DValue *_p[], int _n );\n\
-static void dao_QTextStream_Write3( DaoContext *_ctx, DValue *_p[], int _n );\n\
-static void dao_QTextStream_Write4( DaoContext *_ctx, DValue *_p[], int _n );\n\
-static void dao_QTextStream_Write5( DaoContext *_ctx, DValue *_p[], int _n );\n";
+"static void dao_QTextStream_Write1( DaoProcess *_proc, DValue *_p[], int _n );\n\
+static void dao_QTextStream_Write2( DaoProcess *_proc, DValue *_p[], int _n );\n\
+static void dao_QTextStream_Write3( DaoProcess *_proc, DValue *_p[], int _n );\n\
+static void dao_QTextStream_Write4( DaoProcess *_proc, DValue *_p[], int _n );\n\
+static void dao_QTextStream_Write5( DaoProcess *_proc, DValue *_p[], int _n );\n";
 
 const string qt_qstream_dao =
 "  { dao_QTextStream_Write1, \"write( self : QTextStream, data : int )=>QTextStream\" },\n\
@@ -349,47 +349,47 @@ const string qt_qstream_dao =
   { dao_QTextStream_Write5, \"write( self : QTextStream, data : any )=>QTextStream\" },\n";
 
 const string qt_qstream_func =
-"static void dao_QTextStream_Write1( DaoContext *_ctx, DValue *_p[], int _n )\n\
+"static void dao_QTextStream_Write1( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QTextStream *self = (QTextStream*) DaoValue_TryCastCData( _p[0], dao_QTextStream_Typer );\n\
+  QTextStream *self = (QTextStream*) DaoValue_TryCastCdata( _p[0], dao_QTextStream_Typer );\n\
   *self << _p[1]->v.i;\n\
-  DaoContext_PutValue( _ctx, (DaoValue*) _p[0]->v.cdata );\n\
+  DaoProcess_PutValue( _proc, (DaoValue*) _p[0]->v.cdata );\n\
 }\n\
-static void dao_QTextStream_Write2( DaoContext *_ctx, DValue *_p[], int _n )\n\
+static void dao_QTextStream_Write2( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QTextStream *self = (QTextStream*) DaoValue_TryCastCData( _p[0], dao_QTextStream_Typer );\n\
+  QTextStream *self = (QTextStream*) DaoValue_TryCastCdata( _p[0], dao_QTextStream_Typer );\n\
   *self << _p[1]->v.f;\n\
-  DaoContext_PutValue( _ctx, (DaoValue*) _p[0]->v.cdata );\n\
+  DaoProcess_PutValue( _proc, (DaoValue*) _p[0]->v.cdata );\n\
 }\n\
-static void dao_QTextStream_Write3( DaoContext *_ctx, DValue *_p[], int _n )\n\
+static void dao_QTextStream_Write3( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QTextStream *self = (QTextStream*) DaoValue_TryCastCData( _p[0], dao_QTextStream_Typer );\n\
+  QTextStream *self = (QTextStream*) DaoValue_TryCastCdata( _p[0], dao_QTextStream_Typer );\n\
   *self << _p[1]->v.d;\n\
-  DaoContext_PutValue( _ctx, (DaoValue*) _p[0]->v.cdata );\n\
+  DaoProcess_PutValue( _proc, (DaoValue*) _p[0]->v.cdata );\n\
 }\n\
-static void dao_QTextStream_Write4( DaoContext *_ctx, DValue *_p[], int _n )\n\
+static void dao_QTextStream_Write4( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QTextStream *self = (QTextStream*) DaoValue_TryCastCData( _p[0], dao_QTextStream_Typer );\n\
+  QTextStream *self = (QTextStream*) DaoValue_TryCastCdata( _p[0], dao_QTextStream_Typer );\n\
   *self << DValue_GetMBString( _p[1] );\n\
-  DaoContext_PutValue( _ctx, (DaoValue*) _p[0]->v.cdata );\n\
+  DaoProcess_PutValue( _proc, (DaoValue*) _p[0]->v.cdata );\n\
 }\n\
-static void dao_QTextStream_Write5( DaoContext *_ctx, DValue *_p[], int _n )\n\
+static void dao_QTextStream_Write5( DaoProcess *_proc, DValue *_p[], int _n )\n\
 {\n\
-  QTextStream *self = (QTextStream*) DaoValue_TryCastCData( _p[0], dao_QTextStream_Typer );\n\
+  QTextStream *self = (QTextStream*) DaoValue_TryCastCdata( _p[0], dao_QTextStream_Typer );\n\
   *self << _p[1]->v.p;\n\
-  DaoContext_PutValue( _ctx, (DaoValue*) _p[0]->v.cdata );\n\
+  DaoProcess_PutValue( _proc, (DaoValue*) _p[0]->v.cdata );\n\
 }\n";
 
 const string dao_add_extrc_decl =
-"static void dao_$(host)_add_extrc( DaoContext *_ctx, DaoValue *_p[], int _n );\n";
+"static void dao_$(host)_add_extrc( DaoProcess *_proc, DaoValue *_p[], int _n );\n";
 
 const string dao_add_extrc_dao =
 "  { dao_$(host)_add_extrc, \"dao_add_external_reference( self : $(host) )\" },\n";
 
 const string dao_add_extrc_func =
-"static void dao_$(host)_add_extrc( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+"static void dao_$(host)_add_extrc( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
-	DaoCxx_$(host) *self = (DaoCxx_$(host)*)DaoValue_TryGetCData(_p[0]);\n\
+	DaoCxx_$(host) *self = (DaoCxx_$(host)*)DaoValue_TryGetCdata(_p[0]);\n\
 	self->DaoAddExternalReference();\n\
 }\n";
 
@@ -397,7 +397,7 @@ const string dao_proto =
 "  { dao_$(host_idname)_$(cxxname)$(overload), \"$(daoname)( $(parlist) )$(retype)\" },\n";
 
 const string cxx_wrap_proto 
-= "static void dao_$(host_idname)_$(cxxname)$(overload)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+= "static void dao_$(host_idname)_$(cxxname)$(overload)( DaoProcess *_proc, DaoValue *_p[], int _n )";
 
 const string tpl_struct = "$(qname)* DAO_DLL_$(module) Dao_$(idname)_New();\n";
 
@@ -418,7 +418,7 @@ struct DAO_DLL_$(module) Dao_$(idname)\n\
 {\n\
 	$(qname)  nested;\n\
 	$(qname) *object;\n\
-	DaoCData *cdata;\n\
+	DaoCdata *cdata;\n\
 };\n\
 Dao_$(idname)* DAO_DLL_$(module) Dao_$(idname)_New();\n";
 
@@ -427,7 +427,7 @@ const string tpl_struct_daoc_alloc =
 {\n\
 	Dao_$(idname) *wrap = calloc( 1, sizeof(Dao_$(idname)) );\n\
 	$(name) *self = ($(name)*) wrap;\n\
-	wrap->cdata = DaoCData_New( dao_$(idname)_Typer, wrap );\n\
+	wrap->cdata = DaoCdata_New( dao_$(idname)_Typer, wrap );\n\
 	wrap->object = self;\n\
 $(callbacks)$(selfields)\treturn wrap;\n\
 }\n";
@@ -436,31 +436,31 @@ const string tpl_set_callback = "\tself->$(callback) = Dao_$(name)_$(callback);\
 const string tpl_set_selfield = "\tself->$(field) = wrap;\n";
 
 const string c_wrap_new = 
-"static void dao_$(host_idname)_$(cxxname)( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+"static void dao_$(host_idname)_$(cxxname)( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
 	Dao_$(host_idname) *self = Dao_$(host_idname)_New();\n\
-	DaoContext_PutValue( _ctx, (DaoValue*) self->cdata );\n\
+	DaoProcess_PutValue( _proc, (DaoValue*) self->cdata );\n\
 }\n";
 const string cxx_wrap_new = 
-"static void dao_$(host_idname)_$(cxxname)( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+"static void dao_$(host_idname)_$(cxxname)( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
 	DaoCxx_$(host_idname) *self = DaoCxx_$(host_idname)_New();\n\
-	DaoContext_PutValue( _ctx, (DaoValue*) self->cdata );\n\
+	DaoProcess_PutValue( _proc, (DaoValue*) self->cdata );\n\
 }\n";
 const string cxx_wrap_alloc2 = 
-"static void dao_$(host_idname)_$(cxxname)( DaoContext *_ctx, DaoValue *_p[], int _n )\n\
+"static void dao_$(host_idname)_$(cxxname)( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
 	$(host_qname) *self = Dao_$(host_idname)_New();\n\
-	DaoContext_PutCData( _ctx, self, dao_$(host_idname)_Typer );\n\
+	DaoProcess_PutCdata( _proc, self, dao_$(host_idname)_Typer );\n\
 }\n";
 
 const string tpl_class_def = 
 "class DAO_DLL_$(module) DaoCxxVirt_$(idname) $(virt_supers)\n{\n\
 	public:\n\
 	DaoCxxVirt_$(idname)(){ self = 0; cdata = 0; }\n\
-	void DaoInitWrapper( $(qname) *self, DaoCData *d );\n\n\
+	void DaoInitWrapper( $(qname) *self, DaoCdata *d );\n\n\
 	$(qname) *self;\n\
-	DaoCData *cdata;\n\
+	DaoCdata *cdata;\n\
 \n$(virtuals)\n\
 $(qt_virt_emit)\n\
 };\n\
@@ -477,7 +477,7 @@ const string tpl_class2 =
 tpl_class_def + "$(qname)* Dao_$(idname)_Copy( const $(qname) &p );\n";
 
 const string tpl_class_init =
-"void DaoCxxVirt_$(idname)::DaoInitWrapper( $(qname) *s, DaoCData *d )\n\
+"void DaoCxxVirt_$(idname)::DaoInitWrapper( $(qname) *s, DaoCdata *d )\n\
 {\n\
 	self = s;\n\
 	cdata = d;\n\
@@ -487,13 +487,13 @@ $(qt_init)\n\
 DaoCxx_$(idname)::~DaoCxx_$(idname)()\n\
 {\n\
 	if( cdata ){\n\
-		DaoCData_SetData( cdata, NULL );\n\
-		DaoCData_SetExtReference( cdata, 0 );\n\
+		DaoCdata_SetData( cdata, NULL );\n\
+		DaoCdata_SetExtReference( cdata, 0 );\n\
 	} \n\
 }\n\
 void DaoCxx_$(idname)::DaoInitWrapper()\n\
 {\n\
-	cdata = DaoCData_New( dao_$(idname)_Typer, this );\n\
+	cdata = DaoCdata_New( dao_$(idname)_Typer, this );\n\
 	DaoCxxVirt_$(idname)::DaoInitWrapper( this, cdata );\n\
 $(qt_make_linker)\n\
 }\n";
@@ -550,25 +550,25 @@ const string tpl_meth_decl3 =
 "$(retype) DaoWrap_$(name)( $(parlist) )$(extra){ $(return)$(qname)::$(cxxname)( $(parcall) ); }\n";
 
 const string tpl_raise_call_protected =
-"  if( DaoValue_CastCData(_p[0]) && DaoCData_GetObject((DaoCData*)_p[0]) == NULL ){\n\
-    DaoContext_RaiseException( _ctx, DAO_ERROR, \"call to protected method\" );\n\
+"  if( DaoValue_CastCdata(_p[0]) && DaoCdata_GetObject((DaoCdata*)_p[0]) == NULL ){\n\
+    DaoProcess_RaiseException( _proc, DAO_ERROR, \"call to protected method\" );\n\
     return;\n\
   }\n";
 
 const string cxx_getter_proto = 
-"static void dao_$(host_idname)_GETF_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+"static void dao_$(host_idname)_GETF_$(name)( DaoProcess *_proc, DaoValue *_p[], int _n )";
 
 const string cxx_setter_proto = 
-"static void dao_$(host_idname)_SETF_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+"static void dao_$(host_idname)_SETF_$(name)( DaoProcess *_proc, DaoValue *_p[], int _n )";
 
 const string cxx_get_item_proto = 
-"static void dao_$(host_idname)_GETI_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+"static void dao_$(host_idname)_GETI_$(name)( DaoProcess *_proc, DaoValue *_p[], int _n )";
 
 const string cxx_set_item_proto = 
-"static void dao_$(host_idname)_SETI_$(name)( DaoContext *_ctx, DaoValue *_p[], int _n )";
+"static void dao_$(host_idname)_SETI_$(name)( DaoProcess *_proc, DaoValue *_p[], int _n )";
 
 const string cxx_gs_user =
-"  $(host_qname) *self = ($(host_qname)*)DaoValue_TryCastCData(_p[0],dao_$(typer)_Typer);\n";
+"  $(host_qname) *self = ($(host_qname)*)DaoValue_TryCastCdata(_p[0],dao_$(typer)_Typer);\n";
 
 const string dao_getter_proto = 
 "  { dao_$(host_idname)_GETF_$(name), \".$(name)( self :$(daoname) )=>$(ftype)\" },\n";

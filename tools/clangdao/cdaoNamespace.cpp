@@ -77,21 +77,21 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		outer_name = cdao_qname_to_idname( outer_name );
 		if( outer == NULL || outer->nsdecl == NULL ){
 			if( name == "std" ) name = "stdcxx";
-			onload += "\tDaoNameSpace *" + this_name + " = DaoVmSpace_GetNameSpace( ";
+			onload += "\tDaoNamespace *" + this_name + " = DaoVmSpace_GetNameSpace( ";
 			onload += "vms, \"" + name + "\" );\n";
 		}else{
-			onload += "\tDaoNameSpace *" + this_name + " = DaoNameSpace_GetNameSpace( ";
+			onload += "\tDaoNamespace *" + this_name + " = DaoNamespace_GetNameSpace( ";
 			onload += outer_name + ", \"" + name + "\" );\n";
 		}
 		if( enums.size() ){
 			source += module->MakeConstantStruct( enums, variables, qname );
-			onload2 += "\tDaoNameSpace_AddConstNumbers( " + this_name;
+			onload2 += "\tDaoNamespace_AddConstNumbers( " + this_name;
 			onload2 += ", dao_" + this_name + "_Nums );\n";
 		}
 	}else{
 		if( enums.size() ){
 			source += module->MakeConstantStruct( enums, variables );
-			onload2 += "\tDaoNameSpace_AddConstNumbers( ns, dao__Nums );\n";
+			onload2 += "\tDaoNamespace_AddConstNumbers( ns, dao__Nums );\n";
 		}
 	}
 
@@ -109,7 +109,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	//onload2 += module->MakeOnLoadCodes( this );
 
 #if 0
-	string code = "\tDaoNameSpace_TypeDefine( " + varname + ", \"";
+	string code = "\tDaoNamespace_TypeDefine( " + varname + ", \"";
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType *ut = usertypes[i];
 		if( ut->isRedundant || ut->IsFromRequiredModules() ) continue;

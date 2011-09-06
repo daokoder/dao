@@ -4,8 +4,8 @@ DaoVmSpace *__daoVmSpace = NULL;
 #ifdef __cplusplus
 extern "C"{
 #endif
-static void dao__GetGreetingObject( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao__Testing( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao__GetGreetingObject( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao__Testing( DaoProcess *_proc, DaoValue *_p[], int _n );
 static DaoFuncItem dao__Funcs[] = 
 {
   { dao__GetGreetingObject, "GetGreetingObject(  )=>Greeting" },
@@ -13,14 +13,14 @@ static DaoFuncItem dao__Funcs[] =
   { NULL, NULL }
 };
 /* ./greeting.h */
-static void dao__GetGreetingObject( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao__GetGreetingObject( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 
   Greeting* _GetGreetingObject = GetGreetingObject(  );
-  DaoContext_WrapCData( _ctx, (void*) _GetGreetingObject, dao_Greeting_Typer );
+  DaoProcess_WrapCdata( _proc, (void*) _GetGreetingObject, dao_Greeting_Typer );
 }
 /* ./greeting.h */
-static void dao__Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao__Testing( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[0] );
 
@@ -39,10 +39,10 @@ static DaoNumItem dao__Nums[] =
 #ifdef __cplusplus
 extern "C"{
 #endif
-static void dao_CxxNS_Testing( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_Testing_dao_3( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_Testing2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing_dao_2( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing_dao_3( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_Testing2( DaoProcess *_proc, DaoValue *_p[], int _n );
 static DaoFuncItem dao_CxxNS_Funcs[] = 
 {
   { dao_CxxNS_Testing, "Testing( greeting :Greeting, bl :int =FALSE )" },
@@ -52,15 +52,15 @@ static DaoFuncItem dao_CxxNS_Funcs[] =
   { NULL, NULL }
 };
 /* ./greeting.h */
-static void dao_CxxNS_Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_Testing( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* greeting= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
+  Greeting* greeting= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
   CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[1] );
 
   CxxNS::Testing( greeting, bl );
 }
 /* ./greeting.h */
-static void dao_CxxNS_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_Testing_dao_2( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   int a = (int) DaoValue_TryGetInteger( _p[0] );
   CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[1] );
@@ -68,12 +68,12 @@ static void dao_CxxNS_Testing_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
   CxxNS::Testing( a, bl );
 }
 /* ./greeting.h */
-static void dao_CxxNS_Testing_dao_3( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_Testing_dao_3( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test* t= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* t= (CxxNS::Test*) DaoValue_TryCastCdata( _p[0], dao_CxxNS_0_Test_Typer );
   int b = (int) DaoValue_TryGetInteger( _p[1] );
-  CxxNS::Test* o= (CxxNS::Test*) DaoValue_TryCastCData( _p[2], dao_CxxNS_0_Test_Typer );
-  CxxNS::Test* g= (CxxNS::Test*) DaoValue_TryCastCData( _p[3], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* o= (CxxNS::Test*) DaoValue_TryCastCdata( _p[2], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* g= (CxxNS::Test*) DaoValue_TryCastCdata( _p[3], dao_CxxNS_0_Test_Typer );
   int c = (int) DaoValue_TryGetInteger( _p[4] );
 
   if(_n<=2) CxxNS::Testing( t, b );
@@ -81,19 +81,19 @@ static void dao_CxxNS_Testing_dao_3( DaoContext *_ctx, DaoValue *_p[], int _n )
   else CxxNS::Testing( t, b, *o, *g, c );
 }
 /* ./greeting.h */
-static void dao_CxxNS_Testing2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_Testing2( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test* t= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* t= (CxxNS::Test*) DaoValue_TryCastCdata( _p[0], dao_CxxNS_0_Test_Typer );
   int b = (int) DaoValue_TryGetInteger( _p[1] );
-  CxxNS::Test* o= (CxxNS::Test*) DaoValue_TryCastCData( _p[2], dao_CxxNS_0_Test_Typer );
-  CxxNS::Test* g= (CxxNS::Test*) DaoValue_TryCastCData( _p[3], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* o= (CxxNS::Test*) DaoValue_TryCastCdata( _p[2], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* g= (CxxNS::Test*) DaoValue_TryCastCdata( _p[3], dao_CxxNS_0_Test_Typer );
   int c = (int) DaoValue_TryGetInteger( _p[4] );
 
   int _Testing2;
   if(_n<=2) _Testing2 = CxxNS::Testing2( t, b );
   else if(_n<=3) _Testing2 = CxxNS::Testing2( t, b, *o );
   else _Testing2 = CxxNS::Testing2( t, b, *o, *g, c );
-  DaoContext_PutInteger( _ctx, (int) _Testing2 );
+  DaoProcess_PutInteger( _proc, (int) _Testing2 );
 }
 #ifdef __cplusplus
 }
@@ -110,16 +110,16 @@ static DaoNumItem dao_CxxNS_Nums[] =
 #ifdef __cplusplus
 extern "C"{
 #endif
-static void dao_CxxNS2_Testing( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS2_Testing( DaoProcess *_proc, DaoValue *_p[], int _n );
 static DaoFuncItem dao_CxxNS2_Funcs[] = 
 {
   { dao_CxxNS2_Testing, "Testing( test :CxxNS::Test, bl :int =CxxNS::FALSE )" },
   { NULL, NULL }
 };
 /* ./greeting.h */
-static void dao_CxxNS2_Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS2_Testing( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test* test= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* test= (CxxNS::Test*) DaoValue_TryCastCdata( _p[0], dao_CxxNS_0_Test_Typer );
   CxxNS::Bool bl = (CxxNS::Bool) DaoValue_TryGetInteger( _p[1] );
 
   CxxNS2::Testing( test, bl );
@@ -129,7 +129,6 @@ static void dao_CxxNS2_Testing( DaoContext *_ctx, DaoValue *_p[], int _n )
 #endif
 static DaoTypeBase *dao__Typers[] = 
 {
-	dao___va_list_tag_Typer,
 	dao___darwin_pthread_handler_rec_Typer,
 	dao__opaque_pthread_attr_t_Typer,
 	dao__opaque_pthread_cond_t_Typer,
@@ -182,7 +181,6 @@ static DaoTypeBase *dao__Typers[] =
 };
 static const char *dao__Aliases[] = 
 {
-	"__va_list_tag", "__va_list_tag",
 	"_opaque_pthread_attr_t", "__darwin_pthread_attr_t",
 	"_opaque_pthread_cond_t", "__darwin_pthread_cond_t",
 	"_opaque_pthread_condattr_t", "__darwin_pthread_condattr_t",
@@ -195,7 +193,7 @@ static const char *dao__Aliases[] =
 	"__sFILE", "FILE",
 	"__darwin_fp_control", "__darwin_fp_control_t",
 	"__darwin_fp_status", "__darwin_fp_status_t",
-	"__darwin_mcontext64", "mcontext_t",
+	"__darwin_mcontext32", "mcontext_t",
 	"__darwin_sigaltstack", "stack_t",
 	"__darwin_ucontext", "ucontext_t",
 	"_opaque_pthread_attr_t", "pthread_attr_t",
@@ -206,18 +204,18 @@ static const char *dao__Aliases[] =
 #ifdef __cplusplus
 extern "C"{
 #endif
-int DaoOnLoad( DaoVmSpace *vms, DaoNameSpace *ns )
+int DaoOnLoad( DaoVmSpace *vms, DaoNamespace *ns )
 {
 	__daoVmSpace = vms;
-	DaoNameSpace *CxxNS = DaoVmSpace_GetNameSpace( vms, "CxxNS" );
-	DaoNameSpace *CxxNS2 = DaoVmSpace_GetNameSpace( vms, "CxxNS2" );
-	DaoNameSpace_AddConstNumbers( ns, dao__Nums );
-	DaoNameSpace_AddConstNumbers( CxxNS, dao_CxxNS_Nums );
-	DaoNameSpace_WrapTypes( ns, dao__Typers );
-	DaoNameSpace_TypeDefines( ns, dao__Aliases );
-	DaoNameSpace_WrapFunctions( ns, dao__Funcs );
-	DaoNameSpace_WrapFunctions( CxxNS, dao_CxxNS_Funcs );
-	DaoNameSpace_WrapFunctions( CxxNS2, dao_CxxNS2_Funcs );
+	DaoNamespace *CxxNS = DaoVmSpace_GetNameSpace( vms, "CxxNS" );
+	DaoNamespace *CxxNS2 = DaoVmSpace_GetNameSpace( vms, "CxxNS2" );
+	DaoNamespace_AddConstNumbers( ns, dao__Nums );
+	DaoNamespace_AddConstNumbers( CxxNS, dao_CxxNS_Nums );
+	DaoNamespace_WrapTypes( ns, dao__Typers );
+	DaoNamespace_TypeDefines( ns, dao__Aliases );
+	DaoNamespace_WrapFunctions( ns, dao__Funcs );
+	DaoNamespace_WrapFunctions( CxxNS, dao_CxxNS_Funcs );
+	DaoNamespace_WrapFunctions( CxxNS2, dao_CxxNS2_Funcs );
 	return 0;
 }
 #ifdef __cplusplus

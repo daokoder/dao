@@ -2,10 +2,6 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-/*  */
-static DaoTypeBase __va_list_tag_Typer = 
-{ "__va_list_tag", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };
-DaoTypeBase DAO_DLL_GREETING *dao___va_list_tag_Typer = & __va_list_tag_Typer;
 /* /usr/include/sys/_types.h */
 static DaoTypeBase __darwin_pthread_handler_rec_Typer = 
 { "__darwin_pthread_handler_rec", NULL, NULL, NULL, { NULL }, { NULL }, NULL, NULL };
@@ -179,13 +175,13 @@ static DaoNumItem dao_otto_Nums[] =
 };
 
 
-static void dao_otto_otto_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto_otto( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto_geta( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto_vtest( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto_operator_43_( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto_SETI_( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto_test( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_otto_otto_dao_2( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto_otto( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto_geta( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto_vtest( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto_operator_43_( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto_SETI_( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto_test( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_otto_Meths[] = 
 {
@@ -214,60 +210,60 @@ static DaoTypeBase otto_Typer =
 };
 DaoTypeBase DAO_DLL_GREETING *dao_otto_Typer = & otto_Typer;
 /* ./greeting.h */
-static void dao_otto_otto_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_otto_dao_2( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   int b = (int) DaoValue_TryGetInteger( _p[0] );
 
 	DaoCxx_otto *_self = DaoCxx_otto_New( b );
-	DaoContext_PutValue( _ctx, (DaoValue*) _self->cdata );
+	DaoProcess_PutValue( _proc, (DaoValue*) _self->cdata );
 }
 /* ./greeting.h */
-static void dao_otto_otto( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_otto( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   int b = (int) DaoValue_TryGetInteger( _p[0] );
 
 	DaoCxx_otto *_self = DaoCxx_otto_New( b );
-	DaoContext_PutValue( _ctx, (DaoValue*) _self->cdata );
+	DaoProcess_PutValue( _proc, (DaoValue*) _self->cdata );
 }
 /* ./greeting.h */
-static void dao_otto_geta( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_geta( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  otto* self= (otto*) DaoValue_TryCastCdata( _p[0], dao_otto_Typer );
 
   int _geta = self->otto::geta(  );
-  DaoContext_PutInteger( _ctx, (int) _geta );
+  DaoProcess_PutInteger( _proc, (int) _geta );
 }
 /* ./greeting.h */
-static void dao_otto_vtest( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_vtest( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  otto* self= (otto*) DaoValue_TryCastCdata( _p[0], dao_otto_Typer );
 
   self->otto::vtest(  );
 }
 /* ./greeting.h */
-static void dao_otto_operator_43_( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_operator_43_( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  otto* self= (otto*) DaoValue_TryCastCdata( _p[0], dao_otto_Typer );
   int i = (int) DaoValue_TryGetInteger( _p[1] );
 
   int& _operator_43_ = self->otto::operator[]( i );
-  DaoContext_PutInteger( _ctx, (int) _operator_43_ );
+  DaoProcess_PutInteger( _proc, (int) _operator_43_ );
 }
-static void dao_otto_SETI_( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_SETI_( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  otto* self= (otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
+  otto* self= (otto*) DaoValue_TryCastCdata( _p[0], dao_otto_Typer );
   int i = (int) DaoValue_TryGetInteger( _p[1] );
   int _value = (int) DaoValue_TryGetInteger( _p[2] );
   self->otto::operator[]( i ) = _value;
 }
 /* ./greeting.h */
-static void dao_otto_test( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto_test( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  DaoCxx_otto* self= (DaoCxx_otto*) DaoValue_TryCastCData( _p[0], dao_otto_Typer );
-  otto* value= (otto*) DaoValue_TryCastCData( _p[1], dao_otto_Typer );
+  DaoCxx_otto* self= (DaoCxx_otto*) DaoValue_TryCastCdata( _p[0], dao_otto_Typer );
+  otto* value= (otto*) DaoValue_TryCastCdata( _p[1], dao_otto_Typer );
 
   otto _test = self->DaoWrap_test( *value );
-  DaoContext_PutCData( _ctx, (void*)new otto( _test ), dao_otto_Typer );
+  DaoProcess_PutCdata( _proc, (void*)new otto( _test ), dao_otto_Typer );
 }
 /* ./greeting.h */
 
@@ -278,8 +274,8 @@ static DaoNumItem dao_otto2_Nums[] =
 };
 
 
-static void dao_otto2_otto2( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_otto2_vtest( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_otto2_otto2( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_otto2_vtest( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_otto2_Meths[] = 
 {
@@ -306,15 +302,15 @@ static DaoTypeBase otto2_Typer =
   NULL
 };
 DaoTypeBase DAO_DLL_GREETING *dao_otto2_Typer = & otto2_Typer;
-static void dao_otto2_otto2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto2_otto2( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 	DaoCxx_otto2 *self = DaoCxx_otto2_New();
-	DaoContext_PutValue( _ctx, (DaoValue*) self->cdata );
+	DaoProcess_PutValue( _proc, (DaoValue*) self->cdata );
 }
 /* ./greeting.h */
-static void dao_otto2_vtest( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_otto2_vtest( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  otto2* self= (otto2*) DaoValue_TryCastCData( _p[0], dao_otto2_Typer );
+  otto2* self= (otto2*) DaoValue_TryCastCdata( _p[0], dao_otto2_Typer );
 
   self->otto2::vtest(  );
 }
@@ -327,14 +323,14 @@ static DaoNumItem dao_Greeting_Nums[] =
 };
 
 
-static void dao_Greeting_Greeting_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_Greeting( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_SetMessage( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_PrintMessage( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_DoGreeting( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_TestGreeting( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_Greeting_TestNull( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_Greeting_Greeting_dao_2( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_Greeting( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_SetMessage( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_PrintMessage( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_DoGreeting( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_TestGreeting( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_VirtWithDefault( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_Greeting_TestNull( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting_Meths[] = 
 {
@@ -364,75 +360,75 @@ static DaoTypeBase Greeting_Typer =
 };
 DaoTypeBase DAO_DLL_GREETING *dao_Greeting_Typer = & Greeting_Typer;
 /* ./greeting.h */
-static void dao_Greeting_Greeting_dao_2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_Greeting_dao_2( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   const char* msg = (const char*) DaoValue_TryGetMBString( _p[0] );
 
 	DaoCxx_Greeting *_self = DaoCxx_Greeting_New( msg );
-	DaoContext_PutValue( _ctx, (DaoValue*) _self->cdata );
+	DaoProcess_PutValue( _proc, (DaoValue*) _self->cdata );
   DaoString_SetMBS( (DaoString*)_p[0], (char*)msg );
 }
 /* ./greeting.h */
-static void dao_Greeting_Greeting( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_Greeting( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   const char* msg = (const char*) DaoValue_TryGetMBString( _p[0] );
 
 	DaoCxx_Greeting *_self = DaoCxx_Greeting_New( msg );
-	DaoContext_PutValue( _ctx, (DaoValue*) _self->cdata );
+	DaoProcess_PutValue( _proc, (DaoValue*) _self->cdata );
   DaoString_SetMBS( (DaoString*)_p[0], (char*)msg );
 }
 /* ./greeting.h */
-static void dao_Greeting_SetMessage( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_SetMessage( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
+  Greeting* self= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
   const char* msg = (const char*) DaoValue_TryGetMBString( _p[1] );
 
   self->Greeting::SetMessage( msg );
   DaoString_SetMBS( (DaoString*)_p[1], (char*)msg );
 }
 /* ./greeting.h */
-static void dao_Greeting_PrintMessage( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_PrintMessage( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
+  Greeting* self= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
 
   self->Greeting::PrintMessage(  );
 }
 /* ./greeting.h */
-static void dao_Greeting_DoGreeting( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_DoGreeting( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
+  Greeting* self= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
   const char* name = (const char*) DaoValue_TryGetMBString( _p[1] );
 
   self->Greeting::DoGreeting( name );
   DaoString_SetMBS( (DaoString*)_p[1], (char*)name );
 }
 /* ./greeting.h */
-static void dao_Greeting_TestGreeting( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_TestGreeting( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
-  Greeting* g= (Greeting*) DaoValue_TryCastCData( _p[1], dao_Greeting_Typer );
+  Greeting* self= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
+  Greeting* g= (Greeting*) DaoValue_TryCastCdata( _p[1], dao_Greeting_Typer );
   const char* name = (const char*) DaoValue_TryGetMBString( _p[2] );
 
   self->Greeting::TestGreeting( g, name );
   DaoString_SetMBS( (DaoString*)_p[2], (char*)name );
 }
 /* ./greeting.h */
-static void dao_Greeting_VirtWithDefault( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_VirtWithDefault( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
-  Greeting* g= (Greeting*) DaoValue_TryCastCData( _p[1], dao_Greeting_Typer );
+  Greeting* self= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
+  Greeting* g= (Greeting*) DaoValue_TryCastCdata( _p[1], dao_Greeting_Typer );
 
   if(_n<=1) self->Greeting::VirtWithDefault(  );
   else self->Greeting::VirtWithDefault( *g );
 }
 /* ./greeting.h */
-static void dao_Greeting_TestNull( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_TestNull( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  Greeting* self= (Greeting*) DaoValue_TryCastCData( _p[0], dao_Greeting_Typer );
-  Greeting::Null* _p1= (Greeting::Null*) DaoValue_TryCastCData( _p[1], dao_Greeting_0_Null_Typer );
+  Greeting* self= (Greeting*) DaoValue_TryCastCdata( _p[0], dao_Greeting_Typer );
+  Greeting::Null* _p1= (Greeting::Null*) DaoValue_TryCastCdata( _p[1], dao_Greeting_0_Null_Typer );
 
   Greeting::Null _TestNull = self->Greeting::TestNull( *_p1 );
-  DaoContext_PutCData( _ctx, (void*)new Greeting::Null( _TestNull ), dao_Greeting_0_Null_Typer );
+  DaoProcess_PutCdata( _proc, (void*)new Greeting::Null( _TestNull ), dao_Greeting_0_Null_Typer );
 }
 /* ./greeting.h */
 
@@ -443,7 +439,7 @@ static DaoNumItem dao_Greeting_0_Null_Nums[] =
 };
 
 
-static void dao_Greeting_0_Null_Null( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_Greeting_0_Null_Null( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting_0_Null_Meths[] = 
 {
@@ -465,10 +461,10 @@ static DaoTypeBase Greeting_0_Null_Typer =
   NULL
 };
 DaoTypeBase DAO_DLL_GREETING *dao_Greeting_0_Null_Typer = & Greeting_0_Null_Typer;
-static void dao_Greeting_0_Null_Null( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting_0_Null_Null( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 	Greeting::Null *self = Dao_Greeting_0_Null_New();
-	DaoContext_PutCData( _ctx, self, dao_Greeting_0_Null_Typer );
+	DaoProcess_PutCdata( _proc, self, dao_Greeting_0_Null_Typer );
 }
 /* ./greeting.h */
 
@@ -479,7 +475,7 @@ static DaoNumItem dao_Greeting2_Nums[] =
 };
 
 
-static void dao_Greeting2_Greeting2( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_Greeting2_Greeting2( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_Greeting2_Meths[] = 
 {
@@ -505,10 +501,10 @@ static DaoTypeBase Greeting2_Typer =
   NULL
 };
 DaoTypeBase DAO_DLL_GREETING *dao_Greeting2_Typer = & Greeting2_Typer;
-static void dao_Greeting2_Greeting2( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_Greeting2_Greeting2( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 	DaoCxx_Greeting2 *self = DaoCxx_Greeting2_New();
-	DaoContext_PutValue( _ctx, (DaoValue*) self->cdata );
+	DaoProcess_PutValue( _proc, (DaoValue*) self->cdata );
 }
 /* ./greeting.h */
 
@@ -519,7 +515,7 @@ static DaoNumItem dao_AutobindTest_Nums[] =
 };
 
 
-static void dao_AutobindTest_AutobindTest( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_AutobindTest_AutobindTest( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_AutobindTest_Meths[] = 
 {
@@ -541,10 +537,10 @@ static DaoTypeBase AutobindTest_Typer =
   NULL
 };
 DaoTypeBase DAO_DLL_GREETING *dao_AutobindTest_Typer = & AutobindTest_Typer;
-static void dao_AutobindTest_AutobindTest( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_AutobindTest_AutobindTest( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 	AutobindTest *self = Dao_AutobindTest_New();
-	DaoContext_PutCData( _ctx, self, dao_AutobindTest_Typer );
+	DaoProcess_PutCdata( _proc, self, dao_AutobindTest_Typer );
 }
 /* ./greeting.h */
 
@@ -555,12 +551,12 @@ static DaoNumItem dao_CxxNS_0_Test_Nums[] =
 };
 
 
-static void dao_CxxNS_0_Test_Test( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_0_Test_GETF_index( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_0_Test_SETF_index( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_0_Test_GETF_value( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_0_Test_SETF_value( DaoContext *_ctx, DaoValue *_p[], int _n );
-static void dao_CxxNS_0_Test_Print( DaoContext *_ctx, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_Test( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_GETF_index( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_SETF_index( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_GETF_value( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_SETF_value( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_CxxNS_0_Test_Print( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 static DaoFuncItem dao_CxxNS_0_Test_Meths[] = 
 {
@@ -587,35 +583,35 @@ static DaoTypeBase CxxNS_0_Test_Typer =
   NULL
 };
 DaoTypeBase DAO_DLL_GREETING *dao_CxxNS_0_Test_Typer = & CxxNS_0_Test_Typer;
-static void dao_CxxNS_0_Test_Test( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_0_Test_Test( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 	CxxNS::Test *self = Dao_CxxNS_0_Test_New();
-	DaoContext_PutCData( _ctx, self, dao_CxxNS_0_Test_Typer );
+	DaoProcess_PutCdata( _proc, self, dao_CxxNS_0_Test_Typer );
 }
-static void dao_CxxNS_0_Test_GETF_index( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_0_Test_GETF_index( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
-  DaoContext_PutInteger( _ctx, (int) self->index );
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCdata(_p[0],dao_CxxNS_0_Test_Typer);
+  DaoProcess_PutInteger( _proc, (int) self->index );
 }
-static void dao_CxxNS_0_Test_SETF_index( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_0_Test_SETF_index( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCdata(_p[0],dao_CxxNS_0_Test_Typer);
   self->index = (int) DaoValue_TryGetInteger(_p[1]);
 }
-static void dao_CxxNS_0_Test_GETF_value( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_0_Test_GETF_value( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
-  DaoContext_PutDouble( _ctx, (double) self->value );
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCdata(_p[0],dao_CxxNS_0_Test_Typer);
+  DaoProcess_PutDouble( _proc, (double) self->value );
 }
-static void dao_CxxNS_0_Test_SETF_value( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_0_Test_SETF_value( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCData(_p[0],dao_CxxNS_0_Test_Typer);
+  CxxNS::Test *self = (CxxNS::Test*)DaoValue_TryCastCdata(_p[0],dao_CxxNS_0_Test_Typer);
   self->value = (double) DaoValue_TryGetDouble(_p[1]);
 }
 /* ./greeting.h */
-static void dao_CxxNS_0_Test_Print( DaoContext *_ctx, DaoValue *_p[], int _n )
+static void dao_CxxNS_0_Test_Print( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
-  CxxNS::Test* self= (CxxNS::Test*) DaoValue_TryCastCData( _p[0], dao_CxxNS_0_Test_Typer );
+  CxxNS::Test* self= (CxxNS::Test*) DaoValue_TryCastCdata( _p[0], dao_CxxNS_0_Test_Typer );
 
   self->Test::Print(  );
 }

@@ -76,22 +76,22 @@ const string dao2cxx_uimat2 = dao2cxx_imat2;
 const string dao2cxx_stream = dao2cxx2 + "DaoStream_GetFile( (DaoStream*)_p[$(index)] );\n";
 
 const string dao2cxx_void = 
-"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryGetCData( _p[$(index)] );\n";
+"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryGetCdata( _p[$(index)] );\n";
 
 const string dao2cxx_void2 =
-"  $(cxxtype) $(name)= ($(cxxtype)) DaoValue_TryGetCData( _p[$(index)] );\n";
+"  $(cxxtype) $(name)= ($(cxxtype)) DaoValue_TryGetCdata( _p[$(index)] );\n";
 
 const string dao2cxx_user =
- "  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryCastCData( _p[$(index)], dao_$(typer)_Typer );\n";
+ "  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryCastCdata( _p[$(index)], dao_$(typer)_Typer );\n";
 
 const string dao2cxx_user2 = 
-"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryCastCData( _p[$(index)], dao_$(typer)_Typer );\n";
+"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryCastCdata( _p[$(index)], dao_$(typer)_Typer );\n";
 
 const string dao2cxx_user3 =
-"  $(cxxtype)** $(name)= ($(cxxtype)**) DaoValue_TryGetCData2( _p[$(index)] );\n";
+"  $(cxxtype)** $(name)= ($(cxxtype)**) DaoValue_TryGetCdata2( _p[$(index)] );\n";
 
 const string dao2cxx_user4 = 
-"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryGetCData2( _p[$(index)] );\n";
+"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryGetCdata2( _p[$(index)] );\n";
 
 const string dao2cxx_callback =
 "  DaoMethod *_$(name) = (DaoMethod*) _p[$(index)];\n\
@@ -100,7 +100,7 @@ const string dao2cxx_callback =
 const string dao2cxx_userdata =
 "  DaoCallbackData *$(name) = DaoCallbackData_New( _$(callback), _p[$(index)] );\n\
   if( $(name) == NULL ){\n\
-    DaoContext_RaiseException( _ctx, DAO_ERROR_PARAM, \"invalid callback\" );\n\
+    DaoProcess_RaiseException( _proc, DAO_ERROR_PARAM, \"invalid callback\" );\n\
 	return;\n\
   }\n";
 
@@ -143,8 +143,8 @@ const string cxx2dao_fmat2 = cxx2dao_fmat;
 const string cxx2dao_dmat2 = cxx2dao_dmat;
 
 const string cxx2dao_stream = cxx2dao + "Stream( (FILE*) $(refer) );\n";
-const string cxx2dao_voidp = "  _dp[$(index)] = DaoValue_WrapCData( NULL, (void*) $(refer) );\n";
-const string cxx2dao_user = "  _dp[$(index)] = DaoValue_WrapCData( dao_$(typer)_Typer, (void*) $(refer) );\n";
+const string cxx2dao_voidp = "  _dp[$(index)] = DaoValue_WrapCdata( NULL, (void*) $(refer) );\n";
+const string cxx2dao_user = "  _dp[$(index)] = DaoValue_WrapCdata( dao_$(typer)_Typer, (void*) $(refer) );\n";
 
 const string cxx2dao_userdata = "  DaoValue_Copy( $(name), &_dp2[$(index)] );\n";
 
@@ -153,59 +153,59 @@ const string cxx2dao_qchar2 = cxx2dao+"Integer( $(name)->digitValue() );\n";
 const string cxx2dao_qbytearray = cxx2dao+"MBString( (char*) $(name).data(), 0 );\n";
 const string cxx2dao_qstring = cxx2dao+"MBString( (char*) $(name).toLocal8Bit().data(), 0 );\n";
 
-const string ctxput = "  DaoContext_Put";
+const string ctxput = "  DaoProcess_Put";
 
-const string ctxput_int = ctxput + "Integer( _ctx, (int) $(name) );\n";
-const string ctxput_float = ctxput + "Float( _ctx, (float) $(name) );\n";
-const string ctxput_double = ctxput + "Double( _ctx, (double) $(name) );\n";
-const string ctxput_mbs = ctxput + "MBString( _ctx, (char*) $(name) );\n";
-const string ctxput_wcs = ctxput + "WCString( _ctx, (wchar_t*) $(name) );\n";
-const string ctxput_bytes = ctxput + "Bytes( _ctx, (char*) $(name), $(size) );\n"; // XXX array?
-const string ctxput_shorts = ctxput + "ArrayShort( _ctx, (short*) $(name), $(size) );\n";
-const string ctxput_ints = ctxput + "ArrayInteger( _ctx, (int*) $(name), $(size) );\n";
-const string ctxput_floats = ctxput + "ArrayFloat( _ctx, (float*) $(name), $(size) );\n";
-const string ctxput_doubles = ctxput + "ArrayDouble( _ctx, (double*) $(name), $(size) );\n";
+const string ctxput_int = ctxput + "Integer( _proc, (int) $(name) );\n";
+const string ctxput_float = ctxput + "Float( _proc, (float) $(name) );\n";
+const string ctxput_double = ctxput + "Double( _proc, (double) $(name) );\n";
+const string ctxput_mbs = ctxput + "MBString( _proc, (char*) $(name) );\n";
+const string ctxput_wcs = ctxput + "WCString( _proc, (wchar_t*) $(name) );\n";
+const string ctxput_bytes = ctxput + "Bytes( _proc, (char*) $(name), $(size) );\n"; // XXX array?
+const string ctxput_shorts = ctxput + "ArrayShort( _proc, (short*) $(name), $(size) );\n";
+const string ctxput_ints = ctxput + "ArrayInteger( _proc, (int*) $(name), $(size) );\n";
+const string ctxput_floats = ctxput + "ArrayFloat( _proc, (float*) $(name), $(size) );\n";
+const string ctxput_doubles = ctxput + "ArrayDouble( _proc, (double*) $(name), $(size) );\n";
 
-const string ctxput_stream = ctxput + "File( _ctx, (FILE*) $(name) );\n"; //XXX PutFile
-const string ctxput_voidp = ctxput + "CPointer( _ctx, (void*) $(name), 0 );\n";
-const string ctxput_user = "  DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(typer)_Typer );\n";
-const string qt_ctxput = "  Dao_$(typer)_InitSS( ($(cxxtype)*) $(name) );\n";
+const string ctxput_stream = ctxput + "File( _proc, (FILE*) $(name) );\n"; //XXX PutFile
+const string ctxput_voidp = ctxput + "CPointer( _proc, (void*) $(name), 0 );\n";
+const string ctxput_user = "  DaoProcess_WrapCdata( _proc, (void*) $(name), dao_$(typer)_Typer );\n";
+const string qt_procput = "  Dao_$(typer)_InitSS( ($(cxxtype)*) $(name) );\n";
 const string qt_put_qobject =
 "  DaoValue *dbase = DaoQt_Get_Wrapper( $(name) );\n\
   if( dbase ){\n\
-    DaoContext_PutValue( _ctx, dbase );\n\
+    DaoProcess_PutValue( _proc, dbase );\n\
   }else{\n\
     Dao_$(typer)_InitSS( ($(cxxtype)*) $(name) );\n\
-    DaoContext_WrapCData( _ctx, (void*) $(name), dao_$(typer)_Typer );\n\
+    DaoProcess_WrapCdata( _proc, (void*) $(name), dao_$(typer)_Typer );\n\
   }\n\
 ";
 
 const string ctxput_copycdata =
-"  DaoContext_CopyCData( _ctx, (void*)&$(name), sizeof($(cxxtype)), dao_$(typer)_Typer );\n";
+"  DaoProcess_CopyCdata( _proc, (void*)&$(name), sizeof($(cxxtype)), dao_$(typer)_Typer );\n";
 const string ctxput_newcdata =
-"  DaoContext_PutCData( _ctx, (void*)new $(cxxtype)( $(name) ), dao_$(typer)_Typer );\n";
+"  DaoProcess_PutCdata( _proc, (void*)new $(cxxtype)( $(name) ), dao_$(typer)_Typer );\n";
 const string ctxput_refcdata =
-"  DaoContext_WrapCData( _ctx, (void*)&$(name), dao_$(typer)_Typer );\n";
+"  DaoProcess_WrapCdata( _proc, (void*)&$(name), dao_$(typer)_Typer );\n";
 
 #if 0
 const string qt_qlist_decl = 
 "typedef $(qtype)<$(item)> $(qtype)_$(item);
-void Dao_Put$(qtype)_$(item)( DaoContext *ctx, const $(qtype)_$(item) & qlist );
+void Dao_Put$(qtype)_$(item)( DaoProcess *ctx, const $(qtype)_$(item) & qlist );
 void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist );
 ";
 const string qt_qlist_decl2 = 
 "typedef $(qtype)<$(item)*> $(qtype)P_$(item);
-void Dao_Put$(qtype)P_$(item)( DaoContext *ctx, const $(qtype)P_$(item) & qlist );
+void Dao_Put$(qtype)P_$(item)( DaoProcess *ctx, const $(qtype)P_$(item) & qlist );
 void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist );
 ";
 const string qt_daolist_func =
-"void Dao_Put$(qtype)_$(item)( DaoContext *ctx, const $(qtype)_$(item) & qlist )
+"void Dao_Put$(qtype)_$(item)( DaoProcess *ctx, const $(qtype)_$(item) & qlist )
 {
-	DaoList *dlist = DaoContext_PutList( ctx );
+	DaoList *dlist = DaoProcess_PutList( ctx );
 	DaoValue it = { DAO_CDATA, 0, 0, 0, {0} };
 	int i, m = qlist.size();
 	for(i=0; i<m; i++){
-		it.v.cdata = DaoCData_New( dao_$(item)_Typer, new $(item)( qlist[i] ) );
+		it.v.cdata = DaoCdata_New( dao_$(item)_Typer, new $(item)( qlist[i] ) );
 		DaoList_PushBack( dlist, it );
 	}
 }
@@ -215,19 +215,19 @@ void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist )
 	for(i=0; i<m; i++){
 		DaoValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
-		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( *($(item)*) DaoValue_TryCastCData( & it, dao_$(item)_Typer ) );
+		if( ! DaoCdata_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( *($(item)*) DaoValue_TryCastCdata( & it, dao_$(item)_Typer ) );
 	}
 }
 ";
 const string qt_daolist_func_virt =
-"void Dao_Put$(qtype)_$(item)( DaoContext *ctx, const $(qtype)_$(item) & qlist )
+"void Dao_Put$(qtype)_$(item)( DaoProcess *ctx, const $(qtype)_$(item) & qlist )
 {
-	DaoList *dlist = DaoContext_PutList( ctx );
+	DaoList *dlist = DaoProcess_PutList( ctx );
 	DaoValue it = { DAO_CDATA, 0, 0, 0, {0} };
 	int i, m = qlist.size();
 	for(i=0; i<m; i++){
-		it.v.cdata = DaoCData_New( dao_$(item)_Typer, new $(item)( qlist[i] ) );
+		it.v.cdata = DaoCdata_New( dao_$(item)_Typer, new $(item)( qlist[i] ) );
 		DaoList_PushBack( dlist, it );
 	}
 }
@@ -237,19 +237,19 @@ void Dao_Get$(qtype)_$(item)( DaoList *dlist, $(qtype)_$(item) & qlist )
 	for(i=0; i<m; i++){
 		DaoValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
-		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( * ($(item)*) DaoValue_TryCastCData( & it, dao_$(item)_Typer ) );
+		if( ! DaoCdata_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( * ($(item)*) DaoValue_TryCastCdata( & it, dao_$(item)_Typer ) );
 	}
 }
 ";
 const string qt_daolist_func2 =
-"void Dao_Put$(qtype)P_$(item)( DaoContext *ctx, const $(qtype)P_$(item) & qlist )
+"void Dao_Put$(qtype)P_$(item)( DaoProcess *ctx, const $(qtype)P_$(item) & qlist )
 {
-	DaoList *dlist = DaoContext_PutList( ctx );
+	DaoList *dlist = DaoProcess_PutList( ctx );
 	DaoValue it = { DAO_CDATA, 0, 0, 0, {0} };
 	int i, m = qlist.size();
 	for(i=0; i<m; i++){
-		it.v.cdata = DaoCData_Wrap( dao_$(item)_Typer, qlist[i] );
+		it.v.cdata = DaoCdata_Wrap( dao_$(item)_Typer, qlist[i] );
 		DaoList_PushBack( dlist, it );
 	}
 }
@@ -259,19 +259,19 @@ void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist )
 	for(i=0; i<m; i++){
 		DaoValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
-		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( ($(item)*) DaoValue_TryCastCData( & it, dao_$(item)_Typer ) );
+		if( ! DaoCdata_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( ($(item)*) DaoValue_TryCastCdata( & it, dao_$(item)_Typer ) );
 	}
 }
 ";
 const string qt_daolist_func_virt2 =
-"void Dao_Put$(qtype)P_$(item)( DaoContext *ctx, const $(qtype)P_$(item) & qlist )
+"void Dao_Put$(qtype)P_$(item)( DaoProcess *ctx, const $(qtype)P_$(item) & qlist )
 {
-	DaoList *dlist = DaoContext_PutList( ctx );
+	DaoList *dlist = DaoProcess_PutList( ctx );
 	DaoValue it = { DAO_CDATA, 0, 0, 0, {0} };
 	int i, m = qlist.size();
 	for(i=0; i<m; i++){
-		it.v.cdata = DaoCData_Wrap( dao_$(item)_Typer, qlist[i] );
+		it.v.cdata = DaoCdata_Wrap( dao_$(item)_Typer, qlist[i] );
 		DaoList_PushBack( dlist, it );
 	}
 }
@@ -281,8 +281,8 @@ void Dao_Get$(qtype)P_$(item)( DaoList *dlist, $(qtype)P_$(item) & qlist )
 	for(i=0; i<m; i++){
 		DaoValue it = DaoList_GetItem( dlist, i );
 		if( it.t != DAO_CDATA ) continue;
-		if( ! DaoCData_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
-		qlist.append( ($(item)*) DaoValue_TryCastCData( & it, dao_$(item)_Typer ) );
+		if( ! DaoCdata_IsType( it.v.cdata, dao_$(item)_Typer ) ) continue;
+		qlist.append( ($(item)*) DaoValue_TryCastCdata( & it, dao_$(item)_Typer ) );
 	}
 }
 ";
@@ -294,8 +294,8 @@ const string qt_dao2cxx_list2 =
 "  $(cxxtype) $(name);
   Dao_Get$(qtype)P_$(item)( _p[$(index)]->v.list, $(name) );
 ";
-const string qt_daolist_codes = "  Dao_Put$(qtype)_$(item)( _ctx, $(name) );\n";
-const string qt_daolist_codes2 = "  Dao_Put$(qtype)P_$(item)( _ctx, $(name) );\n";
+const string qt_daolist_codes = "  Dao_Put$(qtype)_$(item)( _proc, $(name) );\n";
+const string qt_daolist_codes2 = "  Dao_Put$(qtype)P_$(item)( _proc, $(name) );\n";
 #endif
 
 const string parset_int = "  DaoInteger_Set( (DaoInteger*)_p[$(index)], (int)$(name) );\n";
@@ -343,8 +343,8 @@ const string dao2cxx_qchar2 =
 
 const string parset_qchar = "  DaoInteger_Set( (DaoInteger*)_p[$(index)], $(name).digitValue() );\n";
 const string parset_qchar2 = "  DaoInteger_Set( (DaoInteger*)_p[$(index)], $(name)->digitValue() );\n";
-const string ctxput_qchar = "  DaoContext_PutInteger( _ctx, $(name).digitValue() );\n";
-const string ctxput_qchar2 = "  DaoContext_PutInteger( _ctx, $(name)->digitValue() );\n";
+const string ctxput_qchar = "  DaoProcess_PutInteger( _proc, $(name).digitValue() );\n";
+const string ctxput_qchar2 = "  DaoProcess_PutInteger( _proc, $(name)->digitValue() );\n";
 
 const string dao2cxx_qbytearray =
 "  char *_mbs$(index) = DaoValue_TryGetMBString( _p[$(index)] );\n\
@@ -360,7 +360,7 @@ const string parset_qbytearray =
 const string parset_qbytearray2 =
 "  DaoString_SetMBS( (DaoString*)_p[$(index)], (char*) $(name)->data() );\n";
 const string ctxput_qbytearray = 
-"  DaoContext_PutMBString( _ctx, $(name).data() );\n";
+"  DaoProcess_PutMBString( _proc, $(name).data() );\n";
 
 const string dao2cxx_qstring =
 "  char *_mbs$(index) = DaoValue_TryGetMBString( _p[$(index)] );\n\
@@ -376,14 +376,14 @@ const string parset_qstring =
 const string parset_qstring2 =
 "  DaoString_SetMBS( (DaoString*)_p[$(index)], (char*)$(name)->toLocal8Bit().data() );\n";
 const string ctxput_qstring = 
-"  DaoContext_PutMBString( _ctx, $(name).toLocal8Bit().data() );\n";
+"  DaoProcess_PutMBString( _proc, $(name).toLocal8Bit().data() );\n";
 
 const string getres_i = "  if(DaoValue_CastInteger(_res)) $(name)=($(cxxtype))";
 const string getres_f = "  if(DaoValue_CastFloat(_res)) $(name)=($(cxxtype))";
 const string getres_d = "  if(DaoValue_CastDouble(_res)) $(name)=($(cxxtype))";
 const string getres_s = "  if(DaoValue_CastString(_res)) $(name)=($(cxxtype)*)";
 const string getres_a = "  if(DaoValue_CastArray(_res))\n    $(name)=($(cxxtype)*)";
-const string getres_p = "  if(DaoValue_CastCData(_res)) $(name)=($(cxxtype)) ";
+const string getres_p = "  if(DaoValue_CastCdata(_res)) $(name)=($(cxxtype)) ";
 const string getres_io = "  if(DaoValue_CastStream(_res)) $(name)=($(cxxtype))";
 
 const string getres_int  = getres_i + "DaoValue_TryGetInteger(_res);\n";
@@ -400,7 +400,7 @@ const string getres_uints = getres_a + "DaoArray_ToUInt( (DaoArray*)_res );\n";
 const string getres_floats = getres_a + "DaoArray_ToFloat( (DaoArray*)_res );\n";
 const string getres_doubles = getres_a + "DaoArray_ToDouble( (DaoArray*)_res );\n";
 const string getres_stream = getres_io + "DaoStream_GetFile( (DaoArray*)_res );\n";
-const string getres_buffer = getres_p + "DaoValue_TryGetCData( _res );\n";
+const string getres_buffer = getres_p + "DaoValue_TryGetCdata( _res );\n";
 
 const string getres_qchar =
 "  if(DaoValue_CastInteger(_res)) $(name)= QChar(DaoValue_TryGetInteger(_res));\n";
@@ -410,19 +410,19 @@ const string getres_qstring =
 "  if(DaoValue_CastString(_res)) $(name)= DaoValue_TryGetMBString( _res );\n";
 
 const string getres_cdata = 
-"  if( DaoValue_CastObject(_res) ) _res = (DaoValue*)DaoObject_MapCData( (DaoObject*)_res, dao_$(typer)_Typer );\n\
-  if( DaoValue_CastCData(_res) && DaoCData_IsType( (DaoCData*)_res, dao_$(typer)_Typer ) ){\n";
+"  if( DaoValue_CastObject(_res) ) _res = (DaoValue*)DaoObject_MapCdata( (DaoObject*)_res, dao_$(typer)_Typer );\n\
+  if( DaoValue_CastCdata(_res) && DaoCdata_IsType( (DaoCdata*)_res, dao_$(typer)_Typer ) ){\n";
 
 const string getres_user = getres_cdata +
-"    $(name) = ($(cxxtype)*) DaoValue_TryCastCData( _res, dao_$(typer)_Typer );\n  }\n";
+"    $(name) = ($(cxxtype)*) DaoValue_TryCastCdata( _res, dao_$(typer)_Typer );\n  }\n";
 
 const string getres_user2 = getres_cdata +
-"    $(name) = *($(cxxtype)*) DaoValue_TryCastCData( _res, dao_$(typer)_Typer );\n  }\n";
+"    $(name) = *($(cxxtype)*) DaoValue_TryCastCdata( _res, dao_$(typer)_Typer );\n  }\n";
 
 
-const string getitem_int = ctxput + "Integer( _ctx, (int) self->$(name)[DaoValue_TryGetInteger(_p[1])] );\n";
-const string getitem_float = ctxput + "Float( _ctx, (float) self->$(name)[DaoValue_TryGetInteger(_p[1])] );\n";
-const string getitem_double = ctxput + "Double( _ctx, (double) self->$(name)[DaoValue_TryGetInteger(_p[1])] );\n";
+const string getitem_int = ctxput + "Integer( _proc, (int) self->$(name)[DaoValue_TryGetInteger(_p[1])] );\n";
+const string getitem_float = ctxput + "Float( _proc, (float) self->$(name)[DaoValue_TryGetInteger(_p[1])] );\n";
+const string getitem_double = ctxput + "Double( _proc, (double) self->$(name)[DaoValue_TryGetInteger(_p[1])] );\n";
 
 const string setitem_int = 
 "  if( DaoValue_TryGetInteger(_p[1]) < 0 || DaoValue_TryGetInteger(_p[1]) >= $(size) ) return;\n\
@@ -434,9 +434,9 @@ const string setitem_double =
 "  if( DaoValue_TryGetInteger(_p[1]) < 0 || DaoValue_TryGetInteger(_p[1]) >= $(size) ) return;\n\
   self->$(name)[DaoValue_TryGetInteger(_p[1])] = DaoValue_TryGetDouble(_p[2]);\n";
 
-const string getitem_int2 = ctxput + "Integer( _ctx, (int) (*self)[DaoValue_TryGetInteger(_p[1])] );\n";
-const string getitem_float2 = ctxput + "Float( _ctx, (float) (*self)[DaoValue_TryGetInteger(_p[1])] );\n";
-const string getitem_double2 = ctxput + "Double( _ctx, (double) (*self)[DaoValue_TryGetInteger(_p[1])] );\n";
+const string getitem_int2 = ctxput + "Integer( _proc, (int) (*self)[DaoValue_TryGetInteger(_p[1])] );\n";
+const string getitem_float2 = ctxput + "Float( _proc, (float) (*self)[DaoValue_TryGetInteger(_p[1])] );\n";
+const string getitem_double2 = ctxput + "Double( _proc, (double) (*self)[DaoValue_TryGetInteger(_p[1])] );\n";
 
 const string setitem_int2 = 
 "  if( DaoValue_TryGetInteger(_p[1]) < 0 || DaoValue_TryGetInteger(_p[1]) >= $(size) ) return;\n\

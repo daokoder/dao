@@ -12,11 +12,11 @@
 #include "cdaoModule.hpp"
 
 const string cxx_get_object_method = 
-"DaoMethod* Dao_Get_Object_Method( DaoCData *cd, DaoObject **obj, const char *name )\n\
+"DaoMethod* Dao_Get_Object_Method( DaoCdata *cd, DaoObject **obj, const char *name )\n\
 {\n\
   DaoMethod *meth;\n\
   if( cd == NULL ) return NULL;\n\
-  *obj = DaoCData_GetObject( cd );\n\
+  *obj = DaoCdata_GetObject( cd );\n\
   if( *obj == NULL ) return NULL;\n\
   meth = DaoObject_GetMethod( *obj, name );\n\
   if( meth == NULL ) return NULL;\n\
@@ -25,14 +25,14 @@ const string cxx_get_object_method =
 }\n";
 
 const string add_number = "  { \"$(name)\", $(type), $(namespace)$(value) },\n";
-const string tpl_typedef = "\tDaoNameSpace_TypeDefine( ns, \"$(old)\", \"$(new)\" );\n";
-const string add_ccdata = "  DaoNameSpace_AddConstData( $(ns), \"$(name)\", "
-"(DaoValue*)DaoCData_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n";
+const string tpl_typedef = "\tDaoNamespace_TypeDefine( ns, \"$(old)\", \"$(new)\" );\n";
+const string add_ccdata = "  DaoNamespace_AddConstData( $(ns), \"$(name)\", "
+"(DaoValue*)DaoCdata_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n";
 
 const string ext_typer = "extern DaoTypeBase *dao_$(type)_Typer;\n";
 const string alias_typer = "DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n";
 
-const string tpl_wraptype = "\tDaoNameSpace_WrapType( ns, dao_$(idname)_Typer );\n";
+const string tpl_wraptype = "\tDaoNamespace_WrapType( ns, dao_$(idname)_Typer );\n";
 
 
 extern string cdao_qname_to_idname( const string & qname );
@@ -617,7 +617,7 @@ string CDaoModule::MakeOnLoadCodes( CDaoNamespace *ns )
 {
 	string codes, tname, nsname = "ns";
 	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
-	codes += "\tDaoNameSpace_WrapTypes( " + nsname + ", dao_" + tname + "_Typers );\n";
+	codes += "\tDaoNamespace_WrapTypes( " + nsname + ", dao_" + tname + "_Typers );\n";
 	return codes;
 }
 string CDaoModule::MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns )
@@ -647,7 +647,7 @@ string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNames
 {
 	string codes, tname, nsname = "ns";
 	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
-	codes += "\tDaoNameSpace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
+	codes += "\tDaoNamespace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
 	return codes;
 }
 string CDaoModule::MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & qname )
@@ -749,7 +749,7 @@ int CDaoModule::Generate( const string & output )
 			source += "\", \"" + cdao_make_dao_template_type_name( td->alias ) + "\",\n";
 		}
 		topLevelScope.source += source + "\tNULL\n};\n";
-		topLevelScope.onload2 += "\tDaoNameSpace_TypeDefines( ns, dao__Aliases );\n";
+		topLevelScope.onload2 += "\tDaoNamespace_TypeDefines( ns, dao__Aliases );\n";
 	}
 
 	map<string,string> kvmap;
@@ -782,13 +782,13 @@ int CDaoModule::Generate( const string & output )
 
 	fout_source << ifdef_cpp_open;
 	string onload = "DaoOnLoad";
-	fout_source << "int " << onload << "( DaoVmSpace *vms, DaoNameSpace *ns )\n{\n";
+	fout_source << "int " << onload << "( DaoVmSpace *vms, DaoNamespace *ns )\n{\n";
 	fout_source << "\t__daoVmSpace = vms;\n";
 
 #if 0
 	map<string,string>::iterator ssit, ssend = daoTypedefs.end();
 	for(ssit=daoTypedefs.begin(); ssit!=ssend; ssit++){
-		fout_source << "\tDaoNameSpace_TypeDefine( ns, \"" << ssit->second;
+		fout_source << "\tDaoNamespace_TypeDefine( ns, \"" << ssit->second;
 		fout_source << "\", \"" << ssit->first << "\" );\n";
 	}
 #endif
