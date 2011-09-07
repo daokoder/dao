@@ -29,7 +29,7 @@
 typedef struct DaoCallThread   DaoCallThread;
 typedef struct DaoCallServer   DaoCallServer;
 
-extern DaoProcess *mainVmProcess;
+extern DaoProcess *mainProcess;
 
 struct DaoCallThread
 {

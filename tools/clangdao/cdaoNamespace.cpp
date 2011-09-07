@@ -77,10 +77,10 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 		outer_name = cdao_qname_to_idname( outer_name );
 		if( outer == NULL || outer->nsdecl == NULL ){
 			if( name == "std" ) name = "stdcxx";
-			onload += "\tDaoNamespace *" + this_name + " = DaoVmSpace_GetNameSpace( ";
+			onload += "\tDaoNamespace *" + this_name + " = DaoVmSpace_GetNamespace( ";
 			onload += "vms, \"" + name + "\" );\n";
 		}else{
-			onload += "\tDaoNamespace *" + this_name + " = DaoNamespace_GetNameSpace( ";
+			onload += "\tDaoNamespace *" + this_name + " = DaoNamespace_GetNamespace( ";
 			onload += outer_name + ", \"" + name + "\" );\n";
 		}
 		if( enums.size() ){

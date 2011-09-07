@@ -118,11 +118,11 @@ static DaoTypeCore nsCore =
 	DaoValue_NoCopy, /* do not copy namespace */
 };
 
-DaoNamespace* DaoNamespace_GetNameSpace( DaoNamespace *self, const char *name )
+DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )
 {
 	DaoNamespace *ns;
 	DString mbs = DString_WrapMBS( name );
-	ns = DaoNamespace_FindNameSpace( self, & mbs );
+	ns = DaoNamespace_FindNamespace( self, & mbs );
 	if( ns == NULL ){
 		ns = DaoNamespace_New( self->vmSpace, name );
 		DArray_Append( ns->parents, self );
@@ -1030,7 +1030,7 @@ DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name )
 	if( value && value->type == DAO_CLASS ) return & value->xClass;
 	return NULL;
 }
-DaoNamespace* DaoNamespace_FindNameSpace( DaoNamespace *self, DString *name )
+DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name )
 {
 	int id = DaoNamespace_FindConst( self, name );
 	DaoValue *value = DaoNamespace_GetConst( self, id );

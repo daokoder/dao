@@ -149,7 +149,7 @@ void DThread_Destroy( DThread *self )
 void DThread_Wrapper( DThread *self )
 {
 	if( self->thdSpecData == NULL ){
-		self->thdSpecData = (DThreadData*)dao_malloc( sizeof(DThreadData) );
+		self->thdSpecData = (DThreadData*)dao_calloc( 1, sizeof(DThreadData) );
 		self->thdSpecData->thdObject = self;
 	}
 	self->thdSpecData->state = 0;
@@ -432,7 +432,7 @@ DThreadData* DThread_GetSpecific()
 void DaoInitThreadSys()
 {
 	/* DThread object for the main thread, used for join() */
-	DThread *mainThread = (DThread*)dao_malloc( sizeof(DThread) );
+	DThread *mainThread = (DThread*)dao_calloc( 1, sizeof(DThread) );
 	thdSpecKey = (dao_thdspec_t)TlsAlloc();
 	DThread_Init( mainThread );
 
@@ -482,6 +482,7 @@ static DaoFuncItem mutexMeths[] =
 static void DaoMutex_Delete( DaoMutex *self )
 {
 	DMutex_Destroy( & self->myMutex );
+	dao_free( self );
 }
 
 static DaoTypeCore mutexCore =
@@ -502,7 +503,7 @@ DaoTypeBase mutexTyper =
 
 DaoMutex* DaoMutex_New( DaoVmSpace *vms )
 {
-	DaoMutex* self = (DaoMutex*) dao_malloc( sizeof(DaoMutex) );
+	DaoMutex* self = (DaoMutex*) dao_calloc( 1, sizeof(DaoMutex) );
 	DaoValue_Init( self, DAO_MUTEX );
 	DMutex_Init( & self->myMutex );
 	self->thdMaster = NULL;
@@ -604,7 +605,7 @@ DaoTypeBase condvTyper =
 };
 DaoCondVar* DaoCondVar_New( DaoThdMaster *thdm )
 {
-	DaoCondVar* self = (DaoCondVar*) dao_malloc( sizeof(DaoCondVar) );
+	DaoCondVar* self = (DaoCondVar*) dao_calloc( 1, sizeof(DaoCondVar) );
 	DaoValue_Init( self, DAO_CONDVAR );
 	DCondVar_Init( & self->myCondVar );
 	self->thdMaster = thdm;
@@ -613,6 +614,7 @@ DaoCondVar* DaoCondVar_New( DaoThdMaster *thdm )
 void DaoCondVar_Delete( DaoCondVar *self )
 {
 	DCondVar_Destroy( & self->myCondVar );
+	dao_free( self );
 }
 
 void DaoCondVar_Wait( DaoCondVar *self, DaoMutex *mutex )
@@ -678,7 +680,7 @@ DaoTypeBase semaTyper =
 };
 DaoSema* DaoSema_New( int n )
 {
-	DaoSema* self = (DaoSema*) dao_malloc( sizeof(DaoSema) );
+	DaoSema* self = (DaoSema*) dao_calloc( 1, sizeof(DaoSema) );
 	DaoValue_Init( self, DAO_SEMA );
 	DSema_Init( & self->mySema, n );
 	return self;
@@ -686,6 +688,7 @@ DaoSema* DaoSema_New( int n )
 void DaoSema_Delete( DaoSema *self )
 {
 	DSema_Destroy( & self->mySema );
+	dao_free( self );
 }
 
 void DaoSema_Wait( DaoSema *self )
@@ -771,7 +774,7 @@ DaoTypeBase threadTyper =
 
 DaoThread* DaoThread_New( DaoThdMaster *thdm )
 {
-	DaoThread* self = (DaoThread*) dao_malloc( sizeof(DaoThread) );
+	DaoThread* self = (DaoThread*) dao_calloc( 1, sizeof(DaoThread) );
 	DaoValue_Init( self, DAO_THREAD );
 	DThread_Init( & self->myThread );
 	self->process = NULL;
@@ -929,7 +932,7 @@ DaoTypeBase thdMasterTyper =
 
 DaoThdMaster* DaoThdMaster_New()
 {
-	DaoThdMaster *self = (DaoThdMaster*) dao_malloc( sizeof(DaoThdMaster) );
+	DaoThdMaster *self = (DaoThdMaster*) dao_calloc( 1, sizeof(DaoThdMaster) );
 	DaoValue_Init( (DaoValue*)self, DAO_THDMASTER );
 	DMutex_Init( & self->recordMutex );
 	self->thdRecords = DArray_New(0);

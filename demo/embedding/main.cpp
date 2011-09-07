@@ -113,12 +113,12 @@ int main( int argc, char *argv[] )
 
 	// Get the main namespace of an DaoVmSpace object.
 	// You can also call DaoNamespace_New( vms ) to create one.
-	ns  = DaoVmSpace_MainNameSpace( vms );
-	ns2  = DaoVmSpace_GetNameSpace( vms, "dao" );
+	ns  = DaoVmSpace_MainNamespace( vms );
+	ns2  = DaoVmSpace_GetNamespace( vms, "dao" );
 
 	// Get the main virtual machine process of an DaoVmSpace object.
 	// You can also call DaoProcess_New( vms ) to create one.
-	vmp = DaoVmSpace_MainVmProcess( vms );
+	vmp = DaoVmSpace_MainProcess( vms );
 
 	// Call the entry function to import the type wrapping Greeting
 	// into the namespace ns.

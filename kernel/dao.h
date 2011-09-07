@@ -414,8 +414,8 @@ DAO_DLL DaoInterface*  DaoValue_CastInterface( DaoValue *self );
 DAO_DLL DaoFunctree*   DaoValue_CastFunctree( DaoValue *self );
 DAO_DLL DaoRoutine*    DaoValue_CastRoutine( DaoValue *self );
 DAO_DLL DaoFunction*   DaoValue_CastFunction( DaoValue *self );
-DAO_DLL DaoProcess*    DaoValue_CastVmProcess( DaoValue *self );
-DAO_DLL DaoNamespace*  DaoValue_CastNameSpace( DaoValue *self );
+DAO_DLL DaoProcess*    DaoValue_CastProcess( DaoValue *self );
+DAO_DLL DaoNamespace*  DaoValue_CastNamespace( DaoValue *self );
 DAO_DLL DaoType*       DaoValue_CastType( DaoValue *self );
 
 DAO_DLL dint DaoValue_TryGetInteger( DaoValue *self );
@@ -672,7 +672,7 @@ DAO_DLL DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoTy
 DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
 
 DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
-DAO_DLL DaoNamespace* DaoNamespace_GetNameSpace( DaoNamespace *self, const char *name );
+DAO_DLL DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name );
 DAO_DLL int  DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
 DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
 DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue *data );
@@ -695,9 +695,9 @@ DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
-DAO_DLL DaoNamespace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
-DAO_DLL DaoNamespace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
-DAO_DLL DaoProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
+DAO_DLL DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name );
+DAO_DLL DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self );
+DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
@@ -800,8 +800,8 @@ DaoInterface*    DaoValue_CastInterface( DaoValue *self );
 DaoFunctree*     DaoValue_CastFunctree( DaoValue *self );
 DaoRoutine*      DaoValue_CastRoutine( DaoValue *self );
 DaoFunction*     DaoValue_CastFunction( DaoValue *self );
-DaoProcess*      DaoValue_CastVmProcess( DaoValue *self );
-DaoNamespace*    DaoValue_CastNameSpace( DaoValue *self );
+DaoProcess*      DaoValue_CastProcess( DaoValue *self );
+DaoNamespace*    DaoValue_CastNamespace( DaoValue *self );
 DaoType*         DaoValue_CastType( DaoValue *self );
 
  Get Multi-Byte String (MBS): 
@@ -1135,7 +1135,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 
 DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
  get namespace with the name, create if not exits: 
-DaoNamespace* DaoNamespace_GetNameSpace( DaoNamespace *self, const char *name );
+DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name );
 int  DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
 void DaoNamespace_AddConstNumbers( DaoNamespace *self0, DaoNumItem *items );
 void DaoNamespace_AddConstValue( DaoNamespace *self, const char *s, DaoValue v );
@@ -1180,9 +1180,9 @@ int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
-DaoNamespace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name );
-DaoNamespace* DaoVmSpace_MainNameSpace( DaoVmSpace *self );
-DaoProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self );
+DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name );
+DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self );
+DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
  get a process object from a pool 
 DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
  return a process object from a pool 

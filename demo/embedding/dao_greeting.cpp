@@ -207,8 +207,8 @@ extern "C"{
 int DaoOnLoad( DaoVmSpace *vms, DaoNamespace *ns )
 {
 	__daoVmSpace = vms;
-	DaoNamespace *CxxNS = DaoVmSpace_GetNameSpace( vms, "CxxNS" );
-	DaoNamespace *CxxNS2 = DaoVmSpace_GetNameSpace( vms, "CxxNS2" );
+	DaoNamespace *CxxNS = DaoVmSpace_GetNamespace( vms, "CxxNS" );
+	DaoNamespace *CxxNS2 = DaoVmSpace_GetNamespace( vms, "CxxNS2" );
 	DaoNamespace_AddConstNumbers( ns, dao__Nums );
 	DaoNamespace_AddConstNumbers( CxxNS, dao_CxxNS_Nums );
 	DaoNamespace_WrapTypes( ns, dao__Typers );

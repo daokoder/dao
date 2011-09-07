@@ -1167,12 +1167,12 @@ DaoFunction* DaoValue_CastFunction( DaoValue *self )
 	if( self == NULL || self->type != DAO_FUNCTION ) return NULL;
 	return (DaoFunction*) self;
 }
-DaoProcess* DaoValue_CastVmProcess( DaoValue *self )
+DaoProcess* DaoValue_CastProcess( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_PROCESS ) return NULL;
 	return (DaoProcess*) self;
 }
-DaoNamespace* DaoValue_CastNameSpace( DaoValue *self )
+DaoNamespace* DaoValue_CastNamespace( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_NAMESPACE ) return NULL;
 	return (DaoNamespace*) self;

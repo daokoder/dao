@@ -97,7 +97,7 @@ void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value );
 DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name );
 
 DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name );
-DaoNamespace* DaoNamespace_FindNameSpace( DaoNamespace *self, DString *name );
+DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name );
 
 int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
 void DaoNamespace_Import( DaoNamespace *self, DaoNamespace *ns, DArray *varImport );

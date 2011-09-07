@@ -59,8 +59,8 @@ DaoConfig daoConfig =
 	0  /*wcs*/
 };
 
-DaoVmSpace   *mainVmSpace = NULL;
-DaoProcess *mainVmProcess = NULL;
+DaoVmSpace *mainVmSpace = NULL;
+DaoProcess *mainProcess = NULL;
 
 static int TestPath( DaoVmSpace *vms, DString *fname );
 
@@ -197,7 +197,7 @@ int DaoVmSpace_GetOptions( DaoVmSpace *self )
 {
 	return self->options;
 }
-DaoNamespace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name )
+DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name )
 {
 	DaoNamespace *ns;
 	DString str = DString_WrapMBS( name );
@@ -210,11 +210,11 @@ DaoNamespace* DaoVmSpace_GetNameSpace( DaoVmSpace *self, const char *name )
 	DaoVmSpace_Unlock( self );
 	return ns;
 }
-DaoNamespace* DaoVmSpace_MainNameSpace( DaoVmSpace *self )
+DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self )
 {
 	return self->mainNamespace;
 }
-DaoProcess* DaoVmSpace_MainVmProcess( DaoVmSpace *self )
+DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self )
 {
 	return self->mainProcess;
 }
@@ -322,7 +322,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsInternal->refCount += 2;
 	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
 
-	self->mainNamespace = DaoNamespace_New( self, "MainNameSpace" );
+	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;
 	self->mainNamespace->refCount ++;
 	self->stdStream->refCount ++;
@@ -1920,7 +1920,7 @@ void DaoQuit()
 	dao_cdata_bindings = NULL;
 	dao_callback_data = NULL;
 	mainVmSpace = NULL;
-	mainVmProcess = NULL; 
+	mainProcess = NULL; 
 	if( dao_jit.Quit ){
 		dao_jit.Quit();
 		dao_jit.Quit = NULL;

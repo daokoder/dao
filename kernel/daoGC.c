@@ -321,7 +321,6 @@ static void DaoGC_DecRC2( DaoValue *p, int change )
 
 	if( p == NULL ) return;
 	p->xGC.refCount += change;
-	//if( p == 0xa0a3c0 ) dao_free(123);
 
 	if( p->xGC.refCount == 0 ){
 #ifdef DAO_GC_PROF
@@ -379,7 +378,7 @@ void DaoGC_Finish()
 	DArray_Delete( gcWorker.auxList );
 	DArray_Delete( gcWorker.auxList2 );
 	DaoLateDeleter_Finish();
-	gcWorker.auxList = NULL;
+	gcWorker.idleList = NULL;
 }
 
 #ifdef DAO_WITH_THREAD
@@ -496,6 +495,7 @@ void DaoCGC_IncRC( DaoValue *p )
 	if( ! p ) return;
 	if( p->xGC.refCount == 0 ){
 		p->xGC.refCount ++;
+		if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
 		return;
 	}
 
@@ -554,6 +554,13 @@ void DaoCGC_Finish()
 	gcWorker.finalizing = 1;
 	DaoCGC_TryInvoke();
 	DThread_Join( & gcWorker.thread );
+
+	DThread_Destroy( & gcWorker.thread );
+	DMutex_Destroy( & gcWorker.mutex_idle_list );
+	DMutex_Destroy( & gcWorker.mutex_start_gc );
+	DMutex_Destroy( & gcWorker.mutex_block_mutator );
+	DCondVar_Destroy( & gcWorker.condv_start_gc );
+	DCondVar_Destroy( & gcWorker.condv_block_mutator );
 }
 
 void DaoCGC_TryInvoke()
@@ -947,7 +954,7 @@ int DaoCGC_AliveObjectScan()
 				DaoType *abtp = (DaoType*) value;
 				cycRefCountIncrement( abtp->aux );
 				cycRefCountIncrement( abtp->value );
-				cycRefCountDecrement( (DaoValue*) abtp->kernel );
+				cycRefCountIncrement( (DaoValue*) abtp->kernel );
 				cycRefCountIncrements( abtp->nested );
 				cycRefCountIncrementMapValue( abtp->interfaces );
 				break;
