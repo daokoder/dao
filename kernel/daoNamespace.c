@@ -207,7 +207,10 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & dao_vsetup_mutex );
 #endif
-	if( typer->core->kernel == NULL ) typer->core->kernel = DaoTypeKernel_New( typer );
+	if( typer->core->kernel == NULL ){
+		typer->core->kernel = DaoTypeKernel_New( typer );
+		DArray_Append( self->cstData, typer->core->kernel );
+	}
 	if( typer->core->kernel->values == NULL ){
 		DString defname = DString_WrapMBS( "default" );
 		DaoDouble buf = {0,0,0,0,0,0.0};
@@ -289,7 +292,10 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & dao_msetup_mutex );
 #endif
-	if( typer->core->kernel == NULL ) typer->core->kernel = DaoTypeKernel_New( typer );
+	if( typer->core->kernel == NULL ){
+		typer->core->kernel = DaoTypeKernel_New( typer );
+		DArray_Append( self->cstData, typer->core->kernel );
+	}
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
 		methods = DHash_New( D_STRING, 0 );
