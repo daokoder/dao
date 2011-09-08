@@ -306,6 +306,7 @@ static void DaoParser_AppendCode( DaoParser *self, DaoInode *inode )
 	inode->prev = self->vmcLast;
 	self->vmcLast->next = inode;
 	self->vmcLast = inode;
+	inode->next = NULL;
 }
 static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last );
@@ -4162,7 +4163,6 @@ void DaoParser_SetupBranching( DaoParser *self )
 #if 0
 	//self->regCount ++; /* TODO: check */
 #endif
-	DaoParser_PushRegister( self );
 }
 int DaoParser_ParseRoutine( DaoParser *self )
 {
@@ -4503,8 +4503,7 @@ int DaoParser_PostParsing( DaoParser *self )
 		DArray_Delete( fails );
 	}
 
-	routine->regCount = self->regCount + 1;
-	/*  XXX DaoParser_PushRegister( self ); */
+	routine->regCount = self->regCount;
 
 	vmCodes = self->vmCodes->items.pVmc;
 
@@ -6644,13 +6643,16 @@ static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop )
 {
 	return DaoParser_ParseExpression2( self, stop, 1 );
 }
+
+extern const unsigned char permutableCodes[];
+
 static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int sep, DaoInode *pre, DArray *cids )
 {
 	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 	DaoInode *inode;
 	DaoEnode item, result = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DArray *inodes = DArray_New(0);
-	int i, tok, cur, id = 0;
+	int i, elast, tok, cur, id = 0;
 	while( pre != NULL ){
 		DArray_Append( inodes, pre );
 		pre = pre->next;
@@ -6673,7 +6675,9 @@ static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int sep, DaoInod
 			goto Finalize;
 		}
 		result.konst += item.konst != 0;
-		if( item.update == self->vmcLast ){
+		/* For avoiding adding extra LOAD for the last expression item: */
+		elast = DaoParser_CurrentTokenName( self ) != sep;
+		if( item.update == self->vmcLast && (elast || permutableCodes[item.update->code]) ){
 			DaoParser_PopRegister( self );
 			DArray_Append( inodes, item.last );
 		}else{ /* { a[1] += 2 }: item.update is ADD, but item.last is SETI */
@@ -6720,7 +6724,7 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 		DArray_PopFront( self->enumTypes );
 		if( item.reg < 0 ) goto Finalize;
 		result.konst += item.konst != 0;
-		if( item.update == self->vmcLast ){
+		if( item.update == self->vmcLast && permutableCodes[item.update->code] ){
 			DaoParser_PopRegister( self );
 			DArray_Append( inodes, item.last );
 		}else{ /* { a[1] += 2 }: item.update is ADD, but item.last is SETI */

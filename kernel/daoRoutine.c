@@ -4062,9 +4062,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray_Delete( errors );
 	DArray_Delete( vmCodeNew );
 	DArray_Delete( addCode );
-	DArray_Append( self->regType, any );
-	GC_IncRC( any );
-	self->regCount ++;
 	/*
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */

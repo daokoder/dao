@@ -568,6 +568,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 		if( k > mt ){
 			itp = tp->nested->items.pType[j];
 			mt = k;
+			if( mt == DAO_MT_EQ ) break;
 		}
 	}
 	if( itp == NULL ) return 0;

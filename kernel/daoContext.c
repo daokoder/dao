@@ -1059,14 +1059,14 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 #endif
 }
 
-static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size )
+static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init )
 {
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
 	if( tup && tup->refCount ==1 && tup->unitype == type ) return tup;
 
 	if( type ){
-		tup = DaoTuple_Create( type );
+		tup = DaoTuple_Create( type, init );
 	}else{
 		tup = DaoTuple_New( size );
 		GC_IncRC( type );
@@ -1095,7 +1095,7 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self )
 {
 	DaoType *type = self->activeTypes[ self->activeCode->c ];
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
-	return DaoProcess_GetTuple( self, type, type->nested->size );
+	return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 }
 
 void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N )
@@ -1197,7 +1197,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_TYPE :
 		{
 			DaoType *type = (DaoType*) p;
-			DaoTuple *tuple = DaoProcess_GetTuple( self, type, vmc->b );
+			DaoTuple *tuple = DaoProcess_GetTuple( self, type, vmc->b, 0 );
 			if( type->tid != DAO_TUPLE ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "invalid enumeration" );
 				break;
@@ -1248,7 +1248,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	int i;
 
 	self->activeCode = vmc;
-	tuple = DaoProcess_GetTuple( self, ct, vmc->b );
+	tuple = DaoProcess_GetTuple( self, ct, vmc->b, 0 );
 	if( ct == NULL ){
 		ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
 		for(i=0; i<vmc->b; i++){
@@ -1398,7 +1398,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
 
 	self->activeCode = vmc;
-	if( A->type == 0 ){
+	if( A == NULL || A->type == 0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
 		return;
 	}

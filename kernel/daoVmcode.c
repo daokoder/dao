@@ -13,7 +13,29 @@
 
 #include"daoVmcode.h"
 
-static const char *const vmOperNames[] = {
+/* Used only by parser for compiling expression lists: */
+const unsigned char permutableCodes[] = 
+{
+	1 /*NOP*/, 1 /*DATA*/, 
+	1 /*GETCL*/, 1 /*GETCK*/, 1 /*GETCG*/, 
+	1 /*GETVL*/, 1 /*GETVO*/, 1 /*GETVK*/, 1 /*GETVG*/, 
+	0 /*GETI*/ , 0 /*GETMI*/, 0 /*GETF*/ , 0 /*GETMF*/,
+	1 /*SETVL*/, 1 /*SETVO*/, 1 /*SETVK*/, 1 /*SETVG*/, 
+	0 /*SETI*/, 0 /*SETMI*/, 0 /*SETF*/, 0 /*SETMF*/,
+	1 /*LOAD*/, 0 /*CAST*/, 0 /*MOVE*/,
+	0 /*NOT*/, 0 /*UNMS*/, 0 /*BITREV*/,
+	0 /*ADD*/, 0 /*SUB*/, 0 /*MUL*/, 0 /*DIV*/, 0 /*MOD*/, 0 /*POW*/,
+	0 /*AND*/, 0 /*OR*/, 0 /*LT*/, 0 /*LE*/, 0 /*EQ*/, 0 /*NE*/, 1 /*IN*/,
+	0 /*BITAND*/, 0 /*BITOR*/, 0 /*BITXOR*/, 0 /*BITLFT*/, 0 /*BITRIT*/,
+	1 /*CHECK*/, 1 /*NAMEVA*/, 1 /*PAIR*/, 1 /*TUPLE*/,
+	1 /*LIST*/, 1 /*MAP*/, 1 /*HASH*/, 1 /*ARRAY*/, 1 /*MATRIX*/, 1 /*CURRY*/, 1 /*MCURRY*/,
+	1 /*ROUTINE*/, 1 /*CLASS*/, 1 /*GOTO*/, 1 /*SWITCH*/, 1 /*CASE*/, 0 /*ITER*/, 1 /*TEST*/, 
+	1 /*MATH*/, 0 /*FUNCT*/, 0 /*CALL*/, 0 /*MCALL*/, 
+	0 /*CRRE*/, 0 /*JITC*/, 0 /*RETURN*/, 0 /*YIELD*/, 0 /*DEBUG*/, 0 /*SECT*/
+};
+
+static const char *const vmOperNames[] = 
+{
 	"NOP", "DATA", 
 	"GETCL", "GETCK", "GETCG", 
 	"GETVL", "GETVO", "GETVK", "GETVG", 

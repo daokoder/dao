@@ -1023,7 +1023,8 @@ CallEntry:
 			vref = dataVG->items.pArray[vmc->c]->items.pValue + vmc->b;
 			if( DaoMoveAC( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETI ) OPCASE( SETMI ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST) )
+				goto ModifyConstant;
 			DaoProcess_DoSetItem( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( SETF ){
@@ -1036,7 +1037,7 @@ CallEntry:
 			DaoProcess_DoSetMetaField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( LOAD ){
-			if( (locVars[ vmc->a ]->xNull.trait & DAO_DATA_CONST) == 0 ){
+			if( locVars[ vmc->a ] && (locVars[ vmc->a ]->xNull.trait & DAO_DATA_CONST) == 0 ){
 				GC_ShiftRC( locVars[ vmc->a ], locVars[ vmc->c ] );
 				locVars[ vmc->c ] = locVars[ vmc->a ];
 			}else{
