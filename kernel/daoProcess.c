@@ -253,18 +253,29 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 }
 void DaoProcess_PopFrame( DaoProcess *self )
 {
-	int i, base, top = self->stackTop;
+	DaoValue **values, **end = self->stackValues + self->stackTop;
 	if( self->topFrame == NULL ) return;
-	base = self->topFrame->stackBase;
-	for(i=base; i<top; i++){
-		DaoValue *value = self->stackValues[i];
-		if( value && (value->xCore.trait & DAO_DATA_STACK) ){
-			self->stackValues[i] = NULL;
-			value->xCore.refCount --;
+	values = self->stackValues + self->topFrame->stackBase;
+	if( self->topFrame->routine ){
+		DaoRoutine *routine = self->topFrame->routine;
+		size_t *id = routine->possibleNumbers->items.pSize;
+		size_t *end = id + routine->possibleNumbers->size;
+		for(; id != end; id++){
+			DaoValue *value = values[*id];
+			if( value && (value->xCore.trait & DAO_DATA_STACK) ){
+				values[*id] = NULL;
+				value->xCore.refCount --;
+			}
+		}
+	}else{
+		for(; values != end; values++){
+			DaoValue *value = *values;
+			if( value && (value->xCore.trait & DAO_DATA_STACK) ){
+				*values = NULL;
+				value->xCore.refCount --;
+			}
 		}
 	}
-	top = self->cacheTop;
-	base = self->topFrame->cacheBase;
 #if 0
 	for(i=base; i<top; i++) assert( self->cacheNumbers[i].refCount == 1 );
 #endif
@@ -289,6 +300,8 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	DaoStackFrame *frame = self->topFrame;
 	DaoValue **values = self->stackValues + frame->stackBase;
 	DaoType **types = routine->regType->items.pType;
+	size_t *id = routine->definiteNumbers->items.pSize;
+	size_t *end = id + routine->definiteNumbers->size;
 	int j, need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	complex16 com = {0.0,0.0};
 
@@ -299,10 +312,9 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	frame->codes = routine->vmCodes->codes;
 	frame->types = routine->regType->items.pType;
 	frame->cacheBase = self->cacheTop;
-	for(j=0; j<routine->simple->size; j++){
-		int tid, i = routine->simple->items.pSize[j];
-		DaoValue *value = values[i], *value2 = NULL;
-		tid = types[i]->tid;
+	for(; id != end; id++){
+		int i = *id, tid = types[i]->tid;
+		DaoValue *value = values[i], *value2;
 		if( tid <= DAO_DOUBLE && self->cacheTop < self->cacheSize ){
 			value2 = (DaoValue*)(self->cacheNumbers + self->cacheTop);
 			value2->type = tid;
@@ -312,6 +324,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 			continue;
 		}
 		if( value && value->type == tid && value->xGC.refCount == 1 && value->xGC.trait == 0 ) continue;
+		value2 = NULL;
 		switch( tid ){
 		case DAO_INTEGER : value2 = (DaoValue*) DaoInteger_New(0); break;
 		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
