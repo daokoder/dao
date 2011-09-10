@@ -3644,7 +3644,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	}
 	/* no tail call inside try{} */
 	if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ){
-		if( self->topFrame->state == 0 ){
+		if( self->topFrame->state == 0 ){ /* No tail call in constructors etc.: */
 			DaoValue **params = self->freeValues;
 			DaoProcess_PopFrame( self );
 			for(i=0; i<rout->parCount; i++){
@@ -4070,12 +4070,11 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	closure = DaoRoutine_Copy( proto );
 	if( proto->upRoutine ){
 		DMap *map = DHash_New(0,0);
-		DaoProcess *proc = DaoProcess_New( self->vmSpace, DVM_THREAD_PROC_CACHE );
+		DaoProcess *proc = DaoProcess_New( self->vmSpace );
 		closure->upRoutine = self->activeRoutine;
 		closure->upContext = proc;
 		GC_IncRC( self->activeRoutine );
 		GC_IncRC( proc );
-		proc->cacheSize = 0; /* avoid using stack caches for upvalues; */
 		DaoProcess_PushRoutine( proc, self->activeRoutine, self->activeObject );
 		DaoProcess_SetActiveFrame( proc, proc->topFrame );
 		for(i=0; i<self->activeRoutine->regCount; i++){
@@ -4106,13 +4105,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	}else if( closure->upContext ){
 		DaoProcess_SetValue( closure->upContext, vmc->c, (DaoValue*) closure );
 		closure->upContext->topFrame->entry = 1 + vmc - self->topFrame->codes;
-		/* allow using stack caches for other routines: */
-		closure->upContext->cacheSize = DVM_THREAD_PROC_CACHE;
 		DaoProcess_Execute( closure->upContext );
-		/* now free the stack caches, since they will no longer be used: */
-		dao_free( closure->upContext->cacheNumbers );
-		closure->upContext->cacheNumbers = NULL;
-		closure->upContext->cacheSize = 0;
 		DaoProcess_PopFrame( self );
 		self->status = DAO_VMPROC_STACKED;
 		return;

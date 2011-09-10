@@ -24,10 +24,6 @@
 
 #define DVM_MAX_TRY_DEPTH 16
 
-#define DVM_MAIN_PROC_CACHE      1600 /* cache size for the main process in a vm space; */
-#define DVM_THREAD_PROC_CACHE     900 /* cache size for the process in a user thread; */
-#define DVM_COROUTINE_PROC_CACHE  400 /* cache size for each coroutine process; */
-
 struct DaoStackFrame
 {
 	ushort_t    entry;     /* entry code id */
@@ -37,7 +33,6 @@ struct DaoStackFrame
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
 
 	ushort_t      parCount;
-	ushort_t      cacheBase;
 	size_t        stackBase;
 	DaoType     **types;
 	DaoVmCode    *codes; /* = routine->vmCodes->codes */
@@ -97,10 +92,6 @@ struct DaoProcess
 	size_t      stackSize; /* maximum number of values that can be hold by stackValues; */
 	size_t      stackTop; /* one past the last active stack value; */
 
-	DaoDouble  *cacheNumbers;
-	ushort_t    cacheSize;
-	ushort_t    cacheTop;
-
 	DaoType  *abtype; /* for coroutine */
 	DArray   *parResume;/* for coroutine */
 	DArray   *parYield;
@@ -121,7 +112,7 @@ struct DaoProcess
 };
 
 /* Create a new virtual machine process */
-DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize );
+DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 void DaoProcess_Delete( DaoProcess *self );
 
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );

@@ -120,7 +120,7 @@ DaoTypeBase vmpTyper =
 	(FuncPtrDel) DaoProcess_Delete, NULL
 };
 
-DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize )
+DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 {
 	int i;
 	DaoProcess *self = (DaoProcess*)dao_calloc( 1, sizeof( DaoProcess ) );
@@ -139,15 +139,6 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize )
 	self->stackTop = 1;
 	self->freeValues = self->stackValues + 1;
 
-	self->cacheTop = 0;
-	self->cacheSize = cacheSize;
-	self->cacheNumbers = (DaoDouble*) dao_calloc( cacheSize, sizeof(DaoDouble) );
-	for(i=0; i<cacheSize; i++){
-		DaoDouble *p = self->cacheNumbers + i;
-		p->trait = DAO_DATA_STACK;
-		p->refCount = 1;
-	}
-
 	self->mbstring = DString_New(1);
 	self->mbsRegex = NULL;
 	self->wcsRegex = NULL;
@@ -161,7 +152,7 @@ void DaoProcess_Delete( DaoProcess *self )
 {
 	DaoStackFrame *frame = self->firstFrame;
 	DNode *n;
-	size_t i; // TODO: GC stackValues
+	size_t i;
 	if( self->mbsRegex ){
 		n = DMap_First( self->mbsRegex );
 		for( ; n !=NULL; n = DMap_Next(self->mbsRegex, n) ) dao_free( n->value.pVoid );
@@ -174,17 +165,22 @@ void DaoProcess_Delete( DaoProcess *self )
 	}
 	while( frame ){
 		DaoStackFrame *p = frame;
+		if( frame->object ) GC_DecRC( frame->object );
+		if( frame->routine ) GC_DecRC( frame->routine );
+		if( frame->function ) GC_DecRC( frame->function );
 		frame = frame->next;
-		//XXX if( p->context ) GC_DecRC( p->context );
 		dao_free( p );
 	}
+	for(i=0; i<self->stackSize; i++){
+		if( self->stackValues[i] ) GC_DecRC( self->stackValues[i] );
+	}
+	if( self->stackValues ) dao_free( self->stackValues );
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
 	if( self->parResume ) DArray_Delete( self->parResume );
 	if( self->parYield ) DArray_Delete( self->parYield );
 	if( self->abtype ) GC_DecRC( self->abtype );
-	if( self->cacheNumbers ) dao_free( self->cacheNumbers );
 	dao_free( self );
 }
 
@@ -237,7 +233,6 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 		self->topFrame->next = frame;
 		frame->prev = self->topFrame;
 	}
-	frame->cacheBase = self->cacheTop;
 	frame->stackBase = self->stackTop;
 	frame->entry = 0;
 	frame->state = 0;
@@ -253,39 +248,9 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 }
 void DaoProcess_PopFrame( DaoProcess *self )
 {
-	DaoValue **values, **end = self->stackValues + self->stackTop;
 	if( self->topFrame == NULL ) return;
-	values = self->stackValues + self->topFrame->stackBase;
-	if( self->topFrame->routine ){
-		DaoRoutine *routine = self->topFrame->routine;
-		size_t *id = routine->possibleNumbers->items.pSize;
-		size_t *end = id + routine->possibleNumbers->size;
-		for(; id != end; id++){
-			DaoValue *value = values[*id];
-			if( value && (value->xCore.trait & DAO_DATA_STACK) ){
-				values[*id] = NULL;
-				value->xCore.refCount --;
-			}
-		}
-	}else{
-		for(; values != end; values++){
-			DaoValue *value = *values;
-			if( value && (value->xCore.trait & DAO_DATA_STACK) ){
-				*values = NULL;
-				value->xCore.refCount --;
-			}
-		}
-	}
-#if 0
-	for(i=base; i<top; i++) assert( self->cacheNumbers[i].refCount == 1 );
-#endif
 	self->status = DAO_VMPROC_RUNNING;
-	GC_DecRC( self->topFrame->routine );
-	GC_DecRC( self->topFrame->function );
-	self->topFrame->routine = NULL;
-	self->topFrame->function = NULL;
 	self->topFrame->depth = 0;
-	self->cacheTop = self->topFrame->cacheBase;
 	self->stackTop = self->topFrame->stackBase;
 	self->topFrame = self->topFrame->prev;
 	self->freeValues = self->stackValues + self->stackTop;
@@ -299,30 +264,30 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 {
 	DaoStackFrame *frame = self->topFrame;
 	DaoValue **values = self->stackValues + frame->stackBase;
+	DaoType *routHost = routine->routHost;
 	DaoType **types = routine->regType->items.pType;
 	size_t *id = routine->definiteNumbers->items.pSize;
 	size_t *end = id + routine->definiteNumbers->size;
 	int j, need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	complex16 com = {0.0,0.0};
 
+	if( need_self && routHost && routHost->tid == DAO_OBJECT ){
+		if( object == NULL && values[0]->type == DAO_OBJECT ) object = & values[0]->xObject;
+		if( object ) object = (DaoObject*) DaoObject_MapThisObject( object->rootObject, routHost );
+		if( object == NULL ) DaoProcess_RaiseException( self, DAO_ERROR, "need self object" );
+		GC_ShiftRC( object, frame->object );
+		frame->object = object;
+	}
+	if( routine == frame->routine ) return;
+	GC_DecRC( frame->function );
 	GC_ShiftRC( routine, frame->routine );
-	GC_ShiftRC( object, frame->object );
+	frame->function = NULL;
 	frame->routine = routine;
-	frame->object = object;
 	frame->codes = routine->vmCodes->codes;
 	frame->types = routine->regType->items.pType;
-	frame->cacheBase = self->cacheTop;
 	for(; id != end; id++){
 		int i = *id, tid = types[i]->tid;
 		DaoValue *value = values[i], *value2;
-		if( tid <= DAO_DOUBLE && self->cacheTop < self->cacheSize ){
-			value2 = (DaoValue*)(self->cacheNumbers + self->cacheTop);
-			value2->type = tid;
-			GC_ShiftRC( value2, value );
-			values[i] = value2;
-			self->cacheTop ++;
-			continue;
-		}
 		if( value && value->type == tid && value->xGC.refCount == 1 && value->xGC.trait == 0 ) continue;
 		value2 = NULL;
 		switch( tid ){
@@ -334,13 +299,6 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		if( value2 == NULL ) continue;
 		GC_ShiftRC( value2, value );
 		values[i] = value2;
-	}
-	if( need_self && ROUT_HOST_TID( routine ) == DAO_OBJECT ){
-		if( object == NULL && values[0]->type == DAO_OBJECT ) object = & values[0]->xObject;
-		if( object ) object = (DaoObject*) DaoObject_MapThisObject( object->rootObject, routine->routHost );
-		if( object == NULL ) DaoProcess_RaiseException( self, DAO_ERROR, "need self object" );
-		GC_ShiftRC( object, frame->object );
-		frame->object = object;
 	}
 }
 void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame )
@@ -368,7 +326,9 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function )
 {
 	DaoStackFrame *frame = DaoProcess_PushFrame( self, function->parCount );
 	frame->active = frame->prev->active;
+	GC_DecRC( frame->routine );
 	GC_IncRC( function );
+	frame->routine = NULL;
 	frame->function = function;
 	self->status = DAO_VMPROC_STACKED;
 }

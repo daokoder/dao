@@ -52,13 +52,13 @@ struct DaoClass
 	DMap  *vtable; /* <DRoutine*,DRoutine*> */
 
 	DaoRoutine   *classRoutine; /* Default class constructor. */
-	DaoFunctree  *classRoutines; /* All explicitly defined constructors */
+	DaoFunctree  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
 
 	DString  *className;
 	DString  *classHelp;
 
 	DaoType  *clsType;
-	DaoType  *objType;
+	DaoType  *objType; /* GC handled in cstData; */
 	DMap     *abstypes;
 	DMap     *deflines;
 

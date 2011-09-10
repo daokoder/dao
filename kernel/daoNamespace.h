@@ -46,6 +46,7 @@ struct DaoNamespace
 	DArray  *cstData; /* <DaoValue*>, global constants; */
 	DArray  *varData; /* <DaoValue*>, global variables; */
 	DArray  *varType; /* <DaoType*>, types of global variables */
+	DArray  *auxData; /* mainly for GC */
 
 	DaoRoutine *mainRoutine;
     DaoList    *argParams;

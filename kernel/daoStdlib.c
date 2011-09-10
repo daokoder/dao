@@ -802,7 +802,7 @@ DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 		return NULL;
 	}
 	routine = (DaoRoutine*) rout;
-	vmProc = DaoProcess_New( proc->vmSpace, DVM_COROUTINE_PROC_CACHE );
+	vmProc = DaoProcess_New( proc->vmSpace );
 	DaoProcess_PushRoutine( vmProc, routine, NULL );
 	vmProc->activeValues = vmProc->stackValues + vmProc->topFrame->stackBase;
 	for(i=0; i<routine->parCount; i++){

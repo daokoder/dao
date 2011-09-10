@@ -846,7 +846,7 @@ static void DaoThdMaster_Lib_Create( DaoProcess *proc, DaoValue *par[], int N )
 		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
 		params = curry->params->items.pValue;
 	}
-	vmProc = DaoProcess_New( proc->vmSpace, DVM_THREAD_PROC_CACHE );
+	vmProc = DaoProcess_New( proc->vmSpace );
 	GC_IncRC( vmProc );
 	if( DaoProcess_PushCallable( vmProc, callable, selfobj, params, N ) ){
 		GC_DecRC( vmProc );

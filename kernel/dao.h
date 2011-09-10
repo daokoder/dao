@@ -637,7 +637,7 @@ DAO_DLL void DaoMutex_Lock( DaoMutex *self );
 DAO_DLL void DaoMutex_Unlock( DaoMutex *self );
 DAO_DLL int DaoMutex_TryLock( DaoMutex *self );
 
-DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize );
+DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
@@ -1084,7 +1084,7 @@ void DaoMutex_Lock( DaoMutex *self );
 void DaoMutex_Unlock( DaoMutex *self );
 int DaoMutex_TryLock( DaoMutex *self );
 
-DaoProcess* DaoProcess_New( DaoVmSpace *vms, ushort_t cacheSize );
+DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 
  Compile source codes in "src", with substitution of escape chars in strings, if rpl != 0 
 int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );

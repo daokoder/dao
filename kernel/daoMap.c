@@ -264,10 +264,18 @@ void DMap_Assign( DMap *self, DMap *other )
 		node = DMap_Next( other, node );
 	}
 }
+static void DMap_DeleteNode( DMap *self, DNode *node );
 void DMap_Delete( DMap *self )
 {
+	DNode *p, *node;
 	DMap_Clear( self );
 	if( self->table ) dao_free( self->table );
+	node = self->first;
+	while( node ){
+		p = node;
+		node = node->next;
+		DMap_DeleteNode( self, p );
+	}
 	dao_free( self );
 }
 static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )

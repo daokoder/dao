@@ -209,7 +209,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 #endif
 	if( typer->core->kernel == NULL ){
 		typer->core->kernel = DaoTypeKernel_New( typer );
-		DArray_Append( self->cstData, typer->core->kernel );
+		DArray_Append( self->auxData, typer->core->kernel );
 	}
 	if( typer->core->kernel->values == NULL ){
 		DString defname = DString_WrapMBS( "default" );
@@ -294,7 +294,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 #endif
 	if( typer->core->kernel == NULL ){
 		typer->core->kernel = DaoTypeKernel_New( typer );
-		DArray_Append( self->cstData, typer->core->kernel );
+		DArray_Append( self->auxData, typer->core->kernel );
 	}
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
@@ -660,9 +660,10 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->options = 0;
 	self->mainRoutine = NULL;
 	self->parents = DArray_New(0);
-	self->cstData  = DArray_New(D_VALUE);
-	self->varData  = DArray_New(D_VALUE);
-	self->varType  = DArray_New(D_VALUE);
+	self->cstData = DArray_New(D_VALUE);
+	self->varData = DArray_New(D_VALUE);
+	self->varType = DArray_New(D_VALUE);
+	self->auxData = DArray_New(D_VALUE);
 	self->nsTable = DArray_New(0);
 	self->lookupTable = DHash_New(D_STRING,0);
 	self->cstDataTable = DArray_New(0);
@@ -711,7 +712,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
 
 	self->tempTypes = DArray_New(0);
-	self->constEvalProcess = DaoProcess_New(vms,0);
+	self->constEvalProcess = DaoProcess_New(vms);
 	self->constEvalRoutine = DaoRoutine_New();
 	self->constEvalRoutine->routType = dao_routine;
 	self->constEvalRoutine->nameSpace = self;
@@ -757,6 +758,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DArray_Delete( self->cstData );
 	DArray_Delete( self->varData );
 	DArray_Delete( self->varType );
+	DArray_Delete( self->auxData );
 	DArray_Delete( self->parents );
 	DArray_Delete( self->cstDataTable );
 	DArray_Delete( self->varDataTable );
@@ -1232,6 +1234,8 @@ void DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *tp )
 	if( node == NULL ){
 		MAP_Insert( self->abstypes, name, tp );
 		GC_IncRC( tp );
+	}else{
+		DArray_Append( self->auxData, tp );
 	}
 }
 void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *tp )

@@ -228,7 +228,7 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 		proc = DArray_Back( self->processes );
 		DArray_PopBack( self->processes );
 	}else{
-		proc = DaoProcess_New( self, DVM_COROUTINE_PROC_CACHE );
+		proc = DaoProcess_New( self );
 		GC_IncRC( proc );
 	}
 #ifdef DAO_WITH_THREAD
@@ -330,7 +330,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->ReadLine = NULL;
 	self->AddHistory = NULL;
 
-	self->mainProcess = DaoProcess_New( self, DVM_MAIN_PROC_CACHE );
+	self->mainProcess = DaoProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
 	if( mainVmSpace ) DaoNamespace_AddParent( self->nsInternal, mainVmSpace->nsInternal );
@@ -1147,7 +1147,7 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args )
 
 	DaoParser_Delete( parser );
 	if( ns->mainRoutine->vmCodes->size > 1 ){
-		vmProc = DaoProcess_New( self, 0 );
+		vmProc = DaoProcess_New( self );
 		GC_IncRC( vmProc );
 		DArray_PushFront( self->nameLoading, ns->path );
 		DArray_PushFront( self->pathLoading, ns->path );

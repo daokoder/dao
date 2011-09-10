@@ -110,9 +110,9 @@ int main( int argc, char **argv )
 	if( DaoVmSpace_GetOptions( vmSpace ) & DAO_EXEC_INTERUN )
 		signal( SIGINT, DaoSignalHandler );
 
-	if( ! DaoVmSpace_RunMain( vmSpace, args ) ) return 1;
+	k = ! DaoVmSpace_RunMain( vmSpace, args );
 	DString_Delete( opts );
 	DString_Delete( args );
 	DaoQuit();
-	return 0;
+	return k;
 }

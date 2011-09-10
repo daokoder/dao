@@ -799,6 +799,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( isconstru ) goto ErrorConstructorReturn; /* class constructor should not return a value */
 		module->returnType = DaoParser_ParseType( self, right+2, size-1, & right, NULL );
 		if( module->returnType == NULL ) goto ErrorInvalidTypeForm;
+		DArray_Append( self->nameSpace->auxData, module->returnType );
 		right -= 1;
 		for(i=start; i<=right; i++) DArray_Append( module->partoks, tokens[i] );
 	}
@@ -1001,7 +1002,7 @@ InvalidTypeForm:
 }
 static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int end )
 {
-	DaoType *type;
+	DaoType *type, *type2;
 	DaoToken *tok;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *field = NULL;
@@ -1062,10 +1063,17 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	/*
 	   printf( "%i  %i  %s\n", end, i, type->name->mbs );
 	 */
+	if( (type2 = DaoNamespace_FindType( self->nameSpace, type->name )) ){
+		DaoType_Delete( type );
+		type = type2;
+	}else{
+		DaoNamespace_AddType( self->nameSpace, type->name, type );
+	}
 	return type;
 WrongForm:
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[k]->line, tokens[k]->string->mbs );
-	return type;
+	DaoType_Delete( type );
+	return NULL;
 }
 static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DArray *types )
 {
@@ -1834,7 +1842,7 @@ int DaoParser_ParseParams( DaoParser *self, int defkey )
 					DArray_Append( self->uplocs, loc );
 					DArray_Append( self->uplocs, i+1 );
 					DArray_Append( self->uplocs, comma-1 );
-					type_default = abstype = DaoType_New( "?", DAO_UDF, 0,0 );
+					type_default = DaoType_New( "?", DAO_UDF, 0,0 );
 				}else{
 					goto ErrorVariableDefault;
 				}
@@ -1979,6 +1987,7 @@ ErrorParamParsing:
 	if( ec ) DaoParser_Error( self, ec, mbs );
 	DaoParser_PrintError( self, routine->defLine, DAO_INVALID_PARAM_LIST, routine->routName );
 	self->initTypes = initTypes;
+	GC_DecRC( abstype );
 	GC_IncRCs( nested );
 	GC_DecRCs( nested );
 	DArray_Delete( nested );
