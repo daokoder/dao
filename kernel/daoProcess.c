@@ -146,8 +146,6 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	return self;
 }
 
-static void DaoProcess_CleanProcess( DaoProcess *self );
-
 void DaoProcess_Delete( DaoProcess *self )
 {
 	DaoStackFrame *frame = self->firstFrame;
@@ -327,7 +325,7 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function )
 	DaoStackFrame *frame = DaoProcess_PushFrame( self, function->parCount );
 	frame->active = frame->prev->active;
 	GC_DecRC( frame->routine );
-	GC_IncRC( function );
+	GC_ShiftRC( function, frame->function );
 	frame->routine = NULL;
 	frame->function = function;
 	self->status = DAO_VMPROC_STACKED;
@@ -473,6 +471,7 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rp
 	p->vmSpace = self->vmSpace;
 	p->nameSpace = ns;
 	res = DaoParser_LexCode( p, src->mbs, rpl ) && DaoParser_ParseScript( p );
+	p->routine->parser = NULL;
 	DaoParser_Delete( p );
 	DString_Delete( src );
 	return res;
@@ -493,6 +492,12 @@ int DaoProcess_Call( DaoProcess *self, DaoMethod *M, DaoValue *O, DaoValue *P[],
 	/* no return value to the previous stack frame */
 	DaoProcess_InterceptReturnValue( self );
 	return DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
+}
+void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n )
+{
+	DaoValue *params[ DAO_MAX_PARAM ];
+	memcpy( params, p, func->parCount*sizeof(DaoValue*) );
+	func->pFunc( self, params, n );
 }
 void DaoProcess_Stop( DaoProcess *self )
 {
@@ -806,7 +811,8 @@ CallEntry:
 	}
 	topFrame = self->topFrame;
 	if( topFrame->function ){
-		topFrame->function->pFunc( self, self->stackValues + topFrame->stackBase, topFrame->parCount );
+		DaoValue **p = self->stackValues + topFrame->stackBase;
+		DaoProcess_CallFunction( self, topFrame->function, p, topFrame->parCount );
 		DaoProcess_PopFrame( self );
 		goto CallEntry;
 	}

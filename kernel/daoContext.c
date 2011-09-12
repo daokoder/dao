@@ -3577,6 +3577,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValu
 	if( DaoParser_ParseRoutine( parser ) ==0 ) goto ErrorDecorator;
 	/* DaoRoutine_PrintCode( routine, self->activeNamespace->vmSpace->stdStream ); */
 	DaoParser_Delete( parser );
+	DMap_Delete( mapids );
 	return routine;
 ErrorDecorator:
 	DaoRoutine_Delete( routine );
@@ -3686,7 +3687,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	   printf( "call: %s %i\n", func->routName->mbs, N );
 	 */
 	DaoProcess_PushFunction( self, func );
-	func->pFunc( self, self->stackValues + self->topFrame->stackBase, N );
+	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, N );
 	DaoProcess_PopFrame( self );
 
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
@@ -3733,7 +3734,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_PushFunction( self, func );
 		DaoProcess_SetActiveFrame( self, self->firstFrame ); /* return value in stackValues[0] */
 		self->topFrame->active = self->firstFrame;
-		func->pFunc( self, self->stackValues + self->topFrame->stackBase, npar );
+		DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, npar );
 		DaoProcess_PopFrame( self );
 
 		if( self->stackValues[0] && self->stackValues[0]->type == DAO_CDATA ){

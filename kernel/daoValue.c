@@ -466,6 +466,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		DaoObject *t = DaoObject_New( s->defClass );
 		DMap *cyc = DHash_New(0,0);
 		DaoObject_CopyData( t, s, NULL, cyc );
+		DMap_Delete( cyc );
 		return (DaoValue*) t;
 	}
 	return self;

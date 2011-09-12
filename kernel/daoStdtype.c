@@ -3186,25 +3186,26 @@ void DaoCdata_DeleteData( DaoCdata *self )
 	DaoCdataCore *c = (DaoCdataCore*)self->typer->core;
 	void (*fdel)(void*) = (void (*)(void *))DaoCdata_Delete;
 	if( self->buffer == NULL ) DaoCdataBindings_Erase( self->data );
+	if( self->attribs & DAO_CDATA_FREE ){
+		if( self->buffer ){
+			dao_free( self->buffer );
+		}else if( self->data ){
+			if( c && c->DelData && c->DelData != fdel ){
+				c->DelData( self->data );
+			}else if( c ==0 && self->typer->Delete && self->typer->Delete != fdel ){
+				/* if the methods of typer has not been setup, typer->core would be NULL */
+				self->typer->Delete( self->data );
+			}else if( self->bufsize > 0 ){
+				dao_free( self->data );
+			}
+		}
+		self->buffer = NULL;
+		self->data = NULL;
+	}
 	if( self->ctype ) GC_DecRC( self->ctype );
 	if( self->object ) GC_DecRC( self->object );
 	self->object = NULL;
 	self->ctype = NULL;
-	if( !(self->attribs & DAO_CDATA_FREE) ) return;
-	if( self->buffer ){
-		dao_free( self->buffer );
-	}else if( self->data ){
-		if( c && c->DelData && c->DelData != fdel ){
-			c->DelData( self->data );
-		}else if( c ==0 && self->typer->Delete && self->typer->Delete != fdel ){
-			/* if the methods of typer has not been setup, typer->core would be NULL */
-			self->typer->Delete( self->data );
-		}else if( self->bufsize > 0 ){
-			dao_free( self->data );
-		}
-	}
-	self->buffer = NULL;
-	self->data = NULL;
 }
 int DaoCdata_IsType( DaoCdata *self, DaoTypeBase *typer )
 {

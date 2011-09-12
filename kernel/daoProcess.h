@@ -130,6 +130,8 @@ void DaoProcess_InterceptReturnValue( DaoProcess *self );
 
 int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 
+void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n );
+
 /* Execute from the top of the calling stack */
 int DaoProcess_Execute( DaoProcess *self );
 int DaoProcess_ExecuteSection( DaoProcess *self, int entry );

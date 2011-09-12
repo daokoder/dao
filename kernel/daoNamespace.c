@@ -720,6 +720,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	GC_IncRC( dao_routine );
 	GC_IncRC( self );
 	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
+	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
 	self->constEvalRoutine->trait |= DAO_DATA_CONST;
 	self->constEvalProcess->trait |= DAO_DATA_CONST;
 	DArray_Append( self->cstData, (DaoValue*) self->constEvalRoutine );
@@ -1249,7 +1250,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	}
 }
 
-static DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 {
@@ -1401,7 +1402,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			abtp = node->value.pType;
 		}else{
 			abtp = DaoType_New( mbs->mbs, tid, NULL, nested );
-			if( p->type < DAO_ARRAY ){
+			if( p->type && p->type < DAO_ARRAY ){
 				simpleTypes[ p->type ] = abtp;
 				GC_IncRC( abtp );
 			}

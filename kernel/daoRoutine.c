@@ -1117,7 +1117,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoValue *meth = NULL;
 	DaoClass *hostClass = tidHost==DAO_OBJECT ? & self->routHost->aux->xClass:NULL;
 	DaoClass *klass;
-	DMap       *tmp;
 	DNode      *node;
 	DString    *str, *mbs, *error = NULL;
 	DMap       *defs, *defs2;
@@ -3486,52 +3485,68 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 #if USE_TYPED_OPCODE
 		case DVM_DATA_I : case DVM_DATA_F : case DVM_DATA_D : 
 			TT1 = DAO_INTEGER + (code - DVM_DATA_I);
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETCL_I : case DVM_GETCL_F : case DVM_GETCL_D : 
 			val = dataCL[opa]->items.pValue[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETCL_I);
 			at = DaoNamespace_GetType( ns, val );
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETCK_I : case DVM_GETCK_F : case DVM_GETCK_D : 
 			val = dataCK->items.pArray[opa]->items.pValue[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETCK_I);
-			ct = DaoNamespace_GetType( ns, val );
+			at = DaoNamespace_GetType( ns, val );
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETCG_I : case DVM_GETCG_F : case DVM_GETCG_D : 
 			val = dataCG->items.pArray[opa]->items.pValue[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETCG_I);
-			ct = DaoNamespace_GetType( ns, val );
+			at = DaoNamespace_GetType( ns, val );
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETVL_I : case DVM_GETVL_F : case DVM_GETVL_D : 
-			at = typeVL[opa]->items.pType[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETVL_I);
+			at = typeVL[opa]->items.pType[opb];
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETVO_I : case DVM_GETVO_F : case DVM_GETVO_D : 
-			at = typeVO[opa]->items.pType[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETVO_I);
+			at = typeVO[opa]->items.pType[opb];
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETVK_I : case DVM_GETVK_F : case DVM_GETVK_D : 
-			at = typeVK->items.pArray[opa]->items.pType[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETVK_I);
+			at = typeVK->items.pArray[opa]->items.pType[opb];
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_GETVG_I : case DVM_GETVG_F : case DVM_GETVG_D : 
-			at = typeVG->items.pArray[opa]->items.pType[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETVG_I);
+			at = typeVG->items.pArray[opa]->items.pType[opb];
+			if( ct == NULL ) ct = type[opc] = simtps[TT1];
 			AssertTypeIdMatching( at, TT1, 0 );
 			AssertTypeIdMatching( ct, TT1, 0 );
+			init[opc] = 1;
 			break;
 		case DVM_SETVL_II : case DVM_SETVL_IF : case DVM_SETVL_ID :
 		case DVM_SETVL_FI : case DVM_SETVL_FF : case DVM_SETVL_FD :
@@ -4186,13 +4201,11 @@ ErrorTyping:
 	 DArray_Delete( errors );
 	 dao_free( init );
 	 dao_free( addCount );
-	 tmp = DMap_New(0,0);
-	 for( i=0; i<self->regCount; i++ )
-		 if( type[i] && type[i]->refCount ==0 ) DMap_Insert( tmp, type[i], 0 );
-	 node = DMap_First( tmp );
-	 for(; node !=NULL; node = DMap_Next(tmp, node) )
-		 DaoType_Delete( (DaoType*)node->key.pValue );
-	 DArray_Clear( self->regType );
+	 for(i=0; i<addRegType->size; i++){
+		 GC_IncRC( addRegType->items.pVoid[i] );
+		 DArray_Append( self->regType, addRegType->items.pVoid[i] );
+	 }
+	 DArray_CleanupCodes( vmCodeNew );
 	 DArray_Delete( regConst );
 	 DArray_Delete( vmCodeNew );
 	 DArray_Delete( addCode );
@@ -4200,7 +4213,6 @@ ErrorTyping:
 	 DString_Delete( mbs );
 	 DMap_Delete( defs );
 	 DMap_Delete( defs2 );
-	 DMap_Delete( tmp );
 	 return 0;
 }
 

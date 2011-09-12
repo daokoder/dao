@@ -1288,14 +1288,16 @@ double DLong_ToDouble( DLong *self )
 }
 void DLong_FromInteger( DLong *self, dint x )
 {
+	ulong_t y;
 	if( x < 0 ){
 		x = -x;
 		self->sign = -1;
 	}
 	DLong_Clear( self );
-	while( x ){
-		DLong_Append( self, x & LONG_MASK );
-		x = x >> LONG_BITS;
+	y = x;
+	while( y ){
+		DLong_Append( self, y & LONG_MASK );
+		y = y >> LONG_BITS;
 	}
 }
 void DLong_FromDouble( DLong *self, double value )

@@ -1866,8 +1866,10 @@ DaoVmSpace* DaoInit()
 	return vms;
 }
 extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
+extern DaoType *simpleTypes[ DAO_ARRAY ];
 void DaoQuit()
 {
+	int i;
 	/* TypeTest(); */
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 	DaoCallServer_Join( mainVmSpace );
@@ -1914,6 +1916,10 @@ void DaoQuit()
 #endif
 
 	DaoVmSpace_Delete( mainVmSpace );
+	for(i=0; i<DAO_ARRAY; i++){
+		GC_DecRC( simpleTypes[i] );
+		simpleTypes[i] = NULL;
+	}
 	DaoGC_Finish();
 	DMap_Delete( dao_cdata_bindings );
 	DArray_Delete( dao_callback_data );
