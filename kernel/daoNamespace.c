@@ -1502,10 +1502,10 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	DArray  *nstd = DArray_New(0);
 	int i, n = strlen( name );
 
-	if( tid != DAO_ANY )
-		any = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
+	if( tid != DAO_ANY ) any = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
 
 	DString_SetMBS( mbs, name );
+	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
 	if( N > 0 ){
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
 		DString_Append( mbs, nest[0]->name );
@@ -1515,7 +1515,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 			DString_Append( mbs, nest[i]->name );
 			DArray_Append( nstd, nest[i] );
 		}
-		if( tid == DAO_ROUTINE && pb && pb->type == DAO_TYPE ){
+		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 			DString_AppendMBS( mbs, "=>" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
 		}
@@ -1540,7 +1540,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		klass = (DaoClass*) pb;
 		tp = klass->objType;
 		goto Finalizing;
-	}else if( tid == DAO_ROUTINE && pb && pb->type == DAO_TYPE ){
+	}else if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 		DString_AppendChar( mbs, '<' );
 		DString_AppendMBS( mbs, "=>" );
 		DString_Append( mbs, ((DaoType*)pb)->name );
@@ -1551,6 +1551,10 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	}else if( tid == DAO_PAR_DEFAULT ){
 		DString_AppendMBS( mbs, "=" );
 		if( pb->type == DAO_TYPE ) DString_Append( mbs, ((DaoType*)pb)->name );
+	}
+	if( tid == DAO_CODEBLOCK ){
+		mbs->mbs[0] = '[';
+		mbs->mbs[mbs->size-1] = ']';
 	}
 	node = MAP_Find( self->abstypes, mbs );
 	if( node == NULL ){
@@ -1658,10 +1662,6 @@ DaoFunction* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto,
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
 	if( DaoParser_ParsePrototype( defparser, parser, key, optok ) < 0 ){
 		DaoParser_PrintError( defparser, 0, 0, NULL );
-		goto Error;
-	}
-	if( DaoParser_ParseParams( parser, key ) == 0 ){
-		DaoParser_PrintError( parser, 0, 0, NULL );
 		goto Error;
 	}
 	return func;

@@ -73,7 +73,7 @@ struct DaoType
 	uchar_t   rntcount; /* real number type count */
 	DString  *name; /* type name */
 	DString  *fname; /* field name, or parameter name */
-	DArray   *nested;
+	DArray   *nested; /* type items */
 	DMap     *mapNames;
 	DMap     *interfaces;
 
@@ -84,7 +84,9 @@ struct DaoType
 	 * aux can be the DaoCdata object in wrapped C type;
 	 * aux can be the constant value in a constant value type. */
 	DaoValue  *aux;
-	DaoValue  *value; /* default value for the type */
+	DaoValue  *value; /* default value for the type; */
+
+	DaoType  *cbtype; /* extra type for code block; */
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeBase    *typer;

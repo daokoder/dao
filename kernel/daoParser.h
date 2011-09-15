@@ -92,6 +92,7 @@ struct DaoParser
 	DaoType      *hostType;
 	DaoParser    *outParser;
 
+	DaoType      *cblockType;
 	DaoType      *returnType;
 
 	int curLine;
@@ -116,7 +117,9 @@ struct DaoParser
 	DString   *str;
 	DMap      *lvm; /* <DString*,int>, for localVarMap; */
 	DArray    *toks;
-	complex16  imgone;
+
+	DArray  *strings;
+	DArray  *arrays;
 };
 
 DaoParser* DaoParser_New();
@@ -124,7 +127,6 @@ void DaoParser_Delete( DaoParser *self );
 
 int DaoParser_LexCode( DaoParser *self, const char *source, int replace );
 int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start );
-int DaoParser_ParseParams( DaoParser *self, int defkey );
 int DaoParser_ParseScript( DaoParser *self );
 int DaoParser_ParseRoutine( DaoParser *self );
 
