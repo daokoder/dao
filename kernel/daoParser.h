@@ -64,6 +64,7 @@ struct DaoParser
 	DArray *routCompilable; /* list of defined routines with bodies */
 
 	int    regCount;
+	int    lastValue;
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
 	int nullValue;

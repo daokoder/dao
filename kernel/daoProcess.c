@@ -438,22 +438,51 @@ int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *re
 	return 1;
 }
 
+DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self, int entry )
+{
+	DaoStackFrame *frame = self->topFrame->prev;
+	while( frame != self->firstFrame ){
+		if( frame->routine && entry == frame->entry + 1 ){
+			DaoVmCode *codes = frame->codes + frame->entry;
+			if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
+		}
+		frame = frame->prev;
+	}
+	return NULL;
+}
 int DaoProcess_ExecuteSection( DaoProcess *self, int entry )
 {
+	DaoStackFrame *top = self->topFrame;
+	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self, entry );
 	ushort_t ranges[DVM_MAX_TRY_DEPTH][2];
-	int depth = self->topFrame->depth;
-	int ret = 0, old = 0;
-	if( entry <0 ) return DAO_VMPROC_ABORTED;
-	if( self->topFrame->codes[entry].code != DVM_SECT ) return DAO_VMPROC_ABORTED;
-	old = self->topFrame->state;
-	self->topFrame->entry = entry + 1;
-	self->topFrame->state = DVM_SPEC_RUN;
-	self->topFrame->depth = 0;
-	memcpy( ranges, self->topFrame->ranges, 2*depth*sizeof(short) );
+	int ret = 0;
+
+	if( frame == NULL ) return DAO_VMPROC_ABORTED;
+	next = DaoProcess_PushFrame( self, 0 );
+	next->entry = entry + 1;
+	next->state = DVM_SPEC_RUN;
+	next->depth = 0;
+
+	GC_ShiftRC( frame->object, next->object );
+	GC_ShiftRC( frame->routine, next->routine );
+	GC_DecRC( next->function );
+	next->function = NULL;
+	next->routine = frame->routine;
+	next->object = frame->object;
+	next->parCount = frame->parCount;
+	next->stackBase = frame->stackBase;
+	next->types = frame->types;
+	next->codes = frame->codes;
+	next->returning = -1;
+	next->active = next;
+
 	ret = DaoProcess_Execute( self );
-	memcpy( self->topFrame->ranges, ranges, 2*depth*sizeof(short) );
-	self->topFrame->depth = depth;
-	self->topFrame->state = old;
+
+	GC_DecRC( next->object );
+	GC_DecRC( next->routine );
+	next->routine = NULL;
+	next->object = NULL;
+	self->topFrame = top;
 	return ret;
 }
 int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl )
@@ -491,7 +520,10 @@ int DaoProcess_Call( DaoProcess *self, DaoMethod *M, DaoValue *O, DaoValue *P[],
 	if( ret ) return ret;
 	/* no return value to the previous stack frame */
 	DaoProcess_InterceptReturnValue( self );
-	return DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
+	ret = DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
+	DaoStream_Flush( self->vmSpace->stdStream );
+	fflush( stdout );
+	return ret;
 }
 void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n )
 {
@@ -538,7 +570,7 @@ int DaoMoveAC( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 
 int DaoProcess_Execute( DaoProcess *self )
 {
-	DaoStackFrame *rollback;
+	DaoStackFrame *rollback = NULL;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoVmCode *vmc=NULL;
@@ -793,7 +825,7 @@ int DaoProcess_Execute( DaoProcess *self )
 #endif
 
 
-	if( self->topFrame == NULL || self->topFrame == self->firstFrame ) goto ReturnFalse;
+	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
 	rollback = self->topFrame->prev;
 	base = self->topFrame;
 	if( self->status == DAO_VMPROC_SUSPENDED ) base = self->firstFrame->next;
@@ -803,7 +835,7 @@ CallEntry:
 	/*
 	   printf( "stack size = %s %i %i\n", getenv("PROC_NAME"), self->stackContext->size, base );
 	 */
-	if( self->topFrame == NULL || self->topFrame == base->prev ){
+	if( self->topFrame == base->prev ){
 		self->status = DAO_VMPROC_FINISHED;
 		if( self->exceptions->size > 0 ) goto FinishProc;
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
@@ -2321,31 +2353,27 @@ FinishCall:
 		}
 		goto ReturnTrue;
 	}
-	print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
-	if( self->topFrame->prev == self->firstFrame && (print || vmSpace->evalCmdline) ){
-		if( self->stackValues[0] ){
-			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
-			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );
-			DaoStream_WriteNewLine( vmSpace->stdStream );
-		}
-	}
 	DaoProcess_PopFrame( self );
 	goto CallEntry;
 
 FinishProc:
 
-	DaoProcess_PrintException( self, 1 );
+	if( self->exceptions->size ) DaoProcess_PrintException( self, 1 );
 	if( self->topFrame && self->topFrame->state & DVM_SPEC_RUN ) goto ReturnTrue;
 	DaoProcess_PopFrames( self, rollback );
 	self->status = DAO_VMPROC_ABORTED;
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 ReturnFalse :
-	DaoStream_Flush( self->vmSpace->stdStream );
-	fflush( stdout );
 	return 0;
 ReturnTrue :
-	DaoStream_Flush( self->vmSpace->stdStream );
-	fflush( stdout );
+	if( self->topFrame == self->firstFrame ){
+		print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
+		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
+			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
+			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );
+			DaoStream_WriteNewLine( vmSpace->stdStream );
+		}
+	}
 	return 1;
 }
 extern void DaoProcess_Trace( DaoProcess *self, int depth );

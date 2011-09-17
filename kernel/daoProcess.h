@@ -136,6 +136,8 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[]
 int DaoProcess_Execute( DaoProcess *self );
 int DaoProcess_ExecuteSection( DaoProcess *self, int entry );
 
+DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self, int entry );
+
 DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
 
 /* Resume a coroutine */

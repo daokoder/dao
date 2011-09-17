@@ -1131,18 +1131,18 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, k;
-	int opA = vmc->a;
-	int bval = vmc->b;
+	int opa = vmc->a;
+	int opb = vmc->b;
 	DaoObject *object;
 	DaoType **mtype;
 	DaoValue *selfobj = NULL;
-	DaoValue *p = self->activeValues[opA];
+	DaoValue *p = self->activeValues[opa];
 	DNode *node;
 
 	if( vmc->code == DVM_MCURRY ){
-		selfobj = self->activeValues[opA+1];
-		opA ++;
-		bval --;
+		selfobj = self->activeValues[opa+1];
+		opa ++;
+		opb --;
 	}
 
 	self->activeCode = vmc;
@@ -1153,13 +1153,13 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
 			mtype = klass->objDataType->items.pType;
-			if( bval >= object->valueCount ){
+			if( opb >= object->valueCount ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "enumerating too many members" );
 				break;
 			}
-			for( i=0; i<bval; i++){
+			for( i=0; i<opb; i++){
 				k = i+1; /* skip self */
-				p = self->activeValues[opA+i+1];
+				p = self->activeValues[opa+i+1];
 				if( p->type == DAO_PAR_NAMED ){
 					DaoNameValue *nameva = & p->xNameValue;
 					node = DMap_Find( klass->lookupTable, nameva->name );
@@ -1184,25 +1184,25 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 		{
 			DaoFunCurry *curry = DaoFunCurry_New( p, selfobj );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)curry );
-			for( i=0; i<bval; i++) DArray_Append( curry->params, self->activeValues[opA+i+1] );
+			for( i=0; i<opb; i++) DArray_Append( curry->params, self->activeValues[opa+i+1] );
 			break;
 		}
 	case DAO_FUNCURRY :
 		{
 			DaoFunCurry *curry = (DaoFunCurry*) p;
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)curry );
-			for(i=0; i<bval; i++) DArray_Append( curry->params, self->activeValues[opA+i+1] );
+			for(i=0; i<opb; i++) DArray_Append( curry->params, self->activeValues[opa+i+1] );
 			break;
 		}
 	case DAO_TYPE :
 		{
 			DaoType *type = (DaoType*) p;
-			DaoTuple *tuple = DaoProcess_GetTuple( self, type, vmc->b, 0 );
+			DaoTuple *tuple = DaoProcess_GetTuple( self, type, opb, 0 );
 			if( type->tid != DAO_TUPLE ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "invalid enumeration" );
 				break;
 			}
-			DaoProcess_MakeTuple( self, tuple, self->activeValues + vmc->a +1, vmc->b );
+			DaoProcess_MakeTuple( self, tuple, self->activeValues + opa + 1, opb );
 			break;
 		}
 	default :

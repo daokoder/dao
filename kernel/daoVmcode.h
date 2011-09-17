@@ -413,6 +413,7 @@ typedef enum DaoOpcode DaoOpcode;
 enum DaoOpcodeExtra
 {
 	DVM_LABEL = 1000,
+	DVM_LOAD2 ,
 	DVM_LOOP ,
 	DVM_BRANCH ,
 	DVM_DO ,

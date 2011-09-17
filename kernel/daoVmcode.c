@@ -137,6 +137,7 @@ static const char *const vmOperNames[] =
 
 	/* for compiling only */
 	"label",
+	"load2",
 	"loop",
 	"branch",
 	"do" ,

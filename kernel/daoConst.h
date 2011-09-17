@@ -145,7 +145,8 @@ enum DaoCallMode
 	DAO_CALL_TAIL = (1<<9), /* may do tail call */
 	DAO_CALL_NOVIRT = (1<<10), /* call as non-virtual function */
 	DAO_CALL_COROUT = (1<<11), /* call for creating a coroutine vm process */
-	DAO_CALL_EXPAR = (1<<12) /* expand the last parameter of tuple type */
+	DAO_CALL_EXPAR = (1<<12), /* expand the last parameter of tuple type */
+	DAO_CALL_BLOCK = (1<<13) /* call with code block */
 };
 enum DaoVmProcPauseType
 {
