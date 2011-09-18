@@ -1737,6 +1737,105 @@ static void DaoSTR_Reverse( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Reverse( self );
 	DaoProcess_PutReference( proc, p[0] );
 }
+static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int funct )
+{
+	dint *count = NULL;
+	DString *string = NULL;
+	DaoList *list = NULL;
+	DaoString *self = & p[0]->xString;
+	DaoInteger chint = {DAO_INTEGER,0,0,0,0,0};
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res, *index = (DaoValue*)(void*)&idint;
+	DaoValue *chr = (DaoValue*)(void*)&chint;
+	DaoVmCode *sect = proc->activeCode + 2;
+	DString *data = self->data;
+	size_t i, k, N = data->size;
+	if( sect->code != DVM_SECT ) return;
+	switch( funct ){
+	case DVM_FUNCT_MAP : string = DaoProcess_PutValue( proc, p[0] )->xString.data; break;
+	case DVM_FUNCT_SELECT : string = DaoProcess_PutMBString( proc, "" ); break;
+	case DVM_FUNCT_INDEX : list = DaoProcess_PutList( proc ); break;
+	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
+	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
+	}
+	if( DString_CheckUTF8( self->data ) ){
+		data = DString_Copy( self->data );
+		DString_ToWCS( data );
+	}
+	if( string ) DString_ToWCS( string );
+	for(i=0; i<N; i++){
+		idint.value = i;
+		chint.value = data->mbs ? data->mbs[i] : data->wcs[i];
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, chr );
+		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
+		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		res = proc->stackValues[0];
+		switch( funct ){
+		case DVM_FUNCT_MAP :
+			string->wcs[i] = DaoValue_GetInteger( res );
+			break;
+		case DVM_FUNCT_SELECT :
+			if( ! DaoValue_IsZero( res ) ){
+				if( data->mbs ){
+					DString_AppendChar( string, data->mbs[i] );
+				}else{
+					DString_AppendWChar( string, data->wcs[i] );
+				}
+			}
+			break;
+		case DVM_FUNCT_INDEX :
+			if( ! DaoValue_IsZero( res ) ) DaoList_Append( list, index );
+			break;
+		case DVM_FUNCT_COUNT :
+			*count += ! DaoValue_IsZero( res );
+			break;
+		case DVM_FUNCT_APPLY :
+			k = DaoValue_GetInteger( res );
+			if( data->mbs ){
+				data->mbs[i] = k;
+			}else{
+				data->wcs[i] = k;
+			}
+			break;
+		}
+	}
+	if( data->wcs && self->data->mbs ){
+		DString *tmp = self->data;
+		for(i=0,k=0; i<data->size; i++) if( data->wcs[i] > k ) k = data->wcs[i];
+		if( k < 128 ) DString_ToMBS( data );
+		self->data = data;
+		data = tmp;
+	}
+	if( data != self->data ) DString_Delete( data );
+	if( string == NULL ) return;
+	for(i=0,k=0; i<string->size; i++) if( string->wcs[i] > k ) k = string->wcs[i];
+	if( k < 128 ) DString_ToMBS( string );
+}
+static void DaoSTR_Each( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_EACH );
+}
+static void DaoSTR_Count( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_COUNT );
+}
+static void DaoSTR_Map( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_MAP );
+}
+static void DaoSTR_Select( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_SELECT );
+}
+static void DaoSTR_Index( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_INDEX );
+}
+static void DaoSTR_Apply( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_APPLY );
+}
 
 static DaoFuncItem stringMeths[] =
 {
@@ -1771,9 +1870,16 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
 	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },
-	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
-	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular, hex> = $regular )=>string" },
+	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum<regular,hex> = $regular )=>string" },
+	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular,hex> = $regular )=>string" },
 	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
+
+	{ DaoSTR_Each,   "each( self :string )[char :int, index :int]" },
+	{ DaoSTR_Count,  "count( self :string )[char :int, index :int =>int]=>int" },
+	{ DaoSTR_Map,    "map( self :string )[char :int, index :int =>int]=>string" },
+	{ DaoSTR_Select, "select( self :string )[char :int, index :int =>int]=>string" },
+	{ DaoSTR_Index,  "index( self :string )[char :int, index :int =>int]=>list<int>" },
+	{ DaoSTR_Apply,  "apply( self :string )[char :int, index :int =>int]=>string" },
 	{ NULL, NULL }
 };
 
@@ -3022,6 +3128,93 @@ static void DaoMAP_Iter( DaoProcess *proc, DaoValue *p[], int N )
 		data[1]->xCdata.data = node;
 	}
 }
+static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct )
+{
+	dint *count = NULL;
+	DaoMap *self = & p[0]->xMap;
+	DaoMap *map = NULL;
+	DaoList *list = NULL;
+	DaoType *type = self->unitype;
+	DaoVmCode *sect = proc->activeCode + 2;
+	DaoValue *res;
+	DNode *node;
+	if( sect->code != DVM_SECT ) return;
+	switch( funct ){
+	case DVM_FUNCT_MAP :
+	case DVM_FUNCT_SELECT :
+		map = DaoMap_New( self->items->hashing );
+		DaoProcess_PutValue( proc, (DaoValue*)map );
+		break;
+	case DVM_FUNCT_KEYS :
+	case DVM_FUNCT_VALUES : list = DaoProcess_PutList( proc ); break;
+	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
+	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
+	}
+	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
+	for(node=DMap_First(self->items); node; node=DMap_Next(self->items,node)){
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, node->key.pValue );
+		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, node->value.pValue );
+		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		res = proc->stackValues[0];
+		switch( funct ){
+		case DVM_FUNCT_MAP :
+			if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
+				DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );
+			break;
+		case DVM_FUNCT_SELECT :
+			if( ! DaoValue_IsZero( res ) )
+				DaoMap_Insert( map, node->key.pValue, node->value.pValue );
+			break;
+		case DVM_FUNCT_KEYS :
+			if( ! DaoValue_IsZero( res ) ) DaoList_Append( list, node->key.pValue );
+			break;
+		case DVM_FUNCT_VALUES :
+			if( ! DaoValue_IsZero( res ) ) DaoList_Append( list, node->value.pValue );
+			break;
+		case DVM_FUNCT_COUNT : *count += ! DaoValue_IsZero( res ); break;
+		case DVM_FUNCT_APPLY : DaoValue_Move( res, & node->value.pValue, type ); break;
+		}
+	}
+}
+static void DaoMAP_Each( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_EACH );
+}
+static void DaoMAP_Count( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_COUNT );
+}
+static void DaoMAP_Keys( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoVmCode *sect = proc->activeCode + 2;
+	if( sect->code != DVM_SECT ){
+		DaoMAP_Key( proc, p, N );
+		return;
+	}
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_KEYS );
+}
+static void DaoMAP_Values( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoVmCode *sect = proc->activeCode + 2;
+	if( sect->code != DVM_SECT ){
+		DaoMAP_Value( proc, p, N );
+		return;
+	}
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_VALUES );
+}
+static void DaoMAP_Select( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_SELECT );
+}
+static void DaoMAP_Map( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_MAP );
+}
+static void DaoMAP_Apply( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_APPLY );
+}
 static DaoFuncItem mapMeths[] =
 {
 	{ DaoMAP_Clear,  "clear( self :map<any,any> )" },
@@ -3032,15 +3225,21 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
 	/* 0:EQ; -1:MaxLess; 1:MinGreat */
 	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type : enum<le,eq,ge>=$eq )=>tuple<int,@K,@V>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any> )=>list<@K>" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K )=>list<@K>" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K, to :@K )=>list<@K>" },
-	{ DaoMAP_Value,  "values( self :map<any,@V> )=>list<@V>" },
 	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K )=>list<@V>" },
 	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K, to :@K )=>list<@V>" },
 	{ DaoMAP_Has,    "has( self :map<@K,any>, key :@K )=>int" },
 	{ DaoMAP_Size,   "size( self :map<any,any> )=>int" },
 	{ DaoMAP_Iter,   "__for_iterator__( self :map<any,any>, iter : for_iterator )" },
+
+	{ DaoMAP_Each,   "each( self :map<@K,@V> )[key :@K, value :@V]" },
+	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
+	{ DaoMAP_Keys,   "keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>" },
+	{ DaoMAP_Values, "values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>" },
+	{ DaoMAP_Select, "select( self :map<@K,@V> )[key :@K, value :@V =>int] =>map<@K,@V>" },
+	{ DaoMAP_Map,    "map( self :map<@K,@V> )[key :@K, value :@V =>tuple<@K2,@V2>] =>map<@K2,@V2>" },
+	{ DaoMAP_Apply,  "apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>" },
 	{ NULL, NULL }
 };
 

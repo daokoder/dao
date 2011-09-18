@@ -835,16 +835,18 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy->mapNames = DMap_Copy( self->mapNames );
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
-	if( self->nested && DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL ) ){
+	if( self->nested /*XXX && DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL )*/ ){
 		char sep = self->tid == DAO_VARIANT ? '|' : ',';
 		if( copy->nested == NULL ) copy->nested = DArray_New(0);
-		DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
-		for(i=1; i<self->name->size; i++){
-			char ch = self->name->mbs[i];
-			if( ch != '_' && !isalnum( ch ) ) break;
-			DString_AppendChar( copy->name, self->name->mbs[i] );
+		if( self->tid != DAO_VARIANT ){
+			DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
+			for(i=1; i<self->name->size; i++){
+				char ch = self->name->mbs[i];
+				if( ch != '_' && !isalnum( ch ) ) break;
+				DString_AppendChar( copy->name, self->name->mbs[i] );
+			}
+			DString_AppendChar( copy->name, '<' );
 		}
-		DString_AppendChar( copy->name, '<' );
 		for(i=0; i<self->nested->size; i++){
 			nest = DaoType_DefineTypes( self->nested->items.pType[i], ns, defs );
 			if( nest ==NULL ) goto DefFailed;
@@ -861,7 +863,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			DString_Append( copy->name, copy->aux->xType.name );
 			GC_IncRC( copy->aux );
 		}
-		DString_AppendChar( copy->name, '>' );
+		if( self->tid != DAO_VARIANT ) DString_AppendChar( copy->name, '>' );
 	}
 	if( copy->aux == NULL && self->aux != NULL ){
 		copy->aux = self->aux;

@@ -432,34 +432,115 @@ static void DaoIO_Mode( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutEnum( proc, buf );
 }
 
+static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *fname;
+	DaoValue *res;
+	DaoString *line;
+	DaoVmCode *sect = proc->activeCode + 2;
+	DaoList *list = DaoProcess_PutList( proc );
+	int chop = p[1]->xInteger.value;
+	char buf[IO_BUF_SIZE];
+	FILE *fin;
+	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
+		return;
+	}
+	fname = DString_Copy( p[0]->xString.data );
+	DString_ToMBS( fname );
+	DaoIO_MakePath( proc, fname );
+	fin = fopen( fname->mbs, "r" );
+	DString_Delete( fname );
+	if( fin == NULL ){
+		snprintf( buf, IO_BUF_SIZE, "file not exist: %s", DString_GetMBS( p[0]->xString.data ) );
+		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
+		return;
+	}
+	if( sect->code != DVM_SECT ){
+		line = DaoString_New(1);
+		while( DaoFile_ReadLine( fin, line->data ) ){
+			if( chop ) DString_Chop( line->data );
+			DaoList_Append( list, (DaoValue*) line );
+		}
+		DaoString_Delete( line );
+	}else{
+		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
+		tmp.data = p[0]->xString.data;
+		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
+		while( DaoFile_ReadLine( fin, line->data ) ){
+			if( chop ) DString_Chop( line->data );
+			DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+			if( proc->status == DAO_VMPROC_ABORTED ) break;
+			res = proc->stackValues[0];
+			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
+		}
+	}
+	fclose( fin );
+}
+static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoValue *res;
+	DaoString *line;
+	DaoVmCode *sect = proc->activeCode + 2;
+	DaoList *list = DaoProcess_PutList( proc );
+	DaoStream *self = & p[0]->xStream;
+	int i = 0, count = p[1]->xInteger.value;
+	int chop = p[2]->xInteger.value;
+	char buf[IO_BUF_SIZE];
+
+	if( sect->code != DVM_SECT ){
+		line = DaoString_New(1);
+		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
+			if( chop ) DString_Chop( line->data );
+			DaoList_Append( list, (DaoValue*) line );
+		}
+		DaoString_Delete( line );
+	}else{
+		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
+		DString tmp2 = DString_WrapMBS( "" );
+		tmp.data = & tmp2;
+		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
+		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
+			if( chop ) DString_Chop( line->data );
+			DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+			if( proc->status == DAO_VMPROC_ABORTED ) break;
+			res = proc->stackValues[0];
+			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
+		}
+	}
+}
+
 static DaoFuncItem streamMeths[] =
 {
-	{  DaoIO_Write,     "write( self :stream, ... )" },
-	{  DaoIO_Write2,    "write( ... )" },
-	{  DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
-	{  DaoIO_Writef2,   "writef( format : string, ... )" },
-	{  DaoIO_Writeln,   "writeln( self :stream, ... )" },
-	{  DaoIO_Writeln2,  "writeln( ... )" },
-	{  DaoIO_Flush,     "flush( self :stream )" },
-	{  DaoIO_Read,      "read( self :stream, count=0 )=>string" },
-	{  DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },
-	{  DaoIO_Read,      "read( )=>string" },
-	{  DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
-	{  DaoIO_Open,      "open( )=>stream" },
-	{  DaoIO_Open,      "open( file :string, mode :string )=>stream" },
-	{  DaoIO_Popen,     "popen( cmd :string, mode :string )=>stream" },
-	{  DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
-	{  DaoIO_GetString, "getstring( self :stream )=>string" },
-	{  DaoIO_Close,     "close( self :stream )" },
-	{  DaoIO_Eof,       "eof( self :stream )=>int" },
-	{  DaoIO_Isopen,    "isopen( self :stream )=>int" },
-	{  DaoIO_Seek,      "seek( self :stream, pos :int, from :enum<begin,current,end> )=>int" },
-	{  DaoIO_Tell,      "tell( self :stream )=>int" },
-	{  DaoIO_FileNO,    "fileno( self :stream )=>int" },
-	{  DaoIO_Name,      "name( self :stream )=>string" },
-	{  DaoIO_Mode,      "mode( self :stream )=>enum<read; write>" },
-	{  DaoIO_Iter,      "__for_iterator__( self :stream, iter : for_iterator )" },
-	{  DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
+	{ DaoIO_Write,     "write( self :stream, ... )" },
+	{ DaoIO_Write2,    "write( ... )" },
+	{ DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
+	{ DaoIO_Writef2,   "writef( format : string, ... )" },
+	{ DaoIO_Writeln,   "writeln( self :stream, ... )" },
+	{ DaoIO_Writeln2,  "writeln( ... )" },
+	{ DaoIO_Flush,     "flush( self :stream )" },
+	{ DaoIO_Read,      "read( self :stream, count=0 )=>string" },
+	{ DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },
+	{ DaoIO_Read,      "read( )=>string" },
+	{ DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
+	{ DaoIO_Open,      "open( )=>stream" },
+	{ DaoIO_Open,      "open( file :string, mode :string )=>stream" },
+	{ DaoIO_Popen,     "popen( cmd :string, mode :string )=>stream" },
+	{ DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
+	{ DaoIO_GetString, "getstring( self :stream )=>string" },
+	{ DaoIO_Close,     "close( self :stream )" },
+	{ DaoIO_Eof,       "eof( self :stream )=>int" },
+	{ DaoIO_Isopen,    "isopen( self :stream )=>int" },
+	{ DaoIO_Seek,      "seek( self :stream, pos :int, from :enum<begin,current,end> )=>int" },
+	{ DaoIO_Tell,      "tell( self :stream )=>int" },
+	{ DaoIO_FileNO,    "fileno( self :stream )=>int" },
+	{ DaoIO_Name,      "name( self :stream )=>string" },
+	{ DaoIO_Mode,      "mode( self :stream )=>enum<read; write>" },
+	{ DaoIO_Iter,      "__for_iterator__( self :stream, iter : for_iterator )" },
+	{ DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
+
+	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>null|@T]=>list<@T>" },
+	{ DaoIO_ReadLines2, "readlines( self :stream, numline=0, chop=0 )[line:string=>null|@T]=>list<@T>" },
 	{ NULL, NULL }
 };
 
@@ -752,7 +833,7 @@ void DaoStream_PrintInfo( DaoStream *self,const char *t, DString *s, int i, cons
 	DaoStream_WriteMBS( stream, e );
 	DaoStream_WriteMBS( stream, ";\n\n" );
 }
-void DaoStream_ReadLine( DaoStream *self, DString *line )
+int DaoStream_ReadLine( DaoStream *self, DString *line )
 {
 	DaoVmSpace *vms = self->vmSpace;
 	int ch, delim = '\n';
@@ -762,7 +843,7 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 	DString_Clear( line );
 	DString_ToMBS( line );
 	if( self->file ){
-		DaoFile_ReadLine( self->file->fd, line );
+		return DaoFile_ReadLine( self->file->fd, line );
 	}else if( self->attribs & DAO_IO_STRING ){
 		size_t pos = DString_FindWChar( self->streamString, delim, 0 );
 		if( pos == MAXSIZE ){
@@ -772,8 +853,10 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 			DString_SubString( self->streamString, line, 0, pos+1 );
 			DString_Erase( self->streamString, 0, pos+1 );
 		}
+		return self->streamString->size >0;
 	}else if( vms && vms->userHandler && vms->userHandler->StdioRead ){
 		vms->userHandler->StdioRead( vms->userHandler, line, 0 );
+		return line->size >0;
 	}else{
 		*start = ch = getchar();
 		start += 1;
@@ -789,7 +872,9 @@ void DaoStream_ReadLine( DaoStream *self, DString *line )
 		if( ch == EOF && start != buf ) start -= 1;
 		DString_AppendDataMBS( line, buf, start-buf );
 		clearerr( stdin );
+		return ch != EOF;
 	}
+	return 0;
 }
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {

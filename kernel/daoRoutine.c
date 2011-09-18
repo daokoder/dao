@@ -3358,7 +3358,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 								if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
 							}
 						}
-					}else if( ct && ct->tid != DAO_UDF && ct->tid != DAO_INITYPE ){
+					}else if( ct && !( ct->attrib & DAO_TYPE_NOTDEF) ){
 						if( notide && DaoType_MatchTo( at, ct, defs ) == DAO_MT_SUB ){
 							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs ) ){
 								/* typedef tuple<x:float,y:float> Point2D

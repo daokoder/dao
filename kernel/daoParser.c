@@ -4024,6 +4024,7 @@ void DaoParser_SetupBranching( DaoParser *self )
 		int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 		int ismain = self->routine->attribs & DAO_ROUT_MAIN;
 		int autoret = ismain && (print || vms->evalCmdline);
+		autoret &= self->vmcLast != self->vmcFirst;
 		if( self->vmSpace->options & DAO_EXEC_IDE ){
 			/* for setting break points in DaoStudio */
 			DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, first,0,0 );
@@ -5543,7 +5544,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	DaoRoutine *routine = self->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *mbs = self->mbs;
-	unsigned char tkn, tki, tki2;
+	unsigned char tkn, tki, tki2, tki3 = 0;
 	int regcount = self->regCount;
 	int size = self->tokens->size;
 	int start = self->curToken;
@@ -5559,7 +5560,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	tkn = tokens[start]->type;
 	tki = tokens[start]->name;
 	tki2 = DaoParser_NextTokenName( self );
-	if( tki == DTOK_IDENTIFIER && tki2 == DTOK_COLON2 ){
+	if( (start + 2) <= end ) tki3 = tokens[start+2]->name;
+	if( tki == DTOK_IDENTIFIER && tki2 == DTOK_COLON2 && tki3 != DTOK_LCB ){
 		int pos = DaoParser_FindScopedConstant( self, & value, start, NULL );
 		if( pos < 0 ) return result;
 		result.konst = LOOKUP_BIND_LC( DRoutine_AddConstant( (DRoutine*)routine, value ) );
@@ -5935,7 +5937,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 						MAP_Insert( varFunctional, & Y, DaoParser_PushRegister( self ) );
 					}
 					sect->b = self->regCount - regCount;
-					if( start > (rb - 1) ) goto InvalidFunctional;
 					back = self->vmcLast;
 					regCount = self->regCount;
 					isFunctional = self->isFunctional;
@@ -5949,8 +5950,16 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 						DaoParser_PopRegisters( self, self->regCount - regCount );
 						if( DaoParser_ParseCodeSect( self, start, rb-1 ) ==0 ) goto InvalidFunctional;
 					}
-					if( self->vmcLast->code != DVM_RETURN )
-						DaoParser_AddCode( self, DVM_RETURN, self->lastValue, 1, DVM_FUNCT_NULL, self->vmcLast->first, 0, rb );
+					if( self->vmcLast->code != DVM_RETURN ){
+						int first = self->vmcLast->first;
+						opa = self->lastValue;
+						opb = 1;
+						if( self->vmcLast == back ){
+							first = start - 1;
+							opa = opb = 0;
+						}
+						DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_FUNCT_NULL, first, 0, rb );
+					}
 					self->isFunctional = isFunctional;
 
 					self->curToken = rb + 1;

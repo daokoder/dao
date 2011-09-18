@@ -68,7 +68,7 @@ extern void DaoStream_WriteNewLine( DaoStream *self );
 
 extern void DaoStream_PrintInfo( DaoStream *self, const char *t, DString *s, int i, const char *e, DString *x );
 
-extern void DaoStream_ReadLine( DaoStream *self, DString *buf );
+extern int DaoStream_ReadLine( DaoStream *self, DString *buf );
 
 extern DString* DaoStream_GetFormat( DaoStream *self, int tp );
 
