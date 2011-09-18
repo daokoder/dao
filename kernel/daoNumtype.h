@@ -183,11 +183,6 @@ float  DaoArray_GetFloat( DaoArray *na, int i );
 double DaoArray_GetDouble( DaoArray *na, int i );
 complex16 DaoArray_GetComplex( DaoArray *na, int i );
 
-#define ARRAY_GET_INT( x, i ) DaoArray_GetInteger( x, i )
-#define ARRAY_GET_SF( x, i ) DaoArray_GetFloat( x, i )
-#define ARRAY_GET_DF( x, i ) DaoArray_GetDouble( x, i )
-#define ARRAY_GET_DC( x, i ) DaoArray_GetComplex( x, i )
-
 #endif
 
 #endif

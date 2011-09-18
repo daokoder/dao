@@ -2377,36 +2377,6 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	for(i=0; i<N; i++) items[i] = data[i].value;
 	dao_free( data );
 }
-void DaoProcess_Sort( DaoProcess *proc, DaoVmCode *vmc, int index, int entry )
-{
-	DaoList *list = NULL;
-	DaoValue **items = NULL;
-	DaoValue *param = proc->activeValues[ vmc->b ];
-	int reg0 = index + 1;
-	int reg1 = index + 2;
-	int nsort = 0;
-	size_t N = 0;
-	if( param->type == DAO_LIST ){
-		list = & param->xList;
-		items = list->items->items.pValue;
-		nsort = N = list->items->size;
-	}else if( param->type == DAO_TUPLE ){
-		if( param->xTuple.size != 2 ) goto ErrorParam;
-		if( param->xTuple.items[0]->type != DAO_LIST ) goto ErrorParam;
-		if( param->xTuple.items[1]->type != DAO_INTEGER ) goto ErrorParam;
-		list = & param->xTuple.items[0]->xList;
-		nsort = param->xTuple.items[1]->xInteger.value;
-		items = list->items->items.pValue;
-		N = list->items->size;
-	}else{
-		goto ErrorParam;
-	}
-	DaoProcess_PutValue( proc, (DaoValue*) list );
-	PartialQuickSort( proc, entry, reg0, reg1, items, 0, N-1, nsort );
-	return;
-ErrorParam :
-	DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid parameter for sort()" );
-}
 static void DaoLIST_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
@@ -2486,7 +2456,7 @@ static void DaoLIST_Reverse( DaoProcess *proc, DaoValue *p[], int npar )
 		items[i] = tmp;
 	}
 }
-static void DaoLIST_MapSelectIndexCountEach( DaoProcess *proc, DaoValue *p[], int npar, int funct )
+static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
 	dint *count = NULL;
 	int direction = funct == DVM_FUNCT_COUNT ? 0 : p[1]->xEnum.value;
@@ -2503,6 +2473,7 @@ static void DaoLIST_MapSelectIndexCountEach( DaoProcess *proc, DaoValue *p[], in
 	case DVM_FUNCT_SELECT :
 	case DVM_FUNCT_INDEX : list2 = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
+	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
 	}
 	for(j=0; j<N; j++){
 		i = direction ? N-1-j : j;
@@ -2517,28 +2488,66 @@ static void DaoLIST_MapSelectIndexCountEach( DaoProcess *proc, DaoValue *p[], in
 		case DVM_FUNCT_SELECT : if( ! DaoValue_IsZero( res ) ) DaoList_Append( list2, items[i] ); break;
 		case DVM_FUNCT_INDEX : if( ! DaoValue_IsZero( res ) ) DaoList_Append( list2, index ); break;
 		case DVM_FUNCT_COUNT : *count += ! DaoValue_IsZero( res ); break;
+		case DVM_FUNCT_APPLY : DaoList_SetItem( list, res, i ); break;
 		}
 	}
 }
 static void DaoLIST_Map( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoLIST_MapSelectIndexCountEach( proc, p, npar, DVM_FUNCT_MAP );
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_MAP );
 }
 static void DaoLIST_Select( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoLIST_MapSelectIndexCountEach( proc, p, npar, DVM_FUNCT_SELECT );
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_SELECT );
 }
 static void DaoLIST_Index( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoLIST_MapSelectIndexCountEach( proc, p, npar, DVM_FUNCT_INDEX );
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_INDEX );
 }
 static void DaoLIST_Count( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoLIST_MapSelectIndexCountEach( proc, p, npar, DVM_FUNCT_COUNT );
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_COUNT );
 }
 static void DaoLIST_Each( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoLIST_MapSelectIndexCountEach( proc, p, npar, DVM_FUNCT_EACH );
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_EACH );
+}
+static void DaoLIST_Apply( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_APPLY );
+}
+static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoFunction *func = proc->topFrame->function;
+	DaoType *etype = func->routType->nested->items.pType[1];
+	DaoList *list = & p[0]->xList;
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue **items = list->items->items.pValue;
+	DaoValue *res = NULL, *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = proc->activeCode + 2;
+	size_t i, j, first = 0, D = 0, N = list->items->size;
+	if( sect->code != DVM_SECT || list->items->size == 0 ) return;
+	if( etype->tid != DAO_ENUM ) etype = func->routType->nested->items.pType[2];
+	if( p[1]->type == DAO_ENUM && p[1]->xEnum.etype == etype ){
+		D = p[1]->xEnum.value;
+		res = items[0];
+		first = 1;
+	}else{
+		res= p[1];
+		D = p[2]->xEnum.value;
+	}
+	for(j=first; j<N; j++){
+		i = D ? N-1-j : j;
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
+		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, res );
+		if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, index );
+		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		res = proc->stackValues[0];
+	}
+	DaoProcess_SetActiveFrame( proc, proc->topFrame );
+	DaoProcess_PutValue( proc, res );
 }
 static DaoFuncItem listMeths[] =
 {
@@ -2561,13 +2570,16 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
 	{ DaoLIST_Iter,     "__for_iterator__( self :list<any>, iter : for_iterator )" },
 
-	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T=>@T2]=>list<@T2>" },
-	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T=>int]=>list<@T>" },
-	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T=>int]=>list<int>" },
-	{ DaoLIST_Count,    "count( self :list<@T> )[item:@T=>int]=>int" },
-	{ DaoLIST_Each,     "each( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T]" },
+	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T2]=>list<@T2>" },
+	{ DaoLIST_Reduce,   "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T" },
+	{ DaoLIST_Reduce,   "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
+	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>" },
+	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>" },
+	{ DaoLIST_Count,    "count( self :list<@T> )[item:@T,index:int=>int]=>int" },
+	{ DaoLIST_Each,     "each( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]" },
 	{ DaoLIST_Sort,     "sort( self :list<@T>, order :enum<ascend,descend>, k=0 )=>list<@T>" },
 	{ DaoLIST_Sort,     "sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>" },
+	{ DaoLIST_Apply,    "apply( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T]=>list<@T>" },
 	{ NULL, NULL }
 };
 

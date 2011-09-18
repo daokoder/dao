@@ -82,7 +82,6 @@ enum DaoOpcode
 	DVM_ITER , /* create or reset an iterator at C for A; */
 	DVM_TEST , /* if A, go to the next one; else, goto B-th instruction; */
 	DVM_MATH , /* C = A( B ); A: sin,cos,...; B: double,complex */
-	DVM_FUNCT , /* C = A( B ); A: map,reduce,...; B: list,tuple */
 	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
 	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
 	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:

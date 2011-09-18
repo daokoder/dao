@@ -30,7 +30,7 @@ const unsigned char permutableCodes[] =
 	1 /*CHECK*/, 1 /*NAMEVA*/, 1 /*PAIR*/, 1 /*TUPLE*/,
 	1 /*LIST*/, 1 /*MAP*/, 1 /*HASH*/, 1 /*ARRAY*/, 1 /*MATRIX*/, 1 /*CURRY*/, 1 /*MCURRY*/,
 	1 /*ROUTINE*/, 1 /*CLASS*/, 1 /*GOTO*/, 1 /*SWITCH*/, 1 /*CASE*/, 0 /*ITER*/, 1 /*TEST*/, 
-	1 /*MATH*/, 0 /*FUNCT*/, 0 /*CALL*/, 0 /*MCALL*/, 
+	1 /*MATH*/, 0 /*CALL*/, 0 /*MCALL*/, 
 	0 /*CRRE*/, 0 /*JITC*/, 0 /*RETURN*/, 0 /*YIELD*/, 0 /*DEBUG*/, 0 /*SECT*/
 };
 
@@ -50,7 +50,7 @@ static const char *const vmOperNames[] =
 	"CHECK", "NAMEVA", "PAIR", "TUPLE",
 	"LIST", "MAP", "HASH", "ARRAY", "MATRIX", "CURRY", "MCURRY",
 	"ROUTINE", "CLASS", "GOTO", "SWITCH", "CASE", "ITER", "TEST", 
-	"MATH", "FUNCT", "CALL", "MCALL", 
+	"MATH", "CALL", "MCALL", 
 	"CRRE", "JITC", "RETURN", "YIELD", "DEBUG", "SECT",
 	"DATA_I" , "DATA_F" , "DATA_D" , 
 	"GETCL_I" , "GETCL_F" , "GETCL_D" , 
