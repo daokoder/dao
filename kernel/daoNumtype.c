@@ -4322,7 +4322,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		}
 		if( funct == DVM_FUNCT_FOLD ) DaoProcess_SetValue( proc, sect->a+1, res );
 		DaoArray_GetValue( self, id, elem );
-		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		DaoProcess_ExecuteSection( proc );
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_MAP :

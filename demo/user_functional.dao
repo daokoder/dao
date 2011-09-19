@@ -1,0 +1,27 @@
+
+# A function that can be called with a code section.
+# The code section is expected to take an integer as parameter,
+# and return a string.
+routine Test()[X:int=>string] => string
+{
+	io.writeln( 'In functional method!' );
+	s = yield( 123 ); # execute the code section;
+	io.writeln( 'Yielded value:', s );
+	return s;
+}
+
+Test::{
+	io.writeln( 'In code section:', X );
+	return 'abc';
+}
+
+routine Test( alist : list<@T> )[ item :@T, index :int =>int ] =>list<@T>
+{
+	yield( 55, 0 );
+	io.writeln( alist.select::{ X < 33 } );
+	return alist.select::{ yield(X,Y) }; # call the list functional method
+}
+
+res = Test( {11,22,33,44} )::{ X > 22 }
+
+io.writeln( res, std.about(res) );

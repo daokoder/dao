@@ -3237,7 +3237,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				if( sect && cbtype && cbtype->nested ){
 					for(j=0, k=sect->a; j<sect->b; j++, k++){
 						if( j >= cbtype->nested->size ){
-							printf( "Unsupported code section parameter!\n" );
+							if( j < sect->c ) printf( "Unsupported code section parameter!\n" );
 							break;
 						}// XXX better warning
 						tt = cbtype->nested->items.pType[j];
@@ -3329,6 +3329,24 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				/*
 				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );
 				 */
+				if( code == DVM_YIELD && self->routType->cbtype ){ /* yield in functional method: */
+					if( vmc->b == 0 ){
+						if( self->routType->cbtype->aux ) goto ErrorTyping;
+						break;
+					}
+					tt = self->routType->cbtype;
+					tp = tt->nested->items.pType;
+					at = DaoNamespace_MakeType( ns, "tuple", DAO_TUPLE, NULL, type+opa, vmc->b);
+					ct = DaoNamespace_MakeType( ns, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
+					if( DaoType_MatchTo( at, ct, defs ) == 0 ) goto ErrorTyping;
+					ct = (DaoType*) self->routType->cbtype->aux;
+					if( ct ){
+						init[opc] = 1;
+						UpdateType( opc, ct );
+						AssertTypeMatching( ct, type[opc], defs, 0 );
+					}
+					break;
+				}
 				if( vmc->b ==0 ){
 					if( ct && ( ct->tid ==DAO_UDF || ct->tid ==DAO_ANY ) ) continue;
 					if( ct && ! (self->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
@@ -3338,7 +3356,9 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					if( vmc->b >1 )
 						at = DaoNamespace_MakeType( ns, "tuple", DAO_TUPLE, NULL, type+opa, vmc->b);
 
+					//printf( "debug 1: %s %s\n", at->name->mbs, ct->name->mbs );
 					if( ct && DaoType_MatchTo( at, ct, defs ) == 0 ) goto ErrorTyping;
+					//printf( "debug 2\n" );
 					if( ct != ct2 && ct->tid != DAO_UDF && ct->tid != DAO_INITYPE ){
 						int mac = DaoType_MatchTo( at, ct, defs );
 						int mca = DaoType_MatchTo( ct, at, defs );

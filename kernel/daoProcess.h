@@ -41,6 +41,7 @@ struct DaoStackFrame
 	DaoObject    *object;
 
 	DaoStackFrame  *active;
+	DaoStackFrame  *sect; /* original frame of a code section frame */
 	DaoStackFrame  *prev;
 	DaoStackFrame  *next;
 };
@@ -134,11 +135,11 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[]
 
 /* Execute from the top of the calling stack */
 int DaoProcess_Execute( DaoProcess *self );
-int DaoProcess_ExecuteSection( DaoProcess *self, int entry );
+int DaoProcess_ExecuteSection( DaoProcess *self );
 
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
-DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self, int entry );
+DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self );
 
 DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
 

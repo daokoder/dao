@@ -89,8 +89,8 @@ enum DaoOpcode
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
 	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
-	DVM_DEBUG , /* prompt to debugging mode */
-	DVM_SECT ,   /* indicate the starting of a code subsection, A is the id. */
+	DVM_DEBUG , /* prompt to debugging mode; */
+	DVM_SECT ,   /* code subsection label, parameters: A,A+1,...,A+B-1; C # explicit parameters; */
 
 	/* optimized opcodes: */
 	DVM_DATA_I ,

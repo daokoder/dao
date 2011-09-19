@@ -1625,6 +1625,14 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	abtp->aux = (DaoValue*) tp;
 	GC_IncRC( abtp->aux );
 	GC_IncRCs( abtp->nested );
+	if( routype->cbtype ){
+		DMap *defs = DHash_New(0,0);
+		DaoType_MatchTo( abtp, routype, defs );
+		abtp->cbtype = DaoType_DefineTypes( routype->cbtype, self, defs );
+		GC_IncRC( abtp->cbtype );
+		DMap_Delete( defs );
+		DString_Append( abtp->name, abtp->cbtype->name );
+	}
 	node = MAP_Find( self->abstypes, abtp->name );
 	if( node ){
 		DaoType_Delete( abtp );

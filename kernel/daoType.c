@@ -836,9 +836,12 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
 	if( self->nested /*XXX && DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL )*/ ){
+		int m = DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL );
 		char sep = self->tid == DAO_VARIANT ? '|' : ',';
 		if( copy->nested == NULL ) copy->nested = DArray_New(0);
-		if( self->tid != DAO_VARIANT ){
+		if( self->tid == DAO_CODEBLOCK ){
+			DString_AppendChar( copy->name, '[' );
+		}else if( self->tid != DAO_VARIANT && m ){
 			DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
 			for(i=1; i<self->name->size; i++){
 				char ch = self->name->mbs[i];
@@ -856,14 +859,20 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		GC_IncRCs( copy->nested );
 		/* NOT FOR @T<int|string> kind types, see notes below: */
-		if( self->aux && self->aux->type == DAO_TYPE && self->tid != DAO_VARIANT ){
-			DString_AppendMBS( copy->name, "=>" );
+		if( self->aux && self->aux->type == DAO_TYPE ){
 			copy->aux = (DaoValue*) DaoType_DefineTypes( & self->aux->xType, ns, defs );
 			if( copy->aux ==NULL ) goto DefFailed;
-			DString_Append( copy->name, copy->aux->xType.name );
 			GC_IncRC( copy->aux );
+			if( self->tid != DAO_VARIANT && (m || self->tid == DAO_CODEBLOCK) ){
+				DString_AppendMBS( copy->name, "=>" );
+				DString_Append( copy->name, copy->aux->xType.name );
+			}
 		}
-		if( self->tid != DAO_VARIANT ) DString_AppendChar( copy->name, '>' );
+		if( self->tid == DAO_CODEBLOCK ){
+			DString_AppendChar( copy->name, ']' );
+		}else if( self->tid != DAO_VARIANT && m ){
+			DString_AppendChar( copy->name, '>' );
+		}
 	}
 	if( copy->aux == NULL && self->aux != NULL ){
 		copy->aux = self->aux;
@@ -878,6 +887,12 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			if( copy->aux ==NULL ) goto DefFailed;
 		}
 		GC_IncRC( copy->aux );
+	}
+	if( copy->cbtype == NULL && self->cbtype != NULL ){
+		copy->cbtype = DaoType_DefineTypes( self->cbtype, ns, defs );
+		if( copy->cbtype ==NULL ) goto DefFailed;
+		GC_IncRC( copy->cbtype );
+		DString_Append( copy->name, copy->cbtype->name );
 	}
 	if( self->tid == DAO_PAR_NAMED ){
 		DString_Append( copy->name, self->fname );

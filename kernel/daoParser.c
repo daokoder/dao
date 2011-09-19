@@ -1036,6 +1036,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( self->errors->size > ecount ) goto ErrorInvalidTypeForm;
 		ts = types->items.pType;
 		cbtype = DaoNamespace_MakeType( NS, "", DAO_CODEBLOCK, type, ts, types->size );
+		if( cbtype == NULL ) goto ErrorInvalidTypeForm;
 	}
 	if( right+1 < size && tokens[right+1]->name == DTOK_FIELD ){
 		e1 += 1;
@@ -5927,6 +5928,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 						if( i < rb2 ){
 							DaoParser_PopRegisters( self, self->regCount - regCount );
 						}else{
+							sect->c = self->regCount - regCount;
 							start = rb2 + 1;
 						}
 					}
@@ -5946,6 +5948,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					if( enode.reg >= 0 && self->curToken == rb ){
 						DaoParser_AddCode( self, DVM_RETURN, enode.reg, enode.count, 0, start, 0, rb-1 );
 					}else{
+						self->error = 0;
+						DArray_Clear( self->errors );
 						DaoParser_PopCodes( self, back );
 						DaoParser_PopRegisters( self, self->regCount - regCount );
 						if( DaoParser_ParseCodeSect( self, start, rb-1 ) ==0 ) goto InvalidFunctional;

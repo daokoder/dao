@@ -3950,15 +3950,14 @@ InvalidParameter:
 void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
-	int i, regReturn = topFrame->returning;
+	int i, returning = topFrame->returning;
 
 	self->activeCode = vmc;
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
-	if( vmc->c == 0 && topFrame->returning != (ushort_t)-1 ){
-		DaoStackFrame *lastframe = topFrame->prev;
+	if( returning != (ushort_t)-1 || self->parYield == NULL ){
+		DaoValue **dest = self->stackValues;
 		DaoValue *retValue = NULL;
-		DaoType *type;
-		assert( lastframe && lastframe->routine );
+		DaoType *type = NULL;
 		if( topFrame->state & DVM_MAKE_OBJECT ){
 			retValue = (DaoValue*)self->activeObject;
 		}else if( vmc->b == 1 ){
@@ -3968,26 +3967,22 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 			DaoValue **items = tuple->items;
 			retValue = (DaoValue*) tuple;
 			for(i=0; i<vmc->b; i++) DaoValue_Copy( self->activeValues[ vmc->a+i ], items + i );
-		}else if( ! ( self->topFrame->state & DVM_SPEC_RUN ) ){
-			/* XXX DaoProcess_SetValue( self->caller, regReturn, daoNullValue ); */
+		}else{
+			return;
 		}
-		type = lastframe->routine->regType->items.pType[ regReturn ];
-		DaoValue_Move( retValue, self->stackValues + lastframe->stackBase + regReturn, type );
+		if( returning != (ushort_t)-1 ){
+			DaoStackFrame *lastframe = topFrame->prev;
+			assert( lastframe && lastframe->routine );
+			type = lastframe->routine->regType->items.pType[ returning ];
+			dest = self->stackValues + lastframe->stackBase + returning;
+		}
+		if( DaoValue_Move( retValue, dest, type ) ==0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
+		}
 	}else if( self->parYield ){
 		DaoProcess_Yield( self, self->activeValues + vmc->a, vmc->b, NULL );
 		/* self->status is set to DAO_VMPROC_SUSPENDED by DaoProcess_Yield() */
 		self->status = DAO_VMPROC_FINISHED;
-	}else{
-		if( vmc->b == 1 ){
-			DaoValue_Move( self->activeValues[ vmc->a ], & self->stackValues[0], NULL );
-		}else if( vmc->b > 1 ){
-			DaoTuple *tuple = DaoTuple_New( vmc->b );
-			DaoValue **items = tuple->items;
-			DaoValue_Clear( & self->stackValues[0] );
-			GC_IncRC( tuple );
-			self->stackValues[0] = (DaoValue*) tuple;
-			for(i=0; i<vmc->b; i++) DaoValue_Copy( self->activeValues[ vmc->a+i ], items + i );
-		}
 	}
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );

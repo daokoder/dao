@@ -1768,7 +1768,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		chint.value = data->mbs ? data->mbs[i] : data->wcs[i];
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, chr );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
-		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		DaoProcess_ExecuteSection( proc );
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){
@@ -2359,7 +2359,7 @@ static int Compare( DaoProcess *proc, int entry, int reg0, int reg1, DaoValue *v
 	DaoValue **locs = proc->activeValues;
 	DaoValue_Copy( v0, locs + reg0 );
 	DaoValue_Copy( v1, locs + reg1 );
-	DaoProcess_ExecuteSection( proc, entry );
+	DaoProcess_ExecuteSection( proc );
 	return DaoValue_GetInteger( proc->stackValues[0] );
 }
 static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
@@ -2454,7 +2454,7 @@ static void DaoLIST_Rank( DaoProcess *proc, DaoValue *p[], int npar)
 static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	int entry = proc->topFrame->prev->entry + 1;
-	DaoStackFrame *frame = DaoProcess_FindSectionFrame( proc, entry );
+	DaoStackFrame *frame = DaoProcess_FindSectionFrame( proc );
 	DaoList *list = & p[0]->xList;
 	DaoValue **items = list->items->items.pValue;
 	dint part = p[1 + (p[1]->type== DAO_ENUM)]->xInteger.value;
@@ -2586,7 +2586,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
-		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		DaoProcess_ExecuteSection( proc );
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){
@@ -2648,7 +2648,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, res );
 		if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, index );
-		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		DaoProcess_ExecuteSection( proc );
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 	}
@@ -3154,7 +3154,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	for(node=DMap_First(self->items); node; node=DMap_Next(self->items,node)){
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, node->key.pValue );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, node->value.pValue );
-		DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+		DaoProcess_ExecuteSection( proc );
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){

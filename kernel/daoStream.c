@@ -469,7 +469,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		while( DaoFile_ReadLine( fin, line->data ) ){
 			if( chop ) DString_Chop( line->data );
-			DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+			DaoProcess_ExecuteSection( proc );
 			if( proc->status == DAO_VMPROC_ABORTED ) break;
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
@@ -502,7 +502,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
 			if( chop ) DString_Chop( line->data );
-			DaoProcess_ExecuteSection( proc, proc->topFrame->prev->entry + 1 );
+			DaoProcess_ExecuteSection( proc );
 			if( proc->status == DAO_VMPROC_ABORTED ) break;
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
