@@ -476,7 +476,10 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_ROUTINE :
 		if( self->name->mbs[0] != type->name->mbs[0] ) return 0; /* @routine */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
+		if( (self->attrib & DAO_TYPE_COROUTINE) && !(type->attrib & DAO_TYPE_COROUTINE) ) return 0;
+		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
 		if( self->aux == NULL && type->aux ) return 0;
+		if( self->cbtype && DaoType_MatchTo( self->cbtype, type->cbtype, defs ) ==0 ) return 0;
 		/* self may have extra parameters, but they must have default values: */
 		for(i=type->nested->size; i<self->nested->size; i++){
 			it1 = self->nested->items.pType[i];
@@ -865,7 +868,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			GC_IncRC( copy->aux );
 			if( self->tid != DAO_VARIANT && (m || self->tid == DAO_CODEBLOCK) ){
 				DString_AppendMBS( copy->name, "=>" );
+				if( self->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( copy->name, '[' );
 				DString_Append( copy->name, copy->aux->xType.name );
+				if( self->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( copy->name, ']' );
 			}
 		}
 		if( self->tid == DAO_CODEBLOCK ){

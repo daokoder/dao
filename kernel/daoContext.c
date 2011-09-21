@@ -3955,9 +3955,9 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
 	if( returning != (ushort_t)-1 || self->parYield == NULL ){
+		DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
 		DaoValue **dest = self->stackValues;
 		DaoValue *retValue = NULL;
-		DaoType *type = NULL;
 		if( topFrame->state & DVM_MAKE_OBJECT ){
 			retValue = (DaoValue*)self->activeObject;
 		}else if( vmc->b == 1 ){
@@ -3970,11 +3970,16 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		}else{
 			return;
 		}
-		if( returning != (ushort_t)-1 ){
+		if( vmc->code == DVM_RETURN &&  returning != (ushort_t)-1 ){
 			DaoStackFrame *lastframe = topFrame->prev;
 			assert( lastframe && lastframe->routine );
 			type = lastframe->routine->regType->items.pType[ returning ];
 			dest = self->stackValues + lastframe->stackBase + returning;
+		}
+		if( retValue == NULL ){
+			int opt1 = self->vmSpace->options & DAO_EXEC_INTERUN;
+			int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
+			if( self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = null;
 		}
 		if( DaoValue_Move( retValue, dest, type ) ==0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );

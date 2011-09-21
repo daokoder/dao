@@ -114,7 +114,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 
 DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p );
 DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
-		uchar_t basic, DaoValue *pb, DaoType *nest[], int N );
+		uint_t basic, DaoValue *pb, DaoType *nest[], int N );
 DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		DaoValue *vals[], DaoType *types[], DaoType *retp );
 

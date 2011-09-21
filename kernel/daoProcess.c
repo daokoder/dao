@@ -427,21 +427,7 @@ int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *re
 		}
 	}
 	DaoProcess_Execute( self );
-	if( ret->activeRoutine && ret->activeCode ){ /* yield */
-		vmc = self->activeCode;
-		tp = ret->activeTypes[ ret->activeCode->c ];
-		if( vmc->b ==1 ){
-			DaoProcess_PutValue( ret, self->activeValues[ vmc->a ] );
-		}else if( vmc->b ){
-			tuple = DaoTuple_New( vmc->b );
-			tuple->unitype = tp;
-			GC_IncRC( tuple->unitype );
-			DaoProcess_MakeTuple( ret, tuple, self->activeValues + vmc->a, vmc->b );
-			DaoProcess_PutValue( ret, (DaoValue*) tuple );
-		}
-	}else{ /* return */
-		DaoProcess_PutValue( ret, self->stackValues[0] );
-	}
+	DaoProcess_PutValue( ret, self->stackValues[0] );
 	return 1;
 }
 
@@ -1191,30 +1177,23 @@ CallEntry:
 					vmc = vmcBase + vmc->b;
 				}
 				break;
-			default :
-				switch( vA->type ){
-				case DAO_LIST  :
-					vmc = vA->xList.items->size ? vmc+1 : vmcBase + vmc->b;
-					break;
-				case DAO_MAP   :
-					vmc = vA->xMap.items->size ? vmc+1 : vmcBase + vmc->b;
-					break;
+			case DAO_LIST  :
+				vmc = vA->xList.items->size ? vmc+1 : vmcBase + vmc->b;
+				break;
+			case DAO_MAP   :
+				vmc = vA->xMap.items->size ? vmc+1 : vmcBase + vmc->b;
+				break;
 #ifdef DAO_WITH_NUMARRAY
-				case DAO_ARRAY :
-					vmc = vA->xArray.size ? vmc+1 : vmcBase + vmc->b;
-					break;
+			case DAO_ARRAY :
+				vmc = vA->xArray.size ? vmc+1 : vmcBase + vmc->b;
+				break;
 #endif
-				case DAO_TUPLE :
-					vmc = vA->xTuple.size ? vmc+1 : vmcBase + vmc->b;
-					break;
-				case DAO_CTYPE :
-				case DAO_CDATA :
-					vmc = vA->xCdata.data ? vmc+1 : vmcBase + vmc->b;
-					break;
-				default :
-					vmc = vmcBase + vmc->b;
-					break;
-				}
+			case DAO_CTYPE :
+			case DAO_CDATA :
+				vmc = vA->xCdata.data ? vmc+1 : vmcBase + vmc->b;
+				break;
+			default :
+				vmc = vmcBase + vmc->b;
 				break;
 			}
 		}OPJUMP() OPCASE( MATH ){
@@ -1307,6 +1286,11 @@ CallEntry:
 				self->status = DAO_VMPROC_STACKED;
 				goto CheckException;
 			}
+			if( self->abtype == NULL ){
+				DaoProcess_RaiseException( self, DAO_ERROR, "Not a coroutine to yield." );
+				goto CheckException;
+			}
+			DaoProcess_DoReturn( self, vmc );
 			self->status = DAO_VMPROC_SUSPENDED;
 			self->pauseType = DAO_VMP_YIELD;
 			self->topFrame->entry = (short)(vmc - vmcBase);

@@ -626,6 +626,11 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 		/* auto-cast tuple type, on the following conditions:
 		 * (1) the item values of "dest" must match exactly to the item types of "tp";
 		 * (2) "tp->mapNames" must contain "(*dest)->xTuple.unitype->mapNames"; */
+		if( src->xTuple.unitype == NULL ){
+			GC_IncRC( tp );
+			src->xTuple.unitype = tp;
+			return 1;
+		}
 		for(i=0; i<T; i++){
 			DaoType *it = item_types[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;

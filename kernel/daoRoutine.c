@@ -3255,8 +3255,19 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					DArray_Append( rettypes, NULL );
 					DArray_Append( rettypes, NULL );
 				}
+				k = self->routType->attrib & ct->attrib;
+				if( (k & DAO_TYPE_COROUTINE) && ! (opb & DAO_CALL_COROUT) ){
+					if( DaoType_MatchTo( (DaoType*) ct->aux, (DaoType*) self->routType->aux, defs ) == 0 ){
+						printf( "Coroutine calls a coroutine that may yield different values!\n" );
+						goto InvOper;
+					}
+				}
 				if( at->tid != DAO_CLASS && ! ctchecked && ! (opb & DAO_CALL_COROUT) ) ct = & ct->aux->xType;
 				if( ct ) ct = DaoType_DefineTypes( ct, ns, defs2 );
+				if( (opb & DAO_CALL_COROUT) && (ct->attrib & DAO_TYPE_COROUTINE) ){
+					DaoType **ts = ct->nested->items.pType;
+					ct = DaoNamespace_MakeType( ns, "routine", DAO_ROUTINE, ct->aux, ts, ct->nested->size );
+				}
 
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
 				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
@@ -3346,6 +3357,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						AssertTypeMatching( ct, type[opc], defs, 0 );
 					}
 					break;
+				}
+				if( code == DVM_YIELD && !(self->routType->attrib & DAO_TYPE_COROUTINE) ){
+					printf( "Cannot yield from normal function!\n" );
+					goto InvOper;
 				}
 				if( vmc->b ==0 ){
 					if( ct && ( ct->tid ==DAO_UDF || ct->tid ==DAO_ANY ) ) continue;

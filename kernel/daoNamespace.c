@@ -381,7 +381,7 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int start, int local );
 DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
-DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types );
+DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types, int *co );
 
 int DaoNamespace_DefineType( DaoNamespace *self, const char *name, DaoType *type )
 {
@@ -433,7 +433,7 @@ int DaoNamespace_DefineType( DaoNamespace *self, const char *name, DaoType *type
 	if( value == NULL || value->type != DAO_CTYPE || tokens[k+1]->type != DTOK_LT ) goto Error;
 	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != n ) goto Error;
 	type->nested = DArray_New(0);
-	DaoParser_ParseTypeItems( parser, k+2, n-1, type->nested );
+	DaoParser_ParseTypeItems( parser, k+2, n-1, type->nested, NULL );
 	GC_IncRCs( type->nested );
 	if( parser->errors->size ) goto Error;
 	kernel = value->xCdata.ctype->kernel;
@@ -1492,32 +1492,38 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	return abtp;
 }
 DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name, 
-		uchar_t tid, DaoValue *pb, DaoType *nest[], int N )
+		uint_t tid, DaoValue *pb, DaoType *nest[], int N )
 {
-	DaoClass   *klass;
+	DaoClass *klass;
 	DaoType *any = NULL;
 	DaoType *tp;
 	DNode   *node;
 	DString *mbs = DString_New(1);
 	DArray  *nstd = DArray_New(0);
 	int i, n = strlen( name );
+	int attrib = tid >> 16;
 
+	tid = tid & 0xffff;
 	if( tid != DAO_ANY ) any = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
 
 	DString_SetMBS( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
 	if( N > 0 ){
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
-		DString_Append( mbs, nest[0]->name );
-		DArray_Append( nstd, nest[0] );
-		for(i=1; i<N; i++){
-			DString_AppendChar( mbs, tid == DAO_VARIANT ? '|' : ',' );
-			DString_Append( mbs, nest[i]->name );
-			DArray_Append( nstd, nest[i] );
+		for(i=0; i<N; i++){
+			DaoType *it = nest[i];
+			if( tid == DAO_TUPLE && it->tid == DAO_PAR_DEFAULT )
+				it = DaoNamespace_MakeType( self, it->fname->mbs, DAO_PAR_NAMED, it->aux, NULL, 0 );
+
+			if( i ) DString_AppendChar( mbs, tid == DAO_VARIANT ? '|' : ',' );
+			DString_Append( mbs, it->name );
+			DArray_Append( nstd, it );
 		}
 		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 			DString_AppendMBS( mbs, "=>" );
+			if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, '[' );
 			DString_Append( mbs, ((DaoType*)pb)->name );
+			if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, ']' );
 		}
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
@@ -1560,6 +1566,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	if( node == NULL ){
 		if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) DString_SetMBS( mbs, name );
 		tp = DaoType_New( mbs->mbs, tid, pb, nstd );
+		tp->attrib |= attrib;
 		if( pb && pb->type == DAO_CDATA ){
 			GC_ShiftRC( ((DaoCdata*)pb)->ctype->kernel, tp->kernel );
 			tp->kernel = ((DaoCdata*)pb)->ctype->kernel;
@@ -1619,7 +1626,9 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	tp = retp ? retp : & routype->aux->xType;
 	if( tp ){
 		DString_AppendMBS( abtp->name, "=>" );
+		if( routype->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( abtp->name, '[' );
 		DString_Append( abtp->name, tp->name );
+		if( routype->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( abtp->name, ']' );
 	}
 	DString_AppendMBS( abtp->name, ">" );
 	abtp->aux = (DaoValue*) tp;

@@ -1,0 +1,27 @@
+#{
+#}
+routine foo( a = 0, b = '' )=>[?]
+{
+	io.writeln( 'foo:', a );
+	return yield( 2 * a, 'by foo()' );
+}
+
+routine bar( a = 0, b = '' )=>[?]
+{
+	io.writeln( 'bar:', a, b );
+	( r, s ) = foo( a + 1, b );
+	io.writeln( 'bar:', r, s );
+	( r, s ) = yield( a + 100, b );
+	io.writeln( 'bar:', r, s );
+	return a, 'ended';
+}
+
+co = bar::( 1, "a" );
+   
+io.writeln( 'main: ', co() );
+io.writeln( 'main: ', co( 1, 'x' ) );
+io.writeln( 'main: ', co( 2, 'y' ) );
+# coroutine has been finished, the following will rise an exception.
+io.writeln( 'main: ', co( 3, 'z' ) );
+
+
