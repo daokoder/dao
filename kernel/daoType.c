@@ -953,7 +953,7 @@ void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	*tp = tmp;
 	DaoType_Delete( tp );
 }
-void DaoType_GetTypes( DaoType *self, DMap *types )
+void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 {
 	int i;
 	if( self->tid == DAO_INITYPE ){
@@ -962,11 +962,11 @@ void DaoType_GetTypes( DaoType *self, DMap *types )
 	}
 	if( self->nested ){
 		for(i=0; i<self->nested->size; i++){
-			DaoType_GetTypes( self->nested->items.pType[i], types );
+			DaoType_GetTypeHolders( self->nested->items.pType[i], types );
 		}
 	}
 	if( self->tid == DAO_TYPE && self->aux && self->aux->type == DAO_TYPE )
-		DaoType_GetTypes( & self->aux->xType, types );
+		DaoType_GetTypeHolders( & self->aux->xType, types );
 }
 
 /* interface implementations */

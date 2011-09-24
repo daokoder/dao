@@ -892,8 +892,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 	if( right < 0 ) return -1;
 
-	for(i=start; i<=right; i++) DString_Append( routine->parCodes, tokens[i]->string );
-
 	if( inter ) hostname = inter->abtype->name;
 	else if( klass ) hostname = klass->className;
 	else if( cdata ) hostname = cdata->name;
@@ -924,7 +922,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		DRoutine_AddConstant( (DRoutine*) routine, NULL ); /* no default parameter; */
 		DString_AppendMBS( pname, type->name->mbs );
 		if( routine->type == DAO_ROUTINE ){
-			DArray_Append( routine->defLocals, tokens[i] );
+			DArray_Append( routine->defLocals, tokens[start] );
 			tok = (DaoToken*) DArray_Back( routine->defLocals );
 			DaoToken_Set( tok, 1, 0, routine->parCount, "self" );
 			MAP_Insert( routine->localVarType, module->regCount, type );
@@ -1128,7 +1126,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 
 	for(i=0; i<routine->routType->nested->size; i++){
 		type = routine->routType->nested->items.pType[i];
-		if( type ) DaoType_GetTypes( type, self->initTypes );
+		if( type ) DaoType_GetTypeHolders( type, self->initTypes );
 	}
 
 	module->parEnd = right;
@@ -2292,18 +2290,23 @@ static int DaoParser_UseConstructor( DaoParser *self, DRoutine *rout, int t1, in
 	}
 	DaoFunctree_Add( host->classRoutines, rout );
 	DString_Assign( s1, host->className );
-	DString_Append( s1, rout->parCodes );
+	DString_AppendChar( s1, ':' );
+	DString_Append( s1, rout->routType->name );
 	DaoClass_AddOvldRoutine( host, s1, (DaoRoutine*) rout );
 	DString_Delete( s1 );
 	DString_Delete( s2 );
 	return 1;
 }
+static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int attribs );
+
 static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	DaoType *abtp;
+	DaoRoutine *tmpRoutine;
+	DaoParser *tmpParser;
+	DaoType *type;
 	DString *str;
 	int estart = start;
 	int use = start;
@@ -2319,28 +2322,41 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		DString *name = tokens[start]->string;
 		DaoClass *klass = NULL, *host = self->hostClass;
 		DaoCdata *cdata = NULL;
-		int i;
+		int i, right;
 		for(i=0; i<host->superClass->size; i++){
 			if( host->superClass->items.pValue[i]->type == DAO_CLASS ){
 				klass = host->superClass->items.pClass[i];
-				if( ! DString_EQ( klass->className, name ) ) klass = NULL;
-				if( klass ) break;
+				if( DString_EQ( klass->className, name ) ) break;
+				klass = NULL;
 			}else if( host->superClass->items.pValue[i]->type == DAO_CTYPE ){
 				cdata = host->superClass->items.pCdata[i];
-				if( ! DString_EQ( cdata->ctype->name, name ) ) cdata = NULL;
-				if( cdata ) break;
+				if( DString_EQ( cdata->ctype->name, name ) ) break;
+				cdata = NULL;
 			}
 		}
-		DString_Clear( signature );
-		if( start+1 <= to && tokens[start+1]->type == DTOK_LB ){
-			int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, to );
-			if( rb <0 ) return -1;
-			DString_Append( signature, name );
-			for(i=start+1; i<=rb; i++) DString_Append( signature, tokens[i]->string );
-			start = rb + 1;
-		}else{
-			start += 1;
+		if( klass == NULL && cdata == NULL ){
+			DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS_CTYPE, tokens[start]->string );
+			DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
+			return -1;
 		}
+		type = klass ? klass->objType : cdata->ctype->kernel->abtype;
+		tmpParser = DaoParser_NewRoutineParser( self, start, 0 );
+		tmpRoutine = tmpParser->routine;
+		GC_ShiftRC( type, tmpRoutine->routHost );
+		tmpRoutine->routHost = type;
+		tmpParser->hostType = type;
+		tmpParser->hostClass = klass;
+		right = DaoParser_ParsePrototype( self, tmpParser, DKEY_ROUTINE, start );
+		if( right < 0 ){
+			DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
+			return -1;
+		}
+		DString_Assign( signature, tmpRoutine->routName );
+		DString_AppendChar( signature, ':' );
+		DString_Append( signature, tmpRoutine->routType->name );
+		DaoParser_Delete( tmpParser );
+		DaoRoutine_Delete( tmpRoutine );
+		start = right + 1;
 		if( klass ){
 			if( signature->size ){
 				DRoutine *rs = (DRoutine*)DaoClass_GetOvldRoutine( klass, signature );
@@ -2365,28 +2381,24 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
 				return -1;
 			}
-			if( signature->size ) DString_Erase( signature, 0, name->size );
+			if( signature->size ) DString_Erase( signature, 0, name->size + 1 );
 			if( func->type == DAO_FUNCTION ){
 				DRoutine *rs = (DRoutine*) func;
-				if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){
-					/* printf( "%s\n", rs->parCodes->mbs ); */
+				if( signature->size ==0 || DString_EQ( signature, rs->routType->name ) ){
+					/* printf( "%s\n", rs->routType->name->mbs ); */
 					DaoParser_UseConstructor( self, rs, use, start );
 					return start;
 				}
 			}else{
 				for(i=0; i<meta->routines->size; i++){
 					DRoutine *rs = (DRoutine*) meta->routines->items.pRout[i];
-					if( signature->size ==0 || DString_EQ( signature, rs->parCodes ) ){
-						/* printf( "%s\n", rs->parCodes->mbs ); */
+					if( signature->size ==0 || DString_EQ( signature, rs->routType->name ) ){
+						/* printf( "%s\n", rs->routType->name->mbs ); */
 						DaoParser_UseConstructor( self, rs, use, start );
 						if( signature->size ) break;
 					}
 				}
 			}
-		}else{
-			DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS_CTYPE, tokens[start]->string );
-			DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
-			return -1;
 		}
 		return start;
 	}
@@ -2395,8 +2407,8 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
 		return -1;
 	}
-	abtp = DaoParser_ParseType( self, start, to, & start, NULL );
-	if( abtp == NULL ){
+	type = DaoParser_ParseType( self, start, to, & start, NULL );
+	if( type == NULL ){
 		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
 		return 0;
 	}
@@ -2405,11 +2417,11 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
 		return 0;
 	}
-	abtp = DaoType_Copy( abtp );
-	DString_Assign( abtp->name, str );
+	type = DaoType_Copy( type );
+	DString_Assign( type->name, str );
 	/*  XXX typedef in routine or class */
-	DaoNamespace_AddType( myNS, str, abtp );
-	DaoNamespace_AddTypeConstant( myNS, str, abtp );
+	DaoNamespace_AddType( myNS, str, type );
+	DaoNamespace_AddTypeConstant( myNS, str, type );
 	return start;
 }
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n );
@@ -2526,7 +2538,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( right < 0 ) goto InvalidDefinition;
 		DString_Assign( mbs2, tmpRoutine->routName );
 		DString_Assign( mbs, tmpRoutine->routName );
-		DString_Append( mbs, tmpRoutine->parCodes );
+		DString_AppendChar( mbs, ':' );
+		DString_Append( mbs, tmpRoutine->routType->name );
 		rout= DaoClass_GetOvldRoutine( & scope->xClass, mbs );
 		if( ! rout ){
 			DaoNamespace *nsdef = NULL;
@@ -2583,7 +2596,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		right = DaoParser_ParsePrototype( self, tmpParser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
 		DString_Assign( mbs, tmpRoutine->routName );
-		DString_Append( mbs, tmpRoutine->parCodes );
+		DString_AppendChar( mbs, ':' );
+		DString_Append( mbs, tmpRoutine->routType->name );
 		if( self->isClassBody ){
 			klass = self->hostClass;
 			rout = DaoClass_GetOvldRoutine( klass, mbs );

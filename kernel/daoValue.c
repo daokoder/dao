@@ -598,6 +598,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 	if( tm ==0 ){
 		printf( "tp = %p; src = %p, type = %i\n", tp, src, src->type );
 		printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
+		if( src->type == DAO_LIST ) printf( "%s\n", src->xList.unitype->name->mbs );
 		if( src->type == DAO_TUPLE ) printf( "%p\n", src->xTuple.unitype );
 	}
 	printf( "src->type = %p\n", src );

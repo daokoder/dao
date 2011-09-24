@@ -122,7 +122,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 
 /* all DAO_INITYPE: @T ... */
-void DaoType_GetTypes( DaoType *self, DMap *types );
+void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 
 
 #define NESTYPE(t,i) ((t)->nested->items.pType[i])

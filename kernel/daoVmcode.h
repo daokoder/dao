@@ -488,4 +488,6 @@ struct DaoVmCodeX
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );
 
+#define DaoGetSectionCode(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
+
 #endif

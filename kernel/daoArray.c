@@ -601,8 +601,7 @@ void DaoVmcArray_Insert( DaoVmcArray *self, DaoVmCode code, size_t pos )
 		self->codes = self->buf;
 	}
 	if( pos < self->size ){
-		memmove( self->codes + pos + 1, self->codes + pos, 
-				(self->size-pos)*sizeof(DaoVmCode) );
+		memmove( self->codes + pos + 1, self->codes + pos, (self->size-pos)*sizeof(DaoVmCode) );
 	}
 	self->codes[ pos ] = code;
 	self->size ++;

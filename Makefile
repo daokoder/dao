@@ -76,14 +76,14 @@ HAS_FILE = test -f
 
 OBJECTS = kernel/daoArray.o \
 		  kernel/daoMap.o \
+		  kernel/daoType.o \
 		  kernel/daoValue.o \
 		  kernel/daoContext.o \
 		  kernel/daoProcess.o \
-		  kernel/daoType.o \
+		  kernel/daoRoutine.o \
+		  kernel/daoGC.o \
 		  kernel/daoStdtype.o \
 		  kernel/daoNamespace.o \
-		  kernel/daoGC.o \
-		  kernel/daoRoutine.o \
 		  kernel/daoString.o \
 		  kernel/daoStdlib.o \
 		  kernel/daoMacro.o \

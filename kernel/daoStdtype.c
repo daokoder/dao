@@ -1747,10 +1747,10 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoValue *chr = (DaoValue*)(void*)&chint;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DString *data = self->data;
 	size_t i, k, N = data->size;
-	if( sect->code != DVM_SECT ) return;
+	if( sect == NULL ) return;
 	switch( funct ){
 	case DVM_FUNCT_MAP : string = DaoProcess_PutValue( proc, p[0] )->xString.data; break;
 	case DVM_FUNCT_SELECT : string = DaoProcess_PutMBString( proc, "" ); break;
@@ -2105,29 +2105,6 @@ static void DaoLIST_Erase( DaoProcess *proc, DaoValue *p[], int N )
 	size_t start = (size_t)p[1]->xInteger.value;
 	size_t n = (size_t)p[2]->xInteger.value;
 	DArray_Erase( self->items, start, n );
-}
-static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoList *self = & p[0]->xList;
-	DaoList *ids = & p[1]->xList;
-	size_t i, k = self->items->size;
-	for(i=0; i<ids->items->size; i++){
-		dint id = ids->items->items.pValue[i]->xInteger.value;
-		if( id < 0 ) id += self->items->size;
-		if( id < 0 || id >= self->items->size ) continue;
-		if( id < k ) k = id;
-		GC_DecRC( self->items->items.pValue[id] );
-		self->items->items.pValue[id] = NULL; /* mark as deleted */
-	}
-	for(i=k; i<self->items->size; i++){
-		DaoValue *val = self->items->items.pValue[i];
-		if( val == NULL ) continue;
-		self->items->items.pValue[k] = val;
-		k += 1;
-	}
-	self->items->size = k;
-	/* to possibly reduce buffer size: */
-	DArray_Resize( self->items, k, NULL );
 }
 static void DaoLIST_Clear( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2571,9 +2548,9 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items->items.pValue;
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	size_t i, j, N = list->items->size;
-	if( sect->code != DVM_SECT ) return;
+	if( sect == NULL ) return;
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
@@ -2630,9 +2607,9 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items->items.pValue;
 	DaoValue *res = NULL, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	size_t i, j, first = 0, D = 0, N = list->items->size;
-	if( sect->code != DVM_SECT || list->items->size == 0 ) return;
+	if( sect == NULL || list->items->size == 0 ) return;
 	if( etype->tid != DAO_ENUM ) etype = func->routType->nested->items.pType[2];
 	if( p[1]->type == DAO_ENUM && p[1]->xEnum.etype == etype ){
 		D = p[1]->xEnum.value;
@@ -2655,11 +2632,66 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	DaoProcess_PutValue( proc, res );
 }
+static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoList *list = & p[0]->xList;
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue **items = list->items->items.pValue;
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	dint *count = DaoProcess_PutInteger( proc, 0 );
+	size_t i, j, N = list->items->size;
+	int mode = p[1]->xEnum.value;
+	if( sect == NULL ) return;
+	for(j=0; j<N; j++){
+		i = mode == 2 ? N-1-j : j; /* mode = $last */
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
+		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
+		DaoProcess_ExecuteSection( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->stackValues[0]->xInteger.value ){
+			GC_DecRC( items[i] );
+			items[i] = NULL; /* mark as deleted */
+			if( mode ) break; /* mode != $all */
+		}
+	}
+	for(i=0, j=0; i<list->items->size; i++){
+		DaoValue *val = items[i];
+		if( val ) items[j++] = val;
+	}
+	*count = list->items->size - j;
+	list->items->size = j;
+	DArray_Resize( list->items, j, NULL ); /* to possibly reduce buffer size: */
+}
+static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoList *list = & p[0]->xList;
+	DaoList *list2 = & p[1]->xList;
+	DaoList *list3 = DaoProcess_PutList( proc );
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue **items = list->items->items.pValue;
+	DaoValue **items2 = list2->items->items.pValue;
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	size_t i, j, N = list->items->size;
+	int direction = p[2]->xEnum.value;
+	if( sect == NULL ) return;
+	if( N > list2->items->size ) N = list2->items->size;
+	for(j=0; j<N; j++){
+		i = direction ? N-1-j : j;
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
+		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, items2[i] );
+		if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, index );
+		DaoProcess_ExecuteSection( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		DaoList_Append( list3, proc->stackValues[0] );
+	}
+}
 static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
-	{ DaoLIST_Erase,    "erase( self :list<any>, start=0, n=1 )" },
-	{ DaoLIST_Erase2,   "erase( self :list<any>, indices : list<int> )" },
 	{ DaoLIST_Clear,    "clear( self :list<any> )" },
 	{ DaoLIST_Size,     "size( self :list<any> )=>int" },
 	{ DaoLIST_Resize,   "resize( self :list<any>, size :int )" },
@@ -2676,7 +2708,10 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
 	{ DaoLIST_Iter,     "__for_iterator__( self :list<any>, iter : for_iterator )" },
 
-	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T2]=>list<@T2>" },
+	{ DaoLIST_Erase,    "erase( self :list<@T>, start=0, n=1 )" },
+	{ DaoLIST_Erase2,   "erase( self :list<@T>, mode :enum<all,first,last> )[item:@T,index:int=>int]=>int" },
+	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@V]=>list<@V>" },
+	{ DaoLIST_Map2,     "map( self :list<@T>, other :list<@S>, direction :enum<forward,backward>=$forward )[item:@T,item2:@S,index:int=>@V]=>list<@V>" },
 	{ DaoLIST_Reduce,   "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T" },
 	{ DaoLIST_Reduce,   "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
 	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>" },
@@ -3135,10 +3170,10 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	DaoMap *map = NULL;
 	DaoList *list = NULL;
 	DaoType *type = self->unitype;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoValue *res;
 	DNode *node;
-	if( sect->code != DVM_SECT ) return;
+	if( sect == NULL ) return;
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
@@ -3187,8 +3222,8 @@ static void DaoMAP_Count( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Keys( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoVmCode *sect = proc->activeCode + 2;
-	if( sect->code != DVM_SECT ){
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	if( sect == NULL ){
 		DaoMAP_Key( proc, p, N );
 		return;
 	}
@@ -3196,8 +3231,8 @@ static void DaoMAP_Keys( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Values( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoVmCode *sect = proc->activeCode + 2;
-	if( sect->code != DVM_SECT ){
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	if( sect == NULL ){
 		DaoMAP_Value( proc, p, N );
 		return;
 	}

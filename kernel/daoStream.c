@@ -437,7 +437,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	DString *fname;
 	DaoValue *res;
 	DaoString *line;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoList *list = DaoProcess_PutList( proc );
 	int chop = p[1]->xInteger.value;
 	char buf[IO_BUF_SIZE];
@@ -456,7 +456,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 		return;
 	}
-	if( sect->code != DVM_SECT ){
+	if( sect == NULL ){
 		line = DaoString_New(1);
 		while( DaoFile_ReadLine( fin, line->data ) ){
 			if( chop ) DString_Chop( line->data );
@@ -481,14 +481,14 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *res;
 	DaoString *line;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoStream *self = & p[0]->xStream;
 	int i = 0, count = p[1]->xInteger.value;
 	int chop = p[2]->xInteger.value;
 	char buf[IO_BUF_SIZE];
 
-	if( sect->code != DVM_SECT ){
+	if( sect == NULL ){
 		line = DaoString_New(1);
 		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
 			if( chop ) DString_Chop( line->data );

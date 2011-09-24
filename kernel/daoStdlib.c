@@ -1336,66 +1336,6 @@ DaoTypeBase libReflectTyper = {
 	"reflect", NULL, NULL, reflMeths, {0}, {0}, NULL, NULL
 };
 
-static void Corout_Create( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess *vmp = DaoProcess_Create( proc, p, N );
-	if( vmp == NULL ) return;
-	vmp->parResume = DArray_New(D_VALUE);
-	vmp->parYield = DArray_New(D_VALUE);
-	DaoProcess_PutValue( proc, (DaoValue*) vmp );
-}
-static void Corout_Resume( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoList *list = DaoProcess_PutList( proc );
-	DaoProcess *self = (DaoProcess*) p[0];
-	if( self->type != DAO_PROCESS || self->parResume == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "need coroutine object" );
-		return;
-	}else if( self->status == DAO_VMPROC_FINISHED ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine execution is finished." );
-		return;
-	}
-
-	DaoProcess_Resume( self, p+1, N-1, list );
-	if( self->status == DAO_VMPROC_ABORTED )
-		DaoProcess_RaiseException( proc, DAO_ERROR, "coroutine execution is aborted." );
-}
-static void Corout_Status( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess *self = (DaoProcess*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
-	if( self->type != DAO_PROCESS || self->parResume == NULL ){
-		DString_SetMBS( res, "not_a_coroutine" );
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "need coroutine object" );
-		return;
-	}
-
-	switch( self->status ){
-	case DAO_VMPROC_SUSPENDED : DString_SetMBS( res, "suspended" ); break;
-	case DAO_VMPROC_RUNNING :   DString_SetMBS( res, "running" ); break;
-	case DAO_VMPROC_ABORTED :   DString_SetMBS( res, "aborted" ); break;
-	case DAO_VMPROC_FINISHED :  DString_SetMBS( res, "finished" ); break;
-	default : break;
-	}
-}
-static void Corout_Yield( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_Yield( proc, p, N, DaoProcess_PutList( proc ) );
-	proc->pauseType = DAO_VMP_YIELD;
-}
-static DaoFuncItem coroutMeths[]=
-{
-	{ Corout_Create,    "create( object, ... )" },
-	{ Corout_Resume,    "resume( object, ... )" },
-	{ Corout_Status,    "status( object )" },
-	{ Corout_Yield,     "yield( ... )" },
-	{ NULL, NULL }
-};
-
-DaoTypeBase coroutTyper = {
-	"coroutine", NULL, NULL, coroutMeths, {0}, {0}, NULL, NULL
-};
-
 /**/
 static void MATH_abs( DaoProcess *proc, DaoValue *p[], int N )
 {

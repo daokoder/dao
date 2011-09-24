@@ -2928,14 +2928,14 @@ static DaoFuncItem numarMeths[] =
 	{ DaoARRAY_FFT,    "fft( self :array<complex>, direction :enum<forward, backward> )" },
 	{ DaoARRAY_Iter,   "__for_iterator__( self :array<any>, iter : for_iterator )" },
 
-	{ DaoARRAY_Map,    "map( self :array<@T> )[E:@T,I:int,J:int,K:int,L:int,M:int=>@T2]=>array<@T2>" },
-	{ DaoARRAY_Reduce, "reduce( self :array<@T> )[E:@T,R:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>@T" },
-	{ DaoARRAY_Reduce, "reduce( self :array<@T>, init :@V )[E:@T,R:@V,I:int,J:int,K:int,L:int,M:int=>@V]=>@V" },
-	{ DaoARRAY_Select, "select( self :array<@T> )[E:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<@T>" },
-	{ DaoARRAY_Index2, "index( self :array<@T> )[E:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<array<int>>" },
-	{ DaoARRAY_Count,  "count( self :array<@T> )[E:@T,I:int,J:int,K:int,L:int,M:int=>int]=>int" },
-	{ DaoARRAY_Each,   "each( self :array<@T> )[E:@T,I:int,J:int,K:int,L:int,M:int]" },
-	{ DaoARRAY_Apply,  "apply( self :array<@T> )[E:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>array<@T>" },
+	{ DaoARRAY_Map,    "map( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T2]=>array<@T2>" },
+	{ DaoARRAY_Reduce, "reduce( self :array<@T> )[item:@T,res:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>@T" },
+	{ DaoARRAY_Reduce, "reduce( self :array<@T>, init :@V )[item:@T,res:@V,I:int,J:int,K:int,L:int,M:int=>@V]=>@V" },
+	{ DaoARRAY_Select, "select( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<@T>" },
+	{ DaoARRAY_Index2, "index( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<array<int>>" },
+	{ DaoARRAY_Count,  "count( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>int" },
+	{ DaoARRAY_Each,   "each( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int]" },
+	{ DaoARRAY_Apply,  "apply( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>array<@T>" },
 	{ NULL, NULL }
 };
 
@@ -4260,7 +4260,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoArray *array = NULL;
 	DaoArray *indices = NULL;
 	DaoArray *self2 = & p[0]->xArray;
-	DaoVmCode *sect = proc->activeCode + 2;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoValue **idval = proc->activeValues + sect->a + 1;
 	DaoValue *res = NULL, *elem = proc->activeValues[sect->a];
 	DaoArray *ref = self2->reference;
@@ -4274,7 +4274,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	int j, vdim = sect->b - 1;
 	dint *count = NULL;
 
-	if( sect->code != DVM_SECT ) return;
+	if( sect == NULL ) return;
 	if( elem == NULL || elem->type != self->numType ){
 		elem = (DaoValue*)(void*) &com;
 		elem->type = self->numType;

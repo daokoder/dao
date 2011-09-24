@@ -8,15 +8,11 @@ class Test
 		io.writeln( 'casting to int' );
 		return value.sum();
 	}
-	# conversion to float or string:
-	routine cast( @T<float|string> ) => @T {
-	#operator cast() => @T<float|string> {
-		io.writeln( 'casting to float or string' )
-		switch( @T ?< type(float|string) ){
-		case 1 : return value.sum() * 1.23; # convert to float
-		case 2 : return value.join(); # convert to string
-		}
-		return 0;
+	# conversion to string:
+	#routine cast( @T<string> ) => @T {
+	operator cast() => string {
+		io.writeln( 'casting to string' )
+		return value.join(); # convert to string
 	}
 	operator cast() => array<int> {
 		io.writeln( 'casting to array<int>' );

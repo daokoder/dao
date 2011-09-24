@@ -26,7 +26,6 @@ DaoType       *routHost; \
 DaoType       *routType; \
 DString       *routName; \
 DString       *routHelp; \
-DString       *parCodes; \
 DArray        *routConsts; \
 DaoNamespace  *nameSpace
 

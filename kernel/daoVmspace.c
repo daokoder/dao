@@ -1512,7 +1512,6 @@ extern DaoTypeBase libMathTyper;
 extern DaoTypeBase libReflectTyper;
 extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
-extern DaoTypeBase coroutTyper;
 
 extern DaoTypeBase DaoFdSet_Typer;
 
@@ -1845,7 +1844,6 @@ DaoVmSpace* DaoInit()
 	DaoNamespace_SetupType( ns, & futureTyper );
 #endif
 	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );
-	DaoNamespace_WrapType( vms->nsInternal, & coroutTyper );
 	DaoNamespace_WrapType( vms->nsInternal, & libStandardTyper );
 	DaoNamespace_WrapType( vms->nsInternal, & libSystemTyper );
 	DaoNamespace_WrapType( vms->nsInternal, & libMathTyper );
@@ -1902,7 +1900,6 @@ void DaoQuit()
 	DaoTypeBase_Free( & thdMasterTyper );
 #endif
 	DaoTypeBase_Free( & vmpTyper );
-	DaoTypeBase_Free( & coroutTyper );
 
 	DaoTypeBase_Free( & libStandardTyper );
 	DaoTypeBase_Free( & libMathTyper );
