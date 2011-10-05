@@ -4262,24 +4262,18 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoArray *self2 = & p[0]->xArray;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoValue **idval = proc->activeValues + sect->a + 1;
-	DaoValue *res = NULL, *elem = proc->activeValues[sect->a];
+	DaoValue *elem, *res = NULL;
 	DaoArray *ref = self2->reference;
 	DaoArray *self = ref ? ref : self2;
 	DArray *slice = self2->slice;
 	size_t *dims = self->dims->items.pSize;
 	size_t N = DaoArray_SliceSize( self2 );
 	size_t i, id, id2, first = 0;
-	int D = self->dims->size;
+	int j, D = self->dims->size;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
-	int j, vdim = sect->b - 1;
+	int entry, vdim = sect->b - 1;
 	dint *count = NULL;
 
-	if( sect == NULL ) return;
-	if( elem == NULL || elem->type != self->numType ){
-		elem = (DaoValue*)(void*) &com;
-		elem->type = self->numType;
-		elem = DaoProcess_SetValue( proc, sect->a, elem );
-	}
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 		array = DaoProcess_PutArray( proc );
@@ -4301,10 +4295,20 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 			DaoArray_GetValue( self, id, res );
 			first = 1;
 		}
+		DaoProcess_PutValue( proc, res );
 		break;
 	case DVM_FUNCT_SELECT : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, ref ? ref : self ); break;
+	}
+	if( sect == NULL ) return;
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	elem = proc->activeValues[sect->a];
+	if( elem == NULL || elem->type != self->numType ){
+		elem = (DaoValue*)(void*) &com;
+		elem->type = self->numType;
+		elem = DaoProcess_SetValue( proc, sect->a, elem );
 	}
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
 	for(i=first; i<N; i++){
@@ -4322,7 +4326,8 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		}
 		if( funct == DVM_FUNCT_FOLD ) DaoProcess_SetValue( proc, sect->a+1, res );
 		DaoArray_GetValue( self, id, elem );
-		DaoProcess_ExecuteSection( proc );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_MAP :
@@ -4342,6 +4347,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 			break;
 		}
 	}
+	DaoProcess_PopFrame( proc );
 	if( indices ) DaoArray_Delete( indices );
 	if( funct == DVM_FUNCT_FOLD ){
 		DaoProcess_SetActiveFrame( proc, proc->topFrame );

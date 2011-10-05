@@ -246,7 +246,7 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 void DaoProcess_PopFrame( DaoProcess *self )
 {
 	if( self->topFrame == NULL ) return;
-	if( self->topFrame->state == DVM_SPEC_RUN ){
+	if( self->topFrame->state == DVM_SECT_POPFRAME ){
 		GC_DecRC( self->topFrame->object );
 		GC_DecRC( self->topFrame->routine );
 		self->topFrame->routine = NULL;
@@ -431,7 +431,7 @@ int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *re
 	return 1;
 }
 
-DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
+static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *frame = self->topFrame;
 	DaoType *cbtype = NULL;
@@ -461,19 +461,19 @@ DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
 	return NULL;
 }
-static int DaoProcess_PushSectionFrame( DaoProcess *self )
+DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	int returning = -1;
 
-	if( frame == NULL ) return 0;
+	if( frame == NULL ) return NULL;
 	if( self->topFrame->routine ){
 		self->topFrame->entry = 1 + self->activeCode - self->topFrame->codes;
 		returning = self->activeCode->c;
 	}
 	next = DaoProcess_PushFrame( self, 0 );
 	next->entry = frame->entry + 2;
-	next->state = DVM_SPEC_RUN;
+	next->state = DVM_SECT_KEEPFRAME;
 	next->depth = 0;
 
 	GC_ShiftRC( frame->object, next->object );
@@ -490,12 +490,7 @@ static int DaoProcess_PushSectionFrame( DaoProcess *self )
 	next->sect = frame;
 	next->returning = returning;
 	DaoProcess_SetActiveFrame( self, frame );
-	return 1;
-}
-int DaoProcess_ExecuteSection( DaoProcess *self )
-{
-	if( DaoProcess_PushSectionFrame( self ) == 0 ) return DAO_VMPROC_ABORTED;
-	return DaoProcess_Execute( self );
+	return frame;
 }
 int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl )
 {
@@ -1271,10 +1266,11 @@ CallEntry:
 			self->activeCode = vmc;
 			if( routine->routType->cbtype ){
 				DaoVmCode *vmc2;
-				if( DaoProcess_PushSectionFrame( self ) ==0 ){
+				if( DaoProcess_PushSectionFrame( self ) == NULL ){
 					printf( "No code section is found\n" ); //XXX
 					goto FinishProc;
 				}
+				self->topFrame->state = DVM_SECT_POPFRAME;
 				vmc2 = self->topFrame->codes + self->topFrame->entry - 1;
 				locVars = self->stackValues + topFrame->stackBase;
 				for(i=0; i<vmc2->b; i++){
@@ -2368,6 +2364,13 @@ CheckException:
 
 FinishCall:
 
+	if( self->topFrame->state & DVM_SECT_KEEPFRAME ){
+		if( self->exceptions->size > exceptCount ){
+			self->status = DAO_VMPROC_ABORTED;
+			goto ReturnFalse;
+		}
+		goto ReturnTrue;
+	}
 	DaoProcess_PopFrame( self );
 	goto CallEntry;
 

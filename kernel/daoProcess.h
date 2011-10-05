@@ -19,15 +19,16 @@
 #include"time.h"
 #include"stdlib.h"
 
-#define DVM_MAKE_OBJECT (1<<6)
-#define DVM_SPEC_RUN (1<<7)
+#define DVM_MAKE_OBJECT    (1<<5)
+#define DVM_SECT_POPFRAME  (1<<6)
+#define DVM_SECT_KEEPFRAME (1<<7)
 
 #define DVM_MAX_TRY_DEPTH 16
 
 struct DaoStackFrame
 {
 	ushort_t    entry;     /* entry code id */
-	ushort_t    state;     /* context state */
+	ushort_t    state;     /* frame state */
 	ushort_t    returning; /* return register id */
 	ushort_t    depth; /* depth of exception scopes */
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
@@ -117,6 +118,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 void DaoProcess_Delete( DaoProcess *self );
 
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
+DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self );
 void DaoProcess_PopFrame( DaoProcess *self );
 void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback );
 
@@ -135,11 +137,8 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[]
 
 /* Execute from the top of the calling stack */
 int DaoProcess_Execute( DaoProcess *self );
-int DaoProcess_ExecuteSection( DaoProcess *self );
 
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
-
-DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self );
 
 DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
 

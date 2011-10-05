@@ -456,7 +456,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 		return;
 	}
-	if( sect == NULL ){
+	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New(1);
 		while( DaoFile_ReadLine( fin, line->data ) ){
 			if( chop ) DString_Chop( line->data );
@@ -464,16 +464,19 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		DaoString_Delete( line );
 	}else{
+		ushort_t entry = proc->topFrame->entry;
 		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
 		tmp.data = p[0]->xString.data;
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		while( DaoFile_ReadLine( fin, line->data ) ){
 			if( chop ) DString_Chop( line->data );
-			DaoProcess_ExecuteSection( proc );
+			proc->topFrame->entry = entry;
+			DaoProcess_Execute( proc );
 			if( proc->status == DAO_VMPROC_ABORTED ) break;
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
 		}
+		DaoProcess_PopFrame( proc );
 	}
 	fclose( fin );
 }
@@ -488,7 +491,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	int chop = p[2]->xInteger.value;
 	char buf[IO_BUF_SIZE];
 
-	if( sect == NULL ){
+	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New(1);
 		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
 			if( chop ) DString_Chop( line->data );
@@ -496,17 +499,20 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		DaoString_Delete( line );
 	}else{
+		ushort_t entry = proc->topFrame->entry;
 		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
 		DString tmp2 = DString_WrapMBS( "" );
 		tmp.data = & tmp2;
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
 			if( chop ) DString_Chop( line->data );
-			DaoProcess_ExecuteSection( proc );
+			proc->topFrame->entry = entry;
+			DaoProcess_Execute( proc );
 			if( proc->status == DAO_VMPROC_ABORTED ) break;
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
 		}
+		DaoProcess_PopFrame( proc );
 	}
 }
 
