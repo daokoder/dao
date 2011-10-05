@@ -1747,7 +1747,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoValue *chr = (DaoValue*)(void*)&chint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DString *data = self->data;
 	size_t i, k, N = data->size;
 	if( sect == NULL ) return;
@@ -2545,10 +2545,11 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	int direction = funct == DVM_FUNCT_COUNT ? 0 : p[1]->xEnum.value;
 	DaoList *list = & p[0]->xList;
 	DaoList *list2 = NULL;
+	DaoTuple *tuple = NULL;
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items->items.pValue;
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	size_t i, j, N = list->items->size;
 	if( sect == NULL ) return;
 	switch( funct ){
@@ -2568,16 +2569,29 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_MAP : DaoList_Append( list2, res ); break;
-		case DVM_FUNCT_SELECT : if( ! DaoValue_IsZero( res ) ) DaoList_Append( list2, items[i] ); break;
-		case DVM_FUNCT_INDEX : if( ! DaoValue_IsZero( res ) ) DaoList_Append( list2, index ); break;
-		case DVM_FUNCT_COUNT : *count += ! DaoValue_IsZero( res ); break;
+		case DVM_FUNCT_SELECT : if( res->xInteger.value ) DaoList_Append( list2, items[i] ); break;
+		case DVM_FUNCT_INDEX : if( res->xInteger.value ) DaoList_Append( list2, index ); break;
+		case DVM_FUNCT_COUNT : *count += res->xInteger.value != 0; break;
 		case DVM_FUNCT_APPLY : DaoList_SetItem( list, res, i ); break;
 		}
+		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
+			DaoProcess_SetActiveFrame( proc, proc->topFrame );
+			tuple = DaoProcess_PutTuple( proc );
+			GC_ShiftRC( items[i], tuple->items[1] );
+			tuple->items[1] = items[i];
+			tuple->items[0]->xInteger.value = j;
+			break;
+		}
 	}
+	if( funct == DVM_FUNCT_FIND && tuple == NULL ) DaoProcess_PutValue( proc, null );
 }
 static void DaoLIST_Map( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_MAP );
+}
+static void DaoLIST_Find( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_FIND );
 }
 static void DaoLIST_Select( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -2607,7 +2621,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items->items.pValue;
 	DaoValue *res = NULL, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	size_t i, j, first = 0, D = 0, N = list->items->size;
 	if( sect == NULL || list->items->size == 0 ) return;
 	if( etype->tid != DAO_ENUM ) etype = func->routType->nested->items.pType[2];
@@ -2638,7 +2652,7 @@ static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items->items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	dint *count = DaoProcess_PutInteger( proc, 0 );
 	size_t i, j, N = list->items->size;
 	int mode = p[1]->xEnum.value;
@@ -2673,7 +2687,7 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoValue **items = list->items->items.pValue;
 	DaoValue **items2 = list2->items->items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	size_t i, j, N = list->items->size;
 	int direction = p[2]->xEnum.value;
 	if( sect == NULL ) return;
@@ -2715,6 +2729,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Reduce,   "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T" },
 	{ DaoLIST_Reduce,   "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
 	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>" },
+	{ DaoLIST_Find,     "find( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>tuple<index:int,value:@T>|null" },
 	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>" },
 	{ DaoLIST_Count,    "count( self :list<@T> )[item:@T,index:int=>int]=>int" },
 	{ DaoLIST_Each,     "each( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]" },
@@ -3060,32 +3075,33 @@ static void DaoMAP_Insert( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMap *self = & p[0]->xMap;
-	DaoTuple *res = DaoProcess_PutTuple( proc );
+	DaoTuple *res = NULL;
 	DNode *node;
 	switch( (int)p[2]->xEnum.value ){
 	case 0 :
 		node = MAP_FindLE( self->items, p[1] );
-		if( node == NULL ) return;
-		res->items[0]->xInteger.value = 1;
-		DaoValue_Copy( node->key.pValue, res->items + 1 );
-		DaoValue_Copy( node->value.pValue, res->items + 2 );
+		if( node == NULL ) break;
+		res = DaoProcess_PutTuple( proc );
+		DaoValue_Copy( node->key.pValue, res->items );
+		DaoValue_Copy( node->value.pValue, res->items + 1 );
 		break;
 	case 1  :
 		node = MAP_Find( self->items, p[1] );
-		if( node == NULL ) return;
-		res->items[0]->xInteger.value = 1;
-		DaoValue_Copy( node->key.pValue, res->items + 1 );
-		DaoValue_Copy( node->value.pValue, res->items + 2 );
+		if( node == NULL ) break;
+		res = DaoProcess_PutTuple( proc );
+		DaoValue_Copy( node->key.pValue, res->items );
+		DaoValue_Copy( node->value.pValue, res->items + 1 );
 		break;
 	case 2  :
 		node = MAP_FindGE( self->items, p[1] );
-		if( node == NULL ) return;
-		res->items[0]->xInteger.value = 1;
-		DaoValue_Copy( node->key.pValue, res->items + 1 );
-		DaoValue_Copy( node->value.pValue, res->items + 2 );
+		if( node == NULL ) break;
+		res = DaoProcess_PutTuple( proc );
+		DaoValue_Copy( node->key.pValue, res->items );
+		DaoValue_Copy( node->value.pValue, res->items + 1 );
 		break;
 	default : break;
 	}
+	if( res == NULL ) DaoProcess_PutValue( proc, null );
 }
 static void DaoMAP_Key( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3169,8 +3185,9 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	DaoMap *self = & p[0]->xMap;
 	DaoMap *map = NULL;
 	DaoList *list = NULL;
+	DaoTuple *tuple = NULL;
 	DaoType *type = self->unitype;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoValue *res;
 	DNode *node;
 	if( sect == NULL ) return;
@@ -3198,19 +3215,29 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 				DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );
 			break;
 		case DVM_FUNCT_SELECT :
-			if( ! DaoValue_IsZero( res ) )
+			if( res->xInteger.value )
 				DaoMap_Insert( map, node->key.pValue, node->value.pValue );
 			break;
 		case DVM_FUNCT_KEYS :
-			if( ! DaoValue_IsZero( res ) ) DaoList_Append( list, node->key.pValue );
+			if( res->xInteger.value ) DaoList_Append( list, node->key.pValue );
 			break;
 		case DVM_FUNCT_VALUES :
-			if( ! DaoValue_IsZero( res ) ) DaoList_Append( list, node->value.pValue );
+			if( res->xInteger.value ) DaoList_Append( list, node->value.pValue );
 			break;
-		case DVM_FUNCT_COUNT : *count += ! DaoValue_IsZero( res ); break;
+		case DVM_FUNCT_COUNT : *count += res->xInteger.value != 0; break;
 		case DVM_FUNCT_APPLY : DaoValue_Move( res, & node->value.pValue, type ); break;
 		}
+		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
+			DaoProcess_SetActiveFrame( proc, proc->topFrame );
+			tuple = DaoProcess_PutTuple( proc );
+			GC_ShiftRC( node->key.pValue, tuple->items[0] );
+			GC_ShiftRC( node->value.pValue, tuple->items[1] );
+			tuple->items[0] = node->key.pValue;
+			tuple->items[1] = node->value.pValue;
+			break;
+		}
 	}
+	if( funct == DVM_FUNCT_FIND && tuple == NULL ) DaoProcess_PutValue( proc, null );
 }
 static void DaoMAP_Each( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3222,7 +3249,7 @@ static void DaoMAP_Count( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Keys( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	if( sect == NULL ){
 		DaoMAP_Key( proc, p, N );
 		return;
@@ -3231,12 +3258,16 @@ static void DaoMAP_Keys( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Values( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	if( sect == NULL ){
 		DaoMAP_Value( proc, p, N );
 		return;
 	}
 	DaoMAP_Functional( proc, p, N, DVM_FUNCT_VALUES );
+}
+static void DaoMAP_Find2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_FIND );
 }
 static void DaoMAP_Select( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3258,8 +3289,7 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
 	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
-	/* 0:EQ; -1:MaxLess; 1:MinGreat */
-	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type : enum<le,eq,ge>=$eq )=>tuple<int,@K,@V>" },
+	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|null" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K )=>list<@K>" },
 	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K, to :@K )=>list<@K>" },
 	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K )=>list<@V>" },
@@ -3272,6 +3302,7 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
 	{ DaoMAP_Keys,   "keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>" },
 	{ DaoMAP_Values, "values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>" },
+	{ DaoMAP_Find2,  "find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|null" },
 	{ DaoMAP_Select, "select( self :map<@K,@V> )[key :@K, value :@V =>int] =>map<@K,@V>" },
 	{ DaoMAP_Map,    "map( self :map<@K,@V> )[key :@K, value :@V =>tuple<@K2,@V2>] =>map<@K2,@V2>" },
 	{ DaoMAP_Apply,  "apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>" },

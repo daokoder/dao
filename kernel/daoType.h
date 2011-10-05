@@ -124,6 +124,8 @@ void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 /* all DAO_INITYPE: @T ... */
 void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 
+DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
+
 
 #define NESTYPE(t,i) ((t)->nested->items.pType[i])
 

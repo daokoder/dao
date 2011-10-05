@@ -957,8 +957,14 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size,
 {
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
-	if( tup && tup->refCount ==1 && tup->unitype == type ) return tup;
 
+	if( tup && tup->unitype == type ){
+		DaoVmCode *vmc = self->activeCode + 1;
+		if( tup->refCount == 1 ) return tup;
+		if( tup->refCount == 2 && (vmc->code == DVM_MOVE || vmc->code == DVM_MOVE_PP) ){
+			if( self->activeValues[vmc->c] == (DaoValue*) tup ) return tup;
+		}
+	}
 	if( type ){
 		tup = DaoTuple_Create( type, init );
 	}else{
@@ -988,6 +994,7 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size,
 DaoTuple* DaoProcess_PutTuple( DaoProcess *self )
 {
 	DaoType *type = self->activeTypes[ self->activeCode->c ];
+	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 }
