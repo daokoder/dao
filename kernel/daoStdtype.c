@@ -915,6 +915,32 @@ static void DaoSTR_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, p[0]->xString.data->size );
 }
+#ifdef DAO_USE_INT64
+#define IO_FORMAT_INT  "%lli"
+#else
+#define IO_FORMAT_INT  "%li"
+#endif
+static dint DaoSTR_CheckParam( DaoProcess *proc, dint i )
+{
+	if( i < 0 ){
+		char buffer[100];
+		sprintf( buffer, "invalid parameter with value " IO_FORMAT_INT "\n", i );
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, buffer );
+	}
+	return i;
+}
+static dint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, dint index, int one_past_last )
+{
+	dint id = index;
+	if( id < 0 ) id = self->size + id;
+	if( id < 0 || id > (self->size - 1 + one_past_last) ){
+		char buffer[100];
+		sprintf( buffer, "index out of range with value " IO_FORMAT_INT "\n", index );
+		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
+		return -1;
+	}
+	return id;
+}
 static void DaoSTR_Resize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	if( ( proc->vmSpace->options & DAO_EXEC_SAFE ) && p[1]->xInteger.value > 1E5 ){
@@ -922,6 +948,7 @@ static void DaoSTR_Resize( DaoProcess *proc, DaoValue *p[], int N )
 				"not permitted to create long string in safe running mode" );
 		return;
 	}
+	if( DaoSTR_CheckParam( proc, p[1]->xInteger.value ) < 0 ) return;
 	DString_Resize( p[0]->xString.data, p[1]->xInteger.value );
 }
 
@@ -929,9 +956,10 @@ static void DaoSTR_Insert( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DString *str = p[1]->xString.data;
-	size_t at = (size_t)p[2]->xInteger.value;
-	size_t rm = (size_t)p[3]->xInteger.value;
-	size_t cp = (size_t)p[4]->xInteger.value;
+	dint at = DaoSTR_CheckIndex( self, proc, p[2]->xInteger.value, 1 /* allow appending */ );
+	dint rm = DaoSTR_CheckParam( proc, p[3]->xInteger.value );
+	dint cp = DaoSTR_CheckParam( proc, p[4]->xInteger.value );
+	if( (at < 0) | (rm < 0) | (cp < 0) ) return;
 	DString_Insert( self, str, at, rm, cp );
 }
 static void DaoSTR_Clear( DaoProcess *proc, DaoValue *p[], int N )
@@ -940,7 +968,10 @@ static void DaoSTR_Clear( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString_Erase( p[0]->xString.data, p[1]->xInteger.value, p[2]->xInteger.value );
+	dint at = DaoSTR_CheckIndex( p[0]->xString.data, proc, p[1]->xInteger.value, 0 );
+	dint rm = DaoSTR_CheckParam( proc, p[2]->xInteger.value );
+	if( (at < 0) | (rm < 0) ) return;
+	DString_Erase( p[0]->xString.data, at, rm );
 }
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1497,15 +1528,15 @@ static void DaoSTR_PFind( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
+	dint start = DaoSTR_CheckIndex( self, proc, p[3]->xInteger.value, 0 );
+	dint end = DaoSTR_CheckIndex( self, proc, p[4]->xInteger.value, 1 );
 	size_t index = p[2]->xInteger.value;
-	size_t start = (size_t)p[3]->xInteger.value;
-	size_t end = (size_t)p[4]->xInteger.value;
 	size_t i, p1=start, p2=end;
 	DaoTuple *tuple = NULL;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoType *itp = list->unitype->nested->items.pType[0];
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
-	if( patt ==NULL ) return;
+	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	i = 0;
 	while( DaoRegex_Match( patt, self, & p1, & p2 ) ){
@@ -1526,18 +1557,14 @@ static void DaoSTR_Match0( DaoProcess *proc, DaoValue *p[], int N, int subm )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
-	size_t start = (size_t)p[2]->xInteger.value;
-	size_t end = (size_t)p[3]->xInteger.value;
+	dint start = DaoSTR_CheckIndex( self, proc, p[2+subm]->xInteger.value, 0 );
+	dint end = DaoSTR_CheckIndex( self, proc, p[3+subm]->xInteger.value, 1 );
 	size_t p1=start, p2=end;
 	int capt = p[4]->xInteger.value;
 	int gid = p[2]->xInteger.value;
 	DaoTuple *tuple = DaoProcess_PutTuple( proc );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
-	if( patt ==NULL ) return;
-	if( subm ){
-		end = capt;
-		p1 = start = end;
-	}
+	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	pt = DString_Copy( pt );
 	DString_Clear( pt );
@@ -1634,14 +1661,14 @@ static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
-	size_t start = (size_t)p[2]->xInteger.value;
-	size_t end = (size_t)p[3]->xInteger.value;
+	dint start = DaoSTR_CheckIndex( self, proc, p[2]->xInteger.value, 0 );
+	dint end = DaoSTR_CheckIndex( self, proc, p[3]->xInteger.value, 1 );
 	size_t p1=start, p2=end;
 	int gid;
 	DaoString *subs = DaoString_New(1);
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
-	if( patt ==NULL ) return;
+	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & p1, & p2 ) ==0 ) return;
 	DString_Delete( subs->data );
@@ -1660,11 +1687,13 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
 	DString *str = p[2]->xString.data;
-	size_t start = (size_t)p[4]->xInteger.value;
-	size_t end = (size_t)p[5]->xInteger.value;
-	dint n, index = p[3]->xInteger.value;
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
+	dint start0 = DaoSTR_CheckIndex( self, proc, p[4]->xInteger.value, 0 );
+	dint end0 = DaoSTR_CheckIndex( self, proc, p[5]->xInteger.value, 1 );
+	dint n, index = p[3]->xInteger.value;
+	size_t start = start0, end = end0;
 	size_t size = self->size;
+	if( (patt == NULL) | (start0 < 0) | (end0 < 0) ) return;
 	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoProcess_PutInteger( proc, n );
 }
@@ -2095,11 +2124,24 @@ static DaoTypeCore listCore=
 	DaoListCore_Copy,
 };
 
+static dint DaoList_MakeIndex( DaoList *self, dint index, int one_past_last )
+{
+	if( index < 0 ) index += self->items->size;
+	if( (index < 0) | (index > (self->items->size - 1 + one_past_last)) ) return -1;
+	return index;
+}
 static void DaoLIST_Insert( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
-	int size = self->items->size;
-	DaoList_Insert( self, p[1], p[2]->xInteger.value );
+	size_t size = self->items->size;
+	dint pos = DaoList_MakeIndex( self, p[2]->xInteger.value, 1 );
+	if( pos < 0 ){
+		char buffer[100];
+		sprintf( buffer, "with value " IO_FORMAT_INT "\n", p[2]->xInteger.value );
+		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
+		return;
+	}
+	DaoList_Insert( self, p[1], pos );
 	if( size == self->items->size )
 		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "value type" );
 }
@@ -2776,7 +2818,7 @@ DaoValue* DaoList_Back( DaoList *self )
 }
 DaoValue* DaoList_GetItem( DaoList *self, int pos )
 {
-	if( pos <0 || pos >= self->items->size ) return NULL;
+	if( (pos = DaoList_MakeIndex( self, pos, 0 )) < 0 ) return NULL;
 	return self->items->items.pValue[pos];
 }
 DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
@@ -2787,7 +2829,7 @@ DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
 int DaoList_SetItem( DaoList *self, DaoValue *it, int pos )
 {
 	DaoValue **val;
-	if( pos <0 || pos >= self->items->size ) return 1;
+	if( (pos = DaoList_MakeIndex( self, pos, 0 )) < 0 ) return 1;
 	val = self->items->items.pValue + pos;
 	if( self->unitype && self->unitype->nested->size ){
 		return DaoValue_Move( it, val, self->unitype->nested->items.pType[0] ) == 0;
@@ -2801,6 +2843,7 @@ int DaoList_Insert( DaoList *self, DaoValue *item, int pos )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
+	if( (pos = DaoList_MakeIndex( self, pos, 1 )) < 0 ) return 1;
 	if( DaoValue_Move( item, & temp, tp ) ==0 ){
 		GC_DecRC( temp );
 		return 1;

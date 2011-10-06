@@ -19,9 +19,9 @@
 #include"time.h"
 #include"stdlib.h"
 
-#define DVM_MAKE_OBJECT    (1<<5)
-#define DVM_SECT_POPFRAME  (1<<6)
-#define DVM_SECT_KEEPFRAME (1<<7)
+#define DVM_MAKE_OBJECT (1<<5)
+#define DVM_FRAME_SECT  (1<<6)
+#define DVM_FRAME_KEEP  (1<<7)
 
 #define DVM_MAX_TRY_DEPTH 16
 
@@ -40,6 +40,7 @@ struct DaoStackFrame
 	DaoRoutine   *routine;
 	DaoFunction  *function;
 	DaoObject    *object;
+	DaoProcess   *outer;
 
 	DaoStackFrame  *active;
 	DaoStackFrame  *sect; /* original frame of a code section frame */

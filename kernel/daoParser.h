@@ -107,6 +107,7 @@ struct DaoParser
 	DArray *errors;
 	DArray *bindtos;
 	DArray *uplocs;
+	DArray *outers;
 	DArray *decoFuncs;
 	DArray *decoParams;
 

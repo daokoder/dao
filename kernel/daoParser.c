@@ -248,6 +248,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->arrays );
 	DMap_Delete( self->comments );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
+	if( self->outers ) DArray_Delete( self->outers );
 	if( self->bindtos ) DArray_Delete( self->bindtos );
 	if( self->allConsts ) DMap_Delete( self->allConsts );
 	DMap_Delete( self->initTypes );
@@ -272,6 +273,14 @@ static void DaoParser_ClearBuffers( DaoParser *self )
 {
 	DArray_Erase( self->strings, 1, -1 );
 	DArray_Erase( self->arrays, 1, -1 );
+}
+static int DaoParser_GetOuterLevel( DaoParser *self, int reg )
+{
+	int i = 0;
+	if( self->outers == NULL ) return -1;
+	while( i < self->outers->size && reg >= self->outers->items.pInt[i] ) i += 1;
+	if( i >= self->outers->size ) return -1;
+	return self->outers->size - 1 - i;
 }
 
 static void DaoParser_PrintCodes( DaoParser *self )
@@ -3763,11 +3772,11 @@ DecoratorError:
 					DArray_Append( inodes, self->vmcLast );
 				}else{
 					int code = enode.update->code;
-					if( code < DVM_GETVL || code > DVM_GETMF ){
+					if( code < DVM_GETVH || code > DVM_GETMF ){
 						DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 						goto InvalidMultiAssignment;
 					}
-					enode.update->code += DVM_SETVL - DVM_GETVL;
+					enode.update->code += DVM_SETVH - DVM_GETVH;
 					enode.update->c = enode.update->a;
 					DaoParser_PopRegister( self );
 					DArray_Append( inodes, enode.update );
@@ -3998,8 +4007,11 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				if( reg < 0 ) continue;
 				if( up ){
 					DaoParser_AddCode( self, DVM_SETVL, reg, id, up, first, mid, end );
+				}else if( (up = DaoParser_GetOuterLevel( self, id )) >= 0 ){
+					DaoParser_AddCode( self, DVM_SETVH, reg, id, up, first, mid, end );
 				}else{
 					DaoParser_AddCode( self, DVM_MOVE, reg, 0, id, first, mid, end );
+					self->lastValue = id;
 				}
 				break;
 			case DAO_OBJECT_VARIABLE :
@@ -4438,7 +4450,13 @@ int DaoParser_GetNormRegister( DaoParser *self, int reg, int first, int mid, int
 
 	/* printf( "reg = %x\n", reg ); */
 	switch( st ){
-	case DAO_LOCAL_VARIABLE : if( up ==0 ) return id; break;
+	case DAO_LOCAL_VARIABLE :
+		if( up ==0 ){
+			up = DaoParser_GetOuterLevel( self, id );
+			if( up < 0 ) return id;
+			code = DVM_GETVH;
+		}
+		break;
 	case DAO_LOCAL_CONSTANT  : code = DVM_GETCL; break;
 	case DAO_OBJECT_VARIABLE : code = DVM_GETVO; break;
 	case DAO_CLASS_VARIABLE  : code = DVM_GETVK; break;
@@ -4851,7 +4869,10 @@ CleanUp:
 		}
 		DaoParser_AddCode( self, DVM_MOVE, first, 0, loc, start+2, eq, colon1-1 );
 		switch( st ){
-		case DAO_LOCAL_VARIABLE  : if( up ) set = DVM_SETVL; break;
+		case DAO_LOCAL_VARIABLE  :
+			if( up ) set = DVM_SETVL;
+			else if( (up = DaoParser_GetOuterLevel( self, id )) >= 0 ) set = DVM_SETVH;
+			break;
 		case DAO_OBJECT_VARIABLE : set = DVM_SETVO; break;
 		case DAO_CLASS_VARIABLE  : set = DVM_SETVK; break;
 		case DAO_GLOBAL_VARIABLE : set = DVM_SETVG; break;
@@ -5612,7 +5633,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	int reg, rb, cst = 0;
 
 	/*
-	   for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
+	int i; for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
 	 */
 	result.prev = self->vmcLast;
 	if( start >= size ) return result;
@@ -5961,6 +5982,13 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					call = self->vmcLast;
 					call->b |= DAO_CALL_BLOCK;
 
+					if( self->outers == NULL ) self->outers = DArray_New(0);
+					if( self->outers->size >= 4 ){
+						printf( "too deep nested code section\n" ); //XXX
+						DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, 1, 0 );
+						goto InvalidFunctional;
+					}
+					DArray_PushBack( self->outers, (void*)(size_t)self->regCount );
 					jump = DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, start+1, 0, 0 );
 					sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0, 0, start+1, 0, 0 );
 					label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
@@ -6023,6 +6051,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					self->curToken = rb + 1;
 					DaoParser_DelScope( self, NULL );
 					DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, rb, 0, 0 );
+					DArray_PopBack( self->outers );
 					self->vmcLast->jumpTrue = jump;
 					DaoParser_AppendCode( self, label ); /* move to back */
 					regLast = call->c;
@@ -6032,6 +6061,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					self->curToken = rb + 1;
 					break;
 InvalidFunctional:
+					self->curToken = rb + 1;
+					enode.reg = -1;
 					return enode;
 				}
 
@@ -6321,8 +6352,8 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			if( warn && curtok == DTOK_ASSN )
 				DaoParser_Warn3( self, DAO_WARN_ASSIGNMENT, postart, posend );
 
-			if( code >= DVM_GETVL && code <= DVM_GETMF ){ /* change GETX to SETX */
-				LHS.last->code += DVM_SETVL - DVM_GETVL;
+			if( code >= DVM_GETVH && code <= DVM_GETMF ){ /* change GETX to SETX */
+				LHS.last->code += DVM_SETVH - DVM_GETVH;
 				LHS.last->c = LHS.last->a;
 				LHS.last->a = RHS.reg;
 				DaoParser_AppendCode( self, LHS.last ); /* move to back */
@@ -6339,9 +6370,9 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], LHS, RHS, pos );
 			result.update = result.last;
 			result.reg = result.last->c;
-			if( code >= DVM_GETVL && code <= DVM_GETMF ){ /* add SETX */
+			if( code >= DVM_GETVH && code <= DVM_GETMF ){ /* add SETX */
 				inode = DaoParser_PushBackCode( self, (DaoVmCodeX*) LHS.last );
-				inode->code += DVM_SETVL - DVM_GETVL;
+				inode->code += DVM_SETVH - DVM_GETVH;
 				inode->c = inode->a;
 				inode->a = result.reg;
 				result.last = inode;
@@ -6636,6 +6667,7 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	DaoParser_ReserveFoldingOperands( self, 3 );
 	DaoValue_Copy( a, & proc->activeValues[1] );
 	DaoValue_Copy( b, & proc->activeValues[2] );
+	proc->activeTypes[0] = NULL;
 	proc->activeCode = & vmc;
 	value = DaoProcess_MakeConst( proc );
 	if( value == NULL ) return -1;

@@ -2158,6 +2158,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	if( ta == DAO_INTEGER ){
+		if( self->activeTypes[ vmc->c ] ) printf( "%s\n", self->activeTypes[ vmc->c ]->name->mbs );
 		C = DaoProcess_SetValue( self, vmc->c, A );
 		switch( vmc->code ){
 		case DVM_NOT :  C->xInteger.value = ! C->xInteger.value; break;

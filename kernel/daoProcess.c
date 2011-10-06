@@ -246,7 +246,8 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 void DaoProcess_PopFrame( DaoProcess *self )
 {
 	if( self->topFrame == NULL ) return;
-	if( self->topFrame->state == DVM_SECT_POPFRAME ){
+	self->topFrame->outer = NULL;
+	if( self->topFrame->state & DVM_FRAME_SECT ){
 		GC_DecRC( self->topFrame->object );
 		GC_DecRC( self->topFrame->routine );
 		self->topFrame->routine = NULL;
@@ -473,7 +474,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	}
 	next = DaoProcess_PushFrame( self, 0 );
 	next->entry = frame->entry + 2;
-	next->state = DVM_SECT_KEEPFRAME;
+	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
 	next->depth = 0;
 
 	GC_ShiftRC( frame->object, next->object );
@@ -488,6 +489,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	next->codes = frame->codes;
 	next->active = next;
 	next->sect = frame;
+	next->outer = self;
 	next->returning = returning;
 	DaoProcess_SetActiveFrame( self, frame );
 	return frame;
@@ -593,6 +595,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DArray   *dataCL[2] = { NULL, NULL };
 	DArray   *dataCK = NULL;
 	DArray   *dataCG = NULL;
+	DaoValue  **dataVH[4] = { NULL, NULL, NULL, NULL };
 	DaoValue  **dataVL = NULL;
 	DaoValue  **dataVO = NULL;
 	DArray   *dataVK = NULL;
@@ -630,9 +633,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_NOP ,
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
-		&& LAB_GETVL , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
+		&& LAB_GETVH , && LAB_GETVL , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
 		&& LAB_GETI  , && LAB_GETMI , && LAB_GETF  , && LAB_GETMF ,
-		&& LAB_SETVL , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
+		&& LAB_SETVH , && LAB_SETVL , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
 		&& LAB_SETI  , && LAB_SETMI , && LAB_SETF , && LAB_SETMF ,
 		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
 		&& LAB_NOT , && LAB_UNMS , && LAB_BITREV ,
@@ -667,10 +670,14 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_GETCL_I , && LAB_GETCL_F , && LAB_GETCL_D ,
 		&& LAB_GETCK_I , && LAB_GETCK_F , && LAB_GETCK_D ,
 		&& LAB_GETCG_I , && LAB_GETCG_F , && LAB_GETCG_D ,
+		&& LAB_GETVH_I , && LAB_GETVH_F , && LAB_GETVH_D ,
 		&& LAB_GETVL_I , && LAB_GETVL_F , && LAB_GETVL_D ,
 		&& LAB_GETVO_I , && LAB_GETVO_F , && LAB_GETVO_D ,
 		&& LAB_GETVK_I , && LAB_GETVK_F , && LAB_GETVK_D ,
 		&& LAB_GETVG_I , && LAB_GETVG_F , && LAB_GETVG_D ,
+		&& LAB_SETVH_II , && LAB_SETVH_IF , && LAB_SETVH_ID ,
+		&& LAB_SETVH_FI , && LAB_SETVH_FF , && LAB_SETVH_FD ,
+		&& LAB_SETVH_DI , && LAB_SETVH_DF , && LAB_SETVH_DD ,
 		&& LAB_SETVL_II , && LAB_SETVL_IF , && LAB_SETVL_ID ,
 		&& LAB_SETVL_FI , && LAB_SETVL_FF , && LAB_SETVL_FD ,
 		&& LAB_SETVL_DI , && LAB_SETVL_DF , && LAB_SETVL_DD ,
@@ -968,6 +975,10 @@ CallEntry:
 		dataVL = routine->upContext->stackValues + 1;
 		typeVL = routine->upRoutine->regType;
 	}
+	if( topFrame->outer ){
+		DaoStackFrame *frame = topFrame;
+		for(i=0; i<4 && frame->outer; i++) dataVH[i] = frame->outer->activeValues;
+	}
 
 	OPBEGIN(){
 		OPCASE( NOP ){
@@ -1001,6 +1012,9 @@ CallEntry:
 			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
+		}OPNEXT() OPCASE( GETVH ){
+			GC_ShiftRC( dataVH[ vmc->a ][ vmc->b ], locVars[ vmc->c ] );
+			locVars[ vmc->c ] = dataVH[ vmc->a ][ vmc->b ];
 		}OPNEXT() OPCASE( GETVL ){
 			GC_ShiftRC( dataVL[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVL[ vmc->b ];
@@ -1024,6 +1038,10 @@ CallEntry:
 		}OPNEXT() OPCASE( GETMF ){
 			DaoProcess_DoGetMetaField( self, vmc );
 			goto CheckException;
+		}OPNEXT() OPCASE( SETVH ){
+			abtp = locTypes[ vmc->b ];
+			if( DaoMoveAC( self, locVars[vmc->a], dataVH[ vmc->c ] + vmc->b, abtp ) ==0 )
+				goto CheckException;
 		}OPNEXT() OPCASE( SETVL ){
 			abtp = typeVL->items.pType[ vmc->b ];
 			if( DaoMoveAC( self, locVars[vmc->a], dataVL + vmc->b, abtp ) ==0 )
@@ -1270,7 +1288,7 @@ CallEntry:
 					printf( "No code section is found\n" ); //XXX
 					goto FinishProc;
 				}
-				self->topFrame->state = DVM_SECT_POPFRAME;
+				self->topFrame->state = DVM_FRAME_SECT;
 				vmc2 = self->topFrame->codes + self->topFrame->entry - 1;
 				locVars = self->stackValues + topFrame->stackBase;
 				for(i=0; i<vmc2->b; i++){
@@ -1333,6 +1351,12 @@ CallEntry:
 		}OPNEXT() OPCASE( GETCG_D ){
 			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
+		}OPNEXT() OPCASE( GETVH_I ){
+			locVars[ vmc->c ]->xInteger.value = dataVH[ vmc->a ][ vmc->b ]->xInteger.value;
+		}OPNEXT() OPCASE( GETVH_F ){
+			locVars[ vmc->c ]->xFloat.value = dataVH[ vmc->a ][ vmc->b ]->xFloat.value;
+		}OPNEXT() OPCASE( GETVH_D ){
+			locVars[ vmc->c ]->xDouble.value = dataVH[ vmc->a ][ vmc->b ]->xDouble.value;
 		}OPNEXT() OPCASE( GETVL_I ){
 			locVars[ vmc->c ]->xInteger.value = dataVL[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETVL_F ){
@@ -1357,6 +1381,24 @@ CallEntry:
 			FloatOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xFloat.value;
 		}OPNEXT() OPCASE( GETVG_D ){
 			DoubleOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xDouble.value;
+		}OPNEXT() OPCASE( SETVH_II ){
+			dataVH[ vmc->c ][ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_IF ){
+			dataVH[ vmc->c ][ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_ID ){
+			dataVH[ vmc->c ][ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_FI ){
+			dataVH[ vmc->c ][ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_FF ){
+			dataVH[ vmc->c ][ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_FD ){
+			dataVH[ vmc->c ][ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_DI ){
+			dataVH[ vmc->c ][ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_DF ){
+			dataVH[ vmc->c ][ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVH_DD ){
+			dataVH[ vmc->c ][ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVL_II ){
 			dataVL[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVL_IF ){
@@ -2364,7 +2406,7 @@ CheckException:
 
 FinishCall:
 
-	if( self->topFrame->state & DVM_SECT_KEEPFRAME ){
+	if( self->topFrame->state & DVM_FRAME_KEEP ){
 		if( self->exceptions->size > exceptCount ){
 			self->status = DAO_VMPROC_ABORTED;
 			goto ReturnFalse;
