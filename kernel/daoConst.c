@@ -88,6 +88,7 @@ static const char* const daoCtInfo[] =
 	"Default value not matching parameter type",
 	"Too many parameters",
 	"Invalid return type",
+	"Too deeply nested code section" ,
 	"Statement in class body",
 	"Statement in interface body",
 	"Statement used out of context",

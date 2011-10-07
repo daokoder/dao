@@ -3258,9 +3258,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
-		map = DaoMap_New( self->items->hashing );
-		DaoProcess_PutValue( proc, (DaoValue*)map );
-		break;
 	case DVM_FUNCT_KEYS :
 	case DVM_FUNCT_VALUES : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
@@ -3279,13 +3276,13 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){
-		case DVM_FUNCT_MAP :
-			if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
-				DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );
-			break;
 		case DVM_FUNCT_SELECT :
-			if( res->xInteger.value )
-				DaoMap_Insert( map, node->key.pValue, node->value.pValue );
+			if( res->xInteger.value ){
+				tuple = DaoTuple_New(2);
+				DaoList_Append( list, (DaoValue*) tuple );
+				DaoTuple_SetItem( tuple, node->key.pValue, 0 );
+				DaoTuple_SetItem( tuple, node->value.pValue, 1 );
+			}
 			break;
 		case DVM_FUNCT_KEYS :
 			if( res->xInteger.value ) DaoList_Append( list, node->key.pValue );
@@ -3295,6 +3292,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 			break;
 		case DVM_FUNCT_COUNT : *count += res->xInteger.value != 0; break;
 		case DVM_FUNCT_APPLY : DaoValue_Move( res, & node->value.pValue, type ); break;
+		case DVM_FUNCT_MAP : DaoList_Append( list, res ); break;
 		}
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			DaoProcess_PopFrame( proc );
@@ -3372,9 +3370,9 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
 	{ DaoMAP_Keys,   "keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>" },
 	{ DaoMAP_Values, "values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>" },
+	{ DaoMAP_Select, "select( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<tuple<key:@K,value:@V>>" },
 	{ DaoMAP_Find2,  "find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|null" },
-	{ DaoMAP_Select, "select( self :map<@K,@V> )[key :@K, value :@V =>int] =>map<@K,@V>" },
-	{ DaoMAP_Map,    "map( self :map<@K,@V> )[key :@K, value :@V =>tuple<@K2,@V2>] =>map<@K2,@V2>" },
+	{ DaoMAP_Map,    "map( self :map<@K,@V> )[key :@K, value :@V =>@T] =>list<@T>" },
 	{ DaoMAP_Apply,  "apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>" },
 	{ NULL, NULL }
 };
