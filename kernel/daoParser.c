@@ -2837,15 +2837,15 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		int line = tokens[start]->line;
 		int t = tokens[start]->name;
 		DString *name = tokens[start]->string;
-		if( (t != DTOK_IDENTIFIER && t < DKEY_EACH) || t > DKEY_TANH ) goto ErrorClassDefinition;
+		if( t != DTOK_IDENTIFIER && t != DTOK_ID_INITYPE && t < DKEY_EACH ) goto ErrorClassDefinition;
 		klass = DaoClass_New();
 
 		className = klass->className;
 		DString_Assign( className, name );
 		if( className->mbs[0] == '@' ){
 			DString_Erase( className, 0, 1 );
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
-			klass->attribs |= DAO_CLS_SYNCHRONOUS;
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+			klass->attribs |= DAO_CLS_ASYNCHRONOUS;
 #else
 			DaoParser_Error3( self, DAO_INVALID_SYNC_CLASS_DEFINITION, start );
 			DaoParser_Error( self, DAO_DISABLED_SYNCLASS, NULL );
@@ -3025,7 +3025,7 @@ ErrorClassDefinition:
 	if( parser ) DaoParser_Delete( parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
 	ec = DAO_INVALID_CLASS_DEFINITION;
-	if( klass )ec += ((klass->attribs & DAO_CLS_SYNCHRONOUS) !=0);
+	if( klass )ec += ((klass->attribs & DAO_CLS_ASYNCHRONOUS) !=0);
 	DaoParser_Error2( self, ec, errorStart, to, 0 );
 	return -1;
 }
@@ -3288,7 +3288,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			}
 		}
 		if( self->isClassBody ){
-			if( hostClass->attribs & DAO_CLS_SYNCHRONOUS ){
+			if( hostClass->attribs & DAO_CLS_ASYNCHRONOUS ){
 				if( storeType & DAO_DECL_STATIC ){
 					DaoParser_Error2( self, DAO_INVALID_ACCESS, errorStart, start, 0 );
 				}
@@ -4518,7 +4518,7 @@ int DaoParser_PostParsing( DaoParser *self )
 
 	vmCodes = self->vmCodes->items.pVmc;
 
-	if( self->hostClass && (self->hostClass->attribs & DAO_CLS_SYNCHRONOUS) ){
+	if( self->hostClass && (self->hostClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
 		for( j=0; j<self->vmCodes->size; j++){
 			DaoVmCodeX *vmc = vmCodes[j];
 			int c = vmc->code;
@@ -5535,7 +5535,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	}
 	if( enode.konst == enode.count ){
 		regC = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
-	}else{
+	}else if( enode.count ){
 		enode.konst = 0;
 		if( self->enumTypes->size ){
 			tp = self->enumTypes->items.pType[0];

@@ -266,13 +266,15 @@ struct DaoFuture
 {
 	DAO_DATA_COMMON;
 
-	int       state;
-	DaoValue *value;
-	DaoType  *unitype;
-
-	DaoFuture   *precondition;
-	DaoProcess  *context; // XXX
+	short        state;
+	short        parCount;
+	DaoType     *unitype;
+	DaoValue    *value;
+	DaoValue    *params[DAO_MAX_PARAM];
+	DaoObject   *object;
+	DaoRoutine  *routine;
 	DaoProcess  *process;
+	DaoFuture   *precondition;
 };
 DaoFuture* DaoFuture_New();
 

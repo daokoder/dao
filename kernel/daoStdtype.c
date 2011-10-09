@@ -4743,10 +4743,9 @@ static void DaoFuture_Lib_Value( DaoProcess *proc, DaoValue *par[], int N )
 		DaoProcess_PutValue( proc, self->value );
 		return;
 	}
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
 	proc->status = DAO_VMPROC_SUSPENDED;
 	proc->pauseType = DAO_VMP_ASYNC;
-	proc->topFrame->entry = (short)(proc->activeCode - proc->topFrame->codes);
 	DaoCallServer_Add( NULL, proc, self );
 #endif
 }
@@ -4759,9 +4758,11 @@ static void DaoFuture_Delete( DaoFuture *self )
 {
 	GC_DecRC( self->value );
 	GC_DecRC( self->unitype );
-	GC_DecRC( self->context );
+	GC_DecRC( self->object );
+	GC_DecRC( self->routine );
 	GC_DecRC( self->process );
 	GC_DecRC( self->precondition );
+	DaoValue_ClearAll( self->params, self->parCount );
 }
 
 static DaoTypeCore futureCore =

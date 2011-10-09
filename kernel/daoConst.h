@@ -165,7 +165,7 @@ enum DaoDataPermission
 enum DaoClassAttrib
 {
 	DAO_CLS_AUTO_DEFAULT = 1,
-	DAO_CLS_SYNCHRONOUS = 2
+	DAO_CLS_ASYNCHRONOUS = 2
 };
 enum DaoRoutineAttrib
 {

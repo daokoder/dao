@@ -36,6 +36,7 @@
 #include"daoStream.h"
 #include"daoParser.h"
 #include"daoValue.h"
+#include"daoSched.h"
 
 #ifndef FE_ALL_EXCEPT
 #define FE_ALL_EXCEPT 0xffff
@@ -567,7 +568,7 @@ case DAO_DOUBLE  : x = v->xDouble.value; break; \
 
 int DaoProcess_CheckFE( DaoProcess *self );
 
-//void DaoContext_AdjustCodes( DaoContext *self, int options );
+void DaoProcess_AdjustCodes( DaoProcess *self, int options );
 
 int DaoMoveAC( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 
@@ -889,8 +890,8 @@ CallEntry:
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
 	//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 
-	//XXX if( (vmSpace->options & DAO_EXEC_DEBUG)|(routine->mode & DAO_EXEC_DEBUG) )
-	//XXX	DaoContext_AdjustCodes( topCtx, vmSpace->options );
+	if( (vmSpace->options & DAO_EXEC_DEBUG) | (routine->mode & DAO_EXEC_DEBUG) )
+		DaoProcess_AdjustCodes( self, vmSpace->options );
 
 	vmcBase = topFrame->codes;
 	id = self->topFrame->entry;
@@ -2830,19 +2831,25 @@ FailConversion :
 	CastBuffer_Clear( & buffer1 );
 	CastBuffer_Clear( & buffer2 );
 }
-static int DaoProcess_TrySynCall( DaoProcess *self, DaoVmCode *vmc, DaoProcess *proc )
+static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 {
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
-	DaoType *retype = self->activeTypes[ self->activeCode->c ];
-	if( retype && retype->tid == DAO_FUTURE ){
-		DaoNamespace *ns = self->activeNamespace;
-		DaoFuture *future = DaoCallServer_Add( proc, NULL, NULL );
-		DaoType *retype = & proc->routine->routType->aux->xType;
-		DaoType *type = DaoNamespace_MakeType( ns, "future", DAO_FUTURE, NULL, &retype,1 );
-		GC_ShiftRC( type, future->unitype );
-		future->unitype = type;
-		DaoProcess_PutValue( self, (DaoValue*) future );
-		return 1;
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+	DaoStackFrame *frame = self->topFrame;
+	DaoStackFrame *prev = frame->prev;
+	if( vmc->code != DVM_MCALL ) return 0;
+	if( frame->object && (frame->object->defClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
+		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
+			DaoNamespace *ns = self->activeNamespace;
+			DaoFuture *future = DaoCallServer_Add( self, NULL, NULL );
+			DaoType *retype = & frame->routine->routType->aux->xType;
+			DaoType *type = DaoNamespace_MakeType( ns, "future", DAO_FUTURE, NULL, &retype,1 );
+			GC_ShiftRC( type, future->unitype );
+			future->unitype = type;
+			DaoProcess_PopFrame( self );
+			DaoProcess_PutValue( self, (DaoValue*) future );
+			self->status = DAO_VMPROC_RUNNING;
+			return 1;
+		}
 	}
 #endif
 	return 0;
@@ -2885,7 +2892,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoFunction *func, DaoValue *selfpar, DaoValue *P[], int N )
 {
-	int code = vmc->code;
+	int status, code = vmc->code;
 	if( (self->vmSpace->options & DAO_EXEC_SAFE) && (func->attribs & DAO_ROUT_EXTFUNC) ){
 		/* normally this condition will not be satisfied.
 		 * it is possible only if the safe mode is set in C codes
@@ -2912,11 +2919,14 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	 */
 	DaoProcess_PushFunction( self, func );
 	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, N );
+	status = self->status;
 	DaoProcess_PopFrame( self );
 
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
-	if( self->status==DAO_VMPROC_SUSPENDED )
+	if( status == DAO_VMPROC_SUSPENDED ){
 		self->topFrame->entry = (short)(vmc - self->topFrame->codes);
+		self->status = status;
+	}
 }
 static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoClass *klass, DaoValue *selfpar, DaoValue *params[], int npar )
@@ -3027,7 +3037,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 	if( rout == NULL ) goto InvalidParameter;
 	if( rout->type == DAO_ROUTINE ){
 		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
-		//XXX if( DaoProcess_TrySynCall( self, vmc, proc ) ) return;
+		if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 	}else if( rout->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) rout;
 		DaoProcess_DoCxxCall( self, vmc, func, selfpar, params, npar );
@@ -3079,7 +3089,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
-		//if( DaoProcess_TrySynCall( self, vmc, proc ) ) return;
+		if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 	}else if( caller->type == DAO_FUNCTREE ){
 		rout = DRoutine_Resolve( caller, selfpar, params, npar, codemode );
 		if( rout == NULL ){
@@ -3094,7 +3104,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 				return;
 			}
 			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
-			//if( DaoProcess_TrySynCall( self, vmc, proc ) ) return;
+			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}else if( rout->type == DAO_FUNCTION ){
 			func = (DaoFunction*) rout;
 			DaoProcess_DoCxxCall( self, vmc, func, selfpar, params, npar );
@@ -3116,6 +3126,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		}
 		if( rout->type == DAO_ROUTINE ){
 			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
+			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}else if( rout->type == DAO_FUNCTION ){
 			func = (DaoFunction*) rout;
 			DaoProcess_DoCxxCall( self, vmc, func, caller, params, npar );

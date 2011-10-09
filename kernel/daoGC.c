@@ -799,10 +799,12 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoFuture *future = (DaoFuture*) value;
 				cycRefCountDecrement( future->value );
+				cycRefCountDecrement( (DaoValue*) future->object );
 				cycRefCountDecrement( (DaoValue*) future->unitype );
-				cycRefCountDecrement( (DaoValue*) future->context );
+				cycRefCountDecrement( (DaoValue*) future->routine );
 				cycRefCountDecrement( (DaoValue*) future->process );
 				cycRefCountDecrement( (DaoValue*) future->precondition );
+				DaoGC_CycRefCountDecrements( future->params, future->parCount );
 				break;
 			}
 		case DAO_PROCESS :
@@ -1011,10 +1013,12 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoFuture *future = (DaoFuture*) value;
 				cycRefCountIncrement( future->value );
+				cycRefCountIncrement( (DaoValue*) future->object );
 				cycRefCountIncrement( (DaoValue*) future->unitype );
-				cycRefCountIncrement( (DaoValue*) future->context );
+				cycRefCountIncrement( (DaoValue*) future->routine );
 				cycRefCountIncrement( (DaoValue*) future->process );
 				cycRefCountIncrement( (DaoValue*) future->precondition );
+				DaoGC_CycRefCountIncrements( future->params, future->parCount );
 				break;
 			}
 		case DAO_PROCESS :
@@ -1212,10 +1216,13 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoFuture *future = (DaoFuture*) value;
 				directRefCountDecrement( (DaoValue**) & future->value );
+				directRefCountDecrement( (DaoValue**) & future->object );
 				directRefCountDecrement( (DaoValue**) & future->unitype );
-				directRefCountDecrement( (DaoValue**) & future->context );
+				directRefCountDecrement( (DaoValue**) & future->routine );
 				directRefCountDecrement( (DaoValue**) & future->process );
 				directRefCountDecrement( (DaoValue**) & future->precondition );
+				DaoGC_RefCountDecrements( future->params, future->parCount );
+				future->parCount = 0;
 				break;
 			}
 		case DAO_PROCESS :
@@ -1581,10 +1588,12 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoFuture *future = (DaoFuture*) value;
 				cycRefCountDecrement( future->value );
+				cycRefCountDecrement( (DaoValue*) future->object );
 				cycRefCountDecrement( (DaoValue*) future->unitype );
-				cycRefCountDecrement( (DaoValue*) future->context );
+				cycRefCountDecrement( (DaoValue*) future->routine );
 				cycRefCountDecrement( (DaoValue*) future->process );
 				cycRefCountDecrement( (DaoValue*) future->precondition );
+				DaoGC_CycRefCountDecrements( future->params, future->parCount );
 				break;
 			}
 		case DAO_PROCESS :
@@ -1829,10 +1838,12 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoFuture *future = (DaoFuture*) value;
 				cycRefCountIncrement( future->value );
+				cycRefCountIncrement( (DaoValue*) future->object );
 				cycRefCountIncrement( (DaoValue*) future->unitype );
-				cycRefCountIncrement( (DaoValue*) future->context );
+				cycRefCountIncrement( (DaoValue*) future->routine );
 				cycRefCountIncrement( (DaoValue*) future->process );
 				cycRefCountIncrement( (DaoValue*) future->precondition );
+				DaoGC_CycRefCountIncrements( future->params, future->parCount );
 				break;
 			}
 		case DAO_PROCESS :
@@ -2058,10 +2069,13 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoFuture *future = (DaoFuture*) value;
 				directRefCountDecrement( (DaoValue**) & future->value );
+				directRefCountDecrement( (DaoValue**) & future->object );
 				directRefCountDecrement( (DaoValue**) & future->unitype );
-				directRefCountDecrement( (DaoValue**) & future->context );
+				directRefCountDecrement( (DaoValue**) & future->routine );
 				directRefCountDecrement( (DaoValue**) & future->process );
 				directRefCountDecrement( (DaoValue**) & future->precondition );
+				DaoGC_RefCountDecrements( future->params, future->parCount );
+				future->parCount = 0;
 				break;
 			}
 		case DAO_PROCESS :

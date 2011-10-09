@@ -45,6 +45,7 @@ struct DaoVmSpace
     DaoThdMaster  *thdMaster;
     DaoStream     *stdStream;
 
+    DMap   *allProcesses;
     DArray *processes;
 
     DString *pathWorking;

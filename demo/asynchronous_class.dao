@@ -13,6 +13,6 @@ o1 = SynClass();
 o2 = SynClass();
 f1 = o1.Test(12);
 f2 = o2.Test(34);
-v1=f1.value();
-v2=f2.value();
+v1 = f1.value();
+v2 = f2.value();
 io.writeln( v1, v2 )

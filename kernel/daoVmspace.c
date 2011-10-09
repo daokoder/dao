@@ -229,7 +229,7 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 		DArray_PopBack( self->processes );
 	}else{
 		proc = DaoProcess_New( self );
-		GC_IncRC( proc );
+		DMap_Insert( self->allProcesses, proc, 0 );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexProc );
@@ -241,7 +241,7 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexProc );
 #endif
-	DArray_PushBack( self->processes, proc );
+	if( DMap_Find( self->allProcesses, proc ) ) DArray_PushBack( self->processes, proc );
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexProc );
 #endif
@@ -304,6 +304,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->pathLoading = DArray_New(D_STRING);
 	self->pathSearching = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
+	self->allProcesses = DMap_New(D_VALUE,0);
 
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
@@ -355,7 +356,6 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdStream );
 	GC_DecRC( self->thdMaster );
-	GC_DecRCs( self->processes );
 	DString_Delete( self->source );
 	DString_Delete( self->fileName );
 	DString_Delete( self->pathWorking );
@@ -367,6 +367,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DMap_Delete( self->allTokens );
 	DMap_Delete( self->nsModules );
 	DMap_Delete( self->modRequire );
+	DMap_Delete( self->allProcesses );
 	GC_DecRC( self->mainProcess );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->mutexLoad );
@@ -1849,7 +1850,7 @@ DaoVmSpace* DaoInit()
 	DaoNamespace_WrapType( vms->nsInternal, & libMathTyper );
 	DaoNamespace_WrapType( vms->nsInternal, & libReflectTyper );
 
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
 	DaoCallServer_Init( vms );
 #endif
 
@@ -1869,7 +1870,7 @@ void DaoQuit()
 {
 	int i;
 	/* TypeTest(); */
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_SYNCLASS )
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
 	DaoCallServer_Join( mainVmSpace );
 #endif
 

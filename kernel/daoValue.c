@@ -601,7 +601,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 		if( src->type == DAO_LIST ) printf( "%s\n", src->xList.unitype->name->mbs );
 		if( src->type == DAO_TUPLE ) printf( "%p\n", src->xTuple.unitype );
 	}
-	printf( "src->type = %p\n", src );
+	printf( "src->type = %p %s %i\n", src, tp->name->mbs, tm );
 #endif
 	if( tm == 0 ) return 0;
 	/* composite known types must match exactly. example,

@@ -61,11 +61,11 @@ int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *re
 void DaoPrintException( DaoCdata *except, DaoStream *stream );
 
 
-void DaoContext_AdjustCodes( DaoContext *self, int options )
+void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 {
 	DaoUserHandler *handler = self->vmSpace->userHandler;
-	DaoRoutine *routine = self->routine;
-	DaoVmCode *c = self->codes;
+	DaoRoutine *routine = self->topFrame->routine;
+	DaoVmCode *c = self->topFrame->codes;
 	int i, n = routine->vmCodes->size;
 	int mode = routine->mode;
 	if( options & DAO_EXEC_DEBUG ){
