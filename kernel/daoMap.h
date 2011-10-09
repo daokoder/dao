@@ -44,8 +44,6 @@ struct DNode
 	DNodeData key;
 	DNodeData value;
 };
-extern DNode* DNode_Next( DNode *self );
-extern DNode* DNode_First( DNode *self );
 
 typedef DMap DHash;
 
