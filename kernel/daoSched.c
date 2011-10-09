@@ -37,8 +37,8 @@ struct DaoCallThread
 	DThreadData  *thdData;
 };
 
-DaoCallThread* DaoCallThread_New();
-void DaoCallThread_Run( DaoCallThread *self );
+static DaoCallThread* DaoCallThread_New();
+static void DaoCallThread_Run( DaoCallThread *self );
 
 struct DaoCallServer
 {
@@ -54,16 +54,16 @@ struct DaoCallServer
 
 	DaoVmSpace  *vmspace;
 };
-static DaoCallServer *daoCallServer;
+static DaoCallServer *daoCallServer = NULL;
 
-DaoCallThread* DaoCallThread_New()
+static DaoCallThread* DaoCallThread_New()
 {
 	DaoCallThread *self = (DaoCallThread*)dao_malloc( sizeof(DaoCallThread) );
 	self->thdData = NULL;
 	DThread_Init( & self->thread );
 	return self;
 }
-DaoCallServer* DaoCallServer_New( DaoVmSpace *vms, int count )
+static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms, int count )
 {
 	DaoCallServer *self = (DaoCallServer*)dao_malloc( sizeof(DaoCallServer) );
 	DMutex_Init( & self->mutex );
@@ -72,11 +72,21 @@ DaoCallServer* DaoCallServer_New( DaoVmSpace *vms, int count )
 	self->total = count;
 	self->idle = 0;
 	self->pending = DArray_New(0);
-	self->active = DMap_New(0,0);
+	self->active = DHash_New(0,0);
 	self->vmspace = vms;
 	return self;
 }
-int DaoCallServer_MapStop( DaoCallServer *self )
+static void DaoCallServer_Init( DaoVmSpace *vms )
+{
+	int i, N = 2;
+	DaoCGC_Start();
+	daoCallServer = DaoCallServer_New( vms, N );
+	for(i=0; i<N; i++){
+		DaoCallThread *calth = DaoCallThread_New();
+		DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth );
+	}
+}
+static int DaoCallServer_MapStop( DaoCallServer *self )
 {
 	if( self->finishing == 0 ) return 0; /* program not reach the end yet */
 	if( self->total > self->idle ) return 0; /* active thread may invoke new calls */
@@ -87,6 +97,10 @@ int DaoCallServer_MapStop( DaoCallServer *self )
 DaoFuture* DaoCallServer_Add( DaoProcess *call, DaoProcess *wait, DaoFuture *pre )
 {
 	DaoFuture *future = NULL;
+	DaoVmSpace *vms = call ? call->vmSpace : wait->vmSpace;
+
+	if( daoCallServer == NULL ) DaoCallServer_Init( vms );
+
 #if 0
 	printf( "DaoCallServer_Add( %12p, %12p, %12p )\n", call, wait, pre );
 #endif
@@ -215,26 +229,18 @@ void DaoCallThread_Run( DaoCallThread *self )
 		case DAO_VMPROC_STACKED : future->state = DAO_CALL_RUNNING; break;
 		default : break;
 		}
-		GC_DecRC( future );
 		if( future->state == DAO_CALL_FINISHED ){
 			GC_DecRC( proc->future );
 			proc->future = NULL;
 			DaoVmSpace_ReleaseProcess( server->vmspace, proc );
 		}
-	}
-}
-void DaoCallServer_Init( DaoVmSpace *vms )
-{
-	int i, N = 2;
-	daoCallServer = DaoCallServer_New( vms, N );
-	for(i=0; i<N; i++){
-		DaoCallThread *calth = DaoCallThread_New();
-		DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth );
+		GC_DecRC( future );
 	}
 }
 void DaoCallServer_Join( DaoVmSpace *vmSpace )
 {
 	DCondVar condv;
+	if( daoCallServer == NULL ) return;
 	DCondVar_Init( & condv );
 	daoCallServer->finishing = 1;
 	DMutex_Lock( & daoCallServer->mutex );

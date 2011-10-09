@@ -178,6 +178,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	if( self->parResume ) DArray_Delete( self->parResume );
 	if( self->parYield ) DArray_Delete( self->parYield );
 	if( self->abtype ) GC_DecRC( self->abtype );
+	if( self->future ) GC_DecRC( self->future );
 	dao_free( self );
 }
 

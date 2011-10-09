@@ -16,7 +16,6 @@
 
 #include"daoVmspace.h"
 
-void DaoCallServer_Init( DaoVmSpace *vms );
 void DaoCallServer_Join( DaoVmSpace *vms );
 DaoFuture* DaoCallServer_Add( DaoProcess *call, DaoProcess *wait, DaoFuture *pre );
 

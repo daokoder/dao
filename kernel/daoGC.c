@@ -811,6 +811,8 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
+				cycRefCountDecrement( (DaoValue*) vmp->abtype );
+				cycRefCountDecrement( (DaoValue*) vmp->future );
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
@@ -1025,6 +1027,8 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
+				cycRefCountIncrement( (DaoValue*) vmp->abtype );
+				cycRefCountIncrement( (DaoValue*) vmp->future );
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
@@ -1229,6 +1233,8 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
+				directRefCountDecrement( (DaoValue**) & vmp->abtype );
+				directRefCountDecrement( (DaoValue**) & vmp->future );
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
@@ -1600,6 +1606,8 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
+				cycRefCountDecrement( (DaoValue*) vmp->abtype );
+				cycRefCountDecrement( (DaoValue*) vmp->future );
 				cycRefCountDecrements( vmp->parResume );
 				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
@@ -1850,6 +1858,8 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
+				cycRefCountIncrement( (DaoValue*) vmp->abtype );
+				cycRefCountIncrement( (DaoValue*) vmp->future );
 				cycRefCountIncrements( vmp->parResume );
 				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
@@ -2082,6 +2092,8 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoProcess *vmp = (DaoProcess*) value;
 				DaoStackFrame *frame = vmp->firstFrame;
+				directRefCountDecrement( (DaoValue**) & vmp->abtype );
+				directRefCountDecrement( (DaoValue**) & vmp->future );
 				directRefCountDecrements( vmp->parResume );
 				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );

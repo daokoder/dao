@@ -4763,6 +4763,7 @@ static void DaoFuture_Delete( DaoFuture *self )
 	GC_DecRC( self->process );
 	GC_DecRC( self->precondition );
 	DaoValue_ClearAll( self->params, self->parCount );
+	dao_free( self );
 }
 
 static DaoTypeCore futureCore =

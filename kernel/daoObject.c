@@ -241,7 +241,7 @@ void DaoObject_Delete( DaoObject *self )
 	GC_DecRC( self->defClass );
 	for(i=0; i<self->baseCount; i++) GC_DecRC( self->parents[i] );
 	if( self->isRoot )for(i=0; i<self->valueCount; i++) GC_DecRC( self->objValues[i] );
-	if( self->isDefault ) dao_free( self->objValues );
+	if( self->objValues != (self->parents + self->baseCount) ) dao_free( self->objValues );
 	dao_free( self );
 }
 

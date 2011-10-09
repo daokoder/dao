@@ -2847,8 +2847,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
 			klass->attribs |= DAO_CLS_ASYNCHRONOUS;
 #else
-			DaoParser_Error3( self, DAO_INVALID_SYNC_CLASS_DEFINITION, start );
-			DaoParser_Error( self, DAO_DISABLED_SYNCLASS, NULL );
+			DaoParser_Error3( self, DAO_INVALID_ASYNC_CLASS_DEFINITION, start );
+			DaoParser_Error( self, DAO_DISABLED_ASYNCLASS, NULL );
 #endif
 		}
 
@@ -2960,6 +2960,12 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 				if( value == NULL || value->type == 0 || value->type == DAO_STRING )
 					ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
 				goto ErrorClassDefinition;
+			}
+			if( klass->attribs & DAO_CLS_ASYNCHRONOUS ){
+				if( value->type != DAO_CLASS || (value->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ==0 ){
+					DaoParser_Error3( self, DAO_SYMBOL_NEED_ASYNCLASS, start );
+					goto ErrorClassDefinition;
+				}
 			}
 			super = & value->xClass;
 			start ++;

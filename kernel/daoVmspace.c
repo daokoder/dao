@@ -1850,10 +1850,6 @@ DaoVmSpace* DaoInit()
 	DaoNamespace_WrapType( vms->nsInternal, & libMathTyper );
 	DaoNamespace_WrapType( vms->nsInternal, & libReflectTyper );
 
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
-	DaoCallServer_Init( vms );
-#endif
-
 	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );
 
 	DaoVmSpace_InitPath( vms );
