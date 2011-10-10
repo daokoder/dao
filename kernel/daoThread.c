@@ -959,6 +959,8 @@ static void DaoMT_RunListFunctional( void *p )
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			self->status |= DaoList_SetItem( list2, res, i );
+		}else if( self->funct == DVM_FUNCT_APPLY ){
+			self->status |= DaoList_SetItem( list, res, i );
 		}else if( self->funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			break;
 		}
@@ -980,10 +982,12 @@ static void DaoMT_RunMapFunctional( void *p )
 	DaoList *list2 = (DaoList*) self->result;
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
+	DaoType *type = map->unitype;
 	DNode *node = NULL;
 	size_t i = 0;
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
+	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
 	for(node=DMap_First( map->items ); node; node=DMap_Next(map->items, node) ){
 		if( (i++) % self->step != self->first ) continue;
 		if( sect->b >0 ) DaoProcess_SetValue( clone, sect->a, node->key.pValue );
@@ -995,6 +999,8 @@ static void DaoMT_RunMapFunctional( void *p )
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			self->status |= DaoList_SetItem( list2, res, i-1 );
+		}else if( self->funct == DVM_FUNCT_APPLY ){
+			self->status |= DaoValue_Move( res, & node->value.pValue, type ) == 0;
 		}else if( self->funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			break;
 		}
@@ -1081,6 +1087,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 
 	for(i=0; i<threads; i++){
 		DaoTaskData *task = tasks + i;
+		DaoVmSpace_ReleaseProcess( proc->vmSpace, task->clone );
 		status |= task->status;
 		if( task->index < index ) index = task->index;
 		if( task->node == NULL ) continue; 
@@ -1103,6 +1110,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		}
 	}
 	if( status ) DaoProcess_RaiseException( proc, DAO_ERROR, "code section execution failed!" );
+	dao_free( tasks );
 }
 static void DaoMT_Run( DaoProcess *proc, DaoValue *p[], int n )
 {
