@@ -241,7 +241,10 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexProc );
 #endif
-	if( DMap_Find( self->allProcesses, proc ) ) DArray_PushBack( self->processes, proc );
+	if( DMap_Find( self->allProcesses, proc ) ){
+		DaoProcess_PopFrames( proc, proc->firstFrame );
+		DArray_PushBack( self->processes, proc );
+	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexProc );
 #endif
@@ -1824,7 +1827,7 @@ DaoVmSpace* DaoInit()
 	DaoException_Setup( vms->nsInternal );
 
 #ifdef DAO_WITH_THREAD
-	DaoNamespace_MakeType( ns, "mtlib", DAO_THDMASTER, NULL, NULL, 0 );
+	DaoNamespace_MakeType( ns, "mt", DAO_THDMASTER, NULL, NULL, 0 );
 	type1 = DaoNamespace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
 	type2 = DaoNamespace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
 	type3 = DaoNamespace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );

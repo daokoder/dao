@@ -17,6 +17,7 @@
 #include"daoVmspace.h"
 
 void DaoCallServer_Join( DaoVmSpace *vms );
+void DaoCallServer_AddTask( DThreadTask func, void *param );
 DaoFuture* DaoCallServer_Add( DaoProcess *call, DaoProcess *wait, DaoFuture *pre );
 
 #endif
