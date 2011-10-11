@@ -4290,13 +4290,14 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 				DaoParser_Warn( self, DAO_SYMBOL_WAS_DEFINED, name );
 				return;
 			}else if( self->isClassBody ){
-				int ln = tok->line;
-				int ec = 0;
+				int ec = 0, ln = tok->line;
+				int asyn = hostClass->attribs & DAO_CLS_ASYNCHRONOUS;
 				if( storeType & DAO_DECL_CONST ){
 					ec = DaoClass_AddConst( hostClass, name, null, perm, ln );
 				}else if( storeType & DAO_DECL_STATIC ){
 					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm, ln );
 				}else{
+					if( asyn && perm == DAO_DATA_PUBLIC ) perm = DAO_DATA_PROTECTED;
 					ec = DaoClass_AddObjectVar( hostClass, name, null, abtp, perm, ln );
 					routine->attribs |= DAO_ROUT_NEEDSELF;
 				}
@@ -5985,7 +5986,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					call->b |= DAO_CALL_BLOCK;
 
 					if( self->outers == NULL ) self->outers = DArray_New(0);
-					if( self->outers->size >= 4 ){
+					if( self->outers->size >= DAO_MAX_SECTDEPTH ){
 						DaoParser_Error2( self, DAO_SECTION_TOO_DEEP, start, rb, 0 );
 						goto InvalidFunctional;
 					}

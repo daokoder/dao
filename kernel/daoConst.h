@@ -17,6 +17,8 @@
 #define DAO_MAX_PARAM  30
 #define DAO_MAX_INDEX  10
 
+#define DAO_MAX_SECTDEPTH  8
+
 #ifdef UNIX
 #define DAO_PATH "/usr/local/dao"
 #elif WIN32

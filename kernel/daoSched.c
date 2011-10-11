@@ -174,7 +174,7 @@ static DaoFuture* DaoFutures_GetFirstExecutable( DArray *futures, DMap *pending,
 	future = (DaoFuture*) futures->items.pVoid[0];
 	precond = future->precondition;
 	first = future;
-	while( precond && (precond->state == DAO_CALL_QUEUED || precond->state == DAO_CALL_PAUSED) ){
+	while( precond && precond->state != DAO_CALL_FINISHED ){
 		DArray_PopFront( futures );
 		DArray_PushBack( futures, future );
 		future = (DaoFuture*) futures->items.pVoid[0];
@@ -197,7 +197,6 @@ static DaoFuture* DaoFutures_GetFirstExecutable( DArray *futures, DMap *pending,
 static void DaoCallThread_Run( DaoCallThread *self )
 {
 	DaoCallServer *server = daoCallServer;
-	DaoType *type = NULL;
 	double wt = 0.001;
 	int i, timeout;
 
@@ -247,10 +246,12 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			DaoValue_ClearAll( future->params, n );
 			DaoProcess_PushRoutine( proc, future->routine, future->object );
 			proc->topFrame->parCount = n;
+			future->state = DAO_CALL_RUNNING;
 			DaoProcess_Execute( proc );
 		}else if( future->state == DAO_CALL_PAUSED ){
 			DaoValue *pars[1] = { NULL };
 			if( future->precondition ) pars[0] = future->precondition->value;
+			future->state = DAO_CALL_RUNNING;
 			DaoProcess_Resume( future->process, pars, future->precondition != NULL, NULL );
 			proc = future->process;
 		}
@@ -264,24 +265,8 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMap_Erase( server->active, proc );
 		DMutex_Unlock( & server->mutex );
 
-		type = future->unitype;
-		type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
-		switch( proc->status ){
-		case DAO_VMPROC_FINISHED :
-		case DAO_VMPROC_ABORTED :
-			DaoValue_Move( proc->stackValues[0], & future->value, type );
-			future->state = DAO_CALL_FINISHED;
-			break;
-		case DAO_VMPROC_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
-		case DAO_VMPROC_RUNNING :
-		case DAO_VMPROC_STACKED : future->state = DAO_CALL_RUNNING; break;
-		default : break;
-		}
-		if( future->state == DAO_CALL_FINISHED ){
-			GC_DecRC( proc->future );
-			proc->future = NULL;
-			DaoVmSpace_ReleaseProcess( server->vmspace, proc );
-		}
+		DaoProcess_ReturnFutureValue( proc, future );
+		if( future->state == DAO_CALL_FINISHED ) DaoVmSpace_ReleaseProcess( server->vmspace, proc );
 		GC_DecRC( future );
 	}
 }

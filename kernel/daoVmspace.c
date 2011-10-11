@@ -242,6 +242,8 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
+		GC_DecRC( proc->future );
+		proc->future = NULL;
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_PushBack( self->processes, proc );
 	}

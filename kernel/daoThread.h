@@ -216,6 +216,8 @@ extern DaoThdMaster* DaoThdMaster_New();
 extern void DaoInitThread();
 extern void DaoStopThread( DaoThdMaster *self );
 
+void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
+
 #endif
 
 #endif

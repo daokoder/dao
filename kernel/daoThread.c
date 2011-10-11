@@ -922,6 +922,24 @@ struct DaoTaskData
 	uint_t  *joined; // number of joined threads
 };
 
+void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
+{
+	DaoType *type;
+	if( future == NULL ) return;
+	type = future->unitype;
+	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
+	switch( self->status ){
+	case DAO_VMPROC_FINISHED :
+	case DAO_VMPROC_ABORTED :
+		DaoValue_Move( self->stackValues[0], & future->value, type );
+		future->state = DAO_CALL_FINISHED;
+		break;
+	case DAO_VMPROC_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
+	case DAO_VMPROC_RUNNING :
+	case DAO_VMPROC_STACKED : future->state = DAO_CALL_RUNNING; break;
+	default : break;
+	}
+}
 static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 {
 	DaoProcess_PushRoutine( clone, proto->activeRoutine, proto->activeObject );
@@ -930,6 +948,33 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	DaoProcess_SetActiveFrame( clone, clone->topFrame );
 	DaoProcess_PushSectionFrame( clone );
 	clone->topFrame->outer = proto;
+}
+static void DaoMT_RunRunFunctional( void *p )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoInteger tidint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DaoValue *threadid = (DaoValue*)(void*)&tidint;
+	DaoTaskData *self = (DaoTaskData*)p;
+	DaoProcess *clone = self->clone;
+	DaoVmCode *sect = self->sect;
+	dint i, n = self->param->xInteger.value;
+	DaoMT_InitProcess( self->proto, clone );
+	tidint.value = self->first;
+	for(i=self->first; i<n; i+=self->step){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( clone, sect->a, index );
+		if( sect->b >1 ) DaoProcess_SetValue( clone, sect->a+1, threadid );
+		clone->topFrame->entry = self->entry;
+		DaoProcess_Execute( clone );
+		if( clone->status == DAO_VMPROC_ABORTED ) break;
+	}
+	self->status |= clone->status == DAO_VMPROC_ABORTED;
+	self->index = i;
+	DMutex_Lock( self->mutex );
+	*self->joined += 1;
+	DCondVar_Signal( self->condv );
+	DMutex_Unlock( self->mutex );
 }
 static void DaoMT_RunListFunctional( void *p )
 {
@@ -1016,6 +1061,7 @@ static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
 	switch( self->param->type ){
+	case DAO_INTEGER : DaoMT_RunRunFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
 	case DAO_MAP   : DaoMT_RunMapFunctional( p ); break;
 	//case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
@@ -1112,9 +1158,61 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	if( status ) DaoProcess_RaiseException( proc, DAO_ERROR, "code section execution failed!" );
 	dao_free( tasks );
 }
+static void DaoMT_Start0( void *p )
+{
+	DaoProcess *proc = (DaoProcess*)p;
+	DaoProcess_Execute( proc );
+	DaoProcess_ReturnFutureValue( proc, proc->future );
+	if( proc->future->state == DAO_CALL_FINISHED ){
+		DaoVmSpace_ReleaseProcess( proc->vmSpace, proc );
+	}
+}
+static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
+{
+	int entry;
+	DaoProcess *clone;
+	DaoVmCode *vmc, *end;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoFuture *future = DaoFuture_New();
+	DaoType *type = & proc->topFrame->function->routType->aux->xType;
+	type = DaoNamespace_MakeType( proc->activeNamespace, "future", DAO_FUTURE, NULL, &type, 1 );
+	GC_ShiftRC( type, future->unitype );
+	future->unitype = type;
+	DaoProcess_PutValue( proc, (DaoValue*) future );
+	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "code section not found!" );
+		return;
+	}
+	entry = proc->topFrame->entry;
+	end = proc->activeRoutine->vmCodes->codes + proc->activeCode[1].b;
+	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
+	DaoProcess_PopFrame( proc );
+	DaoProcess_SetActiveFrame( proc, proc->topFrame );
+	DaoMT_InitProcess( proc, clone );
+	clone->topFrame->entry = entry;
+	clone->topFrame->outer = clone;
+	future->process = clone;
+	GC_IncRC( clone );
+	GC_ShiftRC( future, clone->future );
+	clone->future = future;
+	future->state = DAO_CALL_RUNNING;
+	for(vmc=sect; vmc!=end; vmc++){
+		int i = -1, code = vmc->code;
+		if( code == DVM_GETVH || (code >= DVM_GETVH_I && code <= DVM_GETVH_D) ){
+			if( vmc->a == 0 ) i = vmc->b;
+		}else if( code == DVM_SETVH || (code >= DVM_SETVH_II && code <= DVM_SETVH_DD) ){
+			if( vmc->c == 0 ) i = vmc->b;
+		}
+		if( i >= 0 ){
+			GC_ShiftRC( proc->activeValues[i], clone->activeValues[i] );
+			clone->activeValues[i] = proc->activeValues[i];
+		}
+	}
+	DaoCallServer_AddTask( DaoMT_Start0, clone );
+}
 static void DaoMT_Run( DaoProcess *proc, DaoValue *p[], int n )
 {
-	//DaoMT_Functional( proc, NULL, p[0]->xInteger.value, 0, p[1]->xInteger.value );
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_NULL );
 }
 static void DaoMT_ListEach( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -1160,7 +1258,8 @@ static DaoFuncItem thdMasterMeths[] =
 	{ DaoThdMaster_Lib_Self,        "self( self : mt )=>thread" },
 	{ DaoThdMaster_Lib_MyData,      "mydata( self : mt )=>map<string,any>" },
 
-	{ DaoMT_Run, "run( times=1, threads=2 )[index:int,threadid:int]" },
+	{ DaoMT_Start, "start()[=>@V] =>any" }, // TODO: =>future<@V>
+	{ DaoMT_Run, "run( times :int, threads=2 )[index:int,threadid:int]" },
 
 	{ DaoMT_ListEach, "each( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },
 	{ DaoMT_ListMap, "map( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T2] =>list<@T2>" },
