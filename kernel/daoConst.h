@@ -38,8 +38,6 @@ enum DaoRTTI
 	DAO_MACRO ,
 	DAO_ABROUTINE , /* abstract routine in interface */
 	DAO_FUNCURRY ,
-	DAO_THDMASTER ,
-	DAO_THREADID ,
 	DAO_FUTURE ,
 	DAO_TYPEKERNEL ,
 	DAO_CODEBLOCK ,

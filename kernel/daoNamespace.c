@@ -702,10 +702,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DString_SetMBS( name, "io" ); 
 	DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdStream, DAO_DATA_PUBLIC );
-	if( vms->thdMaster ){
-		DString_SetMBS( name, "mt" ); 
-		DaoNamespace_AddConst( self, name, (DaoValue*) vms->thdMaster, DAO_DATA_PUBLIC );
-	}
 
 	DString_SetMBS( name, "exceptions" );
 	value = (DaoValue*) DaoList_New();

@@ -86,7 +86,6 @@
 typedef struct DTuple     DTuple;
 typedef struct DRoutine   DRoutine;
 
-typedef struct DaoThdMaster  DaoThdMaster;
 typedef struct DaoFunCurry   DaoFunCurry;
 typedef struct DaoCdataCore  DaoCdataCore;
 typedef struct DaoTypeKernel DaoTypeKernel;

@@ -130,7 +130,6 @@ extern DaoTypeBase  futureTyper;
 extern DaoTypeBase mutexTyper;
 extern DaoTypeBase condvTyper;
 extern DaoTypeBase semaTyper;
-extern DaoTypeBase threadTyper;
 extern DaoTypeBase thdMasterTyper;
 
 extern DaoTypeBase macroTyper;
@@ -180,8 +179,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_MUTEX     :  return & mutexTyper;
 	case DAO_CONDVAR   :  return & condvTyper;
 	case DAO_SEMA      :  return & semaTyper;
-	case DAO_THREAD    :  return & threadTyper;
-	case DAO_THDMASTER :  return & thdMasterTyper;
 	case DAO_FUTURE    :  return & futureTyper;
 #endif
 	default : break;
@@ -244,6 +241,8 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	if( DMap_Find( self->allProcesses, proc ) ){
 		GC_DecRC( proc->future );
 		proc->future = NULL;
+		proc->condv = NULL;
+		proc->mutex = NULL;
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_PushBack( self->processes, proc );
 	}
@@ -313,10 +312,7 @@ DaoVmSpace* DaoVmSpace_New()
 
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
-	self->thdMaster = NULL;
 #ifdef DAO_WITH_THREAD
-	self->thdMaster = DaoThdMaster_New();
-	self->thdMaster->refCount ++;
 	DMutex_Init( & self->mutexLoad );
 	DMutex_Init( & self->mutexProc );
 	self->locked = 0;
@@ -360,7 +356,6 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdStream );
-	GC_DecRC( self->thdMaster );
 	DString_Delete( self->source );
 	DString_Delete( self->fileName );
 	DString_Delete( self->pathWorking );
@@ -1829,21 +1824,16 @@ DaoVmSpace* DaoInit()
 	DaoException_Setup( vms->nsInternal );
 
 #ifdef DAO_WITH_THREAD
-	DaoNamespace_MakeType( ns, "mt", DAO_THDMASTER, NULL, NULL, 0 );
-	type1 = DaoNamespace_MakeType( ns, "thread", DAO_THREAD, NULL, NULL, 0 );
 	type2 = DaoNamespace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
 	type3 = DaoNamespace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
 	type4 = DaoNamespace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
-	type1->value = (DaoValue*) DaoThread_New( vms->thdMaster );
-	type2->value = (DaoValue*) DaoMutex_New( vms );
-	type3->value = (DaoValue*) DaoCondVar_New( vms->thdMaster );
+	type2->value = (DaoValue*) DaoMutex_New();
+	type3->value = (DaoValue*) DaoCondVar_New();
 	type4->value = (DaoValue*) DaoSema_New( 0 );
-	GC_IncRC( type1->value );
 	GC_IncRC( type2->value );
 	GC_IncRC( type3->value );
 	GC_IncRC( type4->value );
-	DaoNamespace_SetupType( ns, & threadTyper );
-	DaoNamespace_SetupType( ns, & thdMasterTyper );
+	DaoNamespace_WrapType( ns, & thdMasterTyper );
 	DaoNamespace_SetupType( ns, & mutexTyper );
 	DaoNamespace_SetupType( ns, & condvTyper );
 	DaoNamespace_SetupType( ns, & semaTyper );
@@ -1875,10 +1865,6 @@ void DaoQuit()
 	DaoCallServer_Join( mainVmSpace );
 #endif
 
-#ifdef DAO_WITH_THREAD
-	DaoStopThread( mainVmSpace->thdMaster );
-#endif
-
 	if( daoConfig.iscgi ) return;
 
 #ifdef DAO_WITH_NUMARRAY
@@ -1898,7 +1884,6 @@ void DaoQuit()
 	DaoTypeBase_Free( & mutexTyper );
 	DaoTypeBase_Free( & condvTyper );
 	DaoTypeBase_Free( & semaTyper );
-	DaoTypeBase_Free( & threadTyper );
 	DaoTypeBase_Free( & thdMasterTyper );
 #endif
 	DaoTypeBase_Free( & vmpTyper );

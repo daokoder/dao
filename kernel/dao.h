@@ -161,7 +161,6 @@ enum DaoTypes
 	DAO_MUTEX ,
 	DAO_CONDVAR ,
 	DAO_SEMA ,
-	DAO_THREAD ,
 	DAO_TYPE ,
 	END_CORE_TYPES
 };
@@ -271,7 +270,6 @@ typedef struct DaoProcess      DaoProcess;
 typedef struct DaoMutex        DaoMutex;
 typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
-typedef struct DaoThread       DaoThread;
 typedef struct DaoType         DaoType;
 
 /* Complex type: */
@@ -632,7 +630,7 @@ DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t 
 DAO_DLL int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
 DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
 
-DAO_DLL DaoMutex* DaoMutex_New( DaoVmSpace *vms );
+DAO_DLL DaoMutex* DaoMutex_New();
 DAO_DLL void DaoMutex_Lock( DaoMutex *self );
 DAO_DLL void DaoMutex_Unlock( DaoMutex *self );
 DAO_DLL int DaoMutex_TryLock( DaoMutex *self );
@@ -1079,7 +1077,7 @@ int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
 int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
 int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
 
-DaoMutex* DaoMutex_New( DaoVmSpace *vms );
+DaoMutex* DaoMutex_New();
 void DaoMutex_Lock( DaoMutex *self );
 void DaoMutex_Unlock( DaoMutex *self );
 int DaoMutex_TryLock( DaoMutex *self );

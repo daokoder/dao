@@ -16,6 +16,7 @@
 
 #include"daoVmcode.h"
 #include"daoType.h"
+#include"daoThread.h"
 #include"time.h"
 #include"stdlib.h"
 
@@ -105,6 +106,11 @@ struct DaoProcess
 	char stopit;
 
 	DaoFuture *future;
+
+#ifdef DAO_WITH_THREAD
+	DMutex    *mutex;
+	DCondVar  *condv;
+#endif
 
 	DaoType   *dummyType;
 	DaoVmCode  dummyCode;

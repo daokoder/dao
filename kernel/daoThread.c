@@ -448,16 +448,15 @@ void DaoInitThreadSys()
 
 /* Dao threading types: */
 
-static DaoThread* DaoThdMaster_FindRecord( DaoThdMaster *self, dao_thread_t tid );
-
-static DaoThread* GetThisThread( DaoThdMaster *thdMaster )
+static int DaoMT_PushSectionFrame( DaoProcess *proc )
 {
-	if( thdMaster ){
-		dao_thread_t tid = DThread_Self();
-		return DaoThdMaster_FindRecord( thdMaster, tid );
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "code section not found!" );
+		return 0;
 	}
-	return NULL;
+	return 1;
 }
+
 static void DaoMutex_Lib_Lock( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoMutex *self = (DaoMutex*) par[0];
@@ -473,11 +472,23 @@ static void DaoMutex_Lib_TryLock( DaoProcess *proc, DaoValue *par[], int N )
 	DaoMutex *self = (DaoMutex*) par[0];
 	DaoProcess_PutInteger( proc, DaoMutex_TryLock( self ) );
 }
+static void DaoMutex_Lib_Protect( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoMutex *self = (DaoMutex*) p[0];
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+	DaoMutex_Lock( self );
+	DaoProcess_Execute( proc );
+	DaoMutex_Unlock( self );
+	DaoProcess_PopFrame( proc );
+}
 static DaoFuncItem mutexMeths[] =
 {
-	{ DaoMutex_Lib_Lock,      "lock( self : mutex )" },
+	{ DaoMutex_Lib_Lock,      "lock( self : mutex )" }, // XXX remove???
 	{ DaoMutex_Lib_Unlock,    "unlock( self : mutex )" },
 	{ DaoMutex_Lib_TryLock,   "trylock( self : mutex )=>int" },
+	{ DaoMutex_Lib_Protect,   "protect( self : mutex )[]" },
+	// ??? TODO: protect( self : mutex, try=0 )[locked:int]
 	{ NULL, NULL }
 };
 static void DaoMutex_Delete( DaoMutex *self )
@@ -502,51 +513,24 @@ DaoTypeBase mutexTyper =
 	(FuncPtrDel) DaoMutex_Delete, NULL
 };
 
-DaoMutex* DaoMutex_New( DaoVmSpace *vms )
+DaoMutex* DaoMutex_New()
 {
 	DaoMutex* self = (DaoMutex*) dao_calloc( 1, sizeof(DaoMutex) );
 	DaoValue_Init( self, DAO_MUTEX );
 	DMutex_Init( & self->myMutex );
-	self->thdMaster = NULL;
-	if( vms ) self->thdMaster = vms->thdMaster;
 	return self;
 }
 void DaoMutex_Lock( DaoMutex *self )
 {
-	DaoThread *thread = GetThisThread( self->thdMaster );
-	if( thread ){
-		DNode *node = DMap_Find( thread->mutexUsed, self );
-		if( node == NULL ){
-			GC_IncRC( self );
-			DMap_Insert( thread->mutexUsed, self, (void*)1 );
-		}
-	}
 	DMutex_Lock( & self->myMutex );
 }
 void DaoMutex_Unlock( DaoMutex *self )
 {
-	DaoThread *thread = GetThisThread( self->thdMaster );
 	DMutex_Unlock( & self->myMutex );
-	if( thread ){
-		DNode *node = DMap_Find( thread->mutexUsed, self );
-		if( node != NULL ){
-			GC_IncRC( self );
-			DMap_Erase( thread->mutexUsed, self );
-		}
-	}
 }
 int DaoMutex_TryLock( DaoMutex *self )
 {
-	DaoThread *thread = GetThisThread( self->thdMaster );
-	int locked = DMutex_TryLock( & self->myMutex );
-	if( thread && locked ){
-		DNode *node = DMap_Find( thread->mutexUsed, self );
-		if( node != NULL ){
-			GC_IncRC( self );
-			DMap_Erase( thread->mutexUsed, self );
-		}
-	}
-	return locked;
+	return DMutex_TryLock( & self->myMutex );
 }
 /* Condition variable */
 static void DaoCondV_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
@@ -604,12 +588,11 @@ DaoTypeBase condvTyper =
 	"condition", & condvCore, NULL, (DaoFuncItem*) condvMeths, {0}, {0},
 	(FuncPtrDel) DaoCondVar_Delete, NULL
 };
-DaoCondVar* DaoCondVar_New( DaoThdMaster *thdm )
+DaoCondVar* DaoCondVar_New()
 {
 	DaoCondVar* self = (DaoCondVar*) dao_calloc( 1, sizeof(DaoCondVar) );
 	DaoValue_Init( self, DAO_CONDVAR );
 	DCondVar_Init( & self->myCondVar );
-	self->thdMaster = thdm;
 	return self;
 }
 void DaoCondVar_Delete( DaoCondVar *self )
@@ -656,12 +639,23 @@ static void DaoSema_Lib_GetValue( DaoProcess *proc, DaoValue *par[], int N )
 	DaoSema *self = (DaoSema*) par[0];
 	DaoProcess_PutInteger( proc, DSema_GetValue( & self->mySema ) );
 }
+static void DaoSema_Lib_Protect( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoSema *self = (DaoSema*) p[0];
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+	DSema_Wait( & self->mySema );
+	DaoProcess_Execute( proc );
+	DSema_Post( & self->mySema );
+	DaoProcess_PopFrame( proc );
+}
 static DaoFuncItem semaMeths[] =
 {
 	{ DaoSema_Lib_Wait,      "wait( self : semaphore )" },
 	{ DaoSema_Lib_Post,      "post( self : semaphore )" },
 	{ DaoSema_Lib_SetValue,  "setvalue( self : semaphore, n :int )" },
 	{ DaoSema_Lib_GetValue,  "getvalue( self : semaphore )=>int" },
+	{ DaoSema_Lib_Protect,   "protect( self : mutex )[]" },
 	{ NULL, NULL }
 };
 static DaoTypeCore semaCore =
@@ -710,190 +704,15 @@ int  DaoSema_GetValue( DaoSema *self )
 	return DSema_GetValue( & self->mySema );
 }
 
-/* Thread */
-static void DaoThdMaster_EraseRecord( DaoThdMaster *self, DaoThread *thd );
-static void DaoCleanThread( void *arg )
-{
-	DaoThread *self = (DaoThread*) arg;
-	DNode *node = DMap_First( self->mutexUsed );
-	for( ; node != NULL; node = DMap_Next(self->mutexUsed, node) ){
-		DaoMutex_Unlock( (DaoMutex*)node->key.pVoid );
-		GC_DecRC( node->key.pVoid );
-	}
-
-	if( self->thdMaster ) DaoThdMaster_EraseRecord( self->thdMaster, self );
-	if( self->exitRefCount ) GC_DecRC( self );
-	self->isRunning = 0;
-}
-
-static void DaoThread_Lib_MyData( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThread *self = (DaoThread*) par[0];
-	DaoProcess_PutValue( proc, (DaoValue*)self->myMap );
-}
-static void DaoThread_Lib_Join( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThread *self = (DaoThread*) par[0];
-	DThread_Join( & self->myThread );
-}
-static void DaoThread_Lib_Detach( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThread *self = (DaoThread*) par[0];
-	DThread_Detach( & self->myThread );
-}
-static void DaoThread_Lib_Cancel( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThread *self = (DaoThread*) par[0];
-	DThread_Cancel( & self->myThread );
-}
-static DaoFuncItem threadMeths[] =
-{
-	{ DaoThread_Lib_MyData,      "mydata( self : thread )=>map<string,any>" },
-	{ DaoThread_Lib_Join,        "join( self : thread )" },
-	{ DaoThread_Lib_Detach,      "detach( self : thread )" },
-	{ DaoThread_Lib_Cancel,      "cancel( self : thread )" },
-	{ NULL, NULL }
-};
-
-static void DaoThread_Delete( DaoThread *self );
-
-static DaoTypeCore threadCore =
-{
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
-};
-DaoTypeBase threadTyper =
-{
-	"thread", & threadCore, NULL, (DaoFuncItem*) threadMeths, {0}, {0},
-	(FuncPtrDel) DaoThread_Delete, NULL
-};
-
-DaoThread* DaoThread_New( DaoThdMaster *thdm )
-{
-	DaoThread* self = (DaoThread*) dao_calloc( 1, sizeof(DaoThread) );
-	DaoValue_Init( self, DAO_THREAD );
-	DThread_Init( & self->myThread );
-	self->process = NULL;
-	self->thdMaster = thdm;
-	self->myMap = DaoMap_New(1);
-	self->myMap->refCount ++;
-	self->mutexUsed = DMap_New(0,0);
-	self->myThread.cleaner = DaoCleanThread;
-	self->exitRefCount = 0;
-	self->isRunning = 0;
-	return self;
-}
-void DaoThread_Delete( DaoThread *self )
-{
-	DThread_Destroy( & self->myThread );
-	GC_DecRC( self->process );
-	GC_DecRC( self->myMap );
-	DMap_Delete( self->mutexUsed );
-	dao_free( self );
-}
-
-static void DaoThdMaster_InsertRecord( DaoThdMaster *self, DaoThread *thd );
-
-static void DaoThread_Wrapper( void *p )
-{
-	DaoThread *self = (DaoThread*)p;
-	self->taskFunc( self->taskArg );
-	self->isRunning = 0;
-}
-
-int DaoThread_Start( DaoThread *self, DThreadTask task, void *arg )
-{
-	if( self->thdMaster ) DaoThdMaster_InsertRecord( self->thdMaster, self );
-	self->isRunning = 1;
-	self->taskFunc = task;
-	self->taskArg = arg;
-	return DThread_Start( & self->myThread, DaoThread_Wrapper, self );
-}
-void DaoThread_TestCancel( DaoThread *self )
-{
-	DThread_TestCancel( & self->myThread );
-}
-
-static void DaoProcess_Execute2( DaoProcess *self )
-{
-	DaoProcess_Execute( self );
-}
-
 /* thread master */
-static void DaoThdMaster_Lib_Create( DaoProcess *proc, DaoValue *par[], int N )
-{ 
-	DaoThread *thread;
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoProcess *vmProc = NULL;
-	DaoValue **params = par + 2;
-	DaoValue *callable = par[1];
-	DaoValue *selfobj = NULL;
-	DRoutine *rout;
-	int i;
-
-	DaoCGC_Start();
-
-	N -= 2;
-	if( callable && callable->type == DAO_FUNCURRY ){
-		DaoFunCurry *curry = (DaoFunCurry*) callable;
-		selfobj = curry->selfobj;
-		callable = curry->callable;
-		N = curry->params->size;
-		if( N > DAO_MAX_PARAM ) N = DAO_MAX_PARAM; /* XXX warning */
-		params = curry->params->items.pValue;
-	}
-	vmProc = DaoProcess_New( proc->vmSpace );
-	GC_IncRC( vmProc );
-	if( DaoProcess_PushCallable( vmProc, callable, selfobj, params, N ) ){
-		GC_DecRC( vmProc );
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid parameter for creating thread" );
-		return;
-	}
-	thread = DaoThread_New( self );
-	thread->process = vmProc;
-	thread->exitRefCount = 1;
-	DaoProcess_PutValue( proc, (DaoValue*)thread );
-	DaoThread_Start( thread, (DThreadTask) DaoProcess_Execute2, vmProc );
-}
-static void DaoThdMaster_Lib_Exit( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoThread *thread = GetThisThread( self );
-	DThread_Exit( & thread->myThread );
-}
-static void DaoThdMaster_Lib_TestCancel( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoThread *thread = GetThisThread( self );
-	DThread_TestCancel( & thread->myThread );
-}
-static void DaoThdMaster_Lib_Self( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoProcess_PutValue( proc, (DaoValue*)GetThisThread( self ) );
-}
-static void DaoThdMaster_Lib_MyData( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoThread *thread = GetThisThread( self );
-	DaoProcess_PutValue( proc, (DaoValue*)thread->myMap );
-}
 static void DaoThdMaster_Lib_Mutex( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoMutex *mutex = DaoMutex_New( NULL );
-	mutex->thdMaster = self;
+	DaoMutex *mutex = DaoMutex_New();
 	DaoProcess_PutValue( proc, (DaoValue*) mutex );
 }
 static void DaoThdMaster_Lib_CondVar( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoThdMaster *self = (DaoThdMaster*) par[0];
-	DaoProcess_PutValue( proc, (DaoValue*)DaoCondVar_New( self ) );
+	DaoProcess_PutValue( proc, (DaoValue*)DaoCondVar_New() );
 }
 static void DaoThdMaster_Lib_Sema( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -908,8 +727,6 @@ struct DaoTaskData
 	DaoProcess  *proto; // caller's process;
 	DaoProcess  *clone; // spawned process;
 	DaoVmCode   *sect; // DVM_SECT
-	DCondVar    *condv;
-	DMutex      *mutex;
 
 	DNode   *node; // last executed key value node;
 	uint_t   index; // last executed index;
@@ -948,6 +765,7 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	DaoProcess_SetActiveFrame( clone, clone->topFrame );
 	DaoProcess_PushSectionFrame( clone );
 	clone->topFrame->outer = proto;
+	clone->topFrame->returning = -1;
 }
 static void DaoMT_RunRunFunctional( void *p )
 {
@@ -959,6 +777,7 @@ static void DaoMT_RunRunFunctional( void *p )
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
 	dint i, n = self->param->xInteger.value;
+
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
 	for(i=self->first; i<n; i+=self->step){
@@ -967,14 +786,19 @@ static void DaoMT_RunRunFunctional( void *p )
 		if( sect->b >1 ) DaoProcess_SetValue( clone, sect->a+1, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_ABORTED ) break;
+		if( clone->status == DAO_VMPROC_SUSPENDED ){
+			DMutex_Lock( clone->mutex );
+			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
+				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
+			DMutex_Unlock( clone->mutex );
+		}
+		if( clone->status != DAO_VMPROC_FINISHED ) break;
 	}
-	self->status |= clone->status == DAO_VMPROC_ABORTED;
-	self->index = i;
-	DMutex_Lock( self->mutex );
+	self->status |= clone->status != DAO_VMPROC_FINISHED;
+	DMutex_Lock( clone->mutex );
 	*self->joined += 1;
-	DCondVar_Signal( self->condv );
-	DMutex_Unlock( self->mutex );
+	DCondVar_Signal( clone->condv );
+	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_RunListFunctional( void *p )
 {
@@ -1000,7 +824,13 @@ static void DaoMT_RunListFunctional( void *p )
 		if( sect->b >2 ) DaoProcess_SetValue( clone, sect->a+2, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_ABORTED ) break;
+		if( clone->status == DAO_VMPROC_SUSPENDED ){
+			DMutex_Lock( clone->mutex );
+			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
+				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
+			DMutex_Unlock( clone->mutex );
+		}
+		if( clone->status != DAO_VMPROC_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			self->status |= DaoList_SetItem( list2, res, i );
@@ -1010,12 +840,12 @@ static void DaoMT_RunListFunctional( void *p )
 			break;
 		}
 	}
-	self->status |= clone->status == DAO_VMPROC_ABORTED;
+	self->status |= clone->status != DAO_VMPROC_FINISHED;
 	self->index = i;
-	DMutex_Lock( self->mutex );
+	DMutex_Lock( clone->mutex );
 	*self->joined += 1;
-	DCondVar_Signal( self->condv );
-	DMutex_Unlock( self->mutex );
+	DCondVar_Signal( clone->condv );
+	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_RunMapFunctional( void *p )
 {
@@ -1030,6 +860,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	DaoType *type = map->unitype;
 	DNode *node = NULL;
 	size_t i = 0;
+
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
 	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
@@ -1040,7 +871,13 @@ static void DaoMT_RunMapFunctional( void *p )
 		if( sect->b >2 ) DaoProcess_SetValue( clone, sect->a+2, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_ABORTED ) break;
+		if( clone->status == DAO_VMPROC_SUSPENDED ){
+			DMutex_Lock( clone->mutex );
+			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
+				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
+			DMutex_Unlock( clone->mutex );
+		}
+		if( clone->status != DAO_VMPROC_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			self->status |= DaoList_SetItem( list2, res, i-1 );
@@ -1050,12 +887,12 @@ static void DaoMT_RunMapFunctional( void *p )
 			break;
 		}
 	}
-	self->status |= clone->status == DAO_VMPROC_ABORTED;
+	self->status |= clone->status != DAO_VMPROC_FINISHED;
 	self->node = node;
-	DMutex_Lock( self->mutex );
+	DMutex_Lock( clone->mutex );
 	*self->joined += 1;
-	DCondVar_Signal( self->condv );
-	DMutex_Unlock( self->mutex );
+	DCondVar_Signal( clone->condv );
+	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_RunFunctional( void *p )
 {
@@ -1095,8 +932,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, null ); break;
 	}
 	if( threads <= 0 ) threads = 2;
-	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 	if( list ){
 		DArray_Clear( list->items );
 		if( param->type == DAO_LIST ) DArray_Resize( list->items, param->xList.items->size, NULL );
@@ -1113,8 +949,6 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		DaoTaskData *task = tasks + i;
 		task->param = param;
 		task->result = result;
-		task->condv = & condv;
-		task->mutex = & mutex;
 		task->proto = proc;
 		task->sect = sect;
 		task->funct = F;
@@ -1123,6 +957,8 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->step = threads;
 		task->joined = & joined;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
+		task->clone->condv = & condv;
+		task->clone->mutex = & mutex;
 		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task );
 	}
 	DaoMT_RunFunctional( tasks );
@@ -1175,14 +1011,13 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoFuture *future = DaoFuture_New();
 	DaoType *type = & proc->topFrame->function->routType->aux->xType;
+
 	type = DaoNamespace_MakeType( proc->activeNamespace, "future", DAO_FUTURE, NULL, &type, 1 );
 	GC_ShiftRC( type, future->unitype );
 	future->unitype = type;
 	DaoProcess_PutValue( proc, (DaoValue*) future );
-	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "code section not found!" );
-		return;
-	}
+	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+
 	entry = proc->topFrame->entry;
 	end = proc->activeRoutine->vmCodes->codes + proc->activeCode[1].b;
 	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
@@ -1246,18 +1081,23 @@ static void DaoMT_MapFind( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoMT_Functional( proc, p, n, DVM_FUNCT_FIND );
 }
+static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+	if( proc->mutex ) DMutex_Lock( proc->mutex );
+	DaoProcess_Execute( proc );
+	if( proc->mutex ) DMutex_Unlock( proc->mutex );
+	DaoProcess_PopFrame( proc );
+}
 
 static DaoFuncItem thdMasterMeths[] =
 {
-	{ DaoThdMaster_Lib_Create,      "thread( self : mt, object, ... )=>thread" },
-	{ DaoThdMaster_Lib_Mutex,       "mutex( self : mt )=>mutex" },
-	{ DaoThdMaster_Lib_CondVar,     "condition( self : mt )=>condition" },
-	{ DaoThdMaster_Lib_Sema,        "semaphore( self : mt )=>semaphore" },
-	{ DaoThdMaster_Lib_Exit,        "exit( self : mt )" },
-	{ DaoThdMaster_Lib_TestCancel,  "testcancel( self : mt )" },
-	{ DaoThdMaster_Lib_Self,        "self( self : mt )=>thread" },
-	{ DaoThdMaster_Lib_MyData,      "mydata( self : mt )=>map<string,any>" },
+	{ DaoThdMaster_Lib_Mutex,       "mutex()=>mutex" },
+	{ DaoThdMaster_Lib_CondVar,     "condition()=>condition" },
+	{ DaoThdMaster_Lib_Sema,        "semaphore()=>semaphore" },
 
+	{ DaoMT_Critical, "critical()[]" },
 	{ DaoMT_Start, "start()[=>@V] =>any" }, // TODO: =>future<@V>
 	{ DaoMT_Run, "run( times :int, threads=2 )[index:int,threadid:int]" },
 
@@ -1273,103 +1113,15 @@ static DaoFuncItem thdMasterMeths[] =
 	{ NULL, NULL }
 };
 
-static void DaoThdMaster_Delete( DaoThdMaster *self );
-
-static DaoTypeCore thdMasterCore =
-{
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
-};
 DaoTypeBase thdMasterTyper =
 {
-	"mt", & thdMasterCore, NULL, (DaoFuncItem*) thdMasterMeths, {0}, {0},
-	(FuncPtrDel) DaoThdMaster_Delete, NULL
+	"mt", NULL, NULL, (DaoFuncItem*) thdMasterMeths, {0}, {0}, NULL, NULL
 };
 
-DaoThdMaster* DaoThdMaster_New()
-{
-	DaoThdMaster *self = (DaoThdMaster*) dao_calloc( 1, sizeof(DaoThdMaster) );
-	DaoValue_Init( (DaoValue*)self, DAO_THDMASTER );
-	DMutex_Init( & self->recordMutex );
-	self->thdRecords = DArray_New(0);
-	return self;
-}
-
-static void DaoThdMaster_Delete( DaoThdMaster *self )
-{
-	DMutex_Destroy( & self->recordMutex );
-	DArray_Delete( self->thdRecords );
-	dao_free( self );
-}
-static DaoThread* DaoThdMaster_FindRecord( DaoThdMaster *self, dao_thread_t tid )
-{
-	DaoThread *thd = 0;
-	int i;
-	DaoThread **threads;
-
-	DMutex_Lock( & self->recordMutex );
-	threads = (DaoThread**)self->thdRecords->items.pVoid;
-	for(i=0; i<self->thdRecords->size; i++ ){
-		if( DThread_Equal( tid, threads[i]->myThread.myThread ) ){
-			thd = threads[i];
-			break;
-		}
-	}
-	DMutex_Unlock( & self->recordMutex );
-	return thd;
-}
-static void DaoThdMaster_InsertRecord( DaoThdMaster *self, DaoThread *thd )
-{
-	DMutex_Lock( & self->recordMutex );
-	DArray_Append( self->thdRecords, thd );
-	DMutex_Unlock( & self->recordMutex );
-}
-static void DaoThdMaster_EraseRecord( DaoThdMaster *self, DaoThread *thd )
-{
-	int i;
-	DaoThread **threads;
-
-	DMutex_Lock( & self->recordMutex );
-	threads = (DaoThread**)self->thdRecords->items.pVoid;
-	for(i=0; i<self->thdRecords->size; i++ )
-		if( DThread_Equal( thd->myThread.myThread, threads[i]->myThread.myThread ) ) break;
-
-	DArray_Erase( self->thdRecords, i, 1 );
-	DMutex_Unlock( & self->recordMutex );
-}
 
 void DaoInitThread()
 {
 	DaoInitThreadSys();
-}
-void DaoStopThread( DaoThdMaster *self )
-{
-	DArray *threads = DArray_New(0);
-	DaoThread *thread;
-	int i, T;
-
-	DMutex_Lock( & self->recordMutex );
-	T = self->thdRecords->size;
-	for(i=0; i<T; i++){
-		thread = (DaoThread*)self->thdRecords->items.pVoid[i];
-		GC_IncRC( thread ); /* avoid it being deleted */
-		DArray_Append( threads, thread );
-	}
-	DMutex_Unlock( & self->recordMutex );
-
-	if( T ) printf( "Warning: terminating for un-joined thread(s) ...\n" );
-	for(i=0; i<T; i++){
-		thread = (DaoThread*)threads->items.pVoid[i];
-		thread->process->stopit = 1;
-		DThread_Join( & thread->myThread );
-		GC_DecRC( thread );
-	}
-	DArray_Delete( threads );
 }
 #endif
 

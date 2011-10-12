@@ -981,7 +981,7 @@ CallEntry:
 		DaoStackFrame *frame = topFrame;
 		for(i=0; (i<DAO_MAX_SECTDEPTH) && frame->outer; i++){
 			dataVH[i] = frame->outer;
-			frame = frame->prev;
+			frame = frame->sect;
 		}
 	}
 
@@ -1081,7 +1081,10 @@ CallEntry:
 			if( locVars[ vmc->a ] && (locVars[ vmc->a ]->xNull.trait & DAO_DATA_CONST) == 0 ){
 				GC_ShiftRC( locVars[ vmc->a ], locVars[ vmc->c ] );
 				locVars[ vmc->c ] = locVars[ vmc->a ];
-			}else{
+			}else if( locVars[ vmc->a ] ){
+				/* mt.run(3)::{ mt.critical::{} }: the inner functional will be compiled
+				 * as a LOAD and RETURN, but the inner functional will not return anything,
+				 * so the first operand of LOAD will be NULL! */
 				DaoValue_Copy( locVars[ vmc->a ], & locVars[ vmc->c ] );
 			}
 		}OPNEXT() OPCASE( CAST ){

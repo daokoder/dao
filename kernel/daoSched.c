@@ -203,6 +203,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 	self->thdData = DThread_GetSpecific();
 	while(1){
 		DaoProcess *proc = NULL;
+		DaoProcess *proc2 = NULL;
 		DaoFuture *future = NULL;
 		DThreadTask function = NULL;
 		void *parameter = NULL;
@@ -237,7 +238,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		if( future->state == DAO_CALL_QUEUED ){
 			int n = future->parCount;
 			if( future->process == NULL ){
-				future->process = DaoVmSpace_AcquireProcess( server->vmspace );
+				proc2 = future->process = DaoVmSpace_AcquireProcess( server->vmspace );
 				GC_IncRC( future->process );
 			}
 			proc = future->process;
@@ -266,7 +267,15 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMutex_Unlock( & server->mutex );
 
 		DaoProcess_ReturnFutureValue( proc, future );
-		if( future->state == DAO_CALL_FINISHED ) DaoVmSpace_ReleaseProcess( server->vmspace, proc );
+		if( future->state == DAO_CALL_FINISHED ){
+			if( proc2 ){
+				DaoVmSpace_ReleaseProcess( server->vmspace, proc2 );
+			}else if( proc->mutex && proc->condv ){
+				DMutex_Lock( proc->mutex );
+				DCondVar_Signal( proc->condv );
+				DMutex_Unlock( proc->mutex );
+			}
+		}
 		GC_DecRC( future );
 	}
 }

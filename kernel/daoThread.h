@@ -139,9 +139,8 @@ struct DaoMutex
 	DAO_DATA_COMMON;
 
 	DMutex         myMutex;
-	DaoThdMaster  *thdMaster;
 };
-extern DaoMutex* DaoMutex_New( DaoVmSpace *vms );
+extern DaoMutex* DaoMutex_New();
 extern void DaoMutex_Lock( DaoMutex *self );
 extern void DaoMutex_Unlock( DaoMutex *self );
 extern int DaoMutex_TryLock( DaoMutex *self );
@@ -151,9 +150,8 @@ struct DaoCondVar
 	DAO_DATA_COMMON;
 
 	DCondVar       myCondVar;
-	DaoThdMaster  *thdMaster;
 };
-extern DaoCondVar* DaoCondVar_New( DaoThdMaster *thdm );
+extern DaoCondVar* DaoCondVar_New();
 extern void DaoCondVar_Delete( DaoCondVar *self );
 
 extern void DaoCondVar_Wait( DaoCondVar *self, DaoMutex *mutex );
@@ -178,43 +176,7 @@ extern void DaoSema_Post( DaoSema *self );
 extern void DaoSema_SetValue( DaoSema *self, int n );
 extern int  DaoSema_GetValue( DaoSema *self );
 
-typedef void (*CleanerFunc)( void * );
-
-struct DaoThread
-{
-	DAO_DATA_COMMON;
-
-	DThread        myThread;
-
-	DThreadTask    taskFunc;
-	void          *taskArg;
-	short          exitRefCount;
-	short          isRunning;
-
-	DaoProcess    *process;
-	DaoThdMaster  *thdMaster;
-	DMap          *mutexUsed; /* <DaoMutex*,int> */
-	DaoMap        *myMap;
-};
-extern DaoThread* DaoThread_New( DaoThdMaster *thdm );
-
-extern int DaoThread_Start( DaoThread *self, DThreadTask task, void *arg );
-extern void DaoThread_TestCancel( DaoThread *self );
-
-
-struct DaoThdMaster
-{
-	DAO_DATA_COMMON;
-
-	DMutex   recordMutex;
-
-	DArray  *thdRecords;
-};
-
-extern DaoThdMaster* DaoThdMaster_New();
-
 extern void DaoInitThread();
-extern void DaoStopThread( DaoThdMaster *self );
 
 void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
 
