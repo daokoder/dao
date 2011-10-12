@@ -655,7 +655,7 @@ static DaoFuncItem semaMeths[] =
 	{ DaoSema_Lib_Post,      "post( self : semaphore )" },
 	{ DaoSema_Lib_SetValue,  "setvalue( self : semaphore, n :int )" },
 	{ DaoSema_Lib_GetValue,  "getvalue( self : semaphore )=>int" },
-	{ DaoSema_Lib_Protect,   "protect( self : mutex )[]" },
+	{ DaoSema_Lib_Protect,   "protect( self : semaphore )[]" },
 	{ NULL, NULL }
 };
 static DaoTypeCore semaCore =
