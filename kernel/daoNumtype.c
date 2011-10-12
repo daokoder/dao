@@ -1853,7 +1853,7 @@ static int DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 	}
 	return m;
 }
-static int DaoArray_SliceSize( DaoArray *self )
+int DaoArray_SliceSize( DaoArray *self )
 {
 	int i, m;
 	if( self->reference == NULL || self->slice == NULL ) return self->size;
@@ -4231,7 +4231,7 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPr
 	}
 }
 
-static DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res )
+DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res )
 {
 	res->type = self->numType;
 	switch( self->numType ){
@@ -4243,7 +4243,7 @@ static DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res )
 	}
 	return res;
 }
-static void DaoArray_SetValue( DaoArray *self, int i, DaoValue *value )
+void DaoArray_SetValue( DaoArray *self, int i, DaoValue *value )
 {
 	switch( self->numType ){
 	case DAO_INTEGER : self->data.i[i] = DaoValue_GetInteger( value ); break;
@@ -4272,6 +4272,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	int j, D = self->dims->size;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
 	int entry, vdim = sect->b - 1;
+	int stackBase = proc->topFrame->active->stackBase;
 	dint *count = NULL;
 
 	switch( funct ){
@@ -4304,14 +4305,9 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	if( sect == NULL ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
-	elem = proc->activeValues[sect->a];
-	if( elem == NULL || elem->type != self->numType ){
-		elem = (DaoValue*)(void*) &com;
-		elem->type = self->numType;
-		elem = DaoProcess_SetValue( proc, sect->a, elem );
-	}
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
 	for(i=first; i<N; i++){
+		idval = proc->stackValues + stackBase + sect->a + 1;
 		id = id2 = (ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i);
 		if( isvec ){
 			if( vdim >0 ) idval[0]->xInteger.value = id2;
@@ -4325,6 +4321,12 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 			}
 		}
 		if( funct == DVM_FUNCT_FOLD ) DaoProcess_SetValue( proc, sect->a+1, res );
+		elem = proc->stackValues + stackBase + sect->a;
+		if( elem == NULL || elem->type != self->numType ){
+			elem = (DaoValue*)(void*) &com;
+			elem->type = self->numType;
+			elem = DaoProcess_SetValue( proc, sect->a, elem );
+		}
 		DaoArray_GetValue( self, id, elem );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );

@@ -145,6 +145,7 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[]
 /* Execute from the top of the calling stack */
 int DaoProcess_Execute( DaoProcess *self );
 
+int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
 DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );

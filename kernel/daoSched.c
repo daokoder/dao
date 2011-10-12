@@ -67,6 +67,12 @@ static DaoCallThread* DaoCallThread_New()
 	DThread_Init( & self->thread );
 	return self;
 }
+static void DaoCallThread_Delete( DaoCallThread *self )
+{
+	// XXX self->thdData
+	DThread_Destroy( & self->thread );
+	dao_free( self );
+}
 static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 {
 	DaoCallServer *self = (DaoCallServer*)dao_malloc( sizeof(DaoCallServer) );
@@ -82,6 +88,17 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->active = DHash_New(0,0);
 	self->vmspace = vms;
 	return self;
+}
+static void DaoCallServer_Delete( DaoCallServer *self )
+{
+	DArray_Delete( self->functions );
+	DArray_Delete( self->parameters );
+	DArray_Delete( self->futures );
+	DMap_Delete( self->pending );
+	DMap_Delete( self->active );
+	DMutex_Destroy( & self->mutex );
+	DCondVar_Destroy( & self->condv );
+	dao_free( self );
 }
 static void DaoCallServer_AddThread()
 {
@@ -278,6 +295,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		}
 		GC_DecRC( future );
 	}
+	DaoCallThread_Delete( self );
 }
 void DaoCallServer_Join( DaoVmSpace *vmSpace )
 {
@@ -291,6 +309,9 @@ void DaoCallServer_Join( DaoVmSpace *vmSpace )
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
 	}
 	DMutex_Unlock( & daoCallServer->mutex );
+	DCondVar_Destroy( & condv );
+	DaoCallServer_Delete( daoCallServer );
+	daoCallServer = NULL;
 }
 
 #endif

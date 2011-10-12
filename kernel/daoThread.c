@@ -894,6 +894,85 @@ static void DaoMT_RunMapFunctional( void *p )
 	DCondVar_Signal( clone->condv );
 	DMutex_Unlock( clone->mutex );
 }
+
+int DaoArray_SliceSize( DaoArray *self );
+int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
+DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res );
+void DaoArray_SetValue( DaoArray *self, int i, DaoValue *value );
+
+static void DaoMT_RunArrayFunctional( void *p )
+{
+	DaoValue **idval;
+	DaoValue *elem, *res = NULL;
+	DaoInteger tidint = {DAO_INTEGER,0,0,0,0,0};
+	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
+	DaoValue *threadid = (DaoValue*)(void*)&tidint;
+	DaoTaskData *self = (DaoTaskData*)p;
+	DaoProcess *clone = self->clone;
+	DaoVmCode *sect = self->sect;
+	DaoArray *param = (DaoArray*) self->param;
+	DaoArray *result = (DaoArray*) self->result;
+	DaoArray *ref = param->reference;
+	DaoArray *array = ref ? ref : param;
+	DArray *slice = param->slice;
+	size_t *dims = array->dims->items.pSize;
+	size_t i, id, id2, n = DaoArray_SliceSize( param );
+	int j, D = array->dims->size;
+	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
+	int stackBase, vdim = sect->b - 1;
+
+	DaoMT_InitProcess( self->proto, clone );
+	tidint.value = self->first;
+
+	stackBase = clone->topFrame->active->stackBase;
+	idval = clone->activeValues + sect->a + 1;
+	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
+	for(i=self->first; i<n; i+=self->step){
+		idval = clone->stackValues + stackBase + sect->a + 1;
+		id = id2 = (ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i);
+		if( isvec ){
+			if( vdim >0 ) idval[0]->xInteger.value = id2;
+			if( vdim >1 ) idval[1]->xInteger.value = id2;
+		}else{
+			for( j=D-1; j>=0; j--){
+				int k = id2 % dims[j];
+				id2 /= dims[j];
+				if( j < vdim ) idval[j]->xInteger.value = k;
+			}
+		}
+		elem = clone->stackValues + stackBase + sect->a;
+		if( elem == NULL || elem->type != array->numType ){
+			elem = (DaoValue*)(void*) &com;
+			elem->type = array->numType;
+			elem = DaoProcess_SetValue( clone, sect->a, elem );
+		}
+		DaoArray_GetValue( array, id, elem );
+		if( sect->b > 6 ) DaoProcess_SetValue( clone, sect->a+6, threadid );
+		clone->topFrame->entry = self->entry;
+		DaoProcess_Execute( clone );
+		if( clone->status == DAO_VMPROC_SUSPENDED ){
+			DMutex_Lock( clone->mutex );
+			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
+				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
+			DMutex_Unlock( clone->mutex );
+		}
+		if( clone->status != DAO_VMPROC_FINISHED ) break;
+		res = clone->stackValues[0];
+		if( self->funct == DVM_FUNCT_MAP ){
+			DaoArray_SetValue( result, i, res );
+		}else if( self->funct == DVM_FUNCT_APPLY ){
+			DaoArray_SetValue( array, id, res );
+		}else if( self->funct == DVM_FUNCT_FIND && res->xInteger.value ){
+			break;
+		}
+	}
+	self->status |= clone->status != DAO_VMPROC_FINISHED;
+	self->index = i;
+	DMutex_Lock( clone->mutex );
+	*self->joined += 1;
+	DCondVar_Signal( clone->condv );
+	DMutex_Unlock( clone->mutex );
+}
 static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
@@ -901,7 +980,7 @@ static void DaoMT_RunFunctional( void *p )
 	case DAO_INTEGER : DaoMT_RunRunFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
 	case DAO_MAP   : DaoMT_RunMapFunctional( p ); break;
-	//case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
+	case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
 	}
 }
 static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
@@ -937,7 +1016,9 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		DArray_Clear( list->items );
 		if( param->type == DAO_LIST ) DArray_Resize( list->items, param->xList.items->size, NULL );
 		if( param->type == DAO_MAP ) DArray_Resize( list->items, param->xMap.items->size, NULL );
-	}else if( array ){
+	}else if( array && F == DVM_FUNCT_MAP ){
+		DaoArray_GetSliceShape( (DaoArray*) param, array->dimAccum );
+		DaoArray_ResizeArray( array, array->dimAccum->items.pSize, array->dimAccum->size );
 	}
 
 	DMutex_Init( & mutex );
@@ -992,6 +1073,8 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		}
 	}
 	if( status ) DaoProcess_RaiseException( proc, DAO_ERROR, "code section execution failed!" );
+	DMutex_Destroy( & mutex );
+	DCondVar_Destroy( & condv );
 	dao_free( tasks );
 }
 static void DaoMT_Start0( void *p )
@@ -1081,6 +1164,18 @@ static void DaoMT_MapFind( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoMT_Functional( proc, p, n, DVM_FUNCT_FIND );
 }
+static void DaoMT_ArrayEach( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_EACH );
+}
+static void DaoMT_ArrayMap( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_MAP );
+}
+static void DaoMT_ArrayApply( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_APPLY );
+}
 static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
@@ -1110,6 +1205,10 @@ static DaoFuncItem thdMasterMeths[] =
 	{ DaoMT_MapMap, "map( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@T] =>list<@T>" },
 	{ DaoMT_MapApply, "apply( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@V] =>map<@K,@V>" },
 	{ DaoMT_MapFind, "find( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>int] =>tuple<key:@K,value:@V>|null" },
+
+	{ DaoMT_ArrayEach, "each( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int]" },
+	{ DaoMT_ArrayMap, "map( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T2] =>array<@T2>" },
+	{ DaoMT_ArrayApply, "apply( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T] =>array<@T>" },
 	{ NULL, NULL }
 };
 
