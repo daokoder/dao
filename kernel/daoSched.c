@@ -49,6 +49,7 @@ struct DaoCallServer
 	int acquiring;
 	int total;
 	int idle;
+	int deleted;
 
 	DArray  *functions; /* list of DThreadTask function pointers */
 	DArray  *parameters; /* list of void* */
@@ -72,6 +73,10 @@ static void DaoCallThread_Delete( DaoCallThread *self )
 	// XXX self->thdData
 	DThread_Destroy( & self->thread );
 	dao_free( self );
+
+	DMutex_Lock( & daoCallServer->mutex );
+	daoCallServer->deleted += 1;
+	DMutex_Unlock( & daoCallServer->mutex );
 }
 static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 {
@@ -81,6 +86,7 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->finishing = 0;
 	self->total = 0;
 	self->idle = 0;
+	self->deleted = 0;
 	self->functions = DArray_New(0);
 	self->parameters = DArray_New(0);
 	self->futures = DArray_New(0);
@@ -306,6 +312,9 @@ void DaoCallServer_Join( DaoVmSpace *vmSpace )
 	DMutex_Lock( & daoCallServer->mutex );
 	while( daoCallServer->pending->size || daoCallServer->idle != daoCallServer->total ){
 		/* printf( "finalizing: %3i %3i\n", daoCallServer->idle, daoCallServer->total ); */
+		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
+	}
+	while( daoCallServer->deleted != daoCallServer->total ){
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
 	}
 	DMutex_Unlock( & daoCallServer->mutex );

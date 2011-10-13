@@ -1,0 +1,30 @@
+
+class @Test
+{
+	routine Meth(){
+		for( i = 1 : 5 ){
+			io.writeln( '@Test::Meth()', i );
+			sys.sleep(0.01);
+		}
+	}
+}
+
+t = Test();
+
+mt.run( 4 )::{
+	io.writeln( '=========', X );
+	f = mt.start::{
+		for( i = 1 : 5 ){
+			io.writeln( 'start::{}', i );
+			sys.sleep(0.01);
+		}
+	}
+	f.value(); # waiting for the future value
+	io.writeln( '---------', X );
+}
+
+mt.run( 4 )::{
+	io.writeln( '=========', X );
+	t.Meth().value(); # waiting for the future value
+	io.writeln( '---------', X );
+}

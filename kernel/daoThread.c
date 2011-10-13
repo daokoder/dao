@@ -728,15 +728,14 @@ struct DaoTaskData
 	DaoProcess  *clone; // spawned process;
 	DaoVmCode   *sect; // DVM_SECT
 
-	DNode   *node; // last executed key value node;
-	uint_t   index; // last executed index;
-
 	uint_t   funct; // type of functional;
 	uint_t   entry; // entry code;
 	uint_t   first; // first index;
 	uint_t   step; // index step;
 	uint_t   status; // execution status;
-	uint_t  *joined; // number of joined threads
+	uint_t  *joined; // number of joined threads;
+	uint_t  *index; // smallest index found by all threads;
+	DNode  **node; // smallest key found by all threads;
 };
 
 void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
@@ -836,12 +835,17 @@ static void DaoMT_RunListFunctional( void *p )
 			self->status |= DaoList_SetItem( list2, res, i );
 		}else if( self->funct == DVM_FUNCT_APPLY ){
 			self->status |= DaoList_SetItem( list, res, i );
-		}else if( self->funct == DVM_FUNCT_FIND && res->xInteger.value ){
-			break;
+		}else if( self->funct == DVM_FUNCT_FIND ){
+			if( *self->index < i ) break;
+			if( res->xInteger.value ){
+				DMutex_Lock( clone->mutex );
+				if( i < *self->index ) *self->index = i;
+				DMutex_Unlock( clone->mutex );
+				break;
+			}
 		}
 	}
 	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	self->index = i;
 	DMutex_Lock( clone->mutex );
 	*self->joined += 1;
 	DCondVar_Signal( clone->condv );
@@ -883,18 +887,25 @@ static void DaoMT_RunMapFunctional( void *p )
 			self->status |= DaoList_SetItem( list2, res, i-1 );
 		}else if( self->funct == DVM_FUNCT_APPLY ){
 			self->status |= DaoValue_Move( res, & node->value.pValue, type ) == 0;
-		}else if( self->funct == DVM_FUNCT_FIND && res->xInteger.value ){
-			break;
+		}else if( self->funct == DVM_FUNCT_FIND ){
+			DNode **p = self->node;
+			if( *p && DaoValue_Compare( (*p)->key.pValue, node->key.pValue ) < 0 ) break;
+			if( res->xInteger.value ){
+				DMutex_Lock( clone->mutex );
+				if( *p == NULL || DaoValue_Compare( (*p)->key.pValue, node->key.pValue ) >0 ) *p = node;
+				DMutex_Unlock( clone->mutex );
+				break;
+			}
 		}
 	}
 	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	self->node = node;
 	DMutex_Lock( clone->mutex );
 	*self->joined += 1;
 	DCondVar_Signal( clone->condv );
 	DMutex_Unlock( clone->mutex );
 }
 
+void DaoArray_GetSliceShape( DaoArray *self, DArray *shape );
 int DaoArray_SliceSize( DaoArray *self );
 int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
 DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res );
@@ -940,7 +951,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 				if( j < vdim ) idval[j]->xInteger.value = k;
 			}
 		}
-		elem = clone->stackValues + stackBase + sect->a;
+		elem = clone->stackValues[ stackBase + sect->a ];
 		if( elem == NULL || elem->type != array->numType ){
 			elem = (DaoValue*)(void*) &com;
 			elem->type = array->numType;
@@ -962,12 +973,9 @@ static void DaoMT_RunArrayFunctional( void *p )
 			DaoArray_SetValue( result, i, res );
 		}else if( self->funct == DVM_FUNCT_APPLY ){
 			DaoArray_SetValue( array, id, res );
-		}else if( self->funct == DVM_FUNCT_FIND && res->xInteger.value ){
-			break;
 		}
 	}
 	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	self->index = i;
 	DMutex_Lock( clone->mutex );
 	*self->joined += 1;
 	DCondVar_Signal( clone->condv );
@@ -1036,6 +1044,8 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->entry = entry;
 		task->first = i;
 		task->step = threads;
+		task->index = & index;
+		task->node = & node;
 		task->joined = & joined;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 		task->clone->condv = & condv;
@@ -1052,11 +1062,6 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		DaoTaskData *task = tasks + i;
 		DaoVmSpace_ReleaseProcess( proc->vmSpace, task->clone );
 		status |= task->status;
-		if( task->index < index ) index = task->index;
-		if( task->node == NULL ) continue; 
-		if( node == NULL || DaoValue_Compare( node->key.pValue, task->node->key.pValue ) > 0 ){
-			node = task->node;
-		}
 	}
 	if( F == DVM_FUNCT_FIND ){
 		DaoTuple *tuple = DaoProcess_PutTuple( proc );

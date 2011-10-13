@@ -666,7 +666,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		tp = value->xMap.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		flags = (1<<DAO_UDF)|((ulong_t)1<<DAO_ANY)|((ulong_t)1<<DAO_INITYPE);
-		if( (((ulong_t)1<<it1)&flags) && (((ulong_t)1<<it2)&flags) ){
+		if( (((ulong_t)1<<it1)&flags) || (((ulong_t)1<<it2)&flags) ){
 			if( it1 == DAO_UDF || it2 == DAO_UDF ) return DAO_MT_UDF;
 			if( it1 == DAO_INITYPE || it2 == DAO_INITYPE ) return DAO_MT_INIT;
 			if( it1 == DAO_ANY || it2 == DAO_ANY ) return DAO_MT_ANY;

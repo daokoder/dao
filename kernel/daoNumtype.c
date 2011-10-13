@@ -4321,7 +4321,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 			}
 		}
 		if( funct == DVM_FUNCT_FOLD ) DaoProcess_SetValue( proc, sect->a+1, res );
-		elem = proc->stackValues + stackBase + sect->a;
+		elem = proc->stackValues[ stackBase + sect->a ];
 		if( elem == NULL || elem->type != self->numType ){
 			elem = (DaoValue*)(void*) &com;
 			elem->type = self->numType;

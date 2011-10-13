@@ -1504,7 +1504,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 
 	DString_SetMBS( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
-	if( N > 0 ){
+	if( N > 0 || tid == DAO_CODEBLOCK ){
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
 		for(i=0; i<N; i++){
 			DaoType *it = nest[i];
