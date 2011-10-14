@@ -14,7 +14,7 @@
 #include "stdio.h"
 #include "errno.h"
 
-#include"kernel/dao.h"
+#include"dao.h"
 DAO_INIT_MODULE
 
 void JSON_Indent( DString *text, int indent )
