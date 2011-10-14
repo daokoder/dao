@@ -15,7 +15,7 @@ ifeq ($(UNAME), Linux)
 endif
 
 ifeq ($(UNAME), Darwin)
-  TARGET	= DaoInode.dylib
+  TARGET	= DaoJSON.dylib
   CFLAG += -DUNIX -DMAC_OSX
   LFLAG = -fPIC -dynamiclib
 endif
