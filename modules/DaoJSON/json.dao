@@ -1,0 +1,23 @@
+load DaoJSON;
+
+data = { 
+	"module":               (any)"DaoJSON", 
+	"descriptioin":         "JSON serializer/parser",
+	"external dependences": null,
+	"classes":              0,
+	"methods":              { "serialize", "deserialize" }, 
+	"Dao => JSON mapping":  { 
+	"map<string, any>": "object",
+	"list<any>":        "array",
+	"string":           "string",
+	"int/float/double": "number",
+	"null":             "null"
+    } 
+};
+
+text = json.serialize(data);
+io.writeln("Dao => JSON (readable):\n", text);
+io.writeln("\nDao => JSON (compact):\n", json.serialize(data, $compact));
+
+data = json.deserialize(text);
+io.writeln("\nJSON => Dao:\n", data);

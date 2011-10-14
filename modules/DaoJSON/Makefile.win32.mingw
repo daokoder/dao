@@ -1,0 +1,21 @@
+
+CC = gcc
+INCLUDE = -I.
+LIB = dao.dll
+CFLAG = -c -Wall -O2
+LFLAG = -s -shared
+
+TARGET = DaoJSON.dll
+
+all: $(TARGET)
+
+DaoJSON.o: DaoJSON.c
+	$(CC) $(CFLAG) $(INCLUDE) DaoJSON.c
+	
+$(TARGET): DaoJSON.o
+	$(CC) $(LFLAG) DaoJSON.o $(LIB) -o $(TARGET)
+
+bind: clean
+
+clean:
+	rm *.o

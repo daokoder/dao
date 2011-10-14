@@ -31,6 +31,7 @@ struct DaoNull
 	DAO_DATA_CORE;
 };
 extern DaoValue *null;
+DaoNull* DaoNull_New();
 
 struct DaoInteger
 {

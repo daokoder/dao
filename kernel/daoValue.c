@@ -743,6 +743,12 @@ int DaoValue_Type( DaoValue *self )
 {
 	return self->type;
 }
+DaoValue* DaoValue_NewNull()
+{
+	DaoNull *res = DaoNull_New();
+	GC_IncRC( res );
+	return (DaoValue*) res;
+}
 DaoValue* DaoValue_NewInteger( dint v )
 {
 	DaoInteger *res = DaoInteger_New( v );
@@ -800,6 +806,12 @@ DaoValue* DaoValue_NewList()
 DaoValue* DaoValue_NewArray( int type )
 {
 	DaoArray *res = DaoArray_New( type );
+	GC_IncRC( res );
+	return (DaoValue*) res;
+}
+DaoValue* DaoValue_NewMap( int hashing )
+{
+	DaoMap *res = DaoMap_New( hashing );
 	GC_IncRC( res );
 	return (DaoValue*) res;
 }
