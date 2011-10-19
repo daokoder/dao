@@ -11,7 +11,7 @@ class @Test
 
 t = Test();
 
-mt.run( 4 )::{
+mt.iterate( 4 )::{
 	io.writeln( '=========', X );
 	f = mt.start::{
 		for( i = 1 : 5 ){
@@ -23,7 +23,7 @@ mt.run( 4 )::{
 	io.writeln( '---------', X );
 }
 
-mt.run( 4 )::{
+mt.iterate( 4 )::{
 	io.writeln( '=========', X );
 	t.Meth().value(); # waiting for the future value
 	io.writeln( '---------', X );

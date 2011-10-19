@@ -1845,9 +1845,9 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	for(i=0,k=0; i<string->size; i++) if( string->wcs[i] > k ) k = string->wcs[i];
 	if( k < 128 ) DString_ToMBS( string );
 }
-static void DaoSTR_Each( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTR_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoSTR_Functional( proc, p, N, DVM_FUNCT_EACH );
+	DaoSTR_Functional( proc, p, N, DVM_FUNCT_ITERATE );
 }
 static void DaoSTR_Count( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1907,7 +1907,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular,hex> = $regular )=>string" },
 	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
 
-	{ DaoSTR_Each,   "each( self :string )[char :int, index :int]" },
+	{ DaoSTR_Iterate,   "iterate( self :string )[char :int, index :int]" },
 	{ DaoSTR_Count,  "count( self :string )[char :int, index :int =>int]=>int" },
 	{ DaoSTR_Map,    "map( self :string )[char :int, index :int =>int]=>string" },
 	{ DaoSTR_Select, "select( self :string )[char :int, index :int =>int]=>string" },
@@ -2656,9 +2656,9 @@ static void DaoLIST_Count( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_COUNT );
 }
-static void DaoLIST_Each( DaoProcess *proc, DaoValue *p[], int npar )
+static void DaoLIST_Iterate( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_EACH );
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_ITERATE );
 }
 static void DaoLIST_Apply( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -2795,7 +2795,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Find,     "find( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>tuple<index:int,value:@T>|null" },
 	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>" },
 	{ DaoLIST_Count,    "count( self :list<@T> )[item:@T,index:int=>int]=>int" },
-	{ DaoLIST_Each,     "each( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]" },
+	{ DaoLIST_Iterate,  "iterate( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]" },
 	{ DaoLIST_Sort,     "sort( self :list<@T>, order :enum<ascend,descend>, k=0 )=>list<@T>" },
 	{ DaoLIST_Sort,     "sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>" },
 	{ DaoLIST_Apply,    "apply( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T]=>list<@T>" },
@@ -3307,9 +3307,9 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	}
 	if( funct != DVM_FUNCT_FIND ) DaoProcess_PopFrame( proc );
 }
-static void DaoMAP_Each( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMAP_Functional( proc, p, N, DVM_FUNCT_EACH );
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_ITERATE );
 }
 static void DaoMAP_Count( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3366,7 +3366,7 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Size,   "size( self :map<any,any> )=>int" },
 	{ DaoMAP_Iter,   "__for_iterator__( self :map<any,any>, iter : for_iterator )" },
 
-	{ DaoMAP_Each,   "each( self :map<@K,@V> )[key :@K, value :@V]" },
+	{ DaoMAP_Iterate,   "iterate( self :map<@K,@V> )[key :@K, value :@V]" },
 	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
 	{ DaoMAP_Keys,   "keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>" },
 	{ DaoMAP_Values, "values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>" },

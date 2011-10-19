@@ -1133,13 +1133,13 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	}
 	DaoCallServer_AddTask( DaoMT_Start0, clone );
 }
-static void DaoMT_Run( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMT_Iterate( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoMT_Functional( proc, p, n, DVM_FUNCT_NULL );
 }
-static void DaoMT_ListEach( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMT_ListIterate( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoMT_Functional( proc, p, n, DVM_FUNCT_EACH );
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_ITERATE );
 }
 static void DaoMT_ListMap( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -1153,9 +1153,9 @@ static void DaoMT_ListFind( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoMT_Functional( proc, p, n, DVM_FUNCT_FIND );
 }
-static void DaoMT_MapEach( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMT_MapIterate( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoMT_Functional( proc, p, n, DVM_FUNCT_EACH );
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_ITERATE );
 }
 static void DaoMT_MapMap( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -1169,9 +1169,9 @@ static void DaoMT_MapFind( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoMT_Functional( proc, p, n, DVM_FUNCT_FIND );
 }
-static void DaoMT_ArrayEach( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMT_ArrayIterate( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoMT_Functional( proc, p, n, DVM_FUNCT_EACH );
+	DaoMT_Functional( proc, p, n, DVM_FUNCT_ITERATE );
 }
 static void DaoMT_ArrayMap( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -1199,19 +1199,19 @@ static DaoFuncItem thdMasterMeths[] =
 
 	{ DaoMT_Critical, "critical()[]" },
 	{ DaoMT_Start, "start()[=>@V] =>any" }, // TODO: =>future<@V>
-	{ DaoMT_Run, "run( times :int, threads=2 )[index:int,threadid:int]" },
+	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
 
-	{ DaoMT_ListEach, "each( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },
+	{ DaoMT_ListIterate, "iterate( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },
 	{ DaoMT_ListMap, "map( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T2] =>list<@T2>" },
 	{ DaoMT_ListApply, "apply( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T] =>list<@T>" },
 	{ DaoMT_ListFind, "find( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>int] =>tuple<index:int,item:@T>|null" },
 
-	{ DaoMT_MapEach, "each( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int]" },
+	{ DaoMT_MapIterate, "iterate( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int]" },
 	{ DaoMT_MapMap, "map( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@T] =>list<@T>" },
 	{ DaoMT_MapApply, "apply( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@V] =>map<@K,@V>" },
 	{ DaoMT_MapFind, "find( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>int] =>tuple<key:@K,value:@V>|null" },
 
-	{ DaoMT_ArrayEach, "each( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int]" },
+	{ DaoMT_ArrayIterate, "iterate( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int]" },
 	{ DaoMT_ArrayMap, "map( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T2] =>array<@T2>" },
 	{ DaoMT_ArrayApply, "apply( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T] =>array<@T>" },
 	{ NULL, NULL }

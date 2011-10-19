@@ -48,6 +48,7 @@ struct DaoParser
 	/* Stack of maps: mapping local variable names to virtual register ids at each level: */
 	DArray  *localVarMap; /* < DMap<DString*,int> > */
 	DArray  *localCstMap; /* < DMap<DString*,int> > */
+	DArray  *localDecMap; /* < DMap<DString*,int> > */
 	DArray  *switchMaps;
 	DArray  *enumTypes; /* <DaoType*> */
 
@@ -84,7 +85,6 @@ struct DaoParser
 	char isInterBody;
 	char isDynamicClass;
 	char permission;
-	char warnAssn;
 	char isFunctional;
 
 	DaoInterface *hostInter;

@@ -150,8 +150,6 @@ static const char *const vmOperNames[] =
 	"try" ,
 	"raise" ,
 	"catch" ,
-	"scbegin" ,
-	"scend" ,
 	"unused"
 };
 const char* getOpcodeName( int opc )

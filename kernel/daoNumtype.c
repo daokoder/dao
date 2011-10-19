@@ -2894,9 +2894,9 @@ static void DaoARRAY_Count( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_COUNT );
 }
-static void DaoARRAY_Each( DaoProcess *proc, DaoValue *p[], int npar )
+static void DaoARRAY_Iterate( DaoProcess *proc, DaoValue *p[], int npar )
 {
-	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_EACH );
+	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_ITERATE );
 }
 static void DaoARRAY_Apply( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -2934,7 +2934,7 @@ static DaoFuncItem numarMeths[] =
 	{ DaoARRAY_Select, "select( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<@T>" },
 	{ DaoARRAY_Index2, "index( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<array<int>>" },
 	{ DaoARRAY_Count,  "count( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>int" },
-	{ DaoARRAY_Each,   "each( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int]" },
+	{ DaoARRAY_Iterate,  "iterate( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int]" },
 	{ DaoARRAY_Apply,  "apply( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>array<@T>" },
 	{ NULL, NULL }
 };
