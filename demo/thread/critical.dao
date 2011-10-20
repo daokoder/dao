@@ -2,8 +2,9 @@
 
 count = 0;
 mt.iterate( 10, 4 )::{
-	mt.critical::{
-		io.writeln( 'in critical section' );
+	io.writeln( 'outside of critical section', Y );
+	mt.critical::{[]
+		io.writeln( 'in critical section', Y );
 		for( i = 1 : 100000 ) count += 1;
 	}
 }

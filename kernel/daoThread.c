@@ -766,7 +766,7 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	clone->topFrame->outer = proto;
 	clone->topFrame->returning = -1;
 }
-static void DaoMT_RunRunFunctional( void *p )
+static void DaoMT_RunIterateFunctional( void *p )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger tidint = {DAO_INTEGER,0,0,0,0,0};
@@ -985,7 +985,7 @@ static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
 	switch( self->param->type ){
-	case DAO_INTEGER : DaoMT_RunRunFunctional( p ); break;
+	case DAO_INTEGER : DaoMT_RunIterateFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
 	case DAO_MAP   : DaoMT_RunMapFunctional( p ); break;
 	case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;

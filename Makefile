@@ -32,10 +32,10 @@ TARGETDLL	= dao.so
 ARCHIVE = dao.a
 
 
-CHANGESET_ID = $(shell head -c 12 changeset.id)
+CHANGESET_ID = $(shell hg id -i)
 
 ifneq ($(CHANGESET_ID),)
-	CFLAGS += -DCHANGESET_ID=\"$(CHANGESET_ID)\"
+  CFLAGS += -DCHANGESET_ID=\"HG.$(CHANGESET_ID)\"
 endif
 
 
