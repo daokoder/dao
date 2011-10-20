@@ -370,7 +370,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
 		 * will NOT cause the function to perform conversion and 
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof(state) );
-		smin = wcsrtombs( self->mbs + self->size, (const wchar_t**)&wcs, 7*len, & state );
+		smin = wcsrtombs( self->mbs + self->size, (const wchar_t**)&wcs, len, & state );
 		if( smin == (size_t)-1 ) break;
 		self->size += smin;
 		if( (i + len < n ) ) DMBString_AppendChar( self, '\0' );
