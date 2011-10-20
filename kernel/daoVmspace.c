@@ -75,11 +75,17 @@ enum{
 	DAO_MODULE_DLL
 };
 
+#ifndef CHANGESET_ID
+#define CHANGESET_ID "not specified"
+#endif
+
 const char *const dao_copy_notice =
-"  Dao Virtual Machine (" DAO_VERSION ", " __DATE__ ")\n"
+"  Dao Virtual Machine " DAO_VERSION "\n"
 "  Copyright(C) 2006-2011, Fu Limin.\n"
+"  Built date: " __DATE__ "; Changeset ID: " CHANGESET_ID ".\n"
 "  Dao can be copied under the terms of GNU Lesser General Public License.\n"
-"  Dao Language website: http://www.daovm.net\n";
+"  Dao Language website: http://www.daovm.net\n"
+;
 
 static const char *const cmd_help =
 "\n Usage: dao [options] script_file\n"

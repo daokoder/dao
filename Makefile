@@ -32,6 +32,13 @@ TARGETDLL	= dao.so
 ARCHIVE = dao.a
 
 
+CHANGESET_ID = $(shell head -c 12 changeset.id)
+
+ifneq ($(CHANGESET_ID),)
+	CFLAGS += -DCHANGESET_ID=\"$(CHANGESET_ID)\"
+endif
+
+
 UNAME = $(shell uname)
 
 ifeq ($(UNAME), Linux)
