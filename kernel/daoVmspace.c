@@ -15,10 +15,6 @@
 #include"ctype.h"
 #include"locale.h"
 
-#ifdef WIN32
-#include <windows.h>
-#endif
-
 #ifdef _MSC_VER
 #include "direct.h"
 #define getcwd _getcwd
@@ -800,10 +796,6 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	DString_SetMBS( self->fileName, "interactive codes" );
 	DString_SetMBS( self->mainNamespace->name, "interactive codes" );
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
-#ifdef WIN32
-	SetConsoleCP( GetACP() );
-	SetConsoleOutputCP( GetACP() );
-#endif
 	while(1){
 		DString_Clear( input );
 		if( self->ReadLine ){
