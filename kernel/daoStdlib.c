@@ -744,11 +744,19 @@ static void SYS_Time2( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 {
-	int category = p[0]->xInteger.value;
-	const char *locale = DString_GetMBS( p[1]->xString.data );
-	char* old = setlocale(category,locale);
-	if (old)
-		DaoProcess_PutMBString(proc,old);
+	int category = 0;
+	char* old;
+	switch( p[0]->xEnum.value ){
+	case 0: category = LC_ALL; break;
+	case 1: category = LC_COLLATE; break;
+	case 2: category = LC_CTYPE; break;
+	case 3: category = LC_MONETARY; break;
+	case 4: category = LC_NUMERIC; break;
+	case 5: category = LC_TIME; break;
+	}
+	old = setlocale( category, DString_GetMBS( p[1]->xString.data ) );
+	if ( old )
+		DaoProcess_PutMBString( proc, old );
 	else
 		DaoProcess_RaiseException( proc, DAO_ERROR, "Invalid locale!" );
 }
@@ -767,23 +775,14 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_System,    "system( command :string )" },
 	{ SYS_Time,      "time(  )=>int" },
 	{ SYS_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
-	{ SYS_SetLocale, "setlocale(category:int=0,locale:string='')=>string" },
+	{ SYS_SetLocale,
+		"setlocale( category: enum<all,collate,ctype,monetary,numeric,time> = $all, locale = '' )=>string" },
 	{ SYS_Clock,     "clock()=>float" },
 	{ NULL, NULL }
 };
-static DaoNumItem sysConsts[] =
-{
-	{ "LC_ALL", DAO_INTEGER, LC_ALL } ,
-	{ "LC_COLLATE", DAO_INTEGER, LC_COLLATE } ,
-	{ "LC_CTYPE", DAO_INTEGER, LC_CTYPE } ,
-	{ "LC_MONETARY", DAO_INTEGER, LC_MONETARY } ,
-	{ "LC_NUMERIC", DAO_INTEGER, LC_NUMERIC } ,
-	{ "LC_TIME", DAO_INTEGER, LC_TIME } ,
-	{ NULL, 0, 0 }
-};
 
 DaoTypeBase libSystemTyper = {
-	"sys", NULL, sysConsts, sysMeths, {0}, {0}, NULL, NULL
+	"sys", NULL, NULL, sysMeths, {0}, {0}, NULL, NULL
 };
 
 DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
