@@ -747,7 +747,10 @@ static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 	int category = p[0]->xInteger.value;
 	const char *locale = DString_GetMBS( p[1]->xString.data );
 	char* old = setlocale(category,locale);
-	if (old) DaoProcess_PutMBString(proc,old);
+	if (old)
+		DaoProcess_PutMBString(proc,old);
+	else
+		DaoProcess_RaiseException( proc, DAO_ERROR, "Invalid locale!" );
 }
 static void SYS_Clock( DaoProcess *proc, DaoValue *p[], int N )
 {
