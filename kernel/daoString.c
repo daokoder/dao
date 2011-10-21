@@ -356,25 +356,39 @@ static void DWCString_AppendWChar( DString *self, const wchar_t ch )
 	self->size += 1;
 	self->wcs[ self->size ] = 0;
 }
+#define MAX_CHAR_PER_WCHAR 7
 static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
 {
+	wchar_t buffer[101];
 	mbstate_t state;
-	size_t i = 0;
-	while( i < n ){
-		size_t smin, len;
-		const wchar_t *wcs = chs + i;
-		len = wcslen( wcs );
-		if( (i + len) > n ) len = n - i;
-		DString_Reserve( self, self->size + 7*len );
+	buffer[100] = 0;
+	while( n ){
+		const wchar_t *wcs = buffer;
+		size_t smin, len, m = n;
+		len = n < 100 ? n : 100;
+		wcsncpy( buffer, chs, len );
+		buffer[len] = 0;
+		len = wcslen( buffer );
+		chs += len;
+		n -= len;
+		if( len == 0 ){
+			DMBString_AppendChar( self, '\0' );
+			chs ++;
+			n --;
+			continue;
+		}
+		if( self->bufSize < (self->size + len * MAX_CHAR_PER_WCHAR) ){
+			/* reserve potentially enough memory to avoid frequent memory allocation: */
+			if( (len * MAX_CHAR_PER_WCHAR) > m ) m = len * MAX_CHAR_PER_WCHAR;
+			DString_Reserve( self, self->size + m );
+		}
 		/* under windows using MinGW, passing null output buffer,
 		 * will NOT cause the function to perform conversion and 
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof(state) );
-		smin = wcsrtombs( self->mbs + self->size, (const wchar_t**)&wcs, len, & state );
+		smin = wcsrtombs( self->mbs + self->size, & wcs, len * MAX_CHAR_PER_WCHAR, & state );
 		if( smin == (size_t)-1 ) break;
 		self->size += smin;
-		if( (i + len < n ) ) DMBString_AppendChar( self, '\0' );
-		i += len + 1;
 	}
 	DString_Reserve( self, self->size );
 	self->mbs[ self->size ] = 0;
@@ -389,14 +403,28 @@ static void DWCString_Append( DString *self, const wchar_t *chs, size_t n )
 }
 static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 {
+	char buffer[101];
 	mbstate_t state;
-	size_t i = 0;
-	while( i < n ){
+	buffer[100] = 0;
+	while( n ){
+		const char *mbs = buffer;
 		size_t smin, len;
-		const char *mbs = chs + i;
-		len = strlen( mbs );
-		if( (i + len) > n ) len = n - i;
-		DString_Reserve( self, self->size + len );
+		len = n < 100 ? n : 100;
+		strncpy( buffer, chs, len );
+		buffer[len] = 0;
+		len = strlen( buffer );
+		chs += len;
+		n -= len;
+		if( len == 0 ){
+			DWCString_AppendWChar( self, L'\0' );
+			chs ++;
+			n --;
+			continue;
+		}
+		if( self->bufSize < (self->size + len) ){
+			/* reserve potentially enough memory to avoid frequent memory allocation: */
+			DString_Reserve( self, self->size + len + n );
+		}
 		/* under windows using MinGW, passing null output buffer,
 		 * will NOT cause the function to perform conversion and 
 		 * return the required buffer size. */
@@ -404,8 +432,6 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 		smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
 		if( smin == (size_t)-1 ) break;
 		self->size += smin;
-		if( (i + len) < n ) DWCString_AppendWChar( self, L'\0' );
-		i += len + 1;
 	}
 	self->wcs[ self->size ] = 0;
 }

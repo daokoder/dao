@@ -992,22 +992,20 @@ int DaoToken_Check( const char *src, int size, int *length )
 }
 int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment, int space )
 {
-	int ret = 1;
-	char ch;
-
 	DaoToken lextok;
 	DString *source = DString_New(1);
 	DString *literal = DString_New(1);
 	DArray *lexenvs = DArray_New(0);
+	char ch, hex[11] = "0x00000000";
+	int srcSize = (int)strlen( src );
 	int old=0, state = TOK_START;
 	int lexenv = LEX_ENV_NORMAL;
-	int line = 1;
-	char hex[7] = "0x0000";
-
-	int it = 0;
-	int cpos = 0;
-	int srcSize = (int)strlen( src );
 	int unicoded = 0;
+	int line = 1;
+	int cpos = 0;
+	int ret = 1;
+	int it = 0;
+	int i, m = 4; 
 
 	DString_SetSharing( literal, 0 );
 	for(it=0; it<srcSize; it++){
@@ -1101,34 +1099,39 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 				}
 				if( src[it] == '\n' ) cpos = 0, line ++;
 				switch( src[it] ){
-				case '0' : case '1' : case '2' : case '3' : case '4' :
-				case '5' : case '6' : case '7' : case '8' : case '9' :
-					if( it+1 >= srcSize ){
-						ret = 0;
-						printf( "error: invalid escape in string at line %i.\n", line );
-						break;
+				case '0' : case '1' : case '2' : case '3' : 
+				case '4' : case '5' : case '6' : case '7' : /* \ooo */
+					i = 2;
+					while( i < 5 && it < srcSize && src[it] >= '0' && src[it] < '8' ){
+						hex[i] = src[it++];
+						hex[++i] = 0;
 					}
-					hex[2] = src[ it ];  hex[3] = src[ it+1 ];  hex[4] = 0;
 					DString_AppendChar( literal, (char) strtol( hex, NULL, 0 ) );
-					it += 1;
+					it --;
 					break;
+				case '8' : case '9' :
+					DString_AppendChar( literal, (char) (src[it] - '0') );
+					break;
+				case 'x' :
 				case 'u' :
-					if( it+3 >= srcSize ){
-						ret = 0;
-						printf( "error: invalid escape in string at line %i.\n", line );
-						break;
+				case 'U' :
+					i = 2;
+					switch( src[it] ){
+					case 'x' : m = 4;  break; /* \xhh: max 2 hex digit; */
+					case 'u' : m = 6;  break; /* \uhhhh: max 4 hex digit; */
+					case 'U' : m = 10; break; /* \Uhhhhhhhh: max 8 hex digit; */
 					}
-					hex[2] = src[ it+1 ];  hex[3] = src[ it+2 ];
-					hex[4] = src[ it+3 ];  hex[5] = src[ it+4 ];
-					hex[6] = 0;
+					while( i < m && (it+1) < srcSize && isxdigit( src[it+1] ) ){
+						hex[i] = src[++it];
+						hex[++i] = 0;
+					}
 					DString_AppendWChar( literal, (wchar_t) strtol( hex, NULL, 0 ) );
-					it += 3;
 					break;
 				case 't' : DString_AppendChar( literal, '\t' ); break;
 				case 'n' : DString_AppendChar( literal, '\n' ); break;
 				case 'r' : DString_AppendChar( literal, '\r' ); break;
 				case '\'' : DString_AppendChar( literal, '\'' ); break;
-							case '\"' : DString_AppendChar( literal, '\"' ); break;
+				case '\"' : DString_AppendChar( literal, '\"' ); break;
 				default : DString_AppendChar( literal, src[it] ); break;
 				}
 			}else if( ch == '\'' && state == TOK_STRING_MBS ){
@@ -1245,7 +1248,6 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 	DString_Delete( literal );
 	DString_Delete( source );
 #if 0
-	int i;
 	for(i=0; i<tokens->size; i++){
 		DaoToken *tk = tokens->items.pToken[i];
 		printf( "%4i:  %3i  %3i ,  %3i,  %s\n", i, tk->type, tk->name, tk->cpos,
