@@ -128,7 +128,7 @@ static void JSON_Serialize( DaoProcess *proc, DaoValue *p[], int N )
 	int res = DaoValue_TryGetEnum( p[1] );
 	if( ( res = JSON_SerializeValue( p[0], DaoProcess_PutWCString( proc, L"" ), res? -1 : 0 ) ) != 0 ){
 		if( res == -1 )
-			strcpy( buf, "Non-string key in map/object!" );
+			strcpy( buf, "Non-string key in map/object" );
 		else{
 			strcpy( buf, "Unsupported value type: " );
 			switch( res ){
@@ -153,7 +153,6 @@ static void JSON_Serialize( DaoProcess *proc, DaoValue *p[], int N )
 				case DAO_TYPE:      strcat( buf, "type" ); break;
 				default:            strcat( buf, "[type not recognized]" );
 			}
-			strcat( buf, "!" );
 		}
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 	}
@@ -430,7 +429,7 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *value;
 	char buf[100];
 	if( text == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data not found!" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data not found" );
 		return;
 	}
 	if( *text == L'{' )
@@ -438,7 +437,7 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 	else if( *text == L'[' )
 		value = JSON_ParseArray( (DaoValue*)DaoProcess_PutList( proc ), &text, &error, &line );
 	else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data is not an object or array!" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data is not an object or array" );
 		return;
 	}
 	if( value == NULL ){
@@ -458,12 +457,11 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 		case JSON_NonStringKey:    strcat( buf, "non-string key in object" ); break;
 		default:                   strcat( buf, "[undefined error]" );
 		}
-		strcat( buf, "!" );
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 		return;
 	}
 	if( JSON_FindData( text, &line ) != NULL )
-		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data does not form a single structure!" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data does not form a single structure" );
 }
 
 static DaoFuncItem jsonMeths[] =

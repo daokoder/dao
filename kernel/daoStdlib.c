@@ -758,7 +758,7 @@ static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 	if ( old )
 		DaoProcess_PutMBString( proc, old );
 	else
-		DaoProcess_RaiseException( proc, DAO_ERROR, "Invalid locale!" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid locale" );
 }
 static void SYS_Clock( DaoProcess *proc, DaoValue *p[], int N )
 {

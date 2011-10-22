@@ -265,15 +265,15 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 	if( N==0 ){
 		stream->file->fd = tmpfile();
 		if( stream->file->fd <= 0 ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "failed to create a temporary file" );
+			DaoProcess_RaiseException( proc, DAO_ERROR, "failed to create temporary file" );
 			return;
 		}
 	}else{
-		char buf[100];
+		char buf[IO_BUF_SIZE];
 		DString *fname = stream->fname;
 		DString_Assign( fname, p[0]->xString.data );
 		DString_ToMBS( fname );
-		snprintf( buf, 99, "file opening, %s", fname->mbs );
+		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", fname->mbs );
 		if( DString_Size( fname ) >0 ){
 			DaoIO_MakePath( proc, fname );
 			mode = DString_GetMBS( p[1]->xString.data );
@@ -378,7 +378,7 @@ static void DaoIO_Popen( DaoProcess *proc, DaoValue *p[], int N )
 		if( stream->file->fd == NULL ){
 			dao_free( stream->file );
 			stream->file = NULL;
-			DaoProcess_RaiseException( proc, DAO_ERROR, "pipe opening" );
+			DaoProcess_RaiseException( proc, DAO_ERROR, "error opening pipe" );
 		}
 		stream->mode = 0;
 		if( strstr( mode, "+" ) )
@@ -390,7 +390,7 @@ static void DaoIO_Popen( DaoProcess *proc, DaoValue *p[], int N )
 				stream->mode |= DAO_IO_WRITE;
 		}
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "pipe opening" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "empty command line" );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*)stream );
 }
@@ -452,7 +452,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	fin = fopen( fname->mbs, "r" );
 	DString_Delete( fname );
 	if( fin == NULL ){
-		snprintf( buf, IO_BUF_SIZE, "file not exist: %s", DString_GetMBS( p[0]->xString.data ) );
+		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetMBS( p[0]->xString.data ) );
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 		return;
 	}

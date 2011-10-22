@@ -370,7 +370,7 @@ static void GetErrorMessage( char *buffer, int code, int special )
 	switch ( code ){
 	case EACCES:
 	case EBADF:
-		strcpy( buffer, "Access permission required (EACCES/EBADF)");
+		strcpy( buffer, "Access not permitted (EACCES/EBADF)");
 		break;
 	case EBUSY:
 		strcpy (buffer, "The inode's path is being used (EBUSY)" );
@@ -407,7 +407,7 @@ static void GetErrorMessage( char *buffer, int code, int special )
 		break;
 	case EMFILE:
 	case ENFILE:
-		strcpy( buffer, "Too many inodes open (EMFILE/ENFILE)" );
+		strcpy( buffer, "Too many files open (EMFILE/ENFILE)" );
 		break;
 	case ENOMEM:
 		strcpy( buffer, "Not enough memory (ENOMEM)" );
@@ -419,16 +419,19 @@ static void GetErrorMessage( char *buffer, int code, int special )
 
 static void DaoInode_Open( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char errbuf[MAX_ERRMSG];
+	char errbuf[MAX_ERRMSG + 256];
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	int res;
-	if( ( res = DInode_Open( self, DaoValue_TryGetMBString( p[1] ) ) ) != 0 ){
+	char *path = DaoValue_TryGetMBString( p[1] );
+	if( ( res = DInode_Open( self, path ) ) != 0 ){
 		if( res == 1 )
 			strcpy( errbuf, "Trying to open something which is not a file/directory" );
 		else if( res == -1 )
 			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
 		else
 			GetErrorMessage( errbuf, res, 0 );
+		if( res == 1 || res == ENOENT )
+			snprintf( errbuf + strlen( errbuf ), 256, ": %s", path );
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
@@ -800,16 +803,19 @@ static void DaoInode_Suffix( DaoProcess *proc, DaoValue *p[], int N )
 
 static void DaoInode_New( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char errbuf[MAX_ERRMSG];
+	char errbuf[MAX_ERRMSG + 256];
 	DInode *inode = DInode_New();
 	int res;
-	if( ( res = DInode_Open( inode, DaoString_GetMBS( DaoValue_CastString( p[0] ) ) ) ) != 0 ){
+	char *path = DaoValue_TryGetMBString( p[0] );
+	if( ( res = DInode_Open( inode, path ) ) != 0 ){
 		if( res == 1 )
 			strcpy( errbuf, "Trying to open something which is not a file/directory" );
 		else if( res == -1 )
 			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
 		else
 			GetErrorMessage( errbuf, res, 0 );
+		if( res == 1 || res == ENOENT )
+			snprintf( errbuf + strlen( errbuf ), 256, ": %s", path );
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
