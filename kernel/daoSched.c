@@ -232,7 +232,7 @@ DaoFuture* DaoCallServer_AddCall( DaoProcess *call )
 	DaoCallServer_Add( future );
 	return future;
 }
-void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
+void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, short state )
 {
 	DaoFuture *future;
 	/* joining the process with the future value's own process */
@@ -246,6 +246,7 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 	GC_ShiftRC( pre, future->precondition );
 	future->precondition = pre;
 	future->state = DAO_CALL_PAUSED;
+	future->state2 = state;
 	if( timeout >0 ){
 		DaoCallServer *server;
 		struct timeval now;

@@ -18,7 +18,7 @@
 
 void DaoCallServer_Join( DaoVmSpace *vms );
 void DaoCallServer_AddTask( DThreadTask func, void *param );
-void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout );
+void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout, short state );
 DaoFuture* DaoCallServer_AddCall( DaoProcess *call );
 
 #endif

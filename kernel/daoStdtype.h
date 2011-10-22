@@ -261,13 +261,15 @@ DaoTypeBase* DaoException_GetType( int type );
 extern DaoTypeBase dao_Exception_Typer;
 
 enum{ DAO_CALL_QUEUED, DAO_CALL_RUNNING, DAO_CALL_PAUSED, DAO_CALL_FINISHED };
+enum{ DAO_FUTURE_VALUE, DAO_FUTURE_WAIT };
 
 typedef struct DaoFuture  DaoFuture;
 struct DaoFuture
 {
 	DAO_DATA_COMMON;
 
-	short        state;
+	uchar_t      state;
+	uchar_t      state2;
 	short        parCount;
 	DaoType     *unitype;
 	DaoValue    *value;

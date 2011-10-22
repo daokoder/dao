@@ -4748,14 +4748,25 @@ static void DaoFuture_Lib_Value( DaoProcess *proc, DaoValue *par[], int N )
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
 	proc->status = DAO_VMPROC_SUSPENDED;
 	proc->pauseType = DAO_VMP_ASYNC;
-	DaoCallServer_AddWait( proc, self, timeout );
+	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_VALUE );
+#endif
+}
+static void DaoFuture_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	float timeout = par[1]->xFloat.value;
+	DaoProcess_PutInteger( proc, 0 );
+#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_WAIT );
 #endif
 }
 static DaoFuncItem futureMeths[] =
 {
-	{ DaoFuture_Lib_Value,      "value( self : future<@V> )=>@V" },
-	{ DaoFuture_Lib_Value,      "value( self : future<@V>, timeout : float )=>null|@V" },
-	{ DaoFuture_Lib_Value,      "wait( self : future<@V>, timeout : float )" },
+	{ DaoFuture_Lib_Value,   "value( self : future<@V> )=>@V" },
+	{ DaoFuture_Lib_Value,   "value( self : future<@V>, timeout : float )=>null|@V" },
+	{ DaoFuture_Lib_Wait,    "wait( self : future<@V>, timeout : float = -1 )=>int" },
 	{ NULL, NULL }
 };
 static void DaoFuture_Delete( DaoFuture *self )
@@ -4792,6 +4803,7 @@ DaoFuture* DaoFuture_New()
 	DaoValue_Init( self, DAO_FUTURE );
 	GC_IncRC( null );
 	self->state = DAO_CALL_QUEUED;
+	self->state2 = DAO_FUTURE_VALUE;
 	self->value = null;
 	return self;
 }

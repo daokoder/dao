@@ -947,7 +947,12 @@ CallEntry:
 			for(i=0; i<self->parResume->size; i++)
 				DaoList_Append( list, self->parResume->items.pValue[i] );
 		}else if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
-			DaoProcess_PutValue( self, self->future->precondition->value );
+			int finished = self->future->precondition->state == DAO_CALL_FINISHED;
+			if( self->future->state2 == DAO_FUTURE_VALUE ){
+				DaoProcess_PutValue( self, finished ? self->future->precondition->value : null );
+			}else{
+				DaoProcess_PutInteger( self, finished );
+			}
 		}
 		vmc ++;
 	}
