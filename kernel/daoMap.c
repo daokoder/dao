@@ -511,8 +511,7 @@ static void DMap_EraseChild( DMap *self, DNode *node )
 				while( node->parent ){ /* delete_case1() */
 
 					DNode *parent = node->parent;
-					DNode *sibling
-						= ( node == parent->left ? parent->right : parent->left );
+					DNode *sibling = ( node == parent->left ? parent->right : parent->left );
 					if( sibling && sibling->color == RB_RED ){ /* delete_case2() */
 						parent->color = RB_RED;
 						sibling->color = RB_BLACK;

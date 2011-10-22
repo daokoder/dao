@@ -86,7 +86,7 @@ int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 		int lb = lv ? lv->type : 0;
 		int rb = rv ? rv->type : 0;
 		if( lb == rb && lb == DAO_TUPLE ){
-			res = DaoValue_Compare( lv, rv );
+			res = DaoTuple_Compare( (DaoTuple*) lv, (DaoTuple*) rv );
 			if( res != 0 ) return res;
 		}else if( lb != rb || lb ==0 || lb >= DAO_ARRAY || lb == DAO_COMPLEX ){
 			if( lv < rv ){

@@ -3896,6 +3896,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			if( self->curToken > to ) break;
 			if( tokens[self->curToken]->line != tokens[self->curToken-1]->line ) break;
 			if( tokens[self->curToken]->name == DTOK_SEMCO ) break;
+			if( tokens[self->curToken]->name == DTOK_RCB ) break;
 			if( tokens[self->curToken]->name != DTOK_COMMA ){
 				self->curLine = tokens[self->curToken]->line;
 				DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL );

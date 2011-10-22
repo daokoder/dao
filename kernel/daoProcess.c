@@ -2848,7 +2848,7 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 	if( frame->object && (frame->object->defClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
 		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
 			DaoNamespace *ns = self->activeNamespace;
-			DaoFuture *future = DaoCallServer_Add( self, NULL, NULL );
+			DaoFuture *future = DaoCallServer_AddCall( self );
 			DaoType *retype = & frame->routine->routType->aux->xType;
 			DaoType *type = DaoNamespace_MakeType( ns, "future", DAO_FUTURE, NULL, &retype,1 );
 			GC_ShiftRC( type, future->unitype );

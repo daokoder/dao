@@ -26,6 +26,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <errno.h>
+#include <sys/time.h>
+#include <signal.h>
 
 #define dao_mutex_t    pthread_mutex_t
 #define dao_cond_t     pthread_cond_t

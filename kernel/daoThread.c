@@ -40,9 +40,6 @@ static dao_thdspec_t thdSpecKey = 0;
 
 #ifdef UNIX
 
-#include <sys/time.h>
-#include <signal.h>
-
 void DMutex_Init( DMutex *self )
 {
 	pthread_mutex_init( & self->myMutex, NULL );

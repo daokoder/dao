@@ -4,7 +4,7 @@ class @Test
 	routine Meth(){
 		for( i = 1 : 5 ){
 			io.writeln( '@Test::Meth()', i );
-			sys.sleep(0.01);
+			sys.sleep(0.2);
 		}
 	}
 }
@@ -25,6 +25,6 @@ mt.iterate( 4 )::{
 
 mt.iterate( 4 )::{
 	io.writeln( '=========', X );
-	t.Meth().value(); # waiting for the future value
+	t.Meth().value( 5 ); # waiting for the future value
 	io.writeln( '---------', X );
 }
