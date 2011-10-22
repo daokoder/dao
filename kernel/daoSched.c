@@ -328,7 +328,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		self->thdData->state = 0;
 		DMutex_Lock( & server->mutex );
 		server->idle += 1;
-		while( server->pending->size == 0 ){
+		while( server->pending->size == server->waitings->size ){
 			if( server->finishing && server->idle == server->total ) break;
 			timeout = DCondVar_TimedWait( & server->condv, & server->mutex, wt );
 		}

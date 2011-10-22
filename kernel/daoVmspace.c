@@ -248,8 +248,10 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	if( DMap_Find( self->allProcesses, proc ) ){
 		GC_DecRC( proc->future );
 		proc->future = NULL;
+#ifdef DAO_WITH_THREAD
 		proc->condv = NULL;
 		proc->mutex = NULL;
+#endif
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_PushBack( self->processes, proc );
 	}

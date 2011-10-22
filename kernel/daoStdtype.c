@@ -4755,6 +4755,7 @@ static DaoFuncItem futureMeths[] =
 {
 	{ DaoFuture_Lib_Value,      "value( self : future<@V> )=>@V" },
 	{ DaoFuture_Lib_Value,      "value( self : future<@V>, timeout : float )=>null|@V" },
+	{ DaoFuture_Lib_Value,      "wait( self : future<@V>, timeout : float )" },
 	{ NULL, NULL }
 };
 static void DaoFuture_Delete( DaoFuture *self )
