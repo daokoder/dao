@@ -794,7 +794,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
 	const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
 	char *chs;
-	int ch;
+	int ch, newline = 0;
 	DString_SetMBS( self->fileName, "interactive codes" );
 	DString_SetMBS( self->mainNamespace->name, "interactive codes" );
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
@@ -813,8 +813,16 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			fflush( stdout );
 			ch = getchar();
 			if( ch == EOF ) break;
-			while( ch != '\n' && ch != EOF ){
-				DString_AppendChar( input, (char)ch );
+			while( ( ch != '\n' || newline ) && ch != EOF ){
+				if( ch == '\n' ){
+					DString_Resize( input, input->size - 1 );
+					DString_AppendChar( input, (char)ch );
+					printf( "(dao) " );
+					fflush( stdout );
+				}
+				else
+					DString_AppendChar( input, (char)ch );
+				newline = ( ch == '\\' );
 				ch = getchar();
 			}
 			if( ch == EOF ) clearerr( stdin );
