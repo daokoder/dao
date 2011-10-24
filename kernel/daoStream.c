@@ -214,6 +214,23 @@ static void DaoIO_MakePath( DaoProcess *proc, DString *path )
 	DString_Erase( path, 0, 1 );
 	Dao_MakePath( proc->vmSpace->pathWorking, path );
 }
+static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, int silent )
+{
+	DString *fname = DString_Copy( fname );
+	char buf[IO_BUF_SIZE];
+	FILE *fin;
+
+	DString_ToMBS( fname );
+	DaoIO_MakePath( proc, fname );
+	fin = fopen( fname->mbs, mode );
+	DString_Delete( fname );
+	if( fin == NULL && silent == 0 ){
+		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetMBS( name ) );
+		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
+		return NULL;
+	}
+	return fin;
+}
 static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char buf[IO_BUF_SIZE];
@@ -230,18 +247,8 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 			DString_AppendDataMBS( res, buf, count );
 		}
 	}else{
-		DString *fname = DString_Copy( p[0]->xString.data );
-		FILE *fin;
-		DString_ToMBS( fname );
-		DaoIO_MakePath( proc, fname );
-		fin = fopen( fname->mbs, "r" );
-		DString_Delete( fname );
-		if( fin == NULL ){
-			if( silent ) return;
-			snprintf( buf, IO_BUF_SIZE, "file not exist: %s", DString_GetMBS( p[0]->xString.data ) );
-			DaoProcess_RaiseException( proc, DAO_ERROR, buf );
-			return;
-		}
+		FILE *fin = DaoIO_OpenFile( proc, p[0]->xString.data, "r", silent );
+		if( fin == NULL ) return;
 		while(1){
 			size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
 			if( count ==0 ) break;
@@ -270,30 +277,22 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}else{
 		char buf[IO_BUF_SIZE];
-		DString *fname = stream->fname;
-		DString_Assign( fname, p[0]->xString.data );
-		DString_ToMBS( fname );
-		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", fname->mbs );
-		if( DString_Size( fname ) >0 ){
-			DaoIO_MakePath( proc, fname );
-			mode = DString_GetMBS( p[1]->xString.data );
-			stream->file->fd = fopen( DString_GetMBS( fname ), mode );
-			if( stream->file->fd == NULL ){
-				dao_free( stream->file );
-				stream->file = NULL;
-				DaoProcess_RaiseException( proc, DAO_ERROR, buf );
-			}
-			stream->mode = 0;
-			if( strstr( mode, "+" ) )
-				stream->mode = DAO_IO_WRITE | DAO_IO_READ;
-			else{
-				if( strstr( mode, "r" ) )
-					stream->mode |= DAO_IO_READ;
-				if( strstr( mode, "w" ) || strstr( mode, "a" ) )
-					stream->mode |= DAO_IO_WRITE;
-			}
-		}else{
-			DaoProcess_RaiseException( proc, DAO_ERROR, buf );
+		DString_Assign( stream->fname, p[0]->xString.data );
+		DString_ToMBS( stream->fname );
+		mode = DString_GetMBS( p[1]->xString.data );
+		stream->file->fd = DaoIO_OpenFile( proc, stream->fname, mode, 0 );
+		if( stream->file->fd == NULL ){
+			dao_free( stream->file );
+			stream->file = NULL;
+		}
+		stream->mode = 0;
+		if( strstr( mode, "+" ) )
+			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
+		else{
+			if( strstr( mode, "r" ) )
+				stream->mode |= DAO_IO_READ;
+			if( strstr( mode, "w" ) || strstr( mode, "a" ) )
+				stream->mode |= DAO_IO_WRITE;
 		}
 	}
 	DaoProcess_PutValue( proc, (DaoValue*)stream );
@@ -446,16 +445,8 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
-	fname = DString_Copy( p[0]->xString.data );
-	DString_ToMBS( fname );
-	DaoIO_MakePath( proc, fname );
-	fin = fopen( fname->mbs, "r" );
-	DString_Delete( fname );
-	if( fin == NULL ){
-		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetMBS( p[0]->xString.data ) );
-		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
-		return;
-	}
+	fin = DaoIO_OpenFile( proc, p[0]->xString.data, "r", 0 );
+	if( fin == NULL ) return;
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New(1);
 		while( DaoFile_ReadLine( fin, line->data ) ){
@@ -489,7 +480,6 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *self = & p[0]->xStream;
 	int i = 0, count = p[1]->xInteger.value;
 	int chop = p[2]->xInteger.value;
-	char buf[IO_BUF_SIZE];
 
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New(1);
@@ -514,6 +504,38 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		DaoProcess_PopFrame( proc );
 	}
+}
+static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *string;
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res, *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	int i, entry, lines = p[1]->xInteger.value;
+	FILE *fout = stdout;
+
+	if( p[0]->type == DAO_STREAM ){
+		if( p[0]->xStream.file && p[0]->xStream.file->fd ) fout = p[0]->xStream.file->fd;
+	}else{
+		fout = DaoIO_OpenFile( proc, p[0]->xString.data, "w+", 0 );
+		if( fout == NULL ) return;
+	}
+	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<lines; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		string = proc->stackValues[0]->xString.data;
+		if( string->mbs ){
+			fprintf( fout, "%s", string->mbs );
+		}else{
+			fprintf( fout, "%ls", string->wcs );
+		}
+	}
+	DaoProcess_PopFrame( proc );
 }
 
 static DaoFuncItem streamMeths[] =
@@ -547,6 +569,9 @@ static DaoFuncItem streamMeths[] =
 
 	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>null|@T]=>list<@T>" },
 	{ DaoIO_ReadLines2, "readlines( self :stream, numline=0, chop=0 )[line:string=>null|@T]=>list<@T>" },
+	// Not particularly useful, may be removed! 
+	{ DaoIO_WriteLines, "writelines( self :stream, lines :int)[line:int =>string]" },
+	{ DaoIO_WriteLines, "writelines( file :string, lines :int)[line:int =>string]" },
 	{ NULL, NULL }
 };
 

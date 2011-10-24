@@ -20,9 +20,10 @@ struct DaoObject
 {
 	DAO_DATA_COMMON;
 
-	uchar_t     isRoot    : 4;
-	uchar_t     isDefault : 4;
-	uchar_t     baseCount;
+	uchar_t     isRoot     : 1;
+	uchar_t     isDefault  : 1;
+	uchar_t     baseCount  : 6;
+	uchar_t     baseCount2 : 6;
 	ushort_t    valueCount;
 
 	DaoClass   *defClass; /* definition class; */

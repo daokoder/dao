@@ -97,8 +97,6 @@ struct DaoProcess
 	size_t      stackTop; /* one past the last active stack value; */
 
 	DaoType  *abtype; /* for coroutine */
-	DArray   *parResume;/* for coroutine */
-	DArray   *parYield;
 	DArray   *exceptions;
 
 	char pauseType;
@@ -149,15 +147,6 @@ int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
 DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
-
-/* Resume a coroutine */
-/* coroutine.yeild( a, b, ... ); store object a,b,... in "DaoList *list"
- * 
- * param = coroutine.resume( corout, a, b, ... ); pass "DaoValue par[]" as a,b,...
- * they become addition result from yeild().
- */
-int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoList *list );
-void DaoProcess_Yield( DaoProcess *self, DaoValue *par[], int N, DaoList *list );
 
 void DaoProcess_PrintException( DaoProcess *self, int clear );
 

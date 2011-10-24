@@ -4753,12 +4753,8 @@ static void DaoFuture_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoFuture *self = (DaoFuture*) par[0];
 	float timeout = par[1]->xFloat.value;
-	if( timeout == 0 ){
-		DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
-		return;
-	}
-	DaoProcess_PutInteger( proc, 1 );
-	if( self->state == DAO_CALL_FINISHED ) return;
+	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
+	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
 #if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
 	proc->status = DAO_VMPROC_SUSPENDED;
 	proc->pauseType = DAO_VMP_ASYNC;

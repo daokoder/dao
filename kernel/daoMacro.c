@@ -1215,29 +1215,9 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 		if( rb < 0 ) return -1;
 		start = rb + 1;
-	}else if( tki2 == DTOK_LB && ( (tki >= DKEY_EACH && tki <= DKEY_COUNT) || tki == DKEY_STRING || tki == DKEY_ARRAY || tki == DKEY_LIST || tki == DKEY_MAP ) ){
-		/* built-in functional methods: */
-		if( DaoParser_CurrentTokenName( self ) != DTOK_LB ) return -1;
-		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, self->curToken, end );
-		if( rb < 0 || (rb+3) > end ) return -1;
-		if( tokens[rb+1]->type != DTOK_ARROW ) return -1;
-		if( tokens[rb+2]->type != DTOK_PIPE ){
-			rb += 3;
-			while( rb <= end ){
-				if( tokens[rb]->type != DTOK_IDENTIFIER ) return -1;
-				rb += 1;
-				if( rb > end ) return -1;
-				if( tokens[rb]->type == DTOK_PIPE ) break;
-				if( tokens[rb]->type != DTOK_COMMA ) return -1;
-			}
-		}
-		if( tokens[rb+1]->type != DTOK_LCB ) return -1;
-		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, rb+1, end );
-		if( rb < 0 ) return -1;
-		start = rb + 1;
 	}else if( tki == DTOK_ID_INITYPE && tki2 == DTOK_LB ){
 		start += 1;
-	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON || tki >= DKEY_EACH || tki == DKEY_SELF ){
+	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		start += 1;
 	}
 	if( start < 0 ) return -1;
@@ -1263,6 +1243,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 			break;
 		case DTOK_DOT : case DTOK_COLON2 : case DTOK_ARROW :
 			self->curToken += 1;
+			if( DaoParser_CurrentTokenType( self ) == DTOK_LCB ) break;
 			if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ) return -1;
 			self->curToken += 1;
 			break;

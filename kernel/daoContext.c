@@ -57,7 +57,6 @@ void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, 
 void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
 
 extern void DaoProcess_Trace( DaoProcess *self, int depth );
-int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret );
 void DaoPrintException( DaoCdata *except, DaoStream *stream );
 
 

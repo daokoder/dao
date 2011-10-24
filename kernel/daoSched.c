@@ -367,10 +367,8 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			future->state = DAO_CALL_RUNNING;
 			DaoProcess_Execute( proc );
 		}else if( future->state == DAO_CALL_PAUSED ){
-			DaoValue *pars[1] = { NULL };
-			if( future->precondition ) pars[0] = future->precondition->value;
 			future->state = DAO_CALL_RUNNING;
-			DaoProcess_Resume( future->process, pars, future->precondition != NULL, NULL );
+			DaoProcess_Execute( future->process );
 			proc = future->process;
 		}
 		if( future->object ){

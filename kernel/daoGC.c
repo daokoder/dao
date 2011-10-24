@@ -813,8 +813,6 @@ void DaoCGC_CycRefCountDecScan()
 				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountDecrement( (DaoValue*) vmp->abtype );
 				cycRefCountDecrement( (DaoValue*) vmp->future );
-				cycRefCountDecrements( vmp->parResume );
-				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
 				DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
@@ -1029,8 +1027,6 @@ int DaoCGC_AliveObjectScan()
 				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountIncrement( (DaoValue*) vmp->abtype );
 				cycRefCountIncrement( (DaoValue*) vmp->future );
-				cycRefCountIncrements( vmp->parResume );
-				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
 				DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
@@ -1235,8 +1231,6 @@ void DaoCGC_RefCountDecScan()
 				DaoStackFrame *frame = vmp->firstFrame;
 				directRefCountDecrement( (DaoValue**) & vmp->abtype );
 				directRefCountDecrement( (DaoValue**) & vmp->future );
-				directRefCountDecrements( vmp->parResume );
-				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
 				DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
 				vmp->stackSize = 0;
@@ -1608,8 +1602,6 @@ void DaoIGC_CycRefCountDecScan()
 				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountDecrement( (DaoValue*) vmp->abtype );
 				cycRefCountDecrement( (DaoValue*) vmp->future );
-				cycRefCountDecrements( vmp->parResume );
-				cycRefCountDecrements( vmp->parYield );
 				cycRefCountDecrements( vmp->exceptions );
 				DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
 				j += vmp->stackSize;
@@ -1860,8 +1852,6 @@ int DaoIGC_AliveObjectScan()
 				DaoStackFrame *frame = vmp->firstFrame;
 				cycRefCountIncrement( (DaoValue*) vmp->abtype );
 				cycRefCountIncrement( (DaoValue*) vmp->future );
-				cycRefCountIncrements( vmp->parResume );
-				cycRefCountIncrements( vmp->parYield );
 				cycRefCountIncrements( vmp->exceptions );
 				DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
 				k += vmp->stackSize;
@@ -2094,8 +2084,6 @@ void DaoIGC_RefCountDecScan()
 				DaoStackFrame *frame = vmp->firstFrame;
 				directRefCountDecrement( (DaoValue**) & vmp->abtype );
 				directRefCountDecrement( (DaoValue**) & vmp->future );
-				directRefCountDecrements( vmp->parResume );
-				directRefCountDecrements( vmp->parYield );
 				directRefCountDecrements( vmp->exceptions );
 				DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
 				j += vmp->stackSize;

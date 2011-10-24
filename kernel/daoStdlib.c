@@ -502,6 +502,144 @@ static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutMBString( proc, DAO_VERSION );
 }
 
+static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DString *string = DaoProcess_PutMBString( proc, "" );
+	dint i, entry, size = p[0]->xInteger.value;
+
+	if( p[1]->xEnum.value ) DString_ToWCS( string );
+	if( sect == NULL || size < 0 ) return; // TODO exception
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		DString_AppendWChar( string, proc->stackValues[0]->xInteger.value );
+	}
+	DaoProcess_PopFrame( proc );
+}
+int DaoArray_AlignShape( DaoArray *self, DArray *sidx, DArray *dims );
+static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res, *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoArray *array = DaoProcess_PutArray( proc );
+	DaoArray *sub = NULL;
+	DArray *shape = NULL;
+	dint i, j, k, entry, size = 1;
+
+	for(i=0; i<N; i++){
+		dint d = p[i]->xInteger.value;
+		if( d < 0 ){
+			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
+			break;
+		}
+		size *= d;
+	}
+	if( size == 0 ) return;
+	if( sect == NULL ) return; // TODO exception
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		res = proc->stackValues[0];
+		if( i == 0 ){
+			DArray_Clear( array->dimAccum );
+			for(j=0; j<N; j++) DArray_Append( array->dimAccum, p[j]->xInteger.value );
+			if( res->type == DAO_ARRAY ){
+				sub = (DaoArray*) res;
+				shape = DArray_New(0);
+				for(j=0; j<sub->dims->size; j++){
+					DArray_Append( array->dimAccum, sub->dims->items.pSize[j] );
+					DArray_Append( shape, sub->dims->items.pSize[j] );
+				}
+			}
+			DaoArray_ResizeArray( array, array->dimAccum->items.pSize, array->dimAccum->size );
+		}
+		if( res->type == DAO_ARRAY ){
+			sub = (DaoArray*) res;
+			if( shape == NULL || DaoArray_AlignShape( sub, NULL, shape ) ==0 ){
+				DaoProcess_RaiseException( proc, DAO_ERROR, "inconsistent elements or subarrays" );
+				break;
+			}
+			k = i * sub->size;
+			for(j=0; j<sub->size; j++){
+				switch( array->numType ){
+				case DAO_INTEGER : array->data.i[k+j] = DaoArray_GetInteger( sub, j ); break;
+				case DAO_FLOAT   : array->data.f[k+j] = DaoArray_GetFloat( sub, j ); break;
+				case DAO_DOUBLE  : array->data.d[k+j] = DaoArray_GetDouble( sub, j ); break;
+				case DAO_COMPLEX : array->data.c[k+j] = DaoArray_GetComplex( sub, j ); break;
+				}
+			}
+		}else{
+			switch( array->numType ){
+			case DAO_INTEGER : array->data.i[i] = DaoValue_GetInteger( res ); break;
+			case DAO_FLOAT   : array->data.f[i] = DaoValue_GetFloat( res ); break;
+			case DAO_DOUBLE  : array->data.d[i] = DaoValue_GetDouble( res ); break;
+			case DAO_COMPLEX : array->data.c[i] = DaoValue_GetComplex( res ); break;
+			}
+		}
+	}
+	if( shape ) DArray_Delete( shape );
+	DaoProcess_PopFrame( proc );
+}
+static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res = p[N==2], *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoList *list = DaoProcess_PutList( proc );
+	dint i, entry, size = p[0]->xInteger.value;
+
+	if( sect == NULL || size < 0 ) return; // TODO exception
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		if( sect->b >1 && N ==2 ) DaoProcess_SetValue( proc, sect->a+1, res );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		res = proc->stackValues[0];
+		DaoList_Append( list, res );
+	}
+	DaoProcess_PopFrame( proc );
+}
+static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res, *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoMap *map = DaoProcess_PutMap( proc );
+	dint i, entry, size = p[0]->xInteger.value;
+
+	if( sect == NULL || size < 0 ) return; // TODO exception
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		res = proc->stackValues[0];
+		if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
+			DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );
+	}
+	DaoProcess_PopFrame( proc );
+}
 static DaoFuncItem stdMeths[]=
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
@@ -526,6 +664,12 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Restore,   "restore( fromfile = 'backup.sdo' )" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
+
+	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
+	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },
+	{ STD_List,     "list( size :int )[index:int =>@T] =>list<@T>" },
+	{ STD_List,     "list( size :int, init :@T )[index:int, prev:@T =>@T] =>list<@T>" },
+	{ STD_Map,      "map( size :int )[index:int =>tuple<@K,@V>] =>map<@K,@V>" },
 	{ NULL, NULL }
 };
 

@@ -1795,7 +1795,7 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 	for(i=0; i<D; i ++) S *= slice->items.pArray[i]->items.pSize[1];
 	return S;
 }
-static int DaoArray_AlignShape( DaoArray *self, DArray *sidx, DArray *dims )
+int DaoArray_AlignShape( DaoArray *self, DArray *sidx, DArray *dims )
 {
 	int i;
 	size_t *dself = self->dims->items.pSize;

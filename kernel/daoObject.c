@@ -167,9 +167,10 @@ DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 	DaoValue_Init( self, DAO_OBJECT );
 	GC_IncRC( klass );
 	self->defClass = klass;
-	self->isRoot = 0;
+	self->isRoot = 1;
 	self->isDefault = 0;
 	self->baseCount = parent_count;
+	self->baseCount2 = parent_count;
 	self->valueCount = value_count;
 	self->objValues = self->parents + parent_count;
 	memset( self->parents, 0, (parent_count + value_count)*sizeof(DaoValue*) );
@@ -180,7 +181,6 @@ DaoObject* DaoObject_New( DaoClass *klass )
 	DaoObject *self = DaoObject_Allocate( klass, klass->objDataName->size );
 	GC_IncRC( self );
 	self->rootObject = self;
-	self->isRoot = 1;
 	DaoObject_Init( self, NULL, 0 );
 	return self;
 }
@@ -198,6 +198,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		self->rootObject = self;
 		if( self->isDefault ){ /* no value space is allocated for default object yet! */
 			self->baseCount = klass->superClass->size;
+			self->baseCount2 = klass->superClass->size;
 			self->valueCount = klass->objDataName->size;
 			self->objValues = (DaoValue**) dao_calloc( self->valueCount, sizeof(DaoValue*) );
 		}
@@ -211,6 +212,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 				sup = & supclass->objType->value->xObject;
 			}else{
 				sup = DaoObject_Allocate( supclass, 0 );
+				sup->isRoot = 0;
 				DaoObject_Init( sup, self->rootObject, offset );
 			}
 			GC_IncRC( sup );
@@ -240,8 +242,10 @@ void DaoObject_Delete( DaoObject *self )
 	//if( self->meta ) GC_DecRC( self->meta );
 	GC_DecRC( self->defClass );
 	for(i=0; i<self->baseCount; i++) GC_DecRC( self->parents[i] );
-	if( self->isRoot )for(i=0; i<self->valueCount; i++) GC_DecRC( self->objValues[i] );
-	if( self->objValues != (self->parents + self->baseCount) ) dao_free( self->objValues );
+	if( self->isRoot ){
+		for(i=0; i<self->valueCount; i++) GC_DecRC( self->objValues[i] );
+		if( self->objValues != (self->parents + self->baseCount2) ) dao_free( self->objValues );
+	}
 	dao_free( self );
 }
 

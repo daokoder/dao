@@ -415,7 +415,6 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	self->objType->value = (DaoValue*) DaoObject_Allocate( self, DAO_MAX_PARENT );
 	self->objType->value->xObject.trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
 	self->objType->value->xObject.isDefault = 1;
-	self->objType->value->xObject.isRoot = 1;
 	GC_IncRC( self->objType->value );
 	DString_SetMBS( str, "default" );
 	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC, -1 );

@@ -175,8 +175,6 @@ void DaoProcess_Delete( DaoProcess *self )
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
-	if( self->parResume ) DArray_Delete( self->parResume );
-	if( self->parYield ) DArray_Delete( self->parYield );
 	if( self->abtype ) GC_DecRC( self->abtype );
 	if( self->future ) GC_DecRC( self->future );
 	dao_free( self );
@@ -372,36 +370,8 @@ void DaoProcess_InterceptReturnValue( DaoProcess *self )
 		DaoProcess_SetActiveFrame( self, self->firstFrame );
 	}
 }
-int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoList *list )
-{
-	if( self->status == DAO_VMPROC_SUSPENDED && self->parResume ){
-		int i;
-		DArray_Clear( self->parResume );
-		for( i=0; i<N; i++ ) DArray_Append( self->parResume, par[i] );
-
-		DaoProcess_Execute( self );
-		if( list )
-			for( i=0; i<self->parYield->size; i++ )
-				DaoList_Append( list, self->parYield->items.pValue[i] );
-	}else if( self->status == DAO_VMPROC_SUSPENDED && self->pauseType == DAO_VMP_ASYNC ){
-		DaoProcess_Execute( self );
-	}
-	return self->status;
-}
-void DaoProcess_Yield( DaoProcess *self, DaoValue *par[], int N, DaoList *list )
-{
-	int i;
-	if( self->parYield == NULL ) return;
-	DArray_Clear( self->parYield );
-	for( i=0; i<N; i++ ) DArray_Append( self->parYield, par[i] );
-	if( list ){
-		for( i=0; i<self->parResume->size; i++ )
-			DaoList_Append( list, self->parResume->items.pValue[i] );
-	}
-	self->status = DAO_VMPROC_SUSPENDED;
-}
 void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N );
-int DaoProcess_Resume2( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret )
+int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret )
 {
 	DaoType *tp;
 	DaoVmCode *vmc;
@@ -942,11 +912,7 @@ CallEntry:
 	}
 	if( self->status == DAO_VMPROC_SUSPENDED &&
 			( vmc->code ==DVM_CALL || vmc->code ==DVM_MCALL || vmc->code ==DVM_YIELD ) ){
-		if( self->parResume && self->pauseType != DAO_VMP_ASYNC ){
-			DaoList *list = DaoProcess_GetList( self, vmc );
-			for(i=0; i<self->parResume->size; i++)
-				DaoList_Append( list, self->parResume->items.pValue[i] );
-		}else if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
+		if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
 			int finished = self->future->precondition->state == DAO_CALL_FINISHED;
 			if( self->future->state2 == DAO_FUTURE_VALUE ){
 				DaoProcess_PutValue( self, finished ? self->future->precondition->value : null );
@@ -2584,46 +2550,41 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
+	DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
+	DaoValue **dest = self->stackValues;
+	DaoValue *retValue = NULL;
 	int i, returning = topFrame->returning;
 
 	self->activeCode = vmc;
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
-	if( returning != (ushort_t)-1 || self->parYield == NULL ){
-		DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
-		DaoValue **dest = self->stackValues;
-		DaoValue *retValue = NULL;
-		if( topFrame->state & DVM_MAKE_OBJECT ){
-			retValue = (DaoValue*)self->activeObject;
-		}else if( vmc->b == 1 ){
-			retValue = self->activeValues[ vmc->a ];
-		}else if( vmc->b > 1 ){
-			DaoTuple *tuple = DaoTuple_New( vmc->b );
-			DaoValue **items = tuple->items;
-			retValue = (DaoValue*) tuple;
-			for(i=0; i<vmc->b; i++) DaoValue_Copy( self->activeValues[ vmc->a+i ], items + i );
-		}else{
-			return;
-		}
-		if( vmc->code == DVM_RETURN &&  returning != (ushort_t)-1 ){
-			DaoStackFrame *lastframe = topFrame->prev;
-			assert( lastframe && lastframe->routine );
-			type = lastframe->routine->regType->items.pType[ returning ];
-			dest = self->stackValues + lastframe->stackBase + returning;
-		}
-		if( retValue == NULL ){
-			int opt1 = self->vmSpace->options & DAO_EXEC_INTERUN;
-			int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
-			int retnull = type == NULL || type->tid == DAO_UDF;
-			if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = null;
-		}
-		if( DaoValue_Move( retValue, dest, type ) ==0 ){
-			//printf( "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs );
-			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
-		}
-	}else if( self->parYield ){
-		DaoProcess_Yield( self, self->activeValues + vmc->a, vmc->b, NULL );
-		/* self->status is set to DAO_VMPROC_SUSPENDED by DaoProcess_Yield() */
-		self->status = DAO_VMPROC_FINISHED;
+
+	if( topFrame->state & DVM_MAKE_OBJECT ){
+		retValue = (DaoValue*)self->activeObject;
+	}else if( vmc->b == 1 ){
+		retValue = self->activeValues[ vmc->a ];
+	}else if( vmc->b > 1 ){
+		DaoTuple *tuple = DaoTuple_New( vmc->b );
+		DaoValue **items = tuple->items;
+		retValue = (DaoValue*) tuple;
+		for(i=0; i<vmc->b; i++) DaoValue_Copy( self->activeValues[ vmc->a+i ], items + i );
+	}else{
+		return;
+	}
+	if( vmc->code == DVM_RETURN &&  returning != (ushort_t)-1 ){
+		DaoStackFrame *lastframe = topFrame->prev;
+		assert( lastframe && lastframe->routine );
+		type = lastframe->routine->regType->items.pType[ returning ];
+		dest = self->stackValues + lastframe->stackBase + returning;
+	}
+	if( retValue == NULL ){
+		int opt1 = self->vmSpace->options & DAO_EXEC_INTERUN;
+		int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
+		int retnull = type == NULL || type->tid == DAO_UDF;
+		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = null;
+	}
+	if( DaoValue_Move( retValue, dest, type ) ==0 ){
+		//printf( "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
 	}
 }
 int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
@@ -3186,7 +3147,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_RaiseException( self, DAO_WARNING, "coroutine execution is finished." );
 			return;
 		}
-		DaoProcess_Resume2( vmProc, params, npar, self );
+		DaoProcess_Resume( vmProc, params, npar, self );
 		if( vmProc->status == DAO_VMPROC_ABORTED )
 			DaoProcess_RaiseException( self, DAO_ERROR, "coroutine execution is aborted." );
 	}else{

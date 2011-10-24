@@ -790,11 +790,6 @@ static void DaoMT_RunIterateFunctional( void *p )
 		}
 		if( clone->status != DAO_VMPROC_FINISHED ) break;
 	}
-	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	DMutex_Lock( clone->mutex );
-	*self->joined += 1;
-	DCondVar_Signal( clone->condv );
-	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_RunListFunctional( void *p )
 {
@@ -842,11 +837,6 @@ static void DaoMT_RunListFunctional( void *p )
 			}
 		}
 	}
-	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	DMutex_Lock( clone->mutex );
-	*self->joined += 1;
-	DCondVar_Signal( clone->condv );
-	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_RunMapFunctional( void *p )
 {
@@ -895,11 +885,6 @@ static void DaoMT_RunMapFunctional( void *p )
 			}
 		}
 	}
-	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	DMutex_Lock( clone->mutex );
-	*self->joined += 1;
-	DCondVar_Signal( clone->condv );
-	DMutex_Unlock( clone->mutex );
 }
 
 void DaoArray_GetSliceShape( DaoArray *self, DArray *shape );
@@ -972,21 +957,23 @@ static void DaoMT_RunArrayFunctional( void *p )
 			DaoArray_SetValue( array, id, res );
 		}
 	}
-	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	DMutex_Lock( clone->mutex );
-	*self->joined += 1;
-	DCondVar_Signal( clone->condv );
-	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
+	DaoProcess *clone = self->clone;
 	switch( self->param->type ){
 	case DAO_INTEGER : DaoMT_RunIterateFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
 	case DAO_MAP   : DaoMT_RunMapFunctional( p ); break;
 	case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
 	}
+	self->status |= clone->status != DAO_VMPROC_FINISHED;
+	DMutex_Lock( clone->mutex );
+	*self->joined += 1;
+	if( clone->exceptions->size ) DaoProcess_PrintException( clone, 1 );
+	DCondVar_Signal( clone->condv );
+	DMutex_Unlock( clone->mutex );
 }
 static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 {
@@ -1195,7 +1182,7 @@ static DaoFuncItem thdMasterMeths[] =
 	{ DaoThdMaster_Lib_Sema,        "semaphore()=>semaphore" },
 
 	{ DaoMT_Critical, "critical()[]" },
-	{ DaoMT_Start, "start()[=>@V] =>any" }, // TODO: =>future<@V>
+	{ DaoMT_Start, "start()[=>@V] =>future<@T>" },
 	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
 
 	{ DaoMT_ListIterate, "iterate( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },
