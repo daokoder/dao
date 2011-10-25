@@ -494,7 +494,7 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 	}
 	k = 0;
 	if( array->numType == DAO_INTEGER ){
-		int *vals = array->data.i;
+		dint *vals = array->data.i;
 		for( j=0; j<count; j++ ){
 			DaoValue *p = self->activeValues[ opA + j ];
 			if( p && p->type == DAO_ARRAY ){
@@ -934,7 +934,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 	/* TODO: more restrict type checking on elements. */
 	DaoArray_ResizeArray( array, dim, 2 );
 	if( numtype == DAO_INTEGER ){
-		int *vec = array->data.i;
+		dint *vec = array->data.i;
 		for(i=0; i<size; i++) vec[i] = DaoValue_GetInteger( regv[ opA+i ] );
 	}else if( numtype == DAO_FLOAT ){
 		float *vec = array->data.f;

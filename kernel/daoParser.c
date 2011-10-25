@@ -191,6 +191,7 @@ DaoParser* DaoParser_New()
 	self->decoFuncs = DArray_New(0);
 	self->decoParams = DArray_New(D_VALUE);
 
+	self->lastValue = -1;
 	self->nullValue = -1;
 	self->integerZero = -1;
 	self->integerOne = -1;
@@ -3233,6 +3234,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 	while( start >= from && start <= to ){
 
+		self->lastValue = -1;
 		self->curLine = tokens[start]->line;
 		ptok = tokens[start];
 		tki = tokens[start]->name;
@@ -4124,12 +4126,13 @@ void DaoParser_SetupBranching( DaoParser *self )
 		int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 		int ismain = self->routine->attribs & DAO_ROUT_MAIN;
 		int autoret = ismain && (print || vms->evalCmdline);
-		autoret &= self->vmcLast != self->vmcFirst;
+		int opa = self->lastValue >=0 ? self->lastValue : 0;
+		autoret &= (self->vmcLast != self->vmcFirst) && self->lastValue >=0;
 		if( self->vmSpace->options & DAO_EXEC_IDE ){
 			/* for setting break points in DaoStudio */
 			DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, first,0,0 );
 		}
-		DaoParser_AddCode( self, DVM_RETURN, self->lastValue, autoret, 0, first,0,0 );
+		DaoParser_AddCode( self, DVM_RETURN, opa, autoret, 0, first,0,0 );
 	}
 
 	for(it=self->vmcFirst; it; it=it->next) it->index = id ++;
@@ -6062,8 +6065,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					}
 					if( self->vmcLast->code != DVM_RETURN ){
 						int first = self->vmcLast->first;
-						opa = self->lastValue;
-						opb = 1;
+						opb = self->lastValue >= 0;
+						opa = opb ? self->lastValue : 0;
 						if( self->vmcLast == back ){
 							first = start - 1;
 							opa = opb = 0;

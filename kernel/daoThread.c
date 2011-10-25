@@ -1182,7 +1182,7 @@ static DaoFuncItem thdMasterMeths[] =
 	{ DaoThdMaster_Lib_Sema,        "semaphore()=>semaphore" },
 
 	{ DaoMT_Critical, "critical()[]" },
-	{ DaoMT_Start, "start()[=>@V] =>future<@T>" },
+	{ DaoMT_Start, "start()[=>@V] =>future<@V>" },
 	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
 
 	{ DaoMT_ListIterate, "iterate( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },

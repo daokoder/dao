@@ -3367,7 +3367,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					goto InvOper;
 				}
 				if( vmc->b ==0 ){
-					if( ct && ( ct->tid ==DAO_UDF || ct->tid ==DAO_ANY ) ) continue;
+					// less strict checking for type holder as well (case mt.start()):
+					if( ct && NoCheckingType( ct ) ) continue;
 					if( ct && ! (self->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 				}else{
 					at = type[opa];

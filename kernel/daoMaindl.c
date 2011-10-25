@@ -49,8 +49,12 @@ static void DaoSignalHandler( int sig )
 		printf( "\n" );
 #ifdef DAO_USE_READLINE
 		if( rl_end ==0 ) printf( "type \"q\" to quit.\n" );
+#ifndef MAC_OSX
 		rl_replace_line( "", 0 );
 		rl_forced_update_display();
+#else
+		rl_reset_terminal( "" );
+#endif
 #endif
 	}else{
 		printf( "keyboard interrupt...\n" );
@@ -110,7 +114,13 @@ int main( int argc, char **argv )
 	if( DaoVmSpace_GetOptions( vmSpace ) & DAO_EXEC_INTERUN )
 		signal( SIGINT, DaoSignalHandler );
 
+#ifdef DAO_USE_READLINE
+	read_history( NULL );
+#endif
 	k = ! DaoVmSpace_RunMain( vmSpace, args );
+#ifdef DAO_USE_READLINE
+	write_history( NULL );
+#endif
 	DString_Delete( opts );
 	DString_Delete( args );
 	DaoQuit();

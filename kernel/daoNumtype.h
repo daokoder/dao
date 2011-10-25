@@ -147,7 +147,7 @@ struct DaoArray
 
 	union{
 		void       *p;
-		int        *i;
+		dint       *i;
 		float      *f;
 		double     *d;
 		complex16  *c;

@@ -787,6 +787,39 @@ DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file )
 	return ns;
 }
 
+static int CheckCodeCompletion( DString *source, DArray *tokens )
+{
+	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
+	DaoToken_Tokenize( tokens, source->mbs, 0, 1, 1 );
+	if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
+	switch( tki ){
+	case DTOK_LB :
+	case DTOK_LCB :
+	case DTOK_LSB :
+	case DTOK_CMT_OPEN :
+	case DTOK_MBS_OPEN :
+	case DTOK_WCS_OPEN :
+		completed = 0;
+		break;
+	}
+	if( tokens->size && completed ){
+		bcount = sbcount = cbcount = 0;
+		for(i=0; i<tokens->size; i++){
+			DaoToken *tk = tokens->items.pToken[i];
+			switch( tk->type ){
+			case DTOK_LB : bcount --; break;
+			case DTOK_RB : bcount ++; break;
+			case DTOK_LCB : cbcount --; break;
+			case DTOK_RCB : cbcount ++; break;
+			case DTOK_LSB : sbcount --; break;
+			case DTOK_RSB : sbcount ++; break;
+			default : break;
+			}
+		}
+		if( bcount <0 || sbcount <0 || cbcount <0 ) completed = 0;
+	}
+	return completed;
+}
 static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 {
 	DArray *tokens = DArray_New( D_TOKEN );
@@ -801,13 +834,19 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
 	while(1){
 		DString_Clear( input );
+		DaoValue_Clear( self->mainProcess->stackValues );
 		if( self->ReadLine ){
 			chs = self->ReadLine( "(dao) " );
-			if( chs ){
-				DString_SetMBS( input, chs );
-				DString_Trim( input );
-				if( input->size && self->AddHistory ) self->AddHistory( chs );
+			while( chs ){
+				DString_AppendMBS( input, chs );
+				DString_AppendChar( input, '\n' );
 				dao_free( chs );
+				if( CheckCodeCompletion( input, tokens ) ){
+					DString_Trim( input );
+					if( input->size && self->AddHistory ) self->AddHistory( input->mbs );
+					break;
+				}
+				chs = self->ReadLine( "" );
 			}
 		}else{
 			printf( "(dao) " );
@@ -816,37 +855,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			if( ch == EOF ) break;
 			while( ch != EOF ){
 				if( ch == '\n' ){
-					int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
-					DaoToken_Tokenize( tokens, input->mbs, 0, 1, 1 );
-					if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
-					switch( tki ){
-					case DTOK_LB :
-					case DTOK_LCB :
-					case DTOK_LSB :
-					case DTOK_CMT_OPEN :
-					case DTOK_MBS_OPEN :
-					case DTOK_WCS_OPEN :
-						completed = 0;
-						break;
-					}
-					if( tokens->size && completed ){
-						bcount = sbcount = cbcount = 0;
-						for(i=0; i<tokens->size; i++){
-							DaoToken *tk = tokens->items.pToken[i];
-							switch( tk->type ){
-							case DTOK_LB : bcount --; break;
-							case DTOK_RB : bcount ++; break;
-							case DTOK_LCB : cbcount --; break;
-							case DTOK_RCB : cbcount ++; break;
-							case DTOK_LSB : sbcount --; break;
-							case DTOK_RSB : sbcount ++; break;
-							default : break;
-							}
-						}
-						if( bcount <0 || sbcount <0 || cbcount <0 ) completed = 0;
-					}
-					if( completed ) break;
-					printf( "..... " );
+					if( CheckCodeCompletion( input, tokens ) ) break;
 					fflush( stdout );
 				}
 				DString_AppendChar( input, (char)ch );
@@ -871,8 +880,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input, 1 );
 		}else if( DString_MatchMBS( input, varRegex, NULL, NULL ) ){
 			DString_ChangeMBS( input, "^ %s* = %s*", "", 0 );
-			DString_InsertMBS( input, "io.writeln( '=', ", 0, 0, 0 );
-			DString_AppendMBS( input, ")" );
+			DString_InsertMBS( input, "return ", 0, 0, 0 );
 			if( callback ){
 				(*callback)( input->mbs );
 				continue;

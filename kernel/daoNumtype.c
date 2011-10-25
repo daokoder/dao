@@ -2072,7 +2072,7 @@ int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
 }
 int DaoArray_Compare( DaoArray *x, DaoArray *y )
 {
-	int *xi = x->data.i, *yi = y->data.i;
+	dint *xi = x->data.i, *yi = y->data.i;
 	float *xf = x->data.f, *yf = y->data.f;
 	double *xd = x->data.d, *yd = y->data.d;
 	complex16 *xc = x->data.c, *yc = y->data.c;
@@ -2341,7 +2341,7 @@ static DaoTypeCore numarrCore =
 static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoArray *self = & par[0]->xArray;
-	int i, *v;
+	dint i, *v;
 
 	if( N == 1 ){
 		DaoArray *na = DaoProcess_PutArray( proc );
@@ -2453,8 +2453,8 @@ static void DaoARRAY_Index( DaoProcess *proc, DaoValue *par[], int N )
 	DaoArray *na = DaoProcess_PutArray( proc );
 	size_t *dim = self->dims->items.pSize;
 	int i, D = self->dims->size;
-	int sd = par[1]->xInteger.value;
-	int *v;
+	dint sd = par[1]->xInteger.value;
+	dint *v;
 
 	DaoArray_Sliced( self );
 	dim = self->dims->items.pSize;
@@ -2567,7 +2567,7 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 		if( size == 0 ) return;
 		if( self->numType == DAO_INTEGER ){
 			long sum = 0;
-			int *v = self->data.i;
+			dint *v = self->data.i;
 			for(i=0; i<size; i++ ) sum += v[ DaoArray_IndexFromSlice( self, slice, i ) ];
 			DaoProcess_PutInteger( proc, sum );
 		}else if( self->numType == DAO_FLOAT ){
@@ -2592,7 +2592,7 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 	}else{
 		if( self->numType == DAO_INTEGER ){
 			long sum = 0;
-			int *v = self->data.i;
+			dint *v = self->data.i;
 			for(i=0; i<self->size; i++ ) sum += v[i];
 			DaoProcess_PutInteger( proc, sum );
 		}else if( self->numType == DAO_FLOAT ){
@@ -2659,7 +2659,7 @@ static void DaoARRAY_varn( DaoProcess *proc, DaoValue *par[], int N )
 		*num = dev / self->size;
 	}
 }
-static int Compare( DaoArray *array, int *slice, int *index, int i, int j )
+static int Compare( DaoArray *array, dint *slice, int *index, int i, int j )
 {
 	if( index ){
 		i = index[i];
@@ -2690,7 +2690,7 @@ static int Compare( DaoArray *array, int *slice, int *index, int i, int j )
 	}
 	return 0;
 }
-static void Swap( DaoArray *array, int *slice, int *index, int i, int j )
+static void Swap( DaoArray *array, dint *slice, int *index, int i, int j )
 {
 	if( index ){
 		int k = index[i];
@@ -2728,7 +2728,7 @@ static void Swap( DaoArray *array, int *slice, int *index, int i, int j )
 	default : break;
 	}
 }
-static void QuickSort2( DaoArray *array, int *slice, 
+static void QuickSort2( DaoArray *array, dint *slice, 
 		int *index, int first, int last, int part, int asc )
 {
 	int lower = first+1, upper = last;
@@ -2766,7 +2766,7 @@ static void DaoARRAY_rank( DaoProcess *proc, DaoValue *par[], int npar )
 	dint part = par[2]->xInteger.value;
 	int i, N = DaoArray_SliceSize( array );
 	int *index;
-	int *ids;
+	dint *ids;
 
 	if( res == NULL ) return;
 	if( N == 0 ) return;
@@ -2794,12 +2794,12 @@ static void DaoARRAY_sort( DaoProcess *proc, DaoValue *par[], int npar )
 	DArray *slice = array->slice;
 	dint part = par[2]->xInteger.value;
 	int i, N = DaoArray_SliceSize( array );
-	int *index;
+	dint *index;
 
 	DaoProcess_PutValue( proc, par[0] );
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
-	index = dao_malloc( N * sizeof(int) );
+	index = dao_malloc( N * sizeof(dint) );
 	for(i=0; i<N; i++) index[i] = ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i;
 	QuickSort2( ref ? ref : array, index, NULL, 0, N-1, part, ( par[1]->xEnum.value == 0 ) ? 1 : 0 );
 	dao_free( index );
@@ -2865,7 +2865,7 @@ static void DaoARRAY_Reverse( DaoProcess *proc, DaoValue *p[], int npar )
 	complex16 swc, *dc = self->data.c;
 	double swd, *dd = self->data.d;
 	float swf, *df = self->data.f;
-	int swi, *di = self->data.i;
+	dint swi, *di = self->data.i;
 
 	DaoProcess_PutReference( proc, p[0] );
 	for(i=0; i<N/2; i++){
@@ -3050,10 +3050,10 @@ void DaoArray_FromFloat( DaoArray *self )
 		}
 	}
 }
-int* DaoArray_ToInt( DaoArray *self )
+dint* DaoArray_ToInteger( DaoArray *self )
 {
 	int i;
-	int *buf = self->data.i;
+	dint *buf = self->data.i;
 	if( self->numType == DAO_INTEGER ) return self->data.i;
 	switch( self->numType ){
 	case DAO_FLOAT  : for(i=0; i<self->size; i++) buf[i] = (int)self->data.f[i]; break;
@@ -3068,10 +3068,10 @@ int* DaoArray_ToInt( DaoArray *self )
 	}
 	return buf;
 }
-void DaoArray_FromInt( DaoArray *self )
+void DaoArray_FromInteger( DaoArray *self )
 {
 	int i;
-	int *buf = self->data.i;
+	dint *buf = self->data.i;
 	if( self->numType == DAO_INTEGER ) return;
 	switch( self->numType ){
 	case DAO_FLOAT  : for(i=0; i<self->size; i++) self->data.f[i] = buf[i]; break;
@@ -3085,574 +3085,142 @@ void DaoArray_FromInt( DaoArray *self )
 	default : break;
 	}
 }
-short* DaoArray_ToShort( DaoArray *self )
-{
-	int i;
-	short *buf = (short*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<self->size; i++) buf[i] = (int)self->data.i[i]; break;
-	case DAO_FLOAT   : for(i=0; i<self->size; i++) buf[i] = (int)self->data.f[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<self->size; i++) buf[i] = (int)self->data.d[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (int)self->data.c[i].real;
-			buf[2*i+1] = (int)self->data.c[i].imag;
-		}
-		break;
-	default : break;
-	}
-	return buf;
+#define DefineFunction_DaoArray_To( name, type, cast ) \
+type* name( DaoArray *self ) \
+{ \
+	int i, size = self->size; \
+	type *buf = (type*) self->data.p; \
+	switch( self->numType ){ \
+	case DAO_INTEGER : for(i=0; i<size; i++) buf[i] = (cast)self->data.i[i]; break; \
+	case DAO_FLOAT   : for(i=0; i<size; i++) buf[i] = (cast)self->data.f[i]; break; \
+	case DAO_DOUBLE  : for(i=0; i<size; i++) buf[i] = (cast)self->data.d[i]; break; \
+	case DAO_COMPLEX : \
+		for(i=0; i<size; i++){ \
+			buf[2*i] = (cast)self->data.c[i].real; \
+			buf[2*i+1] = (cast)self->data.c[i].imag; \
+		} \
+		break; \
+	default : break; \
+	} \
+	return buf; \
 }
-void DaoArray_FromShort( DaoArray *self )
-{
-	int i;
-	short *buf = (short*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=self->size-1; i>=0; i--) self->data.i[i] = buf[i]; break;
-	case DAO_FLOAT   : for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i]; break;
-	case DAO_DOUBLE  : for(i=self->size-1; i>=0; i--) self->data.d[i] = buf[i]; break;
-	case DAO_COMPLEX :
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-		break;
-	default : break;
-	}
+DefineFunction_DaoArray_To( DaoArray_ToSByte, signed char, int );
+DefineFunction_DaoArray_To( DaoArray_ToSShort, signed short, int );
+DefineFunction_DaoArray_To( DaoArray_ToSInt, signed int, int );
+DefineFunction_DaoArray_To( DaoArray_ToUByte, unsigned char, unsigned int );
+DefineFunction_DaoArray_To( DaoArray_ToUShort, unsigned short, unsigned int );
+DefineFunction_DaoArray_To( DaoArray_ToUInt, unsigned int, unsigned int );
+
+#define DefineFunction_DaoArray_From( name, type ) \
+void name( DaoArray *self ) \
+{ \
+	int i, size = self->size; \
+	type *buf = (type*) self->data.p; \
+	switch( self->numType ){ \
+	case DAO_INTEGER : for(i=size-1; i>=0; i--) self->data.i[i] = buf[i]; break; \
+	case DAO_FLOAT   : for(i=size-1; i>=0; i--) self->data.f[i] = buf[i]; break; \
+	case DAO_DOUBLE  : for(i=size-1; i>=0; i--) self->data.d[i] = buf[i]; break; \
+	case DAO_COMPLEX : \
+		for(i=size-1; i>=0; i--){ \
+			self->data.c[i].real = buf[2*i]; \
+			self->data.c[i].imag = buf[2*i+1]; \
+		} \
+		break; \
+	default : break; \
+	} \
 }
-signed char* DaoArray_ToByte( DaoArray *self )
-{
-	int i;
-	signed char *buf = (signed char*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<self->size; i++) buf[i] = (int)self->data.i[i]; break;
-	case DAO_FLOAT   : for(i=0; i<self->size; i++) buf[i] = (int)self->data.f[i]; break;
-	case DAO_DOUBLE   : for(i=0; i<self->size; i++) buf[i] = (int)self->data.d[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (int)self->data.c[i].real;
-			buf[2*i+1] = (int)self->data.c[i].imag;
-		}
-		break;
-	default : break;
-	}
-	return buf;
+
+DefineFunction_DaoArray_From( DaoArray_FromSByte, signed char );
+DefineFunction_DaoArray_From( DaoArray_FromSShort, signed short );
+DefineFunction_DaoArray_From( DaoArray_FromSInt, signed int );
+DefineFunction_DaoArray_From( DaoArray_FromUByte, unsigned char );
+DefineFunction_DaoArray_From( DaoArray_FromUShort, unsigned short );
+DefineFunction_DaoArray_From( DaoArray_FromUInt, unsigned int );
+
+#define DefineFunction_DaoArray_GetMatrix( name, convert, type ) \
+type** name( DaoArray *self, int row ) \
+{ \
+	int i, col; \
+	type *buf; \
+	if( row <= 0 ) row = self->dims->items.pInt[0]; \
+	if( self->size % row != 0 ) return NULL; \
+	col = self->size / row; \
+	buf = convert( self ); \
+	if( self->numType == DAO_COMPLEX ) col += col; \
+	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) ); \
+	for(i=0; i<row; i++) self->matrix[i] = buf + i * col; \
+	return (type**)self->matrix; \
 }
-void DaoArray_FromByte( DaoArray *self )
-{
-	int i;
-	signed char *buf = (signed char*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=self->size-1; i>=0; i--) self->data.i[i] = buf[i]; break;
-	case DAO_FLOAT   : for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i]; break;
-	case DAO_DOUBLE  : for(i=self->size-1; i>=0; i--) self->data.d[i] = buf[i]; break;
-	case DAO_COMPLEX :
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-		break;
-	default : break;
-	}
-}
-double** DaoArray_GetMatrixD( DaoArray *self, int row )
-{
-	int i, col;
-	double *buf;
-	if( row <= 0 ) row = self->dims->items.pInt[0];
-	if( self->size % row != 0 ) return NULL;
-	col = self->size / row;
-	buf = DaoArray_ToDouble( self ); /* single to double */
-	if( self->numType == DAO_COMPLEX ) col += col;
-	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) );
-	for(i=0; i<row; i++) self->matrix[i] = buf + i * col;
-	return (double**)self->matrix;
-}
-float** DaoArray_GetMatrixF( DaoArray *self, int row )
-{
-	int i, col;
-	float *buf;
-	if( row <= 0 ) row = self->dims->items.pInt[0];
-	if( self->size % row != 0 ) return NULL;
-	col = self->size / row;
-	buf = DaoArray_ToFloat( self );
-	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) );
-	for(i=0; i<row; i++) self->matrix[i] = buf + i * col;
-	return (float**)self->matrix;
-}
-int** DaoArray_GetMatrixI( DaoArray *self, int row )
-{
-	int i, col;
-	int *buf;
-	if( row <= 0 ) row = self->dims->items.pInt[0];
-	if( self->size % row != 0 ) return NULL;
-	col = self->size / row;
-	buf = DaoArray_ToInt( self );
-	if( self->numType == DAO_COMPLEX ) col += col;
-	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) );
-	for(i=0; i<row; i++) self->matrix[i] = buf + i * col;
-	return (int**)self->matrix;
-}
-short** DaoArray_GetMatrixS( DaoArray *self, int row )
-{
-	int i, col;
-	short *buf;
-	if( row <= 0 ) row = self->dims->items.pInt[0];
-	if( self->size % row != 0 ) return NULL;
-	col = self->size / row;
-	buf = DaoArray_ToShort( self );
-	if( self->numType == DAO_COMPLEX ) col += col;
-	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) );
-	for(i=0; i<row; i++) self->matrix[i] = buf + i * col;
-	return (short**)self->matrix;
-}
-signed char** DaoArray_GetMatrixB( DaoArray *self, int row )
-{
-	int i, col;
-	signed char *buf;
-	if( row <= 0 ) row = self->dims->items.pInt[0];
-	if( self->size % row != 0 ) return NULL;
-	col = self->size / row;
-	buf = DaoArray_ToByte( self );
-	if( self->numType == DAO_COMPLEX ) col += col;
-	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) );
-	for(i=0; i<row; i++) self->matrix[i] = buf + i * col;
-	return (signed char**)self->matrix;
-}
-unsigned int* DaoArray_ToUInt( DaoArray *self )
-{
-	int i, n = self->size;
-	unsigned int *buf = (unsigned int*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<n; i++) buf[i] = (unsigned int)self->data.i[i]; break;
-	case DAO_FLOAT   : for(i=0; i<n; i++) buf[i] = (unsigned int)self->data.f[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<n; i++) buf[i] = (unsigned int)self->data.d[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (unsigned int)self->data.c[i].real;
-			buf[2*i+1] = (unsigned int)self->data.c[i].imag;
-		}
-		break;
-	default : break;
-	}
-	return buf;
-}
-void DaoArray_FromUInt( DaoArray *self )
-{
-	int i;
-	unsigned int *buf = (unsigned int*) self->data.i;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<self->size; i++) self->data.i[i] = buf[i]; break;
-	case DAO_FLOAT   : for(i=0; i<self->size; i++) self->data.f[i] = buf[i]; break;
-	case DAO_DOUBLE  : for(i=self->size-1; i>=0; i--) self->data.d[i] = buf[i]; break;
-	case DAO_COMPLEX :
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-		break;
-	default : break;
-	}
-}
-unsigned short* DaoArray_ToUShort( DaoArray *self )
-{
-	int i, n = self->size;
-	unsigned short *buf = (unsigned short *) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<n; i++) buf[i] = (unsigned short)self->data.i[i]; break;
-	case DAO_FLOAT   : for(i=0; i<n; i++) buf[i] = (unsigned short)self->data.f[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<n; i++) buf[i] = (unsigned short)self->data.d[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (unsigned short)self->data.c[i].real;
-			buf[2*i+1] = (unsigned short)self->data.c[i].imag;
-		}
-		break;
-	default : break;
-	}
-	return buf;
-}
-void DaoArray_FromUShort( DaoArray *self )
-{
-	int i;
-	unsigned short *buf = (unsigned short*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=self->size-1; i>=0; i--) self->data.i[i] = buf[i]; break;
-	case DAO_FLOAT   : for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i]; break;
-	case DAO_DOUBLE  : for(i=self->size-1; i>=0; i--) self->data.d[i] = buf[i]; break;
-	case DAO_COMPLEX :
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-		break;
-	default : break;
-	}
-}
-unsigned char* DaoArray_ToUByte( DaoArray *self )
-{
-	int i, n = self->size;
-	unsigned char *buf = (unsigned char *) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<n; i++) buf[i] = (unsigned char)self->data.i[i]; break;
-	case DAO_FLOAT   : for(i=0; i<n; i++) buf[i] = (unsigned char)self->data.f[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<n; i++) buf[i] = (unsigned char)self->data.d[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (unsigned char)self->data.c[i].real;
-			buf[2*i+1] = (unsigned char)self->data.c[i].imag;
-		}
-		break;
-	default : break;
-	}
-	return buf;
-}
-void DaoArray_FromUByte( DaoArray *self )
-{
-	int i;
-	unsigned char *buf = (unsigned char*) self->data.p;
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=self->size-1; i>=0; i--) self->data.i[i] = buf[i]; break;
-	case DAO_FLOAT   : for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i]; break;
-	case DAO_DOUBLE  : for(i=self->size-1; i>=0; i--) self->data.d[i] = buf[i]; break;
-	case DAO_COMPLEX :
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-		break;
-	default : break;
-	}
-}
+
+DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixSB, DaoArray_ToSByte, signed char );
+DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixSS, DaoArray_ToSShort, signed short );
+DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixSI, DaoArray_ToSInt, signed int );
+DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixI, DaoArray_ToInteger, dint );
+DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixF, DaoArray_ToFloat, float );
+DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixD, DaoArray_ToDouble, double );
 
 static void DaoArray_ResizeData( DaoArray *self, int size, int oldSize );
 
-void DaoArray_SetVectorB( DaoArray *self, char *vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
+#define DefineFunction_DaoArray_SetVector( name, type ) \
+void name( DaoArray *self, type *vec, int N ) \
+{ \
+	int i; \
+	if( N < self->size ) DaoArray_ResizeData( self, self->size, N ); \
+	switch( self->numType ){ \
+	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (dint) vec[i]; break; \
+	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break; \
+	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break; \
+	case DAO_COMPLEX : \
+		for(i=0; i<N; i++){ \
+			self->data.c[i].real = vec[i+i]; \
+			self->data.c[i].imag = vec[i+i+1]; \
+		} \
+		break; \
+	default : break; \
+	} \
 }
-void DaoArray_SetVectorS( DaoArray *self, short *vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
+
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorSB, signed char );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorSS, signed short );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorSI, signed int );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorUB, unsigned char );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorUS, unsigned short );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorUI, unsigned int );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorI, dint );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorF, float );
+DefineFunction_DaoArray_SetVector( DaoArray_SetVectorD, double );
+
+#define DefineFunction_DaoArray_SetMatrix( name, type ) \
+void name( DaoArray *self, type **mat, int R, int C ) \
+{ \
+	size_t dm[2]; \
+	int i, j, N = R * C; \
+	dm[0] = R; dm[1] = C; \
+	if( N != self->size ) DaoArray_ResizeData( self, self->size, N ); \
+	DaoArray_Reshape( self, dm, 2 ); \
+	switch( self->numType ){ \
+	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (dint)mat[i/R][i%R]; break; \
+	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = mat[i/R][i%R]; break; \
+	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = mat[i/R][i%R]; break; \
+	case DAO_COMPLEX : for(i=0; i<N; i++){ \
+						   self->data.c[i].real = mat[i/R][2*(i%R)]; \
+						   self->data.c[i].imag = mat[i/R][2*(i%R)+1]; \
+					   } \
+					   break; \
+	default : break; \
+	} \
 }
-void DaoArray_SetVectorI( DaoArray *self, int *vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetVectorF( DaoArray *self, float *vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (int) vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetVectorD( DaoArray *self, double *vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (int) vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetMatrixB( DaoArray *self, signed char **mat, int row, int col )
-{
-	size_t dm[2];
-	int i, j;
-	dm[0] = row; dm[1] = col;
-	if( row * col != self->size )
-		DaoArray_ResizeData( self, self->size, row * col );
-	DaoArray_Reshape( self, dm, 2 );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.i[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_FLOAT :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.f[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_DOUBLE :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.d[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_COMPLEX :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++){
-				self->data.c[i*(col+col)+j+j].real = mat[i][j+j];
-				self->data.c[i*(col+col)+j+j+1].imag = mat[i][j+j+1];
-			}
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetMatrixUB( DaoArray *self, unsigned char **mat, int N, int M )
-{
-	printf( "not implemented\n" );
-}
-void DaoArray_SetMatrixUS( DaoArray *self, unsigned short **mat, int N, int M )
-{
-	printf( "not implemented\n" );
-}
-void DaoArray_SetMatrixUI( DaoArray *self, unsigned int **mat, int N, int M )
-{
-	printf( "not implemented\n" );
-}
-void DaoArray_SetMatrixS( DaoArray *self, short **mat, int row, int col )
-{
-	size_t dm[2];
-	int i, j;
-	dm[0] = row; dm[1] = col;
-	if( row * col != self->size )
-		DaoArray_ResizeData( self, self->size, row * col );
-	DaoArray_Reshape( self, dm, 2 );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.i[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_FLOAT :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.f[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_DOUBLE :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.d[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_COMPLEX :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++){
-				self->data.c[i*(col+col)+j+j].real = mat[i][j+j];
-				self->data.c[i*(col+col)+j+j+1].imag = mat[i][j+j+1];
-			}
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetMatrixI( DaoArray *self, int **mat, int row, int col )
-{
-	size_t dm[2];
-	int i, j;
-	dm[0] = row; dm[1] = col;
-	if( row * col != self->size )
-		DaoArray_ResizeData( self, self->size, row * col );
-	DaoArray_Reshape( self, dm, 2 );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.i[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_FLOAT :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.f[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_DOUBLE :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.d[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_COMPLEX :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++){
-				self->data.c[i*(col+col)+j+j].real = mat[i][j+j];
-				self->data.c[i*(col+col)+j+j+1].imag = mat[i][j+j+1];
-			}
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetMatrixF( DaoArray *self, float **mat, int row, int col )
-{
-	size_t dm[2];
-	int i, j;
-	dm[0] = row; dm[1] = col;
-	if( row * col != self->size )
-		DaoArray_ResizeData( self, self->size, row * col );
-	DaoArray_Reshape( self, dm, 2 );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.i[i*col+j] = (int) mat[i][j];
-		}
-		break;
-	case DAO_FLOAT :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.f[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_DOUBLE :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.d[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_COMPLEX :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++){
-				self->data.c[i*(col+col)+j+j].real = mat[i][j+j];
-				self->data.c[i*(col+col)+j+j+1].imag = mat[i][j+j+1];
-			}
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetMatrixD( DaoArray *self, double **mat, int row, int col )
-{
-	size_t dm[2];
-	int i, j;
-	dm[0] = row; dm[1] = col;
-	if( row * col != self->size )
-		DaoArray_ResizeData( self, self->size, row * col );
-	DaoArray_Reshape( self, dm, 2 );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.i[i*col+j] = (int) mat[i][j];
-		}
-		break;
-	case DAO_FLOAT :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.f[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_DOUBLE :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++) self->data.d[i*col+j] = mat[i][j];
-		}
-		break;
-	case DAO_COMPLEX :
-		for(i=0; i<row; i++){
-			for(j=0; j<col; j++){
-				self->data.c[i*(col+col)+j+j].real = mat[i][j+j];
-				self->data.c[i*(col+col)+j+j+1].imag = mat[i][j+j+1];
-			}
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER :
-		for(i=0; i<N; i++) self->data.i[i] = vec[i]; break;
-	case DAO_FLOAT :
-		for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE :
-		for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
-}
-void DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, int N )
-{
-	int i;
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N );
-	switch( self->numType ){
-	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = vec[i]; break;
-	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break;
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<N; i++){
-			self->data.c[i].real = vec[i+i];
-			self->data.c[i].imag = vec[i+i+1];
-		}
-		break;
-	default : break;
-	}
-}
+
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixSB, signed char );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixSS, signed short );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixSI, signed int );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixUB, unsigned char );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixUS, unsigned short );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixUI, unsigned int );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixI, dint );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixF, float );
+DefineFunction_DaoArray_SetMatrix( DaoArray_SetMatrixD, double );
+
 void* DaoArray_GetBuffer( DaoArray *self )
 {
 	return self->data.p;
