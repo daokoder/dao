@@ -674,7 +674,7 @@ DaoSema* DaoSema_New( int n )
 {
 	DaoSema* self = (DaoSema*) dao_calloc( 1, sizeof(DaoSema) );
 	DaoValue_Init( self, DAO_SEMA );
-	DSema_Init( & self->mySema, n );
+	DSema_Init( & self->mySema, ( n < 0 )? 0 : n );
 	return self;
 }
 void DaoSema_Delete( DaoSema *self )
@@ -694,7 +694,7 @@ void DaoSema_Post( DaoSema *self )
 
 void DaoSema_SetValue( DaoSema *self, int n )
 {
-	DSema_SetValue( & self->mySema, n );
+	DSema_SetValue( & self->mySema, ( n < 0 )? 0 : n );
 }
 int  DaoSema_GetValue( DaoSema *self )
 {
@@ -713,7 +713,7 @@ static void DaoThdMaster_Lib_CondVar( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoThdMaster_Lib_Sema( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoProcess_PutValue( proc, (DaoValue*)DaoSema_New( 0 ) );
+	DaoProcess_PutValue( proc, (DaoValue*)DaoSema_New( par[0]->xInteger.value ) );
 }
 
 typedef struct DaoTaskData DaoTaskData;
@@ -1179,7 +1179,7 @@ static DaoFuncItem thdMasterMeths[] =
 {
 	{ DaoThdMaster_Lib_Mutex,       "mutex()=>mutex" },
 	{ DaoThdMaster_Lib_CondVar,     "condition()=>condition" },
-	{ DaoThdMaster_Lib_Sema,        "semaphore()=>semaphore" },
+	{ DaoThdMaster_Lib_Sema,        "semaphore( value = 0 )=>semaphore" },
 
 	{ DaoMT_Critical, "critical()[]" },
 	{ DaoMT_Start, "start()[=>@V] =>future<@V>" },
