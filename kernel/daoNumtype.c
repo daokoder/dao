@@ -1595,7 +1595,7 @@ static int DaoArray_Permute( DaoArray *self, DArray *perm )
 	DArray *acc = DArray_New(0); /* new accumulate vector */
 	DArray *mido = DArray_New(0); /* old multiple indices */
 	DArray *midn = DArray_New(0); /* new multiple indices */
-	int ival = 0;
+	dint ival = 0;
 	float fval = 0;
 	double dval = 0;
 	complex16  c16val = {0,0};
@@ -1864,7 +1864,7 @@ int DaoArray_SliceSize( DaoArray *self )
 	}
 	return m;
 }
-int DaoArray_GetInteger( DaoArray *na, int i )
+dint DaoArray_GetInteger( DaoArray *na, int i )
 {
 	switch( na->numType ){
 	case DAO_INTEGER: return na->data.i[i];
@@ -1974,7 +1974,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 }
 static void DaoArray_SetOneItem( DaoArray *self, int id, DaoValue *value, int op )
 {
-	int ival;
+	dint ival;
 	float fval;
 	double dval;
 	complex16 c16;
@@ -2670,8 +2670,8 @@ static int Compare( DaoArray *array, dint *slice, int *index, int i, int j )
 	switch( array->numType ){
 	case DAO_INTEGER :
 		{
-			int a = array->data.i[i];
-			int b = array->data.i[j];
+			dint a = array->data.i[i];
+			dint b = array->data.i[j];
 			return a == b ? 0 : (a < b ? -1 : 1);
 		}
 	case DAO_FLOAT :
@@ -2703,8 +2703,8 @@ static void Swap( DaoArray *array, dint *slice, int *index, int i, int j )
 	switch( array->numType ){
 	case DAO_INTEGER :
 		{
-			int a = array->data.i[i];
-			int b = array->data.i[j];
+			dint a = array->data.i[i];
+			dint b = array->data.i[j];
 			array->data.i[i] = b;
 			array->data.i[j] = a;
 			break;

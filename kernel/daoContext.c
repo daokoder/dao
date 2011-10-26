@@ -164,24 +164,16 @@ DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N )
 	return res->xString.data;
 }
 #ifdef DAO_WITH_NUMARRAY
-DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, int *array, int N )
+DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
 	res->numType = DAO_INTEGER;
 	if( N ){
 		DaoArray_ResizeVector( res, N );
-		if( array ) memcpy( res->data.i, array, N*sizeof(int) );
+		if( array ) memcpy( res->data.i, array, N*sizeof(dint) );
 	}else{
 		DaoArray_UseData( res, array );
 	}
-	return res;
-}
-DaoArray* DaoProcess_PutArrayShort( DaoProcess *self, short *array, int N )
-{
-	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->numType = DAO_INTEGER;
-	DaoArray_ResizeVector( res, N );
-	if( array ) for( N--; N>=0; N-- ) res->data.i[N] = array[N];
 	return res;
 }
 DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N )
@@ -719,8 +711,8 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	switch( type ){
 	case DAO_INTEGER :
 		{
-			const int first = regValues[ vmc->a ]->xInteger.value;
-			const int step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
+			const dint first = regValues[ vmc->a ]->xInteger.value;
+			const dint step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
 			for(i=0; i<num; i++) array->data.i[i] = first + i*step;
 			break;
 		}
@@ -813,7 +805,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 			switch( a0->numType ){
 			case DAO_INTEGER :
 				{
-					const int step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
+					const dint step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
 					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
 						array->data.i[ i*a0->size + j] = a0->data.i[j] + i * step;
 					break;
@@ -1396,7 +1388,7 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 		switch( na->numType ){
-		case DAO_INTEGER : na->data.i[ id ] = (int) val; break;
+		case DAO_INTEGER : na->data.i[ id ] = (dint) val; break;
 		case DAO_FLOAT  : na->data.f[ id ] = (float) val; break;
 		case DAO_DOUBLE : na->data.d[ id ] = val; break;
 		case DAO_COMPLEX : na->data.c[ id ] = cpx; break;

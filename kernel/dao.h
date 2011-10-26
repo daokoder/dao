@@ -662,8 +662,7 @@ DAO_DLL DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs 
 DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
 DAO_DLL DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N );
 DAO_DLL DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
-DAO_DLL DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, int *array, int N );
-DAO_DLL DaoArray*  DaoProcess_PutArrayShort( DaoProcess *self, short *array, int N );
+DAO_DLL DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N );
 DAO_DLL DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N );
 DAO_DLL DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N );
 DAO_DLL DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N );
@@ -1119,7 +1118,6 @@ DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
 DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N );
 DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
 DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, int *array, int N );
-DaoArray*  DaoProcess_PutArrayShort( DaoProcess *self, short *array, int N );
 DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N );
 DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N );
 DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N );

@@ -178,7 +178,7 @@ void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
 int DaoArray_Sliced( DaoArray *self );
 void DaoArray_UseData( DaoArray *self, void *data );
 
-int    DaoArray_GetInteger( DaoArray *na, int i );
+dint   DaoArray_GetInteger( DaoArray *na, int i );
 float  DaoArray_GetFloat( DaoArray *na, int i );
 double DaoArray_GetDouble( DaoArray *na, int i );
 complex16 DaoArray_GetComplex( DaoArray *na, int i );

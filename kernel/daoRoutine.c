@@ -3221,7 +3221,6 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							DaoRoutine *drout = orig;
 							drout = DaoRoutine_Copy( drout );
 							DRoutine_PassParamTypes( (DRoutine*) drout, bt, tp, j, code, defs2 );
-							if( DaoRoutine_InferTypes( drout ) ==0 ) goto InvParam;
 							if( orig->specialized == NULL ){
 								orig->specialized = DaoFunctree_New( ns, drout->routName );
 								GC_IncRC( orig->specialized );
@@ -3229,6 +3228,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							GC_ShiftRC( orig, drout->original );
 							DaoFunctree_Add( orig->specialized, (DRoutine*) drout );
 							drout->original = orig;
+							if( DaoRoutine_InferTypes( drout ) ==0 ) goto InvParam;
 						}
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
@@ -3420,6 +3420,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							tt = DaoNamespace_MakeRoutType( ns, self->routType, NULL, NULL, at );
 							GC_ShiftRC( tt, self->routType );
 							self->routType = tt;
+							rettypes->items.pType[ rettypes->size - 1 ] = tt->aux;
 						}else{
 							ct = DaoType_DefineTypes( ct, ns, defs2 );
 							if( ct ){
