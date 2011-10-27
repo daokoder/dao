@@ -887,7 +887,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	}
 }
 
-void DaoArray_GetSliceShape( DaoArray *self, DArray *shape );
+void DaoArray_GetSliceShape( DaoArray *self, size_t **dims, short *ndim );
 int DaoArray_SliceSize( DaoArray *self );
 int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
 DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res );
@@ -908,9 +908,9 @@ static void DaoMT_RunArrayFunctional( void *p )
 	DaoArray *ref = param->reference;
 	DaoArray *array = ref ? ref : param;
 	DArray *slice = param->slice;
-	size_t *dims = array->dims->items.pSize;
+	size_t *dims = array->dims;
 	size_t i, id, id2, n = DaoArray_SliceSize( param );
-	int j, D = array->dims->size;
+	int j, D = array->ndim;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
 	int stackBase, vdim = sect->b - 1;
 
@@ -934,9 +934,9 @@ static void DaoMT_RunArrayFunctional( void *p )
 			}
 		}
 		elem = clone->stackValues[ stackBase + sect->a ];
-		if( elem == NULL || elem->type != array->numType ){
+		if( elem == NULL || elem->type != array->etype ){
 			elem = (DaoValue*)(void*) &com;
-			elem->type = array->numType;
+			elem->type = array->etype;
 			elem = DaoProcess_SetValue( clone, sect->a, elem );
 		}
 		DaoArray_GetValue( array, id, elem );
@@ -1009,8 +1009,8 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		if( param->type == DAO_LIST ) DArray_Resize( list->items, param->xList.items->size, NULL );
 		if( param->type == DAO_MAP ) DArray_Resize( list->items, param->xMap.items->size, NULL );
 	}else if( array && F == DVM_FUNCT_MAP ){
-		DaoArray_GetSliceShape( (DaoArray*) param, array->dimAccum );
-		DaoArray_ResizeArray( array, array->dimAccum->items.pSize, array->dimAccum->size );
+		DaoArray_GetSliceShape( (DaoArray*) param, & array->dims, & array->ndim );
+		DaoArray_ResizeArray( array, array->dims, array->ndim );
 	}
 
 	DMutex_Init( & mutex );

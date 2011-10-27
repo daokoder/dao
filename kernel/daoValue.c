@@ -444,17 +444,17 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_ARRAY :
 		{
 			DaoArray *array = (DaoArray*) self;
-			DaoArray *copy = DaoArray_New( array->numType );
+			DaoArray *copy = DaoArray_New( array->etype );
 			copy->unitype = array->unitype;
 			if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
 				int nt = tp->nested->items.pType[0]->tid;
 				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ){
 					copy->unitype = tp;
-					copy->numType = nt;
+					copy->etype = nt;
 				}
 			}
 			GC_IncRC( copy->unitype );
-			DaoArray_ResizeArray( copy, array->dims->items.pSize, array->dims->size );
+			DaoArray_ResizeArray( copy, array->dims, array->ndim );
 			DaoArray_CopyArray( copy, array );
 			return (DaoValue*) copy;
 		}
@@ -1415,8 +1415,8 @@ static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 	DaoValue *value = (DaoValue*) & intmp;
 	int i;
 	DString_AppendChar( serial, '[' );
-	for(i=0; i<self->dims->size; i++){
-		value->xInteger.value = self->dims->items.pSize[i];
+	for(i=0; i<self->ndim; i++){
+		value->xInteger.value = self->dims[i];
 		if( i ) DString_AppendChar( serial, ',' );
 		DaoValue_GetString( value, buf );
 		DString_Append( serial, buf );
@@ -1424,7 +1424,7 @@ static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 	DString_AppendChar( serial, ']' );
 	for(i=0; i<self->size; i++){
 		if( i ) DString_AppendChar( serial, ',' );
-		switch( self->numType ){
+		switch( self->etype ){
 		case DAO_INTEGER : DaoSerializeInteger( self->data.i[i], serial ); break;
 		case DAO_FLOAT : DaoSerializeDouble( self->data.f[i], serial ); break;
 		case DAO_DOUBLE : DaoSerializeDouble( self->data.d[i], serial ); break;
@@ -1617,6 +1617,7 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 	DaoTuple *tuple;
 	DaoList *list;
 	DaoMap *map;
+	DArray *dims;
 	DNode *node;
 	char *str;
 	int i, j, k, n;
@@ -1736,15 +1737,16 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		if( n < 0 ) return next;
 		if( it1 == NULL || it1->tid == 0 || it1->tid > DAO_COMPLEX ) return next;
 		array = & value->xArray;
-		DArray_Clear( array->dimAccum );
+		dims = DArray_New(0);
 		for(i=start+1; i<k; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
 			j = strtol( tokens[i]->string->mbs, 0, 0 );
-			DArray_Append( array->dimAccum, (size_t) j );
+			DArray_Append( dims, (size_t) j );
 		}
-		n = array->dimAccum->size;
-		DaoArray_ResizeArray( array, array->dimAccum->items.pSize, n );
+		n = dims->size;
+		DaoArray_ResizeArray( array, dims->items.pSize, n );
 		DArray_PushFront( types, it1 );
+		DArray_Delete( dims );
 		n = 0;
 		for(i=k+1; i<=end; i++){
 			j = i + 1;

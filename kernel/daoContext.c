@@ -167,7 +167,7 @@ DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N )
 DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->numType = DAO_INTEGER;
+	res->etype = DAO_INTEGER;
 	if( N ){
 		DaoArray_ResizeVector( res, N );
 		if( array ) memcpy( res->data.i, array, N*sizeof(dint) );
@@ -179,7 +179,7 @@ DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N )
 DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->numType = DAO_FLOAT;
+	res->etype = DAO_FLOAT;
 	if( N ){
 		DaoArray_ResizeVector( res, N );
 		if( array ) memcpy( res->data.f, array, N*sizeof(float) );
@@ -191,7 +191,7 @@ DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N )
 DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->numType = DAO_DOUBLE;
+	res->etype = DAO_DOUBLE;
 	if( N ){
 		DaoArray_ResizeVector( res, N );
 		if( array ) memcpy( res->data.d, array, N*sizeof(double) );
@@ -203,7 +203,7 @@ DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N )
 DaoArray* DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->numType = DAO_COMPLEX;
+	res->etype = DAO_COMPLEX;
 	DaoArray_ResizeVector( res, N );
 	if( N >0 && array ) memcpy( res->data.c, array, N*sizeof(complex16) );
 	return res;
@@ -382,8 +382,8 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 		if( type == 0 || type > DAO_COMPLEX ) type = DAO_FLOAT;
 	}
 	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 ){
-		if( dC->xArray.numType < type ) DaoArray_ResizeVector( & dC->xArray, 0 );
-		dC->xArray.numType = type;
+		if( dC->xArray.etype < type ) DaoArray_ResizeVector( & dC->xArray, 0 );
+		dC->xArray.etype = type;
 	}else{
 		dC = (DaoValue*) DaoArray_New( type );
 		DaoValue_Copy( dC, & self->activeValues[ vmc->c ] );
@@ -434,9 +434,9 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
 	const ushort_t count = vmc->b - 10;
-	size_t i, j, m, k = 0;
+	size_t i, j, m, k = 0, ndim = 0;
+	size_t *dims = NULL;
 	DaoArray *array = NULL;
-	DArray *dim = NULL;
 
 	if( vmc->b < 10 ){
 		DaoProcess_DoNumRange( self, vmc );
@@ -452,8 +452,8 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
-		case DAO_COMPLEX : array->numType = p->type; break;
-		case DAO_ARRAY : array->numType = p->xArray.numType; break;
+		case DAO_COMPLEX : array->etype = p->type; break;
+		case DAO_ARRAY : array->etype = p->xArray.etype; break;
 		default : DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" ); return;
 		}
 		GC_ShiftRC( type, array->unitype ) ;
@@ -462,30 +462,32 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 	for( j=0; j<count; j++){
 		DaoValue *p = self->activeValues[ opA + j ];
 		if( p == NULL || p->type != DAO_ARRAY ) continue;
-		if( dim == NULL ) dim = p->xArray.dims;
-		if( dim == p->xArray.dims ) continue;
-		if( dim->size != p->xArray.dims->size ){
+		if( dims == NULL ){
+			ndim = p->xArray.ndim;
+			dims = p->xArray.dims;
+		}
+		if( dims == p->xArray.dims ) continue;
+		if( ndim != p->xArray.ndim ){
 			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
 			return;
 		}
-		for(m=0; m<dim->size; m++){
-			if( dim->items.pSize[m] != p->xArray.dims->items.pSize[m] ){
-				DArray_Delete( dim );
-				dim = NULL;
+		for(m=0; m<ndim; m++){
+			if( dims[m] != p->xArray.dims[m] ){
+				dims = NULL;
 				break;
 			}
 		}
 	}
-	if( dim ){
-		dim = DArray_Copy( dim );
-		DArray_PushFront( dim, (void*) (size_t)count );
-		DaoArray_ResizeArray( array, dim->items.pSize, dim->size );
-		DArray_Delete( dim );
+	if( dims ){
+		DaoArray_SetDimensionCount( array, ndim + 1 );
+		array->dims[0] = count;
+		memmove( array->dims + 1, dims, ndim*sizeof(size_t) );
+		DaoArray_ResizeArray( array, array->dims, ndim );
 	}else{
 		DaoArray_ResizeVector( array, count );
 	}
 	k = 0;
-	if( array->numType == DAO_INTEGER ){
+	if( array->etype == DAO_INTEGER ){
 		dint *vals = array->data.i;
 		for( j=0; j<count; j++ ){
 			DaoValue *p = self->activeValues[ opA + j ];
@@ -500,7 +502,7 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 				k ++;
 			}
 		}
-	}else if( array->numType == DAO_FLOAT ){
+	}else if( array->etype == DAO_FLOAT ){
 		float *vals = array->data.f;
 		for( j=0; j<count; j++ ){
 			DaoValue *p = self->activeValues[ opA + j ];
@@ -515,7 +517,7 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 				k ++;
 			}
 		}
-	}else if( array->numType == DAO_DOUBLE ){
+	}else if( array->etype == DAO_DOUBLE ){
 		double *vals = array->data.d;
 		for( j=0; j<count; j++ ){
 			DaoValue *p = self->activeValues[ opA + j ];
@@ -686,7 +688,6 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	size_t i, j;
 	DaoArray *array = NULL;
 	DaoArray *a0, *a1;
-	DArray *dims;
 
 	self->activeCode = vmc;
 	if( dn->type < DAO_INTEGER || dn->type > DAO_DOUBLE ){
@@ -704,7 +705,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 		DaoType *type = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & it, 1 );
 		GC_ShiftRC( type, array->unitype ) ;
 		array->unitype = type;
-		array->numType = regValues[opA]->type;
+		array->etype = regValues[opA]->type;
 	}
 	DaoArray_ResizeVector( array, num );
 
@@ -743,32 +744,31 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 		}
 	case DAO_ARRAY :
 		a0 = & regValues[ opA ]->xArray;
-		array->numType = a0->numType;
-		dims = DArray_New(0);
-		DArray_Assign( dims, a0->dims );
-		DArray_PushFront( dims, (DaoValue*) num );
-		DaoArray_ResizeArray( array, dims->items.pSize, dims->size );
-		DArray_Delete( dims );
+		array->etype = a0->etype;
+		DaoArray_SetDimensionCount( array, a0->ndim + 1 );
+		array->dims[0] = num;
+		memmove( array->dims + 1, a0->dims, a0->ndim*sizeof(size_t) );
+		DaoArray_ResizeArray( array, array->dims, a0->ndim + 1 );
 		if( bval ==3 && regValues[opA+1]->type == DAO_ARRAY ){
 			a1 = & regValues[ opA+1 ]->xArray;
-			if( a0->numType <= DAO_DOUBLE && a1->numType >= DAO_COMPLEX ){
+			if( a0->etype <= DAO_DOUBLE && a1->etype >= DAO_COMPLEX ){
 				DaoProcess_RaiseException( self, DAO_ERROR_TYPE,
 						"need real numarray as the step sizes" );
 				return;
-			}else if( a1->dims->size != a0->dims->size ){
+			}else if( a1->ndim != a0->ndim ){
 				DaoProcess_RaiseException( self, DAO_ERROR_TYPE,
 						"need numarray of the same shape" );
 				return;
 			}else{
-				for(i=0; i<a0->dims->size; i++){
-					if( a0->dims->items.pSize[i] != a1->dims->items.pSize[i] ){
+				for(i=0; i<a0->ndim; i++){
+					if( a0->dims[i] != a1->dims[i] ){
 						DaoProcess_RaiseException( self, DAO_ERROR_TYPE,
 								"need numarray of the same shape" );
 						return;
 					}
 				}
 			}
-			switch( a0->numType ){
+			switch( a0->etype ){
 			case DAO_INTEGER :
 				for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
 					array->data.i[ i*a0->size + j] =
@@ -785,7 +785,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 						a0->data.d[j] + i*DaoArray_GetDouble( a1, j );
 				break;
 			case DAO_COMPLEX :
-				if( a1->numType == DAO_COMPLEX ){
+				if( a1->etype == DAO_COMPLEX ){
 					for(i=0; i<num; i++) for(j=0; j<a0->size; j++){
 						array->data.c[ i*a0->size + j ].real =
 							a0->data.c[j].real + i*a1->data.c[j].real;
@@ -802,7 +802,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 			default : break;
 			}
 		}else{
-			switch( a0->numType ){
+			switch( a0->etype ){
 			case DAO_INTEGER :
 				{
 					const dint step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
@@ -921,7 +921,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 		DaoType *type = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & it, 1 );
 		GC_ShiftRC( type, array->unitype ) ;
 		array->unitype = type;
-		array->numType = numtype;
+		array->etype = numtype;
 	}
 	/* TODO: more restrict type checking on elements. */
 	DaoArray_ResizeArray( array, dim, 2 );
@@ -1268,8 +1268,8 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;
 		}
-		C->type = na->numType;
-		switch( na->numType ){
+		C->type = na->etype;
+		switch( na->etype ){
 		case DAO_INTEGER : C->xInteger.value = na->data.i[id]; break;
 		case DAO_FLOAT   : C->xFloat.value = na->data.f[id];  break;
 		case DAO_DOUBLE  : C->xDouble.value = na->data.d[id];  break;
@@ -1387,7 +1387,7 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;
 		}
-		switch( na->numType ){
+		switch( na->etype ){
 		case DAO_INTEGER : na->data.i[ id ] = (dint) val; break;
 		case DAO_FLOAT  : na->data.f[ id ] = (float) val; break;
 		case DAO_DOUBLE : na->data.d[ id ] = val; break;
@@ -2191,11 +2191,11 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoArray *array = & A->xArray;
 		size_t i;
 		C = A;
-		if( array->numType == DAO_FLOAT ){
+		if( array->etype == DAO_FLOAT ){
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
-			res->numType = array->numType;
-			DaoArray_ResizeArray( res, array->dims->items.pSize, array->dims->size );
-			if( array->numType == DAO_FLOAT ){
+			res->etype = array->etype;
+			DaoArray_ResizeArray( res, array->dims, array->ndim );
+			if( array->etype == DAO_FLOAT ){
 				float *va = array->data.f;
 				float *vc = res->data.f;
 				if( vmc->code == DVM_NOT ){
@@ -2215,8 +2215,8 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		}else if( vmc->code == DVM_UNMS ){
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
 			complex16 *va, *vc;
-			res->numType = array->numType;
-			DaoArray_ResizeArray( res, array->dims->items.pSize, array->dims->size );
+			res->etype = array->etype;
+			DaoArray_ResizeArray( res, array->dims, array->ndim );
 			va = array->data.c;
 			vc = res->data.c;
 			for(i=0; i<array->size; i++ ){
@@ -2464,14 +2464,12 @@ static int DaoValue_CheckTypeShape( DaoValue *self, int type,
 	case DAO_ARRAY :
 #ifdef DAO_WITH_NUMARRAY
 		array = & self->xArray;
-		if( type < array->numType ) type = array->numType;
+		if( type < array->etype ) type = array->etype;
 		if( shape->size <= depth ){
-			for(i=0; i<array->dims->size; i++){
-				DArray_Append( shape, array->dims->items.pVoid[i] );
-			}
+			for(i=0; i<array->ndim; i++) DArray_Append( shape, array->dims[i] );
 		}else if( check_size ){
-			for(i=0; i<array->dims->size; i++){
-				if( shape->items.pSize[i+depth] != array->dims->items.pSize[i] ) return -1;
+			for(i=0; i<array->ndim; i++){
+				if( shape->items.pSize[i+depth] != array->dims[i] ) return -1;
 			}
 		}
 #endif
@@ -2526,7 +2524,7 @@ static int DaoValue_ExportValue( DaoValue *self, DaoArray *array, int k )
 	case DAO_DOUBLE :
 	case DAO_LONG :
 	case DAO_STRING :
-		switch( array->numType ){
+		switch( array->etype ){
 		case DAO_INTEGER : array->data.i[k] = DaoValue_GetInteger( self ); break;
 		case DAO_FLOAT : array->data.f[k] = DaoValue_GetFloat( self ); break;
 		case DAO_DOUBLE : array->data.d[k] = DaoValue_GetDouble( self ); break;
@@ -2536,7 +2534,7 @@ static int DaoValue_ExportValue( DaoValue *self, DaoArray *array, int k )
 		k ++;
 		break;
 	case DAO_COMPLEX :
-		switch( array->numType ){
+		switch( array->etype ){
 		case DAO_INTEGER : array->data.i[k] = self->xComplex.value.real; break;
 		case DAO_FLOAT : array->data.f[k] = self->xComplex.value.real; break;
 		case DAO_DOUBLE : array->data.d[k] = self->xComplex.value.real; break;
@@ -2548,7 +2546,7 @@ static int DaoValue_ExportValue( DaoValue *self, DaoArray *array, int k )
 	case DAO_ARRAY :
 		sub = & self->xArray;
 		for(i=0; i<sub->size; i++){
-			switch( array->numType ){
+			switch( array->etype ){
 			case DAO_INTEGER : array->data.i[k+i] = DaoArray_GetInteger( sub, i ); break;
 			case DAO_FLOAT : array->data.f[k+i] = DaoArray_GetFloat( sub, i ); break;
 			case DAO_DOUBLE : array->data.d[k+i] = DaoArray_GetDouble( sub, i ); break;
@@ -2577,9 +2575,9 @@ static void DaoArray_ToWCString( DaoArray *self, DString *str, int offset, int s
 	size_t i;
 	int type = 1; /*MBS*/
 	DString_ToWCS( str );
-	DString_Resize( str, size * ( (self->numType == DAO_COMPLEX) +1 ) );
+	DString_Resize( str, size * ( (self->etype == DAO_COMPLEX) +1 ) );
 	for(i=0; i<size; i++){
-		switch( self->numType ){
+		switch( self->etype ){
 		case DAO_INTEGER :
 			str->wcs[i] = self->data.i[offset+i];
 			if( str->wcs[i] > 255 ) type = 0;
@@ -2609,31 +2607,31 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 	DaoValue *value = (DaoValue*) & tmp;
 	DaoList *ls;
-	size_t *ds = self->dims->items.pSize;
-	size_t i, size, isvector = self->dims->size==2 && (ds[0] ==1 || ds[1] ==1);
+	size_t *ds = self->dims;
+	size_t i, size, isvector = self->ndim==2 && (ds[0] ==1 || ds[1] ==1);
 
 	if( abtp == NULL ) return 0;
 	abtp = abtp->nested->items.pType[0];
 	if( abtp == NULL ) return 0;
 	if( isvector ) dim = ds[0] ==1 ? 1 : 0;
-	if( dim >= self->dims->size-1 || isvector ){
+	if( dim >= self->ndim-1 || isvector ){
 		if( abtp->tid == DAO_INTEGER ){
 			value->type = DAO_INTEGER;
-			switch( self->numType ){
+			switch( self->etype ){
 			case DAO_INTEGER :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xInteger.value = self->data.i[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_FLOAT :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xInteger.value = self->data.f[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_DOUBLE :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xInteger.value = self->data.d[ offset+i ];
 					DaoList_Append( list, value );
 				}
@@ -2642,21 +2640,21 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 			}
 		}else if( abtp->tid == DAO_FLOAT ){
 			value->type = DAO_FLOAT;
-			switch( self->numType ){
+			switch( self->etype ){
 			case DAO_INTEGER :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xFloat.value = self->data.i[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_FLOAT :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xFloat.value = self->data.f[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_DOUBLE :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xFloat.value = self->data.d[ offset+i ];
 					DaoList_Append( list, value );
 				}
@@ -2665,21 +2663,21 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 			}
 		}else if( abtp->tid == DAO_DOUBLE ){
 			value->type = DAO_DOUBLE;
-			switch( self->numType ){
+			switch( self->etype ){
 			case DAO_INTEGER :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xDouble.value = self->data.i[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_FLOAT :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xDouble.value = self->data.f[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_DOUBLE :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xDouble.value = self->data.d[ offset+i ];
 					DaoList_Append( list, value );
 				}
@@ -2689,27 +2687,27 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 		}else if( abtp->tid == DAO_COMPLEX ){
 			value->type = DAO_COMPLEX;
 			value->xComplex.value.imag = 0.0;
-			switch( self->numType ){
+			switch( self->etype ){
 			case DAO_INTEGER :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xComplex.value.real = self->data.i[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_FLOAT :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xComplex.value.real = self->data.f[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_DOUBLE :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xComplex.value.real = self->data.d[ offset+i ];
 					DaoList_Append( list, value );
 				}
 				break;
 			case DAO_COMPLEX :
-				for( i=0; i<self->dims->items.pSize[dim]; i++ ){
+				for( i=0; i<self->dims[dim]; i++ ){
 					value->xComplex.value = self->data.c[ offset+i ];
 					DaoList_Append( list, value );
 				}
@@ -2723,21 +2721,21 @@ static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
 		if( abtp->tid == DAO_STRING ){
 			value->type = DAO_STRING;
 			value->xString.data = DString_New(1);
-			size = self->dimAccum->items.pSize[dim];
-			for(i=0; i<self->dims->items.pSize[dim]; i++){
+			size = self->dims[self->ndim + dim]; /* products of sizes */
+			for(i=0; i<self->dims[dim]; i++){
 				DaoArray_ToWCString( self, value->xString.data, offset, size );
 				DaoList_Append( list, value );
-				offset += self->dimAccum->items.pSize[dim];
+				offset += self->dims[self->ndim + dim];
 			}
 			DString_Delete( value->xString.data );
 		}else if( abtp->tid == DAO_LIST ){
-			for(i=0; i<self->dims->items.pSize[dim]; i++){
+			for(i=0; i<self->dims[dim]; i++){
 				ls = DaoList_New();
 				ls->unitype = abtp;
 				GC_IncRC( abtp );
 				DaoList_Append( list, (DaoValue*) ls );
 				DaoArray_ToList( self, ls, abtp, dim+1, offset );
-				offset += self->dimAccum->items.pSize[dim];
+				offset += self->dims[self->ndim + dim];
 			}
 		}
 	}
@@ -2748,8 +2746,8 @@ int DaoArray_FromList( DaoArray *self, DaoList *list, DaoType *tp )
 	DArray *shape = DArray_New(0);
 	int type = DaoValue_CheckTypeShape( (DaoValue*) list, DAO_UDF, shape, 0, 1 );
 	if( type < 0 ) goto FailConversion;
-	self->numType = type;
-	if( tp && tp->tid && tp->tid <= DAO_COMPLEX ) self->numType = tp->tid;
+	self->etype = type;
+	if( tp && tp->tid && tp->tid <= DAO_COMPLEX ) self->etype = tp->tid;
 	DaoArray_ResizeArray( self, shape->items.pSize, shape->size );
 	DaoValue_ExportValue( (DaoValue*) list, self, 0 );
 	DArray_Delete( shape );
@@ -2974,15 +2972,15 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}else if( dA->type == DAO_ARRAY ){
 			if( tp == NULL ) goto Rebind;
 			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) goto Rebind;
-			if( array2->numType == tp->tid ) goto Rebind;
+			if( array2->etype == tp->tid ) goto Rebind;
 			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
 			array2 = & dA->xArray;
 			size = array2->size;
 			array = DaoArray_New( tp->tid );
-			if( array2->numType == DAO_DOUBLE && tp->tid == DAO_COMPLEX )
-				array->numType = DAO_COMPLEX;
-			DaoArray_ResizeArray( array, array2->dims->items.pSize, array2->dims->size );
-			if( array2->numType == DAO_INTEGER ){
+			if( array2->etype == DAO_DOUBLE && tp->tid == DAO_COMPLEX )
+				array->etype = DAO_COMPLEX;
+			DaoArray_ResizeArray( array, array2->dims, array2->ndim );
+			if( array2->etype == DAO_INTEGER ){
 				if( tp->tid == DAO_FLOAT ){
 					for( i=0; i<size; i++ ) array->data.f[i] = array2->data.i[i];
 				}else if( tp->tid == DAO_DOUBLE ){
@@ -2990,7 +2988,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 				}else if( tp->tid == DAO_COMPLEX ){
 					for( i=0; i<size; i++ ) array->data.c[i].real = array2->data.i[i];
 				}
-			}else if( array2->numType == DAO_FLOAT ){
+			}else if( array2->etype == DAO_FLOAT ){
 				if( tp->tid == DAO_INTEGER ){
 					for( i=0; i<size; i++ ) array->data.i[i] = (int)array2->data.f[i];
 				}else if( tp->tid == DAO_DOUBLE ){
@@ -2998,7 +2996,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 				}else if( tp->tid == DAO_COMPLEX ){
 					for( i=0; i<size; i++ ) array->data.c[i].real = array2->data.f[i];
 				}
-			}else if( array2->numType ==  DAO_DOUBLE ){
+			}else if( array2->etype ==  DAO_DOUBLE ){
 				if( tp->tid == DAO_INTEGER ){
 					for( i=0; i<size; i++ ) array->data.i[i] = (int)array2->data.d[i];
 				}else if( tp->tid == DAO_FLOAT ){
@@ -3016,7 +3014,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			type = DaoValue_CheckTypeShape( dA, DAO_UDF, shape, 0, 1 );
 			if( type <0 ) goto FailConversion;
 			array = DaoArray_New( DAO_INTEGER );
-			array->numType = tp->tid;
+			array->etype = tp->tid;
 			DaoArray_ResizeArray( array, shape->items.pSize, shape->size );
 			DaoValue_ExportValue( dA, array, 0 );
 		}else goto FailConversion;

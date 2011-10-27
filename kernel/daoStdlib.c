@@ -524,15 +524,15 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoProcess_PopFrame( proc );
 }
-int DaoArray_AlignShape( DaoArray *self, DArray *sidx, DArray *dims );
+int DaoArray_AlignShape( DaoArray *self, DArray *sidx, size_t *dims, int ndim );
 static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoArray *array = DaoProcess_PutArray( proc );
+	DaoArray *first = NULL;
 	DaoArray *sub = NULL;
-	DArray *shape = NULL;
 	dint i, j, k, entry, size = 1;
 
 	for(i=0; i<N; i++){
@@ -555,27 +555,24 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 		if( i == 0 ){
-			DArray_Clear( array->dimAccum );
-			for(j=0; j<N; j++) DArray_Append( array->dimAccum, p[j]->xInteger.value );
+			int D = N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0);
+			DaoArray_SetDimensionCount( array, D );
+			for(j=0; j<N; j++) array->dims[j] = p[j]->xInteger.value;
 			if( res->type == DAO_ARRAY ){
-				sub = (DaoArray*) res;
-				shape = DArray_New(0);
-				for(j=0; j<sub->dims->size; j++){
-					DArray_Append( array->dimAccum, sub->dims->items.pSize[j] );
-					DArray_Append( shape, sub->dims->items.pSize[j] );
-				}
+				first = (DaoArray*) res;
+				memmove( array->dims + N, first->dims, first->ndim*sizeof(size_t) );
 			}
-			DaoArray_ResizeArray( array, array->dimAccum->items.pSize, array->dimAccum->size );
+			DaoArray_ResizeArray( array, array->dims, D );
 		}
 		if( res->type == DAO_ARRAY ){
 			sub = (DaoArray*) res;
-			if( shape == NULL || DaoArray_AlignShape( sub, NULL, shape ) ==0 ){
+			if( first == NULL || DaoArray_AlignShape( sub, NULL, first->dims, first->ndim ) ==0 ){
 				DaoProcess_RaiseException( proc, DAO_ERROR, "inconsistent elements or subarrays" );
 				break;
 			}
 			k = i * sub->size;
 			for(j=0; j<sub->size; j++){
-				switch( array->numType ){
+				switch( array->etype ){
 				case DAO_INTEGER : array->data.i[k+j] = DaoArray_GetInteger( sub, j ); break;
 				case DAO_FLOAT   : array->data.f[k+j] = DaoArray_GetFloat( sub, j ); break;
 				case DAO_DOUBLE  : array->data.d[k+j] = DaoArray_GetDouble( sub, j ); break;
@@ -583,7 +580,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 				}
 			}
 		}else{
-			switch( array->numType ){
+			switch( array->etype ){
 			case DAO_INTEGER : array->data.i[i] = DaoValue_GetInteger( res ); break;
 			case DAO_FLOAT   : array->data.f[i] = DaoValue_GetFloat( res ); break;
 			case DAO_DOUBLE  : array->data.d[i] = DaoValue_GetDouble( res ); break;
@@ -591,7 +588,6 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 			}
 		}
 	}
-	if( shape ) DArray_Delete( shape );
 	DaoProcess_PopFrame( proc );
 }
 static void STD_List( DaoProcess *proc, DaoValue *p[], int N )

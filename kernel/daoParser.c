@@ -3234,7 +3234,6 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 	while( start >= from && start <= to ){
 
-		self->lastValue = -1;
 		self->curLine = tokens[start]->line;
 		ptok = tokens[start];
 		tki = tokens[start]->name;
@@ -3243,6 +3242,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		printf("At tokPos : %i, %i, %p\n", start,ptok->line, ptok->string );
 		printf("At tokPos : %i, %i, %s\n", start,ptok->line, ptok->string->mbs );
 #endif
+		if( tki != DTOK_SEMCO ) self->lastValue = -1;
 		DaoParser_PrintWarnings( self );
 		if( self->errors->size ) return 0;
 		if( empty_decos ){

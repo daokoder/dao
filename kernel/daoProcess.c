@@ -1984,17 +1984,17 @@ CallEntry:
 			array = & locVars[ vmc->a ]->xArray;
 			tuple = & locVars[ vmc->b ]->xTuple;
 			vC = locVars[ vmc->c ];
-			if( array->dims->size == tuple->size ){
-				dims = array->dims->items.pSize;
-				dmac = array->dimAccum->items.pSize;
+			if( array->ndim == tuple->size ){
+				dims = array->dims;
+				dmac = array->dims + array->ndim;
 				id = 0;
-				for(i=0; i<array->dims->size; i++){
+				for(i=0; i<array->ndim; i++){
 					j = DaoValue_GetInteger( tuple->items[i] );
 					if( j <0 ) j += dims[i];
 					if( j <0 || j >= dims[i] ) goto RaiseErrorIndexOutOfRange;
 					id += j * dmac[i];
 				}
-				switch( array->numType ){
+				switch( array->etype ){
 				case DAO_COMPLEX : vC->xComplex.value = array->data.c[ id ]; break;
 				case DAO_INTEGER : vC->xInteger.value = array->data.i[ id ]; break;
 				case DAO_FLOAT : vC->xFloat.value = array->data.f[ id ]; break;
@@ -2010,11 +2010,11 @@ CallEntry:
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			list = & locVars[ vmc->b ]->xList;
-			if( array->dims->size == list->items->size ){
-				dims = array->dims->items.pSize;
-				dmac = array->dimAccum->items.pSize;
+			if( array->ndim == list->items->size ){
+				dims = array->dims;
+				dmac = array->dims + array->ndim;
 				id = 0;
-				for(i=0; i<array->dims->size; i++){
+				for(i=0; i<array->ndim; i++){
 					j = DaoValue_GetInteger( list->items->items.pValue[i] );
 					if( j <0 ) j += dims[i];
 					if( j <0 || j >= dims[i] ) goto RaiseErrorIndexOutOfRange;
@@ -2030,7 +2030,7 @@ CallEntry:
 				default : break;
 				}
 				inum = fnum = dnum;
-				switch( array->numType ){
+				switch( array->etype ){
 				case DAO_INTEGER : array->data.i[ id ] = inum; break;
 				case DAO_FLOAT : array->data.f[ id ] = fnum; break;
 				case DAO_DOUBLE : array->data.d[ id ] = dnum; break;

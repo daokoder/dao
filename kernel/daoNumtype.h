@@ -141,9 +141,12 @@ struct DaoArray
 {
 	DAO_DATA_COMMON;
 
-	size_t  size;
-	short   numType;
-	short   owner;
+	uchar_t  etype; /* element type; */
+	uchar_t  owner; /* own the data; */
+	short    ndim; /* number of dimensions; */
+	size_t   size; /* total number of elements; */
+	size_t  *dims; /* for i=0,...,ndim-1: dims[i], size of the i-th dimension; */
+	/* dims[ndim+i], products of the sizes of the remaining dimensions after the i-th; */
 
 	union{
 		void       *p;
@@ -153,9 +156,7 @@ struct DaoArray
 		complex16  *c;
 	} data;
 
-	DArray  *dims;
-	DArray  *dimAccum;
-
+	// TODO: place slicing fields into a structure!
 	size_t    subSize; /* size of the sub array / slice */
 	DArray   *slice; /* array of indexes in each dimension */
 	DaoArray *reference; /* reference array */
@@ -171,6 +172,9 @@ DaoArray* DaoArray_New( int type );
 DaoArray* DaoArray_Copy( DaoArray *self );
 int DaoArray_CopyArray( DaoArray *self, DaoArray *other );
 void DaoArray_Delete( DaoArray *self );
+
+void DaoArray_SetDimensionCount( DaoArray *self, int D );
+void DaoArray_FinalizeDimensionData( DaoArray *self );
 
 void DaoArray_ResizeVector( DaoArray *self, int size );
 void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );

@@ -648,7 +648,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
 		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
-		if( value->xArray.numType == it1 ) return DAO_MT_EQ;
+		if( value->xArray.etype == it1 ) return DAO_MT_EQ;
 		/* return DAO_MT_EQ for exact match, or zero otherwise: */
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;

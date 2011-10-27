@@ -216,7 +216,7 @@ static void DaoIO_MakePath( DaoProcess *proc, DString *path )
 }
 static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, int silent )
 {
-	DString *fname = DString_Copy( fname );
+	DString *fname = DString_Copy( name );
 	char buf[IO_BUF_SIZE];
 	FILE *fin;
 

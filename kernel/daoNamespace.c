@@ -1364,15 +1364,15 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 				DString_AppendMBS( mbs, "<?>" );
 				DArray_Append( nested, self->udfType1 );
 				zerosize = 1;
-			}else if( array->numType == DAO_INTEGER ){
+			}else if( array->etype == DAO_INTEGER ){
 				itp = DaoNamespace_MakeType( self, "int", DAO_INTEGER, 0,0,0 );
 				DString_AppendMBS( mbs, "<int>" );
 				DArray_Append( nested, itp );
-			}else if( array->numType == DAO_FLOAT ){
+			}else if( array->etype == DAO_FLOAT ){
 				itp = DaoNamespace_MakeType( self, "float", DAO_FLOAT, 0,0,0 );
 				DString_AppendMBS( mbs, "<float>" );
 				DArray_Append( nested, itp );
-			}else if( array->numType == DAO_DOUBLE ){
+			}else if( array->etype == DAO_DOUBLE ){
 				itp = DaoNamespace_MakeType( self, "double", DAO_DOUBLE, 0,0,0 );
 				DString_AppendMBS( mbs, "<double>" );
 				DArray_Append( nested, itp );

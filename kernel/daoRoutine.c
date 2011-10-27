@@ -3420,7 +3420,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							tt = DaoNamespace_MakeRoutType( ns, self->routType, NULL, NULL, at );
 							GC_ShiftRC( tt, self->routType );
 							self->routType = tt;
-							rettypes->items.pType[ rettypes->size - 1 ] = tt->aux;
+							rettypes->items.pType[ rettypes->size - 1 ] = (DaoType*)tt->aux;
 						}else{
 							ct = DaoType_DefineTypes( ct, ns, defs2 );
 							if( ct ){

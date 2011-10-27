@@ -139,7 +139,7 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
 	case DAO_ARRAY :
 		data = self->xArray.data.p;
 		len = self->xArray.size;
-		switch( self->xArray.numType ){
+		switch( self->xArray.etype ){
 		case DAO_INTEGER : len *= sizeof(int); break;
 		case DAO_FLOAT   : len *= sizeof(float); break;
 		case DAO_DOUBLE  : len *= sizeof(double); break;
