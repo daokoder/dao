@@ -161,9 +161,6 @@ static void cycRefCountDecrements( DArray *values );
 static void cycRefCountIncrements( DArray *values );
 static void directRefCountDecrement( DaoValue **value );
 static void directRefCountDecrements( DArray *values );
-static void cycRefCountDecrementsT( DTuple *values );
-static void cycRefCountIncrementsT( DTuple *values );
-static void directRefCountDecrementT( DTuple *values );
 static int cycRefCountDecrementMapValue( DMap *dmap );
 static int cycRefCountIncrementMapValue( DMap *dmap );
 static int directRefCountDecrementMapValue( DMap *dmap );
@@ -201,9 +198,6 @@ static void DaoCGC_Recycle( void * );
 static void DaoCGC_TryInvoke();
 #endif
 
-static void DaoLateDeleter_Init();
-static void DaoLateDeleter_Finish();
-static void DaoLateDeleter_Update();
 
 typedef struct DaoGarbageCollector  DaoGarbageCollector;
 struct DaoGarbageCollector
@@ -259,7 +253,6 @@ int DaoGC_Max( int n /*=-1*/ )
 void DaoGC_Init()
 {
 	if( gcWorker.idleList != NULL ) return;
-	DaoLateDeleter_Init();
 
 	dummyValue = (DaoValue*) dummyEnum2;
 
@@ -384,7 +377,6 @@ void DaoGC_Finish()
 	DArray_Delete( gcWorker.workList );
 	DArray_Delete( gcWorker.auxList );
 	DArray_Delete( gcWorker.auxList2 );
-	DaoLateDeleter_Finish();
 	gcWorker.idleList = NULL;
 }
 
@@ -624,7 +616,6 @@ void DaoCGC_Recycle( void *p )
 			DMutex_Unlock( & gcWorker.mutex_start_gc );
 			if( gcWorker.count < gcWorker.gcMin ) continue;
 		}
-		DaoLateDeleter_Update();
 
 		DMutex_Lock( & gcWorker.mutex_idle_list );
 		gcWorker.count = 0;
@@ -1384,7 +1375,6 @@ void DaoIGC_Continue()
 	DaoIGC_MarkIdleItems();
 	switch( gcWorker.workType ){
 	case GC_RESET_RC :
-		DaoLateDeleter_Update();
 		DaoGC_PrepareCandidates();
 		gcWorker.workType = GC_DEC_RC;
 		gcWorker.ii = 0;
@@ -2268,83 +2258,4 @@ int directRefCountDecrementMapValue( DMap *dmap )
 	DMap_Clear( dmap );
 	return n;
 }
-void cycRefCountDecrementsT( DTuple *tuple )
-{
-	if( tuple ==NULL ) return;
-	DaoGC_CycRefCountDecrements( tuple->items.pValue, tuple->size );
-}
-void cycRefCountIncrementsT( DTuple *tuple )
-{
-	if( tuple ==NULL ) return;
-	DaoGC_CycRefCountIncrements( tuple->items.pValue, tuple->size );
-}
-void directRefCountDecrementT( DTuple *tuple )
-{
-	size_t i;
-	if( tuple ==NULL ) return;
-	DaoGC_RefCountDecrements( tuple->items.pValue, tuple->size );
-	tuple->size = 0;
-}
 
-DaoLateDeleter dao_late_deleter;
-#ifdef DAO_WITH_THREAD
-DMutex dao_late_deleter_mutex;
-#endif
-
-void DaoLateDeleter_Init()
-{
-	dao_late_deleter.lock = 0;
-	dao_late_deleter.safe = 1;
-	dao_late_deleter.version = 0;
-	dao_late_deleter.buffer = DArray_New(0);
-#ifdef DAO_WITH_THREAD
-	DMutex_Init( & dao_late_deleter_mutex );
-#endif
-}
-void DaoLateDeleter_Finish()
-{
-	dao_late_deleter.safe = 0;
-	dao_late_deleter.lock = 0;
-	DaoLateDeleter_Update();
-	DArray_Delete( dao_late_deleter.buffer );
-}
-void DaoLateDeleter_Push( void *p )
-{
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & dao_late_deleter_mutex );
-#endif
-	DArray_Append( dao_late_deleter.buffer, p );
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & dao_late_deleter_mutex );
-#endif
-}
-void DaoLateDeleter_Update()
-{
-	DaoLateDeleter *self = & dao_late_deleter;
-	DArray *buffer = self->buffer;
-	size_t i;
-	switch( (self->safe<<1)|self->lock ){
-	case 2 : /* safe=1, lock=0 */
-		if( self->buffer->size < 10000 ) break;
-		self->safe = 0;
-		self->lock = 0;
-		self->version += 1;
-		break;
-	case 0 : /* safe=0, lock=0 */
-		self->lock = 1;
-#ifdef DAO_WITH_THREAD
-		DMutex_Lock( & dao_late_deleter_mutex );
-#endif
-		for(i=0; i<buffer->size; i++) dao_free( buffer->items.pVoid[i] );
-		buffer->size = 0;
-#ifdef DAO_WITH_THREAD
-		DMutex_Unlock( & dao_late_deleter_mutex );
-#endif
-		break;
-	case 1 : /* safe=0, lock=1 */
-		self->safe = 1;
-		self->lock = 0;
-		break;
-	default : break;
-	}
-}

@@ -108,25 +108,4 @@ void DArray_CleanupCodes( DArray *self );
 #define DaoVmcArray_Pop( self )  DaoVmcArray_PopBack( self )
 
 
-struct DTuple
-{
-	union{
-		size_t      *pInt;
-		void       **pVoid;
-		DaoValue   **pValue;
-		DaoClass   **pClass;
-		DaoObject  **pObject;
-		DaoType    **pType;
-	} items;
-
-	int size;
-};
-/* See daolib.h */
-DTuple* DTuple_New(  size_t size, void *val );
-void DTuple_Delete( DTuple *self );
-void DTuple_Resize( DTuple *self, size_t size, void *val );
-void DTuple_Clear( DTuple *self );
-void DTuple_IncRC( DTuple *self );
-void DTuple_DecRC( DTuple *self );
-
 #endif

@@ -539,7 +539,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	DNode *n;
 	DRoutine_DeleteFields( (DRoutine*)self );
 	if( self->type != DAO_ROUTINE ){ /* maybe DAO_ABROUTINE */
-		DaoLateDeleter_Push( self );
+		dao_free( self );
 		return;
 	}
 	n = DMap_First( self->abstypes );
@@ -560,7 +560,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->parser ) DaoParser_Delete( self->parser );
 	if( dao_jit.Free ) dao_jit.Free( self->jitData );
-	DaoLateDeleter_Push( self );
+	dao_free( self );
 }
 void DaoParser_ClearCodes( DaoParser *self );
 void DaoRoutine_Compile( DaoRoutine *self )
@@ -4306,7 +4306,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 void DaoFunction_Delete( DaoFunction *self )
 {
 	DRoutine_DeleteFields( (DRoutine*) self );
-	DaoLateDeleter_Push( self );
+	dao_free( self );
 }
 
 DaoTypeBase funcTyper =

@@ -163,8 +163,6 @@ struct DaoArray
 
 	DaoMap  *meta;
 	DaoType *unitype;
-
-	void  **matrix;
 };
 #ifdef DAO_WITH_NUMARRAY
 

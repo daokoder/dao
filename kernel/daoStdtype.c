@@ -4669,32 +4669,6 @@ void DaoException_Setup( DaoNamespace *ns )
 	DaoNamespace_SetupMethods( ns, & dao_WarningSyntax_Typer );
 	DaoNamespace_SetupMethods( ns, & dao_WarningValue_Typer );
 }
-extern void DaoTypeBase_Free( DaoTypeBase *typer );
-void DaoException_CleanUp()
-{
-	DaoTypeBase_Free( & dao_Exception_Typer );
-	DaoTypeBase_Free( & dao_ExceptionNone_Typer );
-	DaoTypeBase_Free( & dao_ExceptionAny_Typer );
-	DaoTypeBase_Free( & dao_ExceptionWarning_Typer );
-	DaoTypeBase_Free( & dao_ExceptionError_Typer );
-	DaoTypeBase_Free( & dao_ErrorField_Typer );
-	DaoTypeBase_Free( & dao_FieldNotExist_Typer );
-	DaoTypeBase_Free( & dao_FieldNotPermit_Typer );
-	DaoTypeBase_Free( & dao_ErrorFloat_Typer );
-	DaoTypeBase_Free( & dao_FloatDivByZero_Typer );
-	DaoTypeBase_Free( & dao_FloatOverFlow_Typer );
-	DaoTypeBase_Free( & dao_FloatUnderFlow_Typer );
-	DaoTypeBase_Free( & dao_ErrorIndex_Typer );
-	DaoTypeBase_Free( & dao_IndexOutOfRange_Typer );
-	DaoTypeBase_Free( & dao_ErrorKey_Typer );
-	DaoTypeBase_Free( & dao_KeyNotExist_Typer );
-	DaoTypeBase_Free( & dao_ErrorParam_Typer );
-	DaoTypeBase_Free( & dao_WarningSyntax_Typer );
-	DaoTypeBase_Free( & dao_ErrorSyntax_Typer );
-	DaoTypeBase_Free( & dao_WarningValue_Typer );
-	DaoTypeBase_Free( & dao_ErrorValue_Typer );
-	DaoTypeBase_Free( & dao_ErrorType_Typer );
-}
 DaoTypeBase* DaoException_GetType( int type )
 {
 	switch( type ){

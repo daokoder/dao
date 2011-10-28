@@ -45,7 +45,7 @@ void DaoType_Delete( DaoType *self )
 	if( self->nested ) DArray_Delete( self->nested );
 	if( self->mapNames ) DMap_Delete( self->mapNames );
 	if( self->interfaces ) DMap_Delete( self->interfaces );
-	DaoLateDeleter_Push( self );
+	dao_free( self );
 }
 extern DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc );
 static void DaoType_GetField( DaoValue *self0, DaoProcess *proc, DString *name )

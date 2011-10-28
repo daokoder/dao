@@ -83,7 +83,6 @@
 #endif
 
 
-typedef struct DTuple     DTuple;
 typedef struct DRoutine   DRoutine;
 
 typedef struct DaoFunCurry   DaoFunCurry;

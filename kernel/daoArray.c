@@ -727,37 +727,3 @@ void DArray_CleanupCodes( DArray *self )
 }
 
 
-
-DTuple* DTuple_New( size_t size, void *val )
-{
-	DTuple *self = (DTuple*)dao_malloc( sizeof(DTuple) );
-	self->items.pVoid = NULL;
-	self->size = 0;
-	if( size ) DTuple_Resize( self, size, val );
-#ifdef DAO_GC_PROF
-	daoCountArray ++;
-#endif
-	return self;
-}
-void DTuple_Delete( DTuple *self )
-{
-	DTuple_Clear( self );
-	dao_free( self );
-#ifdef DAO_GC_PROF
-	daoCountArray --;
-#endif
-}
-void DTuple_Resize( DTuple *self, size_t size, void *val )
-{
-	size_t i;
-	if( size == self->size ) return;
-	self->items.pVoid = dao_realloc( self->items.pVoid, size * sizeof(void*) );
-	for(i=self->size; i<size; i++ ) self->items.pVoid[i] = val;
-	self->size = size;
-}
-void DTuple_Clear( DTuple *self )
-{
-	if( self->items.pVoid ) dao_free( self->items.pVoid );
-	self->items.pVoid = NULL;
-	self->size = 0;
-}

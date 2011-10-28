@@ -573,13 +573,6 @@ DAO_DLL unsigned short* DaoArray_ToUShort( DaoArray *self );
 DAO_DLL signed   int* DaoArray_ToSInt( DaoArray *self );
 DAO_DLL unsigned int* DaoArray_ToUInt( DaoArray *self );
 
-DAO_DLL signed char**  DaoArray_GetMatrixSB( DaoArray *self, int row );
-DAO_DLL signed short** DaoArray_GetMatrixSS( DaoArray *self, int row );
-DAO_DLL signed int**   DaoArray_GetMatrixSI( DaoArray *self, int row );
-DAO_DLL dint**   DaoArray_GetMatrixI( DaoArray *self, int row );
-DAO_DLL float**  DaoArray_GetMatrixF( DaoArray *self, int row );
-DAO_DLL double** DaoArray_GetMatrixD( DaoArray *self, int row );
-
 DAO_DLL void  DaoArray_FromInteger( DaoArray *self ); 
 DAO_DLL void  DaoArray_FromFloat( DaoArray *self ); 
 DAO_DLL void  DaoArray_FromDouble( DaoArray *self ); 
@@ -1009,12 +1002,6 @@ double* DaoArray_ToDouble( DaoArray *self );
 unsigned char*  DaoArray_ToUByte( DaoArray *self );
 unsigned short* DaoArray_ToUShort( DaoArray *self );
 unsigned int*   DaoArray_ToUInt( DaoArray *self );
-
-signed char** DaoArray_GetMatrixB( DaoArray *self, int row );
-short**  DaoArray_GetMatrixS( DaoArray *self, int row );
-int**    DaoArray_GetMatrixI( DaoArray *self, int row );
-float**  DaoArray_GetMatrixF( DaoArray *self, int row );
-double** DaoArray_GetMatrixD( DaoArray *self, int row );
 
  Re-interpret the raw data as bytes, and convert them to
  * the current numeric type of the array: 

@@ -1540,26 +1540,6 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 	DString_Delete( pstr );
 }
 
-void DaoTypeBase_Free( DaoTypeBase *typer )
-{
-#if 0
-	DaoCdataCore *hostCore;
-	DMap *hs;
-	DNode *it;
-	if( typer->core == NULL ) return;
-	if( typer->core->methods ) DMap_Delete( typer->core->methods );
-	if( typer->core->values ) DMap_Delete( typer->core->values );
-	typer->core->values = NULL;
-	typer->core->methods = NULL;
-	if( typer->core->attribs & DAO_TYPER_PRIV_FREE ){
-		hostCore = (DaoCdataCore*) typer->core;
-		if( hostCore->instanceCdata ) DMap_Delete( hostCore->instanceCdata );
-		dao_free( typer->core );
-		typer->core = NULL;
-	}
-	return;
-#endif
-}
 extern DaoTypeBase libStandardTyper;
 extern DaoTypeBase libSystemTyper;
 extern DaoTypeBase libMathTyper;
@@ -1920,37 +1900,7 @@ void DaoQuit()
 
 	if( daoConfig.iscgi ) return;
 
-#ifdef DAO_WITH_NUMARRAY
-	DaoTypeBase_Free( & numarTyper );
-#endif
-
-	DaoTypeBase_Free( & stringTyper );
-	DaoTypeBase_Free( & longTyper );
-	DaoTypeBase_Free( & comTyper );
-	DaoTypeBase_Free( & listTyper );
-	DaoTypeBase_Free( & mapTyper );
-
-	DaoTypeBase_Free( & streamTyper );
 	GC_DecRC( cptrCdata.ctype );
-
-#ifdef DAO_WITH_THREAD
-	DaoTypeBase_Free( & mutexTyper );
-	DaoTypeBase_Free( & condvTyper );
-	DaoTypeBase_Free( & semaTyper );
-	DaoTypeBase_Free( & thdMasterTyper );
-#endif
-	DaoTypeBase_Free( & vmpTyper );
-
-	DaoTypeBase_Free( & libStandardTyper );
-	DaoTypeBase_Free( & libMathTyper );
-	DaoTypeBase_Free( & libReflectTyper );
-
-	DaoException_CleanUp();
-
-#ifdef DEBUG
-	DaoTypeBase_Free( dao_FakeList_Typer );
-	DaoTypeBase_Free( dao_FakeShoftList_Typer );
-#endif
 
 	DaoVmSpace_Delete( mainVmSpace );
 	for(i=0; i<DAO_ARRAY; i++){

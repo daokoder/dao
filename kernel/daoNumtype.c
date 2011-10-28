@@ -3152,27 +3152,6 @@ DefineFunction_DaoArray_From( DaoArray_FromUByte, unsigned char );
 DefineFunction_DaoArray_From( DaoArray_FromUShort, unsigned short );
 DefineFunction_DaoArray_From( DaoArray_FromUInt, unsigned int );
 
-#define DefineFunction_DaoArray_GetMatrix( name, convert, type ) \
-type** name( DaoArray *self, int row ) \
-{ \
-	int i, col; \
-	type *buf; \
-	if( row <= 0 ) row = self->dims[0]; \
-	if( self->size % row != 0 ) return NULL; \
-	col = self->size / row; \
-	buf = convert( self ); \
-	if( self->etype == DAO_COMPLEX ) col += col; \
-	self->matrix = (void**)dao_realloc( self->matrix, row * sizeof(void*) ); \
-	for(i=0; i<row; i++) self->matrix[i] = buf + i * col; \
-	return (type**)self->matrix; \
-}
-
-DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixSB, DaoArray_ToSByte, signed char );
-DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixSS, DaoArray_ToSShort, signed short );
-DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixSI, DaoArray_ToSInt, signed int );
-DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixI, DaoArray_ToInteger, dint );
-DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixF, DaoArray_ToFloat, float );
-DefineFunction_DaoArray_GetMatrix( DaoArray_GetMatrixD, DaoArray_ToDouble, double );
 
 static void DaoArray_ResizeData( DaoArray *self, int size, int oldSize );
 
@@ -3268,7 +3247,6 @@ DaoArray* DaoArray_New( int etype )
 	self->ndim = 0;
 	self->dims = NULL;
 	self->data.p = NULL;
-	self->matrix = NULL;
 	self->slice = NULL;
 	self->reference = NULL;
 	DaoArray_ResizeVector( self, 0 );
@@ -3283,7 +3261,6 @@ void DaoArray_Delete( DaoArray *self )
 	if( self->meta ) GC_DecRC( self->meta );
 	if( self->unitype ) GC_DecRC( self->unitype );
 	if( self->owner && self->data.p ) dao_free( self->data.p );
-	if( self->matrix ) dao_free( self->matrix );
 	if( self->slice ) DArray_Delete( self->slice );
 	if( self->reference ) GC_DecRC( self->reference );
 	dao_free( self );

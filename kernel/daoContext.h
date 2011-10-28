@@ -20,41 +20,6 @@
 #include"stdlib.h"
 
 
-typedef struct DaoContext  DaoContext;
-/* running time context for dao routine. */
-struct DaoContext
-{
-	DAO_DATA_COMMON;
-
-	DaoStackFrame *frame;
-
-	DaoVmCode  *codes;
-	DaoVmCode  *vmc; /* current virtual machine code */
-
-	DTuple    *regArray; /* virtual registers for the call */
-	DaoValue **regValues; /* = regArray->items.pValue */
-	DaoType  **regTypes; /* = routine->regType->items.pType; */
-
-	ushort_t  entryCode;
-	ushort_t  idClearFE;
-	ushort_t  parCount;
-	ushort_t  ctxState;
-
-	DaoRoutine   *routine; /* routine prototype */
-	DaoObject    *object; /* self object */
-	DaoNamespace *nameSpace;
-	DaoVmSpace   *vmSpace;
-
-	DaoContext   *caller;
-	DaoProcess   *process;
-	DaoRoutine   *lastRoutine;
-
-	/* the currently called wrapped C function,
-	   for exception handling and DaoCLoader module. */
-	DaoFunction *thisFunction;
-
-};
-
 void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op );
 /**/
