@@ -602,9 +602,9 @@ void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
 	switch( ta ){
 	case DAO_INTEGER :
 		{
-			const int first = regValues[ vmc->a ]->xInteger.value;
+			const dint first = regValues[ vmc->a ]->xInteger.value;
 			if( bval == 3 && regValues[ opA+1 ]->type == DAO_INTEGER ){
-				const int step = regValues[ opA+1 ]->xInteger.value;
+				const dint step = regValues[ opA+1 ]->xInteger.value;
 				for( i=0; i<num; i++) items[i]->xInteger.value = first + i * step;
 			}else{
 				for( i=0; i<num; i++) items[i]->xInteger.value = first + i * step;
@@ -613,7 +613,7 @@ void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
 		}
 	case DAO_FLOAT :
 		{
-			const float first = regValues[ vmc->a ]->xFloat.value;
+			const double first = regValues[ vmc->a ]->xFloat.value;
 			for( i=0; i<num; i++) items[i]->xFloat.value = first + i * step;
 			break;
 		}

@@ -1086,8 +1086,8 @@ static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
 	DMap *sizemap = DMap_New(0,0);
 	DNode *node = DMap_First( par );
 	DArray *sizes = DArray_New(0);
-	int max = p[2]->xInteger.value;
-	int i, j, k, n;
+	dint max = p[2]->xInteger.value;
+	size_t i, j, k, n = self->size;
 	for( ; node != NULL; node = DMap_Next(par, node) )
 		DMap_Insert( words, node->key.pValue->xString.data, node->value.pValue->xString.data );
 	if( self->mbs ){
@@ -1101,7 +1101,6 @@ static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
 		for(node=DMap_First(sizemap); node !=NULL; node = DMap_Next(sizemap, node) )
 			DArray_Append( sizes, node->key.pInt );
 		i = 0;
-		n = self->size;
 		while( i < n ){
 			DString *val = NULL;
 			for(j=0; j<sizes->size; j++){
@@ -1134,7 +1133,6 @@ static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
 		for(node=DMap_First(sizemap); node !=NULL; node = DMap_Next(sizemap, node) )
 			DArray_Append( sizes, node->key.pInt );
 		i = 0;
-		n = self->size;
 		while( i < n ){
 			DString *val = NULL;
 			for(j=0; j<sizes->size; j++){
@@ -1592,8 +1590,9 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
 	DString *mask = p[3]->xString.data;
-	int i, from, to, step, type = p[2]->xInteger.value;
+	int type = p[2]->xInteger.value;
 	int rev = p[4]->xInteger.value;
+	size_t i, from, to, step;
 	size_t size = DString_Size( self );
 	size_t end=size, p1=0, p2=size;
 	DaoString *subs = DaoString_New(1);
@@ -3726,7 +3725,7 @@ void DaoBuffer_Resize( DaoCdata *self, int size )
 }
 static void DaoBuf_New( DaoProcess *proc, DaoValue *p[], int N )
 {
-	int size = p[0]->xInteger.value;
+	dint size = p[0]->xInteger.value;
 	DaoCdata *self = DaoCdata_New( NULL, NULL );
 	self->attribs |= DAO_CDATA_FREE;
 	DaoProcess_PutValue( proc, (DaoValue*) self );
@@ -3798,7 +3797,7 @@ static int DaoBuf_CheckRange( DaoCdata *self, int i, int m, DaoProcess *proc )
 static void DaoBuf_GetByte( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
-	int i = p[1]->xInteger.value;
+	dint i = p[1]->xInteger.value;
 	int it = ( p[2]->xEnum.value == 0 )? ((signed char*)self->buffer)[i] : ((unsigned char*)self->buffer)[i];
 	if( DaoBuf_CheckRange( self, i, sizeof(char), proc ) ) return;
 	DaoProcess_PutInteger( proc, it );
@@ -3806,7 +3805,7 @@ static void DaoBuf_GetByte( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBuf_GetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
-	int i = p[1]->xInteger.value;
+	dint i = p[1]->xInteger.value;
 	int it = ( p[2]->xEnum.value == 0 )? ((signed short*)self->buffer)[i] : ((unsigned short*)self->buffer)[i];
 	if( DaoBuf_CheckRange( self, i, sizeof(short), proc ) ) return;
 	DaoProcess_PutInteger( proc, it );
@@ -3814,7 +3813,7 @@ static void DaoBuf_GetShort( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBuf_GetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
-	int i = p[1]->xInteger.value;
+	dint i = p[1]->xInteger.value;
 	int it = ( p[2]->xEnum.value == 0 )? ((signed int*)self->buffer)[i] : ((unsigned int*)self->buffer)[i];
 	if( DaoBuf_CheckRange( self, i, sizeof(int), proc ) ) return;
 	DaoProcess_PutInteger( proc, it );

@@ -478,7 +478,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoStream *self = & p[0]->xStream;
-	int i = 0, count = p[1]->xInteger.value;
+	dint i = 0, count = p[1]->xInteger.value;
 	int chop = p[2]->xInteger.value;
 
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
@@ -511,7 +511,7 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	int i, entry, lines = p[1]->xInteger.value;
+	dint i, entry, lines = p[1]->xInteger.value;
 	FILE *fout = stdout;
 
 	if( p[0]->type == DAO_STREAM ){
