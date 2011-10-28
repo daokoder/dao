@@ -156,13 +156,13 @@ struct DaoArray
 		complex16  *c;
 	} data;
 
-	// TODO: place slicing fields into a structure!
-	size_t    subSize; /* size of the sub array / slice */
-	DArray   *slice; /* array of indexes in each dimension */
-	DaoArray *reference; /* reference array */
-
-	DaoMap  *meta;
 	DaoType *unitype;
+	//DaoMap  *meta;
+
+	size_t    count; /* count of sliced elements */
+	DArray   *slices; /* list of slicing in each dimension */
+	DaoArray *original; /* original array */
+
 };
 #ifdef DAO_WITH_NUMARRAY
 
@@ -171,8 +171,8 @@ DaoArray* DaoArray_Copy( DaoArray *self );
 int DaoArray_CopyArray( DaoArray *self, DaoArray *other );
 void DaoArray_Delete( DaoArray *self );
 
-void DaoArray_SetDimensionCount( DaoArray *self, int D );
-void DaoArray_FinalizeDimensionData( DaoArray *self );
+void DaoArray_SetDimCount( DaoArray *self, int D );
+void DaoArray_FinalizeDimData( DaoArray *self );
 
 void DaoArray_ResizeVector( DaoArray *self, int size );
 void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );

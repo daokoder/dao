@@ -556,7 +556,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		res = proc->stackValues[0];
 		if( i == 0 ){
 			int D = N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0);
-			DaoArray_SetDimensionCount( array, D );
+			DaoArray_SetDimCount( array, D );
 			for(j=0; j<N; j++) array->dims[j] = p[j]->xInteger.value;
 			if( res->type == DAO_ARRAY ){
 				first = (DaoArray*) res;

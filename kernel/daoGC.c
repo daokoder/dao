@@ -655,7 +655,7 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountDecrement( (DaoValue*) array->unitype );
-				cycRefCountDecrement( (DaoValue*) array->meta );
+				//cycRefCountDecrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -870,7 +870,7 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountIncrement( (DaoValue*) array->unitype );
-				cycRefCountIncrement( (DaoValue*) array->meta );
+				//cycRefCountIncrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -1059,7 +1059,7 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				directRefCountDecrement( (DaoValue**) & array->unitype );
-				directRefCountDecrement( (DaoValue**) & array->meta );
+				//directRefCountDecrement( (DaoValue**) & array->meta );
 				break;
 			}
 #endif
@@ -1428,7 +1428,7 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountDecrement( (DaoValue*) array->unitype );
-				cycRefCountDecrement( (DaoValue*) array->meta );
+				//cycRefCountDecrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -1678,7 +1678,7 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountIncrement( (DaoValue*) array->unitype );
-				cycRefCountIncrement( (DaoValue*) array->meta );
+				//cycRefCountIncrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -1889,7 +1889,7 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				directRefCountDecrement( (DaoValue**) & array->unitype );
-				directRefCountDecrement( (DaoValue**) & array->meta );
+				//directRefCountDecrement( (DaoValue**) & array->meta );
 				break;
 			}
 #endif

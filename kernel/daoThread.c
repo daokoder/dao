@@ -905,9 +905,9 @@ static void DaoMT_RunArrayFunctional( void *p )
 	DaoVmCode *sect = self->sect;
 	DaoArray *param = (DaoArray*) self->param;
 	DaoArray *result = (DaoArray*) self->result;
-	DaoArray *ref = param->reference;
-	DaoArray *array = ref ? ref : param;
-	DArray *slice = param->slice;
+	DaoArray *original = param->original;
+	DaoArray *array = original ? original : param;
+	DArray *slices = param->slices;
 	size_t *dims = array->dims;
 	size_t i, id, id2, n = DaoArray_SliceSize( param );
 	int j, D = array->ndim;
@@ -922,7 +922,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
 	for(i=self->first; i<n; i+=self->step){
 		idval = clone->stackValues + stackBase + sect->a + 1;
-		id = id2 = (ref ? DaoArray_IndexFromSlice( ref, slice, i ) : i);
+		id = id2 = (original ? DaoArray_IndexFromSlice( original, slices, i ) : i);
 		if( isvec ){
 			if( vdim >0 ) idval[0]->xInteger.value = id2;
 			if( vdim >1 ) idval[1]->xInteger.value = id2;

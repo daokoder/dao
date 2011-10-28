@@ -1749,6 +1749,7 @@ CallEntry:
 				DString_Assign( vC->xString.data, locVars[ vmc->a ]->xString.data );
 			}
 		}OPNEXT() OPCASE( MOVE_PP ){
+			if( locVars[ vmc->a ] == NULL ) goto RaiseErrorNullObject;
 			DaoValue_Copy( locVars[ vmc->a ], & locVars[ vmc->c ] );
 		}OPNEXT() OPCASE( UNMS_C ){
 			acom = ComplexOperand( vmc->a );
@@ -1896,6 +1897,7 @@ CallEntry:
 		OPCASE( GETI_AII ){
 			array = & locVars[ vmc->a ]->xArray;
 			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			IntegerOperand( vmc->c ) = array->data.i[id];
@@ -1903,6 +1905,7 @@ CallEntry:
 		OPCASE( GETI_AFI ){
 			array = & locVars[ vmc->a ]->xArray;
 			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			FloatOperand( vmc->c ) = array->data.f[id];
@@ -1910,6 +1913,7 @@ CallEntry:
 		OPCASE( GETI_ADI ){
 			array = & locVars[ vmc->a ]->xArray;
 			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			DoubleOperand( vmc->c ) = array->data.d[id];
@@ -1927,6 +1931,7 @@ CallEntry:
 				case DAO_DOUBLE  : inum = (dint) vA->xDouble.value; break;
 				default : inum = 0; break;
 				}
+				if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 				if( id <0 ) id += array->size;
 				if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 				array->data.i[id] = inum;
@@ -1944,6 +1949,7 @@ CallEntry:
 				case DAO_DOUBLE  : fnum = (float) vA->xDouble.value; break;
 				default : fnum = 0; break;
 				}
+				if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 				if( id <0 ) id += array->size;
 				if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 				array->data.f[id] = fnum;
@@ -1961,6 +1967,7 @@ CallEntry:
 				case DAO_DOUBLE  : dnum = vA->xDouble.value; break;
 				default : dnum = 0; break;
 				}
+				if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 				if( id <0 ) id += array->size;
 				if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 				array->data.d[id] = dnum;
@@ -1968,6 +1975,7 @@ CallEntry:
 		OPCASE( GETI_ACI ){
 			array = & locVars[ vmc->a ]->xArray;
 			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			locVars[ vmc->c ]->xComplex.value = array->data.c[ id ];
@@ -1976,6 +1984,7 @@ CallEntry:
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			array->data.c[ id ] = locVars[ vmc->a ]->xComplex.value;
@@ -1984,6 +1993,7 @@ CallEntry:
 			array = & locVars[ vmc->a ]->xArray;
 			tuple = & locVars[ vmc->b ]->xTuple;
 			vC = locVars[ vmc->c ];
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( array->ndim == tuple->size ){
 				dims = array->dims;
 				dmac = array->dims + array->ndim;
@@ -2010,6 +2020,7 @@ CallEntry:
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			list = & locVars[ vmc->b ]->xList;
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
 			if( array->ndim == list->items->size ){
 				dims = array->dims;
 				dmac = array->dims + array->ndim;
@@ -2335,6 +2346,10 @@ RaiseErrorIndexOutOfRange:
 			self->activeCode = vmc;
 			DaoProcess_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			goto CheckException;
+RaiseErrorSlicing:
+			self->activeCode = vmc;
+			DaoProcess_RaiseException( self, DAO_ERROR_INDEX, "slicing" );
+			goto CheckException;
 RaiseErrorDivByZero:
 			self->activeCode = vmc;
 			//XXX topCtx->idClearFE = vmc - vmcBase;
@@ -2352,12 +2367,10 @@ AccessDefault:
 			self->activeCode = vmc;
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid field access for default object" );
 			goto CheckException;
-#if 0
 RaiseErrorNullObject:
 			self->activeCode = vmc;
 			DaoProcess_RaiseException( self, DAO_ERROR, "operate on null object" );
 			goto CheckException;
-#endif
 CheckException:
 
 			locVars = self->activeValues;
@@ -2526,6 +2539,10 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *C = self->activeValues[ vmc->c ];
 	int overload = 0;
+	if( A == NULL ){
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		return;
+	}
 	if( C ){
 		if( A->type == C->type && C->type == DAO_OBJECT ){
 			overload = DaoClass_ChildOf( A->xObject.defClass, (DaoValue*)C->xObject.defClass ) == 0;

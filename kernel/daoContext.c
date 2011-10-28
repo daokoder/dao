@@ -383,6 +383,8 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 ){
 		if( dC->xArray.etype < type ) DaoArray_ResizeVector( & dC->xArray, 0 );
+		GC_DecRC( dC->xArray.original );
+		dC->xArray.original = NULL;
 		dC->xArray.etype = type;
 	}else{
 		dC = (DaoValue*) DaoArray_New( type );
@@ -479,7 +481,7 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}
 	if( dims ){
-		DaoArray_SetDimensionCount( array, ndim + 1 );
+		DaoArray_SetDimCount( array, ndim + 1 );
 		array->dims[0] = count;
 		memmove( array->dims + 1, dims, ndim*sizeof(size_t) );
 		DaoArray_ResizeArray( array, array->dims, ndim );
@@ -561,9 +563,9 @@ void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
 	DaoList *list = DaoProcess_GetList( self, vmc );
 	DaoValue **items, **regValues = self->activeValues;
 	DaoValue *dn = bval==3 ? regValues[opA+2] : regValues[opA+1];
-	int num = (int)DaoValue_GetDouble( dn );
+	int i, num = (int)DaoValue_GetDouble( dn );
 	int ta = regValues[ opA ]->type;
-	int i;
+	double step;
 
 	self->activeCode = vmc;
 	if( dn->type < DAO_INTEGER || dn->type > DAO_DOUBLE ){
@@ -596,25 +598,28 @@ void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
 		items[i] = it;
 	}
 
+	step = bval == 2 ? 1.0 : DaoValue_GetDouble( regValues[ opA+1 ] );
 	switch( ta ){
 	case DAO_INTEGER :
 		{
 			const int first = regValues[ vmc->a ]->xInteger.value;
-			const int step = bval==2 ? 1: DaoValue_GetDouble( regValues[ opA+1 ] );
-			for( i=0; i<num; i++) items[i]->xInteger.value = first + i * step;
+			if( bval == 3 && regValues[ opA+1 ]->type == DAO_INTEGER ){
+				const int step = regValues[ opA+1 ]->xInteger.value;
+				for( i=0; i<num; i++) items[i]->xInteger.value = first + i * step;
+			}else{
+				for( i=0; i<num; i++) items[i]->xInteger.value = first + i * step;
+			}
 			break;
 		}
 	case DAO_FLOAT :
 		{
 			const float first = regValues[ vmc->a ]->xFloat.value;
-			const float step = bval==2 ? 1: DaoValue_GetDouble( regValues[ opA+1 ] );
 			for( i=0; i<num; i++) items[i]->xFloat.value = first + i * step;
 			break;
 		}
 	case DAO_DOUBLE :
 		{
-			const double first = regValues[ vmc->a ]->xFloat.value;
-			const double step = bval==2 ? 1: DaoValue_GetDouble( regValues[ opA+1 ] );
+			const double first = regValues[ vmc->a ]->xDouble.value;
 			for( i=0; i<num; i++) items[i]->xDouble.value = first + i * step;
 			break;
 		}
@@ -685,7 +690,8 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *dn = bval==3 ? regValues[opA+2] : regValues[opA+1];
 	const size_t num = DaoValue_GetInteger( dn );
 	char type = regValues[ opA ]->type;
-	size_t i, j;
+	size_t i, j, N, S;
+	double step;
 	DaoArray *array = NULL;
 	DaoArray *a0, *a1;
 
@@ -709,25 +715,28 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	}
 	DaoArray_ResizeVector( array, num );
 
+	step = bval == 2 ? 1.0 : DaoValue_GetDouble( regValues[opA+1] );
 	switch( type ){
 	case DAO_INTEGER :
 		{
 			const dint first = regValues[ vmc->a ]->xInteger.value;
-			const dint step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
-			for(i=0; i<num; i++) array->data.i[i] = first + i*step;
+			if( bval == 3 && regValues[opA+1]->type == DAO_INTEGER ){
+				const dint step = regValues[opA+1]->xInteger.value;
+				for(i=0; i<num; i++) array->data.i[i] = first + i*step;
+			}else{
+				for(i=0; i<num; i++) array->data.i[i] = first + i*step;
+			}
 			break;
 		}
 	case DAO_FLOAT :
 		{
-			const float first = (const float)regValues[ vmc->a ]->xFloat.value;
-			const float step = bval==2 ? 1: DaoValue_GetFloat( regValues[opA+1] );
+			const double first = (const double)regValues[ vmc->a ]->xFloat.value;
 			for(i=0; i<num; i++) array->data.f[i] = first + i*step;
 			break;
 		}
 	case DAO_DOUBLE :
 		{
 			const double first = (const double)regValues[ vmc->a ]->xDouble.value;
-			const double step = bval==2 ? 1: DaoValue_GetDouble( regValues[opA+1] );
 			for(i=0; i<num; i++) array->data.d[i] = first + i*step;
 			break;
 		}
@@ -745,10 +754,18 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_ARRAY :
 		a0 = & regValues[ opA ]->xArray;
 		array->etype = a0->etype;
-		DaoArray_SetDimensionCount( array, a0->ndim + 1 );
-		array->dims[0] = num;
-		memmove( array->dims + 1, a0->dims, a0->ndim*sizeof(size_t) );
-		DaoArray_ResizeArray( array, array->dims, a0->ndim + 1 );
+		if( a0->ndim == 2 && (a0->dims[0] == 1 || a0->dims[1] == 1) ){
+			DaoArray_SetDimCount( array, 2 );
+			memmove( array->dims, a0->dims, 2*sizeof(size_t) );
+			array->dims[ a0->dims[1] == 1 ] = num;
+		}else{
+			DaoArray_SetDimCount( array, a0->ndim + 1 );
+			array->dims[0] = num;
+			memmove( array->dims + 1, a0->dims, a0->ndim*sizeof(size_t) );
+		}
+		DaoArray_ResizeArray( array, array->dims, array->ndim );
+		S = a0->size;
+		N = num * a0->size;
 		if( bval ==3 && regValues[opA+1]->type == DAO_ARRAY ){
 			a1 = & regValues[ opA+1 ]->xArray;
 			if( a0->etype <= DAO_DOUBLE && a1->etype >= DAO_COMPLEX ){
@@ -768,62 +785,49 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 					}
 				}
 			}
-			switch( a0->etype ){
-			case DAO_INTEGER :
-				for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-					array->data.i[ i*a0->size + j] =
-						a0->data.i[j] + i*DaoArray_GetInteger( a1, j );
-				break;
-			case DAO_FLOAT :
-				for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-					array->data.f[ i*a0->size + j] =
-						a0->data.f[j] + i*DaoArray_GetFloat( a1, j );
-				break;
-			case DAO_DOUBLE :
-				for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-					array->data.d[ i*a0->size + j] =
-						a0->data.d[j] + i*DaoArray_GetDouble( a1, j );
-				break;
-			case DAO_COMPLEX :
-				if( a1->etype == DAO_COMPLEX ){
-					for(i=0; i<num; i++) for(j=0; j<a0->size; j++){
-						array->data.c[ i*a0->size + j ].real =
-							a0->data.c[j].real + i*a1->data.c[j].real;
-						array->data.c[ i*a0->size + j ].imag =
-							a0->data.c[j].imag + i*a1->data.c[j].imag;
+			for(i=0, j=0; i<N; i++, j=i%S){
+				switch( a0->etype ){
+				case DAO_INTEGER :
+					if( a1->etype == DAO_INTEGER ){
+						array->data.i[i] = a0->data.i[j] + (i/S)*a1->data.i[j];
+					}else{
+						array->data.i[i] = a0->data.i[j] + (i/S)*DaoArray_GetDouble( a1, j );
 					}
-				}else{
-					for(i=0; i<num; i++) for(j=0; j<a0->size; j++){
-						array->data.c[ i*a0->size + j ].real =
-							a0->data.c[j].real + i*DaoArray_GetDouble( a1, j );
+					break;
+				case DAO_FLOAT :
+					array->data.f[i] = a0->data.f[j] + (i/S)*DaoArray_GetDouble( a1, j );
+					break;
+				case DAO_DOUBLE :
+					array->data.d[i] = a0->data.d[j] + (i/S)*DaoArray_GetDouble( a1, j );
+					break;
+				case DAO_COMPLEX :
+					if( a1->etype == DAO_COMPLEX ){
+						array->data.c[i].real = a0->data.c[j].real + (i/S)*a1->data.c[j].real;
+						array->data.c[i].imag = a0->data.c[j].imag + (i/S)*a1->data.c[j].imag;
+					}else{
+						array->data.c[i].real = a0->data.c[j].real + (i/S)*DaoArray_GetDouble( a1, j );
+						array->data.c[i].imag = a0->data.c[j].imag;
 					}
+					break;
+				default : break;
 				}
-				break;
-			default : break;
 			}
 		}else{
 			switch( a0->etype ){
 			case DAO_INTEGER :
-				{
-					const dint step = bval==2 ? 1: DaoValue_GetInteger( regValues[opA+1] );
-					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-						array->data.i[ i*a0->size + j] = a0->data.i[j] + i * step;
-					break;
+				if( bval == 3 && regValues[opA+1]->type == DAO_INTEGER ){
+					const dint step = regValues[opA+1]->xInteger.value;
+					for(i=0, j=0; i<N; i++, j=i%S) array->data.i[i] = a0->data.i[j] + (i/S) * step;
+				}else{
+					for(i=0, j=0; i<N; i++, j=i%S) array->data.i[i] = a0->data.i[j] + (i/S) * step;
 				}
+				break;
 			case DAO_FLOAT :
-				{
-					float step = bval==2 ? 1.0: DaoValue_GetFloat( regValues[opA+1] );
-					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-						array->data.f[ i*a0->size + j] = a0->data.f[j] + i * step;
-					break;
-				}
+				for(i=0, j=0; i<N; i++, j=i%S) array->data.f[i] = a0->data.f[j] + (i/S) * step;
+				break;
 			case DAO_DOUBLE :
-				{
-					const double step = bval==2 ? 1: DaoValue_GetDouble( regValues[opA+1] );
-					for(i=0; i<num; i++) for(j=0; j<a0->size; j++)
-						array->data.d[ i*a0->size + j] = a0->data.d[j] + i * step;
-					break;
-				}
+				for(i=0, j=0; i<N; i++, j=i%S) array->data.d[i] = a0->data.d[j] + (i/S) * step;
+				break;
 			case DAO_COMPLEX :
 				{
 					complex16 step = { 1.0, 0.0 };
@@ -1263,6 +1267,10 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue *C = (DaoValue*) & tmp;
 		DaoArray *na = & A->xArray;
 		id = DaoValue_GetInteger( B );
+		if( na->original && DaoArray_Sliced( na ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR_INDEX, "slicing" );
+			return;
+		}
 		if( id < 0 ) id += na->size;
 		if( id < 0 || id >= na->size ){
 			DaoProcess_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );
@@ -1382,6 +1390,10 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 		double val = DaoValue_GetDouble( A );
 		complex16 cpx = DaoValue_GetComplex( A );
 		id = DaoValue_GetDouble( B );
+		if( na->original && DaoArray_Sliced( na ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR_INDEX, "slicing" );
+			return;
+		}
 		if( id < 0 ) id += na->size;
 		if( id < 0 || id >= na->size ){
 			DaoProcess_RaiseException( self, DAO_ERROR_INDEX_OUTOFRANGE, "" );

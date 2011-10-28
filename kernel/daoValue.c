@@ -381,7 +381,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 
 	if( self == NULL ) return null;
 #ifdef DAO_WITH_NUMARRAY
-	if( self->type == DAO_ARRAY && self->xArray.reference ){
+	if( self->type == DAO_ARRAY && self->xArray.original ){
 		DaoArray_Sliced( (DaoArray*)self );
 		return self;
 	}
