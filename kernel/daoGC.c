@@ -349,7 +349,9 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_COMPLEX : dao_free( p ); return 1;
 		case DAO_LONG : DaoLong_Delete( & p->xLong ); return 1;
 		case DAO_STRING : DaoString_Delete( & p->xString ); return 1;
+#ifdef DAO_WITH_NUMARRAY
 		case DAO_ARRAY : DaoArray_ResizeVector( & p->xArray, 0 ); break;
+#endif
 		default : break;
 		/* No safe way to delete other types of objects here, since they might be
 		 * being concurrently scanned by the GC! */

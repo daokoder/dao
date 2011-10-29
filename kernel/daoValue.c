@@ -803,12 +803,6 @@ DaoValue* DaoValue_NewList()
 	GC_IncRC( res );
 	return (DaoValue*) res;
 }
-DaoValue* DaoValue_NewArray( int type )
-{
-	DaoArray *res = DaoArray_New( type );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
 DaoValue* DaoValue_NewMap( int hashing )
 {
 	DaoMap *res = DaoMap_New( hashing );
@@ -816,6 +810,12 @@ DaoValue* DaoValue_NewMap( int hashing )
 	return (DaoValue*) res;
 }
 #ifdef DAO_WITH_NUMARRAY
+DaoValue* DaoValue_NewArray( int type )
+{
+	DaoArray *res = DaoArray_New( type );
+	GC_IncRC( res );
+	return (DaoValue*) res;
+}
 DaoValue* DaoValue_NewVectorSB( signed char *s, int n )
 {
 	DaoArray *res = DaoArray_New( DAO_INTEGER );
@@ -1014,78 +1014,78 @@ DaoValue* DaoValue_NewBuffer( void *p, int n )
 	return (DaoValue*) res;
 }
 #else
-static DaoValue NumArrayDisabled()
+DaoValue* DaoValue_NewArray( int type )
 {
 	printf( "Error: numeric array is disabled!\n" );
-	return daoNullValue;
+	return NULL;
 }
 DaoValue* DaoValue_NewVectorB( char *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewVectorUB( unsigned char *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewVectorS( short *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewVectorUS( unsigned short *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
-DaoValue* DaoValue_NewVectorI( int *s, int n )
+DaoValue* DaoValue_NewVectorI( dint *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewVectorUI( unsigned int *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewVectorF( float *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewVectorD( double *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixB( signed char **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixUB( unsigned char **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixS( short **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixUS( unsigned short **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
-DaoValue* DaoValue_NewMatrixI( int **s, int n, int m )
+DaoValue* DaoValue_NewMatrixI( dint **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixUI( unsigned int **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixF( float **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewMatrixD( double **s, int n, int m )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 DaoValue* DaoValue_NewBuffer( void *s, int n )
 {
-	return NumArrayDisabled();
+	return DaoValue_NewArray( 0 );
 }
 #endif
 DaoValue* DaoValue_NewStream( FILE *f )
@@ -1271,6 +1271,8 @@ void DaoValue_ClearAll( DaoValue *v[], int n )
 	for(i=0; i<n; i++) DaoValue_Clear( v + i );
 }
 
+
+#ifdef DAO_WITH_SERIALIZATION
 
 #define RADIX 32
 static const char *hex_digits = "ABCDEFGHIJKLMNOP";
@@ -1869,3 +1871,4 @@ Failed:
 	DArray_Delete( types );
 	return 0;
 }
+#endif

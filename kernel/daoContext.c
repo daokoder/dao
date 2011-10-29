@@ -211,14 +211,13 @@ DaoArray* DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N 
 #else
 static DaoArray* NullArray( DaoProcess *self )
 {
-	DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 	return NULL;
 }
-DaoArray* DaoProcess_PutArrayInteger( DaoProcess *s, int*, int ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayShort( DaoProcess *s, int*, int ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayFloat( DaoProcess *s, int*, int ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayDouble( DaoProcess *s, int*, int ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayComplex( DaoProcess *s, int*, int ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayInteger( DaoProcess *s, dint *v, int n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayFloat( DaoProcess *s, float *v, int n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayDouble( DaoProcess *s, double *v, int n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayComplex( DaoProcess *s, complex16 *v, int n ){ return NullArray( s ); }
 #endif
 DaoList* DaoProcess_PutList( DaoProcess *self )
 {
@@ -397,7 +396,7 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	return & dC->xArray;
 #else
 	self->activeCode = vmc;
-	DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 	return NULL;
 #endif
 }
@@ -552,7 +551,7 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 	}
 #else
 	self->activeCode = vmc;
-	DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 #endif
 }
 void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
@@ -689,8 +688,9 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue **regValues = self->activeValues;
 	DaoValue *dn = bval==3 ? regValues[opA+2] : regValues[opA+1];
 	const size_t num = DaoValue_GetInteger( dn );
+	char steptype = bval == 3 ? regValues[opA+1]->type : 0;
 	char type = regValues[ opA ]->type;
-	size_t i, j, N, S;
+	size_t i, j, k, m, N, S, transvec = 0; /* transposed vector */
 	double step;
 	DaoArray *array = NULL;
 	DaoArray *a0, *a1;
@@ -720,7 +720,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_INTEGER :
 		{
 			const dint first = regValues[ vmc->a ]->xInteger.value;
-			if( bval == 3 && regValues[opA+1]->type == DAO_INTEGER ){
+			if( steptype == DAO_INTEGER ){
 				const dint step = regValues[opA+1]->xInteger.value;
 				for(i=0; i<num; i++) array->data.i[i] = first + i*step;
 			}else{
@@ -758,6 +758,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 			DaoArray_SetDimCount( array, 2 );
 			memmove( array->dims, a0->dims, 2*sizeof(size_t) );
 			array->dims[ a0->dims[1] == 1 ] = num;
+			transvec = a0->dims[1] == 1;
 		}else{
 			DaoArray_SetDimCount( array, a0->ndim + 1 );
 			array->dims[0] = num;
@@ -766,87 +767,76 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 		DaoArray_ResizeArray( array, array->dims, array->ndim );
 		S = a0->size;
 		N = num * a0->size;
-		if( bval ==3 && regValues[opA+1]->type == DAO_ARRAY ){
+		if( steptype == DAO_ARRAY ){
+			const char* const msg[2] = { "invalid step array", "unmatched init and step array" };
+			int error = -1;
 			a1 = & regValues[ opA+1 ]->xArray;
 			if( a0->etype <= DAO_DOUBLE && a1->etype >= DAO_COMPLEX ){
-				DaoProcess_RaiseException( self, DAO_ERROR_TYPE,
-						"need real numarray as the step sizes" );
-				return;
+				error = 0;
 			}else if( a1->ndim != a0->ndim ){
-				DaoProcess_RaiseException( self, DAO_ERROR_TYPE,
-						"need numarray of the same shape" );
-				return;
+				error = 1;
 			}else{
 				for(i=0; i<a0->ndim; i++){
 					if( a0->dims[i] != a1->dims[i] ){
-						DaoProcess_RaiseException( self, DAO_ERROR_TYPE,
-								"need numarray of the same shape" );
-						return;
+						error = 1;
+						break;
 					}
 				}
 			}
-			for(i=0, j=0; i<N; i++, j=i%S){
+			if( error >=0 ){
+				DaoProcess_RaiseException( self, DAO_ERROR_VALUE, msg[error] );
+				return;
+			}
+			for(i=0, m = 0, j=0, k = 0; i<N; i++, m=i, j=i%S, k=i/S){
+				if( transvec ) m = j * num + k;
 				switch( a0->etype ){
 				case DAO_INTEGER :
 					if( a1->etype == DAO_INTEGER ){
-						array->data.i[i] = a0->data.i[j] + (i/S)*a1->data.i[j];
+						array->data.i[m] = a0->data.i[j] + k*a1->data.i[j];
 					}else{
-						array->data.i[i] = a0->data.i[j] + (i/S)*DaoArray_GetDouble( a1, j );
+						array->data.i[m] = a0->data.i[j] + k*DaoArray_GetDouble( a1, j );
 					}
 					break;
 				case DAO_FLOAT :
-					array->data.f[i] = a0->data.f[j] + (i/S)*DaoArray_GetDouble( a1, j );
+					array->data.f[m] = a0->data.f[j] + k*DaoArray_GetDouble( a1, j );
 					break;
 				case DAO_DOUBLE :
-					array->data.d[i] = a0->data.d[j] + (i/S)*DaoArray_GetDouble( a1, j );
+					array->data.d[m] = a0->data.d[j] + k*DaoArray_GetDouble( a1, j );
 					break;
 				case DAO_COMPLEX :
 					if( a1->etype == DAO_COMPLEX ){
-						array->data.c[i].real = a0->data.c[j].real + (i/S)*a1->data.c[j].real;
-						array->data.c[i].imag = a0->data.c[j].imag + (i/S)*a1->data.c[j].imag;
+						array->data.c[m].real = a0->data.c[j].real + k*a1->data.c[j].real;
+						array->data.c[m].imag = a0->data.c[j].imag + k*a1->data.c[j].imag;
 					}else{
-						array->data.c[i].real = a0->data.c[j].real + (i/S)*DaoArray_GetDouble( a1, j );
-						array->data.c[i].imag = a0->data.c[j].imag;
+						array->data.c[m].real = a0->data.c[j].real + k*DaoArray_GetDouble( a1, j );
+						array->data.c[m].imag = a0->data.c[j].imag;
 					}
 					break;
 				default : break;
 				}
 			}
 		}else{
-			switch( a0->etype ){
-			case DAO_INTEGER :
-				if( bval == 3 && regValues[opA+1]->type == DAO_INTEGER ){
-					const dint step = regValues[opA+1]->xInteger.value;
-					for(i=0, j=0; i<N; i++, j=i%S) array->data.i[i] = a0->data.i[j] + (i/S) * step;
-				}else{
-					for(i=0, j=0; i<N; i++, j=i%S) array->data.i[i] = a0->data.i[j] + (i/S) * step;
-				}
-				break;
-			case DAO_FLOAT :
-				for(i=0, j=0; i<N; i++, j=i%S) array->data.f[i] = a0->data.f[j] + (i/S) * step;
-				break;
-			case DAO_DOUBLE :
-				for(i=0, j=0; i<N; i++, j=i%S) array->data.d[i] = a0->data.d[j] + (i/S) * step;
-				break;
-			case DAO_COMPLEX :
-				{
-					complex16 step = { 1.0, 0.0 };
-					int offset = 0;
-					double stepR = 0.0, stepI = 0.0;
-					if( bval == 3 && regValues[ opA+1 ]->type == DAO_COMPLEX )
-						step = regValues[ opA+1 ]->xComplex.value;
-					for(i=0; i<num; i++){
-						for(j=0; j<a0->size; j++){
-							array->data.c[ offset+j ].real = a0->data.c[j].real + stepR;
-							array->data.c[ offset+j ].imag = a0->data.c[j].imag + stepI;
-						}
-						offset += a0->size;
-						stepR += step.real;
-						stepI += step.imag;
-					}
+			int istep = steptype == DAO_INTEGER;
+			dint intstep = istep ? regValues[opA+1]->xInteger.value : 0;
+			complex16 cstep = { 1.0, 0.0 };
+			if( steptype == DAO_COMPLEX ) cstep = regValues[ opA+1 ]->xComplex.value;
+			for(i=0, m = 0, j=0, k = 0; i<N; i++, m=i, j=i%S, k=i/S){
+				if( transvec ) m = j * num + k;
+				switch( a0->etype ){
+				case DAO_INTEGER :
+					array->data.i[m] = a0->data.i[j] + (istep ? k * intstep : (dint)(k * step));
+					break;
+				case DAO_FLOAT :
+					array->data.f[m] = a0->data.f[j] + k * step;
+					break;
+				case DAO_DOUBLE :
+					array->data.d[m] = a0->data.d[j] + k * step;
+					break;
+				case DAO_COMPLEX :
+					array->data.c[m].real = a0->data.c[j].real + k * cstep.real;
+					array->data.c[m].imag = a0->data.c[j].imag + k * cstep.imag;
 					break;
 				}
-			default : break;
 			}
 		}
 		break;
@@ -857,7 +847,7 @@ void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 #else
-	DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 #endif
 }
 void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
@@ -944,7 +934,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 	}
 #else
 	self->activeCode = vmc;
-	DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 #endif
 }
 
@@ -3242,6 +3232,7 @@ int DaoProcess_CheckFE( DaoProcess *self )
 	dao_fe_clear();
 	return res;
 }
+#ifdef DAO_WITH_DECORATOR
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n )
 {
 	DArray *nested = decoFunc->routType->nested;
@@ -3326,6 +3317,7 @@ ErrorDecorator:
 	DMap_Delete( mapids );
 	return NULL;
 }
+#endif
 void DaoValue_Check( DaoValue *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
 void DaoPrintCallError( DArray *errors, DaoStream *stdio );
 
@@ -3475,6 +3467,9 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	 printf( "%s\n", closure->routType->name->mbs );
 	 */
 }
+
+
+#ifdef DAO_WITH_DYNCLASS
 
 /* storage enum<const,global,var> */
 static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VARIABLE };
@@ -3803,6 +3798,14 @@ InvalidMethod:
 	DMap_Delete( pm_map );
 	DMap_Delete( st_map );
 }
+#else
+void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DYNCLASS ) );
+}
+#endif
+
+
 int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;

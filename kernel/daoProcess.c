@@ -3073,12 +3073,16 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	}else if( caller->type == DAO_ROUTINE ){
 		rout = DRoutine_Resolve( caller, selfpar, params, npar, codemode );
 		if( rout == NULL ) goto InvalidParameter;
+#ifdef DAO_WITH_DECORATOR
 		if( rout->routName->mbs[0] == '@' ){
 			DaoRoutine *drout = (DaoRoutine*) rout;
 			drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params+1, npar-1 );
 			DaoProcess_PutValue( self, (DaoValue*) drout );
 			return;
 		}
+#else
+		DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
+#endif
 		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 		if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 	}else if( caller->type == DAO_FUNCTREE ){
@@ -3088,12 +3092,16 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			goto InvalidParameter;
 		}
 		if( rout->type == DAO_ROUTINE ){
+#ifdef DAO_WITH_DECORATOR
 			if( rout->routName->mbs[0] == '@' ){
 				DaoRoutine *drout = (DaoRoutine*) rout;
 				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params+1, npar-1 );
 				DaoProcess_PutValue( self, (DaoValue*) drout );
 				return;
 			}
+#else
+			DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
+#endif
 			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}else if( rout->type == DAO_FUNCTION ){

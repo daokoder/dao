@@ -461,6 +461,7 @@ static void STD_Unpack( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 }
+#ifdef DAO_WITH_SERIALIZATION
 static void STD_Serialize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *mbs = DaoProcess_PutMBString( proc, "" );
@@ -493,6 +494,15 @@ static void STD_Restore( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace_Restore( proc->activeNamespace, proc, fin );
 	fclose( fin );
 }
+#else
+static void STD_Serialize( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_RaiseException( proc, DAO_ERROR, getCtInfo( DAO_DISABLED_SERIALIZATION ) );
+}
+#define STD_Deserialize STD_Serialize
+#define STD_Backup      STD_Serialize
+#define STD_Restore     STD_Serialize
+#endif
 static void STD_Warn( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_RaiseException( proc, DAO_WARNING, DString_GetMBS( p[0]->xString.data ) );
@@ -535,6 +545,8 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 	DaoArray *sub = NULL;
 	dint i, j, k, entry, size = 1;
 
+	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
+#ifdef DAO_WITH_NUMARRAY
 	for(i=0; i<N; i++){
 		dint d = p[i]->xInteger.value;
 		if( d < 0 ){
@@ -589,6 +601,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 	DaoProcess_PopFrame( proc );
+#endif
 }
 static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 {

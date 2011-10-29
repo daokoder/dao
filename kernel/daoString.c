@@ -408,8 +408,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 	buffer[100] = 0;
 	while( n ){
 		const char *mbs = buffer;
-		size_t smin, len;
-		len = n < 100 ? n : 100;
+		size_t smin, len = n < 100 ? n : 100;
 		strncpy( buffer, chs, len );
 		buffer[len] = 0;
 		len = strlen( buffer );
@@ -430,7 +429,15 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof (state) );
 		smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
-		if( smin == (size_t)-1 ) break;
+		if( smin == (size_t)-1 ){ /* a valid encoding may have been cut in the middle: */
+			size_t put = len - (mbs - buffer);
+			chs -= put;
+			n += put;
+			mbs = buffer;
+			buffer[len - put] = 0;
+			memset( & state, 0, sizeof (state) );
+			smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
+		}
 		self->size += smin;
 	}
 	self->wcs[ self->size ] = 0;

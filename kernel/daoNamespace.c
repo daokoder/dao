@@ -1853,6 +1853,8 @@ DaoTuple* DaoNamespace_MakePair( DaoNamespace *self, DaoValue *first, DaoValue *
 	return tuple;
 }
 
+
+#ifdef DAO_WITH_SERIALIZATION
 static void NS_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int limit, int store )
 {
 	DNode *node = DMap_First( self->lookupTable );
@@ -1977,3 +1979,4 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 	DArray_Delete( types );
 	DaoParser_Delete( parser );
 }
+#endif

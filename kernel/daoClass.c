@@ -193,6 +193,8 @@ void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 	}
 	DaoValue_Move( value, self, tp2 );
 }
+
+#ifdef DAO_WITH_DYNCLASS
 int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
 	DaoNamespace *ns = other->classRoutine->nameSpace;
@@ -375,6 +377,8 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 	DString_Delete( name );
 	return klass;
 }
+#endif
+
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 {
 	DaoRoutine *rout;

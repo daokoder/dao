@@ -1673,12 +1673,15 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		}
 		goto FailedInstantiation;
 	}
+#ifdef DAO_WITH_DYNCLASS
 	if( tpl->type == DAO_CLASS ){
 		klass = DaoClass_Instantiate( klass, types );
 		inst = (DaoValue*) klass;
 		if( klass == NULL ) goto FailedInstantiation;
 		if( klass && fullname ) DString_Assign( fullname, klass->objType->name );
 	}
+#endif
+
 DoneInstantiation:
 	GC_IncRCs( types );
 	GC_DecRCs( types );
@@ -2444,6 +2447,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	DaoNamespace_AddTypeConstant( myNS, str, type );
 	return start;
 }
+#ifdef DAO_WITH_DECORATOR
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n );
 static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
@@ -2473,6 +2477,7 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 		/* printf( "%s\n", decoFunc->routType->name->mbs ); */
 	}
 }
+#endif
 static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int attribs )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -2692,9 +2697,14 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	}
 	if( k && self->decoFuncs->size ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
+#ifdef DAO_WITH_DECORATOR
 		DaoParser_DecorateRoutine( self, rout );
 		rout->parser = NULL;
 		DaoParser_Delete( parser );
+#else
+			DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
+			return 0;
+#endif
 	}else if( k && rout->routName->mbs[0] == '@' ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
 		rout->parser = NULL;
@@ -2870,6 +2880,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 
 		if( start+1 <= to && tokens[start+1]->name == DTOK_LT ){
+#ifdef DAO_WITH_DYNCLASS
 			rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start+1, -1 );
 			if( rb <= start + 2 ) goto ErrorClassDefinition;
 			klass->typeHolders = DArray_New(0);
@@ -2912,6 +2923,10 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			if( className->mbs[0] == '@' ) DString_Erase( className, 0, 1 );
 			GC_IncRCs( klass->objType->nested );
 			start = rb;
+#else
+			DaoParser_Error( self, DAO_DISABLED_TEMPCLASS, NULL );
+			goto ErrorClassDefinition;
+#endif
 		}else{
 			DaoClass_SetName( klass, className, myNS );
 		}
@@ -3311,16 +3326,14 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 				storeType |= DAO_DECL_GLOBAL;
 			}
 		}
-		if( self->isClassBody ){
-			if( hostClass->attribs & DAO_CLS_ASYNCHRONOUS ){
-				if( storeType & DAO_DECL_STATIC ){
-					DaoParser_Error2( self, DAO_INVALID_ACCESS, errorStart, start, 0 );
-				}
-				if( (storeType & DAO_DECL_VAR) && self->permission == DAO_DATA_PUBLIC ){
-					DaoParser_Error2( self, DAO_INVALID_STORAGE, errorStart, start, 0 );
-				}
-				if( self->errors->size ) return 0;
+		if( self->isClassBody && (hostClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
+			if( storeType & DAO_DECL_STATIC ){
+				DaoParser_Error2( self, DAO_NO_STATIC_IN_ASYNCLASS, errorStart, start, 0 );
 			}
+			if( (storeType & DAO_DECL_VAR) && self->permission == DAO_DATA_PUBLIC ){
+				DaoParser_Error2( self, DAO_NO_PUBLIC_IN_ASYNCLASS, errorStart, start, 0 );
+			}
+			if( self->errors->size ) return 0;
 		}
 		tki = tokens[start]->name;
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
@@ -3333,6 +3346,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			}
 		}
 		if( tki == DTOK_ID_INITYPE ){
+#ifdef DAO_WITH_DECORATOR
 			DaoRoutine *decfunc = NULL;
 			DaoList *declist = NULL;
 			DArray *cid = NULL;
@@ -3375,6 +3389,10 @@ DecoratorError:
 			if( declist ) DaoList_Delete( declist );
 			DaoParser_Error3( self, DAO_CTW_INVA_SYNTAX, start );
 			return 0;
+#else
+			DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
+			return 0;
+#endif
 		}
 		empty_decos = 1;
 		if( tki == DTOK_SEMCO ){
@@ -5241,6 +5259,7 @@ ErrorParamParsing:
 	GC_DecRC( rout );
 	return -1;
 }
+#ifdef DAO_WITH_DYNCLASS
 static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -5315,6 +5334,13 @@ static int DaoParser_ClassExpression( DaoParser *self, int start )
 	DaoParser_AddCode( self, DVM_CLASS, reg1, reg2, regC, start, mid, rb );
 	return regC;
 }
+#else
+static int DaoParser_ClassExpression( DaoParser *self, int start )
+{
+	DaoParser_Error( self, DAO_DISABLED_DYNCLASS, NULL );
+	return -1;
+}
+#endif
 
 int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst )
 {

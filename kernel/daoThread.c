@@ -1082,7 +1082,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	DaoVmCode *vmc, *end;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoFuture *future = DaoFuture_New();
-	DaoType *type = & proc->topFrame->function->routType->aux->xType;
+	DaoType *type = proc->activeTypes[proc->activeCode->c]->nested->items.pType[0];
 
 	type = DaoNamespace_MakeType( proc->activeNamespace, "future", DAO_FUTURE, NULL, &type, 1 );
 	GC_ShiftRC( type, future->unitype );
