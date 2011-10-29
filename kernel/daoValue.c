@@ -103,10 +103,10 @@ int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 }
 int DaoList_Compare( DaoList *list1, DaoList *list2 )
 {
-	DaoValue **d1 = list1->items->items.pValue;
-	DaoValue **d2 = list2->items->items.pValue;
-	int size1 = list1->items->size;
-	int size2 = list2->items->size;
+	DaoValue **d1 = list1->items.items.pValue;
+	DaoValue **d2 = list2->items.items.pValue;
+	int size1 = list1->items.size;
+	int size2 = list2->items.size;
 	int min = size1 < size2 ? size1 : size2;
 	int i = 0, cmp = 0;
 	/* find the first unequal items */
@@ -338,8 +338,8 @@ void DaoValue_MarkConst( DaoValue *self )
 	self->xNull.trait |= DAO_DATA_CONST;
 	switch( self->type ){
 	case DAO_LIST :
-		for(i=0; i<self->xList.items->size; i++)
-			DaoValue_MarkConst( self->xList.items->items.pValue[i] );
+		for(i=0; i<self->xList.items.size; i++)
+			DaoValue_MarkConst( self->xList.items.items.pValue[i] );
 		break;
 	case DAO_TUPLE :
 		for(i=0; i<self->xTuple.size; i++)
@@ -414,9 +414,9 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 			/* no detailed checking of type matching, must be ensured by caller */
 			copy->unitype = (tp && tp->tid == DAO_LIST) ? tp : list->unitype;
 			GC_IncRC( copy->unitype );
-			DArray_Resize( copy->items, list->items->size, NULL );
-			for(i=0; i<list->items->size; i++)
-				DaoList_SetItem( copy, list->items->items.pValue[i], i );
+			DArray_Resize( & copy->items, list->items.size, NULL );
+			for(i=0; i<list->items.size; i++)
+				DaoList_SetItem( copy, list->items.items.pValue[i], i );
 			return (DaoValue*)copy;
 		}
 	case DAO_MAP :
@@ -1440,11 +1440,11 @@ static int DaoList_Serialize( DaoList *self, DString *serial, DaoNamespace *ns, 
 	int i, rc = 1;
 	if( type->nested && type->nested->size ) type = type->nested->items.pType[0];
 	if( type && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
-	for(i=0; i<self->items->size; i++){
+	for(i=0; i<self->items.size; i++){
 		DaoType *it = NULL;
-		if( type == NULL ) it = DaoNamespace_GetType( ns, self->items->items.pValue[i] );
+		if( type == NULL ) it = DaoNamespace_GetType( ns, self->items.items.pValue[i] );
 		if( i ) DString_AppendChar( serial, ',' );
-		rc &= DaoValue_Serialize2( self->items->items.pValue[i], serial, ns, proc, it, buf );
+		rc &= DaoValue_Serialize2( self->items.items.pValue[i], serial, ns, proc, it, buf );
 	}
 	return rc;
 }
@@ -1771,8 +1771,8 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		n = 0;
 		for(i=start; i<=end; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
-			DArray_Append( list->items, NULL );
-			k = DaoParser_Deserialize( self, i, end, list->items->items.pValue + n, types, ns, proc );
+			DArray_Append( & list->items, NULL );
+			k = DaoParser_Deserialize( self, i, end, list->items.items.pValue + n, types, ns, proc );
 			i = k - 1;
 			n += 1;
 		}

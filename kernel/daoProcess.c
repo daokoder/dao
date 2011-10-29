@@ -1170,7 +1170,7 @@ CallEntry:
 				}
 				break;
 			case DAO_LIST  :
-				vmc = vA->xList.items->size ? vmc+1 : vmcBase + vmc->b;
+				vmc = vA->xList.items.size ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_MAP   :
 				vmc = vA->xMap.items->size ? vmc+1 : vmcBase + vmc->b;
@@ -1802,11 +1802,11 @@ CallEntry:
 		}OPNEXT() OPCASE( GETI_LI ){
 			list = & locVars[ vmc->a ]->xList;
 			id = IntegerOperand( vmc->b );
-			if( id <0 ) id += list->items->size;
-			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
+			if( id <0 ) id += list->items.size;
+			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
 			/* All GETX instructions assume the C regisgter is an intermediate register! */
 			/* So no type checking is necessary here! */
-			value = list->items->items.pValue[id];
+			value = list->items.items.pValue[id];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( SETI_LI ){
@@ -1816,9 +1816,9 @@ CallEntry:
 			abtp = NULL;
 			if( list->unitype && list->unitype->nested->size )
 				abtp = list->unitype->nested->items.pType[0];
-			if( id <0 ) id += list->items->size;
-			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-			if( DaoMoveAC( self, locVars[vmc->a], list->items->items.pValue + id, abtp ) ==0 )
+			if( id <0 ) id += list->items.size;
+			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+			if( DaoMoveAC( self, locVars[vmc->a], list->items.items.pValue + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETI_LII )
@@ -1827,9 +1827,9 @@ CallEntry:
 			OPCASE( GETI_LSI ){
 				list = & locVars[ vmc->a ]->xList;
 				id = IntegerOperand( vmc->b );
-				if( id <0 ) id += list->items->size;
-				if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-				value = list->items->items.pValue[id];
+				if( id <0 ) id += list->items.size;
+				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+				value = list->items.items.pValue[id];
 				GC_ShiftRC( value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = value;
 			}OPNEXT()
@@ -1846,9 +1846,9 @@ CallEntry:
 				case DAO_DOUBLE  : inum = (dint) vA->xDouble.value; break;
 				default : inum = 0; break;
 				}
-				if( id <0 ) id += list->items->size;
-				if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-				list->items->items.pValue[id]->xInteger.value = inum;
+				if( id <0 ) id += list->items.size;
+				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+				list->items.items.pValue[id]->xInteger.value = inum;
 			}OPNEXT()
 		OPCASE( SETI_LFII )
 			OPCASE( SETI_LFIF )
@@ -1863,9 +1863,9 @@ CallEntry:
 				case DAO_DOUBLE  : fnum = vA->xDouble.value; break;
 				default : fnum = 0; break;
 				}
-				if( id <0 ) id += list->items->size;
-				if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-				list->items->items.pValue[id]->xFloat.value = fnum;
+				if( id <0 ) id += list->items.size;
+				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+				list->items.items.pValue[id]->xFloat.value = fnum;
 			}OPNEXT()
 		OPCASE( SETI_LDII )
 			OPCASE( SETI_LDIF )
@@ -1880,18 +1880,18 @@ CallEntry:
 				case DAO_DOUBLE  : dnum = vA->xDouble.value; break;
 				default : dnum = 0; break;
 				}
-				if( id <0 ) id += list->items->size;
-				if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-				list->items->items.pValue[id]->xDouble.value = dnum;
+				if( id <0 ) id += list->items.size;
+				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+				list->items.items.pValue[id]->xDouble.value = dnum;
 			}OPNEXT()
 		OPCASE( SETI_LSIS ){
 			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			list = & locVars[ vmc->c ]->xList;
 			vA = locVars[ vmc->a ];
 			id = IntegerOperand( vmc->b );
-			if( id <0 ) id += list->items->size;
-			if( id <0 || id >= list->items->size ) goto RaiseErrorIndexOutOfRange;
-			DString_Assign( list->items->items.pValue[id]->xString.data, vA->xString.data );
+			if( id <0 ) id += list->items.size;
+			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+			DString_Assign( list->items.items.pValue[id]->xString.data, vA->xString.data );
 		}OPNEXT()
 #ifdef DAO_WITH_NUMARRAY
 		OPCASE( GETI_AII ){
@@ -2021,12 +2021,12 @@ CallEntry:
 			array = & locVars[ vmc->c ]->xArray;
 			list = & locVars[ vmc->b ]->xList;
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
-			if( array->ndim == list->items->size ){
+			if( array->ndim == list->items.size ){
 				dims = array->dims;
 				dmac = array->dims + array->ndim;
 				id = 0;
 				for(i=0; i<array->ndim; i++){
-					j = DaoValue_GetInteger( list->items->items.pValue[i] );
+					j = DaoValue_GetInteger( list->items.items.pValue[i] );
 					if( j <0 ) j += dims[i];
 					if( j <0 || j >= dims[i] ) goto RaiseErrorIndexOutOfRange;
 					id += j * dmac[i];

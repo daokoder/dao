@@ -108,9 +108,9 @@ struct DaoList
 {
 	DAO_DATA_COMMON;
 
-	DArray   *items;
-	DaoMap   *meta;
+	DArray    items;
 	DaoType  *unitype;
+	//DaoMap   *meta;
 };
 
 DaoList* DaoList_New();

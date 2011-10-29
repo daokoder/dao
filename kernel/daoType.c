@@ -653,7 +653,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_LIST :
-		if( value->xList.items->size == 0 ) return DAO_MT_EQ;
+		if( value->xList.items.size == 0 ) return DAO_MT_EQ;
 		tp = value->xList.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;

@@ -673,8 +673,8 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoList *list = (DaoList*) value;
 				cycRefCountDecrement( (DaoValue*) list->unitype );
-				cycRefCountDecrement( (DaoValue*) list->meta );
-				cycRefCountDecrements( list->items );
+				//cycRefCountDecrement( (DaoValue*) list->meta );
+				cycRefCountDecrements( & list->items );
 				break;
 			}
 		case DAO_MAP :
@@ -888,8 +888,8 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoList *list= (DaoList*) value;
 				cycRefCountIncrement( (DaoValue*) list->unitype );
-				cycRefCountIncrement( (DaoValue*) list->meta );
-				cycRefCountIncrements( list->items );
+				//cycRefCountIncrement( (DaoValue*) list->meta );
+				cycRefCountIncrements( & list->items );
 				break;
 			}
 		case DAO_MAP :
@@ -1077,9 +1077,9 @@ void DaoCGC_RefCountDecScan()
 		case DAO_LIST :
 			{
 				DaoList *list = (DaoList*) value;
-				directRefCountDecrements( list->items );
+				directRefCountDecrements( & list->items );
 				directRefCountDecrement( (DaoValue**) & list->unitype );
-				directRefCountDecrement( (DaoValue**) & list->meta );
+				//directRefCountDecrement( (DaoValue**) & list->meta );
 				break;
 			}
 		case DAO_MAP :
@@ -1447,9 +1447,9 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoList *list = (DaoList*) value;
 				cycRefCountDecrement( (DaoValue*) list->unitype );
-				cycRefCountDecrement( (DaoValue*) list->meta );
-				cycRefCountDecrements( list->items );
-				j += list->items->size;
+				//cycRefCountDecrement( (DaoValue*) list->meta );
+				cycRefCountDecrements( & list->items );
+				j += list->items.size;
 				break;
 			}
 		case DAO_MAP :
@@ -1697,9 +1697,9 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoList *list= (DaoList*) value;
 				cycRefCountIncrement( (DaoValue*) list->unitype );
-				cycRefCountIncrement( (DaoValue*) list->meta );
-				cycRefCountIncrements( list->items );
-				k += list->items->size;
+				//cycRefCountIncrement( (DaoValue*) list->meta );
+				cycRefCountIncrements( & list->items );
+				k += list->items.size;
 				break;
 			}
 		case DAO_MAP :
@@ -1908,10 +1908,10 @@ void DaoIGC_RefCountDecScan()
 		case DAO_LIST :
 			{
 				DaoList *list = (DaoList*) value;
-				j += list->items->size;
-				directRefCountDecrements( list->items );
+				j += list->items.size;
+				directRefCountDecrements( & list->items );
 				directRefCountDecrement( (DaoValue**) & list->unitype );
-				directRefCountDecrement( (DaoValue**) & list->meta );
+				//directRefCountDecrement( (DaoValue**) & list->meta );
 				break;
 			}
 		case DAO_MAP :

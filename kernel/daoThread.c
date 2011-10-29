@@ -802,8 +802,8 @@ static void DaoMT_RunListFunctional( void *p )
 	DaoList *list2 = (DaoList*) self->result;
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
-	DaoValue **items = list->items->items.pValue;
-	size_t i, n = list->items->size;
+	DaoValue **items = list->items.items.pValue;
+	size_t i, n = list->items.size;
 
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
@@ -1004,9 +1004,9 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	if( threads <= 0 ) threads = 2;
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 	if( list ){
-		DArray_Clear( list->items );
-		if( param->type == DAO_LIST ) DArray_Resize( list->items, param->xList.items->size, NULL );
-		if( param->type == DAO_MAP ) DArray_Resize( list->items, param->xMap.items->size, NULL );
+		DArray_Clear( & list->items );
+		if( param->type == DAO_LIST ) DArray_Resize( & list->items, param->xList.items.size, NULL );
+		if( param->type == DAO_MAP ) DArray_Resize( & list->items, param->xMap.items->size, NULL );
 	}else if( array && F == DVM_FUNCT_MAP ){
 		DaoArray_GetSliceShape( (DaoArray*) param, & array->dims, & array->ndim );
 		DaoArray_ResizeArray( array, array->dims, array->ndim );
@@ -1049,7 +1049,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	if( F == DVM_FUNCT_FIND ){
 		DaoTuple *tuple = DaoProcess_PutTuple( proc );
 		if( param->type == DAO_LIST && index != -1 ){
-			DaoValue **items = param->xList.items->items.pValue;
+			DaoValue **items = param->xList.items.items.pValue;
 			GC_ShiftRC( items[index], tuple->items[1] );
 			tuple->items[1] = items[index];
 			tuple->items[0]->xInteger.value = index;

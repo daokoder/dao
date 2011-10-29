@@ -428,7 +428,7 @@ static void STD_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 		DaoString *str = DaoString_New(1);
 		for(i=0; i<tokens->size; i++){
 			DString_Assign( str->data, tokens->items.pToken[i]->string );
-			DArray_Append( list->items, (DaoValue*) str );
+			DArray_Append( & list->items, (DaoValue*) str );
 		}
 		DaoString_Delete( str );
 	}
@@ -448,14 +448,14 @@ static void STD_Unpack( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue **data;
 	int i;
 	if( str->mbs ){
-		DArray_Resize( list->items, str->size, & zero );
-		data = list->items->items.pValue;
+		DArray_Resize( & list->items, str->size, & zero );
+		data = list->items.items.pValue;
 		for( i=0; i<str->size; i++ ){
 			data[i]->xInteger.value = (uchar_t)str->mbs[i];
 		}
 	}else{
-		DArray_Resize( list->items, str->size, & zero );
-		data = list->items->items.pValue;
+		DArray_Resize( & list->items, str->size, & zero );
+		data = list->items.items.pValue;
 		for( i=0; i<str->size; i++ ){
 			data[i]->xInteger.value = (wchar_t)str->wcs[i];
 		}
@@ -711,8 +711,8 @@ static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char
 	node = DMap_Find( sym->items, & self );
 	if( node ){
 		DaoList *list = & node->value.pValue->xList;
-		if( list->type == DAO_LIST && list->items->size > id ){
-			DaoValue *p = list->items->items.pValue[ id ];
+		if( list->type == DAO_LIST && list->items.size > id ){
+			DaoValue *p = list->items.items.pValue[ id ];
 			if( p->type == DAO_STRING ){
 				DString_Append( S, p->xString.data );
 				return 1;
@@ -1354,7 +1354,7 @@ static void REFL_Param( DaoProcess *proc, DaoValue *p[], int N )
 		node = DMap_First( routype->mapNames );
 		for( ; node !=NULL; node = DMap_Next( routype->mapNames, node ) ){
 			i = node->value.pInt;
-			mbs = list->items->items.pValue[i]->xTuple.items[0]->xString.data;
+			mbs = list->items.items.pValue[i]->xTuple.items[0]->xString.data;
 			DString_Assign( mbs, node->key.pString );
 		}
 	}

@@ -1335,7 +1335,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		DString_SetMBS( mbs, coreTypeNames[p->type] );
 		if( p->type == DAO_LIST ){
 			nested = DArray_New(0);
-			if( list->items->size ==0 ){
+			if( list->items.size ==0 ){
 				DString_AppendMBS( mbs, "<?>" );
 				DArray_Append( nested, self->udfType1 );
 				zerosize = 1;

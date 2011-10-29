@@ -4231,7 +4231,7 @@ ErrorTyping:
 void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns )
 {
 	DaoToken *tok, token = {0,0,0,0,0,NULL};
-	DArray array = {{NULL},{NULL},D_TOKEN,0,0};
+	DArray array = {{NULL},0,0,0,D_TOKEN};
 	DMap *nsTokens = ns->tokens;
 	DNode *node;
 	int i;

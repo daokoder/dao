@@ -14,6 +14,7 @@
 #ifndef DAO_ARRAY_H
 #define DAO_ARRAY_H
 
+#include<limits.h>
 #include"daoBase.h"
 
 typedef union DQuadUByte DQuadUByte;
@@ -46,11 +47,12 @@ struct DArray
 		DaoVmCodeX   **pVmc;
 		DaoToken     **pToken;
 
-	} buf, items;
+	} items;
 
-	short  type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, D_MAP */
 	size_t size;
 	size_t bufsize;
+	size_t offset : CHAR_BIT*sizeof(size_t) - 4;
+	size_t type   : 4; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
 };
 
 /* See daolib.h */

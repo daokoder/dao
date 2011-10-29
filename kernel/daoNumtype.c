@@ -1721,11 +1721,11 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, int N, DArray *slice )
 	case DAO_LIST :
 		{
 			DaoList *list = & pid->xList;
-			DaoValue **v = list->items->items.pValue;
-			DArray_Resize( slice, list->items->size + 2, 0 );
+			DaoValue **v = list->items.items.pValue;
+			DArray_Resize( slice, list->items.size + 2, 0 );
 			slice->items.pSize[0] = SLICE_ENUM;
-			slice->items.pSize[1] = list->items->size;
-			for( j=0; j<list->items->size; j++){
+			slice->items.pSize[1] = list->items.size;
+			for( j=0; j<list->items.size; j++){
 				if( v[j]->type < DAO_INTEGER || v[j]->type > DAO_DOUBLE )
 					DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
 				slice->items.pSize[j+2] = DaoValue_GetInteger( v[j] );

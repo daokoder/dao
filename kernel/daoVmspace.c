@@ -993,8 +993,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	i = DaoNamespace_FindConst( ns, name );
 	DString_Delete( name );
 
-	ps = ns->argParams->items->items.pValue;
-	N = ns->argParams->items->size;
+	ps = ns->argParams->items.items.pValue;
+	N = ns->argParams->items.size;
 	if( i >=0 ){
 		DaoValue *value = DaoNamespace_GetConst( ns, i );
 		if( value->type == DAO_FUNCTREE || value->type == DAO_ROUTINE ){
@@ -1229,8 +1229,8 @@ ExecuteModule :
 			argNames = argValues = NULL;
 		}
 		if( value && value->type == DAO_ROUTINE ){
-			int ret, N = ns->argParams->items->size;
-			DaoValue **ps = ns->argParams->items->items.pValue;
+			int ret, N = ns->argParams->items.size;
+			DaoValue **ps = ns->argParams->items.items.pValue;
 			DaoProcess *vmp = self->mainProcess;
 			DaoRoutine *mainRoutine = & value->xRoutine;
 			ret = DaoProcess_Call( vmp, (DaoMethod*)mainRoutine, NULL, ps, N );
