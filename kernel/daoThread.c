@@ -222,6 +222,10 @@ void DaoInitThreadSys()
 
 #elif WIN32
 
+#if _WIN32_WINNT < 0x0400
+#define _WIN32_WINNT 0x0400
+#endif
+
 void DMutex_Init( DMutex *self )
 {
 	InitializeCriticalSection( & self->myMutex );
@@ -240,12 +244,7 @@ void DMutex_Unlock( DMutex *self )
 }
 int DMutex_TryLock( DMutex *self )
 {
-	/* XXX: version */
-#ifdef _MSC_VER
 	return TryEnterCriticalSection( & self->myMutex );
-#else
-	return 1;
-#endif
 }
 
 void DCondVar_Init( DCondVar *self )
