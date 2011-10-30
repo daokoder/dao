@@ -825,7 +825,7 @@ void DaoToken_Delete( DaoToken *self )
 	DaoToken2 *tok2 = (DaoToken2*) self;
 	if( self->string ){
 		if( self->string == & tok2->string ){
-			if( self->string->data ) DString_DeleteData( self->string );
+			DString_DeleteData( self->string );
 		}else{
 			DString_Delete( self->string );
 		}

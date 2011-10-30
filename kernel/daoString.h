@@ -16,6 +16,7 @@
 
 #include<wctype.h>
 #include<wchar.h>
+#include<limits.h>
 
 #define MAXSIZE ((size_t)(-1))
 
@@ -23,18 +24,17 @@
 
 struct DString
 {
-	size_t   size;
-	size_t   bufSize;
-	size_t  *data;
+	size_t   size    : CHAR_BIT*sizeof(size_t)-1;
+	size_t   dummy   : 1;
+	size_t   bufSize : CHAR_BIT*sizeof(size_t)-1;
+	size_t   shared  : 1;
 	char    *mbs;
 	wchar_t *wcs;
-	/* if data==mbs or data==wcs, no implicit sharing;
-	   otherwise, data+1 must be equal to mbs or wcs, 
-	   and data[0] will be the reference count. */
 };
 
 DString* DString_New( int mbs );
 void DString_Init( DString *self, int mbs );
+void DString_DeleteData( DString *self );
 void DString_Delete( DString *self );
 void DString_Detach( DString *self );
 
