@@ -2666,7 +2666,7 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 		self = self->original;;
 		if( size == 0 ) return;
 		if( self->etype == DAO_INTEGER ){
-			long sum = 0;
+			dint sum = 0;
 			dint *v = self->data.i;
 			for(i=0; i<size; i++ ) sum += v[ DaoArray_IndexFromSlice( self, slices, i ) ];
 			DaoProcess_PutInteger( proc, sum );
@@ -2691,7 +2691,7 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 		}
 	}else{
 		if( self->etype == DAO_INTEGER ){
-			long sum = 0;
+			dint sum = 0;
 			dint *v = self->data.i;
 			for(i=0; i<self->size; i++ ) sum += v[i];
 			DaoProcess_PutInteger( proc, sum );
