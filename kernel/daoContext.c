@@ -954,24 +954,7 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size,
 		tup = DaoTuple_Create( type, init );
 	}else{
 		tup = DaoTuple_New( size );
-		GC_IncRC( type );
-		tup->unitype = type;
 	}
-#if 0
-	tup = DaoTuple_New( size );
-	GC_IncRC( type );
-	tup->unitype = type;
-	if( type && type->nested->size == size ){
-		DaoType **types = type->nested->items.pType;
-		int i;
-		for(i=0; i<size; i++){
-			DaoType *tp = types[i];
-			if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = & tp->aux->xType;
-			if( tp->tid > DAO_ENUM && tp->tid != DAO_ANY && tp->tid != DAO_INITYPE ) continue;
-			DaoValue_Move( tp->value, tup->items + i, tp );
-		}
-	}
-#endif
 	GC_ShiftRC( tup, val );
 	self->activeValues[ self->activeCode->c ] = (DaoValue*) tup;
 	return tup;

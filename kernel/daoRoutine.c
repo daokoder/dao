@@ -1628,7 +1628,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}else if( at->tid == DAO_ARRAY ){
 					ct = at->nested->items.pType[0];
 					for(j=1; j<=opb; j++){
-						int tid = type[j+opa+1]->tid;
+						int tid = type[j+opa]->tid;
 						if( tid == DAO_VALTYPE ) tid = type[j]->aux->type;
 						if( tid ==0 || tid > DAO_DOUBLE ){
 							ct = at;
@@ -3338,6 +3338,14 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						DArray_Erase( rettypes, rettypes->size - 3, -1 );
 						popped = 1;
 					}
+				}
+				if( i && vmcs[i-1]->code == DVM_TUPLE && vmcs[i-1]->c == vmc->a && vmc->b == 1 ){
+					vmc->a = vmcs[i-1]->a;
+					vmc->b = vmcs[i-1]->b;
+					vmcs[i-1]->code = DVM_UNUSED;
+					opa = vmc->a;
+					opb = vmc->b;
+					opc = vmc->c;
 				}
 				/*
 				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );

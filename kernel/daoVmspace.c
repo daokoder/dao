@@ -1717,6 +1717,7 @@ DaoType *dao_access_enum = NULL;
 DaoType *dao_storage_enum = NULL;
 
 #ifdef DAO_WITH_THREAD
+extern DMutex mutex_long_sharing;
 extern DMutex mutex_string_sharing;
 extern DMutex dao_vsetup_mutex;
 extern DMutex dao_msetup_mutex;
@@ -1765,6 +1766,7 @@ DaoVmSpace* DaoInit()
 	/* signal( SIGABRT, print_trace ); */
 
 #ifdef DAO_WITH_THREAD
+	DMutex_Init( & mutex_long_sharing );
 	DMutex_Init( & mutex_string_sharing );
 	DMutex_Init( & dao_vsetup_mutex );
 	DMutex_Init( & dao_msetup_mutex );

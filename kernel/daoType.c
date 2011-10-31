@@ -99,6 +99,7 @@ DaoTypeBase abstypeTyper=
 void DaoType_MapNames( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self )
 {
+	int i, count = 0;
 	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE
 			|| DString_FindChar( self->name, '@', 0 ) != MAXSIZE )
 		self->attrib |= DAO_TYPE_NOTDEF;
@@ -111,13 +112,20 @@ void DaoType_CheckAttributes( DaoType *self )
 		self->attrib &= ~DAO_TYPE_INTER;
 
 	if( self->tid == DAO_TUPLE ){
-		int i;
 		self->rntcount = 0;
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
 			self->rntcount += it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE;
 		}
+	}
+	if( self->nested ){
+		for(i=0; i<self->nested->size; i++){
+			DaoType *it = self->nested->items.pType[i];
+			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+			count += it->tid >= DAO_INTEGER && it->tid <= DAO_STRING;
+		}
+		self->simtype = count == self->nested->size;
 	}
 }
 DaoType* DaoType_New( const char *name, short tid, DaoValue *extra, DArray *nest )

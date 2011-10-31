@@ -90,18 +90,22 @@ complex16 floor_c( const complex16 com );
 #define LONG_BASE 256
 #define LONG_MASK 255
 
+typedef signed char schar_t;
+
+/* bit integer */
 struct DLong
 {
 	uchar_t  *data;
-	uchar_t  *pbuf;
-	short     sign;
-	short     base;
-	size_t    size;
-	size_t    bufSize;
+	uchar_t   base;
+	schar_t   sign;
+	ushort_t  offset;
+	uint_t    size;
+	uint_t    bufSize;
 };
 DLong* DLong_New();
 void DLong_Init( DLong *self );
 void DLong_Delete( DLong *self );
+void DLong_Detach( DLong *self );
 void DLong_Clear( DLong *self );
 void DLong_Resize( DLong *self, size_t size );
 void DLong_PushBack( DLong *self, uchar_t it );

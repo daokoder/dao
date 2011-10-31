@@ -335,9 +335,8 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 
 static int DaoGC_DecRC2( DaoValue *p )
 {
-	p->xGC.refCount --;
-
-	if( p->xGC.refCount == 0 ){
+	int i;
+	if( p->xGC.refCount == 1 ){
 #ifdef DAO_GC_PROF
 		if( p->type < DAO_ENUM ) ObjectProfile[p->type] --;
 #endif
@@ -352,11 +351,29 @@ static int DaoGC_DecRC2( DaoValue *p )
 #ifdef DAO_WITH_NUMARRAY
 		case DAO_ARRAY : DaoArray_ResizeVector( & p->xArray, 0 ); break;
 #endif
+		case DAO_TUPLE :
+			if( p->xTuple.unitype && p->xTuple.unitype->simtype ){
+				DaoTuple *tuple = & p->xTuple;
+				for(i=0; i<tuple->size; i++) if( tuple->items[i] ) DaoGC_DecRC2( tuple->items[i] );
+				tuple->size = 0;
+			}
+			break;
+		case DAO_LIST : // TODO same for map
+			if( p->xList.unitype && p->xList.unitype->simtype ){
+				DArray *array = & p->xList.items;
+				DaoValue **items = array->items.pValue;
+				for(i=0; i<array->size; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
+				array->size = 0;
+				DArray_Clear( array );
+			}
+			break;
 		default : break;
 		/* No safe way to delete other types of objects here, since they might be
 		 * being concurrently scanned by the GC! */
 		}
 	}
+	p->xGC.refCount --;
+
 	/* never push simple data types into GC queue,
 	 * because they cannot form cyclic referencing structure: */
 	if( (p->type < DAO_ENUM) | p->xGC.idle ) return 1;
@@ -666,7 +683,8 @@ void DaoCGC_CycRefCountDecScan()
 				DaoTuple *tuple = (DaoTuple*) value;
 				cycRefCountDecrement( (DaoValue*) tuple->unitype );
 				//cycRefCountDecrement( (DaoValue*) tuple->meta );
-				DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
+				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
+					DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
 				break;
 			}
 		case DAO_LIST :
@@ -674,7 +692,8 @@ void DaoCGC_CycRefCountDecScan()
 				DaoList *list = (DaoList*) value;
 				cycRefCountDecrement( (DaoValue*) list->unitype );
 				//cycRefCountDecrement( (DaoValue*) list->meta );
-				cycRefCountDecrements( & list->items );
+				if( list->unitype == NULL || list->unitype->simtype ==0 )
+					cycRefCountDecrements( & list->items );
 				break;
 			}
 		case DAO_MAP :
@@ -881,7 +900,8 @@ int DaoCGC_AliveObjectScan()
 				DaoTuple *tuple= (DaoTuple*) value;
 				cycRefCountIncrement( (DaoValue*) tuple->unitype );
 				//cycRefCountIncrement( (DaoValue*) tuple->meta );
-				DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
+				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
+					DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
 				break;
 			}
 		case DAO_LIST :
@@ -889,7 +909,8 @@ int DaoCGC_AliveObjectScan()
 				DaoList *list= (DaoList*) value;
 				cycRefCountIncrement( (DaoValue*) list->unitype );
 				//cycRefCountIncrement( (DaoValue*) list->meta );
-				cycRefCountIncrements( & list->items );
+				if( list->unitype == NULL || list->unitype->simtype ==0 )
+					cycRefCountIncrements( & list->items );
 				break;
 			}
 		case DAO_MAP :
@@ -1439,7 +1460,8 @@ void DaoIGC_CycRefCountDecScan()
 				DaoTuple *tuple = (DaoTuple*) value;
 				cycRefCountDecrement( (DaoValue*) tuple->unitype );
 				//cycRefCountDecrement( (DaoValue*) tuple->meta );
-				DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
+				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
+					DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
 				j += tuple->size;
 				break;
 			}
@@ -1448,7 +1470,8 @@ void DaoIGC_CycRefCountDecScan()
 				DaoList *list = (DaoList*) value;
 				cycRefCountDecrement( (DaoValue*) list->unitype );
 				//cycRefCountDecrement( (DaoValue*) list->meta );
-				cycRefCountDecrements( & list->items );
+				if( list->unitype == NULL || list->unitype->simtype ==0 )
+					cycRefCountDecrements( & list->items );
 				j += list->items.size;
 				break;
 			}
@@ -1689,7 +1712,8 @@ int DaoIGC_AliveObjectScan()
 				DaoTuple *tuple= (DaoTuple*) value;
 				cycRefCountIncrement( (DaoValue*) tuple->unitype );
 				//cycRefCountIncrement( (DaoValue*) tuple->meta );
-				DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
+				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
+					DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
 				k += tuple->size;
 				break;
 			}
@@ -1698,7 +1722,8 @@ int DaoIGC_AliveObjectScan()
 				DaoList *list= (DaoList*) value;
 				cycRefCountIncrement( (DaoValue*) list->unitype );
 				//cycRefCountIncrement( (DaoValue*) list->meta );
-				cycRefCountIncrements( & list->items );
+				if( list->unitype == NULL || list->unitype->simtype ==0 )
+					cycRefCountIncrements( & list->items );
 				k += list->items.size;
 				break;
 			}

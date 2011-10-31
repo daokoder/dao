@@ -337,12 +337,17 @@ void DArray_PushFront( DArray *self, void *val )
 void DArray_PopFront( DArray *self )
 {
 	void **buf = self->items.pVoid - self->offset;
+	size_t moffset = ((size_t)-1)>>4;
 	if( self->size == 0 ) return;
 	self->size --;
 	self->offset ++;
 	if( self->type ) DArray_DeleteItem( self, self->items.pVoid[0] );
 	self->items.pVoid ++;
-	if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
+	if( self->offset >= moffset ){
+		self->offset /= 2;
+		memmove( buf + self->offset, self->items.pVoid, self->size*sizeof(void*) );
+		self->items.pVoid = buf + self->offset;
+	}else if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
 		if( self->offset < 0.1 * self->bufsize ){ /* shrink from back */
 			self->bufsize = (size_t)(0.6 * self->bufsize)+1;
 		}else{ /* shrink from front */
