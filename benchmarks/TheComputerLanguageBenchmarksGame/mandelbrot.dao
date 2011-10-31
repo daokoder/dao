@@ -1,0 +1,42 @@
+# The Computer Language Shootout
+# http://shootout.alioth.debian.org/
+
+routine main( width=100 )
+{
+	height = width;
+	wscale = 2.0/width;
+	m = 50;
+	limit2 = 4.0;
+
+	io.write("P4\n", width, " ", height, "\n");
+
+	for( y = 0 : height-1 ){
+		mbs = '';
+		Ci = (2.0 * y) / height - 1;
+		for( xb = 0 : 8 : width-1 ){
+			bits = 0;
+			xbb = xb + 7;
+			for( x = xb : ( (xbb < width) and xbb ) or (width-1) ){
+				bits = bits + bits;
+				Zr = 0.0; Zi = 0.0; Zrq = 0.0; Ziq = 0.0;
+				Cr = x * wscale - 1.5;
+				for( i = 1 : m ){
+					Zri = Zr * Zi;
+					Zr = Zrq - Ziq + Cr;
+					Zi = Zri + Zri + Ci;
+					Zrq = Zr * Zr;
+					Ziq = Zi * Zi;
+					if( ( Zrq + Ziq ) > limit2 ){
+						bits = bits + 1;
+						break;
+					}
+				}
+			}
+			if( xbb >= width ){
+				for( x = width : xbb ) bits = bits + bits + 1;
+			}
+			mbs += 255 - bits;
+		}
+		io.write( mbs );
+	}
+}

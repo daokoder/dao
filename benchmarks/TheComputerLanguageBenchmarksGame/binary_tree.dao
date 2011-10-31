@@ -1,0 +1,45 @@
+
+use Node = tuple<int,any,any>;
+
+routine BottomUpTree(item:int, depth:int) => int|Node
+{
+	if( not depth ) return item;
+	i = item + item;
+	depth = depth - 1;
+	return Node{ item, BottomUpTree(i-1, depth), BottomUpTree(i, depth) };
+}
+
+routine ItemCheck( node : int|Node ) =>int
+{
+	if( node ?< type(Node) ){
+		(item, left, right) = (Node)node;
+		return item + ItemCheck(left) - ItemCheck(right);
+	}
+	return (int)node;
+}
+
+routine main( N = 10 )
+{
+	mindepth = 4;
+	maxdepth = mindepth + 2;
+	if( maxdepth < N ) maxdepth = N;
+
+	stretchdepth = maxdepth + 1;
+	stretchtree = BottomUpTree(0, stretchdepth);
+
+	io.writef( "stretch tree of depth %d\t check: %d\n", stretchdepth, ItemCheck(stretchtree) );
+
+	longlivedtree = BottomUpTree(0, maxdepth);
+
+	for( depth = mindepth : 2 : maxdepth ){
+		iterations = 2 ** (maxdepth - depth + mindepth);
+		check = 0;
+		for( i = 1 : iterations )
+			check = check + ItemCheck(BottomUpTree(1, depth)) + ItemCheck(BottomUpTree(-1, depth));
+
+		io.writef("%d\t trees of depth %d\t check: %d\n", iterations*2, depth, check);
+	}
+	io.writef("long lived tree of depth %d\t check: %d\n", maxdepth, ItemCheck(longlivedtree));
+#{
+#}
+}
