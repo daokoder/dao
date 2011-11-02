@@ -1728,6 +1728,7 @@ extern DMutex dao_cdata_mutex;
 void print_trace();
 
 extern DMap *dao_cdata_bindings;
+extern DHash *dao_meta_tables;
 extern DArray *dao_callback_data;
 
 int DaoJIT_TryInit( DaoVmSpace *vms )
@@ -1760,6 +1761,7 @@ DaoVmSpace* DaoInit()
 	if( mainVmSpace ) return mainVmSpace;
 
 	dao_cdata_bindings = DHash_New(0,0);
+	dao_meta_tables = DHash_New(0,0);
 	dao_callback_data = DArray_New(0);
 
 	/* signal( SIGSEGV, print_trace ); */
@@ -1911,8 +1913,10 @@ void DaoQuit()
 	}
 	DaoGC_Finish();
 	DMap_Delete( dao_cdata_bindings );
+	DMap_Delete( dao_meta_tables );
 	DArray_Delete( dao_callback_data );
 	dao_cdata_bindings = NULL;
+	dao_meta_tables = NULL;
 	dao_callback_data = NULL;
 	mainVmSpace = NULL;
 	mainProcess = NULL; 

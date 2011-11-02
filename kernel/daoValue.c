@@ -243,7 +243,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 	DaoTypeBase *typer;
 	DMap *cd = cycData;
 	if( self == NULL ){
-		DaoStream_WriteMBS( stream, "null[0x0]" );
+		DaoStream_WriteMBS( stream, "none[0x0]" );
 		return;
 	}
 	if( cycData == NULL ) cycData = DMap_New(0,0);
@@ -334,8 +334,8 @@ void DaoValue_MarkConst( DaoValue *self )
 	DMap *map;
 	DNode *it;
 	int i, n;
-	if( self == NULL || (self->xNull.trait & DAO_DATA_CONST) ) return;
-	self->xNull.trait |= DAO_DATA_CONST;
+	if( self == NULL || (self->xNone.trait & DAO_DATA_CONST) ) return;
+	self->xNone.trait |= DAO_DATA_CONST;
 	switch( self->type ){
 	case DAO_LIST :
 		for(i=0; i<self->xList.items.size; i++)
@@ -379,14 +379,14 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	DaoEnum *e;
 	size_t i;
 
-	if( self == NULL ) return null;
+	if( self == NULL ) return dao_none_value;
 #ifdef DAO_WITH_NUMARRAY
 	if( self->type == DAO_ARRAY && self->xArray.original ){
 		DaoArray_Sliced( (DaoArray*)self );
 		return self;
 	}
 #endif
-	if( self->xNull.trait & DAO_DATA_NOCOPY ) return self;
+	if( self->xNone.trait & DAO_DATA_NOCOPY ) return self;
 	if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
 		double value = DaoValue_GetDouble( self );
 		switch( tp->tid ){
@@ -405,7 +405,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
 	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
 	}
-	if( (self->xNull.trait & DAO_DATA_CONST) == 0 ) return self;
+	if( (self->xNone.trait & DAO_DATA_CONST) == 0 ) return self;
 	switch( self->type ){
 	case DAO_LIST :
 		{
@@ -745,7 +745,7 @@ int DaoValue_Type( DaoValue *self )
 }
 DaoValue* DaoValue_NewNull()
 {
-	DaoNull *res = DaoNull_New();
+	DaoNone *res = DaoNone_New();
 	GC_IncRC( res );
 	return (DaoValue*) res;
 }

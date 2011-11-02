@@ -51,7 +51,7 @@ static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
 	if( DaoProcess_Compile( proc, ns, p[0]->xString.data, p[1]->xInteger.value ) ==0 ){
-		DaoProcess_PutValue( proc, null );
+		DaoProcess_PutValue( proc, dao_none_value );
 		return;
 	}
 	DaoProcess_PutValue( proc, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ] );
@@ -1269,7 +1269,7 @@ static void REFL_Class( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.object->defClass );
 	}
 #endif
-	DaoProcess_PutValue( proc, null );
+	DaoProcess_PutValue( proc, dao_none_value );
 }
 static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1320,7 +1320,7 @@ static void REFL_Self( DaoProcess *proc, DaoValue *p[], int N )
 	if( p[0]->type == DAO_OBJECT )
 		DaoProcess_PutValue( proc, (DaoValue*) p[0]->xObject.rootObject );
 	else
-		DaoProcess_PutValue( proc, null );
+		DaoProcess_PutValue( proc, dao_none_value );
 }
 static void REFL_Param( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1370,7 +1370,7 @@ static void REFL_Argv( DaoProcess *proc, DaoValue *p[], int N )
 		DaoList *list = DaoProcess_PutList( proc );
 		for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
 	}else{
-		DaoValue *val = null;
+		DaoValue *val = dao_none_value;
 		if( p[0]->xInteger.value < proc->topFrame->parCount )
 			val = proc->activeValues[ p[0]->xInteger.value ];
 		DaoProcess_PutValue( proc, val );

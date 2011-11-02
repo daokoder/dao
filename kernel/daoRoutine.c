@@ -1132,7 +1132,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DArray  *dataCG = self->nameSpace->cstDataTable;
 	DArray  *dataVG = self->nameSpace->varDataTable;
 	DArray  *typeVG = self->nameSpace->varTypeTable;
-	DaoNull  dummy = {0,0,0,0,0};
+	DaoNone  dummy = {0,0,0,0,0};
 	DaoValue  *constag = (DaoValue*) & dummy;
 	DaoValue  *val = NULL;
 	DaoValue **csts;
@@ -2819,8 +2819,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						if( ts[0] ==NULL && ts[1] ==NULL ) break;
 					}
 				}
-				if( ts[0] ==NULL ) ts[0] = DaoNamespace_GetType( ns, null );
-				if( ts[1] ==NULL ) ts[1] = DaoNamespace_GetType( ns, null );
+				if( ts[0] ==NULL ) ts[0] = DaoNamespace_GetType( ns, dao_none_value );
+				if( ts[1] ==NULL ) ts[1] = DaoNamespace_GetType( ns, dao_none_value );
 				ct = DaoNamespace_MakeType( ns, "map", DAO_MAP, NULL, ts, 2 );
 				UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
@@ -3030,7 +3030,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 			break;
 		case DVM_TEST :
 			{
-				/* if( init[opa] ==0 ) goto NotInit;  allow null value for testing! */
+				/* if( init[opa] ==0 ) goto NotInit;  allow none value for testing! */
 				if( type[opa] ==NULL ) goto NotMatch;
 				at = type[opa];
 				if( typed_code ){
@@ -3278,7 +3278,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				}
 #endif
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-				if( ct == NULL ) ct = DaoNamespace_GetType( ns, null );
+				if( ct == NULL ) ct = DaoNamespace_GetType( ns, dao_none_value );
 				UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				/*
@@ -4201,7 +4201,7 @@ ErrorTyping:
 			 DaoTokens_AnnotateCode( self->source, vmc2, mbs, 32 );
 		 }else if( ec_specific == DTE_TYPE_NOT_MATCHING ){
 			 DString_SetMBS( mbs, "'" );
-			 DString_AppendMBS( mbs, type_source ? type_source->name->mbs : "null" );
+			 DString_AppendMBS( mbs, type_source ? type_source->name->mbs : "none" );
 			 DString_AppendMBS( mbs, "' for '" );
 			 if( type_target )
 				 DString_AppendMBS( mbs, type_target->name->mbs );

@@ -239,7 +239,6 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 void DaoObject_Delete( DaoObject *self )
 {
 	int i;
-	//if( self->meta ) GC_DecRC( self->meta );
 	GC_DecRC( self->defClass );
 	for(i=0; i<self->baseCount; i++) GC_DecRC( self->parents[i] );
 	if( self->isRoot ){

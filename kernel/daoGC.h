@@ -39,4 +39,8 @@ DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 #define GC_IncRCs( p )  DaoGC_IncRCs( p )
 #define GC_DecRCs( p )  DaoGC_DecRCs( p )
 
+void GC_Lock();
+void GC_Unlock();
+
+
 #endif

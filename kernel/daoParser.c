@@ -192,7 +192,7 @@ DaoParser* DaoParser_New()
 	self->decoParams = DArray_New(D_VALUE);
 
 	self->lastValue = -1;
-	self->nullValue = -1;
+	self->noneValue = -1;
 	self->integerZero = -1;
 	self->integerOne = -1;
 	self->imaginaryOne = -1;
@@ -2467,7 +2467,7 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 			return;
 		}
 		rout2 = DaoRoutine_Decorate( rout, decoFunc, params+1, n );
-		j = sizeof(DaoNull) + sizeof(int);
+		j = sizeof(DaoNone) + sizeof(int);
 		/* Do NOT copy GC information: */
 		tmp = *rout;
 		memcpy( (char*)rout + j, (char*)rout2 + j, sizeof(DaoRoutine) - j );
@@ -4259,14 +4259,14 @@ static DaoEnode DaoParser_NullValue( DaoParser *self )
 {
 	DaoEnode enode = {0,0,0,NULL,NULL,NULL,NULL};
 	int cst = 0;
-	if( self->nullValue >= 0 ){
-		cst = self->nullValue;
+	if( self->noneValue >= 0 ){
+		cst = self->noneValue;
 	}else{
-		cst = DRoutine_AddConstant( (DRoutine*) self->routine, null );
-		self->nullValue = cst;
+		cst = DRoutine_AddConstant( (DRoutine*) self->routine, dao_none_value );
+		self->noneValue = cst;
 	}
 	enode.reg = DaoParser_PushRegister( self );
-	enode.konst = self->nullValue = LOOKUP_BIND_LC( cst );
+	enode.konst = self->noneValue = LOOKUP_BIND_LC( cst );
 	DaoParser_AddCode( self, DVM_GETCL, 0, cst, enode.reg, self->curToken,0,0 );
 	enode.first = enode.last = enode.update = self->vmcLast;
 	enode.prev = self->vmcLast->prev;
@@ -4332,12 +4332,12 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 				int ec = 0, ln = tok->line;
 				int asyn = hostClass->attribs & DAO_CLS_ASYNCHRONOUS;
 				if( storeType & DAO_DECL_CONST ){
-					ec = DaoClass_AddConst( hostClass, name, null, perm, ln );
+					ec = DaoClass_AddConst( hostClass, name, dao_none_value, perm, ln );
 				}else if( storeType & DAO_DECL_STATIC ){
 					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm, ln );
 				}else{
 					if( asyn && perm == DAO_DATA_PUBLIC ) perm = DAO_DATA_PROTECTED;
-					ec = DaoClass_AddObjectVar( hostClass, name, null, abtp, perm, ln );
+					ec = DaoClass_AddObjectVar( hostClass, name, dao_none_value, abtp, perm, ln );
 					routine->attribs |= DAO_ROUT_NEEDSELF;
 				}
 				if( ec ) DaoParser_Warn( self, ec, name );
@@ -4352,7 +4352,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	if( found >= 0 ) return;
 
 	if( (storeType & DAO_DECL_GLOBAL) && (storeType & DAO_DECL_CONST) ){
-		DaoNamespace_AddConst( nameSpace, name, null, perm );
+		DaoNamespace_AddConst( nameSpace, name, dao_none_value, perm );
 	}else if( storeType & DAO_DECL_GLOBAL ){
 		DaoNamespace_AddVariable( nameSpace, name, NULL, abtp, perm );
 	}else{
@@ -4361,7 +4361,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		if( storeType & DAO_DECL_CONST ){
 			id = routine->routConsts->size;
 			MAP_Insert( DArray_Top( self->localCstMap ), name, id );
-			DRoutine_AddConstant( (DRoutine*) routine, null );
+			DRoutine_AddConstant( (DRoutine*) routine, dao_none_value );
 		}else{
 			id = self->regCount;
 			MAP_Insert( self->routine->localVarType, id, abtp );
@@ -5167,7 +5167,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		*cst = varReg;
 	}else if( tki == DTOK_COLON ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
-			DaoTuple *tuple = DaoNamespace_MakePair( ns, null, null );
+			DaoTuple *tuple = DaoNamespace_MakePair( ns, dao_none_value, dao_none_value );
 			tuple->trait = 0;
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConstant( (DRoutine*)routine, (DaoValue*) tuple );
@@ -6277,7 +6277,7 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 	end = self->curToken - 1;
 	if( result.konst && code != DVM_ADD && code != DVM_SUB && code != DVM_LOAD ){
 		DaoValue *value = DaoParser_GetVariable( self, result.konst );
-		result.reg = DaoParser_MakeArithConst( self, code, value, null, & result.konst, back, oldcount );
+		result.reg = DaoParser_MakeArithConst( self, code, value, dao_none_value, & result.konst, back, oldcount );
 		if( result.reg < 0 ){
 			ec = DAO_CTW_INV_CONST_EXPR;
 			goto ErrorParsing;
@@ -6493,7 +6493,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			/* It was compiled as IN, now add NOT: */
 			if( result.konst ){
 				DaoValue *value = DaoParser_GetVariable( self, result.konst );
-				result.reg = DaoParser_MakeArithConst( self, DVM_NOT, value, null, & result.konst, LHS.prev, LHS.reg );
+				result.reg = DaoParser_MakeArithConst( self, DVM_NOT, value, dao_none_value, & result.konst, LHS.prev, LHS.reg );
 				if( result.reg < 0 ) return result;
 				result.last = result.update = self->vmcLast;
 			}else{

@@ -26,12 +26,12 @@
 void DaoValue_Init( void *dbase, char type );
 void DaoValue_ChangeState( void *dbase, char state, char add );
 
-struct DaoNull
+struct DaoNone
 {
 	DAO_DATA_CORE;
 };
-extern DaoValue *null;
-DaoNull* DaoNull_New();
+extern DaoValue *dao_none_value;
+DaoNone* DaoNone_New();
 
 struct DaoInteger
 {
@@ -110,7 +110,6 @@ struct DaoList
 
 	DArray    items;
 	DaoType  *unitype;
-	//DaoMap   *meta;
 };
 
 DaoList* DaoList_New();
@@ -130,7 +129,6 @@ struct DaoMap
 	DAO_DATA_COMMON;
 
 	DMap     *items;
-	DaoMap   *meta;
 	DaoType  *unitype;
 };
 
@@ -223,7 +221,6 @@ struct DaoTuple
 	int         size; /* packed with the previous field in 64-bits system; */
 	DaoType    *unitype;
 	DaoValue   *items[1]; /* the actual number of items is in ::size; */
-	//DaoMap     *meta; // TODO: put meta field somewhere else!
 };
 DaoTuple* DaoTuple_Create( DaoType *type, int init );
 void DaoTuple_Delete( DaoTuple *self );

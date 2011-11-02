@@ -68,7 +68,7 @@ struct DaoParser
 	int    lastValue;
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
-	int nullValue;
+	int noneValue;
 	int integerZero;
 	int integerOne;
 	int imaginaryOne;

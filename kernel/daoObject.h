@@ -30,7 +30,6 @@ struct DaoObject
 	DaoObject  *rootObject; /* root object for safe down-casting; */
 	DaoValue  **objValues; /* instance variable values; */
 	DaoValue   *parents[1]; /* the actual size is equal to ::baseCount; */
-	//DaoMap     *meta; /* TODO */
 };
 
 DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count );

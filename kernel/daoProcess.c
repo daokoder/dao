@@ -915,7 +915,8 @@ CallEntry:
 		if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
 			int finished = self->future->precondition->state == DAO_CALL_FINISHED;
 			if( self->future->state2 == DAO_FUTURE_VALUE ){
-				DaoProcess_PutValue( self, finished ? self->future->precondition->value : null );
+				DaoValue *res = finished ? self->future->precondition->value : dao_none_value;
+				DaoProcess_PutValue( self, res );
 			}else{
 				DaoProcess_PutInteger( self, finished );
 			}
@@ -960,15 +961,15 @@ CallEntry:
 		OPCASE( NOP ){
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 		}OPNEXT() OPCASE( DATA ){
-			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNone.konst ) goto ModifyConstant;
 			switch( vmc->a ){
 			case DAO_COMPLEX :
 				ComplexOperand( vmc->c ).real = 0.0;
 				ComplexOperand( vmc->c ).imag = vmc->b;
 				break;
 			case DAO_NULL :
-				GC_ShiftRC( null, locVars[ vmc->c ] );
-				locVars[ vmc->c ] = null;
+				GC_ShiftRC( dao_none_value, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = dao_none_value;
 				break;
 			case DAO_INTEGER : IntegerOperand( vmc->c ) = vmc->b; break;
 			case DAO_FLOAT  : FloatOperand( vmc->c ) = vmc->b; break;
@@ -1035,21 +1036,21 @@ CallEntry:
 			vref = dataVG->items.pArray[vmc->c]->items.pValue + vmc->b;
 			if( DaoMoveAC( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETI ) OPCASE( SETMI ){
-			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST) )
+			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST) )
 				goto ModifyConstant;
 			DaoProcess_DoSetItem( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( SETF ){
 			// class::static_member = XXX
-			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNull.konst ) goto ModifyConstant;
+			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNone.konst ) goto ModifyConstant;
 			DaoProcess_DoSetField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( SETMF ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			DaoProcess_DoSetMetaField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( LOAD ){
-			if( locVars[ vmc->a ] && (locVars[ vmc->a ]->xNull.trait & DAO_DATA_CONST) == 0 ){
+			if( locVars[ vmc->a ] && (locVars[ vmc->a ]->xNone.trait & DAO_DATA_CONST) == 0 ){
 				GC_ShiftRC( locVars[ vmc->a ], locVars[ vmc->c ] );
 				locVars[ vmc->c ] = locVars[ vmc->a ];
 			}else if( locVars[ vmc->a ] ){
@@ -1059,7 +1060,7 @@ CallEntry:
 				DaoValue_Copy( locVars[ vmc->a ], & locVars[ vmc->c ] );
 			}
 		}OPNEXT() OPCASE( CAST ){
-			//if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST) )
+			//if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST) )
 			//	goto ModifyConstant;
 			self->activeCode = vmc;
 			DaoProcess_DoCast( self, vmc );
@@ -1788,7 +1789,7 @@ CallEntry:
 				IntegerOperand( vmc->c ) = str->wcs[id];
 			}
 		}OPNEXT() OPCASE( SETI_SII ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			str = locVars[ vmc->c ]->xString.data;
 			id = IntegerOperand( vmc->b );
 			inum = IntegerOperand( vmc->a );
@@ -1810,7 +1811,7 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( SETI_LI ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			list = & locVars[ vmc->c ]->xList;
 			id = IntegerOperand( vmc->b );
 			abtp = NULL;
@@ -1836,7 +1837,7 @@ CallEntry:
 		OPCASE( SETI_LIII )
 			OPCASE( SETI_LIIF )
 			OPCASE( SETI_LIID ){
-				if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+				if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 				list = & locVars[ vmc->c ]->xList;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1853,7 +1854,7 @@ CallEntry:
 		OPCASE( SETI_LFII )
 			OPCASE( SETI_LFIF )
 			OPCASE( SETI_LFID ){
-				if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+				if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 				list = & locVars[ vmc->c ]->xList;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1870,7 +1871,7 @@ CallEntry:
 		OPCASE( SETI_LDII )
 			OPCASE( SETI_LDIF )
 			OPCASE( SETI_LDID ){
-				if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+				if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 				list = & locVars[ vmc->c ]->xList;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1885,7 +1886,7 @@ CallEntry:
 				list->items.items.pValue[id]->xDouble.value = dnum;
 			}OPNEXT()
 		OPCASE( SETI_LSIS ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			list = & locVars[ vmc->c ]->xList;
 			vA = locVars[ vmc->a ];
 			id = IntegerOperand( vmc->b );
@@ -1921,7 +1922,7 @@ CallEntry:
 		OPCASE( SETI_AIII )
 			OPCASE( SETI_AIIF )
 			OPCASE( SETI_AIID ){
-				if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+				if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 				array = & locVars[ vmc->c ]->xArray;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1939,7 +1940,7 @@ CallEntry:
 		OPCASE( SETI_AFII )
 			OPCASE( SETI_AFIF )
 			OPCASE( SETI_AFID ){
-				if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+				if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 				array = & locVars[ vmc->c ]->xArray;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1957,7 +1958,7 @@ CallEntry:
 		OPCASE( SETI_ADII )
 			OPCASE( SETI_ADIF )
 			OPCASE( SETI_ADID ){
-				if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+				if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 				array = & locVars[ vmc->c ]->xArray;
 				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
@@ -1981,7 +1982,7 @@ CallEntry:
 			locVars[ vmc->c ]->xComplex.value = array->data.c[ id ];
 		}OPNEXT()
 		OPCASE( SETI_ACI ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			id = IntegerOperand( vmc->b );
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
@@ -2017,7 +2018,7 @@ CallEntry:
 			}
 		}OPNEXT()
 		OPCASE( SETI_AM ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			list = & locVars[ vmc->b ]->xList;
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
@@ -2082,7 +2083,7 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( SETI_TI ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			id = IntegerOperand( vmc->b );
 			abtp = NULL;
@@ -2097,7 +2098,7 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( SETF_T ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
@@ -2119,43 +2120,43 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( SETF_TII ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TIF ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TID ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TFI ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TFF ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TFD ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TDI ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TDF ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TDD ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TSS ){
-			if( locVars[ vmc->c ]->xNull.trait & DAO_DATA_CONST ) goto ModifyConstant;
+			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
 			vA = locVars[ vmc->a ];
 			DString_Assign( tuple->items[ vmc->b ]->xString.data, vA->xString.data );
@@ -2369,7 +2370,7 @@ AccessDefault:
 			goto CheckException;
 RaiseErrorNullObject:
 			self->activeCode = vmc;
-			DaoProcess_RaiseException( self, DAO_ERROR, "operate on null object" );
+			DaoProcess_RaiseException( self, DAO_ERROR, "operate on none object" );
 			goto CheckException;
 CheckException:
 
@@ -2540,7 +2541,7 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *C = self->activeValues[ vmc->c ];
 	int overload = 0;
 	if( A == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
 	if( C ){
@@ -2609,7 +2610,7 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		int opt1 = self->vmSpace->options & DAO_EXEC_INTERUN;
 		int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
 		int retnull = type == NULL || type->tid == DAO_UDF;
-		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = null;
+		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
 	if( DaoValue_Move( retValue, dest, type ) ==0 ) goto InvalidReturn;
 	return;
@@ -2726,7 +2727,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 	if( va == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on none object" );
 		return;
 	}
 	if( ct == NULL || ct->type == DAO_UDF || ct->type == DAO_ANY ){
@@ -3069,7 +3070,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 	if( caller->type ==0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "null object not callable" );
+		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "none object not callable" );
 		return;
 	}
 	if( self->activeObject && mcall == 0 ) selfpar = (DaoValue*) self->activeObject;

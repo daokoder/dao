@@ -28,7 +28,7 @@
 union DaoValue
 {
 	uchar_t        type;
-	DaoNull        xNull;
+	DaoNone        xNone;
 	DaoInteger     xInteger;
 	DaoFloat       xFloat;
 	DaoDouble      xDouble;

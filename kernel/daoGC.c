@@ -23,9 +23,6 @@
 #include"daoThread.h"
 #include"daoValue.h"
 
-void GC_Lock();
-void GC_Unlock();
-
 DArray *dao_callback_data = NULL;
 
 DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DaoValue *userdata )
@@ -652,6 +649,8 @@ void DaoCGC_Recycle( void *p )
 	}
 	DThread_Exit( & gcWorker.thread );
 }
+DaoMap* DaoMetaTables_Get( DaoValue *object, int insert );
+DaoMap* DaoMetaTables_Remove( DaoValue *object );
 void DaoCGC_CycRefCountDecScan()
 {
 	DNode *node;
@@ -662,6 +661,9 @@ void DaoCGC_CycRefCountDecScan()
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
+		if( value->xNone.trait & DAO_DATA_WIMETA ){
+			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
+		}
 		switch( value->type ){
 		case DAO_ENUM :
 			{
@@ -674,7 +676,6 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountDecrement( (DaoValue*) array->unitype );
-				//cycRefCountDecrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -682,7 +683,6 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoTuple *tuple = (DaoTuple*) value;
 				cycRefCountDecrement( (DaoValue*) tuple->unitype );
-				//cycRefCountDecrement( (DaoValue*) tuple->meta );
 				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
 					DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
 				break;
@@ -691,7 +691,6 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoList *list = (DaoList*) value;
 				cycRefCountDecrement( (DaoValue*) list->unitype );
-				//cycRefCountDecrement( (DaoValue*) list->meta );
 				if( list->unitype == NULL || list->unitype->simtype ==0 )
 					cycRefCountDecrements( & list->items );
 				break;
@@ -700,7 +699,6 @@ void DaoCGC_CycRefCountDecScan()
 			{
 				DaoMap *map = (DaoMap*) value;
 				cycRefCountDecrement( (DaoValue*) map->unitype );
-				cycRefCountDecrement( (DaoValue*) map->meta );
 				node = DMap_First( map->items );
 				for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
 					cycRefCountDecrement( node->key.pValue );
@@ -715,7 +713,6 @@ void DaoCGC_CycRefCountDecScan()
 				DaoGC_CycRefCountDecrements( obj->parents, obj->baseCount );
 				cycRefCountDecrement( (DaoValue*) obj->rootObject );
 				cycRefCountDecrement( (DaoValue*) obj->defClass );
-				//cycRefCountDecrement( (DaoValue*) obj->meta );
 				break;
 			}
 		case DAO_CDATA : case DAO_CTYPE :
@@ -879,6 +876,9 @@ int DaoCGC_AliveObjectScan()
 	for( i=0; i<auxList->size; i++){
 		DaoValue *value = auxList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
+		if( value->xNone.trait & DAO_DATA_WIMETA ){
+			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
+		}
 		switch( value->type ){
 		case DAO_ENUM :
 			{
@@ -891,7 +891,6 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountIncrement( (DaoValue*) array->unitype );
-				//cycRefCountIncrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -899,7 +898,6 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoTuple *tuple= (DaoTuple*) value;
 				cycRefCountIncrement( (DaoValue*) tuple->unitype );
-				//cycRefCountIncrement( (DaoValue*) tuple->meta );
 				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
 					DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
 				break;
@@ -908,7 +906,6 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoList *list= (DaoList*) value;
 				cycRefCountIncrement( (DaoValue*) list->unitype );
-				//cycRefCountIncrement( (DaoValue*) list->meta );
 				if( list->unitype == NULL || list->unitype->simtype ==0 )
 					cycRefCountIncrements( & list->items );
 				break;
@@ -917,7 +914,6 @@ int DaoCGC_AliveObjectScan()
 			{
 				DaoMap *map = (DaoMap*)value;
 				cycRefCountIncrement( (DaoValue*) map->unitype );
-				cycRefCountIncrement( (DaoValue*) map->meta );
 				node = DMap_First( map->items );
 				for( ; node != NULL; node = DMap_Next( map->items, node ) ){
 					cycRefCountIncrement( node->key.pValue );
@@ -1068,6 +1064,10 @@ void DaoCGC_RefCountDecScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.delay & delayMask ) continue;
+		if( value->xNone.trait & DAO_DATA_WIMETA ){
+			DaoMap *table = DaoMetaTables_Remove( value );
+			if( table ) table->refCount --;
+		}
 
 		DMutex_Lock( & gcWorker.mutex_idle_list );
 		switch( value->type ){
@@ -1082,7 +1082,6 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				directRefCountDecrement( (DaoValue**) & array->unitype );
-				//directRefCountDecrement( (DaoValue**) & array->meta );
 				break;
 			}
 #endif
@@ -1090,7 +1089,6 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoTuple *tuple = (DaoTuple*) value;
 				directRefCountDecrement( (DaoValue**) & tuple->unitype );
-				//directRefCountDecrement( (DaoValue**) & tuple->meta );
 				DaoGC_RefCountDecrements( tuple->items, tuple->size );
 				tuple->size = 0;
 				break;
@@ -1100,7 +1098,6 @@ void DaoCGC_RefCountDecScan()
 				DaoList *list = (DaoList*) value;
 				directRefCountDecrements( & list->items );
 				directRefCountDecrement( (DaoValue**) & list->unitype );
-				//directRefCountDecrement( (DaoValue**) & list->meta );
 				break;
 			}
 		case DAO_MAP :
@@ -1116,7 +1113,6 @@ void DaoCGC_RefCountDecScan()
 				map->items->keytype = map->items->valtype = 0;
 				DMap_Clear( map->items );
 				directRefCountDecrement( (DaoValue**) & map->unitype );
-				directRefCountDecrement( (DaoValue**) & map->meta );
 				break;
 			}
 		case DAO_OBJECT :
@@ -1439,6 +1435,9 @@ void DaoIGC_CycRefCountDecScan()
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
+		if( value->xNone.trait & DAO_DATA_WIMETA ){
+			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
+		}
 		switch( value->type ){
 		case DAO_ENUM :
 			{
@@ -1451,7 +1450,6 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountDecrement( (DaoValue*) array->unitype );
-				//cycRefCountDecrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -1459,7 +1457,6 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoTuple *tuple = (DaoTuple*) value;
 				cycRefCountDecrement( (DaoValue*) tuple->unitype );
-				//cycRefCountDecrement( (DaoValue*) tuple->meta );
 				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
 					DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
 				j += tuple->size;
@@ -1469,7 +1466,6 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoList *list = (DaoList*) value;
 				cycRefCountDecrement( (DaoValue*) list->unitype );
-				//cycRefCountDecrement( (DaoValue*) list->meta );
 				if( list->unitype == NULL || list->unitype->simtype ==0 )
 					cycRefCountDecrements( & list->items );
 				j += list->items.size;
@@ -1479,7 +1475,6 @@ void DaoIGC_CycRefCountDecScan()
 			{
 				DaoMap *map = (DaoMap*) value;
 				cycRefCountDecrement( (DaoValue*) map->unitype );
-				cycRefCountDecrement( (DaoValue*) map->meta );
 				node = DMap_First( map->items );
 				for( ; node != NULL; node = DMap_Next( map->items, node ) ) {
 					cycRefCountDecrement( node->key.pValue );
@@ -1691,6 +1686,9 @@ int DaoIGC_AliveObjectScan()
 	for( ; j<auxList->size; j++){
 		DaoValue *value = auxList->items.pValue[j];
 		if( value->xGC.delay & delayMask ) continue;
+		if( value->xNone.trait & DAO_DATA_WIMETA ){
+			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
+		}
 		switch( value->type ){
 		case DAO_ENUM :
 			{
@@ -1703,7 +1701,6 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				cycRefCountIncrement( (DaoValue*) array->unitype );
-				//cycRefCountIncrement( (DaoValue*) array->meta );
 				break;
 			}
 #endif
@@ -1711,7 +1708,6 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoTuple *tuple= (DaoTuple*) value;
 				cycRefCountIncrement( (DaoValue*) tuple->unitype );
-				//cycRefCountIncrement( (DaoValue*) tuple->meta );
 				if( tuple->unitype == NULL || tuple->unitype->simtype ==0 )
 					DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
 				k += tuple->size;
@@ -1721,7 +1717,6 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoList *list= (DaoList*) value;
 				cycRefCountIncrement( (DaoValue*) list->unitype );
-				//cycRefCountIncrement( (DaoValue*) list->meta );
 				if( list->unitype == NULL || list->unitype->simtype ==0 )
 					cycRefCountIncrements( & list->items );
 				k += list->items.size;
@@ -1731,7 +1726,6 @@ int DaoIGC_AliveObjectScan()
 			{
 				DaoMap *map = (DaoMap*)value;
 				cycRefCountIncrement( (DaoValue*) map->unitype );
-				cycRefCountIncrement( (DaoValue*) map->meta );
 				node = DMap_First( map->items );
 				for( ; node != NULL; node = DMap_Next( map->items, node ) ){
 					cycRefCountIncrement( node->key.pValue );
@@ -1904,6 +1898,10 @@ void DaoIGC_RefCountDecScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.delay & delayMask ) continue;
+		if( value->xNone.trait & DAO_DATA_WIMETA ){
+			DaoMap *table = DaoMetaTables_Remove( value );
+			if( table ) table->refCount --;
+		}
 		switch( value->type ){
 		case DAO_ENUM :
 			{
@@ -1916,7 +1914,6 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoArray *array = (DaoArray*) value;
 				directRefCountDecrement( (DaoValue**) & array->unitype );
-				//directRefCountDecrement( (DaoValue**) & array->meta );
 				break;
 			}
 #endif
@@ -1925,7 +1922,6 @@ void DaoIGC_RefCountDecScan()
 				DaoTuple *tuple = (DaoTuple*) value;
 				j += tuple->size;
 				directRefCountDecrement( (DaoValue**) & tuple->unitype );
-				//directRefCountDecrement( (DaoValue**) & tuple->meta );
 				DaoGC_RefCountDecrements( tuple->items, tuple->size );
 				tuple->size = 0;
 				break;
@@ -1936,7 +1932,6 @@ void DaoIGC_RefCountDecScan()
 				j += list->items.size;
 				directRefCountDecrements( & list->items );
 				directRefCountDecrement( (DaoValue**) & list->unitype );
-				//directRefCountDecrement( (DaoValue**) & list->meta );
 				break;
 			}
 		case DAO_MAP :
@@ -1953,7 +1948,6 @@ void DaoIGC_RefCountDecScan()
 				map->items->keytype = map->items->valtype = 0;
 				DMap_Clear( map->items );
 				directRefCountDecrement( (DaoValue**) & map->unitype );
-				directRefCountDecrement( (DaoValue**) & map->meta );
 				break;
 			}
 		case DAO_OBJECT :

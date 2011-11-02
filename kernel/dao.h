@@ -243,7 +243,7 @@ typedef struct DaoUserHandler  DaoUserHandler;
 typedef struct DaoCallbackData DaoCallbackData;
 
 typedef union  DaoValue        DaoValue;
-typedef struct DaoNull         DaoNull;
+typedef struct DaoNone         DaoNone;
 typedef struct DaoInteger      DaoInteger;
 typedef struct DaoFloat        DaoFloat;
 typedef struct DaoDouble       DaoDouble;

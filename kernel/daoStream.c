@@ -567,8 +567,8 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Iter,      "__for_iterator__( self :stream, iter : for_iterator )" },
 	{ DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
 
-	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>null|@T]=>list<@T>" },
-	{ DaoIO_ReadLines2, "readlines( self :stream, numline=0, chop=0 )[line:string=>null|@T]=>list<@T>" },
+	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>" },
+	{ DaoIO_ReadLines2, "readlines( self :stream, numline=0, chop=0 )[line:string=>none|@T]=>list<@T>" },
 	// Not particularly useful, may be removed! 
 	{ DaoIO_WriteLines, "writelines( self :stream, lines :int)[line:int =>string]" },
 	{ DaoIO_WriteLines, "writelines( file :string, lines :int)[line:int =>string]" },

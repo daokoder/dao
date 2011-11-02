@@ -696,9 +696,9 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_SetName( self, nsname );
 	DaoNamespace_AddConst( self, self->name, (DaoValue*) self, DAO_DATA_PUBLIC );
 
-	DString_SetMBS( name, "null" ); 
-	DaoNamespace_AddConst( self, name, null, DAO_DATA_PUBLIC );
-	DArray_Append( self->cstData, null ); /* reserved for main */
+	DString_SetMBS( name, "none" ); 
+	DaoNamespace_AddConst( self, name, dao_none_value, DAO_DATA_PUBLIC );
+	DArray_Append( self->cstData, dao_none_value ); /* reserved for main */
 
 	DString_SetMBS( name, "io" ); 
 	DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdStream, DAO_DATA_PUBLIC );
@@ -858,7 +858,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			mroutine = DaoFunctree_New( self, name );
 			DaoFunctree_Add( mroutine, (DRoutine*) dest );
 			dest = (DaoValue*) mroutine;
-			dest->xNull.trait |= DAO_DATA_CONST;
+			dest->xNone.trait |= DAO_DATA_CONST;
 			GC_ShiftRC( mroutine, self->cstData->items.pValue[id] );
 			self->cstData->items.pValue[id] = dest;
 		}
@@ -868,7 +868,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			DaoFunctree_Add( & dest->xFunctree, (DRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->cstData, value );
-			value->xNull.trait |= DAO_DATA_CONST;
+			value->xNone.trait |= DAO_DATA_CONST;
 		}
 		id = node->value.pSize;
 	}else{
@@ -1272,7 +1272,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 
 	switch( p->type ){
 	case DAO_NULL :
-		abtp = DaoNamespace_MakeValueType( self, null );
+		abtp = DaoNamespace_MakeValueType( self, dao_none_value );
 		break;
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
 	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING : 
@@ -1817,7 +1817,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 		DString_InsertChar( name, '\'', 0 );
 		DString_AppendChar( name, '\'' );
 	}
-	if( name->size ==0 && value->type ==0 ) DString_SetMBS( name, "null" );
+	if( name->size ==0 && value->type ==0 ) DString_SetMBS( name, "none" );
 	type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, DAO_VALTYPE, 0,0,0 );
 	DaoValue_Copy( value, & type->aux );
 	DString_Delete( name );
@@ -1826,9 +1826,9 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType *second )
 {
 	DaoType *types[2] = {NULL, NULL};
-	DaoType *nullType = DaoNamespace_MakeValueType( self, null );
-	if( first == NULL ) first = nullType;
-	if( second == NULL ) second = nullType;
+	DaoType *noneType = DaoNamespace_MakeValueType( self, dao_none_value );
+	if( first == NULL ) first = noneType;
+	if( second == NULL ) second = noneType;
 	types[0] = DaoNamespace_MakeType( self, "first", DAO_PAR_NAMED, (DaoValue*)first, 0, 0 );
 	types[1] = DaoNamespace_MakeType( self, "second", DAO_PAR_NAMED, (DaoValue*)second, 0, 0 );
 	return DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );

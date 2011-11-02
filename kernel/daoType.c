@@ -210,7 +210,7 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_ANY :
 	case DAO_INITYPE :
 	case DAO_ROUTINE :
-	case DAO_INTERFACE : value = null; break;
+	case DAO_INTERFACE : value = dao_none_value; break;
 	case DAO_VALTYPE : value = self->aux; break;
 	case DAO_INTEGER : value = (DaoValue*) DaoInteger_New(0); break;
 	case DAO_FLOAT  : value = (DaoValue*) DaoFloat_New(0.0); break;
@@ -222,7 +222,7 @@ void DaoType_InitDefault( DaoType *self )
 	}
 	GC_ShiftRC( value, self->value );
 	self->value = value;
-	if( value ) value->xNull.trait |= DAO_DATA_CONST;
+	if( value ) value->xNone.trait |= DAO_DATA_CONST;
 }
 DaoType* DaoType_Copy( DaoType *other )
 {

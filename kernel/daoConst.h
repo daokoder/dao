@@ -119,10 +119,9 @@ enum DaoVarStorage
 
 enum DaoDataTrait
 {
-	DAO_DATA_CONST   = (1<<1), /* using the highest bit in the trait field */
-	DAO_DATA_NOCOPY  = (1<<2), /* data not for copying */
-	DAO_DATA_STACK   = (1<<3), /* stack data from a process */
-	DAO_DATA_CACHE   = (1<<4)  /* cache data from gc */
+	DAO_DATA_CONST   = (1<<1), /* constant data object */
+	DAO_DATA_NOCOPY  = (1<<2), /* data object not for copying */
+	DAO_DATA_WIMETA  = (1<<3) /* data object with meta field */
 };
 enum DaoTypeAttribs
 {

@@ -99,8 +99,8 @@ struct DLong
 	uchar_t   base;
 	schar_t   sign;
 	ushort_t  offset;
-	uint_t    size;
-	uint_t    bufSize;
+	size_t    size;
+	size_t    bufSize;
 };
 DLong* DLong_New();
 void DLong_Init( DLong *self );
@@ -161,7 +161,6 @@ struct DaoArray
 	} data;
 
 	DaoType *unitype;
-	//DaoMap  *meta;
 
 	size_t    count; /* count of sliced elements */
 	DArray   *slices; /* list of slicing in each dimension */

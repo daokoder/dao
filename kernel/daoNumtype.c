@@ -260,7 +260,6 @@ void DLong_Clear( DLong *self )
 }
 void DLong_Detach( DLong *self /* , int extrasize  TODO */ )
 {
-	size_t size;
 	uint_t *pbuf2, *pbuf = (uint_t*)(self->data ? self->data - self->offset - sizeof(uint_t) : NULL);
 	if( pbuf == NULL ){
 		pbuf = (uint_t*) dao_malloc( sizeof(uint_t) );
@@ -273,12 +272,10 @@ void DLong_Detach( DLong *self /* , int extrasize  TODO */ )
 #endif
 	if( pbuf[0] >1 ){
 		pbuf[0] -= 1;
-		size = self->size * sizeof(uchar_t);
-		self->bufSize = self->size;
-		pbuf2 = (uint_t*) dao_malloc( size + sizeof(uint_t) );
+		pbuf2 = (uint_t*) dao_malloc( sizeof(uint_t) + self->bufSize * sizeof(uchar_t) );
 		pbuf2[0] = 1;
-		memcpy( pbuf2+1, pbuf+1, size );
-		self->data = (uchar_t*)(pbuf2 + 1);
+		memcpy( (uchar_t*)(pbuf2+1) + self->offset, self->data, self->size * sizeof(uchar_t) );
+		self->data = (uchar_t*)(pbuf2 + 1) + self->offset;
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & mutex_long_sharing );
@@ -359,16 +356,16 @@ void DLong_Normalize2( DLong *self )
 }
 int DLong_UCompare( DLong *x, DLong *y )
 {
-	int nx = x->size -1;
-	int ny = y->size -1;
+	size_t nx = x->size;
+	size_t ny = y->size;
 	uchar_t *dx = x->data;
 	uchar_t *dy = y->data;
-	while( nx >=0 && dx[nx] ==0 ) nx --;
-	while( ny >=0 && dy[ny] ==0 ) ny --;
+	while( nx >0 && dx[nx-1] ==0 ) nx --;
+	while( ny >0 && dy[ny-1] ==0 ) ny --;
 	if( nx > ny ) return 1; else if( nx < ny ) return -1;
-	while( nx >= 0 && dx[nx] == dy[ny] ) nx --, ny --;
-	if( nx <0 ) return 0;
-	return ( dx[nx] > dy[ny] ) ? 1 : -1;
+	while( nx > 0 && dx[nx-1] == dy[ny-1] ) nx --, ny --;
+	if( nx == 0 ) return 0;
+	return ( dx[nx-1] > dy[ny-1] ) ? 1 : -1;
 }
 int DLong_Compare( DLong *x, DLong *y )
 {
@@ -384,7 +381,7 @@ int DLong_CompareToZero( DLong *self )
 }
 int DLong_CompareToInteger( DLong *self, dint x )
 {
-	int i, n = self->size - 1, m = (sizeof(dint)*8) / LONG_BITS;
+	dint i, n = self->size - 1, m = (sizeof(dint)*8) / LONG_BITS;
 	if( self->sign < 0 && x > 0 ) return -1;
 	if( self->sign > 0 && x < 0 ) return  1;
 	x = abs( x );
@@ -468,7 +465,7 @@ static void LongAdd2( DLong *z, DLong *x, DLong *y, int base )
 	uchar_t *dx, *dy, *dz;
 	size_t nx = x->size;
 	size_t ny = y->size;
-	int i, sum = 0;
+	size_t i, sum = 0;
 	DLong_Detach( z );
 	if( x->size > y->size ){
 		DLong *tmp = x;
@@ -501,7 +498,7 @@ static void DLong_UAdd( DLong *z, DLong *x, DLong *y )
 	uchar_t *dx, *dy, *dz;
 	size_t nx = x->size;
 	size_t ny = y->size;
-	int i, sum = 0;
+	size_t i, sum = 0;
 	DLong_Detach( z );
 	if( x->size > y->size ){
 		DLong *tmp = x;
@@ -533,7 +530,7 @@ static void DLong_UAdd( DLong *z, DLong *x, DLong *y )
 static void LongSub3( DLong *z, DLong *x, DLong *y )
 {
 	uchar_t *dx, *dy, *dz;
-	int i, nx, ny, sub = 1;
+	size_t i, nx, ny, sub = 1;
 
 	DLong_Normalize2( x );
 	DLong_Normalize2( y );
@@ -607,7 +604,7 @@ static void DLong_MulAdd( DLong *z, DLong *x, uchar_t y, short m );
 void DLong_UMulDigitX( DLong *z, DLong *x, uchar_t digit );
 static void DLong_UMulSimple( DLong *z, DLong *x, DLong *y )
 {
-	int i, n = x->size + y->size;
+	size_t i, n = x->size + y->size;
 	DLong_Detach( z );
 	if( z == x || z == y ){
 		DLong *z2 = DLong_New();
@@ -649,7 +646,7 @@ static DLongBuffer* DLongBuffer_New( int max )
 }
 static void DLong_Split( DLong *x, DLong *x1, DLong *x0, size_t m )
 {
-	int size = x->size;
+	size_t size = x->size;
 	DLong_Detach( x0 );
 	DLong_Detach( x1 );
 	memmove( x0->data, x->data, m * sizeof(uchar_t) );
@@ -671,7 +668,7 @@ static void DLongBuffer_Delete( DLongBuffer *self )
 static void LongCat( DLong *z, DLong *x1, size_t m, DLong *x0 )
 {
 	/* z might be the same object as x1: */
-	int n = x1->size;
+	size_t n = x1->size;
 	DLong_Detach( z );
 	if( z->bufSize < n + m + 1 ) DLong_Reserve( z, n + m + 1 );
 	memmove( z->data + m, x1->data, n * sizeof(uchar_t) );
@@ -681,7 +678,7 @@ static void LongCat( DLong *z, DLong *x1, size_t m, DLong *x0 )
 }
 static void LongMulSum( DLong *z, DLong *z2, DLong *z1, DLong *z0, int m )
 {
-	int n = m + z1->size;
+	size_t n = m + z1->size;
 	DLong_Detach( z );
 	DLong_Detach( z1 );
 	if( z2 ) n = z2->size + m + m;
@@ -696,10 +693,10 @@ static void LongMulSum( DLong *z, DLong *z2, DLong *z1, DLong *z0, int m )
 }
 static void LongZ1( DLong *z1, DLong *z0, DLong *z2 )
 {
-	int i, sub=2;
-	int nz1 = z1->size;
-	int nz0 = z0->size;
-	int nz2 = z2->size;
+	size_t i, sub=2;
+	size_t nz1 = z1->size;
+	size_t nz0 = z0->size;
+	size_t nz2 = z2->size;
 	uchar_t *dz1 = z1->data;
 	uchar_t *dz0 = z0->data;
 	uchar_t *dz2 = z2->data;
@@ -905,6 +902,7 @@ void DLong_UMul( DLong *z, DLong *x, DLong *y )
 void DLong_Mul( DLong *z, DLong *x, DLong *y )
 {
 	DLong_UMul( z, x, y );
+	DLong_Normalize2( z );
 	/* DLong_UMulK( z, x, y, NULL, 0 ); */
 	z->sign = x->sign * y->sign;
 }
@@ -921,8 +919,8 @@ static size_t DLong_NormCount( DLong *self )
 void DLong_UMulDigitX( DLong *z, DLong *x, uchar_t digit )
 {
 	uchar_t *dz, *dx = x->data;
-	size_t nx = x->size;
-	int i, carray = 0;
+	size_t i, nx = x->size;
+	uint_t carray = 0;
 	if( digit == 0 ){
 		z->size = 0;
 		return;
@@ -945,8 +943,8 @@ void DLong_UMulDigitX( DLong *z, DLong *x, uchar_t digit )
 }
 uchar_t DLong_UDivDigit( DLong *z, uchar_t digit )
 {
-	size_t nz = z->size;
-	int i, carray = 0;
+	size_t i, nz = z->size;
+	uint_t carray = 0;
 	DLong_Detach( z );
 	while(nz >0 && z->data[nz-1] ==0 ) nz--;
 	for(i=nz; i>0; i--){
@@ -1136,25 +1134,30 @@ static void LongMulInt( DLong *z, DLong *x, int y, int base )
 void DLong_AddInt( DLong *z, DLong *x, dint y, DLong *buf )
 {
 }
-void DLong_MulAdd( DLong *z, DLong *x, uchar_t y, short m )
+void DLong_MulAdd( DLong *Z, DLong *X, uchar_t Y, short M )
 {
-	int i, carray = 0;
-	DLong_Detach( z );
-	if( z->bufSize < x->size + m ) DLong_Reserve( z, x->size + m );
-	for(i=z->size; i<x->size+m; i++) z->data[i] = 0;
-	if( z->size < x->size+m ) z->size = x->size + m;
-	for(i=0; i<x->size; i++){
-		carray += x->data[i] * y + z->data[i+m];
-		z->data[i+m] = carray & LONG_MASK;
+	size_t i, NZ, NX = X->size, NXM = NX + M;
+	uchar_t *DZ, *DX = X->data;
+	uint_t carray = 0;
+
+	DLong_Detach( Z );
+	if( Z->bufSize < NX + M ) DLong_Reserve( Z, NX + M );
+	DZ = Z->data;
+	for(i=Z->size; i<NXM; i++) DZ[i] = 0;
+	if( Z->size < NXM ) Z->size = NXM;
+	NZ = Z->size;
+	for(i=0; i<NX; i++){
+		carray += DX[i] * Y + DZ[i+M];
+		DZ[i+M] = carray & LONG_MASK;
 		carray = carray >> LONG_BITS;
 	}
-	for(i=x->size+m; i<z->size; i++){
-		carray += z->data[i];
-		z->data[i] = carray & LONG_MASK;
+	for(i=NX+M; i<NZ; i++){
+		carray += DZ[i];
+		DZ[i] = carray & LONG_MASK;
 		carray = carray >> LONG_BITS;
 	}
 	while( carray ){
-		DLong_Append( z, carray & LONG_MASK );
+		DLong_Append( Z, carray & LONG_MASK );
 		carray = carray >> LONG_BITS;
 	}
 }
@@ -1217,7 +1220,7 @@ void DLong_BitXOR( DLong *z, DLong *x, DLong *y )
 void DLong_ShiftLeft( DLong *z, int bits )
 {
 	uchar_t *dz;
-	int i, k, nz = z->size;
+	size_t i, k, nz = z->size;
 	k = bits / LONG_BITS;
 	DLong_Detach( z );
 	dz = z->data;
@@ -1245,7 +1248,7 @@ void DLong_ShiftLeft( DLong *z, int bits )
 void DLong_ShiftRight( DLong *z, int bits )
 {
 	uchar_t *dz;
-	int i, k, nz = z->size;
+	size_t i, k, nz = z->size;
 	if( bits >= nz * LONG_BITS ){
 		DLong_Clear( z );
 		return;
@@ -1593,7 +1596,7 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 static void DaoLong_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
 	switch( N ){
-	case 0 : DaoLong_GetItem1( self, proc, null ); break;
+	case 0 : DaoLong_GetItem1( self, proc, dao_none_value ); break;
 	case 1 : DaoLong_GetItem1( self, proc, ids[0] ); break;
 	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 	}
@@ -1601,7 +1604,7 @@ static void DaoLong_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], 
 static void DaoLong_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
 	switch( N ){
-	case 0 : DaoLong_SetItem1( self, proc, null, value ); break;
+	case 0 : DaoLong_SetItem1( self, proc, dao_none_value, value ); break;
 	case 1 : DaoLong_SetItem1( self, proc, ids[0], value ); break;
 	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 	}
@@ -2317,7 +2320,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	DaoArray *self = & vself->xArray;
 	DaoArray_Sliced( self );
 	if( N == 0 ){
-		DaoArray_SetItem1( vself, proc, null, value, DVM_MOVE );
+		DaoArray_SetItem1( vself, proc, dao_none_value, value, DVM_MOVE );
 		return;
 	}else if( N == 1 ){
 		DaoArray_SetItem1( vself, proc, ids[0], value, DVM_MOVE );
@@ -3324,7 +3327,6 @@ DaoArray* DaoArray_New( int etype )
 	DaoArray* self = (DaoArray*) dao_malloc( sizeof( DaoArray ) );
 	DaoValue_Init( self, DAO_ARRAY );
 	self->etype = etype;
-	//self->meta = NULL;
 	self->unitype = NULL;
 	self->size = 0;
 	self->owner = 1;
@@ -3342,7 +3344,6 @@ DaoArray* DaoArray_New( int etype )
 void DaoArray_Delete( DaoArray *self )
 {
 	if( self->dims ) dao_free( self->dims );
-	//if( self->meta ) GC_DecRC( self->meta );
 	if( self->unitype ) GC_DecRC( self->unitype );
 	if( self->owner && self->data.p ) dao_free( self->data.p );
 	if( self->slices ) DArray_Delete( self->slices );

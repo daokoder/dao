@@ -289,6 +289,7 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 
 	iter = & vc->xTuple;
 	iter->items[0]->xInteger.value = 0;
+	DaoTuple_SetItem( iter, dao_none_value, 1 );
 
 	DString_SetMBS( name, "__for_iterator__" );
 	if( va->type == DAO_OBJECT ){
@@ -1123,7 +1124,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		for(i=0; i<vmc->b; i++){
 			val = self->activeValues[ vmc->a + i ];
 			tp = DaoNamespace_GetType( ns, val );
-			if( tp == NULL ) tp = DaoNamespace_GetType( ns, null );
+			if( tp == NULL ) tp = DaoNamespace_GetType( ns, dao_none_value );
 			if( i >0 ) DString_AppendMBS( ct->name, "," );
 			if( tp->tid == DAO_PAR_NAMED ){
 				DaoNameValue *nameva = & val->xNameValue;
@@ -1212,14 +1213,14 @@ void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc )
 void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 {
 	int id;
-	DaoValue *B = null;
+	DaoValue *B = dao_none_value;
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
 	DaoType *ct = self->activeTypes[ vmc->c ];
 
 	self->activeCode = vmc;
 	if( A == NULL || A->type == 0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
 	if( vmc->code == DVM_GETI ) B = self->activeValues[ vmc->b ];
@@ -1272,56 +1273,71 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 	if( A == NULL || A->type == 0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
 	tc->GetField( A, self, self->activeRoutine->routConsts->items.pValue[ vmc->b]->xString.data );
 }
-static DaoMap* DaoGetMetaMap( DaoValue *self, int create )
+
+DHash *dao_meta_tables = NULL; /* hash<DaoValue*,DaoMap*> */
+
+DaoMap* DaoMetaTables_Get( DaoValue *object, int insert )
 {
-	DaoMap *meta = NULL;
-#if 0
-	switch( self->type ){
-	case DAO_ARRAY : meta = self->xArray.meta; break;
-	case DAO_LIST  : meta = self->xList.meta; break;
-	//case DAO_TUPLE : meta = self->xTuple.meta; break;
-	case DAO_MAP   : meta = self->xMap.meta; break;
-	case DAO_CTYPE :
-	case DAO_CDATA : meta = self->xCdata.meta; break;
-	//case DAO_OBJECT : meta = self->xObject.meta; break;
-	default : break;
+	DaoMap *table = NULL;
+	DNode *node = NULL;
+	GC_Lock();
+	if( object->xNone.trait & DAO_DATA_WIMETA ) node = DMap_Find( dao_meta_tables, object );
+	if( node ){
+		table = (DaoMap*) node->value.pValue;
+	}else if( insert ){
+		table = DaoMap_New(1);
+		object->xNone.trait |= DAO_DATA_WIMETA;
+		GC_IncRC( table );
+		DMap_Insert( dao_meta_tables, object, table );
 	}
-	if( meta || create ==0 ) return meta;
-	switch( self->type ){
-	case DAO_ARRAY : meta = self->xArray.meta = DaoMap_New(1); break;
-	case DAO_LIST  : meta = self->xList.meta = DaoMap_New(1); break;
-	//case DAO_TUPLE : meta = self->xTuple.meta = DaoMap_New(1); break;
-	case DAO_MAP   : meta = self->xMap.meta = DaoMap_New(1); break;
-	case DAO_CTYPE :
-	case DAO_CDATA : meta = self->xCdata.meta = DaoMap_New(1); break;
-	//case DAO_OBJECT : meta = self->xObject.meta = DaoMap_New(1); break;
-	default : break;
-	}
-#endif
-	if( meta ){
-		meta->unitype = dao_map_meta;
-		GC_IncRC( meta );
-		GC_IncRC( dao_map_meta );
-	}
-	return meta;
+	GC_Unlock();
+	return table;
 }
+static void DaoMetaTables_Set( DaoValue *object, DaoMap *table )
+{
+	DNode *node;
+	GC_Lock();
+	node = DMap_Find( dao_meta_tables, object );
+	GC_IncRC( table );
+	if( node ) GC_DecRC( node->value.pValue );
+	object->xNone.trait |= DAO_DATA_WIMETA;
+	DMap_Insert( dao_meta_tables, object, table );
+	GC_Unlock();
+}
+DaoMap* DaoMetaTables_Remove( DaoValue *object )
+{
+	DaoMap *table = NULL;
+	DNode *node;
+	GC_Lock();
+	node = DMap_Find( dao_meta_tables, object );
+	object->xNone.trait &= ~DAO_DATA_WIMETA;
+	if( node ){
+		table = (DaoMap*) node->value.pValue;
+		DMap_EraseNode( dao_meta_tables, node );
+	}
+	GC_Unlock();
+	return table;
+}
+
+
 static DaoValue* DaoMap_GetMetaField( DaoMap *self, DaoValue *key )
 {
 	DNode *node = DMap_Find( self->items, key );
 	if( node ) return node->value.pValue;
-	if( self->meta ) return DaoMap_GetMetaField( self->meta, key );
+	self = DaoMetaTables_Get( (DaoValue*)self, 0 );
+	if( self ) return DaoMap_GetMetaField( self, key );
 	return NULL;
 }
 void DaoProcess_DoGetMetaField( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *value;
 	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoMap *meta = A->type == DAO_MAP ? & A->xMap : DaoGetMetaMap( A, 0 );
+	DaoMap *meta = A->type == DAO_MAP ? & A->xMap : DaoMetaTables_Get( A, 0 );
 
 	self->activeCode = vmc;
 	if( meta == NULL ){
@@ -1338,14 +1354,14 @@ void DaoProcess_DoGetMetaField( DaoProcess *self, DaoVmCode *vmc )
 }
 void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *A, *B = null, *C = self->activeValues[ vmc->c ];
+	DaoValue *A, *B = dao_none_value, *C = self->activeValues[ vmc->c ];
 	DaoTypeCore *tc = DaoValue_GetTyper( C )->core;
 	int id, rc = 0;
 
 	self->activeCode = vmc;
 	A = self->activeValues[ vmc->a ];
 	if( C == NULL || C->type == 0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
 
@@ -1396,7 +1412,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	A = self->activeValues[ vmc->a ];
 	if( C == NULL || C->type == 0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
 	tc->SetField( C, self, fname->xString.data, A );
@@ -1406,7 +1422,7 @@ void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *C = self->activeValues[ vmc->c ];
 	DaoValue *fname = self->activeRoutine->routConsts->items.pValue[ vmc->b ];
-	DaoMap *meta = DaoGetMetaMap( C, 1 );
+	DaoMap *meta = DaoMetaTables_Get( C, 1 );
 	int m = 1;
 
 	self->activeCode = vmc;
@@ -1414,11 +1430,14 @@ void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "object can not have meta fields" );
 		return;
 	}
+	/* If C is a map, try first to insert A with field name as key into C: */
 	if( C->type == DAO_MAP ) m = DaoMap_Insert( & C->xMap, fname, A );
+	/* If A is failed to be inserted into C, insert into the meta table: */
 	if( m ) DaoMap_Insert( meta, fname, A );
+	/* If A itself is a map, and the field name is __proto__,
+	 * set the meta table's meta table as A: */
 	if( A->type == DAO_MAP && strcmp( fname->xString.data->mbs, "__proto__" ) ==0 ){
-		GC_ShiftRC( A, meta->meta );
-		meta->meta = (DaoMap*) A;
+		DaoMetaTables_Set( (DaoValue*) meta, (DaoMap*) A );
 	}
 }
 
@@ -1503,7 +1522,7 @@ int DaoProcess_TryObjectArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVa
 		par[1] = A;
 		npar = 2;
 	}
-	nopac = C == NULL || C->xNull.refCount > 1;
+	nopac = C == NULL || C->xNone.refCount > 1;
 	p = par;
 	n = npar;
 
@@ -1587,7 +1606,7 @@ int DaoProcess_TryCdataArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVal
 		par[1] = A;
 		npar = 2;
 	}
-	nopac = C == NULL || C->xNull.refCount > 1;
+	nopac = C == NULL || C->xNone.refCount > 1;
 	p = par;
 	n = npar;
 
@@ -1667,7 +1686,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *C = self->activeValues[ vmc->c ];
 	self->activeCode = vmc;
 	if( A == NULL || B == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
 
@@ -1942,8 +1961,8 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 	int D = 0, rc = 0;
 
 	self->activeCode = vmc;
-	if( A == NULL ) A = null;
-	if( B == NULL ) B = null;
+	if( A == NULL ) A = dao_none_value;
+	if( B == NULL ) B = dao_none_value;
 	if( A->type ==0 || B->type ==0 ){
 		switch( vmc->code ){
 		case DVM_AND: C = A->type ? B : A; break;
@@ -2129,7 +2148,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 	int ta = A->type;
 	self->activeCode = vmc;
 	if( A->type ==0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "on null object" );
+		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "on none object" );
 		return;
 	}
 
@@ -2840,7 +2859,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	if( ct == NULL ) goto FailConversion;
 	memset( & key, 0, sizeof(DaoValue) );
 	memset( & value, 0, sizeof(DaoValue) );
-	key.xNull.trait = value.xNull.trait = DAO_DATA_CONST;
+	key.xNone.trait = value.xNone.trait = DAO_DATA_CONST;
 	dC->type = ct->tid;
 	if( ct->tid == DAO_ANY ) goto Rebind;
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
