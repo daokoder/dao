@@ -3,7 +3,7 @@ load DaoJSON;
 data = { 
 	"module":               (any)"DaoJSON", 
 	"descriptioin":         "JSON serializer/parser",
-	"external dependences": null,
+	"external dependences": none,
 	"classes":              0,
 	"methods":              { "serialize", "deserialize" }, 
 	"Dao => JSON mapping":  { 
@@ -11,7 +11,7 @@ data = {
 	"list<any>":        "array",
 	"string":           "string",
 	"int/float/double": "number",
-	"null":             "null"
+	"none":             "null"
     } 
 };
 

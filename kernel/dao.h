@@ -637,6 +637,20 @@ DAO_DLL void DaoMutex_Lock( DaoMutex *self );
 DAO_DLL void DaoMutex_Unlock( DaoMutex *self );
 DAO_DLL int DaoMutex_TryLock( DaoMutex *self );
 
+DAO_DLL DaoCondVar* DaoCondVar_New();
+DAO_DLL void DaoCondVar_Delete( DaoCondVar *self );
+DAO_DLL void DaoCondVar_Wait( DaoCondVar *self, DaoMutex *mutex );
+DAO_DLL int  DaoCondVar_TimedWait( DaoCondVar *self, DaoMutex *mutex, double seconds );
+DAO_DLL void DaoCondVar_Signal( DaoCondVar *self );
+DAO_DLL void DaoCondVar_BroadCast( DaoCondVar *self );
+
+DAO_DLL DaoSema* DaoSema_New( int n );
+DAO_DLL void DaoSema_Delete( DaoSema *self );
+DAO_DLL void DaoSema_Wait( DaoSema *self );
+DAO_DLL void DaoSema_Post( DaoSema *self );
+DAO_DLL void DaoSema_SetValue( DaoSema *self, int n );
+DAO_DLL int  DaoSema_GetValue( DaoSema *self );
+
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );

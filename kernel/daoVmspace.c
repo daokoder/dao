@@ -856,6 +856,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			while( ch != EOF ){
 				if( ch == '\n' ){
 					if( CheckCodeCompletion( input, tokens ) ) break;
+					printf("..... ");
 					fflush( stdout );
 				}
 				DString_AppendChar( input, (char)ch );
