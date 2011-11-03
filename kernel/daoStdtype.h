@@ -116,8 +116,8 @@ DaoList* DaoList_New();
 void DaoList_Delete( DaoList *self );
 void DaoList_Clear( DaoList *self );
 
-void DaoList_Erase( DaoList *self, int id );
-int DaoList_SetItem( DaoList *self, DaoValue *it, int id );
+void DaoList_Erase( DaoList *self, size_t id );
+int DaoList_SetItem( DaoList *self, DaoValue *it, size_t id );
 int DaoList_Append( DaoList *self, DaoValue *it );
 
 DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );
@@ -232,7 +232,7 @@ struct IndexValue
 	size_t     index;
 	DaoValue  *value;
 };
-void QuickSort( IndexValue *data, int first, int last, int part, int asc );
+void QuickSort( IndexValue *data, size_t first, size_t last, size_t part, int asc );
 
 struct DaoException
 {

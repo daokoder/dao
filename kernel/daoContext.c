@@ -153,7 +153,7 @@ DString*   DaoProcess_PutString( DaoProcess *self, DString *str )
 	if( res ==NULL ) return NULL;
 	return res->xString.data;
 }
-DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N )
+DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, size_t N )
 {
 	DString str = DString_WrapBytes( bytes, N );
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
@@ -164,7 +164,7 @@ DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N )
 	return res->xString.data;
 }
 #ifdef DAO_WITH_NUMARRAY
-DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N )
+DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, size_t N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
 	res->etype = DAO_INTEGER;
@@ -176,7 +176,7 @@ DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N )
 	}
 	return res;
 }
-DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N )
+DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, size_t N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
 	res->etype = DAO_FLOAT;
@@ -188,7 +188,7 @@ DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N )
 	}
 	return res;
 }
-DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N )
+DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, size_t N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
 	res->etype = DAO_DOUBLE;
@@ -200,7 +200,7 @@ DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N )
 	}
 	return res;
 }
-DaoArray* DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N )
+DaoArray* DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, size_t N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
 	res->etype = DAO_COMPLEX;
@@ -214,10 +214,10 @@ static DaoArray* NullArray( DaoProcess *self )
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 	return NULL;
 }
-DaoArray* DaoProcess_PutArrayInteger( DaoProcess *s, dint *v, int n ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayFloat( DaoProcess *s, float *v, int n ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayDouble( DaoProcess *s, double *v, int n ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayComplex( DaoProcess *s, complex16 *v, int n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayInteger( DaoProcess *s, dint *v, size_t n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayFloat( DaoProcess *s, float *v, size_t n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayDouble( DaoProcess *s, double *v, size_t n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutArrayComplex( DaoProcess *s, complex16 *v, size_t n ){ return NullArray( s ); }
 #endif
 DaoList* DaoProcess_PutList( DaoProcess *self )
 {
@@ -1684,6 +1684,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
 	DaoValue *C = self->activeValues[ vmc->c ];
+
 	self->activeCode = vmc;
 	if( A == NULL || B == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
@@ -1802,8 +1803,8 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		case DVM_MOD : DaoProcess_LongDiv( self, A->xLong.value, B->xLong.value, b, c ); break;
 		case DVM_POW : DLong_Pow( c, A->xLong.value, DLong_ToInteger( B->xLong.value ) ); break;
 		default : break;
-		}
-		DLong_Delete( b );
+		}    
+		DLong_Delete( b ); 
 	}else if( A->type == DAO_LONG && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
 		DLong *c = DaoProcess_GetLong( self, vmc );
 		DLong *b = DLong_New();

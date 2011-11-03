@@ -1403,7 +1403,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				indexkey = bt;
 				val = csts[opb];
 				k = at->tid != DAO_CLASS && at->tid != DAO_OBJECT && at->tid != DAO_CDATA;
-				if( val && val->type == 0 && k && bt->tid == 0 ){ /* a[] */
+				if( val && val->type == 0 && k && bt->tid == DAO_VALTYPE ){ /* a[] */
 					ct = at;
 				}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 					/* allow less strict typing: */

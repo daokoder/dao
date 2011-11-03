@@ -383,6 +383,10 @@ static void STD_ListMeth( DaoProcess *proc, DaoValue *p[], int N )
 	DNode *it;
 	int i, j, methCount;
 	if( typer == NULL || typer->core == NULL ) return;
+	DaoProcess_Print( proc, "======================================\nConsts, methods of type \"" );
+	DaoProcess_Print( proc, typer->name );
+	DaoProcess_Print( proc, "\":\n======================================\n" );
+	if( typer->core->kernel == NULL ) return;
 	array = DArray_New(0);
 	hash = typer->core->kernel->values;
 	if( hash == NULL ){
@@ -395,9 +399,6 @@ static void STD_ListMeth( DaoProcess *proc, DaoValue *p[], int N )
 	if( typer->core->kernel->methods ) DMap_SortMethods( typer->core->kernel->methods, array );
 	meths = (DaoFunction**) array->items.pVoid;
 	methCount = array->size;
-	DaoProcess_Print( proc, "======================================\nConsts, methods of type \"" );
-	DaoProcess_Print( proc, typer->name );
-	DaoProcess_Print( proc, "\":\n======================================\n" );
 	if( typer->core->kernel->values ){
 		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
 			DaoProcess_Print( proc, it->key.pString->mbs );

@@ -368,30 +368,30 @@ DAO_DLL DaoValue* DaoValue_NewInteger( dint v );
 DAO_DLL DaoValue* DaoValue_NewFloat( float v );
 DAO_DLL DaoValue* DaoValue_NewDouble( double v );
 DAO_DLL DaoValue* DaoValue_NewComplex( complex16 v );
-DAO_DLL DaoValue* DaoValue_NewMBString( const char *s, int n );
-DAO_DLL DaoValue* DaoValue_NewWCString( const wchar_t *s, int n );
+DAO_DLL DaoValue* DaoValue_NewMBString( const char *s, size_t n );
+DAO_DLL DaoValue* DaoValue_NewWCString( const wchar_t *s, size_t n );
 DAO_DLL DaoValue* DaoValue_NewList();
 DAO_DLL DaoValue* DaoValue_NewArray( int type );
 DAO_DLL DaoValue* DaoValue_NewMap( int hashing );
-DAO_DLL DaoValue* DaoValue_NewVectorSB( signed char *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorUB( unsigned char *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorSS( signed short *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorUS( unsigned short *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorSI( signed int *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorUI( unsigned int *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorI( dint *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorF( float *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewVectorD( double *s, int n ); 
-DAO_DLL DaoValue* DaoValue_NewMatrixSB( signed char **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixUB( unsigned char **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixSS( signed short **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixUS( unsigned short **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixSI( signed int **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixUI( unsigned int **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixI( dint **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixF( float **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewMatrixD( double **s, int n, int m );
-DAO_DLL DaoValue* DaoValue_NewBuffer( void *s, int n );
+DAO_DLL DaoValue* DaoValue_NewVectorSB( signed char *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorUB( unsigned char *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorSS( signed short *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorUS( unsigned short *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorSI( signed int *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorUI( unsigned int *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorI( dint *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorF( float *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewVectorD( double *s, size_t n ); 
+DAO_DLL DaoValue* DaoValue_NewMatrixSB( signed char **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixUB( unsigned char **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixSS( signed short **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixUS( unsigned short **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixSI( signed int **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixUI( unsigned int **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixI( dint **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixF( float **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewMatrixD( double **s, size_t n, size_t m );
+DAO_DLL DaoValue* DaoValue_NewBuffer( void *s, size_t n );
 DAO_DLL DaoValue* DaoValue_NewStream( FILE *f );
 DAO_DLL DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data );
 DAO_DLL DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data );
@@ -496,7 +496,7 @@ DAO_DLL DaoLong*  DaoLong_New();
 DAO_DLL DaoString*  DaoString_New( int mbs );
 DAO_DLL DaoString*  DaoString_NewMBS( const char *mbs );
 DAO_DLL DaoString*  DaoString_NewWCS( const wchar_t *wcs );
-DAO_DLL DaoString*  DaoString_NewBytes( const char *bytes, int n );
+DAO_DLL DaoString*  DaoString_NewBytes( const char *bytes, size_t n );
 
 DAO_DLL size_t  DaoString_Size( DaoString *self );
 
@@ -507,7 +507,7 @@ DAO_DLL const wchar_t* DaoString_GetWCS( DaoString *self );
 DAO_DLL void  DaoString_Set( DaoString *self, DString *str );
 DAO_DLL void  DaoString_SetMBS( DaoString *self, const char *mbs );
 DAO_DLL void  DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
-DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, int n );
+DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
 
 DAO_DLL DaoEnum* DaoEnum_New();
 //float    DaoEnum_Get( DaoEnum *self );
@@ -517,14 +517,14 @@ DAO_DLL DaoList* DaoList_New();
 DAO_DLL int  DaoList_Size( DaoList *self );
 DAO_DLL DaoValue* DaoList_Front( DaoList *self );
 DAO_DLL DaoValue* DaoList_Back( DaoList *self );
-DAO_DLL DaoValue* DaoList_GetItem( DaoList *self, int pos );
-DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *item, int pos );
-DAO_DLL int DaoList_Insert( DaoList *self, DaoValue *item, int pos );
+DAO_DLL DaoValue* DaoList_GetItem( DaoList *self, size_t pos );
+DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *item, size_t pos );
+DAO_DLL int DaoList_Insert( DaoList *self, DaoValue *item, size_t pos );
 DAO_DLL int DaoList_PushFront( DaoList *self, DaoValue *item );
 DAO_DLL int DaoList_PushBack( DaoList *self, DaoValue *item );
 DAO_DLL void DaoList_PopFront( DaoList *self );
 DAO_DLL void DaoList_PopBack( DaoList *self );
-DAO_DLL void DaoList_Erase( DaoList *self, int pos );
+DAO_DLL void DaoList_Erase( DaoList *self, size_t pos );
 DAO_DLL void DaoList_Clear( DaoList *self );
 
 DAO_DLL DaoMap* DaoMap_New( int hashing );
@@ -559,7 +559,7 @@ DAO_DLL int  DaoArray_SizeOfDim( DaoArray *self, int d );
 DAO_DLL void DaoArray_GetShape( DaoArray *self, size_t *dims );
 DAO_DLL int  DaoArray_HasShape( DaoArray *self, size_t *dims, int D );
 DAO_DLL int  DaoArray_GetFlatIndex( DaoArray *self, size_t *indexes );
-DAO_DLL void  DaoArray_ResizeVector( DaoArray *self, int N );
+DAO_DLL void  DaoArray_ResizeVector( DaoArray *self, size_t N );
 DAO_DLL void  DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
 DAO_DLL int DaoArray_Reshape( DaoArray *self, size_t *dims, int D );
 
@@ -583,21 +583,21 @@ DAO_DLL void  DaoArray_FromUShort( DaoArray *self );
 DAO_DLL void  DaoArray_FromUInt( DaoArray *self ); 
 DAO_DLL void  DaoArray_FromSInt( DaoArray *self ); 
 
-DAO_DLL void  DaoArray_SetVectorI( DaoArray *self, dint* vec, int N );
-DAO_DLL void  DaoArray_SetVectorF( DaoArray *self, float* vec, int N );
-DAO_DLL void  DaoArray_SetVectorD( DaoArray *self, double* vec, int N );
-DAO_DLL void  DaoArray_SetMatrixSB( DaoArray *self, signed char **mat, int row, int col );
-DAO_DLL void  DaoArray_SetMatrixSS( DaoArray *self, signed short **mat, int row, int col );
-DAO_DLL void  DaoArray_SetMatrixSI( DaoArray *self, signed int **mat, int row, int col );
-DAO_DLL void  DaoArray_SetMatrixI( DaoArray *self, dint **mat, int row, int col );
-DAO_DLL void  DaoArray_SetMatrixF( DaoArray *self, float **mat, int row, int col );
-DAO_DLL void  DaoArray_SetMatrixD( DaoArray *self, double **mat, int row, int col );
-DAO_DLL void  DaoArray_SetVectorSB( DaoArray *self, signed char* vec, int N );
-DAO_DLL void  DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, int N );
-DAO_DLL void  DaoArray_SetVectorSS( DaoArray *self, signed short* vec, int N );
-DAO_DLL void  DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, int N );
-DAO_DLL void  DaoArray_SetVectorSI( DaoArray *self, signed int* vec, int N );
-DAO_DLL void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, int N );
+DAO_DLL void  DaoArray_SetVectorI( DaoArray *self, dint* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorF( DaoArray *self, float* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorD( DaoArray *self, double* vec, size_t N );
+DAO_DLL void  DaoArray_SetMatrixSB( DaoArray *self, signed char **mat, size_t row, size_t col );
+DAO_DLL void  DaoArray_SetMatrixSS( DaoArray *self, signed short **mat, size_t row, size_t col );
+DAO_DLL void  DaoArray_SetMatrixSI( DaoArray *self, signed int **mat, size_t row, size_t col );
+DAO_DLL void  DaoArray_SetMatrixI( DaoArray *self, dint **mat, size_t row, size_t col );
+DAO_DLL void  DaoArray_SetMatrixF( DaoArray *self, float **mat, size_t row, size_t col );
+DAO_DLL void  DaoArray_SetMatrixD( DaoArray *self, double **mat, size_t row, size_t col );
+DAO_DLL void  DaoArray_SetVectorSB( DaoArray *self, signed char* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorSS( DaoArray *self, signed short* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorSI( DaoArray *self, signed int* vec, size_t N );
+DAO_DLL void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, size_t N );
 
 DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
@@ -653,12 +653,12 @@ DAO_DLL complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
 DAO_DLL DString*   DaoProcess_PutMBString( DaoProcess *self, const char *mbs );
 DAO_DLL DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs );
 DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
-DAO_DLL DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N );
+DAO_DLL DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, size_t N );
 DAO_DLL DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
-DAO_DLL DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, int N );
-DAO_DLL DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N );
-DAO_DLL DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N );
-DAO_DLL DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N );
+DAO_DLL DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, dint *array, size_t N );
+DAO_DLL DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, size_t N );
+DAO_DLL DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, size_t N );
+DAO_DLL DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, size_t N );
 DAO_DLL DaoList*   DaoProcess_PutList( DaoProcess *self );
 DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
@@ -743,32 +743,32 @@ Values created by the following DaoValue_NewXyz() and DaoValue_WrapXyz(),
 must be cleared by DaoValue_Clear() to avoid memory leaking:
 
 Create Multi-Byte String (MBS): 
-DaoValue* DaoValue_NewMBString( const char *s, int n );
+DaoValue* DaoValue_NewMBString( const char *s, size_t n );
 Create Wide Character String (WCS): 
-DaoValue* DaoValue_NewWCString( const wchar_t *s, int n );
+DaoValue* DaoValue_NewWCString( const wchar_t *s, size_t n );
 
  Create [1 x n] vector (DaoArray): 
-DaoValue* DaoValue_NewVectorB( char *s, int n );  byte 
-DaoValue* DaoValue_NewVectorUB( unsigned char *s, int n );  unsigned byte 
-DaoValue* DaoValue_NewVectorS( short *s, int n );  short 
-DaoValue* DaoValue_NewVectorUS( unsigned short *s, int n );  unsigned short 
-DaoValue* DaoValue_NewVectorI( int *s, int n );  int 
-DaoValue* DaoValue_NewVectorUI( unsigned int *s, int n );  unsigned int 
-DaoValue* DaoValue_NewVectorF( float *s, int n );  float 
-DaoValue* DaoValue_NewVectorD( double *s, int n );  double 
+DaoValue* DaoValue_NewVectorB( char *s, size_t n );  byte 
+DaoValue* DaoValue_NewVectorUB( unsigned char *s, size_t n );  unsigned byte 
+DaoValue* DaoValue_NewVectorS( short *s, size_t n );  short 
+DaoValue* DaoValue_NewVectorUS( unsigned short *s, size_t n );  unsigned short 
+DaoValue* DaoValue_NewVectorI( int *s, size_t n );  int 
+DaoValue* DaoValue_NewVectorUI( unsigned int *s, size_t n );  unsigned int 
+DaoValue* DaoValue_NewVectorF( float *s, size_t n );  float 
+DaoValue* DaoValue_NewVectorD( double *s, size_t n );  double 
 
  Create [n x m] matrix (DaoArray): 
-DaoValue* DaoValue_NewMatrixB( signed char **s, int n, int m );
-DaoValue* DaoValue_NewMatrixUB( unsigned char **s, int n, int m );
-DaoValue* DaoValue_NewMatrixS( short **s, int n, int m );
-DaoValue* DaoValue_NewMatrixUS( unsigned short **s, int n, int m );
-DaoValue* DaoValue_NewMatrixI( int **s, int n, int m );
-DaoValue* DaoValue_NewMatrixUI( unsigned int **s, int n, int m );
-DaoValue* DaoValue_NewMatrixF( float **s, int n, int m );
-DaoValue* DaoValue_NewMatrixD( double **s, int n, int m );
+DaoValue* DaoValue_NewMatrixB( signed char **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixUB( unsigned char **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixS( short **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixUS( unsigned short **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixI( int **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixUI( unsigned int **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixF( float **s, size_t n, size_t m );
+DaoValue* DaoValue_NewMatrixD( double **s, size_t n, size_t m );
 
  Create "n" bytes buffer (DaoCdata): 
-DaoValue* DaoValue_NewBuffer( void *s, int n );
+DaoValue* DaoValue_NewBuffer( void *s, size_t n );
  Create io stream object (DaoStream): 
 DaoValue* DaoValue_NewStream( FILE *f );
 
@@ -910,14 +910,14 @@ DaoLong*  DaoLong_New();
 DaoString*     DaoString_New( DString *str );
 DaoString*     DaoString_NewMBS( const char *mbs );
 DaoString*     DaoString_NewWCS( const wchar_t *wcs );
-DaoString*     DaoString_NewBytes( const char *bytes, int n );
+DaoString*     DaoString_NewBytes( const char *bytes, size_t n );
 DString*       DaoString_Get( DaoString *self );
 const char*    DaoString_GetMBS( DaoString *self );
 const wchar_t* DaoString_GetWCS( DaoString *self );
 void           DaoString_Set( DaoString *self, DString *str );
 void           DaoString_SetMBS( DaoString *self, const char *mbs );
 void           DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
-void           DaoString_SetBytes( DaoString *self, const char *bytes, int n );
+void           DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
 
 DaoEnum* DaoEnum_New();
 //float    DaoEnum_Get( DaoEnum *self );
@@ -927,16 +927,16 @@ DaoList* DaoList_New();
 int  DaoList_Size( DaoList *self );
 DaoValue DaoList_Front( DaoList *self );
 DaoValue DaoList_Back( DaoList *self );
-DaoValue DaoList_GetItem( DaoList *self, int pos );
+DaoValue DaoList_GetItem( DaoList *self, size_t pos );
 
  The following functions return 0 if seccessful, 1 if failed: 
-int DaoList_SetItem( DaoList *self, DaoValue item, int pos );
-int DaoList_Insert( DaoList *self, DaoValue item, int pos );
-int DaoList_PushFront( DaoList *self, DaoValue item );
-int DaoList_PushBack( DaoList *self, DaoValue item );
+int DaoList_SetItem( DaoList *self, DaoValue *item, size_t pos );
+int DaoList_Insert( DaoList *self, DaoValue *item, size_t pos );
+int DaoList_PushFront( DaoList *self, DaoValue *item );
+int DaoList_PushBack( DaoList *self, DaoValue *item );
 void DaoList_PopFront( DaoList *self );
 void DaoList_PopBack( DaoList *self );
-void DaoList_Erase( DaoList *self, int pos );
+void DaoList_Erase( DaoList *self, size_t pos );
 void DaoList_Clear( DaoList *self );
 
 DaoMap* DaoMap_New( int hashing );
@@ -984,7 +984,7 @@ int DaoArray_HasShape( DaoArray *self, size_t *dims, int D );
 int   DaoArray_GetFlatIndex( DaoArray *self, size_t *indexes );
 
  Resize to a vector with "N" elements: 
-void  DaoArray_ResizeVector( DaoArray *self, int N );
+void  DaoArray_ResizeVector( DaoArray *self, size_t N );
  Resize to a array with specified shape: 
 void  DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
  Reshape to a array with specified shape:
@@ -1015,19 +1015,19 @@ void  DaoArray_FromUShort( DaoArray *self );  as unsigned shorts
 void  DaoArray_FromUInt( DaoArray *self );  as unsigned ints 
 
  Set data from vector or matrix: 
-void  DaoArray_SetVectorB( DaoArray *self, char* vec, int N );
-void  DaoArray_SetVectorS( DaoArray *self, short* vec, int N );
-void  DaoArray_SetVectorI( DaoArray *self, int* vec, int N );
-void  DaoArray_SetVectorF( DaoArray *self, float* vec, int N );
-void  DaoArray_SetVectorD( DaoArray *self, double* vec, int N );
-void  DaoArray_SetMatrixB( DaoArray *self, signed char **mat, int row, int col );
-void  DaoArray_SetMatrixS( DaoArray *self, short **mat, int row, int col );
-void  DaoArray_SetMatrixI( DaoArray *self, int **mat, int row, int col );
-void  DaoArray_SetMatrixF( DaoArray *self, float **mat, int row, int col );
-void  DaoArray_SetMatrixD( DaoArray *self, double **mat, int row, int col );
-void  DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, int N );
-void  DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, int N );
-void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, int N );
+void  DaoArray_SetVectorB( DaoArray *self, char* vec, size_t N );
+void  DaoArray_SetVectorS( DaoArray *self, short* vec, size_t N );
+void  DaoArray_SetVectorI( DaoArray *self, int* vec, size_t N );
+void  DaoArray_SetVectorF( DaoArray *self, float* vec, size_t N );
+void  DaoArray_SetVectorD( DaoArray *self, double* vec, size_t N );
+void  DaoArray_SetMatrixB( DaoArray *self, signed char **mat, size_t row, size_t col );
+void  DaoArray_SetMatrixS( DaoArray *self, short **mat, size_t row, size_t col );
+void  DaoArray_SetMatrixI( DaoArray *self, int **mat, size_t row, size_t col );
+void  DaoArray_SetMatrixF( DaoArray *self, float **mat, size_t row, size_t col );
+void  DaoArray_SetMatrixD( DaoArray *self, double **mat, size_t row, size_t col );
+void  DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, size_t N );
+void  DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, size_t N );
+void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, size_t N );
 
 void* DaoArray_GetBuffer( DaoArray *self );
 void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
@@ -1102,12 +1102,12 @@ complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
 DString*   DaoProcess_PutMBString( DaoProcess *self, const char *mbs );
 DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs );
 DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
-DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, int N );
+DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, size_t N );
 DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
-DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, int *array, int N );
-DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, int N );
-DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, int N );
-DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, int N );
+DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, int *array, size_t N );
+DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, size_t N );
+DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, size_t N );
+DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, size_t N );
 DaoList*   DaoProcess_PutList( DaoProcess *self );
 DaoMap*    DaoProcess_PutMap( DaoProcess *self );
 DaoArray*  DaoProcess_PutArray( DaoProcess *self );

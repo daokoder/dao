@@ -53,8 +53,8 @@ struct DMap
 	DNode  *root;
 	DNode  *first;
 	DNode  *last;
-	int     size;
-	int     tsize;
+	size_t  size;
+	size_t  tsize;
 	char    keytype;
 	char    valtype;
 	char    hashing;

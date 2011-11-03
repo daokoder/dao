@@ -177,16 +177,16 @@ void DaoArray_Delete( DaoArray *self );
 void DaoArray_SetDimCount( DaoArray *self, int D );
 void DaoArray_FinalizeDimData( DaoArray *self );
 
-void DaoArray_ResizeVector( DaoArray *self, int size );
+void DaoArray_ResizeVector( DaoArray *self, size_t size );
 void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
 
 int DaoArray_Sliced( DaoArray *self );
 void DaoArray_UseData( DaoArray *self, void *data );
 
-dint   DaoArray_GetInteger( DaoArray *na, int i );
-float  DaoArray_GetFloat( DaoArray *na, int i );
-double DaoArray_GetDouble( DaoArray *na, int i );
-complex16 DaoArray_GetComplex( DaoArray *na, int i );
+dint   DaoArray_GetInteger( DaoArray *na, size_t i );
+float  DaoArray_GetFloat( DaoArray *na, size_t i );
+double DaoArray_GetDouble( DaoArray *na, size_t i );
+complex16 DaoArray_GetComplex( DaoArray *na, size_t i );
 
 #endif
 

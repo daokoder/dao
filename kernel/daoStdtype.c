@@ -167,7 +167,7 @@ DaoString* DaoString_NewWCS( const wchar_t *wcs )
 	DString_SetWCS( self->data, wcs );
 	return self;
 }
-DaoString* DaoString_NewBytes( const char *bytes, int n )
+DaoString* DaoString_NewBytes( const char *bytes, size_t n )
 {
 	DaoString *self = DaoString_New(1);
 	DString_SetDataMBS( self->data, bytes, n );
@@ -214,7 +214,7 @@ void DaoString_SetWCS( DaoString *self, const wchar_t *wcs )
 {
 	DString_SetWCS( self->data, wcs );
 }
-void DaoString_SetBytes( DaoString *self, const char *bytes, int n )
+void DaoString_SetBytes( DaoString *self, const char *bytes, size_t n )
 {
 	DString_SetDataMBS( self->data, bytes, n );
 }
@@ -2415,9 +2415,9 @@ static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
 	if( upper >= part ) return;
 	if( upper+1 < last ) PartialQuickSort( proc, entry, r0, r1, data, upper+1, last, part );
 }
-void QuickSort( IndexValue *data, int first, int last, int part, int asc )
+void QuickSort( IndexValue *data, size_t first, size_t last, size_t part, int asc )
 {
-	int lower=first+1, upper=last;
+	size_t lower=first+1, upper=last;
 	IndexValue val;
 	DaoValue *pivot;
 	if( first >= last ) return;
@@ -2815,7 +2815,7 @@ DaoValue* DaoList_Back( DaoList *self )
 	if( self->items.size == 0 ) return NULL;
 	return self->items.items.pValue[ self->items.size-1 ];
 }
-DaoValue* DaoList_GetItem( DaoList *self, int pos )
+DaoValue* DaoList_GetItem( DaoList *self, size_t pos )
 {
 	if( (pos = DaoList_MakeIndex( self, pos, 0 )) < 0 ) return NULL;
 	return self->items.items.pValue[pos];
@@ -2825,7 +2825,7 @@ DaoTuple* DaoList_ToTuple( DaoList *self, DaoTuple *proto )
 	/* XXX */
 	return NULL;
 }
-int DaoList_SetItem( DaoList *self, DaoValue *it, int pos )
+int DaoList_SetItem( DaoList *self, DaoValue *it, size_t pos )
 {
 	DaoValue **val;
 	if( (pos = DaoList_MakeIndex( self, pos, 0 )) < 0 ) return 1;
@@ -2838,7 +2838,7 @@ int DaoList_SetItem( DaoList *self, DaoValue *it, int pos )
 	return 0;
 }
 
-int DaoList_Insert( DaoList *self, DaoValue *item, int pos )
+int DaoList_Insert( DaoList *self, DaoValue *item, size_t pos )
 {
 	DaoType *tp = self->unitype ? self->unitype->nested->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
@@ -2915,7 +2915,7 @@ int DaoList_Append( DaoList *self, DaoValue *value )
 {
 	return DaoList_PushBack( self, value );
 }
-void DaoList_Erase( DaoList *self, int pos )
+void DaoList_Erase( DaoList *self, size_t pos )
 {
 	if( pos < 0 || pos >= self->items.size ) return;
 	DArray_Erase( & self->items, pos, 1 );
@@ -2926,8 +2926,8 @@ static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, 
 {
 	DaoMap *self = & self0->xMap;
 	char *kvsym = self->items->hashing ? " : " : " => ";
-	const int size = self->items->size;
-	int i = 0;
+	const size_t size = self->items->size;
+	size_t i = 0;
 
 	DNode *node = NULL;
 	if( cycData ) node = MAP_Find( cycData, self );
