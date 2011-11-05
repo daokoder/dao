@@ -52,7 +52,7 @@ void DaoValue_Init( void *value, char type )
 DaoNone* DaoNone_New()
 {
 	DaoNone *self = (DaoNone*) dao_malloc( sizeof(DaoNone) );
-	DaoValue_Init( self, DAO_NULL );
+	DaoValue_Init( self, DAO_NONE );
 	return self;
 }
 DaoInteger* DaoInteger_New( dint value )
@@ -287,11 +287,11 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, size_t N, size_t *s
 		if( n2 <0 ) n2 += N;
 		*start = n1;
 		*end = n2;
-		if( first->type ==DAO_NULL && second->type ==DAO_NULL ){
+		if( first->type ==DAO_NONE && second->type ==DAO_NONE ){
 			*idtype = IDX_ALL;
-		}else if( first->type ==DAO_NULL ){
+		}else if( first->type ==DAO_NONE ){
 			*idtype = IDX_TO;
-		}else if( second->type ==DAO_NULL ){
+		}else if( second->type ==DAO_NONE ){
 			*idtype = IDX_FROM;
 		}
 		/* when specify an index range, allow out of range: (eg, str[:5]=='abcde') */
@@ -625,7 +625,7 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 {
 	if( self == NULL ) return & baseTyper;
 	switch( self->type ){
-	case DAO_NULL : return & baseTyper;
+	case DAO_NONE : return & baseTyper;
 	case DAO_INTEGER :
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  : return & numberTyper;
@@ -833,6 +833,7 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	size_t start, end;
 	int idtype;
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
+	DString_Detach( self );
 	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
 		int i, id = value->xInteger.value;
 		if( idtype == IDX_MULTIPLE ){
@@ -1526,14 +1527,19 @@ static void DaoSTR_PFind( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
-	dint start = DaoSTR_CheckIndex( self, proc, p[3]->xInteger.value, 0 );
-	dint end = DaoSTR_CheckIndex( self, proc, p[4]->xInteger.value, 1 );
+	dint start = p[3]->xInteger.value;
+	dint end = p[4]->xInteger.value;
 	size_t index = p[2]->xInteger.value;
 	size_t i, p1=start, p2=end;
 	DaoTuple *tuple = NULL;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoType *itp = list->unitype->nested->items.pType[0];
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
+	/* no need to raise index out of range exception (consider empty self string): */
+	if( start <0 ) start += self->size;
+	if( end <0 ) end += self->size;
+	p1 = start;
+	p2 = end;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	i = 0;
@@ -1555,13 +1561,17 @@ static void DaoSTR_Match0( DaoProcess *proc, DaoValue *p[], int N, int subm )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
-	dint start = DaoSTR_CheckIndex( self, proc, p[2+subm]->xInteger.value, 0 );
-	dint end = DaoSTR_CheckIndex( self, proc, p[3+subm]->xInteger.value, 1 );
+	dint start = p[2+subm]->xInteger.value;
+	dint end = p[3+subm]->xInteger.value;
 	size_t p1=start, p2=end;
 	int capt = p[4]->xInteger.value;
 	int gid = p[2]->xInteger.value;
 	DaoTuple *tuple = DaoProcess_PutTuple( proc );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
+	if( start <0 ) start += self->size;
+	if( end <0 ) end += self->size;
+	p1 = start;
+	p2 = end;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	pt = DString_Copy( pt );
@@ -1595,14 +1605,12 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 	size_t i, from, to, step;
 	size_t size = DString_Size( self );
 	size_t end=size, p1=0, p2=size;
-	DaoString *subs = DaoString_New(1);
+	DaoString *subs = DaoString_New( pt->mbs != NULL );
 	DArray *masks = DArray_New(0);
 	DArray *matchs = DArray_New(0);
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
 	DaoRegex *ptmask = NULL;
-	DString_Delete( subs->data );
-	pt = subs->data = DString_Copy( pt );
 	if( size == 0 ) goto DoNothing;
 	if( DString_Size( mask ) ==0 ) mask = NULL;
 	if( mask ){
@@ -1647,7 +1655,7 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 		   printf( "p1 = %i, p2 = %i\n", p1, p2 );
 		 */
 		if( (p1 >0 && p1 <size) || p2 > p1 ){
-			DString_SubString( self, pt, p1, p2-p1 );
+			DString_SubString( self, subs->data, p1, p2-p1 );
 			DArray_Append( & list->items, (DaoValue*) subs );
 		}
 	}
@@ -1660,26 +1668,29 @@ static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
-	dint start = DaoSTR_CheckIndex( self, proc, p[2]->xInteger.value, 0 );
-	dint end = DaoSTR_CheckIndex( self, proc, p[3]->xInteger.value, 1 );
+	dint start = p[2]->xInteger.value;
+	dint end = p[3]->xInteger.value;
 	size_t p1=start, p2=end;
 	int gid;
-	DaoString *subs = DaoString_New(1);
+	DaoString *subs;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
+	if( start <0 ) start += self->size;
+	if( end <0 ) end += self->size;
+	p1 = start;
+	p2 = end;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( end == 0 ) p2 = end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & p1, & p2 ) ==0 ) return;
-	DString_Delete( subs->data );
-	pt = subs->data = DString_Copy( pt );
+	subs = DaoString_New( pt->mbs != NULL );
 	for( gid=0; gid<=patt->group; gid++ ){
-		DString_Clear( pt );
+		DString_Clear( subs->data );
 		if( DaoRegex_SubMatch( patt, gid, & p1, & p2 ) ){
-			DString_SubString( self, pt, p1, p2-p1+1 );
+			DString_SubString( self, subs->data, p1, p2-p1+1 );
 		}
 		DArray_Append( & list->items, (DaoValue*) subs );
 	}
-	DString_Delete( pt );
+	DaoString_Delete( subs );
 }
 static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1687,11 +1698,15 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	DString *pt = p[1]->xString.data;
 	DString *str = p[2]->xString.data;
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
-	dint start0 = DaoSTR_CheckIndex( self, proc, p[4]->xInteger.value, 0 );
-	dint end0 = DaoSTR_CheckIndex( self, proc, p[5]->xInteger.value, 1 );
+	dint start0 = p[4]->xInteger.value;
+	dint end0 = p[5]->xInteger.value;
 	dint n, index = p[3]->xInteger.value;
 	size_t start = start0, end = end0;
 	size_t size = self->size;
+	if( start0 <0 ) start0 += self->size;
+	if( end0 <0 ) end0 += self->size;
+	start = start0;
+	end = end0;
 	if( (patt == NULL) | (start0 < 0) | (end0 < 0) ) return;
 	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoProcess_PutInteger( proc, n );
@@ -1779,11 +1794,14 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DString *data = self->data;
 	size_t entry, i, k, N = data->size;
 	switch( funct ){
+	case DVM_FUNCT_APPLY : 
+		DString_Detach( self->data );
+		DaoProcess_PutReference( proc, p[0] );
+		break;
 	case DVM_FUNCT_MAP : string = DaoProcess_PutValue( proc, p[0] )->xString.data; break;
 	case DVM_FUNCT_SELECT : string = DaoProcess_PutMBString( proc, "" ); break;
 	case DVM_FUNCT_INDEX : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
-	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
 	}
 	if( sect == NULL ) return;
 	if( DString_CheckUTF8( self->data ) ){
@@ -2386,9 +2404,9 @@ static int Compare( DaoProcess *proc, int entry, int reg0, int reg1, DaoValue *v
 	return DaoValue_GetInteger( proc->stackValues[0] );
 }
 static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
-		DaoValue **data, int first, int last, int part )
+		DaoValue **data, size_t first, size_t last, size_t part )
 {
-	int lower=first+1, upper=last;
+	size_t lower=first+1, upper=last;
 	DaoValue *val;
 	DaoValue *pivot;
 	if( first >= last ) return;
@@ -2411,7 +2429,7 @@ static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
 	val = data[first];
 	data[first] = data[upper];
 	data[upper] = val;
-	if( first < upper-1 ) PartialQuickSort( proc, entry, r0, r1, data, first, upper-1, part );
+	if( first+1 < upper ) PartialQuickSort( proc, entry, r0, r1, data, first, upper-1, part );
 	if( upper >= part ) return;
 	if( upper+1 < last ) PartialQuickSort( proc, entry, r0, r1, data, upper+1, last, part );
 }
@@ -2445,7 +2463,7 @@ void QuickSort( IndexValue *data, size_t first, size_t last, size_t part, int as
 	val = data[first];
 	data[first] = data[upper];
 	data[upper] = val;
-	if( first < upper-1 ) QuickSort( data, first, upper-1, part, asc );
+	if( first+1 < upper ) QuickSort( data, first, upper-1, part, asc );
 	if( upper >= part ) return;
 	if( upper+1 < last ) QuickSort( data, upper+1, last, part, asc );
 }
@@ -2470,7 +2488,7 @@ static void DaoLIST_Rank( DaoProcess *proc, DaoValue *p[], int npar)
 		data[i].index = i;
 		data[i].value = items[i];
 	}
-	QuickSort( data, 0, N-1, part, ( p[1]->xEnum.value == 0 ) ? 1 : 0 );
+	QuickSort( data, 0, N-1, part, p[1]->xEnum.value == 0 );
 	for(i=0; i<N; i++) ids[i]->xInteger.value = data[i].index;
 	dao_free( data );
 }
@@ -2492,7 +2510,12 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	if( frame && p[1]->type != DAO_ENUM ){
 		int entry = proc->topFrame->entry;
 		DaoVmCode *vmc = proc->topFrame->codes + entry - 1;
+		if( vmc->b < 2 ){
+			DaoProcess_RaiseException( proc, DAO_ERROR, "Two few code section parameters" );
+			return;
+		}
 		PartialQuickSort( proc, entry, vmc->a, vmc->a + 1, items, 0, N-1, part );
+		DaoProcess_PopFrame( proc );
 		return;
 	}
 
@@ -2501,7 +2524,7 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 		data[i].index = i;
 		data[i].value = items[i];
 	}
-	QuickSort( data, 0, N-1, part, ( p[1]->xEnum.value == 0 ) ? 1 : 0 );
+	QuickSort( data, 0, N-1, part, p[1]->xEnum.value == 0 );
 	for(i=0; i<N; i++) items[i] = data[i].value;
 	dao_free( data );
 }
@@ -3462,16 +3485,13 @@ void DaoMap_Reset( DaoMap *self )
 {
 	DMap_Reset( self->items );
 }
-void DaoValue_SetType( DaoValue *to, DaoType *tp );
 int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 {
 	DaoType *tp = self->unitype;
 	DaoType *tp1=NULL, *tp2=NULL;
 	DaoValue *key2 = NULL;
 	DaoValue *value2 = NULL;
-	DaoEnum ekey = {DAO_ENUM,0,0,0,1,0,NULL,0};
-	DaoEnum evalue = {DAO_ENUM,0,0,0,1,0,NULL,0};
-	DNode *node;
+	int mt;
 	if( tp ){
 		if( tp->nested->size >=2 ){
 			tp1 = tp->nested->items.pType[0];
@@ -3482,8 +3502,8 @@ int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 	}
 	/* type checking and setting */
 	if( tp1 ){
-		if( DaoType_MatchValue( tp1, key, NULL ) ==0 ) return 1;
-		if( (key->type == DAO_ENUM && tp1->tid == DAO_ENUM) || key->type == DAO_TUPLE ){
+		if( (mt = DaoType_MatchValue( tp1, key, NULL )) ==0 ) return 1;
+		if( mt != DAO_MT_EQ ){
 			if( DaoValue_Move( key, & key2, tp1 ) == 0 ){
 				GC_DecRC( key2 );
 				return 1;
@@ -3492,18 +3512,16 @@ int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 		}
 	}
 	if( tp2 ){
-		if( DaoType_MatchValue( tp2, value, NULL ) ==0 ) return 2;
-		if( (value->type == DAO_ENUM && tp2->tid == DAO_ENUM) || value->type == DAO_TUPLE ){
+		if( (mt = DaoType_MatchValue( tp2, value, NULL )) ==0 ) return 2;
+		if( mt != DAO_MT_EQ ){
 			if( DaoValue_Move( value, & value2, tp2 ) == 0 ){
 				GC_DecRC( value2 );
-				return 1;
+				return 2;
 			}
 			value = value2;
 		}
 	}
-	node = DMap_Insert( self->items, key, value );
-	if( tp1 && key->type >= DAO_ENUM ) DaoValue_SetType( node->key.pValue, tp1 );
-	if( tp2 && value->type >= DAO_ENUM ) DaoValue_SetType( node->value.pValue, tp2 );
+	DMap_Insert( self->items, key, value );
 	GC_DecRC( key2 );
 	GC_DecRC( value2 );
 	return 0;
@@ -3982,7 +4000,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 {
 	DaoTuple *self = & self0->xTuple;
 	int ec = DAO_ERROR_INDEX;
-	if( pid->type == DAO_NULL ){
+	if( pid->type == DAO_NONE ){
 		ec = 0;
 		/* return a copy. TODO */
 	}else if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){

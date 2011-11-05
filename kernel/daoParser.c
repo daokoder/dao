@@ -2062,11 +2062,13 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 	DaoInode *opening = (DaoInode*) DArray_Back( self->scopeOpenings );
 	DaoInode *closing = (DaoInode*) DArray_Back( self->scopeClosings );
 	self->lexLevel --;
-	if( self->lexLevel < 0 || self->scopeOpenings->size == 0 ) return 0;
+	if( self->lexLevel < 0 || self->scopeOpenings->size == 0 ){
+		DaoParser_Error3( self, DAO_INVALID_SCOPE_ENDING, self->curToken );
+		return 0;
+	}
 	if( opening->code == DVM_BRANCH && closing->c == DVM_SWITCH ){
 		DaoInode *branch = opening->jumpTrue; /* condition test */
 		DaoParser_SetupSwitch( self, opening );
-		if( branch->jumpFalse == NULL ) branch->jumpFalse = closing;
 	}else if( opening->code == DVM_BRANCH ){
 		DaoInode *branch = opening->jumpTrue; /* condition test */
 		branch->jumpFalse = closing;
@@ -3492,6 +3494,7 @@ DecoratorError:
 			continue;
 		}
 
+		self->curToken = start;
 		tki = tokens[start]->name;
 		switch( tki ){
 		case DTOK_LCB :
@@ -3596,6 +3599,7 @@ DecoratorError:
 			opening = DaoParser_AddScope( self, DVM_BRANCH, closing );
 			DaoParser_AddCode( self, DVM_SWITCH, reg1, self->switchMaps->size, 0, start,0,rb );
 			opening->jumpTrue = self->vmcLast;
+			opening->jumpTrue->jumpFalse = closing;
 			DArray_Append( self->switchMaps, switchMap );
 			DMap_Delete( switchMap );
 			start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
@@ -3694,6 +3698,7 @@ DecoratorError:
 				return 0;
 			}
 			inode->jumpTrue = tki == DKEY_BREAK ? opening->jumpFalse : opening->next;
+			if( inode->jumpTrue->code == DVM_SWITCH ) inode->jumpTrue = inode->jumpTrue->jumpFalse;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start += 1;
 			continue;

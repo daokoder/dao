@@ -17,18 +17,14 @@
 #include<limits.h>
 #include"daoBase.h"
 
-typedef union DQuadUByte DQuadUByte;
-union DQuadUByte { void *p; struct{ unsigned char a, b, c, d; }X; };
-
 /* Array of pointers or integers: */
 struct DArray
 {
 	union{
 		dint          *pInt;
 		size_t        *pSize;
-		DQuadUByte    *pQUB;
-
 		void         **pVoid;
+
 		DaoValue     **pValue;
 		DaoList      **pList;
 		DaoTuple     **pTuple;

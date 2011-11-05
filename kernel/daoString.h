@@ -41,8 +41,6 @@ void DString_Detach( DString *self );
 void DString_SetSharing( DString *self, int sharing );
 
 int DString_IsMBS( DString *self );
-int DString_IsDigits( DString *self );
-int DString_IsDecimal( DString *self );
 size_t DString_CheckUTF8( DString *self );
 
 char* DString_GetMBS( DString *self );

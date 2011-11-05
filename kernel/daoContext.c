@@ -905,7 +905,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 	array = DaoProcess_GetArray( self, vmc );
 	if( size ){
 		numtype = regv[opA]->type;
-		if( numtype == DAO_NULL || numtype > DAO_COMPLEX ){
+		if( numtype == DAO_NONE || numtype > DAO_COMPLEX ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid matrix enumeration" );
 			return;
 		}
@@ -3082,7 +3082,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		map2 = & dA->xMap;
 		if( map2->unitype ){
 			short m = DaoType_MatchTo( map2->unitype, ct, NULL );
-			if( m == DAO_MT_ANY || m == DAO_MT_EQ ) goto Rebind;
+			if( m == DAO_MT_EQ ) goto Rebind;
 		}
 		map = DaoMap_New(0);
 		map->unitype = ct;

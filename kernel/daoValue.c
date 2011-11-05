@@ -137,7 +137,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 		return L==R ? 0 : ( L<R ? -1 : 1 );
 	}
 	switch( left->type ){
-	case DAO_NULL : return 0;
+	case DAO_NONE : return 0;
 	case DAO_INTEGER : return left->xInteger.value - right->xInteger.value;
 	case DAO_FLOAT   : return float_compare( left->xFloat.value, right->xFloat.value );
 	case DAO_DOUBLE  : return float_compare( left->xDouble.value, right->xDouble.value );
@@ -152,13 +152,13 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
 	}
-	return 1;
+	return left < right ? -1 : (left > right); /* needed for map */
 }
 int DaoValue_IsZero( DaoValue *self )
 {
 	if( self == NULL ) return 1;
 	switch( self->type ){
-	case DAO_NULL : return 1;
+	case DAO_NONE : return 1;
 	case DAO_INTEGER : return self->xInteger.value == 0;
 	case DAO_FLOAT  : return self->xFloat.value == 0.0;
 	case DAO_DOUBLE : return self->xDouble.value == 0.0;
@@ -200,7 +200,7 @@ double DaoValue_GetDouble( DaoValue *self )
 {
 	DString *str;
 	switch( self->type ){
-	case DAO_NULL    : return 0;
+	case DAO_NONE    : return 0;
 	case DAO_INTEGER : return self->xInteger.value;
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_DOUBLE  : return self->xDouble.value;
@@ -224,7 +224,7 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *st
 		DaoStream_WriteMBS( stream, coreTypeNames[ self->type ] );
 	else
 		DaoStream_WriteMBS( stream, DaoValue_GetTyper( self )->name );
-	if( self->type == DAO_NULL ) return;
+	if( self->type == DAO_NONE ) return;
 	if( self->type == DAO_TYPE ){
 		DaoStream_WriteMBS( stream, "<" );
 		DaoStream_WriteMBS( stream, self->xType.name->mbs );
@@ -396,7 +396,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		}
 	}
 	switch( self->type ){
-	case DAO_NULL : return self;
+	case DAO_NONE : return self;
 	case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xInteger.value );
 	case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
 	case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xDouble.value );
@@ -479,13 +479,17 @@ DaoValue* DaoValue_SimpleCopy( DaoValue *self )
 static void DaoValue_CopyExt( DaoValue *src, DaoValue **dest, int copy )
 {
 	DaoValue *dest2 = *dest;
-	if( *dest == NULL ){
+	if( src == dest2 ) return;
+	if( dest2 && dest2->xNone.refCount >1 ){
+		GC_DecRC( dest2 );
+		*dest = dest2 = NULL;
+	}
+	if( dest2 == NULL ){
 		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_IncRC( src );
 		*dest = src;
 		return;
 	}
-	if( src == *dest ) return;
 	if( src->type != dest2->type || src->type > DAO_ENUM ){
 		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_ShiftRC( src, dest2 );
@@ -672,7 +676,8 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 }
 int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 {
-	DaoValue *D2;
+	DaoValue *D2 = *D;
+	if( S == D2 ) return 1;
 	if( S == NULL ){
 		GC_DecRC( *D );
 		*D = NULL;
@@ -683,7 +688,7 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		return 1;
 	}
 	switch( T->tid ){
-	case DAO_NULL :
+	case DAO_NONE :
 	case DAO_INITYPE :
 		DaoValue_Copy( S, D );
 		return 1;
@@ -699,7 +704,10 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		return DaoValue_MoveVariant( S, D, T );
 	default : break;
 	}
-	D2 = *D;
+	if( D2 && D2->xNone.refCount >1 ){
+		GC_DecRC( D2 );
+		*D = D2 = NULL;
+	}
 	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T );
 
 	switch( (S->type << 8) | T->tid ){

@@ -24,7 +24,6 @@
 #define DAO_DATA_COMMON  DAO_DATA_CORE; int cycRefCount
 
 void DaoValue_Init( void *dbase, char type );
-void DaoValue_ChangeState( void *dbase, char state, char add );
 
 struct DaoNone
 {

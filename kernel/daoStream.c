@@ -465,7 +465,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 			DaoProcess_Execute( proc );
 			if( proc->status == DAO_VMPROC_ABORTED ) break;
 			res = proc->stackValues[0];
-			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
+			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
 		DaoProcess_PopFrame( proc );
 	}
@@ -500,7 +500,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 			DaoProcess_Execute( proc );
 			if( proc->status == DAO_VMPROC_ABORTED ) break;
 			res = proc->stackValues[0];
-			if( res && res->type != DAO_NULL ) DaoList_Append( list, res );
+			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
 		DaoProcess_PopFrame( proc );
 	}

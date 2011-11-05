@@ -27,7 +27,7 @@
 
 #include"dao.h"
 
-#define DAO_UDF DAO_NULL  /* undefined type: for implicitly declared variables */
+#define DAO_UDF DAO_NONE  /* undefined type: for implicitly declared variables */
 
 enum DaoRTTI
 {
@@ -59,7 +59,7 @@ enum DaoRTTI
 
 enum DaoBasicStruct
 {
-	D_VALUE = 1, /* for DMap only */
+	D_VALUE = 1,
 	D_VMCODE ,
 	D_TOKEN ,   /* for DArray only */
 	D_STRING ,
@@ -305,6 +305,7 @@ enum DaoCtInfoId
 	DAO_INVALID_REFERENCE ,
 	DAO_INVALID_EXPRESSION ,
 	DAO_INVALID_STATEMENT ,
+	DAO_INVALID_SCOPE_ENDING ,
 	DAO_INVALID_FUNCTIONAL ,
 	DAO_INVALID_DEFINITION ,
 	DAO_INVALID_ENUM_DEFINITION ,

@@ -153,7 +153,7 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
 			if( id >= max ) break;
 		}
 		break;
-	default : break;
+	default : data = & self; len = sizeof(DaoValue*); break;
 	}
 	if( data ) hash = MurmurHash2( data, len, HASH_SEED);
 	if( id == id2 && id < max ){

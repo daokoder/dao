@@ -143,6 +143,9 @@ void DString_DeleteData( DString *self )
 	}else{
 		dao_free( data );
 	}
+	self->shared = 0;
+	self->mbs = NULL;
+	self->wcs = NULL;
 }
 void DString_Delete( DString *self )
 {
@@ -153,7 +156,7 @@ void DString_Detach( DString *self )
 {
 	size_t size, chsize;
 	int *data2, *data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
-	if( self->shared ==0 || data[0] ==1 ) return;
+	if( self->shared ==0 ) return;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
 #endif
@@ -175,10 +178,10 @@ void DString_Detach( DString *self )
 void DString_SetSharing( DString *self, int sharing )
 {
 	int *data;
-	if( self->shared == sharing ) return;
+	if( (self->shared == 0) == (sharing == 0) ) return;
 	DString_Detach( self );
 	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
-	self->shared = sharing;
+	self->shared = sharing != 0;
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
@@ -225,29 +228,6 @@ int DString_IsMBS( DString *self )
 {
 	return ( self->wcs == NULL );
 }
-int DString_IsDigits( DString *self )
-{
-	size_t i;
-	if( self->mbs ){
-		for( i=0; i<self->size; i++ ) if( isdigit( self->mbs[i] ) == 0 ) return 0;
-	}else{
-		for( i=0; i<self->size; i++ ) if( iswdigit( self->wcs[i] ) == 0 ) return 0;
-	}
-	return 1;
-}
-int DString_IsDecimal( DString *self )
-{
-	size_t i;
-	if( self->mbs ){
-		for( i=0; i<self->size; i++ )
-			if( isdigit( self->mbs[i] ) == 0 && self->mbs[i] != '.' ) return 0;
-	}else{
-		for( i=0; i<self->size; i++ )
-			if( iswdigit( self->wcs[i] ) == 0 && self->wcs[i] != L'.' ) return 0;
-	}
-	return 1;
-}
-
 char*  DString_GetMBS( DString *self )
 {
 	DString_ToMBS( self );
@@ -357,6 +337,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
 	wchar_t buffer[101];
 	mbstate_t state;
 	buffer[100] = 0;
+	DString_Detach( self );
 	while( n ){
 		const wchar_t *wcs = buffer;
 		size_t smin, len, m = n;
@@ -401,6 +382,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 	char buffer[101];
 	mbstate_t state;
 	buffer[100] = 0;
+	DString_Detach( self );
 	while( n ){
 		const char *mbs = buffer;
 		size_t smin, len = n < 100 ? n : 100;
@@ -904,22 +886,21 @@ void DString_Assign( DString *self, DString *chs )
 {
 	int *data1 = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
 	int *data2 = (chs->mbs ? (int*)chs->mbs : (int*)chs->wcs) - chs->shared;
-	int share1 = self->shared;
-	int share2 = chs->shared;
 	int assigned = 0;
 	if( self == chs ) return;
 	if( data1 == data2 ) return;
+	//XXX
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
 #endif
-	if( share1 && share2 ){
+	if( self->shared && chs->shared ){
 		data1[0] -= 1;
 		if( data1[0] ==0 ) dao_free( data1 );
 		*self = *chs;
 		data2[0] += 1;
 		assigned = 1;
-	}else if( data1 == NULL && share2 ){
+	}else if( data1 == NULL && chs->shared ){
 		*self = *chs;
 		data2[0] += 1;
 		assigned = 1;
@@ -929,7 +910,7 @@ void DString_Assign( DString *self, DString *chs )
 #endif
 
 	if( assigned ) return;
-	if( data1 == NULL ){
+	if( self->mbs == NULL && self->wcs == NULL ){
 		if( chs->mbs ){
 			self->wcs = NULL;
 			self->size = self->bufSize = chs->size;
@@ -995,7 +976,7 @@ static int DWCString_Compare( DString *self, DString *chs )
 int DString_Compare( DString *self, DString *chs )
 {
 	int res = 0;
-	if( self->mbs == chs->mbs && self->wcs == chs->wcs ) return 0; /* shared */
+	if( self->mbs == chs->mbs && self->wcs == chs->wcs ) return 0;
 	if( self->mbs && chs->mbs ){
 		res = DMBString_Compare( self, chs );
 	}else if( self->wcs && chs->wcs ){
@@ -1098,6 +1079,7 @@ void DString_Reverse( DString *self )
 	size_t half = size / 2;
 	unsigned char ch, *mbs;
 	if( size <= 1 ) return;
+	DString_Detach( self );
 	if( self->wcs ){
 		for(i=0; i<half; i++){
 			wchar_t c = self->wcs[i];

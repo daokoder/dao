@@ -1828,12 +1828,12 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, size_t N, DArray *slice 
 					to   = data[1]->xInteger.value;
 					rc = SliceRange( slice, N, from, to );
 				}
-			}else if( data[0]->type == DAO_NULL && data[1]->type == DAO_NULL ){
+			}else if( data[0]->type == DAO_NONE && data[1]->type == DAO_NONE ){
 				rc = SliceRange2( slice, N, 0, N );
-			}else if( data[0]->type <= DAO_DOUBLE && data[1]->type == DAO_NULL ){
+			}else if( data[0]->type <= DAO_DOUBLE && data[1]->type == DAO_NONE ){
 				from = DaoValue_GetInteger( data[0] );
 				rc = SliceRange( slice, N, from, -1 );
-			}else if( data[0]->type == DAO_NULL && data[1]->type <= DAO_DOUBLE ){
+			}else if( data[0]->type == DAO_NONE && data[1]->type <= DAO_DOUBLE ){
 				to = DaoValue_GetInteger( data[1] );
 				rc = SliceRange( slice, N, 0, to );
 			}else{
@@ -2417,8 +2417,8 @@ static void DaoArray_PrintElement( DaoArray *self, DaoStream *stream, size_t i )
 static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DaoArray *self = & value->xArray;
-	size_t *tmp, *dims = self->dims;
-	size_t i, j;
+	size_t i, *tmp, *dims = self->dims;
+	int j;
 
 	if( self->ndim < 2 ) return;
 	if( self->ndim ==2 && ( dims[0] ==1 || dims[1] ==1 ) ){
@@ -2436,7 +2436,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 		tmp = tmpArray->items.pSize;
 		for(i=0; i<self->size; i++){
 			size_t mod = i;
-			for(j=self->ndim-1; j >=0; j--){
+			for(j=self->ndim-1; j>=0; j--){
 				size_t res = ( mod % dims[j] );
 				mod /= dims[j];
 				tmp[j] = res;
@@ -2886,7 +2886,7 @@ static void QuickSort2( DaoArray *array, dint *slice,
 		lower ++;
 	}
 	Swap( array, slice, index, first, upper );
-	if( first < upper-1 ) QuickSort2( array, slice, index, first, upper-1, part, asc );
+	if( first+1 < upper ) QuickSort2( array, slice, index, first, upper-1, part, asc );
 	if( upper >= part ) return;
 	if( upper+1 < last ) QuickSort2( array, slice, index, upper+1, last, part, asc );
 }

@@ -1271,7 +1271,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	tid = p->type;
 
 	switch( p->type ){
-	case DAO_NULL :
+	case DAO_NONE :
 		abtp = DaoNamespace_MakeValueType( self, dao_none_value );
 		break;
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :

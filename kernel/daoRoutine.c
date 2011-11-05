@@ -528,8 +528,7 @@ DaoRoutine* DaoRoutine_New()
 	self->annotCodes = DArray_New(D_VMCODE);
 	self->localVarType = DMap_New(0,0);
 	self->abstypes = DMap_New(D_STRING,0);
-	self->definiteNumbers = DArray_New(0);
-	self->possibleNumbers = DArray_New(0);
+	self->simpleVariables = DArray_New(0);
 	self->bodyStart = self->bodyEnd = 0;
 	self->jitData = NULL;
 	return self;
@@ -550,8 +549,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	if( self->specialized ) GC_DecRC( self->specialized );
 	GC_DecRCs( self->regType );
 	DaoVmcArray_Delete( self->vmCodes );
-	DArray_Delete( self->definiteNumbers );
-	DArray_Delete( self->possibleNumbers );
+	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );
 	DArray_Delete( self->defLocals );
 	DArray_Delete( self->annotCodes );
@@ -640,8 +638,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	DaoGC_IncRCs( other->regType );
 	DaoGC_DecRCs( self->regType );
 	DArray_Assign( self->regType, other->regType );
-	DArray_Assign( self->definiteNumbers, other->definiteNumbers );
-	DArray_Assign( self->possibleNumbers, other->possibleNumbers );
+	DArray_Assign( self->simpleVariables, other->simpleVariables );
 	GC_ShiftRC( other->nameSpace, self->nameSpace );
 	self->nameSpace = other->nameSpace;
 	self->regCount = other->regCount;
@@ -4057,18 +4054,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 		GC_IncRC( addRegType->items.pVoid[i] );
 		DArray_Append( self->regType, addRegType->items.pVoid[i] );
 	}
-	DArray_Clear( self->definiteNumbers );
-	DArray_Clear( self->possibleNumbers );
+	DArray_Clear( self->simpleVariables );
 	for(i=self->parCount; i<self->regType->size; i++){
 		DaoType *tp = self->regType->items.pType[i];
-		if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_COMPLEX ){
-			DArray_Append( self->definiteNumbers, (size_t)i );
-		}
-	}
-	for(i=0; i<self->regType->size; i++){
-		DaoType *tp = self->regType->items.pType[i];
-		if( tp == NULL || DaoType_MatchTo( inumt, tp, NULL ) ){
-			DArray_Append( self->possibleNumbers, (size_t)i );
+		if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_ENUM ){
+			DArray_Append( self->simpleVariables, (size_t)i );
 		}
 	}
 	self->regCount = self->regType->size;

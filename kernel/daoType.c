@@ -650,7 +650,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DAO_MT_EQ;
 		break;
 	case DAO_ARRAY :
-		if( value->xArray.size == 0 ) return DAO_MT_EQ;
+		if( value->xArray.size == 0 ) return DAO_MT_ANY;
 		tp = value->xArray.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;
@@ -661,7 +661,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_LIST :
-		if( value->xList.items.size == 0 ) return DAO_MT_EQ;
+		if( value->xList.items.size == 0 ) return DAO_MT_ANY;
 		tp = value->xList.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( it1 == DAO_UDF ) return DAO_MT_UDF;
@@ -670,7 +670,7 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_MAP :
-		if( value->xMap.items->size == 0 ) return DAO_MT_EQ;
+		if( value->xMap.items->size == 0 ) return DAO_MT_ANY;
 		tp = value->xMap.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		flags = (1<<DAO_UDF)|((ulong_t)1<<DAO_ANY)|((ulong_t)1<<DAO_INITYPE);

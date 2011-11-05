@@ -185,9 +185,15 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 	DaoRegex *pat = NULL;
 	DaoRgxItem *it;
 	DNode *node;
+	char buf[50];
 	int i;
 	if( mbs && src->wcs ) DString_ToMBS( src );
 	if( mbs==0 && src->mbs ) DString_ToWCS( src );
+	DString_Trim( src );
+	if( src->size ==0 ){
+		DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
+		return NULL;
+	}
 	if( src->mbs ){
 		if( self->mbsRegex == NULL ) self->mbsRegex = DHash_New(D_STRING,0);
 		node = DMap_Find( self->mbsRegex, src );
@@ -204,7 +210,6 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 	for( i=0; i<pat->count; i++ ){
 		it = pat->items + i;
 		if( it->type ==0 ){
-			char buf[50];
 			sprintf( buf, "incorrect pattern, at char %i.", it->length );
 			DaoProcess_RaiseException( self, DAO_ERROR, buf );
 			return NULL;
@@ -272,8 +277,8 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	DaoValue **values = self->stackValues + frame->stackBase;
 	DaoType *routHost = routine->routHost;
 	DaoType **types = routine->regType->items.pType;
-	size_t *id = routine->definiteNumbers->items.pSize;
-	size_t *end = id + routine->definiteNumbers->size;
+	size_t *id = routine->simpleVariables->items.pSize;
+	size_t *end = id + routine->simpleVariables->size;
 	int j, need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	complex16 com = {0.0,0.0};
 
@@ -301,6 +306,9 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
 		case DAO_DOUBLE  : value2 = (DaoValue*) DaoDouble_New(0.0); break;
 		case DAO_COMPLEX : value2 = (DaoValue*) DaoComplex_New(com); break;
+		case DAO_LONG    : value2 = (DaoValue*) DaoLong_New(); break;
+		case DAO_STRING  : value2 = (DaoValue*) DaoString_New(1); break;
+		case DAO_ENUM    : value2 = (DaoValue*) DaoEnum_New( types[i], 0 ); break;
 		}
 		if( value2 == NULL ) continue;
 		GC_ShiftRC( value2, value );
@@ -967,7 +975,7 @@ CallEntry:
 				ComplexOperand( vmc->c ).real = 0.0;
 				ComplexOperand( vmc->c ).imag = vmc->b;
 				break;
-			case DAO_NULL :
+			case DAO_NONE :
 				GC_ShiftRC( dao_none_value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = dao_none_value;
 				break;
@@ -1143,7 +1151,7 @@ CallEntry:
 		}OPNEXT() OPCASE( TEST ){
 			vA = locVars[ vmc->a ];
 			switch( vA->type ){
-			case DAO_NULL :
+			case DAO_NONE :
 				vmc = vmcBase + vmc->b; break;
 			case DAO_INTEGER :
 				vmc = vA->xInteger.value ? vmc+1 : vmcBase + vmc->b; break;
@@ -1706,10 +1714,6 @@ CallEntry:
 				DString_Append( vA->xString.data, vB->xString.data );
 			}else if( vmc->b == vmc->c ){
 				DString_Insert( vB->xString.data, vA->xString.data, 0, 0, 0 );
-			}else if( vC == NULL ){
-				vC = locVars[ vmc->c ] = (DaoValue*) DaoString_Copy( & vA->xString );
-				GC_IncRC( locVars[ vmc->c ] );
-				DString_Append( vC->xString.data, vB->xString.data );
 			}else{
 				DString_Assign( vC->xString.data, vA->xString.data );
 				DString_Append( vC->xString.data, vB->xString.data );
@@ -1741,14 +1745,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MOVE_CC ){
 			ComplexOperand( vmc->c ) = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_SS ){
-			vC = locVars[ vmc->c ];
-			if( vC == NULL || vC->type != DAO_STRING || vC->xGC.refCount >1 ){
-				value = (DaoValue*) DaoString_Copy( & locVars[ vmc->a ]->xString );
-				GC_ShiftRC( value, locVars[ vmc->c ] );
-				locVars[ vmc->c ] = value;
-			}else{
-				DString_Assign( vC->xString.data, locVars[ vmc->a ]->xString.data );
-			}
+			DString_Assign( locVars[ vmc->c ]->xString.data, locVars[ vmc->a ]->xString.data );
 		}OPNEXT() OPCASE( MOVE_PP ){
 			if( locVars[ vmc->a ] == NULL ) goto RaiseErrorNullObject;
 			DaoValue_Copy( locVars[ vmc->a ], & locVars[ vmc->c ] );

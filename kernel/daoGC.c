@@ -313,7 +313,7 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 	if( value->type < DAO_ENUM ) ObjectProfile[value->type] --;
 #endif
 	switch( value->type ){
-	case DAO_NULL :
+	case DAO_NONE :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 	case DAO_DOUBLE :
@@ -338,7 +338,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 		if( p->type < DAO_ENUM ) ObjectProfile[p->type] --;
 #endif
 		switch( p->xGC.type ){
-		case DAO_NULL :
+		case DAO_NONE :
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_DOUBLE :

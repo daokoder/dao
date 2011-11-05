@@ -510,6 +510,8 @@ static int InitRegex( DaoRegex *self, DString *ds )
 #if DEBUG
 	if( self->count * sizeof(DaoRgxItem) > self->itemlen ){
 		printf( "error: allocated memory is not enough for the pattern.\n" );
+		printf( "%s\n", ds->mbs );
+		free(123);
 		exit(0);
 	}
 #endif
@@ -518,8 +520,7 @@ static int InitRegex( DaoRegex *self, DString *ds )
 		self->config |= patt->config;
 		if( patt->type == PAT_SPLIT && patt->gid > max ) max = patt->gid;
 		if( patt->min != patt->max ) fixed = 0;
-		if( (patt->type == PAT_SET || patt->type == PAT_WORD)
-				&& (patt->config & PAT_INC_CASE) ){
+		if( (patt->type == PAT_SET || patt->type == PAT_WORD) && (patt->config & PAT_INC_CASE) ){
 			if( self->mbs ){
 				char *w = ((char*)self->wordbuf) + patt->word;
 				for(j=0; j<patt->length; j++) w[j] = tolower( w[j] );

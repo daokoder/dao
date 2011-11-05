@@ -846,7 +846,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 					if( input->size && self->AddHistory ) self->AddHistory( input->mbs );
 					break;
 				}
-				chs = self->ReadLine( "" );
+				chs = self->ReadLine( "..... " );
 			}
 		}else{
 			printf( "(dao) " );

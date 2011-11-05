@@ -134,7 +134,7 @@ extern int daoProxyPort;
 
 enum DaoTypes
 {
-	DAO_NULL  = 0,
+	DAO_NONE  = 0,
 	DAO_INTEGER ,
 	DAO_FLOAT   ,
 	DAO_DOUBLE  ,
