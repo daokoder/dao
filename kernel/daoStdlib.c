@@ -512,6 +512,21 @@ static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutMBString( proc, DAO_VERSION );
 }
+static void STD_Size( DaoProcess *proc, DaoValue *p[], int N )
+{
+	size_t size = 0;
+	switch( p[0]->type ){
+	case DAO_INTEGER: size = sizeof(dint); break;
+	case DAO_FLOAT:   size = sizeof(float); break;
+	case DAO_DOUBLE:  size = sizeof(double); break;
+	case DAO_COMPLEX: size = sizeof(complex16); break;
+	case DAO_LONG:    size = p[0]->xLong.value->size*sizeof(uchar_t); break;
+	case DAO_STRING:  size = p[0]->xString.data->size*( p[0]->xString.data->mbs?
+															sizeof(char) : sizeof(wchar_t) ); break;
+	default: break;
+	}
+	DaoProcess_PutInteger( proc, size );
+}
 
 static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -674,6 +689,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Restore,   "restore( fromfile = 'backup.sdo' )" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
+	{ STD_Size,      "datasize( value: @T<int|float|double|complex|long|string> )=>int" },
 
 	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
 	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },
