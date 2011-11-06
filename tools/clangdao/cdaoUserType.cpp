@@ -403,7 +403,7 @@ const string tpl_struct = "$(qname)* DAO_DLL_$(module) Dao_$(idname)_New();\n";
 
 const string tpl_struct_alloc =
 "$(qname)* Dao_$(idname)_New()\n{\n\
-	$(qname) *self = calloc( 1, sizeof($(idname)) );\n\
+	$(qname) *self = ($(qname)*) calloc( 1, sizeof($(idname)) );\n\
 	return self;\n\
 }\n";
 const string tpl_struct_alloc2 =
@@ -435,6 +435,12 @@ $(callbacks)$(selfields)\treturn wrap;\n\
 const string tpl_set_callback = "\tself->$(callback) = Dao_$(name)_$(callback);\n";
 const string tpl_set_selfield = "\tself->$(field) = wrap;\n";
 
+const string c_nowrap_new = 
+"static void dao_$(host_idname)_$(cxxname)( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
+{\n\
+	$(qname) *self = Dao_$(idname)_New();\n\
+	DaoProcess_WrapCdata( _proc, self, dao_$(host_idname)_Typer );\n\
+}\n";
 const string c_wrap_new = 
 "static void dao_$(host_idname)_$(cxxname)( DaoProcess *_proc, DaoValue *_p[], int _n )\n\
 {\n\
@@ -810,10 +816,10 @@ int CDaoUserType::Generate( RecordDecl *decl )
 	map<string,string> kvmap;
 
 	wrapType = CDAO_WRAP_TYPE_PROXY;
+	outs() << name << " " << qname << " CDaoUserType::Generate( RecordDecl *decl ) " << this << "\n";
 
 	SetupDefaultMapping( kvmap );
 
-	outs() << name << " CDaoUserType::Generate( RecordDecl *decl )\n";
 	RecordDecl::field_iterator fit, fend;
 	for(fit=decl->field_begin(),fend=decl->field_end(); fit!=fend; fit++){
 		const Type *type = fit->getTypeSourceInfo()->getType().getTypePtr();
@@ -835,39 +841,40 @@ int CDaoUserType::Generate( RecordDecl *decl )
 
 	dao_meths += cdao_string_fill( dao_proto, kvmap );
 	meth_decls += cdao_string_fill( cxx_wrap_proto, kvmap ) + ";\n";
-	meth_codes += cdao_string_fill( c_wrap_new, kvmap );
 	if( callbacks.size() == 0 ){
 		type_decls = cdao_string_fill( tpl_struct, kvmap );
 		type_codes = cdao_string_fill( tpl_struct_alloc, kvmap );
-		return 0;
-	}
+		meth_codes += cdao_string_fill( c_nowrap_new, kvmap );
+	}else{
+		meth_codes += cdao_string_fill( c_wrap_new, kvmap );
 
-	string set_callbacks;
-	string set_fields;
-	kvmap[ "callback" ] = "";
-	for(i=0,n=callbacks.size(); i<n; i++){
-		CDaoFunction & meth = callbacks[i];
-		meth.Generate();
-		if( not meth.generated ) continue;
-		wrapCount += 1;
-		kvmap[ "callback" ] = meth.cxxName;
-		set_callbacks += cdao_string_fill( tpl_set_callback, kvmap );
-		type_decls += meth.cxxWrapperVirtProto;
-		type_codes += meth.cxxWrapperVirt;
-		CDaoProxyFunction::Use( meth.signature2 );
-	}
-	kvmap[ "field" ] = "";
+		string set_callbacks;
+		string set_fields;
+		kvmap[ "callback" ] = "";
+		for(i=0,n=callbacks.size(); i<n; i++){
+			CDaoFunction & meth = callbacks[i];
+			meth.Generate();
+			if( not meth.generated ) continue;
+			wrapCount += 1;
+			kvmap[ "callback" ] = meth.cxxName;
+			set_callbacks += cdao_string_fill( tpl_set_callback, kvmap );
+			type_decls += meth.cxxWrapperVirtProto;
+			type_codes += meth.cxxWrapperVirt;
+			CDaoProxyFunction::Use( meth.signature2 );
+		}
+		kvmap[ "field" ] = "";
 #if 0
-	for( f in selfields.keys() ){
-		kvmap[ 'field' ] = f;
-		setfields += tpl_set_selfield.expand( kvmap );
-	}
-	kvmap = { 'name'=>name, 'callbacks'=>callbacks, 'selfields'=>setfields };
+		for( f in selfields.keys() ){
+			kvmap[ 'field' ] = f;
+			setfields += tpl_set_selfield.expand( kvmap );
+		}
+		kvmap = { 'name'=>name, 'callbacks'=>callbacks, 'selfields'=>setfields };
 #endif
-	kvmap[ "callbacks" ] = set_callbacks;
-	kvmap[ "selfields" ] = set_fields;
-	type_decls += cdao_string_fill( tpl_struct_daoc, kvmap );
-	type_codes += cdao_string_fill( tpl_struct_daoc_alloc, kvmap );
+		kvmap[ "callbacks" ] = set_callbacks;
+		kvmap[ "selfields" ] = set_fields;
+		type_decls += cdao_string_fill( tpl_struct_daoc, kvmap );
+		type_codes += cdao_string_fill( tpl_struct_daoc_alloc, kvmap );
+	}
 
 
 	kvmap[ "decls" ] = meth_decls;

@@ -395,7 +395,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 					}
 				}
 			}else{
-				for(i=i; i<end; i++){
+				for(; i<end; i++){
 					chi = bl ? mbs[i] : wcs[i];
 					if( chi == 'I' ){
 						self->config |= PAT_INC_CASE;

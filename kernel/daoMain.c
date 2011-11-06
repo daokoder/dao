@@ -30,7 +30,7 @@ static DaoVmSpace *vmSpace = NULL;
 
 static char* DaoReadLine( const char *s )
 {
-	char *line;
+	char *line = NULL;
 	readingline = 1;
 #ifdef DAO_USE_READLINE
 	line = readline( s );

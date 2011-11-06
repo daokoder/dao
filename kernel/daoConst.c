@@ -53,6 +53,7 @@ static const char* const daoCtInfo[] =
 	"Failed interface binding",
 	"Failed type instantiation",
 	"Undefined scope name",
+	"Invalid token or unclosed string/comment/verbatim",
 	"Invalid path setting",
 	"Invalid access permission",
 	"Invalid storage type/combination",

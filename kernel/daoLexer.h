@@ -20,6 +20,7 @@ enum DaoTokNames
 {
 	DTOK_NONE ,
 	DTOK_CMT_OPEN , /* used by DaoStudio for code highlighting */
+	DTOK_VBT_OPEN , /* verbatim opening */
 	DTOK_MBS_OPEN ,
 	DTOK_WCS_OPEN ,
 	DTOK_COMMENT ,
@@ -33,6 +34,7 @@ enum DaoTokNames
 	DTOK_DOUBLE_DEC , /* 345D, 123.25D */
 	DTOK_NUMBER_IMG , /* 123.0$, imaginary part of complex */
 	DTOK_NUMBER_SCI ,
+	DTOK_VERBATIM ,
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
 	DTOK_BLANK , /*  */

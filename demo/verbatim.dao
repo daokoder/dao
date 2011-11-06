@@ -1,0 +1,41 @@
+
+s = [=[ some text ]=]
+
+# verbatim, odd =s for MBS.
+# a name (of letters) can be placed just before the second [,
+# so that smart editors can highlight its content properly.
+cpp = [===cpp[
+class AA
+{
+	int index;
+};
+struct BB{};
+]===cpp]
+
+
+# verbatim, even =s for WCS:
+lua = [====lua[
+local a = 1;
+function Test()
+	io.write( 'Hello' )
+end
+]====lua]
+
+html = [===html[
+<body>
+<span name="test"></span>
+</body>
+]===html]
+
+random = [=======[
+asdffd348234lks'djcnzxkWPOWI"Q23EW487503498*(S*(&)(*&QW39EQ8723049
+ASFJA	9384170(*&0(*AS&(A*S&)(*A&sADSUYasi[0A9S8-09a8-AS69876%A
+'"""'''asdfaoi0342sdlfkj(*&^98q73wrq)(&^%&^RFKJRYE"
+s8%S5$&A^5s4^a4'
+]=======]
+
+io.writeln( s );
+io.writeln( cpp );
+io.writeln( lua );
+io.writeln( html );
+io.writeln( random );

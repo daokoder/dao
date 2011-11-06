@@ -27,6 +27,7 @@ const char *const dao_oper_tokens[] =
 {
 	"" ,
 	"#{" ,
+	"[=[",
 	"\'" ,
 	"\"" ,
 	"#" ,
@@ -40,6 +41,7 @@ const char *const dao_oper_tokens[] =
 	"0D" ,
 	"0$" ,
 	"0e0" ,
+	"[=[]=]",
 	"\'\'" ,
 	"\"\"" ,
 	" " ,
@@ -389,11 +391,14 @@ enum
 	TOK_NUMBER_SCI_E , /* 1.2e */
 	TOK_NUMBER_SCI_ES , /* 1.2e+ */
 	TOK_NUMBER_SCI ,
+	TOK_VERBATIM , /* [=\+ */
+	TOK_VERBATIM2 , /* [=\+\[a-zA-Z\]\+ */
 	TOK_STRING_MBS ,
 	TOK_STRING_WCS ,
 	TOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
 	TOK_ID_INITYPE ,
 	TOK_ID_SYMBOL ,
+	TOK_LSB ,  /* [ */
 	TOK_OP_COLON ,
 	TOK_OP_ADD ,
 	TOK_OP_SUB ,
@@ -494,11 +499,14 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_NUMBER_SCI , /* 1.2e */
 	DTOK_NUMBER_SCI , /* 1.2e+ */
 	DTOK_NUMBER_SCI ,
+	DTOK_VERBATIM ,
+	DTOK_VERBATIM ,
 	DTOK_MBS_OPEN ,
 	DTOK_WCS_OPEN ,
 	DTOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
 	DTOK_ID_INITYPE ,
 	DTOK_ID_SYMBOL ,
+	DTOK_LSB ,
 	DTOK_COLON ,
 	DTOK_ADD ,
 	DTOK_SUB ,
@@ -615,6 +623,7 @@ void DaoInitLexTable()
 	daoSpaceType[ '\n' ] = DTOK_NEWLN;
 	daoSpaceType[ '\r' ] = DTOK_NEWLN;
 	for(j=0; j<128; j++){
+		daoLexTable[ TOK_LSB ][j] = TOK_RESTART;
 		daoLexTable[ TOK_OP_RGXM ][ j ] = TOK_RESTART;
 		daoLexTable[ TOK_OP_RGXU ][ j ] = TOK_RESTART;
 		daoLexTable[ TOK_OP_RGXA ][ j ] = TOK_RESTART;
@@ -642,6 +651,10 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_ID_SYMBOL ][ j ] = TOK_ID_SYMBOL;
 			daoLexTable[ TOK_OP_AT ][ j ] = TOK_ID_INITYPE; /* @3 */
 		}else if( isalpha( j ) || j == '_' ){
+			if( j != '_' ){
+				daoLexTable[ TOK_VERBATIM ][j] = TOK_VERBATIM2;
+				daoLexTable[ TOK_VERBATIM2 ][j] = TOK_VERBATIM2;
+			}
 			daoLexTable[ TOK_START ][ j ] = TOK_IDENTIFIER;
 			daoLexTable[ TOK_IDENTIFIER ][ j ] = TOK_IDENTIFIER;
 			daoLexTable[ TOK_ID_INITYPE ][ j ] = TOK_ID_INITYPE;
@@ -658,10 +671,12 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_START ][')'] = TOK_END_RB;
 	daoLexTable[ TOK_START ]['{'] = TOK_END_LCB;
 	daoLexTable[ TOK_START ]['}'] = TOK_END_RCB;
-	daoLexTable[ TOK_START ]['['] = TOK_END_LSB;
+	daoLexTable[ TOK_START ]['['] = TOK_LSB;
 	daoLexTable[ TOK_START ][']'] = TOK_END_RSB;
 	daoLexTable[ TOK_START ][','] = TOK_END_COMMA;
 	daoLexTable[ TOK_START ][';'] = TOK_END_SEMCO;
+	daoLexTable[ TOK_LSB ]['='] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ]['='] = TOK_VERBATIM;
 	daoLexTable[ TOK_OP_SHARP ][ '\n' ] = TOK_END_CMT;
 	daoLexTable[ TOK_OP_SHARP ][ '\r' ] = TOK_END_CMT;
 	daoLexTable[ TOK_COMT_LINE ][ '\n' ] = TOK_END_CMT;
@@ -952,6 +967,8 @@ int DaoToken_Check( const char *src, int size, int *length )
 	}
 	if( type ==0 ){
 		switch( state ){
+		case TOK_VERBATIM : type = DTOK_VBT_OPEN; break;
+		case TOK_VERBATIM2 : type = DTOK_VBT_OPEN; break;
 		case TOK_STRING_MBS : type = DTOK_MBS_OPEN; break;
 		case TOK_STRING_WCS : type = DTOK_WCS_OPEN; break;
 		case TOK_OP_SHARP : type = DTOK_COMMENT; break;
@@ -968,7 +985,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 	DString *source = DString_New(1);
 	DString *literal = DString_New(1);
 	DArray *lexenvs = DArray_New(0);
-	char ch, hex[11] = "0x00000000";
+	char ch, *ss, hex[11] = "0x00000000";
 	int srcSize = (int)strlen( src );
 	int old=0, state = TOK_START;
 	int lexenv = LEX_ENV_NORMAL;
@@ -1121,6 +1138,22 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 			}else{
 				DString_AppendChar( literal, ch );
 			}
+		}else if( ch == '[' && (state == TOK_VERBATIM || state == TOK_VERBATIM2) ){
+			int len = srcSize - it - 1;
+			literal->mbs[0] = ']';
+			DString_AppendChar( literal, ']' );
+			lextok.type = lextok.name = DTOK_VBT_OPEN;
+			if( (ss = strstr( src + it + 1, literal->mbs )) != NULL ){
+				len = (ss - src) - it - 1 + literal->size;
+				lextok.type = lextok.name = DTOK_VERBATIM;
+			}
+			literal->mbs[0] = '[';
+			literal->mbs[literal->size-1] = '[';
+			DString_AppendDataMBS( literal, src + it + 1, len );
+			state = TOK_RESTART;
+			DArray_Append( tokens, & lextok );
+			DString_Clear( literal );
+			it += len;
 		}else if( lexenv == LEX_ENV_NORMAL ){
 			old = state;
 			if( ch >=0 ){
@@ -1204,6 +1237,10 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 	if( literal->size ){
 		lextok.type = lextok.name = daoTokenMap[ state ];
 		if( lexenv == LEX_ENV_COMMENT ) lextok.type = lextok.name = DTOK_CMT_OPEN;
+		switch( state ){
+		case TOK_STRING_MBS : lextok.type = lextok.name = DTOK_MBS_OPEN; break;
+		case TOK_STRING_WCS : lextok.type = lextok.name = DTOK_WCS_OPEN; break;
+		}
 		if( lextok.type == DTOK_IDENTIFIER ){
 			lextok.name = dao_key_hash( literal->mbs, literal->size );
 			if( lextok.name == 0 ) lextok.name = DTOK_IDENTIFIER;

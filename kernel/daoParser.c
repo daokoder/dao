@@ -369,10 +369,12 @@ static DaoInode* DaoParser_PushBackCode( DaoParser *self, DaoVmCodeX *vmc )
 
 void DaoParser_Warn( DaoParser *self, int code, DString *ext )
 {
+	if( ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
 	DaoTokens_Append( self->warnings, code, self->curLine, ext ? ext->mbs : "" );
 }
 void DaoParser_Error( DaoParser *self, int code, DString *ext )
 {
+	if( ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
 	DaoTokens_Append( self->errors, code, self->curLine, ext ? ext->mbs : "" );
 	self->error = code;
 }
@@ -3257,7 +3259,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		topll = (self->levelBase + self->lexLevel) ==0;
 #if 0
 		printf("At tokPos : %i, %i, %p\n", start,ptok->line, ptok->string );
-		printf("At tokPos : %i, %i, %s\n", start,ptok->line, ptok->string->mbs );
+		printf("At tokPos : %i, %i, %s\n", tki,ptok->line, ptok->string->mbs );
 #endif
 		if( tki != DTOK_SEMCO ) self->lastValue = -1;
 		DaoParser_PrintWarnings( self );
@@ -5127,14 +5129,21 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		/*
 		   printf("value = %i; %i; c : %i\n", value->type, varReg, *cst );
 		 */
-	}else if( tki == DTOK_MBS || tki == DTOK_WCS ){
+	}else if( tki == DTOK_MBS || tki == DTOK_WCS || tki == DTOK_VERBATIM ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			DaoString dummy = {DAO_STRING,0,0,0,0,NULL};
+			int wcs = tok[0] == '"';
 			dummy.data = self->str;
 			DString_ToMBS( self->str );
-			DString_SetDataMBS( self->str, tok + 1, str->size-2 );
-			if( daoConfig.mbs == 0 && tok[0] == '"' ) DString_ToWCS( self->str );
-			if( daoConfig.wcs ) DString_ToWCS( self->str );
+			if( tki == DTOK_VERBATIM ){
+				size_t i, count = 0, pos = DString_FindChar( str, '[', 1 );
+				for(i=0; i<pos; i++) count += tok[i] == '=';
+				DString_SetDataMBS( self->str, tok + pos + 1, str->size - 2*(pos + 1) );
+				wcs = count % 2 == 0;
+			}else{
+				DString_SetDataMBS( self->str, tok + 1, str->size-2 );
+			}
+			if( daoConfig.wcs || (daoConfig.mbs == 0 && wcs) ) DString_ToWCS( self->str );
 			MAP_Insert( self->allConsts, str, routine->routConsts->size );
 			DRoutine_AddConstant( (DRoutine*)routine, (DaoValue*) & dummy );
 		}
@@ -5365,9 +5374,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst )
 	reg = enode.reg;
 	*cst = enode.konst;
 	if( self->curToken != end+1 ) reg = -1;
-	if( reg < 0 ){
-		DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, end, 0 );
-	}
+	if( reg < 0 ) DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, end, 0 );
 	return reg;
 }
 
@@ -6541,6 +6548,10 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 	}
 	if( LHS.reg >= 0 ) LHS = DaoParser_ParseOperator( self, LHS, 0, stop, warn );
 	if( LHS.reg < 0 ){
+		if( DaoParser_CurrentTokenType( self ) < DTOK_COMMENT ){
+			DString *tok = self->tokens->items.pToken[ self->curToken ]->string;
+			DaoParser_Error( self, DAO_INVALID_TOKEN, tok );
+		}
 		self->curToken = start;
 		DaoParser_Error3( self, DAO_INVALID_EXPRESSION, start );
 	}else if( LHS.update ){

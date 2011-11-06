@@ -36,6 +36,7 @@
 #define FE_ALL_EXCEPT 0xffff
 #endif
 
+int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 DaoList*  DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc );
 static DaoMap*   DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc );
 static DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc );
@@ -1258,7 +1259,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		case DAO_COMPLEX : C->xComplex.value = na->data.c[id]; break;
 		default : break;
 		}
-		DaoMoveAC( self, C, & self->activeValues[ vmc->c ], ct );
+		DaoProcess_Move( self, C, & self->activeValues[ vmc->c ], ct );
 #endif
 	}else if( vmc->code == DVM_GETI ){
 		tc->GetItem( A, self, self->activeValues + vmc->b, 1 );
@@ -1923,7 +1924,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			for(i=0; i<NB; i++) DaoList_Append( list, lB->items.items.pValue[i] );
 		}else if( vmc->b == vmc->c ){
 			list = lB;
-			for(i=NA-1; i>=0; i--) DaoList_PushFront( list, lA->items.items.pValue[i] );
+			for(i=NA; i>0; i--) DaoList_PushFront( list, lA->items.items.pValue[i-1] );
 		}else{
 			list = DaoProcess_GetList( self, vmc );
 			DArray_Resize( & list->items, NA + NB, NULL );

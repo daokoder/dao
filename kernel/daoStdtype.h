@@ -213,13 +213,19 @@ struct DaoNameValue
 };
 DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
+#define DAO_TUPLE_ITEMS 2
+
 struct DaoTuple
 {
 	DAO_DATA_COMMON;
 
 	int         size; /* packed with the previous field in 64-bits system; */
 	DaoType    *unitype;
-	DaoValue   *items[1]; /* the actual number of items is in ::size; */
+	DaoValue   *items[DAO_TUPLE_ITEMS]; /* the actual number of items is in ::size; */
+	/* 2 is used instead of 1, for two reasons:
+	 * A. most often used tuples have at least two items;
+	 * B. some builtin tuples have at least two items, and are accessed by
+	 *    constant sub index, compilers such Clang may complain if 1 is used. */
 };
 DaoTuple* DaoTuple_Create( DaoType *type, int init );
 void DaoTuple_Delete( DaoTuple *self );

@@ -796,6 +796,7 @@ static int CheckCodeCompletion( DString *source, DArray *tokens )
 	case DTOK_LB :
 	case DTOK_LCB :
 	case DTOK_LSB :
+	case DTOK_VBT_OPEN :
 	case DTOK_CMT_OPEN :
 	case DTOK_MBS_OPEN :
 	case DTOK_WCS_OPEN :

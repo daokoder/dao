@@ -233,6 +233,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		}
 	}
 	CDaoUserType *UT = GetUserType( RD );
+	//outs() << "............." << RD->getNameAsString() << "  " << UT << "\n";
 	if( UT == NULL ) UT = NewUserType( RD );
 	if( TD && UT->isRedundant == false ){
 		if( cxxTypedefs.find( TD ) != cxxTypedefs.end() ) return UT;
@@ -264,6 +265,8 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		}
 		UTD->name = UT->qname;
 		UTD->alias = tdname;
+		if( UT->decl->getDeclContext() == TD->getDeclContext() )
+			UT->qname = UT->name = UT->name2 = UT->qname = tdname;
 	}
 	return UT;
 }

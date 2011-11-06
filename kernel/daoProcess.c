@@ -549,7 +549,7 @@ int DaoProcess_CheckFE( DaoProcess *self );
 
 void DaoProcess_AdjustCodes( DaoProcess *self, int options );
 
-int DaoMoveAC( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
+int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 
 #if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
 #define HAS_VARLABEL
@@ -1025,24 +1025,24 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( SETVH ){
 			abtp = locTypes[ vmc->b ];
-			if( DaoMoveAC( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVL ){
 			abtp = typeVL->items.pType[ vmc->b ];
-			if( DaoMoveAC( self, locVars[vmc->a], dataVL + vmc->b, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], dataVL + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVO ){
 			abtp = typeVO->items.pType[ vmc->b ];
-			if( DaoMoveAC( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVK ){
 			abtp = typeVK->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
 			vref = dataVK->items.pArray[vmc->c]->items.pValue + vmc->b;
-			if( DaoMoveAC( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
+			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETVG ){
 			abtp = typeVG->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
 			vref = dataVG->items.pArray[vmc->c]->items.pValue + vmc->b;
-			if( DaoMoveAC( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
+			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETI ) OPCASE( SETMI ){
 			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST) )
 				goto ModifyConstant;
@@ -1816,7 +1816,7 @@ CallEntry:
 				abtp = list->unitype->nested->items.pType[0];
 			if( id <0 ) id += list->items.size;
 			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-			if( DaoMoveAC( self, locVars[vmc->a], list->items.items.pValue + id, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], list->items.items.pValue + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( GETI_LII )
@@ -2087,7 +2087,7 @@ CallEntry:
 			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
 			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoMoveAC( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( GETF_T ){
 			tuple = & locVars[ vmc->a ]->xTuple;
@@ -2100,7 +2100,7 @@ CallEntry:
 			id = vmc->b;
 			abtp = tuple->unitype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoMoveAC( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( GETF_TI ){
 			tuple = & locVars[ vmc->a ]->xTuple;
@@ -2228,7 +2228,7 @@ CallEntry:
 			klass = & locVars[ vmc->c ]->xClass;
 			vC2 = klass->glbData->items.pValue + vmc->b;
 			abtp = klass->glbDataType->items.pType[ vmc->b ];
-			if( DaoMoveAC( self, locVars[vmc->a], vC2, abtp ) ==0 ) goto CheckException;
+			if( DaoProcess_Move( self, locVars[vmc->a], vC2, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETF_OG ) OPCASE( SETF_OV ){
 			object = & locVars[ vmc->c ]->xObject;
 			if( vmc->code == DVM_SETF_OG ){
@@ -2240,7 +2240,7 @@ CallEntry:
 				vC2 = object->objValues + vmc->b;
 				abtp = object->defClass->objDataType->items.pType[ vmc->b ];
 			}
-			if( DaoMoveAC( self, locVars[vmc->a], vC2, abtp ) ==0 )
+			if( DaoProcess_Move( self, locVars[vmc->a], vC2, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT()
 		OPCASE( SETF_KGII )
@@ -2476,7 +2476,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}
 	return self->topFrame->codes + vmc->b;
 }
-int DaoMoveAC( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
+int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
 {
 	if( ! DaoValue_Move( A, C, t ) ){
 		DaoType *type;
@@ -2560,7 +2560,7 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 			if( rout && DaoProcess_PushCallable( self, rout, C, & A, 1 ) == 0 ) return;
 		}
 	}
-	DaoMoveAC( self, A, & self->activeValues[vmc->c], ct );
+	DaoProcess_Move( self, A, & self->activeValues[vmc->c], ct );
 }
 void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -2704,6 +2704,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	}
 	return 1;
 }
+int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC );
 DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC, CastBuffer *b1, CastBuffer *b2 );
 static void CastBuffer_Clear( CastBuffer *self )
 {

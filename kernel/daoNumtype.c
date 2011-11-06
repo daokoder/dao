@@ -1946,7 +1946,7 @@ static size_t DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 		for(i=0; i<self->slices->size; i++){
 			size_t n1 = self->slices->items.pArray[i]->items.pSize[1];
 			size_t n2 = other->slices->items.pArray[i]->items.pSize[1];
-			if( n1 != n2 ) return -1;
+			if( n1 != n2 ) return (size_t)-1;
 			m *= n1;
 		}
 	}else if( sRef ){
@@ -3544,7 +3544,6 @@ static void DaoArray_ResizeData( DaoArray *self, size_t size, size_t old )
 void DaoArray_ResizeVector( DaoArray *self, size_t size )
 {
 	size_t old = self->size;
-	if( size < 0 ) return;
 	DaoArray_SetDimCount( self, 2 );
 	self->dims[0] = 1;
 	self->dims[1] = size;
@@ -3591,8 +3590,8 @@ void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D )
 size_t DaoArray_UpdateShape( DaoArray *C, DaoArray *A )
 {
 	size_t N = DaoArray_MatchShape( C, A );
-	if( C->original && N < 0 ) return -1;
-	if( C != A && C->original == NULL && N < 0 ){
+	if( C->original && N == (size_t)-1 ) return -1;
+	if( C != A && C->original == NULL && N == (size_t)-1 ){
 		DaoArray_GetSliceShape( A, & C->dims, & C->ndim );
 		DaoArray_ResizeArray( C, C->dims, C->ndim );
 		N = C->size;
@@ -3610,7 +3609,7 @@ void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, 
 	complex16 bc, ac = {0.0, 0.0};
 
 	ac.real = af;
-	if( N < 0 ){
+	if( N == (size_t)-1 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
 		return;
 	}
@@ -3717,7 +3716,7 @@ void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, 
 	complex16 ac, bc = {0.0, 0.0};
 
 	bc.real = bf;
-	if( N < 0 ){
+	if( N == (size_t)-1 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
 		return;
 	}
@@ -3819,10 +3818,10 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPr
 	DaoArray *dA = rA ? rA : A;
 	DaoArray *dB = rB ? rB : B;
 	DaoArray *dC = rC ? rC : C;
-	int N = DaoArray_MatchShape( A, B );
-	int M = C == A ? N : DaoArray_MatchShape( C, A );
+	size_t N = DaoArray_MatchShape( A, B );
+	size_t M = C == A ? N : DaoArray_MatchShape( C, A );
 	size_t i, a, b, c;
-	if( N < 0 || (C->original && M != N) ){
+	if( N == (size_t)-1 || (C->original && M != N) ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
 		return;
 	}
@@ -4060,7 +4059,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		break;
 	case DVM_FUNCT_SELECT : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
-	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, original ? original : self ); break;
+	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, (DaoValue*)self ); break;
 	}
 	if( sect == NULL ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;

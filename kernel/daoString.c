@@ -46,9 +46,8 @@ static size_t DMBString_RFind( DString *self, size_t S, const char* chs, size_t 
 {
 	size_t i, j;
 
-	if( M == 0 ) return MAXSIZE;
-	if( self->size==0 ) return MAXSIZE;
-	if( S <0 || S >= self->size ) S = self->size-1;
+	if( M == 0 || self->size == 0 ) return MAXSIZE;
+	if( S >= self->size ) S = self->size-1;
 	if( M > S || M > self->size ) return MAXSIZE;
 	for( i=S; i>=M-1; i--){
 		int found = 1;
@@ -737,7 +736,7 @@ void DString_SubString( DString *self, DString *sub, size_t from, size_t n )
 		DString_Clear( sub );
 		return;
 	}
-	if( n < 0 || n > size ) n = size;
+	if( n > size ) n = size;
 	if( from+n > size ) n = size-from;
 	DString_Resize( sub, n );
 
@@ -1075,8 +1074,9 @@ void DString_Reverse( DString *self )
 {
 	DString *front, *back;
 	size_t m, utf8 = DString_CheckUTF8( self );
-	size_t i, j, k, gi, gj, size = self->size;
+	size_t i, k, gi, gj, size = self->size;
 	size_t half = size / 2;
+	dint j;
 	unsigned char ch, *mbs;
 	if( size <= 1 ) return;
 	DString_Detach( self );
