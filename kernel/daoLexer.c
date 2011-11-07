@@ -391,10 +391,7 @@ enum
 	TOK_NUMBER_SCI_E , /* 1.2e */
 	TOK_NUMBER_SCI_ES , /* 1.2e+ */
 	TOK_NUMBER_SCI ,
-	TOK_VERBATIM , /* [=\+ */
-	TOK_VERBATIM_CA , /* [=\+\[a-zA-Z\]\+ */
-	TOK_VERBATIM_SQ , /* [=\+\[a-zA-Z\]\*\'\+ */
-	TOK_VERBATIM_DQ , /* [=\+\[a-zA-Z\]\*\"\+ */
+	TOK_VERBATIM , /* @[ or @@[ */
 	TOK_STRING_MBS ,
 	TOK_STRING_WCS ,
 	TOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
@@ -501,10 +498,7 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_NUMBER_SCI , /* 1.2e */
 	DTOK_NUMBER_SCI , /* 1.2e+ */
 	DTOK_NUMBER_SCI ,
-	DTOK_VERBATIM ,
-	DTOK_VERBATIM ,
-	DTOK_VERBATIM ,
-	DTOK_VERBATIM ,
+	DTOK_VBT_OPEN ,
 	DTOK_MBS_OPEN ,
 	DTOK_WCS_OPEN ,
 	DTOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
@@ -637,9 +631,6 @@ void DaoInitLexTable()
 		daoLexTable[ TOK_STRING_MBS ][ j ] = TOK_STRING_MBS;
 		daoLexTable[ TOK_STRING_WCS ][ j ] = TOK_STRING_WCS;
 		daoLexTable[ TOK_VERBATIM ][ j ] = TOK_ERROR;
-		daoLexTable[ TOK_VERBATIM_CA ][ j ] = TOK_ERROR;
-		daoLexTable[ TOK_VERBATIM_SQ ][ j ] = TOK_ERROR;
-		daoLexTable[ TOK_VERBATIM_DQ ][ j ] = TOK_ERROR;
 
 		if( isdigit( j ) ){
 			daoLexTable[ TOK_START ][ j ] = TOK_DIGITS_DEC;
@@ -658,17 +649,15 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_ID_INITYPE ][ j ] = TOK_ID_INITYPE;
 			daoLexTable[ TOK_ID_SYMBOL ][ j ] = TOK_ID_SYMBOL;
 			daoLexTable[ TOK_OP_AT ][ j ] = TOK_ID_INITYPE; /* @3 */
+			daoLexTable[ TOK_VERBATIM ][j] = TOK_VERBATIM;
 		}else if( isalpha( j ) || j == '_' ){
-			if( j != '_' ){
-				daoLexTable[ TOK_VERBATIM ][j] = TOK_VERBATIM_CA;
-				daoLexTable[ TOK_VERBATIM_CA ][j] = TOK_VERBATIM_CA;
-			}
 			daoLexTable[ TOK_START ][ j ] = TOK_IDENTIFIER;
 			daoLexTable[ TOK_IDENTIFIER ][ j ] = TOK_IDENTIFIER;
 			daoLexTable[ TOK_ID_INITYPE ][ j ] = TOK_ID_INITYPE;
 			daoLexTable[ TOK_ID_SYMBOL ][ j ] = TOK_ID_SYMBOL;
 			daoLexTable[ TOK_OP_AT ][ j ] = TOK_ID_INITYPE; /* @T */
 			daoLexTable[ TOK_OP_IMG ][ j ] = TOK_ID_SYMBOL; /* $S */
+			daoLexTable[ TOK_VERBATIM ][j] = TOK_VERBATIM;
 			if( isxdigit( j ) ){
 				daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_NUMBER_HEX;
 				daoLexTable[ TOK_NUMBER_HEX ][ j ] = TOK_NUMBER_HEX;
@@ -679,18 +668,10 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_START ][')'] = TOK_END_RB;
 	daoLexTable[ TOK_START ]['{'] = TOK_END_LCB;
 	daoLexTable[ TOK_START ]['}'] = TOK_END_RCB;
-	daoLexTable[ TOK_START ]['['] = TOK_LSB;
+	daoLexTable[ TOK_START ]['['] = TOK_END_LSB;
 	daoLexTable[ TOK_START ][']'] = TOK_END_RSB;
 	daoLexTable[ TOK_START ][','] = TOK_END_COMMA;
 	daoLexTable[ TOK_START ][';'] = TOK_END_SEMCO;
-	daoLexTable[ TOK_LSB ]['='] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['='] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['\''] = TOK_VERBATIM_SQ;
-	daoLexTable[ TOK_VERBATIM ]['\"'] = TOK_VERBATIM_DQ;
-	daoLexTable[ TOK_VERBATIM_CA ]['\''] = TOK_VERBATIM_SQ;
-	daoLexTable[ TOK_VERBATIM_CA ]['\"'] = TOK_VERBATIM_DQ;
-	daoLexTable[ TOK_VERBATIM_SQ ]['\''] = TOK_VERBATIM_SQ;
-	daoLexTable[ TOK_VERBATIM_DQ ]['\"'] = TOK_VERBATIM_DQ;
 	daoLexTable[ TOK_OP_SHARP ][ '\n' ] = TOK_END_CMT;
 	daoLexTable[ TOK_OP_SHARP ][ '\r' ] = TOK_END_CMT;
 	daoLexTable[ TOK_COMT_LINE ][ '\n' ] = TOK_END_CMT;
@@ -723,6 +704,13 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_START ][ '\\' ] = TOK_OP_ESC;
 	daoLexTable[ TOK_START ][ '@' ] = TOK_OP_AT; 
 	daoLexTable[ TOK_OP_AT ][ '@' ] = TOK_OP_AT2; 
+	daoLexTable[ TOK_OP_AT ]['['] = TOK_VERBATIM;
+	daoLexTable[ TOK_OP_AT2 ]['['] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][' '] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ]['.'] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][':'] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ]['-'] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ]['='] = TOK_VERBATIM;
 	daoLexTable[ TOK_START ][ '~' ] = TOK_OP_TILDE;
 	daoLexTable[ TOK_OP_EQ ][ '~' ] = TOK_OP_RGXM; /* =~ */
 	daoLexTable[ TOK_OP_NOT ][ '~' ] = TOK_OP_RGXU; /* !~ */
@@ -981,10 +969,7 @@ int DaoToken_Check( const char *src, int size, int *length )
 	}
 	if( type ==0 ){
 		switch( state ){
-		case TOK_VERBATIM :
-		case TOK_VERBATIM_CA :
-		case TOK_VERBATIM_SQ :
-		case TOK_VERBATIM_DQ : type = DTOK_VBT_OPEN; break;
+		case TOK_VERBATIM : type = DTOK_VBT_OPEN; break;
 		case TOK_STRING_MBS : type = DTOK_MBS_OPEN; break;
 		case TOK_STRING_WCS : type = DTOK_WCS_OPEN; break;
 		case TOK_OP_SHARP : type = DTOK_COMMENT; break;
@@ -1036,7 +1021,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 		int i, N = 21;
 		it = 0;
 		DString_SetMBS( wcs, src );
-		while( it < wcs->size ){
+		while( it < wcs->size ){ // TODO: handle verbatim string!
 			for( i=0; i<N; i+=3 ){
 				if( wcs->wcs[it] == quotes[i] ){
 					stop = quotes[i+1];
@@ -1154,17 +1139,14 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 			}else{
 				DString_AppendChar( literal, ch );
 			}
-		}else if( ch == '[' && (state >= TOK_VERBATIM && state <= TOK_VERBATIM_DQ) ){
+		}else if( ch == ']' && state == TOK_VERBATIM ){
 			int len = srcSize - it - 1;
-			literal->mbs[0] = ']';
 			DString_AppendChar( literal, ']' );
 			lextok.type = lextok.name = DTOK_VBT_OPEN;
 			if( (ss = strstr( src + it + 1, literal->mbs )) != NULL ){
 				len = (ss - src) - it - 1 + literal->size;
 				lextok.type = lextok.name = DTOK_VERBATIM;
 			}
-			literal->mbs[0] = '[';
-			literal->mbs[literal->size-1] = '[';
 			DString_AppendDataMBS( literal, src + it + 1, len );
 			state = TOK_RESTART;
 			DArray_Append( tokens, & lextok );

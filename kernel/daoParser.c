@@ -5136,9 +5136,9 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 			dummy.data = self->str;
 			DString_ToMBS( self->str );
 			if( tki == DTOK_VERBATIM ){
-				size_t pos = DString_FindChar( str, '[', 1 );
+				size_t pos = DString_FindChar( str, ']', 1 );
 				DString_SetDataMBS( self->str, tok + pos + 1, str->size - 2*(pos + 1) );
-				wcs = tok[pos-1] == '"';
+				wcs = tok[1] == '@';
 			}else{
 				DString_SetDataMBS( self->str, tok + 1, str->size-2 );
 			}

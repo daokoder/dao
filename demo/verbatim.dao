@@ -1,50 +1,53 @@
 
-# any number (at least one) of '='s can be placed in between a pair of '[' and '[',
-# to begin a block of verbatim string, which will be ended with the same number
-# of '='s placed in between of a pair of ']' and ']':
-mbs = [=[ some text ]=]
+# A verbatim string is a string that can contain anything
+# without interpreting escape characters.
 
-# any number of single question marks can be placed before the second '[',
-# to mark the verbatim string as MBS:
-mbs = [='[ some text ]=']
+# A pair of @[] can be used to quote a verbatim string 
+# to be stored as a multi-byte string (MBS):
+mbs = @[] some text @[]
 
-# any number of double question marks can be placed before the second '[',
-# to mark the verbatim string as WCS:
-wcs = [="[ some text ]="]
-wcs = [=""""[ some text ]=""""]
+# A pair of @@[] can be used to quote a verbatim string
+# to be stored as a wide character string (WCS):
+wcs = @@[] some text @@[]
 
-# a caption (of letters) can be placed after the '='s,
-# so that smart editors can highlight its content properly.
-cpp = [===cpp[
+# A delimiter can be placed in the squared brackets to make sure that
+# it can correctly mark the ending of the verbatim string.
+# A delimiter can contain letters, digits, underscores, blank spaces,
+# dots, colons, dashes, assignment marks.
+cpp =
+@[cpp x]
 class AA
 {
 	int index;
 };
 struct BB{};
-]===cpp]
+@[cpp x]
 
 
 # Lua codes in MBS:
-lua = [====lua'[
+lua =
+@[lua]
 local a = 1;
 function Test()
 	io.write( 'Hello' )
 end
-]====lua']
+@[lua]
 
 # HTML codes in WCS:
-html = [===html""[
+html =
+@@[html:123456]
 <body>
 <span name="test"></span>
 </body>
-]===html""]
+@@[html:123456]
 
-random = [=======[
+random = 
+@[=============]
 asdffd348234lks'djcnzxkWPOWI"Q23EW487503498*(S*(&)(*&QW39EQ8723049
 ASFJA	9384170(*&0(*AS&(A*S&)(*A&sADSUYasi[0A9S8-09a8-AS69876%A
 '"""'''asdfaoi0342sdlfkj(*&^98q73wrq)(&^%&^RFKJRYE"
 s8%S5$&A^5s4^a4'
-]=======]
+@[=============]
 
 io.writeln( mbs );
 io.writeln( wcs );
