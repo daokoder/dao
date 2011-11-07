@@ -528,6 +528,25 @@ static void STD_Size( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutInteger( proc, size );
 }
 
+static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	dint i, entry, times = p[0]->xInteger.value;
+
+	if( sect == NULL || times < 0 ) return; // TODO exception
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<times; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_VMPROC_ABORTED ) break;
+	}
+	DaoProcess_PopFrame( proc );
+}
 static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
@@ -583,12 +602,18 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 		if( i == 0 ){
-			int D = N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0);
-			DaoArray_SetDimCount( array, D );
+			int D = N;
+			DaoArray_SetDimCount( array, N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0) );
 			for(j=0; j<N; j++) array->dims[j] = p[j]->xInteger.value;
 			if( res->type == DAO_ARRAY ){
-				first = (DaoArray*) res;
-				memmove( array->dims + N, first->dims, first->ndim*sizeof(size_t) );
+				first = DaoArray_Copy( (DaoArray*) res );
+				if( first->ndim == 2 && (first->dims[0] == 1 || first->dims[1] == 1) ){
+					D += 1;
+					array->dims[N] = first->dims[ first->dims[0] == 1 ];
+				}else{
+					D += first->ndim;
+					memmove( array->dims + N, first->dims, first->ndim*sizeof(size_t) );
+				}
 			}
 			DaoArray_ResizeArray( array, array->dims, D );
 		}
@@ -617,6 +642,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 	DaoProcess_PopFrame( proc );
+	if( first ) DaoArray_Delete( first );
 #endif
 }
 static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
@@ -691,6 +717,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Version,   "version()=>string" },
 	{ STD_Size,      "datasize( value: @T<int|float|double|complex|long|string> )=>int" },
 
+	{ STD_Iterate,  "iterate( times :int )[index:int =>int]" },
 	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
 	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },
 	{ STD_List,     "list( size :int )[index:int =>@T] =>list<@T>" },

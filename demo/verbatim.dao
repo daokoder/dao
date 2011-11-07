@@ -1,8 +1,19 @@
 
-s = [=[ some text ]=]
+# any number (at least one) of '='s can be placed in between a pair of '[' and '[',
+# to begin a block of verbatim string, which will be ended with the same number
+# of '='s placed in between of a pair of ']' and ']':
+mbs = [=[ some text ]=]
 
-# verbatim, odd =s for MBS.
-# a name (of letters) can be placed just before the second [,
+# any number of single question marks can be placed before the second '[',
+# to mark the verbatim string as MBS:
+mbs = [='[ some text ]=']
+
+# any number of double question marks can be placed before the second '[',
+# to mark the verbatim string as WCS:
+wcs = [="[ some text ]="]
+wcs = [=""""[ some text ]=""""]
+
+# a caption (of letters) can be placed after the '='s,
 # so that smart editors can highlight its content properly.
 cpp = [===cpp[
 class AA
@@ -13,19 +24,20 @@ struct BB{};
 ]===cpp]
 
 
-# verbatim, even =s for WCS:
-lua = [====lua[
+# Lua codes in MBS:
+lua = [====lua'[
 local a = 1;
 function Test()
 	io.write( 'Hello' )
 end
-]====lua]
+]====lua']
 
-html = [===html[
+# HTML codes in WCS:
+html = [===html""[
 <body>
 <span name="test"></span>
 </body>
-]===html]
+]===html""]
 
 random = [=======[
 asdffd348234lks'djcnzxkWPOWI"Q23EW487503498*(S*(&)(*&QW39EQ8723049
@@ -34,7 +46,8 @@ ASFJA	9384170(*&0(*AS&(A*S&)(*A&sADSUYasi[0A9S8-09a8-AS69876%A
 s8%S5$&A^5s4^a4'
 ]=======]
 
-io.writeln( s );
+io.writeln( mbs );
+io.writeln( wcs );
 io.writeln( cpp );
 io.writeln( lua );
 io.writeln( html );

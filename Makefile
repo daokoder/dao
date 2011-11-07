@@ -55,14 +55,12 @@ ifeq ($(UNAME), Darwin)
   LIBS += -L/usr/local/lib
 endif
 
-ifeq ($(CC), gcc)
-  ifeq ($(debug),yes)
-    CFLAGS += -ggdb -DDEBUG
-    LFLAGS += -ggdb
-  else
-    CFLAGS += -O2
-    LFLAGS += -s
-  endif
+ifeq ($(debug),yes)
+  CFLAGS += -ggdb -DDEBUG
+  LFLAGS += -ggdb
+else
+  CFLAGS += -O2
+  LFLAGS += -s
 endif
 
 ifeq ($(std),C90)

@@ -1314,17 +1314,17 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
-	if( self->buffer && pid->type >=DAO_INTEGER && pid->type <=DAO_DOUBLE){
+	if( self->buffer.pVoid && pid->type >=DAO_INTEGER && pid->type <=DAO_DOUBLE){
 		int id = DaoValue_GetInteger( pid );
-		self->data = self->buffer;
+		self->data = self->buffer.pVoid;
 		if( self->size && ( id <0 || id > self->size ) ){
 			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "index out of range" );
 			return;
 		}
 		if( self->memsize ){
-			self->data = (void*)( (char*)self->buffer + id * self->memsize );
+			self->data = (void*)( (char*)self->buffer.pVoid + id * self->memsize );
 		}else{
-			self->data = ((void**)self->buffer)[id];
+			self->data = ((void**)self->buffer.pVoid)[id];
 		}
 		DaoProcess_PutValue( proc, self0 );
 	}else{

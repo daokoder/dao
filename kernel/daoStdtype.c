@@ -3584,7 +3584,7 @@ DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data )
 	self->typer = typer;
 	if( typer == NULL ){
 		self->typer = & cdataTyper;
-		self->buffer = data;
+		self->buffer.pVoid = data;
 	}else if( data ){
 		DaoCdataBindings_Insert( data, self );
 	}
@@ -3611,10 +3611,10 @@ void DaoCdata_DeleteData( DaoCdata *self )
 {
 	DaoCdataCore *c = (DaoCdataCore*)self->typer->core;
 	void (*fdel)(void*) = (void (*)(void *))DaoCdata_Delete;
-	if( self->buffer == NULL ) DaoCdataBindings_Erase( self->data );
+	if( self->buffer.pVoid == NULL ) DaoCdataBindings_Erase( self->data );
 	if( self->attribs & DAO_CDATA_FREE ){
-		if( self->buffer ){
-			dao_free( self->buffer );
+		if( self->buffer.pVoid ){
+			dao_free( self->buffer.pVoid );
 		}else if( self->data ){
 			if( c && c->DelData && c->DelData != fdel ){
 				c->DelData( self->data );
@@ -3625,7 +3625,7 @@ void DaoCdata_DeleteData( DaoCdata *self )
 				dao_free( self->data );
 			}
 		}
-		self->buffer = NULL;
+		self->buffer.pVoid = NULL;
 		self->data = NULL;
 	}
 	if( self->ctype ) GC_DecRC( self->ctype );
@@ -3654,21 +3654,21 @@ void DaoCdata_SetExtReference( DaoCdata *self, int bl )
 }
 void DaoCdata_SetData( DaoCdata *self, void *data )
 {
-	if( self->buffer == NULL && self->data ) DaoCdataBindings_Erase( self->data );
+	if( self->buffer.pVoid == NULL && self->data ) DaoCdataBindings_Erase( self->data );
 	self->data = data;
-	if( self->buffer == NULL && data ) DaoCdataBindings_Insert( data, self );
+	if( self->buffer.pVoid == NULL && data ) DaoCdataBindings_Insert( data, self );
 }
 void DaoCdata_SetBuffer( DaoCdata *self, void *data, size_t size )
 {
 	self->data = data;
-	self->buffer = data;
+	self->buffer.pVoid = data;
 	self->size = size;
 	self->bufsize = size;
 }
 void DaoCdata_SetArray( DaoCdata *self, void *data, size_t size, int memsize )
 {
 	self->data = data;
-	self->buffer = data;
+	self->buffer.pVoid = data;
 	self->memsize = memsize;
 	self->size = size;
 	self->bufsize = size;
@@ -3684,7 +3684,7 @@ void* DaoCdata_GetData( DaoCdata *self )
 }
 void* DaoCdata_GetBuffer( DaoCdata *self )
 {
-	return self->buffer;
+	return self->buffer.pVoid;
 }
 void** DaoCdata_GetData2( DaoCdata *self )
 {
@@ -3726,30 +3726,26 @@ void DaoBuffer_Resize( DaoCdata *self, size_t size )
 	self->size = size;
 	if( self->size + 1 >= self->bufsize ){
 		self->bufsize = self->size + self->bufsize * 0.1 + 1;
-		self->buffer = dao_realloc( self->buffer, self->bufsize );
+		self->buffer.pVoid = dao_realloc( self->buffer.pVoid, self->bufsize );
 	}else if( self->size < self->bufsize * 0.75 ){
 		self->bufsize = self->bufsize * 0.8 + 1;
-		self->buffer = dao_realloc( self->buffer, self->bufsize );
+		self->buffer.pVoid = dao_realloc( self->buffer.pVoid, self->bufsize );
 	}
-	self->data = self->buffer;
+	self->data = self->buffer.pVoid;
 }
+const char* buffer_errors[] =
+{
+	"negative buffer size",
+	"not permitted to create large buffer object in safe running mode"
+};
 static void DaoBuf_New( DaoProcess *proc, DaoValue *p[], int N )
 {
 	dint size = p[0]->xInteger.value;
 	DaoCdata *self = DaoCdata_New( NULL, NULL );
-	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "negative buffer size" );
-		return;
-	}
-	else if( size >> sizeof(size_t)*8 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "buffer size too large" );
-		return;
-	}
 	self->attribs |= DAO_CDATA_FREE;
 	DaoProcess_PutValue( proc, (DaoValue*) self );
-	if( ( proc->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR,
-				"not permitted to create large buffer object in safe running mode" );
+	if( size < 0 || ((proc->vmSpace->options & DAO_EXEC_SAFE) && size > 1000) ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, buffer_errors[ size >= 0 ] );
 		return;
 	}
 	DaoBuffer_Resize( self, size );
@@ -3763,17 +3759,8 @@ static void DaoBuf_Resize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	dint size = p[1]->xInteger.value;
-	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "negative buffer size" );
-		return;
-	}
-	else if( size >> sizeof(size_t)*8 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "buffer size too large" );
-		return;
-	}
-	if( ( proc->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR,
-				"not permitted to create large buffer object in safe running mode" );
+	if( size < 0 || ((proc->vmSpace->options & DAO_EXEC_SAFE) && size > 1000) ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, buffer_errors[ size >= 0 ] );
 		return;
 	}
 	DaoBuffer_Resize( self, size );
@@ -3787,7 +3774,7 @@ static void DaoBuf_CopyData( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( self->bufsize < cdat->size ) DaoBuffer_Resize( self, cdat->size );
-	memcpy( self->buffer, cdat->buffer, cdat->size );
+	memcpy( self->buffer.pVoid, cdat->buffer.pVoid, cdat->size );
 	self->size = cdat->size;
 }
 static void DaoBuf_GetString( DaoProcess *proc, DaoValue *p[], int N )
@@ -3796,11 +3783,11 @@ static void DaoBuf_GetString( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str = DaoProcess_PutMBString( proc, "" );
 	if( p[1]->xEnum.value == 0 ){
 		DString_Resize( str, self->size );
-		memcpy( str->mbs, self->buffer, self->size );
+		memcpy( str->mbs, self->buffer.pVoid, self->size );
 	}else{
 		DString_ToWCS( str );
 		DString_Resize( str, self->size / sizeof( wchar_t ) );
-		memcpy( str->wcs, self->buffer, str->size * sizeof( wchar_t ) );
+		memcpy( str->wcs, self->buffer.pVoid, str->size * sizeof( wchar_t ) );
 	}
 }
 static void DaoBuf_SetString( DaoProcess *proc, DaoValue *p[], int N )
@@ -3809,10 +3796,10 @@ static void DaoBuf_SetString( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str = p[1]->xString.data;
 	if( str->mbs ){
 		DaoBuffer_Resize( self, str->size );
-		memcpy( self->buffer, str->mbs, str->size );
+		memcpy( self->buffer.pVoid, str->mbs, str->size );
 	}else{
 		DaoBuffer_Resize( self, str->size * sizeof(wchar_t) );
-		memcpy( self->buffer, str->wcs, str->size * sizeof(wchar_t) );
+		memcpy( self->buffer.pVoid, str->wcs, str->size * sizeof(wchar_t) );
 	}
 }
 static int DaoBuf_CheckRange( DaoCdata *self, int i, int m, DaoProcess *proc )
@@ -3826,94 +3813,94 @@ static void DaoBuf_GetByte( DaoProcess *proc, DaoValue *p[], int N )
 	DaoCdata *self = & p[0]->xCdata;
 	dint i = p[1]->xInteger.value;
 	if( DaoBuf_CheckRange( self, i, sizeof(char), proc ) ) return;
-	DaoProcess_PutInteger( proc, ( p[2]->xEnum.value == 0 )?
-							   ((signed char*)self->buffer)[i] : ((unsigned char*)self->buffer)[i] );
+	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUChar[i] : self->buffer.pSChar[i] );
 }
 static void DaoBuf_GetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	dint i = p[1]->xInteger.value;
 	if( DaoBuf_CheckRange( self, i, sizeof(short), proc ) ) return;
-	DaoProcess_PutInteger( proc, ( p[2]->xEnum.value == 0 )?
-							   ((signed short*)self->buffer)[i] : ((unsigned short*)self->buffer)[i] );
+	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUShort[i] : self->buffer.pSShort[i] );
 }
 static void DaoBuf_GetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	dint i = p[1]->xInteger.value;
 	if( DaoBuf_CheckRange( self, i, sizeof(int), proc ) ) return;
-	DaoProcess_PutInteger( proc, ( p[2]->xEnum.value == 0 )?
-							   ((signed int*)self->buffer)[i] : ((unsigned int*)self->buffer)[i] );
+	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUInt[i] : self->buffer.pSInt[i] );
 }
 static void DaoBuf_GetFloat( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(float), proc ) ) return;
-	DaoProcess_PutFloat( proc, ((float*)self->buffer)[ p[1]->xInteger.value ] );
+	DaoProcess_PutFloat( proc, self->buffer.pFloat[ p[1]->xInteger.value ] );
 }
 static void DaoBuf_GetDouble( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(double), proc ) ) return;
-	DaoProcess_PutDouble( proc, ((double*)self->buffer)[ p[1]->xInteger.value ] );
+	DaoProcess_PutDouble( proc, self->buffer.pDouble[ p[1]->xInteger.value ] );
 }
 static void DaoBuf_SetByte( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
-	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(char), proc ) ) return;
-	if( p[3]->xEnum.value == 0 )
-		((signed char*)self->buffer)[ p[1]->xInteger.value ] = (signed char)p[2]->xInteger.value;
+	dint i = p[1]->xInteger.value;
+	if( DaoBuf_CheckRange( self, i, sizeof(char), proc ) ) return;
+	if( p[3]->xEnum.value )
+		self->buffer.pUChar[i] = (unsigned char)p[2]->xInteger.value;
 	else
-		((unsigned char*)self->buffer)[ p[1]->xInteger.value ] = (unsigned char)p[2]->xInteger.value;
+		self->buffer.pSChar[i] = (signed char)p[2]->xInteger.value;
 }
 static void DaoBuf_SetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
-	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(short), proc ) ) return;
-	if( p[3]->xEnum.value == 0 )
-		((signed short*)self->buffer)[ p[1]->xInteger.value ] = (signed short)p[2]->xInteger.value;
+	dint i = p[1]->xInteger.value;
+	if( DaoBuf_CheckRange( self, i, sizeof(short), proc ) ) return;
+	if( p[3]->xEnum.value )
+		self->buffer.pUShort[i] = (unsigned short)p[2]->xInteger.value;
 	else
-		((unsigned short*)self->buffer)[ p[1]->xInteger.value ] = (unsigned short)p[2]->xInteger.value;
+		self->buffer.pSShort[i] = (signed short)p[2]->xInteger.value;
 }
 static void DaoBuf_SetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
-	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(int), proc ) ) return;
-	if( p[3]->xEnum.value == 0 )
-		((signed int*)self->buffer)[ p[1]->xInteger.value ] = (signed int)p[2]->xInteger.value;
+	dint i = p[1]->xInteger.value;
+	if( DaoBuf_CheckRange( self, i, sizeof(int), proc ) ) return;
+	if( p[3]->xEnum.value )
+		self->buffer.pUInt[i] = (unsigned int)p[2]->xInteger.value;
 	else
-		((unsigned int*)self->buffer)[ p[1]->xInteger.value ] = (unsigned int)p[2]->xInteger.value;
+		self->buffer.pSInt[i] = (signed int)p[2]->xInteger.value;
 }
 static void DaoBuf_SetFloat( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(float), proc ) ) return;
-	((float*)self->buffer)[ p[1]->xInteger.value ] = p[2]->xFloat.value;
+	self->buffer.pFloat[ p[1]->xInteger.value ] = p[2]->xFloat.value;
 }
 static void DaoBuf_SetDouble( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoCdata *self = & p[0]->xCdata;
 	if( DaoBuf_CheckRange( self, p[1]->xInteger.value, sizeof(double), proc ) ) return;
-	((double*)self->buffer)[ p[1]->xInteger.value ] = p[2]->xDouble.value;
+	self->buffer.pDouble[ p[1]->xInteger.value ] = p[2]->xDouble.value;
 }
 static DaoFuncItem cptrMeths[]=
 {
-	{  DaoBuf_New,       "cdata( size=0 )=>cdata" },
-	{  DaoBuf_Size,      "size( self : cdata )=>int" },
-	{  DaoBuf_Resize,    "resize( self : cdata, size :int )" },
-	{  DaoBuf_CopyData,  "copydata( self : cdata, buf : cdata )" },
-	{  DaoBuf_GetString, "getstring( self : cdata, type :enum<mbs, wcs> = $mbs )=>string" },
-	{  DaoBuf_SetString, "setstring( self : cdata, str : string )" },
-	{  DaoBuf_GetByte,   "getbyte( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetShort,  "getshort( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetInt,    "getint( self : cdata, index : int, type :enum<signed, unsigned> = $signed )=>int" },
-	{  DaoBuf_GetFloat,  "getfloat( self : cdata, index : int )=>float" },
-	{  DaoBuf_GetDouble, "getdouble( self : cdata, index : int )=>double" },
-	{  DaoBuf_SetByte,   "setbyte( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
-	{  DaoBuf_SetShort,  "setshort( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)"},
-	{  DaoBuf_SetInt,    "setint( self : cdata, index : int, value: int, type :enum<signed, unsigned> = $signed)" },
-	{  DaoBuf_SetFloat,  "setfloat( self : cdata, index : int, value : float )" },
-	{  DaoBuf_SetDouble, "setdouble( self : cdata, index : int, value : double )" },
+	{ DaoBuf_New,       "cdata( size=0 )=>cdata" },
+	{ DaoBuf_Size,      "size( self :cdata )=>int" },
+	{ DaoBuf_Resize,    "resize( self :cdata, size :int )" },
+	{ DaoBuf_CopyData,  "copydata( self :cdata, buf :cdata )" },
+	{ DaoBuf_GetString, "getstring( self :cdata, stype :enum<mbs, wcs> = $mbs )=>string" },
+	{ DaoBuf_SetString, "setstring( self :cdata, str : string )" },
+	{ DaoBuf_GetByte,   "getbyte( self :cdata, index :int, stype :enum<signed,unsigned> = $signed )=>int" },
+	{ DaoBuf_GetShort,  "getshort( self :cdata, index :int, stype :enum<signed,unsigned> = $signed )=>int" },
+	{ DaoBuf_GetInt,    "getint( self :cdata, index :int, stype :enum<signed,unsigned> = $signed )=>int" },
+	{ DaoBuf_GetFloat,  "getfloat( self :cdata, index :int )=>float" },
+	{ DaoBuf_GetDouble, "getdouble( self :cdata, index :int )=>double" },
+	{ DaoBuf_SetByte,   "setbyte( self :cdata, index :int, value :int, stype :enum<signed,unsigned> = $signed)" },
+	{ DaoBuf_SetShort,  "setshort( self :cdata, index :int, value :int, stype :enum<signed,unsigned> = $signed)"},
+	{ DaoBuf_SetInt,    "setint( self :cdata, index :int, value :int, stype :enum<signed,unsigned> = $signed)" },
+	{ DaoBuf_SetFloat,  "setfloat( self :cdata, index :int, value : float )" },
+	{ DaoBuf_SetDouble, "setdouble( self :cdata, index :int, value : double )" },
 	{ NULL, NULL },
 };
 
@@ -3922,7 +3909,7 @@ DaoTypeBase cdataTyper =
 	"cdata", NULL, NULL, (DaoFuncItem*) cptrMeths, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
 };
-DaoCdata cptrCdata = {DAO_CDATA,0,DAO_DATA_CONST,0,1,0,NULL,NULL,NULL,NULL,0,0,0,0,0};
+DaoCdata cptrCdata = {DAO_CDATA,0,DAO_DATA_CONST,0,1,0,NULL,{NULL},NULL,NULL,0,0,0,0,0};
 
 void DaoNameValue_Delete( DaoNameValue *self )
 {

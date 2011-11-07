@@ -511,7 +511,6 @@ static int InitRegex( DaoRegex *self, DString *ds )
 	if( self->count * sizeof(DaoRgxItem) > self->itemlen ){
 		printf( "error: allocated memory is not enough for the pattern.\n" );
 		printf( "%s\n", ds->mbs );
-		free(123);
 		exit(0);
 	}
 #endif

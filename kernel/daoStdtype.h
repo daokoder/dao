@@ -180,7 +180,17 @@ struct DaoCdata
 	DAO_DATA_COMMON;
 
 	void  *data;
-	void  *buffer;
+	union {
+		void           *pVoid;
+		signed   char  *pSChar;
+		unsigned char  *pUChar;
+		signed   short *pSShort;
+		unsigned short *pUShort;
+		signed   int   *pSInt;
+		unsigned int   *pUInt;
+		float          *pFloat;
+		double         *pDouble;
+	} buffer;
 
 	DaoObject    *object;
 	DaoType      *ctype;

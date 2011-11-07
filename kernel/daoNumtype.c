@@ -3567,7 +3567,7 @@ void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D )
 		}
 		if( dims[i] != 1 || D ==2 ) k ++;
 	}
-	if( self->dims != dims ) DaoArray_SetDimCount( self, k );
+	if( self->dims != dims || self->ndim != k ) DaoArray_SetDimCount( self, k );
 	k = 0;
 	for(i=0; i<D; i++){
 		if( dims[i] != 1 || D ==2 ) self->dims[k++] = dims[i];
