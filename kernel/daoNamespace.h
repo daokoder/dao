@@ -61,6 +61,8 @@ struct DaoNamespace
 	DMap   *localMacros; /* <DString*,DaoMacro*> */
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
 	DMap   *abstypes; /* <DString*,DaoType*> */
+	DMap   *moduleLoaders; /* <DString*,DaoModuleLoader> */
+	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
 
 	DaoType *udfType1;
 	DaoType *udfType2;
@@ -107,6 +109,9 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
 
 void DaoNamespace_AddMacro( DaoNamespace *self, DString *name, DaoMacro *macro, int local );
 DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *name );
+
+DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DString *name );
+DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name );
 
 DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name );
 void DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *tp );

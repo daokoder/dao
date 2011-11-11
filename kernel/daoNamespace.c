@@ -675,6 +675,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->localMacros   = DHash_New(D_STRING,0);
 	self->globalMacros   = DHash_New(D_STRING,0);
 	self->abstypes = DHash_New(D_STRING,0);
+	self->moduleLoaders = DHash_New(D_STRING,0);
+	self->codeInliners = DHash_New(D_STRING,0);
 	self->argParams = DaoList_New();
 	self->time = 0;
 	self->file = DString_New(1);
@@ -769,6 +771,8 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DMap_Delete( self->localMacros );
 	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );
+	DMap_Delete( self->moduleLoaders );
+	DMap_Delete( self->codeInliners );
 	DString_Delete( self->file );
 	DString_Delete( self->path );
 	DString_Delete( self->name );
@@ -1201,6 +1205,40 @@ DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *name )
 		MAP_Insert( self->globalMacros, name, macro );
 		GC_IncRC( macro );
 		return macro;
+	}
+	return NULL;
+}
+void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp )
+{
+	DString mbs = DString_WrapMBS( name );
+	DMap_Insert( self->moduleLoaders, & mbs, fp );
+}
+void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
+{
+	DString mbs = DString_WrapMBS( name );
+	DMap_Insert( self->codeInliners, & mbs, fp );
+}
+DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DString *name )
+{
+	int i, n = self->parents->size;
+	DNode *node = MAP_Find( self->moduleLoaders, name );
+	if( node ) return (DaoModuleLoader) node->value.pVoid;
+	for(i=0; i<n; i++){
+		DaoNamespace *ns = self->parents->items.pNS[i];
+		DaoModuleLoader loader = DaoNamespace_FindModuleLoader( ns, name );
+		if( loader ) return loader;
+	}
+	return NULL;
+}
+DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name )
+{
+	int i, n = self->parents->size;
+	DNode *node = MAP_Find( self->codeInliners, name );
+	if( node ) return (DaoCodeInliner) node->value.pVoid;
+	for(i=0; i<n; i++){
+		DaoNamespace *ns = self->parents->items.pNS[i];
+		DaoCodeInliner inliner = DaoNamespace_FindCodeInliner( ns, name );
+		if( inliner ) return inliner;
 	}
 	return NULL;
 }

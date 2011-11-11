@@ -2219,6 +2219,39 @@ static int DaoParser_Preprocess( DaoParser *self )
 				if( ! DaoParser_ParseLoadStatement( self, start, end ) ) return 0;
 				DArray_Erase( self->tokens, start, end-start+1 );
 				tokens = self->tokens->items.pToken;
+			}else if( tki == DTOK_VERBATIM ){
+				DString *verbatim = tokens[start]->string;
+				const char *pat = "^ @{1,2} %[ %s* %w+ %s* %( %s* (|%w+) %s* %)";
+				size_t pstart = 0, pend = verbatim->size-1, wcs = verbatim->mbs[1] == '@';
+				if( DString_MatchMBS( verbatim, pat, & pstart, & pend ) ){
+					size_t lb = DString_FindChar( verbatim, '(', 0 );
+					size_t rb = DString_FindChar( verbatim, ')', 0 );
+					DaoCodeInliner inliner;
+
+					DString_SetDataMBS( self->mbs, verbatim->mbs + 2 + wcs, lb - 2 - wcs );
+					DString_Trim( self->mbs );
+					inliner = DaoNamespace_FindCodeInliner( ns, self->mbs );
+					if( inliner == NULL ){
+						printf( "inlined code not handled, inliner \"%s\" not found\n", self->mbs->mbs );
+						start ++;
+						continue;
+					}
+					DString_SetDataMBS( self->mbs2, verbatim->mbs + lb + 1, rb - lb - 1 );
+					DString_Trim( self->mbs2 );
+					DString_Clear( self->mbs );
+					if( (*inliner)( ns, self->mbs2, verbatim, self->mbs ) ){
+						printf( "code inlining failed: %s!\n", self->mbs->mbs );
+						return 0;
+					}
+					DArray_Erase( self->tokens, start, 1 );
+					if( self->mbs->size ){
+						DArray *tokens = DArray_New( D_TOKEN );
+						DaoToken_Tokenize( tokens, self->mbs->mbs, 0, 0, 0 );
+						if( tokens->size ) DArray_InsertArray( self->tokens, start, tokens, 0, -1 );
+						DArray_Delete( tokens );
+					}
+					tokens = self->tokens->items.pToken;
+				}
 			}else{
 				start ++;
 			}

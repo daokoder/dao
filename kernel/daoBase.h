@@ -14,10 +14,6 @@
 #ifndef DAO_BASE_H
 #define DAO_BASE_H
 
-#ifndef DAO_DIRECT_API
-#define DAO_DIRECT_API
-#endif
-
 #include"dao.h"
 
 #if defined (__GNUC__)

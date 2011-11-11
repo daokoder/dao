@@ -286,6 +286,9 @@ typedef void  (*FuncPtrDel)( void* );
 typedef int   (*FuncPtrTest)( void* );
 typedef void  (*DaoFuncPtr) ( DaoProcess *process, DaoValue *params[], int npar );
 
+typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename );
+typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out );
+
 typedef struct DaoNumItem   DaoNumItem;
 typedef struct DaoFuncItem  DaoFuncItem;
 
@@ -450,6 +453,8 @@ DAO_DLL void DString_ToWCS( DString *self );
 DAO_DLL void DString_ToMBS( DString *self );
 DAO_DLL char* DString_GetMBS( DString *self );
 DAO_DLL wchar_t* DString_GetWCS( DString *self );
+DAO_DLL void DString_Chop( DString *self );
+DAO_DLL void DString_Trim( DString *self );
 DAO_DLL void DString_Erase( DString *self, size_t start, size_t n );
 DAO_DLL void DString_Insert( DString *self, DString *s, size_t i, size_t m, size_t n );
 DAO_DLL void DString_InsertChar( DString *self, const char ch, size_t at );
@@ -509,7 +514,7 @@ DAO_DLL void  DaoString_SetMBS( DaoString *self, const char *mbs );
 DAO_DLL void  DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
 DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
 
-DAO_DLL DaoEnum* DaoEnum_New();
+DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, dint value );
 //float    DaoEnum_Get( DaoEnum *self );
 //void     DaoEnum_Set( DaoEnum *self, float value );
 
@@ -700,6 +705,8 @@ DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file );
 DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );
 DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
+DAO_DLL void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp );
+DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp );
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
@@ -731,12 +738,11 @@ DAO_DLL DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
 
 DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DaoValue *userdata );
 
-#endif
-
 #ifdef __cplusplus
 }
 #endif
 
+#endif
 
 /*
 

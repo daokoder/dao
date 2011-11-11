@@ -1,0 +1,59 @@
+
+load DaoCxxInliner;
+
+# Inlined codes can be placed between a pair of @[lang(mode)extra-delimiter],
+# where mode can be omit.
+
+
+# C/C++ codes inlined with @[cpp()...] or @[cpp(block)...] will be compiled
+# into a call to run the inlined codes:
+@[cpp()]
+printf( "Hello Dao!\n" );
+@[cpp()]
+
+@[cpp(block)]
+printf( "log(7) = %g\n", log(7) );
+@[cpp(block)]
+
+
+# C/C++ codes inlined with @[cpp(function)...] will be compiled into a function
+# with Dao prototype specified by @define() inside the verbatim string:
+@[cpp(function)]
+@define( test( message : string ) )
+
+printf( "%s\n", message );
+@[cpp(function)]
+
+#test( 'Hello C/C++!' );
+
+
+# C/C++ codes inlined with @[cpp(header)...] will be processed as a header file.
+# A file name can be specified by @file(), so that it can be included by other
+# inlined codes:
+@[cpp(header)]
+@file( klass.h )
+
+class Klass
+{
+	int index;
+};
+@[cpp(header)]
+
+
+# C/C++ codes inlined with @[cpp(source)...] will be compiled as a source file.
+# A file name and the file type can be specified by @file().
+# Functions that need to be wrapped can be listed by @wrap() with Dao prototypes:
+@[cpp(source)]
+@file( klass.cpp )
+@wrap( greet( message : string ) )
+
+#include<stdio.h>
+#include"klass.h"
+
+void greet( const char *message )
+{
+	printf( "%s\n", message );
+}
+@[cpp(source)]
+
+#greet( 'Hello!!!' );
