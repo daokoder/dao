@@ -1,0 +1,16 @@
+
+load DaoCxxInliner;
+
+@[cxx(source)]
+@wrap( load_python() )
+
+#include<dlfcn.h>
+
+void load_python()
+{
+	void *dll = dlopen( "libpython.dylib", RTLD_NOW | RTLD_GLOBAL );
+	printf( "loading python %p!\n", dll );
+}
+@[cxx(source)]
+
+load_python()

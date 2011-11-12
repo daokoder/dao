@@ -315,6 +315,7 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 			DString_AppendMBS( wrapper, " _res = " );
 			DString_Append( wrapper, cc );
 			DString_AppendMBS( wrapper, "DaoProcess_PutMBString( _proc, _res );\n" );
+			break;
 		case DAO_STREAM :
 			DString_InsertMBS( cproto, "FILE* ", 0, 0, 0 );
 			DString_AppendMBS( wrapper, "FILE* " );
@@ -586,16 +587,26 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	CompilerInvocation::CreateFromArgs( compiler.getInvocation(), argv + 1, argv + argc, DG );
 	compiler.setTarget( TargetInfo::CreateTargetInfo( DG, compiler.getTargetOpts() ) );
 
+	string predefines;
 #ifdef MAC_OSX
+	predefines = "#define MAC_OSX 1\n#define UNIX 1\n";
 	// needed to circumvent a bug which is supposingly fixed in clang 2.9-16
 	clang::HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
 	headers.AddPath( "/Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include", clang::frontend::System, false, false, true );
+#elif defined(UNIX)
+	predefines = "#define UNIX 1\n";
+#elif defined(WIN32)
+	predefines = "#define WIN32 1\n";
 #endif
 
 	//compiler.getHeaderSearchOpts().AddPath( "", clang::frontend::Angled, false, false, true );
 
 	compiler.createFileManager();
 	compiler.createSourceManager( compiler.getFileManager() );
+	compiler.createPreprocessor();
+	Preprocessor & pp = compiler.getPreprocessor();
+	pp.setPredefines( pp.getPredefines() + "\n" + predefines );
+
 	DaoCxxInliner_AddVirtualFile( "dummy-main.cpp", "void dummy_main(){}" );
 
 	InitializeNativeTarget();
