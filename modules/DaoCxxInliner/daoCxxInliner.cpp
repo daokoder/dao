@@ -32,6 +32,7 @@ extern "C" {
 #include "daoConst.h"
 #include "daoString.h"
 #include "daoArray.h"
+#include "daoValue.h"
 #include "daoRoutine.h"
 }
 
@@ -105,30 +106,176 @@ static int dao_markers_get( DArray *markers, const char *name, DString *one, DAr
 		DString *marker = markers->items.pString[i];
 		size_t lb = DString_FindChar( marker, '(', 0 );
 		size_t rb = dao_string_find_paired( marker, '(', ')' );
-		if( lb == npos || rb == npos ) continue; // TODO warning
+		if( lb == npos || rb == npos ) continue;
 		DString_SetDataMBS( one, marker->mbs + 1, lb - 1 );
 		DString_Trim( one );
 		if( strcmp( one->mbs, name ) ) continue;
 		DString_SetDataMBS( one, marker->mbs + lb + 1, rb - lb - 1 );
 		DString_Trim( one );
+		DArray_Erase( markers, i, 1 );
+		i -= 1;
 		m += 1;
 		if( all == NULL ) break;
 		DArray_Append( all, one );
 	}
 	return m;
 }
-static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, DString *wrapper )
-{
-	return 0;
-}
-
+const char *dao_wrapper = "( DaoProcess *_proc, DaoValue *_p[], int _n )";
 const char *dao_cxx_default_includes =
 "#include<stdio.h>\n"
 "#include<stdlib.h>\n"
 "#include<math.h>\n"
 "#include<dao.h>\n";
 
-const char *dao_wrapper = "( DaoProcess *proc, DaoValue *p[], int N )";
+static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, DString *wrapper, DString *cc )
+{
+	DString *pname;
+	DaoType *type, **partypes = routype->nested->items.pType;
+	int i, parcount = routype->nested->size;
+	char sindex[10];
+
+	DString_Append( cc, name );
+	DString_Append( cproto, name );
+	DString_AppendMBS( cc, "( " );
+	DString_AppendMBS( cproto, "( " );
+	DString_AppendMBS( wrapper, "void dao_" );
+	DString_Append( wrapper, name );
+	DString_AppendMBS( wrapper, dao_wrapper );
+	DString_AppendMBS( wrapper, "\n{\n" );
+	for(i=0; i<parcount; i++){
+		type = partypes[i];
+		if( type->tid != DAO_PAR_NAMED && type->tid != DAO_PAR_DEFAULT ) return 1;
+		pname = type->fname;
+		type = & type->aux->xType;
+		if( i ){
+			DString_AppendMBS( cc, ", " );
+			DString_AppendMBS( cproto, ", " );
+		}
+		sprintf( sindex, "%i", i );
+		DString_AppendChar( wrapper, '\t' );
+		switch( type->tid ){
+		case DAO_INTEGER :
+		case DAO_FLOAT :
+		case DAO_DOUBLE :
+			DString_Append( cc, pname );
+			DString_Append( cproto, type->name );
+			DString_AppendChar( cproto, ' ' );
+			DString_Append( cproto, pname );
+			DString_Append( wrapper, type->name );
+			DString_AppendChar( wrapper, ' ' );
+			DString_Append( wrapper, pname );
+			switch( type->tid ){
+			case DAO_INTEGER : DString_AppendMBS( wrapper, " = DaoValue_TryGetInteger( _p[" ); break;
+			case DAO_FLOAT   : DString_AppendMBS( wrapper, " = DaoValue_TryGetFloat( _p[" ); break;
+			case DAO_DOUBLE  : DString_AppendMBS( wrapper, " = DaoValue_TryGetDouble( _p[" ); break;
+			}
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		case DAO_STRING :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "const char *" );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "const char *" );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_TryGetMBString( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		case DAO_ARRAY :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "DaoArray *" );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "DaoArray *" );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_CastArray( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		case DAO_LIST :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "DaoList *" );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "DaoList *" );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_CastList( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		case DAO_TUPLE :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "DaoTuple *" );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "DaoTuple *" );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_CastTuple( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		default : return 1;
+		}
+	}
+	DString_AppendMBS( cc, " );\n" );
+	DString_AppendMBS( cproto, " )" );
+	DString_AppendChar( wrapper, '\t' );
+
+	type = & routype->aux->xType;
+	if( type == NULL || type->tid == DAO_UDF ){
+		DString_InsertMBS( cproto, "void ", 0, 0, 0 );
+		DString_Append( wrapper, cc );
+	}else{
+		switch( type->tid ){
+		case DAO_INTEGER :
+		case DAO_FLOAT :
+		case DAO_DOUBLE :
+			DString_InsertMBS( cproto, " ", 0, 0, 0 );
+			DString_Insert( cproto, type->name, 0, 0, 0 );
+			DString_Append( wrapper, type->name );
+			DString_AppendMBS( wrapper, " __res = " );
+			DString_Append( wrapper, cc );
+			switch( type->tid ){
+			case DAO_INTEGER :
+				DString_AppendMBS( wrapper, "DaoProcess_PutInteger( _proc, __res );\n" );
+				break;
+			case DAO_FLOAT :
+				DString_AppendMBS( wrapper, "DaoProcess_PutFloat( _proc, __res );\n" );
+				break;
+			case DAO_DOUBLE :
+				DString_AppendMBS( wrapper, "DaoProcess_PutDouble( _proc, __res );\n" );
+				break;
+			}
+			break;
+		case DAO_STRING :
+			DString_InsertMBS( cproto, "const char* ", 0, 0, 0 );
+			DString_AppendMBS( wrapper, "const char* " );
+			DString_AppendMBS( wrapper, " __res = " );
+			DString_Append( wrapper, cc );
+			DString_AppendMBS( wrapper, "DaoProcess_PutMBString( _proc, __res );\n" );
+		default : return 1;
+		}
+	}
+	DString_AppendMBS( wrapper, "\n}\n" );
+	//printf( "\n%s\n%s\n", cproto->mbs, wrapper->mbs );
+	return 0;
+}
+
+static int error_compile_failed( DString *out )
+{
+	DString_SetMBS( out, "Compiling failed on the inlined codes" );
+	return 1;
+}
+static int error_function_notfound( DString *out, const char *name )
+{
+	DString_SetMBS( out, "Function not found in the inlined codes: " );
+	DString_AppendMBS( out, name );
+	return 1;
+}
+static int error_function_notwrapped( DString *out, const char *name )
+{
+	DString_SetMBS( out, "Function wrapping failed: " );
+	DString_AppendMBS( out, name );
+	return 1;
+}
 
 static int dao_cxx_block( DaoNamespace *NS, DString *VT, DArray *markers, DString *source, DString *out )
 {
@@ -148,14 +295,18 @@ static int dao_cxx_block( DaoNamespace *NS, DString *VT, DArray *markers, DStrin
 	DaoCxxInliner_AddVirtualFile( name, source->mbs );
 
 	action.BeginSourceFile( compiler, name, IK_CXX );
-	if( ! compiler.ExecuteAction( action ) ) return 1;
+	if( ! compiler.ExecuteAction( action ) ) return error_compile_failed( out );
+
 	Module *Module = action.takeModule();
-	if( Module == NULL ) return 1;
+	if( Module == NULL ) return error_compile_failed( out );
+
 	sprintf( name, "dao_anonymous_%p_%p", NS, VT );
 	Function *Func = Module->getFunction( name );
-	if( Func == NULL ) return 1;
+	if( Func == NULL ) return error_function_notfound( out, name );
+
 	void *fp = engine->getPointerToFunction( Func );
-	if( fp == NULL ) return 1;
+	if( fp == NULL ) return error_function_notfound( out, name );
+
 	DString_SetMBS( out, name );
 	DString_AppendMBS( out, "()" );
 	DaoNamespace_WrapFunction( NS, (DaoFuncPtr)fp, out->mbs );
@@ -164,8 +315,9 @@ static int dao_cxx_block( DaoNamespace *NS, DString *VT, DArray *markers, DStrin
 }
 static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DString *source, DString *out )
 {
+	int retc;
 	char file[50];
-	char proto2[100];
+	char proto2[200];
 	char *proto = proto2;
 	DString *mbs = DString_New(1);
 
@@ -174,12 +326,46 @@ static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DSt
 	if( dao_markers_get( markers, "define", mbs, NULL ) ) proto = mbs->mbs;
 
 	DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCxxInliner_Default, proto );
-	if( func == NULL ) return 1; //TODO error
+	if( func == NULL ){
+		error_function_notwrapped( out, proto );
+		DString_Delete( mbs );
+		return 1;
+	}
 	
-	DaoType *routype = func->routType;
+	DString *cproto = DString_New(1);
+	DString *call = DString_New(1);
 
-	//DaoCxxInliner_AddVirtualFile( file, source->mbs );
+	DString_AppendMBS( source, "}\nextern \"C\"{\n" );
+	retc = dao_make_wrapper( func->routName, func->routType, cproto, source, call );
+
+	DString_AppendMBS( cproto, "{\n" );
+	DString_Insert( source, cproto, 0, 0, 0 );
+	DString_InsertMBS( source, dao_cxx_default_includes, 0, 0, 0 );
+	DString_AppendMBS( source, "}\n" );
+
 	DString_Delete( mbs );
+	DString_Delete( cproto );
+	DString_Delete( call );
+
+	if( retc ) return error_function_notwrapped( out, func->routName->mbs );
+
+	//printf( "\n%s\n%s\n", file, source->mbs );
+	DaoCxxInliner_AddVirtualFile( file, source->mbs );
+
+	action.BeginSourceFile( compiler, file, IK_CXX );
+	if( ! compiler.ExecuteAction( action ) ) return error_compile_failed( out );
+
+	Module *Module = action.takeModule();
+	if( Module == NULL ) return error_compile_failed( out );
+
+	sprintf( proto2, "dao_%s", func->routName->mbs ); //XXX buffer size
+	Function *Func = Module->getFunction( proto2 );
+	if( Func == NULL ) return error_function_notfound( out, proto2 );
+
+	void *fp = engine->getPointerToFunction( Func );
+	if( fp == NULL ) return error_function_notfound( out, proto2 );
+
+	func->pFunc = (DaoFuncPtr)fp;
 	return 0;
 }
 static int dao_cxx_header( DaoNamespace *NS, DString *VT, DArray *markers, DString *source, DString *out )
@@ -189,6 +375,7 @@ static int dao_cxx_header( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	char *file = name;
 	sprintf( name, "anonymous_%p_%p.h", NS, VT );
 	if( dao_markers_get( markers, "file", mbs, NULL ) ){
+		// TODO: better handling of suffix?
 		if( isalnum( mbs->mbs[0] ) ) DString_InsertMBS( mbs, "./", 0, 0, 0 );
 		file = mbs->mbs;
 	}
@@ -199,19 +386,68 @@ static int dao_cxx_header( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DString *source, DString *out )
 {
 	DString *mbs = DString_New(1);
-	char name[50];
+	DString *call = DString_New(1);
+	DString *cproto = DString_New(1);
+	DArray *wraps = DArray_New(D_STRING);
+	DArray *funcs = DArray_New(0);
+	InputKind kind = IK_CXX;
+	char name[200];
 	char *file = name;
-	size_t i;
-	sprintf( name, "anonymous_%p_%p.cxx", NS, VT );
-	if( dao_markers_get( markers, "file", mbs, NULL ) ) file = mbs->mbs;
-	DaoCxxInliner_AddVirtualFile( file, source->mbs );
-	DString_Delete( mbs );
+	size_t i, failed = 0;
 
-	action.BeginSourceFile( compiler, file, IK_CXX );
-	if( ! compiler.ExecuteAction( action ) ) return 1;
+	sprintf( name, "anonymous_%p_%p.cxx", NS, VT );
+	dao_markers_get( markers, "wrap", mbs, wraps );
+	if( dao_markers_get( markers, "file", mbs, NULL ) ){
+		file = mbs->mbs;
+		// TODO: better handling of suffix?
+		if( DString_FindMBS( mbs, ".c", 0 ) == mbs->size - 2 ) kind = IK_C;
+		if( DString_FindMBS( mbs, ".C", 0 ) == mbs->size - 2 ) kind = IK_C;
+	}
+
+	DString_Clear( out );
+	DString_InsertMBS( source, dao_cxx_default_includes, 0, 0, 0 );
+	DString_AppendMBS( source, "\nextern \"C\"{\n" );
+	for(i=0; i<wraps->size; i++){
+		DString *daoproto = wraps->items.pString[i];
+		DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCxxInliner_Default, daoproto->mbs );
+		if( func == NULL || dao_make_wrapper( func->routName, func->routType, cproto, source, call ) ){
+			DString_AppendMBS( out, daoproto->mbs );
+			DString_AppendMBS( out, "\n" );
+			failed += 1;
+			continue;
+		}
+		DArray_Append( funcs, func );
+	}
+	DString_AppendMBS( source, "}\n" );
+
+	//printf( "\n%s\n%s\n", file, source->mbs );
+	if( failed == 0 ) DaoCxxInliner_AddVirtualFile( file, source->mbs );
+	DString_Delete( mbs );
+	DString_Delete( call );
+	DString_Delete( cproto );
+
+	if( failed ){
+		DString_InsertMBS( out, "Function wrapping failed:\n", 0, 0, 0 );
+		return 1;
+	}
+
+	action.BeginSourceFile( compiler, file, kind );
+	if( ! compiler.ExecuteAction( action ) ) return error_compile_failed( out );
+
 	Module *Module = action.takeModule();
-	if( Module == NULL ) return 1;
-	// TODO
+	if( Module == NULL ) return error_compile_failed( out );
+
+	for(i=0; i<funcs->size; i++){
+		DaoFunction *func = (DaoFunction*) funcs->items.pVoid[i];
+		sprintf( name, "dao_%s", func->routName->mbs ); //XXX buffer size
+
+		Function *Func = Module->getFunction( name );
+		if( Func == NULL ) return error_function_notfound( out, name );
+
+		void *fp = engine->getPointerToFunction( Func );
+		if( fp == NULL ) return error_function_notfound( out, name );
+		func->pFunc = (DaoFuncPtr)fp;
+	}
 	return 0;
 }
 
@@ -234,6 +470,15 @@ static int dao_cxx_inliner( DaoNamespace *NS, DString *mode, DString *verbatim, 
 	}else{
 		DString_SetMBS( out, "Invalid inline mode" );
 	}
+	if( markers->size ){
+		DString_SetMBS( out, "Invalid specifiers for the mode: \n" );
+		for(size_t i=0; i<markers->size; i++){
+			DString *marker = markers->items.pString[i];
+			DString_Append( out, marker );
+			DString_AppendChar( out, '\n' );
+		}
+		retc = 1;
+	}
 	DString_Delete( source );
 	DArray_Delete( markers );
 	return retc;
@@ -242,7 +487,7 @@ static int dao_cxx_inliner( DaoNamespace *NS, DString *mode, DString *verbatim, 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	static int argc = 2;
-	static char *argv[2] = { "/Users/min/projects/dao", "dummy-main.cpp" };
+	static char *argv[2] = { "dao", "dummy-main.cpp" };
 	DString *mbs = DString_New(1);
 
 	DString_SetMBS( mbs, source_caption_pattern );
@@ -283,5 +528,15 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 
 	DaoNamespace_AddCodeInliner( ns, "cxx", dao_cxx_inliner );
 	DaoNamespace_AddCodeInliner( ns, "cpp", dao_cxx_inliner );
+	DaoNamespace_TypeDefine( ns, "int", "short" );
+	DaoNamespace_TypeDefine( ns, "int", "size_t" );
+	DaoNamespace_TypeDefine( ns, "int", "int8_t" );
+	DaoNamespace_TypeDefine( ns, "int", "uint8_t" );
+	DaoNamespace_TypeDefine( ns, "int", "int16_t" );
+	DaoNamespace_TypeDefine( ns, "int", "uint16_t" );
+	DaoNamespace_TypeDefine( ns, "int", "int32_t" );
+	DaoNamespace_TypeDefine( ns, "int", "uint32_t" );
+	DaoNamespace_TypeDefine( ns, "int", "int64_t" );
+	DaoNamespace_TypeDefine( ns, "int", "uint64_t" );
 	return 0;
 }

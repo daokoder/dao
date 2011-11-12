@@ -11,16 +11,11 @@ CLANG_LIBS = -lclang \
 -lclangCodeGen \
 -lclangDriver \
 -lclangFrontend \
--lclangFrontendTool \
 -lclangIndex \
 -lclangLex \
 -lclangParse \
--lclangRewrite \
 -lclangSema \
--lclangSerialization \
--lclangStaticAnalyzerCheckers \
--lclangStaticAnalyzerCore \
--lclangStaticAnalyzerFrontend
+-lclangSerialization 
 
 CFLAGS = -O2 -fno-rtti -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
 CFLAGS = -ggdb -fno-rtti -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
