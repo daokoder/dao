@@ -78,7 +78,7 @@ static void DaoCallbackData_DeleteByUserdata( DaoValue *userdata )
 }
 
 
-#if DEBUG
+#if defined(DEBUG) && defined(UNIX)
 #if 0
 #endif
 #define DEBUG_TRACE

@@ -359,7 +359,7 @@ void DThread_Init( DThread *self )
 }
 void DThread_Destroy( DThread *self )
 {
-	CloseHandle( self->myThread );
+	if( self->myThread ) CloseHandle( self->myThread );
 	DCondVar_Destroy( & self->condv );
 	GlobalFree( self->thdSpecData );
 	self->thdSpecData = NULL;
@@ -416,9 +416,10 @@ int DThread_Equal( dao_thread_t x, dao_thread_t y )
 }
 void DThread_Exit( DThread *thd )
 {
-	if( thd->cleaner ) (*(thd->cleaner))( thd->taskArg );
 	thd->running = 0;
 	DCondVar_Signal( & thd->condv );
+	if( thd->cleaner ) (*(thd->cleaner))( thd->taskArg );
+	thd->myThread = NULL; /* it will be closed by _endthread() */
 	_endthread();
 }
 

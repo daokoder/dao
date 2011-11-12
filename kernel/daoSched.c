@@ -51,7 +51,9 @@ struct DaoCallServer
 	int timing;
 	int total;
 	int idle;
-	int deleted;
+	int stopped;
+
+	DArray  *threads;
 
 	DArray  *functions; /* list of DThreadTask function pointers */
 	DArray  *parameters; /* list of void* */
@@ -78,10 +80,6 @@ static void DaoCallThread_Delete( DaoCallThread *self )
 	// XXX self->thdData
 	DThread_Destroy( & self->thread );
 	dao_free( self );
-
-	DMutex_Lock( & daoCallServer->mutex );
-	daoCallServer->deleted += 1;
-	DMutex_Unlock( & daoCallServer->mutex );
 }
 static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 {
@@ -94,7 +92,8 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->timing = 0;
 	self->total = 0;
 	self->idle = 0;
-	self->deleted = 0;
+	self->stopped = 0;
+	self->threads = DArray_New(0);
 	self->functions = DArray_New(0);
 	self->parameters = DArray_New(0);
 	self->futures = DArray_New(0);
@@ -112,6 +111,8 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 }
 static void DaoCallServer_Delete( DaoCallServer *self )
 {
+	size_t i, n = self->threads->size;
+	for(i=0; i<n; i++) DaoCallThread_Delete( (DaoCallThread*)self->threads->items.pVoid[i] );
 	GC_DecRC( self->tuple );
 	DArray_Delete( self->functions );
 	DArray_Delete( self->parameters );
@@ -131,28 +132,37 @@ static void DaoCallServer_AddThread()
 	DaoCallThread *calth = DaoCallThread_New();
 	DMutex_Lock( & daoCallServer->mutex );
 	daoCallServer->total += 1;
+	DArray_Append( daoCallServer->threads, calth );
 	DMutex_Unlock( & daoCallServer->mutex );
 	DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth );
+}
+static double DaoGetCurrentTime()
+{
+#ifdef WIN32
+	return timeGetTime();
+#else
+	struct timeval tv;
+	gettimeofday( & tv, NULL);
+	return tv.tv_sec + (double)tv.tv_usec * 1.0E-9;
+#endif
 }
 static void DaoCallServer_Timer( void *p )
 {
 	DaoCallServer *server = daoCallServer;
-	struct timeval tv;
 	double time = 0.0;
 	int i, timeout;
 
 	server->timing = 1;
-	while( server->finishing == 0 || server->deleted != server->total ){
+	while( server->finishing == 0 || server->stopped != server->total ){
 		DMutex_Lock( & server->mutex );
 		while( server->waitings->size == 0 && server->timeouts->size == 0 ){
-			if( server->finishing && server->deleted == server->total ) break;
+			if( server->finishing && server->stopped == server->total ) break;
 			DCondVar_TimedWait( & server->condv2, & server->mutex, 0.01 );
 		}
 		if( server->waitings->size ){
 			DNode *node = DMap_First( server->waitings );
-			gettimeofday( & tv, NULL);
 			time = node->key.pValue->xTuple.items[0]->xDouble.value;
-			time -= (tv.tv_sec + tv.tv_usec * 1.0E-9);
+			time -= DaoGetCurrentTime();
 			/* wait the right amount of time for the closest arriving timeout: */
 			if( time > 0 ) DCondVar_TimedWait( & server->condv2, & server->mutex, time );
 		}else if( server->timeouts->size ){
@@ -161,7 +171,7 @@ static void DaoCallServer_Timer( void *p )
 			DCondVar_TimedWait( & server->condv2, & server->mutex, 0.1 );
 		}
 		DMutex_Unlock( & server->mutex );
-		if( server->finishing && server->deleted == server->total ) break;
+		if( server->finishing && server->stopped == server->total ) break;
 
 		/* create new thread for unhandled timeout: */
 		if( server->timeouts->size ) DaoCallServer_AddThread();
@@ -169,8 +179,7 @@ static void DaoCallServer_Timer( void *p )
 		DMutex_Lock( & server->mutex );
 		if( server->waitings->size ){ /* a new wait timed out: */
 			DNode *node = DMap_First( server->waitings );
-			gettimeofday( & tv, NULL);
-			time = tv.tv_sec + tv.tv_usec * 1.0E-9;
+			time = DaoGetCurrentTime();
 			if( node->key.pValue->xTuple.items[0]->xDouble.value < time ){
 				DArray_Append( server->timeouts, node->value.pVoid );
 				DMap_EraseNode( server->waitings, node );
@@ -249,14 +258,11 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, sh
 	future->state2 = state;
 	if( timeout >0 ){
 		DaoCallServer *server;
-		struct timeval now;
-
-		gettimeofday( & now, NULL);
 		if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 		server = daoCallServer;
 
 		DMutex_Lock( & server->mutex );
-		server->tuple->items[0]->xDouble.value = timeout + now.tv_sec + now.tv_usec * 1.0E-9;
+		server->tuple->items[0]->xDouble.value = timeout + DaoGetCurrentTime();
 		server->tuple->items[1]->xDouble.value += 1;
 		DMap_Insert( server->waitings, server->tuple, future );
 		DMap_Insert( server->pending, future, NULL );
@@ -406,8 +412,10 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		}
 		GC_DecRC( future );
 	}
-	DaoCallThread_Delete( self );
 	DArray_Delete( array );
+	DMutex_Lock( & server->mutex );
+	server->stopped += 1;
+	DMutex_Unlock( & server->mutex );
 }
 void DaoCallServer_Join( DaoVmSpace *vmSpace )
 {
@@ -420,7 +428,7 @@ void DaoCallServer_Join( DaoVmSpace *vmSpace )
 		/* printf( "finalizing: %3i %3i\n", daoCallServer->idle, daoCallServer->total ); */
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
 	}
-	while( daoCallServer->deleted != daoCallServer->total || daoCallServer->timing ){
+	while( daoCallServer->stopped != daoCallServer->total || daoCallServer->timing ){
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
 	}
 	DMutex_Unlock( & daoCallServer->mutex );
