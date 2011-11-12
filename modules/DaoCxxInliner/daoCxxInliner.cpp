@@ -134,6 +134,9 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 	int i, parcount = routype->nested->size;
 	char sindex[10];
 
+	DString_Clear( cc );
+	DString_Clear( cproto );
+
 	DString_Append( cc, name );
 	DString_Append( cproto, name );
 	DString_AppendMBS( cc, "( " );
@@ -172,6 +175,16 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 			DString_AppendMBS( wrapper, sindex );
 			DString_AppendMBS( wrapper, "] );\n" );
 			break;
+		case DAO_COMPLEX :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "complex16 " );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "complex16 " );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_TryGetComplex( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
 		case DAO_STRING :
 			DString_Append( cc, pname );
 			DString_AppendMBS( cproto, "const char *" );
@@ -179,6 +192,16 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 			DString_AppendMBS( wrapper, "const char *" );
 			DString_Append( wrapper, pname );
 			DString_AppendMBS( wrapper, " = DaoValue_TryGetMBString( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		case DAO_ENUM :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "int " );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "int " );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_TryGetEnum( _p[" );
 			DString_AppendMBS( wrapper, sindex );
 			DString_AppendMBS( wrapper, "] );\n" );
 			break;
@@ -212,6 +235,40 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 			DString_AppendMBS( wrapper, sindex );
 			DString_AppendMBS( wrapper, "] );\n" );
 			break;
+		case DAO_MAP :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "DaoMap *" );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "DaoMap *" );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoValue_CastMap( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] );\n" );
+			break;
+		case DAO_STREAM :
+			DString_Append( cc, pname );
+			DString_AppendMBS( cproto, "FILE *" );
+			DString_Append( cproto, pname );
+			DString_AppendMBS( wrapper, "FILE *" );
+			DString_Append( wrapper, pname );
+			DString_AppendMBS( wrapper, " = DaoStream_GetFile( DaoValue_CastStream( _p[" );
+			DString_AppendMBS( wrapper, sindex );
+			DString_AppendMBS( wrapper, "] ) );\n" );
+			break;
+		case DAO_CDATA :
+			if( strcmp( type->name->mbs, "cdata" ) == 0 ){
+				DString_Append( cc, pname );
+				DString_AppendMBS( cproto, "void *" );
+				DString_Append( cproto, pname );
+				DString_AppendMBS( wrapper, "void *" );
+				DString_Append( wrapper, pname );
+				DString_AppendMBS( wrapper, " = DaoValue_TryGetCdata( _p[" );
+				DString_AppendMBS( wrapper, sindex );
+				DString_AppendMBS( wrapper, "] );\n" );
+			}else{
+				return 1;
+			}
+			break;
 		default : return 1;
 		}
 	}
@@ -231,26 +288,51 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 			DString_InsertMBS( cproto, " ", 0, 0, 0 );
 			DString_Insert( cproto, type->name, 0, 0, 0 );
 			DString_Append( wrapper, type->name );
-			DString_AppendMBS( wrapper, " __res = " );
+			DString_AppendMBS( wrapper, " _res = " );
 			DString_Append( wrapper, cc );
 			switch( type->tid ){
 			case DAO_INTEGER :
-				DString_AppendMBS( wrapper, "DaoProcess_PutInteger( _proc, __res );\n" );
+				DString_AppendMBS( wrapper, "DaoProcess_PutInteger( _proc, _res );\n" );
 				break;
 			case DAO_FLOAT :
-				DString_AppendMBS( wrapper, "DaoProcess_PutFloat( _proc, __res );\n" );
+				DString_AppendMBS( wrapper, "DaoProcess_PutFloat( _proc, _res );\n" );
 				break;
 			case DAO_DOUBLE :
-				DString_AppendMBS( wrapper, "DaoProcess_PutDouble( _proc, __res );\n" );
+				DString_AppendMBS( wrapper, "DaoProcess_PutDouble( _proc, _res );\n" );
 				break;
 			}
+			break;
+		case DAO_COMPLEX :
+			DString_InsertMBS( cproto, "complex16 ", 0, 0, 0 );
+			DString_AppendMBS( wrapper, "complex16 " );
+			DString_AppendMBS( wrapper, " _res = " );
+			DString_Append( wrapper, cc );
+			DString_AppendMBS( wrapper, "DaoProcess_PutComplex( _proc, _res );\n" );
 			break;
 		case DAO_STRING :
 			DString_InsertMBS( cproto, "const char* ", 0, 0, 0 );
 			DString_AppendMBS( wrapper, "const char* " );
-			DString_AppendMBS( wrapper, " __res = " );
+			DString_AppendMBS( wrapper, " _res = " );
 			DString_Append( wrapper, cc );
-			DString_AppendMBS( wrapper, "DaoProcess_PutMBString( _proc, __res );\n" );
+			DString_AppendMBS( wrapper, "DaoProcess_PutMBString( _proc, _res );\n" );
+		case DAO_STREAM :
+			DString_InsertMBS( cproto, "FILE* ", 0, 0, 0 );
+			DString_AppendMBS( wrapper, "FILE* " );
+			DString_AppendMBS( wrapper, " _res = " );
+			DString_Append( wrapper, cc );
+			DString_AppendMBS( wrapper, "DaoProcess_PutFile( _proc, _res );\n" );
+			break;
+		case DAO_CDATA :
+			if( strcmp( type->name->mbs, "cdata" ) == 0 ){
+				DString_InsertMBS( cproto, "void* ", 0, 0, 0 );
+				DString_AppendMBS( wrapper, "void* " );
+				DString_AppendMBS( wrapper, " _res = " );
+				DString_Append( wrapper, cc );
+				DString_AppendMBS( wrapper, "DaoProcess_PutCdata( _proc, _res, NULL );\n" );
+			}else{
+				return 1;
+			}
+			break;
 		default : return 1;
 		}
 	}

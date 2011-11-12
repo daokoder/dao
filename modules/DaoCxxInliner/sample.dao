@@ -48,6 +48,11 @@ io.writeln( test(123) );
 class Klass
 {
 	int index;
+
+	public:
+	Klass( int i = 0 ){ index = i; }
+
+	int Index()const{ return index; }
 };
 @[cpp(header)]
 
@@ -75,7 +80,7 @@ greet( 'Hello!!!' );
 ###################################################################################
 # Currently, the following Dao types are supported:
 #   "int" for "int", "float" for "float", "double" for "double",
-#   and "string for "const char*";
+#   and "string" for "const char*";
 #
 # The following C/C++ types are supported (aliased to "int" in Dao):
 #   "short/size_t/int8_t/uint8_t/int16_t/uint16_t/int32_t/uint3_t/int64_t/uint64_t"
@@ -102,9 +107,28 @@ dint *data = DaoArray_ToInteger( a );
 
 printf( "dimension = %i, size = %i\n", dim, size );
 for(i=0; i<size; i++) data[i] *= 100;
-
 @[cpp(function)]
 
 a = [1,2,3;4,5,6];
 test_array( a )
 io.writeln( a );
+
+
+@[cpp(source)]
+@wrap( NewKlass( index = 0 ) => cdata )
+@wrap( KlassGetIndex( obj : cdata ) => int )
+
+#include"klass.h"
+
+void* NewKlass( int index = 0 )
+{
+	return new Klass( index );
+}
+int KlassGetIndex( void *obj )
+{
+	return ((Klass*)obj)->Index();
+}
+@[cpp(source)]
+
+o = NewKlass( 123 );
+io.writeln( KlassGetIndex( o ) );

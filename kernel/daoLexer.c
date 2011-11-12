@@ -713,6 +713,7 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_VERBATIM ]['='] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ]['('] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ][')'] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ]['+'] = TOK_VERBATIM;
 	daoLexTable[ TOK_START ][ '~' ] = TOK_OP_TILDE;
 	daoLexTable[ TOK_OP_EQ ][ '~' ] = TOK_OP_RGXM; /* =~ */
 	daoLexTable[ TOK_OP_NOT ][ '~' ] = TOK_OP_RGXU; /* !~ */
