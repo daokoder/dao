@@ -26,10 +26,10 @@ LFLAGSDLL = -shared
 LIBS      = -L. -ldl -lpthread -lm $(LIB_READLINE)
 
 # dynamic linked Dao interpreter, requires dao.so to run:
-TARGET   = dao.exe
+DAO_EXE   = dao.exe
 
 # Dao dynamic linking library
-TARGETDLL	= dao.dll
+DAO_DLL	= dao.dll
 
 ARCHIVE = dao.a
 
