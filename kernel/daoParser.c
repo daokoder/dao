@@ -6411,11 +6411,12 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 		DaoInode *vmc = self->vmcLast;
 		opb = DaoParser_IntegerOne( self, start );
 		DaoParser_AddCode( self, code, opa, opb, opa, start, 0, end );
-		if( vmc->code >= DVM_GETI && vmc->code <= DVM_GETMF ){
+		if( vmc->code == DVM_GETVH || (vmc->code >= DVM_GETI && vmc->code <= DVM_GETMF) ){
 			DaoParser_PushBackCode( self, (DaoVmCodeX*) vmc );
 			vmc = self->vmcLast;
 			opa = vmc->a; vmc->a = vmc->c; vmc->c = opa;
 			switch( vmc->code ){
+			case DVM_GETVH : vmc->code = DVM_SETVH; break;
 			case DVM_GETI : vmc->code = DVM_SETI; break;
 			case DVM_GETMI : vmc->code = DVM_SETMI; break;
 			case DVM_GETF : vmc->code = DVM_SETF; break;

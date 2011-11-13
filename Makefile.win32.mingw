@@ -18,11 +18,11 @@ DAO_SERIALIZ = -DDAO_WITH_SERIALIZATION
 
 DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SERIALIZ) $(DAO_ASYNCLASS) $(DAO_DYNCLASS) $(DAO_DECORATOR)
 
-CC        = gcc
+CC       ?= gcc
 CFLAGS    = -Wall -Wno-unused -fPIC -DWIN32 $(DAO_CONFIG)
 INCPATH   = -I. -Ikernel
-LFLAGS    = -fPIC
-LFLAGSDLL = -fPIC -shared
+LFLAGS    =
+LFLAGSDLL = -shared
 LIBS      = -L. -ldl -lpthread -lm $(LIB_READLINE)
 
 # dynamic linked Dao interpreter, requires dao.so to run:
