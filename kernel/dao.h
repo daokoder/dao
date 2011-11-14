@@ -346,14 +346,14 @@ struct DaoUserHandler
 	void (*StdioRead)( DaoUserHandler *self, DString *input, int count );
 	void (*StdioWrite)( DaoUserHandler *self, DString *output );
 	void (*StdioFlush)( DaoUserHandler *self );
-	void (*StdlibDebug)( DaoUserHandler *self, DaoProcess *context );
+	void (*StdlibDebug)( DaoUserHandler *self, DaoProcess *process );
 	/* properly change some NOP codes to DEBUG codes */
 	void (*BreakPoints)( DaoUserHandler *self, DaoRoutine *routine );
 	/* profiling hooks, for future use */
 	void (*Called)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
 	void (*Returned)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
 	/* invoke host execution to do whatever (e.g., to process GUI events) */
-	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *context );
+	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *process );
 };
 typedef char* (*ReadLine)( const char *prompt );
 typedef void  (*AddHistory)( const char *cmd );

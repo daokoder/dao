@@ -6490,6 +6490,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			DaoParser_AddCode( self, DVM_DATA, 0,0,RHS.reg, pos+1,0,0 );
 			RHS.first = RHS.last = RHS.update = self->vmcLast;
 		}
+		result.update = NULL;
 		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
 			DaoEnode RHS1, RHS2;
 			int prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
