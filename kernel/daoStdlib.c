@@ -77,7 +77,8 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *name = p[0]->xString.data;
 	int import = p[1]->xInteger.value;
-	int safe = p[2]->xInteger.value;
+	int runim = p[2]->xInteger.value;
+	int safe = p[3]->xInteger.value;
 	int wasProt = 0;
 	int res = 0;
 	DaoVmSpace *vms = proc->vmSpace;
@@ -86,7 +87,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
 	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
-	ns = DaoVmSpace_Load( vms, name );
+	ns = DaoVmSpace_Load( vms, name, runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 #if 0
@@ -696,7 +697,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
 	{ STD_Eval,      "eval( source :string, replace=0, stream=io, safe=0 )" },
-	{ STD_Load,      "load( file :string, import=1, safe=0 )" },
+	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )" },
 	{ STD_About,     "about( ... )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },
 	{ STD_Copy,      "copy( object : @OBJECT ) =>@OBJECT" },
@@ -717,7 +718,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Version,   "version()=>string" },
 	{ STD_Size,      "datasize( value: @T<int|float|double|complex|long|string> )=>int" },
 
-	{ STD_Iterate,  "iterate( times :int )[index:int =>int]" },
+	{ STD_Iterate,  "iterate( times :int )[index:int]" },
 	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
 	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },
 	{ STD_List,     "list( size :int )[index:int =>@T] =>list<@T>" },

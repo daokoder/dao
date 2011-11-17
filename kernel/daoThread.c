@@ -1077,12 +1077,12 @@ static void DaoMT_Start0( void *p )
 }
 static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 {
-	int entry;
 	DaoProcess *clone;
 	DaoVmCode *vmc, *end;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoFuture *future = DaoFuture_New();
 	DaoType *type = proc->activeTypes[proc->activeCode->c]->nested->items.pType[0];
+	int entry, nop = proc->activeCode[1].code == DVM_NOP;
 
 	type = DaoNamespace_MakeType( proc->activeNamespace, "future", DAO_FUTURE, NULL, &type, 1 );
 	GC_ShiftRC( type, future->unitype );
@@ -1091,7 +1091,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 
 	entry = proc->topFrame->entry;
-	end = proc->activeRoutine->vmCodes->codes + proc->activeCode[1].b;
+	end = proc->activeRoutine->vmCodes->codes + proc->activeCode[nop+1].b;
 	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );

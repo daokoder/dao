@@ -18,7 +18,7 @@
 
 enum DaoOpcode
 {
-	DVM_NOP = 0, /* no operation */
+	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
 	DVM_DATA , /* create primitive data: A: type, B: value, C: register; */
 	DVM_GETCL , /* get local const: C = A::B; current routine, A=0; up routine: A=1; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
@@ -500,6 +500,8 @@ struct DaoVmCodeX
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );
 
-#define DaoGetSectionCode(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
+#define DaoGetSectionCode1(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
+#define DaoGetSectionCode2(C) ((C[1].code == DVM_GOTO && C[3].code == DVM_SECT) ? C+3 : NULL)
+#define DaoGetSectionCode(C)  (C[2].code == DVM_NOP ? DaoGetSectionCode2(C) : DaoGetSectionCode1(C))
 
 #endif

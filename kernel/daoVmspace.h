@@ -95,7 +95,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
 int DaoVmSpace_Compile( DaoVmSpace *self, DaoNamespace *ns, DString *src, int rpl );
 int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 
-DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
+DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
 DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 

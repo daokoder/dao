@@ -417,6 +417,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	DaoStackFrame *frame = self->topFrame;
 	DaoType *cbtype = NULL;
 	DaoVmCode *codes;
+	int nop = 0;
 	if( frame->routine ) cbtype = frame->routine->routType->cbtype;
 	if( frame->function ) cbtype = frame->function->routType->cbtype;
 	if( cbtype == NULL ) return NULL;
@@ -431,7 +432,8 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 		if( frame->routine ){
 			cbtype2 = frame->routine->routType->cbtype;
 			codes = frame->codes + frame->entry;
-			if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
+			nop = codes[1].code == DVM_NOP;
+			if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
 		}
 		if( frame->function ) cbtype2 = frame->function->routType->cbtype;
 		if( cbtype2 == NULL || DaoType_MatchTo( cbtype, cbtype2, NULL ) == 0 ) break;
@@ -439,7 +441,8 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	}
 	if( frame == NULL || frame->routine == NULL ) return NULL;
 	codes = frame->codes + frame->entry;
-	if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
+	nop = codes[1].code == DVM_NOP;
+	if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
 	return NULL;
 }
 DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )

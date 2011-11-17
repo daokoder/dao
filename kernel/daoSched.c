@@ -417,7 +417,19 @@ static void DaoCallThread_Run( DaoCallThread *self )
 	server->stopped += 1;
 	DMutex_Unlock( & server->mutex );
 }
-void DaoCallServer_Join( DaoVmSpace *vmSpace )
+void DaoCallServer_Join()
+{
+	DCondVar condv;
+	if( daoCallServer == NULL ) return;
+	DCondVar_Init( & condv );
+	DMutex_Lock( & daoCallServer->mutex );
+	while( daoCallServer->pending->size || daoCallServer->idle != daoCallServer->total ){
+		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
+	}
+	DMutex_Unlock( & daoCallServer->mutex );
+	DCondVar_Destroy( & condv );
+}
+void DaoCallServer_Stop()
 {
 	DCondVar condv;
 	if( daoCallServer == NULL ) return;

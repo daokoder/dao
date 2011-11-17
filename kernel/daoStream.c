@@ -659,9 +659,10 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-		DString_Clear( self->streamString );
-		DString_AppendChar( self->streamString, val );
-		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+		DString *mbs = DString_New(1);
+		DString_AppendChar( mbs, val );
+		vms->userHandler->StdioWrite( vms->userHandler, mbs );
+		DString_Delete( mbs );
 	}else if( self->attribs & DAO_IO_STRING ){
 		DString_AppendChar( self->streamString, val );
 	}else{
@@ -677,9 +678,11 @@ void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
+		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
-		DString_SetMBS( self->streamString, buffer );
-		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+		DString_SetMBS( mbs, buffer );
+		vms->userHandler->StdioWrite( vms->userHandler, mbs );
+		DString_Delete( mbs );
 	}else if( self->attribs & DAO_IO_STRING ){
 		sprintf( buffer, format, val );
 		DString_AppendMBS( self->streamString, buffer );
@@ -711,9 +714,11 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
+		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
-		DString_SetMBS( self->streamString, buffer );
-		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+		DString_SetMBS( mbs, buffer );
+		vms->userHandler->StdioWrite( vms->userHandler, mbs );
+		DString_Delete( mbs );
 	}else if( self->attribs & DAO_IO_STRING ){
 		sprintf( buffer, format, val );
 		DString_AppendMBS( self->streamString, buffer );
@@ -731,8 +736,10 @@ void DaoStream_WriteMBS( DaoStream *self, const char *val )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-		DString_SetMBS( self->streamString, val );
-		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+		DString *mbs = DString_New(1);
+		DString_SetMBS( mbs, val );
+		vms->userHandler->StdioWrite( vms->userHandler, mbs );
+		DString_Delete( mbs );
 	}else if( self->attribs & DAO_IO_STRING ){
 		DString_AppendMBS( self->streamString, val );
 	}else{
@@ -749,8 +756,10 @@ void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-		DString_SetWCS( self->streamString, val );
-		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+		DString *mbs = DString_New(1);
+		DString_SetWCS( mbs, val );
+		vms->userHandler->StdioWrite( vms->userHandler, mbs );
+		DString_Delete( mbs );
 	}else if( self->attribs & DAO_IO_STRING ){
 		DString_AppendWCS( self->streamString, val );
 	}else{
@@ -785,8 +794,10 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 				for(i=0; i<val->size; i++) fprintf( self->file->fd, format, data[i] );
 			}
 		}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-			DString_SetDataMBS( self->streamString, data, val->size );
-			vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+			DString *mbs = DString_New(1);
+			DString_SetDataMBS( mbs, data, val->size );
+			vms->userHandler->StdioWrite( vms->userHandler, mbs );
+			DString_Delete( mbs );
 		}else if( self->attribs & DAO_IO_STRING ){
 			DString_AppendDataMBS( self->streamString, data, val->size );
 		}else{
@@ -806,8 +817,10 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 				for(i=0; i<val->size; i++) fprintf( self->file->fd, format, data[i] );
 			}
 		}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
-			DString_SetWords( self->streamString, data, val->size );
-			vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+			DString *mbs = DString_New(1);
+			DString_SetWords( mbs, data, val->size );
+			vms->userHandler->StdioWrite( vms->userHandler, mbs );
+			DString_Delete( mbs );
 		}else if( self->attribs & DAO_IO_STRING ){
 			DString *wcs = self->streamString;
 			int size = 0;
@@ -834,9 +847,11 @@ void DaoStream_WritePointer( DaoStream *self, void *val )
 	}else if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
+		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
-		DString_SetMBS( self->streamString, buffer );
-		vms->userHandler->StdioWrite( vms->userHandler, (DString*)self->streamString );
+		DString_SetMBS( mbs, buffer );
+		vms->userHandler->StdioWrite( vms->userHandler, mbs );
+		DString_Delete( mbs );
 	}else if( self->attribs & DAO_IO_STRING ){
 		sprintf( buffer, format, val );
 		DString_AppendMBS( self->streamString, buffer );
