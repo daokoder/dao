@@ -3331,7 +3331,8 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 				ct2 = rettypes->items.pType[ rettypes->size - 2 ];
 				redef = rettypes->items.pInt[ rettypes->size - 3 ];
 				if( (i+1) < self->annotCodes->size ){
-					if( vmcs[i+1]->code == DVM_GOTO && vmcs[i+1]->c == DVM_SECT ){
+					int nop = vmcs[i+1]->code == DVM_NOP;
+					if( vmcs[i+nop+1]->code == DVM_GOTO && vmcs[i+nop+1]->c == DVM_SECT ){
 						DArray_Erase( rettypes, rettypes->size - 3, -1 );
 						popped = 1;
 					}

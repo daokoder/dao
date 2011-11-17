@@ -714,7 +714,7 @@ DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
-DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
+DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
 DAO_DLL DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name );
 DAO_DLL DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
