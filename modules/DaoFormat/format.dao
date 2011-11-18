@@ -1,0 +1,43 @@
+load DaoFormat;
+
+#Placeholders '$x' are used to embed unformatted data into string,
+#'x' is the index of additional format() argument.
+#Supported data types: all numeric types, string, enum, list, array, map, tuple, none.
+#Escaping: '$$'.
+
+io.writeln('#General usage');
+io.writeln(format("The values are $$$0, '$1' and {$2}.", 5, 'str', {1, 2, 3} ));
+
+#Placeholders '$(format)' are meant for formatted printing,
+#<format> ::= <argument index> [<element>] [<numeric format>] [<alignment>]
+
+#<alignment> ::= ('>' | '<' | '=') <field width>
+#'<' -- align left,
+#'>' -- align right,
+#'=' -- align center.
+
+io.writeln('\n#Alignment');
+io.writeln(format('($(0<10))', 'left'));
+io.writeln(format('($(0>10))', 'right'));
+io.writeln(format('($(0=10))', 'center'));
+
+#<numeric format> ::= : ['+' | ' '] ('i' | 'x' | 'X' | 'f' | 'g' | 'G') [.<precision>]
+#'+' -- print sign,
+#' ' -- print space if no sign,
+#type specifiers and precision have the same meaning as in C/C++ printf(),
+#integer and floating point arguments are implictly casted if required.
+
+io.writeln('\n#Numeric format');
+io.writeln(format('$(0:i), $(1:X.4), $(2:+f.2)', -1, 255, 3.3452));
+
+#For containers, numeric format and alignment are applied to each element individually.
+
+io.writeln('\n#Containers');
+io.writeln(format('$(0:f.2>6)', {1, 2, 3}));
+
+#<element> ::= ( '[' <index> ']' | .<field name>)
+#Indexing is supported for lists, arrays, tuples (negative indexes allowed),
+#field name can be used with tuples.
+
+io.writeln('\n#Data access');
+io.writeln(format('[$0][-1] = $(0[-1]), ($1).x = $(1.x:i)', [1, 2], (x => 1, y => 2)));

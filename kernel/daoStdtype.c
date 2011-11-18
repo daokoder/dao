@@ -3534,6 +3534,10 @@ DNode* DaoMap_Next( DaoMap *self, DNode *iter )
 {
 	return DMap_Next(self->items,iter);
 }
+int DaoMap_IsHashing( DaoMap *self )
+{
+	return self->items->hashing;
+}
 
 DMap *dao_cdata_bindings = NULL;
 static DaoCdata* DaoCdataBindings_Find( void *data )
@@ -4168,6 +4172,19 @@ DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos )
 {
 	if( pos <0 || pos >= self->size ) return NULL;
 	return self->items[pos];
+}
+DaoValue* DaoTuple_GetNamedItem( DaoTuple *self, DString *name )
+{
+	DaoType *abtp = self->unitype;
+	DNode *node = NULL;
+	int index;
+	if( abtp && abtp->mapNames ) node = MAP_Find( abtp->mapNames, name );
+	if( node == NULL )
+		return NULL;
+	index = node->value.pInt;
+	if( index < 0 || index >= self->size )
+		return NULL;
+	return self->items[index];
 }
 
 static void DaoException_Init( DaoException *self, DaoTypeBase *typer );
