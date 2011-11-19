@@ -240,6 +240,7 @@ struct DaoTuple
 DaoTuple* DaoTuple_Create( DaoType *type, int init );
 void DaoTuple_Delete( DaoTuple *self );
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
+int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 typedef struct IndexValue IndexValue;
 struct IndexValue

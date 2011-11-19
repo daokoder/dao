@@ -1,9 +1,9 @@
 
 CC = gcc
 INCLUDE = -I. -I../../kernel
-LIB = dao.dll
 CFLAG = -c -Wall -O2 -fPIC
 LFLAG = -s -shared
+LIB =
 
 TARGET = DaoFormat.so
 
@@ -15,9 +15,9 @@ ifeq ($(UNAME), Linux)
 endif
 
 ifeq ($(UNAME), Darwin)
-  TARGET	= DaoFormat.dylib
+  TARGET = DaoFormat.dylib
   CFLAG += -DUNIX -DMAC_OSX
-  LFLAG = -fPIC -dynamiclib
+  LFLAG = -fPIC -dynamiclib -undefined dynamic_lookup
 endif
 
 ifeq ($(CC), gcc)

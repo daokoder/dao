@@ -16,6 +16,7 @@
 #include<string.h>
 
 #include"dao.h"
+#include"daoValue.h"
 DAO_INIT_MODULE
 
 #define dao_free free
@@ -115,7 +116,7 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 			sprintf( buf, "%g%+g$", DaoValue_TryGetComplex( value ).real, DaoValue_TryGetComplex( value ).imag );
 		break;
 	case DAO_LONG:
-		DaoLong_Print( DaoValue_CastLong( value ), tmp );
+		DLong_Print( value->xLong.value, tmp );
 		break;
 	case DAO_ENUM:
 		DaoEnum_MakeName( DaoValue_CastEnum( value ), tmp );
@@ -165,7 +166,7 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 				return 2;
 			else if( res == 3 || res == 4 )
 				error = 4;
-			DString_AppendMBS( dest, DaoMap_IsHashing( valmap )? " : " : " => " );
+			DString_AppendMBS( dest, valmap->items->hashing ? " : " : " => " );
 			if( ( res = PrintValue( DNode_Value( node ), dest, format, tmp, buffer ) ) == 1 || res == 2 )
 				return 2;
 			else if( res == 3 || res == 4 )
@@ -223,7 +224,7 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 				DString_SetDataMBS( tmp, format->name, format->namelen );
 			else
 				DString_SetDataWCS( tmp, format->wname, format->namelen );
-			if( ( value = DaoTuple_GetNamedItem( valtuple, tmp ) ) == NULL )
+			if( ( value = DaoTuple_GetItem( valtuple, DaoTuple_GetIndex( valtuple, tmp ) ) ) == NULL )
 				return 8;
 			format->name = NULL;
 			format->wname = NULL;

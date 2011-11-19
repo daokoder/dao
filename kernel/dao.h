@@ -495,7 +495,6 @@ DAO_DLL complex16   DaoComplex_Get( DaoComplex *self );
 DAO_DLL void        DaoComplex_Set( DaoComplex *self, complex16 value );
 
 DAO_DLL DaoLong*  DaoLong_New();
-DAO_DLL void DaoLong_Print( DaoLong *self, DString *s );
 //DLong*   DaoLong_Get( DaoLong *self );
 //void        DaoLong_Set( DaoLong *self, DLong *value );
 
@@ -505,7 +504,6 @@ DAO_DLL DaoString*  DaoString_NewWCS( const wchar_t *wcs );
 DAO_DLL DaoString*  DaoString_NewBytes( const char *bytes, size_t n );
 
 DAO_DLL size_t  DaoString_Size( DaoString *self );
-DAO_DLL void DString_Reserve( DString *self, size_t size );
 
 DAO_DLL DString*  DaoString_Get( DaoString *self );
 DAO_DLL const char*  DaoString_GetMBS( DaoString *self );
@@ -517,7 +515,6 @@ DAO_DLL void  DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
 DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
 
 DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, dint value );
-DAO_DLL void DaoEnum_MakeName( DaoEnum *self, DString *name );
 //float    DaoEnum_Get( DaoEnum *self );
 //void     DaoEnum_Set( DaoEnum *self, float value );
 
@@ -547,7 +544,6 @@ DAO_DLL void DaoMap_Clear( DaoMap *self );
 DAO_DLL DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  );
 DAO_DLL DaoValue* DaoMap_GetValueMBS( DaoMap *self, const char *key  );
 DAO_DLL DaoValue* DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  );
-DAO_DLL int DaoMap_IsHashing( DaoMap *self );
 
 DAO_DLL DNode* DaoMap_First( DaoMap *self );
 DAO_DLL DNode* DaoMap_Next( DaoMap *self, DNode *iter );
@@ -556,9 +552,8 @@ DAO_DLL DaoValue* DNode_Value( DNode *self );
 
 DAO_DLL DaoTuple* DaoTuple_New( int size );
 DAO_DLL int  DaoTuple_Size( DaoTuple *self );
-DAO_DLL void   DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
+DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos );
-DAO_DLL DaoValue* DaoTuple_GetNamedItem( DaoTuple *self, DString *name );
 
 DAO_DLL DaoArray* DaoArray_New( int numtype );
 DAO_DLL int  DaoArray_NumType( DaoArray *self );

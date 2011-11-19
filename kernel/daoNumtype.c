@@ -1619,10 +1619,6 @@ static DaoTypeCore longCore=
 	DaoValue_Print,
 	DaoValue_NoCopy,
 };
-void DaoLong_Print( DaoLong *self, DString *s )
-{
-	DLong_Print( self->value, s );
-}
 static void DaoLong_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DLong *self = p[0]->xLong.value;

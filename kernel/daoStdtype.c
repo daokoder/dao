@@ -3534,10 +3534,6 @@ DNode* DaoMap_Next( DaoMap *self, DNode *iter )
 {
 	return DMap_Next(self->items,iter);
 }
-int DaoMap_IsHashing( DaoMap *self )
-{
-	return self->items->hashing;
-}
 
 DMap *dao_cdata_bindings = NULL;
 static DaoCdata* DaoCdataBindings_Find( void *data )
@@ -3965,17 +3961,9 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value )
 /* ---------------------
  * Dao Tuple
  * ---------------------*/
-static int DaoTuple_GetIndex( DaoTuple *self, DaoProcess *proc, DString *name )
+static int DaoTuple_GetIndexE( DaoTuple *self, DaoProcess *proc, DString *name )
 {
-	DaoType *abtp = self->unitype;
-	DNode *node = NULL;
-	int id;
-	if( abtp && abtp->mapNames ) node = MAP_Find( abtp->mapNames, name );
-	if( node == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid field" );
-		return -1;
-	}
-	id = node->value.pInt;
+	int id = DaoTuple_GetIndex( self, name );
 	if( id <0 || id >= self->size ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid tuple" );
 		return -1;
@@ -3985,7 +3973,7 @@ static int DaoTuple_GetIndex( DaoTuple *self, DaoProcess *proc, DString *name )
 static void DaoTupleCore_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 {
 	DaoTuple *self = & self0->xTuple;
-	int id = DaoTuple_GetIndex( self, proc, name );
+	int id = DaoTuple_GetIndexE( self, proc, name );
 	if( id <0 ) return;
 	DaoProcess_PutReference( proc, self->items[id] );
 }
@@ -3993,7 +3981,7 @@ static void DaoTupleCore_SetField( DaoValue *self0, DaoProcess *proc, DString *n
 {
 	DaoTuple *self = & self0->xTuple;
 	DaoType *t, **type = self->unitype->nested->items.pType;
-	int id = DaoTuple_GetIndex( self, proc, name );
+	int id = DaoTuple_GetIndexE( self, proc, name );
 	if( id <0 ) return;
 	t = type[id];
 	if( t->tid == DAO_PAR_NAMED ) t = & t->aux->xType;
@@ -4155,6 +4143,14 @@ int  DaoTuple_Size( DaoTuple *self )
 {
 	return self->size;
 }
+int DaoTuple_GetIndex( DaoTuple *self, DString *name )
+{
+	DaoType *abtp = self->unitype;
+	DNode *node = NULL;
+	if( abtp && abtp->mapNames ) node = MAP_Find( abtp->mapNames, name );
+	if( node == NULL || node->value.pInt >= self->size ) return -1;
+	return node->value.pInt;
+}
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos )
 {
 	DaoValue **val;
@@ -4172,19 +4168,6 @@ DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos )
 {
 	if( pos <0 || pos >= self->size ) return NULL;
 	return self->items[pos];
-}
-DaoValue* DaoTuple_GetNamedItem( DaoTuple *self, DString *name )
-{
-	DaoType *abtp = self->unitype;
-	DNode *node = NULL;
-	int index;
-	if( abtp && abtp->mapNames ) node = MAP_Find( abtp->mapNames, name );
-	if( node == NULL )
-		return NULL;
-	index = node->value.pInt;
-	if( index < 0 || index >= self->size )
-		return NULL;
-	return self->items[index];
 }
 
 static void DaoException_Init( DaoException *self, DaoTypeBase *typer );
