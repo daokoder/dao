@@ -113,7 +113,7 @@ int JSON_SerializeValue( DaoValue *value, DString *text, int indent )
 		JSON_Indent( text, indent );
 		DString_AppendWCS( text, L"}");
 		break;
-	case DAO_NULL:
+	case DAO_NONE:
 		DString_AppendWCS( text, L"null" );
 		break;
 	default:
