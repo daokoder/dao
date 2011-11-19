@@ -1293,6 +1293,8 @@ void DaoEncodeInteger( char *p, dint value )
 		*(p++) = '-';
 		value = - value;
 	}
+	*(p++) = 'X';
+	*p = 0;
 	if( value == 0 ){
 		*(p++) = '0';
 		*p = 0;
@@ -1314,6 +1316,7 @@ dint DaoDecodeInteger( char *p )
 		sign = -1;
 		p ++;
 	}
+	if( *p == 'X' ) p ++;
 	while( *p ){
 		int digit = *p;
 		digit -= digit >= 'A' ? 'A' - 10 : '0';
@@ -1333,6 +1336,8 @@ void DaoEncodeDouble( char *buf, double value )
 		*(p++) = '-';
 		value = -value;
 	}
+	*(p++) = 'X';
+	*p = 0;
 	frac = frexp( value, & expon );
 	while(1){
 		prod = frac * RADIX;
@@ -1357,6 +1362,7 @@ double DaoDecodeDouble( char *buf )
 		p ++;
 		sign = -1;
 	}
+	if( *p == 'X' ) p ++;
 	while( *p && *p != '_' ){
 		int digit = *p;
 		digit -= digit >= 'A' ? 'A' - 10 : '0';
@@ -1511,10 +1517,9 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *
 static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf )
 {
 	DaoType *type;
-	DaoValue *selfpar = (DaoValue*) self;
 	DaoValue *meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" );
 	if( meth == NULL ) return 0;
-	if( DaoProcess_Call( proc, (DaoMethod*)meth, selfpar, NULL, 0 ) ) return 0;
+	if( DaoProcess_Call( proc, (DaoMethod*)meth, (DaoValue*)self, NULL, 0 ) ) return 0;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
 	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
 	return 1;
@@ -1527,6 +1532,8 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 		DString_AppendChar( serial, '{' );
 	}
 	switch( self->type ){
+	case DAO_NONE :
+		break;
 	case DAO_INTEGER :
 		DaoSerializeInteger( self->xInteger.value, serial );
 		break;
@@ -1679,6 +1686,8 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 #endif
 	value = *value2;
 	switch( type->tid ){
+	case DAO_NONE :
+		break;
 	case DAO_INTEGER :
 		value->xInteger.value = DaoDecodeInteger( str );
 		if( minus ) value->xInteger.value = - value->xInteger.value;
