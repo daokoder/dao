@@ -729,7 +729,7 @@ DAO_DLL void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *f, const c
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
-DAO_DLL void  DaoVmSpace_Stop( DaoVmSpace *self, int bl );
+DAO_DLL void DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 
 DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );

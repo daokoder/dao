@@ -119,38 +119,38 @@ struct DaoProcess
 };
 
 /* Create a new virtual machine process */
-DaoProcess* DaoProcess_New( DaoVmSpace *vms );
-void DaoProcess_Delete( DaoProcess *self );
+DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
+DAO_DLL void DaoProcess_Delete( DaoProcess *self );
 
-DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
-DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self );
-void DaoProcess_PopFrame( DaoProcess *self );
-void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback );
+DAO_DLL DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
+DAO_DLL DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self );
+DAO_DLL void DaoProcess_PopFrame( DaoProcess *self );
+DAO_DLL void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback );
 
-void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
-void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
+DAO_DLL void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
+DAO_DLL void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
 
-void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
-void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
-int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
+DAO_DLL void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
+DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
+DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
 
-void DaoProcess_InterceptReturnValue( DaoProcess *self );
+DAO_DLL void DaoProcess_InterceptReturnValue( DaoProcess *self );
 
-int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 
-void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n );
+DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n );
 
 /* Execute from the top of the calling stack */
-int DaoProcess_Execute( DaoProcess *self );
+DAO_DLL int DaoProcess_Execute( DaoProcess *self );
 
-int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
-DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
+DAO_DLL int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
+DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
-DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
+DAO_DLL DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N );
 
-void DaoProcess_PrintException( DaoProcess *self, int clear );
+DAO_DLL void DaoProcess_PrintException( DaoProcess *self, int clear );
 
-DaoValue* DaoProcess_MakeConst( DaoProcess *self );
+DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 
 typedef struct CastBuffer CastBuffer;

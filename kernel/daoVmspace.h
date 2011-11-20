@@ -80,33 +80,33 @@ struct DaoVmSpace
 #endif
 };
 
-DaoVmSpace* DaoVmSpace_New();
+DAO_DLL DaoVmSpace* DaoVmSpace_New();
 /* DaoVmSpace is not handled by GC, it should be deleted manually. 
  * Normally, DaoVmSpace structures are allocated in the beginning of a program and 
  * persist until the program exits. So DaoVmSpace_Delete() is rarely needed to be called.
  */
-void DaoVmSpace_Delete( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_Delete( DaoVmSpace *self );
 
-void DaoVmSpace_Lock( DaoVmSpace *self );
-void DaoVmSpace_Unlock( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_Lock( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_Unlock( DaoVmSpace *self );
 
-int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
+DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
 
-int DaoVmSpace_Compile( DaoVmSpace *self, DaoNamespace *ns, DString *src, int rpl );
-int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
+DAO_DLL int DaoVmSpace_Compile( DaoVmSpace *self, DaoNamespace *ns, DString *src, int rpl );
+DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 
-DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
-DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
-DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
+DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
+DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns );
+DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 
-void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check );
+DAO_DLL void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check );
 
-void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
-void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
-void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
+DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
+DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
+DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
-DaoVmSpace* DaoInit();
+DAO_DLL DaoVmSpace* DaoInit();
 
-DaoTypeBase* DaoVmSpace_GetTyper( short type );
+DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
 #endif

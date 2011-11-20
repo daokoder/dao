@@ -57,23 +57,21 @@ struct DaoRegex
 	int    length;
 };
 
-DaoRegex* DaoRegex_New( DString *src );
+DAO_DLL DaoRegex* DaoRegex_New( DString *src );
 #define DaoRegex_Delete( self ) dao_free( self )
-void DaoRegex_Copy( DaoRegex *self, DaoRegex *src );
+DAO_DLL void DaoRegex_Copy( DaoRegex *self, DaoRegex *src );
 
 /* compute the number of bytes needed for storing the compiled pattern */
-int DaoRegex_CheckSize( DString *src );
+DAO_DLL int DaoRegex_CheckSize( DString *src );
 
-int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
-int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
+DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
+DAO_DLL int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
 
-int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
-int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
+DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
+DAO_DLL int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
 		int index, size_t *start2, size_t *end2 );
 
-int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
+DAO_DLL int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
 		int index, int count, DArray *packs );
-
-int DaoRegex_Extract( DaoRegex *self, DString *s, DArray *ls, short tp );
 
 #endif

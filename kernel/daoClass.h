@@ -83,42 +83,42 @@ struct DaoClass
 	ushort_t  objDefCount;
 };
 
-DaoClass* DaoClass_New();
-void DaoClass_Delete( DaoClass *self );
+DAO_DLL DaoClass* DaoClass_New();
+DAO_DLL void DaoClass_Delete( DaoClass *self );
 
-void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
-void DaoClass_AddReference( DaoClass *self, void *reference );
+DAO_DLL void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
+DAO_DLL void DaoClass_AddReference( DaoClass *self, void *reference );
 
-int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
-void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
-void DaoClass_DeriveClassData( DaoClass *self );
-void DaoClass_DeriveObjectData( DaoClass *self );
-void DaoClass_ResetAttributes( DaoClass *self );
+DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
+DAO_DLL void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
+DAO_DLL void DaoClass_DeriveClassData( DaoClass *self );
+DAO_DLL void DaoClass_DeriveObjectData( DaoClass *self );
+DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
 
-DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
+DAO_DLL DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 
-int  DaoClass_FindSuper( DaoClass *self, DaoValue *super );
-int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
-void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super, DString *alias );
-DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent );
+DAO_DLL int  DaoClass_FindSuper( DaoClass *self, DaoValue *super );
+DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
+DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super, DString *alias );
+DAO_DLL DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent );
 
-int  DaoClass_FindConst( DaoClass *self, DString *name );
-DaoValue* DaoClass_GetConst( DaoClass *self, int id );
-void DaoClass_SetConst( DaoClass *self, int id, DaoValue *value );
-int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass *thisClass/*=0*/ );
+DAO_DLL int  DaoClass_FindConst( DaoClass *self, DString *name );
+DAO_DLL DaoValue* DaoClass_GetConst( DaoClass *self, int id );
+DAO_DLL void DaoClass_SetConst( DaoClass *self, int id, DaoValue *value );
+DAO_DLL int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass *thisClass/*=0*/ );
 
-DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClass *thisClass );
-int DaoClass_GetDataIndex( DaoClass *self, DString *name );
+DAO_DLL DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClass *thisClass );
+DAO_DLL int DaoClass_GetDataIndex( DaoClass *self, DString *name );
 
-int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int s, int l );
-int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *value, DaoType *t, int s, int l );
-int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoType *t, int s, int l );
+DAO_DLL int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int s, int l );
+DAO_DLL int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *value, DaoType *t, int s, int l );
+DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoType *t, int s, int l );
 
-int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
+DAO_DLL int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 
-void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
-DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );
+DAO_DLL void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
+DAO_DLL DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );
 
-DaoValue* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
+DAO_DLL DaoValue* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
 
 #endif

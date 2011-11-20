@@ -60,11 +60,11 @@ struct DMutex
 {
 	dao_mutex_t myMutex;
 };
-extern void DMutex_Init( DMutex *self );
-extern void DMutex_Destroy( DMutex *self );
-extern void DMutex_Lock( DMutex *self );
-extern void DMutex_Unlock( DMutex *self );
-extern int DMutex_TryLock( DMutex *self );
+DAO_DLL void DMutex_Init( DMutex *self );
+DAO_DLL void DMutex_Destroy( DMutex *self );
+DAO_DLL void DMutex_Lock( DMutex *self );
+DAO_DLL void DMutex_Unlock( DMutex *self );
+DAO_DLL int DMutex_TryLock( DMutex *self );
 
 struct DCondVar
 {
@@ -75,24 +75,24 @@ struct DCondVar
 	DArray *thdWaiting;
 #endif
 };
-extern void DCondVar_Init( DCondVar *self );
-extern void DCondVar_Destroy( DCondVar *self );
-extern void DCondVar_Wait( DCondVar *self, DMutex *mutex );
-extern int  DCondVar_TimedWait( DCondVar *self, DMutex *mutex, double seconds );
+DAO_DLL void DCondVar_Init( DCondVar *self );
+DAO_DLL void DCondVar_Destroy( DCondVar *self );
+DAO_DLL void DCondVar_Wait( DCondVar *self, DMutex *mutex );
+DAO_DLL int  DCondVar_TimedWait( DCondVar *self, DMutex *mutex, double seconds );
 /* return true if time out. */
 
-extern void DCondVar_Signal( DCondVar *self );
-extern void DCondVar_BroadCast( DCondVar *self );
+DAO_DLL void DCondVar_Signal( DCondVar *self );
+DAO_DLL void DCondVar_BroadCast( DCondVar *self );
 
 struct DSema
 {
 	dao_sema_t  mySema;
 	int         count;
 };
-extern void DSema_Init( DSema *self, int n );
-extern void DSema_Destroy( DSema *self );
-extern void DSema_Wait( DSema *self );
-extern void DSema_Post( DSema *self );
+DAO_DLL void DSema_Init( DSema *self, int n );
+DAO_DLL void DSema_Destroy( DSema *self );
+DAO_DLL void DSema_Wait( DSema *self );
+DAO_DLL void DSema_Post( DSema *self );
 
 enum DThreadState
 {
@@ -123,16 +123,16 @@ struct DThread
 	DThreadTask      taskFunc;
 	void            *taskArg;
 };
-extern void DThread_Init( DThread *self );
-extern void DThread_Destroy( DThread *self );
+DAO_DLL void DThread_Init( DThread *self );
+DAO_DLL void DThread_Destroy( DThread *self );
 
-extern int DThread_Start( DThread *self, DThreadTask task, void *arg );
-extern void DThread_Exit( DThread *self );
-extern void DThread_Join( DThread *self );
-extern dao_thread_t DThread_Self();
-extern int DThread_Equal( dao_thread_t x, dao_thread_t y );
+DAO_DLL int DThread_Start( DThread *self, DThreadTask task, void *arg );
+DAO_DLL void DThread_Exit( DThread *self );
+DAO_DLL void DThread_Join( DThread *self );
+DAO_DLL dao_thread_t DThread_Self();
+DAO_DLL int DThread_Equal( dao_thread_t x, dao_thread_t y );
 
-DThreadData* DThread_GetSpecific();
+DAO_DLL DThreadData* DThread_GetSpecific();
 
 
 /* Dao threading types: */
@@ -142,10 +142,10 @@ struct DaoMutex
 
 	DMutex         myMutex;
 };
-extern DaoMutex* DaoMutex_New();
-extern void DaoMutex_Lock( DaoMutex *self );
-extern void DaoMutex_Unlock( DaoMutex *self );
-extern int DaoMutex_TryLock( DaoMutex *self );
+DAO_DLL DaoMutex* DaoMutex_New();
+DAO_DLL void DaoMutex_Lock( DaoMutex *self );
+DAO_DLL void DaoMutex_Unlock( DaoMutex *self );
+DAO_DLL int DaoMutex_TryLock( DaoMutex *self );
 
 struct DaoCondVar
 {
@@ -153,15 +153,15 @@ struct DaoCondVar
 
 	DCondVar       myCondVar;
 };
-extern DaoCondVar* DaoCondVar_New();
-extern void DaoCondVar_Delete( DaoCondVar *self );
+DAO_DLL DaoCondVar* DaoCondVar_New();
+DAO_DLL void DaoCondVar_Delete( DaoCondVar *self );
 
-extern void DaoCondVar_Wait( DaoCondVar *self, DaoMutex *mutex );
-extern int  DaoCondVar_TimedWait( DaoCondVar *self, DaoMutex *mutex, double seconds );
+DAO_DLL void DaoCondVar_Wait( DaoCondVar *self, DaoMutex *mutex );
+DAO_DLL int  DaoCondVar_TimedWait( DaoCondVar *self, DaoMutex *mutex, double seconds );
 /* return true if time out. */
 
-extern void DaoCondVar_Signal( DaoCondVar *self );
-extern void DaoCondVar_BroadCast( DaoCondVar *self );
+DAO_DLL void DaoCondVar_Signal( DaoCondVar *self );
+DAO_DLL void DaoCondVar_BroadCast( DaoCondVar *self );
 
 struct DaoSema
 {
@@ -169,16 +169,16 @@ struct DaoSema
 
 	DSema     mySema;
 };
-extern DaoSema* DaoSema_New( int n );
-extern void DaoSema_Delete( DaoSema *self );
+DAO_DLL DaoSema* DaoSema_New( int n );
+DAO_DLL void DaoSema_Delete( DaoSema *self );
 
-extern void DaoSema_Wait( DaoSema *self );
-extern void DaoSema_Post( DaoSema *self );
+DAO_DLL void DaoSema_Wait( DaoSema *self );
+DAO_DLL void DaoSema_Post( DaoSema *self );
 
-extern void DaoSema_SetValue( DaoSema *self, int n );
-extern int  DaoSema_GetValue( DaoSema *self );
+DAO_DLL void DaoSema_SetValue( DaoSema *self, int n );
+DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 
-extern void DaoInitThread();
+DAO_DLL void DaoInitThread();
 
 void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
 

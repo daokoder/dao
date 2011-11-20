@@ -863,22 +863,6 @@ void DaoStream_WriteNewLine( DaoStream *self )
 {
 	DaoStream_WriteMBS( self, daoConfig.iscgi ? "<br/>" : "\n" );
 }
-void DaoStream_PrintInfo( DaoStream *self,const char *t, DString *s, int i, const char *e, DString *x)
-{
-	DaoStream *stream = self->vmSpace->stdStream;
-	DaoStream_WriteMBS( stream, t );
-	DaoStream_WriteMBS( stream, "( " );
-	DaoStream_WriteString( stream, s );
-	DaoStream_WriteMBS( stream, ", line " );
-	DaoStream_WriteInt( stream, i );
-	DaoStream_WriteMBS( stream, "):\n" );
-	if( x ){
-		DaoStream_WriteString( stream, x );
-		DaoStream_WriteMBS( stream, ", " );
-	}
-	DaoStream_WriteMBS( stream, e );
-	DaoStream_WriteMBS( stream, ";\n\n" );
-}
 int DaoStream_ReadLine( DaoStream *self, DString *line )
 {
 	DaoVmSpace *vms = self->vmSpace;

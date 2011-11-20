@@ -182,7 +182,7 @@ enum DaoRoutineAttrib
 
 enum DaoGlbConstShift
 {
-	DVR_NSC_NIL = 1 ,
+	DVR_NSC_NONE = 1 ,
 	DVR_NSC_MAIN 
 };
 enum DaoGlbVarShift
@@ -431,8 +431,8 @@ typedef struct DaoExceptionTripple
 extern const char* const daoExceptionName[];
 extern const char* const daoExceptionInfo[];
 
-extern const char* getExceptName( int id );
-extern const char* getOpcodeName( int opc );
+DAO_DLL const char* getExceptName( int id );
+DAO_DLL const char* getOpcodeName( int opc );
 
 extern const char* const coreTypeNames[];
 extern const char *const daoBitBoolArithOpers[];

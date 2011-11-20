@@ -70,36 +70,34 @@ union DaoValue
 
 /* Copy when self is a simple data type (with type <= DAO_ENUM),
  * or it is a constant array, list, map or tuple. */
-DaoValue* DaoValue_SimpleCopy( DaoValue *self );
-DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *type );
+DAO_DLL DaoValue* DaoValue_SimpleCopy( DaoValue *self );
+DAO_DLL DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *type );
 
-void DaoValue_Clear( DaoValue **self );
+DAO_DLL void DaoValue_Clear( DaoValue **self );
 
-int DaoValue_Compare( DaoValue *left, DaoValue *right );
+DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
-void DaoValue_Copy( DaoValue *src, DaoValue **dest );
-int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
-int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype );
-void DaoValue_SimpleMove( DaoValue *src, DaoValue **dest );
+DAO_DLL void DaoValue_Copy( DaoValue *src, DaoValue **dest );
+DAO_DLL int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
+DAO_DLL int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype );
+DAO_DLL void DaoValue_SimpleMove( DaoValue *src, DaoValue **dest );
 
-void DaoValue_MarkConst( DaoValue *self );
+DAO_DLL void DaoValue_MarkConst( DaoValue *self );
 
-int DaoValue_IsZero( DaoValue *self );
-long_t DaoValue_GetInteger( DaoValue *self );
-float  DaoValue_GetFloat( DaoValue *self );
-double DaoValue_GetDouble( DaoValue *self );
-complex16 DaoValue_GetComplex( DaoValue *self );
-DLong* DaoValue_GetLong( DaoValue *self, DLong *lng );
-DString* DaoValue_GetString( DaoValue *self, DString *str );
+DAO_DLL int DaoValue_IsZero( DaoValue *self );
+DAO_DLL long_t DaoValue_GetInteger( DaoValue *self );
+DAO_DLL float  DaoValue_GetFloat( DaoValue *self );
+DAO_DLL double DaoValue_GetDouble( DaoValue *self );
+DAO_DLL complex16 DaoValue_GetComplex( DaoValue *self );
+DAO_DLL DLong* DaoValue_GetLong( DaoValue *self, DLong *lng );
+DAO_DLL DString* DaoValue_GetString( DaoValue *self, DString *str );
 
-int DaoValue_FromString( DaoValue *self, DString *str, int type );
+DAO_DLL int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
+DAO_DLL int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
 
-int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
-int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
+DAO_DLL int DaoValue_IsNumber( DaoValue *self );
+DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *ctx, DaoStream *stream, DMap *cycData );
 
-int DaoValue_IsNumber( DaoValue *self );
-void DaoValue_Print( DaoValue *self, DaoProcess *ctx, DaoStream *stream, DMap *cycData );
-
-void DaoValue_IncRCs( DaoValue *v, int n );
+DAO_DLL void DaoValue_IncRCs( DaoValue *v, int n );
 
 #endif

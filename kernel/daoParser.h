@@ -125,14 +125,14 @@ struct DaoParser
 	DArray  *arrays;
 };
 
-DaoParser* DaoParser_New();
-void DaoParser_Delete( DaoParser *self );
+DAO_DLL DaoParser* DaoParser_New();
+DAO_DLL void DaoParser_Delete( DaoParser *self );
 
-int DaoParser_LexCode( DaoParser *self, const char *source, int replace );
-int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start );
-int DaoParser_ParseScript( DaoParser *self );
-int DaoParser_ParseRoutine( DaoParser *self );
+DAO_DLL int DaoParser_LexCode( DaoParser *self, const char *source, int replace );
+DAO_DLL int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start );
+DAO_DLL int DaoParser_ParseScript( DaoParser *self );
+DAO_DLL int DaoParser_ParseRoutine( DaoParser *self );
 
-DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
+DAO_DLL DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
 
 #endif

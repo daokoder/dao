@@ -1273,16 +1273,3 @@ DoNothing:
 	return n;
 }
 
-int DaoRegex_Extract( DaoRegex *self, DString *s, DArray *ls, short tp )
-{
-	size_t size;
-	if( self->mbs ){
-		DString_ToMBS( s );
-		size = s->size;
-	}else{
-		DString_ToWCS( s );
-		size = s->size;
-	}
-	/* XXX */
-	return 0;
-}

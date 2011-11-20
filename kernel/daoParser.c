@@ -1279,6 +1279,8 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	if( i > 0 && i < 100 ){
 		DaoValue *pbasic = token->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;
 		type = DaoNamespace_MakeType( ns, name->mbs, i, pbasic, 0,0 );
+	}else if( token->name == DKEY_NONE ){
+		type = DaoNamespace_MakeValueType( ns, dao_none_value );
 	}else if( token->name == DTOK_ID_INITYPE ){
 		type = DaoNamespace_MakeType( ns, name->mbs, DAO_INITYPE, 0,0,0 );
 	}else if( token->name == DTOK_QUERY ){
@@ -4074,7 +4076,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 			return -1;
 		}
-		if( abtp && abtp->tid != DAO_ANY ) DArray_PushFront( self->enumTypes, abtp );
+		if( abtp && abtp->tid >= DAO_ARRAY && abtp->tid <= DAO_TUPLE )
+			DArray_PushFront( self->enumTypes, abtp );
 		self->curToken = start + 1;
 		enode = DaoParser_ParseExpression( self, 0 );
 		start = self->curToken;
@@ -4750,7 +4753,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}
 	}
 	tki = tokens[i]->name;
-	if( tki != DTOK_LCB && tki != DTOK_LSB && tki != DTOK_SEMCO && tki != DKEY_BY
+	if( tki != DTOK_LCB && tki != DTOK_LSB && tki != DTOK_SEMCO
 			&& tki != DKEY_REQUIRE && tki != DKEY_IMPORT && tki != DKEY_AS ){
 		code = DAO_CTW_LOAD_INVALID;
 		goto ErrorLoad;
@@ -4817,6 +4820,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	mod = NULL;
 
 	DaoVmSpace_Lock( self->vmSpace );
+#if 0
 	if( tokens[i]->name == DKEY_BY ){
 		int reg = DaoParser_GetRegister( self, tokens[i+1] );
 		value = DaoParser_GetVariable( self, reg );
@@ -4828,7 +4832,9 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 			if( mod && mod->type != DAO_NAMESPACE ) mod = 0;
 		}
 		i += 2;
-	}else if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) ==NULL ){
+	}else 
+#endif
+	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) ==NULL ){
 		/* self->mbs could be changed by DaoVmSpace_LoadModule() */
 		DString_Assign( self->str, self->mbs );
 		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs, nsRequire );
@@ -5973,7 +5979,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start += 1;
-	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON || tki >= DKEY_ABS || tki == DKEY_SELF ){
+	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON 
+			|| (tki >= DKEY_ANY && tki <= DKEY_STREAM ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
 		result.reg = regLast;
@@ -6667,7 +6674,7 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 	}
 	if( LHS.reg >= 0 ) LHS = DaoParser_ParseOperator( self, LHS, 0, stop, warn );
 	if( LHS.reg < 0 ){
-		if( DaoParser_CurrentTokenType( self ) < DTOK_COMMENT ){
+		if( self->curToken < self->tokens->size && DaoParser_CurrentTokenType( self ) < DTOK_COMMENT ){
 			DString *tok = self->tokens->items.pToken[ self->curToken ]->string;
 			DaoParser_Error( self, DAO_INVALID_TOKEN, tok );
 		}

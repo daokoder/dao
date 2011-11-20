@@ -2429,7 +2429,13 @@ static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
 	if( upper >= part ) return;
 	if( upper+1 < last ) PartialQuickSort( proc, entry, r0, r1, data, upper+1, last, part );
 }
-void QuickSort( IndexValue *data, size_t first, size_t last, size_t part, int asc )
+typedef struct IndexValue IndexValue;
+struct IndexValue
+{
+	size_t     index;
+	DaoValue  *value;
+};
+static void QuickSort( IndexValue *data, size_t first, size_t last, size_t part, int asc )
 {
 	size_t lower=first+1, upper=last;
 	IndexValue val;

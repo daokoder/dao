@@ -51,27 +51,22 @@ struct DaoStream
 	int mode;
 };
 
-extern DaoStream* DaoStream_New();
-extern void DaoStream_Delete( DaoStream *self );
-extern void DaoStream_Close( DaoStream *self );
-extern void DaoStream_Flush( DaoStream *self );
+DAO_DLL DaoStream* DaoStream_New();
+DAO_DLL void DaoStream_Delete( DaoStream *self );
+DAO_DLL void DaoStream_Close( DaoStream *self );
+DAO_DLL void DaoStream_Flush( DaoStream *self );
 
-extern void DaoStream_WriteChar( DaoStream *self, char val );
-extern void DaoStream_WriteInt( DaoStream *self, dint val );
-extern void DaoStream_WriteFloat( DaoStream *self, double val );
-extern void DaoStream_WriteString( DaoStream *self, DString *val );
-extern void DaoStream_WriteMBS( DaoStream *self, const char *val );
-extern void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
-extern void DaoStream_WritePointer( DaoStream *self, void *val );
-extern void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format );
-extern void DaoStream_WriteNewLine( DaoStream *self );
+DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
+DAO_DLL void DaoStream_WriteInt( DaoStream *self, dint val );
+DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
+DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
+DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
+DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
+DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
+DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format );
+DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
 
-extern void DaoStream_PrintInfo( DaoStream *self, const char *t, DString *s, int i, const char *e, DString *x );
-
-extern int DaoStream_ReadLine( DaoStream *self, DString *buf );
-
-extern DString* DaoStream_GetFormat( DaoStream *self, int tp );
-
-int DaoFile_ReadLine( FILE *fin, DString *line );
+DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );
+DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 
 #endif

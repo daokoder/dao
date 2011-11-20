@@ -102,41 +102,40 @@ struct DLong
 	size_t    size;
 	size_t    bufSize;
 };
-DLong* DLong_New();
-void DLong_Init( DLong *self );
-void DLong_Delete( DLong *self );
-void DLong_Detach( DLong *self );
-void DLong_Clear( DLong *self );
-void DLong_Resize( DLong *self, size_t size );
-void DLong_PushBack( DLong *self, uchar_t it );
-void DLong_PushFront( DLong *self, uchar_t it );
-int DLong_UCompare( DLong *x, DLong *y );
-int DLong_Compare( DLong *x, DLong *y );
-void DLong_Move( DLong *z, DLong *x );
-void DLong_Add( DLong *z, DLong *x, DLong *y );
-void DLong_Sub( DLong *z, DLong *x, DLong *y );
-void DLong_Mul( DLong *z, DLong *x, DLong *y );
-void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r );
-void DLong_Pow( DLong *z, DLong *x, dint n );
-void DLong_AddInt( DLong *z, DLong *x, dint y, DLong *buf );
-void DLong_MulInt( DLong *z, DLong *x, dint y );
-void DLong_Flip( DLong *self );
-void DLong_BitAND( DLong *z, DLong *x, DLong *y );
-void DLong_BitOR( DLong *z, DLong *x, DLong *y );
-void DLong_BitXOR( DLong *z, DLong *x, DLong *y );
-void DLong_ShiftLeft( DLong *self, int bits );
-void DLong_ShiftRight( DLong *self, int bits );
-void DLong_Print( DLong *self, DString *s );
-void DLong_FromInteger( DLong *self, dint x );
-void DLong_FromDouble( DLong *self, double x );
-char DLong_FromString( DLong *self, DString *s );
-dint DLong_ToInteger( DLong *self );
-double DLong_ToDouble( DLong *self );
-int DLong_CompareToZero( DLong *self );
-int DLong_CompareToInteger( DLong *self, dint x );
-int DLong_CompareToDouble( DLong *self, double x );
 
-uchar_t DLong_UDivDigit( DLong *z, uchar_t digit );
+DAO_DLL DLong* DLong_New();
+DAO_DLL void DLong_Init( DLong *self );
+DAO_DLL void DLong_Delete( DLong *self );
+DAO_DLL void DLong_Detach( DLong *self );
+DAO_DLL void DLong_Clear( DLong *self );
+DAO_DLL void DLong_Resize( DLong *self, size_t size );
+DAO_DLL void DLong_PushBack( DLong *self, uchar_t it );
+DAO_DLL void DLong_PushFront( DLong *self, uchar_t it );
+DAO_DLL int DLong_Compare( DLong *x, DLong *y );
+DAO_DLL void DLong_Move( DLong *z, DLong *x );
+DAO_DLL void DLong_Add( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_Sub( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_Mul( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r );
+DAO_DLL void DLong_Pow( DLong *z, DLong *x, dint n );
+DAO_DLL void DLong_AddInt( DLong *z, DLong *x, dint y, DLong *buf );
+DAO_DLL void DLong_MulInt( DLong *z, DLong *x, dint y );
+DAO_DLL void DLong_Flip( DLong *self );
+DAO_DLL void DLong_BitAND( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_BitOR( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_BitXOR( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_ShiftLeft( DLong *self, int bits );
+DAO_DLL void DLong_ShiftRight( DLong *self, int bits );
+DAO_DLL void DLong_Print( DLong *self, DString *s );
+DAO_DLL void DLong_FromInteger( DLong *self, dint x );
+DAO_DLL void DLong_FromDouble( DLong *self, double x );
+DAO_DLL char DLong_FromString( DLong *self, DString *s );
+DAO_DLL dint DLong_ToInteger( DLong *self );
+DAO_DLL double DLong_ToDouble( DLong *self );
+DAO_DLL int DLong_CompareToZero( DLong *self );
+DAO_DLL int DLong_CompareToInteger( DLong *self, dint x );
+DAO_DLL int DLong_CompareToDouble( DLong *self, double x );
+
 
 #define DLong_Append  DLong_PushBack
 
@@ -169,24 +168,24 @@ struct DaoArray
 };
 #ifdef DAO_WITH_NUMARRAY
 
-DaoArray* DaoArray_New( int type );
-DaoArray* DaoArray_Copy( DaoArray *self );
-int DaoArray_CopyArray( DaoArray *self, DaoArray *other );
-void DaoArray_Delete( DaoArray *self );
+DAO_DLL DaoArray* DaoArray_New( int type );
+DAO_DLL DaoArray* DaoArray_Copy( DaoArray *self );
+DAO_DLL int DaoArray_CopyArray( DaoArray *self, DaoArray *other );
+DAO_DLL void DaoArray_Delete( DaoArray *self );
 
-void DaoArray_SetDimCount( DaoArray *self, int D );
-void DaoArray_FinalizeDimData( DaoArray *self );
+DAO_DLL void DaoArray_SetDimCount( DaoArray *self, int D );
+DAO_DLL void DaoArray_FinalizeDimData( DaoArray *self );
 
-void DaoArray_ResizeVector( DaoArray *self, size_t size );
-void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
+DAO_DLL void DaoArray_ResizeVector( DaoArray *self, size_t size );
+DAO_DLL void DaoArray_ResizeArray( DaoArray *self, size_t *dims, int D );
 
-int DaoArray_Sliced( DaoArray *self );
-void DaoArray_UseData( DaoArray *self, void *data );
+DAO_DLL int DaoArray_Sliced( DaoArray *self );
+DAO_DLL void DaoArray_UseData( DaoArray *self, void *data );
 
-dint   DaoArray_GetInteger( DaoArray *na, size_t i );
-float  DaoArray_GetFloat( DaoArray *na, size_t i );
-double DaoArray_GetDouble( DaoArray *na, size_t i );
-complex16 DaoArray_GetComplex( DaoArray *na, size_t i );
+DAO_DLL dint   DaoArray_GetInteger( DaoArray *na, size_t i );
+DAO_DLL float  DaoArray_GetFloat( DaoArray *na, size_t i );
+DAO_DLL double DaoArray_GetDouble( DaoArray *na, size_t i );
+DAO_DLL complex16 DaoArray_GetComplex( DaoArray *na, size_t i );
 
 #endif
 

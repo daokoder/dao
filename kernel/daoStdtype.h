@@ -30,7 +30,7 @@ struct DaoNone
 	DAO_DATA_CORE;
 };
 extern DaoValue *dao_none_value;
-DaoNone* DaoNone_New();
+DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger
 {
@@ -62,8 +62,8 @@ struct DaoLong
 
 	DLong  *value;
 };
-DaoLong* DaoLong_Copy( DaoLong *self );
-void DaoLong_Delete( DaoLong *self );
+DAO_DLL DaoLong* DaoLong_Copy( DaoLong *self );
+DAO_DLL void DaoLong_Delete( DaoLong *self );
 
 struct DaoString
 {
@@ -71,8 +71,8 @@ struct DaoString
 
 	DString  *data;
 };
-DaoString* DaoString_Copy( DaoString *self );
-void DaoString_Delete( DaoString *self );
+DAO_DLL DaoString* DaoString_Copy( DaoString *self );
+DAO_DLL void DaoString_Delete( DaoString *self );
 
 /* Structure for symbol, enum and flag:
  * Storage modes:
@@ -88,20 +88,18 @@ struct DaoEnum
 	DaoType  *etype;  /* type information structure */
 	dint      value; /* value associated with the symbol(s) or flag(s) */
 };
-void DaoBase_Delete( void *obj );
 
-
-DaoEnum* DaoEnum_New( DaoType *type, dint value );
-DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type );
-void DaoEnum_Delete( DaoEnum *self );
-void DaoEnum_MakeName( DaoEnum *self, DString *name );
-void DaoEnum_SetType( DaoEnum *self, DaoType *type );
-int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
-int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames );
-int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames );
-int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames );
-int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
-int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
+DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, dint value );
+DAO_DLL DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type );
+DAO_DLL void DaoEnum_Delete( DaoEnum *self );
+DAO_DLL void DaoEnum_MakeName( DaoEnum *self, DString *name );
+DAO_DLL void DaoEnum_SetType( DaoEnum *self, DaoType *type );
+DAO_DLL int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
+DAO_DLL int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames );
+DAO_DLL int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames );
+DAO_DLL int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames );
+DAO_DLL int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
+DAO_DLL int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
 
 struct DaoList
 {
@@ -111,17 +109,15 @@ struct DaoList
 	DaoType  *unitype;
 };
 
-DaoList* DaoList_New();
-void DaoList_Delete( DaoList *self );
-void DaoList_Clear( DaoList *self );
+DAO_DLL DaoList* DaoList_New();
+DAO_DLL void DaoList_Delete( DaoList *self );
+DAO_DLL void DaoList_Clear( DaoList *self );
 
-void DaoList_Erase( DaoList *self, size_t id );
-int DaoList_SetItem( DaoList *self, DaoValue *it, size_t id );
-int DaoList_Append( DaoList *self, DaoValue *it );
+DAO_DLL void DaoList_Erase( DaoList *self, size_t id );
+DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, size_t id );
+DAO_DLL int DaoList_Append( DaoList *self, DaoValue *it );
 
-DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );
-
-void DaoList_FlatList( DaoList *self, DArray *flat );
+DAO_DLL DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );
 
 struct DaoMap
 {
@@ -131,13 +127,13 @@ struct DaoMap
 	DaoType  *unitype;
 };
 
-DaoMap* DaoMap_New( int hashing );
-void DaoMap_Delete( DaoMap *self );
-void DaoMap_Clear( DaoMap *self );
-void DaoMap_Reset( DaoMap *self );
+DAO_DLL DaoMap* DaoMap_New( int hashing );
+DAO_DLL void DaoMap_Delete( DaoMap *self );
+DAO_DLL void DaoMap_Clear( DaoMap *self );
+DAO_DLL void DaoMap_Reset( DaoMap *self );
 
-int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
-void DaoMap_Erase( DaoMap *self, DaoValue *key );
+DAO_DLL int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
+DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
 enum{
@@ -208,8 +204,8 @@ struct DaoCdata
 extern DaoTypeBase cdataTyper;
 extern DaoCdata cptrCdata;
 
-void DaoCdata_DeleteData( DaoCdata *self );
-int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
+DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );
+DAO_DLL int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 /* DaoNameValue is not data type for general use, it is mainly used for 
  * passing named parameters and fields: */
@@ -237,18 +233,10 @@ struct DaoTuple
 	 * B. some builtin tuples have at least two items, and are accessed by
 	 *    constant sub index, compilers such Clang may complain if 1 is used. */
 };
-DaoTuple* DaoTuple_Create( DaoType *type, int init );
-void DaoTuple_Delete( DaoTuple *self );
-void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
-int DaoTuple_GetIndex( DaoTuple *self, DString *name );
-
-typedef struct IndexValue IndexValue;
-struct IndexValue
-{
-	size_t     index;
-	DaoValue  *value;
-};
-void QuickSort( IndexValue *data, size_t first, size_t last, size_t part, int asc );
+DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int init );
+DAO_DLL void DaoTuple_Delete( DaoTuple *self );
+DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
+DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 struct DaoException
 {

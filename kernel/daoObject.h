@@ -32,19 +32,19 @@ struct DaoObject
 	DaoValue   *parents[1]; /* the actual size is equal to ::baseCount; */
 };
 
-DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count );
-DaoObject* DaoObject_New( DaoClass *klass );
-void DaoObject_Init( DaoObject *self, DaoObject *that, int offset );
-void DaoObject_Delete( DaoObject *self );
+DAO_DLL DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count );
+DAO_DLL DaoObject* DaoObject_New( DaoClass *klass );
+DAO_DLL void DaoObject_Init( DaoObject *self, DaoObject *that, int offset );
+DAO_DLL void DaoObject_Delete( DaoObject *self );
 
-int DaoObject_ChildOf( DaoValue *self, DaoValue *obj );
+DAO_DLL int DaoObject_ChildOf( DaoValue *self, DaoValue *obj );
 
-DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
-DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );
+DAO_DLL DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host );
+DAO_DLL DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );
 
-void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
+DAO_DLL void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
 
-int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *value, DaoObject *objThis );
-int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *objThis );
+DAO_DLL int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *value, DaoObject *objThis );
+DAO_DLL int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *objThis );
 
 #endif

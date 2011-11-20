@@ -1453,12 +1453,14 @@ static int DaoList_Serialize( DaoList *self, DString *serial, DaoNamespace *ns, 
 	DaoType *type = self->unitype;
 	int i, rc = 1;
 	if( type->nested && type->nested->size ) type = type->nested->items.pType[0];
-	if( type && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
+	if( type && type->simtype == 0 && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
 	for(i=0; i<self->items.size; i++){
 		DaoType *it = NULL;
 		if( type == NULL ) it = DaoNamespace_GetType( ns, self->items.items.pValue[i] );
 		if( i ) DString_AppendChar( serial, ',' );
+		if( it == NULL && type && type->tid >= DAO_ARRAY ) DString_AppendChar( serial, '{' );
 		rc &= DaoValue_Serialize2( self->items.items.pValue[i], serial, ns, proc, it, buf );
+		if( it == NULL && type && type->tid >= DAO_ARRAY ) DString_AppendChar( serial, '}' );
 	}
 	return rc;
 }
@@ -1517,8 +1519,16 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *
 static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf )
 {
 	DaoType *type;
-	DaoValue *meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" );
-	if( meth == NULL ) return 0;
+	DaoValue *meth;
+	if( self->typer == & cdataTyper ){
+		uint_t i;
+		for(i=0; i<self->size; i++){
+			DString_AppendChar( serial, hex_digits[ self->buffer.pUChar[i] / 16 ] );
+			DString_AppendChar( serial, hex_digits[ self->buffer.pUChar[i] % 16 ] );
+		}
+		return 1;
+	}
+	if( (meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" )) == NULL ) return 0;
 	if( DaoProcess_Call( proc, (DaoMethod*)meth, (DaoValue*)self, NULL, 0 ) ) return 0;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
 	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
@@ -1668,7 +1678,17 @@ int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value
 		start += 1;
 		end -= 1;
 	}
-	if( type == NULL ) type = types->items.pType[0];
+	if( type == NULL ){
+		type = types->items.pType[0];
+		if( type && type->tid >= DAO_ARRAY ){
+			if( tokens[start]->name != DTOK_LCB ) return start;
+			end = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+			if( end < 0 ) return start;
+			next = end + 1;
+			start += 1;
+			end -= 1;
+		}
+	}
 	if( type == NULL ) return next;
 	DaoValue_Copy( type->value, value2 );
 	if( start > end ) return next;

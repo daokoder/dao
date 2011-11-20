@@ -116,7 +116,6 @@ enum DaoKeyNames
 	DKEY_LOAD ,
 	DKEY_IMPORT ,
 	DKEY_REQUIRE ,
-	DKEY_BY ,
 	DKEY_AS ,
 	DKEY_TO ,
 	DKEY_BIND ,
@@ -129,6 +128,8 @@ enum DaoKeyNames
 	DKEY_INTERFACE ,
 	DKEY_SELF ,
 	DKEY_TYPE ,
+	DKEY_ANY ,
+	DKEY_NONE ,
 	DKEY_INT ,
 	DKEY_FLOAT ,
 	DKEY_DOUBLE ,
@@ -140,7 +141,6 @@ enum DaoKeyNames
 	DKEY_TUPLE ,
 	DKEY_MAP ,
 	DKEY_LIST ,
-	DKEY_ANY ,
 	DKEY_CDATA ,
 	DKEY_STREAM ,
 	DKEY_FUTURE ,
@@ -229,23 +229,24 @@ struct DaoToken
 	 */
 };
 
-DaoToken* DaoToken_New();
-void DaoToken_Delete( DaoToken *self );
+DAO_DLL DaoToken* DaoToken_New();
+DAO_DLL void DaoToken_Delete( DaoToken *self );
 
-const char* DaoToken_NameToString( unsigned char name );
-int DaoToken_Check( const char *src, int size, int *length );
-int DaoToken_IsNumber( const char *src, int size );
-int DaoToken_IsValidName( const char *src, int size );
+DAO_DLL const char* DaoToken_NameToString( unsigned char name );
+DAO_DLL int DaoToken_Check( const char *src, int size, int *length );
+DAO_DLL int DaoToken_IsNumber( const char *src, int size );
+DAO_DLL int DaoToken_IsValidName( const char *src, int size );
 
-int DaoToken_Tokenize( DArray *tokens, const char *src, int repl, int comment, int space );
-void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
+DAO_DLL int DaoToken_Tokenize( DArray *tokens, const char *src, int repl, int comment, int space );
+DAO_DLL void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
 
-void DaoTokens_Append( DArray *self, int name, int line, const char *data );
+DAO_DLL void DaoTokens_Append( DArray *self, int name, int line, const char *data );
 
-void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max );
-int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end );
-int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
-int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
+DAO_DLL void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max );
+DAO_DLL int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end );
+DAO_DLL int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
+DAO_DLL int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
+
 DString* DaoTokens_AddRaiseStatement( DArray *self, const char *type, const char *info, int line );
 
 #endif

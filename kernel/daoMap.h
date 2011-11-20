@@ -59,25 +59,26 @@ struct DMap
 	char    valtype;
 	char    hashing;
 };
-extern DMap* DMap_New( short kt, short vt );
-extern DMap* DHash_New( short kt, short vt );
-extern DMap* DMap_Copy( DMap *dmap );
-extern void DMap_Assign( DMap *self, DMap *other );
 
-extern void DMap_Delete( DMap *self );
-extern void DMap_Clear( DMap *self );
-extern void DMap_Reset( DMap *self );
+DAO_DLL DMap* DMap_New( short kt, short vt );
+DAO_DLL DMap* DHash_New( short kt, short vt );
+DAO_DLL DMap* DMap_Copy( DMap *dmap );
+DAO_DLL void DMap_Assign( DMap *self, DMap *other );
+
+DAO_DLL void DMap_Delete( DMap *self );
+DAO_DLL void DMap_Clear( DMap *self );
+DAO_DLL void DMap_Reset( DMap *self );
 /* Insert key/value, and return the previous value if existed. */
-extern void DMap_Erase( DMap *self, void *key );
-void DMap_EraseNode( DMap *self, DNode *node );
+DAO_DLL void DMap_Erase( DMap *self, void *key );
+DAO_DLL void DMap_EraseNode( DMap *self, DNode *node );
 
-extern DNode* DMap_Insert( DMap *self, void *key, void *value );
-extern DNode* DMap_Find( DMap *self, void *key );
-extern DNode* DMap_First( DMap *self );
-extern DNode* DMap_Next( DMap *self, DNode *node );
+DAO_DLL DNode* DMap_Insert( DMap *self, void *key, void *value );
+DAO_DLL DNode* DMap_Find( DMap *self, void *key );
+DAO_DLL DNode* DMap_First( DMap *self );
+DAO_DLL DNode* DMap_Next( DMap *self, DNode *node );
 
-extern DNode* DMap_FindLE( DMap *self, void *key );
-extern DNode* DMap_FindGE( DMap *self, void *key );
+DAO_DLL DNode* DMap_FindLE( DMap *self, void *key );
+DAO_DLL DNode* DMap_FindGE( DMap *self, void *key );
 
 #define MAP_Insert( s, k, v ) DMap_Insert( (DMap*)(s), (void*)(size_t)(k), (void*)(size_t)(v) )
 #define MAP_Erase( s, k ) DMap_Erase( (DMap*)(s), (void*)(size_t)(k) )
