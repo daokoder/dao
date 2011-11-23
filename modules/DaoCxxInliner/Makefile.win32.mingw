@@ -45,4 +45,4 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(LFLAGS) $(OBJECTS) ..\..\dao.dll $(CLANG_LIBS) $(LLVM_LIBS) $(SYS_LIBS) -o $(TARGET)
 
 clean:
-	rm *.o
+	del /Q *.o

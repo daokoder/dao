@@ -1,51 +1,18 @@
+COPY = copy /Y
 
-CC = gcc
-INCLUDE = -Ikernel
-LIB = dao.dll
-CFLAG = -c -Wall -O2
-LFLAG = -s -shared
+C_TARGETS = DaoFormat DaoCGI DaoInode DaoNetwork DaoJSON
+CLANG_TARGETS = DaoCxxInliner
 
-INODE_PATH = modules/DaoInode
-FORMAT_PATH = modules/DaoFormat
-CGI_PATH = modules/DaoCGI
-NETWORK_PATH = modules/DaoNetwork
-JSON_PATH = modules/DaoJSON
+make_all = for %%x in ($(1)) do \
+           	if not exist %%x.dll ( \
+           		$(MAKE) -C modules\%%x -f Makefile.win32.mingw & \
+           		$(COPY) modules\%%x\%%x.dll %%x.dll )
 
-VPATH = $(FORMAT_PATH);$(CGI_PATH);$(INODE_PATH);$(NETWORK_PATH);$(JSON_PATH)
+all:
+	$(call make_all,$(C_TARGETS))
 
-all: DaoFormat.dll DaoCGI.dll DaoInode.dll DaoNetwork.dll DaoJSON.dll
-
-daoInode.o: daoInode.c
-	$(CC) $(CFLAG) $(INCLUDE) $<
-	
-DaoInode.dll: daoInode.o
-	$(CC) $(LFLAG) $< $(LIB) -o $@
-
-daoFormat.o: daoFormat.c
-	$(CC) $(CFLAG) $(INCLUDE) $<
-	
-DaoFormat.dll: daoFormat.o
-	$(CC) $(LFLAG) $< $(LIB) -o $@
-
-daoCGI.o: daoCGI.c
-	$(CC) $(CFLAG) $(INCLUDE) $<
-	
-DaoCGI.dll: daoCGI.o
-	$(CC) $(LFLAG) $< $(LIB) -o $@
-
-daoNetwork.o: daoNetwork.c
-	$(CC) $(CFLAG) $(INCLUDE) $<
-	
-DaoNetwork.dll: daoNetwork.o
-	$(CC) $(LFLAG) $< $(LIB) -lwsock32 -o $@
-
-daoJSON.o: DaoJSON.c
-	$(CC) $(CFLAG) $(INCLUDE) $<
-	
-DaoJSON.dll: daoJSON.o
-	$(CC) $(LFLAG) $< $(LIB) -o $@
-
-bind: clean
+clang:
+	$(call make_all,$(CLANG_TARGETS))
 
 clean:
-	rm *.o
+	del /S /Q modules\*.o modules\*.dll

@@ -18,4 +18,4 @@ $(TARGET): daoFormat.o
 bind: clean
 
 clean:
-	rm *.o
+	del /Q *.o
