@@ -5,7 +5,7 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Path.h>
 #include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Target/TargetSelect.h>
+#include <llvm/Support/TargetSelect.h>
 #include "llvm/LLVMContext.h"
 #include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/ExecutionEngine/Interpreter.h>
@@ -59,7 +59,7 @@ static void DaoCxxInliner_AddVirtualFile( const char *name, const char *source )
 	const FileEntry* FE = compiler.getFileManager().getVirtualFile( name, 
 			strlen(Buffer->getBufferStart()), time(NULL) );
 	compiler.getSourceManager().overrideFileContents( FE, Buffer );
-	compiler.getFrontendOpts().Inputs.push_back( pair<InputKind, std::string>( IK_C, name ) );
+	compiler.getFrontendOpts().Inputs.push_back( pair<InputKind, std::string>( IK_CXX, name ) );
 }
 
 const char *source_caption_pattern = "^ @{1,2} %[ %s* %w+ %s* %( %s* (|%w+ (|%. %w+)) %s* %)";
@@ -583,20 +583,23 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 
 	compiler.createDiagnostics(argc, argv);
 
-	Diagnostic & DG = compiler.getDiagnostics();
+	DiagnosticsEngine & DG = compiler.getDiagnostics();
 	CompilerInvocation::CreateFromArgs( compiler.getInvocation(), argv + 1, argv + argc, DG );
 	compiler.setTarget( TargetInfo::CreateTargetInfo( DG, compiler.getTargetOpts() ) );
 
+	clang::HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
 	string predefines;
 #ifdef MAC_OSX
 	predefines = "#define MAC_OSX 1\n#define UNIX 1\n";
 	// needed to circumvent a bug which is supposingly fixed in clang 2.9-16
-	clang::HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
 	headers.AddPath( "/Developer/SDKs/MacOSX10.5.sdk/usr/lib/gcc/i686-apple-darwin9/4.2.1/include", clang::frontend::System, false, false, true );
 #elif defined(UNIX)
 	predefines = "#define UNIX 1\n";
 #elif defined(WIN32)
 	predefines = "#define WIN32 1\n";
+	headers.AddPath( "C:/dao", clang::frontend::System, false, false, true );
+	headers.AddPath( "C:/dao/include", clang::frontend::System, false, false, true );
+	headers.AddPath( "C:/MinGW/lib/gcc/mingw32/4.6.1/include", clang::frontend::System, false, false, true );
 #endif
 
 	//compiler.getHeaderSearchOpts().AddPath( "", clang::frontend::Angled, false, false, true );

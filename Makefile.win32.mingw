@@ -22,7 +22,7 @@ CC       ?= gcc
 CFLAGS    = -Wall -Wno-unused -fPIC -DWIN32 $(DAO_CONFIG)
 INCPATH   = -I. -Ikernel
 LFLAGS    =
-LFLAGSDLL = -shared
+LFLAGSDLL = -shared -Wl,--out-implib,libdao.a
 LIBS      = -L. -ldl -lpthread -lm $(LIB_READLINE)
 
 # dynamic linked Dao interpreter, requires dao.so to run:
