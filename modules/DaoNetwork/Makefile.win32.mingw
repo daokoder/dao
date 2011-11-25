@@ -1,7 +1,7 @@
 
 CC = gcc
 INCLUDE = -I. -I..\..\kernel
-LIB = -lwsock32 ..\..\dao.dll
+LIB = -lwsock32 -L..\.. -ldao
 CFLAG = -c -Wall -O2
 LFLAG = -s -shared 
 
