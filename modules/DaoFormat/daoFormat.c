@@ -28,8 +28,8 @@ struct Format
 	int precision;
 	int alignment;
 	char centered;
-	int indexed;
-	int index;
+	int indexed, sliced;
+	int index, index2;
 	char *name;
 	wchar_t *wname;
 	int namelen;
@@ -41,7 +41,8 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 {
 	char *buf = buffer, fmt[20] = {'%', 0};
 	int i = 1, diff, alignment = format->alignment, notation, len = 0, error = 0, integer = 0, res;
-	int indexed = format->indexed, index = format->index, centered = format->centered;
+	int indexed = format->indexed, sliced = format->sliced, index = format->index, index2 = format->index2;
+	int centered = format->centered;
 	int type = DaoValue_Type( value );
 	DNode *node;
 	DString *valstr;
@@ -123,6 +124,25 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 		break;
 	case DAO_STRING:
 		valstr = DaoString_Get( DaoValue_CastString( value ) );
+		if( sliced ){
+			if( index < 0 )
+				index += DString_Size( valstr );
+			if( index2 < 0 )
+				index2 += DString_Size( valstr );
+			if( index < 0 || index >= DString_Size( valstr ) || index2 < 0 || index2 >= DString_Size( valstr ))
+				return 9;
+			if ( index2 < index )
+				return 10;
+			if( index != index2 ){
+				if( DString_IsMBS( valstr ) )
+					DString_SetDataMBS( tmp,  DString_GetMBS( valstr ) + index, index2 - index + 1 );
+				else
+					DString_SetDataWCS( tmp, DString_GetWCS( valstr ) + index, index2 - index + 1 );
+				break;
+			}
+			sliced = 0;
+			indexed = 1;
+		}
 		if( indexed ){
 			if( index < 0 )
 				index += DString_Size( valstr );
@@ -138,6 +158,31 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 		break;
 	case DAO_LIST:
 		vallist = DaoValue_CastList( value );
+		if( sliced ){
+			if( index < 0 )
+				index += DaoList_Size( vallist );
+			if( index2 < 0 )
+				index2 += DaoList_Size( vallist );
+			if( index < 0 || index >= DaoList_Size( vallist ) || index2 < 0 || index2 >= DaoList_Size( vallist ) )
+				return 9;
+			if ( index2 < index )
+				return 10;
+			if( index != index2 ){
+				format->sliced = 0;
+				for( i = index; i <= index2; i++ ){
+					if( i != index )
+						DString_AppendMBS( dest, ", " );
+					if( ( res = PrintValue( DaoList_GetItem( vallist, i ), dest, format, tmp, buffer ) ) == 1
+							|| res == 2)
+						return 2;
+					else if( res == 3 || res == 4 )
+						error = 4;
+				}
+				break;
+			}
+			sliced = 0;
+			indexed = 1;
+		}
 		if( indexed ){
 			if( index < 0 )
 				index += DaoList_Size( vallist );
@@ -175,7 +220,48 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 		break;
 	case DAO_ARRAY:
 		valarray = DaoValue_CastArray( value );
-		if( indexed ){
+		if( sliced ){
+			complex16 comp = {0, 0};
+			int rowsize = 1, maxdim;
+			if( DaoArray_SizeOfDim( valarray, 0 ) != 1 ){
+				maxdim = DaoArray_SizeOfDim( valarray, 0 );
+				for( i = 1; i < DaoArray_DimCount( valarray ); i++ )
+					rowsize *= DaoArray_SizeOfDim( valarray, i );
+			}
+			else
+				maxdim = DaoArray_SizeOfDim( valarray, 1 );
+			if( index < 0 )
+				index += maxdim;
+			if( index2 < 0 )
+				index2 += maxdim;
+			if( index < 0 || index >= maxdim || index2 < 0 || index2 >= maxdim )
+				return 9;
+			if ( index2 < index )
+				return 10;
+			switch( DaoArray_NumType( valarray ) ){
+			case DAO_INTEGER: number = DaoInteger_New( 0 ); break;
+			case DAO_FLOAT:   number = DaoFloat_New( 0 ); break;
+			case DAO_DOUBLE:  number = DaoDouble_New( 0 ); break;
+			case DAO_COMPLEX: number = DaoComplex_New( comp ); break;
+			default: break;
+			}
+			format->sliced = 0;
+			for( i = index*rowsize; i < ( index2 + 1 )*rowsize; i++ ){
+				if( i != index*rowsize )
+					DString_AppendMBS( dest, ", " );
+				switch( DaoArray_NumType( valarray ) ){
+				case DAO_INTEGER: DaoInteger_Set( (DaoInteger*)number, DaoArray_ToInteger( valarray )[i] ); break;
+				case DAO_FLOAT:   DaoFloat_Set( (DaoFloat*)number, DaoArray_ToFloat( valarray )[i] ); break;
+				case DAO_DOUBLE:  DaoDouble_Set( (DaoDouble*)number, DaoArray_ToDouble( valarray )[i] ); break;
+				case DAO_COMPLEX: DaoComplex_Set( (DaoComplex*)number,
+												  ( (complex16*)DaoArray_GetBuffer( valarray ) )[i] ); break;
+				default: break;
+				}
+				PrintValue( (DaoValue*)number, dest, format, tmp, buffer );
+			}
+			dao_free( number );
+		}
+		else if( indexed ){
 			if( index < 0 )
 				index += DaoArray_Size( valarray );
 			if( index < 0 || index >= DaoArray_Size( valarray ) )
@@ -252,6 +338,8 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 	}
 	if( format->name && type != DAO_TUPLE )
 		return 7;
+	if( sliced && type != DAO_STRING && type != DAO_LIST && type != DAO_ARRAY )
+		return 11;
 	if( !indexed || ( type >= DAO_STRING && type != DAO_MAP ) ){
 		if( type <= DAO_COMPLEX || ( type == DAO_STRING && indexed ) ){
 			len = strlen( buf );
@@ -304,8 +392,8 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str = DString_New( DString_IsMBS( fmt )? 1 : 0 );
 	DString *tmp = DString_New( 1 );
 	Format format;
-	int pos, pos2, prevpos;
-	int num, error, width, alignment, sign, precision, notation, argend, index, indexed, centered, namelen;
+	int pos, pos2, prevpos, sliced;
+	int num, error, width, alignment, sign, precision, notation, argend, index, index2, indexed, centered, namelen;
 	char *mbs, buf[200], *name;
 	wchar_t *wcs, *wname;
 	DString_Reserve( str, DString_Size( fmt ) );
@@ -316,6 +404,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 		mbs = DString_GetMBS( fmt );
 		for( pos = 0; pos < DString_Size( fmt ); pos += 2){
 			num = error = alignment = sign = precision = notation = argend = index = indexed = centered = namelen = 0;
+			sliced = index2 = 0;
 			name = NULL;
 			prevpos = pos;
 			pos = DString_FindChar( fmt, '$', pos );
@@ -391,8 +480,8 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 								break;
 							}
 							if( mbs[prevpos] == '-' || mbs[prevpos] == '+' ){
-								if( prevpos == pos2 - 1 ){
-									DaoProcess_RaiseException( proc, DAO_WARNING, "Empty index!" );
+								if( prevpos == pos2 - 1 || mbs[prevpos + 1] == ':' ){
+									DaoProcess_RaiseException( proc, DAO_WARNING, "Missing index number!" );
 									error = 1;
 									break;
 								}
@@ -404,6 +493,38 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 							for(; prevpos < pos2; prevpos++ )
 								if( isdigit( mbs[prevpos] ) )
 									index = index*10 + ( mbs[prevpos] - '0' );
+								else if ( mbs[prevpos] == ':' ){
+									prevpos++;
+									if( prevpos == pos2 ){
+										sliced = 1;
+										index2 = -1;
+										break;
+									}
+									if( mbs[prevpos] == '-' || mbs[prevpos] == '+' ){
+										if( prevpos == pos2 - 1 ){
+											DaoProcess_RaiseException( proc, DAO_WARNING, "Missing index number!" );
+											error = 1;
+											break;
+										}
+										sliced = ( mbs[prevpos] == '-' )? -1 : 1;
+										prevpos++;
+									}
+									else
+										sliced = 1;
+									for(; prevpos < pos2; prevpos++ )
+										if( isdigit( mbs[prevpos] ) )
+											index2 = index2*10 + ( mbs[prevpos] - '0' );
+										else{
+											sprintf( buf, "Invalid character in index ('%c')!", mbs[prevpos] );
+											DaoProcess_RaiseException( proc, DAO_WARNING, buf );
+											sliced = 0;
+											error = 1;
+											break;
+										}
+									index2 *= sliced;
+									if( error )
+										break;
+								}
 								else{
 									sprintf( buf, "Invalid character in index ('%c')!", mbs[prevpos] );
 									DaoProcess_RaiseException( proc, DAO_WARNING, buf );
@@ -412,6 +533,8 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 									break;
 								}
 							index *= indexed;
+							if( sliced )
+								indexed = 0;
 							prevpos = pos2;
 						}
 						else if( strchr( "<>=", mbs[prevpos] ) ){
@@ -518,7 +641,9 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 				format.sign = sign;
 				format.precision = precision;
 				format.indexed = indexed;
+				format.sliced = sliced;
 				format.index = index;
+				format.index2 = index2;
 				format.name = name;
 				format.namelen = namelen;
 				error = PrintValue( p[num + 1], str, &format, tmp, buf );
@@ -531,6 +656,9 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 				case 6: sprintf( buf, "Index out of range (argument %i, index %i)!", num, index ); break;
 				case 7: sprintf( buf, "Named field for argument which is not a tuple (argument %i)!", num ); break;
 				case 8: sprintf( buf, "Named field does not exist (argument %i)!", num ); break;
+				case 9: sprintf( buf, "Slice out of range (argument %i, slice %i : %i)!", num, index, index2 ); break;
+				case 10: sprintf( buf, "Invalid slice (argument %i, slice %i : %i)!", num, index, index2 ); break;
+				case 11: sprintf( buf, "Conflicting slicing and argument type (argument %i)!", num ); break;
 				default: break;
 				}
 				if( error ){
@@ -547,6 +675,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 		wcs = DString_GetWCS( fmt );
 		for( pos = 0; pos < DString_Size( fmt ); pos += 2){
 			num = error = alignment = sign = precision = notation = argend = index = indexed = centered = namelen = 0;
+			sliced = index2 = 0;
 			wname = NULL;
 			prevpos = pos;
 			pos = DString_FindWChar( fmt, L'$', pos );
@@ -622,8 +751,8 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 								break;
 							}
 							if( wcs[prevpos] == L'-' || wcs[prevpos] == L'+' ){
-								if( prevpos == pos2 - 1 ){
-									DaoProcess_RaiseException( proc, DAO_WARNING, "Empty index!" );
+								if( prevpos == pos2 - 1 || wcs[prevpos + 1] == L':' ){
+									DaoProcess_RaiseException( proc, DAO_WARNING, "Missing index number!" );
 									error = 1;
 									break;
 								}
@@ -635,6 +764,38 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 							for(; prevpos < pos2; prevpos++ )
 								if( iswdigit( wcs[prevpos] ) )
 									index = index*10 + ( wcs[prevpos] - L'0' );
+								else if ( wcs[prevpos] == L':' ){
+									prevpos++;
+									if( prevpos == pos2 ){
+										sliced = 1;
+										index2 = -1;
+										break;
+									}
+									if( wcs[prevpos] == L'-' || wcs[prevpos] == L'+' ){
+										if( prevpos == pos2 - 1 ){
+											DaoProcess_RaiseException( proc, DAO_WARNING, "Missing index number!" );
+											error = 1;
+											break;
+										}
+										sliced = ( wcs[prevpos] == L'-' )? -1 : 1;
+										prevpos++;
+									}
+									else
+										sliced = 1;
+									for(; prevpos < pos2; prevpos++ )
+										if( iswdigit( wcs[prevpos] ) )
+											index2 = index2*10 + ( wcs[prevpos] - L'0' );
+										else{
+											sprintf( buf, "Invalid character in index ('%c')!", wcs[prevpos] );
+											DaoProcess_RaiseException( proc, DAO_WARNING, buf );
+											sliced = 0;
+											error = 1;
+											break;
+										}
+									index2 *= sliced;
+									if( error )
+										break;
+								}
 								else{
 									sprintf( buf, "Invalid character in index ('%c')!", wcs[prevpos] );
 									DaoProcess_RaiseException( proc, DAO_WARNING, buf );
@@ -643,6 +804,8 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 									break;
 								}
 							index *= indexed;
+							if( sliced )
+								indexed = 0;
 							prevpos = pos2;
 						}
 						else if( wcschr( L"<>=", wcs[prevpos] ) ){
@@ -749,7 +912,9 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 				format.sign = sign;
 				format.precision = precision;
 				format.indexed = indexed;
+				format.sliced = sliced;
 				format.index = index;
+				format.index2 = index2;
 				format.wname = wname;
 				format.namelen = namelen;
 				error = PrintValue( p[num + 1], str, &format, tmp, buf );
@@ -762,6 +927,9 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 				case 6: sprintf( buf, "Index out of range (argument %i, index %i)!", num, index ); break;
 				case 7: sprintf( buf, "Named field for argument which is not a tuple (argument %i)!", num ); break;
 				case 8: sprintf( buf, "Named field does not exist (argument %i)!", num ); break;
+				case 9: sprintf( buf, "Slice out of range (argument %i, slice %i : %i)!", num, index, index2 ); break;
+				case 10: sprintf( buf, "Invalid slice (argument %i, slice %i : %i)!", num, index, index2 ); break;
+				case 11: sprintf( buf, "Conflicting slicing and argument type (argument %i)!", num ); break;
 				default: break;
 				}
 				if( error ){

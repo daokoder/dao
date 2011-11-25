@@ -35,9 +35,13 @@ io.writeln(format('$(0:i), $(1:X.4), $(2:+f.2)', -1, 255, 3.3452));
 io.writeln('\n#Containers');
 io.writeln(format('$(0:f.2>6)', {1, 2, 3}));
 
-#<element> ::= ( '[' <index> ']' | .<field name>)
-#Indexing is supported for lists, arrays, tuples (negative indexes allowed),
-#field name can be used with tuples.
+#<element> ::= ( '[' <index> | <slice> ']' | .<field name>)
+#<slice> ::= [ <index> ] : [ <index> ]
+#Indexing is supported for strings, lists, arrays, tuples,
+#slicing -- for strings, lists and arrays,
+#negative indexes are allowed,
+#field name can be used for tuples with named items.
 
-io.writeln('\n#Data access');
-io.writeln(format('[$0][-1] = $(0[-1]), ($1).x = $(1.x:i)', [1, 2], (x => 1, y => 2)));
+io.writeln('\n#Inner data access');
+io.writeln(format('[$0][-1] = $(0[-1]); ($1).x = $(1.x:i)', [1, 2], (x => 1, y => 2)));
+io.writeln(format('"$0"[:2] = $(0[:2]); [$1][1:1] = $(1[1:1])', 'string', [1, 2; 3, 4; 5, 6]));
