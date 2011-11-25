@@ -13,7 +13,7 @@ DAO_DLLFLAGS += $(DAO_DLLFLAGS2)libdao.a
 include Makefile.common.main
 
 dummy :
-	-$(COPY) kernel\daoMaindl.o kernel\dummy.o
+	-$(COPY) kernel\daoMaindl.o dummy.o
 
 # Install
 install:  
@@ -29,10 +29,11 @@ install:
 	$(COPY) kernel\*.h $(DAO_INC_DIR)
 	$(COPY) kernel\dao.h $(DAO_DIR)
 	$(COPY) $(DAO_DLL) $(DAO_DIR)
-	$(EXIST) kernel/dummy.o $(MOVE) $(DAO_EXE) $(DAO_EXE)_tmp
-	$(EXIST) kernel/dummy.o $(DAO_LINK_EXE)
+	$(COPY) libdao.a $(DAO_DIR)
+	$(EXIST) dummy.o $(MOVE) $(DAO_EXE) $(DAO_EXE)_tmp
+	$(EXIST) dummy.o $(DAO_LINK_EXE) -L$(DAO_DIR)
 	$(COPY) $(DAO_EXE) $(DAO_DIR)
-	$(EXIST) kernel/dummy.o $(MOVE) $(DAO_EXE)_tmp $(DAO_EXE)
+	$(EXIST) dummy.o $(MOVE) $(DAO_EXE)_tmp $(DAO_EXE)
 
 uninstall:
 	$(EXIST) $(DAO_DIR)  $(DEL_DIR) $(DAO_DIR)

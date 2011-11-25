@@ -75,6 +75,11 @@ endif
 DAO_CFLAGS += $(DAO_CONFIG)
 
 ifdef UNIX
+  DAO_DIR ?= /usr/local/dao
+  DAO_LIB_DIR = $(DAO_DIR)/lib
+  DAO_INC_DIR = $(DAO_DIR)/include
+  DAO_TOOL_DIR = $(DAO_DIR)/tool
+
   AR        = ar rcs
   MOVE      = mv
   COPY      = cp
@@ -88,6 +93,11 @@ ifdef UNIX
 endif
 
 ifdef WIN32
+  DAO_DIR ?= C:\dao
+  DAO_LIB_DIR = $(DAO_DIR)\lib
+  DAO_INC_DIR = $(DAO_DIR)\include
+  DAO_TOOL_DIR = $(DAO_DIR)\tool
+
   AR        = ar rcs
   COPY      = copy /y
   DEL_FILE  = del /f/q

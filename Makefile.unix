@@ -1,10 +1,4 @@
 
-# Installation directory
-DAO_DIR = /usr/local/dao
-DAO_LIB_DIR = $(DAO_DIR)/lib
-DAO_INC_DIR = $(DAO_DIR)/include
-DAO_TOOL_DIR = $(DAO_DIR)/tools
-
 USE_READLINE = -DDAO_USE_READLINE
 LIB_READLINE = -lreadline -lncurses
 
@@ -17,7 +11,7 @@ DAO_DLLFLAGS += $(DAO_DLLFLAGS2)$(DAO_DLL)
 include Makefile.common.main
 
 dummy :
-	-$(COPY) kernel/daoMaindl.o kernel/dummy.o
+	-$(COPY) kernel/daoMaindl.o dummy.o
 
 # Install
 
@@ -36,10 +30,10 @@ install:
 	$(COPY_FILE) kernel/*.h $(DAO_INC_DIR)
 	$(SYMLINK) $(DAO_DIR)/$(DAO_DLL) /usr/lib/$(DAO_DLL)
 	$(SYMLINK) $(DAO_DIR)/dao.h /usr/include/dao.h
-	-$(HAS_FILE) kernel/dummy.o && $(MOVE) $(DAO_EXE) $(DAO_EXE)_tmp
-	-$(HAS_FILE) kernel/dummy.o && $(DAO_LINK_EXE)
+	-$(HAS_FILE) dummy.o && $(MOVE) $(DAO_EXE) $(DAO_EXE)_tmp
+	-$(HAS_FILE) dummy.o && $(DAO_LINK_EXE)
 	$(COPY_FILE) $(DAO_EXE) kernel/dao.h $(DAO_DIR)
-	-$(HAS_FILE) kernel/dummy.o && $(MOVE) $(DAO_EXE)_tmp $(DAO_EXE)
+	-$(HAS_FILE) dummy.o && $(MOVE) $(DAO_EXE)_tmp $(DAO_EXE)
 	$(SYMLINK) $(DAO_DIR)/$(DAO_EXE) /usr/bin/$(DAO_EXE)
 	@echo "Installation successful!"
 
