@@ -7,13 +7,15 @@ ifdef WIN32
   DAO_LIBS += -L$(DAO_DIR) -ldao
 endif
 
-all: DaoCGI.so
+TARGET = DaoCGI.$(DAO_DLL_EXT)
+
+all: $(TARGET)
 
 daoCGI.o: daoCGI.c
 	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) daoCGI.c
 	
-DaoCGI.so: daoCGI.o
-	$(DAO_CC) $(DAO_DLLFLAGS) daoCGI.o $(DAO_LIBS) -o DaoCGI.so
+$(TARGET): daoCGI.o
+	$(DAO_CC) $(DAO_DLLFLAGS) daoCGI.o $(DAO_LIBS) -o $(TARGET)
 
 clean:
 	-$(DEL_FILE) *.o

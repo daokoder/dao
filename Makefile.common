@@ -19,6 +19,8 @@ DAO_LFLAGS   =
 DAO_DLLFLAGS =
 DAO_DLLFLAGS2 =
 
+DAO_DLL_EXT =
+
 # Targets:
 DAO_EXE =
 DAO_DLL =
@@ -47,6 +49,7 @@ ifdef LINUX
   UNIX = 1
   DAO_EXE = dao
   DAO_DLL = libdao.so
+  DAO_DLL_EXT = so
   DAO_CFLAGS   += -fPIC -DUNIX
   DAO_DLLFLAGS += -shared -rdynamic
   DAO_DLLFLAGS2 += -Wl,-soname,
@@ -55,6 +58,7 @@ else
     UNIX = 1
     DAO_EXE = dao
     DAO_DLL = libdao.dylib
+    DAO_DLL_EXT = dylib
     DAO_CFLAGS   += -fPIC -DUNIX -DMAC_OSX
     DAO_DLLFLAGS += -dynamiclib -undefined dynamic_lookup
     DAO_DLLFLAGS2 += -install_name 
@@ -62,6 +66,7 @@ else
     WIN32 = 1
     DAO_EXE = dao.exe
     DAO_DLL = dao.dll
+    DAO_DLL_EXT = dll
     DAO_CFLAGS   += -DWIN32
     DAO_DLLFLAGS += -shared
     DAO_DLLFLAGS2 += -Wl,--out-implib,
