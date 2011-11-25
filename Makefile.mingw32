@@ -7,10 +7,13 @@ DAO_TOOL_DIR = $(DAO_DIR)\tools
 
 include Makefile.common
 
-DAO_LIBS  += -ldl -lpthread -lm $(LIB_READLINE)
+DAO_LIBS  += -lwinmm
 DAO_DLLFLAGS += $(DAO_DLLFLAGS2)libdao.a
 
 include Makefile.common.main
+
+dummy :
+	-$(COPY) kernel\daoMaindl.o kernel\dummy.o
 
 # Install
 install:  

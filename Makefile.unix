@@ -16,6 +16,9 @@ DAO_DLLFLAGS += $(DAO_DLLFLAGS2)$(DAO_DLL)
 
 include Makefile.common.main
 
+dummy :
+	-$(COPY) kernel/daoMaindl.o kernel/dummy.o
+
 # Install
 
 install:
