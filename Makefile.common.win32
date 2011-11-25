@@ -1,9 +1,0 @@
-
-AR        = ar rcs
-COPY      = copy /y
-DEL_FILE  = del /f/q
-DEL_DIR   = rmdir /s/q
-MKDIR     = mkdir
-MOVE      = move /y
-EXIST     = if exist
-NOTEXIST  = if not exist
