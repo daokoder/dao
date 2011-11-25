@@ -59,6 +59,7 @@ static void DaoCxxInliner_AddVirtualFile( const char *name, const char *source )
 	const FileEntry* FE = compiler.getFileManager().getVirtualFile( name, 
 			strlen(Buffer->getBufferStart()), time(NULL) );
 	compiler.getSourceManager().overrideFileContents( FE, Buffer );
+	compiler.getFrontendOpts().Inputs.clear();
 	compiler.getFrontendOpts().Inputs.push_back( pair<InputKind, std::string>( IK_CXX, name ) );
 }
 

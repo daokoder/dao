@@ -1,0 +1,10 @@
+
+AR        = ar rcs
+COPY      = cp
+COPY_FILE = $(COPY) -f
+COPY_DIR  = $(COPY) -r
+DEL_FILE  = rm -fR
+SYMLINK   = ln -sf
+MKDIR     = mkdir -p
+HAS_DIR   = test -d
+HAS_FILE  = test -f

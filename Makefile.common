@@ -1,0 +1,99 @@
+
+# Configurations:
+DAO_MACRO = -DDAO_WITH_MACRO
+DAO_THREAD = -DDAO_WITH_THREAD
+DAO_NUMARRAY = -DDAO_WITH_NUMARRAY
+DAO_ASYNCLASS = -DDAO_WITH_ASYNCLASS
+DAO_DYNCLASS = -DDAO_WITH_DYNCLASS
+DAO_DECORATOR = -DDAO_WITH_DECORATOR
+DAO_SERIALIZ = -DDAO_WITH_SERIALIZATION
+
+DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SERIALIZ) $(DAO_ASYNCLASS) $(DAO_DYNCLASS) $(DAO_DECORATOR)
+
+DAO_CC      ?= gcc
+DAO_CXX     ?= g++
+DAO_INCS     = -I.
+DAO_LIBS     =
+DAO_CFLAGS   = -Wall -Wno-unused
+DAO_LFLAGS   =
+DAO_DLLFLAGS =
+DAO_DLLFLAGS2 =
+
+# Targets:
+DAO_EXE =
+DAO_DLL =
+DAO_ARC = libdao.a
+
+ifeq ($(debug),yes)
+  DAO_CFLAGS += -ggdb -DDEBUG
+  DAO_LFLAGS += -ggdb
+else
+  DAO_CFLAGS += -O2
+endif
+
+UNAME = $(shell uname)
+
+ifeq ($(UNAME), Linux)
+  UNIX = 1
+  LINUX = 1
+endif
+
+ifeq ($(UNAME), Darwin)
+  UNIX = 1
+  MACOSX = 1
+endif
+
+ifdef LINUX
+  UNIX = 1
+  DAO_EXE = dao
+  DAO_DLL = libdao.so
+  DAO_CFLAGS   += -fPIC -DUNIX
+  DAO_DLLFLAGS += -shared -rdynamic
+  DAO_DLLFLAGS2 += -Wl,-soname,
+else
+  ifdef MACOSX
+    UNIX = 1
+    DAO_EXE = dao
+    DAO_DLL = libdao.dylib
+    DAO_CFLAGS   += -fPIC -DUNIX -DMAC_OSX
+    DAO_DLLFLAGS += -dynamiclib -undefined dynamic_lookup
+    DAO_DLLFLAGS2 += -install_name 
+  else
+    WIN32 = 1
+    DAO_EXE = dao.exe
+    DAO_DLL = dao.dll
+    DAO_CFLAGS   += -DWIN32
+    DAO_DLLFLAGS += -shared
+    DAO_DLLFLAGS2 += -Wl,--out-implib,
+  endif
+endif
+
+ifeq ($(std),C90)
+  DAO_CFLAGS += -ansi -pedantic
+endif
+
+DAO_CFLAGS += $(DAO_CONFIG)
+
+ifdef UNIX
+  AR        = ar rcs
+  MOVE      = mv
+  COPY      = cp
+  COPY_FILE = $(COPY) -f
+  COPY_DIR  = $(COPY) -r
+  DEL_FILE  = rm -fR
+  SYMLINK   = ln -sf
+  MKDIR     = mkdir -p
+  HAS_DIR   = test -d
+  HAS_FILE  = test -f
+endif
+
+ifdef WIN32
+  AR        = ar rcs
+  COPY      = copy /y
+  DEL_FILE  = del /f/q
+  DEL_DIR   = rmdir /s/q
+  MKDIR     = mkdir
+  MOVE      = move /y
+  EXIST     = if exist
+  NOTEXIST  = if not exist
+endif

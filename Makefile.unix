@@ -1,0 +1,45 @@
+
+# Installation directory
+DAO_DIR = /usr/local/dao
+DAO_LIB_DIR = $(DAO_DIR)/lib
+DAO_INC_DIR = $(DAO_DIR)/include
+DAO_TOOL_DIR = $(DAO_DIR)/tools
+
+USE_READLINE = -DDAO_USE_READLINE
+LIB_READLINE = -lreadline -lncurses
+
+include Makefile.common
+
+DAO_LIBS  += -ldl -lpthread -lm $(LIB_READLINE)
+
+DAO_DLLFLAGS += $(DAO_DLLFLAGS2)$(DAO_DLL)
+
+include Makefile.common.main
+
+# Install
+
+install:
+	@$(HAS_DIR) $(DAO_DIR) || $(MKDIR) $(DAO_DIR)
+	@$(HAS_DIR) $(DAO_LIB_DIR) || $(MKDIR) $(DAO_LIB_DIR)
+	@$(HAS_DIR) $(DAO_INC_DIR) || $(MKDIR) $(DAO_INC_DIR)
+	@$(HAS_DIR) $(DAO_TOOL_DIR) || $(MKDIR) $(DAO_TOOL_DIR)
+
+	$(HAS_FILE) addpath.dao && $(COPY_FILE) addpath.dao $(DAO_DIR)
+	$(HAS_FILE) tools/autobind.dao && $(COPY_FILE) tools/autobind.dao $(DAO_TOOL_DIR)
+	$(HAS_FILE) tools/autobind.dao && $(SYMLINK) $(DAO_TOOL_DIR)/autobind.dao /usr/bin/autobind.dao
+	$(HAS_FILE) dao.conf && $(COPY_FILE) dao.conf $(DAO_DIR)
+	$(HAS_FILE) $(DAO_DLL) && $(COPY_FILE) $(DAO_DLL) $(DAO_DIR) && $(SYMLINK) $(DAO_DIR)/$(DAO_DLL) /usr/lib/lib$(DAO_DLL)
+
+	$(COPY_FILE) kernel/*.h $(DAO_INC_DIR)
+	$(SYMLINK) $(DAO_DIR)/$(DAO_DLL) /usr/lib/$(DAO_DLL)
+	$(SYMLINK) $(DAO_DIR)/dao.h /usr/include/dao.h
+	-$(HAS_FILE) kernel/dummy.o && $(MOVE) $(DAO_EXE) $(DAO_EXE)_tmp
+	-$(HAS_FILE) kernel/dummy.o && $(DAO_LINK_EXE)
+	$(COPY_FILE) $(DAO_EXE) kernel/dao.h $(DAO_DIR)
+	-$(HAS_FILE) kernel/dummy.o && $(MOVE) $(DAO_EXE)_tmp $(DAO_EXE)
+	$(SYMLINK) $(DAO_DIR)/$(DAO_EXE) /usr/bin/$(DAO_EXE)
+	@echo "Installation successful!"
+
+uninstall:
+	@$(HAS_FILE) /usr/bin/autobind.dao && $(DEL_FILE) /usr/bin/autobind.dao
+	$(DEL_FILE) /usr/bin/$(DAO_EXE) /usr/lib/lib$(DAO_DLL) /usr/include/dao.h $(DAO_DIR)

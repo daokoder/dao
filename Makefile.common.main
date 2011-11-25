@@ -1,0 +1,89 @@
+
+CHANGESET_ID = $(shell hg id -i)
+
+ifneq ($(CHANGESET_ID),)
+  DAO_CFLAGS += -DCHANGESET_ID=\"HG.$(CHANGESET_ID)\"
+endif
+
+DAO_INCS += -Ikernel
+
+DAO_OBJECTS = kernel/daoArray.o \
+              kernel/daoMap.o \
+              kernel/daoType.o \
+              kernel/daoValue.o \
+              kernel/daoContext.o \
+              kernel/daoProcess.o \
+              kernel/daoRoutine.o \
+              kernel/daoGC.o \
+              kernel/daoStdtype.o \
+              kernel/daoNamespace.o \
+              kernel/daoString.o \
+              kernel/daoStdlib.o \
+              kernel/daoMacro.o \
+              kernel/daoLexer.o \
+              kernel/daoParser.o \
+              kernel/daoThread.o \
+              kernel/daoNumtype.o \
+              kernel/daoClass.o \
+              kernel/daoConst.o \
+              kernel/daoObject.o \
+              kernel/daoSched.o \
+              kernel/daoStream.o \
+              kernel/daoVmcode.o \
+              kernel/daoVmspace.o \
+              kernel/daoRegex.o
+
+
+first: all
+
+####### Implicit rules
+
+.SUFFIXES: .c
+
+.c.o:
+	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) -o $@ $<
+
+kernel/daoMaindl.o: kernel/daoMaindl.c
+	$(DAO_CC) -c $(DAO_CFLAGS) $(USE_READLINE) $(DAO_INCS) -o $@ $<
+
+####### Build rules
+
+all: $(DAO_DLL) $(DAO_EXE) dummy
+
+$(DAO_DLL): $(DAO_OBJECTS)
+	$(DAO_CC) $(DAO_DLLFLAGS) -o $(DAO_DLL) $(DAO_OBJECTS) $(DAO_LIBS)
+
+$(DAO_EXE): $(DAO_OBJECTS) kernel/daoMain.o kernel/daoMaindl.o
+	$(DAO_CC) $(DAO_LFLAGS) -o dao $(DAO_OBJECTS) kernel/daoMain.o $(DAO_LIBS)
+
+$(DAO_ARC):  $(DAO_OBJECTS)
+	$(AR) $(DAO_ARC) $(DAO_OBJECTS)
+
+# "make static" will remove "kernel/dummy.o", so that "make install" will install
+# the statically linked dao executable, otherwise, "make install" will build a
+# dynamically linked dao executable on-the-fly, and install that one!
+static: $(DAO_EXE) $(DAO_ARC)
+	-$(DEL_FILE) kernel/dummy.o
+
+dummy :
+	-$(COPY) kernel/daoMaindl.o kernel/dummy.o
+
+one:  $(DAO_OBJECTS) kernel/daoMainv.o
+	$(DAO_CC) $(DAO_LFLAGS) -o daov $(DAO_OBJECTS) kernel/daoMainv.o $(DAO_LIBS)
+
+DAO_LINK_EXE = $(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) kernel/daoMaindl.o $(DAO_LIBS) -ldao
+
+modules:
+	-cd modules/DaoCGI && make
+#	-cd modules/DaoCXX && make
+#	-cd modules/DaoFormat && make
+#	-cd modules/DaoInode && make
+#	-cd modules/DaoJIT && make
+#	-cd modules/DaoJSON && make
+#	-cd modules/DaoNetwork && make
+
+clean:
+	-$(DEL_FILE) kernel/*.o dao.a
+	-$(DEL_FILE) *~ core *.core
+
+.PHONY: modules clean
