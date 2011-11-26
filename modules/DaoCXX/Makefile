@@ -5,23 +5,27 @@ include ../../Makefile.common
 
 TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
-CLANG_LIBS = -lclang \
--lclangAST \
--lclangAnalysis \
--lclangBasic \
--lclangCodeGen \
+CLANG_LIBS = -lclangFrontend \
 -lclangDriver \
--lclangFrontend \
--lclangIndex \
--lclangLex \
--lclangParse \
+-lclangCodeGen \
 -lclangSema \
--lclangSerialization 
+-lclangAnalysis \
+-lclangAST \
+-lclangParse \
+-lclangLex \
+-lclangBasic \
+-lclangIndex \
+-lclangSerialization
+
+
+LLVM_CFLAGS = $(shell llvm-config --cppflags)
+LLVM_LFLAGS = $(shell llvm-config --ldflags)
+LLVM_LIBS = $(shell llvm-config --libs)
 
 DAO_INCS += -I../../kernel
 DAO_LIBS += -L../..
-DAO_CFLAGS += -fno-rtti `llvm-config --cppflags`
-DAO_LFLAGS += $(CLANG_LIBS) `llvm-config --ldflags --libs`
+DAO_CFLAGS += -fno-rtti $(LLVM_CFLAGS)
+DAO_LFLAGS += $(CLANG_LIBS) $(LLVM_LIBS) $(LLVM_LFLAGS)
 
 first: all
 
@@ -36,7 +40,7 @@ all: $(TARGET)
 	$(DAO_CXX) -c $(DAO_CFLAGS) $(DAO_INCS) -o $@ $<
 
 $(TARGET): daoCXX.o
-	$(DAO_CC) $(DAO_DLLFLAGS) daoCXX.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) $(DAO_LFLAGS) -o $(TARGET)
+	$(DAO_CXX) $(DAO_DLLFLAGS) daoCXX.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) $(DAO_LFLAGS) -o $(TARGET)
 
 clean:
 	rm *.o
