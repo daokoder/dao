@@ -1,5 +1,5 @@
 
-load DaoCxxInliner;
+load DaoCXX;
 
 @[cxx(source)]
 @wrap( load_python() )

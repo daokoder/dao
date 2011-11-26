@@ -1,4 +1,4 @@
-// DaoCxxInliner: a Clang based module for Dao to support C/C++ code inlining.
+// DaoCXX: a Clang based module for Dao to support C/C++ code inlining.
 // By Limin Fu.
 
 #include <llvm/Module.h>
@@ -47,13 +47,13 @@ EmitLLVMOnlyAction action;
 ExecutionEngine *engine;
 
 extern "C"{
-static void DaoCxxInliner_Default( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoCXX_Default( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_RaiseException( proc, DAO_ERROR, "Unsuccessully wrapped function" );
 }
 }
 
-static void DaoCxxInliner_AddVirtualFile( const char *name, const char *source )
+static void DaoCXX_AddVirtualFile( const char *name, const char *source )
 {
 	MemoryBuffer* Buffer = llvm::MemoryBuffer::getMemBufferCopy( source, name );
 	const FileEntry* FE = compiler.getFileManager().getVirtualFile( name, 
@@ -376,7 +376,7 @@ static int dao_cxx_block( DaoNamespace *NS, DString *VT, DArray *markers, DStrin
 
 	sprintf( name, "anonymous_%p_%p.cxx", NS, VT );
 	//printf( "%s:\n%s\n", name, source->mbs );
-	DaoCxxInliner_AddVirtualFile( name, source->mbs );
+	DaoCXX_AddVirtualFile( name, source->mbs );
 
 	action.BeginSourceFile( compiler, name, IK_CXX );
 	if( ! compiler.ExecuteAction( action ) ) return error_compile_failed( out );
@@ -409,7 +409,7 @@ static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DSt
 	sprintf( proto2, "anonymous_%p_%p()", NS, VT );
 	if( dao_markers_get( markers, "define", mbs, NULL ) ) proto = mbs->mbs;
 
-	DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCxxInliner_Default, proto );
+	DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, proto );
 	if( func == NULL ){
 		error_function_notwrapped( out, proto );
 		DString_Delete( mbs );
@@ -434,7 +434,7 @@ static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DSt
 	if( retc ) return error_function_notwrapped( out, func->routName->mbs );
 
 	//printf( "\n%s\n%s\n", file, source->mbs );
-	DaoCxxInliner_AddVirtualFile( file, source->mbs );
+	DaoCXX_AddVirtualFile( file, source->mbs );
 
 	action.BeginSourceFile( compiler, file, IK_CXX );
 	if( ! compiler.ExecuteAction( action ) ) return error_compile_failed( out );
@@ -463,7 +463,7 @@ static int dao_cxx_header( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 		if( isalnum( mbs->mbs[0] ) ) DString_InsertMBS( mbs, "./", 0, 0, 0 );
 		file = mbs->mbs;
 	}
-	DaoCxxInliner_AddVirtualFile( file, source->mbs );
+	DaoCXX_AddVirtualFile( file, source->mbs );
 	DString_Delete( mbs );
 	return 0;
 }
@@ -493,7 +493,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	DString_AppendMBS( source, "\nextern \"C\"{\n" );
 	for(i=0; i<wraps->size; i++){
 		DString *daoproto = wraps->items.pString[i];
-		DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCxxInliner_Default, daoproto->mbs );
+		DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, daoproto->mbs );
 		if( func == NULL || dao_make_wrapper( func->routName, func->routType, cproto, source, call ) ){
 			DString_AppendMBS( out, daoproto->mbs );
 			DString_AppendMBS( out, "\n" );
@@ -505,7 +505,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	DString_AppendMBS( source, "}\n" );
 
 	//printf( "\n%s\n%s\n", file, source->mbs );
-	if( failed == 0 ) DaoCxxInliner_AddVirtualFile( file, source->mbs );
+	if( failed == 0 ) DaoCXX_AddVirtualFile( file, source->mbs );
 	DString_Delete( mbs );
 	DString_Delete( call );
 	DString_Delete( cproto );
@@ -568,7 +568,7 @@ static int dao_cxx_inliner( DaoNamespace *NS, DString *mode, DString *verbatim, 
 	return retc;
 }
 
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+int DaoOnLoad( DaoVmSpace *vms, DaoNamespace *ns )
 {
 	static int argc = 2;
 	static char *argv[2] = { "dao", "dummy-main.cpp" };
@@ -580,8 +580,6 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	DString_SetMBS( mbs, header_suffix_pattern );
 	header_suffix_regex = DaoRegex_New( mbs );
 
-	DString_Delete( mbs );
-
 	compiler.createDiagnostics(argc, argv);
 
 	DiagnosticsEngine & DG = compiler.getDiagnostics();
@@ -589,6 +587,18 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	compiler.setTarget( TargetInfo::CreateTargetInfo( DG, compiler.getTargetOpts() ) );
 
 	clang::HeaderSearchOptions & headers = compiler.getHeaderSearchOpts();
+	DString_SetMBS( mbs, DaoVmSpace_CurrentLoadingPath( vms ) );
+	DString_AppendMBS( mbs, "/../" ); // /usr/local/dao relative to /usr/local/dao/lib
+	headers.AddPath( mbs->mbs, clang::frontend::System, false, false, true );
+#ifdef DAO_DIR
+	headers.AddPath( DAO_DIR "/include", clang::frontend::System, false, false, true );
+#endif
+	DString_SetMBS( mbs, DaoVmSpace_CurrentLoadingPath( vms ) );
+	DString_AppendMBS( mbs, "/../../kernel" ); // at build
+	headers.AddPath( mbs->mbs, clang::frontend::System, false, false, true );
+
+	DString_Delete( mbs );
+
 	string predefines;
 #ifdef MAC_OSX
 	predefines = "#define MAC_OSX 1\n#define UNIX 1\n";
@@ -598,8 +608,6 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	predefines = "#define UNIX 1\n";
 #elif defined(WIN32)
 	predefines = "#define WIN32 1\n";
-	headers.AddPath( "C:/dao", clang::frontend::System, false, false, true );
-	headers.AddPath( "C:/dao/include", clang::frontend::System, false, false, true );
 	headers.AddPath( "C:/MinGW/lib/gcc/mingw32/4.6.1/include", clang::frontend::System, false, false, true );
 #endif
 
@@ -611,7 +619,7 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	Preprocessor & pp = compiler.getPreprocessor();
 	pp.setPredefines( pp.getPredefines() + "\n" + predefines );
 
-	DaoCxxInliner_AddVirtualFile( "dummy-main.cpp", "void dummy_main(){}" );
+	DaoCXX_AddVirtualFile( "dummy-main.cpp", "void dummy_main(){}" );
 
 	InitializeNativeTarget();
 	if( ! compiler.ExecuteAction( action ) ) return 1;

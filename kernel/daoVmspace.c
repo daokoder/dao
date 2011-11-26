@@ -66,7 +66,12 @@ static int TestPath( DaoVmSpace *vms, DString *fname );
 
 extern ulong_t FileChangedTime( const char *file );
 
-static const char* const daoFileSuffix[] = { ".dao.o", ".dao.s", ".dao", DAO_DLL_SUFFIX };
+static const char* const daoFileSuffix[] =
+{
+	".dao.o", ".dao.s", ".dao", 
+	DAO_DLL_SUFFIX,
+	DAO_DLL_SUFFIX /* duplicated for automatically adding "lib" prefix; */
+};
 enum{
 	DAO_MODULE_NONE,
 	DAO_MODULE_DAO_O,
@@ -595,7 +600,7 @@ static DaoValue* DaoParseNumber( const char *s, DaoValue *value )
 	return value;
 }
 
-static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname );
+static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int alib );
 static DaoNamespace* DaoVmSpace_LoadDaoByteCode( DaoVmSpace *self, DString *path, int run );
 static DaoNamespace* DaoVmSpace_LoadDaoAssembly( DaoVmSpace *self, DString *path, int run );
 static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DArray *a, int run );
@@ -776,7 +781,7 @@ DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run )
 
 	SplitByWhiteSpaces( file, args );
 	DString_Assign( path, args->items.pString[0] );
-	switch( DaoVmSpace_CompleteModuleName( self, path ) ){
+	switch( DaoVmSpace_CompleteModuleName( self, path, 0 ) ){
 	case DAO_MODULE_DAO_O : ns = DaoVmSpace_LoadDaoByteCode( self, path, 0 ); break;
 	case DAO_MODULE_DAO_S : ns = DaoVmSpace_LoadDaoAssembly( self, path, 0 ); break;
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break;
@@ -1031,7 +1036,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 
 	return 1;
 }
-static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
+static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int alib )
 {
 	int slen = strlen( DAO_DLL_SUFFIX );
 	int i, modtype = DAO_MODULE_NONE;
@@ -1070,8 +1075,12 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 		if( TestPath( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
 		DString *fn = DString_New(1);
-		for(i=0; i<4; i++){
+		for(i=0; i<(4+alib); i++){
 			DString_Assign( fn, fname );
+			if( i == 4 ){
+				if( strncmp( fname->mbs, "lib", 3 ) == 0 ) break;
+				DString_InsertMBS( fn, "lib", 0, 0, 0 );
+			}
 			DString_AppendMBS( fn, daoFileSuffix[i] );
 			DaoVmSpace_MakePath( self, fn, 1 );
 #if 0
@@ -1083,6 +1092,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 			if( self->nameLoading->size && DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
 			if( TestPath( self, fn ) ){
 				modtype = i+1;
+				if( modtype > DAO_MODULE_DLL ) modtype = DAO_MODULE_DLL;
 				DString_Assign( fname, fn );
 				break;
 			}
@@ -1180,17 +1190,11 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, i
 	/*
 	   printf("%p : parsing %s\n", self, libpath->mbs );
 	 */
-	DArray_PushFront( self->nameLoading, libpath );
-	i = DString_RFindChar( libpath, '/', -1 );
-	if( i != MAXSIZE ){
-		DArray_PushFront( self->pathLoading, libpath );
-		DString_Erase( self->pathLoading->items.pString[0], i, -1 );
-	}
+	DArray_PushFront( self->nameLoading, ns->name );
+	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
 	parser->nameSpace = ns;
 	bl = DaoParser_ParseScript( parser );
-	if( i != MAXSIZE ){
-		DArray_PopFront( self->pathLoading );
-	}
+	if( ns->path->size ) DArray_PopFront( self->pathLoading );
 	DArray_PopFront( self->nameLoading );
 	if( ! bl ) goto LaodingFailed;
 
@@ -1339,7 +1343,11 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 		DaoStream_WriteMBS( self->stdStream, "unable to find symbol DaoOnLoad in the library.\n");
 		return 0;
 	}
+	DArray_PushFront( self->nameLoading, ns->name );
+	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
 	(*funpter)( self, ns );
+	if( ns->path->size ) DArray_PopFront( self->pathLoading );
+	DArray_PopFront( self->nameLoading );
 #if 0
 	change to handle returned value of DaoOnLoad?
 		if( bl ==0 ){
@@ -1542,6 +1550,15 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 		self->pathWorking = tmp;
 	}
 	DString_Delete( pstr );
+}
+const char* DaoVmSpace_CurrentWorkingPath( DaoVmSpace *self )
+{
+	return self->pathWorking->mbs;
+}
+const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self )
+{
+	if( self->pathLoading->size ==0 ) return NULL;
+	return self->pathLoading->items.pString[0]->mbs;
 }
 
 extern DaoTypeBase libStandardTyper;
@@ -1936,12 +1953,12 @@ DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {
 	DNode *node = MAP_Find( self->nsModules, fname );
 	if( node ) return (DaoNamespace*) node->value.pValue;
-	DaoVmSpace_CompleteModuleName( self, fname );
+	DaoVmSpace_CompleteModuleName( self, fname, 0 );
 	node = MAP_Find( self->nsModules, fname );
 	if( node ) return (DaoNamespace*) node->value.pValue;
 	return NULL;
 }
-DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns )
+DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns, int alib )
 {
 	DaoNamespace *ns = NULL;
 #ifdef DAO_WITH_THREAD
@@ -1949,7 +1966,7 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *r
 #if 0
 	printf( "modtype = %i\n", modtype );
 #endif
-	switch( DaoVmSpace_CompleteModuleName( self, fname ) ){
+	switch( DaoVmSpace_CompleteModuleName( self, fname, alib ) ){
 	case DAO_MODULE_DAO_O : ns = DaoVmSpace_LoadDaoByteCode( self, fname, 1 ); break;
 	case DAO_MODULE_DAO_S : ns = DaoVmSpace_LoadDaoAssembly( self, fname, 1 ); break;
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;

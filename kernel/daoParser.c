@@ -4726,7 +4726,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DaoValue *value;
 	int i = start+1, j, code = 0;
 	int perm = self->permission;
-	int cyclic = 0;
+	int addlib = 0, cyclic = 0;
 	unsigned char tki = tokens[i]->name;
 
 	DString_Clear( self->mbs );
@@ -4738,6 +4738,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		code = DAO_CTW_LOAD_INVALID;
 		goto ErrorLoad;
 	}else{
+		addlib = i+1 == end;
 		while( i < end ){
 			if( tokens[i]->type != DTOK_IDENTIFIER ){
 				code = DAO_CTW_PATH_INVALID;
@@ -4837,7 +4838,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) ==NULL ){
 		/* self->mbs could be changed by DaoVmSpace_LoadModule() */
 		DString_Assign( self->str, self->mbs );
-		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs, nsRequire );
+		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs, nsRequire, addlib );
 		MAP_Insert( vmSpace->modRequire, self->str, mod );
 		if( modname ) MAP_Insert( vmSpace->modRequire, modname, mod );
 		if( mod == NULL && modname == NULL && varImport->size ==0 ){

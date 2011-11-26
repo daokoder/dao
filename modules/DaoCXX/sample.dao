@@ -1,5 +1,5 @@
 
-load DaoCxxInliner;
+load DaoCXX;
 
 # Inlined codes can be placed between a pair of @[lang(mode)extra-delimiter],
 # where mode can be omit.
