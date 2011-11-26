@@ -1,14 +1,7 @@
 
-# Installation directory
-DAO_DIR = C:\dao
-DAO_LIB_DIR = $(DAO_DIR)\lib
-DAO_INC_DIR = $(DAO_DIR)\include
-DAO_TOOL_DIR = $(DAO_DIR)\tools
-
 include Makefile.common
 
-DAO_LIBS  += -lwinmm
-DAO_DLLFLAGS += $(DAO_DLLFLAGS2)libdao.a
+DAO_LIBS += -lwinmm
 
 include Makefile.common.main
 
@@ -18,22 +11,23 @@ dummy :
 # Install
 install:  
 	$(NOTEXIST) $(DAO_DIR) $(MKDIR) $(DAO_DIR)
-	$(NOTEXIST) $(DAO_LIB_DIR) $(MKDIR) $(DAO_LIB_DIR)
+	$(NOTEXIST) $(DAO_MOD_DIR) $(MKDIR) $(DAO_MOD_DIR)
 	$(NOTEXIST) $(DAO_INC_DIR) $(MKDIR) $(DAO_INC_DIR)
 	$(NOTEXIST) $(DAO_TOOL_DIR) $(MKDIR) $(DAO_TOOL_DIR)
+
+	$(COPY) kernel\*.h $(DAO_INC_DIR)
+	$(COPY) kernel\dao.h $(DAO_DIR)
+	$(COPY) $(DAO_EXE) $(DAO_DIR)
+	$(COPY) $(DAO_DLL) $(DAO_DIR)
+	$(COPY) libdao.a $(DAO_DIR)
 
 	$(EXIST) dao.conf $(COPY) dao.conf $(DAO_DIR)
 	$(EXIST) addpath.dao $(COPY) addpath.dao $(DAO_DIR)
 	$(EXIST) tools\autobind.dao $(COPY) tools\autobind.dao $(DAO_TOOL_DIR)
 
-	$(COPY) kernel\*.h $(DAO_INC_DIR)
-	$(COPY) kernel\dao.h $(DAO_DIR)
-	$(COPY) $(DAO_DLL) $(DAO_DIR)
-	$(COPY) libdao.a $(DAO_DIR)
-	$(EXIST) dummy.o $(MOVE) $(DAO_EXE) $(DAO_EXE)_tmp
-	$(EXIST) dummy.o $(DAO_LINK_EXE) -L$(DAO_DIR)
-	$(COPY) $(DAO_EXE) $(DAO_DIR)
-	$(EXIST) dummy.o $(MOVE) $(DAO_EXE)_tmp $(DAO_EXE)
-
 uninstall:
 	$(EXIST) $(DAO_DIR)  $(DEL_DIR) $(DAO_DIR)
+
+clean:
+	-$(DEL_FILE) kernel\*.o dao.a
+	-$(DEL_FILE) *~ core *.core

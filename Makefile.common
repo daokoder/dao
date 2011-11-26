@@ -13,15 +13,18 @@ DAO_CONFIG = $(DAO_MACRO) $(DAO_THREAD) $(DAO_NUMARRAY) $(DAO_SERIALIZ) $(DAO_AS
 DAO_CC      ?= gcc
 DAO_CXX     ?= g++
 DAO_INCS     = -I.
-DAO_LIBS     =
+DAO_LIBS     = -L.
 DAO_CFLAGS   = -Wall -Wno-unused
 DAO_LFLAGS   =
 DAO_DLLFLAGS =
-DAO_DLLFLAGS2 =
+
+DAO_LFLAGS_DAO =
+DAO_LFLAGS_MOD =
 
 DAO_DLL_EXT =
 
 # Targets:
+PROJECT ?= dao
 DAO_EXE =
 DAO_DLL =
 DAO_ARC = libdao.a
@@ -51,8 +54,7 @@ ifdef LINUX
   DAO_DLL = libdao.so
   DAO_DLL_EXT = so
   DAO_CFLAGS   += -fPIC -DUNIX
-  DAO_DLLFLAGS += -shared -rdynamic
-  DAO_DLLFLAGS2 += -Wl,-soname,
+  DAO_DLLFLAGS += -shared -rdynamic -Wl,-soname,lib$(PROJECT).so
 else
   ifdef MACOSX
     UNIX = 1
@@ -60,16 +62,14 @@ else
     DAO_DLL = libdao.dylib
     DAO_DLL_EXT = dylib
     DAO_CFLAGS   += -fPIC -DUNIX -DMAC_OSX
-    DAO_DLLFLAGS += -dynamiclib -undefined dynamic_lookup
-    DAO_DLLFLAGS2 += -install_name 
+    DAO_DLLFLAGS += -dynamiclib -undefined dynamic_lookup -install_name lib$(PROJECT).dylib
   else
     WIN32 = 1
     DAO_EXE = dao.exe
     DAO_DLL = dao.dll
     DAO_DLL_EXT = dll
     DAO_CFLAGS   += -DWIN32
-    DAO_DLLFLAGS += -shared
-    DAO_DLLFLAGS2 += -Wl,--out-implib,
+    DAO_DLLFLAGS += -shared -Wl,--out-implib,lib$(PROJECT).a
   endif
 endif
 
@@ -81,9 +81,19 @@ DAO_CFLAGS += $(DAO_CONFIG)
 
 ifdef UNIX
   DAO_DIR ?= /usr/local/dao
-  DAO_LIB_DIR = $(DAO_DIR)/lib
+  DAO_BIN_DIR ?= /usr/bin
+  DAO_MOD_DIR = $(DAO_DIR)/lib
   DAO_INC_DIR = $(DAO_DIR)/include
   DAO_TOOL_DIR = $(DAO_DIR)/tool
+
+  ifdef LINUX
+    DAO_LFLAGS_DAO = -Wl,-rpath=$(DAO_DIR) -ldao
+    DAO_LFLAGS_MOD = -Wl,-rpath=$(DAO_MOD_DIR)
+  endif
+  ifdef MACOSX
+    DAO_LFLAGS_DAO = -Wl,-rpath,$(DAO_DIR) -ldao
+    DAO_LFLAGS_MOD = -Wl,-rpath,$(DAO_MOD_DIR)
+  endif
 
   AR        = ar rcs
   MOVE      = mv
@@ -99,9 +109,13 @@ endif
 
 ifdef WIN32
   DAO_DIR ?= C:\dao
-  DAO_LIB_DIR = $(DAO_DIR)\lib
+  DAO_BIN_DIR ?= C:\dao
+  DAO_MOD_DIR = $(DAO_DIR)\lib
   DAO_INC_DIR = $(DAO_DIR)\include
   DAO_TOOL_DIR = $(DAO_DIR)\tool
+
+  DAO_LFLAGS_DAO = -Wl,-rpath=$(DAO_DIR) -ldao
+  DAO_LFLAGS_MOD = -Wl,-rpath=$(DAO_MOD_DIR)
 
   AR        = ar rcs
   COPY      = copy /y
@@ -112,3 +126,4 @@ ifdef WIN32
   EXIST     = if exist
   NOTEXIST  = if not exist
 endif
+

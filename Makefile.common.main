@@ -48,27 +48,21 @@ kernel/daoMaindl.o: kernel/daoMaindl.c
 
 ####### Build rules
 
-all: $(DAO_DLL) $(DAO_EXE) dummy
+all: $(DAO_DLL) $(DAO_EXE)
 
 $(DAO_DLL): $(DAO_OBJECTS)
 	$(DAO_CC) $(DAO_DLLFLAGS) -o $(DAO_DLL) $(DAO_OBJECTS) $(DAO_LIBS)
 
-$(DAO_EXE): $(DAO_OBJECTS) kernel/daoMain.o kernel/daoMaindl.o
-	$(DAO_CC) $(DAO_LFLAGS) -o dao $(DAO_OBJECTS) kernel/daoMain.o $(DAO_LIBS)
+$(DAO_EXE): $(DAO_DLL) kernel/daoMaindl.o
+	$(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) kernel/daoMaindl.o $(DAO_LIBS) $(DAO_LFLAGS_DAO)
 
-$(DAO_ARC):  $(DAO_OBJECTS)
+static: $(DAO_OBJECTS) kernel/daoMain.o
+	$(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) $(DAO_OBJECTS) kernel/daoMain.o $(DAO_LIBS)
 	$(AR) $(DAO_ARC) $(DAO_OBJECTS)
 
-# "make static" will remove "dummy.o", so that "make install" will install
-# the statically linked dao executable, otherwise, "make install" will build a
-# dynamically linked dao executable on-the-fly, and install that one!
-static: $(DAO_EXE) $(DAO_ARC)
-	-$(DEL_FILE) dummy.o
-
-one:  $(DAO_OBJECTS) kernel/daoMainv.o
+one: $(DAO_OBJECTS) kernel/daoMainv.o
 	$(DAO_CC) $(DAO_LFLAGS) -o daov $(DAO_OBJECTS) kernel/daoMainv.o $(DAO_LIBS)
 
-DAO_LINK_EXE = $(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) kernel/daoMaindl.o $(DAO_LIBS) -ldao
 
 modules:
 	-cd modules/DaoCGI && make
@@ -78,9 +72,5 @@ modules:
 #	-cd modules/DaoJIT && make
 #	-cd modules/DaoJSON && make
 #	-cd modules/DaoNetwork && make
-
-clean:
-	-$(DEL_FILE) kernel/*.o dao.a
-	-$(DEL_FILE) *~ core *.core
 
 .PHONY: modules clean
