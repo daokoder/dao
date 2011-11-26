@@ -18,8 +18,9 @@ DAO_CFLAGS   = -Wall -Wno-unused
 DAO_LFLAGS   =
 DAO_DLLFLAGS =
 
-DAO_LFLAGS_DAO =
-DAO_LFLAGS_MOD =
+DAO_LFLAGS_DAO  =
+DAO_LFLAGS_DAO2 =
+DAO_LFLAGS_MOD  =
 
 DAO_DLL_EXT =
 
@@ -87,12 +88,12 @@ ifdef UNIX
   DAO_TOOL_DIR = $(DAO_DIR)/tool
 
   ifdef LINUX
-    DAO_LFLAGS_DAO = -Wl,-rpath=$(DAO_DIR) -ldao
-    DAO_LFLAGS_MOD = -Wl,-rpath=$(DAO_MOD_DIR)
+    DAO_LFLAGS_DAO = -Wl,-rpath=. -Wl,-rpath=$(DAO_DIR) -ldao
+    DAO_LFLAGS_MOD = -Wl,-rpath=. -Wl,-rpath=$(DAO_MOD_DIR)
   endif
   ifdef MACOSX
-    DAO_LFLAGS_DAO = -Wl,-rpath,$(DAO_DIR) -ldao
-    DAO_LFLAGS_MOD = -Wl,-rpath,$(DAO_MOD_DIR)
+    DAO_LFLAGS_DAO = -Wl,-rpath,. -Wl,-rpath,$(DAO_DIR) -ldao
+    DAO_LFLAGS_MOD = -Wl,-rpath,. -Wl,-rpath,$(DAO_MOD_DIR)
   endif
 
   AR        = ar rcs
@@ -114,8 +115,9 @@ ifdef WIN32
   DAO_INC_DIR = $(DAO_DIR)\include
   DAO_TOOL_DIR = $(DAO_DIR)\tool
 
-  DAO_LFLAGS_DAO = -Wl,-rpath=$(DAO_DIR) -ldao
-  DAO_LFLAGS_MOD = -Wl,-rpath=$(DAO_MOD_DIR)
+  DAO_LFLAGS_DAO = -Wl,-rpath,. -Wl,-rpath=$(DAO_DIR) -ldao
+  DAO_LFLAGS_DAO2 = -Wl,-rpath,. -Wl,-rpath=$(DAO_DIR) -ldao
+  DAO_LFLAGS_MOD = -Wl,-rpath,. -Wl,-rpath=$(DAO_MOD_DIR)
 
   AR        = ar rcs
   COPY      = copy /y

@@ -4,6 +4,7 @@ LIB_READLINE = -lreadline -lncurses
 
 include Makefile.common
 
+DAO_LFLAGS += -rdynamic
 DAO_LIBS += -ldl -lpthread -lm $(LIB_READLINE)
 
 include Makefile.common.main
@@ -20,9 +21,9 @@ install:
 	$(COPY_FILE) $(DAO_EXE) $(DAO_DLL) kernel/dao.h $(DAO_DIR)
 	$(SYMLINK) $(DAO_DIR)/$(DAO_EXE) $(DAO_BIN_DIR)/$(DAO_EXE)
 
-	$(HAS_FILE) dao.conf && $(COPY_FILE) dao.conf $(DAO_DIR)
-	$(HAS_FILE) addpath.dao && $(COPY_FILE) addpath.dao $(DAO_DIR)
-	$(HAS_FILE) tools/autobind.dao && $(COPY_FILE) tools/autobind.dao $(DAO_TOOL_DIR)
+	-$(HAS_FILE) dao.conf && $(COPY_FILE) dao.conf $(DAO_DIR)
+	-$(HAS_FILE) addpath.dao && $(COPY_FILE) addpath.dao $(DAO_DIR)
+	-$(HAS_FILE) tools/autobind.dao && $(COPY_FILE) tools/autobind.dao $(DAO_TOOL_DIR)
 
 	@echo "Installation successful!"
 

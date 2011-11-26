@@ -13,7 +13,7 @@ daoCGI.o: daoCGI.c
 	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) daoCGI.c
 	
 $(TARGET): daoCGI.o
-	$(DAO_CC) $(DAO_DLLFLAGS) daoCGI.o $(DAO_LIBS) $(DAO_LFLAGS_DAO) -o $(TARGET)
+	$(DAO_CC) $(DAO_DLLFLAGS) daoCGI.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) -o $(TARGET)
 
 clean:
 	-$(DEL_FILE) *.o
