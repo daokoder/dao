@@ -143,4 +143,7 @@ DAO_DLL DaoFunction* DaoNamespace_MakeFunction( DaoNamespace *self, const char *
 DAO_DLL void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int limit );
 DAO_DLL void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin );
 
+DAO_DLL DaoValue* DaoValue_FindAuxMethod( DaoValue *self, DString *name, DaoNamespace *nspace );
+DAO_DLL DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nspace );
+
 #endif

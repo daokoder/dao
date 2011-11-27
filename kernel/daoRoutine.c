@@ -1693,10 +1693,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					at = at->nested->items.pType[0];
 					type_source = at;
 					if( at->tid == DAO_ENUM && at->mapNames ){
-						if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist;
+						if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist_TryAux;
 						ct = at;
 					}else{
-						goto NotExist;
+						goto NotExist_TryAux;
 					}
 				}else if( at->tid == DAO_INTERFACE ){
 					node = DMap_Find( at->aux->xInterface.methods, str );
@@ -1706,10 +1706,10 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
 						node = DMap_Find( at->aux->xInterface.methods, mbs );
-						if( node == NULL ) goto NotExist;
+						if( node == NULL ) goto NotExist_TryAux;
 						meth = node->value.pValue;
 						rout = DaoValue_Check( meth, at, & bt, 0, DVM_CALL, errors );
-						if( rout == NULL ) goto NotExist;
+						if( rout == NULL ) goto NotExist_TryAux;
 						ct = & rout->routType->aux->xType;
 					}
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
@@ -1736,7 +1736,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					DString_AppendChar( mbs, '.' );
 					DString_Append( mbs, str );
 					if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
-					if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
+					if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist_TryAux;
 					j = DaoClass_GetDataIndex( klass, str );
 					k = LOOKUP_ST( j );
 					if( k == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
@@ -1772,11 +1772,11 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 						}
 					}
 				}else if( at->tid == DAO_TUPLE ){
-					if( at->mapNames == NULL ) goto NotExist;
+					if( at->mapNames == NULL ) goto NotExist_TryAux;
 					node = MAP_Find( at->mapNames, str );
-					if( node == NULL ) goto NotExist;
+					if( node == NULL ) goto NotExist_TryAux;
 					k = node->value.pInt;
-					if( k <0 || k >= at->nested->size ) goto NotExist;
+					if( k <0 || k >= at->nested->size ) goto NotExist_TryAux;
 					ct = at->nested->items.pType[ k ];
 					if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 					if( typed_code && notide ){
@@ -1806,7 +1806,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 							val = DaoNamespace_GetConst( ans, k );
 							if( val ) ct = DaoNamespace_GetType( ans, val );
 						}
-						if( k <0 ) goto NotExist;
+						if( k <0 ) goto NotExist_TryAux;
 					}
 #if 0
 					//}else if( at->tid == DAO_ANY || at->tid == DAO_INITYPE ){
@@ -1825,13 +1825,21 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 					DString_SetMBS( mbs, "." );
 					DString_Append( mbs, str );
 					meth = DaoTypeBase_FindFunction( at->typer, mbs );
-					if( meth == NULL ) goto NotExist;
+					if( meth == NULL ) goto NotExist_TryAux;
 					rout = DaoValue_Check( meth, at, & bt, 0, DVM_CALL, errors );
 					if( rout == NULL ) goto NotMatch;
 					ct = & rout->routType->aux->xType;
 				}
 				if( ct == NULL ) ct = udf;
 			}
+			UpdateType( opc, ct );
+			AssertTypeMatching( ct, type[opc], defs, 0);
+			break;
+NotExist_TryAux:
+			val = DaoType_FindAuxMethod( at, str, ns );
+			if( val == NULL ) goto NotExist;
+			ct = DaoNamespace_GetType( ns, val );
+			csts[opc] = val;
 			UpdateType( opc, ct );
 			AssertTypeMatching( ct, type[opc], defs, 0);
 			break;

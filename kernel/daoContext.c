@@ -1269,15 +1269,25 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 }
 void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *A = self->activeValues[ vmc->a ];
+	DaoValue *C, *A = self->activeValues[ vmc->a ];
 	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
+	DaoNamespace *ns = self->activeNamespace;
+	DString *name = self->activeRoutine->routConsts->items.pValue[ vmc->b ]->xString.data;
+	DArray *elist = self->exceptions;
+	int E = elist->size;
 
 	self->activeCode = vmc;
 	if( A == NULL || A->type == 0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
-	tc->GetField( A, self, self->activeRoutine->routConsts->items.pValue[ vmc->b]->xString.data );
+	tc->GetField( A, self, name );
+	if( elist->size != (E + 1) ) return;
+	if( elist->items.pCdata[E]->typer != DaoException_GetType( DAO_ERROR_FIELD_NOTEXIST ) ) return;
+	C = DaoValue_FindAuxMethod( A, name, ns );
+	if( C == NULL ) return;
+	DArray_PopBack( elist );
+	DaoProcess_PutValue( self, C );
 }
 
 DHash *dao_meta_tables = NULL; /* hash<DaoValue*,DaoMap*> */
