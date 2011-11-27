@@ -1044,6 +1044,6 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoFormat, "format( fmt: string, ... )=>string" );
+	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoFormat, "format( self: string, ... )=>string" );
 	return 0;
 }

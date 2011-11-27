@@ -15,9 +15,9 @@ data = {
     } 
 };
 
-text = json.serialize(data);
+text = data.toJSON();
 io.writeln("Dao => JSON (readable):\n", text);
-io.writeln("\nDao => JSON (compact):\n", json.serialize(data, $compact));
+io.writeln("\nDao => JSON (compact):\n", data.toJSON($compact));
 
-data = json.deserialize(text);
+data = text.parseJSON();
 io.writeln("\nJSON => Dao:\n", data);
