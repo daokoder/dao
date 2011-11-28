@@ -65,6 +65,7 @@ one: $(DAO_OBJECTS) kernel/daoMainv.o
 
 
 modules:
+	-cd modules/string && make
 	-cd modules/DaoCGI && make
 #	-cd modules/DaoCXX && make
 #	-cd modules/DaoFormat && make

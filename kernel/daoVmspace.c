@@ -1285,6 +1285,8 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 				"ERROR: not permitted to open shared library in safe running mode.\n" );
 		return NULL;
 	}
+	node = MAP_Find( self->nsModules, libpath );
+	if( node ) return (DaoNamespace*) node->value.pValue;
 
 	handle = DaoOpenDLL( libpath->mbs );
 	if( ! handle ){
@@ -1293,56 +1295,47 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 		DaoStream_WriteMBS( self->stdStream, "\".\n");
 		return 0;
 	}
-
-	node = MAP_Find( self->nsModules, libpath );
-	if( node ){
-		ns = (DaoNamespace*) node->value.pValue;
-		/* XXX dlclose(  ns->cmodule->libHandle ) */
-		if( handle == ns->libHandle ) return ns;
-	}else{
-		ns = DaoNamespace_New( self, libpath->mbs );
-		GC_IncRC( ns );
-		MAP_Insert( self->nsModules, libpath, ns );
-		i = DString_RFindChar( libpath, '/', -1 );
-		if( i != MAXSIZE ) DString_Erase( libpath, 0, i+1 );
-		i = DString_RFindChar( libpath, '\\', -1 );
-		if( i != MAXSIZE ) DString_Erase( libpath, 0, i+1 );
-		i = DString_FindChar( libpath, '.', 0 );
-		if( i != MAXSIZE ) DString_Erase( libpath, i, -1 );
-		/* printf( "%s\n", libpath->mbs ); */
-		if( reqns ){
-			for(i=0; i<reqns->size; i++){
-				node = MAP_Find( self->modRequire, reqns->items.pString[i] );
-				/* printf( "requiring:  %p  %s\n", node, reqns->items.pString[i]->mbs ); */
-				/*
-				if( node ) DaoNamespace_Import( ns, (DaoNamespace*)node->value.pValue, NULL );
-				*/
-				if( node ) DaoNamespace_AddParent( ns, (DaoNamespace*)node->value.pValue );
-			}
-		}
-		/* MAP_Insert( self->modRequire, libpath, ns ); */
-	}
-	ns->libHandle = handle;
-
 	dhv = (long*) DaoGetSymbolAddress( handle, "DaoH_Version" );
-	if( dhv == NULL ){
-		/* no warning or error, for loading a C/C++ dynamic linking library
-		   for solving symbols in Dao modules. */
-		return ns;
-	}else if( *dhv != DAO_H_VERSION ){
+	funpter = (FuncType) DaoGetSymbolAddress( handle, "DaoOnLoad" );
+	if( dhv == NULL && funpter ){
+		DaoStream_WriteMBS( self->stdStream, "unable to find version number in the library.\n");
+		return NULL;
+	}else if( dhv && funpter == NULL ){
+		DaoStream_WriteMBS( self->stdStream, "unable to find symbol DaoOnLoad in the library.\n");
+		return NULL;
+	}else if( dhv && *dhv != DAO_H_VERSION ){
 		char buf[200];
-		sprintf( buf, "ERROR: DaoH_Version not matching, "
-				"require \"%i\" but find \"%li\" in the library (%s).\n",
-				DAO_H_VERSION, *dhv, libpath->mbs );
+		sprintf( buf, "ERROR: DaoH_Version not matching, require \"%i\", "
+				"but find \"%li\" in the library (%s).\n", DAO_H_VERSION, *dhv, libpath->mbs );
 		DaoStream_WriteMBS( self->stdStream, buf );
-		return 0;
+		return NULL;
 	}
 
-	funpter = (FuncType) DaoGetSymbolAddress( handle, "DaoOnLoad" );
-	if( ! funpter ){
-		DaoStream_WriteMBS( self->stdStream, "unable to find symbol DaoOnLoad in the library.\n");
-		return 0;
+	ns = DaoNamespace_New( self, libpath->mbs );
+	ns->libHandle = handle;
+	GC_IncRC( ns );
+	MAP_Insert( self->nsModules, libpath, ns );
+	i = DString_RFindChar( libpath, '/', -1 );
+	if( i != MAXSIZE ) DString_Erase( libpath, 0, i+1 );
+	i = DString_RFindChar( libpath, '\\', -1 );
+	if( i != MAXSIZE ) DString_Erase( libpath, 0, i+1 );
+	i = DString_FindChar( libpath, '.', 0 );
+	if( i != MAXSIZE ) DString_Erase( libpath, i, -1 );
+	/* printf( "%s\n", libpath->mbs ); */
+	if( reqns ){
+		for(i=0; i<reqns->size; i++){
+			node = MAP_Find( self->modRequire, reqns->items.pString[i] );
+			/* printf( "requiring:  %p  %s\n", node, reqns->items.pString[i]->mbs ); */
+			/*
+			   if( node ) DaoNamespace_Import( ns, (DaoNamespace*)node->value.pValue, NULL );
+			 */
+			if( node ) DaoNamespace_AddParent( ns, (DaoNamespace*)node->value.pValue );
+		}
 	}
+	/* no warning or error for loading a C/C++ dynamic linking library
+	   for solving symbols in Dao modules. */
+	if( dhv == NULL && funpter == NULL ) return ns;
+
 	DArray_PushFront( self->nameLoading, ns->name );
 	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
 	(*funpter)( self, ns );

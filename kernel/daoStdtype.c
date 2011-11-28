@@ -1395,119 +1395,6 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 	DArray_Append( & list->items, value );
 	DaoString_Delete( (DaoString*) value );
 }
-static void DaoSTR_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *self = p[0]->xString.data;
-	DString *delms = p[1]->xString.data;
-	DString *quotes = p[2]->xString.data;
-	int bkslash = (int)p[3]->xInteger.value;
-	int simplify = (int)p[4]->xInteger.value;
-	DaoList *list = DaoProcess_PutList( proc );
-	DaoValue *value = (DaoValue*) DaoString_New(1);
-	DString *str = value->xString.data;
-	if( self->mbs ){
-		char *s = self->mbs;
-		DString_ToMBS( str );
-		DString_ToMBS( delms );
-		DString_ToMBS( quotes );
-		while( *s ){
-			if( bkslash && *s == '\\' ){
-				DString_AppendChar( str, *s );
-				DString_AppendChar( str, *(s+1) );
-				s += 2;
-				continue;
-			}
-			if( ( bkslash == 0 || s == self->mbs || *(s-1) !='\\' )
-					&& DString_FindChar( quotes, *s, 0 ) != MAXSIZE ){
-				DString_AppendChar( str, *s );
-				s ++;
-				while( *s ){
-					if( bkslash && *s == '\\' ){
-						DString_AppendChar( str, *s );
-						DString_AppendChar( str, *(s+1) );
-						s += 2;
-					}
-					if( ( bkslash == 0 || *(s-1) !='\\' )
-							&& DString_FindChar( quotes, *s, 0 ) != MAXSIZE )
-						break;
-					DString_AppendChar( str, *s );
-					s ++;
-				}
-				DString_AppendChar( str, *s );
-				s ++;
-				continue;
-			}
-			if( DString_FindChar( delms, *s, 0 ) != MAXSIZE ){
-				if( s != self->mbs && *(s-1)=='\\' ){
-					DString_AppendChar( str, *s );
-					s ++;
-					continue;
-				}else{
-					if( simplify ) DString_Trim( str );
-					if( str->size > 0 ){
-						DArray_Append( & list->items, value );
-						DString_Clear( str );
-					}
-					DString_AppendChar( str, *s );
-					s ++;
-					if( simplify ) DString_Trim( str );
-					if( str->size > 0 ) DArray_Append( & list->items, value );
-					DString_Clear( str );
-					continue;
-				}
-			}
-			DString_AppendChar( str, *s );
-			s ++;
-		}
-		if( simplify ) DString_Trim( str );
-		if( str->size > 0 ) DArray_Append( & list->items, value );
-	}else{
-		wchar_t *s = self->wcs;
-		DString_ToWCS( str );
-		DString_ToWCS( delms );
-		DString_ToWCS( quotes );
-		while( *s ){
-			if( ( s == self->wcs || bkslash ==0 || *(s-1)!=L'\\' )
-					&& DString_FindWChar( quotes, *s, 0 ) != MAXSIZE ){
-				DString_AppendChar( str, *s );
-				s ++;
-				while( *s ){
-					if( ( bkslash ==0 || *(s-1)!=L'\\' )
-							&& DString_FindWChar( quotes, *s, 0 ) != MAXSIZE ) break;
-					DString_AppendChar( str, *s );
-					s ++;
-				}
-				DString_AppendChar( str, *s );
-				s ++;
-				continue;
-			}
-			if( DString_FindWChar( delms, *s, 0 ) != MAXSIZE ){
-				if( s != self->wcs && ( bkslash && *(s-1)==L'\\' ) ){
-					DString_AppendChar( str, *s );
-					s ++;
-					continue;
-				}else{
-					if( simplify ) DString_Trim( str );
-					if( str->size > 0 ){
-						DArray_Append( & list->items, value );
-						DString_Clear( str );
-					}
-					DString_AppendChar( str, *s );
-					s ++;
-					if( simplify ) DString_Trim( str );
-					if( str->size > 0 ) DArray_Append( & list->items, value );
-					DString_Clear( str );
-					continue;
-				}
-			}
-			DString_AppendChar( str, *s );
-			s ++;
-		}
-		if( simplify ) DString_Trim( str );
-		if( str->size > 0 ) DArray_Append( & list->items, value );
-	}
-	DaoString_Delete( (DaoString*) value );
-}
 extern int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue **dC );
 static void DaoSTR_Tonumber( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1737,23 +1624,6 @@ static void DaoSTR_Mpack( DaoProcess *proc, DaoValue *p[], int N )
 		DArray_Delete( packs );
 	}
 }
-static const char *errmsg[2] =
-{
-	"invalid key",
-	"invalid source"
-};
-static void DaoSTR_Encrypt( DaoProcess *proc, DaoValue *p[], int N )
-{
-	int rc = DString_Encrypt( p[0]->xString.data, p[1]->xString.data, p[2]->xEnum.value );
-	if( rc ) DaoProcess_RaiseException( proc, DAO_ERROR, errmsg[rc-1] );
-	DaoProcess_PutReference( proc, p[0] );
-}
-static void DaoSTR_Decrypt( DaoProcess *proc, DaoValue *p[], int N )
-{
-	int rc = DString_Decrypt( p[0]->xString.data, p[1]->xString.data, p[2]->xEnum.value );
-	if( rc ) DaoProcess_RaiseException( proc, DAO_ERROR, errmsg[rc-1] );
-	DaoProcess_PutReference( proc, p[0] );
-}
 static void DaoSTR_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
@@ -1911,7 +1781,6 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )=>list<string>" },
-	{ DaoSTR_Tokenize, "tokenize( self :string, seps :string, quotes='', backslash=0, simplify=0 )=>list<string>" },
 	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )=>list<tuple<start:int,end:int>>" },
 	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )=>tuple<start:int,end:int,substring:string>" },
 	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )=>tuple<start:int,end:int,substring:string>" },
@@ -1924,8 +1793,6 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
 	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },
-	{ DaoSTR_Encrypt, "encrypt( self :string, key :string, format :enum<regular,hex> = $regular )=>string" },
-	{ DaoSTR_Decrypt, "decrypt( self :string, key :string, format :enum<regular,hex> = $regular )=>string" },
 	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
 
 	{ DaoSTR_Iterate,   "iterate( self :string )[char :int, index :int]" },
