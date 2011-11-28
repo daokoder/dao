@@ -1,41 +1,19 @@
+PROJECT = DaoInode
 
-CC = gcc
-INCLUDE = -I. -I../../kernel
-LIB = dao.dll
-CFLAG = -c -Wall -O2 -fPIC
-LFLAG = -s -shared 
+include ../../Makefile.common
 
-TARGET = DaoInode.so
+DAO_INCS += -I../../kernel
+DAO_LIBS += -L../..
 
-UNAME = $(shell uname)
-
-ifeq ($(UNAME), Linux)
-  CFLAG += -DUNIX
-  LFLAG = -s -fPIC -shared
-endif
-
-ifeq ($(UNAME), Darwin)
-  TARGET	= DaoInode.dylib
-  CFLAG += -DUNIX -DMAC_OSX
-  LFLAG = -fPIC -dynamiclib
-endif
-
-ifeq ($(CC), gcc)
-  ifeq ($(debug),yes)
-    CFLAGS += -ggdb -DDEBUG
-  endif
-endif
-
+TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
 all: $(TARGET)
 
 daoInode.o: daoInode.c
-	$(CC) $(CFLAG) $(INCLUDE) daoInode.c
-	
-$(TARGET): daoInode.o
-	$(CC) $(LFLAG) daoInode.o $(LIB) -o $(TARGET)
+	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) daoInode.c
 
-bind: clean
+$(TARGET): daoInode.o
+	$(DAO_CC) $(DAO_DLLFLAGS) daoInode.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) -o $(TARGET)
 
 clean:
-	rm *.o
+	-$(DEL_FILE) *.o

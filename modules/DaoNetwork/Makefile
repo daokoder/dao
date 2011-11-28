@@ -1,33 +1,25 @@
+PROJECT = DaoNetwork
 
-CC = gcc
-INCLUDE = -I. -I../../kernel
-LIB = dao.dll
-CFLAG = -c -Wall -O2 -fPIC
-LFLAG =
+include ../../Makefile.common
 
-UNAME := $(shell uname)
+DAO_INCS += -I../../kernel
+DAO_LIBS += -L../..
 
-TARGET = DaoNetwork.so
-
-ifeq ($(UNAME), Linux)
-  CFLAG += -DUNIX
-  LFLAGLIB = -s -fPIC -shared
+ifneq (,$(findstring DWIN32,$(DAO_CFLAGS)))
+	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2) -lwsock32
+else
+	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2)
 endif
-ifeq ($(UNAME), Darwin)
-  TARGET = DaoNetwork.dylib
-  CFLAG += -DUNIX -DMAC_OSX
-  LFLAGLIB = -s -fPIC -dynamiclib
-endif
+
+TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
 all: $(TARGET)
 
 daoNetwork.o: daoNetwork.c
-	$(CC) $(CFLAG) $(INCLUDE) daoNetwork.c
-	
-$(TARGET): daoNetwork.o
-	$(CC) $(LFLAGLIB) $(LIB) daoNetwork.o -o $(TARGET)
+	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) daoNetwork.c
 
-bind: clean
+$(TARGET): daoNetwork.o
+	$(DAO_CC) $(DAO_DLLFLAGS) daoNetwork.o $(DAO_LIBS) $(DAO_LFLAGS_NET) -o $(TARGET)
 
 clean:
-	rm *.o
+	-$(DEL_FILE) *.o

@@ -2,3 +2,4 @@
 load md5;
 load tokenize;
 load xxtea;
+load format;

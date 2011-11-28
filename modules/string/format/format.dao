@@ -1,0 +1,62 @@
+load string.format;
+
+
+#Placeholders '$x' are used to embed unformatted data into string,
+#'x' is the index of additional format() argument (starting from 0).
+#Supported data types: all numeric types, string, enum, list, array, map, tuple, none.
+#Escaping: '$$'.
+
+
+io.writeln('#General usage');
+io.writeln("The values are $$$0, '$1' and {$2}.".format(5, 'str', {1, 2, 3} ));
+
+
+#Placeholders '$(format)' are meant for formatted printing,
+#<format> ::= <placeholder ID> [<element>] [<numeric format>] [<alignment>]
+#Placeholder ID should be argument index or name.
+
+
+io.writeln("The values are $(x), $(y) and '$2'.".format(x => $enum, y => 0xFFL, none));
+
+
+#<alignment> ::= ('>' | '<' | '=') <field width>
+#'<' -- align left,
+#'>' -- align right,
+#'=' -- align center.
+
+
+io.writeln('\n#Alignment');
+io.writeln('($(0<10))'.format('left'));
+io.writeln('($(0>10))'.format('right'));
+io.writeln('($(0=10))'.format('center'));
+
+
+#<numeric format> ::= : ['+' | ' '] ('i' | 'x' | 'X' | 'f' | 'g' | 'G') [.<precision>]
+#'+' -- print sign,
+#' ' -- print space if no sign,
+#type specifiers and precision have the same meaning as in C/C++ printf(),
+#integer and floating point arguments are implictly casted if required.
+
+
+io.writeln('\n#Numeric format');
+io.writeln('$(0:i), $(1:X.4), $(2:+f.2)'.format(-1, 255, 3.3452));
+
+
+#For containers, numeric format and alignment are applied to each element individually.
+
+
+io.writeln('\n#Containers');
+io.writeln('$(0:f.2>6)'.format({1, 2, 3}));
+
+
+#<element> ::= ( '[' <index> | <slice> ']' | .<field name>)
+#<slice> ::= [ <index> ] : [ <index> ]
+#Indexing is supported for strings, lists, arrays, tuples,
+#slicing -- for strings, lists and arrays,
+#negative indexes are allowed,
+#field name can be used for tuples with named items.
+
+
+io.writeln('\n#Inner data access');
+io.writeln('[$0][-1] = $(0[-1]); ($1).x = $(1.x:i)'.format([1, 2], (x => 1, y => 2)));
+io.writeln('"$0"[:2] = $(0[:2]); [$1][1:1] = $(1[1:1])'.format('string', [1, 2; 3, 4; 5, 6]));

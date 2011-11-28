@@ -1,41 +1,19 @@
+PROJECT = DaoJSON
 
-CC = gcc
-INCLUDE = -I. -I../../kernel
-LIB = dao.dll
-CFLAG = -c -Wall -O2 -fPIC
-LFLAG = -s -shared
+include ../../Makefile.common
 
-TARGET = DaoJSON.so
+DAO_INCS += -I../../kernel
+DAO_LIBS += -L../..
 
-UNAME = $(shell uname)
-
-ifeq ($(UNAME), Linux)
-  CFLAG += -DUNIX
-  LFLAG = -s -fPIC -shared
-endif
-
-ifeq ($(UNAME), Darwin)
-  TARGET	= DaoJSON.dylib
-  CFLAG += -DUNIX -DMAC_OSX
-  LFLAG = -fPIC -dynamiclib
-endif
-
-ifeq ($(CC), gcc)
-  ifeq ($(debug),yes)
-    CFLAGS += -ggdb -DDEBUG
-  endif
-endif
-
+TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
 all: $(TARGET)
 
 DaoJSON.o: DaoJSON.c
-	$(CC) $(CFLAG) $(INCLUDE) DaoJSON.c
-	
-$(TARGET): DaoJSON.o
-	$(CC) $(LFLAG) DaoJSON.o $(LIB) -o $(TARGET)
+	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) DaoJSON.c
 
-bind: clean
+$(TARGET): DaoJSON.o
+	$(DAO_CC) $(DAO_DLLFLAGS) DaoJSON.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) -o $(TARGET)
 
 clean:
-	rm *.o
+	-$(DEL_FILE) *.o

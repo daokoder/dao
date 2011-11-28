@@ -1,15 +1,20 @@
 COPY = copy /Y
 
-C_TARGETS = DaoFormat DaoCGI DaoInode DaoNetwork DaoJSON
+C_TARGETS = DaoCGI DaoInode DaoNetwork DaoJSON
 CLANG_TARGETS = DaoCxxInliner
 
 make_all = for %%x in ($(1)) do \
            	if not exist %%x.dll ( \
-           		$(MAKE) -C modules\%%x -f Makefile.win32.mingw & \
-           		$(COPY) modules\%%x\%%x.dll %%x.dll )
+				$(MAKE) -C modules\%%x & \
+				$(COPY) modules\%%x\%%x.dll %%x.dll )
 
 all:
 	$(call make_all,$(C_TARGETS))
+	if not exist string ( \
+		$(MAKE) -C modules\string & \
+		mkdir string & \
+		$(COPY) modules\string\*.dll string\*.dll & \
+		$(COPY) modules\string\string.dao string.dao)
 
 clang:
 	$(call make_all,$(CLANG_TARGETS))

@@ -1,5 +1,6 @@
 
 all:
-	-cd md5 && make
-	-cd tokenize && make
-	-cd xxtea && make
+	-cd md5 && $(MAKE)
+	-cd tokenize && $(MAKE)
+	-cd xxtea && $(MAKE)
+	-cd format && $(MAKE)
