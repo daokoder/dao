@@ -118,7 +118,6 @@ static const char* const daoCtInfo[] =
 	"Case value not constant",
 	"Cyclic loading detected",
 	"Numeric array is disabled",
-	"Serialization is disabled",
 	"Synchronous class is disabled",
 	"Template class is disabled",
 	"Runtime class creation is disabled",

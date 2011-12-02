@@ -1,4 +1,4 @@
-load DaoJSON;
+load "../json";
 
 data = { 
 	"module":               (any)"DaoJSON", 

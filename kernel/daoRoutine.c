@@ -453,11 +453,11 @@ int DRoutine_PassParams( DRoutine *routine, DaoValue *obj, DaoValue *recv[], Dao
 				passed = 1;
 			}
 		}else{
-			DaoValue *o = obj;
-			if( o->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				o = DaoObject_MapThisObject( o->xObject.rootObject, tp ); /* for virtual method call */
+			if( obj->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
+				/* for virtual method call, or calling C function on Dao object: */
+				obj = DaoObject_MapThisObject( obj->xObject.rootObject, tp );
 			}
-			if( DaoValue_Move2( o, & recv[0], tp ) ){
+			if( DaoValue_Move2( obj, & recv[0], tp ) ){
 				selfChecked = 1;
 				passed = 1;
 			}

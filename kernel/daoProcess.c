@@ -3054,6 +3054,35 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 InvalidParameter:
 	DaoProcess_ShowCallError( self, (DRoutine*)caller, selfpar, params, npar, DVM_CALL );
 }
+static DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoProcess *vmProc;
+	DaoRoutine *routine;
+	DaoValue *val = par[0];
+	DRoutine *rout;
+	int i, passed = 0;
+	if( val->type == DAO_STRING ) val = DaoNamespace_GetData( proc->activeNamespace, val->xString.data );
+	if( val == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
+		return NULL;
+	}
+	rout = (DRoutine*)DRoutine_Resolve( val, NULL, par+1, N-1, DVM_CALL );
+	if( rout ) passed = DRoutine_PassParams( rout, NULL, proc->freeValues, par+1, N-1, DVM_CALL );
+	if( passed == 0 || rout == NULL || rout->type != DAO_ROUTINE ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
+		return NULL;
+	}
+	routine = (DaoRoutine*) rout;
+	vmProc = DaoProcess_New( proc->vmSpace );
+	DaoProcess_PushRoutine( vmProc, routine, NULL );
+	vmProc->activeValues = vmProc->stackValues + vmProc->topFrame->stackBase;
+	for(i=0; i<routine->parCount; i++){
+		vmProc->activeValues[i] = proc->freeValues[i];
+		GC_IncRC( vmProc->activeValues[i] );
+	}
+	vmProc->status = DAO_VMPROC_SUSPENDED;
+	return vmProc;
+}
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n );
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 {

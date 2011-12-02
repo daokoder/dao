@@ -1,5 +1,6 @@
 
-load DaoNetwork;
+load network;
+load '../system/core';
 
 class @Server
 {
@@ -38,6 +39,6 @@ class @Client
 
 server = Server();
 server.Start();
-sys.sleep(1);
+sleep(1);
 client = Client();
 client.Start();

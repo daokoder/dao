@@ -12,6 +12,7 @@
   =========================================================================================*/
 
 #include "stdio.h"
+#include "string.h"
 #include "errno.h"
 
 #include"dao.h"
@@ -442,7 +443,7 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	if( value == NULL ){
 		strcpy( buf, "JSON parser error at line " );
-		itoa( line, buf + strlen( buf ), 10 );
+		snprintf( buf + strlen( buf ), 10, "%i", line );
 		strcat( buf, ": " );
 		switch( error ){
 		case JSON_ArrayNotClosed:  strcat( buf, "unexpected end of data (array)" ); break;

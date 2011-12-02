@@ -65,13 +65,17 @@ one: $(DAO_OBJECTS) kernel/daoMainv.o
 
 
 modules:
+	-cd modules/math && make
 	-cd modules/string && make
-	-cd modules/DaoCGI && make
+	-cd modules/system && make
+	-cd modules/reflection && make
+	-cd modules/serialization && make
+	-cd modules/network && make
+	-cd modules/web && make
 #	-cd modules/DaoCXX && make
 #	-cd modules/DaoFormat && make
 #	-cd modules/DaoInode && make
 #	-cd modules/DaoJIT && make
 #	-cd modules/DaoJSON && make
-#	-cd modules/DaoNetwork && make
 
 .PHONY: modules clean

@@ -1240,7 +1240,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	*newpos = k + 1;
 	switch( value ? value->type : 0 ){
 	case DAO_CLASS : type = value->xClass.objType; break;
-	case DAO_CTYPE : type = value->xCdata.ctype->kernel->abtype; break; /* get its CDATA type */
+	case DAO_CTYPE : type = value->xCdata.ctype->kernel->abtype; break; /* get its cdata type */
 	case DAO_TYPE  : type = & value->xType; break;
 	case DAO_INTERFACE : type = value->xInterface.abtype; break;
 	default : break;
@@ -1275,6 +1275,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		return DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, i, pbasic, 0,0 );
 	}
 	type = DaoType_FindType( name, ns, self->hostCdata, klass, routine );
+	if( type && type->tid == DAO_CTYPE ) type = type->kernel->abtype; /* get its cdata type */
 	if( type ) return type;
 	if( i > 0 && i < 100 ){
 		DaoValue *pbasic = token->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;

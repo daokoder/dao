@@ -1555,9 +1555,6 @@ const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self )
 }
 
 extern DaoTypeBase libStandardTyper;
-extern DaoTypeBase libSystemTyper;
-extern DaoTypeBase libMathTyper;
-extern DaoTypeBase libReflectTyper;
 extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
 
@@ -1892,9 +1889,6 @@ DaoVmSpace* DaoInit()
 #endif
 	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );
 	DaoNamespace_WrapType( vms->nsInternal, & libStandardTyper );
-	DaoNamespace_WrapType( vms->nsInternal, & libSystemTyper );
-	DaoNamespace_WrapType( vms->nsInternal, & libMathTyper );
-	DaoNamespace_WrapType( vms->nsInternal, & libReflectTyper );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );
 

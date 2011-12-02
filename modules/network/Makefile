@@ -1,11 +1,11 @@
-PROJECT = DaoNetwork
+PROJECT = network
 
 include ../../Makefile.common
 
 DAO_INCS += -I../../kernel
 DAO_LIBS += -L../..
 
-ifneq (,$(findstring DWIN32,$(DAO_CFLAGS)))
+ifdef (WIN32)
 	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2) -lwsock32
 else
 	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2)
@@ -15,11 +15,11 @@ TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
 all: $(TARGET)
 
-daoNetwork.o: daoNetwork.c
-	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) daoNetwork.c
+dao_network.o: dao_network.c
+	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) dao_network.c
 
-$(TARGET): daoNetwork.o
-	$(DAO_CC) $(DAO_DLLFLAGS) daoNetwork.o $(DAO_LIBS) $(DAO_LFLAGS_NET) -o $(TARGET)
+$(TARGET): dao_network.o
+	$(DAO_CC) $(DAO_DLLFLAGS) dao_network.o $(DAO_LIBS) $(DAO_LFLAGS_NET) -o $(TARGET)
 
 clean:
 	-$(DEL_FILE) *.o

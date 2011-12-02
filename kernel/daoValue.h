@@ -92,9 +92,6 @@ DAO_DLL complex16 DaoValue_GetComplex( DaoValue *self );
 DAO_DLL DLong* DaoValue_GetLong( DaoValue *self, DLong *lng );
 DAO_DLL DString* DaoValue_GetString( DaoValue *self, DString *str );
 
-DAO_DLL int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
-DAO_DLL int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
-
 DAO_DLL int DaoValue_IsNumber( DaoValue *self );
 DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *ctx, DaoStream *stream, DMap *cycData );
 
