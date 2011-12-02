@@ -15,6 +15,11 @@
 #include<math.h>
 #include"daoValue.h"
 
+#ifdef _MSC_VER
+#define isnan _isnan
+#define isfinite _finite
+#endif
+
 DAO_INIT_MODULE
 
 static void MATH_abs( DaoProcess *proc, DaoValue *p[], int N )
@@ -224,6 +229,25 @@ static void MATH_pow_cc( DaoProcess *proc, DaoValue *p[], int N )
 	COM_MUL( com2, com, p[1]->xComplex.value );
 	*res = exp_c( com2 );
 }
+static void MATH_round( DaoProcess *proc, DaoValue *p[], int N )
+{
+	double val = p[0]->xDouble.value;
+	DaoProcess_PutDouble( proc, ( val > 0 )? floor( val + 0.5 ) : ceil( val - 0.5 ) );
+}
+static void MATH_hypot( DaoProcess *proc, DaoValue *p[], int N )
+{
+	double val1 = p[0]->xDouble.value;
+	double val2 = p[1]->xDouble.value;
+	DaoProcess_PutDouble( proc, abs( val1 )*sqrt( 1 + pow( val2/val1, 2 ) ) );
+}
+static void MATH_isnan( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutInteger( proc, isnan( p[0]->xDouble.value ) );
+}
+static void MATH_isinf( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutInteger( proc, !isfinite( p[0]->xDouble.value ) );
+}
 
 static DaoFuncItem mathMeths[]=
 {
@@ -245,6 +269,10 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_srand,     "srand( p :double )=>double" },
 	{ MATH_rand,      "rand( p :double=1.0D )=>double" },
 	{ MATH_rand_gaussian,  "rand_gaussian( p :double=1.0D )=>double" },
+	{ MATH_round,     "round( p :double )=>double" },
+	{ MATH_hypot,     "hypot( p1 :double, p2 :double )=>double" },
+	{ MATH_isnan,     "isnan( p :double )=>int" },
+	{ MATH_isinf,     "isinf( p :double )=>int" },
 
 	{ MATH_pow,       "pow( p1 :double, p2 :double )=>double" },
 
@@ -276,5 +304,6 @@ static DaoFuncItem mathMeths[]=
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace_WrapFunctions( ns, mathMeths );
+	DaoNamespace_AddConstValue( ns, "Pi", (DaoValue*)DaoDouble_New( M_PI ) );
 	return 0;
 }

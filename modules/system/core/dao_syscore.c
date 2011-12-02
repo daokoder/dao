@@ -15,10 +15,15 @@
 #include"math.h"
 #include"string.h"
 #include"locale.h"
+#include"stdlib.h"
 
 #ifdef UNIX
 #include<unistd.h>
 #include<sys/time.h>
+#endif
+
+#ifdef _MSC_VER
+#define putenv _putenv
 #endif
 
 #include"daoString.h"
@@ -246,6 +251,26 @@ static void SYS_Clock( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutFloat( proc, ((float)clock())/CLOCKS_PER_SEC );
 }
+static void SYS_GetEnv( DaoProcess *proc, DaoValue *p[], int N )
+{
+	char *evar = getenv( DString_GetMBS( p[0]->xString.data ) );
+	DaoProcess_PutMBString( proc, evar? evar : "" );
+}
+static void SYS_PutEnv( DaoProcess *proc, DaoValue *p[], int N )
+{
+	char *name = DString_GetMBS( p[0]->xString.data );
+	char *value = DString_GetMBS( p[1]->xString.data );
+	char *buf = malloc( strlen( name ) + strlen( value ) + 2 );
+	if( !buf ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "memory allocation failed" );
+		return;
+	}
+	sprintf( buf, "%s=%s", name, value );
+	if( putenv( buf ) ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "error putting environment variable" );
+		free( buf );
+	}
+}
 
 static DaoFuncItem sysMeths[]=
 {
@@ -260,6 +285,8 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
 	{ SYS_SetLocale,
 		"setlocale( category: enum<all,collate,ctype,monetary,numeric,time> = $all, locale = '' )=>string" },
+	{ SYS_GetEnv,    "getenv( name: string )=>string" },
+	{ SYS_PutEnv,    "putenv( name: string, value = '' )"},
 	{ NULL, NULL }
 };
 
