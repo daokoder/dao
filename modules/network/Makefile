@@ -5,7 +5,7 @@ include ../../Makefile.common
 DAO_INCS += -I../../kernel
 DAO_LIBS += -L../..
 
-ifdef (WIN32)
+ifdef WIN32
 	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2) -lwsock32
 else
 	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2)

@@ -71,20 +71,20 @@
 	COM_UNMS( self, com ) \
 { (self).real = - com.real; (self).imag = - com.imag;  }
 
-double abs_c( const complex16 com );
-double arg_c( const complex16 com );
-double norm_c( const complex16 com );
-complex16 cos_c( const complex16 com );
-complex16 cosh_c( const complex16 com );
-complex16 exp_c( const complex16 com );
-complex16 log_c( const complex16 com );
-complex16 sin_c( const complex16 com );
-complex16 sinh_c( const complex16 com );
-complex16 sqrt_c( const complex16 com );
-complex16 tan_c( const complex16 com );
-complex16 tanh_c( const complex16 com );
-complex16 ceil_c( const complex16 com );
-complex16 floor_c( const complex16 com );
+DAO_DLL double abs_c( const complex16 com );
+DAO_DLL double arg_c( const complex16 com );
+DAO_DLL double norm_c( const complex16 com );
+DAO_DLL complex16 cos_c( const complex16 com );
+DAO_DLL complex16 cosh_c( const complex16 com );
+DAO_DLL complex16 exp_c( const complex16 com );
+DAO_DLL complex16 log_c( const complex16 com );
+DAO_DLL complex16 sin_c( const complex16 com );
+DAO_DLL complex16 sinh_c( const complex16 com );
+DAO_DLL complex16 sqrt_c( const complex16 com );
+DAO_DLL complex16 tan_c( const complex16 com );
+DAO_DLL complex16 tanh_c( const complex16 com );
+DAO_DLL complex16 ceil_c( const complex16 com );
+DAO_DLL complex16 floor_c( const complex16 com );
 
 #define LONG_BITS 8
 #define LONG_BASE 256

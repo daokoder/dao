@@ -134,5 +134,7 @@ DAO_DLL int DaoParser_ParseScript( DaoParser *self );
 DAO_DLL int DaoParser_ParseRoutine( DaoParser *self );
 
 DAO_DLL DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
+DAO_DLL int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop/*=-1*/ );
+DAO_DLL DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 
 #endif

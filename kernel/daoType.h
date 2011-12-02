@@ -106,25 +106,25 @@ extern DaoType *dao_type_for_iterator;
 extern DaoType *dao_access_enum;
 extern DaoType *dao_storage_enum;
 
-DaoType* DaoType_New( const char *name, short tid, DaoValue *pb, DArray *nest );
-DaoType* DaoType_Copy( DaoType *self );
-void DaoType_Delete( DaoType *self );
+DAO_DLL DaoType* DaoType_New( const char *name, short tid, DaoValue *pb, DArray *nest );
+DAO_DLL DaoType* DaoType_Copy( DaoType *self );
+DAO_DLL void DaoType_Delete( DaoType *self );
 
-void DaoType_InitDefault( DaoType *self );
-void DaoType_CheckAttributes( DaoType *self );
+DAO_DLL void DaoType_InitDefault( DaoType *self );
+DAO_DLL void DaoType_CheckAttributes( DaoType *self );
 
 /* if "self" match to "type": */
-short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
-short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
+DAO_DLL short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
+DAO_DLL short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
 short DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 /* define @X */
-DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
-void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
+DAO_DLL DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
+DAO_DLL void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 
 /* all DAO_INITYPE: @T ... */
-void DaoType_GetTypeHolders( DaoType *self, DMap *types );
+DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 
-DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
+DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
 
 #define NESTYPE(t,i) ((t)->nested->items.pType[i])
@@ -219,9 +219,9 @@ struct DaoCdataCore
 	int    (*DelTest)( void *data );
 };
 
-DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
-DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
-DaoValue* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
-DaoValue* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
+DAO_DLL DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
+DAO_DLL DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
+DAO_DLL DaoValue* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
+DAO_DLL DaoValue* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
 
 #endif

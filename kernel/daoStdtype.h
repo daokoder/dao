@@ -29,7 +29,7 @@ struct DaoNone
 {
 	DAO_DATA_CORE;
 };
-extern DaoValue *dao_none_value;
+DAO_DLL extern DaoValue *dao_none_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger
@@ -201,7 +201,7 @@ struct DaoCdata
 	uint_t  bufsize;
 };
 
-extern DaoTypeBase cdataTyper;
+DAO_DLL extern DaoTypeBase cdataTyper;
 extern DaoCdata cptrCdata;
 
 DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );

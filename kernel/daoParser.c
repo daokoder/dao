@@ -805,7 +805,6 @@ static void DaoParser_Reset( DaoParser *self, DaoInode *back, int regCount )
 }
 
 void DaoType_MapNames( DaoType *self );
-DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types, int *co );
 static DaoValue* DaoParser_GetVariable( DaoParser *self, int reg );
 static int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst );
