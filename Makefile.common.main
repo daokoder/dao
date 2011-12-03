@@ -65,7 +65,8 @@ one: $(DAO_OBJECTS) kernel/daoMainv.o
 
 
 modules:
-	-cd modules/aux && make
+	-cd modules/auxlib && make
+	-cd modules/syslib && make
 	-cd modules/math && make
 	-cd modules/string && make
 	-cd modules/system && make

@@ -1,5 +1,6 @@
 
-std.path( 'aux', $add );
+std.path( 'auxlib', $add );
+std.path( 'syslib', $add );
 std.path( 'math', $add );
 std.path( 'string', $add );
 std.path( 'system', $add );

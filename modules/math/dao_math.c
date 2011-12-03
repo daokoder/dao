@@ -251,6 +251,7 @@ static void MATH_isinf( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem mathMeths[]=
 {
+#if 0
 	{ MATH_abs,       "abs( p :double )=>double" },
 	{ MATH_acos,      "acos( p :double )=>double" },
 	{ MATH_asin,      "asin( p :double )=>double" },
@@ -266,8 +267,10 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_sqrt,      "sqrt( p :double )=>double" },
 	{ MATH_tan,       "tan( p :double )=>double" },
 	{ MATH_tanh,      "tanh( p :double )=>double" },
-	{ MATH_srand,     "srand( p :double )=>double" },
 	{ MATH_rand,      "rand( p :double=1.0D )=>double" },
+#endif
+
+	{ MATH_srand,     "srand( p :double )=>double" },
 	{ MATH_rand_gaussian,  "rand_gaussian( p :double=1.0D )=>double" },
 	{ MATH_round,     "round( p :double )=>double" },
 	{ MATH_hypot,     "hypot( p1 :double, p2 :double )=>double" },
@@ -276,6 +279,7 @@ static DaoFuncItem mathMeths[]=
 
 	{ MATH_pow,       "pow( p1 :double, p2 :double )=>double" },
 
+#if 0
 	{ MATH_abs_c,     "abs( p :complex )=>double" },
 	{ MATH_arg_c,     "arg( p :complex )=>double" },
 	{ MATH_imag_c,    "imag( p :complex )=>double" },
@@ -293,6 +297,7 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_tanh_c,    "tanh( p :complex )=>complex" },
 	{ MATH_ceil_c,    "ceil( p :complex )=>complex" },
 	{ MATH_floor_c,   "floor( p :complex )=>complex" },
+#endif
 
 	{ MATH_pow_rc,    "pow( p1 :double, p2 :complex )=>complex" },
 	{ MATH_pow_cr,    "pow( p1 :complex, p2 :double )=>complex" },
@@ -301,9 +306,27 @@ static DaoFuncItem mathMeths[]=
 	{ NULL, NULL }
 };
 
+DaoNumItem mathConsts[] =
+{
+	{ "MATH_E",        DAO_DOUBLE, M_E },
+	{ "MATH_LOG2E",    DAO_DOUBLE, M_LOG2E },
+	{ "MATH_LOG10E",   DAO_DOUBLE, M_LOG10E },
+	{ "MATH_LN2",      DAO_DOUBLE, M_LN2 },
+	{ "MATH_LN10",     DAO_DOUBLE, M_LN10 },
+	{ "MATH_PI",       DAO_DOUBLE, M_PI },
+	{ "MATH_PI_2",     DAO_DOUBLE, M_PI_2 },
+	{ "MATH_PI_4",     DAO_DOUBLE, M_PI_4 },
+	{ "MATH_1_PI",     DAO_DOUBLE, M_1_PI },
+	{ "MATH_2_PI",     DAO_DOUBLE, M_2_PI },
+	{ "MATH_2_SQRTPI", DAO_DOUBLE, M_2_SQRTPI },
+	{ "MATH_SQRT2",    DAO_DOUBLE, M_SQRT2 },
+	{ "MATH_SQRT1_2",  DAO_DOUBLE, M_SQRT1_2 },
+	{ NULL, 0.0, 0.0 }
+};
+
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace_WrapFunctions( ns, mathMeths );
-	DaoNamespace_AddConstValue( ns, "Pi", (DaoValue*)DaoDouble_New( M_PI ) );
+	DaoNamespace_AddConstNumbers( ns, mathConsts );
 	return 0;
 }
