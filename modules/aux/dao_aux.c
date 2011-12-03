@@ -19,7 +19,7 @@
 #include"daoParser.h"
 #include"daoNamespace.h"
 #include"daoGC.h"
-#include"dao_serialization.h"
+#include"dao_aux.h"
 
 DAO_INIT_MODULE
 
@@ -776,19 +776,19 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 	DaoParser_Delete( parser );
 }
 
-static void STD_Serialize( DaoProcess *proc, DaoValue *p[], int N )
+static void AUX_Serialize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *mbs = DaoProcess_PutMBString( proc, "" );
 	DaoValue_Serialize( p[0], mbs, proc->activeNamespace, proc );
 }
-static void STD_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
+static void AUX_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *value = NULL;
 	DaoValue_Deserialize( & value, p[0]->xString.data, proc->activeNamespace, proc );
 	DaoProcess_PutValue( proc, value );
 	GC_DecRC( value );
 }
-static void STD_Backup( DaoProcess *proc, DaoValue *p[], int N )
+static void AUX_Backup( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fout = fopen( DString_GetMBS( p[0]->xString.data ), "w+" );
 	if( fout == NULL ){
@@ -798,7 +798,7 @@ static void STD_Backup( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace_Backup( proc->activeNamespace, proc, fout, p[1]->xInteger.value );
 	fclose( fout );
 }
-static void STD_Restore( DaoProcess *proc, DaoValue *p[], int N )
+static void AUX_Restore( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin = fopen( DString_GetMBS( p[0]->xString.data ), "r" );
 	if( fin == NULL ){
@@ -808,20 +808,49 @@ static void STD_Restore( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace_Restore( proc->activeNamespace, proc, fin );
 	fclose( fin );
 }
-
-static DaoFuncItem serlMeths[]=
+static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 {
-	{ STD_Serialize, "serialize( value : any )=>string" },
-	{ STD_Deserialize, "deserialize( text : string )=>any" },
-	{ STD_Backup,    "backup( tofile = 'backup.sdo', limit=0 )" },
-	{ STD_Restore,   "restore( fromfile = 'backup.sdo' )" },
+	DString *source = p[0]->xString.data;
+	DaoList *list = DaoProcess_PutList( proc );
+	DArray *tokens = DArray_New(D_TOKEN);
+	int i, rc = 0;
+	DString_ToMBS( source );
+	rc = DaoToken_Tokenize( tokens, source->mbs, 0, 1, 1 );
+	if( rc ){
+		DaoString *str = DaoString_New(1);
+		for(i=0; i<tokens->size; i++){
+			DString_Assign( str->data, tokens->items.pToken[i]->string );
+			DArray_Append( & list->items, (DaoValue*) str );
+		}
+		DaoString_Delete( str );
+	}
+	DArray_Delete( tokens );
+}
+static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *info = p[0]->xString.data;
+	FILE *fout = fopen( "dao.log", "a" );
+	DString_ToMBS( info );
+	fprintf( fout, "%s\n", info->mbs );
+	fclose( fout );
+}
+
+static DaoFuncItem auxMeths[]=
+{
+	{ AUX_Serialize,   "serialize( value : any )=>string" },
+	{ AUX_Deserialize, "deserialize( text : string )=>any" },
+	{ AUX_Backup,      "backup( tofile = 'backup.sdo', limit=0 )" },
+	{ AUX_Restore,     "restore( fromfile = 'backup.sdo' )" },
+	{ AUX_Tokenize,    "tokenize( source :string )=>list<string>" },
+	{ AUX_Log,         "log( info='' )" },
 	{ NULL, NULL }
 };
 
+static DaoTypeBase auxTyper = { "aux", NULL, NULL, auxMeths, {0}, {0}, NULL, NULL };
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapFunctions( ns, serlMeths );
+	DaoNamespace_WrapType( ns, & auxTyper );
 	return 0;
 }
 

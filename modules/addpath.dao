@@ -1,9 +1,9 @@
 
+std.path( 'aux', $add );
 std.path( 'math', $add );
 std.path( 'string', $add );
 std.path( 'system', $add );
 std.path( 'reflection', $add );
-std.path( 'serialization', $add );
 std.path( 'network', $add );
 std.path( 'web', $add );
 std.path( 'DaoCXX', $add );

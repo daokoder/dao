@@ -283,7 +283,7 @@ int DInode_Append( DInode *self, const char *path, int dir, DInode *dest )
 	return DInode_Open( dest, buf );
 }
 
-extern DaoTypeBase inodeTyper;
+extern DaoTypeBase fsnodeTyper;
 
 int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *pattern )
 {
@@ -310,22 +310,22 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 	if (handle != -1){
 		DString *str = DString_New( 1 );
 		DaoValue *value;
-		DInode *inode;
+		DInode *fsnode;
 		do
 			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
 				DString_SetDataMBS( str, finfo.name, strlen(finfo.name) );
 				strcpy( buffer + len, finfo.name );
-				inode = DInode_New();
-				if( ( res = DInode_Open( inode, buffer ) ) != 0 ){
-					DInode_Delete( inode );
+				fsnode = DInode_New();
+				if( ( res = DInode_Open( fsnode, buffer ) ) != 0 ){
+					DInode_Delete( fsnode );
 					return res;
 				}
-				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
-					value = DaoValue_NewCdata( &inodeTyper, inode );
+				if( ( fsnode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
+					value = DaoValue_NewCdata( &fsnodeTyper, fsnode );
 					DaoList_PushBack( dest, value );
 				}
 				else
-					DInode_Delete( inode );
+					DInode_Delete( fsnode );
 			}
 		while( !_findnext( handle, &finfo ) );
 		DString_Delete( str );
@@ -339,22 +339,22 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 	if( handle ){
 		DString *str = DString_New( 1 );
 		DaoValue *value;
-		DInode *inode;
+		DInode *fsnode;
 		while( ( finfo = readdir( handle ) ) )
 			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
 				DString_SetDataMBS( str, finfo->d_name, strlen(finfo->d_name) );
 				strcpy( buffer + len, finfo->d_name );
-				inode = DInode_New();
-				if( ( res = DInode_Open( inode, buffer ) ) != 0 ){
-					DInode_Delete( inode );
+				fsnode = DInode_New();
+				if( ( res = DInode_Open( fsnode, buffer ) ) != 0 ){
+					DInode_Delete( fsnode );
 					return res;
 				}
-				if( ( inode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
-					value = DaoValue_NewCdata( &inodeTyper, inode );
+				if( ( fsnode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
+					value = DaoValue_NewCdata( &fsnodeTyper, fsnode );
 					DaoList_PushBack( dest, value );
 				}
 				else
-					DInode_Delete( inode );
+					DInode_Delete( fsnode );
 			}
 		DString_Delete( str );
 		closedir( handle );
@@ -373,11 +373,11 @@ static void GetErrorMessage( char *buffer, int code, int special )
 		strcpy( buffer, "Access not permitted (EACCES/EBADF)");
 		break;
 	case EBUSY:
-		strcpy (buffer, "The inode's path is being used (EBUSY)" );
+		strcpy (buffer, "The fsnode's path is being used (EBUSY)" );
 		break;
 	case ENOTEMPTY:
 	case EEXIST:
-		strcpy( buffer, special? "The directory is not empty (ENOTEMPTY/EEXIST)" : "The inode already exists (EEXIST/ENOTEMPTY)" );
+		strcpy( buffer, special? "The directory is not empty (ENOTEMPTY/EEXIST)" : "The fsnode already exists (EEXIST/ENOTEMPTY)" );
 		break;
 	case EPERM:
 	case ENOTDIR:
@@ -385,13 +385,13 @@ static void GetErrorMessage( char *buffer, int code, int special )
 		strcat( buffer, "Inconsistent type of the file object(s) (EPERM/ENOTDIR/EISDIR)" );
 		break;
 	case EINVAL:
-		strcpy( buffer, special? "The inode's path does not exist (EINVAL)" : "Trying to make the directory its own subdirectory (EINVAL)" );
+		strcpy( buffer, special? "The fsnode's path does not exist (EINVAL)" : "Trying to make the directory its own subdirectory (EINVAL)" );
 		break;
 	case EMLINK:
 		strcat( buffer, "Trying to create too many entries in the parent directory (EMLINK)" );
 		break;
 	case ENOENT:
-		strcpy( buffer, "The inode's path does not exist (ENOENT)" );
+		strcpy( buffer, "The fsnode's path does not exist (ENOENT)" );
 		break;
 	case ENOSPC:
 		strcpy( buffer, "No space for a new entry in the file system (ENOSPC)" );
@@ -400,10 +400,10 @@ static void GetErrorMessage( char *buffer, int code, int special )
 		strcpy( buffer, "Trying to write to a read-only file system (EROFS)" );
 		break;
 	case EXDEV:
-		strcpy( buffer, "Trying to relocate the inode to a different file system (EXDEV)" );
+		strcpy( buffer, "Trying to relocate the fsnode to a different file system (EXDEV)" );
 		break;
 	case ENAMETOOLONG:
-		strcpy( buffer, "The inode's path is too long (ENAMETOOLONG)" );
+		strcpy( buffer, "The fsnode's path is too long (ENAMETOOLONG)" );
 		break;
 	case EMFILE:
 	case ENFILE:
@@ -417,7 +417,7 @@ static void GetErrorMessage( char *buffer, int code, int special )
 	}
 }
 
-static void DaoInode_Open( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Open( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char errbuf[MAX_ERRMSG + 256];
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
@@ -437,33 +437,33 @@ static void DaoInode_Open( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-static void DaoInode_Isopen( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Isopen( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, ((DInode*)DaoValue_TryGetCdata( p[0] ))->path ? 1 : 0 );
 }
 
-static void DaoInode_Close( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Close( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode_Close( self );
 }
 
-static void DaoInode_Path( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	DaoProcess_PutMBString( proc, self->path );
 }
 
-static void DaoInode_Name( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Name( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	int i;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	for (i = strlen( self->path ) - 1; i >= 0; i--)
@@ -475,53 +475,53 @@ static void DaoInode_Name( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_PutMBString( proc, self->path + i + 1 );
 }
 
-static void DaoInode_Parent( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Parent( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode *par;
 	char path[MAX_PATH + 1];
 	int res = 0;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	par = DInode_New();
 	if( !DInode_Parent( self, path ) || ( res = DInode_Open( par, path ) ) != 0 ){
 		DInode_Delete( par );
 		if( res == 0 )
-			strcpy( path, "The inode has no parent" );
+			strcpy( path, "The fsnode has no parent" );
 		else
 			GetErrorMessage( path, res, 0 );
 		DaoProcess_RaiseException( proc, DAO_ERROR, path );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)par, &inodeTyper );
+	DaoProcess_PutCdata( proc, (void*)par, &fsnodeTyper );
 }
 
-static void DaoInode_Type( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Type( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	DaoProcess_PutEnum( proc, self->type == 1 ? "file" : "dir" );
 }
 
-static void DaoInode_Rename( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Rename( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	int res;
 	char errbuf[MAX_ERRMSG];
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if ( (res = DInode_Rename( self, DaoValue_TryGetMBString( p[1] ) ) ) != 0 ){
 		if( res == -1 )
 			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
 		else if( res == 1 )
-			strcpy( errbuf, "Trying to rename root inode" );
+			strcpy( errbuf, "Trying to rename root fsnode" );
 		else
 			GetErrorMessage( errbuf, res, 0 );
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
@@ -529,13 +529,13 @@ static void DaoInode_Rename( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-static void DaoInode_Remove( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Remove( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	int res;
 	char errbuf[MAX_ERRMSG];
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if ( (res = DInode_Remove( self ) ) != 0 ){
@@ -545,32 +545,32 @@ static void DaoInode_Remove( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-static void DaoInode_Ctime( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Ctime( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	DaoProcess_PutInteger( proc, self->ctime );
 }
 
-static void DaoInode_Mtime( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Mtime( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	DaoProcess_PutInteger( proc, self->mtime );
 }
 
-static void DaoInode_Access( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Access( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	char res[20] = {0};
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if( self->pread )
@@ -582,25 +582,25 @@ static void DaoInode_Access( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutEnum( proc, res );
 }
 
-static void DaoInode_Makefile( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Makefile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode *child;
 	char errbuf[MAX_ERRMSG];
 	int res;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not a directory" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not a directory" );
 		return;
 	}
 	child = DInode_New();
 	if( ( res = DInode_Append( self, DaoValue_TryGetMBString( p[1] ), 0, child ) ) != 0 ){
 		DInode_Delete( child );
 		if( res == 1 )
-			strcpy( errbuf, "The inode's name is invalid (EINVAL)" );
+			strcpy( errbuf, "The fsnode's name is invalid (EINVAL)" );
 		else if( res == -1 )
 			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
 		else
@@ -608,28 +608,28 @@ static void DaoInode_Makefile( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)child, &inodeTyper );
+	DaoProcess_PutCdata( proc, (void*)child, &fsnodeTyper );
 }
 
-static void DaoInode_Makedir( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Makedir( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode *child;
 	char errbuf[MAX_ERRMSG];
 	int res;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not a directory" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not a directory" );
 		return;
 	}
 	child = DInode_New();
 	if( ( res = DInode_Append( self, DaoValue_TryGetMBString( p[1] ), 1, child ) ) != 0 ){
 		DInode_Delete( child );
 		if( res == 1 )
-			strcpy( errbuf, "The inode's name is invalid (EINVAL)" );
+			strcpy( errbuf, "The fsnode's name is invalid (EINVAL)" );
 		else if( res == -1 )
 			strcpy( errbuf, "'.' and '..' entries in path are not allowed" );
 		else
@@ -637,31 +637,31 @@ static void DaoInode_Makedir( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)child, &inodeTyper );
+	DaoProcess_PutCdata( proc, (void*)child, &fsnodeTyper );
 }
 
-static void DaoInode_Isroot( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Isroot( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	if( self->path == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	DaoProcess_PutInteger( proc, IS_PATH_SEP( self->path[strlen( self->path ) - 1] ) ? 1 : 0 );
 }
 
-static void DaoInode_Child( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Child( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode *child;
 	char path[MAX_PATH + 1], *str;
 	int res;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not a directory" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not a directory" );
 		return;
 	}
 	child = DInode_New();
@@ -677,7 +677,7 @@ static void DaoInode_Child( DaoProcess *proc, DaoValue *p[], int N )
 	if( ( res = DInode_Open( child, path ) ) != 0 ){
 		DInode_Delete( child );
 		if( res == 1 )
-			strcpy( path, "The inode is not a directory" );
+			strcpy( path, "The fsnode is not a directory" );
 		else if( res == -1 )
 			strcpy( path, "'.' and '..' entries in path are not allowed" );
 		else
@@ -685,7 +685,7 @@ static void DaoInode_Child( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, path );
 		return;                                  
 	}
-	DaoProcess_PutCdata( proc, (void*)child, &inodeTyper );
+	DaoProcess_PutCdata( proc, (void*)child, &fsnodeTyper );
 }
 
 static void DInode_Children( DInode *self, DaoProcess *proc, int type, DString *pat, int ft )
@@ -696,11 +696,11 @@ static void DInode_Children( DInode *self, DaoProcess *proc, int type, DString *
 	DString *strbuf;
 	DaoRegex *pattern;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
 	if( self->type != 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not a directory" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not a directory" );
 		return;
 	}
 	filter = DString_GetMBS( pat );
@@ -770,44 +770,44 @@ static void DInode_Children( DInode *self, DaoProcess *proc, int type, DString *
 	}
 }
 
-static void DaoInode_Children( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Children( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode_Children( self, proc, DaoValue_TryGetEnum( p[1] ), DaoString_Get( DaoValue_CastString( p[2] ) ),
 					 DaoValue_TryGetEnum( p[3] ) );
 }
 
-static void DaoInode_Files( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Files( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode_Children( self, proc, 1, DaoString_Get( DaoValue_CastString( p[1] ) ), DaoValue_TryGetEnum( p[2] ) );
 }
 
-static void DaoInode_Dirs( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Dirs( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	DInode_Children( self, proc, 2, DaoString_Get( DaoValue_CastString( p[1] ) ), DaoValue_TryGetEnum( p[2] ) );
 }
 
-static void DaoInode_Suffix( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_Suffix( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
 	char *pos;
 	if( !self->path ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open!" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open!" );
 		return;
 	}
 	pos = strrchr( self->path, '.' );
 	DaoProcess_PutMBString( proc, pos? pos + 1 : "" );
 }
 
-static void DaoInode_New( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_New( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char errbuf[MAX_ERRMSG + 256];
-	DInode *inode = DInode_New();
+	DInode *fsnode = DInode_New();
 	int res;
 	char *path = DaoValue_TryGetMBString( p[0] );
-	if( ( res = DInode_Open( inode, path ) ) != 0 ){
+	if( ( res = DInode_Open( fsnode, path ) ) != 0 ){
 		if( res == 1 )
 			strcpy( errbuf, "Trying to open something which is not a file/directory" );
 		else if( res == -1 )
@@ -819,76 +819,76 @@ static void DaoInode_New( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)inode, &inodeTyper );
+	DaoProcess_PutCdata( proc, (void*)fsnode, &fsnodeTyper );
 }
 
-static void DaoInode_GetCWD( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_GetCWD( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char buf[MAX_PATH + 1];
 	int res = 0;
-	DInode *inode = DInode_New();
-	if( !getcwd( buf, MAX_PATH ) || ( res = DInode_Open( inode, buf ) ) != 0 ){
-		DInode_Delete( inode );
+	DInode *fsnode = DInode_New();
+	if( !getcwd( buf, MAX_PATH ) || ( res = DInode_Open( fsnode, buf ) ) != 0 ){
+		DInode_Delete( fsnode );
 		GetErrorMessage( buf, ( res == 0 )? errno : res, 0 );
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)inode, &inodeTyper );
+	DaoProcess_PutCdata( proc, (void*)fsnode, &fsnodeTyper );
 }
 
-static void DaoInode_SetCWD( DaoProcess *proc, DaoValue *p[], int N )
+static void FSNode_SetCWD( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DInode *inode = (DInode*)DaoValue_TryGetCdata( p[0] );
+	DInode *fsnode = (DInode*)DaoValue_TryGetCdata( p[0] );
 	char errbuf[MAX_PATH + 1];
-	if( inode->path == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not open" );
+	if( fsnode->path == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not open" );
 		return;
 	}
-	if( inode->type != 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "The inode is not a directory" );
+	if( fsnode->type != 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "The fsnode is not a directory" );
 		return;
 	}
-	if( chdir( inode->path ) != 0 ){
+	if( chdir( fsnode->path ) != 0 ){
 		GetErrorMessage( errbuf, errno, 0 );
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
 }
 
-static DaoFuncItem inodeMeths[] =
+static DaoFuncItem fsnodeMeths[] =
 {
-	{ DaoInode_New,      "inode( path : string )=>inode" },
-	{ DaoInode_Open,     "open( self : inode, path : string )" },
-	{ DaoInode_Isopen,   "isopen( self : inode )=>int" },
-	{ DaoInode_Close,    "close( self : inode )" },
-	{ DaoInode_Path,     "path( self : inode )=>string" },
-	{ DaoInode_Name,     "name( self : inode )=>string" },
-	{ DaoInode_Type,     "type( self : inode )=>enum<file, dir>" },
-	{ DaoInode_Suffix,   "suffix( self: inode )=>string" },
-	{ DaoInode_Parent,   "parent( self : inode )=>inode" },
-	{ DaoInode_Ctime,    "ctime( self : inode )=>int" },
-	{ DaoInode_Mtime,    "mtime( self : inode )=>int" },
-	{ DaoInode_Access,   "access( self : inode )=>enum<read; write; execute>" },
-	{ DaoInode_Rename,   "rename( self : inode, path : string )" },
-	{ DaoInode_Remove,   "remove( self : inode )" },
-	{ DaoInode_Makefile, "makefile( self : inode, path : string )=>inode" },
-	{ DaoInode_Makedir,  "makedir( self : inode, path : string )=>inode" },
-	{ DaoInode_Isroot,   "isroot( self : inode )=>int" },
-	{ DaoInode_Children, "children( self : inode, type : enum<files; dirs>, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<inode>" },
-	{ DaoInode_Files,    "files( self : inode, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<inode>" },
-	{ DaoInode_Dirs,     "dirs( self : inode, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<inode>" },
-	{ DaoInode_Child,    "[]( self : inode, path : string )=>inode" },
-	{ DaoInode_GetCWD,   "getcwd(  )=>inode" },
-	{ DaoInode_SetCWD,   "setcwd( self : inode )" },
+	{ FSNode_New,      "fsnode( path : string )=>fsnode" },
+	{ FSNode_Open,     "open( self : fsnode, path : string )" },
+	{ FSNode_Isopen,   "isopen( self : fsnode )=>int" },
+	{ FSNode_Close,    "close( self : fsnode )" },
+	{ FSNode_Path,     "path( self : fsnode )=>string" },
+	{ FSNode_Name,     "name( self : fsnode )=>string" },
+	{ FSNode_Type,     "type( self : fsnode )=>enum<file, dir>" },
+	{ FSNode_Suffix,   "suffix( self: fsnode )=>string" },
+	{ FSNode_Parent,   "parent( self : fsnode )=>fsnode" },
+	{ FSNode_Ctime,    "ctime( self : fsnode )=>int" },
+	{ FSNode_Mtime,    "mtime( self : fsnode )=>int" },
+	{ FSNode_Access,   "access( self : fsnode )=>enum<read; write; execute>" },
+	{ FSNode_Rename,   "rename( self : fsnode, path : string )" },
+	{ FSNode_Remove,   "remove( self : fsnode )" },
+	{ FSNode_Makefile, "makefile( self : fsnode, path : string )=>fsnode" },
+	{ FSNode_Makedir,  "makedir( self : fsnode, path : string )=>fsnode" },
+	{ FSNode_Isroot,   "isroot( self : fsnode )=>int" },
+	{ FSNode_Children, "children( self : fsnode, type : enum<files; dirs>, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<fsnode>" },
+	{ FSNode_Files,    "files( self : fsnode, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<fsnode>" },
+	{ FSNode_Dirs,     "dirs( self : fsnode, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<fsnode>" },
+	{ FSNode_Child,    "[]( self : fsnode, path : string )=>fsnode" },
+	{ FSNode_GetCWD,   "getcwd(  )=>fsnode" },
+	{ FSNode_SetCWD,   "setcwd( self : fsnode )" },
 	{ NULL, NULL }
 };
 
-DaoTypeBase inodeTyper = {
-	"inode", NULL, NULL, inodeMeths, {NULL}, {0}, (FuncPtrDel)DInode_Delete, NULL
+DaoTypeBase fsnodeTyper = {
+	"fsnode", NULL, NULL, fsnodeMeths, {NULL}, {0}, (FuncPtrDel)DInode_Delete, NULL
 };
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & inodeTyper );
+	DaoNamespace_WrapType( ns, & fsnodeTyper );
 	return 0;
 }

@@ -103,6 +103,12 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	DArray_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_Import( proc->activeNamespace, ns, NULL );
 }
+static void STD_Argv( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DaoList *list = DaoProcess_PutList( proc );
+	for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
+}
 static void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 {
 	DaoType *abtp = DaoNamespace_GetType( ns, var );
@@ -348,14 +354,6 @@ static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_RaiseException( proc, DAO_ERROR, DString_GetMBS( p[0]->xString.data ) );
 }
-static void STD_Log( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *info = p[0]->xString.data;
-	FILE *fout = fopen( "dao.log", "a" );
-	DString_ToMBS( info );
-	fprintf( fout, "%s\n", info->mbs );
-	fclose( fout );
-}
 static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, DaoGC_Max( -1 ) );
@@ -455,25 +453,6 @@ ListAuxMethods:
 	}
 	DArray_Delete( array );
 	DMap_Delete( hash );
-}
-extern int DaoToken_Tokenize( DArray *toks, const char *src, int r, int cmt, int nosp );
-static void STD_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *source = p[0]->xString.data;
-	DaoList *list = DaoProcess_PutList( proc );
-	DArray *tokens = DArray_New(D_TOKEN);
-	int i, rc = 0;
-	DString_ToMBS( source );
-	rc = DaoToken_Tokenize( tokens, source->mbs, 0, 1, 1 );
-	if( rc ){
-		DaoString *str = DaoString_New(1);
-		for(i=0; i<tokens->size; i++){
-			DString_Assign( str->data, tokens->items.pToken[i]->string );
-			DArray_Append( & list->items, (DaoValue*) str );
-		}
-		DaoString_Delete( str );
-	}
-	DArray_Delete( tokens );
 }
 static void STD_SubType( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -674,18 +653,17 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
 	{ STD_Eval,      "eval( source :string, replace=0, stream=io, safe=0 )" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )" },
+	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },
 	{ STD_Copy,      "copy( object : @OBJECT ) =>@OBJECT" },
 	{ STD_Debug,     "debug( ... )" },
+	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Error,     "error( info :string )" },
-	{ STD_Log,       "log( info='' )" },
 	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
 	{ STD_ListMeth,  "listmeth( object )" },
-	{ STD_Tokenize,  "tokenize( source :string )=>list<string>" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
-	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Version,   "version()=>string" },
 	{ STD_Size,      "datasize( value: @T<int|float|double|complex|long|string> )=>int" },
 
@@ -698,8 +676,6 @@ static DaoFuncItem stdMeths[]=
 	{ NULL, NULL }
 };
 
-DaoTypeBase libStandardTyper = {
-	"std", NULL, NULL, stdMeths, {0}, {0}, NULL, NULL
-};
+DaoTypeBase libStandardTyper = { "std", NULL, NULL, stdMeths, {0}, {0}, NULL, NULL };
 
 

@@ -356,43 +356,6 @@ static void DaoIO_GetString( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Assign( res, self->streamString );
 	DString_Clear( self->streamString );
 }
-static void DaoIO_Popen( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoStream *stream = NULL;
-	char *mode;
-	DString *fname;
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	stream = DaoStream_New();
-	stream->file = (DFile*)dao_malloc( sizeof(DFile) );
-	stream->file->rc = 1;
-	stream->attribs |= DAO_IO_PIPE;
-	fname = stream->fname;
-	DString_Assign( fname, p[0]->xString.data );
-	if( DString_Size( fname ) >0 ){
-		mode = DString_GetMBS( p[1]->xString.data );
-		stream->file->fd = popen( DString_GetMBS( fname ), mode );
-		if( stream->file->fd == NULL ){
-			dao_free( stream->file );
-			stream->file = NULL;
-			DaoProcess_RaiseException( proc, DAO_ERROR, "error opening pipe" );
-		}
-		stream->mode = 0;
-		if( strstr( mode, "+" ) )
-			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
-		else{
-			if( strstr( mode, "r" ) )
-				stream->mode |= DAO_IO_READ;
-			if( strstr( mode, "w" ) || strstr( mode, "a" ) )
-				stream->mode |= DAO_IO_WRITE;
-		}
-	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "empty command line" );
-	}
-	DaoProcess_PutValue( proc, (DaoValue*)stream );
-}
 static void DaoIO_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
@@ -553,7 +516,6 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{ DaoIO_Open,      "open( )=>stream" },
 	{ DaoIO_Open,      "open( file :string, mode :string )=>stream" },
-	{ DaoIO_Popen,     "popen( cmd :string, mode :string )=>stream" },
 	{ DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
 	{ DaoIO_GetString, "getstring( self :stream )=>string" },
 	{ DaoIO_Close,     "close( self :stream )" },

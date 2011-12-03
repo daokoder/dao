@@ -1215,21 +1215,27 @@ size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0
 	return MAXSIZE;
 }
 
+static char *empty_mbs = "";
+static wchar_t *empty_wcs = L"";
 
 DString DString_WrapBytes( const char *mbs, int n )
 {
 	DString str = { 0, 0, 0, 0, NULL, NULL };
+	str.mbs = empty_mbs;
+	if( mbs == NULL ) return str;
 	str.mbs = (char*) mbs;
 	str.size = str.bufSize = n;
 	return str;
 }
 DString DString_WrapMBS( const char *mbs )
 {
-	return DString_WrapBytes( mbs, strlen( mbs ) );
+	return DString_WrapBytes( mbs, mbs ? strlen( mbs ) : 0 );
 }
 DString DString_WrapWCS( const wchar_t *wcs )
 {
 	DString str = { 0, 0, 0, 0, NULL, NULL };
+	str.wcs = empty_wcs;
+	if( wcs == NULL ) return str;
 	str.wcs = (wchar_t*) wcs;
 	str.size = str.bufSize = wcslen( wcs );
 	return str;

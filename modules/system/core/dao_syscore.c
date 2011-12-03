@@ -209,6 +209,40 @@ static void SYS_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, system( DString_GetMBS( p[0]->xString.data ) ) );
 }
+static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoStream *stream = NULL;
+	char *mode;
+	DString *fname;
+
+	stream = DaoStream_New();
+	stream->file = (DFile*)dao_malloc( sizeof(DFile) );
+	stream->file->rc = 1;
+	stream->attribs |= DAO_IO_PIPE;
+	fname = stream->fname;
+	DString_Assign( fname, p[0]->xString.data );
+	if( DString_Size( fname ) >0 ){
+		mode = DString_GetMBS( p[1]->xString.data );
+		stream->file->fd = popen( DString_GetMBS( fname ), mode );
+		if( stream->file->fd == NULL ){
+			dao_free( stream->file );
+			stream->file = NULL;
+			DaoProcess_RaiseException( proc, DAO_ERROR, "error opening pipe" );
+		}
+		stream->mode = 0;
+		if( strstr( mode, "+" ) )
+			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
+		else{
+			if( strstr( mode, "r" ) )
+				stream->mode |= DAO_IO_READ;
+			if( strstr( mode, "w" ) || strstr( mode, "a" ) )
+				stream->mode |= DAO_IO_WRITE;
+		}
+	}else{
+		DaoProcess_RaiseException( proc, DAO_ERROR, "empty command line" );
+	}
+	DaoProcess_PutValue( proc, (DaoValue*)stream );
+}
 static void SYS_Time( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, time( NULL ) );
@@ -275,6 +309,7 @@ static void SYS_PutEnv( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem sysMeths[]=
 {
 	{ SYS_Shell,     "shell( command :string )" },
+	{ SYS_Popen,     "popen( cmd :string, mode :string )=>stream" },
 	{ SYS_Sleep,     "sleep( seconds :float )" },
 	{ SYS_Exit,      "exit( code=0 )" },
 	{ SYS_Clock,     "clock()=>float" },
@@ -290,8 +325,10 @@ static DaoFuncItem sysMeths[]=
 	{ NULL, NULL }
 };
 
+DaoTypeBase modSysCoreTyper = { "sys", NULL, NULL, sysMeths, {0}, {0}, NULL, NULL };
+
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapFunctions( ns, sysMeths );
+	DaoNamespace_WrapType( ns, & modSysCoreTyper );
 	return 0;
 }
