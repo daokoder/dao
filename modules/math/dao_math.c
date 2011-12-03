@@ -238,7 +238,7 @@ static void MATH_hypot( DaoProcess *proc, DaoValue *p[], int N )
 {
 	double val1 = p[0]->xDouble.value;
 	double val2 = p[1]->xDouble.value;
-	DaoProcess_PutDouble( proc, abs( val1 )*sqrt( 1 + pow( val2/val1, 2 ) ) );
+	DaoProcess_PutDouble( proc, fabs( val1 )*sqrt( 1 + pow( val2/val1, 2 ) ) );
 }
 static void MATH_isnan( DaoProcess *proc, DaoValue *p[], int N )
 {
