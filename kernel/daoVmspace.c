@@ -66,11 +66,16 @@ static int TestPath( DaoVmSpace *vms, DString *fname );
 
 extern ulong_t FileChangedTime( const char *file );
 
+static const char* const daoDllPrefix[] =
+{
+	"", "", "", "",
+	"dao_", "libdao_", "lib"
+};
 static const char* const daoFileSuffix[] =
 {
-	".dao.o", ".dao.s", ".dao", 
-	DAO_DLL_SUFFIX,
-	DAO_DLL_SUFFIX /* duplicated for automatically adding "lib" prefix; */
+	".dao.o", ".dao.s", ".dao", DAO_DLL_SUFFIX,
+	DAO_DLL_SUFFIX, DAO_DLL_SUFFIX, DAO_DLL_SUFFIX
+	/* duplicated for automatically adding "dao/libdao_/lib" prefix; */
 };
 enum{
 	DAO_MODULE_NONE,
@@ -1075,11 +1080,11 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 		if( TestPath( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
 		DString *fn = DString_New(1);
-		for(i=0; i<(4+alib); i++){
+		for(i=0; i<(4+3*alib); i++){
 			DString_Assign( fn, fname );
-			if( i == 4 ){
+			if( i >= 4 ){
 				if( strncmp( fname->mbs, "lib", 3 ) == 0 ) break;
-				DString_InsertMBS( fn, "lib", 0, 0, 0 );
+				DString_InsertMBS( fn, daoDllPrefix[i], 0, 0, 0 );
 			}
 			DString_AppendMBS( fn, daoFileSuffix[i] );
 			DaoVmSpace_MakePath( self, fn, 1 );
