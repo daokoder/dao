@@ -114,9 +114,9 @@ ifdef WIN32
   DAO_INC_DIR = $(DAO_DIR)\include
   DAO_TOOL_DIR = $(DAO_DIR)\tool
 
-  DAO_LFLAGS_DAO  = /link /libpath:. /link /libpath:$(DAO_DIR) -ldao
-  DAO_LFLAGS_DAO2 = /link /libpath:. /link /libpath:$(DAO_DIR) -ldao
-  DAO_LFLAGS_MOD  = /link /libpath:. /link /libpath:$(DAO_MOD_DIR)
+  DAO_LFLAGS_DAO  = -Wl,-rpath=. -Wl,-rpath=$(DAO_DIR) -ldao
+  DAO_LFLAGS_DAO2 = -Wl,-rpath=. -Wl,-rpath=$(DAO_DIR) -ldao
+  DAO_LFLAGS_MOD  = -Wl,-rpath=. -Wl,-rpath=$(DAO_MOD_DIR)
 
   AR        = ar rcs
   COPY      = copy /y
