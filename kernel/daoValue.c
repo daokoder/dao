@@ -749,7 +749,7 @@ int DaoValue_Type( DaoValue *self )
 {
 	return self->type;
 }
-DaoValue* DaoValue_NewNull()
+DaoValue* DaoValue_NewNone()
 {
 	DaoNone *res = DaoNone_New();
 	GC_IncRC( res );

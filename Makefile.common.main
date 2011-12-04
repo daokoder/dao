@@ -48,7 +48,7 @@ kernel/daoMaindl.o: kernel/daoMaindl.c
 
 ####### Build rules
 
-all: $(DAO_DLL) $(DAO_EXE)
+all: $(DAO_DLL) $(DAO_EXE) modules
 
 $(DAO_DLL): $(DAO_OBJECTS)
 	$(DAO_CC) $(DAO_DLLFLAGS) -o $(DAO_DLL) $(DAO_OBJECTS) $(DAO_LIBS)
@@ -65,15 +65,6 @@ one: $(DAO_OBJECTS) kernel/daoMainv.o
 
 
 modules:
-	-cd modules/auxlib && make
-	-cd modules/syslib && make
-	-cd modules/math && make
-	-cd modules/string && make
-	-cd modules/system && make
-	-cd modules/reflection && make
-	-cd modules/network && make
-	-cd modules/web && make
-#	-cd modules/DaoCXX && make
-#	-cd modules/DaoJIT && make
+	-cd modules && make
 
 .PHONY: modules clean

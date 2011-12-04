@@ -101,7 +101,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	}
 #endif
 	DArray_PopFront( vms->pathLoading );
-	if( import && ns ) DaoNamespace_Import( proc->activeNamespace, ns, NULL );
+	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
 static void STD_Argv( DaoProcess *proc, DaoValue *p[], int N )
 {

@@ -49,13 +49,12 @@ struct DaoVmSpace
     DMap   *allProcesses;
     DArray *processes;
 
+	DString *mainSource;
     DString *pathWorking;
     DArray  *nameLoading;
     DArray  *pathLoading;
     DArray  *pathSearching; /* <DString*> */
 
-    DString *fileName;
-    DString *source;
     int options;
     char stopit;
     char safeTag;
@@ -65,9 +64,6 @@ struct DaoVmSpace
 
     /* map full file name (including path and suffix) to module namespace */
     DMap  *nsModules;
-    /* map file name (excluding path and suffix) to module namespace:
-     * mainly for requiring modules in load statement */
-    DMap  *modRequire;
     DMap  *allTokens;
 
     DaoUserHandler *userHandler;
@@ -78,7 +74,6 @@ struct DaoVmSpace
 #ifdef DAO_WITH_THREAD
     DMutex  mutexLoad;
     DMutex  mutexProc;
-    int locked;
 #endif
 };
 
@@ -98,7 +93,7 @@ DAO_DLL int DaoVmSpace_Compile( DaoVmSpace *self, DaoNamespace *ns, DString *src
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 
 DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
-DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *rns, int alib);
+DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, int alib);
 DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 
 DAO_DLL void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int type, int check );

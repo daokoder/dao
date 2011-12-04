@@ -555,7 +555,7 @@ static int dao_cxx_inliner( DaoNamespace *NS, DString *mode, DString *verbatim, 
 		DString_SetMBS( out, "Invalid inline mode" );
 	}
 	if( markers->size ){
-		DString_SetMBS( out, "Invalid specifiers for the mode: \n" );
+		DString_AppendMBS( out, "Invalid specifiers for the mode: \n" );
 		for(size_t i=0; i<markers->size; i++){
 			DString *marker = markers->items.pString[i];
 			DString_Append( out, marker );
@@ -564,6 +564,44 @@ static int dao_cxx_inliner( DaoNamespace *NS, DString *mode, DString *verbatim, 
 		retc = 1;
 	}
 	DString_Delete( source );
+	DArray_Delete( markers );
+	return retc;
+}
+static int dao_cxx_loader( DaoNamespace *NS, DString *file, DString *emsg )
+{
+	DArray *markers;
+	DString *source, *marker = NULL;
+	size_t start = 0;
+	int retc = 0;
+
+	source = DString_New(1);
+	if( DString_ReadFile( source, file->mbs ) == 0 ){
+		DString_Delete( source );
+		return 1;
+	}
+	marker = DString_New(1);
+	markers = DArray_New(D_STRING);
+	while( start < source->size && source->mbs[start] == '@' ){
+		size_t end = DString_FindChar( source, '\n', start );
+		if( end == (size_t)-1 ) break;
+		DString_SetDataMBS( marker, source->mbs + start, end - start );
+		DArray_Append( markers, marker );
+		start = end + 1;
+		while( start < source->size && isspace( source->mbs[start] ) ) start += 1;
+	}
+	DString_Erase( source, 0, start );
+	retc = dao_cxx_source( NS, file, markers, source, emsg );
+	if( markers->size ){
+		DString_AppendMBS( emsg, "Invalid specifiers in the module file: \n" );
+		for(size_t i=0; i<markers->size; i++){
+			DString *marker = markers->items.pString[i];
+			DString_Append( emsg, marker );
+			DString_AppendChar( emsg, '\n' );
+		}
+		retc = 1;
+	}
+	DString_Delete( source );
+	DString_Delete( marker );
 	DArray_Delete( markers );
 	return retc;
 }
@@ -633,6 +671,8 @@ int DaoOnLoad( DaoVmSpace *vms, DaoNamespace *ns )
 
 	DaoNamespace_AddCodeInliner( ns, "cxx", dao_cxx_inliner );
 	DaoNamespace_AddCodeInliner( ns, "cpp", dao_cxx_inliner );
+	DaoNamespace_AddModuleLoader( ns, "cxx", dao_cxx_loader );
+	DaoNamespace_AddModuleLoader( ns, "cpp", dao_cxx_loader );
 	DaoNamespace_TypeDefine( ns, "int", "short" );
 	DaoNamespace_TypeDefine( ns, "int", "size_t" );
 	DaoNamespace_TypeDefine( ns, "int", "int8_t" );

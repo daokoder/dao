@@ -63,8 +63,6 @@ DaoVmSpace *mainVmSpace = NULL;
 DaoProcess *mainProcess = NULL;
 
 extern ulong_t FileChangedTime( const char *file );
-extern int Dao_IsFile( const char *file );
-extern int Dao_IsDir( const char *file );
 
 static int TestFile( DaoVmSpace *vms, DString *fname )
 {
@@ -325,17 +323,15 @@ DaoVmSpace* DaoVmSpace_New()
 	DaoValue_Init( self, DAO_VMSPACE );
 	self->stdStream = DaoStream_New();
 	self->stdStream->vmSpace = self;
-	self->source = DString_New(1);
 	self->options = 0;
 	self->stopit = 0;
 	self->safeTag = 1;
 	self->evalCmdline = 0;
 	self->userHandler = NULL;
+	self->mainSource = DString_New(1);
 	self->vfiles = DMap_New(D_STRING,D_STRING);
 	self->nsModules = DMap_New(D_STRING,0);
-	self->modRequire = DMap_New(D_STRING,0);
 	self->allTokens = DMap_New(D_STRING,0);
-	self->fileName = DString_New(1);
 	self->pathWorking = DString_New(1);
 	self->nameLoading = DArray_New(D_STRING);
 	self->pathLoading = DArray_New(D_STRING);
@@ -348,7 +344,6 @@ DaoVmSpace* DaoVmSpace_New()
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->mutexLoad );
 	DMutex_Init( & self->mutexProc );
-	self->locked = 0;
 #endif
 
 	self->nsInternal = NULL; /* need to be set for DaoNamespace_New() */
@@ -369,7 +364,6 @@ DaoVmSpace* DaoVmSpace_New()
 	GC_IncRC( self->mainProcess );
 
 	if( mainVmSpace ) DaoNamespace_AddParent( self->nsInternal, mainVmSpace->nsInternal );
-	DString_Clear( self->source );
 
 	return self;
 }
@@ -389,8 +383,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdStream );
-	DString_Delete( self->source );
-	DString_Delete( self->fileName );
+	DString_Delete( self->mainSource );
 	DString_Delete( self->pathWorking );
 	DArray_Delete( self->nameLoading );
 	DArray_Delete( self->pathLoading );
@@ -399,7 +392,6 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->allTokens );
 	DMap_Delete( self->nsModules );
-	DMap_Delete( self->modRequire );
 	DMap_Delete( self->allProcesses );
 	GC_DecRC( self->mainProcess );
 #ifdef DAO_WITH_THREAD
@@ -412,44 +404,28 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 void DaoVmSpace_Lock( DaoVmSpace *self )
 {
 #ifdef DAO_WITH_THREAD
-	if( self->locked ) return;
 	DMutex_Lock( & self->mutexLoad );
-	self->locked = 1;
 #endif
 }
 void DaoVmSpace_Unlock( DaoVmSpace *self )
 {
 #ifdef DAO_WITH_THREAD
-	if( self->locked ==0 ) return;
-	self->locked = 0;
 	DMutex_Unlock( & self->mutexLoad );
 #endif
 }
-static int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname )
+static int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 {
-	FILE *fin;
-	char buf[IO_BUF_SIZE];
 	DNode *node = MAP_Find( self->vfiles, fname );
 	/* printf( "reading %s\n", fname->mbs ); */
 	if( node ){
-		DString_Assign( self->source, node->value.pString );
+		DString_Assign( source, node->value.pString );
 		return 1;
 	}
-	fin = fopen( fname->mbs, "r" );
-	DString_Clear( self->source );
-	if( ! fin ){
-		DaoStream_WriteMBS( self->stdStream, "ERROR: can not open file \"" );
-		DaoStream_WriteMBS( self->stdStream, fname->mbs );
-		DaoStream_WriteMBS( self->stdStream, "\".\n" );
-		return 0;
-	}
-	while(1){
-		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
-		if( count ==0 ) break;
-		DString_AppendDataMBS( self->source, buf, count );
-	}
-	fclose( fin );
-	return 1;
+	if( DString_ReadFile( source, fname->mbs ) ) return 1;
+	DaoStream_WriteMBS( self->stdStream, "ERROR: can not open file \"" );
+	DaoStream_WriteMBS( self->stdStream, fname->mbs );
+	DaoStream_WriteMBS( self->stdStream, "\".\n" );
+	return 0;
 }
 void SplitByWhiteSpaces( DString *str, DArray *tokens )
 {
@@ -503,8 +479,8 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 	for( i=0; i<array->size; i++ ){
 		DString *token = array->items.pString[i];
 		if( self->evalCmdline ){
-			DString_Append( self->source, token );
-			DString_AppendChar( self->source, ' ' );
+			DString_Append( self->mainSource, token );
+			DString_AppendChar( self->mainSource, ' ' );
 			continue;
 		}
 		if( token->mbs[0] =='-' && token->size >1 && token->mbs[1] =='-' ){
@@ -514,7 +490,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 				self->options |= DAO_EXEC_VINFO;
 			}else if( strcmp( token->mbs, "--eval" ) ==0 ){
 				self->evalCmdline = 1;
-				DString_Clear( self->source );
+				DString_Clear( self->mainSource );
 			}else if( strcmp( token->mbs, "--debug" ) ==0 ){
 				self->options |= DAO_EXEC_DEBUG;
 			}else if( strcmp( token->mbs, "--safe" ) ==0 ){
@@ -569,7 +545,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 						   daoConfig.typedcode = 0;
 						   break;
 				case 'e' : self->evalCmdline = 1;
-						   DString_Clear( self->source );
+						   DString_Clear( self->mainSource );
 						   break;
 				case '-' : break;
 				default :
@@ -654,12 +630,13 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	if( array == NULL && file ){
 		array = DArray_New(D_STRING);
 		SplitByWhiteSpaces( file, array );
-		DString_Assign( self->fileName, array->items.pString[0] );
+		DString_Assign( ns->name, array->items.pString[0] );
 	}
 	DString_Assign( val, array->items.pString[0] );
 	DaoList_Append( argv, sval );
 	DaoMap_Insert( cmdarg, nkey, sval );
-	DaoVmSpace_MakePath( self, self->fileName, DAO_FILE_PATH, 1 );
+	DaoVmSpace_MakePath( self, ns->name, DAO_FILE_PATH, 1 );
+	DaoNamespace_SetName( ns, ns->name->mbs ); /* to update ns->path and ns->file; */
 	i = 1;
 	while( i < array->size ){
 		DString *s = array->items.pString[i];
@@ -706,12 +683,18 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	}
 	DString_SetMBS( str, "ARGV" );
 	DaoNamespace_AddConst( ns, str, (DaoValue*) argv, DAO_DATA_PUBLIC );
-	if( ns == self->mainNamespace )
+	if( ns == self->mainNamespace ){
+		DaoVmSpace_Lock( self );
 		DaoNamespace_AddConst( self->nsInternal, str, nkey, DAO_DATA_PUBLIC );
+		DaoVmSpace_Unlock( self );
+	}
 	DString_SetMBS( str, "CMDARG" );
 	DaoNamespace_AddConst( ns, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC );
-	if( ns == self->mainNamespace )
+	if( ns == self->mainNamespace ){
+		DaoVmSpace_Lock( self );
 		DaoNamespace_AddConst( self->nsInternal, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC );
+		DaoVmSpace_Unlock( self );
+	}
 	if( args == NULL ) DArray_Delete( array );
 	DString_Delete( key );
 	DString_Delete( val );
@@ -795,7 +778,7 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run )
 {
 	DArray *args = DArray_New(D_STRING);
-	DString *path = self->fileName;
+	DString *path = DString_New(1);
 	DaoNamespace *ns = NULL;
 
 	SplitByWhiteSpaces( file, args );
@@ -807,6 +790,7 @@ DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run )
 	default : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break; /* any suffix */
 	}
 	DArray_Delete( args );
+	DString_Delete( path );
 	if( ns == NULL ) return 0;
 	return ns;
 }
@@ -854,7 +838,6 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
 	char *chs;
 	int ch, newline = 0;
-	DString_SetMBS( self->fileName, "interactive codes" );
 	DString_SetMBS( self->mainNamespace->name, "interactive codes" );
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
 	while(1){
@@ -978,9 +961,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		DArray_PushFront( self->pathLoading, self->pathWorking );
 		if( self->evalCmdline ){
 			DaoRoutine *rout;
-			DString_SetMBS( self->fileName, "command line codes" );
 			DString_SetMBS( self->mainNamespace->name, "command line codes" );
-			if( DaoProcess_Compile( vmp, ns, self->source, 1 ) ==0 ) return 0;
+			if( DaoProcess_Compile( vmp, ns, self->mainSource, 1 ) ==0 ) return 0;
 			DaoVmSpace_ExeCmdArgs( self );
 			rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
 			if( DaoProcess_Call( vmp, (DaoMethod*) rout, NULL, NULL, 0 ) ==0 ) return 0;
@@ -994,7 +976,6 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	argNames = DArray_New(D_STRING);
 	argValues = DArray_New(D_STRING);
 	DaoVmSpace_ParseArguments( self, ns, file, NULL, argNames, argValues );
-	DaoNamespace_SetName( ns, self->fileName->mbs );
 	DaoVmSpace_AddPath( self, ns->path->mbs );
 	DArray_PushFront( self->nameLoading, ns->name );
 	DArray_PushFront( self->pathLoading, ns->path );
@@ -1006,8 +987,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	ns->time = tm;
 
 	/* self->fileName may has been changed */
-	res = DaoVmSpace_ReadSource( self, ns->name );
-	res = res && DaoProcess_Compile( vmp, ns, self->source, 1 );
+	res = DaoVmSpace_ReadSource( self, ns->name, self->mainSource );
+	res = res && DaoProcess_Compile( vmp, ns, self->mainSource, 1 );
 	if( res ) DaoVmSpace_ConvertArguments( ns, argNames, argValues );
 	DArray_Delete( argNames );
 	DArray_Delete( argValues );
@@ -1137,14 +1118,13 @@ static DaoNamespace* DaoVmSpace_LoadDaoAssembly( DaoVmSpace *self, DString *fnam
  * The next time the module is loaded:
  * (1) its implicit main is executed, IF run != 0; (mainly for IDE)
  * (2) its explicit main that matches with "args" will be executed. */
-static DaoNamespace* 
-DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, int run )
+DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, int run )
 {
-	DArray *argNames = NULL;
-	DArray *argValues = NULL;
-	DaoParser *parser;
-	DaoProcess *vmProc;
-	DaoNamespace *ns;
+	DString *source = NULL;
+	DArray *argNames = NULL, *argValues = NULL;
+	DaoNamespace *ns = NULL, *ns2 = NULL;
+	DaoParser *parser = NULL;
+	DaoProcess *process;
 	DString name;
 	DNode *node;
 	ulong_t tm = 0;
@@ -1159,39 +1139,41 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, i
 		argNames = DArray_New(D_STRING);
 		argValues = DArray_New(D_STRING);
 	}
-	DString_SetMBS( self->fileName, libpath->mbs );
 
+	DaoVmSpace_Lock( self );
 	node = MAP_Find( self->nsModules, libpath );
+	if( node ) ns = ns2 = (DaoNamespace*)node->value.pValue;
+	DaoVmSpace_Unlock( self );
+
 	tm = FileChangedTime( libpath->mbs );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->mbs, node ); */
-	if( node ){
-		ns = (DaoNamespace*)node->value.pValue;
-		if( ns->time >= tm ){
-			if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
-			if( run ) goto ExecuteImplicitMain;
-			goto ExecuteExplicitMain;
-		}
+	if( ns && ns->time >= tm ){
+		if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
+		if( run ) goto ExecuteImplicitMain;
+		goto ExecuteExplicitMain;
 	}
 
-	if( ! DaoVmSpace_ReadSource( self, libpath ) ) return 0;
+	source = DString_New(1);
+	if( ! DaoVmSpace_ReadSource( self, libpath, source ) ) goto LaodingFailed;
 
 	/*
 	   printf("%p : loading %s\n", self, libpath->mbs );
 	 */
 	parser = DaoParser_New();
-	DString_Assign( parser->fileName, self->fileName );
+	DString_Assign( parser->fileName, libpath );
 	parser->vmSpace = self;
-	if( ! DaoParser_LexCode( parser, DString_GetMBS( self->source ), 1 ) ) goto LaodingFailed;
+	if( ! DaoParser_LexCode( parser, DString_GetMBS( source ), 1 ) ) goto LaodingFailed;
 
 	ns = DaoNamespace_New( self, libpath->mbs );
 	ns->time = tm;
-	/*DString_Assign( ns->source, self->source );*/
 	if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 
-	GC_IncRC( ns );
+	GC_ShiftRC( ns, ns2 );
+
+	DaoVmSpace_Lock( self );
 	node = MAP_Find( self->nsModules, libpath );
-	if( node ) GC_DecRC( node->value.pValue );
 	MAP_Insert( self->nsModules, libpath, ns );
+	DaoVmSpace_Unlock( self );
 
 #if 0
 	tok = parser->tokStr->items.pString;
@@ -1209,14 +1191,20 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, i
 	/*
 	   printf("%p : parsing %s\n", self, libpath->mbs );
 	 */
+	DaoVmSpace_Lock( self );
 	DArray_PushFront( self->nameLoading, ns->name );
 	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
+	DaoVmSpace_Unlock( self );
+
 	parser->nameSpace = ns;
 	bl = DaoParser_ParseScript( parser );
+
+	DaoVmSpace_Lock( self );
 	if( ns->path->size ) DArray_PopFront( self->pathLoading );
 	DArray_PopFront( self->nameLoading );
-	if( ! bl ) goto LaodingFailed;
+	DaoVmSpace_Unlock( self );
 
+	if( ! bl ) goto LaodingFailed;
 	if( ns->mainRoutine == NULL ) goto LaodingFailed;
 	DString_SetMBS( ns->mainRoutine->routName, "::main" );
 	if( args ){
@@ -1230,20 +1218,25 @@ DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, i
 
 ExecuteImplicitMain :
 	if( ns->mainRoutine->vmCodes->size > 1 ){
-		vmProc = DaoProcess_New( self );
-		GC_IncRC( vmProc );
+		process = DaoVmSpace_AcquireProcess( self );
+		DaoVmSpace_Lock( self );
 		DArray_PushFront( self->nameLoading, ns->path );
 		DArray_PushFront( self->pathLoading, ns->path );
-		DaoProcess_PushRoutine( vmProc, ns->mainRoutine, NULL );
-		if( ! DaoProcess_Execute( vmProc ) ){
-			GC_DecRC( vmProc );
+		DaoVmSpace_Unlock( self );
+		DaoProcess_PushRoutine( process, ns->mainRoutine, NULL );
+		if( ! DaoProcess_Execute( process ) ){
+			DaoVmSpace_ReleaseProcess( self, process );
+			DaoVmSpace_Lock( self );
 			DArray_PopFront( self->nameLoading );
 			DArray_PopFront( self->pathLoading );
-			return 0;
+			DaoVmSpace_Unlock( self );
+			goto LaodingFailed;
 		}
-		GC_DecRC( vmProc );
+		DaoVmSpace_ReleaseProcess( self, process );
+		DaoVmSpace_Lock( self );
 		DArray_PopFront( self->nameLoading );
 		DArray_PopFront( self->pathLoading );
+		DaoVmSpace_Unlock( self );
 	}
 
 ExecuteExplicitMain :
@@ -1260,25 +1253,26 @@ ExecuteExplicitMain :
 		if( value && value->type == DAO_ROUTINE ){
 			int ret, N = ns->argParams->items.size;
 			DaoValue **ps = ns->argParams->items.items.pValue;
-			DaoProcess *vmp = self->mainProcess;
-			DaoRoutine *mainRoutine = & value->xRoutine;
-			ret = DaoProcess_Call( vmp, (DaoMethod*)mainRoutine, NULL, ps, N );
+			DaoRoutine *rout = & value->xRoutine;
+			process = DaoVmSpace_AcquireProcess( self );
+			ret = DaoProcess_Call( process, (DaoMethod*)rout, NULL, ps, N );
 			if( ret == DAO_ERROR_PARAM ){
 				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				if( mainRoutine->routHelp )
-					DaoStream_WriteString( self->stdStream, mainRoutine->routHelp );
-				return 0;
+				if( rout->routHelp ) DaoStream_WriteString( self->stdStream, rout->routHelp );
 			}
-			if( ret ) return 0;
+			DaoVmSpace_ReleaseProcess( self, process );
+			if( ret ) goto LaodingFailed;
 		}
 	}
+	if( source ) DString_Delete( source );
 	if( argNames ) DArray_Delete( argNames );
 	if( argValues ) DArray_Delete( argValues );
 	return ns;
 LaodingFailed :
+	if( source ) DString_Delete( source );
 	if( argNames ) DArray_Delete( argNames );
 	if( argValues ) DArray_Delete( argValues );
-	DaoParser_Delete( parser );
+	if( parser ) DaoParser_Delete( parser );
 	return 0;
 }
 DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
@@ -1289,23 +1283,28 @@ DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 static void* DaoOpenDLL( const char *name );
 static void* DaoGetSymbolAddress( void *handle, const char *name );
 
-DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArray *reqns )
+typedef void (*FuncType)( DaoVmSpace *, DaoNamespace * );
+
+static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath )
 {
-	DaoNamespace *ns;
+	DaoNamespace *ns = NULL;
 	DNode *node;
-	typedef void (*FuncType)( DaoVmSpace *, DaoNamespace * );
-	void (*funpter)( DaoVmSpace *, DaoNamespace * );
+	FuncType funpter;
 	void *handle;
 	long *dhv;
-	int i;
+	size_t i;
 
 	if( self->options & DAO_EXEC_SAFE ){
 		DaoStream_WriteMBS( self->stdStream,
 				"ERROR: not permitted to open shared library in safe running mode.\n" );
 		return NULL;
 	}
+	DaoVmSpace_Lock( self );
 	node = MAP_Find( self->nsModules, libpath );
-	if( node ) return (DaoNamespace*) node->value.pValue;
+	if( node ) ns = (DaoNamespace*) node->value.pValue;
+	DaoVmSpace_Unlock( self );
+
+	if( ns ) return ns;
 
 	handle = DaoOpenDLL( libpath->mbs );
 	if( ! handle ){
@@ -1333,7 +1332,10 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 	ns = DaoNamespace_New( self, libpath->mbs );
 	ns->libHandle = handle;
 	GC_IncRC( ns );
+	DaoVmSpace_Lock( self );
 	MAP_Insert( self->nsModules, libpath, ns );
+	DaoVmSpace_Unlock( self );
+
 	i = DString_RFindChar( libpath, '/', -1 );
 	if( i != MAXSIZE ) DString_Erase( libpath, 0, i+1 );
 	i = DString_RFindChar( libpath, '\\', -1 );
@@ -1341,25 +1343,22 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 	i = DString_FindChar( libpath, '.', 0 );
 	if( i != MAXSIZE ) DString_Erase( libpath, i, -1 );
 	/* printf( "%s\n", libpath->mbs ); */
-	if( reqns ){
-		for(i=0; i<reqns->size; i++){
-			node = MAP_Find( self->modRequire, reqns->items.pString[i] );
-			/* printf( "requiring:  %p  %s\n", node, reqns->items.pString[i]->mbs ); */
-			/*
-			   if( node ) DaoNamespace_Import( ns, (DaoNamespace*)node->value.pValue, NULL );
-			 */
-			if( node ) DaoNamespace_AddParent( ns, (DaoNamespace*)node->value.pValue );
-		}
-	}
+
 	/* no warning or error for loading a C/C++ dynamic linking library
 	   for solving symbols in Dao modules. */
 	if( dhv == NULL && funpter == NULL ) return ns;
 
+	DaoVmSpace_Lock( self );
 	DArray_PushFront( self->nameLoading, ns->name );
 	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
+	DaoVmSpace_Unlock( self );
+
 	(*funpter)( self, ns );
+
+	DaoVmSpace_Lock( self );
 	if( ns->path->size ) DArray_PopFront( self->pathLoading );
 	DArray_PopFront( self->nameLoading );
+	DaoVmSpace_Unlock( self );
 #if 0
 	change to handle returned value of DaoOnLoad?
 		if( bl ==0 ){
@@ -1373,17 +1372,21 @@ DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath, DArr
 void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *file, const char *data )
 {
 	DNode *node;
-	DString_ToMBS( self->fileName );
-	DString_SetMBS( self->fileName, "/@/" );
-	DString_AppendMBS( self->fileName, file );
-	node = DMap_Find( self->vfiles, self->fileName );
+	DString *fname = DString_New(1);
+	DString *source = DString_New(1);
+	DString_ToMBS( fname );
+	DString_SetMBS( fname, "/@/" );
+	DString_AppendMBS( fname, file );
+	node = DMap_Find( self->vfiles, fname );
 	if( node ){
 		DString_AppendMBS( node->value.pString, data );
 	}else{
-		DString_ToMBS( self->source );
-		DString_SetMBS( self->source, data );
-		MAP_Insert( self->vfiles, self->fileName, self->source );
+		DString_ToMBS( source );
+		DString_SetMBS( source, data );
+		MAP_Insert( self->vfiles, fname, source );
 	}
+	DString_Delete( fname );
+	DString_Delete( source );
 }
 
 void Dao_MakePath( DString *base, DString *path )
@@ -1942,7 +1945,7 @@ DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 	if( node ) return (DaoNamespace*) node->value.pValue;
 	return NULL;
 }
-DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *reqns, int alib )
+DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, int alib )
 {
 	DaoNamespace *ns = NULL;
 #ifdef DAO_WITH_THREAD
@@ -1954,7 +1957,7 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *r
 	case DAO_MODULE_DAO_O : ns = DaoVmSpace_LoadDaoByteCode( self, fname, 1 ); break;
 	case DAO_MODULE_DAO_S : ns = DaoVmSpace_LoadDaoAssembly( self, fname, 1 ); break;
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
-	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname, reqns ); break;
+	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;
 	}
 #ifdef DAO_WITH_THREAD
 #endif

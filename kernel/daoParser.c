@@ -4383,7 +4383,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	if( self->error ) return 0;
 	return DaoParser_PostParsing( self );
 }
-static DaoEnode DaoParser_NullValue( DaoParser *self )
+static DaoEnode DaoParser_NoneValue( DaoParser *self )
 {
 	DaoEnode enode = {0,0,0,NULL,NULL,NULL,NULL};
 	int cst = 0;
@@ -4713,6 +4713,14 @@ int DaoParser_PostParsing( DaoParser *self )
 	return 1;
 }
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent );
+static DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DString *file )
+{
+	DString suffix;
+	size_t i = DString_RFindChar( file, '.', file->size - 1 );
+	if( i == MAXSIZE ) return NULL;
+	suffix = DString_WrapMBS( file->mbs + i + 1 );
+	return DaoNamespace_FindModuleLoader( self, & suffix );
+}
 int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 {
 	DaoNamespace *ns, *mod, *nameSpace = self->nameSpace;
@@ -4721,8 +4729,6 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DaoClass *hostClass = self->hostClass;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *modname = NULL;
-	DArray *varImport = DArray_New(D_STRING);
-	DArray *nsRequire = DArray_New(D_STRING);
 	DaoValue *value;
 	int i = start+1, j, code = 0;
 	int perm = self->permission;
@@ -4754,50 +4760,9 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}
 	}
 	tki = tokens[i]->name;
-	if( tki != DTOK_LCB && tki != DTOK_LSB && tki != DTOK_SEMCO
-			&& tki != DKEY_REQUIRE && tki != DKEY_IMPORT && tki != DKEY_AS ){
+	if( tki != DTOK_LCB && tki != DTOK_LSB && tki != DTOK_SEMCO && tki != DKEY_AS ){
 		code = DAO_CTW_LOAD_INVALID;
 		goto ErrorLoad;
-	}
-	for(j=0; j<2; j++){
-		DArray *array = NULL;
-		if( tokens[i]->name == DKEY_REQUIRE ){
-			array = nsRequire;
-		}else if( tokens[i]->name == DKEY_IMPORT ){
-			array = varImport;
-		}
-		if( array == NULL ) continue;
-		do{
-			i ++;
-			if( array == varImport && tokens[i]->type != DTOK_IDENTIFIER ){
-				code = DAO_CTW_LOAD_INVALID_VAR;
-				goto ErrorLoad;
-			}
-			if( tokens[i]->type == DTOK_MBS || tokens[i]->type == DTOK_WCS ){
-				DString_SubString( tokens[i]->string, self->str, 1, tokens[i]->string->size-2 );
-			}else{
-				DString_Assign( self->str, tokens[i]->string );
-			}
-			DArray_Append( array, self->str );
-			i ++;
-		}while( i < end && tokens[i]->name == DTOK_COMMA );
-	}
-	while( tokens[i]->name == DTOK_LCB ){
-		int r = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, i, end );
-		if( r < 0 ){
-			code = DAO_CTW_LOAD_INVALID;
-			goto ErrorLoad;
-		}
-		for( j=i+1; j<r; j++){
-			tki = tokens[j]->name;
-			if( tki == DTOK_COMMA || tki == DTOK_SEMCO ) continue;
-			if( tokens[j]->type == DTOK_IDENTIFIER ){
-				code = DAO_CTW_LOAD_INVALID_VAR;
-				goto ErrorLoad;
-			}
-			DArray_Append( varImport, tokens[j]->string );
-		}
-		i = r + 1;
 	}
 	if( tokens[i]->name == DKEY_AS ){
 		if( tokens[i+1]->type != DTOK_IDENTIFIER ){
@@ -4820,34 +4785,31 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	}
 	mod = NULL;
 
-	DaoVmSpace_Lock( self->vmSpace );
-#if 0
-	if( tokens[i]->name == DKEY_BY ){
-		int reg = DaoParser_GetRegister( self, tokens[i+1] );
-		value = DaoParser_GetVariable( self, reg );
-		if( value && value->type == DAO_CDATA ){
-			typedef DaoNamespace* (*LoaderFuncPtr)( DaoVmSpace *vms, const char *name );
-			DaoCdata *cdata = & value->xCdata;
-			LoaderFuncPtr loader = (LoaderFuncPtr)cdata->data;
-			if( loader ) mod = (*loader)( self->vmSpace, self->mbs->mbs );
-			if( mod && mod->type != DAO_NAMESPACE ) mod = 0;
-		}
-		i += 2;
-	}else 
-#endif
 	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) ==NULL ){
-		/* self->mbs could be changed by DaoVmSpace_LoadModule() */
+		DaoModuleLoader loader = DaoNamespace_FindModuleLoader2( ns, self->mbs );
+		/* self->mbs could be changed during loading */
 		DString_Assign( self->str, self->mbs );
-		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs, nsRequire, addlib );
-		MAP_Insert( vmSpace->modRequire, self->str, mod );
-		if( modname ) MAP_Insert( vmSpace->modRequire, modname, mod );
-		if( mod == NULL && modname == NULL && varImport->size ==0 ){
-			mod = DaoVmSpace_FindModule( vmSpace, self->mbs );
-			cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
-			mod = NULL;
+		if( loader ){
+			DaoVmSpace_MakePath( vmSpace, self->mbs, DAO_FILE_PATH, 1 );
+			if( Dao_IsFile( self->mbs->mbs ) ){
+				mod = DaoNamespace_New( vmSpace, self->mbs->mbs );
+				if( (*loader)( mod, self->mbs, self->mbs2 ) ){
+					GC_IncRC( mod );
+					GC_DecRC( mod );
+					mod = NULL;
+					DaoParser_Error( self, DAO_CTW_LOAD_FAILED, self->mbs2 );
+					goto ErrorLoad;
+				}
+			}
+		}else{
+			mod = DaoVmSpace_LoadModule( vmSpace, self->mbs, addlib );
+			if( mod == NULL && modname == NULL ){
+				mod = DaoVmSpace_FindModule( vmSpace, self->mbs );
+				cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
+				mod = NULL;
+			}
 		}
 	}
-	DaoVmSpace_Unlock( self->vmSpace );
 
 	nameSpace->mainRoutine = mainRout;
 	DaoNamespace_SetConst( nameSpace, DVR_NSC_MAIN, (DaoValue*) mainRout );
@@ -4856,14 +4818,10 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		if( vmSpace->stopit ) code = DAO_CTW_LOAD_CANCELLED;
 		goto ErrorLoad;
 	}
-	if( modname == NULL && varImport->size ==0 ){
+	if( modname == NULL ){
 		cyclic = (DaoNamespace_AddParent( nameSpace, mod ) == 0);
 	}else if( ns != mod ){
-		if( varImport->size ){
-			DaoNamespace_Import( ns, mod, varImport );
-		}else{
-			cyclic = (DaoNamespace_AddParent( ns, mod ) == 0);
-		}
+		cyclic = (DaoNamespace_AddParent( ns, mod ) == 0);
 	}
 	if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
 	if( ns == nameSpace ){
@@ -4877,24 +4835,11 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	   printf("ns=%p; mod=%p; myns=%p\n", ns, mod, nameSpace);
 	 */
 
-	if( varImport->size >0 ){
-		int k;
-		DString_Clear( self->mbs );
-		for( k=0; k<varImport->size; k++){
-			DString_Append( self->mbs, varImport->items.pString[k] );
-			DString_AppendMBS( self->mbs, " " );
-		}
-		DaoParser_Warn( self, DAO_CTW_LOAD_VAR_NOT_FOUND, self->mbs );
-	}
 	if( i != end ) DaoParser_Warn( self, DAO_CTW_LOAD_REDUNDANT, NULL );
-	DArray_Delete( varImport );
-	DArray_Delete( nsRequire );
 	return 1;
 ErrorLoad:
 	DaoParser_Error( self, code, NULL );
 	if( code != DAO_CTW_LOAD_FAILED ) DaoParser_Error( self, DAO_CTW_LOAD_FAILED, NULL );
-	DArray_Delete( varImport );
-	DArray_Delete( nsRequire );
 	return 0;
 }
 
@@ -6105,7 +6050,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				self->curToken += 1;
 				if( DaoParser_FindOpenToken( self, DTOK_COMMA, start+1, rb, 0 ) < 0 ){
 					if( (start+1) == rb ){
-						enode = DaoParser_NullValue( self );
+						enode = DaoParser_NoneValue( self );
 					}else{
 						enode = DaoParser_ParseExpression( self, 0 );
 					}

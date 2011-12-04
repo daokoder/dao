@@ -286,7 +286,7 @@ typedef void  (*FuncPtrDel)( void* );
 typedef int   (*FuncPtrTest)( void* );
 typedef void  (*DaoFuncPtr) ( DaoProcess *process, DaoValue *params[], int npar );
 
-typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename );
+typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename, DString *emsg );
 typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out );
 
 typedef struct DaoNumItem   DaoNumItem;
@@ -366,7 +366,7 @@ DAO_DLL void DaoQuit();
 
 DAO_DLL int DaoValue_Type( DaoValue *self );
 
-DAO_DLL  DaoValue* DaoValue_NewNull();
+DAO_DLL  DaoValue* DaoValue_NewNone();
 DAO_DLL DaoValue* DaoValue_NewInteger( dint v );
 DAO_DLL DaoValue* DaoValue_NewFloat( float v );
 DAO_DLL DaoValue* DaoValue_NewDouble( double v );
@@ -476,7 +476,8 @@ DAO_DLL size_t DString_RFind( DString *self, DString *chs, size_t start );
 DAO_DLL size_t DString_RFindMBS( DString *self, const char *ch, size_t start );
 DAO_DLL size_t DString_RFindChar( DString *self, char ch, size_t start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
-DAO_DLL int  DString_Compare( DString *left, DString *right );
+DAO_DLL int DString_Compare( DString *left, DString *right );
+DAO_DLL int DString_ReadFile( DString *self, const char *fname );
 
 DAO_DLL DaoInteger* DaoInteger_New( dint value );
 DAO_DLL dint        DaoInteger_Get( DaoInteger *self );

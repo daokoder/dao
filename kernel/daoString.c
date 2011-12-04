@@ -818,29 +818,23 @@ size_t DString_FindChar( DString *self, char ch, size_t start )
 {
 	size_t i;
 	if( self->mbs ){
-		for(i=start; i<self->size; i++ )
-			if( self->mbs[i] == ch ) return i;
+		for(i=start; i<self->size; i++ ) if( self->mbs[i] == ch ) return i;
 	}else{
 		wchar_t wch = ch;
-		for(i=start; i<self->size; i++ )
-			if( self->wcs[i] == wch ) return i;
+		for(i=start; i<self->size; i++ ) if( self->wcs[i] == wch ) return i;
 	}
 	return MAXSIZE;
 }
 size_t DString_RFindChar( DString *self, char ch, size_t start )
 {
 	int i;
+	if( self->size ==0 ) return MAXSIZE;
+	if( start >= self->size ) start = self->size - 1;
 	if( self->mbs ){
-		if( self->size ==0 ) return MAXSIZE;
-		if( start >= self->size ) start = self->size -1;
-		for(i=start; i >=0; i-- )
-			if( self->mbs[i] == ch ) return i;
+		for(i=start; i >=0; i-- ) if( self->mbs[i] == ch ) return i;
 	}else{
 		wchar_t wch = ch;
-		if( self->size ==0 ) return MAXSIZE;
-		if( start >= self->size ) start = self->size -1;
-		for(i=start; i >=0; i-- )
-			if( self->wcs[i] == wch ) return i;
+		for(i=start; i >=0; i-- ) if( self->wcs[i] == wch ) return i;
 	}
 	return MAXSIZE;
 }
@@ -848,8 +842,7 @@ size_t DString_FindWChar( DString *self, wchar_t ch, size_t start )
 {
 	size_t i;
 	if( self->wcs ){
-		for(i=start; i<self->size; i++ )
-			if( self->wcs[i] == ch ) return i;
+		for(i=start; i<self->size; i++ ) if( self->wcs[i] == ch ) return i;
 	}else{
 		DString *s = DString_New(1);
 		DMBString_AppendWChar( s, ch );
@@ -1239,4 +1232,20 @@ DString DString_WrapWCS( const wchar_t *wcs )
 	str.wcs = (wchar_t*) wcs;
 	str.size = str.bufSize = wcslen( wcs );
 	return str;
+}
+
+#define IO_BUF_SIZE  512
+int DString_ReadFile( DString *self, const char *fname )
+{
+	FILE *fin = fopen( fname, "r" );
+	char buf[IO_BUF_SIZE];
+	DString_Clear( self );
+	if( fin == NULL ) return 0;
+	while(1){
+		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
+		if( count ==0 ) break;
+		DString_AppendDataMBS( self, buf, count );
+	}
+	fclose( fin );
+	return 1;
 }

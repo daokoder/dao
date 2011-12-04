@@ -485,12 +485,9 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rp
 	src = DString_Copy( src );
 	DString_ToMBS( src );
 	p = DaoParser_New();
-	if( self->topFrame ) /* source name as parameter ??? */
-		DString_SetMBS( p->fileName, "code string" );
-	else
-		DString_Assign( p->fileName, self->vmSpace->fileName );
 	p->vmSpace = self->vmSpace;
 	p->nameSpace = ns;
+	DString_Assign( p->fileName, ns->name );
 	res = DaoParser_LexCode( p, src->mbs, rpl ) && DaoParser_ParseScript( p );
 	p->routine->parser = NULL;
 	DaoParser_Delete( p );
@@ -500,6 +497,7 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rp
 int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *source, int rpl )
 {
 	DaoRoutine *rout;
+	DString_SetMBS( ns->name, "code string" );
 	if( DaoProcess_Compile( self, ns, source, rpl ) ==0 ) return 0;
 	rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
 	if( DaoProcess_Call( self, (DaoMethod*) rout, NULL, NULL, 0 ) ) return 0;
