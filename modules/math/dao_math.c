@@ -16,8 +16,12 @@
 #include"daoValue.h"
 
 #ifdef _MSC_VER
+#define hypot _hypot
 #define isnan _isnan
 #define isfinite _finite
+#define copysign _copysign
+#define fmax __max
+#define fmin __min
 #endif
 
 DAO_INIT_MODULE
@@ -236,9 +240,7 @@ static void MATH_round( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void MATH_hypot( DaoProcess *proc, DaoValue *p[], int N )
 {
-	double val1 = p[0]->xDouble.value;
-	double val2 = p[1]->xDouble.value;
-	DaoProcess_PutDouble( proc, fabs( val1 )*sqrt( 1 + pow( val2/val1, 2 ) ) );
+	DaoProcess_PutDouble( proc, hypot( p[0]->xDouble.value, p[1]->xDouble.value ) );
 }
 static void MATH_isnan( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -247,6 +249,18 @@ static void MATH_isnan( DaoProcess *proc, DaoValue *p[], int N )
 static void MATH_isinf( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, !isfinite( p[0]->xDouble.value ) );
+}
+static void MATH_copysign( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutDouble( proc, copysign( p[0]->xDouble.value, p[1]->xDouble.value ) );
+}
+static void MATH_max( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutDouble( proc, fmax( p[0]->xDouble.value, p[1]->xDouble.value ) );
+}
+static void MATH_min( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutDouble( proc, fmin( p[0]->xDouble.value, p[1]->xDouble.value ) );
 }
 
 static DaoFuncItem mathMeths[]=
@@ -276,7 +290,9 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_hypot,     "hypot( p1 :double, p2 :double )=>double" },
 	{ MATH_isnan,     "isnan( p :double )=>int" },
 	{ MATH_isinf,     "isinf( p :double )=>int" },
-
+	{ MATH_copysign,  "copysign( p1 :double, p2 :double )=>double" },
+	{ MATH_max,       "max( p1 :double, p2 :double )=>double" },
+	{ MATH_min,       "min( p1 :double, p2 :double )=>double" },
 	{ MATH_pow,       "pow( p1 :double, p2 :double )=>double" },
 
 #if 0
