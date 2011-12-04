@@ -928,3 +928,23 @@ ulong_t FileChangedTime( const char *file )
 	if( stat( file, &st ) ==0 ) return (ulong_t) st.st_mtime;
 	return 0;
 }
+int Dao_IsFile( const char *file )
+{
+	struct stat st;
+	if( stat( file, &st ) ) return 0;
+#if WIN32
+	return (st.st_mode & _S_IFDIR) == 0;
+#else
+	return S_ISDIR( st.st_mode ) == 0;
+#endif
+}
+int Dao_IsDir( const char *file )
+{
+	struct stat st;
+	if( stat( file, &st ) ) return 0;
+#if WIN32
+	return (st.st_mode & _S_IFDIR) != 0;
+#else
+	return S_ISDIR( st.st_mode ) != 0;
+#endif
+}

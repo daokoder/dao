@@ -40,7 +40,7 @@
 static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *path = DString_GetMBS( p[0]->xString.data );
-	switch( p[1]->xInteger.value ){
+	switch( p[1]->xEnum.value ){
 	case 0 : DaoVmSpace_SetPath( proc->vmSpace, path ); break;
 	case 1 : DaoVmSpace_AddPath( proc->vmSpace, path ); break;
 	case 2 : DaoVmSpace_DelPath( proc->vmSpace, path ); break;

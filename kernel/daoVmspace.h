@@ -19,6 +19,8 @@
 #include"daoType.h"
 #include"daoThread.h"
 
+enum DaoPathType{ DAO_FILE_PATH, DAO_DIR_PATH };
+
 extern const char *const dao_copy_notice;
 
 /* Dao Virtual Machine Space:
@@ -99,7 +101,7 @@ DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run 
 DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DArray *rns, int alib);
 DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 
-DAO_DLL void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check );
+DAO_DLL void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int type, int check );
 
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );

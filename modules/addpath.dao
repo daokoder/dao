@@ -8,5 +8,4 @@ std.path( 'reflection', $add );
 std.path( 'network', $add );
 std.path( 'web', $add );
 std.path( 'DaoCXX', $add );
-std.path( 'DaoInode', $add );
 std.path( 'DaoJIT', $add );

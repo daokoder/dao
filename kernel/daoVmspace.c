@@ -62,9 +62,23 @@ DaoConfig daoConfig =
 DaoVmSpace *mainVmSpace = NULL;
 DaoProcess *mainProcess = NULL;
 
-static int TestPath( DaoVmSpace *vms, DString *fname );
-
 extern ulong_t FileChangedTime( const char *file );
+extern int Dao_IsFile( const char *file );
+extern int Dao_IsDir( const char *file );
+
+static int TestFile( DaoVmSpace *vms, DString *fname )
+{
+	FILE *file;
+	DNode *node = MAP_Find( vms->vfiles, fname );
+	/* printf( "testing: %s  %p\n", fname->mbs, node ); */
+	if( node ) return 1;
+	return Dao_IsFile( fname->mbs );
+}
+static int TestPath( DaoVmSpace *vms, DString *fname, int type )
+{
+	if( type == DAO_FILE_PATH ) return TestFile( vms, fname );
+	return Dao_IsDir( fname->mbs );
+}
 
 static const char* const daoDllPrefix[] =
 {
@@ -645,7 +659,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DString_Assign( val, array->items.pString[0] );
 	DaoList_Append( argv, sval );
 	DaoMap_Insert( cmdarg, nkey, sval );
-	DaoVmSpace_MakePath( self, self->fileName, 1 );
+	DaoVmSpace_MakePath( self, self->fileName, DAO_FILE_PATH, 1 );
 	i = 1;
 	while( i < array->size ){
 		DString *s = array->items.pString[i];
@@ -1049,15 +1063,15 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 	DString_ToMBS( fname );
 	size = fname->size;
 	if( size >6 && DString_FindMBS( fname, ".dao.o", 0 ) == size-6 ){
-		DaoVmSpace_MakePath( self, fname, 1 );
-		if( TestPath( self, fname ) ) modtype = DAO_MODULE_DAO_O;
+		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO_O;
 	}else if( size >6 && DString_FindMBS( fname, ".dao.s", 0 ) == size-6 ){
-		DaoVmSpace_MakePath( self, fname, 1 );
-		if( TestPath( self, fname ) ) modtype = DAO_MODULE_DAO_S;
+		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO_S;
 	}else if( size >4 && ( DString_FindMBS( fname, ".dao", 0 ) == size-4
 				|| DString_FindMBS( fname, ".cgi", 0 ) == size-4 ) ){
-		DaoVmSpace_MakePath( self, fname, 1 );
-		if( TestPath( self, fname ) ) modtype = DAO_MODULE_DAO;
+		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
 	}else if( size > slen && DString_FindMBS( fname, DAO_DLL_SUFFIX, 0 ) == size - slen ){
 		modtype = DAO_MODULE_DLL;
 #ifdef UNIX
@@ -1076,8 +1090,8 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 		if( DString_FindMBS( fname, ".dll", 0 ) != size-4 )
 			DString_AppendMBS( fname, ".dll" );
 #endif
-		DaoVmSpace_MakePath( self, fname, 1 );
-		if( TestPath( self, fname ) ) modtype = DAO_MODULE_DLL;
+		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
 		DString *fn = DString_New(1);
 		for(i=0; i<(4+3*alib); i++){
@@ -1087,7 +1101,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 				DString_InsertMBS( fn, daoDllPrefix[i], 0, 0, 0 );
 			}
 			DString_AppendMBS( fn, daoFileSuffix[i] );
-			DaoVmSpace_MakePath( self, fn, 1 );
+			DaoVmSpace_MakePath( self, fn, DAO_FILE_PATH, 1 );
 #if 0
 			printf( "%s %s\n", fn->mbs, self->nameLoading->items.pString[0]->mbs );
 #endif
@@ -1095,7 +1109,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 			   load gsl_vector require gsl_complex, gsl_block;
 			   which will allow searching for gsl_vector.so, gsl_vector.dylib or gsl_vector.dll. */
 			if( self->nameLoading->size && DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
-			if( TestPath( self, fn ) ){
+			if( TestFile( self, fn ) ){
 				modtype = i+1;
 				if( modtype > DAO_MODULE_DLL ) modtype = DAO_MODULE_DLL;
 				DString_Assign( fname, fn );
@@ -1372,17 +1386,6 @@ void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *file, const char *
 	}
 }
 
-int TestPath( DaoVmSpace *vms, DString *fname )
-{
-	FILE *file;
-	DNode *node = MAP_Find( vms->vfiles, fname );
-	/* printf( "testing: %s  %p\n", fname->mbs, node ); */
-	if( node ) return 1;
-	file = fopen( fname->mbs, "r" );
-	if( file == NULL ) return 0;
-	fclose( file );
-	return 1;
-}
 void Dao_MakePath( DString *base, DString *path )
 {
 	while( DString_MatchMBS( path, " ^ %.%. / ", NULL, NULL ) ){
@@ -1398,7 +1401,7 @@ void Dao_MakePath( DString *base, DString *path )
 	}
 	DString_ChangeMBS( path, "/ %. /", "/", 0 );
 }
-void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check )
+void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int type, int check )
 {
 	size_t i;
 	char *p;
@@ -1434,22 +1437,20 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check )
 
 	for( i=0; i<self->pathLoading->size; i++){
 		DString_Assign( path, self->pathLoading->items.pString[i] );
-		if( path->size > 0 && path->mbs[ path->size-1 ] != '/' )
-			DString_AppendMBS( path, "/" );
+		if( path->size > 0 && path->mbs[ path->size-1 ] != '/' ) DString_AppendMBS( path, "/" );
 		DString_Append( path, fname );
 		/*
 		   printf( "%s %s\n", self->pathLoading->items.pString[i]->mbs, path->mbs );
 		 */
-		if( TestPath( self, path ) ){
+		if( TestPath( self, path, type ) ){
 			DString_Assign( fname, path );
 			goto FreeString;
 		}
 	}
-	if( path->size > 0 && path->mbs[ path->size -1 ] != '/' )
-		DString_AppendMBS( path, "/" );
+	if( path->size > 0 && path->mbs[ path->size -1 ] != '/' ) DString_AppendMBS( path, "/" );
 	DString_Append( path, fname );
 	/* printf( "%s %s\n", path->mbs, path->mbs ); */
-	if( ! check || TestPath( self, path ) ){
+	if( ! check || TestPath( self, path, type ) ){
 		DString_Assign( fname, path );
 		goto FreeString;
 	}
@@ -1460,7 +1461,7 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int check )
 		/*
 		   printf( "%s %s\n", self->pathSearching->items.pString[i]->mbs, path->mbs );
 		 */
-		if( TestPath( self, path ) ){
+		if( TestPath( self, path, type ) ){
 			DString_Assign( fname, path );
 			goto FreeString;
 		}
@@ -1476,37 +1477,28 @@ void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path )
 }
 void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 {
-	DString *pstr;
-	int exist = 0;
+	DString *tmp, *pstr = DString_New(1);
 	char *p;
-	size_t i;
 
-	pstr = DString_New(1);
 	DString_SetMBS( pstr, path );
 	while( ( p = strchr( pstr->mbs, '\\') ) !=NULL ) *p = '/';
-	DaoVmSpace_MakePath( self, pstr, 1 );
+	DaoVmSpace_MakePath( self, pstr, DAO_DIR_PATH, 1 );
 
 	if( pstr->mbs[pstr->size-1] == '/' ) DString_Erase( pstr, pstr->size-1, 1 );
 
-	for(i=0; i<self->pathSearching->size; i++ ){
-		if( DString_Compare( pstr, self->pathSearching->items.pString[i] ) == 0 ){
-			exist = 1;
-			break;
-		}
-	}
-	if( ! exist ){
-		DString *tmp = self->pathWorking;
+	if( Dao_IsDir( pstr->mbs ) ){
+		tmp = self->pathWorking;
 		self->pathWorking = pstr;
 		DArray_PushFront( self->pathSearching, pstr );
 		DString_AppendMBS( pstr, "/addpath.dao" );
-		if( TestPath( self, pstr ) ) DaoVmSpace_LoadDaoModuleExt( self, pstr, NULL, 0 );
+		if( TestFile( self, pstr ) ) DaoVmSpace_LoadDaoModuleExt( self, pstr, NULL, 0 );
 		self->pathWorking = tmp;
 	}
+	DString_Delete( pstr );
 	/*
 	   for(i=0; i<self->pathSearching->size; i++ )
 	   printf( "%s\n", self->pathSearching->items.pString[i]->mbs );
 	 */
-	DString_Delete( pstr );
 }
 void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 {
@@ -1517,7 +1509,7 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 	pstr = DString_New(1);
 	DString_SetMBS( pstr, path );
 	while( ( p = strchr( pstr->mbs, '\\') ) !=NULL ) *p = '/';
-	DaoVmSpace_MakePath( self, pstr, 1 );
+	DaoVmSpace_MakePath( self, pstr, DAO_DIR_PATH, 1 );
 
 	if( pstr->mbs[pstr->size-1] == '/' ) DString_Erase( pstr, pstr->size-1, 1 );
 
@@ -1532,7 +1524,7 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 		DString *tmp = self->pathWorking;
 		self->pathWorking = pstr;
 		DString_AppendMBS( pathDao, "/delpath.dao" );
-		if( TestPath( self, pathDao ) ){
+		if( TestFile( self, pathDao ) ){
 			DaoVmSpace_LoadDaoModuleExt( self, pathDao, NULL, 0 );
 			/* id may become invalid after loadDaoModule(): */
 			id = -1;
