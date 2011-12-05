@@ -223,7 +223,7 @@ DaoValue* JSON_ParseSpecialLiteral( wchar_t* *text )
 	}
 	else if( wcscmp( buf, L"null" ) == 0 ){
 		*text += 4;
-		return DaoValue_NewNull();
+		return DaoValue_NewNone();
 	}
 	return NULL;
 }

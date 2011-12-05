@@ -1,12 +1,12 @@
 
 all:
-	-cd auxlib && make
-	-cd syslib && make
-	-cd math && make
-	-cd string && make
-	-cd reflection && make
-	-cd network && make
-	-cd web && make
-	-cd os && make
-#	-cd DaoCXX && make
-#	-cd DaoJIT && make
+	-cd auxlib && $(MAKE)
+	-cd syslib && $(MAKE)
+	-cd math && $(MAKE)
+	-cd string && $(MAKE)
+	-cd reflection && $(MAKE)
+	-cd network && $(MAKE)
+	-cd web && $(MAKE)
+	-cd os && $(MAKE)
+#	-cd DaoCXX && $(MAKE)
+#	-cd DaoJIT && $(MAKE)
