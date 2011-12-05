@@ -693,10 +693,10 @@ void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int 
 {
 	int i;
 	NS_Backup( self, proc, fout, limit, DAO_GLOBAL_CONSTANT );
-	if( self->inputs->size ){
+	if( self->inputs->size ){ /* essential statements and definitions */
 		static const char *digits = "ABCDEFGHIJKLMNOP";
 		unsigned char *mbs = (unsigned char*) self->inputs->mbs;
-		fprintf( fout, "require { " );
+		fprintf( fout, "inputs { " );
 		for(i=0; i<self->inputs->size; i++){
 			fprintf( fout, "%c%c", digits[ mbs[i] / 16 ], digits[ mbs[i] % 16 ] );
 		}
@@ -724,6 +724,23 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 
 		DaoParser_LexCode( parser, line->mbs, 0 );
 		if( tokens->size == 0 ) continue;
+		name = tokens->items.pToken[start]->string;
+		if( name->size == 6 && strcmp( name->mbs, "inputs" ) == 0 ){
+			if( tokens->size < 3 ) continue;
+			DString_Clear( line );
+			n = tokens->items.pToken[start+2]->string->size;
+			mbs = tokens->items.pToken[start+2]->string->mbs;
+			for(i=0; i<n; i++){
+				char c1 = mbs[i];
+				char c2 = mbs[i+1];
+				if( c1 < 'A' || c1 > 'P' ) continue;
+				DString_AppendChar( line, (char)((c1-'A')*16 + (c2-'A')) );
+				i += 1;
+			}
+			/* printf( "%s\n", line->mbs ); */
+			DaoProcess_Eval( proc, self, line, 0 );
+			continue;
+		}
 		switch( tokens->items.pToken[start]->name ){
 		case DKEY_PRIVATE   : pm = DAO_DATA_PRIVATE;   start += 1; break;
 		case DKEY_PROTECTED : pm = DAO_DATA_PROTECTED; start += 1; break;
