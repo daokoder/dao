@@ -361,7 +361,7 @@ typedef void  (*AddHistory)( const char *cmd );
 
 /* See the end of this file for some descriptions. */
 
-DAO_DLL DaoVmSpace* DaoInit();
+DAO_DLL DaoVmSpace* DaoInit( const char *command );
 DAO_DLL void DaoQuit();
 
 DAO_DLL int DaoValue_Type( DaoValue *self );

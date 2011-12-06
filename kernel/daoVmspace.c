@@ -305,7 +305,7 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 	getcwd( pwd, 511 );
 	DaoVmSpace_SetPath( self, pwd );
 	DaoVmSpace_AddPath( self, pwd );
-	DaoVmSpace_AddPath( self, DAO_PATH );
+	DaoVmSpace_AddPath( self, DAO_DIR );
 	DaoVmSpace_AddPath( self, "~/dao" );
 	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 }
@@ -1389,8 +1389,13 @@ void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *file, const char *
 	DString_Delete( source );
 }
 
+/* base is assumed to be absolute, and path is assumed to be relative: */
 void Dao_MakePath( DString *base, DString *path )
 {
+#ifdef WIN32
+	DString_ChangeMBS( base, "\\", "/", 0 );
+	DString_ChangeMBS( path, "\\", "/", 0 );
+#endif
 	while( DString_MatchMBS( path, " ^ %.%. / ", NULL, NULL ) ){
 		if( DString_MatchMBS( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
 			DString_ChangeMBS( path, " ^ %.%. / ", "", 1 );
@@ -1651,7 +1656,7 @@ static void DaoConfigure()
 	DaoInitLexTable();
 	daoConfig.iscgi = getenv( "GATEWAY_INTERFACE" ) ? 1 : 0;
 
-	DString_SetMBS( mbs, DAO_PATH );
+	DString_SetMBS( mbs, DAO_DIR );
 	DString_AppendMBS( mbs, "/dao.conf" );
 	DaoConfigure_FromFile( mbs->mbs );
 	if( daodir ){
@@ -1761,12 +1766,13 @@ int DaoJIT_TryInit( DaoVmSpace *vms )
 	return dao_jit.Compile != NULL;
 }
 
-DaoVmSpace* DaoInit()
+DaoVmSpace* DaoInit( const char *command )
 {
+	DString *mbs;
 	DaoVmSpace *vms;
 	DaoNamespace *ns;
 	DaoType *type, *type1, *type2, *type3, *type4;
-	DString *mbs;
+	char *daodir = getenv( "DAO_DIR" );
 	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
@@ -1788,6 +1794,30 @@ DaoVmSpace* DaoInit()
 
 	mbs = DString_New(1);
 	setlocale( LC_CTYPE, "" );
+
+	if( daodir == NULL && command ){
+		int absolute = command[0] == '/';
+		int relative = command[0] == '.';
+#ifdef WIN32
+		absolute = isalph( command[0] ) && command[1] == ':';
+#endif
+		DString_SetMBS( mbs, command );
+		if( relative ){
+			DString *base = DString_New(1);
+			char pwd[512];
+			getcwd( pwd, 511 );
+			DString_SetMBS( base, pwd );
+			Dao_MakePath( base, mbs );
+			DString_Delete( base );
+		}
+		while( (i = mbs->size) && mbs->mbs[i-1] != '/' && mbs->mbs[i-1] != '\\' ) mbs->size --;
+		mbs->mbs[ mbs->size ] = 0;
+		daodir = (char*) dao_malloc( mbs->size + 10 );
+		strncpy( daodir, "DAO_DIR=", 9 );
+		strncat( daodir, mbs->mbs, mbs->size );
+		putenv( daodir );
+	}
+
 	DaoConfigure();
 	DaoType_Init();
 	/*

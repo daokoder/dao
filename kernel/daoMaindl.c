@@ -66,7 +66,7 @@ int main( int argc, char **argv )
 	DString *opts, *args;
 	int i, k, idsrc;
 
-	vmSpace = DaoInit();
+	vmSpace = DaoInit( argv[0] );
 
 	opts = DString_New(1);
 	args = DString_New(1);

@@ -1045,7 +1045,7 @@ static DaoFuncItem netMeths[] =
 };
 
 DaoTypeBase libNetTyper = {
-	"network", NULL, NULL, netMeths, {0}, {0}, NULL, NULL
+	"net", NULL, NULL, netMeths, {0}, {0}, NULL, NULL
 };
 
 void DaoNetwork_Init( DaoVmSpace *vms, DaoNamespace *ns )

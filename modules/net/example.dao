@@ -1,14 +1,14 @@
 
-load network;
-load '../system/core';
+load net;
+load sys;
 
 class @Server
 {
 	routine Start()
 	{
-#	io.writeln( network.gethost( '127.0.0.1' ) );
-		io.writeln( network.gethost( 'localhost' ) );
-		sock = network.bind( 10000 );
+#	io.writeln( net.gethost( '127.0.0.1' ) );
+		io.writeln( net.gethost( 'localhost' ) );
+		sock = net.bind( 10000 );
 		sock.listen();
 		while(1){
 			sockfd = sock.accept();
@@ -26,7 +26,7 @@ class @Client
 {
 	routine Start()
 	{
-		sockfd = network.connect( 'localhost', 10000 );
+		sockfd = net.connect( 'localhost', 10000 );
 		io.writeln( 'sending' );
 		sockfd.send( 'TEST' );
 		message = sockfd.receive_dao();
@@ -34,11 +34,11 @@ class @Client
 		sockfd.close();
 	}
 }
-#std.listmeth( network );
-#io.println( network );
+#std.listmeth( net );
+#io.println( net );
 
 server = Server();
 server.Start();
-sleep(1);
+sys.sleep(1);
 client = Client();
 client.Start();

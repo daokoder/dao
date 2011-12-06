@@ -1,4 +1,4 @@
-PROJECT = network
+PROJECT = net
 
 include ../../Makefile.common
 
