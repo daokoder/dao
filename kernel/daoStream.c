@@ -399,7 +399,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	DString *fname;
 	DaoValue *res;
 	DaoString *line;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoList *list = DaoProcess_PutList( proc );
 	int chop = p[1]->xInteger.value;
 	char buf[IO_BUF_SIZE];
@@ -438,7 +438,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *res;
 	DaoString *line;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoStream *self = & p[0]->xStream;
 	dint i = 0, count = p[1]->xInteger.value;

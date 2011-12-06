@@ -4019,7 +4019,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoArray *array = NULL;
 	DaoArray *indices = NULL;
 	DaoArray *self2 = & p[0]->xArray;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoValue **idval = proc->activeValues + sect->a + 1;
 	DaoValue *elem, *res = NULL;
 	DaoArray *original = self2->original;
@@ -4115,4 +4115,4 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		DaoProcess_PutValue( proc, res );
 	}
 }
-#endif
+#endif /* DAO_WITH_NUMARRAY */
