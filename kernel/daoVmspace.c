@@ -1799,7 +1799,7 @@ DaoVmSpace* DaoInit( const char *command )
 		int absolute = command[0] == '/';
 		int relative = command[0] == '.';
 #ifdef WIN32
-		absolute = isalph( command[0] ) && command[1] == ':';
+		absolute = isalpha( command[0] ) && command[1] == ':';
 #endif
 		DString_SetMBS( mbs, command );
 		if( relative ){
