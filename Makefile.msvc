@@ -24,7 +24,7 @@ LIBS      = wsock32.lib
 
 ########################################
 S = kernel
-O = objs
+O = .
 
 # dynamic linked Dao interpreter, requires dao.so to run:
 TARGET   = dao.exe

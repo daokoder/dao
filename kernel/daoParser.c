@@ -2254,6 +2254,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 	DaoNamespace *ns = self->nameSpace;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
+	DaoMacro *macro, *macro2, *reapply;
 
 	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int bropen1 = 0, bropen2 = 0, bropen3 = 0;
@@ -2303,11 +2304,11 @@ static int DaoParser_Preprocess( DaoParser *self )
 				   printf( "macro : %s %i\n", tokens[start+2]->string->mbs, right );
 				 */
 				if( right <0 ){
-					DaoParser_Error3( self, DAO_INVALID_STATEMENT, start );
+					DaoParser_Error3( self, DAO_CTW_INV_MAC_DEFINE, start );
 					return 0;
 				}
-				if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );
-				DArray_Erase( self->tokens, start - prefixed, right-start+1 );
+				if( cons ) DaoParser_MakeCodes( self, start - prefixed, right+1, ns->inputs );
+				DArray_Erase( self->tokens, start - prefixed, right - start + prefixed + 1 );
 				tokens = self->tokens->items.pToken;
 #else
 				DaoStream_WriteMBS( vmSpace->stdStream, "macro is not enabled.\n" );
@@ -2333,36 +2334,33 @@ static int DaoParser_Preprocess( DaoParser *self )
 			start ++;
 		}
 	}
-	start = self->tokens->size-1;
 #ifdef DAO_WITH_MACRO
-	while( start >=0 && start < self->tokens->size ){
-		DaoMacro *macro = DaoNamespace_FindMacro( ns, tokens[start]->string );
+	for(start = self->tokens->size-1; start >=0 && start < self->tokens->size; start--){
+		macro = DaoNamespace_FindMacro( ns, ns->lang, tokens[start]->string );
 		self->curLine = tokens[start]->line;
-		if( macro ){
+		if( macro == NULL ) continue;
+		/*
+		   printf( "macro %i %s\n", start, tokStr[start]->mbs );
+		 */
+		for( i=0; i<macro->macroList->size; i++){
+			macro2 = (DaoMacro*) macro->macroList->items.pVoid[i];
+			end = DaoParser_MacroTransform( self, macro2, start, tag );
 			/*
-			   printf( "macro %i %s\n", start, tokStr[start]->mbs );
+			   printf( "overloaded: %i, %i\n", i, end );
 			 */
-			for( i=0; i<macro->macroList->size; i++){
-				DaoMacro *m = (DaoMacro*) macro->macroList->items.pVoid[i];
-				end = DaoParser_MacroTransform( self, m, start, tag );
-				/*
-				   printf( "overloaded: %i, %i\n", i, end );
-				 */
-				if( end >0 ){
-					DaoMacro *reapply = NULL;
-					tag ++;
-					tokens = self->tokens->items.pToken;
-					for(k=0; k<m->keyListApply->size; k++){
-						/* printf( "%i, %s\n", k, m->keyListApply->items.pString[k]->mbs ); */
-						reapply = DaoNamespace_FindMacro( ns, m->keyListApply->items.pString[k] );
-						if( reapply ) break;
-					}
-					if( reapply ) start = end;
-					break;
-				}
+			if( end <= 0 ) continue;
+
+			tag ++;
+			reapply = NULL;
+			tokens = self->tokens->items.pToken;
+			for(k=0; k<macro2->keyListApply->size; k++){
+				/* printf( "%i, %s\n", k, m->keyListApply->items.pString[k]->mbs ); */
+				reapply = DaoNamespace_FindMacro( ns, ns->lang, macro2->keyListApply->items.pString[k] );
+				if( reapply ) break;
 			}
+			if( reapply ) start = end;
+			break;
 		}
-		start --;
 	}
 #endif
 	return 1;

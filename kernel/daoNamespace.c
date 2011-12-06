@@ -670,10 +670,10 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->varDataTable = DArray_New(0);
 	self->varTypeTable = DArray_New(0);
 	self->mainRoutines  = DArray_New(0);
-	self->definedRoutines  = DArray_New(0);
+	self->definedRoutines = DArray_New(0);
 	self->nsLoaded  = DArray_New(0);
-	self->localMacros   = DHash_New(D_STRING,0);
-	self->globalMacros   = DHash_New(D_STRING,0);
+	self->localMacros = DHash_New(D_STRING,0);
+	self->globalMacros = DHash_New(D_STRING,0);
 	self->abstypes = DHash_New(D_STRING,0);
 	self->moduleLoaders = DHash_New(D_STRING,0);
 	self->codeInliners = DHash_New(D_STRING,0);
@@ -682,6 +682,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->file = DString_New(1);
 	self->path = DString_New(1);
 	self->name = DString_New(1);
+	self->lang = DString_New(1);
 	self->inputs = DString_New(1);
 	self->sources = DArray_New(D_ARRAY);
 	self->tokens = DHash_New(D_STRING,0);
@@ -690,6 +691,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	GC_IncRC( self->udfType1 );
 	GC_IncRC( self->udfType2 );
 
+	DString_SetMBS( self->lang, "dao" );
 	DArray_Append( self->cstDataTable, self->cstData );
 	DArray_Append( self->varDataTable, self->varData );
 	DArray_Append( self->varTypeTable, self->varType );
@@ -776,6 +778,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DString_Delete( self->file );
 	DString_Delete( self->path );
 	DString_Delete( self->name );
+	DString_Delete( self->lang );
 	DString_Delete( self->inputs );
 	DArray_Delete( self->sources );
 	DMap_Delete( self->tokens );
@@ -789,6 +792,8 @@ void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 	if( i != MAXSIZE ){
 		DString_SetMBS( self->file, name + i + 1 );
 		DString_SetDataMBS( self->path, name, i );
+		i = DString_RFindChar( self->name, '.', -1 );
+		if( i != MAXSIZE ) DString_SetMBS( self->lang, self->name->mbs + i + 1 );
 	}else{
 		DString_Clear( self->file );
 		DString_Clear( self->path );
@@ -1050,18 +1055,23 @@ DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name )
 	if( value && value->type == DAO_NAMESPACE ) return & value->xNamespace;
 	return NULL;
 }
-void DaoNamespace_AddMacro( DaoNamespace *self, DString *name, DaoMacro *macro, int local )
+void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro, int local )
 {
 	DMap *macros = local ? self->localMacros : self->globalMacros;
-	DNode *node = MAP_Find( macros, name );
+	DString *combo = DString_Copy( lang );
+	DNode *node;
+	DString_AppendMBS( combo, ":" );
+	DString_Append( combo, name );
+	node = MAP_Find( macros, combo );
 	if( node == NULL ){
 		GC_IncRC( macro );
-		MAP_Insert( macros, name, macro );
+		MAP_Insert( macros, combo, macro );
 	}else{
 		DaoMacro *m2 = (DaoMacro*) node->value.pVoid;
 		GC_IncRC( macro );
 		DArray_Append( m2->macroList, macro );
 	}
+	DString_Delete( combo );
 }
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent )
 {
@@ -1111,31 +1121,51 @@ static int DaoNamespace_GetUpIndex( DaoNamespace *self, DaoNamespace *ns )
 	return up;
 }
 
-static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *name )
+static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *lang, DString *name )
 {
 	int i, n = self->parents->size;
-	DNode *node = MAP_Find( self->globalMacros, name );
+	DString *combo = DString_Copy( lang );
+	DNode *node;
+
+	DString_AppendMBS( combo, ":" );
+	DString_Append( combo, name );
+	node = MAP_Find( self->globalMacros, combo );
+	DString_Delete( combo );
 	if( node ) return (DaoMacro*) node->value.pVoid;
 	for(i=0; i<n; i++){
 		DaoNamespace *ns = self->parents->items.pNS[i];
-		DaoMacro *macro = DaoNamespace_FindMacro2( ns, name );
+		DaoMacro *macro = DaoNamespace_FindMacro2( ns, lang, name );
 		if( macro ) return macro;
 	}
 	return NULL;
 }
-DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *name )
+DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name )
 {
 	int i, n = self->parents->size;
-	DNode *node = MAP_Find( self->localMacros, name );
-	if( node ) return (DaoMacro*) node->value.pVoid;
-	node = MAP_Find( self->globalMacros, name );
-	if( node ) return (DaoMacro*) node->value.pVoid;
+	DString *combo = DString_Copy( lang );
+	DNode *node;
+
+	DString_AppendMBS( combo, ":" );
+	DString_Append( combo, name );
+	node = MAP_Find( self->localMacros, combo );
+	if( node ){
+		DString_Delete( combo );
+		return (DaoMacro*) node->value.pVoid;
+	}
+	node = MAP_Find( self->globalMacros, combo );
+	if( node ){
+		DString_Delete( combo );
+		return (DaoMacro*) node->value.pVoid;
+	}
+	/* Stop searching upstream namespaces if the current is .dao file: */
+	if( strcmp( self->lang->mbs, "dao" ) ==0 ) return NULL;
 	for(i=0; i<n; i++){
 		DaoNamespace *ns = self->parents->items.pNS[i];
-		DaoMacro *macro = DaoNamespace_FindMacro2( ns, name );
+		DaoMacro *macro = DaoNamespace_FindMacro2( ns, lang, name );
 		if( macro == NULL ) continue;
-		MAP_Insert( self->globalMacros, name, macro );
+		MAP_Insert( self->globalMacros, combo, macro );
 		GC_IncRC( macro );
+		DString_Delete( combo );
 		return macro;
 	}
 	return NULL;

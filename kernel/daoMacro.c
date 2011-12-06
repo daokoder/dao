@@ -421,15 +421,24 @@ static void DMacroGroup_FindVariables( DMacroGroup *self )
 }
 int DaoParser_ParseMacro( DaoParser *self, int start, int local )
 {
-	DaoMacro *macro;
+	int rb1, rb2, i = start, N = self->tokens->size;
 	DaoToken **toks = self->tokens->items.pToken;
-	DArray   *stops;
-	DMap     *markers;
-	int N = self->tokens->size;
-	int i = start;
-	int rb1, rb2;
+	DaoMacro *macro;
+	DString *lang;
+	DArray  *stops;
+	DMap  *markers;
 
 	if( start + 5 >= N ) return -1;
+	lang = toks[start+1]->string;
+	if( toks[start+1]->type != DTOK_IDENTIFIER ){
+		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
+		return -1;
+	}
+	if( lang->size == 3 && strcmp( lang->mbs, "dao" ) == 0 ){
+		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
+		return -1;
+	}
+	start += 1;
 	if( toks[start+1]->name != DTOK_LCB ) return -1;
 
 	self->curLine = toks[start]->line;
@@ -493,7 +502,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start, int local )
 	DMacroGroup_FindVariables( macro->macroMatch );
 	DArray_Clear( stops );
 	DMacroGroup_SetStop( macro->macroApply, stops );
-	DaoNamespace_AddMacro( self->nameSpace, toks[start+2]->string, macro, local );
+	DaoNamespace_AddMacro( self->nameSpace, lang, toks[start+2]->string, macro, local );
 	DArray_Delete( stops );
 	DMap_Delete( markers );
 	return rb2;

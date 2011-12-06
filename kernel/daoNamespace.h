@@ -70,6 +70,7 @@ struct DaoNamespace
 	DString *file;
 	DString *path;
 	DString *name; /* path + file */
+	DString *lang;
 	DString *inputs; /* interactive inputs (load statements and some definitions) */
 	DArray  *sources;
 	DMap    *tokens; /* hash<DString,int> */
@@ -107,8 +108,8 @@ DAO_DLL void DaoNamespace_Import( DaoNamespace *self, DaoNamespace *ns, DArray *
 
 DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
 
-DAO_DLL void DaoNamespace_AddMacro( DaoNamespace *self, DString *name, DaoMacro *macro, int local );
-DAO_DLL DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *name );
+DAO_DLL void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro, int local );
+DAO_DLL DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name );
 
 DAO_DLL DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DString *name );
 DAO_DLL DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name );

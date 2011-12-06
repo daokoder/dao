@@ -26,23 +26,12 @@
 int main( int argc, char **argv )
 {
 	int i, k, idsrc;
-	char *daodir = getenv( "DAO_DIR" );
 	DString *opts, *args;
 	DaoVmSpace *vmSpace;
 
-	if( daodir == NULL && argv[0][0] == '/' ){
-		k = strlen( argv[0] );
-		if( strcmp( argv[0] + k - 4, "/dao" ) ==0 ){
-			daodir = (char*) dao_malloc( k + 10 );
-			strncpy( daodir, "DAO_DIR=", 9 );
-			strncat( daodir, argv[0], k - 4 );
-			putenv( daodir );
-			daodir += 8;
-		}
-	}
 	/*mtrace(); */
 
-	vmSpace = DaoInit();
+	vmSpace = DaoInit( argv[0] );
 
 	args  = DString_New(1);
 	for(i=1; i<argc; i++ ){
@@ -63,6 +52,5 @@ int main( int argc, char **argv )
 	if( ! DaoVmSpace_RunMain( vmSpace, args ) ) return 1;
 	DaoQuit();
 
-	//printf( "FINISHED %s\n", getenv( "PROC_NAME" ) );
 	return 0;
 }
