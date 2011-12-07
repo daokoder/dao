@@ -8,5 +8,6 @@ all:
 	-cd net && $(MAKE)
 	-cd web && $(MAKE)
 	-cd os && $(MAKE)
+	-cd stream && $(MAKE)
 #	-cd DaoCXX && $(MAKE)
 #	-cd DaoJIT && $(MAKE)

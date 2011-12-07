@@ -21,7 +21,7 @@
 
 DAO_INIT_MODULE
 
-static void REFL_NS( DaoProcess *proc, DaoValue *p[], int N )
+static void META_NS( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *res = proc->activeNamespace;
 	if( N == 0 ){
@@ -35,7 +35,7 @@ static void REFL_NS( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) res );
 }
-static void REFL_Name( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Name( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *str = DaoProcess_PutMBString( proc, "" );
 	switch( p[0]->type ){
@@ -52,7 +52,7 @@ static void REFL_Name( DaoProcess *proc, DaoValue *p[], int N )
 	default : break;
 	}
 }
-static void REFL_Base( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Base( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *ls = DaoProcess_PutList( proc );
 	int i;
@@ -66,13 +66,13 @@ static void REFL_Base( DaoProcess *proc, DaoValue *p[], int N )
 		for( i=0; i<k->baseCount; i++ ) DaoList_Append( ls, k->parents[i] );
 	}
 }
-static void REFL_Type( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Type( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoType *tp = DaoNamespace_GetType( proc->activeNamespace, p[0] );
 	DaoProcess_PutValue( proc, (DaoValue*) tp );
 }
 
-static void REFL_Cst1( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMap *map = DaoProcess_PutMap( proc );
 	DaoTuple *tuple;
@@ -124,7 +124,7 @@ static void REFL_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DString_Delete( name.data );
 }
-static void REFL_Var1( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMap *map = DaoProcess_PutMap( proc );
 	DaoTuple *tuple;
@@ -190,7 +190,7 @@ static void REFL_Var1( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DString_Delete( name.data );
 }
-static void REFL_Cst2( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoTuple *tuple = DaoTuple_New( 2 );
 	DaoNamespace *ns = proc->activeNamespace;
@@ -232,7 +232,7 @@ static void REFL_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoValue_Copy( p[2], value );
 	}
 }
-static void REFL_Var2( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoTuple *tuple = DaoTuple_New( 2 );
 	DaoNamespace *ns = proc->activeNamespace;
@@ -284,7 +284,7 @@ static void REFL_Var2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoValue_Copy( p[2], value );
 	}
 }
-static void REFL_Routine( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Routine( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *list;
 	DaoValue *item;
@@ -304,7 +304,7 @@ static void REFL_Routine( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_PutValue( proc, (DaoValue*) proc->activeRoutine );
 	}
 }
-static void REFL_Class( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Class( DaoProcess *proc, DaoValue *p[], int N )
 {
 #if 0
 	if( p[0]->type == DAO_ROUTINE && p[0]->v.routine->tidHost == DAO_OBJECT ){
@@ -315,7 +315,7 @@ static void REFL_Class( DaoProcess *proc, DaoValue *p[], int N )
 #endif
 	DaoProcess_PutValue( proc, dao_none_value );
 }
-static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
 	dint *res = DaoProcess_PutInteger( proc, 0 );
@@ -359,14 +359,14 @@ static void REFL_Isa( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 	}
 }
-static void REFL_Self( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Self( DaoProcess *proc, DaoValue *p[], int N )
 {
 	if( p[0]->type == DAO_OBJECT )
 		DaoProcess_PutValue( proc, (DaoValue*) p[0]->xObject.rootObject );
 	else
 		DaoProcess_PutValue( proc, dao_none_value );
 }
-static void REFL_Param( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DRoutine *routine = (DRoutine*) p[0];
 	DaoList *list = DaoProcess_PutList( proc );
@@ -403,11 +403,11 @@ static void REFL_Param( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 }
-static void REFL_Argc( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Argc( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, proc->topFrame->parCount );
 }
-static void REFL_Argv( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Argv( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int i;
 	if( N ==0 ){
@@ -420,7 +420,7 @@ static void REFL_Argv( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_PutValue( proc, val );
 	}
 }
-static void REFL_Trace( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Trace( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *backtrace = DaoProcess_PutList( proc );
 	DaoStackFrame *frame = proc->topFrame;
@@ -471,7 +471,7 @@ static void REFL_Trace( DaoProcess *proc, DaoValue *p[], int N )
 	}
 #endif
 }
-static void REFL_Doc( DaoProcess *proc, DaoValue *p[], int N )
+static void META_Doc( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *doc = NULL;
 	switch( p[0]->type ){
@@ -503,36 +503,40 @@ static void REFL_Doc( DaoProcess *proc, DaoValue *p[], int N )
  * ns() current ns
  * trace( print=0 )
  * */
-static DaoFuncItem reflMeths[]=
+static DaoFuncItem metaMeths[]=
 {
-	{ REFL_NS,    "namespace() => any" },
-	{ REFL_NS,    "namespace( object ) => any" },
-	{ REFL_Name,  "name( object ) => string" },
-	{ REFL_Type,  "type( object ) => any" },
-	{ REFL_Base,  "base( object ) => list<any>" },
-	{ REFL_Doc,   "doc( object, newdoc='' ) => string" },
-	{ REFL_Cst1,  "constant( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
-	{ REFL_Var1,  "variable( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
-	{ REFL_Cst2,  "constant( object, name:string )=>tuple<value:any,type:any>" },
-	{ REFL_Var2,  "variable( object, name:string )=>tuple<value:any,type:any>" },
-	{ REFL_Cst2,  "constant( object, name:string, value )=>tuple<value:any,type:any>" },
-	{ REFL_Var2,  "variable( object, name:string, value )=>tuple<value:any,type:any>" },
-	{ REFL_Class,   "class( object ) => any" },
-	{ REFL_Routine, "routine() => any" },
-	{ REFL_Routine, "routine( rout : any ) => list<any>" },
-	{ REFL_Param,   "param( rout )=>list<tuple<name:string,type:any,deft:int,value:any>>" },
-	{ REFL_Isa,     "isa( object, name : string ) => int" },
-	{ REFL_Isa,     "isa( object, type : any ) => int" },
-	{ REFL_Self,    "self( object ) => any" },
-	{ REFL_Argc,    "argc() => int" },
-	{ REFL_Argv,    "argv() => list<any>" },
-	{ REFL_Argv,    "argv( i : int ) => any" },
-	{ REFL_Trace,   "trace( action:enum<generate,print>=$generate, depth=0 ) => list<tuple<rout_name:string,rout_type:any,instr:int,line:int,namespace:string>>" },
+	{ META_NS,    "namespace() => any" },
+	{ META_NS,    "namespace( object ) => any" },
+	{ META_Name,  "name( object ) => string" },
+	{ META_Type,  "type( object ) => any" },
+	{ META_Base,  "base( object ) => list<any>" },
+	{ META_Doc,   "doc( object, newdoc='' ) => string" },
+	{ META_Cst1,  "constant( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
+	{ META_Var1,  "variable( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
+	{ META_Cst2,  "constant( object, name:string )=>tuple<value:any,type:any>" },
+	{ META_Var2,  "variable( object, name:string )=>tuple<value:any,type:any>" },
+	{ META_Cst2,  "constant( object, name:string, value )=>tuple<value:any,type:any>" },
+	{ META_Var2,  "variable( object, name:string, value )=>tuple<value:any,type:any>" },
+	{ META_Class,   "class( object ) => any" },
+	{ META_Routine, "routine() => any" },
+	{ META_Routine, "routine( rout : any ) => list<any>" },
+	{ META_Param,   "param( rout )=>list<tuple<name:string,type:any,deft:int,value:any>>" },
+	{ META_Isa,     "isa( object, name : string ) => int" },
+	{ META_Isa,     "isa( object, type : any ) => int" },
+	{ META_Self,    "self( object ) => any" },
+	{ META_Argc,    "argc() => int" },
+	{ META_Argv,    "argv() => list<any>" },
+	{ META_Argv,    "argv( i : int ) => any" },
+	{ META_Trace,   "trace( action:enum<generate,print>=$generate, depth=0 ) => list<tuple<rout_name:string,rout_type:any,instr:int,line:int,namespace:string>>" },
 	{ NULL, NULL }
+};
+
+DaoTypeBase metaTyper = {
+	"meta", NULL, NULL, metaMeths, {NULL}, {0}, NULL, NULL
 };
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapFunctions( ns, reflMeths );
+	DaoNamespace_WrapType( ns, & metaTyper );
 	return 0;
 }
