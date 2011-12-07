@@ -24,7 +24,7 @@
 #include"daoProcess.h"
 #include"daoGC.h"
 
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+#ifdef DAO_WITH_CONCURRENT
 
 typedef struct DaoCallThread   DaoCallThread;
 typedef struct DaoCallServer   DaoCallServer;

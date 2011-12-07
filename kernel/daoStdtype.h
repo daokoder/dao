@@ -279,6 +279,8 @@ struct DaoFuture
 	DaoProcess  *process;
 	DaoFuture   *precondition;
 };
+#ifdef DAO_WITH_CONCURRENT
 DaoFuture* DaoFuture_New();
+#endif
 
 #endif

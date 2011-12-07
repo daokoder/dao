@@ -134,7 +134,12 @@ DAO_DLL int DThread_Equal( dao_thread_t x, dao_thread_t y );
 
 DAO_DLL DThreadData* DThread_GetSpecific();
 
+DAO_DLL void DaoInitThread();
 
+#endif /* DAO_WITH_THREAD */
+
+
+#ifdef DAO_WITH_CONCURRENT
 /* Dao threading types: */
 struct DaoMutex
 {
@@ -178,10 +183,7 @@ DAO_DLL void DaoSema_Post( DaoSema *self );
 DAO_DLL void DaoSema_SetValue( DaoSema *self, int n );
 DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 
-DAO_DLL void DaoInitThread();
-
 void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
-
-#endif
+#endif /* DAO_WITH_CONCURRENT */
 
 #endif

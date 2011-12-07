@@ -2837,7 +2837,7 @@ FailConversion :
 }
 static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 {
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+#ifdef DAO_WITH_CONCURRENT
 	DaoStackFrame *frame = self->topFrame;
 	DaoStackFrame *prev = frame->prev;
 	if( vmc->code != DVM_MCALL ) return 0;

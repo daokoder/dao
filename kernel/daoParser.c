@@ -2980,7 +2980,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString_Assign( className, name );
 		if( className->mbs[0] == '@' ){
 			DString_Erase( className, 0, 1 );
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+#ifdef DAO_WITH_CONCURRENT
 			klass->attribs |= DAO_CLS_ASYNCHRONOUS;
 #else
 			DaoParser_Error3( self, DAO_INVALID_ASYNC_CLASS_DEFINITION, start );

@@ -440,11 +440,17 @@ void DaoInitThreadSys()
 
 	TlsSetValue( thdSpecKey, mainThread->thdSpecData );
 }
+#endif /* WIN32	*/
 
-#endif
+void DaoInitThread()
+{
+	DaoInitThreadSys();
+}
+#endif /* DAO_WITH_THREAD */
 
-/* Dao threading types: */
 
+#ifdef DAO_WITH_CONCURRENT
+/* mt module: */
 static int DaoMT_PushSectionFrame( DaoProcess *proc )
 {
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ){
@@ -887,6 +893,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	}
 }
 
+#ifdef DAO_WITH_NUMARRAY
 void DaoArray_GetSliceShape( DaoArray *self, size_t **dims, short *ndim );
 int DaoArray_SliceSize( DaoArray *self );
 int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
@@ -958,6 +965,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 		}
 	}
 }
+#endif
 static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
@@ -966,7 +974,9 @@ static void DaoMT_RunFunctional( void *p )
 	case DAO_INTEGER : DaoMT_RunIterateFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
 	case DAO_MAP   : DaoMT_RunMapFunctional( p ); break;
+#ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
+#endif
 	}
 	self->status |= clone->status != DAO_VMPROC_FINISHED;
 	DMutex_Lock( clone->mutex );
@@ -1008,9 +1018,11 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		DArray_Clear( & list->items );
 		if( param->type == DAO_LIST ) DArray_Resize( & list->items, param->xList.items.size, NULL );
 		if( param->type == DAO_MAP ) DArray_Resize( & list->items, param->xMap.items->size, NULL );
+#ifdef DAO_WITH_NUMARRAY
 	}else if( array && F == DVM_FUNCT_MAP ){
 		DaoArray_GetSliceShape( (DaoArray*) param, & array->dims, & array->ndim );
 		DaoArray_ResizeArray( array, array->dims, array->ndim );
+#endif
 	}
 
 	DMutex_Init( & mutex );
@@ -1206,10 +1218,5 @@ DaoTypeBase thdMasterTyper =
 	"mt", NULL, NULL, (DaoFuncItem*) thdMasterMeths, {0}, {0}, NULL, NULL
 };
 
-
-void DaoInitThread()
-{
-	DaoInitThreadSys();
-}
-#endif
+#endif /* DAO_WITH_CONCURRENT */
 

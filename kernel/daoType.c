@@ -166,7 +166,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoValue *extra, DArray *nest
 }
 void DaoType_InitDefault( DaoType *self )
 {
-	complex16 com;
+	complex16 com = {0.0,0.0};
 	DaoValue *value = NULL;
 	DaoType *itype, **types = self->nested ? self->nested->items.pType : NULL;
 	int i, count = self->nested ? self->nested->size : 0;

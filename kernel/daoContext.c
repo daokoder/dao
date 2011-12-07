@@ -3205,14 +3205,14 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 Rebind :
 	if( wcs ) DString_Delete( wcs );
 	if( shape ) DArray_Delete( shape );
-#ifdef DAO_WITH_NUMARR
+#ifdef DAO_WITH_NUMARRAY
 	if( array ) DaoArray_Delete( array );
 #endif
 	return dA;
 FailConversion :
 	if( wcs ) DString_Delete( wcs );
 	if( shape ) DArray_Delete( shape );
-#ifdef DAO_WITH_NUMARR
+#ifdef DAO_WITH_NUMARRAY
 	if( array ) DaoArray_Delete( array );
 #endif
 	if( map ) DaoMap_Delete( map );

@@ -204,7 +204,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 #ifdef DAO_WITH_MACRO
 	case DAO_MACRO     :  return & macroTyper;
 #endif
-#ifdef DAO_WITH_THREAD
+#ifdef DAO_WITH_CONCURRENT
 	case DAO_MUTEX     :  return & mutexTyper;
 	case DAO_CONDVAR   :  return & condvTyper;
 	case DAO_SEMA      :  return & semaTyper;
@@ -902,7 +902,9 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			}
 			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input, 1 );
 		}
+#ifdef DAO_WITH_CONCURRENT
 		DaoCallServer_Join();
+#endif
 		/*
 		   printf( "%s\n", input->mbs );
 		 */
@@ -1901,7 +1903,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DaoException_Setup( vms->nsInternal );
 
-#ifdef DAO_WITH_THREAD
+#ifdef DAO_WITH_CONCURRENT
 	type2 = DaoNamespace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
 	type3 = DaoNamespace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
 	type4 = DaoNamespace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
@@ -1936,7 +1938,7 @@ void DaoQuit()
 {
 	int i;
 	/* TypeTest(); */
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+#ifdef DAO_WITH_CONCURRENT
 	DaoCallServer_Stop();
 #endif
 

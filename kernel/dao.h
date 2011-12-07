@@ -22,6 +22,10 @@
 #define DAO_VERSION "1.2"
 #define DAO_H_VERSION 20110806
 
+#if (defined DAO_WITH_CONCURRENT && !defined DAO_WITH_THREAD)
+#define DAO_WITH_THREAD
+#endif
+
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
 #endif /* MAC_OSX */

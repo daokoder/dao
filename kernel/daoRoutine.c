@@ -3276,7 +3276,7 @@ NotExist_TryAux:
 					ct = DaoNamespace_MakeType( ns, "routine", DAO_ROUTINE, ct->aux, ts, ct->nested->size );
 				}
 
-#if( defined DAO_WITH_THREAD && defined DAO_WITH_ASYNCLASS )
+#ifdef DAO_WITH_CONCURRENT
 				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
 						&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
 					ct = DaoNamespace_MakeType( ns, "future", DAO_FUTURE, NULL, &ct, 1 );
