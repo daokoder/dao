@@ -21,14 +21,15 @@ DAO_INIT_MODULE
 #ifdef WIN32
 
 #include<windows.h>
+#include<io.h>
 
 int SetCharForeground( DaoStream *stream, int color, int mbs )
 {
 	WORD attr;
 	int res = 0;
 	struct _CONSOLE_SCREEN_BUFFER_INFO info;
-	HANDLE *fd = (HANDLE)DaoStream_GetFile( stream );
-	if( !fd )
+	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
+	if( fd == INVALID_HANDLE_VALUE )
 		fd = GetStdHandle( STD_OUTPUT_HANDLE );
 	if( !GetConsoleScreenBufferInfo( fd, &info ) )
 		return -1;
@@ -56,8 +57,8 @@ int SetCharBackground( DaoStream *stream, int color, int mbs )
 	WORD attr;
 	int res = 0;
 	struct _CONSOLE_SCREEN_BUFFER_INFO info;
-	FILE *fd = DaoStream_GetFile( stream );
-	if( !fd )
+	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
+	if( fd == INVALID_HANDLE_VALUE )
 		fd = GetStdHandle( STD_OUTPUT_HANDLE );
 	if( !GetConsoleScreenBufferInfo( fd, &info ) )
 		return -1;
