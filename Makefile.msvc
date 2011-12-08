@@ -63,7 +63,6 @@ SOURCES = $S/daoType.c \
 		$S/daoMacro.c \
 		$S/daoRegex.c \
 		$S/daoValue.c \
-		$S/daoContext.c \
 		$S/daoProcess.c \
 		$S/daoStdlib.c \
 		$S/daoArray.c \
@@ -80,7 +79,6 @@ OBJECTS = \
 		$O/daoArray.obj \
 		$O/daoMap.obj \
 		$O/daoValue.obj \
-		$O/daoContext.obj \
 		$O/daoProcess.obj \
 		$O/daoType.obj \
 		$O/daoStdtype.obj \

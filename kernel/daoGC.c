@@ -742,7 +742,7 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrements( rout->routConsts );
 				if( rout->type == DAO_ROUTINE ){
 					cycRefCountDecrement( (DaoValue*) rout->upRoutine );
-					cycRefCountDecrement( (DaoValue*) rout->upContext );
+					cycRefCountDecrement( (DaoValue*) rout->upProcess );
 					cycRefCountDecrement( (DaoValue*) rout->original );
 					cycRefCountDecrement( (DaoValue*) rout->specialized );
 					cycRefCountDecrements( rout->regType );
@@ -957,7 +957,7 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrements( rout->routConsts );
 				if( rout->type == DAO_ROUTINE ){
 					cycRefCountIncrement( (DaoValue*) rout->upRoutine );
-					cycRefCountIncrement( (DaoValue*) rout->upContext );
+					cycRefCountIncrement( (DaoValue*) rout->upProcess );
 					cycRefCountIncrement( (DaoValue*) rout->original );
 					cycRefCountIncrement( (DaoValue*) rout->specialized );
 					cycRefCountIncrements( rout->regType );
@@ -1160,7 +1160,7 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrements( rout->routConsts );
 				if( rout->type == DAO_ROUTINE ){
 					directRefCountDecrement( (DaoValue**) & rout->upRoutine );
-					directRefCountDecrement( (DaoValue**) & rout->upContext );
+					directRefCountDecrement( (DaoValue**) & rout->upProcess );
 					directRefCountDecrement( (DaoValue**) & rout->original );
 					directRefCountDecrement( (DaoValue**) & rout->specialized );
 					directRefCountDecrements( rout->regType );
@@ -1525,7 +1525,7 @@ void DaoIGC_CycRefCountDecScan()
 				if( rout->type == DAO_ROUTINE ){
 					j += rout->regType->size + rout->abstypes->size;
 					cycRefCountDecrement( (DaoValue*) rout->upRoutine );
-					cycRefCountDecrement( (DaoValue*) rout->upContext );
+					cycRefCountDecrement( (DaoValue*) rout->upProcess );
 					cycRefCountDecrement( (DaoValue*) rout->original );
 					cycRefCountDecrement( (DaoValue*) rout->specialized );
 					cycRefCountDecrements( rout->regType );
@@ -1775,7 +1775,7 @@ int DaoIGC_AliveObjectScan()
 				if( rout->type == DAO_ROUTINE ){
 					k += rout->abstypes->size;
 					cycRefCountIncrement( (DaoValue*) rout->upRoutine );
-					cycRefCountIncrement( (DaoValue*) rout->upContext );
+					cycRefCountIncrement( (DaoValue*) rout->upProcess );
 					cycRefCountIncrement( (DaoValue*) rout->original );
 					cycRefCountIncrement( (DaoValue*) rout->specialized );
 					cycRefCountIncrements( rout->regType );
@@ -2007,7 +2007,7 @@ void DaoIGC_RefCountDecScan()
 				if( rout->type == DAO_ROUTINE ){
 					j += rout->abstypes->size;
 					directRefCountDecrement( (DaoValue**) & rout->upRoutine );
-					directRefCountDecrement( (DaoValue**) & rout->upContext );
+					directRefCountDecrement( (DaoValue**) & rout->upProcess );
 					directRefCountDecrement( (DaoValue**) & rout->original );
 					directRefCountDecrement( (DaoValue**) & rout->specialized );
 					directRefCountDecrements( rout->regType );

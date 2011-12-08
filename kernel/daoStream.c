@@ -15,7 +15,6 @@
 #include"daoStream.h"
 #include"daoVmspace.h"
 #include"daoRoutine.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoNumtype.h"
 #include"daoNamespace.h"
@@ -907,6 +906,19 @@ int DaoFile_ReadLine( FILE *fin, DString *line )
 		ch = getc( fin );
 		if( ch != EOF ) ungetc( ch, fin );
 	}
+	return 1;
+}
+int DaoFile_ReadAll( FILE *fin, DString *all, int close )
+{
+	char buf[IO_BUF_SIZE];
+	DString_Clear( all );
+	if( fin == NULL ) return 0;
+	while(1){
+		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
+		if( count ==0 ) break;
+		DString_AppendDataMBS( all, buf, count );
+	}
+	if( close ) fclose( fin );
 	return 1;
 }
 

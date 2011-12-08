@@ -17,7 +17,6 @@
 #include"daoThread.h"
 #include"daoMap.h"
 #include"daoGC.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoVmspace.h"
 #include"daoRoutine.h"
@@ -487,11 +486,11 @@ static void DaoMutex_Lib_Protect( DaoProcess *proc, DaoValue *p[], int n )
 }
 static DaoFuncItem mutexMeths[] =
 {
-	{ DaoMutex_Lib_Lock,      "lock( self : mutex )" }, // XXX remove???
+	{ DaoMutex_Lib_Lock,      "lock( self : mutex )" }, /* XXX remove??? */
 	{ DaoMutex_Lib_Unlock,    "unlock( self : mutex )" },
 	{ DaoMutex_Lib_TryLock,   "trylock( self : mutex )=>int" },
 	{ DaoMutex_Lib_Protect,   "protect( self : mutex )[]" },
-	// ??? TODO: protect( self : mutex, try=0 )[locked:int]
+	/* ??? TODO: protect( self : mutex, try=0 )[locked:int] */
 	{ NULL, NULL }
 };
 static void DaoMutex_Delete( DaoMutex *self )
@@ -707,6 +706,74 @@ int  DaoSema_GetValue( DaoSema *self )
 	return DSema_GetValue( & self->mySema );
 }
 
+
+static void DaoFuture_Lib_Value( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	if( self->state == DAO_CALL_FINISHED ){
+		DaoProcess_PutValue( proc, self->value );
+		return;
+	}
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, -1, DAO_FUTURE_VALUE );
+}
+static void DaoFuture_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	float timeout = par[1]->xFloat.value;
+	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
+	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_WAIT );
+}
+static DaoFuncItem futureMeths[] =
+{
+	{ DaoFuture_Lib_Value,   "value( self : future<@V> )=>@V" },
+	{ DaoFuture_Lib_Wait,    "wait( self : future<@V>, timeout : float = -1 )=>int" },
+	{ NULL, NULL }
+};
+static void DaoFuture_Delete( DaoFuture *self )
+{
+	GC_DecRC( self->value );
+	GC_DecRC( self->unitype );
+	GC_DecRC( self->object );
+	GC_DecRC( self->routine );
+	GC_DecRC( self->process );
+	GC_DecRC( self->precondition );
+	DaoValue_ClearAll( self->params, self->parCount );
+	dao_free( self );
+}
+
+static DaoTypeCore futureCore =
+{
+	NULL,
+	DaoValue_SafeGetField,
+	DaoValue_SafeSetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
+	DaoValue_Print,
+	DaoValue_NoCopy,
+};
+DaoTypeBase futureTyper =
+{
+	"future", & futureCore, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
+	(FuncPtrDel) DaoFuture_Delete, NULL
+};
+
+DaoFuture* DaoFuture_New()
+{
+	DaoFuture *self = (DaoFuture*)dao_calloc(1,sizeof(DaoFuture));
+	DaoValue_Init( self, DAO_FUTURE );
+	GC_IncRC( dao_none_value );
+	self->state = DAO_CALL_QUEUED;
+	self->state2 = DAO_FUTURE_VALUE;
+	self->value = dao_none_value;
+	return self;
+}
+
+
 /* thread master */
 static void DaoThdMaster_Lib_Mutex( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -725,20 +792,20 @@ static void DaoThdMaster_Lib_Sema( DaoProcess *proc, DaoValue *par[], int N )
 typedef struct DaoTaskData DaoTaskData;
 struct DaoTaskData
 {
-	DaoValue    *param; // parameter container: list, map or array;
-	DaoValue    *result; // result container: list or array;
-	DaoProcess  *proto; // caller's process;
-	DaoProcess  *clone; // spawned process;
-	DaoVmCode   *sect; // DVM_SECT
+	DaoValue    *param; /* parameter container: list, map or array; */
+	DaoValue    *result; /* result container: list or array; */
+	DaoProcess  *proto; /* caller's process; */
+	DaoProcess  *clone; /* spawned process; */
+	DaoVmCode   *sect; /* DVM_SECT */
 
-	uint_t   funct; // type of functional;
-	uint_t   entry; // entry code;
-	uint_t   first; // first index;
-	uint_t   step; // index step;
-	uint_t   status; // execution status;
-	uint_t  *joined; // number of joined threads;
-	uint_t  *index; // smallest index found by all threads;
-	DNode  **node; // smallest key found by all threads;
+	uint_t   funct; /* type of functional; */
+	uint_t   entry; /* entry code; */
+	uint_t   first; /* first index; */
+	uint_t   step; /* index step; */
+	uint_t   status; /* execution status; */
+	uint_t  *joined; /* number of joined threads; */
+	uint_t  *index; /* smallest index found by all threads; */
+	DNode  **node; /* smallest key found by all threads; */
 };
 
 void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )

@@ -24,7 +24,6 @@
 #include"daoStream.h"
 #include"daoRoutine.h"
 #include"daoObject.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoStdlib.h"
@@ -4598,70 +4597,3 @@ void DaoException_Init( DaoException *self, DaoTypeBase *typer )
 	}
 }
 
-#ifdef DAO_WITH_CONCURRENT
-static void DaoFuture_Lib_Value( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoFuture *self = (DaoFuture*) par[0];
-	if( self->state == DAO_CALL_FINISHED ){
-		DaoProcess_PutValue( proc, self->value );
-		return;
-	}
-	proc->status = DAO_VMPROC_SUSPENDED;
-	proc->pauseType = DAO_VMP_ASYNC;
-	DaoCallServer_AddWait( proc, self, -1, DAO_FUTURE_VALUE );
-}
-static void DaoFuture_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoFuture *self = (DaoFuture*) par[0];
-	float timeout = par[1]->xFloat.value;
-	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
-	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
-	proc->status = DAO_VMPROC_SUSPENDED;
-	proc->pauseType = DAO_VMP_ASYNC;
-	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_WAIT );
-}
-static DaoFuncItem futureMeths[] =
-{
-	{ DaoFuture_Lib_Value,   "value( self : future<@V> )=>@V" },
-	{ DaoFuture_Lib_Wait,    "wait( self : future<@V>, timeout : float = -1 )=>int" },
-	{ NULL, NULL }
-};
-static void DaoFuture_Delete( DaoFuture *self )
-{
-	GC_DecRC( self->value );
-	GC_DecRC( self->unitype );
-	GC_DecRC( self->object );
-	GC_DecRC( self->routine );
-	GC_DecRC( self->process );
-	GC_DecRC( self->precondition );
-	DaoValue_ClearAll( self->params, self->parCount );
-	dao_free( self );
-}
-
-static DaoTypeCore futureCore =
-{
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
-};
-DaoTypeBase futureTyper =
-{
-	"future", & futureCore, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
-	(FuncPtrDel) DaoFuture_Delete, NULL
-};
-
-DaoFuture* DaoFuture_New()
-{
-	DaoFuture *self = (DaoFuture*)dao_calloc(1,sizeof(DaoFuture));
-	DaoValue_Init( self, DAO_FUTURE );
-	GC_IncRC( dao_none_value );
-	self->state = DAO_CALL_QUEUED;
-	self->state2 = DAO_FUTURE_VALUE;
-	self->value = dao_none_value;
-	return self;
-}
-#endif

@@ -16,7 +16,6 @@
 
 #include"daoConst.h"
 #include"daoRoutine.h"
-#include"daoContext.h"
 #include"daoGC.h"
 #include"daoClass.h"
 #include"daoObject.h"
@@ -69,7 +68,6 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 }
 static void DRoutine_DeleteFields( DRoutine *self )
 {
-	//printf( "DRoutine_DeleteFields: %p %s\n", self, self->routName->mbs );
 	GC_DecRC( self->routHost );
 	GC_DecRC( self->routType );
 	GC_DecRC( self->nameSpace );
@@ -544,7 +542,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	n = DMap_First( self->abstypes );
 	for( ; n != NULL; n = DMap_Next( self->abstypes, n ) ) GC_DecRC( n->value.pValue );
 	if( self->upRoutine ) GC_DecRC( self->upRoutine );
-	if( self->upContext ) GC_DecRC( self->upContext );
+	if( self->upProcess ) GC_DecRC( self->upProcess );
 	if( self->original ) GC_DecRC( self->original );
 	if( self->specialized ) GC_DecRC( self->specialized );
 	GC_DecRCs( self->regType );
@@ -3381,7 +3379,7 @@ NotExist_TryAux:
 					goto InvOper;
 				}
 				if( vmc->b ==0 ){
-					// less strict checking for type holder as well (case mt.start()):
+					/* less strict checking for type holder as well (case mt.start()): */
 					if( ct && NoCheckingType( ct ) ) continue;
 					if( ct && ! (self->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 				}else{
@@ -3390,9 +3388,7 @@ NotExist_TryAux:
 					if( vmc->b >1 )
 						at = DaoNamespace_MakeType( ns, "tuple", DAO_TUPLE, NULL, type+opa, vmc->b);
 
-					//printf( "debug 1: %s %s\n", at->name->mbs, ct->name->mbs );
 					if( ct && DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
-					//printf( "debug 2\n" );
 					if( ct != ct2 && ct->tid != DAO_UDF && ct->tid != DAO_INITYPE ){
 						int mac = DaoType_MatchTo( at, ct, defs2 );
 						int mca = DaoType_MatchTo( ct, at, defs2 );
@@ -4154,7 +4150,7 @@ InvParam :
 	 ec = DTE_PARAM_ERROR;
 	 goto ErrorTyping;
 #if 0
-				//FunctionNotImplemented: ec = DTE_ROUT_NOT_IMPLEMENTED; goto ErrorTyping;
+	 FunctionNotImplemented: ec = DTE_ROUT_NOT_IMPLEMENTED; goto ErrorTyping;
 #endif
 
 ErrorTyping:
@@ -4431,7 +4427,6 @@ DParNode* DParNode_Add( DParNode *self, DRoutine *routine, int pid )
 	for(i=0; i<n; i++){
 		param = items[i];
 		/* Found a node with the same parameter type: */
-		//printf( "%i %p %p %s\n", i, param->type, type, type->name->mbs );
 		if( param->type == type ){
 			if( name ) MAP_Insert( self->names, name, param );
 			return DParNode_Add( param, routine, pid+1 );
@@ -4452,7 +4447,6 @@ DRoutine* DaoFunctree_Add( DaoFunctree *self, DRoutine *routine )
 	if( routine->routType == NULL ) return NULL;
 	/* If the name is not set yet, set it: */
 	if( self->name->size ==0 ) DString_Assign( self->name, routine->routName );
-	//printf( "Overloading %s(): %s\n", routine->routName->mbs, routine->routType->name->mbs );
 	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != MAXSIZE;
 	if( routine->routType->attrib & DAO_TYPE_SELF ){
 		if( self->mtree == NULL ) self->mtree = DParNode_New();
@@ -4603,7 +4597,6 @@ DRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, int
 	DRoutine *rout = NULL;
 	DRoutine *best = NULL;
 	DaoValue *value = NULL;
-	//printf( "DParNode_Lookup: %s %i\n", self->type ? self->type->name->mbs : "", n );
 	*ms = 1;
 	if( n == 0 ) return DParNode_GetLeaf( self, ms );
 	if( p[0]->type == DAO_PAR_NAMED ) return DParNode_LookupByName( self, p, n, strict, ms, defs );
@@ -4614,7 +4607,6 @@ DRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, int
 		if( type == NULL ) continue;
 		if( strict && value->type != type->tid ) continue;
 		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchValue( type, value, defs );
-		//printf( "%i: %i, %i %p %s\n", i, m, value->type, type, type->name->mbs );
 		if( m == 0 ) continue;
 		if( strict && m != DAO_MT_EQ ) continue;
 		k = type->tid == DAO_PAR_VALIST ? 0 : n-1;
@@ -4636,12 +4628,10 @@ DRoutine* DParNode_LookupByType( DParNode *self, DaoType *types[], int n, int st
 	DRoutine *rout = NULL;
 	DRoutine *best = NULL;
 	DaoType *partype = NULL;
-	//printf( "DParNode_LookupByType: %s %i\n", self->type ? self->type->name->mbs : "", n );
 	*ms = 1;
 	if( n == 0 ) return DParNode_GetLeaf( self, ms );
 	if( types[0]->tid == DAO_PAR_NAMED )
 		return DParNode_LookupByName2( self, types, n, strict, ms, defs );
-	//printf( "DParNode_NextBestByType: %i\n", n );
 	partype = types[0];
 	for(i=0; i<K; i++){
 		DParNode *param = items[i];
@@ -4655,8 +4645,6 @@ DRoutine* DParNode_LookupByType( DParNode *self, DaoType *types[], int n, int st
 		rout = DParNode_LookupByType( param, types+1, k, strict, & k, defs );
 		if( rout == NULL ) continue;
 		m += k;
-		//printf( "%i: %i, %i %p %s\n", i, m, partype->tid, type, type->name->mbs );
-		//if( rout ) printf( "rout = %s %i %i\n", rout->routType->name->mbs, n, m );
 		if( m > max ){
 			best = rout;
 			max = m;
@@ -4702,7 +4690,6 @@ DRoutine* DaoFunctree_Lookup2( DaoFunctree *self, DaoValue *obj, DaoValue *p[], 
 		rout = DParNode_Lookup( self->mtree, p, n, strict, & score, defs );
 		if( rout ) goto Finalize;
 	}
-	//printf( "DaoFunctree_Lookup(): %s %p %i\n", self->name->mbs, self->tree, n );
 	if( self->tree ){
 		if( mcall ){
 			p += 1;
@@ -4721,7 +4708,6 @@ DRoutine* DaoFunctree_LookupByType2( DaoFunctree *self, DaoType *selftype, DaoTy
 	DParNode *param = NULL;
 	DRoutine *rout = NULL;
 	DMap *defs = NULL;
-	//printf( "DaoFunctree_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
 	if( self->attribs ) defs = DHash_New(0,0);
 	if( selftype && mcall ==0 ){
 		if( self->mtree ){
@@ -4748,7 +4734,6 @@ DRoutine* DaoFunctree_LookupByType2( DaoFunctree *self, DaoType *selftype, DaoTy
 		rout = DParNode_LookupByType( self->mtree, types, n, strict, & score, defs );
 		if( rout ) goto Finalize;
 	}
-	//printf( "DaoFunctree_LookupByType(): %s %p %i\n", self->name->mbs, self->tree, n );
 	if( self->tree ){
 		if( mcall ){
 			types += 1;
@@ -4836,7 +4821,6 @@ DParNode* DParNode_BestNextByType( DParNode *self, DaoType *par )
 	DParNode **items = (DParNode**) self->nexts->items.pVoid;
 	int i, n = self->nexts->size;
 	if( par->tid == DAO_PAR_NAMED || par->tid == DAO_PAR_DEFAULT ) par = & par->aux->xType;
-	//printf( "DParNode_NextBestByType: %i\n", n );
 	for(i=0; i<n; i++){
 		DParNode *param = items[i];
 		if( param->type == par ) return param;
@@ -4847,7 +4831,6 @@ DRoutine* DParNode_LookupByType2( DParNode *self, DaoType *types[], int n )
 {
 	int i;
 	DParNode *param = NULL;
-	//printf( "DParNode_LookupByType2: %s %i\n", self->type ? self->type->name->mbs : "", n );
 	if( n == 0 ){
 		if( self->routine ) return self->routine; /* a leaf */
 		for(i=0; i<self->nexts->size; i++){
@@ -4877,7 +4860,6 @@ void DaoFunctree_UpdateVtable( DaoFunctree *self, DRoutine *routine, DMap *vtabl
 	klass = & self->host->aux->xClass;
 	if( DaoClass_ChildOf( klass, rhost->aux ) ==0 ) return;
 	n = self->mtree->nexts->size;
-	//printf( "DaoFunctree_UpdateVtable(): %s %s\n", self->name->mbs, routine->routName->mbs );
 	for(i=0; i<n; i++){
 		DParNode *param = (DParNode*) self->mtree->nexts->items.pVoid[i];
 		int tid = param->type->tid;

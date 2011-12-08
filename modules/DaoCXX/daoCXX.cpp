@@ -575,7 +575,7 @@ static int dao_cxx_loader( DaoNamespace *NS, DString *file, DString *emsg )
 	int retc = 0;
 
 	source = DString_New(1);
-	if( DString_ReadFile( source, file->mbs ) == 0 ){
+	if( DaoFile_ReadAll( fopen( file->mbs, "r" ), source, 1 ) == 0 ){
 		DString_Delete( source );
 		return 1;
 	}

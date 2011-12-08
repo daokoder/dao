@@ -1234,18 +1234,3 @@ DString DString_WrapWCS( const wchar_t *wcs )
 	return str;
 }
 
-#define IO_BUF_SIZE  512
-int DString_ReadFile( DString *self, const char *fname )
-{
-	FILE *fin = fopen( fname, "r" );
-	char buf[IO_BUF_SIZE];
-	DString_Clear( self );
-	if( fin == NULL ) return 0;
-	while(1){
-		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
-		if( count ==0 ) break;
-		DString_AppendDataMBS( self, buf, count );
-	}
-	fclose( fin );
-	return 1;
-}

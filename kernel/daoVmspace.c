@@ -33,7 +33,6 @@
 #include"daoRoutine.h"
 #include"daoRegex.h"
 #include"daoStdlib.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoSched.h"
@@ -421,7 +420,7 @@ static int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *sou
 		DString_Assign( source, node->value.pString );
 		return 1;
 	}
-	if( DString_ReadFile( source, fname->mbs ) ) return 1;
+	if( DaoFile_ReadAll( fopen( fname->mbs, "r" ), source, 1 ) ) return 1;
 	DaoStream_WriteMBS( self->stdStream, "ERROR: can not open file \"" );
 	DaoStream_WriteMBS( self->stdStream, fname->mbs );
 	DaoStream_WriteMBS( self->stdStream, "\".\n" );

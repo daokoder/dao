@@ -24,7 +24,6 @@
 #include"daoStream.h"
 #include"daoRoutine.h"
 #include"daoObject.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoStdlib.h"

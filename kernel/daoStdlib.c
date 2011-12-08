@@ -21,7 +21,6 @@
 #endif
 
 #include"daoStdlib.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoClass.h"

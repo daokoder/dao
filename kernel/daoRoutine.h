@@ -78,7 +78,7 @@ struct DaoRoutine
 	DaoFunctree  *specialized;
 
 	DaoRoutine   *upRoutine;
-	DaoProcess   *upContext;
+	DaoProcess   *upProcess;
 	DaoParser    *parser;
 	DaoRoutine   *revised; /* to support edit & continue */
 

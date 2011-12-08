@@ -481,7 +481,6 @@ DAO_DLL size_t DString_RFindMBS( DString *self, const char *ch, size_t start );
 DAO_DLL size_t DString_RFindChar( DString *self, char ch, size_t start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
-DAO_DLL int DString_ReadFile( DString *self, const char *fname );
 
 DAO_DLL DaoInteger* DaoInteger_New( dint value );
 DAO_DLL dint        DaoInteger_Get( DaoInteger *self );
@@ -619,8 +618,21 @@ DAO_DLL DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
 
 DAO_DLL DaoStream* DaoStream_New();
+DAO_DLL void DaoStream_Delete( DaoStream *self );
+DAO_DLL void DaoStream_Close( DaoStream *self );
+DAO_DLL void DaoStream_Flush( DaoStream *self );
+DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
+DAO_DLL void DaoStream_WriteInt( DaoStream *self, dint val );
+DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
+DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
+DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
+DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
+DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
 DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
 DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
+DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *line );
+DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
+DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 
 DAO_DLL DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data );
 DAO_DLL DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data );

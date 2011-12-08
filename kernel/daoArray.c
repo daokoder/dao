@@ -19,7 +19,6 @@
 #include"daoType.h"
 #include"daoValue.h"
 #include"daoNumtype.h"
-#include"daoContext.h"
 #include"daoParser.h"
 #include"daoGC.h"
 

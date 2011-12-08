@@ -68,6 +68,7 @@ DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
 
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
+DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 
 DAO_DLL int Dao_IsFile( const char *file );
 DAO_DLL int Dao_IsDir( const char *file );

@@ -11,7 +11,6 @@ DAO_OBJECTS = kernel/daoArray.o \
               kernel/daoMap.o \
               kernel/daoType.o \
               kernel/daoValue.o \
-              kernel/daoContext.o \
               kernel/daoProcess.o \
               kernel/daoRoutine.o \
               kernel/daoGC.o \

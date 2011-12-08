@@ -12,7 +12,6 @@
   =========================================================================================*/
 
 #include"daoStream.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoGC.h"
 #include"daoVmspace.h"
