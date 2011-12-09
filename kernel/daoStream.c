@@ -737,6 +737,29 @@ void DString_SetWords( DString *self, const wchar_t *bytes, int count )
 	data = self->wcs;
 	for( i=0; i<count; i++ ) data[i] = bytes[i];
 }
+static void PrintSting( FILE* file, DString *str )
+{
+	size_t len = 0;
+	int res;
+	if( str->mbs )
+		for( ;; ){
+			res = fprintf( file, "%s", str->mbs + len );
+			len += res + 1;
+			if( res >= 0 && len < str->size )
+				fprintf( file, "%c", str->mbs[len - 1] );
+			else
+				break;
+		}
+	else
+		for( ;; ){
+			res = fprintf( file, "%ls", str->wcs + len );
+			len += res + 1;
+			if( res >= 0 && len < str->size )
+				fprintf( file, "%lc", str->wcs[len - 1] );
+			else
+				break;
+		}
+}
 void DaoStream_WriteString( DaoStream *self, DString *val )
 {
 	DaoVmSpace *vms = self->vmSpace;
@@ -746,13 +769,12 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 		return;
 	}
 	if( val->mbs ){
-		const char *format = "%c";
 		const char *data = val->mbs;
 		if( self->file ){
 			if( self->format ){
 				fprintf( self->file->fd, self->format, data );
 			}else{
-				for(i=0; i<val->size; i++) fprintf( self->file->fd, format, data[i] );
+				PrintSting( self->file->fd, val );
 			}
 		}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
 			DString *mbs = DString_New(1);
@@ -765,17 +787,16 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			if( self->format ){
 				printf( self->format, data );
 			}else{
-				for(i=0; i<val->size; i++) printf( format, data[i] );
+				PrintSting( stdout, val );
 			}
 		}
 	}else{
-		const char *format = "%lc";
 		const wchar_t *data = val->wcs;
 		if( self->file ){
 			if( self->format ){
 				fprintf( self->file->fd, self->format, data );
 			}else{
-				for(i=0; i<val->size; i++) fprintf( self->file->fd, format, data[i] );
+				PrintSting( self->file->fd, val );
 			}
 		}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
 			DString *mbs = DString_New(1);
@@ -793,7 +814,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			if( self->format ){
 				printf( self->format, data );
 			}else{
-				for(i=0; i<val->size; i++) printf( format, data[i] );
+				PrintSting( stdout, val );
 			}
 		}
 	}
