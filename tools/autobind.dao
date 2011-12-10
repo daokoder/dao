@@ -5,6 +5,8 @@ author: Fu Limin (phoolimin@gmail.com)
 
 #}
 
+load sys;
+
 class DaoCxxVariable
 {
 }

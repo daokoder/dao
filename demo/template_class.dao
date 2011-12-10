@@ -1,22 +1,21 @@
 
 class Item<@V>
 {
-#	var value : @V;
-#	var next : Item;
+	var value : @V;
+	var next : Item;
 
-#	routine Item( v : @V ){ value = v }
+	routine Item( v : @V ){ value = v }
 }
 
 class LinkList<@V,@T=int>
 {
-#	var first : Item<@V>;
+	var first : Item<@V>;
 	var last  : Item<@V>;
 
-	#routine LinkList(){
-		#io.writeln( std.about( self ) );
-	# }
+	routine LinkList(){
+		io.writeln( std.about( self ) );
+	}
 
-#{
 	routine Append( value : @V ){
 		item = Item<@V>( value );
 		#io.writeln( std.about( first, last, item ) );
@@ -31,10 +30,8 @@ class LinkList<@V,@T=int>
 			io.writeln( item.value, item );
 		}
 	}
-#}
 }
 ll = LinkList<int>();
-#{
 ll.Append(11);
 ll.Append(22);
 ll.Append(33);
@@ -81,4 +78,3 @@ sll.Append( 'AA' )
 sll.Append( 'BB' )
 sll.Append( 'CC' )
 sll.Print();
-#}

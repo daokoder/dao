@@ -2757,12 +2757,7 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 	/* create a new list in any case. */
 	DaoList *list = DaoList_New();
 	DaoType *tp = self->activeTypes[ vmc->c ];
-	if( tp == NULL || tp->tid !=DAO_LIST
-#if 0
-	   || NESTYPE( tp, 0 )->tid == DAO_UDF
-#endif
-	   )
-		tp = dao_list_any;
+	if( tp == NULL || tp->tid != DAO_LIST ) tp = dao_list_any;
 	list->unitype = tp;
 	GC_IncRC( tp );
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
@@ -2773,14 +2768,7 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc )
 	DaoMap *map = DaoMap_New( vmc->code == DVM_HASH );
 	DaoType *tp = self->activeTypes[ vmc->c ];
 	DaoValue_Move( (DaoValue*) map, self->activeValues + vmc->c, tp );
-	if( tp == NULL || tp->tid !=DAO_MAP
-	   || NESTYPE( tp, 0 )->tid + NESTYPE( tp, 1 )->tid == DAO_UDF ){
-		tp = dao_map_any;
-	}else if( NESTYPE( tp, 0 )->tid * NESTYPE( tp, 1 )->tid == DAO_UDF ){
-		DMap *map = DMap_New(0,0);
-		tp = DaoType_DefineTypes( tp, self->activeNamespace, map );
-		DMap_Delete( map );
-	}
+	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_map_any;
 	GC_ShiftRC( tp, map->unitype );
 	map->unitype = tp;
 	return map;
@@ -2805,8 +2793,7 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 		dC = (DaoValue*) DaoArray_New( type );
 		DaoValue_Copy( dC, & self->activeValues[ vmc->c ] );
 	}
-	if( tp == NULL || tp->tid !=DAO_ARRAY || NESTYPE( tp, 0 )->tid == DAO_UDF )
-		tp = dao_array_any;
+	if( tp == NULL || tp->tid != DAO_ARRAY ) tp = dao_array_any;
 	dC->xArray.unitype = tp;
 	GC_IncRC( tp );
 	return & dC->xArray;
@@ -6700,17 +6687,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	}
 	
 	/* extract parameters */
-	it = MAP_Find( keys, "name" );
-	if( it && data[it->value.pInt]->type == DAO_STRING ) name = data[it->value.pInt]->xString.data;
-	it = MAP_Find( keys, "parents" );
-	if( it && data[it->value.pInt]->type == DAO_LIST ) parents = & data[it->value.pInt]->xList;
-	if( it && data[it->value.pInt]->type == DAO_MAP ) parents2 = & data[it->value.pInt]->xMap;
-	it = MAP_Find( keys, "fields" );
-	if( it && data[it->value.pInt]->type == DAO_LIST ) fields = & data[it->value.pInt]->xList;
-	it = MAP_Find( keys, "methods" );
-	if( it && data[it->value.pInt]->type == DAO_LIST ) methods = & data[it->value.pInt]->xList;
-	
-	if( name ==NULL && tuple->size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+	if( tuple->size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
 	if( parents ==NULL && parents2 == NULL && tuple->size >1 ){
 		if( data[1]->type == DAO_LIST ) parents = & data[1]->xList;
 		if( data[1]->type == DAO_MAP ) parents2 = & data[1]->xMap;
@@ -6789,157 +6766,78 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			DaoValue *item = parents->items.items.pValue[i];
 			if( item->type == DAO_CLASS ){
 				DaoClass_AddSuperClass( klass, item, item->xClass.className );
+			}else if( item->type == DAO_CTYPE ){
+				DaoClass_AddSuperClass( klass, item, item->xCdata.ctype->name );
 			}
 		}
 	}else if( parents2 ){
 		for(it=DMap_First(parents2->items);it;it=DMap_Next(parents2->items,it)){
-			if( it->key.pValue->type == DAO_STRING && it->value.pValue->type == DAO_CLASS ){
+			int type = it->value.pValue->type;
+			if( it->key.pValue->type == DAO_STRING && (type == DAO_CLASS || type == DAO_CTYPE) ){
 				DaoClass_AddSuperClass( klass, it->value.pValue, it->key.pValue->xString.data );
-			}
+			}//XXX error handling
 		}
 	}
 	DaoClass_DeriveClassData( klass );
 	if( fields ){ /* add fields from parameters */
 		for(i=0; i<fields->items.size; i++){
+			DaoValue *fieldv = fields->items.items.pValue[i];
 			DaoType *type = NULL;
-			DaoTuple *field = NULL;
-			DMap *keys = NULL;
-			DaoValue **data = NULL;
-			DaoValue *name = NULL;
 			DaoValue *value = NULL;
-			DaoValue *storage = NULL;
-			DaoValue *access = NULL;
-			int flags = 0;
 			
-			if( fields->items.items.pValue[i]->type != DAO_TUPLE ) continue;
-			field = & fields->items.items.pValue[i]->xTuple;
-			keys = field->unitype->mapNames;
-			data = field->items;
-			size = field->size;
+			if( DaoType_MatchValue( dao_dynclass_field, fieldv, NULL ) == 0) continue;//XXX
+			data = fieldv->xTuple.items;
+			size = fieldv->xTuple.size;
 			st = DAO_OBJECT_VARIABLE;
 			pm = DAO_DATA_PUBLIC;
 			
-			if( size < 2 || size > 4 ) goto InvalidField;
-			
-			id = (it = MAP_Find( keys, "name" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type == DAO_STRING ){
-				flags |= 1<<id;
-				name = data[id];
-			}
-			id = (it = MAP_Find( keys, "value" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type ){
-				flags |= 1<<id;
-				value = data[id];
-				type = field->unitype->nested->items.pType[id];
-			}
-			id = (it = MAP_Find( keys, "storage" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type == DAO_ENUM ){
-				flags |= 1<<id;
-				storage = data[id];
-			}
-			id = (it = MAP_Find( keys, "access" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type == DAO_ENUM ){
-				flags |= 1<<id;
-				access = data[id];
-			}
-			
-			if( name ==NULL && size && data[0]->type == DAO_STRING && !(flags & 1) ){
-				flags |= 1;
-				name = data[0];
-			}
-			if( value ==NULL && size >1 && data[1]->type && !(flags & 2) ){
-				flags |= 2;
+			name = NULL;
+			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+			if( size > 1 && data[1]->type ){
 				value = data[1];
-				type = field->unitype->nested->items.pType[1];
+				type = fieldv->xTuple.unitype->nested->items.pType[1];
 			}
-			if( storage ==NULL && size >2 && data[2]->type == DAO_ENUM && !(flags&4) ){
-				flags |= 4;
-				storage = data[2];
-			}
-			if( access ==NULL && size >3 && data[3]->type == DAO_ENUM && !(flags&8) ){
-				flags |= 8;
-				access = data[3];
-			}
-			
-			if( flags != ((1<<size)-1) ) goto InvalidField;
 			if( name == NULL || value == NULL ) continue;
-			if( MAP_Find( klass->lookupTable, name->xString.data ) ) continue;
-			if( storage ){
-				if( DaoEnum_SetValue( & stEnum, & storage->xEnum, NULL ) ==0) goto InvalidField;
+			if( MAP_Find( klass->lookupTable, name ) ) continue;
+			
+			if( size > 2 && data[2]->type == DAO_ENUM ){
+				if( DaoEnum_SetValue( & stEnum, & data[2]->xEnum, NULL ) ==0) goto InvalidField;
 				st = storages[ stEnum.value ];
 			}
-			if( access ){
-				if( DaoEnum_SetValue( & pmEnum, & access->xEnum, NULL ) ==0) goto InvalidField;
+			if( size > 3 && data[3]->type == DAO_ENUM ){
+				if( DaoEnum_SetValue( & pmEnum, & data[3]->xEnum, NULL ) ==0) goto InvalidField;
 				pm = permissions[ pmEnum.value ];
 			}
-			/* printf( "%s %i %i\n", name->xString.data->mbs, st, pm ); */
+			/* printf( "%s %i %i\n", name->mbs, st, pm ); */
 			switch( st ){
-				case DAO_OBJECT_VARIABLE :
-					DaoClass_AddObjectVar( klass, name->xString.data, value, type, pm, 0 );
-					break;
-				case DAO_CLASS_VARIABLE :
-					DaoClass_AddGlobalVar( klass, name->xString.data, value, type, pm, 0 );
-					break;
-				case DAO_CLASS_CONSTANT :
-					DaoClass_AddConst( klass, name->xString.data, value, pm, 0 );
-					break;
-				default : break;
+			case DAO_OBJECT_VARIABLE: DaoClass_AddObjectVar( klass, name, value, type, pm, 0 ); break;
+			case DAO_CLASS_VARIABLE : DaoClass_AddGlobalVar( klass, name, value, type, pm, 0 ); break;
+			case DAO_CLASS_CONSTANT : DaoClass_AddConst( klass, name, value, pm, 0 ); break;
+			default : break;
 			}
 			continue;
-		InvalidField:
+InvalidField:
 			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
 		}
 	}
 	if( methods ){ /* add methods from parameters */
 		for(i=0; i<methods->items.size; i++){
-			DaoTuple *tuple;
+			DaoValue *methodv = methods->items.items.pValue[i];
 			DaoRoutine *newRout;
-			DaoValue **data = NULL;
-			DaoValue *name = NULL;
 			DaoValue *method = NULL;
-			DaoValue *access = NULL;
 			DaoValue *dest;
-			int flags = 0;
 			
-			if( methods->items.items.pValue[i]->type != DAO_TUPLE ) continue;
-			tuple = & methods->items.items.pValue[i]->xTuple;
-			data = tuple->items;
-			size = tuple->size;
+			if( DaoType_MatchValue( dao_dynclass_method, methodv, NULL ) == 0) continue;//XXX
+			data = methodv->xTuple.items;
+			size = methodv->xTuple.size;
 			pm = DAO_DATA_PUBLIC;
 			
-			id = (it = MAP_Find( keys, "name" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type == DAO_ENUM ){
-				flags |= 1<<id;
-				name = data[id];
-			}
-			id = (it = MAP_Find( keys, "method" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type == DAO_ENUM ){
-				flags |= 1<<id;
-				method = data[id];
-			}
-			id = (it = MAP_Find( keys, "access" )) ? it->value.pInt : -1;
-			if( id >=0 && data[id]->type == DAO_ENUM ){
-				flags |= 1<<id;
-				access = data[id];
-			}
-			
-			if( name ==NULL && size && data[0]->type == DAO_STRING && !(flags&1) ){
-				flags |= 1;
-				name = data[0];
-			}
-			if( method ==NULL && size >1 && data[1]->type == DAO_ROUTINE && !(flags&2) ){
-				flags |= 2;
-				method = data[1];
-			}
-			if( access ==NULL && size >2 && data[2]->type == DAO_ENUM && !(flags&4) ){
-				flags |= 4;
-				access = data[2];
-			}
-			
-			if( flags != ((1<<size)-1) ) goto InvalidMethod;
+			name = NULL;
+			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+			if( size > 1 && data[1]->type == DAO_ROUTINE ) method = data[1];
 			if( name == NULL || method == NULL ) continue;
-			if( access ){
-				if( DaoEnum_SetValue( & pmEnum, & access->xEnum, NULL ) ==0) goto InvalidMethod;
+			if( size > 2 && data[2]->type == DAO_ENUM ){
+				if( DaoEnum_SetValue( & pmEnum, & data[2]->xEnum, NULL ) ==0) goto InvalidMethod;
 				pm = permissions[ pmEnum.value ];
 			}
 			
@@ -6949,14 +6847,14 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 				DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
 				continue;
 			}
-			DString_Assign( newRout->routName, name->xString.data );
+			DString_Assign( newRout->routName, name );
 			if( DString_EQ( newRout->routName, klass->className ) ){
 				DaoFunctree_Add( klass->classRoutines, (DRoutine*)newRout );
 			}
 			
-			node = DMap_Find( proto->lookupTable, name->xString.data );
+			node = DMap_Find( proto->lookupTable, name );
 			if( node == NULL ){
-				DaoClass_AddConst( klass, name->xString.data, method, pm, 0 );
+				DaoClass_AddConst( klass, name, method, pm, 0 );
 				continue;
 			}
 			if( LOOKUP_UP( node->value.pSize ) ) continue;
@@ -6967,7 +6865,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 				DaoFunctree_Add( & dest->xFunctree, (DRoutine*)newRout );
 			}
 			continue;
-		InvalidMethod:
+InvalidMethod:
 			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
 		}
 	}

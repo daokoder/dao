@@ -3322,6 +3322,23 @@ NotExist_TryAux:
 			}
 		case DVM_CLASS :
 			AssertInitialized( opa, 0, 0, vmc->middle - 1 );
+			if( at->tid != DAO_TUPLE ) goto InvParam;
+			if( at->nested->size ){
+				bt = at->nested->items.pType[0];
+				if( bt->tid == DAO_PAR_NAMED ) bt = & bt->aux->xType;
+				if( bt->tid != DAO_STRING ) goto InvParam;
+			}
+			if( at->nested->size > 1 ){
+				bt = at->nested->items.pType[1];
+				if( bt->tid == DAO_PAR_NAMED ) bt = & bt->aux->xType;
+				k = DaoType_MatchTo( bt, dao_list_any, defs ) == 0;
+				if( k && DaoType_MatchTo( bt, dao_map_any, defs ) == 0 ) goto InvParam;
+			}
+			for(j=2; j<at->nested->size; j++){
+				bt = at->nested->items.pType[j];
+				if( bt->tid == DAO_PAR_NAMED ) bt = & bt->aux->xType;
+				if( DaoType_MatchTo( bt, dao_list_any, defs ) == 0 ) goto InvParam;
+			}
 			init[opc] = 1;
 			ct = udf;
 			UpdateType( opc, ct );

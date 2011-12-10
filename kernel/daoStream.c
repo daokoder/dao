@@ -737,29 +737,6 @@ void DString_SetWords( DString *self, const wchar_t *bytes, int count )
 	data = self->wcs;
 	for( i=0; i<count; i++ ) data[i] = bytes[i];
 }
-static void PrintSting( FILE* file, DString *str )
-{
-	size_t len = 0;
-	int res;
-	if( str->mbs )
-		for( ;; ){
-			res = fprintf( file, "%s", str->mbs + len );
-			len += res + 1;
-			if( res >= 0 && len < str->size )
-				fprintf( file, "%c", str->mbs[len - 1] );
-			else
-				break;
-		}
-	else
-		for( ;; ){
-			res = fprintf( file, "%ls", str->wcs + len );
-			len += res + 1;
-			if( res >= 0 && len < str->size )
-				fprintf( file, "%lc", str->wcs[len - 1] );
-			else
-				break;
-		}
-}
 void DaoStream_WriteString( DaoStream *self, DString *val )
 {
 	DaoVmSpace *vms = self->vmSpace;
@@ -774,7 +751,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			if( self->format ){
 				fprintf( self->file->fd, self->format, data );
 			}else{
-				PrintSting( self->file->fd, val );
+				DaoFile_WriteString( self->file->fd, val );
 			}
 		}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
 			DString *mbs = DString_New(1);
@@ -787,7 +764,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			if( self->format ){
 				printf( self->format, data );
 			}else{
-				PrintSting( stdout, val );
+				DaoFile_WriteString( stdout, val );
 			}
 		}
 	}else{
@@ -796,7 +773,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			if( self->format ){
 				fprintf( self->file->fd, self->format, data );
 			}else{
-				PrintSting( self->file->fd, val );
+				DaoFile_WriteString( self->file->fd, val );
 			}
 		}else if( vms && vms->userHandler && vms->userHandler->StdioWrite ){
 			DString *mbs = DString_New(1);
@@ -814,7 +791,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			if( self->format ){
 				printf( self->format, data );
 			}else{
-				PrintSting( stdout, val );
+				DaoFile_WriteString( stdout, val );
 			}
 		}
 	}
@@ -941,6 +918,26 @@ int DaoFile_ReadAll( FILE *fin, DString *all, int close )
 	}
 	if( close ) fclose( fin );
 	return 1;
+}
+void DaoFile_WriteString( FILE* file, DString *str )
+{
+	size_t len = 0;
+	int res;
+	if( str->mbs ){
+		for( ;; ){
+			res = fprintf( file, "%s", str->mbs + len );
+			len += res + 1;
+			if( res < 0 || len >= str->size ) break;
+			fprintf( file, "%c", str->mbs[len - 1] );
+		}
+	}else{
+		for( ;; ){
+			res = fprintf( file, "%ls", str->wcs + len );
+			len += res + 1;
+			if( res < 0 || len >= str->size ) break;
+			fprintf( file, "%lc", str->wcs[len - 1] );
+		}
+	}
 }
 
 

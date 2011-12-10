@@ -5656,7 +5656,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		goto ParsingError;
 	}
 	if( colon >= 0 && btype != DTOK_LCB ) enode.konst = 0;
-	if( self->enumTypes->size ==0 && isempty ){
+	if( (tp == NULL || tp->tid != enumcode) && isempty ){
 		tp = NULL;
 		switch( enumcode ){
 		case DVM_LIST : tp = dao_list_empty; break;

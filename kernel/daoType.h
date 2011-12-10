@@ -105,6 +105,8 @@ extern DaoType *dao_class_any;
 extern DaoType *dao_type_for_iterator;
 extern DaoType *dao_access_enum;
 extern DaoType *dao_storage_enum;
+extern DaoType *dao_dynclass_field;
+extern DaoType *dao_dynclass_method;
 
 DAO_DLL DaoType* DaoType_New( const char *name, short tid, DaoValue *pb, DArray *nest );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );

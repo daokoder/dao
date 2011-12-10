@@ -25,6 +25,8 @@ install:
 	-$(HAS_FILE) addpath.dao && $(COPY_FILE) addpath.dao $(DAO_DIR)
 	-$(HAS_FILE) tools/autobind.dao && $(COPY_FILE) tools/autobind.dao $(DAO_TOOL_DIR)
 
+	cd modules && $(MAKE) install-unix
+
 	@echo "Installation successful!"
 
 uninstall:

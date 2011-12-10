@@ -82,9 +82,9 @@ DAO_CFLAGS += $(DAO_CONFIG)
 ifdef UNIX
   DAO_DIR ?= /usr/local/dao
   DAO_BIN_DIR ?= /usr/bin
-  DAO_MOD_DIR = $(DAO_DIR)/lib
   DAO_INC_DIR = $(DAO_DIR)/include
-  DAO_TOOL_DIR = $(DAO_DIR)/tool
+  DAO_MOD_DIR = $(DAO_DIR)/modules
+  DAO_TOOL_DIR = $(DAO_DIR)/tools
 
   ifdef LINUX
     DAO_LFLAGS_DAO = -Wl,-rpath=. -Wl,-rpath=$(DAO_DIR) -ldao
@@ -110,9 +110,9 @@ endif
 ifdef WIN32
   DAO_DIR ?= C:\dao
   DAO_BIN_DIR ?= C:\dao
-  DAO_MOD_DIR = $(DAO_DIR)\lib
   DAO_INC_DIR = $(DAO_DIR)\include
-  DAO_TOOL_DIR = $(DAO_DIR)\tool
+  DAO_MOD_DIR = $(DAO_DIR)\modules
+  DAO_TOOL_DIR = $(DAO_DIR)\tools
 
   DAO_LFLAGS_DAO  = -Wl,-rpath=. -Wl,-rpath=$(DAO_DIR) -ldao
   DAO_LFLAGS_DAO2 = -Wl,-rpath=. -Wl,-rpath=$(DAO_DIR) -ldao

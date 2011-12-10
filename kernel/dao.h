@@ -633,6 +633,7 @@ DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *line );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
+DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
 
 DAO_DLL DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data );
 DAO_DLL DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data );
