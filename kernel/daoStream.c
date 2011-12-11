@@ -20,6 +20,17 @@
 #include"daoNamespace.h"
 #include"daoValue.h"
 
+#include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#ifdef WIN32
+#include <windows.h>
+#define stat _stat
+#define fstat _fstat
+#define fileno _fileno
+#endif
+
 void DaoStream_Flush( DaoStream *self )
 {
 	DaoVmSpace *vms = self->vmSpace;
@@ -174,24 +185,16 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 		vms->userHandler->StdioRead( vms->userHandler, ds, count );
 	}else if( count ){
 		FILE *fd = stdin;
-		char buf[IO_BUF_SIZE];
 		DString_Clear( ds );
 		if( self->file ) fd = self->file->fd;
 		if( count >0 ){
-			while( count >0 ){
-				size_t rest = count;
-				if( rest > IO_BUF_SIZE ) rest = IO_BUF_SIZE;
-				count -= rest;
-				rest = fread( buf, 1, rest, fd );
-				if( rest ==0 ) break;
-				DString_AppendDataMBS( ds, buf, rest );
-			}
+			DString_Resize( ds, count );
+			DString_Resize( ds, fread( ds->mbs, 1, count, fd ) );
 		}else{
-			while( 1 ){
-				size_t rest = fread( buf, 1, IO_BUF_SIZE, fd );
-				if( rest ==0 ) break;
-				DString_AppendDataMBS( ds, buf, rest );
-			}
+			struct stat info;
+			fstat( fileno( fd ), &info );
+			DString_Resize( ds, info.st_size - ftell( fd )/2 );
+			DString_Resize( ds, fread( ds->mbs, 1, ds->size, fd ) );
 		}
 		if( fd == stdin ) fseek( stdin, 0, SEEK_END );
 	}else{
@@ -232,7 +235,6 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 }
 static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char buf[IO_BUF_SIZE];
 	DString *res = DaoProcess_PutMBString( proc, "" );
 	dint silent = p[1]->xInteger.value;
 	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
@@ -240,19 +242,19 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( DString_Size( p[0]->xString.data ) ==0 ){
+		char buf[1024];
 		while(1){
-			size_t count = fread( buf, 1, IO_BUF_SIZE, stdin );
+			size_t count = fread( buf, 1, sizeof( buf ), stdin );
 			if( count ==0 ) break;
 			DString_AppendDataMBS( res, buf, count );
 		}
 	}else{
 		FILE *fin = DaoIO_OpenFile( proc, p[0]->xString.data, "r", silent );
+		struct stat info;
 		if( fin == NULL ) return;
-		while(1){
-			size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
-			if( count ==0 ) break;
-			DString_AppendDataMBS( res, buf, count );
-		}
+		fstat( fileno( fin ), &info );
+		DString_Resize( res, info.st_size );
+		DString_Resize( res, fread( res->mbs, 1, res->size, fin ) );
 		fclose( fin );
 	}
 }
@@ -275,7 +277,6 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 			return;
 		}
 	}else{
-		char buf[IO_BUF_SIZE];
 		DString_Assign( stream->fname, p[0]->xString.data );
 		DString_ToMBS( stream->fname );
 		mode = DString_GetMBS( p[1]->xString.data );
@@ -939,18 +940,6 @@ void DaoFile_WriteString( FILE* file, DString *str )
 		}
 	}
 }
-
-
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#ifdef WIN32
-#include <windows.h>
-#if defined(_MSC_VER) && !defined(_stat)
-#define _stat stat
-#endif
-#endif
 
 ulong_t FileChangedTime( const char *file )
 {
