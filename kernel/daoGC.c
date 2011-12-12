@@ -503,10 +503,11 @@ enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };
 static void DaoGC_ScanArray( DArray *array, int action )
 {
 	if( array == NULL || array->size == 0 ) return;
+	if( array->type != 0 && array->type != D_VALUE ) return;
 	switch( action ){
 	case DAO_GC_DEC : cycRefCountDecrements( array ); break;
 	case DAO_GC_INC : cycRefCountIncrements( array ); break;
-	case DAO_GC_BREAK : directRefCountDecrements( array ); break;
+	case DAO_GC_BREAK : directRefCountDecrements( array ); array->size = 0; break;
 	}
 }
 static void DaoGC_ScanMap( DMap *map, int action )
@@ -544,6 +545,7 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 
 	if( cdata->type == DAO_CTYPE || cdata->subtype == DAO_CDATA_PTR ) return;
 	if( cdata->typer == NULL || cdata->typer->GetGCFields == NULL ) return;
+	cvalues->size = carrays->size = cmaps->size = 0;
 	cdata->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
 	DaoGC_ScanArray( cvalues, action );
 	for(i=0,n=carrays->size; i<n; i++) DaoGC_ScanArray( carrays->items.pArray[i], action );

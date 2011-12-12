@@ -337,7 +337,8 @@ struct DaoTypeBase
 	/* Get garbage collectable fields (Dao data types with refCount by the type): 
 	 * Dao data types should be pushed into "values";
 	 * DArray holding Dao data types should be pushed into "arrays";
-	 * DMap holding Dao data types should be pushed into "maps"; */
+	 * DMap holding Dao data types should be pushed into "maps";
+	 * When "remove" != 0, references to data that are pushed to "values" should be broken; */
 	void  (*GetGCFields)( void *self, DArray *values, DArray *arrays, DArray *maps, int remove );
 };
 

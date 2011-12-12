@@ -3870,14 +3870,9 @@ void DaoException_Delete( DaoException *self )
 void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
 {
 	DaoException *self = (DaoException*) p;
-	if( self->edata ){
-		DArray_Append( values, self->edata );
-		if( remove ) self->edata = NULL;
-	}
-	if( self->callers->size ){
-		DArray_Append( arrays, self->callers );
-		if( remove ) self->callers->size = 0;
-	}
+	if( self->edata ) DArray_Append( values, self->edata );
+	if( self->callers->size ) DArray_Append( arrays, self->callers );
+	if( remove ) self->edata = NULL;
 }
 
 static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n );
