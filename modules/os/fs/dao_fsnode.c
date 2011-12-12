@@ -845,6 +845,6 @@ DaoTypeBase fsnodeTyper = {
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & fsnodeTyper );
+	DaoNamespace_WrapType( ns, & fsnodeTyper, 1 );
 	return 0;
 }

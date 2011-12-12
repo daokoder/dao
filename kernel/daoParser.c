@@ -1252,7 +1252,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, int *newpos )
 {
 	DaoType *type = NULL;
-	DaoCdata *cdata = & cptrCdata;
+	DaoCdata *cdata = & dao_default_cdata;
 	DaoNamespace *ns = self->nameSpace;
 	DaoClass *klass = self->hostClass;
 	DaoRoutine *routine = self->routine;
@@ -1574,7 +1574,7 @@ WrongType:
 		GC_IncRC( retype );
 		GC_DecRC( retype );
 	}else if( tokname > 0 && tokname < 100 ){
-		DaoCdata *cdata = & cptrCdata;
+		DaoCdata *cdata = & dao_default_cdata;
 		DaoValue *pbasic = tok->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;
 		DString *name = DString_New(1);
 		DString_AppendMBS( name, "dao::" );

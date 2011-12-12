@@ -478,9 +478,9 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	return i != DAO_DT_FAILED ? tp : NULL;
 }
 
-DaoType* DaoCdata_WrapType( DaoNamespace *ns, DaoTypeBase *typer );
+DaoType* DaoCdata_WrapType( DaoNamespace *ns, DaoTypeBase *typer, int opaque );
 
-static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, DaoParser *parser )
+static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int opaque, DaoParser *parser )
 {
 	DaoParser *parser2 = parser;
 	DaoType *ctype_type, *cdata_type;
@@ -489,7 +489,7 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 
 	if( typer->core ) return typer->core->kernel->abtype;
 
-	ctype_type = DaoCdata_WrapType( self, typer );
+	ctype_type = DaoCdata_WrapType( self, typer, opaque );
 	cdata_type = typer->core->kernel->abtype;
 	typer->core->kernel->attribs |= DAO_TYPER_PRIV_FREE;
 	ret = DaoNamespace_DefineType( self, typer->name, ctype_type );
@@ -505,9 +505,9 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	//printf( "type wrapping: %s\n", typer->name );
 	return cdata_type;
 }
-DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer )
+DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
 {
-	return DaoNamespace_WrapType2( self, typer, NULL );
+	return DaoNamespace_WrapType2( self, typer, opaque, NULL );
 }
 DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer )
 {
@@ -521,7 +521,7 @@ int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	DaoParser *parser = DaoParser_New();
 	int i, ec = 0;
 	for(i=0; typers[i]; i++ ){
-		ec += DaoNamespace_WrapType2( self, typers[i], parser ) == NULL;
+		ec += DaoNamespace_WrapType2( self, typers[i], 0, parser ) == NULL;
 		/* e |= ( DaoNamespace_SetupValues( self, typers[i] ) == 0 ); */
 	}
 	/* if( setup ) return DaoNamespace_SetupTypes( self, typers ); */

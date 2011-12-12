@@ -261,16 +261,8 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *
 static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf )
 {
 	DaoType *type;
-	DaoValue *meth;
-	if( self->typer == & cdataTyper ){
-		uint_t i;
-		for(i=0; i<self->size; i++){
-			DString_AppendChar( serial, hex_digits[ self->buffer.pUChar[i] / 16 ] );
-			DString_AppendChar( serial, hex_digits[ self->buffer.pUChar[i] % 16 ] );
-		}
-		return 1;
-	}
-	if( (meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" )) == NULL ) return 0;
+	DaoValue *meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" );
+	if( meth == NULL ) return 0;
 	if( DaoProcess_Call( proc, (DaoMethod*)meth, (DaoValue*)self, NULL, 0 ) ) return 0;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
 	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
@@ -851,7 +843,7 @@ static DaoTypeBase auxTyper = { "aux", NULL, NULL, auxMeths, {0}, {0}, NULL, NUL
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & auxTyper );
+	DaoNamespace_WrapType( ns, & auxTyper, 1 );
 	return 0;
 }
 

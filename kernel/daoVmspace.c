@@ -186,7 +186,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_ARRAY  :  return & baseTyper;
 #endif
 	case DAO_FUNCURRY : return & curryTyper;
-	case DAO_CDATA   :  return & cdataTyper;
+	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_FUNCTREE : return & mroutineTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_ABROUTINE :  return & routTyper;
@@ -1891,8 +1891,8 @@ DaoVmSpace* DaoInit( const char *command )
 
 #ifdef DEBUG
 	fakeShortType = DaoNamespace_TypeDefine( ns, "int", "short" );
-	DaoNamespace_WrapType( vms->nsInternal, dao_FakeList_Typer );
-	DaoNamespace_WrapType( vms->nsInternal, dao_FakeShoftList_Typer );
+	DaoNamespace_WrapType( vms->nsInternal, dao_FakeList_Typer, 1 );
+	DaoNamespace_WrapType( vms->nsInternal, dao_FakeShoftList_Typer, 1 );
 	fakeShortType = DaoNamespace_TypeDefine( ns, "FakeList<short>", "FakeList<int>" );
 #endif
 
@@ -1911,8 +1911,9 @@ DaoVmSpace* DaoInit( const char *command )
 	type->value = (DaoValue*) vms->stdStream;
 	GC_IncRC( vms->stdStream );
 
-	cptrCdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & cdataTyper );
-	GC_IncRC( cptrCdata.ctype );
+	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 0 );
+	dao_default_cdata.ctype->cdatatype = DAO_CDATA_PTR;
+	GC_IncRC( dao_default_cdata.ctype );
 
 	DaoException_Setup( vms->nsInternal );
 
@@ -1926,14 +1927,14 @@ DaoVmSpace* DaoInit( const char *command )
 	GC_IncRC( type2->value );
 	GC_IncRC( type3->value );
 	GC_IncRC( type4->value );
-	DaoNamespace_WrapType( ns, & thdMasterTyper );
+	DaoNamespace_WrapType( ns, & thdMasterTyper, 1 );
 	DaoNamespace_SetupType( ns, & mutexTyper );
 	DaoNamespace_SetupType( ns, & condvTyper );
 	DaoNamespace_SetupType( ns, & semaTyper );
 	DaoNamespace_SetupType( ns, & futureTyper );
 #endif
 	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );
-	DaoNamespace_WrapType( vms->nsInternal, & libStandardTyper );
+	DaoNamespace_WrapType( vms->nsInternal, & libStandardTyper, 1 );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );
 
@@ -1957,7 +1958,7 @@ void DaoQuit()
 
 	if( daoConfig.iscgi ) return;
 
-	GC_DecRC( cptrCdata.ctype );
+	GC_DecRC( dao_default_cdata.ctype );
 
 	DaoVmSpace_Delete( mainVmSpace );
 	for(i=0; i<DAO_ARRAY; i++){

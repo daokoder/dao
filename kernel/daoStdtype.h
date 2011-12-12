@@ -136,89 +136,6 @@ DAO_DLL int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
 DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
-enum{
-	DAO_CDATA_FREE = 1
-};
-
-/* DaoCdata stores a pointer to a C/C++ object or to a memory buffer:
- * XXX possible changes:
- * The following restriction should be imposed?
- * 1. If it is a memory buffer, the size and the memory pointer should
- *    not be mutable (in Dao scripts) after the creation of the cdata;
- *    they should be set at creation, but may be modified by C interfaces.
- *    Reason: resizing the buffer will cause the memory to be dao_reallocated
- *    which will introduce invalidated pointers, if the buffer is returned
- *    from a module written in C (e.g., a vector allocated by GSL module).
- * 2. Reading from the buffer is not limited by the "size" field, but writing
- *    to the buffer will be limited to the part smaller than "size". 
- *    If a module is generated automatically by the autobind tool, when a
- *    function need to return a memory buffer, the tool may not know the
- *    size of the buffer, and it can set it to zero, since the size of the
- *    buffer can be known from another place. Unlimited reading will allow
- *    the content of the buffer to be retrieved. Modifying a buffer outside
- *    of the "size" boundary is considered as dangerous, and should be forbidden.
- * 3. The "size" field should be respected even for reading, when the cdata
- *    is not a memory buffer, but an array of C/C++ objects. Because considering
- *    a pierce of memory beyond the "size" boundary as an C/C++ object is
- *    also dangerous, and should be forbidden.
- *
- * Other notes:
- * 1. "buffer" may store an array of C/C++ objects, and when an item is requested
- *    with the [] operator, "data" will be pointed to the requested one.
- * 2. The "attrib" field contains flags, if the DAO_CDATA_FREE flag is set in this
- *    field, this will indicate the memory pointed by "buffer"/"data" should be 
- *    freed when this cdata is reclaimed by GC. When "buffer" is not null, the 
- *    "data" field is a pointer with some offset from "buffer", so "buffer" should 
- *    be freed, not "data".
- */
-struct DaoCdata
-{
-	DAO_DATA_COMMON;
-
-	void  *data;
-	union {
-		void           *pVoid;
-		signed   char  *pSChar;
-		unsigned char  *pUChar;
-		signed   short *pSShort;
-		unsigned short *pUShort;
-		signed   int   *pSInt;
-		unsigned int   *pUInt;
-		float          *pFloat;
-		double         *pDouble;
-	} buffer;
-
-	DaoObject    *object;
-	DaoType      *ctype;
-	DaoTypeBase  *typer;
-
-	uchar_t   attribs;
-	uchar_t   extref;
-	ushort_t  memsize; /* size of single C/C++ object */
-
-	/* in case it is a memory buffer: */
-	uint_t  size;
-	uint_t  bufsize;
-};
-
-DAO_DLL extern DaoTypeBase cdataTyper;
-extern DaoCdata cptrCdata;
-
-DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );
-DAO_DLL int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
-
-/* DaoNameValue is not data type for general use, it is mainly used for 
- * passing named parameters and fields: */
-struct DaoNameValue
-{
-	DAO_DATA_COMMON;
-
-	DString   *name;
-	DaoValue  *value;
-	DaoType   *unitype;
-};
-DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
-
 #define DAO_TUPLE_ITEMS 2
 
 struct DaoTuple
@@ -238,8 +155,50 @@ DAO_DLL void DaoTuple_Delete( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
+
+/* DaoNameValue is not data type for general use, it is mainly used for 
+ * passing named parameters and fields: */
+struct DaoNameValue
+{
+	DAO_DATA_COMMON;
+
+	DString   *name;
+	DaoValue  *value;
+	DaoType   *unitype;
+};
+DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
+
+
+/* Customized/extended Dao data or opaque C/C++ data: */
+/* DaoCdata sub-types: */
+enum DaoCdataType
+{
+	DAO_CDATA_PTR , /* opaque C/C++ data, not owned by the wrapper */
+	DAO_CDATA_CXX , /* opaque C/C++ data, owned by the wrapper */
+	DAO_CDATA_DAO   /* customized Dao data */
+};
+
+#define DAO_CDATA_COMMON DAO_DATA_COMMON; \
+	DaoType *ctype; DaoTypeBase *typer; DaoObject *object; void *data
+
+struct DaoCdata
+{
+	DAO_CDATA_COMMON;
+};
+
+DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoTypeBase *typer );
+DAO_DLL void DaoCdata_FreeCommon( DaoCdata *self );
+DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );
+DAO_DLL int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
+
+DAO_DLL extern DaoTypeBase defaultCdataTyper;
+DAO_DLL extern DaoCdata dao_default_cdata;
+
+
 struct DaoException
 {
+	DAO_CDATA_COMMON;
+
 	int       fromLine;
 	int       toLine;
 	DRoutine *routine;
@@ -248,7 +207,7 @@ struct DaoException
 
 	DString  *name;
 	DString  *info;
-	DaoValue *data;
+	DaoValue *edata;
 };
 
 DaoException* DaoException_New( DaoTypeBase *typer );

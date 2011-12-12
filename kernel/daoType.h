@@ -68,8 +68,9 @@ struct DaoType
 	uchar_t   tid; /* type id */
 	uchar_t   attrib;
 	uchar_t   flagtype : 1; /* for enum type */
-	uchar_t   simtype : 1; /* if the nested contains only simple types */
-	uchar_t   ffitype : 6; /* for DaoCLoader module */
+	uchar_t   simtype  : 1; /* if the nested contains only simple types */
+	uchar_t   cdatatype : 2; /* sub type of DaoCdata */
+	uchar_t   ffitype : 4; /* for DaoCLoader module */
 	uchar_t   rntcount; /* real number type count */
 	DString  *name; /* type name */
 	DString  *fname; /* field name, or parameter name */
@@ -218,7 +219,6 @@ struct DaoCdataCore
 	DaoValue* (*Copy)(  DaoValue *self, DaoProcess *proc, DMap *cycData );
 
 	void   (*DelData)( void *data );
-	int    (*DelTest)( void *data );
 };
 
 DAO_DLL DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );

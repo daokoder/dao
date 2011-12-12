@@ -135,6 +135,7 @@ DaoType* DaoType_New( const char *name, short tid, DaoValue *extra, DArray *nest
 	DaoValue_Init( self, DAO_TYPE );
 	self->tid = tid;
 	self->name = DString_New(1);
+	self->cdatatype = DAO_CDATA_PTR;
 	self->typer = typer;
 	if( typer->core ){
 		self->kernel = typer->core->kernel;
@@ -492,6 +493,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		break;
 	case DAO_ROUTINE :
 		if( self->name->mbs[0] != type->name->mbs[0] ) return 0; /* @routine */
+		if( type->aux == NULL ) return DAO_MT_SIM; /* match to "routine"; */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( (self->attrib & DAO_TYPE_COROUTINE) && !(type->attrib & DAO_TYPE_COROUTINE) ) return 0;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
@@ -846,6 +848,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->kernel = self->kernel;
 	copy->typer = self->typer;
 	copy->attrib = self->attrib;
+	copy->cdatatype = self->cdatatype;
 	copy->ffitype = self->ffitype;
 	copy->attrib &= ~ DAO_TYPE_EMPTY; /* not any more empty */
 	GC_IncRC( copy );
@@ -1309,33 +1312,18 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 {
 	DaoCdata *self = & self0->xCdata;
 	DaoTypeBase *typer = self->typer;
+	DaoValue *func = NULL;
 
 	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
-	if( self->buffer.pVoid && pid->type >=DAO_INTEGER && pid->type <=DAO_DOUBLE){
-		int id = DaoValue_GetInteger( pid );
-		self->data = self->buffer.pVoid;
-		if( self->size && ( id <0 || id > self->size ) ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "index out of range" );
-			return;
-		}
-		if( self->memsize ){
-			self->data = (void*)( (char*)self->buffer.pVoid + id * self->memsize );
-		}else{
-			self->data = ((void**)self->buffer.pVoid)[id];
-		}
-		DaoProcess_PutValue( proc, self0 );
-	}else{
-		DaoValue *func = NULL;
-		func = DaoTypeBase_FindFunctionMBS( typer, "[]" );
-		if( func == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
-			return;
-		}
-		DaoProcess_PushCallable( proc, func, self0, & pid, 1 );
+	func = DaoTypeBase_FindFunctionMBS( typer, "[]" );
+	if( func == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
+		return;
 	}
+	DaoProcess_PushCallable( proc, func, self0, & pid, 1 );
 }
 static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {

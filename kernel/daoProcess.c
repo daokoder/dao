@@ -91,7 +91,7 @@ static void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc );
 /* return TRUE, if some exceptions can be rescued */
 static int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op );
-static void DaoPrintException( DaoCdata *except, DaoStream *stream );
+static void DaoPrintException( DaoException *except, DaoStream *stream );
 
 static void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc );
@@ -2699,21 +2699,12 @@ DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoTypeBase *plgTy
 	DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata );
 	return cdata;
 }
-DaoCdata* DaoProcess_PutCPointer( DaoProcess *self, void *data, int size )
-{
-	DaoCdata *cptr = DaoCdata_New( NULL, NULL );
-	cptr->data = data;
-	cptr->size = cptr->bufsize = size;
-	DaoProcess_PutValue( self, (DaoValue*)cptr );
-	return cptr;
-}
 DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoTypeBase *t )
 {
 	DaoCdata *cdt;
 	void *d2 = dao_malloc( n );
 	memcpy( d2, d, n );
 	cdt = DaoProcess_PutCdata( self, d2, t );
-	cdt->attribs |= DAO_CDATA_FREE;
 	return cdt;
 }
 DLong* DaoProcess_GetLong( DaoProcess *self, DaoVmCode *vmc )
@@ -6891,11 +6882,10 @@ int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 	if( DaoProcess_CheckFE( self ) ) return 1;
 	return ( self->exceptions->size > 0 );
 }
-static void DaoInitException( DaoCdata *except, DaoProcess *proc, DaoVmCode *vmc, int fe, const char *value )
+static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, int fe, const char *value )
 {
 	DaoRoutine *rout = proc->activeRoutine;
 	DaoTypeBase *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
-	DaoException *exdat = (DaoException*) except->data;
 	DaoVmCodeX **annotCodes = rout->annotCodes->items.pVmc;
 	DaoStackFrame *frame = proc->topFrame->prev;
 	int line, line2;
@@ -6904,30 +6894,30 @@ static void DaoInitException( DaoCdata *except, DaoProcess *proc, DaoVmCode *vmc
 	line = line2 = rout->defLine;
 	if( vmc && rout->vmCodes->size ) line = annotCodes[id]->line;
 	line2 = line;
-	exdat->routine = (DRoutine*) rout;
-	exdat->toLine = line;
+	except->routine = (DRoutine*) rout;
+	except->toLine = line;
 	if( DaoCdata_ChildOf( except->typer, efloat ) && fe >=0 )
 		line2 = (vmc && rout->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
-	exdat->fromLine = line2;
+	except->fromLine = line2;
 	if( value && value[0] != 0 ){
-		DaoValue_Clear( & exdat->data );
-		exdat->data = DaoValue_NewMBString( value, 0 );
+		DaoValue_Clear( & except->edata );
+		except->edata = DaoValue_NewMBString( value, 0 );
 	}
-	DArray_Clear( exdat->callers );
-	DArray_Clear( exdat->lines );
+	DArray_Clear( except->callers );
+	DArray_Clear( except->lines );
 #if 0
 	XXX
 	if( proc->thisFunction ){
-		DArray_Append( exdat->callers, rout );
-		DArray_Append( exdat->lines, (size_t)line );
-		exdat->routine = (DRoutine*) proc->thisFunction;
+		DArray_Append( except->callers, rout );
+		DArray_Append( except->lines, (size_t)line );
+		except->routine = (DRoutine*) proc->thisFunction;
 	}
 #endif
 	while( frame && frame->routine ){
-		if( exdat->callers->size >= 5 ) break;
+		if( except->callers->size >= 5 ) break;
 		line = frame->routine->annotCodes->items.pVmc[ frame->entry ]->line;
-		DArray_Append( exdat->callers, frame->routine );
-		DArray_Append( exdat->lines, (size_t) line );
+		DArray_Append( except->callers, frame->routine );
+		DArray_Append( except->lines, (size_t) line );
 		frame = frame->prev;
 	}
 }
@@ -6935,7 +6925,7 @@ extern void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStream *stdio = self->vmSpace->stdStream;
-	DaoCdata *cdata = NULL;
+	DaoException *cdata = NULL;
 	DaoTypeBase *except = & dao_Exception_Typer;
 	DaoTypeBase *warning = DaoException_GetType( DAO_WARNING );
 	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
@@ -6954,12 +6944,12 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 			cdata = NULL;
 			if( val->type == DAO_OBJECT ){
 				DaoType *type = except->core->kernel->abtype;
-				cdata = (DaoCdata*) DaoObject_MapThisObject( & val->xObject, type );
+				cdata = (DaoException*) DaoObject_MapThisObject( & val->xObject, type );
 			}else{
-				if( DaoCdata_ChildOf( DaoValue_GetTyper(val), except ) ) cdata = & val->xCdata;
+				if( DaoCdata_ChildOf( DaoValue_GetTyper(val), except ) ) cdata = (DaoException*)val;
 			}
-			if( cdata == NULL || cdata->data == NULL ) goto InvalidException;
-			DaoInitException( cdata, self, vmc, 0/*self->idClearFE*/, NULL );
+			if( cdata == NULL ) goto InvalidException;
+			DaoInitException( (DaoException*)cdata, self, vmc, 0/*self->idClearFE*/, NULL );
 			if( DaoCdata_ChildOf( cdata->typer, warning ) ){
 				DaoPrintException( cdata, stdio );
 			}else{
@@ -7045,22 +7035,22 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	DaoTypeBase *typer;
 	DaoTypeBase *warning = DaoException_GetType( DAO_WARNING );
 	DaoStream *stdio = self->vmSpace->stdStream;
-	DaoCdata *cdata;
+	DaoException *except;
 	if( type <= 1 ) return;
 	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
 	
 	typer = DaoException_GetType( type );
 	if( DaoCdata_ChildOf( typer, warning ) ){
 		/* XXX support warning suppression */
-		cdata = DaoCdata_New( typer, DaoException_New( typer ) );
-		DaoInitException( cdata, self, self->activeCode, 0/*self->idClearFE*/, value );
-		DaoPrintException( cdata, stdio );
-		typer->Delete( cdata );
+		except = DaoException_New( typer );
+		DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
+		DaoPrintException( except, stdio );
+		typer->Delete( except );
 		return;
 	}
-	cdata = DaoCdata_New( typer, DaoException_New( typer ) );
-	DaoInitException( cdata, self, self->activeCode, 0/*self->idClearFE*/, value );
-	DArray_Append( self->exceptions, (DaoValue*) cdata );
+	except = DaoException_New( typer );
+	DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
+	DArray_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_EXEC_DEBUG) ){
 		if( self->stopit ==0 && self->vmSpace->stopit ==0 ){
 			DaoProcess_Trace( self, 10 );
@@ -7082,9 +7072,8 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 	DString_Delete( details );
 }
 
-void DaoPrintException( DaoCdata *except, DaoStream *stream )
+void DaoPrintException( DaoException *ex, DaoStream *stream )
 {
-	DaoException *ex = (DaoException*) except->data;
 	int i, h, w = 100, n = ex->callers->size;
 	DaoStream *ss = DaoStream_New();
 	DString *sstring = ss->streamString;
@@ -7102,8 +7091,8 @@ void DaoPrintException( DaoCdata *except, DaoStream *stream )
 	DaoStream_WriteString( stream, sstring );
 	DString_Clear( sstring );
 
-	if( ex->data && ex->data->type == DAO_STRING ){
-		DaoStream_WriteString( ss, ex->data->xString.data );
+	if( ex->edata && ex->edata->type == DAO_STRING ){
+		DaoStream_WriteString( ss, ex->edata->xString.data );
 		if( DString_RFindChar( sstring, '\n', -1 ) != sstring->size-1 )
 			DaoStream_WriteNewLine( ss );
 		DaoStream_WriteString( stream, sstring );
@@ -7173,14 +7162,14 @@ void DaoProcess_PrintException( DaoProcess *self, int clear )
 	DaoValue **excobjs = self->exceptions->items.pValue;
 	int i;
 	for(i=0; i<self->exceptions->size; i++){
-		DaoCdata *cdata = NULL;
+		DaoException *except = NULL;
 		if( excobjs[i]->type == DAO_CDATA ){
-			cdata = & excobjs[i]->xCdata;
+			except = (DaoException*) excobjs[i];
 		}else if( excobjs[i]->type == DAO_OBJECT ){
-			cdata = (DaoCdata*)DaoObject_MapThisObject( & excobjs[i]->xObject, extype );
+			except = (DaoException*)DaoObject_MapThisObject( & excobjs[i]->xObject, extype );
 		}
-		if( cdata == NULL ) continue;
-		DaoPrintException( cdata, stdio );
+		if( except == NULL ) continue;
+		DaoPrintException( except, stdio );
 	}
 	if( clear ) DArray_Clear( self->exceptions );
 }

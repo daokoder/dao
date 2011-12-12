@@ -14,6 +14,19 @@ all:
 #	-cd DaoCXX && $(MAKE)
 #	-cd DaoJIT && $(MAKE)
 
+clean:
+	-cd auxlib && $(MAKE) clean
+	-cd syslib && $(MAKE) clean
+	-cd math && $(MAKE) clean
+	-cd string && $(MAKE) clean
+	-cd meta && $(MAKE) clean
+	-cd net && $(MAKE) clean
+	-cd web && $(MAKE) clean
+	-cd os && $(MAKE) clean
+	-cd stream && $(MAKE) clean
+#	-cd DaoCXX && $(MAKE) clean
+#	-cd DaoJIT && $(MAKE) clean
+
 install-unix:
 	@$(HAS_DIR) $(DAO_MOD_DIR)/string || $(MKDIR) $(DAO_MOD_DIR)/string
 	@$(HAS_DIR) $(DAO_MOD_DIR)/web || $(MKDIR) $(DAO_MOD_DIR)/web

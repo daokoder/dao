@@ -33,3 +33,4 @@ uninstall:
 clean:
 	-$(DEL_FILE) kernel\*.o dao.a
 	-$(DEL_FILE) *~ core *.core
+	cd modules && $(MAKE) clean

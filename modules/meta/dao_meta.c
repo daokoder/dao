@@ -537,6 +537,6 @@ DaoTypeBase metaTyper = {
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & metaTyper );
+	DaoNamespace_WrapType( ns, & metaTyper, 1 );
 	return 0;
 }
