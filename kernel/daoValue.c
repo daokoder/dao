@@ -735,7 +735,7 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T )
 	int rc = DaoValue_Move( S, D, T );
 	if( rc == 0 || T == NULL ) return rc;
 	if( S->type <= DAO_STREAM || S->type != T->tid ) return rc;
-	if( S->type == DAO_CDATA ){
+	if( S->type == DAO_CDATA && S->xCdata.subtype != DAO_CDATA_DAO ){
 		if( S->xCdata.data == NULL ) rc = 0;
 	}else{
 		if( S == T->value ) rc = 0;
