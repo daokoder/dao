@@ -1,0 +1,10 @@
+
+load graph;
+
+graph = Graph();
+node1 = graph.add_node();
+node2 = graph.add_node();
+edge = graph.add_edge( node1, node2 );
+
+io.writeln( edge.nodes() );
+io.writeln( graph.nodes(), graph.edges() )

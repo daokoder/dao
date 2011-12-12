@@ -55,8 +55,8 @@ install-win32:
 	@$(HAS_DIR) $(DAO_MOD_DIR)\os || $(MKDIR) $(DAO_MOD_DIR)\os
 	@$(HAS_DIR) $(DAO_MOD_DIR)\stream || $(MKDIR) $(DAO_MOD_DIR)\stream
 	-$(COPY) addpath.dao $(DAO_MOD_DIR)
-	-$(COPY) auxlib\libdao_aux.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
-	-$(COPY) syslib\libdao_sys.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
+	-$(COPY) auxlib\dao_aux.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
+	-$(COPY) syslib\dao_sys.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) math\math.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) meta\meta.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) net\net.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
