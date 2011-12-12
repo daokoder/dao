@@ -36,6 +36,7 @@
 #include"winsock.h"
 
 typedef size_t socklen_t;
+#define fileno _fileno
 
 #endif
 
@@ -973,7 +974,7 @@ static void DaoNetLib_Select( DaoProcess *proc, DaoValue *par[], int N  )
 				DaoProcess_RaiseException( proc, DAO_ERROR, "The read list contains a stream not associated with a file" );
 				return;
 			}
-			FD_SET( (int)file, &set1 );
+			FD_SET( fileno( file ), &set1 );
 		}else{
 			socket = (DaoSocket*)DaoValue_TryGetCdata( value );
 			if( socket->id == -1 ){
@@ -991,7 +992,7 @@ static void DaoNetLib_Select( DaoProcess *proc, DaoValue *par[], int N  )
 				DaoProcess_RaiseException( proc, DAO_ERROR, "The write list contains a stream not associated with a file" );
 				return;
 			}
-			FD_SET( (int)file, &set2 );
+			FD_SET( fileno( file ), &set2 );
 		}else{
 			socket = (DaoSocket*)DaoValue_TryGetCdata( value );
 			if( socket->id == -1 ){
@@ -1015,7 +1016,7 @@ static void DaoNetLib_Select( DaoProcess *proc, DaoValue *par[], int N  )
 	for( i = 0; i < DaoList_Size( list1 ); i++ ){
 		value = DaoList_GetItem( list1, i );
 		if( DaoValue_Type( value ) == DAO_STREAM ){
-			if( FD_ISSET( (int)DaoStream_GetFile( DaoValue_CastStream( value ) ), &set1 ) )
+			if( FD_ISSET( fileno( DaoStream_GetFile( DaoValue_CastStream( value ) ) ), &set1 ) )
 				DaoList_PushBack( reslist, value );
 		}else if( FD_ISSET( ((DaoSocket*)DaoValue_TryGetCdata( value ))->id, &set1 ) )
 			DaoList_PushBack( reslist, value );
@@ -1027,7 +1028,7 @@ static void DaoNetLib_Select( DaoProcess *proc, DaoValue *par[], int N  )
 	for( i = 0; i < DaoList_Size( list2 ); i++ ){
 		value = DaoList_GetItem( list2, i );
 		if( DaoValue_Type( value ) == DAO_STREAM ){
-			if( FD_ISSET( (int)DaoStream_GetFile( DaoValue_CastStream( value ) ), &set2 ) )
+			if( FD_ISSET( fileno( DaoStream_GetFile( DaoValue_CastStream( value ) ) ), &set2 ) )
 				DaoList_PushBack( reslist, value );
 		}else if( FD_ISSET( ((DaoSocket*)DaoValue_TryGetCdata( value ))->id, &set2 ) )
 			DaoList_PushBack( reslist, value );
