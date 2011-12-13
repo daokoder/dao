@@ -594,10 +594,11 @@ static DaoValue* DaoParseNumber( const char *s, DaoValue *value )
 	return value;
 }
 
-static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int alib );
+static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname );
 static DaoNamespace* DaoVmSpace_LoadDaoByteCode( DaoVmSpace *self, DString *path, int run );
 static DaoNamespace* DaoVmSpace_LoadDaoAssembly( DaoVmSpace *self, DString *path, int run );
 static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DArray *a, int run );
+static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath );
 
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 		DString *file, DArray *args, DArray *argNames, DArray *argValues )
@@ -782,16 +783,28 @@ DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run )
 
 	SplitByWhiteSpaces( file, args );
 	DString_Assign( path, args->items.pString[0] );
-	switch( DaoVmSpace_CompleteModuleName( self, path, 0 ) ){
+	switch( DaoVmSpace_CompleteModuleName( self, path ) ){
 	case DAO_MODULE_DAO_O : ns = DaoVmSpace_LoadDaoByteCode( self, path, 0 ); break;
 	case DAO_MODULE_DAO_S : ns = DaoVmSpace_LoadDaoAssembly( self, path, 0 ); break;
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break;
+	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, path ); break;
 	default : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break; /* any suffix */
 	}
 	DArray_Delete( args );
 	DString_Delete( path );
 	if( ns == NULL ) return 0;
 	return ns;
+}
+/* Link "ns" to the module/namespace corresponding to "mod". */
+/* If the module "mod" is not loaded yet, it will be loaded first. */
+/* Return the namespace corresponding to "mod". */
+DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const char *mod )
+{
+	DString name = DString_WrapMBS( mod );
+	DaoNamespace *modns = DaoVmSpace_Load( self, & name, 0 );
+	if( modns == NULL ) return NULL;
+	DaoNamespace_AddParent( ns, modns );
+	return modns;
 }
 
 static int CheckCodeCompletion( DString *source, DArray *tokens )
@@ -1037,7 +1050,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 
 	return 1;
 }
-static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int alib )
+static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 {
 	int slen = strlen( DAO_DLL_SUFFIX );
 	int i, modtype = DAO_MODULE_NONE;
@@ -1076,11 +1089,24 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
 		DString *fn = DString_New(1);
-		for(i=0; i<(4+3*alib); i++){
-			DString_Assign( fn, fname );
-			if( i >= 4 ){
+		DString *path = DString_New(1);
+		DString *file = DString_New(1);
+		size_t pos = fname->size;
+		while( pos && (fname->mbs[pos-1] == '_' || isalnum( fname->mbs[pos-1] )) ) pos -= 1;
+		if( pos && (fname->mbs[pos-1] == '/' || fname->mbs[pos-1] == '\\') ){
+			DString_SubString( fname, path, 0, pos );
+			DString_SubString( fname, file, pos, fname->size - pos );
+		}else{
+			DString_Assign( file, fname );
+		}
+		for(i=0; i<7; i++){
+			if( i < DAO_MODULE_DLL ){
+				DString_Assign( fn, fname );
+			}else{
 				if( strncmp( fname->mbs, "lib", 3 ) == 0 ) break;
-				DString_InsertMBS( fn, daoDllPrefix[i], 0, 0, 0 );
+				DString_Assign( fn, path );
+				DString_AppendMBS( fn, daoDllPrefix[i] );
+				DString_Append( fn, file );
 			}
 			DString_AppendMBS( fn, daoFileSuffix[i] );
 			DaoVmSpace_MakePath( self, fn, DAO_FILE_PATH, 1 );
@@ -1099,6 +1125,8 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int 
 			}
 		}
 		DString_Delete( fn );
+		DString_Delete( path );
+		DString_Delete( file );
 	}
 	return modtype;
 }
@@ -1284,7 +1312,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 static void* DaoOpenDLL( const char *name );
 static void* DaoGetSymbolAddress( void *handle, const char *name );
 
-typedef void (*FuncType)( DaoVmSpace *, DaoNamespace * );
+typedef int (*FuncType)( DaoVmSpace *, DaoNamespace * );
 
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath )
 {
@@ -1293,7 +1321,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	FuncType funpter;
 	void *handle;
 	long *dhv;
-	size_t i;
+	size_t i, retc;
 
 	if( self->options & DAO_EXEC_SAFE ){
 		DaoStream_WriteMBS( self->stdStream,
@@ -1354,20 +1382,17 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
 	DaoVmSpace_Unlock( self );
 
-	(*funpter)( self, ns );
+	retc = (*funpter)( self, ns );
 
 	DaoVmSpace_Lock( self );
 	if( ns->path->size ) DArray_PopFront( self->pathLoading );
 	DArray_PopFront( self->nameLoading );
 	DaoVmSpace_Unlock( self );
-#if 0
-	change to handle returned value of DaoOnLoad?
-		if( bl ==0 ){
-			MAP_Erase( self->nsModules, libpath );
-			GC_DecRC( ns );
-			return NULL;
-		}
-#endif
+	if( retc ){
+		MAP_Erase( self->nsModules, ns->name );
+		GC_DecRC( ns );
+		return NULL;
+	}
 	return ns;
 }
 void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *file, const char *data )
@@ -1986,12 +2011,12 @@ DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {
 	DNode *node = MAP_Find( self->nsModules, fname );
 	if( node ) return (DaoNamespace*) node->value.pValue;
-	DaoVmSpace_CompleteModuleName( self, fname, 0 );
+	DaoVmSpace_CompleteModuleName( self, fname );
 	node = MAP_Find( self->nsModules, fname );
 	if( node ) return (DaoNamespace*) node->value.pValue;
 	return NULL;
 }
-DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, int alib )
+DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 {
 	DaoNamespace *ns = NULL;
 #ifdef DAO_WITH_THREAD
@@ -1999,7 +2024,7 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, int alib 
 #if 0
 	printf( "modtype = %i\n", modtype );
 #endif
-	switch( DaoVmSpace_CompleteModuleName( self, fname, alib ) ){
+	switch( DaoVmSpace_CompleteModuleName( self, fname ) ){
 	case DAO_MODULE_DAO_O : ns = DaoVmSpace_LoadDaoByteCode( self, fname, 1 ); break;
 	case DAO_MODULE_DAO_S : ns = DaoVmSpace_LoadDaoAssembly( self, fname, 1 ); break;
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
