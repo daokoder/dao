@@ -33,10 +33,10 @@ struct DaoxNode
 	DArray     *outs; /* <DaoxEdge*>; */
 
 	union {
-		dint   i;
-		float  f;
-		double d;
-	} weight;
+		dint   I;
+		float  F;
+		double D;
+	} U1, U2, U3;
 };
 
 DAO_DLL DaoxNode* DaoxNode_New( DaoxGraph *graph );
@@ -51,10 +51,10 @@ struct DaoxEdge
 	DaoxNode   *to;
 
 	union {
-		dint   i;
-		float  f;
-		double d;
-	} weight;
+		dint   I;
+		float  F;
+		double D;
+	} W1, W2, W3;
 };
 
 DAO_DLL DaoxEdge* DaoxEdge_New( DaoxGraph *graph );
@@ -75,5 +75,7 @@ DAO_DLL void DaoxGraph_Delete( DaoxGraph *self );
 
 DAO_DLL DaoxNode* DaoxGraph_AddNode( DaoxGraph *self );
 DAO_DLL DaoxEdge* DaoxGraph_AddEdge( DaoxGraph *self, DaoxNode *from, DaoxNode *to );
+
+DAO_DLL double DaoxGraph_MaxFlow_PushRelabelToFront( DaoxGraph *self, DaoxNode *source, DaoxNode *sink );
 
 #endif
