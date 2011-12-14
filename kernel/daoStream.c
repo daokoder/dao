@@ -903,14 +903,14 @@ void DaoFile_WriteString( FILE* file, DString *str )
 		for( ;; ){
 			res = fprintf( file, "%s", str->mbs + len );
 			len += res + 1;
-			if( res < 0 || len >= str->size ) break;
+			if( res < 0 || len > str->size ) break;
 			fprintf( file, "%c", str->mbs[len - 1] );
 		}
 	}else{
 		for( ;; ){
 			res = fprintf( file, "%ls", str->wcs + len );
 			len += res + 1;
-			if( res < 0 || len >= str->size ) break;
+			if( res < 0 || len > str->size ) break;
 			fprintf( file, "%lc", str->wcs[len - 1] );
 		}
 	}
