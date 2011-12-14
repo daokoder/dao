@@ -868,43 +868,18 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 }
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {
-	int ch;
 	char buf[IO_BUF_SIZE];
-	char *start = buf, *end = buf + IO_BUF_SIZE;
-
 	DString_Clear( line );
 	DString_ToMBS( line );
-	if( feof( fin ) ) return 0;
-
-	*start = ch = getc( fin );
-	start += 1;
-	while( ch != '\n' && ch != '\r' && ch != EOF ){ /* LF or CR */
-		*start = ch = getc( fin );
-		start += 1;
-		if( start == end ){
-			if( ch == EOF ) start -= 1;
-			DString_AppendDataMBS( line, buf, start-buf );
-			start = buf;
-		}
+	if( feof( fin ) )
+		return 0;
+	do{
+		buf[IO_BUF_SIZE - 1] = 1;
+		if( !fgets( buf, IO_BUF_SIZE, fin ) )
+			break;
+		DString_AppendMBS( line, buf );
 	}
-	if( ch == EOF && start != buf ) start -= 1;
-	DString_AppendDataMBS( line, buf, start-buf );
-	if( line->mbs[ line->size-1 ] == '\r' ){
-		/* some programs may write consecutive 2 \r under Windows */
-		if( feof( fin ) ) return 1;
-		ch = getc( fin );
-		if( ch == '\n' ){ /* CR + LF*/
-			DString_AppendChar( line, ch );
-		}else if( ch != '\r' && ch != EOF ){
-			if( ch != EOF ) ungetc( ch, fin );
-		}
-	}
-	/* the last line may be ended with newline, but followed with no line: */
-	if( feof( fin ) ) return 1;
-	if( line->mbs[ line->size-1 ] == '\n' ){
-		ch = getc( fin );
-		if( ch != EOF ) ungetc( ch, fin );
-	}
+	while( buf[IO_BUF_SIZE - 1] != 1 );
 	return 1;
 }
 int DaoFile_ReadAll( FILE *fin, DString *all, int close )
