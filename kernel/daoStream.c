@@ -869,23 +869,21 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {
 	char buf[IO_BUF_SIZE];
-	DString_Clear( line );
+	DString_Reset( line, 0 );
 	DString_ToMBS( line );
-	if( feof( fin ) )
-		return 0;
+	if( feof( fin ) ) return 0;
 	do{
 		buf[IO_BUF_SIZE - 1] = 1;
-		if( !fgets( buf, IO_BUF_SIZE, fin ) )
-			break;
+		if( !fgets( buf, IO_BUF_SIZE, fin ) ) break;
 		DString_AppendMBS( line, buf );
-	}
-	while( buf[IO_BUF_SIZE - 1] != 1 );
+	} while( buf[IO_BUF_SIZE - 1] != 1 );
 	return 1;
 }
 int DaoFile_ReadAll( FILE *fin, DString *all, int close )
 {
 	char buf[IO_BUF_SIZE];
-	DString_Clear( all );
+	DString_Reset( all, 0 );
+	DString_ToMBS( all );
 	if( fin == NULL ) return 0;
 	while(1){
 		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );

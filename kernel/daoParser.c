@@ -1349,6 +1349,39 @@ InvalidTypeForm:
 	DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[i]->line, tokens[i]->string->mbs );
 	return NULL;
 }
+int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *holders, DArray *defaults, DString *name )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	int i = start;
+	while( i < end ){
+		DaoType *holder, *deft = NULL;
+		DString *str = tokens[i]->string;
+		if( tokens[i]->name != DTOK_ID_INITYPE ){
+			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, str );
+			return 0;
+		}
+		holder = DaoParser_ParseType( self, i, end-1, &i, NULL );
+		if( holder == NULL ) return 0;
+		if( name ){
+			if( holders->size ) DString_AppendChar( name, ',' );
+			DString_Append( name, holder->name );
+		}
+		if( i < end && tokens[i]->type == DTOK_ASSN ){
+			deft = DaoParser_ParseType( self, i+1, end-1, &i, NULL );
+			if( deft == NULL ) return 0;
+			i += 1;
+		}
+		DArray_Append( holders, holder );
+		DArray_Append( defaults, deft );
+		if( i < end && tokens[i]->type != DTOK_COMMA ){
+			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, tokens[i]->string );
+			return 0;
+		}
+		i += 1;
+	}
+	return 1;
+}
+
 static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int end )
 {
 	DaoType *type, *type2;
@@ -2954,10 +2987,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoRoutine *rout = NULL;
 	DaoParser *parser = NULL;
 	DaoClass *klass = NULL;
+	DaoValue *value = NULL, *scope = NULL;
 	DaoToken *tokName;
 	DString *str, *mbs = self->mbs;
 	DString *className, *ename = NULL;
-	DaoValue *value = NULL, *scope = NULL;
+	DArray *holders, *defaults;
 	int begin, line = self->curLine;
 	int i, k, rb, right;
 	int errorStart = start;
@@ -2991,38 +3025,16 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 #ifdef DAO_WITH_DYNCLASS
 			rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start+1, -1 );
 			if( rb <= start + 2 ) goto ErrorClassDefinition;
-			klass->typeHolders = DArray_New(0);
-			klass->typeDefaults = DArray_New(0);
+			klass->typeHolders = holders = DArray_New(0);
+			klass->typeDefaults = defaults = DArray_New(0);
 			klass->instanceClasses = DMap_New(D_STRING,0);
 			DString_AppendChar( className, '<' );
-			i = start + 2;
-			while( i < rb ){
-				DaoType *holder, *deft = NULL;
-				str = tokens[i]->string;
-				if( tokens[i]->name != DTOK_ID_INITYPE ){
-					DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, str );
-					goto ErrorClassDefinition;
-				}
-				holder = DaoNamespace_MakeType( myNS, str->mbs, DAO_INITYPE, 0,0,0 );
-				if( holder == NULL ) goto ErrorClassDefinition;
-				if( klass->typeHolders->size ) DString_AppendChar( className, ',' );
-				DString_Append( className, holder->name );
-				i += 1;
-				if( i < rb && tokens[i]->type == DTOK_ASSN ){
-					deft = DaoParser_ParseType( self, i+1, rb-1, &i, NULL );
-					if( deft == NULL ) goto ErrorClassDefinition;
-					i += 1;
-				}
-				DArray_Append( klass->typeHolders, holder );
-				DArray_Append( klass->typeDefaults, deft );
-				DaoClass_AddReference( klass, holder );
-				DaoClass_AddReference( klass, deft );
-				if( i < rb && tokens[i]->type != DTOK_COMMA ){
-					DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, tokens[i]->string );
-					goto ErrorClassDefinition;
-				}
-				i += 1;
+			k = DaoParser_ParseTemplateParams( self, start + 2, rb, holders, defaults, className );
+			for(i=0; i<holders->size; i++){
+				DaoClass_AddReference( klass, holders->items.pValue[i] );
+				DaoClass_AddReference( klass, defaults->items.pValue[i] );
 			}
+			if( k == 0 ) goto ErrorClassDefinition;
 			DString_AppendChar( className, '>' );
 			DaoClass_SetName( klass, className, myNS );
 			klass->objType->nested = DArray_Copy( klass->typeHolders );

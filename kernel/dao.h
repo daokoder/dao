@@ -454,6 +454,7 @@ DAO_DLL DString* DString_Copy( DString *self );
 DAO_DLL void DString_Delete( DString *self );
 DAO_DLL size_t DString_Size( DString *self );
 DAO_DLL void DString_Clear( DString *self );
+DAO_DLL void DString_Reset( DString *self, size_t size );
 DAO_DLL void DString_Resize( DString *self, size_t size );
 DAO_DLL int  DString_IsMBS( DString *self );
 DAO_DLL void DString_SetMBS( DString *self, const char *chs );

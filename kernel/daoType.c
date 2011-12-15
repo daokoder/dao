@@ -128,7 +128,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		self->simtype = count == self->nested->size;
 	}
 }
-DaoType* DaoType_New( const char *name, short tid, DaoValue *extra, DArray *nest )
+DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 {
 	DaoTypeBase *typer = DaoVmSpace_GetTyper( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
@@ -358,10 +358,10 @@ void DaoType_Init()
 	dao_type_matrix[DAO_FUNCTREE][DAO_FUNCTREE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
 }
-static short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
+static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
 static int DaoInterface_TryBindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
 
-static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int host )
+static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int host )
 {
 	DaoType *ext1 = self;
 	DaoType *ext2 = type;
@@ -384,11 +384,11 @@ static short DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *b
 	}
 	return m;
 }
-short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
+int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	DaoType *it1, *it2;
 	DNode *it, *node = NULL;
-	short i, k, mt2, mt = DAO_MT_NOT;
+	int i, k, mt2, mt = DAO_MT_NOT;
 	if( self ==NULL || type ==NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 	mt = dao_type_matrix[self->tid][type->tid];
@@ -523,14 +523,16 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_OBJECT :
 		/* par : class */
 		if( type->aux == NULL && self->tid == DAO_CLASS ) return DAO_MT_SUB;
-		if( self->aux == type->aux ) return DAO_MT_EQ;
-		it1 = self->aux->xClass.objType;
-		if( type->tid == DAO_INTERFACE ){
+		if( self->aux == type->aux ){
+			return DAO_MT_EQ;
+		}else if( DaoClass_ChildOf( & self->aux->xClass, type->aux ) ){
+			return DAO_MT_SUB;
+		}else if( type->tid == DAO_INTERFACE ){
+			it1 = self->aux->xClass.objType;
 			if( DaoType_HasInterface( it1, & type->aux->xInterface ) ) return DAO_MT_SUB;
 			if( DaoInterface_TryBindTo( & type->aux->xInterface, it1, binds, NULL ) ) return DAO_MT_SUB;
 		}
-		if( DaoClass_ChildOf( & self->aux->xClass, type->aux ) ) return DAO_MT_SUB;
-		return DAO_MT_NOT;
+		return DAO_MT_SUB;
 		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
@@ -564,7 +566,7 @@ short DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt > DAO_MT_EQ ) mt = DAO_MT_NOT;
 	return mt;
 }
-short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
+int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	void *pvoid[2];
 	size_t mt;
@@ -585,18 +587,18 @@ short DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt ==0 && binds && DMap_Find( binds, pvoid ) ) return DAO_MT_INIT;
 	return mt;
 }
-short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
+int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 {
 	return DaoType_Match( self, type, defs, NULL );
 }
-short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
+int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 {
 	ulong_t flags;
 	DaoType *tp;
 	DaoEnum *other;
 	DNode *node;
 	DMap *names;
-	short i, mt, mt2, it1, it2;
+	int i, mt, mt2, it1, it2;
 	if( self == NULL ) return DAO_MT_NOT;
 	mt = dao_type_matrix[value->type][self->tid];
 	if( mt == DAO_MT_SIM || mt == DAO_MT_EQ ) return mt;
@@ -742,13 +744,16 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( DaoClass_ChildOf( & value->xClass, self->aux ) ) return DAO_MT_SUB;
 		break;
 	case DAO_OBJECT :
+		printf( "%s\n", value->xObject.defClass->className->mbs );
 		if( self->aux == (DaoValue*) value->xObject.defClass ) return DAO_MT_EQ;
 		tp = value->xObject.defClass->objType;
 		if( self->tid == DAO_INTERFACE ){
 			if( DaoType_HasInterface( tp, & self->aux->xInterface ) ) return DAO_MT_SUB;
 			if( DaoInterface_TryBindTo( & self->aux->xInterface, tp, NULL, NULL ) ) return DAO_MT_SUB;
 		}
+		printf( "%s\n", value->xObject.defClass->className->mbs );
 		if( DaoClass_ChildOf( value->xObject.defClass, self->aux ) ) return DAO_MT_SUB;
+		printf( "%s\n", value->xObject.defClass->className->mbs );
 		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
@@ -786,9 +791,9 @@ short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 	return DAO_MT_NOT;
 }
-short DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs )
+int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs )
 {
-	short m = DaoType_MatchValue( self, value, defs );
+	int m = DaoType_MatchValue( self, value, defs );
 	if( m == 0 || value->type <= DAO_STREAM || value->type != self->tid ) return m;
 	if( value->type == DAO_CDATA ){
 		if( value->xCdata.data == NULL ) m = 0;
@@ -811,10 +816,9 @@ static void DMap_Erase2( DMap *defs, void *p )
 }
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 {
-	int i;
-	DaoType *nest;
-	DaoType *copy = NULL;
+	DaoType *type, *copy = NULL;
 	DNode *node;
+	int i;
 
 	if( self == NULL ) return NULL;
 	if( DString_FindChar( self->name, '?', 0 ) == MAXSIZE
@@ -835,6 +839,12 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy = node ? node->value.pType : NULL;
 		if( copy ==0 || copy->tid == DAO_ANY || copy->tid == DAO_UDF ) return self;
 		return DaoType_DefineTypes( copy, ns, defs );
+	}else if( self->tid == DAO_VARIANT && self->aux ){ /* @T<int|float> */
+		node = MAP_Find( defs, self->aux );
+		if( node == NULL ) return self;
+		type = DaoType_DefineTypes( node->value.pType, ns, defs );
+		if( type == NULL ) return self;
+		return DaoNamespace_MakeType( ns, self->aux->xType.name->mbs, DAO_VARIANT, self->aux, &type, 1 );
 	}else if( self->tid == DAO_ANY ){
 		return self;
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
@@ -874,10 +884,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			DString_AppendChar( copy->name, '<' );
 		}
 		for(i=0; i<self->nested->size; i++){
-			nest = DaoType_DefineTypes( self->nested->items.pType[i], ns, defs );
-			if( nest ==NULL ) goto DefFailed;
-			DArray_Append( copy->nested, nest );
-			DString_Append( copy->name, nest->name );
+			type = DaoType_DefineTypes( self->nested->items.pType[i], ns, defs );
+			if( type ==NULL ) goto DefFailed;
+			DArray_Append( copy->nested, type );
+			DString_Append( copy->name, type->name );
 			if( i+1 <self->nested->size ) DString_AppendChar( copy->name, sep );
 		}
 		GC_IncRCs( copy->nested );

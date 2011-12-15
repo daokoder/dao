@@ -6693,6 +6693,17 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	}else{
 		DaoClass_SetName( klass, name, ns2 );
 	}
+	for(i=0; i<routine->parCount; i++){
+		DaoType *type = routine->routType->nested->items.pType[i];
+		DaoValue *value = self->activeValues[i];
+		if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ) type = (DaoType*) type->aux;
+		if( type->tid != DAO_TYPE ) continue;
+		type = type->nested->items.pType[0];
+		if( type->tid == DAO_VARIANT && type->aux ) type = (DaoType*) type->aux;
+		if( type->tid == DAO_INITYPE && value->type == DAO_TYPE ){
+			MAP_Insert( deftypes, type, value );
+		}
+	}
 	tp = DaoNamespace_MakeType( ns, "@class", DAO_INITYPE, NULL,NULL,0 );
 	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
 	DaoProcess_MapTypes( self, deftypes );

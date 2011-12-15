@@ -475,6 +475,20 @@ size_t DString_Size( DString *self )
 	return self->size;
 }
 
+void DString_Reset( DString *self, size_t size )
+{
+	if( size < self->bufSize ){
+		DString_Detach( self );
+		self->size = size;
+		if( self->mbs ){
+			self->mbs[size] = '\0';
+		}else{
+			self->wcs[size] = L'\0';
+		}
+		return;
+	}
+	DString_Resize( self, size );
+}
 void DString_Resize( DString *self, size_t size )
 {
 	int *data;

@@ -346,6 +346,11 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		DaoClass_SetName( klass, name, self->classRoutine->nameSpace );
 		for(i=0; i<types->size; i++){
 			type = types->items.pType[i];
+			if( DaoType_MatchTo( type, self->typeHolders->items.pVoid[i], deftypes ) ==0 ){
+				DString_Delete( name );
+				GC_IncRC( klass ); GC_DecRC( klass );
+				return NULL;
+			}
 			MAP_Insert( deftypes, self->typeHolders->items.pVoid[i], type );
 		}
 		klass->objType->nested = DArray_New(0);

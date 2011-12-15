@@ -3109,10 +3109,10 @@ NotExist_TryAux:
 				}else if( at->tid == DAO_INITYPE || at->tid == DAO_FUNCURRY ){
 					UpdateType( opc, any );
 					AssertTypeMatching( any, type[opc], defs, 0 );
-					break;
+					goto TryPushBlockReturnType;
 				}else if( at->tid == DAO_UDF || at->tid == DAO_ANY ){
 					UpdateType( opc, any );
-					break;
+					goto TryPushBlockReturnType;
 				}else if( at->tid == DAO_OBJECT ){
 					rout = (DRoutine*) DaoClass_FindOperator( & at->aux->xClass, "()", hostClass );
 					if( rout == NULL ) goto ErrorTyping;
@@ -3168,7 +3168,7 @@ NotExist_TryAux:
 						if( pp[0] && pp[0]->type == DAO_ROUTINE ) ct = pp[0]->xRoutine.routType;
 						UpdateType( opc, ct );
 						AssertTypeMatching( ct, type[opc], defs, 0 );
-						break;
+						goto TryPushBlockReturnType;
 					}
 					cbtype = at->cbtype;
 					DRoutine_CheckType( at, ns, bt, tp, j, code, 1 );
@@ -3193,7 +3193,7 @@ NotExist_TryAux:
 						}
 						UpdateType( opc, ct );
 						AssertTypeMatching( ct, type[opc], defs, 0 );
-						break;
+						goto TryPushBlockReturnType;
 					}
 #if 0
 					//XXX if( rout != rout2 ) type[opa] = rout->routType;
@@ -3239,27 +3239,6 @@ NotExist_TryAux:
 					   printf( "ct2 = %s\n", ct ? ct->name->mbs : "" );
 					 */
 				}
-				if( sect && cbtype && cbtype->nested ){
-					for(j=0, k=sect->a; j<sect->b; j++, k++){
-						if( j >= cbtype->nested->size ){
-							if( j < sect->c ) printf( "Unsupported code section parameter!\n" );
-							break;
-						}// XXX better warning
-						tt = cbtype->nested->items.pType[j];
-						if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = (DaoType*)tt->aux;
-						tt = DaoType_DefineTypes( tt, ns, defs2 );
-						UpdateType( k, tt );
-					}
-					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, ns, defs2 );
-					DArray_Append( rettypes, opc );
-					DArray_Append( rettypes, tt );
-					DArray_Append( rettypes, tt );
-				}else if( sect && cbtype == NULL ){
-					printf( "Unused code section at line %i!\n", vmc->line );
-					DArray_Append( rettypes, opc );
-					DArray_Append( rettypes, NULL );
-					DArray_Append( rettypes, NULL );
-				}
 				k = self->routType->attrib & ct->attrib;
 				if( (k & DAO_TYPE_COROUTINE) && ! (opb & DAO_CALL_COROUT) ){
 					if( DaoType_MatchTo( (DaoType*) ct->aux, (DaoType*) self->routType->aux, defs ) == 0 ){
@@ -3280,7 +3259,7 @@ NotExist_TryAux:
 					ct = DaoNamespace_MakeType( ns, "future", DAO_FUTURE, NULL, &ct, 1 );
 				}
 #endif
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
+				if( type[opc] && type[opc]->tid == DAO_ANY ) goto TryPushBlockReturnType;
 				if( ct == NULL ) ct = DaoNamespace_GetType( ns, dao_none_value );
 				UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
@@ -3292,6 +3271,30 @@ NotExist_TryAux:
 				}
 				 */
 
+TryPushBlockReturnType:
+				if( sect && cbtype && cbtype->nested ){
+					for(j=0, k=sect->a; j<sect->b; j++, k++){
+						if( j >= cbtype->nested->size ){
+							if( j < sect->c ) printf( "Unsupported code section parameter!\n" );
+							break;
+						}// XXX better warning
+						tt = cbtype->nested->items.pType[j];
+						if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = (DaoType*)tt->aux;
+						tt = DaoType_DefineTypes( tt, ns, defs2 );
+						UpdateType( k, tt );
+					}
+					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, ns, defs2 );
+					DArray_Append( rettypes, opc );
+					DArray_Append( rettypes, tt );
+					DArray_Append( rettypes, tt );
+				}else if( sect && cbtype == NULL ){
+					if( NoCheckingType( type[opc] ) == 0 ){
+						printf( "Unused code section at line %i!\n", vmc->line );
+					}
+					DArray_Append( rettypes, opc );
+					DArray_Append( rettypes, NULL );
+					DArray_Append( rettypes, NULL );
+				}
 				break;
 			}
 		case DVM_ROUTINE :

@@ -58,6 +58,7 @@ DAO_DLL void DString_ToUpper( DString *self );
 DAO_DLL void DString_Reverse( DString *self );
 
 DAO_DLL size_t DString_Size( DString *self );
+DAO_DLL void DString_Reset( DString *self, size_t size );
 DAO_DLL void DString_Resize( DString *self, size_t size );
 DAO_DLL void DString_Reserve( DString *self, size_t size );
 DAO_DLL void DString_Clear( DString *self );

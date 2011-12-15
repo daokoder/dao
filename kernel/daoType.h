@@ -109,7 +109,7 @@ extern DaoType *dao_storage_enum;
 extern DaoType *dao_dynclass_field;
 extern DaoType *dao_dynclass_method;
 
-DAO_DLL DaoType* DaoType_New( const char *name, short tid, DaoValue *pb, DArray *nest );
+DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DArray *nest );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );
 DAO_DLL void DaoType_Delete( DaoType *self );
 
@@ -117,9 +117,9 @@ DAO_DLL void DaoType_InitDefault( DaoType *self );
 DAO_DLL void DaoType_CheckAttributes( DaoType *self );
 
 /* if "self" match to "type": */
-DAO_DLL short DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
-DAO_DLL short DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
-short DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
+DAO_DLL int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
+DAO_DLL int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
+DAO_DLL int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 /* define @X */
 DAO_DLL DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 DAO_DLL void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
