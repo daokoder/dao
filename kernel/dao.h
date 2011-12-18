@@ -687,6 +687,7 @@ DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
 
+DAO_DLL DaoType*   DaoProcess_GetReturnType( DaoProcess *self );
 DAO_DLL dint*      DaoProcess_PutInteger( DaoProcess *self, dint value );
 DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );

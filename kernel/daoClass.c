@@ -484,10 +484,16 @@ void DaoClass_DeriveClassData( DaoClass *self )
 
 	mbs = DString_New(1);
 
+	if( self->clsType->bases == NULL ) self->clsType->bases = DArray_New(D_VALUE);
+	if( self->objType->bases == NULL ) self->objType->bases = DArray_New(D_VALUE);
+	DArray_Clear( self->clsType->bases );
+	DArray_Clear( self->objType->bases );
 	for( i=0; i<self->superClass->size; i++){
 		DString *alias = self->superAlias->items.pString[i];
 		if( self->superClass->items.pValue[i]->type == DAO_CLASS ){
 			DaoValue *klass = self->superClass->items.pValue[i];
+			DArray_Append( self->clsType->bases, klass->xClass.clsType );
+			DArray_Append( self->objType->bases, klass->xClass.objType );
 			if( DString_EQ( klass->xClass.className, alias ) ==0 ){
 				DaoClass_AddConst( self, alias, klass, DAO_DATA_PRIVATE, -1 );
 			}
@@ -497,6 +503,8 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			DMap *values = kernel->values;
 			DMap *methods = kernel->methods;
 
+			DArray_Append( self->clsType->bases, cdata->xCdata.ctype );
+			DArray_Append( self->objType->bases, kernel->abtype );
 			if( values == NULL ){
 				DaoNamespace_SetupValues( kernel->nspace, kernel->typer );
 				values = kernel->values;

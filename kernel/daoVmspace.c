@@ -1699,46 +1699,49 @@ static void DaoConfigure()
 }
 
 #ifdef DEBUG
-static void dao_FakeShoftList_FakeShoftList( DaoProcess *_ctx, DaoValue *_p[], int _n );
-static void dao_FakeShoftList_Size( DaoProcess *_ctx, DaoValue *_p[], int _n );
-static void dao_FakeShoftList_GetItem( DaoProcess *_ctx, DaoValue *_p[], int _n );
-static void dao_FakeShoftList_SetItem( DaoProcess *_ctx, DaoValue *_p[], int _n );
+static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_FakeList_Size( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_FakeList_GetItem( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n );
 
-static DaoFuncItem dao_FakeShoftList_Meths[] = 
+#define FakeListName "FakeList<@T<short|int|float>=int,@S=int>"
+
+static DaoFuncItem dao_FakeList_Meths[] = 
 {
-  { dao_FakeShoftList_FakeShoftList, "FakeList<short>( size=0 )=>FakeList<short>" },
-  { dao_FakeShoftList_Size, "size( self : FakeList<short> )=>int" },
-  { dao_FakeShoftList_GetItem, "[]( self : FakeList<short>, index : int )=>int" },
-  { dao_FakeShoftList_SetItem, "[]=( self : FakeList<short>, index : int, value : int )=>int" },
-  { NULL, NULL }
+	/* the names of allocators must be identical to the typer name: */
+	{ dao_FakeList_FakeList, FakeListName "( size=0 )" },
+	{ dao_FakeList_Size, "size( self :FakeList )=>int" },
+	{ dao_FakeList_GetItem, "[]( self :FakeList<@T<short|int|float>>, index :int )=>int" },
+	{ dao_FakeList_SetItem, "[]=( self :FakeList<@T<short|int|float>>, index :int, value :int )=>int" },
+	{ NULL, NULL }
 };
-static void Dao_FakeShoftList_Delete( void *self ){}
-static DaoTypeBase FakeShoftList_Typer = 
-{ "FakeList<short>", NULL, NULL, dao_FakeShoftList_Meths, {0}, {0}, Dao_FakeShoftList_Delete, NULL };
-DaoTypeBase *dao_FakeShoftList_Typer = & FakeShoftList_Typer;
-
-static void dao_FakeShoftList_FakeShoftList( DaoProcess *_ctx, DaoValue *_p[], int _n )
-{
-  int size = _p[0]->xInteger.value;
-  DaoProcess_PutCdata( _ctx, (void*)(size_t)size, dao_FakeShoftList_Typer );
-}
-static void dao_FakeShoftList_Size( DaoProcess *_ctx, DaoValue *_p[], int _n )
-{
-  dint size = (dint) DaoCdata_GetData( & _p[0]->xCdata );
-  DaoProcess_PutInteger( _ctx, size );
-}
-static void dao_FakeShoftList_GetItem( DaoProcess *_ctx, DaoValue *_p[], int _n )
-{
-  DaoProcess_PutInteger( _ctx, 123 );
-}
-static void dao_FakeShoftList_SetItem( DaoProcess *_ctx, DaoValue *_p[], int _n )
-{
-}
+static void Dao_FakeList_Delete( void *self ){}
 static DaoTypeBase FakeList_Typer = 
-{ "FakeList", NULL, NULL, NULL, {0}, {0}, NULL, NULL };
+{ FakeListName, NULL, NULL, dao_FakeList_Meths, {0}, {0}, Dao_FakeList_Delete, NULL };
 DaoTypeBase *dao_FakeList_Typer = & FakeList_Typer;
 
-DaoType *fakeShortType = NULL;
+static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n )
+{
+  int size = _p[0]->xInteger.value;
+  DaoType *retype = DaoProcess_GetReturnType( _proc );
+  DaoCdata *cdata = DaoCdata_New( dao_FakeList_Typer, (void*)(size_t)size );
+  printf( "retype = %s\n", retype->name->mbs );
+  GC_ShiftRC( retype, cdata->ctype );
+  cdata->ctype = retype;
+  DaoProcess_PutValue( _proc, cdata );
+}
+static void dao_FakeList_Size( DaoProcess *_proc, DaoValue *_p[], int _n )
+{
+  dint size = (dint) DaoCdata_GetData( & _p[0]->xCdata );
+  DaoProcess_PutInteger( _proc, size );
+}
+static void dao_FakeList_GetItem( DaoProcess *_proc, DaoValue *_p[], int _n )
+{
+  DaoProcess_PutInteger( _proc, 123 );
+}
+static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n )
+{
+}
 #endif
 
 extern void DaoType_Init();
@@ -1915,10 +1918,9 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddType( ns, dao_map_empty->name, dao_map_empty );
 
 #ifdef DEBUG
-	fakeShortType = DaoNamespace_TypeDefine( ns, "int", "short" );
+	DaoNamespace_TypeDefine( ns, "int", "short" );
 	DaoNamespace_WrapType( vms->nsInternal, dao_FakeList_Typer, 1 );
-	DaoNamespace_WrapType( vms->nsInternal, dao_FakeShoftList_Typer, 1 );
-	fakeShortType = DaoNamespace_TypeDefine( ns, "FakeList<short>", "FakeList<int>" );
+	DaoNamespace_TypeDefine( ns, "FakeList<short>", "FakeList<int>" );
 #endif
 
 #ifdef DAO_WITH_NUMARRAY

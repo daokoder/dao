@@ -21,6 +21,7 @@
 #include"daoMap.h"
 #include"daoStdtype.h"
 
+
 /* Dao abstract type:
  * type class for number, string, ... list<X>, ...
  * 
@@ -75,6 +76,7 @@ struct DaoType
 	DString  *name; /* type name */
 	DString  *fname; /* field name, or parameter name */
 	DArray   *nested; /* type items */
+	DArray   *bases; /* base types */
 	DMap     *mapNames;
 	DMap     *interfaces;
 
@@ -129,8 +131,10 @@ DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
+DAO_DLL DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent );
+DAO_DLL DaoValue* DaoType_CastToDerived( DaoValue *object, DaoType *derived );
 
-#define NESTYPE(t,i) ((t)->nested->items.pType[i])
+
 
 struct DaoInterface
 {
@@ -156,6 +160,7 @@ void DMap_SortMethods( DMap *hash, DArray *methods );
 int DaoType_HasInterface( DaoType *self, DaoInterface *inter );
 
 
+
 /* Structure DaoTypeKernel will contain generated wrapping data for the type.
  * It is GC collectable, so that it will be automatically deleted once it is
  * no longer used, which make it possible to unload external modules automatically.
@@ -167,8 +172,8 @@ struct DaoTypeKernel
 	uint_t         attribs;
 	DMap          *values;
 	DMap          *methods;
-	DMap          *instances; /* for C data; */
 	DaoType       *abtype;
+	DTypeSpecTree *sptree;
 	DaoNamespace  *nspace;
 	DaoTypeCore   *core;
 	DaoTypeBase   *typer;
@@ -225,5 +230,38 @@ DAO_DLL DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
 DAO_DLL DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
 DAO_DLL DaoValue* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
 DAO_DLL DaoValue* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
+
+
+typedef struct DTypeParam DTypeParam;
+
+/* Template type parameters structured into a trie: */
+struct DTypeParam
+{
+	DaoType       *type;   /* parameter type; */
+	DArray        *nexts;  /* next parameter nodes; */
+	DaoType       *sptype; /* specialized type; */
+	DTypeSpecTree *tree;
+};
+
+
+
+/* Template type specialization tree: */
+struct DTypeSpecTree
+{
+#warning "missing GC handling for DTypeSpecTree"
+	DTypeParam *root;
+	DArray *holders;  /* type holders; */
+	DArray *defaults; /* default types; */
+	DArray *sptypes;  /* for GC; */
+};
+
+DTypeSpecTree* DTypeSpecTree_New();
+void DTypeSpecTree_Delete( DTypeSpecTree *self );
+
+int DTypeSpecTree_Test( DTypeSpecTree *self, DArray *types );
+void DTypeSpecTree_Add( DTypeSpecTree *self, DArray *types, DaoType *sptype );
+DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types );
+
+DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types );
 
 #endif

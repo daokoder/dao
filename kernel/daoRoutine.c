@@ -3101,7 +3101,7 @@ NotExist_TryAux:
 					}
 					ct = at->aux->xClass.objType;
 				}else if( at->tid == DAO_CTYPE ){
-					val = DaoTypeBase_FindValue( at->typer, at->name );
+					val = DaoTypeBase_FindFunctionMBS( at->typer, at->typer->name );
 					if( val == NULL || val->type < DAO_FUNCTREE || val->type > DAO_FUNCTION ) goto ErrorTyping;
 					rout = (DRoutine*) val;
 				}else if( csts[opa] && csts[opa]->type >= DAO_FUNCTREE && csts[opa]->type <= DAO_FUNCTION ){
@@ -3207,6 +3207,11 @@ NotExist_TryAux:
 					}
 					DMap_Clear( defs2 );
 					DMap_Assign( defs2, defs );
+
+					if( at->tid == DAO_CTYPE && at->kernel->sptree ){
+						/* For type holder specialization: */
+						k = DaoType_MatchTo( at, at->kernel->abtype->aux->xCdata.ctype, defs2 );
+					}
 
 					k = defs2->size;
 					DRoutine_PassParamTypes2( rout, bt, tp, j, code, defs2 );
@@ -4369,16 +4374,15 @@ DaoFunCurry* DaoFunCurry_New( DaoValue *v, DaoValue *o )
 	return self;
 }
 
-DParNode* DParNode_New()
+static DParNode* DParNode_New()
 {
 	DParNode *self = (DParNode*) dao_calloc( 1, sizeof(DParNode) );
 	return self;
 }
-void DParNode_Delete( DParNode *self )
+static void DParNode_Delete( DParNode *self )
 {
-	int i, n;
 	if( self->nexts ){
-		n = self->nexts->size;
+		int i, n = self->nexts->size;
 		for(i=0; i<n; i++) DParNode_Delete( (DParNode*) self->nexts->items.pVoid[i] );
 		DArray_Delete( self->nexts );
 	}

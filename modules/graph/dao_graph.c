@@ -17,6 +17,13 @@
 
 DAO_INIT_MODULE
 
+
+/* TUW: type of weights (U1, U2, U3) in nodes, (W1, W2, W3) in edges; */
+/* TNV: type of user data for nodes; */
+/* TEV: type of user data for edges; */
+
+#define TYPE_PARAMS "<@TUW<none|int|float|double>=none,@TNV=none,@TEV=none>"
+
 DaoxNode* DaoxNode_New( DaoxGraph *graph )
 {
 	DaoxNode *self = (DaoxNode*) dao_calloc( 1, sizeof(DaoxNode) );
@@ -75,12 +82,22 @@ void DaoxGraph_Delete( DaoxGraph *self )
 DaoxNode* DaoxGraph_AddNode( DaoxGraph *self )
 {
 	DaoxNode *node = DaoxNode_New( self );
+	DaoType *type = DaoCdataType_Specialize( node->ctype, self->ctype->nested );
+	if( type ){
+		GC_ShiftRC( type, node->ctype );
+		node->ctype = type;
+	}
 	DArray_Append( self->nodes, node );
 	return node;
 }
 DaoxEdge* DaoxGraph_AddEdge( DaoxGraph *self, DaoxNode *from, DaoxNode *to )
 {
 	DaoxEdge *edge = DaoxEdge_New( self );
+	DaoType *type = DaoCdataType_Specialize( edge->ctype, self->ctype->nested );
+	if( type ){
+		GC_ShiftRC( type, edge->ctype );
+		edge->ctype = type;
+	}
 	DArray_Append( self->edges, edge );
 	DArray_Append( from->outs, edge );
 	DArray_Append( to->ins, edge );
@@ -470,7 +487,13 @@ static void EDGE_GetNodes( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void GRAPH_Graph( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutValue( proc, (DaoValue*) DaoxGraph_New( p[0]->xEnum.value, p[1]->xEnum.value ) );
+	DaoType *retype = DaoProcess_GetReturnType( proc );
+	DaoxGraph *graph = DaoxGraph_New( 0, p[0]->xEnum.value );
+	GC_ShiftRC( retype, graph->ctype );
+	graph->ctype = retype;
+	if( retype->nested->size && retype->nested->items.pType[0]->tid <= DAO_DOUBLE )
+		graph->wtype = retype->nested->items.pType[0]->tid;
+	DaoValue *res = DaoProcess_PutValue( proc, (DaoValue*) graph );
 }
 static void GRAPH_GetNodes( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -501,8 +524,16 @@ static void GRAPH_MaxFlow( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxGraph *self = (DaoxGraph*) p[0];
 	DaoxNode *source = (DaoxNode*) p[1];
 	DaoxNode *sink = (DaoxNode*) p[2];
-	double maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );
-	DaoProcess_PutDouble( proc, maxflow );
+	if( self->wtype == DAO_INTEGER ){
+		dint maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );
+		DaoProcess_PutInteger( proc, maxflow );
+	}else if( self->wtype == DAO_FLOAT ){
+		float maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );
+		DaoProcess_PutFloat( proc, maxflow );
+	}else{
+		double maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );
+		DaoProcess_PutDouble( proc, maxflow );
+	}
 }
 
 
@@ -511,43 +542,45 @@ static DaoFuncItem DaoxNodeMeths[]=
 	//{ NODE_GetIntegers, "integers() => tuple<U1:int,U2:int,U3:int>" },
 	//{ NODE_GetFloats,   "floats() => tuple<U1:float,U2:float,U3:float>" },
 	//{ NODE_GetDoubles,  "doubles() => tuple<U1:double,U2:double,U3:double>" },
-	{ NODE_GetEdges, "edges( self :Node, set :enum<in,out> = $out ) => list<Edge>" },
+	{ NODE_GetEdges, "edges( self :Node<@TUW,@TNV,@TEV>, set :enum<in,out> = $out ) => list<Edge<@TUW,@TNV,@TEV>>" },
 	{ NULL, NULL }
 };
 
 DaoTypeBase DaoxNode_Typer =
 {
-	"Node", NULL, NULL, (DaoFuncItem*) DaoxNodeMeths, {0}, {0},
+	"Node"TYPE_PARAMS, NULL, NULL, (DaoFuncItem*) DaoxNodeMeths, {0}, {0},
 	(FuncPtrDel)DaoxNode_Delete, DaoxNode_GetGCFields
 };
 
 static DaoFuncItem DaoxEdgeMeths[]=
 {
-	{ EDGE_SetWeight, "set_weight( self :Edge, w :int|float|double )" },
-	{ EDGE_GetNodes, "nodes( self :Edge ) => tuple<from:Node,to:Node>" },
+	{ EDGE_SetWeight, "set_weight( self :Edge<@TUW,@TNV,@TEV>, w :@TUW )" },
+	{ EDGE_GetNodes, "nodes( self :Edge<@TUW,@TNV,@TEV> ) => tuple<from:Node<@TUW,@TNV,@TEV>,to:Node<@TUW,@TNV,@TEV>>" },
 	{ NULL, NULL }
 };
 
 DaoTypeBase DaoxEdge_Typer =
 {
-	"Edge", NULL, NULL, (DaoFuncItem*) DaoxEdgeMeths, {0}, {0},
+	"Edge"TYPE_PARAMS, NULL, NULL, (DaoFuncItem*) DaoxEdgeMeths, {0}, {0},
 	(FuncPtrDel)DaoxEdge_Delete, DaoxEdge_GetGCFields
 };
 
+
 static DaoFuncItem DaoxGraphMeths[]=
 {
-	{ GRAPH_Graph, "Graph( wtype :enum<none,int,float,double>=$none, dir :enum<undirected,directed>=$undirected ) => Graph" },
-	{ GRAPH_GetNodes, "nodes( self :Graph ) => list<Node>" },
-	{ GRAPH_GetEdges, "edges( self :Graph ) => list<Edge>" },
-	{ GRAPH_AddNode, "add_node( self :Graph ) => Node" },
-	{ GRAPH_AddEdge, "add_edge( self :Graph, from :Node, to :Node ) => Edge" },
-	{ GRAPH_MaxFlow, "maxflow( self :Graph, source :Node, sink :Node ) => double" },
+	/* allocators must have names identical to the typer name: */
+	{ GRAPH_Graph,    "Graph"TYPE_PARAMS"( dir :enum<undirected,directed>=$undirected )" },
+	{ GRAPH_GetNodes, "nodes( self :Graph<@TUW,@TNV,@TEV> ) => list<Node<@TUW,@TNV,@TEV>>" },
+	{ GRAPH_GetEdges, "edges( self :Graph<@TUW,@TNV,@TEV> ) => list<Edge<@TUW,@TNV,@TEV>>" },
+	{ GRAPH_AddNode, "add_node( self :Graph<@TUW,@TNV,@TEV> ) => Node<@TUW,@TNV,@TEV>" },
+	{ GRAPH_AddEdge, "add_edge( self :Graph<@TUW,@TNV,@TEV>, from :Node<@TUW,@TNV,@TEV>, to :Node<@TUW,@TNV,@TEV> ) => Edge<@TUW,@TNV,@TEV>" },
+	{ GRAPH_MaxFlow, "maxflow( self :Graph<@TUW,@TNV,@TEV>, source :Node<@TUW,@TNV,@TEV>, sink :Node<@TUW,@TNV,@TEV> ) => @TUW" },
 	{ NULL, NULL }
 };
 
 DaoTypeBase DaoxGraph_Typer =
 {
-	"Graph", NULL, NULL, (DaoFuncItem*) DaoxGraphMeths, {0}, {0},
+	"Graph"TYPE_PARAMS, NULL, NULL, (DaoFuncItem*) DaoxGraphMeths, {0}, {0},
 	(FuncPtrDel)DaoxGraph_Delete, DaoxGraph_GetGCFields
 };
 

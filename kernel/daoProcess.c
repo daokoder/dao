@@ -262,6 +262,8 @@ void DaoProcess_PopFrame( DaoProcess *self )
 {
 	if( self->topFrame == NULL ) return;
 	self->topFrame->outer = NULL;
+	GC_DecRC( self->topFrame->retype );
+	self->topFrame->retype = NULL;
 	if( self->topFrame->state & DVM_FRAME_SECT ){
 		GC_DecRC( self->topFrame->object );
 		GC_DecRC( self->topFrame->routine );
@@ -2425,12 +2427,15 @@ FinishProc:
 ReturnFalse :
 	return 0;
 ReturnTrue :
-	if( self->topFrame == self->firstFrame ){
+	if( self->topFrame == self->firstFrame && self->topFrame->next && self->topFrame->next->routine ){
 		print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
+			DaoProcess_PushRoutine( self, self->topFrame->next->routine, NULL );
+			DaoProcess_SetActiveFrame( self, self->topFrame );
 			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
 			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );
 			DaoStream_WriteNewLine( vmSpace->stdStream );
+			DaoProcess_PopFrame( self );
 		}
 	}
 	return 1;
@@ -2684,20 +2689,30 @@ DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
 {
 	DaoStream *stream = DaoStream_New();
 	DaoStream_SetFile( stream, file );
-	DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) stream );
-	return stream;
+	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) stream ) ) return stream;
+	DaoStream_Delete( stream );
+	return NULL;
 }
+void DaoCdata_Delete( DaoCdata *self );
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoTypeBase *plgTyper )
 {
 	DaoCdata *cdata = DaoCdata_New( plgTyper, data );
-	DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata );
-	return cdata;
+	DaoType *tp = self->activeTypes[self->activeCode->c];
+	if( tp ){
+		printf( "%s %p\n", tp->name->mbs, tp );
+		printf( "%p\n", tp->typer->core->kernel->abtype );
+		printf( "%p\n", cdata->ctype );
+	}
+	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
+	DaoCdata_Delete( cdata );
+	return NULL;
 }
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoTypeBase *plgTyper )
 {
 	DaoCdata *cdata = DaoCdata_Wrap( plgTyper, data );
-	DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata );
-	return cdata;
+	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
+	DaoCdata_Delete( cdata );
+	return NULL;
 }
 DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoTypeBase *t )
 {
@@ -2821,6 +2836,23 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self )
 	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
+}
+DaoType* DaoProcess_GetReturnType( DaoProcess *self )
+{
+	DaoStackFrame *frame = self->topFrame;
+	DaoType *type = self->activeTypes[ self->activeCode->c ]; /* could be specialized; */
+	if( frame->retype ) return self->topFrame->retype;
+	if( type == NULL || (type->attrib & DAO_TYPE_NOTDEF) ){
+		if( frame->routine ){
+			type = (DaoType*) frame->routine->routType->aux;
+		}else if( frame->function ){
+			type = (DaoType*) frame->function->routType->aux;
+		}
+	}
+	if( type == NULL ) type = self->activeTypes[ self->activeCode->c ];
+	GC_ShiftRC( type, self->topFrame->retype );
+	self->topFrame->retype = type;
+	return type;
 }
 
 void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N )
@@ -3588,6 +3620,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoFunction *func, DaoValue *selfpar, DaoValue *P[], int N )
 {
+	DaoValue *caller = self->activeValues[ vmc->a ];
 	int status, code = vmc->code;
 	if( (self->vmSpace->options & DAO_EXEC_SAFE) && (func->attribs & DAO_ROUT_EXTFUNC) ){
 		/* normally this condition will not be satisfied.
@@ -3614,6 +3647,10 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	   printf( "call: %s %i\n", func->routName->mbs, N );
 	 */
 	DaoProcess_PushFunction( self, func );
+	if( caller->type == DAO_CTYPE ){
+		GC_ShiftRC( caller->xCdata.ctype, self->topFrame->retype );
+		self->topFrame->retype = caller->xCdata.ctype;
+	}
 	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, N );
 	status = self->status;
 	DaoProcess_PopFrame( self );
@@ -3752,8 +3789,8 @@ static DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 	DRoutine *rout;
 	int i, passed = 0;
 	if( val->type == DAO_STRING ) val = DaoNamespace_GetData( proc->activeNamespace, val->xString.data );
-	if( val == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
+	if( val == NULL || (val->type != DAO_ROUTINE && val->type != DAO_FUNCTREE) ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, NULL );
 		return NULL;
 	}
 	rout = (DRoutine*)DRoutine_Resolve( val, NULL, par+1, N-1, DVM_CALL );
@@ -3784,6 +3821,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *selfpar = NULL;
 	DaoValue *caller = self->activeValues[ vmc->a ];
 	DaoValue **params = self->activeValues + vmc->a + 1;
+	DaoStackFrame *topFrame = self->topFrame;
 	DRoutine *rout, *rout2 = NULL;
 	DaoFunctree *mroutine;
 	DaoFunction *func;
@@ -3846,6 +3884,10 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( caller->type == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, npar );
+		if( self->topFrame != topFrame ){
+			GC_ShiftRC( caller->xClass.objType, self->topFrame->retype );
+			self->topFrame->retype = caller->xClass.objType;
+		}
 	}else if( caller->type == DAO_OBJECT ){
 		DaoClass *host = self->activeObject ? self->activeObject->defClass : NULL;
 		rout = (DRoutine*) DaoClass_FindOperator( caller->xObject.defClass, "()", host );
@@ -3865,8 +3907,8 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_DoCxxCall( self, vmc, func, caller, params, npar );
 		}
 	}else if( caller->type == DAO_CTYPE ){
-		DaoType *ctype = caller->xCdata.ctype;
-		rout = (DRoutine*) DaoTypeBase_FindFunction( caller->xCdata.typer, ctype->name );
+		DaoTypeBase *typer = caller->xCdata.ctype->typer;
+		rout = (DRoutine*) DaoTypeBase_FindFunctionMBS( typer, typer->name );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;
@@ -6696,6 +6738,9 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	for(i=0; i<routine->parCount; i++){
 		DaoType *type = routine->routType->nested->items.pType[i];
 		DaoValue *value = self->activeValues[i];
+		/* type<@T<int|float>> kind of types may be specialized to type<float>
+		 * the type holder is only available from the original routine parameters: */
+		if( routine->original ) type = routine->original->routType->nested->items.pType[i];
 		if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ) type = (DaoType*) type->aux;
 		if( type->tid != DAO_TYPE ) continue;
 		type = type->nested->items.pType[0];

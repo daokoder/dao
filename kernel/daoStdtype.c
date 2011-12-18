@@ -3751,7 +3751,7 @@ DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data )
 	self->subtype = DAO_CDATA_PTR;
 	return self;
 }
-static void DaoCdata_Delete( DaoCdata *self )
+void DaoCdata_Delete( DaoCdata *self )
 {
 	DaoCdata_DeleteData( self );
 	dao_free( self );
@@ -3825,6 +3825,76 @@ void* DaoCdata_CastData( DaoCdata *self, DaoTypeBase *totyper )
 	}
 	return NULL;
 }
+
+
+/* In analog to Dao classes, two type objects are created for each cdata type:
+ * one for the cdata type type, the other for the cdata object type.
+ * Additionally, two dummy cdata objects are created:
+ * one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
+ * the other with typeid DAO_CDATA serves as the default value for the cdata object type. */
+DaoType* DaoCdata_NewType( DaoTypeBase *typer )
+{
+	DaoCdata *cdata = DaoCdata_New( typer, NULL );
+	DaoCdata *ctype = DaoCdata_New( typer, NULL );
+	DaoType *cdata_type;
+	DaoType *ctype_type;
+	int i;
+
+	ctype->subtype = DAO_CDATA_PTR;
+	cdata->subtype = DAO_CDATA_PTR;
+	ctype->type = DAO_CTYPE;
+	ctype->trait |= DAO_DATA_NOCOPY;
+	cdata->trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
+
+	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoValue*)ctype, NULL );
+	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );
+	GC_IncRC( cdata );
+	cdata_type->value = (DaoValue*) cdata;
+	GC_ShiftRC( ctype_type, ctype->ctype );
+	GC_ShiftRC( cdata_type, cdata->ctype );
+	ctype->ctype = ctype_type;
+	cdata->ctype = cdata_type;
+	ctype->typer = typer;
+	cdata->typer = typer;
+	ctype_type->typer = typer;
+	cdata_type->typer = typer;
+
+	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+		DaoTypeBase *sup = typer->supers[i];
+		if( sup == NULL ) break;
+		if( sup->core == NULL || sup->core->kernel->abtype == NULL ){
+			printf( "parent type is not wrapped (successfully): %s\n", typer->name );
+			return NULL;
+		}
+		if( ctype_type->bases == NULL ) ctype_type->bases = DArray_New(D_VALUE);
+		if( cdata_type->bases == NULL ) cdata_type->bases = DArray_New(D_VALUE);
+		DArray_Append( ctype_type->bases, sup->core->kernel->abtype->aux->xCdata.ctype );
+		DArray_Append( cdata_type->bases, sup->core->kernel->abtype );
+	}
+	return cdata_type;
+}
+DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque )
+{
+	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
+	DaoCdataCore *core = (DaoCdataCore*) kernel->core;
+	DaoType *cdata_type = DaoCdata_NewType( typer );
+	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
+
+	GC_IncRC( nspace );
+	GC_IncRC( cdata_type );
+	kernel->nspace = nspace;
+	kernel->abtype = cdata_type;
+	kernel->abtype->cdatatype = opaque ? DAO_CDATA_CXX : DAO_CDATA_DAO;
+	GC_ShiftRC( kernel, ctype_type->kernel );
+	GC_ShiftRC( kernel, cdata_type->kernel );
+	ctype_type->kernel = kernel;
+	cdata_type->kernel = kernel;
+	core->DelData = typer->Delete;
+	typer->Delete = (FuncPtrDel)DaoCdata_Delete;
+	typer->core = (DaoTypeCore*)core;
+	return ctype_type;
+}
+
 
 DaoTypeBase defaultCdataTyper =
 {
@@ -4206,48 +4276,6 @@ DaoTypeBase dao_ErrorValue_Typer =
 	(FuncPtrDel) DaoException_Delete, NULL
 };
 
-DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque )
-{
-	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
-	DaoCdataCore *core = (DaoCdataCore*) kernel->core;
-	DaoCdata *ctype;
-	DaoCdata *cdata;
-	DaoType *ctype_type;
-	DaoType *cdata_type;
-
-	cdata = DaoCdata_New( typer, NULL );
-	ctype = DaoCdata_New( typer, NULL );
-	ctype->type = DAO_CTYPE;
-	ctype->trait |= DAO_DATA_NOCOPY;
-	cdata->trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
-
-	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoValue*)ctype, NULL );
-	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );
-	GC_IncRC( cdata );
-	cdata_type->value = (DaoValue*) cdata;
-	GC_ShiftRC( ctype_type, ctype->ctype );
-	GC_ShiftRC( cdata_type, cdata->ctype );
-	ctype->ctype = ctype_type;
-	cdata->ctype = cdata_type;
-	ctype->typer = typer;
-	cdata->typer = typer;
-	ctype_type->typer = typer;
-	cdata_type->typer = typer;
-
-	GC_IncRC( nspace );
-	GC_IncRC( cdata_type );
-	kernel->nspace = nspace;
-	kernel->abtype = cdata_type;
-	kernel->abtype->cdatatype = opaque ? DAO_CDATA_CXX : DAO_CDATA_DAO;
-	GC_ShiftRC( kernel, ctype_type->kernel );
-	GC_ShiftRC( kernel, cdata_type->kernel );
-	ctype_type->kernel = kernel;
-	cdata_type->kernel = kernel;
-	core->DelData = typer->Delete;
-	typer->Delete = (FuncPtrDel)DaoCdata_Delete;
-	typer->core = (DaoTypeCore*)core;
-	return ctype_type;
-}
 void DaoException_Setup( DaoNamespace *ns )
 {
 	DaoType *exception = DaoCdata_WrapType( ns, & dao_Exception_Typer, 0 );

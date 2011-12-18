@@ -36,8 +36,9 @@ struct DaoStackFrame
 
 	ushort_t      parCount;
 	size_t        stackBase;
-	DaoType     **types;
 	DaoVmCode    *codes; /* = routine->vmCodes->codes */
+	DaoType     **types;
+	DaoType      *retype;
 	DaoRoutine   *routine;
 	DaoFunction  *function;
 	DaoObject    *object;

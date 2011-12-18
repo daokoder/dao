@@ -1,7 +1,7 @@
 
 load graph;
 
-graph = Graph( $int );
+graph = Graph<float>();
 node1 = graph.add_node();
 node2 = graph.add_node();
 node3 = graph.add_node();

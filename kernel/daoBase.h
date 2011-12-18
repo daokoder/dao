@@ -84,6 +84,7 @@ typedef struct DRoutine   DRoutine;
 typedef struct DaoFunCurry   DaoFunCurry;
 typedef struct DaoCdataCore  DaoCdataCore;
 typedef struct DaoTypeKernel DaoTypeKernel;
+typedef struct DTypeSpecTree DTypeSpecTree;
 
 typedef struct DaoToken      DaoToken;
 typedef struct DaoInode      DaoInode;

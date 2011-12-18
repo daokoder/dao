@@ -128,10 +128,8 @@ struct DParNode
 	DMap     *names; /* <DaoType*,DParNode*> */
 	DRoutine *routine;
 };
-DParNode* DParNode_New();
-void DParNode_Delete( DParNode *self );
 
-/* DaoFunctree is a structure to organize overloaded functions into trees,
+/* DaoFunctree is a structure to organize overloaded functions into trees (tries),
  * for fast function resolving based on parameter types. */
 
 /* In data structures for namespace and class,

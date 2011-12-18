@@ -855,6 +855,7 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( abtp->value );
 				cycRefCountDecrement( (DaoValue*) abtp->kernel );
 				cycRefCountDecrements( abtp->nested );
+				cycRefCountDecrements( abtp->bases );
 				cycRefCountDecrementMapValue( abtp->interfaces );
 				break;
 			}
@@ -865,7 +866,6 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) kernel->nspace );
 				cycRefCountDecrementMapValue( kernel->values );
 				cycRefCountDecrementMapValue( kernel->methods );
-				cycRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -892,6 +892,7 @@ void DaoCGC_CycRefCountDecScan()
 					cycRefCountDecrement( (DaoValue*) frame->routine );
 					cycRefCountDecrement( (DaoValue*) frame->function );
 					cycRefCountDecrement( (DaoValue*) frame->object );
+					cycRefCountDecrement( (DaoValue*) frame->retype );
 					frame = frame->next;
 				}
 				break;
@@ -1062,6 +1063,7 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( abtp->value );
 				cycRefCountIncrement( (DaoValue*) abtp->kernel );
 				cycRefCountIncrements( abtp->nested );
+				cycRefCountIncrements( abtp->bases );
 				cycRefCountIncrementMapValue( abtp->interfaces );
 				break;
 			}
@@ -1072,7 +1074,6 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) kernel->nspace );
 				cycRefCountIncrementMapValue( kernel->values );
 				cycRefCountIncrementMapValue( kernel->methods );
-				cycRefCountIncrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1099,6 +1100,7 @@ int DaoCGC_AliveObjectScan()
 					cycRefCountIncrement( (DaoValue*) frame->routine );
 					cycRefCountIncrement( (DaoValue*) frame->function );
 					cycRefCountIncrement( (DaoValue*) frame->object );
+					cycRefCountIncrement( (DaoValue*) frame->retype );
 					frame = frame->next;
 				}
 				break;
@@ -1263,6 +1265,7 @@ void DaoCGC_RefCountDecScan()
 			{
 				DaoType *abtp = (DaoType*) value;
 				directRefCountDecrements( abtp->nested );
+				directRefCountDecrements( abtp->bases );
 				directRefCountDecrement( (DaoValue**) & abtp->aux );
 				directRefCountDecrement( (DaoValue**) & abtp->value );
 				directRefCountDecrement( (DaoValue**) & abtp->kernel );
@@ -1276,7 +1279,6 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & kernel->nspace );
 				directRefCountDecrementMapValue( kernel->values );
 				directRefCountDecrementMapValue( kernel->methods );
-				directRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1305,9 +1307,11 @@ void DaoCGC_RefCountDecScan()
 					if( frame->routine ) frame->routine->refCount --;
 					if( frame->function ) frame->function->refCount --;
 					if( frame->object ) frame->object->refCount --;
+					if( frame->retype ) frame->retype->refCount --;
 					frame->routine = NULL;
 					frame->function = NULL;
 					frame->object = NULL;
+					frame->retype = NULL;
 					frame = frame->next;
 				}
 				break;
@@ -1639,6 +1643,7 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrement( abtp->value );
 				cycRefCountDecrement( (DaoValue*) abtp->kernel );
 				cycRefCountDecrements( abtp->nested );
+				cycRefCountDecrements( abtp->bases );
 				j += cycRefCountDecrementMapValue( abtp->interfaces );
 				break;
 			}
@@ -1649,7 +1654,6 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) kernel->nspace );
 				j += cycRefCountDecrementMapValue( kernel->values );
 				j += cycRefCountDecrementMapValue( kernel->methods );
-				j += cycRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1678,6 +1682,7 @@ void DaoIGC_CycRefCountDecScan()
 					cycRefCountDecrement( (DaoValue*) frame->routine );
 					cycRefCountDecrement( (DaoValue*) frame->function );
 					cycRefCountDecrement( (DaoValue*) frame->object );
+					cycRefCountDecrement( (DaoValue*) frame->retype );
 					frame = frame->next;
 				}
 				break;
@@ -1882,6 +1887,7 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( abtp->value );
 				cycRefCountIncrement( (DaoValue*) abtp->kernel );
 				cycRefCountIncrements( abtp->nested );
+				cycRefCountIncrements( abtp->bases );
 				k += cycRefCountIncrementMapValue( abtp->interfaces );
 				break;
 			}
@@ -1892,7 +1898,6 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) kernel->nspace );
 				k += cycRefCountIncrementMapValue( kernel->values );
 				k += cycRefCountIncrementMapValue( kernel->methods );
-				k += cycRefCountIncrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -1921,6 +1926,7 @@ int DaoIGC_AliveObjectScan()
 					cycRefCountIncrement( (DaoValue*) frame->routine );
 					cycRefCountIncrement( (DaoValue*) frame->function );
 					cycRefCountIncrement( (DaoValue*) frame->object );
+					cycRefCountIncrement( (DaoValue*) frame->retype );
 					frame = frame->next;
 				}
 				break;
@@ -2111,6 +2117,7 @@ void DaoIGC_RefCountDecScan()
 			{
 				DaoType *abtp = (DaoType*) value;
 				directRefCountDecrements( abtp->nested );
+				directRefCountDecrements( abtp->bases );
 				directRefCountDecrement( (DaoValue**) & abtp->aux );
 				directRefCountDecrement( (DaoValue**) & abtp->value );
 				directRefCountDecrement( (DaoValue**) & abtp->kernel );
@@ -2124,7 +2131,6 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & kernel->nspace );
 				j += directRefCountDecrementMapValue( kernel->values );
 				j += directRefCountDecrementMapValue( kernel->methods );
-				j += directRefCountDecrementMapValue( kernel->instances );
 				break;
 			}
 		case DAO_FUTURE :
@@ -2155,9 +2161,11 @@ void DaoIGC_RefCountDecScan()
 					if( frame->routine ) frame->routine->refCount --;
 					if( frame->function ) frame->function->refCount --;
 					if( frame->object ) frame->object->refCount --;
+					if( frame->retype ) frame->retype->refCount --;
 					frame->routine = NULL;
 					frame->function = NULL;
 					frame->object = NULL;
+					frame->retype = NULL;
 					frame = frame->next;
 				}
 				break;

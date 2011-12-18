@@ -1083,7 +1083,13 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	}
 
 	k = pname->size;
-	if( klass && routine->routHost == klass->objType && notConstr == 0 ) retype = klass->objType;
+	if( notConstr == 0 ){
+		if( klass && routine->routHost == klass->objType ){
+			retype = klass->objType;
+		}else if( cdata && routine->routHost == cdata ){
+			retype = cdata;
+		}
+	}
 	if( retype == NULL ) retype = DaoType_New( "?", DAO_UDF, 0,0 );
 	DArray_Append( NS->auxData, retype );
 	DString_AppendMBS( pname, iscoroutine ? "=>[" : "=>" );
@@ -1369,7 +1375,10 @@ int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *
 		if( i < end && tokens[i]->type == DTOK_ASSN ){
 			deft = DaoParser_ParseType( self, i+1, end-1, &i, NULL );
 			if( deft == NULL ) return 0;
-			i += 1;
+		}
+		if( deft == NULL && DArray_Back( defaults ) != NULL ){
+			DaoParser_Error( self, DAO_PARAM_NEED_DEFAULT, tokens[i-1]->string );
+			return 0;
 		}
 		DArray_Append( holders, holder );
 		DArray_Append( defaults, deft );
@@ -1687,21 +1696,13 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	if( tpl->type == DAO_CLASS && klass->typeHolders == NULL ) goto FailedInstantiation;
 	DaoParser_ParseTypeItems( self, start, end, types, NULL );
 	if( self->errors->size ) goto FailedInstantiation;
-	for(i=0; i<types->size; i++){
-		DaoTypeKernel *kernel = types->items.pType[i]->kernel;
-		/* Use C type's canonical type: */
-		if( kernel && kernel->abtype ) types->items.pType[i] = kernel->abtype;
-	}
 	if( tpl->type == DAO_CTYPE ){
 		DaoCdataCore *hostCore = (DaoCdataCore*) cdata->typer->core;
-		if( hostCore->kernel->instances ){
-			DNode *node = MAP_Find( hostCore->kernel->instances, types );
-			if( node && node->value.pValue->type == DAO_CTYPE ){
-				inst = node->value.pValue;
-				cdata = (DaoCdata*) inst;
-				if( cdata && fullname ) DString_Assign( fullname, cdata->ctype->name );
-				goto DoneInstantiation;
-			}
+		DaoType *sptype = DaoCdataType_Specialize( hostCore->kernel->abtype, types );
+		if( sptype ){
+			inst = sptype->aux;
+			if( fullname ) DString_Assign( fullname, sptype->name );
+			goto DoneInstantiation;
 		}
 		goto FailedInstantiation;
 	}
@@ -1739,7 +1740,7 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DaoValue **scope, DaoValue *
 			DaoValue *p = DaoParse_InstantiateType( self, *value, start+1, i-1, NULL );
 			/* Failed instantiation should not raise an error here,
 			 * because this function may be called (directly or indirectly)
-			 * to simply parse a type name as in DaoNamespace_DefineType(). */
+			 * to simply parse a type name as in DaoNS_ParseType(). */
 			if( p ){
 				*value = p;
 				start = i + 1;

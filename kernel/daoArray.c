@@ -193,6 +193,7 @@ void DArray_Assign( DArray *left, DArray *right )
 	size_t i;
 	assert( left->type == right->type );
 
+	if( left == right ) return;
 	if( right->size == 0 ){
 		DArray_Clear( left );
 		return;

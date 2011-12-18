@@ -31,6 +31,7 @@ struct DaoxNode
 	DaoxGraph  *graph;
 	DArray     *ins;  /* <DaoxEdge*>; */
 	DArray     *outs; /* <DaoxEdge*>; */
+	DaoValue   *value;
 
 	union {
 		dint   I;
@@ -49,6 +50,7 @@ struct DaoxEdge
 	DaoxGraph  *graph;
 	DaoxNode   *from;
 	DaoxNode   *to;
+	DaoValue   *value;
 
 	union {
 		dint   I;
