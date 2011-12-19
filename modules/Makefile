@@ -11,6 +11,7 @@ all:
 	-cd web && $(MAKE)
 	-cd os && $(MAKE)
 	-cd stream && $(MAKE)
+	-cd sync && $(MAKE)
 #	-cd DaoCXX && $(MAKE)
 #	-cd DaoJIT && $(MAKE)
 
@@ -24,6 +25,7 @@ clean:
 	-cd web && $(MAKE) clean
 	-cd os && $(MAKE) clean
 	-cd stream && $(MAKE) clean
+	-cd sync && $(MAKE) clean
 #	-cd DaoCXX && $(MAKE) clean
 #	-cd DaoJIT && $(MAKE) clean
 

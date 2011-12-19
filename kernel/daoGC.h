@@ -25,7 +25,7 @@ void DaoCGC_Start();
 
 void DaoGC_IncRC( DaoValue *dbase );
 void DaoGC_DecRC( DaoValue *dbase );
-void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
+DAO_DLL void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
 
 void DaoGC_IncRCs( DArray *dbases );
 void DaoGC_DecRCs( DArray *dbases );
