@@ -41,8 +41,6 @@ DRoutine* DRoutine_New();
 void DRoutine_CopyFields( DRoutine *self, DRoutine *from );
 int  DRoutine_AddConstant( DRoutine *self, DaoValue *value );
 
-/* Return 0 if failed, otherwise return 1 plus number passed parameters: */
-int DRoutine_PassParams( DRoutine *rout, DaoValue *obj, DaoValue *recv[], DaoValue *p[], int np, int code );
 
 struct DaoRoutine
 {

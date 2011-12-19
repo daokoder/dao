@@ -358,6 +358,138 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function )
 	frame->function = function;
 	self->status = DAO_VMPROC_STACKED;
 }
+static int DRoutine_PassDefault( DRoutine *routine, DaoValue *dest[], int passed, DMap *defs )
+{
+	DaoType *tp, *routype = routine->routType;
+	DaoType **types = routype->nested->items.pType;
+	DaoValue **consts = routine->routConsts->items.pValue;
+	int i, ndef = routine->parCount;
+	for(i=0; i<ndef; i++){
+		int m = types[i]->tid;
+		if( m == DAO_PAR_VALIST ) break;
+		if( passed & (1<<i) ) continue;
+		if( m != DAO_PAR_DEFAULT ) return 0;
+		tp = & types[i]->aux->xType;
+		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) ){
+			tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
+			//XXX printf( "tp = %s\n", tp->name->mbs );
+		}
+		if( DaoValue_Move2( consts[i], & dest[i], tp ) ==0 ) return 0;
+	}
+	return 1;
+}
+/* Return 0 if failed, otherwise return 1 plus number passed parameters: */
+static int DRoutine_PassParams( DRoutine *routine, DaoValue *dest[], DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code )
+{
+	DMap *defs = NULL;
+	DaoType *routype = routine->routType;
+	DaoType *tp, **types = routype->nested->items.pType;
+	ulong_t passed = 0;
+	int mcall = code == DVM_MCALL;
+	int need_self = routype->attrib & DAO_TYPE_SELF;
+	int need_spec = routype->attrib & DAO_TYPE_NOTDEF;
+	int ndef = routine->parCount;
+	int npar = np;
+	int ifrom, ito;
+	int selfChecked = 0;
+#if 0
+	int i;
+	printf( "%s: %i %i %i\n", routine->routName->mbs, ndef, np, obj ? obj->type : 0 );
+	for(i=0; i<npar; i++){
+		tp = DaoNamespace_GetType( routine->nameSpace, *p[i] );
+		printf( "%i  %s\n", i, tp->name->mbs );
+	}
+#endif
+
+	if( need_spec ){
+		defs = DHash_New(0,0);
+		if( hostype && routine->routHost && (routine->routHost->attrib & DAO_TYPE_NOTDEF) ){
+			//XXX printf( "%s %s\n", hostype->name->mbs, routine->routHost->name->mbs );
+			DaoType_MatchTo( hostype, routine->routHost, defs );
+		}
+	}
+
+	if( mcall && ! need_self ){
+		npar --;
+		p ++;
+	}else if( obj && need_self && ! mcall ){
+		/* class DaoClass : CppClass{ cppmethod(); } */
+		tp = & types[0]->aux->xType;
+		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) )
+			tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
+		if( obj->type < DAO_ARRAY ){
+			if( tp == NULL || DaoType_MatchValue( tp, obj, defs ) == DAO_MT_EQ ){
+				GC_ShiftRC( obj, dest[0] );
+				dest[0] = obj;
+				selfChecked = 1;
+				passed = 1;
+			}
+		}else{
+			if( obj->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
+				/* for virtual method call, or calling C function on Dao object: */
+				obj = DaoObject_MapThisObject( obj->xObject.rootObject, tp );
+			}
+			if( DaoValue_Move2( obj, & dest[0], tp ) ){
+				selfChecked = 1;
+				passed = 1;
+			}
+		}
+	}
+	/*
+	   printf( "%s, rout = %s; ndef = %i; npar = %i, %i\n", routine->routName->mbs, routine->routType->name->mbs, ndef, npar, selfChecked );
+	 */
+	if( npar > ndef ) goto ReturnZero;
+	if( (npar|ndef) ==0 ){
+		if( defs ) DMap_Delete( defs );
+		return 1;
+	}
+	/* pass from p[ifrom] to dest[ito], with type checking by types[ito] */
+	for(ifrom=0; ifrom<npar; ifrom++){
+		DaoValue *val = p[ifrom];
+		ito = ifrom + selfChecked;
+		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
+			for(; ifrom<npar; ifrom++){
+				ito = ifrom + selfChecked;
+				DaoValue_Move2( p[ifrom], & dest[ito], NULL );
+				passed |= (ulong_t)1<<ito;
+			}
+			break;
+		}
+		if( val->type == DAO_PAR_NAMED ){
+			DaoNameValue *nameva = & val->xNameValue;
+			DNode *node = DMap_Find( routype->mapNames, nameva->name );
+			val = nameva->value;
+			if( node == NULL ) goto ReturnZero;
+			ito = node->value.pInt;
+		}
+		if( ito >= ndef ) goto ReturnZero;
+		passed |= (ulong_t)1<<ito;
+		tp = & types[ito]->aux->xType;
+		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) ){
+			tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
+			//XXX printf( "tp = %s\n", tp->name->mbs );
+		}
+		if( routine->refParams & (1<<ito) ){
+			if( DaoType_MatchValue( tp, val, defs ) == DAO_MT_EQ ){
+				GC_ShiftRC( val, dest[ito] );
+				dest[ito] = val;
+				continue;
+			}
+		}
+		if( need_self && ifrom ==0 && val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
+			/* for virtual method call */
+			val = (DaoValue*) DaoObject_MapThisObject( val->xObject.rootObject, tp );
+			if( val == NULL ) goto ReturnZero;
+		}
+		if( DaoValue_Move2( val, & dest[ito], tp ) ==0 ) goto ReturnZero;
+	}
+	if( DRoutine_PassDefault( routine, dest, passed, defs ) == 0) goto ReturnZero;
+	if( defs ) DMap_Delete( defs );
+	return 1 + npar + selfChecked;
+ReturnZero:
+	if( defs ) DMap_Delete( defs );
+	return 0;
+}
 /* If the callable is a constructor, and O is a derived type of the constructor's type,
  * cast O to the constructor's type and then call the constructor on the casted object: */
 int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N )
@@ -367,7 +499,7 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValu
 
 	if( M == NULL ) return DAO_ERROR;
 	if( M->type == DAO_FUNCTREE ) R = DRoutine_Resolve( M, O, P, N, DVM_CALL );
-	if( R ) passed = DRoutine_PassParams( R, O, self->freeValues, P, N, DVM_CALL );
+	if( R ) passed = DRoutine_PassParams( R, self->freeValues, NULL, O, P, N, DVM_CALL );
 	if( passed == 0 ) return DAO_ERROR_PARAM;
 
 	if( R->type == DAO_ROUTINE ){
@@ -413,7 +545,7 @@ int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret
 		int m = 0;
 		DRoutine *rout = (DRoutine*)self->topFrame->routine;
 		DaoValue **values = self->stackValues + self->topFrame->stackBase;
-		if( rout ) m = DRoutine_PassParams( rout, NULL, values, par, N, DVM_CALL );
+		if( rout ) m = DRoutine_PassParams( rout, values, NULL, NULL, par, N, DVM_CALL );
 		if( m ==0 ){
 			DaoProcess_RaiseException( ret, DAO_ERROR, "invalid parameters." );
 			return 0;
@@ -3597,7 +3729,7 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout, 
 		DaoValue *selfpar, DaoValue *P[], int N, DaoVmCode *vmc )
 {
-	int i, M = DRoutine_PassParams( (DRoutine*)rout, selfpar, self->freeValues, P, N, vmc->code );
+	int i, M = DRoutine_PassParams( (DRoutine*)rout, self->freeValues, NULL, selfpar, P, N, vmc->code );
 	if( M ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
 		return;
@@ -3618,7 +3750,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	self->topFrame->parCount = M - 1;
 }
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
-		DaoFunction *func, DaoValue *selfpar, DaoValue *P[], int N )
+		DaoType *hostype, DaoFunction *func, DaoValue *selfpar, DaoValue *P[], int N )
 {
 	DaoValue *caller = self->activeValues[ vmc->a ];
 	int status, code = vmc->code;
@@ -3629,7 +3761,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
-	if( DRoutine_PassParams( (DRoutine*)func, selfpar, self->freeValues, P, N, code ) ==0 ){
+	if( DRoutine_PassParams( (DRoutine*)func, self->freeValues, hostype, selfpar, P, N, code ) ==0 ){
 		//rout2 = (DRoutine*) rout;
 		DaoProcess_ShowCallError( self, (DRoutine*)func, selfpar, P, N, code );
 		return;
@@ -3692,7 +3824,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 	}
 	if( rout->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) rout;
-		npar = DRoutine_PassParams( rout, selfpar, self->freeValues, params, npar, vmc->code );
+		npar = DRoutine_PassParams( rout, self->freeValues, klass->objType, selfpar, params, npar, vmc->code );
 		if( npar == 0 ){
 			//rout2 = (DRoutine*) rout;
 			//XXX goto InvalidParameter;
@@ -3773,7 +3905,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 		if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 	}else if( rout->type == DAO_FUNCTION ){
 		DaoFunction *func = (DaoFunction*) rout;
-		DaoProcess_DoCxxCall( self, vmc, func, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, NULL, func, selfpar, params, npar );
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 	}
@@ -3794,7 +3926,7 @@ static DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 		return NULL;
 	}
 	rout = (DRoutine*)DRoutine_Resolve( val, NULL, par+1, N-1, DVM_CALL );
-	if( rout ) passed = DRoutine_PassParams( rout, NULL, proc->freeValues, par+1, N-1, DVM_CALL );
+	if( rout ) passed = DRoutine_PassParams( rout, proc->freeValues, NULL, NULL, par+1, N-1, DVM_CALL );
 	if( passed == 0 || rout == NULL || rout->type != DAO_ROUTINE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
 		return NULL;
@@ -3841,7 +3973,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	}else if( caller->type == DAO_FUNCURRY || (mode & DAO_CALL_EXPAR) ){
 		DaoProcess_DoCall2( self, vmc );
 	}else if( caller->type == DAO_FUNCTION ){
-		DaoProcess_DoCxxCall( self, vmc, & caller->xFunction, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, NULL, & caller->xFunction, selfpar, params, npar );
 	}else if( caller->type == DAO_ROUTINE ){
 		rout = DRoutine_Resolve( caller, selfpar, params, npar, codemode );
 		if( rout == NULL ) goto InvalidParameter;
@@ -3878,7 +4010,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}else if( rout->type == DAO_FUNCTION ){
 			func = (DaoFunction*) rout;
-			DaoProcess_DoCxxCall( self, vmc, func, selfpar, params, npar );
+			DaoProcess_DoCxxCall( self, vmc, NULL, func, selfpar, params, npar );
 		}else{
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 		}
@@ -3904,7 +4036,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}else if( rout->type == DAO_FUNCTION ){
 			func = (DaoFunction*) rout;
-			DaoProcess_DoCxxCall( self, vmc, func, caller, params, npar );
+			DaoProcess_DoCxxCall( self, vmc, NULL, func, caller, params, npar );
 		}
 	}else if( caller->type == DAO_CTYPE ){
 		DaoTypeBase *typer = caller->xCdata.ctype->typer;
@@ -3918,7 +4050,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			// XXX
 			return;
 		}
-		DaoProcess_DoCxxCall( self, vmc, (DaoFunction*) rout, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, caller->xCdata.ctype, (DaoFunction*) rout, selfpar, params, npar );
 		// XXX handle fail
 		sup = DaoProcess_InitBase( self, vmc, caller );
 		if( caller->type == DAO_CTYPE && sup >= 0 ){
@@ -3941,7 +4073,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			// XXX
 			return;
 		}
-		DaoProcess_DoCxxCall( self, vmc, (DaoFunction*) rout, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, NULL, (DaoFunction*) rout, selfpar, params, npar );
 	}else if( caller->type == DAO_PROCESS && caller->xProcess.abtype ){
 		DaoProcess *vmProc = & caller->xProcess;
 		if( vmProc->status == DAO_VMPROC_FINISHED ){

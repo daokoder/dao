@@ -1,7 +1,8 @@
+load meta;
 
 routine @trace( func : routine )
 {
-	reflect.trace($print);
+	meta.trace($print);
 	io.writeln( std.about( func ) );
 	return func(...);
 }

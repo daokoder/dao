@@ -282,8 +282,7 @@ static DRoutine* MatchByParamType( DaoValue *self, DaoType *selftype, DaoType *t
 	}
 	return rout;
 }
-void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
-		DaoType *ts[], int np, int code, DMap *defs )
+void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DMap *defs )
 {
 	int npar = np;
 	int ndef = self->parCount;
@@ -347,11 +346,12 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype,
 	}
 	if( self->type == DAO_ROUTINE ){
 		DaoRoutine *rout = (DaoRoutine*) self;
-		for(j=0; j<rout->regType->size; j++){
-			abtp = rout->regType->items.pType[j];
-			abtp = DaoType_DefineTypes( abtp, rout->nameSpace, defs );
-			GC_ShiftRC( abtp, rout->regType->items.pType[j] );
-			rout->regType->items.pType[j] = abtp;
+		DMap *tmap = rout->localVarType;
+		/* Only specialize explicitly declared variables: */
+		for(node=DMap_First(tmap); node !=NULL; node = DMap_Next(tmap,node) ){
+			DaoType *abtp = DaoType_DefineTypes( node->value.pType, rout->nameSpace, defs );
+			GC_ShiftRC( abtp, rout->regType->items.pType[ node->key.pInt ] );
+			rout->regType->items.pType[ node->key.pInt ] = abtp;
 		}
 	}
 }
@@ -401,109 +401,6 @@ void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
 		printf( "binding:  %s  %s\n", node->key.pType->name->mbs, node->value.pType->name->mbs );
 	 */
 	return;
-}
-int DRoutine_PassDefault( DRoutine *routine, DaoValue *recv[], int passed )
-{
-	DaoType *routype = routine->routType;
-	DaoType **types = routype->nested->items.pType;
-	DaoValue **consts = routine->routConsts->items.pValue;
-	int i, ndef = routine->parCount;
-	for(i=0; i<ndef; i++){
-		int m = types[i]->tid;
-		if( m == DAO_PAR_VALIST ) break;
-		if( passed & (1<<i) ) continue;
-		if( m != DAO_PAR_DEFAULT ) return 0;
-		if( DaoValue_Move2( consts[i], & recv[i], & types[i]->aux->xType ) ==0 ) return 0;
-	}
-	return 1;
-}
-int DRoutine_PassParams( DRoutine *routine, DaoValue *obj, DaoValue *recv[], DaoValue *p[], int np, int code )
-{
-	ulong_t passed = 0;
-	int mcall = code == DVM_MCALL;
-	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
-	int npar = np;
-	int ifrom, ito;
-	int ndef = routine->parCount;
-	int selfChecked = 0;
-	DaoType *routype = routine->routType;
-	DaoType *tp, **types = routype->nested->items.pType;
-#if 0
-	int i;
-	printf( "%s: %i %i %i\n", routine->routName->mbs, ndef, np, obj ? obj->type : 0 );
-	for(i=0; i<npar; i++){
-		tp = DaoNamespace_GetType( routine->nameSpace, *p[i] );
-		printf( "%i  %s\n", i, tp->name->mbs );
-	}
-#endif
-
-	if( mcall && ! need_self ){
-		npar --;
-		p ++;
-	}else if( obj && need_self && ! mcall ){
-		/* class DaoClass : CppClass{ cppmethod(); } */
-		tp = & types[0]->aux->xType;
-		if( obj->type < DAO_ARRAY ){
-			if( tp == NULL || DaoType_MatchValue( tp, obj, NULL ) == DAO_MT_EQ ){
-				GC_ShiftRC( obj, recv[0] );
-				recv[0] = obj;
-				selfChecked = 1;
-				passed = 1;
-			}
-		}else{
-			if( obj->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
-				/* for virtual method call, or calling C function on Dao object: */
-				obj = DaoObject_MapThisObject( obj->xObject.rootObject, tp );
-			}
-			if( DaoValue_Move2( obj, & recv[0], tp ) ){
-				selfChecked = 1;
-				passed = 1;
-			}
-		}
-	}
-	/*
-	   printf( "%s, rout = %s; ndef = %i; npar = %i, %i\n", routine->routName->mbs, routine->routType->name->mbs, ndef, npar, selfChecked );
-	 */
-	if( npar > ndef ) return 0;
-	if( (npar|ndef) ==0 ) return 1;
-	/* pass from p[ifrom] to recv[ito], with type checking by types[ito] */
-	for(ifrom=0; ifrom<npar; ifrom++){
-		DaoValue *val = p[ifrom];
-		ito = ifrom + selfChecked;
-		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
-			for(; ifrom<npar; ifrom++){
-				ito = ifrom + selfChecked;
-				DaoValue_Move2( p[ifrom], & recv[ito], NULL );
-				passed |= (ulong_t)1<<ito;
-			}
-			break;
-		}
-		if( val->type == DAO_PAR_NAMED ){
-			DaoNameValue *nameva = & val->xNameValue;
-			DNode *node = DMap_Find( routype->mapNames, nameva->name );
-			val = nameva->value;
-			if( node == NULL ) return 0;
-			ito = node->value.pInt;
-		}
-		if( ito >= ndef ) return 0;
-		passed |= (ulong_t)1<<ito;
-		tp = & types[ito]->aux->xType;
-		if( routine->refParams & (1<<ito) ){
-			if( DaoType_MatchValue( tp, val, NULL ) == DAO_MT_EQ ){
-				GC_ShiftRC( val, recv[ito] );
-				recv[ito] = val;
-				continue;
-			}
-		}
-		if( need_self && ifrom ==0 && val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
-			/* for virtual method call */
-			val = (DaoValue*) DaoObject_MapThisObject( val->xObject.rootObject, tp );
-			if( val == NULL ) return 0;
-		}
-		if( DaoValue_Move2( val, & recv[ito], tp ) ==0 ) return 0;
-	}
-	if( DRoutine_PassDefault( routine, recv, passed ) == 0) return 0;
-	return 1 + npar + selfChecked;
 }
 
 DaoTypeBase routTyper=

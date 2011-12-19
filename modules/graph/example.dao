@@ -1,18 +1,18 @@
 
 load graph;
 
-graph = Graph<float>();
-node1 = graph.add_node();
-node2 = graph.add_node();
-node3 = graph.add_node();
-edge1 = graph.add_edge( node1, node2 );
-edge2 = graph.add_edge( node2, node3 );
-edge3 = graph.add_edge( node1, node3 );
-edge1.set_weight( 2.5 );
-edge2.set_weight( 3 );
-edge3.set_weight( 1 );
+graph = Graph<float>( $directed );
+node1 = graph.AddNode();
+node2 = graph.AddNode();
+node3 = graph.AddNode();
+edge1 = graph.AddEdge( node1, node2 );
+edge2 = graph.AddEdge( node2, node3 );
+edge3 = graph.AddEdge( node1, node3 );
+edge1.SetWeight( 2.5 );
+edge2.SetWeight( 3 );
+edge3.SetWeight( 1 );
 
-io.writeln( edge1.nodes() );
-io.writeln( graph.nodes(), graph.edges() )
+io.writeln( edge1.Nodes() );
+io.writeln( graph.Nodes(), graph.Edges() )
 
-io.writeln( graph.maxflow( node1, node3 ) );
+io.writeln( graph.MaxFlow( node1, node3 ) );

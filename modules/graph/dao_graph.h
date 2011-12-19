@@ -29,8 +29,8 @@ struct DaoxNode
 	DAO_CDATA_COMMON;
 
 	DaoxGraph  *graph;
-	DArray     *ins;  /* <DaoxEdge*>; */
-	DArray     *outs; /* <DaoxEdge*>; */
+	/* For directed graph, out edges are pushed to front; in edges are pushed to back: */
+	DArray     *edges;  /* <DaoxEdge*>; */
 	DaoValue   *value;
 
 	union {
@@ -48,8 +48,8 @@ struct DaoxEdge
 	DAO_CDATA_COMMON;
 
 	DaoxGraph  *graph;
-	DaoxNode   *from;
-	DaoxNode   *to;
+	DaoxNode   *first;
+	DaoxNode   *second;
 	DaoValue   *value;
 
 	union {
@@ -76,7 +76,7 @@ DAO_DLL DaoxGraph* DaoxGraph_New( int wtype, int directed );
 DAO_DLL void DaoxGraph_Delete( DaoxGraph *self );
 
 DAO_DLL DaoxNode* DaoxGraph_AddNode( DaoxGraph *self );
-DAO_DLL DaoxEdge* DaoxGraph_AddEdge( DaoxGraph *self, DaoxNode *from, DaoxNode *to );
+DAO_DLL DaoxEdge* DaoxGraph_AddEdge( DaoxGraph *self, DaoxNode *first, DaoxNode *second );
 
 DAO_DLL double DaoxGraph_MaxFlow_PushRelabelToFront( DaoxGraph *self, DaoxNode *source, DaoxNode *sink );
 
