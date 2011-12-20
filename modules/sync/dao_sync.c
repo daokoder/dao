@@ -53,6 +53,14 @@ void DaoState_Delete( DaoState *self )
 	DaoCdata_FreeCommon( (DaoCdata*)self );
 	dao_free( self );
 }
+static void DaoState_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
+{
+	DaoState *self = (DaoState*)p;
+	if( self->state ){
+		DArray_Append( values, self->state );
+		if( remove ) self->state = NULL;
+	}
+}
 
 extern DaoTypeBase stateTyper;
 
@@ -205,7 +213,8 @@ static DaoFuncItem stateMeths[] =
 };
 
 DaoTypeBase stateTyper = {
-	"state<@T>", NULL, NULL, stateMeths, {NULL}, {0}, (FuncPtrDel)DaoState_Delete, NULL
+	"state<@T>", NULL, NULL, stateMeths, {NULL}, {0}, 
+	(FuncPtrDel)DaoState_Delete, DaoState_GetGCFields
 };
 
 struct QueueItem
@@ -263,6 +272,19 @@ void DaoQueue_Delete( DaoQueue *self )
 	DaoGC_DecRC( (DaoValue*)self->popvar );
 	DaoCdata_FreeCommon( (DaoCdata*)self );
 	dao_free( self );
+}
+
+static void DaoQueue_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
+{
+	DaoQueue *self = (DaoQueue*)p;
+	while( self->tail != NULL ){
+		QueueItem *item = self->tail;
+		self->tail = item->previous;
+		if( item->value ){
+			DArray_Append( values, item->value );
+			if( remove ) item->value = NULL;
+		}
+	}
 }
 
 static void DaoQueue_Size( DaoProcess *proc, DaoValue *p[], int N )
@@ -457,7 +479,8 @@ static DaoFuncItem queueMeths[] =
 };
 
 DaoTypeBase queueTyper = {
-	"queue<@T>", NULL, NULL, queueMeths, {NULL}, {0}, (FuncPtrDel)DaoQueue_Delete, NULL
+	"queue<@T>", NULL, NULL, queueMeths, {NULL}, {0}, 
+	(FuncPtrDel)DaoQueue_Delete, DaoQueue_GetGCFields
 };
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )

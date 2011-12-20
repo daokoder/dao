@@ -534,6 +534,7 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 		break;
 	case DAO_TUPLE :
 		tp2 = to->xTuple.unitype;
+		if( tp->tid == DAO_ANY ) break;
 		if( tp->nested->size ==0 ) break; /* not to the generic tuple type */
 		if( tp2 == NULL || tp2->mapNames == NULL || tp2->mapNames->size ==0 ){
 			GC_ShiftRC( tp, to->xTuple.unitype );

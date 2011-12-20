@@ -866,6 +866,11 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) kernel->nspace );
 				cycRefCountDecrementMapValue( kernel->values );
 				cycRefCountDecrementMapValue( kernel->methods );
+				if( kernel->sptree ){
+					cycRefCountDecrements( kernel->sptree->holders );
+					cycRefCountDecrements( kernel->sptree->defaults );
+					cycRefCountDecrements( kernel->sptree->sptypes );
+				}
 				break;
 			}
 		case DAO_FUTURE :
@@ -1074,6 +1079,11 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) kernel->nspace );
 				cycRefCountIncrementMapValue( kernel->values );
 				cycRefCountIncrementMapValue( kernel->methods );
+				if( kernel->sptree ){
+					cycRefCountIncrements( kernel->sptree->holders );
+					cycRefCountIncrements( kernel->sptree->defaults );
+					cycRefCountIncrements( kernel->sptree->sptypes );
+				}
 				break;
 			}
 		case DAO_FUTURE :
@@ -1279,6 +1289,11 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & kernel->nspace );
 				directRefCountDecrementMapValue( kernel->values );
 				directRefCountDecrementMapValue( kernel->methods );
+				if( kernel->sptree ){
+					directRefCountDecrements( kernel->sptree->holders );
+					directRefCountDecrements( kernel->sptree->defaults );
+					directRefCountDecrements( kernel->sptree->sptypes );
+				}
 				break;
 			}
 		case DAO_FUTURE :
@@ -1654,6 +1669,11 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) kernel->nspace );
 				j += cycRefCountDecrementMapValue( kernel->values );
 				j += cycRefCountDecrementMapValue( kernel->methods );
+				if( kernel->sptree ){
+					cycRefCountDecrements( kernel->sptree->holders );
+					cycRefCountDecrements( kernel->sptree->defaults );
+					cycRefCountDecrements( kernel->sptree->sptypes );
+				}
 				break;
 			}
 		case DAO_FUTURE :
@@ -1898,6 +1918,11 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) kernel->nspace );
 				k += cycRefCountIncrementMapValue( kernel->values );
 				k += cycRefCountIncrementMapValue( kernel->methods );
+				if( kernel->sptree ){
+					cycRefCountIncrements( kernel->sptree->holders );
+					cycRefCountIncrements( kernel->sptree->defaults );
+					cycRefCountIncrements( kernel->sptree->sptypes );
+				}
 				break;
 			}
 		case DAO_FUTURE :
@@ -2131,6 +2156,11 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & kernel->nspace );
 				j += directRefCountDecrementMapValue( kernel->values );
 				j += directRefCountDecrementMapValue( kernel->methods );
+				if( kernel->sptree ){
+					directRefCountDecrements( kernel->sptree->holders );
+					directRefCountDecrements( kernel->sptree->defaults );
+					directRefCountDecrements( kernel->sptree->sptypes );
+				}
 				break;
 			}
 		case DAO_FUTURE :

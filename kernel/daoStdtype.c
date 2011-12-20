@@ -218,7 +218,17 @@ void DaoString_SetBytes( DaoString *self, const char *bytes, size_t n )
 	DString_SetDataMBS( self->data, bytes, n );
 }
 
-enum{ IDX_NULL, IDX_SINGLE, IDX_FROM, IDX_TO, IDX_PAIR, IDX_ALL, IDX_MULTIPLE, IDX_OUTOFRANGE };
+enum{
+	IDX_NULL,
+	IDX_SINGLE,
+	IDX_FROM,
+	IDX_TO,
+	IDX_PAIR,
+	IDX_ALL,
+	IDX_MULTIPLE, 
+	IDX_NONUMINDEX, 
+	IDX_OUTOFRANGE
+};
 
 static DaoValue* DaoValue_MakeCopy( DaoValue *self, DaoProcess *proc, DMap *cycData )
 {
@@ -234,7 +244,7 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, size_t N, size_t *s
 	long_t n1, n2;
 	DaoValue **items;
 	DaoValue *first, *second;
-	DArray *array;
+	DArray *array = NULL;
 
 	*idtype = IDX_NULL;
 	*start = 0;
@@ -281,8 +291,10 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, size_t N, size_t *s
 		first = index->xTuple.items[0];
 		second = index->xTuple.items[1];
 		/* a[ : 1 ] ==> pair(nil,int) */
-		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE )
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
+		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ){
+			*idtype = IDX_NONUMINDEX;
+			break;
+		}
 		n1 = DaoValue_GetInteger( first );
 		n2 = DaoValue_GetInteger( second );
 		if( n1 <0 ) n1 += N;
@@ -306,16 +318,23 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, size_t N, size_t *s
 		array = DArray_New(0);
 		DArray_Resize( array, index->xList.items.size, 0 );
 		for( i=0; i<array->size; i++ ){
-			if( ! DaoValue_IsNumber( items[i] ) )
-				DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
+			if( ! DaoValue_IsNumber( items[i] ) ){
+				*idtype = IDX_NONUMINDEX;
+				break;
+			}
 			n1 = (size_t) DaoValue_GetDouble( items[i] );
 			if( n1 <0 ) n1 += N;
 			if( n1 <0 || n1 >= N ) *idtype = IDX_OUTOFRANGE;
 			array->items.pInt[i] = n1;
 		}
+		if( *idtype != IDX_MULTIPLE ){
+			DArray_Delete( array );
+			break;
+		}
 		return array;
 	default : break;
 	}
+	if( *idtype == IDX_NONUMINDEX ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
 	if( *idtype == IDX_OUTOFRANGE ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 	return NULL;
 }
@@ -1489,9 +1508,9 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DString *pt = p[1]->xString.data;
-	DString *mask = p[3]->xString.data;
-	int type = p[2]->xInteger.value;
-	int rev = p[4]->xInteger.value;
+	DString *mask = p[3]->xTuple.items[0]->xString.data;
+	int rev = p[3]->xTuple.items[1]->xInteger.value;
+	int type = p[2]->xEnum.value;
 	size_t i, from, to, step;
 	size_t size = DString_Size( self );
 	size_t end=size, p1=0, p2=size;
@@ -1531,12 +1550,10 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 	step = 2;
 	from = 0;
 	to = matchs->size -1;
-	if( type > 0 ){
-		from = 1;
-	}else if( type < 0 ){
-		to = matchs->size;
-	}else{
-		step = 1;
+	switch( type ){
+	case 0 : step = 1; break;
+	case 1 : from = 1; break;
+	case 2 : to = matchs->size; break;
 	}
 	for(i=from; i<to; i+=step){
 		p1 = matchs->items.pInt[i];
@@ -1783,7 +1800,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )=>list<tuple<start:int,end:int>>" },
 	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )=>tuple<start:int,end:int,substring:string>" },
 	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )=>tuple<start:int,end:int,substring:string>" },
-	{ DaoSTR_Extract, "extract( self :string, pt :string, matched=1, mask='', rev=0 )=>list<string>" },
+	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype: enum<both,matched,unmatched>=$matched, mask :tuple<pattern:string,reversed:enum<false,true>> = ('', $false) )=>list<string>" },
 	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )=>list<string>" },
 	{ DaoSTR_Change,  "change( self :string, pt :string, s:string, index=0, start=0, end=0 )=>int" },
 	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s:string, index=0 )=>string" },

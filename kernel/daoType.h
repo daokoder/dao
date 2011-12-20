@@ -248,7 +248,6 @@ struct DTypeParam
 /* Template type specialization tree: */
 struct DTypeSpecTree
 {
-#warning "missing GC handling for DTypeSpecTree"
 	DTypeParam *root;
 	DArray *holders;  /* type holders; */
 	DArray *defaults; /* default types; */
