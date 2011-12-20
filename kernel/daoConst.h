@@ -38,7 +38,7 @@ enum DaoRTTI
 	DAO_VALTYPE ,
 	DAO_VARIANT , /* variant or disjoint union */
 	DAO_MACRO ,
-	DAO_ABROUTINE , /* abstract routine in interface */
+	DAO_ROUTBODY ,
 	DAO_FUNCURRY ,
 	DAO_FUTURE ,
 	DAO_TYPEKERNEL ,

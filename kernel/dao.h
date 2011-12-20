@@ -158,7 +158,6 @@ enum DaoTypes
 	DAO_INTERFACE ,
 	DAO_FUNCTREE ,
 	DAO_ROUTINE   ,
-	DAO_FUNCTION  ,
 	DAO_PROCESS ,
 	DAO_NAMESPACE ,
 	DAO_VMSPACE   ,
@@ -259,9 +258,8 @@ typedef struct DaoArray        DaoArray;
 typedef struct DaoList         DaoList;
 typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
-typedef struct DaoFunctree     DaoFunctree;
+typedef struct DaoRoutree     DaoRoutree;
 typedef struct DaoRoutine      DaoRoutine;
-typedef struct DaoFunction     DaoFunction;
 typedef struct DaoInterface    DaoInterface;
 typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
@@ -279,7 +277,7 @@ typedef struct DaoType         DaoType;
 /* Complex type: */
 typedef struct complex16 { double real, imag; } complex16;
 
-/* Dummy type for functions, casted from DaoRoutine, DaoFunction or DaoFunctree: */
+/* Dummy type for functions, casted from DaoRoutine, DaoRoutree: */
 typedef struct DaoMethod { uchar_t type;  } DaoMethod;
 
 typedef void (*CallbackOnString)( const char *str );
@@ -287,7 +285,6 @@ typedef void (*FuncDaoInit)();
 typedef void  (*DThreadTask)( void *arg );
 typedef void* (*FuncPtrCast)( void* );
 typedef void  (*FuncPtrDel)( void* );
-typedef int   (*FuncPtrTest)( void* );
 typedef void  (*DaoFuncPtr) ( DaoProcess *process, DaoValue *params[], int npar );
 
 typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename, DString *emsg );
@@ -427,9 +424,8 @@ DAO_DLL DaoCdata*    DaoValue_CastCdata( DaoValue *self );
 DAO_DLL DaoClass*    DaoValue_CastClass( DaoValue *self );
 
 DAO_DLL DaoInterface*  DaoValue_CastInterface( DaoValue *self );
-DAO_DLL DaoFunctree*   DaoValue_CastFunctree( DaoValue *self );
+DAO_DLL DaoRoutree*   DaoValue_CastFunctree( DaoValue *self );
 DAO_DLL DaoRoutine*    DaoValue_CastRoutine( DaoValue *self );
-DAO_DLL DaoFunction*   DaoValue_CastFunction( DaoValue *self );
 DAO_DLL DaoProcess*    DaoValue_CastProcess( DaoValue *self );
 DAO_DLL DaoNamespace*  DaoValue_CastNamespace( DaoValue *self );
 DAO_DLL DaoType*       DaoValue_CastType( DaoValue *self );
@@ -720,7 +716,7 @@ DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoVal
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
 DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
-DAO_DLL DaoFunction* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
+DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
 DAO_DLL int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );
 DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
 DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
@@ -839,9 +835,8 @@ DaoObject*       DaoValue_CastObject( DaoValue *self );
 DaoCdata*        DaoValue_CastCdata( DaoValue *self );
 DaoClass*        DaoValue_CastClass( DaoValue *self );
 DaoInterface*    DaoValue_CastInterface( DaoValue *self );
-DaoFunctree*     DaoValue_CastFunctree( DaoValue *self );
+DaoRoutree*     DaoValue_CastFunctree( DaoValue *self );
 DaoRoutine*      DaoValue_CastRoutine( DaoValue *self );
-DaoFunction*     DaoValue_CastFunction( DaoValue *self );
 DaoProcess*      DaoValue_CastProcess( DaoValue *self );
 DaoNamespace*    DaoValue_CastNamespace( DaoValue *self );
 DaoType*         DaoValue_CastType( DaoValue *self );
@@ -1083,7 +1078,7 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 DaoMethod* DaoMethod_Resolve( DaoMethod *self, DaoValue *o, DaoValue *p[], int n );
 
 DaoValue DaoObject_GetField( DaoObject *self, const char *name );
- return a null value, or a value of DaoFunctree, DaoRoutine or DaoFunction: 
+ return a null value, or a value of DaoRoutree, DaoRoutine: 
 DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
 DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
 
@@ -1123,7 +1118,7 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rp
  Evaluate source codes in "src", with substitution of escape chars in strings, if rpl != 0 
 int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 
- f: function to be called, one of DaoFunctree, DaoRoutine and DaoFunction: 
+ f: function to be called, one of DaoRoutree, DaoRoutine: 
  Try to call "f" as:
  *     f( p[0], ..., p[n] )
  * Or,
@@ -1180,7 +1175,7 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
  wrap c type, return NULL if failed 
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
  wrap c function, return NULL if failed 
-DaoFunction* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
+DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
 
    parameters alias[] is an array of type name aliases,
    used as typedefs like: typedef alias[2*i] alias[2*i+1];

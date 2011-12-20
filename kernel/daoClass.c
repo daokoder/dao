@@ -169,7 +169,7 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 }
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
-int  DaoRoutine_InferTypes( DaoRoutine *self );
+int  DaoRoutine_DoTypeInference( DaoRoutine *self );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
@@ -305,7 +305,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DArray_Erase( self->glbTypeTable, 1, MAXSIZE );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
-	return DaoRoutine_InferTypes( self->classRoutine );
+	return DaoRoutine_DoTypeInference( self->classRoutine );
 }
 DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 {
