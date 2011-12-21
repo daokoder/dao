@@ -6671,7 +6671,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DRoutine *rout, DaoValue *selfo
 }
 
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
-int DaoRoutine_InferTypes( DaoRoutine *self );
+int DaoRoutine_DoTypeInference( DaoRoutine *self );
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
 
@@ -6726,7 +6726,7 @@ int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 	}
 	if( self->type != DAO_ROUTINE ) return 1;
 	DaoRoutine_MapTypes( self, deftypes );
-	return DaoRoutine_InferTypes( self );
+	return DaoRoutine_DoTypeInference( self );
 	/*
 	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
