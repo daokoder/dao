@@ -6518,15 +6518,24 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			if( LHS.konst ) goto InvalidConstModificatioin;
 			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], LHS, RHS, pos );
 			result.update = result.last;
-			result.reg = result.last->c;
+			DaoParser_PopRegister( self ); /* result.last->c */
 			if( code >= DVM_GETVH && code <= DVM_GETMF ){ /* add SETX */
+				/* For X += Y, if X is not local, it will be compiled into:
+				 *   GETX A1, B1, C1; # LHS.last;
+				 *   ADD  C1, B2, C2; # result.last;
+				 *   SETX C2, B1, A1; # inode;
+				 * If X is a string and Y an integer, it will require that
+				 *   C1 == C2;
+				 * to pass static type checking: */
+				result.last->c = LHS.last->c;
+				result.reg = LHS.last->c;
+
 				inode = DaoParser_PushBackCode( self, (DaoVmCodeX*) LHS.last );
 				inode->code += DVM_SETVH - DVM_GETVH;
 				inode->c = inode->a;
 				inode->a = result.reg;
 				result.last = inode;
 			}else{
-				DaoParser_PopRegister( self ); /* opc of LHS.last */
 				result.last->c = result.last->a;
 				result.reg = result.last->a;
 			}

@@ -2237,10 +2237,13 @@ static void DaoLIST_Pop( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "list is empty" );
 		return;
 	}
-	if ( p[1]->xEnum.value == 0 )
+	if ( p[1]->xEnum.value == 0 ){
+		DaoProcess_PutReference( proc, self->items.items.pValue[0] );
 		DaoList_Erase( self, 0 );
-	else
+	}else{
+		DaoProcess_PutReference( proc, self->items.items.pValue[self->items.size -1] );
 		DaoList_Erase( self, self->items.size -1 );
+	}
 }
 static void DaoLIST_PushBack( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2571,10 +2574,9 @@ static void DaoLIST_Apply( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_APPLY );
 }
-static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
+static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which )
 {
 	DaoFunction *func = proc->topFrame->function;
-	DaoType *etype = func->routType->nested->items.pType[1];
 	DaoList *list = & p[0]->xList;
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items.items.pValue;
@@ -2584,8 +2586,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 	if( sect == NULL || list->items.size == 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
-	if( etype->tid != DAO_ENUM ) etype = func->routType->nested->items.pType[2];
-	if( p[1]->type == DAO_ENUM && p[1]->xEnum.etype == etype ){
+	if( which == 1 ){
 		D = p[1]->xEnum.value;
 		res = items[0];
 		first = 1;
@@ -2607,6 +2608,14 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	DaoProcess_PutValue( proc, res );
+}
+static void DaoLIST_Reduce1( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoLIST_Reduce( proc, p, npar, 1 );
+}
+static void DaoLIST_Reduce2( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoLIST_Reduce( proc, p, npar, 2 );
 }
 static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -2685,7 +2694,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Join,     "join( self :list<int|float|double|long|complex|string|enum>, separator='' )=>string" },
 	{ DaoLIST_PushBack, "append( self :list<@T>, item :@T )" },
 	{ DaoLIST_Push,     "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
-	{ DaoLIST_Pop,      "pop( self :list<any>, from :enum<front, back> = $back )" },
+	{ DaoLIST_Pop,      "pop( self :list<@T>, from :enum<front, back> = $back ) => @T" },
 	{ DaoLIST_Front,    "front( self :list<@T> )=>@T" },
 	{ DaoLIST_Top,      "back( self :list<@T> )=>@T" },
 	{ DaoLIST_Rank,     "rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
@@ -2696,8 +2705,8 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Erase2,   "erase( self :list<@T>, mode :enum<all,first,last> )[item:@T,index:int=>int]=>int" },
 	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@V]=>list<@V>" },
 	{ DaoLIST_Map2,     "map( self :list<@T>, other :list<@S>, direction :enum<forward,backward>=$forward )[item:@T,item2:@S,index:int=>@V]=>list<@V>" },
-	{ DaoLIST_Reduce,   "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T" },
-	{ DaoLIST_Reduce,   "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
+	{ DaoLIST_Reduce1,  "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T" },
+	{ DaoLIST_Reduce2,  "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
 	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>" },
 	{ DaoLIST_Find,     "find( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>tuple<index:int,value:@T>|none" },
 	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>" },
