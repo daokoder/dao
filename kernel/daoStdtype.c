@@ -2089,25 +2089,6 @@ static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
 	}
 	return type;
 }
-#if 0
-static void DaoList_PutDefault( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoList *self = & p[0]->xList;
-	complex16 com = { 0.0, 0.0 };
-	if( self->unitype && self->unitype->nested->size ){
-		switch( self->unitype->nested->items.pType[0]->tid ){
-		case DAO_INTEGER : DaoProcess_PutInteger( proc, 0 ); break;
-		case DAO_FLOAT   : DaoProcess_PutFloat( proc, 0.0 ); break;
-		case DAO_DOUBLE  : DaoProcess_PutDouble( proc, 0.0 ); break;
-		case DAO_COMPLEX : DaoProcess_PutComplex( proc, com ); break;
-		case DAO_STRING  : DaoProcess_PutMBString( proc, "" ); break;
-		default : DaoProcess_PutValue( proc, NULL ); break;
-		}
-	}else{
-		DaoProcess_PutValue( proc, NULL );
-	}
-}
-#endif
 static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoTuple *tuple = DaoProcess_PutTuple( proc );
@@ -2118,7 +2099,7 @@ static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 	tuple->items[1]->xInteger.value = -1;
 	type = DaoList_CheckType( self, proc );
 	if( type == 0 ){
-		/* DaoList_PutDefault( proc, p, N ); */
+		DaoTuple_SetItem( tuple, self->unitype->nested->items.pType[0]->value, 0 );
 		return;
 	}
 	imax = 0;
@@ -2142,7 +2123,7 @@ static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 	tuple->items[1]->xInteger.value = -1;
 	type = DaoList_CheckType( self, proc );
 	if( type == 0 ){
-		/* DaoList_PutDefault( proc, p, N ); */
+		DaoTuple_SetItem( tuple, self->unitype->nested->items.pType[0]->value, 0 );
 		return;
 	}
 	imin = 0;
@@ -2165,7 +2146,7 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue **data = self->items.items.pValue;
 	type = DaoList_CheckType( self, proc );
 	if( type == 0 ){
-		/* DaoList_PutDefault( proc, p, N ); */
+		DaoProcess_PutValue( proc, self->unitype->nested->items.pType[0]->value );
 		return;
 	}
 	switch( type ){
