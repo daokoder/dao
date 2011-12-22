@@ -724,6 +724,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_TUPLE :
 		tp = value->xTuple.unitype;
 		if( tp == self ) return DAO_MT_EQ;
+		if( self->nested->size ==0 ) return DAO_MT_SUB; /* tuple<...> for tuple; */
 		if( value->xTuple.size != self->nested->size ) return DAO_MT_NOT;
 
 		for(i=0; i<self->nested->size; i++){

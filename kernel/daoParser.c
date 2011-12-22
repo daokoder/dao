@@ -330,6 +330,19 @@ static int DaoParser_PopCodes( DaoParser *self, DaoInode *back )
 	while( (node=self->vmcLast) != back ) DaoParser_PopBackCode( self ), count ++;
 	return count;
 }
+/* In constant folding, do not actually remove the codes, which may invalidate
+ * some references in DaoEnode structures: */
+static int DaoParser_PopCodes2( DaoParser *self, DaoInode *back )
+{
+	int count = 0;
+	DaoInode *node = self->vmcLast;
+	while( node != back ){
+		node->code = DVM_UNUSED;
+		node = node->prev;
+		count ++;
+	}
+	return count;
+}
 static void DaoParser_AppendCode( DaoParser *self, DaoInode *inode )
 {
 	if( inode == self->vmcLast ) return;
@@ -6801,7 +6814,7 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int 
 		DaoValue *v = DaoParser_GetVariable( self, cid->items.pInt[i] );
 		DaoValue_Copy( v, & proc->activeValues[i+1] );
 	}
-	DaoParser_PopCodes( self, enode->prev );
+	DaoParser_PopCodes2( self, enode->prev );
 	for(i=regcount; i<self->regCount; i++) MAP_Erase( self->routine->localVarType, i );
 	DaoParser_PopRegisters( self, self->regCount - regcount );
 	/* Execute the instruction to get the const result: */
@@ -6821,7 +6834,7 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	int p2 = p1 + self->vmcLast->middle;
 	int p3 = p1 + self->vmcLast->last;
 
-	DaoParser_PopCodes( self, back );
+	DaoParser_PopCodes2( self, back );
 	DaoParser_PopRegisters( self, self->regCount - regcount );
 
 	*cst = 0;
