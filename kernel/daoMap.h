@@ -20,15 +20,16 @@ typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 
 typedef union
 {
-	dint       pInt;
-	size_t     pSize;
-	void      *pVoid;
-	DString   *pString;
-	DArray    *pArray;
-	DaoValue  *pValue;
-	DaoClass  *pClass;
-	DaoType   *pType;
-	DaoInode  *pInode;
+	dint         pInt;
+	size_t       pSize;
+	void        *pVoid;
+	DString     *pString;
+	DArray      *pArray;
+	DaoValue    *pValue;
+	DaoClass    *pClass;
+	DaoRoutine  *pRoutine;
+	DaoType     *pType;
+	DaoInode    *pInode;
 }DNodeData;
 
 struct DNode

@@ -199,15 +199,15 @@ struct DaoException
 {
 	DAO_CDATA_COMMON;
 
-	int       fromLine;
-	int       toLine;
-	DRoutine *routine;
-	DArray   *callers;
-	DArray   *lines;
+	int         fromLine;
+	int         toLine;
+	DaoRoutine *routine;
+	DArray     *callers;
+	DArray     *lines;
 
-	DString  *name;
-	DString  *info;
-	DaoValue *edata;
+	DString    *name;
+	DString    *info;
+	DaoValue   *edata;
 };
 
 DaoException* DaoException_New( DaoTypeBase *typer );

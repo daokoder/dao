@@ -580,7 +580,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	int tm = 1;
-	if( tp->tid == DAO_FUNCTREE && src->type == DAO_FUNCTREE ){
+	if( tp->tid == DAO_ROUTREE && src->type == DAO_ROUTREE ){
 		/* XXX pair<objetp,routine<...>> */
 		if( tp != src->xFunctree.unitype ) return 0;
 	}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
@@ -1189,20 +1189,15 @@ DaoInterface* DaoValue_CastInterface( DaoValue *self )
 	if( self == NULL || self->type != DAO_INTERFACE ) return NULL;
 	return (DaoInterface*) self;
 }
-DaoFunctree* DaoValue_CastFunctree( DaoValue *self )
+DaoRoutree* DaoValue_CastFunctree( DaoValue *self )
 {
-	if( self == NULL || self->type != DAO_FUNCTREE ) return NULL;
-	return (DaoFunctree*) self;
+	if( self == NULL || self->type != DAO_ROUTREE ) return NULL;
+	return (DaoRoutree*) self;
 }
 DaoRoutine* DaoValue_CastRoutine( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_ROUTINE ) return NULL;
 	return (DaoRoutine*) self;
-}
-DaoFunction* DaoValue_CastFunction( DaoValue *self )
-{
-	if( self == NULL || self->type != DAO_FUNCTION ) return NULL;
-	return (DaoFunction*) self;
 }
 DaoProcess* DaoValue_CastProcess( DaoValue *self )
 {

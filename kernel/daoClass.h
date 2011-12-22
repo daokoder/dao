@@ -51,8 +51,8 @@ struct DaoClass
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
 	DMap  *vtable; /* <DRoutine*,DRoutine*> */
 
-	DaoRoutine   *classRoutine; /* Default class constructor. */
-	DaoFunctree  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
+	DaoRoutine  *classRoutine; /* Default class constructor. */
+	DaoRoutree  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
 
 	DString  *className;
 	DString  *classHelp;

@@ -656,7 +656,6 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CTYPE   :
 	case DAO_CDATA   : return self->xCdata.typer;
-	case DAO_FUNCTION : return & funcTyper;
 	default : break;
 	}
 	return DaoVmSpace_GetTyper( self->type );
@@ -2557,7 +2556,6 @@ static void DaoLIST_Apply( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which )
 {
-	DaoFunction *func = proc->topFrame->function;
 	DaoList *list = & p[0]->xList;
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items.items.pValue;
@@ -4017,7 +4015,7 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 {
 	/* DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer; */
-	DaoTypeBase *typer = proc->topFrame->function->routHost->kernel->typer;
+	DaoTypeBase *typer = proc->topFrame->routine->routHost->kernel->typer;
 	DaoException *self = (DaoException*)DaoException_New( typer );
 	if( n ) DString_Assign( self->info, p[0]->xString.data );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
@@ -4025,7 +4023,7 @@ static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 {
 	/* DaoTypeBase *typer = proc->activeTypes[ proc->activeCode->c ]->typer; */
-	DaoTypeBase *typer = proc->topFrame->function->routHost->kernel->typer;
+	DaoTypeBase *typer = proc->topFrame->routine->routHost->kernel->typer;
 	DaoException *self = (DaoException*)DaoException_New2( typer, p[0] );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 }

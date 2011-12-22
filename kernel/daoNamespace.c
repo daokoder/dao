@@ -251,7 +251,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 #endif
 	return 1;
 }
-void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host )
+void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoType *host )
 {
 	DNode *node = MAP_Find( methods, rout->routName );
 	if( node == NULL ){
@@ -260,12 +260,12 @@ void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host )
 	}else if( node->value.pValue->type == DAO_FUNCTREE ){
 		DaoFunctree_Add( & node->value.pValue->xFunctree, rout );
 	}else{
-		DRoutine *existed = (DRoutine*) node->value.pValue;
+		DaoRoutine *existed = node->value.pRoutine;
 		DaoFunctree *mroutine = DaoFunctree_New( existed->nameSpace, rout->routName );
 		GC_IncRC( host );
 		mroutine->host = host;
-		DaoFunctree_Add( mroutine, (DRoutine*) node->value.pValue );
-		DaoFunctree_Add( mroutine, (DRoutine*) rout );
+		DaoFunctree_Add( mroutine, node->value.pRoutine );
+		DaoFunctree_Add( mroutine, rout );
 		GC_ShiftRC( mroutine, node->value.pValue );
 		node->value.pVoid = mroutine;
 	}
@@ -273,7 +273,7 @@ void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host )
 int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 {
 	DaoParser *parser, *defparser;
-	DaoFunction *cur;
+	DaoRoutine *cur;
 	DString *name1, *name2;
 	DArray *parents;
 	DMap *methods;
@@ -326,7 +326,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			cur->pFunc = typer->funcItems[i].fpter;
 			if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
 
-			DaoMethods_Insert( methods, (DRoutine*)cur, hostype );
+			DaoMethods_Insert( methods, cur, hostype );
 		}
 		parents = DArray_New(0);
 		DaoTypeBase_Parents( typer, parents );
@@ -339,13 +339,13 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 					/* skip constructor */
 					if( STRCMP( meta->name, sup->name ) ==0 ) continue;
 					for(k=0; k<meta->routines->size; k++){
-						DRoutine *rout = meta->routines->items.pRout2[k];
+						DaoRoutine *rout = meta->routines->items.pRoutine[k];
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != sup->core->kernel->abtype ) continue;
 						DaoMethods_Insert( methods, rout, hostype );
 					}
 				}else{
-					DRoutine *rout = (DRoutine*) it->value.pVoid;
+					DaoRoutine *rout = it->value.pRoutine;
 					/* skip constructor */
 					if( STRCMP( rout->routName, sup->name ) ==0 ) continue;
 					/* skip methods not defined in this parent type */
@@ -578,12 +578,11 @@ int DaoNamespace_SetupTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	}
 	return ec;
 }
-DaoFunction* DaoNamespace_MakeFunction( DaoNamespace *self, 
-		const char *proto, DaoParser *parser )
+DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser )
 {
 	DaoParser *old = parser;
 	DaoParser *defparser = NULL;
-	DaoFunction *func;
+	DaoRoutine *func;
 	DaoValue *value;
 
 	if( parser == NULL ){
@@ -603,15 +602,15 @@ DaoFunction* DaoNamespace_MakeFunction( DaoNamespace *self,
 	if( func == NULL ) return NULL;
 	value = DaoNamespace_GetData( self, func->routName );
 	if( value && value->type == DAO_FUNCTREE ){
-		DaoFunctree_Add( & value->xFunctree, (DRoutine*)func );
+		DaoFunctree_Add( & value->xFunctree, func );
 	}else{
 		DaoNamespace_AddConst( self, func->routName, (DaoValue*) func, DAO_DATA_PUBLIC );
 	}
 	return func;
 }
-DaoFunction* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fptr, const char *proto )
+DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fptr, const char *proto )
 {
-	DaoFunction *func = DaoNamespace_MakeFunction( self, proto, NULL );
+	DaoRoutine *func = DaoNamespace_MakeFunction( self, proto, NULL );
 	if( func == NULL ) return NULL;
 	func->pFunc = fptr;
 	return func;
@@ -620,7 +619,7 @@ DaoFunction* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fptr, con
 int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 {
 	DaoParser *defparser, *parser = DaoParser_New();
-	DaoFunction *func;
+	DaoRoutine *func;
 	int i = 0;
 	int ec = 0;
 	parser->vmSpace = self->vmSpace;
@@ -894,7 +893,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			DArray_Append( self->cstData, dest );
 
 			mroutine = DaoFunctree_New( self, name );
-			DaoFunctree_Add( mroutine, (DRoutine*) dest );
+			DaoFunctree_Add( mroutine, (DaoRoutine*) dest );
 			dest = (DaoValue*) mroutine;
 			dest->xNone.trait |= DAO_DATA_CONST;
 			GC_ShiftRC( mroutine, self->cstData->items.pValue[id] );
@@ -903,7 +902,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 		if( value->type == DAO_FUNCTREE ){
 			DaoFunctree_Import( & dest->xFunctree, & value->xFunctree );
 		}else{
-			DaoFunctree_Add( & dest->xFunctree, (DRoutine*) value );
+			DaoFunctree_Add( & dest->xFunctree, (DaoRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->cstData, value );
 			value->xNone.trait |= DAO_DATA_CONST;
@@ -1282,7 +1281,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	DNode *node;
 	DArray *nested = NULL;
 	DString *mbs;
-	DRoutine *rout;
+	DaoRoutine *rout;
 	DaoType *abtp = NULL;
 	DaoType *itp = (DaoType*) p;
 	DaoTuple *tuple = (DaoTuple*) p;
@@ -1339,7 +1338,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = ((DaoFunctree*)p)->unitype; break;
 	case DAO_ROUTINE :
 	case DAO_FUNCTION :
-		rout = (DRoutine*) p;
+		rout = (DaoRoutine*) p;
 		abtp = rout->routType;
 		break;
 	case DAO_PAR_NAMED :
@@ -1469,7 +1468,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		}
 #endif
 	}else if( p->type == DAO_ROUTINE || p->type == DAO_FUNCTION ){ /* XXX should never reach here */
-		DRoutine *rout = (DRoutine*) p;
+		DaoRoutine *rout = (DaoRoutine*) p;
 		abtp = rout->routType; /* might be NULL */
 	}else if( p->type == DAO_CDATA ){ /* XXX should never reach here */
 		DString_Append( mbs, cdata->ctype->name );
@@ -1678,9 +1677,9 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	return abtp;
 }
 
-DaoFunction* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, DaoParser *parser )
+DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, DaoParser *parser )
 {
-	DaoFunction *func = DaoFunction_New();
+	DaoRoutine *func = DaoRoutine_New();
 	DaoParser *defparser;
 	int key = DKEY_OPERATOR;
 	int optok = 0;
@@ -1708,7 +1707,7 @@ DaoFunction* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto,
 	}
 	return func;
 Error:
-	DaoFunction_Delete( func );
+	DaoRoutine_Delete( func );
 	return NULL;
 }
 /* symbols should be comma or semicolon delimited string */

@@ -30,8 +30,7 @@ struct DArray
 		DaoTuple     **pTuple;
 		DaoClass     **pClass;
 		DaoObject    **pObject;
-		DaoRoutine   **pRout;
-		DRoutine     **pRout2;
+		DaoRoutine   **pRoutine;
 		DaoCdata     **pCdata;
 		DaoType      **pType;
 		DaoNamespace **pNS;

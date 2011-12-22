@@ -19,6 +19,8 @@
 
 #define ROUT_HOST_TID( t ) ((t)->routHost ? (t)->routHost->tid : 0)
 
+typedef struct DaoRoutineBody DaoRoutineBody;
+
 
 /* Two types of specializatins may happen to a routine:
  * 1. Method Specialization (MS) for specialized template-like types;
@@ -42,10 +44,10 @@ struct DaoRoutine
 	uchar_t          parCount; /* number of parameters that can be accepted; */
 	ushort_t         defLine;  /* definition line number in the source file; */
 	uint_t           refParams; /* bit flags for reference parameters; */
-	DArray          *defaults; /* default parameters; */
 	DString         *routName; /* routine name; */
 	DaoType         *routType; /* routine type; */
 	DaoType         *routHost; /* host type, for routine that is a method; */
+	DaoList         *routConsts; /* default parameters and routine constants; */
 	DaoRoutine      *original; /* the original routine of a PS specialized one; */
 	DaoRoutree      *specialized; /* specialization based on parameters; */
 	DaoNamespace    *nameSpace; /* definition namespace; */
@@ -127,10 +129,10 @@ typedef struct DParNode DParNode;
 
 struct DParNode
 {
-	DaoType  *type;
-	DArray   *nexts; /* <DParNode*> */
-	DMap     *names; /* <DaoType*,DParNode*> */
-	DRoutine *routine;
+	DaoType    *type;
+	DArray     *nexts; /* <DParNode*> */
+	DMap       *names; /* <DaoType*,DParNode*> */
+	DaoRoutine *routine;
 };
 
 /* DaoRoutree is a structure to organize overloaded functions into trees (tries),
@@ -159,16 +161,16 @@ struct DaoRoutree
 DaoRoutree* DaoRoutree_New( DaoNamespace *nameSpace, DString *name );
 void DaoRoutree_Delete( DaoRoutree *self );
 
-void DaoRoutree_UpdateVtable( DaoRoutree *self, DRoutine *routine, DMap *vtable );
-DRoutine* DaoRoutree_Add( DaoRoutree *self, DRoutine *routine );
-DRoutine* DaoRoutree_Lookup( DaoRoutree *self, DaoValue *obj, DaoValue *p[], int n, int code );
-DRoutine* DaoRoutree_LookupByType( DaoRoutree *self, DaoType *st, DaoType *t[], int n, int c );
+void DaoRoutree_UpdateVtable( DaoRoutree *self, DaoRoutine *routine, DMap *vtable );
+DaoRoutine* DaoRoutree_Add( DaoRoutree *self, DaoRoutine *routine );
+DaoRoutine* DaoRoutree_Lookup( DaoRoutree *self, DaoValue *obj, DaoValue *p[], int n, int code );
+DaoRoutine* DaoRoutree_LookupByType( DaoRoutree *self, DaoType *st, DaoType *t[], int n, int c );
 void DaoRoutree_Import( DaoRoutree *self, DaoRoutree *other );
 void DaoRoutree_Compile( DaoRoutree *self );
 
 /* Resolve overloaded, virtual and specialized function: */
-/* "self" must be one of: DRoutine, DaoRoutine, DaoFunction, DaoRoutree. */
-DRoutine* DRoutine_Resolve( DaoValue *self, DaoValue *obj, DaoValue *p[], int n, int code );
-DRoutine* DRoutine_ResolveByType( DaoValue *self, DaoType *st, DaoType *t[], int n, int code );
+/* "self" must be one of: DaoRoutine, DaoRoutree. */
+DaoRoutine* DaoRoutine_Resolve( DaoValue *self, DaoValue *obj, DaoValue *p[], int n, int code );
+DaoRoutine* DaoRoutine_ResolveByType( DaoValue *self, DaoType *st, DaoType *t[], int n, int code );
 
 #endif

@@ -40,7 +40,6 @@ struct DaoStackFrame
 	DaoType     **types;
 	DaoType      *retype;
 	DaoRoutine   *routine;
-	DaoFunction  *function;
 	DaoObject    *object;
 	DaoProcess   *outer;
 
@@ -132,14 +131,14 @@ DAO_DLL void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, Dao
 DAO_DLL void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
 
 DAO_DLL void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
-DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
+DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *function );
 DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
 
 DAO_DLL void DaoProcess_InterceptReturnValue( DaoProcess *self );
 
 DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
 
-DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n );
+DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n );
 
 /* Execute from the top of the calling stack */
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );

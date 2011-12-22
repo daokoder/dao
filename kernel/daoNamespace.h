@@ -134,12 +134,12 @@ DAO_DLL DaoType* DaoNamespace_SymbolTypeAdd( DaoNamespace *self, DaoType *t1, Da
 DAO_DLL DaoType* DaoNamespace_SymbolTypeSub( DaoNamespace *self, DaoType *t1, DaoType *t2, dint *value );
 
 DAO_DLL int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer );
-DAO_DLL void DaoMethods_Insert( DMap *methods, DRoutine *rout, DaoType *host );
+DAO_DLL void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoType *host );
 DAO_DLL int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer );
 DAO_DLL DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer );
 
-DAO_DLL DaoFunction* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, DaoParser *parser );
-DAO_DLL DaoFunction* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser );
+DAO_DLL DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, DaoParser *parser );
+DAO_DLL DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser );
 
 DAO_DLL DaoValue* DaoValue_FindAuxMethod( DaoValue *self, DString *name, DaoNamespace *nspace );
 DAO_DLL DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nspace );
