@@ -357,7 +357,6 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_ABROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_FUNCTION][DAO_ROUTINE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTREE][DAO_ROUTINE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUNCTREE][DAO_FUNCTREE] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
@@ -763,7 +762,6 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			return DaoType_MatchTo( rout->routType, self, defs );
 		}
 		break;
-	case DAO_FUNCTION :
 	case DAO_ROUTINE :
 	case DAO_ABROUTINE :
 		tp = value->xRoutine.routType;

@@ -28,33 +28,22 @@
 #include"daoNamespace.h"
 #include"daoValue.h"
 
-static void DRoutine_Init( DRoutine *self )
+DaoRoutine* DaoRoutine_New()
 {
-	self->attribs = 0;
-	self->parCount = 0;
-	self->defLine  = 0;
-	self->refParams = 0;
-	self->routHost = NULL;
-	self->routType = NULL;
-	self->routHelp = NULL;
+	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof(DaoRoutine) );
+	DaoValue_Init( self, DAO_ROUTINE );
 	self->routName = DString_New(1);
 	self->routConsts = DArray_New(D_VALUE);
-	self->nameSpace = NULL;
-}
-DRoutine* DRoutine_New()
-{
-	DRoutine *self = (DRoutine*) dao_calloc( 1, sizeof(DRoutine) );
-	DaoValue_Init( self, DAO_ABROUTINE );
-	DRoutine_Init( self );
 	return self;
 }
-void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from )
 {
 	int i;
 	self->attribs = from->attribs;
 	self->parCount = from->parCount;
 	self->defLine = from->defLine;
 	self->refParams = from->refParams;
+	self->pFunc = from->pFunc;
 	GC_ShiftRC( from->routHost, self->routHost );
 	GC_ShiftRC( from->routType, self->routType );
 	GC_ShiftRC( from->nameSpace, self->nameSpace );
@@ -66,23 +55,31 @@ void DRoutine_CopyFields( DRoutine *self, DRoutine *from )
 	for(i=0; i<from->routConsts->size; i++)
 		DaoValue_MarkConst( self->routConsts->items.pValue[i] );
 }
-static void DRoutine_DeleteFields( DRoutine *self )
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self )
+{
+	DaoRoutine *copy = DaoRoutine_New();
+	DaoRoutine_Compile( self );
+	DaoRoutine_CopyFields( copy, self );
+	GC_IncRC( self->body );
+	copy->body = self->body;
+	return copy;
+}
+void DaoRoutine_Delete( DaoRoutine *self )
 {
 	GC_DecRC( self->routHost );
 	GC_DecRC( self->routType );
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
 	DArray_Delete( self->routConsts );
-	if( self->routHelp ) DString_Delete( self->routHelp );
 }
-int DRoutine_AddConstant( DRoutine *self, DaoValue *value )
+int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 {
 	// TODO: handle NULL
 	DArray_Append( self->routConsts, value );
 	DaoValue_MarkConst( self->routConsts->items.pValue[self->routConsts->size-1] );
 	return self->routConsts->size-1;
 }
-static int DRoutine_Check( DRoutine *self, DaoValue *obj, DaoValue *p[], int n, int code )
+static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int n, int code )
 {
 	DNode *node;
 	DaoValue **dpar = p;
@@ -164,7 +161,7 @@ NotMatched:
 	DMap_Delete( defs );
 	return 0;
 }
-static int DRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *selftype,
+static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *selftype,
 		DaoType *ts[], int np, int code, int def )
 {
 	int ndef = 0;
@@ -272,17 +269,17 @@ FinishError:
 	DMap_Delete( defs );
 	return -1;
 }
-static DRoutine* MatchByParamType( DaoValue *self, DaoType *selftype, DaoType *ts[], int np, int code )
+static DaoRoutine* MatchByParamType( DaoValue *self, DaoType *selftype, DaoType *ts[], int np, int code )
 {
-	DRoutine *rout = DRoutine_ResolveByType( self, selftype, ts, np, code );
-	if( rout == (DRoutine*)self ){ /* parameters not yet checked: */
-		if( DRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, code, 0 ) ==0){
+	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, code );
+	if( rout == (DaoRoutine*)self ){ /* parameters not yet checked: */
+		if( DaoRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, code, 0 ) ==0){
 			rout = NULL;
 		}
 	}
 	return rout;
 }
-void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DMap *defs )
+void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DMap *defs )
 {
 	int npar = np;
 	int ndef = self->parCount;
@@ -355,7 +352,7 @@ void DRoutine_PassParamTypes( DRoutine *self, DaoType *selftype, DaoType *ts[], 
 		}
 	}
 }
-void DRoutine_PassParamTypes2( DRoutine *self, DaoType *selftype,
+void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 		DaoType *ts[], int np, int code, DMap *defs )
 {
 	int npar = np;
@@ -409,11 +406,10 @@ DaoTypeBase routTyper=
 	(FuncPtrDel) DaoRoutine_Delete, NULL
 };
 
-DaoRoutine* DaoRoutine_New()
+DaoRoutineBody* DaoRoutineBody_New()
 {
-	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof( DaoRoutine ) );
-	DaoValue_Init( self, DAO_ROUTINE );
-	DRoutine_Init( (DRoutine*)self );
+	DaoRoutineBody *self = (DaoRoutineBody*) dao_calloc( 1, sizeof( DaoRoutineBody ) );
+	DaoValue_Init( self, DAO_ROUTBODY );
 	self->source = NULL;
 	self->original = NULL;
 	self->specialized = NULL;
@@ -428,10 +424,9 @@ DaoRoutine* DaoRoutine_New()
 	self->jitData = NULL;
 	return self;
 }
-void DaoRoutine_Delete( DaoRoutine *self )
+void DaoRoutineBody_Delete( DaoRoutineBody *self )
 {
 	DNode *n;
-	DRoutine_DeleteFields( (DRoutine*)self );
 	if( self->type != DAO_ROUTINE ){ /* maybe DAO_ABROUTINE */
 		dao_free( self );
 		return;
@@ -502,25 +497,9 @@ void DaoRoutine_Compile( DaoRoutine *self )
 		self->parser = NULL;
 	}
 }
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self )
-{
-	DaoRoutine *copy = NULL;
-	if( self->type != DAO_ROUTINE ){ /* maybe DAO_ABROUTINE */
-		DRoutine *copy2 = DRoutine_New();
-		DRoutine_CopyFields( (DRoutine*) copy2, (DRoutine*) self );
-		return (DaoRoutine*) copy2;
-	}
-	copy = DaoRoutine_New();
-	DaoRoutine_Compile( self );
-	DRoutine_CopyFields( (DRoutine*) copy, (DRoutine*) self );
-	DaoRoutine_CopyFields( copy, self );
-	return copy;
-}
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
+void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 {
 	int i;
-	DaoRoutine_Compile( other );
 	DArray_Assign( self->routConsts, other->routConsts );
 	for(i=0; i<other->routConsts->size; i++) DaoValue_MarkConst( self->routConsts->items.pValue[i] );
 	if( other->type != DAO_ROUTINE ) return;
@@ -541,8 +520,14 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other )
 	self->bodyStart = other->bodyStart;
 	self->bodyEnd = other->bodyEnd;
 }
+DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self )
+{
+	DaoRoutineBody *copy = DaoRoutineBody_New();
+	DaoRoutineBody_CopyFields( copy, self );
+	return copy;
+}
 
-int DaoRoutine_InferTypes( DaoRoutine *self );
+int DaoRoutine_DoTypeInference( DaoRoutine *self );
 extern void DaoRoutine_JitCompile( DaoRoutine *self );
 
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
@@ -556,12 +541,12 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
 	for(i=0; i<vmCodes->size; i++){
 		self->vmCodes->codes[i] = * (DaoVmCode*) vmCodes->items.pVmc[i];
 	}
-	return DaoRoutine_InferTypes( self );
+	return DaoRoutine_DoTypeInference( self );
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes )
 {
 	DaoVmcArray_Assign( self->vmCodes, vmCodes );
-	return DaoRoutine_InferTypes( self );
+	return DaoRoutine_DoTypeInference( self );
 }
 
 static DaoType* DaoType_DeepItemType( DaoType *self )
@@ -924,7 +909,7 @@ void DaoPrintCallError( DArray *errors, DaoStream *stdio )
 	}
 	DString_Delete( mbs );
 }
-int DaoRoutine_InferTypes( DaoRoutine *self )
+int DaoRoutine_DoTypeInference( DaoRoutine *self )
 {
 #define NoCheckingType(t) ((t->tid==DAO_UDF)|(t->tid==DAO_ANY)|(t->tid==DAO_INITYPE))
 
@@ -1131,7 +1116,7 @@ int DaoRoutine_InferTypes( DaoRoutine *self )
 	DaoGC_IncRCs( self->regType );
 
 	/*
-	   printf( "DaoRoutine_InferTypes() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->regCount );
+	   printf( "DaoRoutine_DoTypeInference() %p %s %i %i\n", self, self->routName->mbs, self->parCount, self->regCount );
 	   if( self->routType ) printf( "%p %p\n", hostClass, self->routType->aux );
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
@@ -3133,7 +3118,7 @@ NotExist_TryAux:
 							GC_ShiftRC( orig, drout->original );
 							DaoFunctree_Add( orig->specialized, (DRoutine*) drout );
 							drout->original = orig;
-							if( DaoRoutine_InferTypes( drout ) ==0 ) goto InvParam;
+							if( DaoRoutine_DoTypeInference( drout ) ==0 ) goto InvParam;
 						}
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
