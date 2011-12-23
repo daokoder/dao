@@ -40,17 +40,17 @@ install:
 	-$(COPY) math/math.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) meta/meta.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) net/net.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
-	-$(COPY) string/string.dao $(DAO_MOD_DIR)
+	-$(COPY) string/string.dao $(DAO_MOD_DIR)/string
 	-$(COPY) string/format.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/string
 	-$(COPY) string/md5.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/string
 	-$(COPY) string/tokenize.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/string
 	-$(COPY) string/xxtea.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/string
-	-$(COPY) stream/stream.dao $(DAO_MOD_DIR)
+	-$(COPY) stream/stream.dao $(DAO_MOD_DIR)/stream
 	-$(COPY) stream/clprint.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/stream
 	-$(COPY) stream/buffer.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/stream
 	-$(COPY) sync/sync.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) web/cgi.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/web
 	-$(COPY) web/json.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/web
 	-$(COPY) os/fs.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/os
-	-$(COPY) os/os.dao $(DAO_MOD_DIR)
+	-$(COPY) os/os.dao $(DAO_MOD_DIR)/os
 
