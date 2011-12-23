@@ -25,7 +25,7 @@ install:
 	$(EXIST) addpath.dao $(COPY) addpath.dao $(DAO_DIR)
 	$(EXIST) tools\autobind.dao $(COPY) tools\autobind.dao $(DAO_TOOL_DIR)
 
-	cd modules && $(MAKE) install-win32
+	cd modules && $(MAKE) install
 
 uninstall:
 	$(EXIST) $(DAO_DIR)  $(DEL_DIR) $(DAO_DIR)

@@ -1,10 +1,14 @@
 
 std.path( 'auxlib', $add );
+std.path( 'graph', $add );
 std.path( 'syslib', $add );
 std.path( 'math', $add );
 std.path( 'string', $add );
+std.path( 'stream', $add );
+std.path( 'sync', $add );
 std.path( 'meta', $add );
 std.path( 'net', $add );
+std.path( 'os', $add );
 std.path( 'web', $add );
 std.path( 'DaoCXX', $add );
 std.path( 'DaoJIT', $add );
