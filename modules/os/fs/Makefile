@@ -1,4 +1,4 @@
-PROJECT = fsnode
+PROJECT = fs
 
 include ../../../Makefile.common
 
@@ -9,11 +9,11 @@ TARGET = ../$(PROJECT).$(DAO_DLL_EXT)
 
 all: $(TARGET)
 
-dao_fsnode.o: dao_fsnode.c
-	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) dao_fsnode.c
+dao_fs.o: dao_fs.c
+	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) dao_fs.c
 
-$(TARGET): dao_fsnode.o
-	$(DAO_CC) $(DAO_DLLFLAGS) dao_fsnode.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) -o $(TARGET)
+$(TARGET): dao_fs.o
+	$(DAO_CC) $(DAO_DLLFLAGS) dao_fs.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) -o $(TARGET)
 
 clean:
 	-$(DEL_FILE) *.o
