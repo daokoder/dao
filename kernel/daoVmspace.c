@@ -146,7 +146,6 @@ extern DaoTypeBase  objTyper;
 extern DaoTypeBase  nsTyper;
 extern DaoTypeBase  tupleTyper;
 extern DaoTypeBase  namevaTyper;
-extern DaoTypeBase  mroutineTyper;
 
 extern DaoTypeBase  numarTyper;
 extern DaoTypeBase  comTyper;
@@ -187,10 +186,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 #endif
 	case DAO_FUNCURRY : return & curryTyper;
 	case DAO_CDATA   :  return & defaultCdataTyper;
-	case DAO_FUNCTREE : return & mroutineTyper;
 	case DAO_ROUTINE   :  return & routTyper;
-	case DAO_ABROUTINE :  return & routTyper;
-	case DAO_FUNCTION  :  return & funcTyper;
 	case DAO_INTERFACE :  return & interTyper;
 	case DAO_CLASS     :  return & classTyper;
 	case DAO_OBJECT    :  return & objTyper;

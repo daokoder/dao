@@ -70,7 +70,8 @@ struct DaoType
 	uchar_t   attrib;
 	uchar_t   flagtype : 1; /* for enum type */
 	uchar_t   simtype  : 1; /* if the nested contains only simple types */
-	uchar_t   cdatatype : 2; /* sub type of DaoCdata */
+	uchar_t   cdatatype : 1; /* sub type of DaoCdata */
+	uchar_t   overloads : 1; /* overloaded routines */
 	uchar_t   ffitype : 4; /* for DaoCLoader module */
 	uchar_t   rntcount; /* real number type count */
 	DString  *name; /* type name */
@@ -228,8 +229,8 @@ struct DaoCdataCore
 
 DAO_DLL DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
 DAO_DLL DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
-DAO_DLL DaoValue* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
-DAO_DLL DaoValue* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
+DAO_DLL DaoRoutine* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
+DAO_DLL DaoRoutine* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
 
 
 typedef struct DTypeParam DTypeParam;

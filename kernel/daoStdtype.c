@@ -696,7 +696,7 @@ void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, Dao
 void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
 {
 	DaoTypeBase *typer = DaoValue_GetTyper( self );
-	DaoValue *func = DaoTypeBase_FindFunctionMBS( typer, "[]" );
+	DaoRoutine *func = DaoTypeBase_FindFunctionMBS( typer, "[]" );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "[]" );
 		return;
@@ -706,7 +706,7 @@ void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N 
 void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
 {
 	DaoTypeBase *typer = DaoValue_GetTyper( self );
-	DaoValue *func = DaoTypeBase_FindFunctionMBS( typer, "[]=" );
+	DaoRoutine *func = DaoTypeBase_FindFunctionMBS( typer, "[]=" );
 	DaoValue *p[ DAO_MAX_PARAM ];
 	memcpy( p, pid, N*sizeof(DaoValue*) );
 	p[N+1] = value;

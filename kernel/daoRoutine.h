@@ -48,14 +48,18 @@ struct DaoRoutine
 	DaoType         *routType; /* routine type; */
 	DaoType         *routHost; /* host type, for routine that is a method; */
 	DaoList         *routConsts; /* default parameters and routine constants; */
-	DaoRoutine      *original; /* the original routine of a PS specialized one; */
-	DaoRoutree      *specialized; /* specialization based on parameters; */
 	DaoNamespace    *nameSpace; /* definition namespace; */
+
 	DaoRoutineBody  *body; /* data for Dao routines; */
 	DaoFuncPtr       pFunc;
+
+	DaoRoutine      *original; /* the original routine of a PS specialized one; */
+	DRoutines       *specialized; /* specialization based on parameters; */
+	DRoutines       *overloads; /* overloaded routines; */
 };
 
-DaoRoutine* DaoRoutine_New();
+DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body );
+DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init );
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self );
 void DaoRoutine_Delete( DaoRoutine *self );
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from );
@@ -99,10 +103,10 @@ struct DaoRoutineBody
 
 	DMap *abstypes;
 
-	DaoRoutine   *upRoutine;
-	DaoProcess   *upProcess;
-	DaoParser    *parser;
-	DaoRoutine   *revised; /* to support edit & continue */
+	DaoRoutine  *upRoutine;
+	DaoProcess  *upProcess;
+	DaoParser   *parser;
+	DaoRoutine  *revised; /* to support edit & continue */
 
 	void *jitData;
 };
@@ -135,42 +139,36 @@ struct DParNode
 	DaoRoutine *routine;
 };
 
-/* DaoRoutree is a structure to organize overloaded functions into trees (tries),
+/* DRoutines is a structure to organize overloaded functions into trees (tries),
  * for fast function resolving based on parameter types. */
 
 /* In data structures for namespace and class,
  * each individual function should have its own entry in these structures,
- * and an additional entry of DaoRoutree should be added for overloaded
+ * and an additional entry of DRoutines should be added for overloaded
  * functions. This will simplify some operations such as deriving methods from
  * parent type or instantiating template classes! */
 
-struct DaoRoutree
+struct DRoutines
 {
-	DAO_DATA_COMMON;
-
 	unsigned int   attribs;
-	DaoNamespace  *space;
-	DaoType       *host;
-	DaoType       *unitype;
-	DString       *name;
 	DParNode      *tree;
 	DParNode      *mtree; /* for routines with self parameter */
 	DArray        *routines; /* list of overloaded routines on the trees */
 };
 
-DaoRoutree* DaoRoutree_New( DaoNamespace *nameSpace, DString *name );
-void DaoRoutree_Delete( DaoRoutree *self );
+DRoutines* DRoutines_New();
+void DRoutines_Delete( DRoutines *self );
 
-void DaoRoutree_UpdateVtable( DaoRoutree *self, DaoRoutine *routine, DMap *vtable );
-DaoRoutine* DaoRoutree_Add( DaoRoutree *self, DaoRoutine *routine );
-DaoRoutine* DaoRoutree_Lookup( DaoRoutree *self, DaoValue *obj, DaoValue *p[], int n, int code );
-DaoRoutine* DaoRoutree_LookupByType( DaoRoutree *self, DaoType *st, DaoType *t[], int n, int c );
-void DaoRoutree_Import( DaoRoutree *self, DaoRoutree *other );
-void DaoRoutree_Compile( DaoRoutree *self );
+DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine );
+DaoRoutine* DRoutines_Lookup( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code );
+DaoRoutine* DRoutines_LookupByType( DRoutines *self, DaoType *st, DaoType *t[], int n, int c );
+void DRoutines_Import( DRoutines *self, DRoutines *other );
+void DRoutines_Compile( DRoutines *self );
+
 
 /* Resolve overloaded, virtual and specialized function: */
-/* "self" must be one of: DaoRoutine, DaoRoutree. */
-DaoRoutine* DaoRoutine_Resolve( DaoValue *self, DaoValue *obj, DaoValue *p[], int n, int code );
-DaoRoutine* DaoRoutine_ResolveByType( DaoValue *self, DaoType *st, DaoType *t[], int n, int code );
+DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int n, int code );
+DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code );
+void DaoRoutine_UpdateVtable( DaoRoutine *self, DaoRoutine *routine, DMap *vtable );
 
 #endif

@@ -132,11 +132,11 @@ DAO_DLL void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame )
 
 DAO_DLL void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
 DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *function );
-DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
+DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N );
 
 DAO_DLL void DaoProcess_InterceptReturnValue( DaoProcess *self );
 
-DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 
 DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n );
 

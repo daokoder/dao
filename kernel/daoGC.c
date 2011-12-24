@@ -25,11 +25,11 @@
 
 DArray *dao_callback_data = NULL;
 
-DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DaoValue *userdata )
+DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DaoValue *userdata )
 {
 	DaoCallbackData *self;
 	if( callback == NULL ) return NULL;
-	if( callback->type < DAO_ROUTREE || callback->type > DAO_ROUTINE ) return NULL;
+	if( callback->type != DAO_ROUTINE ) return NULL;
 	self = (DaoCallbackData*) calloc( 1, sizeof(DaoCallbackData) );
 	self->callback = callback;
 	DaoValue_Copy( userdata, & self->userdata );
@@ -51,7 +51,7 @@ static void DaoCallbackData_DeleteByCallback( DaoValue *callback )
 	GC_Lock();
 	for(i=0; i<dao_callback_data->size; i++){
 		cd = (DaoCallbackData*) dao_callback_data->items.pValue[i];
-		if( cd->callback == (DaoMethod*) callback ){
+		if( cd->callback == (DaoRoutine*) callback ){
 			DaoCallbackData_Delete( cd );
 			DArray_Erase( dao_callback_data, i, 1 );
 			i--;
@@ -280,7 +280,6 @@ void DaoGC_Init()
 	type_gc_delay[ DAO_CLASS ] = 1;
 	type_gc_delay[ DAO_CTYPE ] = 1;
 	type_gc_delay[ DAO_INTERFACE ] = 1;
-	type_gc_delay[ DAO_ROUTREE ] = 1;
 	type_gc_delay[ DAO_ROUTINE ] = 1;
 	type_gc_delay[ DAO_PROCESS ] = 1;
 	type_gc_delay[ DAO_NAMESPACE ] = 1;
@@ -671,8 +670,7 @@ static void DaoValue_Delete( DaoValue *self )
 #ifdef DAO_GC_PROF
 	ObjectProfile[self->type] --;
 #endif
-	if( self->type >= DAO_ROUTREE && self->type <= DAO_ROUTINE )
-		DaoCallbackData_DeleteByCallback( self );
+	if( self->type == DAO_ROUTINE ) DaoCallbackData_DeleteByCallback( self );
 	DaoCallbackData_DeleteByUserdata( self );
 	typer->Delete( self );
 }
@@ -782,15 +780,6 @@ void DaoCGC_CycRefCountDecScan()
 				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
 				break;
 			}
-		case DAO_ROUTREE :
-			{
-				DaoRoutree *meta = (DaoRoutree*) value;
-				cycRefCountDecrement( (DaoValue*) meta->space );
-				cycRefCountDecrement( (DaoValue*) meta->host );
-				cycRefCountDecrement( (DaoValue*) meta->unitype );
-				cycRefCountDecrements( meta->routines );
-				break;
-			}
 		case DAO_ROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*)value;
@@ -800,6 +789,7 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) rout->original );
 				cycRefCountDecrement( (DaoValue*) rout->specialized );
 				cycRefCountDecrement( (DaoValue*) rout->routConsts );
+				if( rout->overloads ) cycRefCountDecrements( rout->overloads->routines );
 				break;
 			}
 		case DAO_ROUTBODY :
@@ -995,15 +985,6 @@ int DaoCGC_AliveObjectScan()
 				DaoGC_ScanCdata( cdata, DAO_GC_INC );
 				break;
 			}
-		case DAO_ROUTREE :
-			{
-				DaoRoutree *meta = (DaoRoutree*) value;
-				cycRefCountIncrement( (DaoValue*) meta->space );
-				cycRefCountIncrement( (DaoValue*) meta->host );
-				cycRefCountIncrement( (DaoValue*) meta->unitype );
-				cycRefCountIncrements( meta->routines );
-				break;
-			}
 		case DAO_ROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*) value;
@@ -1013,6 +994,7 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) rout->original );
 				cycRefCountIncrement( (DaoValue*) rout->specialized );
 				cycRefCountIncrement( (DaoValue*) rout->routConsts );
+				if( rout->overloads ) cycRefCountIncrements( rout->overloads->routines );
 				break;
 			}
 		case DAO_ROUTBODY :
@@ -1205,15 +1187,6 @@ void DaoCGC_RefCountDecScan()
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				break;
 			}
-		case DAO_ROUTREE :
-			{
-				DaoRoutree *meta = (DaoRoutree*) value;
-				directRefCountDecrement( (DaoValue**) & meta->space );
-				directRefCountDecrement( (DaoValue**) & meta->host );
-				directRefCountDecrement( (DaoValue**) & meta->unitype );
-				directRefCountDecrements( meta->routines );
-				break;
-			}
 		case DAO_ROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*)value;
@@ -1223,6 +1196,7 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & rout->original );
 				directRefCountDecrement( (DaoValue**) & rout->specialized );
 				directRefCountDecrement( (DaoValue**) & rout->routConsts );
+				if( rout->overloads ) directRefCountDecrements( rout->overloads->routines );
 				break;
 			}
 		case DAO_ROUTBODY :
@@ -1575,15 +1549,6 @@ void DaoIGC_CycRefCountDecScan()
 				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
 				break;
 			}
-		case DAO_ROUTREE :
-			{
-				DaoRoutree *meta = (DaoRoutree*) value;
-				cycRefCountDecrement( (DaoValue*) meta->space );
-				cycRefCountDecrement( (DaoValue*) meta->host );
-				cycRefCountDecrement( (DaoValue*) meta->unitype );
-				cycRefCountDecrements( meta->routines );
-				break;
-			}
 		case DAO_ROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*)value;
@@ -1593,6 +1558,7 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) rout->original );
 				cycRefCountDecrement( (DaoValue*) rout->specialized );
 				cycRefCountDecrement( (DaoValue*) rout->routConsts );
+				if( rout->overloads ) cycRefCountDecrements( rout->overloads->routines );
 				break;
 			}
 		case DAO_ROUTBODY :
@@ -1823,15 +1789,6 @@ int DaoIGC_AliveObjectScan()
 				DaoGC_ScanCdata( cdata, DAO_GC_INC );
 				break;
 			}
-		case DAO_ROUTREE :
-			{
-				DaoRoutree *meta = (DaoRoutree*) value;
-				cycRefCountIncrement( (DaoValue*) meta->space );
-				cycRefCountIncrement( (DaoValue*) meta->host );
-				cycRefCountIncrement( (DaoValue*) meta->unitype );
-				cycRefCountIncrements( meta->routines );
-				break;
-			}
 		case DAO_ROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*) value;
@@ -1841,6 +1798,7 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) rout->original );
 				cycRefCountIncrement( (DaoValue*) rout->specialized );
 				cycRefCountIncrement( (DaoValue*) rout->routConsts );
+				if( rout->overloads ) cycRefCountIncrements( rout->overloads->routines );
 				break;
 			}
 		case DAO_ROUTBODY :
@@ -2055,16 +2013,6 @@ void DaoIGC_RefCountDecScan()
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				break;
 			}
-		case DAO_ROUTREE :
-			{
-				DaoRoutree *meta = (DaoRoutree*) value;
-				j += meta->routines->size;
-				directRefCountDecrement( (DaoValue**) & meta->space );
-				directRefCountDecrement( (DaoValue**) & meta->host );
-				directRefCountDecrement( (DaoValue**) & meta->unitype );
-				directRefCountDecrements( meta->routines );
-				break;
-			}
 		case DAO_ROUTINE :
 			{
 				DaoRoutine *rout = (DaoRoutine*)value;
@@ -2078,6 +2026,7 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & rout->original );
 				directRefCountDecrement( (DaoValue**) & rout->specialized );
 				directRefCountDecrement( (DaoValue**) & rout->routConsts );
+				if( rout->overloads ) directRefCountDecrements( rout->overloads->routines );
 				break;
 			}
 		case DAO_ROUTBODY :

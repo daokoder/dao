@@ -79,7 +79,7 @@
 #endif
 
 
-typedef struct DRoutine   DRoutine;
+typedef struct DRoutines     DRoutines;
 
 typedef struct DaoFunCurry   DaoFunCurry;
 typedef struct DaoCdataCore  DaoCdataCore;

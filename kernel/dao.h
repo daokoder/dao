@@ -156,7 +156,6 @@ enum DaoTypes
 	DAO_CLASS  ,
 	DAO_CTYPE  ,
 	DAO_INTERFACE ,
-	DAO_ROUTREE ,
 	DAO_ROUTINE   ,
 	DAO_PROCESS ,
 	DAO_NAMESPACE ,
@@ -258,7 +257,6 @@ typedef struct DaoArray        DaoArray;
 typedef struct DaoList         DaoList;
 typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
-typedef struct DaoRoutree     DaoRoutree;
 typedef struct DaoRoutine      DaoRoutine;
 typedef struct DaoInterface    DaoInterface;
 typedef struct DaoClass        DaoClass;
@@ -276,9 +274,6 @@ typedef struct DaoType         DaoType;
 
 /* Complex type: */
 typedef struct complex16 { double real, imag; } complex16;
-
-/* Dummy type for functions, casted from DaoRoutine, DaoRoutree: */
-typedef struct DaoMethod { uchar_t type;  } DaoMethod;
 
 typedef void (*CallbackOnString)( const char *str );
 typedef void (*FuncDaoInit)();
@@ -342,8 +337,8 @@ struct DaoTypeBase
 /* Callback data: freed when "callback" or "userdata" is collected by GC. */
 struct DaoCallbackData
 {
-	DaoMethod  *callback;
-	DaoValue   *userdata;
+	DaoRoutine  *callback;
+	DaoValue    *userdata;
 };
 
 /* This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
@@ -424,7 +419,6 @@ DAO_DLL DaoCdata*    DaoValue_CastCdata( DaoValue *self );
 DAO_DLL DaoClass*    DaoValue_CastClass( DaoValue *self );
 
 DAO_DLL DaoInterface*  DaoValue_CastInterface( DaoValue *self );
-DAO_DLL DaoRoutree*   DaoValue_CastFunctree( DaoValue *self );
 DAO_DLL DaoRoutine*    DaoValue_CastRoutine( DaoValue *self );
 DAO_DLL DaoProcess*    DaoValue_CastProcess( DaoValue *self );
 DAO_DLL DaoNamespace*  DaoValue_CastNamespace( DaoValue *self );
@@ -615,11 +609,11 @@ DAO_DLL void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, size_t N 
 DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
-DAO_DLL DaoMethod* DaoMethod_Resolve( DaoMethod *self, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], int n );
 
-DAO_DLL DaoValue* DaoObject_GetField( DaoObject *self, const char *name );
-DAO_DLL DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
-DAO_DLL DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
+DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
+DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
+DAO_DLL DaoCdata*   DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_Delete( DaoStream *self );
@@ -677,7 +671,7 @@ DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
-DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL void DaoProcess_Stop( DaoProcess *self );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
@@ -757,7 +751,7 @@ DAO_DLL void DaoGC_DecRC( DaoValue *p );
 
 DAO_DLL DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
 
-DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DaoValue *userdata );
+DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DaoValue *userdata );
 
 #ifdef __cplusplus
 }
@@ -835,7 +829,6 @@ DaoObject*       DaoValue_CastObject( DaoValue *self );
 DaoCdata*        DaoValue_CastCdata( DaoValue *self );
 DaoClass*        DaoValue_CastClass( DaoValue *self );
 DaoInterface*    DaoValue_CastInterface( DaoValue *self );
-DaoRoutree*     DaoValue_CastFunctree( DaoValue *self );
 DaoRoutine*      DaoValue_CastRoutine( DaoValue *self );
 DaoProcess*      DaoValue_CastProcess( DaoValue *self );
 DaoNamespace*    DaoValue_CastNamespace( DaoValue *self );
@@ -1075,11 +1068,11 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
  * Or,
  *     o->func( p[0], ..., p[n] )
  * If yes, return the best matched function; otherwise return NULL. 
-DaoMethod* DaoMethod_Resolve( DaoMethod *self, DaoValue *o, DaoValue *p[], int n );
+DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], int n );
 
+ return a null value, or a value of DaoRoutine: 
+DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DaoValue DaoObject_GetField( DaoObject *self, const char *name );
- return a null value, or a value of DaoRoutree, DaoRoutine: 
-DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name );
 DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
 
 DaoStream* DaoStream_New();
@@ -1124,7 +1117,7 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl )
  * Or,
  *     o->f( p[0], ..., p[n] )
  * Return 1 if successful, otherwise return 0. 
-int DaoProcess_Call( DaoProcess *s, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 void  DaoProcess_Stop( DaoProcess *self );
 DaoValue DaoProcess_GetReturned( DaoProcess *self );
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
@@ -1229,5 +1222,5 @@ void DaoGC_DecRC( DaoBase *p );
 
 DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
 
-DaoCallbackData* DaoCallbackData_New( DaoMethod *callback, DaoValue *userdata );
+DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DaoValue *userdata );
 */

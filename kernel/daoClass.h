@@ -52,7 +52,7 @@ struct DaoClass
 	DMap  *vtable; /* <DRoutine*,DRoutine*> */
 
 	DaoRoutine  *classRoutine; /* Default class constructor. */
-	DaoRoutree  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
+	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
 
 	DString  *className;
 	DString  *classHelp;
@@ -119,6 +119,6 @@ DAO_DLL int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 DAO_DLL void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
 DAO_DLL DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );
 
-DAO_DLL DaoValue* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
+DAO_DLL DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
 
 #endif

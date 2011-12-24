@@ -44,7 +44,6 @@ union DaoValue
 	DaoCdata       xCdata;
 	DaoClass       xClass;
 	DaoInterface   xInterface;
-	DaoRoutree     xFunctree;
 	DaoRoutine     xRoutine;
 	DaoProcess     xProcess;
 	DaoNamespace   xNamespace;

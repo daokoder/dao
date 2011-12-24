@@ -134,7 +134,7 @@ DAO_DLL DaoType* DaoNamespace_SymbolTypeAdd( DaoNamespace *self, DaoType *t1, Da
 DAO_DLL DaoType* DaoNamespace_SymbolTypeSub( DaoNamespace *self, DaoType *t1, DaoType *t2, dint *value );
 
 DAO_DLL int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer );
-DAO_DLL void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoType *host );
+DAO_DLL void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
 DAO_DLL int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer );
 DAO_DLL DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer );
 

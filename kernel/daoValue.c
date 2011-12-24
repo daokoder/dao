@@ -580,10 +580,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	int tm = 1;
-	if( tp->tid == DAO_ROUTREE && src->type == DAO_ROUTREE ){
-		/* XXX pair<objetp,routine<...>> */
-		if( tp != src->xFunctree.unitype ) return 0;
-	}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
+	if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
 		if( src->xObject.defClass != & tp->aux->xClass ){
 			src = DaoObject_MapThisObject( src->xObject.rootObject, tp );
 			tm = (src != NULL);
@@ -1188,11 +1185,6 @@ DaoInterface* DaoValue_CastInterface( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_INTERFACE ) return NULL;
 	return (DaoInterface*) self;
-}
-DaoRoutree* DaoValue_CastFunctree( DaoValue *self )
-{
-	if( self == NULL || self->type != DAO_ROUTREE ) return NULL;
-	return (DaoRoutree*) self;
 }
 DaoRoutine* DaoValue_CastRoutine( DaoValue *self )
 {
