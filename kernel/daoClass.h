@@ -116,8 +116,8 @@ DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft
 
 DAO_DLL int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 
-DAO_DLL void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
-DAO_DLL DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );
+DAO_DLL void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
+DAO_DLL DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature );
 
 DAO_DLL DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
 

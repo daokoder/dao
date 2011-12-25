@@ -79,8 +79,6 @@ struct DaoRoutineBody
 	/* virtual machine codes: */
 	DaoVmcArray *vmCodes;
 
-	DArray *routConsts;
-
 	/* data type for local registers: */
 	DArray *regType; /* <DaoType*> */
 
@@ -93,13 +91,15 @@ struct DaoRoutineBody
 
 	DArray *simpleVariables;
 
+	DString *routHelp;
+
 	DMap *localVarType; /* <int,DaoType*> local variable types */
 
 	int mode;
 
 	ushort_t regCount;
-	ushort_t bodyStart;
-	ushort_t bodyEnd;
+	ushort_t codeStart;
+	ushort_t codeEnd;
 
 	DMap *abstypes;
 

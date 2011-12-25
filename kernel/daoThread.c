@@ -830,7 +830,7 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 {
 	DaoProcess_PushRoutine( clone, proto->activeRoutine, proto->activeObject );
 	clone->activeCode = proto->activeCode;
-	DaoProcess_PushFunction( clone, proto->topFrame->function );
+	DaoProcess_PushFunction( clone, proto->topFrame->routine );
 	DaoProcess_SetActiveFrame( clone, clone->topFrame );
 	DaoProcess_PushSectionFrame( clone );
 	clone->topFrame->outer = proto;
@@ -1170,7 +1170,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 
 	entry = proc->topFrame->entry;
-	end = proc->activeRoutine->vmCodes->codes + proc->activeCode[nop+1].b;
+	end = proc->activeRoutine->body->vmCodes->codes + proc->activeCode[nop+1].b;
 	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );

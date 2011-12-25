@@ -1809,7 +1809,6 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) rout->upProcess );
 				cycRefCountIncrements( rout->regType );
 				cycRefCountIncrementMapValue( rout->abstypes );
-				k += rout->routConsts->size;
 				break;
 			}
 		case DAO_CLASS :

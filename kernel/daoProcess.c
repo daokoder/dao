@@ -3944,9 +3944,11 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_PutValue( self, (DaoValue*) vmp );
 	}else if( caller->type == DAO_FUNCURRY || (mode & DAO_CALL_EXPAR) ){
 		DaoProcess_DoCall2( self, vmc );
-	}else if( caller->xRoutine.pFunc ){
-		DaoProcess_DoCxxCall( self, vmc, NULL, & caller->xRoutine, selfpar, params, npar );
 	}else if( caller->type == DAO_ROUTINE ){
+		if( caller->xRoutine.pFunc ){
+			DaoProcess_DoCxxCall( self, vmc, NULL, & caller->xRoutine, selfpar, params, npar );
+			return;
+		}
 		rout = DaoRoutine_ResolveX( (DaoRoutine*) caller, selfpar, params, npar, codemode );
 		if( rout == NULL ){
 			rout2 = (DaoRoutine*) caller;

@@ -31,13 +31,13 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 	DaoValue *O = (DaoValue*)self;
 	int errcode = DaoObject_GetData( self, name, &V, othis );
 	if( errcode ) return errcode;
-	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return DAO_ERROR_TYPE;
-	if( DaoProcess_PushCallable( proc, V, O, P, N ) ) goto InvalidParam;
+	if( V == NULL || V->type != DAO_ROUTINE ) return DAO_ERROR_TYPE;
+	if( DaoProcess_PushCallable( proc, (DaoRoutine*) V, O, P, N ) ) goto InvalidParam;
 	if( ignore_return ) DaoProcess_InterceptReturnValue( proc );
 	if( execute ) DaoProcess_Execute( proc );
 	return 0;
 InvalidParam:
-	DaoProcess_ShowCallError( proc, (DRoutine*)V, O, P, N, DVM_CALL );
+	DaoProcess_ShowCallError( proc, (DaoRoutine*)V, O, P, N, DVM_CALL );
 	return 0;
 }
 static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -401,13 +401,13 @@ DaoValue* DaoObject_GetField( DaoObject *self, const char *name )
 	DaoObject_GetData( self, & str, & res, self );
 	return res;
 }
-DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name )
+DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name )
 {
 	DaoValue *V;
 	DString str = DString_WrapMBS( name );
 	int id = DaoClass_FindConst( self->defClass, & str );
 	if( id < 0 ) return NULL;
 	V = DaoClass_GetConst( self->defClass, id );
-	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return NULL;
-	return (DaoMethod*) V;
+	if( V == NULL || V->type != DAO_ROUTINE ) return NULL;
+	return (DaoRoutine*) V;
 }

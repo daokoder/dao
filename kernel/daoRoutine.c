@@ -48,10 +48,15 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init )
 {
 	DaoRoutine *self = DaoRoutine_New( nspace, host, 0 );
-	DString_Assign( self->routName, init->routName );
 	self->overloads = DRoutines_New();
 	self->routType = DaoType_New( "routine", DAO_ROUTINE, (DaoValue*)self, NULL );
+	self->routHost = host;
+	self->routType->overloads = 1;
 	GC_IncRC( self->routType );
+	GC_IncRC( self->routHost );
+	if( init == NULL ) return self;
+
+	DString_Assign( self->routName, init->routName );
 	if( self->nameSpace == NULL ){
 		self->nameSpace = init->nameSpace;
 		GC_IncRC( self->nameSpace );
@@ -448,8 +453,9 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->annotCodes = DArray_New(D_VMCODE);
 	self->localVarType = DMap_New(0,0);
 	self->abstypes = DMap_New(D_STRING,0);
+	self->routHelp = DString_New(1);
 	self->simpleVariables = DArray_New(0);
-	self->bodyStart = self->bodyEnd = 0;
+	self->codeStart = self->codeEnd = 0;
 	self->jitData = NULL;
 	return self;
 }
@@ -466,6 +472,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DArray_Delete( self->regType );
 	DArray_Delete( self->defLocals );
 	DArray_Delete( self->annotCodes );
+	DString_Delete( self->routHelp );
 	DMap_Delete( self->localVarType );
 	DMap_Delete( self->abstypes );
 	if( self->revised ) GC_DecRC( self->revised );
@@ -533,9 +540,10 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	DaoGC_DecRCs( self->regType );
 	DArray_Assign( self->regType, other->regType );
 	DArray_Assign( self->simpleVariables, other->simpleVariables );
+	DString_Assign( self->routHelp, other->routHelp );
 	self->regCount = other->regCount;
-	self->bodyStart = other->bodyStart;
-	self->bodyEnd = other->bodyEnd;
+	self->codeStart = other->codeStart;
+	self->codeEnd = other->codeEnd;
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self )
 {
@@ -3116,14 +3124,15 @@ NotExist_TryAux:
 						orig = rout;
 						drout = DaoRoutine_Copy( rout );
 						DaoRoutine_PassParamTypes( drout, bt, tp, j, code, defs2 );
-						if( orig->specialized == NULL ){
-							orig->specialized = DRoutines_New();
-							GC_IncRC( orig->specialized );
-						}
+						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
 						GC_ShiftRC( orig, drout->original );
 						DRoutines_Add( orig->specialized, drout );
 						drout->original = orig;
-						//XXX if( DaoRoutine_DoTypeInference( drout ) ==0 ) goto InvParam;
+						if( rout->body ){
+							GC_DecRC( drout->body );
+							drout->body = DaoRoutineBody_Copy( rout->body );
+							if( DaoRoutine_DoTypeInference( drout ) ==0 ) goto InvParam;
+						}
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
 					/*

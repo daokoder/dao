@@ -955,9 +955,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 {
 	DaoNamespace *ns = self->mainNamespace;
 	DaoProcess *vmp = self->mainProcess;
+	DaoStream *io = self->stdStream;
 	DaoRoutine *mainRoutine;
-	DRoutine *unirout = NULL;
-	DaoMethod *meth = NULL;
+	DaoRoutine *rout = NULL;
 	DaoValue **ps;
 	DString *name;
 	DArray *argNames;
@@ -974,8 +974,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 			DString_SetMBS( self->mainNamespace->name, "command line codes" );
 			if( DaoProcess_Compile( vmp, ns, self->mainSource, 1 ) ==0 ) return 0;
 			DaoVmSpace_ExeCmdArgs( self );
-			rout = ns->mainRoutines->items.pRout[ ns->mainRoutines->size-1 ];
-			if( DaoProcess_Call( vmp, (DaoMethod*) rout, NULL, NULL, 0 ) ==0 ) return 0;
+			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
+			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ==0 ) return 0;
 		}else{
 			DaoVmSpace_ExeCmdArgs( self );
 		}
@@ -1015,14 +1015,13 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	N = ns->argParams->items.size;
 	if( i >=0 ){
 		DaoValue *value = DaoNamespace_GetConst( ns, i );
-		if( value->type == DAO_FUNCTREE || value->type == DAO_ROUTINE ){
-			meth = (DaoMethod*) DRoutine_Resolve( value, NULL, ps, N, DVM_CALL );
-			unirout = (DRoutine*) meth;
+		if( value->type == DAO_ROUTINE ){
+			rout = DaoRoutine_ResolveX( (DaoRoutine*) value, NULL, ps, N, DVM_CALL );
 		}
-		if( meth == NULL ){
-			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-			if( unirout && unirout->routHelp )
-				DaoStream_WriteString( self->stdStream, unirout->routHelp );
+		if( rout == NULL && value->type == DAO_ROUTINE ){
+			DaoRoutineBody *body = value->xRoutine.body;
+			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+			if( body->routHelp ) DaoStream_WriteString( io, body->routHelp );
 			return 0;
 		}
 	}
@@ -1033,15 +1032,15 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 		DaoProcess_Execute( vmp );
 	}
 	/* check and execute explicitly defined main() routine  */
-	if( meth != NULL ){
-		if( DaoProcess_Call( vmp, meth, NULL, ps, N ) ){
-			DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-			if( unirout->routHelp ) DaoStream_WriteString( self->stdStream, unirout->routHelp );
+	if( rout != NULL ){
+		if( DaoProcess_Call( vmp, rout, NULL, ps, N ) ){
+			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+			if( rout->body->routHelp ) DaoStream_WriteString( io, rout->body->routHelp );
 			return 0;
 		}
 		DaoProcess_Execute( vmp );
 	}
-	if( ( self->options & DAO_EXEC_INTERUN ) && self->userHandler == NULL )
+	if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )
 		DaoVmSpace_Interun( self, NULL );
 
 	return 1;
@@ -1242,7 +1241,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	DaoParser_Delete( parser );
 
 ExecuteImplicitMain :
-	if( ns->mainRoutine->vmCodes->size > 1 ){
+	if( ns->mainRoutine->body->vmCodes->size > 1 ){
 		process = DaoVmSpace_AcquireProcess( self );
 		DaoVmSpace_Lock( self );
 		DArray_PushFront( self->nameLoading, ns->path );
@@ -1279,11 +1278,12 @@ ExecuteExplicitMain :
 			int ret, N = ns->argParams->items.size;
 			DaoValue **ps = ns->argParams->items.items.pValue;
 			DaoRoutine *rout = & value->xRoutine;
+			DaoStream *io = self->stdStream;
 			process = DaoVmSpace_AcquireProcess( self );
-			ret = DaoProcess_Call( process, (DaoMethod*)rout, NULL, ps, N );
+			ret = DaoProcess_Call( process, rout, NULL, ps, N );
 			if( ret == DAO_ERROR_PARAM ){
-				DaoStream_WriteMBS( self->stdStream, "ERROR: invalid command line arguments.\n" );
-				if( rout->routHelp ) DaoStream_WriteString( self->stdStream, rout->routHelp );
+				DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+				if( rout->body->routHelp ) DaoStream_WriteString( io, rout->body->routHelp );
 			}
 			DaoVmSpace_ReleaseProcess( self, process );
 			if( ret ) goto LaodingFailed;
@@ -1724,7 +1724,7 @@ static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n )
   printf( "retype = %s\n", retype->name->mbs );
   GC_ShiftRC( retype, cdata->ctype );
   cdata->ctype = retype;
-  DaoProcess_PutValue( _proc, cdata );
+  DaoProcess_PutValue( _proc, (DaoValue*)cdata );
 }
 static void dao_FakeList_Size( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
