@@ -493,7 +493,11 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoVa
 	passed = DaoRoutine_PassParams( R, self->freeValues, NULL, O, P, N, DVM_CALL );
 	if( passed == 0 ) return DAO_ERROR_PARAM;
 
-	DaoProcess_PushRoutine( self, R, DaoValue_CastObject( O ) );
+	if( R->body ){
+		DaoProcess_PushRoutine( self, R, DaoValue_CastObject( O ) );
+	}else{
+		DaoProcess_PushFunction( self, R );
+	}
 	self->topFrame->parCount = passed - 1;
 	return 0;
 }
@@ -579,7 +583,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	int returning = -1;
 
 	if( frame == NULL ) return NULL;
-	if( self->topFrame->routine ){
+	if( self->topFrame->routine->body ){
 		self->topFrame->entry = 1 + self->activeCode - self->topFrame->codes;
 		returning = self->activeCode->c;
 	}
@@ -4840,7 +4844,7 @@ TryAgain:
 		p = par + nopac;
 		n = npar - nopac;
 	}
-	rout = (DaoRoutine*) rout;
+	rout = (DaoRoutine*) value;
 	if( DaoProcess_PushCallable( self, rout, NULL, p, n ) == DAO_ERROR_PARAM ) goto ArithError;
 	
 	return 1;
@@ -6624,7 +6628,6 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
 int DaoRoutine_DoTypeInference( DaoRoutine *self );
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
 
 static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
@@ -6678,7 +6681,7 @@ int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
 	}
 	if( self->type != DAO_ROUTINE ) return 1;
 	DaoRoutine_MapTypes( self, deftypes );
-	return DaoRoutine_DoTypeInference( self );
+	return 1;
 	/*
 	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
 	 */
@@ -6700,7 +6703,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}
 	
-	closure = DaoRoutine_Copy( proto );
+	closure = DaoRoutine_Copy( proto, 1, 1 );
 	if( proto->body->upRoutine ){
 		DMap *map = DHash_New(0,0);
 		DaoProcess *proc = DaoProcess_New( self->vmSpace );
@@ -6786,6 +6789,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DMap *pm_map = DMap_New(D_STRING,0);
 	DMap *st_map = DMap_New(D_STRING,0);
 	DMap *protoValues = NULL;
+	DArray *routines = DArray_New(0);
 	DNode *it, *node;
 	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,NULL,0};
 	DaoEnum stEnum = {DAO_ENUM,0,0,0,0,0,NULL,0};
@@ -6860,6 +6864,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 					DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
 					continue;
 				}
+				DArray_Append( routines, newRout );
 				if( strcmp( newRout->routName->mbs, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
@@ -6976,8 +6981,9 @@ InvalidField:
 			if( ROUT_HOST_TID( newRout ) !=0 ) continue;
 			if( DaoRoutine_Finalize( newRout, klass, deftypes ) == 0){
 				DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
-				continue;
+				continue; // XXX
 			}
+			DArray_Append( routines, newRout );
 			DString_Assign( newRout->routName, name );
 			if( DString_EQ( newRout->routName, klass->className ) ){
 				DRoutines_Add( klass->classRoutines->overloads, newRout );
@@ -7000,8 +7006,15 @@ InvalidMethod:
 			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
 		}
 	}
+	for(i=0; i<routines->size; i++){
+		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i] ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+			// XXX
+		}
+	}
 	DaoClass_DeriveObjectData( klass );
 	DaoClass_ResetAttributes( klass );
+	DArray_Delete( routines );
 	DMap_Delete( deftypes );
 	DMap_Delete( pm_map );
 	DMap_Delete( st_map );
@@ -7054,8 +7067,9 @@ static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode 
 	}
 #endif
 	while( frame && frame->routine ){
+		DaoRoutineBody *body = frame->routine->body;
 		if( except->callers->size >= 5 ) break;
-		line = frame->routine->body->annotCodes->items.pVmc[ frame->entry ]->line;
+		line = body ? body->annotCodes->items.pVmc[ frame->entry ]->line : 0;
 		DArray_Append( except->callers, frame->routine );
 		DArray_Append( except->lines, (size_t) line );
 		frame = frame->prev;

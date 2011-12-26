@@ -35,6 +35,8 @@ typedef struct DaoRoutineBody DaoRoutineBody;
  * specialized routine will share the same routine body (DaoRoutine::body)
  * as the original one. Deep specialization with type inference can be performed
  * at runtime.
+ *
+ * For Parametric Specialization, routine constants can be reused.
  */
 struct DaoRoutine
 {
@@ -60,9 +62,9 @@ struct DaoRoutine
 
 DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body );
 DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init );
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self );
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int copy_const, int copy_body );
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy_body, int copy_const );
 void DaoRoutine_Delete( DaoRoutine *self );
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from );
 int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
 void DaoRoutine_Compile( DaoRoutine *self );

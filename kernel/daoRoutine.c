@@ -70,7 +70,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	}
 	return self;
 }
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from )
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int body )
 {
 	int i;
 	self->attribs = from->attribs;
@@ -81,20 +81,31 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from )
 	GC_ShiftRC( from->routHost, self->routHost );
 	GC_ShiftRC( from->routType, self->routType );
 	GC_ShiftRC( from->nameSpace, self->nameSpace );
-	GC_ShiftRC( from->routConsts, self->routConsts );
 	self->routHost = from->routHost;
 	self->routType = from->routType;
 	self->nameSpace = from->nameSpace;
-	self->routConsts = from->routConsts;
 	DString_Assign( self->routName, from->routName );
+	if( cst ){
+		DaoList *list = DaoList_New();
+		GC_ShiftRC( list, self->routConsts );
+		self->routConsts = list;
+		DArray_Assign( & self->routConsts->items, & from->routConsts->items );
+	}else{
+		GC_ShiftRC( from->routConsts, self->routConsts );
+		self->routConsts = from->routConsts;
+	}
+	if( from->body ){
+		DaoRoutineBody *body = from->body;
+		if( body ) body = DaoRoutineBody_Copy( body );
+		GC_ShiftRC( body, self->body );
+		self->body = body;
+	}
 }
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self )
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body )
 {
 	DaoRoutine *copy = DaoRoutine_New( self->nameSpace, self->routHost, 0 );
 	DaoRoutine_Compile( self );
-	DaoRoutine_CopyFields( copy, self );
-	GC_IncRC( self->body );
-	copy->body = self->body;
+	DaoRoutine_CopyFields( copy, self, cst, body );
 	return copy;
 }
 void DaoRoutine_Delete( DaoRoutine *self )
@@ -374,19 +385,17 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts
 		if( DaoType_MatchTo( selftype, abtp, defs ) )
 			DaoType_RenewTypes( selftype, self->nameSpace, defs );
 	}
-#if 0
 	// XXX match the specialize routine type to the original routine type to setup type defs!
-	if( self->type == DAO_ROUTINE ){
+	if( self->body ){
 		DaoRoutine *rout = self;
-		DMap *tmap = rout->localVarType;
+		DMap *tmap = rout->body->localVarType;
 		/* Only specialize explicitly declared variables: */
 		for(node=DMap_First(tmap); node !=NULL; node = DMap_Next(tmap,node) ){
 			DaoType *abtp = DaoType_DefineTypes( node->value.pType, rout->nameSpace, defs );
-			GC_ShiftRC( abtp, rout->regType->items.pType[ node->key.pInt ] );
-			rout->regType->items.pType[ node->key.pInt ] = abtp;
+			GC_ShiftRC( abtp, rout->body->regType->items.pType[ node->key.pInt ] );
+			rout->body->regType->items.pType[ node->key.pInt ] = abtp;
 		}
 	}
-#endif
 }
 void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 		DaoType *ts[], int np, int code, DMap *defs )
@@ -3118,19 +3127,17 @@ NotExist_TryAux:
 					if( notide && rout != self && (defs2->size > k || rout->routType->aux ==NULL) ){
 						DaoRoutine *orig, *drout;
 						/*to infer returned type*/ 
-						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 						if( rout->original ) rout = rout->original;
+						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 						/* rout may has only been declared */
 						orig = rout;
-						drout = DaoRoutine_Copy( rout );
+						drout = DaoRoutine_Copy( rout, 0, 1 );
 						DaoRoutine_PassParamTypes( drout, bt, tp, j, code, defs2 );
 						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
 						GC_ShiftRC( orig, drout->original );
 						DRoutines_Add( orig->specialized, drout );
 						drout->original = orig;
 						if( rout->body ){
-							GC_DecRC( drout->body );
-							drout->body = DaoRoutineBody_Copy( rout->body );
 							if( DaoRoutine_DoTypeInference( drout ) ==0 ) goto InvParam;
 						}
 					}

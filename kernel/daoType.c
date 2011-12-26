@@ -11,10 +11,11 @@
   See the GNU Lesser General Public License for more details.
   =========================================================================================*/
 
-#include"stdlib.h"
-#include"stdio.h"
-#include"string.h"
-#include"ctype.h"
+#include<stdlib.h>
+#include<stdio.h>
+#include<string.h>
+#include<ctype.h>
+#include<assert.h>
 
 #include"daoType.h"
 #include"daoVmspace.h"
@@ -1012,6 +1013,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	if( self->tid == DAO_OBJECT && self->aux->xClass.instanceClasses ){
 		DaoClass *klass = & self->aux->xClass;
 		klass = DaoClass_Instantiate( klass, copy->nested );
+		assert( klass != NULL );
 		DMap_Erase2( defs, copy );
 		GC_DecRC( copy );
 		return klass->objType;

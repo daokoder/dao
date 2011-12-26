@@ -167,7 +167,6 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 	GC_IncRC( reference );
 	DArray_Append( self->references, reference );
 }
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *other );
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int  DaoRoutine_DoTypeInference( DaoRoutine *self );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
@@ -200,6 +199,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DaoType *tp;
 	DArray *parents = DArray_New(0);
 	DArray *offsets = DArray_New(0);
+	DArray *routines = DArray_New(0);
 	DNode *it;
 	int i, st, up, id;
 
@@ -226,8 +226,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		}
 	}
 
-	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine );
-	DaoRoutine_MapTypes( self->classRoutine, deftypes );
+	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine, 1, 1 );
 	for(it=DMap_First(other->lookupTable);it;it=DMap_Next(other->lookupTable,it)){
 		st = LOOKUP_ST( it->value.pSize );
 		up = LOOKUP_UP( it->value.pSize );
@@ -269,12 +268,11 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DaoRoutine *rout = & value->xRoutine;
 		if( value->type == DAO_ROUTINE && rout->overloads == NULL && rout->routHost == other->objType ){
 			DString *name = rout->routName;
-			rout = DaoRoutine_Copy( rout );
+			rout = DaoRoutine_Copy( rout, 1, 1 );
 			value = (DaoValue*) rout;
 #if 0
 			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
 #endif
-			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) return 0;
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DRoutines_Add( self->classRoutines->overloads, rout );
 			}else if( (it = DMap_Find( other->lookupTable, name )) ){
@@ -288,6 +286,8 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 				}
 			}
 			DArray_Append( self->cstData, value );
+			DArray_Append( routines, rout );
+			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) goto Failed;
 			continue;
 		}else if( value->type == DAO_ROUTINE ){
 			/* No need to added the overloaded routines now; */
@@ -299,12 +299,22 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DArray_Append( self->cstData, value );
 		DaoValue_Update( & self->cstData->items.pValue[i], ns, deftypes );
 	}
+	for(i=0; i<routines->size; i++){
+		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i] ) == 0 ) goto Failed;
+	}
 	DArray_Erase( self->cstDataTable, 1, MAXSIZE );
 	DArray_Erase( self->glbDataTable, 1, MAXSIZE );
 	DArray_Erase( self->glbTypeTable, 1, MAXSIZE );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
+	DArray_Delete( routines );
+	DaoRoutine_Finalize( self->classRoutine, self, deftypes );
 	return DaoRoutine_DoTypeInference( self->classRoutine );
+Failed:
+	DArray_Delete( parents );
+	DArray_Delete( offsets );
+	DArray_Delete( routines );
+	return 0;
 }
 DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 {

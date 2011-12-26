@@ -1847,7 +1847,7 @@ static void DaoTokens_SumTokens( DaoToken **tokens, int start, int end, DString 
 {
 	int i;
 	DString_Clear( sum );
-	for(i=start; i<=end; i++) DString_Append( sum, tokens[start]->string );
+	for(i=start; i<=end; i++) DString_Append( sum, tokens[i]->string );
 }
 int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start, DString *name )
 {
@@ -1857,19 +1857,18 @@ int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start, 
 	int i, size = self->tokens->size;
 	if( (tok != DTOK_IDENTIFIER && tok < DKEY_ABS) || tok > DKEY_TANH ) return -1;
 	end = DaoParser_FindConstantWithScope( self, NULL, value, start );
+	if( name ) DaoTokens_SumTokens( tokens, start, end, name );
 	if( end == start && (end+1) < size && tokens[end+1]->type == DTOK_COLON2 ){
 		if( (end+2) >= size || tokens[end+2]->type != DTOK_IDENTIFIER ) return -1;
 		if( strcmp( tokens[start]->string->mbs, "dao" ) == 0 ){
 			DaoType *type = DaoParser_ParseType( self, start, size-1, & end, NULL );
+			if( name ) DaoTokens_SumTokens( tokens, start, end, name );
 			if( type == NULL ) return -1;
 			*value = (DaoValue*) type;
 			return end - 1;
 		}
 	}
-	if( end >= start ){
-		if( name ) DaoTokens_SumTokens( tokens, start, end, name );
-		return end;
-	}
+	if( end >= start ) return end;
 	if( (start + 1) >= size ) return -1;
 	if( tokens[start+1]->type != DTOK_COLON2 ) return -1;
 	node = DMap_Find( self->vmSpace->nsModules, tokens[start]->string );
@@ -2746,7 +2745,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			goto InvalidDefinition;
 		}
 		k = rout->attribs;
-		DaoRoutine_CopyFields( rout, tmpRoutine );
+		DaoRoutine_CopyFields( rout, tmpRoutine, 0, 0 );
 		rout->attribs = k;
 		parser = tmpParser;
 		tmpParser = rout->body->parser;
@@ -2785,7 +2784,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			parser = tmpParser;
 			if( STRCMP( rout->routName, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
 		}else{
-			DaoRoutine_CopyFields( rout, tmpRoutine );
+			DaoRoutine_CopyFields( rout, tmpRoutine, 0, 0 );
 			parser = tmpParser;
 			tmpParser = rout->body->parser;
 			rout->body->parser = parser;
@@ -2995,7 +2994,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoClass *klass = NULL;
 	DaoValue *value = NULL, *scope = NULL;
 	DaoToken *tokName;
-	DString *str, *mbs = self->mbs;
+	DString *str, *mbs = DaoParser_GetString( self );
 	DString *className, *ename = NULL;
 	DArray *holders, *defaults;
 	int begin, line = self->curLine;
