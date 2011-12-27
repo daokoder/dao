@@ -178,18 +178,16 @@ enum DaoCdataType
 	DAO_CDATA_DAO   /* customized Dao data */
 };
 
-#define DAO_CDATA_COMMON DAO_DATA_COMMON; \
-	DaoType *ctype; DaoTypeBase *typer; DaoObject *object; void *data
+#define DAO_CDATA_COMMON DAO_DATA_COMMON; DaoType *ctype; DaoObject *object; void *data
 
 struct DaoCdata
 {
 	DAO_CDATA_COMMON;
 };
 
-DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoTypeBase *typer );
+DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoType *type );
 DAO_DLL void DaoCdata_FreeCommon( DaoCdata *self );
 DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );
-DAO_DLL int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 DAO_DLL extern DaoTypeBase defaultCdataTyper;
 DAO_DLL extern DaoCdata dao_default_cdata;
@@ -210,12 +208,12 @@ struct DaoException
 	DaoValue   *edata;
 };
 
-DaoException* DaoException_New( DaoTypeBase *typer );
-DaoException* DaoException_New2( DaoTypeBase *typer, DaoValue *v );
+DaoException* DaoException_New( DaoType *type );
+DaoException* DaoException_New2( DaoType *type, DaoValue *v );
 void DaoException_Delete( DaoException *self );
 void DaoException_Setup( DaoNamespace *ns );
 
-DaoTypeBase* DaoException_GetType( int type );
+DaoType* DaoException_GetType( int type );
 
 extern DaoTypeBase dao_Exception_Typer;
 

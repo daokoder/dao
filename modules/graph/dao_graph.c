@@ -27,7 +27,8 @@ DAO_INIT_MODULE
 DaoxNode* DaoxNode_New( DaoxGraph *graph )
 {
 	DaoxNode *self = (DaoxNode*) dao_calloc( 1, sizeof(DaoxNode) );
-	DaoCdata_InitCommon( (DaoCdata*) self, & DaoxNode_Typer );
+	DaoType *type = DaoCdataType_Specialize( daox_node_template_type, graph->ctype->nested );
+	DaoCdata_InitCommon( (DaoCdata*) self, type );
 	self->edges = DArray_New(D_VALUE);
 	self->graph = graph;
 	GC_IncRC( graph );
@@ -48,7 +49,8 @@ void DaoxNode_SetValue( DaoxNode *self, DaoValue *value )
 DaoxEdge* DaoxEdge_New( DaoxGraph *graph )
 {
 	DaoxEdge *self = (DaoxEdge*) dao_calloc( 1, sizeof(DaoxEdge) );
-	DaoCdata_InitCommon( (DaoCdata*) self, & DaoxEdge_Typer );
+	DaoType *type = DaoCdataType_Specialize( daox_edge_template_type, graph->ctype->nested );
+	DaoCdata_InitCommon( (DaoCdata*) self, type );
 	self->first = self->second = NULL;
 	self->graph = graph;
 	GC_IncRC( graph );
@@ -67,14 +69,16 @@ void DaoxEdge_SetValue( DaoxEdge *self, DaoValue *value )
 	DaoValue_Move( value, & self->value, self->ctype->nested->items.pType[1] );
 }
 
-DaoxGraph* DaoxGraph_New( int wtype, int directed )
+DaoxGraph* DaoxGraph_New( DaoType *type, int directed )
 {
 	DaoxGraph *self = (DaoxGraph*) dao_calloc( 1, sizeof(DaoxGraph) );
-	DaoCdata_InitCommon( (DaoCdata*) self, & DaoxGraph_Typer );
+	DaoCdata_InitCommon( (DaoCdata*) self, type );
 	self->nodes = DArray_New(D_VALUE);
 	self->edges = DArray_New(D_VALUE);
-	self->wtype = wtype;
 	self->directed = directed;
+	self->wtype = 0;
+	if( type && type->nested->size ) self->wtype = type->nested->items.pType[0]->tid;
+	if( self->wtype > DAO_DOUBLE ) self->wtype = DAO_DOUBLE;
 	return self;
 }
 void DaoxGraph_Delete( DaoxGraph *self )
@@ -644,12 +648,10 @@ static void GRAPH_Graph( DaoProcess *proc, DaoValue *p[], int N )
 {
 	//XXX printf( "%i\n", p[1]->type );
 	DaoType *retype = DaoProcess_GetReturnType( proc );
-	DaoxGraph *graph = DaoxGraph_New( 0, p[0]->xEnum.value );
-	GC_ShiftRC( retype, graph->ctype );
-	graph->ctype = retype;
-	if( retype->nested->size && retype->nested->items.pType[0]->tid <= DAO_DOUBLE )
-		graph->wtype = retype->nested->items.pType[0]->tid;
+	printf( "retype = %s %i\n", retype->name->mbs, retype->tid );
+	DaoxGraph *graph = DaoxGraph_New( retype, p[0]->xEnum.value );
 	DaoValue *res = DaoProcess_PutValue( proc, (DaoValue*) graph );
+	printf( "%p\n", res );
 }
 static void GRAPH_GetNodes( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -749,10 +751,14 @@ DaoTypeBase DaoxGraph_Typer =
 	(FuncPtrDel)DaoxGraph_Delete, DaoxGraph_GetGCFields
 };
 
+DaoType *daox_node_template_type = NULL;
+DaoType *daox_edge_template_type = NULL;
+DaoType *daox_graph_template_type = NULL;
+
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & DaoxNode_Typer, 0 );
-	DaoNamespace_WrapType( ns, & DaoxEdge_Typer, 0 );
-	DaoNamespace_WrapType( ns, & DaoxGraph_Typer, 0 );
+	daox_node_template_type = DaoNamespace_WrapType( ns, & DaoxNode_Typer, 0 );
+	daox_edge_template_type = DaoNamespace_WrapType( ns, & DaoxEdge_Typer, 0 );
+	daox_graph_template_type = DaoNamespace_WrapType( ns, & DaoxGraph_Typer, 0 );
 	return 0;
 }

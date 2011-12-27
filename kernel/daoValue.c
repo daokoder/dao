@@ -1097,13 +1097,13 @@ DaoValue* DaoValue_NewStream( FILE *f )
 	DaoStream_SetFile( self, f );
 	return (DaoValue*) self;
 }
-DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data )
+DaoValue* DaoValue_NewCdata( DaoType *type, void *data )
 {
-	return (DaoValue*) DaoCdata_New( typer, data );
+	return (DaoValue*) DaoCdata_New( type, data );
 }
-DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data )
+DaoValue* DaoValue_WrapCdata( DaoType *type, void *data )
 {
-	return (DaoValue*) DaoCdata_Wrap( typer, data );
+	return (DaoValue*) DaoCdata_Wrap( type, data );
 }
 
 DaoInteger* DaoValue_CastInteger( DaoValue *self )
@@ -1243,10 +1243,10 @@ wchar_t* DaoValue_TryGetWCString( DaoValue *self )
 	if( self->type != DAO_STRING ) return NULL;
 	return DString_GetWCS( self->xString.data );
 }
-void* DaoValue_TryCastCdata( DaoValue *self, DaoTypeBase *typer )
+void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 {
 	if( self->type != DAO_CDATA ) return NULL;
-	return DaoCdata_CastData( & self->xCdata, typer );
+	return DaoCdata_CastData( & self->xCdata, type );
 }
 void* DaoValue_TryGetCdata( DaoValue *self )
 {

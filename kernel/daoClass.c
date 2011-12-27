@@ -169,7 +169,7 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 }
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int  DaoRoutine_DoTypeInference( DaoRoutine *self );
-int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes );
+int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 {
@@ -287,7 +287,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			}
 			DArray_Append( self->cstData, value );
 			DArray_Append( routines, rout );
-			if( DaoRoutine_Finalize( rout, self, deftypes ) ==0 ) goto Failed;
+			if( DaoRoutine_Finalize( rout, self->objType, deftypes ) ==0 ) goto Failed;
 			continue;
 		}else if( value->type == DAO_ROUTINE ){
 			/* No need to added the overloaded routines now; */
@@ -308,7 +308,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
 	DArray_Delete( routines );
-	DaoRoutine_Finalize( self->classRoutine, self, deftypes );
+	DaoRoutine_Finalize( self->classRoutine, self->objType, deftypes );
 	return DaoRoutine_DoTypeInference( self->classRoutine );
 Failed:
 	DArray_Delete( parents );

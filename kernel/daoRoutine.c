@@ -678,7 +678,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		}else if( at->tid == DAO_OBJECT ){
 			rout = DaoClass_FindOperator( & at->aux->xClass, mbs->mbs, hostClass );
 		}else if( at->tid == DAO_CDATA ){
-			rout = DaoTypeBase_FindFunction( at->typer, mbs );
+			rout = DaoType_FindFunction( at, mbs );
 		}
 		if( rout ){
 			rout = MatchByParamType( rout, NULL, ts+1, 2, DVM_CALL );
@@ -695,7 +695,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	}else if( at->tid == DAO_OBJECT ){
 		rout = DaoClass_FindOperator( & at->aux->xClass, mbs->mbs, hostClass );
 	}else if( at->tid == DAO_CDATA ){
-		rout = DaoTypeBase_FindFunction( at->typer, mbs );
+		rout = DaoType_FindFunction( at, mbs );
 	}
 	if( rout ){
 		rout2 = rout;
@@ -712,7 +712,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		}else if( bt->tid == DAO_OBJECT ){
 			rout = DaoClass_FindOperator( & bt->aux->xClass, mbs->mbs, hostClass );
 		}else if( bt->tid == DAO_CDATA ){
-			rout = DaoTypeBase_FindFunction( bt->typer, mbs );
+			rout = DaoType_FindFunction( bt, mbs );
 		}
 		if( rout == NULL ) return NULL;
 		rout2 = rout;
@@ -1473,7 +1473,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 					ct = & rout->routType->aux->xType;
 				}else if( at->tid == DAO_CDATA ){
 					DString_SetMBS( mbs, "[]" );
-					meth = DaoTypeBase_FindFunction( at->typer, mbs );
+					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
 					rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
@@ -1489,9 +1489,9 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 				}else if( at->tid == DAO_UDF || at->tid == DAO_ANY
 						|| at->tid == DAO_INITYPE ){
 					ct = udf;
-				}else if( at->typer ){
+				}else if( at->kernel ){
 					DString_SetMBS( mbs, "[]" );
-					meth = DaoTypeBase_FindFunction( at->typer, mbs );
+					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
 					rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
@@ -1555,14 +1555,14 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 					meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass );
 					if( meth == NULL ) goto WrongContainer;
 				}else if( at->tid == DAO_CDATA ){
-					meth = DaoTypeBase_FindFunction( at->typer, mbs );
+					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}else if( at->tid == DAO_INTERFACE ){
 					node = DMap_Find( at->aux->xInterface.methods, mbs );
 					if( node == NULL ) goto WrongContainer;
 					meth = node->value.pRoutine;
-				}else if( at->typer ){
-					meth = DaoTypeBase_FindFunction( at->typer, mbs );
+				}else if( at->kernel ){
+					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}
 				if( meth ){
@@ -1716,8 +1716,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 					//}else if( at->tid == DAO_ANY || at->tid == DAO_INITYPE ){
 					//  ct = any;
 #endif
-			}else if( at->typer ){
-				val = DaoTypeBase_FindValue( at->typer, str );
+			}else if( at->kernel ){
+				val = DaoType_FindValue( at, str );
 				if( val && val->type == DAO_ROUTINE ){
 					DaoRoutine *func = (DaoRoutine*) val;
 					ct = func->routType;
@@ -1728,7 +1728,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 				}else{
 					DString_SetMBS( mbs, "." );
 					DString_Append( mbs, str );
-					meth = DaoTypeBase_FindFunction( at->typer, mbs );
+					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto NotExist_TryAux;
 					rout = DaoValue_Check( meth, at, & bt, 0, DVM_CALL, errors );
 					if( rout == NULL ) goto NotMatch;
@@ -1940,7 +1940,7 @@ NotExist_TryAux:
 					break;
 				case DAO_CDATA :
 					DString_SetMBS( mbs, "[]=" );
-					meth = DaoTypeBase_FindFunction( ct->typer, mbs );
+					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto InvIndex;
 					ts[0] = bt;
 					ts[1] = at;
@@ -1998,14 +1998,14 @@ NotExist_TryAux:
 					meth = DaoClass_FindOperator( & ct->aux->xClass, "[]=", hostClass );
 					if( meth == NULL ) goto WrongContainer;
 				}else if( ct->tid == DAO_CDATA ){
-					meth = DaoTypeBase_FindFunction( ct->typer, mbs );
+					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}else if( ct->tid == DAO_INTERFACE ){
 					node = DMap_Find( ct->aux->xInterface.methods, mbs );
 					if( node == NULL ) goto WrongContainer;
 					meth = node->value.pRoutine;
-				}else if( ct->typer ){
-					meth = DaoTypeBase_FindFunction( ct->typer, mbs );
+				}else if( ct->kernel ){
+					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}
 				if( meth ){
@@ -2157,7 +2157,7 @@ NotExist_TryAux:
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
 						DString_AppendMBS( mbs, "=" );
-						meth = DaoTypeBase_FindFunction( ct->typer, mbs );
+						meth = DaoType_FindFunction( ct, mbs );
 						if( meth == NULL ) goto NotMatch;
 						ts[0] = ct;
 						ts[1] = at;
@@ -2243,7 +2243,7 @@ NotExist_TryAux:
 					if( ct->tid == DAO_OBJECT ){
 						meth = DaoClass_FindOperator( & ct->aux->xClass, "=", hostClass );
 					}else{
-						meth = DaoTypeBase_FindFunctionMBS( ct->typer, "=" );
+						meth = DaoType_FindFunctionMBS( ct, "=" );
 					}
 					if( meth ){
 						rout = DaoValue_Check( meth, ct, & at, 1, DVM_CALL, errors );
@@ -2928,7 +2928,7 @@ NotExist_TryAux:
 					meth = node->value.pRoutine;
 					break;
 				default :
-					if( at->typer ) meth = DaoTypeBase_FindFunction( at->typer, mbs );
+					if( at->kernel ) meth = DaoType_FindFunction( at, mbs );
 					break;
 				}
 				if( meth == NULL ) goto NotMatch;
@@ -3011,7 +3011,7 @@ NotExist_TryAux:
 					}
 					ct = at->aux->xClass.objType;
 				}else if( at->tid == DAO_CTYPE ){
-					rout = DaoTypeBase_FindFunctionMBS( at->typer, at->typer->name );
+					rout = DaoType_FindFunctionMBS( at, at->typer->name );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( csts[opa] && csts[opa]->type == DAO_ROUTINE ){
 					rout = (DaoRoutine*) csts[opa];
@@ -3026,7 +3026,7 @@ NotExist_TryAux:
 					rout = DaoClass_FindOperator( & at->aux->xClass, "()", hostClass );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( at->tid == DAO_CDATA ){
-					rout = DaoTypeBase_FindFunctionMBS( at->typer, "()" );
+					rout = DaoType_FindFunctionMBS( at, "()" );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( at->tid != DAO_ROUTINE ){
 					goto ErrorTyping;

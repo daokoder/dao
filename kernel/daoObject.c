@@ -259,7 +259,7 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 		if( obj->type == DAO_CDATA ){
 			DaoCdata *cdata1 = (DaoCdata*) self;
 			DaoCdata *cdata2 = (DaoCdata*) obj;
-			if( DaoCdata_ChildOf( cdata1->ctype->kernel->typer, cdata2->ctype->kernel->typer ) ) return 1;
+			if( DaoType_ChildOf( cdata1->ctype, cdata2->ctype ) ) return 1;
 		}
 		return 0;
 	}
@@ -283,7 +283,7 @@ DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 		if( sup->type == DAO_OBJECT ){
 			if( (sup = DaoObject_MapThisObject( & sup->xObject, host ) ) ) return sup;
 		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
-			if( DaoCdata_ChildOf( sup->xCdata.typer, host->typer ) ) return sup;
+			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
 		}
 	}
 	return NULL;
@@ -307,7 +307,7 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 		}
 		if( sup->type == DAO_CTYPE ){
 			DaoCdata *cdata = (DaoCdata*)sup;
-			if( DaoCdata_ChildOf( cdata->typer, parent->typer ) ){
+			if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
 				GC_IncRC( parent );
 				self->parents[i] = (DaoValue*)parent;
 				return self;
@@ -316,11 +316,10 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 	}
 	return child;
 }
-DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer )
+DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
-	if( typer && typer->core && typer->core->kernel->abtype )
-		p = DaoObject_MapThisObject( self, typer->core->kernel->abtype );
+	if( type ) p = DaoObject_MapThisObject( self, type );
 	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
 	return NULL;
 }

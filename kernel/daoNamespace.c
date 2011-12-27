@@ -1472,7 +1472,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			abtp = DaoType_New( mbs->mbs, p->type, p, NULL );
 			GC_ShiftRC( cdata->ctype->kernel, abtp->kernel );
 			abtp->kernel = cdata->ctype->kernel;
-			abtp->typer = cdata->typer;
 			DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}else if( p->type == DAO_TYPE ){

@@ -539,9 +539,10 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 	size_t i, n;
 
 	if( cdata->type == DAO_CTYPE || cdata->subtype == DAO_CDATA_PTR ) return;
-	if( cdata->typer == NULL || cdata->typer->GetGCFields == NULL ) return;
+	if( cdata->ctype == NULL || cdata->ctype->typer ) return;
+	if( cdata->ctype->typer->GetGCFields == NULL ) return;
 	cvalues->size = carrays->size = cmaps->size = 0;
-	cdata->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+	cdata->ctype->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
 	DaoGC_ScanArray( cvalues, action );
 	for(i=0,n=carrays->size; i<n; i++) DaoGC_ScanArray( carrays->items.pArray[i], action );
 	for(i=0,n=cmaps->size; i<n; i++) DaoGC_ScanMap( cmaps->items.pMap[i], action );
@@ -1174,7 +1175,7 @@ void DaoCGC_RefCountDecScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				DaoTypeBase *typer = cdata->typer;
+				DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
 				/* Do not use ctype->kernel, since this reference may have been broken: */
 				value = (DaoValue*) (typer && typer->core ? typer->core->kernel : NULL);
 				if( value && value->xGC.idle ==0 ){
@@ -1183,7 +1184,8 @@ void DaoCGC_RefCountDecScan()
 					DArray_Append( gcWorker.idleList, value );
 				}
 				directRefCountDecrement( (DaoValue**) & cdata->object );
-				directRefCountDecrement( (DaoValue**) & cdata->ctype );
+				/* Do not break the reference to ctype now, it is required
+				 * for deleting the cdata properly. */
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				break;
 			}
@@ -1999,7 +2001,7 @@ void DaoIGC_RefCountDecScan()
 		case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
-				DaoTypeBase *typer = cdata->typer;
+				DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
 				/* Do not use ctype->kernel, since this reference may have been broken: */
 				value = (DaoValue*) (typer && typer->core ? typer->core->kernel : NULL);
 				if( value && value->xGC.idle ==0 ){
@@ -2008,7 +2010,8 @@ void DaoIGC_RefCountDecScan()
 					DArray_Append( gcWorker.idleList, value );
 				}
 				directRefCountDecrement( (DaoValue**) & cdata->object );
-				directRefCountDecrement( (DaoValue**) & cdata->ctype );
+				/* Do not break the reference to ctype now, it is required
+				 * for deleting the cdata properly. */
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				break;
 			}

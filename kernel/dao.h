@@ -399,8 +399,8 @@ DAO_DLL DaoValue* DaoValue_NewMatrixI( dint **s, size_t n, size_t m );
 DAO_DLL DaoValue* DaoValue_NewMatrixF( float **s, size_t n, size_t m );
 DAO_DLL DaoValue* DaoValue_NewMatrixD( double **s, size_t n, size_t m );
 DAO_DLL DaoValue* DaoValue_NewStream( FILE *f );
-DAO_DLL DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data );
-DAO_DLL DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data );
+DAO_DLL DaoValue* DaoValue_NewCdata( DaoType *type, void *data );
+DAO_DLL DaoValue* DaoValue_WrapCdata( DaoType *type, void *data );
 
 DAO_DLL DaoInteger*  DaoValue_CastInteger( DaoValue *self );
 DAO_DLL DaoFloat*    DaoValue_CastFloat( DaoValue *self );
@@ -431,7 +431,7 @@ DAO_DLL dint DaoValue_TryGetEnum( DaoValue *self );
 DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
 DAO_DLL char* DaoValue_TryGetMBString( DaoValue *self );
 DAO_DLL wchar_t* DaoValue_TryGetWCString( DaoValue *self );
-DAO_DLL void*  DaoValue_TryCastCdata( DaoValue *self, DaoTypeBase *totyper );
+DAO_DLL void*  DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
 DAO_DLL void*  DaoValue_TryGetCdata( DaoValue *self );
 DAO_DLL void** DaoValue_TryGetCdata2( DaoValue *self );
 
@@ -613,7 +613,7 @@ DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue 
 
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
-DAO_DLL DaoCdata*   DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
+DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_Delete( DaoStream *self );
@@ -633,12 +633,13 @@ DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
 
-DAO_DLL DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data );
-DAO_DLL DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data );
-DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoTypeBase *typer );
+DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
+DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
 DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
+DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );
 DAO_DLL void   DaoCdata_SetData( DaoCdata *self, void *data );
-DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoTypeBase *totyper );
+DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *totype );
 DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
 DAO_DLL void** DaoCdata_GetData2( DaoCdata *self );
 DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
@@ -696,9 +697,9 @@ DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
 DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self );
 DAO_DLL DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
-DAO_DLL DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoTypeBase *typer );
-DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoTypeBase *typer );
-DAO_DLL DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoTypeBase *t );
+DAO_DLL DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type );
+DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type );
+DAO_DLL DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t );
 DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
 
 DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
@@ -807,11 +808,11 @@ DaoValue* DaoValue_NewStream( FILE *f );
 
  Create DaoCdata object wrapping the opaque data with given type: 
  data will be deleted with the DaoCdata structure created by this function 
-DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data );
+DaoValue* DaoValue_NewCdata( DaoType *type, void *data );
 
  Create DaoCdata object wrapping the opaque data with given type: 
  data will NOT be deleted with the DaoCdata structure created by this function 
-DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data );
+DaoValue* DaoValue_WrapCdata( DaoType *type, void *data );
 
 DaoInteger*      DaoValue_CastInteger( DaoValue *self );
 DaoFloat*        DaoValue_CastFloat( DaoValue *self );
@@ -844,7 +845,7 @@ wchar_t* DaoValue_GetWCString( DaoValue *self );
  * return a pointer to the opaque object that has been properly casted using
  * the "casts" methods of typer structures (DaoTypeBase).
  * Otherwise return NULL. 
-void*  DaoValue_CastCdataData( DaoValue *self, DaoTypeBase *totyper );
+void*  DaoValue_CastCdataData( DaoValue *self, DaoType *totype );
  Get the pointer to the opaque data: 
 void*  DaoValue_GetCdataData( DaoValue *self );
 void** DaoValue_GetCdataData2( DaoValue *self );
@@ -1073,22 +1074,22 @@ DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], in
  return a null value, or a value of DaoRoutine: 
 DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DaoValue DaoObject_GetField( DaoObject *self, const char *name );
-DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer );
+DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 DaoStream* DaoStream_New();
 void DaoStream_SetFile( DaoStream *self, FILE *fd );
 FILE* DaoStream_GetFile( DaoStream *self );
 
  data will be deleted with the new DaoCdata 
-DaoCdata* DaoCdata_New( DaoTypeBase *typer, void *data );
+DaoCdata* DaoCdata_New( DaoType *type, void *data );
  data will not be deleted with the new DaoCdata 
-DaoCdata* DaoCdata_Wrap( DaoTypeBase *typer, void *data );
-int    DaoCdata_IsType( DaoCdata *self, DaoTypeBase *typer );
+DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
+int    DaoCdata_IsType( DaoCdata *self, DaoType *typer );
  return 1 if the data will be deleted with the DaoCdata, otherwise 0 
 int    DaoCdata_OwnData( DaoCdata *self );
  tell daovm that self->data has external reference 
 void   DaoCdata_SetData( DaoCdata *self, void *data );
-void*  DaoCdata_CastData( DaoValue *self, DaoTypeBase *totyper );
+void*  DaoCdata_CastData( DaoValue *self, DaoType *totype );
 void*  DaoCdata_GetData( DaoCdata *self );
 void** DaoCdata_GetData2( DaoCdata *self );
 DaoObject* DaoCdata_GetObject( DaoCdata *self );
@@ -1142,12 +1143,12 @@ DaoTuple*  DaoProcess_PutTuple( DaoProcess *self );
 DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
 DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue value );
  data will be deleted with the new DaoCdata 
-DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoTypeBase *typer );
+DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type );
 DaoBase*   DaoProcess_PutResult( DaoProcess *self, DaoBase *data );
  data will not be deleted with the new DaoCdata 
-DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoTypeBase *typer );
+DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type );
  data will be deleted with the new DaoCdata 
-DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoTypeBase *t );
+DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t );
 void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 
 

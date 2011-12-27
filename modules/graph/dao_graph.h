@@ -71,8 +71,11 @@ struct DaoxGraph
 	short    wtype; /* weight type: DAO_NONE, DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE; */
 	short    directed; /* directed graph; */
 };
+DAO_DLL extern DaoType *daox_node_template_type;
+DAO_DLL extern DaoType *daox_edge_template_type;
+DAO_DLL extern DaoType *daox_graph_template_type;
 
-DAO_DLL DaoxGraph* DaoxGraph_New( int wtype, int directed );
+DAO_DLL DaoxGraph* DaoxGraph_New( DaoType *type, int directed );
 DAO_DLL void DaoxGraph_Delete( DaoxGraph *self );
 
 DAO_DLL DaoxNode* DaoxGraph_AddNode( DaoxGraph *self );

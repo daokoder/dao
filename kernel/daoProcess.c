@@ -2812,9 +2812,9 @@ DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
 	return NULL;
 }
 void DaoCdata_Delete( DaoCdata *self );
-DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoTypeBase *plgTyper )
+DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdata = DaoCdata_New( plgTyper, data );
+	DaoCdata *cdata = DaoCdata_New( type, data );
 	DaoType *tp = self->activeTypes[self->activeCode->c];
 	if( tp ){
 		printf( "%s %p\n", tp->name->mbs, tp );
@@ -2825,14 +2825,14 @@ DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoTypeBase *plgTyp
 	DaoCdata_Delete( cdata );
 	return NULL;
 }
-DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoTypeBase *plgTyper )
+DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdata = DaoCdata_Wrap( plgTyper, data );
+	DaoCdata *cdata = DaoCdata_Wrap( type, data );
 	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
 	DaoCdata_Delete( cdata );
 	return NULL;
 }
-DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoTypeBase *t )
+DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t )
 {
 	DaoCdata *cdt;
 	void *d2 = dao_malloc( n );
@@ -3201,7 +3201,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 	}
 	tc->GetField( A, self, name );
 	if( elist->size != (E + 1) ) return;
-	if( elist->items.pCdata[E]->typer != DaoException_GetType( DAO_ERROR_FIELD_NOTEXIST ) ) return;
+	if( elist->items.pCdata[E]->ctype != DaoException_GetType( DAO_ERROR_FIELD_NOTEXIST ) ) return;
 	C = DaoValue_FindAuxMethod( A, name, ns );
 	if( C == NULL ) return;
 	DArray_PopBack( elist );
@@ -3384,7 +3384,7 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 		if( A->type == C->type && C->type == DAO_OBJECT ){
 			overload = DaoClass_ChildOf( A->xObject.defClass, (DaoValue*)C->xObject.defClass ) == 0;
 		}else if( A->type == C->type && C->type == DAO_CDATA ){
-			overload = DaoCdata_ChildOf( DaoValue_GetTyper(A), DaoValue_GetTyper(C) ) == 0;
+			overload = DaoType_ChildOf( A->xCdata.ctype, C->xCdata.ctype ) == 0;
 		}else if( C->type == DAO_OBJECT || C->type == DAO_CDATA ){
 			overload = 1;
 		}
@@ -3394,7 +3394,7 @@ void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
 				DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
 				rout = DaoClass_FindOperator( C->xObject.defClass, "=", scope );
 			}else{
-				rout = DaoTypeBase_FindFunctionMBS( C->xCdata.typer, "=" );
+				rout = DaoType_FindFunctionMBS( C->xCdata.ctype, "=" );
 			}
 			if( rout && DaoProcess_PushCallable( self, rout, C, & A, 1 ) == 0 ) return;
 		}
@@ -3657,7 +3657,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}else if( va->type == DAO_CDATA ){
 		DaoValue *tpar = (DaoValue*) ct;
-		meth = DaoTypeBase_FindFunctionMBS( va->xCdata.typer, "cast" );
+		meth = DaoType_FindFunctionMBS( va->xCdata.ctype, "cast" );
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}
 NormalCasting:
@@ -3763,8 +3763,10 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	 */
 	DaoProcess_PushFunction( self, func );
 	if( caller->type == DAO_CTYPE ){
-		GC_ShiftRC( caller->xCdata.ctype, self->topFrame->retype );
-		self->topFrame->retype = caller->xCdata.ctype;
+		DaoType *retype = caller->xCdata.ctype->kernel->abtype;
+		printf( ">>>>>>>>>>>>> %s %s\n", retype->name->mbs, caller->xCdata.ctype->name->mbs );
+		GC_ShiftRC( retype, self->topFrame->retype );
+		self->topFrame->retype = retype;
 	}
 	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, N );
 	status = self->status;
@@ -3998,12 +4000,15 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}
 	}else if( caller->type == DAO_CTYPE ){
-		DaoTypeBase *typer = caller->xCdata.ctype->typer;
-		rout = DaoTypeBase_FindFunctionMBS( typer, typer->name );
+#warning"................"
+		DaoType *type = caller->xCdata.ctype;
+		printf( "%p %p %s\n", type, type->kernel->abtype, type->name->mbs );
+		rout = DaoType_FindFunctionMBS( type, type->typer->name );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;
 		}
+		printf( "%s\n", rout->routType->name->mbs );
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
 		if( rout == NULL || rout->type != DAO_ROUTINE || rout->pFunc == NULL ){
 			// XXX
@@ -4022,7 +4027,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			}
 		}
 	}else if( caller->type == DAO_CDATA ){
-		rout = DaoTypeBase_FindFunctionMBS( caller->xCdata.typer, "()" );
+		rout = DaoType_FindFunctionMBS( caller->xCdata.ctype, "()" );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C object not callable" );
 			return;
@@ -4084,7 +4089,7 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 	DString *name = self->mbstring;
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
-	DaoTypeBase *typer = DaoValue_GetTyper( va );
+	DaoType *type = DaoNamespace_GetType( self->activeNamespace, va );
 	DaoTuple *iter;
 	int rc = 1;
 	
@@ -4102,7 +4107,7 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 	if( va->type == DAO_OBJECT ){
 		rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
 	}else{
-		DaoRoutine *meth = DaoTypeBase_FindFunction( typer, name );
+		DaoRoutine *meth = DaoType_FindFunction( type, name );
 		if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
 	}
 	if( rc ) DaoProcess_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
@@ -4905,7 +4910,7 @@ TryAgain:
 	
 	cdata = A->type == DAO_CDATA ? & A->xCdata : & B->xCdata;
 	overloaded = cdata->ctype->kernel->attribs & DAO_OPER_OVERLOADED;
-	func = DaoTypeBase_FindFunction( cdata->typer, name );
+	func = DaoType_FindFunction( cdata->ctype, name );
 	if( func ==NULL && (code == DVM_LT || code == DVM_LE) ){
 		if( code == DVM_LT ){
 			DString_SetMBS( name, ">" );
@@ -4914,7 +4919,7 @@ TryAgain:
 		}
 		par[1] = B;
 		par[2] = A;
-		func = DaoTypeBase_FindFunction( cdata->typer, name );
+		func = DaoType_FindFunction( cdata->ctype, name );
 	}
 	if( func == NULL ){
 		if( bothobj && boolres ) return 0;
@@ -6448,7 +6453,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		case DAO_CTYPE :
 		case DAO_CDATA :
 			if( dA->type == DAO_CDATA ){
-				if( DaoCdata_ChildOf( dA->xCdata.typer, ct->kernel->typer ) ){
+				if( DaoType_ChildOf( dA->xCdata.ctype, ct ) ){
 					dC = dA;
 					/*
 					 }else if( DaoCdata_ChildOf( ct->typer, dA->typer ) ){
@@ -6669,17 +6674,17 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		DaoValue_Update( & self->routConsts->items.items.pValue[i], self->nameSpace, deftypes );
 	}
 }
-int DaoRoutine_Finalize( DaoRoutine *self, DaoClass *klass, DMap *deftypes )
+int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
 {
 	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
 	if( tp == NULL ) return 0;
 	GC_ShiftRC( tp, self->routType );
 	self->routType = tp;
-	if( klass ){
-		GC_ShiftRC( klass->objType, self->routHost );
-		self->routHost = klass->objType;
+	if( host ){
+		GC_ShiftRC( host, self->routHost );
+		self->routHost = host;
 	}
-	if( self->type != DAO_ROUTINE ) return 1;
+	if( self->body == NULL ) return 1;
 	DaoRoutine_MapTypes( self, deftypes );
 	return 1;
 	/*
@@ -6860,7 +6865,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			DaoValue *dest = *dest2;
 			if( value->type == DAO_ROUTINE && value->xRoutine.routHost == proto->objType ){
 				newRout = & value->xRoutine;
-				if( DaoRoutine_Finalize( newRout, klass, deftypes ) == 0){
+				if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
 					DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
 					continue;
 				}
@@ -6979,7 +6984,7 @@ InvalidField:
 			
 			newRout = & method->xRoutine;
 			if( ROUT_HOST_TID( newRout ) !=0 ) continue;
-			if( DaoRoutine_Finalize( newRout, klass, deftypes ) == 0){
+			if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
 				DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
 				continue; // XXX
 			}
@@ -7038,7 +7043,7 @@ int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, int fe, const char *value )
 {
 	DaoRoutine *rout = proc->activeRoutine;
-	DaoTypeBase *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
+	DaoType *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
 	DaoVmCodeX **annotCodes = rout->body->annotCodes->items.pVmc;
 	DaoStackFrame *frame = proc->topFrame->prev;
 	int line, line2;
@@ -7049,7 +7054,7 @@ static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode 
 	line2 = line;
 	except->routine = rout;
 	except->toLine = line;
-	if( DaoCdata_ChildOf( except->typer, efloat ) && fe >=0 )
+	if( DaoType_ChildOf( except->ctype, efloat ) && fe >=0 )
 		line2 = (vmc && rout->body->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
 	except->fromLine = line2;
 	if( value && value[0] != 0 ){
@@ -7080,8 +7085,8 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStream *stdio = self->vmSpace->stdStream;
 	DaoException *cdata = NULL;
-	DaoTypeBase *except = & dao_Exception_Typer;
-	DaoTypeBase *warning = DaoException_GetType( DAO_WARNING );
+	DaoType *except = DaoException_GetType( DAO_EXCEPTION );
+	DaoType *warning = DaoException_GetType( DAO_WARNING );
 	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
 	DaoValue **excepts = self->activeValues + vmc->a;
 	DaoValue *val;
@@ -7097,14 +7102,13 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 		if( val->type == DAO_OBJECT || val->type == DAO_CDATA ){
 			cdata = NULL;
 			if( val->type == DAO_OBJECT ){
-				DaoType *type = except->core->kernel->abtype;
-				cdata = (DaoException*) DaoObject_MapThisObject( & val->xObject, type );
+				cdata = (DaoException*) DaoObject_MapThisObject( & val->xObject, except );
 			}else{
-				if( DaoCdata_ChildOf( DaoValue_GetTyper(val), except ) ) cdata = (DaoException*)val;
+				if( DaoType_ChildOf( val->xCdata.ctype, except ) ) cdata = (DaoException*)val;
 			}
 			if( cdata == NULL ) goto InvalidException;
 			DaoInitException( (DaoException*)cdata, self, vmc, 0/*self->idClearFE*/, NULL );
-			if( DaoCdata_ChildOf( cdata->typer, warning ) ){
+			if( DaoType_ChildOf( cdata->ctype, warning ) ){
 				DaoPrintException( cdata, stdio );
 			}else{
 				DArray_Append( self->exceptions, val );
@@ -7126,9 +7130,9 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
-	DaoTypeBase *ext = & dao_Exception_Typer;
-	DaoTypeBase *any = DaoException_GetType( DAO_EXCEPTION_ANY );
-	DaoTypeBase *none = DaoException_GetType( DAO_EXCEPTION_NONE );
+	DaoType *ext = DaoException_GetType( DAO_EXCEPTION );
+	DaoType *any = DaoException_GetType( DAO_EXCEPTION_ANY );
+	DaoType *none = DaoException_GetType( DAO_EXCEPTION_NONE );
 	DaoValue **excepts = self->activeValues + vmc->a;
 	DaoValue *val, *val2;
 	DaoCdata *cdata;
@@ -7148,13 +7152,12 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 		if( val->type == DAO_CLASS || val->type == DAO_CTYPE ){
 			cdata = & val->xCdata;
 			if( val->type == DAO_CLASS ){
-				DaoType *type = ext->core->kernel->abtype;
-				cdata = (DaoCdata*) DaoClass_MapToParent( & val->xClass, type );
+				cdata = (DaoCdata*) DaoClass_MapToParent( & val->xClass, ext );
 			}
-			if( cdata && DaoCdata_ChildOf( cdata->typer, any ) ){
+			if( cdata && DaoType_ChildOf( cdata->ctype, any ) ){
 				DArray_Swap( self->exceptions, & list->items );
 				return 1;
-			}else if( cdata && DaoCdata_ChildOf( cdata->typer, none ) && M ==0 ){
+			}else if( cdata && DaoType_ChildOf( cdata->ctype, none ) && M ==0 ){
 				return 1;
 			}else if( cdata ){
 				for(j=0; j<self->exceptions->size; j++){
@@ -7168,10 +7171,9 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 					}else if( val->type == DAO_CTYPE ){
 						DaoCdata *cdata2 = & val2->xCdata;
 						if( val2->type == DAO_CLASS ){
-							DaoType *type = ext->core->kernel->abtype;
-							cdata2 = (DaoCdata*) DaoClass_MapToParent( & val2->xClass, type );
+							cdata2 = (DaoCdata*) DaoType_CastToParent( val2, ext );
 						}
-						if( DaoCdata_ChildOf( cdata2->typer, cdata->typer ) ){
+						if( DaoType_ChildOf( cdata2->ctype, cdata->ctype ) ){
 							canRescue = 1;
 							DArray_Append( & list->items, val2 );
 							DArray_Erase( self->exceptions, j, 1 );
@@ -7186,23 +7188,23 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 }
 void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 {
-	DaoTypeBase *typer;
-	DaoTypeBase *warning = DaoException_GetType( DAO_WARNING );
+	DaoType *etype;
+	DaoType *warning = DaoException_GetType( DAO_WARNING );
 	DaoStream *stdio = self->vmSpace->stdStream;
 	DaoException *except;
 	if( type <= 1 ) return;
 	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
 	
-	typer = DaoException_GetType( type );
-	if( DaoCdata_ChildOf( typer, warning ) ){
+	etype = DaoException_GetType( type );
+	if( DaoType_ChildOf( etype, warning ) ){
 		/* XXX support warning suppression */
-		except = DaoException_New( typer );
+		except = DaoException_New( etype );
 		DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
 		DaoPrintException( except, stdio );
-		typer->Delete( except );
+		etype->typer->Delete( except );
 		return;
 	}
-	except = DaoException_New( typer );
+	except = DaoException_New( etype );
 	DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
 	DArray_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_EXEC_DEBUG) ){

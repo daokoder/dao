@@ -1720,7 +1720,7 @@ static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   int size = _p[0]->xInteger.value;
   DaoType *retype = DaoProcess_GetReturnType( _proc );
-  DaoCdata *cdata = DaoCdata_New( dao_FakeList_Typer, (void*)(size_t)size );
+  DaoCdata *cdata = DaoCdata_New( FakeList_Typer.core->kernel->abtype, (void*)(size_t)size );
   printf( "retype = %s\n", retype->name->mbs );
   GC_ShiftRC( retype, cdata->ctype );
   cdata->ctype = retype;

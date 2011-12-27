@@ -85,7 +85,7 @@ struct DaoType
 	 * aux can be the returned type in a routine type;
 	 * aux can be the parameter type in a named parameter type;
 	 * aux can be the class object in class or object type;
-	 * aux can be the DaoCdata object in wrapped C type;
+	 * aux can be the DaoCdata type object (DAO_CTYPE) in wrapped C type;
 	 * aux can be the constant value in a constant value type. */
 	DaoValue  *aux;
 	DaoValue  *value; /* default value for the type; */
@@ -132,8 +132,14 @@ DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
+DAO_DLL int DaoType_ChildOf( DaoType *self, DaoType *other );
 DAO_DLL DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent );
 DAO_DLL DaoValue* DaoType_CastToDerived( DaoValue *object, DaoType *derived );
+
+DAO_DLL DaoValue* DaoType_FindValue( DaoType *self, DString *name );
+DAO_DLL DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name );
+DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
+DAO_DLL DaoRoutine* DaoType_FindFunctionMBS( DaoType *self, const char *name );
 
 
 
@@ -173,7 +179,7 @@ struct DaoTypeKernel
 	uint_t         attribs;
 	DMap          *values;
 	DMap          *methods;
-	DaoType       *abtype;
+	DaoType       *abtype; /* the template cdata type for a specialized type; */
 	DTypeSpecTree *sptree;
 	DaoNamespace  *nspace;
 	DaoTypeCore   *core;
@@ -227,10 +233,6 @@ struct DaoCdataCore
 	void   (*DelData)( void *data );
 };
 
-DAO_DLL DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
-DAO_DLL DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
-DAO_DLL DaoRoutine* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
-DAO_DLL DaoRoutine* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
 
 
 typedef struct DTypeParam DTypeParam;
@@ -263,5 +265,6 @@ void DTypeSpecTree_Add( DTypeSpecTree *self, DArray *types, DaoType *sptype );
 DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types );
 
 DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types );
+DAO_DLL void DaoCdataType_SpecializeMethods( DaoType *self );
 
 #endif

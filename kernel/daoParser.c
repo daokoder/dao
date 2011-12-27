@@ -694,7 +694,7 @@ static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, 
 		DaoCdata *cdata = (DaoCdata*) klass->superClass->items.pValue[i];
 		if( flags & (1<<i) ) continue;
 		if( cdata->type == DAO_CTYPE ){
-			DaoRoutine *func = DaoTypeBase_FindFunction( cdata->typer, sup );
+			DaoRoutine *func = DaoType_FindFunction( cdata->ctype, sup );
 			if( func ) func = DaoRoutine_ResolveX( func, NULL, NULL, 0, DVM_CALL );
 			if( func ) goto AppendInitSuper;
 			info = DaoTokens_AddRaiseStatement( self, "Error", "", line );
@@ -1710,7 +1710,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DaoParser_ParseTypeItems( self, start, end, types, NULL );
 	if( self->errors->size ) goto FailedInstantiation;
 	if( tpl->type == DAO_CTYPE ){
-		DaoCdataCore *hostCore = (DaoCdataCore*) cdata->typer->core;
+		DaoCdataCore *hostCore = (DaoCdataCore*) cdata->ctype->typer->core;
 		DaoType *sptype = DaoCdataType_Specialize( hostCore->kernel->abtype, types );
 		if( sptype ){
 			inst = sptype->aux;
@@ -1777,7 +1777,7 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DaoValue **scope, DaoValue *
 			*value = DaoClass_GetConst( & (*value)->xClass, i );
 			break;
 		case DAO_CTYPE :
-			res = DaoTypeBase_FindValueOnly( (*value)->xCdata.typer, name );
+			res = DaoType_FindValueOnly( (*value)->xCdata.ctype, name );
 			if( res == NULL ) return start - 1;
 			*value = res;
 			break;
@@ -2551,7 +2551,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				}
 			}
 		}else if( cdata ){
-			DaoRoutine *func = DaoTypeBase_FindFunction( cdata->typer, name );
+			DaoRoutine *func = DaoType_FindFunction( cdata->ctype, name );
 			if( func == NULL ){
 				DaoParser_Error( self, DAO_CONSTR_NOT_DEFINED, name );
 				DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
@@ -4524,7 +4524,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 
 	if( self->hostCdata ){
 		/* QStyleOption( version : int = QStyleOption::Version, ... ) */
-		DaoValue *it = DaoTypeBase_FindValueOnly( self->hostCdata->typer, name );
+		DaoValue *it = DaoType_FindValueOnly( self->hostCdata, name );
 		if( it ){
 			i = routine->routConsts->items.size;
 			MAP_Insert( DArray_Top( self->localCstMap ), name, i );
@@ -6220,8 +6220,7 @@ InvalidFunctional:
 				/* printf( "%s  %i\n", name->mbs, cstlast ); */
 				if( result.konst ){
 					DaoValue *ov = DaoParser_GetVariable( self, result.konst );
-					DaoType *tp = (DaoType*) ov;
-					DaoTypeBase *typer;
+					DaoType *type, *tp = (DaoType*) ov;
 					/*
 					   printf( "%s  %i\n", name->mbs, ov->type );
 					 */
@@ -6247,9 +6246,9 @@ InvalidFunctional:
 						if( opb >=0 ) it = DaoClass_GetConst( & ov->xClass, opb );
 						break;
 					default :
-						typer = DaoValue_GetTyper( ov );
+						type = DaoNamespace_GetType( self->nameSpace, ov );
 						/* do not get method */
-						it = DaoTypeBase_FindValueOnly( typer, name );
+						it = DaoType_FindValueOnly( type, name );
 						break;
 					}
 				}

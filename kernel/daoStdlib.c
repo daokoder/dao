@@ -159,14 +159,13 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	case DAO_CTYPE :
 		{
-			DaoTypeBase *typer = p0->xCdata.typer;
-			*res = DaoTypeBase_FindFunction( typer, p0->xCdata.ctype->name ) != NULL;
+			DaoType *type = p0->xCdata.ctype;
+			*res = DaoType_FindFunctionMBS( type, type->typer->name ) != NULL;
 			break;
 		}
 	case DAO_CDATA :
 		{
-			DaoTypeBase *typer = p0->xCdata.typer;
-			*res = DaoTypeBase_FindFunctionMBS( typer, "()" ) != NULL;
+			*res = DaoType_FindFunctionMBS( p0->xCdata.ctype, "()" ) != NULL;
 			break;
 		}
 	default : break;
