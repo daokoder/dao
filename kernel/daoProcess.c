@@ -2961,7 +2961,10 @@ DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 	DaoType *type = self->activeTypes[ self->activeCode->c ]; /* could be specialized; */
 	if( frame->retype ) return self->topFrame->retype;
 	if( type == NULL || (type->attrib & DAO_TYPE_NOTDEF) ){
-		if( frame->routine ) type = (DaoType*) frame->routine->routType->aux;
+		if( frame->routine ){
+			type = (DaoType*) frame->routine->routType->aux;
+			printf( "DaoProcess_GetReturnType:  %p  %s\n", type, type->name->mbs );
+		}
 	}
 	if( type == NULL ) type = self->activeTypes[ self->activeCode->c ];
 	GC_ShiftRC( type, self->topFrame->retype );
@@ -3762,12 +3765,14 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	   printf( "call: %s %i\n", func->routName->mbs, N );
 	 */
 	DaoProcess_PushFunction( self, func );
+#if 0
 	if( caller->type == DAO_CTYPE ){
-		DaoType *retype = caller->xCdata.ctype->kernel->abtype;
+		DaoType *retype = caller->xCtype.cdtype;
 		printf( ">>>>>>>>>>>>> %s %s\n", retype->name->mbs, caller->xCdata.ctype->name->mbs );
 		GC_ShiftRC( retype, self->topFrame->retype );
 		self->topFrame->retype = retype;
 	}
+#endif
 	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, N );
 	status = self->status;
 	DaoProcess_PopFrame( self );
@@ -4000,15 +4005,12 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}
 	}else if( caller->type == DAO_CTYPE ){
-#warning"................"
 		DaoType *type = caller->xCdata.ctype;
-		printf( "%p %p %s\n", type, type->kernel->abtype, type->name->mbs );
 		rout = DaoType_FindFunctionMBS( type, type->typer->name );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;
 		}
-		printf( "%s\n", rout->routType->name->mbs );
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
 		if( rout == NULL || rout->type != DAO_ROUTINE || rout->pFunc == NULL ){
 			// XXX

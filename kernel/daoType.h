@@ -68,11 +68,10 @@ struct DaoType
 
 	uchar_t   tid; /* type id */
 	uchar_t   attrib;
-	uchar_t   flagtype : 1; /* for enum type */
-	uchar_t   simtype  : 1; /* if the nested contains only simple types */
-	uchar_t   cdatatype : 1; /* sub type of DaoCdata */
-	uchar_t   overloads : 1; /* overloaded routines */
-	uchar_t   ffitype : 4; /* for DaoCLoader module */
+	uchar_t   flagtype : 2; /* for enum type */
+	uchar_t   simtype  : 2; /* if the nested contains only simple types */
+	uchar_t   cdatatype : 2; /* sub type of DaoCdata */
+	uchar_t   overloads : 2; /* overloaded routines */
 	uchar_t   rntcount; /* real number type count */
 	DString  *name; /* type name */
 	DString  *fname; /* field name, or parameter name */

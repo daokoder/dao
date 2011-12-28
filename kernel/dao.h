@@ -262,6 +262,7 @@ typedef struct DaoInterface    DaoInterface;
 typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;
+typedef struct DaoCtype        DaoCtype;
 typedef struct DaoCdata        DaoCdata;
 typedef struct DaoRegex        DaoRegex;
 typedef struct DaoNamespace    DaoNamespace;

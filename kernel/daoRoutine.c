@@ -4350,7 +4350,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		DaoType *t1 = routine->routHost;
 		DaoType *t2 = param->routine->routHost;
 		if( t1->tid == DAO_CDATA && t2->tid == DAO_CDATA ){
-			bl = DaoCdata_ChildOf( t1->typer, t2->typer );
+			bl = DaoType_ChildOf( t1, t2 );
 		}else if( t1->tid == DAO_OBJECT && (t2->tid == DAO_OBJECT || t2->tid == DAO_CDATA) ){
 			bl = DaoClass_ChildOf( & t1->aux->xClass, t2->aux );
 		}

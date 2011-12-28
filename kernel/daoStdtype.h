@@ -187,10 +187,21 @@ struct DaoCdata
 
 DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoType *type );
 DAO_DLL void DaoCdata_FreeCommon( DaoCdata *self );
-DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );
 
 DAO_DLL extern DaoTypeBase defaultCdataTyper;
 DAO_DLL extern DaoCdata dao_default_cdata;
+
+
+/* In analog to DaoClass, a DaoCtype is created for each cdata type: */
+struct DaoCtype
+{
+	DAO_CDATA_COMMON;
+
+	DaoType *cdtype;
+};
+DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
+DAO_DLL void DaoCtype_Delete( DaoCtype *self );
+
 
 
 struct DaoException

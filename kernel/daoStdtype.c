@@ -651,8 +651,8 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  : return & numberTyper;
 	case DAO_COMPLEX : return & comTyper;
-	case DAO_LONG  : return & longTyper;
-	case DAO_ENUM  : return & enumTyper;
+	case DAO_LONG    : return & longTyper;
+	case DAO_ENUM    : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CTYPE   :
 	case DAO_CDATA   : return self->xCdata.ctype->typer;
@@ -3751,8 +3751,13 @@ DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
 	self->subtype = DAO_CDATA_PTR;
 	return self;
 }
+static void DaoCdata_DeleteData( DaoCdata *self );
 void DaoCdata_Delete( DaoCdata *self )
 {
+	if( self->type == DAO_CTYPE ){
+		DaoCtype_Delete( (DaoCtype*) self );
+		return;
+	}
 	DaoCdata_DeleteData( self );
 	dao_free( self );
 }
@@ -3824,6 +3829,31 @@ void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 }
 
 
+DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
+{
+	DaoCtype *self = (DaoCtype*)dao_calloc( 1, sizeof(DaoCtype) );
+	DaoCdata_InitCommon( (DaoCdata*)self, cttype );
+	GC_IncRC( cdtype );
+	self->cdtype = cdtype;
+	self->type = DAO_CTYPE;
+	return self;
+}
+void DaoCtype_Delete( DaoCtype *self )
+{
+	DaoCdata_FreeCommon( (DaoCdata*) self );
+	GC_DecRC( self->cdtype );
+	dao_free( self );
+}
+
+DaoTypeBase defaultCdataTyper =
+{
+	"cdata", NULL, NULL, NULL, {0}, {0},
+	(FuncPtrDel)DaoCdata_Delete, NULL
+};
+DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_DATA_CONST,0,1,0,NULL,NULL,NULL};
+
+
+
 /* In analog to Dao classes, two type objects are created for each cdata type:
  * one for the cdata type type, the other for the cdata object type.
  * Additionally, two dummy cdata objects are created:
@@ -3832,14 +3862,13 @@ void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 {
 	DaoCdata *cdata = DaoCdata_New( NULL, NULL );
-	DaoCdata *ctype = DaoCdata_New( NULL, NULL );
+	DaoCtype *ctype = DaoCtype_New( NULL, NULL );
 	DaoType *cdata_type;
 	DaoType *ctype_type;
 	int i;
 
 	ctype->subtype = DAO_CDATA_PTR;
 	cdata->subtype = DAO_CDATA_PTR;
-	ctype->type = DAO_CTYPE;
 	ctype->trait |= DAO_DATA_NOCOPY;
 	cdata->trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
 
@@ -3847,8 +3876,10 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );
 	GC_IncRC( cdata );
 	cdata_type->value = (DaoValue*) cdata;
+	GC_ShiftRC( cdata_type, ctype->cdtype );
 	GC_ShiftRC( ctype_type, ctype->ctype );
 	GC_ShiftRC( cdata_type, cdata->ctype );
+	ctype->cdtype = cdata_type;
 	ctype->ctype = ctype_type;
 	cdata->ctype = cdata_type;
 	ctype_type->typer = typer;
@@ -3890,13 +3921,6 @@ DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque
 	return ctype_type;
 }
 
-
-DaoTypeBase defaultCdataTyper =
-{
-	"cdata", NULL, NULL, NULL, {0}, {0},
-	(FuncPtrDel)DaoCdata_Delete, NULL
-};
-DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_DATA_CONST,0,1,0,NULL,NULL,NULL};
 
 
 static void DaoException_Init( DaoException *self, DaoType *type );

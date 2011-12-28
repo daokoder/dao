@@ -1700,7 +1700,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 {
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoClass *klass = (DaoClass*) tpl;
-	DaoCdata *cdata = (DaoCdata*) tpl;
+	DaoCtype *ctype = (DaoCtype*) tpl;
 	DaoValue *func = NULL;
 	DaoValue *inst = NULL;
 	DArray *types = DArray_New(0);
@@ -1710,8 +1710,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DaoParser_ParseTypeItems( self, start, end, types, NULL );
 	if( self->errors->size ) goto FailedInstantiation;
 	if( tpl->type == DAO_CTYPE ){
-		DaoCdataCore *hostCore = (DaoCdataCore*) cdata->ctype->typer->core;
-		DaoType *sptype = DaoCdataType_Specialize( hostCore->kernel->abtype, types );
+		DaoType *sptype = DaoCdataType_Specialize( ctype->cdtype, types );
 		if( sptype ){
 			inst = sptype->aux;
 			if( fullname ) DString_Assign( fullname, sptype->name );

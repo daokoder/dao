@@ -42,6 +42,7 @@ union DaoValue
 	DaoStream      xStream;
 	DaoObject      xObject;
 	DaoCdata       xCdata;
+	DaoCtype       xCtype;
 	DaoClass       xClass;
 	DaoInterface   xInterface;
 	DaoRoutine     xRoutine;

@@ -92,22 +92,12 @@ void DaoxGraph_Delete( DaoxGraph *self )
 DaoxNode* DaoxGraph_AddNode( DaoxGraph *self )
 {
 	DaoxNode *node = DaoxNode_New( self );
-	DaoType *type = DaoCdataType_Specialize( node->ctype, self->ctype->nested );
-	if( type ){
-		GC_ShiftRC( type, node->ctype );
-		node->ctype = type;
-	}
 	DArray_Append( self->nodes, node );
 	return node;
 }
 DaoxEdge* DaoxGraph_AddEdge( DaoxGraph *self, DaoxNode *first, DaoxNode *second )
 {
 	DaoxEdge *edge = DaoxEdge_New( self );
-	DaoType *type = DaoCdataType_Specialize( edge->ctype, self->ctype->nested );
-	if( type ){
-		GC_ShiftRC( type, edge->ctype );
-		edge->ctype = type;
-	}
 	if( self->directed ){
 		DArray_PushFront( first->edges, edge );
 	}else{
@@ -646,12 +636,9 @@ static void EDGE_GetNodes( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void GRAPH_Graph( DaoProcess *proc, DaoValue *p[], int N )
 {
-	//XXX printf( "%i\n", p[1]->type );
 	DaoType *retype = DaoProcess_GetReturnType( proc );
-	printf( "retype = %s %i\n", retype->name->mbs, retype->tid );
 	DaoxGraph *graph = DaoxGraph_New( retype, p[0]->xEnum.value );
 	DaoValue *res = DaoProcess_PutValue( proc, (DaoValue*) graph );
-	printf( "%p\n", res );
 }
 static void GRAPH_GetNodes( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -735,7 +722,6 @@ DaoTypeBase DaoxEdge_Typer =
 static DaoFuncItem DaoxGraphMeths[]=
 {
 	/* allocaters must have names identical second the typer name: */
-	//XXX { GRAPH_Graph,    "Graph"TYPE_PARAMS"( dir :enum<undirected,directed>=$undirected, t :@W=1 )" },
 	{ GRAPH_Graph,    "Graph"TYPE_PARAMS"( dir :enum<undirected,directed>=$undirected )" },
 	{ GRAPH_GetNodes, "Nodes( self :Graph<@W,@N,@E> ) => list<Node<@W,@N,@E>>" },
 	{ GRAPH_GetEdges, "Edges( self :Graph<@W,@N,@E> ) => list<Edge<@W,@N,@E>>" },

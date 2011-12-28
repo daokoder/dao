@@ -447,10 +447,12 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		DString_Assign( ctype_type->name, cdata_type->name );
 		DaoNS_ParseType( self, cdata_type->name->mbs, ctype_type, cdata_type );
 		value = cdata_type->aux;
+
 		GC_ShiftRC( kernel, ctype_type->kernel );
 		GC_ShiftRC( kernel, cdata_type->kernel );
 		ctype_type->kernel = kernel;
 		cdata_type->kernel = kernel;
+		cdata_type->cdatatype = type2->cdatatype;
 		cdata_type->nested = DArray_New(0);
 		ctype_type->nested = DArray_New(0);
 		kernel->sptree = DTypeSpecTree_New();
@@ -1324,15 +1326,14 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = array->unitype; break;
 #endif
 	case DAO_OBJECT :
-		abtp = ((DaoObject*)p)->defClass->objType; break;
+		abtp = p->xObject.defClass->objType; break;
 	case DAO_CLASS :
-		abtp = ((DaoClass*)p)->clsType; break;
+		abtp = p->xClass.clsType; break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
-		abtp = ((DaoCdata*)p)->ctype; break;
+		abtp = p->xCdata.ctype; break;
 	case DAO_ROUTINE :
-		rout = (DaoRoutine*) p;
-		abtp = rout->routType;
+		abtp = p->xRoutine.routType;
 		break;
 	case DAO_PAR_NAMED :
 		abtp = nameva->unitype; break;
@@ -1343,7 +1344,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	case DAO_PROCESS :
 		abtp = vmp->abtype; break;
 	case DAO_INTERFACE :
-		abtp = ((DaoInterface*)p)->abtype; break;
+		abtp = p->xInterface.abtype; break;
 	default : break;
 	}
 	if( abtp ){
@@ -1460,20 +1461,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		default : break;
 		}
 #endif
-	}else if( p->type == DAO_ROUTINE ){ /* XXX should never reach here */
-		DaoRoutine *rout = (DaoRoutine*) p;
-		abtp = rout->routType; /* might be NULL */
-	}else if( p->type == DAO_CDATA ){ /* XXX should never reach here */
-		DString_Append( mbs, cdata->ctype->name );
-		node = MAP_Find( self->abstypes, mbs );
-		if( node ){
-			abtp = node->value.pType;
-		}else{
-			abtp = DaoType_New( mbs->mbs, p->type, p, NULL );
-			GC_ShiftRC( cdata->ctype->kernel, abtp->kernel );
-			abtp->kernel = cdata->ctype->kernel;
-			DaoNamespace_AddType( self, abtp->name, abtp );
-		}
 	}else if( p->type == DAO_TYPE ){
 		DString_SetMBS( mbs, "type<" );
 		nested = DArray_New(0);
@@ -1495,8 +1482,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			abtp = node->value.pType;
 		}else{
 			abtp = DaoType_New( typer->name, p->type, NULL, NULL );
-			//XXX GC_ShiftRC( cdata->ctype->kernel, abtp->kernel );
-			//abtp->kernel = cdata->ctype->kernel;
 			DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}
@@ -1583,10 +1568,6 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) DString_SetMBS( mbs, name );
 		tp = DaoType_New( mbs->mbs, tid, pb, nstd );
 		tp->attrib |= attrib;
-		if( pb && pb->type == DAO_CDATA ){
-			GC_ShiftRC( ((DaoCdata*)pb)->ctype->kernel, tp->kernel );
-			tp->kernel = ((DaoCdata*)pb)->ctype->kernel;
-		}
 		DaoNamespace_AddType( self, tp->name, tp );
 	}else{
 		tp = node->value.pType;

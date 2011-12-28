@@ -786,7 +786,6 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_CTYPE :
 	case DAO_CDATA :
 		tp = value->xCdata.ctype;
-		printf( "%s %p %i %s %p %i\n", self->name->mbs, self, self->tid, tp->name->mbs, tp, tp->tid );
 		if( self == tp ){
 			return DAO_MT_EQ;
 		}else if( self->tid == DAO_INTERFACE ){
@@ -917,7 +916,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->typer = self->typer;
 	copy->attrib = self->attrib;
 	copy->cdatatype = self->cdatatype;
-	copy->ffitype = self->ffitype;
 	copy->overloads = self->overloads;
 	copy->attrib &= ~ DAO_TYPE_EMPTY; /* not any more empty */
 	GC_IncRC( copy );
@@ -951,7 +949,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		GC_IncRCs( copy->nested );
 		if( (self->tid == DAO_CTYPE || self->tid == DAO_CDATA) && self->kernel->sptree ){
-			DaoType *sptype = DaoCdataType_Specialize( self, copy->nested );
+			DaoType *sptype = self->typer->core->kernel->abtype;
+			if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
+			sptype = DaoCdataType_Specialize( sptype, copy->nested );
 			if( sptype ){
 				DMap_Erase2( defs, copy );
 				GC_DecRC( copy );
@@ -1084,20 +1084,20 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 {
 	DNode *node;
+	DaoTypeCore *core = self->typer->core;
 	DaoTypeKernel *kernel = self->kernel;
-	if( self->typer->core->kernel == NULL ) return NULL;
-	if( self->typer->core->kernel->methods == NULL ){
+	if( core->kernel == NULL ) return NULL;
+	if( core->kernel->methods == NULL ){
 		DaoNamespace_SetupMethods( kernel->nspace, self->typer );
-		if( self->typer->core->kernel->methods == NULL ) return NULL;
+		if( core->kernel->methods == NULL ) return NULL;
 	}
-	if( self->tid == DAO_CDATA && self->kernel == self->typer->core->kernel ){
-		/* For non cdata type, self->typer->core->kernel->abtype could be NULL: */
-		if( self->aux != self->typer->core->kernel->abtype->aux ){
+	if( self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
+		/* For non cdata type, core->kernel->abtype could be NULL: */
+		if( self->kernel == core->kernel && self->aux != core->kernel->abtype->aux ){
 			/* Specialize methods for specialized cdata type: */
 			DaoCdataType_SpecializeMethods( self );
 		}
 	}
-	printf( "DaoType_FindFunctionMBS: %p %p\n", self, self->kernel->methods );
 	node = DMap_Find( self->kernel->methods, name );
 	if( node ) return node->value.pRoutine;
 	return NULL;
@@ -1583,7 +1583,7 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 		self->core->Print = DaoCdata_Print;
 		self->core->Copy = DaoValue_NoCopy;
 	}
-	self->core->kernel = self;
+	if( self->core->kernel == NULL ) self->core->kernel = self;
 	return self;
 }
 
@@ -1721,8 +1721,11 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	DaoTypeKernel *kernel;
 	DTypeSpecTree *sptree;
 	size_t i, pos;
-	if( self->tid != DAO_CDATA && self->tid != DAO_CTYPE ) return NULL;
-	if( (kernel = self->typer->core->kernel) == NULL ) return NULL;
+
+	assert( self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
+	assert( self->kernel == self->typer->core->kernel );
+
+	if( (kernel = self->kernel) == NULL ) return NULL;
 	if( (sptree = kernel->sptree) == NULL ) return NULL;
 	if( (sptype = DTypeSpecTree_Get( sptree, types )) ){
 		if( self->tid == DAO_CTYPE ) return sptype->aux->xCdata.ctype;
@@ -1749,6 +1752,8 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 		DArray_Append( sptype->nested, types->items.pType[i] );
 	}
 	for(i=types->size; i<sptree->holders->size; i++){
+		if( i ) DString_AppendChar( sptype->name, ',' );
+		DString_Append( sptype->name, sptree->defaults->items.pType[i]->name );
 		DArray_Append( sptype->nested, sptree->defaults->items.pType[i] );
 	}
 	sptype2->nested = DArray_Copy( sptype->nested );
@@ -1772,7 +1777,6 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 		}
 		DMap_Delete( defs );
 	}
-	printf( "%s %p\n", sptype->name->mbs, sptype );
 	if( self->tid == DAO_CTYPE ) return sptype2;
 	return sptype;
 }
@@ -1789,12 +1793,9 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 	DaoTypeKernel *kernel;
 	size_t i, k;
 	if( self == original ) return;
-	printf( "1. DaoCdataType_SpecializeMethods: %s\n", self->typer->name );
 	if( self->kernel != original->kernel ) return;
-	printf( "2. DaoCdataType_SpecializeMethods: %s\n", self->typer->name );
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
-	printf( "3. DaoCdataType_SpecializeMethods: %s\n", self->typer->name );
-	assert( self->tid == DAO_CDATA );
+	assert( self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & dao_msetup_mutex );
 #endif
@@ -1811,13 +1812,12 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 		kernel->abtype = original;
 		GC_IncRC( kernel->nspace );
 		GC_IncRC( kernel->abtype );
-		GC_ShiftRC( kernel, self->kernel );
-		GC_ShiftRC( kernel, self->aux->xCdata.ctype->kernel );
-		self->kernel = kernel;
-		self->aux->xCdata.ctype->kernel = kernel;
+		GC_ShiftRC( kernel, self->aux->xCtype.ctype->kernel );
+		GC_ShiftRC( kernel, self->aux->xCtype.cdtype->kernel );
+		self->aux->xCtype.ctype->kernel = kernel;
+		self->aux->xCtype.cdtype->kernel = kernel;
 		kernel->methods = DHash_New( D_STRING, 0 );
 
-	printf( "4. DaoCdataType_SpecializeMethods: %s %p %p %p\n", self->name->mbs, self->aux->xCdata.ctype, self, kernel->methods );
 		for(i=0; i<self->nested->size; i++){
 			DaoType_MatchTo( self->nested->items.pType[i], original->nested->items.pType[i], defs );
 		}
@@ -1849,7 +1849,6 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 			}
 		}
 		DMap_Delete( defs );
-		printf( "%i %i\n", kernel->methods->size, orimeths->size );
 
 #if 0
 		for(i=1; i<parents->size; i++){
