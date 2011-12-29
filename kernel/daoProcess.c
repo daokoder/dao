@@ -369,6 +369,8 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 	}
 	return 1;
 }
+int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
+int DaoRoutine_DoTypeInference( DaoRoutine *self );
 /* Return 0 if failed, otherwise return 1 plus number passed parameters: */
 static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code )
 {

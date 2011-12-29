@@ -239,10 +239,14 @@ typedef struct DTypeParam DTypeParam;
 /* Template type parameters structured into a trie: */
 struct DTypeParam
 {
-	DaoType       *type;   /* parameter type; */
-	DArray        *nexts;  /* next parameter nodes; */
-	DaoType       *sptype; /* specialized type; */
 	DTypeSpecTree *tree;
+
+	DaoType  *type;   /* parameter type; */
+	DaoType  *sptype; /* specialized type; */
+
+	DTypeParam  *first; /* the first child node; */
+	DTypeParam  *last;  /* the last child node; */
+	DTypeParam  *next;  /* the next sibling node; */
 };
 
 
@@ -250,10 +254,11 @@ struct DTypeParam
 /* Template type specialization tree: */
 struct DTypeSpecTree
 {
-	DTypeParam *root;
-	DArray *holders;  /* type holders; */
-	DArray *defaults; /* default types; */
-	DArray *sptypes;  /* for GC; */
+	DTypeParam  *root;
+
+	DArray  *holders;  /* type holders; */
+	DArray  *defaults; /* default types; */
+	DArray  *sptypes;  /* for GC; */
 };
 
 DTypeSpecTree* DTypeSpecTree_New();

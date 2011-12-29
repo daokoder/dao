@@ -217,7 +217,6 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		DaoType *abtype = typer->core->kernel->abtype;
 
 		values = DHash_New( D_STRING, D_VALUE );
-		typer->core->kernel->values = values;
 		if( abtype && abtype->value ) DMap_Insert( values, & defname, abtype->value );
 		for(i=0; i<valCount; i++){
 			DString name = DString_WrapMBS( typer->numItems[i].name );
@@ -245,6 +244,8 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 			}
 		}
 		DArray_Delete( parents );
+		/* Set values field after it has been setup, for read safety in multithreading: */
+		typer->core->kernel->values = values;
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & dao_vsetup_mutex );
@@ -294,7 +295,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
 		methods = DHash_New( D_STRING, 0 );
-		typer->core->kernel->methods = methods;
 		size = 0;
 		name1 = DString_New(1);
 		name2 = DString_New(1);
@@ -362,6 +362,8 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		}
 		DString_Delete( name1 );
 		DString_Delete( name2 );
+		/* Set methods field after it has been setup, for read safety in multithreading: */
+		typer->core->kernel->methods = methods;
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & dao_msetup_mutex );
@@ -1860,9 +1862,9 @@ DaoValue* DaoValue_FindAuxMethod( DaoValue *self, DString *name, DaoNamespace *n
 	if( meth == NULL || meth->type != DAO_ROUTINE ) return NULL;
 	if( meth->type == DAO_ROUTINE && meth->xRoutine.overloads ){
 		DRoutines *routs = meth->xRoutine.overloads;
+		DParamNode *param;
 		if( routs->mtree == NULL ) return NULL;
-		for(i=0; i<routs->mtree->nexts->size; i++){
-			DParNode *param = (DParNode*) routs->mtree->nexts->items.pVoid[i];
+		for(param=routs->mtree->first; param; param=param->next){
 			if( param->type && DaoType_MatchValue( param->type, self, NULL ) ) return meth;
 		}
 	}else if( meth->xRoutine.attribs & DAO_ROUT_PARSELF ){
@@ -1878,9 +1880,9 @@ DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nsp
 	if( meth == NULL || meth->type != DAO_ROUTINE ) return NULL;
 	if( meth->type == DAO_ROUTINE && meth->xRoutine.overloads ){
 		DRoutines *routs = meth->xRoutine.overloads;
+		DParamNode *param;
 		if( routs->mtree == NULL ) return NULL;
-		for(i=0; i<routs->mtree->nexts->size; i++){
-			DParNode *param = (DParNode*) routs->mtree->nexts->items.pVoid[i];
+		for(param=routs->mtree->first; param; param=param->next){
 			if( param->type && DaoType_MatchTo( self, param->type, NULL ) ) return meth;
 		}
 	}else if( meth->xRoutine.attribs & DAO_ROUT_PARSELF ){

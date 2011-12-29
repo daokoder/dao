@@ -1598,64 +1598,73 @@ static DTypeParam* DTypeParam_New( DTypeSpecTree *tree )
 }
 static void DTypeParam_Delete( DTypeParam *self )
 {
-	if( self->nexts ){
-		int i, n = self->nexts->size;
-		for(i=0; i<n; i++) DTypeParam_Delete( (DTypeParam*) self->nexts->items.pVoid[i] );
-		DArray_Delete( self->nexts );
+	while( self->first ){
+		DTypeParam *node = self->first;
+		self->first = node->next;
+		DTypeParam_Delete( node );
 	}
 	dao_free( self );
 }
 static DTypeParam* DTypeParam_Add( DTypeParam *self, DArray *types, int pid, DaoType *sptype )
 {
-	DTypeParam *param, **items;
+	DTypeParam *param, *ret;
 	DaoType *type;
 	int i, n;
-	if( self->nexts == NULL ) self->nexts = DArray_New(0);
-	items = (DTypeParam**)self->nexts->items.pVoid;
-	n = self->nexts->size;
 	if( pid >= types->size ){
 		/* If a specialization with the same parameter signature is found, return it: */
-		for(i=0; i<n; i++) if( items[i]->sptype ) return items[i];
+		for(param=self->first; param; param=param->next) if( param->sptype ) return param;
 		param = DTypeParam_New( self->tree );
 		param->sptype = sptype;
-		DArray_Append( self->nexts, param ); /* Add a leaf. */
+		/* Add a leaf. */
+		if( self->last ){
+			self->last->next = param;
+			self->last = param;
+		}else{
+			self->first = self->last = param;
+		}
 		return param;
 	}
 	type = types->items.pType[pid];
-	for(i=0; i<n; i++){
-		if( items[i]->type == type ) return DTypeParam_Add( items[i], types, pid+1, sptype );
+	for(param=self->first; param; param=param->next){
+		if( param->type == type ) return DTypeParam_Add( param, types, pid+1, sptype );
 	}
 	/* Add a new internal node: */
 	param = DTypeParam_New( self->tree );
-	param->nexts = DArray_New(0);
 	param->type = type;
-	DArray_PushBack( self->nexts, param );
-	return DTypeParam_Add( param, types, pid+1, sptype );
+	ret = DTypeParam_Add( param, types, pid+1, sptype );
+	/* Add the node to the tree after all its child nodes have been created, to ensure
+	 * a reader will always lookup in a valid tree in multi-threaded applications: */
+	if( self->last ){
+		self->last->next = param;
+		self->last = param;
+	}else{
+		self->first = self->last = param;
+	}
+	return ret;
 }
 static DaoType* DTypeParam_GetLeaf( DTypeParam *self, int pid, int *ms )
 {
-	int i;
+	DArray *defaults = self->tree->defaults;
+	DTypeParam *param;
 	*ms = 0;
 	if( self->sptype ) return self->sptype; /* a leaf */
-	if( pid > self->tree->defaults->size ) return NULL;
-	if( self->tree->defaults->items.pType[pid] == NULL ) return NULL;
-	for(i=0; i<self->nexts->size; i++){
-		DTypeParam *param = (DTypeParam*) self->nexts->items.pVoid[i];
+	if( pid > defaults->size ) return NULL;
+	if( pid < defaults->size && defaults->items.pType[pid] == NULL ) return NULL;
+	for(param=self->first; param; param=param->next){
 		if( param->type == NULL ) return param->sptype; /* a leaf */
 	}
 	return NULL;
 }
 static DaoType* DTypeParam_Get2( DTypeParam *self, DArray *types, int pid, int *score )
 {
-	DTypeParam **items = (DTypeParam**) self->nexts->items.pVoid;
+	DTypeParam *param;
 	DaoType *argtype, *sptype = NULL, *best = NULL;
-	int i, m, k = 0, max = 0, K = self->nexts->size;
+	int i, m, k = 0, max = 0;
 
 	*score = 1;
 	if( pid >= types->size ) return DTypeParam_GetLeaf( self, pid, score );
 	argtype = types->items.pType[pid];
-	for(i=0; i<K; i++){
-		DTypeParam *param = items[i];
+	for(param=self->first; param; param=param->next){
 		DaoType *partype = param->type;
 		if( partype == NULL ) continue;
 		if( argtype->tid != partype->tid ) continue;

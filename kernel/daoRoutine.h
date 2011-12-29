@@ -131,14 +131,16 @@ DaoFunCurry* DaoFunCurry_New( DaoValue *v, DaoValue *o );
 
 
 
-typedef struct DParNode DParNode;
+typedef struct DParamNode DParamNode;
 
-struct DParNode
+struct DParamNode
 {
-	DaoType    *type;
-	DArray     *nexts; /* <DParNode*> */
-	DMap       *names; /* <DaoType*,DParNode*> */
-	DaoRoutine *routine;
+	DaoType     *type;    /* type of the parameter node; */
+	DaoType     *type2;   /* name + type; */
+	DaoRoutine  *routine; /* routine of a leaf node; */
+	DParamNode  *first;   /* first child node; */
+	DParamNode  *last;    /* last child node; */
+	DParamNode  *next;    /* next sibling node; */
 };
 
 /* DRoutines is a structure to organize overloaded/specialized functions into trees (tries),
@@ -153,8 +155,8 @@ struct DParNode
 struct DRoutines
 {
 	unsigned int   attribs;
-	DParNode      *tree;
-	DParNode      *mtree; /* for routines with self parameter */
+	DParamNode    *tree;
+	DParamNode    *mtree; /* for routines with self parameter */
 	DArray        *routines; /* list of overloaded routines on the trees */
 };
 
