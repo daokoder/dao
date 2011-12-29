@@ -141,7 +141,7 @@ struct DParNode
 	DaoRoutine *routine;
 };
 
-/* DRoutines is a structure to organize overloaded functions into trees (tries),
+/* DRoutines is a structure to organize overloaded/specialized functions into trees (tries),
  * for fast function resolving based on parameter types. */
 
 /* In data structures for namespace and class,
@@ -162,8 +162,6 @@ DRoutines* DRoutines_New();
 void DRoutines_Delete( DRoutines *self );
 
 DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine );
-DaoRoutine* DRoutines_Lookup( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code );
-DaoRoutine* DRoutines_LookupByType( DRoutines *self, DaoType *st, DaoType *t[], int n, int c );
 void DRoutines_Import( DRoutines *self, DRoutines *other );
 void DRoutines_Compile( DRoutines *self );
 

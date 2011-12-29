@@ -70,7 +70,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	}
 	return self;
 }
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int body )
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbody )
 {
 	int i;
 	self->attribs = from->attribs;
@@ -96,7 +96,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int bod
 	}
 	if( from->body ){
 		DaoRoutineBody *body = from->body;
-		if( body ) body = DaoRoutineBody_Copy( body );
+		if( cbody ) body = DaoRoutineBody_Copy( body );
 		GC_ShiftRC( body, self->body );
 		self->body = body;
 	}
@@ -1106,6 +1106,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 
 	GC_DecRCs( self->body->regType );
 	regConst = DArray_New(0);
+	DArray_Clear( self->body->regType );
 	DArray_Resize( regConst, self->body->regCount, NULL );
 	DArray_Resize( self->body->regType, self->body->regCount, 0 );
 	type = self->body->regType->items.pType;
@@ -3124,20 +3125,20 @@ NotExist_TryAux:
 
 					k = defs2->size;
 					DaoRoutine_PassParamTypes2( rout, bt, tp, j, code, defs2 );
-					if( notide && rout != self && (defs2->size > k || rout->routType->aux ==NULL) ){
+					if( notide && rout != self && (defs2->size > k || rout->routType->aux->xType.tid == 0) ){
 						DaoRoutine *orig, *drout;
-						/*to infer returned type*/ 
 						if( rout->original ) rout = rout->original;
 						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 						/* rout may has only been declared */
 						orig = rout;
-						drout = DaoRoutine_Copy( rout, 0, 1 );
+						drout = DaoRoutine_Copy( rout, 0, 0 );
 						DaoRoutine_PassParamTypes( drout, bt, tp, j, code, defs2 );
 						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
 						GC_ShiftRC( orig, drout->original );
 						DRoutines_Add( orig->specialized, drout );
 						drout->original = orig;
-						if( rout->body ){
+						if( rout->body && rout->routType->aux->xType.tid == 0 ){
+							/* to infer returned type */ 
 							if( DaoRoutine_DoTypeInference( drout ) ==0 ) goto InvParam;
 						}
 					}
@@ -3307,7 +3308,16 @@ TryPushBlockReturnType:
 				}
 				if( vmc->b ==0 ){
 					/* less strict checking for type holder as well (case mt.start()): */
+					if( ct && ct->tid == DAO_UDF ){
+						ct = DaoNamespace_MakeValueType( ns, dao_none_value );
+						ct = DaoNamespace_MakeRoutType( ns, self->routType, NULL, NULL, ct );
+						rettypes->items.pType[ rettypes->size - 1 ] = ct;
+						GC_ShiftRC( ct, self->routType );
+						self->routType = ct;
+						continue;
+					}
 					if( ct && NoCheckingType( ct ) ) continue;
+					if( ct && ct->tid == DAO_VALTYPE && ct->aux == dao_none_value ) continue;
 					if( ct && ! (self->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 				}else{
 					at = type[opa];
@@ -4290,7 +4300,7 @@ void DRoutines_Delete( DRoutines *self )
 	dao_free( self );
 }
 
-DParNode* DParNode_Add( DParNode *self, DaoRoutine *routine, int pid )
+static DParNode* DParNode_Add( DParNode *self, DaoRoutine *routine, int pid )
 {
 	DaoType *type, *name = NULL;
 	DParNode *param, **items;
@@ -4381,7 +4391,7 @@ void DRoutines_Compile( DRoutines *self )
 		if( rout->type == DAO_ROUTINE ) DaoRoutine_Compile( rout );
 	}
 }
-DaoRoutine* DParNode_GetLeaf( DParNode *self, int *ms )
+static DaoRoutine* DParNode_GetLeaf( DParNode *self, int *ms )
 {
 	DParNode *param;
 	DaoRoutine *rout;
@@ -4409,7 +4419,7 @@ DaoRoutine* DParNode_GetLeaf( DParNode *self, int *ms )
 	}
 	return NULL;
 }
-DaoRoutine* DParNode_LookupByName( DParNode *self, DaoValue *p[], int n, int strict, int *ms, DMap *defs )
+static DaoRoutine* DParNode_LookupByName( DParNode *self, DaoValue *p[], int n, int strict, int *ms, DMap *defs )
 {
 	DNode *it;
 	DaoRoutine *rout = NULL, *best = NULL;
@@ -4444,7 +4454,7 @@ DaoRoutine* DParNode_LookupByName( DParNode *self, DaoValue *p[], int n, int str
 	*ms = max;
 	return best;
 }
-DaoRoutine* DParNode_LookupByName2( DParNode *self, DaoType *ts[], int n, int strict, int *ms, DMap *defs )
+static DaoRoutine* DParNode_LookupByName2( DParNode *self, DaoType *ts[], int n, int strict, int *ms, DMap *defs )
 {
 	DNode *it;
 	DaoRoutine *rout = NULL, *best = NULL;
@@ -4478,7 +4488,7 @@ DaoRoutine* DParNode_LookupByName2( DParNode *self, DaoType *ts[], int n, int st
 	*ms = max;
 	return best;
 }
-DaoRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, int *ms, DMap *defs )
+static DaoRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, int *ms, DMap *defs, int clear )
 {
 	int i, k, m, max = 0, K = self->nexts->size;
 	DParNode **items = (DParNode**) self->nexts->items.pVoid;
@@ -4494,11 +4504,12 @@ DaoRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, i
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
 		if( strict && value->type != type->tid ) continue;
+		if( defs && clear ) DMap_Clear( defs );
 		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchValue( type, value, defs );
 		if( m == 0 ) continue;
 		if( strict && m != DAO_MT_EQ ) continue;
 		k = type->tid == DAO_PAR_VALIST ? 0 : n-1;
-		rout = DParNode_Lookup( param, p+1, k, strict, & k, defs );
+		rout = DParNode_Lookup( param, p+1, k, strict, & k, defs, 0 );
 		if( rout == NULL ) continue;
 		m += k;
 		if( m > max ){
@@ -4509,7 +4520,7 @@ DaoRoutine* DParNode_Lookup( DParNode *self, DaoValue *p[], int n, int strict, i
 	*ms = max;
 	return best;
 }
-DaoRoutine* DParNode_LookupByType( DParNode *self, DaoType *types[], int n, int strict, int *ms, DMap *defs )
+static DaoRoutine* DParNode_LookupByType( DParNode *self, DaoType *types[], int n, int strict, int *ms, DMap *defs, int clear )
 {
 	int i, m, k, max = 0, K = self->nexts->size;
 	DParNode **items = (DParNode**) self->nexts->items.pVoid;
@@ -4526,11 +4537,12 @@ DaoRoutine* DParNode_LookupByType( DParNode *self, DaoType *types[], int n, int 
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
 		if( strict && partype->tid != type->tid ) continue;
+		if( defs && clear ) DMap_Clear( defs );
 		m = type->tid == DAO_PAR_VALIST ? 1 : DaoType_MatchTo( partype, type, defs );
 		if( m == 0 ) continue;
 		if( strict && m != DAO_MT_EQ ) continue;
 		k = type->tid == DAO_PAR_VALIST ? 0 : n-1;
-		rout = DParNode_LookupByType( param, types+1, k, strict, & k, defs );
+		rout = DParNode_LookupByType( param, types+1, k, strict, & k, defs, 0 );
 		if( rout == NULL ) continue;
 		m += k;
 		if( m > max ){
@@ -4541,11 +4553,7 @@ DaoRoutine* DParNode_LookupByType( DParNode *self, DaoType *types[], int n, int 
 	*ms = max;
 	return best;
 }
-/* XXX:
- * different routines should have different type holders for the same names
- * in order to handle them properly in resolving overloaded routines!
- */
-DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code, int strict )
+static DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code, int strict )
 {
 	int i, k, m, score = 0;
 	int mcall = code == DVM_MCALL;
@@ -4560,10 +4568,11 @@ DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *p[], in
 				param = (DParNode*) self->mtree->nexts->items.pVoid[i];
 				if( param->type == NULL ) continue;
 				if( strict && param->type->tid != obj->type ) continue;
+				if( defs ) DMap_Clear( defs );
 				m = DaoType_MatchValue( param->type, obj, defs );
 				if( strict && m != DAO_MT_EQ ) continue;
 				if( m == 0 ) continue;
-				rout2 = DParNode_Lookup( param, p, n, strict, & k, defs );
+				rout2 = DParNode_Lookup( param, p, n, strict, & k, defs, 0 );
 				if( rout2 == NULL ) continue;
 				m += k;
 				if( m > score ){
@@ -4575,7 +4584,7 @@ DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *p[], in
 		}
 	}
 	if( mcall && self->mtree ){
-		rout = DParNode_Lookup( self->mtree, p, n, strict, & score, defs );
+		rout = DParNode_Lookup( self->mtree, p, n, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
 	if( self->tree ){
@@ -4583,13 +4592,13 @@ DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *p[], in
 			p += 1;
 			n -= 1;
 		}
-		rout = DParNode_Lookup( self->tree, p, n, strict, & score, defs );
+		rout = DParNode_Lookup( self->tree, p, n, strict, & score, defs, 1 );
 	}
 Finalize:
 	if( defs ) DMap_Delete( defs );
 	return rout;
 }
-DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, DaoType *types[], int n, int code, int strict )
+static DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, DaoType *types[], int n, int code, int strict )
 {
 	int i, k, m, score = 0;
 	int mcall = code == DVM_MCALL;
@@ -4604,10 +4613,11 @@ DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, DaoType
 				param = (DParNode*) self->mtree->nexts->items.pVoid[i];
 				if( param->type == NULL ) continue;
 				if( strict && param->type->tid != selftype->tid ) continue;
+				if( defs ) DMap_Clear( defs );
 				m = DaoType_MatchTo( selftype, param->type, defs );
 				if( strict && m != DAO_MT_EQ ) continue;
 				if( m == 0 ) continue;
-				rout2 = DParNode_LookupByType( param, types, n, strict, & k, defs );
+				rout2 = DParNode_LookupByType( param, types, n, strict, & k, defs, 0 );
 				if( rout2 == NULL ) continue;
 				m += k;
 				if( m > score ){
@@ -4619,7 +4629,7 @@ DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, DaoType
 		}
 	}
 	if( mcall && self->mtree ){
-		rout = DParNode_LookupByType( self->mtree, types, n, strict, & score, defs );
+		rout = DParNode_LookupByType( self->mtree, types, n, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
 	if( self->tree ){
@@ -4627,17 +4637,17 @@ DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, DaoType
 			types += 1;
 			n -= 1;
 		}
-		rout = DParNode_LookupByType( self->tree, types, n, strict, & score, defs );
+		rout = DParNode_LookupByType( self->tree, types, n, strict, & score, defs, 1 );
 	}
 Finalize:
 	if( defs ) DMap_Delete( defs );
 	return rout;
 }
-DaoRoutine* DRoutines_Lookup( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code )
+static DaoRoutine* DRoutines_Lookup( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code )
 {
 	return DRoutines_Lookup2( self, obj, p, n, code, 0 );
 }
-DaoRoutine* DRoutines_LookupByType( DRoutines *self, DaoType *selftype, DaoType *types[], int n, int code )
+static DaoRoutine* DRoutines_LookupByType( DRoutines *self, DaoType *selftype, DaoType *types[], int n, int code )
 {
 	return DRoutines_LookupByType2( self, selftype, types, n, code, 0 );
 }
@@ -4661,20 +4671,17 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 		}else if( mcall && n && p[0]->type == DAO_OBJECT ){
 			klass = p[0]->xObject.rootObject->defClass;
 		}
-		if( klass && klass != & rout->routHost->aux->xClass && klass->vtable ){
+		if( klass && klass != (DaoClass*)rout->routHost->aux && klass->vtable ){
 			DNode *node = MAP_Find( klass->vtable, rout );
-			if( node && node->value.pVoid ){
-				rout = (DaoRoutine*) node->value.pVoid;
-				if( rout->type == DAO_ROUTINE ) return rout;
-			}
+			if( node && node->value.pVoid ) rout = (DaoRoutine*) node->value.pVoid;
 		}
 	}
 	if( rout->specialized ){
 		/* strict checking for specialized routines: */
 		DaoRoutine *rt = DRoutines_Lookup2( rout->specialized, obj, p, n, code, 1 );
-		if( rt ) return rt;
+		if( rt ) rout = rt;
 	}
-	return (DaoRoutine*) self;
+	return (DaoRoutine*) rout;
 }
 DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code )
 {
@@ -4700,7 +4707,7 @@ DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], in
 }
 
 
-DParNode* DParNode_BestNextByType( DParNode *self, DaoType *par )
+static DParNode* DParNode_BestNextByType( DParNode *self, DaoType *par )
 {
 	DParNode **items = (DParNode**) self->nexts->items.pVoid;
 	int i, n = self->nexts->size;
@@ -4711,7 +4718,7 @@ DParNode* DParNode_BestNextByType( DParNode *self, DaoType *par )
 	}
 	return NULL;
 }
-DaoRoutine* DParNode_LookupByType2( DParNode *self, DaoType *types[], int n )
+static DaoRoutine* DParNode_LookupByType2( DParNode *self, DaoType *types[], int n )
 {
 	int i;
 	DParNode *param = NULL;

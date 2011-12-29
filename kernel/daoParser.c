@@ -1103,7 +1103,13 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 			retype = cdata;
 		}
 	}
-	if( retype == NULL ) retype = DaoType_New( "?", DAO_UDF, 0,0 );
+	if( retype == NULL ){
+		if( routine->body == NULL ){
+			retype = DaoNamespace_MakeValueType( NS, dao_none_value );
+		}else{
+			retype = DaoType_New( "?", DAO_UDF, 0,0 );
+		}
+	}
 	DArray_Append( NS->auxData, retype );
 	DString_AppendMBS( pname, iscoroutine ? "=>[" : "=>" );
 	DString_Append( pname, retype->name );

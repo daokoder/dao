@@ -1796,12 +1796,20 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
 	assert( self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
+	if( self->tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
+	if( self->bases ){
+		for(i=0; i<self->bases->size; i++){
+			DaoType *base = self->bases->items.pType[i];
+			DaoCdataType_SpecializeMethods( base );
+		}
+	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & dao_msetup_mutex );
 #endif
 	if( self->kernel == original->kernel && original->kernel && original->kernel->methods ){
 		DaoNamespace *nspace = self->kernel->nspace;
 		DMap *orimeths = original->kernel->methods;
+		DMap *methods = DHash_New( D_STRING, 0 );
 		DMap *defs = DHash_New(0,0);
 		DArray *parents = DArray_New(0);
 		DNode *it;
@@ -1816,7 +1824,6 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 		GC_ShiftRC( kernel, self->aux->xCtype.cdtype->kernel );
 		self->aux->xCtype.ctype->kernel = kernel;
 		self->aux->xCtype.cdtype->kernel = kernel;
-		kernel->methods = DHash_New( D_STRING, 0 );
 
 		for(i=0; i<self->nested->size; i++){
 			DaoType_MatchTo( self->nested->items.pType[i], original->nested->items.pType[i], defs );
@@ -1827,7 +1834,6 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 			if( type->bases == NULL ) continue;
 			for(i=0; i<type->bases->size; i++){
 				DaoType *base = type->bases->items.pType[i];
-				DaoCdataType_SpecializeMethods( base );
 				DArray_Append( parents, base );
 			}
 		}
@@ -1840,43 +1846,43 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 					if( rout->routHost->aux != original->aux ) continue;
 					rout = DaoRoutine_Copy( rout, 1, 1 );
 					DaoRoutine_Finalize( rout, self, defs );
-					DaoMethods_Insert( kernel->methods, rout, nspace, self );
+					DaoMethods_Insert( methods, rout, nspace, self );
 				}
 			}else{
 				rout = DaoRoutine_Copy( routine, 1, 1 );
 				DaoRoutine_Finalize( rout, self, defs );
-				DaoMethods_Insert( kernel->methods, rout, nspace, self );
+				DaoMethods_Insert( methods, rout, nspace, self );
 			}
 		}
 		DMap_Delete( defs );
 
-#if 0
 		for(i=1; i<parents->size; i++){
-			DaoTypeBase *sup = (DaoTypeBase*) parents->items.pVoid[i];
-			supMethods = sup->core->kernel->methods;
+			DaoType *sup = parents->items.pType[i];
+			DMap *supMethods = sup->kernel->methods;
 			for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
 				if( it->value.pRoutine->overloads ){
 					DRoutines *meta = (DRoutines*) it->value.pVoid;
 					/* skip constructor */
-					if( STRCMP( it->value.pRoutine->routName, sup->name ) ==0 ) continue;
+					if( DString_EQ( it->value.pRoutine->routName, sup->name ) ) continue;
 					for(k=0; k<meta->routines->size; k++){
 						DaoRoutine *rout = meta->routines->items.pRoutine[k];
 						/* skip methods not defined in this parent type */
-						if( rout->routHost != sup->core->kernel->abtype ) continue;
-						DaoMethods_Insert( methods, rout, self, hostype );
+						if( rout->routHost != sup->kernel->abtype ) continue;
+						DaoMethods_Insert( methods, rout, nspace, self );
 					}
 				}else{
 					DaoRoutine *rout = it->value.pRoutine;
 					/* skip constructor */
-					if( STRCMP( rout->routName, sup->name ) ==0 ) continue;
+					if( DString_EQ( rout->routName, sup->name ) ) continue;
 					/* skip methods not defined in this parent type */
-					if( rout->routHost != sup->core->kernel->abtype ) continue;
-					DaoMethods_Insert( methods, rout, self, hostype );
+					if( rout->routHost != sup->kernel->abtype ) continue;
+					DaoMethods_Insert( methods, rout, nspace, self );
 				}
 			}
 		}
 		DArray_Delete( parents );
-#endif
+		/* Set methods field after it has been setup, for read safety in multithreading: */
+		kernel->methods = methods;
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & dao_msetup_mutex );

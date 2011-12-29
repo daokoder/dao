@@ -778,7 +778,11 @@ void DaoCGC_CycRefCountDecScan()
 				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountDecrement( (DaoValue*) cdata->object );
 				cycRefCountDecrement( (DaoValue*) cdata->ctype );
-				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
+				if( value->type == DAO_CDATA ){
+					DaoGC_ScanCdata( cdata, DAO_GC_DEC );
+				}else{
+					cycRefCountDecrement( (DaoValue*) value->xCtype.cdtype );
+				}
 				break;
 			}
 		case DAO_ROUTINE :
@@ -983,7 +987,11 @@ int DaoCGC_AliveObjectScan()
 				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountIncrement( (DaoValue*) cdata->object );
 				cycRefCountIncrement( (DaoValue*) cdata->ctype );
-				DaoGC_ScanCdata( cdata, DAO_GC_INC );
+				if( value->type == DAO_CDATA ){
+					DaoGC_ScanCdata( cdata, DAO_GC_INC );
+				}else{
+					cycRefCountIncrement( (DaoValue*) value->xCtype.cdtype );
+				}
 				break;
 			}
 		case DAO_ROUTINE :
@@ -1186,7 +1194,11 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & cdata->object );
 				/* Do not break the reference to ctype now, it is required
 				 * for deleting the cdata properly. */
-				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+				if( value->type == DAO_CDATA ){
+					DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+				}else{
+					directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
+				}
 				break;
 			}
 		case DAO_ROUTINE :
@@ -1548,7 +1560,11 @@ void DaoIGC_CycRefCountDecScan()
 				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountDecrement( (DaoValue*) cdata->object );
 				cycRefCountDecrement( (DaoValue*) cdata->ctype );
-				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
+				if( value->type == DAO_CDATA ){
+					DaoGC_ScanCdata( cdata, DAO_GC_DEC );
+				}else{
+					cycRefCountDecrement( (DaoValue*) value->xCtype.cdtype );
+				}
 				break;
 			}
 		case DAO_ROUTINE :
@@ -1788,7 +1804,11 @@ int DaoIGC_AliveObjectScan()
 				DaoCdata *cdata = (DaoCdata*) value;
 				cycRefCountIncrement( (DaoValue*) cdata->object );
 				cycRefCountIncrement( (DaoValue*) cdata->ctype );
-				DaoGC_ScanCdata( cdata, DAO_GC_INC );
+				if( value->type == DAO_CDATA ){
+					DaoGC_ScanCdata( cdata, DAO_GC_INC );
+				}else{
+					cycRefCountIncrement( (DaoValue*) value->xCtype.cdtype );
+				}
 				break;
 			}
 		case DAO_ROUTINE :
@@ -2012,7 +2032,11 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & cdata->object );
 				/* Do not break the reference to ctype now, it is required
 				 * for deleting the cdata properly. */
-				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+				if( value->type == DAO_CDATA ){
+					DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+				}else{
+					directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
+				}
 				break;
 			}
 		case DAO_ROUTINE :
