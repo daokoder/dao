@@ -370,8 +370,8 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 	}
 	return 1;
 }
+void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
-int DaoRoutine_DoTypeInference( DaoRoutine *self );
 /* Return 0 if failed, otherwise return 1 plus number passed parameters: */
 static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code )
 {
@@ -510,9 +510,20 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		DMutex_Lock( & mutex_routine_specialize2 );
 		if( routine->body == routine->original->body ){
 			DaoRoutineBody *body = DaoRoutineBody_Copy( routine->body );
+			DMap *defs2 = DHash_New(0,0);
+
+			DaoType_MatchTo( routine->routType, routine->original->routType, defs2 );
 			GC_ShiftRC( body, routine->body );
 			routine->body = body;
-			DaoRoutine_DoTypeInference( routine );
+			/* Only specialize explicitly declared variables: */
+			DaoRoutine_MapTypes( routine, defs2 );
+			DMap_Delete( defs2 );
+			if( DaoRoutine_DoTypeInference( routine, 1 ) == 0 ){
+				/* Specialization may fail at unreachable parts for certain parameters.
+				 * Example: binary tree benchmark using list (binary_tree2.dao). */
+				GC_ShiftRC( (*routine2)->body, routine->body );
+				routine->body = (*routine2)->body;
+			}
 		}
 		DMutex_Unlock( & mutex_routine_specialize2 );
 	}
@@ -6675,7 +6686,6 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 }
 
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
-int DaoRoutine_DoTypeInference( DaoRoutine *self );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
 
 static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
@@ -7055,7 +7065,7 @@ InvalidMethod:
 		}
 	}
 	for(i=0; i<routines->size; i++){
-		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i] ) == 0 ){
+		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i], 0 ) == 0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
 			// XXX
 		}

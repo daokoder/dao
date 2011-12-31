@@ -327,6 +327,7 @@ static DaoRoutine* MatchByParamType( DaoRoutine *self, DaoType *selftype, DaoTyp
 	}
 	return rout;
 }
+void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DMap *defs )
 {
 	int npar = np;
@@ -390,6 +391,7 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts
 			DaoType_RenewTypes( selftype, self->nameSpace, defs );
 	}
 	// XXX match the specialize routine type to the original routine type to setup type defs!
+#if 0
 	if( self->body ){
 		DaoRoutine *rout = self;
 		DMap *tmap = rout->body->localVarType;
@@ -400,6 +402,7 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts
 			rout->body->regType->items.pType[ node->key.pInt ] = abtp;
 		}
 	}
+#endif
 }
 void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 		DaoType *ts[], int np, int code, DMap *defs )
@@ -565,7 +568,6 @@ DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self )
 	return copy;
 }
 
-int DaoRoutine_DoTypeInference( DaoRoutine *self );
 extern void DaoRoutine_JitCompile( DaoRoutine *self );
 
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
@@ -581,12 +583,12 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
 	for(i=0; i<vmCodes->size; i++){
 		body->vmCodes->codes[i] = * (DaoVmCode*) vmCodes->items.pVmc[i];
 	}
-	return DaoRoutine_DoTypeInference( self );
+	return DaoRoutine_DoTypeInference( self, 0 );
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes )
 {
 	DaoVmcArray_Assign( self->body->vmCodes, vmCodes );
-	return DaoRoutine_DoTypeInference( self );
+	return DaoRoutine_DoTypeInference( self, 0 );
 }
 
 static DaoType* DaoType_DeepItemType( DaoType *self )
@@ -937,7 +939,7 @@ void DaoPrintCallError( DArray *errors, DaoStream *stdio )
 	}
 	DString_Delete( mbs );
 }
-int DaoRoutine_DoTypeInference( DaoRoutine *self )
+int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 {
 #define NoCheckingType(t) ((t->tid==DAO_UDF)|(t->tid==DAO_ANY)|(t->tid==DAO_INITYPE))
 
@@ -3128,7 +3130,7 @@ NotExist_TryAux:
 
 					k = defs2->size;
 					DaoRoutine_PassParamTypes2( rout, bt, tp, j, code, defs2 );
-					if( notide && rout != self && (defs2->size > k || rout->routType->aux->xType.tid == 0) ){
+					if( notide && rout != self && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == 0) ){
 						DaoRoutine *orig, *drout;
 						if( rout->original ) rout = rout->original;
 						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
@@ -3144,10 +3146,17 @@ NotExist_TryAux:
 						GC_ShiftRC( orig, drout->original );
 						DRoutines_Add( orig->specialized, drout );
 						drout->original = orig;
-						if( rout->body && rout->routType->aux->xType.tid == 0 ){
+						if( rout->body && drout->routType->aux->xType.tid == 0 ){
+							DaoRoutineBody *body = DaoRoutineBody_Copy( drout->body );
+							GC_ShiftRC( body, drout->body );
+							drout->body = body;
+							DMap_Clear( defs2 );
+							DaoType_MatchTo( drout->routType, orig->routType, defs2 );
+							DaoRoutine_MapTypes( drout, defs2 );
 							/* to infer returned type */ 
-							if( DaoRoutine_DoTypeInference( drout ) ==0 ) goto InvParam;
+							if( DaoRoutine_DoTypeInference( drout, silent ) ==0 ) goto InvParam;
 						}
+						rout = drout;
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
 					/*
@@ -4094,10 +4103,12 @@ InvParam :
 	 ec = DTE_PARAM_ERROR;
 	 goto ErrorTyping;
 #if 0
-	 FunctionNotImplemented: ec = DTE_ROUT_NOT_IMPLEMENTED; goto ErrorTyping;
+	 FunctionNotImplemented:
+	 ec = DTE_ROUT_NOT_IMPLEMENTED; goto ErrorTyping;
 #endif
 
 ErrorTyping:
+	 if( silent ) goto SilentError;
 	 vmc = self->body->annotCodes->items.pVmc[cid];
 	 sprintf( char200, "%s:%i,%i,%i", getOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
 
@@ -4154,6 +4165,7 @@ ErrorTyping:
 		 DaoStream_WriteMBS( stdio, " \";\n" );
 	 }
 	 DaoPrintCallError( errors, stdio );
+SilentError:
 	 DArray_Delete( errors );
 	 dao_free( init );
 	 dao_free( addCount );

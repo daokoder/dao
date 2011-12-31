@@ -164,7 +164,6 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 	DArray_Append( self->references, reference );
 }
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
-int  DaoRoutine_DoTypeInference( DaoRoutine *self );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
@@ -292,14 +291,14 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DaoValue_Update( & self->cstData->items.pValue[i], ns, deftypes );
 	}
 	for(i=0; i<routines->size; i++){
-		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i] ) == 0 ) goto Failed;
+		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i], 0 ) == 0 ) goto Failed;
 	}
 	DArray_Erase( self->classes, 1, MAXSIZE );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
 	DArray_Delete( routines );
 	DaoRoutine_Finalize( self->classRoutine, self->objType, deftypes );
-	return DaoRoutine_DoTypeInference( self->classRoutine );
+	return DaoRoutine_DoTypeInference( self->classRoutine, 0 );
 Failed:
 	DArray_Delete( parents );
 	DArray_Delete( offsets );

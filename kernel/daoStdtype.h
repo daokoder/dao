@@ -137,6 +137,10 @@ DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
 #define DAO_TUPLE_ITEMS 2
+/* 2 is used instead of 1, for two reasons:
+ * A. most often used tuples have at least two items;
+ * B. some builtin tuples have at least two items, and are accessed by
+ *    constant sub index, compilers such Clang may complain if 1 is used. */
 
 struct DaoTuple
 {
@@ -145,11 +149,8 @@ struct DaoTuple
 	int         size; /* packed with the previous field in 64-bits system; */
 	DaoType    *unitype;
 	DaoValue   *items[DAO_TUPLE_ITEMS]; /* the actual number of items is in ::size; */
-	/* 2 is used instead of 1, for two reasons:
-	 * A. most often used tuples have at least two items;
-	 * B. some builtin tuples have at least two items, and are accessed by
-	 *    constant sub index, compilers such Clang may complain if 1 is used. */
 };
+
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int init );
 DAO_DLL void DaoTuple_Delete( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );

@@ -72,6 +72,7 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
 void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
+int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
 
 
 struct DaoRoutineBody
