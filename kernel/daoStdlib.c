@@ -398,7 +398,7 @@ static void DaoNS_GetAuxMethods( DaoNamespace *ns, DaoValue *p, DArray *methods 
 			DArray_PushBack( methods, meth );
 		}
 	}
-	for(i=0; i<ns->parents->size; i++) DaoNS_GetAuxMethods( ns->parents->items.pNS[i], p, methods );
+	for(i=0; i<ns->namespaces->size; i++) DaoNS_GetAuxMethods( ns->namespaces->items.pNS[i], p, methods );
 }
 static void STD_ListMeth( DaoProcess *proc, DaoValue *p[], int N )
 {

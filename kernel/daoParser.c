@@ -4228,8 +4228,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				break;
 			case DAO_CLASS_VARIABLE :
 				if( isdecl && cst ){
-					DaoType *type = hostClass->glbTypeTable->items.pArray[up]->items.pType[id];
-					DaoValue **data = hostClass->glbDataTable->items.pArray[up]->items.pValue + id;
+					DaoType *type = hostClass->classes->items.pClass[up]->glbDataType->items.pType[id];
+					DaoValue **data = hostClass->classes->items.pClass[up]->glbData->items.pValue + id;
 					DaoValue_Move( value, data, type );
 					remove = 1;
 				}else if( isdecl && self->isDynamicClass ){
@@ -4620,9 +4620,9 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 	}
 	switch( st ){
 	case DAO_LOCAL_CONSTANT : val = routine->routConsts->items.items.pValue[id]; break; /*XXX up*/
-	case DAO_CLASS_CONSTANT : val = klass->cstDataTable->items.pArray[up]->items.pValue[id]; break;
-	case DAO_GLOBAL_VARIABLE : val = ns->varDataTable->items.pArray[up]->items.pValue[id]; break;
-	case DAO_GLOBAL_CONSTANT : val = ns->cstDataTable->items.pArray[up]->items.pValue[id]; break;
+	case DAO_CLASS_CONSTANT : val = klass->classes->items.pClass[up]->cstData->items.pValue[id]; break;
+	case DAO_GLOBAL_VARIABLE : val = ns->namespaces->items.pNS[up]->varData->items.pValue[id]; break;
+	case DAO_GLOBAL_CONSTANT : val = ns->namespaces->items.pNS[up]->cstData->items.pValue[id]; break;
 	default : break;
 	}
 	return val;
@@ -4840,12 +4840,6 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		cyclic = (DaoNamespace_AddParent( ns, mod ) == 0);
 	}
 	if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
-	if( ns == nameSpace ){
-		DArray_Append( nameSpace->nsLoaded, mod );
-	}else{
-		DArray_Append( ns->nsLoaded, mod );
-		DArray_Append( nameSpace->nsLoaded, ns );
-	}
 
 	/*
 	   printf("ns=%p; mod=%p; myns=%p\n", ns, mod, nameSpace);

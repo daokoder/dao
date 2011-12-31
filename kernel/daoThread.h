@@ -136,6 +136,13 @@ DAO_DLL DThreadData* DThread_GetSpecific();
 
 DAO_DLL void DaoInitThread();
 
+#else
+
+typedef int DMutex;
+
+#define DMutex_Lock( x ) (1 == 1)
+#define DMutex_Unlock( x ) (1 == 1)
+
 #endif /* DAO_WITH_THREAD */
 
 

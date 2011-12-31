@@ -50,8 +50,8 @@ static void DaoClass_SetField( DaoValue *self0, DaoProcess *proc, DString *name,
 	if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_VARIABLE ){
 		int up = LOOKUP_UP( node->value.pSize );
 		int id = LOOKUP_ID( node->value.pSize );
-		DaoValue **dt = self->glbDataTable->items.pArray[up]->items.pValue + id;
-		DaoType *tp = self->glbTypeTable->items.pArray[up]->items.pType[ id ];
+		DaoValue **dt = self->classes->items.pClass[up]->glbData->items.pValue + id;
+		DaoType *tp = self->classes->items.pClass[up]->glbDataType->items.pType[ id ];
 		if( DaoValue_Move( value, dt, tp ) ==0 )
 			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
 	}else{
@@ -101,9 +101,7 @@ DaoClass* DaoClass_New()
 	self->attribs = 0;
 	self->objDefCount = 0;
 
-	self->cstDataTable = DArray_New(0);
-	self->glbDataTable = DArray_New(0);
-	self->glbTypeTable = DArray_New(0);
+	self->classes = DArray_New(0);
 	self->lookupTable  = DHash_New(D_STRING,0);
 	self->ovldRoutMap  = DHash_New(D_STRING,0);
 	self->abstypes = DMap_New(D_STRING,0);
@@ -136,11 +134,9 @@ void DaoClass_Delete( DaoClass *self )
 	DMap_Delete( self->deflines );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->ovldRoutMap );
+	DArray_Delete( self->classes );
 	DArray_Delete( self->cstData );
 	DArray_Delete( self->glbData );
-	DArray_Delete( self->cstDataTable );
-	DArray_Delete( self->glbDataTable );
-	DArray_Delete( self->glbTypeTable );
 	DArray_Delete( self->glbDataType );
 	DArray_Delete( self->objDataType );
 	DArray_Delete( self->objDataName );
@@ -219,11 +215,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DaoClass_Parents( self, parents, offsets );
 	for(i=1; i<parents->size; i++){
 		DaoClass *klass = parents->items.pClass[i];
-		if( klass->type == DAO_CLASS ){
-			DArray_Append( self->cstDataTable, klass->cstData );
-			DArray_Append( self->glbDataTable, klass->glbData );
-			DArray_Append( self->glbTypeTable, klass->glbDataType );
-		}
+		if( klass->type == DAO_CLASS ) DArray_Append( self->classes, klass );
 	}
 
 	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine, 1, 1 );
@@ -302,9 +294,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	for(i=0; i<routines->size; i++){
 		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i] ) == 0 ) goto Failed;
 	}
-	DArray_Erase( self->cstDataTable, 1, MAXSIZE );
-	DArray_Erase( self->glbDataTable, 1, MAXSIZE );
-	DArray_Erase( self->glbTypeTable, 1, MAXSIZE );
+	DArray_Erase( self->classes, 1, MAXSIZE );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
 	DArray_Delete( routines );
@@ -438,9 +428,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DaoClass_AddConst( self, rout->routName, (DaoValue*)self->classRoutines, DAO_DATA_PUBLIC, -1 );
 	DString_Delete( str );
 
-	DArray_Append( self->cstDataTable, self->cstData );
-	DArray_Append( self->glbDataTable, self->glbData );
-	DArray_Append( self->glbTypeTable, self->glbDataType );
+	DArray_Append( self->classes, self );
 }
 /* breadth-first search */
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
@@ -532,10 +520,8 @@ void DaoClass_DeriveClassData( DaoClass *self )
 		DaoClass *klass = parents->items.pClass[i];
 		DaoCdata *cdata = parents->items.pCdata[i];
 		if( klass->type == DAO_CLASS ){
-			int up = self->cstDataTable->size;
-			DArray_Append( self->cstDataTable, klass->cstData );
-			DArray_Append( self->glbDataTable, klass->glbData );
-			DArray_Append( self->glbTypeTable, klass->glbDataType );
+			int up = self->classes->size;
+			DArray_Append( self->classes, klass );
 			/* For class data: */
 			for( id=0; id<klass->cstDataName->size; id++ ){
 				DString *name = klass->cstDataName->items.pString[id];
@@ -814,17 +800,17 @@ DaoValue* DaoClass_GetConst( DaoClass *self, int id )
 {
 	int up = LOOKUP_UP( id );
 	id = LOOKUP_ID( id );
-	if( up >= self->cstDataTable->size ) return NULL;
-	if( id >= self->cstDataTable->items.pArray[up]->size ) return NULL;
-	return self->cstDataTable->items.pArray[up]->items.pValue[id];
+	if( up >= self->classes->size ) return NULL;
+	if( id >= self->classes->items.pClass[up]->cstData->size ) return NULL;
+	return self->classes->items.pClass[up]->cstData->items.pValue[id];
 }
 void DaoClass_SetConst( DaoClass *self, int id, DaoValue *data )
 {
 	int up = LOOKUP_UP( id );
 	id = LOOKUP_ID( id );
-	if( up >= self->cstDataTable->size ) return;
-	if( id >= self->cstDataTable->items.pArray[up]->size ) return;
-	DaoValue_Copy( data, & self->cstDataTable->items.pArray[up]->items.pValue[id] );
+	if( up >= self->classes->size ) return;
+	if( id >= self->classes->items.pClass[up]->cstData->size ) return;
+	DaoValue_Copy( data, & self->classes->items.pClass[up]->cstData->items.pValue[id] );
 }
 int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass *thisClass )
 {
@@ -841,8 +827,8 @@ int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass 
 	id = LOOKUP_ID( node->value.pSize );
 	if( self == thisClass || perm == DAO_DATA_PUBLIC || (child && perm >= DAO_DATA_PROTECTED) ){
 		switch( sto ){
-		case DAO_CLASS_VARIABLE : p = self->glbDataTable->items.pArray[up]->items.pValue[id]; break;
-		case DAO_CLASS_CONSTANT : p = self->cstDataTable->items.pArray[up]->items.pValue[id]; break;
+		case DAO_CLASS_VARIABLE : p = self->classes->items.pClass[up]->glbData->items.pValue[id]; break;
+		case DAO_CLASS_CONSTANT : p = self->classes->items.pClass[up]->cstData->items.pValue[id]; break;
 		default : return DAO_ERROR_FIELD;
 		}
 		if( p ) *value = p;
@@ -868,7 +854,7 @@ DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClas
 	if( self == thisClass || perm == DAO_DATA_PUBLIC || (child && perm >=DAO_DATA_PROTECTED) ){
 		switch( sto ){
 		case DAO_OBJECT_VARIABLE : return self->objDataType->items.pType + id;
-		case DAO_CLASS_VARIABLE  : return self->glbTypeTable->items.pArray[up]->items.pType + id;
+		case DAO_CLASS_VARIABLE  : return self->classes->items.pClass[up]->glbDataType->items.pType + id;
 		case DAO_CLASS_CONSTANT  : return NULL;
 		default : break;
 		}

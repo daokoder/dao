@@ -1389,6 +1389,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 		GC_DecRC( ns );
 		return NULL;
 	}
+	DaoNamespace_UpdateLookupTable( ns );
 	return ns;
 }
 void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *file, const char *data )
@@ -1772,8 +1773,12 @@ const char *method_typename =
 #ifdef DAO_WITH_THREAD
 extern DMutex mutex_long_sharing;
 extern DMutex mutex_string_sharing;
-extern DMutex dao_vsetup_mutex;
-extern DMutex dao_msetup_mutex;
+extern DMutex mutex_type_map;
+extern DMutex mutex_values_setup;
+extern DMutex mutex_methods_setup;
+extern DMutex mutex_routines_update;
+extern DMutex mutex_routine_specialize;
+extern DMutex mutex_routine_specialize2;
 extern DMutex dao_cdata_mutex;
 #endif
 
@@ -1824,8 +1829,12 @@ DaoVmSpace* DaoInit( const char *command )
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & mutex_long_sharing );
 	DMutex_Init( & mutex_string_sharing );
-	DMutex_Init( & dao_vsetup_mutex );
-	DMutex_Init( & dao_msetup_mutex );
+	DMutex_Init( & mutex_type_map );
+	DMutex_Init( & mutex_values_setup );
+	DMutex_Init( & mutex_methods_setup );
+	DMutex_Init( & mutex_routines_update );
+	DMutex_Init( & mutex_routine_specialize );
+	DMutex_Init( & mutex_routine_specialize2 );
 	DMutex_Init( & dao_cdata_mutex );
 #endif
 
@@ -2004,6 +2013,17 @@ void DaoQuit()
 		dao_jit.Compile = NULL;
 		dao_jit.Execute = NULL;
 	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Destroy( & mutex_long_sharing );
+	DMutex_Destroy( & mutex_string_sharing );
+	DMutex_Destroy( & mutex_type_map );
+	DMutex_Destroy( & mutex_values_setup );
+	DMutex_Destroy( & mutex_methods_setup );
+	DMutex_Destroy( & mutex_routines_update );
+	DMutex_Destroy( & mutex_routine_specialize );
+	DMutex_Destroy( & mutex_routine_specialize2 );
+	DMutex_Destroy( & dao_cdata_mutex );
+#endif
 }
 DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {

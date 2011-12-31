@@ -28,6 +28,10 @@
 #include"daoNamespace.h"
 #include"daoValue.h"
 
+DMutex mutex_routines_update;
+DMutex mutex_routine_specialize;
+DMutex mutex_routine_specialize2;
+
 DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 {
 	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof(DaoRoutine) );
@@ -1028,11 +1032,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 	DArray  *dataCL[2] = { NULL, NULL };
 	DArray  *typeVL[2] = { NULL, NULL };
 	DArray  *typeVO[2] = { NULL, NULL };
-	DArray  *dataCK = hostClass ? hostClass->cstDataTable : NULL;
-	DArray  *typeVK = hostClass ? hostClass->glbTypeTable : NULL;
-	DArray  *dataCG = self->nameSpace->cstDataTable;
-	DArray  *dataVG = self->nameSpace->varDataTable;
-	DArray  *typeVG = self->nameSpace->varTypeTable;
+	DArray  *CSS = hostClass ? hostClass->classes : NULL;
+	DArray  *NSS = self->nameSpace->namespaces;
 	DaoNone  dummy = {0,0,0,0,0};
 	DaoValue  *constag = (DaoValue*) & dummy;
 	DaoValue  *val = NULL;
@@ -1206,8 +1207,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 		case DVM_GETCL : case DVM_GETCK : case DVM_GETCG :
 			{
 				if( code == DVM_GETCL ) val = dataCL[opa]->items.pValue[opb];
-				else if( code == DVM_GETCK ) val = dataCK->items.pArray[opa]->items.pValue[opb];
-				else /* code == DVM_GETCG */ val = dataCG->items.pArray[opa]->items.pValue[opb];
+				else if( code == DVM_GETCK ) val = CSS->items.pClass[opa]->cstData->items.pValue[opb];
+				else /* code == DVM_GETCG */ val = NSS->items.pNS[opa]->cstData->items.pValue[opb];
 				at = DaoNamespace_GetType( ns, val );
 
 				UpdateType( opc, at );
@@ -1228,8 +1229,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 				if( code == DVM_GETVH ) at = type[opb];
 				else if( code == DVM_GETVL ) at = typeVL[opa]->items.pType[opb];
 				else if( code == DVM_GETVO ) at = typeVO[opa]->items.pType[opb];
-				else if( code == DVM_GETVK ) at = typeVK->items.pArray[opa]->items.pType[opb];
-				else /* code == DVM_GETVG */ at = typeVG->items.pArray[opa]->items.pType[opb];
+				else if( code == DVM_GETVK ) at = CSS->items.pClass[opa]->glbDataType->items.pType[opb];
+				else /* code == DVM_GETVG */ at = NSS->items.pNS[opa]->varType->items.pType[opb];
 				if( at == NULL ) at = udf;
 				UpdateType( opc, at );
 				/*
@@ -1251,8 +1252,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 				if( code == DVM_SETVH ) tp = type + opb;
 				else if( code == DVM_SETVL ) tp = typeVL[opc]->items.pType + opb;
 				else if( code == DVM_SETVO ) tp = typeVO[opc]->items.pType + opb;
-				else if( code == DVM_SETVK ) tp = typeVK->items.pArray[opc]->items.pType + opb;
-				else /* code == DVM_SETVG */ tp = typeVG->items.pArray[opc]->items.pType + opb;
+				else if( code == DVM_SETVK ) tp = CSS->items.pClass[opc]->glbDataType->items.pType + opb;
+				else /* code == DVM_SETVG */ tp = NSS->items.pNS[opc]->varType->items.pType + opb;
 				at = type[opa];
 				if( tp && ( *tp==NULL || (*tp)->tid ==DAO_UDF ) ){
 					GC_ShiftRC( at, *tp );
@@ -1273,7 +1274,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 						&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 					if( typed_code ){
 						if( code == DVM_SETVG ){
-							DaoValue **p = dataVG->items.pArray[opc]->items.pValue + opb;
+							DaoValue **p = NSS->items.pNS[opc]->varData->items.pValue + opb;
 							if( *p == NULL ) *p = DaoValue_SimpleCopy( at->value );
 						}
 						vmc->code = 3*(tp[0]->tid - DAO_INTEGER) + (at->tid - DAO_INTEGER) + DVM_SETVH_II;
@@ -1490,7 +1491,9 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 				}else if( at->tid == DAO_UDF || at->tid == DAO_ANY
 						|| at->tid == DAO_INITYPE ){
 					ct = udf;
-				}else if( at->kernel ){
+				}else if( at->typer ){
+					/* Use at->typer instead of at->kernel, because at->kernel may still be NULL,
+					 * if the type is created before the setup of the typer structure. */
 					DString_SetMBS( mbs, "[]" );
 					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
@@ -1562,7 +1565,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 					node = DMap_Find( at->aux->xInterface.methods, mbs );
 					if( node == NULL ) goto WrongContainer;
 					meth = node->value.pRoutine;
-				}else if( at->kernel ){
+				}else if( at->typer ){
 					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}
@@ -1717,7 +1720,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self )
 					//}else if( at->tid == DAO_ANY || at->tid == DAO_INITYPE ){
 					//  ct = any;
 #endif
-			}else if( at->kernel ){
+			}else if( at->typer ){
 				val = DaoType_FindValue( at, str );
 				if( val && val->type == DAO_ROUTINE ){
 					DaoRoutine *func = (DaoRoutine*) val;
@@ -2005,7 +2008,7 @@ NotExist_TryAux:
 					node = DMap_Find( ct->aux->xInterface.methods, mbs );
 					if( node == NULL ) goto WrongContainer;
 					meth = node->value.pRoutine;
-				}else if( ct->kernel ){
+				}else if( ct->typer ){
 					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}
@@ -2929,7 +2932,7 @@ NotExist_TryAux:
 					meth = node->value.pRoutine;
 					break;
 				default :
-					if( at->kernel ) meth = DaoType_FindFunction( at, mbs );
+					if( at->typer ) meth = DaoType_FindFunction( at, mbs );
 					break;
 				}
 				if( meth == NULL ) goto NotMatch;
@@ -3133,7 +3136,11 @@ NotExist_TryAux:
 						orig = rout;
 						drout = DaoRoutine_Copy( rout, 0, 0 );
 						DaoRoutine_PassParamTypes( drout, bt, tp, j, code, defs2 );
+
+						DMutex_Lock( & mutex_routine_specialize );
 						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
+						DMutex_Unlock( & mutex_routine_specialize );
+
 						GC_ShiftRC( orig, drout->original );
 						DRoutines_Add( orig->specialized, drout );
 						drout->original = orig;
@@ -3421,7 +3428,7 @@ TryPushBlockReturnType:
 			init[opc] = 1;
 			break;
 		case DVM_GETCK_I : case DVM_GETCK_F : case DVM_GETCK_D : 
-			val = dataCK->items.pArray[opa]->items.pValue[opb];
+			val = CSS->items.pClass[opa]->cstData->items.pValue[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETCK_I);
 			at = DaoNamespace_GetType( ns, val );
 			if( ct == NULL ){
@@ -3433,7 +3440,7 @@ TryPushBlockReturnType:
 			init[opc] = 1;
 			break;
 		case DVM_GETCG_I : case DVM_GETCG_F : case DVM_GETCG_D : 
-			val = dataCG->items.pArray[opa]->items.pValue[opb];
+			val = NSS->items.pNS[opa]->cstData->items.pValue[opb];
 			TT1 = DAO_INTEGER + (code - DVM_GETCG_I);
 			at = DaoNamespace_GetType( ns, val );
 			if( ct == NULL ){
@@ -3479,7 +3486,7 @@ TryPushBlockReturnType:
 			break;
 		case DVM_GETVK_I : case DVM_GETVK_F : case DVM_GETVK_D : 
 			TT1 = DAO_INTEGER + (code - DVM_GETVK_I);
-			at = typeVK->items.pArray[opa]->items.pType[opb];
+			at = CSS->items.pClass[opa]->glbDataType->items.pType[opb];
 			if( ct == NULL ){
 				GC_ShiftRC( simtps[TT1], type[opc] );
 				ct = type[opc] = simtps[TT1];
@@ -3490,7 +3497,7 @@ TryPushBlockReturnType:
 			break;
 		case DVM_GETVG_I : case DVM_GETVG_F : case DVM_GETVG_D : 
 			TT1 = DAO_INTEGER + (code - DVM_GETVG_I);
-			at = typeVG->items.pArray[opa]->items.pType[opb];
+			at = NSS->items.pNS[opa]->varType->items.pType[opb];
 			if( ct == NULL ){
 				GC_ShiftRC( simtps[TT1], type[opc] );
 				ct = type[opc] = simtps[TT1];
@@ -3545,7 +3552,7 @@ TryPushBlockReturnType:
 		case DVM_SETVK_II : case DVM_SETVK_IF : case DVM_SETVK_ID :
 		case DVM_SETVK_FI : case DVM_SETVK_FF : case DVM_SETVK_FD :
 		case DVM_SETVK_DI : case DVM_SETVK_DF : case DVM_SETVK_DD :
-			tp = typeVK->items.pArray[opc]->items.pType + opb;
+			tp = CSS->items.pClass[opc]->glbDataType->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ){
 				GC_ShiftRC( type[opa], *tp );
 				*tp = type[opa];
@@ -3559,7 +3566,7 @@ TryPushBlockReturnType:
 		case DVM_SETVG_II : case DVM_SETVG_IF : case DVM_SETVG_ID :
 		case DVM_SETVG_FI : case DVM_SETVG_FF : case DVM_SETVG_FD :
 		case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
-			tp = typeVG->items.pArray[opc]->items.pType + opb;
+			tp = NSS->items.pNS[opc]->varType->items.pType + opb;
 			if( *tp==NULL || (*tp)->tid ==DAO_UDF ){
 				GC_ShiftRC( type[opa], *tp );
 				*tp = type[opa];
@@ -4341,6 +4348,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	if( routine->routType == NULL ) return NULL;
 	/* If the name is not set yet, set it: */
 	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != MAXSIZE;
+	DMutex_Lock( & mutex_routines_update );
 	if( routine->routType->attrib & DAO_TYPE_SELF ){
 		if( self->mtree == NULL ) self->mtree = DParamNode_New();
 		param = DParamNode_Add( self->mtree, routine, 0 );
@@ -4348,10 +4356,14 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		if( self->tree == NULL ) self->tree = DParamNode_New();
 		param = DParamNode_Add( self->tree, routine, 0 );
 	}
-	if( routine == param->routine ){
-		DArray_Append( self->routines, routine );
-		GC_IncRC( routine );
-	}else if( routine->routHost && param->routine->routHost ){
+	/* Runtime routine specialization based on parameter types may create 
+	 * two specializations with identical parameter signature, so one of 
+	 * the specialized routine will not be successully added to the tree.
+	 * To avoid memory leaking, the one not added to the tree should also
+	 * be appended to "routines", so that it can be properly garbage collected. */
+	DArray_Append( self->routines, routine );
+	GC_IncRC( routine );
+	if( routine->routHost && param->routine->routHost ){
 		DaoType *t1 = routine->routHost;
 		DaoType *t2 = param->routine->routHost;
 		if( t1->tid == DAO_CDATA && t2->tid == DAO_CDATA ){
@@ -4371,6 +4383,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 			param->routine = routine;
 		}
 	}
+	DMutex_Unlock( & mutex_routines_update );
 	return param->routine;
 }
 void DRoutines_Import( DRoutines *self, DRoutines *other )

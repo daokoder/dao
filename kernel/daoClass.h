@@ -24,11 +24,8 @@ struct DaoClass
 
 	/* Holding index of class members, including data from its parents: */
 	/* negative index indicates an inaccessible private member from a parent? XXX */
-	DMap  *lookupTable; /* <DString*,size_t> */
-
-	DArray  *cstDataTable; /* <DVarray*> */
-	DArray  *glbDataTable; /* <DVarray*> */
-	DArray  *glbTypeTable; /* <DArray*> */
+	DMap    *lookupTable; /* <DString*,size_t> */
+	DArray  *classes; /* <DaoClass*> */
 
 	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
 	DArray  *objDataType;  /* <DaoType*> */

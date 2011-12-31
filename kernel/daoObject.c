@@ -353,8 +353,8 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 		value = self->objValues + id;
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 	}else if( st == DAO_CLASS_VARIABLE ){
-		value = klass->glbDataTable->items.pArray[up]->items.pValue + id;
-		type = klass->glbTypeTable->items.pArray[up]->items.pType[ id ];
+		value = klass->classes->items.pClass[up]->glbData->items.pValue + id;
+		type = klass->classes->items.pClass[up]->glbDataType->items.pType[ id ];
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 	}else if( st == DAO_CLASS_CONSTANT ){
 		return DAO_ERROR_FIELD;
@@ -385,8 +385,8 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	switch( st ){
 	case DAO_OBJECT_VARIABLE : p = self->objValues[id]; break;
-	case DAO_CLASS_VARIABLE  : p = klass->glbDataTable->items.pArray[up]->items.pValue[id]; break;
-	case DAO_CLASS_CONSTANT  : p = klass->cstDataTable->items.pArray[up]->items.pValue[id]; break;
+	case DAO_CLASS_VARIABLE  : p = klass->classes->items.pClass[up]->glbData->items.pValue[id]; break;
+	case DAO_CLASS_CONSTANT  : p = klass->classes->items.pClass[up]->cstData->items.pValue[id]; break;
 	default : break;
 	}
 	*data = p;

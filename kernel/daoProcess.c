@@ -41,7 +41,8 @@
 #define FE_ALL_EXCEPT 0xffff
 #endif
 
-#define SEMA_PER_VMPROC  1000
+extern DMutex mutex_routine_specialize;
+extern DMutex mutex_routine_specialize2;
 
 struct DaoJIT dao_jit = { NULL, NULL, NULL, NULL };
 
@@ -495,18 +496,25 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		DaoRoutine *original = routine->original ? routine->original : routine;
 		routine = DaoRoutine_Copy( original, 0, 0 );
 		DaoRoutine_Finalize( routine, routine->routHost, defs );
+
+		DMutex_Lock( & mutex_routine_specialize );
 		if( original->specialized == NULL ) original->specialized = DRoutines_New();
+		DMutex_Unlock( & mutex_routine_specialize );
+
 		GC_ShiftRC( original, routine->original );
 		DRoutines_Add( original->specialized, routine );
 		routine->original = original;
 	}
 	if( routine->original && routine->body && routine->body == routine->original->body ){
 		/* Specialize routine body (local types and VM instructions): */
-		// XXX mutex
-		DaoRoutineBody *body = DaoRoutineBody_Copy( routine->body );
-		GC_ShiftRC( body, routine->body );
-		routine->body = body;
-		DaoRoutine_DoTypeInference( routine );
+		DMutex_Lock( & mutex_routine_specialize2 );
+		if( routine->body == routine->original->body ){
+			DaoRoutineBody *body = DaoRoutineBody_Copy( routine->body );
+			GC_ShiftRC( body, routine->body );
+			routine->body = body;
+			DaoRoutine_DoTypeInference( routine );
+		}
+		DMutex_Unlock( & mutex_routine_specialize2 );
 	}
 	*routine2 = routine;
 	if( defs ) DMap_Delete( defs );
@@ -735,18 +743,17 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoObject *this = NULL;
 	DaoObject *object = NULL;
 	DaoArray *array;
+	DArray   *NSS;
+	DArray   *CSS = NULL;
 	DArray   *dataCL[2] = { NULL, NULL };
 	DArray   *dataCK = NULL;
-	DArray   *dataCG = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH] = { NULL, NULL, NULL, NULL };
 	DaoValue  **dataVL = NULL;
 	DaoValue  **dataVO = NULL;
 	DArray   *dataVK = NULL;
-	DArray   *dataVG = NULL;
 	DArray   *typeVL = NULL;
 	DArray   *typeVO = NULL;
 	DArray   *typeVK = NULL;
-	DArray   *typeVG = NULL;
 	DaoValue *value, *vA, *vB, *vC = NULL;
 	DaoValue **vA2, **vB2, **vC2 = NULL;
 	DaoValue **vref;
@@ -1102,14 +1109,10 @@ CallEntry:
 	locVars = self->activeValues;
 	locTypes = self->activeTypes;
 	dataCL[0] = & routine->routConsts->items;
-	dataCG = here->cstDataTable;
-	dataVG = here->varDataTable;
-	typeVG = here->varTypeTable;
+	NSS = here->namespaces;
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT ){
 		host = & routine->routHost->aux->xClass;
-		dataCK = host->cstDataTable;
-		dataVK = host->glbDataTable;
-		typeVK = host->glbTypeTable;
+		CSS = host->classes;
 		if( !(routine->attribs & DAO_ROUT_STATIC) ){
 			dataVO = this->objValues;
 			typeVO = host->objDataType;
@@ -1153,11 +1156,11 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETCK ){
-			value = dataCK->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETCG ){
-			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETVH ){
@@ -1170,11 +1173,11 @@ CallEntry:
 			GC_ShiftRC( dataVO[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVO[ vmc->b ];
 		}OPNEXT() OPCASE( GETVK ){
-			value = dataVK->items.pArray[vmc->a]->items.pValue[ vmc->b ];
+			value = CSS->items.pClass[vmc->a]->glbData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETVG ){
-			value = dataVG->items.pArray[vmc->a]->items.pValue[ vmc->b ];
+			value = NSS->items.pNS[vmc->a]->varData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETI ) OPCASE( GETMI ){
@@ -1199,12 +1202,12 @@ CallEntry:
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVK ){
-			abtp = typeVK->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
-			vref = dataVK->items.pArray[vmc->c]->items.pValue + vmc->b;
+			abtp = CSS->items.pClass[vmc->c]->glbDataType->items.pType[ vmc->b ];
+			vref = CSS->items.pClass[vmc->c]->glbData->items.pValue + vmc->b;
 			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETVG ){
-			abtp = typeVG->items.pArray[ vmc->c ]->items.pType[ vmc->b ];
-			vref = dataVG->items.pArray[vmc->c]->items.pValue + vmc->b;
+			abtp = NSS->items.pNS[vmc->c]->varType->items.pType[ vmc->b ];
+			vref = NSS->items.pNS[vmc->c]->varData->items.pValue + vmc->b;
 			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETI ) OPCASE( SETMI ){
 			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST) )
@@ -1485,22 +1488,22 @@ CallEntry:
 			value = dataCL[ vmc->a ]->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETCK_I ){
-			value = dataCK->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETCK_F ){
-			value = dataCK->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETCK_D ){
-			value = dataCK->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETCG_I ){
-			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETCG_F ){
-			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETCG_D ){
-			value = dataCG->items.pArray[ vmc->a ]->items.pValue[ vmc->b ];
+			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETVH_I ){
 			locVars[ vmc->c ]->xInteger.value = dataVH[ vmc->a ]->activeValues[ vmc->b ]->xInteger.value;
@@ -1521,17 +1524,17 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVO_D ){
 			locVars[ vmc->c ]->xDouble.value = dataVO[ vmc->b ]->xDouble.value;
 		}OPNEXT() OPCASE( GETVK_I ){
-			IntegerOperand( vmc->c ) = ArrayArrayValue( dataVK, vmc->a, vmc->b )->xInteger.value;
+			IntegerOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pInteger[vmc->b]->value;
 		}OPNEXT() OPCASE( GETVK_F ){
-			FloatOperand( vmc->c ) = ArrayArrayValue( dataVK, vmc->a, vmc->b )->xFloat.value;
+			FloatOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pFloat[vmc->b]->value;
 		}OPNEXT() OPCASE( GETVK_D ){
-			DoubleOperand( vmc->c ) = ArrayArrayValue( dataVK, vmc->a, vmc->b )->xDouble.value;
+			DoubleOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pDouble[vmc->b]->value;
 		}OPNEXT() OPCASE( GETVG_I ){
-			IntegerOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xInteger.value;
+			IntegerOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pInteger[vmc->b]->value;
 		}OPNEXT() OPCASE( GETVG_F ){
-			FloatOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xFloat.value;
+			FloatOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pFloat[vmc->b]->value;
 		}OPNEXT() OPCASE( GETVG_D ){
-			DoubleOperand( vmc->c ) = ArrayArrayValue( dataVG, vmc->a, vmc->b )->xDouble.value;
+			DoubleOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pDouble[vmc->b]->value;
 		}OPNEXT() OPCASE( SETVH_II ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVH_IF ){
@@ -1587,41 +1590,41 @@ CallEntry:
 		}OPNEXT() OPCASE( SETVO_DD ){
 			dataVO[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_II ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xInteger.value = IntegerOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_IF ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xInteger.value = FloatOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_ID ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xInteger.value = DoubleOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_FI ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xFloat.value = IntegerOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_FF ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xFloat.value = FloatOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_FD ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xFloat.value = DoubleOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_DI ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xDouble.value = IntegerOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_DF ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xDouble.value = FloatOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_DD ){
-			ArrayArrayValue( dataVK, vmc->c, vmc->b )->xDouble.value = DoubleOperand( vmc->a );
+			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_II ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xInteger.value = IntegerOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_IF ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xInteger.value = FloatOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_ID ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xInteger.value = DoubleOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_FI ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xFloat.value = IntegerOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_FF ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xFloat.value = FloatOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_FD ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xFloat.value = DoubleOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_DI ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xDouble.value = IntegerOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_DF ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xDouble.value = FloatOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_DD ){
-			ArrayArrayValue( dataVG, vmc->c, vmc->b )->xDouble.value = DoubleOperand( vmc->a );
+			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_II ){
 			IntegerOperand( vmc->c ) = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_III ){

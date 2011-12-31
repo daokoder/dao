@@ -26,6 +26,9 @@ struct DArray
 		void         **pVoid;
 
 		DaoValue     **pValue;
+		DaoInteger   **pInteger;
+		DaoFloat     **pFloat;
+		DaoDouble    **pDouble;
 		DaoList      **pList;
 		DaoTuple     **pTuple;
 		DaoClass     **pClass;

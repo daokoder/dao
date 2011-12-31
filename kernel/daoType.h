@@ -152,7 +152,6 @@ struct DaoInterface
 	DArray  *supers; /* parent interfaces */
 	DMap    *methods; /* DHash<DString*,DRoutine*> */
 	DaoType *abtype;
-	DMap    *ovldRoutMap; /* <DString*,DaoRoutine*> */
 };
 
 DaoInterface* DaoInterface_New( const char *name );
@@ -269,6 +268,5 @@ void DTypeSpecTree_Add( DTypeSpecTree *self, DArray *types, DaoType *sptype );
 DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types );
 
 DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types );
-DAO_DLL void DaoCdataType_SpecializeMethods( DaoType *self );
 
 #endif

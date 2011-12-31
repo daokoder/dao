@@ -1040,7 +1040,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}else{
 		//GC_IncRC( copy );
 		/* reference count already increased */
-		DMap_Insert( ns->abstypes, copy->name, copy );
+		DaoNamespace_AddType( ns, copy->name, copy );
 		DMap_Insert( defs, self, copy );
 	}
 	//DValue_Clear( & copy->value );
@@ -1081,6 +1081,9 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 		DaoType_GetTypeHolders( & self->aux->xType, types );
 }
 
+extern DMutex mutex_methods_setup;
+static void DaoCdataType_SpecializeMethods( DaoType *self );
+
 DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 {
 	DNode *node;
@@ -1097,6 +1100,15 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 			/* Specialize methods for specialized cdata type: */
 			DaoCdataType_SpecializeMethods( self );
 		}
+	}
+	if( self->kernel == NULL ){
+		/* The type is created before the setup of the typer structure: */
+		DMutex_Lock( & mutex_methods_setup );
+		if( self->kernel == NULL ){
+			GC_IncRC( core->kernel );
+			self->kernel = core->kernel;
+		}
+		DMutex_Unlock( & mutex_methods_setup );
 	}
 	node = DMap_Find( self->kernel->methods, name );
 	if( node ) return node->value.pRoutine;
@@ -1116,6 +1128,7 @@ DaoValue* DaoType_FindValue( DaoType *self, DString *name )
 }
 DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 {
+	/* Values are not specialized. */
 	/* Get the original type kernel for template-like cdata type: */
 	DaoTypeKernel *kernel = self->typer->core->kernel;
 	DaoValue *value = NULL;
@@ -1792,9 +1805,6 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 
-#ifdef DAO_WITH_THREAD
-extern DMutex dao_msetup_mutex;
-#endif
 
 void DaoCdataType_SpecializeMethods( DaoType *self )
 {
@@ -1812,9 +1822,7 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 			DaoCdataType_SpecializeMethods( base );
 		}
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & dao_msetup_mutex );
-#endif
+	DMutex_Lock( & mutex_methods_setup );
 	if( self->kernel == original->kernel && original->kernel && original->kernel->methods ){
 		DaoNamespace *nspace = self->kernel->nspace;
 		DMap *orimeths = original->kernel->methods;
@@ -1893,7 +1901,5 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 		/* Set methods field after it has been setup, for read safety in multithreading: */
 		kernel->methods = methods;
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & dao_msetup_mutex );
-#endif
+	DMutex_Unlock( & mutex_methods_setup );
 }

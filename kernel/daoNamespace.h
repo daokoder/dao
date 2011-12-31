@@ -28,21 +28,8 @@ struct DaoNamespace
 
 	DaoVmSpace *vmSpace;
 
-	/* Namespaces that should be used to resolve un-resolved symbols: */
-	/* 1. vmSpace.nsInternal; */
-	/* 2. loaded namespaces by: load name, without "import" or "as" etc. */
-	/* No GC, these namespaces are also referenced by ::cstData. */
-	DArray *parents; /* DArray<DaoNamespace*> */
-
-	DMap   *lookupTable; /* <DString*,size_t> */
-	DArray *cstDataTable;
-	DArray *varDataTable;
-	DArray *varTypeTable;
-	DArray *nsTable;
-
-	int cstUser;
-	int options;
-
+	DMap    *lookupTable; /* <DString*,size_t> */
+	DArray  *namespaces; /* <DaoNamespace*> */
 	DArray  *cstData; /* <DaoValue*>, global constants; */
 	DArray  *varData; /* <DaoValue*>, global variables; */
 	DArray  *varType; /* <DaoType*>, types of global variables */
@@ -54,9 +41,9 @@ struct DaoNamespace
 	DArray *mainRoutines; /* stdlib.eval() */
 	DArray *definedRoutines; /* for DaoStudio IDE */
 
-	DArray *nsLoaded; /* loaded modules as namespaces */
-
 	void  *libHandle;
+	int cstUser;
+	int options;
 
 	DMap   *localMacros; /* <DString*,DaoMacro*> */
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
@@ -103,8 +90,8 @@ DAO_DLL DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name );
 DAO_DLL DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name );
 DAO_DLL DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name );
 
+DAO_DLL void DaoNamespace_UpdateLookupTable( DaoNamespace *self );
 DAO_DLL int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
-DAO_DLL void DaoNamespace_Import( DaoNamespace *self, DaoNamespace *ns, DArray *varImport );
 
 DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
 
@@ -115,7 +102,7 @@ DAO_DLL DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DStri
 DAO_DLL DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name );
 
 DAO_DLL DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name );
-DAO_DLL void DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *tp );
+DAO_DLL DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *tp );
 DAO_DLL void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *tp );
 
 DAO_DLL DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p );
