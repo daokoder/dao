@@ -160,21 +160,40 @@ struct CastBuffer
 };
 
 
-typedef struct DaoJIT DaoJIT;
+
+typedef struct DaoJIT         DaoJIT;
+typedef struct DaoJitCallData DaoJitCallData;
+
 typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
 typedef void (*DaoJIT_QuitFPT)();
 typedef void (*DaoJIT_FreeFPT)( DaoRoutine *routine );
 typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
-typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *context, int jitcode );
+typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 
 struct DaoJIT
 {
 	void (*Quit)();
 	void (*Free)( DaoRoutine *routine );
 	void (*Compile)( DaoRoutine *routine );
-	void (*Execute)( DaoProcess *context, int jitcode );
+	void (*Execute)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 };
 
 extern struct DaoJIT dao_jit;
+
+struct DaoJitCallData
+{
+	DaoValue  **localValues;
+	DaoValue  **localConsts;
+
+	DaoValue  **objectValues;
+	DaoValue  **classValues;
+	DaoValue  **classConsts;
+
+	DaoValue  **globalValues;
+	DaoValue  **globalConsts;
+
+	DArray  *classes;
+	DArray  *namespaces;
+};
 
 #endif

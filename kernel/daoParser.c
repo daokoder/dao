@@ -2037,7 +2037,7 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 	DaoInode *it2, *aux;
 	DMap *map;
 	DNode *iter;
-	int i, min, max, count, direct = 0;
+	int i, min, max, count, direct = 0, casemode = 0;
 	min = max = 0;
 	count = 0;
 	map = self->switchMaps->items.pMap[ node->b ];
@@ -2061,9 +2061,11 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 	}
 	node->c = map->size;
 	aux = node;
+	casemode = direct ? DAO_CASE_TABLE : DAO_CASE_ORDERED;
 	for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
 		it2 = DaoInode_New( self );
 		it2->code = DVM_CASE;
+		it2->c = casemode; /* mark integer jump table */
 		if( iter->value.pInode ){
 			it2->a = iter->value.pInode->a;
 			it2->jumpTrue = iter->value.pInode;
@@ -2080,8 +2082,6 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 		aux->next = it2;
 		aux = it2;
 	}
-	/* mark integer jump table */
-	node->next->c = direct ? DAO_CASE_TABLE : DAO_CASE_ORDERED;
 }
 static DaoInode* DaoParser_AddScope( DaoParser *self, int code, DaoInode *closing )
 {

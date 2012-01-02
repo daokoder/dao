@@ -27,18 +27,18 @@ struct DaoClass
 	DMap    *lookupTable; /* <DString*,size_t> */
 	DArray  *classes; /* <DaoClass*> */
 
-	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
-	DArray  *objDataType;  /* <DaoType*> */
-	DArray  *objDataDefault; /* <DaoValue*>, NULL: no default, not for parent classes */
-
-	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
 	/* Holding class consts and routines - class data: */
 	/* For both this class and its parents: */
-	DArray  *cstData;
+	DArray  *cstData; /* <DaoValue*> */
+	DArray  *glbData; /* <DaoValue*>: static variables; */
 
+	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
+	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
+
 	DArray  *glbDataType;  /* <DaoType*> */
-	DArray  *glbData;      /* <DaoValue*> */
+	DArray  *objDataType;  /* <DaoType*> */
+	DArray  *objDataDefault; /* <DaoValue*>, NULL: no default, not for parent classes */
 
 	DArray  *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
 	DArray  *superAlias;

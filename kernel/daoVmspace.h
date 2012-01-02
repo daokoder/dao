@@ -102,8 +102,6 @@ DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
-DAO_DLL DaoVmSpace* DaoInit();
-
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
 #endif

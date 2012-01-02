@@ -8,24 +8,22 @@
 #include "llvm/Instructions.h"
 #include "llvm/Support/IRBuilder.h"
 
-#define DAO_DIRECT_API
 
 extern "C"{
 #include"daoArray.h"
-#include"daoOpcode.h"
-#include"daoStdtype.h"
+#include"daoVmcode.h"
+#include"daoValue.h"
 #include"daoRoutine.h"
-#include"daoContext.h"
 #include"daoProcess.h"
 #include"daoVmspace.h"
 #include"daoGC.h"
 
-void DaoJIT_Init( DaoVmSpace *vms );
+void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit );
 void DaoJIT_Quit();
 
 void DaoJIT_Free( DaoRoutine *routine );
 void DaoJIT_Compile( DaoRoutine *routine );
-void DaoJIT_Execute( DaoContext *context, int jitcode );
+void DaoJIT_Execute( DaoProcess *process, DaoJitCallData *data, int jitcode );
 }
 
 using namespace llvm;
@@ -39,11 +37,11 @@ struct DaoJitHandle : public IRBuilder<>
 	BasicBlock *secondBlock; // the block after the entry;
 	BasicBlock *lastBlock;
 
-	Value *localTypes; // context->regTypes: DaoType*[]*
-	Value *localValues; // context->regValues: DValue*[]*
-	Value *localConsts; // routine->routConsts->data: DValue[]*
+	Value *localTypes; // process->activeTypes: DaoType*[]*
+	Value *localValues; // process->activeValues: DaoValue*[]*
+	Value *localConsts; // routine->routConsts->data: DaoValue[]*
 
-	std::vector<Value*> localRefers; // DValue**
+	std::vector<Value*> localRefers; // DaoValue**
 	std::vector<Value*> tempRefers; // int*, float*, double*, for intermediate operands
 	std::vector<Value*> tempValues; // int, float, double, for intermediate operands
 
@@ -72,6 +70,10 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* CastDoublePointer( Value *value ); // to double*
 	Value* GetValueItem( Value *array, Value *index );
 
+	Value* CastIntegerValuePointer( Value *value ); // to DaoInteger*
+	Value* CastFloatValuePointer( Value *value ); // to DaoFloat*
+	Value* CastDoubleValuePointer( Value *value ); // to DaoDouble*
+
 	void ClearTempOperand( int reg );
 	void ClearTempOperand( DaoVmCodeX *vmc );
 	void StoreTempResult( Value *value, Value *dest, int reg );
@@ -86,8 +88,8 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* GetIntegerLeftValue( int reg ); // int*
 	Value* GetFloatLeftValue( int reg ); // float*
 	Value* GetDoubleLeftValue( int reg ); // double*
-	Value* GetTuple( int reg ); // Value[]*
-	Value* GetListItem( int reg, int index, int vmc ); // Value*
+	Value* GetTupleItems( int reg ); // DaoValue*[]*
+	Value* GetListItem( int reg, int index, int vmc ); // DaoValue*
 	Value* GetClassConstant( int reg, int field ); // Value*
 	Value* GetClassStatic( int reg, int field ); // Value*
 	Value* GetObjectConstant( int reg, int field ); // Value*

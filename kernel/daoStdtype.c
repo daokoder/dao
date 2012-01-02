@@ -369,7 +369,7 @@ extern DaoTypeBase comTyper;
 extern DaoTypeBase longTyper;
 extern DaoTypeBase stringTyper;
 
-DaoEnum* DaoEnum_New( DaoType *type, dint value )
+DaoEnum* DaoEnum_New( DaoType *type, int value )
 {
 	DaoEnum *self = (DaoEnum*) dao_malloc( sizeof(DaoEnum) );
 	DaoValue_Init( self, DAO_ENUM );

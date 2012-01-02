@@ -85,11 +85,11 @@ struct DaoEnum
 {
 	DAO_DATA_COMMON;
 
-	DaoType  *etype;  /* type information structure */
-	dint      value; /* value associated with the symbol(s) or flag(s) */
+	int       value; /* value associated with the symbol(s) or flag(s) */
+	DaoType  *etype; /* type information structure */
 };
 
-DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, dint value );
+DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
 DAO_DLL DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type );
 DAO_DLL void DaoEnum_Delete( DaoEnum *self );
 DAO_DLL void DaoEnum_MakeName( DaoEnum *self, DString *name );

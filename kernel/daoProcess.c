@@ -741,6 +741,7 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options );
 
 int DaoProcess_Execute( DaoProcess *self )
 {
+	DaoJitCallData jitCallData = {NULL};
 	DaoStackFrame *rollback = NULL;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
 	DaoVmSpace *vmSpace = self->vmSpace;
@@ -757,14 +758,11 @@ int DaoProcess_Execute( DaoProcess *self )
 	DArray   *NSS;
 	DArray   *CSS = NULL;
 	DArray   *dataCL[2] = { NULL, NULL };
-	DArray   *dataCK = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH] = { NULL, NULL, NULL, NULL };
 	DaoValue  **dataVL = NULL;
 	DaoValue  **dataVO = NULL;
-	DArray   *dataVK = NULL;
 	DArray   *typeVL = NULL;
 	DArray   *typeVO = NULL;
-	DArray   *typeVK = NULL;
 	DaoValue *value, *vA, *vB, *vC = NULL;
 	DaoValue **vA2, **vB2, **vC2 = NULL;
 	DaoValue **vref;
@@ -775,6 +773,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoList *list;
 	DString *str;
 	complex16 com = {0,0};
+	complex16 czero = {0,0};
 	size_t size, *dims, *dmac;
 	int invokehost = handler && handler->InvokeHost;
 	int i, j, print, retCode;
@@ -1121,12 +1120,23 @@ CallEntry:
 	locTypes = self->activeTypes;
 	dataCL[0] = & routine->routConsts->items;
 	NSS = here->namespaces;
+	if( routine->body->jitData ){
+		jitCallData.localValues = locVars;
+		jitCallData.localConsts = routine->routConsts->items.items.pValue;
+		jitCallData.globalValues = here->varData->items.pValue;
+		jitCallData.globalConsts = here->cstData->items.pValue;
+		jitCallData.namespaces = NSS;
+	}
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT ){
 		host = & routine->routHost->aux->xClass;
 		CSS = host->classes;
+		jitCallData.classes = CSS;
+		jitCallData.classValues = host->glbData->items.pValue;
+		jitCallData.classConsts = host->cstData->items.pValue;
 		if( !(routine->attribs & DAO_ROUT_STATIC) ){
 			dataVO = this->objValues;
 			typeVO = host->objDataType;
+			jitCallData.objectValues = dataVO;
 		}
 	}
 	if( routine->body->upRoutine ){
@@ -1147,19 +1157,27 @@ CallEntry:
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 		}OPNEXT() OPCASE( DATA ){
 			//if( locVars[ vmc->c ] && locVars[ vmc->c ]->xNone.konst ) goto ModifyConstant;
-			switch( vmc->a ){
-			case DAO_COMPLEX :
-				ComplexOperand( vmc->c ).real = 0.0;
-				ComplexOperand( vmc->c ).imag = vmc->b;
-				break;
-			case DAO_NONE :
+			if( vmc->a == DAO_NONE ){
 				GC_ShiftRC( dao_none_value, locVars[ vmc->c ] );
 				locVars[ vmc->c ] = dao_none_value;
-				break;
-			case DAO_INTEGER : IntegerOperand( vmc->c ) = vmc->b; break;
-			case DAO_FLOAT  : FloatOperand( vmc->c ) = vmc->b; break;
-			case DAO_DOUBLE : DoubleOperand( vmc->c ) = vmc->b; break;
-			default : break;
+			}else{
+				value = locVars[vmc->c];
+				if( value == NULL || value->type != vmc->a ){
+					DaoValue *tmp = (DaoValue*) DaoComplex_New(czero);
+					tmp->type = vmc->a;
+					GC_ShiftRC( tmp, value );
+					locVars[ vmc->c ] = value = tmp;
+				}
+				switch( vmc->a ){
+				case DAO_COMPLEX :
+					value->xComplex.value.real = 0;
+					value->xComplex.value.imag = vmc->b;
+					break;
+				case DAO_INTEGER : value->xInteger.value = vmc->b; break;
+				case DAO_FLOAT  : value->xFloat.value = vmc->b; break;
+				case DAO_DOUBLE : value->xDouble.value = vmc->b; break;
+				default : break;
+				}
 			}
 		}OPNEXT() OPCASE( GETCL ){
 			/* All GETX instructions assume the C regisgter is an intermediate register! */
@@ -1431,7 +1449,8 @@ CallEntry:
 				}
 			}
 		}OPNEXT() OPCASE( JITC ){
-			dao_jit.Execute( self, vmc->a );
+			jitCallData.globalValues = here->varData->items.pValue;
+			dao_jit.Execute( self, & jitCallData, vmc->a );
 			if( self->exceptions->size > exceptCount ) goto CheckException;
 			vmc += vmc->b;
 			OPJUMP()
@@ -1988,13 +2007,12 @@ CallEntry:
 			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			list = & locVars[ vmc->c ]->xList;
 			id = IntegerOperand( vmc->b );
-			abtp = NULL;
-			if( list->unitype && list->unitype->nested->size )
-				abtp = list->unitype->nested->items.pType[0];
 			if( id <0 ) id += list->items.size;
 			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-			if( DaoProcess_Move( self, locVars[vmc->a], list->items.items.pValue + id, abtp ) ==0 )
-				goto CheckException;
+			value = locVars[ vmc->a ];
+			vC2 = list->items.items.pValue + id;
+			GC_ShiftRC( value, *vC2 );
+			*vC2 = value;
 		}OPNEXT()
 		OPCASE( GETI_LII )
 			OPCASE( GETI_LFI )
@@ -2274,11 +2292,10 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_T ){
 			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			tuple = & locVars[ vmc->c ]->xTuple;
-			id = vmc->b;
-			abtp = tuple->unitype->nested->items.pType[id];
-			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoProcess_Move( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
-				goto CheckException;
+			value = locVars[ vmc->a ];
+			vC2 = tuple->items + vmc->b;
+			GC_ShiftRC( value, *vC2 );
+			*vC2 = value;
 		}OPNEXT() OPCASE( GETF_TI ){
 			tuple = & locVars[ vmc->a ]->xTuple;
 			locVars[ vmc->c ]->xInteger.value = tuple->items[ vmc->b ]->xInteger.value;
@@ -2404,21 +2421,21 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_KG ){
 			klass = & locVars[ vmc->c ]->xClass;
 			vC2 = klass->glbData->items.pValue + vmc->b;
-			abtp = klass->glbDataType->items.pType[ vmc->b ];
-			if( DaoProcess_Move( self, locVars[vmc->a], vC2, abtp ) ==0 ) goto CheckException;
+			value = locVars[vmc->a];
+			GC_ShiftRC( value, *vC2 );
+			*vC2 = value;
 		}OPNEXT() OPCASE( SETF_OG ) OPCASE( SETF_OV ){
 			object = & locVars[ vmc->c ]->xObject;
 			if( vmc->code == DVM_SETF_OG ){
 				klass = ((DaoObject*)klass)->defClass;
 				vC2 = klass->glbData->items.pValue + vmc->b;
-				abtp = klass->glbDataType->items.pType[ vmc->b ];
 			}else{
 				if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 				vC2 = object->objValues + vmc->b;
-				abtp = object->defClass->objDataType->items.pType[ vmc->b ];
 			}
-			if( DaoProcess_Move( self, locVars[vmc->a], vC2, abtp ) ==0 )
-				goto CheckException;
+			value = locVars[vmc->a];
+			GC_ShiftRC( value, *vC2 );
+			*vC2 = value;
 		}OPNEXT()
 		OPCASE( SETF_KGII )
 			OPCASE( SETF_KGIF )
@@ -6849,8 +6866,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DMap *protoValues = NULL;
 	DArray *routines = DArray_New(0);
 	DNode *it, *node;
-	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,NULL,0};
-	DaoEnum stEnum = {DAO_ENUM,0,0,0,0,0,NULL,0};
+	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	DaoEnum stEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
 	int i, st, pm, up, id, size;
 	char buf[50];
 	

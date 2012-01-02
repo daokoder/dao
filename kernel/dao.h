@@ -517,9 +517,9 @@ DAO_DLL void  DaoString_SetMBS( DaoString *self, const char *mbs );
 DAO_DLL void  DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
 DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
 
-DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, dint value );
+DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
 //float    DaoEnum_Get( DaoEnum *self );
-//void     DaoEnum_Set( DaoEnum *self, float value );
+//void     DaoEnum_Set( DaoEnum *self, int value );
 
 DAO_DLL DaoList* DaoList_New();
 DAO_DLL int  DaoList_Size( DaoList *self );

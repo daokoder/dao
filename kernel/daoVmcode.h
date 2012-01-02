@@ -19,7 +19,7 @@
 enum DaoOpcode
 {
 	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
-	DVM_DATA , /* create primitive data: A: type, B: value, C: register; */
+	DVM_DATA , /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
 	DVM_GETCL , /* get local const: C = A::B; current routine, A=0; up routine: A=1; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
 	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
@@ -289,8 +289,8 @@ enum DaoOpcode
 
 	/* single indexing C=A[B]: GETI and MOVE */
 	/* index should be integer, may be casted from float/double by the typing system */
-	DVM_GETI_LI , /* optimization opcode for list: get item(s) : C = A[B]; list[int] */
-	DVM_SETI_LI , /* set item : C[B] = A;  */
+	DVM_GETI_LI , /* get item : C = A[B]; X=list<X>[int] */
+	DVM_SETI_LI , /* set item : C[B] = A; list<X>[int]=X, or list<any>[int]=X; */
 	DVM_GETI_SI , /* get char from a string: string[int] */
 	DVM_SETI_SII , /* set char to a string: string[int]=int */
 	DVM_GETI_LII , /* get item : C = A[B]; list<int>[int] */
@@ -320,15 +320,15 @@ enum DaoOpcode
 	DVM_SETI_ADIF , /* set item : C[B] = A;  */
 	DVM_SETI_ADID , /* set item : C[B] = A;  */
 
-	DVM_GETI_TI , /* optimization opcode for tuple: get item(s) : C = A[B]; tuple[int] */
-	DVM_SETI_TI , /* set item : C[B] = A;  */
+	DVM_GETI_TI , /* get item : C = A[B]; tuple<...>[int] */
+	DVM_SETI_TI , /* set item : C[B] = A; tuple<...>[int]=X; */
 	/* access field by constant index; specialized from GETI[const] or GETF */
 	DVM_GETF_T ,
 	DVM_GETF_TI , /* get integer field by constant index; */
 	DVM_GETF_TF , /* get float field by constant index; */
 	DVM_GETF_TD , /* get double field by constant index; */
 	DVM_GETF_TS , /* get string field by constant index; */
-	DVM_SETF_T ,
+	DVM_SETF_T ,  /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 	DVM_SETF_TII , /* set integer field to integer. */
 	DVM_SETF_TIF , /* set integer field to float. */
 	DVM_SETF_TID , /* set integer field to double. */
@@ -358,9 +358,9 @@ enum DaoOpcode
 	DVM_GETF_OC , /* get class instance field, const; code: GET Member Field Const*/
 	DVM_GETF_OG , /* get class instance field, global */
 	DVM_GETF_OV , /* get class instance field, variable */
-	DVM_SETF_KG ,
-	DVM_SETF_OG ,
-	DVM_SETF_OV ,
+	DVM_SETF_KG , /* set class static field: field type equals to opa type, or is "any" type; */
+	DVM_SETF_OG , /* set class static field: field type equals to opa type, or is "any" type; */
+	DVM_SETF_OV , /* set class instance field: field type equals to opa type, or is "any" type; */
 
 	/* C=A.B : GETF and MOVE */
 	DVM_GETF_KCI , /* GET Member Field Const Integer */
