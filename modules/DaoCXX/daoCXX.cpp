@@ -338,6 +338,7 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 		case DAO_VALTYPE :
 			if( type->aux->type != DAO_NONE ) return 1;
 			DString_InsertMBS( cproto, "void ", 0, 0, 0 );
+			DString_Append( wrapper, cc );
 			break;
 		default : return 1;
 		}

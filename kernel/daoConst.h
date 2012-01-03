@@ -72,12 +72,6 @@ enum DaoBasicStruct
 	D_NULL
 };
 
-enum DaoValueMode
-{
-	DAO_VALUE_NORMAL ,
-	DAO_REFER_PARAM /* reference parameter */
-};
-
 /* It is for the typing system, to decide when to specialize a routine.
  * when any or ? match to @X in parameter list, no routine specialization.
  *   ls = {};

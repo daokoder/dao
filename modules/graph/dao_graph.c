@@ -27,8 +27,7 @@ DAO_INIT_MODULE
 DaoxNode* DaoxNode_New( DaoxGraph *graph )
 {
 	DaoxNode *self = (DaoxNode*) dao_calloc( 1, sizeof(DaoxNode) );
-	DaoType *type = DaoCdataType_Specialize( daox_node_template_type, graph->ctype->nested );
-	DaoCdata_InitCommon( (DaoCdata*) self, type );
+	DaoCdata_InitCommon( (DaoCdata*) self, graph->nodeType );
 	self->edges = DArray_New(D_VALUE);
 	self->graph = graph;
 	GC_IncRC( graph );
@@ -49,8 +48,7 @@ void DaoxNode_SetValue( DaoxNode *self, DaoValue *value )
 DaoxEdge* DaoxEdge_New( DaoxGraph *graph )
 {
 	DaoxEdge *self = (DaoxEdge*) dao_calloc( 1, sizeof(DaoxEdge) );
-	DaoType *type = DaoCdataType_Specialize( daox_edge_template_type, graph->ctype->nested );
-	DaoCdata_InitCommon( (DaoCdata*) self, type );
+	DaoCdata_InitCommon( (DaoCdata*) self, graph->edgeType );
 	self->first = self->second = NULL;
 	self->graph = graph;
 	GC_IncRC( graph );
@@ -77,7 +75,13 @@ DaoxGraph* DaoxGraph_New( DaoType *type, int directed )
 	self->edges = DArray_New(D_VALUE);
 	self->directed = directed;
 	self->wtype = 0;
-	if( type && type->nested->size ) self->wtype = type->nested->items.pType[0]->tid;
+	self->nodeType = NULL;
+	self->edgeType = NULL;
+	if( type ){
+		if( type->nested->size ) self->wtype = type->nested->items.pType[0]->tid;
+		self->nodeType = DaoCdataType_Specialize( daox_node_template_type, type->nested );
+		self->edgeType = DaoCdataType_Specialize( daox_edge_template_type, type->nested );
+	}
 	if( self->wtype > DAO_DOUBLE ) self->wtype = DAO_DOUBLE;
 	return self;
 }

@@ -29,6 +29,7 @@ enum DaoOpcode
 	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
 	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
 	DVM_GETI ,  /* GET Item(s) : C = A[B]; */
+	DVM_GETDI , /* GET Item(s) : C = A[B], B is the (direct) index; */
 	DVM_GETMI , /* GET Item(s) : C = A[A+1, ..., A+B]; */
 	DVM_GETF ,  /* GET Field : C = A.B */
 	DVM_GETMF , /* GET Meta Field: C = A->B */
@@ -38,10 +39,11 @@ enum DaoOpcode
 	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
 	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
 	DVM_SETI ,  /* SET Item(s) : C[B] = A;  */
+	DVM_SETDI , /* SET Item(s) : C[B] = A, B is the (direct) index; */
 	DVM_SETMI , /* SET Item(s) : C[C+1, ..., C+B] = A;  */
 	DVM_SETF ,  /* SET Field : C.B = A */
 	DVM_SETMF , /* SET Meta Field : C->B = A */
-	DVM_LOAD , /* put local value A as reference at C */
+	DVM_LOAD , /* put local value A as reference at C, if B>0, assert type (routConsts[B-1]) first; */
 	DVM_CAST , /* convert A to C if they have different types; */
 	DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */
 	DVM_NOT ,  /* C = ! A; not */
@@ -181,7 +183,7 @@ enum DaoOpcode
 	DVM_MOVE_DD ,
 	DVM_MOVE_CC , /* move complex number */
 	DVM_MOVE_SS , /* string */
-	DVM_MOVE_PP , /* pointer for typed operands */
+	DVM_MOVE_PP , /* C = A, where C and A are the same type, or C is type any; */
 	DVM_NOT_I ,
 	DVM_NOT_F ,
 	DVM_NOT_D ,
@@ -280,6 +282,11 @@ enum DaoOpcode
 	DVM_BITLFT_DNN ,
 	DVM_BITRIT_DNN ,
 
+	DVM_ADD_CC ,
+	DVM_SUB_CC ,
+	DVM_MUL_CC ,
+	DVM_DIV_CC ,
+
 	/* string */
 	DVM_ADD_SS , 
 	DVM_LT_SS ,
@@ -322,6 +329,7 @@ enum DaoOpcode
 
 	DVM_GETI_TI , /* get item : C = A[B]; tuple<...>[int] */
 	DVM_SETI_TI , /* set item : C[B] = A; tuple<...>[int]=X; */
+
 	/* access field by constant index; specialized from GETI[const] or GETF */
 	DVM_GETF_T ,
 	DVM_GETF_TI , /* get integer field by constant index; */
@@ -340,16 +348,12 @@ enum DaoOpcode
 	DVM_SETF_TDD , /* set double field to double. */
 	DVM_SETF_TSS , /* set string field to string. */
 
-	DVM_ADD_CC ,
-	DVM_SUB_CC ,
-	DVM_MUL_CC ,
-	DVM_DIV_CC ,
 	DVM_GETI_ACI , /* get item : C = A[B]; array<complex>[int] */
 	DVM_SETI_ACI , /* set item : C[B] = A; */
 
 	/* multiple indexing a[i,j] */
-	DVM_GETI_AM , /* array: get item(s) : C = A[B]; B: integer/float numbers */
-	DVM_SETI_AM , /* set item(s) : C[B] = A;  */
+	DVM_GETMI_A , /* array: get item(s) : C = A[B]; B: integer/float numbers */
+	DVM_SETMI_A , /* set item(s) : C[B] = A;  */
 
 	/* setters and getters */
 	/* get/set member of class instance by index instead of name: */
@@ -410,6 +414,8 @@ enum DaoOpcode
 	DVM_TEST_I ,
 	DVM_TEST_F ,
 	DVM_TEST_D ,
+
+	DVM_CHECK_ST , /* check against simple types: int, float, double, complex, long, string; */
 
 	/* increase a count, and perform the normal goto operation 
 	 * if the count does not exceed a safe bound. */

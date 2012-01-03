@@ -70,6 +70,9 @@ struct DaoxGraph
 	DArray  *edges; /* <DaoxEdge*>; */
 	short    wtype; /* weight type: DAO_NONE, DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE; */
 	short    directed; /* directed graph; */
+
+	DaoType  *nodeType;
+	DaoType  *edgeType;
 };
 DAO_DLL extern DaoType *daox_node_template_type;
 DAO_DLL extern DaoType *daox_edge_template_type;

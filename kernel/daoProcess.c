@@ -794,9 +794,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
 		&& LAB_GETVH , && LAB_GETVL , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
-		&& LAB_GETI  , && LAB_GETMI , && LAB_GETF  , && LAB_GETMF ,
+		&& LAB_GETI  , && LAB_GETDI , && LAB_GETMI , && LAB_GETF  , && LAB_GETMF ,
 		&& LAB_SETVH , && LAB_SETVL , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
-		&& LAB_SETI  , && LAB_SETMI , && LAB_SETF , && LAB_SETMF ,
+		&& LAB_SETI  , && LAB_SETDI , && LAB_SETMI , && LAB_SETF  , && LAB_SETMF ,
 		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
 		&& LAB_NOT , && LAB_UNMS , && LAB_BITREV ,
 		&& LAB_ADD , && LAB_SUB ,
@@ -906,6 +906,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_EQ_DNN , && LAB_NE_DNN ,
 		&& LAB_BITLFT_DNN , && LAB_BITRIT_DNN ,
 
+		&& LAB_ADD_CC , && LAB_SUB_CC ,
+		&& LAB_MUL_CC , && LAB_DIV_CC ,
+
 		&& LAB_ADD_SS ,
 		&& LAB_LT_SS , && LAB_LE_SS ,
 		&& LAB_EQ_SS , && LAB_NE_SS ,
@@ -934,11 +937,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_SETF_TDI , && LAB_SETF_TDF , && LAB_SETF_TDD ,
 		&& LAB_SETF_TSS ,
 
-		&& LAB_ADD_CC , && LAB_SUB_CC ,
-		&& LAB_MUL_CC , && LAB_DIV_CC ,
 		&& LAB_GETI_ACI , && LAB_SETI_ACI ,
 
-		&& LAB_GETI_AM , && LAB_SETI_AM ,
+		&& LAB_GETMI_A , && LAB_SETMI_A ,
 
 		&& LAB_GETF_KC , && LAB_GETF_KG ,
 		&& LAB_GETF_OC , && LAB_GETF_OG , && LAB_GETF_OV ,
@@ -961,6 +962,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_SETF_OVDI , && LAB_SETF_OVDF , && LAB_SETF_OVDD ,
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
+		&& LAB_CHECK_ST ,
 
 		&& LAB_SAFE_GOTO
 	};
@@ -1126,6 +1128,7 @@ CallEntry:
 		jitCallData.globalValues = here->varData->items.pValue;
 		jitCallData.globalConsts = here->cstData->items.pValue;
 		jitCallData.namespaces = NSS;
+		jitCallData.processes = dataVH;
 	}
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT ){
 		host = & routine->routHost->aux->xClass;
@@ -1143,6 +1146,7 @@ CallEntry:
 		dataCL[1] = & routine->body->upRoutine->routConsts->items;
 		dataVL = routine->body->upProcess->stackValues + 1;
 		typeVL = routine->body->upRoutine->body->regType;
+		jitCallData.upConsts = dataCL[1]->items.pValue;
 	}
 	if( topFrame->outer ){
 		DaoStackFrame *frame = topFrame;
@@ -1209,7 +1213,7 @@ CallEntry:
 			value = NSS->items.pNS[vmc->a]->varData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
-		}OPNEXT() OPCASE( GETI ) OPCASE( GETMI ){
+		}OPNEXT() OPCASE( GETI ) OPCASE( GETDI ) OPCASE( GETMI ){
 			DaoProcess_DoGetItem( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( GETF ){
@@ -1238,7 +1242,7 @@ CallEntry:
 			abtp = NSS->items.pNS[vmc->c]->varType->items.pType[ vmc->b ];
 			vref = NSS->items.pNS[vmc->c]->varData->items.pValue + vmc->b;
 			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
-		}OPNEXT() OPCASE( SETI ) OPCASE( SETMI ){
+		}OPNEXT() OPCASE( SETI ) OPCASE( SETDI ) OPCASE( SETMI ){
 			if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST) )
 				goto ModifyConstant;
 			DaoProcess_DoSetItem( self, vmc );
@@ -1253,14 +1257,16 @@ CallEntry:
 			DaoProcess_DoSetMetaField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( LOAD ){
-			if( locVars[ vmc->a ] && (locVars[ vmc->a ]->xNone.trait & DAO_DATA_CONST) == 0 ){
-				GC_ShiftRC( locVars[ vmc->a ], locVars[ vmc->c ] );
-				locVars[ vmc->c ] = locVars[ vmc->a ];
-			}else if( locVars[ vmc->a ] ){
+			if( (vA = locVars[ vmc->a ]) ){
 				/* mt.run(3)::{ mt.critical::{} }: the inner functional will be compiled
 				 * as a LOAD and RETURN, but the inner functional will not return anything,
 				 * so the first operand of LOAD will be NULL! */
-				DaoValue_Copy( locVars[ vmc->a ], & locVars[ vmc->c ] );
+				if( (vA->xNone.trait & DAO_DATA_CONST) == 0 ){
+					GC_ShiftRC( vA, locVars[ vmc->c ] );
+					locVars[ vmc->c ] = vA;
+				}else{
+					DaoValue_Copy( vA, & locVars[ vmc->c ] );
+				}
 			}
 		}OPNEXT() OPCASE( CAST ){
 			//if( locVars[ vmc->c ] && (locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST) )
@@ -2182,7 +2188,7 @@ CallEntry:
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			array->data.c[ id ] = locVars[ vmc->a ]->xComplex.value;
 		}OPNEXT()
-		OPCASE( GETI_AM ){
+		OPCASE( GETMI_A ){
 			array = & locVars[ vmc->a ]->xArray;
 			tuple = & locVars[ vmc->b ]->xTuple;
 			vC = locVars[ vmc->c ];
@@ -2209,7 +2215,7 @@ CallEntry:
 				goto CheckException;
 			}
 		}OPNEXT()
-		OPCASE( SETI_AM ){
+		OPCASE( SETMI_A ){
 			if( locVars[ vmc->c ]->xNone.trait & DAO_DATA_CONST ) goto ModifyConstant;
 			array = & locVars[ vmc->c ]->xArray;
 			list = & locVars[ vmc->b ]->xList;
@@ -2261,8 +2267,8 @@ CallEntry:
 			OPCASE( SETI_ADID )
 			OPCASE( GETI_ACI )
 			OPCASE( SETI_ACI )
-			OPCASE( GETI_AM )
-			OPCASE( SETI_AM ){
+			OPCASE( GETMI_A )
+			OPCASE( SETMI_A ){
 				self->activeCode = vmc;
 				DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
 			}OPNEXT()
@@ -2297,6 +2303,10 @@ CallEntry:
 			GC_ShiftRC( value, *vC2 );
 			*vC2 = value;
 		}OPNEXT() OPCASE( GETF_TI ){
+			/* Do not get reference here!
+			 * Getting reference is always more expensive due to reference counting.
+			 * The compiler always generates SETX, if element modification is done
+			 * through index or field accessing: A[B] += C, A.B += C. */
 			tuple = & locVars[ vmc->a ]->xTuple;
 			locVars[ vmc->c ]->xInteger.value = tuple->items[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETF_TF ){
@@ -2509,7 +2519,11 @@ CallEntry:
 				case DVM_SETF_OVDD : vC->xDouble.value = DoubleOperand( vmc->a ); break;
 				default : break;
 				}
-			}OPNEXT()
+		}OPNEXT()
+		OPCASE( CHECK_ST ){
+			vA = locVars[vmc->a];
+			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
+		}OPNEXT()
 		OPCASE( SAFE_GOTO ){
 			if( ( self->vmSpace->options & DAO_EXEC_SAFE ) ){
 				gotoCount ++;
@@ -3246,6 +3260,11 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 #endif
 	}else if( vmc->code == DVM_GETI ){
 		tc->GetItem( A, self, self->activeValues + vmc->b, 1 );
+	}else if( vmc->code == DVM_GETDI ){
+		DaoInteger iv = {DAO_INTEGER,0,0,0,1,0};
+		DaoValue *piv = (DaoValue*) (DaoInteger*) & iv;
+		iv.value = vmc->b;
+		tc->GetItem( A, self, & piv, 1 );
 	}else if( vmc->code == DVM_GETMI ){
 		tc->GetItem( A, self, self->activeValues + vmc->a + 1, vmc->b );
 	}
@@ -3392,6 +3411,11 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 #endif
 	}else if( vmc->code == DVM_SETI ){
 		tc->SetItem( C, self, self->activeValues + vmc->b, 1, A );
+	}else if( vmc->code == DVM_GETDI ){
+		DaoInteger iv = {DAO_INTEGER,0,0,0,1,0};
+		DaoValue *piv = (DaoValue*) (DaoInteger*) & iv;
+		iv.value = vmc->b;
+		tc->SetItem( C, self, & piv, 1, A );
 	}else if( vmc->code == DVM_SETMI ){
 		tc->SetItem( C, self, self->activeValues + vmc->c + 1, vmc->b, A );
 	}
@@ -3629,21 +3653,15 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	DNode *node;
 	int i, mt, mt2;
 
-	self->activeCode = vmc;
 	if( va == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on none object" );
 		return;
 	}
-	if( ct == NULL || ct->type == DAO_UDF || ct->type == DAO_ANY ){
-		DaoValue_Copy( va, vc2 );
-		return;
-	}
-	if( va == vc && vc->type == ct->type && ct->type < DAO_ENUM ) return;
-	if( vc && vc->type == ct->type && va->type <= DAO_STRING ){
-		if( va->type == ct->type ){
-			DaoValue_Copy( va, vc2 );
-			return;
-		}
+	if( ct == NULL || ct->tid == DAO_UDF || ct->tid == DAO_ANY ) goto FastCasting;
+	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
+
+	if( vc && vc->type == ct->tid && va->type <= DAO_STRING ){
+		if( va->type == ct->tid ) goto FastCasting;
 		if( va->type == DAO_STRING ){
 			if( vc->type == DAO_LONG ){
 				if( buffer1.lng == NULL ) buffer1.lng = DLong_New();
@@ -3652,7 +3670,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			if( ConvertStringToNumber( self, va, vc ) == 0 ) goto FailConversion;
 			return;
 		}
-		switch( ct->type ){
+		switch( ct->tid ){
 		case DAO_INTEGER : vc->xInteger.value = DaoValue_GetInteger( va ); return;
 		case DAO_FLOAT   : vc->xFloat.value = DaoValue_GetFloat( va ); return;
 		case DAO_DOUBLE  : vc->xDouble.value = DaoValue_GetDouble( va ); return;
@@ -3733,6 +3751,10 @@ NormalCasting:
 	DaoValue_Copy( va, vc2 );
 	CastBuffer_Clear( & buffer1 );
 	CastBuffer_Clear( & buffer2 );
+	return;
+FastCasting:
+	GC_ShiftRC( va, vc );
+	*vc2 = va;
 	return;
 FailConversion :
 	at = DaoNamespace_GetType( self->activeNamespace, self->activeValues[ vmc->a ] );

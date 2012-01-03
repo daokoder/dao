@@ -192,6 +192,9 @@ struct DaoJitCallData
 	DaoValue  **globalValues;
 	DaoValue  **globalConsts;
 
+	DaoValue   **upConsts;
+	DaoProcess **processes;
+
 	DArray  *classes;
 	DArray  *namespaces;
 };

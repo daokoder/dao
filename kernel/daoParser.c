@@ -3961,8 +3961,7 @@ DecoratorError:
 				int p1 = inodes->items.pInode[k]->first;
 				int p2 = p1 + inodes->items.pInode[k]->last;
 				reg = DaoParser_PushRegister( self );
-				DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, k, i, p1, 0, p2 );
-				DaoParser_AddCode( self, DVM_GETI, enode.reg, i, reg, p1, 0, p2 );
+				DaoParser_AddCode( self, DVM_GETDI, enode.reg, k, reg, p1, 0, p2 );
 				DaoParser_AppendCode( self, inodes->items.pInode[k] );
 				self->vmcLast->a = reg;
 			}
@@ -4569,9 +4568,10 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 	if( (i = DaoNamespace_FindConst( ns, name )) >= 0 ) return i;
 
 	if( self->outParser ){ /* search upvalues before globals/class members??? */
-		int st, up, id;
+		int st, pm, up, id;
 		i = DaoParser_GetRegister( self->outParser, nametok );
 		st = LOOKUP_ST( i );
+		pm = LOOKUP_PM( i );
 		up = LOOKUP_UP( i );
 		id = LOOKUP_ID( i );
 		if( st > DAO_LOCAL_CONSTANT && st < DAO_GLOBAL_VARIABLE ){
@@ -4582,15 +4582,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 		if( i >=0 ){
 			routine->body->upRoutine = self->outParser->routine;
 			GC_IncRC( routine->body->upRoutine );
-			MAP_Insert( self->routine->body->localVarType, self->regCount, NULL );
-			MAP_Insert( DArray_Top( self->localVarMap ), name, self->regCount );
-			if( st == DAO_LOCAL_VARIABLE ){
-				DaoParser_AddCode( self, DVM_GETVL, 1, id, self->regCount, nametok->index,0,0 );
-			}else{
-				DaoParser_AddCode( self, DVM_GETCL, 1, id, self->regCount, nametok->index,0,0);
-			}
-			DaoParser_PushRegister( self );
-			return self->regCount -1;
+			return LOOKUP_BIND( st, pm, 1, id );
 		}
 	}
 	return -1;
@@ -4619,7 +4611,13 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 		return val;
 	}
 	switch( st ){
-	case DAO_LOCAL_CONSTANT : val = routine->routConsts->items.items.pValue[id]; break; /*XXX up*/
+	case DAO_LOCAL_CONSTANT :
+		switch( up ){
+		case 0 : val = routine->routConsts->items.items.pValue[id]; break;
+		case 1 : val = routine->body->upRoutine->routConsts->items.items.pValue[id]; break;
+		default : val = NULL; break;
+		}
+		break;
 	case DAO_CLASS_CONSTANT : val = klass->classes->items.pClass[up]->cstData->items.pValue[id]; break;
 	case DAO_GLOBAL_VARIABLE : val = ns->namespaces->items.pNS[up]->varData->items.pValue[id]; break;
 	case DAO_GLOBAL_CONSTANT : val = ns->namespaces->items.pNS[up]->cstData->items.pValue[id]; break;
@@ -5967,7 +5965,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				if( result.last && inode->code == DVM_LOAD2 ){ /* X.Y or X->Y */
 					DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
 					inode->code = DVM_LOAD;
-					inode->b = DAO_REFER_PARAM;
+					inode->b = 0;
 					inode = inode->prev;
 					code = DVM_MCALL;
 				}else if( result.last &&  permutableCodes[ result.last->code ] ){
@@ -6013,6 +6011,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
 					extra = back->prev;
 					back->code = DVM_LOAD;
+					back->b = 0;
 					code = DVM_MCURRY;
 				}else if( result.last &&  permutableCodes[ back->code ] ){
 					extra = back;
@@ -6113,6 +6112,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					if( result.last && back->code == DVM_LOAD2 ){ /* X.Y or X->Y */
 						DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
 						back->code = DVM_LOAD;
+						back->b = 0;
 						back->prev->c = DaoParser_PushRegister( self );
 						back->c = DaoParser_PushRegister( self );
 						regLast = DaoParser_PushRegister( self );
@@ -6404,7 +6404,7 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 			return result;
 		}
 		result.reg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_LOAD, opa, DAO_REFER_PARAM, result.reg, start, 0, end );
+		DaoParser_AddCode( self, DVM_LOAD, opa, 0, result.reg, start, 0, end );
 	}else{
 		result.reg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, code, opa, opb, result.reg, start, 0, end );

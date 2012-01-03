@@ -11,11 +11,9 @@ routine BottomUpTree(item:int, depth:int) => int|Node
 
 routine ItemCheck( node : int|Node ) =>int
 {
-	if( node ?< type(Node) ){
-		(item, left, right) = (Node)node;
-		return item + ItemCheck(left) - ItemCheck(right);
-	}
-	return (int)node;
+	if( node ?< type(int) ) return (int)node;
+	(item, left, right) = (Node)node;
+	return item + ItemCheck(left) - ItemCheck(right);
 }
 
 routine main( N = 10 )

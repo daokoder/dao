@@ -228,7 +228,7 @@ struct DaoGarbageCollector
 };
 static DaoGarbageCollector gcWorker = { NULL, NULL, NULL };
 
-static DaoEnum dummyEnum = {0,0,DAO_DATA_CONST,0,1,1,NULL,0};
+static DaoEnum dummyEnum = {0,0,DAO_DATA_CONST,0,1,1,0,NULL};
 static DaoEnum *dummyEnum2 = & dummyEnum;
 static DaoValue *dummyValue = NULL;
 

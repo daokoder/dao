@@ -560,6 +560,10 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
 	self->codeEnd = other->codeEnd;
+	GC_ShiftRC( other->upRoutine, self->upRoutine );
+	GC_ShiftRC( other->upProcess, self->upProcess );
+	self->upRoutine = other->upRoutine;
+	self->upProcess = other->upProcess;
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self )
 {
@@ -1036,6 +1040,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DArray  *typeVO[2] = { NULL, NULL };
 	DArray  *CSS = hostClass ? hostClass->classes : NULL;
 	DArray  *NSS = self->nameSpace->namespaces;
+	DaoInteger integer = {DAO_INTEGER,0,0,0,1,0};
 	DaoValue  *val = NULL;
 	DaoValue **csts;
 	DaoValue **pp;
@@ -1303,20 +1308,27 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 				break;
 			}
 		case DVM_GETI :
+		case DVM_GETDI :
 			{
 				val = csts[opa] ? dao_none_value : NULL;
 				GC_ShiftRC( val, csts[opc] );
 				csts[opc] = val;
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+
+				integer.value = opb;
+				val = (DaoValue*)(DaoInteger*)&integer;
+				bt = inumt;
+				if( code == DVM_GETI ){
+					AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last - 1 );
+					bt = type[opb];
+					val = csts[opb];
+				}
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				at = type[opa];
-				bt = type[opb];
 				ct = NULL;
 				container = at;
 				indexkey = bt;
-				val = csts[opb];
 				k = at->tid != DAO_CLASS && at->tid != DAO_OBJECT && at->tid != DAO_CDATA;
 				if( val && val->type == 0 && k && bt->tid == DAO_VALTYPE ){ /* a[] */
 					ct = at;
@@ -1330,7 +1342,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 					ct = at;
 					if( bt->tid >= DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
 						ct = inumt;
-						if( typed_code ){
+						if( typed_code && code == DVM_GETI ){
 							if( bt->tid == DAO_INTEGER ){
 								vmc->code = DVM_GETI_SI;
 							}else if( bt->tid == DAO_FLOAT && notide ){
@@ -1369,7 +1381,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 					if( bt->tid == DAO_INTEGER || bt->tid == DAO_FLOAT
 							|| bt->tid == DAO_DOUBLE ){
 						ct = at->nested->items.pType[0];
-						if( typed_code && notide ){
+						if( typed_code && notide && code == DVM_GETI ){
 							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
 								vmc->code = DVM_GETI_LII + ct->tid - DAO_INTEGER;
 							}else if( ct->tid == DAO_STRING ){
@@ -1415,7 +1427,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 							|| bt->tid == DAO_DOUBLE ){
 						/* array[i] */
 						ct = at->nested->items.pType[0];
-						if( typed_code && notide ){
+						if( typed_code && notide && code == DVM_GETI ){
 							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE )
 								vmc->code = DVM_GETI_AII + ct->tid - DAO_INTEGER;
 							else if( ct->tid == DAO_COMPLEX )
@@ -1442,7 +1454,6 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 					}
 				}else if( at->tid ==DAO_TUPLE ){
 					ct = udf;
-					val = csts[opb];
 					if( val && val->type ){
 						if( val->type > DAO_DOUBLE ) goto InvIndex;
 						k = DaoValue_GetInteger( val );
@@ -1450,14 +1461,14 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 						ct = at->nested->items.pType[ k ];
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						if( typed_code ){
-							if( k < 0xffff ){
+							if( k <= 0xffff ){
 								if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
 									vmc->b = k;
 									vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
 								}else if( ct->tid == DAO_STRING ){
 									vmc->b = k;
 									vmc->code = DVM_GETF_TS;
-								}else if( ct->tid >= DAO_ARRAY && ct->tid < DAO_ROUTINE ){
+								}else/*XXX if( ct->tid >= DAO_ARRAY && ct->tid < DAO_ROUTINE )*/{
 									/* for skipping type checking */
 									vmc->b = k;
 									vmc->code = DVM_GETF_T;
@@ -1465,9 +1476,9 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 							}
 						}
 					}else if( bt->tid >= DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
-						if( typed_code && bt->tid == DAO_INTEGER ){
+						if( typed_code && code == DVM_GETI && bt->tid == DAO_INTEGER ){
 							vmc->code = DVM_GETI_TI;
-						}else if( typed_code && notide ){
+						}else if( typed_code && notide && code == DVM_GETI ){
 							vmc->code = DVM_GETI_TI;
 							addCount[i] ++;
 							vmc2.code = DVM_CAST;
@@ -1712,7 +1723,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 							}else if( ct->tid == DAO_STRING ){
 								vmc->b = k;
 								vmc->code = DVM_GETF_TS;
-							}else if( ct->tid >= DAO_ARRAY && ct->tid < DAO_ROUTINE ){
+							}else/*XXX if( ct->tid >= DAO_ARRAY && ct->tid < DAO_ROUTINE )*/{
 								/* for skipping type checking */
 								vmc->code = DVM_GETF_T;
 								vmc->b = k;
@@ -1773,23 +1784,31 @@ NotExist_TryAux:
 			break;
 			}
 		case DVM_SETI :
+		case DVM_SETDI :
 			{
 				ct = (DaoType*) type[opc];
 				if( ct == NULL ) goto ErrorTyping;
 				if( csts[opc] ) goto ModifyConstant;
 				k = DaoTokens_FindLeftPair( self->body->source, DTOK_LSB, DTOK_RSB, vmc->first + vmc->middle, 0 );
 				AssertInitialized( opa, DTE_ITEM_WRONG_ACCESS, vmc->middle + 1, vmc->last );
-				AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
 				AssertInitialized( opc, DTE_ITEM_WRONG_ACCESS, 0, vmc->middle - 1 );
+
+				integer.value = opb;
+				val = (DaoValue*)(DaoInteger*)&integer;
+				bt = inumt;
+				if( code == DVM_SETI ){
+					AssertInitialized( opb, DTE_ITEM_WRONG_ACCESS, k - vmc->first + 1, vmc->middle - 2 );
+					bt = type[opb];
+					val = csts[opb];
+				}
 				at = type[opa];
-				bt = type[opb];
 				container = ct;
 				indexkey = bt;
 				itemvalue = at;
 				if( NoCheckingType(at) || NoCheckingType(bt) || NoCheckingType(ct) ) break;
 				switch( ct->tid ){
 				case DAO_STRING :
-					if( typed_code && notide ){
+					if( typed_code && notide && code == DVM_SETI ){
 						if( ( at->tid >=DAO_INTEGER && at->tid <=DAO_DOUBLE )
 								&& ( bt->tid >=DAO_INTEGER && bt->tid <=DAO_DOUBLE ) ){
 							vmc->code = DVM_SETI_SII;
@@ -1829,7 +1848,7 @@ NotExist_TryAux:
 					if( bt->tid >=DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
 						ct = ct->nested->items.pType[0];
 						AssertTypeMatching( at, ct, defs, 0);
-						if( typed_code && notide ){
+						if( typed_code && notide && code == DVM_SETI ){
 							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE
 									&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 								vmc->code = 3 * ( ct->tid - DAO_INTEGER ) + DVM_SETI_LIII
@@ -1877,7 +1896,7 @@ NotExist_TryAux:
 						if( DaoType_MatchTo( at, ct, defs ) ) break;
 						ct = ct->nested->items.pType[0];
 						/* array[i] */
-						if( typed_code && notide ){
+						if( typed_code && notide && code == DVM_SETI ){
 							if( ct->tid >=DAO_INTEGER && ct->tid <= DAO_DOUBLE
 									&& at->tid >=DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 								vmc->code = 3 * ( ct->tid - DAO_INTEGER ) + DVM_SETI_AIII
@@ -1904,7 +1923,6 @@ NotExist_TryAux:
 					}
 					break;
 				case DAO_TUPLE :
-					val = csts[opb];
 					if( val && val->type ){
 						if( val->type > DAO_DOUBLE ) goto InvIndex;
 						k = DaoValue_GetInteger( val );
@@ -1913,7 +1931,7 @@ NotExist_TryAux:
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						AssertTypeMatching( at, ct, defs, 0);
 						if( typed_code ){
-							if( k < 0xffff && (at == ct || ct->tid == DAO_ANY) ){
+							if( k <= 0xffff && (at == ct || ct->tid == DAO_ANY) ){
 								if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE
 										&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 									vmc->code = DVM_SETF_TII + 3*( ct->tid - DAO_INTEGER )
@@ -2228,21 +2246,29 @@ NotExist_TryAux:
 					vmc->code = DVM_MOVE_CC;
 			}
 			break;
-		case DVM_MOVE :
 		case DVM_LOAD :
+			AssertInitialized( opa, 0, vmc->middle + 1, vmc->last );
+			init[opc] = 1;
+			at = type[opa];
+			UpdateType( opc, at );
+			AssertTypeMatching( at, type[opc], defs, 0);
+			at = type[opa];
+			ct = type[opc];
+			break;
+		case DVM_MOVE :
 			{
-				if( code == DVM_MOVE && csts[opc] ) goto ModifyConstant;
+				if( csts[opc] ) goto ModifyConstant;
 				AssertInitialized( opa, 0, vmc->middle ? vmc->middle + 1 : 0, vmc->last );
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				at = type[opa];
 				UpdateType( opc, at );
-				if( code == DVM_MOVE ){
-					ct = type[opc];
-					if( ct == dao_array_empty ) UpdateType( opc, dao_array_any );
-					if( ct == dao_list_empty ) UpdateType( opc, dao_list_any );
-					if( ct == dao_map_empty ) UpdateType( opc, dao_map_any );
-				}
+
+				ct = type[opc];
+				if( ct == dao_array_empty ) UpdateType( opc, dao_array_any );
+				if( ct == dao_list_empty ) UpdateType( opc, dao_list_any );
+				if( ct == dao_map_empty ) UpdateType( opc, dao_map_any );
+
 				ct = type[opc];
 
 				k = DaoType_MatchTo( at, type[opc], defs );
@@ -2264,7 +2290,7 @@ NotExist_TryAux:
 
 				if( at->tid ==DAO_UDF || at->tid ==DAO_ANY ){
 					/* less strict checking */
-				}else if( code == DVM_MOVE && at != ct && (ct->tid == DAO_OBJECT || ct->tid == DAO_CDATA) ){
+				}else if( at != ct && (ct->tid == DAO_OBJECT || ct->tid == DAO_CDATA) ){
 					if( ct->tid == DAO_OBJECT ){
 						meth = DaoClass_FindOperator( & ct->aux->xClass, "=", hostClass );
 					}else{
@@ -2294,7 +2320,11 @@ NotExist_TryAux:
 					vmc->code = DVM_CAST;
 					break;
 				}
-				if( typed_code && code != DVM_LOAD && k == DAO_MT_EQ ){
+				if( vmc->b == 0 ){
+					ct = DaoType_DefineTypes( type[opc], ns, defs );
+					if( ct ) UpdateType( opc, ct );
+				}
+				if( typed_code && k == DAO_MT_EQ ){
 					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE
 							&& ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
 						vmc->code = DVM_MOVE_II + 3 * ( ct->tid - DAO_INTEGER )
@@ -2303,8 +2333,7 @@ NotExist_TryAux:
 						vmc->code = DVM_MOVE_CC;
 					}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 						vmc->code = DVM_MOVE_SS;
-					}else if( at->tid >= DAO_ARRAY && at->tid < DAO_ANY
-							&& at->tid != DAO_ROUTINE && at->tid != DAO_CLASS ){
+					}else if( at->tid >= DAO_ARRAY ){
 						/* Do not use simple move when moving a constant to a variable,
 						 * which requires copying and possibly proper setting of type
 						 * fields (such as DaoList::unitype ect). */
@@ -2312,15 +2341,10 @@ NotExist_TryAux:
 							DaoType *t = DaoNamespace_GetType( ns, csts[opa] );
 							k = DaoType_MatchTo( t, ct, defs );
 						}
-						if( k == DAO_MT_EQ && DString_FindChar( at->name, '?', 0 ) == MAXSIZE ){
+						if( ct == type[opc] || (type[opc] && type[opc]->tid == DAO_ANY) ){
 							vmc->code = DVM_MOVE_PP;
 						}
 					}
-				}
-
-				if( vmc->b == 0 ){
-					ct = DaoType_DefineTypes( type[opc], ns, defs );
-					if( ct ) UpdateType( opc, ct );
 				}
 				break;
 			}
@@ -2619,13 +2643,21 @@ NotExist_TryAux:
 				break;
 			}
 		case DVM_CHECK :
+		case DVM_CHECK_ST :
 			{
 				AssertInitialized( opa, 0, 0, vmc->middle - 1 );
 				AssertInitialized( opb, 0, vmc->middle + 1, vmc->last );
 				init[opc] = 1;
-				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				UpdateType( opc, inumt );
 				AssertTypeMatching( inumt, type[opc], defs, 0 );
+				bt = type[opb];
+				ct = type[opc];
+				k = bt->tid == DAO_TYPE ? bt->nested->items.pType[0]->tid : 0;
+				if( k && k <= DAO_STRING && ct->tid == DAO_INTEGER ){
+					vmc->code = DVM_CHECK_ST;
+				}else if( code == DVM_CHECK_ST ){
+					goto ErrorTyping;
+				}
 				break;
 			}
 		case DVM_NAMEVA :
@@ -3062,7 +3094,6 @@ NotExist_TryAux:
 				}else if( at->tid != DAO_ROUTINE ){
 					goto ErrorTyping;
 				}
-				m = 0;
 				pp = csts+opa+1;
 				tp = type+opa+1;
 				j = vmc->b & 0xff;
@@ -3072,17 +3103,14 @@ NotExist_TryAux:
 					pp = csts + k;
 					tp = type + k;
 				}else{
-					m = 1;
 					for(k=0; k<j; k++){
 						tt = DaoType_DefineTypes( tp[k], ns, defs );
 						GC_ShiftRC( tt, tp[k] );
 						tp[k] = tt;
 						if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
 						assert( i >= (k+1) );
-						m &= vmcs[i-k-1]->code != DVM_LOAD || vmcs[i-k-1]->b != DAO_REFER_PARAM;
 					}
-				}
-				if( m ){
+					m = 1;
 					for(k=i+1; k<N; k++){
 						DaoVmCodeX *ret = vmcs[k];
 						if( ret->code == DVM_NOP ) continue;
@@ -3093,8 +3121,8 @@ NotExist_TryAux:
 						m = 0;
 						break;
 					}
+					if( m ) vmc->b |= DAO_CALL_TAIL;
 				}
-				if( m ) vmc->b |= DAO_CALL_TAIL;
 				if( at->tid == DAO_ROUTINE && at->overloads ){
 					rout = MatchByParamType( (DaoRoutine*) at->aux, bt, tp, j, code );
 					if( rout == NULL ) goto ErrorTyping;

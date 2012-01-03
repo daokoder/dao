@@ -57,12 +57,18 @@ struct DaoJitHandle : public IRBuilder<>
 	void SetActiveBlock( BasicBlock *block );
 
 	Value* GetLocalConstant( int id );
+	Value* GetUpConstant( int id );
 	Value* GetLocalReference( int reg );
 	Value* GetLocalValue( int reg );
 	Value* GetLocalValueDataPointer( int reg );
 
-	Value* GetValueTypePointer( Value *value ); // & DValue->t
-	Value* GetValueDataPointer( Value *value ); // & DValue->v.d
+	Value* GetLocalNumberValue( int reg, Type *type );
+
+	Value* GetValueTypePointer( Value *value ); // DaoValue->type
+	Value* GetValueDataPointer( Value *value ); // DaoValue->value: for int, float, double;
+
+	// DaoInteger->value, DaoFloat->value, DaoDouble->value:
+	Value* GetValueNumberPointer( Value *value, Type *type );
 
 	Value* Dereference( Value *value );
 	Value* CastIntegerPointer( Value *value ); // to dint*
@@ -101,6 +107,8 @@ struct DaoJitHandle : public IRBuilder<>
 	void GetNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB );
 	void GetFNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
 	void GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Value **dC );
+
+	Value* MoveValue( Value *dA, Value *dC, Type *type );
 };
 
 #endif

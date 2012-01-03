@@ -1006,7 +1006,8 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 		DaoValue *val;
 		if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
 		val = self->cstData->items.pValue[ LOOKUP_ID( node->value.pSize ) ];
-		if( val->type == DAO_ROUTINE ) DaoRoutine_PrintCode( & val->xRoutine, stream );
+		if( val->type == DAO_ROUTINE && val->xRoutine.body )
+			DaoRoutine_PrintCode( & val->xRoutine, stream );
 	}
 }
 DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped )
