@@ -280,10 +280,10 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
-		/*
-		   printf( "%p %s %p %s\n", tp->aux, tp->name->mbs, abtp->aux, abtp->name->mbs );
-		   printf( "%i:  %i\n", ito, parpass[ito] );
-		 */
+#if 0
+		printf( "%p %s %p %s\n", tp->aux, tp->name->mbs, abtp->aux, abtp->name->mbs );
+		printf( "%i:  %i\n", ito, parpass[ito] );
+#endif
 
 		/* less strict */
 		if( tp && parpass[ito] ==0 ){

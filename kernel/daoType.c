@@ -474,7 +474,18 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt <= DAO_MT_EQ ) return mt;
 	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
-	if( type->tid == DAO_VARIANT ){
+	if( self->tid == DAO_VARIANT && type->tid == DAO_VARIANT ){
+		mt = DAO_MT_NOT;
+		for(i=0; i<self->nested->size; i++){
+			it2 = self->nested->items.pType[i];
+			mt2 = DaoType_MatchTo( it2, type, defs );
+			if( mt2 > mt ) mt = mt2;
+			if( mt == DAO_MT_EQ ) break;
+		}
+		if( mt && defs && type->aux && type->aux->type == DAO_TYPE )
+			MAP_Insert( defs, type->aux, self->aux );
+		return mt;
+	}else if( type->tid == DAO_VARIANT ){
 		mt = DAO_MT_NOT;
 		for(i=0; i<type->nested->size; i++){
 			it2 = type->nested->items.pType[i];
@@ -512,6 +523,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
 			/* Do not match between array<int>, array<float>, array<double>: */
 			if( self->tid == DAO_ARRAY && k == DAO_MT_SIM ) return DAO_MT_NOT;
 			if( k == DAO_MT_NOT ) return k;
