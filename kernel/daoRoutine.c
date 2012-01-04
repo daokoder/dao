@@ -242,7 +242,7 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 	   if( selftype ) printf( "%i\n", routType->name->mbs, ndef, npar, selftype );
 	 */
 
-	if( code == DVM_MCALL && ! ( routType->attrib & DAO_TYPE_SELF ) ){
+	if( code == DVM_MCALL && ! (routType->attrib & DAO_TYPE_SELF) ){
 		npar --;
 		tps ++;
 	}else if( selftype && (routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
@@ -259,13 +259,13 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 		goto FinishError;
 	}
 
-	for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
+	for(j=selfChecked; j<ndef; j++) parpass[j] = 0;
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DaoType *tp = tps[ifrom];
 		ito = ifrom + selfChecked;
 		if( ito >= ndef ) goto FinishError;
 		if( partypes[ito]->tid == DAO_PAR_VALIST ){
-			for(; ifrom<npar; ifrom++) parpass[ifrom+selfChecked] = 1;
+			for(; ifrom<npar; ifrom++) parpass[ito] = 1;
 			break;
 		}
 		if( tp == NULL ) goto FinishError;
@@ -3002,7 +3002,7 @@ NotExist_TryAux:
 					break;
 				}
 				if( meth == NULL ) goto NotMatch;
-				rout = DaoValue_Check( meth, at, ts, 1, DVM_MCALL, errors );
+				rout = DaoValue_Check( meth, at, ts, 1, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
 				ct = dao_type_for_iterator;
 				UpdateType( opc, ct );
