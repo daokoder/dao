@@ -1062,11 +1062,11 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	 }
 
 	if( self->body->vmCodes->size ==0 ) return 1;
-	defs = NULL;
 	defs2 = DHash_New(0,0);
 	defs3 = DHash_New(0,0);
 	typeMaps = DArray_New(D_MAP);
 	DArray_PushBack( typeMaps, defs2 );
+	defs = (DMap*) DArray_Back( typeMaps );
 	init = dao_malloc( self->body->regCount );
 	memset( init, 0, self->body->regCount );
 	addCount = dao_malloc( self->body->vmCodes->size * sizeof(int) );
@@ -3136,7 +3136,15 @@ NotExist_TryAux:
 				}
 				DMap_Clear( defs2 );
 				DMap_Assign( defs2, defs );
-				if( rout == NULL ){
+				if( rout == NULL && at->aux == NULL ){
+					/* "routine" type: */
+					ct = any;
+					ctchecked = 1;
+				}else if( self->routName->mbs[0] == '@' && (vmc->b & DAO_CALL_EXPAR) ){
+					/* inside decorator: */
+					ct = (DaoType*) at->aux;
+					ctchecked = 1;
+				}else if( rout == NULL ){
 					if( DaoRoutine_CheckType( at, ns, bt, tp, j, code, 0 ) ==0 ){
 						goto ErrorTyping;
 					}

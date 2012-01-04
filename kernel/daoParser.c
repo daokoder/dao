@@ -1594,7 +1594,7 @@ WrongType:
 		case DKEY_ROUTINE :
 			tid = DAO_ROUTINE;
 			if( type == NULL ){
-				type = DaoType_New( "?", DAO_UDF, NULL, NULL );
+				type = DaoNamespace_MakeValueType( ns, dao_none_value );
 				DArray_Append( ns->auxData, type );
 			}
 			retype = (DaoValue*) type;
