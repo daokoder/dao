@@ -315,7 +315,7 @@ FinishOK:
 	return match;
 FinishError:
 	DMap_Delete( defs );
-	return -1;
+	return 0;
 }
 static DaoRoutine* MatchByParamType( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code )
 {
@@ -951,11 +951,11 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	{ itp = (tp)->nested->items.pType[0]; \
 	if( itp->tid == DAO_PAR_NAMED ) itp = & itp->aux->xType; \
 	k = itp->tid; if( k == DAO_VALTYPE ) k = itp->aux->type; \
-	if( k > DAO_DOUBLE && k != DAO_ANY ) goto NotMatch; \
+	if( k > DAO_DOUBLE && ! NoCheckingType(itp) ) goto NotMatch; \
 	itp = (tp)->nested->items.pType[1]; \
 	if( itp->tid == DAO_PAR_NAMED ) itp = & itp->aux->xType; \
 	k = itp->tid; if( k == DAO_VALTYPE ) k = itp->aux->type; \
-	if( k > DAO_DOUBLE && k != DAO_ANY ) goto NotMatch; }
+	if( k > DAO_DOUBLE && ! NoCheckingType(itp) ) goto NotMatch; }
 
 #define InsertCodeMoveToInteger( opABC, opcode ) \
 	{ vmc2.a = opABC; \
@@ -994,6 +994,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 #define UpdateType( id, tp ) \
 	if( type[id] == NULL || (type[id]->attrib & DAO_TYPE_NOTDEF) ){ \
 		if( type[id] == NULL || DaoType_MatchTo( tp, type[id], NULL ) ){ \
+			if( tp->attrib & DAO_TYPE_NOTDEF ) tp = DaoType_DefineTypes( tp, ns, defs ); \
 			GC_ShiftRC( tp, type[id] ); \
 			type[id] = tp; } }
 
@@ -1024,11 +1025,10 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoRoutine *meth = NULL;
 	DaoClass *hostClass = tidHost==DAO_OBJECT ? & self->routHost->aux->xClass:NULL;
 	DaoClass *klass;
-	DNode      *node;
-	DString    *str, *mbs, *error = NULL;
-	DMap       *defs, *defs2;
-	char       *init, char50[50], char200[200];
-	int     *addCount;
+	DNode    *node;
+	DString  *str, *mbs, *error = NULL;
+	DArray  *typeMaps;
+	DMap    *defs, *defs2, *defs3;
 	DArray  *rettypes; /* for code sections */
 	DArray  *tparray, *errors = NULL;
 	DArray  *vmCodeNew, *addCode;
@@ -1045,6 +1045,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoValue **csts;
 	DaoValue **pp;
 	int notide = ! (vms->options & DAO_EXEC_IDE);
+	char *init, char50[50], char200[200];
+	int *addCount;
 	/* To support Edit&Continue in DaoStudio, some of the features
 	 * have to be switched off:
 	 * (1) function specialization based on parameter types;
@@ -1060,8 +1062,11 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	 }
 
 	if( self->body->vmCodes->size ==0 ) return 1;
-	defs = DMap_New(0,0);
-	defs2 = DMap_New(0,0);
+	defs = NULL;
+	defs2 = DHash_New(0,0);
+	defs3 = DHash_New(0,0);
+	typeMaps = DArray_New(D_MAP);
+	DArray_PushBack( typeMaps, defs2 );
 	init = dao_malloc( self->body->regCount );
 	memset( init, 0, self->body->regCount );
 	addCount = dao_malloc( self->body->vmCodes->size * sizeof(int) );
@@ -1176,6 +1181,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 		bt = opb < M ? type[opb] : NULL;
 		ct = opc < M ? type[opc] : NULL;
 		addCount[i] += i ==0 ? 0 : addCount[i-1];
+		defs = (DMap*) DArray_Back( typeMaps );
 		node = DMap_First( defs );
 		while( node !=NULL ){
 			DaoType *abtp = (DaoType*) node->key.pValue;
@@ -1190,6 +1196,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 #if 0
 		DaoTokens_AnnotateCode( self->body->source, vmc2, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, mbs->mbs );
+		printf( "%i\n", typeMaps->size );
 #endif
 		switch( code ){
 		case DVM_NOP :
@@ -3127,6 +3134,8 @@ NotExist_TryAux:
 					rout = MatchByParamType( (DaoRoutine*) at->aux, bt, tp, j, code );
 					if( rout == NULL ) goto ErrorTyping;
 				}
+				DMap_Clear( defs2 );
+				DMap_Assign( defs2, defs );
 				if( rout == NULL ){
 					if( DaoRoutine_CheckType( at, ns, bt, tp, j, code, 0 ) ==0 ){
 						goto ErrorTyping;
@@ -3173,8 +3182,6 @@ NotExist_TryAux:
 					if( tt->aux == NULL || (tt->attrib & DAO_TYPE_NOTDEF) ){
 						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 					}
-					DMap_Clear( defs2 );
-					DMap_Assign( defs2, defs );
 
 					if( at->tid == DAO_CTYPE && at->kernel->sptree ){
 						/* For type holder specialization: */
@@ -3203,9 +3210,9 @@ NotExist_TryAux:
 							DaoRoutineBody *body = DaoRoutineBody_Copy( drout->body );
 							GC_ShiftRC( body, drout->body );
 							drout->body = body;
-							DMap_Clear( defs2 );
-							DaoType_MatchTo( drout->routType, orig->routType, defs2 );
-							DaoRoutine_MapTypes( drout, defs2 );
+							DMap_Clear( defs3 );
+							DaoType_MatchTo( drout->routType, orig->routType, defs3 );
+							DaoRoutine_MapTypes( drout, defs3 );
 							/* to infer returned type */ 
 							if( DaoRoutine_DoTypeInference( drout, silent ) ==0 ) goto InvParam;
 						}
@@ -3264,6 +3271,7 @@ TryPushBlockReturnType:
 					DArray_Append( rettypes, opc );
 					DArray_Append( rettypes, tt );
 					DArray_Append( rettypes, tt );
+					DArray_PushBack( typeMaps, defs2 );
 				}else if( sect && cbtype == NULL ){
 					if( NoCheckingType( type[opc] ) == 0 ){
 						printf( "Unused code section at line %i!\n", vmc->line );
@@ -3271,6 +3279,7 @@ TryPushBlockReturnType:
 					DArray_Append( rettypes, opc );
 					DArray_Append( rettypes, NULL );
 					DArray_Append( rettypes, NULL );
+					DArray_PushBack( typeMaps, defs2 );
 				}
 				break;
 			}
@@ -3334,10 +3343,13 @@ TryPushBlockReturnType:
 				ct = rettypes->items.pType[ rettypes->size - 1 ];
 				ct2 = rettypes->items.pType[ rettypes->size - 2 ];
 				redef = rettypes->items.pInt[ rettypes->size - 3 ];
+				DMap_Clear( defs2 );
+				DMap_Assign( defs2, defs );
 				if( (i+1) < self->body->annotCodes->size ){
 					int nop = vmcs[i+1]->code == DVM_NOP;
 					if( vmcs[i+nop+1]->code == DVM_GOTO && vmcs[i+nop+1]->c == DVM_SECT ){
 						DArray_Erase( rettypes, rettypes->size - 3, -1 );
+						DArray_PopBack( typeMaps );
 						popped = 1;
 					}
 				}
@@ -3352,8 +3364,6 @@ TryPushBlockReturnType:
 				/*
 				   printf( "%p %i %s %s\n", self, self->routType->nested->size, self->routType->name->mbs, ct?ct->name->mbs:"" );
 				 */
-				DMap_Clear( defs2 );
-				DMap_Assign( defs2, defs );
 				if( code == DVM_YIELD && self->routType->cbtype ){ /* yield in functional method: */
 					if( vmc->b == 0 ){
 						if( self->routType->cbtype->aux ) goto ErrorTyping;
@@ -3380,14 +3390,14 @@ TryPushBlockReturnType:
 					/* less strict checking for type holder as well (case mt.start()): */
 					if( ct && ct->tid == DAO_UDF ){
 						ct = DaoNamespace_MakeValueType( ns, dao_none_value );
-						ct = DaoNamespace_MakeRoutType( ns, self->routType, NULL, NULL, ct );
 						rettypes->items.pType[ rettypes->size - 1 ] = ct;
+						ct = DaoNamespace_MakeRoutType( ns, self->routType, NULL, NULL, ct );
 						GC_ShiftRC( ct, self->routType );
 						self->routType = ct;
 						continue;
 					}
 					if( ct && NoCheckingType( ct ) ) continue;
-					if( ct && ct->tid == DAO_VALTYPE && ct->aux == dao_none_value ) continue;
+					if( ct && ct->tid == DAO_VALTYPE && ct->aux->type == DAO_NONE ) continue;
 					if( ct && ! (self->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 				}else{
 					at = type[opa];
@@ -4123,8 +4133,9 @@ TryPushBlockReturnType:
 
 	GC_DecRCs( regConst );
 	DArray_Delete( regConst );
-	DMap_Delete( defs );
+	DArray_Delete( typeMaps );
 	DMap_Delete( defs2 );
+	DMap_Delete( defs3 );
 	DArray_Delete( addRegType );
 	DString_Delete( mbs );
 	dao_free( init );
@@ -4245,9 +4256,10 @@ SilentError:
 	 DArray_Delete( vmCodeNew );
 	 DArray_Delete( addCode );
 	 DArray_Delete( addRegType );
+	 DArray_Delete( typeMaps );
 	 DString_Delete( mbs );
-	 DMap_Delete( defs );
 	 DMap_Delete( defs2 );
+	 DMap_Delete( defs3 );
 	 return 0;
 }
 

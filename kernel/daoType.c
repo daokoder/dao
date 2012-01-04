@@ -512,6 +512,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			/* Do not match between array<int>, array<float>, array<double>: */
+			if( self->tid == DAO_ARRAY && k == DAO_MT_SIM ) return DAO_MT_NOT;
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
 		}

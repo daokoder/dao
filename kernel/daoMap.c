@@ -249,6 +249,7 @@ DMap* DMap_Copy( DMap *other )
 		self = DHash_New( other->keytype, other->valtype );
 		self->tsize = other->tsize;
 		self->table = (DNode**)dao_realloc( self->table, other->tsize*sizeof(DNode*) );
+		memset( self->table, 0, other->tsize*sizeof(DNode*) );
 	}else{
 		self = DMap_New( other->keytype, other->valtype );
 	}
