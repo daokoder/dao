@@ -475,12 +475,12 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
 	if( self->tid == DAO_VARIANT && type->tid == DAO_VARIANT ){
-		mt = DAO_MT_NOT;
+		mt = DAO_MT_EQ;
 		for(i=0; i<self->nested->size; i++){
 			it2 = self->nested->items.pType[i];
 			mt2 = DaoType_MatchTo( it2, type, defs );
-			if( mt2 > mt ) mt = mt2;
-			if( mt == DAO_MT_EQ ) break;
+			if( mt2 < mt ) mt = mt2;
+			if( mt == DAO_MT_NOT ) break;
 		}
 		if( mt && defs && type->aux && type->aux->type == DAO_TYPE )
 			MAP_Insert( defs, type->aux, self->aux );

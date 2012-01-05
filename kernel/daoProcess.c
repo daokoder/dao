@@ -2028,9 +2028,16 @@ CallEntry:
 				id = IntegerOperand( vmc->b );
 				if( id <0 ) id += list->items.size;
 				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-				value = list->items.items.pValue[id];
-				GC_ShiftRC( value, locVars[ vmc->c ] );
-				locVars[ vmc->c ] = value;
+				vA = list->items.items.pValue[id];
+				switch( vmc->code ){
+				case DVM_GETI_LSI :
+					GC_ShiftRC( vA, locVars[ vmc->c ] );
+					locVars[ vmc->c ] = vA;
+					break;
+				case DVM_GETI_LII : locVars[ vmc->c ]->xInteger.value = vA->xInteger.value; break;
+				case DVM_GETI_LFI : locVars[ vmc->c ]->xFloat.value = vA->xFloat.value; break;
+				case DVM_GETI_LDI : locVars[ vmc->c ]->xDouble.value = vA->xDouble.value; break;
+				}
 			}OPNEXT()
 		OPCASE( SETI_LIII )
 			OPCASE( SETI_LIIF )

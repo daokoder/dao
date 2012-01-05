@@ -1062,11 +1062,10 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	 }
 
 	if( self->body->vmCodes->size ==0 ) return 1;
+	defs = DHash_New(0,0);
 	defs2 = DHash_New(0,0);
 	defs3 = DHash_New(0,0);
 	typeMaps = DArray_New(D_MAP);
-	DArray_PushBack( typeMaps, defs2 );
-	defs = (DMap*) DArray_Back( typeMaps );
 	init = dao_malloc( self->body->regCount );
 	memset( init, 0, self->body->regCount );
 	addCount = dao_malloc( self->body->vmCodes->size * sizeof(int) );
@@ -1162,6 +1161,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DArray_Append( rettypes, 0 );
 	DArray_Append( rettypes, self->routType->aux );
 	DArray_Append( rettypes, self->routType->aux );
+	DArray_PushBack( typeMaps, defs );
 	for(i=0; i<N; i++){
 		/* adding type to namespace may add constant data as well */
 		cid = i;
@@ -1181,17 +1181,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 		bt = opb < M ? type[opb] : NULL;
 		ct = opc < M ? type[opc] : NULL;
 		addCount[i] += i ==0 ? 0 : addCount[i-1];
-		defs = (DMap*) DArray_Back( typeMaps );
-		node = DMap_First( defs );
-		while( node !=NULL ){
-			DaoType *abtp = (DaoType*) node->key.pValue;
-			if( abtp->tid == DAO_UDF ){
-				DMap_Erase( defs, (void*) abtp );
-				node = DMap_First( defs );
-				continue;
-			}
-			node = DMap_Next( defs, node );
-		}
+		DMap_Assign( defs, (DMap*)DArray_Back( typeMaps ) );
 
 #if 0
 		DaoTokens_AnnotateCode( self->body->source, vmc2, mbs, 24 );
@@ -4142,6 +4132,7 @@ TryPushBlockReturnType:
 	GC_DecRCs( regConst );
 	DArray_Delete( regConst );
 	DArray_Delete( typeMaps );
+	DMap_Delete( defs );
 	DMap_Delete( defs2 );
 	DMap_Delete( defs3 );
 	DArray_Delete( addRegType );
@@ -4266,6 +4257,7 @@ SilentError:
 	 DArray_Delete( addRegType );
 	 DArray_Delete( typeMaps );
 	 DString_Delete( mbs );
+	 DMap_Delete( defs );
 	 DMap_Delete( defs2 );
 	 DMap_Delete( defs3 );
 	 return 0;
