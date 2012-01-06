@@ -44,7 +44,8 @@ struct DaoVmSpace
     /* for some internal scripts and predefined objects or types */
     DaoNamespace  *nsInternal;
 
-    DaoStream  *stdStream;
+    DaoStream  *stdioStream;
+    DaoStream  *errorStream;
 
     DMap   *allProcesses;
     DArray *processes;

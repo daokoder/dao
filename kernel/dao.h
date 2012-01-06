@@ -241,6 +241,7 @@ typedef struct DMap        DMap;
 
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
+typedef struct DaoUserStream   DaoUserStream;
 typedef struct DaoUserHandler  DaoUserHandler;
 typedef struct DaoCallbackData DaoCallbackData;
 
@@ -342,15 +343,18 @@ struct DaoCallbackData
 	DaoValue    *userdata;
 };
 
-/* This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
- * to change the handling of standard input/output, debugging and profiling
- * behaviour. */
-struct DaoUserHandler
+struct DaoUserStream
 {
 	/* count>0: read count bytes; count=0: one line; count<0: until EOF */
-	void (*StdioRead)( DaoUserHandler *self, DString *input, int count );
-	void (*StdioWrite)( DaoUserHandler *self, DString *output );
-	void (*StdioFlush)( DaoUserHandler *self );
+	void (*StdioRead)( DaoUserStream *self, DString *input, int count );
+	void (*StdioWrite)( DaoUserStream *self, DString *output );
+	void (*StdioFlush)( DaoUserStream *self );
+};
+
+/* This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
+ * to change the handling of debugging and profiling behaviour. */
+struct DaoUserHandler
+{
 	void (*StdlibDebug)( DaoUserHandler *self, DaoProcess *process );
 	/* properly change some NOP codes to DEBUG codes */
 	void (*BreakPoints)( DaoUserHandler *self, DaoRoutine *routine );
@@ -628,6 +632,7 @@ DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
 DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
+DAO_DLL void DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us );
 DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *line );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
@@ -675,6 +680,7 @@ DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL void DaoProcess_Stop( DaoProcess *self );
+DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
@@ -736,6 +742,8 @@ DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
+DAO_DLL void DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream );
+DAO_DLL void DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream );
 DAO_DLL void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );

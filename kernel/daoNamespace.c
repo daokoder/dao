@@ -640,9 +640,9 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 	char buf[IO_BUF_SIZE];
 	int ch;
 	if( ! fin ){
-		DaoStream_WriteMBS( vms->stdStream, "ERROR: can not open file \"" );
-		DaoStream_WriteMBS( vms->stdStream, fname );
-		DaoStream_WriteMBS( vms->stdStream, "\".\n" );
+		DaoStream_WriteMBS( vms->errorStream, "ERROR: can not open file \"" );
+		DaoStream_WriteMBS( vms->errorStream, fname );
+		DaoStream_WriteMBS( vms->errorStream, "\".\n" );
 		return 0;
 	}
 	src = DString_New(1);
@@ -720,7 +720,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DArray_Append( self->cstData, dao_none_value ); /* reserved for main */
 
 	DString_SetMBS( name, "io" ); 
-	DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdStream, DAO_DATA_PUBLIC );
+	DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdioStream, DAO_DATA_PUBLIC );
 
 	DString_SetMBS( name, "exceptions" );
 	value = (DaoValue*) DaoList_New();

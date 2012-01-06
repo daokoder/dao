@@ -94,6 +94,7 @@ struct DaoType
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeBase    *typer;
 };
+extern DaoType *dao_type_none;
 extern DaoType *dao_type_udf;
 extern DaoType *dao_type_any;
 extern DaoType *dao_array_any;

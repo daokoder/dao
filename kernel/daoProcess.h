@@ -104,6 +104,7 @@ struct DaoProcess
 	char stopit;
 
 	DaoFuture *future;
+	DaoStream *stdioStream;
 
 #ifdef DAO_WITH_THREAD
 	DMutex    *mutex; /* used only by mt; */

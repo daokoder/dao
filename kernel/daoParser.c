@@ -433,14 +433,14 @@ void DaoParser_Error3( DaoParser *self, int code, int m )
 }
 void DaoParser_Suggest( DaoParser *self, const char *suggestion )
 {
-	DaoStream_WriteMBS( self->vmSpace->stdStream, "suggestion:\n" );
-	DaoStream_WriteMBS( self->vmSpace->stdStream, suggestion );
-	DaoStream_WriteChar( self->vmSpace->stdStream, '\n' );
+	DaoStream_WriteMBS( self->vmSpace->errorStream, "suggestion:\n" );
+	DaoStream_WriteMBS( self->vmSpace->errorStream, suggestion );
+	DaoStream_WriteChar( self->vmSpace->errorStream, '\n' );
 }
 void DaoParser_PrintInformation( DaoParser *self, DArray *infolist, const char *header )
 {
 	int i;
-	DaoStream *stream = self->vmSpace->stdStream;
+	DaoStream *stream = self->vmSpace->errorStream;
 
 	if( infolist->size ==0 ) return;
 	DaoStream_WriteMBS( stream, header );
@@ -1158,7 +1158,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( module );
 	/* one parse might be used to compile multiple C functions: */
-	if( routine->body == NULL ) DMap_Clear( module->allConsts );
+	if( routine->body == NULL ) DMap_Reset( module->allConsts );
 
 	for(i=0; i<routine->routType->nested->size; i++){
 		type = routine->routType->nested->items.pType[i];
@@ -2361,7 +2361,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 				DArray_Erase( self->tokens, start - prefixed, right - start + prefixed + 1 );
 				tokens = self->tokens->items.pToken;
 #else
-				DaoStream_WriteMBS( vmSpace->stdStream, "macro is not enabled.\n" );
+				DaoStream_WriteMBS( vmSpace->errorStream, "macro is not enabled.\n" );
 				return 0;
 #endif
 			}else if( tki == DKEY_LOAD && start+1<self->tokens->size
@@ -4724,7 +4724,7 @@ int DaoParser_PostParsing( DaoParser *self )
 	/* DArray_Swap( self->regLines, routine->regLines ); */
 	if( DaoRoutine_SetVmCodes( routine, self->vmCodes ) ==0) return 0;
 	/*
-	   DaoRoutine_PrintCode( routine, self->vmSpace->stdStream );
+	   DaoRoutine_PrintCode( routine, self->vmSpace->errorStream );
 	 */
 	return 1;
 }

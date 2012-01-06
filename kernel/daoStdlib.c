@@ -58,18 +58,24 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns = proc->activeNamespace;
-	DaoStream *prevStream = vms->stdStream->redirect;
+	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[2];
 	dint *num = DaoProcess_PutInteger( proc, 0 );
 	int safe = p[3]->xInteger.value;
 	int wasProt = 0;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
-	if( redirect != prevStream ) vms->stdStream->redirect = redirect;
+	if( redirect != prevStream ){
+		GC_ShiftRC( redirect, proc->stdioStream );
+		proc->stdioStream = redirect;
+	}
 
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
 	*num = DaoProcess_Eval( proc, ns, p[0]->xString.data, p[1]->xInteger.value );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
-	if( redirect != prevStream ) vms->stdStream->redirect = prevStream;
+	if( redirect != prevStream ){
+		GC_ShiftRC( prevStream, proc->stdioStream );
+		proc->stdioStream = prevStream;
+	}
 }
 static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -195,7 +201,7 @@ static const char *const help =
 
 void DaoProcess_Trace( DaoProcess *self, int depth )
 {
-	DaoStream *stream = self->vmSpace->stdStream;
+	DaoStream *stream = self->vmSpace->stdioStream;
 	DaoStackFrame *frame = self->topFrame;
 	int k, i = 0;
 	while( frame && frame->routine ){
@@ -226,7 +232,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoUserHandler *handler = proc->vmSpace->userHandler;
 	DaoRoutine *routine = proc->activeRoutine;
-	DaoStream *stream = proc->vmSpace->stdStream;
+	DaoStream *stream = proc->vmSpace->stdioStream;
 	DString *input;
 	DArray *tokens;
 	DMap   *cycData;

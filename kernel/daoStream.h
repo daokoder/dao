@@ -40,15 +40,15 @@ struct DaoStream
 {
 	DAO_DATA_COMMON;
 
-	DFile      *file;
-	DString    *streamString;
 	char        attribs;
+	int         mode;
 	int         useQuote;
 	char       *format;
-	DaoVmSpace *vmSpace;
+	DFile      *file;
+	DString    *streamString;
 	DString    *fname;
-	DaoStream  *redirect;
-	int mode;
+
+	DaoUserStream *redirect;
 };
 
 DAO_DLL DaoStream* DaoStream_New();

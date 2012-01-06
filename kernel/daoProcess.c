@@ -694,7 +694,9 @@ int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[]
 	/* no return value to the previous stack frame */
 	DaoProcess_InterceptReturnValue( self );
 	ret = DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
-	DaoStream_Flush( self->vmSpace->stdStream );
+	if( self->stdioStream ) DaoStream_Flush( self->stdioStream );
+	DaoStream_Flush( self->vmSpace->stdioStream );
+	DaoStream_Flush( self->vmSpace->errorStream );
 	fflush( stdout );
 	return ret;
 }
@@ -1075,7 +1077,7 @@ CallEntry:
 	printf("number of instruction: %i\n", routine->body->vmCodes->size );
 	printf( "VM process: %p\n", self );
 	printf("==================================================\n");
-	DaoRoutine_PrintCode( routine, self->vmSpace->stdStream );
+	DaoRoutine_PrintCode( routine, self->vmSpace->stdioStream );
 #endif
 
 	vmc = vmcBase + id;
@@ -2636,9 +2638,9 @@ ReturnTrue :
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
 			DaoProcess_PushRoutine( self, self->topFrame->next->routine, NULL );
 			DaoProcess_SetActiveFrame( self, self->topFrame );
-			DaoStream_WriteMBS( vmSpace->stdStream, "= " );
-			DaoValue_Print( self->stackValues[0], self, vmSpace->stdStream, NULL );
-			DaoStream_WriteNewLine( vmSpace->stdStream );
+			DaoStream_WriteMBS( vmSpace->stdioStream, "= " );
+			DaoValue_Print( self->stackValues[0], self, vmSpace->stdioStream, NULL );
+			DaoStream_WriteNewLine( vmSpace->stdioStream );
 			DaoProcess_PopFrame( self );
 		}
 	}
@@ -6700,7 +6702,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValu
 	/* if( decoFunc->parser ) DaoRoutine_Compile( decoFunc ); */
 	DArray_Assign( parser->tokens, decoFunc->body->source );
 	if( DaoParser_ParseRoutine( parser ) ==0 ) goto ErrorDecorator;
-	/* DaoRoutine_PrintCode( routine, self->activeNamespace->vmSpace->stdStream ); */
+	/* DaoRoutine_PrintCode( routine, self->activeNamespace->vmSpace->stdioStream ); */
 	DaoParser_Delete( parser );
 	DMap_Delete( mapids );
 	return routine;
@@ -6787,7 +6789,7 @@ int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
 	DaoRoutine_MapTypes( self, deftypes );
 	return 1;
 	/*
-	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdStream );
+	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdioStream );
 	 */
 }
 
@@ -6852,8 +6854,8 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	}
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) closure );
 	/*
-	 DaoRoutine_PrintCode( proto, self->vmSpace->stdStream );
-	 DaoRoutine_PrintCode( closure, self->vmSpace->stdStream );
+	 DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
+	 DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
 	 printf( "%s\n", closure->routType->name->mbs );
 	 */
 }
@@ -7182,7 +7184,7 @@ static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode 
 extern void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoStream *stdio = self->vmSpace->stdStream;
+	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *cdata = NULL;
 	DaoType *except = DaoException_GetType( DAO_EXCEPTION );
 	DaoType *warning = DaoException_GetType( DAO_WARNING );
@@ -7208,7 +7210,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 			if( cdata == NULL ) goto InvalidException;
 			DaoInitException( (DaoException*)cdata, self, vmc, 0/*self->idClearFE*/, NULL );
 			if( DaoType_ChildOf( cdata->ctype, warning ) ){
-				DaoPrintException( cdata, stdio );
+				DaoPrintException( cdata, stream );
 			}else{
 				DArray_Append( self->exceptions, val );
 			}
@@ -7289,7 +7291,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 {
 	DaoType *etype;
 	DaoType *warning = DaoException_GetType( DAO_WARNING );
-	DaoStream *stdio = self->vmSpace->stdStream;
+	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *except;
 	if( type <= 1 ) return;
 	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
@@ -7299,7 +7301,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 		/* XXX support warning suppression */
 		except = DaoException_New( etype );
 		DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
-		DaoPrintException( except, stdio );
+		DaoPrintException( except, stream );
 		etype->typer->Delete( except );
 		return;
 	}
@@ -7413,7 +7415,7 @@ void DaoPrintException( DaoException *ex, DaoStream *stream )
 void DaoProcess_PrintException( DaoProcess *self, int clear )
 {
 	DaoType *extype = dao_Exception_Typer.core->kernel->abtype;
-	DaoStream *stdio = self->vmSpace->stdStream;
+	DaoStream *stream = self->vmSpace->errorStream;
 	DaoValue **excobjs = self->exceptions->items.pValue;
 	int i;
 	for(i=0; i<self->exceptions->size; i++){
@@ -7424,14 +7426,14 @@ void DaoProcess_PrintException( DaoProcess *self, int clear )
 			except = (DaoException*)DaoObject_MapThisObject( & excobjs[i]->xObject, extype );
 		}
 		if( except == NULL ) continue;
-		DaoPrintException( except, stdio );
+		DaoPrintException( except, stream );
 	}
 	if( clear ) DArray_Clear( self->exceptions );
 }
 
 void DaoProcess_Print( DaoProcess *self, const char *chs )
 {
-	DaoStream_WriteMBS( self->vmSpace->stdStream, chs );
+	DaoStream_WriteMBS( self->vmSpace->stdioStream, chs );
 }
 
 DaoValue* DaoProcess_MakeConst( DaoProcess *self )
@@ -7543,4 +7545,10 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 		routine->body->mode &= ~DAO_EXEC_SAFE;
 		for(i=0; i<n; i++) if( c[i].code == DVM_SAFE_GOTO ) c[i].code = DVM_GOTO;
 	}
+}
+
+void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream )
+{
+	GC_ShiftRC( stream, self->stdioStream );
+	self->stdioStream = stream;
 }
