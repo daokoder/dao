@@ -810,6 +810,7 @@ void DaoClass_SetConst( DaoClass *self, int id, DaoValue *data )
 	if( up >= self->classes->size ) return;
 	if( id >= self->classes->items.pClass[up]->cstData->size ) return;
 	DaoValue_Copy( data, & self->classes->items.pClass[up]->cstData->items.pValue[id] );
+	DaoValue_MarkConst( self->classes->items.pClass[up]->cstData->items.pValue[id] );
 }
 int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass *thisClass )
 {

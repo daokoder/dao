@@ -1195,7 +1195,7 @@ void DaoCGC_RefCountDecScan()
 				/* Do not break the reference to ctype now, it is required
 				 * for deleting the cdata properly. */
 				if( value->type == DAO_CDATA ){
-					DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+					//DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				}else{
 					directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 				}
@@ -2033,7 +2033,7 @@ void DaoIGC_RefCountDecScan()
 				/* Do not break the reference to ctype now, it is required
 				 * for deleting the cdata properly. */
 				if( value->type == DAO_CDATA ){
-					DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+					//DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				}else{
 					directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 				}

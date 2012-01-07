@@ -282,7 +282,7 @@ typedef void (*FuncDaoInit)();
 typedef void  (*DThreadTask)( void *arg );
 typedef void* (*FuncPtrCast)( void* );
 typedef void  (*FuncPtrDel)( void* );
-typedef void  (*DaoFuncPtr) ( DaoProcess *process, DaoValue *params[], int npar );
+typedef void  (*DaoCFunction) ( DaoProcess *process, DaoValue *params[], int npar );
 
 typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename, DString *emsg );
 typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out );
@@ -298,8 +298,8 @@ struct DaoNumItem
 };
 struct DaoFuncItem
 {
-	DaoFuncPtr  fpter;    /* C function pointer; */
-	const char *proto;    /* function prototype: name( parlist ) => return_type */
+	DaoCFunction  fpter;    /* C function pointer; */
+	const char   *proto;    /* function prototype: name( parlist ) => return_type */
 };
 
 /* Typer structure, contains type information of each Dao type: */
@@ -615,6 +615,7 @@ DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
 DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL int DaoRoutine_IsWrapper( DaoRoutine *self );
 
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
@@ -718,7 +719,7 @@ DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoVal
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
 DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
-DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
+DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );
 DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
 DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
@@ -1178,7 +1179,7 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
  wrap c type, return NULL if failed 
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
  wrap c function, return NULL if failed 
-DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fp, const char *proto );
+DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 
    parameters alias[] is an array of type name aliases,
    used as typedefs like: typedef alias[2*i] alias[2*i+1];

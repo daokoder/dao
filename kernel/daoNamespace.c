@@ -327,7 +327,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			supMethods = sup->core->kernel->methods;
 			for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
 				if( it->value.pRoutine->overloads ){
-					DRoutines *meta = (DRoutines*) it->value.pVoid;
+					DRoutines *meta = (DRoutines*) it->value.pRoutine->overloads;
 					/* skip constructor */
 					if( STRCMP( it->value.pRoutine->routName, sup->name ) ==0 ) continue;
 					for(k=0; k<meta->routines->size; k++){
@@ -602,7 +602,7 @@ DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, Da
 	}
 	return func;
 }
-DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoFuncPtr fptr, const char *proto )
+DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fptr, const char *proto )
 {
 	DaoRoutine *func = DaoNamespace_MakeFunction( self, proto, NULL );
 	if( func == NULL ) return NULL;
@@ -624,7 +624,7 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 	defparser->routine = self->constEvalRoutine;
 	while( items[i].fpter != NULL ){
 		func = DaoNamespace_MakeFunction( self, items[i].proto, parser );
-		if( func ) func->pFunc = (DaoFuncPtr)items[i].fpter;
+		if( func ) func->pFunc = (DaoCFunction)items[i].fpter;
 		ec += func == NULL;
 		i ++;
 	}

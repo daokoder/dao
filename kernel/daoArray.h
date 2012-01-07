@@ -53,7 +53,6 @@ struct DArray
 	size_t type   : 4; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
 };
 
-/* See daolib.h */
 DAO_DLL DArray* DArray_New( short type );
 DAO_DLL DArray* DArray_Copy( DArray *self );
 DAO_DLL void DArray_Delete( DArray *self );

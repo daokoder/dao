@@ -171,6 +171,7 @@ enum DaoKeyNames
 	DKEY_RETRY ,
 	DKEY_CATCH ,
 	DKEY_RAISE ,
+	/* Built-in math functions; not real keywords, handle as keywords for convenience: */
 	DKEY_ABS ,
 	DKEY_ACOS ,
 	DKEY_ARG ,

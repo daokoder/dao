@@ -53,7 +53,7 @@ struct DaoRoutine
 	DaoNamespace    *nameSpace; /* definition namespace; */
 
 	DaoRoutineBody  *body; /* data for Dao routines; */
-	DaoFuncPtr       pFunc;
+	DaoCFunction     pFunc;
 
 	DaoRoutine      *original; /* the original routine of a PS specialized one; */
 	DRoutines       *specialized; /* specialization based on parameters; */

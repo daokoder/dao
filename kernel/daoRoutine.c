@@ -120,6 +120,10 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
 }
+int DaoRoutine_IsWrapper( DaoRoutine *self )
+{
+	return self->pFunc != NULL;
+}
 int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 {
 	DArray *consts = & self->routConsts->items;
@@ -1187,7 +1191,6 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 #if 0
 		DaoTokens_AnnotateCode( self->body->source, vmc2, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( vmc2, mbs->mbs );
-		printf( "%i\n", typeMaps->size );
 #endif
 		switch( code ){
 		case DVM_NOP :
@@ -2322,7 +2325,7 @@ NotExist_TryAux:
 					ct = DaoType_DefineTypes( type[opc], ns, defs );
 					if( ct ) UpdateType( opc, ct );
 				}
-				if( typed_code && k == DAO_MT_EQ ){
+				if( typed_code && k == DAO_MT_EQ && at == type[opc] ){
 					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE
 							&& ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
 						vmc->code = DVM_MOVE_II + 3 * ( ct->tid - DAO_INTEGER )
@@ -2331,17 +2334,8 @@ NotExist_TryAux:
 						vmc->code = DVM_MOVE_CC;
 					}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 						vmc->code = DVM_MOVE_SS;
-					}else if( at->tid >= DAO_ARRAY ){
-						/* Do not use simple move when moving a constant to a variable,
-						 * which requires copying and possibly proper setting of type
-						 * fields (such as DaoList::unitype ect). */
-						if( csts[opa] ){
-							DaoType *t = DaoNamespace_GetType( ns, csts[opa] );
-							k = DaoType_MatchTo( t, ct, defs );
-						}
-						if( ct == type[opc] || (type[opc] && type[opc]->tid == DAO_ANY) ){
-							vmc->code = DVM_MOVE_PP;
-						}
+					}else if( at->tid >= DAO_ARRAY && csts[opa] == NULL ){
+						vmc->code = DVM_MOVE_PP;
 					}
 				}
 				break;
