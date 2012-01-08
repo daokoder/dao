@@ -500,6 +500,7 @@ DaoCxx_$(idname)::~DaoCxx_$(idname)()\n\
 void DaoCxx_$(idname)::DaoInitWrapper()\n\
 {\n\
 	cdata = DaoCdata_New( dao_type_$(idname), this );\n\
+	DaoGC_IncRC( (DaoValue*)cdata );\n\
 	DaoCxxVirt_$(idname)::DaoInitWrapper( this, cdata );\n\
 $(qt_make_linker)\n\
 }\n";
@@ -617,6 +618,7 @@ const string get_gcfields =
 {\n\
 	DaoCxx_$(typer) *self = (DaoCxx_$(typer)*) P;\n\
 	if( self->cdata ) DArray_Append( VS, (void*) self->cdata );\n\
+	if( RM ) self->cdata = NULL;\n\
 }\n";
 
 const string cast_to_parent = 

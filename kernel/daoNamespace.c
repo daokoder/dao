@@ -317,6 +317,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			}
 			cur->pFunc = typer->funcItems[i].fpter;
 			if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
+			if( strcmp( cur->routName->mbs, typer->name ) == 0 ) cur->attribs |= DAO_ROUT_INITOR;
 
 			DaoMethods_Insert( methods, cur, self, hostype );
 		}
@@ -545,7 +546,7 @@ int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	DaoParser *parser = DaoParser_New();
 	int i, ec = 0;
 	for(i=0; typers[i]; i++ ){
-		ec += DaoNamespace_WrapType2( self, typers[i], 0, parser ) == NULL;
+		ec += DaoNamespace_WrapType2( self, typers[i], 1, parser ) == NULL;
 		/* e |= ( DaoNamespace_SetupValues( self, typers[i] ) == 0 ); */
 	}
 	/* if( setup ) return DaoNamespace_SetupTypes( self, typers ); */

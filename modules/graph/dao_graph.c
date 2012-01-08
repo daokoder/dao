@@ -81,6 +81,8 @@ DaoxGraph* DaoxGraph_New( DaoType *type, int directed )
 		if( type->nested->size ) self->wtype = type->nested->items.pType[0]->tid;
 		self->nodeType = DaoCdataType_Specialize( daox_node_template_type, type->nested );
 		self->edgeType = DaoCdataType_Specialize( daox_edge_template_type, type->nested );
+		GC_IncRC( self->nodeType );
+		GC_IncRC( self->edgeType );
 	}
 	if( self->wtype > DAO_DOUBLE ) self->wtype = DAO_DOUBLE;
 	return self;
@@ -90,6 +92,8 @@ void DaoxGraph_Delete( DaoxGraph *self )
 	DaoCdata_FreeCommon( (DaoCdata*) self );
 	DArray_Delete( self->nodes );
 	DArray_Delete( self->edges );
+	GC_DecRC( self->nodeType );
+	GC_DecRC( self->edgeType );
 	dao_free( self );
 }
 
@@ -145,6 +149,12 @@ static void DaoxGraph_GetGCFields( void *p, DArray *values, DArray *arrays, DArr
 	DaoxGraph *self = (DaoxGraph*) p;
 	DArray_Append( arrays, self->nodes );
 	DArray_Append( arrays, self->edges );
+	if( self->nodeType ) DArray_Append( values, self->nodeType );
+	if( self->edgeType ) DArray_Append( values, self->edgeType );
+	if( remove ){
+		self->nodeType = NULL;
+		self->edgeType = NULL;
+	}
 }
 
 

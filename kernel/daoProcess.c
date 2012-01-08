@@ -391,7 +391,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 	int i;
 	printf( "%s: %i %i %i\n", routine->routName->mbs, ndef, np, obj ? obj->type : 0 );
 	for(i=0; i<npar; i++){
-		tp = DaoNamespace_GetType( routine->nameSpace, *p[i] );
+		tp = DaoNamespace_GetType( routine->nameSpace, p[i] );
 		printf( "%i  %s\n", i, tp->name->mbs );
 	}
 #endif
@@ -4130,9 +4130,11 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_DoCxxCall( self, vmc, caller->xCdata.ctype, rout, selfpar, params, npar );
 		// XXX handle fail
 		sup = DaoProcess_InitBase( self, vmc, caller );
+		//printf( "sup = %i\n", sup );
 		if( caller->type == DAO_CTYPE && sup >= 0 ){
 			DaoCdata *cdata = & self->activeValues[ vmc->c ]->xCdata;
 			if( cdata && cdata->type == DAO_CDATA ){
+				//printf( "%p %p %p\n", cdata, cdata->object, self->activeObject->rootObject );
 				GC_ShiftRC( cdata, self->activeObject->parents[sup] );
 				self->activeObject->parents[sup] = (DaoValue*) cdata;
 				GC_ShiftRC( self->activeObject->rootObject, cdata->object );

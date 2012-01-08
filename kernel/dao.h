@@ -1127,7 +1127,7 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl )
  *     f( p[0], ..., p[n] )
  * Or,
  *     o->f( p[0], ..., p[n] )
- * Return 1 if successful, otherwise return 0. 
+ * Return 0 if successful, otherwise return DAO_ERROR, DAO_ERROR_PARAM etc. 
 int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 void  DaoProcess_Stop( DaoProcess *self );
 DaoValue DaoProcess_GetReturned( DaoProcess *self );

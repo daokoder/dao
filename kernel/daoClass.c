@@ -173,15 +173,25 @@ void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 
 	if( value == NULL || value->type < DAO_ENUM ) return;
 	tp = DaoNamespace_GetType( ns, value );
+	/* DaoType_DefineTypes() will make proper specialization of template-like type: */
 	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
 	if( tp == tp2 ) return;
 	if( tp2->tid == DAO_OBJECT && value->type == DAO_OBJECT && value->xObject.isDefault ){
-		GC_ShiftRC( tp2->value, value );
+		/* "self" is supposed to be a constant, so it has to be a default instance: */
+		GC_ShiftRC( tp2->value, value ); /* default instance of specialized Dao class; */
 		*self = tp2->value;
 		return;
 	}else if( tp2->tid == DAO_CLASS && value->type == DAO_CLASS ){
-		GC_ShiftRC( tp2->aux, value );
+		GC_ShiftRC( tp2->aux, value ); /* specialized Dao class; */
 		*self = tp2->aux;
+		return;
+	}else if( tp2->tid == DAO_CTYPE && value->type == DAO_CTYPE ){
+		GC_ShiftRC( tp2->aux, value ); /* specialized C type; */
+		*self = tp2->aux;
+		return;
+	}else if( tp2->tid == DAO_CDATA && value->type == DAO_CDATA ){
+		GC_ShiftRC( tp2->value, value ); /* default instance of specialized C type; */
+		*self = tp2->value;
 		return;
 	}
 	DaoValue_Move( value, self, tp2 );
@@ -196,17 +206,20 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	DArray *offsets = DArray_New(0);
 	DArray *routines = DArray_New(0);
 	DNode *it;
-	int i, st, up, id;
+	int i, k, st, up, id;
 
 	for(i=0; i<other->superClass->size; i++){
-		DaoClass *klass = other->superClass->items.pClass[i];
-		if( klass->type == DAO_CLASS && klass->typeHolders ){
-			tp = DaoType_DefineTypes( klass->objType, ns, deftypes );
-			if( tp ) klass = & tp->aux->xClass;
-			DArray_Append( self->superClass, klass );
-			DArray_Append( self->superAlias, klass->objType->name );
+		DaoValue *sup = other->superClass->items.pValue[i];
+		if( sup->type == DAO_CLASS && sup->xClass.typeHolders ){
+			tp = DaoType_DefineTypes( sup->xClass.objType, ns, deftypes );
+			DArray_Append( self->superClass, tp->aux );
+			DArray_Append( self->superAlias, tp->aux->xClass.objType->name );
+		}else if( sup->type == DAO_CTYPE && sup->xCtype.ctype->typer->core->kernel->sptree ){
+			tp = DaoType_DefineTypes( sup->xCtype.ctype, ns, deftypes );
+			DArray_Append( self->superClass, tp->aux );
+			DArray_Append( self->superAlias, tp->aux->xCtype.ctype->name );
 		}else{
-			DArray_Append( self->superClass, klass );
+			DArray_Append( self->superClass, sup );
 			DArray_Append( self->superAlias, other->superAlias->items.pVoid[i] );
 		}
 	}
@@ -261,6 +274,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			DString *name = rout->routName;
 			rout = DaoRoutine_Copy( rout, 1, 1 );
 			value = (DaoValue*) rout;
+			k = DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
 			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
 #endif
@@ -278,7 +292,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			}
 			DArray_Append( self->cstData, value );
 			DArray_Append( routines, rout );
-			if( DaoRoutine_Finalize( rout, self->objType, deftypes ) ==0 ) goto Failed;
+			if( k == 0 ) goto Failed;
 			continue;
 		}else if( value->type == DAO_ROUTINE ){
 			/* No need to added the overloaded routines now; */
@@ -489,13 +503,13 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				DaoClass_AddConst( self, alias, klass, DAO_DATA_PRIVATE, -1 );
 			}
 		}else if( self->superClass->items.pValue[i]->type == DAO_CTYPE ){
-			DaoValue *cdata = self->superClass->items.pValue[i];
-			DaoTypeKernel *kernel = cdata->xCdata.ctype->kernel;
+			DaoCtype *cdata = (DaoCtype*) self->superClass->items.pValue[i];
+			DaoTypeKernel *kernel = cdata->ctype->kernel;
 			DMap *values = kernel->values;
 			DMap *methods = kernel->methods;
 
-			DArray_Append( self->clsType->bases, cdata->xCdata.ctype );
-			DArray_Append( self->objType->bases, kernel->abtype );
+			DArray_Append( self->clsType->bases, cdata->ctype );
+			DArray_Append( self->objType->bases, cdata->cdtype );
 			if( values == NULL ){
 				DaoNamespace_SetupValues( kernel->nspace, kernel->typer );
 				values = kernel->values;
@@ -506,9 +520,9 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 
 			DString_SetMBS( mbs, kernel->typer->name );
-			DaoClass_AddConst( self, mbs, cdata, DAO_DATA_PRIVATE, -1 );
+			DaoClass_AddConst( self, mbs, (DaoValue*)cdata, DAO_DATA_PRIVATE, -1 );
 			if( strcmp( kernel->typer->name, alias->mbs ) ){
-				DaoClass_AddConst( self, alias, cdata, DAO_DATA_PRIVATE, -1 );
+				DaoClass_AddConst( self, alias, (DaoValue*)cdata, DAO_DATA_PRIVATE, -1 );
 			}
 		}
 	}
@@ -567,12 +581,17 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				}
 			}
 		}else if( cdata->type == DAO_CTYPE ){
+			DaoCtype *ctypeobj = (DaoCtype*) cdata;
 			DaoTypeKernel *kernel = cdata->ctype->kernel;
 			DaoTypeBase *typer = kernel->typer;
 			DMap *values = kernel->values;
 			DMap *methods = kernel->methods;
 			DNode *it;
 			int j;
+
+			DaoCdataType_SpecializeMethods( cdata->ctype );
+			kernel = cdata->ctype->kernel;
+			methods = kernel->methods;
 
 			if( typer->numItems ){
 				for(j=0; typer->numItems[j].name!=NULL; j++){
@@ -583,7 +602,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				}
 			}
 			for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
-				DaoRoutine *func = (DaoRoutine*) it->value.pValue;
+				DaoRoutine *func = it->value.pRoutine;
 				DaoRoutine **funcs = & func;
 				int k, count = 1;
 				if( it->value.pValue->type == DAO_ROUTINE && it->value.pRoutine->overloads ){
@@ -593,25 +612,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				}
 				for(k=0; k<count; k++){
 					DaoRoutine *func = funcs[k];
-					if( func->routHost != kernel->abtype ) continue;
-					if( DString_EQ( func->routName, kernel->abtype->name ) ) continue;
+					if( func->routHost != ctypeobj->cdtype ) continue;
+					if( func->attribs & DAO_ROUT_INITOR ) continue;
 					DaoClass_AddConst( self, it->key.pString, (DaoValue*)func, DAO_DATA_PUBLIC, -1 );
 				}
-#if 0
-				if( it->value.pValue->type == DAO_FUNCTION ){
-					DaoFunction *func = (DaoFunction*) it->value.pValue;
-					value.v.func = func;
-					value.t = func->type;
-					if( func->routHost != typer->core->abtype ) continue;
-					if( DString_EQ( func->routName, core->abtype->name ) ) continue;
-					DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );
-				}else if( it->value.pValue->type == DAO_FUNCTREE ){
-				}
-				//if( DString_EQ( value.v.func->routName, core->abtype->name ) ) continue;
-				//search = MAP_Find( self->lookupTable, it->key.pVoid );
-				//if( search ==NULL ) /* TODO: overload between C and Dao functions */
-				//	DaoClass_AddConst( self, it->key.pString, value, DAO_DATA_PUBLIC, -1 );
-#endif
 			}
 		}
 	}
@@ -725,8 +729,9 @@ void DaoClass_ResetAttributes( DaoClass *self )
 int  DaoClass_FindSuper( DaoClass *self, DaoValue *super )
 {
 	int i;
-	for(i=0; i<self->superClass->size; i++)
+	for(i=0; i<self->superClass->size; i++){
 		if( super == self->superClass->items.pValue[i] ) return i;
+	}
 	return -1;
 }
 
@@ -1002,7 +1007,6 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, "class " );
 	DaoStream_WriteString( stream, self->className );
 	DaoStream_WriteMBS( stream, ":\n" );
-	DaoRoutine_PrintCode( self->classRoutine, stream );
 	for( ; node != NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DaoValue *val;
 		if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;

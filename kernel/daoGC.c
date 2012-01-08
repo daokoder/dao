@@ -135,9 +135,11 @@ static void DaoGC_PrintProfile( DArray *idleList, DArray *workList )
 static void DaoGC_PrintValueInfo( DaoValue *value )
 {
 	if( value->type == DAO_TYPE ){
-		printf( "%s\n", value->xType.name->mbs );
+		printf( "%s %i\n", value->xType.name->mbs, value->xType.tid );
 	}else if( value->type == DAO_CDATA ){
 		printf( "%s\n", value->xCdata.ctype->name->mbs );
+	}else if( value->type == DAO_CLASS ){
+		printf( "%s\n", value->xClass.className->mbs );
 	}else if( value->type == DAO_TYPEKERNEL ){
 		printf( "%s\n", ((DaoTypeKernel*)value)->typer->name );
 	}
@@ -1195,7 +1197,7 @@ void DaoCGC_RefCountDecScan()
 				/* Do not break the reference to ctype now, it is required
 				 * for deleting the cdata properly. */
 				if( value->type == DAO_CDATA ){
-					//DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+					DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				}else{
 					directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 				}
@@ -2033,7 +2035,7 @@ void DaoIGC_RefCountDecScan()
 				/* Do not break the reference to ctype now, it is required
 				 * for deleting the cdata properly. */
 				if( value->type == DAO_CDATA ){
-					//DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+					DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 				}else{
 					directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 				}

@@ -986,7 +986,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 			if( DaoProcess_Compile( vmp, ns, self->mainSource, 1 ) ==0 ) return 0;
 			DaoVmSpace_ExeCmdArgs( self );
 			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
-			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ==0 ) return 0;
+			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ) return 0;
 		}else{
 			DaoVmSpace_ExeCmdArgs( self );
 		}

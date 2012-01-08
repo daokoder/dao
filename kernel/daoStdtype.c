@@ -3910,7 +3910,7 @@ DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque
 	GC_IncRC( cdata_type );
 	kernel->nspace = nspace;
 	kernel->abtype = cdata_type;
-	kernel->abtype->cdatatype = opaque ? DAO_CDATA_CXX : DAO_CDATA_DAO;
+	cdata_type->cdatatype = opaque ? DAO_CDATA_CXX : DAO_CDATA_DAO;
 	GC_ShiftRC( kernel, ctype_type->kernel );
 	GC_ShiftRC( kernel, cdata_type->kernel );
 	ctype_type->kernel = kernel;
