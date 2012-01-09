@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -272,7 +272,7 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 }
 extern int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
-DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
+DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 {
 	int i;
 	if( host == NULL ) return NULL;
@@ -281,7 +281,7 @@ DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 		DaoValue *sup = self->parents[i];
 		if( sup == NULL ) return NULL;
 		if( sup->type == DAO_OBJECT ){
-			if( (sup = DaoObject_MapThisObject( & sup->xObject, host ) ) ) return sup;
+			if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
 		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
 			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
 		}
@@ -319,7 +319,7 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
-	if( type ) p = DaoObject_MapThisObject( self, type );
+	if( type ) p = DaoObject_CastToBase( self, type );
 	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
 	return NULL;
 }

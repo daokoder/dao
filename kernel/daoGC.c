@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -886,6 +886,7 @@ void DaoCGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) vmp->abtype );
 				cycRefCountDecrement( (DaoValue*) vmp->future );
 				cycRefCountDecrements( vmp->exceptions );
+				cycRefCountDecrements( vmp->factory );
 				DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
 					cycRefCountDecrement( (DaoValue*) frame->routine );
@@ -1095,6 +1096,7 @@ int DaoCGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) vmp->abtype );
 				cycRefCountIncrement( (DaoValue*) vmp->future );
 				cycRefCountIncrements( vmp->exceptions );
+				cycRefCountIncrements( vmp->factory );
 				DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
 				while( frame ){
 					cycRefCountIncrement( (DaoValue*) frame->routine );
@@ -1303,6 +1305,7 @@ void DaoCGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & vmp->abtype );
 				directRefCountDecrement( (DaoValue**) & vmp->future );
 				directRefCountDecrements( vmp->exceptions );
+				directRefCountDecrements( vmp->factory );
 				DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
 				vmp->stackSize = 0;
 				while( frame ){
@@ -1676,6 +1679,7 @@ void DaoIGC_CycRefCountDecScan()
 				cycRefCountDecrement( (DaoValue*) vmp->abtype );
 				cycRefCountDecrement( (DaoValue*) vmp->future );
 				cycRefCountDecrements( vmp->exceptions );
+				cycRefCountDecrements( vmp->factory );
 				DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
 				j += vmp->stackSize;
 				while( frame ){
@@ -1920,6 +1924,7 @@ int DaoIGC_AliveObjectScan()
 				cycRefCountIncrement( (DaoValue*) vmp->abtype );
 				cycRefCountIncrement( (DaoValue*) vmp->future );
 				cycRefCountIncrements( vmp->exceptions );
+				cycRefCountIncrements( vmp->factory );
 				DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
 				k += vmp->stackSize;
 				while( frame ){
@@ -2153,6 +2158,7 @@ void DaoIGC_RefCountDecScan()
 				directRefCountDecrement( (DaoValue**) & vmp->abtype );
 				directRefCountDecrement( (DaoValue**) & vmp->future );
 				directRefCountDecrements( vmp->exceptions );
+				directRefCountDecrements( vmp->factory );
 				DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
 				j += vmp->stackSize;
 				vmp->stackSize = 0;

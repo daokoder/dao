@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of the Dao standard modules.
-  Copyright (C) 2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2011-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -252,8 +252,8 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *
 	DaoValue *selfpar = (DaoValue*) self;
 	DString name = DString_WrapMBS( "serialize" );
 	int errcode = DaoObject_GetData( self, & name, & value, NULL );
-	if( errcode || value == NULL || value->type < DAO_FUNCTREE || value->type > DAO_FUNCTION ) return 0;
-	if( DaoProcess_Call( proc, (DaoMethod*)value, selfpar, NULL, 0 ) ) return 0;
+	if( errcode || value == NULL || value->type != DAO_ROUTINE ) return 0;
+	if( DaoProcess_Call( proc, (DaoRoutine*)value, selfpar, NULL, 0 ) ) return 0;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
 	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
 	return 1;
@@ -261,9 +261,9 @@ static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *
 static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf )
 {
 	DaoType *type;
-	DaoValue *meth = DaoTypeBase_FindFunctionMBS( self->typer, "serialize" );
+	DaoRoutine *meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
 	if( meth == NULL ) return 0;
-	if( DaoProcess_Call( proc, (DaoMethod*)meth, (DaoValue*)self, NULL, 0 ) ) return 0;
+	if( DaoProcess_Call( proc, meth, (DaoValue*)self, NULL, 0 ) ) return 0;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
 	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf );
 	return 1;
@@ -344,9 +344,8 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoValue *cst = (DaoValue*)self->classRoutines;
 	DaoObject *object = DaoObject_New( self );
-	if( DaoProcess_PushCallable( proc, cst, (DaoValue*)object, & param, 1 ) ==0 ){
+	if( DaoProcess_PushCallable( proc, self->classRoutines, (DaoValue*)object, & param, 1 ) ==0 ){
 		proc->topFrame->returning = -1;
 		if( DaoProcess_Execute( proc ) ) return object;
 	}
@@ -355,8 +354,9 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProce
 }
 static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoValue *value = DaoTypeBase_FindFunction( self->typer, self->ctype->name );
-	if( DaoProcess_PushCallable( proc, value, NULL, & param, 1 ) ) return NULL;
+	DaoValue *value;
+	DaoRoutine *routine = DaoType_FindFunction( self->ctype, self->ctype->name );
+	if( DaoProcess_PushCallable( proc, routine, NULL, & param, 1 ) ) return NULL;
 	proc->topFrame->active = proc->firstFrame;
 	DaoProcess_SetActiveFrame( proc, proc->firstFrame ); /* return value in stackValues[0] */
 	if( DaoProcess_Execute( proc ) == 0 ) return NULL;

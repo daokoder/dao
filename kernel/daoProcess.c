@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -130,6 +130,9 @@ DaoTypeBase vmpTyper =
 	(FuncPtrDel) DaoProcess_Delete, NULL
 };
 
+static DaoType  *dummyType = NULL;
+static DaoVmCode dummyCode = {0,0,0,0};
+
 DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 {
 	int i;
@@ -141,13 +144,14 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 
 	self->firstFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
-	self->firstFrame->types = & self->dummyType;
-	self->firstFrame->codes = & self->dummyCode;
+	self->firstFrame->types = & dummyType;
+	self->firstFrame->codes = & dummyCode;
 	self->firstFrame->entry = 1;
 	self->stackValues = (DaoValue**)dao_calloc( 1+DAO_MAX_PARAM, sizeof(DaoValue*) );
 	self->stackSize = 1+DAO_MAX_PARAM;
 	self->stackTop = 1;
 	self->freeValues = self->stackValues + 1;
+	self->factory = NULL;
 
 	self->mbstring = DString_New(1);
 	self->mbsRegex = NULL;
@@ -178,18 +182,22 @@ void DaoProcess_Delete( DaoProcess *self )
 		frame = frame->next;
 		dao_free( p );
 	}
-	for(i=0; i<self->stackSize; i++){
-		if( self->stackValues[i] ) GC_DecRC( self->stackValues[i] );
-	}
+	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
 	if( self->abtype ) GC_DecRC( self->abtype );
 	if( self->future ) GC_DecRC( self->future );
+	if( self->factory ) DArray_Delete( self->factory );
 	dao_free( self );
 }
 
+DaoFactory* DaoProcess_GetFactory( DaoProcess *self )
+{
+	if( self->factory == NULL )self->factory = DArray_New(D_VALUE);
+	return self->factory;
+}
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 {
 	DaoRegex *pat = NULL;
@@ -296,7 +304,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 
 	if( need_self && routHost && routHost->tid == DAO_OBJECT ){
 		if( object == NULL && values[0]->type == DAO_OBJECT ) object = & values[0]->xObject;
-		if( object ) object = (DaoObject*) DaoObject_MapThisObject( object->rootObject, routHost );
+		if( object ) object = (DaoObject*) DaoObject_CastToBase( object->rootObject, routHost );
 		if( object == NULL ) DaoProcess_RaiseException( self, DAO_ERROR, "need self object" );
 		GC_ShiftRC( object, frame->object );
 		frame->object = object;
@@ -427,7 +435,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		}else{
 			if( obj->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA) ){
 				/* for virtual method call, or calling C function on Dao object: */
-				obj = DaoObject_MapThisObject( obj->xObject.rootObject, tp );
+				obj = DaoObject_CastToBase( obj->xObject.rootObject, tp );
 			}
 			if( DaoValue_Move2( obj, & dest[0], tp ) ){
 				selfChecked = 1;
@@ -486,7 +494,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		}
 		if( need_self && ifrom ==0 && val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
 			/* for virtual method call */
-			val = (DaoValue*) DaoObject_MapThisObject( val->xObject.rootObject, tp );
+			val = (DaoValue*) DaoObject_CastToBase( val->xObject.rootObject, tp );
 			if( val == NULL ) goto ReturnZero;
 		}
 		if( DaoValue_Move2( val, & dest[ito], tp ) ==0 ) goto ReturnZero;
@@ -3947,7 +3955,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
 		obj = othis;
 		if( initbase >= 0 ){
-			obj = (DaoObject*) DaoObject_MapThisObject( obj, rout->routHost );
+			obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
 		}else{
 			self->topFrame->state = DVM_MAKE_OBJECT;
 		}
@@ -6562,7 +6570,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			if( dA->type == DAO_CDATA ) dA = (DaoValue*) dA->xCdata.object;
 			/* XXX compiling time checking */
 			if( dA == NULL || dA->type != DAO_OBJECT ) goto FailConversion;
-			dC = DaoObject_MapThisObject( & dA->xObject, ct );
+			dC = DaoObject_CastToBase( & dA->xObject, ct );
 			if( dC == NULL ) goto FailConversion;
 			break;
 		case DAO_CTYPE :
@@ -6579,7 +6587,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 				}else{
 				}
 			}else if( dA->type == DAO_OBJECT ){
-				dC = (DaoValue*) DaoObject_MapThisObject( & dA->xObject, ct );
+				dC = (DaoValue*) DaoObject_CastToBase( & dA->xObject, ct );
 				if( dC == NULL ) goto FailConversion;
 			}else{
 				goto FailConversion;
@@ -7172,8 +7180,10 @@ static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode 
 		line2 = (vmc && rout->body->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
 	except->fromLine = line2;
 	if( value && value[0] != 0 ){
-		DaoValue_Clear( & except->edata );
-		except->edata = DaoValue_NewMBString( value, 0 );
+		DaoValue *s = (DaoValue*) DaoString_New(1);
+		DString_SetMBS( s->xString.data, value );
+		GC_ShiftRC( s, except->edata );
+		except->edata = s;
 	}
 	DArray_Clear( except->callers );
 	DArray_Clear( except->lines );
@@ -7216,7 +7226,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 		if( val->type == DAO_OBJECT || val->type == DAO_CDATA ){
 			cdata = NULL;
 			if( val->type == DAO_OBJECT ){
-				cdata = (DaoException*) DaoObject_MapThisObject( & val->xObject, except );
+				cdata = (DaoException*) DaoObject_CastToBase( & val->xObject, except );
 			}else{
 				if( DaoType_ChildOf( val->xCdata.ctype, except ) ) cdata = (DaoException*)val;
 			}
@@ -7436,7 +7446,7 @@ void DaoProcess_PrintException( DaoProcess *self, int clear )
 		if( excobjs[i]->type == DAO_CDATA ){
 			except = (DaoException*) excobjs[i];
 		}else if( excobjs[i]->type == DAO_OBJECT ){
-			except = (DaoException*)DaoObject_MapThisObject( & excobjs[i]->xObject, extype );
+			except = (DaoException*)DaoObject_CastToBase( & excobjs[i]->xObject, extype );
 		}
 		if( except == NULL ) continue;
 		DaoPrintException( except, stream );
@@ -7565,3 +7575,4 @@ void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream )
 	GC_ShiftRC( stream, self->stdioStream );
 	self->stdioStream = stream;
 }
+

@@ -2310,7 +2310,7 @@ void DaoJIT_Compile( DaoRoutine *routine )
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
-		llvm_func_optimizer->run( *jitfunc );
+		//llvm_func_optimizer->run( *jitfunc );
 
 		DaoVmCode *vmc = routine->body->vmCodes->codes + segments[i].start;
 		vmc->code = DVM_JITC;

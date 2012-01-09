@@ -214,7 +214,7 @@ int main( int argc, char *argv[] )
 	//dao_jit.Free = DaoJIT_Free;
 	//dao_jit.Compile = DaoJIT_Compile;
 	//dao_jit.Execute = DaoJIT_Execute;
-	DaoRoutine_PrintCode( ns->mainRoutine, vms->stdStream );
+	DaoRoutine_PrintCode( ns->mainRoutine, vms->stdioStream );
 	//DaoJIT_Compile( ns->mainRoutine );
 	//DaoRoutine_PrintCode( ns->mainRoutine, vms->stdStream );
 

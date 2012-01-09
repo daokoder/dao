@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -102,8 +102,8 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->active = DHash_New(0,0);
 	self->vmspace = vms;
 	self->tuple = DaoTuple_New(2);
-	self->tuple->items[0] = DaoValue_NewDouble(0);
-	self->tuple->items[1] = DaoValue_NewDouble(0);
+	self->tuple->items[0] = (DaoValue*) DaoDouble_New(0);
+	self->tuple->items[1] = (DaoValue*) DaoDouble_New(0);
 	DaoValue_MarkConst( (DaoValue*) self->tuple );
 	GC_IncRC( self->tuple );
 	return self;

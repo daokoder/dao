@@ -487,8 +487,8 @@ const string tpl_class_init =
 {\n\
 	self = s;\n\
 	cdata = d;\n\
-$(init_supers)\n\
-$(qt_init)\n\
+$(init_supers)\
+$(qt_init)\
 }\n\
 DaoCxx_$(idname)::~DaoCxx_$(idname)()\n\
 {\n\
@@ -502,7 +502,7 @@ void DaoCxx_$(idname)::DaoInitWrapper()\n\
 	cdata = DaoCdata_New( dao_type_$(idname), this );\n\
 	DaoGC_IncRC( (DaoValue*)cdata );\n\
 	DaoCxxVirt_$(idname)::DaoInitWrapper( this, cdata );\n\
-$(qt_make_linker)\n\
+$(qt_make_linker)\
 }\n";
 const string tpl_class_init_qtss = 
 "void DAO_DLL_$(module) Dao_$(idname)_InitSS( $(qname) *p )\n\

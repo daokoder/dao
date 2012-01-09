@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -721,13 +721,21 @@ void DString_AppendWCS( DString *self, const wchar_t *chs )
 
 void DString_SetDataMBS( DString *self, const char *bytes, size_t count )
 {
-	DString_Clear( self );
-	DString_AppendDataMBS( self, bytes, count );
+	if( count ){
+		DString_Clear( self );
+		DString_AppendDataMBS( self, bytes, count );
+	}else{
+		DString_SetMBS( self, bytes );
+	}
 }
 void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count )
 {
-	DString_Clear( self );
-	DString_AppendDataWCS( self, data, count );
+	if( count ){
+		DString_Clear( self );
+		DString_AppendDataWCS( self, data, count );
+	}else{
+		DString_SetWCS( self, data );
+	}
 }
 void DString_Replace( DString *self, DString *chs, size_t start, size_t rm )
 {

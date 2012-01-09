@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -1455,8 +1455,10 @@ static void DaoSTR_PFind( DaoProcess *proc, DaoValue *p[], int N )
 			tuple = DaoTuple_New( 2 );
 			GC_IncRC( itp );
 			tuple->unitype = itp;
-			tuple->items[0] = DaoValue_NewInteger( p1 );
-			tuple->items[1] = DaoValue_NewInteger( p2 );
+			tuple->items[0] = (DaoValue*) DaoInteger_New( p1 );
+			tuple->items[1] = (DaoValue*) DaoInteger_New( p2 );
+			GC_IncRC( tuple->items[0] );
+			GC_IncRC( tuple->items[1] );
 			DArray_Append( & list->items, tuple );
 			if( index ) break;
 		}
@@ -1643,11 +1645,11 @@ static void DaoSTR_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
 	DaoTuple *tuple = & p[1]->xTuple;
+	DaoInteger *iter = DaoInteger_New( 0 );
 	DaoValue **data = tuple->items;
-	DaoValue *iter = DaoValue_NewInteger(0);
 	data[0]->xInteger.value = self->size >0;
-	DaoValue_Copy( iter, & data[1] );
-	GC_DecRC( iter );
+	DaoValue_Copy( (DaoValue*) iter, & data[1] );
+	dao_free( iter );
 }
 
 static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
@@ -2400,11 +2402,11 @@ static void DaoLIST_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
 	DaoTuple *tuple = & p[1]->xTuple;
+	DaoInteger *iter = DaoInteger_New( 0 );
 	DaoValue **data = tuple->items;
-	DaoValue *iter = DaoValue_NewInteger(0);
 	data[0]->xInteger.value = self->items.size >0;
-	DaoValue_Copy( iter, & data[1] );
-	GC_DecRC( iter );
+	DaoValue_Copy( (DaoValue*) iter, & data[1] );
+	dao_free( iter );
 }
 static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 {

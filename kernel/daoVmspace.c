@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -104,7 +104,7 @@ const char *const dao_copy_notice =
 "  Dao Virtual Machine " DAO_VERSION "\n"
 "  Built date: " __DATE__ "\n"
 "  Changeset ID: " CHANGESET_ID "\n\n"
-"  Copyright(C) 2006-2011, Fu Limin\n"
+"  Copyright(C) 2006-2012, Fu Limin\n"
 "  Dao can be copied under the terms of GNU Lesser General Public License\n"
 "  Dao Language website: http://www.daovm.net\n"
 ;
@@ -246,7 +246,7 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( self->processes->size ){
-		proc = DArray_Back( self->processes );
+		proc = (DaoProcess*) DArray_Back( self->processes );
 		DArray_PopBack( self->processes );
 	}else{
 		proc = DaoProcess_New( self );
@@ -269,8 +269,40 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 		proc->condv = NULL;
 		proc->mutex = NULL;
 #endif
+		if( proc->factory ) DArray_Clear( proc->factory );
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_PushBack( self->processes, proc );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexProc );
+#endif
+}
+DaoFactory* DaoVmSpace_AcquireFactory( DaoVmSpace *self )
+{
+	DaoFactory *fac = NULL;
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexProc );
+#endif
+	if( self->factories->size ){
+		fac = (DaoFactory*) DArray_Back( self->factories );
+		DArray_PopBack( self->factories );
+	}else{
+		fac = DArray_New(D_VALUE);
+		DMap_Insert( self->allFactories, fac, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexProc );
+#endif
+	return fac;
+}
+void DaoVmSpace_ReleaseFactory( DaoVmSpace *self, DaoFactory *fac )
+{
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexProc );
+#endif
+	if( DMap_Find( self->allFactories, fac ) ){
+		DArray_Clear( fac );
+		DArray_PushBack( self->factories, fac );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexProc );
@@ -341,7 +373,9 @@ DaoVmSpace* DaoVmSpace_New()
 	self->pathLoading = DArray_New(D_STRING);
 	self->pathSearching = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
+	self->factories = DArray_New(0);
 	self->allProcesses = DMap_New(D_VALUE,0);
+	self->allFactories = DMap_New(0,0);
 
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
@@ -374,16 +408,16 @@ DaoVmSpace* DaoVmSpace_New()
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
-	DNode *node = DMap_First( self->nsModules );
-#ifdef DEBUG
-	ObjectProfile[ DAO_VMSPACE ] --;
-#endif
-	for( ; node!=NULL; node = DMap_Next( self->nsModules, node ) ){
+	DNode *it;
+	for(it=DMap_First( self->nsModules ); it!=NULL; it = DMap_Next( self->nsModules, it ) ){
 #if 0
-		printf( "%i  %i  %s\n", node->value.pValue->refCount,
-				((DaoNamespace*)node->value.pValue)->cmethods->size, node->key.pString->mbs );
+		printf( "%i  %i  %s\n", it->value.pValue->refCount,
+				((DaoNamespace*)it->value.pValue)->cmethods->size, it->key.pString->mbs );
 #endif
-		GC_DecRC( node->value.pValue );
+		GC_DecRC( it->value.pValue );
+	}
+	for(it=DMap_First(self->allFactories); it!=NULL; it=DMap_Next(self->allFactories,it) ){
+		DArray_Delete( it->key.pArray );
 	}
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
@@ -395,10 +429,12 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DArray_Delete( self->pathLoading );
 	DArray_Delete( self->pathSearching );
 	DArray_Delete( self->processes );
+	DArray_Delete( self->factories );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->allTokens );
 	DMap_Delete( self->nsModules );
 	DMap_Delete( self->allProcesses );
+	DMap_Delete( self->allFactories );
 	GC_DecRC( self->mainProcess );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->mutexLoad );

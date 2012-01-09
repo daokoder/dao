@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -2984,11 +2984,11 @@ static void DaoARRAY_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoArray *self = & p[0]->xArray;
 	DaoTuple *tuple = & p[1]->xTuple;
+	DaoInteger *iter = DaoInteger_New( 0 );
 	DaoValue **data = tuple->items;
-	DaoValue *iter = DaoValue_NewInteger(0);
 	data[0]->xInteger.value = DaoArray_SliceSize( self ) >0;
-	DaoValue_Copy( iter, & data[1] );
-	GC_DecRC( iter );
+	DaoValue_Copy( (DaoValue*) iter, & data[1] );
+	dao_free( iter );
 }
 static void DaoARRAY_Reverse( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -3276,6 +3276,10 @@ static void DaoArray_ResizeData( DaoArray *self, size_t size, size_t oldSize );
 void name( DaoArray *self, type *vec, size_t N ) \
 { \
 	size_t i; \
+	if( vec && N == 0 ){ \
+		DaoArray_UseData( self, vec ); \
+		return; \
+	} \
 	if( N < self->size ) DaoArray_ResizeData( self, self->size, N ); \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (dint) vec[i]; break; \
