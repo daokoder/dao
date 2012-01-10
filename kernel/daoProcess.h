@@ -151,14 +151,6 @@ DAO_DLL void DaoProcess_PrintException( DaoProcess *self, int clear );
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 
-typedef struct CastBuffer CastBuffer;
-struct CastBuffer
-{
-	DLong    *lng;
-	DString  *str;
-};
-
-
 
 typedef struct DaoJIT         DaoJIT;
 typedef struct DaoJitCallData DaoJitCallData;

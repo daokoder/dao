@@ -369,64 +369,146 @@ typedef char* (*ReadLine)( const char *prompt );
 typedef void  (*AddHistory)( const char *cmd );
 
 
-/* See the end of this file for some descriptions. */
 
+/*
+// DaoInit() should be called to initialize the Dao library,
+// before using any other functions. Optional parameter "command"
+// should be the name of the executable, and will be used to setup
+// the module searching paths if the environment variable "DAO_DIR"
+// has not been set. This function will return the first instance
+// of DaoVmSpace, which can be used to create other objects.
+*/
 DAO_DLL DaoVmSpace* DaoInit( const char *command );
+
+/*
+// DaoQuit() should be called to finalize the library. It will wait 
+// for unfinished computation, and do some cleanup, then quit.
+*/
 DAO_DLL void DaoQuit();
 
+
+
+/*
+// DaoValue_Type() returns the type of the value.
+*/
 DAO_DLL int DaoValue_Type( DaoValue *self );
 
-DAO_DLL DaoInteger*  DaoValue_CastInteger( DaoValue *self );
-DAO_DLL DaoFloat*    DaoValue_CastFloat( DaoValue *self );
-DAO_DLL DaoDouble*   DaoValue_CastDouble( DaoValue *self );
-DAO_DLL DaoComplex*  DaoValue_CastComplex( DaoValue *self );
-DAO_DLL DaoLong*     DaoValue_CastLong( DaoValue *self );
-DAO_DLL DaoString*   DaoValue_CastString( DaoValue *self );
-DAO_DLL DaoEnum*     DaoValue_CastEnum( DaoValue *self );
-DAO_DLL DaoArray*    DaoValue_CastArray( DaoValue *self );
-DAO_DLL DaoList*     DaoValue_CastList( DaoValue *self );
-DAO_DLL DaoMap*      DaoValue_CastMap( DaoValue *self );
-DAO_DLL DaoTuple*    DaoValue_CastTuple( DaoValue *self );
-DAO_DLL DaoStream*   DaoValue_CastStream( DaoValue *self );
-DAO_DLL DaoObject*   DaoValue_CastObject( DaoValue *self );
-DAO_DLL DaoCdata*    DaoValue_CastCdata( DaoValue *self );
-DAO_DLL DaoClass*    DaoValue_CastClass( DaoValue *self );
+/*
+// The following functions will check the type of the DaoValue and 
+// cast it to the requested type on success. Otherwise return NULL;
+*/
+DAO_DLL DaoInteger*   DaoValue_CastInteger( DaoValue *self );
+DAO_DLL DaoFloat*     DaoValue_CastFloat( DaoValue *self );
+DAO_DLL DaoDouble*    DaoValue_CastDouble( DaoValue *self );
+DAO_DLL DaoComplex*   DaoValue_CastComplex( DaoValue *self );
+DAO_DLL DaoLong*      DaoValue_CastLong( DaoValue *self );
+DAO_DLL DaoString*    DaoValue_CastString( DaoValue *self );
+DAO_DLL DaoEnum*      DaoValue_CastEnum( DaoValue *self );
+DAO_DLL DaoArray*     DaoValue_CastArray( DaoValue *self );
+DAO_DLL DaoList*      DaoValue_CastList( DaoValue *self );
+DAO_DLL DaoMap*       DaoValue_CastMap( DaoValue *self );
+DAO_DLL DaoTuple*     DaoValue_CastTuple( DaoValue *self );
+DAO_DLL DaoStream*    DaoValue_CastStream( DaoValue *self );
+DAO_DLL DaoObject*    DaoValue_CastObject( DaoValue *self );
+DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self );
+DAO_DLL DaoClass*     DaoValue_CastClass( DaoValue *self );
+DAO_DLL DaoInterface* DaoValue_CastInterface( DaoValue *self );
+DAO_DLL DaoRoutine*   DaoValue_CastRoutine( DaoValue *self );
+DAO_DLL DaoProcess*   DaoValue_CastProcess( DaoValue *self );
+DAO_DLL DaoNamespace* DaoValue_CastNamespace( DaoValue *self );
+DAO_DLL DaoType*      DaoValue_CastType( DaoValue *self );
 
-DAO_DLL DaoInterface*  DaoValue_CastInterface( DaoValue *self );
-DAO_DLL DaoRoutine*    DaoValue_CastRoutine( DaoValue *self );
-DAO_DLL DaoProcess*    DaoValue_CastProcess( DaoValue *self );
-DAO_DLL DaoNamespace*  DaoValue_CastNamespace( DaoValue *self );
-DAO_DLL DaoType*       DaoValue_CastType( DaoValue *self );
-
-DAO_DLL dint DaoValue_TryGetInteger( DaoValue *self );
-DAO_DLL float DaoValue_TryGetFloat( DaoValue *self );
-DAO_DLL double DaoValue_TryGetDouble( DaoValue *self );
-DAO_DLL dint DaoValue_TryGetEnum( DaoValue *self );
+/*
+// The following functions will check the type of the DaoValue and 
+// return the requested data on success. Otherwise return zero or NULL;
+*/
+DAO_DLL dint      DaoValue_TryGetInteger( DaoValue *self );
+DAO_DLL float     DaoValue_TryGetFloat( DaoValue *self );
+DAO_DLL double    DaoValue_TryGetDouble( DaoValue *self );
 DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
-DAO_DLL char* DaoValue_TryGetMBString( DaoValue *self );
-DAO_DLL wchar_t* DaoValue_TryGetWCString( DaoValue *self );
-DAO_DLL void*  DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
-DAO_DLL void*  DaoValue_TryGetCdata( DaoValue *self );
-DAO_DLL void** DaoValue_TryGetCdata2( DaoValue *self );
+DAO_DLL char*     DaoValue_TryGetMBString( DaoValue *self );
+DAO_DLL wchar_t*  DaoValue_TryGetWCString( DaoValue *self );
+DAO_DLL int       DaoValue_TryGetEnum( DaoValue *self );
+DAO_DLL void*     DaoValue_TryGetCdata( DaoValue *self );
+DAO_DLL void**    DaoValue_TryGetCdata2( DaoValue *self );
 
+/*
+// DaoValue_TryCastCdata() will cast the data of the cdata to the type
+// as specified by "totype". This will essentially call a chain of cast
+// functions as specified in the "casts" fields of DaoTypeBase structures
+// along the inheritance chain between the type of the cdata value and
+// the type "totype".
+//
+// Return NULL if "totype" is not a parent type of the value.
+*/
+DAO_DLL void* DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
+
+/*
+// DaoValue_Copy() copies value from "source" to "dest".
+//
+// For simple types such as int, float, double, complex, long, string and enum,
+// if "dest" already holds an object of the same type as "source", the data
+// field(s) are copied from "source" to "dest"; otherwise, a new object of the
+// same type with the same data will be created at "dest".
+//
+// For other types, only the pointer is copied to "dest", and the reference
+// count is updated for both "source" and original object at "dest".
+*/
 DAO_DLL void DaoValue_Copy( DaoValue *source, DaoValue **dest );
-//DAO_DLL void DaoValue_Clear( DaoValue *v );
+
+/*
+// DaoValue_ClearAll() will clear values in the array that holds "n" values.
+*/
 DAO_DLL void DaoValue_ClearAll( DaoValue *v[], int n );
 
+
+
+/*
+// String functions:
+//
+// DString_New() creates a new multi-byte string (MBS) or wide-character string;
+*/
 DAO_DLL DString* DString_New( int mbs );
+
 DAO_DLL DString* DString_Copy( DString *self );
 DAO_DLL void DString_Delete( DString *self );
 DAO_DLL size_t DString_Size( DString *self );
 DAO_DLL void DString_Clear( DString *self );
-DAO_DLL void DString_Reset( DString *self, size_t size );
-DAO_DLL void DString_Resize( DString *self, size_t size );
 DAO_DLL int  DString_IsMBS( DString *self );
+
+/*
+// DString_Reset() reset the size of the string to "size",
+// if "size" is smaller than the capacity of the string;
+// otherwise resize it to "size".
+*/
+DAO_DLL void DString_Reset( DString *self, size_t size );
+
+/*
+// DString_Resize() resizes the string to size "size".
+*/
+DAO_DLL void DString_Resize( DString *self, size_t size );
+
+/*
+// DString_SetMBS() and DString_SetWCS() replace the data of the string
+// with data specified by null-terminated C string.
+*/
 DAO_DLL void DString_SetMBS( DString *self, const char *chs );
 DAO_DLL void DString_SetWCS( DString *self, const wchar_t *chs );
+
+/*
+// DString_SetDataMBS() and DString_SetDataWCS() replace the data of string
+// with data specified by (wide) character array with "n" characters.
+// If "n" is zero, the character array is assumed to be null-terminated.
+*/
 DAO_DLL void DString_SetDataMBS( DString *self, const char *data, size_t n );
 DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, size_t n );
-DAO_DLL void DString_ToWCS( DString *self );
+
+/*
+// DString_ToMBS() and DString_ToWCS() convert the string to the requested
+// character type.
+*/
 DAO_DLL void DString_ToMBS( DString *self );
+DAO_DLL void DString_ToWCS( DString *self );
 DAO_DLL char* DString_GetMBS( DString *self );
 DAO_DLL wchar_t* DString_GetWCS( DString *self );
 DAO_DLL void DString_Chop( DString *self );
@@ -453,6 +535,8 @@ DAO_DLL size_t DString_RFindMBS( DString *self, const char *ch, size_t start );
 DAO_DLL size_t DString_RFindChar( DString *self, char ch, size_t start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
+
+
 
 DAO_DLL DaoInteger* DaoInteger_New( dint value );
 DAO_DLL dint        DaoInteger_Get( DaoInteger *self );
@@ -494,6 +578,8 @@ DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
 //float    DaoEnum_Get( DaoEnum *self );
 //void     DaoEnum_Set( DaoEnum *self, int value );
 
+
+
 DAO_DLL DaoList* DaoList_New();
 DAO_DLL int  DaoList_Size( DaoList *self );
 DAO_DLL DaoValue* DaoList_Front( DaoList *self );
@@ -508,6 +594,8 @@ DAO_DLL void DaoList_PopBack( DaoList *self );
 DAO_DLL void DaoList_Erase( DaoList *self, size_t pos );
 DAO_DLL void DaoList_Clear( DaoList *self );
 
+
+
 DAO_DLL DaoMap* DaoMap_New( int hashing );
 DAO_DLL int  DaoMap_Size( DaoMap *self );
 DAO_DLL int  DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
@@ -521,15 +609,21 @@ DAO_DLL DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  );
 DAO_DLL DaoValue* DaoMap_GetValueMBS( DaoMap *self, const char *key  );
 DAO_DLL DaoValue* DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  );
 
+
+
 DAO_DLL DNode* DaoMap_First( DaoMap *self );
 DAO_DLL DNode* DaoMap_Next( DaoMap *self, DNode *iter );
 DAO_DLL DaoValue* DNode_Key( DNode *self );
 DAO_DLL DaoValue* DNode_Value( DNode *self );
 
+
+
 DAO_DLL DaoTuple* DaoTuple_New( int size );
 DAO_DLL int  DaoTuple_Size( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos );
+
+
 
 DAO_DLL DaoArray* DaoArray_New( int numtype );
 DAO_DLL int  DaoArray_NumType( DaoArray *self );
@@ -586,12 +680,33 @@ DAO_DLL void  DaoArray_SetMatrixUI( DaoArray *self, unsigned int **mat, size_t r
 DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
-DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], int n );
+
+
+/*
+// DaoRoutine_Resolve() resolves from overloaded routines to get the best routine that
+// matches the value parameters.
+//
+// Note: if the routine is not overloaded, it is returned without checking.
+//
+// The parameter values are normally specified in an array pointed by "P" with "N" entries.
+// If a non-null value "O" is passed, it will be checked against the "self" parameter of
+// the routine if it has one, and the values in "P" will be checked against the rest of
+// of the parameters.
+*/
+DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *O, DaoValue *P[], int N );
+
+/*
+// DaoRoutine_IsWrapper() checks if the routine is a wrapped C function.
+*/
 DAO_DLL int DaoRoutine_IsWrapper( DaoRoutine *self );
+
+
 
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
+
+
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_Delete( DaoStream *self );
@@ -611,6 +726,8 @@ DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *line );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
+
+
 
 DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
 DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
@@ -648,6 +765,8 @@ DAO_DLL void DaoSema_Post( DaoSema *self );
 DAO_DLL void DaoSema_SetValue( DaoSema *self, int n );
 DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 
+
+
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
@@ -660,6 +779,24 @@ DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs
 DAO_DLL DaoFactory* DaoProcess_GetFactory( DaoProcess *self );
 
 DAO_DLL DaoType*   DaoProcess_GetReturnType( DaoProcess *self );
+
+/*
+// The following functions can be called within a wrapped C function to create
+// the returned value. The value object will be properly created (if necessary)
+// for returning, which means for types such as enum, array, list, map and tuple,
+// the returned value object will have properly type.
+//
+// For example, if the wrapped function specifies "list<int>" as the returning type,
+// DaoProcess_PutList() will return a list of type "list<int>", and only DaoInteger
+// can be pushed successfully into the list. And if "tuple<float,string>" is the
+// specified returning type, the tuple returned by DaoProcess_PutTuple() will be
+// a tuple that can only accept DaoInteger as its first item, and DaoString as its
+// second item.
+//
+// All these functions return NULL when failed. This happens when the intended
+// returning value does not match to the returning type that is specified by the
+// function prototype of the wrapped C function.
+*/
 DAO_DLL dint*      DaoProcess_PutInteger( DaoProcess *self, dint value );
 DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );
@@ -678,10 +815,27 @@ DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
 DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self );
 DAO_DLL DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
-DAO_DLL DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type );
-DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type );
-DAO_DLL DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t );
 DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
+
+/*
+// DaoProcess_PutCdata() creates a cdata as the returned value.
+// This cdata will be responsible to deallocate "data".
+*/
+DAO_DLL DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type );
+
+/*
+// DaoProcess_PutCdata() creates a cdata as the returned value.
+// This cdata will not be responsible to deallocate "data".
+*/
+DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type );
+
+/*
+// DaoProcess_PutCdata() creates a cdata as the returned value.
+// This cdata will make a copy of "D" which is assumed to has "N" bytes,
+// and be responsible to deallocate the copied data.
+*/
+DAO_DLL DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *D, int N, DaoType *T );
+
 
 
 DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
@@ -702,6 +856,8 @@ DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );
 DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
 DAO_DLL void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp );
 DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp );
+
+
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
@@ -735,8 +891,24 @@ DAO_DLL const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 
 
+
+/*
+// DaoFactory_CacheValue() caches the value in the value factory.
+*/
 DAO_DLL void DaoFactory_CacheValue( DaoFactory *self, DaoValue *value );
+
+/*
+// DaoFactory_GetLastValues() returns the last "N" created or cached
+// values as an array.
+*/
 DAO_DLL DaoValue** DaoFactory_GetLastValues( DaoFactory *self, int N );
+
+/*
+// The following methods create values of the requested type with data
+// specified by the parameter(s). Values created in this way have references
+// in and handled by the value factory, so that user does not need to handle
+// the reference count of the created value.
+*/
 DAO_DLL DaoNone*    DaoFactory_NewNone( DaoFactory *self );
 DAO_DLL DaoInteger* DaoFactory_NewInteger( DaoFactory *self, dint v );
 DAO_DLL DaoFloat*   DaoFactory_NewFloat( DaoFactory *self, float v );
@@ -745,8 +917,39 @@ DAO_DLL DaoComplex* DaoFactory_NewComplex( DaoFactory *self, complex16 v );
 DAO_DLL DaoString*  DaoFactory_NewMBString( DaoFactory *self, const char *s, size_t n );
 DAO_DLL DaoString*  DaoFactory_NewWCString( DaoFactory *self, const wchar_t *s, size_t n );
 DAO_DLL DaoList*  DaoFactory_NewList( DaoFactory *self );
+
+/*
+// DaoFactory_NewMap() creates a (hash) map.
+*/
 DAO_DLL DaoMap*   DaoFactory_NewMap( DaoFactory *self, int hashing );
+
+/*
+// DaoFactory_NewArray() creates a numeric array with element type
+// specified by the parameter "type".
+*/
 DAO_DLL DaoArray* DaoFactory_NewArray( DaoFactory *self, int type );
+
+/*
+// DaoFactory_NewVectorSB() creates an integer vector from an array of signed byte;
+// DaoFactory_NewVectorUB() creates an integer vector from an array of unsigned byte;
+// DaoFactory_NewVectorSS() creates an integer vector from an array of signed short;
+// DaoFactory_NewVectorUS() creates an integer vector from an array of unsigned short;
+// DaoFactory_NewVectorSI() creates an integer vector from an array of signed int;
+// DaoFactory_NewVectorUI() creates an integer vector from an array of unsigned int;
+// DaoFactory_NewVectorI() creates an integer vector from an array of dint;
+// DaoFactory_NewVectorF() creates an float vector from an array of float;
+// DaoFactory_NewVectorD() creates an double vector from an array of double;
+//
+// If "n" is not zero, the created array will allocate a new buffer, and copy
+// the data from the C array passed as parameter to the new buffer; otherwise,
+// the created array will directly use the C array as buffer.
+//
+// In the case that the C array is directly used, one can call reshape() to set
+// the array to proper shape before using. The C array must be ensured to be valid
+// throughout the use of the created array; and its deallocation must be handled by
+// the owner of the C array. A typical scenario of using array in this way is to call
+// a Dao function from C, and pass a C array to the Dao function.
+*/
 DAO_DLL DaoArray* DaoFactory_NewVectorSB( DaoFactory *self, signed char *s, size_t n ); 
 DAO_DLL DaoArray* DaoFactory_NewVectorUB( DaoFactory *self, unsigned char *s, size_t n ); 
 DAO_DLL DaoArray* DaoFactory_NewVectorSS( DaoFactory *self, signed short *s, size_t n ); 
@@ -756,6 +959,18 @@ DAO_DLL DaoArray* DaoFactory_NewVectorUI( DaoFactory *self, unsigned int *s, siz
 DAO_DLL DaoArray* DaoFactory_NewVectorI( DaoFactory *self, dint *s, size_t n ); 
 DAO_DLL DaoArray* DaoFactory_NewVectorF( DaoFactory *self, float *s, size_t n ); 
 DAO_DLL DaoArray* DaoFactory_NewVectorD( DaoFactory *self, double *s, size_t n ); 
+
+/*
+// DaoFactory_NewMatrixSB() creates an integer matrix from a [n x m] matrix of signed byte;
+// DaoFactory_NewMatrixUB() creates an integer matrix from a [n x m] matrix of unsigned byte;
+// DaoFactory_NewMatrixSS() creates an integer matrix from a [n x m] matrix of signed short;
+// DaoFactory_NewMatrixUS() creates an integer matrix from a [n x m] matrix of unsigned short;
+// DaoFactory_NewMatrixSI() creates an integer matrix from a [n x m] matrix of signed int;
+// DaoFactory_NewMatrixUI() creates an integer matrix from a [n x m] matrix of unsigned int;
+// DaoFactory_NewMatrixI() creates an integer matrix from a [n x m] matrix of dint;
+// DaoFactory_NewMatrixF() creates an float matrix from a [n x m] matrix of float;
+// DaoFactory_NewMatrixD() creates an double matrix from a [n x m] matrix of double;
+*/
 DAO_DLL DaoArray* DaoFactory_NewMatrixSB( DaoFactory *self, signed char **s, size_t n, size_t m );
 DAO_DLL DaoArray* DaoFactory_NewMatrixUB( DaoFactory *self, unsigned char **s, size_t n, size_t m );
 DAO_DLL DaoArray* DaoFactory_NewMatrixSS( DaoFactory *self, signed short **s, size_t n, size_t m );
@@ -765,7 +980,17 @@ DAO_DLL DaoArray* DaoFactory_NewMatrixUI( DaoFactory *self, unsigned int **s, si
 DAO_DLL DaoArray* DaoFactory_NewMatrixI( DaoFactory *self, dint **s, size_t n, size_t m );
 DAO_DLL DaoArray* DaoFactory_NewMatrixF( DaoFactory *self, float **s, size_t n, size_t m );
 DAO_DLL DaoArray* DaoFactory_NewMatrixD( DaoFactory *self, double **s, size_t n, size_t m );
+
+/*
+// DaoFactory_NewStream() creates a new stream with specified file.
+*/
 DAO_DLL DaoStream* DaoFactory_NewStream( DaoFactory *self, FILE *file );
+
+/*
+// DaoFactory_NewCdata() creates a new cdata object with specified type and data.
+// If and only if "owned" is not zero, the created cdata will be responsible to
+// deallocated "data".
+*/
 DAO_DLL DaoCdata* DaoFactory_NewCdata( DaoFactory *self, DaoType *type, void *data, int owned );
 
 
@@ -783,102 +1008,6 @@ DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DaoValue *us
 #endif
 
 /*
-
-DaoVmSpace* DaoInit();
-Initialize the Dao library
-
-void DaoQuit();
-Wait for unfinished computation and then quit
-
-int DaoValue_Type( DaoValue *self );
-
-Create basic Dao values
-DaoValue* DaoValue_NewInteger( dint v );
-DaoValue* DaoValue_NewFloat( float v );
-DaoValue* DaoValue_NewDouble( double v );
-
-Values created by the following DaoValue_NewXyz() and DaoValue_WrapXyz(),
-must be cleared by DaoValue_Clear() to avoid memory leaking:
-
-Create Multi-Byte String (MBS): 
-DaoValue* DaoValue_NewMBString( const char *s, size_t n );
-Create Wide Character String (WCS): 
-DaoValue* DaoValue_NewWCString( const wchar_t *s, size_t n );
-
- Create [1 x n] vector (DaoArray): 
-DaoValue* DaoValue_NewVectorB( char *s, size_t n );  byte 
-DaoValue* DaoValue_NewVectorUB( unsigned char *s, size_t n );  unsigned byte 
-DaoValue* DaoValue_NewVectorS( short *s, size_t n );  short 
-DaoValue* DaoValue_NewVectorUS( unsigned short *s, size_t n );  unsigned short 
-DaoValue* DaoValue_NewVectorI( int *s, size_t n );  int 
-DaoValue* DaoValue_NewVectorUI( unsigned int *s, size_t n );  unsigned int 
-DaoValue* DaoValue_NewVectorF( float *s, size_t n );  float 
-DaoValue* DaoValue_NewVectorD( double *s, size_t n );  double 
-
- Create [n x m] matrix (DaoArray): 
-DaoValue* DaoValue_NewMatrixB( signed char **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixUB( unsigned char **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixS( short **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixUS( unsigned short **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixI( int **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixUI( unsigned int **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixF( float **s, size_t n, size_t m );
-DaoValue* DaoValue_NewMatrixD( double **s, size_t n, size_t m );
-
- Create io stream object (DaoStream): 
-DaoValue* DaoValue_NewStream( FILE *f );
-
- Create DaoCdata object wrapping the opaque data with given type: 
- data will be deleted with the DaoCdata structure created by this function 
-DaoValue* DaoValue_NewCdata( DaoType *type, void *data );
-
- Create DaoCdata object wrapping the opaque data with given type: 
- data will NOT be deleted with the DaoCdata structure created by this function 
-DaoValue* DaoValue_WrapCdata( DaoType *type, void *data );
-
-DaoInteger*      DaoValue_CastInteger( DaoValue *self );
-DaoFloat*        DaoValue_CastFloat( DaoValue *self );
-DaoDouble*       DaoValue_CastDouble( DaoValue *self );
-DaoComplex*      DaoValue_CastComplex( DaoValue *self );
-DaoLong*         DaoValue_CastLong( DaoValue *self );
-DaoString*       DaoValue_CastString( DaoValue *self );
-DaoEnum*         DaoValue_CastEnum( DaoValue *self );
-DaoArray*        DaoValue_CastArray( DaoValue *self );
-DaoList*         DaoValue_CastList( DaoValue *self );
-DaoMap*          DaoValue_CastMap( DaoValue *self );
-DaoTuple*        DaoValue_CastTuple( DaoValue *self );
-DaoStream*       DaoValue_CastStream( DaoValue *self );
-DaoObject*       DaoValue_CastObject( DaoValue *self );
-DaoCdata*        DaoValue_CastCdata( DaoValue *self );
-DaoClass*        DaoValue_CastClass( DaoValue *self );
-DaoInterface*    DaoValue_CastInterface( DaoValue *self );
-DaoRoutine*      DaoValue_CastRoutine( DaoValue *self );
-DaoProcess*      DaoValue_CastProcess( DaoValue *self );
-DaoNamespace*    DaoValue_CastNamespace( DaoValue *self );
-DaoType*         DaoValue_CastType( DaoValue *self );
-
- Get Multi-Byte String (MBS): 
- Return NULL if it is not a string; 
- If it is a Wide Character String (WCS), convert to MBS first; 
-char* DaoValue_GetMBString( DaoValue *self );
-wchar_t* DaoValue_GetWCString( DaoValue *self );
-
- If "self" stores a c data object with type matching to "totyper",
- * return a pointer to the opaque object that has been properly casted using
- * the "casts" methods of typer structures (DaoTypeBase).
- * Otherwise return NULL. 
-void*  DaoValue_CastCdataData( DaoValue *self, DaoType *totype );
- Get the pointer to the opaque data: 
-void*  DaoValue_GetCdataData( DaoValue *self );
-void** DaoValue_GetCdataData2( DaoValue *self );
-
- Copy value from "from" to "self": 
-void DaoValue_Copy( DaoValue *self, DaoValue from );
-
- Clear the data in the value: 
-void DaoValue_Clear( DaoValue *v );
- Clear the data in the value array: 
-void DaoValue_ClearAll( DaoValue *v, int n );
 
  --------------------------------
  * String Manipulation:
@@ -940,42 +1069,6 @@ void DString_Assign( DString *left, DString *right );
  * if "left" is found to be less than, equal to or greater than "right": 
 int  DString_Compare( DString *left, DString *right );
 
-
-DaoInteger* DaoInteger_New( dint value );
-dint        DaoInteger_Get( DaoInteger *self );
-void        DaoInteger_Set( DaoInteger *self, dint value );
-
-DaoFloat* DaoFloat_New( float value );
-float     DaoFloat_Get( DaoFloat *self );
-void      DaoFloat_Set( DaoFloat *self, float value );
-
-DaoDouble* DaoDouble_New( double value );
-double     DaoDouble_Get( DaoDouble *self );
-void       DaoDouble_Set( DaoDouble *self, double value );
-
-DaoComplex* DaoComplex_New( complex16 value );
-complex16   DaoComplex_Get( DaoComplex *self );
-void        DaoComplex_Set( DaoComplex *self, complex16 value );
-
-DaoLong*  DaoLong_New();
-//DLong*   DaoLong_Get( DaoLong *self );
-//void        DaoLong_Set( DaoLong *self, DLong *value );
-
-DaoString*     DaoString_New( DString *str );
-DaoString*     DaoString_NewMBS( const char *mbs );
-DaoString*     DaoString_NewWCS( const wchar_t *wcs );
-DaoString*     DaoString_NewBytes( const char *bytes, size_t n );
-DString*       DaoString_Get( DaoString *self );
-const char*    DaoString_GetMBS( DaoString *self );
-const wchar_t* DaoString_GetWCS( DaoString *self );
-void           DaoString_Set( DaoString *self, DString *str );
-void           DaoString_SetMBS( DaoString *self, const char *mbs );
-void           DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
-void           DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
-
-DaoEnum* DaoEnum_New();
-//float    DaoEnum_Get( DaoEnum *self );
-//void     DaoEnum_Set( DaoEnum *self, float value );
 
 DaoList* DaoList_New();
 int  DaoList_Size( DaoList *self );
@@ -1069,15 +1162,6 @@ void  DaoArray_FromUShort( DaoArray *self );  as unsigned shorts
 void  DaoArray_FromUInt( DaoArray *self );  as unsigned ints 
 
  Set data from vector or matrix: 
-void  DaoArray_SetVectorB( DaoArray *self, char* vec, size_t N );
-void  DaoArray_SetVectorS( DaoArray *self, short* vec, size_t N );
-void  DaoArray_SetVectorI( DaoArray *self, int* vec, size_t N );
-void  DaoArray_SetVectorF( DaoArray *self, float* vec, size_t N );
-void  DaoArray_SetVectorD( DaoArray *self, double* vec, size_t N );
-void  DaoArray_SetMatrixB( DaoArray *self, signed char **mat, size_t row, size_t col );
-void  DaoArray_SetMatrixS( DaoArray *self, short **mat, size_t row, size_t col );
-void  DaoArray_SetMatrixI( DaoArray *self, int **mat, size_t row, size_t col );
-void  DaoArray_SetMatrixF( DaoArray *self, float **mat, size_t row, size_t col );
 void  DaoArray_SetMatrixD( DaoArray *self, double **mat, size_t row, size_t col );
 void  DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, size_t N );
 void  DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, size_t N );
@@ -1144,34 +1228,6 @@ int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], i
 void  DaoProcess_Stop( DaoProcess *self );
 DaoValue DaoProcess_GetReturned( DaoProcess *self );
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
-
-dint*      DaoProcess_PutInteger( DaoProcess *self, dint value );
-float*     DaoProcess_PutFloat( DaoProcess *self, float value );
-double*    DaoProcess_PutDouble( DaoProcess *self, double value );
-complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
-DString*   DaoProcess_PutMBString( DaoProcess *self, const char *mbs );
-DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs );
-DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
-DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, size_t N );
-DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
-DaoArray*  DaoProcess_PutArrayInteger( DaoProcess *self, int *array, size_t N );
-DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, size_t N );
-DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, size_t N );
-DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, size_t N );
-DaoList*   DaoProcess_PutList( DaoProcess *self );
-DaoMap*    DaoProcess_PutMap( DaoProcess *self );
-DaoArray*  DaoProcess_PutArray( DaoProcess *self );
-DaoTuple*  DaoProcess_PutTuple( DaoProcess *self );
-DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
-DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue value );
- data will be deleted with the new DaoCdata 
-DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type );
-DaoBase*   DaoProcess_PutResult( DaoProcess *self, DaoBase *data );
- data will not be deleted with the new DaoCdata 
-DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type );
- data will be deleted with the new DaoCdata 
-DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t );
-void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 
 
 DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );

@@ -3662,24 +3662,18 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	return 1;
 }
 int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC );
-DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC, CastBuffer *b1, CastBuffer *b2 );
-static void CastBuffer_Clear( CastBuffer *self )
-{
-	if( self->lng ) DLong_Delete( self->lng );
-	if( self->str ) DString_Delete( self->str );
-}
+DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC );
+void DaoFactory_PopValues( DaoFactory *self, int N );
 void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 {
-	CastBuffer buffer1 = {NULL, NULL};
-	CastBuffer buffer2 = {NULL, NULL};
+	DaoFactory *factory = DaoProcess_GetFactory( self );
 	DaoType *at, *ct = self->activeTypes[ vmc->c ];
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoValue **vc2 = self->activeValues + vmc->c;
-	DaoValue value;
 	DaoRoutine *meth;
 	DNode *node;
-	int i, mt, mt2;
+	int i, mt, mt2, top = factory->size;
 
 	if( va == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on none object" );
@@ -3691,10 +3685,6 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	if( vc && vc->type == ct->tid && va->type <= DAO_STRING ){
 		if( va->type == ct->tid ) goto FastCasting;
 		if( va->type == DAO_STRING ){
-			if( vc->type == DAO_LONG ){
-				if( buffer1.lng == NULL ) buffer1.lng = DLong_New();
-				vc->xLong.value = buffer1.lng;
-			}
 			if( ConvertStringToNumber( self, va, vc ) == 0 ) goto FailConversion;
 			return;
 		}
@@ -3773,12 +3763,10 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}
 NormalCasting:
-	memset( & value, 0, sizeof(DaoValue) );
-	va = DaoTypeCast( self, ct, va, & value, & buffer1, & buffer2 );
+	va = DaoTypeCast( self, ct, va, vc );
+	DaoFactory_PopValues( factory, factory->size - top );
 	if( va == NULL || va->type == 0 ) goto FailConversion;
 	DaoValue_Copy( va, vc2 );
-	CastBuffer_Clear( & buffer1 );
-	CastBuffer_Clear( & buffer2 );
 	return;
 FastCasting:
 	GC_ShiftRC( va, vc );
@@ -3787,8 +3775,6 @@ FastCasting:
 FailConversion :
 	at = DaoNamespace_GetType( self->activeNamespace, self->activeValues[ vmc->a ] );
 	DaoProcess_RaiseTypeError( self, at, ct, "casting" );
-	CastBuffer_Clear( & buffer1 );
-	CastBuffer_Clear( & buffer2 );
 }
 static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -6258,31 +6244,28 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	if( imagfirst ) dC->xComplex.value.real = d2; else dC->xComplex.value.imag = d2;
 	return toklen == mbs->size;
 }
-DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC, CastBuffer *b1, CastBuffer *b2 )
+DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC )
 {
+	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoTuple *tuple = NULL;
 	DaoList *list = NULL, *list2 = NULL;
 	DaoMap *map = NULL, *map2 = NULL;
 	DaoType *tp = NULL, *tp2 = NULL;
 	DaoArray *array = NULL, *array2 = NULL;
-	DaoValue **data, **data2, *K, *V, key, value;
+	DaoValue **data, **data2, *K = NULL, *V = NULL;
 	DString *str, *wcs = NULL;
 	DArray *shape = NULL;
 	DNode *node;
 	int i, type, size;
 	if( ct == NULL ) goto FailConversion;
-	memset( & key, 0, sizeof(DaoValue) );
-	memset( & value, 0, sizeof(DaoValue) );
-	key.xNone.trait = value.xNone.trait = DAO_DATA_CONST;
-	dC->type = ct->tid;
 	if( ct->tid == DAO_ANY ) goto Rebind;
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
+	if( ct->tid > 0 && ct->tid <= DAO_LONG && (dC == NULL || dC->type != ct->tid) ){
+		dC = DaoValue_SimpleCopy( ct->value );
+		DaoFactory_CacheValue( factory, dC );
+	}
 	if( dA->type == DAO_STRING && ct->tid > 0 && ct->tid <= DAO_LONG ){
-		if( dC->type == DAO_LONG ){
-			if( b1->lng == NULL ) b1->lng = DLong_New();
-			dC->xLong.value = b1->lng;
-		}
 		if( ConvertStringToNumber( proc, dA, dC ) ==0 ) goto FailConversion;
 		return dC;
 	}
@@ -6299,16 +6282,11 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		case DAO_COMPLEX :
 			if( dA->type == DAO_COMPLEX ) goto Rebind;
 			if( dA->type >= DAO_ARRAY ) goto FailConversion;
-			/* do not allocate complex here,
-			 * the caller should not be responsible to free it.
-			 * the same for string. */
 			dC->xComplex.value = DaoValue_GetComplex( dA );
 			break;
 		case DAO_LONG :
 			if( dA->type == DAO_LONG ) goto Rebind;
 			if( dA->type >= DAO_ARRAY ) goto FailConversion;
-			if( b1->lng == NULL ) b1->lng = DLong_New();
-			dC->xLong.value = b1->lng;
 			switch( dA->type ){
 				case DAO_INTEGER :
 					DLong_FromInteger( dC->xLong.value, DaoValue_GetInteger( dA ) );
@@ -6326,8 +6304,6 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			break;
 		case DAO_STRING :
 			if( dA->type == DAO_STRING ) goto Rebind;
-			if( b1->str == NULL ) b1->str = DString_New(1);
-			dC->xString.data = b1->str;
 			str = dC->xString.data;
 			wcs = DString_New(0);
 			if( dA->type < DAO_ARRAY ){
@@ -6449,12 +6425,10 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			dC = (DaoValue*) list;
 			if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
 			if( tp == NULL ) goto FailConversion;
-			value.type = tp->tid;
-			value.xDouble.value = 0.0;
 			if( dA->type == DAO_STRING ){
 				str = dA->xString.data;
 				if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
-				DArray_Resize( & list->items, DString_Size( str ), & value );
+				DArray_Resize( & list->items, DString_Size( str ), tp->value );
 				data = list->items.items.pValue;
 				if( str->mbs ){
 					for(i=0; i<str->size; i++){
@@ -6485,7 +6459,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 				data = list->items.items.pValue;
 				data2 = list2->items.items.pValue;
 				for(i=0; i<list2->items.size; i++ ){
-					V = DaoTypeCast( proc, tp, data2[i], & value, b1, b2 );
+					V = DaoTypeCast( proc, tp, data2[i], V );
 					if( V == NULL || V->type ==0 ) goto FailConversion;
 					DaoValue_Copy( V, data + i );
 				}
@@ -6507,8 +6481,8 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			if( tp == NULL || tp2 == NULL ) goto FailConversion;
 			node = DMap_First( map2->items );
 			for(; node!=NULL; node=DMap_Next(map2->items,node) ){
-				K = DaoTypeCast( proc, tp, node->key.pValue, & key, b1, b2 );
-				V = DaoTypeCast( proc, tp2, node->value.pValue, & value, b2, b1 );
+				K = DaoTypeCast( proc, tp, node->key.pValue, K );
+				V = DaoTypeCast( proc, tp2, node->value.pValue, V );
 				if( K ==NULL || V ==NULL || K->type ==0 || V->type ==0 ) goto FailConversion;
 				DMap_Insert( map->items, K, V );
 			}
@@ -6538,7 +6512,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 						tp2 = ct->nested->items.pType[i];
 						if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
 						/* if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion; */
-						V = DaoTypeCast( proc, tp2, V, & value, b1, b2 );
+						V = DaoTypeCast( proc, tp2, V, K );
 					}
 					if( V == NULL || V->type == 0 ) goto FailConversion;
 					DaoValue_Copy( V, tuple->items + i );
@@ -6556,7 +6530,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 					}else{
 						tp2 = ct->nested->items.pType[i];
 						if( node->key.pValue->type != DAO_STRING ) goto FailConversion;
-						V = DaoTypeCast( proc, tp2, node->value.pValue, & value, b1, b2 );
+						V = DaoTypeCast( proc, tp2, node->value.pValue, V );
 						if( V == NULL || V->type ==0 ) goto FailConversion;
 						DaoValue_Copy( V, tuple->items + i );
 					}

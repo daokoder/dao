@@ -863,7 +863,7 @@ double DaoValue_TryGetDouble( DaoValue *self )
 	if( self->type != DAO_DOUBLE ) return 0.0;
 	return self->xDouble.value;
 }
-dint DaoValue_TryGetEnum(DaoValue *self)
+int DaoValue_TryGetEnum(DaoValue *self)
 {
 	if( self->type != DAO_ENUM ) return 0;
 	return self->xEnum.value;
@@ -908,6 +908,14 @@ void DaoValue_ClearAll( DaoValue *v[], int n )
 void DaoFactory_CacheValue( DaoFactory *self, DaoValue *value )
 {
 	DArray_Append( self, value );
+}
+void DaoFactory_PopValues( DaoFactory *self, int N )
+{
+	if( N >= self->size ){
+		DArray_Clear( self );
+	}else{
+		DArray_Erase( self, self->size - N, N );
+	}
 }
 DaoValue** DaoFactory_GetLastValues( DaoFactory *self, int N )
 {
