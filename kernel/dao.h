@@ -20,7 +20,7 @@
 #include<stdlib.h>
 
 #define DAO_VERSION "1.2"
-#define DAO_H_VERSION 20110806
+#define DAO_H_VERSION 20120112
 
 #if (defined DAO_WITH_CONCURRENT && !defined DAO_WITH_THREAD)
 #define DAO_WITH_THREAD
@@ -164,6 +164,7 @@ enum DaoTypes
 	DAO_CONDVAR ,
 	DAO_SEMA ,
 	DAO_TYPE ,
+	DAO_ANY ,
 	END_CORE_TYPES
 };
 enum DaoProcessStatus
@@ -376,7 +377,7 @@ typedef void  (*AddHistory)( const char *cmd );
 // should be the name of the executable, and will be used to setup
 // the module searching paths if the environment variable "DAO_DIR"
 // has not been set. This function will return the first instance
-// of DaoVmSpace, which can be used to create other objects.
+// of DaoVmSpace.
 */
 DAO_DLL DaoVmSpace* DaoInit( const char *command );
 
@@ -428,6 +429,7 @@ DAO_DLL double    DaoValue_TryGetDouble( DaoValue *self );
 DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
 DAO_DLL char*     DaoValue_TryGetMBString( DaoValue *self );
 DAO_DLL wchar_t*  DaoValue_TryGetWCString( DaoValue *self );
+DAO_DLL DString*  DaoValue_TryGetString( DaoValue *self );
 DAO_DLL int       DaoValue_TryGetEnum( DaoValue *self );
 DAO_DLL void*     DaoValue_TryGetCdata( DaoValue *self );
 DAO_DLL void**    DaoValue_TryGetCdata2( DaoValue *self );
@@ -555,8 +557,6 @@ DAO_DLL complex16   DaoComplex_Get( DaoComplex *self );
 DAO_DLL void        DaoComplex_Set( DaoComplex *self, complex16 value );
 
 DAO_DLL DaoLong*  DaoLong_New();
-//DLong*   DaoLong_Get( DaoLong *self );
-//void        DaoLong_Set( DaoLong *self, DLong *value );
 
 DAO_DLL DaoString*  DaoString_New( int mbs );
 DAO_DLL DaoString*  DaoString_NewMBS( const char *mbs );
@@ -575,8 +575,6 @@ DAO_DLL void  DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
 DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, size_t n );
 
 DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
-//float    DaoEnum_Get( DaoEnum *self );
-//void     DaoEnum_Set( DaoEnum *self, int value );
 
 
 
@@ -684,7 +682,7 @@ DAO_DLL void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
 
 /*
 // DaoRoutine_Resolve() resolves from overloaded routines to get the best routine that
-// matches the value parameters.
+// matches the parameter values.
 //
 // Note: if the routine is not overloaded, it is returned without checking.
 //
@@ -784,7 +782,7 @@ DAO_DLL DaoType*   DaoProcess_GetReturnType( DaoProcess *self );
 // The following functions can be called within a wrapped C function to create
 // the returned value. The value object will be properly created (if necessary)
 // for returning, which means for types such as enum, array, list, map and tuple,
-// the returned value object will have properly type.
+// the returned value object will have proper type.
 //
 // For example, if the wrapped function specifies "list<int>" as the returning type,
 // DaoProcess_PutList() will return a list of type "list<int>", and only DaoInteger
@@ -906,17 +904,20 @@ DAO_DLL DaoValue** DaoFactory_GetLastValues( DaoFactory *self, int N );
 /*
 // The following methods create values of the requested type with data
 // specified by the parameter(s). Values created in this way have references
-// in and handled by the value factory, so that user does not need to handle
-// the reference count of the created value.
+// stored in the value factory, so that user does not need to handle the
+// reference counting of the created value.
 */
 DAO_DLL DaoNone*    DaoFactory_NewNone( DaoFactory *self );
 DAO_DLL DaoInteger* DaoFactory_NewInteger( DaoFactory *self, dint v );
 DAO_DLL DaoFloat*   DaoFactory_NewFloat( DaoFactory *self, float v );
 DAO_DLL DaoDouble*  DaoFactory_NewDouble( DaoFactory *self, double v );
 DAO_DLL DaoComplex* DaoFactory_NewComplex( DaoFactory *self, complex16 v );
+DAO_DLL DaoLong*    DaoFactory_NewLong( DaoFactory *self );
+DAO_DLL DaoString*  DaoFactory_NewString( DaoFactory *self, int mbs );
 DAO_DLL DaoString*  DaoFactory_NewMBString( DaoFactory *self, const char *s, size_t n );
 DAO_DLL DaoString*  DaoFactory_NewWCString( DaoFactory *self, const wchar_t *s, size_t n );
-DAO_DLL DaoList*  DaoFactory_NewList( DaoFactory *self );
+DAO_DLL DaoEnum*    DaoFactory_NewEnum( DaoFactory *self, DaoType *type, int value );
+DAO_DLL DaoList*    DaoFactory_NewList( DaoFactory *self );
 
 /*
 // DaoFactory_NewMap() creates a (hash) map.
@@ -936,9 +937,9 @@ DAO_DLL DaoArray* DaoFactory_NewArray( DaoFactory *self, int type );
 // DaoFactory_NewVectorUS() creates an integer vector from an array of unsigned short;
 // DaoFactory_NewVectorSI() creates an integer vector from an array of signed int;
 // DaoFactory_NewVectorUI() creates an integer vector from an array of unsigned int;
-// DaoFactory_NewVectorI() creates an integer vector from an array of dint;
-// DaoFactory_NewVectorF() creates an float vector from an array of float;
-// DaoFactory_NewVectorD() creates an double vector from an array of double;
+// DaoFactory_NewVectorI()  creates an integer vector from an array of dint;
+// DaoFactory_NewVectorF()  creates an float vector from an array of float;
+// DaoFactory_NewVectorD()  creates an double vector from an array of double;
 //
 // If "n" is not zero, the created array will allocate a new buffer, and copy
 // the data from the C array passed as parameter to the new buffer; otherwise,

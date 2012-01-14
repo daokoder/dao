@@ -30,6 +30,7 @@ struct DaoNone
 	DAO_DATA_CORE;
 };
 DAO_DLL extern DaoValue *dao_none_value;
+DAO_DLL extern DaoValue *dao_any_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger

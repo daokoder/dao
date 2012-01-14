@@ -718,6 +718,9 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DString_SetMBS( name, "none" ); 
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_DATA_PUBLIC );
+	DString_SetMBS( name, "any" ); 
+	DaoNamespace_AddConst( self, name, dao_any_value, DAO_DATA_PUBLIC );
+
 	DArray_Append( self->cstData, dao_none_value ); /* reserved for main */
 
 	DString_SetMBS( name, "io" ); 
@@ -1299,7 +1302,11 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 
 	switch( p->type ){
 	case DAO_NONE :
-		abtp = DaoNamespace_MakeValueType( self, dao_none_value );
+		if( p->xNone.subtype == DAO_ANY ){
+			abtp = dao_type_any;
+		}else{
+			abtp = DaoNamespace_MakeValueType( self, dao_none_value );
+		}
 		break;
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
 	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING : 

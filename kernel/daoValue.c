@@ -884,6 +884,11 @@ wchar_t* DaoValue_TryGetWCString( DaoValue *self )
 	if( self->type != DAO_STRING ) return NULL;
 	return DString_GetWCS( self->xString.data );
 }
+DString* DaoValue_TryGetString( DaoValue *self )
+{
+	if( self->type != DAO_STRING ) return NULL;
+	return self->xString.data;
+}
 void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 {
 	if( self->type != DAO_CDATA ) return NULL;
@@ -953,18 +958,37 @@ DaoComplex* DaoFactory_NewComplex( DaoFactory *self, complex16 v )
 	DaoFactory_CacheValue( self, (DaoValue*) res );
 	return res;
 }
-
+DaoLong* DaoFactory_NewLong( DaoFactory *self )
+{
+	DaoLong *res = DaoLong_New();
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoString* DaoFactory_NewString( DaoFactory *self, int mbs )
+{
+	DaoString *res = DaoString_New( mbs );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
 DaoString* DaoFactory_NewMBString( DaoFactory *self, const char *s, size_t n )
 {
 	DaoString *res = DaoString_New(1);
-	if( s ) DString_SetDataMBS( res->data, s, n );
+	if( s && n ) DString_SetDataMBS( res->data, s, n );
+	else if( s ) DString_SetMBS( res->data, s );
 	DaoFactory_CacheValue( self, (DaoValue*) res );
 	return res;
 }
 DaoString* DaoFactory_NewWCString( DaoFactory *self, const wchar_t *s, size_t n )
 {
 	DaoString *res = DaoString_New(0);
-	if( s ) DString_SetDataWCS( res->data, s, n );
+	if( s && n ) DString_SetDataWCS( res->data, s, n );
+	else if( s ) DString_SetWCS( res->data, s );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoEnum* DaoFactory_NewEnum( DaoFactory *self, DaoType *type, int value )
+{
+	DaoEnum *res = DaoEnum_New( type, value );
 	DaoFactory_CacheValue( self, (DaoValue*) res );
 	return res;
 }

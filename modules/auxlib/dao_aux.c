@@ -344,17 +344,19 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProcess *proc )
 {
+	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoObject *object = DaoObject_New( self );
+	DaoFactory_CacheValue( factory, (DaoValue*) object );
 	if( DaoProcess_PushCallable( proc, self->classRoutines, (DaoValue*)object, & param, 1 ) ==0 ){
 		proc->topFrame->returning = -1;
 		if( DaoProcess_Execute( proc ) ) return object;
 	}
-	GC_IncRC( object ); GC_DecRC( object );
 	return NULL;
 }
 static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProcess *proc )
 {
 	DaoValue *value;
+	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoRoutine *routine = DaoType_FindFunction( self->ctype, self->ctype->name );
 	if( DaoProcess_PushCallable( proc, routine, NULL, & param, 1 ) ) return NULL;
 	proc->topFrame->active = proc->firstFrame;
@@ -365,6 +367,12 @@ static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProces
 	return NULL;
 }
 
+/*
+// Note: reference count is handled for "value2"!
+// 
+// Item of list/tuple etc. can be directly passed as parameter "value2",
+// to avoid creating unnecessary intermediate objects.
+*/
 static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue **value2, DArray *types, DaoNamespace *ns, DaoProcess *proc )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -598,10 +606,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		DArray_PopFront( types );
 		if( tmp == NULL ) break;
 		object = DaoClass_MakeObject( & type->aux->xClass, tmp, proc );
-		if( object == NULL ) break;
-		value = (DaoValue*) object;
-		DaoValue_Copy( value, value2 );
-		if( *value2 != value ) GC_IncRC( value ), GC_DecRC( value );
+		if( object ) DaoValue_Copy( (DaoValue*) object, value2 );
 		break;
 	case DAO_CDATA :
 		DArray_PushFront( types, NULL );
@@ -609,23 +614,25 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		DArray_PopFront( types );
 		if( tmp == NULL ) break;
 		cdata = DaoCdata_MakeObject( & type->aux->xCdata, tmp, proc );
-		if( cdata == NULL ) break;
-		value = (DaoValue*) cdata;
-		DaoValue_Copy( value, value2 );
-		if( *value2 != value ) GC_IncRC( value ), GC_DecRC( value );
+		if( cdata ) DaoValue_Copy( (DaoValue*) cdata, value2 );
 		break;
 	}
 	DaoValue_Clear( & tmp );
 	DaoValue_Clear( & tmp2 );
 	return next;
 }
+/*
+// Note: reference count is not handled for "self"!
+// But it is cached in a DaoFactory object, so no need to handle it by user!
+*/
 int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc )
 {
+	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoParser *parser = DaoParser_New();
 	DArray *types = DArray_New(0);
 	int rc;
 
-	DaoValue_Clear( self );
+	*self = NULL;
 	parser->nameSpace = ns;
 	parser->vmSpace = ns->vmSpace;
 	DaoParser_LexCode( parser, DString_GetMBS( serial ), 0 );
@@ -633,7 +640,7 @@ int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, Da
 
 	DArray_PushFront( types, NULL );
 	rc = DaoParser_Deserialize( parser, 0, parser->tokens->size-1, self, types, ns, proc );
-
+	if( *self ) DaoFactory_CacheValue( factory, *self );
 	DaoParser_Delete( parser );
 	DArray_Delete( types );
 	return rc;
@@ -762,7 +769,6 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 		}else{
 			DaoNamespace_AddVariable( self, name, value, NULL, pm );
 		}
-		GC_DecRC( value );
 	}
 	DString_Delete( line );
 	DArray_Delete( types );
@@ -779,7 +785,6 @@ static void AUX_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *value = NULL;
 	DaoValue_Deserialize( & value, p[0]->xString.data, proc->activeNamespace, proc );
 	DaoProcess_PutValue( proc, value );
-	GC_DecRC( value );
 }
 static void AUX_Backup( DaoProcess *proc, DaoValue *p[], int N )
 {

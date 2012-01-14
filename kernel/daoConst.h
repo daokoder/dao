@@ -33,8 +33,7 @@
 
 enum DaoRTTI
 {
-	DAO_ANY = END_CORE_TYPES, /* a : any */
-	DAO_INITYPE ,  /* a : @t */
+	DAO_INITYPE = END_CORE_TYPES, /* a : @t */
 	DAO_VALTYPE ,
 	DAO_VARIANT , /* variant or disjoint union */
 	DAO_MACRO ,
@@ -179,6 +178,7 @@ enum DaoRoutineAttrib
 enum DaoGlbConstShift
 {
 	DVR_NSC_NONE = 1 ,
+	DVR_NSC_ANY , 
 	DVR_NSC_MAIN 
 };
 enum DaoGlbVarShift

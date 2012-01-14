@@ -721,21 +721,13 @@ void DString_AppendWCS( DString *self, const wchar_t *chs )
 
 void DString_SetDataMBS( DString *self, const char *bytes, size_t count )
 {
-	if( count ){
-		DString_Clear( self );
-		DString_AppendDataMBS( self, bytes, count );
-	}else{
-		DString_SetMBS( self, bytes );
-	}
+	DString_Clear( self );
+	DString_AppendDataMBS( self, bytes, count );
 }
 void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count )
 {
-	if( count ){
-		DString_Clear( self );
-		DString_AppendDataWCS( self, data, count );
-	}else{
-		DString_SetWCS( self, data );
-	}
+	DString_Clear( self );
+	DString_AppendDataWCS( self, data, count );
 }
 void DString_Replace( DString *self, DString *chs, size_t start, size_t rm )
 {

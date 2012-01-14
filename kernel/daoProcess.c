@@ -3776,9 +3776,9 @@ FailConversion :
 	at = DaoNamespace_GetType( self->activeNamespace, self->activeValues[ vmc->a ] );
 	DaoProcess_RaiseTypeError( self, at, ct, "casting" );
 }
+#ifdef DAO_WITH_CONCURRENT
 static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 {
-#ifdef DAO_WITH_CONCURRENT
 	DaoStackFrame *frame = self->topFrame;
 	DaoStackFrame *prev = frame->prev;
 	if( vmc->code != DVM_MCALL ) return 0;
@@ -3796,9 +3796,9 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 			return 1;
 		}
 	}
-#endif
 	return 0;
 }
+#endif
 static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller )
 {
 	int mode = vmc->b & 0xff00;
@@ -3821,7 +3821,11 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	}
 	/* no tail call inside try{} */
 	if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ){
-		if( self->topFrame->state == 0 ){ /* No tail call in constructors etc.: */
+		int async = rout->routHost && rout->routHost->tid == DAO_OBJECT;
+		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
+		/* No tail call for possible asynchronous calls: */
+		/* No tail call in constructors etc.: */
+		if( async == 0 && self->topFrame->state == 0 ){
 			DaoValue **params = self->freeValues;
 			DaoProcess_PopFrame( self );
 			for(i=0; i<rout->parCount; i++){
@@ -3833,6 +3837,9 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	}
 	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( selfpar ) );//, code );
 	self->topFrame->parCount = M - 1;
+#ifdef DAO_WITH_CONCURRENT
+	DaoProcess_TryAsynCall( self, vmc );
+#endif
 }
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoType *hostype, DaoRoutine *func, DaoValue *selfpar, DaoValue *P[], int N )
@@ -3997,7 +4004,6 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
 	}else if( rout->type == DAO_ROUTINE ){
 		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
-		if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 	}
@@ -4084,7 +4090,6 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
 #endif
 			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
-			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}
 	}else if( caller->type == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, npar );
@@ -4107,7 +4112,6 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, npar );
 		}else if( rout->type == DAO_ROUTINE ){
 			DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
-			if( DaoProcess_TryAsynCall( self, vmc ) ) return;
 		}
 	}else if( caller->type == DAO_CTYPE ){
 		DaoType *type = caller->xCdata.ctype;
