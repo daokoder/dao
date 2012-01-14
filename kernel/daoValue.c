@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -580,12 +580,9 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	int tm = 1;
-	if( tp->tid == DAO_FUNCTREE && src->type == DAO_FUNCTREE ){
-		/* XXX pair<objetp,routine<...>> */
-		if( tp != src->xFunctree.unitype ) return 0;
-	}else if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
+	if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
 		if( src->xObject.defClass != & tp->aux->xClass ){
-			src = DaoObject_MapThisObject( src->xObject.rootObject, tp );
+			src = DaoObject_CastToBase( src->xObject.rootObject, tp );
 			tm = (src != NULL);
 		}
 	}else if( src->type == DAO_CLASS && tp->tid == DAO_CLASS && src->xClass.typeHolders ){
@@ -598,7 +595,7 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 	}
 #if 0
 	if( tm ==0 ){
-		printf( "tp = %p; src = %p, type = %i\n", tp, src, src->type );
+		printf( "tp = %p; src = %p, type = %i %i\n", tp, src, src->type, DAO_ROUTINE );
 		printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
 		if( src->type == DAO_LIST ) printf( "%s\n", src->xList.unitype->name->mbs );
 		if( src->type == DAO_TUPLE ) printf( "%p\n", src->xTuple.unitype );
@@ -749,365 +746,6 @@ int DaoValue_Type( DaoValue *self )
 {
 	return self->type;
 }
-DaoValue* DaoValue_NewNone()
-{
-	DaoNone *res = DaoNone_New();
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewInteger( dint v )
-{
-	DaoInteger *res = DaoInteger_New( v );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewFloat( float v )
-{
-	DaoFloat *res = DaoFloat_New( v );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewDouble( double v )
-{
-	DaoDouble *res = DaoDouble_New( v );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewComplex( complex16 v )
-{
-	DaoComplex *res = DaoComplex_New( v );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-
-DaoValue* DaoValue_NewMBString( const char *s, size_t n )
-{
-	DaoString *res = DaoString_New(1);
-	if( n ){
-		DString_SetDataMBS( res->data, s, n );
-	}else{
-		DString_SetMBS( res->data, s );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewWCString( const wchar_t *s, size_t n )
-{
-	DaoString *res = DaoString_New(0);
-	if( n ){
-		DString_Resize( res->data, n );
-		memcpy( res->data->wcs, s, n * sizeof(wchar_t) );
-	}else{
-		DString_SetWCS( res->data, s );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewList()
-{
-	DaoList *res = DaoList_New();
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMap( int hashing )
-{
-	DaoMap *res = DaoMap_New( hashing );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-#ifdef DAO_WITH_NUMARRAY
-DaoValue* DaoValue_NewArray( int type )
-{
-	DaoArray *res = DaoArray_New( type );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorSB( signed char *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorSB( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorUB( unsigned char *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorUB( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorSS( signed short *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorSS( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorUS( unsigned short *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorUS( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorSI( signed int *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorSI( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorI( dint *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorI( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorF( float *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_FLOAT );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorF( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewVectorD( double *s, size_t n )
-{
-	DaoArray *res = DaoArray_New( DAO_DOUBLE );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetVectorD( res, s, n );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-extern void DaoArray_SetMatrixUB( DaoArray *self, unsigned char **mat, int N, int M );
-extern void DaoArray_SetMatrixUS( DaoArray *self, unsigned short **mat, int N, int M );
-extern void DaoArray_SetMatrixUI( DaoArray *self, unsigned int **mat, int N, int M );
-DaoValue* DaoValue_NewMatrixSB( signed char **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixSB( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixUB( unsigned char **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixUB( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixSS( signed short **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixSS( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixUS( unsigned short **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixUS( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixSI( signed int **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixSI( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixUI( unsigned int **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixUI( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixI( dint **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_INTEGER );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixI( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixF( float **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_FLOAT );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixF( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewMatrixD( double **s, size_t n, size_t m )
-{
-	DaoArray *res = DaoArray_New( DAO_DOUBLE );
-	if( s && n == 0 ){
-		DaoArray_UseData( res, s );
-	}else if( s ){
-		DaoArray_SetMatrixD( res, s, n, m );
-	}
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-DaoValue* DaoValue_NewBuffer( void *p, size_t n )
-{
-	DaoArray *res = DaoArray_New(0);
-	DaoArray_SetBuffer( res, p, n );
-	GC_IncRC( res );
-	return (DaoValue*) res;
-}
-#else
-DaoValue* DaoValue_NewArray( int type )
-{
-	printf( "Error: numeric array is disabled!\n" );
-	return NULL;
-}
-DaoValue* DaoValue_NewVectorB( char *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorUB( unsigned char *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorS( short *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorUS( unsigned short *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorI( dint *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorUI( unsigned int *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorF( float *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewVectorD( double *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixB( signed char **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixUB( unsigned char **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixS( short **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixUS( unsigned short **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixI( dint **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixUI( unsigned int **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixF( float **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewMatrixD( double **s, size_t n, size_t m )
-{
-	return DaoValue_NewArray( 0 );
-}
-DaoValue* DaoValue_NewBuffer( void *s, size_t n )
-{
-	return DaoValue_NewArray( 0 );
-}
-#endif
-DaoValue* DaoValue_NewStream( FILE *f )
-{
-	DaoStream *self = DaoStream_New();
-	DaoStream_SetFile( self, f );
-	return (DaoValue*) self;
-}
-DaoValue* DaoValue_NewCdata( DaoTypeBase *typer, void *data )
-{
-	return (DaoValue*) DaoCdata_New( typer, data );
-}
-DaoValue* DaoValue_WrapCdata( DaoTypeBase *typer, void *data )
-{
-	return (DaoValue*) DaoCdata_Wrap( typer, data );
-}
 
 DaoInteger* DaoValue_CastInteger( DaoValue *self )
 {
@@ -1189,20 +827,10 @@ DaoInterface* DaoValue_CastInterface( DaoValue *self )
 	if( self == NULL || self->type != DAO_INTERFACE ) return NULL;
 	return (DaoInterface*) self;
 }
-DaoFunctree* DaoValue_CastFunctree( DaoValue *self )
-{
-	if( self == NULL || self->type != DAO_FUNCTREE ) return NULL;
-	return (DaoFunctree*) self;
-}
 DaoRoutine* DaoValue_CastRoutine( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_ROUTINE ) return NULL;
 	return (DaoRoutine*) self;
-}
-DaoFunction* DaoValue_CastFunction( DaoValue *self )
-{
-	if( self == NULL || self->type != DAO_FUNCTION ) return NULL;
-	return (DaoFunction*) self;
 }
 DaoProcess* DaoValue_CastProcess( DaoValue *self )
 {
@@ -1235,7 +863,7 @@ double DaoValue_TryGetDouble( DaoValue *self )
 	if( self->type != DAO_DOUBLE ) return 0.0;
 	return self->xDouble.value;
 }
-dint DaoValue_TryGetEnum(DaoValue *self)
+int DaoValue_TryGetEnum(DaoValue *self)
 {
 	if( self->type != DAO_ENUM ) return 0;
 	return self->xEnum.value;
@@ -1256,10 +884,15 @@ wchar_t* DaoValue_TryGetWCString( DaoValue *self )
 	if( self->type != DAO_STRING ) return NULL;
 	return DString_GetWCS( self->xString.data );
 }
-void* DaoValue_TryCastCdata( DaoValue *self, DaoTypeBase *typer )
+DString* DaoValue_TryGetString( DaoValue *self )
+{
+	if( self->type != DAO_STRING ) return NULL;
+	return self->xString.data;
+}
+void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 {
 	if( self->type != DAO_CDATA ) return NULL;
-	return DaoCdata_CastData( & self->xCdata, typer );
+	return DaoCdata_CastData( & self->xCdata, type );
 }
 void* DaoValue_TryGetCdata( DaoValue *self )
 {
@@ -1277,3 +910,318 @@ void DaoValue_ClearAll( DaoValue *v[], int n )
 	for(i=0; i<n; i++) DaoValue_Clear( v + i );
 }
 
+void DaoFactory_CacheValue( DaoFactory *self, DaoValue *value )
+{
+	DArray_Append( self, value );
+}
+void DaoFactory_PopValues( DaoFactory *self, int N )
+{
+	if( N >= self->size ){
+		DArray_Clear( self );
+	}else{
+		DArray_Erase( self, self->size - N, N );
+	}
+}
+DaoValue** DaoFactory_GetLastValues( DaoFactory *self, int N )
+{
+	if( N > self->size ) return self->items.pValue;
+	return self->items.pValue + (self->size - N);
+}
+
+DaoNone* DaoFactory_NewNone( DaoFactory *self )
+{
+	DaoNone *res = DaoNone_New();
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoInteger* DaoFactory_NewInteger( DaoFactory *self, dint v )
+{
+	DaoInteger *res = DaoInteger_New( v );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoFloat* DaoFactory_NewFloat( DaoFactory *self, float v )
+{
+	DaoFloat *res = DaoFloat_New( v );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoDouble* DaoFactory_NewDouble( DaoFactory *self, double v )
+{
+	DaoDouble *res = DaoDouble_New( v );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoComplex* DaoFactory_NewComplex( DaoFactory *self, complex16 v )
+{
+	DaoComplex *res = DaoComplex_New( v );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoLong* DaoFactory_NewLong( DaoFactory *self )
+{
+	DaoLong *res = DaoLong_New();
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoString* DaoFactory_NewString( DaoFactory *self, int mbs )
+{
+	DaoString *res = DaoString_New( mbs );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoString* DaoFactory_NewMBString( DaoFactory *self, const char *s, size_t n )
+{
+	DaoString *res = DaoString_New(1);
+	if( s && n ) DString_SetDataMBS( res->data, s, n );
+	else if( s ) DString_SetMBS( res->data, s );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoString* DaoFactory_NewWCString( DaoFactory *self, const wchar_t *s, size_t n )
+{
+	DaoString *res = DaoString_New(0);
+	if( s && n ) DString_SetDataWCS( res->data, s, n );
+	else if( s ) DString_SetWCS( res->data, s );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoEnum* DaoFactory_NewEnum( DaoFactory *self, DaoType *type, int value )
+{
+	DaoEnum *res = DaoEnum_New( type, value );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoList* DaoFactory_NewList( DaoFactory *self )
+{
+	DaoList *res = DaoList_New();
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoMap* DaoFactory_NewMap( DaoFactory *self, int hashing )
+{
+	DaoMap *res = DaoMap_New( hashing );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+#ifdef DAO_WITH_NUMARRAY
+DaoArray* DaoFactory_NewArray( DaoFactory *self, int type )
+{
+	DaoArray *res = DaoArray_New( type );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorSB( DaoFactory *self, signed char *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorSB( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorUB( DaoFactory *self, unsigned char *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorUB( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorSS( DaoFactory *self, signed short *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorSS( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorUS( DaoFactory *self, unsigned short *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorUS( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorSI( DaoFactory *self, signed int *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorSI( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorI( DaoFactory *self, dint *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorI( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorF( DaoFactory *self, float *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_FLOAT );
+	if( s ) DaoArray_SetVectorF( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewVectorD( DaoFactory *self, double *s, size_t n )
+{
+	DaoArray *res = DaoArray_New( DAO_DOUBLE );
+	if( s ) DaoArray_SetVectorD( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixSB( DaoFactory *self, signed char **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixSB( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixUB( DaoFactory *self, unsigned char **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixUB( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixSS( DaoFactory *self, signed short **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixSS( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixUS( DaoFactory *self, unsigned short **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixUS( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixSI( DaoFactory *self, signed int **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixSI( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixUI( DaoFactory *self, unsigned int **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixUI( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixI( DaoFactory *self, dint **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetMatrixI( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixF( DaoFactory *self, float **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_FLOAT );
+	if( s ) DaoArray_SetMatrixF( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewMatrixD( DaoFactory *self, double **s, size_t n, size_t m )
+{
+	DaoArray *res = DaoArray_New( DAO_DOUBLE );
+	if( s ) DaoArray_SetMatrixD( res, s, n, m );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoFactory_NewBuffer( DaoFactory *self, void *p, size_t n )
+{
+	DaoArray *res = DaoArray_New(0);
+	DaoArray_SetBuffer( res, p, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+#else
+static DaoArray* DaoValue_NewArray()
+{
+	printf( "Error: numeric array is disabled!\n" );
+	return NULL;
+}
+DaoArray* DaoFactory_NewVectorB( DaoFactory *self, char *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorUB( DaoFactory *self, unsigned char *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorS( DaoFactory *self, short *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorUS( DaoFactory *self, unsigned short *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorI( DaoFactory *self, dint *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorUI( DaoFactory *self, unsigned int *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorF( DaoFactory *self, float *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewVectorD( DaoFactory *self, double *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixB( DaoFactory *self, signed char **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixUB( DaoFactory *self, unsigned char **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixS( DaoFactory *self, short **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixUS( DaoFactory *self, unsigned short **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixI( DaoFactory *self, dint **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixUI( DaoFactory *self, unsigned int **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixF( DaoFactory *self, float **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewMatrixD( DaoFactory *self, double **s, size_t n, size_t m )
+{
+	return DaoValue_NewArray();
+}
+DaoArray* DaoFactory_NewBuffer( DaoFactory *self, void *s, size_t n )
+{
+	return DaoValue_NewArray();
+}
+#endif
+DaoStream* DaoFactory_NewStream( DaoFactory *self, FILE *f )
+{
+	DaoStream *res = DaoStream_New();
+	DaoStream_SetFile( res, f );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoCdata* DaoFactory_NewCdata( DaoFactory *self, DaoType *type, void *data, int owned )
+{
+	DaoCdata *res = owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}

@@ -129,6 +129,7 @@ struct CDaoModule
 	string MakeSource2Codes( vector<CDaoUserType*> & usertypes );
 	string MakeSource3Codes( vector<CDaoUserType*> & usertypes );
 	string MakeOnLoadCodes( CDaoNamespace *ns = NULL );
+	string MakeOnLoad2Codes( vector<CDaoUserType*> & usertypes );
 
 	string MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
 	string MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );

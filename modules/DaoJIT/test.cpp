@@ -83,42 +83,122 @@ const char* dao_source =
 const char* dao_source3 = 
 "function getSomeString(){ return 'StringFromDao' }";
 
+//#include "llvm/LLVMContext.h"
+//#include "llvm/Module.h"
+//#include "llvm/Constants.h"
+//#include "llvm/DerivedTypes.h"
+//#include "llvm/Instructions.h"
+//#include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/ExecutionEngine/Interpreter.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/Support/TargetSelect.h"
+//#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
+//#include "llvm/Support/IRBuilder.h"
+
 int main( int argc, char *argv[] )
 {
 	DString *src;
 	DaoVmSpace *vms;
-	DaoNameSpace *ns;
-	DaoNameSpace *ns2;
-	DaoVmProcess *vmp;
+	DaoNamespace *ns;
+	DaoNamespace *ns2;
+	DaoProcess *vmp;
 
-	// Search and load the Dao library.
-	// DaoInitLibrary() can take a parameter which is the path
-	// to the dynamic loading file of the Dao library.
-	// If the parameter is NULL, the current path is searched,
-	// then the path defined by environment variable DAO_DIR,
-	// then $(HOME)/dao, and then the default system path:
-	// /usr/local/dao/ or C:\dao\.
-	//
-	// With direct APIs, the example must be linked against the Dao library.
-	// So if direct APIs are used, the following call is not necessary.
-#ifndef DAO_DIRECT_API
-	if( DaoInitLibrary( NULL ) ==0 ) return 1;
+#if 0
+  InitializeNativeTarget();
+
+  LLVMContext Context;
+  
+  // Create some module to put our function into it.
+  Module *M = new Module("test", Context);
+
+  // Create the add1 function entry and insert this entry into module M.  The
+  // function will have a return type of "int" and take an argument of "int".
+  // The '0' terminates the list of argument types.
+  Function *Add1F =
+    cast<Function>(M->getOrInsertFunction("add1", Type::getInt32Ty(Context),
+                                          Type::getInt32Ty(Context),
+                                          (Type *)0));
+
+  // Add a basic block to the function. As before, it automatically inserts
+  // because of the last argument.
+  BasicBlock *BB = BasicBlock::Create(Context, "EntryBlock", Add1F);
+
+  // Create a basic block builder with default parameters.  The builder will
+  // automatically append instructions to the basic block `BB'.
+  IRBuilder<> builder(BB);
+
+  // Get pointers to the constant `1'.
+  Value *One = builder.getInt32(1);
+
+  // Get pointers to the integer argument of the add1 function...
+  assert(Add1F->arg_begin() != Add1F->arg_end()); // Make sure there's an arg
+  Argument *ArgX = Add1F->arg_begin();  // Get the arg
+  ArgX->setName("AnArg");            // Give it a nice symbolic name for fun.
+
+  // Create the add instruction, inserting it into the end of BB.
+  Value *Add = builder.CreateAdd(One, ArgX);
+
+  // Create the return instruction and add it to the basic block
+  builder.CreateRet(Add);
+
+  // Now, function add1 is ready.
+
+
+  // Now we're going to create function `foo', which returns an int and takes no
+  // arguments.
+  Function *FooF =
+    cast<Function>(M->getOrInsertFunction("foo", Type::getInt32Ty(Context),
+                                          (Type *)0));
+
+  // Add a basic block to the FooF function.
+  BB = BasicBlock::Create(Context, "EntryBlock", FooF);
+
+  // Tell the basic block builder to attach itself to the new basic block
+  builder.SetInsertPoint(BB);
+
+  // Get pointer to the constant `10'.
+  Value *Ten = builder.getInt32(10);
+
+  // Pass Ten to the call to Add1F
+  CallInst *Add1CallRes = builder.CreateCall(Add1F, Ten);
+  Add1CallRes->setTailCall(true);
+
+  // Create the return instruction and add it to the basic block.
+  builder.CreateRet(Add1CallRes);
+
+  // Now we create the JIT.
+  ExecutionEngine* EE = EngineBuilder(M).create();
+
+  outs() << "We just constructed this LLVM module:\n\n" << *M;
+  outs() << "\n\nRunning foo: ";
+  outs().flush();
+
+  // Call the `foo' function with no arguments:
+  std::vector<GenericValue> noargs;
+  GenericValue gv = EE->runFunction(FooF, noargs);
+
+  // Import result of execution:
+  outs() << "Result: " << gv.IntVal << "\n";
 #endif
+
+	DaoJIT_Init( NULL, NULL );
 
 	// Initialize Dao library, and get the default DaoVmSpace object.
 	// DaoVmSpace is responsible for handling interpreter settings,
 	// paths and module loading etc. It is need to create several
 	// other types of objects.
-	vms = DaoInit();
+	vms = DaoInit( argv[0] );
+	DaoJIT_Init( vms, & dao_jit );
 
 	// Get the main namespace of an DaoVmSpace object.
-	// You can also call DaoNameSpace_New( vms ) to create one.
-	ns  = DaoVmSpace_MainNameSpace( vms );
-	ns2  = DaoVmSpace_GetNameSpace( vms, "dao" );
+	// You can also call DaoNamespace_New( vms ) to create one.
+	ns  = DaoVmSpace_MainNamespace( vms );
+	ns2  = DaoVmSpace_GetNamespace( vms, "dao" );
 
 	// Get the main virtual machine process of an DaoVmSpace object.
-	// You can also call DaoVmProcess_New( vms ) to create one.
-	vmp = DaoVmSpace_MainVmProcess( vms );
+	// You can also call DaoProcess_New( vms ) to create one.
+	vmp = DaoVmSpace_MainProcess( vms );
 
 	// Prepare the Dao source codes:
 	src = DString_New(1);
@@ -128,16 +208,17 @@ int main( int argc, char *argv[] )
 	// Since the wrapped functions and types are imported into
 	// namespace ns, it is need to access the wrapped functions and types
 	// in the Dao scripts when it is executed:
-	DaoVmProcess_Eval( vmp, ns, src, 1 );
+	DaoProcess_Eval( vmp, ns, src, 1 );
 
-	DaoJIT_Init( vms );
-	dao_jit.Free = DaoJIT_Free;
-	dao_jit.Compile = DaoJIT_Compile;
-	dao_jit.Execute = DaoJIT_Execute;
-	DaoRoutine_PrintCode( ns->mainRoutine, vms->stdStream );
+	DaoJIT_Init( vms, & dao_jit );
+	//dao_jit.Free = DaoJIT_Free;
+	//dao_jit.Compile = DaoJIT_Compile;
+	//dao_jit.Execute = DaoJIT_Execute;
+	DaoRoutine_PrintCode( ns->mainRoutine, vms->stdioStream );
 	//DaoJIT_Compile( ns->mainRoutine );
 	//DaoRoutine_PrintCode( ns->mainRoutine, vms->stdStream );
 
+#if 0
 	DaoContext *ctx = DaoContext_New();
 	DaoContext_Init( ctx, ns->mainRoutine );
 	ctx->regValues[1]->v.f = 123.56;
@@ -149,12 +230,13 @@ int main( int argc, char *argv[] )
 	//DaoJIT_SearchCompilable( ns->mainRoutine, segments );
 
 	DaoJIT_Compile( ns->mainRoutine );
-	DaoVmProcess_PushRoutine( vmp, ns->mainRoutine );
+	DaoProcess_PushRoutine( vmp, ns->mainRoutine );
 	ctx = vmp->topFrame->context;
-	DaoVmProcess_Execute( vmp );
+	DaoProcess_Execute( vmp );
 	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[0]->v.f );
 	printf( "%p value.v.f = %g\n", ctx, (float)ctx->regValues[3]->v.f );
 	printf( "%p %p %p\n", ns->mainRoutine->routConsts->data, ctx->regValues[1], ctx->regArray->data+1 );
+#endif
 
 	DString_Delete( src );
 	DaoQuit(); // Finalizing

@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -20,15 +20,16 @@ typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 
 typedef union
 {
-	dint       pInt;
-	size_t     pSize;
-	void      *pVoid;
-	DString   *pString;
-	DArray    *pArray;
-	DaoValue  *pValue;
-	DaoClass  *pClass;
-	DaoType   *pType;
-	DaoInode  *pInode;
+	dint         pInt;
+	size_t       pSize;
+	void        *pVoid;
+	DString     *pString;
+	DArray      *pArray;
+	DaoValue    *pValue;
+	DaoClass    *pClass;
+	DaoRoutine  *pRoutine;
+	DaoType     *pType;
+	DaoInode    *pInode;
 }DNodeData;
 
 struct DNode

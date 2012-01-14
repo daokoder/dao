@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -30,10 +30,10 @@ struct DaoState
 typedef struct DaoState DaoState;
 extern DaoTypeBase stateTyper;
 
-DaoState* DaoState_New( DaoValue *state )
+DaoState* DaoState_New( DaoType *type, DaoValue *state )
 {
 	DaoState *res = dao_malloc( sizeof(DaoState) );
-	DaoCdata_InitCommon( (DaoCdata*)res, &stateTyper );
+	DaoCdata_InitCommon( (DaoCdata*)res, type );
 	DaoValue_Copy( state, &res->state );
 	res->lock = DaoMutex_New();
 	res->defmtx = DaoMutex_New();
@@ -66,10 +66,8 @@ extern DaoTypeBase stateTyper;
 
 static void DaoState_Create( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoState *res = DaoState_New( p[0] );
 	DaoType *type = DaoProcess_GetReturnType( proc );
-	GC_ShiftRC( type, res->ctype );
-	res->ctype = type;
+	DaoState *res = DaoState_New( type, p[0] );
 	DaoProcess_PutValue( proc, (DaoValue*)res );
 }
 
@@ -242,10 +240,10 @@ struct DaoQueue
 typedef struct DaoQueue DaoQueue;
 extern DaoTypeBase queueTyper;
 
-DaoQueue* DaoQueue_New( int capacity )
+DaoQueue* DaoQueue_New( DaoType *type, int capacity )
 {
 	DaoQueue *res = (DaoQueue*)dao_malloc( sizeof(DaoQueue) );
-	DaoCdata_InitCommon( (DaoCdata*)res, &queueTyper );
+	DaoCdata_InitCommon( (DaoCdata*)res, type );
 	res->head = res->tail = NULL;
 	res->size = 0;
 	res->capacity = ( ( capacity < 0 )? 0 : capacity );
@@ -449,7 +447,7 @@ static void DaoQueue_TryPop( DaoProcess *proc, DaoValue *p[], int N )
 		self->size--;
 	}
 	DaoMutex_Unlock( self->mtx );
-	DaoProcess_PutValue( proc, item? item->value : DaoValue_NewNone() );
+	DaoProcess_PutValue( proc, item? item->value : dao_none_value );
 	if( item ){
 		DaoGC_DecRC( item->value );
 		dao_free( item );
@@ -458,10 +456,8 @@ static void DaoQueue_TryPop( DaoProcess *proc, DaoValue *p[], int N )
 
 static void DaoQueue_Create( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoQueue *res = DaoQueue_New( DaoValue_TryGetInteger( p[0] ) );
 	DaoType *type = DaoProcess_GetReturnType( proc );
-	GC_ShiftRC( type, res->ctype );
-	res->ctype = type;
+	DaoQueue *res = DaoQueue_New( type, DaoValue_TryGetInteger( p[0] ) );
 	DaoProcess_PutValue( proc, (DaoValue*)res );
 }
 

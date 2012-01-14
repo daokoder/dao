@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -68,10 +68,10 @@ struct DaoType
 
 	uchar_t   tid; /* type id */
 	uchar_t   attrib;
-	uchar_t   flagtype : 1; /* for enum type */
-	uchar_t   simtype  : 1; /* if the nested contains only simple types */
+	uchar_t   flagtype : 2; /* for enum type */
+	uchar_t   simtype  : 2; /* if the nested contains only simple types */
 	uchar_t   cdatatype : 2; /* sub type of DaoCdata */
-	uchar_t   ffitype : 4; /* for DaoCLoader module */
+	uchar_t   overloads : 2; /* overloaded routines */
 	uchar_t   rntcount; /* real number type count */
 	DString  *name; /* type name */
 	DString  *fname; /* field name, or parameter name */
@@ -84,7 +84,7 @@ struct DaoType
 	 * aux can be the returned type in a routine type;
 	 * aux can be the parameter type in a named parameter type;
 	 * aux can be the class object in class or object type;
-	 * aux can be the DaoCdata object in wrapped C type;
+	 * aux can be the DaoCdata type object (DAO_CTYPE) in wrapped C type;
 	 * aux can be the constant value in a constant value type. */
 	DaoValue  *aux;
 	DaoValue  *value; /* default value for the type; */
@@ -94,6 +94,7 @@ struct DaoType
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeBase    *typer;
 };
+extern DaoType *dao_type_none;
 extern DaoType *dao_type_udf;
 extern DaoType *dao_type_any;
 extern DaoType *dao_array_any;
@@ -131,8 +132,14 @@ DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
+DAO_DLL int DaoType_ChildOf( DaoType *self, DaoType *other );
 DAO_DLL DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent );
 DAO_DLL DaoValue* DaoType_CastToDerived( DaoValue *object, DaoType *derived );
+
+DAO_DLL DaoValue* DaoType_FindValue( DaoType *self, DString *name );
+DAO_DLL DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name );
+DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
+DAO_DLL DaoRoutine* DaoType_FindFunctionMBS( DaoType *self, const char *name );
 
 
 
@@ -146,7 +153,6 @@ struct DaoInterface
 	DArray  *supers; /* parent interfaces */
 	DMap    *methods; /* DHash<DString*,DRoutine*> */
 	DaoType *abtype;
-	DMap    *ovldRoutMap; /* <DString*,DaoRoutine*> */
 };
 
 DaoInterface* DaoInterface_New( const char *name );
@@ -172,7 +178,7 @@ struct DaoTypeKernel
 	uint_t         attribs;
 	DMap          *values;
 	DMap          *methods;
-	DaoType       *abtype;
+	DaoType       *abtype; /* the template cdata type for a specialized type; */
 	DTypeSpecTree *sptree;
 	DaoNamespace  *nspace;
 	DaoTypeCore   *core;
@@ -226,10 +232,6 @@ struct DaoCdataCore
 	void   (*DelData)( void *data );
 };
 
-DAO_DLL DaoValue* DaoTypeBase_FindValue( DaoTypeBase *self, DString *name );
-DAO_DLL DaoValue* DaoTypeBase_FindValueOnly( DaoTypeBase *self, DString *name );
-DAO_DLL DaoValue* DaoTypeBase_FindFunction( DaoTypeBase *self, DString *name );
-DAO_DLL DaoValue* DaoTypeBase_FindFunctionMBS( DaoTypeBase *self, const char *name );
 
 
 typedef struct DTypeParam DTypeParam;
@@ -237,10 +239,14 @@ typedef struct DTypeParam DTypeParam;
 /* Template type parameters structured into a trie: */
 struct DTypeParam
 {
-	DaoType       *type;   /* parameter type; */
-	DArray        *nexts;  /* next parameter nodes; */
-	DaoType       *sptype; /* specialized type; */
 	DTypeSpecTree *tree;
+
+	DaoType  *type;   /* parameter type; */
+	DaoType  *sptype; /* specialized type; */
+
+	DTypeParam  *first; /* the first child node; */
+	DTypeParam  *last;  /* the last child node; */
+	DTypeParam  *next;  /* the next sibling node; */
 };
 
 
@@ -248,10 +254,11 @@ struct DTypeParam
 /* Template type specialization tree: */
 struct DTypeSpecTree
 {
-	DTypeParam *root;
-	DArray *holders;  /* type holders; */
-	DArray *defaults; /* default types; */
-	DArray *sptypes;  /* for GC; */
+	DTypeParam  *root;
+
+	DArray  *holders;  /* type holders; */
+	DArray  *defaults; /* default types; */
+	DArray  *sptypes;  /* for GC; */
 };
 
 DTypeSpecTree* DTypeSpecTree_New();
@@ -262,5 +269,6 @@ void DTypeSpecTree_Add( DTypeSpecTree *self, DArray *types, DaoType *sptype );
 DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types );
 
 DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types );
+DAO_DLL void DaoCdataType_SpecializeMethods( DaoType *self );
 
 #endif

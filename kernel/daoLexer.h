@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -171,6 +171,7 @@ enum DaoKeyNames
 	DKEY_RETRY ,
 	DKEY_CATCH ,
 	DKEY_RAISE ,
+	/* Built-in math functions; not real keywords, handle as keywords for convenience: */
 	DKEY_ABS ,
 	DKEY_ACOS ,
 	DKEY_ARG ,

@@ -155,7 +155,7 @@ const string cxx_call_static2_list[] =
 
 const string cxx_call_new = 
 "	$(host_qname) *_self = Dao_$(host_idname)_New( $(parlist) );\n\
-	DaoProcess_PutCdata( _proc, _self, dao_$(host_idname)_Typer );\n";
+	DaoProcess_PutCdata( _proc, _self, dao_type_$(host_idname) );\n";
 const string cxx_call_new2 = 
 "	DaoCxx_$(host_idname) *_self = DaoCxx_$(host_idname)_New( $(parlist) );\n\
 	DaoProcess_PutValue( _proc, (DaoValue*) _self->cdata );\n";
@@ -184,16 +184,17 @@ const string c_callback_proto =
 const string c_callback_struct =
 "$(retype) Dao_$(cxxname)( $(parlist) )\n\
 {\n\
-  int _cs = 0;\n\
+  int _cs = 1;\n\
   DaoCallbackData *_dao_cbd = (DaoCallbackData*) $(userdata);\n\
-  DaoMethod *_ro = _dao_cbd->callback;\n";
+  DaoRoutine *_ro = _dao_cbd->callback;\n";
 
 const string c_callback_call_00 =
-"  DaoProcess *vmproc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
-  _ro = DaoMethod_Resolve( _ro, NULL, NULL, 0 );\n\
-  if( _ro == NULL || _ro->type != DAO_ROUTINE ) return;\n\
-  DaoProcess_Call( _vmp, _ro, NULL, NULL, 0 );\n\
-  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+"  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  _ro = DaoRoutine_Resolve( _ro, NULL, NULL, 0 );\n\
+  if( _ro == NULL || DaoRoutine_IsWrapper( _ro ) ) goto EndCall;\n\
+  DaoProcess_Call( _proc, _ro, NULL, NULL, 0 );\n\
+EndCall:\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
 }\n";
 
 const string c_callback_call_01 =
@@ -232,25 +233,25 @@ const string qt_get_wrapper2 =
 
 const string cxx_virt_call_00 =
 "  DaoObject *_obj = NULL;\n\
-  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  DaoRoutine *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   if( _ro == NULL || _obj == NULL ) return;\n\
-  _ro = DaoMethod_Resolve( _ro, (DaoValue*)_obj, NULL, 0 );\n\
-  if( DaoValue_CastRoutine( (DaoValue*)_ro ) == NULL ) return;\n\
-  DaoProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
-  DaoProcess_Call( _vmp, _ro, (DaoValue*)_obj, NULL, 0 );\n\
-  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+  _ro = DaoRoutine_Resolve( _ro, (DaoValue*) _obj, NULL, 0 );\n\
+  if( DaoRoutine_IsWrapper( _ro ) ) return;\n\
+  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  DaoProcess_Call( _proc, _ro, (DaoValue*)_obj, NULL, 0 );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
 }\n";
 
 const string cxx_virt_call_01 =
 "  DaoObject *_obj = NULL;\n\
-  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  DaoRoutine *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   if( _ro == NULL || _obj == NULL ) return;\n\
   $(proxy_name)( & _cs, _ro, _obj, $(parcall) );\n\
 }\n";
 
 const string cxx_virt_call_10 =
 "  DaoObject *_obj = NULL;\n\
-  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  DaoRoutine *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   $(vareturn)\n\
   if( _ro == NULL || _obj == NULL ) return $(return);\n\
   return ($(retype))$(proxy_name)( & _cs, _ro, _obj );\n\
@@ -258,101 +259,101 @@ const string cxx_virt_call_10 =
 
 const string cxx_virt_call_11 =
 "  DaoObject *_obj = NULL;\n\
-  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  DaoRoutine *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   $(vareturn)\n\
   if( _ro == NULL || _obj == NULL ) return $(return);\n\
   return ($(retype))$(proxy_name)( & _cs, _ro, _obj, $(parcall) );\n\
 }\n";
 
 const string cxx_proxy_body00 =
-"static void $(proxy_name)( int *_cs, DaoMethod *_ro, DaoObject *_ob )\n{\n\
+"static void $(proxy_name)( int *_cs, DaoRoutine *_ro, DaoObject *_ob )\n{\n\
   if( _ro == NULL ) return;\n\
-  _ro = DaoMethod_Resolve( _ro, (DaoValue*)_ob, NULL, 0 );\n\
-  if( DaoValue_CastRoutine( (DaoValue*)_ro ) == NULL ) return;\n\
-  DaoProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
-  *_cs = DaoProcess_Call( _vmp, _ro, (DaoValue*)_ob, NULL, 0 );\n\
-  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+  _ro = DaoRoutine_Resolve( _ro, (DaoValue*) _ob, NULL, 0 );\n\
+  if( DaoRoutine_IsWrapper( _ro ) ) return;\n\
+  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  *_cs = DaoProcess_Call( _proc, _ro, (DaoValue*)_ob, NULL, 0 );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
 }\n";
 
 const string cxx_proxy_body01 =
-"static void $(proxy_name)( int *_cs, DaoMethod *_ro, DaoObject *_ob, $(parlist) )\n{\n\
-  DaoValue *_dp[$(count)] = { $(nulls) };\n\
-  if( _ro == NULL ) return;\n\
-$(cxx2dao)\n\
-  _ro = DaoMethod_Resolve( _ro, (DaoValue*)_ob, _dp, $(count) );\n\
-  if( DaoValue_CastRoutine( (DaoValue*)_ro ) == NULL ) return;\n\
-  DaoProcess *_vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
-  *_cs = DaoProcess_Call( _vmp, _ro, (DaoValue*)_ob, _dp, $(count) );\n\
-  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
-  DaoValue_ClearAll( _dp, $(count) );\n\
+"static void $(proxy_name)( int *_cs, DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{\n\
+  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  DaoFactory *_fac = DaoProcess_GetFactory( _proc );\n\
+  DaoValue **_dp;\n\
+  if( _ro == NULL ) goto EndCall;\n\
+$(cxx2dao)\
+  _dp = DaoFactory_GetLastValues( _fac, $(count) );\n\
+  _ro = DaoRoutine_Resolve( _ro, (DaoValue*) _ob, _dp, $(count) );\n\
+  if( DaoRoutine_IsWrapper( _ro ) ) goto EndCall;\n\
+  *_cs = DaoProcess_Call( _proc, _ro, (DaoValue*)_ob, _dp, $(count) );\n\
+EndCall:\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
 }\n";
 
 const string cxx_proxy_body10 =
-"static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DaoObject *_ob )\n{\n\
+"static $(retype) $(proxy_name)( int *_cs, DaoRoutine *_ro, DaoObject *_ob )\n{\n\
+  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
   DaoValue *_res;\n\
   DaoCdata *_cd;\n\
-  DaoProcess *_vmp;\n\
   $(vareturn)\n\
   if( _ro == NULL ) goto EndCall;\n\
-  _ro = DaoMethod_Resolve( _ro, (DaoValue*)_ob, NULL, 0 );\n\
-  if( DaoValue_CastRoutine( (DaoValue*)_ro ) == NULL ) goto EndCall;\n\
-  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
-  if( (*_cs = DaoProcess_Call( _vmp, _ro, (DaoValue*)_ob, NULL, 0 )) ==0 ) goto EndCall;\n\
-  _res = DaoProcess_GetReturned( _vmp );\n\
-  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+  _ro = DaoRoutine_Resolve( _ro, (DaoValue*) _ob, NULL, 0 );\n\
+  if( DaoRoutine_IsWrapper( _ro ) ) goto EndCall;\n\
+  if( (*_cs = DaoProcess_Call( _proc, _ro, (DaoValue*)_ob, NULL, 0 )) ) goto EndCall;\n\
+  _res = DaoProcess_GetReturned( _proc );\n\
 $(getreturn)\n\
 EndCall:\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
   return $(return);\n\
 }\n";
 
 const string cxx_proxy_body11 =
-"static $(retype) $(proxy_name)( int *_cs, DaoMethod *_ro, DaoObject *_ob, $(parlist) )\n{\n\
-  DaoValue *_dp[$(count)] = { $(nulls) };\n\
-  DaoValue *_res;\n\
+"static $(retype) $(proxy_name)( int *_cs, DaoRoutine *_ro, DaoObject *_ob, $(parlist) )\n{\n\
+  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
+  DaoFactory *_fac = DaoProcess_GetFactory( _proc );\n\
+  DaoValue *_res, **_dp;\n\
   DaoCdata *_cd;\n\
-  DaoProcess *_vmp;\n\
   $(vareturn)\n\
   if( _ro == NULL ) goto EndCall;\n\
-$(cxx2dao)\n\
-  _ro = DaoMethod_Resolve( _ro, (DaoValue*)_ob, _dp, $(count) );\n\
-  if( DaoValue_CastRoutine( (DaoValue*)_ro ) == NULL ) goto EndCall;\n\
-  _vmp = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
-  if( (*_cs = DaoProcess_Call( _vmp, _ro, (DaoValue*)_ob, _dp, $(count) )) ==0 ) goto EndCall;\n\
-  _res = DaoProcess_GetReturned( _vmp );\n\
-  DaoVmSpace_ReleaseProcess( __daoVmSpace, _vmp );\n\
+$(cxx2dao)\
+  _dp = DaoFactory_GetLastValues( _fac, $(count) );\n\
+  _ro = DaoRoutine_Resolve( _ro, (DaoValue*) _ob, _dp, $(count) );\n\
+  if( DaoRoutine_IsWrapper( _ro ) ) goto EndCall;\n\
+  if( (*_cs = DaoProcess_Call( _proc, _ro, (DaoValue*)_ob, _dp, $(count) )) ) goto EndCall;\n\
+  _res = DaoProcess_GetReturned( _proc );\n\
 $(getreturn)\n\
 EndCall:\n\
-  DaoValue_ClearAll( _dp, $(count) );\n\
+  DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
   return $(return);\n\
 }\n";
 
 //XXX ((DaoCxxVirt_$(type)*)this)->DaoCxxVirt_$(type)::$(cxxname)
 const string cxx_virt_class2 =
 "$(retype) DaoCxx_$(host_idname)::$(cxxname)( $(parlist) )$(const)\n{\n\
-  int _cs = 0;\n\
+  int _cs = 1;\n\
   $(return)((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
 }\n";
 
 const string cxx_virt_class3 =
 "$(retype) DaoCxx_$(host_idname)::$(cxxname)( $(parlist) )$(const)\n{\n\
-  int _cs = 0;\n\
+  int _cs = 1;\n\
   DaoObject *_obj = NULL;\n\
-  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  DaoRoutine *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   if( _ro && _obj ){\n\
     ((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
-    if( _cs ) return;\n\
+    if( _cs == 0 ) return;\n\
   }\n\
   $(host_qname)::$(cxxname)( $(parcall) );\n\
 }\n";
 
 const string cxx_virt_class4 =
 "$(retype) DaoCxx_$(host_idname)::$(cxxname)( $(parlist) )$(const)\n{\n\
-  int _cs = 0;\n\
+  int _cs = 1;\n\
   DaoObject *_obj = NULL;\n\
-  DaoMethod *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
+  DaoRoutine *_ro = Dao_Get_Object_Method( cdata, & _obj, \"$(cxxname)\" );\n\
   if( _ro && _obj ){\n\
     $(vareturn) = ((DaoCxxVirt_$(host_idname)*)this)->DaoCxxVirt_$(host_idname)::$(cxxname)( _cs$(comma) $(parcall) );\n\
-    if( _cs ) return $(vareturn2);\n\
+    if( _cs == 0 ) return $(vareturn2);\n\
   }\n\
   return $(host_qname)::$(cxxname)( $(parcall) );\n\
 }\n";
@@ -369,9 +370,9 @@ const string dao_callback_def =
 "$(retype) Dao_$(host_idname)( $(parlist) )\n\
 {\n\
   DaoCallbackData *_dao_cbd = (DaoCallbackData*) _ud;\n\
-  DaoMethod *_ro = _dao_cbd->callback;\n\
+  DaoRoutine *_ro = _dao_cbd->callback;\n\
   DValueX userdata = _dao_cbd->userdata;\n\
-  int _cs = 0;\n\
+  int _cs = 1;\n\
   if( _ro ==NULL ) return;\n\
   $(proxy_name)( & _cs, _ro, NULL, $(parcall) );\n\
 }\n";
@@ -648,7 +649,7 @@ int CDaoFunction::Generate()
 		if( retype.isUserData && retype.callback == vo.name ){
 			signature2 += "DaoValue";
 			cxxprotpars += "DaoValue *" + vo.name;
-			cxx2daocodes += "  _dp[" + sindex + "] = " + vo.name + ";\n";
+			cxx2daocodes += "  DaoFactory_CacheValue( _fac, " + vo.name + " );\n";
 			cxxCallParamV += "_dao_cbd->userdata";
 		}else{
 			signature2 += vo.cxxtype;
@@ -888,7 +889,7 @@ int CDaoFunction::Generate()
 	}else if( fieldDecl ){ // callback field of a struct:
 		cxxWrapperVirtProto = cdao_string_fill( cxx_virt_proto, kvmap3 );
 		cxxWrapperVirt = cdao_string_fill( cxx_virt_struct, kvmap3 );
-		cxxWrapperVirt += "  int _cs = 0;\n";
+		cxxWrapperVirt += "  int _cs = 1;\n";
 	}else{
 		kvmap3[ "parlist" ] = cxxProtoParamVirt;
 		cxxWrapperVirtProto = cdao_string_fill( c_callback_proto, kvmap3 );

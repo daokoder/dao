@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of the Dao standard modules.
-  Copyright (C) 2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2011-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -28,9 +28,7 @@ static void META_NS( DaoProcess *proc, DaoValue *p[], int N )
 		res = proc->activeNamespace;
 	}else if( p[0]->type == DAO_CLASS ){
 		res = p[0]->xClass.classRoutine->nameSpace;
-	}else if( p[0]->type == DAO_FUNCTREE ){
-		res = p[0]->xFunctree.space;
-	}else if( p[0]->type == DAO_ROUTINE || p[0]->type == DAO_FUNCTION ){
+	}else if( p[0]->type == DAO_ROUTINE ){
 		res = p[0]->xRoutine.nameSpace;
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) res );
@@ -40,7 +38,6 @@ static void META_Name( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str = DaoProcess_PutMBString( proc, "" );
 	switch( p[0]->type ){
 	case DAO_ROUTINE :
-	case DAO_FUNCTION :
 		DString_Assign( str, p[0]->xRoutine.routName );
 		break;
 	case DAO_CLASS :
@@ -290,15 +287,18 @@ static void META_Routine( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *item;
 	int i;
 	if( N ==1 ){ // XXX
-		DaoFunctree *rout = & p[0]->xFunctree;
+		DaoRoutine *rout = & p[0]->xRoutine;
 		list = DaoProcess_PutList( proc );
-		if( p[0]->type != DAO_FUNCTREE ){
+		if( p[0]->type != DAO_ROUTINE ){
 			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 			return;
 		}
-		for(i=0; i<rout->routines->size; i++){
-			item = rout->routines->items.pValue[i];
-			DaoList_Append( list, item );
+		if( rout->overloads ){
+			for(i=0; i<rout->overloads->routines->size; i++){
+				item = rout->overloads->routines->items.pValue[i];
+				DaoList_Append( list, item );
+			}
+		}else{
 		}
 	}else{
 		DaoProcess_PutValue( proc, (DaoValue*) proc->activeRoutine );
@@ -328,7 +328,7 @@ static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 		if( p[0]->type == DAO_OBJECT ){
 			*res = DaoClass_ChildOf( p[0]->xObject.rootObject->defClass, p[1] );
 		}else if( p[0]->type == DAO_CDATA ){
-			*res = DaoCdata_ChildOf( p[0]->xCdata.ctype->kernel->typer, p[1]->xCdata.ctype->kernel->typer );
+			*res = DaoType_ChildOf( p[0]->xCdata.ctype, p[1]->xCdata.ctype );
 		}
 	}else if( p[1]->type == DAO_STRING ){
 		DString *tname = p[1]->xString.data;
@@ -339,8 +339,6 @@ static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 			if( p[0]->type == DAO_OBJECT  ) *res = 1;
 		}else if( strcmp( tname->mbs, "routine" ) ==0 ){
 			if( p[0]->type == DAO_ROUTINE  ) *res = 1;
-		}else if( strcmp( tname->mbs, "function" ) ==0 ){
-			if( p[0]->type == DAO_FUNCTION  ) *res = 1;
 		}else if( strcmp( tname->mbs, "namespace" ) ==0 ){
 			if( p[0]->type == DAO_NAMESPACE  ) *res = 1;
 		}else if( strcmp( tname->mbs, "tuple" ) ==0 ){
@@ -368,7 +366,7 @@ static void META_Self( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DRoutine *routine = (DRoutine*) p[0];
+	DaoRoutine *routine = (DaoRoutine*) p[0];
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoTuple *tuple;
 	DaoType *routype = routine->routType;
@@ -390,7 +388,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 		DaoValue_Copy( (DaoValue*) & str, & tuple->items[0] );
 		DaoValue_Copy( (DaoValue*) nested[i], & tuple->items[1] );
 		DaoValue_Copy( (DaoValue*) & num, & tuple->items[2] );
-		DaoValue_Copy( routine->routConsts->items.pValue[i], & tuple->items[3] );
+		DaoValue_Copy( routine->routConsts->items.items.pValue[i], & tuple->items[3] );
 		DaoList_Append( list, (DaoValue*) tuple );
 	}
 	DString_Delete( mbs );

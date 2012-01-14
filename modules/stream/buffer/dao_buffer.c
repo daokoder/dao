@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -111,10 +111,10 @@ static void DaoBufferWrite( DaoProcess *proc, DaoValue *p[], int N )
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoVmSpace_LinkModule( vmSpace, ns, "sys" );
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoBufferRead,   "fillbuf( self: stream, buf: buffer, count = 0 )=>int" );
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoBufferReadAll,"readbuf( self: stream, count = 0 )=>buffer" );
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoBufferReadAll2,
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)DaoBufferRead,   "fillbuf( self: stream, buf: buffer, count = 0 )=>int" );
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)DaoBufferReadAll,"readbuf( self: stream, count = 0 )=>buffer" );
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)DaoBufferReadAll2,
 							   "readbuf( self: stream, file: string, count = 0 )=>buffer" );
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoBufferWrite,   "writebuf( self: stream, buf: buffer, count = 0 )" );
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)DaoBufferWrite,   "writebuf( self: stream, buf: buffer, count = 0 )" );
 	return 0;
 }

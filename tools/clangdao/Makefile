@@ -1,5 +1,5 @@
 
-CC = g++
+CC = g++-4.2
 
 DAO_INC =/usr/local/dao/include
 

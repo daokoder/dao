@@ -1,6 +1,6 @@
 /*=======================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -33,12 +33,11 @@
 
 enum DaoRTTI
 {
-	DAO_ANY = END_CORE_TYPES, /* a : any */
-	DAO_INITYPE ,  /* a : @t */
+	DAO_INITYPE = END_CORE_TYPES, /* a : @t */
 	DAO_VALTYPE ,
 	DAO_VARIANT , /* variant or disjoint union */
 	DAO_MACRO ,
-	DAO_ABROUTINE , /* abstract routine in interface */
+	DAO_ROUTBODY ,
 	DAO_FUNCURRY ,
 	DAO_FUTURE ,
 	DAO_TYPEKERNEL ,
@@ -70,12 +69,6 @@ enum DaoBasicStruct
 	D_MAP ,
 	D_VOID2 , /* a pair of pointer */
 	D_NULL
-};
-
-enum DaoValueMode
-{
-	DAO_VALUE_NORMAL ,
-	DAO_REFER_PARAM /* reference parameter */
 };
 
 /* It is for the typing system, to decide when to specialize a routine.
@@ -185,6 +178,7 @@ enum DaoRoutineAttrib
 enum DaoGlbConstShift
 {
 	DVR_NSC_NONE = 1 ,
+	DVR_NSC_ANY , 
 	DVR_NSC_MAIN 
 };
 enum DaoGlbVarShift

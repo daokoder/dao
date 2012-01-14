@@ -12,15 +12,15 @@
 #include "cdaoModule.hpp"
 
 const string cxx_get_object_method = 
-"DaoMethod* Dao_Get_Object_Method( DaoCdata *cd, DaoObject **obj, const char *name )\n\
+"DaoRoutine* Dao_Get_Object_Method( DaoCdata *cd, DaoObject **obj, const char *name )\n\
 {\n\
-  DaoMethod *meth;\n\
+  DaoRoutine *meth;\n\
   if( cd == NULL ) return NULL;\n\
   *obj = DaoCdata_GetObject( cd );\n\
   if( *obj == NULL ) return NULL;\n\
   meth = DaoObject_GetMethod( *obj, name );\n\
   if( meth == NULL ) return NULL;\n\
-  if( DaoValue_CastFunction( (DaoValue*)meth ) ) return NULL; /*do not call C function*/\n\
+  if( DaoRoutine_IsWrapper( meth ) ) return NULL; /*do not call C function*/\n\
   return meth;\n\
 }\n";
 
@@ -30,7 +30,7 @@ const string add_ccdata = "  DaoNamespace_AddConstData( $(ns), \"$(name)\", "
 "(DaoValue*)DaoCdata_Wrap( dao_$(type)_Typer, ($(type)*) $(refer) $(name) ) );\n";
 
 const string ext_typer = "extern DaoTypeBase *dao_$(type)_Typer;\n";
-const string alias_typer = "DaoTypeBase *dao_$(new)_Typer = & $(old)_Typer;\n";
+const string ext_dao_types = "extern DaoType *dao_type_$(type);\n";
 
 const string tpl_wraptype = "\tDaoNamespace_WrapType( ns, dao_$(idname)_Typer );\n";
 
@@ -140,8 +140,9 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 	const RecordType *record = dyn_cast<RecordType>( canotype.getTypePtr() );
 	if( record == NULL ) return NULL;
 	if( const TypedefType *TDT = dyn_cast<TypedefType>( qualtype.getTypePtr() ) ){
-		if( TD == NULL ) TD = TDT->getDecl();
+		//XXX if( TD == NULL ) TD = (TypedefDecl*)TDT->getDecl(); // XXX
 	}
+	TD = NULL; //XXX
 
 	ClassTemplateSpecializationDecl *SD, *DE;
 	RecordDecl *RD = record->getDecl();
@@ -508,6 +509,8 @@ void CDaoModule::HandleTypeDefine( TypedefDecl *TD )
 		}
 	}
 }
+const char *ifdef_cpp_open = "#ifdef __cplusplus\nextern \"C\"{\n#endif\n";
+const char *ifdef_cpp_close = "#ifdef __cplusplus\n}\n#endif\n";
 void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 {
 	string name_macro = UppercaseString( moduleInfo.name );
@@ -518,6 +521,9 @@ void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 	fout_header << "#include<assert.h>\n";
 	fout_header << "#include<string.h>\n";
 	fout_header << "#include<dao.h>\n\n";
+	fout_header << ifdef_cpp_open;
+	fout_header << "#include<daoArray.h>\n\n";
+	fout_header << ifdef_cpp_close;
 
 	map<FileEntry*,CDaoHeaderInfo>::iterator it, end = headers.end();
 	for(it=headers.begin(); it != end; it++){
@@ -546,13 +552,10 @@ void CDaoModule::WriteHeaderIncludes( std::ostream & fout_header )
 	fout_header << "extern DaoVmSpace *__daoVmSpace;\n";
 }
 
-const char *ifdef_cpp_open = "#ifdef __cplusplus\nextern \"C\"{\n#endif\n";
-const char *ifdef_cpp_close = "#ifdef __cplusplus\n}\n#endif\n";
-
 string CDaoModule::MakeHeaderCodes( vector<CDaoUserType*> & usertypes )
 {
 	int i, n;
-	string codes;
+	string codes, codes2;
 	map<string,string> kvmap;
 	codes += ifdef_cpp_open;
 	for(i=0, n=usertypes.size(); i<n; i++){
@@ -560,8 +563,9 @@ string CDaoModule::MakeHeaderCodes( vector<CDaoUserType*> & usertypes )
 		if( utp.isRedundant ) continue;
 		kvmap[ "type" ] = utp.idname;
 		codes += cdao_string_fill( ext_typer, kvmap );
+		codes2 += cdao_string_fill( ext_dao_types, kvmap );
 	}
-	codes += ifdef_cpp_close;
+	codes += codes2 + ifdef_cpp_close;
 	for(i=0, n=usertypes.size(); i<n; i++){
 		CDaoUserType & utp = *usertypes[i];
 		if( utp.isRedundant || utp.IsFromRequiredModules() ) continue;
@@ -573,7 +577,6 @@ string CDaoModule::MakeSourceCodes( vector<CDaoUserType*> & usertypes, CDaoNames
 {
 	int i, n;
 	string codes, idname;
-	map<string,string> kvmap;
 	if( ns && ns->nsdecl ) idname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	//codes += ifdef_cpp_open;
 	codes += "static DaoTypeBase *dao_" + idname + "_Typers[] = \n{\n";
@@ -621,6 +624,18 @@ string CDaoModule::MakeOnLoadCodes( CDaoNamespace *ns )
 	string codes, tname, nsname = "ns";
 	if( ns && ns->nsdecl ) tname = nsname = cdao_qname_to_idname( ns->nsdecl->getQualifiedNameAsString() );
 	codes += "\tDaoNamespace_WrapTypes( " + nsname + ", dao_" + tname + "_Typers );\n";
+	return codes;
+}
+string CDaoModule::MakeOnLoad2Codes( vector<CDaoUserType*> & usertypes )
+{
+	int i, n;
+	string codes;
+	
+	for(i=0, n=usertypes.size(); i<n; i++){
+		CDaoUserType & utp = *usertypes[i];
+		if( utp.isRedundant || utp.IsFromRequiredModules() ) continue;
+		codes += "\tdao_type_" + utp.idname + " = DaoType_GetFromTypeStructure( dao_" + utp.idname + "_Typer );\n";
+	}
 	return codes;
 }
 string CDaoModule::MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns )
@@ -754,6 +769,7 @@ int CDaoModule::Generate( const string & output )
 		topLevelScope.source += source + "\tNULL\n};\n";
 		topLevelScope.onload2 += "\tDaoNamespace_TypeDefines( ns, dao__Aliases );\n";
 	}
+	topLevelScope.onload3 += MakeOnLoad2Codes( sorted );
 
 	map<string,string> kvmap;
 	kvmap[ "module" ] = moduleInfo.name;
@@ -816,8 +832,8 @@ string CDaoModule::ExtractSource( SourceLocation & start, SourceLocation & end, 
 	Preprocessor & pp = compiler->getPreprocessor();
 	SourceManager & sm = compiler->getSourceManager();
 	if( original ){
-		start = sm.getInstantiationLoc( start );
-		end = sm.getInstantiationLoc( end );
+		start = sm.getExpansionLoc( start );
+		end = sm.getExpansionLoc( end );
 	}else{
 		start = sm.getSpellingLoc( start );
 		end = sm.getSpellingLoc( end );

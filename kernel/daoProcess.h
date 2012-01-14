@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -40,7 +40,6 @@ struct DaoStackFrame
 	DaoType     **types;
 	DaoType      *retype;
 	DaoRoutine   *routine;
-	DaoFunction  *function;
 	DaoObject    *object;
 	DaoProcess   *outer;
 
@@ -104,15 +103,14 @@ struct DaoProcess
 	char status;
 	char stopit;
 
-	DaoFuture *future;
+	DaoFuture  *future;
+	DaoStream  *stdioStream;
+	DaoFactory *factory;
 
 #ifdef DAO_WITH_THREAD
 	DMutex    *mutex; /* used only by mt; */
 	DCondVar  *condv; /* used only by mt; */
 #endif
-
-	DaoType   *dummyType;
-	DaoVmCode  dummyCode;
 
 	DString *mbstring;
 	DMap    *mbsRegex; /* <DString*,DString*> */
@@ -132,14 +130,14 @@ DAO_DLL void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, Dao
 DAO_DLL void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
 
 DAO_DLL void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
-DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
-DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
+DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *function );
+DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N );
 
 DAO_DLL void DaoProcess_InterceptReturnValue( DaoProcess *self );
 
-DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 
-DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n );
+DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n );
 
 /* Execute from the top of the calling stack */
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );
@@ -153,29 +151,43 @@ DAO_DLL void DaoProcess_PrintException( DaoProcess *self, int clear );
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 
-typedef struct CastBuffer CastBuffer;
-struct CastBuffer
-{
-	DLong    *lng;
-	DString  *str;
-};
 
+typedef struct DaoJIT         DaoJIT;
+typedef struct DaoJitCallData DaoJitCallData;
 
-typedef struct DaoJIT DaoJIT;
 typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
 typedef void (*DaoJIT_QuitFPT)();
 typedef void (*DaoJIT_FreeFPT)( DaoRoutine *routine );
 typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
-typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *context, int jitcode );
+typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 
 struct DaoJIT
 {
 	void (*Quit)();
 	void (*Free)( DaoRoutine *routine );
 	void (*Compile)( DaoRoutine *routine );
-	void (*Execute)( DaoProcess *context, int jitcode );
+	void (*Execute)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 };
 
 extern struct DaoJIT dao_jit;
+
+struct DaoJitCallData
+{
+	DaoValue  **localValues;
+	DaoValue  **localConsts;
+
+	DaoValue  **objectValues;
+	DaoValue  **classValues;
+	DaoValue  **classConsts;
+
+	DaoValue  **globalValues;
+	DaoValue  **globalConsts;
+
+	DaoValue   **upConsts;
+	DaoProcess **processes;
+
+	DArray  *classes;
+	DArray  *namespaces;
+};
 
 #endif

@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of the Dao standard modules.
-  Copyright (C) 2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2011-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -70,9 +70,15 @@ struct DaoxGraph
 	DArray  *edges; /* <DaoxEdge*>; */
 	short    wtype; /* weight type: DAO_NONE, DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE; */
 	short    directed; /* directed graph; */
-};
 
-DAO_DLL DaoxGraph* DaoxGraph_New( int wtype, int directed );
+	DaoType  *nodeType;
+	DaoType  *edgeType;
+};
+DAO_DLL extern DaoType *daox_node_template_type;
+DAO_DLL extern DaoType *daox_edge_template_type;
+DAO_DLL extern DaoType *daox_graph_template_type;
+
+DAO_DLL DaoxGraph* DaoxGraph_New( DaoType *type, int directed );
 DAO_DLL void DaoxGraph_Delete( DaoxGraph *self );
 
 DAO_DLL DaoxNode* DaoxGraph_AddNode( DaoxGraph *self );

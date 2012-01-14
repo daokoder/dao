@@ -1,9 +1,11 @@
 
-CC = g++
+CC = g++-4.2
 
 DAO_INC =/usr/local/dao/include
+DAO_INC =../../kernel
 
-CFLAGS = -ggdb -O2 -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
+CFLAGS = -O2 -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
+CFLAGS = -ggdb -O0 -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
 LFLAGS = -fPIC `llvm-config --ldflags --libs`
 LFLAGS2 = -fPIC -ldao `llvm-config --ldflags --libs`
 

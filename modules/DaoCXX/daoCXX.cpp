@@ -6,7 +6,7 @@
 #include <llvm/Support/Path.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/TargetSelect.h>
-#include "llvm/LLVMContext.h"
+#include <llvm/LLVMContext.h>
 #include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/ExecutionEngine/Interpreter.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -335,6 +335,11 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 				return 1;
 			}
 			break;
+		case DAO_VALTYPE :
+			if( type->aux->type != DAO_NONE ) return 1;
+			DString_InsertMBS( cproto, "void ", 0, 0, 0 );
+			DString_Append( wrapper, cc );
+			break;
 		default : return 1;
 		}
 	}
@@ -409,7 +414,7 @@ static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DSt
 	sprintf( proto2, "anonymous_%p_%p()", NS, VT );
 	if( dao_markers_get( markers, "define", mbs, NULL ) ) proto = mbs->mbs;
 
-	DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, proto );
+	DaoRoutine *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, proto );
 	if( func == NULL ){
 		error_function_notwrapped( out, proto );
 		DString_Delete( mbs );
@@ -493,7 +498,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	DString_AppendMBS( source, "\nextern \"C\"{\n" );
 	for(i=0; i<wraps->size; i++){
 		DString *daoproto = wraps->items.pString[i];
-		DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, daoproto->mbs );
+		DaoRoutine *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, daoproto->mbs );
 		if( func == NULL || dao_make_wrapper( func->routName, func->routType, cproto, source, call ) ){
 			DString_AppendMBS( out, daoproto->mbs );
 			DString_AppendMBS( out, "\n" );
@@ -522,7 +527,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	if( Module == NULL ) return error_compile_failed( out );
 
 	for(i=0; i<funcs->size; i++){
-		DaoFunction *func = (DaoFunction*) funcs->items.pVoid[i];
+		DaoRoutine *func = funcs->items.pRoutine[i];
 		sprintf( name, "dao_%s", func->routName->mbs ); //XXX buffer size
 
 		Function *Func = Module->getFunction( name );
