@@ -621,30 +621,47 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 	if( itp == NULL ) return 0;
 	return DaoValue_Move( src, dest, itp );
 }
-int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
+int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 {
 	int tm = 1;
-	if( (tp->tid == DAO_OBJECT || tp->tid == DAO_CDATA) && src->type == DAO_OBJECT){
-		if( src->xObject.defClass != & tp->aux->xClass ){
-			src = DaoObject_CastToBase( src->xObject.rootObject, tp );
-			tm = (src != NULL);
+	if( !(S->xTuple.trait & DAO_DATA_CONST) ){
+		DaoType *ST = NULL;
+		switch( (S->type << 8) | T->tid ){
+		case (DAO_TUPLE<<8)|DAO_TUPLE : ST = S->xTuple.unitype; break;
+		case (DAO_ARRAY<<8)|DAO_ARRAY : ST = S->xArray.unitype; break;
+		case (DAO_LIST <<8)|DAO_LIST  : ST = S->xList.unitype; break;
+		case (DAO_MAP  <<8)|DAO_MAP   : ST = S->xMap.unitype; break;
+		case (DAO_CDATA<<8)|DAO_CDATA : ST = S->xCdata.ctype; break;
+		case (DAO_OBJECT<<8)|DAO_OBJECT : ST = S->xObject.defClass->objType; break;
 		}
-	}else if( src->type == DAO_CLASS && tp->tid == DAO_CLASS && src->xClass.typeHolders ){
-		if( DMap_Find( src->xClass.instanceClasses, tp->aux->xClass.className ) ){
-			src = tp->aux;
+		if( ST == T ){
+			DaoValue *D2 = *D;
+			GC_ShiftRC( S, D2 );
+			*D = S;
+			return 1;
+		}
+	}
+	if( (T->tid == DAO_OBJECT || T->tid == DAO_CDATA) && S->type == DAO_OBJECT){
+		if( S->xObject.defClass != & T->aux->xClass ){
+			S = DaoObject_CastToBase( S->xObject.rootObject, T );
+			tm = (S != NULL);
+		}
+	}else if( S->type == DAO_CLASS && T->tid == DAO_CLASS && S->xClass.typeHolders ){
+		if( DMap_Find( S->xClass.instanceClasses, T->aux->xClass.className ) ){
+			S = T->aux;
 			tm = DAO_MT_SUB;
 		}
 	}else{
-		tm = DaoType_MatchValue( tp, src, NULL );
+		tm = DaoType_MatchValue( T, S, NULL );
 	}
 #if 0
 	if( tm ==0 ){
-		printf( "tp = %p; src = %p, type = %i %i\n", tp, src, src->type, DAO_ROUTINE );
-		printf( "tp: %s %i %i\n", tp->name->mbs, tp->tid, tm );
-		if( src->type == DAO_LIST ) printf( "%s\n", src->xList.unitype->name->mbs );
-		if( src->type == DAO_TUPLE ) printf( "%p\n", src->xTuple.unitype );
+		printf( "T = %p; S = %p, type = %i %i\n", T, S, S->type, DAO_ROUTINE );
+		printf( "T: %s %i %i\n", T->name->mbs, T->tid, tm );
+		if( S->type == DAO_LIST ) printf( "%s\n", S->xList.unitype->name->mbs );
+		if( S->type == DAO_TUPLE ) printf( "%p\n", S->xTuple.unitype );
 	}
-	printf( "src->type = %p %s %i\n", src, tp->name->mbs, tm );
+	printf( "S->type = %p %s %i\n", S, T->name->mbs, tm );
 #endif
 	if( tm == 0 ) return 0;
 	/* composite known types must match exactly. example,
@@ -656,13 +673,13 @@ int DaoValue_Move4( DaoValue *src, DaoValue **dest, DaoType *tp )
 	 * but if d is of type list<list<any>>,
 	 * the matching do not necessary to be exact.
 	 */
-	src = DaoValue_SimpleCopyWithType( src, tp );
-	GC_ShiftRC( src, *dest );
-	*dest = src;
-	if( src->type == DAO_TUPLE && src->xTuple.unitype != tp && tm >= DAO_MT_SIM ){
-		return DaoValye_TryCastTuple( src, dest, tp );
-	}else if( tp && tp->tid == src->type ){
-		DaoValue_SetType( src, tp );
+	S = DaoValue_SimpleCopyWithType( S, T );
+	GC_ShiftRC( S, *D );
+	*D = S;
+	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm >= DAO_MT_SIM ){
+		return DaoValye_TryCastTuple( S, D, T );
+	}else if( T && T->tid == S->type ){
+		DaoValue_SetType( S, T );
 	}
 	return 1;
 }
@@ -720,7 +737,7 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 	case (DAO_DOUBLE <<8)|DAO_FLOAT   : D2->xFloat.value   = S->xDouble.value; break;
 	case (DAO_DOUBLE <<8)|DAO_DOUBLE  : D2->xDouble.value  = S->xDouble.value; break;
 	case (DAO_COMPLEX<<8)|DAO_COMPLEX : D2->xComplex.value = S->xComplex.value; break;
-	case (DAO_LONG<<8)|DAO_LONG : DLong_Move( D2->xLong.value, S->xLong.value ); break;
+	case (DAO_LONG   <<8)|DAO_LONG    : DLong_Move( D2->xLong.value, S->xLong.value ); break;
 	default : return DaoValue_Move4( S, D, T );
 	}
 	return 1;

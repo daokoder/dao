@@ -893,12 +893,10 @@ void DaoIGC_DecRC( DaoValue *p )
 static void DaoIGC_TryInvoke()
 {
 	if( gcWorker.busy ) return;
-	counts --;
+	if( -- counts ) return;
 	if( gcWorker.idleList->size < gcWorker.gcMax ){
-		if( counts ) return;
 		counts = 100;
 	}else{
-		if( counts ) return;
 		counts = 10;
 	}
 
@@ -983,9 +981,11 @@ void DaoIGC_CycRefCountDecScan()
 	DNode *node;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
+	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0, k;
 
+	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
@@ -993,7 +993,7 @@ void DaoIGC_CycRefCountDecScan()
 			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		j += DaoGC_CycRefCountDecScan( value );
-		if( (++j) >= gcWorker.gcMin ) break;
+		if( (++j) >= min ) break;
 	}
 	if( i >= workList->size ){
 		gcWorker.ii = 0;
@@ -1004,11 +1004,13 @@ void DaoIGC_CycRefCountDecScan()
 }
 void DaoIGC_CycRefCountIncScan()
 {
-	daoint k = 0;
-	daoint i = gcWorker.ii;
 	DArray *workList = gcWorker.workList;
 	DArray *auxList = gcWorker.auxList;
+	daoint min = workList->size >> 2;
+	daoint i = gcWorker.ii;
+	daoint k = 0;
 
+	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	if( gcWorker.jj ){
 		k += DaoIGC_AliveObjectScan();
 		if( gcWorker.jj ) return;
@@ -1022,7 +1024,7 @@ void DaoIGC_CycRefCountIncScan()
 			value->xGC.alive = 1;
 			DArray_Append( auxList, value );
 			k += DaoIGC_AliveObjectScan();
-			if( gcWorker.jj || k >= gcWorker.gcMin ) break;
+			if( gcWorker.jj || k >= min ) break;
 		}
 	}
 	if( i >= workList->size ){
@@ -1037,10 +1039,12 @@ int DaoIGC_AliveObjectScan()
 {
 	daoint i, k = 9;
 	daoint j = gcWorker.jj;
+	daoint min = gcWorker.workList->size >> 2;
 	uchar_t delayMask = gcWorker.delayMask;
 	DArray *auxList = gcWorker.auxList;
 	DNode *node;
 
+	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for( ; j<auxList->size; j++){
 		DaoValue *value = auxList->items.pValue[j];
 		if( value->xGC.delay & delayMask ) continue;
@@ -1048,7 +1052,7 @@ int DaoIGC_AliveObjectScan()
 			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		k += DaoGC_CycRefCountIncScan( value );
-		if( (++k) >= gcWorker.gcMin ) break;
+		if( (++k) >= min ) break;
 	}
 	if( j >= auxList->size ){
 		gcWorker.jj = 0;
@@ -1062,9 +1066,11 @@ void DaoIGC_RefCountDecScan()
 	DNode *node;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
+	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0, k;
 
+	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
@@ -1074,7 +1080,7 @@ void DaoIGC_RefCountDecScan()
 			if( table ) table->refCount --;
 		}
 		j += DaoGC_RefCountDecScan( value );
-		if( j >= gcWorker.gcMin ) break;
+		if( j >= min ) break;
 	}
 	if( i >= workList->size ){
 		gcWorker.ii = 0;
@@ -1089,10 +1095,12 @@ void DaoIGC_FreeGarbage()
 	DArray *idleList = gcWorker.idleList;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
+	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0;
 	daoint old;
 
+	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
 		value->xGC.work = value->xGC.alive = 0;
@@ -1115,7 +1123,7 @@ void DaoIGC_FreeGarbage()
 		old = gcWorker.idleList->size;
 		DaoValue_Delete( value );
 		if( old != gcWorker.idleList->size ) DaoIGC_MarkIdleItems();
-		if( j >= gcWorker.gcMin ) break;
+		if( j >= min ) break;
 	}
 	if( i >= workList->size ){
 		gcWorker.ii = 0;

@@ -3537,7 +3537,9 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 
 	if( vmc->code == DVM_RETURN &&  returning != (ushort_t)-1 ){
 		DaoStackFrame *lastframe = topFrame->prev;
+#ifdef DEBUG
 		assert( lastframe && lastframe->routine );
+#endif
 		type = lastframe->routine->body->regType->items.pType[ returning ];
 		dest = self->stackValues + lastframe->stackBase + returning;
 	}
@@ -3546,17 +3548,24 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc->b == 1 ){
 		retValue = self->activeValues[ vmc->a ];
 	}else if( vmc->b > 1 && dest != self->stackValues ){
-		daoint ecount = self->exceptions->size;
-		DaoTuple *tuple;
-		DaoProcess_SetActiveFrame( self, topFrame->prev->active );
-		tuple = DaoProcess_PutTuple( self );
-		DaoProcess_SetActiveFrame( self, topFrame->active );
-		if( tuple == NULL || tuple->size > vmc->b ) goto InvalidReturn;
-		for(i=0,n=tuple->size; i<n; i++) DaoValue_Copy( src[i], tuple->items + i );
-		GC_DecRC( tuple->unitype );
-		tuple->unitype = NULL;
-		if( self->exceptions->size > ecount ) goto InvalidReturn;
-		return;
+		DaoTuple *tup = (DaoTuple*) *dest;
+		DaoTuple *tuple = NULL;
+		if( tup && tup->type == DAO_TUPLE && tup->unitype == type && tup->refCount == 1 ){
+			if( tup->size > vmc->b ) goto InvalidReturn;
+			tuple = tup;
+		}else if( type && type->tid == DAO_TUPLE ){
+			if( type->nested->size > vmc->b ) goto InvalidReturn;
+			tuple = DaoTuple_Create( type, 0 );
+		}else{
+			tuple = DaoTuple_New( vmc->b );
+		}
+		if( tuple->unitype ){
+			DaoType **TS = tuple->unitype->nested->items.pType;
+			for(i=0,n=tuple->size; i<n; i++) DaoValue_Move( src[i], tuple->items + i, TS[i] );
+		}else{
+			for(i=0,n=tuple->size; i<n; i++) DaoValue_Copy( src[i], tuple->items + i );
+		}
+		retValue = (DaoValue*) tuple;
 	}else if( vmc->b > 1 ){
 		DaoTuple *tuple = DaoTuple_New( vmc->b );
 		retValue = (DaoValue*) tuple;
