@@ -24,9 +24,9 @@ DMutex  mutex_string_sharing;
 #endif
 
 /* TODO: better string searching algorithm */
-static size_t DMBString_Find( DString *self, size_t S, const char *chs, size_t M )
+static daoint DMBString_Find( DString *self, daoint S, const char *chs, daoint M )
 {
-	size_t i, j;
+	daoint i, j;
 
 	if( M == 0 ) return MAXSIZE;
 	if( M+S > self->size ) return MAXSIZE;
@@ -42,9 +42,9 @@ static size_t DMBString_Find( DString *self, size_t S, const char *chs, size_t M
 	}
 	return MAXSIZE;
 }
-static size_t DMBString_RFind( DString *self, size_t S, const char* chs, size_t M )
+static daoint DMBString_RFind( DString *self, daoint S, const char* chs, daoint M )
 {
-	size_t i, j;
+	daoint i, j;
 
 	if( M == 0 || self->size == 0 ) return MAXSIZE;
 	if( S >= self->size ) S = self->size-1;
@@ -61,9 +61,9 @@ static size_t DMBString_RFind( DString *self, size_t S, const char* chs, size_t 
 	}
 	return MAXSIZE;
 }
-static size_t DWCString_Find( DString *self, size_t S, const wchar_t *chs, size_t M )
+static daoint DWCString_Find( DString *self, daoint S, const wchar_t *chs, daoint M )
 {
-	size_t i, j;
+	daoint i, j;
 
 	if( M == 0 ) return MAXSIZE;
 	if( M+S > self->size ) return MAXSIZE;
@@ -79,9 +79,9 @@ static size_t DWCString_Find( DString *self, size_t S, const wchar_t *chs, size_
 	}
 	return MAXSIZE;
 }
-static size_t DWCString_RFind( DString *self, size_t S, const wchar_t* chs, size_t M )
+static daoint DWCString_RFind( DString *self, daoint S, const wchar_t* chs, daoint M )
 {
-	size_t i, j;
+	daoint i, j;
 
 	if( M == 0 ) return MAXSIZE;
 	if( self->size==0 ) return MAXSIZE;
@@ -153,7 +153,7 @@ void DString_Delete( DString *self )
 }
 void DString_Detach( DString *self )
 {
-	size_t size, chsize;
+	daoint size, chsize;
 	int *data2, *data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
 	if( self->shared ==0 ) return;
 #ifdef DAO_WITH_THREAD
@@ -198,7 +198,7 @@ void DString_SetSharing( DString *self, int sharing )
 			self->wcs[ self->size ] = 0;
 		}
 	}else if( self->mbs ){
-		if( self->bufSize < self->size + sizeof(int)/sizeof(char) ){
+		if( self->bufSize < self->size + (daoint)(sizeof(int)/sizeof(char)) ){
 			size_t size = (self->size + 1)*sizeof(char) + sizeof(int);
 			data = (int*) dao_realloc( data, size );
 			self->bufSize = self->size;
@@ -208,7 +208,7 @@ void DString_SetSharing( DString *self, int sharing )
 		self->mbs[ self->size ] = 0;
 		data[0] = 1;
 	}else{ /* self->wcs */
-		if( self->bufSize < self->size + sizeof(int)/sizeof(wchar_t) ){
+		if( self->bufSize < self->size + (daoint)(sizeof(int)/sizeof(wchar_t)) ){
 			size_t size = (self->size + 1)*sizeof(wchar_t) + sizeof(int);
 			data = (int*) dao_realloc( data, size );
 			self->bufSize = self->size;
@@ -237,11 +237,11 @@ wchar_t* DString_GetWCS( DString *self )
 	DString_ToWCS( self );
 	return self->wcs;
 }
-static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n );
-static void DWCString_AppendMBS( DString *self, const char *chs, size_t n );
+static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint n );
+static void DWCString_AppendMBS( DString *self, const char *chs, daoint n );
 void DString_SetMBS( DString *self, const char *chs )
 {
-	size_t n;
+	daoint n;
 	if( self->mbs && self->mbs == chs ) return;
 	if( chs == NULL ){
 		DString_Clear( self );
@@ -258,7 +258,7 @@ void DString_SetMBS( DString *self, const char *chs )
 }
 void DString_SetWCS( DString *self, const wchar_t *chs )
 {
-	size_t n;
+	daoint n;
 	if( self->wcs && self->wcs == chs ) return;
 	if( chs == NULL ){
 		DString_Clear( self );
@@ -273,10 +273,10 @@ void DString_SetWCS( DString *self, const wchar_t *chs )
 		DMBString_AppendWCS(self,chs,n);
 	}
 }
-void DString_Reserve( DString *self, size_t size )
+void DString_Reserve( DString *self, daoint size )
 {
 	int *data;
-	size_t bsize;
+	daoint bsize;
 	DString_Detach( self );
 	if( size <= self->bufSize && 2*size >= self->bufSize ) return;
 	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
@@ -296,9 +296,9 @@ void DString_Reserve( DString *self, size_t size )
 		}
 	}
 }
-static void DMBString_Append( DString *self, const char *chs, size_t n )
+static void DMBString_Append( DString *self, const char *chs, daoint n )
 {
-	size_t i;
+	daoint i;
 	DString_Reserve( self, self->size + n );
 	for( i=0; i<n; i++ ) self->mbs[self->size+i] = chs[i];
 	self->size += n;
@@ -331,7 +331,7 @@ static void DWCString_AppendWChar( DString *self, const wchar_t ch )
 	self->wcs[ self->size ] = 0;
 }
 #define MAX_CHAR_PER_WCHAR 7
-static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
+static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint n )
 {
 	wchar_t buffer[101];
 	mbstate_t state;
@@ -339,7 +339,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
 	DString_Detach( self );
 	while( n ){
 		const wchar_t *wcs = buffer;
-		size_t smin, len, m = n;
+		daoint smin, len, m = n;
 		len = n < 100 ? n : 100;
 		wcsncpy( buffer, chs, len );
 		buffer[len] = 0;
@@ -362,21 +362,21 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, size_t n )
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof(state) );
 		smin = wcsrtombs( self->mbs + self->size, & wcs, len * MAX_CHAR_PER_WCHAR, & state );
-		if( smin == (size_t)-1 ) break;
+		if( smin == -1 ) break;
 		self->size += smin;
 	}
 	DString_Reserve( self, self->size );
 	self->mbs[ self->size ] = 0;
 }
-static void DWCString_Append( DString *self, const wchar_t *chs, size_t n )
+static void DWCString_Append( DString *self, const wchar_t *chs, daoint n )
 {
-	size_t i;
+	daoint i;
 	DString_Reserve( self, self->size + n );
 	for( i=0; i<n; i++ ) self->wcs[self->size+i] = chs[i];
 	self->size += n;
 	self->wcs[ self->size ] = 0;
 }
-static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
+static void DWCString_AppendMBS( DString *self, const char *chs, daoint n )
 {
 	char buffer[101];
 	mbstate_t state;
@@ -384,7 +384,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 	DString_Detach( self );
 	while( n ){
 		const char *mbs = buffer;
-		size_t smin, len = n < 100 ? n : 100;
+		daoint smin, len = n < 100 ? n : 100;
 		strncpy( buffer, chs, len );
 		buffer[len] = 0;
 		len = strlen( buffer );
@@ -405,8 +405,8 @@ static void DWCString_AppendMBS( DString *self, const char *chs, size_t n )
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof (state) );
 		smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
-		if( smin == (size_t)-1 ){ /* a valid encoding may have been cut in the middle: */
-			size_t put = len - (mbs - buffer);
+		if( smin == -1 ){ /* a valid encoding may have been cut in the middle: */
+			daoint put = len - (mbs - buffer);
 			chs -= put;
 			n += put;
 			mbs = buffer;
@@ -448,34 +448,34 @@ void DString_ToMBS( DString *self )
 }
 void DString_ToLower( DString *self )
 {
-	size_t i;
+	daoint i;
 	DString_Detach( self );
 	if( self->mbs ){
 		char *mbs = self->mbs;
-		for( i=0; i<self->size; i++, mbs++ ) *mbs = tolower( *mbs );
+		for(i=0; i<self->size; i++, mbs++) *mbs = tolower( *mbs );
 	}else{
 		wchar_t *wcs = self->wcs;
-		for( i=0; i<self->size; i++, wcs++ ) *wcs = towlower( *wcs );
+		for(i=0; i<self->size; i++, wcs++) *wcs = towlower( *wcs );
 	}
 }
 void DString_ToUpper( DString *self )
 {
-	size_t i;
+	daoint i;
 	DString_Detach( self );
 	if( self->mbs ){
 		char *mbs = self->mbs;
-		for( i=0; i<self->size; i++, mbs++ ) *mbs = toupper( *mbs );
+		for(i=0; i<self->size; i++, mbs++) *mbs = toupper( *mbs );
 	}else{
 		wchar_t *wcs = self->wcs;
-		for( i=0; i<self->size; i++, wcs++ ) *wcs = towupper( *wcs );
+		for(i=0; i<self->size; i++, wcs++) *wcs = towupper( *wcs );
 	}
 }
-size_t DString_Size( DString *self )
+daoint DString_Size( DString *self )
 {
 	return self->size;
 }
 
-void DString_Reset( DString *self, size_t size )
+void DString_Reset( DString *self, daoint size )
 {
 	if( size < self->bufSize ){
 		DString_Detach( self );
@@ -489,10 +489,10 @@ void DString_Reset( DString *self, size_t size )
 	}
 	DString_Resize( self, size );
 }
-void DString_Resize( DString *self, size_t size )
+void DString_Resize( DString *self, daoint size )
 {
 	int *data;
-	size_t i, bsize = self->bufSize;
+	daoint i, bsize = self->bufSize;
 	DString_Detach( self );
 	if( size == self->size && size <= bsize && 2*size >= bsize ) return;
 	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
@@ -526,12 +526,12 @@ void DString_Clear( DString *self )
 	DString_Init( self, mbs );
 	DString_SetSharing( self, share );
 }
-void DString_Erase( DString *self, size_t start, size_t n )
+void DString_Erase( DString *self, daoint start, daoint n )
 {
 	int *data;
-	size_t i, rest, bsize;
+	daoint i, rest, bsize;
 	if( start >= self->size ) return;
-	if( n == (size_t)-1 ) n = self->size;
+	if( n < 0 ) n = self->size;
 	if( n + start > self->size ) n = self->size - start;
 	rest = self->size - start - n;
 	if( rest ==0 ){
@@ -546,7 +546,7 @@ void DString_Erase( DString *self, size_t start, size_t n )
 		self->mbs[start+rest] = 0;
 		self->size -= n;
 		if( self->size < 0.5*self->bufSize && self->size+5 < self->bufSize ){
-			self->bufSize = (size_t)(0.6 * self->bufSize) + 1;
+			self->bufSize = (daoint)(0.6 * self->bufSize) + 1;
 			bsize = (self->bufSize+1)*sizeof(char) + self->shared*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
 			self->mbs = (char*)(data + self->shared);
@@ -557,7 +557,7 @@ void DString_Erase( DString *self, size_t start, size_t n )
 		self->wcs[start+rest] = 0;
 		self->size -= n;
 		if( self->size < 0.5*self->bufSize && self->size + 5 < self->bufSize ){
-			self->bufSize = (size_t)(0.6 * self->bufSize) + 1;
+			self->bufSize = (daoint)(0.6 * self->bufSize) + 1;
 			bsize = (self->bufSize+1)*sizeof(wchar_t) + self->shared*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
 			self->wcs = (wchar_t*)(data + self->shared);
@@ -565,11 +565,12 @@ void DString_Erase( DString *self, size_t start, size_t n )
 		}
 	}
 }
-static void DMBString_Insert( DString *self, const char* chs, size_t at, size_t rm, size_t cp )
+static void DMBString_Insert( DString *self, const char* chs, daoint at, daoint rm, daoint cp )
 {
-	size_t i;
+	daoint i;
 	if( chs == NULL ) return;
 	if( at > self->size ) at = self->size;
+	if( rm < 0 ) rm = self->size;
 	if( rm + at > self->size ) rm = self->size - at;
 	DString_Detach( self );
 	if( cp < rm ){
@@ -583,9 +584,9 @@ static void DMBString_Insert( DString *self, const char* chs, size_t at, size_t 
 	self->size += cp-rm;
 	self->mbs[self->size] = 0;
 }
-static void DWCString_Insert( DString *self, const wchar_t* chs, size_t at, size_t rm, size_t cp )
+static void DWCString_Insert( DString *self, const wchar_t* chs, daoint at, daoint rm, daoint cp )
 {
-	size_t i;
+	daoint i;
 	if( chs == NULL ) return;
 	if( at > self->size ) at = self->size;
 	if( rm + at > self->size ) rm = self->size - at;
@@ -601,7 +602,7 @@ static void DWCString_Insert( DString *self, const wchar_t* chs, size_t at, size
 	self->size += cp-rm;
 	self->wcs[self->size] = 0;
 }
-void DString_Insert( DString *self, DString *chs, size_t at, size_t rm, size_t cp )
+void DString_Insert( DString *self, DString *chs, daoint at, daoint rm, daoint cp )
 {
 	if( cp ==0 ) cp = chs->size;
 	DString_Detach( self );
@@ -621,7 +622,7 @@ void DString_Insert( DString *self, DString *chs, size_t at, size_t rm, size_t c
 		DString_Delete( str );
 	}
 }
-void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm, size_t n )
+void DString_InsertMBS( DString *self, const char *chs, daoint at, daoint rm, daoint n )
 {
 	if( n ==0 ) n = strlen( chs );
 	DString_Detach( self );
@@ -634,14 +635,14 @@ void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm, si
 		DString_Delete( wcs );
 	}
 }
-void DString_InsertChar( DString *self, const char ch, size_t at )
+void DString_InsertChar( DString *self, const char ch, daoint at )
 {
 	char chs[2];
 	chs[0] = ch;
 	chs[1] = '\0';
 	DString_InsertMBS( self, chs, at, 0, 1 );
 }
-void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm, size_t n )
+void DString_InsertWCS( DString *self, const wchar_t *chs, daoint at, daoint rm, daoint n )
 {
 	if( n ==0 ) n = wcslen( chs );
 	DString_Detach( self );
@@ -689,7 +690,7 @@ void DString_AppendWChar( DString *self, const wchar_t ch )
 		DWCString_AppendWChar( self, ch );
 	}
 }
-void DString_AppendDataMBS( DString *self, const char *chs, size_t n )
+void DString_AppendDataMBS( DString *self, const char *chs, daoint n )
 {
 	DString_Detach( self );
 	if( self->mbs ){
@@ -704,7 +705,7 @@ void DString_AppendMBS( DString *self, const char *chs )
 	DString_AppendDataMBS(self, chs, strlen( chs ));
 }
 
-void DString_AppendDataWCS( DString *self, const wchar_t *chs,size_t n )
+void DString_AppendDataWCS( DString *self, const wchar_t *chs,daoint n )
 {
 	DString_Detach( self );
 	if( self->wcs ){
@@ -719,21 +720,29 @@ void DString_AppendWCS( DString *self, const wchar_t *chs )
 	DString_AppendDataWCS(self,chs,wcslen( chs ));
 }
 
-void DString_SetDataMBS( DString *self, const char *bytes, size_t count )
+void DString_SetDataMBS( DString *self, const char *bytes, daoint count )
 {
-	DString_Clear( self );
-	DString_AppendDataMBS( self, bytes, count );
+	if( count < 0 ){
+		DString_SetMBS( self, bytes );
+	}else{
+		DString_Clear( self );
+		DString_AppendDataMBS( self, bytes, count );
+	}
 }
-void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count )
+void DString_SetDataWCS( DString *self, const wchar_t *data, daoint count )
 {
-	DString_Clear( self );
-	DString_AppendDataWCS( self, data, count );
+	if( count < 0 ){
+		DString_SetWCS( self, data );
+	}else{
+		DString_Clear( self );
+		DString_AppendDataWCS( self, data, count );
+	}
 }
-void DString_Replace( DString *self, DString *chs, size_t start, size_t rm )
+void DString_Replace( DString *self, DString *chs, daoint start, daoint rm )
 {
 	DString_Insert( self, chs, start, rm, chs->size );
 }
-void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm )
+void DString_ReplaceMBS( DString *self, const char *chs, daoint start, daoint rm )
 {
 	/* Use by DaoParser only, guarantee to be MBS. */
 	if( self->mbs ){
@@ -741,16 +750,16 @@ void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm
 		DMBString_Insert( self, chs, start, rm, strlen( chs ) );
 	}
 }
-void DString_SubString( DString *self, DString *sub, size_t from, size_t n )
+void DString_SubString( DString *self, DString *sub, daoint from, daoint n )
 {
-	size_t i, size = self->size;
+	daoint i, size = self->size;
 	if( self->wcs ) DString_ToWCS( sub );
 	if( self->mbs ) DString_ToMBS( sub );
 	if( from >= size ){
 		DString_Clear( sub );
 		return;
 	}
-	if( n > size ) n = size;
+	if( n < 0 || n > size ) n = size;
 	if( from+n > size ) n = size-from;
 	DString_Resize( sub, n );
 
@@ -760,9 +769,9 @@ void DString_SubString( DString *self, DString *sub, size_t from, size_t n )
 		for( i=0; i<n; i++) sub->wcs[i] = self->wcs[i+from];
 	}
 }
-size_t DString_Find( DString *self, DString *chs, size_t start )
+daoint DString_Find( DString *self, DString *chs, daoint start )
 {
-	size_t res = MAXSIZE;
+	daoint res = MAXSIZE;
 	if( self->mbs && chs->mbs ){
 		res = DMBString_Find( self, start, chs->mbs, chs->size );
 	}else if( self->wcs && chs->wcs ){
@@ -780,9 +789,9 @@ size_t DString_Find( DString *self, DString *chs, size_t start )
 	}
 	return res;
 }
-size_t DString_RFind( DString *self, DString *chs, size_t start )
+daoint DString_RFind( DString *self, DString *chs, daoint start )
 {
-	size_t res = MAXSIZE;
+	daoint res = MAXSIZE;
 	if( self->mbs && chs->mbs ){
 		res = DMBString_RFind( self, start, chs->mbs, chs->size );
 	}else if( self->wcs && chs->wcs ){
@@ -800,10 +809,10 @@ size_t DString_RFind( DString *self, DString *chs, size_t start )
 	}
 	return res;
 }
-size_t DString_FindMBS( DString *self, const char *ch, size_t start )
+daoint DString_FindMBS( DString *self, const char *ch, daoint start )
 {
-	size_t res = MAXSIZE;
-	size_t M = strlen( ch );
+	daoint res = MAXSIZE;
+	daoint M = strlen( ch );
 	if( self->mbs ){
 		res = DMBString_Find( self, start, ch, M );
 	}else{
@@ -814,10 +823,10 @@ size_t DString_FindMBS( DString *self, const char *ch, size_t start )
 	}
 	return res;
 }
-size_t DString_RFindMBS( DString *self, const char *ch, size_t start )
+daoint DString_RFindMBS( DString *self, const char *ch, daoint start )
 {
-	size_t res = MAXSIZE;
-	size_t M = strlen( ch );
+	daoint res = MAXSIZE;
+	daoint M = strlen( ch );
 	if( self->mbs ){
 		res = DMBString_RFind( self, start, ch, M );
 	}else{
@@ -828,9 +837,9 @@ size_t DString_RFindMBS( DString *self, const char *ch, size_t start )
 	}
 	return res;
 }
-size_t DString_FindChar( DString *self, char ch, size_t start )
+daoint DString_FindChar( DString *self, char ch, daoint start )
 {
-	size_t i;
+	daoint i;
 	if( self->mbs ){
 		for(i=start; i<self->size; i++ ) if( self->mbs[i] == ch ) return i;
 	}else{
@@ -839,11 +848,11 @@ size_t DString_FindChar( DString *self, char ch, size_t start )
 	}
 	return MAXSIZE;
 }
-size_t DString_RFindChar( DString *self, char ch, size_t start )
+daoint DString_RFindChar( DString *self, char ch, daoint start )
 {
-	int i;
+	daoint i;
 	if( self->size ==0 ) return MAXSIZE;
-	if( start >= self->size ) start = self->size - 1;
+	if( start < 0 || start >= self->size ) start = self->size - 1;
 	if( self->mbs ){
 		for(i=start; i >=0; i-- ) if( self->mbs[i] == ch ) return i;
 	}else{
@@ -852,9 +861,9 @@ size_t DString_RFindChar( DString *self, char ch, size_t start )
 	}
 	return MAXSIZE;
 }
-size_t DString_FindWChar( DString *self, wchar_t ch, size_t start )
+daoint DString_FindWChar( DString *self, wchar_t ch, daoint start )
 {
-	size_t i;
+	daoint i;
 	if( self->wcs ){
 		for(i=start; i<self->size; i++ ) if( self->wcs[i] == ch ) return i;
 	}else{
@@ -943,7 +952,7 @@ void DString_Assign( DString *self, DString *chs )
 }
 static int DMBString_Compare( DString *self, DString *chs )
 {
-	size_t min = self->size > chs->size ? chs->size : self->size;
+	daoint min = self->size > chs->size ? chs->size : self->size;
 	char *p1 = self->mbs;
 	char *p2 = chs->mbs;
 	char *stop = p1 + min;
@@ -965,8 +974,8 @@ static int DMBString_Compare( DString *self, DString *chs )
 }
 static int DWCString_Compare( DString *self, DString *chs )
 {
-	size_t min = self->size > chs->size ? chs->size : self->size;
-	size_t i;
+	daoint min = self->size > chs->size ? chs->size : self->size;
+	daoint i;
 	for( i=0; i<min; i++ ){
 		if( self->wcs[i] > chs->wcs[i] )
 			return 1;
@@ -1058,11 +1067,11 @@ void DString_Trim( DString *self )
 		DString_Erase( self, 0, i );
 	}
 }
-size_t DString_CheckUTF8( DString *self )
+daoint DString_CheckUTF8( DString *self )
 {
-	size_t i = 0, m, size = self->size;
-	size_t total = 0;
-	size_t valid = 0;
+	daoint i = 0, m, size = self->size;
+	daoint total = 0;
+	daoint valid = 0;
 	unsigned char *mbs;
 	if( self->wcs ) return 0;
 	mbs = (unsigned char*) self->mbs;
@@ -1080,10 +1089,10 @@ size_t DString_CheckUTF8( DString *self )
 void DString_Reverse( DString *self )
 {
 	DString *front, *back;
-	size_t m, utf8 = DString_CheckUTF8( self );
-	size_t i, k, gi, gj, size = self->size;
-	size_t half = size / 2;
-	dint j;
+	daoint m, utf8 = DString_CheckUTF8( self );
+	daoint i, k, gi, gj, size = self->size;
+	daoint half = size / 2;
+	daoint j;
 	unsigned char ch, *mbs;
 	if( size <= 1 ) return;
 	DString_Detach( self );
@@ -1111,7 +1120,7 @@ void DString_Reverse( DString *self )
 	gi = gj = 0;
 	while( utf8 > 1 ){
 		if( front->size ==0 ){ /* get valid multibytes from front */
-			size_t i2 = 0;
+			daoint i2 = 0;
 			gi += 1;
 			ch = mbs[i++];
 			m = utf8_markers[ ch ];
@@ -1124,7 +1133,7 @@ void DString_Reverse( DString *self )
 			}
 		}
 		if( back->size ==0 ){ /* get valid multibytes from back */
-			size_t j2 = j;
+			daoint j2 = j;
 			k = 1;
 			while( k < 7 && j >= 0 && utf8_markers[ mbs[j] ] == 1 ) j -= 1, k += 1;
 			m = utf8_markers[ mbs[j] ];
@@ -1156,11 +1165,11 @@ void DString_Reverse( DString *self )
 	DString_Delete( front );
 	DString_Delete( back );
 }
-size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
-		uint_t esc0, size_t start, size_t end, int countonly )
+daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
+		uint_t esc0, daoint start, daoint end, int countonly )
 {
-	size_t size = self->size;
-	size_t i, count = 0;
+	daoint size = self->size;
+	daoint i, count = 0;
 	if( self->mbs ){
 		char *src = self->mbs;
 		char chr = (char) ch0;
@@ -1222,8 +1231,8 @@ size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0
 	return MAXSIZE;
 }
 
-static char *empty_mbs = "";
-static wchar_t *empty_wcs = L"";
+static char empty_mbs[] = "";
+static wchar_t empty_wcs[] = L"";
 
 DString DString_WrapBytes( const char *mbs, int n )
 {

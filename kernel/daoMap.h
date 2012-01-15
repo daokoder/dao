@@ -20,8 +20,8 @@ typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 
 typedef union
 {
-	dint         pInt;
-	size_t       pSize;
+	daoint       pInt;
+	daoint       pSize;
 	void        *pVoid;
 	DString     *pString;
 	DArray      *pArray;
@@ -54,8 +54,8 @@ struct DMap
 	DNode  *root;
 	DNode  *first;
 	DNode  *last;
-	size_t  size;
-	size_t  tsize;
+	daoint  size;
+	daoint  tsize;
 	char    keytype;
 	char    valtype;
 	char    hashing;
@@ -81,10 +81,10 @@ DAO_DLL DNode* DMap_Next( DMap *self, DNode *node );
 DAO_DLL DNode* DMap_FindLE( DMap *self, void *key );
 DAO_DLL DNode* DMap_FindGE( DMap *self, void *key );
 
-#define MAP_Insert( s, k, v ) DMap_Insert( (DMap*)(s), (void*)(size_t)(k), (void*)(size_t)(v) )
-#define MAP_Erase( s, k ) DMap_Erase( (DMap*)(s), (void*)(size_t)(k) )
-#define MAP_Find( s, k ) DMap_Find( (DMap*)(s), (void*)(size_t)(k) )
-#define MAP_FindLE( s, k ) DMap_FindLE( (DMap*)(s), (void*)(size_t)(k) )
-#define MAP_FindGE( s, k ) DMap_FindGE( (DMap*)(s), (void*)(size_t)(k) )
+#define MAP_Insert( s, k, v ) DMap_Insert( (DMap*)(s), (void*)(daoint)(k), (void*)(daoint)(v) )
+#define MAP_Erase( s, k ) DMap_Erase( (DMap*)(s), (void*)(daoint)(k) )
+#define MAP_Find( s, k ) DMap_Find( (DMap*)(s), (void*)(daoint)(k) )
+#define MAP_FindLE( s, k ) DMap_FindLE( (DMap*)(s), (void*)(daoint)(k) )
+#define MAP_FindGE( s, k ) DMap_FindGE( (DMap*)(s), (void*)(daoint)(k) )
 
 #endif

@@ -65,6 +65,8 @@ struct DInode
 
 typedef struct DInode DInode;
 
+DaoType *daox_type_fsnode = NULL;
+
 DInode* DInode_New()
 {
 	DInode *res = (DInode*)dao_malloc( sizeof(DInode) );
@@ -315,8 +317,9 @@ int DInode_Append( DInode *self, const char *path, int dir, DInode *dest )
 
 extern DaoTypeBase fsnodeTyper;
 
-int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *pattern )
+int DInode_ChildrenRegex( DInode *self, int type, DaoProcess *proc, DaoList *dest, DaoRegex *pattern )
 {
+	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	char buffer[MAX_PATH + 1];
 	int len, res;
 #ifdef WIN32
@@ -351,7 +354,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 					return res;
 				}
 				if( ( fsnode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
-					value = DaoValue_NewCdata( &fsnodeTyper, fsnode );
+					value = (DaoValue*) DaoFactory_NewCdata( factory, daox_type_fsnode, fsnode, 1 );
 					DaoList_PushBack( dest, value );
 				}
 				else
@@ -380,7 +383,7 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoList *dest, DaoRegex *patte
 					return res;
 				}
 				if( ( fsnode->type == type || type == 2 ) && DaoRegex_Match( pattern, str, NULL, NULL ) ){
-					value = DaoValue_NewCdata( &fsnodeTyper, fsnode );
+					value = (DaoValue*) DaoFactory_NewCdata( factory, daox_type_fsnode, fsnode, 1 );
 					DaoList_PushBack( dest, value );
 				}
 				else
@@ -482,7 +485,7 @@ static void FSNode_Parent( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, path );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)par, &fsnodeTyper );
+	DaoProcess_PutCdata( proc, (void*)par, daox_type_fsnode );
 }
 
 static void FSNode_Type( DaoProcess *proc, DaoValue *p[], int N )
@@ -573,7 +576,7 @@ static void FSNode_Makefile( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)child, &fsnodeTyper );
+	DaoProcess_PutCdata( proc, (void*)child, daox_type_fsnode );
 }
 
 static void FSNode_Makedir( DaoProcess *proc, DaoValue *p[], int N )
@@ -598,7 +601,7 @@ static void FSNode_Makedir( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)child, &fsnodeTyper );
+	DaoProcess_PutCdata( proc, (void*)child, daox_type_fsnode );
 }
 
 static void FSNode_Isroot( DaoProcess *proc, DaoValue *p[], int N )
@@ -638,7 +641,7 @@ static void FSNode_Child( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, path );
 		return;                                  
 	}
-	DaoProcess_PutCdata( proc, (void*)child, &fsnodeTyper );
+	DaoProcess_PutCdata( proc, (void*)child, daox_type_fsnode );
 }
 
 static void DInode_Children( DInode *self, DaoProcess *proc, int type, DString *pat, int ft )
@@ -712,7 +715,7 @@ static void DInode_Children( DInode *self, DaoProcess *proc, int type, DString *
     if( !pattern )
     	return;
 	type = ( type == 3 ) ? 2 : ( ( type == 1 ) ? 1 : 0 );
-	if( ( res = DInode_ChildrenRegex( self, type, list, pattern ) ) != 0 ){
+	if( ( res = DInode_ChildrenRegex( self, type, proc, list, pattern ) ) != 0 ){
 		GetErrorMessage( buffer, res, 1 );
 		DaoProcess_RaiseException( proc, DAO_ERROR, buffer );
 		return;
@@ -764,7 +767,7 @@ static void FSNode_New( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)fsnode, &fsnodeTyper );
+	DaoProcess_PutCdata( proc, (void*)fsnode, daox_type_fsnode );
 }
 
 static void FSNode_GetCWD( DaoProcess *proc, DaoValue *p[], int N )
@@ -778,7 +781,7 @@ static void FSNode_GetCWD( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
 		return;
 	}
-	DaoProcess_PutCdata( proc, (void*)fsnode, &fsnodeTyper );
+	DaoProcess_PutCdata( proc, (void*)fsnode, daox_type_fsnode );
 }
 
 static void FSNode_SetCWD( DaoProcess *proc, DaoValue *p[], int N )
@@ -845,6 +848,6 @@ DaoTypeBase fsnodeTyper = {
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & fsnodeTyper, 1 );
+	daox_type_fsnode = DaoNamespace_WrapType( ns, & fsnodeTyper, 1 );
 	return 0;
 }

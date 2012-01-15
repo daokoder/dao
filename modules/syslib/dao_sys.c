@@ -333,7 +333,7 @@ DaoTypeBase modSysCoreTyper = { "sys", NULL, NULL, sysMeths, {0}, {0}, NULL, NUL
 
 static void DaoBUF_New( DaoProcess *proc, DaoValue *p[], int N )
 {
-	dint size = p[0]->xInteger.value;
+	daoint size = p[0]->xInteger.value;
 	Dao_Buffer *self = Dao_Buffer_New( size >= 0 ? size : 0 );
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	if( size < 0 ){
@@ -349,7 +349,7 @@ static void DaoBUF_Size( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_Resize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint size = p[1]->xInteger.value;
+	daoint size = p[1]->xInteger.value;
 	if( size < 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "negative buffer size" );
 		return;
@@ -402,21 +402,21 @@ static int DaoBUF_CheckRange( Dao_Buffer *self, int i, int m, DaoProcess *proc )
 static void DaoBUF_GetByte( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(char), proc ) ) return;
 	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUChar[i] : self->buffer.pSChar[i] );
 }
 static void DaoBUF_GetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(short), proc ) ) return;
 	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUShort[i] : self->buffer.pSShort[i] );
 }
 static void DaoBUF_GetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(int), proc ) ) return;
 	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUInt[i] : self->buffer.pSInt[i] );
 }
@@ -435,7 +435,7 @@ static void DaoBUF_GetDouble( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_SetByte( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(char), proc ) ) return;
 	if( p[3]->xEnum.value )
 		self->buffer.pUChar[i] = (unsigned char)p[2]->xInteger.value;
@@ -445,7 +445,7 @@ static void DaoBUF_SetByte( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_SetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(short), proc ) ) return;
 	if( p[3]->xEnum.value )
 		self->buffer.pUShort[i] = (unsigned short)p[2]->xInteger.value;
@@ -455,7 +455,7 @@ static void DaoBUF_SetShort( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_SetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(int), proc ) ) return;
 	if( p[3]->xEnum.value )
 		self->buffer.pUInt[i] = (unsigned int)p[2]->xInteger.value;

@@ -168,7 +168,7 @@ int DThread_Start( DThread *self, DThreadTask task, void *arg )
 {
 	pthread_attr_t tattr;
 	/*
-	   size_t stacksize = 0;
+	   daoint stacksize = 0;
 	   int ret;
 	   ret = pthread_attr_getstacksize(&tattr, &stacksize);
 	 */
@@ -803,8 +803,8 @@ struct DaoTaskData
 	uint_t   first; /* first index; */
 	uint_t   step; /* index step; */
 	uint_t   status; /* execution status; */
-	uint_t  *joined; /* number of joined threads; */
-	uint_t  *index; /* smallest index found by all threads; */
+	daoint  *joined; /* number of joined threads; */
+	daoint  *index; /* smallest index found by all threads; */
 	DNode  **node; /* smallest key found by all threads; */
 };
 
@@ -845,7 +845,7 @@ static void DaoMT_RunIterateFunctional( void *p )
 	DaoTaskData *self = (DaoTaskData*)p;
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
-	dint i, n = self->param->xInteger.value;
+	daoint i, n = self->param->xInteger.value;
 
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
@@ -877,7 +877,7 @@ static void DaoMT_RunListFunctional( void *p )
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
 	DaoValue **items = list->items.items.pValue;
-	size_t i, n = list->items.size;
+	daoint i, n = list->items.size;
 
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
@@ -923,7 +923,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	DaoVmCode *sect = self->sect;
 	DaoType *type = map->unitype;
 	DNode *node = NULL;
-	size_t i = 0;
+	daoint i = 0;
 
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
@@ -961,11 +961,11 @@ static void DaoMT_RunMapFunctional( void *p )
 }
 
 #ifdef DAO_WITH_NUMARRAY
-void DaoArray_GetSliceShape( DaoArray *self, size_t **dims, short *ndim );
+void DaoArray_GetSliceShape( DaoArray *self, daoint **dims, short *ndim );
 int DaoArray_SliceSize( DaoArray *self );
-int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, int sid );
-DaoValue* DaoArray_GetValue( DaoArray *self, int i, DaoValue *res );
-void DaoArray_SetValue( DaoArray *self, int i, DaoValue *value );
+int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, daoint sid );
+DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res );
+void DaoArray_SetValue( DaoArray *self, daoint i, DaoValue *value );
 
 static void DaoMT_RunArrayFunctional( void *p )
 {
@@ -982,8 +982,8 @@ static void DaoMT_RunArrayFunctional( void *p )
 	DaoArray *original = param->original;
 	DaoArray *array = original ? original : param;
 	DArray *slices = param->slices;
-	size_t *dims = array->dims;
-	size_t i, id, id2, n = DaoArray_SliceSize( param );
+	daoint *dims = array->dims;
+	daoint i, id, id2, n = DaoArray_SliceSize( param );
 	int j, D = array->ndim;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
 	int stackBase, vdim = sect->b - 1;
@@ -1063,7 +1063,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	DaoArray *array = NULL;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	int i, entry, threads = P[1]->xInteger.value;
-	uint_t index = -1, status = 0, joined = 0;
+	daoint index = -1, status = 0, joined = 0;
 	DNode *node = NULL;
 
 	switch( F ){

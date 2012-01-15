@@ -24,6 +24,7 @@
 #include"daoNumtype.h"
 #include"daoValue.h"
 
+void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc, 
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute )
 {
@@ -114,6 +115,8 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 extern void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, DMap *cycData );
 void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMap *cycData )
 {
+	/* TODO: support by something like C++ copy constructor? */
+#if 0
 	DaoObject **selfSups = NULL;
 	DaoObject **fromSups = NULL;
 	DaoValue **selfValues = self->objValues;
@@ -125,6 +128,7 @@ void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMa
 	fromSups = from->parents;
 	for( i=0; i<from->baseCount; i++ )
 		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], proc, cycData );
+#endif
 }
 static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycData )
 {
@@ -186,7 +190,7 @@ DaoObject* DaoObject_New( DaoClass *klass )
 void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 {
 	DaoClass *klass = self->defClass;
-	int i;
+	daoint i;
 
 	if( that ){
 		GC_ShiftRC( that, self->rootObject );

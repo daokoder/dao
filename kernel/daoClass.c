@@ -326,8 +326,8 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 	DString *name;
 	DNode *node;
 	DMap *deftypes;
-	size_t lt = DString_FindChar( self->className, '<', 0 );
-	int i, holders = 0;
+	daoint lt = DString_FindChar( self->className, '<', 0 );
+	daoint i, holders = 0;
 	if( self->typeHolders == NULL || self->typeHolders->size ==0 ) return self;
 	while( types->size < self->typeHolders->size ){
 		type = self->typeDefaults->items.pType[ types->size ];
@@ -358,7 +358,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		DaoClass_SetName( klass, name, self->classRoutine->nameSpace );
 		for(i=0; i<types->size; i++){
 			type = types->items.pType[i];
-			if( DaoType_MatchTo( type, self->typeHolders->items.pVoid[i], deftypes ) ==0 ){
+			if( DaoType_MatchTo( type, self->typeHolders->items.pType[i], deftypes ) ==0 ){
 				DString_Delete( name );
 				GC_IncRC( klass ); GC_DecRC( klass );
 				return NULL;
@@ -450,7 +450,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 	DaoClass *klass;
 	DaoCdata *cdata;
 	DaoTypeBase *typer;
-	int i, j, offset;
+	daoint i, j, offset;
 	DArray_Clear( parents );
 	DArray_Clear( offsets );
 	DArray_Append( parents, self );
@@ -463,7 +463,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 			for(j=0; j<klass->superClass->size; j++){
 				DaoClass *cls = klass->superClass->items.pClass[j];
 				DArray_Append( parents, cls );
-				DArray_Append( offsets, (size_t) offset );
+				DArray_Append( offsets, (daoint) offset );
 				offset += (cls->type == DAO_CLASS) ? cls->objDataName->size : 0;
 			}
 		}else if( dbase->type == DAO_CTYPE ){
@@ -472,7 +472,7 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
 				if( typer->supers[j] == NULL ) break;
 				DArray_Append( parents, typer->supers[j]->core->kernel->abtype->aux );
-				DArray_Append( offsets, (size_t) offset );
+				DArray_Append( offsets, (daoint) offset );
 			}
 		}
 	}
@@ -485,7 +485,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	DArray *parents, *offsets;
 	DString *mbs;
 	DNode *search;
-	size_t i, k, id, perm, index;
+	daoint i, k, id, perm, index;
 
 	mbs = DString_New(1);
 
@@ -631,7 +631,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DArray *parents, *offsets;
 	DString *mbs;
 	DNode *search;
-	size_t i, id, perm, index, offset = 0;
+	daoint i, id, perm, index, offset = 0;
 
 	self->objDefCount = self->objDataName->size;
 	offset = self->objDataName->size;
@@ -878,7 +878,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoTyp
 	int id;
 	DNode *node = MAP_Find( self->deflines, name );
 	if( node ) return DAO_CTW_WAS_DEFINED;
-	if( ln >= 0 ) MAP_Insert( self->deflines, name, (size_t)ln );
+	if( ln >= 0 ) MAP_Insert( self->deflines, name, (daoint)ln );
 	if( deft == NULL && t ) deft = t->value;
 
 	id = self->objDataName->size;
@@ -911,7 +911,7 @@ static int DaoClass_AddConst2( DaoClass *self, DString *name, DaoValue *data, in
 			data = (DaoValue*) routs;
 		}
 	}
-	if( ln >= 0 ) MAP_Insert( self->deflines, name, (size_t)ln );
+	if( ln >= 0 ) MAP_Insert( self->deflines, name, (daoint)ln );
 	MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_CONSTANT, s, 0, self->cstData->size ) );
 	DaoClass_AddConst3( self, name, data );
 	return 0;
@@ -969,7 +969,7 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoTyp
 	DNode *node = MAP_Find( self->deflines, name );
 	int size = self->glbData->size;
 	if( node ) return DAO_CTW_WAS_DEFINED;
-	if( ln >= 0 ) MAP_Insert( self->deflines, name, (size_t)ln );
+	if( ln >= 0 ) MAP_Insert( self->deflines, name, (daoint)ln );
 	if( data == NULL && t ) data = t->value;
 	MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_CLASS_VARIABLE, s, 0, size ) );
 	DArray_Append( self->glbData, NULL );

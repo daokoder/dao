@@ -18,15 +18,15 @@
 #include<wchar.h>
 #include<limits.h>
 
-#define MAXSIZE ((size_t)(-1))
+#define MAXSIZE ((daoint)(-1))
 
 #include"daoBase.h"
 
 struct DString
 {
-	size_t   size    : CHAR_BIT*sizeof(size_t)-1;
+	daoint   size    : CHAR_BIT*sizeof(daoint)-1;
 	size_t   dummy   : 1;
-	size_t   bufSize : CHAR_BIT*sizeof(size_t)-1;
+	daoint   bufSize : CHAR_BIT*sizeof(daoint)-1;
 	size_t   shared  : 1;
 	char    *mbs;
 	wchar_t *wcs;
@@ -41,15 +41,15 @@ DAO_DLL void DString_Detach( DString *self );
 DAO_DLL void DString_SetSharing( DString *self, int sharing );
 
 DAO_DLL int DString_IsMBS( DString *self );
-DAO_DLL size_t DString_CheckUTF8( DString *self );
+DAO_DLL daoint DString_CheckUTF8( DString *self );
 
 DAO_DLL char* DString_GetMBS( DString *self );
 DAO_DLL wchar_t* DString_GetWCS( DString *self );
 
 DAO_DLL void DString_SetMBS( DString *self, const char *chs );
 DAO_DLL void DString_SetWCS( DString *self, const wchar_t *chs );
-DAO_DLL void DString_SetDataMBS( DString *self, const char *bytes, size_t count );
-DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count );
+DAO_DLL void DString_SetDataMBS( DString *self, const char *bytes, daoint count );
+DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, daoint count );
 
 DAO_DLL void DString_ToWCS( DString *self );
 DAO_DLL void DString_ToMBS( DString *self );
@@ -57,44 +57,44 @@ DAO_DLL void DString_ToLower( DString *self );
 DAO_DLL void DString_ToUpper( DString *self );
 DAO_DLL void DString_Reverse( DString *self );
 
-DAO_DLL size_t DString_Size( DString *self );
-DAO_DLL void DString_Reset( DString *self, size_t size );
-DAO_DLL void DString_Resize( DString *self, size_t size );
-DAO_DLL void DString_Reserve( DString *self, size_t size );
+DAO_DLL daoint DString_Size( DString *self );
+DAO_DLL void DString_Reset( DString *self, daoint size );
+DAO_DLL void DString_Resize( DString *self, daoint size );
+DAO_DLL void DString_Reserve( DString *self, daoint size );
 DAO_DLL void DString_Clear( DString *self );
 
-DAO_DLL void DString_Erase( DString *self, size_t start, size_t n );
-DAO_DLL void DString_Insert( DString *self, DString *chs, size_t at, size_t rm, size_t cp );
-DAO_DLL void DString_InsertMBS( DString *self, const char *chs, size_t at, size_t rm, size_t cp );
-DAO_DLL void DString_InsertChar( DString *self, const char ch, size_t at );
-DAO_DLL void DString_InsertWCS( DString *self, const wchar_t *chs, size_t at, size_t rm, size_t cp );
+DAO_DLL void DString_Erase( DString *self, daoint start, daoint n );
+DAO_DLL void DString_Insert( DString *self, DString *chs, daoint at, daoint rm, daoint cp );
+DAO_DLL void DString_InsertMBS( DString *self, const char *chs, daoint at, daoint rm, daoint cp );
+DAO_DLL void DString_InsertChar( DString *self, const char ch, daoint at );
+DAO_DLL void DString_InsertWCS( DString *self, const wchar_t *chs, daoint at, daoint rm, daoint cp );
 DAO_DLL void DString_Append( DString *self, DString *chs );
 DAO_DLL void DString_AppendChar( DString *self, const char ch );
 DAO_DLL void DString_AppendWChar( DString *self, const wchar_t ch );
 DAO_DLL void DString_AppendMBS( DString *self, const char *chs );
 DAO_DLL void DString_AppendWCS( DString *self, const wchar_t *chs );
-DAO_DLL void DString_AppendDataMBS( DString *self, const char *chs, size_t n );
-DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *chs,size_t n );
-DAO_DLL void DString_SetDataMBS( DString *self, const char *bytes, size_t count );
-DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, size_t count );
+DAO_DLL void DString_AppendDataMBS( DString *self, const char *chs, daoint n );
+DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *chs,daoint n );
+DAO_DLL void DString_SetDataMBS( DString *self, const char *bytes, daoint count );
+DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, daoint count );
 
-DAO_DLL void DString_Replace( DString *self, DString *chs, size_t start, size_t rm );
-DAO_DLL void DString_ReplaceMBS( DString *self, const char *chs, size_t start, size_t rm );
-DAO_DLL void DString_SubString( DString *self, DString *sub, size_t from, size_t n );
+DAO_DLL void DString_Replace( DString *self, DString *chs, daoint start, daoint rm );
+DAO_DLL void DString_ReplaceMBS( DString *self, const char *chs, daoint start, daoint rm );
+DAO_DLL void DString_SubString( DString *self, DString *sub, daoint from, daoint n );
 
-DAO_DLL size_t DString_Find( DString *self, DString *chs, size_t start );
-DAO_DLL size_t DString_RFind( DString *self, DString *chs, size_t start );
-DAO_DLL size_t DString_FindMBS( DString *self, const char *ch, size_t start );
-DAO_DLL size_t DString_RFindMBS( DString *self, const char *ch, size_t start );
-DAO_DLL size_t DString_FindChar( DString *self, char ch, size_t start );
-DAO_DLL size_t DString_FindWChar( DString *self, wchar_t ch, size_t start );
-DAO_DLL size_t DString_RFindChar( DString *self, char ch, size_t start );
+DAO_DLL daoint DString_Find( DString *self, DString *chs, daoint start );
+DAO_DLL daoint DString_RFind( DString *self, DString *chs, daoint start );
+DAO_DLL daoint DString_FindMBS( DString *self, const char *ch, daoint start );
+DAO_DLL daoint DString_RFindMBS( DString *self, const char *ch, daoint start );
+DAO_DLL daoint DString_FindChar( DString *self, char ch, daoint start );
+DAO_DLL daoint DString_FindWChar( DString *self, wchar_t ch, daoint start );
+DAO_DLL daoint DString_RFindChar( DString *self, char ch, daoint start );
 
-DAO_DLL int DString_MatchMBS( DString *self, const char *pat, size_t *start, size_t *end );
-DAO_DLL int DString_MatchWCS( DString *self, const wchar_t *pat, size_t *start, size_t *end );
+DAO_DLL int DString_MatchMBS( DString *self, const char *pat, daoint *start, daoint *end );
+DAO_DLL int DString_MatchWCS( DString *self, const wchar_t *pat, daoint *start, daoint *end );
 
-DAO_DLL int DString_ChangeMBS( DString *self, char *pat, char *target, int index );
-DAO_DLL int DString_ChangeWCS( DString *self, wchar_t *pat, wchar_t *target, int index );
+DAO_DLL int DString_ChangeMBS( DString *self, const char *pat, const char *target, int index );
+DAO_DLL int DString_ChangeWCS( DString *self, const wchar_t *pat, const wchar_t *target, int index );
 
 DAO_DLL DString* DString_Copy( DString *self );
 DAO_DLL DString* DString_DeepCopy( DString *self );
@@ -109,8 +109,8 @@ DAO_DLL void DString_Trim( DString *self );
 DAO_DLL int DString_Encrypt( DString *self, DString *key, int hex );
 DAO_DLL int DString_Decrypt( DString *self, DString *key, int hex );
 
-DAO_DLL size_t DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
-		uint_t esc0, size_t start, size_t end, int countonly );
+DAO_DLL daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
+		uint_t esc0, daoint start, daoint end, int countonly );
 
 DAO_DLL DString DString_WrapBytes( const char *mbs, int n );
 DAO_DLL DString DString_WrapMBS( const char *mbs );

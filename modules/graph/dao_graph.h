@@ -34,7 +34,7 @@ struct DaoxNode
 	DaoValue   *value;
 
 	union {
-		dint   I;
+		daoint I;
 		float  F;
 		double D;
 	} U1, U2, U3;
@@ -53,7 +53,7 @@ struct DaoxEdge
 	DaoValue   *value;
 
 	union {
-		dint   I;
+		daoint I;
 		float  F;
 		double D;
 	} W1, W2, W3;

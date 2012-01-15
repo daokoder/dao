@@ -28,7 +28,7 @@ DAO_INIT_MODULE
 static const char *hex_digits = "ABCDEFGHIJKLMNOP";
 static const char *mydigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVW";
 
-void DaoEncodeInteger( char *p, dint value )
+void DaoEncodeInteger( char *p, daoint value )
 {
 	int m;
 	if( value < 0 ){
@@ -49,10 +49,10 @@ void DaoEncodeInteger( char *p, dint value )
 	}
 	*p = 0;
 }
-dint DaoDecodeInteger( char *p )
+daoint DaoDecodeInteger( char *p )
 {
-	dint value = 0;
-	dint power = 1;
+	daoint value = 0;
+	daoint power = 1;
 	int sign = 1;
 	if( *p == '-' ){
 		sign = -1;
@@ -120,7 +120,7 @@ double DaoDecodeDouble( char *buf )
 	return ldexp( frac, expon ) * sign;
 }
 
-static void DaoSerializeInteger( dint value, DString *serial )
+static void DaoSerializeInteger( daoint value, DString *serial )
 {
 	char buf[100];
 	DaoEncodeInteger( buf, value );

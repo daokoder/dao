@@ -60,7 +60,7 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[2];
-	dint *num = DaoProcess_PutInteger( proc, 0 );
+	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	int safe = p[3]->xInteger.value;
 	int wasProt = 0;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
@@ -143,7 +143,7 @@ static void STD_About( DaoProcess *proc, DaoValue *p[], int N )
 static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *p0 = p[0];
-	dint *res = DaoProcess_PutInteger( proc, 0 );
+	daoint *res = DaoProcess_PutInteger( proc, 0 );
 	if( p0 == NULL || p0->type == 0 ){
 		*res = 0;
 		return;
@@ -385,7 +385,7 @@ static void PrintMethod( DaoProcess *proc, DaoRoutine *meth )
 }
 static void DaoNS_GetAuxMethods( DaoNamespace *ns, DaoValue *p, DArray *methods )
 {
-	size_t i;
+	daoint i;
 	for(i=0; i<ns->cstData->size; i++){
 		DaoValue *meth = ns->cstData->items.pValue[i];
 		if( meth == NULL || meth->type != DAO_ROUTINE ) continue;
@@ -472,9 +472,9 @@ static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void STD_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
-	size_t size = 0;
+	daoint size = 0;
 	switch( p[0]->type ){
-	case DAO_INTEGER: size = sizeof(dint); break;
+	case DAO_INTEGER: size = sizeof(daoint); break;
 	case DAO_FLOAT:   size = sizeof(float); break;
 	case DAO_DOUBLE:  size = sizeof(double); break;
 	case DAO_COMPLEX: size = sizeof(complex16); break;
@@ -491,7 +491,7 @@ static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	dint i, entry, times = p[0]->xInteger.value;
+	daoint i, entry, times = p[0]->xInteger.value;
 
 	if( sect == NULL || times < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
@@ -511,7 +511,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DString *string = DaoProcess_PutMBString( proc, "" );
-	dint i, entry, size = p[0]->xInteger.value;
+	daoint i, entry, size = p[0]->xInteger.value;
 
 	if( p[1]->xEnum.value ) DString_ToWCS( string );
 	if( sect == NULL || size < 0 ) return; // TODO exception
@@ -527,7 +527,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoProcess_PopFrame( proc );
 }
-int DaoArray_AlignShape( DaoArray *self, DArray *sidx, size_t *dims, int ndim );
+int DaoArray_AlignShape( DaoArray *self, DArray *sidx, daoint *dims, int ndim );
 static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
@@ -536,12 +536,12 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 	DaoArray *array = DaoProcess_PutArray( proc );
 	DaoArray *first = NULL;
 	DaoArray *sub = NULL;
-	dint i, j, k, entry, size = 1;
+	daoint i, j, k, entry, size = 1;
 
 	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
 #ifdef DAO_WITH_NUMARRAY
 	for(i=0; i<N; i++){
-		dint d = p[i]->xInteger.value;
+		daoint d = p[i]->xInteger.value;
 		if( d < 0 ){
 			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
 			break;
@@ -570,7 +570,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 					array->dims[N] = first->dims[ first->dims[0] == 1 ];
 				}else{
 					D += first->ndim;
-					memmove( array->dims + N, first->dims, first->ndim*sizeof(size_t) );
+					memmove( array->dims + N, first->dims, first->ndim*sizeof(daoint) );
 				}
 			}
 			DaoArray_ResizeArray( array, array->dims, D );
@@ -609,7 +609,7 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *res = p[N==2], *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoList *list = DaoProcess_PutList( proc );
-	dint i, entry, size = p[0]->xInteger.value;
+	daoint i, entry, size = p[0]->xInteger.value;
 
 	if( sect == NULL || size < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
@@ -632,7 +632,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoMap *map = DaoProcess_PutMap( proc );
-	dint i, entry, size = p[0]->xInteger.value;
+	daoint i, entry, size = p[0]->xInteger.value;
 
 	if( sect == NULL || size < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;

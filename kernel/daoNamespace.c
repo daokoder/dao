@@ -53,7 +53,7 @@ static void DNS_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	pm = LOOKUP_PM( node->value.pSize );
 	up = LOOKUP_UP( node->value.pSize );
 	id = LOOKUP_ID( node->value.pSize );
-	if( up >= self->namespaces->size ) goto InvalidField;
+	if( up >= (int)self->namespaces->size ) goto InvalidField;
 	if( pm == DAO_DATA_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
 	if( st == DAO_GLOBAL_CONSTANT ){
 		DaoProcess_PutValue( proc, self->namespaces->items.pNS[up]->cstData->items.pValue[id] );
@@ -85,7 +85,7 @@ static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoV
 	id = LOOKUP_ID( node->value.pSize );
 	if( pm == DAO_DATA_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
 	if( st == DAO_GLOBAL_CONSTANT ) goto FieldNoPermit;
-	if( up >= self->namespaces->size ) goto InvalidField;
+	if( up >= (int)self->namespaces->size ) goto InvalidField;
 	type = self->namespaces->items.pNS[up]->varData->items.pType[id];
 	dest = self->namespaces->items.pNS[up]->varData->items.pValue + id;
 	if( DaoValue_Move( value, dest, type ) ==0 ) goto TypeNotMatching;
@@ -175,10 +175,10 @@ void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue 
 }
 static void DaoTypeBase_Parents( DaoTypeBase *typer, DArray *parents )
 {
-	int i, k;
+	int i, k, n;
 	DArray_Clear( parents );
 	DArray_Append( parents, typer );
-	for(k=0; k<parents->size; k++){
+	for(k=0,n=parents->size; k<n; k++){
 		typer = (DaoTypeBase*) parents->items.pVoid[k];
 		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 			if( typer->supers[i] == NULL ) break;
@@ -188,7 +188,7 @@ static void DaoTypeBase_Parents( DaoTypeBase *typer, DArray *parents )
 }
 int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 {
-	int i, j, valCount;
+	daoint i, j, valCount;
 	DArray *parents;
 	DMap *values;
 	DMap *supValues;
@@ -274,7 +274,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	DMap *methods;
 	DMap *supMethods;
 	DNode *it;
-	int i, k, size;
+	daoint i, k, size;
 
 	assert( typer->core != NULL );
 	if( typer->funcItems == NULL ) return 0;
@@ -384,7 +384,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DaoParser *parser = DaoParser_New();
 	DaoValue *scope = NULL, *value = NULL;
 	DTypeSpecTree *sptree = NULL;
-	int i, k, n, ret = DAO_DT_UNSCOPED;
+	daoint i, k, n, ret = DAO_DT_UNSCOPED;
 
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
@@ -428,7 +428,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	ret = k ? DAO_DT_SCOPED : DAO_DT_UNSCOPED;
 	if( type->tid != DAO_CTYPE ) goto Error;
 	if( (value && value->type != DAO_CTYPE) || tokens[k+1]->type != DTOK_LT ) goto Error;
-	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != n ) goto Error;
+	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != (int)n ) goto Error;
 	type->nested = DArray_New(0);
 	type2->nested = DArray_New(0);
 	DaoParser_ParseTemplateParams( parser, k+2, n, type->nested, type2->nested, NULL );
@@ -759,7 +759,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 {
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->mbs ); */
 	DNode *it;
-	int i, j;
+	daoint i, j;
 	it = DMap_First( self->localMacros );
 	for( ; it !=NULL; it = DMap_Next(self->localMacros, it) ) GC_DecRC( it->value.pValue );
 	it = DMap_First( self->globalMacros );
@@ -801,7 +801,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 }
 void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 {
-	int i;
+	daoint i;
 	DString_SetMBS( self->name, name );
 	i = DString_RFindChar( self->name, '/', -1 );
 	if( i != MAXSIZE ){
@@ -826,9 +826,8 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 	DaoValue *dest;
 	DaoRoutine *mroutine;
 	DNode *node = MAP_Find( self->lookupTable, name );
-	int isrout = value->type == DAO_ROUTINE;
-	int sto, up, id = 0;
-	int isrout2;
+	int isrout2, isrout = value->type == DAO_ROUTINE;
+	daoint sto, up, id = 0;
 
 	if( node && LOOKUP_UP( node->value.pSize ) ){ /* override */
 		sto = LOOKUP_ST( node->value.pSize );
@@ -891,8 +890,8 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 void DaoNamespace_SetConst( DaoNamespace *self, int index, DaoValue *value )
 {
 	DaoValue **dest;
-	int up = LOOKUP_UP( index );
-	int id = LOOKUP_ID( index );
+	daoint up = LOOKUP_UP( index );
+	daoint id = LOOKUP_ID( index );
 	if( LOOKUP_ST( index ) != DAO_GLOBAL_CONSTANT ) return;
 	if( up >= self->namespaces->size ) return;
 	if( id >= self->namespaces->items.pNS[up]->cstData->size ) return;
@@ -902,16 +901,16 @@ void DaoNamespace_SetConst( DaoNamespace *self, int index, DaoValue *value )
 }
 DaoValue* DaoNamespace_GetConst( DaoNamespace *self, int index )
 {
-	int st = LOOKUP_ST( index );
-	int up = LOOKUP_UP( index );
-	int id = LOOKUP_ID( index );
+	daoint st = LOOKUP_ST( index );
+	daoint up = LOOKUP_UP( index );
+	daoint id = LOOKUP_ID( index );
 	if( index < 0 ) return NULL;
 	if( st != DAO_GLOBAL_CONSTANT ) return NULL;
 	if( up >= self->namespaces->size ) return NULL;
 	if( id >= self->namespaces->items.pNS[up]->cstData->size ) return NULL;
 	return self->namespaces->items.pNS[up]->cstData->items.pValue[id];
 }
-int  DaoNamespace_FindVariable( DaoNamespace *self, DString *name )
+int DaoNamespace_FindVariable( DaoNamespace *self, DString *name )
 {
 	DNode *node = DMap_Find( self->lookupTable, name );
 	if( node == NULL ) return -1;
@@ -923,7 +922,7 @@ int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value
 	DaoType *abtp = DaoNamespace_GetType( self, value );
 	DNode *node = MAP_Find( self->lookupTable, name );
 	DaoValue **dest;
-	int id = 0;
+	daoint id = 0;
 
 	if( abtp == NULL ) abtp = dao_type_udf;
 	if( tp && value && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
@@ -948,31 +947,14 @@ int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value
 		DaoValue_Move( value, self->varData->items.pValue + self->varData->size -1, tp );
 		DArray_Append( self->varType, (void*)tp );
 	}
-	if( abtp->attrib & DAO_TYPE_EMPTY ){
-		switch( value->type ){
-		case DAO_LIST :
-			GC_ShiftRC( tp, value->xList.unitype );
-			value->xList.unitype = tp; break;
-		case DAO_MAP :  
-			GC_ShiftRC( tp, value->xMap.unitype );
-			value->xMap.unitype = tp; break;
-		case DAO_ARRAY : 
-			GC_ShiftRC( tp, value->xArray.unitype );
-			value->xArray.unitype = tp; break;
-		case DAO_TUPLE : 
-			GC_ShiftRC( tp, value->xTuple.unitype );
-			value->xTuple.unitype = tp; break;
-		default : break;
-		}
-	}
 	return id;
 }
 int DaoNamespace_SetVariable( DaoNamespace *self, int index, DaoValue *value )
 {
 	DaoType *type;
 	DaoValue **dest;
-	int up = LOOKUP_UP( index );
-	int id = LOOKUP_ID( index );
+	daoint up = LOOKUP_UP( index );
+	daoint id = LOOKUP_ID( index );
 	if( LOOKUP_ST( index ) != DAO_GLOBAL_VARIABLE ) return 0;
 	if( up >= self->namespaces->size ) return 0;
 	if( id >= self->namespaces->items.pNS[up]->varData->size ) return 0;
@@ -982,9 +964,9 @@ int DaoNamespace_SetVariable( DaoNamespace *self, int index, DaoValue *value )
 }
 DaoValue* DaoNamespace_GetVariable( DaoNamespace *self, int index )
 {
-	int st = LOOKUP_ST( index );
-	int up = LOOKUP_UP( index );
-	int id = LOOKUP_ID( index );
+	daoint st = LOOKUP_ST( index );
+	daoint up = LOOKUP_UP( index );
+	daoint id = LOOKUP_ID( index );
 	if( st != DAO_GLOBAL_VARIABLE ) return NULL;
 	if( up >= self->namespaces->size ) return NULL;
 	if( id >= self->namespaces->items.pNS[up]->varData->size ) return NULL;
@@ -992,9 +974,9 @@ DaoValue* DaoNamespace_GetVariable( DaoNamespace *self, int index )
 }
 DaoType* DaoNamespace_GetVariableType( DaoNamespace *self, int index )
 {
-	int st = LOOKUP_ST( index );
-	int up = LOOKUP_UP( index );
-	int id = LOOKUP_ID( index );
+	daoint st = LOOKUP_ST( index );
+	daoint up = LOOKUP_UP( index );
+	daoint id = LOOKUP_ID( index );
 	if( st != DAO_GLOBAL_VARIABLE ) return NULL;
 	if( up >= self->namespaces->size ) return NULL;
 	if( id >= self->namespaces->items.pNS[up]->varType->size ) return NULL;
@@ -1004,8 +986,8 @@ void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
 	if( node ){
-		int id = node->value.pSize;
-		int st = LOOKUP_ST( id );
+		daoint id = node->value.pSize;
+		daoint st = LOOKUP_ST( id );
 		if( st == DAO_GLOBAL_CONSTANT ) DaoNamespace_SetConst( self, id, value );
 		if( st == DAO_GLOBAL_VARIABLE ) DaoNamespace_SetVariable( self, id, value );
 		return;
@@ -1015,7 +997,7 @@ void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value )
 DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
-	int st, id;
+	daoint st, id;
 	if( node == NULL ) return NULL;
 	id = node->value.pSize;
 	st = LOOKUP_ST( id );
@@ -1057,7 +1039,7 @@ void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, Da
 }
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent )
 {
-	int i;
+	daoint i;
 	if( parent == self ) return 1;
 	for(i=0; i<self->namespaces->size; i++)
 		if( self->namespaces->items.pNS[i] == parent ) return 0;
@@ -1068,7 +1050,7 @@ int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent )
 }
 static void DaoNS_UpdateParents( DaoNamespace *self, DMap *added )
 {
-	size_t i, j;
+	daoint i, j;
 	DMap *old = added;
 	if( added == NULL ){
 		added = DHash_New(0,0);
@@ -1107,7 +1089,7 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 {
 	DNode *it, *search;
-	size_t i, pm, st, up, id;
+	daoint i, pm, st, up, id;
 
 	DaoNS_UpdateParents( self, NULL );
 	for(i=1; i<self->namespaces->size; i++){
@@ -1136,7 +1118,7 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 }
 int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 {
-	int i;
+	daoint i;
 	if( parent == self ) return 0;
 	if( DaoNamespace_CyclicParent( self, parent ) ) return 0;
 	for(i=0; i<self->namespaces->size; i++){
@@ -1154,7 +1136,7 @@ int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 
 static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *lang, DString *name )
 {
-	int i, n = self->namespaces->size;
+	daoint i, n = self->namespaces->size;
 	DString *combo = DString_Copy( lang );
 	DNode *node;
 
@@ -1172,7 +1154,7 @@ static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *lang, DSt
 }
 DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name )
 {
-	int i, n = self->namespaces->size;
+	daoint i, n = self->namespaces->size;
 	DString *combo = DString_Copy( lang );
 	DNode *node;
 
@@ -1204,12 +1186,12 @@ DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *na
 void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp )
 {
 	DString mbs = DString_WrapMBS( name );
-	DMap_Insert( self->moduleLoaders, & mbs, fp );
+	DMap_Insert( self->moduleLoaders, & mbs, (void*)fp );
 }
 void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
 {
 	DString mbs = DString_WrapMBS( name );
-	DMap_Insert( self->codeInliners, & mbs, fp );
+	DMap_Insert( self->codeInliners, & mbs, (void*)fp );
 }
 DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DString *name )
 {
@@ -1294,7 +1276,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	DaoCdata *cdata = (DaoCdata*) p;
 	DaoProcess *vmp = (DaoProcess*) p;
 	DaoTypeBase *typer;
-	int i, tid, zerosize = 0;
+	int i, tid;
 
 	if( p == NULL ) return NULL;
 	if( p->type == DAO_TYPE && itp->tid == DAO_TYPE ) return itp;
@@ -1368,7 +1350,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			if( list->items.size ==0 ){
 				DString_AppendMBS( mbs, "<?>" );
 				DArray_Append( nested, self->udfType1 );
-				zerosize = 1;
 			}else{
 				itp = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
 				DString_AppendMBS( mbs, "<any>" );
@@ -1380,7 +1361,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 				DString_AppendMBS( mbs, "<?,?>" );
 				DArray_Append( nested, self->udfType1 );
 				DArray_Append( nested, self->udfType2 );
-				zerosize = 1;
 			}else{
 				itp = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
 				DString_AppendMBS( mbs, "<any,any>" );
@@ -1393,7 +1373,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			if( array->size ==0 ){
 				DString_AppendMBS( mbs, "<?>" );
 				DArray_Append( nested, self->udfType1 );
-				zerosize = 1;
 			}else if( array->etype == DAO_INTEGER ){
 				itp = DaoNamespace_MakeType( self, "int", DAO_INTEGER, 0,0,0 );
 				DString_AppendMBS( mbs, "<int>" );
@@ -1430,29 +1409,22 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 				simpleTypes[ p->type ] = abtp;
 				GC_IncRC( abtp );
 			}
-			if( zerosize ) abtp->attrib |= DAO_TYPE_EMPTY;
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 #if 1
 		switch( p->type ){
 		case DAO_LIST :
-			if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
-				list->unitype = abtp;
-				GC_IncRC( abtp );
-			}
+			list->unitype = abtp;
+			GC_IncRC( abtp );
 			break;
 		case DAO_MAP :
-			if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
-				map->unitype = abtp;
-				GC_IncRC( abtp );
-			}
+			map->unitype = abtp;
+			GC_IncRC( abtp );
 			break;
 #ifdef DAO_WITH_NUMARRAY
 		case DAO_ARRAY :
-			if( ! ( abtp->attrib & DAO_TYPE_EMPTY ) ){
-				array->unitype = abtp;
-				GC_IncRC( abtp );
-			}
+			array->unitype = abtp;
+			GC_IncRC( abtp );
 			break;
 #endif
 		case DAO_PAR_NAMED :
@@ -1582,7 +1554,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	DaoType *tp, *tp2, *abtp;
 	DString *fname = NULL;
 	DNode *node;
-	int i, ch = 0;
+	daoint i, ch = 0;
 
 	abtp = DaoType_New( "", DAO_ROUTINE, NULL, NULL );
 	abtp->attrib = routype->attrib;
@@ -1727,7 +1699,7 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	DString_Delete( key );
 	return (t1&t2) ==0 ? type : NULL;
 }
-DaoType* DaoNamespace_SymbolTypeAdd( DaoNamespace *self, DaoType *t1, DaoType *t2, dint *value )
+DaoType* DaoNamespace_SymbolTypeAdd( DaoNamespace *self, DaoType *t1, DaoType *t2, int *value )
 {
 	DaoType *type;
 	DMap *names1 = t1->mapNames;
@@ -1768,7 +1740,7 @@ DaoType* DaoNamespace_SymbolTypeAdd( DaoNamespace *self, DaoType *t1, DaoType *t
 	DString_Delete( name );
 	return type;
 }
-DaoType* DaoNamespace_SymbolTypeSub( DaoNamespace *self, DaoType *t1, DaoType *t2, dint *value )
+DaoType* DaoNamespace_SymbolTypeSub( DaoNamespace *self, DaoType *t1, DaoType *t2, int *value )
 {
 	DaoType *type;
 	DMap *names1 = t1->mapNames;

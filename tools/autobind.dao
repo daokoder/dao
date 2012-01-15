@@ -1129,7 +1129,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	for( pat in fixing ){
 		k = 1;
 		while( k ){
-			if( pat[0][:11] == '%B{ # %s* if' and pat[1] == '' ){
+			if( pat[0].find( '%B{ # %s* if' ) == 0 and pat[1] == '' ){
 				sb = source.match( pat[0] );
 				while( sb.start >=0 ){
 					sb2 = source.match( patder, sb.start + 3, sb.end );

@@ -37,7 +37,7 @@ struct DaoInteger
 {
 	DAO_DATA_CORE;
 
-	dint value;
+	daoint value;
 };
 struct DaoFloat
 {
@@ -114,8 +114,8 @@ DAO_DLL DaoList* DaoList_New();
 DAO_DLL void DaoList_Delete( DaoList *self );
 DAO_DLL void DaoList_Clear( DaoList *self );
 
-DAO_DLL void DaoList_Erase( DaoList *self, size_t id );
-DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, size_t id );
+DAO_DLL void DaoList_Erase( DaoList *self, daoint id );
+DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, daoint id );
 DAO_DLL int DaoList_Append( DaoList *self, DaoValue *it );
 
 DAO_DLL DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );

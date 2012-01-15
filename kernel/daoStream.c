@@ -241,7 +241,7 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutMBString( proc, "" );
-	dint silent = p[1]->xInteger.value;
+	daoint silent = p[1]->xInteger.value;
 	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
@@ -310,7 +310,7 @@ static void DaoIO_Close( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_Eof( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	dint *num = DaoProcess_PutInteger( proc, 0 );
+	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	*num = 1;
 	if( self->file ) *num = feof( self->file->fd );
 }
@@ -330,14 +330,14 @@ static void DaoIO_Seek( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_Tell( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	dint *num = DaoProcess_PutInteger( proc, 0 );
+	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	if( self->file == NULL ) return;
 	*num = ftell( self->file->fd );
 }
 static void DaoIO_FileNO( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	dint *num = DaoProcess_PutInteger( proc, 0 );
+	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	if( self->file == NULL ) return;
 	*num = fileno( self->file->fd );
 }
@@ -446,7 +446,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoStream *self = & p[0]->xStream;
-	dint i = 0, count = p[1]->xInteger.value;
+	daoint i = 0, count = p[1]->xInteger.value;
 	int chop = p[2]->xInteger.value;
 
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
@@ -479,7 +479,7 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	dint i, entry, lines = p[1]->xInteger.value;
+	daoint i, entry, lines = p[1]->xInteger.value;
 	FILE *fout = stdout;
 
 	if( p[0]->type == DAO_STREAM ){
@@ -637,7 +637,7 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 		printf( format, val );
 	}
 }
-void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format )
+void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format )
 {
 	char buffer[100];
 	if( self->file ){
@@ -655,21 +655,19 @@ void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format )
 		printf( format, val );
 	}
 }
-void DaoStream_WriteInt( DaoStream *self, dint val )
+void DaoStream_WriteInt( DaoStream *self, daoint val )
 {
-	char *format = self->format;
-	if( format == NULL ){
-		format = sizeof(dint)==4 ? "%i" : "%lli";
-	}
+	const char *format = self->format;
+	if( format == NULL ) format = "%ti";
 	DaoStream_WriteFormatedInt( self, val, format );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )
 {
-	char *format = self->format;
+	const char *format = self->format;
 	const char *iconvs = "diouxXcC";
 	char buffer[100];
 	if( format && strchr( iconvs, format[ strlen(format)-1 ] ) && val ==(long)val ){
-		DaoStream_WriteInt( self, (dint)val );
+		DaoStream_WriteInt( self, (daoint)val );
 		return;
 	}
 	if( format == NULL ) format = "%f";
@@ -690,7 +688,7 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 }
 void DaoStream_WriteMBS( DaoStream *self, const char *val )
 {
-	char *format = self->format;
+	const char *format = self->format;
 	if( format == NULL ) format = "%s";
 	if( self->file ){
 		fprintf( self->file->fd, format, val );
@@ -707,7 +705,7 @@ void DaoStream_WriteMBS( DaoStream *self, const char *val )
 }
 void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val )
 {
-	char *format = self->format;
+	const char *format = self->format;
 	if( format == NULL ) format = "%ls";
 	if( self->file ){
 		fprintf( self->file->fd, format, val );
@@ -820,7 +818,7 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 	if( self->file ){
 		return DaoFile_ReadLine( self->file->fd, line );
 	}else if( self->attribs & DAO_IO_STRING ){
-		size_t pos = DString_FindWChar( self->streamString, delim, 0 );
+		daoint pos = DString_FindWChar( self->streamString, delim, 0 );
 		if( pos == MAXSIZE ){
 			DString_Assign( line, self->streamString );
 			DString_Clear( self->streamString );
@@ -880,7 +878,7 @@ int DaoFile_ReadAll( FILE *fin, DString *all, int close )
 }
 void DaoFile_WriteString( FILE* file, DString *str )
 {
-	size_t len = 0;
+	daoint len = 0;
 	int res;
 	if( str->mbs ){
 		for( ;; ){

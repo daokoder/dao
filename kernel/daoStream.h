@@ -57,13 +57,13 @@ DAO_DLL void DaoStream_Close( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );
 
 DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
-DAO_DLL void DaoStream_WriteInt( DaoStream *self, dint val );
+DAO_DLL void DaoStream_WriteInt( DaoStream *self, daoint val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
 DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
-DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format );
+DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format );
 DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
 
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );

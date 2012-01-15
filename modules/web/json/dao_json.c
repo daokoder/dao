@@ -39,7 +39,7 @@ int JSON_SerializeValue( DaoValue *value, DString *text, int indent )
 #ifndef __MINGW32__
 				  sizeof(buf),
 #endif
-				  sizeof(dint) == 4? L"%i" : L"%lli", DaoValue_TryGetInteger( value ) );
+				  L"%ti", DaoValue_TryGetInteger( value ) );
 		DString_AppendWCS( text, buf );
 		break;
 	case DAO_FLOAT:

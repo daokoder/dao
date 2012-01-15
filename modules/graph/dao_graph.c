@@ -173,10 +173,10 @@ static void MaxFlow_PushInt( DaoxNode *node, DaoxEdge *edge )
 {
 	DaoxNode *U = node;
 	DaoxNode *V = edge->second;
-	dint  CUV =   edge->W1.I;
-	dint *FUV = & edge->W2.I;
-	dint *FVU = & edge->W3.I;
-	dint send;
+	daoint  CUV =   edge->W1.I;
+	daoint *FUV = & edge->W2.I;
+	daoint *FVU = & edge->W3.I;
+	daoint send;
 	if( node == edge->second ){
 		V = edge->first;
 		CUV = 0;
@@ -192,8 +192,8 @@ static void MaxFlow_PushInt( DaoxNode *node, DaoxEdge *edge )
 }
 static void MaxFlow_RelabelInt( DaoxNode *U )
 {
-	dint min_height = 100 * U->graph->nodes->size;
-	size_t i, n;
+	daoint min_height = 100 * U->graph->nodes->size;
+	daoint i, n;
 	for(i=0,n=U->edges->size; i<n; i++){
 		DaoxEdge *edge = (DaoxEdge*) U->edges->items.pValue[i];
 		if( U == edge->first ){ /* out edges */
@@ -208,7 +208,7 @@ static void MaxFlow_RelabelInt( DaoxNode *U )
 }
 static void MaxFlow_DischargeInt( DaoxNode *U )
 {
-	size_t i, n;
+	daoint i, n;
 	while( U->U2.I > 0 ){
 		for(i=0,n=U->edges->size; i<n; i++){
 			DaoxEdge *edge = (DaoxEdge*) U->edges->items.pValue[i];
@@ -223,10 +223,10 @@ static void MaxFlow_DischargeInt( DaoxNode *U )
 		MaxFlow_RelabelInt( U );
 	}
 }
-dint DaoxGraph_MaxFlow_PRTF_Int( DaoxGraph *self, DaoxNode *source, DaoxNode *sink )
+daoint DaoxGraph_MaxFlow_PRTF_Int( DaoxGraph *self, DaoxNode *source, DaoxNode *sink )
 {
-	size_t i, n;
-	dint inf = 0;
+	daoint i, n;
+	daoint inf = 0;
 	DArray *list = DArray_New(0);
 
 	for(i=0,n=source->edges->size; i<n; i++){
@@ -249,7 +249,7 @@ dint DaoxGraph_MaxFlow_PRTF_Int( DaoxGraph *self, DaoxNode *source, DaoxNode *si
 	i = 0;
 	while( i < list->size ){
 		DaoxNode *U = (DaoxNode*) list->items.pValue[i];
-		dint old_height = U->U1.I;
+		daoint old_height = U->U1.I;
 		MaxFlow_DischargeInt( U );
 		if( U->U1.I > old_height ){
 			DArray_Erase( list, i, 1 );
@@ -291,8 +291,8 @@ static void MaxFlow_PushFloat( DaoxNode *node, DaoxEdge *edge )
 }
 static void MaxFlow_RelabelFloat( DaoxNode *U )
 {
-	dint min_height = 100 * U->graph->nodes->size;
-	size_t i, n;
+	daoint min_height = 100 * U->graph->nodes->size;
+	daoint i, n;
 	for(i=0,n=U->edges->size; i<n; i++){
 		DaoxEdge *edge = (DaoxEdge*) U->edges->items.pValue[i];
 		if( U == edge->first ){ /* out edges */
@@ -307,7 +307,7 @@ static void MaxFlow_RelabelFloat( DaoxNode *U )
 }
 static void MaxFlow_DischargeFloat( DaoxNode *U )
 {
-	size_t i, n;
+	daoint i, n;
 	while( U->U2.F > 0 ){
 		for(i=0,n=U->edges->size; i<n; i++){
 			DaoxEdge *edge = (DaoxEdge*) U->edges->items.pValue[i];
@@ -324,7 +324,7 @@ static void MaxFlow_DischargeFloat( DaoxNode *U )
 }
 float DaoxGraph_MaxFlow_PRTF_Float( DaoxGraph *self, DaoxNode *source, DaoxNode *sink )
 {
-	size_t i, n;
+	daoint i, n;
 	float inf = 0;
 	DArray *list = DArray_New(0);
 
@@ -348,7 +348,7 @@ float DaoxGraph_MaxFlow_PRTF_Float( DaoxGraph *self, DaoxNode *source, DaoxNode 
 	i = 0;
 	while( i < list->size ){
 		DaoxNode *U = (DaoxNode*) list->items.pValue[i];
-		dint old_height = U->U1.I;
+		daoint old_height = U->U1.I;
 		MaxFlow_DischargeFloat( U );
 		if( U->U1.I > old_height ){
 			DArray_Erase( list, i, 1 );
@@ -390,8 +390,8 @@ static void MaxFlow_PushDouble( DaoxNode *node, DaoxEdge *edge )
 }
 static void MaxFlow_RelabelDouble( DaoxNode *U )
 {
-	dint min_height = 100 * U->graph->nodes->size;
-	size_t i, n;
+	daoint min_height = 100 * U->graph->nodes->size;
+	daoint i, n;
 	for(i=0,n=U->edges->size; i<n; i++){
 		DaoxEdge *edge = (DaoxEdge*) U->edges->items.pValue[i];
 		if( U == edge->first ){ /* out edges */
@@ -406,7 +406,7 @@ static void MaxFlow_RelabelDouble( DaoxNode *U )
 }
 static void MaxFlow_DischargeDouble( DaoxNode *U )
 {
-	size_t i, n;
+	daoint i, n;
 	while( U->U2.D > 0 ){
 		for(i=0,n=U->edges->size; i<n; i++){
 			DaoxEdge *edge = (DaoxEdge*) U->edges->items.pValue[i];
@@ -423,7 +423,7 @@ static void MaxFlow_DischargeDouble( DaoxNode *U )
 }
 double DaoxGraph_MaxFlow_PRTF_Double( DaoxGraph *self, DaoxNode *source, DaoxNode *sink )
 {
-	size_t i, n;
+	daoint i, n;
 	double inf = 0;
 	DArray *list = DArray_New(0);
 
@@ -447,7 +447,7 @@ double DaoxGraph_MaxFlow_PRTF_Double( DaoxGraph *self, DaoxNode *source, DaoxNod
 	i = 0;
 	while( i < list->size ){
 		DaoxNode *U = (DaoxNode*) list->items.pValue[i];
-		dint old_height = U->U1.I;
+		daoint old_height = U->U1.I;
 		MaxFlow_DischargeDouble( U );
 		if( U->U1.I > old_height ){
 			DArray_Erase( list, i, 1 );
@@ -555,7 +555,7 @@ static void NODE_GetEdges( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxNode *self = (DaoxNode*) p[0];
 	DaoList *res = DaoProcess_PutList( proc );
-	size_t i, n;
+	daoint i, n;
 	if( p[1]->xEnum.value == 0 ){
 		for(i=0,n=self->edges->size; i>0; i--){
 			DaoxEdge *edge = (DaoxEdge*) self->edges->items.pValue[i-1];
@@ -658,14 +658,14 @@ static void GRAPH_GetNodes( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxGraph *self = (DaoxGraph*) p[0];
 	DaoList *res = DaoProcess_PutList( proc );
-	size_t i;
+	daoint i;
 	for(i=0; i<self->nodes->size; i++) DaoList_PushBack( res, self->nodes->items.pValue[i] );
 }
 static void GRAPH_GetEdges( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxGraph *self = (DaoxGraph*) p[0];
 	DaoList *res = DaoProcess_PutList( proc );
-	size_t i;
+	daoint i;
 	for(i=0; i<self->edges->size; i++) DaoList_PushBack( res, self->edges->items.pValue[i] );
 }
 static void GRAPH_AddNode( DaoProcess *proc, DaoValue *p[], int N )
@@ -684,7 +684,7 @@ static void GRAPH_MaxFlow( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxNode *source = (DaoxNode*) p[1];
 	DaoxNode *sink = (DaoxNode*) p[2];
 	if( self->wtype == DAO_INTEGER ){
-		dint maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );
+		daoint maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );
 		DaoProcess_PutInteger( proc, maxflow );
 	}else if( self->wtype == DAO_FLOAT ){
 		float maxflow = DaoxGraph_MaxFlow_PushRelabelToFront( self, source, sink );

@@ -99,7 +99,7 @@ DMap* DHash_New( short kt, short vt )
 	return self;
 }
 double norm_c( const complex16 com );
-dint DLong_ToInteger( DLong *self );
+daoint DLong_ToInteger( DLong *self );
 
 #define HASH_SEED  0xda0
 unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed );
@@ -112,7 +112,7 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
 	unsigned int hash = 0;
 	switch( self->type ){
 	case DAO_INTEGER :
-		data = & self->xInteger.value;  len = sizeof(dint);  break;
+		data = & self->xInteger.value;  len = sizeof(daoint);  break;
 	case DAO_FLOAT   : 
 		data = & self->xFloat.value;  len = sizeof(float);  break;
 	case DAO_DOUBLE  : 
@@ -358,7 +358,7 @@ static void DMap_DeleteTree( DMap *self, DNode *node )
 }
 void DMap_Clear( DMap *self )
 {
-	int i;
+	daoint i;
 	if( self->hashing ){
 		for(i=0; i<self->tsize; i++) DMap_DeleteTree( self, self->table[i] );
 		if( self->table ) dao_free( self->table );
@@ -372,7 +372,7 @@ void DMap_Clear( DMap *self )
 }
 void DMap_Reset( DMap *self )
 {
-	int i;
+	daoint i;
 	if( self->hashing ){
 		for(i=0; i<self->tsize; i++) DMap_BufferTree( self, self->table[i] );
 		memset( self->table, 0, self->tsize*sizeof(DNode*) );
@@ -596,29 +596,29 @@ void DMap_EraseNode( DMap *self, DNode *node )
 		DMap_EraseChild( self, node );
 	}
 }
-static int DArray_Compare( DArray *k1, DArray *k2 )
+static daoint DArray_Compare( DArray *k1, DArray *k2 )
 {
-	int i = 0, n = k1->size;
-	dint *v1 = k1->items.pInt;
-	dint *v2 = k2->items.pInt;
+	daoint i = 0, n = k1->size;
+	daoint *v1 = k1->items.pInt;
+	daoint *v2 = k2->items.pInt;
 	if( n != k2->size ) return (int)(n - k2->size);
 	while( i < n && v1[i] == v2[i] ) i += 1;
 	if( i < n ) return v1[i] - v2[i];
 	return 0;
 }
-static int DVoid2_Compare( void **k1, void **k2 )
+static daoint DVoid2_Compare( void **k1, void **k2 )
 {
-	if( k1[0] != k2[0] ) return (int)( (size_t)k1[0] - (size_t)k2[0] );
-	return (int)( (size_t)k1[1] - (size_t)k2[1] );
+	if( k1[0] != k2[0] ) return (daoint)k1[0] - (daoint)k2[0];
+	return (daoint)k1[1] - (daoint)k2[1];
 }
-static int DMap_CompareKeys( DMap *self, void *k1, void *k2 )
+static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 {
 	switch( self->keytype ){
 	case D_STRING : return DString_Compare( (DString*) k1, (DString*) k2 );
 	case D_VALUE  : return DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );
 	case D_ARRAY  : return DArray_Compare( (DArray*) k1, (DArray*) k2 );
 	case D_VOID2  : return DVoid2_Compare( (void**) k1, (void**) k2 );
-	default : return (int)( (size_t)k1 - (size_t)k2 );
+	default : return (daoint)k1 - (daoint)k2;
 	}
 	return 0;
 }
@@ -627,7 +627,7 @@ static DNode* DMap_FindChild( DMap *self, DNode *root, void *key, KeySearchType 
 {
 	DNode *p = root;
 	DNode *m = 0;
-	int compare;
+	daoint compare;
 
 	if( root == NULL ) return NULL;
 
@@ -748,7 +748,7 @@ DNode* DMap_FindGE( DMap *self, void *key )
 DNode* DMap_First( DMap *self )
 {
 	DNode *node = NULL;
-	int i = 0;
+	daoint i = 0;
 	if( self == NULL ) return NULL;
 	if( self->hashing ){
 		while( i < self->tsize && self->table[i] == NULL ) i += 1;
@@ -763,7 +763,7 @@ DNode* DMap_Next( DMap *self, DNode *node )
 	if( node == NULL ) return NULL;
 	next = DNode_Next( node );
 	if( next == NULL && self->hashing ){
-		int i = node->hash + 1;
+		daoint i = node->hash + 1;
 		while( i < self->tsize && self->table[i] == NULL ) i += 1;
 		if( i < self->tsize ) next = DNode_First( self->table[i] );
 	}

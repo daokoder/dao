@@ -14,7 +14,7 @@
 #include"daoVmcode.h"
 
 /* Used only by parser for compiling expression lists: */
-const unsigned char permutableCodes[] = 
+unsigned char permutableCodes[] = 
 {
 	1 /*NOP*/, 1 /*DATA*/, 
 	1 /*GETCL*/, 1 /*GETCK*/, 1 /*GETCG*/, 

@@ -318,7 +318,7 @@ static void META_Class( DaoProcess *proc, DaoValue *p[], int N )
 static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
-	dint *res = DaoProcess_PutInteger( proc, 0 );
+	daoint *res = DaoProcess_PutInteger( proc, 0 );
 	if( p[1]->type == DAO_TYPE ){
 		if( DaoType_MatchValue( & p[1]->xType, p[0], NULL ) ) *res = 1;
 	}else if( p[1]->type == DAO_CLASS ){

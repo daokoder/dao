@@ -35,7 +35,7 @@ struct DaoStackFrame
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
 
 	ushort_t      parCount;
-	size_t        stackBase;
+	daoint        stackBase;
 	DaoVmCode    *codes; /* = routine->vmCodes->codes */
 	DaoType     **types;
 	DaoType      *retype;
@@ -93,8 +93,8 @@ struct DaoProcess
 
 	DaoValue  **freeValues; /* = stackValues + stackTop */
 	DaoValue  **stackValues;
-	size_t      stackSize; /* maximum number of values that can be hold by stackValues; */
-	size_t      stackTop; /* one past the last active stack value; */
+	daoint      stackSize; /* maximum number of values that can be hold by stackValues; */
+	daoint      stackTop; /* one past the last active stack value; */
 
 	DaoType  *abtype; /* for coroutine */
 	DArray   *exceptions;
@@ -157,14 +157,14 @@ typedef struct DaoJitCallData DaoJitCallData;
 
 typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
 typedef void (*DaoJIT_QuitFPT)();
-typedef void (*DaoJIT_FreeFPT)( DaoRoutine *routine );
+typedef void (*DaoJIT_FreeFPT)( void *jitdata );
 typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
 typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 
 struct DaoJIT
 {
 	void (*Quit)();
-	void (*Free)( DaoRoutine *routine );
+	void (*Free)( void *jitdata );
 	void (*Compile)( DaoRoutine *routine );
 	void (*Execute)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 };

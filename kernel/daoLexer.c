@@ -619,10 +619,10 @@ void DaoInitLexTable()
 	if( daoLexTable[0][0] <= TOK_ERROR ) return;
 	memset( daoLexTable, TOK_RESTART, 128 * TOK_ERROR * sizeof(char) );
 	memset( daoSpaceType, DTOK_NONE, 128 * sizeof(char) );
-	daoSpaceType[ ' ' ] = DTOK_BLANK;
-	daoSpaceType[ '\t' ] = DTOK_TAB;
-	daoSpaceType[ '\n' ] = DTOK_NEWLN;
-	daoSpaceType[ '\r' ] = DTOK_NEWLN;
+	daoSpaceType[ (unsigned) ' ' ] = DTOK_BLANK;
+	daoSpaceType[ (unsigned) '\t' ] = DTOK_TAB;
+	daoSpaceType[ (unsigned) '\n' ] = DTOK_NEWLN;
+	daoSpaceType[ (unsigned) '\r' ] = DTOK_NEWLN;
 	for(j=0; j<128; j++){
 		daoLexTable[ TOK_LSB ][j] = TOK_RESTART;
 		daoLexTable[ TOK_OP_RGXM ][ j ] = TOK_RESTART;
@@ -667,72 +667,72 @@ void DaoInitLexTable()
 			}
 		}
 	}
-	daoLexTable[ TOK_START ]['('] = TOK_END_LB;
-	daoLexTable[ TOK_START ][')'] = TOK_END_RB;
-	daoLexTable[ TOK_START ]['{'] = TOK_END_LCB;
-	daoLexTable[ TOK_START ]['}'] = TOK_END_RCB;
-	daoLexTable[ TOK_START ]['['] = TOK_END_LSB;
-	daoLexTable[ TOK_START ][']'] = TOK_END_RSB;
-	daoLexTable[ TOK_START ][','] = TOK_END_COMMA;
-	daoLexTable[ TOK_START ][';'] = TOK_END_SEMCO;
-	daoLexTable[ TOK_OP_SHARP ][ '\n' ] = TOK_END_CMT;
-	daoLexTable[ TOK_OP_SHARP ][ '\r' ] = TOK_END_CMT;
-	daoLexTable[ TOK_COMT_LINE ][ '\n' ] = TOK_END_CMT;
-	daoLexTable[ TOK_COMT_LINE ][ '\r' ] = TOK_END_CMT;
-	daoLexTable[ TOK_START ][ '\'' ] = TOK_STRING_MBS;
-	daoLexTable[ TOK_STRING_MBS ][ '\'' ] = TOK_END_MBS;
-	daoLexTable[ TOK_START ][ '\"' ] = TOK_STRING_WCS;
-	daoLexTable[ TOK_STRING_WCS ][ '\"' ] = TOK_END_WCS;
-	daoLexTable[ TOK_START ][ '.' ] = TOK_OP_DOT;
-	daoLexTable[ TOK_OP_DOT ][ '.' ] = TOK_OP_DOT2;
-	daoLexTable[ TOK_OP_DOT2 ][ '.' ] = TOK_END_DOTS; /* ... */
-	daoLexTable[ TOK_DIGITS_0 ][ '.' ] = TOK_NUMBER_DEC_D;
-	daoLexTable[ TOK_DIGITS_DEC ][ '.' ] = TOK_NUMBER_DEC_D;
-	daoLexTable[ TOK_DIGITS_0 ][ 'L' ] = TOK_DIGITS_DEC;
-	daoLexTable[ TOK_DIGITS_DEC ][ 'L' ] = TOK_DIGITS_DEC;
-	daoLexTable[ TOK_DIGITS_HEX ][ 'L' ] = TOK_DIGITS_HEX;
-	daoLexTable[ TOK_NUMBER_HEX ][ 'L' ] = TOK_NUMBER_HEX;
-	daoLexTable[ TOK_DIGITS_0 ][ 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_DIGITS_DEC ][ 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_NUMBER_DEC_D ][ 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_NUMBER_DEC ][ 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_DIGITS_0 ][ '$' ] = TOK_NUMBER_IMG;
-	daoLexTable[ TOK_DIGITS_DEC ][ '$' ] = TOK_NUMBER_IMG;
-	daoLexTable[ TOK_NUMBER_DEC ][ '$' ] = TOK_NUMBER_IMG;
-	daoLexTable[ TOK_IDENTIFIER ][ '.' ] = TOK_RESTART;
-	daoLexTable[ TOK_ID_INITYPE ][ '.' ] = TOK_RESTART;
-	daoLexTable[ TOK_ID_SYMBOL ][ '.' ] = TOK_RESTART;
-	daoLexTable[ TOK_OP_SHARP ][ '{' ] = TOK_COMT_OPEN;
-	daoLexTable[ TOK_OP_SHARP ][ '}' ] = TOK_COMT_CLOSE;
-	daoLexTable[ TOK_START ][ '\\' ] = TOK_OP_ESC;
-	daoLexTable[ TOK_START ][ '@' ] = TOK_OP_AT; 
-	daoLexTable[ TOK_OP_AT ][ '@' ] = TOK_OP_AT2; 
-	daoLexTable[ TOK_OP_AT ]['['] = TOK_VERBATIM;
-	daoLexTable[ TOK_OP_AT2 ]['['] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ][' '] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['.'] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ][':'] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['-'] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['='] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['('] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ][')'] = TOK_VERBATIM;
-	daoLexTable[ TOK_VERBATIM ]['+'] = TOK_VERBATIM;
-	daoLexTable[ TOK_START ][ '~' ] = TOK_OP_TILDE;
-	daoLexTable[ TOK_OP_EQ ][ '~' ] = TOK_OP_RGXM; /* =~ */
-	daoLexTable[ TOK_OP_NOT ][ '~' ] = TOK_OP_RGXU; /* !~ */
-	daoLexTable[ TOK_OP_TILDE ][ '~' ] = TOK_OP_RGXA; /* ~~ */
-	daoLexTable[ TOK_START ][ '=' ] = TOK_OP_EQ;
+	daoLexTable[ TOK_START ][ (unsigned) '(' ] = TOK_END_LB;
+	daoLexTable[ TOK_START ][ (unsigned) ')' ] = TOK_END_RB;
+	daoLexTable[ TOK_START ][ (unsigned) '{' ] = TOK_END_LCB;
+	daoLexTable[ TOK_START ][ (unsigned) '}' ] = TOK_END_RCB;
+	daoLexTable[ TOK_START ][ (unsigned) '[' ] = TOK_END_LSB;
+	daoLexTable[ TOK_START ][ (unsigned) ']' ] = TOK_END_RSB;
+	daoLexTable[ TOK_START ][ (unsigned) ',' ] = TOK_END_COMMA;
+	daoLexTable[ TOK_START ][ (unsigned) ';' ] = TOK_END_SEMCO;
+	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '\n' ] = TOK_END_CMT;
+	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '\r' ] = TOK_END_CMT;
+	daoLexTable[ TOK_COMT_LINE ][ (unsigned) '\n' ] = TOK_END_CMT;
+	daoLexTable[ TOK_COMT_LINE ][ (unsigned) '\r' ] = TOK_END_CMT;
+	daoLexTable[ TOK_START ][ (unsigned) '\'' ] = TOK_STRING_MBS;
+	daoLexTable[ TOK_STRING_MBS ][ (unsigned) '\'' ] = TOK_END_MBS;
+	daoLexTable[ TOK_START ][ (unsigned) '\"' ] = TOK_STRING_WCS;
+	daoLexTable[ TOK_STRING_WCS ][ (unsigned) '\"' ] = TOK_END_WCS;
+	daoLexTable[ TOK_START ][ (unsigned) '.' ] = TOK_OP_DOT;
+	daoLexTable[ TOK_OP_DOT ][ (unsigned) '.' ] = TOK_OP_DOT2;
+	daoLexTable[ TOK_OP_DOT2 ][ (unsigned) '.' ] = TOK_END_DOTS; /* ... */
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '.' ] = TOK_NUMBER_DEC_D;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '.' ] = TOK_NUMBER_DEC_D;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'L' ] = TOK_DIGITS_DEC;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'L' ] = TOK_DIGITS_DEC;
+	daoLexTable[ TOK_DIGITS_HEX ][ (unsigned) 'L' ] = TOK_DIGITS_HEX;
+	daoLexTable[ TOK_NUMBER_HEX ][ (unsigned) 'L' ] = TOK_NUMBER_HEX;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
+	daoLexTable[ TOK_NUMBER_DEC_D ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
+	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
+	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
+	daoLexTable[ TOK_IDENTIFIER ][ (unsigned) '.' ] = TOK_RESTART;
+	daoLexTable[ TOK_ID_INITYPE ][ (unsigned) '.' ] = TOK_RESTART;
+	daoLexTable[ TOK_ID_SYMBOL ][ (unsigned) '.' ] = TOK_RESTART;
+	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '{' ] = TOK_COMT_OPEN;
+	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '}' ] = TOK_COMT_CLOSE;
+	daoLexTable[ TOK_START ][ (unsigned) '\\' ] = TOK_OP_ESC;
+	daoLexTable[ TOK_START ][ (unsigned) '@' ] = TOK_OP_AT; 
+	daoLexTable[ TOK_OP_AT ][ (unsigned) '@' ] = TOK_OP_AT2; 
+	daoLexTable[ TOK_OP_AT ][ (unsigned) '[' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_OP_AT2 ][ (unsigned) '[' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) ' ' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) '.' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) ':' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) '-' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) '=' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) '(' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) ')' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_VERBATIM ][ (unsigned) '+' ] = TOK_VERBATIM;
+	daoLexTable[ TOK_START ][ (unsigned) '~' ] = TOK_OP_TILDE;
+	daoLexTable[ TOK_OP_EQ ][ (unsigned) '~' ] = TOK_OP_RGXM; /* =~ */
+	daoLexTable[ TOK_OP_NOT ][ (unsigned) '~' ] = TOK_OP_RGXU; /* !~ */
+	daoLexTable[ TOK_OP_TILDE ][ (unsigned) '~' ] = TOK_OP_RGXA; /* ~~ */
+	daoLexTable[ TOK_START ][ (unsigned) '=' ] = TOK_OP_EQ;
 
 	/* :=  +=  -=  /=  *=  %=  &=  |=  !=*/
 	for(i=TOK_OP_COLON; i<TOK_OP_LT; i++)
-		daoLexTable[i]['='] = i + (TOK_EQ_COLON - TOK_OP_COLON);
-	daoLexTable[ TOK_START ][ '>' ] = TOK_OP_GT;
-	daoLexTable[ TOK_OP_QUEST ][ '?' ] = TOK_END_ASSERT; /* ?? */
-	daoLexTable[ TOK_OP_QUEST ][ '=' ] = TOK_END_TEQ; /* ?= */
-	daoLexTable[ TOK_OP_QUEST ][ '<' ] = TOK_END_TISA; /* ?< */
-	daoLexTable[ TOK_OP_SUB ][ '>' ] = TOK_END_ARROW; /* -> */
-	daoLexTable[ TOK_OP_EQ ][ '>' ] = TOK_END_FIELD; /* => */
-	daoLexTable[ TOK_START ][ '<' ] = TOK_OP_LT;
+		daoLexTable[i][ (unsigned) '=' ] = i + (TOK_EQ_COLON - TOK_OP_COLON);
+	daoLexTable[ TOK_START ][ (unsigned) '>' ] = TOK_OP_GT;
+	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '?' ] = TOK_END_ASSERT; /* ?? */
+	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '=' ] = TOK_END_TEQ; /* ?= */
+	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '<' ] = TOK_END_TISA; /* ?< */
+	daoLexTable[ TOK_OP_SUB ][ (unsigned) '>' ] = TOK_END_ARROW; /* -> */
+	daoLexTable[ TOK_OP_EQ ][ (unsigned) '>' ] = TOK_END_FIELD; /* => */
+	daoLexTable[ TOK_START ][ (unsigned) '<' ] = TOK_OP_LT;
 
 	/* example use of generic types: */
 	/* routine<=>int>; list<list<int>>; abc : list<int>={} */
@@ -743,52 +743,52 @@ void DaoInitLexTable()
 	/* daoLexTable[ TOK_OP_GT ][ '>' ] = TOK_END_RSHIFT; */ /* >> */
 	/* daoLexTable[ TOK_OP_LT ][ '<' ] = TOK_END_LSHIFT; */ /* << */
 
-	daoLexTable[ TOK_START ][ '+' ] = TOK_OP_ADD;
-	daoLexTable[ TOK_OP_ADD ][ '+' ] = TOK_END_INCR; /* ++ */
-	daoLexTable[ TOK_START ][ '-' ] = TOK_OP_SUB; 
-	daoLexTable[ TOK_OP_SUB ][ '-' ] = TOK_END_DECR; /* -- */
-	daoLexTable[ TOK_START ][ '*' ] = TOK_OP_MUL;
-	daoLexTable[ TOK_OP_MUL ][ '*' ] = TOK_END_POW; /* ** */
-	daoLexTable[ TOK_START ][ '/' ] = TOK_OP_DIV;
-	daoLexTable[ TOK_START ][ '&' ] = TOK_OP_AND;
-	daoLexTable[ TOK_OP_AND ][ '&' ] = TOK_END_AND; /* && */
-	daoLexTable[ TOK_START ][ '|' ] = TOK_OP_OR;
-	daoLexTable[ TOK_OP_OR ][ '|' ] = TOK_END_OR; /* || */
-	daoLexTable[ TOK_START ][ ':' ] = TOK_OP_COLON;
-	daoLexTable[ TOK_OP_COLON ][ ':' ] = TOK_END_COLON2; /* :: */
-	daoLexTable[ TOK_START ][ '%' ] = TOK_OP_MOD;
-	daoLexTable[ TOK_START ][ '!' ] = TOK_OP_NOT;
-	daoLexTable[ TOK_START ][ '^' ] = TOK_OP_XOR;
-	daoLexTable[ TOK_START ][ '?' ] = TOK_OP_QUEST;
-	daoLexTable[ TOK_START ][ '$' ] = TOK_OP_IMG;
-	daoLexTable[ TOK_START ][ '#' ] = TOK_OP_SHARP;
-	daoLexTable[ TOK_START ][ '0' ] = TOK_DIGITS_0;
-	daoLexTable[ TOK_DIGITS_0 ][ 'x' ] = TOK_DIGITS_0X;
-	daoLexTable[ TOK_DIGITS_0 ][ 'X' ] = TOK_DIGITS_0X;
-	daoLexTable[ TOK_DIGITS_0 ][ 'e' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_DIGITS_0 ][ 'E' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_DIGITS_DEC ][ 'e' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_DIGITS_DEC ][ 'E' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_DEC_D ][ 'e' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_DEC_D ][ 'E' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_DEC ][ 'e' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_DEC ][ 'E' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_SCI_E ][ '+' ] = TOK_NUMBER_SCI_ES;
-	daoLexTable[ TOK_NUMBER_SCI_E ][ '-' ] = TOK_NUMBER_SCI_ES;
+	daoLexTable[ TOK_START ][ (unsigned) '+' ] = TOK_OP_ADD;
+	daoLexTable[ TOK_OP_ADD ][ (unsigned) '+' ] = TOK_END_INCR; /* ++ */
+	daoLexTable[ TOK_START ][ (unsigned) '-' ] = TOK_OP_SUB; 
+	daoLexTable[ TOK_OP_SUB ][ (unsigned) '-' ] = TOK_END_DECR; /* -- */
+	daoLexTable[ TOK_START ][ (unsigned) '*' ] = TOK_OP_MUL;
+	daoLexTable[ TOK_OP_MUL ][ (unsigned) '*' ] = TOK_END_POW; /* ** */
+	daoLexTable[ TOK_START ][ (unsigned) '/' ] = TOK_OP_DIV;
+	daoLexTable[ TOK_START ][ (unsigned) '&' ] = TOK_OP_AND;
+	daoLexTable[ TOK_OP_AND ][ (unsigned) '&' ] = TOK_END_AND; /* && */
+	daoLexTable[ TOK_START ][ (unsigned) '|' ] = TOK_OP_OR;
+	daoLexTable[ TOK_OP_OR ][ (unsigned) '|' ] = TOK_END_OR; /* || */
+	daoLexTable[ TOK_START ][ (unsigned) ':' ] = TOK_OP_COLON;
+	daoLexTable[ TOK_OP_COLON ][ (unsigned) ':' ] = TOK_END_COLON2; /* :: */
+	daoLexTable[ TOK_START ][ (unsigned) '%' ] = TOK_OP_MOD;
+	daoLexTable[ TOK_START ][ (unsigned) '!' ] = TOK_OP_NOT;
+	daoLexTable[ TOK_START ][ (unsigned) '^' ] = TOK_OP_XOR;
+	daoLexTable[ TOK_START ][ (unsigned) '?' ] = TOK_OP_QUEST;
+	daoLexTable[ TOK_START ][ (unsigned) '$' ] = TOK_OP_IMG;
+	daoLexTable[ TOK_START ][ (unsigned) '#' ] = TOK_OP_SHARP;
+	daoLexTable[ TOK_START ][ (unsigned) '0' ] = TOK_DIGITS_0;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'x' ] = TOK_DIGITS_0X;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'X' ] = TOK_DIGITS_0X;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_NUMBER_DEC_D ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_NUMBER_DEC_D ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_NUMBER_SCI_E ][ (unsigned) '+' ] = TOK_NUMBER_SCI_ES;
+	daoLexTable[ TOK_NUMBER_SCI_E ][ (unsigned) '-' ] = TOK_NUMBER_SCI_ES;
 
-	daoLexTable[ TOK_OP_ESC ]['('] = TOK_ESC_LB;
-	daoLexTable[ TOK_OP_ESC ][')'] = TOK_ESC_RB;
-	daoLexTable[ TOK_OP_ESC ]['{'] = TOK_ESC_LCB;
-	daoLexTable[ TOK_OP_ESC ]['}'] = TOK_ESC_RCB;
-	daoLexTable[ TOK_OP_ESC ]['['] = TOK_ESC_LSB;
-	daoLexTable[ TOK_OP_ESC ][']'] = TOK_ESC_RSB;
-	daoLexTable[ TOK_OP_ESC ]['|'] = TOK_ESC_PIPE;
-	daoLexTable[ TOK_OP_ESC ]['!'] = TOK_ESC_EXCLA;
-	daoLexTable[ TOK_OP_ESC ]['?'] = TOK_ESC_QUES;
-	daoLexTable[ TOK_OP_ESC ]['*'] = TOK_ESC_STAR;
-	daoLexTable[ TOK_OP_ESC ]['+'] = TOK_ESC_PLUS;
-	daoLexTable[ TOK_OP_ESC ]['\''] = TOK_ESC_SQUO;
-	daoLexTable[ TOK_OP_ESC ]['\"'] = TOK_ESC_DQUO;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '(' ] = TOK_ESC_LB;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) ')' ] = TOK_ESC_RB;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '{' ] = TOK_ESC_LCB;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '}' ] = TOK_ESC_RCB;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '[' ] = TOK_ESC_LSB;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) ']' ] = TOK_ESC_RSB;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '|' ] = TOK_ESC_PIPE;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '!' ] = TOK_ESC_EXCLA;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '?' ] = TOK_ESC_QUES;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '*' ] = TOK_ESC_STAR;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '+' ] = TOK_ESC_PLUS;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '\'' ] = TOK_ESC_SQUO;
+	daoLexTable[ TOK_OP_ESC ][ (unsigned) '\"' ] = TOK_ESC_DQUO;
 
 	memset( daoArithOper, 0, DAO_NOKEY2*sizeof(DOper) );
 
@@ -842,7 +842,7 @@ typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
 
 extern void DString_DeleteData( DString *self );
 
-DaoToken* DaoToken_New() { return dao_calloc( 1, sizeof(DaoToken) ); }
+DaoToken* DaoToken_New() { return (DaoToken*) dao_calloc( 1, sizeof(DaoToken) ); }
 void DaoToken_Delete( DaoToken *self )
 {
 	DaoToken2 *tok2 = (DaoToken2*) self;
@@ -872,7 +872,7 @@ void DaoTokens_Append( DArray *self, int name, int line, const char *data )
 	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
 	if( name == DTOK_ID_INITYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
 	DArray_Append( self, & token );
-	tok = DArray_Top( self );
+	tok = (DaoToken*) DArray_Top( self );
 	tok->string = DString_New(1);
 	DString_SetMBS( tok->string, data );
 }
@@ -1061,7 +1061,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 	}
 	DArray_Clear( tokens );
 
-	DArray_PushFront( lexenvs, (void*)(size_t)LEX_ENV_NORMAL );
+	DArray_PushFront( lexenvs, (void*)(daoint)LEX_ENV_NORMAL );
 	it = 0;
 	lextok.string = literal;
 	lextok.cpos = 0;
@@ -1273,7 +1273,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max )
 {
 	DaoToken *t1, *t2, **tokens;
-	int i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
+	daoint i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
 	int max2 = max/2;
 	if( m < 5 ) m = 5;
 	DString_Clear( annot );
@@ -1284,7 +1284,7 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 		k = i + vmc.first;
 		if( k >= self->size ) break;
 		t2 = tokens[k];
-		if( k != vmc.first ){
+		if( k != (daoint)vmc.first ){
 			t1 = tokens[k-1];
 			pos = t1->cpos + t1->string->size;
 			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
@@ -1312,7 +1312,7 @@ void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int m
 		k = i + vmc.first;
 		if( k >= self->size ) break;
 		t2 = tokens[k];
-		if( k != vmc.first ){
+		if( k != (daoint)vmc.first ){
 			t1 = tokens[k-1];
 			pos = t1->cpos + t1->string->size;
 			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );

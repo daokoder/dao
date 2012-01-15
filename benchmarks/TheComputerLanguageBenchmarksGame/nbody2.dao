@@ -117,7 +117,6 @@ routine energy( bodies : list<OneBody> , nbody : int )
 			distance = (dx*dx + dy*dy + dz*dz)**0.5D;
 			e = e - ((bim * bj.mass) / distance);
 		}
-		#io.writeln(i, nbody)
 	}
 	return e
 }
@@ -125,17 +124,17 @@ routine energy( bodies : list<OneBody> , nbody : int )
 
 routine offsetMomentum( b : list<OneBody>, nbody : int )
 {
-  px = 0.0D; py = 0.0D; pz = 0.0D
-  for( i = 0 : nbody-1 ){
-    bi = b[i];
-    bim = bi.mass;
-    px = px + (bi.vx * bim);
-    py = py + (bi.vy * bim);
-    pz = pz + (bi.vz * bim);
-  }
-  b[0].vx = -px / SOLAR_MASS
-  b[0].vy = -py / SOLAR_MASS
-  b[0].vz = -pz / SOLAR_MASS
+	px = 0.0D; py = 0.0D; pz = 0.0D;
+	for( i = 0 : nbody-1 ){
+		bi = b[i];
+		bim = bi.mass;
+		px = px + (bi.vx * bim);
+		py = py + (bi.vy * bim);
+		pz = pz + (bi.vz * bim);
+	}
+	b[0].vx = -px / SOLAR_MASS;
+	b[0].vy = -py / SOLAR_MASS;
+	b[0].vz = -pz / SOLAR_MASS;
 }
 
 global bodies = { Sun, Jupiter, Saturn, Uranus, Neptune };

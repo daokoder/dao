@@ -416,7 +416,7 @@ static int DaoNetwork_SendArray( int sockfd, DaoArray *data )
 	packet.dataI1 = htonl( M );
 	packet.dataI2 = htonl( 0 );
 	if( numtype == DAO_INTEGER ){
-		dint *vec = DaoArray_ToInteger( data );
+		daoint *vec = DaoArray_ToInteger( data );
 		for(j=0; j<M; j++){
 			DaoPrintNumber( buf2, vec[j] );
 			len = strlen( buf2 ) + 1;
@@ -591,7 +591,7 @@ int DaoNetwork_ReceiveExt( DaoProcess *proc, int sockfd, DaoList *data )
 					DaoList_PushBack( data, item );
 				}
 				if( numtype == DAO_INTEGER ){
-					dint *iv = DaoArray_ToInteger( arr );
+					daoint *iv = DaoArray_ToInteger( arr );
 					for(i=j; i<M; i++){
 						iv[i] = DaoParseNumber( buf2 );
 						while( *buf2 ) buf2 ++;

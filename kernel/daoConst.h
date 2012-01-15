@@ -33,7 +33,8 @@
 
 enum DaoRTTI
 {
-	DAO_INITYPE = END_CORE_TYPES, /* a : @t */
+	DAO_ANY = END_CORE_TYPES,
+	DAO_INITYPE , /* a : @t */
 	DAO_VALTYPE ,
 	DAO_VARIANT , /* variant or disjoint union */
 	DAO_MACRO ,
@@ -44,9 +45,6 @@ enum DaoRTTI
 	DAO_CODEBLOCK ,
 
 	DAO_PAIR ,
-	DAO_LIST_EMPTY ,
-	DAO_ARRAY_EMPTY ,
-	DAO_MAP_EMPTY ,
 	DAO_LIST_ANY ,
 	DAO_ARRAY_ANY , /* map<any,any> */
 	DAO_MAP_ANY ,
@@ -85,7 +83,8 @@ enum DaoMatchType
 	DAO_MT_ANYUDF ,
 	DAO_MT_INIT ,
 	DAO_MT_UDF ,
-	DAO_MT_ANY ,
+	DAO_MT_ANYX , /* match any to X */
+	DAO_MT_ANY , /* match to type "any" */
 	DAO_MT_SUB ,
 	DAO_MT_SIM , /* int, float, double */
 	DAO_MT_EQ
@@ -120,11 +119,10 @@ enum DaoDataTrait
 };
 enum DaoTypeAttribs
 {
-	DAO_TYPE_EMPTY = (1<<0),
-	DAO_TYPE_SELF = (1<<1),
-	DAO_TYPE_COROUTINE = (1<<2),
-	DAO_TYPE_NOTDEF = (1<<3),
-	DAO_TYPE_INTER = (1<<4)
+	DAO_TYPE_SELF = (1<<0),
+	DAO_TYPE_COROUTINE = (1<<1),
+	DAO_TYPE_NOTDEF = (1<<2),
+	DAO_TYPE_INTER = (1<<3)
 };
 enum DaoCaseMode
 {

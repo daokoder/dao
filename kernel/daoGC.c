@@ -46,7 +46,7 @@ static void DaoCallbackData_Delete( DaoCallbackData *self )
 static void DaoCallbackData_DeleteByCallback( DaoValue *callback )
 {
 	DaoCallbackData *cd = NULL;
-	int i;
+	daoint i;
 	if( dao_callback_data->size ==0 ) return;
 	GC_Lock();
 	for(i=0; i<dao_callback_data->size; i++){
@@ -62,7 +62,7 @@ static void DaoCallbackData_DeleteByCallback( DaoValue *callback )
 static void DaoCallbackData_DeleteByUserdata( DaoValue *userdata )
 {
 	DaoCallbackData *cd = NULL;
-	int i;
+	daoint i;
 	if( userdata == NULL ) return;
 	if( dao_callback_data->size ==0 ) return;
 	GC_Lock();
@@ -89,13 +89,13 @@ static void DaoCallbackData_DeleteByUserdata( DaoValue *userdata )
 void print_trace( const char *info )
 {
 	void  *array[100];
-	size_t i, size = backtrace (array, 100);
+	daoint i, size = backtrace (array, 100);
 	char **strings = backtrace_symbols (array, size);
 	FILE *debug = fopen( "debug.txt", "w+" );
 	fprintf (debug, "===========================================\n");
-	fprintf (debug, "Obtained %zd stack frames.\n", size);
+	fprintf (debug, "Obtained %ti stack frames.\n", size);
 	printf ("=====================%s======================\n", info);
-	printf ("Obtained %zd stack frames.\n", size);
+	printf ("Obtained %ti stack frames.\n", size);
 	for (i = 0; i < size; i++){
 		printf ("%s\n", strings[i]);
 		fprintf (debug,"%s\n", strings[i]);
@@ -149,9 +149,9 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 #endif
 
 static int DaoGC_DecRC2( DaoValue *p );
-static void DaoGC_CycRefCountDecrements( DaoValue **values, size_t size );
-static void DaoGC_CycRefCountIncrements( DaoValue **values, size_t size );
-static void DaoGC_RefCountDecrements( DaoValue **values, size_t size );
+static void DaoGC_CycRefCountDecrements( DaoValue **values, daoint size );
+static void DaoGC_CycRefCountIncrements( DaoValue **values, daoint size );
+static void DaoGC_RefCountDecrements( DaoValue **values, daoint size );
 static void cycRefCountDecrement( DaoValue *value );
 static void cycRefCountIncrement( DaoValue *value );
 static void cycRefCountDecrements( DArray *values );
@@ -191,6 +191,7 @@ static void DaoIGC_CycRefCountIncScan();
 static int  DaoIGC_AliveObjectScan();
 static void DaoIGC_RefCountDecScan();
 static void DaoIGC_Finish();
+static void DaoIGC_TryInvoke();
 
 static void DaoGC_Init();
 
@@ -214,8 +215,8 @@ struct DaoGarbageCollector
 	DArray   *cdataArrays;
 	DArray   *cdataMaps;
 
-	int       gcMin, gcMax;
-	int       ii, jj, kk;
+	daoint    gcMin, gcMax;
+	daoint    ii, jj, kk;
 	int       finalizing; /* set at any time; */
 	int       delayMask; /* set at cycle boundary; */
 	short     busy;
@@ -340,7 +341,7 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 
 static int DaoGC_DecRC2( DaoValue *p )
 {
-	int i;
+	daoint i, n;
 	if( p->xGC.refCount == 1 ){
 #ifdef DAO_GC_PROF
 		if( p->type < DAO_ENUM ) ObjectProfile[p->type] --;
@@ -359,7 +360,8 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_TUPLE :
 			if( p->xTuple.unitype && p->xTuple.unitype->simtype ){
 				DaoTuple *tuple = & p->xTuple;
-				for(i=0; i<tuple->size; i++) if( tuple->items[i] ) DaoGC_DecRC2( tuple->items[i] );
+				for(i=0,n=tuple->size; i<n; i++)
+					if( tuple->items[i] ) DaoGC_DecRC2( tuple->items[i] );
 				tuple->size = 0;
 			}
 			break;
@@ -367,7 +369,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 			if( p->xList.unitype && p->xList.unitype->simtype ){
 				DArray *array = & p->xList.items;
 				DaoValue **items = array->items.pValue;
-				for(i=0; i<array->size; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
+				for(i=0,n=array->size; i<n; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
 				array->size = 0;
 				DArray_Clear( array );
 			}
@@ -410,27 +412,40 @@ void DaoGC_Finish()
 #ifdef DAO_WITH_THREAD
 void DaoGC_IncRC( DaoValue *value )
 {
+	if( value == NULL ) return;
+	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
 	if( gcWorker.concurrent ){
-		DaoCGC_IncRC( value );
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		value->xGC.refCount ++;
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
 		return;
 	}
-	DaoIGC_IncRC( value );
+	value->xGC.refCount ++;
 }
 void DaoGC_DecRC( DaoValue *value )
 {
+	if( value == NULL ) return;
 	if( gcWorker.concurrent ){
-		DaoCGC_DecRC( value );
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		DaoGC_DecRC2( value );
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
 		return;
 	}
-	DaoIGC_DecRC( value );
+	DaoGC_DecRC2( value );
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
+	if( up == down ) return;
+	if( up && up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	if( gcWorker.concurrent ){
-		DaoCGC_ShiftRC( up, down );
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		if( up ) up->xGC.refCount ++;
+		if( down ) DaoGC_DecRC2( down );
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
 		return;
 	}
-	DaoIGC_ShiftRC( up, down );
+	if( up ) up->xGC.refCount ++;
+	if( down ) DaoGC_DecRC2( down );
 }
 void DaoGC_IncRCs( DArray *values )
 {
@@ -448,19 +463,30 @@ void DaoGC_DecRCs( DArray *values )
 	}
 	DaoIGC_DecRCs( values );
 }
+void DaoGC_TryInvoke()
+{
+	if( gcWorker.concurrent ){
+		DaoCGC_TryInvoke();
+		return;
+	}
+	DaoIGC_TryInvoke();
+}
 #else
 
 void DaoGC_IncRC( DaoValue *value )
 {
-	DaoIGC_IncRC( value );
+	value->xGC.refCount ++;
+	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
 }
 void DaoGC_DecRC( DaoValue *value )
 {
-	DaoIGC_DecRC( value );
+	DaoGC_DecRC2( value );
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
-	DaoIGC_ShiftRC( up, down );
+	if( up && up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
+	if( up ) up->xGC.refCount ++;
+	if( down ) DaoGC_DecRC2( down );
 }
 void DaoGC_IncRCs( DArray *values )
 {
@@ -470,6 +496,9 @@ void DaoGC_DecRCs( DArray *values )
 {
 	DaoIGC_DecRCs( values );
 }
+void DaoGC_TryInvoke()
+{
+}
 #endif
 
 /* The implementation makes sure the GC fields are modified only by the GC thread! */
@@ -477,7 +506,7 @@ void DaoGC_PrepareCandidates()
 {
 	DaoValue *value;
 	DArray *workList = gcWorker.workList;
-	size_t i, k = 0;
+	daoint i, k = 0;
 	/* Remove possible redundant items: */
 	for(i=0; i<workList->size; i++){
 		value = workList->items.pValue[i];
@@ -494,7 +523,7 @@ void DaoGC_PrepareCandidates()
 static void DaoIGC_MarkIdleItems()
 {
 	DArray *idleList = gcWorker.idleList;
-	size_t i, n = idleList->size;
+	daoint i, n = idleList->size;
 	for(i=gcWorker.kk; i<n; i++) idleList->items.pValue[i]->xGC.idle = 1;
 	idleList->size = n;
 	gcWorker.kk = n;
@@ -543,7 +572,7 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 	DArray *cvalues = gcWorker.cdataValues;
 	DArray *carrays = gcWorker.cdataArrays;
 	DArray *cmaps = gcWorker.cdataMaps;
-	size_t i, n;
+	daoint i, n;
 
 	if( cdata->type == DAO_CTYPE || cdata->subtype == DAO_CDATA_PTR ) return;
 	if( cdata->ctype == NULL || cdata->ctype->typer ) return;
@@ -573,12 +602,8 @@ void DaoCGC_DecRC( DaoValue *p )
 	if( ! p ) return;
 
 	DMutex_Lock( & gcWorker.mutex_idle_list );
-
 	DaoGC_DecRC2( p );
-
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
-
-	if( gcWorker.idleList->size > gcWorker.gcMin ) DaoCGC_TryInvoke();
 }
 void DaoCGC_IncRC( DaoValue *p )
 {
@@ -602,13 +627,11 @@ void DaoCGC_ShiftRC( DaoValue *up, DaoValue *down )
 	if( down ) DaoGC_DecRC2( down );
 
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
-
-	if( down && gcWorker.idleList->size > gcWorker.gcMin ) DaoCGC_TryInvoke();
 }
 
 void DaoCGC_IncRCs( DArray *list )
 {
-	size_t i;
+	daoint i;
 	DaoValue **values;
 
 	if( list->size == 0 ) return;
@@ -624,14 +647,13 @@ void DaoCGC_IncRCs( DArray *list )
 }
 void DaoCGC_DecRCs( DArray *list )
 {
-	size_t i;
+	daoint i;
 	DaoValue **values;
 	if( list==NULL || list->size == 0 ) return;
 	values = list->items.pValue;
 	DMutex_Lock( & gcWorker.mutex_idle_list );
 	for( i=0; i<list->size; i++) if( values[i] ) DaoGC_DecRC2( values[i] );
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
-	if( gcWorker.idleList->size > gcWorker.gcMin ) DaoCGC_TryInvoke();
 }
 void DaoCGC_Finish()
 {
@@ -651,6 +673,7 @@ void DaoCGC_Finish()
 void DaoCGC_TryInvoke()
 {
 	if( gcWorker.busy ) return;
+	if( gcWorker.idleList->size < gcWorker.gcMin ) return;
 
 	DMutex_Lock( & gcWorker.mutex_start_gc );
 	if( gcWorker.idleList->size >= gcWorker.gcMin ) DCondVar_Signal( & gcWorker.condv_start_gc );
@@ -665,7 +688,7 @@ void DaoCGC_TryInvoke()
 	DMutex_Unlock( & gcWorker.mutex_block_mutator );
 }
 
-static size_t DaoCGC_MarkIdleItems()
+static daoint DaoCGC_MarkIdleItems()
 {
 	DMutex_Lock( & gcWorker.mutex_idle_list );
 	DaoIGC_MarkIdleItems();
@@ -685,7 +708,7 @@ static void DaoValue_Delete( DaoValue *self )
 void DaoCGC_Recycle( void *p )
 {
 	while(1){
-		size_t count = gcWorker.idleList->size + gcWorker.workList->size;
+		daoint count = gcWorker.idleList->size + gcWorker.workList->size;
 		if( gcWorker.finalizing && count ==0 ) break;
 		gcWorker.busy = 0;
 		if( ! gcWorker.finalizing ){
@@ -720,7 +743,7 @@ void DaoCGC_CycRefCountDecScan()
 	DNode *node;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
-	size_t i, k;
+	daoint i, k;
 
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
@@ -734,7 +757,7 @@ void DaoCGC_CycRefCountDecScan()
 }
 void DaoCGC_CycRefCountIncScan()
 {
-	size_t i, j;
+	daoint i, j;
 	DArray *workList = gcWorker.workList;
 	DArray *auxList = gcWorker.auxList;
 
@@ -754,7 +777,7 @@ void DaoCGC_CycRefCountIncScan()
 }
 int DaoCGC_AliveObjectScan()
 {
-	size_t i, k;
+	daoint i, k;
 	uchar_t delayMask = gcWorker.delayMask;
 	DArray *auxList = gcWorker.auxList;
 	DNode *node;
@@ -775,7 +798,7 @@ void DaoCGC_RefCountDecScan()
 	DNode *node;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
-	size_t i, k;
+	daoint i, k;
 
 	for( i=0; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
@@ -796,7 +819,7 @@ static void DaoCGC_FreeGarbage()
 	DArray *idleList = gcWorker.idleList;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
-	size_t i, n = 0, old = DaoCGC_MarkIdleItems();
+	daoint i, n = 0, old = DaoCGC_MarkIdleItems();
 
 	for(i=0; i<gcWorker.auxList2->size; i++) gcWorker.auxList2->items.pValue[i]->xGC.alive = 0;
 	gcWorker.auxList2->size = 0;
@@ -865,10 +888,10 @@ void DaoIGC_IncRC( DaoValue *p )
 static int counts = 100;
 void DaoIGC_DecRC( DaoValue *p )
 {
-	if( ! p ) return;
-
-	if( DaoGC_DecRC2( p ) ) return;
-
+	if( p ) DaoGC_DecRC2( p );
+}
+static void DaoIGC_TryInvoke()
+{
 	if( gcWorker.busy ) return;
 	counts --;
 	if( gcWorker.idleList->size < gcWorker.gcMax ){
@@ -886,7 +909,7 @@ void DaoIGC_DecRC( DaoValue *p )
 }
 void DaoIGC_IncRCs( DArray *list )
 {
-	size_t i;
+	daoint i;
 	DaoValue **data;
 	if( list->size == 0 ) return;
 	data = list->items.pValue;
@@ -894,7 +917,7 @@ void DaoIGC_IncRCs( DArray *list )
 }
 void DaoIGC_DecRCs( DArray *list )
 {
-	size_t i;
+	daoint i;
 	DaoValue **data;
 	if( list == NULL || list->size == 0 ) return;
 	data = list->items.pValue;
@@ -960,8 +983,8 @@ void DaoIGC_CycRefCountDecScan()
 	DNode *node;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
-	size_t i = gcWorker.ii;
-	size_t j = 0, k;
+	daoint i = gcWorker.ii;
+	daoint j = 0, k;
 
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
@@ -981,8 +1004,8 @@ void DaoIGC_CycRefCountDecScan()
 }
 void DaoIGC_CycRefCountIncScan()
 {
-	size_t k = 0;
-	size_t i = gcWorker.ii;
+	daoint k = 0;
+	daoint i = gcWorker.ii;
 	DArray *workList = gcWorker.workList;
 	DArray *auxList = gcWorker.auxList;
 
@@ -1012,8 +1035,8 @@ void DaoIGC_CycRefCountIncScan()
 }
 int DaoIGC_AliveObjectScan()
 {
-	size_t i, k = 9;
-	size_t j = gcWorker.jj;
+	daoint i, k = 9;
+	daoint j = gcWorker.jj;
 	uchar_t delayMask = gcWorker.delayMask;
 	DArray *auxList = gcWorker.auxList;
 	DNode *node;
@@ -1039,8 +1062,8 @@ void DaoIGC_RefCountDecScan()
 	DNode *node;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
-	size_t i = gcWorker.ii;
-	size_t j = 0, k;
+	daoint i = gcWorker.ii;
+	daoint j = 0, k;
 
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
@@ -1066,9 +1089,9 @@ void DaoIGC_FreeGarbage()
 	DArray *idleList = gcWorker.idleList;
 	DArray *workList = gcWorker.workList;
 	uchar_t delayMask = gcWorker.delayMask;
-	size_t i = gcWorker.ii;
-	size_t j = 0;
-	size_t old;
+	daoint i = gcWorker.ii;
+	daoint j = 0;
+	daoint old;
 
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
@@ -1139,19 +1162,19 @@ void cycRefCountIncrement( DaoValue *value )
 		if( (value->xGC.idle|value->xGC.work) ==0 ) DArray_Append( gcWorker.auxList2, value );
 	}
 }
-void DaoGC_CycRefCountDecrements( DaoValue **values, size_t size )
+void DaoGC_CycRefCountDecrements( DaoValue **values, daoint size )
 {
-	size_t i;
+	daoint i;
 	for(i=0; i<size; i++) cycRefCountDecrement( values[i] );
 }
-void DaoGC_CycRefCountIncrements( DaoValue **values, size_t size )
+void DaoGC_CycRefCountIncrements( DaoValue **values, daoint size )
 {
-	size_t i;
+	daoint i;
 	for(i=0; i<size; i++) cycRefCountIncrement( values[i] );
 }
-void DaoGC_RefCountDecrements( DaoValue **values, size_t size )
+void DaoGC_RefCountDecrements( DaoValue **values, daoint size )
 {
-	size_t i;
+	daoint i;
 	for(i=0; i<size; i++){
 		DaoValue *p = values[i];
 		if( p == NULL ) continue;

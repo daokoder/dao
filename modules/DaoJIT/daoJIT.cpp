@@ -37,7 +37,7 @@ Type *int8_type = NULL;
 Type *int16_type = NULL;
 Type *int32_type = NULL;
 Type *int64_type = NULL;
-Type *dint_type = NULL; // 32 or 64 bits
+Type *daoint_type = NULL; // 32 or 64 bits
 Type *float_type = NULL;
 Type *double_type = NULL;
 Type *size_t_type = NULL;
@@ -207,9 +207,9 @@ int DaoJIT_GETI_SI( DaoValue *dA, DaoValue *dB, DaoValue *dC, int vmc )
 {
 	wchar_t *wcs = dA->xString.data->wcs;
 	char *mbs = dA->xString.data->mbs;
-	dint id = dB->xInteger.value;
-	if( id <0 ) id += (dint)dA->xString.data->size;
-	if( id <0 || id >= (dint)dA->xString.data->size ) return (DAO_ERROR_INDEX<<16)|vmc;
+	daoint id = dB->xInteger.value;
+	if( id <0 ) id += dA->xString.data->size;
+	if( id <0 || id >= dA->xString.data->size ) return (DAO_ERROR_INDEX<<16)|vmc;
 	dC->xInteger.value = mbs ? mbs[id] : wcs[id];
 	return 0;
 }
@@ -217,20 +217,20 @@ int DaoJIT_SETI_SII( DaoValue *dA, DaoValue *dB, DaoValue *dC, int vmc )
 {
 	wchar_t *wcs = dC->xString.data->wcs;
 	char *mbs = dC->xString.data->mbs;
-	dint id = dB->xInteger.value;
-	dint ch = dA->xInteger.value;
-	if( id <0 ) id += (dint)dC->xString.data->size;
-	if( id <0 || id >= (dint)dC->xString.data->size ) return (DAO_ERROR_INDEX<<16)|vmc;
+	daoint id = dB->xInteger.value;
+	daoint ch = dA->xInteger.value;
+	if( id <0 ) id += dC->xString.data->size;
+	if( id <0 || id >= dC->xString.data->size ) return (DAO_ERROR_INDEX<<16)|vmc;
 	if( mbs ) mbs[id] = ch; else wcs[id] = ch;
 	return 0;
 }
 int DaoJIT_SETI_LI( DaoValue *dA, DaoValue *dB, DaoValue *dC, int vmc )
 {
 	DaoList *list = (DaoList*) dC;
-	dint id = dB->xInteger.value;
+	daoint id = dB->xInteger.value;
 	if( dC->xNone.trait & DAO_DATA_CONST ) return (DAO_ERROR<<16)|vmc;
-	if( id <0 ) id += (dint)list->items.size;
-	if( id <0 || id >= (dint)list->items.size ) return (DAO_ERROR_INDEX<<16)|vmc;
+	if( id <0 ) id += list->items.size;
+	if( id <0 || id >= list->items.size ) return (DAO_ERROR_INDEX<<16)|vmc;
 	GC_ShiftRC( dA, list->items.items.pValue[id] );
 	list->items.items.pValue[id] = dA;
 	return 0;
@@ -239,7 +239,7 @@ int DaoJIT_SETI_TI( DaoValue *dA, DaoValue *dB, DaoValue *dC, int vmc )
 {
 	DaoTuple *tuple = (DaoTuple*) dC;
 	DaoType *type = NULL;
-	dint id = dB->xInteger.value;
+	daoint id = dB->xInteger.value;
 	if( id <0 || id >= tuple->size ) return (DAO_ERROR_INDEX<<16)|vmc;
 	type = tuple->unitype->nested->items.pType[id];
 	if( type->tid == DAO_PAR_NAMED ) type = & type->aux->xType;
@@ -310,12 +310,12 @@ void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit )
 	int64_type = Type::getInt64Ty( *llvm_context );
 	int8_vector2 = VectorType::get( int8_type, 2 );
 
-	dint_type = int32_type;
-	if( sizeof(void*) == 8 ) dint_type = Type::getInt64Ty( *llvm_context );
+	daoint_type = int32_type;
+	if( sizeof(void*) == 8 ) daoint_type = Type::getInt64Ty( *llvm_context );
 	float_type = Type::getFloatTy( *llvm_context );
 	double_type = Type::getDoubleTy( *llvm_context );
 
-	size_t_type = dint_type;
+	size_t_type = daoint_type;
 
 	void_type = Type::getVoidTy( *llvm_context );
 	void_type_p = PointerType::getUnqual( int8_type );
@@ -341,9 +341,9 @@ void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit )
 	dao_value_ptr_array_type = ArrayType::get( dao_value_type_p, 0 );
 	dao_value_ptr_array_type_p = PointerType::getUnqual( dao_value_ptr_array_type );
 
-	// type { i8, i8, i8, i8, i32, dint }
+	// type { i8, i8, i8, i8, i32, daoint }
 	field_types.erase( field_types.begin()+5, field_types.end() );
-	field_types.push_back( dint_type );
+	field_types.push_back( daoint_type );
 	dao_integer_type = StructType::get( *llvm_context, field_types );
 	dao_integer_type_p = PointerType::getUnqual( dao_integer_type );
 	//dao_integer_type_pp = PointerType::getUnqual( dao_integer_type_p );
@@ -852,7 +852,7 @@ Value* DaoJitHandle::CastDoubleValuePointer( Value *value )
 
 Value* DaoJitHandle::CastIntegerPointer( Value *value )
 {
-	PointerType *type = PointerType::getUnqual( dint_type );
+	PointerType *type = PointerType::getUnqual( daoint_type );
 	SetInsertPoint( activeBlock );
 	return CreatePointerCast( value, type );
 }
@@ -958,7 +958,7 @@ Value* DaoJitHandle::GetTupleItems( int reg )
 void DaoJitHandle::AddReturnCodeChecking( Value *retcode, int vmc )
 {
 	BasicBlock *block = activeBlock;
-	Constant *zero = ConstantInt::get( dint_type, 0 );
+	Constant *zero = ConstantInt::get( daoint_type, 0 );
 	Value *cmp = CreateICmpNE( retcode, zero );
 
 	BasicBlock *bltrue = NewBlock( vmc );
@@ -975,8 +975,8 @@ Value* DaoJitHandle::AddIndexChecking( Value *index, Value *size, int vmc )
 {
 	BasicBlock *block = activeBlock;
 	size = Dereference( size );
-	size = CreateIntCast( size, dint_type, false );
-	Constant *zero = ConstantInt::get( dint_type, 0 );
+	size = CreateIntCast( size, daoint_type, false );
+	Constant *zero = ConstantInt::get( daoint_type, 0 );
 	Value *index2 = CreateAdd( index, size );
 	Value *cmp = CreateICmpSLT( index, zero );
 	index = CreateSelect( cmp, index2, index );
@@ -995,7 +995,7 @@ Value* DaoJitHandle::AddIndexChecking( Value *index, Value *size, int vmc )
 }
 Value* DaoJitHandle::GetListItem( int reg, int index, int vmc )
 {
-	Constant *zero = ConstantInt::get( dint_type, 0 );
+	Constant *zero = ConstantInt::get( daoint_type, 0 );
 	Value *value = GetLocalValue( reg );
 	Value *id = GetIntegerOperand( index );
 	SetInsertPoint( activeBlock );
@@ -1174,7 +1174,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	Argument *arg_context = jitFunction->arg_begin();
 	Constant *zero32 = ConstantInt::get( int32_type, 0 );
 	Constant *zero8 = ConstantInt::get( int8_type, 0 );
-	Constant *zero = ConstantInt::get( dint_type, 0 );
+	Constant *zero = ConstantInt::get( daoint_type, 0 );
 	Constant *tid8_integer = ConstantInt::get( int8_type, DAO_INTEGER );
 	Constant *tid8_float = ConstantInt::get( int8_type, DAO_FLOAT );
 	Constant *tid8_double = ConstantInt::get( int8_type, DAO_DOUBLE );
@@ -1286,7 +1286,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dC = GetLocalValue( vmc->c );
 			dB = CreateCall( mathfunc, dB );
 			switch( types[ vmc->c ]->tid ){
-			case DAO_INTEGER : dB = CreateFPToSI( dB, dint_type ); break;
+			case DAO_INTEGER : dB = CreateFPToSI( dB, daoint_type ); break;
 			case DAO_FLOAT : dB = CreateFPCast( dB, float_type ); break;
 			case DAO_DOUBLE : break;
 			}
@@ -1412,7 +1412,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			}
 			switch( code ){
 			case DVM_MOVE_IF : 
-			case DVM_MOVE_ID : dA = CreateFPToSI( dA, dint_type ); break;
+			case DVM_MOVE_ID : dA = CreateFPToSI( dA, daoint_type ); break;
 			case DVM_MOVE_FI : dA = CreateSIToFP( dA, float_type ); break;
 			case DVM_MOVE_DI : dA = CreateSIToFP( dA, double_type ); break;
 			case DVM_MOVE_FD : dA = CreateFPCast( dA, float_type ); break;
@@ -1442,7 +1442,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dA = CreateSIToFP( dA, double_type );
 			dB = CreateSIToFP( dB, double_type );
 			tmp = CreateCall2( dao_pow_double, dA, dB );
-			tmp = CreateFPToSI( tmp, dint_type );
+			tmp = CreateFPToSI( tmp, daoint_type );
 			StoreTempResult( tmp, dC, vmc->c );
 			break;
 		case DVM_AND_III :
@@ -1475,7 +1475,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 					}
 				}
 			}
-			value = CreateIntCast( value, dint_type, false );
+			value = CreateIntCast( value, daoint_type, false );
 			StoreTempResult( value, dC, vmc->c );
 			break;
 		case DVM_BITAND_III :
@@ -1557,8 +1557,8 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_BITLFT_FFF :
 		case DVM_BITRIT_FFF :
 			GetFloatOperands( vmc, & dA, & dB, & dC );
-			dA = CreateFPToUI( dA, dint_type );
-			dB = CreateFPToUI( dB, dint_type );
+			dA = CreateFPToUI( dA, daoint_type );
+			dB = CreateFPToUI( dB, daoint_type );
 			switch( code ){
 			case DVM_BITAND_FFF : value = CreateAnd( dA, dB ); break;
 			case DVM_BITOR_FFF : value = CreateOr( dA, dB ); break;
@@ -1717,8 +1717,8 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_BITLFT_FNN :
 		case DVM_BITRIT_FNN :
 			GetFNNOperands( vmc, & dA, & dB, & dC );
-			if( types[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
-			if( types[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
+			if( types[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, daoint_type );
+			if( types[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, daoint_type );
 			switch( code ){
 			case DVM_BITLFT_FNN : value = CreateShl( dA, dB ); break;
 			case DVM_BITRIT_FNN : value = CreateLShr( dA, dB ); break;
@@ -1799,8 +1799,8 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		case DVM_BITLFT_DNN :
 		case DVM_BITRIT_DNN :
 			GetDNNOperands( vmc, & dA, & dB, & dC );
-			if( types[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, dint_type );
-			if( types[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, dint_type );
+			if( types[ vmc->a ]->tid != DAO_INTEGER ) dA = CreateFPToUI( dA, daoint_type );
+			if( types[ vmc->b ]->tid != DAO_INTEGER ) dB = CreateFPToUI( dB, daoint_type );
 			switch( code ){
 			case DVM_BITLFT_DNN : value = CreateShl( dA, dB ); break;
 			case DVM_BITRIT_DNN : value = CreateLShr( dA, dB ); break;
@@ -1911,7 +1911,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			case DVM_SETI_LIII :
 			case DVM_SETI_LIIF :
 			case DVM_SETI_LIID :
-				if( code != DVM_SETI_LIII ) dA = CreateFPToSI( dA, dint_type );
+				if( code != DVM_SETI_LIII ) dA = CreateFPToSI( dA, daoint_type );
 				dC = CastIntegerValuePointer( dC );
 				break;
 			case DVM_SETI_LFII :
@@ -2004,11 +2004,11 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 				break;
 			case DVM_SETF_TIF :
 				dC = CastIntegerValuePointer( dC );
-				dA = CreateFPToSI( dA, dint_type );
+				dA = CreateFPToSI( dA, daoint_type );
 				break;
 			case DVM_SETF_TID :
 				dC = CastIntegerValuePointer( dC );
-				dA = CreateFPToSI( dA, dint_type );
+				dA = CreateFPToSI( dA, daoint_type );
 				break;
 			case DVM_SETF_TFI :
 				dC = CastFloatValuePointer( dC );
@@ -2083,7 +2083,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dA = GetLocalNumberValue( vmc->a, dao_number_types[ code - DVM_SETF_KGII ] );
 			dC = GetClassStatic( vmc->c, vmc->b );
 			dC = GetValueNumberPointer( dC, dao_integer_type );
-			if( code != DVM_SETF_KGII ) dA = CreateFPToSI( dA, dint_type );
+			if( code != DVM_SETF_KGII ) dA = CreateFPToSI( dA, daoint_type );
 			CreateStore( dA, dC );
 			break;
 		case DVM_SETF_KGFI :
@@ -2112,7 +2112,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dA = GetLocalNumberValue( vmc->a, dao_number_types[ code - DVM_SETF_OGII ] );
 			dC = GetObjectStatic( vmc->c, vmc->b );
 			dC = GetValueNumberPointer( dC, dao_integer_type );
-			if( code != DVM_SETF_KGII ) dA = CreateFPToSI( dA, dint_type );
+			if( code != DVM_SETF_KGII ) dA = CreateFPToSI( dA, daoint_type );
 			CreateStore( dA, dC );
 			break;
 		case DVM_SETF_OGFI :
@@ -2141,7 +2141,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			dA = GetLocalNumberValue( vmc->a, dao_number_types[ code - DVM_SETF_OVII ] );
 			dC = GetObjectVariable( vmc->c, vmc->b );
 			dC = GetValueNumberPointer( dC, dao_integer_type );
-			if( code != DVM_SETF_KGII ) dA = CreateFPToSI( dA, dint_type );
+			if( code != DVM_SETF_KGII ) dA = CreateFPToSI( dA, daoint_type );
 			CreateStore( dA, dC );
 			break;
 		case DVM_SETF_OVFI :
@@ -2252,9 +2252,9 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			// use DVM_CASE to add switch labels
 			for(k=1; k<=vmc->c; k++){
 				DaoVmCodeX *vmc2 = vmcs[ iter->first + k ];
-				dint ic = routConsts[vmc2->a]->xInteger.value;
+				daoint ic = routConsts[vmc2->a]->xInteger.value;
 				if( m == DAO_ENUM ) ic = routConsts[vmc2->a]->xEnum.value;
-				caseint = cast<ConstantInt>( ConstantInt::get( dint_type, ic ) );
+				caseint = cast<ConstantInt>( ConstantInt::get( daoint_type, ic ) );
 				inswitch->addCase( caseint, labels[vmc2->b] );
 			}
 			break;
