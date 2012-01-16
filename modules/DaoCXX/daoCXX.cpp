@@ -6,7 +6,7 @@
 #include <llvm/Support/Path.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/TargetSelect.h>
-#include "llvm/LLVMContext.h"
+#include <llvm/LLVMContext.h>
 #include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/ExecutionEngine/Interpreter.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -72,12 +72,12 @@ DaoRegex *header_suffix_regex = NULL;
 static void dao_cxx_parse( DString *VT, DString *source, DArray *markers )
 {
 	DString *marker = NULL;
-	size_t start = 0, rb = DString_FindChar( VT, ']', 0 );
+	daoint start = 0, rb = DString_FindChar( VT, ']', 0 );
 	DString_SetDataMBS( source, VT->mbs + rb + 1, VT->size - 2*(rb + 1) );
 	while( start < source->size && isspace( source->mbs[start] ) ) start += 1;
 	while( start < source->size && source->mbs[start] == '@' ){
-		size_t end = DString_FindChar( source, '\n', start );
-		if( end == (size_t)-1 ) break;
+		daoint end = DString_FindChar( source, '\n', start );
+		if( end == -1 ) break;
 		if( marker == NULL ) marker = DString_New(1);
 		DString_SetDataMBS( marker, source->mbs + start, end - start );
 		DArray_Append( markers, marker );
@@ -87,9 +87,9 @@ static void dao_cxx_parse( DString *VT, DString *source, DArray *markers )
 	if( marker ) DString_Delete( marker );
 	DString_Erase( source, 0, start );
 }
-static size_t dao_string_find_paired( DString *mbs, char lb, char rb )
+static daoint dao_string_find_paired( DString *mbs, char lb, char rb )
 {
-	size_t i, count = 0, N = mbs->size;
+	daoint i, count = 0, N = mbs->size;
 	for(i=0; i<N; i++){
 		if( mbs->mbs[i] == lb ){
 			count -= 1;
@@ -98,15 +98,15 @@ static size_t dao_string_find_paired( DString *mbs, char lb, char rb )
 			if( count == 0 ) return i;
 		}
 	}
-	return (size_t)-1;
+	return -1;
 }
 static int dao_markers_get( DArray *markers, const char *name, DString *one, DArray *all )
 {
-	size_t i, m = 0, npos = (size_t)-1;
+	daoint i, m = 0, npos = -1;
 	for(i=0; i<markers->size; i++){
 		DString *marker = markers->items.pString[i];
-		size_t lb = DString_FindChar( marker, '(', 0 );
-		size_t rb = dao_string_find_paired( marker, '(', ')' );
+		daoint lb = DString_FindChar( marker, '(', 0 );
+		daoint rb = dao_string_find_paired( marker, '(', ')' );
 		if( lb == npos || rb == npos ) continue;
 		DString_SetDataMBS( one, marker->mbs + 1, lb - 1 );
 		DString_Trim( one );
@@ -335,6 +335,11 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 				return 1;
 			}
 			break;
+		case DAO_VALTYPE :
+			if( type->aux->type != DAO_NONE ) return 1;
+			DString_InsertMBS( cproto, "void ", 0, 0, 0 );
+			DString_Append( wrapper, cc );
+			break;
 		default : return 1;
 		}
 	}
@@ -393,7 +398,7 @@ static int dao_cxx_block( DaoNamespace *NS, DString *VT, DArray *markers, DStrin
 
 	DString_SetMBS( out, name );
 	DString_AppendMBS( out, "()" );
-	DaoNamespace_WrapFunction( NS, (DaoFuncPtr)fp, out->mbs );
+	DaoNamespace_WrapFunction( NS, (DaoCFunction)fp, out->mbs );
 	DString_AppendChar( out, ';' );
 	return 0;
 }
@@ -409,7 +414,7 @@ static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DSt
 	sprintf( proto2, "anonymous_%p_%p()", NS, VT );
 	if( dao_markers_get( markers, "define", mbs, NULL ) ) proto = mbs->mbs;
 
-	DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, proto );
+	DaoRoutine *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, proto );
 	if( func == NULL ){
 		error_function_notwrapped( out, proto );
 		DString_Delete( mbs );
@@ -449,7 +454,7 @@ static int dao_cxx_function( DaoNamespace *NS, DString *VT, DArray *markers, DSt
 	void *fp = engine->getPointerToFunction( Func );
 	if( fp == NULL ) return error_function_notfound( out, proto2 );
 
-	func->pFunc = (DaoFuncPtr)fp;
+	func->pFunc = (DaoCFunction)fp;
 	return 0;
 }
 static int dao_cxx_header( DaoNamespace *NS, DString *VT, DArray *markers, DString *source, DString *out )
@@ -477,7 +482,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	InputKind kind = IK_CXX;
 	char name[200];
 	char *file = name;
-	size_t i, failed = 0;
+	daoint i, failed = 0;
 
 	sprintf( name, "anonymous_%p_%p.cxx", NS, VT );
 	dao_markers_get( markers, "wrap", mbs, wraps );
@@ -493,7 +498,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	DString_AppendMBS( source, "\nextern \"C\"{\n" );
 	for(i=0; i<wraps->size; i++){
 		DString *daoproto = wraps->items.pString[i];
-		DaoFunction *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, daoproto->mbs );
+		DaoRoutine *func = DaoNamespace_WrapFunction( NS, DaoCXX_Default, daoproto->mbs );
 		if( func == NULL || dao_make_wrapper( func->routName, func->routType, cproto, source, call ) ){
 			DString_AppendMBS( out, daoproto->mbs );
 			DString_AppendMBS( out, "\n" );
@@ -522,7 +527,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 	if( Module == NULL ) return error_compile_failed( out );
 
 	for(i=0; i<funcs->size; i++){
-		DaoFunction *func = (DaoFunction*) funcs->items.pVoid[i];
+		DaoRoutine *func = funcs->items.pRoutine[i];
 		sprintf( name, "dao_%s", func->routName->mbs ); //XXX buffer size
 
 		Function *Func = Module->getFunction( name );
@@ -530,7 +535,7 @@ static int dao_cxx_source( DaoNamespace *NS, DString *VT, DArray *markers, DStri
 
 		void *fp = engine->getPointerToFunction( Func );
 		if( fp == NULL ) return error_function_notfound( out, name );
-		func->pFunc = (DaoFuncPtr)fp;
+		func->pFunc = (DaoCFunction)fp;
 	}
 	return 0;
 }
@@ -556,7 +561,7 @@ static int dao_cxx_inliner( DaoNamespace *NS, DString *mode, DString *verbatim, 
 	}
 	if( markers->size ){
 		DString_AppendMBS( out, "Invalid specifiers for the mode: \n" );
-		for(size_t i=0; i<markers->size; i++){
+		for(daoint i=0; i<markers->size; i++){
 			DString *marker = markers->items.pString[i];
 			DString_Append( out, marker );
 			DString_AppendChar( out, '\n' );
@@ -571,7 +576,7 @@ static int dao_cxx_loader( DaoNamespace *NS, DString *file, DString *emsg )
 {
 	DArray *markers;
 	DString *source, *marker = NULL;
-	size_t start = 0;
+	daoint start = 0;
 	int retc = 0;
 
 	source = DString_New(1);
@@ -582,8 +587,8 @@ static int dao_cxx_loader( DaoNamespace *NS, DString *file, DString *emsg )
 	marker = DString_New(1);
 	markers = DArray_New(D_STRING);
 	while( start < source->size && source->mbs[start] == '@' ){
-		size_t end = DString_FindChar( source, '\n', start );
-		if( end == (size_t)-1 ) break;
+		daoint end = DString_FindChar( source, '\n', start );
+		if( end == -1 ) break;
 		DString_SetDataMBS( marker, source->mbs + start, end - start );
 		DArray_Append( markers, marker );
 		start = end + 1;
@@ -593,7 +598,7 @@ static int dao_cxx_loader( DaoNamespace *NS, DString *file, DString *emsg )
 	retc = dao_cxx_source( NS, file, markers, source, emsg );
 	if( markers->size ){
 		DString_AppendMBS( emsg, "Invalid specifiers in the module file: \n" );
-		for(size_t i=0; i<markers->size; i++){
+		for(daoint i=0; i<markers->size; i++){
 			DString *marker = markers->items.pString[i];
 			DString_Append( emsg, marker );
 			DString_AppendChar( emsg, '\n' );
@@ -609,7 +614,7 @@ static int dao_cxx_loader( DaoNamespace *NS, DString *file, DString *emsg )
 int DaoOnLoad( DaoVmSpace *vms, DaoNamespace *ns )
 {
 	static int argc = 2;
-	static char *argv[2] = { "dao", "dummy-main.cpp" };
+	const char *argv[2] = { "dao", "dummy-main.cpp" };
 	DString *mbs = DString_New(1);
 
 	DString_SetMBS( mbs, source_caption_pattern );

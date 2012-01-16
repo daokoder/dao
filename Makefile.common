@@ -36,6 +36,11 @@ else
   DAO_CFLAGS += -O2
 endif
 
+ifeq ($(profile),yes)
+  DAO_CFLAGS += -pg
+  DAO_LFLAGS += -pg
+endif
+
 UNAME = $(shell uname)
 
 ifeq ($(UNAME), Linux)

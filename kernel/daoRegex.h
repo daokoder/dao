@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -28,10 +28,10 @@ struct DaoRgxItem
 	short  from;
 	short  min;
 	short  max;
-	size_t count;
-	size_t pos;
-	size_t offset;
-	size_t posave;
+	daoint count;
+	daoint pos;
+	daoint offset;
+	daoint posave;
 	short  fromsave;
 
 	short  length; /* length of the pattern */
@@ -41,8 +41,8 @@ struct DaoRgxItem
 struct DaoRegex
 {
 	void   *source;
-	size_t  start;
-	size_t  end;
+	daoint  start;
+	daoint  end;
 	DaoRgxItem *items;
 	/* total number of items; or free space in the buffer as input */
 	short  count;
@@ -64,12 +64,12 @@ DAO_DLL void DaoRegex_Copy( DaoRegex *self, DaoRegex *src );
 /* compute the number of bytes needed for storing the compiled pattern */
 DAO_DLL int DaoRegex_CheckSize( DString *src );
 
-DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, size_t *start, size_t *end );
-DAO_DLL int DaoRegex_SubMatch( DaoRegex *self, int gid, size_t *start, size_t *end );
+DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, daoint *start, daoint *end );
+DAO_DLL int DaoRegex_SubMatch( DaoRegex *self, int gid, daoint *start, daoint *end );
 
 DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
 DAO_DLL int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
-		int index, size_t *start2, size_t *end2 );
+		int index, daoint *start2, daoint *end2 );
 
 DAO_DLL int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
 		int index, int count, DArray *packs );

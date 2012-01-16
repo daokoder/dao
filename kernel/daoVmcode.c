@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -14,14 +14,14 @@
 #include"daoVmcode.h"
 
 /* Used only by parser for compiling expression lists: */
-const unsigned char permutableCodes[] = 
+unsigned char permutableCodes[] = 
 {
 	1 /*NOP*/, 1 /*DATA*/, 
 	1 /*GETCL*/, 1 /*GETCK*/, 1 /*GETCG*/, 
 	1 /*GETVH*/, 1 /*GETVL*/, 1 /*GETVO*/, 1 /*GETVK*/, 1 /*GETVG*/, 
-	0 /*GETI*/ , 0 /*GETMI*/, 0 /*GETF*/ , 0 /*GETMF*/,
+	0 /*GETI*/ , 0 /*GETDI*/, 0 /*GETMI*/, 0 /*GETF*/ , 0 /*GETMF*/,
 	1 /*SETVH*/, 1 /*SETVL*/, 1 /*SETVO*/, 1 /*SETVK*/, 1 /*SETVG*/, 
-	0 /*SETI*/, 0 /*SETMI*/, 0 /*SETF*/, 0 /*SETMF*/,
+	0 /*SETI*/, 0 /*SETDI*/, 0 /*SETMI*/, 0 /*SETF*/, 0 /*SETMF*/,
 	1 /*LOAD*/, 0 /*CAST*/, 0 /*MOVE*/,
 	0 /*NOT*/, 0 /*UNMS*/, 0 /*BITREV*/,
 	0 /*ADD*/, 0 /*SUB*/, 0 /*MUL*/, 0 /*DIV*/, 0 /*MOD*/, 0 /*POW*/,
@@ -39,9 +39,9 @@ static const char *const vmOperNames[] =
 	"NOP", "DATA", 
 	"GETCL", "GETCK", "GETCG", 
 	"GETVH", "GETVL", "GETVO", "GETVK", "GETVG", 
-	"GETI", "GETMI", "GETF", "GETMF",
+	"GETI", "GETDI", "GETMI", "GETF", "GETMF",
 	"SETVH", "SETVL", "SETVO", "SETVK", "SETVG", 
-	"SETI", "SETMI", "SETF", "SETMF",
+	"SETI", "SETDI", "SETMI", "SETF", "SETMF",
 	"LOAD", "CAST", "MOVE",
 	"NOT", "UNMS", "BITREV",
 	"ADD", "SUB", "MUL", "DIV", "MOD", "POW",
@@ -99,6 +99,7 @@ static const char *const vmOperNames[] =
 	"ADD_DNN", "SUB_DNN", "MUL_DNN", "DIV_DNN", "MOD_DNN", "POW_DNN",
 	"AND_DNN", "OR_DNN", "LT_DNN", "LE_DNN", "EQ_DNN", "NE_DNN", 
 	"BITLFT_DNN", "BITRIT_DNN", 
+	"ADD_CC", "SUB_CC", "MUL_CC", "DIV_CC", 
 	"ADD_SS", "LT_SS", "LE_SS", "EQ_SS", "NE_SS",
 	"GETI_LI", "SETI_LI",
 	"GETI_SI", "SETI_SII",
@@ -116,9 +117,8 @@ static const char *const vmOperNames[] =
 	"SETF_TII", "SETF_TIF", "SETF_TID",
 	"SETF_TFI", "SETF_TFF", "SETF_TFD",
 	"SETF_TDI", "SETF_TDF", "SETF_TDD", "SETF_TSS",
-	"ADD_CC", "SUB_CC", "MUL_CC", "DIV_CC", 
 	"GETI_ACI", "SETI_ACI",
-	"GETI_AM", "SETI_AM",
+	"GETMI_A", "SETMI_A",
 	"GETF_KC", "GETF_KG", "GETF_OC", "GETF_OG", "GETF_OV", 
 	"SETF_KG", "SETF_OG", "SETF_OV",
 	"GETF_KCI", "GETF_KCF", "GETF_KCD",
@@ -136,6 +136,7 @@ static const char *const vmOperNames[] =
 	"SETF_OVFI", "SETF_OVFF", "SETF_OVFD",
 	"SETF_OVDI", "SETF_OVDF", "SETF_OVDD",
 	"TEST_I", "TEST_F", "TEST_D",
+	"CHECK_ST" ,
 	"GOTO",
 	"???",
 

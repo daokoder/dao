@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -30,13 +30,14 @@ struct DaoNone
 	DAO_DATA_CORE;
 };
 DAO_DLL extern DaoValue *dao_none_value;
+DAO_DLL extern DaoValue *dao_any_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger
 {
 	DAO_DATA_CORE;
 
-	dint value;
+	daoint value;
 };
 struct DaoFloat
 {
@@ -85,11 +86,11 @@ struct DaoEnum
 {
 	DAO_DATA_COMMON;
 
-	DaoType  *etype;  /* type information structure */
-	dint      value; /* value associated with the symbol(s) or flag(s) */
+	int       value; /* value associated with the symbol(s) or flag(s) */
+	DaoType  *etype; /* type information structure */
 };
 
-DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, dint value );
+DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
 DAO_DLL DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type );
 DAO_DLL void DaoEnum_Delete( DaoEnum *self );
 DAO_DLL void DaoEnum_MakeName( DaoEnum *self, DString *name );
@@ -113,8 +114,8 @@ DAO_DLL DaoList* DaoList_New();
 DAO_DLL void DaoList_Delete( DaoList *self );
 DAO_DLL void DaoList_Clear( DaoList *self );
 
-DAO_DLL void DaoList_Erase( DaoList *self, size_t id );
-DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, size_t id );
+DAO_DLL void DaoList_Erase( DaoList *self, daoint id );
+DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, daoint id );
 DAO_DLL int DaoList_Append( DaoList *self, DaoValue *it );
 
 DAO_DLL DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );
@@ -137,6 +138,10 @@ DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
 #define DAO_TUPLE_ITEMS 2
+/* 2 is used instead of 1, for two reasons:
+ * A. most often used tuples have at least two items;
+ * B. some builtin tuples have at least two items, and are accessed by
+ *    constant sub index, compilers such Clang may complain if 1 is used. */
 
 struct DaoTuple
 {
@@ -145,11 +150,8 @@ struct DaoTuple
 	int         size; /* packed with the previous field in 64-bits system; */
 	DaoType    *unitype;
 	DaoValue   *items[DAO_TUPLE_ITEMS]; /* the actual number of items is in ::size; */
-	/* 2 is used instead of 1, for two reasons:
-	 * A. most often used tuples have at least two items;
-	 * B. some builtin tuples have at least two items, and are accessed by
-	 *    constant sub index, compilers such Clang may complain if 1 is used. */
 };
+
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int init );
 DAO_DLL void DaoTuple_Delete( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
@@ -178,44 +180,53 @@ enum DaoCdataType
 	DAO_CDATA_DAO   /* customized Dao data */
 };
 
-#define DAO_CDATA_COMMON DAO_DATA_COMMON; \
-	DaoType *ctype; DaoTypeBase *typer; DaoObject *object; void *data
+#define DAO_CDATA_COMMON DAO_DATA_COMMON; DaoType *ctype; DaoObject *object; void *data
 
 struct DaoCdata
 {
 	DAO_CDATA_COMMON;
 };
 
-DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoTypeBase *typer );
+DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoType *type );
 DAO_DLL void DaoCdata_FreeCommon( DaoCdata *self );
-DAO_DLL void DaoCdata_DeleteData( DaoCdata *self );
-DAO_DLL int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 DAO_DLL extern DaoTypeBase defaultCdataTyper;
 DAO_DLL extern DaoCdata dao_default_cdata;
+
+
+/* In analog to DaoClass, a DaoCtype is created for each cdata type: */
+struct DaoCtype
+{
+	DAO_CDATA_COMMON;
+
+	DaoType *cdtype;
+};
+DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
+DAO_DLL void DaoCtype_Delete( DaoCtype *self );
+
 
 
 struct DaoException
 {
 	DAO_CDATA_COMMON;
 
-	int       fromLine;
-	int       toLine;
-	DRoutine *routine;
-	DArray   *callers;
-	DArray   *lines;
+	int         fromLine;
+	int         toLine;
+	DaoRoutine *routine;
+	DArray     *callers;
+	DArray     *lines;
 
-	DString  *name;
-	DString  *info;
-	DaoValue *edata;
+	DString    *name;
+	DString    *info;
+	DaoValue   *edata;
 };
 
-DaoException* DaoException_New( DaoTypeBase *typer );
-DaoException* DaoException_New2( DaoTypeBase *typer, DaoValue *v );
+DaoException* DaoException_New( DaoType *type );
+DaoException* DaoException_New2( DaoType *type, DaoValue *v );
 void DaoException_Delete( DaoException *self );
 void DaoException_Setup( DaoNamespace *ns );
 
-DaoTypeBase* DaoException_GetType( int type );
+DaoType* DaoException_GetType( int type );
 
 extern DaoTypeBase dao_Exception_Typer;
 

@@ -6,7 +6,7 @@ interface AA
 	operator.name()=>string;
 
 	routine __for_iterator__( iter : for_iterator );
-	operator[]( iter : for_iterator );
+	operator[]( iter : for_iterator )=>int;
 }
 routine Test( o : AA )
 {

@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -102,9 +102,11 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->active = DHash_New(0,0);
 	self->vmspace = vms;
 	self->tuple = DaoTuple_New(2);
-	self->tuple->items[0] = DaoValue_NewDouble(0);
-	self->tuple->items[1] = DaoValue_NewDouble(0);
+	self->tuple->items[0] = (DaoValue*) DaoDouble_New(0);
+	self->tuple->items[1] = (DaoValue*) DaoDouble_New(0);
 	DaoValue_MarkConst( (DaoValue*) self->tuple );
+	GC_IncRC( self->tuple->items[0] );
+	GC_IncRC( self->tuple->items[1] );
 	GC_IncRC( self->tuple );
 	return self;
 }
@@ -243,6 +245,10 @@ DaoFuture* DaoCallServer_AddCall( DaoProcess *call )
 void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, short state )
 {
 	DaoFuture *future;
+	DaoCallServer *server;
+	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
+	server = daoCallServer;
+
 	/* joining the process with the future value's own process */
 	if( wait->future == NULL ){
 		wait->future = DaoFuture_New();
@@ -255,22 +261,36 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, sh
 	future->precondition = pre;
 	future->state = DAO_CALL_PAUSED;
 	future->state2 = state;
-	if( timeout >0 ){
-		DaoCallServer *server;
-		if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
-		server = daoCallServer;
 
-		DMutex_Lock( & server->mutex );
+	DMutex_Lock( & server->mutex );
+	if( timeout >0 ){
 		server->tuple->items[0]->xDouble.value = timeout + DaoGetCurrentTime();
 		server->tuple->items[1]->xDouble.value += 1;
 		DMap_Insert( server->waitings, server->tuple, future );
 		DMap_Insert( server->pending, future, NULL );
 		GC_IncRC( future );
 		DCondVar_Signal( & server->condv2 );
-		DMutex_Unlock( & server->mutex );
 	}else{
-		DaoCallServer_Add( future );
+		//DaoCallServer_Add( future );
+		DArray_Append( server->futures, future );
+		DMap_Insert( server->pending, future, NULL );
+		GC_IncRC( future );
+		DCondVar_Signal( & server->condv );
 	}
+	if( wait->condv ){
+		/*
+		// Need to suspend the native thread, for suspending inside code sections
+		// for functional methods such as std.iterate(), mt.iterate() etc:
+		*/
+		wait->pauseType = DAO_VMP_NATIVE_SUSPENSION;
+		if( timeout > 0 ){
+			DCondVar_TimedWait( wait->condv, & server->mutex, timeout );
+		}else{
+			DCondVar_Wait( wait->condv, & server->mutex );
+		}
+		wait->status = DAO_VMPROC_RUNNING;
+	}
+	DMutex_Unlock( & server->mutex );
 }
 static DaoFuture* DaoCallServer_GetNextFuture()
 {
@@ -372,8 +392,15 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			future->state = DAO_CALL_RUNNING;
 			DaoProcess_Execute( proc );
 		}else if( future->state == DAO_CALL_PAUSED ){
-			future->state = DAO_CALL_RUNNING;
-			DaoProcess_Execute( future->process );
+			if( future->process->pauseType == DAO_VMP_NATIVE_SUSPENSION ){
+				DMutex_Lock( & server->mutex );
+				future->process->pauseType = 0;
+				DCondVar_Signal( future->process->condv );
+				DMutex_Unlock( & server->mutex );
+			}else{
+				future->state = DAO_CALL_RUNNING;
+				DaoProcess_Execute( future->process );
+			}
 			proc = future->process;
 		}
 		if( future->object ){
@@ -401,13 +428,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			for(i=0; i<array->size; i++) DMap_Erase( server->waitings, array->items.pVoid[i] );
 			DCondVar_Signal( & server->condv2 );
 			DMutex_Unlock( & server->mutex );
-			if( proc2 ){
-				DaoVmSpace_ReleaseProcess( server->vmspace, proc2 );
-			}else if( proc->mutex && proc->condv ){
-				DMutex_Lock( proc->mutex );
-				DCondVar_Signal( proc->condv );
-				DMutex_Unlock( proc->mutex );
-			}
+			if( proc2 ) DaoVmSpace_ReleaseProcess( server->vmspace, proc2 );
 		}
 		GC_DecRC( future );
 	}

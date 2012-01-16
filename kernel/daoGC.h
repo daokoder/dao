@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -16,19 +16,21 @@
 
 #include"daoType.h"
 
-int DaoGC_Min( int n /*=-1*/ );
-int DaoGC_Max( int n /*=-1*/ );
+DAO_DLL int DaoGC_Min( int n /*=-1*/ );
+DAO_DLL int DaoGC_Max( int n /*=-1*/ );
 
-void DaoGC_Start();
-void DaoGC_Finish();
-void DaoCGC_Start();
+DAO_DLL void DaoGC_Start();
+DAO_DLL void DaoGC_Finish();
+DAO_DLL void DaoGC_TryInvoke();
 
-void DaoGC_IncRC( DaoValue *dbase );
-void DaoGC_DecRC( DaoValue *dbase );
+DAO_DLL void DaoCGC_Start();
+
+DAO_DLL void DaoGC_IncRC( DaoValue *dbase );
+DAO_DLL void DaoGC_DecRC( DaoValue *dbase );
 DAO_DLL void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
 
-void DaoGC_IncRCs( DArray *dbases );
-void DaoGC_DecRCs( DArray *dbases );
+DAO_DLL void DaoGC_IncRCs( DArray *dbases );
+DAO_DLL void DaoGC_DecRCs( DArray *dbases );
 
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoValue*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoValue*)(p) )
@@ -39,8 +41,8 @@ DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 #define GC_IncRCs( p )  DaoGC_IncRCs( p )
 #define GC_DecRCs( p )  DaoGC_DecRCs( p )
 
-void GC_Lock();
-void GC_Unlock();
+DAO_DLL void GC_Lock();
+DAO_DLL void GC_Unlock();
 
 
 #endif

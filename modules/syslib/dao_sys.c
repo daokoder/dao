@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of the Dao standard modules.
-  Copyright (C) 2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2011-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -36,17 +36,18 @@ static void SYS_Ctime( DaoProcess *proc, DaoValue *p[], int N )
 {
 	struct tm *ctime;
 	time_t t = (time_t)p[0]->xInteger.value;
+	DaoFactory *fac = DaoProcess_GetFactory( proc );
 	DaoTuple *tuple = DaoTuple_New( 7 );
 	DaoValue **items = tuple->items;
 	if( t == 0 ) t = time(NULL);
 	ctime = gmtime( & t );
-	items[0] = DaoValue_NewInteger( ctime->tm_year + 1900 );
-	items[1] = DaoValue_NewInteger( ctime->tm_mon + 1 );
-	items[2] = DaoValue_NewInteger( ctime->tm_mday );
-	items[3] = DaoValue_NewInteger( ctime->tm_wday + 1 );
-	items[4] = DaoValue_NewInteger( ctime->tm_hour );
-	items[5] = DaoValue_NewInteger( ctime->tm_min );
-	items[6] = DaoValue_NewInteger( ctime->tm_sec );
+	items[0] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_year + 1900 );
+	items[1] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_mon + 1 );
+	items[2] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_mday );
+	items[3] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_wday + 1 );
+	items[4] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_hour );
+	items[5] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_min );
+	items[6] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_sec );
 	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 }
 static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char *key, int id )
@@ -332,7 +333,7 @@ DaoTypeBase modSysCoreTyper = { "sys", NULL, NULL, sysMeths, {0}, {0}, NULL, NUL
 
 static void DaoBUF_New( DaoProcess *proc, DaoValue *p[], int N )
 {
-	dint size = p[0]->xInteger.value;
+	daoint size = p[0]->xInteger.value;
 	Dao_Buffer *self = Dao_Buffer_New( size >= 0 ? size : 0 );
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	if( size < 0 ){
@@ -348,7 +349,7 @@ static void DaoBUF_Size( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_Resize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint size = p[1]->xInteger.value;
+	daoint size = p[1]->xInteger.value;
 	if( size < 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "negative buffer size" );
 		return;
@@ -401,21 +402,21 @@ static int DaoBUF_CheckRange( Dao_Buffer *self, int i, int m, DaoProcess *proc )
 static void DaoBUF_GetByte( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(char), proc ) ) return;
 	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUChar[i] : self->buffer.pSChar[i] );
 }
 static void DaoBUF_GetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(short), proc ) ) return;
 	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUShort[i] : self->buffer.pSShort[i] );
 }
 static void DaoBUF_GetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(int), proc ) ) return;
 	DaoProcess_PutInteger( proc, p[2]->xEnum.value ? self->buffer.pUInt[i] : self->buffer.pSInt[i] );
 }
@@ -434,7 +435,7 @@ static void DaoBUF_GetDouble( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_SetByte( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(char), proc ) ) return;
 	if( p[3]->xEnum.value )
 		self->buffer.pUChar[i] = (unsigned char)p[2]->xInteger.value;
@@ -444,7 +445,7 @@ static void DaoBUF_SetByte( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_SetShort( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(short), proc ) ) return;
 	if( p[3]->xEnum.value )
 		self->buffer.pUShort[i] = (unsigned short)p[2]->xInteger.value;
@@ -454,7 +455,7 @@ static void DaoBUF_SetShort( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_SetInt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	dint i = p[1]->xInteger.value;
+	daoint i = p[1]->xInteger.value;
 	if( DaoBUF_CheckRange( self, i, sizeof(int), proc ) ) return;
 	if( p[3]->xEnum.value )
 		self->buffer.pUInt[i] = (unsigned int)p[2]->xInteger.value;
@@ -499,11 +500,12 @@ DaoTypeBase bufferTyper =
 	"buffer", NULL, NULL, (DaoFuncItem*) bufferMeths, {0}, {0},
 	(FuncPtrDel)Dao_Buffer_Delete, NULL
 };
+static DaoType *daox_type_buffer = NULL;
 
 Dao_Buffer* Dao_Buffer_New( size_t size )
 {
 	Dao_Buffer *self = (Dao_Buffer*) dao_malloc( sizeof(Dao_Buffer) );
-	DaoCdata_InitCommon( (DaoCdata*)self, & bufferTyper );
+	DaoCdata_InitCommon( (DaoCdata*)self, daox_type_buffer );
 	self->size = self->bufsize = 0;
 	self->buffer.pVoid = NULL;
 	Dao_Buffer_Resize( self, size );
@@ -529,7 +531,7 @@ void Dao_Buffer_Delete( Dao_Buffer *self )
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & bufferTyper, 0 );
+	daox_type_buffer = DaoNamespace_WrapType( ns, & bufferTyper, 0 );
 	DaoNamespace_WrapType( ns, & modSysCoreTyper, 1 );
 	return 0;
 }

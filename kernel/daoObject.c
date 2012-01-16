@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -24,6 +24,7 @@
 #include"daoNumtype.h"
 #include"daoValue.h"
 
+void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc, 
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute )
 {
@@ -31,13 +32,13 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 	DaoValue *O = (DaoValue*)self;
 	int errcode = DaoObject_GetData( self, name, &V, othis );
 	if( errcode ) return errcode;
-	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return DAO_ERROR_TYPE;
-	if( DaoProcess_PushCallable( proc, V, O, P, N ) ) goto InvalidParam;
+	if( V == NULL || V->type != DAO_ROUTINE ) return DAO_ERROR_TYPE;
+	if( DaoProcess_PushCallable( proc, (DaoRoutine*) V, O, P, N ) ) goto InvalidParam;
 	if( ignore_return ) DaoProcess_InterceptReturnValue( proc );
 	if( execute ) DaoProcess_Execute( proc );
 	return 0;
 InvalidParam:
-	DaoProcess_ShowCallError( proc, (DRoutine*)V, O, P, N, DVM_CALL );
+	DaoProcess_ShowCallError( proc, (DaoRoutine*)V, O, P, N, DVM_CALL );
 	return 0;
 }
 static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -114,6 +115,8 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 extern void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, DMap *cycData );
 void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMap *cycData )
 {
+	/* TODO: support by something like C++ copy constructor? */
+#if 0
 	DaoObject **selfSups = NULL;
 	DaoObject **fromSups = NULL;
 	DaoValue **selfValues = self->objValues;
@@ -125,6 +128,7 @@ void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMa
 	fromSups = from->parents;
 	for( i=0; i<from->baseCount; i++ )
 		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], proc, cycData );
+#endif
 }
 static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycData )
 {
@@ -186,7 +190,7 @@ DaoObject* DaoObject_New( DaoClass *klass )
 void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 {
 	DaoClass *klass = self->defClass;
-	int i;
+	daoint i;
 
 	if( that ){
 		GC_ShiftRC( that, self->rootObject );
@@ -259,7 +263,7 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 		if( obj->type == DAO_CDATA ){
 			DaoCdata *cdata1 = (DaoCdata*) self;
 			DaoCdata *cdata2 = (DaoCdata*) obj;
-			if( DaoCdata_ChildOf( cdata1->ctype->kernel->typer, cdata2->ctype->kernel->typer ) ) return 1;
+			if( DaoType_ChildOf( cdata1->ctype, cdata2->ctype ) ) return 1;
 		}
 		return 0;
 	}
@@ -272,7 +276,7 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 }
 extern int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
-DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
+DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 {
 	int i;
 	if( host == NULL ) return NULL;
@@ -281,9 +285,9 @@ DaoValue* DaoObject_MapThisObject( DaoObject *self, DaoType *host )
 		DaoValue *sup = self->parents[i];
 		if( sup == NULL ) return NULL;
 		if( sup->type == DAO_OBJECT ){
-			if( (sup = DaoObject_MapThisObject( & sup->xObject, host ) ) ) return sup;
+			if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
 		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
-			if( DaoCdata_ChildOf( sup->xCdata.typer, host->typer ) ) return sup;
+			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
 		}
 	}
 	return NULL;
@@ -307,7 +311,7 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 		}
 		if( sup->type == DAO_CTYPE ){
 			DaoCdata *cdata = (DaoCdata*)sup;
-			if( DaoCdata_ChildOf( cdata->typer, parent->typer ) ){
+			if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
 				GC_IncRC( parent );
 				self->parents[i] = (DaoValue*)parent;
 				return self;
@@ -316,11 +320,10 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 	}
 	return child;
 }
-DaoCdata* DaoObject_MapCdata( DaoObject *self, DaoTypeBase *typer )
+DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
-	if( typer && typer->core && typer->core->kernel->abtype )
-		p = DaoObject_MapThisObject( self, typer->core->kernel->abtype );
+	if( type ) p = DaoObject_CastToBase( self, type );
 	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
 	return NULL;
 }
@@ -354,8 +357,8 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 		value = self->objValues + id;
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 	}else if( st == DAO_CLASS_VARIABLE ){
-		value = klass->glbDataTable->items.pArray[up]->items.pValue + id;
-		type = klass->glbTypeTable->items.pArray[up]->items.pType[ id ];
+		value = klass->classes->items.pClass[up]->glbData->items.pValue + id;
+		type = klass->classes->items.pClass[up]->glbDataType->items.pType[ id ];
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 	}else if( st == DAO_CLASS_CONSTANT ){
 		return DAO_ERROR_FIELD;
@@ -386,8 +389,8 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	switch( st ){
 	case DAO_OBJECT_VARIABLE : p = self->objValues[id]; break;
-	case DAO_CLASS_VARIABLE  : p = klass->glbDataTable->items.pArray[up]->items.pValue[id]; break;
-	case DAO_CLASS_CONSTANT  : p = klass->cstDataTable->items.pArray[up]->items.pValue[id]; break;
+	case DAO_CLASS_VARIABLE  : p = klass->classes->items.pClass[up]->glbData->items.pValue[id]; break;
+	case DAO_CLASS_CONSTANT  : p = klass->classes->items.pClass[up]->cstData->items.pValue[id]; break;
 	default : break;
 	}
 	*data = p;
@@ -401,13 +404,13 @@ DaoValue* DaoObject_GetField( DaoObject *self, const char *name )
 	DaoObject_GetData( self, & str, & res, self );
 	return res;
 }
-DaoMethod* DaoObject_GetMethod( DaoObject *self, const char *name )
+DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name )
 {
 	DaoValue *V;
 	DString str = DString_WrapMBS( name );
 	int id = DaoClass_FindConst( self->defClass, & str );
 	if( id < 0 ) return NULL;
 	V = DaoClass_GetConst( self->defClass, id );
-	if( V == NULL || V->type < DAO_FUNCTREE || V->type > DAO_FUNCTION ) return NULL;
-	return (DaoMethod*) V;
+	if( V == NULL || V->type != DAO_ROUTINE ) return NULL;
+	return (DaoRoutine*) V;
 }

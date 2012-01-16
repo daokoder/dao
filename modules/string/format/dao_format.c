@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -60,7 +60,7 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 			sprintf( fmt + i, "%i", format->precision );
 		}
 		if( format->notation == 'i' || format->notation == 'x' || format->notation == 'X' ){
-			strcat( fmt, ( sizeof(dint) == 4 )? "l" : "ll" );
+			strcat( fmt, ( sizeof(daoint) == 4 )? "l" : "ll" );
 			integer = 1;
 		}
 		len = strlen( fmt );
@@ -78,12 +78,12 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 				sprintf( buf, fmt, (double)DaoValue_TryGetInteger( value ) );
 		}
 		else
-			sprintf( buf, ( sizeof(dint) == 4 )? "%li" : "%lli", DaoValue_TryGetInteger( value ) );
+			sprintf( buf, DAO_INT_FORMAT, DaoValue_TryGetInteger( value ) );
 		break;
 	case DAO_FLOAT:
 		if( notation ){
 			if( integer )
-				sprintf( buf, fmt, (dint)DaoValue_TryGetFloat( value ) );
+				sprintf( buf, fmt, (daoint)DaoValue_TryGetFloat( value ) );
 			else
 				sprintf( buf, fmt, DaoValue_TryGetFloat( value ) );
 		}
@@ -93,7 +93,7 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 	case DAO_DOUBLE:
 		if( notation ){
 			if( integer )
-				sprintf( buf, fmt, (dint)DaoValue_TryGetDouble( value ) );
+				sprintf( buf, fmt, (daoint)DaoValue_TryGetDouble( value ) );
 			else
 				sprintf( buf, fmt, DaoValue_TryGetDouble( value ) );
 		}
@@ -109,7 +109,7 @@ static int PrintValue( DaoValue *value, DString *dest, Format *format, DString *
 			else
 				strncpy( fmt + len + 2, fmt + 1, len - 1 );
 			if( integer )
-				sprintf( buf, fmt, (dint)comp.real, (dint)comp.imag );
+				sprintf( buf, fmt, (daoint)comp.real, (daoint)comp.imag );
 			else
 				sprintf( buf, fmt, comp.real, comp.imag );
 		}
@@ -1044,6 +1044,6 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)DaoFormat, "format( self: string, ... )=>string" );
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)DaoFormat, "format( self: string, ... )=>string" );
 	return 0;
 }

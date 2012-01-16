@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -24,24 +24,21 @@ struct DaoClass
 
 	/* Holding index of class members, including data from its parents: */
 	/* negative index indicates an inaccessible private member from a parent? XXX */
-	DMap  *lookupTable; /* <DString*,size_t> */
+	DMap    *lookupTable; /* <DString*,size_t> */
+	DArray  *classes; /* <DaoClass*> */
 
-	DArray  *cstDataTable; /* <DVarray*> */
-	DArray  *glbDataTable; /* <DVarray*> */
-	DArray  *glbTypeTable; /* <DArray*> */
-
-	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
-	DArray  *objDataType;  /* <DaoType*> */
-	DArray  *objDataDefault; /* <DaoValue*>, NULL: no default, not for parent classes */
-
-	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
 	/* Holding class consts and routines - class data: */
 	/* For both this class and its parents: */
-	DArray  *cstData;
+	DArray  *cstData; /* <DaoValue*> */
+	DArray  *glbData; /* <DaoValue*>: static variables; */
 
+	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
+	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
+
 	DArray  *glbDataType;  /* <DaoType*> */
-	DArray  *glbData;      /* <DaoValue*> */
+	DArray  *objDataType;  /* <DaoType*> */
+	DArray  *objDataDefault; /* <DaoValue*>, NULL: no default, not for parent classes */
 
 	DArray  *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
 	DArray  *superAlias;
@@ -51,8 +48,8 @@ struct DaoClass
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
 	DMap  *vtable; /* <DRoutine*,DRoutine*> */
 
-	DaoRoutine   *classRoutine; /* Default class constructor. */
-	DaoFunctree  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
+	DaoRoutine  *classRoutine; /* Default class constructor. */
+	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
 
 	DString  *className;
 	DString  *classHelp;
@@ -116,9 +113,9 @@ DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft
 
 DAO_DLL int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 
-DAO_DLL void DaoClass_AddOvldRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
-DAO_DLL DaoRoutine* DaoClass_GetOvldRoutine( DaoClass *self, DString *signature );
+DAO_DLL void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
+DAO_DLL DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature );
 
-DAO_DLL DaoValue* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
+DAO_DLL DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped );
 
 #endif

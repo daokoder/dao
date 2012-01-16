@@ -96,6 +96,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 	}
 
 	onload3 += module->MakeOnLoadCodes( functions, this );
+	onload3 += module->MakeOnLoad2Codes( usertypes );
 	for(i=0, n=namespaces.size(); i<n; i++){
 		retcode |= namespaces[i]->Generate( this );
 		header += namespaces[i]->header;

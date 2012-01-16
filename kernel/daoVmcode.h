@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -19,7 +19,7 @@
 enum DaoOpcode
 {
 	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
-	DVM_DATA , /* create primitive data: A: type, B: value, C: register; */
+	DVM_DATA , /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
 	DVM_GETCL , /* get local const: C = A::B; current routine, A=0; up routine: A=1; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
 	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
@@ -29,6 +29,7 @@ enum DaoOpcode
 	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
 	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
 	DVM_GETI ,  /* GET Item(s) : C = A[B]; */
+	DVM_GETDI , /* GET Item(s) : C = A[B], B is the (direct) index; */
 	DVM_GETMI , /* GET Item(s) : C = A[A+1, ..., A+B]; */
 	DVM_GETF ,  /* GET Field : C = A.B */
 	DVM_GETMF , /* GET Meta Field: C = A->B */
@@ -38,10 +39,11 @@ enum DaoOpcode
 	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
 	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
 	DVM_SETI ,  /* SET Item(s) : C[B] = A;  */
+	DVM_SETDI , /* SET Item(s) : C[B] = A, B is the (direct) index; */
 	DVM_SETMI , /* SET Item(s) : C[C+1, ..., C+B] = A;  */
 	DVM_SETF ,  /* SET Field : C.B = A */
 	DVM_SETMF , /* SET Meta Field : C->B = A */
-	DVM_LOAD , /* put local value A as reference at C */
+	DVM_LOAD , /* put local value A as reference at C, if B>0, assert type (routConsts[B-1]) first; */
 	DVM_CAST , /* convert A to C if they have different types; */
 	DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */
 	DVM_NOT ,  /* C = ! A; not */
@@ -181,7 +183,7 @@ enum DaoOpcode
 	DVM_MOVE_DD ,
 	DVM_MOVE_CC , /* move complex number */
 	DVM_MOVE_SS , /* string */
-	DVM_MOVE_PP , /* pointer for typed operands */
+	DVM_MOVE_PP , /* C = A, where C and A are the same type, or C is type any; */
 	DVM_NOT_I ,
 	DVM_NOT_F ,
 	DVM_NOT_D ,
@@ -280,6 +282,11 @@ enum DaoOpcode
 	DVM_BITLFT_DNN ,
 	DVM_BITRIT_DNN ,
 
+	DVM_ADD_CC ,
+	DVM_SUB_CC ,
+	DVM_MUL_CC ,
+	DVM_DIV_CC ,
+
 	/* string */
 	DVM_ADD_SS , 
 	DVM_LT_SS ,
@@ -289,8 +296,8 @@ enum DaoOpcode
 
 	/* single indexing C=A[B]: GETI and MOVE */
 	/* index should be integer, may be casted from float/double by the typing system */
-	DVM_GETI_LI , /* optimization opcode for list: get item(s) : C = A[B]; list[int] */
-	DVM_SETI_LI , /* set item : C[B] = A;  */
+	DVM_GETI_LI , /* get item : C = A[B]; X=list<X>[int] */
+	DVM_SETI_LI , /* set item : C[B] = A; list<X>[int]=X, or list<any>[int]=X; */
 	DVM_GETI_SI , /* get char from a string: string[int] */
 	DVM_SETI_SII , /* set char to a string: string[int]=int */
 	DVM_GETI_LII , /* get item : C = A[B]; list<int>[int] */
@@ -320,15 +327,16 @@ enum DaoOpcode
 	DVM_SETI_ADIF , /* set item : C[B] = A;  */
 	DVM_SETI_ADID , /* set item : C[B] = A;  */
 
-	DVM_GETI_TI , /* optimization opcode for tuple: get item(s) : C = A[B]; tuple[int] */
-	DVM_SETI_TI , /* set item : C[B] = A;  */
+	DVM_GETI_TI , /* get item : C = A[B]; tuple<...>[int] */
+	DVM_SETI_TI , /* set item : C[B] = A; tuple<...>[int]=X; */
+
 	/* access field by constant index; specialized from GETI[const] or GETF */
 	DVM_GETF_T ,
 	DVM_GETF_TI , /* get integer field by constant index; */
 	DVM_GETF_TF , /* get float field by constant index; */
 	DVM_GETF_TD , /* get double field by constant index; */
 	DVM_GETF_TS , /* get string field by constant index; */
-	DVM_SETF_T ,
+	DVM_SETF_T ,  /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 	DVM_SETF_TII , /* set integer field to integer. */
 	DVM_SETF_TIF , /* set integer field to float. */
 	DVM_SETF_TID , /* set integer field to double. */
@@ -340,16 +348,12 @@ enum DaoOpcode
 	DVM_SETF_TDD , /* set double field to double. */
 	DVM_SETF_TSS , /* set string field to string. */
 
-	DVM_ADD_CC ,
-	DVM_SUB_CC ,
-	DVM_MUL_CC ,
-	DVM_DIV_CC ,
 	DVM_GETI_ACI , /* get item : C = A[B]; array<complex>[int] */
 	DVM_SETI_ACI , /* set item : C[B] = A; */
 
 	/* multiple indexing a[i,j] */
-	DVM_GETI_AM , /* array: get item(s) : C = A[B]; B: integer/float numbers */
-	DVM_SETI_AM , /* set item(s) : C[B] = A;  */
+	DVM_GETMI_A , /* array: get item(s) : C = A[B]; B: integer/float numbers */
+	DVM_SETMI_A , /* set item(s) : C[B] = A;  */
 
 	/* setters and getters */
 	/* get/set member of class instance by index instead of name: */
@@ -358,9 +362,9 @@ enum DaoOpcode
 	DVM_GETF_OC , /* get class instance field, const; code: GET Member Field Const*/
 	DVM_GETF_OG , /* get class instance field, global */
 	DVM_GETF_OV , /* get class instance field, variable */
-	DVM_SETF_KG ,
-	DVM_SETF_OG ,
-	DVM_SETF_OV ,
+	DVM_SETF_KG , /* set class static field: field type equals to opa type, or is "any" type; */
+	DVM_SETF_OG , /* set class static field: field type equals to opa type, or is "any" type; */
+	DVM_SETF_OV , /* set class instance field: field type equals to opa type, or is "any" type; */
 
 	/* C=A.B : GETF and MOVE */
 	DVM_GETF_KCI , /* GET Member Field Const Integer */
@@ -410,6 +414,8 @@ enum DaoOpcode
 	DVM_TEST_I ,
 	DVM_TEST_F ,
 	DVM_TEST_D ,
+
+	DVM_CHECK_ST , /* check against simple types: int, float, double, complex, long, string; */
 
 	/* increase a count, and perform the normal goto operation 
 	 * if the count does not exceed a safe bound. */

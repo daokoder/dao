@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -40,15 +40,15 @@ struct DaoStream
 {
 	DAO_DATA_COMMON;
 
-	DFile      *file;
-	DString    *streamString;
 	char        attribs;
+	int         mode;
 	int         useQuote;
 	char       *format;
-	DaoVmSpace *vmSpace;
+	DFile      *file;
+	DString    *streamString;
 	DString    *fname;
-	DaoStream  *redirect;
-	int mode;
+
+	DaoUserStream *redirect;
 };
 
 DAO_DLL DaoStream* DaoStream_New();
@@ -57,13 +57,13 @@ DAO_DLL void DaoStream_Close( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );
 
 DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
-DAO_DLL void DaoStream_WriteInt( DaoStream *self, dint val );
+DAO_DLL void DaoStream_WriteInt( DaoStream *self, daoint val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
 DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
-DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, dint val, char *format );
+DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format );
 DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
 
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );

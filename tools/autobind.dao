@@ -625,7 +625,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 	oldsource = source;
 	isDefined = 1;
 	psources = { '', '', '', '', '', '' };
-	parts = source.extract( '(private|protected|public|Q_SIGNALS)%s*(Q_SLOTS|)%s*:', 0 );
+	parts = source.extract( '(private|protected|public|Q_SIGNALS)%s*(Q_SLOTS|)%s*:', $both );
 	perm = isStruct==0 ? 0 : 2;
 	for( part in parts ){
 		if( part.pfind( ' ^ private %s* : $' ) ){
@@ -1129,7 +1129,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	for( pat in fixing ){
 		k = 1;
 		while( k ){
-			if( pat[0][:11] == '%B{ # %s* if' and pat[1] == '' ){
+			if( pat[0].find( '%B{ # %s* if' ) == 0 and pat[1] == '' ){
 				sb = source.match( pat[0] );
 				while( sb.start >=0 ){
 					sb2 = source.match( patder, sb.start + 3, sb.end );
@@ -4454,7 +4454,7 @@ routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 	if( utp.name == 'QApplication' or utp.name == 'QCoreApplication' ) kvmap[ 'comment' ] = '//';
 	if( utp.isQWidget )
 	kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
-	if( del_tests.has( utp.condType ) ){
+	if( utp.condType != UserType::default and del_tests.has( utp.condType ) ){
 		kvmap['condition'] = del_tests[ utp.condType ];
 		kvmap['deltest'] = 'Dao_' + utp.name + '_DelTest';
 		return usertype_code_class2.expand( kvmap );

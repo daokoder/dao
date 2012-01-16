@@ -19,5 +19,5 @@ text = data.toJSON();
 io.writeln("Dao => JSON (readable):\n", text);
 io.writeln("\nDao => JSON (compact):\n", data.toJSON($compact));
 
-data = text.parseJSON();
-io.writeln("\nJSON => Dao:\n", data);
+data2 = text.parseJSON();
+io.writeln("\nJSON => Dao:\n", data2);

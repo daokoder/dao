@@ -34,7 +34,8 @@ struct CDaoPPCallbacks : public PPCallbacks
 
 	void MacroDefined(const Token &MacroNameTok, const MacroInfo *MI);
 	void InclusionDirective(SourceLocation Loc, const Token &Tok, StringRef Name, 
-			bool Angled, const FileEntry *File, SourceLocation End);
+			bool Angled, const FileEntry *File, SourceLocation End,
+			StringRef SearchPath, StringRef RelativePath );
 };
 
 void CDaoPPCallbacks::MacroDefined(const Token &MacroNameTok, const MacroInfo *MI)
@@ -48,7 +49,8 @@ void CDaoPPCallbacks::MacroDefined(const Token &MacroNameTok, const MacroInfo *M
 	if( MI->isFunctionLike() ) module->HandleHintDefinition( name, MI );
 }
 void CDaoPPCallbacks::InclusionDirective(SourceLocation Loc, const Token &Tok, 
-		StringRef Name, bool Angled, const FileEntry *File, SourceLocation End)
+		StringRef Name, bool Angled, const FileEntry *File, SourceLocation End,
+		StringRef SearchPath, StringRef RelativePath )
 {
 	module->HandleHeaderInclusion( Loc, Name.str(), File );
 }
@@ -301,7 +303,9 @@ int main(int argc, char *argv[] )
 	compiler.createPreprocessor();
 	compiler.createASTContext();
 	compiler.setASTConsumer( new CDaoASTConsumer( & compiler, & module ) );
-	compiler.createSema(false, NULL);
+	//XXX compiler.createSema(false, NULL);
+	//compiler.createSema(TU_Module, NULL);
+	compiler.createSema(TU_Prefix, NULL);
 
 	Preprocessor & pp = compiler.getPreprocessor();
 	pp.setPredefines( pp.getPredefines() + "\n" + predefines );

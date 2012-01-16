@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -54,7 +54,7 @@ static int DaoParser_FindOpenToken2( DaoParser *self, DaoToken *tok, int start, 
 	DaoToken **tokens = self->tokens->items.pToken;
 
 	if( start < 0 ) return -10000;
-	if( end == -1 || end >= self->tokens->size ) end = self->tokens->size-1;
+	if( end == -1 || end >= (int)self->tokens->size ) end = self->tokens->size-1;
 	n1 = n2 = n3 = n4 = 0;
 	for( i=start; i<=end; i++){
 		if( ! ( n1 | n2 | n3 | n4 ) && DaoToken_EQ( tokens[i], tok ) ){
@@ -107,7 +107,7 @@ DMacroGroup* DMacroGroup_New()
 }
 void DMacroGroup_Delete( DMacroGroup *self )
 {
-	int i;
+	daoint i;
 	for(i=0; i<self->units->size; i++ ){
 		DMacroUnit *unit = (DMacroUnit*) self->units->items.pVoid[i];
 		if( unit->type == DMACRO_GRP || unit->type == DMACRO_ALT ){
@@ -124,7 +124,7 @@ void DMacroGroup_Delete( DMacroGroup *self )
 
 DaoTypeBase macroTyper=
 {
-	"macro", (void*) & baseCore, NULL, NULL, {0}, {0},
+	"macro", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoMacro_Delete, NULL
 };
 
@@ -142,9 +142,9 @@ DaoMacro* DaoMacro_New()
 }
 void DaoMacro_Delete( DaoMacro *self )
 {
-	int i;
+	daoint i;
 	if( self == self->firstMacro ){
-		for( i=0; i<self->macroList->size; i++ ){
+		for(i=0; i<self->macroList->size; i++){
 			DaoMacro *macro = (DaoMacro*) self->macroList->items.pVoid[i];
 			if( macro != self ) DaoMacro_Delete( macro );
 		}
@@ -325,9 +325,9 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 static void DMacroGroup_AddStop( DMacroGroup *self, DArray *stops )
 {
 	DMacroGroup *group;
-	int i, j;
-	for( i=self->units->size-1; i>=0; i-- ){
-		DMacroUnit *unit = self->units->items.pVoid[i];
+	daoint i, j;
+	for(i=self->units->size-1; i>=0; i--){
+		DMacroUnit *unit = (DMacroUnit*) self->units->items.pVoid[i];
 		if( unit->type == DMACRO_GRP || unit->type == DMACRO_ALT ){
 			group = (DMacroGroup*) unit;
 			DMacroGroup_AddStop( group, stops );
@@ -350,13 +350,13 @@ static void DMacroGroup_AddStop( DMacroGroup *self, DArray *stops )
 static void DMacroGroup_SetStop( DMacroGroup *self, DArray *stops )
 {
 	DMacroGroup *group;
-	int i, j;
+	daoint i, j;
 	/*
 	   printf( "stop : %i\n", stops->size );
 	 */
 
-	for( i=self->units->size-1; i>=0; i-- ){
-		DMacroUnit *unit = self->units->items.pVoid[i];
+	for(i=self->units->size-1; i>=0; i--){
+		DMacroUnit *unit = (DMacroUnit*) self->units->items.pVoid[i];
 		if( unit->type == DMACRO_GRP || unit->type == DMACRO_ALT ){
 			group = (DMacroGroup*) unit;
 			/* self->stops as temporary array: */
@@ -401,10 +401,10 @@ static void DMacroGroup_SetStop( DMacroGroup *self, DArray *stops )
 static void DMacroGroup_FindVariables( DMacroGroup *self )
 {
 	DMacroGroup *group;
-	int i, j;
+	daoint i, j;
 
-	for( i=0; i<self->units->size; i++ ){
-		DMacroUnit *unit = self->units->items.pVoid[i];
+	for(i=0; i<self->units->size; i++){
+		DMacroUnit *unit = (DMacroUnit*) self->units->items.pVoid[i];
 		if( unit->type == DMACRO_GRP || unit->type == DMACRO_ALT ){
 			group = (DMacroGroup*) unit;
 			DMacroGroup_FindVariables( group );
@@ -540,12 +540,12 @@ void DMacroNode_Delete( DMacroNode *self )
 
 static void DMacroNode_Print( DMacroNode *self )
 {
-	int i;
+	daoint i;
 	printf( "{ %i lev=%i nodes=%llu: ", self->isLeaf, self->level, (unsigned long long)self->nodes->size );
 	for(i=0; i<self->leaves->size; i++)
 		printf( "%s, ", self->leaves->items.pToken[i]->string->mbs );
 	for(i=0; i<self->nodes->size; i++){
-		printf( "\nnode%i\n", i );
+		printf( "\nnode" DAO_INT_FORMAT "\n", i );
 		DMacroNode_Print( (DMacroNode*)self->nodes->items.pVoid[i] );
 	}
 	printf( " }" );
@@ -585,7 +585,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 	DaoToken **toks = self->tokens->items.pToken;
 	DNode  *kwnode;
 	DMacroNode *node, *prev;
-	int N = group->units->size;
+	int M, N = group->units->size;
 	int i, j=0, k=0, m, min, from = start;
 	int idt, gid = -1;
 
@@ -596,7 +596,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 
 	if( group->repeat != DMACRO_AUTO ){
 		level ++;
-		for(j=0; j<group->variables->size; j++){
+		for(j=0,M=group->variables->size; j<M; j++){
 			kwnode = MAP_Find( tokMap, group->variables->items.pToken[j]->string );
 			prev = (DMacroNode*)( kwnode ? kwnode->value.pVoid : NULL );
 			node = DMacroNode_New( level==1, level );
@@ -612,7 +612,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 		}
 	}
 
-	for( i=0; i<N; i++ ){
+	for(i=0; i<N; i++){
 		unit = units[i];
 		idt = unit->indent;
 #if 0
@@ -670,7 +670,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 				if( j < 0 ) return -100;
 				j += 1;
 				min = j + unit->stops->size;
-				for(k=0; k<unit->stops->size; k++){
+				for(k=0,M=unit->stops->size; k<M; k++){
 					DaoToken *stop = unit->stops->items.pToken[k];
 					m = DaoParser_FindOpenToken2( self, stop, from, end );
 #if 0
@@ -694,7 +694,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 			case DMACRO_BL :
 				j = end;
 				min = j + unit->stops->size;
-				for(k=0; k<unit->stops->size; k++){
+				for(k=0,M=unit->stops->size; k<M; k++){
 					DaoToken *stop = unit->stops->items.pToken[k];
 					m = DaoParser_FindOpenToken2( self, stop, from, end );
 					/* printf( "searching: %i %s %i\n", j, stop->mbs, tokPos[j] ); */
@@ -708,7 +708,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 				k = toks[from]->line;
 				m = toks[from]->cpos;
 				j = from;
-				while( j > start && toks[j-1]->line == k ) j -= 1;
+				while( j > start && (int)toks[j-1]->line == k ) j -= 1;
 				if( j < from ) m = toks[j]->cpos + 1;
 				j = from + 1;
 				while( j < end && toks[j]->cpos >= m ) j += 1;
@@ -800,7 +800,7 @@ static DMacroNode* DMacroNode_FindLeaf( DMacroNode *self, DMap *check, int level
 {
 	DNode *used = DMap_Find( check, self );
 	DMacroNode *node;
-	int j;
+	daoint j;
 	/* for variable not in a group */
 	if( self->level == level+1 && self->leaves->size && used ==NULL ) return self;
 	for(j=0; j<self->nodes->size; j++){
@@ -818,7 +818,7 @@ static int DMacroNode_LeavesAreEmpty( DMacroNode *self )
 {
 	DMacroNode *node;
 	int empty = 1;
-	int j;
+	daoint j;
 	if( self->leaves->size ) return 0;
 	if( self->nodes->size ==0 && self->leaves->size ==0 ) return 1;
 	for(j=0; j<self->nodes->size; j++){
@@ -854,7 +854,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 	DNode  *kwnode = NULL;
 	DMap *check = NULL;
 	DMap one = { NULL, 0, 0, 0 };
-	int N = group->units->size;
+	int M, N = group->units->size;
 	int i, j, gid = -1;
 	int repeated = 0;
 	int start_mbs = -1;
@@ -878,7 +878,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 			if( (squote && start_mbs >=0) || (dquote && start_wcs >=0) ){
 				int qstart = squote ? start_mbs : start_wcs;
 				tt = tokens->items.pToken[ qstart ];
-				for(j=qstart+1; j<tokens->size; j++){
+				for(j=qstart+1,M=tokens->size; j<M; j++){
 					DaoToken *jtok = tokens->items.pToken[j];
 					int t = j ? tokens->items.pToken[j-1]->type : 0;
 					if( t == DTOK_IDENTIFIER && jtok->type == t )
@@ -1034,7 +1034,8 @@ int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int t
 	DMap *tokMap = DMap_New(D_STRING,0);
 	DMap *used = DMap_New(0,D_MAP);
 	DNode *it;
-	int i, j, p0, lev = 0, adjust=0;
+	daoint i;
+	int j, p0, lev = 0, adjust=0;
 	int indent[10];
 	char buf[20];
 

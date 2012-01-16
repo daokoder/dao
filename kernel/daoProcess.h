@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms 
   of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -35,12 +35,11 @@ struct DaoStackFrame
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
 
 	ushort_t      parCount;
-	size_t        stackBase;
+	daoint        stackBase;
 	DaoVmCode    *codes; /* = routine->vmCodes->codes */
 	DaoType     **types;
 	DaoType      *retype;
 	DaoRoutine   *routine;
-	DaoFunction  *function;
 	DaoObject    *object;
 	DaoProcess   *outer;
 
@@ -94,25 +93,25 @@ struct DaoProcess
 
 	DaoValue  **freeValues; /* = stackValues + stackTop */
 	DaoValue  **stackValues;
-	size_t      stackSize; /* maximum number of values that can be hold by stackValues; */
-	size_t      stackTop; /* one past the last active stack value; */
+	daoint      stackSize; /* maximum number of values that can be hold by stackValues; */
+	daoint      stackTop; /* one past the last active stack value; */
+
+	uchar_t  pauseType;
+	uchar_t  status;
+	uchar_t  stopit;
 
 	DaoType  *abtype; /* for coroutine */
 	DArray   *exceptions;
 
-	char pauseType;
-	char status;
-	char stopit;
-
-	DaoFuture *future;
+	DaoFuture  *future;
+	DaoStream  *stdioStream;
+	DaoFactory *factory;
 
 #ifdef DAO_WITH_THREAD
-	DMutex    *mutex; /* used only by mt; */
-	DCondVar  *condv; /* used only by mt; */
+	int        depth;
+	DCondVar  *condv; /* condition variable for resuming suspended process; */
+	DMutex    *mutex; /* mutex for mt.critical::{} */
 #endif
-
-	DaoType   *dummyType;
-	DaoVmCode  dummyCode;
 
 	DString *mbstring;
 	DMap    *mbsRegex; /* <DString*,DString*> */
@@ -132,17 +131,22 @@ DAO_DLL void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, Dao
 DAO_DLL void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame );
 
 DAO_DLL void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object );
-DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoFunction *function );
-DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoValue *M, DaoValue *O, DaoValue *P[], int N );
+DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *function );
+DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N );
 
 DAO_DLL void DaoProcess_InterceptReturnValue( DaoProcess *self );
 
-DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoMethod *f, DaoValue *o, DaoValue *p[], int n );
+DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 
-DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoFunction *func, DaoValue *p[], int n );
+DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n );
 
 /* Execute from the top of the calling stack */
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );
+
+/* Acquire and release the condition variable: */
+DAO_DLL void DaoProcess_AcquireCV( DaoProcess *self );
+DAO_DLL void DaoProcess_ReleaseCV( DaoProcess *self );
+DAO_DLL void DaoProcess_Suspend( DaoProcess *self, int type );
 
 DAO_DLL int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
@@ -153,29 +157,43 @@ DAO_DLL void DaoProcess_PrintException( DaoProcess *self, int clear );
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 
-typedef struct CastBuffer CastBuffer;
-struct CastBuffer
-{
-	DLong    *lng;
-	DString  *str;
-};
 
+typedef struct DaoJIT         DaoJIT;
+typedef struct DaoJitCallData DaoJitCallData;
 
-typedef struct DaoJIT DaoJIT;
 typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
 typedef void (*DaoJIT_QuitFPT)();
-typedef void (*DaoJIT_FreeFPT)( DaoRoutine *routine );
+typedef void (*DaoJIT_FreeFPT)( void *jitdata );
 typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
-typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *context, int jitcode );
+typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 
 struct DaoJIT
 {
 	void (*Quit)();
-	void (*Free)( DaoRoutine *routine );
+	void (*Free)( void *jitdata );
 	void (*Compile)( DaoRoutine *routine );
-	void (*Execute)( DaoProcess *context, int jitcode );
+	void (*Execute)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 };
 
 extern struct DaoJIT dao_jit;
+
+struct DaoJitCallData
+{
+	DaoValue  **localValues;
+	DaoValue  **localConsts;
+
+	DaoValue  **objectValues;
+	DaoValue  **classValues;
+	DaoValue  **classConsts;
+
+	DaoValue  **globalValues;
+	DaoValue  **globalConsts;
+
+	DaoValue   **upConsts;
+	DaoProcess **processes;
+
+	DArray  *classes;
+	DArray  *namespaces;
+};
 
 #endif

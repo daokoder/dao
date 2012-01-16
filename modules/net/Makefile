@@ -2,13 +2,14 @@ PROJECT = net
 
 include ../../Makefile.common
 
-DAO_INCS += -I../../kernel
+DAO_INCS += -I../../kernel -I../auxlib
 DAO_LIBS += -L../..
 
+
 ifdef WIN32
-	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2) -lwsock32
+  DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2) -L../auxlib -ldao_aux -lwsock32
 else
-	DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2)
+  DAO_LFLAGS_NET = $(DAO_LFLAGS_DAO2)
 endif
 
 TARGET = $(PROJECT).$(DAO_DLL_EXT)

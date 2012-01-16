@@ -1,6 +1,6 @@
 /*=========================================================================================
   This file is a part of a virtual machine for the Dao programming language.
-  Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+  Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
   This software is free software; you can redistribute it and/or modify it under the terms
   of the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -17,6 +17,12 @@
 
 #include"dao.h"
 DAO_INIT_MODULE
+
+#ifdef DAO_USE_INT64
+#define DAO_INT_LFORMAT  L"%lli"
+#else
+#define DAO_INT_LFORMAT  L"%i"
+#endif /* DAO_USE_INT64 */
 
 void JSON_Indent( DString *text, int indent )
 {
@@ -39,7 +45,7 @@ int JSON_SerializeValue( DaoValue *value, DString *text, int indent )
 #ifndef __MINGW32__
 				  sizeof(buf),
 #endif
-				  sizeof(dint) == 4? L"%i" : L"%lli", DaoValue_TryGetInteger( value ) );
+				  DAO_INT_LFORMAT, DaoValue_TryGetInteger( value ) );
 		DString_AppendWCS( text, buf );
 		break;
 	case DAO_FLOAT:
@@ -148,9 +154,7 @@ static void JSON_Serialize( DaoProcess *proc, DaoValue *p[], int N )
 				case DAO_CDATA:
 				case DAO_CTYPE:	    strcat( buf, "cdata/ctype" ); break;
 				case DAO_INTERFACE:	strcat( buf, "interface" );	break;
-				case DAO_FUNCTREE:
-				case DAO_ROUTINE:
-				case DAO_FUNCTION:  strcat( buf, "routine" ); break;
+				case DAO_ROUTINE:   strcat( buf, "routine" ); break;
 				case DAO_TYPE:      strcat( buf, "type" ); break;
 				default:            strcat( buf, "[type not recognized]" );
 			}
@@ -173,7 +177,7 @@ enum
 	JSON_NonStringKey
 };
 
-DaoValue* JSON_ParseString( wchar_t* *text )
+DaoValue* JSON_ParseString( DaoFactory *factory, wchar_t* *text )
 {
 	wchar_t* end = *text + 1;
 	DaoValue *value;
@@ -181,14 +185,14 @@ DaoValue* JSON_ParseString( wchar_t* *text )
 		if( *end == L'\\' && *(end + 1) != L'\0' )
 			end++;
 		else if( *end == L'"' ){
-			value = DaoValue_NewWCString( *text + 1, end - *text - 1 );
+			value = (DaoValue*) DaoFactory_NewWCString( factory, *text + 1, end - *text - 1 );
 			*text = end + 1;
 			return value;
 		}
 	return NULL;
 }
 
-DaoValue* JSON_ParseNumber( wchar_t* *text )
+DaoValue* JSON_ParseNumber( DaoFactory *factory, wchar_t* *text )
 {
 	wchar_t* stop;
 	double dres;
@@ -198,32 +202,32 @@ DaoValue* JSON_ParseNumber( wchar_t* *text )
 	if( errno == ERANGE || ( *stop != L'\0' && wcschr( L"eE.", *stop ) != NULL && stop != *text ) ){
 		dres = wcstod( *text, &stop );
 		*text = stop;
-		return DaoValue_NewDouble( dres );
+		return (DaoValue*) DaoFactory_NewDouble( factory, dres );
 	}
 	else if( stop != *text ){
 		*text = stop;
-		return DaoValue_NewInteger( ires );
+		return (DaoValue*) DaoFactory_NewInteger( factory, ires );
 	}
 	return NULL;
 }
 
-DaoValue* JSON_ParseSpecialLiteral( wchar_t* *text )
+DaoValue* JSON_ParseSpecialLiteral( DaoFactory *factory, wchar_t* *text )
 {
 	wchar_t buf[6];
 	wcsncpy( buf, *text, 5 );
 	buf[5] = L'\0';
 	if( wcscmp( buf, L"false" ) == 0 ){
 		*text += 5;
-		return DaoValue_NewInteger( 0 );
+		return (DaoValue*) DaoFactory_NewInteger( factory, 0 );
 	}
 	buf[4] = L'\0';
 	if( wcscmp( buf, L"true" ) == 0 ){
 		*text += 4;
-		return DaoValue_NewInteger( 1 );
+		return (DaoValue*) DaoFactory_NewInteger( factory, 1 );
 	}
 	else if( wcscmp( buf, L"null" ) == 0 ){
 		*text += 4;
-		return DaoValue_NewNone();
+		return (DaoValue*) DaoFactory_NewNone( factory );
 	}
 	return NULL;
 }
@@ -257,28 +261,26 @@ wchar_t* JSON_FindData( wchar_t* text, int *line )
 	return NULL;
 }
 
-DaoValue* JSON_ParseObject( DaoValue *object, wchar_t* *text, int *error, int *line );
+DaoValue* JSON_ParseObject( DaoFactory *factory, DaoValue *object, wchar_t* *text, int *error, int *line );
 
-DaoValue* JSON_ParseArray( DaoValue *exlist, wchar_t* *text, int *error, int *line )
+DaoValue* JSON_ParseArray( DaoFactory *factory, DaoValue *exlist, wchar_t* *text, int *error, int *line )
 {
 	wchar_t* data;
-	DaoValue *list = exlist? exlist : DaoValue_NewList();
+	DaoList *list = exlist? (DaoList*)exlist : DaoFactory_NewList( factory );
 	DaoValue *value;
-	int coma = 0, rc = exlist? 0 : 1;
+	int coma = 0;
 	(*text)++;
 	for( ;; ){
 		data = JSON_FindData( *text, line );
 		if( data == NULL ){
-			if( rc )
-				DaoGC_DecRC( list );
 			*error = JSON_ArrayNotClosed;
 			return NULL;
 		}
 		*text = data;
 		if( *data == L']' ){
-			if( coma || DaoList_Size( DaoValue_CastList( list ) ) == 0 ){
+			if( coma || DaoList_Size( list ) == 0 ){
 				(*text)++;
-				return list;
+				return (DaoValue*) list;
 			}
 			else{
 				*error = JSON_UnexpectedRSB;
@@ -287,8 +289,6 @@ DaoValue* JSON_ParseArray( DaoValue *exlist, wchar_t* *text, int *error, int *li
 		}
 		else if( *data == L',' ){
 			if( !coma ){
-				if( rc )
-					DaoGC_DecRC( list );
 				*error = JSON_UnexpectedComa;
 				return NULL;
 			}
@@ -297,55 +297,48 @@ DaoValue* JSON_ParseArray( DaoValue *exlist, wchar_t* *text, int *error, int *li
 			continue;
 		}
 		else if( coma ){
-			if( rc )
-				DaoGC_DecRC( list );
 			*error = JSON_MissingComa;
 			return NULL;
 		}
 		else if( *data == L'"' )
-			value = JSON_ParseString( text );
+			value = JSON_ParseString( factory, text );
 		else if( *data == L'[' )
-			value = JSON_ParseArray( NULL, text, error, line );
+			value = JSON_ParseArray( factory, NULL, text, error, line );
 		else if( *data == L'{' )
-			value = JSON_ParseObject( NULL, text, error, line );
+			value = JSON_ParseObject( factory, NULL, text, error, line );
 		else if( wcschr( L"0123456789-", *data ) != NULL )
-			value = JSON_ParseNumber( text );
+			value = JSON_ParseNumber( factory, text );
 		else
-			value = JSON_ParseSpecialLiteral( text );
+			value = JSON_ParseSpecialLiteral( factory, text );
 		if( value == NULL ){
-			if( rc )
-				DaoGC_DecRC( list );
 			if( !*error )
 				*error = JSON_InvalidToken;
 			return NULL;
 		}
-		DaoList_PushBack( DaoValue_CastList( list ), value );
-		DaoGC_DecRC( value );
+		DaoList_PushBack( list, value );
 		coma = 1;
 	}
 }
 
-DaoValue* JSON_ParseObject( DaoValue *exmap, wchar_t* *text, int *error, int *line )
+DaoValue* JSON_ParseObject( DaoFactory *factory, DaoValue *exmap, wchar_t* *text, int *error, int *line )
 {
 	wchar_t* data;
-	DaoValue *map = exmap? exmap : DaoValue_NewMap( 0 );
+	DaoMap *map = exmap? (DaoMap*)exmap : DaoFactory_NewMap( factory, 0 );
 	DaoValue *key, *value;
 	DaoValue **val = &key;
-	int coma = 0, colon = 0, rc = exmap? 0 : 1;
+	int coma = 0, colon = 0;
 	(*text)++;
 	for( ;; ){
 		data = JSON_FindData( *text, line );
 		if( data == NULL ){
-			if( rc )
-				DaoGC_DecRC( map );
 			*error = JSON_ObjectNotClosed;
 			return NULL;
 		}
 		*text = data;
 		if( *data == L'}' ){
-			if( coma || DaoMap_Size( DaoValue_CastMap( map ) ) == 0 ){
+			if( coma || DaoMap_Size( map ) == 0 ){
 				(*text)++;
-				return map;
+				return (DaoValue*) map;
 			}
 			else{
 				*error = JSON_UnexpectedRCB;
@@ -354,8 +347,6 @@ DaoValue* JSON_ParseObject( DaoValue *exmap, wchar_t* *text, int *error, int *li
 		}
 		else if( *data == L',' ){
 			if( !coma ){
-				if( rc )
-					DaoGC_DecRC( map );
 				*error = JSON_UnexpectedComa;
 				return NULL;
 			}
@@ -364,15 +355,11 @@ DaoValue* JSON_ParseObject( DaoValue *exmap, wchar_t* *text, int *error, int *li
 			continue;
 		}
 		else if( coma ){
-			if( rc )
-				DaoGC_DecRC( map );
 			*error = JSON_MissingComa;
 			return NULL;
 		}
 		else if( *data == L':' ){
 			if( !colon ){
-				if( rc )
-					DaoGC_DecRC( map );
 				*error = JSON_UnexpectedColon;
 				return NULL;
 			}
@@ -381,30 +368,24 @@ DaoValue* JSON_ParseObject( DaoValue *exmap, wchar_t* *text, int *error, int *li
 			continue;
 		}
 		else if( colon ){
-			if( rc )
-				DaoGC_DecRC( map );
 			*error = JSON_MissingColon;
 			return NULL;
 		}
 		else if( *data == L'"' )
-			*val = JSON_ParseString( text );
+			*val = JSON_ParseString( factory, text );
 		else if( val == &key ){
-			if( rc )
-				DaoGC_DecRC( map );
 			*error = JSON_NonStringKey;
 			return NULL;
 		}
 		else if( *data == L'[' )
-			*val = JSON_ParseArray( NULL, text, error, line );
+			*val = JSON_ParseArray( factory, NULL, text, error, line );
 		else if( *data == L'{' )
-			*val = JSON_ParseObject( NULL, text, error, line );
+			*val = JSON_ParseObject( factory, NULL, text, error, line );
 		else if( wcschr( L"0123456789-", *data ) != NULL )
-			*val = JSON_ParseNumber( text );
+			*val = JSON_ParseNumber( factory, text );
 		else
-			*val = JSON_ParseSpecialLiteral( text );
+			*val = JSON_ParseSpecialLiteral( factory, text );
 		if( *val == NULL ){
-			if( rc )
-				DaoGC_DecRC( map );
 			if( !*error )
 				*error = JSON_InvalidToken;
 			return NULL;
@@ -414,9 +395,7 @@ DaoValue* JSON_ParseObject( DaoValue *exmap, wchar_t* *text, int *error, int *li
 			colon = 1;
 		}
 		else{
-			DaoMap_Insert( DaoValue_CastMap( map ), key, value );
-			DaoGC_DecRC( key );
-			DaoGC_DecRC( value );
+			DaoMap_Insert( map, key, value );
 			val = &key;
 			coma = 1;
 		}
@@ -425,18 +404,20 @@ DaoValue* JSON_ParseObject( DaoValue *exmap, wchar_t* *text, int *error, int *li
 
 static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 {
+	char buf[100];
 	int error = 0, line = 1;
 	wchar_t *text = JSON_FindData( DaoValue_TryGetWCString( p[0] ), &line );
+	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoValue *value;
-	char buf[100];
+
 	if( text == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data not found" );
 		return;
 	}
 	if( *text == L'{' )
-		value = JSON_ParseObject( (DaoValue*)DaoProcess_PutMap( proc ), &text, &error, &line );
+		value = JSON_ParseObject( factory, (DaoValue*)DaoProcess_PutMap( proc ), &text, &error, &line );
 	else if( *text == L'[' )
-		value = JSON_ParseArray( (DaoValue*)DaoProcess_PutList( proc ), &text, &error, &line );
+		value = JSON_ParseArray( factory, (DaoValue*)DaoProcess_PutList( proc ), &text, &error, &line );
 	else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data is not an object or array" );
 		return;
@@ -467,9 +448,9 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)JSON_Serialize,
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)JSON_Serialize,
 		"toJSON( self: map<string, any>|list<any>, style: enum<pretty,compact>=$pretty )=>string" );
-	DaoNamespace_WrapFunction( ns, (DaoFuncPtr)JSON_Deserialize,
+	DaoNamespace_WrapFunction( ns, (DaoCFunction)JSON_Deserialize,
 		"parseJSON( self: string )=>map<string, any>|list<any>" );
 	return 0;
 }

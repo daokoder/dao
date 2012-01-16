@@ -1,7 +1,7 @@
 
 /*=========================================================================================
    This is the CGI module for the Dao programming language.
-   Copyright (C) 2006-2011, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
+   Copyright (C) 2006-2012, Fu Limin. Email: fu@daovm.net, limin.fu@yahoo.com
 
    This software is free software; you can redistribute it and/or modify it under the terms 
    of the GNU Lesser General Public License as published by the Free Software Foundation; 
@@ -34,30 +34,29 @@ extern char ** environ;
 
 static DaoVmSpace *vmMaster = NULL;
 
-static void InsertKeyValue( DaoMap *mulmap, DaoMap *map, DaoValue *vk, DaoValue *vv )
+static void InsertKeyValue( DaoFactory *fac, DaoMap *mulmap, DaoMap *map, DaoValue *vk, DaoValue *vv )
 {
 	DaoValue *val, *vlist;
 	DaoMap_Insert( map, vk, vv );
 	if( mulmap ){
 		val = DaoMap_GetValue( mulmap, vk );
 		if( val == NULL ){
-			vlist = DaoValue_NewList();
+			vlist = (DaoValue*) DaoFactory_NewList( fac );
 			DaoMap_Insert( mulmap, vk, vlist );
-			DaoGC_DecRC( vlist );
 			val = DaoMap_GetValue( mulmap, vk );
 		}
 		DaoList_PushBack( DaoValue_CastList( val ), vv );
 	}
 }
-static void ParseKeyValueString( DaoMap *mulmap, DaoMap *map, const char *s )
+static void ParseKeyValueString( DaoFactory *fac, DaoMap *mulmap, DaoMap *map, const char *s )
 {
 	int i = 0;
 	int nc = 0;
 	int len = 0;
 	char buffer[ LOCAL_BUF_SIZE + 1 ];
 	
-	DaoValue *vk = DaoValue_NewMBString( NULL, 0 );
-	DaoValue *vv = DaoValue_NewMBString( NULL, 0 );
+	DaoValue *vk = (DaoValue*) DaoFactory_NewMBString( fac, NULL, 0 );
+	DaoValue *vv = (DaoValue*) DaoFactory_NewMBString( fac, NULL, 0 );
 	DString *key = DaoString_Get( DaoValue_CastString( vk ) );
 	DString *value = DaoString_Get( DaoValue_CastString( vv ) );
 
@@ -80,7 +79,7 @@ static void ParseKeyValueString( DaoMap *mulmap, DaoMap *map, const char *s )
 			if( DString_Size( key ) > 0 ){
 				buffer[ nc ] = 0;
 				DString_AppendMBS( value, buffer );
-				InsertKeyValue( mulmap, map, vk, vv );
+				InsertKeyValue( fac, mulmap, map, vk, vv );
 				DString_Clear( key );
 				DString_Clear( value );
 				nc = 0;
@@ -89,7 +88,7 @@ static void ParseKeyValueString( DaoMap *mulmap, DaoMap *map, const char *s )
 				buffer[ nc ] = 0;
 				DString_AppendMBS( key, buffer );
 				DString_SetMBS( value, "NULL" );
-				InsertKeyValue( mulmap, map, vk, vv );
+				InsertKeyValue( fac, mulmap, map, vk, vv );
 				DString_Clear( key );
 				DString_Clear( value );
 				nc = 0;
@@ -121,23 +120,21 @@ static void ParseKeyValueString( DaoMap *mulmap, DaoMap *map, const char *s )
 	if( DString_Size( key ) > 0 ){
 		buffer[ nc ] = 0;
 		DString_AppendMBS( value, buffer );
-		InsertKeyValue( mulmap, map, vk, vv );
+		InsertKeyValue( fac, mulmap, map, vk, vv );
 	}else if( nc > 0 ){
 		buffer[ nc ] = 0;
 		DString_AppendMBS( key, buffer );
 		DString_SetMBS( value, "NULL" );
-		InsertKeyValue( mulmap, map, vk, vv );
+		InsertKeyValue( fac, mulmap, map, vk, vv );
 	}
-	DaoGC_DecRC( vk );
-	DaoGC_DecRC( vv );
 }
-static void ParseKeyValueStringArray( DaoMap *map, char **p )
+static void ParseKeyValueStringArray( DaoFactory *fac, DaoMap *map, char **p )
 {
 	int nc = 0;
 	char buffer[ LOCAL_BUF_SIZE + 1 ];
 	
-	DaoValue *vk = DaoValue_NewMBString( NULL, 0 );
-	DaoValue *vv = DaoValue_NewMBString( NULL, 0 );
+	DaoValue *vk = (DaoValue*) DaoFactory_NewMBString( fac, NULL, 0 );
+	DaoValue *vv = (DaoValue*) DaoFactory_NewMBString( fac, NULL, 0 );
 	DString *key = DaoString_Get( DaoValue_CastString( vk ) );
 	DString *value = DaoString_Get( DaoValue_CastString( vv ) );
 	while( *p != NULL ){
@@ -162,13 +159,11 @@ static void ParseKeyValueStringArray( DaoMap *map, char **p )
 		DString_Clear( value );
 		p ++;
 	}
-	DaoGC_DecRC( vk );
-	DaoGC_DecRC( vv );
 }
-static void PreparePostData( DaoMap *httpPOSTS, DaoMap *httpPOST, DaoMap *httpFILE )
+static void PreparePostData( DaoFactory *fac, DaoMap *httpPOSTS, DaoMap *httpPOST, DaoMap *httpFILE )
 {
-	DaoValue *vk = DaoValue_NewMBString( NULL, 0 );
-	DaoValue *vv = DaoValue_NewMBString( NULL, 0 );
+	DaoValue *vk = (DaoValue*) DaoFactory_NewMBString( fac, NULL, 0 );
+	DaoValue *vv = (DaoValue*) DaoFactory_NewMBString( fac, NULL, 0 );
 	DString *key = DaoString_Get( DaoValue_CastString( vk ) );
 	DString *value = DaoString_Get( DaoValue_CastString( vv ) );
 	DString *dynaBuffer = DString_New(1);
@@ -203,7 +198,7 @@ static void PreparePostData( DaoMap *httpPOSTS, DaoMap *httpPOST, DaoMap *httpFI
 					*p = 0; // null-terminating
 					p++;
 					DString_AppendMBS( dynaBuffer, buffer );
-					ParseKeyValueString( httpPOSTS, httpPOST, DString_GetMBS( dynaBuffer ) );
+					ParseKeyValueString( fac, httpPOSTS, httpPOST, DString_GetMBS( dynaBuffer ) );
 					DString_Clear( dynaBuffer );
 					DString_AppendMBS( dynaBuffer, p );
 				}else{
@@ -211,7 +206,7 @@ static void PreparePostData( DaoMap *httpPOSTS, DaoMap *httpPOST, DaoMap *httpFI
 				}
 				i += LOCAL_BUF_SIZE;
 			}
-			ParseKeyValueString( httpPOSTS, httpPOST, DString_GetMBS( dynaBuffer ) );
+			ParseKeyValueString( fac, httpPOSTS, httpPOST, DString_GetMBS( dynaBuffer ) );
 		}else{
 			char *boundary = strstr( contentType, "boundary" );
 			boundary = strstr( boundary, "------" );
@@ -255,7 +250,7 @@ static void PreparePostData( DaoMap *httpPOSTS, DaoMap *httpPOST, DaoMap *httpFI
 					if( p != NULL ) part = p;
 					DaoMap_Insert( httpPOST, vk, vv );
 				}else{
-					DaoValue *vs = DaoValue_NewStream( tmpfile() );
+					DaoValue *vs = (DaoValue*) DaoFactory_NewStream( fac, tmpfile() );
 					FILE *file = DaoStream_GetFile( DaoValue_CastStream( vs ) );
 					char *t = NULL;
 					p = strchr( p, '\"' ) + 1;
@@ -326,13 +321,10 @@ static void PreparePostData( DaoMap *httpPOSTS, DaoMap *httpPOST, DaoMap *httpFI
 					//if( p != NULL ) part = p;
 					rewind( file );
 					DaoMap_Insert( httpFILE, vk, vs );
-					DaoGC_DecRC( vs );
 				}
 			}
 		}
 	}
-	DaoGC_DecRC( vk );
-	DaoGC_DecRC( vv );
 	DString_Delete( dynaBuffer );
 }
 /*
@@ -400,6 +392,7 @@ void DaoCGI_RandomString( DaoProcess *proc, DaoValue *p[], int N )
 }
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
+	DaoFactory *factory = DaoVmSpace_AcquireFactory( vmSpace );
 	DaoMap *httpENV, *httpGET, *httpPOST, *httpFILE, *httpCOOKIE;
 	DaoMap *httpGETS, *httpPOSTS;
 	srand( time(NULL) );
@@ -424,15 +417,17 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	DaoNamespace_AddValue( ns,"HTTP_POSTS",(DaoValue*)httpPOSTS,"map<string,list<string> >");
 
 	// Prepare HTTP_ENV:
-	ParseKeyValueStringArray( httpENV, environ );
+	ParseKeyValueStringArray( factory, httpENV, environ );
 	
 	// Prepare HTTP_GET:
 	char *query = getenv( "QUERY_STRING" );
-	if( query ) ParseKeyValueString( httpGETS, httpGET, query );
+	if( query ) ParseKeyValueString( factory, httpGETS, httpGET, query );
 	query = getenv( "HTTP_COOKIE" );
-	if( query ) ParseKeyValueString( NULL, httpCOOKIE, query );
+	if( query ) ParseKeyValueString( factory, NULL, httpCOOKIE, query );
 
-	PreparePostData( httpPOSTS, httpPOST, httpFILE );
+	PreparePostData( factory, httpPOSTS, httpPOST, httpFILE );
+
+	DaoVmSpace_ReleaseFactory( vmSpace, factory );
 	return 0;
 }
 
