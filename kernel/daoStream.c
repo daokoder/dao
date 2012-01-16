@@ -662,7 +662,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 void DaoStream_WriteInt( DaoStream *self, daoint val )
 {
 	const char *format = self->format;
-	if( format == NULL ) format = "%ti";
+	if( format == NULL ) format = DAO_INT_FORMAT;
 	DaoStream_WriteFormatedInt( self, val, format );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )
@@ -901,10 +901,10 @@ void DaoFile_WriteString( FILE* file, DString *str )
 	}
 }
 
-ulong_t FileChangedTime( const char *file )
+size_t FileChangedTime( const char *file )
 {
 	struct stat st;
-	if( stat( file, &st ) ==0 ) return (ulong_t) st.st_mtime;
+	if( stat( file, &st ) ==0 ) return (size_t) st.st_mtime;
 	return 0;
 }
 int Dao_IsFile( const char *file )

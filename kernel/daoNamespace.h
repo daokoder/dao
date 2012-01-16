@@ -61,7 +61,7 @@ struct DaoNamespace
 	DString *inputs; /* interactive inputs (load statements and some definitions) */
 	DArray  *sources;
 	DMap    *tokens; /* hash<DString,int> */
-	ulong_t  time;
+	size_t   time;
 
 	DaoProcess  *constEvalProcess;
 	DaoRoutine  *constEvalRoutine;

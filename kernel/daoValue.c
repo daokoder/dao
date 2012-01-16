@@ -165,7 +165,7 @@ int DaoValue_IsZero( DaoValue *self )
 	}
 	return 0;
 }
-long_t DString_ToInteger( DString *self )
+static daoint DString_ToInteger( DString *self )
 {
 	if( self->mbs ) return strtoll( self->mbs, NULL, 0 );
 	return wcstoll( self->wcs, NULL, 0 );
@@ -175,7 +175,7 @@ double DString_ToDouble( DString *self )
 	if( self->mbs ) return strtod( self->mbs, 0 );
 	return wcstod( self->wcs, 0 );
 }
-long_t DaoValue_GetInteger( DaoValue *self )
+daoint DaoValue_GetInteger( DaoValue *self )
 {
 	switch( self->type ){
 	case DAO_INTEGER : return self->xInteger.value;
@@ -314,7 +314,7 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	char chs[100] = {0};
 	DString_Clear( str );
 	switch( self->type ){
-	case DAO_INTEGER : sprintf( chs, "%ti", self->xInteger.value ); break;
+	case DAO_INTEGER : sprintf( chs, DAO_INT_FORMAT, self->xInteger.value ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", self->xDouble.value ); break;
 	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%g$" : "%g+%g$", self->xComplex.value.real, self->xComplex.value.imag ); break;
@@ -693,21 +693,21 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		return 0;
 	}
 	if( T == NULL ){
-		DaoValue_Copy( S, D );
+		DaoValue_CopyExt( S, D, 1 );
 		return 1;
 	}
 	switch( T->tid ){
 	case DAO_NONE :
 	case DAO_INITYPE :
-		DaoValue_Copy( S, D );
+		DaoValue_CopyExt( S, D, 1 );
 		return 1;
 	case DAO_ANY :
-		DaoValue_Copy( S, D );
+		DaoValue_CopyExt( S, D, 1 );
 		DaoValue_SetType( *D, T );
 		return 1;
 	case DAO_VALTYPE :
 		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
-		DaoValue_Copy( S, D );
+		DaoValue_CopyExt( S, D, 1 );
 		return 1;
 	case DAO_VARIANT :
 		return DaoValue_MoveVariant( S, D, T );

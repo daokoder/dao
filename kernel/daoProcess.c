@@ -387,7 +387,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 	DaoRoutine *routine = *routine2;
 	DaoType *routype = routine->routType;
 	DaoType *tp, **types = routype->nested->items.pType;
-	ulong_t passed = 0;
+	size_t passed = 0;
 	int mcall = code == DVM_MCALL;
 	int need_self = routype->attrib & DAO_TYPE_SELF;
 	int need_spec = routype->attrib & DAO_TYPE_NOTDEF;
@@ -459,7 +459,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 			for(; ifrom<npar; ifrom++){
 				ito = ifrom + selfChecked;
 				DaoValue_Move2( p[ifrom], & dest[ito], NULL );
-				passed |= (ulong_t)1<<ito;
+				passed |= (size_t)1<<ito;
 			}
 			break;
 		}
@@ -471,7 +471,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 			ito = node->value.pInt;
 		}
 		if( ito >= ndef ) goto ReturnZero;
-		passed |= (ulong_t)1<<ito;
+		passed |= (size_t)1<<ito;
 		tp = & types[ito]->aux->xType;
 		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) ){
 			DaoType *type = DaoNamespace_GetType( routine->nameSpace, val );
@@ -815,10 +815,10 @@ int DaoProcess_Execute( DaoProcess *self )
 	daoint exceptCount = 0;
 	daoint gotoCount = 0;
 	daoint inum=0;
+	daoint lnum = 0;
 	float fnum=0;
 	double AA, BB, dnum=0;
 	int invokehost = handler && handler->InvokeHost;
-	long_t lnum = 0;
 	ushort_t *range;
 	complex16 acom, bcom;
 	DaoStackFrame *base;
@@ -1723,17 +1723,17 @@ CallEntry:
 		}OPNEXT() OPCASE( NE_III ){
 			IntegerOperand( vmc->c ) = IntegerOperand( vmc->a ) != IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITAND_III ){
-			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) & (ulong_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (size_t)IntegerOperand( vmc->a ) & (size_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITOR_III ){
-			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) | (ulong_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (size_t)IntegerOperand( vmc->a ) | (size_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITXOR_III ){
-			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) ^ (ulong_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (size_t)IntegerOperand( vmc->a ) ^ (size_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITLFT_III ){
-			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) << (ulong_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (size_t)IntegerOperand( vmc->a ) << (size_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_III ){
-			IntegerOperand( vmc->c ) = (ulong_t)IntegerOperand( vmc->a ) >> (ulong_t)IntegerOperand( vmc->b );
+			IntegerOperand( vmc->c ) = (size_t)IntegerOperand( vmc->a ) >> (size_t)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITREV_I ){
-			IntegerOperand( vmc->c ) = ~ (ulong_t) IntegerOperand( vmc->a );
+			IntegerOperand( vmc->c ) = ~ (size_t) IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_FF ){
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_FFF ){
@@ -1767,17 +1767,17 @@ CallEntry:
 		}OPNEXT() OPCASE( NE_FFF ){
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) != FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITAND_FFF ){
-			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) & (ulong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) & (size_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITOR_FFF ){
-			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) | (ulong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) | (size_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITXOR_FFF ){
-			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) ^ (ulong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) ^ (size_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITLFT_FFF ){
-			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) << (ulong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) << (size_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_FFF ){
-			FloatOperand( vmc->c ) = (ulong_t)FloatOperand( vmc->a ) >> (ulong_t)FloatOperand( vmc->b );
+			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) >> (size_t)FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( BITREV_F ){
-			FloatOperand( vmc->c ) = ~ (ulong_t) FloatOperand( vmc->a );
+			FloatOperand( vmc->c ) = ~ (size_t) FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_DD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_DDD ){
@@ -1789,9 +1789,9 @@ CallEntry:
 		}OPNEXT() OPCASE( DIV_DDD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) / DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( MOD_DDD ){
-			lnum = (long_t) DoubleOperand( vmc->b );
+			lnum = (daoint) DoubleOperand( vmc->b );
 			if( lnum ==0 ) goto RaiseErrorDivByZero;
-			DoubleOperand( vmc->c )=(long_t)DoubleOperand( vmc->a ) % lnum;
+			DoubleOperand( vmc->c )=(daoint)DoubleOperand( vmc->a ) % lnum;
 		}OPNEXT() OPCASE( POW_DDD ){
 			DoubleOperand( vmc->c ) = pow( DoubleOperand( vmc->a ), DoubleOperand( vmc->b ) );
 		}OPNEXT() OPCASE( AND_DDD ){
@@ -1811,17 +1811,17 @@ CallEntry:
 		}OPNEXT() OPCASE( NE_DDD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) != DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITAND_DDD ){
-			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) & (ulong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) & (size_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITOR_DDD ){
-			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) | (ulong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) | (size_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITXOR_DDD ){
-			DoubleOperand( vmc->c ) = ((ulong_t)DoubleOperand( vmc->a )) ^ (ulong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = ((size_t)DoubleOperand( vmc->a )) ^ (size_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITLFT_DDD ){
-			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) << (ulong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) << (size_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_DDD ){
-			DoubleOperand( vmc->c ) = (ulong_t)DoubleOperand( vmc->a ) >> (ulong_t)DoubleOperand( vmc->b );
+			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) >> (size_t)DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( BITREV_D ){
-			DoubleOperand( vmc->c ) = ~ (ulong_t) DoubleOperand( vmc->a );
+			DoubleOperand( vmc->c ) = ~ (size_t) DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1841,7 +1841,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MOD_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (long_t)AA % (long_t)BB;
+			FloatOperand( vmc->c ) = (daoint)AA % (daoint)BB;
 		}OPNEXT() OPCASE( POW_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1873,11 +1873,11 @@ CallEntry:
 		}OPNEXT() OPCASE( BITLFT_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (ulong_t)AA << (ulong_t)BB;
+			FloatOperand( vmc->c ) = (size_t)AA << (size_t)BB;
 		}OPNEXT() OPCASE( BITRIT_FNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (ulong_t)AA >> (ulong_t)BB;
+			FloatOperand( vmc->c ) = (size_t)AA >> (size_t)BB;
 		}OPNEXT() OPCASE( ADD_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1897,7 +1897,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MOD_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = (long_t)AA % (long_t)BB;
+			DoubleOperand( vmc->c ) = (daoint)AA % (daoint)BB;
 		}OPNEXT() OPCASE( POW_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
@@ -1929,11 +1929,11 @@ CallEntry:
 		}OPNEXT() OPCASE( BITLFT_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = ((ulong_t)AA) << (ulong_t)BB;
+			DoubleOperand( vmc->c ) = ((size_t)AA) << (size_t)BB;
 		}OPNEXT() OPCASE( BITRIT_DNN ){
 			NumberOperand( AA, vA, vmc->a );
 			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = ((ulong_t)AA) >> (ulong_t)BB;
+			DoubleOperand( vmc->c ) = ((size_t)AA) >> (size_t)BB;
 		}OPNEXT() OPCASE( ADD_SS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			vC = locVars[ vmc->c ];
@@ -2854,7 +2854,7 @@ DString* DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs )
 	if( res ==NULL ) return NULL;
 	return res->xString.data;
 }
-DString*   DaoProcess_PutString( DaoProcess *self, DString *str )
+DString* DaoProcess_PutString( DaoProcess *self, DString *str )
 {
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
@@ -3856,6 +3856,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	int i, M = DaoRoutine_PassParams( & rout, self->freeValues, NULL, selfpar, P, N, vmc->code );
 	if( M ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
+		DaoProcess_ShowCallError( self, rout, selfpar, P, N, vmc->code );
 		return;
 	}
 	/* no tail call inside try{} */
@@ -3899,10 +3900,8 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		return;
 	}
 	if( DaoRoutine_PassParams( & func, self->freeValues, hostype, selfpar, P, N, code ) ==0 ){
-		//rout2 = (DaoRoutine*) rout;
-		DaoProcess_ShowCallError( self, func, selfpar, P, N, code );
+		DaoProcess_ShowCallError( self, rout, selfpar, P, N, code );
 		return;
-		//goto InvalidParameter;
 	}
 	/* foo: routine<x:int,s:string>
 	 *   ns.foo( 1, "" );
@@ -3955,18 +3954,10 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		/* default contstructor */
 		rout = klass->classRoutine;
 	}
-	if( rout == NULL ){
-		//rout2 = (DRoutine*) klass->classRoutine;
-		//XXX goto InvalidParameter;
-		return;
-	}
+	if( rout == NULL ) goto InvalidParameter;
 	if( rout->pFunc ){
 		npar = DaoRoutine_PassParams( & rout, self->freeValues, klass->objType, selfpar, params, npar, vmc->code );
-		if( npar == 0 ){
-			//rout2 = (DRoutine*) rout;
-			//XXX goto InvalidParameter;
-			return;
-		}
+		if( npar == 0 ) goto InvalidParameter;
 		DaoProcess_PushFunction( self, rout );
 		DaoProcess_SetActiveFrame( self, self->firstFrame ); /* return value in stackValues[0] */
 		self->topFrame->active = self->firstFrame;
@@ -3980,8 +3971,9 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 			cdata->object = othis;
 		}
 		DaoProcess_PutValue( self, (DaoValue*) othis );
-	}else if( rout != NULL ){
-		DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
+	}else{
+		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
+		if( self->exceptions->size ) goto DeleteObject;
 		obj = othis;
 		if( initbase >= 0 ){
 			obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
@@ -3990,10 +3982,12 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		}
 		GC_ShiftRC( obj, self->topFrame->object );
 		self->topFrame->object = obj;
-	}else{
-		if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
-		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (class)" );
 	}
+	return;
+InvalidParameter:
+	DaoProcess_ShowCallError( self, routines, selfpar, params, npar, DVM_CALL );
+DeleteObject:
+	if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
 }
 void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -4038,10 +4032,8 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 	if( rout == NULL ) goto InvalidParameter;
 	if( rout->pFunc ){
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
-	}else if( rout->type == DAO_ROUTINE ){
-		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
 	}else{
-		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
+		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
 	}
 	return;
 InvalidParameter:
@@ -4135,15 +4127,13 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( caller->type == DAO_OBJECT ){
 		DaoClass *host = self->activeObject ? self->activeObject->defClass : NULL;
-		rout = DaoClass_FindOperator( caller->xObject.defClass, "()", host );
+		rout = rout2 = DaoClass_FindOperator( caller->xObject.defClass, "()", host );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "class instance not callable" );
 			return;
 		}
 		rout = DaoRoutine_ResolveX( rout, caller, params, npar, codemode );
-		if( rout == NULL ){
-			return; //XXX
-		}
+		if( rout == NULL ) goto InvalidParameter;
 		if( rout->pFunc ){
 			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, npar );
 		}else if( rout->type == DAO_ROUTINE ){
@@ -4151,18 +4141,16 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( caller->type == DAO_CTYPE ){
 		DaoType *type = caller->xCdata.ctype;
-		rout = DaoType_FindFunctionMBS( type, type->typer->name );
+		rout = rout2 = DaoType_FindFunctionMBS( type, type->typer->name );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;
 		}
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
-		if( rout == NULL || rout->type != DAO_ROUTINE || rout->pFunc == NULL ){
-			// XXX
-			return;
-		}
+		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		DaoProcess_DoCxxCall( self, vmc, caller->xCdata.ctype, rout, selfpar, params, npar );
-		// XXX handle fail
+		if( self->exceptions->size ) return;
+
 		sup = DaoProcess_InitBase( self, vmc, caller );
 		//printf( "sup = %i\n", sup );
 		if( caller->type == DAO_CTYPE && sup >= 0 ){
@@ -4176,16 +4164,13 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			}
 		}
 	}else if( caller->type == DAO_CDATA ){
-		rout = DaoType_FindFunctionMBS( caller->xCdata.ctype, "()" );
+		rout = rout2 = DaoType_FindFunctionMBS( caller->xCdata.ctype, "()" );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C object not callable" );
 			return;
 		}
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
-		if( rout == NULL || rout->type != DAO_ROUTINE || rout->pFunc == NULL ){
-			// XXX
-			return;
-		}
+		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
 	}else if( caller->type == DAO_PROCESS && caller->xProcess.abtype ){
 		DaoProcess *vmProc = & caller->xProcess;
@@ -5149,7 +5134,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoDouble buf = {DAO_DOUBLE,0,0,0,0,0.0};
 		int type = A->type > B->type ? A->type : B->type;
 		double res = 0;
-		long_t ib;
+		daoint ib;
 		switch( vmc->code ){
 			case DVM_MOD:
 				ib = DaoValue_GetInteger( B );
@@ -5767,7 +5752,7 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
-	ulong_t inum = 0;
+	size_t inum = 0;
 	
 	self->activeCode = vmc;
 	if( A->type && B->type && A->type <= DAO_DOUBLE && B->type <= DAO_DOUBLE ){
@@ -5819,7 +5804,7 @@ void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
 	if( A->type && B->type && A->type <= DAO_DOUBLE && B->type <= DAO_DOUBLE ){
-		long_t inum = 0;
+		daoint inum = 0;
 		if( vmc->code == DVM_BITLFT ){
 			inum = DaoValue_GetInteger(A) << DaoValue_GetInteger(B);
 		}else{
@@ -5877,8 +5862,8 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 	if( A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE ){
 		switch( A->type ){
 			case DAO_INTEGER : DaoProcess_PutInteger( self, A->xInteger.value ); break;
-			case DAO_FLOAT   : DaoProcess_PutFloat( self, ~(long_t)A->xFloat.value ); break;
-			case DAO_DOUBLE  : DaoProcess_PutDouble( self, ~(long_t)A->xDouble.value ); break;
+			case DAO_FLOAT   : DaoProcess_PutFloat( self, ~(size_t)A->xFloat.value ); break;
+			case DAO_DOUBLE  : DaoProcess_PutDouble( self, ~(size_t)A->xDouble.value ); break;
 		}
 	}else if( A->type == DAO_LONG ){
 		DLong *bigint = DaoProcess_PutLong( self );

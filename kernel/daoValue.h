@@ -83,7 +83,7 @@ DAO_DLL void DaoValue_SimpleMove( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_MarkConst( DaoValue *self );
 
 DAO_DLL int DaoValue_IsZero( DaoValue *self );
-DAO_DLL long_t DaoValue_GetInteger( DaoValue *self );
+DAO_DLL daoint DaoValue_GetInteger( DaoValue *self );
 DAO_DLL float  DaoValue_GetFloat( DaoValue *self );
 DAO_DLL double DaoValue_GetDouble( DaoValue *self );
 DAO_DLL complex16 DaoValue_GetComplex( DaoValue *self );

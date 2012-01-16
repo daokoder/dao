@@ -821,7 +821,7 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 	daoint ny = y->size;
 	daoint max = nx > ny ? nx : ny;
 	daoint i, nc = 1;
-	long_t c = 0; 
+	daoint c = 0; 
 	int mc = 0;
 	while( (nc>>1) < max ) nc <<= 1, mc ++;
 	/* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
@@ -841,7 +841,7 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 	DLong_Resize( z, nc );
 	memset( z->data, 0, nc*sizeof(uchar_t) );
 	for(i=0; i<nc; i++){
-		c += (long_t)(cx[i].real / nc + 0.5);
+		c += (daoint)(cx[i].real / nc + 0.5);
 		z->data[i] = c & LONG_MASK;
 		c = c >> LONG_BITS;
 	}
@@ -964,7 +964,7 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 	daoint nx = x->size;
 	daoint nz = z->size;
 	daoint nr;
-	long_t hr;
+	daoint hr;
 	int cmp, hx;
 	uchar_t d;
 
@@ -1002,7 +1002,7 @@ void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r )
 		assert( (r->size-1) <= nx );
 		nr = r->size;
 		hr = (r->data[nx-1] << LONG_BITS) | r->data[nx-2];
-		if( nr > nx ) hr |= ((long_t)r->data[nx]) << (LONG_BITS<<1);
+		if( nr > nx ) hr |= ((daoint)r->data[nx]) << (LONG_BITS<<1);
 		/* using the first two digits of the divisor to guess the quotient */
 		d = hr / hx;
 		DLong_UMulDigitX( mul, x, d );
@@ -1395,7 +1395,7 @@ double DLong_ToDouble( DLong *self )
 }
 void DLong_FromInteger( DLong *self, daoint x )
 {
-	ulong_t y;
+	size_t y;
 	if( x < 0 ){
 		x = -x;
 		self->sign = -1;
@@ -3077,6 +3077,7 @@ int DaoArray_NumType( DaoArray *self )
 }
 void DaoArray_SetNumType( DaoArray *self, short numtype )
 {
+	if( self->etype == numtype ) return;
 	self->etype = numtype;
 	DaoArray_ResizeVector( self, self->size );
 }

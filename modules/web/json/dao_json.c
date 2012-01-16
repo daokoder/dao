@@ -18,6 +18,12 @@
 #include"dao.h"
 DAO_INIT_MODULE
 
+#ifdef DAO_USE_INT64
+#define DAO_INT_LFORMAT  L"%lli"
+#else
+#define DAO_INT_LFORMAT  L"%i"
+#endif /* DAO_USE_INT64 */
+
 void JSON_Indent( DString *text, int indent )
 {
 	int i;
@@ -39,7 +45,7 @@ int JSON_SerializeValue( DaoValue *value, DString *text, int indent )
 #ifndef __MINGW32__
 				  sizeof(buf),
 #endif
-				  L"%ti", DaoValue_TryGetInteger( value ) );
+				  DAO_INT_LFORMAT, DaoValue_TryGetInteger( value ) );
 		DString_AppendWCS( text, buf );
 		break;
 	case DAO_FLOAT:

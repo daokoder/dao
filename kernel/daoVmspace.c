@@ -61,7 +61,7 @@ DaoConfig daoConfig =
 DaoVmSpace *mainVmSpace = NULL;
 DaoProcess *mainProcess = NULL;
 
-extern ulong_t FileChangedTime( const char *file );
+extern size_t FileChangedTime( const char *file );
 
 static int TestFile( DaoVmSpace *vms, DString *fname )
 {
@@ -1015,7 +1015,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DString *name;
 	DArray *argNames;
 	DArray *argValues;
-	ulong_t tm = 0;
+	size_t tm = 0;
 	daoint N;
 	int i, j, res;
 
@@ -1204,7 +1204,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	DaoProcess *process;
 	DString name;
 	DNode *node;
-	ulong_t tm = 0;
+	size_t tm = 0;
 	daoint i = DString_FindMBS( libpath, "/addpath.dao", 0 );
 	daoint j = DString_FindMBS( libpath, "/delpath.dao", 0 );
 	int bl, m;

@@ -637,7 +637,7 @@ int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 }
 int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 {
-	ulong_t flags;
+	size_t flags;
 	DaoType *tp;
 	DaoEnum *other;
 	DNode *node;
@@ -729,8 +729,8 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
 		if( self->nested && self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
-		flags = (1<<DAO_UDF)|((ulong_t)1<<DAO_ANY)|((ulong_t)1<<DAO_INITYPE);
-		if( (((ulong_t)1<<it1)&flags) || (((ulong_t)1<<it2)&flags) ){
+		flags = (1<<DAO_UDF)|((size_t)1<<DAO_ANY)|((size_t)1<<DAO_INITYPE);
+		if( (((size_t)1<<it1)&flags) || (((size_t)1<<it2)&flags) ){
 			if( it1 == DAO_UDF || it2 == DAO_UDF ) return DAO_MT_UDF;
 			if( it1 == DAO_INITYPE || it2 == DAO_INITYPE ) return DAO_MT_INIT;
 			if( it1 == DAO_ANY || it2 == DAO_ANY ) return DAO_MT_ANY;

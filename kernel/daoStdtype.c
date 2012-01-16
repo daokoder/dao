@@ -266,7 +266,7 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 		break;
 	case DAO_FLOAT :
 		*idtype = IDX_SINGLE;
-		n1 = (long_t)(index->xFloat.value);
+		n1 = (daoint)(index->xFloat.value);
 		if( n1 <0 ) n1 += N;
 		if( n1 <0 || n1 >= N ) *idtype = IDX_OUTOFRANGE;
 		*start = n1;
@@ -274,7 +274,7 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 		break;
 	case DAO_DOUBLE :
 		*idtype = IDX_SINGLE;
-		n1 = (long_t)(index->xDouble.value);
+		n1 = (daoint)(index->xDouble.value);
 		if( n1 <0 ) n1 += N;
 		if( n1 <0 || n1 >= N ) *idtype = IDX_OUTOFRANGE;
 		*start = n1;
@@ -734,7 +734,7 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 }
 static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid )
 {
-	ulong_t bits = (ulong_t) DaoValue_GetDouble( self );
+	size_t bits = (size_t) DaoValue_GetDouble( self );
 	daoint size = 8*sizeof(daoint);
 	daoint start, end;
 	int idtype;
@@ -749,8 +749,8 @@ static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid 
 }
 static void DaoNumber_SetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
-	ulong_t bits = (ulong_t) DaoValue_GetDouble( self );
-	ulong_t val = (ulong_t) DaoValue_GetDouble( value );
+	size_t bits = (size_t) DaoValue_GetDouble( self );
+	size_t val = (size_t) DaoValue_GetDouble( value );
 	daoint size = 8*sizeof(daoint);
 	daoint start, end;
 	int idtype;
@@ -946,7 +946,7 @@ static daoint DaoSTR_CheckParam( DaoProcess *proc, daoint i )
 {
 	if( i < 0 ){
 		char buffer[100];
-		sprintf( buffer, "invalid parameter with value %ti\n", i );
+		sprintf( buffer, "invalid parameter with value " DAO_INT_FORMAT "\n", i );
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, buffer );
 	}
 	return i;
@@ -957,7 +957,7 @@ static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, 
 	if( id < 0 ) id = self->size + id;
 	if( id < 0 || id > (self->size - 1 + one_past_last) ){
 		char buffer[100];
-		sprintf( buffer, "index out of range with value %ti\n", index );
+		sprintf( buffer, "index out of range with value " DAO_INT_FORMAT "\n", index );
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
 		return -1;
 	}
@@ -2027,7 +2027,7 @@ static void DaoLIST_Insert( DaoProcess *proc, DaoValue *p[], int N )
 	daoint pos = DaoList_MakeIndex( self, p[2]->xInteger.value, 1 );
 	if( pos == -1 ){
 		char buffer[100];
-		sprintf( buffer, "with value %ti\n", p[2]->xInteger.value );
+		sprintf( buffer, "with value " DAO_INT_FORMAT "\n", p[2]->xInteger.value );
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
 		return;
 	}

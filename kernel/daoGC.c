@@ -93,9 +93,9 @@ void print_trace( const char *info )
 	char **strings = backtrace_symbols (array, size);
 	FILE *debug = fopen( "debug.txt", "w+" );
 	fprintf (debug, "===========================================\n");
-	fprintf (debug, "Obtained %ti stack frames.\n", size);
+	fprintf (debug, "Obtained " DAO_INT_FORMAT " stack frames.\n", size);
 	printf ("=====================%s======================\n", info);
-	printf ("Obtained %ti stack frames.\n", size);
+	printf ("Obtained " DAO_INT_FORMAT " stack frames.\n", size);
 	for (i = 0; i < size; i++){
 		printf ("%s\n", strings[i]);
 		fprintf (debug,"%s\n", strings[i]);
@@ -498,6 +498,7 @@ void DaoGC_DecRCs( DArray *values )
 }
 void DaoGC_TryInvoke()
 {
+	DaoIGC_TryInvoke();
 }
 #endif
 
