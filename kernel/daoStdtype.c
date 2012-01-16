@@ -1693,6 +1693,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	if( string ) DString_ToWCS( string );
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(i=0; i<N; i++){
 		idint.value = i;
 		chint.value = data->mbs ? data->mbs[i] : data->wcs[i];
@@ -1731,6 +1732,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 			break;
 		}
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	if( data->wcs && self->data->mbs ){
 		DString *tmp = self->data;
@@ -2491,6 +2493,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	if( sect == NULL ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
 		i = direction ? N-1-j : j;
 		idint.value = i;
@@ -2517,6 +2520,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 			break;
 		}
 	}
+	DaoProcess_ReleaseCV( proc );
 	if( funct != DVM_FUNCT_FIND ) DaoProcess_PopFrame( proc );
 }
 static void DaoLIST_Map( DaoProcess *proc, DaoValue *p[], int npar )
@@ -2566,6 +2570,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 		res= p[1];
 		D = p[2]->xEnum.value;
 	}
+	DaoProcess_AcquireCV( proc );
 	for(j=first; j<N; j++){
 		i = D ? N-1-j : j;
 		idint.value = i;
@@ -2577,6 +2582,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		res = proc->stackValues[0];
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	DaoProcess_PutValue( proc, res );
@@ -2602,6 +2608,7 @@ static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
 	if( sect == NULL ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
 		i = mode == 2 ? N-1-j : j; /* mode = $last */
 		idint.value = i;
@@ -2616,6 +2623,7 @@ static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
 			if( mode ) break; /* mode != $all */
 		}
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	for(i=0, j=0; i<list->items.size; i++){
 		DaoValue *val = items[i];
@@ -2641,6 +2649,7 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 	if( N > list2->items.size ) N = list2->items.size;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
 		i = direction ? N-1-j : j;
 		idint.value = i;
@@ -2652,6 +2661,7 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		DaoList_Append( list3, proc->stackValues[0] );
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static DaoFuncItem listMeths[] =
@@ -3154,6 +3164,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
+	DaoProcess_AcquireCV( proc );
 	for(node=DMap_First(self->items); node; node=DMap_Next(self->items,node)){
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, node->key.pValue );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, node->value.pValue );
@@ -3191,6 +3202,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 			break;
 		}
 	}
+	DaoProcess_ReleaseCV( proc );
 	if( funct != DVM_FUNCT_FIND ) DaoProcess_PopFrame( proc );
 }
 static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )

@@ -268,6 +268,12 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
+#if 0
+		if( proc->future && proc->future->process == proc ){
+			GC_DecRC( proc );
+			proc->future->process = NULL;
+		}
+#endif
 		GC_DecRC( proc->future );
 		proc->future = NULL;
 #ifdef DAO_WITH_THREAD

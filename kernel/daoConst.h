@@ -145,7 +145,8 @@ enum DaoVmProcPauseType
 {
 	DAO_VMP_NOPAUSE ,
 	DAO_VMP_ASYNC ,  /* by join mode of asynchronous call */
-	DAO_VMP_YIELD    /* by coroutine */
+	DAO_VMP_YIELD ,  /* by coroutine */
+	DAO_VMP_NATIVE_SUSPENSION 
 };
 
 enum DaoDataPermission

@@ -499,7 +499,9 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		}
 		if( DaoValue_Move2( val, & dest[ito], tp ) ==0 ) goto ReturnZero;
 	}
-	if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0) goto ReturnZero;
+	if( (selfChecked + npar) < ndef ){
+		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnZero;
+	}
 	if( defs && defs->size ){ /* Need specialization */
 		DaoRoutine *original = routine->original ? routine->original : routine;
 		routine = DaoRoutine_Copy( original, 0, 0 );
@@ -722,6 +724,30 @@ DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
 	return self->stackValues[0];
 }
+void DaoProcess_AcquireCV( DaoProcess *self )
+{
+#ifdef DAO_WITH_THREAD
+	if( self->condv ){
+		self->depth += 1;
+		return;
+	}
+	self->depth = 1;
+	self->condv = (DCondVar*) dao_malloc( sizeof(DCondVar) );
+	DCondVar_Init( self->condv );
+#endif
+}
+void DaoProcess_ReleaseCV( DaoProcess *self )
+{
+#ifdef DAO_WITH_THREAD
+	if( self->condv == NULL ) return;
+	self->depth -= 1;
+	if( self->depth ) return;
+	DCondVar_Destroy( self->condv );
+	dao_free( self->condv );
+	self->condv = NULL;
+#endif
+}
+
 
 #define IntegerOperand( i ) locVars[i]->xInteger.value
 #define FloatOperand( i )   locVars[i]->xFloat.value
@@ -1008,7 +1034,6 @@ int DaoProcess_Execute( DaoProcess *self )
 #endif
 
 #endif
-
 
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
 	rollback = self->topFrame->prev;
@@ -1498,7 +1523,6 @@ CallEntry:
 			DaoProcess_DoReturn( self, vmc );
 			self->status = DAO_VMPROC_SUSPENDED;
 			self->pauseType = DAO_VMP_YIELD;
-			self->topFrame->entry = (short)(vmc - vmcBase);
 			goto CheckException;
 		}OPCASE( DEBUG ){
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
@@ -2623,6 +2647,7 @@ CheckException:
 			}else if( self->status == DAO_VMPROC_STACKED ){
 				goto CallEntry;
 			}else if( self->status == DAO_VMPROC_SUSPENDED ){
+				self->topFrame->entry = (short)(vmc - vmcBase);
 				goto ReturnFalse;
 			}else if( self->status == DAO_VMPROC_ABORTED ){
 				goto FinishProc;
@@ -3904,10 +3929,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	DaoProcess_PopFrame( self );
 
 	//XXX if( DaoProcess_CheckFE( self ) ) return;
-	if( status == DAO_VMPROC_SUSPENDED ){
-		self->topFrame->entry = (short)(vmc - self->topFrame->codes);
-		self->status = status;
-	}
+	if( status == DAO_VMPROC_SUSPENDED ) self->status = status;
 }
 static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoClass *klass, DaoValue *selfpar, DaoValue *params[], int npar )
@@ -5305,7 +5327,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		if( vmc->c != vmc->a && ta->name->mbs[0] == '$' && tb->name->mbs[0] == '$' ){
 			DaoNamespace *ns = self->activeNamespace;
 			DaoType *type = NULL;
-			daoint value = 0;
+			int value = 0;
 			denum = DaoProcess_GetEnum( self, vmc );
 			if( vmc->code == DVM_ADD ){
 				type = DaoNamespace_SymbolTypeAdd( ns, ta, tb, &value );

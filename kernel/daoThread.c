@@ -798,6 +798,9 @@ struct DaoTaskData
 	DaoProcess  *clone; /* spawned process; */
 	DaoVmCode   *sect; /* DVM_SECT */
 
+	DCondVar  *condv;
+	DMutex    *mutex;
+
 	uint_t   funct; /* type of functional; */
 	uint_t   entry; /* entry code; */
 	uint_t   first; /* first index; */
@@ -855,12 +858,6 @@ static void DaoMT_RunIterateFunctional( void *p )
 		if( sect->b >1 ) DaoProcess_SetValue( clone, sect->a+1, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_SUSPENDED ){
-			DMutex_Lock( clone->mutex );
-			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
-				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
-			DMutex_Unlock( clone->mutex );
-		}
 		if( clone->status != DAO_VMPROC_FINISHED ) break;
 	}
 }
@@ -888,12 +885,6 @@ static void DaoMT_RunListFunctional( void *p )
 		if( sect->b >2 ) DaoProcess_SetValue( clone, sect->a+2, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_SUSPENDED ){
-			DMutex_Lock( clone->mutex );
-			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
-				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
-			DMutex_Unlock( clone->mutex );
-		}
 		if( clone->status != DAO_VMPROC_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
@@ -903,9 +894,9 @@ static void DaoMT_RunListFunctional( void *p )
 		}else if( self->funct == DVM_FUNCT_FIND ){
 			if( *self->index < i ) break;
 			if( res->xInteger.value ){
-				DMutex_Lock( clone->mutex );
+				DMutex_Lock( self->mutex );
 				if( i < *self->index ) *self->index = i;
-				DMutex_Unlock( clone->mutex );
+				DMutex_Unlock( self->mutex );
 				break;
 			}
 		}
@@ -935,12 +926,6 @@ static void DaoMT_RunMapFunctional( void *p )
 		if( sect->b >2 ) DaoProcess_SetValue( clone, sect->a+2, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_SUSPENDED ){
-			DMutex_Lock( clone->mutex );
-			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
-				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
-			DMutex_Unlock( clone->mutex );
-		}
 		if( clone->status != DAO_VMPROC_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
@@ -951,9 +936,9 @@ static void DaoMT_RunMapFunctional( void *p )
 			DNode **p = self->node;
 			if( *p && DaoValue_Compare( (*p)->key.pValue, node->key.pValue ) < 0 ) break;
 			if( res->xInteger.value ){
-				DMutex_Lock( clone->mutex );
+				DMutex_Lock( self->mutex );
 				if( *p == NULL || DaoValue_Compare( (*p)->key.pValue, node->key.pValue ) >0 ) *p = node;
-				DMutex_Unlock( clone->mutex );
+				DMutex_Unlock( self->mutex );
 				break;
 			}
 		}
@@ -1017,12 +1002,6 @@ static void DaoMT_RunArrayFunctional( void *p )
 		if( sect->b > 6 ) DaoProcess_SetValue( clone, sect->a+6, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status == DAO_VMPROC_SUSPENDED ){
-			DMutex_Lock( clone->mutex );
-			while( clone->status != DAO_VMPROC_FINISHED && clone->status != DAO_VMPROC_ABORTED )
-				DCondVar_TimedWait( clone->condv, clone->mutex, 0.01 );
-			DMutex_Unlock( clone->mutex );
-		}
 		if( clone->status != DAO_VMPROC_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
@@ -1037,6 +1016,7 @@ static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
 	DaoProcess *clone = self->clone;
+	DaoProcess_AcquireCV( clone );
 	switch( self->param->type ){
 	case DAO_INTEGER : DaoMT_RunIterateFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
@@ -1045,12 +1025,13 @@ static void DaoMT_RunFunctional( void *p )
 	case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
 #endif
 	}
+	DaoProcess_ReleaseCV( clone );
 	self->status |= clone->status != DAO_VMPROC_FINISHED;
-	DMutex_Lock( clone->mutex );
+	DMutex_Lock( self->mutex );
 	*self->joined += 1;
 	if( clone->exceptions->size ) DaoProcess_PrintException( clone, 1 );
-	DCondVar_Signal( clone->condv );
-	DMutex_Unlock( clone->mutex );
+	DCondVar_Signal( self->condv );
+	DMutex_Unlock( self->mutex );
 }
 static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 {
@@ -1110,8 +1091,9 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->index = & index;
 		task->node = & node;
 		task->joined = & joined;
+		task->condv = & condv;
+		task->mutex = & mutex;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
-		task->clone->condv = & condv;
 		task->clone->mutex = & mutex;
 		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task );
 	}

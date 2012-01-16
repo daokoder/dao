@@ -496,13 +496,17 @@ static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL || times < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(i=0; i<times; i++){
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
+		fflush(stdout);printf( "before: %i\n", i );fflush(stdout);
 		DaoProcess_Execute( proc );
+		fflush(stdout);printf( "after: %i\n", i );fflush(stdout);
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
@@ -517,6 +521,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL || size < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
@@ -525,6 +530,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 		DString_AppendWChar( string, proc->stackValues[0]->xInteger.value );
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 int DaoArray_AlignShape( DaoArray *self, DArray *sidx, daoint *dims, int ndim );
@@ -552,6 +558,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
@@ -599,6 +606,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 			}
 		}
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	if( first ) DaoArray_Delete( first );
 #endif
@@ -614,6 +622,7 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL || size < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
@@ -624,6 +633,7 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 		res = proc->stackValues[0];
 		DaoList_Append( list, res );
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
@@ -637,6 +647,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL || size < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
@@ -647,6 +658,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 		if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
 			DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static DaoFuncItem stdMeths[]=

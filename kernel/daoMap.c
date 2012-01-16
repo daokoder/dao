@@ -376,7 +376,6 @@ void DMap_Reset( DMap *self )
 	if( self->hashing ){
 		for(i=0; i<self->tsize; i++) DMap_BufferTree( self, self->table[i] );
 		memset( self->table, 0, self->tsize*sizeof(DNode*) );
-		self->tsize = 4;
 	}else{
 		DMap_BufferTree( self, self->root );
 	}

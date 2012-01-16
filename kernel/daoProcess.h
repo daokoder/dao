@@ -96,20 +96,21 @@ struct DaoProcess
 	daoint      stackSize; /* maximum number of values that can be hold by stackValues; */
 	daoint      stackTop; /* one past the last active stack value; */
 
+	uchar_t  pauseType;
+	uchar_t  status;
+	uchar_t  stopit;
+
 	DaoType  *abtype; /* for coroutine */
 	DArray   *exceptions;
-
-	char pauseType;
-	char status;
-	char stopit;
 
 	DaoFuture  *future;
 	DaoStream  *stdioStream;
 	DaoFactory *factory;
 
 #ifdef DAO_WITH_THREAD
-	DMutex    *mutex; /* used only by mt; */
-	DCondVar  *condv; /* used only by mt; */
+	int        depth;
+	DCondVar  *condv; /* condition variable for resuming suspended process; */
+	DMutex    *mutex; /* mutex for mt.critical::{} */
 #endif
 
 	DString *mbstring;
@@ -141,6 +142,11 @@ DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoVal
 
 /* Execute from the top of the calling stack */
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );
+
+/* Acquire and release the condition variable: */
+DAO_DLL void DaoProcess_AcquireCV( DaoProcess *self );
+DAO_DLL void DaoProcess_ReleaseCV( DaoProcess *self );
+DAO_DLL void DaoProcess_Suspend( DaoProcess *self, int type );
 
 DAO_DLL int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );

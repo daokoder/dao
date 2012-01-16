@@ -4068,6 +4068,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
+	DaoProcess_AcquireCV( proc );
 	for(i=first; i<N; i++){
 		idval = proc->stackValues + stackBase + sect->a + 1;
 		id = id2 = (original ? DaoArray_IndexFromSlice( original, slices, i ) : i);
@@ -4111,6 +4112,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 			break;
 		}
 	}
+	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	if( indices ) DaoArray_Delete( indices );
 	if( funct == DVM_FUNCT_FOLD ){

@@ -427,6 +427,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
 		tmp.data = p[0]->xString.data;
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
+		DaoProcess_AcquireCV( proc );
 		while( DaoFile_ReadLine( fin, line->data ) ){
 			if( chop ) DString_Chop( line->data );
 			proc->topFrame->entry = entry;
@@ -435,6 +436,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
+		DaoProcess_ReleaseCV( proc );
 		DaoProcess_PopFrame( proc );
 	}
 	fclose( fin );
@@ -462,6 +464,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		DString tmp2 = DString_WrapMBS( "" );
 		tmp.data = & tmp2;
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
+		DaoProcess_AcquireCV( proc );
 		while( (i++) < count && DaoStream_ReadLine( self, line->data ) ){
 			if( chop ) DString_Chop( line->data );
 			proc->topFrame->entry = entry;
@@ -470,6 +473,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
+		DaoProcess_ReleaseCV( proc );
 		DaoProcess_PopFrame( proc );
 	}
 }
