@@ -268,4 +268,5 @@ DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types );
 DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types );
 DAO_DLL void DaoCdataType_SpecializeMethods( DaoType *self );
 
+
 #endif

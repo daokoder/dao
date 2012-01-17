@@ -59,6 +59,7 @@ struct DaoParser
 
 	short levelBase;
 	short lexLevel;
+	short needConst;
 
 	DMap  *allConsts; /* <DString*,int>: implicit and explict constants; */
 

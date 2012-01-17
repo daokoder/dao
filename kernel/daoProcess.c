@@ -3016,18 +3016,37 @@ DaoEnum* DaoProcess_PutEnum( DaoProcess *self, const char *symbols )
 DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 {
 	/* create a new list in any case. */
-	DaoList *list = DaoList_New();
+	DaoList *list = (DaoList*)self->activeValues[ vmc->c ];
 	DaoType *tp = self->activeTypes[ vmc->c ];
+	if( list && list->type == DAO_LIST && list->unitype == tp ){
+		DaoVmCode *vmc2 = vmc + 1;
+		if( list->refCount == 1 ) return list;
+		if( list->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
+			if( self->activeValues[vmc2->c] == (DaoValue*) list ) return list;
+		}
+	}
+	list = DaoList_New();
 	if( tp == NULL || tp->tid != DAO_LIST ) tp = dao_list_any;
+	GC_ShiftRC( tp, list->unitype );
 	list->unitype = tp;
-	GC_IncRC( tp );
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
 	return list;
 }
 DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc )
 {
-	DaoMap *map = DaoMap_New( vmc->code == DVM_HASH );
+	DaoMap *map = (DaoMap*) self->activeValues[ vmc->c ];
 	DaoType *tp = self->activeTypes[ vmc->c ];
+
+	if( map && map->type == DAO_MAP && map->unitype == tp ){
+		if( (map->items->hashing == 0) == (vmc->code == DVM_MAP) ){
+			DaoVmCode *vmc2 = vmc + 1;
+			if( map->refCount == 1 ) return map;
+			if( map->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
+				if( self->activeValues[vmc2->c] == (DaoValue*) map ) return map;
+			}
+		}
+	}
+	map = DaoMap_New( vmc->code == DVM_HASH );
 	DaoValue_Move( (DaoValue*) map, self->activeValues + vmc->c, tp );
 	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_map_any;
 	GC_ShiftRC( tp, map->unitype );
@@ -3040,7 +3059,17 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
 	DaoType *tp = self->activeTypes[ vmc->c ];
 	DaoValue *dC = self->activeValues[ vmc->c ];
+	DaoArray *array = (DaoArray*) dC;
 	int type = DAO_FLOAT;
+	if( array && array->type == DAO_ARRAY && array->unitype == tp ){
+		DaoVmCode *vmc2 = vmc + 1;
+		if( array->refCount == 1 ) return array;
+		if( array->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
+			if( self->activeValues[vmc2->c] == (DaoValue*) array ){
+				return array;
+			}
+		}
+	}
 	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
 		type = tp->nested->items.pType[0]->tid;
 		if( type == 0 || type > DAO_COMPLEX ) type = DAO_FLOAT;
@@ -3055,8 +3084,8 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue_Copy( dC, & self->activeValues[ vmc->c ] );
 	}
 	if( tp == NULL || tp->tid != DAO_ARRAY ) tp = dao_array_any;
+	GC_ShiftRC( tp, dC->xArray.unitype );
 	dC->xArray.unitype = tp;
-	GC_IncRC( tp );
 	return & dC->xArray;
 #else
 	self->activeCode = vmc;
@@ -4117,7 +4146,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 #else
 			DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
 #endif
-			DaoProcess_PrepareCall( self, (DaoRoutine*)rout, selfpar, params, npar, vmc );
+			DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
 		}
 	}else if( caller->type == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, npar );

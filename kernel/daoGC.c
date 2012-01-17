@@ -429,9 +429,11 @@ void DaoGC_DecRC( DaoValue *value )
 		DMutex_Lock( & gcWorker.mutex_idle_list );
 		DaoGC_DecRC2( value );
 		DMutex_Unlock( & gcWorker.mutex_idle_list );
+		DaoCGC_TryInvoke();
 		return;
 	}
 	DaoGC_DecRC2( value );
+	DaoIGC_TryInvoke();
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
@@ -442,10 +444,14 @@ void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 		if( up ) up->xGC.refCount ++;
 		if( down ) DaoGC_DecRC2( down );
 		DMutex_Unlock( & gcWorker.mutex_idle_list );
+		if( down ) DaoCGC_TryInvoke();
 		return;
 	}
 	if( up ) up->xGC.refCount ++;
-	if( down ) DaoGC_DecRC2( down );
+	if( down ){
+		DaoGC_DecRC2( down );
+		DaoIGC_TryInvoke();
+	}
 }
 void DaoGC_IncRCs( DArray *values )
 {
@@ -600,34 +606,35 @@ void GC_Unlock()
 
 void DaoCGC_DecRC( DaoValue *p )
 {
-	if( ! p ) return;
-
-	DMutex_Lock( & gcWorker.mutex_idle_list );
-	DaoGC_DecRC2( p );
-	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	if( p ){
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		DaoGC_DecRC2( p );
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
+		DaoCGC_TryInvoke();
+	}
 }
 void DaoCGC_IncRC( DaoValue *p )
 {
-	if( ! p ) return;
-
-	DMutex_Lock( & gcWorker.mutex_idle_list );
-	p->xGC.refCount ++;
-	if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
-	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	if( p ){
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		p->xGC.refCount ++;
+		if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
+	}
 }
 void DaoCGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	if( up == down ) return;
 
 	DMutex_Lock( & gcWorker.mutex_idle_list );
-
 	if( up ){
 		up->xGC.refCount ++;
 		if( up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	}
 	if( down ) DaoGC_DecRC2( down );
-
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
+
+	if( down ) DaoCGC_TryInvoke();
 }
 
 void DaoCGC_IncRCs( DArray *list )
@@ -655,6 +662,7 @@ void DaoCGC_DecRCs( DArray *list )
 	DMutex_Lock( & gcWorker.mutex_idle_list );
 	for( i=0; i<list->size; i++) if( values[i] ) DaoGC_DecRC2( values[i] );
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	DaoCGC_TryInvoke();
 }
 void DaoCGC_Finish()
 {
@@ -886,19 +894,22 @@ void DaoIGC_IncRC( DaoValue *p )
 	p->xGC.refCount ++;
 	if( p->type >= DAO_ENUM ) p->xGC.cycRefCount ++;
 }
-static int counts = 100;
+static int counts = 1000;
 void DaoIGC_DecRC( DaoValue *p )
 {
-	if( p ) DaoGC_DecRC2( p );
+	if( p ){
+		DaoGC_DecRC2( p );
+		DaoIGC_TryInvoke();
+	}
 }
 static void DaoIGC_TryInvoke()
 {
 	if( gcWorker.busy ) return;
 	if( -- counts ) return;
 	if( gcWorker.idleList->size < gcWorker.gcMax ){
-		counts = 100;
+		counts = 1000;
 	}else{
-		counts = 10;
+		counts = 100;
 	}
 
 	if( gcWorker.workList->size )
@@ -921,12 +932,16 @@ void DaoIGC_DecRCs( DArray *list )
 	if( list == NULL || list->size == 0 ) return;
 	data = list->items.pValue;
 	for( i=0; i<list->size; i++) DaoIGC_DecRC( data[i] );
+	DaoIGC_TryInvoke();
 }
 void DaoIGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	if( up == down ) return;
 	if( up ) DaoIGC_IncRC( up );
-	if( down ) DaoIGC_DecRC( down );
+	if( down ){
+		DaoIGC_DecRC( down );
+		DaoIGC_TryInvoke();
+	}
 }
 
 void DaoIGC_Switch()

@@ -1023,9 +1023,11 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 				printf( "cst = %i;  reg = %i, %s\n", cst, reg, type?type->name->mbs:"" );
 				for(j=i+1; j<comma; j++) printf( "%s\n", tokens[j]->string->mbs );
 #endif
+				self->needConst += 1;
 				DArray_PushFront( self->enumTypes, type );
 				reg = DaoParser_MakeArithTree( self, i+1, comma-1, & cst );
 				DArray_PopFront( self->enumTypes );
+				self->needConst -= 1;
 				if( reg < 0 ) goto ErrorInvalidDefault;
 				if( cst ){
 					dft = DaoParser_GetVariable( self, cst );
@@ -1243,7 +1245,9 @@ static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 {
 	DaoValue *value;
 	int cst = 0;
+	self->needConst += 1;
 	DaoParser_ParseAtomicExpression( self, start, & cst );
+	self->needConst -= 1;
 	if( cst ==0 ) return NULL;
 	value = DaoParser_GetVariable( self, cst );
 	return DaoNamespace_MakeValueType( self->nameSpace, value );
@@ -4092,6 +4096,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	enode.konst = 0;
 	temp = start > to ? 0 : tokens[start]->name;
 	if( temp == DTOK_ASSN || temp == DTOK_CASSN ){ /* V=E  V:=E  V:TYPE=E */
+		int foldConst = self->isClassBody && (store & DAO_DECL_MEMBER);
+		foldConst |= (store & DAO_DECL_CONST);
 		eq = start;
 		if( start + 1 > to ){
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
@@ -4100,7 +4106,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		if( abtp && abtp->tid >= DAO_ARRAY && abtp->tid <= DAO_TUPLE )
 			DArray_PushFront( self->enumTypes, abtp );
 		self->curToken = start + 1;
+		if( foldConst ) self->needConst += 1;
 		enode = DaoParser_ParseExpression( self, 0 );
+		if( foldConst ) self->needConst -= 1;
 		start = self->curToken;
 		end = self->curToken;
 		if( enode.reg < 0 ){
@@ -5606,13 +5614,18 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		isempty = lb >= rb;
 		if( etype == DKEY_MAP && colon <0 ) enumcode = DVM_MAP;
 		if( lb >= rb ){
-			DaoMap *hm = DaoMap_New(colon>=0);
-			hm->unitype = tp ? tp : dao_map_any;
-			GC_IncRC( hm->unitype );
-			regC = DaoRoutine_AddConstant( self->routine, (DaoValue*) hm );
-			enode.konst = LOOKUP_BIND_LC( regC );
-			enode.count = 0;
-			regC = DaoParser_GetNormRegister( self, enode.konst, start, 0, end );
+			if( self->needConst ){
+				DaoMap *hm = DaoMap_New(colon>=0);
+				hm->unitype = tp ? tp : dao_map_any;
+				GC_IncRC( hm->unitype );
+				regC = DaoRoutine_AddConstant( self->routine, (DaoValue*) hm );
+				enode.konst = LOOKUP_BIND_LC( regC );
+				enode.count = 0;
+				regC = DaoParser_GetNormRegister( self, enode.konst, start, 0, end );
+			}else{
+				regC = DaoParser_PushRegister( self );
+				DaoParser_AddCode( self, enumcode, regC, 0, regC, start, mid, end );
+			}
 		}else{
 			int sep = pto >= 0 ? DTOK_FIELD : DTOK_COLON;
 			step = 2;
@@ -5667,14 +5680,14 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		goto ParsingError;
 	}
 	if( colon >= 0 && btype != DTOK_LCB ) enode.konst = 0;
-	if( enode.konst == enode.count ){
+	if( self->needConst && enode.konst == enode.count ){
 		regC = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
 	}else if( enode.count ){
 		enode.konst = 0;
-		if( self->enumTypes->size ){
-			tp = self->enumTypes->items.pType[0];
-			if( tp && tp->tid != DAO_ANY ) MAP_Insert( self->routine->body->localVarType, regC, tp );
-		}
+	}
+	if( self->enumTypes->size ){
+		tp = self->enumTypes->items.pType[0];
+		if( tp && tp->tid != DAO_ANY ) MAP_Insert( self->routine->body->localVarType, regC, tp );
 	}
 	result.reg = regC;
 	result.konst = enode.konst;
@@ -6018,9 +6031,9 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				regLast = DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, code, enode.reg, enode.count-1, regLast, postart, start, rb );
 
-				if( code == DVM_CURRY && result.konst && enode.konst == (enode.count-1) ){
+				if( self->needConst && result.konst && enode.konst == (enode.count-1) ){
 					value = DaoParser_GetVariable( self, result.konst );
-					if( value == NULL || value->type != DAO_CLASS ){
+					if( code == DVM_CURRY && (value == NULL || value->type != DAO_CLASS) ){
 						cid->items.pInt[0] = result.konst;
 						if( extra ){
 							DaoInode *inode = self->vmcLast;

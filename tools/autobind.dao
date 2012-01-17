@@ -899,7 +899,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	const pat_usercst = '%s* const %s+ (%w+) (%s+ | %s* (%*) %s*) (%w+) %s* ;';
 
 	blank = ';'[0];
-	allpats = {};
+	allpats : list<tuple<PatternType,int,string>> = {};
 	mlist = source.pfind( pat_struct );
 	for( it in mlist ){
 		codes = source[ it.start : it.end ];

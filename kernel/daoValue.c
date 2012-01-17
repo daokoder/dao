@@ -520,14 +520,14 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 	case DAO_LIST :
 		/* v : any = {}, v->unitype should be list<any> */
 		if( tp->tid == DAO_ANY ) tp = dao_list_any;
-		if( to->xList.unitype ) break;
-		GC_IncRC( tp );
+		if( to->xList.unitype && !(to->xList.unitype->attrib & DAO_TYPE_NOTDEF) ) break;
+		GC_ShiftRC( tp, to->xList.unitype );
 		to->xList.unitype = tp;
 		break;
 	case DAO_MAP :
 		if( tp->tid == DAO_ANY ) tp = dao_map_any;
-		if( to->xMap.unitype ) break;
-		GC_IncRC( tp );
+		if( to->xMap.unitype && !(to->xMap.unitype->attrib & DAO_TYPE_NOTDEF) ) break;
+		GC_ShiftRC( tp, to->xMap.unitype );
 		to->xMap.unitype = tp;
 		break;
 	case DAO_TUPLE :
@@ -550,8 +550,8 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		if( tp->tid == DAO_ANY ) tp = dao_array_any;
-		if( to->xArray.unitype ) break;
-		GC_IncRC( tp );
+		if( to->xArray.unitype && !(to->xArray.unitype->attrib & DAO_TYPE_NOTDEF) ) break;
+		GC_ShiftRC( tp, to->xArray.unitype );
 		to->xArray.unitype = tp;
 		break;
 #endif

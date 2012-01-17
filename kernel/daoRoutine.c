@@ -761,7 +761,7 @@ static DString* AppendError( DArray *errors, DaoRoutine *rout, size_t type )
 void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
 {
 	DNode *node;
-	DMap *defs = DMap_New(0,0);
+	DMap *defs = DHash_New(0,0);
 	DaoType *routType = self->routType;
 	DaoType *abtp, **partypes = routType->nested->items.pType;
 	int npar = np, size = routType->nested->size;
@@ -860,6 +860,7 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
 			tp = ts[ifrom];
 			abtp = routType->nested->items.pType[ito];
+			abtp = DaoType_DefineTypes( abtp, self->nameSpace, defs );
 			DString_AppendChar( s, '\'' );
 			DString_Append( s, tp->name );
 			DString_AppendMBS( s, "\' for \'" );
@@ -2719,12 +2720,12 @@ NotExist_TryAux:
 			{
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-				at = NULL;
+				at = udf;
 				if( opb >= 11 ){
 					at = type[opa];
 					for(j=1; j<opb-10; j++){
 						if( DaoType_MatchTo( type[opa+j], at, defs )==0 ){
-							at = 0;
+							at = any;
 							break;
 						}
 						if( at->tid < type[opa+j]->tid ) at = type[opa+j];
@@ -2780,7 +2781,7 @@ NotExist_TryAux:
 			{
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
-				ts[0] = ts[1] = NULL;
+				ts[0] = ts[1] = udf;
 				if( opb > 0 ){
 					ts[0] = type[opa];
 					ts[1] = type[opa+1];
@@ -2790,8 +2791,8 @@ NotExist_TryAux:
 						if( ts[0] ==NULL && ts[1] ==NULL ) break;
 					}
 				}
-				if( ts[0] ==NULL ) ts[0] = DaoNamespace_GetType( ns, dao_none_value );
-				if( ts[1] ==NULL ) ts[1] = DaoNamespace_GetType( ns, dao_none_value );
+				if( ts[0] ==NULL ) ts[0] = opb ? any : udf;
+				if( ts[1] ==NULL ) ts[1] = opb ? any : udf;
 				ct = DaoNamespace_MakeType( ns, "map", DAO_MAP, NULL, ts, 2 );
 				UpdateType( opc, ct );
 				AssertTypeMatching( ct, type[opc], defs, 0 );
@@ -2802,7 +2803,7 @@ NotExist_TryAux:
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				k = ( (0xff00 & vmc->b )>>8 ) * ( 0xff & vmc->b );
-				at = NULL;
+				at = udf;
 				if( k >0 ){
 					at = type[opa];
 					for( j=0; j<k; j++){
