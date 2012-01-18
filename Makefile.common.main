@@ -64,6 +64,6 @@ one: $(DAO_OBJECTS) kernel/daoMainv.o
 
 
 modules:
-	-cd modules && make
+	-cd modules && $(MAKE)
 
 .PHONY: modules clean

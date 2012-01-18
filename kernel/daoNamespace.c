@@ -705,10 +705,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->inputs = DString_New(1);
 	self->sources = DArray_New(D_ARRAY);
 	self->tokens = DHash_New(D_STRING,0);
-	self->udfType1 = DaoType_New( "?", DAO_UDF, 0,0 );
-	self->udfType2 = DaoType_New( "?", DAO_UDF, 0,0 );
-	GC_IncRC( self->udfType1 );
-	GC_IncRC( self->udfType2 );
 
 	DString_SetMBS( self->lang, "dao" );
 	DArray_Append( self->namespaces, self );
@@ -740,8 +736,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	GC_IncRC( self );
 	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
 	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
-	self->constEvalRoutine->trait |= DAO_DATA_CONST;
-	self->constEvalProcess->trait |= DAO_DATA_CONST;
+	self->constEvalRoutine->trait |= DAO_VALUE_CONST;
+	self->constEvalProcess->trait |= DAO_VALUE_CONST;
 	DArray_Append( self->cstData, (DaoValue*) self->constEvalRoutine );
 	DArray_Append( self->cstData, (DaoValue*) self->constEvalProcess );
 	DString_Delete( name );
@@ -772,8 +768,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	}
 	DaoList_Delete( self->argParams );
 
-	GC_DecRC( self->udfType1 );
-	GC_DecRC( self->udfType2 );
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->cstData );
@@ -860,7 +854,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 
 			mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) dest );
 			dest = (DaoValue*) mroutine;
-			dest->xNone.trait |= DAO_DATA_CONST;
+			dest->xNone.trait |= DAO_VALUE_CONST;
 			GC_ShiftRC( mroutine, self->cstData->items.pValue[id] );
 			self->cstData->items.pValue[id] = dest;
 		}
@@ -870,7 +864,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			DRoutines_Add( dest->xRoutine.overloads, (DaoRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->cstData, value );
-			value->xNone.trait |= DAO_DATA_CONST;
+			value->xNone.trait |= DAO_VALUE_CONST;
 		}
 		id = node->value.pSize;
 	}else{
@@ -1127,7 +1121,7 @@ int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 			return 1;
 		}
 	}
-	parent->trait |= DAO_DATA_CONST;
+	parent->trait |= DAO_VALUE_CONST;
 	DArray_Append( self->cstData, parent );
 	DArray_Append( self->namespaces, parent );
 	DaoNamespace_UpdateLookupTable( self );
@@ -1349,9 +1343,9 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			nested = DArray_New(0);
 			if( list->items.size ==0 ){
 				DString_AppendMBS( mbs, "<?>" );
-				DArray_Append( nested, self->udfType1 );
+				DArray_Append( nested, dao_type_udf );
 			}else{
-				itp = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
+				itp = dao_type_any;
 				DString_AppendMBS( mbs, "<any>" );
 				DArray_Append( nested, itp );
 			}  
@@ -1359,10 +1353,10 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			nested = DArray_New(0);
 			if( map->items->size ==0 ){
 				DString_AppendMBS( mbs, "<?,?>" );
-				DArray_Append( nested, self->udfType1 );
-				DArray_Append( nested, self->udfType2 );
+				DArray_Append( nested, dao_type_udf );
+				DArray_Append( nested, dao_type_udf );
 			}else{
-				itp = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
+				itp = dao_type_any;
 				DString_AppendMBS( mbs, "<any,any>" );
 				DArray_Append( nested, itp );
 				DArray_Append( nested, itp );
@@ -1372,7 +1366,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			nested = DArray_New(0);
 			if( array->size ==0 ){
 				DString_AppendMBS( mbs, "<?>" );
-				DArray_Append( nested, self->udfType1 );
+				DArray_Append( nested, dao_type_udf );
 			}else if( array->etype == DAO_INTEGER ){
 				itp = DaoNamespace_MakeType( self, "int", DAO_INTEGER, 0,0,0 );
 				DString_AppendMBS( mbs, "<int>" );
@@ -1478,7 +1472,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	int attrib = tid >> 16;
 
 	tid = tid & 0xffff;
-	if( tid != DAO_ANY ) any = DaoNamespace_MakeType( self, "any", DAO_ANY, 0,0,0 );
+	if( tid != DAO_ANY ) any = dao_type_any;
 
 	DString_SetMBS( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );

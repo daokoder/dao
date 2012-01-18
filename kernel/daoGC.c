@@ -237,7 +237,7 @@ struct DaoGarbageCollector
 };
 static DaoGarbageCollector gcWorker = { NULL, NULL, NULL };
 
-static DaoEnum dummyEnum = {0,0,DAO_DATA_CONST,0,1,1,0,NULL};
+static DaoEnum dummyEnum = {0,0,DAO_VALUE_CONST,0,1,1,0,NULL};
 static DaoEnum *dummyEnum2 = & dummyEnum;
 static DaoValue *dummyValue = NULL;
 
@@ -351,9 +351,9 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
-		case DAO_COMPLEX : dao_free( p ); return 1;
-		case DAO_LONG : DaoLong_Delete( & p->xLong ); return 1;
-		case DAO_STRING : DaoString_Delete( & p->xString ); return 1;
+		case DAO_COMPLEX : dao_free( p ); return 0;
+		case DAO_LONG : DaoLong_Delete( & p->xLong ); return 0;
+		case DAO_STRING : DaoString_Delete( & p->xString ); return 0;
 #ifdef DAO_WITH_NUMARRAY
 		case DAO_ARRAY : DaoArray_ResizeVector( & p->xArray, 0 ); break;
 #endif
@@ -383,10 +383,10 @@ static int DaoGC_DecRC2( DaoValue *p )
 
 	/* never push simple data types into GC queue,
 	 * because they cannot form cyclic referencing structure: */
-	if( (p->type < DAO_ENUM) | p->xGC.idle ) return 1;
+	if( (p->type < DAO_ENUM) | p->xGC.idle ) return 0;
 
 	DArray_Append( gcWorker.idleList, p );
-	return 0;
+	return 1;
 }
 
 void DaoGC_Finish()
@@ -432,8 +432,7 @@ void DaoGC_DecRC( DaoValue *value )
 		DaoCGC_TryInvoke();
 		return;
 	}
-	DaoGC_DecRC2( value );
-	DaoIGC_TryInvoke();
+	if( DaoGC_DecRC2( value ) ) DaoIGC_TryInvoke();
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
@@ -449,8 +448,7 @@ void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 	}
 	if( up ) up->xGC.refCount ++;
 	if( down ){
-		DaoGC_DecRC2( down );
-		DaoIGC_TryInvoke();
+		if( DaoGC_DecRC2( down ) ) DaoIGC_TryInvoke();
 	}
 }
 void DaoGC_IncRCs( DArray *values )
@@ -481,18 +479,24 @@ void DaoGC_TryInvoke()
 
 void DaoGC_IncRC( DaoValue *value )
 {
-	value->xGC.refCount ++;
-	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
+	if( value ){
+		value->xGC.refCount ++;
+		if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
+	}
 }
 void DaoGC_DecRC( DaoValue *value )
 {
-	DaoGC_DecRC2( value );
+	if( value ){
+		if( DaoGC_DecRC2( value ) ) DaoIGC_TryInvoke();
+	}
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	if( up && up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	if( up ) up->xGC.refCount ++;
-	if( down ) DaoGC_DecRC2( down );
+	if( down ){
+		if( DaoGC_DecRC2( down ) ) DaoIGC_TryInvoke();
+	}
 }
 void DaoGC_IncRCs( DArray *values )
 {
@@ -757,7 +761,7 @@ void DaoCGC_CycRefCountDecScan()
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_DATA_WIMETA ){
+		if( value->xNone.trait & DAO_VALUE_WIMETA ){
 			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		DaoGC_CycRefCountDecScan( value );
@@ -794,7 +798,7 @@ int DaoCGC_AliveObjectScan()
 	for( i=0; i<auxList->size; i++){
 		DaoValue *value = auxList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_DATA_WIMETA ){
+		if( value->xNone.trait & DAO_VALUE_WIMETA ){
 			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		DaoGC_CycRefCountIncScan( value );
@@ -813,7 +817,7 @@ void DaoCGC_RefCountDecScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_DATA_WIMETA ){
+		if( value->xNone.trait & DAO_VALUE_WIMETA ){
 			DaoMap *table = DaoMetaTables_Remove( value );
 			if( table ) table->refCount --;
 		}
@@ -898,8 +902,7 @@ static int counts = 1000;
 void DaoIGC_DecRC( DaoValue *p )
 {
 	if( p ){
-		DaoGC_DecRC2( p );
-		DaoIGC_TryInvoke();
+		if( DaoGC_DecRC2( p ) ) DaoIGC_TryInvoke();
 	}
 }
 static void DaoIGC_TryInvoke()
@@ -939,8 +942,7 @@ void DaoIGC_ShiftRC( DaoValue *up, DaoValue *down )
 	if( up == down ) return;
 	if( up ) DaoIGC_IncRC( up );
 	if( down ){
-		DaoIGC_DecRC( down );
-		DaoIGC_TryInvoke();
+		if( DaoGC_DecRC2( down ) ) DaoIGC_TryInvoke();
 	}
 }
 
@@ -1005,7 +1007,7 @@ void DaoIGC_CycRefCountDecScan()
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_DATA_WIMETA ){
+		if( value->xNone.trait & DAO_VALUE_WIMETA ){
 			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		j += DaoGC_CycRefCountDecScan( value );
@@ -1064,7 +1066,7 @@ int DaoIGC_AliveObjectScan()
 	for( ; j<auxList->size; j++){
 		DaoValue *value = auxList->items.pValue[j];
 		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_DATA_WIMETA ){
+		if( value->xNone.trait & DAO_VALUE_WIMETA ){
 			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		k += DaoGC_CycRefCountIncScan( value );
@@ -1091,7 +1093,7 @@ void DaoIGC_RefCountDecScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_DATA_WIMETA ){
+		if( value->xNone.trait & DAO_VALUE_WIMETA ){
 			DaoMap *table = DaoMetaTables_Remove( value );
 			if( table ) table->refCount --;
 		}

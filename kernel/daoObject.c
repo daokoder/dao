@@ -135,7 +135,7 @@ static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycDa
 	DaoObject *pnew, *self = & value->xObject;
 	DNode *node = DMap_Find( cycData, self );
 	if( node ) return node->value.pValue;
-	if( self->trait & DAO_DATA_NOCOPY ) return value;
+	if( self->trait & DAO_VALUE_NOCOPY ) return value;
 
 	pnew = DaoObject_New( self->defClass );
 	DMap_Insert( cycData, self, pnew );

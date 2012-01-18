@@ -370,7 +370,7 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 		if( passed & (1<<i) ) continue;
 		if( m != DAO_PAR_DEFAULT ) return 0;
 		tp = & types[i]->aux->xType;
-		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) ){
+		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
 			tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
 			//XXX printf( "tp = %s\n", tp->name->mbs );
 		}
@@ -390,7 +390,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 	size_t passed = 0;
 	int mcall = code == DVM_MCALL;
 	int need_self = routype->attrib & DAO_TYPE_SELF;
-	int need_spec = routype->attrib & DAO_TYPE_NOTDEF;
+	int need_spec = routype->attrib & DAO_TYPE_SPEC;
 	int ndef = routine->parCount;
 	int npar = np;
 	int ifrom, ito;
@@ -406,7 +406,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 
 	if( need_spec ){
 		defs = DHash_New(0,0);
-		if( hostype && routine->routHost && (routine->routHost->attrib & DAO_TYPE_NOTDEF) ){
+		if( hostype && routine->routHost && (routine->routHost->attrib & DAO_TYPE_SPEC) ){
 			//XXX printf( "%s %s\n", hostype->name->mbs, routine->routHost->name->mbs );
 			/* Init type specialization mapping for static methods: */
 			DaoType_MatchTo( hostype, routine->routHost, defs );
@@ -419,7 +419,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 	}else if( obj && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		tp = & types[0]->aux->xType;
-		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) ){
+		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
 			DaoType *type = DaoNamespace_GetType( routine->nameSpace, obj );
 			DaoType_MatchTo( type, tp, defs ); /* Init type specialization mapping; */
 			/* Specialize types: */
@@ -473,7 +473,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		if( ito >= ndef ) goto ReturnZero;
 		passed |= (size_t)1<<ito;
 		tp = & types[ito]->aux->xType;
-		if( defs && tp && (tp->attrib & DAO_TYPE_NOTDEF) ){
+		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
 			DaoType *type = DaoNamespace_GetType( routine->nameSpace, val );
 			int mt = DaoType_MatchTo( type, tp, defs ); /* Init type specialization mapping; */
 			/* Specialize types: */
@@ -1289,7 +1289,7 @@ CallEntry:
 				/* mt.run(3)::{ mt.critical::{} }: the inner functional will be compiled
 				 * as a LOAD and RETURN, but the inner functional will not return anything,
 				 * so the first operand of LOAD will be NULL! */
-				if( (vA->xNone.trait & DAO_DATA_CONST) == 0 ){
+				if( (vA->xNone.trait & DAO_VALUE_CONST) == 0 ){
 					GC_ShiftRC( vA, locVars[ vmc->c ] );
 					locVars[ vmc->c ] = vA;
 				}else{
@@ -2781,7 +2781,7 @@ int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
 	DaoType *tp2, *tp = self->activeTypes[reg];
 
 	if( *value == refer ) return 1;
-	if( !(refer->xNone.trait & DAO_DATA_CONST) ){
+	if( !(refer->xNone.trait & DAO_VALUE_CONST) ){
 		if( tp == NULL ){
 			GC_ShiftRC( refer, *value );
 			*value = refer;
@@ -3020,9 +3020,15 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp = self->activeTypes[ vmc->c ];
 	if( list && list->type == DAO_LIST && list->unitype == tp ){
 		DaoVmCode *vmc2 = vmc + 1;
-		if( list->refCount == 1 ) return list;
+		if( list->refCount == 1 ){
+			DaoList_Clear( list );
+			return list;
+		}
 		if( list->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
-			if( self->activeValues[vmc2->c] == (DaoValue*) list ) return list;
+			if( self->activeValues[vmc2->c] == (DaoValue*) list ){
+				DaoList_Clear( list );
+				return list;
+			}
 		}
 	}
 	list = DaoList_New();
@@ -3040,9 +3046,15 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc )
 	if( map && map->type == DAO_MAP && map->unitype == tp ){
 		if( (map->items->hashing == 0) == (vmc->code == DVM_MAP) ){
 			DaoVmCode *vmc2 = vmc + 1;
-			if( map->refCount == 1 ) return map;
+			if( map->refCount == 1 ){
+				DaoMap_Reset( map );
+				return map;
+			}
 			if( map->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
-				if( self->activeValues[vmc2->c] == (DaoValue*) map ) return map;
+				if( self->activeValues[vmc2->c] == (DaoValue*) map ){
+					DaoMap_Reset( map );
+					return map;
+				}
 			}
 		}
 	}
@@ -3126,7 +3138,7 @@ DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 	DaoStackFrame *frame = self->topFrame;
 	DaoType *type = self->activeTypes[ self->activeCode->c ]; /* could be specialized; */
 	if( frame->retype ) return self->topFrame->retype;
-	if( type == NULL || (type->attrib & DAO_TYPE_NOTDEF) ){
+	if( type == NULL || (type->attrib & DAO_TYPE_UNDEF) ){
 		if( frame->routine ) type = (DaoType*) frame->routine->routType->aux;
 	}
 	if( type == NULL ) type = self->activeTypes[ self->activeCode->c ];
@@ -3386,12 +3398,12 @@ DaoMap* DaoMetaTables_Get( DaoValue *object, int insert )
 	DaoMap *table = NULL;
 	DNode *node = NULL;
 	GC_Lock();
-	if( object->xNone.trait & DAO_DATA_WIMETA ) node = DMap_Find( dao_meta_tables, object );
+	if( object->xNone.trait & DAO_VALUE_WIMETA ) node = DMap_Find( dao_meta_tables, object );
 	if( node ){
 		table = (DaoMap*) node->value.pValue;
 	}else if( insert ){
 		table = DaoMap_New(1);
-		object->xNone.trait |= DAO_DATA_WIMETA;
+		object->xNone.trait |= DAO_VALUE_WIMETA;
 		GC_IncRC( table );
 		DMap_Insert( dao_meta_tables, object, table );
 	}
@@ -3405,7 +3417,7 @@ static void DaoMetaTables_Set( DaoValue *object, DaoMap *table )
 	node = DMap_Find( dao_meta_tables, object );
 	GC_IncRC( table );
 	if( node ) GC_DecRC( node->value.pValue );
-	object->xNone.trait |= DAO_DATA_WIMETA;
+	object->xNone.trait |= DAO_VALUE_WIMETA;
 	DMap_Insert( dao_meta_tables, object, table );
 	GC_Unlock();
 }
@@ -3415,7 +3427,7 @@ DaoMap* DaoMetaTables_Remove( DaoValue *object )
 	DNode *node;
 	GC_Lock();
 	node = DMap_Find( dao_meta_tables, object );
-	object->xNone.trait &= ~DAO_DATA_WIMETA;
+	object->xNone.trait &= ~DAO_VALUE_WIMETA;
 	if( node ){
 		table = (DaoMap*) node->value.pValue;
 		DMap_EraseNode( dao_meta_tables, node );
@@ -4749,8 +4761,7 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( bval >0 && self->activeTypes[ vmc->c ] ==NULL ){
 		/* for constant evaluation only */
-		DaoType *any = DaoNamespace_MakeType( ns, "any", DAO_ANY, 0,0,0 );
-		DaoType *t, *tp[2];
+		DaoType *tp[2], *t, *any = dao_type_any;
 		tp[0] = DaoNamespace_GetType( ns, pp[opA] );
 		tp[1] = DaoNamespace_GetType( ns, pp[opA+1] );
 		for(i=2; i<bval; i+=2){

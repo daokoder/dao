@@ -4048,7 +4048,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		list = DaoProcess_PutList( proc );
 		indices = DaoArray_New( DAO_INTEGER );
 		DaoArray_ResizeVector( indices, D );
-		indices->trait |= DAO_DATA_CONST;
+		indices->trait |= DAO_VALUE_CONST;
 		break;
 	case DVM_FUNCT_FOLD :
 		if( npar > 1 ){

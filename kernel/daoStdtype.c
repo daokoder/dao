@@ -364,8 +364,8 @@ DaoTypeBase baseTyper =
 {
 	"none", & baseCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
 };
-static DaoNone none0 = {0,0,DAO_DATA_CONST,0,1};
-static DaoNone any0 = {0,DAO_ANY,DAO_DATA_CONST,0,1};
+static DaoNone none0 = {0,0,DAO_VALUE_CONST,0,1};
+static DaoNone any0 = {0,DAO_ANY,DAO_VALUE_CONST,0,1};
 DaoValue *dao_none_value = (DaoValue*) (void*) & none0;
 DaoValue *dao_any_value = (DaoValue*) (void*) & any0;
 
@@ -1603,8 +1603,6 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	daoint n, size = self->size;
 	if( start <0 ) start += self->size;
 	if( end <0 ) end += self->size;
-	start = start;
-	end = end;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoProcess_PutInteger( proc, n );
@@ -3855,7 +3853,7 @@ DaoTypeBase defaultCdataTyper =
 	"cdata", NULL, NULL, NULL, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
 };
-DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_DATA_CONST,0,1,0,NULL,NULL,NULL};
+DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL};
 
 
 
@@ -3874,8 +3872,8 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 
 	ctype->subtype = DAO_CDATA_PTR;
 	cdata->subtype = DAO_CDATA_PTR;
-	ctype->trait |= DAO_DATA_NOCOPY;
-	cdata->trait |= DAO_DATA_CONST|DAO_DATA_NOCOPY;
+	ctype->trait |= DAO_VALUE_NOCOPY;
+	cdata->trait |= DAO_VALUE_CONST|DAO_VALUE_NOCOPY;
 
 	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoValue*)ctype, NULL );
 	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );

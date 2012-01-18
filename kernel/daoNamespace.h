@@ -51,9 +51,6 @@ struct DaoNamespace
 	DMap   *moduleLoaders; /* <DString*,DaoModuleLoader> */
 	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
 
-	DaoType *udfType1;
-	DaoType *udfType2;
-
 	DString *file;
 	DString *path;
 	DString *name; /* path + file */

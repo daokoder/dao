@@ -45,12 +45,10 @@ enum DaoRTTI
 	DAO_CODEBLOCK ,
 
 	DAO_PAIR ,
-	DAO_LIST_ANY ,
-	DAO_ARRAY_ANY , /* map<any,any> */
-	DAO_MAP_ANY ,
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST , /* ... */
+
 	END_EXTRA_TYPES ,
 
 	END_NOT_TYPES
@@ -87,7 +85,8 @@ enum DaoMatchType
 	DAO_MT_ANY , /* match to type "any" */
 	DAO_MT_SUB ,
 	DAO_MT_SIM , /* int, float, double */
-	DAO_MT_EQ
+	DAO_MT_EQ ,
+	DAO_MT_EXACT /* value to value type */
 };
 
 enum DaoVarDeclaration
@@ -111,18 +110,18 @@ enum DaoVarStorage
 	DAO_LAST_REGISTER
 };
 
-enum DaoDataTrait
+enum DaoValueTrait
 {
-	DAO_DATA_CONST   = (1<<1), /* constant data object */
-	DAO_DATA_NOCOPY  = (1<<2), /* data object not for copying */
-	DAO_DATA_WIMETA  = (1<<3) /* data object with meta field */
+	DAO_VALUE_CONST   = (1<<1), /* constant data object */
+	DAO_VALUE_NOCOPY  = (1<<2), /* data object not for copying */
+	DAO_VALUE_WIMETA  = (1<<3) /* data object with meta field */
 };
 enum DaoTypeAttribs
 {
-	DAO_TYPE_SELF = (1<<0),
-	DAO_TYPE_COROUTINE = (1<<1),
-	DAO_TYPE_NOTDEF = (1<<2),
-	DAO_TYPE_INTER = (1<<3)
+	DAO_TYPE_SPEC = (1<<0),  /* specializable type, with at least one type holder; */
+	DAO_TYPE_UNDEF = (1<<1), /* undefined type, with at least one undefined type; */
+	DAO_TYPE_SELF  = (1<<2), /* routine type that has self parameter; */
+	DAO_TYPE_COROUTINE = (1<<3) /* routine type that can run as coroutine; */
 };
 enum DaoCaseMode
 {
@@ -174,13 +173,13 @@ enum DaoRoutineAttrib
 #define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)
 #define DAO_OPER_OVERLOADED  (DAO_TYPER_PRIV_FREE<<1)
 
-enum DaoGlbConstShift
+enum DaoGlobalConstOffset
 {
 	DVR_NSC_NONE = 1 ,
 	DVR_NSC_ANY , 
 	DVR_NSC_MAIN 
 };
-enum DaoGlbVarShift
+enum DaoGlobalVarOffset
 {
 	DVR_NSV_EXCEPTIONS 
 };

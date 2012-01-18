@@ -996,9 +996,9 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	if( k < 0 ) k = vmc->last - 1; else k -= vmc->first; }
 
 #define UpdateType( id, tp ) \
-	if( type[id] == NULL || (type[id]->attrib & DAO_TYPE_NOTDEF) ){ \
+	if( type[id] == NULL || (type[id]->attrib & DAO_TYPE_UNDEF) ){ \
 		if( type[id] == NULL || DaoType_MatchTo( tp, type[id], NULL ) ){ \
-			if( tp->attrib & DAO_TYPE_NOTDEF ) tp = DaoType_DefineTypes( tp, ns, defs ); \
+			if( tp->attrib & DAO_TYPE_SPEC ) tp = DaoType_DefineTypes( tp, ns, defs ); \
 			GC_ShiftRC( tp, type[id] ); \
 			type[id] = tp; } }
 
@@ -1079,8 +1079,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	array = DArray_New(0);
 	mbs = DString_New(1);
 
-	any = DaoNamespace_MakeType( ns, "any", DAO_ANY, NULL, NULL, 0 );
-	udf = DaoNamespace_MakeType( ns, "?", DAO_UDF, NULL, NULL, 0 );
+	any = dao_type_any;
+	udf = dao_type_udf;
 	inumt = DaoNamespace_MakeType( ns, "int", DAO_INTEGER, NULL, NULL, 0 );
 	fnumt = DaoNamespace_MakeType( ns, "float", DAO_FLOAT, NULL, NULL, 0 );
 	dnumt = DaoNamespace_MakeType( ns, "double", DAO_DOUBLE, NULL, NULL, 0 );
@@ -3219,7 +3219,7 @@ NotExist_TryAux:
 
 					tt = rout->routType;
 					cbtype = tt->cbtype;
-					if( tt->aux == NULL || (tt->attrib & DAO_TYPE_NOTDEF) ){
+					if( tt->aux == NULL || (tt->attrib & DAO_TYPE_UNDEF) ){
 						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 					}
 
@@ -3465,7 +3465,7 @@ TryPushBlockReturnType:
 								if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
 							}
 						}
-					}else if( ct && !( ct->attrib & DAO_TYPE_NOTDEF) ){
+					}else if( ct && !( ct->attrib & DAO_TYPE_UNDEF) ){
 						if( notide && DaoType_MatchTo( at, ct, defs2 ) == DAO_MT_SUB ){
 							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs2 ) ){
 								/* typedef tuple<x:float,y:float> Point2D

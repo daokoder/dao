@@ -102,16 +102,10 @@ void DaoType_MapNames( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self )
 {
 	daoint i, count = 0;
-	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE
-			|| DString_FindChar( self->name, '@', 0 ) != MAXSIZE )
-		self->attrib |= DAO_TYPE_NOTDEF;
-	else
-		self->attrib &= ~DAO_TYPE_NOTDEF;
 
-	if( self->tid == DAO_INTERFACE )
-		self->attrib |= DAO_TYPE_INTER;
-	else
-		self->attrib &= ~DAO_TYPE_INTER;
+	self->attrib &= ~(DAO_TYPE_SPEC|DAO_TYPE_UNDEF);
+	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
+	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
 
 	if( self->tid == DAO_TUPLE ){
 		self->rntcount = 0;
@@ -225,7 +219,7 @@ void DaoType_InitDefault( DaoType *self )
 	}
 	GC_ShiftRC( value, self->value );
 	self->value = value;
-	if( value ) value->xNone.trait |= DAO_DATA_CONST;
+	if( value ) value->xNone.trait |= DAO_VALUE_CONST;
 }
 DaoType* DaoType_Copy( DaoType *other )
 {
@@ -335,9 +329,6 @@ void DaoType_Init()
 	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_LIST][DAO_LIST_ANY] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_ARRAY][DAO_ARRAY_ANY] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_MAP][DAO_MAP_ANY] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_FUTURE][DAO_FUTURE] = DAO_MT_EQ+1;
 
 	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EQ+1;
@@ -455,15 +446,13 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 	}else if( mt == DAO_MT_UDF ){
 		if( self->tid == DAO_UDF ){
-			if( defs && type->tid != DAO_UDF ) MAP_Insert( defs, self, type );
 			if( type->tid==DAO_ANY || type->tid==DAO_UDF ) return DAO_MT_ANYUDF;
 		}else{
-			if( defs && self->tid != DAO_UDF ) MAP_Insert( defs, type, self );
 			if( self->tid==DAO_ANY || self->tid==DAO_UDF ) return DAO_MT_ANYUDF;
 		}
 		return mt;
 	}else if( mt == DAO_MT_ANYUDF ){
-		if( self->tid == DAO_ANY && (type->tid == DAO_UDF || type->tid == DAO_INITYPE) ){
+		if( self->tid == DAO_ANY && type->tid == DAO_INITYPE ){
 			if( defs ) MAP_Insert( defs, type, self );
 		}
 		return mt;
@@ -501,10 +490,10 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	}
 	switch( self->tid ){
 	case DAO_ENUM :
-		if( DString_EQ( self->name, type->name ) ) return DAO_MT_EQ;
+		if( self == type ) return DAO_MT_EQ;
+		if( DString_EQ( self->name, type->name ) ) return DAO_MT_SIM;
 		if( self->flagtype && type->flagtype ==0 ) return 0;
-		if( self->mapNames ==NULL && self->mapNames ==NULL ) return DAO_MT_SUB;
-		if( self->mapNames ==NULL || self->mapNames ==NULL ) return DAO_MT_SUB;
+		if( self->mapNames == NULL || type->mapNames == NULL ) return DAO_MT_SUB;
 		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
 			node = DMap_Find( type->mapNames, it->key.pVoid );
 			if( node ==NULL ) return 0;
@@ -661,12 +650,12 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 	switch( self->tid ){
 	case DAO_UDF :
+		return DAO_MT_UDF;
 	case DAO_INITYPE :
 		if( defs ){
 			node = MAP_Find( defs, self );
 			if( node ) return DaoType_MatchValue( node->value.pType, value, defs );
 		}
-		if( self->tid == DAO_UDF ) return DAO_MT_UDF;
 		return DAO_MT_INIT;
 	case DAO_VARIANT :
 		mt = DAO_MT_NOT;
@@ -678,13 +667,13 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		}
 		return mt;
 	case DAO_VALTYPE :
-		if( DaoValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EQ + 1;
+		if( DaoValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EXACT;
 		return DAO_MT_NOT;
 	case DAO_ANY : return DAO_MT_ANY;
 	}
 	switch( value->type ){
 	case DAO_ENUM :
-		if( value->xEnum.etype == self ) return DAO_MT_EQ;
+		if( self == value->xEnum.etype ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		other = & value->xEnum;
 		names = other->etype->mapNames;
@@ -696,7 +685,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			}
 			if( DMap_Find( self->mapNames, node->key.pVoid ) == NULL ) return 0;
 		}
-		return DAO_MT_EQ;
+		return DAO_MT_SIM;
 		break;
 	case DAO_ARRAY :
 		if( value->xArray.size == 0 ) return DAO_MT_ANY;
@@ -899,8 +888,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	daoint i, n;
 
 	if( self == NULL ) return NULL;
-	if( DString_FindChar( self->name, '?', 0 ) == MAXSIZE
-			&& DString_FindChar( self->name, '@', 0 ) == MAXSIZE ) return self;
+	if( !(self->attrib & DAO_TYPE_SPEC) ) return self;
 
 	node = MAP_Find( defs, self );
 	if( node ){
@@ -912,11 +900,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		node = MAP_Find( defs, self );
 		if( node == NULL ) return self;
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
-	}else if( self->tid == DAO_UDF ){
-		node = MAP_Find( defs, self );
-		copy = node ? node->value.pType : NULL;
-		if( copy ==0 || copy->tid == DAO_ANY || copy->tid == DAO_UDF ) return self;
-		return DaoType_DefineTypes( copy, ns, defs );
 	}else if( self->tid == DAO_VARIANT && self->aux ){ /* @T<int|float> */
 		node = MAP_Find( defs, self->aux );
 		if( node == NULL ) return self;

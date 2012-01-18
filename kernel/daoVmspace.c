@@ -670,7 +670,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 
 	skey->xString.data = key;
 	sval->xString.data = val;
-	nested[0] = DaoNamespace_MakeType( ns, "any", DAO_ANY, NULL,NULL,0 );
+	nested[0] = dao_type_any;
 	nested[1] = DaoNamespace_MakeType( ns, "string",DAO_STRING, NULL,NULL,0 );
 	cmdarg->unitype = DaoNamespace_MakeType( ns, "map",DAO_MAP,NULL,nested,2);
 	argv->unitype = DaoNamespace_MakeType( ns, "list",DAO_LIST,NULL,nested+1,1);
@@ -815,7 +815,7 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 		if( argNames->items.pString[i]->size ){
 			DaoNameValue *nameva = DaoNameValue_New( argNames->items.pString[i], nkey );
 			DaoList_Append( ns->argParams, (DaoValue*) nameva );
-			nameva->trait |= DAO_DATA_CONST;
+			nameva->trait |= DAO_VALUE_CONST;
 		}else{
 			DaoList_Append( ns->argParams, nkey );
 		}
@@ -1804,7 +1804,6 @@ DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
 DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
-DaoType *dao_class_any = NULL;
 DaoType *dao_type_for_iterator = NULL;
 DaoType *dao_access_enum = NULL;
 DaoType *dao_storage_enum = NULL;
@@ -1859,6 +1858,8 @@ int DaoJIT_TryInit( DaoVmSpace *vms )
 	return dao_jit.Compile != NULL;
 }
 
+static DaoFactory *factory = NULL;
+
 DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs;
@@ -1869,6 +1870,8 @@ DaoVmSpace* DaoInit( const char *command )
 	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
+
+	factory = DArray_New(D_VALUE);
 
 	dao_cdata_bindings = DHash_New(0,0);
 	dao_meta_tables = DHash_New(0,0);
@@ -1934,7 +1937,10 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
-	dao_class_any = DaoType_New( "class", DAO_CLASS, (DaoValue*)DaoClass_New(), NULL );
+
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_udf );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_any );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_routine );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 	vms->safeTag = 0;
@@ -2026,6 +2032,7 @@ void DaoQuit()
 	GC_DecRC( dao_default_cdata.ctype );
 
 	DaoVmSpace_Delete( mainVmSpace );
+	DArray_Delete( factory );
 	for(i=0; i<DAO_ARRAY; i++){
 		GC_DecRC( simpleTypes[i] );
 		simpleTypes[i] = NULL;

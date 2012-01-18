@@ -254,7 +254,7 @@ void DArray_InsertArray( DArray *self, daoint at, DArray *array, daoint id, daoi
 	void **objs = array->items.pVoid;
 	daoint i;
 	assert( self->type == array->type );
-	if( n < 0 ) n = self->size;
+	if( n < 0 ) n = array->size;
 	n += id;
 	if( n > array->size ) n = array->size;
 	if( n ==0 || id >= array->size ) return;

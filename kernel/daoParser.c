@@ -852,6 +852,13 @@ static DaoType* DaoParser_ParseReturningType( DaoParser *self, int start, int *n
 	return retype;
 }
 
+static DaoType* DaoType_MakeIndexedHolder( DaoNamespace *ns, int index )
+{
+	char name[20];
+	sprintf( name, "@%i", index );
+	return DaoNamespace_MakeType( ns, name, DAO_INITYPE, 0,0,0 );
+}
+
 int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start )
 {
 	DNode *node;
@@ -1009,7 +1016,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 			}
 			if( tokens[i]->name == DTOK_CASSN ){
 				if( type ) goto ErrorRedundantType;
-				type = DaoNamespace_MakeType( NS, "any", DAO_ANY, 0,0,0 );
+				type = dao_type_any;
 			}
 			if( tokens[i]->name == DTOK_ASSN || tokens[i]->name == DTOK_CASSN ){
 				int reg=1, cst = 0;
@@ -1038,7 +1045,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 					DArray_Append( module->uplocs, loc );
 					DArray_Append( module->uplocs, i+1 );
 					DArray_Append( module->uplocs, comma-1 );
-					type_default = DaoType_New( "?", DAO_UDF, 0,0 );
+					type_default = DaoType_MakeIndexedHolder( NS, routine->parCount );
 				}else{
 					goto ErrorVariableDefault;
 				}
@@ -1048,9 +1055,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 				i = comma;
 			}
 		}else if( tokens[i]->type == DTOK_IDENTIFIER ){
-			type = DaoType_New( "?", DAO_UDF, 0,0 );
-			DArray_Append( NS->auxData, type );
-			/* TODO: similar handling in other places, and cleanup. */
+			type = DaoType_MakeIndexedHolder( NS, routine->parCount );
 		}else if( tki == DTOK_COMMA ){
 			i ++;
 			continue;
@@ -1106,7 +1111,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( routine->body == NULL ){
 			retype = DaoNamespace_MakeValueType( NS, dao_none_value );
 		}else{
-			retype = DaoType_New( "?", DAO_UDF, 0,0 );
+			retype = dao_type_udf;
 		}
 	}
 	DArray_Append( NS->auxData, retype );
@@ -1309,9 +1314,9 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	}else if( token->name == DTOK_ID_INITYPE ){
 		type = DaoNamespace_MakeType( ns, name->mbs, DAO_INITYPE, 0,0,0 );
 	}else if( token->name == DTOK_QUERY ){
-		type = DaoNamespace_MakeType( ns, "?", DAO_UDF, 0,0,0 );
+		type = dao_type_udf;
 	}else if( token->name == DTOK_DOTS ){
-		type = DaoNamespace_MakeType( ns, "...", DAO_UDF, 0,0,0 );
+		type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, 0,0,0 );
 	}else{
 		/* scoped type or user defined template class */
 		type = DaoParser_ParseUserType( self, start, end, newpos );
