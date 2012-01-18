@@ -3015,7 +3015,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	int begin, line = self->curLine;
 	int i, k, rb, right;
 	int errorStart = start;
-	int ec = 0;
+	int pm1, pm2, ec = 0;
 	if( start+1 > to ) goto ErrorClassDefinition;
 	tokName = tokens[start+1];
 	className = ename = tokName->string;
@@ -3190,6 +3190,23 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_CLASS );
 		goto ErrorClassDefinition;
 	}
+	for(i=0; i<klass->cstDataName->size; i++){
+		DNode *it1, *it2;
+		value = klass->cstData->items.pValue[i];
+		if( value == NULL || value->type != DAO_ROUTINE ) continue;
+		if( value->xRoutine.routName->mbs[0] != '.' ) continue;
+		DString_SetMBS( mbs, value->xRoutine.routName->mbs + 1 );
+		if( mbs->mbs[ mbs->size - 1 ] == '=' ) DString_Erase( mbs, mbs->size - 1, 1 );
+		it1 = MAP_Find( klass->lookupTable, value->xRoutine.routName );
+		it2 = MAP_Find( klass->lookupTable, mbs );
+		if( it1 == NULL || it2 == NULL ) continue;
+		pm1 = LOOKUP_PM( it1->value.pSize );
+		pm2 = LOOKUP_PM( it2->value.pSize );
+		if( pm1 <= pm2 || pm2 != DAO_DATA_PRIVATE ){
+			self->curLine = value->xRoutine.defLine;
+			DaoParser_Warn( self, DAO_WARN_GET_SETTER, mbs );
+		}
+	}
 	DaoClass_ResetAttributes( klass );
 	DArray_Clear( parser->tokens );
 	DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
@@ -3203,7 +3220,7 @@ ErrorClassDefinition:
 	if( parser ) DaoParser_Delete( parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
 	ec = DAO_INVALID_CLASS_DEFINITION;
-	if( klass )ec += ((klass->attribs & DAO_CLS_ASYNCHRONOUS) !=0);
+	if( klass ) ec += ((klass->attribs & DAO_CLS_ASYNCHRONOUS) !=0);
 	DaoParser_Error2( self, ec, errorStart, to, 0 );
 	return -1;
 }
@@ -4156,7 +4173,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		/* prepare default value for local variables */
 		int id = DaoRoutine_AddConstant( self->routine, abtp->value );
 		if( DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ) return -1;
-		if( abtp->value ){
+		if( abtp->tid <= DAO_STRING && abtp->value ){
 			reg = self->regCount;
 			DaoParser_PushRegister( self );
 			DaoParser_AddCode( self, DVM_GETCL, 0, id, reg, start, end,0 );

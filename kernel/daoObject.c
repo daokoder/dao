@@ -83,7 +83,7 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 	DaoObject *self = & self0->xObject;
 	int ec = DaoObject_SetData( self, name, value, proc->activeObject );
 	int ec2 = ec;
-	if( ec ){
+	if( ec != DAO_ERROR ){
 		DString *mbs = proc->mbstring;
 		DString_SetMBS( mbs, "." );
 		DString_Append( mbs, name );
@@ -91,7 +91,11 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
-	if( ec ) DaoProcess_RaiseException( proc, ec, DString_GetMBS( name ) );
+	if( ec == DAO_ERROR ){
+		DaoProcess_RaiseException( proc, ec, "cannot modify default class instance" );
+	}else{
+		DaoProcess_RaiseException( proc, ec, DString_GetMBS( name ) );
+	}
 }
 static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -340,6 +344,8 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	DaoObject *dft = & klass->objType->value->xObject;
 	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
 	int id, st, up, pm, access;
+
+	if( self == (DaoObject*)self->defClass->objType->value ) return DAO_ERROR;
 
 	node = DMap_Find( self->defClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;

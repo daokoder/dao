@@ -26,6 +26,7 @@ static const char* const daoCtInfo[] =
 	"has been previously defined",
 	"Statements not seperated properly",
 	"Assignment inside expression",
+	"Getter/setter may not be used for",
 	"No method to use from",
 	"No public field is allowed in asynclass",
 	"No static field is allowed in asynclass",
@@ -214,11 +215,11 @@ const char* const daoExceptionName[] =
 };
 const char* const daoExceptionInfo[] =
 {
-	"undefined exception" ,
+	"certain exception" ,
 	"none exception" ,
 	"any or none exception" ,
-	"undefined error" ,
-	"undefined error" ,
+	"certain warning" ,
+	"certain error" ,
 	"invalid field accessing" ,
 	"field not exist" ,
 	"field not permit" ,

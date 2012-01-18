@@ -305,7 +305,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	if( need_self && routHost && routHost->tid == DAO_OBJECT ){
 		if( object == NULL && values[0]->type == DAO_OBJECT ) object = & values[0]->xObject;
 		if( object ) object = (DaoObject*) DaoObject_CastToBase( object->rootObject, routHost );
-		if( object == NULL ) DaoProcess_RaiseException( self, DAO_ERROR, "need self object" );
+		assert( object && object != (DaoObject*)object->defClass->objType->value );
 		GC_ShiftRC( object, frame->object );
 		frame->object = object;
 	}
@@ -557,6 +557,12 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoVa
 	if( passed == 0 ) return DAO_ERROR_PARAM;
 
 	if( R->body ){
+		int need_self = R->routType->attrib & DAO_TYPE_SELF;
+		if( need_self && R->routHost && R->routHost->tid == DAO_OBJECT ){
+			if( O == NULL && P[0]->type == DAO_OBJECT ) O = P[0];
+			if( O ) O = DaoObject_CastToBase( O->xObject.rootObject, R->routHost );
+			if( O == NULL || O == O->xObject.defClass->objType->value ) return DAO_ERROR;
+		}
 		DaoProcess_PushRoutine( self, R, DaoValue_CastObject( O ) );
 	}else{
 		DaoProcess_PushFunction( self, R );
@@ -2624,7 +2630,7 @@ ModifyConstant:
 			goto CheckException;
 AccessDefault:
 			self->activeCode = vmc;
-			DaoProcess_RaiseException( self, DAO_ERROR, "invalid field access for default object" );
+			DaoProcess_RaiseException( self, DAO_ERROR, "cannot modify default class instance" );
 			goto CheckException;
 RaiseErrorNullObject:
 			self->activeCode = vmc;
@@ -3892,13 +3898,25 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 	return -1;
 }
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout, 
-		DaoValue *selfpar, DaoValue *P[], int N, DaoVmCode *vmc )
+		DaoValue *O, DaoValue *P[], int N, DaoVmCode *vmc )
 {
-	int i, M = DaoRoutine_PassParams( & rout, self->freeValues, NULL, selfpar, P, N, vmc->code );
+	int need_self = rout->routType->attrib & DAO_TYPE_SELF;
+	int i, M = DaoRoutine_PassParams( & rout, self->freeValues, NULL, O, P, N, vmc->code );
 	if( M ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
-		DaoProcess_ShowCallError( self, rout, selfpar, P, N, vmc->code );
+		DaoProcess_ShowCallError( self, rout, O, P, N, vmc->code );
 		return;
+	}
+	if( need_self && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
+		if( O == NULL && P[0]->type == DAO_OBJECT ) O = P[0];
+		if( O ) O = DaoObject_CastToBase( O->xObject.rootObject, rout->routHost );
+		if( O == NULL ){
+			DaoProcess_RaiseException( self, DAO_ERROR, "self object is null" );
+			return;
+		}else if( O == O->xObject.defClass->objType->value ){
+			DaoProcess_RaiseException( self, DAO_ERROR, "self object is the default object" );
+			return;
+		}
 	}
 	/* no tail call inside try{} */
 	if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ){
@@ -3916,7 +3934,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 			}
 		}
 	}
-	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( selfpar ) );//, code );
+	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );//, code );
 	self->topFrame->parCount = M - 1;
 #ifdef DAO_WITH_CONCURRENT
 	DaoProcess_TryAsynCall( self, vmc );
