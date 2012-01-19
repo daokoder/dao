@@ -741,6 +741,23 @@ static DaoFuncItem DaoxGraphMeths[]=
 	{ GRAPH_GetEdges, "Edges( self :Graph<@W,@N,@E> ) => list<Edge<@W,@N,@E>>" },
 	{ GRAPH_AddNode, "AddNode( self :Graph<@W,@N,@E> ) => Node<@W,@N,@E>" },
 	{ GRAPH_AddEdge, "AddEdge( self :Graph<@W,@N,@E>, first :Node<@W,@N,@E>, second :Node<@W,@N,@E> ) => Edge<@W,@N,@E>" },
+
+	//{ GRAPH_MaxFlow, "BreadthFirstSearch( self :Graph<@W,@N,@E>, start :Node<@W,@N,@E> )[node :Node<@W,@N,@E> =>int] => Node<@W,@N,@E>" },
+	//{ GRAPH_MaxFlow, "DepthFirstSearch( self :Graph<@W,@N,@E>, start :Node<@W,@N,@E> )[node :Node<@W,@N,@E> =>int] => Node<@W,@N,@E>" },
+	//{ GRAPH_MaxFlow, "Search( self :Graph<@W,@N,@E>, start :Node<@W,@N,@E>, method :enum<breadth,depth> = $breadth )[node :Node<@W,@N,@E> =>int] => Node<@W,@N,@E>" },
+	//{ GRAPH_MaxFlow, "FindNode( self :Graph<@W,@N,@E> )[node :Node<@W,@N,@E> =>int] => Node<@W,@N,@E>" },
+	//{ GRAPH_MaxFlow, "FindEdge( self :Graph<@W,@N,@E> )[node :Edge<@W,@N,@E> =>int] => Edge<@W,@N,@E>" },
+	//{ GRAPH_MaxFlow, "FindNodes( self :Graph<@W,@N,@E> )[node :Node<@W,@N,@E> =>int] => list<Node<@W,@N,@E>>" },
+	//{ GRAPH_MaxFlow, "FindEdges( self :Graph<@W,@N,@E> )[node :Edge<@W,@N,@E> =>int] => list<Edge<@W,@N,@E>>" },
+
+	//{ GRAPH_Distance, "Distance( self :Graph<@W,@N,@E>, start :Node<@W,@N,@E>, end :Node<@W,@N,@E> ) => int" },
+	//{ GRAPH_Distances, "Distances( self :Graph<@W,@N,@E>, start :Node<@W,@N,@E> ) => list<tuple<end:Node<@W,@N,@E>,dist:int>>" },
+	//{ GRAPH_Distances, "Distances( self :Graph<@W,@N,@E> ) => list<tuple<start:Node<@W,@N,@E>,end:Node<@W,@N,@E>,dist:int>>" },
+
+	//{ GRAPH_ConnectedComponents, "ConnectedComponents( self :Graph<@W,@N,@E> ) => list<list<Node<@W,@N,@E>>>" },
+	//{ GRAPH_SplitByCC, "SplitByCC( self :Graph<@W,@N,@E> ) => list<Graph<@W,@N,@E>>" },
+	//{ GRAPH_MininumSpanTree, "MininumSpanTree( self :Graph<@W,@N,@E> ) => Graph<@W,Node<@W,@N,@E>,@E>" },
+
 	{ GRAPH_MaxFlow, "MaxFlow( self :Graph<@W,@N,@E>, source :Node<@W,@N,@E>, sink :Node<@W,@N,@E> ) => @W" },
 	{ NULL, NULL }
 };

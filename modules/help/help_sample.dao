@@ -1,0 +1,30 @@
+load help;
+
+@[name()]
+dao.type.string
+@[name()]
+
+@[title()]
+Dao string data type
+@[title()]
+
+@[text()]
+String quoted with single quotation symbol is stored as
+Multi-Bytes String (MBS) in UTF-8, which is more efficient to represent
+ASCII and latin letters; while string quoted with
+double quotation symbol is stored as Wide Character String (WCS) in Unicode,
+which is more efficient to represent other types of symbols,
+such as CJK (Chinese, Japanese and Korean) symbols.
+These two types of strings can be mixed together, one can be converted to
+the other automatically when necessary. But it's better to use one
+of them consistently.
+@[text()]
+
+@[code(dao)]
+mbs = 'Multi-Bytes String quoted with single quotation mark';
+wcs = "Wide Character String quoted with double quotation mark";
+@[code(dao)]
+
+@[method(find)]
+string.find( str :string, from =0, reverse =0 ) => int
+@[method(find)]

@@ -374,88 +374,6 @@ static void STD_Gcmin( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	if( N == 1 ) DaoGC_Min( (int)p[0]->xInteger.value );
 }
-static void PrintMethod( DaoProcess *proc, DaoRoutine *meth )
-{
-	int j;
-	DaoProcess_Print( proc, meth->routName->mbs );
-	DaoProcess_Print( proc, ": " );
-	for(j=meth->routName->size; j<20; j++) DaoProcess_Print( proc, " " );
-	DaoProcess_Print( proc, meth->routType->name->mbs );
-	DaoProcess_Print( proc, "\n" );
-}
-static void DaoNS_GetAuxMethods( DaoNamespace *ns, DaoValue *p, DArray *methods )
-{
-	daoint i;
-	for(i=0; i<ns->cstData->size; i++){
-		DaoValue *meth = ns->cstData->items.pValue[i];
-		if( meth == NULL || meth->type != DAO_ROUTINE ) continue;
-		if( meth->type == DAO_ROUTINE && meth->xRoutine.overloads ){
-			DRoutines *routs = meth->xRoutine.overloads;
-			if( routs->mtree == NULL ) continue;
-			for(i=0; i<routs->routines->size; i++){
-				DaoRoutine *rout = routs->routines->items.pRoutine[i];
-				DaoType *type = rout->routType->nested->items.pType[0];
-				if( DaoType_MatchValue( (DaoType*) type->aux, p, NULL ) ==0 ) continue;
-				DArray_PushBack( methods, rout );
-			}
-		}else if( meth->xRoutine.attribs & DAO_ROUT_PARSELF ){
-			DaoType *type = meth->xRoutine.routType->nested->items.pType[0];
-			if( DaoType_MatchValue( (DaoType*) type->aux, p, NULL ) ==0 ) continue;
-			DArray_PushBack( methods, meth );
-		}
-	}
-	for(i=0; i<ns->namespaces->size; i++) DaoNS_GetAuxMethods( ns->namespaces->items.pNS[i], p, methods );
-}
-static void STD_ListMeth( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoTypeBase *typer = DaoValue_GetTyper( p[0] );
-	DaoNamespace *ns = proc->activeNamespace;
-	DaoRoutine **meths;
-	DArray *array;
-	DMap *hash;
-	DNode *it;
-	int i, j, methCount;
-	if( typer == NULL || typer->core == NULL ) goto ListAuxMethods;
-	DaoProcess_Print( proc, "======================================\nConsts, methods of type \"" );
-	DaoProcess_Print( proc, typer->name );
-	DaoProcess_Print( proc, "\":\n======================================\n" );
-	if( typer->core->kernel == NULL ) goto ListAuxMethods;
-	array = DArray_New(0);
-	hash = typer->core->kernel->values;
-	if( hash == NULL ){
-		DaoNamespace_SetupValues( typer->core->kernel->nspace, typer );
-		hash = typer->core->kernel->values;
-	}
-	if( typer->core->kernel->methods == NULL ){
-		DaoNamespace_SetupMethods( typer->core->kernel->nspace, typer );
-	}
-	if( typer->core->kernel->methods ) DMap_SortMethods( typer->core->kernel->methods, array );
-	meths = array->items.pRoutine;
-	methCount = array->size;
-	if( typer->core->kernel->values ){
-		for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-			DaoProcess_Print( proc, it->key.pString->mbs );
-			DaoProcess_Print( proc, "\n" );
-		}
-	}
-	if( typer->core->kernel->methods ){
-		for(i=0; i<methCount; i++ ) PrintMethod( proc, (DaoRoutine*)meths[i] );
-	}
-	DArray_Delete( array );
-ListAuxMethods:
-	array = DArray_New(0);
-	hash = DHash_New(0,0);
-	DaoProcess_Print( proc, "------------------Auxiliary Methods--------------------\n" );
-	DaoNS_GetAuxMethods( ns, p[0], array );
-	for(i=0; i<array->size; i++){
-		DaoRoutine *rout = array->items.pRoutine[i];
-		if( DMap_Find( hash, rout ) ) continue;
-		DMap_Insert( hash, rout, NULL );
-		PrintMethod( proc, rout );
-	}
-	DArray_Delete( array );
-	DMap_Delete( hash );
-}
 static void STD_SubType( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoType *tp1 = DaoNamespace_GetType( proc->activeNamespace, p[0] );
@@ -676,7 +594,6 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Error,     "error( info :string )" },
 	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
-	{ STD_ListMeth,  "listmeth( object )" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
 	{ STD_Version,   "version()=>string" },
 	{ STD_Size,      "datasize( value: @T<int|float|double|complex|long|string> )=>int" },

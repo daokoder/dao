@@ -635,11 +635,10 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 }
 int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 {
-	DaoVmSpace *vms = self->vmSpace;
 	DString *src;
+	DaoVmSpace *vms = self->vmSpace;
 	FILE *fin = fopen( fname, "r" );
-	char buf[IO_BUF_SIZE];
-	int ch;
+	int ret;
 	if( ! fin ){
 		DaoStream_WriteMBS( vms->errorStream, "ERROR: can not open file \"" );
 		DaoStream_WriteMBS( vms->errorStream, fname );
@@ -647,15 +646,10 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 		return 0;
 	}
 	src = DString_New(1);
-	while(1){
-		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
-		if( count ==0 ) break;
-		DString_AppendDataMBS( src, buf, count );
-	}
-	fclose( fin );
-	ch = DaoProcess_Eval( self->vmSpace->mainProcess, self, src, 1 );
+	DaoFile_ReadAll( fin, src, 1 );
+	ret = DaoProcess_Eval( self->vmSpace->mainProcess, self, src, 1 );
 	DString_Delete( src );
-	return ch;
+	return ret;
 }
 void DaoNamespace_SetOptions( DaoNamespace *self, int options )
 {
