@@ -230,7 +230,6 @@ DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name )
 	DNode *node = DMap_Find( self->nsModules, & str );
 	if( node ) return (DaoNamespace*) node->value.pValue;
 	ns = DaoNamespace_New( self, name );
-	GC_IncRC( ns );
 	DaoVmSpace_Lock( self );
 	DMap_Insert( self->nsModules, & str, ns );
 	DaoVmSpace_Unlock( self );
@@ -393,7 +392,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsInternal = NULL; /* need to be set for DaoNamespace_New() */
 	self->nsInternal = DaoNamespace_New( self, "dao" );
 	self->nsInternal->vmSpace = self;
-	self->nsInternal->refCount += 2;
+	self->nsInternal->refCount += 1;
 	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
@@ -412,16 +411,9 @@ DaoVmSpace* DaoVmSpace_New()
 
 	return self;
 }
-void DaoVmSpace_Delete( DaoVmSpace *self )
+void DaoVmSpace_DeleteData( DaoVmSpace *self )
 {
 	DNode *it;
-	for(it=DMap_First( self->nsModules ); it!=NULL; it = DMap_Next( self->nsModules, it ) ){
-#if 0
-		printf( "%i  %i  %s\n", it->value.pValue->refCount,
-				((DaoNamespace*)it->value.pValue)->cmethods->size, it->key.pString->mbs );
-#endif
-		GC_DecRC( it->value.pValue );
-	}
 	for(it=DMap_First(self->allFactories); it!=NULL; it=DMap_Next(self->allFactories,it) ){
 		DArray_Delete( it->key.pArray );
 	}
@@ -438,15 +430,19 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DArray_Delete( self->factories );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->allTokens );
-	DMap_Delete( self->nsModules );
 	DMap_Delete( self->allProcesses );
 	DMap_Delete( self->allFactories );
 	GC_DecRC( self->mainProcess );
+	self->stdioStream = NULL;
+}
+void DaoVmSpace_Delete( DaoVmSpace *self )
+{
+	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
+	DMap_Delete( self->nsModules );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->mutexLoad );
 	DMutex_Destroy( & self->mutexProc );
 #endif
-
 	dao_free( self );
 }
 void DaoVmSpace_Lock( DaoVmSpace *self )
@@ -1044,7 +1040,6 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file )
 	DArray_PushFront( self->pathLoading, ns->path );
 	if( DMap_Find( self->nsModules, ns->name ) == NULL ){
 		MAP_Insert( self->nsModules, ns->name, ns );
-		GC_IncRC( ns );
 	}
 	tm = FileChangedTime( ns->name->mbs );
 	ns->time = tm;
@@ -1245,8 +1240,6 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	ns->time = tm;
 	if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 
-	GC_ShiftRC( ns, ns2 );
-
 	DaoVmSpace_Lock( self );
 	node = MAP_Find( self->nsModules, libpath );
 	MAP_Insert( self->nsModules, libpath, ns );
@@ -1409,7 +1402,6 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 
 	ns = DaoNamespace_New( self, libpath->mbs );
 	ns->libHandle = handle;
-	GC_IncRC( ns );
 	DaoVmSpace_Lock( self );
 	MAP_Insert( self->nsModules, libpath, ns );
 	DaoVmSpace_Unlock( self );
@@ -1439,7 +1431,6 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	DaoVmSpace_Unlock( self );
 	if( retc ){
 		MAP_Erase( self->nsModules, ns->name );
-		GC_DecRC( ns );
 		return NULL;
 	}
 	DaoNamespace_UpdateLookupTable( ns );
@@ -2022,6 +2013,8 @@ extern DaoType *simpleTypes[ DAO_ARRAY ];
 void DaoQuit()
 {
 	int i;
+	DNode *it = NULL;
+
 	/* TypeTest(); */
 #ifdef DAO_WITH_CONCURRENT
 	DaoCallServer_Stop();
@@ -2031,13 +2024,20 @@ void DaoQuit()
 
 	GC_DecRC( dao_default_cdata.ctype );
 
-	DaoVmSpace_Delete( mainVmSpace );
+	DaoVmSpace_DeleteData( mainVmSpace );
 	DArray_Delete( factory );
 	for(i=0; i<DAO_ARRAY; i++){
 		GC_DecRC( simpleTypes[i] );
 		simpleTypes[i] = NULL;
 	}
 	DaoGC_Finish();
+#ifdef DEBUG
+	for(it=DMap_First(mainVmSpace->nsModules); it; it=DMap_Next(mainVmSpace->nsModules,it) ){
+		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
+				((DaoNamespace*)it->value.pValue)->name->mbs, it->value.pValue->xNone.refCount );
+	}
+#endif
+	DaoVmSpace_Delete( mainVmSpace );
 	DMap_Delete( dao_cdata_bindings );
 	DMap_Delete( dao_meta_tables );
 	DArray_Delete( dao_callback_data );
@@ -2077,8 +2077,6 @@ DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 {
 	DaoNamespace *ns = NULL;
-#ifdef DAO_WITH_THREAD
-#endif
 #if 0
 	printf( "modtype = %i\n", modtype );
 #endif
@@ -2088,8 +2086,6 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;
 	}
-#ifdef DAO_WITH_THREAD
-#endif
 	return ns;
 }
 

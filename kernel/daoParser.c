@@ -1159,6 +1159,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	/* for(j=0; j<nested->size; j++) printf( "%s\n", nested->items.pType[j]->name->mbs ); */
 	if( routine->attribs & DAO_ROUT_PARSELF ) routine->routType->attrib |= DAO_ROUT_PARSELF;
 	GC_IncRC( routine->routType );
+	GC_DecRCs( nested );
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( module );
 	/* one parse might be used to compile multiple C functions: */

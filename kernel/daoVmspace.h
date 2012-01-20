@@ -66,7 +66,7 @@ struct DaoVmSpace
     DMap  *vfiles;
 
     /* map full file name (including path and suffix) to module namespace */
-    DMap  *nsModules;
+    DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
     DMap  *allTokens;
 
     DaoUserHandler *userHandler;
@@ -79,6 +79,8 @@ struct DaoVmSpace
     DMutex  mutexProc;
 #endif
 };
+
+extern DaoVmSpace *mainVmSpace;
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
 /* DaoVmSpace is not handled by GC, it should be deleted manually. 
@@ -98,6 +100,7 @@ DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
 DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
 DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
+DAO_DLL void DaoVmSpace_UnloadIdleModules( DaoVmSpace *self );
 
 DAO_DLL void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int type, int check );
 

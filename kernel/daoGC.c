@@ -20,6 +20,7 @@
 #include"daoProcess.h"
 #include"daoRoutine.h"
 #include"daoNamespace.h"
+#include"daoVmspace.h"
 #include"daoThread.h"
 #include"daoValue.h"
 
@@ -570,9 +571,11 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 		count += gckey + gcvalue;
 	}
 	for(it=map->first; it; it=it->next){
-		if( gckey ) DaoGC_ScanValue( & it->key.pValue, action );
-		if( gcvalue ) DaoGC_ScanValue( & it->value.pValue, action );
-		count += gckey + gcvalue;
+		/* for other key/value types, the values in the cached node must
+		// must have their reference count handled: */
+		if( map->keytype == D_VALUE ) DaoGC_ScanValue( & it->key.pValue, action );
+		if( map->valtype == D_VALUE ) DaoGC_ScanValue( & it->value.pValue, action );
+		count += (map->keytype == D_VALUE) + (map->valtype == D_VALUE);
 	}
 	if( action == DAO_GC_BREAK ){
 		map->keytype = 0;
@@ -1047,7 +1050,6 @@ void DaoIGC_CycRefCountIncScan()
 	if( i >= workList->size ){
 		gcWorker.ii = 0;
 		gcWorker.workType ++;
-		if( gcWorker.workType == GC_DIR_DEC_RC ) DaoGC_PrintProfile( gcWorker.idleList, gcWorker.workList );
 	}else{
 		gcWorker.ii = i+1;
 	}
@@ -1310,6 +1312,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) rout->original );
 			cycRefCountDecrement( (DaoValue*) rout->specialized );
 			cycRefCountDecrement( (DaoValue*) rout->routConsts );
+			cycRefCountDecrement( (DaoValue*) rout->body );
 			if( rout->overloads ) cycRefCountDecrements( rout->overloads->routines );
 			break;
 		}
@@ -1503,6 +1506,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) rout->original );
 			cycRefCountIncrement( (DaoValue*) rout->specialized );
 			cycRefCountIncrement( (DaoValue*) rout->routConsts );
+			cycRefCountIncrement( (DaoValue*) rout->body );
 			if( rout->overloads ) cycRefCountIncrements( rout->overloads->routines );
 			break;
 		}
@@ -1707,6 +1711,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & rout->original );
 			directRefCountDecrement( (DaoValue**) & rout->specialized );
 			directRefCountDecrement( (DaoValue**) & rout->routConsts );
+			directRefCountDecrement( (DaoValue**) & rout->body );
 			if( rout->overloads ) directRefCountDecrements( rout->overloads->routines );
 			break;
 		}

@@ -724,10 +724,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->constEvalProcess = DaoProcess_New(vms);
 	self->constEvalRoutine = DaoRoutine_New( self, NULL, 1 );
 	self->constEvalRoutine->routType = dao_routine;
-	self->constEvalRoutine->nameSpace = self;
 	self->constEvalProcess->activeNamespace = self;
 	GC_IncRC( dao_routine );
-	GC_IncRC( self );
 	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
 	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
 	self->constEvalRoutine->trait |= DAO_VALUE_CONST;
@@ -760,8 +758,11 @@ void DaoNamespace_Delete( DaoNamespace *self )
 		DArray *array = self->sources->items.pArray[i];
 		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
-	DaoList_Delete( self->argParams );
+	DaoVmSpace_Lock( self->vmSpace );
+	DMap_Erase( self->vmSpace->nsModules, self->name );
+	DaoVmSpace_Unlock( self->vmSpace );
 
+	DaoList_Delete( self->argParams );
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->cstData );

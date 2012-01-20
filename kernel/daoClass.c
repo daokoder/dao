@@ -421,7 +421,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	self->classRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
-	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, (DaoValue*) self->objType, NULL );
+	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, NULL, NULL );
 	DString_Append( rout->routType->name, name );
 	DString_AppendMBS( rout->routType->name, ">" );
 	GC_IncRC( rout->routType );
@@ -982,9 +982,6 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoTyp
 int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp )
 {
 	DNode *node = MAP_Find( self->abstypes, name );
-	/* remove this following two lines? XXX */
-	if( DString_FindChar( name, '?', 0 ) != MAXSIZE
-			|| DString_FindChar( name, '@', 0 ) != MAXSIZE ) return 0;
 	if( node == NULL ){
 		MAP_Insert( self->abstypes, name, tp );
 		GC_IncRC( tp );

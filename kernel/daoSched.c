@@ -28,7 +28,6 @@
 typedef struct DaoCallThread   DaoCallThread;
 typedef struct DaoCallServer   DaoCallServer;
 
-extern DaoVmSpace *mainVmSpace;
 
 struct DaoCallThread
 {

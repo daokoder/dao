@@ -54,10 +54,8 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	DaoRoutine *self = DaoRoutine_New( nspace, host, 0 );
 	self->overloads = DRoutines_New();
 	self->routType = DaoType_New( "routine", DAO_ROUTINE, (DaoValue*)self, NULL );
-	self->routHost = host;
 	self->routType->overloads = 1;
 	GC_IncRC( self->routType );
-	GC_IncRC( self->routHost );
 	if( init == NULL ) return self;
 
 	DString_Assign( self->routName, init->routName );

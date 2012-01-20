@@ -18,6 +18,7 @@
 #include"daoValue.h"
 #include"daoParser.h"
 #include"daoNamespace.h"
+#include"daoVmspace.h"
 #include"daoGC.h"
 
 DAO_INIT_MODULE
@@ -46,6 +47,8 @@ struct DaoxHelper
 	DArray *nslist;
 };
 DaoxHelper *daox_helper = NULL;
+DaoValue *daox_cdata_helper = NULL;
+DaoVmSpace *dao_vmspace = NULL;
 
 static DaoxHelper* DaoxHelper_New()
 {
@@ -178,15 +181,47 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DArray_Delete( array );
 }
+static void HELP_Help( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxHelp *help;
+	DaoNamespace *NS = NULL;
+	DaoStream *stdio = proc->stdioStream;
+	DString *name = DString_New(1);
+	DString *name2 = DString_New(1);
+	daoint pos;
+
+	DaoProcess_PutValue( proc, daox_cdata_helper );
+
+	DString_Assign( name, p[0]->xString.data );
+	DString_ToMBS( name );
+	while( NS == NULL ){
+		DString_SetMBS( name2, "help_" );
+		DString_Append( name2, name );
+		DString_ChangeMBS( name2, "%.", "_", 0 );
+		NS = DaoVmSpace_Load( proc->vmSpace, name2, 0 );
+		if( NS ) break;
+		pos = DString_RFindChar( name, '.', -1 );
+		if( pos < 0 ) break;
+		DString_Erase( name, pos, 1 );
+	}
+
+	help = DaoxHelper_Get( daox_helper, NS, NULL );
+	printf( "%s %p\n", name->mbs, help );
+	DString_Delete( name );
+	DString_Delete( name2 );
+	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
+	if( help == NULL ){
+		DaoStream_WriteMBS( stdio, "No help document available for \"" );
+		DaoStream_WriteString( stdio, name );
+		DaoStream_WriteMBS( stdio, "\"" );
+		return;
+	}
+}
+static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
+{
+}
 static void HELP_Search( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoNamespace *NS;
-	DString *name = p[0]->xString.data;
-	DString_ToMBS( name );
-	DString_InsertMBS( name, "help_", 0, 0, 5 );
-
-	printf( "%s\n", name->mbs );
-	NS = DaoVmSpace_Load( proc->vmSpace, name, 0 );
 }
 static void HELP_Search2( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -194,6 +229,8 @@ static void HELP_Search2( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem helpMeths[]=
 {
+	{ HELP_Help,      "help( keyword :string )" },
+	{ HELP_Help2,     "help( object :any, keyword :string )" },
 	{ HELP_List,      "list( object :any, type :enum<values,methods,auxmeths>=$methods )" },
 	{ HELP_Search,    "search( keyword :string )" },
 	{ HELP_Search2,   "search( object :any, keyword :string )" },
@@ -259,6 +296,7 @@ static int dao_help_method( DaoNamespace *NS, DString *mode, DString *verbatim, 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoType *type;
+	dao_vmspace = vmSpace;
 	DaoNamespace_AddCodeInliner( ns, "name", dao_help_name );
 	DaoNamespace_AddCodeInliner( ns, "title", dao_help_title );
 	DaoNamespace_AddCodeInliner( ns, "text", dao_help_text );
@@ -266,7 +304,8 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	DaoNamespace_AddCodeInliner( ns, "method", dao_help_method );
 	type = DaoNamespace_WrapType( ns, & helpTyper, 1 );
 	daox_helper = DaoxHelper_New();
-	DaoNamespace_AddConstValue( ns, "__helper__", (DaoValue*)DaoCdata_New( type, daox_helper ) );
+	daox_cdata_helper = (DaoValue*) DaoCdata_New( type, daox_helper );
+	DaoNamespace_AddConstValue( ns, "__helper__", daox_cdata_helper );
 	return 0;
 }
 

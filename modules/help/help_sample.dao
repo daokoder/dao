@@ -1,7 +1,14 @@
 load help;
 
+#{
+
+help( 'dao.string' ); search help_dao_string.dao, and then help_dao.dao;
+help( object, 'method' ); help_ObjectTypeName_method.dao; help_ObjectTypeName.dao;
+
+#}
+
 @[name()]
-dao.type.string
+dao.string
 @[name()]
 
 @[title()]
@@ -25,6 +32,16 @@ mbs = 'Multi-Bytes String quoted with single quotation mark';
 wcs = "Wide Character String quoted with double quotation mark";
 @[code(dao)]
 
-@[method(find)]
+
+@[name()]
+dao.string.find
+@[name()]
+
+@[title()]
 string.find( str :string, from =0, reverse =0 ) => int
-@[method(find)]
+@[title()]
+
+@[text()]
+Find substring <%>str</%>, starting from <%>from</%>; search backward if <%>reverse</%> is true.
+Return the index of the occurrence of <%>str</%>, return -1 if not found.
+@[text()]
