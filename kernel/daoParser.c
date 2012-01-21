@@ -1114,7 +1114,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 			retype = dao_type_udf;
 		}
 	}
-	DArray_Append( NS->auxData, retype );
 	DString_AppendMBS( pname, iscoroutine ? "=>[" : "=>" );
 	DString_Append( pname, retype->name );
 	if( iscoroutine ) DString_AppendChar( pname, ']' );
@@ -1129,14 +1128,15 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		DString_AppendMBS( pname, "=>" );
 		DString_Append( pname, retype->name );
 		tt = DaoType_New( "", DAO_PAR_NAMED, (DaoValue*) tt, NULL );
+		DArray_Append( NS->auxData, (void*) tt );
 		DArray_Append( nested, (void*) tt );
 		DaoRoutine_AddConstant( routine, NULL );
 		DaoParser_PushRegister( module );
 		routine->parCount ++;
 	}
 	DString_AppendMBS( pname, ">" );
-	GC_IncRCs( nested );
 	type = DaoType_New( pname->mbs, DAO_ROUTINE, (DaoValue*) retype, nested );
+	DArray_Append( NS->auxData, type );
 	if( iscoroutine ) type->attrib |= DAO_TYPE_COROUTINE;
 	if( cbtype ){
 		GC_ShiftRC( cbtype, type->cbtype );
@@ -1144,10 +1144,9 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		DString_Append( type->name, cbtype->name );
 		DString_Append( pname, cbtype->name );
 	}
+	assert( routine->routType == NULL );
 	routine->routType = DaoNamespace_FindType( NS, pname );
-	if( DaoType_MatchTo( type, routine->routType, NULL ) == DAO_MT_EQ ){
-		DaoType_Delete( type );
-	}else{
+	if( DaoType_MatchTo( type, routine->routType, NULL ) != DAO_MT_EQ ){
 		routine->routType = type;
 		DaoType_MapNames( routine->routType );
 		DaoNamespace_AddType( NS, pname, routine->routType );
@@ -1159,7 +1158,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	/* for(j=0; j<nested->size; j++) printf( "%s\n", nested->items.pType[j]->name->mbs ); */
 	if( routine->attribs & DAO_ROUT_PARSELF ) routine->routType->attrib |= DAO_ROUT_PARSELF;
 	GC_IncRC( routine->routType );
-	GC_DecRCs( nested );
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( module );
 	/* one parse might be used to compile multiple C functions: */
@@ -1531,14 +1529,8 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			*newpos = gt + 1;
 			if( type == NULL ) goto WrongType;
 		}
-		GC_IncRC( vartype );
-		GC_DecRC( vartype );
 		return type;
 WrongType:
-		GC_IncRC( initype );
-		GC_DecRC( initype );
-		GC_IncRC( vartype );
-		GC_DecRC( vartype );
 		DaoTokens_Append( self->errors, DAO_INVALID_TYPE_FORM, tokens[start]->line, tks->mbs );
 		return NULL;
 	}
@@ -1600,10 +1592,7 @@ WrongType:
 			break;
 		case DKEY_ROUTINE :
 			tid = DAO_ROUTINE;
-			if( type == NULL ){
-				type = DaoNamespace_MakeValueType( ns, dao_none_value );
-				DArray_Append( ns->auxData, type );
-			}
+			if( type == NULL ) type = DaoNamespace_MakeValueType( ns, dao_none_value );
 			retype = (DaoValue*) type;
 			break;
 		case DKEY_FUTURE :
@@ -1634,13 +1623,7 @@ WrongType:
 				DArray_Append( ns->auxData, type );
 			}
 		}
-		for(i=0; i<count2; i++){
-			GC_IncRC( nested[i] );
-			GC_DecRC( nested[i] );
-		}
 		DArray_Erase( types, count, count2 );
-		GC_IncRC( retype );
-		GC_DecRC( retype );
 	}else if( tokname > 0 && tokname < 100 ){
 		DaoCdata *cdata = & dao_default_cdata;
 		DaoValue *pbasic = tok->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;
@@ -1690,10 +1673,6 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DA
 		DaoType **nested = types->items.pType + count;
 		int i, count2 = types->size - count;
 		type = DaoNamespace_MakeType( ns, "", DAO_VARIANT, NULL, nested, count2 );
-		for(i=0; i<count2; i++){
-			GC_IncRC( nested[i] );
-			GC_DecRC( nested[i] );
-		}
 		DArray_Erase( types, count, count2 );
 		if( type == NULL ) goto InvalidType;
 	}
@@ -1741,13 +1720,9 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 #endif
 
 DoneInstantiation:
-	GC_IncRCs( types );
-	GC_DecRCs( types );
 	DArray_Delete( types );
 	return inst;
 FailedInstantiation:
-	GC_IncRCs( types );
-	GC_DecRCs( types );
 	DArray_Delete( types );
 	/* Error should be raised here, see comments in DaoParser_ParseScopedConstant(). */
 	return NULL;
@@ -1829,11 +1804,11 @@ int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **val
 	}else{
 		i = DaoParser_GetRegister( self, tokens[start] );
 		if( i <0 ){
-			DNode *node;
+			DaoNamespace *ns;
 			if( local || (start+1) >= n || tokens[start+1]->type != DTOK_COLON2 ) goto HandleName;
-			node = DMap_Find( self->vmSpace->nsModules, tokens[start]->string );
-			if( node == NULL ) goto HandleName;
-			*value = node->value.pValue;
+			ns = DaoVmSpace_FindNamespace( self->vmSpace, tokens[start]->string );
+			if( ns == NULL ) goto HandleName;
+			*value = (DaoValue*) ns;
 		}else{
 			if( (LOOKUP_ST(i) & 1) == 0 ) goto ErrorWasDefined;
 			*value = DaoParser_GetVariable( self, i );
@@ -1863,7 +1838,7 @@ static void DaoTokens_SumTokens( DaoToken **tokens, int start, int end, DString 
 }
 int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start, DString *name )
 {
-	DNode *node;
+	DaoNamespace *ns;
 	DaoToken **tokens = self->tokens->items.pToken;
 	int end, tok = tokens[start]->name;
 	int i, size = self->tokens->size;
@@ -1883,9 +1858,9 @@ int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start, 
 	if( end >= start ) return end;
 	if( (start + 1) >= size ) return -1;
 	if( tokens[start+1]->type != DTOK_COLON2 ) return -1;
-	node = DMap_Find( self->vmSpace->nsModules, tokens[start]->string );
-	if( node == NULL ) return -1;
-	*value = node->value.pValue;
+	ns = DaoVmSpace_FindNamespace( self->vmSpace, tokens[start]->string );
+	if( ns == NULL ) return -1;
+	*value = (DaoValue*) ns;
 	end = DaoParser_ParseScopedConstant( self, NULL, value, start + 1 );
 	if( (end+1) < size && tokens[end+1]->type == DTOK_COLON2 ){
 		DaoType *type = NULL;
@@ -1933,12 +1908,10 @@ int DaoParser_ParseScript( DaoParser *self )
 
 	routMain->body->codeStart = 1;
 	routMain->body->codeEnd = self->lineCount;
+	routMain->body->parser = self;
 	self->routine = routMain;
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
-	GC_ShiftRC( ns, routMain->nameSpace );
-	routMain->nameSpace = ns;
-	routMain->body->parser = self;
 
 	bl = DaoParser_Preprocess( self ) && DaoParser_ParseRoutine( self );
 	if( daoConfig.incompile ) return 1;
@@ -5326,8 +5299,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	rout = DaoRoutine_New( myNS, NULL, 1 );
 	parser->routine = rout;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
-	GC_ShiftRC( self->nameSpace, rout->nameSpace );
-	parser->nameSpace = rout->nameSpace = self->nameSpace;
+	parser->nameSpace = self->nameSpace;
 	parser->vmSpace = self->vmSpace;
 	parser->outParser = self;
 	parser->uplocs = uplocs = DArray_New(0);

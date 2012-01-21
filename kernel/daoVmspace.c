@@ -190,6 +190,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_ARRAY  :  return & baseTyper;
 #endif
 	case DAO_FUNCURRY : return & curryTyper;
+	case DAO_CTYPE   :
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_INTERFACE :  return & interTyper;
@@ -223,12 +224,24 @@ int DaoVmSpace_GetOptions( DaoVmSpace *self )
 {
 	return self->options;
 }
+DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name )
+{
+	DNode *node;
+	DaoNamespace *ns = NULL;
+	DaoVmSpace_Lock( self );
+	node = DMap_Find( self->nsModules, name );
+	if( node ){
+		ns = (DaoNamespace*) node->value.pValue;
+		ns->cycRefCount ++;
+	}
+	DaoVmSpace_Unlock( self );
+	return ns;
+}
 DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name )
 {
-	DaoNamespace *ns;
 	DString str = DString_WrapMBS( name );
-	DNode *node = DMap_Find( self->nsModules, & str );
-	if( node ) return (DaoNamespace*) node->value.pValue;
+	DaoNamespace *ns = DaoVmSpace_FindNamespace( self, & str );
+	if( ns ) return ns;
 	ns = DaoNamespace_New( self, name );
 	DaoVmSpace_Lock( self );
 	DMap_Insert( self->nsModules, & str, ns );
@@ -1212,10 +1225,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		argValues = DArray_New(D_STRING);
 	}
 
-	DaoVmSpace_Lock( self );
-	node = MAP_Find( self->nsModules, libpath );
-	if( node ) ns = ns2 = (DaoNamespace*)node->value.pValue;
-	DaoVmSpace_Unlock( self );
+	ns = ns2 = DaoVmSpace_FindNamespace( self, libpath );
 
 	tm = FileChangedTime( libpath->mbs );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->mbs, node ); */
@@ -1241,7 +1251,6 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 
 	DaoVmSpace_Lock( self );
-	node = MAP_Find( self->nsModules, libpath );
 	MAP_Insert( self->nsModules, libpath, ns );
 	DaoVmSpace_Unlock( self );
 
@@ -1370,11 +1379,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 				"ERROR: not permitted to open shared library in safe running mode.\n" );
 		return NULL;
 	}
-	DaoVmSpace_Lock( self );
-	node = MAP_Find( self->nsModules, libpath );
-	if( node ) ns = (DaoNamespace*) node->value.pValue;
-	DaoVmSpace_Unlock( self );
-
+	ns = DaoVmSpace_FindNamespace( self, libpath );
 	if( ns ) return ns;
 
 	handle = DaoOpenDLL( libpath->mbs );
@@ -1430,7 +1435,9 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	DArray_PopFront( self->nameLoading );
 	DaoVmSpace_Unlock( self );
 	if( retc ){
+		DaoVmSpace_Lock( self );
 		MAP_Erase( self->nsModules, ns->name );
+		DaoVmSpace_Unlock( self );
 		return NULL;
 	}
 	DaoNamespace_UpdateLookupTable( ns );
@@ -2067,12 +2074,10 @@ void DaoQuit()
 }
 DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 {
-	DNode *node = MAP_Find( self->nsModules, fname );
-	if( node ) return (DaoNamespace*) node->value.pValue;
+	DaoNamespace* ns = DaoVmSpace_FindNamespace( self, fname );
+	if( ns ) return ns;
 	DaoVmSpace_CompleteModuleName( self, fname );
-	node = MAP_Find( self->nsModules, fname );
-	if( node ) return (DaoNamespace*) node->value.pValue;
-	return NULL;
+	return DaoVmSpace_FindNamespace( self, fname );
 }
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 {

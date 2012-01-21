@@ -117,6 +117,16 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	GC_DecRC( self->routConsts );
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
+	if( self->overloads ){
+		GC_DecRCs( self->overloads->routines );
+		DRoutines_Delete( self->overloads );
+	}
+	if( self->specialized ){
+		GC_DecRCs( self->specialized->routines );
+		DRoutines_Delete( self->specialized );
+	}
+	if( self->body ) GC_DecRC( self->body );
+	dao_free( self );
 }
 int DaoRoutine_IsWrapper( DaoRoutine *self )
 {
@@ -4523,7 +4533,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	 * be appended to "routines", so that it can be properly garbage collected. */
 	DArray_Append( self->routines, routine );
 	GC_IncRC( routine );
-	if( routine->routHost && param->routine->routHost ){
+	if( routine != param->routine && routine->routHost && param->routine->routHost ){
 		DaoType *t1 = routine->routHost;
 		DaoType *t2 = param->routine->routHost;
 		if( t1->tid == DAO_CDATA && t2->tid == DAO_CDATA ){
@@ -4534,12 +4544,11 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		if( bl ){
 			for(i=0,n=self->routines->size; i<n; i++){
 				if( self->routines->items.pRoutine[i] == param->routine ){
+					GC_DecRC( param->routine );
 					DArray_Erase( self->routines, i, 1 );
 					break;
 				}
 			}
-			DArray_Append( self->routines, routine );
-			GC_ShiftRC( routine, param->routine );
 			param->routine = routine;
 		}
 	}

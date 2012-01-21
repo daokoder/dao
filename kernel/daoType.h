@@ -215,20 +215,6 @@ DaoValue* DaoValue_NoCopy( DaoValue *self, DaoProcess *proc, DMap *cycData );
 void DaoValue_SafeGetField( DaoValue *self, DaoProcess *proc, DString *name );
 void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
 
-struct DaoCdataCore
-{
-	DaoTypeKernel  *kernel;
-
-	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
-	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
-	void (*GetItem)(  DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
-	void (*SetItem)(  DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
-	void (*Print)( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
-	DaoValue* (*Copy)(  DaoValue *self, DaoProcess *proc, DMap *cycData );
-
-	void   (*DelData)( void *data );
-};
-
 
 
 typedef struct DTypeParam DTypeParam;

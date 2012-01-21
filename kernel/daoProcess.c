@@ -313,7 +313,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	GC_ShiftRC( routine, frame->routine );
 	frame->routine = routine;
 	frame->codes = routine->body->vmCodes->codes;
-	frame->types = routine->body->regType->items.pType;
+	frame->types = types;
 	for(; id != end; id++){
 		daoint i = *id, tid = types[i]->tid;
 		DaoValue *value = values[i], *value2;
@@ -531,8 +531,8 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 			if( DaoRoutine_DoTypeInference( routine, 1 ) == 0 ){
 				/* Specialization may fail at unreachable parts for certain parameters.
 				 * Example: binary tree benchmark using list (binary_tree2.dao). */
-				GC_ShiftRC( (*routine2)->body, routine->body );
-				routine->body = (*routine2)->body;
+				GC_ShiftRC( routine->original->body, routine->body );
+				routine->body = routine->original->body;
 			}
 		}
 		DMutex_Unlock( & mutex_routine_specialize2 );
@@ -7386,7 +7386,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 		except = DaoException_New( etype );
 		DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
 		DaoPrintException( except, stream );
-		etype->typer->Delete( except );
+		DaoException_Delete( except );
 		return;
 	}
 	except = DaoException_New( etype );

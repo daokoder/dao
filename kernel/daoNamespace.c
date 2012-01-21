@@ -758,9 +758,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 		DArray *array = self->sources->items.pArray[i];
 		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
-	DaoVmSpace_Lock( self->vmSpace );
-	DMap_Erase( self->vmSpace->nsModules, self->name );
-	DaoVmSpace_Unlock( self->vmSpace );
 
 	DaoList_Delete( self->argParams );
 	DMap_Delete( self->lookupTable );
@@ -1621,9 +1618,7 @@ DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, 
 	assert( parser->defParser != NULL );
 	defparser = parser->defParser;
 
-	GC_IncRC( self );
 	GC_IncRC( parser->hostCdata );
-	func->nameSpace = self;
 	func->routHost = parser->hostCdata;
 	if( ! DaoToken_Tokenize( defparser->tokens, proto, 0, 0, 0 ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;

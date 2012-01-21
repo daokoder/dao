@@ -209,6 +209,7 @@ struct DaoGarbageCollector
 	DArray   *workList;
 	DArray   *auxList;
 	DArray   *auxList2;
+	DArray   *nsList;
 	DArray   *cdataValues;
 	DArray   *cdataArrays;
 	DArray   *cdataMaps;
@@ -265,6 +266,7 @@ void DaoGC_Init()
 	gcWorker.workList = DArray_New(0);
 	gcWorker.auxList = DArray_New(0);
 	gcWorker.auxList2 = DArray_New(0);
+	gcWorker.nsList = DArray_New(0);
 	gcWorker.cdataValues = DArray_New(0);
 	gcWorker.cdataArrays = DArray_New(0);
 	gcWorker.cdataMaps = DArray_New(0);
@@ -401,6 +403,7 @@ void DaoGC_Finish()
 	DArray_Delete( gcWorker.workList );
 	DArray_Delete( gcWorker.auxList );
 	DArray_Delete( gcWorker.auxList2 );
+	DArray_Delete( gcWorker.nsList );
 	DArray_Delete( gcWorker.cdataValues );
 	DArray_Delete( gcWorker.cdataArrays );
 	DArray_Delete( gcWorker.cdataMaps );
@@ -592,10 +595,13 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 	daoint i, n;
 
 	if( cdata->type == DAO_CTYPE || cdata->subtype == DAO_CDATA_PTR ) return;
-	if( cdata->ctype == NULL || cdata->ctype->typer ) return;
-	if( cdata->ctype->typer->GetGCFields == NULL ) return;
+	if( cdata->typer == NULL || cdata->typer->GetGCFields == NULL ) return;
 	cvalues->size = carrays->size = cmaps->size = 0;
-	cdata->ctype->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+	if( cdata->subtype == DAO_CDATA_DAO ){
+		cdata->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+	}else{
+		cdata->typer->GetGCFields( cdata->data, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+	}
 	DaoGC_ScanArray( cvalues, action );
 	for(i=0,n=carrays->size; i<n; i++) DaoGC_ScanArray( carrays->items.pArray[i], action );
 	for(i=0,n=cmaps->size; i<n; i++) DaoGC_ScanMap( cmaps->items.pMap[i], action, 1, 1 );
@@ -722,7 +728,11 @@ static void DaoValue_Delete( DaoValue *self )
 #endif
 	if( self->type == DAO_ROUTINE ) DaoCallbackData_DeleteByCallback( self );
 	DaoCallbackData_DeleteByUserdata( self );
-	typer->Delete( self );
+	if( self->type == DAO_CDATA && self->xCdata.subtype != DAO_CDATA_DAO ){
+		DaoCdata_Delete( (DaoCdata*) self );
+	}else{
+		typer->Delete( self );
+	}
 }
 void DaoCGC_Recycle( void *p )
 {
@@ -783,6 +793,12 @@ void DaoCGC_CycRefCountIncScan()
 		for( i=0; i<workList->size; i++ ){
 			DaoValue *value = workList->items.pValue[i];
 			if( value->xGC.alive ) continue;
+			if( j && value->type == DAO_NAMESPACE ){
+				DaoNamespace *NS= (DaoNamespace*) value;
+				DaoVmSpace_Lock( NS->vmSpace );
+				DMap_Erase( NS->vmSpace->nsModules, NS->name );
+				DaoVmSpace_Unlock( NS->vmSpace );
+			}
 			if( value->xGC.cycRefCount >0 ){
 				auxList->size = 0;
 				value->xGC.alive = 1;
@@ -1026,6 +1042,7 @@ void DaoIGC_CycRefCountIncScan()
 {
 	DArray *workList = gcWorker.workList;
 	DArray *auxList = gcWorker.auxList;
+	daoint second = gcWorker.workType == GC_INC_RC2;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint k = 0;
@@ -1039,6 +1056,12 @@ void DaoIGC_CycRefCountIncScan()
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
+		if( second && value->type == DAO_NAMESPACE ){
+			DaoNamespace *NS= (DaoNamespace*) value;
+			DaoVmSpace_Lock( NS->vmSpace );
+			DMap_Erase( NS->vmSpace->nsModules, NS->name );
+			DaoVmSpace_Unlock( NS->vmSpace );
+		}
 		if( value->xGC.cycRefCount >0 ){
 			auxList->size = 0;
 			value->xGC.alive = 1;
@@ -1310,10 +1333,10 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) rout->routHost );
 			cycRefCountDecrement( (DaoValue*) rout->nameSpace );
 			cycRefCountDecrement( (DaoValue*) rout->original );
-			cycRefCountDecrement( (DaoValue*) rout->specialized );
 			cycRefCountDecrement( (DaoValue*) rout->routConsts );
 			cycRefCountDecrement( (DaoValue*) rout->body );
 			if( rout->overloads ) cycRefCountDecrements( rout->overloads->routines );
+			if( rout->specialized ) cycRefCountDecrements( rout->specialized->routines );
 			break;
 		}
 	case DAO_ROUTBODY :
@@ -1373,6 +1396,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( abtp->aux );
 			cycRefCountDecrement( abtp->value );
 			cycRefCountDecrement( (DaoValue*) abtp->kernel );
+			cycRefCountDecrement( (DaoValue*) abtp->cbtype );
 			cycRefCountDecrements( abtp->nested );
 			cycRefCountDecrements( abtp->bases );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_DEC, 0, 1 );
@@ -1504,10 +1528,10 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) rout->routHost );
 			cycRefCountIncrement( (DaoValue*) rout->nameSpace );
 			cycRefCountIncrement( (DaoValue*) rout->original );
-			cycRefCountIncrement( (DaoValue*) rout->specialized );
 			cycRefCountIncrement( (DaoValue*) rout->routConsts );
 			cycRefCountIncrement( (DaoValue*) rout->body );
 			if( rout->overloads ) cycRefCountIncrements( rout->overloads->routines );
+			if( rout->specialized ) cycRefCountIncrements( rout->specialized->routines );
 			break;
 		}
 	case DAO_ROUTBODY :
@@ -1567,6 +1591,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( abtp->aux );
 			cycRefCountIncrement( abtp->value );
 			cycRefCountIncrement( (DaoValue*) abtp->kernel );
+			cycRefCountIncrement( (DaoValue*) abtp->cbtype );
 			cycRefCountIncrements( abtp->nested );
 			cycRefCountIncrements( abtp->bases );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_INC, 0, 1 );
@@ -1679,18 +1704,10 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		}
 	case DAO_CDATA : case DAO_CTYPE :
 		{
+			DaoValue *value2 = value;
 			DaoCdata *cdata = (DaoCdata*) value;
-			DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
-			/* Do not use ctype->kernel, since this reference may have been broken: */
-			value = (DaoValue*) (typer && typer->core ? typer->core->kernel : NULL);
-			if( value && value->xGC.idle ==0 ){
-				/* To make sure that the DaoTypeKernel will be deleted after: */
-				value->xGC.idle = 1;
-				DArray_Append( gcWorker.idleList, value );
-			}
 			directRefCountDecrement( (DaoValue**) & cdata->object );
-			/* Do not break the reference to ctype now, it is required
-			 * for deleting the cdata properly. */
+			directRefCountDecrement( (DaoValue**) & cdata->ctype );
 			if( value->type == DAO_CDATA ){
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 			}else{
@@ -1709,10 +1726,10 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			 * in the last cycle */
 			directRefCountDecrement( (DaoValue**) & rout->routHost );
 			directRefCountDecrement( (DaoValue**) & rout->original );
-			directRefCountDecrement( (DaoValue**) & rout->specialized );
 			directRefCountDecrement( (DaoValue**) & rout->routConsts );
 			directRefCountDecrement( (DaoValue**) & rout->body );
 			if( rout->overloads ) directRefCountDecrements( rout->overloads->routines );
+			if( rout->specialized ) directRefCountDecrements( rout->specialized->routines );
 			break;
 		}
 	case DAO_ROUTBODY :
@@ -1774,6 +1791,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & abtp->aux );
 			directRefCountDecrement( (DaoValue**) & abtp->value );
 			directRefCountDecrement( (DaoValue**) & abtp->kernel );
+			directRefCountDecrement( (DaoValue**) & abtp->cbtype );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_BREAK, 0, 1 );
 			break;
 		}

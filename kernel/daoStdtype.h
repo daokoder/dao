@@ -180,7 +180,8 @@ enum DaoCdataType
 	DAO_CDATA_DAO   /* customized Dao data */
 };
 
-#define DAO_CDATA_COMMON DAO_DATA_COMMON; DaoType *ctype; DaoObject *object; void *data
+#define DAO_CDATA_COMMON \
+	DAO_DATA_COMMON; DaoTypeBase *typer; DaoType *ctype; DaoObject *object; void *data
 
 struct DaoCdata
 {
@@ -189,6 +190,7 @@ struct DaoCdata
 
 DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoType *type );
 DAO_DLL void DaoCdata_FreeCommon( DaoCdata *self );
+DAO_DLL void DaoCdata_Delete( DaoCdata *self );
 
 DAO_DLL extern DaoTypeBase defaultCdataTyper;
 DAO_DLL extern DaoCdata dao_default_cdata;

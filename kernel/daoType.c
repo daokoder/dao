@@ -247,6 +247,7 @@ DaoType* DaoType_Copy( DaoType *other )
 	GC_IncRC( other->aux );
 	GC_IncRC( other->value );
 	GC_IncRC( other->kernel );
+	GC_IncRC( other->cbtype );
 	return self;
 }
 void DaoType_MapNames( DaoType *self )
@@ -921,7 +922,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->attrib = self->attrib;
 	copy->cdatatype = self->cdatatype;
 	copy->overloads = self->overloads;
-	GC_IncRC( copy );
+	DArray_Append( ns->auxData, copy );
 	DMap_Insert( defs, self, copy );
 	if( self->mapNames ){
 		if( copy->mapNames ) DMap_Delete( copy->mapNames );
@@ -957,7 +958,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			sptype = DaoCdataType_Specialize( sptype, copy->nested );
 			if( sptype ){
 				DMap_Erase2( defs, copy );
-				GC_DecRC( copy );
 				return sptype;
 			}
 		}
@@ -1024,7 +1024,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		klass = DaoClass_Instantiate( klass, copy->nested );
 		assert( klass != NULL );
 		DMap_Erase2( defs, copy );
-		GC_DecRC( copy );
 		return klass->objType;
 	}
 #endif
@@ -1038,10 +1037,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 #endif
 	if( node ){
 		DMap_Erase2( defs, copy );
-		GC_DecRC( copy );
 		return node->value.pType;
 	}else{
-		//GC_IncRC( copy );
 		/* reference count already increased */
 		DaoNamespace_AddType( ns, copy->name, copy );
 		DMap_Insert( defs, self, copy );
@@ -1050,7 +1047,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	DaoType_InitDefault( copy );
 	return copy;
 DefFailed:
-	GC_DecRC( copy );
 	printf( "redefine failed\n" );
 	return NULL;
 }
@@ -1584,7 +1580,7 @@ DaoTypeBase typeKernelTyper =
 
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 {
-	int extra = typer && typer->core ? 0 : sizeof(DaoCdataCore);
+	int extra = typer && typer->core ? 0 : sizeof(DaoTypeCore);
 	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) + extra );
 	DaoValue_Init( self, DAO_TYPEKERNEL );
 	if( typer ) self->typer = typer;

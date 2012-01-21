@@ -661,7 +661,7 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	case DAO_ENUM    : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CTYPE   :
-	case DAO_CDATA   : return self->xCdata.ctype->typer;
+	case DAO_CDATA   : return self->xCdata.typer;
 	default : break;
 	}
 	return DaoVmSpace_GetTyper( self->type );
@@ -3721,10 +3721,12 @@ void DaoCdata_InitCommon( DaoCdata *self, DaoType *type )
 {
 	DaoValue_Init( self, DAO_CDATA );
 	self->subtype = DAO_CDATA_PTR;
+	self->typer = & defaultCdataTyper;
 	self->object = NULL;
 	self->ctype = type;
 	if( type == NULL ) self->ctype = dao_default_cdata.ctype;
 	if( self->ctype ){
+		self->typer = self->ctype->typer;
 		self->subtype = self->ctype->cdatatype;
 		GC_IncRC( self->ctype );
 	}
@@ -3766,20 +3768,11 @@ void DaoCdata_Delete( DaoCdata *self )
 }
 void DaoCdata_DeleteData( DaoCdata *self )
 {
-	DaoCdataCore *c = NULL;
-	DaoTypeBase *typer = & defaultCdataTyper;
 	void (*fdel)(void*) = (void (*)(void *))DaoCdata_Delete;
 	if( self->subtype != DAO_CDATA_DAO ) DaoCdataBindings_Erase( self->data );
-	if( self->ctype && self->ctype->typer ){
-		typer = self->ctype->typer;
-		c = (DaoCdataCore*)typer->core;
-	}
-	if( self->type != DAO_CTYPE && self->subtype == DAO_CDATA_CXX && self->data != NULL ){
-		if( c && c->DelData && c->DelData != fdel ){
-			c->DelData( self->data );
-		}else if( c ==0 && typer->Delete && typer->Delete != fdel ){
-			/* if the methods of typer has not been setup, typer->core would be NULL */
-			typer->Delete( self->data );
+	if( self->subtype == DAO_CDATA_CXX && self->data != NULL ){
+		if( self->typer->Delete && self->typer->Delete != fdel ){
+			self->typer->Delete( self->data );
 		}else{
 			dao_free( self->data );
 		}
@@ -3853,7 +3846,7 @@ DaoTypeBase defaultCdataTyper =
 	"cdata", NULL, NULL, NULL, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
 };
-DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL};
+DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL,NULL};
 
 
 
@@ -3905,7 +3898,6 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque )
 {
 	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
-	DaoCdataCore *core = (DaoCdataCore*) kernel->core;
 	DaoType *cdata_type = DaoCdata_NewType( typer );
 	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
 
@@ -3918,9 +3910,7 @@ DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque
 	GC_ShiftRC( kernel, cdata_type->kernel );
 	ctype_type->kernel = kernel;
 	cdata_type->kernel = kernel;
-	core->DelData = typer->Delete;
-	typer->Delete = (FuncPtrDel)DaoCdata_Delete;
-	typer->core = (DaoTypeCore*)core;
+	typer->core = kernel->core;
 	return ctype_type;
 }
 
@@ -3984,7 +3974,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ Dao_Exception_Set_info, ".info=( self : Exception, info : string)" },
 	{ Dao_Exception_Get_data, ".data( self : Exception )=>any" },
 	{ Dao_Exception_Set_data, ".data=( self : Exception, data : any)" },
-	{ Dao_Exception_New, "Exception( info = '' )=>Exception" },
+	{ Dao_Exception_New,   "Exception( info = '' )=>Exception" },
 	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_info, "serialize( self : Exception )=>string" },
