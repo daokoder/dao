@@ -146,6 +146,7 @@ void DaoClass_Delete( DaoClass *self )
 	DArray_Delete( self->superAlias );
 	DArray_Delete( self->references );
 	DArray_Delete( self->objDataDefault );
+	if( self->vtable ) DMap_Delete( self->vtable );
 	if( self->protoValues ) DMap_Delete( self->protoValues );
 	if( self->typeHolders ){
 		DArray_Delete( self->typeHolders );
@@ -354,23 +355,25 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		klass = DaoClass_New();
 		if( holders ) klass->templateClass = self;
 		DMap_Insert( self->instanceClasses, name, klass );
-		DaoClass_AddReference( self, klass );
+		DaoClass_AddReference( self, klass ); /* No need for cleanup of klass; */
 		DaoClass_SetName( klass, name, self->classRoutine->nameSpace );
 		for(i=0; i<types->size; i++){
 			type = types->items.pType[i];
 			if( DaoType_MatchTo( type, self->typeHolders->items.pType[i], deftypes ) ==0 ){
 				DString_Delete( name );
-				GC_IncRC( klass ); GC_DecRC( klass );
 				return NULL;
 			}
 			MAP_Insert( deftypes, self->typeHolders->items.pVoid[i], type );
 		}
 		klass->objType->nested = DArray_New(0);
-		DArray_Swap( klass->objType->nested, types );
+		/*
+		// valgrind reports memory leaking on demo/template_class.dao:
+		// DArray_Swap( klass->objType->nested, types );
+		*/
+		DArray_Assign( klass->objType->nested, types );
 		GC_IncRCs( klass->objType->nested );
 		if( DaoClass_CopyField( klass, self, deftypes ) == 0 ){
 			DString_Delete( name );
-			GC_IncRC( klass ); GC_DecRC( klass );
 			return NULL;
 		}
 		DaoClass_DeriveClassData( klass );

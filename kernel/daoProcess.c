@@ -6895,9 +6895,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( proto->body->upRoutine ){
 		DMap *map = DHash_New(0,0);
 		DaoProcess *proc = DaoProcess_New( self->vmSpace );
-		closure->body->upRoutine = self->activeRoutine;
 		closure->body->upProcess = proc;
-		GC_IncRC( self->activeRoutine );
 		GC_IncRC( proc );
 		DaoProcess_PushRoutine( proc, self->activeRoutine, self->activeObject );
 		DaoProcess_SetActiveFrame( proc, proc->topFrame );
@@ -6905,9 +6903,10 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 			DaoValue *value = self->activeValues[i];
 			DNode *node = DMap_Find( map, value );
 			if( node == NULL ) node = DMap_Insert( map, value, DaoValue_SimpleCopy( value ) );
-			GC_IncRC( node->value.pValue );
+			GC_ShiftRC( node->value.pValue, proc->activeValues[i] );
 			proc->activeValues[i] = node->value.pValue;
 		}
+		DMap_Delete( map );
 	}
 	pp2 = closure->routConsts->items.items.pValue;
 	for(i=0; i<vmc->b; i+=2) DaoValue_Copy( pp[i+1], pp2 + pp[i+2]->xInteger.value );
@@ -6923,6 +6922,8 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	DaoRoutine_MapTypes( closure, deftypes );
 	DMap_Delete( deftypes );
 	
+	/* It's necessary to put it in "self" process in any case, so that it can be GC'ed: */
+	DaoProcess_SetValue( self, vmc->c, (DaoValue*) closure );
 	DArray_Assign( closure->body->annotCodes, proto->body->annotCodes );
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "function creation failed" );
@@ -6932,9 +6933,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_Execute( closure->body->upProcess );
 		DaoProcess_PopFrame( self );
 		self->status = DAO_VMPROC_STACKED;
-		return;
 	}
-	DaoProcess_SetValue( self, vmc->c, (DaoValue*) closure );
 	/*
 	 DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
 	 DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );

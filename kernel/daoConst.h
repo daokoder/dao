@@ -28,6 +28,7 @@
 #endif
 
 #include"dao.h"
+#include"daoBase.h"
 
 #define DAO_UDF DAO_NONE  /* undefined type: for implicitly declared variables */
 
@@ -175,9 +176,9 @@ enum DaoRoutineAttrib
 
 enum DaoGlobalConstOffset
 {
-	DVR_NSC_NONE = 1 ,
-	DVR_NSC_ANY , 
-	DVR_NSC_MAIN 
+	DVR_NSC_NONE = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_DATA_PUBLIC, 0, 1 ) ,
+	DVR_NSC_ANY  = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_DATA_PUBLIC, 0, 2 ) , 
+	DVR_NSC_MAIN = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_DATA_PUBLIC, 0, 3 )
 };
 enum DaoGlobalVarOffset
 {

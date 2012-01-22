@@ -114,6 +114,7 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 	size_t i, n = self->threads->size;
 	for(i=0; i<n; i++) DaoCallThread_Delete( (DaoCallThread*)self->threads->items.pVoid[i] );
 	GC_DecRC( self->tuple );
+	DArray_Delete( self->threads );
 	DArray_Delete( self->functions );
 	DArray_Delete( self->parameters );
 	DArray_Delete( self->futures );

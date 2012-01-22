@@ -581,8 +581,8 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 		count += (map->keytype == D_VALUE) + (map->valtype == D_VALUE);
 	}
 	if( action == DAO_GC_BREAK ){
-		map->keytype = 0;
-		map->valtype = 0;
+		if( map->keytype == D_VALUE ) map->keytype = 0;
+		if( map->valtype == D_VALUE ) map->valtype = 0;
 		DMap_Clear( map );
 	}
 	return count;
@@ -730,6 +730,8 @@ static void DaoValue_Delete( DaoValue *self )
 	DaoCallbackData_DeleteByUserdata( self );
 	if( self->type == DAO_CDATA && self->xCdata.subtype != DAO_CDATA_DAO ){
 		DaoCdata_Delete( (DaoCdata*) self );
+	}else if( self->type == DAO_ROUTBODY ){
+		DaoRoutineBody_Delete( (DaoRoutineBody*) self );
 	}else{
 		typer->Delete( self );
 	}

@@ -1901,7 +1901,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	routMain->attribs |= DAO_ROUT_MAIN;
 	ns->mainRoutine = routMain;
 	DaoNamespace_SetConst( ns, DVR_NSC_MAIN, (DaoValue*) routMain );
-	DString_SetMBS( self->routName, "::main" );
+	DString_SetMBS( self->routName, "__main__" );
 	GC_IncRC( routMain );
 	DArray_Append( ns->mainRoutines, routMain );
 	/* the name of routMain will be set in DaoParser_ParseRoutine() */
@@ -4587,8 +4587,10 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 			return -1;
 		}
 		if( i >=0 ){
-			routine->body->upRoutine = self->outParser->routine;
-			GC_IncRC( routine->body->upRoutine );
+			if( routine->body->upRoutine == NULL ){
+				routine->body->upRoutine = self->outParser->routine;
+				GC_IncRC( routine->body->upRoutine );
+			}
 			return LOOKUP_BIND( st, pm, 1, id );
 		}
 	}

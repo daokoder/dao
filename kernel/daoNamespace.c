@@ -758,6 +758,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 		DArray *array = self->sources->items.pArray[i];
 		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
+	GC_DecRCs( self->mainRoutines );
 
 	DaoList_Delete( self->argParams );
 	DMap_Delete( self->lookupTable );
@@ -766,9 +767,11 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DArray_Delete( self->varData );
 	DArray_Delete( self->varType );
 	DArray_Delete( self->auxData );
-	DArray_Delete( self->namespaces );
+
 	/* no need for GC, because these namespaces are indirectly
 	 * referenced through functions. */
+	DArray_Delete( self->namespaces );
+
 	DArray_Delete( self->mainRoutines );
 	DArray_Delete( self->definedRoutines );
 	DMap_Delete( self->localMacros );
@@ -1146,18 +1149,10 @@ DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *na
 
 	DString_AppendMBS( combo, ":" );
 	DString_Append( combo, name );
-	node = MAP_Find( self->localMacros, combo );
-	if( node ){
-		DString_Delete( combo );
-		return (DaoMacro*) node->value.pVoid;
-	}
-	node = MAP_Find( self->globalMacros, combo );
-	if( node ){
-		DString_Delete( combo );
-		return (DaoMacro*) node->value.pVoid;
-	}
+	if( (node = MAP_Find( self->localMacros, combo )) ) goto ReturnMacro;
+	if( (node = MAP_Find( self->globalMacros, combo )) ) goto ReturnMacro;
 	/* Stop searching upstream namespaces if the current is .dao file: */
-	if( strcmp( self->lang->mbs, "dao" ) ==0 ) return NULL;
+	if( strcmp( self->lang->mbs, "dao" ) ==0 ) goto ReturnNull;
 	for(i=1; i<n; i++){
 		DaoNamespace *ns = self->namespaces->items.pNS[i];
 		DaoMacro *macro = DaoNamespace_FindMacro2( ns, lang, name );
@@ -1167,7 +1162,12 @@ DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *na
 		DString_Delete( combo );
 		return macro;
 	}
+ReturnNull:
+	DString_Delete( combo );
 	return NULL;
+ReturnMacro:
+	DString_Delete( combo );
+	return (DaoMacro*) node->value.pVoid;
 }
 void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp )
 {
