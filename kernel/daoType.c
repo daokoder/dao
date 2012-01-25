@@ -1662,7 +1662,8 @@ static DaoType* DTypeParam_GetLeaf( DTypeParam *self, int pid, int *ms )
 	DTypeParam *param;
 	*ms = 0;
 	if( self->sptype ) return self->sptype; /* a leaf */
-	if( pid > (int)defaults->size ) return NULL;
+	/* Explicit specializable types has no default type parameters: */
+	if( defaults->size && pid > (int)defaults->size ) return NULL;
 	if( pid < (int)defaults->size && defaults->items.pType[pid] == NULL ) return NULL;
 	for(param=self->first; param; param=param->next){
 		if( param->type == NULL ) return param->sptype; /* a leaf */
@@ -1686,7 +1687,7 @@ static DaoType* DTypeParam_Get2( DTypeParam *self, DArray *types, int pid, int *
 		DaoType *partype = param->type;
 		if( partype == NULL ) continue;
 		if( argtype->tid != partype->tid ) continue;
-		if( (m = DaoType_MatchTo( argtype, partype, NULL )) != DAO_MT_EQ ){
+		if( (m = DaoType_MatchTo( argtype, partype, NULL )) < DAO_MT_EQ ){
 			continue;
 		}
 		if( (sptype = DTypeParam_Get2( param, types, pid+1, & k )) == NULL ) continue;
@@ -1740,7 +1741,8 @@ void DTypeSpecTree_Add( DTypeSpecTree *self, DArray *types, DaoType *sptype )
 DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types )
 {
 	int score = 0;
-	if( DTypeSpecTree_Test( self, types ) == 0 ) return NULL;
+	/* For explicitly specialized types, the specialization tree has no type holders: */
+	if( self->holders->size && DTypeSpecTree_Test( self, types ) == 0 ) return NULL;
 	return DTypeParam_Get2( self->root, types, 0, & score );
 }
 extern DaoType* DaoCdata_NewType( DaoTypeBase *typer );
@@ -1864,18 +1866,22 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 			}
 		}
 		for(it=DMap_First(orimeths); it; it=DMap_Next(orimeths, it)){
-			DaoRoutine *rout, *routine = it->value.pRoutine;
+			DaoRoutine *rout, *rout2, *routine = it->value.pRoutine;
 			if( routine->routHost->aux != original->aux ) continue;
 			if( routine->overloads ){
 				for(i=0; i<routine->overloads->routines->size; i++){
-					rout = routine->overloads->routines->items.pRoutine[i];
+					rout = rout2 = routine->overloads->routines->items.pRoutine[i];
 					if( rout->routHost->aux != original->aux ) continue;
 					rout = DaoRoutine_Copy( rout, 1, 1 );
+					if( rout2->attribs & DAO_ROUT_INITOR )
+						DString_Assign( rout->routName, self->name );
 					DaoRoutine_Finalize( rout, self, defs );
 					DaoMethods_Insert( methods, rout, nspace, self );
 				}
 			}else{
 				rout = DaoRoutine_Copy( routine, 1, 1 );
+				if( routine->attribs & DAO_ROUT_INITOR )
+					DString_Assign( rout->routName, self->name );
 				DaoRoutine_Finalize( rout, self, defs );
 				DaoMethods_Insert( methods, rout, nspace, self );
 			}

@@ -28,6 +28,8 @@ struct CDaoVariable
 	SourceLocation  location;
 	const Expr     *initor;
 
+	bool    isArithmeticType;
+	bool    isPointerType;
 	bool    isNullable;
 	bool    isCallback;
 	bool    isUserData; // callback userdata

@@ -599,8 +599,10 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 	cvalues->size = carrays->size = cmaps->size = 0;
 	if( cdata->subtype == DAO_CDATA_DAO ){
 		cdata->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
-	}else{
+	}else if( cdata->data ){
 		cdata->typer->GetGCFields( cdata->data, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+	}else{
+		return;
 	}
 	DaoGC_ScanArray( cvalues, action );
 	for(i=0,n=carrays->size; i<n; i++) DaoGC_ScanArray( carrays->items.pArray[i], action );

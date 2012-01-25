@@ -3085,7 +3085,7 @@ NotExist_TryAux:
 					}
 					ct = at->aux->xClass.objType;
 				}else if( at->tid == DAO_CTYPE ){
-					rout = DaoType_FindFunctionMBS( at, at->typer->name );
+					rout = DaoType_FindFunction( at, at->name );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( csts[opa] && csts[opa]->type == DAO_ROUTINE ){
 					rout = (DaoRoutine*) csts[opa];

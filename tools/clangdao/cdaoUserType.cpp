@@ -618,7 +618,10 @@ const string get_gcfields =
 {\n\
 	DaoCxx_$(typer) *self = (DaoCxx_$(typer)*) P;\n\
 	if( self->cdata ) DArray_Append( VS, (void*) self->cdata );\n\
-	if( RM ) self->cdata = NULL;\n\
+	if( RM ){\n\
+$(breakref)\
+		self->cdata = NULL;\n\
+	}\n\
 }\n";
 
 const string cast_to_parent = 
@@ -663,7 +666,9 @@ CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
 	module = mod;
 	isRedundant = true;
+	isRedundant2 = false;
 	forceOpaque = false;
+	dummyTemplate = false;
 	isQObject = isQObjectBase = false;
 	wrapCount = 0;
 	wrapType = CDAO_WRAP_TYPE_NONE;
@@ -713,11 +718,12 @@ void CDaoUserType::Clear()
 }
 int CDaoUserType::GenerateSimpleTyper()
 {
+	string ss = dummyTemplate ? "<>" : "";
 	map<string,string> kvmap;
 	kvmap[ "module" ] = UppercaseString( module->moduleInfo.name );
 	kvmap[ "typer" ] = idname;
 	kvmap[ "name2" ] = name2;
-	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( qname );
+	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( qname ) + ss;
 	typer_codes = cdao_string_fill( usertype_code_none, kvmap );
 	wrapType = CDAO_WRAP_TYPE_OPAQUE;
 	return 0;
@@ -735,6 +741,8 @@ int CDaoUserType::Generate()
 		//outs() << "\n" << decl->isAnonymousStructOrUnion() << "\n\n";
 		return 0;
 	}
+	isRedundant = isRedundant2;
+	if( isRedundant ) return 0;
 
 	if( decl->isAnonymousStructOrUnion() ) return 0;
 	if( module->finalGenerating == false && dd == NULL ) return 0;
@@ -1014,9 +1022,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		if( methit->getAccess() == AS_protected ) hasProtected = true;
 		methods.push_back( CDaoFunction( module, *methit, ++overloads[name] ) );
 		methods.back().location = location;
-		//if( methit->isPure() ) pvmeths[ *methit ] = 1;
+		if( methit->isPure() ) pvmeths[ *methit ] = 1;
 		if( methit->isVirtual() ){
-			pvmeths[ *methit ] = 1;
+			//pvmeths[ *methit ] = 1;
 			CXXMethodDecl::method_iterator it2, end2 = methit->end_overridden_methods();
 			for(it2=methit->begin_overridden_methods(); it2!=end2; it2++)
 				pvmeths.erase( (CXXMethodDecl*)*it2 );
@@ -1252,10 +1260,17 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		func.Generate();
 		if( not func.generated ){
 			TypeLoc typeloc = mdec->getTypeSourceInfo()->getTypeLoc();
-			string source = module->ExtractSource( typeloc.getSourceRange(), true );
+			FunctionTypeLoc ftypeloc = cast<FunctionTypeLoc>(typeloc);
+			//string source = module->ExtractSource( ftypeloc.getLocalSourceRange(), true );
+			string source = module->ExtractSource( ftypeloc.getLocalSourceRange(), true );
+			string source2 = module->ExtractSource( ftypeloc.getResultLoc().getLocalSourceRange(), true );
+
+			string proto = mdec->getResultType().getAsString();
+			proto += " " + func.signature;
 			//module->ExtractSource( mdec->getSourceRange(), true ); //with no return type
-			if( isconst ) source += "const";
-			kmethods += "\t" + source + "{/*XXX 1*/}\n";
+			if( isconst ) proto += "const";
+			kmethods += "\t" + proto + "{/*XXX 1*/}\n";
+			outs()<<proto<<"\n";
 			continue;
 		}
 		kvmap[ "name" ] = mdec->getNameAsString();
@@ -1419,6 +1434,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		return usertype_code_class2.expand( kvmap );
 	}
 #endif
+	kvmap["breakref"] = gcfields;
 	typer_codes = cdao_string_fill( usertype_code_class2, kvmap );
 	return 0;
 }

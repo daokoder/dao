@@ -156,6 +156,14 @@ string normalize_type_name( const string & name0 )
 static bool is_invalid_dao_type_name( const string & name )
 {
 	int i, n = name.size();
+	if( n == 0 ) return true;
+	if( name[0] == '@' ){
+		for(i=1; i<n; i++){
+			char ch = name[i];
+			if( isalnum( ch ) == 0 && ch != '_' ) return true;
+		}
+		return false;
+	}
 	for(i=0; i<n; i++){
 		char ch = name[i];
 		if( isalnum( ch ) == 0 && ch != '_' && ch != ':' ) return true;
@@ -163,8 +171,10 @@ static bool is_invalid_dao_type_name( const string & name )
 	return false;
 }
 map<string,int> type_for_quoting;
-string cdao_make_dao_template_type_name( const string & name0 )
+map<string,string> type_substitutions;
+string cdao_make_dao_template_type_name( const string & name0, const map<string,string> & subs, const map<string,int> & type_for_quoting )
 {
+	map<string,string>::const_iterator it;
 	string name = normalize_type_name( name0 );
 	string result, part;
 	int i, n;
@@ -173,10 +183,14 @@ string cdao_make_dao_template_type_name( const string & name0 )
 		if( ch == '<' || ch == '>' || ch == ',' ){
 			if( part != "" && part != " " ){
 				string quote = is_invalid_dao_type_name( part ) ? "'" : "";
+				it = subs.find( part );
+				if( it != subs.end() ) part = it->second;
 				if( part.find( "std::" ) == 0 ) part.replace( 0, 5, "stdcxx::" );
 				if( type_for_quoting.find( part ) != type_for_quoting.end() ) quote = "'";
+				if( type_for_quoting.size() == 0 ) quote = "";
 				result += quote + part + quote;
 			}
+			if( ch == '>' && result[result.size()-1] == '>' ) result += ' ';
 			result += ch;
 			part = "";
 		}else{
@@ -185,9 +199,69 @@ string cdao_make_dao_template_type_name( const string & name0 )
 	}
 	if( part == "" ) return result;
 	string quote = is_invalid_dao_type_name( part ) ? "'" : "";
+	it = subs.find( part );
+	if( it != subs.end() ) part = it->second;
 	if( part.find( "std::" ) == 0 ) part.replace( 0, 5, "stdcxx::" );
 	if( type_for_quoting.find( part ) != type_for_quoting.end() ) quote = "'";
 	return result + quote + part + quote;
+}
+string cdao_make_dao_template_type_name( const string & name0 )
+{
+	map<string,string>::const_iterator it;
+	string name = normalize_type_name( name0 );
+	string result, part;
+	int i, n;
+	for(i=0, n = name.size(); i<n; i++){
+		char ch = name[i];
+		if( ch == '<' || ch == '>' || ch == ',' ){
+			if( part != "" && part != " " ){
+				string quote = is_invalid_dao_type_name( part ) ? "'" : "";
+				it = type_substitutions.find( part );
+				if( it != type_substitutions.end() ) part = it->second;
+				if( part.find( "std::" ) == 0 ) part.replace( 0, 5, "stdcxx::" );
+				if( type_for_quoting.find( part ) != type_for_quoting.end() ) quote = "'";
+				result += quote + part + quote;
+			}
+			//if( ch == '>' && result[result.size()-1] == '>' ) result += ' ';
+			result += ch;
+			part = "";
+		}else{
+			part += ch;
+		}
+	}
+	if( part == "" ) return result;
+	string quote = is_invalid_dao_type_name( part ) ? "'" : "";
+	it = type_substitutions.find( part );
+	if( it != type_substitutions.end() ) part = it->second;
+	if( part.find( "std::" ) == 0 ) part.replace( 0, 5, "stdcxx::" );
+	if( type_for_quoting.find( part ) != type_for_quoting.end() ) quote = "'";
+	return result + quote + part + quote;
+}
+string cdao_substitute_typenames( const string & name0 )
+{
+	map<string,string>::const_iterator it;
+	string name = normalize_type_name( name0 );
+	string result, part;
+	int i, n;
+	for(i=0, n = name.size(); i<n; i++){
+		char ch = name[i];
+		if( ch == '<' || ch == '>' || ch == ',' ){
+			if( part != "" && part != " " ){
+				it = type_substitutions.find( part );
+				if( it != type_substitutions.end() ) part = it->second;
+				result += part;
+			}
+			if( ch == '>' && result[result.size()-1] == '>' ) result += ' ';
+			result += ch;
+			part = "";
+		}else{
+			part += ch;
+		}
+	}
+	if( part == "" ) return result;
+	it = type_substitutions.find( part );
+	if( it != type_substitutions.end() ) part = it->second;
+	return result + part;
 }
 string cdao_remove_type_scopes( const string & qname )
 {
@@ -275,6 +349,7 @@ int main(int argc, char *argv[] )
 	type_for_quoting[ "uint16_t" ] = 1;
 	type_for_quoting[ "uint32_t" ] = 1;
 	type_for_quoting[ "uint64_t" ] = 1;
+	type_substitutions[ "_Bool" ] = "bool";
 
 	size_t i;
 	cl::ParseCommandLineOptions( argc, argv, 

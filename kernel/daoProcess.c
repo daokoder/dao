@@ -4200,7 +4200,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( caller->type == DAO_CTYPE ){
 		DaoType *type = caller->xCdata.ctype;
-		rout = rout2 = DaoType_FindFunctionMBS( type, type->typer->name );
+		rout = rout2 = DaoType_FindFunction( type, type->name );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;
@@ -6574,7 +6574,6 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			}
 			break;
 		case DAO_TUPLE :
-			dC->type = DAO_TUPLE;
 			if( dA->type == DAO_LIST || dA->type == DAO_TUPLE ){
 				DaoValue **items = NULL;
 				daoint size = 0, tsize = ct->nested->size;
@@ -6681,8 +6680,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	if( map ) DaoMap_Delete( map );
 	if( list ) DaoList_Delete( list );
 	if( tuple ) DaoTuple_Delete( tuple );
-	dC->type = 0;
-	return dC;
+	return NULL;
 }
 int DaoProcess_CheckFE( DaoProcess *self )
 {

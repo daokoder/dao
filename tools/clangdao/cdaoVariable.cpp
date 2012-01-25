@@ -37,9 +37,9 @@ const string dao2cxx_double = dao2cxx + "DaoValue_TryGetDouble( _p[$(index)] );\
 const string dao2cxx_complex = dao2cxx + "DaoValue_TryGetComplex( _p[$(index)] );\n";
 const string dao2cxx_mbs = dao2cxx2 + "DaoValue_TryGetMBString( _p[$(index)] );\n";
 const string dao2cxx_wcs = dao2cxx2 + "DaoValue_TryGetWCString( _p[$(index)] );\n";
-const string dao2cxx_bytes = dao2cxx2 + "DaoArray_ToByte( (DaoArray*)_p[$(index)] );\n";
+const string dao2cxx_bytes = dao2cxx2 + "DaoArray_ToSByte( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_ubytes = dao2cxx2 + "DaoArray_ToUByte( (DaoArray*)_p[$(index)] );\n";
-const string dao2cxx_shorts = dao2cxx2 + "DaoArray_ToShort( (DaoArray*)_p[$(index)] );\n";
+const string dao2cxx_shorts = dao2cxx2 + "DaoArray_ToSShort( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_ushorts = dao2cxx2 + "DaoArray_ToUShort( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_ints = dao2cxx2 + "DaoArray_ToSInt( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_uints = dao2cxx2 + "DaoArray_ToUInt( (DaoArray*)_p[$(index)] );\n";
@@ -60,8 +60,8 @@ const string dao2cxx_ubmat = dao2cxx_bmat; // TODO:
 const string dao2cxx_usmat = dao2cxx_smat;
 const string dao2cxx_uimat = dao2cxx_imat;
 
-const string dao2cxx_bmat2 = dao2cxx4 + "DaoArray_ToByte( (DaoArray*)_p[$(index)] );\n";
-const string dao2cxx_smat2 = dao2cxx4 + "DaoArray_ToShort( (DaoArray*)_p[$(index)] );\n";
+const string dao2cxx_bmat2 = dao2cxx4 + "DaoArray_ToSByte( (DaoArray*)_p[$(index)] );\n";
+const string dao2cxx_smat2 = dao2cxx4 + "DaoArray_ToSShort( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_imat2 = dao2cxx4 + "DaoArray_ToSInt( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_fmat2 = dao2cxx4 + "DaoArray_ToFloat( (DaoArray*)_p[$(index)] );\n";
 const string dao2cxx_dmat2 = dao2cxx4 + "DaoArray_ToDouble( (DaoArray*)_p[$(index)] );\n";
@@ -115,20 +115,20 @@ const string cxx2dao_float2 = cxx2dao + "Float( _fac, (float) *$(name) );\n";
 const string cxx2dao_double2 = cxx2dao + "Double( _fac, (double) *$(name) );\n";
 const string cxx2dao_mbs = cxx2dao+"MBString( _fac, (char*) $(name), strlen( (char*)$(name) ) );\n"; // XXX for char**
 const string cxx2dao_wcs = cxx2dao + "WCString( _fac, (wchar_t*) $(name), wcslen( (wchar_t*)$(name) ) );\n"; // XXX for wchar_t**
-const string cxx2dao_bytes = cxx2dao + "VectorB( _fac, (char*) $(name), $(size) );\n";
+const string cxx2dao_bytes = cxx2dao + "VectorSB( _fac, (signed char*) $(name), $(size) );\n";
 const string cxx2dao_ubytes = cxx2dao + "VectorUB( _fac, (unsigned char*) $(name), $(size) );\n";
-const string cxx2dao_shorts = cxx2dao + "VectorS( _fac, (short*) $(name), $(size) );\n";
+const string cxx2dao_shorts = cxx2dao + "VectorSS( _fac, (signed short*) $(name), $(size) );\n";
 const string cxx2dao_ushorts = cxx2dao + "VectorUS( _fac, (unsigned short*) $(name), $(size) );\n";
-const string cxx2dao_ints = cxx2dao + "VectorI( _fac, (int*) $(name), $(size) );\n";
+const string cxx2dao_ints = cxx2dao + "VectorSI( _fac, (signed int*) $(name), $(size) );\n";
 const string cxx2dao_uints = cxx2dao + "VectorUI( _fac, (unsigned int*) $(name), $(size) );\n";
 const string cxx2dao_floats = cxx2dao + "VectorF( _fac, (float*) $(name), $(size) );\n";
 const string cxx2dao_doubles = cxx2dao + "VectorD( _fac, (double*) $(name), $(size) );\n";
 
-const string cxx2dao_bmat = cxx2dao + "MatrixB( _fac, (char**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_bmat = cxx2dao + "MatrixSB( _fac, (signed char**) $(name), $(size), $(size2) );\n";
 const string cxx2dao_ubmat = cxx2dao + "MatrixUB( _fac, (unsigned char**) $(name), $(size), $(size2) );\n";
-const string cxx2dao_smat = cxx2dao + "MatrixS( _fac, (short**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_smat = cxx2dao + "MatrixSS( _fac, (signed short**) $(name), $(size), $(size2) );\n";
 const string cxx2dao_usmat = cxx2dao + "MatrixUS( _fac, (unsigned short**) $(name), $(size), $(size2) );\n";
-const string cxx2dao_imat = cxx2dao + "MatrixI( _fac, (int**) $(name), $(size), $(size2) );\n";
+const string cxx2dao_imat = cxx2dao + "MatrixSI( _fac, (signed int**) $(name), $(size), $(size2) );\n";
 const string cxx2dao_uimat = cxx2dao + "MatrixUI( _fac, (unsigned int**) $(name), $(size), $(size2) );\n";
 const string cxx2dao_fmat = cxx2dao + "MatrixF( _fac, (float**) $(name), $(size), $(size2) );\n";
 const string cxx2dao_dmat = cxx2dao + "MatrixD( _fac, (double**) $(name), $(size), $(size2) );\n";
@@ -142,7 +142,7 @@ const string cxx2dao_uimat2 = cxx2dao_uimat;
 const string cxx2dao_fmat2 = cxx2dao_fmat;
 const string cxx2dao_dmat2 = cxx2dao_dmat;
 
-const string cxx2dao_stream = cxx2dao + "Stream( (FILE*) $(refer) );\n";
+const string cxx2dao_stream = cxx2dao + "Stream( _fac, (FILE*) $(refer) );\n";
 const string cxx2dao_voidp = "  DaoFactory_NewCdata( _fac, NULL, (void*) $(refer), 0 );\n";
 const string cxx2dao_user = "  DaoFactory_NewCdata( _fac, dao_type_$(typer), (void*) $(refer), 0 );\n";
 
@@ -162,7 +162,7 @@ const string ctxput_mbs = ctxput + "MBString( _proc, (char*) $(name) );\n";
 const string ctxput_wcs = ctxput + "WCString( _proc, (wchar_t*) $(name) );\n";
 const string ctxput_bytes = ctxput + "Bytes( _proc, (char*) $(name), $(size) );\n"; // XXX array?
 const string ctxput_shorts = ctxput + "ArrayShort( _proc, (short*) $(name), $(size) );\n";
-const string ctxput_ints = ctxput + "ArrayInteger( _proc, (dint*) $(name), $(size) );\n"; // XXX
+const string ctxput_ints = ctxput + "ArrayInteger( _proc, (daoint*) $(name), $(size) );\n"; // XXX
 const string ctxput_floats = ctxput + "ArrayFloat( _proc, (float*) $(name), $(size) );\n";
 const string ctxput_doubles = ctxput + "ArrayDouble( _proc, (double*) $(name), $(size) );\n";
 
@@ -303,11 +303,11 @@ const string parset_float = "  DaoFloat_Set( (DaoFloat*)_p[$(index)], (float)$(n
 const string parset_double = "  DaoDouble_Set( (DaoDouble*)_p[$(index)], (double)$(name) );\n";
 const string parset_mbs = "  DaoString_SetMBS( (DaoString*)_p[$(index)], (char*)$(name) );\n";
 const string parset_wcs = "  DaoString_SetWCS( (DaoString*)_p[$(index)], (wchar_t*)$(name) );\n";
-const string parset_bytes = "  DaoArray_FromByte( (DaoArray*)_p[$(index)] );\n";
+const string parset_bytes = "  DaoArray_FromSByte( (DaoArray*)_p[$(index)] );\n";
 const string parset_ubytes = "  DaoArray_FromUByte( (DaoArray*)_p[$(index)] );\n";
-const string parset_shorts = "  DaoArray_FromShort( (DaoArray*)_p[$(index)] );\n";
+const string parset_shorts = "  DaoArray_FromSShort( (DaoArray*)_p[$(index)] );\n";
 const string parset_ushorts = "  DaoArray_FromUShort( (DaoArray*)_p[$(index)] );\n";
-const string parset_ints = "  DaoArray_FromInt( (DaoArray*)_p[$(index)] );\n";
+const string parset_ints = "  DaoArray_FromSInt( (DaoArray*)_p[$(index)] );\n";
 const string parset_uints = "  DaoArray_FromUInt( (DaoArray*)_p[$(index)] );\n";
 const string parset_floats = "  DaoArray_FromFloat( (DaoArray*)_p[$(index)] );\n";
 const string parset_doubles = "  DaoArray_FromDouble( (DaoArray*)_p[$(index)] );\n";
@@ -482,6 +482,7 @@ extern string cdao_string_fill( const string & tpl, const map<string,string> & s
 extern string cdao_qname_to_idname( const string & qname );
 extern string normalize_type_name( const string & name );
 extern string cdao_make_dao_template_type_name( const string & name );
+extern string cdao_substitute_typenames( const string & qname );
 
 struct CDaoVarTemplates
 {
@@ -595,6 +596,8 @@ CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 	hasArrayHint = false;
 	unsupported = false;
 	useDefault = true;
+	isArithmeticType = false;
+	isPointerType = false;
 	SetDeclaration( decl );
 }
 void CDaoVariable::SetQualType( QualType qtype, SourceLocation loc )
@@ -675,6 +678,8 @@ int CDaoVariable::Generate( int daopar_index, int cxxpar_index )
 	unsupported = unsupported or (retcode != 0);
 	if( unsupported == false ){
 		MakeCxxParameter( prefix, suffix );
+		prefix = cdao_substitute_typenames( prefix );
+		suffix = cdao_substitute_typenames( suffix );
 		cxxpar = prefix + " " + name + suffix;
 		cxxtype = prefix + suffix;
 	}
@@ -738,6 +743,7 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 	if( canotype->isBuiltinType() ){
 		return GenerateForBuiltin( daopar_index, cxxpar_index );
 	}else if( canotype->isPointerType() and not hasArrayHint ){
+		isPointerType = true;
 		return GenerateForPointer( daopar_index, cxxpar_index );
 	}else if( canotype->isReferenceType() ){
 		return GenerateForReference( daopar_index, cxxpar_index );
@@ -745,6 +751,7 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		return GenerateForArray( daopar_index, cxxpar_index );
 	}else if( canotype->isEnumeralType() ){
 		daotype = "int";
+		isArithmeticType = true;
 		tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 		return 0;
 	}else if( CDaoUserType *UT = module->HandleUserType( canotype, location ) ){
@@ -785,6 +792,7 @@ int CDaoVariable::GenerateForBuiltin( int daopar_index, int cxxpar_index )
 	if( canotype->isArithmeticType() ){
 		daotype = "int";
 		isNullable = false;
+		isArithmeticType = true;
 		tpl.SetupIntScalar();
 		switch( canotype->getAs<BuiltinType>()->getKind() ){
 		case BuiltinType::Bool :
@@ -1440,8 +1448,15 @@ void CDaoVariable::MakeCxxParameter( string & prefix, string & suffix )
 			CDaoUserType *UT = module->GetUserType( RD );
 			//outs() << RD->getQualifiedNameAsString() << " " << UT << " " << (void*)RD << "\n";
 			if( hostype && hostype->decl ){
+				// For vector( size_type __n, ... ), the canonical type name of size_type is
+				// std::vector::size_type, even for vector<bool>. And RD will be a specialization
+				// different from vector<bool>!
 				RecordDecl *RD2 = hostype->decl;
 				ClassTemplateSpecializationDecl *CTS = dyn_cast<ClassTemplateSpecializationDecl>( RD2 );
+				ClassTemplateSpecializationDecl *CTS2 = dyn_cast<ClassTemplateSpecializationDecl>( RD );
+				CXXRecordDecl *CRD1 = CTS ? CTS->getSpecializedTemplate()->getTemplatedDecl() : NULL;
+				CXXRecordDecl *CRD2 = CTS2 ? CTS2->getSpecializedTemplate()->getTemplatedDecl() : NULL;
+				if( CRD1 && CRD2 && CRD1 == CRD2 ) UT = hostype;
 				if( CTS && RD == CTS->getSpecializedTemplate()->getTemplatedDecl() ) UT = hostype;
 			}
 			if( UT ){

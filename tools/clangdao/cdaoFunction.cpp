@@ -429,22 +429,40 @@ void CDaoFunction::SetDeclaration( FunctionDecl *decl )
 		return;
 	}
 	
-	string sig = funcDecl->getQualifiedNameAsString() + "(";
+	string proto = "(";
 	for(i=0, n=decl->param_size(); i<n; i++){
 		ParmVarDecl *pardecl = decl->getParamDecl( i );
 		parlist.push_back( CDaoVariable( module, pardecl ) );
-		if( i ) sig += ",";
-		sig += pardecl->getTypeSourceInfo()->getType().getAsString();
+		if( i ) proto += ",";
+		proto += pardecl->getTypeSourceInfo()->getType().getAsString();
 	}
 	retype.name = "_" + cdao_qname_to_idname( decl->getNameAsString() );
 	retype.SetQualType( funcDecl->getResultType(), funcDecl->getLocation() );
 
-	sig += ")";
-	sig = normalize_type_name( sig );
+	proto += ")";
+	proto = normalize_type_name( proto );
+
+	string sig = funcDecl->getQualifiedNameAsString() + proto;
+	signature = funcDecl->getNameAsString() + proto;
 
 	map<string,vector<string> >::iterator it = module->functionHints.find( sig );
-	if( it == module->functionHints.end() ) return;
-	SetHints( it->second, sig );
+	if( it != module->functionHints.end() ){
+		SetHints( it->second, sig );
+		return;
+	}
+	string fname = funcDecl->getQualifiedNameAsString();
+	size_t pos = fname.find( '<' );
+	size_t pos2 = fname.rfind( "::" );
+	if( pos != string::npos ){
+		if( pos2 != string::npos ){
+			fname.erase( pos, pos2 - pos );
+		}else{
+			fname.erase( pos );
+		}
+	}
+	sig = fname + proto;
+	it = module->functionHints.find( sig );
+	if( it != module->functionHints.end() ) SetHints( it->second, sig );
 }
 void CDaoFunction::SetCallback( FunctionProtoType *func, FieldDecl *decl, const string & name )
 {
@@ -537,6 +555,25 @@ int CDaoFunction::Generate()
 		CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>( decl );
 		if( DD && DD->getAccess() == AS_private ) return 1;
 	}
+
+	cxxWrapperVirt = "";
+	cxxWrapperVirt2 = "";
+	cxxWrapperVirt3 = "";
+	cxxWrapperVirtProto = "";
+	daoProtoCodes = "";
+	cxxProtoCodes = "";
+	cxxCallCodes = "";
+	cxxProtoParam = "";
+	cxxProtoParamDecl = "";
+	cxxProtoParamVirt = "";
+	cxxCallParam = "";
+	cxxCallParamV = "";
+	qtSlotSignalDecl = "";
+	qtSignalSignalDecl = "";
+	qtSlotSlotDecl = "";
+	qtSlotSlotCode = "";
+	qtSignalSlotDecl = "";
+	qtSignalSlotCode = "";
 
 	int autoself = 0;
 	const CXXMethodDecl *methdecl = NULL;
@@ -857,7 +894,12 @@ int CDaoFunction::Generate()
 	kvmap3[ "const" ] = "";
 	kvmap3[ "userdata" ] = retype.callback;
 	
-	string vareturn = retype.cxxpar + " = 0;";
+	string vareturn = retype.cxxpar + ";";
+	if( retype.isArithmeticType ){
+		vareturn = retype.cxxpar + " = 0;";
+	}else if( retype.isPointerType ){
+		vareturn = retype.cxxpar + " = NULL;";
+	}
 #if 0
 	if( retype.refer == "" and retype.typeid > $CT_USER ){
 		tks = retype.dao2cxx.capture( "= %s* %b()" );

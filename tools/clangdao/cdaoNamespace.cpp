@@ -79,6 +79,7 @@ int CDaoNamespace::Generate( CDaoNamespace *outer )
 			if( name == "std" ) name = "stdcxx";
 			onload += "\tDaoNamespace *" + this_name + " = DaoVmSpace_GetNamespace( ";
 			onload += "vms, \"" + name + "\" );\n";
+			onload2 += "\tDaoNamespace_AddConstValue( ns, \"" + name + "\", (DaoValue*) " + this_name + " );\n";
 		}else{
 			onload += "\tDaoNamespace *" + this_name + " = DaoNamespace_GetNamespace( ";
 			onload += outer_name + ", \"" + name + "\" );\n";

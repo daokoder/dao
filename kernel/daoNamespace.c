@@ -175,10 +175,10 @@ void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue 
 }
 static void DaoTypeBase_Parents( DaoTypeBase *typer, DArray *parents )
 {
-	int i, k, n;
+	daoint i, k, n;
 	DArray_Clear( parents );
 	DArray_Append( parents, typer );
-	for(k=0,n=parents->size; k<n; k++){
+	for(k=0; k<parents->size; k++){
 		typer = (DaoTypeBase*) parents->items.pVoid[k];
 		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 			if( typer->supers[i] == NULL ) break;
@@ -317,8 +317,9 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			}
 			cur->pFunc = typer->funcItems[i].fpter;
 			if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
-			if( strcmp( cur->routName->mbs, typer->name ) == 0 ) cur->attribs |= DAO_ROUT_INITOR;
-
+			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
+				cur->attribs |= DAO_ROUT_INITOR;
+			}
 			DaoMethods_Insert( methods, cur, self, hostype );
 		}
 		parents = DArray_New(0);
@@ -329,10 +330,10 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
 				if( it->value.pRoutine->overloads ){
 					DRoutines *meta = (DRoutines*) it->value.pRoutine->overloads;
-					/* skip constructor */
-					if( STRCMP( it->value.pRoutine->routName, sup->name ) ==0 ) continue;
 					for(k=0; k<meta->routines->size; k++){
 						DaoRoutine *rout = meta->routines->items.pRoutine[k];
+						/* skip constructor */
+						if( rout->attribs & DAO_ROUT_INITOR ) continue;
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != sup->core->kernel->abtype ) continue;
 						DaoMethods_Insert( methods, rout, self, hostype );
@@ -340,7 +341,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 				}else{
 					DaoRoutine *rout = it->value.pRoutine;
 					/* skip constructor */
-					if( STRCMP( rout->routName, sup->name ) ==0 ) continue;
+					if( rout->attribs & DAO_ROUT_INITOR ) continue;
 					/* skip methods not defined in this parent type */
 					if( rout->routHost != sup->core->kernel->abtype ) continue;
 					DaoMethods_Insert( methods, rout, self, hostype );
@@ -393,6 +394,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	if( parser->tokens->size == 0 ) goto Error;
 	tokens = parser->tokens->items.pToken;
 	n = parser->tokens->size - 1;
+	DArray_Clear( parser->errors );
 	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0, 0 )) <0 ) goto Error;
 	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
 	if( k == n ){
@@ -431,6 +433,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != (int)n ) goto Error;
 	type->nested = DArray_New(0);
 	type2->nested = DArray_New(0);
+	DArray_Clear( parser->errors );
 	DaoParser_ParseTemplateParams( parser, k+2, n, type->nested, type2->nested, NULL );
 	GC_IncRCs( type->nested );
 	GC_IncRCs( type2->nested );
@@ -440,7 +443,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		DaoType *cdata_type = DaoCdata_NewType( type->typer );
 		DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
 		DString_Clear( cdata_type->name );
-		for(i=0; i<=k; i++) DString_Append( cdata_type->name, tokens[k]->string );
+		for(i=0; i<=k; i++) DString_Append( cdata_type->name, tokens[i]->string );
 		DString_Assign( ctype_type->name, cdata_type->name );
 		DaoNS_ParseType( self, cdata_type->name->mbs, ctype_type, cdata_type );
 		value = cdata_type->aux;
@@ -469,7 +472,8 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DArray_Assign( type2->nested, type->nested );
 	sptree = value->xCdata.ctype->kernel->sptree;
 	if( sptree == NULL ) goto Error;
-	if( DTypeSpecTree_Test( sptree, type->nested ) == 0 ) goto Error;
+	if( sptree->holders->size && type->nested->size )
+		if( DTypeSpecTree_Test( sptree, type->nested ) == 0 ) goto Error;
 	DTypeSpecTree_Add( sptree, type->nested, type2 );
 	DString_Clear( type->name );
 	while( k < parser->tokens->size ) DString_Append( type->name, tokens[k++]->string );

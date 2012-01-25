@@ -77,6 +77,7 @@ extern string normalize_type_name( const string & name );
 extern string cdao_make_dao_template_type_name( const string & name );
 extern string cdao_remove_type_scopes( const string & qname );
 extern string cdao_qname_to_idname( const string & qname );
+extern string cdao_substitute_typenames( const string & qname );
 
 CDaoModule::CDaoModule( CompilerInstance *com, const string & path ) : topLevelScope( this )
 {
@@ -140,9 +141,11 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 	const RecordType *record = dyn_cast<RecordType>( canotype.getTypePtr() );
 	if( record == NULL ) return NULL;
 	if( const TypedefType *TDT = dyn_cast<TypedefType>( qualtype.getTypePtr() ) ){
+		TypedefDecl *TD2 = dyn_cast<TypedefDecl>( TDT->getDecl() );
+		if( TD == NULL ) TD = TD2;
 		//XXX if( TD == NULL ) TD = (TypedefDecl*)TDT->getDecl(); // XXX
 	}
-	TD = NULL; //XXX
+	//TD = NULL; //XXX
 
 	ClassTemplateSpecializationDecl *SD, *DE;
 	RecordDecl *RD = record->getDecl();
@@ -156,12 +159,25 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		if( GetUserType( RD ) == NULL ){
 			CDaoUserType *UT = NewUserType( RD );
 			UT->forceOpaque = true;
+			UT->dummyTemplate = true;
 			if( NamespaceDecl *ND = dyn_cast<NamespaceDecl>( RD->getParent() ) ){
 				CDaoNamespace *NS = GetNamespace2( ND );
 				NS->AddUserType( UT );
 			}else{
 				topLevelScope.AddUserType( UT );
 			}
+#if 0
+			ClassTemplateDecl *CTD = SD->getSpecializedTemplate();
+			TemplateParameterList *TPL = CTD->getTemplateParameters();
+			if( TPL->size() ) UT->qname += '<';
+			for(unsigned int i=0; i<TPL->size(); i++){
+				NamedDecl *ND = TPL->getParam( i );
+				if( i ) UT->qname += ',';
+				UT->qname += '@';
+				UT->qname += ND->getNameAsString();
+			}
+			if( TPL->size() ) UT->qname += '>';
+#endif
 		}
 		CDaoUserType *UT2 = GetUserType( RD );
 		UT2->forceOpaque = true;
@@ -192,10 +208,15 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 				canoname = RD->getQualifiedNameAsString() + "<";
 				for(int i=0, n = TST->getNumArgs(); i<n; i++){
 					if( i ) canoname += ',';
-					canoname += args[i].getAsType().getAsString();
+					if( args[i].getKind() == TemplateArgument::Integral ){
+						canoname += args[i].getAsIntegral()->toString( 10 );
+					}else{
+						canoname += args[i].getAsType().getAsString();
+					}
 				}
 				if( canoname[canoname.size()-1] == '>' ) canoname += ' ';
 				canoname += ">";
+				//if( canoname.find( "NULL TYPE" ) != string::npos )
 				//outs() << canotype.getAsString() << "  " << canoname << "================\n";
 			}
 
@@ -205,8 +226,9 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 			string qname = canoname;
 			string name = cdao_remove_type_scopes( qname );
 			UT->name = UT->name2 = name;
-			UT->qname = qname;
+			UT->qname = cdao_substitute_typenames( qname );
 			UT->idname = cdao_qname_to_idname( qname );
+			UT->wrapType = CDAO_WRAP_TYPE_NONE;
 
 			string nsname;
 			string nsname2;
@@ -223,15 +245,22 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 			}
 
 			UT->AddRequiredType( UT2 );
+
 			const TemplateArgumentList & args = SD->getTemplateArgs();
 			for(int i=0, n = args.size(); i<n; i++){
-				const Type *type = args[i].getAsType().getTypePtr();
+				const Type *type = args[i].getAsType().getTypePtrOrNull();
+				if( type == NULL ) continue;
 				const RecordType *RT = dyn_cast<RecordType>( type );
 				if( RT == NULL ) continue;
 				CDaoUserType *UT2 = GetUserType( RT->getDecl() );
+				if( UT2 == NULL ) UT2 = HandleUserType( args[i].getAsType(), loc, NULL );
 				if( UT2 ) UT->AddRequiredType( UT2 );
 			}
 		}
+		CDaoUserType *UT = GetUserType( SD );
+		// The dummy template wrapper is created for a specialization 
+		// from a required modeul:
+		if( UT->IsFromRequiredModules() ) UT2->isRedundant2 = true;
 	}
 	CDaoUserType *UT = GetUserType( RD );
 	//outs() << "............." << RD->getNameAsString() << "  " << UT << "\n";
@@ -461,6 +490,40 @@ void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 {
 	if( dyn_cast<CXXMethodDecl>( funcdec ) ) return; // inline C++ method;
 	//outs() << funcdec->getNameAsString() << " has "<< funcdec->param_size() << " parameters\n";
+	if( funcdec->getNameAsString().find( "dao_gcfields_breakref" ) == 0 ){
+		Stmt *body = funcdec->getBody();
+		if( body == NULL ) return;
+		if( funcdec->param_size() != 1 ) return;
+		ParmVarDecl *pardecl = funcdec->getParamDecl( 0 );
+		QualType qtype = pardecl->getTypeSourceInfo()->getType()->getPointeeType();
+		QualType canotype = qtype.getLocalUnqualifiedType().getCanonicalType();
+		const RecordType *record = dyn_cast<RecordType>( canotype.getTypePtr() );
+		if( record == NULL ) return;
+
+		RecordDecl *RD = record->getDecl();
+		CDaoUserType *UT = GetUserType( RD );
+		if( UT == NULL ) return;
+		string source = ExtractSource( body->getSourceRange() );
+		UT->gcfields += source;
+		UT->wrapType = CDAO_WRAP_TYPE_NONE;
+		UT->Generate();
+
+		const CXXRecordDecl *base = dyn_cast<CXXRecordDecl>( UT->decl );
+		if( base == NULL ) return;
+
+		map<const RecordDecl*,CDaoUserType*>::iterator it;
+		for(it=allUsertypes.begin(); it!=allUsertypes.end(); it++){
+			CDaoUserType *other = it->second;
+			const CXXRecordDecl *sub = dyn_cast<CXXRecordDecl>( other->decl );
+			if( other->isRedundant ) continue;
+			if( sub == NULL || not sub->isDerivedFrom( base ) ) continue;
+			other->gcfields += source;
+			if( other->wrapType == CDAO_WRAP_TYPE_NONE ) continue;
+			other->wrapType = CDAO_WRAP_TYPE_NONE;
+			other->Generate();
+		}
+		return;
+	}
 	topLevelScope.AddFunction( new CDaoFunction( this, funcdec ) );
 }
 void CDaoModule::HandleUserType( RecordDecl *record )
@@ -754,6 +817,11 @@ int CDaoModule::Generate( const string & output )
 	//topLevelScope.Sort( sorted, check );
 	for(i=0, n=usertypes.size(); i<n; i++) topLevelScope.Sort( usertypes[i], sorted, check );
 
+	map<FileEntry*,CDaoModuleInfo>::iterator it2, end2 = requiredModules.end();
+	for(it2=requiredModules.begin(); it2 != end2; it2++){
+		topLevelScope.onload += "\tDaoVmSpace_LinkModule( vms, ns, \"" + it2->second.name + "\" );\n";
+	}
+
 	topLevelScope.source += MakeSourceCodes( sorted, & topLevelScope );
 	topLevelScope.source2 += MakeSource2Codes( sorted );
 	topLevelScope.source3 += MakeSource3Codes( sorted );
@@ -842,7 +910,7 @@ string CDaoModule::ExtractSource( SourceLocation & start, SourceLocation & end, 
 	string source;
 	const char *p = sm.getCharacterData( start );
 	const char *q = sm.getCharacterData( pp.getLocForEndOfToken( end ) );
-	for(; p!=q; p++) source += *p;
+	for(; *p && p!=q; p++) source += *p;
 	return source;
 }
 string CDaoModule::ExtractSource( const SourceRange & range, bool original )

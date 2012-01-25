@@ -39,7 +39,9 @@ struct CDaoUserType
 	short  wrapType;
 	short  wrapCount;
 	bool   forceOpaque;
+	bool   dummyTemplate;
 	bool   isRedundant;
+	bool   isRedundant2;
 	bool   isQObject;
 	bool   isQObjectBase;
 
@@ -47,6 +49,8 @@ struct CDaoUserType
 	string  name2; // name, with template arguments if any: vector<int>, SomeClass;
 	string  qname; // qualified name: std::vector<int>, SomeNamespace::SomeClass;
 	string  idname; // identification name: std_0_vector_1_int_2_, SomeNamespace_0_SomeClass;
+
+	string  gcfields;
 
 	string  type_decls;
 	string  type_codes;

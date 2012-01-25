@@ -1386,11 +1386,18 @@ int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *
 	while( i < end ){
 		DaoType *holder, *deft = NULL;
 		DString *str = tokens[i]->string;
+#if 0
 		if( tokens[i]->name != DTOK_ID_INITYPE ){
 			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, str );
 			return 0;
 		}
-		holder = DaoParser_ParseType( self, i, end-1, &i, NULL );
+#endif
+		if( tokens[i]->type >= DTOK_ID_SYMBOL && tokens[i]->type <= DTOK_WCS ){
+			holder = DaoParser_ParseValueType( self, i );
+			i += 1;
+		}else{
+			holder = DaoParser_ParseType( self, i, end-1, &i, NULL );
+		}
 		if( holder == NULL ) return 0;
 		if( name ){
 			if( holders->size ) DString_AppendChar( name, ',' );
