@@ -4121,4 +4121,4 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		DaoProcess_PutValue( proc, res );
 	}
 }
-#endif
+#endif /* DAO_WITH_NUMARRAY */
