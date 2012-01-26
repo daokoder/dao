@@ -79,7 +79,7 @@ static void SYS_Ctimef( DaoProcess *proc, DaoValue *p[], int N )
 	char *p1 = buf+1;
 	char *p2;
 	DaoMap *sym = NULL;
-	DaoString *ds = DaoString_New(1);;
+	DaoString *ds = DaoString_New(1);
 	DaoValue *key = (DaoValue*) ds;
 	DString *S;
 

@@ -2612,7 +2612,7 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
 		size = self->count;
-		self = self->original;;
+		self = self->original;
 		if( size == 0 ) return;
 		imax = DaoArray_IndexFromSlice( self, slices, 0 );
 		for(i=1; i<size; i++ ){
@@ -2656,7 +2656,7 @@ static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
 		size = self->count;
-		self = self->original;;
+		self = self->original;
 		if( size == 0 ) return;
 		imax = DaoArray_IndexFromSlice( self, slices, 0 );
 		for(i=1; i<size; i++ ){
@@ -2696,7 +2696,7 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
 		size = self->count;
-		self = self->original;;
+		self = self->original;
 		if( size == 0 ) return;
 		if( self->etype == DAO_INTEGER ){
 			daoint sum = 0;
@@ -2761,7 +2761,7 @@ static void DaoARRAY_varn( DaoProcess *proc, DaoValue *par[], int N )
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
 		size = self->count;
-		self = self->original;;
+		self = self->original;
 		if( size > 0 ){
 			for(i=0; i<size; i++ ){
 				daoint k = DaoArray_IndexFromSlice( self, slices, i );
@@ -4023,7 +4023,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoArray *array = NULL;
 	DaoArray *indices = NULL;
 	DaoArray *self2 = & p[0]->xArray;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoValue **idval = proc->activeValues + sect->a + 1;
 	DaoValue *elem, *res = NULL;
 	DaoArray *original = self2->original;

@@ -1,2 +1,3 @@
 
 std.path( 'modules', $add );
+std.path( '../lib/dao/modules', $add ); # For linux/unix installations.

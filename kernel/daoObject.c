@@ -128,8 +128,8 @@ void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMa
 	int i, selfSize = self->defClass->objDataDefault->size;
 	DaoCopyValues( selfValues + 1, fromValues + 1, selfSize-1, proc, cycData );
 	/*  XXX super might be Cdata: */
-	selfSups = self->parents;
-	fromSups = from->parents;
+	selfSups = (DaoObject **)self->parents;
+	fromSups = (DaoObject **)from->parents;
 	for( i=0; i<from->baseCount; i++ )
 		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], proc, cycData );
 #endif
