@@ -136,6 +136,7 @@ CDaoNamespace* CDaoModule::AddNamespace( const NamespaceDecl *decl )
 }
 CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc, TypedefDecl *TD )
 {
+	int i, n;
 	qualtype = qualtype.getLocalUnqualifiedType();
 	QualType canotype = qualtype.getCanonicalType();
 	const RecordType *record = dyn_cast<RecordType>( canotype.getTypePtr() );
@@ -185,6 +186,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 			//outs()<<">>>>>>>>>>>>>>> "<<qualtype.getAsString()<<" "<<canotype.getAsString()<< "\n";
 			//outs() << (void*)SD << ": " << GetFileName( SD->getLocation() ) << "\n";
 			//outs() << (void*)SD << ": " << GetFileName( loc ) << "\n";
+			//if( qualtype.getAsString().find( "__normal_iterator" ) != string::npos ) free((void*)12);
 			DE = cast_or_null<ClassTemplateSpecializationDecl>( SD->getDefinition());
 			if( DE == NULL ){
 				TemplateSpecializationKind kind = TSK_ExplicitSpecialization;
@@ -202,23 +204,48 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 			if( TSI ) writtenName = TSI->getType().getAsString();
 
 			string canoname = canotype.getAsString();
-			const TemplateSpecializationType *TST;
-			if( (TST = dyn_cast<TemplateSpecializationType>( qualtype.getTypePtr() ) ) ){
+			const TemplateSpecializationType *TST = NULL;
+			if( 1 ){//(TST = dyn_cast<TemplateSpecializationType>( qualtype.getTypePtr() ) ) ){
 				const TemplateArgumentList & args = SD->getTemplateArgs();
 				canoname = RD->getQualifiedNameAsString() + "<";
-				for(int i=0, n = TST->getNumArgs(); i<n; i++){
+
+				// For class K : public std::basic_string<char>{}
+				// Or: void M( std::basic_string<char> s )
+				//
+				// qualtype.getTypePtr() is NOT a TemplateSpecializationType!
+				//
+				if( TSI ) TST = dyn_cast<TemplateSpecializationType>( TSI->getType().getTypePtr() );
+				n = TST ? TST->getNumArgs() : args.size();
+				for(i=0; i<n; i++){
 					if( i ) canoname += ',';
 					if( args[i].getKind() == TemplateArgument::Integral ){
 						canoname += args[i].getAsIntegral()->toString( 10 );
 					}else{
-						canoname += args[i].getAsType().getAsString();
+						QualType itype = args[i].getAsType();
+						CDaoUserType *UT3 = HandleUserType( itype, loc, NULL );
+						if( UT3 ){
+							canoname += UT3->qname; // may not contain default argument type;
+						}else{
+							canoname += itype.getAsString();
+						}
 					}
 				}
+#if 0
+				ClassTemplateDecl *CTD = SD->getSpecializedTemplate();
+				TemplateParameterList *TPL = CTD->getTemplateParameters();
+				for(i=TST->getNumArgs(), n=TPL->size(); i<n; i++){
+					TemplateTypeParmDecl *TTPD = cast<TemplateTypeParmDecl>( TPL->getParam( i ) );
+					canoname += ',';
+					canoname += TTPD->getDefaultArgument().getAsString();
+				}
+#endif
 				if( canoname[canoname.size()-1] == '>' ) canoname += ' ';
 				canoname += ">";
 				//if( canoname.find( "NULL TYPE" ) != string::npos )
 				//outs() << canotype.getAsString() << "  " << canoname << "================\n";
 			}
+			// Disable "<anonymous>" types:
+			if( canoname.find( "<anonymous>" ) != string::npos ) canoname = "<anonymous>";
 
 			writtenName = normalize_type_name( writtenName );
 			canoname = normalize_type_name( canoname );
@@ -253,7 +280,10 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 				const RecordType *RT = dyn_cast<RecordType>( type );
 				if( RT == NULL ) continue;
 				CDaoUserType *UT2 = GetUserType( RT->getDecl() );
-				if( UT2 == NULL ) UT2 = HandleUserType( args[i].getAsType(), loc, NULL );
+				if( UT2 == NULL ){
+					UT2 = HandleUserType( args[i].getAsType(), loc, NULL );
+					if( UT2 ) UT2->location = loc;
+				}
 				if( UT2 ) UT->AddRequiredType( UT2 );
 			}
 		}
@@ -819,7 +849,12 @@ int CDaoModule::Generate( const string & output )
 
 	map<FileEntry*,CDaoModuleInfo>::iterator it2, end2 = requiredModules.end();
 	for(it2=requiredModules.begin(); it2 != end2; it2++){
-		topLevelScope.onload += "\tDaoVmSpace_LinkModule( vms, ns, \"" + it2->second.name + "\" );\n";
+		string mod = it2->second.name;
+		topLevelScope.onload += "\tDaoNamespace *" + mod + " = ";
+		topLevelScope.onload += "DaoVmSpace_LinkModule( vms, ns, \"" + mod + "\" );\n";
+		topLevelScope.onload += "\tif( " + mod + " == NULL ) " + mod + " = ";
+		topLevelScope.onload += "DaoVmSpace_LinkModule( vms, ns, \"Dao" + mod + "\" );\n";
+		topLevelScope.onload += "\tif( " + mod + " == NULL ) return 1;\n";
 	}
 
 	topLevelScope.source += MakeSourceCodes( sorted, & topLevelScope );

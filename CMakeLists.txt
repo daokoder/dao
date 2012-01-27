@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 2.6)
 
+if( "${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}" )
+	MESSAGE(FATAL_ERROR "\nDirectory ${CMAKE_SOURCE_DIR} already contains other Makefiles.\n"
+			"Please choose a different one!")
+endif()
+
 project(dao)
 
 set(DAO_SYSTEM_LIBS "")
@@ -125,6 +130,10 @@ elseif(WIN32)
         list(APPEND DAO_SYSTEM_LIBS "winmm.lib")
     endif(DAO_WITH_THREAD OR DAO_WITH_CONCURRENT)
 endif(UNIX)
+
+IF(APPLE)
+	SET( CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup" )
+ENDIF()
 
 include_directories("${PROJECT_SOURCE_DIR}/kernel")
 

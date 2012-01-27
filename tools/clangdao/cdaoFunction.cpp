@@ -483,12 +483,12 @@ void CDaoFunction::SetCallback( FunctionProtoType *func, FieldDecl *decl, const 
 	for(i=0, n=func->getNumArgs(); i<n; i++){
 		QualType partype = func->getArgType( i );
 		parlist.push_back( CDaoVariable( module ) );
-		parlist.back().SetQualType( partype );
+		parlist.back().SetQualType( partype, location );
 		if( i ) sig += ",";
 		sig += partype.getAsString();
 	}
 	retype.name = "_" + idname;
-	retype.SetQualType( func->getResultType() );
+	retype.SetQualType( func->getResultType(), location );
 
 	sig += ")";
 	sig = normalize_type_name( sig );
@@ -611,6 +611,7 @@ int CDaoFunction::Generate()
 	}
 	host_idname = cdao_qname_to_idname( host_qname );
 	if( hostype ){
+		location = hostype->location;
 		host_name = hostype->name;
 		host_qname = hostype->qname;
 		host_idname = hostype->idname;
@@ -624,6 +625,7 @@ int CDaoFunction::Generate()
 	int i, n = parlist.size();
 	for(i=0; i<n; i++){
 		CDaoVariable & var = parlist[i];
+		var.location = location;
 		var.hostype = hostype;
 		retcode |= var.Generate( i, i-autoself );
 		if( var.unsupported ){
@@ -632,6 +634,7 @@ int CDaoFunction::Generate()
 		}
 	}
 	retype.hostype = hostype;
+	retype.location = location;
 	retcode |= retype.Generate( VAR_INDEX_RETURN );
 	if( retype.unsupported ){
 		excluded = true;
