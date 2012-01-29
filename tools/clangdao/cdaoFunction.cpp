@@ -301,7 +301,7 @@ const string cxx_proxy_body10 =
   if( DaoRoutine_IsWrapper( _ro ) ) goto EndCall;\n\
   if( (*_cs = DaoProcess_Call( _proc, _ro, (DaoValue*)_ob, NULL, 0 )) ) goto EndCall;\n\
   _res = DaoProcess_GetReturned( _proc );\n\
-$(getreturn)\n\
+$(getreturn)\
 EndCall:\n\
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
   return $(return);\n\
@@ -321,7 +321,7 @@ $(cxx2dao)\
   if( DaoRoutine_IsWrapper( _ro ) ) goto EndCall;\n\
   if( (*_cs = DaoProcess_Call( _proc, _ro, (DaoValue*)_ob, _dp, $(count) )) ) goto EndCall;\n\
   _res = DaoProcess_GetReturned( _proc );\n\
-$(getreturn)\n\
+$(getreturn)\
 EndCall:\n\
   DaoVmSpace_ReleaseProcess( __daoVmSpace, _proc );\n\
   return $(return);\n\
@@ -601,6 +601,10 @@ int CDaoFunction::Generate()
 	}
 	CDaoUserType *hostype = module->GetUserType( hostdecl );
 	if( decl ) cxxName = decl->getNameAsString();
+	if( cxxName.find( " " ) != string::npos ){ // operator bool
+		excluded = true;
+		return 1;
+	}
 	daoName = cxxName;
 	host_qname = CDaoModule::GetQName( decl );
 	size_t pos = host_qname.rfind( "::" );
@@ -620,6 +624,9 @@ int CDaoFunction::Generate()
 			daoName = cdao_make_dao_template_type_name( hostype->name2 );
 		}
 	}
+	//outs() << (decl == NULL ? "" : module->GetFileName( decl->getLocation() )) <<"\n";
+	//outs() << module->GetFileName( location ) <<"\n";
+	//outs() << cxxName << " " << hostype << " " << (hostype ? hostype->qname:"") <<"\n";
 
 	int retcode = 0;
 	int i, n = parlist.size();
@@ -804,11 +811,16 @@ int CDaoFunction::Generate()
 	kvmap[ "parlist" ] = cxxCallParam;
 	
 	if( methdecl ){
+#if 0
 		string ss = "self->";
 		if( methdecl->getAccess() != AS_protected && ! methdecl->isPure() ){
 			ss += host_name + "::";
 		}
-		kvmap[ "func_call" ] = ss + cxxName;
+#endif
+		// DO NOT use self->type::meth(), because "meth()" may be a virtual
+		// function, and "self" may be an instance of a subclass of "type",
+		// and the subclass has reimplemented "meth()".
+		kvmap[ "func_call" ] = "self->" + cxxName;
 	}
 	int dd = unusedDefaults.size();
 	for(i=1; i<=dd; i++){
@@ -899,9 +911,17 @@ int CDaoFunction::Generate()
 	
 	string vareturn = retype.cxxpar + ";";
 	if( retype.isArithmeticType ){
-		vareturn = retype.cxxpar + " = 0;";
+		vareturn = retype.cxxpar + " = (" + retype.cxxtype + ") 0;";
 	}else if( retype.isPointerType ){
 		vareturn = retype.cxxpar + " = NULL;";
+	}else if( retype.isObjectType ){
+		vareturn = retype.cxxpar;
+		vareturn.insert( vareturn.rfind( ' ' ), "*" );
+		vareturn += " = NULL;";
+		string getres = retype.getres;
+		getres.erase( getres.find( " = *(" ) + 3, 1 );
+		kvmap3[ "getreturn" ] = getres;
+		kvmap3[ "return" ] = "*" + retype.name;
 	}
 #if 0
 	if( retype.refer == "" and retype.typeid > $CT_USER ){

@@ -159,6 +159,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		if( RD->getDefinition() ) RD = RD->getDefinition();
 		if( GetUserType( RD ) == NULL ){
 			CDaoUserType *UT = NewUserType( RD );
+			UT->location = loc;
 			UT->forceOpaque = true;
 			UT->dummyTemplate = true;
 			if( NamespaceDecl *ND = dyn_cast<NamespaceDecl>( RD->getParent() ) ){
@@ -259,8 +260,9 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 
 			string nsname;
 			string nsname2;
+			CDaoNamespace *NS = & topLevelScope;
 			if( NamespaceDecl *ND = dyn_cast<NamespaceDecl>( DC ) ){
-				CDaoNamespace *NS = GetNamespace2( ND );
+				NS = GetNamespace2( ND );
 				NS->AddUserType( UT );
 				nsname = NS->varname;
 				nsname2 = ND->getQualifiedNameAsString();
@@ -269,6 +271,31 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 				topLevelScope.AddUserType( UT );
 				nsname = topLevelScope.varname;
 				//outs() << nsname << " " << qname << " " << canotype.getAsString() << "\n";
+			}
+			if( TST && canoname != "<anonymous>" && UT->isRedundant == false and UT->IsFromRequiredModules() == false ){
+				const TemplateArgumentList & args = SD->getTemplateArgs();
+				string alias = canoname;
+				for(i=TST->getNumArgs(), n=args.size(); i<n; i++){
+					alias.erase( alias.size()-1 );
+					alias += ',';
+					if( args[i].getKind() == TemplateArgument::Integral ){
+						alias += args[i].getAsIntegral()->toString( 10 );
+					}else{
+						QualType itype = args[i].getAsType();
+						CDaoUserType *UT3 = HandleUserType( itype, loc, NULL );
+						if( UT3 ){
+							alias += UT3->qname; // may not contain default argument type;
+						}else{
+							alias += itype.getAsString();
+						}
+					}
+					alias += '>';
+					CDaoUserTypeDef *UTD = new CDaoUserTypeDef();
+					typedefs.push_back( UTD );
+					UTD->nspace = NS->varname;
+					UTD->name = UT->qname;
+					UTD->alias = cdao_substitute_typenames( alias );
+				}
 			}
 
 			UT->AddRequiredType( UT2 );
@@ -280,10 +307,7 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 				const RecordType *RT = dyn_cast<RecordType>( type );
 				if( RT == NULL ) continue;
 				CDaoUserType *UT2 = GetUserType( RT->getDecl() );
-				if( UT2 == NULL ){
-					UT2 = HandleUserType( args[i].getAsType(), loc, NULL );
-					if( UT2 ) UT2->location = loc;
-				}
+				if( UT2 == NULL ) UT2 = HandleUserType( args[i].getAsType(), loc, NULL );
 				if( UT2 ) UT->AddRequiredType( UT2 );
 			}
 		}
@@ -294,12 +318,29 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 	}
 	CDaoUserType *UT = GetUserType( RD );
 	//outs() << "............." << RD->getNameAsString() << "  " << UT << "\n";
-	if( UT == NULL ) UT = NewUserType( RD );
+	if( UT == NULL ){
+		DeclContext *DC = RD->getDeclContext();
+		RecordDecl *RD2 = dyn_cast<RecordDecl>( DC );
+		CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>( RD );
+		CDaoUserType *UT2 = GetUserType( RD2 );
+
+		UT = NewUserType( RD );
+		if( CRD ){
+			if( ClassTemplateDecl *CTD = CRD->getDescribedClassTemplate() ){
+				if( CTD->getTemplatedDecl() == CRD ) UT->forceOpaque = true;
+			}
+		}
+		if( RD->isDependentType() || (CRD && CRD->hasAnyDependentBases()) ){ 
+			UT->location = loc;
+			if( RD->isDependentType() ) UT->forceOpaque = true;
+		}else if( UT2 ){
+			UT->location = UT2->location;
+		}
+	}
 	if( TD && UT->isRedundant == false ){
 		if( cxxTypedefs.find( TD ) != cxxTypedefs.end() ) return UT;
 
 		CDaoUserTypeDef *UTD = new CDaoUserTypeDef();
-		typedefs.push_back( UTD );
 		cxxTypedefs[ TD ] = 1;
 
 		DeclContext *DC = TD->getDeclContext();
@@ -325,8 +366,13 @@ CDaoUserType* CDaoModule::HandleUserType( QualType qualtype, SourceLocation loc,
 		}
 		UTD->name = UT->qname;
 		UTD->alias = tdname;
-		if( UT->decl->getDeclContext() == TD->getDeclContext() )
-			UT->qname = UT->name = UT->name2 = UT->qname = tdname;
+		//if( UT->decl->getDeclContext() == TD->getDeclContext() )
+		//	UT->qname = UT->name = UT->name2 = UT->qname = tdname;
+		if( IsFromMainModule( TD->getLocation() ) ){
+			typedefs.push_back( UTD );
+		}else{
+			delete UTD;
+		}
 	}
 	return UT;
 }
@@ -365,8 +411,12 @@ bool CDaoModule::IsFromModules( SourceLocation loc )
 	bool is = e == moduleInfo.entry;
 	//if( e ) outs() << e->getName() << "\n";
 	is = is or requiredModules2.find( e ) != requiredModules2.end();
-	is = is or headers.find( e ) != headers.end();
-	is = is or extHeaders.find( e ) != extHeaders.end();
+	if( finalGenerating ){
+		is = is or headers.find( e ) != headers.end();
+	}else{
+		is = is or headers2.find( e ) != headers2.end();
+	}
+	is = is or extHeaders2.find( e ) != extHeaders2.end();
 	return is;
 }
 bool CDaoModule::IsFromMainModule( SourceLocation loc )
@@ -383,11 +433,35 @@ bool CDaoModule::IsFromModuleSources( SourceLocation loc )
 	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
 	return e == moduleInfo.entry or requiredModules2.find( e ) != requiredModules2.end();
 }
+bool CDaoModule::IsFromRequiredModules( SourceLocation loc )
+{
+	SourceManager & sourceman = compiler->getSourceManager();
+	FileID fid = sourceman.getFileID( sourceman.getSpellingLoc( loc ) );
+	FileEntry *e = (FileEntry*) sourceman.getFileEntryForID( fid );
+	return extHeaders2.find( e ) != extHeaders2.end() && not IsFromMainModule( loc );
+	//return IsFromModules( loc ) && not IsFromMainModule( loc );
+	//return e == moduleInfo.entry or headers.find( e ) != headers.end();
+}
 bool CDaoModule::CheckHeaderDependency()
 {
 	map<CDaoInclusionInfo,int>::iterator it, it2, end = inclusions.end();
 	map<string,vector<string> > extras;
 	map<string,vector<string> >::iterator it3;
+	for(int i=0; i<100; i++){
+		bool updated = false;
+		for(it=inclusions.begin(); it!=end; it++){
+			FileEntry *includer = it->first.includer;
+			FileEntry *includee = it->first.includee;
+			if( extHeaders2.find( includer ) != extHeaders2.end()
+					&& extHeaders2.find( includee ) == extHeaders2.end() ){
+				if( headers.find( includee ) == headers.end() ){
+					extHeaders2[ includee ] = CDaoHeaderInfo( "", includee );
+					updated = true;
+				}
+			}
+		}
+		if( updated == false ) break;
+	}
 	for(it=inclusions.begin(); it!=end; it++){
 		FileEntry *includer = it->first.includer;
 		FileEntry *includee = it->first.includee;
@@ -396,7 +470,7 @@ bool CDaoModule::CheckHeaderDependency()
 			errs() << "Error: main module file is included by other files!\n";
 			return false;
 		}
-		if( headers.find( includer ) != headers.end() ){
+		if( headers.find( includer ) != headers.end() && extHeaders2.find( includer ) == extHeaders2.end() ){
 			string name = includer->getName();
 			string path = includer->getDir()->getName();
 			name.erase( 0, path.size() );
@@ -405,7 +479,8 @@ bool CDaoModule::CheckHeaderDependency()
 				if( headers.find( includee ) == headers.end() ){
 					headers[ includee ] = CDaoHeaderInfo( "", includee );
 					extHeaders.erase( includee );
-					extras[path+name].push_back( includee->getName() );
+					extHeaders2.erase( includee );
+					extras[name].push_back( includee->getName() );
 				}
 			}
 		}
@@ -472,13 +547,24 @@ void CDaoModule::HandleHeaderInclusion( SourceLocation loc, const string & name,
 	if( sourceman.isFromMainFile( loc ) ){
 		if( headers.find( entryHeader ) != headers.end() ) return;
 		headers[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
+		headers2[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
 
 		map<FileEntry*,CDaoHeaderInfo>::iterator it = extHeaders.find( entryHeader );
 		if( it != extHeaders.end() ) extHeaders.erase( it );
+
+		it = extHeaders2.find( entryHeader );
+		if( it != extHeaders2.end() ) extHeaders2.erase( it );
 	}else if( requiredModules2.find( entryInclude ) != requiredModules2.end() ){
 		if( headers.find( entryHeader ) != headers.end() ) return;
 		if( extHeaders.find( entryHeader ) != extHeaders.end() ) return;
 		extHeaders[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
+		extHeaders2[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
+	}else if( extHeaders2.find( entryInclude ) != extHeaders2.end() ){
+		if( headers.find( entryHeader ) == headers.end() ){
+			extHeaders2[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
+		}
+	}else if( headers2.find( entryInclude ) != headers2.end() ){
+		headers2[ entryHeader ] = CDaoHeaderInfo( name, entryHeader );
 	}
 	//outs() << name << " is included\n";
 }
@@ -545,7 +631,8 @@ void CDaoModule::HandleFunction( FunctionDecl *funcdec )
 		for(it=allUsertypes.begin(); it!=allUsertypes.end(); it++){
 			CDaoUserType *other = it->second;
 			const CXXRecordDecl *sub = dyn_cast<CXXRecordDecl>( other->decl );
-			if( other->isRedundant ) continue;
+			if( other->isRedundant || other->IsFromRequiredModules() ) continue;
+			if( sub->getDefinition() == NULL ) continue;
 			if( sub == NULL || not sub->isDerivedFrom( base ) ) continue;
 			other->gcfields += source;
 			if( other->wrapType == CDAO_WRAP_TYPE_NONE ) continue;
@@ -761,7 +848,7 @@ string CDaoModule::MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNames
 	codes += "\tDaoNamespace_WrapFunctions( " + nsname + ", dao_" + tname + "_Funcs );\n";
 	return codes;
 }
-string CDaoModule::MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & qname )
+string CDaoModule::MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & qname, bool nested )
 {
 	int i, n;
 	string qname2 = qname.size() ? qname + "::" : "";
@@ -771,7 +858,7 @@ string CDaoModule::MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*
 		EnumDecl *dd = (EnumDecl*) decl->getDefinition();
 		// TODO: Add type define;
 		if( dd == NULL && not IsFromMainModule( decl->getLocation() ) ) continue;
-		if( not IsFromMainModule( dd->getLocation() ) ) continue;
+		if( nested == false && not IsFromMainModule( dd->getLocation() ) ) continue;
 		if( dd == NULL ) continue;
 		EnumDecl::enumerator_iterator it, end = dd->enumerator_end();
 		for(it=dd->enumerator_begin(); it!=end; it++){
@@ -784,6 +871,7 @@ string CDaoModule::MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*
 		QualType qtype = decl->getType();
 		string item = decl->getNameAsString();
 		if( not qtype.isConstQualified() ) continue;
+		if( not IsFromMainModule( decl->getLocation() ) ) continue;
 		qtype = qtype.getCanonicalType();
 		const BuiltinType *type = dyn_cast<BuiltinType>( qtype.getTypePtr() );
 		if( type == NULL ) continue;

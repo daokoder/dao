@@ -3189,9 +3189,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 	}
 	DaoClass_ResetAttributes( klass );
-	DArray_Clear( parser->tokens );
-	DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
-	DaoParser_ParseRoutine( parser );
+	if( klass->classRoutines->overloads->routines->size == 0 ){
+		DArray_Clear( parser->tokens );
+		DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
+		DaoParser_ParseRoutine( parser );
+	}
 	rout->body->parser = NULL;
 	DaoParser_Delete( parser );
 	/* TODO: compile routines if it is not in incremental compiling mode */

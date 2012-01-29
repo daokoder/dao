@@ -42,6 +42,7 @@ struct CDaoNamespace
 
 	void AddNamespace( CDaoNamespace *one ){ namespaces.push_back( one ); }
 	void AddUserType( CDaoUserType *one ){
+		if( one == NULL ) return;
 		if( utcheck.find( one ) != utcheck.end() ) return;
 		utcheck[ one ] = 1;
 		usertypes.push_back( one );

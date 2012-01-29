@@ -93,7 +93,8 @@ enum{
 	DAO_MODULE_DAO_O,
 	DAO_MODULE_DAO_S,
 	DAO_MODULE_DAO,
-	DAO_MODULE_DLL
+	DAO_MODULE_DLL,
+	DAO_MODULE_ANY
 };
 
 #ifndef CHANGESET_ID
@@ -846,7 +847,8 @@ DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run )
 	case DAO_MODULE_DAO_S : ns = DaoVmSpace_LoadDaoAssembly( self, path, 0 ); break;
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, path ); break;
-	default : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break; /* any suffix */
+	case DAO_MODULE_ANY : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break; /* any suffix */
+	default : break;
 	}
 	DArray_Delete( args );
 	DString_Delete( path );
@@ -1179,6 +1181,10 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 				DString_Assign( fname, fn );
 				break;
 			}
+		}
+		if( modtype == DAO_MODULE_NONE ){
+			DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+			if( TestFile( self, fname ) ) modtype = DAO_MODULE_ANY;
 		}
 		DString_Delete( fn );
 		DString_Delete( path );

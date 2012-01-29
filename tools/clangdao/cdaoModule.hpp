@@ -83,7 +83,9 @@ struct CDaoModule
 	map<FileEntry*,CDaoModuleInfo>  requiredModules2; // directly/indirectly required modules;
 
 	map<FileEntry*,CDaoHeaderInfo>  headers; // header files from this module;
+	map<FileEntry*,CDaoHeaderInfo>  headers2; // direct and indirect header files from this module;
 	map<FileEntry*,CDaoHeaderInfo>  extHeaders; // header files from the required modules;
+	map<FileEntry*,CDaoHeaderInfo>  extHeaders2; // direct and indirect header files from the required modules;
 	map<CDaoInclusionInfo,int>      inclusions;
 	map<string,vector<string> >     functionHints;
 
@@ -107,6 +109,7 @@ struct CDaoModule
 	bool IsFromModules( SourceLocation loc );
 	bool IsFromMainModule( SourceLocation loc );
 	bool IsFromModuleSources( SourceLocation loc );
+	bool IsFromRequiredModules( SourceLocation loc );
 	bool CheckHeaderDependency();
 
 	string GetFileName( SourceLocation );
@@ -133,7 +136,7 @@ struct CDaoModule
 
 	string MakeSourceCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
 	string MakeOnLoadCodes( vector<CDaoFunction*> & functions, CDaoNamespace *ns = NULL );
-	string MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "" );
+	string MakeConstantItems( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "", bool nested = false );
 	string MakeConstantStruct( vector<EnumDecl*> & enums, vector<VarDecl*> & vars, const string & name = "" );
 
 	string ExtractSource( SourceLocation & start, SourceLocation & end, bool original = true );

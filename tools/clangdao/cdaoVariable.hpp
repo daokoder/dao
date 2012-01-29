@@ -30,6 +30,7 @@ struct CDaoVariable
 
 	bool    isArithmeticType;
 	bool    isPointerType;
+	bool    isObjectType;
 	bool    isNullable;
 	bool    isCallback;
 	bool    isUserData; // callback userdata

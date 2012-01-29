@@ -665,6 +665,7 @@ extern string cdao_remove_type_scopes( const string & qname );
 CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
 	module = mod;
+	unsupported = false;
 	isRedundant = true;
 	isRedundant2 = false;
 	forceOpaque = false;
@@ -698,7 +699,7 @@ bool CDaoUserType::IsFromMainModule()
 }
 bool CDaoUserType::IsFromRequiredModules()
 {
-	return module->IsFromModules( location ) && not module->IsFromMainModule( location );
+	return module->IsFromRequiredModules( location );
 }
 string CDaoUserType::GetInputFile()const
 {
@@ -735,14 +736,24 @@ int CDaoUserType::Generate()
 
 	size_t pos = name.find( '<' );
 	if( pos != string::npos ) name.erase( pos );
-	if( qname == "<anonymous>" ){
+	if( qname.find( "<anonymous>" ) != string::npos ){
 		//outs() << module->GetFileName( decl->getLocation() ) << "============\n";
 		//decl->getLocation().print( outs(), module->compiler->getSourceManager() );
 		//outs() << "\n" << decl->isAnonymousStructOrUnion() << "\n\n";
+		unsupported = true;
 		return 0;
 	}
 	isRedundant = isRedundant2;
 	if( isRedundant ) return 0;
+	if( name.find( '_' ) == 0 || qname.find( '_' ) == 0 ){
+		//unsupported = true;
+		//isRedundant = true;
+		//return 0;
+	}
+	if( name == "reverse_iterator" && idname.find( "std_0_reverse_iterator" ) == 0 ){
+		// There is a problem to wrap std::reverse_iterator
+		forceOpaque = true;
+	}
 
 	if( decl->isAnonymousStructOrUnion() ) return 0;
 	if( module->finalGenerating == false && dd == NULL ) return 0;
@@ -1115,7 +1126,8 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( meth.funcDecl );
 		meth.Generate();
 		if( not meth.generated ) continue;
-		if( ctor->getAccess() != AS_public ) continue;
+		//XXX if( ctor->getAccess() != AS_public ) continue;
+		if( ctor->getAccess() == AS_private ) continue;
 		wrapCount += 1;
 		dao_meths += meth.daoProtoCodes;
 		meth_decls += meth.cxxProtoCodes + (meth.cxxProtoCodes.size() ? ";\n" : "");
@@ -1123,7 +1135,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	}
 	for(i=0,n=methods.size(); i<n; i++){
 		CDaoFunction & meth = methods[i];
+		const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>( meth.funcDecl );
 		const CXXMethodDecl *mdec = dyn_cast<CXXMethodDecl>( meth.funcDecl );
+		if( ctor ) continue;
 		meth.Generate();
 		if( not meth.generated ) continue;
 		if( mdec->getAccess() == AS_protected && not mdec->isPure() && not mdec->isOverloadedOperator() ){
@@ -1222,7 +1236,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			type_codes += cdao_string_fill( tpl_class_init2, kvmap );
 		}
 	}
-	kvmap[ "nums" ] = module->MakeConstantItems( enums, vars, qname );
+	kvmap[ "nums" ] = module->MakeConstantItems( enums, vars, qname, true );
 	kvmap[ "decls" ] = meth_decls;
 	kvmap[ "meths" ] = dao_meths;
 	kvmap["constructors"] = "";
@@ -1382,19 +1396,20 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 			meth_decls += meth.cxxProtoCodes + ";\n";
 			string wrapper = meth.cxxWrapper;
 			string name22 = "DaoCxx_" + idname;
-			string from = qname + "* self= (" + qname + "*)";
-			string to = name22 + "* self= (" + name22 + "*)";
+			string from = qname + "* self = (" + qname + "*)";
+			string to = name22 + "* self = (" + name22 + "*)";
 			string from2 = "self->" + mdec->getNameAsString() + "(";
 			string to2 = "self->DaoWrap_" + mdec->getNameAsString() + "(";
-			string from3 = name + "::" + mdec->getNameAsString() + "(";
+			string from3 = qname + "::" + mdec->getNameAsString() + "(";
 			string to3 = name22 + "::DaoWrap_" + mdec->getNameAsString() + "(";
 			size_t pos;
 			if( (pos = wrapper.find( from )) != string::npos )
 				wrapper.replace( pos, from.size(), to );
 			if( (pos = wrapper.find( from2 )) != string::npos )
 				wrapper.replace( pos, from2.size(), to2 );
-			if( (pos = wrapper.find( from3 )) != string::npos )
+			if( (pos = wrapper.find( from3 )) != string::npos ){
 				wrapper.replace( pos, from3.size(), to3 );
+			}
 			meth_codes += wrapper;
 		}
 		if( mdec->isVirtual() && meth.cxxWrapperVirt.size() ){

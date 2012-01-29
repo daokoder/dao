@@ -23,9 +23,7 @@ CDaoNamespace::CDaoNamespace( CDaoModule *mod, const NamespaceDecl *decl )
 void CDaoNamespace::HandleExtension( NamespaceDecl *nsdecl )
 {
 	NamespaceDecl::decl_iterator it, end;
-	if( not module->IsFromModules( nsdecl->getLocation() ) ) return;
 	for(it=nsdecl->decls_begin(),end=nsdecl->decls_end(); it!=end; it++){
-		if( not module->IsFromModules( (*it)->getLocation() ) ) continue;
 		if (VarDecl *var = dyn_cast<VarDecl>(*it)) {
 			variables.push_back( var );
 		}else if (EnumDecl *e = dyn_cast<EnumDecl>(*it)) {
@@ -144,6 +142,12 @@ void CDaoNamespace::Sort( vector<CDaoUserType*> & sorted, map<CDaoUserType*,int>
 void CDaoNamespace::Sort( CDaoUserType *UT, vector<CDaoUserType*> & sorted, map<CDaoUserType*,int> & check )
 {
 	if( check.find( UT ) != check.end() ) return;
+	RecordDecl *dd = UT->decl->getDefinition();
+	if( dd && dd != UT->decl ){
+		CDaoUserType *UT2 = module->GetUserType( dd );
+		if( UT2 ) UT->priorUserTypes.push_back( UT2 );
+	}
+
 	int i, n = UT->priorUserTypes.size();
 	//if( n ) outs() << n << "  " << UT->qname << "\n";
 	for(i=0; i<n; i++) Sort( UT->priorUserTypes[i], sorted, check );

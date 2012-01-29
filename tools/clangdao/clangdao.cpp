@@ -335,6 +335,7 @@ const string predefines =
 
 int main(int argc, char *argv[] )
 {
+	type_for_quoting[ "void" ] = 1;
 	type_for_quoting[ "bool" ] = 1;
 	type_for_quoting[ "char" ] = 1;
 	type_for_quoting[ "wchar_t" ] = 1;

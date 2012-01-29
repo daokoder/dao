@@ -21,8 +21,8 @@ CLANG_LIBS = -lclang \
 -lclangStaticAnalyzerCore \
 -lclangStaticAnalyzerFrontend
 
-CFLAGS = -O2 -fno-rtti -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
 CFLAGS = -ggdb -fno-rtti -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
+CFLAGS = -O2 -fno-rtti -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
 LFLAGS = -fPIC $(CLANG_LIBS) `llvm-config --ldflags --libs`
 
 TARGET = clangdao

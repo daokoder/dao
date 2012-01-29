@@ -1063,6 +1063,13 @@ DaoArray* DaoFactory_NewVectorSI( DaoFactory *self, signed int *s, daoint n )
 	DaoFactory_CacheValue( self, (DaoValue*) res );
 	return res;
 }
+DaoArray* DaoFactory_NewVectorUI( DaoFactory *self, unsigned int *s, daoint n )
+{
+	DaoArray *res = DaoArray_New( DAO_INTEGER );
+	if( s ) DaoArray_SetVectorUI( res, s, n );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
 DaoArray* DaoFactory_NewVectorI( DaoFactory *self, daoint *s, daoint n )
 {
 	DaoArray *res = DaoArray_New( DAO_INTEGER );

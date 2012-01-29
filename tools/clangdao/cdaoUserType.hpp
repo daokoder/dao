@@ -40,6 +40,7 @@ struct CDaoUserType
 	short  wrapCount;
 	bool   forceOpaque;
 	bool   dummyTemplate;
+	bool   unsupported;
 	bool   isRedundant;
 	bool   isRedundant2;
 	bool   isQObject;

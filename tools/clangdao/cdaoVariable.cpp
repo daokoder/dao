@@ -76,22 +76,22 @@ const string dao2cxx_uimat2 = dao2cxx_imat2;
 const string dao2cxx_stream = dao2cxx2 + "DaoStream_GetFile( (DaoStream*)_p[$(index)] );\n";
 
 const string dao2cxx_void = 
-"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryGetCdata( _p[$(index)] );\n";
+"  $(cxxtype)* $(name) = ($(cxxtype)*) DaoValue_TryGetCdata( _p[$(index)] );\n";
 
 const string dao2cxx_void2 =
-"  $(cxxtype) $(name)= ($(cxxtype)) DaoValue_TryGetCdata( _p[$(index)] );\n";
+"  $(cxxtype) $(name) = ($(cxxtype)) DaoValue_TryGetCdata( _p[$(index)] );\n";
 
 const string dao2cxx_user =
- "  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryCastCdata( _p[$(index)], dao_type_$(typer) );\n";
+ "  $(cxxtype)* $(name) = ($(cxxtype)*) DaoValue_TryCastCdata( _p[$(index)], dao_type_$(typer) );\n";
 
 const string dao2cxx_user2 = 
-"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryCastCdata( _p[$(index)], dao_type_$(typer) );\n";
+"  $(cxxtype)* $(name) = ($(cxxtype)*) DaoValue_TryCastCdata( _p[$(index)], dao_type_$(typer) );\n";
 
 const string dao2cxx_user3 =
-"  $(cxxtype)** $(name)= ($(cxxtype)**) DaoValue_TryGetCdata2( _p[$(index)] );\n";
+"  $(cxxtype)** $(name) = ($(cxxtype)**) DaoValue_TryGetCdata2( _p[$(index)] );\n";
 
 const string dao2cxx_user4 = 
-"  $(cxxtype)* $(name)= ($(cxxtype)*) DaoValue_TryGetCdata2( _p[$(index)] );\n";
+"  $(cxxtype)* $(name) = ($(cxxtype)*) DaoValue_TryGetCdata2( _p[$(index)] );\n";
 
 const string dao2cxx_callback =
 "  DaoRoutine *_$(name) = (DaoRoutine*) _p[$(index)];\n\
@@ -597,6 +597,7 @@ CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 	unsupported = false;
 	useDefault = true;
 	isArithmeticType = false;
+	isObjectType = false;
 	isPointerType = false;
 	SetDeclaration( decl );
 }
@@ -740,6 +741,10 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 	CDaoVarTemplates tpl;
 	tpl.SetupIntScalar();
 	map<string,string> kvmap;
+	if( daodefault.size() > 1 ){
+		int m = daodefault.size();
+		if( daodefault[m-1] == 'f' && isdigit( daodefault[m-2] ) ) daodefault.erase( m-1 );
+	}
 	if( canotype->isBuiltinType() ){
 		return GenerateForBuiltin( daopar_index, cxxpar_index );
 	}else if( canotype->isPointerType() and not hasArrayHint ){
@@ -755,11 +760,12 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		tpl.Generate( this, kvmap, daopar_index, cxxpar_index );
 		return 0;
 	}else if( CDaoUserType *UT = module->HandleUserType( canotype, location ) ){
-		if( UT->qname == "<anonymous>" ) return 1;
+		if( UT->unsupported ) return 1;
 		daotype = cdao_make_dao_template_type_name( UT->qname );
 		cxxtype2 = UT->qname;
 		cxxtyper = UT->idname;
 		cxxcall = "*" + name;
+		isObjectType = true;
 		if( daodefault.size() ) useDefault = false;
 		tpl.daopar = daopar_user;
 		tpl.getres = getres_user2;
@@ -925,7 +931,7 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 		tpl.cxx2dao = cxx2dao_int2;
 		tpl.setter = "";
 	}else if( CDaoUserType *UT = module->HandleUserType( qtype1, location ) ){
-		if( UT->qname == "<anonymous>" ) return 1;
+		if( UT->unsupported ) return 1;
 		if( qtype1.getAsString() == "FILE" ){
 			daotype = "stream";
 			cxxtype = "FILE";
@@ -1056,7 +1062,7 @@ int CDaoVariable::GenerateForReference( int daopar_index, int cxxpar_index )
 		tpl.SetupIntScalar();
 		tpl.parset = parset_int;
 	}else if( CDaoUserType *UT = module->HandleUserType( qtype1, location ) ){
-		if( UT->qname == "<anonymous>" ) return 1;
+		if( UT->unsupported ) return 1;
 		daotype = cdao_make_dao_template_type_name( UT->qname );
 		cxxtype2 = UT->qname;
 		cxxtyper = UT->idname;
