@@ -185,8 +185,8 @@ const string c_callback_struct =
 "$(retype) Dao_$(cxxname)( $(parlist) )\n\
 {\n\
   int _cs = 1;\n\
-  DaoCallbackData *_dao_cbd = (DaoCallbackData*) $(userdata);\n\
-  DaoRoutine *_ro = _dao_cbd->callback;\n";
+  DaoTuple *_dao_cbd = (DaoTuple*) $(userdata);\n\
+  DaoRoutine *_ro = DaoValue_CastRoutine( DaoTuple_GetItem( _dao_cbd, 0 ) );\n";
 
 const string c_callback_call_00 =
 "  DaoProcess *_proc = DaoVmSpace_AcquireProcess( __daoVmSpace );\n\
@@ -369,13 +369,19 @@ const string dao_callback_proto =
 const string dao_callback_def =
 "$(retype) Dao_$(host_idname)( $(parlist) )\n\
 {\n\
-  DaoCallbackData *_dao_cbd = (DaoCallbackData*) _ud;\n\
-  DaoRoutine *_ro = _dao_cbd->callback;\n\
+  DaoTuple *_dao_cbd = (DaoTuple*) _ud;\n\
+  DaoRoutine *_ro = DaoRoutine_CastRoutine( DaoTuple_GetItem( _dao_cbd, 0 ) );\n\
   DValueX userdata = _dao_cbd->userdata;\n\
   int _cs = 1;\n\
   if( _ro ==NULL ) return;\n\
   $(proxy_name)( & _cs, _ro, NULL, $(parcall) );\n\
 }\n";
+
+const string dao_check_callback =
+"  if( _$(name_cb) != $(name_ud) || DaoTuple_GetItem( $(name_ud), 0 ) == NULL ){\n\
+     DaoProcess_RaiseException( _proc, DAO_ERROR_PARAM, \"invalid callback\" );\n\
+	 return;\n\
+   }";
 
 const string daoqt_slot_slot_decl =
 "   void slot_$(ssname)( void*, void*, const DaoQtMessage& );\n";
@@ -697,7 +703,7 @@ int CDaoFunction::Generate()
 			signature2 += "DaoValue";
 			cxxprotpars += "DaoValue *" + vo.name;
 			cxx2daocodes += "  DaoFactory_CacheValue( _fac, " + vo.name + " );\n";
-			cxxCallParamV += "_dao_cbd->userdata";
+			cxxCallParamV += "DaoTuple_GetItem( _dao_cbd, 1 )";
 		}else{
 			signature2 += vo.cxxtype;
 			cxxprotpars += vo.cxxpar;
@@ -721,10 +727,12 @@ int CDaoFunction::Generate()
 		signature2 += "const";
 	}
 
+	map<string,string> cbmap;
+	string checkCallback;
 	// parameter with array hint may need parameter behind it:
 	// example, for func( int a[][], int n, int m ):
-	// int n= (int) _p[1]->v.i;
-	// float** mat= (float**) DaoArray_GetMatrixF( _p[0]->v.array, n );
+	// int n= (int) DaoValue_TryGetInteger( _p[1] );
+	// float** mat= (float**) DaoArray_GetMatrixF( (DaoArray*) _p[0], n );
 	for(i=n-1; i>=0; i--){
 		CDaoVariable *vo = pps[i];
 		if( vo->sizes.size() || vo->isUserData ){
@@ -733,10 +741,13 @@ int CDaoFunction::Generate()
 		}
 		if( vo->isCallback ){
 			bool hasUserData = false;
+			cbmap[ "name_cb" ] = vo->name;
 			for(int j=0; j<n; j++){
 				CDaoVariable & vo2 = parlist[j];
 				if( vo2.isUserData && vo2.callback == vo->name ){
 					hasUserData = true;
+					cbmap[ "name_ud" ] = vo2.name;
+					checkCallback += cdao_string_fill( dao_check_callback, cbmap );
 					break;
 				}
 			}
@@ -754,6 +765,7 @@ int CDaoFunction::Generate()
 		CDaoVariable *vo = pps[i];
 		dao2cxxcodes += vo->dao2cxx;
 	}
+	dao2cxxcodes += checkCallback;
 #if 0
 	if( hasCallback and not hasUserData ) excluded = 1;
 	nowrap = excluded;

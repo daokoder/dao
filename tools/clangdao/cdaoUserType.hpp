@@ -62,8 +62,12 @@ struct CDaoUserType
 	string  cxxWrapperVirt;
 	string  typer_codes;
 
-	vector<CDaoUserType*>   priorUserTypes;
-	vector<CXXMethodDecl*>  pureVirtuals;
+	vector<CDaoUserType*>    priorUserTypes;
+
+	/* All virtual methods (including inherited but not overridden ones)
+	// need to be wrapped by the DaoCxx_ classes:
+	*/
+	map<CXXMethodDecl*,CDaoUserType*>  virtualMethods;
 
 	CDaoUserType( CDaoModule *mod = NULL, const RecordDecl *decl = NULL );
 

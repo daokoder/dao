@@ -715,7 +715,7 @@ void CDaoUserType::Clear()
 	alloc_default.clear();
 	cxxWrapperVirt.clear();
 	typer_codes.clear();
-	pureVirtuals.clear();
+	virtualMethods.clear();
 }
 int CDaoUserType::GenerateSimpleTyper()
 {
@@ -946,8 +946,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 	outs() << "generating: " << qname << "\n";
 	SetupDefaultMapping( kvmap );
 
-	map<CXXMethodDecl*,int>  pvmeths;
-	map<CXXMethodDecl*,int>::iterator pvit, pvend;
+	map<CXXMethodDecl*,CDaoUserType*>::iterator imd, emd;
 	map<const RecordDecl*,CDaoUserType*>::iterator find;
 	CXXRecordDecl::base_class_iterator baseit, baseend = decl->bases_end();
 	for(baseit=decl->bases_begin(); baseit != baseend; baseit++){
@@ -969,7 +968,9 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		//outs() << "parent: " << qname << "  " << sup->qname << " " << (int)sup->wrapType << "\n";
 		if( sup->wrapType != CDAO_WRAP_TYPE_PROXY ) continue;
 
-		for(i=0,n=sup->pureVirtuals.size(); i<n; i++) pvmeths[ sup->pureVirtuals[i] ] = 1;
+		for(imd=sup->virtualMethods.begin(),emd=sup->virtualMethods.end(); imd!=emd; imd++){
+			virtualMethods[imd->first] = imd->second;
+		}
 		kvmap[ "super" ] = supname;
 		if( virt_supers.size() ){
 			daoc_supers += ',';
@@ -1033,12 +1034,11 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		if( methit->getAccess() == AS_protected ) hasProtected = true;
 		methods.push_back( CDaoFunction( module, *methit, ++overloads[name] ) );
 		methods.back().location = location;
-		if( methit->isPure() ) pvmeths[ *methit ] = 1;
 		if( methit->isVirtual() ){
-			//pvmeths[ *methit ] = 1;
+			virtualMethods[ *methit ] = this;
 			CXXMethodDecl::method_iterator it2, end2 = methit->end_overridden_methods();
 			for(it2=methit->begin_overridden_methods(); it2!=end2; it2++)
-				pvmeths.erase( (CXXMethodDecl*)*it2 );
+				virtualMethods.erase( (CXXMethodDecl*)*it2 );
 		}
 	}
 
@@ -1263,11 +1263,10 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 
 	string kmethods;
 	string kvirtuals;
-	for(pvit=pvmeths.begin(),pvend=pvmeths.end(); pvit!=pvend; pvit++){
-		CXXMethodDecl *mdec = pvit->first;
+	for(imd=virtualMethods.begin(),emd=virtualMethods.end(); imd!=emd; imd++){
+		CXXMethodDecl *mdec = imd->first;
 		string name = mdec->getNameAsString();
 		bool isconst = mdec->getTypeQualifiers() & DeclSpec::TQ_const;
-		pureVirtuals.push_back( mdec );
 		if( mdec->getParent() == decl ) continue;
 
 		CDaoFunction func( module, mdec, ++overloads[name] );
@@ -1293,7 +1292,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		kvmap[ "extra" ] = isconst ? "const" : "";
 		kmethods += cdao_string_fill( tpl_meth_decl2, kvmap );
 		string wrapper = func.cxxWrapperVirt2;
-		string from = "DaoCxx_" + mdec->getParent()->getNameAsString() + "::";
+		string from = "DaoCxx_" + imd->second->idname + "::";
 		string to = "DaoCxx_" + idname + "::";
 		size_t pos = wrapper.find( from );
 		if( pos != string::npos ) wrapper.replace( pos, from.size(), to );

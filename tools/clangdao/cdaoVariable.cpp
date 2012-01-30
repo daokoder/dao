@@ -94,15 +94,10 @@ const string dao2cxx_user4 =
 "  $(cxxtype)* $(name) = ($(cxxtype)*) DaoValue_TryGetCdata2( _p[$(index)] );\n";
 
 const string dao2cxx_callback =
-"  DaoRoutine *_$(name) = (DaoRoutine*) _p[$(index)];\n\
+"  DaoTuple *_$(name) = (DaoTuple*) _p[$(index)];\n\
   $(cxxtype) $(name) = Dao_$(callback);\n";
 
-const string dao2cxx_userdata =
-"  DaoCallbackData *$(name) = DaoCallbackData_New( _$(callback), _p[$(index)] );\n\
-  if( $(name) == NULL ){\n\
-    DaoProcess_RaiseException( _proc, DAO_ERROR_PARAM, \"invalid callback\" );\n\
-	return;\n\
-  }\n";
+const string dao2cxx_userdata = "  DaoTuple *$(name) = (DaoTuple*) _p[$(index)];\n";
 
 
 const string cxx2dao = "  DaoFactory_New";

@@ -931,7 +931,9 @@ void DaoValue_ClearAll( DaoValue *v[], int n )
 
 void DaoFactory_CacheValue( DaoFactory *self, DaoValue *value )
 {
-	DArray_Append( self, value );
+	DArray_Append( self, NULL );
+	GC_IncRC( value );
+	self->items.pValue[ self->size - 1 ] = value;
 }
 void DaoFactory_PopValues( DaoFactory *self, int N )
 {

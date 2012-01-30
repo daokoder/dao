@@ -243,7 +243,6 @@ typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
 typedef struct DaoUserStream   DaoUserStream;
 typedef struct DaoUserHandler  DaoUserHandler;
-typedef struct DaoCallbackData DaoCallbackData;
 
 typedef union  DaoValue        DaoValue;
 typedef struct DaoNone         DaoNone;
@@ -342,13 +341,6 @@ struct DaoTypeBase
 	// When "remove" != 0, references to data that are pushed to "values" should be broken;
 	*/
 	void  (*GetGCFields)( void *self, DArray *values, DArray *arrays, DArray *maps, int remove );
-};
-
-/* Callback data: freed when "callback" or "userdata" is collected by GC. */
-struct DaoCallbackData
-{
-	DaoRoutine  *callback;
-	DaoValue    *userdata;
 };
 
 struct DaoUserStream
@@ -1078,8 +1070,6 @@ DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );
 
 DAO_DLL DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
-
-DAO_DLL DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DaoValue *userdata );
 
 #ifdef __cplusplus
 }

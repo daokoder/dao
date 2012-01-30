@@ -430,6 +430,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 			break;
 		default : DaoParser_Error2( parser, DAO_UNDEFINED_SCOPE_NAME, k-2, k-2, 0 ); goto Error;
 		}
+		DaoParser_Delete( parser );
 		return DAO_DT_SCOPED;
 	}
 	ret = k ? DAO_DT_SCOPED : DAO_DT_UNSCOPED;

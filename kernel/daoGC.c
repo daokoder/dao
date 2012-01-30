@@ -24,60 +24,6 @@
 #include"daoThread.h"
 #include"daoValue.h"
 
-DArray *dao_callback_data = NULL;
-
-DaoCallbackData* DaoCallbackData_New( DaoRoutine *callback, DaoValue *userdata )
-{
-	DaoCallbackData *self;
-	if( callback == NULL ) return NULL;
-	if( callback->type != DAO_ROUTINE ) return NULL;
-	self = (DaoCallbackData*) calloc( 1, sizeof(DaoCallbackData) );
-	self->callback = callback;
-	DaoValue_Copy( userdata, & self->userdata );
-	GC_Lock();
-	DArray_Append( dao_callback_data, self );
-	GC_Unlock();
-	return self;
-}
-static void DaoCallbackData_Delete( DaoCallbackData *self )
-{
-	GC_DecRC( self->userdata );
-	dao_free( self );
-}
-static void DaoCallbackData_DeleteByCallback( DaoValue *callback )
-{
-	DaoCallbackData *cd = NULL;
-	daoint i;
-	if( dao_callback_data->size ==0 ) return;
-	GC_Lock();
-	for(i=0; i<dao_callback_data->size; i++){
-		cd = (DaoCallbackData*) dao_callback_data->items.pValue[i];
-		if( cd->callback == (DaoRoutine*) callback ){
-			DaoCallbackData_Delete( cd );
-			DArray_Erase( dao_callback_data, i, 1 );
-			i--;
-		}
-	}
-	GC_Unlock();
-}
-static void DaoCallbackData_DeleteByUserdata( DaoValue *userdata )
-{
-	DaoCallbackData *cd = NULL;
-	daoint i;
-	if( userdata == NULL ) return;
-	if( dao_callback_data->size ==0 ) return;
-	GC_Lock();
-	for(i=0; i<dao_callback_data->size; i++){
-		cd = (DaoCallbackData*) dao_callback_data->items.pValue[i];
-		if( cd->userdata == userdata ){
-			DaoCallbackData_Delete( cd );
-			DArray_Erase( dao_callback_data, i, 1 );
-			i--;
-		}
-	}
-	GC_Unlock();
-}
-
 
 #if defined(DEBUG) && defined(UNIX)
 #if 0
@@ -728,8 +674,6 @@ static void DaoValue_Delete( DaoValue *self )
 #ifdef DAO_GC_PROF
 	ObjectProfile[self->type] --;
 #endif
-	if( self->type == DAO_ROUTINE ) DaoCallbackData_DeleteByCallback( self );
-	DaoCallbackData_DeleteByUserdata( self );
 	if( self->type == DAO_CDATA && self->xCdata.subtype != DAO_CDATA_DAO ){
 		DaoCdata_Delete( (DaoCdata*) self );
 	}else if( self->type == DAO_ROUTBODY ){
