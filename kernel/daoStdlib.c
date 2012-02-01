@@ -559,7 +559,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	DaoMap *map = DaoProcess_PutMap( proc );
+	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
 	daoint i, entry, size = p[0]->xInteger.value;
 
 	if( sect == NULL || size < 0 ) return; // TODO exception
@@ -603,7 +603,7 @@ static DaoFuncItem stdMeths[]=
 	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },
 	{ STD_List,     "list( size :int )[index:int =>@T] =>list<@T>" },
 	{ STD_List,     "list( size :int, init :@T )[index:int, prev:@T =>@T] =>list<@T>" },
-	{ STD_Map,      "map( size :int )[index:int =>tuple<@K,@V>] =>map<@K,@V>" },
+	{ STD_Map,      "map( size :int, hashing = 0 )[index:int =>tuple<@K,@V>] =>map<@K,@V>" },
 	{ NULL, NULL }
 };
 

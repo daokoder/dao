@@ -400,13 +400,13 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	vmMaster = vmSpace;
 	DaoNamespace_WrapFunction( ns, DaoCGI_RandomString, "random_string( n : int, alnum=1 )" );
 
-	httpENV = DaoMap_New(1);
-	httpGET = DaoMap_New(1);
-	httpPOST = DaoMap_New(1);
-	httpFILE = DaoMap_New(1);
-	httpCOOKIE = DaoMap_New(1);
-	httpGETS = DaoMap_New(1);
-	httpPOSTS = DaoMap_New(1);
+	httpENV = DaoMap_New(1+rand());
+	httpGET = DaoMap_New(1+rand());
+	httpPOST = DaoMap_New(1+rand());
+	httpFILE = DaoMap_New(1+rand());
+	httpCOOKIE = DaoMap_New(1+rand());
+	httpGETS = DaoMap_New(1+rand());
+	httpPOSTS = DaoMap_New(1+rand());
 
 	DaoNamespace_AddValue( ns, "HTTP_ENV", (DaoValue*)httpENV, "map<string,string>" );
 	DaoNamespace_AddValue( ns, "HTTP_GET", (DaoValue*)httpGET, "map<string,string>" );

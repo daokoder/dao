@@ -271,11 +271,6 @@ DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 	}
 	return NULL;
 }
-DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer )
-{
-	if( typer->core == NULL ) return NULL;
-	return typer->core->kernel->abtype;
-}
 
 #define MIN(x,y) (x>y?y:x)
 

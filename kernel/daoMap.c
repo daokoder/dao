@@ -27,6 +27,8 @@
 #define RB_RED    0
 #define RB_BLACK  1
 
+#define HASH_SEED  0xda0
+
 static DNode* DNode_New( DMap *map, int keytype, int valtype )
 {
 	if( map->first && map->keytype == keytype && map->valtype == valtype ){
@@ -93,7 +95,7 @@ DMap* DMap_New( short kt, short vt )
 DMap* DHash_New( short kt, short vt )
 {
 	DMap *self = DMap_New( kt, vt );
-	self->hashing = 1;
+	self->hashing = HASH_SEED;
 	self->tsize = 4;
 	self->table = (DNode**) dao_calloc( self->tsize, sizeof(DNode*) );
 	return self;
@@ -101,10 +103,9 @@ DMap* DHash_New( short kt, short vt )
 double norm_c( const complex16 com );
 daoint DLong_ToInteger( DLong *self );
 
-#define HASH_SEED  0xda0
 unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed );
 
-static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
+static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, unsigned int seed )
 {
 	void *data = NULL;
 	int i, len = 0;
@@ -149,13 +150,13 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max )
 		break;
 	case DAO_TUPLE :
 		for(i=0; i<self->xTuple.size; i++){
-			id = DaoValue_Hash( self->xTuple.items[i], buf, id, max );
+			id = DaoValue_Hash( self->xTuple.items[i], buf, id, max, seed );
 			if( id >= max ) break;
 		}
 		break;
 	default : data = & self; len = sizeof(DaoValue*); break;
 	}
-	if( data ) hash = MurmurHash2( data, len, HASH_SEED);
+	if( data ) hash = MurmurHash2( data, len, seed );
 	if( id == id2 && id < max ){
 		buf[id] = hash;
 		id += 1;
@@ -185,26 +186,26 @@ static int DHash_HashIndex( DMap *self, void *key )
 			data = s->wcs;
 			m *= sizeof(wchar_t);
 		}
-		id = MurmurHash2( data, m, HASH_SEED) % T;
+		id = MurmurHash2( data, m, self->hashing ) % T;
 		break;
 	case D_VALUE :
-		m = DaoValue_Hash( (DaoValue*) key, buf, 0, HASH_MAX );
+		m = DaoValue_Hash( (DaoValue*) key, buf, 0, HASH_MAX, self->hashing );
 		if( m ==1 ){
 			id = buf[0] % T;
 		}else{
-			id = MurmurHash2( buf, m*sizeof(unsigned int), HASH_SEED) % T;
+			id = MurmurHash2( buf, m*sizeof(unsigned int), self->hashing ) % T;
 		}
 		break;
 	case D_ARRAY :
 		array = (DArray*)key;
 		m = array->size * sizeof(void*);
-		id = MurmurHash2( array->items.pVoid, m, HASH_SEED) % T;
+		id = MurmurHash2( array->items.pVoid, m, self->hashing ) % T;
 		break;
 	case D_VOID2 :
-		id = MurmurHash2( key, 2*sizeof(void*), HASH_SEED) % T;
+		id = MurmurHash2( key, 2*sizeof(void*), self->hashing ) % T;
 		break;
 	default : 
-		id = MurmurHash2( & key, sizeof(void*), HASH_SEED) % T;
+		id = MurmurHash2( & key, sizeof(void*), self->hashing ) % T;
 		break;
 	}
 	return (int)id;

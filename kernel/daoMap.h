@@ -56,9 +56,9 @@ struct DMap
 	DNode  *last;
 	daoint  size;
 	daoint  tsize;
+	uint_t  hashing;
 	char    keytype;
 	char    valtype;
-	char    hashing;
 };
 
 DAO_DLL DMap* DMap_New( short kt, short vt );

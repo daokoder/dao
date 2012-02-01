@@ -665,6 +665,7 @@ extern string cdao_remove_type_scopes( const string & qname );
 CDaoUserType::CDaoUserType( CDaoModule *mod, const RecordDecl *decl )
 {
 	module = mod;
+	used = false;
 	unsupported = false;
 	isRedundant = true;
 	isRedundant2 = false;
@@ -727,6 +728,7 @@ int CDaoUserType::GenerateSimpleTyper()
 	kvmap[ "daotypename" ] = cdao_make_dao_template_type_name( qname ) + ss;
 	typer_codes = cdao_string_fill( usertype_code_none, kvmap );
 	wrapType = CDAO_WRAP_TYPE_OPAQUE;
+	if( dummyTemplate ) used = true;
 	return 0;
 }
 int CDaoUserType::Generate()
@@ -963,6 +965,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		bases.push_back( sup );
 		priorUserTypes.push_back( sup );
 
+		sup->used = true;
 		sup->Generate();
 		if( module->finalGenerating == false && sup->wrapType <= CDAO_WRAP_TYPE_OPAQUE ) return 0;
 		//outs() << "parent: " << qname << "  " << sup->qname << " " << (int)sup->wrapType << "\n";

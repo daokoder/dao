@@ -621,6 +621,7 @@ int CDaoFunction::Generate()
 	}
 	host_idname = cdao_qname_to_idname( host_qname );
 	if( hostype ){
+		hostype->used = true;
 		location = hostype->location;
 		host_name = hostype->name;
 		host_qname = hostype->qname;

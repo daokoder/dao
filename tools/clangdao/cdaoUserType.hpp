@@ -45,6 +45,7 @@ struct CDaoUserType
 	bool   isRedundant2;
 	bool   isQObject;
 	bool   isQObjectBase;
+	bool   used;
 
 	string  name;  // just name: vector, SomeClass;
 	string  name2; // name, with template arguments if any: vector<int>, SomeClass;

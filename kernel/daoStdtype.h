@@ -128,7 +128,7 @@ struct DaoMap
 	DaoType  *unitype;
 };
 
-DAO_DLL DaoMap* DaoMap_New( int hashing );
+DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
 DAO_DLL void DaoMap_Delete( DaoMap *self );
 DAO_DLL void DaoMap_Clear( DaoMap *self );
 DAO_DLL void DaoMap_Reset( DaoMap *self );

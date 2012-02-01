@@ -1011,13 +1011,19 @@ DaoEnum* DaoFactory_NewEnum( DaoFactory *self, DaoType *type, int value )
 	DaoFactory_CacheValue( self, (DaoValue*) res );
 	return res;
 }
+DaoTuple* DaoFactory_NewTuple( DaoFactory *self, int count )
+{
+	DaoTuple *res = DaoTuple_New( count );
+	DaoFactory_CacheValue( self, (DaoValue*) res );
+	return res;
+}
 DaoList* DaoFactory_NewList( DaoFactory *self )
 {
 	DaoList *res = DaoList_New();
 	DaoFactory_CacheValue( self, (DaoValue*) res );
 	return res;
 }
-DaoMap* DaoFactory_NewMap( DaoFactory *self, int hashing )
+DaoMap* DaoFactory_NewMap( DaoFactory *self, unsigned int hashing )
 {
 	DaoMap *res = DaoMap_New( hashing );
 	DaoFactory_CacheValue( self, (DaoValue*) res );

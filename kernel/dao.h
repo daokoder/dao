@@ -621,8 +621,13 @@ DAO_DLL void DaoList_Erase( DaoList *self, daoint pos );
 DAO_DLL void DaoList_Clear( DaoList *self );
 
 
-
-DAO_DLL DaoMap* DaoMap_New( int hashing );
+/*
+// DaoMap_New() creates a map or hash map:
+// hashing = 0: normal map, no hashing;
+// hashing = 1: hash map with a default hashing seed;
+// hashing > 1: hash map with specified hashing seed;
+*/
+DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
 DAO_DLL int  DaoMap_Size( DaoMap *self );
 
 /*
@@ -880,7 +885,7 @@ DAO_DLL DaoArray*  DaoProcess_PutArrayFloat( DaoProcess *self, float *array, dao
 DAO_DLL DaoArray*  DaoProcess_PutArrayDouble( DaoProcess *self, double *array, daoint N );
 DAO_DLL DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, daoint N );
 DAO_DLL DaoList*   DaoProcess_PutList( DaoProcess *self );
-DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self );
+DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self, unsigned int hashing );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
 DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self );
 DAO_DLL DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
@@ -988,12 +993,13 @@ DAO_DLL DaoString*  DaoFactory_NewString( DaoFactory *self, int mbs );
 DAO_DLL DaoString*  DaoFactory_NewMBString( DaoFactory *self, const char *s, daoint n );
 DAO_DLL DaoString*  DaoFactory_NewWCString( DaoFactory *self, const wchar_t *s, daoint n );
 DAO_DLL DaoEnum*    DaoFactory_NewEnum( DaoFactory *self, DaoType *type, int value );
+DAO_DLL DaoTuple*   DaoFactory_NewTuple( DaoFactory *self, int count );
 DAO_DLL DaoList*    DaoFactory_NewList( DaoFactory *self );
 
 /*
 // DaoFactory_NewMap() creates a (hash) map.
 */
-DAO_DLL DaoMap*   DaoFactory_NewMap( DaoFactory *self, int hashing );
+DAO_DLL DaoMap*   DaoFactory_NewMap( DaoFactory *self, unsigned int hashing );
 
 /*
 // DaoFactory_NewArray() creates a numeric array with element type
@@ -1069,7 +1075,6 @@ DAO_DLL DaoCdata* DaoFactory_NewCdata( DaoFactory *self, DaoType *type, void *da
 DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );
 
-DAO_DLL DaoType* DaoType_GetFromTypeStructure( DaoTypeBase *typer );
 
 #ifdef __cplusplus
 }

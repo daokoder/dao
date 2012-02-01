@@ -756,6 +756,7 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 		return 0;
 	}else if( CDaoUserType *UT = module->HandleUserType( canotype, location ) ){
 		if( UT->unsupported ) return 1;
+		UT->used = true;
 		daotype = cdao_make_dao_template_type_name( UT->qname );
 		cxxtype2 = UT->qname;
 		cxxtyper = UT->idname;
@@ -927,6 +928,7 @@ int CDaoVariable::GenerateForPointer( int daopar_index, int cxxpar_index )
 		tpl.setter = "";
 	}else if( CDaoUserType *UT = module->HandleUserType( qtype1, location ) ){
 		if( UT->unsupported ) return 1;
+		UT->used = true;
 		if( qtype1.getAsString() == "FILE" ){
 			daotype = "stream";
 			cxxtype = "FILE";
@@ -1058,6 +1060,7 @@ int CDaoVariable::GenerateForReference( int daopar_index, int cxxpar_index )
 		tpl.parset = parset_int;
 	}else if( CDaoUserType *UT = module->HandleUserType( qtype1, location ) ){
 		if( UT->unsupported ) return 1;
+		UT->used = true;
 		daotype = cdao_make_dao_template_type_name( UT->qname );
 		cxxtype2 = UT->qname;
 		cxxtyper = UT->idname;

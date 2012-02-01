@@ -3338,12 +3338,13 @@ DaoTypeBase mapTyper=
 	(FuncPtrDel)DaoMap_Delete, NULL
 };
 
-DaoMap* DaoMap_New( int hashing )
+DaoMap* DaoMap_New( unsigned int hashing )
 {
 	DaoMap *self = (DaoMap*) dao_malloc( sizeof( DaoMap ) );
 	DaoValue_Init( self, DAO_MAP );
 	self->items = hashing ? DHash_New( D_VALUE, D_VALUE ) : DMap_New( D_VALUE, D_VALUE );
 	self->unitype = NULL;
+	if( hashing > 1 ) self->items->hashing = hashing;
 	return self;
 }
 void DaoMap_Delete( DaoMap *self )

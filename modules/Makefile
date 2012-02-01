@@ -35,8 +35,8 @@ install:
 	@$(HAS_DIR) $(DAO_MOD_DIR)/os || $(MKDIR) $(DAO_MOD_DIR)/os
 	@$(HAS_DIR) $(DAO_MOD_DIR)/stream || $(MKDIR) $(DAO_MOD_DIR)/stream
 	-$(COPY) addpath.dao $(DAO_MOD_DIR)
-	-$(COPY) auxlib/dao_aux.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
-	-$(COPY) syslib/dao_sys.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
+	-$(COPY) auxlib/libdao_aux.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
+	-$(COPY) syslib/libdao_sys.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) math/math.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) meta/meta.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) net/net.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
@@ -48,7 +48,7 @@ install:
 	-$(COPY) stream/stream.dao $(DAO_MOD_DIR)/stream
 	-$(COPY) stream/clprint.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/stream
 	-$(COPY) stream/buffer.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/stream
-	-$(COPY) sync/sync.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
+	-$(COPY) sync/libsync.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) web/cgi.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/web
 	-$(COPY) web/json.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/web
 	-$(COPY) os/fs.$(DAO_DLL_EXT) $(DAO_MOD_DIR)/os

@@ -29,6 +29,7 @@ struct DArray
 		DaoInteger   **pInteger;
 		DaoFloat     **pFloat;
 		DaoDouble    **pDouble;
+		DaoComplex   **pComplex;
 		DaoList      **pList;
 		DaoTuple     **pTuple;
 		DaoClass     **pClass;

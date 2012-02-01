@@ -49,7 +49,7 @@ struct DaoJIT dao_jit = { NULL, NULL, NULL, NULL };
 
 static DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc );
 static DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc );
-static DaoMap* DaoProcess_GetMap( DaoProcess *self, DaoVmCode *vmc );
+static DaoMap* DaoProcess_GetMap( DaoProcess *self, DaoVmCode *vmc, unsigned int hashing );
 
 static void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoList( DaoProcess *self, DaoVmCode *vmc );
@@ -2939,9 +2939,9 @@ DaoList* DaoProcess_PutList( DaoProcess *self )
 {
 	return DaoProcess_GetList( self, self->activeCode );
 }
-DaoMap* DaoProcess_PutMap( DaoProcess *self )
+DaoMap* DaoProcess_PutMap( DaoProcess *self, unsigned int hashing )
 {
-	return DaoProcess_GetMap( self, self->activeCode );
+	return DaoProcess_GetMap( self, self->activeCode, hashing );
 }
 DaoArray* DaoProcess_PutArray( DaoProcess *self )
 {
@@ -3044,27 +3044,29 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
 	return list;
 }
-DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc )
+DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashing )
 {
 	DaoMap *map = (DaoMap*) self->activeValues[ vmc->c ];
 	DaoType *tp = self->activeTypes[ vmc->c ];
 
 	if( map && map->type == DAO_MAP && map->unitype == tp ){
-		if( (map->items->hashing == 0) == (vmc->code == DVM_MAP) ){
+		if( (map->items->hashing == 0) == (hashing == 0) ){
 			DaoVmCode *vmc2 = vmc + 1;
 			if( map->refCount == 1 ){
 				DaoMap_Reset( map );
+				map->items->hashing = hashing;
 				return map;
 			}
 			if( map->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
 				if( self->activeValues[vmc2->c] == (DaoValue*) map ){
 					DaoMap_Reset( map );
+					map->items->hashing = hashing;
 					return map;
 				}
 			}
 		}
 	}
-	map = DaoMap_New( vmc->code == DVM_HASH );
+	map = DaoMap_New( hashing );
 	DaoValue_Move( (DaoValue*) map, self->activeValues + vmc->c, tp );
 	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_map_any;
 	GC_ShiftRC( tp, map->unitype );
@@ -4764,7 +4766,7 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 	const ushort_t bval = vmc->b;
 	DaoNamespace *ns = self->activeNamespace;
 	DaoValue **pp = self->activeValues;
-	DaoMap *map = DaoProcess_GetMap( self, vmc );
+	DaoMap *map = DaoProcess_GetMap( self, vmc, vmc->code == DVM_HASH );
 	
 	if( bval == 2 && pp[opA]->type ==0 && pp[opA+1]->type ==0 ) return;
 	for( i=0; i<bval-1; i+=2 ){
@@ -5427,7 +5429,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			hC = hB;
 			hB = hA;
 		}else{
-			hC = DaoProcess_GetMap( self, vmc );
+			hC = DaoProcess_GetMap( self, vmc, hA->items->hashing );
 			node = DMap_First( hA->items );
 			for( ; node !=NULL; node=DMap_Next( hA->items, node) )
 				DMap_Insert( hC->items, node->key.pVoid, node->value.pVoid );
@@ -5931,320 +5933,26 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid operands" );
 	}
 }
-static int DaoValue_CheckTypeShape( DaoValue *self, int type,
-								   DArray *shape, daoint depth, int check_size )
-{
-	DaoTuple *tuple;
-	DaoArray *array;
-	DaoList *list;
-	DaoValue **data;
-	daoint i, j, n;
-	int d;
-	if( self->type ==0 ) return -1;
-	switch( self->type ){
-		case DAO_INTEGER :
-		case DAO_FLOAT :
-		case DAO_DOUBLE :
-		case DAO_COMPLEX :
-			if( type <= self->type ) type = self->type;
-			break;
-		case DAO_STRING :
-			type = type == DAO_UDF || type == self->type ? self->type : -1;
-			break;
-		case DAO_ARRAY :
 #ifdef DAO_WITH_NUMARRAY
-			array = & self->xArray;
-			if( type < array->etype ) type = array->etype;
-			if( shape->size <= depth ){
-				for(d=0; d<array->ndim; d++) DArray_Append( shape, array->dims[d] );
-			}else if( check_size ){
-				for(d=0; d<array->ndim; d++){
-					if( shape->items.pSize[d+depth] != array->dims[d] ) return -1;
-				}
-			}
-#endif
-			break;
-		case DAO_LIST :
-			list = & self->xList;
-			if( shape->size <= depth ) DArray_Append( shape, (void*)list->items.size );
-			if( check_size && list->items.size != shape->items.pSize[depth] ) return -1;
-			depth ++;
-			if( list->unitype && list->unitype->nested->size ){
-				d = list->unitype->nested->items.pType[0]->tid;
-				if( d <= DAO_COMPLEX ){
-					if( type <= d ) type = d;
-				}else if( d == DAO_STRING ){
-					type = type == DAO_UDF || type == d ? d : -1;
-					break;
-				}
-			}
-			data = list->items.items.pValue;
-			for(i=0,n=list->items.size; i<n; i++ ){
-				type = DaoValue_CheckTypeShape( data[i], type, shape, depth, check_size );
-				if( type < 0 ) break;
-			}
-			break;
-		case DAO_TUPLE :
-			tuple = & self->xTuple;
-			if( shape->size <= depth ) DArray_Append( shape, tuple->size );
-			if( check_size && tuple->size != (int)shape->items.pSize[depth] ) return -1;
-			depth ++;
-			data = tuple->items;
-			for(i=0,n=tuple->size; i<n; i++){
-				type = DaoValue_CheckTypeShape( data[i], type, shape, depth, check_size );
-				if( type < 0 ) break;
-			}
-			break;
-		default : break;
-	}
-	return type;
-}
-#ifdef DAO_WITH_NUMARRAY
-static int DaoValue_ExportValue( DaoValue *self, DaoArray *array, daoint k )
-{
-	DaoTuple *tup;
-	DaoArray *sub;
-	DaoList *list;
-	DaoValue **items;
-	daoint i, n;
-	if( k >= array->size ) return k;
-	switch( self->type ){
-		case DAO_INTEGER :
-		case DAO_FLOAT :
-		case DAO_DOUBLE :
-		case DAO_LONG :
-		case DAO_STRING :
-			switch( array->etype ){
-				case DAO_INTEGER : array->data.i[k] = DaoValue_GetInteger( self ); break;
-				case DAO_FLOAT : array->data.f[k] = DaoValue_GetFloat( self ); break;
-				case DAO_DOUBLE : array->data.d[k] = DaoValue_GetDouble( self ); break;
-				case DAO_COMPLEX : array->data.c[k].real = DaoValue_GetDouble( self ); break;
-				default : break;
-			}
-			k ++;
-			break;
-		case DAO_COMPLEX :
-			switch( array->etype ){
-				case DAO_INTEGER : array->data.i[k] = self->xComplex.value.real; break;
-				case DAO_FLOAT : array->data.f[k] = self->xComplex.value.real; break;
-				case DAO_DOUBLE : array->data.d[k] = self->xComplex.value.real; break;
-				case DAO_COMPLEX : array->data.c[k] = self->xComplex.value; break;
-				default : break;
-			}
-			k ++;
-			break;
-		case DAO_ARRAY :
-			sub = & self->xArray;
-			for(i=0,n=sub->size; i<n; i++){
-				switch( array->etype ){
-					case DAO_INTEGER : array->data.i[k+i] = DaoArray_GetInteger( sub, i ); break;
-					case DAO_FLOAT : array->data.f[k+i] = DaoArray_GetFloat( sub, i ); break;
-					case DAO_DOUBLE : array->data.d[k+i] = DaoArray_GetDouble( sub, i ); break;
-					case DAO_COMPLEX : array->data.c[k+i] = DaoArray_GetComplex( sub, i ); break;
-					default : break;
-				}
-			}
-			k += sub->size;
-			break;
-		case DAO_LIST :
-			list = & self->xList;
-			items = list->items.items.pValue;
-			for(i=0,n=list->items.size; i<n; i++ ) k = DaoValue_ExportValue( items[i], array, k );
-			break;
-		case DAO_TUPLE :
-			tup = & self->xTuple;
-			items = tup->items;
-			for(i=0,n=tup->size; i<n; i++) k = DaoValue_ExportValue( items[i], array, k );
-			break;
-		default : break;
-	}
-	return k;
-}
-static void DaoArray_ToWCString( DaoArray *self, DString *str, daoint offset, daoint size )
+static void DaoArray_ToString( DaoArray *self, DString *str, daoint offset, daoint size )
 {
 	daoint i;
 	int type = 1; /*MBS*/
 	DString_ToWCS( str );
 	DString_Resize( str, size * ( (self->etype == DAO_COMPLEX) +1 ) );
-	for(i=0; i<size; i++){
-		switch( self->etype ){
-			case DAO_INTEGER :
-				str->wcs[i] = self->data.i[offset+i];
-				if( str->wcs[i] > 255 ) type = 0;
-				break;
-			case DAO_FLOAT :
-				str->wcs[i] = self->data.f[offset+i];
-				if( str->wcs[i] > 255 ) type = 0;
-				break;
-			case DAO_DOUBLE :
-				str->wcs[i] = self->data.d[offset+i];
-				if( str->wcs[i] > 255 ) type = 0;
-				break;
-			case DAO_COMPLEX :
-				str->wcs[2*i] = self->data.c[offset+i].real;
-				str->wcs[2*i+1] = self->data.c[offset+i].imag;
-				if( str->wcs[2*i] > 255 ) type = 0;
-				if( str->wcs[2*i+1] > 255 ) type = 0;
-				break;
-			default : break;
+	if( self->etype == DAO_COMPLEX ){
+		for(i=0; i<size; i++){
+			str->wcs[2*i] = self->data.c[offset+i].real;
+			str->wcs[2*i+1] = self->data.c[offset+i].imag;
+			if( str->wcs[2*i] > 255 ) type = 0;
+		}
+	}else{
+		for(i=0; i<size; i++){
+			str->wcs[i] = DaoArray_GetInteger( self, offset+i );
+			if( str->wcs[i] > 255 ) type = 0;
 		}
 	}
 	if( type ) DString_ToMBS( str );
-}
-static int DaoArray_ToList( DaoArray *self, DaoList *list, DaoType *abtp,
-						   int dim, int offset )
-{
-	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
-	DaoValue *value = (DaoValue*) & tmp;
-	DaoList *ls;
-	daoint *ds = self->dims;
-	daoint i, size, isvector = self->ndim==2 && (ds[0] ==1 || ds[1] ==1);
-	
-	if( abtp == NULL ) return 0;
-	abtp = abtp->nested->items.pType[0];
-	if( abtp == NULL ) return 0;
-	if( isvector ) dim = ds[0] ==1 ? 1 : 0;
-	if( dim >= self->ndim-1 || isvector ){
-		if( abtp->tid == DAO_INTEGER ){
-			value->type = DAO_INTEGER;
-			switch( self->etype ){
-				case DAO_INTEGER :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xInteger.value = self->data.i[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_FLOAT :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xInteger.value = self->data.f[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_DOUBLE :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xInteger.value = self->data.d[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				default : break;
-			}
-		}else if( abtp->tid == DAO_FLOAT ){
-			value->type = DAO_FLOAT;
-			switch( self->etype ){
-				case DAO_INTEGER :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xFloat.value = self->data.i[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_FLOAT :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xFloat.value = self->data.f[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_DOUBLE :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xFloat.value = self->data.d[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				default : break;
-			}
-		}else if( abtp->tid == DAO_DOUBLE ){
-			value->type = DAO_DOUBLE;
-			switch( self->etype ){
-				case DAO_INTEGER :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xDouble.value = self->data.i[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_FLOAT :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xDouble.value = self->data.f[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_DOUBLE :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xDouble.value = self->data.d[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				default : break;
-			}
-		}else if( abtp->tid == DAO_COMPLEX ){
-			value->type = DAO_COMPLEX;
-			value->xComplex.value.imag = 0.0;
-			switch( self->etype ){
-				case DAO_INTEGER :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xComplex.value.real = self->data.i[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_FLOAT :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xComplex.value.real = self->data.f[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_DOUBLE :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xComplex.value.real = self->data.d[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				case DAO_COMPLEX :
-					for( i=0; i<self->dims[dim]; i++ ){
-						value->xComplex.value = self->data.c[ offset+i ];
-						DaoList_Append( list, value );
-					}
-					break;
-				default : break;
-			}
-		}else{
-			return 0;
-		}
-	}else{
-		if( abtp->tid == DAO_STRING ){
-			value->type = DAO_STRING;
-			value->xString.data = DString_New(1);
-			size = self->dims[self->ndim + dim]; /* products of sizes */
-			for(i=0; i<self->dims[dim]; i++){
-				DaoArray_ToWCString( self, value->xString.data, offset, size );
-				DaoList_Append( list, value );
-				offset += self->dims[self->ndim + dim];
-			}
-			DString_Delete( value->xString.data );
-		}else if( abtp->tid == DAO_LIST ){
-			for(i=0; i<self->dims[dim]; i++){
-				ls = DaoList_New();
-				ls->unitype = abtp;
-				GC_IncRC( abtp );
-				DaoList_Append( list, (DaoValue*) ls );
-				DaoArray_ToList( self, ls, abtp, dim+1, offset );
-				offset += self->dims[self->ndim + dim];
-			}
-		}
-	}
-	return 1;
-}
-int DaoArray_FromList( DaoArray *self, DaoList *list, DaoType *tp )
-{
-	DArray *shape = DArray_New(0);
-	int type = DaoValue_CheckTypeShape( (DaoValue*) list, DAO_UDF, shape, 0, 1 );
-	if( type < 0 ) goto FailConversion;
-	self->etype = type;
-	if( tp && tp->tid && tp->tid <= DAO_COMPLEX ) self->etype = tp->tid;
-	DaoArray_ResizeArray( self, shape->items.pSize, shape->size );
-	DaoValue_ExportValue( (DaoValue*) list, self, 0 );
-	DArray_Delete( shape );
-	return 1;
-FailConversion:
-	DArray_Delete( shape );
-	return 0;
 }
 #endif
 /* Set dC->type before calling to instruct this function what type number to convert: */
@@ -6329,18 +6037,43 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	if( imagfirst ) dC->xComplex.value.real = d2; else dC->xComplex.value.imag = d2;
 	return toklen == (int)mbs->size;
 }
+static DaoArray* DaoTypeCast_MakeArray( DaoFactory *factory, DaoValue *dC, DaoType *ct, int etype )
+{
+	DaoArray *array = NULL;
+	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 && array->original == NULL ){
+		array = (DaoArray*) dC;
+		DaoArray_SetNumType( array, etype );
+	}else{
+		array = DaoFactory_NewArray( factory, etype );
+	}
+	GC_ShiftRC( ct, array->unitype );
+	array->unitype = ct;
+	return array;
+}
+static DaoTuple* DaoTypeCast_MakeTuple( DaoFactory *factory, DaoValue *dC, DaoType *ct, int size )
+{
+	DaoTuple *tuple = NULL;
+	if( dC && dC->type == DAO_TUPLE && dC->xTuple.refCount == 1 && dC->xTuple.unitype == ct ){
+		tuple = (DaoTuple*) dC;
+	}else{
+		tuple = DaoFactory_NewTuple( factory, size );
+		tuple->unitype = ct;
+		GC_IncRC( ct );
+	}
+	return tuple;
+}
 DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC )
 {
 	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoNamespace *ns = proc->activeNamespace;
-	DaoTuple *tuple = NULL;
+	DaoTuple *tuple = NULL, *tuple2 = NULL;
 	DaoList *list = NULL, *list2 = NULL;
 	DaoMap *map = NULL, *map2 = NULL;
 	DaoType *tp = NULL, *tp2 = NULL;
 	DaoArray *array = NULL, *array2 = NULL;
 	DaoValue **data, **data2, *K = NULL, *V = NULL;
-	DString *str, *wcs = NULL;
-	DArray *shape = NULL;
+	DaoValue *itvalue;
+	DString *str;
 	DNode *node;
 	daoint i, n, size;
 	int type;
@@ -6356,330 +6089,280 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		return dC;
 	}
 	switch( ct->tid ){
+	case DAO_INTEGER :
+		dC->xInteger.value = DaoValue_GetInteger( dA );
+		break;
+	case DAO_FLOAT :
+		dC->xFloat.value = DaoValue_GetFloat( dA );
+		break;
+	case DAO_DOUBLE :
+		dC->xDouble.value = DaoValue_GetDouble( dA );
+		break;
+	case DAO_COMPLEX :
+		if( dA->type == DAO_COMPLEX ) goto Rebind;
+		if( dA->type >= DAO_ARRAY ) goto FailConversion;
+		dC->xComplex.value = DaoValue_GetComplex( dA );
+		break;
+	case DAO_LONG :
+		if( dA->type == DAO_LONG ) goto Rebind;
+		if( dA->type >= DAO_ARRAY ) goto FailConversion;
+		switch( dA->type ){
 		case DAO_INTEGER :
-			dC->xInteger.value = DaoValue_GetInteger( dA );
+			DLong_FromInteger( dC->xLong.value, DaoValue_GetInteger( dA ) );
 			break;
 		case DAO_FLOAT :
-			dC->xFloat.value = DaoValue_GetFloat( dA );
-			break;
 		case DAO_DOUBLE :
-			dC->xDouble.value = DaoValue_GetDouble( dA );
-			break;
-		case DAO_COMPLEX :
-			if( dA->type == DAO_COMPLEX ) goto Rebind;
-			if( dA->type >= DAO_ARRAY ) goto FailConversion;
-			dC->xComplex.value = DaoValue_GetComplex( dA );
-			break;
-		case DAO_LONG :
-			if( dA->type == DAO_LONG ) goto Rebind;
-			if( dA->type >= DAO_ARRAY ) goto FailConversion;
-			switch( dA->type ){
-				case DAO_INTEGER :
-					DLong_FromInteger( dC->xLong.value, DaoValue_GetInteger( dA ) );
-					break;
-				case DAO_FLOAT :
-				case DAO_DOUBLE :
-					DLong_FromDouble( dC->xLong.value, DaoValue_GetDouble( dA ) );
-					break;
-				case DAO_STRING :
-					DLong_FromString( dC->xLong.value, dA->xString.data );
-					break;
-				default : break;
-			}
-			dC->type = DAO_LONG;
+			DLong_FromDouble( dC->xLong.value, DaoValue_GetDouble( dA ) );
 			break;
 		case DAO_STRING :
-			if( dA->type == DAO_STRING ) goto Rebind;
-			str = dC->xString.data;
-			wcs = DString_New(0);
-			if( dA->type < DAO_ARRAY ){
-				DaoValue_GetString( dA, str );
+			DLong_FromString( dC->xLong.value, dA->xString.data );
+			break;
+		default : break;
+		}
+		dC->type = DAO_LONG;
+		break;
+	case DAO_STRING :
+		if( dA->type == DAO_STRING ) goto Rebind;
+		str = dC->xString.data;
+		if( dA->type < DAO_ARRAY ){
+			DaoValue_GetString( dA, str );
 #ifdef DAO_WITH_NUMARRAY
-			}else if( dA->type == DAO_ARRAY ){
-				array2 = & dA->xArray;
-				DaoArray_ToWCString( array2, str, 0, array2->size );
+		}else if( dA->type == DAO_ARRAY ){
+			array = (DaoArray*) dA;
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto FailConversion; 
+			DaoArray_ToString( array, str, 0, array->size );
 #endif
-			}else if( dA->type == DAO_LIST ){
-				shape = DArray_New(0);
-				type = DaoValue_CheckTypeShape( dA, DAO_UDF, shape, 0, 1 );
-				if( type <=0 || type >= DAO_COMPLEX ||shape->size >1 ) goto FailConversion;
-				list = & dA->xList;
-				DString_Resize( wcs, list->items.size );
-				type = 1; /*MBS*/
-				for(i=0,n=list->items.size; i<n; i++){
-					wcs->wcs[i] = DaoValue_GetInteger( list->items.items.pValue[i] );
-					if( wcs->wcs[i] > 255 ) type = 0;
-				}
-				
-				if( type ){
-					DString_ToMBS( str );
-					DString_Resize( str, wcs->size );
-					for(i=0,n=wcs->size; i<n; i++) str->mbs[i] = wcs->wcs[i];
-				}else{
-					DString_Assign( str, wcs );
-				}
-			}else{
-				goto FailConversion;
+		}else if( dA->type == DAO_LIST ){
+			list = & dA->xList;
+			DString_ToWCS( str );
+			DString_Resize( str, list->items.size );
+			type = 1; /*MBS*/
+			for(i=0,n=list->items.size; i<n; i++){
+				itvalue = list->items.items.pValue[i];
+				if( itvalue->type > DAO_DOUBLE ) goto FailConversion;
+				str->wcs[i] = DaoValue_GetInteger( itvalue );
+				if( str->wcs[i] > 255 ) type = 0;
 			}
-			break;
+			if( type ) DString_ToMBS( str );
+		}else{
+			goto FailConversion;
+		}
+		break;
 #ifdef DAO_WITH_NUMARRAY
-		case DAO_ARRAY :
-			if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-			if( dA->type == DAO_STRING ){
-				str = dA->xString.data;
-				if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
-				array = DaoArray_New( DAO_INTEGER + ( tp->tid - DAO_INTEGER ) );
-				if( str->mbs ){
-					DaoArray_ResizeVector( array, str->size );
-					for(i=0,n=str->size; i<n; i++){
-						switch( tp->tid ){
-							case DAO_INTEGER : array->data.i[i] = str->mbs[i]; break;
-							case DAO_FLOAT   : array->data.f[i]  = str->mbs[i]; break;
-							case DAO_DOUBLE  : array->data.d[i]  = str->mbs[i]; break;
-							default : break;
-						}
-					}
-				}else{
-					DaoArray_ResizeVector( array, str->size );
-					for(i=0,n=str->size; i<n; i++){
-						switch( tp->tid ){
-							case DAO_INTEGER : array->data.i[i] = str->wcs[i]; break;
-							case DAO_FLOAT   : array->data.f[i]  = str->wcs[i]; break;
-							case DAO_DOUBLE  : array->data.d[i]  = str->wcs[i]; break;
-							default : break;
-						}
-					}
+	case DAO_ARRAY :
+		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
+		if( dA->type == DAO_STRING ){
+			str = dA->xString.data;
+			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
+			array = DaoTypeCast_MakeArray( factory, dC, ct, tp->tid );
+			DaoArray_ResizeVector( array, str->size );
+			for(i=0,n=str->size; i<n; i++){
+				wchar_t ch = str->mbs ? str->mbs[i] : str->wcs[i];
+				switch( tp->tid ){
+				case DAO_INTEGER : array->data.i[i] = ch; break;
+				case DAO_FLOAT   : array->data.f[i]  = ch; break;
+				case DAO_DOUBLE  : array->data.d[i]  = ch; break;
+				default : break;
 				}
-			}else if( dA->type == DAO_ARRAY ){
-				if( tp == NULL ) goto Rebind;
-				if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) goto Rebind;
-				if( array2->etype == tp->tid ) goto Rebind;
-				if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
-				array2 = & dA->xArray;
-				size = array2->size;
-				array = DaoArray_New( tp->tid );
-				if( array2->etype == DAO_DOUBLE && tp->tid == DAO_COMPLEX )
-					array->etype = DAO_COMPLEX;
-				DaoArray_ResizeArray( array, array2->dims, array2->ndim );
-				if( array2->etype == DAO_INTEGER ){
-					if( tp->tid == DAO_FLOAT ){
-						for( i=0; i<size; i++ ) array->data.f[i] = array2->data.i[i];
-					}else if( tp->tid == DAO_DOUBLE ){
-						for( i=0; i<size; i++ ) array->data.d[i] = array2->data.i[i];
-					}else if( tp->tid == DAO_COMPLEX ){
-						for( i=0; i<size; i++ ) array->data.c[i].real = array2->data.i[i];
-					}
-				}else if( array2->etype == DAO_FLOAT ){
-					if( tp->tid == DAO_INTEGER ){
-						for( i=0; i<size; i++ ) array->data.i[i] = (int)array2->data.f[i];
-					}else if( tp->tid == DAO_DOUBLE ){
-						for( i=0; i<size; i++ ) array->data.d[i] = array2->data.f[i];
-					}else if( tp->tid == DAO_COMPLEX ){
-						for( i=0; i<size; i++ ) array->data.c[i].real = array2->data.f[i];
-					}
-				}else if( array2->etype ==  DAO_DOUBLE ){
-					if( tp->tid == DAO_INTEGER ){
-						for( i=0; i<size; i++ ) array->data.i[i] = (int)array2->data.d[i];
-					}else if( tp->tid == DAO_FLOAT ){
-						for( i=0; i<size; i++ ) array->data.f[i] = array2->data.d[i];
-					}else if( tp->tid == DAO_COMPLEX ){
-						for( i=0; i<size; i++ ) array->data.c[i].real = array2->data.d[i];
-					}
-				}else{
-					goto FailConversion;
+			}
+		}else if( dA->type == DAO_ARRAY ){
+			if( tp == NULL ) goto Rebind;
+			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) goto Rebind;
+			if( array2->etype == tp->tid ) goto Rebind;
+			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
+			array2 = & dA->xArray;
+			if( array2->original && DaoArray_Sliced( array2 ) == 0 ) goto FailConversion; 
+
+			array = DaoTypeCast_MakeArray( factory, dC, ct, tp->tid );
+			DaoArray_ResizeArray( array, array2->dims, array2->ndim );
+			for(i=0,size=array2->size; i<size; i++){
+				switch( array->etype ){
+				case DAO_INTEGER : array->data.i[i] = DaoArray_GetInteger( array2, i ); break;
+				case DAO_FLOAT   : array->data.f[i] = DaoArray_GetFloat( array2, i );  break;
+				case DAO_DOUBLE  : array->data.d[i] = DaoArray_GetDouble( array2, i ); break;
+				case DAO_COMPLEX : array->data.c[i] = DaoArray_GetComplex( array2, i ); break;
 				}
-			}else if( dA->type == DAO_LIST ){
-				if( tp == NULL ) goto FailConversion;
-				if( tp->tid ==0 || tp->tid > DAO_COMPLEX ) goto FailConversion;
-				shape = DArray_New(0);
-				type = DaoValue_CheckTypeShape( dA, DAO_UDF, shape, 0, 1 );
-				if( type <0 ) goto FailConversion;
-				array = DaoArray_New( DAO_INTEGER );
-				array->etype = tp->tid;
-				DaoArray_ResizeArray( array, shape->items.pSize, shape->size );
-				DaoValue_ExportValue( dA, array, 0 );
-			}else goto FailConversion;
-			dC = (DaoValue*) array;
-			array->unitype = ct;
-			GC_IncRC( ct );
-			break;
+			}
+		}else if( dA->type == DAO_LIST ){
+			list = & dA->xList;
+			size = list->items.size;
+			if( tp == NULL ) goto FailConversion;
+			if( tp->tid ==0 || tp->tid > DAO_COMPLEX ) goto FailConversion;
+			array = DaoTypeCast_MakeArray( factory, dC, ct, tp->tid );
+			DaoArray_ResizeVector( array, size );
+			for(i=0; i<size; i++){
+				itvalue = list->items.items.pValue[i];
+				if( itvalue->type > DAO_COMPLEX ) goto FailConversion;
+				switch( array->etype ){
+				case DAO_INTEGER : array->data.i[i] = DaoValue_GetInteger( itvalue ); break;
+				case DAO_FLOAT   : array->data.f[i] = DaoValue_GetFloat( itvalue );  break;
+				case DAO_DOUBLE  : array->data.d[i] = DaoValue_GetDouble( itvalue ); break;
+				case DAO_COMPLEX : array->data.c[i] = DaoValue_GetComplex( itvalue ); break;
+				}
+			}
+		}else goto FailConversion;
+		dC = (DaoValue*) array;
+		break;
 #endif
-		case DAO_LIST :
+	case DAO_LIST :
+		if( DaoType_MatchValue( ct, dA, NULL ) >= DAO_MT_EQ ) goto Rebind;
+		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
+
+		if( tp == NULL ) goto FailConversion;
+		if( dC && dC->type == DAO_LIST && dC->xList.refCount == 1 && dC->xList.unitype == ct ){
+			list = (DaoList*) dC;
+		}else{
 			list = DaoList_New();
 			list->unitype = ct;
 			GC_IncRC( ct );
 			dC = (DaoValue*) list;
-			if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-			if( tp == NULL ) goto FailConversion;
-			if( dA->type == DAO_STRING ){
-				str = dA->xString.data;
-				if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
-				DArray_Resize( & list->items, DString_Size( str ), tp->value );
-				data = list->items.items.pValue;
-				if( str->mbs ){
-					for(i=0,n=str->size; i<n; i++){
-						switch( tp->tid ){
-							case DAO_INTEGER : data[i]->xInteger.value = str->mbs[i]; break;
-							case DAO_FLOAT   : data[i]->xFloat.value = str->mbs[i]; break;
-							case DAO_DOUBLE  : data[i]->xDouble.value = str->mbs[i]; break;
-							default : break;
-						}
-					}
-				}else{
-					for(i=0,n=str->size; i<n; i++){
-						switch( tp->tid ){
-							case DAO_INTEGER : data[i]->xInteger.value = str->wcs[i]; break;
-							case DAO_FLOAT   : data[i]->xFloat.value = str->wcs[i]; break;
-							case DAO_DOUBLE  : data[i]->xDouble.value = str->wcs[i]; break;
-							default : break;
-						}
-					}
+		}
+		if( dA->type == DAO_STRING ){
+			str = dA->xString.data;
+			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
+			DArray_Resize( & list->items, DString_Size( str ), tp->value );
+			data = list->items.items.pValue;
+			for(i=0,n=str->size; i<n; i++){
+				wchar_t ch = str->mbs ? str->mbs[i] : str->wcs[i];
+				switch( tp->tid ){
+				case DAO_INTEGER : data[i]->xInteger.value = ch; break;
+				case DAO_FLOAT   : data[i]->xFloat.value = ch; break;
+				case DAO_DOUBLE  : data[i]->xDouble.value = ch; break;
+				default : break;
 				}
-#ifdef DAO_WITH_NUMARRAY
-			}else if( dA->type == DAO_ARRAY ){
-				DaoArray_ToList( & dA->xArray, list, ct, 0, 0 );
-#endif
-			}else if( dA->type == DAO_LIST ){
-				list2 = & dA->xList;
-				DArray_Resize( & list->items, list2->items.size, NULL );
-				data = list->items.items.pValue;
-				data2 = list2->items.items.pValue;
-				for(i=0,n=list2->items.size; i<n; i++ ){
-					V = DaoTypeCast( proc, tp, data2[i], V );
-					if( V == NULL || V->type ==0 ) goto FailConversion;
-					DaoValue_Copy( V, data + i );
-				}
-			}else goto FailConversion;
-			break;
-		case DAO_MAP :
-			if( dA->type != DAO_MAP ) goto FailConversion;
-			map2 = & dA->xMap;
-			if( map2->unitype ){
-				short m = DaoType_MatchTo( map2->unitype, ct, NULL );
-				if( m == DAO_MT_EQ ) goto Rebind;
 			}
+#ifdef DAO_WITH_NUMARRAY
+		}else if( dA->type == DAO_ARRAY ){
+			array = (DaoArray*)dA;
+			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto FailConversion; 
+			DArray_Resize( & list->items, array->size, tp->value );
+			data = list->items.items.pValue;
+			for(i=0,n=array->size; i<n; i++){
+				switch( tp->tid ){
+				case DAO_INTEGER : data[i]->xInteger.value = DaoArray_GetInteger( array, i ); break;
+				case DAO_FLOAT   : data[i]->xFloat.value = DaoArray_GetFloat( array, i );  break;
+				case DAO_DOUBLE  : data[i]->xDouble.value = DaoArray_GetDouble( array, i ); break;
+				case DAO_COMPLEX : data[i]->xComplex.value = DaoArray_GetComplex( array, i ); break;
+				}
+			}
+#endif
+		}else if( dA->type == DAO_LIST ){
+			list2 = & dA->xList;
+			DArray_Resize( & list->items, list2->items.size, NULL );
+			data = list->items.items.pValue;
+			data2 = list2->items.items.pValue;
+			for(i=0,n=list2->items.size; i<n; i++ ){
+				V = DaoTypeCast( proc, tp, data2[i], V );
+				if( V == NULL || V->type ==0 ) goto FailConversion;
+				DaoValue_Copy( V, data + i );
+			}
+		}else goto FailConversion;
+		break;
+	case DAO_MAP :
+		if( dA->type != DAO_MAP ) goto FailConversion;
+		map2 = & dA->xMap;
+		if( DaoType_MatchTo( map2->unitype, ct, NULL ) >= DAO_MT_EQ ) goto Rebind;
+
+		if( dC && dC->type == DAO_MAP && dC->xMap.refCount == 1 && dC->xMap.unitype == ct ){
+			map = (DaoMap*) dC;
+			DMap_Reset( map->items );
+		}else{
 			map = DaoMap_New(0);
 			map->unitype = ct;
 			GC_IncRC( ct );
 			dC = (DaoValue*) map;
-			if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-			if( ct->nested->size >1 ) tp2 = ct->nested->items.pType[1];
-			if( tp == NULL || tp2 == NULL ) goto FailConversion;
-			node = DMap_First( map2->items );
-			for(; node!=NULL; node=DMap_Next(map2->items,node) ){
-				K = DaoTypeCast( proc, tp, node->key.pValue, K );
-				V = DaoTypeCast( proc, tp2, node->value.pValue, V );
-				if( K ==NULL || V ==NULL || K->type ==0 || V->type ==0 ) goto FailConversion;
-				DMap_Insert( map->items, K, V );
+		}
+		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
+		if( ct->nested->size >1 ) tp2 = ct->nested->items.pType[1];
+		if( tp == NULL || tp2 == NULL ) goto FailConversion;
+		node = DMap_First( map2->items );
+		for(; node!=NULL; node=DMap_Next(map2->items,node) ){
+			K = DaoTypeCast( proc, tp, node->key.pValue, K );
+			V = DaoTypeCast( proc, tp2, node->value.pValue, V );
+			if( K ==NULL || V ==NULL || K->type ==0 || V->type ==0 ) goto FailConversion;
+			DMap_Insert( map->items, K, V );
+		}
+		break;
+	case DAO_TUPLE :
+		if( dA->type == DAO_TUPLE ){
+			tuple2 = (DaoTuple*) dA;
+			if( tuple2->unitype == ct || ct->nested->size ==0 ) goto Rebind;
+			if( tuple2->size < ct->nested->size ) goto FailConversion;
+			tuple = DaoTypeCast_MakeTuple( factory, dC, ct, ct->nested->size );
+			for(i=0; i<tuple->size; i++){
+				DaoValue *V = tuple2->items[i];
+				tp2 = ct->nested->items.pType[i];
+				if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
+				V = DaoTypeCast( proc, tp2, V, K );
+				if( V == NULL || V->type == 0 ) goto FailConversion;
+				DaoValue_Copy( V, tuple->items + i );
 			}
-			break;
-		case DAO_TUPLE :
-			if( dA->type == DAO_LIST || dA->type == DAO_TUPLE ){
-				DaoValue **items = NULL;
-				daoint size = 0, tsize = ct->nested->size;
-				if( dA->type == DAO_LIST ){
-					size = dA->xList.items.size;
-					items = dA->xList.items.items.pValue;
-				}else{
-					size = dA->xTuple.size;
-					items = dA->xTuple.items;
+		}else if( dA->type == DAO_LIST ){
+			list = (DaoList*) dA;
+			if( list->items.size < ct->nested->size ) goto FailConversion;
+			tuple = DaoTypeCast_MakeTuple( factory, dC, ct, list->items.size );
+			for(i=0; i<tuple->size; i++){
+				DaoValue *V = list->items.items.pValue[i];
+				if( i < ct->nested->size ){
+					tp2 = ct->nested->items.pType[i];
+					if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
+					V = DaoTypeCast( proc, tp2, V, K );
 				}
-				if( size < tsize ) goto FailConversion;
-				if( tsize ) size = tsize;
-				tuple = DaoTuple_New( size );
-				GC_IncRC( ct );
-				tuple->unitype = ct;
-				dC = (DaoValue*) tuple;
-				for(i=0; i<size; i++){
-					DaoValue *V = items[i];
-					tp = DaoNamespace_GetType( ns, V );
-					if( tsize ){
-						tp2 = ct->nested->items.pType[i];
-						if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
-						/* if( DaoType_MatchTo( tp, tp2, 0 ) ==0 ) goto FailConversion; */
-						V = DaoTypeCast( proc, tp2, V, K );
-					}
-					if( V == NULL || V->type == 0 ) goto FailConversion;
+				if( V == NULL || V->type == 0 ) goto FailConversion;
+				DaoValue_Copy( V, tuple->items + i );
+			}
+		}else if( dA->type == DAO_MAP ){
+			map = (DaoMap*) dA;
+			if( map->items->size < ct->nested->size ) goto FailConversion;
+			tuple = DaoTypeCast_MakeTuple( factory, dC, ct, map->items->size );
+			node = DMap_First( map->items );
+			for(i=0; node!=NULL; i++, node=DMap_Next(map->items,node) ){
+				if( i >= ct->nested->size ){
+					DaoValue_Copy( node->value.pValue, tuple->items + i );
+				}else{
+					tp2 = ct->nested->items.pType[i];
+					if( node->key.pValue->type != DAO_STRING ) goto FailConversion;
+					V = DaoTypeCast( proc, tp2, node->value.pValue, V );
+					if( V == NULL || V->type ==0 ) goto FailConversion;
 					DaoValue_Copy( V, tuple->items + i );
 				}
-			}else if( dA->type == DAO_MAP ){
-				i = 0;
-				tuple = DaoTuple_New( dA->xMap.items->size );
-				dC = (DaoValue*) tuple;
-				tuple->unitype = ct;
-				GC_IncRC( ct );
-				node = DMap_First( dA->xMap.items );
-				for(; node!=NULL; node=DMap_Next(dA->xMap.items,node) ){
-					if( i >= ct->nested->size ){
-						DaoValue_Copy( node->value.pValue, tuple->items + i );
-					}else{
-						tp2 = ct->nested->items.pType[i];
-						if( node->key.pValue->type != DAO_STRING ) goto FailConversion;
-						V = DaoTypeCast( proc, tp2, node->value.pValue, V );
-						if( V == NULL || V->type ==0 ) goto FailConversion;
-						DaoValue_Copy( V, tuple->items + i );
-					}
-					i ++;
-				}
-			}else{
-				goto FailConversion;
 			}
-			break;
-		case DAO_OBJECT :
-			if( dA->type == DAO_CDATA ) dA = (DaoValue*) dA->xCdata.object;
-			/* XXX compiling time checking */
-			if( dA == NULL || dA->type != DAO_OBJECT ) goto FailConversion;
-			dC = DaoObject_CastToBase( & dA->xObject, ct );
-			if( dC == NULL ) goto FailConversion;
-			break;
-		case DAO_CTYPE :
-		case DAO_CDATA :
-			if( dA->type == DAO_CDATA ){
-				if( DaoType_ChildOf( dA->xCdata.ctype, ct ) ){
-					dC = dA;
-					/*
-					 }else if( DaoCdata_ChildOf( ct->typer, dA->typer ) ){
-					 // not work for C++ types, that require reinterpret_cast<>
-					 dA->typer = ct->typer;
-					 dC = dA;
-					 */
-				}else{
-				}
-			}else if( dA->type == DAO_OBJECT ){
-				dC = (DaoValue*) DaoObject_CastToBase( & dA->xObject, ct );
-				if( dC == NULL ) goto FailConversion;
-			}else{
-				goto FailConversion;
-			}
-			break;
-		case DAO_VALTYPE :
-			if( DaoValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
-			dC = dA;
-			break;
-		case DAO_VARIANT :
-			dC = dA;
-			break;
-		default : break;
+		}else{
+			goto FailConversion;
+		}
+		dC = (DaoValue*) tuple;
+		break;
+	case DAO_OBJECT :
+		if( dA->type == DAO_CDATA ) dA = (DaoValue*) dA->xCdata.object;
+		/* XXX compiling time checking */
+		if( dA == NULL || dA->type != DAO_OBJECT ) goto FailConversion;
+		dC = DaoObject_CastToBase( & dA->xObject, ct );
+		if( dC == NULL ) goto FailConversion;
+		break;
+	case DAO_CTYPE :
+	case DAO_CDATA :
+		dC = NULL;
+		if( dA->type == DAO_CDATA ){
+			if( DaoType_ChildOf( dA->xCdata.ctype, ct ) ) dC = dA;
+		}else if( dA->type == DAO_OBJECT ){
+			dC = (DaoValue*) DaoObject_CastToBase( & dA->xObject, ct );
+		}
+		if( dC == NULL ) goto FailConversion;
+		break;
+	case DAO_VALTYPE :
+		if( DaoValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
+		dC = dA;
+		break;
+	case DAO_VARIANT :
+		dC = dA;
+		break;
+	default : break;
 	}
-	if( wcs ) DString_Delete( wcs );
-	if( shape ) DArray_Delete( shape );
 	return dC;
-	Rebind :
-	if( wcs ) DString_Delete( wcs );
-	if( shape ) DArray_Delete( shape );
-#ifdef DAO_WITH_NUMARRAY
-	if( array ) DaoArray_Delete( array );
-#endif
+Rebind :
 	return dA;
-	FailConversion :
-	if( wcs ) DString_Delete( wcs );
-	if( shape ) DArray_Delete( shape );
-#ifdef DAO_WITH_NUMARRAY
-	if( array ) DaoArray_Delete( array );
-#endif
-	if( map ) DaoMap_Delete( map );
-	if( list ) DaoList_Delete( list );
-	if( tuple ) DaoTuple_Delete( tuple );
+FailConversion :
 	return NULL;
 }
 int DaoProcess_CheckFE( DaoProcess *self )
