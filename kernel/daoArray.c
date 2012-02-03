@@ -336,13 +336,14 @@ void DArray_PushFront( DArray *self, void *val )
 	self->size ++;
 	self->offset --;
 }
-void DArray_PopFront( DArray *self )
+void* DArray_PopFront( DArray *self )
 {
-	void **buf = self->items.pVoid - self->offset;
+	void *ret, **buf = self->items.pVoid - self->offset;
 	size_t moffset = ((size_t)-1)>>4;
-	if( self->size == 0 ) return;
+	if( self->size == 0 ) return NULL;
 	self->size --;
 	self->offset ++;
+	ret = self->items.pVoid[0];
 	if( self->type ) DArray_DeleteItem( self, self->items.pVoid[0] );
 	self->items.pVoid ++;
 	if( self->offset >= moffset ){
@@ -359,6 +360,8 @@ void DArray_PopFront( DArray *self )
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
 	}
+	if( self->type ) return NULL;
+	return ret;
 }
 void DArray_PushBack( DArray *self, void *val )
 {
@@ -375,11 +378,12 @@ void DArray_PushBack( DArray *self, void *val )
 	}
 	self->size++;
 }
-void DArray_PopBack( DArray *self )
+void* DArray_PopBack( DArray *self )
 {
-	void **buf = self->items.pVoid - self->offset;
-	if( self->size == 0 ) return;
+	void *ret, **buf = self->items.pVoid - self->offset;
+	if( self->size == 0 ) return NULL;
 	self->size --;
+	ret = self->items.pVoid[ self->size ];
 	if( self->type ) DArray_DeleteItem( self, self->items.pVoid[ self->size ] );
 	if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
 		if( self->offset < 0.1 * self->bufsize ){ /* shrink from back */
@@ -391,6 +395,8 @@ void DArray_PopBack( DArray *self )
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
 	}
+	if( self->type ) return NULL;
+	return ret;
 }
 void  DArray_SetItem( DArray *self, daoint index, void *value )
 {

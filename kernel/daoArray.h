@@ -66,10 +66,10 @@ DAO_DLL void DArray_InsertArray( DArray *self, daoint at, DArray *array, daoint 
 DAO_DLL void DArray_AppendArray( DArray *self, DArray *array );
 DAO_DLL void DArray_Erase( DArray *self, daoint start, daoint n );
 DAO_DLL void DArray_PushFront( DArray *self, void *val );
-DAO_DLL void DArray_PopFront( DArray *self );
 DAO_DLL void DArray_PushBack( DArray *self, void *val );
-DAO_DLL void DArray_PopBack( DArray *self );
 
+DAO_DLL void* DArray_PopFront( DArray *self );
+DAO_DLL void* DArray_PopBack( DArray *self );
 DAO_DLL void* DArray_Front( DArray *self );
 DAO_DLL void* DArray_Back( DArray *self );
 

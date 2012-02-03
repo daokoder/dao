@@ -2885,7 +2885,7 @@ static void DaoMap_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, D
 static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
 	DaoMap *self = & self0->xMap;
-	DaoMap *map = DaoProcess_PutMap( proc );
+	DaoMap *map = DaoProcess_PutMap( proc, self->items->hashing );
 	DNode *node1 = DMap_First( self->items );
 	DNode *node2 = NULL;
 	if( ids[0]->type ) node1 = MAP_FindGE( self->items, ids[0] );

@@ -4282,7 +4282,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	return end;
 }
-void DaoParser_SetupBranching( DaoParser *self )
+static int DaoParser_SetupBranching( DaoParser *self )
 {
 	DaoInode *it, *it2 = NULL;
 	int id = 0, unused = 0;
@@ -4309,6 +4309,24 @@ void DaoParser_SetupBranching( DaoParser *self )
 	}
 
 	for(it=self->vmcFirst; it; it=it->next) it->index = id ++;
+	if( self->regCount > 0xefff || id > 0xefff ){
+		/*
+		// Though Dao VM instructions can hold operand id or jump id as big as 0xffff,
+		// the type inference procedure may need to allocate additional registers, or
+		// add additional instructions to handle code specialization or type casting.
+		*/
+		char buf[50];
+		if( id > 0xefff ){
+			sprintf( buf, "instructions (%i)!", id );
+		}else{
+			sprintf( buf, "virtual registers (%i)!", self->regCount );
+		}
+		DString_SetMBS( self->mbs, "too big function with too many " );
+		DString_AppendMBS( self->mbs, buf );
+		DaoParser_Error( self, DAO_CTW_INTERNAL, self->mbs );
+		DaoParser_PrintError( self, 0, 0, NULL );
+		return 0;
+	}
 	/*
 	DaoParser_PrintCodes( self );
 	 */
@@ -4374,6 +4392,7 @@ void DaoParser_SetupBranching( DaoParser *self )
 #if 0
 	//self->regCount ++; /* TODO: check */
 #endif
+	return 1;
 }
 int DaoParser_ParseRoutine( DaoParser *self )
 {
@@ -4685,7 +4704,7 @@ int DaoParser_PostParsing( DaoParser *self )
 	int i, j, k;
 
 	DaoRoutine_SetSource( routine, self->tokens, routine->nameSpace );
-	DaoParser_SetupBranching( self );
+	if( DaoParser_SetupBranching( self ) == 0 ) return 0;
 
 	if( self->bindtos ){
 		DArray *fails = DArray_New(0);
