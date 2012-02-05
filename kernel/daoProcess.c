@@ -55,8 +55,10 @@ static void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoList( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc );
@@ -852,7 +854,8 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_NAMEVA , && LAB_PAIR ,
 		&& LAB_TUPLE  , && LAB_LIST ,
 		&& LAB_MAP    , && LAB_HASH ,
-		&& LAB_ARRAY  , && LAB_MATRIX ,
+		&& LAB_VECTOR , && LAB_MATRIX ,
+		&& LAB_APLIST , && LAB_APVECTOR ,
 		&& LAB_CURRY  , && LAB_MCURRY ,
 		&& LAB_ROUTINE , && LAB_CLASS ,
 		&& LAB_GOTO ,
@@ -860,11 +863,10 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_ITER , && LAB_TEST ,
 		&& LAB_MATH ,
 		&& LAB_CALL , && LAB_MCALL ,
-		&& LAB_CRRE ,
-		&& LAB_JITC ,
-		&& LAB_RETURN ,
-		&& LAB_YIELD ,
+		&& LAB_RETURN , && LAB_YIELD ,
+		&& LAB_TRY , && LAB_RAISE , && LAB_CATCH ,
 		&& LAB_DEBUG ,
+		&& LAB_JITC ,
 		&& LAB_SECT ,
 
 		&& LAB_DATA_I , && LAB_DATA_F , && LAB_DATA_D ,
@@ -1134,7 +1136,7 @@ CallEntry:
 	/* Check if an exception has been raisen by a function call: */
 	if( self->exceptions->size ){ /* yes */
 		if( topFrame->depth == 0 ) goto FinishCall; /* should never happen */
-		/* jump to the proper CRRE instruction to handle the exception,
+		/* jump to the proper catch instruction to handle the exception,
 		 * or jump to the last RETURN instruction to defer the handling to
 		 * its caller. */
 		topFrame->depth --;
@@ -1367,10 +1369,14 @@ CallEntry:
 		}OPNEXT() OPCASE( MAP ) OPCASE( HASH ){
 			self->activeCode = vmc;
 			DaoProcess_DoMap( self, vmc );
-		}OPNEXT() OPCASE( ARRAY ){
-			DaoProcess_DoArray( self, vmc );
+		}OPNEXT() OPCASE( VECTOR ){
+			DaoProcess_DoVector( self, vmc );
 		}OPNEXT() OPCASE( MATRIX ){
 			DaoProcess_DoMatrix( self, vmc );
+		}OPNEXT() OPCASE( APLIST ){
+			DaoProcess_DoAPList( self, vmc );
+		}OPNEXT() OPCASE( APVECTOR ){
+			DaoProcess_DoAPVector( self, vmc );
 		}OPNEXT() OPCASE( CURRY ) OPCASE( MCURRY ){
 			DaoProcess_DoCurry( self, vmc );
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
@@ -1446,7 +1452,7 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_MakeClass( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( CRRE ){
+		}OPNEXT() OPCASE( TRY ) OPCASE( RAISE ) OPCASE( CATCH ){
 			DaoProcess_CheckFE( self );
 			exceptCount = self->exceptions->size;
 			self->activeCode = vmc;
@@ -1462,15 +1468,6 @@ CallEntry:
 					vmc = vmcBase + range[1];
 					topFrame->depth --;
 					OPJUMP()
-				}else if( vmc->c > 0 ){
-					/* add exception scope for: try{ ... } */
-					if( topFrame->depth < DVM_MAX_TRY_DEPTH )
-						DaoStackFrame_PushRange( topFrame, size, vmc->c );
-					else
-						printf( "too many nested try{} statements\n" );
-				}else if( topFrame->depth >0 && size >= range[1] ){
-					/* remove a pair of exception scope, when it becomes invalid: */
-					topFrame->depth --;
 				}
 			}else if( vmc->c == 0 ){
 				self->activeCode = vmc;
@@ -4309,50 +4306,39 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 }
 
 
-void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc );
 void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoNamespace *ns = self->activeNamespace;
 	DaoValue **regValues = self->activeValues;
+	const int bval = vmc->b;
 	const ushort_t opA = vmc->a;
 	int i;
-	
-	if( vmc->b == 0 || vmc->b >= 10 ){
-		const int bval = vmc->b ? vmc->b - 10 : 0;
-		DaoList *list = DaoProcess_GetList( self, vmc );
-		DArray_Resize( & list->items, bval, NULL );
-		if( bval >0 && self->activeTypes[ vmc->c ] ==NULL ){
-			DaoType *abtp = DaoNamespace_GetType( ns, regValues[opA] );
-			DaoType *t = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
-			GC_ShiftRC( t, list->unitype );
-			list->unitype = t;
+
+	DaoList *list = DaoProcess_GetList( self, vmc );
+	DArray_Resize( & list->items, bval, NULL );
+	if( bval >0 && self->activeTypes[ vmc->c ] ==NULL ){
+		DaoType *abtp = DaoNamespace_GetType( ns, regValues[opA] );
+		DaoType *t = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
+		GC_ShiftRC( t, list->unitype );
+		list->unitype = t;
+	}
+	for( i=0; i<bval; i++){
+		if( DaoList_SetItem( list, regValues[opA+i], i ) ){
+			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
+			return;
 		}
-		for( i=0; i<bval; i++){
-			if( DaoList_SetItem( list, regValues[opA+i], i ) ){
-				DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
-				return;
-			}
-		}
-	}else{
-		DaoProcess_DoRange( self, vmc );
 	}
 }
-static void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc );
-void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
-	const ushort_t count = vmc->b - 10;
+	const ushort_t count = vmc->b;
 	daoint *dims = NULL;
 	daoint i, j, k = 0;
 	int m, ndim = 0;
-	DaoArray *array = NULL;
-	
-	if( vmc->b < 10 ){
-		DaoProcess_DoNumRange( self, vmc );
-		return;
-	}
-	array = DaoProcess_GetArray( self, vmc );
+	DaoArray *array = DaoProcess_GetArray( self, vmc );
+
 	if( count && (array->unitype == NULL || array->unitype == dao_array_any) ){
 		DaoNamespace *ns = self->activeNamespace;
 		DaoValue *p = self->activeValues[opA];
@@ -4463,7 +4449,7 @@ void DaoProcess_DoArray( DaoProcess *self, DaoVmCode *vmc )
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 #endif
 }
-void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 {
 	const ushort_t opA = vmc->a;
 	const ushort_t bval = vmc->b;
@@ -4589,7 +4575,7 @@ void DaoProcess_DoRange(  DaoProcess *self, DaoVmCode *vmc )
 		list->unitype = tp;
 	}
 }
-void DaoProcess_DoNumRange( DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
@@ -4806,8 +4792,8 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 	DaoArray *array = NULL;
 	daoint dim[2];
 
-	dim[0] = (0xff00 & bval)>>8;
-	dim[1] = 0xff & bval;
+	dim[0] = bval >> 8;
+	dim[1] = bval & 0xff;
 	size = dim[0] * dim[1];
 	array = DaoProcess_GetArray( self, vmc );
 	if( size ){
@@ -6897,11 +6883,26 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 
 int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 {
+	DaoStackFrame *topFrame = self->topFrame;
 	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
+	ushort_t *range = topFrame->ranges[ topFrame->depth-1 ];
+	daoint size = (daoint)(vmc - topFrame->codes);
+
 	DaoList_Clear( list );
 	self->activeCode = vmc;
 	if( DaoProcess_CheckFE( self ) ) return 1;
-	return ( self->exceptions->size > 0 );
+	if( self->exceptions->size > 0 ) return 1;
+	if( vmc->c > 0 ){
+		/* add exception scope for: try{ ... } */
+		if( topFrame->depth < DVM_MAX_TRY_DEPTH )
+			DaoStackFrame_PushRange( topFrame, size, vmc->c );
+		else
+			printf( "too many nested try{} statements\n" );
+	}else if( topFrame->depth >0 && size >= range[1] ){
+		/* remove a pair of exception scope, when it becomes invalid: */
+		topFrame->depth --;
+	}
+	return 0;
 }
 static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, int fe, const char *value )
 {
@@ -6956,7 +6957,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue **excepts = self->activeValues + vmc->a;
 	DaoValue *val;
 	ushort_t i, line = 0, line2 = 0;
-	ushort_t N = vmc->b -1;
+	ushort_t N = vmc->b;
 	line2 = line;
 	if( N == 0 && list->items.size >0 ){
 		N = list->items.size;
@@ -7002,7 +7003,7 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *val, *val2;
 	DaoCdata *cdata;
 	ushort_t i, j;
-	ushort_t N = vmc->b -1;
+	ushort_t N = vmc->b;
 	int canRescue = 0;
 	int M = self->exceptions->size;
 	DaoList_Clear( list );
@@ -7258,8 +7259,8 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	case DVM_MAP :
 	case DVM_HASH :
 		DaoProcess_DoMap( self, vmc ); break;
-	case DVM_ARRAY :
-		DaoProcess_DoArray( self, vmc ); break;
+	case DVM_VECTOR :
+		DaoProcess_DoVector( self, vmc ); break;
 	case DVM_MATRIX :
 		DaoProcess_DoMatrix( self, vmc ); break;
 	case DVM_MATH :

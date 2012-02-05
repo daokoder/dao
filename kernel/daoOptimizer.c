@@ -41,35 +41,92 @@ void DaoCodeNode_Delete( DaoCodeNode *self )
 	DMap_Delete( self->set );
 	dao_free( self );
 }
-
-
-DaoFlowGraph* DaoFlowGraph_New()
+void DaoCodeNode_Clear( DaoCodeNode *self )
 {
-	DaoFlowGraph *self = (DaoFlowGraph*) dao_malloc( sizeof(DaoFlowGraph) );
-	self->nodes = DArray_New(0);
-	self->inits = DHash_New(0,0);
-	self->finals = DHash_New(0,0);
-	self->least = DHash_New(0,0);
-	self->extreme = DHash_New(0,0);
+	self->ins->size = self->outs->size = 0;
+	DMap_Reset( self->set );
+}
+
+static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine );
+
+DaoOptimizer* DaoOptimizer_New()
+{
+	DaoOptimizer *self = (DaoOptimizer*) dao_malloc( sizeof(DaoOptimizer) );
+	self->routine = NULL;
+	self->nodeCache  = DArray_New(0); /* DArray<DaoCodeNode*> */
+	self->arrayCache = DArray_New(D_ARRAY); /* DArray<DArray<DaoCodeNode*>> */
+	self->nodes = DArray_New(0);  /* DArray<DaoCodeNode*> */
+	self->uses  = DArray_New(0);  /* DArray<DArray<DaoCodeNode*>> */
+	self->exprs = DHash_New(D_VMCODE,0); /* DMap<DaoVmCode*,int> */
+	self->inits = DHash_New(0,0);   /* DMap<DaoCodeNode*,int> */
+	self->finals = DHash_New(0,0);  /* DMap<DaoCodeNode*,int> */
+	self->least = DHash_New(0,0);   /* DMap<int,int> */
+	self->extreme = DHash_New(0,0); /* DMap<int,int> */
+	self->tmp = DHash_New(0,0);
+	self->tmp2 = DArray_New(0);
+	self->reverseFlow = 0;
+	self->updater = NULL;
 	return self;
 }
-void DaoFlowGraph_Clear( DaoFlowGraph *self )
+void DaoOptimizer_Clear( DaoOptimizer *self )
 {
 	DArray *nodes = self->nodes;
-	daoint i;
-	for(i=0; i<nodes->size; i++) DaoCodeNode_Delete( (DaoCodeNode*) nodes->items.pVoid[i] );
-	DArray_Clear( nodes );
+	self->nodes->size = 0;
+	self->uses->size = 0;
+	DMap_Reset( self->inits );
+	DMap_Reset( self->finals );
+	DMap_Reset( self->exprs );
+	DMap_Reset( self->least );
+	DMap_Reset( self->extreme );
 }
-void DaoFlowGraph_Delete( DaoFlowGraph *self )
+void DaoOptimizer_Delete( DaoOptimizer *self )
 {
-	DaoFlowGraph_Clear( self );
-	DArray_Clear( self->nodes );
+	daoint i;
+	for(i=0; i<self->nodeCache->size; i++)
+		DaoCodeNode_Delete( (DaoCodeNode*) self->nodeCache->items.pVoid[i] );
+	DArray_Delete( self->nodeCache );
+	DArray_Delete( self->arrayCache );
+	DArray_Delete( self->nodes );
+	DArray_Delete( self->uses );
+	DArray_Delete( self->tmp2 );
+	DMap_Delete( self->inits );
+	DMap_Delete( self->finals );
+	DMap_Delete( self->exprs );
+	DMap_Delete( self->least );
+	DMap_Delete( self->extreme );
+	DMap_Delete( self->tmp );
 	dao_free( self );
 }
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output );
+static void DaoOptimizer_Print( DaoOptimizer *self )
+{
+	DNode *it;
+	DaoRoutine *routine = self->routine;
+	DaoStream *stream = routine->nameSpace->vmSpace->stdioStream;
+	DaoVmCodeX **vmCodes = routine->body->annotCodes->items.pVmc;
+	DString *annot = DString_New(1);
+	daoint j, n;
 
-typedef void (*TransferFunction)( DaoCodeNode*, DMap* );
+	DaoStream_WriteMBS( stream, "============================================================\n" );
+	DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
+	for( j=0,n=routine->body->annotCodes->size; j<n; j++){
+		DaoCodeNode *node = (DaoCodeNode*)self->nodes->items.pVoid[j];
+		DaoRoutine_FormatCode( routine, j, annot );
+		DString_Chop( annot );
+		while( annot->size < 80 ) DString_AppendChar( annot, ' ' );
+		DString_AppendMBS( annot, "| " );
+		DaoStream_WriteString( stream, annot );
+		for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
+			DaoStream_WriteInt( stream, it->key.pInt );
+			DaoStream_WriteMBS( stream, ", " );
+		}
+		DaoStream_WriteMBS( stream, "\n" );
+	}
+	DString_Delete( annot );
+}
 
-static int DaoMF_Contains( DMap *A, DMap *B )
+
+static int DaoOptimizer_Contains( DMap *A, DMap *B )
 {
 	DNode *it;
 	for(it=DMap_First(B); it; it=DMap_Next(B,it)){
@@ -77,8 +134,121 @@ static int DaoMF_Contains( DMap *A, DMap *B )
 	}
 	return 1;
 }
+static void DaoOptimizer_AEAKill( DaoOptimizer *self, DMap *set, int kill )
+{
+	daoint i;
+	DArray *kills = self->uses->items.pArray[kill];
+	for(i=0; i<kills->size; i++){
+		DaoCodeNode *node = (DaoCodeNode*) kills->items.pVoid[i];
+		if( node->exprid != 0xffff ) MAP_Erase( set, node->exprid );
+	}
+}
+/* Transfer function for Available Expression Analysis: */
+static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCodeNode *node, DMap *out )
+{
+	DaoType **types = self->routine->body->regType->items.pType;
+	daoint code = self->routine->body->annotCodes->items.pVmc[node->index]->code;
+	/* node->third is the C operand for SETI, SETDI, SETMI, SETF and SETMF: */
+	daoint killAE = node->lvalue != 0xffff ? node->lvalue : node->third;
+	daoint genAE = node->exprid;
+	daoint i, at, bt, ct, overload;
+
+	DMap_Assign( out, node->set );
+	if( killAE != 0xffff ) DaoOptimizer_AEAKill( self, out, killAE );
+
+	/* Check if the operation may modify its arguments or operands: */
+	code = DaoVmCode_GetOpcodeType( code );
+	switch( code ){
+	case DAO_CODE_CALL :
+	case DAO_CODE_YIELD :
+		for(i=node->first; i<=node->second; i++) DaoOptimizer_AEAKill( self, out, i );
+		break;
+	case DAO_CODE_GETF :
+	case DAO_CODE_GETI :
+	case DAO_CODE_GETM :
+		at = types[node->first] ? types[node->first]->tid : 0;
+		overload = at == 0 || at == DAO_ANY || at == DAO_INITYPE || at == DAO_VARIANT;
+		overload |= at >= DAO_OBJECT && at <= DAO_CTYPE;
+		if( overload == 0 ) break;
+		DaoOptimizer_AEAKill( self, out, node->first );
+		/* node->lvalue must have been killed; */
+		if( code != DAO_CODE_GETM ) break;
+		for(i=node->first; i<=node->second; i++) DaoOptimizer_AEAKill( self, out, i );
+		break;
+	case DAO_CODE_SETF :
+	case DAO_CODE_SETI :
+	case DAO_CODE_SETM :
+		ct = code == DAO_CODE_SETF ? node->second : node->third;
+		ct = types[ct] ? types[ct]->tid : 0;
+		overload = ct == 0 || ct == DAO_ANY || ct == DAO_INITYPE || ct == DAO_VARIANT;
+		overload |= ct >= DAO_OBJECT && ct <= DAO_CTYPE;
+		if( overload == 0 ) break;
+		DaoOptimizer_AEAKill( self, out, node->first );
+		if( code == DAO_CODE_SETF ) DaoOptimizer_AEAKill( self, out, node->second );
+		/* node->third must have been killed; */
+		if( code != DAO_CODE_SETM ) break;
+		for(i=node->first; i<=node->second; i++) DaoOptimizer_AEAKill( self, out, i );
+		break;
+	case DAO_CODE_MOVE :
+	case DAO_CODE_UNARY :
+		at = types[node->first] ? types[node->first]->tid : 0;
+		ct = types[node->lvalue] ? types[node->lvalue]->tid : 0;
+		overload = at == 0 || at == DAO_ANY || at == DAO_INITYPE || at == DAO_VARIANT;
+		overload |= ct == 0 || ct == DAO_ANY || ct == DAO_INITYPE || ct == DAO_VARIANT;
+		overload |= at >= DAO_OBJECT && at <= DAO_CTYPE;
+		overload |= ct >= DAO_OBJECT && ct <= DAO_CTYPE;
+		if( overload == 0 ) break;
+		DaoOptimizer_AEAKill( self, out, node->first );
+		/* node->lvalue must have been killed; */
+		break;
+	case DAO_CODE_BINARY :
+		at = types[node->first] ? types[node->first]->tid : 0;
+		bt = types[node->second] ? types[node->second]->tid : 0;
+		ct = types[node->lvalue] ? types[node->lvalue]->tid : 0;
+		overload = at == 0 || at == DAO_ANY || at == DAO_INITYPE || at == DAO_VARIANT;
+		overload |= bt == 0 || bt == DAO_ANY || bt == DAO_INITYPE || bt == DAO_VARIANT;
+		overload |= ct == 0 || ct == DAO_ANY || ct == DAO_INITYPE || ct == DAO_VARIANT;
+		overload |= at >= DAO_OBJECT && at <= DAO_CTYPE;
+		overload |= bt >= DAO_OBJECT && bt <= DAO_CTYPE;
+		overload |= ct >= DAO_OBJECT && ct <= DAO_CTYPE;
+		if( overload == 0 ) break;
+		DaoOptimizer_AEAKill( self, out, node->first );
+		DaoOptimizer_AEAKill( self, out, node->second );
+		/* node->lvalue must have been killed; */
+		break;
+	}
+
+	if( node->first == killAE || node->second == killAE || node->third == killAE ){
+		genAE = 0xffff;
+	}else if( node->type == DAO_OP_RANGE ){
+		if( node->first <= killAE && killAE <= node->second ) genAE = 0xffff;
+	}else if( node->type == DAO_OP_RANGE2 ){
+		genAE = 0xffff;
+	}
+	if( genAE != 0xffff ) MAP_Insert( out, genAE, 0 );
+}
+static int DaoOptimizer_UpdateAEA( DaoOptimizer *self, DaoCodeNode *first, DaoCodeNode *second )
+{
+	daoint i;
+	DNode *it;
+	DMap *set = self->tmp;
+
+	DMap_Reset( set );
+	DaoOptimizer_AEA( self, first, set );
+	if( second == NULL ){
+		DMap_Assign( first->set, set );
+		return 0;
+	}
+	if( DaoOptimizer_Contains( set, second->set ) ) return 0;
+	self->tmp2->size = 0;
+	for(it=DMap_First(second->set); it; it=DMap_Next(second->set,it)){
+		if( MAP_Find( set, it->key.pVoid ) == NULL ) DArray_Append( self->tmp2, it->key.pVoid );
+	}
+	for(i=0; i<self->tmp2->size; i++) DMap_Erase( second->set, self->tmp2->items.pVoid[i] );
+	return 1;
+}
 /* Transfer function for Live Variable Analysis: */
-static void DaoMF_LVA( DaoCodeNode *node, DMap *out )
+static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCodeNode *node, DMap *out )
 {
 	ushort_t i;
 	DMap_Assign( out, node->set );
@@ -97,25 +267,37 @@ static void DaoMF_LVA( DaoCodeNode *node, DMap *out )
 		MAP_Insert( out, node->third, 0 );
 		break;
 	case DAO_OP_RANGE :
+	case DAO_OP_RANGE2 :
 		for(i=node->first; i<=node->second; i++) MAP_Insert( out, i, 0 );
+		if( node->type == DAO_OP_RANGE2 ) MAP_Insert( out, node->third, 0 );
 		break;
 	}
 }
-static void DaoMF_ProcessWorklist( DArray *worklist, TransferFunction trans, int reverse )
+static int DaoOptimizer_UpdateLVA( DaoOptimizer *self, DaoCodeNode *first, DaoCodeNode *second )
+{
+	DNode *it;
+	DMap *set = self->tmp;
+	DMap_Reset( set );
+	DaoOptimizer_LVA( self, first, set );
+	if( second == NULL ){
+		DMap_Assign( first->set, set );
+		return 0;
+	}
+	if( DaoOptimizer_Contains( second->set, set ) ) return 0;
+	for(it=DMap_First(set); it; it=DMap_Next(set,it)){
+		DMap_Insert( second->set, it->key.pVoid, NULL );
+	}
+	return 1;
+}
+static void DaoOptimizer_ProcessWorklist( DaoOptimizer *self, DArray *worklist )
 {
 	daoint i;
-	DNode *it;
-	DMap *set = DHash_New(0,0);
 	while( worklist->size ){
 		DaoCodeNode *second = (DaoCodeNode*) DArray_PopBack( worklist );
 		DaoCodeNode *first = (DaoCodeNode*) DArray_PopBack( worklist );
-		DMap_Reset( set );
-		(*trans)( first, set );
-		if( DaoMF_Contains( second->set, set ) ) continue;
-		for(it=DMap_First(set); it; it=DMap_Next(set,it)){
-			DMap_Insert( second->set, it->key.pVoid, NULL );
-		}
-		if( reverse ){
+		//printf( "%9i\n", (int)worklist->size );
+		if( self->updater( self, first, second ) == 0 ) continue;
+		if( self->reverseFlow ){
 			for(i=0; i<second->ins->size; i++){
 				DArray_PushBack( worklist, second );
 				DArray_PushBack( worklist, second->ins->items.pVoid[i] );
@@ -127,32 +309,31 @@ static void DaoMF_ProcessWorklist( DArray *worklist, TransferFunction trans, int
 			}
 		}
 	}
-	DMap_Delete( set );
 }
-static void DaoMF_SolveFlowEquation( DaoFlowGraph *flow, TransferFunction trans, int reverse )
+static void DaoOptimizer_SolveFlowEquation( DaoOptimizer *self )
 {
-	DMap *set = DHash_New(0,0);
+	DMap *set = self->tmp;
 	DArray *worklist = DArray_New(0);
-	DaoCodeNode *node, **nodes = (DaoCodeNode**) flow->nodes->items.pVoid;
-	daoint i, j, N = flow->nodes->size;
+	DaoCodeNode *node, **nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	daoint i, j, N = self->nodes->size;
 	for(i=0; i<N; i++){
 		node = nodes[i];
 		DMap_Reset( node->set );
-		if( reverse ){
-			if( DMap_Find( flow->finals, node ) ){
-				DMap_Assign( node->set, flow->extreme );
+		if( self->reverseFlow ){
+			if( DMap_Find( self->finals, node ) ){
+				DMap_Assign( node->set, self->extreme );
 			}else{
-				DMap_Assign( node->set, flow->least );
+				DMap_Assign( node->set, self->least );
 			}
 			for(j=0; j<node->outs->size; j++){
 				DArray_PushBack( worklist, node->outs->items.pVoid[j] );
 				DArray_PushBack( worklist, node );
 			}
 		}else{
-			if( DMap_Find( flow->inits, node ) ){
-				DMap_Assign( node->set, flow->extreme );
+			if( DMap_Find( self->inits, node ) ){
+				DMap_Assign( node->set, self->extreme );
 			}else{
-				DMap_Assign( node->set, flow->least );
+				DMap_Assign( node->set, self->least );
 			}
 			for(j=0; j<node->outs->size; j++){
 				DArray_PushBack( worklist, node );
@@ -160,44 +341,59 @@ static void DaoMF_SolveFlowEquation( DaoFlowGraph *flow, TransferFunction trans,
 			}
 		}
 	}
-	DaoMF_ProcessWorklist( worklist, trans, reverse );
-	for(i=0; i<N; i++){
-		node = nodes[i];
-		DMap_Reset( set );
-		(*trans)( node, set );
-		DMap_Assign( node->set, set );
-	}
+	DaoOptimizer_ProcessWorklist( self, worklist );
+	//XXX for(i=0; i<N; i++) self->updater( self, nodes[i], NULL );
 	DArray_Delete( worklist );
-	DMap_Delete( set );
 }
 
-void DaoRoutine_BuildFlowGraph( DaoRoutine *self, DaoFlowGraph *graph )
+/* Optimization should be done on routine->body->annotCodes,
+// which should not contain opcodes such as DEBUG, JITC or SAFE_GOTO etc. */
+static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DaoCodeNode *node, **nodes;
-	DaoVmCode *vmc, *codes = self->body->vmCodes->codes;
-	daoint i, j, k, N = self->body->vmCodes->size;
-	DaoFlowGraph_Clear( graph );
-	for(i=0; i<N; i++){
-		node = DaoCodeNode_New();
-		node->index = i;
-		DaoRoutine_GetCodeOperands( self, & codes[i], node );
-		DArray_Append( graph->nodes, node );
+	DaoVmCode *vmc, **codes = (DaoVmCode**)routine->body->annotCodes->items.pVmc;
+	daoint N = routine->body->annotCodes->size;
+	daoint M = routine->body->regCount;
+	daoint i, j, k;
+
+	self->routine = routine;
+	DaoOptimizer_Clear( self );
+	if( self->nodeCache->size < N ) DArray_Resize( self->nodeCache, N, NULL );
+	if( self->arrayCache->size < M ){
+		DArray *array = DArray_New(0);
+		DArray_Resize( self->arrayCache, M, array );
+		DArray_Delete( array );
 	}
-	nodes = (DaoCodeNode**) graph->nodes->items.pVoid;
-	DMap_Insert( graph->inits, nodes[0], NULL );
+	for(i=0; i<M; i++){
+		DArray *array = self->arrayCache->items.pArray[i];
+		DArray_Append( self->uses, array );
+		array->size = 0;
+	}
 	for(i=0; i<N; i++){
-		vmc = codes + i;
+		node = (DaoCodeNode*) self->nodeCache->items.pVoid[i];
+		if( node == NULL ){
+			node = DaoCodeNode_New();
+			self->nodeCache->items.pVoid[i] = node;
+		}
+		node->index = i;
+		DaoOptimizer_InitNode( self, node, codes[i] );
+		DArray_Append( self->nodes, node );
+	}
+	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	DMap_Insert( self->inits, nodes[0], NULL );
+	for(i=0; i<N; i++){
+		vmc = codes[i];
 		node = nodes[i];
 		if( i && vmc->code != DVM_CASE ){
-			k = codes[i-1].code;
-			if( k != DVM_GOTO && k != DVM_SAFE_GOTO && k != DVM_RETURN ){
+			k = codes[i-1]->code;
+			if( k != DVM_GOTO && k != DVM_RETURN ){
 				DArray_Append( nodes[i-1]->outs, node );
 				DArray_Append( node->ins, nodes[i-1] );
 			}
 		}
 		switch( vmc->code ){
-		case DVM_TEST : case DVM_GOTO : case DVM_SAFE_GOTO :
-		case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
+		case DVM_GOTO : case DVM_CASE : 
+		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
 			DArray_Append( node->outs, nodes[vmc->b] );
 			DArray_Append( nodes[vmc->b]->ins, node );
 			break;
@@ -209,122 +405,275 @@ void DaoRoutine_BuildFlowGraph( DaoRoutine *self, DaoFlowGraph *graph )
 				DArray_Append( nodes[i+j]->ins, node );
 			}
 			break;
-		case DVM_CASE : 
-			DArray_Append( node->outs, nodes[vmc->b] );
-			DArray_Append( nodes[vmc->b]->ins, node );
+		case DVM_CATCH :
+			DArray_Append( node->outs, nodes[vmc->c] );
+			DArray_Append( nodes[vmc->c]->ins, node );
 			break;
-		case DVM_JITC :
-#warning"==================================="
-			break;
-		case DVM_CRRE :
-#warning"==================================="
-			break;
-		case DVM_RETURN :
-			DMap_Insert( graph->finals, node, NULL );
-			break;
+		case DVM_RETURN : DMap_Insert( self->finals, node, NULL ); break;
+		case DVM_SECT   : DMap_Insert( self->inits, node, NULL ); break;
 		default : break;
 		}
+	}
+}
+static void DaoOptimizer_InitAEA( DaoOptimizer *self )
+{
+	DNode *it;
+	self->reverseFlow = 0;
+	self->updater = DaoOptimizer_UpdateAEA;
+	DMap_Reset( self->extreme );
+	DMap_Reset( self->least );
+	for(it=DMap_First(self->exprs); it; it=DMap_Next(self->exprs,it))
+		MAP_Insert( self->least, it->value.pVoid, 0 );
+}
+static void DaoOptimizer_InitLVA( DaoOptimizer *self )
+{
+	self->reverseFlow = 1;
+	self->updater = DaoOptimizer_UpdateLVA;
+	DMap_Reset( self->extreme );
+	DMap_Reset( self->least );
+}
+
+static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
+{
+	DNode *it;
+	DMap *localVarType = self->body->localVarType;
+	DaoType **types = self->body->regType->items.pType;
+	DaoVmCode *vmc, *codes = self->body->vmCodes->codes;
+	DaoVmCode **codes2 = (DaoVmCode**) self->body->annotCodes->items.pVmc;
+	daoint i, N = self->body->annotCodes->size;
+	daoint k, M = self->body->regCount;
+	daoint *regmap = mapping->items.pInt;
+	for(i=0; i<M; i++) if( regmap[i] != i ) regmap[i] = - 1 - regmap[i];
+	for(i=0,k=0; i<M; i++){
+		if( regmap[i] != i ) continue;
+		if( i == k ){
+			k += 1;
+			continue;
+		}
+		if( (it = MAP_Find( localVarType, i )) ){
+			MAP_Insert( localVarType, k, it->value.pVoid );
+			MAP_Erase( localVarType, i );
+		}
+		GC_ShiftRC( types[i], types[k] );
+		types[k] = types[i];
+		regmap[i] = k ++;
+	}
+	self->body->regCount = k;
+	for(i=0; i<M; i++) if( regmap[i] < 0 ) regmap[i] = regmap[ - regmap[i] - 1 ];
+	//for(i=0; i<M; i++) printf( "%3i: %3i\n", i, regmap[i] );
+	for(i=0; i<N; i++){
+		vmc = codes2[i];
+		switch( DaoVmCode_GetOpcodeType( vmc->code ) ){
+		case DAO_CODE_NOP :
+			break;
+		case DAO_CODE_GETC :
+		case DAO_CODE_GETG :
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_SETG :
+		case DAO_CODE_BRANCH :
+		case DAO_CODE_EXPLIST :
+			vmc->a = regmap[ vmc->a ];
+			break;
+		case DAO_CODE_GETF : case DAO_CODE_GETM :
+		case DAO_CODE_SETF : case DAO_CODE_SETM:
+		case DAO_CODE_MOVE : case DAO_CODE_UNARY :
+		case DAO_CODE_ENUM : case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
+		case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
+		case DAO_CODE_CALL : case DAO_CODE_YIELD :
+			vmc->a = regmap[ vmc->a ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_SETI : 
+		case DAO_CODE_GETI :
+		case DAO_CODE_BINARY :
+			vmc->a = regmap[ vmc->a ];
+			vmc->b = regmap[ vmc->b ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_UNARY2 :
+			vmc->b = regmap[ vmc->b ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		default: break;
+		}
+		codes[i] = *vmc;
+	}
+}
+static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DArray *array = DArray_New(0);
+	DaoCodeNode *node, *node2, **nodes;
+	daoint i, N = routine->body->annotCodes->size;
+	daoint j, M = routine->body->regCount;
+	daoint *regmap;
+
+	DaoOptimizer_Init( self, routine );
+	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+
+	DArray_Resize( array, M, 0 );
+	regmap = array->items.pInt;
+	for(i=0; i<M; i++) regmap[i] = i;
+
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		if( node->exprid == 0xffff || node->exprid == node->index ) continue;
+		node2 = nodes[ node->exprid ];
+		if( node->lvalue == 0xffff || node->lvalue == node2->lvalue ) continue;
+		regmap[ node->lvalue ] = node2->lvalue;
+	}
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
+		for(j=node->first; j<=node->second; j++) regmap[j] = j;
+	}
+	//for(i=0; i<M; i++) printf( "%3i: %3i\n", i, regmap[i] );
+	DaoRoutine_UpdateRegister( routine, array );
+	DArray_Delete( array );
+}
+static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DaoCodeNode *node, *node2, **nodes;
+	DArray *annotCodes = routine->body->annotCodes;
+	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
+	daoint i, N = annotCodes->size;
+
+	DaoOptimizer_Init( self, routine );
+	DaoOptimizer_InitAEA( self );
+	DaoOptimizer_SolveFlowEquation( self );
+
+	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		vmc = codes[i];
+		if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
+		if( MAP_Find( node->set, node->exprid ) == NULL ) continue;
+		node2 = nodes[ node->exprid ];
+		if( node->lvalue != node2->lvalue ) continue;
+		vmc->code = DVM_UNUSED;
+	}
+	DArray_CleanupCodes( annotCodes );
+	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
+	for(i=0,N=annotCodes->size; i<N; i++){
+		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
 	}
 }
 
 static void DaoRoutine_Optimize( DaoRoutine *self )
 {
-	DaoFlowGraph *flow = DaoFlowGraph_New();
+	//if( self->routName->size == 0 ) return;
+	DaoStream *stream = self->nameSpace->vmSpace->stdioStream;
 
-	DaoRoutine_BuildFlowGraph( self, flow );
-	DaoMF_SolveFlowEquation( flow, DaoMF_LVA, 1 );
+	DaoOptimizer *flow = DaoOptimizer_New();
+
+	//DaoRoutine_PrintCode( self, stream );
+
+	DaoOptimizer_MergeRegister( flow, self );
+
+	//DaoRoutine_PrintCode( self, stream );
+
+	DaoOptimizer_CSE( flow, self );
+
+	//DaoOptimizer_Print( flow );
+
+	DaoOptimizer_InitLVA( flow );
+
+	DaoOptimizer_Delete( flow );
 }
 
 
-void DaoRoutine_GetCodeOperands( DaoRoutine *self, DaoVmCode *vmc, DaoCodeNode *node )
+static int DaoRoutine_IsVolatileParameter( DaoRoutine *self, int id )
 {
-	int k, m;
+	DaoType *T;
+	if( id >= self->parCount ) return 0;
+	if( id >= self->routType->nested->size ) return 1;
+	T = self->routType->nested->items.pType[id];
+	if( T && (T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT) ) T = (DaoType*) T->aux;
+	if( T == NULL || T->tid == 0 || T->tid >= DAO_ARRAY  ) return 1;
+	if( self->refParams & (1<<id) ) return 1;
+	return 0;
+}
+void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *vmc )
+{
+	DNode *it;
+	DArray **uses = self->uses->items.pArray;
+	DaoRoutine *routine = self->routine;
+	DaoType **types = routine->body->regType->items.pType;
+	uchar_t type = DaoVmCode_GetOpcodeType( vmc->code );
+	int i, k, m, at, bt, ct;
 
 	node->type = DAO_OP_NONE;
-	node->first = node->second = node->third = 0;
+	node->first = node->second = node->third = 0xffff;
 	node->lvalue = 0xffff;
-	switch( vmc->code ){
-	case DVM_NOP :
-	case DVM_DEBUG :
+	node->exprid = 0xffff;
+	switch( type ){
+	case DAO_CODE_NOP :
 		break;
-	case DVM_DATA :
-	case DVM_GETCL : case DVM_GETCK : case DVM_GETCG :
-	case DVM_GETVO : case DVM_GETVK : case DVM_GETVG :
-	case DVM_GETVH : case DVM_GETVL : 
+	case DAO_CODE_GETC :
+	case DAO_CODE_GETG :
 		node->lvalue = vmc->c;
 		break;
-	case DVM_SETVH : case DVM_SETVL : 
-	case DVM_SETVO : case DVM_SETVK : case DVM_SETVG :
+	case DAO_CODE_SETG :
 		node->type = DAO_OP_SINGLE;
 		node->first = vmc->a;
 		break;
-	case DVM_GETF : case DVM_GETMF : case DVM_GETDI :
-	case DVM_LOAD : case DVM_CAST : case DVM_MOVE :
-	case DVM_NOT : case DVM_UNMS : case DVM_BITREV :
-	case DVM_ITER :
+	case DAO_CODE_GETF :
+	case DAO_CODE_MOVE :
+	case DAO_CODE_UNARY :
+	case DAO_CODE_CLASS :
 		node->type = DAO_OP_SINGLE;
 		node->first = vmc->a;
 		node->lvalue = vmc->c;
 		break;
-	case DVM_SETF : case DVM_SETMF : case DVM_SETDI :
+	case DAO_CODE_SETF :
 		node->type = DAO_OP_PAIR;
 		node->first = vmc->a;
 		node->second = vmc->c;
 		break;
-	case DVM_SETI : case DVM_SETMI :
+	case DAO_CODE_SETI : 
 		node->type = DAO_OP_TRIPLE;
 		node->first = vmc->a;
 		node->second = vmc->b;
 		node->third = vmc->c;
 		break;
-	case DVM_GETI : case DVM_GETMI :
-	case DVM_ADD : case DVM_SUB : case DVM_MUL :
-	case DVM_DIV : case DVM_MOD : case DVM_POW :
-	case DVM_AND : case DVM_OR : case DVM_LT :
-	case DVM_LE :  case DVM_EQ : case DVM_NE : case DVM_IN :
-	case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
-	case DVM_BITLFT : case DVM_BITRIT :
-	case DVM_PAIR : case DVM_CHECK :
+	case DAO_CODE_GETI :
+	case DAO_CODE_BINARY :
 		node->type = DAO_OP_PAIR;
 		node->first = vmc->a;
 		node->second = vmc->b;
 		node->lvalue = vmc->c;
 		break;
-	case DVM_NAMEVA :
+	case DAO_CODE_UNARY2 :
 		node->type = DAO_OP_SINGLE;
 		node->first = vmc->b;
 		node->lvalue = vmc->c;
 		break;
-	case DVM_TUPLE : case DVM_MAP : case DVM_HASH :
+	case DAO_CODE_GETM :
+	case DAO_CODE_ENUM :
+	case DAO_CODE_ENUM2 :
+	case DAO_CODE_ROUTINE :
 		node->type = DAO_OP_RANGE;
 		node->first = vmc->a;
-		node->second = vmc->a + vmc->b - 1;
+		node->second = vmc->a + vmc->b - (type == DAO_CODE_ENUM);
 		node->lvalue = vmc->c;
 		break;
-	case DVM_LIST : case DVM_ARRAY :
-		k = (vmc->b >= 10) ? (vmc->b - 10) : vmc->b;
-		node->type = DAO_OP_RANGE;
-		node->first = vmc->a;
-		node->second = vmc->a + k - 1;
-		node->lvalue = vmc->c;
-		break;
-	case DVM_CURRY : case DVM_MCURRY :
-		node->type = DAO_OP_RANGE;
+	case DAO_CODE_SETM:
+		node->type = DAO_OP_RANGE2;
 		node->first = vmc->a;
 		node->second = vmc->a + vmc->b;
-		node->lvalue = vmc->c;
+		node->third = vmc->c;
 		break;
-	case DVM_CALL : case DVM_MCALL :
+	case DAO_CODE_CALL :
 		k = vmc->b & 0xff;
 		if( k == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-			k = self->parCount - (self->routType->attrib & DAO_TYPE_SELF) != 0;
+			k = routine->parCount - (routine->routType->attrib & DAO_TYPE_SELF) != 0;
 		}
 		node->type = DAO_OP_RANGE;
 		node->first = vmc->a;
 		node->second = vmc->a + k;
 		node->lvalue = vmc->c;
 		break;
-	case DVM_MATRIX :
+	case DAO_CODE_MATRIX :
 		k = vmc->b & 0xff;
 		m = vmc->b >> 8;
 		node->type = DAO_OP_RANGE;
@@ -332,159 +681,81 @@ void DaoRoutine_GetCodeOperands( DaoRoutine *self, DaoVmCode *vmc, DaoCodeNode *
 		node->second = vmc->a + k*m - 1;
 		node->lvalue = vmc->c;
 		break;
-	case DVM_SWITCH :
-	case DVM_TEST :
-	case DVM_TEST_I :
-	case DVM_TEST_F :
-	case DVM_TEST_D :
+	case DAO_CODE_BRANCH :
 		node->type = DAO_OP_SINGLE;
 		node->first = vmc->a;
 		break;
-	case DVM_CASE :
-		break;
-	case DVM_MATH :
-		node->type = DAO_OP_SINGLE;
-		node->first = vmc->a;
-		node->lvalue = vmc->c;
-		break;
-	case DVM_ROUTINE :
-	case DVM_CLASS :
-#warning"==================================="
-		//ClearChecking( node, checks );
-		break;
-	case DVM_CRRE :
-#warning"==================================="
-		break;
-	case DVM_RETURN :
-	case DVM_YIELD :
+	case DAO_CODE_YIELD :
+	case DAO_CODE_EXPLIST :
 		node->type = DAO_OP_RANGE;
 		node->first = vmc->a;
 		node->second = vmc->a + vmc->b - 1;
-		break;
-	case DVM_DATA_I : case DVM_DATA_F : case DVM_DATA_D :
-	case DVM_GETCL_I : case DVM_GETCL_F : case DVM_GETCL_D : 
-	case DVM_GETCK_I : case DVM_GETCK_F : case DVM_GETCK_D : 
-	case DVM_GETCG_I : case DVM_GETCG_F : case DVM_GETCG_D : 
-	case DVM_GETVH_I : case DVM_GETVH_F : case DVM_GETVH_D : 
-	case DVM_GETVL_I : case DVM_GETVL_F : case DVM_GETVL_D : 
-	case DVM_GETVO_I : case DVM_GETVO_F : case DVM_GETVO_D : 
-	case DVM_GETVK_I : case DVM_GETVK_F : case DVM_GETVK_D : 
-	case DVM_GETVG_I : case DVM_GETVG_F : case DVM_GETVG_D : 
-		node->lvalue = vmc->c;
-		break;
-	case DVM_SETVH_II : case DVM_SETVH_IF : case DVM_SETVH_ID : 
-	case DVM_SETVH_FI : case DVM_SETVH_FF : case DVM_SETVH_FD : 
-	case DVM_SETVH_DI : case DVM_SETVH_DF : case DVM_SETVH_DD : 
-	case DVM_SETVL_II : case DVM_SETVL_IF : case DVM_SETVL_ID :
-	case DVM_SETVL_FI : case DVM_SETVL_FF : case DVM_SETVL_FD :
-	case DVM_SETVL_DI : case DVM_SETVL_DF : case DVM_SETVL_DD :
-	case DVM_SETVO_II : case DVM_SETVO_IF : case DVM_SETVO_ID :
-	case DVM_SETVO_FI : case DVM_SETVO_FF : case DVM_SETVO_FD :
-	case DVM_SETVO_DI : case DVM_SETVO_DF : case DVM_SETVO_DD :
-	case DVM_SETVK_II : case DVM_SETVK_IF : case DVM_SETVK_ID :
-	case DVM_SETVK_FI : case DVM_SETVK_FF : case DVM_SETVK_FD :
-	case DVM_SETVK_DI : case DVM_SETVK_DF : case DVM_SETVK_DD :
-	case DVM_SETVG_II : case DVM_SETVG_IF : case DVM_SETVG_ID :
-	case DVM_SETVG_FI : case DVM_SETVG_FF : case DVM_SETVG_FD :
-	case DVM_SETVG_DI : case DVM_SETVG_DF : case DVM_SETVG_DD :
-		node->type = DAO_OP_SINGLE;
-		node->first = vmc->a;
-		break;
-	case DVM_MOVE_II : case DVM_MOVE_FF : case DVM_MOVE_DD :
-	case DVM_MOVE_CC : case DVM_MOVE_SS : case DVM_MOVE_PP :
-	case DVM_MOVE_IF : case DVM_MOVE_FI :
-	case DVM_MOVE_ID : case DVM_MOVE_FD :
-	case DVM_MOVE_DI : case DVM_MOVE_DF :
-	case DVM_NOT_I : case DVM_UNMS_I : case DVM_BITREV_I :
-	case DVM_NOT_F : case DVM_UNMS_F : case DVM_BITREV_F :
-	case DVM_NOT_D : case DVM_UNMS_D : case DVM_BITREV_D :
-	case DVM_UNMS_C : case DVM_CHECK_ST :
-		node->type = DAO_OP_SINGLE;
-		node->first = vmc->a;
-		node->lvalue = vmc->c;
-		break;
-	case DVM_ADD_III : case DVM_SUB_III : case DVM_MUL_III : case DVM_DIV_III :
-	case DVM_MOD_III : case DVM_POW_III : case DVM_AND_III : case DVM_OR_III  :
-	case DVM_LT_III  : case DVM_LE_III  : case DVM_EQ_III : case DVM_NE_III :
-	case DVM_BITAND_III : case DVM_BITOR_III  : case DVM_BITXOR_III :
-	case DVM_BITLFT_III : case DVM_BITRIT_III :
-	case DVM_ADD_FFF : case DVM_SUB_FFF : case DVM_MUL_FFF : case DVM_DIV_FFF :
-	case DVM_MOD_FFF : case DVM_POW_FFF : case DVM_AND_FFF : case DVM_OR_FFF  :
-	case DVM_LT_FFF  : case DVM_LE_FFF  : case DVM_EQ_FFF :
-	case DVM_BITAND_FFF : case DVM_BITOR_FFF  : case DVM_BITXOR_FFF :
-	case DVM_BITLFT_FFF : case DVM_BITRIT_FFF :
-	case DVM_ADD_DDD : case DVM_SUB_DDD : case DVM_MUL_DDD : case DVM_DIV_DDD :
-	case DVM_MOD_DDD : case DVM_POW_DDD : case DVM_AND_DDD : case DVM_OR_DDD  :
-	case DVM_LT_DDD  : case DVM_LE_DDD  : case DVM_EQ_DDD :
-	case DVM_BITAND_DDD : case DVM_BITOR_DDD  : case DVM_BITXOR_DDD :
-	case DVM_BITLFT_DDD : case DVM_BITRIT_DDD :
-	case DVM_ADD_CC : case DVM_SUB_CC : case DVM_MUL_CC : case DVM_DIV_CC :
-	case DVM_ADD_SS : case DVM_LT_SS : case DVM_LE_SS :
-	case DVM_EQ_SS : case DVM_NE_SS :
-	case DVM_ADD_FNN : case DVM_SUB_FNN : case DVM_MUL_FNN : case DVM_DIV_FNN :
-	case DVM_MOD_FNN : case DVM_POW_FNN : case DVM_AND_FNN : case DVM_OR_FNN  :
-	case DVM_LT_FNN  : case DVM_LE_FNN  : case DVM_EQ_FNN :
-	case DVM_BITLFT_FNN : case DVM_BITRIT_FNN :
-	case DVM_ADD_DNN : case DVM_SUB_DNN : case DVM_MUL_DNN : case DVM_DIV_DNN :
-	case DVM_MOD_DNN : case DVM_POW_DNN : case DVM_AND_DNN : case DVM_OR_DNN  :
-	case DVM_LT_DNN  : case DVM_LE_DNN  : case DVM_EQ_DNN :
-	case DVM_BITLFT_DNN  : case DVM_BITRIT_DNN  :
-	case DVM_GETI_SI  : case DVM_GETI_LI :
-	case DVM_GETI_LII : case DVM_GETI_LFI : case DVM_GETI_LDI :
-	case DVM_GETI_AII : case DVM_GETI_AFI : case DVM_GETI_ADI :
-	case DVM_GETI_LSI : case DVM_GETI_TI : case DVM_GETI_ACI :
-		node->type = DAO_OP_PAIR;
-		node->first = vmc->a;
-		node->second = vmc->b;
-		node->lvalue = vmc->c;
-		break;
-	case DVM_SETI_SII : case DVM_SETI_LI :
-	case DVM_SETI_LIII : case DVM_SETI_LIIF : case DVM_SETI_LIID :
-	case DVM_SETI_LFII : case DVM_SETI_LFIF : case DVM_SETI_LFID :
-	case DVM_SETI_LDII : case DVM_SETI_LDIF : case DVM_SETI_LDID :
-	case DVM_SETI_AIII : case DVM_SETI_AIIF : case DVM_SETI_AIID :
-	case DVM_SETI_AFII : case DVM_SETI_AFIF : case DVM_SETI_AFID :
-	case DVM_SETI_ADII : case DVM_SETI_ADIF : case DVM_SETI_ADID :
-	case DVM_SETI_LSIS : case DVM_SETI_TI : case DVM_SETI_ACI :
-		node->type = DAO_OP_TRIPLE;
-		node->first = vmc->a;
-		node->second = vmc->b;
-		node->third = vmc->c;
-		break;
-	case DVM_GETF_T :
-	case DVM_GETF_TI : case DVM_GETF_TF :
-	case DVM_GETF_TD : case DVM_GETF_TS :
-	case DVM_GETF_KC : case DVM_GETF_KG :
-	case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
-	case DVM_GETF_KCI : case DVM_GETF_KCF : case DVM_GETF_KCD : 
-	case DVM_GETF_KGI : case DVM_GETF_KGF : case DVM_GETF_KGD :
-	case DVM_GETF_OCI : case DVM_GETF_OCF : case DVM_GETF_OCD : 
-	case DVM_GETF_OGI : case DVM_GETF_OGF : case DVM_GETF_OGD : 
-	case DVM_GETF_OVI : case DVM_GETF_OVF : case DVM_GETF_OVD :
-		node->type = DAO_OP_SINGLE;
-		node->first = vmc->a;
-		node->lvalue = vmc->c;
-		break;
-	case DVM_SETF_T :
-	case DVM_SETF_TII : case DVM_SETF_TIF : case DVM_SETF_TID :
-	case DVM_SETF_TFI : case DVM_SETF_TFF : case DVM_SETF_TFD :
-	case DVM_SETF_TDI : case DVM_SETF_TDF : case DVM_SETF_TDD :
-	case DVM_SETF_TSS :
-	case DVM_SETF_KG : case DVM_SETF_OG : case DVM_SETF_OV :
-	case DVM_SETF_KGII : case DVM_SETF_KGIF : case DVM_SETF_KGID : 
-	case DVM_SETF_KGFI : case DVM_SETF_KGFF : case DVM_SETF_KGFD : 
-	case DVM_SETF_KGDI : case DVM_SETF_KGDF : case DVM_SETF_KGDD : 
-	case DVM_SETF_OGII : case DVM_SETF_OGIF : case DVM_SETF_OGID : 
-	case DVM_SETF_OGFI : case DVM_SETF_OGFF : case DVM_SETF_OGFD : 
-	case DVM_SETF_OGDI : case DVM_SETF_OGDF : case DVM_SETF_OGDD : 
-	case DVM_SETF_OVII : case DVM_SETF_OVIF : case DVM_SETF_OVID :
-	case DVM_SETF_OVFI : case DVM_SETF_OVFF : case DVM_SETF_OVFD :
-	case DVM_SETF_OVDI : case DVM_SETF_OVDF : case DVM_SETF_OVDD :
-		node->type = DAO_OP_PAIR;
-		node->first = vmc->a;
-		node->second = vmc->c;
+		if( type == DAO_CODE_YIELD ) node->lvalue = vmc->c;
 		break;
 	default: break;
+	}
+	/* Handle zero number of variables in the range: */
+	if( node->type == DAO_OP_RANGE && node->second == 0xffff ) node->type = DAO_OP_NONE;
+
+	/* Exclude expression that does not yield new value: */
+	if( node->lvalue == 0xffff ) return;
+	switch( type ){
+	case DAO_CODE_GETG :
+	case DAO_CODE_ROUTINE :
+	case DAO_CODE_CLASS :
+	case DAO_CODE_CALL :
+	case DAO_CODE_YIELD :
+		/* Exclude expressions that access global data or must be evaluated: */
+		return;
+	case DAO_CODE_UNARY2 :
+		/* Exclude expressions that may have side effects: */
+		if( vmc->code == DVM_MATH && vmc->a == DVM_MATH_RAND ) return;
+		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
+		break;
+	case DAO_CODE_GETF :
+	case DAO_CODE_MOVE :
+	case DAO_CODE_UNARY :
+		/* Exclude expressions that may have side effects by operator overloading: */
+		at = types[vmc->a] ? types[vmc->a]->tid : 0;
+		ct = types[vmc->c] ? types[vmc->c]->tid : 0;
+		if( at == 0 || at == DAO_ANY || at == DAO_INITYPE || at == DAO_VARIANT ) return;
+		if( ct == 0 || ct == DAO_ANY || ct == DAO_INITYPE || ct == DAO_VARIANT ) return;
+		if( at >= DAO_OBJECT && at <= DAO_CTYPE ) return;
+		if( ct >= DAO_OBJECT && ct <= DAO_CTYPE ) return;
+		if( DaoRoutine_IsVolatileParameter( routine, vmc->a ) ) return;
+		break;
+	case DAO_CODE_GETI :
+	case DAO_CODE_BINARY :
+		/* Exclude expressions that may have side effects by operator overloading: */
+		at = types[vmc->a] ? types[vmc->a]->tid : 0;
+		bt = types[vmc->b] ? types[vmc->b]->tid : 0;
+		ct = types[vmc->c] ? types[vmc->c]->tid : 0;
+		if( at == 0 || at == DAO_ANY || at == DAO_INITYPE || at == DAO_VARIANT ) return;
+		if( bt == 0 || bt == DAO_ANY || bt == DAO_INITYPE || bt == DAO_VARIANT ) return;
+		if( ct == 0 || ct == DAO_ANY || ct == DAO_INITYPE || ct == DAO_VARIANT ) return;
+		if( at >= DAO_OBJECT && at <= DAO_CTYPE ) return;
+		if( bt >= DAO_OBJECT && bt <= DAO_CTYPE ) return;
+		if( ct >= DAO_OBJECT && ct <= DAO_CTYPE ) return;
+		if( DaoRoutine_IsVolatileParameter( routine, vmc->a ) ) return;
+		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
+		break;
+	}
+
+	it = MAP_Find( self->exprs, vmc );
+	if( it == NULL ) it = MAP_Insert( self->exprs, vmc, node->index );
+	node->exprid = it->value.pInt;
+
+	switch( node->type ){
+	case DAO_OP_SINGLE :
+		DArray_Append( uses[node->first], node );
+		break;
+	case DAO_OP_PAIR   : 
+		DArray_Append( uses[node->first], node );
+		DArray_Append( uses[node->second], node );
+		break;
+	case DAO_OP_RANGE :
+		for(i=node->first; i<=node->second; i++) DArray_Append( uses[i], node );
+		break;
 	}
 }
 
@@ -2557,7 +2828,7 @@ NotExist_TryAux:
 				if( ct->tid ==DAO_UDF || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				ct = type[opc];
-				if( i && typed_code ){
+				if( typed_code ){
 					if( at->tid == bt->tid && at->tid == ct->tid ){
 						switch( at->tid ){
 						case DAO_INTEGER :
@@ -2645,7 +2916,7 @@ NotExist_TryAux:
 				if( ct->tid ==DAO_UDF || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				ct = type[opc];
-				if( i && typed_code ){
+				if( typed_code ){
 					if( at->tid == bt->tid && at->tid == ct->tid ){
 						switch( at->tid ){
 						case DAO_INTEGER :
@@ -2849,22 +3120,25 @@ NotExist_TryAux:
 				AssertTypeMatching( ct, type[opc], defs, 0 );
 				break;
 			}
-		case DVM_LIST : case DVM_ARRAY :
+		case DVM_LIST : case DVM_VECTOR :
+		case DVM_APLIST : case DVM_APVECTOR :
 			{
 				init[opc] = 1;
 				if( type[opc] && type[opc]->tid == DAO_ANY ) continue;
 				at = udf;
-				if( opb >= 11 ){
-					at = type[opa];
-					for(j=1; j<opb-10; j++){
-						if( DaoType_MatchTo( type[opa+j], at, defs )==0 ){
-							at = any;
-							break;
+				if( code == DVM_LIST || code == DVM_VECTOR ){
+					if( opb ){
+						at = type[opa];
+						for(j=1; j<opb; j++){
+							if( DaoType_MatchTo( type[opa+j], at, defs )==0 ){
+								at = any;
+								break;
+							}
+							if( at->tid < type[opa+j]->tid ) at = type[opa+j];
 						}
-						if( at->tid < type[opa+j]->tid ) at = type[opa+j];
+						if( code == DVM_VECTOR && at )
+							if( at->tid ==0 || at->tid > DAO_COMPLEX ) at = fnumt;
 					}
-					if( code == DVM_ARRAY && at )
-						if( at->tid ==0 || at->tid > DAO_COMPLEX ) at = fnumt;
 				}else{
 					if( opb == 2 ){
 						int a = type[opa]->tid;
@@ -2891,12 +3165,10 @@ NotExist_TryAux:
 						}
 						if( type[opa+2]->tid < DAO_INTEGER
 								|| type[opa+2]->tid > DAO_DOUBLE ) goto ErrorTyping;
-						if( vmc->code ==DVM_ARRAY && at->tid ==DAO_STRING ) goto ErrorTyping;
-					}else{
-						at = udf;
+						if( vmc->code ==DVM_VECTOR && at->tid ==DAO_STRING ) goto ErrorTyping;
 					}
 				}
-				if( vmc->code == DVM_LIST )
+				if( code == DVM_LIST || code == DVM_APLIST )
 					ct = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, &at, at!=NULL );
 				else if( at && at->tid >=DAO_INTEGER && at->tid <= DAO_COMPLEX )
 					ct = arrtps[ at->tid ];
@@ -4305,10 +4577,10 @@ TryPushBlockReturnType:
 			DArray_Append( vmCodeNew, addCode->items.pVmc[0] );
 			DArray_PopFront( addCode );
 		}
-		if( c ==DVM_GOTO || c ==DVM_TEST || c ==DVM_SWITCH || c == DVM_CASE
-				|| ( c >=DVM_TEST_I && c <=DVM_TEST_D ) ){
+		if( c == DVM_GOTO || c == DVM_TEST || c == DVM_SWITCH || c == DVM_CASE
+				|| ( c >= DVM_TEST_I && c <= DVM_TEST_D ) ){
 			if( vmc->b >0 ) vmc->b += addCount[vmc->b-1];
-		}else if( c ==DVM_CRRE && vmc->c >0 ){
+		}else if( c == DVM_CATCH ){
 			vmc->c += addCount[vmc->c-1];
 		}
 		DArray_Append( vmCodeNew, self->body->annotCodes->items.pVmc[i] );
@@ -4316,7 +4588,7 @@ TryPushBlockReturnType:
 	DArray_CleanupCodes( vmCodeNew );
 	DaoVmcArray_Resize( self->body->vmCodes, vmCodeNew->size );
 	for(i=0,n=vmCodeNew->size; i<n; i++){
-		self->body->vmCodes->codes[i] = * (DaoVmCode*) vmCodeNew->items.pVmc[i];
+		self->body->vmCodes->codes[i] = *(DaoVmCode*) vmCodeNew->items.pVmc[i];
 	}
 	DArray_Swap( self->body->annotCodes, vmCodeNew );
 	DArray_Delete( errors );
@@ -4326,6 +4598,9 @@ TryPushBlockReturnType:
 	/*
 	   DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream );
 	 */
+#if DEBUG
+	DaoRoutine_Optimize( self );
+#endif
 	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self );
 
 	GC_DecRCs( regConst );
@@ -4385,7 +4660,7 @@ InvParam :
 ErrorTyping:
 	 if( silent ) goto SilentError;
 	 vmc = self->body->annotCodes->items.pVmc[cid];
-	 sprintf( char200, "%s:%i,%i,%i", getOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
+	 sprintf( char200, "%s:%i,%i,%i", DaoVmCode_GetOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
 
 	 DaoStream_WriteMBS( stream, "[[ERROR]] in file \"" );
 	 DaoStream_WriteString( stream, self->nameSpace->name );

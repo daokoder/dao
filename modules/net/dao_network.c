@@ -912,7 +912,7 @@ static void DaoNetLib_GetHost( DaoProcess *proc, DaoValue *par[], int N  )
 	size_t size = sizeof( struct sockaddr_in );
 	const char *host = DaoString_GetMBS( DaoValue_CastString( par[0] ) );
 	DaoFactory *factory = DaoProcess_GetFactory( proc );
-	DaoMap *res = DaoProcess_PutMap( proc );
+	DaoMap *res = DaoProcess_PutMap( proc, 0 );
 	DaoValue *value;
 	if( DaoString_Size( DaoValue_CastString( par[0] ) ) ==0 ) return;
 	if( host[0] >= '0' && host[0] <= '9' ){

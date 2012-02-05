@@ -71,7 +71,7 @@ static void META_Type( DaoProcess *proc, DaoValue *p[], int N )
 
 static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMap *map = DaoProcess_PutMap( proc );
+	DaoMap *map = DaoProcess_PutMap( proc, 0 );
 	DaoTuple *tuple;
 	DaoClass *klass;
 	DaoObject *object;
@@ -123,7 +123,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMap *map = DaoProcess_PutMap( proc );
+	DaoMap *map = DaoProcess_PutMap( proc, 0 );
 	DaoTuple *tuple;
 	DaoClass *klass = NULL;
 	DaoObject *object = NULL;

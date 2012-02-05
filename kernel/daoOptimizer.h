@@ -16,10 +16,10 @@
 
 #include"daoBase.h"
 
-enum { DAO_OP_NONE, DAO_OP_SINGLE, DAO_OP_PAIR, DAO_OP_TRIPLE, DAO_OP_RANGE };
+enum { DAO_OP_NONE, DAO_OP_SINGLE, DAO_OP_PAIR, DAO_OP_TRIPLE, DAO_OP_RANGE, DAO_OP_RANGE2 };
 
 typedef struct DaoCodeNode  DaoCodeNode;
-typedef struct DaoFlowGraph DaoFlowGraph;
+typedef struct DaoOptimizer DaoOptimizer;
 
 struct DaoCodeNode
 {
@@ -29,6 +29,7 @@ struct DaoCodeNode
 	ushort_t  second; /* the second (for PAIR) or the last (for RANGE) used variable; */
 	ushort_t  third;  /* the third (for TRIPLE) used variable; */
 	ushort_t  lvalue; /* variable defined by the instruction; 0xffff for none; */
+	ushort_t  exprid; /* expression id; 0xffff for none; */
 
 	DArray   *ins;  /* in nodes in the flow graph; */
 	DArray   *outs; /* out nodes in the flow graph; */
@@ -39,23 +40,37 @@ struct DaoCodeNode
 DaoCodeNode* DaoCodeNode_New();
 void DaoCodeNode_Delete( DaoCodeNode *self );
 
+typedef int (*AnalysisUpdater)( DaoOptimizer*, DaoCodeNode*, DaoCodeNode* );
 
-struct DaoFlowGraph
+struct DaoOptimizer
 {
-	DArray  *nodes;  /* all nodes (labels); */
+	DaoRoutine *routine;
 
+	int reverseFlow;
+
+	AnalysisUpdater updater;
+
+	DArray  *nodes; /* all nodes (labels); */
+	DArray  *uses;  /* nodes that use a variable; */
+
+	DMap  *exprs;   /* all expressions; */
 	DMap  *inits;   /* init nodes; */
 	DMap  *finals;  /* final nodes; */
 	DMap  *least;   /* least element; */
 	DMap  *extreme; /* extremal value; */
+
+	DMap  *tmp;
+
+	DArray *tmp2;
+
+	DArray  *nodeCache;
+	DArray  *arrayCache;
 };
 
-DaoFlowGraph* DaoFlowGraph_New();
-void DaoFlowGraph_Clear( DaoFlowGraph *self );
-void DaoFlowGraph_Delete( DaoFlowGraph *self );
+DaoOptimizer* DaoOptimizer_New();
+void DaoOptimizer_Clear( DaoOptimizer *self );
+void DaoOptimizer_Delete( DaoOptimizer *self );
 
-
-void DaoRoutine_GetCodeOperands( DaoRoutine *self, DaoVmCode *code, DaoCodeNode *node );
-void DaoRoutine_BuildFlowGraph( DaoRoutine *self, DaoFlowGraph *graph );
+void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *code );
 
 #endif

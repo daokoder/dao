@@ -57,15 +57,15 @@ enum DaoRTTI
 
 enum DaoBasicStruct
 {
-	D_VALUE = 1,
+	D_NULL ,
+	D_VALUE ,
 	D_VMCODE ,
 	D_TOKEN ,   /* for DArray only */
 	D_STRING ,
 	D_VARRAY ,
 	D_ARRAY ,
 	D_MAP ,
-	D_VOID2 , /* a pair of pointer */
-	D_NULL
+	D_VOID2 /* a pair of pointer */
 };
 
 /* It is for the typing system, to decide when to specialize a routine.
@@ -427,7 +427,6 @@ extern const char* const daoExceptionName[];
 extern const char* const daoExceptionInfo[];
 
 DAO_DLL const char* getExceptName( int id );
-DAO_DLL const char* getOpcodeName( int opc );
 
 extern const char* const coreTypeNames[];
 extern const char *const daoBitBoolArithOpers[];

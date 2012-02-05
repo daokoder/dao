@@ -565,8 +565,8 @@ void DaoVmcArray_Insert( DaoVmcArray *self, DaoVmCode code, int pos )
 		case DVM_JITC :
 			if( vmc->b + i >= pos ) vmc->b ++;
 			break;
-		case DVM_CRRE :
-			if( vmc->c && vmc->c >= pos ) vmc->c ++;
+		case DVM_CATCH :
+			if( vmc->c >= pos ) vmc->c ++;
 			break;
 		default : break;
 		}
@@ -591,18 +591,17 @@ void DaoVmcArray_Cleanup( DaoVmcArray *self )
 		case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
 		case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
 		case DVM_SWITCH : case DVM_CASE :
-		case DVM_JITC :
-		case DVM_CRRE :
+		case DVM_CATCH : case DVM_JITC :
 			j = vmc->b;
-			if( vmc->code == DVM_CRRE ){
+			if( vmc->code == DVM_CATCH ){
 				j = vmc->c;
 			}else if( vmc->code == DVM_JITC ){
 				j = vmc->b + i;
 			}
 			for(k=0; k<dels->size; k++){
-				if( dels->items.pInt[k] > j ) break; 
+				if( dels->items.pInt[k] >= j ) break; 
 			}
-			if( vmc->code == DVM_CRRE ){
+			if( vmc->code == DVM_CATCH ){
 				if( vmc->c ) vmc->c -= k;
 			}else if( vmc->code == DVM_JITC ){
 				vmc->b = (vmc->b + i - k) - M;
@@ -642,18 +641,17 @@ void DArray_CleanupCodes( DArray *self )
 		case DVM_GOTO : case DVM_TEST : case DVM_TEST_I :
 		case DVM_TEST_F : case DVM_TEST_D : case DVM_SAFE_GOTO :
 		case DVM_SWITCH : case DVM_CASE : 
-		case DVM_JITC :
-		case DVM_CRRE :
+		case DVM_CATCH : case DVM_JITC :
 			j = vmc->b;
-			if( vmc->code == DVM_CRRE ){
+			if( vmc->code == DVM_CATCH ){
 				j = vmc->c;
 			}else if( vmc->code == DVM_JITC ){
 				j = vmc->b + i;
 			}
 			for(k=0; k<dels->size; k++){
-				if( dels->items.pInt[k] > j ) break; 
+				if( dels->items.pInt[k] >= j ) break; 
 			}
-			if( vmc->code == DVM_CRRE ){
+			if( vmc->code == DVM_CATCH ){
 				if( vmc->c ) vmc->c -= k;
 			}else if( vmc->code == DVM_JITC ){
 				vmc->b = (vmc->b + i - k) - M;

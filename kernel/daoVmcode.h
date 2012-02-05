@@ -69,13 +69,15 @@ enum DaoOpcode
 	DVM_BITRIT , /* C = A >> B */
 	DVM_CHECK , /* check type: C = A ?= B; C = A ?< B, where A is data, B is data or type */
 	DVM_NAMEVA , /* C = A => B: name A, local constant, value B, local register */
-	DVM_PAIR , /* C = A : B; create a pair of index, as an array; */
+	DVM_PAIR , /* C = A : B; create a pair of index, as a tuple; */
 	DVM_TUPLE , /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
-	DVM_LIST , /* list: C = { A, A+1, ..., A+B-10 }, or {A:A+1},{ A : A+1 : A+2 }; */
+	DVM_LIST , /* list: C = { A, A+1, ..., A+B-1 }; */
 	DVM_MAP , /* map: C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty; */
 	DVM_HASH , /* hash: C = { A : A+1, ..., A+B-2 : A+B-1 }; if B==0, empty; */
-	DVM_ARRAY , /* array: C = [ A, A+1, ..., A+B-10 ], or [A:A+1],[ A : A+1 : A+2 ]; */
+	DVM_VECTOR , /* vector: C = [ A, A+1, ..., A+B-1 ]; */
 	DVM_MATRIX , /* matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.*/
+	DVM_APLIST , /* arithmetic progression list: C = { A : ... : A+B-1 }, B = 2 or 3; */
+	DVM_APVECTOR , /* arithmetic progression vector: C = [ A : ... : A+B-1 ], B = 2 or 3; */
 	DVM_CURRY , /* class_or_routine_name: A{ A+1, ..., A+B } */
 	DVM_MCURRY , /* object.method: A{ A+1, ..., A+B } */
 	DVM_ROUTINE , /* create a function, possibly with closure */
@@ -88,12 +90,13 @@ enum DaoOpcode
 	DVM_MATH , /* C = A( B ); A: sin,cos,...; B: double,complex */
 	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
 	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
-	DVM_CRRE , /* Check(B=0), Raise(C=0) or Rescue(C>0, goto C if not matching) Exceptions:
-				  A,A+1,..,A+B-2; If B==1, no exception to raise or rescue. */
-	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
 	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
+	DVM_TRY , /* check exception, push exception scope, and then try the block; */
+	DVM_RAISE , /* raise exceptions: A,...,A+B-1; if B=0, re-raise catched exceptions; */
+	DVM_CATCH , /* catch exceptions: A,...,A+B-1; if B=0, catch all; if none, goto C; */
 	DVM_DEBUG , /* prompt to debugging mode; */
+	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
 	DVM_SECT ,   /* code subsection label, parameters: A,A+1,...,A+B-1; C # explicit parameters; */
 
 	/* optimized opcodes: */
@@ -431,16 +434,13 @@ typedef enum DaoOpcode DaoOpcode;
  */
 enum DaoOpcodeExtra
 {
-	DVM_LABEL = 1000,
+	DVM_LABEL = DVM_NULL + 1,
 	DVM_LOAD2 ,
 	DVM_LOOP ,
 	DVM_BRANCH ,
 	DVM_DO ,
 	DVM_LBRA ,
 	DVM_RBRA ,
-	DVM_TRY ,
-	DVM_RAISE ,
-	DVM_CATCH ,
 	DVM_UNUSED
 };
 
@@ -487,11 +487,43 @@ enum DaoFunctMeth
 	DVM_FUNCT_NULL
 };
 
+enum DaoCodeType
+{
+	DAO_CODE_NOP ,      /*  Local variable operands: None; */
+	DAO_CODE_GETC ,     /*  C;     */
+	DAO_CODE_GETG ,     /*  C;     */
+	DAO_CODE_GETF ,     /*  A,C;   */
+	DAO_CODE_GETI ,     /*  A,B,C; */
+	DAO_CODE_GETM ,     /*  C,A,A+1,...,A+B; */
+	DAO_CODE_SETG ,     /*  A,C;   */
+	DAO_CODE_SETF ,     /*  A,C;   */
+	DAO_CODE_SETI ,     /*  A,B,C; */
+	DAO_CODE_SETM ,     /*  A,C,C+1,...,C+B; */
+	DAO_CODE_MOVE ,     /*  A,C;   */
+	DAO_CODE_UNARY ,    /*  A,C;   */
+	DAO_CODE_BINARY ,   /*  A,B,C; */
+	DAO_CODE_UNARY2 ,   /*  B,C;   */
+	DAO_CODE_MATRIX ,   /*  C,A,A+1,...,A+N-1; where N=(B>>8)&(B&0xff); */
+	DAO_CODE_ENUM ,     /*  C,A,A+1,...,A+B-1; */
+	DAO_CODE_ENUM2 ,    /*  C,A,A+1,...,A+B; */
+	DAO_CODE_CALL ,     /*  C,A,A+1,...,A+N; where N=B&0xff*/
+	DAO_CODE_ROUTINE ,  /*  C,A,A+1,...,A+B; */
+	DAO_CODE_CLASS ,    /*  A,C;   */
+	DAO_CODE_YIELD ,    /*  C,A,A+1,...,A+B-1; */
+	DAO_CODE_EXPLIST ,  /*  A,A+1,...,A+B-1; */
+	DAO_CODE_BRANCH ,   /*  A;   */
+	DAO_CODE_JUMP
+};
+
 struct DaoVmCode
 {
 	unsigned short  code; /* opcode */
 	unsigned short  a, b, c; /* register ids for operands */
 };
+
+DAO_DLL const char* DaoVmCode_GetOpcodeName( int code );
+DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( int code );
+DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
 
 struct DaoVmCodeX
 {
@@ -505,6 +537,7 @@ struct DaoVmCodeX
 };
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );
+
 
 #define DaoGetSectionCode1(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
 #define DaoGetSectionCode2(C) ((C[1].code == DVM_GOTO && C[3].code == DVM_SECT) ? C+3 : NULL)
