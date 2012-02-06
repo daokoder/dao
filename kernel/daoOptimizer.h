@@ -30,17 +30,21 @@ struct DaoCodeNode
 	ushort_t  third;  /* the third (for TRIPLE) used variable; */
 	ushort_t  lvalue; /* variable defined by the instruction; 0xffff for none; */
 	ushort_t  exprid; /* expression id; 0xffff for none; */
+	ushort_t  ones; /* number of ones in the bit array; */
 
 	DArray   *ins;  /* in nodes in the flow graph; */
 	DArray   *outs; /* out nodes in the flow graph; */
+	DArray   *kills; /* expressions that are killed by this one; */
 
 	DMap     *set; /* set for the analysis; */
+	DString  *bits; /* bit array for the analysis; */
 };
 
 DaoCodeNode* DaoCodeNode_New();
 void DaoCodeNode_Delete( DaoCodeNode *self );
 
-typedef int (*AnalysisUpdater)( DaoOptimizer*, DaoCodeNode*, DaoCodeNode* );
+typedef void (*AnalysisInit)( DaoOptimizer*, DaoCodeNode* );
+typedef int (*AnalysisUpdate)( DaoOptimizer*, DaoCodeNode*, DaoCodeNode* );
 
 struct DaoOptimizer
 {
@@ -48,20 +52,20 @@ struct DaoOptimizer
 
 	int reverseFlow;
 
-	AnalysisUpdater updater;
+	AnalysisInit    init;
+	AnalysisUpdate  update;
 
 	DArray  *nodes; /* all nodes (labels); */
+	DArray  *enodes; /* expression nodes (labels); */
 	DArray  *uses;  /* nodes that use a variable; */
 
-	DMap  *exprs;   /* all expressions; */
-	DMap  *inits;   /* init nodes; */
-	DMap  *finals;  /* final nodes; */
-	DMap  *least;   /* least element; */
-	DMap  *extreme; /* extremal value; */
+	DMap    *exprs;   /* all expressions; */
+	DMap    *inits;   /* init nodes; */
+	DMap    *finals;  /* final nodes; */
 
-	DMap  *tmp;
-
-	DArray *tmp2;
+	DMap    *tmp;
+	DArray  *tmp2;
+	DString *tmp3;
 
 	DArray  *nodeCache;
 	DArray  *arrayCache;

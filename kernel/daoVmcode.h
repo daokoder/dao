@@ -492,10 +492,12 @@ enum DaoCodeType
 	DAO_CODE_NOP ,      /*  Local variable operands: None; */
 	DAO_CODE_GETC ,     /*  C;     */
 	DAO_CODE_GETG ,     /*  C;     */
+	DAO_CODE_GETU ,     /*  B,C;   */
 	DAO_CODE_GETF ,     /*  A,C;   */
 	DAO_CODE_GETI ,     /*  A,B,C; */
 	DAO_CODE_GETM ,     /*  C,A,A+1,...,A+B; */
 	DAO_CODE_SETG ,     /*  A,C;   */
+	DAO_CODE_SETU ,     /*  A,B;   */
 	DAO_CODE_SETF ,     /*  A,C;   */
 	DAO_CODE_SETI ,     /*  A,B,C; */
 	DAO_CODE_SETM ,     /*  A,C,C+1,...,C+B; */
