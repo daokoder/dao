@@ -553,7 +553,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			break;
 		case DAO_CODE_ENUM : 
 		case DAO_CODE_YIELD :
-			if( vmc->b || vmc->a < M /*XXX*/ ){
+			if( vmc->b || vmc->a < M ){
 				vmc->a = regmap[ vmc->a ];
 				node->first = vmc->a;
 			}
@@ -637,15 +637,12 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DArray *annotCodes = routine->body->annotCodes;
 	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
 	DaoCodeNode *node, *node2, **nodes;
-	daoint i, j, N = annotCodes->size;
+	daoint i, j, k, m, N = annotCodes->size;
 
 	DaoOptimizer_Init( self, routine );
 	DaoOptimizer_InitKills( self );
 	DaoOptimizer_InitAEA( self );
 	DaoOptimizer_SolveFlowEquation( self );
-
-	//DaoOptimizer_Print( self );
-	//return;
 
 	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
 	while( 1 ){
@@ -657,6 +654,13 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			node2 = (DaoCodeNode*) self->enodes->items.pVoid[ node->exprid ];
 			if( node->lvalue != node2->lvalue ) continue;
 			vmc->code = DVM_UNUSED;
+
+			/*
+			// The entry available expressions of the downstream nodes of this node
+			// need to be recomputed by using the entry AE instead of the exit AE
+			// of this node. So this node need to be modified such that it kills
+			// no expression:
+			*/
 			node->type = DAO_OP_NONE;
 			node->lvalue = 0xffff;
 			node->exprid = 0xffff;
@@ -667,8 +671,18 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			}
 		}
 		if( worklist->size == 0 ) break;
-		for(j=1; j<worklist->size; j+=2){
-			DaoOptimizer_InitNodeAEA( self, (DaoCodeNode*) worklist->items.pVoid[j] );
+		for(j=0,m=worklist->size; j<m; j+=2){
+			node2 = (DaoCodeNode*) worklist->items.pVoid[j];
+			node = (DaoCodeNode*) worklist->items.pVoid[j+1];
+			/* Init its entry available expressions to include all expressions: */
+			DaoOptimizer_InitNodeAEA( self, node );
+			/* Add its upstream nodes to the worklist so that the updated flow equations
+			// will be solved correctly: */
+			for(k=0; k<node->ins->size; k++){
+				if( node->ins->items.pVoid[k] == (void*)node2 ) continue;
+				DArray_PushBack( worklist, node->ins->items.pVoid[k] );
+				DArray_PushBack( worklist, node );
+			}
 		}
 		DaoOptimizer_ProcessWorklist( self, worklist );
 	}
