@@ -36,7 +36,6 @@ struct DaoCodeNode
 	DArray   *outs; /* out nodes in the flow graph; */
 	DArray   *kills; /* expressions that are killed by this one; */
 
-	DMap     *set; /* set for the analysis; */
 	DString  *bits; /* bit array for the analysis; */
 };
 
@@ -50,6 +49,7 @@ struct DaoOptimizer
 {
 	DaoRoutine *routine;
 
+	int bitCount;
 	int reverseFlow;
 
 	AnalysisInit    init;
