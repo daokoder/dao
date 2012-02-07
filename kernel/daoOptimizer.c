@@ -373,7 +373,8 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			DArray_Append( nodes[vmc->c]->ins, node );
 			break;
 		case DVM_RETURN : DMap_Insert( self->finals, node, NULL ); break;
-		case DVM_SECT   : DMap_Insert( self->inits, node, NULL ); break;
+		// GETVH, GETVL etc. need to be linked with the outer codes:
+		//case DVM_SECT   : DMap_Insert( self->inits, node, NULL ); break;
 		default : break;
 		}
 	}
@@ -726,21 +727,23 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DArray *array = DArray_New(0);
-	DArray *unused = DArray_New(0);
+	DArray *unused2 = DArray_New(0);
 	DArray *worklist = DArray_New(0);
 	DArray *annotCodes = routine->body->annotCodes;
 	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
 	DaoCodeNode *node, *node2, **nodes;
 	daoint i, j, k, m, N = annotCodes->size;
+	daoint *unused;
 
 	DaoOptimizer_Init( self, routine );
 	DaoOptimizer_InitLVA( self );
 	DaoOptimizer_SolveFlowEquation( self );
 
 	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
-	DArray_Resize( unused, N, 0 );
+	DArray_Resize( unused2, N, 0 );
+	unused = unused2->items.pInt;
 	while( 1 ){
-		DaoOptimizer_Print( self );
+		//DaoOptimizer_Print( self );
 		array->size = 0;
 		for(i=0; i<N; i++){
 			node = nodes[i];
@@ -750,7 +753,25 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 			if( GET_BIT( node->bits->mbs, node->lvalue ) ) continue;
 			if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) return;
 
-			DArray_Append( array, (size_t)node->lvalue );
+			switch( node->type ){
+			case DAO_OP_SINGLE :
+				DArray_Append( array, (size_t)node->first );
+				break;
+			case DAO_OP_PAIR :
+				DArray_Append( array, (size_t)node->first );
+				DArray_Append( array, (size_t)node->second );
+				break;
+			case DAO_OP_TRIPLE :
+				DArray_Append( array, (size_t)node->first );
+				DArray_Append( array, (size_t)node->second );
+				DArray_Append( array, (size_t)node->third );
+				break;
+			case DAO_OP_RANGE :
+			case DAO_OP_RANGE2 :
+				for(j=node->first; j<=node->second; j++) DArray_Append( array, (size_t)j );
+				if( node->type == DAO_OP_RANGE2 ) DArray_Append( array, (size_t)node->third );
+				break;
+			}
 			vmc->code = DVM_UNUSED;
 			node->type = DAO_OP_NONE;
 			node->lvalue = 0xffff;
@@ -760,21 +781,22 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 				DArray_PushBack( worklist, node->ins->items.pVoid[j] );
 			}
 		}
-		memset( unused->items.pInt, 0, unused->size * sizeof(daoint) );
+		memset( unused, 0, N * sizeof(daoint) );
 		for(i=0; i<N; i++){
 			vmc = codes[i];
-			if( i ) unused->items.pInt[i] = unused->items.pInt[i-1];
-			if( vmc->code == DVM_UNUSED ) unused->items.pInt[i] += 1;
+			if( i ) unused[i] = unused[i-1];
+			if( vmc->code == DVM_UNUSED ) unused[i] += 1;
 		}
 		for(i=0; i<N; i++){
 			node = nodes[i];
 			vmc = codes[i];
-			k = unused->items.pInt[i];
+			k = unused[i];
 			switch( vmc->code ){
 			case DVM_GOTO : case DVM_CASE : case DVM_SWITCH : 
 			case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
-				if( (unused->items.pInt[vmc->b] - k) != abs(vmc->b - i) ) break;
+				if( (unused[vmc->b] - k) != abs(vmc->b - i) ) break;
 				/* The codes between this location and the target are all dead: */
+				if( node->first != 0xffff ) DArray_Append( array, (size_t)node->first );
 				vmc->code = DVM_UNUSED;
 				node->type = DAO_OP_NONE;
 				node->lvalue = 0xffff;
@@ -803,10 +825,9 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 				k = array->items.pInt[j];
 				if( GET_BIT( node->bits->mbs, k ) == 0 ) continue;
 				/* Remove live variables that were defined in the dead codes.
-				// And add effected pair of nodes into the worklist: */
+				// And add effected pairs of nodes into the worklist: */
 				SET_BIT0( node->bits->mbs, k );
 				for(k=0; k<node->outs->size; k++){
-					if( node->outs->items.pVoid[k] == (void*)node2 ) continue;
 					DArray_PushBack( worklist, node->outs->items.pVoid[k] );
 					DArray_PushBack( worklist, node );
 				}
@@ -815,7 +836,7 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 		DaoOptimizer_ProcessWorklist( self, worklist );
 	}
 	DArray_Delete( array );
-	DArray_Delete( unused );
+	DArray_Delete( unused2 );
 	DArray_Delete( worklist );
 	DArray_CleanupCodes( annotCodes );
 	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
@@ -826,6 +847,106 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 /* Remove redundant registers for the same data types: */
 static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine )
 {
+	DNode *it;
+	DMap *same, *one = DHash_New(0,0);
+	DMap *sets = DHash_New(0,D_MAP);
+	DArray *array = DArray_New(0);
+	DArray *annotCodes = routine->body->annotCodes;
+	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
+	DaoCodeNode *node, *node2, **nodes;
+	DaoType *type, **types;
+	daoint i, j, k, m, N = annotCodes->size;
+	daoint *regmap, M = routine->body->regCount;
+
+	DArray_Resize( array, M, 0 );
+	regmap = array->items.pInt;
+	/* For DaoOptimizer_UpdateRegister(), the final number of registers is
+	// the number of mappings where (regmap[i] == i). Set regmap[0] */
+	//regmap[0] = 1;
+
+	DaoOptimizer_Init( self, routine );
+	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		switch( node->type ){
+		case DAO_OP_SINGLE :
+			regmap[ node->first ] = node->first;
+			break;
+		case DAO_OP_PAIR :
+			regmap[ node->first ] = node->first;
+			regmap[ node->second ] = node->second;
+			break;
+		case DAO_OP_TRIPLE :
+			regmap[ node->first ] = node->first;
+			regmap[ node->second ] = node->second;
+			regmap[ node->third ] = node->third;
+			break;
+		case DAO_OP_RANGE :
+		case DAO_OP_RANGE2 :
+			for(j=node->first; j<=node->second; j++) regmap[j] = j;
+			if( node->type == DAO_OP_RANGE2 ) regmap[ node->third ] = node->third;
+			break;
+		}
+		if( node->lvalue != 0xffff ) regmap[ node->lvalue ] = node->lvalue;
+	}
+	DaoOptimizer_UpdateRegister( self, routine, array );
+
+	//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
+
+	DaoOptimizer_Init( self, routine );
+	DaoOptimizer_InitLVA( self );
+	DaoOptimizer_SolveFlowEquation( self );
+
+	//DaoOptimizer_Print( self );
+
+	types = routine->body->regType->items.pType;
+	M = routine->body->regCount;
+	memset( regmap, 0, M*sizeof(daoint) );
+	for(i=0; i<M; i++){
+		type = types[i];
+		regmap[i] = i;
+		if( type == NULL || type->tid == 0 ) continue;
+		if( (it = MAP_Find( sets, type )) == NULL ) it = MAP_Insert( sets, type, one );
+		MAP_Insert( it->value.pMap, i, 0 );
+	}
+	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
+		/* Do not map lvalue that falls in the range: */
+		for(j=node->first; j<=node->second; j++) regmap[j] = - 1 - j;
+	}
+	//for(i=0; i<M; i++) printf( "%3i: %3i\n", (int)i, (int)regmap[i] );
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		vmc = codes[i];
+		if( node->lvalue == 0xffff || regmap[node->lvalue] < 0 ) continue;
+		it = MAP_Find( sets, types[node->lvalue] );
+		if( it == NULL ) continue;
+		same = it->value.pMap;
+		for(it=DMap_First(same); it; it=DMap_Next(same,it)){
+			if( it->key.pInt >= node->lvalue ){
+				it = NULL;
+				break;
+			}
+			if( GET_BIT( node->bits->mbs, it->key.pInt ) == 0 ) break;
+		}
+		if( it == NULL ) continue;
+		k = regmap[ it->key.pInt ];
+		regmap[ node->lvalue ] = k;
+		for(j=i; j<N; j++){
+			node2 = nodes[j];
+			if( GET_BIT( node2->bits->mbs, node->lvalue ) == 0 ) continue;
+			SET_BIT0( node2->bits->mbs, node->lvalue );
+			SET_BIT1( node2->bits->mbs, k );
+		}
+	}
+	for(i=0; i<M; i++) if( regmap[i] < 0 ) regmap[i] = - 1 - regmap[i];
+	//for(i=0; i<M; i++) printf( "%3i: %3i\n", (int)i, (int)regmap[i] );
+	DaoOptimizer_UpdateRegister( self, routine, array );
+	DArray_Delete( array );
+	DMap_Delete( sets );
+	DMap_Delete( one );
 }
 
 static void DaoRoutine_Optimize( DaoRoutine *self )
@@ -836,17 +957,10 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 
 	DaoOptimizer *flow = DaoOptimizer_New();
 
-	//DaoRoutine_PrintCode( self, stream );
-
 	DaoOptimizer_MergeRegister( flow, self );
-
-	//DaoRoutine_PrintCode( self, stream );
-
 	DaoOptimizer_CSE( flow, self );
-
-	//DaoRoutine_PrintCode( self, stream );
-
 	DaoOptimizer_DCE( flow, self );
+	//DaoOptimizer_ReduceRegister( flow, self );
 
 	DaoOptimizer_Delete( flow );
 }

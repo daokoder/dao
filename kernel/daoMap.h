@@ -25,6 +25,7 @@ typedef union
 	void        *pVoid;
 	DString     *pString;
 	DArray      *pArray;
+	DMap        *pMap;
 	DaoValue    *pValue;
 	DaoClass    *pClass;
 	DaoRoutine  *pRoutine;
