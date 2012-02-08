@@ -29,6 +29,7 @@ struct DaoCodeNode
 	ushort_t  second; /* the second (for PAIR) or the last (for RANGE) used variable; */
 	ushort_t  third;  /* the third (for TRIPLE) used variable; */
 	ushort_t  lvalue; /* variable defined by the instruction; 0xffff for none; */
+	ushort_t  lvalue2; /* C operand for SETF, SETI, SETDI, SETMI instructions; */
 	ushort_t  exprid; /* expression id; 0xffff for none; */
 	ushort_t  ones; /* number of ones in the bit array; */
 
