@@ -2023,6 +2023,7 @@ CallEntry:
 			inum = IntegerOperand( vmc->a );
 			if( id <0 ) id += str->size;
 			if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
+			DString_Detach( str );
 			if( str->mbs ){
 				str->mbs[id] = inum;
 			}else{
@@ -2455,9 +2456,7 @@ CallEntry:
 				if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 				vC2 = object->objValues + vmc->b;
 			}
-			value = locVars[vmc->a];
-			GC_ShiftRC( value, *vC2 );
-			*vC2 = value;
+			DaoValue_Copy( locVars[vmc->a], vC2 );
 		}OPNEXT()
 		OPCASE( SETF_KGII ){
 			klass = & locVars[ vmc->c ]->xClass;
@@ -3027,7 +3026,7 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 			DaoList_Clear( list );
 			return list;
 		}
-		if( list->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
+		if( list->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
 			if( self->activeValues[vmc2->c] == (DaoValue*) list ){
 				DaoList_Clear( list );
 				return list;
@@ -3054,7 +3053,7 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 				map->items->hashing = hashing;
 				return map;
 			}
-			if( map->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
+			if( map->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
 				if( self->activeValues[vmc2->c] == (DaoValue*) map ){
 					DaoMap_Reset( map );
 					map->items->hashing = hashing;
@@ -3081,7 +3080,7 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	if( array && array->type == DAO_ARRAY && array->unitype == tp ){
 		DaoVmCode *vmc2 = vmc + 1;
 		if( array->refCount == 1 ) return array;
-		if( array->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) ){
+		if( array->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
 			if( self->activeValues[vmc2->c] == (DaoValue*) array ){
 				return array;
 			}
@@ -3118,7 +3117,7 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size,
 	if( tup && tup->unitype == type ){
 		DaoVmCode *vmc = self->activeCode + 1;
 		if( tup->refCount == 1 ) return tup;
-		if( tup->refCount == 2 && (vmc->code == DVM_MOVE || vmc->code == DVM_MOVE_PP) ){
+		if( tup->refCount == 2 && (vmc->code == DVM_MOVE || vmc->code == DVM_MOVE_PP) && vmc->a != vmc->c ){
 			if( self->activeValues[vmc->c] == (DaoValue*) tup ) return tup;
 		}
 	}

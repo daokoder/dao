@@ -160,17 +160,21 @@ static void DaoOptimizer_InitNodeAEA( DaoOptimizer *self, DaoCodeNode *node )
 /* Transfer function for Available Expression Analysis: */
 static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCodeNode *node, DString *out )
 {
-	/* node->lvalue2 is the C operand for SETI, SETDI, SETMI, SETF and SETMF: */
-	daoint lvalue = node->lvalue != 0xffff ? node->lvalue : node->lvalue2;
 	daoint genAE = node->exprid;
 	daoint i, k, ones = node->ones;
 
-	if( node->first == lvalue || node->second == lvalue || node->third == lvalue ){
-		genAE = 0xffff;
-	}else if( node->type == DAO_OP_RANGE ){
-		if( node->first <= lvalue && lvalue <= node->second ) genAE = 0xffff;
-	}else if( node->type == DAO_OP_RANGE2 ){
-		genAE = 0xffff;
+	switch( node->type ){
+	case DAO_OP_SINGLE :
+		if( node->lvalue == node->first ) genAE = 0xffff;
+		break;
+	case DAO_OP_PAIR :
+		if( node->lvalue == node->first ) genAE = 0xffff;
+		if( node->lvalue == node->second ) genAE = 0xffff;
+		break;
+	case DAO_OP_RANGE :
+		if( node->first <= node->lvalue && node->lvalue <= node->second ) genAE = 0xffff;
+		break;
+	default : genAE = 0xffff; break;
 	}
 
 	memcpy( out->mbs, node->bits->mbs, node->bits->size );
@@ -538,7 +542,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		GC_ShiftRC( types[i], array->items.pType[k] );
 		array->items.pType[k] = types[i];
 	}
-	routine->body->regCount = k = array->size;
+	routine->body->regCount = array->size;
 	GC_DecRCs( routine->body->regType );
 	DArray_Swap( routine->body->regType, array );
 	DArray_Delete( array );
@@ -547,19 +551,17 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 	regmap = mapping->items.pInt;
 	types = routine->body->regType->items.pType;
 
-	for(i=0; i<M; i++) printf( "%3i: %3i\n", i, regmap[i] );
+	//for(i=0; i<M; i++) printf( "%3i: %3i\n", i, regmap[i] );
 	routine->body->simpleVariables->size = 0;
-	for(i=routine->parCount; i<k; i++){
+	for(i=routine->parCount; i<m; i++){
 		DaoType *tp = types[i];
 		if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_ENUM ){
 			DArray_Append( routine->body->simpleVariables, (daoint)i );
 		}
 	}
-	DMap_Reset( self->tmp );
 	for(i=0; i<N; i++){
 		vmc = codes2[i];
 		node = nodes[i];
-		if( MAP_Find( self->exprs, vmc ) ) MAP_Insert( self->tmp, vmc, i );
 		switch( (k = DaoVmCode_GetOpcodeType( vmc->code )) ){
 		case DAO_CODE_NOP :
 			break;
@@ -573,6 +575,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			vmc->b = regmap[ vmc->b ];
 			node->first = vmc->a;
 			node->second = vmc->b;
+			node->lvalue2 = vmc->b;
 			break;
 		case DAO_CODE_SETG :
 		case DAO_CODE_BRANCH :
@@ -620,8 +623,8 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		case DAO_CODE_YIELD :
 			if( vmc->b || vmc->a < M ){
 				vmc->a = regmap[ vmc->a ];
+				node->second += vmc->a - node->first;
 				node->first = vmc->a;
-				node->second = vmc->a + vmc->b - 1;
 			}
 			vmc->c = regmap[ vmc->c ];
 			node->lvalue = vmc->c;
@@ -666,6 +669,18 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		node->exprid = it->value.pInt;
 	}
 }
+static int DaoVmCode_MayCreateReference( int code )
+{
+	switch( code ){
+	case DVM_GETI_LI : case DVM_GETI_LSI :
+	case DVM_GETI_TI : case DVM_GETF_TS : case DVM_GETF_T :
+	case DVM_GETF_KC : case DVM_GETF_KG :
+	case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
+		return 1;
+	default : return code < DVM_SECT;
+	}
+	return 0;
+}
 /* Merge left hand registers for the same instructions with the same operands: */
 static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine )
 {
@@ -677,6 +692,9 @@ static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine 
 	DaoOptimizer_Init( self, routine );
 	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
 	do{
+		DaoType **types = routine->body->regType->items.pType;
+		DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
+		//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
 		M = routine->body->regCount;
 		DArray_Resize( array, M, 0 );
 		regmap = array->items.pInt;
@@ -688,6 +706,9 @@ static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine 
 			node2 = (DaoCodeNode*)self->enodes->items.pVoid[ node->exprid ];
 			if( node == node2 || node->lvalue == node2->lvalue ) continue;
 			if( MAP_Find( routine->body->localVarType, node->lvalue ) ) continue;
+			/* Do not merge lvalue of instruction that may produce a reference: */
+			if( DaoVmCode_MayCreateReference( codes[i].code ) ) continue;
+			assert( types[node->lvalue] == types[node2->lvalue] );
 			regmap[ node->lvalue ] = node2->lvalue;
 		}
 		for(i=0; i<N; i++){
@@ -731,7 +752,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			// need to be recomputed by using the entry AE instead of the exit AE
 			// of this node. So this node need to be modified such that it kills
 			// no expression:
-			*/
+			 */
 			node->type = DAO_OP_NONE;
 			node->lvalue = 0xffff;
 			node->lvalue2 = 0xffff;
@@ -937,7 +958,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	for(i=0; i<routine->parCount; i++) regmap[i] = i;
 	DaoOptimizer_UpdateRegister( self, routine, array );
 
-	DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
+	//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
 
 	/* Now use the linear scan algorithm (Poletto and Sarkar) to reallocation the registers: */
 	DaoOptimizer_DoLiveVariableAnalysis( self, routine );
@@ -947,18 +968,23 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	regCount = routine->parCount;
 	M = routine->body->regCount;
 	types = routine->body->regType->items.pType;
-	for(i=0; i<M; i++){
+	for(i=0; i<routine->parCount; i++){
+		regmap[i] = i;
+		intervals[2*i] = 0; /* initialize the live interval of the register; */
+		intervals[2*i+1] = N-1;
+	}
+	for(i=routine->parCount; i<M; i++){
 		type = types[i];
 		regmap[i] = -1; /* mark the register not yet mapped; */
 		intervals[2*i] = -1; /* initialize the live interval of the register; */
 		intervals[2*i+1] = -1;
 		/* map untyped register to distinctive new register ids: */
-		if( type == NULL || type->tid == 0 ) regmap[i] = regCount ++;
+		if( type == NULL || type->tid == DAO_ANY || type->tid == DAO_VARIANT || (type->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ) regmap[i] = regCount ++;
 	}
-	for(i=0; i<routine->parCount; i++) regmap[i] = i;
 	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
 	for(i=0; i<N; i++){
 		node = nodes[i];
+		vmc = codes[i];
 		for(j=0,k=0; j<M && k<node->ones; j++){
 			if( GET_BIT( node->bits->mbs, j ) == 0 ) continue;
 			if( intervals[2*j] < 0 ) intervals[2*j] = i;
@@ -970,10 +996,21 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 			intervals[2*node->lvalue] = i;
 			intervals[2*node->lvalue+1] = i;
 		}
+		if( node->lvalue != 0xffff && regmap[ node->lvalue ] < 0 ){
+			type = types[ node->lvalue ];
+			/* No reduction for register that may hold reference to simple types: */
+			if( type && type->tid && (type->tid < DAO_ARRAY || type->tid == DAO_VARIANT) ){
+				if( DaoVmCode_MayCreateReference( vmc->code ) ) regmap[node->lvalue] = regCount ++;
+			}
+		}
 		if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
 		/* map this range of registers to a new range of registers: */
-		for(j=node->first; j<=node->second; j++) regmap[j] = regCount ++;
+		for(j=node->first; j<=node->second; j++){
+			if( regmap[j] >= 0 ) continue;
+			regmap[j] = regCount ++;
+		}
 	}
+	printf( "%i %i\n", M, regCount );
 	for(i=0; i<M; i++){
 		type = types[i];
 		if( regmap[i] >= 0 ) continue;
@@ -987,6 +1024,8 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 		MAP_Insert( offsets, it->key.pVoid, regCount );
 		regCount += it->value.pMap->size;
 	}
+	printf( "%i %i\n", M, regCount );
+	assert( regCount == M );
 
 	/* Sort all the live intervals by the starting point and the register index: */
 	for(i=0; i<M; i++){
@@ -1077,6 +1116,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *vm
 		node->type = DAO_OP_PAIR;
 		node->first = vmc->a;
 		node->second = vmc->b;
+		node->lvalue2 = vmc->b;
 		break;
 	case DAO_CODE_SETF :
 		node->type = DAO_OP_PAIR;
@@ -1123,7 +1163,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *vm
 	case DAO_CODE_CALL :
 		k = vmc->b & 0xff;
 		if( k == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-			k = routine->parCount - (routine->routType->attrib & DAO_TYPE_SELF) != 0;
+			//XXX	k = routine->parCount - (routine->routType->attrib & DAO_TYPE_SELF) != 0;
 		}
 		node->type = DAO_OP_RANGE;
 		node->first = vmc->a;
@@ -1431,8 +1471,8 @@ void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 	DNode *node;
 	DMap *mapNames = self->routType->mapNames;
 	/*
-	printf( "%s %s\n", self->routName->mbs, self->routType->name->mbs );
-	*/
+	   printf( "%s %s\n", self->routName->mbs, self->routType->name->mbs );
+	 */
 	if( npar == ndef && ndef == 0 ) return;
 	if( code == DVM_MCALL && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
@@ -1460,8 +1500,8 @@ void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 		DaoType_MatchTo( tp, abtp, defs );
 	}
 	/*
-	for(node=DMap_First(defs);node;node=DMap_Next(defs,node))
-		printf( "binding:  %s  %s\n", node->key.pType->name->mbs, node->value.pType->name->mbs );
+	   for(node=DMap_First(defs);node;node=DMap_Next(defs,node))
+	   printf( "binding:  %s  %s\n", node->key.pType->name->mbs, node->value.pType->name->mbs );
 	 */
 	return;
 }
