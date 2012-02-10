@@ -131,6 +131,7 @@ struct DaoConfig
 	short jit;  /* enable JIT compiling, TODO fix */
 	short safe; /* enable safe running mode */
 	short typedcode; /* enable typed VM codes */
+	short optimize;  /* enable optimization */
 	short incompile; /* enable incremental compiling */
 	short iscgi;     /* is CGI script */
 	short tabspace;  /* number of spaces counted for a tab */

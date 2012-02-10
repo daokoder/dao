@@ -50,6 +50,7 @@ DaoConfig daoConfig =
 	0, /*jit*/
 	0, /*safe*/
 	1, /*typedcode*/
+	1, /*optimize*/
 	0, /*incompile*/
 	0, /*iscgi*/
 	8, /*tabspace*/
@@ -116,13 +117,11 @@ static const char *const cmd_help =
 "   -h, --help:           print this help information;\n"
 "   -v, --version:        print version information;\n"
 "   -e, --eval:           evaluate command line codes;\n"
-"   -s, --safe:           run in safe mode;\n"
 "   -d, --debug:          run in debug mode;\n"
-"   -i, --ineractive:     run in interactive mode;\n"
-"   -l, --list-bc:        print compiled bytecodes;\n"
+"   -i, --interactive:    run in interactive mode;\n"
+"   -l, --list-code:      print compiled bytecodes;\n"
 "   -j, --jit:            enable just-in-time compiling;\n"
-"   -T, --no-typed-code:  no typed VM codes;\n"
-"   -n, --incr-comp:      incremental compiling;\n"
+"   -Ox:                  optimization level (x=0 or 1);\n"
 ;
 /*
    "   -s, --assembly:    generate assembly file;\n"
@@ -281,12 +280,6 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
-#if 0
-		if( proc->future && proc->future->process == proc ){
-			GC_DecRC( proc );
-			proc->future->process = NULL;
-		}
-#endif
 		GC_DecRC( proc->future );
 		proc->future = NULL;
 #ifdef DAO_WITH_THREAD
@@ -551,23 +544,12 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 				DString_Clear( self->mainSource );
 			}else if( strcmp( token->mbs, "--debug" ) ==0 ){
 				self->options |= DAO_EXEC_DEBUG;
-			}else if( strcmp( token->mbs, "--safe" ) ==0 ){
-				self->options |= DAO_EXEC_SAFE;
-				daoConfig.safe = 1;
 			}else if( strcmp( token->mbs, "--interactive" ) ==0 ){
 				self->options |= DAO_EXEC_INTERUN;
-			}else if( strcmp( token->mbs, "--list-bc" ) ==0 ){
-				self->options |= DAO_EXEC_LIST_BC;
-			}else if( strcmp( token->mbs, "--list-bc" ) ==0 ){
+			}else if( strcmp( token->mbs, "--list-code" ) ==0 ){
 				self->options |= DAO_EXEC_LIST_BC;
 			}else if( strcmp( token->mbs, "--compile" ) ==0 ){
 				self->options |= DAO_EXEC_COMP_BC;
-			}else if( strcmp( token->mbs, "--incr-comp" ) ==0 ){
-				self->options |= DAO_EXEC_INCR_COMP;
-				daoConfig.incompile = 1;
-			}else if( strcmp( token->mbs, "--no-typed-code" ) ==0 ){
-				self->options |= DAO_EXEC_NO_TC;
-				daoConfig.typedcode = 0;
 			}else if( strcmp( token->mbs, "--jit" ) ==0 ){
 				self->options |= DAO_EXEC_JIT;
 				daoConfig.jit = 1;
@@ -579,6 +561,10 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 		}else if( DString_MatchMBS( token, " ^ [%C_]+=.* ", NULL, NULL ) ){
 			token = DString_DeepCopy( token );
 			putenv( token->mbs );
+		}else if( strcmp( token->mbs, "-O0" ) ==0 ){
+			daoConfig.optimize = 0;
+		}else if( strcmp( token->mbs, "-O1" ) ==0 ){
+			daoConfig.optimize = 1;
 		}else{
 			daoint len = token->size;
 			DString_Clear( str );
@@ -1697,6 +1683,9 @@ static void DaoConfigure_FromFile( const char *name )
 			}else if( TOKCMP( tk1, "typedcode" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.typedcode = yes;
+			}else if( TOKCMP( tk1, "optimize" )==0 ){
+				if( yes <0 ) goto InvalidConfigValue;
+				daoConfig.optimize = yes;
 			}else if( TOKCMP( tk1, "incompile" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.incompile = yes;

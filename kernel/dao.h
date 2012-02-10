@@ -172,16 +172,17 @@ enum DaoNamespaceOption
 /* Execution options, combinable by | */
 enum DaoExecOption
 {
-	DAO_EXEC_HELP      = (1<<0), /* -h, --help:       print this help information; */
-	DAO_EXEC_VINFO     = (1<<1), /* -v, --version:    print version information; */
-	DAO_EXEC_DEBUG     = (1<<2), /* -d, --debug:      run in debug mode; */
-	DAO_EXEC_SAFE      = (1<<3), /* -s, --safe:       run in safe mode; */
-	DAO_EXEC_INTERUN   = (1<<4), /* -i, --interactive: run in interactive mode; */
-	DAO_EXEC_LIST_BC   = (1<<5), /* -l, --list-bc:    print compiled bytecodes; */
-	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:    compile to bytecodes;(TODO) */
-	DAO_EXEC_INCR_COMP = (1<<7), /* -n, --incr-comp:  incremental compiling; */
-	DAO_EXEC_JIT       = (1<<8), /* -J, --jit:        enable JIT compiling; */
-	DAO_EXEC_NO_TC     = (1<<9), /* -T, --no-typed-code:   no typed code; */
+	DAO_EXEC_HELP      = (1<<0), /* -h, --help:         print this help information; */
+	DAO_EXEC_VINFO     = (1<<1), /* -v, --version:      print version information; */
+	DAO_EXEC_DEBUG     = (1<<2), /* -d, --debug:        run in debug mode; */
+	DAO_EXEC_INTERUN   = (1<<3), /* -i, --interactive:  run in interactive mode; */
+	DAO_EXEC_LIST_BC   = (1<<4), /* -l, --list-code:    print compiled bytecodes; */
+	DAO_EXEC_JIT       = (1<<5), /* -j, --jit:          enable JIT compiling; */
+	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:      compile to bytecodes;(TODO) */
+
+	DAO_EXEC_INCR_COMP = (1<<7), /* incremental compiling; */
+	DAO_EXEC_NO_TC     = (1<<8), /* no typed code; */
+	DAO_EXEC_SAFE      = (1<<9), /* run in safe mode; */
 
 	/* -- disable JIT;
 	 * -- disable function specialization;

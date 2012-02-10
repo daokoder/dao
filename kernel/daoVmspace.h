@@ -101,7 +101,6 @@ DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run 
 DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name );
-DAO_DLL void DaoVmSpace_UnloadIdleModules( DaoVmSpace *self );
 
 DAO_DLL void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int type, int check );
 
