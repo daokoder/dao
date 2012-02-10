@@ -364,8 +364,8 @@ DaoTypeBase baseTyper =
 {
 	"none", & baseCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
 };
-static DaoNone none0 = {0,0,DAO_VALUE_CONST,0,1};
-static DaoNone any0 = {0,DAO_ANY,DAO_VALUE_CONST,0,1};
+static DaoNone none0 = {0,DAO_NONE,DAO_VALUE_CONST,0,1};
+static DaoNone any0  = {0,DAO_ANY,DAO_VALUE_CONST,0,1};
 DaoValue *dao_none_value = (DaoValue*) (void*) & none0;
 DaoValue *dao_any_value = (DaoValue*) (void*) & any0;
 
@@ -2914,7 +2914,7 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 		/* a : tuple<string,map<string,int>> = ('',{=>});
 		   duplicating the constant to assign to "a" may not set the unitype properly */
 		tp = proc->activeTypes[ proc->activeCode->c ];
-		if( tp == NULL || tp->tid == 0 ) tp = dao_map_any;
+		if( tp == NULL || tp->tid == DAO_UDT ) tp = dao_map_any;
 		self->unitype = tp;
 		GC_IncRC( tp );
 	}

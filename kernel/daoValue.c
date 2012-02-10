@@ -702,8 +702,8 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		return 1;
 	}
 	switch( T->tid ){
-	case DAO_NONE :
-	case DAO_INITYPE :
+	case DAO_UDT :
+	case DAO_THT :
 		DaoValue_CopyExt( S, D, 1 );
 		return 1;
 	case DAO_ANY :

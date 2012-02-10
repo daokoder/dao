@@ -505,7 +505,7 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_MBS_OPEN ,
 	DTOK_WCS_OPEN ,
 	DTOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
-	DTOK_ID_INITYPE ,
+	DTOK_ID_THTYPE ,
 	DTOK_ID_SYMBOL ,
 	DTOK_LSB ,
 	DTOK_COLON ,
@@ -857,7 +857,7 @@ void DaoToken_Delete( DaoToken *self )
 }
 void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s )
 {
-	if( name == DTOK_ID_INITYPE || name == DTOK_ID_SYMBOL ) type = DTOK_IDENTIFIER;
+	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) type = DTOK_IDENTIFIER;
 	self->type = type;
 	self->name = name;
 	self->index = index;
@@ -870,7 +870,7 @@ void DaoTokens_Append( DArray *self, int name, int line, const char *data )
 	token.type = token.name = name;
 	token.line = line;
 	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
-	if( name == DTOK_ID_INITYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
+	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
 	DArray_Append( self, & token );
 	tok = (DaoToken*) DArray_Top( self );
 	tok->string = DString_New(1);
@@ -1172,7 +1172,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 			if( state >= TOK_END ){
 				DString_AppendChar( literal, ch );
 				lextok.type = lextok.name = daoTokenMap[ state ];
-				if( lextok.type == DTOK_ID_INITYPE || lextok.type == DTOK_ID_SYMBOL )
+				if( lextok.type == DTOK_ID_THTYPE || lextok.type == DTOK_ID_SYMBOL )
 					lextok.type = DTOK_IDENTIFIER;
 				if( space || comment || lextok.type != DTOK_COMMENT ){
 					if( isspace( lextok.string->mbs[0] ) )
@@ -1191,7 +1191,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 						DArray_Append( tokens, & lextok );
 					}else if( old > TOK_RESTART && old != TOK_END ){
 						lextok.type = lextok.name = daoTokenMap[ old ];
-						if( lextok.type == DTOK_ID_INITYPE || lextok.type == DTOK_ID_SYMBOL )
+						if( lextok.type == DTOK_ID_THTYPE || lextok.type == DTOK_ID_SYMBOL )
 							lextok.type = DTOK_IDENTIFIER;
 						DArray_Append( tokens, & lextok );
 					}else if( space ){
@@ -1248,7 +1248,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 		if( lextok.type == DTOK_IDENTIFIER ){
 			lextok.name = dao_key_hash( literal->mbs, literal->size );
 			if( lextok.name == 0 ) lextok.name = DTOK_IDENTIFIER;
-		}else if( lextok.type == DTOK_ID_INITYPE || lextok.type == DTOK_ID_SYMBOL ){
+		}else if( lextok.type == DTOK_ID_THTYPE || lextok.type == DTOK_ID_SYMBOL ){
 			lextok.type = DTOK_IDENTIFIER;
 		}
 		if( lextok.type || space ){

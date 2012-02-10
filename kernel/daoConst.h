@@ -30,18 +30,13 @@
 #include"dao.h"
 #include"daoBase.h"
 
-#define DAO_UDF DAO_NONE  /* undefined type: for implicitly declared variables */
-
 enum DaoRTTI
 {
-	DAO_ANY = END_CORE_TYPES,
-	DAO_INITYPE , /* a : @t */
-	DAO_VALTYPE ,
-	DAO_VARIANT , /* variant or disjoint union */
+	DAO_VARIANT = END_CORE_TYPES, /* variant or disjoint union type */
+	DAO_FUTURE ,  /* future value type */
 	DAO_MACRO ,
 	DAO_ROUTBODY ,
 	DAO_FUNCURRY ,
-	DAO_FUTURE ,
 	DAO_TYPEKERNEL ,
 	DAO_CODEBLOCK ,
 
@@ -49,6 +44,13 @@ enum DaoRTTI
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST , /* ... */
+
+	DAO_VALTYPE , /* value type type */
+
+	/* bit (1<<6) to indicate inexact checking: */
+	DAO_ANY = (1<<6)|0, /* any type */
+	DAO_THT = (1<<6)|1, /* type holder type */
+	DAO_UDT = (1<<6)|2, /* undefined type */
 
 	END_EXTRA_TYPES ,
 

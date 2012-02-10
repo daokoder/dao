@@ -1806,7 +1806,7 @@ DaoType *dao_dynclass_method = NULL;
 /* name:string,value:any,storage:enum<>,access:enum<> */
 const char *field_typename = 
 "tuple<string,any>|tuple<string,any,enum<const,global,var>>|"
-"tuple<string,any,enum<const,global,var>,enum<private,protected,public>>>";
+"tuple<string,any,enum<const,global,var>,enum<private,protected,public>>";
 
 /* name:string,method:routine,access:enum<> */
 const char *method_typename = 
@@ -1925,7 +1925,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DaoGC_Start();
 
-	dao_type_udf = DaoType_New( "?", DAO_UDF, NULL, NULL );
+	dao_type_udf = DaoType_New( "?", DAO_UDT, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 

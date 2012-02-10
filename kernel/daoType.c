@@ -203,9 +203,9 @@ void DaoType_InitDefault( DaoType *self )
 		for(i=0; i<count; i++) DaoType_InitDefault( types[i] );
 		if( count ) value = types[0]->value;
 		break;
-	case DAO_UDF :
+	case DAO_UDT :
 	case DAO_ANY :
-	case DAO_INITYPE :
+	case DAO_THT :
 	case DAO_ROUTINE :
 	case DAO_INTERFACE : value = dao_none_value; break;
 	case DAO_VALTYPE : value = self->aux; break;
@@ -304,20 +304,20 @@ void DaoType_Init()
 	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EQ+1;
 
 	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[DAO_UDF][i] = DAO_MT_UDF;
-		dao_type_matrix[i][DAO_UDF] = DAO_MT_UDF;
+		dao_type_matrix[DAO_UDT][i] = DAO_MT_UDF;
+		dao_type_matrix[i][DAO_UDT] = DAO_MT_UDF;
 		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
 		dao_type_matrix[DAO_ANY][i] = DAO_MT_ANYX;
-		dao_type_matrix[DAO_INITYPE][i] = DAO_MT_INIT;
-		dao_type_matrix[i][DAO_INITYPE] = DAO_MT_INIT;
+		dao_type_matrix[DAO_THT][i] = DAO_MT_INIT;
+		dao_type_matrix[i][DAO_THT] = DAO_MT_INIT;
 	}
 
-	dao_type_matrix[DAO_UDF][DAO_ANY] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_ANY][DAO_UDF] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_INITYPE][DAO_ANY] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_ANY][DAO_INITYPE] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_UDF][DAO_INITYPE] = DAO_MT_UDF;
-	dao_type_matrix[DAO_INITYPE][DAO_UDF] = DAO_MT_UDF;
+	dao_type_matrix[DAO_UDT][DAO_ANY] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_ANY][DAO_UDT] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_UDT][DAO_THT] = DAO_MT_UDF;
+	dao_type_matrix[DAO_THT][DAO_UDT] = DAO_MT_UDF;
 
 	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EQ+1;
 	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EQ+1;
@@ -423,32 +423,32 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			self->name->mbs, type->name->mbs, defs );
 	 */
 	if( mt == DAO_MT_INIT ){
-		if( self && self->tid == DAO_INITYPE ){
+		if( self && self->tid == DAO_THT ){
 			if( defs ) node = MAP_Find( defs, self );
 			if( node ) self = node->value.pType;
 		}
-		if( type && type->tid == DAO_INITYPE ){
+		if( type && type->tid == DAO_THT ){
 			if( defs ) node = MAP_Find( defs, type );
 			if( node == NULL ){
 				if( defs ) MAP_Insert( defs, type, self );
-				if( self == NULL || self->tid==DAO_ANY || self->tid==DAO_UDF )
+				if( self == NULL || self->tid==DAO_ANY || self->tid==DAO_UDT )
 					return DAO_MT_ANYUDF;
 				return DAO_MT_INIT; /* even if self==NULL, for typing checking for undefined @X */
 			}
 			type = node->value.pType;
 			mt = DAO_MT_INIT;
-			if( type == NULL || type->tid==DAO_ANY || type->tid==DAO_UDF )
+			if( type == NULL || type->tid==DAO_ANY || type->tid==DAO_UDT )
 				return DAO_MT_ANYUDF;
 		}
 	}else if( mt == DAO_MT_UDF ){
-		if( self->tid == DAO_UDF ){
-			if( type->tid==DAO_ANY || type->tid==DAO_UDF ) return DAO_MT_ANYUDF;
+		if( self->tid == DAO_UDT ){
+			if( type->tid==DAO_ANY || type->tid==DAO_UDT ) return DAO_MT_ANYUDF;
 		}else{
-			if( self->tid==DAO_ANY || self->tid==DAO_UDF ) return DAO_MT_ANYUDF;
+			if( self->tid==DAO_ANY || self->tid==DAO_UDT ) return DAO_MT_ANYUDF;
 		}
 		return mt;
 	}else if( mt == DAO_MT_ANYUDF ){
-		if( self->tid == DAO_ANY && type->tid == DAO_INITYPE ){
+		if( self->tid == DAO_ANY && type->tid == DAO_THT ){
 			if( defs ) MAP_Insert( defs, type, self );
 		}
 		return mt;
@@ -622,7 +622,6 @@ int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 }
 int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 {
-	size_t flags;
 	DaoType *tp;
 	DaoEnum *other;
 	DNode *node;
@@ -645,9 +644,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case (DAO_DOUBLE  << 8) | DAO_FLOAT   : return DAO_MT_SIM;
 	}
 	switch( self->tid ){
-	case DAO_UDF :
+	case DAO_UDT :
 		return DAO_MT_UDF;
-	case DAO_INITYPE :
+	case DAO_THT :
 		if( defs ){
 			node = MAP_Find( defs, self );
 			if( node ) return DaoType_MatchValue( node->value.pType, value, defs );
@@ -689,9 +688,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
-		if( it1 == DAO_UDF ) return DAO_MT_UDF;
+		if( it1 == DAO_UDT ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
-		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( it1 == DAO_THT ) return DAO_MT_INIT;
 		if( value->xArray.etype == it1 ) return DAO_MT_EQ;
 		/* return DAO_MT_EQ for exact match, or zero otherwise: */
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
@@ -702,9 +701,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
-		if( it1 == DAO_UDF ) return DAO_MT_UDF;
+		if( it1 == DAO_UDT ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
-		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( it1 == DAO_THT ) return DAO_MT_INIT;
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_MAP :
@@ -714,10 +713,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
 		if( self->nested && self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
-		flags = (1<<DAO_UDF)|((size_t)1<<DAO_ANY)|((size_t)1<<DAO_INITYPE);
-		if( (((size_t)1<<it1)&flags) || (((size_t)1<<it2)&flags) ){
-			if( it1 == DAO_UDF || it2 == DAO_UDF ) return DAO_MT_UDF;
-			if( it1 == DAO_INITYPE || it2 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( (it1|it2) & DAO_ANY ){ /* check for bit (1<<6) */
+			if( it1 == DAO_UDT || it2 == DAO_UDT ) return DAO_MT_UDF;
+			if( it1 == DAO_THT || it2 == DAO_THT ) return DAO_MT_INIT;
 			if( it1 == DAO_ANY || it2 == DAO_ANY ) return DAO_MT_ANY;
 		}
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
@@ -737,7 +735,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			 * the tuple may be assigned to a context value before
 			 * its values are set properly! */
 			if( value->xTuple.items[i] == NULL ) continue;
-			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) continue;
+			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 
 			mt = DaoType_MatchValue( tp, value->xTuple.items[i], defs );
 			if( mt < DAO_MT_SIM ) return 0;
@@ -809,9 +807,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
-		if( it1 == DAO_UDF ) return DAO_MT_UDF;
+		if( it1 == DAO_UDT ) return DAO_MT_UDF;
 		if( it1 == DAO_ANY ) return DAO_MT_ANY;
-		if( it1 == DAO_INITYPE ) return DAO_MT_INIT;
+		if( it1 == DAO_THT ) return DAO_MT_INIT;
 		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
 		break;
 	case DAO_PAR_NAMED :
@@ -892,7 +890,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
 	}
 
-	if( self->tid == DAO_INITYPE ){
+	if( self->tid == DAO_THT ){
 		node = MAP_Find( defs, self );
 		if( node == NULL ) return self;
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
@@ -1057,7 +1055,7 @@ void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 {
 	daoint i, n;
-	if( self->tid == DAO_INITYPE ){
+	if( self->tid == DAO_THT ){
 		DMap_Insert( types, self, 0 );
 		return;
 	}
@@ -1723,7 +1721,7 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DArray *types )
 	for(i=0; i<types->size; i++){
 		DaoType *par = self->holders->items.pType[i];
 		DaoType *arg = types->items.pType[i];
-		if( arg->tid == DAO_UDF ) return 0;
+		if( arg->tid == DAO_UDT ) return 0;
 		if( DaoType_MatchTo( arg, par, NULL ) ==0 ) return 0;
 	}
 	return 1;

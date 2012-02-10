@@ -2984,7 +2984,7 @@ DLong* DaoProcess_GetLong( DaoProcess *self, DaoVmCode *vmc )
 		dC->xLong.value->size = 0;
 		return dC->xLong.value;
 	}
-	if( tp && tp->tid !=DAO_LONG && tp->tid !=DAO_UDF && tp->tid !=DAO_ANY ) return NULL;
+	if( tp && tp->tid !=DAO_LONG && tp->tid != DAO_UDT && tp->tid != DAO_ANY ) return NULL;
 	dC = (DaoValue*) DaoLong_New();
 	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
 	self->activeValues[ vmc->c ] = dC;
@@ -3002,7 +3002,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 		if( tp != dC->xEnum.etype ) DaoEnum_SetType( & dC->xEnum, tp );
 		return & dC->xEnum;
 	}
-	if( tp && tp->tid !=DAO_ENUM && tp->tid !=DAO_UDF && tp->tid !=DAO_ANY ) return NULL;
+	if( tp && tp->tid !=DAO_ENUM && tp->tid != DAO_UDT && tp->tid != DAO_ANY ) return NULL;
 	dC = (DaoValue*) DaoEnum_New( tp, 0 );
 	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
 	self->activeValues[ vmc->c ] = dC;
@@ -3647,7 +3647,7 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	if( retValue == NULL ){
 		int opt1 = self->vmSpace->options & DAO_EXEC_INTERUN;
 		int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
-		int retnull = type == NULL || type->tid == DAO_UDF;
+		int retnull = type == NULL || type->tid == DAO_UDT;
 		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
 	if( DaoValue_Move( retValue, dest, type ) ==0 ) goto InvalidReturn;
@@ -3763,7 +3763,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on none object" );
 		return;
 	}
-	if( ct == NULL || ct->tid == DAO_UDF || ct->tid == DAO_ANY ) goto FastCasting;
+	if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_ANY ) goto FastCasting;
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
 
 	if( vc && vc->type == ct->tid && va->type <= DAO_STRING ){
@@ -5950,7 +5950,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	int tid = dC->type;
 	int imagfirst = 0;
 	int ec, sign = 1;
-	if( dA->type != DAO_STRING || tid ==0 || tid > DAO_LONG ) return 0;
+	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_LONG ) return 0;
 	if( dA->xString.data->mbs ){
 		DString_SetDataMBS( mbs, dA->xString.data->mbs, dA->xString.data->size );
 	}else{
@@ -6065,11 +6065,11 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	if( ct == NULL ) goto FailConversion;
 	if( ct->tid == DAO_ANY ) goto Rebind;
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
-	if( ct->tid > 0 && ct->tid <= DAO_LONG && (dC == NULL || dC->type != ct->tid) ){
+	if( ct->tid > DAO_NONE && ct->tid <= DAO_LONG && (dC == NULL || dC->type != ct->tid) ){
 		dC = DaoValue_SimpleCopy( ct->value );
 		DaoFactory_CacheValue( factory, dC );
 	}
-	if( dA->type == DAO_STRING && ct->tid > 0 && ct->tid <= DAO_LONG ){
+	if( dA->type == DAO_STRING && ct->tid > DAO_NONE && ct->tid <= DAO_LONG ){
 		if( ConvertStringToNumber( proc, dA, dC ) ==0 ) goto FailConversion;
 		return dC;
 	}
@@ -6152,7 +6152,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			}
 		}else if( dA->type == DAO_ARRAY ){
 			if( tp == NULL ) goto Rebind;
-			if( tp->tid == DAO_UDF || tp->tid == DAO_ANY || tp->tid == DAO_INITYPE ) goto Rebind;
+			if( tp->tid & DAO_ANY ) goto Rebind;
 			if( array2->etype == tp->tid ) goto Rebind;
 			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
 			array2 = & dA->xArray;
@@ -6172,7 +6172,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			list = & dA->xList;
 			size = list->items.size;
 			if( tp == NULL ) goto FailConversion;
-			if( tp->tid ==0 || tp->tid > DAO_COMPLEX ) goto FailConversion;
+			if( tp->tid == DAO_NONE || tp->tid > DAO_COMPLEX ) goto FailConversion;
 			array = DaoTypeCast_MakeArray( factory, dC, ct, tp->tid );
 			DaoArray_ResizeVector( array, size );
 			for(i=0; i<size; i++){
@@ -6625,10 +6625,11 @@ static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUB
 void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoType *tp;
+	DaoValue **values = self->activeValues;
 	DaoRoutine *routine = self->activeRoutine;
 	DaoNamespace *ns = self->activeNamespace;
 	DaoNamespace *ns2 = self->activeNamespace;
-	DaoTuple *tuple = & self->activeValues[vmc->a]->xTuple;
+	DaoTuple *tuple = (DaoTuple*) values[vmc->a];
 	DaoClass *klass = DaoClass_New();
 	DaoClass *proto = NULL;
 	DaoList *parents = NULL;
@@ -6641,11 +6642,11 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DMap *deftypes = DMap_New(0,0);
 	DMap *pm_map = DMap_New(D_STRING,0);
 	DMap *st_map = DMap_New(D_STRING,0);
-	DMap *protoValues = NULL;
 	DArray *routines = DArray_New(0);
 	DNode *it, *node;
 	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
 	DaoEnum stEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	int iclass = values[vmc->a+1]->xInteger.value;
 	int i, n, st, pm, up, id, size;
 	char buf[50];
 	
@@ -6654,9 +6655,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) klass );
 	//printf( "%s\n", tuple->unitype->name->mbs );
-	if( vmc->b && routine->routConsts->items.items.pValue[vmc->b-1]->type == DAO_CLASS ){
-		proto = & routine->routConsts->items.items.pValue[vmc->b-1]->xClass;
-		protoValues = proto->protoValues;
+	if( iclass && routine->routConsts->items.items.pValue[iclass-1]->type == DAO_CLASS ){
+		proto = & routine->routConsts->items.items.pValue[iclass-1]->xClass;
 		ns2 = proto->classRoutine->nameSpace;
 	}
 	
@@ -6686,11 +6686,11 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 		if( type->tid != DAO_TYPE ) continue;
 		type = type->nested->items.pType[0];
 		if( type->tid == DAO_VARIANT && type->aux ) type = (DaoType*) type->aux;
-		if( type->tid == DAO_INITYPE && value->type == DAO_TYPE ){
+		if( type->tid == DAO_THT && value->type == DAO_TYPE ){
 			MAP_Insert( deftypes, type, value );
 		}
 	}
-	tp = DaoNamespace_MakeType( ns, "@class", DAO_INITYPE, NULL,NULL,0 );
+	tp = DaoNamespace_MakeType( ns, "@class", DAO_THT, NULL,NULL,0 );
 	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
 	DaoProcess_MapTypes( self, deftypes );
 	
@@ -6698,15 +6698,11 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	if( proto ) DaoClass_CopyField( klass, proto, deftypes );
 	
 	/* update class members with running time data */
-	for(it=DMap_First(protoValues);it;it=DMap_Next(protoValues,it)){
+	for(i=2; i<=vmc->b; i+=3){
 		DaoValue *value;
-		node = DMap_Find( proto->lookupTable, it->value.pString );
-		st = LOOKUP_ST( node->value.pSize );
-		pm = LOOKUP_PM( node->value.pSize );
-		up = LOOKUP_UP( node->value.pSize );
-		id = LOOKUP_ID( node->value.pSize );
-		if( up ) continue; /* should be never true */
-		value = self->activeValues[it->key.pInt];
+		st = values[vmc->a+i+1]->xInteger.value;
+		id = values[vmc->a+i+2]->xInteger.value;
+		value = self->activeValues[vmc->a+i];
 		if( st == DAO_CLASS_CONSTANT ){
 			DaoRoutine *newRout = NULL;
 			DaoValue **dest2 = klass->cstData->items.pValue + id;

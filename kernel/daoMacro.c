@@ -1225,7 +1225,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 		if( rb < 0 ) return -1;
 		start = rb + 1;
-	}else if( tki == DTOK_ID_INITYPE && tki2 == DTOK_LB ){
+	}else if( tki == DTOK_ID_THTYPE && tki2 == DTOK_LB ){
 		start += 1;
 	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		start += 1;

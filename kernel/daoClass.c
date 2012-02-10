@@ -341,7 +341,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 	DString_AppendChar( name, '<' );
 	for(i=0; i<types->size; i++){
 		type = types->items.pType[i];
-		holders += type->tid == DAO_INITYPE;
+		holders += type->tid == DAO_THT;
 		if( i ) DString_AppendChar( name, ',' );
 		DString_Append( name, type->name );
 	}

@@ -25,7 +25,7 @@ enum DaoTokNames
 	DTOK_WCS_OPEN ,
 	DTOK_COMMENT ,
 	DTOK_IDENTIFIER ,
-	DTOK_ID_INITYPE , /* @type_holder, @decorator */
+	DTOK_ID_THTYPE , /* @type_holder, @decorator */
 	DTOK_ID_SYMBOL , /* $symbol */
 	DTOK_DIGITS_HEX ,
 	DTOK_DIGITS_DEC ,

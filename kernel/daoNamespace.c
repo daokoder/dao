@@ -1287,7 +1287,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	if( id >=0 ) return;
 	if( tp->aux && (tp->tid >= DAO_OBJECT && tp->tid <= DAO_CTYPE) ){
 		DaoNamespace_AddConst( self, name, tp->aux, DAO_DATA_PUBLIC );
-	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_INITYPE ){
+	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_THT ){
 		DaoNamespace_AddConst( self, name, (DaoValue*) tp, DAO_DATA_PUBLIC );
 	}
 }
@@ -1606,7 +1606,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 			ch = tp->name->mbs[tp->fname->size];
 			tp2 = & tp->aux->xType;
 		}
-		if( tp2 && tp2->tid ==DAO_UDF ){
+		if( tp2 && tp2->tid == DAO_UDT ){
 			if( vals && vals[i] ){
 				tp2 = DaoNamespace_GetType( self, vals[i] );
 			}else if( types && types[i] ){

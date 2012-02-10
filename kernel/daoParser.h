@@ -113,6 +113,9 @@ struct DaoParser
 	DArray *decoFuncs;
 	DArray *decoParams;
 
+	/* Proto-values for a proto class: upvalue register ids to class member ids */
+	DMap  *protoValues; /* <int,int> */
+
 	/* members for convenience */
 	DaoEnum   *denum;
 	DLong     *bigint;
