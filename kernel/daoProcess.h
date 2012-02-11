@@ -14,11 +14,13 @@
 #ifndef DAO_PROCESS_H
 #define DAO_PROCESS_H
 
+#include"time.h"
+#include"stdlib.h"
+
 #include"daoVmcode.h"
 #include"daoType.h"
 #include"daoThread.h"
-#include"time.h"
-#include"stdlib.h"
+#include"daoOptimizer.h"
 
 #define DVM_MAKE_OBJECT (1<<5)
 #define DVM_FRAME_SECT  (1<<6)
@@ -164,14 +166,14 @@ typedef struct DaoJitCallData DaoJitCallData;
 typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
 typedef void (*DaoJIT_QuitFPT)();
 typedef void (*DaoJIT_FreeFPT)( void *jitdata );
-typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine );
+typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine, DaoOptimizer *optimizer );
 typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 
 struct DaoJIT
 {
 	void (*Quit)();
 	void (*Free)( void *jitdata );
-	void (*Compile)( DaoRoutine *routine );
+	void (*Compile)( DaoRoutine *routine, DaoOptimizer *optimizer );
 	void (*Execute)( DaoProcess *process, DaoJitCallData *data, int jitcode );
 };
 

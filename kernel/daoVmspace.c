@@ -1833,11 +1833,13 @@ extern DHash *dao_meta_tables;
 
 int DaoJIT_TryInit( DaoVmSpace *vms )
 {
+	DString *name = DString_New(1);
 	void (*init)( DaoVmSpace*, DaoJIT* );
-	char name[64];
 	void *jitHandle;
-	sprintf( name, "libDaoJIT%s", DAO_DLL_SUFFIX );
-	jitHandle = DaoLoadLibrary( name );
+	DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
+	DaoVmSpace_MakePath( vms, name, DAO_FILE_PATH, 1 );
+	jitHandle = DaoLoadLibrary( name->mbs );
+	DString_Delete( name );
 	if( jitHandle == NULL ) return 0;
 	init = (DaoJIT_InitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Init" );
 	if( init == NULL ) return 0;

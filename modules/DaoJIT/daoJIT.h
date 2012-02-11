@@ -22,7 +22,7 @@ void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit );
 void DaoJIT_Quit();
 
 void DaoJIT_Free( DaoRoutine *routine );
-void DaoJIT_Compile( DaoRoutine *routine );
+void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer );
 void DaoJIT_Execute( DaoProcess *process, DaoJitCallData *data, int jitcode );
 }
 
@@ -31,6 +31,10 @@ using namespace llvm;
 struct DaoJitHandle : public IRBuilder<>
 {
 	DaoRoutine *routine;
+	DaoOptimizer *optimizer;
+	DaoCodeNode  *currentNode;
+	DaoCodeNode  *lastNode;
+
 	Function   *jitFunction;
 	BasicBlock *entryBlock;
 	BasicBlock *activeBlock;
@@ -45,11 +49,15 @@ struct DaoJitHandle : public IRBuilder<>
 	std::vector<Value*> tempRefers; // int*, float*, double*, for intermediate operands
 	std::vector<Value*> tempValues; // int, float, double, for intermediate operands
 
-	DaoJitHandle( LLVMContext & ctx, DaoRoutine *rout=NULL ) : IRBuilder<>( ctx ){
+	DaoJitHandle( LLVMContext & ctx, DaoRoutine *rout=NULL, DaoOptimizer *opt=NULL ) 
+		: IRBuilder<>( ctx ){
 		routine = rout;
+		optimizer = opt;
+		currentNode = NULL;
+		lastNode = NULL;
 	}
 
-	Function* Compile( DaoRoutine *routine, int start, int end );
+	Function* Compile( int start, int end );
 
 	Function* NewFunction( DaoRoutine *routine, int id );
 	BasicBlock* NewBlock( int vmc );

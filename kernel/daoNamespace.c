@@ -352,11 +352,11 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DaoParser_Delete( parser );
 		DaoParser_Delete( defparser );
 
-		assert( DAO_ROUT_MAIN < (1<<DVM_MOVE) );
-		for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
-			DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_MOVE] );
+		assert( DAO_ROUT_MAIN < (1<<DVM_NOT) );
+		for(i=DVM_NOT; i<=DVM_BITRIT; i++){
+			DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_NOT] );
 			if( DMap_Find( methods, name1 ) == NULL ) continue;
-			typer->core->kernel->attribs |= DAO_OPER_OVERLOADED | (DVM_MOVE<<(i-DVM_MOVE+1));
+			typer->core->kernel->attribs |= DAO_OPER_OVERLOADED | (DVM_NOT<<(i-DVM_NOT+1));
 		}
 		DString_Delete( name1 );
 		DString_Delete( name2 );

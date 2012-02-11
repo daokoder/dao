@@ -24,13 +24,10 @@
 #include"daoVmspace.h"
 #include"daoOptimizer.h"
 
-#define GET_BIT( bits, id ) (bits[id/8] & (1<<(id%8)))
-#define SET_BIT0( bits, id ) bits[id/8] &= ~(1<<(id%8))
-#define SET_BIT1( bits, id ) bits[id/8] |= (1<<(id%8))
 
 extern DMutex mutex_routine_specialize;
 
-DaoCodeNode* DaoCodeNode_New()
+static DaoCodeNode* DaoCodeNode_New()
 {
 	DaoCodeNode *self = (DaoCodeNode*) dao_calloc( 1, sizeof(DaoCodeNode) );
 	self->ins = DArray_New(0);
@@ -39,7 +36,7 @@ DaoCodeNode* DaoCodeNode_New()
 	self->bits = DString_New(1);
 	return self;
 }
-void DaoCodeNode_Delete( DaoCodeNode *self )
+static void DaoCodeNode_Delete( DaoCodeNode *self )
 {
 	DArray_Delete( self->ins );
 	DArray_Delete( self->outs );
@@ -47,7 +44,7 @@ void DaoCodeNode_Delete( DaoCodeNode *self )
 	DString_Delete( self->bits );
 	dao_free( self );
 }
-void DaoCodeNode_Clear( DaoCodeNode *self )
+static void DaoCodeNode_Clear( DaoCodeNode *self )
 {
 	self->ins->size = self->outs->size = 0;
 	self->kills->size = 0;
@@ -1112,7 +1109,7 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 	DaoOptimizer_DCE( optimizer, self );
 	DaoOptimizer_ReduceRegister( optimizer, self );
 
-	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self );
+	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self, optimizer );
 	DaoOptimizer_Delete( optimizer );
 }
 
@@ -1243,7 +1240,6 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *vm
 		/* Exclude expressions that access global data or must be evaluated: */
 		return;
 	case DAO_CODE_MOVE :
-		if( vmc->code < DVM_SECT ) return; /* Exclude non-specialized; */
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->c ) ) return;
 		break;
 	case DAO_CODE_UNARY2 :
@@ -1628,8 +1624,8 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	ts[0] = ct;
 	ts[1] = at;
 	ts[2] = bt;
-	if( setname && opa == opc && daoBitBoolArithOpers2[code-DVM_MOVE] ){
-		DString_SetMBS( mbs, daoBitBoolArithOpers2[code-DVM_MOVE] );
+	if( setname && opa == opc && daoBitBoolArithOpers2[code-DVM_NOT] ){
+		DString_SetMBS( mbs, daoBitBoolArithOpers2[code-DVM_NOT] );
 		if( at->tid == DAO_INTERFACE ){
 			node = DMap_Find( at->aux->xInterface.methods, mbs );
 			rout = node->value.pRoutine;
@@ -1646,7 +1642,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 			if( rout ) return ct;
 		}
 	}
-	if( setname ) DString_SetMBS( mbs, daoBitBoolArithOpers[code-DVM_MOVE] );
+	if( setname ) DString_SetMBS( mbs, daoBitBoolArithOpers[code-DVM_NOT] );
 	if( at->tid == DAO_INTERFACE ){
 		node = DMap_Find( at->aux->xInterface.methods, mbs );
 		rout = node->value.pRoutine;
@@ -2882,10 +2878,10 @@ NotExist_TryAux:
 								}else if( at->tid ==DAO_STRING && ct->tid ==DAO_STRING ){
 									vmc->code = DVM_SETF_TSS;
 									vmc->b = k;
-								}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_STREAM && csts[opa] == NULL ){
+								}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
 									vmc->code = DVM_SETF_TPP;
 									vmc->b = k;
-								}else if( at->tid <= DAO_STREAM ){
+								}else{
 									vmc->code = DVM_SETF_TXX;
 									vmc->b = k;
 								}
@@ -3124,10 +3120,10 @@ NotExist_TryAux:
 							}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 								vmc->code = DVM_SETF_TSS;
 								vmc->b = k;
-							}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_STREAM && csts[opa] == NULL ){
+							}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
 								vmc->code = DVM_SETF_TPP;
 								vmc->b = k;
-							}else if( at->tid <= DAO_STREAM ){
+							}else{
 								vmc->code = DVM_SETF_TXX;
 								vmc->b = k;
 							}
@@ -3284,11 +3280,13 @@ NotExist_TryAux:
 						vmc->code = DVM_MOVE_CC;
 					}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 						vmc->code = DVM_MOVE_SS;
-					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_STREAM && csts[opa] == NULL ){
+					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
 						vmc->code = DVM_MOVE_PP;
-					}else if( at->tid <= DAO_STREAM ){
+					}else{
 						vmc->code = DVM_MOVE_XX;
 					}
+				}else if( typed_code && type[opc]->tid == DAO_ANY ){
+					vmc->code = DVM_MOVE_XX;
 				}
 				break;
 			}

@@ -717,15 +717,15 @@ void DaoClass_ResetAttributes( DaoClass *self )
 		}
 	}
 	if( autodef ) self->attribs |= DAO_CLS_AUTO_DEFAULT;
-	for(i=DVM_MOVE; i<=DVM_BITRIT; i++){
-		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_MOVE] );
+	for(i=DVM_NOT; i<=DVM_BITRIT; i++){
+		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
 		node = DMap_Find( self->lookupTable, mbs );
 		if( node == NULL ) continue;
 		if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
 		id = LOOKUP_ID( node->value.pSize );
 		k = self->cstData->items.pValue[id]->type;
 		if( k != DAO_ROUTINE ) continue;
-		self->attribs |= DAO_OPER_OVERLOADED | (DAO_OPER_OVERLOADED<<(i-DVM_MOVE+1));
+		self->attribs |= DAO_OPER_OVERLOADED | (DAO_OPER_OVERLOADED<<(i-DVM_NOT+1));
 	}
 	DString_Delete( mbs );
 }

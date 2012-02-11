@@ -419,9 +419,7 @@ static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
-		fflush(stdout);printf( "before: %i\n", i );fflush(stdout);
 		DaoProcess_Execute( proc );
-		fflush(stdout);printf( "after: %i\n", i );fflush(stdout);
 		if( proc->status == DAO_VMPROC_ABORTED ) break;
 	}
 	DaoProcess_ReleaseCV( proc );

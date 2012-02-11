@@ -100,7 +100,6 @@ static void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc );
 
 static DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
 static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
@@ -1307,8 +1306,7 @@ CallEntry:
 			DaoProcess_DoCast( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( MOVE ){
-			self->activeCode = vmc;
-			DaoProcess_DoMove( self, vmc );
+			DaoProcess_Move( self, locVars[ vmc->a ], & locVars[ vmc->c ], locTypes[vmc->c] );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( ADD )
@@ -3552,37 +3550,6 @@ void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc )
 	}
 }
 
-void DaoProcess_DoMove( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoType *ct = self->activeTypes[ vmc->c ];
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoValue *C = self->activeValues[ vmc->c ];
-	int overload = 0;
-	if( A == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
-		return;
-	}
-	if( C ){
-		if( A->type == C->type && C->type == DAO_OBJECT ){
-			overload = DaoClass_ChildOf( A->xObject.defClass, (DaoValue*)C->xObject.defClass ) == 0;
-		}else if( A->type == C->type && C->type == DAO_CDATA ){
-			overload = DaoType_ChildOf( A->xCdata.ctype, C->xCdata.ctype ) == 0;
-		}else if( C->type == DAO_OBJECT || C->type == DAO_CDATA ){
-			overload = 1;
-		}
-		if( overload ){
-			DaoRoutine *rout = NULL;
-			if( C->type == DAO_OBJECT ){
-				DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
-				rout = DaoClass_FindOperator( C->xObject.defClass, "=", scope );
-			}else{
-				rout = DaoType_FindFunctionMBS( C->xCdata.ctype, "=" );
-			}
-			if( rout && DaoProcess_PushCallable( self, rout, C, & A, 1 ) == 0 ) return;
-		}
-	}
-	DaoProcess_Move( self, A, & self->activeValues[vmc->c], ct );
-}
 void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
@@ -4975,7 +4942,7 @@ int DaoProcess_TryObjectArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVa
 	par[0] = C;
 	par[1] = A;
 	par[2] = B;
-	if( C == A && B && daoBitBoolArithOpers2[ code-DVM_MOVE ] ){
+	if( C == A && B && daoBitBoolArithOpers2[ code-DVM_NOT ] ){
 		/* C += B, or C = C + B */
 		par[1] = B;
 		npar = 2;
@@ -4990,9 +4957,9 @@ int DaoProcess_TryObjectArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVa
 	
 TryAgain:
 	if( compo )
-		DString_SetMBS( name, daoBitBoolArithOpers2[ code-DVM_MOVE ] );
+		DString_SetMBS( name, daoBitBoolArithOpers2[ code-DVM_NOT ] );
 	else
-		DString_SetMBS( name, daoBitBoolArithOpers[ code-DVM_MOVE ] );
+		DString_SetMBS( name, daoBitBoolArithOpers[ code-DVM_NOT ] );
 	if( DString_EQ( name, self->activeRoutine->routName ) ) recursive = 1;
 	
 	object = A->type == DAO_OBJECT ? & A->xObject : & B->xObject;
@@ -5060,7 +5027,7 @@ int DaoProcess_TryCdataArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVal
 	par[0] = C;
 	par[1] = A;
 	par[2] = B;
-	if( C == A && B && daoBitBoolArithOpers2[ code-DVM_MOVE ] ){
+	if( C == A && B && daoBitBoolArithOpers2[ code-DVM_NOT ] ){
 		/* C += B, or C = C + B */
 		par[1] = B;
 		npar = 2;
@@ -5075,9 +5042,9 @@ int DaoProcess_TryCdataArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVal
 	
 TryAgain:
 	if( compo )
-		DString_SetMBS( name, daoBitBoolArithOpers2[ code-DVM_MOVE ] );
+		DString_SetMBS( name, daoBitBoolArithOpers2[ code-DVM_NOT ] );
 	else
-		DString_SetMBS( name, daoBitBoolArithOpers[ code-DVM_MOVE ] );
+		DString_SetMBS( name, daoBitBoolArithOpers[ code-DVM_NOT ] );
 	
 	cdata = A->type == DAO_CDATA ? & A->xCdata : & B->xCdata;
 	overloaded = cdata->ctype->kernel->attribs & DAO_OPER_OVERLOADED;
@@ -7200,8 +7167,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		DArray_Append( self->activeRoutine->body->annotCodes, & vmcx );
 
 	switch( vmc->code ){
-	case DVM_MOVE :
-		DaoProcess_DoMove( self, vmc ); break;
 	case DVM_ADD : case DVM_SUB : case DVM_MUL :
 	case DVM_DIV : case DVM_MOD : case DVM_POW :
 		DaoProcess_DoBinArith( self, vmc );

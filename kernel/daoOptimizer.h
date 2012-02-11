@@ -16,6 +16,10 @@
 
 #include"daoBase.h"
 
+#define GET_BIT( bits, id ) (bits[id/8] & (1<<(id%8)))
+#define SET_BIT0( bits, id ) bits[id/8] &= ~(1<<(id%8))
+#define SET_BIT1( bits, id ) bits[id/8] |= (1<<(id%8))
+
 enum { DAO_OP_NONE, DAO_OP_SINGLE, DAO_OP_PAIR, DAO_OP_TRIPLE, DAO_OP_RANGE, DAO_OP_RANGE2 };
 
 typedef struct DaoCodeNode  DaoCodeNode;
@@ -39,9 +43,6 @@ struct DaoCodeNode
 
 	DString  *bits; /* bit array for the analysis; */
 };
-
-DaoCodeNode* DaoCodeNode_New();
-void DaoCodeNode_Delete( DaoCodeNode *self );
 
 typedef void (*AnalysisInit)( DaoOptimizer*, DaoCodeNode* );
 typedef int (*AnalysisUpdate)( DaoOptimizer*, DaoCodeNode*, DaoCodeNode* );
@@ -72,10 +73,11 @@ struct DaoOptimizer
 	DArray  *arrayCache;
 };
 
-DaoOptimizer* DaoOptimizer_New();
-void DaoOptimizer_Clear( DaoOptimizer *self );
-void DaoOptimizer_Delete( DaoOptimizer *self );
+DAO_DLL DaoOptimizer* DaoOptimizer_New();
+DAO_DLL void DaoOptimizer_Clear( DaoOptimizer *self );
+DAO_DLL void DaoOptimizer_Delete( DaoOptimizer *self );
 
-void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *code );
+DAO_DLL void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *code );
+DAO_DLL void DaoOptimizer_DoLiveVariableAnalysis( DaoOptimizer *self, DaoRoutine *routine );
 
 #endif

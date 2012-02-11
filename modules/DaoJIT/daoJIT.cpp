@@ -228,7 +228,7 @@ int DaoJIT_SETI_LI( DaoValue *dA, DaoValue *dB, DaoValue *dC, int vmc )
 {
 	DaoList *list = (DaoList*) dC;
 	daoint id = dB->xInteger.value;
-	if( dC->xNone.trait & DAO_DATA_CONST ) return (DAO_ERROR<<16)|vmc;
+	if( dC->xNone.trait & DAO_VALUE_CONST ) return (DAO_ERROR<<16)|vmc;
 	if( id <0 ) id += list->items.size;
 	if( id <0 || id >= list->items.size ) return (DAO_ERROR_INDEX<<16)|vmc;
 	GC_ShiftRC( dA, list->items.items.pValue[id] );
@@ -273,7 +273,9 @@ void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit )
 	dao_opcode_compilable[ DVM_GOTO ] = 1;
 	dao_opcode_compilable[ DVM_SWITCH ] = 1;
 	dao_opcode_compilable[ DVM_CASE ] = 1;
-	dao_opcode_compilable[ DVM_CRRE ] = 1;
+	dao_opcode_compilable[ DVM_TRY ] = 1;
+	dao_opcode_compilable[ DVM_RAISE ] = 1;
+	dao_opcode_compilable[ DVM_CATCH ] = 1;
 	dao_opcode_compilable[ DVM_TEST ] = 1;
 	dao_opcode_compilable[ DVM_TEST_I ] = 1;
 	dao_opcode_compilable[ DVM_TEST_F ] = 1;
@@ -283,7 +285,7 @@ void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit )
 	dao_opcode_compilable[ DVM_GETI_LI ] = CHECK_MODE;
 	dao_opcode_compilable[ DVM_SETI_LI ] = 1;
 	dao_opcode_compilable[ DVM_SETI_TI ] = 1;
-	dao_opcode_compilable[ DVM_SETF_T ] = 1;
+	dao_opcode_compilable[ DVM_SETF_TPP ] = 1;
 	dao_opcode_compilable[ DVM_MOVE_PP ] = 1;
 	dao_opcode_compilable[ DVM_MOVE_SS ] = 1;
 
@@ -607,7 +609,7 @@ BasicBlock* DaoJitHandle::NewBlock( DaoVmCodeX *vmc )
 {
 	char name[ 256 ];
 	iplist<BasicBlock> & blist = jitFunction->getBasicBlockList();
-	sprintf( name, "%s%i", getOpcodeName( vmc->code ), (unsigned int)blist.size() );
+	sprintf( name, "%s%i", DaoVmCode_GetOpcodeName( vmc->code ), (unsigned int)blist.size() );
 	activeBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
 	SetInsertPoint( activeBlock );
 	lastBlock = activeBlock;
@@ -688,7 +690,7 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 			if( code != DVM_CASE ) case_mode = DAO_CASE_UNORDERED;
 			//printf( "checking %3i: ", j ); DaoVmCodeX_Print( *vmc, NULL );
 			switch( code ){
-			case DVM_GOTO : case DVM_TEST : case DVM_CRRE : 
+			case DVM_GOTO : case DVM_TEST : case DVM_CATCH : 
 			case DVM_SWITCH : case DVM_CASE :
 			case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 				compilable = false;
@@ -710,8 +712,8 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 					if( m != DAO_INTEGER and m != DAO_ENUM ) compilable = false;
 					if( vmc->b < start or vmc->b >= (end+1) ) compilable = false;
 					break;
-				case DVM_CRRE :
-					jump = vmc->c ? vmc->c : -1;
+				case DVM_CATCH :
+					jump = vmc->c;
 					break;
 				}
 				if( compilable == false ){
@@ -1148,6 +1150,8 @@ void DaoJitHandle::GetDNNOperands( DaoVmCodeX *vmc, Value **dA, Value **dB, Valu
 }
 void DaoJitHandle::StoreTempResult( Value *value, Value *dest, int reg )
 {
+	//if( GET_BIT( lastNode->bits->mbs, reg ) ) CreateStore( value, dest );
+	//return;
 	if( MAP_Find( routine->body->localVarType, reg ) == NULL ){
 		// Do not store intermediate data yet,
 		// save it in the intermediate data buffer instead:
@@ -1163,8 +1167,9 @@ Value* DaoJitHandle::MoveValue( Value *dA, Value *dC, Type *type )
 	dA = Dereference( dA );
 	return CreateStore( dA, dC );
 }
-Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
+Function* DaoJitHandle::Compile( int start, int end )
 {
+	DaoCodeNode **nodes = (DaoCodeNode**) optimizer->nodes->items.pVoid;
 	DaoValue **routConsts = routine->routConsts->items.items.pValue;
 	DaoType **types = routine->body->regType->items.pType;
 	DaoVmCodeX *vmc, **vmcs = routine->body->annotCodes->items.pVmc;
@@ -1191,6 +1196,8 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 	std::map<int,BasicBlock*> branchings;
 	std::map<int,BasicBlock*> labels;
 	std::map<int,BasicBlock*>::iterator iter, stop;
+
+	lastNode = nodes[end];
 	for(i=start; i<=end; i++){
 		vmc = vmcs[i];
 		code = vmc->code;
@@ -1216,6 +1223,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 		Constant *vmcIndex = ConstantInt::get( int32_type, i );
 		vmc = vmcs[i];
 		code = vmc->code;
+		currentNode = nodes[i];
 		printf( "%3i ", i ); DaoVmCodeX_Print( *vmc, NULL );
 		if( labels.find( i ) != labels.end() ){
 			//printf( "%3i ", i ); DaoVmCodeX_Print( *vmc, NULL );
@@ -1946,8 +1954,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			refer = GetLocalReference( vmc->c );
 			tmp = CreateCall2( dao_move_pp, value, refer );
 			break;
-		case DVM_GETF_T :
-		case DVM_GETF_TS :
+		case DVM_GETF_TX :
 			value = GetTupleItems( vmc->a );
 			value = CreateConstGEP2_32( value, 0, vmc->b );
 			value = Dereference( value );
@@ -1973,7 +1980,7 @@ Function* DaoJitHandle::Compile( DaoRoutine *routine, int start, int end )
 			tmp = CreateCall4( dao_seti_ti, dA, dB, dC, vmcIndex );
 			AddReturnCodeChecking( tmp, i );
 			break;
-		case DVM_SETF_T : 
+		case DVM_SETF_TPP : 
 			dA = GetLocalValue( vmc->a );
 			dB = ConstantInt::get( int32_type, vmc->b );
 			dC = GetLocalValue( vmc->c );
@@ -2298,17 +2305,19 @@ Failed:
 	jitfunc->eraseFromParent();
 	return NULL;
 }
-void DaoJIT_Compile( DaoRoutine *routine )
+void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer )
 {
 	printf( "routine %s\n", routine->routName->mbs );
-	DaoJitHandle handle( *llvm_context, routine );
+	DaoJitHandle handle( *llvm_context, routine, optimizer );
 	std::vector<Function*> jitFunctions;
 	std::vector<IndexRange> segments;
 	DaoJIT_SearchCompilable( routine, segments );
+	if( segments.size() == 0 ) return;
+	DaoOptimizer_DoLiveVariableAnalysis( optimizer, routine );
 	for(int i=0, n=segments.size(); i<n; i++){
 		if( (segments[i].end - segments[i].start) < 10 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
-		Function *jitfunc = handle.Compile( routine, segments[i].start, segments[i].end );
+		Function *jitfunc = handle.Compile( segments[i].start, segments[i].end );
 		if( jitfunc == NULL ) continue;
 		//llvm_func_optimizer->run( *jitfunc );
 
