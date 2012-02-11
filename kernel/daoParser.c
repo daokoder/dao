@@ -5298,6 +5298,9 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 	if( value && value->type == DAO_INTEGER && value->xInteger.value >=0 && value->xInteger.value <= 0xffff ){
 		varReg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, value->xInteger.value, varReg, start, 0, 0 );
+	}else if( value && value->type == DAO_FLOAT && value->xInteger.value == 0.0 ){
+		varReg = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_DATA, DAO_FLOAT, 0, varReg, start, 0, 0 );
 	}
 	return DaoParser_GetNormRegister( self, varReg, start, 0, start );
 }

@@ -19,11 +19,11 @@ routine main( width=100 )
 			for( x = xb : ( (xbb < width) and xbb ) or (width-1) ){
 				bits = bits + bits;
 				Zr = 0.0; Zi = 0.0; Zrq = 0.0; Ziq = 0.0;
-				Cr = x * wscale - 1.5;
+				Cr = (float)x * wscale - 1.5;
 				for( i = 1 : m ){
 					Zri = Zr * Zi;
 					Zr = Zrq - Ziq + Cr;
-					Zi = Zri + Zri + Ci;
+					Zi = Zri + Zri + (float)Ci;
 					Zrq = Zr * Zr;
 					Ziq = Zi * Zi;
 					if( ( Zrq + Ziq ) > limit2 ){

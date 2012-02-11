@@ -897,7 +897,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MOVE_II , && LAB_MOVE_IF , && LAB_MOVE_ID ,
 		&& LAB_MOVE_FI , && LAB_MOVE_FF , && LAB_MOVE_FD ,
 		&& LAB_MOVE_DI , && LAB_MOVE_DF , && LAB_MOVE_DD ,
-		&& LAB_MOVE_CC , && LAB_MOVE_SS , && LAB_MOVE_PP ,
+		&& LAB_MOVE_CC , && LAB_MOVE_SS , && LAB_MOVE_PP , && LAB_MOVE_XX ,
 		&& LAB_NOT_I , && LAB_NOT_F , && LAB_NOT_D ,
 		&& LAB_UNMS_I , && LAB_UNMS_F , && LAB_UNMS_D ,
 		&& LAB_BITREV_I , && LAB_BITREV_F , && LAB_BITREV_D ,
@@ -971,14 +971,12 @@ int DaoProcess_Execute( DaoProcess *self )
 
 		&& LAB_GETI_TI , && LAB_SETI_TI ,
 
-		&& LAB_GETF_T ,
 		&& LAB_GETF_TI , && LAB_GETF_TF ,
-		&& LAB_GETF_TD , && LAB_GETF_TS ,
-		&& LAB_SETF_T ,
+		&& LAB_GETF_TD , && LAB_GETF_TX ,
 		&& LAB_SETF_TII , && LAB_SETF_TIF , && LAB_SETF_TID ,
 		&& LAB_SETF_TFI , && LAB_SETF_TFF , && LAB_SETF_TFD ,
 		&& LAB_SETF_TDI , && LAB_SETF_TDF , && LAB_SETF_TDD ,
-		&& LAB_SETF_TSS ,
+		&& LAB_SETF_TSS , && LAB_SETF_TPP , && LAB_SETF_TXX ,
 
 		&& LAB_GETI_ACI , && LAB_SETI_ACI ,
 
@@ -1981,6 +1979,9 @@ CallEntry:
 			value = locVars[ vmc->a ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
+		}OPNEXT() OPCASE( MOVE_XX ){
+			if( locVars[ vmc->a ] == NULL ) goto RaiseErrorNullObject;
+			DaoValue_Copy( locVars[ vmc->a ], locVars + vmc->c );
 		}OPNEXT() OPCASE( UNMS_C ){
 			acom = ComplexOperand( vmc->a );
 			vC = locVars[ vmc->c ];
@@ -2044,10 +2045,7 @@ CallEntry:
 			id = IntegerOperand( vmc->b );
 			if( id <0 ) id += list->items.size;
 			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-			value = locVars[ vmc->a ];
-			vC2 = list->items.items.pValue + id;
-			GC_ShiftRC( value, *vC2 );
-			*vC2 = value;
+			DaoValue_Copy( locVars[ vmc->a ], list->items.items.pValue + id );
 		}OPNEXT()
 		OPCASE( GETI_LII )
 			OPCASE( GETI_LFI )
@@ -2314,17 +2312,6 @@ CallEntry:
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
 			if( DaoProcess_Move( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
-		}OPNEXT() OPCASE( GETF_T ){
-			tuple = & locVars[ vmc->a ]->xTuple;
-			value = tuple->items[ vmc->b ];
-			GC_ShiftRC( value, locVars[ vmc->c ] );
-			locVars[ vmc->c ] = value;
-		}OPNEXT() OPCASE( SETF_T ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			value = locVars[ vmc->a ];
-			vC2 = tuple->items + vmc->b;
-			GC_ShiftRC( value, *vC2 );
-			*vC2 = value;
 		}OPNEXT() OPCASE( GETF_TI ){
 			/* Do not get reference here!
 			 * Getting reference is always more expensive due to reference counting.
@@ -2338,7 +2325,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF_TD ){
 			tuple = & locVars[ vmc->a ]->xTuple;
 			locVars[ vmc->c ]->xDouble.value = tuple->items[ vmc->b ]->xDouble.value;
-		}OPNEXT() OPCASE( GETF_TS ){
+		}OPNEXT() OPCASE( GETF_TX ){
 			tuple = & locVars[ vmc->a ]->xTuple;
 			value = tuple->items[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
@@ -2374,6 +2361,15 @@ CallEntry:
 			tuple = & locVars[ vmc->c ]->xTuple;
 			vA = locVars[ vmc->a ];
 			DString_Assign( tuple->items[ vmc->b ]->xString.data, vA->xString.data );
+		}OPNEXT() OPCASE( SETF_TPP ){
+			tuple = & locVars[ vmc->c ]->xTuple;
+			value = locVars[ vmc->a ];
+			vC2 = tuple->items + vmc->b;
+			GC_ShiftRC( value, *vC2 );
+			*vC2 = value;
+		}OPNEXT() OPCASE( SETF_TXX ){
+			tuple = & locVars[ vmc->c ]->xTuple;
+			DaoValue_Copy( locVars[ vmc->a ], tuple->items + vmc->b );
 		}OPNEXT() OPCASE( GETF_KC ){
 			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
@@ -2443,20 +2439,14 @@ CallEntry:
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( SETF_KG ){
 			klass = & locVars[ vmc->c ]->xClass;
-			vC2 = klass->glbData->items.pValue + vmc->b;
-			value = locVars[vmc->a];
-			GC_ShiftRC( value, *vC2 );
-			*vC2 = value;
-		}OPNEXT() OPCASE( SETF_OG ) OPCASE( SETF_OV ){
+			DaoValue_Copy( locVars[vmc->a], klass->glbData->items.pValue + vmc->b );
+		}OPNEXT() OPCASE( SETF_OG ){
+			klass = locVars[ vmc->c ]->xObject.defClass;
+			DaoValue_Copy( locVars[vmc->a], klass->glbData->items.pValue + vmc->b );
+		}OPNEXT() OPCASE( SETF_OV ){
 			object = & locVars[ vmc->c ]->xObject;
-			if( vmc->code == DVM_SETF_OG ){
-				klass = ((DaoObject*)klass)->defClass;
-				vC2 = klass->glbData->items.pValue + vmc->b;
-			}else{
-				if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-				vC2 = object->objValues + vmc->b;
-			}
-			DaoValue_Copy( locVars[vmc->a], vC2 );
+			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			DaoValue_Copy( locVars[vmc->a], object->objValues + vmc->b );
 		}OPNEXT()
 		OPCASE( SETF_KGII ){
 			klass = & locVars[ vmc->c ]->xClass;

@@ -473,7 +473,7 @@ DaoValue* DaoValue_SimpleCopy( DaoValue *self )
 	return DaoValue_SimpleCopyWithType( self, NULL );
 }
 
-static void DaoValue_CopyExt( DaoValue *src, DaoValue **dest, int copy )
+void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 {
 	DaoValue *dest2 = *dest;
 	if( src == dest2 ) return;
@@ -482,13 +482,13 @@ static void DaoValue_CopyExt( DaoValue *src, DaoValue **dest, int copy )
 		*dest = dest2 = NULL;
 	}
 	if( dest2 == NULL ){
-		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
+		src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_IncRC( src );
 		*dest = src;
 		return;
 	}
 	if( src->type != dest2->type || src->type > DAO_ENUM ){
-		if( copy ) src = DaoValue_SimpleCopyWithType( src, NULL );
+		src = DaoValue_SimpleCopyWithType( src, NULL );
 		GC_ShiftRC( src, dest2 );
 		*dest = src;
 		return;
@@ -505,10 +505,6 @@ static void DaoValue_CopyExt( DaoValue *src, DaoValue **dest, int copy )
 	case DAO_LONG    : DLong_Move( dest2->xLong.value, src->xLong.value ); break;
 	case DAO_STRING  : DString_Assign( dest2->xString.data, src->xString.data ); break;
 	}
-}
-void DaoValue_Copy( DaoValue *src, DaoValue **dest )
-{
-	DaoValue_CopyExt( src, dest, 1 );
 }
 void DaoValue_SetType( DaoValue *to, DaoType *tp )
 {
@@ -698,21 +694,21 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		return 0;
 	}
 	if( T == NULL ){
-		DaoValue_CopyExt( S, D, 1 );
+		DaoValue_Copy( S, D );
 		return 1;
 	}
 	switch( T->tid ){
 	case DAO_UDT :
 	case DAO_THT :
-		DaoValue_CopyExt( S, D, 1 );
+		DaoValue_Copy( S, D );
 		return 1;
 	case DAO_ANY :
-		DaoValue_CopyExt( S, D, 1 );
+		DaoValue_Copy( S, D );
 		DaoValue_SetType( *D, T );
 		return 1;
 	case DAO_VALTYPE :
 		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
-		DaoValue_CopyExt( S, D, 1 );
+		DaoValue_Copy( S, D );
 		return 1;
 	case DAO_VARIANT :
 		return DaoValue_MoveVariant( S, D, T );

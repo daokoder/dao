@@ -175,18 +175,19 @@ enum DaoOpcode
 	DVM_SETVG_DF , 
 	DVM_SETVG_DD , 
 
-	DVM_MOVE_II ,
-	DVM_MOVE_IF ,
-	DVM_MOVE_ID ,
+	DVM_MOVE_II , /* integer = integer */
+	DVM_MOVE_IF , /* integer = float */
+	DVM_MOVE_ID , /* integer = double */
 	DVM_MOVE_FI ,
 	DVM_MOVE_FF ,
 	DVM_MOVE_FD ,
 	DVM_MOVE_DI ,
 	DVM_MOVE_DF ,
 	DVM_MOVE_DD ,
-	DVM_MOVE_CC , /* move complex number */
-	DVM_MOVE_SS , /* string */
-	DVM_MOVE_PP , /* C = A, where C and A are the same type, or C is type any; */
+	DVM_MOVE_CC , /* complex = complex */
+	DVM_MOVE_SS , /* string = string */
+	DVM_MOVE_PP , /* C = A; C and A are of the same non-primitive type, A must not be constant; */
+	DVM_MOVE_XX , /* C = A; C and A are of the same type; */
 	DVM_NOT_I ,
 	DVM_NOT_F ,
 	DVM_NOT_D ,
@@ -334,12 +335,10 @@ enum DaoOpcode
 	DVM_SETI_TI , /* set item : C[B] = A; tuple<...>[int]=X; */
 
 	/* access field by constant index; specialized from GETI[const] or GETF */
-	DVM_GETF_T ,
 	DVM_GETF_TI , /* get integer field by constant index; */
 	DVM_GETF_TF , /* get float field by constant index; */
 	DVM_GETF_TD , /* get double field by constant index; */
-	DVM_GETF_TS , /* get string field by constant index; */
-	DVM_SETF_T ,  /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
+	DVM_GETF_TX , /* get type checked field by constant index; */
 	DVM_SETF_TII , /* set integer field to integer. */
 	DVM_SETF_TIF , /* set integer field to float. */
 	DVM_SETF_TID , /* set integer field to double. */
@@ -350,6 +349,8 @@ enum DaoOpcode
 	DVM_SETF_TDF , /* set double field to float. */
 	DVM_SETF_TDD , /* set double field to double. */
 	DVM_SETF_TSS , /* set string field to string. */
+	DVM_SETF_TPP , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
+	DVM_SETF_TXX , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 
 	DVM_GETI_ACI , /* get item : C = A[B]; array<complex>[int] */
 	DVM_SETI_ACI , /* set item : C[B] = A; */
