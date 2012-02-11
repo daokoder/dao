@@ -62,6 +62,7 @@ enum DaoBasicStruct
 	D_NULL ,
 	D_VALUE ,
 	D_VMCODE ,
+	D_VMCODE2 ,
 	D_TOKEN ,   /* for DArray only */
 	D_STRING ,
 	D_VARRAY ,

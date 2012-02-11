@@ -205,6 +205,9 @@ static int DHash_HashIndex( DMap *self, void *key )
 		id = MurmurHash2( key, 2*sizeof(void*), self->hashing ) % T;
 		break;
 	case D_VMCODE :
+		id = MurmurHash2( key, 4*sizeof(unsigned short), self->hashing ) % T;
+		break;
+	case D_VMCODE2 :
 		id = MurmurHash2( key, 3*sizeof(unsigned short), self->hashing ) % T;
 		break;
 	default : 
@@ -618,6 +621,13 @@ static daoint DaoVmCode_Compare( DaoVmCode *k1, DaoVmCode *k2 )
 {
 	if( k1->code != k2->code ) return k1->code - k2->code;
 	if( k1->a != k2->a ) return k1->a - k2->a;
+	if( k1->b != k2->b ) return k1->b - k2->b;
+	return k1->c - k2->c;
+}
+static daoint DaoVmCode_Compare2( DaoVmCode *k1, DaoVmCode *k2 )
+{
+	if( k1->code != k2->code ) return k1->code - k2->code;
+	if( k1->a != k2->a ) return k1->a - k2->a;
 	return k1->b - k2->b;
 }
 static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
@@ -628,6 +638,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 	case D_ARRAY  : return DArray_Compare( (DArray*) k1, (DArray*) k2 );
 	case D_VOID2  : return DVoid2_Compare( (void**) k1, (void**) k2 );
 	case D_VMCODE : return DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );
+	case D_VMCODE2 : return DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 );
 	default : return (daoint)k1 - (daoint)k2;
 	}
 	return 0;
