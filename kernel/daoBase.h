@@ -97,6 +97,9 @@ typedef struct DaoFuture     DaoFuture;
 typedef struct DaoException  DaoException;
 typedef struct DaoNameValue  DaoNameValue;
 
+typedef struct DaoCodeNode   DaoCodeNode;
+typedef struct DaoOptimizer  DaoOptimizer;
+
 typedef struct DaoMacro      DaoMacro;
 typedef struct DaoParser     DaoParser;
 

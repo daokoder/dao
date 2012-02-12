@@ -50,7 +50,6 @@ static void DaoCodeNode_Clear( DaoCodeNode *self )
 	self->kills->size = 0;
 }
 
-static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine );
 
 DaoOptimizer* DaoOptimizer_New()
 {
@@ -69,6 +68,7 @@ DaoOptimizer* DaoOptimizer_New()
 	self->tmp3 = DString_New(1);
 	self->reverseFlow = 0;
 	self->bitCount = 0;
+	self->byteCount = 0;
 	self->update = NULL;
 	return self;
 }
@@ -84,8 +84,7 @@ void DaoOptimizer_Clear( DaoOptimizer *self )
 void DaoOptimizer_Delete( DaoOptimizer *self )
 {
 	daoint i;
-	for(i=0; i<self->nodeCache->size; i++)
-		DaoCodeNode_Delete( (DaoCodeNode*) self->nodeCache->items.pVoid[i] );
+	for(i=0; i<self->nodeCache->size; i++) DaoCodeNode_Delete( self->nodeCache->items.pCnode[i] );
 	DArray_Delete( self->nodeCache );
 	DArray_Delete( self->arrayCache );
 	DArray_Delete( self->enodes );
@@ -100,6 +99,7 @@ void DaoOptimizer_Delete( DaoOptimizer *self )
 	dao_free( self );
 }
 void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output );
+static int DaoOptimizer_UpdateRDA( DaoOptimizer *self, DaoCodeNode *first, DaoCodeNode *second );
 static void DaoOptimizer_Print( DaoOptimizer *self )
 {
 	DNode *it;
@@ -107,25 +107,38 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 	DaoStream *stream = routine->nameSpace->vmSpace->stdioStream;
 	DaoVmCodeX **vmCodes = routine->body->annotCodes->items.pVmc;
 	DString *annot = DString_New(1);
-	daoint j, k, n;
+	daoint j, k, m, n;
 
 	DaoStream_WriteMBS( stream, "============================================================\n" );
 	DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
 	for( j=0,n=routine->body->annotCodes->size; j<n; j++){
-		DaoCodeNode *node = (DaoCodeNode*)self->nodes->items.pVoid[j];
+		DaoCodeNode *node = self->nodes->items.pCnode[j];
 		DaoRoutine_FormatCode( routine, j, annot );
 		DString_Chop( annot );
 		while( annot->size < 80 ) DString_AppendChar( annot, ' ' );
 		DString_AppendMBS( annot, "| " );
 		DaoStream_WriteString( stream, annot );
-		k = -1;
-		if( node->exprid != 0xffff ) k = ((DaoCodeNode*)self->enodes->items.pVoid[node->exprid])->index;
-		DaoStream_WriteInt( stream, k );
-		DaoStream_WriteMBS( stream, " | " );
-		for(k=0; k<self->bitCount; k++){
-			if( GET_BIT( node->bits->mbs, k ) == 0 ) continue;
+		if( self->update == DaoOptimizer_UpdateRDA ){
+			DaoStream_WriteInt( stream, j );
+			DaoStream_WriteMBS( stream, " | " );
+			for(k=routine->body->regCount; k<self->bitCount; k++){
+				if( GET_BIT( node->bits->mbs, k ) == 0 ) continue;
+				m = k - routine->body->regCount;
+				m = self->enodes->items.pCnode[m]->index;
+				DaoStream_WriteInt( stream, m );
+				DaoStream_WriteMBS( stream, ", " );
+			}
+		}else{
+			k = -1;
+			if( node->exprid != 0xffff )
+				k = self->enodes->items.pCnode[node->exprid]->index;
 			DaoStream_WriteInt( stream, k );
-			DaoStream_WriteMBS( stream, ", " );
+			DaoStream_WriteMBS( stream, " | " );
+			for(k=0; k<self->bitCount; k++){
+				if( GET_BIT( node->bits->mbs, k ) == 0 ) continue;
+				DaoStream_WriteInt( stream, k );
+				DaoStream_WriteMBS( stream, ", " );
+			}
 		}
 		DaoStream_WriteMBS( stream, "\n" );
 	}
@@ -134,17 +147,9 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 
 
 
-static int DaoOptimizer_Contains( DMap *A, DMap *B )
-{
-	DNode *it;
-	for(it=DMap_First(B); it; it=DMap_Next(B,it)){
-		if( DMap_Find( A, it->key.pVoid ) == NULL ) return 0;
-	}
-	return 1;
-}
 static void DaoOptimizer_InitNodeAEA( DaoOptimizer *self, DaoCodeNode *node )
 {
-	daoint B = (self->enodes->size>>3) + 1;
+	daoint B = self->byteCount;
 	if( node->bits->size < B ) DString_Resize( node->bits, B );
 
 	memset( node->bits->mbs, 0, B*sizeof(char) );
@@ -180,7 +185,7 @@ static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCodeNode *node, DString *ou
 		break;
 	}
 
-	memcpy( out->mbs, node->bits->mbs, node->bits->size );
+	memcpy( out->mbs, node->bits->mbs, self->byteCount );
 	for(i=0; ones && i<node->kills->size; i++){
 		k = node->kills->items.pInt[i];
 		if( GET_BIT( out->mbs, k ) == 0 ) continue;
@@ -193,11 +198,9 @@ static int DaoOptimizer_UpdateAEA( DaoOptimizer *self, DaoCodeNode *first, DaoCo
 {
 	char *newbits = self->tmp3->mbs;
 	char *oldbits = second->bits->mbs;
-	daoint M = self->bitCount;
-	daoint i, changed = 0;
+	daoint i, changed = 0, M = self->bitCount;
 
 	DaoOptimizer_AEA( self, first, self->tmp3 );
-
 	for(i=0; i<M; i++){
 		if( GET_BIT( oldbits, i ) && GET_BIT( newbits, i ) == 0 ){
 			SET_BIT0( oldbits, i );
@@ -207,9 +210,53 @@ static int DaoOptimizer_UpdateAEA( DaoOptimizer *self, DaoCodeNode *first, DaoCo
 	}
 	return changed;
 }
+
+
+static void DaoOptimizer_InitNodeRDA( DaoOptimizer *self, DaoCodeNode *node )
+{
+	daoint i, B = self->byteCount;
+	if( node->bits->size < B ) DString_Resize( node->bits, B );
+
+	memset( node->bits->mbs, 0, B*sizeof(char) );
+	node->ones = 0;
+	if( DMap_Find( self->inits, node ) ){
+		for(i=0; i<self->routine->body->regCount; i++) SET_BIT1( node->bits->mbs, i );
+	}
+}
+/* Transfer function for Reaching Definition Analysis: */
+static void DaoOptimizer_RDA( DaoOptimizer *self, DaoCodeNode *node, DString *out )
+{
+	DArray *kills;
+	daoint i, N;
+	memcpy( out->mbs, node->bits->mbs, self->byteCount );
+	if( node->lvalue == 0xffff ) return;
+	kills = self->uses->items.pArray[node->lvalue];
+	N = kills->size;
+	SET_BIT0( out->mbs, node->lvalue );
+	for(i=0; i<N; i++) SET_BIT0( out->mbs, kills->items.pInt[i] );
+	SET_BIT1( out->mbs, node->exprid );
+}
+static int DaoOptimizer_UpdateRDA( DaoOptimizer *self, DaoCodeNode *first, DaoCodeNode *second )
+{
+	char *newbits = self->tmp3->mbs;
+	char *oldbits = second->bits->mbs;
+	daoint i, changed = 0, M = self->bitCount;
+
+	DaoOptimizer_RDA( self, first, self->tmp3 );
+	for(i=0; i<M; i++){
+		if( GET_BIT( oldbits, i ) == 0 && GET_BIT( newbits, i ) ){
+			SET_BIT1( oldbits, i );
+			second->ones ++;
+			changed = 1;
+		}
+	}
+	return changed;
+}
+
+
 static void DaoOptimizer_InitNodeLVA( DaoOptimizer *self, DaoCodeNode *node )
 {
-	daoint i, B = (self->bitCount>>3) + 1;
+	daoint i, B = self->byteCount;
 	if( node->bits->size < B ) DString_Resize( node->bits, B );
 
 	memset( node->bits->mbs, 0, B*sizeof(char) );
@@ -225,7 +272,7 @@ static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCodeNode *node, DString *ou
 {
 	ushort_t i;
 
-	memcpy( out->mbs, node->bits->mbs, node->bits->size );
+	memcpy( out->mbs, node->bits->mbs, self->byteCount );
 	if( node->lvalue != 0xffff ) SET_BIT0( out->mbs, node->lvalue );
 	switch( node->type ){
 	case DAO_OP_SINGLE :
@@ -251,11 +298,9 @@ static int DaoOptimizer_UpdateLVA( DaoOptimizer *self, DaoCodeNode *first, DaoCo
 {
 	char *newbits = self->tmp3->mbs;
 	char *oldbits = second->bits->mbs;
-	daoint M = self->bitCount;
-	daoint i, changed = 0;
+	daoint i, changed = 0, M = self->bitCount;
 
 	DaoOptimizer_LVA( self, first, self->tmp3 );
-
 	for(i=0; i<M; i++){
 		if( GET_BIT( oldbits, i ) == 0 && GET_BIT( newbits, i ) ){
 			SET_BIT1( oldbits, i );
@@ -291,7 +336,7 @@ static void DaoOptimizer_ProcessWorklist( DaoOptimizer *self, DArray *worklist )
 static void DaoOptimizer_SolveFlowEquation( DaoOptimizer *self )
 {
 	DArray *worklist = DArray_New(0);
-	DaoCodeNode *node, **nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	DaoCodeNode *node, **nodes = self->nodes->items.pCnode;
 	daoint i, j, N = self->nodes->size;
 	for(i=0; i<N; i++){
 		node = nodes[i];
@@ -336,10 +381,10 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 		array->size = 0;
 	}
 	for(i=0; i<N; i++){
-		node = (DaoCodeNode*) self->nodeCache->items.pVoid[i];
+		node = self->nodeCache->items.pCnode[i];
 		if( node == NULL ){
 			node = DaoCodeNode_New();
-			self->nodeCache->items.pVoid[i] = node;
+			self->nodeCache->items.pCnode[i] = node;
 		}
 		node->index = i;
 		DaoCodeNode_Clear( node );
@@ -350,7 +395,7 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 	printf( "number of nodes: %i, number of registers: %i\n", self->nodes->size, M );
 	printf( "number of interesting expression: %i\n", self->exprs->size );
 #endif
-	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	nodes = self->nodes->items.pCnode;
 	DMap_Insert( self->inits, nodes[0], NULL );
 	for(i=0; i<N; i++){
 		vmc = codes[i];
@@ -387,29 +432,109 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 		}
 	}
 }
-static void DaoOptimizer_InitAEA( DaoOptimizer *self )
+static void DaoOptimizer_InitKills( DaoOptimizer *self );
+static void DaoOptimizer_InitAEA( DaoOptimizer *self, DaoRoutine *routine )
 {
-	int B = (self->enodes->size>>3) + 1;
-	self->bitCount = self->enodes->size;
 	self->reverseFlow = 0;
 	self->init = DaoOptimizer_InitNodeAEA;
 	self->update = DaoOptimizer_UpdateAEA;
-	if( self->tmp3->size < B ) DString_Resize( self->tmp3, B );
+	DaoOptimizer_Init( self, routine );
+	DaoOptimizer_InitKills( self );
+	self->bitCount = self->enodes->size;
+	self->byteCount = (self->bitCount >> 3) + 1;
+	if( self->tmp3->size < self->byteCount ) DString_Resize( self->tmp3, self->byteCount );
 }
-static void DaoOptimizer_InitLVA( DaoOptimizer *self )
+static void DaoOptimizer_InitNodesRDA( DaoOptimizer *self );
+static void DaoOptimizer_InitRDA( DaoOptimizer *self, DaoRoutine *routine )
 {
-	int B = (self->routine->body->regCount>>3) + 1;
-	self->bitCount = self->routine->body->regCount;
+	self->reverseFlow = 0;
+	self->init = DaoOptimizer_InitNodeRDA;
+	self->update = DaoOptimizer_UpdateRDA;
+	DaoOptimizer_Init( self, routine );
+	DaoOptimizer_InitNodesRDA( self );
+	self->bitCount = self->enodes->size + routine->body->regCount;
+	self->byteCount = (self->bitCount >> 3) + 1;
+	if( self->tmp3->size < self->byteCount ) DString_Resize( self->tmp3, self->byteCount );
+}
+static void DaoOptimizer_InitLVA( DaoOptimizer *self, DaoRoutine *routine )
+{
 	self->reverseFlow = 1;
 	self->init = DaoOptimizer_InitNodeLVA;
 	self->update = DaoOptimizer_UpdateLVA;
-	if( self->tmp3->size < B ) DString_Resize( self->tmp3, B );
-}
-void DaoOptimizer_DoLiveVariableAnalysis( DaoOptimizer *self, DaoRoutine *routine )
-{
 	DaoOptimizer_Init( self, routine );
-	DaoOptimizer_InitLVA( self );
+	self->bitCount = self->routine->body->regCount;
+	self->byteCount = (self->bitCount >> 3) + 1;
+	if( self->tmp3->size < self->byteCount ) DString_Resize( self->tmp3, self->byteCount );
+}
+void DaoOptimizer_DoLVA( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DaoOptimizer_InitLVA( self, routine );
 	DaoOptimizer_SolveFlowEquation( self );
+}
+void DaoOptimizer_DoRDA( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DaoOptimizer_InitRDA( self, routine );
+	DaoOptimizer_SolveFlowEquation( self );
+}
+void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DaoCodeNode *node, *node2, **nodes;
+	daoint i, j, N, M = routine->body->regCount;
+
+	DaoOptimizer_InitRDA( self, routine );
+	DaoOptimizer_SolveFlowEquation( self );
+
+	nodes = self->nodes->items.pCnode;
+	N = self->nodes->size;
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		node->ins->size = 0;
+		node->outs->size = 0;
+	}
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		for(j=M; j<self->bitCount; j++){
+			int using = 0;
+			if( GET_BIT( node->bits->mbs, j ) == 0 ) continue;
+
+			node2 = self->enodes->items.pCnode[j-M];
+			switch( node->type ){
+			case DAO_OP_SINGLE :
+				using = node->first == node2->lvalue;
+				break;
+			case DAO_OP_PAIR   : 
+				using = node->first == node2->lvalue;
+				using |= node->second == node2->lvalue;
+				break;
+			case DAO_OP_TRIPLE :
+				using = node->first == node2->lvalue;
+				using |= node->second == node2->lvalue;
+				using |= node->third == node2->lvalue;
+				break;
+			case DAO_OP_RANGE :
+			case DAO_OP_RANGE2 :
+				using = node->first <= node2->lvalue && node2->lvalue <= node->second;
+				if( node->type == DAO_OP_RANGE2 ) using |= node->third == node2->lvalue;
+				break;
+			}
+			if( using ){
+				DArray_Append( node->ins, node2 );
+				DArray_Append( node2->outs, node );
+			}
+		}
+	}
+#if 0
+	DaoOptimizer_Print( self );
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		printf( "%03i: ", i );
+		DaoVmCode_Print( routine->body->vmCodes->codes[i], NULL );
+		for(j=0; j<node->ins->size; j++) printf( "%3i ", node->ins->items.pCnode[j]->index );
+		printf("\n");
+		for(j=0; j<node->outs->size; j++) printf( "%3i ", node->outs->items.pCnode[j]->index );
+		printf("\n" );
+	}
+#endif
 }
 
 static int DaoRoutine_IsVolatileParameter( DaoRoutine *self, int id )
@@ -428,7 +553,7 @@ static void DaoOptimizer_AddKill( DaoOptimizer *self, DMap *out, int kill )
 	daoint i;
 	DArray *kills = self->uses->items.pArray[kill];
 	for(i=0; i<kills->size; i++){
-		DaoCodeNode *node = (DaoCodeNode*) kills->items.pVoid[i];
+		DaoCodeNode *node = kills->items.pCnode[i];
 		if( node->exprid != 0xffff ) MAP_Insert( out, node->exprid, 0 );
 	}
 }
@@ -437,7 +562,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 	DNode *it;
 	DMap *kills = self->tmp;
 	DaoType **types = self->routine->body->regType->items.pType;
-	DaoCodeNode *node, **nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	DaoCodeNode *node, **nodes = self->nodes->items.pCnode;
 	DaoVmCodeX *vmc, **codes = self->routine->body->annotCodes->items.pVmc;
 	daoint i, j, N = self->nodes->size;
 	daoint at, bt, ct, code, lvalue, overload;
@@ -516,6 +641,22 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 		}
 	}
 }
+static void DaoOptimizer_InitNodesRDA( DaoOptimizer *self )
+{
+	DaoCodeNode *node, **nodes = self->nodes->items.pCnode;
+	daoint M = self->routine->body->regCount;
+	daoint i, j, N = self->nodes->size;
+	self->enodes->size = 0;
+	for(i=0; i<N; i++){
+		node = nodes[i];
+		node->exprid = 0xffff;
+		if( node->lvalue == 0xffff ) continue;
+		node->exprid = self->enodes->size + M;
+		DArray_Append( self->enodes, node );
+		DArray_Append( self->uses->items.pArray[node->lvalue], node->exprid );
+	}
+}
+
 static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine, DArray *mapping )
 {
 	DNode *it;
@@ -524,7 +665,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 	DaoType **types = routine->body->regType->items.pType;
 	DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
 	DaoVmCode **codes2 = (DaoVmCode**) routine->body->annotCodes->items.pVmc;
-	DaoCodeNode *node, **nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	DaoCodeNode *node, **nodes = self->nodes->items.pCnode;
 	daoint i, N = routine->body->annotCodes->size;
 	daoint k, m = 0, M = routine->body->regCount;
 	daoint *regmap = (daoint*)dao_calloc( M, sizeof(daoint) );
@@ -694,8 +835,9 @@ static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine 
 
 	DMap_Reset( self->exprs );
 	self->exprs->keytype = D_VMCODE2; /* Compare code and operands only; */
+	self->update = NULL;
 	DaoOptimizer_Init( self, routine );
-	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	nodes = self->nodes->items.pCnode;
 	do{
 		DaoType **types = routine->body->regType->items.pType;
 		DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
@@ -709,7 +851,7 @@ static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine 
 		for(i=0; i<N; i++){
 			node = nodes[i];
 			if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
-			node2 = (DaoCodeNode*)self->enodes->items.pVoid[ node->exprid ];
+			node2 = self->enodes->items.pCnode[ node->exprid ];
 			if( node == node2 || node->lvalue == node2->lvalue ) continue;
 			if( MAP_Find( routine->body->localVarType, node->lvalue ) ) continue;
 			if( MAP_Find( routine->body->localVarType, node2->lvalue ) ) continue;
@@ -739,12 +881,10 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoCodeNode *node, *node2, **nodes;
 	daoint i, j, k, m, N = annotCodes->size;
 
-	DaoOptimizer_Init( self, routine );
-	DaoOptimizer_InitKills( self );
-	DaoOptimizer_InitAEA( self );
+	DaoOptimizer_InitAEA( self, routine );
 	DaoOptimizer_SolveFlowEquation( self );
 
-	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	nodes = self->nodes->items.pCnode;
 	while( 1 ){
 		//DaoOptimizer_Print( self );
 		for(i=0; i<N; i++){
@@ -752,7 +892,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			vmc = codes[i];
 			if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
 			if( GET_BIT( node->bits->mbs, node->exprid ) == 0 ) continue;
-			node2 = (DaoCodeNode*) self->enodes->items.pVoid[ node->exprid ];
+			node2 = self->enodes->items.pCnode[ node->exprid ];
 			if( node == node2 ) continue;
 			if( node->lvalue != node2->lvalue ) continue;
 			vmc->code = DVM_UNUSED;
@@ -775,14 +915,14 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		}
 		if( worklist->size == 0 ) break;
 		for(j=0,m=worklist->size; j<m; j+=2){
-			node2 = (DaoCodeNode*) worklist->items.pVoid[j];
-			node = (DaoCodeNode*) worklist->items.pVoid[j+1];
+			node2 = worklist->items.pCnode[j];
+			node = worklist->items.pCnode[j+1];
 			/* Init its entry available expressions to include all expressions: */
 			DaoOptimizer_InitNodeAEA( self, node );
 			/* Add its upstream nodes to the worklist so that the updated flow equations
 			// will be solved correctly: */
 			for(k=0; k<node->ins->size; k++){
-				if( node->ins->items.pVoid[k] == (void*)node2 ) continue;
+				if( node->ins->items.pCnode[k] == node2 ) continue;
 				DArray_PushBack( worklist, node->ins->items.pVoid[k] );
 				DArray_PushBack( worklist, node );
 			}
@@ -808,9 +948,9 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 	daoint i, j, k, m, N = annotCodes->size;
 	daoint *unused;
 
-	DaoOptimizer_DoLiveVariableAnalysis( self, routine );
+	DaoOptimizer_DoLVA( self, routine );
 
-	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	nodes = self->nodes->items.pCnode;
 	DArray_Resize( unused2, N, 0 );
 	unused = unused2->items.pInt;
 	while( 1 ){
@@ -883,11 +1023,11 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 		}
 		if( worklist->size == 0 ) break;
 		for(j=0,m=worklist->size; j<m; j+=2){
-			node2 = (DaoCodeNode*) worklist->items.pVoid[j];
-			node = (DaoCodeNode*) worklist->items.pVoid[j+1];
+			node2 = worklist->items.pCnode[j];
+			node = worklist->items.pCnode[j+1];
 			DaoOptimizer_InitNodeLVA( self, node );
 			for(k=0; k<node->outs->size; k++){
-				if( node->outs->items.pVoid[k] == (void*)node2 ) continue;
+				if( node->outs->items.pCnode[k] == node2 ) continue;
 				DArray_PushBack( worklist, node->outs->items.pVoid[k] );
 				DArray_PushBack( worklist, node );
 			}
@@ -940,8 +1080,9 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	regmap = array->items.pInt;
 
 	/* Dead Code Elimination may have produce some dead registers. Remove them first: */
+	self->update = NULL;
 	DaoOptimizer_Init( self, routine );
-	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	nodes = self->nodes->items.pCnode;
 	for(i=0; i<N; i++){
 		node = nodes[i];
 		switch( node->type ){
@@ -971,7 +1112,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
 
 	/* Now use the linear scan algorithm (Poletto and Sarkar) to reallocation the registers: */
-	DaoOptimizer_DoLiveVariableAnalysis( self, routine );
+	DaoOptimizer_DoLVA( self, routine );
 
 	//DaoOptimizer_Print( self );
 
@@ -995,7 +1136,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 				|| (type->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) )
 			regmap[i] = regCount ++;
 	}
-	nodes = (DaoCodeNode**) self->nodes->items.pVoid;
+	nodes = self->nodes->items.pCnode;
 	for(i=0; i<N; i++){
 		node = nodes[i];
 		vmc = codes[i];
@@ -1093,6 +1234,8 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 	daoint i, k, notide = ! (vms->options & DAO_EXEC_IDE);
 
 	if( daoConfig.optimize == 0 ) return;
+	/* Do not perform optimization if it may take too much memory (1M): */
+	if( (self->body->vmCodes->size * self->body->regCount) > 8000000 ) return;
 	if( self->body->vmCodes->size > 1000 && self->body->regCount > 200 ){
 		DaoType *type, **types = self->body->regType->items.pType;
 		if( self->body->simpleVariables->size < self->body->regCount / 2 ) return;
@@ -1100,6 +1243,7 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 			type = types[ self->body->simpleVariables->items.pInt[i] ];
 			k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_LONG : 0;
 		}
+		/* Optimize only if there are sufficient amount of numeric calculations: */
 		if( k < self->body->regCount / 2 ) return;
 	}
 
@@ -1108,6 +1252,8 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 	DaoOptimizer_CSE( optimizer, self );
 	DaoOptimizer_DCE( optimizer, self );
 	DaoOptimizer_ReduceRegister( optimizer, self );
+
+	//DaoOptimizer_LinkDU( optimizer, self );
 
 	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self, optimizer );
 	DaoOptimizer_Delete( optimizer );
@@ -1230,6 +1376,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *vm
 
 	/* Exclude expression that does not yield new value: */
 	if( node->lvalue == 0xffff ) return;
+	if( self->update == DaoOptimizer_UpdateRDA ) return;
 	switch( type ){
 	case DAO_CODE_GETG :
 	case DAO_CODE_GETU :

@@ -22,8 +22,6 @@
 
 enum { DAO_OP_NONE, DAO_OP_SINGLE, DAO_OP_PAIR, DAO_OP_TRIPLE, DAO_OP_RANGE, DAO_OP_RANGE2 };
 
-typedef struct DaoCodeNode  DaoCodeNode;
-typedef struct DaoOptimizer DaoOptimizer;
 
 struct DaoCodeNode
 {
@@ -52,6 +50,7 @@ struct DaoOptimizer
 	DaoRoutine *routine;
 
 	int bitCount;
+	int byteCount;
 	int reverseFlow;
 
 	AnalysisInit    init;
@@ -78,6 +77,15 @@ DAO_DLL void DaoOptimizer_Clear( DaoOptimizer *self );
 DAO_DLL void DaoOptimizer_Delete( DaoOptimizer *self );
 
 DAO_DLL void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *code );
-DAO_DLL void DaoOptimizer_DoLiveVariableAnalysis( DaoOptimizer *self, DaoRoutine *routine );
+DAO_DLL void DaoOptimizer_DoLVA( DaoOptimizer *self, DaoRoutine *routine );
+DAO_DLL void DaoOptimizer_DoRDA( DaoOptimizer *self, DaoRoutine *routine );
+
+/*
+// Link Definition-Use and Use-Definition:
+// The results are stored in each node:
+// node->ins:  node is the use, node->ins are the defintions;
+// node->outs: node is the defintion, node->outs are the uses;
+*/
+DAO_DLL void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine );
 
 #endif
