@@ -39,6 +39,9 @@ struct DaoCodeNode
 	DArray   *outs; /* out nodes in the flow graph; */
 	DArray   *kills; /* expressions that are killed by this one; */
 
+	DArray   *defs; /* definitions for this use node; */
+	DArray   *uses; /* uses for this definition node; */
+
 	DString  *bits; /* bit array for the analysis; */
 };
 

@@ -2623,6 +2623,7 @@ RaiseErrorNullObject:
 CheckException:
 
 			locVars = self->activeValues;
+			jitCallData.localValues = locVars;
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){

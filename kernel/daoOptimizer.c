@@ -33,6 +33,8 @@ static DaoCodeNode* DaoCodeNode_New()
 	self->ins = DArray_New(0);
 	self->outs = DArray_New(0);
 	self->kills = DArray_New(0);
+	self->defs = DArray_New(0);
+	self->uses = DArray_New(0);
 	self->bits = DString_New(1);
 	return self;
 }
@@ -41,6 +43,8 @@ static void DaoCodeNode_Delete( DaoCodeNode *self )
 	DArray_Delete( self->ins );
 	DArray_Delete( self->outs );
 	DArray_Delete( self->kills );
+	DArray_Delete( self->defs );
+	DArray_Delete( self->uses );
 	DString_Delete( self->bits );
 	dao_free( self );
 }
@@ -488,8 +492,8 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 	N = self->nodes->size;
 	for(i=0; i<N; i++){
 		node = nodes[i];
-		node->ins->size = 0;
-		node->outs->size = 0;
+		node->defs->size = 0;
+		node->uses->size = 0;
 	}
 	for(i=0; i<N; i++){
 		node = nodes[i];
@@ -518,8 +522,8 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 				break;
 			}
 			if( using ){
-				DArray_Append( node->ins, node2 );
-				DArray_Append( node2->outs, node );
+				DArray_Append( node->defs, node2 );
+				DArray_Append( node2->uses, node );
 			}
 		}
 	}

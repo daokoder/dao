@@ -1,5 +1,6 @@
 
 CC = g++-4.2
+CC = clang++
 
 DAO_INC =/usr/local/dao/include
 DAO_INC =../../kernel
