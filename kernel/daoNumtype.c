@@ -2792,7 +2792,7 @@ static void DaoARRAY_varn( DaoProcess *proc, DaoValue *par[], int N )
 		*num = dev / self->size;
 	}
 }
-static int Compare( DaoArray *array, daoint *slice, int *index, daoint i, daoint j )
+static int Compare( DaoArray *array, daoint *slice, daoint *index, daoint i, daoint j )
 {
 	if( index ){
 		i = index[i];
@@ -2823,7 +2823,7 @@ static int Compare( DaoArray *array, daoint *slice, int *index, daoint i, daoint
 	}
 	return 0;
 }
-static void Swap( DaoArray *array, daoint *slice, int *index, daoint i, daoint j )
+static void Swap( DaoArray *array, daoint *slice, daoint *index, daoint i, daoint j )
 {
 	if( index ){
 		int k = index[i];

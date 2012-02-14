@@ -415,7 +415,7 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( *text == L'{' )
-		value = JSON_ParseObject( factory, (DaoValue*)DaoProcess_PutMap( proc ), &text, &error, &line );
+		value = JSON_ParseObject( factory, (DaoValue*)DaoProcess_PutMap( proc, 1 ), &text, &error, &line );
 	else if( *text == L'[' )
 		value = JSON_ParseArray( factory, (DaoValue*)DaoProcess_PutList( proc ), &text, &error, &line );
 	else{

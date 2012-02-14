@@ -221,11 +221,11 @@ enum DaoExceptionType
 };
 
 #ifndef DAO_INT_FORMAT
-#ifdef DAO_USE_INT64
-#define DAO_INT_FORMAT  "%lli"
+#ifdef WIN32
+#define DAO_INT_FORMAT  "%Ii"
 #else
-#define DAO_INT_FORMAT  "%i"
-#endif /* DAO_USE_INT64 */
+#define DAO_INT_FORMAT  "%ti"
+#endif /* WIN32 */
 #endif /* DAO_INT_FORMAT */
 
 /* define an integer type with size equal to the size of pointers
