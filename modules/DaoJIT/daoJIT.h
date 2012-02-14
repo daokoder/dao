@@ -45,19 +45,22 @@ struct DaoJitHandle : public IRBuilder<>
 	BasicBlock *secondBlock; // the block after the entry;
 	BasicBlock *lastBlock;
 
+	Value *estatus; // exception status
 	Value *localTypes; // process->activeTypes: DaoType*[]*
 	Value *localValues; // process->activeValues: DaoValue*[]*
 	Value *localConsts; // routine->routConsts->data: DaoValue[]*
 
 	// Direct values: single-definition and single-use values.
-	// Such values do not explicitly use the stack, and do not
+	// Such values do not explicitly use the stack, or explicitly
 	// store to and load from memory:
 	std::vector<Value*> directValues; // DaoValue**
 
 	// Stack values: multiple-definitions or multiple-uses values.
-	// They are allocated in the entry block, and may have values loaded from memory.
+	// They are allocated on the program stack at the entry block,
+	// and may have values loaded from the VM stack.
 	// Modification to the value is stored in the stack.
-	// The values may be stored to memory, if necessary, at the exit of the JIT code.
+	// These values may be stored back to the VM stack,
+	// if they are still alive at the exit of the JIT code.
 	std::vector<Value*> stackValues; // DaoValue**
 
 	std::vector<Value*> localRefers; // DaoValue**

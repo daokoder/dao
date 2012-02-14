@@ -533,9 +533,9 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 		node = nodes[i];
 		printf( "%03i: ", i );
 		DaoVmCode_Print( routine->body->vmCodes->codes[i], NULL );
-		for(j=0; j<node->ins->size; j++) printf( "%3i ", node->ins->items.pCnode[j]->index );
+		for(j=0; j<node->defs->size; j++) printf( "%3i ", node->defs->items.pCnode[j]->index );
 		printf("\n");
-		for(j=0; j<node->outs->size; j++) printf( "%3i ", node->outs->items.pCnode[j]->index );
+		for(j=0; j<node->uses->size; j++) printf( "%3i ", node->uses->items.pCnode[j]->index );
 		printf("\n" );
 	}
 #endif
@@ -950,7 +950,7 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
 	DaoCodeNode *node, *node2, **nodes;
 	daoint i, j, k, m, N = annotCodes->size;
-	daoint *unused;
+	daoint *unused, linkdu = 1;
 
 	DaoOptimizer_DoLVA( self, routine );
 
@@ -968,34 +968,8 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 			if( GET_BIT( node->bits->mbs, node->lvalue ) ) continue;
 			if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) return;
 
-			switch( node->type ){
-			case DAO_OP_SINGLE :
-				DArray_Append( array, (size_t)node->first );
-				break;
-			case DAO_OP_PAIR :
-				DArray_Append( array, (size_t)node->first );
-				DArray_Append( array, (size_t)node->second );
-				break;
-			case DAO_OP_TRIPLE :
-				DArray_Append( array, (size_t)node->first );
-				DArray_Append( array, (size_t)node->second );
-				DArray_Append( array, (size_t)node->third );
-				break;
-			case DAO_OP_RANGE :
-			case DAO_OP_RANGE2 :
-				for(j=node->first; j<=node->second; j++) DArray_Append( array, (size_t)j );
-				if( node->type == DAO_OP_RANGE2 ) DArray_Append( array, (size_t)node->third );
-				break;
-			}
 			vmc->code = DVM_UNUSED;
-			node->type = DAO_OP_NONE;
-			node->lvalue = 0xffff;
-			node->lvalue2 = 0xffff;
-			node->exprid = 0xffff;
-			for(j=0; j<node->ins->size; j++){
-				DArray_PushBack( worklist, node );
-				DArray_PushBack( worklist, node->ins->items.pVoid[j] );
-			}
+			DArray_PushBack( array, node );
 		}
 		memset( unused, 0, N * sizeof(daoint) );
 		for(i=0; i<N; i++){
@@ -1012,45 +986,40 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 			case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 				if( (unused[vmc->b] - k) != abs(vmc->b - i) ) break;
 				/* The codes between this location and the target are all dead: */
-				if( node->first != 0xffff ) DArray_Append( array, (size_t)node->first );
 				vmc->code = DVM_UNUSED;
-				node->type = DAO_OP_NONE;
-				node->lvalue = 0xffff;
-				node->lvalue2 = 0xffff;
-				node->exprid = 0xffff;
-				for(j=0; j<node->ins->size; j++){
-					DArray_PushBack( worklist, node );
-					DArray_PushBack( worklist, node->ins->items.pVoid[j] );
-				}
+				DArray_PushBack( array, node );
 				break;
 			}
 		}
-		if( worklist->size == 0 ) break;
-		for(j=0,m=worklist->size; j<m; j+=2){
-			node2 = worklist->items.pCnode[j];
-			node = worklist->items.pCnode[j+1];
-			DaoOptimizer_InitNodeLVA( self, node );
-			for(k=0; k<node->outs->size; k++){
-				if( node->outs->items.pCnode[k] == node2 ) continue;
-				DArray_PushBack( worklist, node->outs->items.pVoid[k] );
-				DArray_PushBack( worklist, node );
-			}
+		if( array->size == 0 ) break;
+		if( linkdu ){
+			/* DaoOptimizer_LinkDU() is expensive, do it only after
+			// an initial set of dead codes have been found: */
+			DaoOptimizer_LinkDU( self, routine );
+			DaoOptimizer_DoLVA( self, routine );
+			linkdu = 0;
 		}
-		for(i=0; i<N; i++){
-			node = nodes[i];
-			for(j=0,m=array->size; j<array->size; j++){
-				k = array->items.pInt[j];
-				if( GET_BIT( node->bits->mbs, k ) == 0 ) continue;
-				/* Remove live variables that were defined in the dead codes.
-				// And add effected pairs of nodes into the worklist: */
-				SET_BIT0( node->bits->mbs, k );
-				for(k=0; k<node->outs->size; k++){
-					DArray_PushBack( worklist, node->outs->items.pVoid[k] );
-					DArray_PushBack( worklist, node );
+		for(i=0; i<array->size; i++){
+			node = array->items.pCnode[i];
+			node->type = DAO_OP_NONE;
+			node->lvalue = 0xffff;
+			node->lvalue2 = 0xffff;
+			node->exprid = 0xffff;
+			for(j=0; j<node->defs->size; j++){
+				node2 = node->defs->items.pCnode[j];
+				for(k=0; k<node2->uses->size; k++){
+					if( node2->uses->items.pCnode[k] == node ){
+						DArray_Erase( node2->uses, k, 1 );
+						break;
+					}
+				}
+				if( node2->uses->size == 0 ){
+					codes[node2->index]->code = DVM_UNUSED;
+					DArray_PushBack( array, node2 );
+					SET_BIT0( node2->bits->mbs, node2->lvalue );
 				}
 			}
 		}
-		DaoOptimizer_ProcessWorklist( self, worklist );
 	}
 	DArray_Delete( array );
 	DArray_Delete( unused2 );
@@ -1240,7 +1209,7 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 	if( daoConfig.optimize == 0 ) return;
 	/* Do not perform optimization if it may take too much memory (1M): */
 	if( (self->body->vmCodes->size * self->body->regCount) > 8000000 ) return;
-	if( self->body->vmCodes->size > 1000 && self->body->regCount > 200 ){
+	if( self->body->vmCodes->size > 400 && self->body->regCount > 200 ){
 		DaoType *type, **types = self->body->regType->items.pType;
 		if( self->body->simpleVariables->size < self->body->regCount / 2 ) return;
 		for(i=0,k=0; i<self->body->simpleVariables->size; i++){

@@ -1480,6 +1480,7 @@ CallEntry:
 				}
 			}
 		}OPNEXT() OPCASE( JITC ){
+			jitCallData.localValues = locVars;
 			jitCallData.globalValues = here->varData->items.pValue;
 			dao_jit.Execute( self, & jitCallData, vmc->a );
 			if( self->exceptions->size > exceptCount ) goto CheckException;
@@ -2623,7 +2624,6 @@ RaiseErrorNullObject:
 CheckException:
 
 			locVars = self->activeValues;
-			jitCallData.localValues = locVars;
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
@@ -6155,7 +6155,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( dC && dC->type == DAO_LIST && dC->xList.refCount == 1 && dC->xList.unitype == ct ){
 			list = (DaoList*) dC;
 		}else{
-			list = DaoList_New();
+			list = DaoFactory_NewList( factory );
 			list->unitype = ct;
 			GC_IncRC( ct );
 			dC = (DaoValue*) list;
@@ -6211,7 +6211,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			map = (DaoMap*) dC;
 			DMap_Reset( map->items );
 		}else{
-			map = DaoMap_New(0);
+			map = DaoFactory_NewMap( factory, map2->items->hashing );
 			map->unitype = ct;
 			GC_IncRC( ct );
 			dC = (DaoValue*) map;
