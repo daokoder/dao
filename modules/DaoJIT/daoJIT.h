@@ -95,6 +95,7 @@ struct DaoJitHandle : public IRBuilder<>
 
 	// DaoInteger->value, DaoFloat->value, DaoDouble->value:
 	Value* GetValueNumberPointer( Value *value, Type *type );
+	Value* GetValueNumberValue( Value *value, Type *type );
 
 	Value* Dereference( Value *value );
 	Value* CastIntegerPointer( Value *value ); // to dint*

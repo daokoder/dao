@@ -536,7 +536,7 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 		for(j=0; j<node->defs->size; j++) printf( "%3i ", node->defs->items.pCnode[j]->index );
 		printf("\n");
 		for(j=0; j<node->uses->size; j++) printf( "%3i ", node->uses->items.pCnode[j]->index );
-		printf("\n" );
+		printf("\n\n" );
 	}
 #endif
 }
@@ -2523,16 +2523,14 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 						ct = at->nested->items.pType[ k ];
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						UpdateType( opc, ct );
-						if( typed_code && ct == type[opc] ){
-							if( k <= 0xffff ){
-								if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
-									vmc->b = k;
-									vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
-								}else{
-									/* for skipping type checking */
-									vmc->b = k;
-									vmc->code = DVM_GETF_TX;
-								}
+						if( typed_code && ct == type[opc] && k <= 0xffff ){
+							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
+								vmc->b = k;
+								vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
+							}else{
+								/* for skipping type checking */
+								vmc->b = k;
+								vmc->code = DVM_GETF_TX;
 							}
 						}
 					}else if( bt->tid >= DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
@@ -2988,22 +2986,20 @@ NotExist_TryAux:
 						ct = ct->nested->items.pType[ k ];
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						AssertTypeMatching( at, ct, defs, 0);
-						if( typed_code ){
-							if( k <= 0xffff && (at == ct || ct->tid == DAO_ANY) ){
-								if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE
-										&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
-									vmc->code = DVM_SETF_TII + 3*( ct->tid - DAO_INTEGER )
-										+ (at->tid - DAO_INTEGER);
-									vmc->b = k;
-								}else if( at->tid ==DAO_STRING && ct->tid ==DAO_STRING ){
+						if( typed_code && k <= 0xffff ){
+							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE
+									&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
+								vmc->b = k;
+								vmc->code = DVM_SETF_TII + 3*( ct->tid - DAO_INTEGER )
+									+ (at->tid - DAO_INTEGER);
+							}else if( at == ct || ct->tid == DAO_ANY ){
+								vmc->b = k;
+								if( at->tid ==DAO_STRING && ct->tid ==DAO_STRING ){
 									vmc->code = DVM_SETF_TSS;
-									vmc->b = k;
 								}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
 									vmc->code = DVM_SETF_TPP;
-									vmc->b = k;
 								}else{
 									vmc->code = DVM_SETF_TXX;
-									vmc->b = k;
 								}
 							}
 						}
@@ -3231,7 +3227,7 @@ NotExist_TryAux:
 						ct = ct->nested->items.pType[ k ];
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						AssertTypeMatching( at, ct, defs, 0);
-						if( typed_code && k < 0xffff && (at == ct || ct->tid == DAO_ANY) ){
+						if( typed_code && k < 0xffff ){
 							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE
 									&& at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE ){
 								vmc->code = DVM_SETF_TII + 3*( ct->tid - DAO_INTEGER )
@@ -3240,12 +3236,13 @@ NotExist_TryAux:
 							}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 								vmc->code = DVM_SETF_TSS;
 								vmc->b = k;
-							}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
-								vmc->code = DVM_SETF_TPP;
+							}else if( at == ct || ct->tid == DAO_ANY ){
 								vmc->b = k;
-							}else{
-								vmc->code = DVM_SETF_TXX;
-								vmc->b = k;
+								if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
+									vmc->code = DVM_SETF_TPP;
+								}else{
+									vmc->code = DVM_SETF_TXX;
+								}
 							}
 						}
 						break;
@@ -3391,7 +3388,8 @@ NotExist_TryAux:
 					ct = DaoType_DefineTypes( type[opc], ns, defs );
 					if( ct ) UpdateType( opc, ct );
 				}
-				if( typed_code && k == DAO_MT_EQ && at == type[opc] ){
+				ct = type[opc];
+				if( typed_code ){
 					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE
 							&& ct->tid >= DAO_INTEGER && ct->tid <= DAO_DOUBLE ){
 						vmc->code = DVM_MOVE_II + 3 * ( ct->tid - DAO_INTEGER )
@@ -3400,13 +3398,13 @@ NotExist_TryAux:
 						vmc->code = DVM_MOVE_CC;
 					}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 						vmc->code = DVM_MOVE_SS;
-					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
-						vmc->code = DVM_MOVE_PP;
-					}else{
-						vmc->code = DVM_MOVE_XX;
+					}else if( at == ct || ct->tid == DAO_ANY ){
+						if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && csts[opa] == NULL ){
+							vmc->code = DVM_MOVE_PP;
+						}else{
+							vmc->code = DVM_MOVE_XX;
+						}
 					}
-				}else if( typed_code && type[opc]->tid == DAO_ANY ){
-					vmc->code = DVM_MOVE_XX;
 				}
 				break;
 			}
