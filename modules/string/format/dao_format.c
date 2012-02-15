@@ -763,7 +763,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 							else if( wcs[prevpos] != L'_' )
 								break;
 						if( !litera ){
-							sprintf( buf, "Invalid placeholder name (stopped on char '%c')!", wcs[prevpos] );
+							sprintf( buf, "Invalid placeholder name (stopped on char '%lc')!", wcs[prevpos] );
 							DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 							pos--;
 							DString_AppendWChar( str, L'?' );
@@ -774,7 +774,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 						if( iswdigit( wcs[prevpos] ) && !argend && !wargname )
 							num = num*10 + ( wcs[prevpos] - L'0' );
 						else if( wcs[prevpos - 1] == L'(' ){
-							sprintf( buf, "Invalid character in placeholder ID ('%c')!", wcs[prevpos] );
+							sprintf( buf, "Invalid character in placeholder ID ('%lc')!", wcs[prevpos] );
 							DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 							error = 1;
 							break;
@@ -789,7 +789,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 								break;
 							}
 							if( !iswalpha( wcs[prevpos] ) && wcs[prevpos] != L'_' ){
-								sprintf( buf, "Invalid character in argument field name ('%c')!", wcs[prevpos] );
+								sprintf( buf, "Invalid character in argument field name ('%lc')!", wcs[prevpos] );
 								DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 								error = 1;
 								break;
@@ -856,7 +856,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 										if( iswdigit( wcs[prevpos] ) )
 											index2 = index2*10 + ( wcs[prevpos] - L'0' );
 										else{
-											sprintf( buf, "Invalid character in index ('%c')!", wcs[prevpos] );
+											sprintf( buf, "Invalid character in index ('%lc')!", wcs[prevpos] );
 											DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 											sliced = 0;
 											error = 1;
@@ -867,7 +867,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 										break;
 								}
 								else{
-									sprintf( buf, "Invalid character in index ('%c')!", wcs[prevpos] );
+									sprintf( buf, "Invalid character in index ('%lc')!", wcs[prevpos] );
 									DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 									indexed = 0;
 									error = 1;
@@ -892,7 +892,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 								if( iswdigit( wcs[prevpos] ) )
 									width = width*10 + ( wcs[prevpos] - L'0' );
 								else{
-									sprintf( buf, "Invalid character in field width ('%c')!", wcs[prevpos] );
+									sprintf( buf, "Invalid character in field width ('%lc')!", wcs[prevpos] );
 									DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 									width = 0;
 									break;
@@ -922,7 +922,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 							if( prevpos != pos && !wcschr( L"<>=.", wcs[prevpos] ) ){
 								notation = wcs[prevpos];
 								if( !wcschr( L"ixXfgG", notation ) ){
-									sprintf( buf, "Invalid numeric format ('%c')!", wcs[prevpos] );
+									sprintf( buf, "Invalid numeric format ('%lc')!", wcs[prevpos] );
 									DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 									notation = 0;
 									continue;
@@ -950,7 +950,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 								DaoProcess_RaiseException( proc, DAO_WARNING, "Incomplete numeric format!" );
 						}
 						else{
-							sprintf( buf, "Invalid character in placeholder ('%c')!", wcs[prevpos] );
+							sprintf( buf, "Invalid character in placeholder ('%lc')!", wcs[prevpos] );
 							DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 							error = 1;
 							break;
@@ -963,7 +963,7 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 				}
 				else{
 					if( !iswdigit( wcs[pos + 1] ) ){
-						sprintf( buf, "Invalid placeholder index ('%c')!", wcs[pos + 1] );
+						sprintf( buf, "Invalid placeholder index ('%lc')!", wcs[pos + 1] );
 						DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 						DString_AppendWChar( str, L'?' );
 						continue;
@@ -982,9 +982,9 @@ static void DaoFormat( DaoProcess *proc, DaoValue *p[], int N )
 							}
 						}
 					if( !value ){
-						DString *sname = DString_New( 1 );
+						DString *sname = DString_New( 0 );
 						DString_SetDataWCS( sname, wargname, argnamelen );
-						sprintf( buf, "No argument matching placeholder name ('%s')!", DString_GetMBS( sname ) );
+						sprintf( buf, "No argument matching placeholder name ('%ls')!", DString_GetWCS( sname ) );
 						DString_Delete( sname );
 						DaoProcess_RaiseException( proc, DAO_WARNING, buf );
 						DString_AppendWChar( str, L'?' );
