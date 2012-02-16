@@ -46,9 +46,13 @@ struct DaoJitHandle : public IRBuilder<>
 	BasicBlock *lastBlock;
 
 	Value *estatus; // exception status
-	Value *localTypes; // process->activeTypes: DaoType*[]*
-	Value *localValues; // process->activeValues: DaoValue*[]*
-	Value *localConsts; // routine->routConsts->data: DaoValue[]*
+	Value *localValues;  // jitcdata->localConsts : DaoValue*[]*
+	Value *localConsts;  // jitcdata->localValues : DaoValue*[]*
+	Value *objectValues; // jitcdata->objectValues: DaoValue*[]*
+	Value *classValues;  // jitcdata->classValues : DaoValue*[]*
+	Value *classConsts;  // jitcdata->classConsts : DaoValue*[]*
+	Value *globalValues; // jitcdata->globalValues: DaoValue*[]*
+	Value *globalConsts; // jitcdata->globalConsts: DaoValue*[]*
 
 	// Direct values: single-definition and single-use values.
 	// Such values do not explicitly use the stack, or explicitly
@@ -65,8 +69,17 @@ struct DaoJitHandle : public IRBuilder<>
 
 	std::vector<Value*> localRefers; // DaoValue**
 
+	std::vector<std::pair<Value*,BasicBlock*> > dataItems; // DaoValue**
+
+	std::map<int,Value*> mapObjectValueRefers;
+	std::map<int,Value*> mapClassValueRefers;
+	std::map<int,Value*> mapGlobalValueRefers;
+	std::map<int,Value*> mapClassConstValues;
+	std::map<int,Value*> mapGlobalConstValues;
+
 	DaoJitHandle( LLVMContext & ctx, DaoRoutine *rout=NULL, DaoOptimizer *opt=NULL ) 
-		: IRBuilder<>( ctx ){
+		: IRBuilder<>( ctx )
+	{
 		routine = rout;
 		optimizer = opt;
 		currentNode = NULL;
@@ -86,9 +99,16 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* GetUpConstant( int id );
 	Value* GetLocalReference( int reg );
 	Value* GetLocalValue( int reg );
-	Value* GetLocalValueDataPointer( int reg );
 
-	Value* GetLocalNumberValue( int reg, Type *type );
+	Value* GetObjectValueRefer( int index );
+	Value* GetObjectValueValue( int index );
+	Value* GetClassValueRefer( int index );
+	Value* GetClassValueValue( int index );
+	Value* GetGlobalValueRefer( int index );
+	Value* GetGlobalValueValue( int index );
+
+	Value* GetClassConstValue( int index );
+	Value* GetGlobalConstValue( int index );
 
 	Value* GetValueTypePointer( Value *value ); // DaoValue->type
 	Value* GetValueDataPointer( Value *value ); // DaoValue->value: for int, float, double;
@@ -116,6 +136,8 @@ struct DaoJitHandle : public IRBuilder<>
 	void AddReturnCodeChecking( Value *retcode, int vmc );
 	// index: dint; size: size_t* or int*;
 	Value* AddIndexChecking( Value *index, Value *size, int vmc );
+
+	Value* GetItemValue( int reg, int field, int *maycache );
 
 	Value* GetNumberOperand( int reg ); // int
 	Value* GetTupleItems( int reg ); // DaoValue*[]*
