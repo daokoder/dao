@@ -41,7 +41,6 @@ struct DaoJitHandle : public IRBuilder<>
 
 	Function   *jitFunction;
 	BasicBlock *entryBlock;
-	BasicBlock *activeBlock;
 	BasicBlock *secondBlock; // the block after the entry;
 	BasicBlock *lastBlock;
 
@@ -54,7 +53,7 @@ struct DaoJitHandle : public IRBuilder<>
 	Value *globalValues; // jitcdata->globalValues: DaoValue*[]*
 	Value *globalConsts; // jitcdata->globalConsts: DaoValue*[]*
 
-	// Direct values: single-definition and single-use values.
+	// Direct values: single-definition values.
 	// Such values do not explicitly use the stack, or explicitly
 	// store to and load from memory:
 	std::vector<Value*> directValues; // DaoValue**
@@ -91,7 +90,6 @@ struct DaoJitHandle : public IRBuilder<>
 	Function* NewFunction( DaoRoutine *routine, int id );
 	BasicBlock* NewBlock( int vmc );
 	BasicBlock* NewBlock( DaoVmCodeX *vmc );
-	void SetActiveBlock( BasicBlock *block );
 
 	void SetValueName( Value *value, const char *name, int id );
 
@@ -126,6 +124,8 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* CastIntegerValuePointer( Value *value ); // to DaoInteger*
 	Value* CastFloatValuePointer( Value *value ); // to DaoFloat*
 	Value* CastDoubleValuePointer( Value *value ); // to DaoDouble*
+
+	Value* GetDirectValue( int reg );
 
 	int IsDirectValue( int reg );
 	void StoreNumber( Value *value, int reg );

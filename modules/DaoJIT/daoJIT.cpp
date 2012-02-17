@@ -588,7 +588,7 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 	jitFunction = cast<Function>( llvm_module->getOrInsertFunction( name, dao_jit_function_type ) );
 	entryBlock = BasicBlock::Create( *llvm_context, "EntryBlock", jitFunction );
 	secondBlock = BasicBlock::Create( *llvm_context, "Second", jitFunction );
-	lastBlock = activeBlock = secondBlock;
+	lastBlock = secondBlock;
 	SetInsertPoint( entryBlock );
 
 	Argument *jitcdata = jitFunction->arg_begin();
@@ -604,12 +604,12 @@ Function* DaoJitHandle::NewFunction( DaoRoutine *routine, int id )
 	Constant *cst = ConstantInt::get( int32_type, 0 );
 	CreateStore( cst, estatus );
 
-	directValues.resize( routine->body->regCount );
+	directValues.resize( routine->body->vmCodes->size );
+	for(i=0; i<routine->body->vmCodes->size; i++) directValues[i] = NULL;
 	stackValues.resize( routine->body->regCount );
 	localRefers.resize( routine->body->regCount );
 	dataItems.resize( routine->body->regCount );
 	for(i=0; i<routine->body->regCount; i++){
-		directValues[i] = NULL;
 		stackValues[i] = NULL;
 		localRefers[i] = NULL;
 		dataItems[i] = std::pair<Value*,BasicBlock*>( NULL, NULL );
@@ -636,25 +636,18 @@ BasicBlock* DaoJitHandle::NewBlock( int vmc )
 	char name[ 256 ];
 	iplist<BasicBlock> & blist = jitFunction->getBasicBlockList();
 	sprintf( name, "block%i", (unsigned int)blist.size() );
-	activeBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
-	SetInsertPoint( activeBlock );
-	lastBlock = activeBlock;
-	return activeBlock;
+	lastBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
+	SetInsertPoint( lastBlock );
+	return lastBlock;
 }
 BasicBlock* DaoJitHandle::NewBlock( DaoVmCodeX *vmc )
 {
 	char name[ 256 ];
 	iplist<BasicBlock> & blist = jitFunction->getBasicBlockList();
 	sprintf( name, "%s%i", DaoVmCode_GetOpcodeName( vmc->code ), (unsigned int)blist.size() );
-	activeBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
-	SetInsertPoint( activeBlock );
-	lastBlock = activeBlock;
-	return activeBlock;
-}
-void DaoJitHandle::SetActiveBlock( BasicBlock *block )
-{
-	activeBlock = block;
-	SetInsertPoint( activeBlock );
+	lastBlock = BasicBlock::Create( *llvm_context, name, jitFunction );
+	SetInsertPoint( lastBlock );
+	return lastBlock;
 }
 
 
@@ -831,7 +824,7 @@ Value* DaoJitHandle::GetUpConstant( int id )
 void DaoJitHandle::SetValueName( Value *value, const char *name, int id )
 {
 	char buf[100];
-	sprintf( buf, "%s%i", name, id );
+	sprintf( buf, "%s_%i_", name, id );
 	value->setName( buf );
 }
 Value* DaoJitHandle::GetLocalReference( int reg )
@@ -1021,15 +1014,21 @@ Value* DaoJitHandle::CastDoublePointer( Value *value )
 }
 Value* DaoJitHandle::GetNumberOperand( int reg )
 {
-	Value *A;
 	BasicBlock *current = GetInsertBlock();
-	if( directValues[reg] ) return directValues[reg];
-	if( stackValues[reg] ) return CreateLoad( stackValues[reg] );
+	Value *A = GetDirectValue( reg );
+	if( A ) return A;
+	if( stackValues[reg] ){
+		printf( "%60i: read   from stack: %i\n", 3, reg );
+		return CreateLoad( stackValues[reg] );
+	}
+
+	printf( "%60i: allocate on stack: %i\n", 1, reg );
 
 	DaoType *type = routine->body->regType->items.pType[reg];
 
 	SetInsertPoint( entryBlock );
 	stackValues[reg] = CreateAlloca( cxx_number_types[type->tid - DAO_INTEGER] );
+	SetValueName( stackValues[reg], "stack", reg );
 
 	A = CreateLoad( GetLocalReference( reg ) );
 	A = GetValueNumberValue( A, dao_number_types[type->tid - DAO_INTEGER] );
@@ -1052,19 +1051,20 @@ Value* DaoJitHandle::GetTupleItems( int reg )
 {
 	Value *value;
 	DaoCodeNode *node;
+	BasicBlock *block = GetInsertBlock();
 	daoint i, k = 0;
 	for(i=0; i<currentNode->defs->size; i++){
 		node = currentNode->defs->items.pCnode[i];
 		if( node->lvalue == reg ) k += 1;
 	}
-	if( k == 1 && dataItems[reg].first && dataItems[reg].second == activeBlock )
+	if( k == 1 && dataItems[reg].first && dataItems[reg].second == block )
 		return dataItems[reg].first;
 
 	value = GetLocalValue( reg );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( block );
 	value = CreatePointerCast( value, dao_tuple_type_p ); // DaoTuple*
 	value = CreateConstGEP2_32( value, 0, 8 ); // tuple->items: DaoValue*[]*
-	if( k == 1 ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, activeBlock );
+	if( k == 1 ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, block );
 	return value;
 }
 void DaoJitHandle::AddReturnCodeChecking( Value *retcode, int vmc )
@@ -1077,14 +1077,14 @@ void DaoJitHandle::AddReturnCodeChecking( Value *retcode, int vmc )
 
 	BasicBlock *bltrue = NewBlock( vmc );
 	BasicBlock *blfalse = NewBlock( vmc );
-	SetActiveBlock( block );
+	SetInsertPoint( block );
 	CreateCondBr( cmp, bltrue, blfalse );
-	SetActiveBlock( bltrue );
+	SetInsertPoint( bltrue );
 	cst = ConstantInt::get( int32_type, vmc );
 	retcode = CreateOr( retcode, cst );
 	CreateRet( retcode );
-	SetActiveBlock( blfalse );
-	lastBlock = activeBlock;
+	SetInsertPoint( blfalse );
+	lastBlock = blfalse;
 }
 Value* DaoJitHandle::AddIndexChecking( Value *index, Value *size, int vmc )
 {
@@ -1099,20 +1099,21 @@ Value* DaoJitHandle::AddIndexChecking( Value *index, Value *size, int vmc )
 
 	BasicBlock *bltrue = NewBlock( vmc );
 	BasicBlock *blfalse = NewBlock( vmc );
-	SetActiveBlock( block );
+	SetInsertPoint( block );
 	CreateCondBr( cmp, bltrue, blfalse );
-	SetActiveBlock( bltrue );
+	SetInsertPoint( bltrue );
 	CreateRet( ConstantInt::get( int32_type, (DAO_ERROR_INDEX<<16)|vmc ) );
-	SetActiveBlock( blfalse );
-	lastBlock = activeBlock;
+	SetInsertPoint( blfalse );
+	lastBlock = blfalse;
 	return index;
 }
 Value* DaoJitHandle::GetListItem( int reg, int index, int vmc )
 {
+	BasicBlock *current = GetInsertBlock();
 	Constant *zero = ConstantInt::get( daoint_type, 0 );
 	Value *value = GetLocalValue( reg );
 	Value *id = GetNumberOperand( index );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( current );
 	value = CreatePointerCast( value, dao_list_type_p );
 	value = CreateConstGEP2_32( value, 0, 6 ); // list->items: DArray*
 
@@ -1131,13 +1132,14 @@ Value* DaoJitHandle::GetItemValue( int reg, int field, int *maycache )
 {
 	Value *value;
 	DaoCodeNode *node;
+	BasicBlock *current = GetInsertBlock();
 	daoint i, k = 0;
 	for(i=0; i<currentNode->defs->size; i++){
 		node = currentNode->defs->items.pCnode[i];
 		if( node->lvalue == reg ) k += 1;
 	}
 	*maycache = k == 1;
-	if( k == 1 && dataItems[reg].first && dataItems[reg].second == activeBlock ){
+	if( k == 1 && dataItems[reg].first && dataItems[reg].second == current ){
 		value = dataItems[reg].first;
 		value = CreateConstGEP2_32( value, 0, field );
 		value = CreateLoad( value );
@@ -1148,17 +1150,18 @@ Value* DaoJitHandle::GetItemValue( int reg, int field, int *maycache )
 Value* DaoJitHandle::GetClassConstant( int reg, int field )
 {
 	int maycache = 0;
+	BasicBlock *current = GetInsertBlock();
 	Value *value = GetItemValue( reg, field, & maycache );
 	if( value ) return value;
 
 	value = GetLocalValue( reg );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( current );
 	value = CreatePointerCast( value, dao_class_type_p );
 	value = CreateConstGEP2_32( value, 0, 8 ); // klass->cstData: DArray**;
 	value = Dereference( value ); // klass->cstData: DArray*
 	value = CreateConstGEP2_32( value, 0, 0 ); // klass->cstData->items.pValue: DaoValue*[]**
 	value = Dereference( value ); // klass->cstData->data: DaoValue*[]*
-	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, activeBlock );
+	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, current );
 
 	value = CreateConstGEP2_32( value, 0, field );
 	return CreateLoad( value );
@@ -1166,17 +1169,18 @@ Value* DaoJitHandle::GetClassConstant( int reg, int field )
 Value* DaoJitHandle::GetClassStatic( int reg, int field )
 {
 	int maycache = 0;
+	BasicBlock *current = GetInsertBlock();
 	Value *value = GetItemValue( reg, field, & maycache );
 	if( value ) return value;
 
 	value = GetLocalValue( reg );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( current );
 	value = CreatePointerCast( value, dao_class_type_p );
 	value = CreateConstGEP2_32( value, 0, 9 ); // klass->glbData: DArray**;
 	value = Dereference( value ); // klass->glbData: DArray*
 	value = CreateConstGEP2_32( value, 0, 0 ); // klass->glbData->items.pValue: DaoValue*[]**
 	value = Dereference( value ); // klass->glbData->data: DaoValue*[]*
-	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, activeBlock );
+	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, current );
 
 	value = CreateConstGEP2_32( value, 0, field );
 	return CreateLoad( value );
@@ -1184,11 +1188,12 @@ Value* DaoJitHandle::GetClassStatic( int reg, int field )
 Value* DaoJitHandle::GetObjectConstant( int reg, int field )
 {
 	int maycache = 0;
+	BasicBlock *current = GetInsertBlock();
 	Value *value = GetItemValue( reg, field, & maycache );
 	if( value ) return value;
 
 	value = GetLocalValue( reg );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( current );
 	value = CreatePointerCast( value, dao_object_type_p );
 	value = CreateConstGEP2_32( value, 0, 8 /*bit fields as one*/ ); // object->defClass: DaoClass**;
 	value = Dereference( value ); // object->defClass: DaoClass*;
@@ -1196,7 +1201,7 @@ Value* DaoJitHandle::GetObjectConstant( int reg, int field )
 	value = Dereference( value ); // klass->cstData: DArray*
 	value = CreateConstGEP2_32( value, 0, 0 ); // klass->cstData->items.pValue: DaoValue*[]**
 	value = Dereference( value ); // klass->cstData->data: DaoValue*[]*
-	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, activeBlock );
+	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, current );
 
 	value = CreateConstGEP2_32( value, 0, field );
 	return CreateLoad( value );
@@ -1204,11 +1209,12 @@ Value* DaoJitHandle::GetObjectConstant( int reg, int field )
 Value* DaoJitHandle::GetObjectStatic( int reg, int field )
 {
 	int maycache = 0;
+	BasicBlock *current = GetInsertBlock();
 	Value *value = GetItemValue( reg, field, & maycache );
 	if( value ) return value;
 
 	value = GetLocalValue( reg );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( current );
 	value = CreatePointerCast( value, dao_object_type_p );
 	value = CreateConstGEP2_32( value, 0, 8 /*bit fields as one*/ ); // object->defClass: DaoClass**;
 	value = Dereference( value ); // object->defClass: DaoClass*;
@@ -1216,7 +1222,7 @@ Value* DaoJitHandle::GetObjectStatic( int reg, int field )
 	value = Dereference( value ); // klass->glbData: DArray*
 	value = CreateConstGEP2_32( value, 0, 0 ); // klass->glbData->items.pValue: DaoValue*[]**
 	value = Dereference( value ); // klass->glbData->data: DaoValue*[]*
-	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, activeBlock );
+	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, current );
 
 	value = CreateConstGEP2_32( value, 0, field );
 	return CreateLoad( value );
@@ -1224,15 +1230,16 @@ Value* DaoJitHandle::GetObjectStatic( int reg, int field )
 Value* DaoJitHandle::GetObjectVariable( int reg, int field )
 {
 	int maycache = 0;
+	BasicBlock *current = GetInsertBlock();
 	Value *value = GetItemValue( reg, field, & maycache );
 	if( value ) return value;
 
 	value = GetLocalValue( reg );
-	SetInsertPoint( activeBlock );
+	SetInsertPoint( current );
 	value = CreatePointerCast( value, dao_object_type_p );
 	value = CreateConstGEP2_32( value, 0, 10 /*bit fields*/ ); // object->objValues: DaoValue*[]**;
 	value = Dereference( value ); // object->objValues: DaoValue*[]*;
-	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, activeBlock );
+	if( maycache ) dataItems[reg] = std::pair<Value*,BasicBlock*>( value, current );
 
 	value = CreateConstGEP2_32( value, 0, field );
 	value = CreateLoad( value );
@@ -1241,29 +1248,58 @@ Value* DaoJitHandle::GetObjectVariable( int reg, int field )
 }
 int DaoJitHandle::IsDirectValue( int reg )
 {
-	daoint i, n, dcount = 0;
-	DaoCodeNode *node = currentNode;
-	if( node->uses->size == 0 ) return 1; // Unused value;
-	if( node->uses->size > 1 ) return 0; // Multi-use value;
-
-	node = node->uses->items.pCnode[0];
-	for(i=0,n=node->defs->size; i<n; i++) dcount += node->defs->items.pCnode[i]->lvalue == reg;
-	if( dcount > 1 ) return 0; // Multi-defintion value;
-	return node->index >= start && node->index <= end;
+	daoint i, j, m, n, dcount = 0;
+	DaoCodeNode *node;
+	for(i=0,n=currentNode->uses->size; i<n; i++){
+		dcount = 0;
+		node = currentNode->uses->items.pCnode[i];
+		if( node->index < start || node->index > end ) return 0; // Used outside of compilable codes;
+		for(j=0,m=node->defs->size; j<m; j++) dcount += node->defs->items.pCnode[j]->lvalue == reg;
+		if( dcount > 1 ) return 0; // Multi-defintion value;
+	}
+		printf( ">>>>>>>>>>>>>>>>>>>>>>>>>  %3i  %3i\n", reg, n );
+	return 1;
+}
+Value* DaoJitHandle::GetDirectValue( int reg )
+{
+	DaoCodeNode *def = NULL;
+	daoint i, n, ndef = 0;
+	for(i=0,n=currentNode->defs->size; i<n; i++){
+		DaoCodeNode *node = currentNode->defs->items.pCnode[i];
+		if( node->lvalue != reg ) continue;
+		if( node->index < start || node->index > end ) continue;
+		def = node;
+		ndef += 1;
+		if( ndef > 1 ) return NULL;
+	}
+	if( def == NULL ) return NULL;
+	return directValues[ def->index ];
 }
 void DaoJitHandle::StoreNumber( Value *value, int reg )
 {
+	BasicBlock *current = GetInsertBlock();
 	//printf( "%3i  %i\n", reg, IsDirectValue( reg ) );
 	if( IsDirectValue( reg ) ){
-		directValues[reg] = value;
+		SetValueName( value, "direct", reg );
+		directValues[ currentNode->index ] = value;
 		return;
 	}
-	directValues[reg] = NULL; // No long used;
-	BasicBlock *current = GetInsertBlock();
 	if( stackValues[reg] == NULL ){
 		DaoType *type = routine->body->regType->items.pType[reg];
 		SetInsertPoint( entryBlock );
 		stackValues[reg] = CreateAlloca( cxx_number_types[type->tid - DAO_INTEGER] );
+		SetValueName( stackValues[reg], "stack", reg );
+		if( GET_BIT( lastNode->bits->mbs, reg ) ){
+			// This stack value will be wrote back to the VM stack,
+			// so it is necessary to initialize it with the current VM stack value,
+			// in case that the following store is not executed!
+			Value *A = CreateLoad( GetLocalReference( reg ) );
+			A = GetValueNumberValue( A, dao_number_types[type->tid - DAO_INTEGER] );
+			CreateStore( A, stackValues[reg] );
+		}
+		printf( "%60i: allocate on stack: %i\n", 2, reg );
+	}else{
+		printf( "%60i: store    on stack: %i\n", 2, reg );
 	}
 	SetInsertPoint( current );
 	CreateStore( value, stackValues[reg] );
@@ -1284,6 +1320,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 	Function *jitfunc = NewFunction( routine, start );
 	Function *mathfunc = NULL;
 
+	BasicBlock *current;
 	Argument *arg_context = jitFunction->arg_begin();
 	Constant *zero32 = ConstantInt::get( int32_type, 0 );
 	Constant *zero8 = ConstantInt::get( int8_type, 0 );
@@ -1330,7 +1367,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 		}
 	}
 
-	SetActiveBlock( secondBlock );
+	SetInsertPoint( secondBlock );
 	for(i=start; i<=end; i++){
 		Constant *vmcIndex = ConstantInt::get( int32_type, i );
 		vmc = vmcs[i];
@@ -1416,10 +1453,11 @@ Function* DaoJitHandle::Compile( int start, int end )
 			}else{
 				dB = GetLocalConstant( vmc->b );
 			}
+			current = GetInsertBlock();
 			SetInsertPoint( entryBlock );
 			dB = GetValueNumberPointer( dB, numtype );
 			dB = CreateLoad( dB );
-			SetInsertPoint( activeBlock );
+			SetInsertPoint( current );
 			StoreNumber( dB, vmc->c );
 			break;
 		case DVM_GETCK_I : 
@@ -1652,7 +1690,8 @@ Function* DaoJitHandle::Compile( int start, int end )
 				if( m == DVM_TEST or (m >= DVM_TEST_I and m <= DVM_TEST_D) ){
 					if( vmc->c == vmcs[i+1]->a ){
 						comparisons[ i+1 ] = value;
-						break;
+						/* Do not store C, if it is no longer alive: */
+						if( GET_BIT( nodes[i+1]->bits->mbs, vmc->c ) == 0 ) break;
 					}
 				}
 			}
@@ -1730,7 +1769,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 				if( m == DVM_TEST or (m >= DVM_TEST_I and m <= DVM_TEST_D) ){
 					if( vmc->c == vmcs[i+1]->a ){
 						comparisons[ i+1 ] = value;
-						break;
+						if( GET_BIT( nodes[i+1]->bits->mbs, vmc->c ) == 0 ) break;
 					}
 				}
 			}
@@ -1808,7 +1847,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 				if( m == DVM_TEST or (m >= DVM_TEST_I and m <= DVM_TEST_D) ){
 					if( vmc->c == vmcs[i+1]->a ){
 						comparisons[ i+1 ] = value;
-						break;
+						if( GET_BIT( nodes[i+1]->bits->mbs, vmc->c ) == 0 ) break;
 					}
 				}
 			}
@@ -1902,7 +1941,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 				if( m == DVM_TEST or (m >= DVM_TEST_I and m <= DVM_TEST_D) ){
 					if( vmc->c == vmcs[i+1]->a ){
 						comparisons[ i+1 ] = value;
-						break;
+						if( GET_BIT( nodes[i+1]->bits->mbs, vmc->c ) == 0 ) break;
 					}
 				}
 			}
@@ -1988,7 +2027,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 				if( m == DVM_TEST or (m >= DVM_TEST_I and m <= DVM_TEST_D) ){
 					if( vmc->c == vmcs[i+1]->a ){
 						comparisons[ i+1 ] = value;
-						break;
+						if( GET_BIT( nodes[i+1]->bits->mbs, vmc->c ) == 0 ) break;
 					}
 				}
 			}
@@ -2028,8 +2067,42 @@ Function* DaoJitHandle::Compile( int start, int end )
 			case DVM_NE_SS : CreateCall3( dao_string_ne, dA, dB, dC ); break;
 			}
 			break;
-		case DVM_GOTO : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
-		case DVM_SWITCH : case DVM_CASE :
+		case DVM_GOTO :
+			break;
+		case DVM_TEST_I :
+			if( comparisons.find( i ) != comparisons.end() ) break;
+			dA = GetNumberOperand( vmc->a );
+			value = CreateICmpNE( dA, zero );
+			comparisons[i] = value;
+			break;
+		case DVM_TEST_F :
+			if( comparisons.find( i ) != comparisons.end() ) break;
+			dA = GetNumberOperand( vmc->a );
+			value = CreateUIToFP( zero, float_type );
+			value = CreateFCmpONE( dA, value );
+			comparisons[i] = value;
+			break;
+		case DVM_TEST_D : 
+			if( comparisons.find( i ) != comparisons.end() ) break;
+			dA = GetNumberOperand( vmc->a );
+			value = CreateUIToFP( zero, double_type );
+			value = CreateFCmpONE( dA, value );
+			comparisons[i] = value;
+			break;
+		case DVM_SWITCH :
+			m = types[vmc->a]->tid; // integer or enum
+			dA = NULL;
+			if( m == DAO_ENUM ){
+				dA = GetLocalValue( vmc->a );
+				dA = CreatePointerCast( dA, dao_enum_type_p );
+				dA = CreateConstGEP2_32( dA, 0, 6 );
+				dA = Dereference( dA );
+			}else{
+				dA = GetNumberOperand( vmc->a );
+			}
+			comparisons[i] = dA;
+			break;
+		case DVM_CASE :
 			break;
 		case DVM_MOVE_SS :
 			dA = GetLocalValue( vmc->a );
@@ -2335,7 +2408,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 			break;
 		default : goto Failed;
 		}
-		if( branchings.find( i ) != branchings.end() ) branchings[i] = activeBlock;
+		if( branchings.find( i ) != branchings.end() ) branchings[i] = GetInsertBlock();
 		//if( code == DVM_SWITCH ) i += vmc->c + 1; // skip cases and one goto.
 	}
 	if( labels.find( start ) != labels.end() ){
@@ -2363,59 +2436,32 @@ Function* DaoJitHandle::Compile( int start, int end )
 	}
 #endif
 	for(iter=branchings.begin(), stop=branchings.end(); iter!=stop; iter++){
+		currentNode = nodes[ iter->first ];
 		vmc = vmcs[ iter->first ];
 		code = vmc->code;
 		if( labels[ vmc->b ] == NULL ) labels[vmc->b] = lastBlock;
 		//printf( "%3i %3i %p\n", iter->first, vmc->b, labels[vmc->b] );
 		//printf( "%3i %9p: ", iter->first, iter->second ); DaoVmCodeX_Print( *vmc, NULL );
-		SetActiveBlock( iter->second );
+		SetInsertPoint( iter->second );
 		switch( code ){
 		case DVM_GOTO :
 			CreateBr( labels[ vmc->b ] );
 			break;
 		case DVM_TEST_I :
-			value = NULL;
-			if( comparisons.find( iter->first ) != comparisons.end() ){
-				value = comparisons[iter->first];
-			}else{
-				dA = GetNumberOperand( vmc->a );
-				value = CreateICmpNE( dA, zero );
-			}
+			value = comparisons[iter->first];
 			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
 			break;
 		case DVM_TEST_F :
-			value = NULL;
-			if( comparisons.find( iter->first ) != comparisons.end() ){
-				value = comparisons[iter->first];
-			}else{
-				dA = GetNumberOperand( vmc->a );
-				value = CreateUIToFP( zero, float_type );
-				value = CreateFCmpONE( dA, value );
-			}
+			value = comparisons[iter->first];
 			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
 			break;
 		case DVM_TEST_D :
-			value = NULL;
-			if( comparisons.find( iter->first ) != comparisons.end() ){
-				value = comparisons[iter->first];
-			}else{
-				dA = GetNumberOperand( vmc->a );
-				value = CreateUIToFP( zero, double_type );
-				value = CreateFCmpONE( dA, value );
-			}
+			value = comparisons[iter->first];
 			CreateCondBr( value, labels[ iter->first + 1 ], labels[ vmc->b ] );
 			break;
 		case DVM_SWITCH :
-			m = types[vmc->a]->tid; // integer or enum
-			if( m == DAO_ENUM ){
-				dA = GetLocalValue( vmc->a );
-				dA = CreatePointerCast( dA, dao_enum_type_p );
-				dA = CreateConstGEP2_32( dA, 0, 6 );
-				dA = Dereference( dA );
-			}else{
-				dA = GetNumberOperand( vmc->a );
-			}
-			inswitch = CreateSwitch( dA, labels[ vmc->b ], vmc->c );
+			value = comparisons[iter->first];
+			inswitch = CreateSwitch( value, labels[ vmc->b ], vmc->c );
 			// use DVM_CASE to add switch labels
 			for(k=1; k<=vmc->c; k++){
 				DaoVmCodeX *vmc2 = vmcs[ iter->first + k ];
@@ -2435,14 +2481,14 @@ Function* DaoJitHandle::Compile( int start, int end )
 		}
 	}
 	printf( "lastBlock = %p\n", lastBlock ) ;
-	SetActiveBlock( lastBlock );
+	SetInsertPoint( lastBlock );
 	node = optimizer->nodes->items.pCnode[end];
 	for(i=0; i<routine->body->regCount; i++){
 		DaoType *type = types[i];
-		printf( "%3i:  %p  %p\n", i, directValues[i], stackValues[i] );
+		printf( "%3i:  %p\n", i, stackValues[i] );
 		if( stackValues[i] == NULL ) continue;
 		if( GET_BIT( node->bits->mbs, i ) == 0 ) continue; // skip dead variables;
-		printf( "%3i:  %p  %p\n", i, directValues[i], stackValues[i] );
+		printf( "%3i:  %p\n", i, stackValues[i] );
 		Value *A = CreateLoad( stackValues[i] );
 		Value *C = GetLocalValue( i );
 		C = GetValueNumberPointer( C, dao_number_types[type->tid - DAO_INTEGER] );
@@ -2484,8 +2530,20 @@ void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer )
 	if( segments.size() == 0 ) return;
 	DaoOptimizer_LinkDU( optimizer, routine );
 	DaoOptimizer_DoLVA( optimizer, routine );
+#if 0
+	if( routine->body->vmCodes->size > 50 ){
+		DaoVmCode *vmc1 = routine->body->vmCodes->codes + 41;
+		DaoVmCode *vmc2 = routine->body->vmCodes->codes + 42;
+		if( vmc1->code == DVM_TEST_I && vmc2->code == DVM_GOTO ){
+			vmc1->code = DVM_NOP;
+			vmc2->code = DVM_NOP;
+			routine->body->annotCodes->items.pVmc[41]->code = DVM_NOP;
+			routine->body->annotCodes->items.pVmc[42]->code = DVM_NOP;
+		}
+	}
+#endif
 	for(int i=0, n=segments.size(); i<n; i++){
-		//if( (segments[i].end - segments[i].start) < 10 ) continue;
+		if( (segments[i].end - segments[i].start) < 10 ) continue;
 		//if( (segments[i].end - segments[i].start) < 3 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( segments[i].start, segments[i].end );
@@ -2500,7 +2558,7 @@ void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer )
 		jitFunctions.push_back( jitfunc );
 	}
 	if( jitFunctions.size() ) routine->body->jitData = new std::vector<Function*>( jitFunctions );
-	//return;
+	return;
 	PassManager PM;
 	PM.add(createPrintModulePass(&outs()));
 	PM.run(*llvm_module);
