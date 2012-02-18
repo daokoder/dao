@@ -82,7 +82,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MAP",        DVM_MAP,        DAO_CODE_ENUM,    1 },
 	{ "HASH",       DVM_HASH,       DAO_CODE_ENUM,    1 },
 	{ "VECTOR",     DVM_VECTOR,     DAO_CODE_ENUM,    1 },
-	{ "MATRIX",     DVM_MATRIX,     DAO_CODE_ENUM,    1 },
+	{ "MATRIX",     DVM_MATRIX,     DAO_CODE_MATRIX,  1 },
 	{ "APLIST",     DVM_APLIST,     DAO_CODE_ENUM,    1 },
 	{ "APVECTOR",   DVM_APVECTOR,   DAO_CODE_ENUM,    1 },
 	{ "CURRY",      DVM_CURRY,      DAO_CODE_ENUM2,   1 },

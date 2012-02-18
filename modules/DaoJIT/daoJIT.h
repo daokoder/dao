@@ -141,6 +141,7 @@ struct DaoJitHandle : public IRBuilder<>
 
 	Value* GetNumberOperand( int reg ); // int
 	Value* GetTupleItems( int reg ); // DaoValue*[]*
+	Value* GetArrayItem( int reg, int index, int vmc ); // daoint/float/double*
 	Value* GetListItem( int reg, int index, int vmc ); // DaoValue*
 	Value* GetClassConstant( int reg, int field ); // Value*
 	Value* GetClassStatic( int reg, int field ); // Value*

@@ -892,11 +892,11 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 
 	if( self->tid == DAO_THT ){
 		node = MAP_Find( defs, self );
-		if( node == NULL ) return self;
+		if( node == NULL || node->value.pType == self ) return self;
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
 	}else if( self->tid == DAO_VARIANT && self->aux ){ /* @T<int|float> */
 		node = MAP_Find( defs, self->aux );
-		if( node == NULL ) return self;
+		if( node == NULL || node->value.pType == self ) return self;
 		type = DaoType_DefineTypes( node->value.pType, ns, defs );
 		if( type == NULL ) return self;
 		return type;
