@@ -34,6 +34,7 @@ DAO_INIT_MODULE
 #define getcwd _getcwd
 #define mkdir _mkdir
 #define stat _stat
+#define chmod _chmod
 #endif
 
 #else
@@ -263,7 +264,6 @@ int DInode_Remove( DInode *self )
 		if( unlink( self->path ) != 0 )
 			return errno;
 	}
-	DInode_Close( self );
 	return 0;
 }
 
@@ -398,6 +398,17 @@ int DInode_ChildrenRegex( DInode *self, int type, DaoProcess *proc, DaoList *des
 	return 0;
 }
 
+int DInode_SetAccess(DInode *self, int mode)
+{
+#ifdef WIN32
+	if (chmod(self->path, ((mode & 1)? _S_IREAD : 0) | ((mode & 2)? _S_IWRITE : 0)))
+#else
+	if (chmod(self->path, ((mode & 1)? S_IREAD : 0) | ((mode & 2)? S_IWRITE : 0) | ((mode & 4)? S_IEXEC : 0)))
+#endif
+		return errno;
+	return 0;
+}
+
 static void GetErrorMessage( char *buffer, int code, int special )
 {
 	switch ( code ){
@@ -447,6 +458,22 @@ static void GetErrorMessage( char *buffer, int code, int special )
 		break;
 	default:
 		sprintf( buffer, "Unknown system error (%x)", code );
+	}
+}
+
+static void FSNode_Update( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
+	char errbuf[MAX_PATH + 1];
+	int res;
+	if( ( res = DInode_Reopen( self ) ) != 0 ){
+		if( res == 1 )
+			strcpy( errbuf, "Trying to open something which is not a file/directory" );
+		else
+			GetErrorMessage( errbuf, res, 0 );
+		if( res == 1 || res == ENOENT )
+			snprintf( errbuf + strlen( errbuf ), 256, ": %s", self->path );
+		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
 	}
 }
 
@@ -552,6 +579,19 @@ static void FSNode_Access( DaoProcess *proc, DaoValue *p[], int N )
 	if( self->pexec )
 		strcat( res, "$execute" );
 	DaoProcess_PutEnum( proc, res );
+}
+
+static void FSNode_SetAccess(DaoProcess *proc, DaoValue *p[], int N)
+{
+	DInode *self = (DInode*)DaoValue_TryGetCdata(p[0]);
+	char errbuf[MAX_ERRMSG];
+	int res = DInode_SetAccess(self, DaoValue_TryGetEnum(p[1]));
+	if (res){
+		GetErrorMessage(errbuf, res, 0);
+		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
+	}
+	else
+		FSNode_Update(proc, p, N);
 }
 
 static void FSNode_Makefile( DaoProcess *proc, DaoValue *p[], int N )
@@ -799,22 +839,6 @@ static void FSNode_SetCWD( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-static void FSNode_Update( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DInode *self = (DInode*)DaoValue_TryGetCdata( p[0] );
-	char errbuf[MAX_PATH + 1];
-	int res;
-	if( ( res = DInode_Reopen( self ) ) != 0 ){
-		if( res == 1 )
-			strcpy( errbuf, "Trying to open something which is not a file/directory" );
-		else
-			GetErrorMessage( errbuf, res, 0 );
-		if( res == 1 || res == ENOENT )
-			snprintf( errbuf + strlen( errbuf ), 256, ": %s", self->path );
-		DaoProcess_RaiseException( proc, DAO_ERROR, errbuf );
-	}
-}
-
 static DaoFuncItem fsnodeMeths[] =
 {
 	{ FSNode_New,      "fsnode( path : string )=>fsnode" },
@@ -827,17 +851,18 @@ static DaoFuncItem fsnodeMeths[] =
 	{ FSNode_Ctime,    "ctime( self : fsnode )=>int" },
 	{ FSNode_Mtime,    "mtime( self : fsnode )=>int" },
 	{ FSNode_Access,   "access( self : fsnode )=>enum<read; write; execute>" },
+	{ FSNode_SetAccess,"set_access( self : fsnode, mode: enum<read; write; execute>)" },
 	{ FSNode_Rename,   "rename( self : fsnode, path : string )" },
 	{ FSNode_Remove,   "remove( self : fsnode )" },
-	{ FSNode_Makefile, "makefile( self : fsnode, path : string )=>fsnode" },
-	{ FSNode_Makedir,  "makedir( self : fsnode, path : string )=>fsnode" },
+	{ FSNode_Makefile, "mkfile( self : fsnode, path : string )=>fsnode" },
+	{ FSNode_Makedir,  "mkdir( self : fsnode, path : string )=>fsnode" },
 	{ FSNode_Isroot,   "isroot( self : fsnode )=>int" },
 	{ FSNode_Children, "children( self : fsnode, type : enum<files; dirs>, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<fsnode>" },
 	{ FSNode_Files,    "files( self : fsnode, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<fsnode>" },
 	{ FSNode_Dirs,     "dirs( self : fsnode, filter='*', filtering : enum<wildcard, regex> = $wildcard )=>list<fsnode>" },
 	{ FSNode_Child,    "[]( self : fsnode, path : string )=>fsnode" },
-	{ FSNode_GetCWD,   "getcwd(  )=>fsnode" },
-	{ FSNode_SetCWD,   "setcwd( self : fsnode )" },
+	{ FSNode_GetCWD,   "cwd(  )=>fsnode" },
+	{ FSNode_SetCWD,   "set_cwd( self : fsnode )" },
 	{ FSNode_Update,   "update( self : fsnode )" },
 	{ NULL, NULL }
 };
