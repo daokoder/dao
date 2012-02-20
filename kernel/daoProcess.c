@@ -761,15 +761,6 @@ void DaoProcess_ReleaseCV( DaoProcess *self )
 #define DoubleOperand( i )  locVars[i]->xDouble.value
 #define ComplexOperand( i ) locVars[i]->xComplex.value
 
-#define NumberOperand( x, v, i ) \
-x = 0; \
-v = locVars[i]; \
-switch( v->type ){ \
-case DAO_INTEGER : x = v->xInteger.value; break; \
-case DAO_FLOAT   : x = v->xFloat.value; break; \
-case DAO_DOUBLE  : x = v->xDouble.value; break; \
-}
-
 #define ArrayArrayValue( array, up, id ) array->items.pArray[ up ]->items.pValue[ id ]
 
 static int DaoProcess_CheckFE( DaoProcess *self );
@@ -877,21 +868,11 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_GETVO_I , && LAB_GETVO_F , && LAB_GETVO_D ,
 		&& LAB_GETVK_I , && LAB_GETVK_F , && LAB_GETVK_D ,
 		&& LAB_GETVG_I , && LAB_GETVG_F , && LAB_GETVG_D ,
-		&& LAB_SETVH_II , && LAB_SETVH_IF , && LAB_SETVH_ID ,
-		&& LAB_SETVH_FI , && LAB_SETVH_FF , && LAB_SETVH_FD ,
-		&& LAB_SETVH_DI , && LAB_SETVH_DF , && LAB_SETVH_DD ,
-		&& LAB_SETVL_II , && LAB_SETVL_IF , && LAB_SETVL_ID ,
-		&& LAB_SETVL_FI , && LAB_SETVL_FF , && LAB_SETVL_FD ,
-		&& LAB_SETVL_DI , && LAB_SETVL_DF , && LAB_SETVL_DD ,
-		&& LAB_SETVO_II , && LAB_SETVO_IF , && LAB_SETVO_ID ,
-		&& LAB_SETVO_FI , && LAB_SETVO_FF , && LAB_SETVO_FD ,
-		&& LAB_SETVO_DI , && LAB_SETVO_DF , && LAB_SETVO_DD ,
-		&& LAB_SETVK_II , && LAB_SETVK_IF , && LAB_SETVK_ID ,
-		&& LAB_SETVK_FI , && LAB_SETVK_FF , && LAB_SETVK_FD ,
-		&& LAB_SETVK_DI , && LAB_SETVK_DF , && LAB_SETVK_DD ,
-		&& LAB_SETVG_II , && LAB_SETVG_IF , && LAB_SETVG_ID ,
-		&& LAB_SETVG_FI , && LAB_SETVG_FF , && LAB_SETVG_FD ,
-		&& LAB_SETVG_DI , && LAB_SETVG_DF , && LAB_SETVG_DD ,
+		&& LAB_SETVH_II , && LAB_SETVH_FF , && LAB_SETVH_DD ,
+		&& LAB_SETVL_II , && LAB_SETVL_FF , && LAB_SETVL_DD ,
+		&& LAB_SETVO_II , && LAB_SETVO_FF , && LAB_SETVO_DD ,
+		&& LAB_SETVK_II , && LAB_SETVK_FF , && LAB_SETVK_DD ,
+		&& LAB_SETVG_II , && LAB_SETVG_FF , && LAB_SETVG_DD ,
 
 		&& LAB_MOVE_II , && LAB_MOVE_IF , && LAB_MOVE_ID ,
 		&& LAB_MOVE_FI , && LAB_MOVE_FF , && LAB_MOVE_FD ,
@@ -899,8 +880,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MOVE_CC , && LAB_MOVE_SS , && LAB_MOVE_PP , && LAB_MOVE_XX ,
 		&& LAB_NOT_I , && LAB_NOT_F , && LAB_NOT_D ,
 		&& LAB_UNMS_I , && LAB_UNMS_F , && LAB_UNMS_D ,
-		&& LAB_BITREV_I , && LAB_BITREV_F , && LAB_BITREV_D ,
-		&& LAB_UNMS_C ,
+		&& LAB_BITREV_I , && LAB_UNMS_C ,
 
 		&& LAB_ADD_III , && LAB_SUB_III ,
 		&& LAB_MUL_III , && LAB_DIV_III ,
@@ -916,65 +896,37 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MUL_FFF , && LAB_DIV_FFF ,
 		&& LAB_MOD_FFF , && LAB_POW_FFF ,
 		&& LAB_AND_FFF , && LAB_OR_FFF ,
-		&& LAB_LT_FFF , && LAB_LE_FFF ,
-		&& LAB_EQ_FFF , && LAB_NE_FFF ,
-		&& LAB_BITAND_FFF , && LAB_BITOR_FFF ,
-		&& LAB_BITXOR_FFF , && LAB_BITLFT_FFF ,
-		&& LAB_BITRIT_FFF ,
+		&& LAB_LT_IFF , && LAB_LE_IFF ,
+		&& LAB_EQ_IFF , && LAB_NE_IFF ,
 
 		&& LAB_ADD_DDD , && LAB_SUB_DDD ,
 		&& LAB_MUL_DDD , && LAB_DIV_DDD ,
 		&& LAB_MOD_DDD , && LAB_POW_DDD ,
 		&& LAB_AND_DDD , && LAB_OR_DDD ,
-		&& LAB_LT_DDD , && LAB_LE_DDD ,
-		&& LAB_EQ_DDD , && LAB_NE_DDD ,
-		&& LAB_BITAND_DDD , && LAB_BITOR_DDD ,
-		&& LAB_BITXOR_DDD , && LAB_BITLFT_DDD ,
-		&& LAB_BITRIT_DDD ,
+		&& LAB_LT_IDD , && LAB_LE_IDD ,
+		&& LAB_EQ_IDD , && LAB_NE_IDD ,
 
-		&& LAB_ADD_FNN , && LAB_SUB_FNN ,
-		&& LAB_MUL_FNN , && LAB_DIV_FNN ,
-		&& LAB_MOD_FNN , && LAB_POW_FNN ,
-		&& LAB_AND_FNN , && LAB_OR_FNN ,
-		&& LAB_LT_FNN , && LAB_LE_FNN ,
-		&& LAB_EQ_FNN , && LAB_NE_FNN ,
-		&& LAB_BITLFT_FNN , && LAB_BITRIT_FNN ,
+		&& LAB_ADD_CCC , && LAB_SUB_CCC ,
+		&& LAB_MUL_CCC , && LAB_DIV_CCC ,
 
-		&& LAB_ADD_DNN , && LAB_SUB_DNN ,
-		&& LAB_MUL_DNN , && LAB_DIV_DNN ,
-		&& LAB_MOD_DNN , && LAB_POW_DNN ,
-		&& LAB_AND_DNN , && LAB_OR_DNN ,
-		&& LAB_LT_DNN , && LAB_LE_DNN ,
-		&& LAB_EQ_DNN , && LAB_NE_DNN ,
-		&& LAB_BITLFT_DNN , && LAB_BITRIT_DNN ,
-
-		&& LAB_ADD_CC , && LAB_SUB_CC ,
-		&& LAB_MUL_CC , && LAB_DIV_CC ,
-
-		&& LAB_ADD_SS ,
-		&& LAB_LT_SS , && LAB_LE_SS ,
-		&& LAB_EQ_SS , && LAB_NE_SS ,
+		&& LAB_ADD_SSS ,
+		&& LAB_LT_ISS , && LAB_LE_ISS ,
+		&& LAB_EQ_ISS , && LAB_NE_ISS ,
 
 		&& LAB_GETI_LI , && LAB_SETI_LI , && LAB_GETI_SI ,
 		&& LAB_SETI_SII , && LAB_GETI_LII ,
 		&& LAB_GETI_LFI , && LAB_GETI_LDI ,
 		&& LAB_GETI_LSI ,
-		&& LAB_SETI_LIII , && LAB_SETI_LIIF , && LAB_SETI_LIID ,
-		&& LAB_SETI_LFII , && LAB_SETI_LFIF , && LAB_SETI_LFID ,
-		&& LAB_SETI_LDII , && LAB_SETI_LDIF , && LAB_SETI_LDID ,
+		&& LAB_SETI_LIII , && LAB_SETI_LFIF , && LAB_SETI_LDID ,
 		&& LAB_SETI_LSIS ,
 		&& LAB_GETI_AII , && LAB_GETI_AFI , && LAB_GETI_ADI ,
-		&& LAB_SETI_AIII , && LAB_SETI_AIIF , && LAB_SETI_AIID ,
-		&& LAB_SETI_AFII , && LAB_SETI_AFIF , && LAB_SETI_AFID ,
-		&& LAB_SETI_ADII , && LAB_SETI_ADIF , && LAB_SETI_ADID ,
+		&& LAB_SETI_AIII , && LAB_SETI_AFIF , && LAB_SETI_ADID ,
 
 		&& LAB_GETI_TI , && LAB_SETI_TI ,
 
 		&& LAB_GETF_TI , && LAB_GETF_TF ,
 		&& LAB_GETF_TD , && LAB_GETF_TX ,
-		&& LAB_SETF_TII , && LAB_SETF_TIF , && LAB_SETF_TID ,
-		&& LAB_SETF_TFI , && LAB_SETF_TFF , && LAB_SETF_TFD ,
-		&& LAB_SETF_TDI , && LAB_SETF_TDF , && LAB_SETF_TDD ,
+		&& LAB_SETF_TII , && LAB_SETF_TFF , && LAB_SETF_TDD ,
 		&& LAB_SETF_TSS , && LAB_SETF_TPP , && LAB_SETF_TXX ,
 
 		&& LAB_GETI_ACI , && LAB_SETI_ACI ,
@@ -991,15 +943,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_GETF_OGI , && LAB_GETF_OGF , && LAB_GETF_OGD , 
 		&& LAB_GETF_OVI , && LAB_GETF_OVF , && LAB_GETF_OVD ,
 
-		&& LAB_SETF_KGII , && LAB_SETF_KGIF , && LAB_SETF_KGID , 
-		&& LAB_SETF_KGFI , && LAB_SETF_KGFF , && LAB_SETF_KGFD , 
-		&& LAB_SETF_KGDI , && LAB_SETF_KGDF , && LAB_SETF_KGDD , 
-		&& LAB_SETF_OGII , && LAB_SETF_OGIF , && LAB_SETF_OGID , 
-		&& LAB_SETF_OGFI , && LAB_SETF_OGFF , && LAB_SETF_OGFD , 
-		&& LAB_SETF_OGDI , && LAB_SETF_OGDF , && LAB_SETF_OGDD , 
-		&& LAB_SETF_OVII , && LAB_SETF_OVIF , && LAB_SETF_OVID ,
-		&& LAB_SETF_OVFI , && LAB_SETF_OVFF , && LAB_SETF_OVFD ,
-		&& LAB_SETF_OVDI , && LAB_SETF_OVDF , && LAB_SETF_OVDD ,
+		&& LAB_SETF_KGII , && LAB_SETF_KGFF , && LAB_SETF_KGDD , 
+		&& LAB_SETF_OGII , && LAB_SETF_OGFF , && LAB_SETF_OGDD , 
+		&& LAB_SETF_OVII , && LAB_SETF_OVFF , && LAB_SETF_OVDD ,
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
 		&& LAB_CHECK_ST ,
@@ -1598,92 +1544,32 @@ CallEntry:
 			DoubleOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pDouble[vmc->b]->value;
 		}OPNEXT() OPCASE( SETVH_II ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVH_IF ){
-			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVH_ID ){
-			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVH_FI ){
-			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVH_FF ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVH_FD ){
-			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVH_DI ){
-			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVH_DF ){
-			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVH_DD ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVL_II ){
 			dataVL[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVL_IF ){
-			dataVL[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVL_ID ){
-			dataVL[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVL_FI ){
-			dataVL[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVL_FF ){
 			dataVL[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVL_FD ){
-			dataVL[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVL_DI ){
-			dataVL[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVL_DF ){
-			dataVL[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVL_DD ){
 			dataVL[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVO_II ){
 			dataVO[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVO_IF ){
-			dataVO[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVO_ID ){
-			dataVO[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVO_FI ){
-			dataVO[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVO_FF ){
 			dataVO[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVO_FD ){
-			dataVO[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVO_DI ){
-			dataVO[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVO_DF ){
-			dataVO[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVO_DD ){
 			dataVO[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_II ){
 			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVK_IF ){
-			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVK_ID ){
-			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVK_FI ){
-			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_FF ){
 			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVK_FD ){
-			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVK_DI ){
-			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVK_DF ){
-			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_DD ){
 			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_II ){
 			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVG_IF ){
-			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVG_ID ){
-			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVG_FI ){
-			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_FF ){
 			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVG_FD ){
-			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVG_DI ){
-			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETVG_DF ){
-			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_DD ){
 			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_II ){
@@ -1744,7 +1630,7 @@ CallEntry:
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) * FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( DIV_FFF ){
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) / FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( MOD_FFF ){
+		}OPNEXT() OPCASE( MOD_FFF ){ // XXX
 			inum = (daoint) FloatOperand( vmc->b );
 			if( inum ==0 ) goto RaiseErrorDivByZero;
 			FloatOperand( vmc->c ) = (daoint)FloatOperand( vmc->a ) % inum;
@@ -1758,26 +1644,14 @@ CallEntry:
 			FloatOperand( vmc->c ) = ! FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( UNMS_F ){
 			FloatOperand( vmc->c ) = - FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( LT_FFF ){
-			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) < FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( LE_FFF ){
-			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) <= FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( EQ_FFF ){
-			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) == FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( NE_FFF ){
-			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) != FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( BITAND_FFF ){
-			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) & (size_t)FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( BITOR_FFF ){
-			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) | (size_t)FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( BITXOR_FFF ){
-			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) ^ (size_t)FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( BITLFT_FFF ){
-			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) << (size_t)FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( BITRIT_FFF ){
-			FloatOperand( vmc->c ) = (size_t)FloatOperand( vmc->a ) >> (size_t)FloatOperand( vmc->b );
-		}OPNEXT() OPCASE( BITREV_F ){
-			FloatOperand( vmc->c ) = ~ (size_t) FloatOperand( vmc->a );
+		}OPNEXT() OPCASE( LT_IFF ){
+			IntegerOperand( vmc->c ) = FloatOperand( vmc->a ) < FloatOperand( vmc->b );
+		}OPNEXT() OPCASE( LE_IFF ){
+			IntegerOperand( vmc->c ) = FloatOperand( vmc->a ) <= FloatOperand( vmc->b );
+		}OPNEXT() OPCASE( EQ_IFF ){
+			IntegerOperand( vmc->c ) = FloatOperand( vmc->a ) == FloatOperand( vmc->b );
+		}OPNEXT() OPCASE( NE_IFF ){
+			IntegerOperand( vmc->c ) = FloatOperand( vmc->a ) != FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( MOVE_DD ){
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_DDD ){
@@ -1802,139 +1676,15 @@ CallEntry:
 			DoubleOperand( vmc->c ) = ! DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( UNMS_D ){
 			DoubleOperand( vmc->c ) = - DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( LT_DDD ){
-			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) < DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( LE_DDD ){
-			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) <= DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( EQ_DDD ){
-			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) == DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( NE_DDD ){
-			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) != DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( BITAND_DDD ){
-			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) & (size_t)DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( BITOR_DDD ){
-			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) | (size_t)DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( BITXOR_DDD ){
-			DoubleOperand( vmc->c ) = ((size_t)DoubleOperand( vmc->a )) ^ (size_t)DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( BITLFT_DDD ){
-			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) << (size_t)DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( BITRIT_DDD ){
-			DoubleOperand( vmc->c ) = (size_t)DoubleOperand( vmc->a ) >> (size_t)DoubleOperand( vmc->b );
-		}OPNEXT() OPCASE( BITREV_D ){
-			DoubleOperand( vmc->c ) = ~ (size_t) DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( ADD_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA + BB;
-		}OPNEXT() OPCASE( SUB_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA - BB;
-		}OPNEXT() OPCASE( MUL_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA * BB;
-		}OPNEXT() OPCASE( DIV_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA / BB;
-		}OPNEXT() OPCASE( MOD_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (daoint)AA % (daoint)BB;
-		}OPNEXT() OPCASE( POW_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = powf( AA, BB );
-		}OPNEXT() OPCASE( AND_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA ? BB : AA;
-		}OPNEXT() OPCASE( OR_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA ? AA : BB;
-		}OPNEXT() OPCASE( LT_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA < BB;
-		}OPNEXT() OPCASE( LE_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA <= BB;
-		}OPNEXT() OPCASE( EQ_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA == BB;
-		}OPNEXT() OPCASE( NE_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = AA != BB;
-		}OPNEXT() OPCASE( BITLFT_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (size_t)AA << (size_t)BB;
-		}OPNEXT() OPCASE( BITRIT_FNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			FloatOperand( vmc->c ) = (size_t)AA >> (size_t)BB;
-		}OPNEXT() OPCASE( ADD_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA + BB;
-		}OPNEXT() OPCASE( SUB_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA - BB;
-		}OPNEXT() OPCASE( MUL_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA * BB;
-		}OPNEXT() OPCASE( DIV_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA / BB;
-		}OPNEXT() OPCASE( MOD_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = (daoint)AA % (daoint)BB;
-		}OPNEXT() OPCASE( POW_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = pow( AA, BB );
-		}OPNEXT() OPCASE( AND_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA ? BB : AA;
-		}OPNEXT() OPCASE( OR_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA ? AA : BB;
-		}OPNEXT() OPCASE( LT_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA < BB;
-		}OPNEXT() OPCASE( LE_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA <= BB;
-		}OPNEXT() OPCASE( EQ_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA == BB;
-		}OPNEXT() OPCASE( NE_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = AA != BB;
-		}OPNEXT() OPCASE( BITLFT_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = ((size_t)AA) << (size_t)BB;
-		}OPNEXT() OPCASE( BITRIT_DNN ){
-			NumberOperand( AA, vA, vmc->a );
-			NumberOperand( BB, vB, vmc->b );
-			DoubleOperand( vmc->c ) = ((size_t)AA) >> (size_t)BB;
-		}OPNEXT() OPCASE( ADD_SS ){
+		}OPNEXT() OPCASE( LT_IDD ){
+			IntegerOperand( vmc->c ) = DoubleOperand( vmc->a ) < DoubleOperand( vmc->b );
+		}OPNEXT() OPCASE( LE_IDD ){
+			IntegerOperand( vmc->c ) = DoubleOperand( vmc->a ) <= DoubleOperand( vmc->b );
+		}OPNEXT() OPCASE( EQ_IDD ){
+			IntegerOperand( vmc->c ) = DoubleOperand( vmc->a ) == DoubleOperand( vmc->b );
+		}OPNEXT() OPCASE( NE_IDD ){
+			IntegerOperand( vmc->c ) = DoubleOperand( vmc->a ) != DoubleOperand( vmc->b );
+		}OPNEXT() OPCASE( ADD_SSS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			vC = locVars[ vmc->c ];
 			if( vmc->a == vmc->c ){
@@ -1945,16 +1695,16 @@ CallEntry:
 				DString_Assign( vC->xString.data, vA->xString.data );
 				DString_Append( vC->xString.data, vB->xString.data );
 			}
-		}OPNEXT() OPCASE( LT_SS ){
+		}OPNEXT() OPCASE( LT_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.data, vB->xString.data ) <0;
-		}OPNEXT() OPCASE( LE_SS ){
+		}OPNEXT() OPCASE( LE_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.data, vB->xString.data ) <=0;
-		}OPNEXT() OPCASE( EQ_SS ){
+		}OPNEXT() OPCASE( EQ_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.data, vB->xString.data ) ==0;
-		}OPNEXT() OPCASE( NE_SS ){
+		}OPNEXT() OPCASE( NE_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.data, vB->xString.data ) !=0;
 		}OPNEXT() OPCASE( MOVE_IF ){
@@ -1986,22 +1736,22 @@ CallEntry:
 			vC = locVars[ vmc->c ];
 			vC->xComplex.value.real = - acom.real;
 			vC->xComplex.value.imag = - acom.imag;
-		}OPNEXT() OPCASE( ADD_CC ){
+		}OPNEXT() OPCASE( ADD_CCC ){
 			acom = ComplexOperand( vmc->a );  bcom = ComplexOperand( vmc->b );
 			vC = locVars[ vmc->c ];
 			vC->xComplex.value.real = acom.real + bcom.real;
 			vC->xComplex.value.imag = acom.imag + bcom.imag;
-		}OPNEXT() OPCASE( SUB_CC ){
+		}OPNEXT() OPCASE( SUB_CCC ){
 			acom = ComplexOperand( vmc->a );  bcom = ComplexOperand( vmc->b );
 			vC = locVars[ vmc->c ];
 			vC->xComplex.value.real = acom.real - bcom.real;
 			vC->xComplex.value.imag = acom.imag - bcom.imag;
-		}OPNEXT() OPCASE( MUL_CC ){
+		}OPNEXT() OPCASE( MUL_CCC ){
 			acom = ComplexOperand( vmc->a );  bcom = ComplexOperand( vmc->b );
 			vC = locVars[ vmc->c ];
 			vC->xComplex.value.real = acom.real * bcom.real - acom.imag * bcom.imag;
 			vC->xComplex.value.imag = acom.real * bcom.imag + acom.imag * bcom.real;
-		}OPNEXT() OPCASE( DIV_CC ){
+		}OPNEXT() OPCASE( DIV_CCC ){
 			acom = ComplexOperand( vmc->a );  bcom = ComplexOperand( vmc->b );
 			vC = locVars[ vmc->c ];
 			dnum = acom.real * bcom.real + acom.imag * bcom.imag;
@@ -2065,55 +1815,25 @@ CallEntry:
 				case DVM_GETI_LDI : locVars[ vmc->c ]->xDouble.value = vA->xDouble.value; break;
 				}
 			}OPNEXT()
-		OPCASE( SETI_LIII )
-			OPCASE( SETI_LIIF )
-			OPCASE( SETI_LIID ){
+		OPCASE( SETI_LIII ){
+			list = & locVars[ vmc->c ]->xList;
+			id = IntegerOperand( vmc->b );
+			if( id <0 ) id += list->items.size;
+			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+			list->items.items.pValue[id]->xInteger.value = locVars[ vmc->a ]->xInteger.value;
+		}OPNEXT() OPCASE( SETI_LFIF ){
 				list = & locVars[ vmc->c ]->xList;
-				vA = locVars[ vmc->a ];
 				id = IntegerOperand( vmc->b );
-				switch( vA->type ){
-				case DAO_INTEGER : inum = vA->xInteger.value; break;
-				case DAO_FLOAT   : inum = (daoint) vA->xFloat.value; break;
-				case DAO_DOUBLE  : inum = (daoint) vA->xDouble.value; break;
-				default : inum = 0; break;
-				}
 				if( id <0 ) id += list->items.size;
 				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-				list->items.items.pValue[id]->xInteger.value = inum;
-			}OPNEXT()
-		OPCASE( SETI_LFII )
-			OPCASE( SETI_LFIF )
-			OPCASE( SETI_LFID ){
-				list = & locVars[ vmc->c ]->xList;
-				vA = locVars[ vmc->a ];
-				id = IntegerOperand( vmc->b );
-				switch( vA->type ){
-				case DAO_INTEGER : fnum = vA->xInteger.value; break;
-				case DAO_FLOAT   : fnum = vA->xFloat.value; break;
-				case DAO_DOUBLE  : fnum = vA->xDouble.value; break;
-				default : fnum = 0; break;
-				}
-				if( id <0 ) id += list->items.size;
-				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-				list->items.items.pValue[id]->xFloat.value = fnum;
-			}OPNEXT()
-		OPCASE( SETI_LDII )
-			OPCASE( SETI_LDIF )
-			OPCASE( SETI_LDID ){
-				list = & locVars[ vmc->c ]->xList;
-				vA = locVars[ vmc->a ];
-				id = IntegerOperand( vmc->b );
-				switch( vA->type ){
-				case DAO_INTEGER : dnum = vA->xInteger.value; break;
-				case DAO_FLOAT   : dnum = vA->xFloat.value; break;
-				case DAO_DOUBLE  : dnum = vA->xDouble.value; break;
-				default : dnum = 0; break;
-				}
-				if( id <0 ) id += list->items.size;
-				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-				list->items.items.pValue[id]->xDouble.value = dnum;
-			}OPNEXT()
-		OPCASE( SETI_LSIS ){
+				list->items.items.pValue[id]->xFloat.value = locVars[ vmc->a ]->xFloat.value;
+		}OPNEXT() OPCASE( SETI_LDID ){
+			list = & locVars[ vmc->c ]->xList;
+			id = IntegerOperand( vmc->b );
+			if( id <0 ) id += list->items.size;
+			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+			list->items.items.pValue[id]->xDouble.value = locVars[ vmc->a ]->xDouble.value;
+		}OPNEXT() OPCASE( SETI_LSIS ){
 			list = & locVars[ vmc->c ]->xList;
 			vA = locVars[ vmc->a ];
 			id = IntegerOperand( vmc->b );
@@ -2145,58 +1865,28 @@ CallEntry:
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			DoubleOperand( vmc->c ) = array->data.d[id];
+		}OPNEXT() OPCASE( SETI_AIII ){
+			array = & locVars[ vmc->c ]->xArray;
+			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
+			if( id <0 ) id += array->size;
+			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
+			array->data.i[id] = locVars[ vmc->a ]->xInteger.value;
+		}OPNEXT() OPCASE( SETI_AFIF ){
+			array = & locVars[ vmc->c ]->xArray;
+			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
+			if( id <0 ) id += array->size;
+			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
+			array->data.f[id] = locVars[ vmc->a ]->xFloat.value;
+		}OPNEXT() OPCASE( SETI_ADID ){
+			array = & locVars[ vmc->c ]->xArray;
+			id = IntegerOperand( vmc->b );
+			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
+			if( id <0 ) id += array->size;
+			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
+			array->data.d[id] = locVars[ vmc->a ]->xDouble.value;
 		}OPNEXT()
-		OPCASE( SETI_AIII )
-			OPCASE( SETI_AIIF )
-			OPCASE( SETI_AIID ){
-				array = & locVars[ vmc->c ]->xArray;
-				vA = locVars[ vmc->a ];
-				id = IntegerOperand( vmc->b );
-				switch( vA->type ){
-				case DAO_INTEGER : inum = vA->xInteger.value; break;
-				case DAO_FLOAT   : inum = (daoint) vA->xFloat.value; break;
-				case DAO_DOUBLE  : inum = (daoint) vA->xDouble.value; break;
-				default : inum = 0; break;
-				}
-				if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
-				if( id <0 ) id += array->size;
-				if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
-				array->data.i[id] = inum;
-			}OPNEXT()
-		OPCASE( SETI_AFII )
-			OPCASE( SETI_AFIF )
-			OPCASE( SETI_AFID ){
-				array = & locVars[ vmc->c ]->xArray;
-				vA = locVars[ vmc->a ];
-				id = IntegerOperand( vmc->b );
-				switch( vA->type ){
-				case DAO_INTEGER : fnum = vA->xInteger.value; break;
-				case DAO_FLOAT   : fnum = vA->xFloat.value; break;
-				case DAO_DOUBLE  : fnum = (float) vA->xDouble.value; break;
-				default : fnum = 0; break;
-				}
-				if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
-				if( id <0 ) id += array->size;
-				if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
-				array->data.f[id] = fnum;
-			}OPNEXT()
-		OPCASE( SETI_ADII )
-			OPCASE( SETI_ADIF )
-			OPCASE( SETI_ADID ){
-				array = & locVars[ vmc->c ]->xArray;
-				vA = locVars[ vmc->a ];
-				id = IntegerOperand( vmc->b );
-				switch( vA->type ){
-				case DAO_INTEGER : dnum = vA->xInteger.value; break;
-				case DAO_FLOAT   : dnum = vA->xFloat.value; break;
-				case DAO_DOUBLE  : dnum = vA->xDouble.value; break;
-				default : dnum = 0; break;
-				}
-				if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing; 
-				if( id <0 ) id += array->size;
-				if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
-				array->data.d[id] = dnum;
-			}OPNEXT()
 		OPCASE( GETI_ACI ){
 			array = & locVars[ vmc->a ]->xArray;
 			id = IntegerOperand( vmc->b );
@@ -2276,9 +1966,7 @@ CallEntry:
 		}OPNEXT()
 #else
 		OPCASE( GETI_AII ) OPCASE( GETI_AFI ) OPCASE( GETI_ADI )
-			OPCASE( SETI_AIII ) OPCASE( SETI_AIIF ) OPCASE( SETI_AIID )
-			OPCASE( SETI_AFII ) OPCASE( SETI_AFIF ) OPCASE( SETI_AFID )
-			OPCASE( SETI_ADII ) OPCASE( SETI_ADIF ) OPCASE( SETI_ADID )
+			OPCASE( SETI_AIII ) OPCASE( SETI_AFIF ) OPCASE( SETI_ADID )
 			OPCASE( GETI_ACI ) OPCASE( SETI_ACI )
 			OPCASE( GETMI_A ) OPCASE( SETMI_A ){
 				self->activeCode = vmc;
@@ -2322,27 +2010,9 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_TII ){
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETF_TIF ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETF_TID ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETF_TFI ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TFF ){
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( SETF_TFD ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( SETF_TDI ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( SETF_TDF ){
-			tuple = & locVars[ vmc->c ]->xTuple;
-			tuple->items[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_TDD ){
 			tuple = & locVars[ vmc->c ]->xTuple;
 			tuple->items[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
@@ -2441,33 +2111,9 @@ CallEntry:
 			klass = & locVars[ vmc->c ]->xClass;
 			klass->glbData->items.pInteger[ vmc->b ]->value = IntegerOperand( vmc->a );
 		}OPNEXT()
-		OPCASE( SETF_KGIF ){
-			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pInteger[ vmc->b ]->value = FloatOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_KGID ){
-			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pInteger[ vmc->b ]->value = DoubleOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_KGFI ){
-			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pFloat[ vmc->b ]->value = IntegerOperand( vmc->a );
-		}OPNEXT()
 		OPCASE( SETF_KGFF ){
 			klass = & locVars[ vmc->c ]->xClass;
 			klass->glbData->items.pFloat[ vmc->b ]->value = FloatOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_KGFD ){
-			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pFloat[ vmc->b ]->value = DoubleOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_KGDI ){
-			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pDouble[ vmc->b ]->value = IntegerOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_KGDF ){
-			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pDouble[ vmc->b ]->value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_KGDD ){
 			klass = & locVars[ vmc->c ]->xClass;
@@ -2477,33 +2123,9 @@ CallEntry:
 			klass = locVars[ vmc->c ]->xObject.defClass;
 			klass->glbData->items.pInteger[ vmc->b ]->value = IntegerOperand( vmc->a );
 		}OPNEXT()
-		OPCASE( SETF_OGIF ){
-			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pInteger[ vmc->b ]->value = FloatOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OGID ){
-			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pInteger[ vmc->b ]->value = DoubleOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OGFI ){
-			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pFloat[ vmc->b ]->value = IntegerOperand( vmc->a );
-		}OPNEXT()
 		OPCASE( SETF_OGFF ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
 			klass->glbData->items.pFloat[ vmc->b ]->value = FloatOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OGFD ){
-			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pFloat[ vmc->b ]->value = DoubleOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OGDI ){
-			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pDouble[ vmc->b ]->value = IntegerOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OGDF ){
-			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pDouble[ vmc->b ]->value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_OGDD ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
@@ -2514,40 +2136,10 @@ CallEntry:
 			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 			object->objValues[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT()
-		OPCASE( SETF_OVIF ){
-			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-			object->objValues[ vmc->b ]->xInteger.value = FloatOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OVID ){
-			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-			object->objValues[ vmc->b ]->xInteger.value = DoubleOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OVFI ){
-			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-			object->objValues[ vmc->b ]->xFloat.value = IntegerOperand( vmc->a );
-		}OPNEXT()
 		OPCASE( SETF_OVFF ){
 			object = (DaoObject*) locVars[ vmc->c ];
 			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 			object->objValues[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OVFD ){
-			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-			object->objValues[ vmc->b ]->xFloat.value = DoubleOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OVDI ){
-			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-			object->objValues[ vmc->b ]->xDouble.value = IntegerOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( SETF_OVDF ){
-			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
-			object->objValues[ vmc->b ]->xDouble.value = FloatOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( SETF_OVDD ){
 			object = (DaoObject*) locVars[ vmc->c ];

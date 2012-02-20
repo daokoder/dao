@@ -43,7 +43,7 @@ struct DArray
 		DArray       **pArray;
 		DMap         **pMap;
 		DaoInode     **pInode;
-		DaoCodeNode  **pCnode;
+		DaoCnode     **pCnode;
 		DaoVmCodeX   **pVmc;
 		DaoToken     **pToken;
 

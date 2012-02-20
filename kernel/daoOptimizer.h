@@ -23,7 +23,8 @@
 enum { DAO_OP_NONE, DAO_OP_SINGLE, DAO_OP_PAIR, DAO_OP_TRIPLE, DAO_OP_RANGE, DAO_OP_RANGE2 };
 
 
-struct DaoCodeNode
+/* Code Node */
+struct DaoCnode
 {
 	ushort_t  index;
 	ushort_t  type;  /* use type of variable: DAO_OP_NONE/SINGLE/PAIR/RANGE; */
@@ -45,8 +46,10 @@ struct DaoCodeNode
 	DString  *bits; /* bit array for the analysis; */
 };
 
-typedef void (*AnalysisInit)( DaoOptimizer*, DaoCodeNode* );
-typedef int (*AnalysisUpdate)( DaoOptimizer*, DaoCodeNode*, DaoCodeNode* );
+DAO_DLL void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *code );
+
+typedef void (*AnalysisInit)( DaoOptimizer*, DaoCnode* );
+typedef int (*AnalysisUpdate)( DaoOptimizer*, DaoCnode*, DaoCnode* );
 
 struct DaoOptimizer
 {
@@ -79,7 +82,6 @@ DAO_DLL DaoOptimizer* DaoOptimizer_New();
 DAO_DLL void DaoOptimizer_Clear( DaoOptimizer *self );
 DAO_DLL void DaoOptimizer_Delete( DaoOptimizer *self );
 
-DAO_DLL void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCodeNode *node, DaoVmCode *code );
 DAO_DLL void DaoOptimizer_DoLVA( DaoOptimizer *self, DaoRoutine *routine );
 DAO_DLL void DaoOptimizer_DoRDA( DaoOptimizer *self, DaoRoutine *routine );
 
@@ -90,5 +92,71 @@ DAO_DLL void DaoOptimizer_DoRDA( DaoOptimizer *self, DaoRoutine *routine );
 // node->outs: node is the defintion, node->outs are the uses;
 */
 DAO_DLL void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine );
+
+
+
+/* Instruction Node */
+struct DaoInode
+{
+	unsigned short  code;    /* opcode */
+	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  level;   /* lexical level */
+	unsigned short  line;    /* line number in source file */
+	unsigned int    first;   /* index of the first token of the expression */
+	unsigned short  middle;  /* the middle token, relative to "first" */
+	unsigned short  last;    /* the last token, relative to "first" */
+
+	unsigned short  index;   /* index of the instruction */
+
+	DaoInode *jumpTrue;
+	DaoInode *jumpFalse;
+
+	DaoInode *prev;
+	DaoInode *next;
+};
+
+DaoInode* DaoInode_New();
+
+typedef struct DaoInferencer DaoInferencer;
+
+struct DaoInferencer
+{
+	unsigned char  tidHost;
+	unsigned char  silent;
+	unsigned char  error;
+
+	unsigned short  currentIndex;
+
+	DaoRoutine  *routine;
+	DaoClass    *hostClass;
+
+	DArray      *inodes;
+	DArray      *consts;
+	DArray      *types;
+	DString     *inited;
+
+	DArray      *rettypes;
+	DArray      *typeMaps;
+	DArray      *errors;
+	DArray      *array;
+
+	DMap        *defs;
+	DMap        *defs2;
+	DMap        *defs3;
+	DString     *mbstring;
+
+	DaoType     *type_source;
+	DaoType     *type_target;
+	int          tid_target;
+	int          annot_first;
+	int          annot_last;
+
+	DaoType     *typeLong;
+	DaoType     *typeEnum;
+	DaoType     *typeString;
+	DaoType     *basicTypes[DAO_ARRAY];
+};
+
+DaoInferencer* DaoInferencer_New();
 
 #endif

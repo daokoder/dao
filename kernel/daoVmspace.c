@@ -1792,6 +1792,10 @@ extern void DaoType_Init();
 DaoType *dao_type_udf = NULL;
 DaoType *dao_type_none = NULL;
 DaoType *dao_type_any = NULL;
+DaoType *dao_type_int = NULL;
+DaoType *dao_type_float = NULL;
+DaoType *dao_type_double = NULL;
+DaoType *dao_type_complex = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
@@ -1929,10 +1933,18 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_udf = DaoType_New( "?", DAO_UDT, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
+	dao_type_int = DaoType_New( "int", DAO_INTEGER, NULL, NULL );
+	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
+	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
+	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_udf );
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_any );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_int );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_float );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_complex );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_double );
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_routine );
 
 	mainVmSpace = vms = DaoVmSpace_New();

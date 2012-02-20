@@ -1,5 +1,6 @@
 
 #include<stdio.h>
+#include<map>
 #include"daoJIT.h"
 #include"daoNamespace.h"
 

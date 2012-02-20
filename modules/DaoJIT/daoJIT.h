@@ -32,9 +32,9 @@ struct DaoJitHandle : public IRBuilder<>
 {
 	DaoRoutine   *routine;
 	DaoOptimizer *optimizer;
-	DaoCodeNode  *currentNode;
-	DaoCodeNode  *firstNode;
-	DaoCodeNode  *lastNode;
+	DaoCnode  *currentNode;
+	DaoCnode  *firstNode;
+	DaoCnode  *lastNode;
 
 	int start;
 	int end;

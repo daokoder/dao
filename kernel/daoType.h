@@ -68,7 +68,8 @@ struct DaoType
 
 	uchar_t   tid; /* type id */
 	uchar_t   attrib;
-	uchar_t   flagtype : 2; /* for enum type */
+	uchar_t   realnum : 1; /* for type of int/float/double */
+	uchar_t   flagtype : 1; /* for enum type */
 	uchar_t   simtype  : 2; /* if the nested contains only simple types */
 	uchar_t   cdatatype : 2; /* sub type of DaoCdata */
 	uchar_t   overloads : 2; /* overloaded routines */
@@ -97,6 +98,10 @@ struct DaoType
 extern DaoType *dao_type_none;
 extern DaoType *dao_type_udf;
 extern DaoType *dao_type_any;
+extern DaoType *dao_type_int;
+extern DaoType *dao_type_float;
+extern DaoType *dao_type_double;
+extern DaoType *dao_type_complex;
 extern DaoType *dao_array_any;
 extern DaoType *dao_list_any;
 extern DaoType *dao_map_any;

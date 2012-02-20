@@ -1798,7 +1798,7 @@ DaoType* DaoNamespace_SymbolTypeSub( DaoNamespace *self, DaoType *t1, DaoType *t
 	type = DaoNamespace_FindType( self, name );
 	if( type == NULL ){
 		type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
-		type->flagtype = count > 1 ? 1 : 0;
+		type->flagtype = count > 1;
 		type->mapNames = mapNames = DMap_New(D_STRING,0);
 		*value = type->flagtype;
 		for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){

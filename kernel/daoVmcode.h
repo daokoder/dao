@@ -130,49 +130,19 @@ enum DaoOpcode
 	DVM_GETVG_D , 
 
 	DVM_SETVH_II , 
-	DVM_SETVH_IF , 
-	DVM_SETVH_ID , 
-	DVM_SETVH_FI , 
 	DVM_SETVH_FF , 
-	DVM_SETVH_FD , 
-	DVM_SETVH_DI , 
-	DVM_SETVH_DF , 
 	DVM_SETVH_DD , 
 	DVM_SETVL_II , 
-	DVM_SETVL_IF , 
-	DVM_SETVL_ID , 
-	DVM_SETVL_FI , 
 	DVM_SETVL_FF , 
-	DVM_SETVL_FD , 
-	DVM_SETVL_DI , 
-	DVM_SETVL_DF , 
 	DVM_SETVL_DD , 
 	DVM_SETVO_II , 
-	DVM_SETVO_IF , 
-	DVM_SETVO_ID , 
-	DVM_SETVO_FI , 
 	DVM_SETVO_FF , 
-	DVM_SETVO_FD , 
-	DVM_SETVO_DI , 
-	DVM_SETVO_DF , 
 	DVM_SETVO_DD , 
 	DVM_SETVK_II , 
-	DVM_SETVK_IF , 
-	DVM_SETVK_ID , 
-	DVM_SETVK_FI , 
 	DVM_SETVK_FF , 
-	DVM_SETVK_FD , 
-	DVM_SETVK_DI , 
-	DVM_SETVK_DF , 
 	DVM_SETVK_DD , 
 	DVM_SETVG_II , 
-	DVM_SETVG_IF , 
-	DVM_SETVG_ID , 
-	DVM_SETVG_FI , 
 	DVM_SETVG_FF , 
-	DVM_SETVG_FD , 
-	DVM_SETVG_DI , 
-	DVM_SETVG_DF , 
 	DVM_SETVG_DD , 
 
 	DVM_MOVE_II , /* integer = integer */
@@ -195,8 +165,6 @@ enum DaoOpcode
 	DVM_UNMS_F ,
 	DVM_UNMS_D ,
 	DVM_BITREV_I ,
-	DVM_BITREV_F ,
-	DVM_BITREV_D ,
 	DVM_UNMS_C ,
 	/* C = A + B: will be compiled into: ADD, MOVE,
 	 * and the C operand of ADD is always an intermediate data with type to be inferred,
@@ -228,15 +196,10 @@ enum DaoOpcode
 	DVM_POW_FFF ,
 	DVM_AND_FFF ,
 	DVM_OR_FFF ,
-	DVM_LT_FFF ,
-	DVM_LE_FFF ,
-	DVM_EQ_FFF ,
-	DVM_NE_FFF ,
-	DVM_BITAND_FFF ,
-	DVM_BITOR_FFF ,
-	DVM_BITXOR_FFF ,
-	DVM_BITLFT_FFF ,
-	DVM_BITRIT_FFF ,
+	DVM_LT_IFF ,
+	DVM_LE_IFF ,
+	DVM_EQ_IFF ,
+	DVM_NE_IFF ,
 	/* double: */
 	DVM_ADD_DDD ,
 	DVM_SUB_DDD ,
@@ -246,57 +209,22 @@ enum DaoOpcode
 	DVM_POW_DDD ,
 	DVM_AND_DDD ,
 	DVM_OR_DDD ,
-	DVM_LT_DDD ,
-	DVM_LE_DDD ,
-	DVM_EQ_DDD ,
-	DVM_NE_DDD ,
-	DVM_BITAND_DDD ,
-	DVM_BITOR_DDD ,
-	DVM_BITXOR_DDD ,
-	DVM_BITLFT_DDD ,
-	DVM_BITRIT_DDD ,
-	/* mixed operand, float result */
-	DVM_ADD_FNN ,
-	DVM_SUB_FNN ,
-	DVM_MUL_FNN ,
-	DVM_DIV_FNN ,
-	DVM_MOD_FNN ,
-	DVM_POW_FNN ,
-	DVM_AND_FNN ,
-	DVM_OR_FNN ,
-	DVM_LT_FNN ,
-	DVM_LE_FNN ,
-	DVM_EQ_FNN ,
-	DVM_NE_FNN ,
-	DVM_BITLFT_FNN ,
-	DVM_BITRIT_FNN ,
-	/* mixed operand, double result */
-	DVM_ADD_DNN ,
-	DVM_SUB_DNN ,
-	DVM_MUL_DNN ,
-	DVM_DIV_DNN ,
-	DVM_MOD_DNN ,
-	DVM_POW_DNN ,
-	DVM_AND_DNN ,
-	DVM_OR_DNN ,
-	DVM_LT_DNN ,
-	DVM_LE_DNN ,
-	DVM_EQ_DNN ,
-	DVM_NE_DNN ,
-	DVM_BITLFT_DNN ,
-	DVM_BITRIT_DNN ,
+	DVM_LT_IDD ,
+	DVM_LE_IDD ,
+	DVM_EQ_IDD ,
+	DVM_NE_IDD ,
 
-	DVM_ADD_CC ,
-	DVM_SUB_CC ,
-	DVM_MUL_CC ,
-	DVM_DIV_CC ,
+	DVM_ADD_CCC ,
+	DVM_SUB_CCC ,
+	DVM_MUL_CCC ,
+	DVM_DIV_CCC ,
 
 	/* string */
-	DVM_ADD_SS , 
-	DVM_LT_SS ,
-	DVM_LE_SS ,
-	DVM_EQ_SS ,
-	DVM_NE_SS ,
+	DVM_ADD_SSS , 
+	DVM_LT_ISS ,
+	DVM_LE_ISS ,
+	DVM_EQ_ISS ,
+	DVM_NE_ISS ,
 
 	/* single indexing C=A[B]: GETI and MOVE */
 	/* index should be integer, may be casted from float/double by the typing system */
@@ -309,26 +237,14 @@ enum DaoOpcode
 	DVM_GETI_LDI , /* get item : C = A[B]; list<double>[int] */
 	DVM_GETI_LSI , /* get item : C = A[B]; list<double>[int] */
 	DVM_SETI_LIII , /* set item : C[B] = A; list<int>[int]=int */
-	DVM_SETI_LIIF , /* set item : C[B] = A; list<int>[int]=float */
-	DVM_SETI_LIID , /* set item : C[B] = A; list<int>[int]=double */
-	DVM_SETI_LFII , /* set item : C[B] = A; list<float>[int]=int */
 	DVM_SETI_LFIF , /* set item : C[B] = A;  */
-	DVM_SETI_LFID , /* set item : C[B] = A;  */
-	DVM_SETI_LDII , /* set item : C[B] = A; list<double>[int]=int */
-	DVM_SETI_LDIF , /* set item : C[B] = A;  */
 	DVM_SETI_LDID , /* set item : C[B] = A;  */
 	DVM_SETI_LSIS , /* set item : C[B] = A;  */
 	DVM_GETI_AII , /* get item : C = A[B]; array<int>[int] */
 	DVM_GETI_AFI , /* get item : C = A[B]; array<float>[int] */
 	DVM_GETI_ADI , /* get item : C = A[B]; array<double>[int] */
 	DVM_SETI_AIII , /* set item : C[B] = A;  */
-	DVM_SETI_AIIF , /* set item : C[B] = A;  */
-	DVM_SETI_AIID , /* set item : C[B] = A;  */
-	DVM_SETI_AFII , /* set item : C[B] = A;  */
 	DVM_SETI_AFIF , /* set item : C[B] = A;  */
-	DVM_SETI_AFID , /* set item : C[B] = A; array<float>[int]=double */
-	DVM_SETI_ADII , /* set item : C[B] = A;  */
-	DVM_SETI_ADIF , /* set item : C[B] = A;  */
 	DVM_SETI_ADID , /* set item : C[B] = A;  */
 
 	DVM_GETI_TI , /* get item : C = A[B]; tuple<...>[int] */
@@ -340,13 +256,7 @@ enum DaoOpcode
 	DVM_GETF_TD , /* get double field by constant index; */
 	DVM_GETF_TX , /* get type checked field by constant index; */
 	DVM_SETF_TII , /* set integer field to integer. */
-	DVM_SETF_TIF , /* set integer field to float. */
-	DVM_SETF_TID , /* set integer field to double. */
-	DVM_SETF_TFI , /* set float field to integer. */
 	DVM_SETF_TFF , /* set float field to float. */
-	DVM_SETF_TFD , /* set float field to double. */
-	DVM_SETF_TDI , /* set double field to integer. */
-	DVM_SETF_TDF , /* set double field to float. */
 	DVM_SETF_TDD , /* set double field to double. */
 	DVM_SETF_TSS , /* set string field to string. */
 	DVM_SETF_TPP , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
@@ -388,31 +298,13 @@ enum DaoOpcode
 	DVM_GETF_OVD ,
 	/* C.B=A specialize according to both: C.B and A */
 	DVM_SETF_KGII ,
-	DVM_SETF_KGIF ,
-	DVM_SETF_KGID ,
-	DVM_SETF_KGFI ,
 	DVM_SETF_KGFF ,
-	DVM_SETF_KGFD ,
-	DVM_SETF_KGDI ,
-	DVM_SETF_KGDF ,
 	DVM_SETF_KGDD ,
 	DVM_SETF_OGII ,
-	DVM_SETF_OGIF ,
-	DVM_SETF_OGID ,
-	DVM_SETF_OGFI ,
 	DVM_SETF_OGFF ,
-	DVM_SETF_OGFD ,
-	DVM_SETF_OGDI ,
-	DVM_SETF_OGDF ,
 	DVM_SETF_OGDD ,
 	DVM_SETF_OVII ,
-	DVM_SETF_OVIF ,
-	DVM_SETF_OVID ,
-	DVM_SETF_OVFI ,
 	DVM_SETF_OVFF ,
-	DVM_SETF_OVFD ,
-	DVM_SETF_OVDI ,
-	DVM_SETF_OVDF ,
 	DVM_SETF_OVDD ,
 
 	DVM_TEST_I ,
@@ -497,7 +389,7 @@ enum DaoCodeType
 	DAO_CODE_GETF ,     /*  A,C;   */
 	DAO_CODE_GETI ,     /*  A,B,C; */
 	DAO_CODE_GETM ,     /*  C,A,A+1,...,A+B; */
-	DAO_CODE_SETG ,     /*  A,C;   */
+	DAO_CODE_SETG ,     /*  A;   */
 	DAO_CODE_SETU ,     /*  A,B;   */
 	DAO_CODE_SETF ,     /*  A,C;   */
 	DAO_CODE_SETI ,     /*  A,B,C; */

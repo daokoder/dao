@@ -103,6 +103,7 @@ void DaoType_CheckAttributes( DaoType *self )
 {
 	daoint i, count = 0;
 
+	self->realnum = self->tid >= DAO_INTEGER && self->tid <= DAO_DOUBLE;
 	self->attrib &= ~(DAO_TYPE_SPEC|DAO_TYPE_UNDEF);
 	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
