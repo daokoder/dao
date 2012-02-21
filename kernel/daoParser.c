@@ -5871,7 +5871,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start = rb + 1;
-	}else if( tki2 == DTOK_LB && (tki >= DKEY_ABS && tki <= DKEY_TANH) ){
+	}else if( tki2 == DTOK_LB && (tki >= DKEY_RAND && tki <= DKEY_TANH) ){
 		/* built-in math functions */
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 		if( rb < 0 || (rb == start+2 && tki != DKEY_RAND) ){
@@ -5890,7 +5890,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 			DaoVmCode vmc = { DVM_MATH, 0, 1, 0 };
 			DaoValue *value;
 
-			vmc.a = tki - DKEY_ABS;
+			vmc.a = tki - DKEY_RAND;
 			DaoParser_ReserveFoldingOperands( self, 2 );
 			DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
 			proc->activeCode = & vmc;
@@ -5903,7 +5903,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 			regLast = DaoParser_GetNormRegister( self, cst, start, 0, rb );
 		}else{
 			regLast = DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, DVM_MATH, tki-DKEY_ABS, reg, regLast, start, 0, rb );
+			DaoParser_AddCode( self, DVM_MATH, tki-DKEY_RAND, reg, regLast, start, 0, rb );
 		}
 		result.reg = regLast;
 		result.first = last->next;

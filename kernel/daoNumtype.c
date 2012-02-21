@@ -1810,7 +1810,7 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 	case DAO_DOUBLE :
 		{
 			id = DaoValue_GetInteger( pid );
-			SliceRange2( slice, N, id, 1 );
+			rc = SliceRange2( slice, N, id, 1 );
 			break;
 		}
 	case DAO_TUPLE :
@@ -1819,7 +1819,7 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 			DArray_Clear( slice );
 			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
 				if( pid->xTuple.unitype == dao_type_for_iterator ){
-					SliceRange2( slice, N, data[1]->xInteger.value, 1 );
+					rc = SliceRange2( slice, N, data[1]->xInteger.value, 1 );
 					data[1]->xInteger.value += 1;
 					data[0]->xInteger.value = data[1]->xInteger.value < N;
 				}else{
@@ -2300,7 +2300,7 @@ static void DaoArray_GetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	}else if( N == 1 ){
 		DaoArray_GetItem1( vself, proc, ids[0] );
 		return;
-	}else if( N == self->ndim ){
+	}else if( N <= self->ndim ){
 		daoint *dimAccum = self->dims + self->ndim;
 		daoint *dims = self->dims;
 		daoint allNumbers = 1;
@@ -2355,7 +2355,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	}else if( N == 1 ){
 		DaoArray_SetItem1( vself, proc, ids[0], value, DVM_MOVE );
 		return;
-	}else if( N == self->ndim ){
+	}else if( N <= self->ndim ){
 		daoint *dims = self->dims;
 		daoint *dimAccum = self->dims + self->ndim;
 		daoint i, allNumbers = 1;

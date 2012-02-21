@@ -761,6 +761,9 @@ void DaoJIT_SearchCompilable( DaoRoutine *routine, std::vector<IndexRange> & seg
 		// so that they can be checked in the next stage:
 		switch( vmc->code ){
 		case DVM_MATH :
+		case DVM_MATH_I :
+		case DVM_MATH_F :
+		case DVM_MATH_D :
 			j = types[vmc->b]->tid;
 			m = types[vmc->c]->tid;
 			compilable = j and j <= DAO_DOUBLE and m and m <= DAO_DOUBLE;
@@ -1512,6 +1515,9 @@ Function* DaoJitHandle::Compile( int start, int end )
 			tmp = CreateCall2( dao_move_pp, dB, dC );
 			break;
 		case DVM_MATH :
+		case DVM_MATH_I :
+		case DVM_MATH_F :
+		case DVM_MATH_D :
 			dB = GetNumberOperand( vmc->b );
 			switch( types[ vmc->b ]->tid ){
 			case DAO_INTEGER : dB = CreateSIToFP( dB, double_type ); break;
@@ -2314,7 +2320,7 @@ void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer )
 	}
 #endif
 	for(int i=0, n=segments.size(); i<n; i++){
-		//if( (segments[i].end - segments[i].start) < 10 ) continue;
+		if( (segments[i].end - segments[i].start) < 10 ) continue;
 		//if( (segments[i].end - segments[i].start) < 3 ) continue;
 		printf( "compiling: %5i %5i\n", segments[i].start, segments[i].end );
 		Function *jitfunc = handle.Compile( segments[i].start, segments[i].end );
@@ -2329,7 +2335,7 @@ void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer )
 		jitFunctions.push_back( jitfunc );
 	}
 	if( jitFunctions.size() ) routine->body->jitData = new std::vector<Function*>( jitFunctions );
-	//return;
+	return;
 	PassManager PM;
 	PM.add(createPrintModulePass(&outs()));
 	PM.run(*llvm_module);

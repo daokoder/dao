@@ -734,7 +734,7 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 }
 static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid )
 {
-	size_t bits = (size_t) DaoValue_GetDouble( self );
+	daoint bits = DaoValue_GetInteger( self );
 	daoint size = 8*sizeof(daoint);
 	daoint start, end;
 	int idtype;
@@ -749,8 +749,8 @@ static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid 
 }
 static void DaoNumber_SetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
-	size_t bits = (size_t) DaoValue_GetDouble( self );
-	size_t val = (size_t) DaoValue_GetDouble( value );
+	daoint bits = DaoValue_GetInteger( self );
+	daoint val = DaoValue_GetInteger( value );
 	daoint size = 8*sizeof(daoint);
 	daoint start, end;
 	int idtype;

@@ -154,6 +154,9 @@ enum DaoOpcode
 	DVM_MOVE_DI ,
 	DVM_MOVE_DF ,
 	DVM_MOVE_DD ,
+	DVM_MOVE_CI ,
+	DVM_MOVE_CF ,
+	DVM_MOVE_CD ,
 	DVM_MOVE_CC , /* complex = complex */
 	DVM_MOVE_SS , /* string = string */
 	DVM_MOVE_PP , /* C = A; C and A are of the same non-primitive type, A must not be constant; */
@@ -164,8 +167,8 @@ enum DaoOpcode
 	DVM_UNMS_I ,
 	DVM_UNMS_F ,
 	DVM_UNMS_D ,
-	DVM_BITREV_I ,
 	DVM_UNMS_C ,
+	DVM_BITREV_I ,
 	/* C = A + B: will be compiled into: ADD, MOVE,
 	 * and the C operand of ADD is always an intermediate data with type to be inferred,
 	 * so it is only necessary to add specialized opcode according the A,B operands. */
@@ -243,9 +246,11 @@ enum DaoOpcode
 	DVM_GETI_AII , /* get item : C = A[B]; array<int>[int] */
 	DVM_GETI_AFI , /* get item : C = A[B]; array<float>[int] */
 	DVM_GETI_ADI , /* get item : C = A[B]; array<double>[int] */
+	DVM_GETI_ACI , /* get item : C = A[B]; array<complex>[int] */
 	DVM_SETI_AIII , /* set item : C[B] = A;  */
 	DVM_SETI_AFIF , /* set item : C[B] = A;  */
 	DVM_SETI_ADID , /* set item : C[B] = A;  */
+	DVM_SETI_ACIC , /* set item : C[B] = A;  */
 
 	DVM_GETI_TI , /* get item : C = A[B]; tuple<...>[int] */
 	DVM_SETI_TI , /* set item : C[B] = A; tuple<...>[int]=X; */
@@ -262,12 +267,15 @@ enum DaoOpcode
 	DVM_SETF_TPP , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 	DVM_SETF_TXX , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 
-	DVM_GETI_ACI , /* get item : C = A[B]; array<complex>[int] */
-	DVM_SETI_ACI , /* set item : C[B] = A; */
-
 	/* multiple indexing a[i,j] */
-	DVM_GETMI_A , /* array: get item(s) : C = A[B]; B: integer/float numbers */
-	DVM_SETMI_A , /* set item(s) : C[B] = A;  */
+	DVM_GETMI_AII , /* array: get item(s) : C = A[B]; B,C: integer, A integer array; */
+	DVM_GETMI_AFI , /* array: get item(s) : C = A[B]; B,C: integer, A float array; */
+	DVM_GETMI_ADI , /* array: get item(s) : C = A[B]; B,C: integer, A double array; */
+	DVM_GETMI_ACI , /* array: get item(s) : C = A[B]; B,C: integer, A complex array; */
+	DVM_SETMI_AIII , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
+	DVM_SETMI_AFIF , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
+	DVM_SETMI_ADID , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
+	DVM_SETMI_ACIC , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
 
 	/* setters and getters */
 	/* get/set member of class instance by index instead of name: */
@@ -311,6 +319,10 @@ enum DaoOpcode
 	DVM_TEST_F ,
 	DVM_TEST_D ,
 
+	DVM_MATH_I ,
+	DVM_MATH_F ,
+	DVM_MATH_D ,
+
 	DVM_CHECK_ST , /* check against simple types: int, float, double, complex, long, string; */
 
 	/* increase a count, and perform the normal goto operation 
@@ -339,21 +351,21 @@ enum DaoOpcodeExtra
 
 enum DaoMathFunct
 {
+	DVM_MATH_RAND ,
+	DVM_MATH_CEIL ,
+	DVM_MATH_FLOOR ,
 	DVM_MATH_ABS ,
-	DVM_MATH_ACOS ,
 	DVM_MATH_ARG ,
+	DVM_MATH_IMAG ,
+	DVM_MATH_NORM ,
+	DVM_MATH_REAL ,
+	DVM_MATH_ACOS ,
 	DVM_MATH_ASIN ,
 	DVM_MATH_ATAN ,
-	DVM_MATH_CEIL ,
 	DVM_MATH_COS ,
 	DVM_MATH_COSH ,
 	DVM_MATH_EXP ,
-	DVM_MATH_FLOOR ,
-	DVM_MATH_IMAG ,
 	DVM_MATH_LOG ,
-	DVM_MATH_NORM ,
-	DVM_MATH_RAND ,
-	DVM_MATH_REAL ,
 	DVM_MATH_SIN ,
 	DVM_MATH_SINH ,
 	DVM_MATH_SQRT ,
