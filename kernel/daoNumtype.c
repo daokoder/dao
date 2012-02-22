@@ -24,6 +24,26 @@
 #include"string.h"
 #include"ctype.h"
 
+static void DaoComplex_GetField( DaoValue *self, DaoProcess *proc, DString *name )
+{
+	if( strcmp( name->mbs, "real" ) == 0 ){
+		DaoProcess_PutDouble( proc, self->xComplex.value.real );
+	}else if( strcmp( name->mbs, "imag" ) == 0 ){
+		DaoProcess_PutDouble( proc, self->xComplex.value.imag );
+	}else{
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	}
+}
+static void DaoComplex_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
+{
+	if( strcmp( name->mbs, "real" ) == 0 ){
+		self->xComplex.value.real = DaoValue_GetDouble( value );
+	}else if( strcmp( name->mbs, "imag" ) == 0 ){
+		self->xComplex.value.imag = DaoValue_GetDouble( value );
+	}else{
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	}
+}
 static void DaoComplex_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	complex16 p = self->xComplex.value;
@@ -39,36 +59,17 @@ static DaoValue* DaoComplex_Copy( DaoValue *self, DaoProcess *proc, DMap *cycDat
 static DaoTypeCore comCore =
 {
 	NULL,
-	DaoValue_GetField,
-	DaoValue_SetField,
+	DaoComplex_GetField,
+	DaoComplex_SetField,
 	DaoValue_GetItem,
 	DaoValue_SetItem,
 	DaoComplex_Print,
 	DaoComplex_Copy,
 };
-static void DaoComplex_Lib_Real( DaoProcess *proc, DaoValue *par[], int N )
-{
-	complex16 *self = & par[0]->xComplex.value;
-	DaoProcess_PutDouble( proc, self->real );
-	if( N == 2 ) self->real = par[1]->xDouble.value;
-}
-static void DaoComplex_Lib_Imag( DaoProcess *proc, DaoValue *par[], int N )
-{
-	complex16 *self = & par[0]->xComplex.value;
-	DaoProcess_PutDouble( proc, self->imag );
-	if( N == 2 ) self->imag = par[1]->xDouble.value;
-}
-static DaoFuncItem comMeths[] =
-{
-	{ DaoComplex_Lib_Real,     "real( self :complex, v=0.00 )=>double" },
-	{ DaoComplex_Lib_Imag,     "imag( self :complex, v=0.00 )=>double" },
-
-	{ NULL, NULL }
-};
 
 DaoTypeBase comTyper = 
 {
-	"complex", & comCore, NULL, (DaoFuncItem*) comMeths, {0}, {0}, NULL, NULL
+	"complex", & comCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
 
 double abs_c( const complex16 com )

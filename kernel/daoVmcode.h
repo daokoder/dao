@@ -277,6 +277,9 @@ enum DaoOpcode
 	DVM_SETMI_ADID , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
 	DVM_SETMI_ACIC , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
 
+	DVM_GETF_CX , /* get complex field: real/imag; */
+	DVM_SETF_CX , /* set complex field: real/imag; */
+
 	/* setters and getters */
 	/* get/set member of class instance by index instead of name: */
 	DVM_GETF_KC , /* get class field, const; code: GET Member Field Const*/

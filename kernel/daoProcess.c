@@ -949,6 +949,8 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_SETMI_AIII , && LAB_SETMI_AFIF ,
 		&& LAB_SETMI_ADID , && LAB_SETMI_ACIC ,
 
+		&& LAB_GETF_CX , && LAB_SETF_CX ,
+
 		&& LAB_GETF_KC , && LAB_GETF_KG ,
 		&& LAB_GETF_OC , && LAB_GETF_OG , && LAB_GETF_OV ,
 		&& LAB_SETF_KG , && LAB_SETF_OG , && LAB_SETF_OV ,
@@ -1649,7 +1651,7 @@ CallEntry:
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) / FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( MOD_FFF ){
 			fnum = FloatOperand( vmc->b );
-			if( inum == 0.0 ) goto RaiseErrorDivByZero;
+			if( fnum == 0.0 ) goto RaiseErrorDivByZero;
 			inum = (daoint)(FloatOperand( vmc->a ) / fnum);
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a ) - inum * fnum;
 		}OPNEXT() OPCASE( POW_FFF ){
@@ -1684,7 +1686,7 @@ CallEntry:
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) / DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( MOD_DDD ){
 			dnum = DoubleOperand( vmc->b );
-			if( inum == 0.0 ) goto RaiseErrorDivByZero;
+			if( dnum == 0.0 ) goto RaiseErrorDivByZero;
 			inum = (daoint)(DoubleOperand( vmc->a ) / dnum);
 			DoubleOperand( vmc->c ) = DoubleOperand( vmc->a ) - inum * dnum;
 		}OPNEXT() OPCASE( POW_DDD ){
@@ -1992,6 +1994,12 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_TXX ){
 			tuple = & locVars[ vmc->c ]->xTuple;
 			DaoValue_Copy( locVars[ vmc->a ], tuple->items + vmc->b );
+		}OPNEXT() OPCASE( GETF_CX ){
+			double *RI = (double*)(complex16*) & locVars[ vmc->a ]->xComplex.value;
+			locVars[ vmc->c ]->xDouble.value = RI[ vmc->b ];
+		}OPNEXT() OPCASE( SETF_CX ){
+			double *RI = (double*)(complex16*) & locVars[ vmc->c ]->xComplex.value;
+			RI[ vmc->b ] = locVars[ vmc->a ]->xDouble.value;
 		}OPNEXT() OPCASE( GETF_KC ){
 			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );

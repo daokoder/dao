@@ -261,6 +261,8 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "SETMI_AFIF", DVM_SETMI_AFIF, DAO_CODE_SETM,    0 },
 	{ "SETMI_ADID", DVM_SETMI_ADID, DAO_CODE_SETM,    0 },
 	{ "SETMI_ACIC", DVM_SETMI_ACIC, DAO_CODE_SETM,    0 },
+	{ "GETF_CX",    DVM_GETF_CX,    DAO_CODE_GETF,    0 },
+	{ "SETF_CX",    DVM_SETF_CX,    DAO_CODE_SETF,    0 },
 	{ "GETF_KC",    DVM_GETF_KC,    DAO_CODE_GETF,    0 },
 	{ "GETF_KG",    DVM_GETF_KG,    DAO_CODE_GETF,    0 },
 	{ "GETF_OC",    DVM_GETF_OC,    DAO_CODE_GETF,    0 },

@@ -110,6 +110,7 @@ struct DaoInode
 
 	DaoInode *jumpTrue;
 	DaoInode *jumpFalse;
+	DaoInode *extra;
 
 	DaoInode *prev;
 	DaoInode *next;
