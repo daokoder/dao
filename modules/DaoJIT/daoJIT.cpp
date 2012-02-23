@@ -528,7 +528,7 @@ void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit )
 	dao_namespace_type_pp = PointerType::getUnqual( dao_namespace_type_p );
 
 	
-	std::vector<Type*> jitcd_types( 8, dao_value_ptr_array_type_p );
+	std::vector<Type*> jitcd_types( 7, dao_value_ptr_array_type_p );
 	jitcd_types.push_back( void_type_p );
 	jitcd_types.push_back( darray_value_type_p );
 	jitcd_types.push_back( darray_value_type_p );
@@ -880,19 +880,6 @@ Value* DaoJitHandle::GetLocalConstant( int id )
 	Value *value = CreateConstGEP2_32( localConsts, 0, id );
 	value = CreateLoad( value );
 	SetValueName( value, "locst", id );
-	SetInsertPoint( current );
-	return value;
-}
-Value* DaoJitHandle::GetUpConstant( int id )
-{
-	BasicBlock *current = GetInsertBlock();
-	Argument *jitcdata = jitFunction->arg_begin();
-
-	SetInsertPoint( entryBlock );
-	Value *value = CreateConstGEP2_32( jitcdata, 0, 7 ); // jitcdata->upConsts: DaoValue*[]**
-	value = CreateLoad( value ); // jitcdata->upConsts: DaoValue*[]*
-	value = CreateConstGEP2_32( value, 0, id );
-	value = CreateLoad( value );
 	SetInsertPoint( current );
 	return value;
 }
@@ -1568,11 +1555,7 @@ Function* DaoJitHandle::Compile( int start, int end )
 			if( vmc->a > 1 ) goto Failed;
 			numtype = dao_number_types[ vmc->code - DVM_GETCL_I ];
 			dB = NULL;
-			if( vmc->a ){
-				dB = GetUpConstant( vmc->b );
-			}else{
-				dB = GetLocalConstant( vmc->b );
-			}
+			dB = GetLocalConstant( vmc->b );
 			current = GetInsertBlock();
 			SetInsertPoint( entryBlock );
 			dB = GetValueNumberPointer( dB, numtype );
@@ -1599,10 +1582,6 @@ Function* DaoJitHandle::Compile( int start, int end )
 		case DVM_GETVH_I : 
 		case DVM_GETVH_F : 
 		case DVM_GETVH_D : 
-			goto Failed;
-		case DVM_GETVL_I : 
-		case DVM_GETVL_F : 
-		case DVM_GETVL_D : 
 			goto Failed;
 		case DVM_GETVO_I : 
 		case DVM_GETVO_F : 
@@ -1631,9 +1610,6 @@ Function* DaoJitHandle::Compile( int start, int end )
 		case DVM_SETVH_II : 
 		case DVM_SETVH_FF : 
 		case DVM_SETVH_DD : 
-		case DVM_SETVL_II : 
-		case DVM_SETVL_FF : 
-		case DVM_SETVL_DD : 
 			goto Failed;
 		case DVM_SETVO_II : 
 			if( vmc->c ) goto Failed;

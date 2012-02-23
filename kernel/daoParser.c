@@ -247,10 +247,10 @@ static void DaoParser_ClearBuffers( DaoParser *self )
 static int DaoParser_GetOuterLevel( DaoParser *self, int reg )
 {
 	int i = 0;
-	if( self->outers == NULL ) return -1;
+	if( self->outers == NULL ) return 0;
 	while( i < self->outers->size && reg >= self->outers->items.pInt[i] ) i += 1;
-	if( i >= self->outers->size ) return -1;
-	return self->outers->size - 1 - i;
+	if( i >= self->outers->size ) return 0;
+	return self->outers->size - i;
 }
 
 static void DaoParser_PrintCodes( DaoParser *self )
@@ -4164,8 +4164,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			case DAO_LOCAL_VARIABLE :
 				if( reg < 0 ) continue;
 				if( up ){
-					DaoParser_AddCode( self, DVM_SETVL, reg, id, up, first, mid, end );
-				}else if( (up = DaoParser_GetOuterLevel( self, id )) >= 0 ){
+					DaoParser_AddCode( self, DVM_SETVH, reg, id, 0, first, mid, end );
+				}else if( (up = DaoParser_GetOuterLevel( self, id )) > 0 ){
 					DaoParser_AddCode( self, DVM_SETVH, reg, id, up, first, mid, end );
 				}else{
 					DaoParser_AddCode( self, DVM_MOVE, reg, 0, id, first, mid, end );
@@ -4595,16 +4595,18 @@ int DaoParser_GetNormRegister( DaoParser *self, int reg, int first, int mid, int
 	int st = LOOKUP_ST( reg );
 	int up = LOOKUP_UP( reg );
 	int id = LOOKUP_ID( reg );
-	int regc, code = DVM_GETVL;
+	int regc, code = DVM_NOP;
 
 	/* printf( "reg = %x\n", reg ); */
 	switch( st ){
 	case DAO_LOCAL_VARIABLE :
-		if( up ==0 ){
+		if( up == 0 ){ /* Host variable accessed from code sections: */
 			up = DaoParser_GetOuterLevel( self, id );
-			if( up < 0 ) return id;
-			code = DVM_GETVH;
+			if( up == 0 ) return id;
+		}else{ /* Up variable accessed from closures: */
+			up = 0;
 		}
+		code = DVM_GETVH;
 		break;
 	case DAO_LOCAL_CONSTANT  : code = DVM_GETCL; break;
 	case DAO_OBJECT_VARIABLE : code = DVM_GETVO; break;
@@ -4958,8 +4960,12 @@ CleanUp:
 		DaoParser_AddCode( self, DVM_MOVE, first, 0, loc, start+2, eq, colon1-1 );
 		switch( st ){
 		case DAO_LOCAL_VARIABLE  :
-			if( up ) set = DVM_SETVL;
-			else if( (up = DaoParser_GetOuterLevel( self, id )) >= 0 ) set = DVM_SETVH;
+			if( up ){
+				up = 0;
+				set = DVM_SETVH;
+			}else if( (up = DaoParser_GetOuterLevel( self, id )) > 0 ){
+				set = DVM_SETVH;
+			}
 			break;
 		case DAO_OBJECT_VARIABLE : set = DVM_SETVO; break;
 		case DAO_CLASS_VARIABLE  : set = DVM_SETVK; break;

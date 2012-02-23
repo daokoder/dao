@@ -94,7 +94,6 @@ struct DaoJitHandle : public IRBuilder<>
 	void SetValueName( Value *value, const char *name, int id );
 
 	Value* GetLocalConstant( int id );
-	Value* GetUpConstant( int id );
 	Value* GetLocalReference( int reg );
 	Value* GetLocalValue( int reg );
 

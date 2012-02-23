@@ -20,11 +20,10 @@ enum DaoOpcode
 {
 	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
 	DVM_DATA , /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
-	DVM_GETCL , /* get local const: C = A::B; current routine, A=0; up routine: A=1; */
+	DVM_GETCL , /* get local const: C = A::B; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
 	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
-	DVM_GETVH , /* get host variable in code section: C = A::B; A, outer level; */
-	DVM_GETVL , /* get local variables: C = A::B; A=1, up routine; */
+	DVM_GETVH , /* get up/host variable in closure or code section: C = A::B; A, outer level; */
 	DVM_GETVO , /* get instance object variables: C = A::B; A=0; */
 	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
 	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
@@ -34,7 +33,6 @@ enum DaoOpcode
 	DVM_GETF ,  /* GET Field : C = A.B */
 	DVM_GETMF , /* GET Meta Field: C = A->B */
 	DVM_SETVH , /* set host variable in code section: C::B = A; C, outer level; */
-	DVM_SETVL , /* set local variables: C::B = A, C the same as A in DVM_GETVL */
 	DVM_SETVO , /* set object variables: C::B = A, C the same as A in DVM_GETVO */
 	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
 	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
@@ -103,47 +101,54 @@ enum DaoOpcode
 	DVM_DATA_I ,
 	DVM_DATA_F ,
 	DVM_DATA_D ,
+	DVM_DATA_C ,
+
 	DVM_GETCL_I , 
 	DVM_GETCL_F , 
 	DVM_GETCL_D , 
+	DVM_GETCL_C , 
 	DVM_GETCK_I , 
 	DVM_GETCK_F , 
 	DVM_GETCK_D , 
+	DVM_GETCK_C , 
 	DVM_GETCG_I , 
 	DVM_GETCG_F , 
 	DVM_GETCG_D , 
+	DVM_GETCG_C , 
 
 	DVM_GETVH_I , 
 	DVM_GETVH_F , 
 	DVM_GETVH_D , 
-	DVM_GETVL_I , 
-	DVM_GETVL_F , 
-	DVM_GETVL_D , 
+	DVM_GETVH_C , 
 	DVM_GETVO_I , 
 	DVM_GETVO_F , 
 	DVM_GETVO_D , 
+	DVM_GETVO_C , 
 	DVM_GETVK_I , 
 	DVM_GETVK_F , 
 	DVM_GETVK_D , 
+	DVM_GETVK_C , 
 	DVM_GETVG_I , 
 	DVM_GETVG_F , 
 	DVM_GETVG_D , 
+	DVM_GETVG_C , 
 
 	DVM_SETVH_II , 
 	DVM_SETVH_FF , 
 	DVM_SETVH_DD , 
-	DVM_SETVL_II , 
-	DVM_SETVL_FF , 
-	DVM_SETVL_DD , 
+	DVM_SETVH_CC , 
 	DVM_SETVO_II , 
 	DVM_SETVO_FF , 
 	DVM_SETVO_DD , 
+	DVM_SETVO_CC , 
 	DVM_SETVK_II , 
 	DVM_SETVK_FF , 
 	DVM_SETVK_DD , 
+	DVM_SETVK_CC , 
 	DVM_SETVG_II , 
 	DVM_SETVG_FF , 
 	DVM_SETVG_DD , 
+	DVM_SETVG_CC , 
 
 	DVM_MOVE_II , /* integer = integer */
 	DVM_MOVE_IF , /* integer = float */
@@ -222,6 +227,9 @@ enum DaoOpcode
 	DVM_MUL_CCC ,
 	DVM_DIV_CCC ,
 
+	DVM_EQ_ICC ,
+	DVM_NE_ICC ,
+
 	/* string */
 	DVM_ADD_SSS , 
 	DVM_LT_ISS ,
@@ -238,10 +246,12 @@ enum DaoOpcode
 	DVM_GETI_LII , /* get item : C = A[B]; list<int>[int] */
 	DVM_GETI_LFI , /* get item : C = A[B]; list<float>[int] */
 	DVM_GETI_LDI , /* get item : C = A[B]; list<double>[int] */
-	DVM_GETI_LSI , /* get item : C = A[B]; list<double>[int] */
+	DVM_GETI_LCI , /* get item : C = A[B]; list<complex>[int] */
+	DVM_GETI_LSI , /* get item : C = A[B]; list<string>[int] */
 	DVM_SETI_LIII , /* set item : C[B] = A; list<int>[int]=int */
 	DVM_SETI_LFIF , /* set item : C[B] = A;  */
 	DVM_SETI_LDID , /* set item : C[B] = A;  */
+	DVM_SETI_LCIC , /* set item : C[B] = A;  */
 	DVM_SETI_LSIS , /* set item : C[B] = A;  */
 	DVM_GETI_AII , /* get item : C = A[B]; array<int>[int] */
 	DVM_GETI_AFI , /* get item : C = A[B]; array<float>[int] */
@@ -259,10 +269,12 @@ enum DaoOpcode
 	DVM_GETF_TI , /* get integer field by constant index; */
 	DVM_GETF_TF , /* get float field by constant index; */
 	DVM_GETF_TD , /* get double field by constant index; */
+	DVM_GETF_TC , /* get complex field by constant index; */
 	DVM_GETF_TX , /* get type checked field by constant index; */
 	DVM_SETF_TII , /* set integer field to integer. */
 	DVM_SETF_TFF , /* set float field to float. */
 	DVM_SETF_TDD , /* set double field to double. */
+	DVM_SETF_TCC , /* set complex field to double. */
 	DVM_SETF_TSS , /* set string field to string. */
 	DVM_SETF_TPP , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 	DVM_SETF_TXX , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
@@ -295,28 +307,36 @@ enum DaoOpcode
 	DVM_GETF_KCI , /* GET Member Field Const Integer */
 	DVM_GETF_KCF , /* GET Member Field Const Float */
 	DVM_GETF_KCD , /* GET Member Field Const Double*/
+	DVM_GETF_KCC , /* GET Member Field Const Complex*/
 	DVM_GETF_KGI ,
 	DVM_GETF_KGF ,
 	DVM_GETF_KGD ,
+	DVM_GETF_KGC ,
 	DVM_GETF_OCI , /* GET Member Field Const Integer */
 	DVM_GETF_OCF , /* GET Member Field Const Float */
 	DVM_GETF_OCD , /* GET Member Field Const Double*/
+	DVM_GETF_OCC , /* GET Member Field Const Complex*/
 	DVM_GETF_OGI ,
 	DVM_GETF_OGF ,
 	DVM_GETF_OGD ,
+	DVM_GETF_OGC ,
 	DVM_GETF_OVI ,
 	DVM_GETF_OVF ,
 	DVM_GETF_OVD ,
+	DVM_GETF_OVC ,
 	/* C.B=A specialize according to both: C.B and A */
 	DVM_SETF_KGII ,
 	DVM_SETF_KGFF ,
 	DVM_SETF_KGDD ,
+	DVM_SETF_KGCC ,
 	DVM_SETF_OGII ,
 	DVM_SETF_OGFF ,
 	DVM_SETF_OGDD ,
+	DVM_SETF_OGCC ,
 	DVM_SETF_OVII ,
 	DVM_SETF_OVFF ,
 	DVM_SETF_OVDD ,
+	DVM_SETF_OVCC ,
 
 	DVM_TEST_I ,
 	DVM_TEST_F ,
