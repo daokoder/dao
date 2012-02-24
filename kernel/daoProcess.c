@@ -2163,7 +2163,8 @@ CallEntry:
 		}OPJUMP() OPCASE( MATH_I ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
-				IntegerOperand(vmc->c) = IntegerOperand(vmc->b) * rand() / (RAND_MAX+1.0); break;
+				IntegerOperand(vmc->c) = (int)(IntegerOperand(vmc->b) * (rand() / (RAND_MAX+1.0)));
+				break;
 			case DVM_MATH_CEIL : IntegerOperand(vmc->c) = ceil( IntegerOperand(vmc->b) ); break;
 			case DVM_MATH_FLOOR: IntegerOperand(vmc->c) = floor( IntegerOperand(vmc->b) ); break;
 			case DVM_MATH_ABS  : IntegerOperand(vmc->c) = abs( IntegerOperand(vmc->b) );  break;

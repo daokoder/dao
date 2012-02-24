@@ -278,7 +278,7 @@ static int dao_make_wrapper( DString *name, DaoType *routype, DString *cproto, D
 	DString_AppendChar( wrapper, '\t' );
 
 	type = & routype->aux->xType;
-	if( type == NULL || type->tid == DAO_UDF ){
+	if( type == NULL || type->tid == DAO_NONE ){
 		DString_InsertMBS( cproto, "void ", 0, 0, 0 );
 		DString_Append( wrapper, cc );
 	}else{

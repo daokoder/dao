@@ -1374,7 +1374,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	case DAO_CODE_UNARY2 :
 		/* Exclude expressions that may have side effects: */
 		if( code == DVM_MATH && vmc->a == DVM_MATH_RAND ) return;
-		if( (code >= DVM_MATH_I && code >= DVM_MATH_D) && vmc->a == DVM_MATH_RAND ) return;
+		if( (code >= DVM_MATH_I && code <= DVM_MATH_D) && vmc->a == DVM_MATH_RAND ) return;
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
 		break;
 	case DAO_CODE_GETF :
@@ -4086,9 +4086,16 @@ NotExist_TryAux:
 				bt = DaoNamespace_GetType( NS, cc );
 				if( at->name->mbs[0] == '$' && bt->name->mbs[0] == '$' ) continue;
 				if( DaoType_MatchValue( at, cc, defs ) ==0 ){
-					self->currentIndex = i + k;
-					type = DaoNamespace_GetType( NS, cc );
-					return DaoInferencer_ErrorTypeNotMatching( self, type, at );
+					int matched = 0;
+					if( cc->type == DAO_TUPLE && cc->xNone.subtype == DAO_PAIR ){
+						matched = DaoType_MatchValue( at, cc->xTuple.items[0], defs );
+						matched &= DaoType_MatchValue( at, cc->xTuple.items[1], defs );
+					}
+					if( matched == 0 ){
+						self->currentIndex = i + k;
+						type = DaoNamespace_GetType( NS, cc );
+						return DaoInferencer_ErrorTypeNotMatching( self, type, at );
+					}
 				}
 			}
 			if( consts[opa] && consts[opa]->type ){

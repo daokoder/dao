@@ -103,7 +103,7 @@ io.writeln( type_size(123) );
 
 int dim = DaoArray_DimCount( a );
 int i, size = DaoArray_Size( a );
-dint *data = DaoArray_ToInteger( a );
+daoint *data = DaoArray_ToInteger( a );
 
 printf( "dimension = %i, size = %i\n", dim, size );
 for(i=0; i<size; i++) data[i] *= 100;

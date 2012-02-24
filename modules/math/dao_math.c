@@ -92,7 +92,8 @@ static void MATH_rand( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void MATH_srand( DaoProcess *proc, DaoValue *p[], int N )
 {
-	srand( (unsigned int)p[0]->xDouble.value );
+	srand( (unsigned int)p[0]->xInteger.value );
+	rand();
 }
 static void MATH_rand_gaussian( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -284,7 +285,7 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_rand,      "rand( p :double=1.0D )=>double" },
 #endif
 
-	{ MATH_srand,     "srand( p :double )=>double" },
+	{ MATH_srand,     "srand( p :int)=>int" },
 	{ MATH_rand_gaussian,  "rand_gaussian( p :double=1.0D )=>double" },
 	{ MATH_round,     "round( p :double )=>double" },
 	{ MATH_hypot,     "hypot( p1 :double, p2 :double )=>double" },

@@ -7,15 +7,15 @@ help( object, 'method' ); help_ObjectTypeName_method.dao; help_ObjectTypeName.da
 
 #}
 
-@[name()]
+@[name]
 dao.string
-@[name()]
+@[name]
 
-@[title()]
+@[title]
 Dao string data type
-@[title()]
+@[title]
 
-@[text()]
+@[text]
 String quoted with single quotation symbol is stored as
 Multi-Bytes String (MBS) in UTF-8, which is more efficient to represent
 ASCII and latin letters; while string quoted with
@@ -25,7 +25,7 @@ such as CJK (Chinese, Japanese and Korean) symbols.
 These two types of strings can be mixed together, one can be converted to
 the other automatically when necessary. But it's better to use one
 of them consistently.
-@[text()]
+@[text]
 
 @[code(dao)]
 mbs = 'Multi-Bytes String quoted with single quotation mark';
@@ -33,15 +33,15 @@ wcs = "Wide Character String quoted with double quotation mark";
 @[code(dao)]
 
 
-@[name()]
+@[name]
 dao.string.find
-@[name()]
+@[name]
 
-@[title()]
+@[title]
 string.find( str :string, from =0, reverse =0 ) => int
-@[title()]
+@[title]
 
-@[text()]
+@[text]
 Find substring <%>str</%>, starting from <%>from</%>; search backward if <%>reverse</%> is true.
 Return the index of the occurrence of <%>str</%>, return -1 if not found.
-@[text()]
+@[text]
