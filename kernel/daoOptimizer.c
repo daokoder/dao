@@ -169,6 +169,7 @@ DaoOptimizer* DaoOptimizer_New()
 {
 	DaoOptimizer *self = (DaoOptimizer*) dao_malloc( sizeof(DaoOptimizer) );
 	self->routine = NULL;
+	self->array = DArray_New(0); /* DArray<daoint> */
 	self->nodeCache  = DArray_New(0); /* DArray<DaoCnode*> */
 	self->arrayCache = DArray_New(D_ARRAY); /* DArray<DArray<DaoCnode*>> */
 	self->nodes = DArray_New(0);  /* DArray<DaoCnode*> */
@@ -199,6 +200,7 @@ void DaoOptimizer_Delete( DaoOptimizer *self )
 {
 	daoint i;
 	for(i=0; i<self->nodeCache->size; i++) DaoCnode_Delete( self->nodeCache->items.pCnode[i] );
+	DArray_Delete( self->array );
 	DArray_Delete( self->nodeCache );
 	DArray_Delete( self->arrayCache );
 	DArray_Delete( self->enodes );
@@ -519,6 +521,10 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 		if( i && vmc->code != DVM_CASE ){
 			k = codes[i-1]->code;
 			if( k != DVM_GOTO && k != DVM_RETURN ){
+				DArray_Append( nodes[i-1]->outs, node );
+				DArray_Append( node->ins, nodes[i-1] );
+			}else if( vmc->code == DVM_SECT || (vmc->code == DVM_GOTO && vmc->c == DVM_SECT) ){
+				/* Code section is isolated from the main codes: */
 				DArray_Append( nodes[i-1]->outs, node );
 				DArray_Append( node->ins, nodes[i-1] );
 			}
@@ -1142,24 +1148,14 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
 	}
 }
-/* Remove redundant registers for the same data types: */
-static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine )
+/* Simple remapping the used registers to remove the unused ones: */
+static void DaoOptimizer_RemapRegister( DaoOptimizer *self, DaoRoutine *routine )
 {
-	DNode *it, *it2, *it3, *it4;
-	DMap *same, *one = DHash_New(0,0);
-	DMap *sets = DHash_New(0,D_MAP);
-	DMap *livemap = DMap_New(0,0);
-	DMap *actives = DMap_New(0,0);
-	DMap *offsets = DMap_New(0,0);
-	DArray *array = DArray_New(0);
-	DArray *array2 = DArray_New(0);
-	DArray *annotCodes = routine->body->annotCodes;
-	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
-	DaoCnode *node, *node2, **nodes;
-	DaoType *type, *type2, **types;
-	daoint i, j, k, m, N = annotCodes->size;
-	daoint regCount, M = routine->body->regCount;
-	daoint *intervals, *regmap;
+	DaoCnode *node, **nodes;
+	DArray *array = self->array;
+	daoint i, N = routine->body->annotCodes->size;
+	daoint j, M = routine->body->regCount;
+	daoint *regmap;
 
 	DArray_Resize( array, M, (void*)(size_t)M );
 	regmap = array->items.pInt;
@@ -1193,6 +1189,61 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	}
 	for(i=0; i<routine->parCount; i++) regmap[i] = i;
 	DaoOptimizer_UpdateRegister( self, routine, array );
+}
+static void DaoOptimizer_RemoveUnreachableCodes( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DArray *array = self->array;
+	DArray *annotCodes = routine->body->annotCodes;
+	DaoVmCodeX **codes = annotCodes->items.pVmc;
+	DaoCnode *node, *node2, **nodes;
+	daoint i, j, m, N = annotCodes->size;
+
+	if( N == 0 ) return;
+	self->update = NULL;
+	DaoOptimizer_Init( self, routine );
+	nodes = self->nodes->items.pCnode;
+	for(i=0; i<N; i++) nodes[i]->reachable = 0;
+	array->size = 0;
+	DArray_Append( array, nodes[0] );
+	for(i=0; i<array->size; i++){
+		node = array->items.pCnode[i];
+		node->reachable = 1;
+		for(j=0,m=node->outs->size; j<m; j++){
+			node2 = node->outs->items.pCnode[j];
+			if( node2->reachable == 0 ) DArray_Append( array, node2 );
+		}
+	}
+	for(i=0; i<N; i++){
+		if( nodes[i]->reachable == 0 ) codes[i]->code = DVM_UNUSED;
+	}
+	DArray_CleanupCodes( annotCodes );
+	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
+	for(i=0,N=annotCodes->size; i<N; i++){
+		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
+	}
+	DaoOptimizer_RemapRegister( self, routine );
+}
+/* Remove redundant registers for the same data types: */
+static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine )
+{
+	DNode *it, *it2, *it3, *it4;
+	DMap *same, *one = DHash_New(0,0);
+	DMap *sets = DHash_New(0,D_MAP);
+	DMap *livemap = DMap_New(0,0);
+	DMap *actives = DMap_New(0,0);
+	DMap *offsets = DMap_New(0,0);
+	DArray *array = DArray_New(0);
+	DArray *annotCodes = routine->body->annotCodes;
+	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
+	DaoCnode *node, *node2, **nodes;
+	DaoType *type, *type2, **types;
+	daoint i, j, k, m, N = annotCodes->size;
+	daoint regCount, M = routine->body->regCount;
+	daoint *intervals, *regmap;
+
+	/* Dead Code Elimination may have produce some dead registers. Remove them first: */
+	DaoOptimizer_RemapRegister( self, routine );
+	regmap = self->array->items.pInt;
 
 	//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
 
@@ -1201,8 +1252,8 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 
 	//DaoOptimizer_Print( self );
 
-	DArray_Resize( array2, 2*M, 0 );
-	intervals = array2->items.pInt;
+	DArray_Resize( array, 2*M, 0 );
+	intervals = array->items.pInt;
 	regCount = routine->parCount;
 	M = routine->body->regCount;
 	types = routine->body->regType->items.pType;
@@ -1292,8 +1343,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 		MAP_Insert( actives, (intervals[2*i+1]<<16) | i, it4->key.pVoid );
 		DMap_EraseNode( it3->value.pMap, it4 );
 	}
-	DaoOptimizer_UpdateRegister( self, routine, array );
-	DArray_Delete( array2 );
+	DaoOptimizer_UpdateRegister( self, routine, self->array );
 	DArray_Delete( array );
 	DMap_Delete( livemap );
 	DMap_Delete( offsets );
@@ -1333,6 +1383,7 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 	}
 
 	optimizer = DaoOptimizer_New();
+	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 	DaoOptimizer_MergeRegister( optimizer, self );
 	DaoOptimizer_CSE( optimizer, self );
 	DaoOptimizer_DCE( optimizer, self );
@@ -4234,6 +4285,10 @@ NotExist_TryAux:
 			{
 				/* if( inited[opa] ==0 ) goto NotInit;  allow none value for testing! */
 				if( types[opa] ==NULL ) goto NotMatch;
+				if( consts[opa] ){
+					vmc->code =  DaoValue_IsZero( consts[opa] ) ? DVM_GOTO : DVM_UNUSED;
+					continue;
+				}
 				if( typed_code ){
 					if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE )
 						vmc->code = DVM_TEST_I + at->tid - DAO_INTEGER;
@@ -4620,6 +4675,7 @@ TryPushBlockReturnType:
 				if( (i+1) < (int)body->annotCodes->size ){
 					int nop = inodes[i+1]->code == DVM_NOP;
 					if( inodes[i+nop+1]->code == DVM_GOTO && inodes[i+nop+1]->c == DVM_SECT ){
+						/* Special GOTO marks the ending of a code section: */
 						DArray_Erase( rettypes, rettypes->size - 3, -1 );
 						DArray_PopBack( self->typeMaps );
 						popped = 1;

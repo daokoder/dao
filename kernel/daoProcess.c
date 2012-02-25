@@ -3252,9 +3252,10 @@ InvalidReturn:
 }
 int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 {
+	DaoComplex tmp = {0};
+	DaoValue *value = (DaoValue*) (DaoComplex*) & tmp;
 	DaoNamespace *ns = self->activeRoutine->nameSpace;
 	DaoType *type = self->activeTypes[vmc->c];
-	DaoComplex tmp = {DAO_COMPLEX};
 	int func = vmc->a;
 	self->activeCode = vmc;
 	if( A->type == DAO_COMPLEX ){
@@ -3282,21 +3283,38 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		default : return 1;
 		}
 		if( isreal ){
-			if( type == NULL ) self->activeTypes[vmc->c] = dao_type_double;
 			if( C && C->type == DAO_DOUBLE ){
 				C->xDouble.value = rres;
 			}else{
-				return DaoProcess_PutDouble( self, rres ) == NULL;
+				value->type = DAO_DOUBLE;
+				value->xDouble.value = rres;
+				return DaoValue_Move( value, self->activeValues + vmc->c, dao_type_double ) == 0;
 			}
 		}else{
-			if( type == NULL ) self->activeTypes[vmc->c] = dao_type_complex;
 			if( C && C->type == DAO_COMPLEX ){
 				C->xComplex.value = cres;
 			}else{
-				return DaoProcess_PutComplex( self, cres ) == NULL;
+				value->type = DAO_COMPLEX;
+				value->xComplex.value = cres;
+				return DaoValue_Move( value, self->activeValues + vmc->c, dao_type_complex ) == 0;
 			}
 		}
 		return 0;
+	}else if( A->type == DAO_INTEGER && func <= DVM_MATH_ABS ){
+		daoint res = A->xInteger.value;
+		switch( func ){
+		case DVM_MATH_RAND : res = res * (rand() / (RAND_MAX+1.0)); break;
+		case DVM_MATH_ABS  : res = abs( res );  break;
+		/* case DVM_MATH_CEIL : res = par; break; */
+		/* case DVM_MATH_FLOOR: res = par; break; */
+		}
+		if( C && C->type == DAO_INTEGER ){
+			C->xInteger.value = res;
+		}else{
+			value->type = DAO_INTEGER;
+			value->xInteger.value = res;
+			return DaoValue_Move( value, self->activeValues + vmc->c, dao_type_int ) == 0;
+		}
 	}else if( A->type && A->type <= DAO_DOUBLE ){
 		double par = DaoValue_GetDouble( A );
 		double res = 0.0;
@@ -3309,7 +3327,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		case DVM_MATH_COS  : res = cos( par );  break;
 		case DVM_MATH_COSH : res = cosh( par ); break;
 		case DVM_MATH_EXP  : res = exp( par );  break;
-		case DVM_MATH_FLOOR : res = floor( par ); break;
+		case DVM_MATH_FLOOR: res = floor( par ); break;
 		case DVM_MATH_LOG  : res = log( par );  break;
 		case DVM_MATH_RAND : res = par * rand() / (RAND_MAX+1.0); break;
 		case DVM_MATH_SIN  : res = sin( par );  break;
@@ -3320,20 +3338,19 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		default : return 1;
 		}
 		if( func == DVM_MATH_RAND ){
-			if( type == NULL ) self->activeTypes[vmc->c] = DaoNamespace_GetType( ns, A );
+			value->type = A->type;
 			switch( A->type ){
-			case DAO_INTEGER : return DaoProcess_PutInteger( self, res ) == NULL;
-			case DAO_FLOAT  : return DaoProcess_PutFloat( self, res ) == NULL;
-			case DAO_DOUBLE : return DaoProcess_PutDouble( self, res ) == NULL;
-			default : break;
+			case DAO_FLOAT  : value->xFloat.value = res; type = dao_type_float; break;
+			case DAO_DOUBLE : value->xDouble.value = res; type = dao_type_double; break;
 			}
+			return DaoValue_Move( value, self->activeValues + vmc->c, type ) == 0;
 		}else if( C && C->type == DAO_DOUBLE ){
 			C->xDouble.value = res;
 			return 0;
 		}else{
-			tmp.type = DAO_DOUBLE;
-			if( type == NULL ) self->activeTypes[vmc->c] = dao_type_double;
-			return DaoProcess_PutDouble( self, res ) == NULL;
+			value->type = DAO_DOUBLE;
+			value->xDouble.value = res;
+			return DaoValue_Move( value, self->activeValues + vmc->c, dao_type_double ) == 0;
 		}
 	}
 	return 1;

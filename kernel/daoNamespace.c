@@ -294,6 +294,8 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		size = 0;
 		name1 = DString_New(1);
 		name2 = DString_New(1);
+		DaoNamespace_InitConstEvalData( self );
+
 		parser = DaoParser_New();
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
@@ -390,6 +392,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DTypeSpecTree *sptree = NULL;
 	daoint i, k, n, ret = DAO_DT_UNSCOPED;
 
+	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
 	parser->routine = self->constEvalRoutine;
@@ -629,6 +632,7 @@ DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, Da
 	DaoValue *value;
 
 	if( parser == NULL ){
+		DaoNamespace_InitConstEvalData( self );
 		parser = DaoParser_New();
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
@@ -665,6 +669,7 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 	DaoRoutine *func;
 	int i = 0;
 	int ec = 0;
+	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
 	parser->defParser = defparser = DaoParser_New();
@@ -747,6 +752,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->inputs = DString_New(1);
 	self->sources = DArray_New(D_ARRAY);
 	self->tokens = DHash_New(D_STRING,0);
+	self->constEvalProcess = NULL;
+	self->constEvalRoutine = NULL;
 
 	DString_SetMBS( self->lang, "dao" );
 	DArray_Append( self->namespaces, self );
@@ -768,18 +775,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	value = (DaoValue*) DaoList_New();
 	DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
 
-	self->tempTypes = DArray_New(0);
-	self->constEvalProcess = DaoProcess_New(vms);
-	self->constEvalRoutine = DaoRoutine_New( self, NULL, 1 );
-	self->constEvalRoutine->routType = dao_routine;
-	self->constEvalProcess->activeNamespace = self;
-	GC_IncRC( dao_routine );
-	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
-	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
-	self->constEvalRoutine->trait |= DAO_VALUE_CONST;
-	self->constEvalProcess->trait |= DAO_VALUE_CONST;
-	DArray_Append( self->cstData, (DaoValue*) self->constEvalRoutine );
-	DArray_Append( self->cstData, (DaoValue*) self->constEvalProcess );
 	DString_Delete( name );
 	self->cstUser = self->cstData->size;
 
@@ -810,7 +805,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 
 	DaoList_Delete( self->argParams );
 	DMap_Delete( self->lookupTable );
-	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->cstData );
 	DArray_Delete( self->varData );
 	DArray_Delete( self->varType );
@@ -835,6 +829,21 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DArray_Delete( self->sources );
 	DMap_Delete( self->tokens );
 	dao_free( self );
+}
+void DaoNamespace_InitConstEvalData( DaoNamespace *self )
+{
+	if( self->constEvalProcess ) return;
+	self->constEvalProcess = DaoProcess_New( self->vmSpace );
+	self->constEvalRoutine = DaoRoutine_New( self, NULL, 1 );
+	self->constEvalRoutine->routType = dao_routine;
+	self->constEvalProcess->activeNamespace = self;
+	GC_IncRC( dao_routine );
+	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
+	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
+	self->constEvalRoutine->trait |= DAO_VALUE_CONST;
+	self->constEvalProcess->trait |= DAO_VALUE_CONST;
+	DArray_Append( self->auxData, (DaoValue*) self->constEvalRoutine );
+	DArray_Append( self->auxData, (DaoValue*) self->constEvalProcess );
 }
 void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 {

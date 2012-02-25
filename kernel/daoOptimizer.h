@@ -20,24 +20,33 @@
 #define SET_BIT0( bits, id ) bits[id/8] &= ~(1<<(id%8))
 #define SET_BIT1( bits, id ) bits[id/8] |= (1<<(id%8))
 
-enum { DAO_OP_NONE, DAO_OP_SINGLE, DAO_OP_PAIR, DAO_OP_TRIPLE, DAO_OP_RANGE, DAO_OP_RANGE2 };
+enum DaoCnodeOperandType
+{
+	DAO_OP_NONE,
+	DAO_OP_SINGLE,
+	DAO_OP_PAIR,
+	DAO_OP_TRIPLE,
+	DAO_OP_RANGE,
+	DAO_OP_RANGE2
+};
 
 
 /* Code Node */
 struct DaoCnode
 {
-	ushort_t  index;
-	ushort_t  type;  /* use type of variable: DAO_OP_NONE/SINGLE/PAIR/RANGE; */
-	ushort_t  first; /* the only (for SINGLE) or the first (for PAIR/RANGE) used variable; */
-	ushort_t  second; /* the second (for PAIR) or the last (for RANGE) used variable; */
-	ushort_t  third;  /* the third (for TRIPLE) used variable; */
-	ushort_t  lvalue; /* variable defined by the instruction; 0xffff for none; */
-	ushort_t  lvalue2; /* C operand for SETF, SETI, SETDI, SETMI instructions; */
-	ushort_t  exprid; /* expression id; 0xffff for none; */
-	ushort_t  ones; /* number of ones in the bit array; */
+	uchar_t   type;       /* use type of operands; */
+	uchar_t   reachable;  /* reachable status; */
+	ushort_t  index;      /* index of the node; */
+	ushort_t  first;      /* the only (for SINGLE) or the first (for PAIR/RANGE) used variable; */
+	ushort_t  second;     /* the second (for PAIR) or the last (for RANGE) used variable; */
+	ushort_t  third;      /* the third (for TRIPLE) used variable; */
+	ushort_t  lvalue;     /* variable defined by the instruction; 0xffff for none; */
+	ushort_t  lvalue2;    /* C operand for SETF, SETI, SETDI, SETMI instructions; */
+	ushort_t  exprid;     /* expression id; 0xffff for none; */
+	ushort_t  ones;       /* number of ones in the bit array; */
 
-	DArray   *ins;  /* in nodes in the flow graph; */
-	DArray   *outs; /* out nodes in the flow graph; */
+	DArray   *ins;   /* in nodes in the flow graph; */
+	DArray   *outs;  /* out nodes in the flow graph; */
 	DArray   *kills; /* expressions that are killed by this one; */
 
 	DArray   *defs; /* definitions for this use node; */
@@ -74,6 +83,7 @@ struct DaoOptimizer
 	DArray  *tmp2;
 	DString *tmp3;
 
+	DArray  *array;
 	DArray  *nodeCache;
 	DArray  *arrayCache;
 };

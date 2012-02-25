@@ -62,7 +62,6 @@ struct DaoNamespace
 
 	DaoProcess  *constEvalProcess;
 	DaoRoutine  *constEvalRoutine;
-	DArray      *tempTypes;
 };
 
 DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
@@ -127,5 +126,7 @@ DAO_DLL DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *p
 
 DAO_DLL DaoValue* DaoValue_FindAuxMethod( DaoValue *self, DString *name, DaoNamespace *nspace );
 DAO_DLL DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nspace );
+
+DAO_DLL void DaoNamespace_InitConstEvalData( DaoNamespace *self );
 
 #endif
