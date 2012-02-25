@@ -1218,7 +1218,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_ARRAY :
 		{
 			DaoArray *array = (DaoArray*) value;
-			cycRefCountDecrement( (DaoValue*) array->unitype );
+			cycRefCountDecrement( (DaoValue*) array->original );
 			break;
 		}
 #endif
@@ -1413,7 +1413,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_ARRAY :
 		{
 			DaoArray *array = (DaoArray*) value;
-			cycRefCountIncrement( (DaoValue*) array->unitype );
+			cycRefCountIncrement( (DaoValue*) array->original );
 			break;
 		}
 #endif
@@ -1608,7 +1608,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_ARRAY :
 		{
 			DaoArray *array = (DaoArray*) value;
-			directRefCountDecrement( (DaoValue**) & array->unitype );
+			directRefCountDecrement( (DaoValue**) & array->original );
 			break;
 		}
 #endif

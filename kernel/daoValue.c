@@ -442,15 +442,10 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		{
 			DaoArray *array = (DaoArray*) self;
 			DaoArray *copy = DaoArray_New( array->etype );
-			copy->unitype = array->unitype;
 			if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
 				int nt = tp->nested->items.pType[0]->tid;
-				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ){
-					copy->unitype = tp;
-					copy->etype = nt;
-				}
+				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
 			}
-			GC_IncRC( copy->unitype );
 			DaoArray_ResizeArray( copy, array->dims, array->ndim );
 			DaoArray_CopyArray( copy, array );
 			return (DaoValue*) copy;
@@ -543,14 +538,6 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 		GC_ShiftRC( tp, to->xTuple.unitype );
 		to->xTuple.unitype = tp;
 		break;
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY :
-		if( tp->tid == DAO_ANY ) tp = dao_array_any;
-		if( to->xArray.unitype && !(to->xArray.unitype->attrib & DAO_TYPE_UNDEF) ) break;
-		GC_ShiftRC( tp, to->xArray.unitype );
-		to->xArray.unitype = tp;
-		break;
-#endif
 	default : break;
 	}
 }
@@ -629,7 +616,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 		DaoType *ST = NULL;
 		switch( (S->type << 8) | T->tid ){
 		case (DAO_TUPLE<<8)|DAO_TUPLE : ST = S->xTuple.unitype; break;
-		case (DAO_ARRAY<<8)|DAO_ARRAY : ST = S->xArray.unitype; break;
+		case (DAO_ARRAY<<8)|DAO_ARRAY : ST = dao_array_types[ S->xArray.etype ]; break;
 		case (DAO_LIST <<8)|DAO_LIST  : ST = S->xList.unitype; break;
 		case (DAO_MAP  <<8)|DAO_MAP   : ST = S->xMap.unitype; break;
 		case (DAO_CDATA<<8)|DAO_CDATA : ST = S->xCdata.ctype; break;

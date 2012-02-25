@@ -1806,6 +1806,7 @@ DaoType *dao_access_enum = NULL;
 DaoType *dao_storage_enum = NULL;
 DaoType *dao_dynclass_field = NULL;
 DaoType *dao_dynclass_method = NULL;
+DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
 /* name:string,value:any,storage:enum<>,access:enum<> */
 const char *field_typename = 
@@ -1943,8 +1944,8 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_any );
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_int );
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_float );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_complex );
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_double );
+	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_complex );
 	DaoFactory_CacheValue( factory, (DaoValue*) dao_routine );
 
 	mainVmSpace = vms = DaoVmSpace_New();
@@ -1965,6 +1966,12 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
 	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
 	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, NULL );
+
+	dao_array_types[DAO_NONE] = dao_array_any;
+	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
+	dao_array_types[DAO_FLOAT]   = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_float, 1 );
+	dao_array_types[DAO_DOUBLE]  = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_double, 1 );
+	dao_array_types[DAO_COMPLEX] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 
 #ifdef DEBUG
 	DaoNamespace_TypeDefine( ns, "int", "short" );

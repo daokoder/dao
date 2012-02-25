@@ -159,11 +159,8 @@ struct DaoArray
 		complex16  *c;
 	} data;
 
-	DaoType *unitype;
-
-	daoint    count; /* count of sliced elements */
-	DArray   *slices; /* list of slicing in each dimension */
 	DaoArray *original; /* original array */
+	DArray   *slices; /* list of slicing in each dimension */
 
 };
 #ifdef DAO_WITH_NUMARRAY

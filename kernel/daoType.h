@@ -113,6 +113,7 @@ extern DaoType *dao_access_enum;
 extern DaoType *dao_storage_enum;
 extern DaoType *dao_dynclass_field;
 extern DaoType *dao_dynclass_method;
+extern DaoType *dao_array_types[DAO_COMPLEX+1];
 
 DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DArray *nest );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );

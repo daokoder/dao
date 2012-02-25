@@ -3558,6 +3558,9 @@ NotExist_TryAux:
 		case DVM_LOAD :
 			DaoInferencer_UpdateType( self, opc, at );
 			AssertTypeMatching( at, types[opc], defs );
+			if( at == types[opc] && at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && consts[opa] == NULL ){
+				vmc->code = DVM_MOVE_PP;
+			}
 			break;
 		case DVM_MOVE :
 			{
@@ -3803,33 +3806,47 @@ NotExist_TryAux:
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
-		case DVM_NOT : case DVM_UNMS : case DVM_BITREV :
-			{
-				/* force the result of DVM_NOT to be a number? */
-				DaoInferencer_UpdateType( self, opc, at );
-				if( NoCheckingType( at ) ) continue;
-				AssertTypeMatching( types[opa], types[opc], defs );
-				ct = types[opc];
-				/*
-				   printf( "a: %s\n", types[opa]->name->mbs );
-				   printf( "c: %s\n", types[opc]->name->mbs );
-				 */
-				if( typed_code == 0 ) break;
-				if( at->tid == ct->tid && at->tid == DAO_COMPLEX && code == DVM_UNMS ){
-					vmc->code = DVM_UNMS_C;
-					break;
+		case DVM_NOT :
+			ct = DaoInferencer_UpdateType( self, opc, dao_type_int );
+			if( NoCheckingType( at ) ) continue;
+			AssertTypeMatching( dao_type_int, ct, defs );
+			if( at->realnum ){
+				if( typed_code ) continue;
+				if( ct->realnum ) inode->code = DVM_NOT_I + (at->tid - DAO_INTEGER);
+				if( ct != dao_type_int ) DaoInferencer_InsertMove2( self, inode, ct, dao_type_int );
+				continue;
+			}
+			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue; // XXX enum
+			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
+			goto InvOper;
+			break;
+		case DVM_UNMS :
+			ct = DaoInferencer_UpdateType( self, opc, at );
+			if( NoCheckingType( at ) ) continue;
+			AssertTypeMatching( at, ct, defs );
+			if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
+				if( typed_code ){
+					if( at != ct ) DaoInferencer_InsertMove( self, inode, & inode->a, at, ct );
+					inode->code = DVM_UNMS_I + (ct->tid - DAO_INTEGER);
 				}
-				if( at->realnum == 0 || ct->realnum == 0 ) break;
-				if( code == DVM_BITREV ){
+				continue;
+			}
+			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue;
+			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
+			goto InvOper;
+			break;
+		case DVM_BITREV :
+			{
+				ct = DaoInferencer_UpdateType( self, opc, at );
+				if( NoCheckingType( at ) ) continue;
+				AssertTypeMatching( at, ct, defs );
+				if( typed_code && at->realnum && ct->realnum ){
 					if( at->tid != DAO_INTEGER )
 						DaoInferencer_InsertMove( self, inode, & inode->a, at, dao_type_int );
 					vmc->code = DVM_BITREV_I;
 					if( ct->tid != DAO_INTEGER )
 						DaoInferencer_InsertMove2( self, inode, dao_type_int, ct );
-					break;
 				}
-				vmc->code = DVM_NOT_I + 3*(code - DVM_NOT) + at->tid - DAO_INTEGER;
-				if( ct->tid != at->tid ) DaoInferencer_InsertMove2( self, inode, at, ct );
 				break;
 			}
 		case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :

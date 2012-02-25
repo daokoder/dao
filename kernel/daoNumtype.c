@@ -1981,13 +1981,12 @@ static daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 }
 daoint DaoArray_SliceSize( DaoArray *self )
 {
-	daoint i, m;
+	DArray **arrays;
+	daoint i, m, n;
 	if( self->original == NULL || self->slices == NULL ) return self->size;
-	return self->count;
-	m = self->slices->size != 0;
-	for(i=0; i<self->slices->size; i++){
-		m *= self->slices->items.pArray[i]->items.pSize[1];
-	}
+	arrays = self->slices->items.pArray;
+	n = self->slices->size;
+	for(i=0,m=(n!=0); i<n; i++) m *= arrays[i]->items.pSize[1];
 	return m;
 }
 daoint DaoArray_GetInteger( DaoArray *na, daoint i )
@@ -2081,13 +2080,11 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 		return;
 	}
 	na = DaoProcess_PutArray( proc );
-	GC_ShiftRC( self->unitype, na->unitype );
 	GC_ShiftRC( self, na->original );
 	na->etype = self->etype;
-	na->unitype = self->unitype;
 	na->original = self;
 	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
-	na->count = DaoArray_MakeSlice( self, proc, & pid, 1, na->slices );
+	DaoArray_MakeSlice( self, proc, & pid, 1, na->slices );
 }
 static void DaoArray_SetOneItem( DaoArray *self, daoint id, DaoValue *value, int op )
 {
@@ -2279,7 +2276,7 @@ void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue 
 		return;
 	}
 	if( self->slices == NULL ) self->slices = DArray_New(D_ARRAY);
-	self->count = DaoArray_MakeSlice( self, proc, & pid, 1, self->slices );
+	DaoArray_MakeSlice( self, proc, & pid, 1, self->slices );
 	self->original = self;
 	if( value->type == DAO_ARRAY ){
 		DaoArray *na = & value->xArray;
@@ -2338,13 +2335,11 @@ static void DaoArray_GetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 		}
 	}
 	na = DaoProcess_PutArray( proc );
-	GC_ShiftRC( self->unitype, na->unitype );
 	GC_ShiftRC( self, na->original );
 	na->etype = self->etype;
-	na->unitype = self->unitype;
 	na->original = self;
 	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
-	na->count = DaoArray_MakeSlice( self, proc, ids, N, na->slices );
+	DaoArray_MakeSlice( self, proc, ids, N, na->slices );
 }
 static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
@@ -2383,7 +2378,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 		}
 	}
 	if( self->slices == NULL ) self->slices = DArray_New(D_ARRAY);
-	self->count = DaoArray_MakeSlice( self, proc, ids, N, self->slices );
+	DaoArray_MakeSlice( self, proc, ids, N, self->slices );
 	self->original = self;
 	if( value->type == DAO_ARRAY ){
 		DaoArray *na = & value->xArray;
@@ -2609,10 +2604,9 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 	daoint i, k, size, cmp=0, imax = -1;
 
 	if( self->etype == DAO_COMPLEX ) return;/* no exception, guaranteed by the typing system */
-	if( DaoArray_SliceSize( self ) == 0 ) return;
+	if( (size = DaoArray_SliceSize( self )) == 0 ) return;
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
-		size = self->count;
 		self = self->original;
 		if( size == 0 ) return;
 		imax = DaoArray_IndexFromSlice( self, slices, 0 );
@@ -2653,10 +2647,9 @@ static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 	daoint i, k, size, cmp=0, imax = -1;
 
 	if( self->etype == DAO_COMPLEX ) return;
-	if( DaoArray_SliceSize( self ) == 0 ) return;
+	if( (size = DaoArray_SliceSize( self )) == 0 ) return;
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
-		size = self->count;
 		self = self->original;
 		if( size == 0 ) return;
 		imax = DaoArray_IndexFromSlice( self, slices, 0 );
@@ -2696,7 +2689,7 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 	daoint i, size;
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
-		size = self->count;
+		size = DaoArray_SliceSize( self );
 		self = self->original;
 		if( size == 0 ) return;
 		if( self->etype == DAO_INTEGER ){
@@ -2758,10 +2751,9 @@ static void DaoARRAY_varn( DaoProcess *proc, DaoValue *par[], int N )
 	daoint i, size;
 
 	if( self->etype == DAO_COMPLEX ) return;
-	if( DaoArray_SliceSize( self ) ==0 ) return;
+	if( (size = DaoArray_SliceSize( self )) ==0 ) return;
 	if( self->original && self->slices ){
 		DArray *slices = self->slices;
-		size = self->count;
 		self = self->original;
 		if( size > 0 ){
 			for(i=0; i<size; i++ ){
@@ -3360,17 +3352,10 @@ static int array_count = 0;
 
 DaoArray* DaoArray_New( int etype )
 {
-	DaoArray* self = (DaoArray*) dao_malloc( sizeof( DaoArray ) );
+	DaoArray* self = (DaoArray*) dao_calloc( 1, sizeof( DaoArray ) );
 	DaoValue_Init( self, DAO_ARRAY );
 	self->etype = etype;
-	self->unitype = NULL;
-	self->size = 0;
 	self->owner = 1;
-	self->ndim = 0;
-	self->dims = NULL;
-	self->data.p = NULL;
-	self->slices = NULL;
-	self->original = NULL;
 	DaoArray_ResizeVector( self, 0 );
 #ifdef DEBUG
 	array_count ++;
@@ -3380,7 +3365,6 @@ DaoArray* DaoArray_New( int etype )
 void DaoArray_Delete( DaoArray *self )
 {
 	if( self->dims ) dao_free( self->dims );
-	if( self->unitype ) GC_DecRC( self->unitype );
 	if( self->owner && self->data.p ) dao_free( self->data.p );
 	if( self->slices ) DArray_Delete( self->slices );
 	if( self->original ) GC_DecRC( self->original );
@@ -3528,8 +3512,6 @@ static int DaoArray_DataTypeSize( DaoArray *self )
 DaoArray* DaoArray_Copy( DaoArray *self )
 {
 	DaoArray *copy = DaoArray_New( self->etype );
-	copy->unitype = self->unitype;
-	GC_IncRC( copy->unitype );
 	DaoArray_ResizeArray( copy, self->dims, self->ndim );
 	memcpy( copy->data.p, self->data.p, self->size * DaoArray_DataTypeSize( self ) );
 	return copy;

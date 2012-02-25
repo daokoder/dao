@@ -177,8 +177,6 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_ARRAY :
 		itype = types && self->nested->size > 0 ? types[0] : NULL;
 		value = (DaoValue*) DaoArray_New( itype ? itype->tid : DAO_INTEGER );
-		value->xArray.unitype = self;
-		GC_IncRC( self );
 		break;
 #endif
 	case DAO_LIST :
@@ -685,7 +683,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		break;
 	case DAO_ARRAY :
 		if( value->xArray.size == 0 ) return DAO_MT_ANY;
-		tp = value->xArray.unitype;
+		tp = dao_array_types[ value->xArray.etype ];
 		if( tp == self ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;

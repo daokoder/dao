@@ -1347,7 +1347,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = map->unitype; break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
-		abtp = array->unitype; break;
+		abtp = dao_array_types[ array->etype ]; break;
 #endif
 	case DAO_OBJECT :
 		abtp = p->xObject.defClass->objType; break;
@@ -1455,12 +1455,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			map->unitype = abtp;
 			GC_IncRC( abtp );
 			break;
-#ifdef DAO_WITH_NUMARRAY
-		case DAO_ARRAY :
-			array->unitype = abtp;
-			GC_IncRC( abtp );
-			break;
-#endif
 		case DAO_PAR_NAMED :
 			GC_IncRC( abtp );
 			nameva->unitype = abtp;
