@@ -779,6 +779,55 @@ static void DaoOptimizer_InitNodesRDA( DaoOptimizer *self )
 	}
 }
 
+static void DaoRoutine_UpdateCodes( DaoRoutine *self )
+{
+	DArray *annotCodes = self->body->annotCodes;
+	DaoVmcArray *vmCodes = self->body->vmCodes;
+	DaoVmCodeX *vmc, **vmcs = annotCodes->items.pVmc;
+	int i, C, K, N = annotCodes->size;
+	int *ids;
+
+	if( vmCodes->size < N ) DaoVmcArray_Resize( vmCodes, N );
+	ids = (int*)vmCodes->codes; /* as temporary buffer; */
+	for(i=0,K=0; i<N; i++){
+		ids[i] = K;
+		K += vmcs[i]->code < DVM_UNUSED;
+	}
+	for(i=0,K=0; i<N; i++){
+		vmc = vmcs[i];
+		if( vmc->code >= DVM_UNUSED ) continue;
+		switch( vmc->code ){
+		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
+		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
+			vmc->b = ids[ vmc->b ];
+			break;
+		case DVM_CATCH :
+			vmc->c = ids[ vmc->c ];
+			break;
+		default : break;
+		}
+		*vmcs[K++] = *vmc;
+	}
+	annotCodes->size = K;
+	vmCodes->size = K;
+	N = 0;
+	for(i=0; i<K; i++){
+		vmc = vmcs[i];
+		vmCodes->codes[i] = *(DaoVmCode*)vmc;
+		C = vmc->code;
+		if( C == DVM_GOTO || C == DVM_TEST || (C >= DVM_TEST_I && C <= DVM_TEST_D) ){
+			if( vmc->b == (i+1) ){
+				vmc->code = DVM_UNUSED;
+				N = 1;
+			}
+		}
+	}
+	if( N ) DaoRoutine_UpdateCodes( self );
+	if( annotCodes->size < 0.8 * annotCodes->bufsize ){
+		DArray_Resize( annotCodes, annotCodes->size, NULL );
+		DaoVmcArray_Resize( vmCodes, vmCodes->size );
+	}
+}
 static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine, DArray *mapping )
 {
 	DNode *it;
@@ -1052,11 +1101,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		DaoOptimizer_ProcessWorklist( self, worklist );
 	}
 	DArray_Delete( worklist );
-	DArray_CleanupCodes( annotCodes );
-	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
-	for(i=0,N=annotCodes->size; i<N; i++){
-		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
-	}
+	DaoRoutine_UpdateCodes( routine );
 }
 /* Dead Code Elimination: */
 static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
@@ -1142,11 +1187,7 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 	DArray_Delete( array );
 	DArray_Delete( unused2 );
 	DArray_Delete( worklist );
-	DArray_CleanupCodes( annotCodes );
-	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
-	for(i=0,N=annotCodes->size; i<N; i++){
-		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
-	}
+	DaoRoutine_UpdateCodes( routine );
 }
 /* Simple remapping the used registers to remove the unused ones: */
 static void DaoOptimizer_RemapRegister( DaoOptimizer *self, DaoRoutine *routine )
@@ -1216,11 +1257,7 @@ static void DaoOptimizer_RemoveUnreachableCodes( DaoOptimizer *self, DaoRoutine 
 	for(i=0; i<N; i++){
 		if( nodes[i]->reachable == 0 ) codes[i]->code = DVM_UNUSED;
 	}
-	DArray_CleanupCodes( annotCodes );
-	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
-	for(i=0,N=annotCodes->size; i<N; i++){
-		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
-	}
+	DaoRoutine_UpdateCodes( routine );
 	DaoOptimizer_RemapRegister( self, routine );
 }
 /* Remove redundant registers for the same data types: */
@@ -1355,35 +1392,32 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 		if( vmc->code >= DVM_MOVE_II && vmc->code <= DVM_MOVE_XX && vmc->a == vmc->c )
 			vmc->code = DVM_UNUSED;
 	}
-	DArray_CleanupCodes( annotCodes );
-	DaoVmcArray_Resize( routine->body->vmCodes, annotCodes->size );
-	for(i=0,N=annotCodes->size; i<N; i++){
-		routine->body->vmCodes->codes[i] = *(DaoVmCode*) annotCodes->items.pVmc[i];
-	}
+	DaoRoutine_UpdateCodes( routine );
 }
 
 static void DaoRoutine_Optimize( DaoRoutine *self )
 {
-	DaoOptimizer *optimizer;
+	DaoOptimizer *optimizer = DaoOptimizer_New();
 	DaoVmSpace *vms = self->nameSpace->vmSpace;
 	daoint i, k, notide = ! (vms->options & DAO_EXEC_IDE);
 
-	if( daoConfig.optimize == 0 ) return;
+	if( daoConfig.optimize == 0 ) goto Done;
+
+	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+
 	/* Do not perform optimization if it may take too much memory (1M): */
-	if( (self->body->vmCodes->size * self->body->regCount) > 8000000 ) return;
+	if( (self->body->vmCodes->size * self->body->regCount) > 8000000 ) goto Done;
 	if( self->body->vmCodes->size > 400 && self->body->regCount > 200 ){
 		DaoType *type, **types = self->body->regType->items.pType;
-		if( self->body->simpleVariables->size < self->body->regCount / 2 ) return;
+		if( self->body->simpleVariables->size < self->body->regCount / 2 ) goto Done;
 		for(i=0,k=0; i<self->body->simpleVariables->size; i++){
 			type = types[ self->body->simpleVariables->items.pInt[i] ];
 			k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_LONG : 0;
 		}
 		/* Optimize only if there are sufficient amount of numeric calculations: */
-		if( k < self->body->regCount / 2 ) return;
+		if( k < self->body->regCount / 2 ) goto Done;
 	}
 
-	optimizer = DaoOptimizer_New();
-	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 	DaoOptimizer_MergeRegister( optimizer, self );
 	DaoOptimizer_CSE( optimizer, self );
 	DaoOptimizer_DCE( optimizer, self );
@@ -1391,7 +1425,14 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 
 	//DaoOptimizer_LinkDU( optimizer, self );
 
-	if( notide && daoConfig.jit && dao_jit.Compile ) dao_jit.Compile( self, optimizer );
+	if( notide && daoConfig.jit && dao_jit.Compile ){
+		/* LLVMContext provides no locking guarantees: */
+		DMutex_Lock( & mutex_routine_specialize );
+		dao_jit.Compile( self, optimizer );
+		DMutex_Unlock( & mutex_routine_specialize );
+	}
+
+Done:
 	DaoOptimizer_Delete( optimizer );
 }
 
@@ -2326,7 +2367,7 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 			break;
 		default : break;
 		}
-		if( it->code == DVM_UNUSED ) continue;
+		if( it->code >= DVM_UNUSED ) continue;
 		DaoVmcArray_PushBack( body->vmCodes, *(DaoVmCode*) it );
 		DArray_PushBack( body->annotCodes, (DaoVmCodeX*) it );
 	}

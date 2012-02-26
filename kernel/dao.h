@@ -967,6 +967,13 @@ DAO_DLL const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self );
 
 DAO_DLL void DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 
+/*
+// DaoVmSpace_TryInitJIT() tries to load the JIT module.
+// If "module" is NULL, the module will be searched in the module paths.
+// Return 1 on success.
+*/
+DAO_DLL int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module );
+
 
 
 /*

@@ -21,12 +21,26 @@ extern "C"{
 void DaoJIT_Init( DaoVmSpace *vms, DaoJIT *jit );
 void DaoJIT_Quit();
 
-void DaoJIT_Free( DaoRoutine *routine );
+void DaoJIT_Free( void *jitdata );
 void DaoJIT_Compile( DaoRoutine *routine, DaoOptimizer *optimizer );
 void DaoJIT_Execute( DaoProcess *process, DaoJitCallData *data, int jitcode );
+
 }
 
 using namespace llvm;
+
+typedef int (*DaoJitFunction)( DaoJitCallData *data );
+
+struct DaoJitFunctionData
+{
+	Function       *llvmFunction;
+	DaoJitFunction  funcPointer;
+
+	DaoJitFunctionData( Function *function = NULL, DaoJitFunction fpter = NULL ){
+		llvmFunction = function;
+		funcPointer = fpter;
+	}
+};
 
 struct DaoJitHandle : public IRBuilder<>
 {

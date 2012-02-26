@@ -519,7 +519,7 @@ void SplitByWhiteSpaces( DString *str, DArray *tokens )
 	DString_Delete( tok );
 }
 
-int DaoJIT_TryInit( DaoVmSpace *vms );
+int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module );
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 {
 	DString *str = DString_New(1);
@@ -609,7 +609,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 	}
 	DString_Delete( str );
 	DArray_Delete( array );
-	if( daoConfig.jit && dao_jit.Compile == NULL && DaoJIT_TryInit( self ) == 0 ){
+	if( daoConfig.jit && dao_jit.Compile == NULL && DaoVmSpace_TryInitJIT( self, NULL ) == 0 ){
 		DaoStream_WriteMBS( self->errorStream, "Failed to enable Just-In-Time compiling!\n" );
 	}
 	return 1;
@@ -1836,19 +1836,29 @@ void print_trace();
 extern DMap *dao_cdata_bindings;
 extern DHash *dao_meta_tables;
 
-int DaoJIT_TryInit( DaoVmSpace *vms )
+int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 {
 	DString *name = DString_New(1);
 	void (*init)( DaoVmSpace*, DaoJIT* );
-	void *jitHandle;
-	DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
-	DaoVmSpace_MakePath( vms, name, DAO_FILE_PATH, 1 );
-	jitHandle = DaoLoadLibrary( name->mbs );
+	void *jitHandle = NULL;
+	if( module ){
+		DString_SetMBS( name, module );
+		jitHandle = DaoLoadLibrary( name->mbs );
+	}else{
+		DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
+		DaoVmSpace_MakePath( self, name, DAO_FILE_PATH, 1 );
+		jitHandle = DaoLoadLibrary( name->mbs );
+		if( jitHandle == NULL ){
+			DString_SetMBS( name, "DaoJIT" DAO_DLL_SUFFIX );
+			DaoVmSpace_MakePath( self, name, DAO_FILE_PATH, 1 );
+			jitHandle = DaoLoadLibrary( name->mbs );
+		}
+	}
 	DString_Delete( name );
 	if( jitHandle == NULL ) return 0;
 	init = (DaoJIT_InitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Init" );
 	if( init == NULL ) return 0;
-	(*init)( vms, & dao_jit );
+	(*init)( self, & dao_jit );
 	dao_jit.Quit = (DaoJIT_QuitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Quit" );
 	dao_jit.Free = (DaoJIT_FreeFPT) DaoFindSymbol( jitHandle, "DaoJIT_Free" );
 	dao_jit.Compile = (DaoJIT_CompileFPT) DaoFindSymbol( jitHandle, "DaoJIT_Compile" );

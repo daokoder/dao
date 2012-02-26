@@ -1,51 +1,34 @@
 
-CC = g++-4.2
-CC = clang++
+PROJECT = DaoJIT
 
-DAO_INC =/usr/local/dao/include
-DAO_INC =../../kernel
+include ../../Makefile.common
 
-CFLAGS = -ggdb -O0 -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
-CFLAGS = -O2 -Wall -Wno-unused -I. -I$(DAO_INC) `llvm-config --cppflags`
-LFLAGS = -fPIC `llvm-config --ldflags --libs`
-LFLAGS2 = -fPIC -ldao `llvm-config --ldflags --libs`
-
-TARGET = libDaoJIT.so
-TARGET2 = test
-
-UNAME = $(shell uname)
-
-ifeq ($(UNAME), Linux)
-	CFLAGS += -DUNIX
-	LFLAGS += -shared -Wl,-soname,libDaoJIT.so
-endif
-
-ifeq ($(UNAME), Darwin)
-	CFLAGS += -DUNIX -DMAC_OSX
-	LFLAGS += -dynamiclib -undefined dynamic_lookup -install_name libDaoJIT.dylib
-	TARGET = libDaoJIT.dylib
-endif
+TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
 
-OBJECTS = daoJIT.o
+LLVM_CFLAGS = $(shell llvm-config --cppflags)
+LLVM_LFLAGS = $(shell llvm-config --ldflags)
+LLVM_LIBS = $(shell llvm-config --libs)
+
+DAO_INCS += -I../../kernel
+DAO_LIBS += -L../..
+DAO_CFLAGS += -fno-rtti $(LLVM_CFLAGS)
+DAO_LFLAGS += $(LLVM_LIBS) $(LLVM_LFLAGS)
 
 first: all
 
-all: $(TARGET) $(TARGET2)
+all: $(TARGET)
 
 .SUFFIXES: .c .obj .cpp .cc .cxx .C
 
 .cxx.o:
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(DAO_CXX) -c $(DAO_CFLAGS) $(DAO_INCS) -o $@ $<
 
 .cpp.o:
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(DAO_CXX) -c $(DAO_CFLAGS) $(DAO_INCS) -o $@ $<
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(LFLAGS) $(OBJECTS) -o $(TARGET)
-
-$(TARGET2): test.o daoJIT.o
-	$(CC) $(LFLAGS2) test.o daoJIT.o -o $(TARGET2)
+$(TARGET): daoJIT.o
+	$(DAO_CXX) $(DAO_DLLFLAGS) daoJIT.o $(DAO_LIBS) $(DAO_LFLAGS_DAO2) $(DAO_LFLAGS) -o $(TARGET)
 
 clean:
 	rm *.o

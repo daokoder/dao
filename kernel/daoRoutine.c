@@ -263,7 +263,12 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DMap_Delete( self->abstypes );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->parser ) DaoParser_Delete( self->parser );
-	if( dao_jit.Free ) dao_jit.Free( self->jitData );
+	if( dao_jit.Free && self->jitData ){
+		/* LLVMContext provides no locking guarantees: */
+		DMutex_Lock( & mutex_routine_specialize );
+		dao_jit.Free( self->jitData );
+		DMutex_Unlock( & mutex_routine_specialize );
+	}
 	dao_free( self );
 }
 void DaoParser_ClearCodes( DaoParser *self );
