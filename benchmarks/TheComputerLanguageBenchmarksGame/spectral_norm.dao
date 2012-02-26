@@ -1,0 +1,57 @@
+#{
+-- The Computer Language Shootout
+-- http://shootout.alioth.debian.org/
+-- contributed by Isaac Gouy, tuned by Mike Pall
+-- modified by Fu Limin for Dao language.
+#}
+
+function Av( n :int, x :array<double>, y :array<double>)
+{
+	for( i = 0 : n-1 ){
+		a = 0D;
+		for( j = 0 : n-1){
+			ij = i + j;
+			a += x[j] / ( (ij*(ij+1)) / 2 + i+1);
+		}
+		y[i] = a;
+	}
+}
+
+function Atv(n :int, x :array<double>, y :array<double>)
+{
+	for( i = 0 : n-1 ){
+		a = 0D;
+		for( j = 0 : n-1){
+			ij = i + j;
+			a += x[j] / ( (ij*(ij+1)) / 2 + j+1);
+		}
+		y[i] = a;
+	}
+}
+
+function AtAv(n :int, x :array<double>, y :array<double>, t :array<double>)
+{
+	Av(n, x, t);
+	Atv(n, t, y);
+}
+
+function main( n = 100 )
+{
+	u = [ 1D : 0 : n ];
+	v = [ 1D : 0 : n ];
+	t = [ 1D : 0 : n ];
+
+	for( i = 1 : 10 ){
+		AtAv(n, u, v, t);
+		AtAv(n, v, u, t);
+	}
+
+	vBv, vv = 0D;
+	for( i = 0 : n-1 ){
+		ui = u[i];
+		vi = v[i];
+		vBv = vBv + ui*vi;
+		vv = vv + vi*vi;
+	}
+	io.writef("%0.9f\n", sqrt(vBv / vv));
+}
