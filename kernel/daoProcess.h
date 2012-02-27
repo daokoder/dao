@@ -26,14 +26,14 @@
 #define DVM_FRAME_SECT  (1<<6)
 #define DVM_FRAME_KEEP  (1<<7)
 
-#define DVM_MAX_TRY_DEPTH 16
+#define DVM_MAX_TRY_DEPTH 8
 
 struct DaoStackFrame
 {
 	ushort_t    entry;     /* entry code id */
 	ushort_t    state;     /* frame state */
 	ushort_t    returning; /* return register id */
-	ushort_t    depth; /* depth of exception scopes */
+	ushort_t    depth;     /* depth of exception scopes */
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
 
 	ushort_t      parCount;
@@ -83,7 +83,7 @@ struct DaoProcess
 	DaoVmSpace *vmSpace;
 
 	DaoStackFrame *firstFrame; /* the first frame */
-	DaoStackFrame *topFrame; /* top call frame */
+	DaoStackFrame *topFrame;   /* top call frame */
 
 	DaoVmCode     *activeCode;
 	DaoRoutine    *activeRoutine;
@@ -110,7 +110,7 @@ struct DaoProcess
 	DaoFactory *factory;
 
 #ifdef DAO_WITH_THREAD
-	int        depth;
+	daoint     depth;
 	DCondVar  *condv; /* condition variable for resuming suspended process; */
 	DMutex    *mutex; /* mutex for mt.critical::{} */
 #endif

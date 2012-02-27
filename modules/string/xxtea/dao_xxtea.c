@@ -17,7 +17,6 @@
 #include"daoString.h"
 #include"daoValue.h"
 
-DAO_INIT_MODULE
 
 /* Corrected Block Tiny Encryption Algorithm (Corrected Block TEA, or XXTEA)
  * by David Wheeler and Roger Needham

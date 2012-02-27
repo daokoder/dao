@@ -16,7 +16,6 @@
 
 #include"dao.h"
 #include"daoStream.h"
-DAO_INIT_MODULE
 
 #ifdef WIN32
 

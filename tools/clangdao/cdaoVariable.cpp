@@ -594,6 +594,7 @@ CDaoVariable::CDaoVariable( CDaoModule *mod, const VarDecl *decl )
 	isArithmeticType = false;
 	isObjectType = false;
 	isPointerType = false;
+	useDaoString = false;
 	SetDeclaration( decl );
 }
 void CDaoVariable::SetQualType( QualType qtype, SourceLocation loc )
@@ -628,6 +629,8 @@ void CDaoVariable::SetHints( const string & hints )
 			isNullable = true;
 		}if( hint == "unsupported" ){
 			unsupported = true;
+		}if( hint == "string" ){
+			useDaoString = true;
 		}if( hint == "callbackdata" ){
 			isUserData = true;
 			size_t pos2 = hints2.find( "_hint_", pos );
@@ -637,8 +640,10 @@ void CDaoVariable::SetHints( const string & hints )
 				callback = hints2.substr( pos+1, pos2 - pos - 1 );
 			}
 			if( callback == "" ) errs() << "Warning: need callback name for \"callbackdata\" hint!\n";
-		}else if( hint == "array" ){
+		}else if( hint == "array" || hint == "qname" ){
 			size_t pos2 = hints2.find( "_hint_", pos );
+			vector<string> *parts = & sizes;
+			if( hint == "qname" ) parts = & scopes;
 			hint = "";
 			if( pos2 != pos ){
 				if( pos2 == string::npos ){
@@ -649,14 +654,14 @@ void CDaoVariable::SetHints( const string & hints )
 			}
 			size_t from = 0;
 			while( (pos = hint.find( '_', from )) < pos2 ){
-				sizes.push_back( hint.substr( from, pos - from ) );
+				parts->push_back( hint.substr( from, pos - from ) );
 				from = pos + 1;
 			}
 			if( from < pos2 ){
 				if( pos2 == string::npos ){
-					sizes.push_back( hint.substr( from ) );
+					parts->push_back( hint.substr( from ) );
 				}else{
-					sizes.push_back( hint.substr( from, pos2 - from ) );
+					parts->push_back( hint.substr( from, pos2 - from ) );
 				}
 			}
 			//outs() << "array hint: " << hint << " " << sizes.size() << "\n";
@@ -687,8 +692,15 @@ int CDaoVariable::Generate2( int daopar_index, int cxxpar_index )
 	if( initor ){
 		SourceRange range = initor->getSourceRange();
 		daodefault = module->ExtractSource( range, true );
+
+		for(int i=0,n=scopes.size(); i<n; i++){
+			daodefault = scopes[i] + "::" + daodefault;
+			cxxdefault = scopes[i] + "::" + cxxdefault;
+		}
 		cxxdefault = "=" + daodefault;
 		if( daodefault == "0L" ) daodefault = "0";
+
+		std::replace( daodefault.begin(), daodefault.end(), '\"', '\'');
 
 		Preprocessor & pp = module->compiler->getPreprocessor();
 		SourceManager & sm = module->compiler->getSourceManager();

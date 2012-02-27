@@ -463,9 +463,8 @@ const string cxx_wrap_alloc2 =
 const string tpl_class_def = 
 "class DAO_DLL_$(module) DaoCxxVirt_$(idname) $(virt_supers)\n{\n\
 	public:\n\
-	DaoCxxVirt_$(idname)(){ self = 0; cdata = 0; }\n\
-	void DaoInitWrapper( $(qname) *self, DaoCdata *d );\n\n\
-	$(qname) *self;\n\
+	DaoCxxVirt_$(idname)(){ cdata = 0; }\n\
+	void DaoInitWrapper( DaoCdata *d );\n\n\
 	DaoCdata *cdata;\n\
 \n$(virtuals)\n\
 $(qt_virt_emit)\n\
@@ -483,9 +482,8 @@ const string tpl_class2 =
 tpl_class_def + "$(qname)* Dao_$(idname)_Copy( const $(qname) &p );\n";
 
 const string tpl_class_init =
-"void DaoCxxVirt_$(idname)::DaoInitWrapper( $(qname) *s, DaoCdata *d )\n\
+"void DaoCxxVirt_$(idname)::DaoInitWrapper( DaoCdata *d )\n\
 {\n\
-	self = s;\n\
 	cdata = d;\n\
 $(init_supers)\
 $(qt_init)\
@@ -501,7 +499,7 @@ void DaoCxx_$(idname)::DaoInitWrapper()\n\
 {\n\
 	cdata = DaoCdata_New( dao_type_$(idname), this );\n\
 	DaoGC_IncRC( (DaoValue*)cdata );\n\
-	DaoCxxVirt_$(idname)::DaoInitWrapper( this, cdata );\n\
+	DaoCxxVirt_$(idname)::DaoInitWrapper( cdata );\n\
 $(qt_make_linker)\
 }\n";
 const string tpl_class_init_qtss = 
@@ -545,7 +543,7 @@ const string tpl_class_init2 =
 	return self;\n\
 }\n";
 
-const string tpl_init_super = "\tDaoCxxVirt_$(super)::DaoInitWrapper( s, d );\n";
+const string tpl_init_super = "\tDaoCxxVirt_$(super)::DaoInitWrapper( d );\n";
 
 const string tpl_meth_decl =
 "\t$(retype) $(name)( int &_cs$(comma) $(parlist) )$(extra);\n";
@@ -689,6 +687,18 @@ void CDaoUserType::SetDeclaration( RecordDecl *decl )
 	name = name2 = decl->getNameAsString();
 	size_t pos;
 	if( (pos = name.find( '<' )) != string::npos ) name.erase( pos );
+
+	map<string,vector<string> >::iterator it = module->functionHints.find( qname );
+	if( it == module->functionHints.end() ){
+		string qname2 = qname;
+		if( (pos = qname2.find( '<' )) != string::npos ) qname2.erase( pos );
+		it = module->functionHints.find( qname2 );
+	}
+	if( it != module->functionHints.end() ){
+		CDaoVariable var;
+		var.SetHints( it->second[0] );
+		if( var.unsupported ) forceOpaque = true;
+	}
 }
 void CDaoUserType::SetNamespace( const CDaoNamespace *ns )
 {
@@ -1010,6 +1020,7 @@ int CDaoUserType::Generate( CXXRecordDecl *decl )
 		CDaoVariable field( module );
 		field.SetQualType( fit->getTypeSourceInfo()->getType(), location );
 		field.name = fit->getNameAsString();
+		if( field.name == "" ) continue;
 		field.Generate( VAR_INDEX_FIELD );
 		if( field.unsupported ) continue;
 		kvmap[ "name" ] = field.name;

@@ -42,7 +42,6 @@ typedef size_t socklen_t;
 
 #include"dao.h"
 
-DAO_INIT_MODULE
 
 #define dao_malloc malloc
 #define dao_free free
@@ -1066,7 +1065,11 @@ void DaoNetwork_Init( DaoVmSpace *vms, DaoNamespace *ns )
 
 }
 
+#ifdef DAO_INLINE_NET
+int DaoNetwork_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#else
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#endif
 {
 	daox_type_socket = DaoNamespace_WrapType( ns, & socketTyper, 1 );
 	DaoNamespace_WrapType( ns, & libNetTyper, 1 );

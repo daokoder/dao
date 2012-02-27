@@ -24,7 +24,6 @@
 #define fmin __min
 #endif
 
-DAO_INIT_MODULE
 
 static void MATH_abs( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -341,7 +340,11 @@ DaoNumItem mathConsts[] =
 	{ NULL, 0.0, 0.0 }
 };
 
+#ifdef DAO_INLINE_MATH
+int DaoMath_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#else
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#endif
 {
 	DaoNamespace_WrapFunctions( ns, mathMeths );
 	DaoNamespace_AddConstNumbers( ns, mathConsts );

@@ -16,7 +16,6 @@
 #include"daoString.h"
 #include"daoValue.h"
 
-DAO_INIT_MODULE
 
 static void DaoSTR_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 {

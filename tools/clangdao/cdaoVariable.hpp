@@ -37,6 +37,7 @@ struct CDaoVariable
 	bool    hasArrayHint;
 	bool    unsupported;
 	bool    useDefault;
+	bool    useDaoString;
 	string  name;
 	string  cxxdefault;
 	string  daodefault;
@@ -61,6 +62,7 @@ struct CDaoVariable
 
 	string          callback;
 	vector<string>  sizes;
+	vector<string>  scopes;
 
 	CDaoVariable( CDaoModule *mod = NULL, const VarDecl *decl = NULL );
 

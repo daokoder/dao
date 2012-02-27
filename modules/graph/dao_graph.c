@@ -15,8 +15,6 @@
 #include"daoValue.h"
 #include"dao_graph.h"
 
-DAO_INIT_MODULE
-
 
 /* @W: type of weights (U1, U2, U3) in nodes, (W1, W2, W3) in edges; */
 /* @N: type of user data for nodes; */

@@ -34,6 +34,73 @@ DAO_OBJECTS = kernel/daoArray.o \
               kernel/daoRegex.o
 
 
+ifeq ($(inline),all)
+  aux = yes
+  sys = yes
+  math = yes
+  meta = yes
+  fsnode = yes
+  net = yes
+  cgi = yes
+  json = yes
+  sync = yes
+endif
+
+ifeq ($(aux),yes)
+  DAO_INCS += -Imodules/auxlib
+  DAO_CFLAGS += -DDAO_INLINE_AUX
+  DAO_OBJECTS += modules/auxlib/dao_aux.o
+endif
+
+ifeq ($(sys),yes)
+  DAO_INCS += -Imodules/syslib
+  DAO_CFLAGS += -DDAO_INLINE_SYS
+  DAO_OBJECTS += modules/syslib/dao_sys.o
+endif
+
+ifeq ($(math),yes)
+  DAO_INCS += -Imodules/math
+  DAO_CFLAGS += -DDAO_INLINE_MATH
+  DAO_OBJECTS += modules/math/dao_math.o
+endif
+
+ifeq ($(meta),yes)
+  DAO_INCS += -Imodules/metalib
+  DAO_CFLAGS += -DDAO_INLINE_META
+  DAO_OBJECTS += modules/meta/dao_meta.o
+endif
+
+ifeq ($(fsnode),yes)
+  DAO_INCS += -Imodules/os/fs
+  DAO_CFLAGS += -DDAO_INLINE_FSNODE
+  DAO_OBJECTS += modules/os/fs/dao_fs.o
+endif
+
+ifeq ($(net),yes)
+  DAO_INCS += -Imodules/net
+  DAO_CFLAGS += -DDAO_INLINE_NET
+  DAO_OBJECTS += modules/net/dao_network.o
+endif
+
+ifeq ($(cgi),yes)
+  DAO_INCS += -Imodules/web/cgi
+  DAO_CFLAGS += -DDAO_INLINE_CGI
+  DAO_OBJECTS += modules/web/cgi/dao_cgi.o
+endif
+
+ifeq ($(json),yes)
+  DAO_INCS += -Imodules/web/json
+  DAO_CFLAGS += -DDAO_INLINE_JSON
+  DAO_OBJECTS += modules/web/json/dao_json.o
+endif
+
+ifeq ($(sync),yes)
+  DAO_INCS += -Imodules/sync
+  DAO_CFLAGS += -DDAO_INLINE_SYNC
+  DAO_OBJECTS += modules/sync/dao_sync.o
+endif
+
+
 first: all
 
 ####### Implicit rules

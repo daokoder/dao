@@ -21,7 +21,6 @@
 #include"daoVmspace.h"
 #include"daoGC.h"
 
-DAO_INIT_MODULE
 
 typedef struct DaoxHelp   DaoxHelp;
 typedef struct DaoxHelper DaoxHelper;

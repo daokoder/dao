@@ -23,8 +23,6 @@
 
 #include"dao.h"
 
-DAO_INIT_MODULE
-
 #ifdef MAC_OSX
 #  include <crt_externs.h>
 #  define environ (*_NSGetEnviron())
@@ -390,7 +388,12 @@ void DaoCGI_RandomString( DaoProcess *proc, DaoValue *p[], int N )
 			DString_AppendChar( res, (char)(255 * (rand()/(RAND_MAX+1.0))) );
 	}
 }
+
+#ifdef DAO_INLINE_CGI
+int DaoCGI_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#else
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#endif
 {
 	DaoFactory *factory = DaoVmSpace_AcquireFactory( vmSpace );
 	DaoMap *httpENV, *httpGET, *httpPOST, *httpFILE, *httpCOOKIE;

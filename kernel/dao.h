@@ -100,25 +100,7 @@
 #endif
 
 
-#ifdef __cplusplus
-#define DAO_EXTC_OPEN extern "C"{
-#define DAO_EXTC_CLOSE }
-#else
-#define DAO_EXTC_OPEN
-#define DAO_EXTC_CLOSE
-#endif
-
-/* define module initializer: */
-#define \
-    DAO_INIT_MODULE \
-DAO_EXTC_OPEN \
-DAO_DLL int DaoH_Version = DAO_H_VERSION; \
-DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns ); \
-DAO_EXTC_CLOSE
-
-
 #define DAO_MAX_CDATA_SUPER 10
-
 
 #ifdef __cplusplus
 extern "C"{
@@ -286,6 +268,7 @@ typedef void* (*FuncPtrCast)( void* );
 typedef void  (*FuncPtrDel)( void* );
 typedef void  (*DaoCFunction) ( DaoProcess *process, DaoValue *params[], int npar );
 
+typedef int (*DaoModuleOnLoad)( DaoVmSpace *vmspace, DaoNamespace *nspace );
 typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename, DString *emsg );
 typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out );
 
@@ -959,6 +942,7 @@ DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );
 
 DAO_DLL void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *f, const char *s );
+DAO_DLL void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, const char *f, DaoModuleOnLoad onload );
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
@@ -1085,6 +1069,7 @@ DAO_DLL DaoCdata* DaoFactory_NewCdata( DaoFactory *self, DaoType *type, void *da
 DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );
 
+DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
 
 #ifdef __cplusplus
 }

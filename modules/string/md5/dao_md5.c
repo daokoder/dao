@@ -18,7 +18,6 @@
 #include"daoString.h"
 #include"daoValue.h"
 
-DAO_INIT_MODULE
 
 static void MD5_Append( DString *md5, uint32_t h )
 {

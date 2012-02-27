@@ -36,7 +36,6 @@ extern "C" {
 #include "daoRoutine.h"
 }
 
-DAO_INIT_MODULE
 
 using namespace std;
 using namespace llvm;

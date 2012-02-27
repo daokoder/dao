@@ -18,7 +18,6 @@
 #include"daoStdtype.h"
 #include"daoStream.h"
 #include"dao_sys.h"
-DAO_INIT_MODULE
 
 #ifdef WIN32
 #define fstat _fstat

@@ -64,6 +64,7 @@ struct DaoVmSpace
     char evalCmdline;
 
     DMap  *vfiles;
+	DMap  *vmodules;
 
     /* map full file name (including path and suffix) to module namespace */
     DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */

@@ -15,7 +15,6 @@
 #include"daoStdtype.h"
 #include"daoValue.h"
 #include"daoGC.h"
-DAO_INIT_MODULE
 
 struct DaoState
 {
@@ -479,7 +478,11 @@ DaoTypeBase queueTyper = {
 	(FuncPtrDel)DaoQueue_Delete, DaoQueue_GetGCFields
 };
 
+#ifdef DAO_INLINE_SYNC
+int DaoSync_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#else
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#endif
 {
 	DaoNamespace_WrapType( ns, &stateTyper, 0 );
 	DaoNamespace_WrapType( ns, &queueTyper, 0 );

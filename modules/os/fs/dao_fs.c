@@ -19,7 +19,6 @@
 #include<sys/stat.h>
 
 #include"dao.h"
-DAO_INIT_MODULE
 
 #define dao_malloc malloc
 #define dao_free free
@@ -871,7 +870,11 @@ DaoTypeBase fsnodeTyper = {
 	"fsnode", NULL, NULL, fsnodeMeths, {NULL}, {0}, (FuncPtrDel)DInode_Delete, NULL
 };
 
+#ifdef DAO_INLINE_FSNODE
+int DaoFSNode_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#else
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+#endif
 {
 	daox_type_fsnode = DaoNamespace_WrapType( ns, & fsnodeTyper, 1 );
 	return 0;

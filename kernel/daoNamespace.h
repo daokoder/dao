@@ -82,6 +82,7 @@ DAO_DLL DaoType* DaoNamespace_GetVariableType( DaoNamespace *self, int i );
 
 DAO_DLL void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value );
 DAO_DLL DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name );
+DAO_DLL DaoValue* DaoNamespace_GetValue( DaoNamespace *self, daoint index );
 
 DAO_DLL DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name );
 DAO_DLL DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name );

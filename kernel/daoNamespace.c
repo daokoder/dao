@@ -1043,12 +1043,14 @@ void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value )
 DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
-	daoint st, id;
 	if( node == NULL ) return NULL;
-	id = node->value.pSize;
-	st = LOOKUP_ST( id );
-	if( st == DAO_GLOBAL_CONSTANT ) return DaoNamespace_GetConst( self, id );
-	if( st == DAO_GLOBAL_VARIABLE ) return DaoNamespace_GetVariable( self, id );
+	return DaoNamespace_GetValue( self, node->value.pInt );
+}
+DaoValue* DaoNamespace_GetValue( DaoNamespace *self, daoint index )
+{
+	daoint st = LOOKUP_ST( index );
+	if( st == DAO_GLOBAL_CONSTANT ) return DaoNamespace_GetConst( self, index );
+	if( st == DAO_GLOBAL_VARIABLE ) return DaoNamespace_GetVariable( self, index );
 	return NULL;
 }
 DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name )
@@ -1142,15 +1144,14 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 		DaoNamespace *ns = self->namespaces->items.pNS[i];
 		DaoNamespace_UpdateLookupTable( ns );
 		for(it=DMap_First( ns->lookupTable ); it; it=DMap_Next(ns->lookupTable,it) ){
-			DaoValue *value = DaoNamespace_GetConst( ns, it->value.pSize );
+			DaoValue *value = DaoNamespace_GetValue( ns, it->value.pInt );
 			DString *name = it->key.pString;
 			up = LOOKUP_UP( it->value.pSize );
 			pm = LOOKUP_PM( it->value.pSize );
 			st = LOOKUP_ST( it->value.pSize );
 			id = LOOKUP_ID( it->value.pSize );
 			assert( up < ns->namespaces->size );
-			if( up || pm != DAO_DATA_PUBLIC ) continue;
-			if( value == NULL ) continue;
+			if( up || pm != DAO_DATA_PUBLIC || value == NULL ) continue;
 
 			search = MAP_Find( self->lookupTable, name );
 			if( search && value->type == DAO_ROUTINE ){

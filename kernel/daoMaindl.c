@@ -27,8 +27,6 @@
 #include"dao.h"
 #include"signal.h"
 
-DAO_INIT_MODULE
-
 static int readingline = 0;
 static DaoVmSpace *vmSpace = NULL;
 
