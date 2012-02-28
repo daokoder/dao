@@ -261,6 +261,20 @@ void DaoCGC_Start()
 	DThread_Start( & gcWorker.thread, DaoCGC_Recycle, NULL );
 #endif
 }
+static void DaoValue_Delete( DaoValue *self )
+{
+	DaoTypeBase *typer = DaoValue_GetTyper( self );
+#ifdef DAO_GC_PROF
+	ObjectProfile[self->type] --;
+#endif
+	if( self->type == DAO_CDATA && self->xCdata.subtype != DAO_CDATA_DAO ){
+		DaoCdata_Delete( (DaoCdata*) self );
+	}else if( self->type == DAO_ROUTBODY ){
+		DaoRoutineBody_Delete( (DaoRoutineBody*) self );
+	}else{
+		typer->Delete( self );
+	}
+}
 static void DaoGC_DeleteSimpleData( DaoValue *value )
 {
 	if( value == NULL || value->xGC.refCount ) return;
@@ -667,20 +681,6 @@ static daoint DaoCGC_MarkIdleItems()
 	DaoIGC_MarkIdleItems();
 	DMutex_Unlock( & gcWorker.mutex_idle_list );
 	return gcWorker.kk;
-}
-static void DaoValue_Delete( DaoValue *self )
-{
-	DaoTypeBase *typer = DaoValue_GetTyper( self );
-#ifdef DAO_GC_PROF
-	ObjectProfile[self->type] --;
-#endif
-	if( self->type == DAO_CDATA && self->xCdata.subtype != DAO_CDATA_DAO ){
-		DaoCdata_Delete( (DaoCdata*) self );
-	}else if( self->type == DAO_ROUTBODY ){
-		DaoRoutineBody_Delete( (DaoRoutineBody*) self );
-	}else{
-		typer->Delete( self );
-	}
 }
 void DaoCGC_Recycle( void *p )
 {

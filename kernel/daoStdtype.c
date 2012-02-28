@@ -343,7 +343,6 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 	return NULL;
 }
 
-void DaoValue_Delete( void *self ){ dao_free( self ); }
 
 DaoValue* DaoValue_NoCopy( DaoValue *self, DaoProcess *proc, DMap *cycData )
 {
@@ -362,7 +361,7 @@ DaoTypeCore baseCore =
 };
 DaoTypeBase baseTyper =
 {
-	"none", & baseCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
+	"none", & baseCore, NULL, NULL, {0}, {0}, dao_free, NULL
 };
 static DaoNone none0 = {0,DAO_NONE,DAO_VALUE_CONST,0,1};
 static DaoNone any0  = {0,DAO_ANY,DAO_VALUE_CONST,0,1};
@@ -793,7 +792,7 @@ static DaoTypeCore numberCore=
 
 DaoTypeBase numberTyper=
 {
-	"double", & numberCore, NULL, NULL, {0}, {0}, DaoValue_Delete, NULL
+	"double", & numberCore, NULL, NULL, {0}, {0}, dao_free, NULL
 };
 
 /**/

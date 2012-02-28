@@ -453,6 +453,7 @@ struct DaoVmCode
 
 DAO_DLL const char* DaoVmCode_GetOpcodeName( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( int code );
+DAO_DLL uchar_t     DaoVmCode_GetOpcodeBase( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
 
 struct DaoVmCodeX

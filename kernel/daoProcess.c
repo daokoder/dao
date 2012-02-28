@@ -6135,18 +6135,23 @@ int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
 
 void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 {
-	DMap *deftypes;
-	DaoValue **pp = self->activeValues + vmc->a;
-	DaoValue **pp2;
 	DaoType *tp;
-	DaoRoutine *closure;
+	DaoValue **pp2;
+	DaoValue **pp = self->activeValues + vmc->a;
 	DaoRoutine *proto = & pp[0]->xRoutine;
+	DaoRoutine *closure;
+	DMap *deftypes;
 	int i;
 	if( proto->body->vmCodes->size ==0 && proto->body->annotCodes->size ){
 		if( DaoRoutine_SetVmCodes( proto, proto->body->annotCodes ) ==0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid closure" );
 			return;
 		}
+	}
+	if( proto->body->upRoutine == NULL && proto->routHost == NULL && vmc->b == 0 ){
+		/* proto->routHost is not NULL for methods of runtime class. */
+		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
+		return;
 	}
 	
 	closure = DaoRoutine_Copy( proto, 1, 1 );

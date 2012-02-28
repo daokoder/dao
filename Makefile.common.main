@@ -65,7 +65,7 @@ ifeq ($(math),yes)
 endif
 
 ifeq ($(meta),yes)
-  DAO_INCS += -Imodules/metalib
+  DAO_INCS += -Imodules/meta
   DAO_CFLAGS += -DDAO_INLINE_META
   DAO_OBJECTS += modules/meta/dao_meta.o
 endif
@@ -116,6 +116,8 @@ kernel/daoMaindl.o: kernel/daoMaindl.c
 ####### Build rules
 
 all: $(DAO_DLL) $(DAO_EXE) modules
+
+lib: $(DAO_DLL) modules
 
 $(DAO_DLL): $(DAO_OBJECTS)
 	$(DAO_CC) $(DAO_DLLFLAGS) -o $(DAO_DLL) $(DAO_OBJECTS) $(DAO_LIBS)

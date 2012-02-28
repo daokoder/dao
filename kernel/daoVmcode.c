@@ -344,6 +344,11 @@ uchar_t DaoVmCode_GetOpcodeType( int code )
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
 	return DAO_CODE_NOP;
 }
+uchar_t DaoVmCode_GetOpcodeBase( int code )
+{
+	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].base;
+	return DVM_NOP;
+}
 uchar_t DaoVmCode_CheckPermutable( int code )
 {
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].perm;
