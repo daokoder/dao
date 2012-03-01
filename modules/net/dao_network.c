@@ -1065,11 +1065,7 @@ void DaoNetwork_Init( DaoVmSpace *vms, DaoNamespace *ns )
 
 }
 
-#ifdef DAO_INLINE_NET
-int DaoNetwork_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#else
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#endif
+int DaoNet_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	daox_type_socket = DaoNamespace_WrapType( ns, & socketTyper, 1 );
 	DaoNamespace_WrapType( ns, & libNetTyper, 1 );

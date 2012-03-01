@@ -445,11 +445,7 @@ static void JSON_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, "JSON data does not form a single structure" );
 }
 
-#ifdef DAO_INLINE_JSON
 int DaoJSON_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#else
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#endif
 {
 	DaoNamespace_WrapFunction( ns, (DaoCFunction)JSON_Serialize,
 		"toJSON( self: map<string, any>|list<any>, style: enum<pretty,compact>=$pretty )=>string" );

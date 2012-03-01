@@ -528,11 +528,7 @@ void Dao_Buffer_Delete( Dao_Buffer *self )
 	dao_free( self );
 }
 
-#ifdef DAO_INLINE_SYS
 int DaoSys_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#else
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#endif
 {
 	daox_type_buffer = DaoNamespace_WrapType( ns, & bufferTyper, 0 );
 	DaoNamespace_WrapType( ns, & modSysCoreTyper, 1 );

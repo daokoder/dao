@@ -4568,7 +4568,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 				routine->body->upRoutine = self->outParser->routine;
 				GC_IncRC( routine->body->upRoutine );
 			}
-			return LOOKUP_BIND( st, pm, 1, id );
+			return LOOKUP_BIND( DAO_LOCAL_VARIABLE, pm, 1, id );
 		}
 	}
 	return -1;
@@ -5274,20 +5274,26 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 
 static int DaoParser_ExpClosure( DaoParser *self, int start )
 {
-	int rb, regCall, opc;
-	int i, end = self->tokens->size-1;
-	int tokPos = self->tokens->items.pToken[ start ]->line;
+	char name[100];
+	daoint rb, regCall, opc;
+	daoint i, k, n, end = self->tokens->size-1;
+	daoint tokPos = self->tokens->items.pToken[ start ]->line;
+	DString *mbs = DaoParser_GetString( self );
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken tok = { DTOK_SEMCO, DTOK_SEMCO, 0, 0, 0, NULL };
+	DaoVmCodeX *vmc;
 	DaoRoutine *rout;
 	DaoParser *parser;
 	DArray *uplocs;
-	DString *mbs = DaoParser_GetString( self );
+	DMap *upmap;
+	DNode *it;
 
 	parser = DaoParser_New();
 	rout = DaoRoutine_New( myNS, NULL, 1 );
+	sprintf( name, "AnonymousFunction_%p", rout );
+	DString_SetMBS( rout->routName, name );
 	parser->routine = rout;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
 	parser->nameSpace = self->nameSpace;
@@ -5316,16 +5322,34 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		DString_SetMBS( mbs, "invalid anonymous function" );
 		goto ErrorParamParsing;
 	}
+	/* Setup and update upvalue accessing */
+	upmap = DHash_New(0,0);
+	for(i=0,n=rout->body->annotCodes->size; i<n; i++){
+		vmc = rout->body->annotCodes->items.pVmc[i];
+		if( vmc->code != DVM_GETVH && vmc->code != DVM_SETVH ) continue;
+		if( vmc->code == DVM_GETVH && vmc->a != 0 ) continue;
+		if( vmc->code == DVM_SETVH && vmc->c != 0 ) continue;
+		k = uplocs->size / 2;
+		DArray_Append( uplocs, vmc->b );
+		DArray_Append( uplocs, k );
+		DArray_Append( uplocs, vmc->first );
+		DArray_Append( uplocs, vmc->last );
+		it = MAP_Find( upmap, vmc->b );
+		if( it == NULL ) it = MAP_Insert( upmap, vmc->b, k );
+		vmc->b = it->value.pInt;
+		if( i < rout->body->vmCodes->size ) rout->body->vmCodes->codes[i].b = it->value.pInt;
+	}
+	DMap_Delete( upmap );
 
 	regCall = self->regCount;
 	DaoParser_PushRegister( self );
-	for( i=0; i<uplocs->size; i+=4 ){
+	for(i=0; i<uplocs->size; i+=4 ){
 		int up = uplocs->items.pInt[i];
 		int loc = uplocs->items.pInt[i+1];
 		int first = uplocs->items.pInt[i+2];
 		int last = uplocs->items.pInt[i+3];
-		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+i+1, first, 0, last );
-		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, loc, regCall+i+2, first,0,last );
+		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+i/2+1, first, 0, last );
+		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, loc, regCall+i/2+2, first,0,last );
 	}
 	DaoParser_PushRegisters( self, uplocs->size/2 );
 

@@ -389,11 +389,7 @@ void DaoCGI_RandomString( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-#ifdef DAO_INLINE_CGI
 int DaoCGI_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#else
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#endif
 {
 	DaoFactory *factory = DaoVmSpace_AcquireFactory( vmSpace );
 	DaoMap *httpENV, *httpGET, *httpPOST, *httpFILE, *httpCOOKIE;

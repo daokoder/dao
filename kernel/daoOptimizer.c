@@ -81,10 +81,15 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_SETU :
-		self->type = DAO_OP_PAIR;
-		self->first = vmc->a;
-		self->second = vmc->b;
-		self->lvalue2 = vmc->b;
+		if( vmc->c == 0 ){
+			self->type = DAO_OP_SINGLE;
+			self->first = vmc->a;
+		}else{
+			self->type = DAO_OP_PAIR;
+			self->first = vmc->a;
+			self->second = vmc->b;
+			self->lvalue2 = vmc->b;
+		}
 		break;
 	case DAO_CODE_SETF :
 		self->type = DAO_OP_PAIR;
@@ -107,6 +112,12 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_GETU :
+		if( vmc->a != 0 ){
+			self->type = DAO_OP_SINGLE;
+			self->first = vmc->b;
+		}
+		self->lvalue = vmc->c;
+		break;
 	case DAO_CODE_UNARY2 :
 		self->type = DAO_OP_SINGLE;
 		self->first = vmc->b;
@@ -808,7 +819,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		}
 		*vmcs[K++] = *vmc;
 	}
-	annotCodes->size = K;
+	DArray_Erase( annotCodes, K, -1 );
 	vmCodes->size = K;
 	N = 0;
 	for(i=0; i<K; i++){
@@ -888,10 +899,12 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			break;
 		case DAO_CODE_SETU :
 			vmc->a = regmap[ vmc->a ];
-			vmc->b = regmap[ vmc->b ];
 			node->first = vmc->a;
-			node->second = vmc->b;
-			node->lvalue2 = vmc->b;
+			if( vmc->c != 0 ){
+				vmc->b = regmap[ vmc->b ];
+				node->second = vmc->b;
+				node->lvalue2 = vmc->b;
+			}
 			break;
 		case DAO_CODE_SETG :
 		case DAO_CODE_BRANCH :
@@ -960,6 +973,13 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			}
 			break;
 		case DAO_CODE_GETU :
+			vmc->c = regmap[ vmc->c ];
+			node->lvalue = vmc->c;
+			if( vmc->a != 0 ){
+				vmc->b = regmap[ vmc->b ];
+				node->second = vmc->b;
+			}
+			break;
 		case DAO_CODE_UNARY2 :
 			vmc->b = regmap[ vmc->b ];
 			vmc->c = regmap[ vmc->c ];
@@ -2578,7 +2598,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DMap *defs3 = self->defs3;
 	DArray *errors = self->errors;
 	DString *str, *mbs = self->mbstring;
-	DaoVmCodeX *vmc;
+	DaoVmCodeX *vmc, *vmc2;
 	DaoType *at, *bt, *ct, *tt, *catype, *ts[DAO_ARRAY+DAO_MAX_PARAM];;
 	DaoType *type, **tp, **type2, **types = self->types->items.pType;
 	DaoValue *value, **pp, **consts = self->consts->items.pValue;
@@ -2610,7 +2630,21 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	if( hostClass ) typeVO[0] = hostClass->objDataType;
 	if( body->upRoutine ){
 		if( body->upRoutine->body->parser ) DaoRoutine_Compile( body->upRoutine );
-		typeVH[0] = body->upRoutine->body->regType->items.pType;
+		for(i=0,n=body->upRoutine->body->annotCodes->size; i<n; i++){
+			vmc = body->upRoutine->body->annotCodes->items.pVmc[i];
+			if( i == 0 || vmc->code != DVM_ROUTINE ) continue;
+			vmc2 = body->upRoutine->body->annotCodes->items.pVmc[i-1];
+			if( vmc2->code != DVM_GETCL ) continue;
+			rout = body->upRoutine->routConsts->items.items.pRoutine[ vmc2->b ];
+			if( rout->type != DAO_ROUTINE ) continue;
+			if( ! DString_EQ( rout->routName, routine->routName ) ) continue;
+			typeVH[0] = body->upRoutine->body->regType->items.pType + vmc->a + 1;
+			break;
+		}
+		if( typeVH[0] == NULL ){
+			printf( "ERROR: invalid up-function for the closure proto-function\n" );
+			return 0; // XXX error message;
+		}
 	}
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
 
@@ -2643,6 +2677,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		// they must have been checked by other instructions. */
 		switch( K ){
 		case DAO_CODE_GETU :
+			if( inode->a != 0 ) AssertInitialized( inode->b, 0, middle, middle );
+			break;
 		case DAO_CODE_UNARY2 :
 			AssertInitialized( inode->b, 0, middle, middle );
 			break;

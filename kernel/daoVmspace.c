@@ -1373,6 +1373,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 
 	if( (node = MAP_Find( self->vmodules, libpath ) ) ){
 		funpter = (DaoModuleOnLoad) node->value.pVoid;
+		ns = DaoNamespace_New( self, libpath->mbs );
 	}else{
 		handle = DaoOpenDLL( libpath->mbs );
 		if( ! handle ){
@@ -1381,11 +1382,34 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 			DaoStream_WriteMBS( self->errorStream, "\".\n");
 			return 0;
 		}
+		ns = DaoNamespace_New( self, libpath->mbs );
+		ns->libHandle = handle;
 		funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, "DaoOnLoad" );
+		if( funpter == NULL ){
+			DString *name = DString_Copy( ns->file );
+			const char *prefixes[4] = { "dao_", "dao", "libdao_", "libdao" };
+			int size = strlen( DAO_DLL_SUFFIX );
+			DString_Erase( name, name->size - size, size );
+			DString_ToLower( name );
+			for(i=0; i<4; i++){
+				if( DString_FindMBS( name, prefixes[i], 0 ) != 0 ) continue;
+				DString_Erase( name, 0, strlen( prefixes[i] ) );
+			}
+			DString_InsertMBS( name, "Dao", 0, 0, 3 );
+			DString_AppendMBS( name, "_OnLoad" );
+			funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+			if( funpter == NULL ){
+				name->mbs[3] = toupper( name->mbs[3] );
+				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+			}
+			if( funpter == NULL ){
+				for(i=3; i<name->size-7; i++) name->mbs[i] = toupper( name->mbs[i] );
+				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+			}
+			DString_Delete( name );
+		}
 	}
 
-	ns = DaoNamespace_New( self, libpath->mbs );
-	ns->libHandle = handle;
 	DaoVmSpace_Lock( self );
 	MAP_Insert( self->nsModules, libpath, ns );
 	DaoVmSpace_Unlock( self );
@@ -1874,12 +1898,14 @@ static DaoFactory *factory = NULL;
 
 DaoVmSpace* DaoInit( const char *command )
 {
-	DString *mbs;
+	DString *mbs, *mbs2;
 	DaoVmSpace *vms;
 	DaoNamespace *ns;
 	DaoType *type, *type1, *type2, *type3, *type4;
+	DaoModuleOnLoad fpter;
 	char *daodir = getenv( "DAO_DIR" );
-	int i;
+	void *handle;
+	daoint i, n;
 
 	if( mainVmSpace ) return mainVmSpace;
 
@@ -2036,49 +2062,33 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DaoVmSpace_InitPath( vms );
 
-#ifdef DAO_INLINE_AUX
-	extern int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/auxlib/dao_aux" DAO_DLL_SUFFIX, DaoAux_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_SYS
-	extern int DaoSys_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/syslib/dao_sys" DAO_DLL_SUFFIX, DaoSys_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_MATH
-	extern int DaoMath_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/math/dao_math" DAO_DLL_SUFFIX, DaoMath_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_META
-	extern int DaoMeta_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/meta/dao_meta" DAO_DLL_SUFFIX, DaoMeta_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_FSNODE
-	extern int DaoFSNode_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/os/fs/dao_fs" DAO_DLL_SUFFIX, DaoFSNode_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_NET
-	extern int DaoNetwork_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/net/dao_net" DAO_DLL_SUFFIX, DaoNetwork_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_CGI
-	extern int DaoCGI_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/web/cgi/dao_cgi" DAO_DLL_SUFFIX, DaoCGI_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_JSON
-	extern int DaoJSON_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/web/json/dao_json" DAO_DLL_SUFFIX, DaoJSON_OnLoad );
-#endif
-
-#ifdef DAO_INLINE_SYNC
-	extern int DaoSync_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-	DaoVmSpace_AddVirtualModule( vms, "modules/sync/dao_sync" DAO_DLL_SUFFIX, DaoSync_OnLoad );
+#ifdef DAO_WITH_MODULES
+	mbs2 = DString_New(1);
+	DString_Clear( mbs );
+	handle = DaoOpenDLL( NULL );
+	for(i=0,n=strlen(DAO_WITH_MODULES); i<n; i++){
+		char ch = DAO_WITH_MODULES[i];
+		if( ch == ',' || i == (n-1) ){
+			if( ch != ',' ) DString_AppendChar( mbs, ch );
+			if( mbs->size == 0 || mbs2->size == 0 ) continue;
+			DString_InsertMBS( mbs2, "Dao", 0, 0, 3 );
+			DString_AppendMBS( mbs2, "_OnLoad" );
+			fpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, mbs2->mbs );
+			if( fpter ){
+				DString_AppendMBS( mbs, DAO_DLL_SUFFIX );
+				DaoVmSpace_AddVirtualModule( vms, mbs->mbs, fpter );
+			}else{
+				fprintf( stderr, "WARNING: failed to embed module \"%s\"!\n", mbs->mbs );
+			}
+			DString_Clear( mbs );
+			DString_Clear( mbs2 );
+		}else if( ch == ':' ){
+			DString_Assign( mbs2, mbs );
+		}else{
+			DString_AppendChar( mbs, ch );
+		}
+	}
+	DString_Delete( mbs2 );
 #endif
 
 	/*

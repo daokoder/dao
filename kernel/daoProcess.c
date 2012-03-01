@@ -6158,6 +6158,8 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( proto->body->upRoutine ){
 		DMap *map = DHash_New(0,0);
 		DaoProcess *proc = DaoProcess_New( self->vmSpace );
+		GC_ShiftRC( self->activeRoutine, closure->body->upRoutine );
+		closure->body->upRoutine = self->activeRoutine;
 		closure->body->upProcess = proc;
 		GC_IncRC( proc );
 		DaoProcess_PushRoutine( proc, self->activeRoutine, self->activeObject );
@@ -6170,9 +6172,14 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 			proc->activeValues[i] = node->value.pValue;
 		}
 		DMap_Delete( map );
+		proc->activeValues = proc->activeValues + vmc->a + 1;
+		proc->activeTypes = proc->activeTypes + vmc->a + 1;
 	}
 	pp2 = closure->routConsts->items.items.pValue;
-	for(i=0; i<vmc->b; i+=2) DaoValue_Copy( pp[i+1], pp2 + pp[i+2]->xInteger.value );
+	for(i=0; i<vmc->b; i+=2){
+		if( pp[i+2]->xInteger.value >= closure->parCount ) break;
+		DaoValue_Copy( pp[i+1], pp2 + pp[i+2]->xInteger.value );
+	}
 	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL );
 	GC_ShiftRC( tp, closure->routType );
 	closure->routType = tp;
@@ -6190,12 +6197,6 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	DArray_Assign( closure->body->annotCodes, proto->body->annotCodes );
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "function creation failed" );
-	}else if( closure->body->upProcess ){
-		DaoProcess_SetValue( closure->body->upProcess, vmc->c, (DaoValue*) closure );
-		closure->body->upProcess->topFrame->entry = 1 + vmc - self->topFrame->codes;
-		DaoProcess_Execute( closure->body->upProcess );
-		DaoProcess_PopFrame( self );
-		self->status = DAO_VMPROC_STACKED;
 	}
 	/*
 	 DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );

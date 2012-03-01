@@ -133,4 +133,7 @@ ifdef WIN32
   NOTEXIST  = if not exist
 endif
 
-DAO_CFLAGS += -DDAO_DIR=\"$(DAO_DIR)\"
+# for windows path:
+DAO_DIR2 = $(subst \,\\,$(DAO_DIR))
+
+DAO_CFLAGS += -DDAO_DIR=\"$(DAO_DIR2)\"

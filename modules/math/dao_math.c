@@ -340,11 +340,7 @@ DaoNumItem mathConsts[] =
 	{ NULL, 0.0, 0.0 }
 };
 
-#ifdef DAO_INLINE_MATH
 int DaoMath_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#else
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-#endif
 {
 	DaoNamespace_WrapFunctions( ns, mathMeths );
 	DaoNamespace_AddConstNumbers( ns, mathConsts );
