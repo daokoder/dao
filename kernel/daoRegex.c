@@ -871,7 +871,7 @@ static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
 {
 	DaoRgxItem *patt, *patt2;
 	daoint s1 = 0, s2 = size;
-	daoint pos, sum, max = 0, min = MAXSIZE, from = 0, to = size;
+	daoint pos, sum, max = 0, min = 0x7fffffff, from = 0, to = size;
 	daoint oldstart = self->start, oldend = self->end;
 	int bl, expand, matched, minmode = ((self->config & PAT_MIN) !=0);
 	if( patts == NULL ){

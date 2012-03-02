@@ -2215,6 +2215,7 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 	}else if( DString_MatchMBS( verbatim, pat, & pstart, & pend ) ){ /* code inlining */
 		DaoCodeInliner inliner;
 		daoint lb = DString_FindChar( verbatim, '(', 0 );
+		if( lb > pend ) lb = MAXSIZE;
 
 		if( lb != MAXSIZE ){
 			daoint rb = DString_FindChar( verbatim, ')', 0 );

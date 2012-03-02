@@ -1153,6 +1153,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 				len = (ss - src) - it - 1 + literal->size;
 				lextok.type = lextok.name = DTOK_VERBATIM;
 			}
+			for(i=0; i<len; i++) if( src[it+1+i] == '\n' ) line += 1;
 			DString_AppendDataMBS( literal, src + it + 1, len );
 			state = TOK_RESTART;
 			DArray_Append( tokens, & lextok );

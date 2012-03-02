@@ -1149,8 +1149,8 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 			if( node->lvalue == 0xffff ) continue;
 			if( node->exprid == 0xffff ) continue; /* this instruction may have side effect; */
 			if( GET_BIT( node->bits->mbs, node->lvalue ) ) continue;
-			if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) return;
-
+			if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) continue;
+			
 			vmc->code = DVM_UNUSED;
 			DArray_PushBack( array, node );
 		}
@@ -1463,6 +1463,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	DArray **uses = self->uses->items.pArray;
 	DaoRoutine *routine = self->routine;
 	DaoType **types = routine->body->regType->items.pType;
+	DMap *localVarType = routine->body->localVarType;
 	uchar_t type = DaoVmCode_GetOpcodeType( vmc->code );
 	int i, k, m, at, bt, ct, code = vmc->code;
 
@@ -1482,6 +1483,15 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		return;
 	case DAO_CODE_MOVE :
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->c ) ) return;
+		/*
+		// Exclude MOVE if the destination is a potential reference (list.back()=1).
+		// Note:
+		// routine->body->localVarType still contains registers of explicitly declared
+		// variables even after optimizations, because registers from instructions that
+		// may create references are not merged or reused for register reduction.
+		// See also DaoVmCode_MayCreateReference().
+		*/
+		if( MAP_Find( localVarType, vmc->c ) == NULL ) return;
 		break;
 	case DAO_CODE_UNARY2 :
 		/* Exclude expressions that may have side effects: */
@@ -1500,8 +1510,12 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		if( ct >= DAO_OBJECT && ct <= DAO_CTYPE ) return;
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->a ) ) return;
 		break;
-	case DAO_CODE_GETI :
 	case DAO_CODE_BINARY :
+		/* Exclude binary operations if the destination is a potential reference (list.back()+=1): */
+		if( vmc->a == vmc->c || vmc->b == vmc->c )
+			if( MAP_Find( localVarType, vmc->c ) == NULL ) return;
+		/* Fall through for further checking; */
+	case DAO_CODE_GETI :
 		/* Exclude expressions that may have side effects by operator overloading: */
 		at = types[vmc->a] ? types[vmc->a]->tid : DAO_UDT;
 		bt = types[vmc->b] ? types[vmc->b]->tid : DAO_UDT;

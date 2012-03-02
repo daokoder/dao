@@ -356,6 +356,25 @@ enum DaoOpcode
 };
 typedef enum DaoOpcode DaoOpcode;
 
+/*
+// Additional nodes for the virtual machine instructions:
+//
+// DVM_GETVH and DVM_SETVH:
+//
+// These two instructions are for accessing up-values from closures or from code sections.
+// The value of operand ::a (DVM_GETVH) or ::c (DVM_SETVH) instructs what kind of up-value
+// is accessed; and the value of operand ::b tells which up-value is accessed.
+//
+// Zero value of the operand ::a or ::c indicates the up-value is accessed from a closure.
+// The up-value is a local variable of the routine in which the closure was created.
+//
+// A non-zero value of ::a or ::c indicates the up-value
+// TODO
+// 
+// DVM_ROUTINE
+// TODO
+*/
+
 /* Extra vmcode type for compiling:
  * They are used to setup proper indexing, branching or jumping. After this, 
  * they will be removed or replaced with proper instructions from DaoOpcode.
