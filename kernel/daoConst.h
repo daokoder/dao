@@ -35,6 +35,8 @@ enum DaoRTTI
 	DAO_VARIANT = END_CORE_TYPES, /* variant or disjoint union type */
 	DAO_FUTURE ,  /* future value type */
 	DAO_MACRO ,
+	DAO_CONSTANT ,
+	DAO_VARIABLE ,
 	DAO_ROUTBODY ,
 	DAO_FUNCURRY ,
 	DAO_TYPEKERNEL ,

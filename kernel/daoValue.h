@@ -24,6 +24,30 @@
 #include"daoNamespace.h"
 #include"daoProcess.h"
 
+
+struct DaoConstant
+{
+	DAO_DATA_COMMON;
+
+	DaoValue *value;
+};
+
+struct DaoVariable
+{
+	DAO_DATA_COMMON;
+
+	DaoValue *value;
+	DaoType  *dtype;
+};
+
+DAO_DLL DaoConstant* DaoConstant_New( DaoValue *value );
+DAO_DLL DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type );
+
+DAO_DLL void DaoConstant_Delete( DaoConstant *self );
+DAO_DLL void DaoVariable_Delete( DaoVariable *self );
+
+
+
 union DaoValue
 {
 	uchar_t        type;
@@ -49,6 +73,8 @@ union DaoValue
 	DaoProcess     xProcess;
 	DaoNamespace   xNamespace;
 	DaoNameValue   xNameValue;
+	DaoConstant    xConst;
+	DaoVariable    xVar;
 	DaoType        xType;
 
 	struct { DAO_DATA_CORE; } xCore;

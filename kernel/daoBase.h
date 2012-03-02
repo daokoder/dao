@@ -96,6 +96,8 @@ typedef struct DaoVmcArray   DaoVmcArray;
 typedef struct DaoFuture     DaoFuture;
 typedef struct DaoException  DaoException;
 typedef struct DaoNameValue  DaoNameValue;
+typedef struct DaoConstant   DaoConstant;
+typedef struct DaoVariable   DaoVariable;
 
 typedef struct DaoCnode      DaoCnode;
 typedef struct DaoOptimizer  DaoOptimizer;

@@ -28,6 +28,36 @@
 #include"daoProcess.h"
 #include"daoValue.h"
 
+
+DaoConstant* DaoConstant_New( DaoValue *value )
+{
+	DaoConstant *self = (DaoConstant*) dao_calloc( 1, sizeof(DaoConstant) );
+	DaoValue_Init( self, DAO_CONSTANT );
+	DaoValue_Copy( value, & self->value );
+	return self;
+}
+DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type )
+{
+	DaoVariable *self = (DaoVariable*) dao_calloc( 1, sizeof(DaoVariable) );
+	DaoValue_Init( self, DAO_VARIABLE );
+	DaoValue_Move( value, & self->value, type );
+	self->dtype = type;
+	GC_IncRC( type );
+	return self;
+}
+
+void DaoConstant_Delete( DaoConstant *self )
+{
+	GC_DecRC( self->value );
+	dao_free( self );
+}
+void DaoVariable_Delete( DaoVariable *self )
+{
+	GC_DecRC( self->value );
+	GC_DecRC( self->dtype );
+	dao_free( self );
+}
+
 #ifdef DAO_WITH_NUMARRAY
 int DaoArray_Compare( DaoArray *x, DaoArray *y );
 #endif

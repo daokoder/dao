@@ -2763,7 +2763,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			switch( code ){
 			case DVM_GETCL : value = routConsts->items.pValue[opb]; break;
 			case DVM_GETCK : value = CSS->items.pClass[opa]->cstData->items.pValue[opb]; break;
-			case DVM_GETCG : value = NSS->items.pNS[opa]->cstData->items.pValue[opb]; break;
+			case DVM_GETCG : value = NS->constants->items.pConst[opb]->value; break;
 			}
 			at = DaoNamespace_GetType( NS, value );
 			DaoInferencer_UpdateType( self, opc, at );
@@ -2786,7 +2786,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DVM_GETVH : at = typeVH[opa][opb]; break;
 			case DVM_GETVO : at = typeVO[opa]->items.pType[opb]; break;
 			case DVM_GETVK : at = CSS->items.pClass[opa]->glbDataType->items.pType[opb]; break;
-			case DVM_GETVG : at = NSS->items.pNS[opa]->varType->items.pType[opb]; break;
+			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
 			}
 			if( at == NULL ) at = dao_type_udf;
 			DaoInferencer_UpdateType( self, opc, at );
@@ -2809,7 +2809,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
 			case DVM_SETVO : type2 = typeVO[opc]->items.pType + opb; break;
 			case DVM_SETVK : type2 = CSS->items.pClass[opc]->glbDataType->items.pType + opb; break;
-			case DVM_SETVG : type2 = NSS->items.pNS[opc]->varType->items.pType + opb; break;
+			case DVM_SETVG : type2 = & NS->variables->items.pVar[opb]->dtype; break;
 			}
 			at = types[opa];
 			if( type2 && ( *type2 == NULL || (*type2)->tid == DAO_UDT ) ){
@@ -2826,7 +2826,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( type2[0]->tid && type2[0]->tid <= DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 				if( typed_code ){
 					if( code == DVM_SETVG ){
-						DaoValue **p = NSS->items.pNS[opc]->varData->items.pValue + opb;
+						DaoValue **p = & NS->variables->items.pVar[opb]->value;
 						if( *p == NULL ) *p = DaoValue_SimpleCopy( at->value );
 					}
 					if( at->tid != type2[0]->tid ){
@@ -4911,7 +4911,7 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( ct, TT1 );
 			break;
 		case DVM_GETCG_I : case DVM_GETCG_F : case DVM_GETCG_D : case DVM_GETCG_C :
-			value = NSS->items.pNS[opa]->cstData->items.pValue[opb];
+			value = NS->constants->items.pConst[opb]->value;
 			TT1 = DAO_INTEGER + (code - DVM_GETCG_I);
 			at = DaoNamespace_GetType( NS, value );
 			ct = DaoInferencer_UpdateType( self, opc, self->basicTypes[TT1] );
@@ -4941,7 +4941,7 @@ TryPushBlockReturnType:
 			break;
 		case DVM_GETVG_I : case DVM_GETVG_F : case DVM_GETVG_D : case DVM_GETVG_C :
 			TT1 = DAO_INTEGER + (code - DVM_GETVG_I);
-			at = NSS->items.pNS[opa]->varType->items.pType[opb];
+			at = NS->variables->items.pVar[opb]->dtype;
 			ct = DaoInferencer_UpdateType( self, opc, self->basicTypes[TT1] );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( ct, TT1 );
@@ -4981,7 +4981,7 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVG_II : case DVM_SETVG_FF : case DVM_SETVG_DD : case DVM_SETVG_CC :
-			tp = NSS->items.pNS[opc]->varType->items.pType + opb;
+			tp = & NS->variables->items.pVar[opb]->dtype;
 			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
 				GC_ShiftRC( types[opa], *tp );
 				*tp = types[opa];

@@ -985,8 +985,8 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 	DaoStream_Flush( self->stdioStream );
 
 	if( self->options & DAO_EXEC_LIST_BC ){
-		for(i=ns->cstUser; i<ns->cstData->size; i++){
-			DaoValue *p = ns->cstData->items.pValue[i];
+		for(i=ns->cstUser; i<ns->constants->size; i++){
+			DaoValue *p = ns->constants->items.pConst[i]->value;
 			if( p->type == DAO_ROUTINE && & p->xRoutine != ns->mainRoutine ){
 				DaoRoutine_Compile( & p->xRoutine );
 				DaoRoutine_PrintCode( & p->xRoutine, self->stdioStream );

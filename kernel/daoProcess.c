@@ -806,6 +806,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoArray *array;
 	DArray   *NSS, *CSS = NULL, *typeVO = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {0};
+	DaoVariable *variable = NULL;
 	DaoValue  **dataVO = NULL;
 	DaoValue **dataCL = NULL;
 	DaoValue *value, *vA, *vB, *vC = NULL;
@@ -1113,8 +1114,8 @@ CallEntry:
 	if( routine->body->jitData ){
 		jitCallData.localValues = locVars;
 		jitCallData.localConsts = routine->routConsts->items.items.pValue;
-		jitCallData.globalValues = here->varData->items.pValue;
-		jitCallData.globalConsts = here->cstData->items.pValue;
+		jitCallData.globalValues = here->variables->items.pValue; // XXX
+		jitCallData.globalConsts = here->constants->items.pValue; // XXX
 		jitCallData.namespaces = NSS;
 		jitCallData.processes = dataVH;
 	}
@@ -1175,7 +1176,7 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETCG ){
-			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = here->constants->items.pConst[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETVH ){
@@ -1189,7 +1190,7 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETVG ){
-			value = NSS->items.pNS[vmc->a]->varData->items.pValue[ vmc->b ];
+			value = here->variables->items.pVar[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETI ) OPCASE( GETDI ) OPCASE( GETMI ){
@@ -1214,9 +1215,9 @@ CallEntry:
 			vref = CSS->items.pClass[vmc->c]->glbData->items.pValue + vmc->b;
 			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETVG ){
-			abtp = NSS->items.pNS[vmc->c]->varType->items.pType[ vmc->b ];
-			vref = NSS->items.pNS[vmc->c]->varData->items.pValue + vmc->b;
-			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
+			variable = here->variables->items.pVar[ vmc->b ];
+			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 )
+				goto CheckException;
 		}OPNEXT() OPCASE( SETI ) OPCASE( SETDI ) OPCASE( SETMI ){
 			DaoProcess_DoSetItem( self, vmc );
 			goto CheckException;
@@ -1418,7 +1419,7 @@ CallEntry:
 			}
 		}OPNEXT() OPCASE( JITC ){
 			jitCallData.localValues = locVars;
-			jitCallData.globalValues = here->varData->items.pValue;
+			jitCallData.globalValues = here->variables->items.pValue; // XXX
 			dao_jit.Execute( self, & jitCallData, vmc->a );
 			if( self->exceptions->size > exceptCount ) goto CheckException;
 			vmc += vmc->b;
@@ -1500,16 +1501,16 @@ CallEntry:
 			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETCG_I ){
-			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = here->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETCG_F ){
-			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = here->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETCG_D ){
-			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = here->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETCG_C ){
-			value = NSS->items.pNS[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = here->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETVH_I ){
 			locVars[ vmc->c ]->xInteger.value = dataVH[vmc->a]->activeValues[vmc->b]->xInteger.value;
@@ -1536,13 +1537,13 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVK_C ){
 			ComplexOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pComplex[vmc->b]->value;
 		}OPNEXT() OPCASE( GETVG_I ){
-			IntegerOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pInteger[vmc->b]->value;
+			IntegerOperand( vmc->c ) = here->variables->items.pVar[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVG_F ){
-			FloatOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pFloat[vmc->b]->value;
+			FloatOperand( vmc->c ) = here->variables->items.pVar[vmc->b]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVG_D ){
-			DoubleOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pDouble[vmc->b]->value;
+			DoubleOperand( vmc->c ) = here->variables->items.pVar[vmc->b]->value->xDouble.value;
 		}OPNEXT() OPCASE( GETVG_C ){
-			ComplexOperand( vmc->c ) = NSS->items.pNS[vmc->a]->varData->items.pComplex[vmc->b]->value;
+			ComplexOperand( vmc->c ) = here->variables->items.pVar[vmc->b]->value->xComplex.value;
 		}OPNEXT() OPCASE( SETVH_II ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVH_FF ){
@@ -1568,13 +1569,13 @@ CallEntry:
 		}OPNEXT() OPCASE( SETVK_CC ){
 			CSS->items.pClass[vmc->c]->glbData->items.pComplex[vmc->b]->value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_II ){
-			NSS->items.pNS[vmc->c]->varData->items.pInteger[vmc->b]->value = IntegerOperand( vmc->a );
+			here->variables->items.pVar[vmc->b]->value->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_FF ){
-			NSS->items.pNS[vmc->c]->varData->items.pFloat[vmc->b]->value = FloatOperand( vmc->a );
+			here->variables->items.pVar[vmc->b]->value->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_DD ){
-			NSS->items.pNS[vmc->c]->varData->items.pDouble[vmc->b]->value = DoubleOperand( vmc->a );
+			here->variables->items.pVar[vmc->b]->value->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_CC ){
-			NSS->items.pNS[vmc->c]->varData->items.pComplex[vmc->b]->value = ComplexOperand( vmc->a );
+			here->variables->items.pVar[vmc->b]->value->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( MOVE_II ){
 			IntegerOperand( vmc->c ) = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_III ){
@@ -6477,7 +6478,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
-	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
+	DaoList *list = & self->activeNamespace->variables->items.pVar[DVR_NSV_EXCEPTIONS]->value->xList;
 	ushort_t *range = topFrame->ranges[ topFrame->depth-1 ];
 	daoint size = (daoint)(vmc - topFrame->codes);
 
@@ -6546,7 +6547,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 	DaoException *cdata = NULL;
 	DaoType *except = DaoException_GetType( DAO_EXCEPTION );
 	DaoType *warning = DaoException_GetType( DAO_WARNING );
-	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
+	DaoList *list = & self->activeNamespace->variables->items.pVar[DVR_NSV_EXCEPTIONS]->value->xList;
 	DaoValue **excepts = self->activeValues + vmc->a;
 	DaoValue *val;
 	ushort_t i, line = 0, line2 = 0;
@@ -6588,7 +6589,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 }
 int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoList *list = & self->activeNamespace->varData->items.pValue[DVR_NSV_EXCEPTIONS]->xList;
+	DaoList *list = & self->activeNamespace->variables->items.pVar[DVR_NSV_EXCEPTIONS]->value->xList;
 	DaoType *ext = DaoException_GetType( DAO_EXCEPTION );
 	DaoType *any = DaoException_GetType( DAO_EXCEPTION_ANY );
 	DaoType *none = DaoException_GetType( DAO_EXCEPTION_NONE );

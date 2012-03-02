@@ -4606,8 +4606,8 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 		}
 		break;
 	case DAO_CLASS_CONSTANT : val = klass->classes->items.pClass[up]->cstData->items.pValue[id]; break;
-	case DAO_GLOBAL_VARIABLE : val = ns->namespaces->items.pNS[up]->varData->items.pValue[id]; break;
-	case DAO_GLOBAL_CONSTANT : val = ns->namespaces->items.pNS[up]->cstData->items.pValue[id]; break;
+	case DAO_GLOBAL_VARIABLE : val = ns->variables->items.pVar[id]->value; break;
+	case DAO_GLOBAL_CONSTANT : val = ns->constants->items.pConst[id]->value; break;
 	default : break;
 	}
 	return val;

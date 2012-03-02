@@ -30,10 +30,9 @@ struct DaoNamespace
 
 	DMap    *lookupTable; /* <DString*,size_t> */
 	DArray  *namespaces; /* <DaoNamespace*> */
-	DArray  *cstData; /* <DaoValue*>, global constants; */
-	DArray  *varData; /* <DaoValue*>, global variables; */
-	DArray  *varType; /* <DaoType*>, types of global variables */
-	DArray  *auxData; /* mainly for GC */
+	DArray  *constants; /* <DaoConstant*>, global constants; */
+	DArray  *variables; /* <DaoVariable*>, global variables; */
+	DArray  *auxData;   /* mainly for GC */
 
 	DaoRoutine *mainRoutine;
     DaoList    *argParams;
@@ -47,7 +46,7 @@ struct DaoNamespace
 
 	DMap   *localMacros; /* <DString*,DaoMacro*> */
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
-	DMap   *abstypes; /* <DString*,DaoType*> */
+	DMap   *abstypes;     /* <DString*,DaoType*> */
 	DMap   *moduleLoaders; /* <DString*,DaoModuleLoader> */
 	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
 

@@ -37,6 +37,8 @@ struct DArray
 		DaoRoutine   **pRoutine;
 		DaoCdata     **pCdata;
 		DaoType      **pType;
+		DaoConstant  **pConst;
+		DaoVariable  **pVar;
 		DaoNamespace **pNS;
 
 		DString      **pString;

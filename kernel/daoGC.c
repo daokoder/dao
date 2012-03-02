@@ -1214,6 +1214,17 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) en->etype );
 			break;
 		}
+	case DAO_CONSTANT :
+		{
+			cycRefCountDecrement( value->xConst.value );
+			break;
+		}
+	case DAO_VARIABLE :
+		{
+			cycRefCountDecrement( value->xVar.value );
+			cycRefCountDecrement( (DaoValue*) value->xVar.dtype );
+			break;
+		}
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		{
@@ -1329,13 +1340,12 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_NAMESPACE :
 		{
 			DaoNamespace *ns = (DaoNamespace*) value;
-			cycRefCountDecrements( ns->cstData );
-			cycRefCountDecrements( ns->varData );
-			cycRefCountDecrements( ns->varType );
+			cycRefCountDecrements( ns->constants );
+			cycRefCountDecrements( ns->variables );
 			cycRefCountDecrements( ns->auxData );
 			cycRefCountDecrements( ns->mainRoutines );
 			count += DaoGC_ScanMap( ns->abstypes, DAO_GC_DEC, 0, 1 );
-			count += ns->cstData->size + ns->varData->size + ns->abstypes->size;
+			count += ns->constants->size + ns->variables->size + ns->abstypes->size;
 			break;
 		}
 	case DAO_TYPE :
@@ -1407,6 +1417,17 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoEnum *en = (DaoEnum*) value;
 			cycRefCountIncrement( (DaoValue*) en->etype );
+			break;
+		}
+	case DAO_CONSTANT :
+		{
+			cycRefCountIncrement( value->xConst.value );
+			break;
+		}
+	case DAO_VARIABLE :
+		{
+			cycRefCountIncrement( value->xVar.value );
+			cycRefCountIncrement( (DaoValue*) value->xVar.dtype );
 			break;
 		}
 #ifdef DAO_WITH_NUMARRAY
@@ -1524,13 +1545,12 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_NAMESPACE :
 		{
 			DaoNamespace *ns = (DaoNamespace*) value;
-			cycRefCountIncrements( ns->cstData );
-			cycRefCountIncrements( ns->varData );
-			cycRefCountIncrements( ns->varType );
+			cycRefCountIncrements( ns->constants );
+			cycRefCountIncrements( ns->variables );
 			cycRefCountIncrements( ns->auxData );
 			cycRefCountIncrements( ns->mainRoutines );
 			count += DaoGC_ScanMap( ns->abstypes, DAO_GC_INC, 0, 1 );
-			count += ns->cstData->size + ns->varData->size + ns->abstypes->size;
+			count += ns->constants->size + ns->variables->size + ns->abstypes->size;
 			break;
 		}
 	case DAO_TYPE :
@@ -1602,6 +1622,17 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoEnum *en = (DaoEnum*) value;
 			directRefCountDecrement( (DaoValue**) & en->etype );
+			break;
+		}
+	case DAO_CONSTANT :
+		{
+			directRefCountDecrement( & value->xConst.value );
+			break;
+		}
+	case DAO_VARIABLE :
+		{
+			directRefCountDecrement( & value->xVar.value );
+			directRefCountDecrement( (DaoValue**) & value->xVar.dtype );
 			break;
 		}
 #ifdef DAO_WITH_NUMARRAY
@@ -1722,11 +1753,10 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_NAMESPACE :
 		{
 			DaoNamespace *ns = (DaoNamespace*) value;
-			count += ns->cstData->size + ns->varData->size + ns->abstypes->size;
+			count += ns->constants->size + ns->variables->size + ns->abstypes->size;
 			count += DaoGC_ScanMap( ns->abstypes, DAO_GC_BREAK, 0, 1 );
-			directRefCountDecrements( ns->cstData );
-			directRefCountDecrements( ns->varData );
-			directRefCountDecrements( ns->varType );
+			directRefCountDecrements( ns->constants );
+			directRefCountDecrements( ns->variables );
 			directRefCountDecrements( ns->auxData );
 			directRefCountDecrements( ns->mainRoutines );
 			break;
