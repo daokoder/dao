@@ -5145,6 +5145,7 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buf
 		value->type = DAO_FLOAT;
 		value->xFloat.value = strtod( str, 0 );
 	}else if( (pl = DString_FindChar(tok->string, 'L', 0)) != MAXSIZE ){
+#ifdef DAO_WITH_LONGINT
 		char ec;
 		value->xLong.value = self->bigint;
 		ec = DLong_FromString( value->xLong.value, tok->string );
@@ -5161,6 +5162,10 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buf
 			return NULL;
 		}
 		value->type = DAO_LONG;
+#else
+		DaoParser_Error( self, DAO_DISABLED_LONGINT, NULL );
+		return NULL;
+#endif
 	}else{
 		value->type = DAO_INTEGER;
 		value->xInteger.value = (sizeof(daoint) == 4) ? strtol( str, 0, 0 ) : strtoll( str, 0, 0 );

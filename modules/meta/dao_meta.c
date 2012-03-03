@@ -92,11 +92,11 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		lookup = klass->lookupTable;
 		index = klass->lookupTable;
-		data = klass->cstData;
+		data = klass->constants;
 	}else if( p[0]->type == DAO_NAMESPACE ){
 		ns = & p[0]->xNamespace;
 		//index = ns->cstIndex; XXX
-		data = ns->cstData;
+		data = ns->constants;
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 		DString_Delete( name.data );
@@ -111,7 +111,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		tuple = DaoTuple_New( 2 );
 		tuple->unitype = tp;
 		GC_IncRC( tp );
-		value = data->items.pValue[ id ];
+		value = data->items.pConst[ id ]->value;
 		vabtp = (DaoValue*) DaoNamespace_GetType( here, value );
 		DaoValue_Copy( value, tuple->items );
 		DaoValue_Copy( vabtp, tuple->items + 1 );
@@ -170,14 +170,16 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 				value = object->objValues[id];
 				vabtp = klass->objDataType->items.pValue[ id ];
 			}else if( st == DAO_CLASS_VARIABLE ){
-				value = klass->glbData->items.pValue[id];
-				vabtp = klass->glbDataType->items.pValue[ id ];
+				DaoVariable *var = klass->variables->items.pVar[id];
+				value = var->value;
+				vabtp = (DaoValue*) var->dtype;
 			}else if( st == DAO_OBJECT_VARIABLE ){
 				vabtp = klass->objDataType->items.pValue[ id ];
 			}
 		}else{
-			value = ns->varData->items.pValue[id];
-			vabtp = ns->varType->items.pValue[ id ];
+			DaoVariable *var = ns->variables->items.pVar[id];
+			value = var->value;
+			vabtp = (DaoValue*) var->dtype;
 		}
 		DaoValue_Copy( value, tuple->items );
 		DaoValue_Copy( vabtp, tuple->items + 1 );
@@ -200,7 +202,7 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 		if( p[0]->type == DAO_OBJECT ) klass = p[0]->xObject.defClass;
 		node = DMap_Find( klass->lookupTable, name );
 		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_CONSTANT ){
-			value = klass->cstData->items.pValue + LOOKUP_ID( node->value.pSize );
+			value = klass->constants->items.pValue + LOOKUP_ID( node->value.pSize );
 			type = (DaoValue*) DaoNamespace_GetType( ns, *value );
 		}
 	}else if( p[0]->type == DAO_NAMESPACE ){
@@ -208,7 +210,7 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 		return; //XXX
 		//node = DMap_Find( ns2->cstIndex, name );
 		if( node ){
-			value = ns2->cstData->items.pValue + node->value.pInt;
+			value = ns2->constants->items.pValue + node->value.pInt;
 			type = (DaoValue*) DaoNamespace_GetType( ns, *value );
 		}
 	}else{
@@ -245,8 +247,9 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		node = DMap_Find( klass->lookupTable, name );
 		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_VARIABLE ){
-			value = klass->cstData->items.pValue + LOOKUP_ID( node->value.pSize );
-			type = klass->glbDataType->items.pValue[ LOOKUP_ID( node->value.pSize ) ];
+			DaoVariable *var = klass->variables->items.pVar[LOOKUP_ID( node->value.pSize )];
+			value = & var->value;
+			type = (DaoValue*) var->dtype;
 		}else if( object && node && LOOKUP_ST( node->value.pSize ) == DAO_OBJECT_VARIABLE ){
 			value = object->objValues + LOOKUP_ID( node->value.pSize );
 			type = klass->objDataType->items.pValue[ LOOKUP_ID( node->value.pSize ) ];
@@ -259,8 +262,9 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 		return; //XXX
 		//node = DMap_Find( ns2->varIndex, name );
 		if( node ){
-			value = ns2->varData->items.pValue + node->value.pInt;
-			type = ns2->varType->items.pValue[ node->value.pInt ];
+			DaoVariable *var = ns2->variables->items.pVar[node->value.pInt];
+			value = & var->value;
+			type = (DaoValue*) var->dtype;
 		}
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );

@@ -139,17 +139,15 @@ DaoLong* DaoLong_Copy( DaoLong *self )
 	DaoLong *copy = (DaoLong*) dao_malloc( sizeof(DaoLong) );
 	DaoValue_Init( copy, DAO_LONG );
 	copy->value = DLong_New();
+#ifdef DAO_WITH_LONGINT
 	DLong_Move( copy->value, self->value );
+#endif
 	return copy;
 }
 void DaoLong_Delete( DaoLong *self )
 {
 	DLong_Delete( self->value );
 	dao_free( self );
-}
-void DaoLong_Set( DaoLong *self, DLong *value )
-{
-	DLong_Move( self->value, value );
 }
 
 DaoString* DaoString_New( int mbs )
@@ -1420,6 +1418,7 @@ static void DaoSTR_Toupper( DaoProcess *proc, DaoValue *p[], int N )
 	DString_ToUpper( p[0]->xString.data );
 	DaoProcess_PutReference( proc, p[0] );
 }
+#ifdef DAO_WITH_REGEX
 static void DaoSTR_PFind( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
@@ -1628,6 +1627,7 @@ static void DaoSTR_Mpack( DaoProcess *proc, DaoValue *p[], int N )
 		DArray_Delete( packs );
 	}
 }
+#endif
 static void DaoSTR_Iter( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
@@ -1788,6 +1788,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )=>list<string>" },
+#ifdef DAO_WITH_REGEX
 	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )=>list<tuple<start:int,end:int>>" },
 	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )=>tuple<start:int,end:int,substring:string>" },
 	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )=>tuple<start:int,end:int,substring:string>" },
@@ -1796,6 +1797,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Change,  "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
 	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s :string, index=0 )=>string" },
 	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s :string, index :int, count :int )=>list<string>" },
+#endif
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
 	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },
@@ -2169,12 +2171,14 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 			DaoProcess_PutComplex( proc, res );
 			break;
 		}
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG :
 		{
 			DLong *dlong = DaoProcess_GetLong( proc, proc->activeCode );
 			for(i=0; i<self->items.size; i++) DLong_Add( dlong, dlong, data[i]->xLong.value );
 			break;
 		}
+#endif
 	case DAO_ENUM :
 		{
 			/* XXX */

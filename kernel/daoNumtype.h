@@ -108,6 +108,8 @@ DAO_DLL void DLong_Init( DLong *self );
 DAO_DLL void DLong_Delete( DLong *self );
 DAO_DLL void DLong_Detach( DLong *self );
 DAO_DLL void DLong_Clear( DLong *self );
+
+#ifdef DAO_WITH_LONGINT
 DAO_DLL void DLong_Resize( DLong *self, daoint size );
 DAO_DLL void DLong_PushBack( DLong *self, uchar_t it );
 DAO_DLL void DLong_PushFront( DLong *self, uchar_t it );
@@ -135,9 +137,10 @@ DAO_DLL double DLong_ToDouble( DLong *self );
 DAO_DLL int DLong_CompareToZero( DLong *self );
 DAO_DLL int DLong_CompareToInteger( DLong *self, daoint x );
 DAO_DLL int DLong_CompareToDouble( DLong *self, double x );
-
-
 #define DLong_Append  DLong_PushBack
+#endif
+
+
 
 /* Multi-dimensional array stored in row major order: */
 struct DaoArray

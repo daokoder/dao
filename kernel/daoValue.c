@@ -168,7 +168,9 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_INTEGER : return left->xInteger.value - right->xInteger.value;
 	case DAO_FLOAT   : return float_compare( left->xFloat.value, right->xFloat.value );
 	case DAO_DOUBLE  : return float_compare( left->xDouble.value, right->xDouble.value );
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG    : return DLong_Compare( left->xLong.value, right->xLong.value );
+#endif
 	case DAO_STRING  : return DString_Compare( left->xString.data, right->xString.data );
 	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
@@ -212,7 +214,9 @@ daoint DaoValue_GetInteger( DaoValue *self )
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_DOUBLE  : return self->xDouble.value;
 	case DAO_COMPLEX : return self->xComplex.value.real;
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG    : return DLong_ToInteger( self->xLong.value );
+#endif
 	case DAO_STRING  : return DString_ToInteger( self->xString.data );
 	case DAO_ENUM    : return self->xEnum.value;
 	default : break;
@@ -232,7 +236,9 @@ double DaoValue_GetDouble( DaoValue *self )
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_DOUBLE  : return self->xDouble.value;
 	case DAO_COMPLEX : return self->xComplex.value.real;
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG    : return DLong_ToDouble( self->xLong.value );
+#endif
 	case DAO_STRING  : return DString_ToDouble( self->xString.data );
 	case DAO_ENUM    : return self->xEnum.value;
 	default : break;
@@ -287,12 +293,14 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
 		DaoStream_WriteMBS( stream, "$" );
 		break;
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG :
 		name = DString_New(1);
 		DLong_Print( self->xLong.value, name );
 		DaoStream_WriteString( stream, name );
 		DString_Delete( name );
 		break;
+#endif
 	case DAO_ENUM  :
 		name = DString_New(1);
 		DaoEnum_MakeName( & self->xEnum, name );
@@ -328,6 +336,7 @@ complex16 DaoValue_GetComplex( DaoValue *self )
 }
 DLong* DaoValue_GetLong( DaoValue *self, DLong *lng )
 {
+#ifdef DAO_WITH_LONGINT
 	switch( self->type ){
 	case DAO_INTEGER : DLong_FromInteger( lng, DaoValue_GetInteger( self ) ); break;
 	case DAO_FLOAT   : 
@@ -337,6 +346,7 @@ DLong* DaoValue_GetLong( DaoValue *self, DLong *lng )
 	case DAO_STRING  : DLong_FromString( lng, self->xString.data ); break;
 	default : break; /* TODO list array? */
 	}
+#endif
 	return lng;
 }
 DString* DaoValue_GetString( DaoValue *self, DString *str )
@@ -348,7 +358,9 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", self->xDouble.value ); break;
 	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%g$" : "%g+%g$", self->xComplex.value.real, self->xComplex.value.imag ); break;
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG  : DLong_Print( self->xLong.value, str ); break;
+#endif
 	case DAO_ENUM : DaoEnum_MakeName( & self->xEnum, str ); break;
 	case DAO_STRING : DString_Assign( str, self->xString.data ); break;
 	default : break;
@@ -527,7 +539,9 @@ void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 	case DAO_FLOAT   : dest2->xFloat.value = src->xFloat.value; break;
 	case DAO_DOUBLE  : dest2->xDouble.value = src->xDouble.value; break;
 	case DAO_COMPLEX : dest2->xComplex.value = src->xComplex.value; break;
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG    : DLong_Move( dest2->xLong.value, src->xLong.value ); break;
+#endif
 	case DAO_STRING  : DString_Assign( dest2->xString.data, src->xString.data ); break;
 	}
 }
@@ -755,7 +769,9 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 	case (DAO_DOUBLE <<8)|DAO_FLOAT   : D2->xFloat.value   = S->xDouble.value; break;
 	case (DAO_DOUBLE <<8)|DAO_DOUBLE  : D2->xDouble.value  = S->xDouble.value; break;
 	case (DAO_COMPLEX<<8)|DAO_COMPLEX : D2->xComplex.value = S->xComplex.value; break;
+#ifdef DAO_WITH_LONGINT
 	case (DAO_LONG   <<8)|DAO_LONG    : DLong_Move( D2->xLong.value, S->xLong.value ); break;
+#endif
 	default : return DaoValue_Move4( S, D, T );
 	}
 	return 1;

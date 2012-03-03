@@ -281,6 +281,7 @@ void DLong_Detach( DLong *self /* , int extrasize  TODO */ )
 	DMutex_Unlock( & mutex_long_sharing );
 #endif
 }
+#ifdef DAO_WITH_LONGINT
 void DLong_Resize( DLong *self, daoint size )
 {
 	daoint i;
@@ -1652,6 +1653,9 @@ DaoTypeBase longTyper =
 {
 	"long", & longCore, NULL, (DaoFuncItem*) longMeths, {0}, {0}, NULL, NULL
 };
+#else
+DaoTypeBase longTyper = { "long", & baseCore, NULL, NULL, {0}, {0}, NULL, NULL };
+#endif
 
 
 #ifdef DAO_WITH_NUMARRAY

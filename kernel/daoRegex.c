@@ -17,6 +17,7 @@
 #include<ctype.h>
 
 #include"daoRegex.h"
+#include"daoValue.h"
 
 #define ALIGN_LEN   sizeof(void*)
 #define ALIGN_MASK  (ALIGN_LEN-1)
@@ -1132,7 +1133,6 @@ int DaoRegex_SubMatch( DaoRegex *self, int gid, daoint *start, daoint *end )
 	*end = gp2;
 	return 1;
 }
-#include"daoValue.h"
 static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
 {
 	DString *tmp = sval->xString.data;
@@ -1229,6 +1229,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, int index
 {
 	return DaoRegex_ChangeExt( self, source, target, index, NULL, NULL );
 }
+#ifdef DAO_WITH_REGEX
 int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
 		int index, int count, DArray *packs )
 {
@@ -1272,4 +1273,4 @@ DoNothing:
 	DArray_Delete( array );
 	return n;
 }
-
+#endif
