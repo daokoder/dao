@@ -3139,7 +3139,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 	for(i=0; i<klass->cstDataName->size; i++){
 		DNode *it1, *it2;
-		value = klass->cstData->items.pValue[i];
+		value = klass->constants->items.pConst[i]->value;
 		if( value == NULL || value->type != DAO_ROUTINE ) continue;
 		if( value->xRoutine.routName->mbs[0] != '.' ) continue;
 		DString_SetMBS( mbs, value->xRoutine.routName->mbs + 1 );
@@ -4227,9 +4227,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				break;
 			case DAO_CLASS_VARIABLE :
 				if( isdecl && cst ){
-					DaoType *type = hostClass->classes->items.pClass[up]->glbDataType->items.pType[id];
-					DaoValue **data = hostClass->classes->items.pClass[up]->glbData->items.pValue + id;
-					DaoValue_Move( value, data, type );
+					DaoVariable *var = hostClass->variables->items.pVar[id];
+					DaoValue_Move( value, & var->value, var->dtype );
 					remove = 1;
 				}else if( isdecl && self->isDynamicClass ){
 					if( reg < 0 ) continue;
@@ -4398,7 +4397,7 @@ static DaoEnode DaoParser_NoneValue( DaoParser *self )
 	}
 	enode.reg = DaoParser_PushRegister( self );
 	enode.konst = self->noneValue = LOOKUP_BIND_LC( cst );
-	DaoParser_AddCode( self, DVM_GETCL, 0, cst, enode.reg, self->curToken,0,0 );
+	DaoParser_AddCode( self, DVM_DATA, 0, 0, enode.reg, self->curToken,0,0 );
 	enode.first = enode.last = enode.update = self->vmcLast;
 	enode.prev = self->vmcLast->prev;
 	return enode;
@@ -4605,7 +4604,7 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 		default : val = NULL; break;
 		}
 		break;
-	case DAO_CLASS_CONSTANT : val = klass->classes->items.pClass[up]->cstData->items.pValue[id]; break;
+	case DAO_CLASS_CONSTANT : val = klass->constants->items.pConst[id]->value; break;
 	case DAO_GLOBAL_VARIABLE : val = ns->variables->items.pVar[id]->value; break;
 	case DAO_GLOBAL_CONSTANT : val = ns->constants->items.pConst[id]->value; break;
 	default : break;

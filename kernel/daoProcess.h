@@ -181,20 +181,17 @@ extern struct DaoJIT dao_jit;
 
 struct DaoJitCallData
 {
-	DaoValue  **localValues;
-	DaoValue  **localConsts;
+	DaoValue     **localValues;
+	DaoValue     **localConsts;
 
-	DaoValue  **objectValues;
-	DaoValue  **classValues;
-	DaoValue  **classConsts;
+	DaoValue     **objectValues;
+	DaoVariable  **classValues;
+	DaoConstant  **classConsts;
 
-	DaoValue  **globalValues;
-	DaoValue  **globalConsts;
+	DaoVariable  **globalValues;
+	DaoConstant  **globalConsts;
 
 	DaoProcess **processes;
-
-	DArray  *classes;
-	DArray  *namespaces;
 };
 
 #endif

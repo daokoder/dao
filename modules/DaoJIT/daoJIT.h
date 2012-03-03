@@ -66,6 +66,7 @@ struct DaoJitHandle : public IRBuilder<>
 	Value *classConsts;  // jitcdata->classConsts : DaoValue*[]*
 	Value *globalValues; // jitcdata->globalValues: DaoValue*[]*
 	Value *globalConsts; // jitcdata->globalConsts: DaoValue*[]*
+	Value *processes;  // jitcdata->process: DaoProcess*[]*
 
 	// Direct values: single-definition values.
 	// Such values do not explicitly use the stack, or explicitly
@@ -117,6 +118,9 @@ struct DaoJitHandle : public IRBuilder<>
 	Value* GetClassValueValue( int index );
 	Value* GetGlobalValueRefer( int index );
 	Value* GetGlobalValueValue( int index );
+
+	Value* GetUpValueRefer( int up, int index );
+	Value* GetUpValueValue( int up, int index );
 
 	Value* GetClassConstValue( int index );
 	Value* GetGlobalConstValue( int index );

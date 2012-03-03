@@ -103,9 +103,9 @@ static DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
 static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
-void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *ctx );
-void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *ctx );
-void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
+int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *ctx );
+int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *ctx );
+int DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
 
 extern void DaoProcess_Trace( DaoProcess *self, int depth );
@@ -321,6 +321,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		if( value && value->type == tid && value->xGC.refCount == 1 && value->xGC.trait == 0 ) continue;
 		value2 = NULL;
 		switch( tid ){
+		case DAO_NONE    : value2 = dao_none_value; break;
 		case DAO_INTEGER : value2 = (DaoValue*) DaoInteger_New(0); break;
 		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
 		case DAO_DOUBLE  : value2 = (DaoValue*) DaoDouble_New(0.0); break;
@@ -804,7 +805,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoObject *othis = NULL;
 	DaoObject *object = NULL;
 	DaoArray *array;
-	DArray   *NSS, *CSS = NULL, *typeVO = NULL;
+	DArray   *typeVO = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {0};
 	DaoVariable *variable = NULL;
 	DaoValue  **dataVO = NULL;
@@ -1110,21 +1111,17 @@ CallEntry:
 	locVars = self->activeValues;
 	locTypes = self->activeTypes;
 	dataCL = routine->routConsts->items.items.pValue;
-	NSS = here->namespaces;
 	if( routine->body->jitData ){
 		jitCallData.localValues = locVars;
 		jitCallData.localConsts = routine->routConsts->items.items.pValue;
-		jitCallData.globalValues = here->variables->items.pValue; // XXX
-		jitCallData.globalConsts = here->constants->items.pValue; // XXX
-		jitCallData.namespaces = NSS;
+		jitCallData.globalValues = here->variables->items.pVar;
+		jitCallData.globalConsts = here->constants->items.pConst;
 		jitCallData.processes = dataVH;
 	}
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT ){
 		host = & routine->routHost->aux->xClass;
-		CSS = host->classes;
-		jitCallData.classes = CSS;
-		jitCallData.classValues = host->glbData->items.pValue;
-		jitCallData.classConsts = host->cstData->items.pValue;
+		jitCallData.classValues = host->variables->items.pVar;
+		jitCallData.classConsts = host->constants->items.pConst;
 		if( !(routine->attribs & DAO_ROUT_STATIC) ){
 			dataVO = othis->objValues;
 			typeVO = host->objDataType;
@@ -1172,7 +1169,7 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETCK ){
-			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = host->constants->items.pConst[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETCG ){
@@ -1186,7 +1183,7 @@ CallEntry:
 			GC_ShiftRC( dataVO[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVO[ vmc->b ];
 		}OPNEXT() OPCASE( GETVK ){
-			value = CSS->items.pClass[vmc->a]->glbData->items.pValue[ vmc->b ];
+			value = host->variables->items.pVar[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETVG ){
@@ -1211,9 +1208,8 @@ CallEntry:
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVK ){
-			abtp = CSS->items.pClass[vmc->c]->glbDataType->items.pType[ vmc->b ];
-			vref = CSS->items.pClass[vmc->c]->glbData->items.pValue + vmc->b;
-			if( DaoProcess_Move( self, locVars[vmc->a], vref, abtp ) ==0 ) goto CheckException;
+			variable = host->variables->items.pVar[ vmc->b ];
+			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETVG ){
 			variable = here->variables->items.pVar[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 )
@@ -1419,7 +1415,7 @@ CallEntry:
 			}
 		}OPNEXT() OPCASE( JITC ){
 			jitCallData.localValues = locVars;
-			jitCallData.globalValues = here->variables->items.pValue; // XXX
+			jitCallData.globalValues = here->variables->items.pVar;
 			dao_jit.Execute( self, & jitCallData, vmc->a );
 			if( self->exceptions->size > exceptCount ) goto CheckException;
 			vmc += vmc->b;
@@ -1489,16 +1485,16 @@ CallEntry:
 		}OPNEXT() OPCASE( GETCL_C ){
 			locVars[ vmc->c ]->xComplex.value = dataCL[ vmc->b ]->xComplex.value;
 		}OPNEXT() OPCASE( GETCK_I ){
-			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = host->constants->items.pConst[vmc->b]->value;;
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETCK_F ){
-			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = host->constants->items.pConst[vmc->b]->value;;
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETCK_D ){
-			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = host->constants->items.pConst[vmc->b]->value;;
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETCK_C ){
-			value = CSS->items.pClass[ vmc->a ]->cstData->items.pValue[ vmc->b ];
+			value = host->constants->items.pConst[vmc->b]->value;;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETCG_I ){
 			value = here->constants->items.pConst[ vmc->b ]->value;
@@ -1529,13 +1525,13 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVO_C ){
 			locVars[ vmc->c ]->xComplex.value = dataVO[ vmc->b ]->xComplex.value;
 		}OPNEXT() OPCASE( GETVK_I ){
-			IntegerOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pInteger[vmc->b]->value;
+			IntegerOperand( vmc->c ) = host->variables->items.pVar[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVK_F ){
-			FloatOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pFloat[vmc->b]->value;
+			FloatOperand( vmc->c ) = host->variables->items.pVar[vmc->b]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVK_D ){
-			DoubleOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pDouble[vmc->b]->value;
+			DoubleOperand( vmc->c ) = host->variables->items.pVar[vmc->b]->value->xDouble.value;
 		}OPNEXT() OPCASE( GETVK_C ){
-			ComplexOperand( vmc->c ) = CSS->items.pClass[vmc->a]->glbData->items.pComplex[vmc->b]->value;
+			ComplexOperand( vmc->c ) = host->variables->items.pVar[vmc->b]->value->xComplex.value;
 		}OPNEXT() OPCASE( GETVG_I ){
 			IntegerOperand( vmc->c ) = here->variables->items.pVar[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVG_F ){
@@ -1561,13 +1557,13 @@ CallEntry:
 		}OPNEXT() OPCASE( SETVO_CC ){
 			dataVO[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_II ){
-			CSS->items.pClass[vmc->c]->glbData->items.pInteger[vmc->b]->value = IntegerOperand( vmc->a );
+			host->variables->items.pVar[vmc->b]->value->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_FF ){
-			CSS->items.pClass[vmc->c]->glbData->items.pFloat[vmc->b]->value = FloatOperand( vmc->a );
+			host->variables->items.pVar[vmc->b]->value->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_DD ){
-			CSS->items.pClass[vmc->c]->glbData->items.pDouble[vmc->b]->value = DoubleOperand( vmc->a );
+			host->variables->items.pVar[vmc->b]->value->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVK_CC ){
-			CSS->items.pClass[vmc->c]->glbData->items.pComplex[vmc->b]->value = ComplexOperand( vmc->a );
+			host->variables->items.pVar[vmc->b]->value->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_II ){
 			here->variables->items.pVar[vmc->b]->value->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVG_FF ){
@@ -2008,19 +2004,19 @@ CallEntry:
 			double *RI = (double*)(complex16*) & locVars[ vmc->c ]->xComplex.value;
 			RI[ vmc->b ] = locVars[ vmc->a ]->xDouble.value;
 		}OPNEXT() OPCASE( GETF_KC ){
-			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.constants->items.pConst[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETF_KG ){
-			value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.variables->items.pVar[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETF_OC ){
-			value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->constants->items.pConst[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETF_OG ){
-			value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->variables->items.pVar[ vmc->b ]->value;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETF_OV ){
@@ -2030,52 +2026,52 @@ CallEntry:
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETF_KCI ){
-			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_KCF ){
-			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETF_KCD ){
-			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETF_KCC ){
-			value = locVars[ vmc->a ]->xClass.cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETF_KGI ){
-			value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_KGF ){
-			value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETF_KGD ){
-			value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETF_KGC ){
-			value = locVars[ vmc->a ]->xClass.glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xClass.variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETF_OCI ){
-			value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_OCF ){
-			value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETF_OCD ){
-			value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETF_OCC ){
-			value = locVars[ vmc->a ]->xObject.defClass->cstData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->constants->items.pConst[ vmc->b ]->value;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETF_OGI ){
-			value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_OGF ){
-			value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
 		}OPNEXT() OPCASE( GETF_OGD ){
-			value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
 		}OPNEXT() OPCASE( GETF_OGC ){
-			value = locVars[ vmc->a ]->xObject.defClass->glbData->items.pValue[ vmc->b ];
+			value = locVars[ vmc->a ]->xObject.defClass->variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETF_OVI ){
 			value = locVars[ vmc->a ]->xObject.objValues[ vmc->b ];
@@ -2091,38 +2087,38 @@ CallEntry:
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( SETF_KG ){
 			klass = & locVars[ vmc->c ]->xClass;
-			DaoValue_Copy( locVars[vmc->a], klass->glbData->items.pValue + vmc->b );
+			DaoValue_Copy( locVars[vmc->a], & klass->variables->items.pVar[vmc->b]->value );
 		}OPNEXT() OPCASE( SETF_OG ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
-			DaoValue_Copy( locVars[vmc->a], klass->glbData->items.pValue + vmc->b );
+			DaoValue_Copy( locVars[vmc->a], & klass->variables->items.pVar[vmc->b]->value );
 		}OPNEXT() OPCASE( SETF_OV ){
 			object = & locVars[ vmc->c ]->xObject;
 			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
 			DaoValue_Copy( locVars[vmc->a], object->objValues + vmc->b );
 		}OPNEXT() OPCASE( SETF_KGII ){
 			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pInteger[ vmc->b ]->value = IntegerOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_KGFF ){
 			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pFloat[ vmc->b ]->value = FloatOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_KGDD ){
 			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pDouble[ vmc->b ]->value = DoubleOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_KGCC ){
 			klass = & locVars[ vmc->c ]->xClass;
-			klass->glbData->items.pComplex[ vmc->b ]->value = ComplexOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OGII ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pInteger[ vmc->b ]->value = IntegerOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OGFF ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pFloat[ vmc->b ]->value = FloatOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OGDD ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pDouble[ vmc->b ]->value = DoubleOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OGCC ){
 			klass = locVars[ vmc->c ]->xObject.defClass;
-			klass->glbData->items.pComplex[ vmc->b ]->value = ComplexOperand( vmc->a );
+			klass->variables->items.pVar[vmc->b]->value->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OVII ){
 			object = (DaoObject*) locVars[ vmc->c ];
 			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
@@ -6304,8 +6300,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 		value = self->activeValues[vmc->a+i];
 		if( st == DAO_CLASS_CONSTANT ){
 			DaoRoutine *newRout = NULL;
-			DaoValue **dest2 = klass->cstData->items.pValue + id;
-			DaoValue *dest = *dest2;
+			DaoConstant *dest2 = klass->constants->items.pConst[id];
+			DaoValue *dest = dest2->value;
 			if( value->type == DAO_ROUTINE && value->xRoutine.routHost == proto->objType ){
 				newRout = & value->xRoutine;
 				if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
@@ -6320,24 +6316,24 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 					up = LOOKUP_UP( node->value.pSize );
 					if( st == DAO_CLASS_CONSTANT && up ==0 ){
 						id = LOOKUP_ID( node->value.pSize );
-						dest2 = klass->cstData->items.pValue + id;
+						dest2 = klass->constants->items.pConst[id];
 					}
 					DRoutines_Add( klass->classRoutines->overloads, newRout );
 				}
 			}
-			dest = *dest2;
+			dest = dest2->value;
 			if( dest->type == DAO_ROUTINE ){
 				DaoRoutine *rout = & dest->xRoutine;
-				if( rout->routHost != klass->objType ) DaoValue_Clear( dest2 );
+				if( rout->routHost != klass->objType ) DaoValue_Clear( & dest2->value );
 			}
 			if( dest->type == DAO_ROUTINE && dest->xRoutine.overloads ){
 				DRoutines_Add( dest->xRoutine.overloads, newRout );
 			}else{
-				DaoValue_Move( value, dest2, NULL );
+				DaoValue_Copy( value, & dest2->value );
 			}
 		}else if( st == DAO_CLASS_VARIABLE ){
-			tp = klass->glbDataType->items.pType[id];
-			DaoValue_Move( value, klass->glbData->items.pValue + id, tp );
+			DaoVariable *var = klass->variables->items.pVar[id];
+			DaoValue_Move( value, & var->value, var->dtype );
 		}else if( st == DAO_OBJECT_VARIABLE ){
 			tp = klass->objDataType->items.pType[id];
 			DaoValue_Move( value, klass->objDataDefault->items.pValue + id, tp );
@@ -6445,7 +6441,7 @@ InvalidField:
 			if( LOOKUP_UP( node->value.pSize ) ) continue;
 			if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
 			id = LOOKUP_ID( node->value.pSize );
-			dest = klass->cstData->items.pValue[id];
+			dest = klass->constants->items.pConst[id]->value;
 			if( dest->type == DAO_ROUTINE && dest->xRoutine.overloads ){
 				DRoutines_Add( dest->xRoutine.overloads, newRout );
 			}

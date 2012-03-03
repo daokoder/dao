@@ -25,18 +25,16 @@ struct DaoClass
 	/* Holding index of class members, including data from its parents: */
 	/* negative index indicates an inaccessible private member from a parent? XXX */
 	DMap    *lookupTable; /* <DString*,size_t> */
-	DArray  *classes; /* <DaoClass*> */
 
 	/* Holding class consts and routines - class data: */
 	/* For both this class and its parents: */
-	DArray  *cstData; /* <DaoValue*> */
-	DArray  *glbData; /* <DaoValue*>: static variables; */
+	DArray  *constants; /* <DaoConstant*>, constants; */
+	DArray  *variables; /* <DaoVariable*>, static variables; */
 
 	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
 
-	DArray  *glbDataType;  /* <DaoType*> */
 	DArray  *objDataType;  /* <DaoType*> */
 	DArray  *objDataDefault; /* <DaoValue*>, NULL: no default, not for parent classes */
 
@@ -44,18 +42,18 @@ struct DaoClass
 	DArray  *superAlias;
 
 	/* Routines with overloading signatures: */
-	/* They are inserted into cstData, no refCount updating for this. */
+	/* They are inserted into constants, no refCount updating for this. */
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
 	DMap  *vtable; /* <DRoutine*,DRoutine*> */
 
 	DaoRoutine  *classRoutine; /* Default class constructor. */
-	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in cstData; */
+	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in constants; */
 
 	DString  *className;
 	DString  *classHelp;
 
 	DaoType  *clsType;
-	DaoType  *objType; /* GC handled in cstData; */
+	DaoType  *objType; /* GC handled in constants; */
 	DMap     *abstypes;
 	DMap     *deflines;
 

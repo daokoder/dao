@@ -44,8 +44,8 @@ routine fannkuch( n : int ) => int
 			}
 		}
 		# Use incremental change to generate another permutation
-		while (1) {
-			if (r == n) return maxFlipsCount;
+		while ( r != n ) {
+			#if (r == n) return maxFlipsCount;
 			perm0 = perm1[0];
 			i = 0;
 			while (i < r) {
@@ -58,6 +58,7 @@ routine fannkuch( n : int ) => int
 			if (count[r] > 0) break;
 			r+=1;
 		}
+		if (r == n) return maxFlipsCount;
 	}
 	return maxFlipsCount;
 }

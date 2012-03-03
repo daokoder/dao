@@ -2036,9 +2036,9 @@ complex16 DaoArray_GetComplex( DaoArray *na, daoint i )
 }
 
 daoint DaoArray_IndexFromSlice( DaoArray *self, DArray *slices, daoint sid );
-void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *proc );
-void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *proc );
-void DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
+int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *proc );
+int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *proc );
+int DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
 static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream, DMap *cycData );
 
 static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid )
@@ -3585,7 +3585,7 @@ daoint DaoArray_UpdateShape( DaoArray *C, DaoArray *A )
 	}
 	return N;
 }
-void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *proc )
+int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *proc )
 {
 	DaoArray *rB = B->original;
 	DaoArray *rC = C->original;
@@ -3597,8 +3597,8 @@ void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, 
 
 	ac.real = af;
 	if( N < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
-		return;
+		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
+		return 0;
 	}
 	if( dB->etype == DAO_INTEGER && A->type == DAO_INTEGER ){
 		daoint bi, ci = 0, ai = A->xInteger.value;
@@ -3625,7 +3625,7 @@ void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, 
 			case DAO_COMPLEX : dC->data.c[c].real = ci; dC->data.c[c].imag = 0; break;
 			}
 		}
-		return;
+		return 1;
 	}
 	for(i=0; i<N; i++){
 		c = rC ? DaoArray_IndexFromSlice( rC, C->slices, i ) : i;
@@ -3690,8 +3690,9 @@ void DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, 
 		default : break;
 		}
 	}
+	return 1;
 }
-void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *proc )
+int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *proc )
 {
 	DaoArray *rA = A->original;
 	DaoArray *rC = C->original;
@@ -3704,8 +3705,8 @@ void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, 
 
 	bc.real = bf;
 	if( N < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
-		return;
+		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
+		return 0;
 	}
 	if( dA->etype == DAO_INTEGER && B->type == DAO_INTEGER ){
 		for(i=0; i<N; i++){
@@ -3731,7 +3732,7 @@ void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, 
 			case DAO_COMPLEX : dC->data.c[c].real = ci; dC->data.c[c].imag = 0; break;
 			}
 		}
-		return;
+		return 1;
 	}
 	for(i=0; i<N; i++){
 		c = rC ? DaoArray_IndexFromSlice( rC, C->slices, i ) : i;
@@ -3796,8 +3797,9 @@ void DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, 
 		default : break;
 		}
 	}
+	return 1;
 }
-void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoProcess *proc )
+int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoProcess *proc )
 {
 	DaoArray *rA = A->original;
 	DaoArray *rB = B->original;
@@ -3809,8 +3811,8 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPr
 	daoint M = C == A ? N : DaoArray_MatchShape( C, A );
 	daoint i, a, b, c;
 	if( N < 0 || (C->original && M != N) ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
-		return;
+		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
+		return 0;
 	}
 	if( A != C && C->original == NULL && M != N ){
 		DaoArray_GetSliceShape( A, & C->dims, & C->ndim );
@@ -3877,7 +3879,7 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPr
 			default : break;
 			}
 		}
-		return;
+		return 1;
 	}else if( dA->etype == DAO_INTEGER && dB->etype == DAO_INTEGER ){
 		daoint res = 0;
 		for(i=0; i<N; i++){
@@ -3903,7 +3905,7 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPr
 			case DAO_COMPLEX : dC->data.c[c].real = res; dC->data.c[c].imag = 0; break;
 			}
 		}
-		return;
+		return 1;
 	}
 	for(i=0; i<N; i++){
 		complex16 ac, bc;
@@ -3975,6 +3977,7 @@ void DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPr
 		default : break;
 		}
 	}
+	return 1;
 }
 
 DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res )

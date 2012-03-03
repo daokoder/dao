@@ -395,18 +395,14 @@ static const char *const sep1 = "==========================================\n";
 static const char *const sep2 =
 "-------------------------------------------------------------------------\n";
 
-void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output )
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output )
 {
-	DaoVmCodeX **vmCodes = self->body->annotCodes->items.pVmc;
-	DaoVmCodeX vmc;
 	char buffer1[10];
 	char buffer2[200];
 	const char *fmt = daoRoutineCodeFormat;
 	const char *name;
 
 	DString_Clear( output );
-	if( i < 0 || i >= (int)self->body->annotCodes->size ) return;
-	vmc = *vmCodes[i];
 	name = DaoVmCode_GetOpcodeName( vmc.code );
 	sprintf( buffer1, "%5i :  ", i);
 	if( self->body->source ) DaoTokens_AnnotateCode( self->body->source, vmc, output, 24 );
@@ -421,7 +417,6 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	int j, n;
 
 	DaoRoutine_Compile( self );
-
 	DaoStream_WriteMBS( stream, sep1 );
 	DaoStream_WriteMBS( stream, "routine " );
 	DaoStream_WriteString( stream, self->routName );
@@ -442,8 +437,15 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, sep2 );
 	annot = DString_New(1);
 	vmCodes = self->body->annotCodes->items.pVmc;
-	for( j=0,n=self->body->annotCodes->size; j<n; j++){
-		DaoRoutine_FormatCode( self, j, annot );
+	for(j=0,n=self->body->annotCodes->size; j<n; j++){
+		DaoVmCode vmc = self->body->vmCodes->codes[j];
+		if( vmc.code == DVM_JITC ){
+			DaoVmCodeX vmcx = *vmCodes[j];
+			*(DaoVmCode*) & vmcx = vmc;
+			DaoRoutine_FormatCode( self, j, vmcx, annot );
+			DaoStream_WriteString( stream, annot );
+		}
+		DaoRoutine_FormatCode( self, j, *vmCodes[j], annot );
 		DaoStream_WriteString( stream, annot );
 	}
 	DaoStream_WriteMBS( stream, sep2 );
