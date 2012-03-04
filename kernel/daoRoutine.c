@@ -952,3 +952,4 @@ void DaoRoutine_UpdateVtable( DaoRoutine *self, DaoRoutine *routine, DMap *vtabl
 		if( node ) node->value.pRoutine = routine;
 	}
 }
+

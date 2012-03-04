@@ -93,21 +93,8 @@ DAO_DLL DaoVmcArray* DaoVmcArray_New();
 DAO_DLL void DaoVmcArray_Delete( DaoVmcArray *self );
 DAO_DLL void DaoVmcArray_Clear( DaoVmcArray *self );
 DAO_DLL void DaoVmcArray_Resize( DaoVmcArray *self, int size );
-DAO_DLL void DaoVmcArray_PushFront( DaoVmcArray *self, DaoVmCode code );
 DAO_DLL void DaoVmcArray_PushBack( DaoVmcArray *self, DaoVmCode code );
-DAO_DLL void DaoVmcArray_PopFront( DaoVmcArray *self );
-DAO_DLL void DaoVmcArray_PopBack( DaoVmcArray *self );
 DAO_DLL void DaoVmcArray_Assign( DaoVmcArray *left, DaoVmcArray *right );
-/*DaoVmCode* DaoVmcArray_Top( DaoVmcArray *self ); */
-
-/* Insert code and update jumps */
-DAO_DLL void DaoVmcArray_Insert( DaoVmcArray *self, DaoVmCode code, int pos );
-/* Cleanup unused codes and update jumps */
-DAO_DLL void DaoVmcArray_Cleanup( DaoVmcArray *self );
-DAO_DLL void DArray_CleanupCodes( DArray *self );
-
-#define DaoVmcArray_Append( self, code )  DaoVmcArray_PushBack( self, code )
-#define DaoVmcArray_Pop( self )  DaoVmcArray_PopBack( self )
 
 
 #endif

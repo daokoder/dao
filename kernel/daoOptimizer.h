@@ -150,6 +150,7 @@ struct DaoInferencer
 	DArray      *typeMaps;
 	DArray      *errors;
 	DArray      *array;
+	DArray      *array2;
 
 	DMap        *defs;
 	DMap        *defs2;

@@ -142,9 +142,6 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		break;
 	case DAO_CODE_CALL :
 		k = vmc->b & 0xff;
-		if( k == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-			//XXX	k = routine->parCount - (routine->routType->attrib & DAO_TYPE_SELF) != 0;
-		}
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
 		self->second = vmc->a + k;
@@ -839,10 +836,111 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		DaoVmcArray_Resize( vmCodes, vmCodes->size );
 	}
 }
-static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine, DArray *mapping )
+static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 {
 	DNode *it;
 	DArray *array = DArray_New(0);
+	DMap *localVarType = self->body->localVarType;
+	DaoType **types = self->body->regType->items.pType;
+	DaoVmCode *vmc, *codes = self->body->vmCodes->codes;
+	DaoVmCode **codes2 = (DaoVmCode**) self->body->annotCodes->items.pVmc;
+	daoint i, N = self->body->annotCodes->size;
+	daoint k, m = 0, M = self->body->regCount;
+	daoint *regmap = mapping->items.pInt;
+
+	for(i=0; i<M; i++){
+		k = regmap[i];
+		if( (k + 1) >= m && k < M ) m = k + 1;
+	}
+	DArray_Resize( array, m, 0 );
+	for(i=0; i<M; i++){
+		k = regmap[i];
+		if( i != k && (it = MAP_Find( localVarType, i )) ){
+			MAP_Insert( localVarType, k, it->value.pVoid );
+			MAP_Erase( localVarType, i );
+		}
+		if( k >= m ) continue;
+		GC_ShiftRC( types[i], array->items.pType[k] );
+		array->items.pType[k] = types[i];
+	}
+	self->body->regCount = array->size;
+	GC_DecRCs( self->body->regType );
+	DArray_Swap( self->body->regType, array );
+	DArray_Delete( array );
+
+	types = self->body->regType->items.pType;
+	self->body->simpleVariables->size = 0;
+	for(i=self->parCount; i<m; i++){
+		DaoType *tp = types[i];
+		if( tp && tp->tid <= DAO_ENUM ){
+			DArray_Append( self->body->simpleVariables, (daoint)i );
+		}
+	}
+	for(i=0; i<N; i++){
+		vmc = codes2[i];
+		switch( (k = DaoVmCode_GetOpcodeType( vmc->code )) ){
+		case DAO_CODE_NOP :
+			break;
+		case DAO_CODE_GETC :
+		case DAO_CODE_GETG :
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_SETU :
+			vmc->a = regmap[ vmc->a ];
+			if( vmc->c != 0 ) vmc->b = regmap[ vmc->b ];
+			break;
+		case DAO_CODE_SETG :
+		case DAO_CODE_BRANCH :
+			vmc->a = regmap[ vmc->a ];
+			break;
+		case DAO_CODE_EXPLIST :
+			if( vmc->b == 0 && vmc->a >= M ) break;
+			vmc->a = regmap[ vmc->a ];
+			break;
+		case DAO_CODE_GETF : case DAO_CODE_SETF :
+		case DAO_CODE_MOVE : case DAO_CODE_UNARY :
+			vmc->a = regmap[ vmc->a ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_GETM :
+		case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
+		case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
+		case DAO_CODE_CALL :
+			vmc->a = regmap[ vmc->a ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_SETM:
+			vmc->a = regmap[ vmc->a ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_ENUM : 
+		case DAO_CODE_YIELD :
+			if( vmc->b || vmc->a < M ) vmc->a = regmap[ vmc->a ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_SETI : 
+		case DAO_CODE_GETI :
+		case DAO_CODE_BINARY :
+			vmc->a = regmap[ vmc->a ];
+			vmc->b = regmap[ vmc->b ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		case DAO_CODE_GETU :
+			vmc->c = regmap[ vmc->c ];
+			if( vmc->a != 0 ) vmc->b = regmap[ vmc->b ];
+			break;
+		case DAO_CODE_UNARY2 :
+			vmc->b = regmap[ vmc->b ];
+			vmc->c = regmap[ vmc->c ];
+			break;
+		default: break;
+		}
+		codes[i] = *vmc;
+	}
+}
+static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine, DArray *mapping )
+{
+	DNode *it;
 	DMap *localVarType = routine->body->localVarType;
 	DaoType **types = routine->body->regType->items.pType;
 	DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
@@ -857,35 +955,17 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		k = mapping->items.pInt[i];
 		if( k >= 0 && k < M && regmap[k] == 0 ) regmap[k] = ++ m;
 	}
-	DArray_Resize( array, m, 0 );
 	for(i=0; i<M; i++){
 		k = mapping->items.pInt[i];
 		if( k < 0 || k >= M ) continue;
 		k = regmap[k] - 1;
 		mapping->items.pInt[i] = k;
-		if( i != k && (it = MAP_Find( localVarType, i )) ){
-			MAP_Insert( localVarType, k, it->value.pVoid );
-			MAP_Erase( localVarType, i );
-		}
-		GC_ShiftRC( types[i], array->items.pType[k] );
-		array->items.pType[k] = types[i];
 	}
-	routine->body->regCount = array->size;
-	GC_DecRCs( routine->body->regType );
-	DArray_Swap( routine->body->regType, array );
-	DArray_Delete( array );
 	dao_free( regmap );
-
 	regmap = mapping->items.pInt;
-	types = routine->body->regType->items.pType;
 
-	routine->body->simpleVariables->size = 0;
-	for(i=routine->parCount; i<m; i++){
-		DaoType *tp = types[i];
-		if( tp && tp->tid <= DAO_ENUM ){
-			DArray_Append( routine->body->simpleVariables, (daoint)i );
-		}
-	}
+	DaoRoutine_UpdateRegister( routine, mapping );
+
 	for(i=0; i<N; i++){
 		vmc = codes2[i];
 		node = nodes[i];
@@ -894,33 +974,26 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			break;
 		case DAO_CODE_GETC :
 		case DAO_CODE_GETG :
-			vmc->c = regmap[ vmc->c ];
 			node->lvalue = vmc->c;
 			break;
 		case DAO_CODE_SETU :
-			vmc->a = regmap[ vmc->a ];
 			node->first = vmc->a;
 			if( vmc->c != 0 ){
-				vmc->b = regmap[ vmc->b ];
 				node->second = vmc->b;
 				node->lvalue2 = vmc->b;
 			}
 			break;
 		case DAO_CODE_SETG :
 		case DAO_CODE_BRANCH :
-			vmc->a = regmap[ vmc->a ];
 			node->first = vmc->a;
 			break;
 		case DAO_CODE_EXPLIST :
-			if( vmc->b == 0 && vmc->a >= M ) break;
-			vmc->a = regmap[ vmc->a ];
+			if( vmc->b == 0 ) break;
 			node->second += vmc->a - node->first;
 			node->first = vmc->a;
 			break;
 		case DAO_CODE_GETF : case DAO_CODE_SETF :
 		case DAO_CODE_MOVE : case DAO_CODE_UNARY :
-			vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
 			node->first = vmc->a;
 			if( k == DAO_CODE_SETF ){
 				node->second = vmc->c;
@@ -933,15 +1006,11 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
 		case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
 		case DAO_CODE_CALL :
-			vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
 			node->second += vmc->a - node->first;
 			node->first = vmc->a;
 			node->lvalue = vmc->c;
 			break;
 		case DAO_CODE_SETM:
-			vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
 			node->second += vmc->c - node->first;
 			node->first = vmc->c;
 			node->third = vmc->a;
@@ -950,19 +1019,14 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		case DAO_CODE_ENUM : 
 		case DAO_CODE_YIELD :
 			if( vmc->b || vmc->a < M ){
-				vmc->a = regmap[ vmc->a ];
 				node->second += vmc->a - node->first;
 				node->first = vmc->a;
 			}
-			vmc->c = regmap[ vmc->c ];
 			node->lvalue = vmc->c;
 			break;
 		case DAO_CODE_SETI : 
 		case DAO_CODE_GETI :
 		case DAO_CODE_BINARY :
-			vmc->a = regmap[ vmc->a ];
-			vmc->b = regmap[ vmc->b ];
-			vmc->c = regmap[ vmc->c ];
 			node->first = vmc->a;
 			node->second = vmc->b;
 			if( k == DAO_CODE_SETI ){
@@ -973,16 +1037,10 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			}
 			break;
 		case DAO_CODE_GETU :
-			vmc->c = regmap[ vmc->c ];
 			node->lvalue = vmc->c;
-			if( vmc->a != 0 ){
-				vmc->b = regmap[ vmc->b ];
-				node->second = vmc->b;
-			}
+			if( vmc->a != 0 ) node->second = vmc->b;
 			break;
 		case DAO_CODE_UNARY2 :
-			vmc->b = regmap[ vmc->b ];
-			vmc->c = regmap[ vmc->c ];
 			node->second = vmc->b;
 			node->lvalue = vmc->c;
 			break;
@@ -1218,8 +1276,9 @@ static void DaoOptimizer_RemapRegister( DaoOptimizer *self, DaoRoutine *routine 
 	daoint j, M = routine->body->regCount;
 	daoint *regmap;
 
-	DArray_Resize( array, M, (void*)(size_t)M );
+	DArray_Resize( array, M, 0 );
 	regmap = array->items.pInt;
+	for(i=0; i<M; i++) array->items.pInt[i] = M; /* mark all register unused; */
 
 	/* Dead Code Elimination may have produce some dead registers. Remove them first: */
 	self->update = NULL;
@@ -1583,6 +1642,7 @@ DaoInferencer* DaoInferencer_New()
 	self->typeMaps = DArray_New(D_MAP);
 	self->errors = DArray_New(0);
 	self->array = DArray_New(0);
+	self->array2 = DArray_New(0);
 	self->defs = DHash_New(0,0);
 	self->defs2 = DHash_New(0,0);
 	self->defs3 = DHash_New(0,0);
@@ -1608,6 +1668,7 @@ void DaoInferencer_Clear( DaoInferencer *self )
 	DArray_Clear( self->typeMaps );
 	DArray_Clear( self->errors );
 	DArray_Clear( self->array );
+	DArray_Clear( self->array2 );
 	DMap_Clear( self->defs );
 	DMap_Clear( self->defs2 );
 	DMap_Clear( self->defs3 );
@@ -1629,6 +1690,7 @@ void DaoInferencer_Delete( DaoInferencer *self )
 	DArray_Delete( self->typeMaps );
 	DArray_Delete( self->errors );
 	DArray_Delete( self->array );
+	DArray_Delete( self->array2 );
 	DString_Delete( self->mbstring );
 	DMap_Delete( self->defs );
 	DMap_Delete( self->defs2 );
@@ -1643,6 +1705,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	DaoInode *inode, *inode2;
 	DaoNamespace *NS = routine->nameSpace;
 	DaoVmCodeX *vmc, **vmcs = routine->body->annotCodes->items.pVmc;
+	DArray *partypes = routine->routType->nested;
 	daoint i, n, N = routine->body->annotCodes->size;
 	daoint M = routine->body->regCount;
 	char *inited;
@@ -1691,16 +1754,10 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	inited = self->inited->mbs;
 	types = self->types->items.pType;
 
-	if( routine->routName->mbs[0] == '@' && routine->routType->nested->size ){
-		DaoType *ftype = routine->routType->nested->items.pType[0];
-		if( ftype->tid == DAO_PAR_NAMED && ftype->aux->xType.tid == DAO_ROUTINE ){
-			ftype = & ftype->aux->xType;
-			for(i=0,n=ftype->nested->size; i<n; i++) inited[i+routine->parCount] = 1;
-		}
-	}
-	for(i=0,n=routine->routType->nested->size; i<n; i++){
+	if( routine->routName->mbs[0] == '@' && partypes->size ) inited[routine->parCount] = 1;
+	for(i=0,n=partypes->size; i<n; i++){
 		inited[i] = 1;
-		types[i] = routine->routType->nested->items.pType[i];
+		types[i] = partypes->items.pType[i];
 		if( types[i] && types[i]->tid == DAO_PAR_VALIST ) types[i] = NULL;
 		type = types[i];
 		if( type ) types[i] = & type->aux->xType; /* name:type, name=type */
@@ -1711,7 +1768,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	}
 	node = DMap_First( routine->body->localVarType );
 	for( ; node !=NULL; node = DMap_Next(routine->body->localVarType,node) ){
-		if( node->key.pInt < (int)routine->routType->nested->size ) continue;
+		if( node->key.pInt < (int)partypes->size ) continue;
 		types[ node->key.pInt ] = DaoType_DefineTypes( node->value.pType, NS, defs );
 	}
 	DArray_PushBack( self->typeMaps, defs );
@@ -4444,11 +4501,12 @@ NotExist_TryAux:
 				at = types[opa];
 				bt = ct = NULL;
 				if( code == DVM_CALL && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
-				/*
-				   DaoVmCodeX_Print( *vmc, NULL );
-				   printf( "call: %s %i\n", types[opa]->name->mbs, types[opa]->tid );
-				   if(bt) printf( "self: %s\n", bt->name->mbs );
-				 */
+
+#if 0
+				DaoVmCodeX_Print( *vmc, NULL );
+				printf( "call: %s %i\n", types[opa]->name->mbs, types[opa]->tid );
+				if(bt) printf( "self: %s\n", bt->name->mbs );
+#endif
 				ct = types[opa];
 				rout = NULL;
 				if( at->tid == DAO_CLASS ){
@@ -4482,31 +4540,32 @@ NotExist_TryAux:
 				pp = consts+opa+1;
 				tp = types+opa+1;
 				j = vmc->b & 0xff;
-				if( j == 0 && (vmc->b & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-					k = (routine->routType->attrib & DAO_TYPE_SELF) != 0;
-					j = routine->parCount - k;
-					pp = consts + k;
-					tp = types + k;
-				}else{
-					for(k=0; k<j; k++){
-						tt = DaoType_DefineTypes( tp[k], NS, defs );
-						GC_ShiftRC( tt, tp[k] );
-						tp[k] = tt;
-						if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
-						assert( i >= (k+1) );
-					}
-					m = 1;
-					for(k=i+1; k<N; k++){
-						DaoInode *ret = inodes[k];
-						if( ret->code == DVM_NOP ) continue;
-						if( ret->code == DVM_RETURN ){
-							m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
-							break;
-						}
-						m = 0;
+				for(k=0; k<j; k++){
+					tt = DaoType_DefineTypes( tp[k], NS, defs );
+					GC_ShiftRC( tt, tp[k] );
+					tp[k] = tt;
+					if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
+					assert( i >= (k+1) );
+				}
+				m = 1;
+				for(k=i+1; k<N; k++){
+					DaoInode *ret = inodes[k];
+					if( ret->code == DVM_NOP ) continue;
+					if( ret->code == DVM_RETURN ){
+						m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
 						break;
 					}
-					if( m ) vmc->b |= DAO_CALL_TAIL;
+					m = 0;
+					break;
+				}
+				if( m ) vmc->b |= DAO_CALL_TAIL;
+				if( (vmc->b & DAO_CALL_EXPAR) && j && tp[j-1]->tid == DAO_TUPLE ){
+					DArray *its = tp[j-1]->nested;
+					DArray_Clear( self->array2 );
+					for(k=0; k<(j-1); k++) DArray_Append( self->array2, tp[k] );
+					for(k=0; k<its->size; k++) DArray_Append( self->array2, its->items.pType[k] );
+					tp = self->array2->items.pType;
+					j = self->array2->size;
 				}
 				if( at->tid == DAO_ROUTINE && at->overloads ) rout = (DaoRoutine*)at->aux;
 				DMap_Reset( defs2 );
@@ -4514,10 +4573,6 @@ NotExist_TryAux:
 				if( rout == NULL && at->aux == NULL ){
 					/* "routine" type: */
 					ct = dao_type_any;
-					ctchecked = 1;
-				}else if( routine->routName->mbs[0] == '@' && (vmc->b & DAO_CALL_EXPAR) ){
-					/* inside decorator: */
-					ct = (DaoType*) at->aux;
 					ctchecked = 1;
 				}else if( rout == NULL ){
 					if( DaoRoutine_CheckType( at, NS, bt, tp, j, code, 0 ) ==0 ){
@@ -5359,3 +5414,142 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	if( retc ) DaoRoutine_Optimize( self );
 	return retc;
 }
+
+#ifdef DAO_WITH_DECORATOR
+/*
+// Function decoration is done in the following way:
+// 1. Use the decoration parameters to find the right decorator function, if overloaded;
+// 2. Use the decorator's parameter to determine the right subject (OLD) function, if overloaded;
+// 3. The decorator function is copied to form the basis of the result (NEW) function;
+// 4. Then the NEW function is adjusted to take the same parameters as the OLD function;
+// 5. The arguments to the decorator is stored and accessed in the same way as local constants;
+// 6. Extra codes are added at the beginning of the NEW function to access decorator arguments;
+// 7. Code is also added to create a tuple (named args) from the parameters of the NEW function;
+// 8. The registers from the decorate function will be mapped to higher indexes to reserve
+//    indexes for the parameters of the NEW function.
+*/
+DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip )
+{
+	int i, j, k, m;
+	int parpass[DAO_MAX_PARAM];
+	DArray *regmap = DArray_New(0);
+	DArray *annotCodes, *added = DArray_New(D_VMCODE);
+	DArray *nested = decorator->routType->nested;
+	DaoType **decotypes = nested->items.pType;
+	DaoRoutine *newfn, *oldfn = self;
+	DaoVmCodeX *vmc;
+
+	if( decorator->overloads ){
+		decorator = DaoRoutine_ResolveX( decorator, NULL, p, n, DVM_CALL );
+		if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
+		nested = decorator->routType->nested;
+		decotypes = nested->items.pType;
+	}
+	if( self->overloads ){
+		DaoType *ftype = & decotypes[0]->aux->xType;
+		DArray *ptypes = ftype->nested;
+		int code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
+		oldfn = DaoRoutine_ResolveByType( self, NULL, ptypes->items.pType, ptypes->size, code );
+	}
+	newfn = DaoRoutine_Copy( decorator, 1, 1 );
+
+	DArray_Resize( regmap, decorator->body->regCount + oldfn->parCount, 0 );
+	for(i=0,m=decorator->body->regCount; i<m; i++) regmap->items.pInt[i] = i + oldfn->parCount;
+	for(i=0,m=oldfn->parCount; i<m; i++) regmap->items.pInt[i + decorator->body->regCount] = i;
+
+	DArray_Resize( newfn->body->regType, newfn->body->regCount + oldfn->parCount, NULL );
+	for(i=0,m=oldfn->routType->nested->size; i<m; i++){
+		DaoType *T = oldfn->routType->nested->items.pType[i];
+		if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
+		newfn->body->regType->items.pType[i + newfn->body->regCount] = T;
+		GC_IncRC( T );
+		//DArray_Append( newfn->body->defLocals, oldfn->body->defLocals->items.pToken[i] );
+	}
+	newfn->body->regCount += oldfn->parCount;
+	annotCodes = newfn->body->annotCodes;
+	k = 0;
+	for(i=0,m=nested->size; i<m; i++) parpass[i] = 0;
+	for(i=0; i<n; i++){
+		DaoValue *pv = p[i];
+		if( i == 0 ){
+			/*
+			// This should be the function to be called from inside of the new function.
+			// If the new function does not override the old one, the old function will be called;
+			// Otherwise, the function bodies of the old and the new will be swapped,
+			// and the new function will be called.
+			*/
+			pv = (DaoValue*)(ip ? newfn : oldfn);
+		}
+		if( pv->type == DAO_PAR_NAMED ){
+			DaoNameValue *nameva = & pv->xNameValue;
+			DNode *node = DMap_Find( decorator->routType->mapNames, nameva->name );
+			if( node == NULL ) goto ErrorDecorator;
+			pv = nameva->value;
+			k = node->value.pInt;
+		}
+		parpass[k] = 1;
+		DArray_PushBack( added, annotCodes->items.pVoid[0] );
+		vmc = added->items.pVmc[added->size-1];
+		vmc->code = DVM_GETCL;
+		vmc->b = DaoRoutine_AddConstant( newfn, pv );
+		vmc->c = k++;
+	}
+	for(i=1,m=nested->size; i<m; i++){
+		k = decotypes[i]->tid;
+		if( k == DAO_PAR_VALIST ) break;
+		if( parpass[i] ) continue;
+		if( k != DAO_PAR_DEFAULT ) continue;
+		DArray_PushBack( added, annotCodes->items.pVoid[0] );
+		vmc = added->items.pVmc[added->size-1];
+		vmc->code = DVM_GETCL;
+		vmc->b = DaoRoutine_AddConstant( newfn, decorator->routConsts->items.items.pValue[i] );
+		vmc->c = i;
+	}
+	DArray_PushBack( added, annotCodes->items.pVoid[0] ); // XXX
+	vmc = added->items.pVmc[added->size-1];
+	vmc->code = DVM_TUPLE;
+	vmc->a = decorator->body->regCount;
+	vmc->b = oldfn->parCount;
+	vmc->c = decorator->parCount;
+	for(i=0,m=annotCodes->size; i<m; i++){
+		vmc = annotCodes->items.pVmc[i];
+		k = DaoVmCode_GetOpcodeType( vmc->code );
+		if( k == DAO_CODE_BRANCH || k == DAO_CODE_JUMP ) vmc->b += added->size;
+	}
+	DArray_InsertArray( annotCodes, 0, added, 0, added->size );
+	GC_ShiftRC( oldfn->routType, newfn->routType );
+	newfn->routType = oldfn->routType;
+	newfn->parCount = oldfn->parCount;
+	newfn->refParams = oldfn->refParams;
+	newfn->attribs = oldfn->attribs;
+	DString_Assign( newfn->routName, oldfn->routName );
+	/* Decorator should have reserve spaces for up to DAO_MAX_PARAM default parameters: */
+	assert( oldfn->routConsts->items.size >= DAO_MAX_PARAM );
+	for(i=0,m=nested->size; i<m; i++){
+		DaoValue *value = oldfn->routConsts->items.items.pValue[i];
+		DaoValue_Copy( value, newfn->routConsts->items.items.pValue + i );
+	}
+
+	DaoRoutine_UpdateRegister( newfn, regmap );
+	DaoRoutine_DoTypeInference( newfn, 0 );
+
+	if( ip ){
+		/* For in place decoration, override the old function by swapping the function
+		// bodies and other associated data: */
+		DaoRoutineBody *body = oldfn->body;
+		DaoNamespace *ns = oldfn->nameSpace;
+		DaoList *clist = oldfn->routConsts;
+		oldfn->routConsts = newfn->routConsts;
+		oldfn->nameSpace = newfn->nameSpace;
+		oldfn->body = newfn->body;
+		newfn->routConsts = clist;
+		newfn->nameSpace = ns;
+		newfn->body = body;
+	}
+
+	return newfn;
+ErrorDecorator:
+	DaoRoutine_Delete( newfn );
+	return NULL;
+}
+#endif

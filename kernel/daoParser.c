@@ -1130,6 +1130,10 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	/* one parse might be used to compile multiple C functions: */
 	if( routine->body == NULL ) DMap_Reset( module->allConsts );
 
+	/* Resever enough space for default parameters for function decoration: */
+	if( routine->routName->mbs[0] == '@' && routine->routConsts->items.size < DAO_MAX_PARAM )
+		DArray_Resize( & routine->routConsts->items, DAO_MAX_PARAM, NULL );
+
 	for(i=0; i<routine->routType->nested->size; i++){
 		type = routine->routType->nested->items.pType[i];
 		if( type ) DaoType_GetTypeHolders( type, self->initTypes );
@@ -2558,7 +2562,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	return start;
 }
 #ifdef DAO_WITH_DECORATOR
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n );
+DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
 static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
 	DaoRoutine *rout2, tmp;
@@ -2576,15 +2580,7 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;
 		}
-		rout2 = DaoRoutine_Decorate( rout, decoFunc, params+1, n );
-		j = sizeof(DaoNone) + sizeof(int);
-		/* Do NOT copy GC information: */
-		tmp = *rout;
-		memcpy( (char*)rout + j, (char*)rout2 + j, sizeof(DaoRoutine) - j );
-		memcpy( (char*)rout2 + j, (char*)&tmp + j, sizeof(DaoRoutine) - j );
-		GC_ShiftRC( rout2, rout->routConsts->items.items.pValue[rout->parCount] );
-		rout->routConsts->items.items.pValue[rout->parCount] = (DaoValue*) rout2;
-		/* printf( "%s\n", decoFunc->routType->name->mbs ); */
+		rout2 = DaoRoutine_Decorate( rout, decoFunc, params, n+1, 1 );
 	}
 }
 #endif
@@ -4358,22 +4354,16 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	self->error = 0;
 
 	if( routine->routName->mbs[0] == '@' && routine->routType->nested->size ){
-		DaoType *ftype = routine->routType->nested->items.pType[0];
+		DString name = DString_WrapMBS( "args" );
 		DaoToken tok = { DTOK_IDENTIFIER, DTOK_IDENTIFIER, 0, 0, 0, NULL };
-		if( ftype->tid == DAO_PAR_NAMED && ftype->aux->xType.tid == DAO_ROUTINE ){
-			DMap *names;
-			DNode *it;
-			ftype = & ftype->aux->xType;
-			names = ftype->mapNames;
-			assert( routine->parCount == self->regCount );
-			for(id=0,it=DMap_First(names); it; it=DMap_Next(names,it),id++){
-				DaoType *tp = ftype->nested->items.pType[it->value.pInt];
-				tok.string = it->key.pString;
-				if( tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT ) tp = & tp->aux->xType;
-				DaoParser_DeclareVariable( self, & tok, 0, tp );
-				self->regCount = routine->parCount + (id+1);
-			}
-		}
+		DaoType *tt, *ft = routine->routType->nested->items.pType[0];
+		assert( routine->parCount == self->regCount );
+		if( ft->tid == DAO_PAR_NAMED ) ft = (DaoType*) ft->aux;
+		if( ft->tid != DAO_ROUTINE ) return 0; //XXX error info;
+		/* XXX handle ... */
+		tt = DaoNamespace_MakeType( myNS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, ft->nested->size );
+		tok.string = & name;
+		DaoParser_DeclareVariable( self, & tok, 0, tt );
 	}
 
 	if( DaoParser_ParseCodeSect( self, 0, tokChrCount-1 )==0 ){
@@ -5400,7 +5390,7 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 
 	vmcx.line = rout->defLine;
 	DArray_Append( rout->body->annotCodes, & vmcx );
-	DaoVmcArray_Append( rout->body->vmCodes, vmc );
+	DaoVmcArray_PushBack( rout->body->vmCodes, vmc );
 
 	self->protoValues = DMap_New(0,0);
 	self->hostClass = klass;

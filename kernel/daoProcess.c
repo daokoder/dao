@@ -3676,12 +3676,6 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 	int npar = vmc->b & 0xff;
 	int i, m, n = 0;
 
-	if( npar == 0 && (mode & DAO_CALL_EXPAR) ){ /* call with caller's parameter */
-		int m = (self->activeRoutine->routType->attrib & DAO_TYPE_SELF) != 0;
-		npar = self->topFrame->parCount - m;
-		params = self->activeValues + m;
-		mode &= ~DAO_CALL_EXPAR;
-	}
 	if( self->activeObject && mcall == 0 ) selfpar = (DaoValue*) self->activeObject;
 	if( caller->type == DAO_FUNCURRY ){
 		DaoFunCurry *curry = (DaoFunCurry*) caller;
@@ -3741,7 +3735,7 @@ static DaoProcess* DaoProcess_Create( DaoProcess *proc, DaoValue *par[], int N )
 	vmProc->status = DAO_VMPROC_SUSPENDED;
 	return vmProc;
 }
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n );
+DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 {
 	int sup = 0, code = vmc->code;
@@ -3785,7 +3779,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( rout->routName->mbs[0] == '@' ){
 #ifdef DAO_WITH_DECORATOR
 				DaoRoutine *drout = (DaoRoutine*) rout;
-				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params+1, npar-1 );
+				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params, npar, 0 );
 				DaoProcess_PutValue( self, (DaoValue*) drout );
 #else
 				DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
@@ -5999,91 +5993,6 @@ int DaoProcess_CheckFE( DaoProcess *self )
 	dao_fe_clear();
 	return res;
 }
-#ifdef DAO_WITH_DECORATOR
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decoFunc, DaoValue *p[], int n )
-{
-	DArray *nested = decoFunc->routType->nested;
-	DaoType **decotypes = nested->items.pType;
-	DaoParser *parser = DaoParser_New();
-	DaoRoutine *routine = DaoRoutine_New( NULL, NULL, 1 );
-	DMap *mapids = DMap_New(0,D_STRING);
-	int parpass[DAO_MAX_PARAM];
-	int i, j, k, m;
-	if( decoFunc->overloads ){
-		decoFunc = DaoRoutine_ResolveX( decoFunc, NULL, p, n, DVM_CALL );
-		if( decoFunc == NULL || decoFunc->type != DAO_ROUTINE ) return NULL;
-		nested = decoFunc->routType->nested;
-		decotypes = nested->items.pType;
-	}
-	if( self->overloads ){
-		DaoType *ftype = & decotypes[0]->aux->xType;
-		DaoType **pts = ftype->nested->items.pType;
-		int nn = ftype->nested->size;
-		int code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
-		self = DaoRoutine_ResolveByType( self, NULL, pts, nn, code );
-	}
-	parser->routine = routine;
-	parser->nameSpace = routine->nameSpace = decoFunc->nameSpace;
-	parser->vmSpace = routine->nameSpace->vmSpace;
-	GC_IncRC( routine->nameSpace );
-	routine->parCount = self->parCount;
-	routine->attribs = self->attribs;
-	GC_ShiftRC( self->routHost, routine->routHost );
-	GC_ShiftRC( self->routType, routine->routType );
-	routine->routHost = self->routHost;
-	routine->routType = self->routType;
-	DString_Assign( routine->routName, self->routName );
-	for(i=0,m=self->routType->nested->size; i<m; i++){
-		DaoType *type = self->routType->nested->items.pType[i];
-		DaoRoutine_AddConstant( routine, self->routConsts->items.items.pValue[i] );
-		if( type->tid == DAO_PAR_VALIST ) break;
-		MAP_Insert( DArray_Top( parser->localVarMap ), type->fname, i );
-		DArray_Append( routine->body->defLocals, self->body->defLocals->items.pToken[i] );
-	}
-	parser->regCount = self->parCount;
-	i = DaoRoutine_AddConstant( routine, (DaoValue*) self );
-	MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[0]->fname, i );
-	
-	k = 1;
-	for(i=0,m=nested->size; i<m; i++) parpass[i] = 0;
-	for(i=0; i<n; i++){
-		DaoValue *pv = p[i];
-		if( pv->type == DAO_PAR_NAMED ){
-			DaoNameValue *nameva = & pv->xNameValue;
-			DNode *node = DMap_Find( decoFunc->routType->mapNames, nameva->name );
-			if( node == NULL ) goto ErrorDecorator;
-			pv = nameva->value;
-			k = node->value.pInt;
-		}
-		j = DaoRoutine_AddConstant( routine, pv );
-		MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[k]->fname, j );
-		parpass[k] = 1;
-		k += 1;
-	}
-	for(i=1,m=nested->size; i<m; i++){
-		k = decotypes[i]->tid;
-		if( k == DAO_PAR_VALIST ) break;
-		if( parpass[i] ) continue;
-		if( k != DAO_PAR_DEFAULT ) continue;
-		k = DaoRoutine_AddConstant( routine, decoFunc->routConsts->items.items.pValue[i] );
-		MAP_Insert( DArray_Top( parser->localCstMap ), decotypes[i]->fname, k );
-		parpass[i] = 1;
-	}
-	
-	/* if( decoFunc->parser ) DaoRoutine_Compile( decoFunc ); */
-	DArray_Assign( parser->tokens, decoFunc->body->source );
-	if( DaoParser_ParseRoutine( parser ) ==0 ) goto ErrorDecorator;
-	/* DaoRoutine_PrintCode( routine, self->activeNamespace->vmSpace->stdioStream ); */
-	DaoParser_Delete( parser );
-	DMap_Delete( mapids );
-	return routine;
-ErrorDecorator:
-	DaoRoutine_Delete( routine );
-	DaoParser_Delete( parser );
-	DMap_Delete( mapids );
-	return NULL;
-}
-#endif
 
 DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
 void DaoPrintCallError( DArray *errors, DaoStream *stdio );
