@@ -849,6 +849,11 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 	int mode = codemode >> 16;
 	int mcall = code == DVM_MCALL;
 
+	/* Check for explicit self parameter: */
+	if( n && p[0]->type == DAO_PAR_NAMED ){
+		DaoNameValue *nameva = & p[0]->xNameValue;
+		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ) obj = NULL;
+	}
 	if( self == NULL ) return NULL;
 	if( self->overloads ){
 		self = DRoutines_Lookup( self->overloads, obj, p, n, code );
@@ -876,6 +881,8 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 }
 DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code )
 {
+	/* Check for explicit self parameter: */
+	if( n && (t[0]->attrib & DAO_TYPE_SELFNAMED) ) st = NULL;
 	if( self == NULL ) return NULL;
 	if( self->overloads ){
 		self = DRoutines_LookupByType( self->overloads, st, t, n, code );

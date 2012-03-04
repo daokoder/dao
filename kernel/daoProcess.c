@@ -419,6 +419,11 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 			DaoType_MatchTo( hostype, routine->routHost, defs );
 		}
 	}
+	/* Check for explicit self parameter: */
+	if( np && p[0]->type == DAO_PAR_NAMED ){
+		DaoNameValue *nameva = & p[0]->xNameValue;
+		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ) obj = NULL;
+	}
 
 	if( mcall && ! need_self ){
 		npar --;
@@ -3671,6 +3676,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *parbuf[DAO_MAX_PARAM+1];
 	DaoValue **params = self->activeValues + vmc->a + 1;
 	DaoValue *caller = self->activeValues[ vmc->a ];
+	DaoNameValue nameva = {DAO_PAR_NAMED,0,0,0,1,1,NULL,NULL,NULL};
 	int mcall = vmc->code == DVM_MCALL;
 	int mode = vmc->b & 0xff00;
 	int npar = vmc->b & 0xff;
@@ -3687,8 +3693,18 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 	if( mode & DAO_CALL_EXPAR ){
 		if( npar > mcall && params[npar-1]->type == DAO_TUPLE ){
 			DaoTuple *tup = & params[npar-1]->xTuple;
+			DArray *its = tup->unitype->nested;
 			n -= 1;
-			for(i=0,m=tup->size; i<m; i++) parbuf[n++] = tup->items[i];
+			for(i=0,m=tup->size; i<m; i++){
+				if( i == 0 && its->size && (its->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ){
+					nameva.name = its->items.pType[0]->fname;
+					nameva.value = tup->items[0];
+					nameva.unitype = its->items.pType[0];
+					parbuf[n++] = (DaoValue*) & nameva;
+					continue;
+				}
+				parbuf[n++] = tup->items[i];
+			}
 		}
 	}
 	params = parbuf;

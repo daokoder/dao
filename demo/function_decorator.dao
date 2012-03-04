@@ -3,8 +3,8 @@ load meta;
 routine @trace( func : routine )
 {
 	meta.trace($print);
-	io.writeln( std.about( func ) );
-	return func(...);
+	io.writeln( std.about( func ), args );
+	return func( args, ... );
 }
 
 @trace
@@ -18,7 +18,7 @@ func(123);
 
 routine @test( func : routine<index:int=>string>, expected = '' )
 {
-	res = func( ... );
+	res = func( args, ... );
 	io.writeln( res );
 	io.writeln( 'check:', res == expected, res, expected );
 	return res;
@@ -37,7 +37,7 @@ hello();
 # overloaded decorator:
 routine @test( func : routine<name:string=>int>, expected = 0 )
 {
-	res = func( ... );
+	res = func( args, ... );
 	io.writeln( res );
 	io.writeln( 'check:', res == expected, res, expected );
 	return res;

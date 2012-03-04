@@ -127,7 +127,8 @@ enum DaoTypeAttribs
 	DAO_TYPE_SPEC = (1<<0),  /* specializable type, with at least one type holder; */
 	DAO_TYPE_UNDEF = (1<<1), /* undefined type, with at least one undefined type; */
 	DAO_TYPE_SELF  = (1<<2), /* routine type that has self parameter; */
-	DAO_TYPE_COROUTINE = (1<<3) /* routine type that can run as coroutine; */
+	DAO_TYPE_COROUTINE = (1<<3), /* routine type that can run as coroutine; */
+	DAO_TYPE_SELFNAMED = (1<<4)
 };
 enum DaoCaseMode
 {

@@ -2805,8 +2805,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		rout->body->parser = NULL;
 		DaoParser_Delete( parser );
 #else
-			DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
-			return 0;
+		DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
+		return 0;
 #endif
 	}else if( k && rout->routName->mbs[0] == '@' ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
@@ -3450,6 +3450,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		}
 		if( tki == DTOK_ID_THTYPE ){
 #ifdef DAO_WITH_DECORATOR
+			DaoInode *back = self->vmcLast;
 			DaoRoutine *decfunc = NULL;
 			DaoList *declist = NULL;
 			DArray *cid = NULL;
@@ -3485,6 +3486,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			if( cid ) DArray_Delete( cid );
 			DArray_PushFront( self->decoFuncs, decfunc );
 			DArray_PushFront( self->decoParams, declist );
+			DaoParser_PopCodes( self, back );
 			start ++;
 			continue;
 DecoratorError:
@@ -4357,6 +4359,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		DString name = DString_WrapMBS( "args" );
 		DaoToken tok = { DTOK_IDENTIFIER, DTOK_IDENTIFIER, 0, 0, 0, NULL };
 		DaoType *tt, *ft = routine->routType->nested->items.pType[0];
+
 		assert( routine->parCount == self->regCount );
 		if( ft->tid == DAO_PAR_NAMED ) ft = (DaoType*) ft->aux;
 		if( ft->tid != DAO_ROUTINE ) return 0; //XXX error info;

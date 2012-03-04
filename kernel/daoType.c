@@ -108,6 +108,10 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
 
+	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) && self->fname ){
+		if( strcmp( self->fname->mbs, "self" ) == 0 ) self->attrib |= DAO_TYPE_SELFNAMED;
+	}
+
 	if( self->tid == DAO_TUPLE ){
 		self->rntcount = 0;
 		for(i=0; i<self->nested->size; i++){

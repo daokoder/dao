@@ -840,6 +840,7 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 {
 	DNode *it;
 	DArray *array = DArray_New(0);
+	DMap *localVarType2 = DMap_New(0,0);
 	DMap *localVarType = self->body->localVarType;
 	DaoType **types = self->body->regType->items.pType;
 	DaoVmCode *vmc, *codes = self->body->vmCodes->codes;
@@ -855,18 +856,17 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 	DArray_Resize( array, m, 0 );
 	for(i=0; i<M; i++){
 		k = regmap[i];
-		if( i != k && (it = MAP_Find( localVarType, i )) ){
-			MAP_Insert( localVarType, k, it->value.pVoid );
-			MAP_Erase( localVarType, i );
-		}
 		if( k >= m ) continue;
 		GC_ShiftRC( types[i], array->items.pType[k] );
 		array->items.pType[k] = types[i];
+		if( (it = MAP_Find( localVarType, i )) ) MAP_Insert( localVarType2, k, it->value.pVoid );
 	}
 	self->body->regCount = array->size;
+	self->body->localVarType = localVarType2;
 	GC_DecRCs( self->body->regType );
 	DArray_Swap( self->body->regType, array );
 	DArray_Delete( array );
+	DMap_Delete( localVarType );
 
 	types = self->body->regType->items.pType;
 	self->body->simpleVariables->size = 0;
@@ -941,10 +941,7 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine, DArray *mapping )
 {
 	DNode *it;
-	DMap *localVarType = routine->body->localVarType;
-	DaoType **types = routine->body->regType->items.pType;
-	DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
-	DaoVmCode **codes2 = (DaoVmCode**) routine->body->annotCodes->items.pVmc;
+	DaoVmCode *vmc, **codes = (DaoVmCode**) routine->body->annotCodes->items.pVmc;
 	DaoCnode *node, **nodes = self->nodes->items.pCnode;
 	daoint i, N = routine->body->annotCodes->size;
 	daoint k, m = 0, M = routine->body->regCount;
@@ -967,7 +964,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 	DaoRoutine_UpdateRegister( routine, mapping );
 
 	for(i=0; i<N; i++){
-		vmc = codes2[i];
+		vmc = codes[i];
 		node = nodes[i];
 		switch( (k = DaoVmCode_GetOpcodeType( vmc->code )) ){
 		case DAO_CODE_NOP :
@@ -1046,12 +1043,11 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			break;
 		default: break;
 		}
-		codes[i] = *vmc;
 	}
 	self->enodes->size = 0;
 	DMap_Reset( self->exprs );
 	for(i=0; i<N; i++){
-		vmc = codes2[i];
+		vmc = codes[i];
 		node = nodes[i];
 		if( node->exprid == 0xffff ) continue;
 		it = MAP_Find( self->exprs, vmc );
@@ -1802,6 +1798,9 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 	DNode *node;
 	DMap *defs;
 
+	/* Check for explicit self parameter: */
+	if( np && (ts[0]->attrib & DAO_TYPE_SELFNAMED) ) selftype = NULL;
+
 	defs = DMap_New(0,0);
 	if( routType->nested ){
 		ndef = routType->nested->size;
@@ -1918,6 +1917,9 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts
 	DMap *mapNames = self->routType->mapNames;
 	DNode *node;
 
+	/* Check for explicit self parameter: */
+	if( np && (ts[0]->attrib & DAO_TYPE_SELFNAMED) ) selftype = NULL;
+
 	if( npar == ndef && ndef == 0 ) return;
 	if( code == DVM_MCALL && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
@@ -1997,6 +1999,8 @@ void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 	/*
 	   printf( "%s %s\n", self->routName->mbs, self->routType->name->mbs );
 	 */
+	/* Check for explicit self parameter: */
+	if( np && (ts[0]->attrib & DAO_TYPE_SELFNAMED) ) selftype = NULL;
 	if( npar == ndef && ndef == 0 ) return;
 	if( code == DVM_MCALL && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
@@ -5523,11 +5527,11 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	newfn->refParams = oldfn->refParams;
 	newfn->attribs = oldfn->attribs;
 	DString_Assign( newfn->routName, oldfn->routName );
-	/* Decorator should have reserve spaces for up to DAO_MAX_PARAM default parameters: */
-	assert( oldfn->routConsts->items.size >= DAO_MAX_PARAM );
+	/* Decorator should have reserved spaces for up to DAO_MAX_PARAM default parameters: */
+	assert( newfn->routConsts->items.size >= DAO_MAX_PARAM );
 	for(i=0,m=nested->size; i<m; i++){
 		DaoValue *value = oldfn->routConsts->items.items.pValue[i];
-		DaoValue_Copy( value, newfn->routConsts->items.items.pValue + i );
+		if( value ) DaoValue_Copy( value, newfn->routConsts->items.items.pValue + i );
 	}
 
 	DaoRoutine_UpdateRegister( newfn, regmap );
