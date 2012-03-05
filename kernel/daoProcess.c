@@ -2847,19 +2847,18 @@ void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc )
 }
 void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
-	DaoTuple *tuple;
 	DaoValue *val;
-	int i;
+	DaoTuple *tuple;
+	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
+	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
+	int i, count = argstuple ? self->topFrame->parCount : vmc->b;
 	
 	self->activeCode = vmc;
-	tuple = DaoProcess_GetTuple( self, ct, vmc->b, 0 );
-	if( ct ){
-		DaoProcess_MakeTuple( self, tuple, self->activeValues + vmc->a, vmc->b );
-	}else{
+	tuple = DaoProcess_GetTuple( self, argstuple ? NULL : ct, count, 0 );
+	if( ct == NULL ){
 		DaoNamespace *ns = self->activeNamespace;
 		ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
-		for(i=0; i<vmc->b; i++){
+		for(i=0; i<count; i++){
 			val = self->activeValues[ vmc->a + i ];
 			tp = DaoNamespace_GetType( ns, val );
 			if( tp == NULL ) tp = DaoNamespace_GetType( ns, dao_none_value );
@@ -2891,6 +2890,12 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		}
 		tuple->unitype = ct;
 		GC_IncRC( ct );
+	}else if( argstuple ){
+		tuple->unitype = ct;
+		GC_IncRC( ct );
+		for(i=0; i<count; i++) DaoTuple_SetItem( tuple, self->activeValues[vmc->a + i], i );
+	}else{
+		DaoProcess_MakeTuple( self, tuple, self->activeValues + vmc->a, count );
 	}
 }
 void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc )
@@ -3696,7 +3701,8 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 			DArray *its = tup->unitype->nested;
 			n -= 1;
 			for(i=0,m=tup->size; i<m; i++){
-				if( i == 0 && its->size && (its->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ){
+				/* Handle explicit "self" argument: */
+				if( n == 0 && its->size && (its->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ){
 					nameva.name = its->items.pType[0]->fname;
 					nameva.value = tup->items[0];
 					nameva.unitype = its->items.pType[0];

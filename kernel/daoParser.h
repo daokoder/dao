@@ -97,6 +97,8 @@ struct DaoParser
 	DaoType      *cblockType;
 	DaoType      *returnType;
 
+	DaoToken  *argName;
+
 	int curLine;
 	int lineCount;
 	short indent;

@@ -153,6 +153,13 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 	int npar = n;
 	int j, ifrom, ito;
 	int parpass[DAO_MAX_PARAM];
+
+	/* Check for explicit self parameter: */
+	if( n && p[0]->type == DAO_PAR_NAMED ){
+		DaoNameValue *nameva = & p[0]->xNameValue;
+		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ) obj = NULL;
+	}
+
 	/* func();
 	 * obj.func();
 	 * obj::func();
@@ -879,7 +886,7 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 	}
 	return (DaoRoutine*) rout;
 }
-DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code )
+DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code )
 {
 	/* Check for explicit self parameter: */
 	if( n && (t[0]->attrib & DAO_TYPE_SELFNAMED) ) st = NULL;

@@ -3617,9 +3617,10 @@ int DaoTuple_GetIndex( DaoTuple *self, DString *name )
 void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos )
 {
 	DaoValue **val;
-	if( pos <0 || pos >= self->size ) return;
+	if( pos < 0 ) pos += self->size;
+	if( pos < 0 || pos >= self->size ) return;
 	val = self->items + pos;
-	if( self->unitype && self->unitype->nested->size ){
+	if( self->unitype && pos < self->unitype->nested->size ){
 		DaoType *t = self->unitype->nested->items.pType[pos];
 		if( t->tid == DAO_PAR_NAMED ) t = & t->aux->xType;
 		DaoValue_Move( it, val, t );

@@ -1894,9 +1894,10 @@ FinishError:
 	DMap_Delete( defs );
 	return 0;
 }
-static DaoRoutine* MatchByParamType( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code )
+DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code );
+DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code )
 {
-	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, code );
+	DaoRoutine *rout = DaoRoutine_ResolveByTypeX( self, selftype, ts, np, code );
 	if( rout == (DaoRoutine*)self ){ /* parameters not yet checked: */
 		if( DaoRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, code, 0 ) ==0){
 			rout = NULL;
@@ -2130,7 +2131,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 			rout = DaoType_FindFunction( at, mbs );
 		}
 		if( rout ){
-			rout = MatchByParamType( rout, NULL, ts+1, 2, DVM_CALL );
+			rout = DaoRoutine_ResolveByType( rout, NULL, ts+1, 2, DVM_CALL );
 			/* if the operation is used in the overloaded operator,
 			   do operation by address */
 			if( boolop && rout == self ) return dao_type_int;
@@ -2148,12 +2149,12 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	}
 	if( rout ){
 		rout2 = rout;
-		rout = MatchByParamType( rout2, NULL, ts+1, 2, DVM_CALL );
+		rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 2, DVM_CALL );
 		/* if the operation is used in the overloaded operator,
 		   do operation by address */
 		if( boolop && rout == self ) return dao_type_int;
 		if( rout ) ct = & rout->routType->aux->xType;
-		if( rout == NULL && ct ) rout = MatchByParamType( rout2, NULL, ts, 3, DVM_CALL );
+		if( rout == NULL && ct ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 3, DVM_CALL );
 	}else{
 		if( bt->tid == DAO_INTERFACE ){
 			node = DMap_Find( bt->aux->xInterface.methods, mbs );
@@ -2165,12 +2166,12 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		}
 		if( rout == NULL ) return NULL;
 		rout2 = rout;
-		rout = MatchByParamType( rout2, NULL, ts+1, 2, DVM_CALL );
+		rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 2, DVM_CALL );
 		/* if the operation is used in the overloaded operator,
 		   do operation by address */
 		if( boolop && rout == self ) return dao_type_int;
 		if( rout ) ct = & rout->routType->aux->xType;
-		if( rout == NULL && ct ) rout = MatchByParamType( rout2, NULL, ts, 3, DVM_CALL );
+		if( rout == NULL && ct ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 3, DVM_CALL );
 		if( rout == NULL ) return NULL;
 	}
 	return ct;
@@ -2327,7 +2328,7 @@ FinishError:
 DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
 {
 	int i, n;
-	DaoRoutine *rout = MatchByParamType( self, selftype, ts, np, code );
+	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, code );
 	if( rout ) return rout;
 	if( self->overloads == NULL ){
 		DaoRoutine_CheckError( self, selftype, ts, np, code, errors );
@@ -4134,6 +4135,8 @@ NotExist_TryAux:
 				k = 1;
 				for(j=0; j<opb; j++){
 					at = types[opa+j];
+					/* for decoration of variadic function; */
+					if( opa == 0 && opb == routine->parCount && at == NULL ) break;
 					if( j >0 ) DString_AppendMBS( ct->name, "," );
 					if( at->tid == DAO_PAR_NAMED ){
 						if( ct->mapNames == NULL ) ct->mapNames = DMap_New(D_STRING,0);
@@ -5434,27 +5437,30 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 */
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip )
 {
-	int i, j, k, m;
+	int i, j, k, m, code;
 	int parpass[DAO_MAX_PARAM];
 	DArray *regmap = DArray_New(0);
 	DArray *annotCodes, *added = DArray_New(D_VMCODE);
-	DArray *nested = decorator->routType->nested;
-	DaoType **decotypes = nested->items.pType;
+	DArray *nested, *ptypes;
+	DaoType *ftype, **decotypes;
 	DaoRoutine *newfn, *oldfn = self;
 	DaoVmCodeX *vmc;
 
-	if( decorator->overloads ){
-		decorator = DaoRoutine_ResolveX( decorator, NULL, p, n, DVM_CALL );
-		if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
-		nested = decorator->routType->nested;
-		decotypes = nested->items.pType;
-	}
-	if( self->overloads ){
-		DaoType *ftype = & decotypes[0]->aux->xType;
-		DArray *ptypes = ftype->nested;
-		int code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
+	decorator = DaoRoutine_Resolve( decorator, NULL, p, n );
+	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
+
+	nested = decorator->routType->nested;
+	decotypes = nested->items.pType;
+	if( nested->size == 0 ) return NULL;
+
+	ftype = (DaoType*) decotypes[0]->aux;
+	ptypes = ftype->nested;
+	code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
+	/* ftype->aux is NULL for type "routine": */
+	if( ftype->aux )
 		oldfn = DaoRoutine_ResolveByType( self, NULL, ptypes->items.pType, ptypes->size, code );
-	}
+	if( oldfn == NULL ) return NULL;
+
 	newfn = DaoRoutine_Copy( decorator, 1, 1 );
 
 	DArray_Resize( regmap, decorator->body->regCount + oldfn->parCount, 0 );
