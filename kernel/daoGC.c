@@ -1225,6 +1225,12 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) value->xVar.dtype );
 			break;
 		}
+	case DAO_PAR_NAMED :
+		{
+			cycRefCountDecrement( value->xNameValue.value );
+			cycRefCountDecrement( (DaoValue*) value->xNameValue.unitype );
+			break;
+		}
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		{
@@ -1428,6 +1434,12 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) value->xVar.dtype );
 			break;
 		}
+	case DAO_PAR_NAMED :
+		{
+			cycRefCountIncrement( value->xNameValue.value );
+			cycRefCountIncrement( (DaoValue*) value->xNameValue.unitype );
+			break;
+		}
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		{
@@ -1629,6 +1641,12 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			directRefCountDecrement( & value->xVar.value );
 			directRefCountDecrement( (DaoValue**) & value->xVar.dtype );
+			break;
+		}
+	case DAO_PAR_NAMED :
+		{
+			directRefCountDecrement( & value->xNameValue.value );
+			directRefCountDecrement( (DaoValue**) & value->xNameValue.unitype );
 			break;
 		}
 #ifdef DAO_WITH_NUMARRAY

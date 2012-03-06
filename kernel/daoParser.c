@@ -1599,6 +1599,11 @@ WrongType:
 		if( iscoroutine ) tid |= DAO_TYPE_COROUTINE << 16;
 		type = DaoNamespace_MakeType( ns, tks->mbs, tid, retype, nested, count2 );
 		if( type == NULL ) goto InvalidTypeForm;
+		if( tid == DAO_ROUTINE ){
+			DString sname = DString_WrapMBS( "self" );
+			DNode *node = MAP_Find( type->mapNames, & sname );
+			if( node && node->value.pInt == 0 ) type->attrib |= DAO_TYPE_SELF;
+		}
 		if( tid == DAO_ROUTINE && gt < end && tokens[gt+1]->type == DTOK_LSB ){
 			DaoType *tt, *cbtype = DaoParser_ParseCodeBlockType( self, gt+1, newpos );
 			DString *name = DaoParser_GetString( self );
@@ -5841,17 +5846,13 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start = pos + 1;
-	}else if( tki == DTOK_IDENTIFIER && tki2 == DTOK_FIELD ){
+	}else if( (tki == DTOK_IDENTIFIER || tki == DKEY_SELF || tki >= DKEY_RAND) && tki2 == DTOK_FIELD ){
 		DaoString ds = {DAO_STRING,0,0,0,1,NULL};
 		DaoValue *value = (DaoValue*) & ds;
 		DString *field = tokens[start]->string;
 		DString_Assign( mbs, field );
 		DString_AppendMBS( mbs, "=>" );
 		MAP_Insert( self->allConsts, mbs, routine->routConsts->items.size );
-		if( DaoToken_IsValidName( field->mbs, field->size ) ==0 ){
-			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
-			return result;
-		}
 		ds.data = field;
 		self->curToken += 2;
 		enode = DaoParser_ParseExpression( self, stop );

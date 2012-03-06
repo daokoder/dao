@@ -157,7 +157,10 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 	/* Check for explicit self parameter: */
 	if( n && p[0]->type == DAO_PAR_NAMED ){
 		DaoNameValue *nameva = & p[0]->xNameValue;
-		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ) obj = NULL;
+		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ){
+			code = DVM_MCALL;
+			obj = NULL;
+		}
 	}
 
 	/* func();
@@ -859,7 +862,17 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 	/* Check for explicit self parameter: */
 	if( n && p[0]->type == DAO_PAR_NAMED ){
 		DaoNameValue *nameva = & p[0]->xNameValue;
-		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ) obj = NULL;
+		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ){
+			code = DVM_CALL;
+			mcall = 0;
+			/* If the first argument is named, by default, all the rest arguments are
+			// expected to be named. But here for explicit self parameter, this shouldn't
+			// be the case. Pass the self value as "obj", to avoid resolving by name for
+			// all the rest arguments: */
+			obj = p[0]->xNameValue.value;
+			p += 1;
+			n -= 1;
+		}
 	}
 	if( self == NULL ) return NULL;
 	if( self->overloads ){
@@ -888,8 +901,13 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 }
 DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code )
 {
-	/* Check for explicit self parameter: */
-	if( n && (t[0]->attrib & DAO_TYPE_SELFNAMED) ) st = NULL;
+	/* Check for explicit self parameter. See comments in DaoRoutine_ResolveX(). */
+	if( n && (t[0]->attrib & DAO_TYPE_SELFNAMED) ){
+		code = DVM_CALL;
+		st = (DaoType*) t[0]->aux;
+		t += 1;
+		n -= 1;
+	}
 	if( self == NULL ) return NULL;
 	if( self->overloads ){
 		self = DRoutines_LookupByType( self->overloads, st, t, n, code );

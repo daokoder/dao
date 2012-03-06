@@ -1799,7 +1799,10 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 	DMap *defs;
 
 	/* Check for explicit self parameter: */
-	if( np && (ts[0]->attrib & DAO_TYPE_SELFNAMED) ) selftype = NULL;
+	if( np && (ts[0]->attrib & DAO_TYPE_SELFNAMED) ){
+		selftype = NULL;
+		code = DVM_MCALL;
+	}
 
 	defs = DMap_New(0,0);
 	if( routType->nested ){
@@ -1871,7 +1874,7 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 				parpass[ito] = DAO_MT_NEGLECT;
 		}
 		if( parpass[ito] == 0 ) goto FinishError;
-		if( def ) tps[ifrom] = DaoType_DefineTypes( tp, ns, defs );
+		if( def ) tps[ifrom] = DaoType_DefineTypes( tps[ifrom], ns, defs );
 	}
 	for(ito=0; ito<ndef; ito++){
 		i = partypes[ito]->tid;
@@ -2364,7 +2367,7 @@ void DaoPrintCallError( DArray *errors, DaoStream *stream )
 		DString_AppendChar( mbs, '(' );
 		DString_AppendDataMBS( mbs, rout->routType->name->mbs + 8, k-9 );
 		DString_AppendChar( mbs, ')' );
-		if( rout->routType->name->mbs[k+1] != '?' ){
+		if( rout->routType->aux && rout->routType->aux->type == DAO_TYPE ){
 			DString_AppendMBS( mbs, "=>" );
 			DString_Append( mbs, rout->routType->aux->xType.name );
 		}
@@ -4612,7 +4615,6 @@ NotExist_TryAux:
 								int cc = DVM_CALL + (ft->attrib & DAO_TYPE_SELF);
 								rout = DaoValue_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc, errors );
 								if( rout == NULL ) goto ErrorTyping;
-								ct = rout->routType;
 							}
 						}
 						DaoInferencer_UpdateType( self, opc, ct );
@@ -5418,7 +5420,11 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoInferencer_Init( inferencer, self, silent );
 	retc = DaoInferencer_DoInference( inferencer );
 	DaoInferencer_Delete( inferencer );
-	if( retc ) DaoRoutine_Optimize( self );
+	//if( retc ) DaoRoutine_Optimize( self );
+	//DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream );
+	int i;
+	//for(i=0; i<self->body->regType->size; i++)
+	//	if( self->body->regType->items.pType[i] ) printf( "%2i: %s\n", i, self->body->regType->items.pType[i]->name->mbs );
 	return retc;
 }
 
@@ -5439,12 +5445,28 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 {
 	int i, j, k, m, code;
 	int parpass[DAO_MAX_PARAM];
-	DArray *regmap = DArray_New(0);
-	DArray *annotCodes, *added = DArray_New(D_VMCODE);
+	DArray *annotCodes, *added = NULL, *regmap = NULL;
 	DArray *nested, *ptypes;
 	DaoType *ftype, **decotypes;
 	DaoRoutine *newfn, *oldfn = self;
 	DaoVmCodeX *vmc;
+
+	/* No in place decoration of overloaded function: */
+	if( self->overloads && ip ) return NULL;
+	if( self->overloads ){
+		DaoRoutine *newfn = DaoRoutine_Copy( self, 0, 0 );
+		newfn->overloads = DRoutines_New();
+		for(i=0; i<self->overloads->routines->size; i++){
+			DaoRoutine *rout = self->overloads->routines->items.pRoutine[i];
+			rout = DaoRoutine_Decorate( rout, decorator, p, n, 0 );
+			if( rout ) DRoutines_Add( newfn->overloads, rout );
+		}
+		if( newfn->overloads->routines->size == 0 ){
+			DaoRoutine_Delete( newfn );
+			return NULL;
+		}
+		return newfn;
+	}
 
 	decorator = DaoRoutine_Resolve( decorator, NULL, p, n );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
@@ -5462,6 +5484,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	if( oldfn == NULL ) return NULL;
 
 	newfn = DaoRoutine_Copy( decorator, 1, 1 );
+	added = DArray_New(D_VMCODE);
+	regmap = DArray_New(0);
 
 	DArray_Resize( regmap, decorator->body->regCount + oldfn->parCount, 0 );
 	for(i=0,m=decorator->body->regCount; i<m; i++) regmap->items.pInt[i] = i + oldfn->parCount;
@@ -5535,7 +5559,9 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	DString_Assign( newfn->routName, oldfn->routName );
 	/* Decorator should have reserved spaces for up to DAO_MAX_PARAM default parameters: */
 	assert( newfn->routConsts->items.size >= DAO_MAX_PARAM );
-	for(i=0,m=nested->size; i<m; i++){
+	i = oldfn->routConsts->items.size;
+	m = oldfn->parCount < i ? oldfn->parCount : i;
+	for(i=0; i<m; i++){
 		DaoValue *value = oldfn->routConsts->items.items.pValue[i];
 		if( value ) DaoValue_Copy( value, newfn->routConsts->items.items.pValue + i );
 	}
@@ -5556,9 +5582,13 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		newfn->nameSpace = ns;
 		newfn->body = body;
 	}
+	DArray_Delete( added );
+	DArray_Delete( regmap );
 
 	return newfn;
 ErrorDecorator:
+	if( added ) DArray_Delete( added );
+	if( regmap ) DArray_Delete( regmap );
 	DaoRoutine_Delete( newfn );
 	return NULL;
 }

@@ -422,7 +422,10 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 	/* Check for explicit self parameter: */
 	if( np && p[0]->type == DAO_PAR_NAMED ){
 		DaoNameValue *nameva = & p[0]->xNameValue;
-		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ) obj = NULL;
+		if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ){
+			obj = NULL;
+			mcall = 1;
+		}
 	}
 
 	if( mcall && ! need_self ){
@@ -3694,7 +3697,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc )
 		selfpar = curry->selfobj;
 		for(i=0,m=curry->params->size; i<m; i++) parbuf[n++] = curry->params->items.pValue[i];
 	}
-	for(i=mcall; i<npar; i++) parbuf[n++] = params[i];
+	for(i=0; i<npar; i++) parbuf[n++] = params[i];
 	if( mode & DAO_CALL_EXPAR ){
 		if( npar > mcall && params[npar-1]->type == DAO_TUPLE ){
 			DaoTuple *tup = & params[npar-1]->xTuple;
