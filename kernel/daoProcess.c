@@ -6829,7 +6829,8 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		break;
 	case DVM_CALL :
 	case DVM_MCALL :
-		DaoProcess_DoCall( self, vmc ); break;
+		DaoProcess_DoCall( self, vmc );
+		break;
 	default: break;
 	}
 	self->activeCode = NULL;
