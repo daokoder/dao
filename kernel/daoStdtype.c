@@ -1786,7 +1786,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )=>int" },
 	{ DaoSTR_Replace2, "replace( self :string, table : map<string,string>, max=0 )" },
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
-	{ DaoSTR_Expand,  "expand( self :string, keys : tuple, spec='$', keep=1 )=>string" },
+	{ DaoSTR_Expand,  "expand( self :string, keys :tuple, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )=>list<string>" },
 #ifdef DAO_WITH_REGEX
 	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )=>list<tuple<start:int,end:int>>" },

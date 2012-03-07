@@ -68,9 +68,10 @@ struct DaoType
 
 	uchar_t   tid; /* type id */
 	uchar_t   attrib;
-	uchar_t   realnum : 1; /* for type of int/float/double */
+	uchar_t   variadic : 1; /* type for variadic tuple or routine */
+	uchar_t   realnum  : 1; /* for type of int/float/double */
 	uchar_t   flagtype : 1; /* for enum type */
-	uchar_t   simtype  : 2; /* if the nested contains only simple types */
+	uchar_t   simtype  : 1; /* if the nested contains only simple types */
 	uchar_t   cdatatype : 2; /* sub type of DaoCdata */
 	uchar_t   overloads : 2; /* overloaded routines */
 	uchar_t   rntcount; /* real number type count */

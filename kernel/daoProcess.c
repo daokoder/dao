@@ -2752,6 +2752,7 @@ static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size,
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
 	
+	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
 	if( tup && tup->unitype == type ){
 		DaoVmCode *vmc = self->activeCode + 1;
 		if( tup->refCount == 1 ) return tup;
@@ -2822,17 +2823,33 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 
 void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *dA = self->activeRoutine->routConsts->items.items.pValue[ vmc->a ];
 	DaoValue *dB = self->activeValues[ vmc->b ];
-	DaoNameValue *nameva = DaoNameValue_New( dA->xString.data, dB );
-	nameva->unitype = self->activeTypes[ vmc->c ];
-	if( nameva->unitype == NULL ){
-		DaoNamespace *ns = self->activeNamespace;
-		DaoType *tp = DaoNamespace_GetType( ns, nameva->value );
-		nameva->unitype = DaoNamespace_MakeType( ns, dA->xString.data->mbs, DAO_PAR_NAMED, (DaoValue*)tp, NULL, 0 );
+	DaoValue *dC = self->activeValues[ vmc->c ];
+	DaoType *type = self->activeTypes[ vmc->c ];
+	DaoNameValue *nameva = NULL;
+	if( type && dC && dC->type == DAO_PAR_NAMED && dC->xNameValue.unitype == type ){
+		DaoNameValue *NV = (DaoNameValue*) dC;
+		DaoVmCode *vmc2 = vmc + 1;
+		uchar_t codetype = DaoVmCode_GetOpcodeType( vmc2->code );
+		if( NV->refCount == 1 ){
+			nameva = NV;
+		}else if( NV->refCount == 2 && codetype == DAO_CODE_MOVE && vmc2->a != vmc2->c ){
+			if( self->activeValues[vmc2->c] == dC ) nameva = NV;
+		}
 	}
-	GC_IncRC( nameva->unitype );
-	DaoProcess_SetValue( self, vmc->c, (DaoValue*) nameva );
+	if( nameva == NULL ){
+		DaoString *S = (DaoString*) self->activeRoutine->routConsts->items.items.pValue[ vmc->a ];
+		if( type == NULL ){
+			DaoNamespace *ns = self->activeNamespace;
+			DaoValue *tp = (DaoValue*) DaoNamespace_GetType( ns, dB );
+			type = DaoNamespace_MakeType( ns, S->data->mbs, DAO_PAR_NAMED, tp, NULL, 0 );
+		}
+		nameva = DaoNameValue_New( S->data, NULL );
+		nameva->unitype = type;
+		GC_IncRC( nameva->unitype );
+		DaoProcess_SetValue( self, vmc->c, (DaoValue*) nameva );
+	}
+	DaoValue_Move( dB, & nameva->value, nameva->unitype );
 }
 void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -2840,13 +2857,13 @@ void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp = self->activeTypes[ vmc->c ];
 	DaoValue *dA = self->activeValues[ vmc->a ];
 	DaoValue *dB = self->activeValues[ vmc->b ];
-	DaoTuple *tuple = DaoTuple_New(2);
+	DaoTuple *tuple;
+	self->activeCode = vmc;
 	if( tp == NULL ) tp = DaoNamespace_MakePairValueType( ns, dA, dB );
-	tuple->unitype = tp;
-	GC_IncRC( tuple->unitype );
+	tuple = DaoProcess_GetTuple( self, tp, 2, 1 );
+	tuple->subtype = DAO_PAIR;
 	DaoValue_Copy( dA, & tuple->items[0] );
 	DaoValue_Copy( dB, & tuple->items[1] );
-	DaoProcess_SetValue( self, vmc->c, (DaoValue*) tuple );
 }
 void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 {

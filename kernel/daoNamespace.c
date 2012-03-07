@@ -1496,6 +1496,10 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 			DString_Append( mbs, it->name );
 			DArray_Append( nstd, it );
 		}
+		if( attrib & DAO_TYPE_VARIADIC ){
+			if( N ) DString_AppendChar( mbs, ',' );
+			DString_AppendMBS( mbs, "..." );
+		}
 		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 			DString_AppendMBS( mbs, "=>" );
 			if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, '[' );
@@ -1544,6 +1548,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) DString_SetMBS( mbs, name );
 		tp = DaoType_New( mbs->mbs, tid, pb, nstd );
 		tp->attrib |= attrib;
+		if( attrib & DAO_TYPE_VARIADIC ) tp->variadic = 1;
 		tp = DaoNamespace_AddType( self, tp->name, tp );
 	}
 Finalizing:

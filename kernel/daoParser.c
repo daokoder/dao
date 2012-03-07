@@ -1283,7 +1283,9 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	if( i > 0 && i < 100 ){
 		/* Always compile unscoped builtin type names as builtin types: */
 		DaoValue *pbasic = token->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;
-		return DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, i, pbasic, 0,0 );
+		type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, i, pbasic, 0,0 );
+		if( type->tid == DAO_TUPLE ) type->variadic = 1; /* "tuple" is variadic; */
+		return type;
 	}
 	type = DaoType_FindType( name, ns, self->hostCdata, klass, routine );
 	if( type && type->tid == DAO_CTYPE ) type = type->kernel->abtype; /* get its cdata type */
@@ -4381,14 +4383,14 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		if( ft->tid == DAO_PAR_NAMED ) ft = (DaoType*) ft->aux;
 		if( ft->tid != DAO_ROUTINE ) return 0; //XXX error info;
 		np = ft->nested->size;
-		if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
+		//if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( myNS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, np );
 		tok.string = & name;
 		DaoParser_DeclareVariable( self, & tok, 0, tt );
 	}else if( self->argName ){
 		DArray *partypes = routine->routType->nested;
 		np = partypes->size;
-		if( np && partypes->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
+		//if( np && partypes->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( myNS, "tuple", DAO_TUPLE, 0, partypes->items.pType, np );
 		id = self->regCount;
 		DaoParser_DeclareVariable( self, self->argName, 0, tt );
@@ -6549,10 +6551,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		if( RHS.reg < 0 ){
 			if( oper != DAO_OPER_COLON || self->curToken > pos + 1 ) return RHS;
 			/* e : , */
-			RHS.prev = self->vmcLast;
-			RHS.reg = DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, DVM_DATA, 0,0,RHS.reg, pos+1,0,0 );
-			RHS.first = RHS.last = RHS.update = self->vmcLast;
+			RHS = DaoParser_NoneValue( self );
 		}
 		result.update = NULL;
 		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
@@ -6728,10 +6727,7 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 #endif
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
 		/* : e , */
-		LHS.prev = self->vmcLast;
-		LHS.reg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_DATA, 0,0,LHS.reg, self->curToken,0,0 );
-		LHS.first = LHS.last = LHS.update = self->vmcLast;
+		LHS = DaoParser_NoneValue( self );
 	}else{
 		LHS = DaoParser_ParseUnary( self, stop );
 	}

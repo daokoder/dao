@@ -3020,20 +3020,48 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}
 			}else if( at->tid == DAO_TUPLE ){
 				ct = dao_type_udf;
-				if( value && value->type ){
+				if( value && value->type == DAO_TUPLE && value->xTuple.subtype == DAO_PAIR ){
+					/* tuple slicing only for constant index pair? */
+					DaoValue *first = value->xTuple.items[0];
+					DaoValue *second = value->xTuple.items[1];
+					daoint start = DaoValue_GetInteger( first );
+					daoint end = DaoValue_GetInteger( second );
+					/* Note: a tuple may contain more items than what are explicitly typed. */
+					if( start < 0 || end < 0 ) goto InvIndex; /* No support for negative index; */
+					if( at->variadic == 0 && start >= at->nested->size ) goto InvIndex;
+					if( at->variadic == 0 && end >= at->nested->size ) goto InvIndex;
+					if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ) goto InvIndex;
+					if( first->type == DAO_NONE && second->type == DAO_NONE ){
+						ct = at;
+					}else{
+						end = second->type == DAO_NONE ? at->nested->size : end + 1;
+						if( end >= at->nested->size ) end = at->nested->size;
+						if( start >= at->nested->size ) end = start;
+						k = at->variadic && end >= at->nested->size ? DAO_TYPE_VARIADIC : 0;
+						k = (k<<16) | DAO_TUPLE;
+						ct = DaoNamespace_MakeType( NS, "tuple", k, NULL, types+start, end-start );
+					}
+				}else if( value && value->type == DAO_NONE ){
+					ct = at;
+				}else if( value && value->type ){
 					if( value->type > DAO_DOUBLE ) goto InvIndex;
 					k = DaoValue_GetInteger( value );
-					if( k <0 || k >= (int)at->nested->size ) goto InvIndex;
-					ct = at->nested->items.pType[ k ];
-					if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
-					DaoInferencer_UpdateType( self, opc, ct );
-					if( typed_code && ct == types[opc] && k <= 0xffff ){
-						vmc->b = k;
-						if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_COMPLEX ){
-							vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
-						}else{
-							/* for skipping type checking */
-							vmc->code = DVM_GETF_TX;
+					if( k < 0 ) goto InvIndex; /* No support for negative index; */
+					if( at->variadic && k >= at->nested->size ){
+						ct = dao_type_any;
+					}else{
+						if( k >= at->nested->size ) goto InvIndex;
+						ct = at->nested->items.pType[ k ];
+						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
+						DaoInferencer_UpdateType( self, opc, ct );
+						if( typed_code && ct == types[opc] && k <= 0xffff ){
+							vmc->b = k;
+							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_COMPLEX ){
+								vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
+							}else{
+								/* for skipping type checking */
+								vmc->code = DVM_GETF_TX;
+							}
 						}
 					}
 				}else if( bt->realnum ){
@@ -4134,32 +4162,12 @@ NotExist_TryAux:
 			}
 		case DVM_TUPLE :
 			{
-				ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
-				k = 1;
-				for(j=0; j<opb; j++){
-					at = types[opa+j];
-					/* for decoration of variadic function; */
-					if( opa == 0 && opb == routine->parCount && at == NULL ) break;
-					if( j >0 ) DString_AppendMBS( ct->name, "," );
-					if( at->tid == DAO_PAR_NAMED ){
-						if( ct->mapNames == NULL ) ct->mapNames = DMap_New(D_STRING,0);
-						MAP_Insert( ct->mapNames, at->fname, j );
-						DString_Append( ct->name, at->name );
-					}else{
-						DString_Append( ct->name, at->name );
-					}
-					DArray_Append( ct->nested, at );
-				}
-				DString_AppendMBS( ct->name, ">" );
-				GC_IncRCs( ct->nested );
-				bt = DaoNamespace_FindType( NS, ct->name );
-				if( bt ){
-					DaoType_Delete( ct );
-					ct = bt;
+				if( opa == 0 && opb == routine->parCount ){
+					k = routine->routType->nested->size;
+					tp = routine->routType->nested->items.pType;
+					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, tp, k );
 				}else{
-					DaoType_CheckAttributes( ct );
-					DaoType_InitDefault( ct );
-					DaoNamespace_AddType( NS, ct->name, ct );
+					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
@@ -5454,17 +5462,24 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	/* No in place decoration of overloaded function: */
 	if( self->overloads && ip ) return NULL;
 	if( self->overloads ){
-		DaoRoutine *newfn = DaoRoutine_Copy( self, 0, 0 );
-		newfn->overloads = DRoutines_New();
+		DArray *routs = DArray_New(0);
 		for(i=0; i<self->overloads->routines->size; i++){
 			DaoRoutine *rout = self->overloads->routines->items.pRoutine[i];
 			rout = DaoRoutine_Decorate( rout, decorator, p, n, 0 );
-			if( rout ) DRoutines_Add( newfn->overloads, rout );
+			if( rout ) DArray_Append( routs, rout );
 		}
-		if( newfn->overloads->routines->size == 0 ){
-			DaoRoutine_Delete( newfn );
+		if( routs->size == 0 ){
+			DArray_Delete( routs );
 			return NULL;
+		}else if( routs->size == 1 ){
+			newfn = routs->items.pRoutine[0];
+			DArray_Delete( routs );
+			return newfn;
 		}
+		newfn = DaoRoutine_Copy( self, 0, 0 );
+		newfn->overloads = DRoutines_New();
+		for(i=0; i<routs->size; i++) DRoutines_Add( newfn->overloads, routs->items.pRoutine[i] );
+		DArray_Delete( routs );
 		return newfn;
 	}
 

@@ -127,6 +127,16 @@ void DaoType_CheckAttributes( DaoType *self )
 			count += it->tid >= DAO_INTEGER && it->tid <= DAO_STRING;
 		}
 		self->simtype = count == self->nested->size;
+		if( (self->tid == DAO_TUPLE || self->tid == DAO_ROUTINE) && self->nested->size ){
+			DaoType *it = self->nested->items.pType[self->nested->size - 1];
+			if( it->tid == DAO_PAR_VALIST ){
+				self->variadic = 1;
+				if( self->tid == DAO_TUPLE ){
+					DArray_Erase( self->nested, self->nested->size-1, 1 );
+					GC_DecRC( it );
+				}
+			}
+		}
 	}
 }
 DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
