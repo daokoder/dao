@@ -509,10 +509,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			/* if( node->value.pInt != it->value.pInt ) return 0; */
 		}
 		return DAO_MT_EQ;
-	case DAO_ARRAY : case DAO_LIST : case DAO_MAP : case DAO_TUPLE : 
+	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TYPE : case DAO_FUTURE :
-		/* tuple<...> to tuple */
-		if( self->tid == DAO_TUPLE && type->nested->size ==0 ) return DAO_MT_SUB;
 		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it1 = self->nested->items.pType[i];
@@ -521,6 +519,18 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
 			/* Do not match between array<int>, array<float>, array<double>: */
 			if( self->tid == DAO_ARRAY && k == DAO_MT_SIM ) return DAO_MT_NOT;
+			if( k == DAO_MT_NOT ) return k;
+			if( k < mt ) mt = k;
+		}
+		break;
+	case DAO_TUPLE :
+		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
+		if( self->nested->size > type->nested->size && type->variadic == 0 ) return DAO_MT_NOT;
+		for(i=0,n=type->nested->size; i<n; i++){
+			it1 = self->nested->items.pType[i];
+			it2 = type->nested->items.pType[i];
+			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
 		}
@@ -737,8 +747,8 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		tp = value->xTuple.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( self->nested->size ==0 ) return DAO_MT_SUB; /* tuple<...> for tuple; */
-		if( value->xTuple.size != self->nested->size ) return DAO_MT_NOT;
+		if( value->xTuple.size < self->nested->size ) return DAO_MT_NOT;
+		if( value->xTuple.size > self->nested->size && self->variadic ==0 ) return DAO_MT_NOT;
 
 		for(i=0,n=self->nested->size; i<n; i++){
 			tp = self->nested->items.pType[i];

@@ -2747,7 +2747,7 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	return NULL;
 #endif
 }
-static DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init )
+DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init )
 {
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
@@ -2792,29 +2792,29 @@ DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 
 void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N )
 {
-	DaoType *tp, *ct = tuple->unitype;
-	DaoValue *val;
-	DNode *node;
-	int i;
+	DaoType **types, *tp, *ct = tuple->unitype;
+	int i, M;
 	if( ct == NULL ) return;
-	if( ct->nested == NULL || ct->nested->size != N ){
+	if( ct->nested == NULL || ct->nested->size > N ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );
 		return;
 	}
+	types = ct->nested->items.pType;
+	M = ct->nested->size;
 	for(i=0; i<N; i++){
-		val = its[i];
+		DaoValue *val = its[i];
 		if( val->type == DAO_PAR_NAMED ){
 			DaoNameValue *nameva = & val->xNameValue;
-			node = MAP_Find( ct->mapNames, nameva->name );
+			DNode *node = MAP_Find( ct->mapNames, nameva->name );
 			if( node == NULL || node->value.pInt != i ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "name not matched" );
 				return;
 			}
 			val = nameva->value;
 		}
-		tp = ct->nested->items.pType[i];
-		if( tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
-		if( DaoValue_Move( val, tuple->items + i, tp ) == 0){
+		tp = i < M ? types[i] : NULL;
+		if( tp && tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
+		if( DaoValue_Move( val, tuple->items + i, tp ) == 0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );
 			return;
 		}
@@ -2849,7 +2849,7 @@ void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 		GC_IncRC( nameva->unitype );
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) nameva );
 	}
-	DaoValue_Move( dB, & nameva->value, nameva->unitype );
+	DaoValue_Move( dB, & nameva->value, (DaoType*) nameva->unitype->aux );
 }
 void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -2874,7 +2874,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	int i, count = argstuple ? self->topFrame->parCount : vmc->b;
 	
 	self->activeCode = vmc;
-	tuple = DaoProcess_GetTuple( self, argstuple ? NULL : ct, count, 0 );
+	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );
 	if( ct == NULL ){
 		DaoNamespace *ns = self->activeNamespace;
 		ct = DaoType_New( "tuple<", DAO_TUPLE, NULL, NULL );
@@ -2915,6 +2915,10 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		GC_IncRC( ct );
 		for(i=0; i<count; i++) DaoTuple_SetItem( tuple, self->activeValues[vmc->a + i], i );
 	}else{
+		if( tuple->unitype == NULL ){
+			tuple->unitype = ct;
+			GC_IncRC( ct );
+		}
 		DaoProcess_MakeTuple( self, tuple, self->activeValues + vmc->a, count );
 	}
 }

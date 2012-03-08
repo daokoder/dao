@@ -3451,6 +3451,7 @@ static void DaoTupleCore_SetField( DaoValue *self0, DaoProcess *proc, DString *n
 	if( DaoValue_Move( value, self->items + id, t ) ==0)
 		DaoProcess_RaiseException( proc, DAO_ERROR, "type not matching" );
 }
+DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init );
 static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
 	DaoTuple *self = & self0->xTuple;
@@ -3466,6 +3467,29 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		}else{
 			ec = DAO_ERROR_INDEX_OUTOFRANGE;
 		}
+	}else if( pid->type == DAO_TUPLE && pid->xTuple.subtype == DAO_PAIR ){
+		DaoTuple *tuple;
+		DaoType *type = proc->activeTypes[ proc->activeCode->c ];
+		DaoValue *first = pid->xTuple.items[0];
+		DaoValue *second = pid->xTuple.items[1];
+		daoint start = DaoValue_GetInteger( first );
+		daoint i, end = DaoValue_GetInteger( second );
+		if( start < 0 || end < 0 ) goto InvIndex; /* No support for negative index; */
+		if( start >= self->size || end >= self->size ) goto InvIndex;
+		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ) goto InvIndex;
+		if( first->type == DAO_NONE && second->type == DAO_NONE ){
+#warning "=================="
+			// XXX
+		}else{
+			end = second->type == DAO_NONE ? self->size : end + 1;
+			tuple = DaoProcess_GetTuple( proc, NULL, end - start, 0 );
+			GC_ShiftRC( type, tuple->unitype );
+			tuple->unitype = type;
+			for(i=start; i<end; i++) DaoTuple_SetItem( tuple, self->items[i], i-start );
+		}
+		return;
+InvIndex:
+		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 	}
 	if( ec ) DaoProcess_RaiseException( proc, ec, "" );
 }

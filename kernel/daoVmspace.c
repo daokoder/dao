@@ -1822,6 +1822,7 @@ DaoType *dao_type_int = NULL;
 DaoType *dao_type_float = NULL;
 DaoType *dao_type_double = NULL;
 DaoType *dao_type_complex = NULL;
+DaoType *dao_type_tuple = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
@@ -2004,6 +2005,9 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
 	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
 	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, NULL );
+
+	dao_type_tuple = DaoNamespace_MakeType( ns, "tuple<...>", DAO_TUPLE, NULL, NULL, 0 );
+	dao_type_tuple->variadic = 1;
 
 	dao_array_types[DAO_NONE] = dao_array_any;
 	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );

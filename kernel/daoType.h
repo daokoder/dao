@@ -103,6 +103,7 @@ extern DaoType *dao_type_int;
 extern DaoType *dao_type_float;
 extern DaoType *dao_type_double;
 extern DaoType *dao_type_complex;
+extern DaoType *dao_type_tuple;
 extern DaoType *dao_array_any;
 extern DaoType *dao_list_any;
 extern DaoType *dao_map_any;

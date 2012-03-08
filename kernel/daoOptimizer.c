@@ -3020,8 +3020,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}
 			}else if( at->tid == DAO_TUPLE ){
 				ct = dao_type_udf;
+				/* tuple slicing with constant index range, will produce a tuple with type
+				// determined from the index range. For variable range, it produces tuple<...>. */
 				if( value && value->type == DAO_TUPLE && value->xTuple.subtype == DAO_PAIR ){
-					/* tuple slicing only for constant index pair? */
 					DaoValue *first = value->xTuple.items[0];
 					DaoValue *second = value->xTuple.items[1];
 					daoint start = DaoValue_GetInteger( first );
@@ -3039,7 +3040,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						if( start >= at->nested->size ) end = start;
 						k = at->variadic && end >= at->nested->size ? DAO_TYPE_VARIADIC : 0;
 						k = (k<<16) | DAO_TUPLE;
-						ct = DaoNamespace_MakeType( NS, "tuple", k, NULL, types+start, end-start );
+						tp = at->nested->items.pType + start;
+						ct = DaoNamespace_MakeType( NS, "tuple", k, NULL, tp, end-start );
 					}
 				}else if( value && value->type == DAO_NONE ){
 					ct = at;
@@ -3070,6 +3072,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						if( bt->tid != DAO_INTEGER )
 							DaoInferencer_InsertMove( self, inode, & inode->b, bt, dao_type_int );
 					}
+				}else if( bt->tid == DAO_TUPLE && bt->nested->size == 2 ){
+					ct = dao_type_tuple;
 				}else if( bt->tid != DAO_UDT && bt->tid != DAO_ANY ){
 					goto InvIndex;
 				}
