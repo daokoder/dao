@@ -5570,6 +5570,12 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		if( k == DAO_CODE_BRANCH || k == DAO_CODE_JUMP ) vmc->b += added->size;
 	}
 	DArray_InsertArray( annotCodes, 0, added, 0, added->size );
+	DaoVmcArray_Resize( newfn->body->vmCodes, annotCodes->size );
+	for(i=0,m=annotCodes->size; i<m; i++){
+		vmc = annotCodes->items.pVmc[i];
+		newfn->body->vmCodes->codes[i] = *(DaoVmCode*) vmc;
+	}
+
 	GC_ShiftRC( oldfn->routType, newfn->routType );
 	newfn->routType = oldfn->routType;
 	newfn->parCount = oldfn->parCount;

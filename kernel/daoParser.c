@@ -5982,7 +5982,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				return error;
 			}
 		}
-		if( regLast & 1 ) result.konst = regLast;
+		if( LOOKUP_ST(regLast) & 1 ) result.konst = regLast;
 		result.reg = regLast = DaoParser_GetNormRegister( self, regLast, start, 0, start );
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
