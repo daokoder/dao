@@ -303,18 +303,18 @@ void DaoType_Init()
 	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
 	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EQ+2;
-		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EQ+2;
-		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EQ+2;
-		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EQ+2;
+		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
+		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EXACT+2;
+		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
+		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
 
-		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EQ+1;
-		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EQ+1;
-		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EQ+1;
-		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EQ+1;
+		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EXACT+1;
+		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EXACT+1;
+		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
+		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
 	}
-	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
 
 	for(i=0; i<END_EXTRA_TYPES; i++){
 		dao_type_matrix[DAO_UDT][i] = DAO_MT_UDF;
@@ -332,27 +332,27 @@ void DaoType_Init()
 	dao_type_matrix[DAO_UDT][DAO_THT] = DAO_MT_UDF;
 	dao_type_matrix[DAO_THT][DAO_UDT] = DAO_MT_UDF;
 
-	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_FUTURE][DAO_FUTURE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_FUTURE][DAO_FUTURE] = DAO_MT_EXACT+1;
 
-	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EQ+1;
-	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EQ+1;
+	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
 }
 static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
 static int DaoInterface_TryBindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
@@ -467,8 +467,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return mt;
 	}
 	mt = dao_type_matrix[self->tid][type->tid];
-	if( mt <= DAO_MT_EQ ) return mt;
-	if( mt == DAO_MT_EQ+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
+	if( mt <= DAO_MT_EXACT ) return mt;
+	if( mt == DAO_MT_EXACT+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
 	if( self->tid == DAO_VARIANT && type->tid == DAO_VARIANT ){
 		mt = DAO_MT_EQ;
@@ -497,6 +497,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EQ + 1;
 		return DAO_MT_NOT;
 	}
+	mt = DAO_MT_EQ;
 	switch( self->tid ){
 	case DAO_ENUM :
 		if( self == type ) return DAO_MT_EQ;
@@ -601,7 +602,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return DaoType_MatchToParent( self, type, defs );
 	case DAO_VALTYPE :
 		if( type->tid != DAO_VALTYPE ) return DaoType_MatchValue( type, self->aux, defs );
-		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EQ + 1;
+		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EXACT;
 		return DAO_MT_NOT;
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
@@ -614,7 +615,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return mt;
 	default : break;
 	}
-	if( mt > DAO_MT_EQ ) mt = DAO_MT_NOT;
+	if( mt > DAO_MT_EXACT ) mt = DAO_MT_NOT;
 	return mt;
 }
 int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
