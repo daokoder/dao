@@ -463,27 +463,6 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 }
 
 
-void DaoFunCurry_Delete( DaoFunCurry *self )
-{
-	GC_DecRC( self->callable );
-	GC_DecRC( self->selfobj );
-	DArray_Delete( self->params );
-	dao_free( self );
-}
-DaoTypeBase curryTyper =
-{
-	"curry", & baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoFunCurry_Delete, NULL
-};
-DaoFunCurry* DaoFunCurry_New( DaoValue *v, DaoValue *o )
-{
-	DaoFunCurry *self = (DaoFunCurry*)dao_calloc( 1, sizeof(DaoFunCurry) );
-	DaoValue_Init( self, DAO_FUNCURRY );
-	if( v ) DaoValue_Copy( v, & self->callable );
-	if( o ) DaoValue_Copy( o, & self->selfobj );
-	self->params = DArray_New(D_VALUE);
-	return self;
-}
 
 static DParamNode* DParamNode_New()
 {

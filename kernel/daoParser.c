@@ -218,6 +218,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->strings );
 	DArray_Delete( self->arrays );
 	DMap_Delete( self->comments );
+	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
 	if( self->outers ) DArray_Delete( self->outers );
 	if( self->bindtos ) DArray_Delete( self->bindtos );
@@ -825,6 +826,7 @@ static DaoType* DaoType_MakeIndexedHolder( DaoNamespace *ns, int index )
 	sprintf( name, "@%i", index );
 	return DaoNamespace_MakeType( ns, name, DAO_THT, 0,0,0 );
 }
+DaoToken* DaoToken_Copy( DaoToken *self );
 
 int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start )
 {
@@ -1051,7 +1053,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( i >= right ) break;
 		if( tokens[i]->name == DKEY_AS ){
 			if( (i+1) >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorParamParsing;
-			module->argName = tokens[i+1];
+			module->argName = DaoToken_Copy( tokens[i+1] );
 			i += 2;
 			if( i < right ) goto ErrorParamParsing;
 		}else if( tokens[i]->name != DTOK_COMMA ){

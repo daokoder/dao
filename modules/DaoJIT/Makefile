@@ -8,7 +8,7 @@ TARGET = $(PROJECT).$(DAO_DLL_EXT)
 
 LLVM_CFLAGS = $(shell llvm-config --cppflags)
 LLVM_LFLAGS = $(shell llvm-config --ldflags)
-LLVM_LIBS = $(shell llvm-config --libs)
+LLVM_LIBS = $(shell llvm-config --libs engine)
 
 DAO_INCS += -I../../kernel
 DAO_LIBS += -L../..

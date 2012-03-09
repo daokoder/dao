@@ -22,22 +22,30 @@
 typedef struct DaoRoutineBody DaoRoutineBody;
 
 
-/* Two types of specializatins may happen to a routine:
- * 1. Method Specialization (MS) for specialized template-like types;
- * 2. Parametric Specialization (PS) according to parameter types;
- *
- * For C methods specialization of cdata types, only the routine type
- * needs specialization.
- *
- * For Dao routines, only the original routines have type inference done
- * at compiling time. Routine specialization on parameters at compiling time
- * is only done for the routine type (DaoRoutine::routType), such shallowly
- * specialized routine will share the same routine body (DaoRoutine::body)
- * as the original one. Deep specialization with type inference can be performed
- * at runtime.
- *
- * For Parametric Specialization, routine constants can be reused.
- */
+/*
+// Two types of specializatins may happen to a routine:
+// 1. Method Specialization (MS) for specialized template-like types;
+// 2. Parametric Specialization (PS) according to parameter types;
+//
+// For C methods specialization of cdata types, only the routine type
+// needs specialization.
+//
+// For Dao routines, only the original routines have type inference done
+// at compiling time. Routine specialization on parameters at compiling time
+// is only done for the routine type (DaoRoutine::routType), such shallowly
+// specialized routine will share the same routine body (DaoRoutine::body)
+// as the original one. Deep specialization with type inference can be performed
+// at runtime.
+//
+// For Parametric Specialization, routine constants can be reused.
+//
+// For a Dao routine, "body" is not NULL;
+// For a C function, "pFunc" is not NULL;
+// For abstract routine in interface, "body", "pFunc" and "original" are NULL;
+//
+// For a partially applied function, "body" and "pFunc" are NULL, but "original" is not;
+// and "routConsts" holds partially applied parameters.
+*/
 struct DaoRoutine
 {
 	DAO_DATA_COMMON;
@@ -120,18 +128,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self );
 
 
 
-struct DaoFunCurry
-{
-	DAO_DATA_COMMON;
-
-	DaoValue  *callable;
-	DaoValue  *selfobj;
-	DArray    *params;
-};
-DaoFunCurry* DaoFunCurry_New( DaoValue *v, DaoValue *o );
-
-
-
 typedef struct DParamNode DParamNode;
 
 struct DParamNode
@@ -144,14 +140,18 @@ struct DParamNode
 	DParamNode  *next;    /* next sibling node; */
 };
 
-/* DRoutines is a structure to organize overloaded/specialized functions into trees (tries),
- * for fast function resolving based on parameter types. */
 
-/* In data structures for namespace and class,
- * each individual function should have its own entry in these structures,
- * and an additional entry of DRoutines should be added for overloaded
- * functions. This will simplify some operations such as deriving methods from
- * parent type or instantiating template classes! */
+/*
+// DRoutines is a structure to organize overloaded/specialized functions into trees (tries),
+// for fast function resolving based on parameter types.
+//
+//
+// In data structures for namespace and class,
+// each individual function should have its own entry in these structures,
+// and an additional entry of DRoutines should be added for overloaded
+// functions. This will simplify some operations such as deriving methods from
+// parent type or instantiating template classes!
+*/
 
 struct DRoutines
 {

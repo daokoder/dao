@@ -79,7 +79,7 @@ void DArray_Delete( DArray *self )
 
 typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
 
-static DaoToken* DaoToken_Copy( DaoToken *self )
+DaoToken* DaoToken_Copy( DaoToken *self )
 {
 	DaoToken* copy = NULL;
 	if( self->string ){

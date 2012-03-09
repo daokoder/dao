@@ -148,7 +148,6 @@ extern DaoTypeBase  namevaTyper;
 extern DaoTypeBase  numarTyper;
 extern DaoTypeBase  comTyper;
 extern DaoTypeBase  abstypeTyper;
-extern DaoTypeBase  curryTyper;
 extern DaoTypeBase  rgxMatchTyper;
 extern DaoTypeBase  futureTyper;
 
@@ -187,7 +186,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 #else
 	case DAO_ARRAY  :  return & baseTyper;
 #endif
-	case DAO_FUNCURRY : return & curryTyper;
 	case DAO_CTYPE   :
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
