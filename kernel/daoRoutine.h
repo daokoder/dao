@@ -157,8 +157,10 @@ struct DRoutines
 {
 	unsigned int   attribs;
 	DParamNode    *tree;
-	DParamNode    *mtree; /* for routines with self parameter */
-	DArray        *routines; /* list of overloaded routines on the trees */
+	DParamNode    *mtree;    /* for routines with self parameter */
+	DArray        *routines; /* list of overloaded routines on both trees */
+	DArray        *array;    /* list of all added routines (may not be on the trees) */
+	DArray        *array2;
 };
 
 DRoutines* DRoutines_New();

@@ -1905,7 +1905,7 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 	return DaoRoutine_CheckTypeX( routType, ns, selftype, ts, np, code, def, parpass, 1 );
 }
 
-DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DArray *routines, DArray *partypes, int call, int *which )
+DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DArray *routines, DArray *partypes, int call, int *which, int *matched )
 {
 	DaoType *type, **types;
 	DArray *routypes = DArray_New(0);
@@ -1921,13 +1921,15 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DArray *ro
 	}else{
 		DArray_Append( routypes, routype );
 	}
+	*matched = 0;
 	routype = NULL;
 	for(j=0; j<routypes->size; j++){
 		type = routypes->items.pType[j];
 		k = type->nested->size;
 		partypes->size = npar;
 		while( partypes->size < k ) DArray_Append( partypes, dao_type_any );
-		k = DaoRoutine_CheckType( type, NS, NULL, partypes->items.pType, k, call, 0 );
+		k = DaoRoutine_CheckTypeX( type, NS, NULL, partypes->items.pType, k, call, 0, parpass, 0 );
+		*matched += k != 0;
 		if( k > max ){
 			if( routines ) *which = j;
 			routype = type;
@@ -2113,6 +2115,7 @@ static DaoType* DaoType_DeepItemType( DaoType *self )
 
 enum DaoTypingErrorCode
 {
+	DTE_TYPE_AMBIGIOUS_PFA = 1,
 	DTE_TYPE_NOT_CONSISTENT ,
 	DTE_TYPE_NOT_MATCHING ,
 	DTE_TYPE_NOT_INITIALIZED,
@@ -2136,6 +2139,8 @@ enum DaoTypingErrorCode
 };
 static const char*const DaoTypingErrorString[] =
 {
+	"",
+	"Ambigious partial function application on overloaded functions",
 	"Inconsistent typing",
 	"Types not matching",
 	"Variable not initialized",
@@ -2588,6 +2593,7 @@ static void DaoInferencer_WriteErrorGeneral( DaoInferencer *self, int error )
 
 	self->error = 1;
 	if( self->silent ) return;
+	sprintf( char50, "  At line %i : ", vmc->line );
 
 	mbs = DString_New(1);
 	DaoStream_WriteMBS( stream, char50 );
@@ -4331,14 +4337,15 @@ NotExist_TryAux:
 				ct = NULL;
 				if( at->tid == DAO_TYPE ) at = at->nested->items.pType[0];
 				if( at->tid == DAO_ROUTINE ){
-					int which = 0, call = DVM_CALL + (code - DVM_CURRY);
+					int wh = 0, mc = 0, call = DVM_CALL + (code - DVM_CURRY);
 					DArray *routines;
 					rout = (DaoRoutine*)consts[opa];
 					if( rout == NULL && at->overloads ) rout = (DaoRoutine*) at->aux;
 					routines = (rout && rout->overloads) ? rout->overloads->routines : NULL;
 					self->array->size = 0;
 					for(j=1; j<=opb; j++) DArray_Append( self->array, types[opa+j] );
-					ct = DaoRoutine_PartialCheck( NS, at, routines, self->array, call, & which );
+					ct = DaoRoutine_PartialCheck( NS, at, routines, self->array, call, & wh, & mc );
+					if( mc > 1 ) return DaoInferencer_Error( self, DTE_TYPE_AMBIGIOUS_PFA );
 					if( ct == NULL ) goto InvOper;
 				}else if( at->tid == DAO_CLASS ){
 					if( consts[opa] == NULL ) goto NotInit;
@@ -4645,7 +4652,11 @@ NotExist_TryAux:
 					DArray *its = tp[j-1]->nested;
 					DArray_Clear( self->array2 );
 					for(k=0; k<(j-1); k++) DArray_Append( self->array2, tp[k] );
-					for(k=0; k<its->size; k++) DArray_Append( self->array2, its->items.pType[k] );
+					for(k=0; k<its->size; k++){
+						DaoType *it = its->items.pType[k];
+						if( it->tid == DAO_PAR_NAMED ) it = (DaoType*) it->aux;
+						DArray_Append( self->array2, it );
+					}
 					tp = self->array2->items.pType;
 					j = self->array2->size;
 				}

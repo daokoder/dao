@@ -2911,8 +2911,8 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		tuple->unitype = ct;
 		GC_IncRC( ct );
 	}else if( argstuple ){
+		GC_ShiftRC( ct, tuple->unitype );
 		tuple->unitype = ct;
-		GC_IncRC( ct );
 		for(i=0; i<count; i++) DaoTuple_SetItem( tuple, self->activeValues[vmc->a + i], i );
 	}else{
 		if( tuple->unitype == NULL ){
@@ -4499,7 +4499,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 #endif
 }
 
-DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DArray *RS, DArray *TS, int C, int *W );
+DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DArray *RS, DArray *TS, int C, int *W, int *M );
 void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, k;
@@ -4553,7 +4553,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 		}
 	case DAO_ROUTINE :
 		{
-			int wh = 0, call = DVM_CALL + (vmc->code - DVM_CURRY);
+			int wh = 0, mc = 0, call = DVM_CALL + (vmc->code - DVM_CURRY);
 			DaoNamespace *NS = self->activeNamespace;
 			DaoRoutine *parout = DaoRoutine_New( NS, NULL, 0 );
 			DaoRoutine *routine = (DaoRoutine*) p;
@@ -4570,10 +4570,16 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 				bindings = routine->routConsts; 
 				routine = routine->original;
 			}
-			parout->routType = DaoRoutine_PartialCheck( NS, routype, routines, partypes, call, & wh );
+			parout->routType = DaoRoutine_PartialCheck( NS, routype, routines, partypes, call, & wh, & mc );
 			GC_IncRC( parout->routType );
 			DArray_Delete( partypes );
-			if( parout->routType == NULL ){
+			if( mc > 0 ){
+				DaoRoutine_Delete( parout );
+				DaoProcess_RaiseException( self, DAO_ERROR,
+						"ambigious partial function application on overloaded functions" );
+				break;
+			}else if( parout->routType == NULL ){
+				DaoRoutine_Delete( parout );
 				DaoProcess_RaiseException( self, DAO_ERROR, "invalid partial function application" );
 				break;
 			}

@@ -1300,8 +1300,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) rout->original );
 			cycRefCountDecrement( (DaoValue*) rout->routConsts );
 			cycRefCountDecrement( (DaoValue*) rout->body );
-			if( rout->overloads ) cycRefCountDecrements( rout->overloads->routines );
-			if( rout->specialized ) cycRefCountDecrements( rout->specialized->routines );
+			if( rout->overloads ) cycRefCountDecrements( rout->overloads->array );
+			if( rout->specialized ) cycRefCountDecrements( rout->specialized->array );
 			break;
 		}
 	case DAO_ROUTBODY :
@@ -1509,8 +1509,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) rout->original );
 			cycRefCountIncrement( (DaoValue*) rout->routConsts );
 			cycRefCountIncrement( (DaoValue*) rout->body );
-			if( rout->overloads ) cycRefCountIncrements( rout->overloads->routines );
-			if( rout->specialized ) cycRefCountIncrements( rout->specialized->routines );
+			if( rout->overloads ) cycRefCountIncrements( rout->overloads->array );
+			if( rout->specialized ) cycRefCountIncrements( rout->specialized->array );
 			break;
 		}
 	case DAO_ROUTBODY :
@@ -1721,8 +1721,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & rout->original );
 			directRefCountDecrement( (DaoValue**) & rout->routConsts );
 			directRefCountDecrement( (DaoValue**) & rout->body );
-			if( rout->overloads ) directRefCountDecrements( rout->overloads->routines );
-			if( rout->specialized ) directRefCountDecrements( rout->specialized->routines );
+			if( rout->overloads ) directRefCountDecrements( rout->overloads->array );
+			if( rout->specialized ) directRefCountDecrements( rout->specialized->array );
 			break;
 		}
 	case DAO_ROUTBODY :

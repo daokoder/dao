@@ -118,11 +118,11 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
 	if( self->overloads ){
-		GC_DecRCs( self->overloads->routines );
+		GC_DecRCs( self->overloads->array );
 		DRoutines_Delete( self->overloads );
 	}
 	if( self->specialized ){
-		GC_DecRCs( self->specialized->routines );
+		GC_DecRCs( self->specialized->array );
 		DRoutines_Delete( self->specialized );
 	}
 	if( self->body ) GC_DecRC( self->body );
@@ -486,6 +486,8 @@ DRoutines* DRoutines_New()
 	self->tree = NULL;
 	self->mtree = NULL;
 	self->routines = DArray_New(0);
+	self->array = DArray_New(0);
+	self->array2 = DArray_New(0);
 	return self;
 }
 void DRoutines_Delete( DRoutines *self )
@@ -493,6 +495,8 @@ void DRoutines_Delete( DRoutines *self )
 	if( self->tree ) DParamNode_Delete( self->tree );
 	if( self->mtree ) DParamNode_Delete( self->mtree );
 	DArray_Delete( self->routines );
+	DArray_Delete( self->array );
+	DArray_Delete( self->array2 );
 	dao_free( self );
 }
 
@@ -531,10 +535,18 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 	}
 	return it;
 }
+static void DParamNode_ExportRoutine( DParamNode *self, DArray *routines )
+{
+	DParamNode *it;
+	if( self->routine ) DArray_PushFront( routines, self->routine ); 
+	for(it=self->first; it; it=it->next) DParamNode_ExportRoutine( it, routines );
+}
 DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 {
 	int i, n, bl = 0;
 	DParamNode *param = NULL;
+	DArray *routs;
+
 	if( routine->routType == NULL ) return NULL;
 	/* If the name is not set yet, set it: */
 	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != MAXSIZE;
@@ -550,8 +562,8 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	 * two specializations with identical parameter signature, so one of 
 	 * the specialized routine will not be successully added to the tree.
 	 * To avoid memory leaking, the one not added to the tree should also
-	 * be appended to "routines", so that it can be properly garbage collected. */
-	DArray_Append( self->routines, routine );
+	 * be appended to "array", so that it can be properly garbage collected. */
+	DArray_Append( self->array, routine );
 	GC_IncRC( routine );
 	if( routine != param->routine && routine->routHost && param->routine->routHost ){
 		DaoType *t1 = routine->routHost;
@@ -561,17 +573,15 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		}else if( t1->tid == DAO_OBJECT && (t2->tid == DAO_OBJECT || t2->tid == DAO_CDATA) ){
 			bl = DaoClass_ChildOf( & t1->aux->xClass, t2->aux );
 		}
-		if( bl ){
-			for(i=0,n=self->routines->size; i<n; i++){
-				if( self->routines->items.pRoutine[i] == param->routine ){
-					GC_DecRC( param->routine );
-					DArray_Erase( self->routines, i, 1 );
-					break;
-				}
-			}
-			param->routine = routine;
-		}
+		if( bl ) param->routine = routine;
 	}
+	self->array2->size = 0;
+	if( self->mtree ) DParamNode_ExportRoutine( self->mtree, self->array2 );
+	if( self->tree ) DParamNode_ExportRoutine( self->tree, self->array2 );
+	/* to ensure safety for readers: */
+	routs = self->routines;
+	self->routines = self->array2;
+	self->array2 = routs;
 	DMutex_Unlock( & mutex_routines_update );
 	return param->routine;
 }
