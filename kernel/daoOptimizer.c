@@ -1929,9 +1929,10 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DArray *ro
 		partypes->size = npar;
 		while( partypes->size < k ) DArray_Append( partypes, dao_type_any );
 		k = DaoRoutine_CheckTypeX( type, NS, NULL, partypes->items.pType, k, call, 0, parpass, 0 );
-		*matched += k != 0;
+		*matched += k != 0 && k == max;
 		if( k > max ){
 			if( routines ) *which = j;
+			*matched = 0;
 			routype = type;
 			max = k;
 		}
