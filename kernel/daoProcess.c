@@ -5741,6 +5741,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	if( imagfirst ) dC->xComplex.value.real = d2; else dC->xComplex.value.imag = d2;
 	return toklen == (int)mbs->size;
 }
+#ifdef DAO_WITH_NUMARRAY
 static DaoArray* DaoTypeCast_MakeArray( DaoFactory *factory, DaoValue *dC, int etype )
 {
 	DaoArray *array = NULL;
@@ -5752,6 +5753,7 @@ static DaoArray* DaoTypeCast_MakeArray( DaoFactory *factory, DaoValue *dC, int e
 	}
 	return array;
 }
+#endif
 static DaoTuple* DaoTypeCast_MakeTuple( DaoFactory *factory, DaoValue *dC, DaoType *ct, int size )
 {
 	DaoTuple *tuple = NULL;

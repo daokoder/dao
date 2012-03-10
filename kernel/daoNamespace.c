@@ -582,8 +582,15 @@ DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaq
 }
 DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer )
 {
-	if( DaoNamespace_SetupValues( self, typer ) == 0 ) return NULL;
-	if( DaoNamespace_SetupMethods( self, typer ) == 0 ) return NULL;
+	if( typer->core == NULL ) return NULL;
+	DMutex_Lock( & mutex_values_setup ); // XXX
+	if( typer->core->kernel == NULL ){
+		typer->core->kernel = DaoTypeKernel_New( typer );
+		typer->core->kernel->nspace = self;
+		GC_IncRC( self );
+		DArray_Append( self->auxData, typer->core->kernel );
+	}
+	DMutex_Unlock( & mutex_values_setup );
 	return typer->core->kernel->abtype;
 }
 int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
@@ -1476,7 +1483,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	DaoType *tp;
 	DNode   *node;
 	DString *mbs = DString_New(1);
-	DArray  *nstd = DArray_New(0);
+	DArray  *nstd = NULL;
 	int i, n = strlen( name );
 	int attrib = tid >> 16;
 
@@ -1486,6 +1493,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	DString_SetMBS( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
 	if( N > 0 || tid == DAO_CODEBLOCK ){
+		nstd = DArray_New(0);
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
 		for(i=0; i<N; i++){
 			DaoType *it = nest[i];
@@ -1508,9 +1516,11 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		}
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
+		nstd = DArray_New(0);
 		DString_AppendMBS( mbs, "<any>" );
 		DArray_Append( nstd, any );
 	}else if( tid == DAO_MAP ){
+		nstd = DArray_New(0);
 		DString_AppendMBS( mbs, "<any,any>" );
 		DArray_Append( nstd, any );
 		DArray_Append( nstd, any );
@@ -1553,7 +1563,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	}
 Finalizing:
 	DString_Delete( mbs );
-	DArray_Delete( nstd );
+	if( nstd ) DArray_Delete( nstd );
 	return tp;
 }
 DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,

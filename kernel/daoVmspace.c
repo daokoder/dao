@@ -352,11 +352,15 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
 	char *daodir = getenv( "DAO_DIR" );
 	char pwd[512];
+	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	getcwd( pwd, 511 );
 	DaoVmSpace_SetPath( self, pwd );
 	DaoVmSpace_AddPath( self, pwd );
+	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	DaoVmSpace_AddPath( self, DAO_DIR );
+	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	DaoVmSpace_AddPath( self, "~/dao" );
+	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 }
 
@@ -371,6 +375,8 @@ DaoVmSpace* DaoVmSpace_New()
 	self->stopit = 0;
 	self->safeTag = 1;
 	self->evalCmdline = 0;
+	self->hasAuxlibPath = 0;
+	self->hasSyslibPath = 0;
 	self->userHandler = NULL;
 	self->mainSource = DString_New(1);
 	self->vfiles = DHash_New(D_STRING,D_STRING);
@@ -1587,9 +1593,16 @@ void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 	if( Dao_IsDir( pstr->mbs ) ){
 		tmp = self->pathWorking;
 		self->pathWorking = pstr;
+		if( DString_FindMBS( pstr, "modules/auxlib", 0 ) == (pstr->size-14) ) self->hasAuxlibPath = 1;
+		if( DString_FindMBS( pstr, "modules/syslib", 0 ) == (pstr->size-14) ) self->hasSyslibPath = 1;
 		DArray_PushFront( self->pathSearching, pstr );
 		DString_AppendMBS( pstr, "/addpath.dao" );
-		if( TestFile( self, pstr ) ) DaoVmSpace_LoadDaoModuleExt( self, pstr, NULL, 0 );
+		if( TestFile( self, pstr ) ){
+			/* the namespace may have got no chance to reduce its reference count: */
+			DaoNamespace *ns = DaoVmSpace_LoadDaoModuleExt( self, pstr, NULL, 0 );
+			GC_IncRC( ns );
+			GC_DecRC( ns );
+		}
 		self->pathWorking = tmp;
 	}
 	DString_Delete( pstr );
@@ -1623,7 +1636,9 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 		self->pathWorking = pstr;
 		DString_AppendMBS( pathDao, "/delpath.dao" );
 		if( TestFile( self, pathDao ) ){
-			DaoVmSpace_LoadDaoModuleExt( self, pathDao, NULL, 0 );
+			DaoNamespace *ns = DaoVmSpace_LoadDaoModuleExt( self, pathDao, NULL, 0 );
+			GC_IncRC( ns );
+			GC_DecRC( ns );
 			/* id may become invalid after loadDaoModule(): */
 			id = -1;
 			for(i=0; i<self->pathSearching->size; i++ ){
@@ -2114,6 +2129,7 @@ void DaoQuit()
 	if( daoConfig.iscgi ) return;
 
 	GC_DecRC( dao_default_cdata.ctype );
+	dao_default_cdata.ctype = NULL;
 
 	DaoVmSpace_DeleteData( mainVmSpace );
 	DArray_Delete( factory );

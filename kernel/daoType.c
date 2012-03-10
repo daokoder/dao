@@ -1581,8 +1581,8 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
 	DNode *it;
 	DMap *methods = self->methods;
+	if( self->core ) self->core->kernel = NULL;
 	if( self->core == (DaoTypeCore*)(self + 1) ){
-		self->core->kernel = NULL;
 		self->typer->core = NULL;
 	}
 	for(it=DMap_First(methods); it; it=DMap_Next(methods,it)) GC_DecRC( it->value.pValue );

@@ -62,6 +62,8 @@ struct DaoVmSpace
     char stopit;
     char safeTag;
     char evalCmdline;
+	char hasAuxlibPath;
+	char hasSyslibPath;
 
     DMap  *vfiles;
 	DMap  *vmodules;
