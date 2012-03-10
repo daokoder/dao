@@ -4573,7 +4573,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 			parout->routType = DaoRoutine_PartialCheck( NS, routype, routines, partypes, call, & wh, & mc );
 			GC_IncRC( parout->routType );
 			DArray_Delete( partypes );
-			if( mc > 0 ){
+			if( mc > 1 ){
 				DaoRoutine_Delete( parout );
 				DaoProcess_RaiseException( self, DAO_ERROR,
 						"ambigious partial function application on overloaded functions" );
