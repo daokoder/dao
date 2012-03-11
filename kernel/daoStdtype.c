@@ -4388,29 +4388,6 @@ void DaoException_Setup( DaoNamespace *ns )
 	DMap_Insert( error->kernel->values, type->name, type->aux );
 	DMap_Insert( warning->kernel->values, wsyntax->name, wsyntax->aux );
 	DMap_Insert( warning->kernel->values, wvalue->name, wvalue->aux );
-
-	DaoNamespace_SetupMethods( ns, & dao_Exception_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ExceptionNone_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ExceptionAny_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ExceptionWarning_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ExceptionError_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorField_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_FieldNotExist_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_FieldNotPermit_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorFloat_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_FloatDivByZero_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_FloatOverFlow_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_FloatUnderFlow_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorIndex_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_IndexOutOfRange_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorKey_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_KeyNotExist_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorParam_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorSyntax_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorValue_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_ErrorType_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_WarningSyntax_Typer );
-	DaoNamespace_SetupMethods( ns, & dao_WarningValue_Typer );
 }
 DaoType* DaoException_GetType( int type )
 {
