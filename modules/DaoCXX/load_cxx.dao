@@ -1,5 +1,0 @@
-
-load DaoCXX;
-load 'test.cxx';
-
-greet( 'Hello C++!' );

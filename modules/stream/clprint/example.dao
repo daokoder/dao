@@ -1,7 +1,0 @@
-load stream.clprint;
-
-#clprint pattern ::= '#' [<foreground color>] [':' [<background color>]] '(' <text> ')#'
-#color ::= ('black' | 'blue' | 'green' | 'red' | 'yellow' | 'cyan' | 'magenta' | 'white')
-#escaping: '##' (in text, any '#' which does not precede ')' is treated as part of text )
-
-io.clprint('Colors: #red(red)#, #green:blue(green on blue)#, #:magenta(default on magenta)#\n');
