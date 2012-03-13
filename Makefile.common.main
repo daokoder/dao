@@ -39,16 +39,16 @@ ifeq ($(inline),all)
   sys = yes
   math = yes
   meta = yes
-  fsnode = yes
-  net = yes
-  cgi = yes
-  json = yes
-  sync = yes
+#  fsnode = yes
+#  net = yes
+#  cgi = yes
+#  json = yes
+#  sync = yes
 endif
 
 DAO_MODULES =
 
-# Assuming a C/C++ module loadable by name "mod" with entry function named DaoMod_OnLoad(),
+# Assuming a C/C++ module is loadable by name "mod" with entry function named DaoMod_OnLoad(),
 # it can be easily embedded into Dao by compiling Dao with -DDAO_WITH_MODULES=\"Mod:path/mod\",
 # and linking with the module's object files.
 #

@@ -133,6 +133,8 @@ ifdef WIN32
   MOVE      = move /y
   EXIST     = if exist
   NOTEXIST  = if not exist
+  HAS_DIR   = $(EXIST)
+  HAS_FILE  = $(EXIST)
 endif
 
 # for windows path:
