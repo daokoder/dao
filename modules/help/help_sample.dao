@@ -8,7 +8,7 @@ help( object, 'method' ); help_ObjectTypeName_method.dao; help_ObjectTypeName.da
 #}
 
 @[name]
-dao.string
+sample
 @[name]
 
 @[title]
@@ -25,16 +25,24 @@ such as CJK (Chinese, Japanese and Korean) symbols.
 These two types of strings can be mixed together, one can be converted to
 the other automatically when necessary. But it's better to use one
 of them consistently.
+
+Example:
 @[text]
 
 @[code(dao)]
+# This is a simple demo:
+io.writeln( "Hello World!" );
+#{
+Here are multi-lines comments.
+Here are multi-lines comments.
+#}
 mbs = 'Multi-Bytes String quoted with single quotation mark';
 wcs = "Wide Character String quoted with double quotation mark";
 @[code(dao)]
 
 
 @[name]
-dao.string.find
+string.find
 @[name]
 
 @[title]

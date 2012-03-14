@@ -147,4 +147,10 @@ one: $(DAO_OBJECTS) kernel/daoMainv.o
 modules:
 	-cd modules && $(MAKE)
 
+
+checkout:
+	-$(HAS_FILE) modules/Makefile2 || (cd modules && fossil clone http://daovm.net/projects/dao-modules dao-modules.fossil && fossil open --nested dao-modules.fossil)
+	-$(HAS_DIR) tools/clangdao || (cd tools && fossil clone http://daovm.net/projects/dao-tools dao-tools.fossil && fossil open --nested dao-tools.fossil)
+
+
 .PHONY: modules clean
