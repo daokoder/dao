@@ -3381,13 +3381,13 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		printf("At tokPos : %i, %i, %s\n", tki,ptok->line, ptok->string->mbs );
 #endif
 		if( tki != DTOK_SEMCO ) self->lastValue = -1;
-		DaoParser_PrintWarnings( self );
+		if( self->warnings->size ) DaoParser_PrintWarnings( self );
 		if( self->errors->size ) return 0;
-		if( empty_decos ){
+		if( empty_decos && self->decoFuncs->size ){
 			DArray_Clear( self->decoFuncs );
 			DArray_Clear( self->decoParams );
 		}
-		DArray_Clear( self->enumTypes );
+		if( self->enumTypes->size ) DArray_Clear( self->enumTypes );
 		errorStart = start;
 		if( ! self->isClassBody ) self->permission = DAO_DATA_PUBLIC;
 		if( tki >= DKEY_PRIVATE && tki <= DKEY_PUBLIC ){
@@ -4815,7 +4815,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		/* self->mbs could be changed during loading */
 		DString_Assign( self->str, self->mbs );
 		if( loader ){
-			DaoVmSpace_MakePath( vmSpace, self->mbs, DAO_FILE_PATH, 1 );
+			DaoVmSpace_SearchPath( vmSpace, self->mbs, DAO_FILE_PATH, 1 );
 			if( Dao_IsFile( self->mbs->mbs ) ){
 				mod = DaoNamespace_New( vmSpace, self->mbs->mbs );
 				if( (*loader)( mod, self->mbs, self->mbs2 ) ){

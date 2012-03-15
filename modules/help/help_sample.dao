@@ -40,16 +40,24 @@ mbs = 'Multi-Bytes String quoted with single quotation mark';
 wcs = "Wide Character String quoted with double quotation mark";
 @[code(dao)]
 
-
 @[name]
-string.find
+dao.string.size
 @[name]
 
 @[title]
-string.find( str :string, from =0, reverse =0 ) => int
+string method size()
+@[title]
+
+@[name]
+dao.string.find
+@[name]
+
+@[title]
+string method find()
 @[title]
 
 @[text]
+string.find( str :string, from =0, reverse =0 ) => int
 Find substring <%>str</%>, starting from <%>from</%>; search backward if <%>reverse</%> is true.
 Return the index of the occurrence of <%>str</%>, return -1 if not found.
 @[text]

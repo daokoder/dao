@@ -643,6 +643,7 @@ static DaoValue* DaoParseNumber( const char *s, DaoValue *value )
 	return value;
 }
 
+static void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path );
 static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname );
 static DaoNamespace* DaoVmSpace_LoadDaoByteCode( DaoVmSpace *self, DString *path, int run );
 static DaoNamespace* DaoVmSpace_LoadDaoAssembly( DaoVmSpace *self, DString *path, int run );
@@ -684,7 +685,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DString_Assign( val, array->items.pString[0] );
 	DaoList_Append( argv, sval );
 	DaoMap_Insert( cmdarg, nkey, sval );
-	DaoVmSpace_MakePath( self, ns->name, DAO_FILE_PATH, 1 );
+	DaoVmSpace_MakePath( self, ns->name );
 	DaoNamespace_SetName( ns, ns->name->mbs ); /* to update ns->path and ns->file; */
 	i = 1;
 	while( i < array->size ){
@@ -759,10 +760,11 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 	DaoValue *sval = (DaoValue*) & sval2;
 	DaoRoutine *rout = ns->mainRoutine;
 	DaoType *abtp = rout->routType;
-	DString *key = DString_New(1);
-	DString *val = DString_New(1);
-	DString *str;
+	DString *str, *key, *val;
 	int i;
+	if( argValues->size == 0 ) return;
+	key = DString_New(1);
+	val = DString_New(1);
 	skey->xString.data = key;
 	sval->xString.data = val;
 	DaoList_Clear( ns->argParams );
@@ -1105,14 +1107,14 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 	DString_ToMBS( fname );
 	size = fname->size;
 	if( size >6 && DString_FindMBS( fname, ".dao.o", 0 ) == size-6 ){
-		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO_O;
 	}else if( size >6 && DString_FindMBS( fname, ".dao.s", 0 ) == size-6 ){
-		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO_S;
 	}else if( size >4 && ( DString_FindMBS( fname, ".dao", 0 ) == size-4
 				|| DString_FindMBS( fname, ".cgi", 0 ) == size-4 ) ){
-		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
 	}else if( size > slen && DString_FindMBS( fname, DAO_DLL_SUFFIX, 0 ) == size - slen ){
 		modtype = DAO_MODULE_DLL;
@@ -1132,7 +1134,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 		if( DString_FindMBS( fname, ".dll", 0 ) != size-4 )
 			DString_AppendMBS( fname, ".dll" );
 #endif
-		DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
 		DString *fn = DString_New(1);
@@ -1156,7 +1158,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 				DString_Append( fn, file );
 			}
 			DString_AppendMBS( fn, daoFileSuffix[i] );
-			DaoVmSpace_MakePath( self, fn, DAO_FILE_PATH, 1 );
+			DaoVmSpace_SearchPath( self, fn, DAO_FILE_PATH, 1 );
 #if 0
 			printf( "%s %s\n", fn->mbs, self->nameLoading->items.pString[0]->mbs );
 #endif
@@ -1172,7 +1174,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 			}
 		}
 		if( modtype == DAO_MODULE_NONE ){
-			DaoVmSpace_MakePath( self, fname, DAO_FILE_PATH, 1 );
+			DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 			if( TestFile( self, fname ) ) modtype = DAO_MODULE_ANY;
 		}
 		DString_Delete( fn );
@@ -1505,7 +1507,7 @@ void Dao_MakePath( DString *base, DString *path )
 	}
 	DString_ChangeMBS( path, "/ %. /", "/", 0 );
 }
-void DaoVmSpace_MakePath( DaoVmSpace *self, DString *fname, int type, int check )
+void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check )
 {
 	daoint i;
 	char *p;
@@ -1579,14 +1581,38 @@ void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path )
 	DString_SetMBS( self->pathWorking, path );
 	while( ( p = strchr( self->pathWorking->mbs, '\\') ) !=NULL ) *p = '/';
 }
+/* Make path only relative to the current loading path or working path: */
+void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path )
+{
+	DString *wpath = self->pathWorking;
+
+	if( path->size == 0 ) return;
+	/* C:\dir\source.dao; /home/...  */
+	if( path->size > 1 && (path->mbs[0] == '/' || path->mbs[1] == ':') ) return;
+
+	if( self->pathLoading->size ) wpath = self->pathLoading->items.pString[0];
+	if( path->mbs[0] == '.' ){
+		Dao_MakePath( wpath, path );
+	}else{
+		DString *tmp = DString_Copy( wpath );
+		if( tmp->size > 0 && tmp->mbs[ tmp->size-1 ] != '/' ) DString_AppendMBS( tmp, "/" );
+		DString_Append( tmp, path );
+		DString_Assign( path, tmp );
+		DString_Delete( tmp );
+	}
+}
 void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 {
-	DString *tmp, *pstr = DString_New(1);
+	DString *tmp, *pstr;
 	char *p;
 
+	if( path == NULL || path[0] == '\0' ) return;
+
+	pstr = DString_New(1);
 	DString_SetMBS( pstr, path );
 	while( ( p = strchr( pstr->mbs, '\\') ) !=NULL ) *p = '/';
-	DaoVmSpace_MakePath( self, pstr, DAO_DIR_PATH, 1 );
+
+	DaoVmSpace_MakePath( self, pstr );
 
 	if( pstr->mbs[pstr->size-1] == '/' ) DString_Erase( pstr, pstr->size-1, 1 );
 
@@ -1620,7 +1646,8 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 	pstr = DString_New(1);
 	DString_SetMBS( pstr, path );
 	while( ( p = strchr( pstr->mbs, '\\') ) !=NULL ) *p = '/';
-	DaoVmSpace_MakePath( self, pstr, DAO_DIR_PATH, 1 );
+
+	DaoVmSpace_MakePath( self, pstr );
 
 	if( pstr->mbs[pstr->size-1] == '/' ) DString_Erase( pstr, pstr->size-1, 1 );
 
@@ -1886,11 +1913,11 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 		jitHandle = DaoLoadLibrary( name->mbs );
 	}else{
 		DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
-		DaoVmSpace_MakePath( self, name, DAO_FILE_PATH, 1 );
+		DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
 		jitHandle = DaoLoadLibrary( name->mbs );
 		if( jitHandle == NULL ){
 			DString_SetMBS( name, "DaoJIT" DAO_DLL_SUFFIX );
-			DaoVmSpace_MakePath( self, name, DAO_FILE_PATH, 1 );
+			DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
 			jitHandle = DaoLoadLibrary( name->mbs );
 		}
 	}
