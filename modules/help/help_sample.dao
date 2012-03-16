@@ -38,18 +38,26 @@ Here are multi-lines comments.
 #}
 mbs = 'Multi-Bytes String quoted with single quotation mark';
 wcs = "Wide Character String quoted with double quotation mark";
+a = 123L;
 @[code(dao)]
 
 @[name]
-dao.string.size
+string.size
 @[name]
 
 @[title]
-string method size()
+a very long title
+a very long title
+a very long title
+a very long title
+a very long title
+a very long title
+a very long title
+a very long title
 @[title]
 
 @[name]
-dao.string.find
+string.find
 @[name]
 
 @[title]

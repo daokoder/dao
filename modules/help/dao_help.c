@@ -213,23 +213,62 @@ static void DaoxHelpBlock_Delete( DaoxHelpBlock *self )
 	if( self->lang ) DString_Delete( self->lang );
 	dao_free( self );
 }
+static void DaoxStream_PrintLineNumber( DaoStream *self, int line )
+{
+	int color;
+	char sline[20];
+	sprintf( sline, "%4i ", line );
+	color = SetColor( self, DAOX_WHITE|(DAOX_BLACK<<8) );
+	DaoStream_WriteMBS( self, sline );
+	color = SetColor( self, color );
+	DaoStream_WriteChar( self, ' ' );
+}
 static void DaoxHelpBlock_PrintCode( DaoxHelpBlock *self, DaoStream *stream )
 {
+	DString *string = DString_New(1);
 	DArray *tokens = DArray_New(D_TOKEN);
-	daoint i, fgcolor, bgcolor;
+	daoint i, pos, last, color, fgcolor;
+	int line = 1, printedline = 0;
+
 	DaoToken_Tokenize( tokens, self->code->mbs, 0, 1, 1 );
 	for(i=0; i<tokens->size; i++){
 		DaoToken *tok = tokens->items.pToken[i];
 		fgcolor = -1;
+		if( line != printedline ){
+			DaoxStream_PrintLineNumber( stream, line );
+			printedline = line;
+		}
 		switch( tok->name ){
-		case DTOK_MBS : case DTOK_WCS :
-		case DTOK_MBS_OPEN : case DTOK_WCS_OPEN :
+		case DTOK_NEWLN :
+			line += 1;
+			break;
 		case DTOK_DIGITS_HEX : case DTOK_DIGITS_DEC :
 		case DTOK_NUMBER_HEX : case DTOK_NUMBER_DEC : case DTOK_NUMBER_SCI :
 			fgcolor = DAOX_RED;
 			break;
+		case DTOK_VERBATIM :
+		case DTOK_MBS : case DTOK_WCS :
+		case DTOK_MBS_OPEN : case DTOK_WCS_OPEN :
 		case DTOK_CMT_OPEN : case DTOK_COMMENT :
-			fgcolor = DAOX_BLUE;
+			fgcolor = DAOX_RED;
+			if( tok->name == DTOK_CMT_OPEN || tok->name == DTOK_COMMENT ) fgcolor = DAOX_BLUE;
+			last = 0;
+			pos = DString_FindChar( tok->string, '\n', 0 );
+			while( last < tok->string->size ){
+				if( last ){
+					printedline = line;
+					DaoxStream_PrintLineNumber( stream, line );
+				}
+				line += pos != MAXSIZE;
+				if( pos == MAXSIZE ) pos = tok->string->size - 1;
+				DString_SubString( tok->string, string, last, pos - last + 1 );
+				color = SetCharForeground( stream, fgcolor );
+				DaoStream_WriteString( stream, string );
+				color = SetCharForeground( stream, color );
+				last = pos + 1;
+				pos = DString_FindChar( tok->string, '\n', pos + 1 );
+			}
+			fgcolor = -100;
 			break;
 		case DKEY_USE : case DKEY_LOAD : case DKEY_BIND :
 		case DKEY_AS : case DKEY_SYNTAX : 
@@ -264,15 +303,17 @@ static void DaoxHelpBlock_PrintCode( DaoxHelpBlock *self, DaoStream *stream )
 			break;
 		default: break;
 		}
+		if( fgcolor < -10 ) continue;
 		if( fgcolor < 0 ){
-			DaoStream_WriteString( stream, tokens->items.pToken[i]->string );
+			DaoStream_WriteString( stream, tok->string );
 			continue;
 		}
 		fgcolor = SetCharForeground( stream, fgcolor );
-		DaoStream_WriteString( stream, tokens->items.pToken[i]->string );
+		DaoStream_WriteString( stream, tok->string );
 		fgcolor = SetCharForeground( stream, fgcolor );
 	}
 	DArray_Delete( tokens );
+	DString_Delete( string );
 }
 static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProcess *proc )
 {
@@ -368,32 +409,76 @@ static int DaoxHelpEntry_GetNameLength( DaoxHelpEntry *self )
 	if( pos == MAXSIZE ) return self->name->size;
 	return self->name->size - 1 - pos;
 }
+static int DString_Break( DString *self, int at )
+{
+	int i = at - 15;
+	if( i < 0 ) i = 0;
+	if( at == 0 || isspace( self->mbs[at-1] ) || isspace( self->mbs[at] ) ) return at;
+	while( at > i && isspace( self->mbs[at-1] ) == 0 ) at -= 1;
+	return at;
+}
 static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DArray *offsets, int offset, int width, int last )
 {
 	DNode *it;
+	DArray *old = offsets;
 	DString *line = DString_New(1);
 	int i, len = DaoxHelpEntry_GetNameLength( self );
 	int extra = self->parent ? 5 : 2;
+	int color, count = 0;
+	int screen = 100;
+
+	if( offsets == NULL ) offsets = DArray_New(0);
 
 	DString_Resize( line, offset );
 	memset( line->mbs, ' ', line->size*sizeof(char) );
 	for(i=0; i<offsets->size; i++) line->mbs[ offsets->items.pInt[i] ] = '|';
 	if( self->parent ) DString_AppendMBS( line, "|--" );
+	DaoStream_WriteString( stream, line );
+
+	count = line->size;
 	DString_AppendMBS( line, self->name->mbs + self->name->size - len );
+	color = SetCharForeground( stream, DAOX_GREEN );
+	DaoStream_WriteMBS( stream, line->mbs + count );
+	color = SetCharForeground( stream, color );
+
+	count = line->size;
 	for(i=len; i<(width+2); i++) DString_AppendChar( line, '-' );
 	DString_AppendChar( line, '|' );
+	DString_AppendMBS( line, " " );
+	DaoStream_WriteMBS( stream, line->mbs + count );
+
+	count = line->size;
 	if( self->title->size ){
-		DString_AppendMBS( line, " " );
-		DString_Append( line, self->name );
-		DString_AppendMBS( line, ": " );
-		DString_Append( line, self->title );
+		color = SetCharForeground( stream, DAOX_BLUE );
+		DaoStream_WriteString( stream, self->name );
+		color = SetCharForeground( stream, color );
+
+		if( count < (screen - 20) ){
+			DString *chunk = DString_New(1);
+			int TW = screen - count;
+			DaoStream_WriteMBS( stream, ": " );
+			if( (self->title->size + self->name->size + 2) < TW ){
+				DaoStream_WriteString( stream, self->title );
+			}else{
+				int next = 0;
+				int start = DString_Break( self->title, TW - (self->name->size + 2) );
+				DString_SubString( self->title, chunk, 0, start );
+				DString_Trim( chunk );
+				DaoStream_WriteString( stream, chunk );
+				memset( line->mbs + offset, ' ', (width + extra)*sizeof(char) );
+				for(; start < self->title->size; start=next){
+					start = DString_Break( self->title, start );
+					next = DString_Break( self->title, start + TW );
+					DString_SubString( self->title, chunk, start, next - start );
+					DString_Trim( chunk );
+					DaoStream_WriteChar( stream, '\n' );
+					DaoStream_WriteString( stream, line );
+					DaoStream_WriteString( stream, chunk );
+				}
+			}
+			DString_Delete( chunk );
+		}
 	}
-	if( line->size > 100 ){
-		DString_Erase( line, 97, -1 );
-		DString_AppendMBS( line, "..." );
-	}
-	DaoStream_WriteString( stream, line );
-	//printf( "|               %3i %3i %3i %p", offset, width, last, self->parent );
 	DaoStream_WriteChar( stream, '\n' );
 	if( last == 0 ) DArray_Append( offsets, offset );
 	len = 0;
@@ -409,6 +494,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 	}
 	if( last == 0 ) DArray_PopBack( offsets );
 	DString_Delete( line );
+	if( old == NULL ) DArray_Delete( offsets );
 }
 
 
@@ -430,7 +516,7 @@ static void DaoxHelp_Delete( DaoxHelp *self )
 
 static DaoxHelper* DaoxHelper_New()
 {
-	DString name = DString_WrapMBS( "help" );
+	DString name = DString_WrapMBS( "ALL" );
 	DaoxHelper *self = (DaoxHelper*) dao_malloc( sizeof(DaoxHelper) );
 	self->helps = DHash_New(0,0);
 	self->tree = DaoxHelpEntry_New( & name );
@@ -489,12 +575,6 @@ static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DString *name )
 	}
 	DMap_Insert( self->entries, name, entry );
 	return entry;
-}
-static void DaoxHelper_PrintTree( DaoxHelper *self, DaoStream *stream )
-{
-	DArray *offsets = DArray_New(0);
-	DaoxHelpEntry_PrintTree( self->tree, stream, offsets, 0, self->tree->name->size, 1 );
-	DArray_Delete( offsets );
 }
 
 
@@ -595,6 +675,31 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DArray_Delete( array );
 }
+static void HELP_ErrorNoHelp( DaoProcess *proc, DString *entry_name )
+{
+	DaoStream *stdio = proc->stdioStream;
+	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
+	DaoStream_WriteMBS( stdio, "No available help document for \"" );
+	DaoStream_WriteString( stdio, entry_name );
+	DaoStream_WriteMBS( stdio, "\"!\n" );
+}
+static void HELP_ErrorNoEntry( DaoProcess *proc, DString *entry_name )
+{
+	DaoStream *stdio = proc->stdioStream;
+	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
+	DaoStream_WriteMBS( stdio, "No available help entry for \"" );
+	DaoStream_WriteString( stdio, entry_name );
+	DaoStream_WriteMBS( stdio, "\"!\n" );
+}
+static void HELP_WarnNoExactEntry( DaoProcess *proc, DString *entry_name )
+{
+	DaoStream *stdio = proc->stdioStream;
+	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
+	DaoStream_WriteMBS( stdio, "No available help entry for \"" );
+	DaoStream_WriteString( stdio, entry_name );
+	DaoStream_WriteMBS( stdio, "\",\n" );
+	DaoStream_WriteMBS( stdio, "a more generical entry is used!\n\n" );
+}
 static DaoxHelp* HELP_GetHelp( DaoProcess *proc, DString *entry_name )
 {
 	DaoxHelp *help;
@@ -619,19 +724,7 @@ static DaoxHelp* HELP_GetHelp( DaoProcess *proc, DString *entry_name )
 	}
 	DString_Delete( name );
 	DString_Delete( name2 );
-
-	help = DaoxHelper_Get( daox_helper, NS, NULL );
-	//printf( "%s %p\n", name->mbs, help );
-	if( help == NULL ){
-		if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
-		DaoStream_WriteMBS( stdio, "No help document available for \"" );
-		DaoStream_WriteString( stdio, entry_name );
-		DaoStream_WriteMBS( stdio, "\"\n" );
-		DString_Delete( name );
-		DString_Delete( name2 );
-		return NULL;
-	}
-	return help;
+	return DaoxHelper_Get( daox_helper, NS, NULL );
 }
 
 static DaoxHelpEntry* HELP_GetEntry( DaoProcess *proc, DaoxHelp *help, DString *entry_name )
@@ -642,6 +735,7 @@ static DaoxHelpEntry* HELP_GetEntry( DaoProcess *proc, DaoxHelp *help, DString *
 	daoint pos;
 	DString_Assign( name, entry_name );
 	DString_ToMBS( name );
+	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
 	while( entry == NULL ){
 		DNode *it = DMap_Find( help->entries, name );
 		if( it ){
@@ -652,42 +746,55 @@ static DaoxHelpEntry* HELP_GetEntry( DaoProcess *proc, DaoxHelp *help, DString *
 		if( pos < 0 ) break;
 		DString_Erase( name, pos, -1 );
 	}
-	if( entry == NULL ){
-		DaoStream_WriteMBS( stdio, "No help entry available for \"" );
-		DaoStream_WriteString( stdio, entry_name );
-		DaoStream_WriteMBS( stdio, "\"\n" );
-		DString_Delete( name );
-		return NULL;
-	}
-	if( DString_EQ( entry->name, entry_name ) == 0 ){
-		DaoStream_WriteMBS( stdio, "No help entry available for \"" );
-		DaoStream_WriteString( stdio, entry_name );
-		DaoStream_WriteMBS( stdio, "\",\n" );
-		DaoStream_WriteMBS( stdio, "a more generical entry is used!\n\n" );
-	}
 	DString_Delete( name );
 	return entry;
 }
-static void HELP_Help( DaoProcess *proc, DaoValue *p[], int N )
+static void HELP_Help1( DaoProcess *proc, DaoValue *p[], int N )
 {
+	DaoStream *stdio = proc->stdioStream;
+	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
+	DaoxHelpEntry_PrintTree( daox_helper->tree, stdio, NULL, 0, daox_helper->tree->name->size, 1 );
+	DaoStream_WriteChar( stdio, '\n' );
+}
+static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *entry_name = p[0]->xString.data;
 	DaoProcess *newproc = NULL;
 	DaoStream *stdio = proc->stdioStream;
-	DaoxHelp *help = HELP_GetHelp( proc, p[0]->xString.data );
-	DaoxHelpEntry *entry = HELP_GetEntry( proc, help, p[0]->xString.data );
+	DaoxHelpEntry *entry = NULL;
+	DaoxHelp *help = NULL;
+
+	DaoProcess_PutValue( proc, daox_cdata_helper );
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
-	if( entry ){
+	help = HELP_GetHelp( proc, entry_name );
+	if( help ) entry = HELP_GetEntry( proc, help, entry_name );
+	if( entry == NULL ){
+		DNode *node = DMap_Find( daox_helper->entries, entry_name );
+		if( node ) entry = (DaoxHelpEntry*) node->value.pVoid;
+	}
+	if( entry == NULL ){
+		if( help == NULL ){
+			HELP_ErrorNoHelp( proc, entry_name );
+		}else{
+			HELP_ErrorNoEntry( proc, entry_name );
+		}
+		return;
+	}
+	if( DString_EQ( entry->name, entry_name ) == 0 ) HELP_WarnNoExactEntry( proc, entry_name );
+	if( entry->title->size ){
 		if( p[1]->xInteger.value ) newproc = DaoVmSpace_AcquireProcess( proc->vmSpace );
 		DaoxHelpEntry_Print( entry, stdio, newproc );
 		if( newproc ) DaoVmSpace_ReleaseProcess( proc->vmSpace, newproc );
+	}else{
+		DaoxHelpEntry_PrintTree( entry, stdio, NULL, 0, entry->name->size, 1 );
 	}
-	DaoProcess_PutValue( proc, daox_cdata_helper );
 }
-static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
+static void HELP_Help3( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess *newproc = NULL;
 	DaoStream *stdio = proc->stdioStream;
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, p[0] );
-	DaoxHelpEntry *entry;
+	DaoxHelpEntry *entry = NULL;
 	DaoxHelp *help;
 	DString *name;
 
@@ -704,12 +811,27 @@ static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
 		DString_AppendMBS( name, "." );
 		DString_Append( name, p[1]->xString.data );
 	}
-	help = HELP_GetHelp( proc, p[0]->xString.data );
-	entry = HELP_GetEntry( proc, help, p[0]->xString.data );
-	if( entry ){
+	help = HELP_GetHelp( proc, name );
+	if( help ) entry = HELP_GetEntry( proc, help, name );
+	if( entry == NULL ){
+		DNode *node = DMap_Find( daox_helper->entries, name );
+		if( node ) entry = (DaoxHelpEntry*) node->value.pVoid;
+	}
+	if( entry == NULL ){
+		if( help == NULL ){
+			HELP_ErrorNoHelp( proc, name );
+		}else{
+			HELP_ErrorNoEntry( proc, name );
+		}
+		return;
+	}
+	if( DString_EQ( entry->name, name ) == 0 ) HELP_WarnNoExactEntry( proc, name );
+	if( entry->title->size ){
 		if( p[2]->xInteger.value ) newproc = DaoVmSpace_AcquireProcess( proc->vmSpace );
 		DaoxHelpEntry_Print( entry, stdio, newproc );
 		if( newproc ) DaoVmSpace_ReleaseProcess( proc->vmSpace, newproc );
+	}else{
+		DaoxHelpEntry_PrintTree( entry, stdio, NULL, 0, entry->name->size, 1 );
 	}
 	DString_Delete( name );
 }
@@ -731,22 +853,15 @@ static void HELP_Load( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-static void HELP_Tree( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoStream *stdio = proc->stdioStream;
-	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
-	DaoxHelper_PrintTree( daox_helper, stdio );
-	DaoStream_WriteChar( stdio, '\n' );
-}
 
 static DaoFuncItem helpMeths[]=
 {
-	{ HELP_Help,      "help( keyword :string, run = 0 )" },
-	{ HELP_Help2,     "help( object :any, keyword :string, run = 0 )" },
+	{ HELP_Help1,     "help()" },
+	{ HELP_Help2,     "help( keyword :string, run = 0 )" },
+	{ HELP_Help3,     "help( object :any, keyword :string, run = 0 )" },
 	{ HELP_Search,    "search( keyword :string )" },
 	{ HELP_Search2,   "search( object :any, keyword :string )" },
 	{ HELP_Load,      "load( help_file :string )" },
-	{ HELP_Tree,      "tree()" },
 	{ HELP_List,      "list( object :any, type :enum<values,methods,auxmeths>=$methods )" },
 	{ NULL, NULL }
 };
@@ -770,8 +885,10 @@ static int dao_string_delete( DString *string, int retc )
 static int dao_help_name( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
 {
 	DString *name = dao_verbatim_content( verbatim );
-	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, name );
+	DaoxHelp *help;
 	DNode *it;
+	DString_ChangeMBS( name, "%s+", " ", 0 );
+	help = DaoxHelper_Get( daox_helper, NS, name );
 	if( help == NULL ) return dao_string_delete( name, 1 );
 	//printf( "dao_help_name: %s\n", name->mbs );
 	it = DMap_Find( help->entries, name );
@@ -789,6 +906,7 @@ static int dao_help_title( DaoNamespace *NS, DString *mode, DString *verbatim, D
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
 	//printf( "%s\n", title->mbs );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( title, 1 );
+	DString_ChangeMBS( title, "%s+", " ", 0 );
 	DString_Assign( help->current->title, title );
 	return dao_string_delete( title, 0 );
 }
