@@ -1,0 +1,41 @@
+load help;
+
+@[name]
+dao.type.number.int
+@[name]
+
+@[title]
+Integer Type
+@[title]
+
+@[name]
+dao.type.number.float
+@[name]
+
+@[title]
+Single Precision Floating Point Number Type
+@[title]
+
+@[name]
+dao.type.number.double
+@[name]
+
+@[title]
+Double Precision Floating Point Number Type
+@[title]
+
+@[name]
+dao.type.number.complex
+@[name]
+
+@[title]
+Complex Number Type
+@[title]
+
+@[name]
+dao.type.number.long
+@[name]
+
+@[title]
+Arbitrary Precision Integer Type
+@[title]

@@ -1,0 +1,17 @@
+load help;
+
+@[name]
+dao.type.list
+@[name]
+
+@[title]
+List Container Type
+@[title]
+
+@[name]
+dao.type.list.init
+@[name]
+
+@[name]
+dao.type.list.method
+@[name]

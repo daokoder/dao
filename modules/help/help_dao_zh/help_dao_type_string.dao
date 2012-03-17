@@ -1,0 +1,13 @@
+load help;
+
+@[name]
+dao.type.string
+@[name]
+
+@[name]
+dao.type.string.init
+@[name]
+
+@[name]
+dao.type.string.method
+@[name]

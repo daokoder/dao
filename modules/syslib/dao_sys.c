@@ -276,7 +276,7 @@ static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 	case 4: category = LC_NUMERIC; break;
 	case 5: category = LC_TIME; break;
 	}
-	old = setlocale( category, DString_GetMBS( p[1]->xString.data ) );
+	old = setlocale( category, N == 1 ? NULL : DString_GetMBS( p[1]->xString.data ) );
 	if ( old )
 		DaoProcess_PutMBString( proc, old );
 	else

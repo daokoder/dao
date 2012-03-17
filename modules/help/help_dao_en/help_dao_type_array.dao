@@ -1,0 +1,33 @@
+load help;
+
+@[name]
+dao.type.array
+@[name]
+
+@[title]
+Multi-dimensional Numeric Array
+@[title]
+
+@[name]
+dao.type.array.init
+@[name]
+
+@[name]
+dao.type.array.method
+@[name]
+
+@[name]
+dao.type.array.method.dim
+@[name]
+
+@[title]
+Array method dim()
+@[title]
+
+@[name]
+dao.type.array.method.index
+@[name]
+
+@[title]
+Array method index()
+@[title]

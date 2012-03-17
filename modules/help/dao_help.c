@@ -188,6 +188,7 @@ struct DaoxHelp
 struct DaoxHelper
 {
 	DaoxHelpEntry  *tree;
+	DMap           *trees;
 	DMap           *entries;
 	DMap           *helps;
 	DArray         *nslist;
@@ -338,8 +339,8 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 {
 	DaoxHelpEntry *self = (DaoxHelpEntry*) dao_malloc( sizeof(DaoxHelpEntry) );
+	self->title = NULL;
 	self->name = DString_Copy( name );
-	self->title = DString_New(1);
 	self->nested = DMap_New(D_STRING,0);
 	self->first = self->last = NULL;
 	self->parent = NULL;
@@ -352,8 +353,8 @@ static void DaoxHelpEntry_Delete( DaoxHelpEntry *self )
 		DaoxHelpEntry_Delete( (DaoxHelpEntry*) it->value.pVoid );
 	}
 	if( self->first ) DaoxHelpBlock_Delete( self->first );
+	if( self->title ) DString_Delete( self->title );
 	DString_Delete( self->name );
-	DString_Delete( self->title );
 	dao_free( self );
 }
 static void DaoxHelpEntry_AppendText( DaoxHelpEntry *self, DString *text )
@@ -394,7 +395,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProc
 	DaoStream_WriteMBS( stream, "\n\n[SYNOPSIS]\n" );
 	color = SetColor( stream, color );
 
-	DaoStream_WriteString( stream, self->title );
+	if( self->title ) DaoStream_WriteString( stream, self->title );
 
 	color = SetColor( stream, scolor );
 	DaoStream_WriteMBS( stream, "\n\n[DESCRIPTION]\n" );
@@ -427,7 +428,10 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 	int color, count = 0;
 	int screen = 100;
 
-	if( offsets == NULL ) offsets = DArray_New(0);
+	if( offsets == NULL ){
+		offsets = DArray_New(0);
+		len = self->name->size;
+	}
 
 	DString_Resize( line, offset );
 	memset( line->mbs, ' ', line->size*sizeof(char) );
@@ -448,7 +452,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 	DaoStream_WriteMBS( stream, line->mbs + count );
 
 	count = line->size;
-	if( self->title->size ){
+	if( self->title ){
 		color = SetCharForeground( stream, DAOX_BLUE );
 		DaoStream_WriteString( stream, self->name );
 		color = SetCharForeground( stream, color );
@@ -465,7 +469,10 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 				DString_SubString( self->title, chunk, 0, start );
 				DString_Trim( chunk );
 				DaoStream_WriteString( stream, chunk );
-				memset( line->mbs + offset, ' ', (width + extra)*sizeof(char) );
+				if( last )
+					memset( line->mbs + offset, ' ', (width + extra)*sizeof(char) );
+				else
+					memset( line->mbs + offset + 1, ' ', (width + extra - 1)*sizeof(char) );
 				for(; start < self->title->size; start=next){
 					start = DString_Break( self->title, start );
 					next = DString_Break( self->title, start + TW );
@@ -491,6 +498,11 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 		DaoxHelpEntry *entry = (DaoxHelpEntry*) it->value.pVoid;
 		int last = DMap_Next( self->nested, it ) == NULL;
 		DaoxHelpEntry_PrintTree( entry, stream, offsets, offset + width + extra, len, last );
+	}
+	if( last ){
+		memset( line->mbs + offset, ' ', (width + extra + 1)*sizeof(char) );
+		DaoStream_WriteString( stream, line );
+		DaoStream_WriteChar( stream, '\n' );
 	}
 	if( last == 0 ) DArray_PopBack( offsets );
 	DString_Delete( line );
@@ -715,7 +727,7 @@ static DaoxHelp* HELP_GetHelp( DaoProcess *proc, DString *entry_name )
 	while( NS == NULL ){
 		DString_SetMBS( name2, "help_" );
 		DString_Append( name2, name );
-		DString_ChangeMBS( name2, "%.", "_", 0 );
+		DString_ChangeMBS( name2, "%W", "_", 0 );
 		NS = DaoVmSpace_Load( proc->vmSpace, name2, 0 );
 		if( NS ) break;
 		pos = DString_RFindChar( name, '.', -1 );
@@ -754,7 +766,6 @@ static void HELP_Help1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *stdio = proc->stdioStream;
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
 	DaoxHelpEntry_PrintTree( daox_helper->tree, stdio, NULL, 0, daox_helper->tree->name->size, 1 );
-	DaoStream_WriteChar( stdio, '\n' );
 }
 static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -781,7 +792,7 @@ static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( DString_EQ( entry->name, entry_name ) == 0 ) HELP_WarnNoExactEntry( proc, entry_name );
-	if( entry->title->size ){
+	if( entry->title ){
 		if( p[1]->xInteger.value ) newproc = DaoVmSpace_AcquireProcess( proc->vmSpace );
 		DaoxHelpEntry_Print( entry, stdio, newproc );
 		if( newproc ) DaoVmSpace_ReleaseProcess( proc->vmSpace, newproc );
@@ -826,7 +837,7 @@ static void HELP_Help3( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( DString_EQ( entry->name, name ) == 0 ) HELP_WarnNoExactEntry( proc, name );
-	if( entry->title->size ){
+	if( entry->title ){
 		if( p[2]->xInteger.value ) newproc = DaoVmSpace_AcquireProcess( proc->vmSpace );
 		DaoxHelpEntry_Print( entry, stdio, newproc );
 		if( newproc ) DaoVmSpace_ReleaseProcess( proc->vmSpace, newproc );
@@ -907,6 +918,7 @@ static int dao_help_title( DaoNamespace *NS, DString *mode, DString *verbatim, D
 	//printf( "%s\n", title->mbs );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( title, 1 );
 	DString_ChangeMBS( title, "%s+", " ", 0 );
+	if( help->current->title == NULL ) help->current->title = DString_New(1);
 	DString_Assign( help->current->title, title );
 	return dao_string_delete( title, 0 );
 }
@@ -931,7 +943,9 @@ static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
+	DString help_help = DString_WrapMBS( "help_help" );
 	DaoType *type;
+
 	dao_vmspace = vmSpace;
 	DaoNamespace_AddCodeInliner( ns, "name", dao_help_name );
 	DaoNamespace_AddCodeInliner( ns, "title", dao_help_title );
@@ -941,6 +955,7 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	daox_helper = DaoxHelper_New();
 	daox_cdata_helper = (DaoValue*) DaoCdata_New( type, daox_helper );
 	DaoNamespace_AddConstValue( ns, "__helper__", daox_cdata_helper );
+	DaoVmSpace_Load( vmSpace, & help_help, 0 );
 	return 0;
 }
 

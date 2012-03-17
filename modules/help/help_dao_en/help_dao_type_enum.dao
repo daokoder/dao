@@ -1,0 +1,14 @@
+load help;
+
+@[name]
+dao.type.enum
+@[name]
+
+@[title]
+Enum or Symbol Type
+@[title]
+
+@[name]
+dao.type.enum.init
+@[name]
+

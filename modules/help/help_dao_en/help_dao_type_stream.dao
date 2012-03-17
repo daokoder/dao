@@ -1,0 +1,17 @@
+load help;
+
+@[name]
+dao.type.stream
+@[name]
+
+@[title]
+Input/Output Stream Type
+@[title]
+
+@[name]
+dao.type.stream.init
+@[name]
+
+@[name]
+dao.type.stream.method
+@[name]

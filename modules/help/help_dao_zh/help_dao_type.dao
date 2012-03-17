@@ -1,0 +1,19 @@
+load help;
+
+load help_dao_type_number;
+load help_dao_type_enum;
+load help_dao_type_string;
+load help_dao_type_array;
+load help_dao_type_list;
+load help_dao_type_map;
+load help_dao_type_tuple;
+load help_dao_type_stream;
+
+@[name]
+dao.type
+@[name]
+
+@[title]
+数据类型
+@[title]
+

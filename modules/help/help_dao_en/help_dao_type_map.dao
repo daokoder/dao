@@ -1,0 +1,17 @@
+load help;
+
+@[name]
+dao.type.map
+@[name]
+
+@[title]
+Map or Hash Map Container Type
+@[title]
+
+@[name]
+dao.type.map.init
+@[name]
+
+@[name]
+dao.type.map.method
+@[name]

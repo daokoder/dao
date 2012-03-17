@@ -1,0 +1,11 @@
+load help;
+load sys;
+
+ctype = sys.setlocale( $ctype );
+
+lang = '_en';
+
+if( ctype.find( 'zh_' ) == 0 or ctype.find( 'Zh_' ) == 0 or ctype.find( 'ZH_' ) == 0 ) lang = '_zh';
+
+std.load( 'help_help' + lang );
+
