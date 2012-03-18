@@ -1038,43 +1038,34 @@ int Dao_IsDir( const char *file )
 const char* const dao_colors[8] 
 = { "black", "blue", "green", "cyan", "red", "magenta", "yellow", "white" };
 
-static int SetCharForeground( DaoStream *stream, int color )
+static int SetCharColor( DaoStream *stream, int color, int RGB[3] )
 {
-	WORD attr;
 	int res = 0;
 	struct _CONSOLE_SCREEN_BUFFER_INFO info;
 	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
+	WORD attr;
 	if( fd == INVALID_HANDLE_VALUE ) fd = GetStdHandle( STD_OUTPUT_HANDLE );
 	if( !GetConsoleScreenBufferInfo( fd, &info ) ) return 255;
 	attr = info.wAttributes;
-	if( attr & FOREGROUND_BLUE ) res |= 1;
-	if( attr & FOREGROUND_GREEN ) res |= 2;
-	if( attr & FOREGROUND_RED ) res |= 4;
-	attr = attr & ~FOREGROUND_BLUE & ~FOREGROUND_GREEN & ~FOREGROUND_RED;
-	if( color & 1 ) attr |= FOREGROUND_BLUE;
-	if( color & 2 ) attr |= FOREGROUND_GREEN;
-	if( color & 4 ) attr |= FOREGROUND_RED;
+	if( attr & RGB[2] ) res |= 1;
+	if( attr & RGB[1] ) res |= 2;
+	if( attr & RGB[0] ) res |= 4;
+	attr = attr & ~RGB[2] & ~RGB[1] & ~RGB[0];
+	if( color & 1 ) attr |= RGB[2];
+	if( color & 2 ) attr |= RGB[1];
+	if( color & 4 ) attr |= RGB[0];
 	if( !SetConsoleTextAttribute( fd, attr ) ) return 255;
 	return res;
 }
+static int SetCharForeground( DaoStream *stream, int color )
+{
+	int RGB[3] = { FOREGROUND_RED, FOREGROUND_GREEN, FOREGROUND_BLUE };
+	return SetCharColor( stream, color, RGB );
+}
 static int SetCharBackground( DaoStream *stream, int color )
 {
-	WORD attr;
-	int res = 0;
-	struct _CONSOLE_SCREEN_BUFFER_INFO info;
-	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
-	if( fd == INVALID_HANDLE_VALUE ) fd = GetStdHandle( STD_OUTPUT_HANDLE );
-	if( !GetConsoleScreenBufferInfo( fd, &info ) ) return 255;
-	attr = info.wAttributes;
-	if( attr & BACKGROUND_BLUE ) res |= 1;
-	if( attr & BACKGROUND_GREEN ) res |= 2;
-	if( attr & BACKGROUND_RED ) res |= 4;
-	attr = attr & ~BACKGROUND_BLUE & ~BACKGROUND_GREEN & ~BACKGROUND_RED;
-	if( color & 1 ) attr |= BACKGROUND_BLUE;
-	if( color & 2 ) attr |= BACKGROUND_GREEN;
-	if( color & 4 ) attr |= BACKGROUND_RED;
-	if( !SetConsoleTextAttribute( fd, attr ) ) return 255;
-	return res;
+	int RGB[3] = { BACKGROUND_RED, BACKGROUND_GREEN, BACKGROUND_BLUE };
+	return SetCharColor( stream, color, RGB );
 }
 
 #else

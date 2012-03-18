@@ -2,16 +2,95 @@ load help;
 load help_dao_en.help_dao;
 
 
+####################################################################################
+####################################################################################
+####################################################################################
 @[name]
 help
 @[name]
+
 @[title]
 The Online Help Module
 @[title]
 
 @[text]
+@[green]Help@[green] is an integrate help system to provide convenient online help for Dao.
+The main functionalities are accessible through the following methods:
+@[list]
+@[item]
+@[green]help()@[green]: see @[blue]help.method.help@[blue];
+  @[list()]
+  @[item()]
+  test
+  @[item()]
+  @[list()]
+@[item]
+
+@[item]
+@[green]help.search()@[green]: see @[blue]help.method.search@[blue];
+@[item]
+
+@[item]
+@[green]help.load()@[green]: see @[blue]help.method.load@[blue];
+@[item]
+
+@[item]
+@[green]help.list()@[green]: see @[blue]help.method.list@[blue];
+@[item]
+@[list]
 @[text]
 
+####################################################################################
+####################################################################################
+####################################################################################
+@[name]
+help.format
+@[name]
+
+@[title]
+Format of The Help Files
+@[title]
+
+@[text]
+Help files are regular Dao source files which contains mostly verbatim texts,
+and can be loaded as regular Dao modules.
+Such files must have the following loading statement before any use of verbatims:
+
+@[code(dao)]
+load help;
+@[code(dao)]
+
+Then the captions of the verbatims determine how they will be interpreted by the 
+help system.
+Each verbatim that is captioned with "name" contains an ID string of a help entry,
+example:
+
+@[code(dao)]
+@[name]
+help.format
+@[name]
+@[code(dao)]
+
+Such ID string instructs how this entry will be organized in the help system,
+and how it will be located.
+Each ID string is composed of multiple parts which are delimited by dots.
+There is one node in the help system that is corresponding to each part of the ID string.
+
+Each help entry may have a title which is represented by a verbatim text captioned
+by "title":
+
+@[code(dao)]
+@[title]
+Format of The Help Files
+@[title]
+@[code(dao)]
+
+The main text of the help must be placed in verbatim strings captioned with "text".
+@[text]
+
+####################################################################################
+####################################################################################
+####################################################################################
 @[name]
 help.method.help
 @[name]
