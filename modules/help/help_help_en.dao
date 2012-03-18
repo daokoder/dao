@@ -14,29 +14,26 @@ The Online Help Module
 @[title]
 
 @[text]
-@[green]Help@[green] is an integrate help system to provide convenient online help for Dao.
-The main functionalities are accessible through the following methods:
+Module @[green]help@[green] is an integrate help system to provide convenient online help for Dao.
+This module provides a single type named @[green]help@[green] and a singleton object
+named @[green]__helper__@[green]. The singleton object has no particular use except that
+it will be the only instance object to be returned by the initializer of @[green]help@[green].
+The type @[green]help@[green] provides several of initializers and static methods
+to access the help system:
 @[list]
-@[item]
-@[green]help()@[green]: see @[blue]help.method.help@[blue];
-  @[list()]
-  @[item()]
-  test
-  @[item()]
-  @[list()]
-@[item]
+==@[green]help()@[green]: see @[blue]help.method.help@[blue] for details;
 
-@[item]
-@[green]help.search()@[green]: see @[blue]help.method.search@[blue];
-@[item]
+There are three versions of initializers:
+@[code(dao)]
+help()
+help( keyword :string, run = 0 )
+help( object :any, keyword :string, run = 0 )
+@[code(dao)]
+The first initializer @[code]help()@[code].
 
-@[item]
-@[green]help.load()@[green]: see @[blue]help.method.load@[blue];
-@[item]
-
-@[item]
-@[green]help.list()@[green]: see @[blue]help.method.list@[blue];
-@[item]
+==@[green]help.search()@[green]: see @[blue]help.method.search@[blue] for details;
+==@[green]help.load()@[green]: see @[blue]help.method.load@[blue] for details;
+==@[green]help.list()@[green]: see @[blue]help.method.list@[blue] for details;
 @[list]
 @[text]
 

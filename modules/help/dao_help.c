@@ -53,6 +53,7 @@ typedef struct DaoxHelpBlock   DaoxHelpBlock;
 typedef struct DaoxHelpEntry   DaoxHelpEntry;
 typedef struct DaoxHelp        DaoxHelp;
 typedef struct DaoxHelper      DaoxHelper;
+typedef struct DaoxStream      DaoxStream;
 
 struct DaoxHelpBlock
 {
@@ -91,6 +92,12 @@ struct DaoxHelper
 	DMap           *helps;
 	DArray         *nslist;
 };
+struct DaoxStream
+{
+	DaoStream *stream;
+	unsigned   offset; /* offset in the current line */
+	char       last; /* last char in the current line */
+};
 DaoxHelper *daox_helper = NULL;
 DaoValue *daox_cdata_helper = NULL;
 DaoVmSpace *dao_vmspace = NULL;
@@ -122,22 +129,65 @@ static int DString_Break( DString *self, int at )
 	while( at > i && isspace( self->mbs[at-1] ) == 0 ) at -= 1;
 	return at;
 }
-static void DaoxStream_WriteParagraph( DaoStream *self, DString *text, int width )
+static void DaoxStream_WriteNewLine( DaoxStream *self, const char *text )
+{
+	DaoStream_WriteMBS( self->stream, text );
+	DaoStream_WriteChar( self->stream, '\n' );
+	self->offset = 0;
+	self->last = 0;
+}
+static void DaoxStream_WriteChar( DaoxStream *self, char ch )
+{
+	if( self->offset && isspace( self->last ) == 0 && isalnum( ch ) )
+		DaoxStream_WriteChar( self, ' ' );
+	DaoStream_WriteChar( self->stream, ch );
+	self->offset += 1;
+	self->last = ch;
+}
+static void DaoxStream_WriteString( DaoxStream *self, DString *text )
+{
+	if( self->offset && isspace( self->last ) == 0 && isalnum( text->mbs[0] ) )
+		DaoxStream_WriteChar( self, ' ' );
+	DaoStream_WriteString( self->stream, text );
+	self->offset += text->size;
+	if( text->size ) self->last = text->mbs[text->size-1];
+}
+static int DaoxStream_WriteItemID( DaoxStream *self, char type, int id )
+{
+	char buf[20];
+	self->last = ' ';
+	if( type == '-' ){
+		DaoStream_WriteMBS( self->stream, "* " );
+		self->offset += 2;
+		return 2;
+	}else{
+		sprintf( buf, "% 3i. ", id );
+		DaoStream_WriteMBS( self->stream, buf );
+		self->offset += strlen( buf );
+	}
+	return 5;
+}
+static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offset, int width )
 {
 	DString *line = DString_New(1);
 	daoint start, next;
+	int i;
 	for(start=next=0; start<text->size; start=next){
 		start = DString_Break( text, start );
-		next = DString_Break( text, start + width );
+		next = DString_Break( text, start + width - self->offset );
+		if( (next - start) <= 0 ){
+			DaoxStream_WriteNewLine( self, "" );
+			next = DString_Break( text, start + width - self->offset );
+		}
 		DString_SubString( text, line, start, next - start );
 		DString_Trim( line );
-		if( start ) DaoStream_WriteChar( self, '\n' );
-		DaoStream_WriteString( self, line );
+		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
+		DaoxStream_WriteString( self, line );
 	}
-	if( text->size && text->mbs[text->size-1] == '\n' ) DaoStream_WriteChar( self, '\n' );
+	//if( text->size && text->mbs[text->size-1] == '\n' ) DaoxStream_WriteNewLine( self, "" );
 	DString_Delete( line );
 }
-static void DaoxStream_WriteText( DaoStream *self, DString *text, int width )
+static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, int width )
 {
 	DString *paragraph = DString_New(1);
 	daoint pos, last = 0;
@@ -147,37 +197,47 @@ static void DaoxStream_WriteText( DaoStream *self, DString *text, int width )
 	pos = DString_FindMBS( text, "\n\n", 0 );
 	while( last < text->size ){
 		DString_SubString( text, paragraph, last, pos - last + 1 );
-		if( last ) DaoStream_WriteMBS( self, "\n\n" );
-		DaoxStream_WriteParagraph( self, paragraph, width );
+		if( last ) DaoxStream_WriteNewLine( self, "\n" );
+		DaoxStream_WriteParagraph( self, paragraph, offset, width );
 		last = pos + 1;
 		pos = DString_FindMBS( text, "\n\n", last );
 		if( pos == MAXSIZE ) pos = text->size;
 	}
 	DString_Delete( paragraph );
 }
-static void DaoxStream_PrintLineNumber( DaoStream *self, int line )
+static void DaoxStream_PrintLineNumber( DaoxStream *self, int line, int offset )
 {
-	int color;
+	int i, color;
 	char sline[20];
 	sprintf( sline, "%4i ", line );
-	DaoStream_SetColor( self, "white", "black" );
-	DaoStream_WriteMBS( self, sline );
-	DaoStream_SetColor( self, NULL, NULL );
-	DaoStream_WriteChar( self, ' ' );
+	for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
+	DaoStream_SetColor( self->stream, "white", "black" );
+	DaoStream_WriteMBS( self->stream, sline );
+	DaoStream_SetColor( self->stream, NULL, NULL );
+	DaoStream_WriteChar( self->stream, ' ' );
 }
-static void DaoxStream_PrintCode( DaoStream *self, DString *code )
+static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset )
 {
 	DString *string = DString_New(1);
 	DArray *tokens = DArray_New(D_TOKEN);
-	daoint i, pos, last, color, fgcolor;
+	const char *bgcolor = "yellow"; 
+	daoint i, j, pos, last, color, fgcolor;
 	int line = 1, printedline = 0;
+	int println = 1;
+
+	if( self->offset && DString_FindChar( code, '\n', 0 ) != MAXSIZE )
+		DaoxStream_WriteNewLine( self, "" );
+
+	println = self->offset <= offset;
+	if( println ) bgcolor = NULL;
+	else if( isspace( self->last ) == 0 ) DaoxStream_WriteChar( self, ' ' );
 
 	DaoToken_Tokenize( tokens, code->mbs, 0, 1, 1 );
 	for(i=0; i<tokens->size; i++){
 		DaoToken *tok = tokens->items.pToken[i];
 		fgcolor = -1;
 		if( line != printedline ){
-			DaoxStream_PrintLineNumber( self, line );
+			if( println ) DaoxStream_PrintLineNumber( self, line, offset );
 			printedline = line;
 		}
 		switch( tok->name ){
@@ -199,14 +259,14 @@ static void DaoxStream_PrintCode( DaoStream *self, DString *code )
 			while( last < tok->string->size ){
 				if( last ){
 					printedline = line;
-					DaoxStream_PrintLineNumber( self, line );
+					if( println ) DaoxStream_PrintLineNumber( self, line, offset );
 				}
 				line += pos != MAXSIZE;
 				if( pos == MAXSIZE ) pos = tok->string->size - 1;
 				DString_SubString( tok->string, string, last, pos - last + 1 );
-				DaoStream_SetColor( self, dao_colors[fgcolor], NULL );
-				DaoStream_WriteString( self, string );
-				DaoStream_SetColor( self, NULL, NULL );
+				DaoStream_SetColor( self->stream, dao_colors[fgcolor], bgcolor );
+				DaoStream_WriteString( self->stream, string );
+				DaoStream_SetColor( self->stream, NULL, NULL );
 				last = pos + 1;
 				pos = DString_FindChar( tok->string, '\n', pos + 1 );
 			}
@@ -247,26 +307,61 @@ static void DaoxStream_PrintCode( DaoStream *self, DString *code )
 		}
 		if( fgcolor < -10 ) continue;
 		if( fgcolor < 0 ){
-			DaoStream_WriteString( self, tok->string );
+			DaoStream_SetColor( self->stream, NULL, bgcolor );
+			DaoStream_WriteString( self->stream, tok->string );
+			DaoStream_SetColor( self->stream, NULL, NULL );
 			continue;
 		}
-		DaoStream_SetColor( self, dao_colors[fgcolor], NULL );
-		DaoStream_WriteString( self, tok->string );
-		DaoStream_SetColor( self, NULL, NULL );
+		DaoStream_SetColor( self->stream, dao_colors[fgcolor], bgcolor );
+		DaoStream_WriteString( self->stream, tok->string );
+		DaoStream_SetColor( self->stream, NULL, NULL );
 	}
+	if( println ) self->offset = 1000;
+	else self->offset += code->size;
 	DArray_Delete( tokens );
 	DString_Delete( string );
 }
 
-static void DaoxHelpBlock_PrintList( DaoxHelpBlock *self, DaoStream *stream )
+static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, int width, DaoRegex *regex, int islist, int listdep );
+
+static void DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, int width, DaoRegex *regex, int islist, int listdep )
 {
+	const char *pat = "^[\n]+[ \t]* (%-%-|==)";
+	daoint pos, lb, last = 0, start = 0, end = text->size-1;
+	int i, itemid = 1;
+
+	if( DString_MatchMBS( text, pat, & start, & end ) ){
+		DString *delim = DString_New(1);
+		DString *item = DString_New(1);
+		DString_SubString( text, delim, start, end - start + 1 );
+		DString_ChangeMBS( delim, "^[\n][\n]+", "\n", 1 );
+		while( last < text->size ){
+			DString_SubString( text, item, last, start - last );
+			DString_Trim( item );
+			if( item->size ){
+				DString_Erase( item, 0, 2 );
+				DString_Trim( item );
+				for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
+				i = DaoxStream_WriteItemID( self, delim->mbs[delim->size-1], itemid ++ );
+				DaoxStream_WriteBlock( self, item, offset+i, width, regex, 0, listdep );
+			}
+			/* print newline for items except the last one: */
+			if( start < text->size ) DaoxStream_WriteNewLine( self, "" );
+			last = start;
+			start = DString_Find( text, delim, last + delim->size );
+			if( start == MAXSIZE ) start = text->size;
+		}
+	}else{
+		DaoxStream_WriteBlock( self, text, offset, width, regex, 0, listdep );
+	}
 }
-static void DaoxStream_WriteBlock( DaoStream *self, DString *text, int width, DaoRegex *regex, int islist, int listdep )
+static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, int width, DaoRegex *regex, int islist, int listdep )
 {
-	int itemid = 1;
 	daoint pos, lb, start, end, last = 0;
-	const char *pat = "@ %[ %s* %w+ %s* ( %( %s* (|%w+) %s* %) | ) [^%]]* %]";
+	const char *pat = "@ %[ %s* (| : | %w+%s*:) %s* %w+ %s* ( %( %s* (|%w+) %s* %) | ) [^%]]* %]";
 	DString spat = DString_WrapMBS( pat );
+	DString *fgcolor = DString_New(1);
+	DString *bgcolor = DString_New(1);
 	DString *delim = DString_New(1);
 	DString *cap = DString_New(1);
 	DString *mode = DString_New(1);
@@ -280,7 +375,7 @@ static void DaoxStream_WriteBlock( DaoStream *self, DString *text, int width, Da
 		if( DaoRegex_Match( regex, text, & start, & end ) ){
 			DString_SubString( text, part, last, start - last );
 			if( islist ) DString_Trim( part );
-			DaoxStream_WriteText( self, part, width );
+			DaoxStream_WriteText( self, part, offset, width );
 
 			DString_SubString( text, delim, start, end - start + 1 );
 			pos = DString_Find( text, delim, end );
@@ -306,31 +401,37 @@ static void DaoxStream_WriteBlock( DaoStream *self, DString *text, int width, Da
 			//printf( "%s\n", cap->mbs );
 			if( strcmp( cap->mbs, "code" ) == 0 ){
 				DString_Trim( part );
-				DaoxStream_PrintCode( self, part );
+				DaoxStream_PrintCode( self, part, offset );
 			}else if( strcmp( cap->mbs, "list" ) == 0 ){
-				DaoxStream_WriteBlock( self, part, width, NULL, 1, listdep+1 );
-			}else if( strcmp( cap->mbs, "item" ) == 0 ){
-				DString_Trim( part );
-				DaoStream_WriteChar( self, '\n' );
-				DaoStream_WriteInt( self, itemid ++ );
-				DaoStream_WriteMBS( self, ". " );
-				DaoxStream_WriteBlock( self, part, width, NULL, 0, listdep );
+				DaoxStream_WriteList( self, part, offset, width, NULL, 1, listdep+1 );
 			}else{
+				fgcolor->size = bgcolor->size = 0;
+				pos = DString_FindChar( cap, ':', 0 );
+				if( pos == MAXSIZE ){
+					DString_Assign( fgcolor, cap );
+				}else{
+					DString_SubString( cap, fgcolor, 0, pos );
+					DString_SubString( cap, bgcolor, pos + 1, cap->size );
+				}
+				DString_Trim( fgcolor );
+				DString_Trim( bgcolor );
 				if( islist ) DString_Trim( part );
-				if( start && text->mbs[start-1] == ' ' ) DaoStream_WriteChar( self, ' ' );
-				DaoStream_SetColor( self, cap->mbs, NULL );
-				DaoxStream_WriteText( self, part, width );
-				DaoStream_SetColor( self, NULL, NULL );
-				if( last < text->size && text->mbs[last] == ' ' ) DaoStream_WriteChar( self, ' ' );
+				if( start && text->mbs[start-1] == ' ' ) DaoxStream_WriteChar( self, ' ' );
+				DaoStream_SetColor( self->stream, fgcolor->mbs, bgcolor->mbs );
+				DaoxStream_WriteText( self, part, offset, width );
+				DaoStream_SetColor( self->stream, NULL, NULL );
+				if( last < text->size && text->mbs[last] == ' ' ) DaoxStream_WriteChar( self, ' ' );
 			}
 		}else{
 			DString_SubString( text, part, last, text->size - last );
 			if( islist ) DString_Trim( part );
-			DaoxStream_WriteText( self, part, width );
+			DaoxStream_WriteText( self, part, offset, width );
 			break;
 		}
 	}
 	if( rgx == NULL ) DaoRegex_Delete( regex );
+	DString_Delete( fgcolor );
+	DString_Delete( bgcolor );
 	DString_Delete( delim );
 	DString_Delete( cap );
 	DString_Delete( mode );
@@ -339,18 +440,20 @@ static void DaoxStream_WriteBlock( DaoStream *self, DString *text, int width, Da
 
 static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProcess *proc )
 {
+	DaoxStream xstream;
+	xstream.stream = stream;
+	xstream.offset = 0;
+	xstream.last = 0;
 	if( self->type == DAOX_HELP_TEXT ){
-		DaoxStream_WriteBlock( stream, self->text, DAOX_TEXT_WIDTH, NULL, 0, 0 );
+		DaoxStream_WriteBlock( & xstream, self->text, 0, DAOX_TEXT_WIDTH, NULL, 0, 0 );
 	}else if( self->type == DAOX_HELP_CODE ){
-		DaoxStream_PrintCode( stream, self->text );
+		DaoxStream_PrintCode( & xstream, self->text, 0 );
 		if( proc && (self->lang == NULL || strcmp( self->lang->mbs, "dao" ) == 0) ){
 			DaoStream_WriteMBS( stream, "\n" );
 			DaoStream_SetColor( stream, dao_colors[DAOX_YELLOW], NULL );
 			DaoProcess_Eval( proc, self->entry->help->nspace, self->text, 1 );
 			DaoStream_SetColor( stream, NULL, NULL );
 		}
-	}else if( self->type == DAOX_HELP_LIST ){
-		DaoxHelpBlock_PrintList( self, stream );
 	}
 	DaoStream_WriteMBS( stream, "\n" );
 	if( self->next ) DaoxHelpBlock_Print( self->next, stream, proc );
@@ -423,6 +526,10 @@ static void DaoxHelpEntry_AppendList( DaoxHelpEntry *self, DString *text )
 }
 static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProcess *proc )
 {
+	DaoxStream xstream;
+	xstream.stream = stream;
+	xstream.offset = 0;
+
 	DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
 	DaoStream_WriteMBS( stream, "[NAME]\n" );
 	DaoStream_SetColor( stream, NULL, NULL );
@@ -433,7 +540,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProc
 	DaoStream_WriteMBS( stream, "\n\n[TITLE]\n" );
 	DaoStream_SetColor( stream, NULL, NULL );
 
-	if( self->title ) DaoxStream_WriteText( stream, self->title, DAOX_TEXT_WIDTH );
+	if( self->title ) DaoxStream_WriteText( & xstream, self->title, 0, DAOX_TEXT_WIDTH );
 
 	DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
 	DaoStream_WriteMBS( stream, "\n\n[DESCRIPTION]\n" );
