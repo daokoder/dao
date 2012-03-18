@@ -31,6 +31,7 @@
 #define fileno _fileno
 #endif
 
+
 void DaoStream_Flush( DaoStream *self )
 {
 	if( self->file ){
@@ -99,55 +100,154 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	DaoIO_Writeln0( stream, proc, p, N );
 }
+/*
+// C printf format: %[parameter][flags][width][.precision][length]type
+//
+// Dao writef format: %[parameter][flags][width][.precision]type[color]
+//
+// Where 'parameter', 'flags', 'width' and 'precision' will conform to the
+// C format, but 'type' can only be:
+//   c, d, i, o, u, x/X : for integer;
+//   e/E, f/F, g/G : for float and double;
+//   s : for string;
+//   p : for any type, write address;
+//   a : automatic, for any type, write in the default format;
+// Namely the standard ones exception 'n', and plus 'a'.
+//
+// Optional 'color' format will be in form of: [foreground:background], [foreground]
+// or [:background]. The supported color name format will depend on the color printing
+// handle. Mininum requirement is the support of the following 8 color names:
+// black, white, red, green, blue, yellow, magenta, cyan.
+*/
 static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *mbs;
+	DaoValue *value;
 	DMap *cycData;
-	const char *convs = "diouxXfeEgGaAcCsSpm";
-	char *s, *fmt, *format = DString_GetMBS( p[0]->xString.data );
-	char ch;
-	int i, j;
+	DString *format, *fmt2;
+	DString *fgcolor, *bgcolor;
+	const char *convs = "aspcdiouxXfFeEgG";
+	char F, *s, *end, *fg, *bg, *fmt, message[100];
+	int k, id = 1;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not open!" );
 		return;
 	}
-	mbs = DString_New(1);
 	cycData = DMap_New(0,0);
-	DString_SetMBS( mbs, format );
-	s = mbs->mbs;
-	i = 0;
-	j = 1;
-	while( *s ){
+	fmt2 = DString_New(1);
+	fgcolor = DString_New(1);
+	bgcolor = DString_New(1);
+	format = DString_Copy( p[0]->xString.data );
+	DString_ToMBS( format );
+	s = format->mbs;
+	end = s + format->size;
+	for(; s<end; s++){
+		k = 0;
 		if( *s =='%' ){
 			fmt = s;
-			if( s[1] =='%' ){
-				DaoStream_WriteMBS( self, "%");
-				s += 2;
+			s += 1;
+			if( *s =='%' || *s == '[' ){
+				DaoStream_WriteChar( self, *s );
 				continue;
 			}
-			while( *s ){
-				if( ( *s >= 'a' && *s <= 'z' ) || (  *s >= 'A' && *s <= 'Z' ) ) break;
-				s ++;
+			if( isdigit( *s ) && (*s > '0') ){
+				while( isdigit( *s ) ) s += 1;
+				if( *s == '$' ){ /* parameter: number$ */
+					*s = '\0';
+					k = strtol( fmt + 1, NULL, 10 );
+					if( k == 0 || k >= N ){
+						DaoProcess_RaiseException( proc, DAO_WARNING, "invalid parameter number" );
+					}
+					*s = '%';
+					fmt = s ++;
+				}
 			}
-			if( *s == 'l' ) s ++;
-			if( *s == 'l' ) s ++;
-			if( strchr( convs, *s ) ==NULL ){
+			/* flags: */
+			while( *s == '+' || *s == '-' || *s == '#' || *s == '0' || *s == ' ' ) s += 1;
+			while( isdigit( *s ) ) s += 1; /* width; */
+			if( *s == '.' ){ /* precision: */
+				s += 1;
+				while( isdigit( *s ) ) s += 1;
+			}
+			DString_SetDataMBS( fmt2, fmt, s - fmt + 1 );
+			if( strchr( convs, *s ) == NULL ){
 				DaoProcess_RaiseException( proc, DAO_WARNING, "invalid format conversion" );
-			}else{
-				ch = s[1];
-				s[1] = 0;
-				self->format = fmt;
-				if( j < N ) DaoValue_Print( p[j], proc, self, cycData );
-				j ++;
-				self->format = NULL;
-				s[1] = ch;
+				continue;
 			}
+			F = *s;
+			s += 1;
+			fg = bg = NULL;
+			if( *s == '[' ){
+				s += 1;
+				fmt = s;
+				while( isalnum( *s ) ) s += 1;
+				DString_SetDataMBS( fgcolor, fmt, s - fmt );
+				if( fgcolor->size ) fg = fgcolor->mbs;
+				if( *s == ':' ){
+					s += 1;
+					fmt = s;
+					while( isalnum( *s ) ) s += 1;
+					DString_SetDataMBS( bgcolor, fmt, s - fmt );
+					if( bgcolor->size ) bg = bgcolor->mbs;
+				}
+				if( *s != ']' ) DaoProcess_RaiseException( proc, DAO_WARNING, "invalid color format" );
+			}else{
+				s -= 1;
+			}
+			if( k == 0 ) k = id;
+			value = p[k]; 
+			id += 1;
+			if( fg || bg ) DaoStream_SetColor( self, fg, bg );
+			self->format = fmt2->mbs;
+			if( value == NULL ){
+				if( F == 'p' ){
+					DaoStream_WriteMBS( self, "0x0" );
+				}else{
+					DaoProcess_RaiseException( proc, DAO_WARNING, "null parameter" );
+				}
+			}
+			self->format = fmt2->mbs;
+			if( F == 'c' || F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
+				if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[1], fmt2->size-1 );
+				self->format = fmt2->mbs;
+				if( value->type == DAO_INTEGER ){
+					DaoStream_WriteInt( self, value->xInteger.value );
+				}else{
+					goto WrongParameter;
+				}
+			}else if( toupper( F ) == 'E' || toupper( F ) == 'F' || toupper( F ) == 'G' ){
+				if( value->type == DAO_FLOAT ){
+					DaoStream_WriteFloat( self, value->xFloat.value );
+				}else if( value->type == DAO_DOUBLE ){
+					DaoStream_WriteFloat( self, value->xDouble.value );
+				}else{
+					goto WrongParameter;
+				}
+			}else if( F == 's' && value->type == DAO_STRING ){
+				DaoStream_WriteString( self, value->xString.data );
+			}else if( F == 'p' ){
+				DaoStream_WritePointer( self, value );
+			}else if( F == 'a' ){
+				self->format = NULL;
+				DaoValue_Print( value, proc, self, cycData );
+			}else{
+				goto WrongParameter;
+			}
+			self->format = NULL;
+			if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
+			continue;
+WrongParameter:
+			self->format = NULL;
+			if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
+			sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", k, fmt2->mbs );
+			DaoProcess_RaiseException( proc, DAO_WARNING, message );
 		}else{
 			DaoStream_WriteChar( self, *s );
 		}
-		s ++;
 	}
-	DString_Delete( mbs );
+	DString_Delete( fgcolor );
+	DString_Delete( bgcolor );
+	DString_Delete( format );
+	DString_Delete( fmt2 );
 	DMap_Delete( cycData );
 }
 static void DaoIO_Writef( DaoProcess *proc, DaoValue *p[], int N )
@@ -624,6 +724,7 @@ void DaoStream_Delete( DaoStream *self )
 void DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
 {
 	self->redirect = us;
+	if( us ) us->stream = self;
 }
 void DaoStream_WriteChar( DaoStream *self, char val )
 {
@@ -790,8 +891,9 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 }
 void DaoStream_WritePointer( DaoStream *self, void *val )
 {
-	const char *format = "%p";
+	const char *format = self->format;
 	char buffer[100];
+	if( format == NULL ) format = "%p";
 	if( self->file ){
 		fprintf( self->file->fd, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
@@ -926,4 +1028,112 @@ int Dao_IsDir( const char *file )
 #else
 	return S_ISDIR( st.st_mode ) != 0;
 #endif
+}
+
+#ifdef WIN32
+
+#include<windows.h>
+#include<io.h>
+
+const char* const dao_colors[8] 
+= { "black", "blue", "green", "cyan", "red", "magenta", "yellow", "white" };
+
+static int SetCharForeground( DaoStream *stream, int color )
+{
+	WORD attr;
+	int res = 0;
+	struct _CONSOLE_SCREEN_BUFFER_INFO info;
+	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
+	if( fd == INVALID_HANDLE_VALUE ) fd = GetStdHandle( STD_OUTPUT_HANDLE );
+	if( !GetConsoleScreenBufferInfo( fd, &info ) ) return 255;
+	attr = info.wAttributes;
+	if( attr & FOREGROUND_BLUE ) res |= 1;
+	if( attr & FOREGROUND_GREEN ) res |= 2;
+	if( attr & FOREGROUND_RED ) res |= 4;
+	attr = attr & ~FOREGROUND_BLUE & ~FOREGROUND_GREEN & ~FOREGROUND_RED;
+	if( color & 1 ) attr |= FOREGROUND_BLUE;
+	if( color & 2 ) attr |= FOREGROUND_GREEN;
+	if( color & 4 ) attr |= FOREGROUND_RED;
+	if( !SetConsoleTextAttribute( fd, attr ) ) return 255;
+	return res;
+}
+static int SetCharBackground( DaoStream *stream, int color )
+{
+	WORD attr;
+	int res = 0;
+	struct _CONSOLE_SCREEN_BUFFER_INFO info;
+	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
+	if( fd == INVALID_HANDLE_VALUE ) fd = GetStdHandle( STD_OUTPUT_HANDLE );
+	if( !GetConsoleScreenBufferInfo( fd, &info ) ) return 255;
+	attr = info.wAttributes;
+	if( attr & BACKGROUND_BLUE ) res |= 1;
+	if( attr & BACKGROUND_GREEN ) res |= 2;
+	if( attr & BACKGROUND_RED ) res |= 4;
+	attr = attr & ~BACKGROUND_BLUE & ~BACKGROUND_GREEN & ~BACKGROUND_RED;
+	if( color & 1 ) attr |= BACKGROUND_BLUE;
+	if( color & 2 ) attr |= BACKGROUND_GREEN;
+	if( color & 4 ) attr |= BACKGROUND_RED;
+	if( !SetConsoleTextAttribute( fd, attr ) ) return 255;
+	return res;
+}
+
+#else
+
+#define CSI_RESET "\033[0m"
+#define CSI_FCOLOR "\033[3%im"
+#define CSI_BCOLOR "\033[4%im"
+
+const char* const dao_colors[8]
+= { "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" };
+
+static int SetCharForeground( DaoStream *stream, int color )
+{
+	char buf[20];
+	if( color == 254 )
+		snprintf( buf, sizeof( buf ), CSI_RESET );
+	else
+		snprintf( buf, sizeof( buf ), CSI_FCOLOR, color );
+	DaoStream_WriteMBS( stream, buf );
+	return 254;
+}
+static int SetCharBackground( DaoStream *stream, int color )
+{
+	char buf[20];
+	if( color == 254 )
+		snprintf( buf, sizeof( buf ), CSI_RESET );
+	else
+		snprintf( buf, sizeof( buf ), CSI_BCOLOR, color );
+	DaoStream_WriteMBS( stream, buf );
+	return 254;
+}
+#endif
+
+static int MapColor( const char *mbs )
+{
+	int i;
+	for(i=0; i<8; i++) if( ! strcmp( dao_colors[i], mbs ) ) return i;
+	return 254;
+}
+
+void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
+{
+	static int fg = -1;
+	static int bg = -1;
+	if( self->redirect == NULL && self->file == NULL ){
+		/* reset first, because resetting one of foreground and background could reset both: */
+		if( fg >= 0 && (fgcolor == NULL || fgcolor[0] == 0) ) SetCharForeground( self, fg );
+		if( bg >= 0 && (bgcolor == NULL || bgcolor[0] == 0) ) SetCharBackground( self, bg );
+
+		if( fgcolor && fgcolor[0] ){
+			int fg2 = SetCharForeground( self, MapColor( fgcolor ) );
+			if( fg < 0 ) fg = fg2;
+		}
+		if( bgcolor && bgcolor[0] ){
+			int bg2 = SetCharBackground( self, MapColor( bgcolor ) );
+			if( bg < 0 ) bg = bg2;
+		}
+		return;
+	}
+	if( self->redirect == NULL || self->redirect->SetColor == NULL ) return;
+	self->redirect->SetColor( self->redirect, fgcolor, bgcolor );
 }

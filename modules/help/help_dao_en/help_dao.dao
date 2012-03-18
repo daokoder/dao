@@ -9,4 +9,10 @@ load help_dao_concurrent;
 load help_dao_c_interface;
 load help_dao_module;
 
+@[name]
+dao
+@[name]
 
+@[title]
+Dao Programming Language (Version 1.2)
+@[title]

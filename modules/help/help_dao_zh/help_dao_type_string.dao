@@ -4,6 +4,10 @@ load help;
 dao.type.string
 @[name]
 
+@[title]
+字符串类型
+@[title]
+
 @[name]
 dao.type.string.init
 @[name]

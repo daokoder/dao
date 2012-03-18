@@ -1,41 +1,41 @@
 load help;
 
 @[name]
-dao.type.number.int
+dao.type.int
 @[name]
 
 @[title]
-Integer Type
+整数类型
 @[title]
 
 @[name]
-dao.type.number.float
+dao.type.float
 @[name]
 
 @[title]
-Single Precision Floating Point Number Type
+单精度浮点数类型
 @[title]
 
 @[name]
-dao.type.number.double
+dao.type.double
 @[name]
 
 @[title]
-Double Precision Floating Point Number Type
+双精度浮点数类型
 @[title]
 
 @[name]
-dao.type.number.complex
+dao.type.complex
 @[name]
 
 @[title]
-Complex Number Type
+复数类型
 @[title]
 
 @[name]
-dao.type.number.long
+dao.type.long
 @[name]
 
 @[title]
-Arbitrary Precision Integer Type
+任意精度整数类型
 @[title]

@@ -2319,7 +2319,7 @@ ReturnFalse :
 ReturnTrue :
 	if( self->topFrame == self->firstFrame && self->topFrame->next && self->topFrame->next->routine ){
 		print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
-		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
+		if( (print || vmSpace->evalCmdline) && self->stackValues[0] && self == vmSpace->mainProcess ){
 			DaoProcess_PushRoutine( self, self->topFrame->next->routine, NULL );
 			DaoProcess_SetActiveFrame( self, self->topFrame );
 			DaoStream_WriteMBS( vmSpace->stdioStream, "= " );

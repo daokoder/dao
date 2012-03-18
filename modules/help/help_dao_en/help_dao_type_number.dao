@@ -1,7 +1,7 @@
 load help;
 
 @[name]
-dao.type.number.int
+dao.type.int
 @[name]
 
 @[title]
@@ -9,7 +9,7 @@ Integer Type
 @[title]
 
 @[name]
-dao.type.number.float
+dao.type.float
 @[name]
 
 @[title]
@@ -17,7 +17,7 @@ Single Precision Floating Point Number Type
 @[title]
 
 @[name]
-dao.type.number.double
+dao.type.double
 @[name]
 
 @[title]
@@ -25,7 +25,7 @@ Double Precision Floating Point Number Type
 @[title]
 
 @[name]
-dao.type.number.complex
+dao.type.complex
 @[name]
 
 @[title]
@@ -33,7 +33,7 @@ Complex Number Type
 @[title]
 
 @[name]
-dao.type.number.long
+dao.type.long
 @[name]
 
 @[title]

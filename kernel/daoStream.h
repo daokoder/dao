@@ -56,6 +56,8 @@ DAO_DLL void DaoStream_Delete( DaoStream *self );
 DAO_DLL void DaoStream_Close( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );
 
+DAO_DLL void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
+
 DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
 DAO_DLL void DaoStream_WriteInt( DaoStream *self, daoint val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );

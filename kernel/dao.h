@@ -331,10 +331,12 @@ struct DaoTypeBase
 
 struct DaoUserStream
 {
+	DaoStream *stream;
 	/* count>0: read count bytes; count=0: one line; count<0: until EOF */
 	void (*StdioRead)( DaoUserStream *self, DString *input, int count );
 	void (*StdioWrite)( DaoUserStream *self, DString *output );
 	void (*StdioFlush)( DaoUserStream *self );
+	void (*SetColor)( DaoUserStream *self, const char *fgcolor, const char *bgcolor );
 };
 
 /*
