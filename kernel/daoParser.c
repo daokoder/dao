@@ -908,11 +908,11 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	isMeth = klass && routine != klass->classRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && DString_EQ( routine->routName, hostname ) == 0;
-	notConstr &= strcmp( routine->routName->mbs, "@class" ) != 0;
+	notConstr &= strcmp( routine->routName->mbs, "$class" ) != 0;
 	if( self->isClassBody && notConstr == 0 ) routine->attribs |= DAO_ROUT_INITOR;
 	if( (isMeth || inter) && tokens[start+1]->name != DKEY_SELF && notStatic && notConstr ){
 		if( module->outParser && module->outParser->isClassBody ){ /* in dynamic class */
-			hostype = DaoNamespace_MakeType( NS, "@class", DAO_THT, NULL,NULL,0 );
+			hostype = DaoNamespace_MakeType( NS, "$class", DAO_THT, NULL,NULL,0 );
 		}
 		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)hostype, NULL, 0 );
 		DArray_Append( nested, (void*) type ); /* self parameter type */
@@ -2320,7 +2320,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 			start ++;
 			continue;
 		}else if( bropen1 ==0 && bropen2 ==0 && bropen3 ==0 ){
-			if( tki == DKEY_SYNTAX ){
+			if( tki == DKEY_SYNTAX && (start == 0 || tokens[start-1]->name != DKEY_USE) ){
 #ifdef DAO_WITH_MACRO
 				int prefixed = 0;
 				int local = 0;
@@ -2330,6 +2330,13 @@ static int DaoParser_Preprocess( DaoParser *self )
 						prefixed = 1;
 						local = (tki != DKEY_PUBLIC);
 					}
+				}
+				if( (start + 1) < self->tokens->size && tokens[start+1]->type == DTOK_LCB ){
+					if( local == 0 && prefixed ){
+						DaoParser_Warn2( self, DAO_INVALID_ACCESS, start-1, start );
+						/* XXX: hint? */
+					}
+					local = 1;
 				}
 				right = DaoParser_ParseMacro( self, start, local );
 				/*
@@ -2463,6 +2470,16 @@ static int DaoParser_UseConstructor( DaoParser *self, DaoRoutine *rout, int t1, 
 }
 static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int attribs );
 
+static int DaoParser_CheckNameToken( DaoParser *self, int start, int to, int ecode, int estart )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
+		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
+		DaoParser_Error2( self, ecode, estart, start, 1 );
+		return 0;
+	}
+	return 1;
+}
 static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -2475,10 +2492,12 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	int estart = start;
 	int use = start;
 	start ++;
-	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
-		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, tokens[start]->string );
-		DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, estart, 1 );
-		return -1;
+	if( DaoParser_CheckNameToken( self, start, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
+	if( tokens[start]->name == DKEY_SYNTAX ){
+		if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
+#warning"================"
+		//DaoNamespace_ImportMacro( self, tokens[start+1]->string );
+		return start + 2;
 	}
 	str = tokens[start]->string;
 	if( self->isClassBody && (start+1 > to || tokens[start+1]->type != DTOK_ASSN ) ){
@@ -2686,7 +2705,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		DString_Assign( mbs, tmpRoutine->routName );
 		DString_AppendChar( mbs, ':' );
 		DString_Append( mbs, tmpRoutine->routType->name );
-		rout= DaoClass_GetOverloadedRoutine( & scope->xClass, mbs );
+		rout = DaoClass_GetOverloadedRoutine( & scope->xClass, mbs );
 		if( ! rout ){
 			DaoNamespace *nsdef = NULL;
 			DMap *hash = scope->xClass.ovldRoutMap;
@@ -2768,6 +2787,10 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		}
 
 		value = (DaoValue*) rout;
+		switch( perm ){
+		case DAO_DATA_PRIVATE   : rout->attribs |= DAO_ROUT_PRIVATE; break;
+		case DAO_DATA_PROTECTED : rout->attribs |= DAO_ROUT_PROTECTED; break;
+		}
 		if( self->isClassBody ){
 			DaoClass_AddOverloadedRoutine( klass, mbs, rout );
 			if( rout->attribs & DAO_ROUT_INITOR ){ /* overloading constructor */

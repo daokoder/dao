@@ -1091,7 +1091,23 @@ CallEntry:
 	self->activeNamespace = routine->nameSpace;
 
 	/* range ( 0, routine->body->vmCodes->size-1 ) */
-	if( id ==0 ) DaoStackFrame_PushRange( topFrame, 0, (routine->body->vmCodes->size-1) );
+	if( id == 0 ){
+		DaoStackFrame_PushRange( topFrame, 0, (routine->body->vmCodes->size-1) );
+		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
+			uchar_t priv = routine->attribs & DAO_ROUT_PRIVATE;
+			if( routine->routHost ){
+				DaoObject *obj = topFrame->prev ? topFrame->prev->object : NULL;
+				if( priv == 0 && obj == NULL ) goto CallNotPermitted;
+				if( priv && obj->defClass->objType != routine->routHost ) goto CallNotPermitted;
+			}else if( priv && routine->nameSpace != topFrame->prev->routine->nameSpace ){
+				goto CallNotPermitted;
+			}
+CallNotPermitted:
+			/* DaoProcess_PopFrame( self ); cannot popframe, it may be tail-call optimized! */
+			DaoProcess_RaiseException( self, DAO_ERROR, "CallNotPermitted" );
+			goto FinishProc;
+		}
+	}
 
 	exceptCount = self->exceptions->size;
 	/* Check if an exception has been raisen by a function call: */
@@ -3594,18 +3610,19 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoType *hostype, DaoRoutine *func, DaoValue *selfpar, DaoValue *P[], int N )
 {
 	DaoRoutine *rout = func;
+	DaoVmSpace *vmspace = self->vmSpace;
 	DaoValue *caller = self->activeValues[ vmc->a ];
 	int status, code = vmc->code;
-	if( (self->vmSpace->options & DAO_EXEC_SAFE) && (func->attribs & DAO_ROUT_EXTFUNC) ){
+	func = DaoRoutine_ResolveX( func, selfpar, P, N, code );
+	if( func == NULL ){
+		DaoProcess_ShowCallError( self, rout, selfpar, P, N, code );
+		return;
+	}
+	if( (vmspace->options & DAO_EXEC_SAFE) && func->nameSpace != vmspace->nsInternal ){
 		/* normally this condition will not be satisfied.
 		 * it is possible only if the safe mode is set in C codes
 		 * by embedding or extending. */
 		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
-		return;
-	}
-	func = DaoRoutine_ResolveX( func, selfpar, P, N, code );
-	if( func == NULL ){
-		DaoProcess_ShowCallError( self, rout, selfpar, P, N, code );
 		return;
 	}
 	if( DaoRoutine_PassParams( & func, self->freeValues, hostype, selfpar, P, N, code ) ==0 ){
@@ -5343,7 +5360,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 			default: break;
 		}
 	}else if( ta == DAO_FLOAT ){
-		C = DaoProcess_SetValue( self, vmc->c, A );
+		C = DaoProcess_SetValue( self, vmc->c, A ); // XXX integer result?
 		switch( vmc->code ){
 			case DVM_NOT :  C->xFloat.value = ! C->xFloat.value; break;
 			case DVM_UNMS : C->xFloat.value = - C->xFloat.value; break;

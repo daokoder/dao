@@ -168,13 +168,14 @@ enum DaoClassAttrib
 };
 enum DaoRoutineAttrib
 {
-	DAO_ROUT_PARSELF = 1, /* need self parameter */
-	DAO_ROUT_INITOR = (1<<1), /* class constructor */
-	DAO_ROUT_NEEDSELF = (1<<2), /* for routines use class instance variable(s) */
-	DAO_ROUT_EXTFUNC = (1<<3), /* external C function */
-	DAO_ROUT_VIRTUAL = (1<<4),
-	DAO_ROUT_STATIC = (1<<5),
-	DAO_ROUT_MAIN = (1<<7)
+	DAO_ROUT_PARSELF = 1,        /* need self parameter */
+	DAO_ROUT_INITOR = (1<<1),    /* class constructor */
+	DAO_ROUT_NEEDSELF = (1<<2),  /* for routines use class instance variable(s) */
+	DAO_ROUT_VIRTUAL = (1<<3),   /* virtual function */
+	DAO_ROUT_STATIC  = (1<<4),   /* static function */
+	DAO_ROUT_PRIVATE = (1<<5),   /* private method */
+	DAO_ROUT_PROTECTED = (1<<6), /* protected method */
+	DAO_ROUT_MAIN = (1<<7)       /* main function */
 };
 
 #define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)

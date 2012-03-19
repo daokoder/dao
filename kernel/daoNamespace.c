@@ -312,7 +312,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 				continue;
 			}
 			cur->pFunc = typer->funcItems[i].fpter;
-			if( self->vmSpace->safeTag ) cur->attribs |= DAO_ROUT_EXTFUNC;
 			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
 				cur->attribs |= DAO_ROUT_INITOR;
 			}
@@ -868,37 +867,49 @@ int DaoNamespace_FindConst( DaoNamespace *self, DString *name )
 }
 int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, int pm )
 {
+	DaoValue *vdest;
 	DaoConstant *dest;
 	DaoRoutine *mroutine;
 	DNode *node = MAP_Find( self->lookupTable, name );
 	int isrout2, isrout = value->type == DAO_ROUTINE;
-	daoint sto, up, id = 0;
+	daoint sto, pm2, up, id = 0;
 
-	if( node && LOOKUP_UP( node->value.pSize ) ){ /* override */
+	if( node && LOOKUP_UP( node->value.pSize ) ){ /* inherited data: */
 		sto = LOOKUP_ST( node->value.pSize );
+		pm2 = LOOKUP_PM( node->value.pSize );
 		id = LOOKUP_ID( node->value.pSize );
-		dest = self->constants->items.pConst[id];
-		isrout2 = dest->value->type == DAO_ROUTINE;
-
-		DMap_EraseNode( self->lookupTable, node );
-		if( sto == DAO_GLOBAL_CONSTANT && isrout && isrout2 ){
-			/* to allow function overloading */
-			DaoNamespace_AddConst( self, name, dest->value, pm );
+		if( sto != DAO_GLOBAL_CONSTANT ){ /* override inherited variable: */
+			DMap_EraseNode( self->lookupTable, node );
+			return DaoNamespace_AddConst( self, name, value, pm );
 		}
-		DaoNamespace_AddConst( self, name, value, pm );
-		node = MAP_Find( self->lookupTable, name );
-		return node->value.pSize;
-	}else if( node ){
-		id = LOOKUP_ID( node->value.pSize );
-		if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_CONSTANT ) return -1;
-		assert( id < self->constants->size );
+		node->value.pSize = LOOKUP_BIND( sto, pm2, 0, id );
 		dest = self->constants->items.pConst[id];
-		isrout2 = dest->value->type == DAO_ROUTINE;
-		/* No overriding, only function overloading: */
-		if( isrout == 0 || isrout2 == 0 ) return -1;
-		if( dest->value->xRoutine.overloads == NULL ){
+		if( dest->value->type == DAO_ROUTINE && value->type == DAO_ROUTINE ){
+			/* Add the inherited routine(s) for overloading: */
+			DaoRoutine *routs = DaoRoutines_New( self, NULL, (DaoRoutine*) dest->value );
+			DaoConstant *cst = DaoConstant_New( (DaoValue*) routs );
+			GC_ShiftRC( cst, dest );
+			self->constants->items.pConst[id] = cst;
+			return DaoNamespace_AddConst( self, name, value, pm );
+		}else{
+			/* Add the new constant: */
+			DaoConstant *cst = DaoConstant_New( value );
+			GC_ShiftRC( cst, dest );
+			self->constants->items.pConst[id] = cst;
+			return node->value.pSize;
+		}
+	}else if( node ){
+		sto = LOOKUP_ST( node->value.pSize );
+		pm2 = LOOKUP_PM( node->value.pSize );
+		id = LOOKUP_ID( node->value.pSize );
+		if( sto != DAO_GLOBAL_CONSTANT ) return -1;
+		dest = self->constants->items.pConst[id];
+		vdest = dest->value;
+		if( vdest->type != DAO_ROUTINE || value->type != DAO_ROUTINE ) return -1;
+		if( pm > pm2 ) node->value.pSize = LOOKUP_BIND( sto, pm, 0, id );
+		if( vdest->xRoutine.overloads == NULL || vdest->xRoutine.nameSpace != self ){
 			/* Add individual entry for the existing function: */
-			DArray_Append( self->constants, dest );
+			if( vdest->xRoutine.nameSpace == self ) DArray_Append( self->constants, dest );
 
 			mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) dest->value );
 			dest = DaoConstant_New( (DaoValue*) mroutine );
@@ -907,19 +918,18 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			self->constants->items.pConst[id] = dest;
 		}
 		if( value->xRoutine.overloads ){
-			DRoutines_Import( dest->value->xRoutine.overloads, value->xRoutine.overloads );
+			DaoRoutines_Import( (DaoRoutine*) dest->value, value->xRoutine.overloads );
 		}else{
 			DRoutines_Add( dest->value->xRoutine.overloads, (DaoRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->constants, DaoConstant_New( value ) );
 			value->xNone.trait |= DAO_VALUE_CONST;
 		}
-		id = node->value.pSize;
+		return node->value.pSize;
 	}else{
 		DaoRoutine *rout = (DaoRoutine*) value;
 		if( value->type == DAO_ROUTINE && rout->overloads && rout->nameSpace != self ){
 			mroutine = DaoRoutines_New( self, NULL, rout );
-			DRoutines_Import( mroutine->overloads, rout->overloads );
 			value = (DaoValue*) mroutine;
 		}
 		id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->constants->size );
@@ -1056,10 +1066,12 @@ DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name )
 void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro, int local )
 {
 	DMap *macros = local ? self->localMacros : self->globalMacros;
-	DString *combo = DString_Copy( lang );
+	DString *combo = lang ? DString_Copy( lang ) : name;
 	DNode *node;
-	DString_AppendMBS( combo, ":" );
-	DString_Append( combo, name );
+	if( lang ){
+		DString_AppendMBS( combo, ":" );
+		DString_Append( combo, name );
+	}
 	node = MAP_Find( macros, combo );
 	if( node == NULL ){
 		GC_IncRC( macro );
@@ -1069,7 +1081,7 @@ void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, Da
 		GC_IncRC( macro );
 		DArray_Append( m2->macroList, macro );
 	}
-	DString_Delete( combo );
+	if( lang ) DString_Delete( combo );
 }
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent )
 {
@@ -1126,6 +1138,14 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 			}
 			if( search ) continue;
 			if( st == DAO_GLOBAL_CONSTANT ){
+				DaoValue *value = ns->constants->items.pConst[id]->value;
+				if( value->type == DAO_ROUTINE && value->xRoutine.overloads ){
+					/* To skip the private methods: */
+					DaoNamespace_AddConst( self, name, value, pm );
+					continue;
+				}
+			}
+			if( st == DAO_GLOBAL_CONSTANT ){
 				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, i, self->constants->size ) );
 				DArray_Append( self->constants, ns->constants->items.pConst[id] );
 			}else{
@@ -1174,9 +1194,13 @@ static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *lang, DSt
 DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name )
 {
 	daoint i, n = self->namespaces->size;
-	DString *combo = DString_Copy( lang );
+	DString *combo = NULL;
 	DNode *node;
 
+	/* check local macros that are not associated with any language name: */
+	if( (node = MAP_Find( self->localMacros, name )) ) return (DaoMacro*) node->value.pVoid;
+
+	combo = DString_Copy( lang );
 	DString_AppendMBS( combo, ":" );
 	DString_Append( combo, name );
 	if( (node = MAP_Find( self->localMacros, combo )) ) goto ReturnMacro;
@@ -1198,6 +1222,9 @@ ReturnNull:
 ReturnMacro:
 	DString_Delete( combo );
 	return (DaoMacro*) node->value.pVoid;
+}
+void DaoNamespace_ImportMacro( DaoNamespace *self, DaoNamespace *other, DString *lang )
+{
 }
 void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp )
 {

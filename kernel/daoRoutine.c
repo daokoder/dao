@@ -66,7 +66,14 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	if( init->overloads ){
 		DArray *routs = init->overloads->routines;
 		int i, n = routs->size;
-		for(i=0; i<n; i++) DRoutines_Add( self->overloads, routs->items.pRoutine[i] );
+		for(i=0; i<n; i++){
+			DaoRoutine *routine = routs->items.pRoutine[i];
+			if( routine->attribs & DAO_ROUT_PRIVATE ){
+				if( routine->routHost && routine->routHost != host ) continue;
+				if( routine->routHost == NULL && routine->nameSpace != nspace ) continue;
+			}
+			DRoutines_Add( self->overloads, routine );
+		}
 	}else{
 		DRoutines_Add( self->overloads, init );
 	}
@@ -585,17 +592,19 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	DMutex_Unlock( & mutex_routines_update );
 	return param->routine;
 }
-void DRoutines_Import( DRoutines *self, DRoutines *other )
+void DaoRoutines_Import( DaoRoutine *self, DRoutines *other )
 {
+	DaoType *host = self->routHost;
+	DaoNamespace *nspace = self->nameSpace;
 	int i, n = other->routines->size;
-	for(i=0; i<n; i++) DRoutines_Add( self, other->routines->items.pRoutine[i] );
-}
-void DRoutines_Compile( DRoutines *self )
-{
-	int i, n = self->routines->size;
+	if( self->overloads == NULL ) return;
 	for(i=0; i<n; i++){
-		DaoRoutine *rout = (DaoRoutine*) self->routines->items.pRoutine[i];
-		if( rout->type == DAO_ROUTINE ) DaoRoutine_Compile( rout );
+		DaoRoutine *routine = other->routines->items.pRoutine[i];
+		if( routine->attribs & DAO_ROUT_PRIVATE ){
+			if( routine->routHost && routine->routHost != host ) continue;
+			if( routine->routHost == NULL && routine->nameSpace != nspace ) continue;
+		}
+		DRoutines_Add( self->overloads, routine );
 	}
 }
 static DaoRoutine* DParamNode_GetLeaf( DParamNode *self, int *ms )

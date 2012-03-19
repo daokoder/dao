@@ -26,6 +26,7 @@
 #include"daoBase.h"
 
 /* functions defined in daoParser.c */
+extern void DaoParser_Warn2( DaoParser *self, int code, int start, int end );
 extern void DaoParser_Warn( DaoParser *self, int code, DString *ext );
 extern void DaoParser_Error( DaoParser *self, int code, DString *ext );
 static int DaoParser_ParseExpression( DaoParser *self, int stop );
@@ -424,21 +425,23 @@ int DaoParser_ParseMacro( DaoParser *self, int start, int local )
 	int rb1, rb2, i = start, N = self->tokens->size;
 	DaoToken **toks = self->tokens->items.pToken;
 	DaoMacro *macro;
-	DString *lang;
+	DString *lang = NULL;
 	DArray  *stops;
 	DMap  *markers;
 
 	if( start + 5 >= N ) return -1;
-	lang = toks[start+1]->string;
-	if( toks[start+1]->type != DTOK_IDENTIFIER ){
-		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
-		return -1;
+	if( toks[start+1]->type != DTOK_LCB ){
+		lang = toks[start+1]->string;
+		if( toks[start+1]->type != DTOK_IDENTIFIER ){
+			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
+			return -1;
+		}
+		if( lang->size == 3 && strcmp( lang->mbs, "dao" ) == 0 ){
+			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
+			return -1;
+		}
+		start += 1;
 	}
-	if( lang->size == 3 && strcmp( lang->mbs, "dao" ) == 0 ){
-		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
-		return -1;
-	}
-	start += 1;
 	if( toks[start+1]->name != DTOK_LCB ) return -1;
 
 	self->curLine = toks[start]->line;

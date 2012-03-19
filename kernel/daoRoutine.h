@@ -167,8 +167,8 @@ DRoutines* DRoutines_New();
 void DRoutines_Delete( DRoutines *self );
 
 DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine );
-void DRoutines_Import( DRoutines *self, DRoutines *other );
-void DRoutines_Compile( DRoutines *self );
+
+void DaoRoutines_Import( DaoRoutine *self, DRoutines *other );
 
 
 /* Resolve overloaded, virtual and specialized function: */

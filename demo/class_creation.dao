@@ -26,7 +26,7 @@ routine CreateClass( name : string, value = 0 )
 		var index = value;
 		var text = '---';
 
-		routine @class( id = 0 ){ index = id; io.writeln( 'new' ); }
+		routine $class( id = 0 ){ index = id; io.writeln( 'new' ); }
 
 		routine Meth( id = 0 ){ io.writeln( 'Meth(id)', id, index, text ) }
 		routine Meth( text : string ){ io.writeln( 'Meth(text)' ) }

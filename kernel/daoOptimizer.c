@@ -2122,6 +2122,7 @@ enum DaoTypingErrorCode
 	DTE_TYPE_NOT_INITIALIZED,
 	DTE_TYPE_WRONG_CONTAINER ,
 	DTE_DATA_CANNOT_CREATE ,
+	DTE_CALL_NOT_PERMIT ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
 	DTE_FIELD_OF_INSTANCE ,
@@ -2147,7 +2148,8 @@ static const char*const DaoTypingErrorString[] =
 	"Variable not initialized",
 	"Wrong container type",
 	"Data cannot be created",
-	"Member not permited",
+	"Call not permitted",
+	"Member not permitted",
 	"Member not exist",
 	"Need class instance",
 	"Invalid index/key access",
@@ -4103,7 +4105,8 @@ NotExist_TryAux:
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
 		case DVM_NOT :
-			ct = DaoInferencer_UpdateType( self, opc, dao_type_int );
+			ct = NoCheckingType( at ) ? dao_type_udf : dao_type_int;
+			ct = DaoInferencer_UpdateType( self, opc, ct );
 			if( NoCheckingType( at ) ) continue;
 			AssertTypeMatching( dao_type_int, ct, defs );
 			if( at->realnum ){
@@ -4688,6 +4691,12 @@ NotExist_TryAux:
 					/* rout can be DRoutines: */
 					rout = DaoValue_Check( rout, bt, tp, j, code, errors );
 					if( rout == NULL ) goto ErrorTyping;
+					if( rout->attribs & DAO_ROUT_PRIVATE ){
+						if( rout->routHost && rout->routHost != routine->routHost ) goto NotPermitCall;
+						if( rout->routHost == NULL && rout->nameSpace != NS ) goto NotPermitCall;
+					}else if( rout->attribs & DAO_ROUT_PROTECTED ){
+						if( rout->routHost && routine->routHost == NULL ) goto NotPermitCall;
+					}
 					if( rout->routName->mbs[0] == '@' ){
 						ct = tp[0];
 						if( pp[0] && pp[0]->type == DAO_ROUTINE ){
@@ -5483,6 +5492,7 @@ TryPushBlockReturnType:
 	return 1;
 NotMatch : return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
 NotInit : return DaoInferencer_ErrorNotInitialized( self, 0, 0, 0 );
+NotPermitCall : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
 NotPermit : return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
 NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );

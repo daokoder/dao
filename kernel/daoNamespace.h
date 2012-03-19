@@ -91,6 +91,7 @@ DAO_DLL int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
 
 DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items );
 
+DAO_DLL void DaoNamespace_ImportMacro( DaoNamespace *self, DaoNamespace *other, DString *lang );
 DAO_DLL void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro, int local );
 DAO_DLL DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name );
 
