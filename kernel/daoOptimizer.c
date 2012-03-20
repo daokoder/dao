@@ -4600,6 +4600,42 @@ NotExist_TryAux:
 				printf( "call: %s %i\n", types[opa]->name->mbs, types[opa]->tid );
 				if(bt) printf( "self: %s\n", bt->name->mbs );
 #endif
+
+				pp = consts+opa+1;
+				tp = types+opa+1;
+				j = vmc->b & 0xff;
+				for(k=0; k<j; k++){
+					tt = DaoType_DefineTypes( tp[k], NS, defs );
+					GC_ShiftRC( tt, tp[k] );
+					tp[k] = tt;
+					if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
+					assert( i >= (k+1) );
+				}
+				m = 1; /* tail call; */
+				for(k=i+1; k<N; k++){
+					DaoInode *ret = inodes[k];
+					if( ret->code == DVM_NOP ) continue;
+					if( ret->code == DVM_RETURN ){
+						m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
+						break;
+					}
+					m = 0;
+					break;
+				}
+				if( m ) vmc->b |= DAO_CALL_TAIL;
+				if( (vmc->b & DAO_CALL_EXPAR) && j && tp[j-1]->tid == DAO_TUPLE ){
+					DArray *its = tp[j-1]->nested;
+					DArray_Clear( self->array2 );
+					for(k=0; k<(j-1); k++) DArray_Append( self->array2, tp[k] );
+					for(k=0; k<its->size; k++){
+						DaoType *it = its->items.pType[k];
+						if( it->tid == DAO_PAR_NAMED ) it = (DaoType*) it->aux;
+						DArray_Append( self->array2, it );
+					}
+					tp = self->array2->items.pType;
+					j = self->array2->size;
+				}
+
 				ct = types[opa];
 				rout = NULL;
 				if( at->tid == DAO_CLASS ){
@@ -4629,40 +4665,6 @@ NotExist_TryAux:
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( at->tid != DAO_ROUTINE ){
 					goto ErrorTyping;
-				}
-				pp = consts+opa+1;
-				tp = types+opa+1;
-				j = vmc->b & 0xff;
-				for(k=0; k<j; k++){
-					tt = DaoType_DefineTypes( tp[k], NS, defs );
-					GC_ShiftRC( tt, tp[k] );
-					tp[k] = tt;
-					if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
-					assert( i >= (k+1) );
-				}
-				m = 1;
-				for(k=i+1; k<N; k++){
-					DaoInode *ret = inodes[k];
-					if( ret->code == DVM_NOP ) continue;
-					if( ret->code == DVM_RETURN ){
-						m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
-						break;
-					}
-					m = 0;
-					break;
-				}
-				if( m ) vmc->b |= DAO_CALL_TAIL;
-				if( (vmc->b & DAO_CALL_EXPAR) && j && tp[j-1]->tid == DAO_TUPLE ){
-					DArray *its = tp[j-1]->nested;
-					DArray_Clear( self->array2 );
-					for(k=0; k<(j-1); k++) DArray_Append( self->array2, tp[k] );
-					for(k=0; k<its->size; k++){
-						DaoType *it = its->items.pType[k];
-						if( it->tid == DAO_PAR_NAMED ) it = (DaoType*) it->aux;
-						DArray_Append( self->array2, it );
-					}
-					tp = self->array2->items.pType;
-					j = self->array2->size;
 				}
 				if( at->tid == DAO_ROUTINE && at->overloads ) rout = (DaoRoutine*)at->aux;
 				DMap_Reset( defs2 );

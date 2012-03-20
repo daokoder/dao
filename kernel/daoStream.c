@@ -1077,25 +1077,43 @@ static int SetCharBackground( DaoStream *stream, int color )
 const char* const dao_colors[8]
 = { "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" };
 
-static int SetCharForeground( DaoStream *stream, int color )
+#ifdef UNIX
+#include<unistd.h>
+#endif
+static int IsaTTY( DaoStream *stream )
+{
+#ifdef UNIX
+	static int ist = 0;
+	static int checked = 0;
+	FILE *file = stdout;
+	if( checked ) return ist;
+	if( stream->file ) file = stream->file->fd;
+	ist = isatty( fileno( file ) );
+	checked = 1;
+	return ist;
+#else
+	return 0;
+#endif
+}
+
+static int SetCharColor( DaoStream *stream, int color, const char *csi )
 {
 	char buf[20];
+	if( IsaTTY( stream ) == 0 ) return 254;
 	if( color == 254 )
 		snprintf( buf, sizeof( buf ), CSI_RESET );
 	else
-		snprintf( buf, sizeof( buf ), CSI_FCOLOR, color );
+		snprintf( buf, sizeof( buf ), csi, color );
 	DaoStream_WriteMBS( stream, buf );
 	return 254;
 }
+static int SetCharForeground( DaoStream *stream, int color )
+{
+	return SetCharColor( stream, color, CSI_FCOLOR );
+}
 static int SetCharBackground( DaoStream *stream, int color )
 {
-	char buf[20];
-	if( color == 254 )
-		snprintf( buf, sizeof( buf ), CSI_RESET );
-	else
-		snprintf( buf, sizeof( buf ), CSI_BCOLOR, color );
-	DaoStream_WriteMBS( stream, buf );
-	return 254;
+	return SetCharColor( stream, color, CSI_BCOLOR );
 }
 #endif
 

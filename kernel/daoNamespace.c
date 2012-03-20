@@ -1063,9 +1063,9 @@ DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name )
 	if( value && value->type == DAO_NAMESPACE ) return & value->xNamespace;
 	return NULL;
 }
-void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro, int local )
+void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro )
 {
-	DMap *macros = local ? self->localMacros : self->globalMacros;
+	DMap *macros = lang ? self->globalMacros : self->localMacros;
 	DString *combo = lang ? DString_Copy( lang ) : name;
 	DNode *node;
 	if( lang ){
@@ -1223,8 +1223,23 @@ ReturnMacro:
 	DString_Delete( combo );
 	return (DaoMacro*) node->value.pVoid;
 }
-void DaoNamespace_ImportMacro( DaoNamespace *self, DaoNamespace *other, DString *lang )
+void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang )
 {
+	DString *name2 = DString_New(1);
+	DNode *it;
+	daoint i, pos;
+	for(i=0; i<self->namespaces->size; i++){
+		DaoNamespace *ns = self->namespaces->items.pNS[i];
+		for(it=DMap_First( ns->globalMacros ); it; it=DMap_Next(ns->globalMacros,it) ){
+			DString *name = it->key.pString;
+			pos = DString_Find( name, lang, 0 );
+			if( pos != 0 || name->mbs[lang->size] != ':' ) continue;
+			/* Add as local macro: */
+			DString_SetDataMBS( name2, name->mbs + lang->size + 1, name->size - lang->size - 1 );
+			DaoNamespace_AddMacro( self, NULL, name2, (DaoMacro*) it->value.pVoid );
+		}
+	}
+	DString_Delete( name2 );
 }
 void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp )
 {

@@ -3590,7 +3590,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
 		/* No tail call for possible asynchronous calls: */
 		/* No tail call in constructors etc.: */
-		if( async == 0 && self->topFrame->state == 0 ){
+		if( async == 0 && self->topFrame->state == 0 && daoConfig.optimize ){
 			DaoValue **params = self->freeValues;
 			DaoProcess_PopFrame( self );
 			for(i=0; i<rout->parCount; i++){
@@ -6585,18 +6585,10 @@ static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode 
 	}
 	DArray_Clear( except->callers );
 	DArray_Clear( except->lines );
-#if 0
-	XXX
-	if( proc->thisFunction ){
-		DArray_Append( except->callers, rout );
-		DArray_Append( except->lines, (daoint)line );
-		except->routine = (DRoutine*) proc->thisFunction;
-	}
-#endif
 	while( frame && frame->routine ){
 		DaoRoutineBody *body = frame->routine->body;
 		if( except->callers->size >= 5 ) break;
-		line = body ? body->annotCodes->items.pVmc[ frame->entry ]->line : 0;
+		line = body ? body->annotCodes->items.pVmc[ frame->entry - 1 ]->line : 0;
 		DArray_Append( except->callers, frame->routine );
 		DArray_Append( except->lines, (daoint) line );
 		frame = frame->prev;

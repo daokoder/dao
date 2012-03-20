@@ -2281,6 +2281,8 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 	return start;
 }
 
+static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to );
+
 static int DaoParser_Preprocess( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
@@ -2292,7 +2294,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 	int bropen1 = 0, bropen2 = 0, bropen3 = 0;
 	int i, end, tag = 0;
 	int k, right, start = 0;
-	unsigned char tki;
+	unsigned char tki, tki2;
 
 	/*
 	   printf("routine = %p\n", self->routine );
@@ -2320,25 +2322,10 @@ static int DaoParser_Preprocess( DaoParser *self )
 			start ++;
 			continue;
 		}else if( bropen1 ==0 && bropen2 ==0 && bropen3 ==0 ){
+			tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
 			if( tki == DKEY_SYNTAX && (start == 0 || tokens[start-1]->name != DKEY_USE) ){
 #ifdef DAO_WITH_MACRO
-				int prefixed = 0;
-				int local = 0;
-				if( start ){
-					tki = tokens[start-1]->name;
-					if( tki >= DKEY_PRIVATE && tki <= DKEY_PUBLIC ){
-						prefixed = 1;
-						local = (tki != DKEY_PUBLIC);
-					}
-				}
-				if( (start + 1) < self->tokens->size && tokens[start+1]->type == DTOK_LCB ){
-					if( local == 0 && prefixed ){
-						DaoParser_Warn2( self, DAO_INVALID_ACCESS, start-1, start );
-						/* XXX: hint? */
-					}
-					local = 1;
-				}
-				right = DaoParser_ParseMacro( self, start, local );
+				right = DaoParser_ParseMacro( self, start );
 				/*
 				   printf( "macro : %s %i\n", tokens[start+2]->string->mbs, right );
 				 */
@@ -2346,20 +2333,23 @@ static int DaoParser_Preprocess( DaoParser *self )
 					DaoParser_Error3( self, DAO_CTW_INV_MAC_DEFINE, start );
 					return 0;
 				}
-				if( cons ) DaoParser_MakeCodes( self, start - prefixed, right+1, ns->inputs );
-				DArray_Erase( self->tokens, start - prefixed, right - start + prefixed + 1 );
+				if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );
+				DArray_Erase( self->tokens, start, right - start + 1 );
 				tokens = self->tokens->items.pToken;
 #else
 				DaoStream_WriteMBS( vmSpace->errorStream, "macro is not enabled.\n" );
 				return 0;
 #endif
-			}else if( tki == DKEY_LOAD && start+1<self->tokens->size
-					&& tokens[start+1]->name != DTOK_LB ){
+			}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
 				/* only for top level "load", for macros in the module  */
 				end = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, -1, 1 );
 				if( end < 0 ) return 0;
 				if( cons ) DaoParser_MakeCodes( self, start, end+1, ns->inputs );
 				if( ! DaoParser_ParseLoadStatement( self, start, end ) ) return 0;
+				DArray_Erase( self->tokens, start, end-start+1 );
+				tokens = self->tokens->items.pToken;
+			}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
+				end = DaoParser_ParseUseStatement( self, start, self->tokens->size-1 );
 				DArray_Erase( self->tokens, start, end-start+1 );
 				tokens = self->tokens->items.pToken;
 			}else if( tki == DTOK_VERBATIM ){
@@ -2378,15 +2368,15 @@ static int DaoParser_Preprocess( DaoParser *self )
 		macro = DaoNamespace_FindMacro( ns, ns->lang, tokens[start]->string );
 		self->curLine = tokens[start]->line;
 		if( macro == NULL ) continue;
-		/*
-		   printf( "macro %i %s\n", start, tokStr[start]->mbs );
-		 */
+#if 0
+		printf( "macro %i %s\n", start, tokens[start]->string->mbs );
+#endif
 		for( i=0; i<macro->macroList->size; i++){
 			macro2 = (DaoMacro*) macro->macroList->items.pVoid[i];
 			end = DaoParser_MacroTransform( self, macro2, start, tag );
-			/*
-			   printf( "overloaded: %i, %i\n", i, end );
-			 */
+#if 0
+			printf( "overloaded: %i, %i\n", i, end );
+#endif
 			if( end <= 0 ) continue;
 
 			tag ++;
@@ -2495,8 +2485,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	if( DaoParser_CheckNameToken( self, start, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
 	if( tokens[start]->name == DKEY_SYNTAX ){
 		if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
-#warning"================"
-		//DaoNamespace_ImportMacro( self, tokens[start+1]->string );
+		DaoNamespace_ImportMacro( myNS, tokens[start+1]->string );
 		return start + 2;
 	}
 	str = tokens[start]->string;
