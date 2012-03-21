@@ -17,3 +17,46 @@ dao.type
 Data Type
 @[title]
 
+@[author]
+Limin Fu
+@[author]
+
+@[license]
+GNU Free Documentation License
+@[license]
+
+@[text]
+Dao supports optional/hybrid typing that allows variables to be declared
+with or without type names. When a variable is declared without type name,
+its type will be automatically inferred at compiling time if possible.
+If a variable has an explicitly declared type or a successfully inferred type,
+static type checking will be carried out on this variable at compiling time,
+otherwise, it will be checked at running time.
+
+The most basic inference is based on assignment,
+so the simplest way to declare a variable to have certain type without explicitly
+specifying it is by assigning a value of the desired type to the variable at 
+the declaration, for example @[code]id = 0@[code] will decalare @[code]id@[code]
+as an integer, which is equivalent to @[code]id :int = 0@[code].
+
+@[section]Explicit Type Declaration@[section]
+
+The type of a variable can be declared explicitly in the following form,
+@[code]
+variable : type
+variable : type = value
+@[code]
+The same form can also be used in function parameter list.
+
+Type basic type names are the following:
+@[list]
+--@[green]int@[green] : 
+--@[green]float@[green] : 
+--@[green]double@[green] : 
+--@[green]complex@[green] : 
+--@[green]long@[green] : 
+--@[green]string@[green] : 
+--@[green]tuple@[green] : 
+@[list]
+
+@[text]

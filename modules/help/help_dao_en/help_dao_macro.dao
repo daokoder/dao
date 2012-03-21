@@ -1,0 +1,168 @@
+load help;
+
+
+@[name]
+dao.macro
+@[name]
+
+@[title]
+Syntax Macro
+@[title]
+
+@[author]
+Limin Fu
+@[author]
+
+@[license]
+GNU Free Documentation License
+@[license]
+
+@[text]
+
+Dao supports a docent macro system which can be used to create new syntax or to simplify
+scripts. A set of markups can be used in a macro definition to control the syntax matching
+and transformation. These markups are similar to what are commonly used in BNF representation
+of syntax. So that defining a macro ressembles to write a BNF-like representation of the source
+syntax to be matched, and a BNF-like representation of the target syntax to be applied.
+
+@[code]
+syntax [optional_language_id] {
+	source_syntax_pattern
+}as{
+	target_syntax_pattern
+}
+@[code]
+
+@[section]Controlling Markers@[section]
+
+The following control symbols are recognized by the Dao macro system,
+@[list]
+--@[green]\(\)@[green]: grouping;
+--@[green]\?@[green]: optional( repeat zero or once ), must follow @[cyan]\(\)@[cyan];
+--@[green]\*@[green]: repeat zero or more times, must follow @[cyan]\(\)@[cyan];
+--@[green]\+@[green]: repeat once or more times, must follow @[cyan]\(\)@[cyan];
+--@[green]\!@[green]: repeat zero times, ie, the previous group should not appear, must follow @[cyan]\(\)@[cyan];
+--@[green]\[\]@[green]: optional, equivalent to @[cyan]\(\) \?@[cyan];
+--@[green]\{\}@[green]: repeat zero or more times, equivalent to @[cyan]\(\) \*@[cyan];
+--@[green]\|@[green]: alternative pattern, must be inside paired control tokens such as @[cyan]\(\), \[\],\{\}@[cyan];
+@[list]
+If @[green]\?,\*,\+,\!@[green] follow the special grouping@[green]\[\]@[green] or @[green]\{\}@[green],
+these special grouping is @[red]considered the same@[red] as @[green]\(\)@[green].
+
+
+@[section]Variables@[section]
+
+The following prefixes can be used to define special variables 
+that may also be use in the patterns,
+@[list]
+--@[green]$ID@[green]  : a valid identifier;
+--@[green]$OP@[green]  : a valid operater;
+--@[green]$EXP@[green] : an expression or subexpression;
+--@[green]$BL@[green]  : a block of code may contain any type of syntax structures;
+--@[green]$VAR@[green] : a temporary variable used in the target syntax pattern;
+@[list]
+The Dao parser will generate unique names for each macro application for
+temporary variables represented by @[green]$VAR@[green]-prefixed literal.
+@[green]$EXP@[green]-prefixed variable normally matches a whole expression,
+but in the case that there is a normal token (neither control token, nor special variable)
+following the variable in the defintion, it may match a sub-expression.
+@[green]$BL@[green] prefixed variable matches a set of statements (code BLock), and
+extend the matching as much as possible, similarly, if there is a normal token
+following the variable in the defintion, this normal token is used to decide
+the boundary of the code block. If @[green]$EXP,$BL@[green] variables are followed by
+a grouping pattern, the macro system will check the patterns in the grouping to
+figure out if there is a proper stoping token for the special variables.
+
+
+Normal Dao operators can be used in the syntax patterns.
+If brackets are used, they must be properly paired. To use
+an unpaired bracket, enclose it in quotes such as '(', '[', '{' etc.
+
+
+For special variables with the same names in the source and targe syntax patterns, 
+it is preferable that they appear in the same grouping
+and repeating patterns in the source and target syntax. In this case,
+the syntax transformation has well defined behaviour.
+After the source pattern is matched and the tokens matching
+the special variables are extracted, the target pattern is scanned,
+and the extracted tokens are expanded at the position of the proper special variables.
+
+@[section]Accessibility@[section]
+
+If a syntax macro is defined without a language id, it will be applied strictly locally,
+namely, in the same file where it is defined.
+If it is defined with a language id, it will be applied in files that have extensions
+that match the language id. To use macros with language ids different from the file
+extension, one can explicitly make them applicable by:
+
+@[code]
+use syntax lang_id
+@[code]
+
+@[section]Examples@[section]
+
+@[code(dao)]
+# routine definition
+syntax dao_v1_syntax {
+	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ) \( ; \) \!
+		\( { $BL2 } \) \!
+		\[ $BL3 \]
+		end 
+}as{
+	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ){
+		\[ $BL3 \]
+	}   
+}
+# class definition
+syntax dao_v1_syntax {
+	class $ID1 \{ :: $ID2 \} \[ ( \[ $BL1 \] ) \]
+		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
+		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
+		\( { $BL5 } \) \!
+		\[ $BL4 \]
+	end
+}as{
+	class $ID1 \{ :: $ID2 \}
+		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
+		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
+	{
+		\[ $BL4 \]
+	}
+}
+syntax dao_v1_syntax {
+	my $ID1
+}as{
+	var $ID1
+}
+
+use syntax dao_v1_syntax;
+
+class Klass
+	public
+
+	my name = "Klass";
+
+	routine test(a:float) io.writeln( "by test() 1" ) end
+	routine test(b:string) io.writeln( "by test() 2" ) end
+end
+
+obj = Klass();
+
+io.writeln( obj.name );
+
+obj.test(1);
+obj.test("1");
+@[code(dao)]
+
+
+@[text]
+
+#{
+@[white:green]4. Examples@[white:green]
+
+Starting from a release in 2007, the core syntax of Dao no longer supports
+scoping by @[green]do-end@[green], @[green]else-end@[green], @[green]routine-end@[green] and @[green]class-end@[green]
+etc. Instead @[green]{}@[green] should be used for scoping, as in some early releases.
+However, scoping by @[green]do/else/routine/class/try-end@[green] can be still supported
+by the following macros:
+#}
