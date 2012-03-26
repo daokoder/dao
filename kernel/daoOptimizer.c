@@ -839,7 +839,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 {
 	DNode *it;
-	DArray *array = DArray_New(0);
+	DArray *array = DArray_New(D_VALUE);
 	DMap *localVarType2 = DMap_New(0,0);
 	DMap *localVarType = self->body->localVarType;
 	DaoType **types = self->body->regType->items.pType;
@@ -863,8 +863,7 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 	}
 	self->body->regCount = array->size;
 	self->body->localVarType = localVarType2;
-	GC_DecRCs( self->body->regType );
-	DArray_Swap( self->body->regType, array );
+	DArray_Assign( self->body->regType, array );
 	DArray_Delete( array );
 	DMap_Delete( localVarType );
 
@@ -1631,8 +1630,8 @@ DaoInferencer* DaoInferencer_New()
 {
 	DaoInferencer *self = (DaoInferencer*) dao_calloc( 1, sizeof(DaoInferencer) );
 	self->inodes = DArray_New(0);
-	self->consts = DArray_New(0);
-	self->types = DArray_New(0);
+	self->consts = DArray_New(D_VALUE);
+	self->types = DArray_New(D_VALUE);
 	self->inited = DString_New(1);
 	self->rettypes = DArray_New(0);
 	self->typeMaps = DArray_New(D_MAP);
@@ -1654,8 +1653,6 @@ void DaoInferencer_Clear( DaoInferencer *self )
 		inode = inode->next;
 		DaoInode_Delete( tmp );
 	}
-	GC_DecRCs( self->consts );
-	GC_DecRCs( self->types );
 	DArray_Clear( self->inodes );
 	DArray_Clear( self->consts );
 	DArray_Clear( self->types );
@@ -1767,8 +1764,8 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 		if( node->key.pInt < (int)partypes->size ) continue;
 		types[ node->key.pInt ] = DaoType_DefineTypes( node->value.pType, NS, defs );
 	}
+	for(i=0; i<self->types->size; i++) GC_IncRC( types[i] );
 	DArray_PushBack( self->typeMaps, defs );
-	GC_IncRCs( self->types );
 
 	self->typeLong = DaoNamespace_MakeType( NS, "long", DAO_LONG, NULL, NULL, 0 );
 	self->typeEnum = DaoNamespace_MakeType( NS, "enum", DAO_ENUM, NULL, NULL, 0 );
@@ -2463,7 +2460,6 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 	if( addreg ){
 		inode->c = self->types->size;
 		DArray_Append( self->types, type );
-		GC_IncRC( type );
 	}
 	if( prev ){
 		prev->next = inode;
@@ -2530,9 +2526,7 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 		DaoVmcArray_PushBack( body->vmCodes, *(DaoVmCode*) it );
 		DArray_PushBack( body->annotCodes, (DaoVmCodeX*) it );
 	}
-	DArray_Swap( self->types, body->regType );
-	GC_DecRCs( self->types );
-	DArray_Clear( self->types );
+	DArray_Assign( body->regType, self->types );
 
 	body->regCount = body->regType->size;
 	DArray_Clear( body->simpleVariables );
@@ -5597,9 +5591,10 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	DArray_Resize( newfn->body->regType, newfn->body->regCount + oldfn->parCount, NULL );
 	for(i=0,m=oldfn->routType->nested->size; i<m; i++){
 		DaoType *T = oldfn->routType->nested->items.pType[i];
+		DaoType *T2 = newfn->body->regType->items.pType[i + newfn->body->regCount];
 		if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
+		GC_ShiftRC( T, T2 );
 		newfn->body->regType->items.pType[i + newfn->body->regCount] = T;
-		GC_IncRC( T );
 		//DArray_Append( newfn->body->defLocals, oldfn->body->defLocals->items.pToken[i] );
 	}
 	newfn->body->regCount += oldfn->parCount;

@@ -2994,6 +2994,23 @@ static void DaoMAP_Clear( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoMAP_Reset( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMap_Reset( & p[0]->xMap );
+	if( N > 1 ){
+		DMap *map = p[0]->xMap.items;
+		int type = p[1]->xEnum.value;
+		if( type < 2 && map->hashing == type ) return;
+		if( type == 0 ){
+			map->hashing = 0;
+			if( map->table ) dao_free( map->table );
+			map->table = NULL;
+			map->tsize = 0;
+		}else{
+			if( map->hashing == 0 ){
+				map->tsize = 4;
+				map->table = (DNode**) dao_calloc( map->tsize, sizeof(DNode*) );
+			}
+			map->hashing = type == 1 ? HASH_SEED : rand();
+		}
+	}
 }
 static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3252,6 +3269,7 @@ static DaoFuncItem mapMeths[] =
 {
 	{ DaoMAP_Clear,  "clear( self :map<any,any> )" },
 	{ DaoMAP_Reset,  "reset( self :map<any,any> )" },
+	{ DaoMAP_Reset,  "reset( self :map<any,any>, hashing :enum<none,default,random> )" },
 	{ DaoMAP_Erase,  "erase( self :map<any,any> )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
@@ -3347,7 +3365,11 @@ DaoMap* DaoMap_New( unsigned int hashing )
 	DaoValue_Init( self, DAO_MAP );
 	self->items = hashing ? DHash_New( D_VALUE, D_VALUE ) : DMap_New( D_VALUE, D_VALUE );
 	self->unitype = NULL;
-	if( hashing > 1 ) self->items->hashing = hashing;
+	if( hashing == 2 ){
+		self->items->hashing = rand();
+	}else if( hashing > 2 ){
+		self->items->hashing = hashing;
+	}
 	return self;
 }
 void DaoMap_Delete( DaoMap *self )

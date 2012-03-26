@@ -44,5 +44,7 @@ DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 DAO_DLL void GC_Lock();
 DAO_DLL void GC_Unlock();
 
+DAO_DLL int DaoGC_LockData( void *data );
+DAO_DLL void DaoGC_UnlockData( void *data );
 
 #endif

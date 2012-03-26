@@ -40,7 +40,6 @@ void DaoType_Delete( DaoType *self )
 	GC_DecRC( self->aux );
 	GC_DecRC( self->value );
 	GC_DecRC( self->kernel );
-	GC_DecRCs( self->nested );
 	DString_Delete( self->name );
 	if( self->fname ) DString_Delete( self->fname );
 	if( self->nested ) DArray_Delete( self->nested );
@@ -131,10 +130,7 @@ void DaoType_CheckAttributes( DaoType *self )
 			DaoType *it = self->nested->items.pType[self->nested->size - 1];
 			if( it->tid == DAO_PAR_VALIST ){
 				self->variadic = 1;
-				if( self->tid == DAO_TUPLE ){
-					DArray_Erase( self->nested, self->nested->size-1, 1 );
-					GC_DecRC( it );
-				}
+				if( self->tid == DAO_TUPLE ) DArray_Erase( self->nested, self->nested->size-1, 1 );
 			}
 		}
 	}
@@ -146,7 +142,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	DaoValue_Init( self, DAO_TYPE );
 	self->tid = tid;
 	self->name = DString_New(1);
-	self->cdatatype = DAO_CDATA_PTR;
+	self->cdatatype = tid == DAO_CDATA ? DAO_CDATA_PTR : 0;
 	self->typer = typer;
 	if( typer->core ){
 		self->kernel = typer->core->kernel;
@@ -156,7 +152,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		self->aux = extra;
 		GC_IncRC( extra );
 	}
-	if( tid == DAO_OBJECT || tid == DAO_CTYPE ) self->interfaces = DHash_New(0,0);
+	if( tid == DAO_OBJECT || tid == DAO_CTYPE ) self->interfaces = DHash_New(0,D_VALUE);
 	DString_SetMBS( self->name, name );
 	if( (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) && extra && extra->type == DAO_TYPE ){
 		self->fname = DString_New(1);
@@ -165,11 +161,10 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		DString_Append( self->name, self->aux->xType.name );
 	}
 	if( nest ){
-		self->nested = DArray_New(0);
+		self->nested = DArray_New(D_VALUE);
 		DArray_Assign( self->nested, nest );
-		GC_IncRCs( self->nested );
 	}else if( tid == DAO_ROUTINE || tid == DAO_TUPLE ){
-		self->nested = DArray_New(0);
+		self->nested = DArray_New(D_VALUE);
 	}
 	if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
 	DaoType_CheckAttributes( self );
@@ -245,16 +240,9 @@ DaoType* DaoType_Copy( DaoType *other )
 	self->name = DString_Copy( other->name );
 	if( other->fname ) self->fname = DString_Copy( other->fname );
 	if( other->bases ) self->bases = DArray_Copy( other->bases );
-	if( other->nested ){
-		self->nested = DArray_Copy( other->nested );
-		GC_IncRCs( self->nested );
-	}
+	if( other->nested ) self->nested = DArray_Copy( other->nested );
 	if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
-	if( other->interfaces ){
-		self->interfaces = DMap_Copy( other->interfaces );
-		it = DMap_First( other->interfaces );
-		for(; it!=NULL; it=DMap_Next(other->interfaces,it)) GC_IncRC( it->key.pValue );
-	}
+	if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
 	self->aux = other->aux;
 	self->value = other->value;
 	GC_IncRC( other->aux );
@@ -946,10 +934,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy->mapNames = DMap_Copy( self->mapNames );
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
-	if( self->nested /*XXX && DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL )*/ ){
+	if( self->nested ){
 		int m = DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL );
 		char sep = self->tid == DAO_VARIANT ? '|' : ',';
-		if( copy->nested == NULL ) copy->nested = DArray_New(0);
+		if( copy->nested == NULL ) copy->nested = DArray_New(D_VALUE);
 		if( self->tid == DAO_CODEBLOCK ){
 			DString_AppendChar( copy->name, '[' );
 		}else if( self->tid != DAO_VARIANT && m ){
@@ -968,7 +956,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			DString_Append( copy->name, type->name );
 			if( i+1 < (int)self->nested->size ) DString_AppendChar( copy->name, sep );
 		}
-		GC_IncRCs( copy->nested );
 		if( (self->tid == DAO_CTYPE || self->tid == DAO_CDATA) && self->typer->core->kernel->sptree ){
 			DaoType *sptype = self->typer->core->kernel->abtype;
 			if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
@@ -1167,10 +1154,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 /* interface implementations */
 void DaoInterface_Delete( DaoInterface *self )
 {
-	DNode *it = DMap_First(self->methods);
-	GC_DecRCs( self->supers );
 	GC_DecRC( self->abtype );
-	for(; it!=NULL; it=DMap_Next(self->methods,it)) GC_DecRC( it->value.pValue );
 	DArray_Delete( self->supers );
 	DMap_Delete( self->methods );
 	dao_free( self );
@@ -1187,8 +1171,8 @@ DaoInterface* DaoInterface_New( const char *name )
 	DaoValue_Init( self, DAO_INTERFACE );
 	self->bindany = 0;
 	self->derived = 0;
-	self->supers = DArray_New(0);
-	self->methods = DHash_New(D_STRING,0);
+	self->supers = DArray_New(D_VALUE);
+	self->methods = DHash_New(D_STRING,D_VALUE);
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
 	GC_IncRC( self->abtype );
 	return self;
@@ -1297,12 +1281,10 @@ int DaoInterface_Bind( DArray *pairs, DArray *fails )
 			continue;
 		}
 
-		GC_IncRC( inter );
 		DMap_Insert( type->interfaces, inter, inter );
 		for(j=0,m=inter->supers->size; j<m; j++){
 			DaoInterface *super = (DaoInterface*) inter->supers->items.pValue[j];
 			if( DMap_Find( type->interfaces, super ) ) continue;
-			GC_IncRC( super );
 			DMap_Insert( type->interfaces, super, super );
 		}
 	}
@@ -1329,12 +1311,10 @@ int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray 
 	DArray_Delete( methods );
 	if( newbinds ) DMap_Delete( newbinds );
 	if( bl ==0 ) return 0;
-	GC_IncRC( self );
 	DMap_Insert( type->interfaces, self, self );
 	for(i=0,n=self->supers->size; i<n; i++){
 		DaoInterface *super = (DaoInterface*) self->supers->items.pValue[i];
 		if( DMap_Find( type->interfaces, super ) ) continue;
-		GC_IncRC( super );
 		DMap_Insert( type->interfaces, super, super );
 	}
 	return 1;
@@ -1579,13 +1559,10 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 
 void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
-	DNode *it;
-	DMap *methods = self->methods;
 	if( self->core ) self->core->kernel = NULL;
 	if( self->core == (DaoTypeCore*)(self + 1) ){
 		self->typer->core = NULL;
 	}
-	for(it=DMap_First(methods); it; it=DMap_Next(methods,it)) GC_DecRC( it->value.pValue );
 	if( self->values ) DMap_Delete( self->values );
 	if( self->methods ) DMap_Delete( self->methods );
 	if( self->sptree ) DTypeSpecTree_Delete( self->sptree );
@@ -1790,7 +1767,7 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	GC_ShiftRC( kernel, sptype2->kernel );
 	sptype->kernel = self->kernel;
 	sptype2->kernel = self->kernel;
-	sptype->nested = DArray_New(0);
+	sptype->nested = DArray_New(D_VALUE);
 	pos = DString_FindChar( sptype->name, '<', 0 );
 	if( pos != MAXSIZE ) DString_Erase( sptype->name, pos, -1 );
 	DString_AppendChar( sptype->name, '<' );
@@ -1805,8 +1782,6 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 		DArray_Append( sptype->nested, sptree->defaults->items.pType[i] );
 	}
 	sptype2->nested = DArray_Copy( sptype->nested );
-	GC_IncRCs( sptype->nested );
-	GC_IncRCs( sptype2->nested );
 	DString_AppendChar( sptype->name, '>' );
 	DString_Assign( sptype2->name, sptype->name );
 	DTypeSpecTree_Add( sptree, sptype->nested, sptype );
@@ -1854,7 +1829,7 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 	if( self->kernel == original->kernel && original->kernel && original->kernel->methods ){
 		DaoNamespace *nspace = self->kernel->nspace;
 		DMap *orimeths = original->kernel->methods;
-		DMap *methods = DHash_New( D_STRING, 0 );
+		DMap *methods = DHash_New( D_STRING, D_VALUE );
 		DMap *defs = DHash_New(0,0);
 		DArray *parents = DArray_New(0);
 		DNode *it;

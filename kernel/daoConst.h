@@ -61,15 +61,15 @@ enum DaoRTTI
 enum DaoBasicStruct
 {
 	D_NULL ,
-	D_VALUE ,
+	D_VALUE ,   /* garbage collectable items, managed by the container; */
 	D_VMCODE ,
-	D_VMCODE2 ,
-	D_TOKEN ,   /* for DArray only */
+	D_VMCODE2 , /* for DMap, compare code and operands only; */
+	D_TOKEN ,   /* for DArray only; */
 	D_STRING ,
 	D_VARRAY ,
 	D_ARRAY ,
 	D_MAP ,
-	D_VOID2 /* a pair of pointer */
+	D_VOID2 /* a pair of pointer; */
 };
 
 /* It is for the typing system, to decide when to specialize a routine.
@@ -111,8 +111,7 @@ enum DaoVarStorage
 	DAO_CLASS_VARIABLE = 4,
 	DAO_CLASS_CONSTANT = 5, /* lowest bit set to 1 for constant */
 	DAO_GLOBAL_VARIABLE = 6,
-	DAO_GLOBAL_CONSTANT = 7, /* lowest bit set to 1 for constant */
-	DAO_LAST_REGISTER
+	DAO_GLOBAL_CONSTANT = 7  /* lowest bit set to 1 for constant */
 };
 
 enum DaoValueTrait

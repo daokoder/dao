@@ -2914,7 +2914,6 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 			DaoTuple_SetItem( tuple, val, i );
 		}
 		DString_AppendMBS( ct->name, ">" );
-		GC_IncRCs( ct->nested );
 		tp = DaoNamespace_FindType( ns, ct->name );
 		if( tp ){
 			DaoType_Delete( ct );
@@ -3759,7 +3758,9 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 #ifdef DAO_WITH_DECORATOR
 				DaoRoutine *drout = (DaoRoutine*) rout;
 				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params, npar, 0 );
+				printf( "%p\n", drout );
 				DaoProcess_PutValue( self, (DaoValue*) drout );
+				printf( "%p\n", drout );
 #else
 				DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
 #endif

@@ -90,7 +90,7 @@ DaoClass* DaoClass_New()
 {
 	DaoClass *self = (DaoClass*) dao_malloc( sizeof(DaoClass) );
 	DaoValue_Init( self, DAO_CLASS );
-	self->vtable = NULL; //XXX GC
+	self->vtable = NULL;
 	self->classRoutine = NULL;
 	self->classRoutines = NULL;
 	self->className = DString_New(1);
@@ -102,7 +102,7 @@ DaoClass* DaoClass_New()
 
 	self->lookupTable  = DHash_New(D_STRING,0);
 	self->ovldRoutMap  = DHash_New(D_STRING,0);
-	self->abstypes = DMap_New(D_STRING,0);
+	self->abstypes = DMap_New(D_STRING,D_VALUE);
 	self->deflines = DMap_New(D_STRING,0);
 	self->constants    = DArray_New(D_VALUE);
 	self->variables    = DArray_New(D_VALUE);
@@ -118,15 +118,12 @@ DaoClass* DaoClass_New()
 	self->typeDefaults = NULL;
 	self->instanceClasses = NULL;
 	self->templateClass = NULL;
-	self->references = DArray_New(0);
+	self->references = DArray_New(D_VALUE);
 	return self;
 }
 void DaoClass_Delete( DaoClass *self )
 {
-	DNode *n = DMap_First( self->abstypes );
-	for( ; n != NULL; n = DMap_Next( self->abstypes, n ) ) GC_DecRC( n->value.pValue );
 	GC_DecRC( self->clsType );
-	GC_DecRCs( self->references );
 	DMap_Delete( self->abstypes );
 	DMap_Delete( self->deflines );
 	DMap_Delete( self->lookupTable );
@@ -156,7 +153,6 @@ void DaoClass_Delete( DaoClass *self )
 void DaoClass_AddReference( DaoClass *self, void *reference )
 {
 	if( reference == NULL ) return;
-	GC_IncRC( reference );
 	DArray_Append( self->references, reference );
 }
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
@@ -348,13 +344,8 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 			}
 			MAP_Insert( deftypes, self->typeHolders->items.pVoid[i], type );
 		}
-		klass->objType->nested = DArray_New(0);
-		/*
-		// valgrind reports memory leaking on demo/template_class.dao:
-		// DArray_Swap( klass->objType->nested, types );
-		*/
+		klass->objType->nested = DArray_New(D_VALUE);
 		DArray_Assign( klass->objType->nested, types );
-		GC_IncRCs( klass->objType->nested );
 		if( DaoClass_CopyField( klass, self, deftypes ) == 0 ){
 			DString_Delete( name );
 			return NULL;
@@ -364,12 +355,14 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		DaoClass_ResetAttributes( klass );
 		DMap_Delete( deftypes );
 		if( holders ){
-			klass->typeHolders = DArray_Copy( klass->objType->nested );
+			klass->typeHolders = DArray_New(0);
 			klass->typeDefaults = DArray_New(0);
 			klass->instanceClasses = DMap_New(D_STRING,0);
 			DMap_Insert( klass->instanceClasses, klass->className, klass );
-			while( klass->typeDefaults->size < klass->typeHolders->size )
+			for(i=0; i<types->size; i++){
+				DArray_Append( klass->typeHolders, types->items.pType[i] );
 				DArray_Append( klass->typeDefaults, NULL );
+			}
 			for(i=0; i<klass->typeHolders->size; i++){
 				DaoClass_AddReference( klass, klass->typeHolders->items.pType[i] );
 				DaoClass_AddReference( klass, klass->typeDefaults->items.pType[i] );
@@ -533,6 +526,10 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					index = LOOKUP_BIND( DAO_CLASS_CONSTANT, perm, i+1, self->constants->size );
 					MAP_Insert( self->lookupTable, name, index );
 					DArray_Append( self->constants, klass->constants->items.pConst[id] );
+					if( value->type == DAO_ROUTINE && (value->xRoutine.attribs & DAO_ROUT_VIRTUAL) ){
+						if( self->vtable == NULL ) self->vtable = DHash_New(0,0);
+						MAP_Insert( self->vtable, value, value );
+					}
 				}else if( value->type == DAO_ROUTINE && value->xRoutine.overloads ){
 					DRoutines *routs = value->xRoutine.overloads;
 					for(k=0; k<routs->routines->size; k++){
@@ -979,10 +976,7 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoTyp
 int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp )
 {
 	DNode *node = MAP_Find( self->abstypes, name );
-	if( node == NULL ){
-		MAP_Insert( self->abstypes, name, tp );
-		GC_IncRC( tp );
-	}
+	if( node == NULL ) MAP_Insert( self->abstypes, name, tp );
 	return 1;
 }
 void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout )

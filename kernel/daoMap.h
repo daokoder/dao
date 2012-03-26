@@ -16,6 +16,8 @@
 
 #include"daoBase.h"
 
+#define HASH_SEED  0xda0
+
 typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 
 typedef union
@@ -41,7 +43,6 @@ struct DNode
 	DNode  *parent;
 	DNode  *left;
 	DNode  *right;
-	DNode  *next;
 
 	DNodeData key;
 	DNodeData value;
@@ -51,15 +52,14 @@ typedef DMap DHash;
 
 struct DMap
 {
-	DNode **table;
-	DNode  *root;
-	DNode  *first;
-	DNode  *last;
-	daoint  size;
-	daoint  tsize;
-	uint_t  hashing;
-	char    keytype;
-	char    valtype;
+	DNode  **table;    /* hash table, each entry is a tree; */
+	DNode   *root;     /* root node; */
+	DNode   *list;     /* first node of the free list; */
+	daoint   size;     /* size of the map; */
+	daoint   tsize;    /* size of the table; */
+	uint_t   hashing;  /* hashing seed; */
+	uchar_t  keytype;  /* key type; */
+	uchar_t  valtype;  /* value type; */
 };
 
 DAO_DLL DMap* DMap_New( short kt, short vt );

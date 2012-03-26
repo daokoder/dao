@@ -1882,12 +1882,28 @@ int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start, 
 }
 
 static int DaoParser_Preprocess( DaoParser *self );
+static int DaoParser_CompileRoutines( DaoParser *self )
+{
+	daoint i;
+	for(i=0; i<self->routCompilable->size; i++){
+		DaoRoutine* rout = (DaoRoutine*) self->routCompilable->items.pValue[i];
+		/* could be set to null in DaoRoutine_Compile() for recursive routines */
+		if( rout->body->parser == NULL ) continue;
+		if( rout->type != DAO_ROUTINE ) continue;
+		if( DaoParser_ParseRoutine( rout->body->parser ) ==0 ) return 0;
+		/* could be set to null in DaoRoutine_Compile() for recursive routines */
+		if( rout->body->parser == NULL ) continue;
+		DaoParser_Delete( rout->body->parser );
+		rout->body->parser = NULL;
+	}
+	return 1;
+}
 int DaoParser_ParseScript( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
 	DaoVmSpace   *vmSpace = self->vmSpace;
-	int i, bl;
 	DaoRoutine *routMain = self->routine; /* could be set in DaoVmSpace_Eval() */
+	daoint i, bl;
 
 	self->error = 0;
 	if( routMain == NULL ) routMain = DaoRoutine_New( ns, NULL, 1 );
@@ -1904,7 +1920,6 @@ int DaoParser_ParseScript( DaoParser *self )
 	ns->mainRoutine = routMain;
 	DaoNamespace_SetConst( ns, DVR_NSC_MAIN, (DaoValue*) routMain );
 	DString_SetMBS( self->routName, "__main__" );
-	GC_IncRC( routMain );
 	DArray_Append( ns->mainRoutines, routMain );
 	/* the name of routMain will be set in DaoParser_ParseRoutine() */
 
@@ -1916,18 +1931,11 @@ int DaoParser_ParseScript( DaoParser *self )
 	self->nameSpace = ns;
 
 	bl = DaoParser_Preprocess( self ) && DaoParser_ParseRoutine( self );
+#ifndef DAO_WITH_THREAD
+	/* incremental compiling only when no threading is enabled: */
 	if( daoConfig.incompile ) return 1;
-	for(i=0; i<self->routCompilable->size; i++){
-		DaoRoutine* rout = (DaoRoutine*) self->routCompilable->items.pValue[i];
-		/* could be set to null in DaoRoutine_Compile() for recursive routines */
-		if( rout->body->parser == NULL ) continue;
-		if( rout->type != DAO_ROUTINE ) continue;
-		if( DaoParser_ParseRoutine( rout->body->parser ) ==0 ) return 0;
-		/* could be set to null in DaoRoutine_Compile() for recursive routines */
-		if( rout->body->parser == NULL ) continue;
-		DaoParser_Delete( rout->body->parser );
-		rout->body->parser = NULL;
-	}
+#endif
+	if( DaoParser_CompileRoutines( self ) == 0 ) return 0;
 	routMain->body->parser = NULL;
 	if( bl ==0 ) DaoParser_PrintError( self, 0, 0, NULL );
 	return bl;
@@ -2414,7 +2422,6 @@ static void DaoParser_AddToScope( DaoParser *self, DaoValue *scope,
 			DaoClass_AddType( self->hostClass, name, abtype );
 			DaoClass_AddConst( self->hostClass, name, value, perm, line );
 		}
-		GC_IncRC( abtype );
 		MAP_Insert( routine->body->abstypes, name, abtype );
 		MAP_Insert( DArray_Top( self->localCstMap ), name, routine->routConsts->items.size );
 		MAP_Insert( DArray_Top( self->localDecMap ), name, 0 );
@@ -3034,11 +3041,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			if( k == 0 ) goto ErrorClassDefinition;
 			DString_AppendChar( className, '>' );
 			DaoClass_SetName( klass, className, myNS );
-			klass->objType->nested = DArray_Copy( klass->typeHolders );
+			klass->objType->nested = DArray_New(D_VALUE);
+			DArray_Assign( klass->objType->nested, klass->typeHolders );
 			DMap_Insert( klass->instanceClasses, className, klass );
 			DString_Assign( klass->className, name );
 			if( className->mbs[0] == '@' ) DString_Erase( className, 0, 1 );
-			GC_IncRCs( klass->objType->nested );
 			start = rb;
 #else
 			DaoParser_Error( self, DAO_DISABLED_TEMPCLASS, NULL );
@@ -3190,9 +3197,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
 		DaoParser_ParseRoutine( parser );
 	}
+	if( DaoParser_CompileRoutines( parser ) == 0 ) return -1;
 	rout->body->parser = NULL;
 	DaoParser_Delete( parser );
-	/* TODO: compile routines if it is not in incremental compiling mode */
 
 	return right + 1;
 ErrorClassDefinition:
@@ -5133,7 +5140,7 @@ static void DaoParser_PushItemType( DaoParser *self, DaoType *type, int id, ucha
 				itp = type->nested->items.pType[0];
 			}
 			break;
-		case DAO_LIST :
+		case DAO_LIST : // XXX
 			if( sep1 == DTOK_COLON && id == 0 ){
 				itp = type->nested->items.pType[0];
 			}else{

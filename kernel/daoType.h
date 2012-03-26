@@ -156,7 +156,7 @@ struct DaoInterface
 	short derived;
 
 	DArray  *supers; /* parent interfaces */
-	DMap    *methods; /* DHash<DString*,DRoutine*> */
+	DMap    *methods; /* DHash<DString*,DaoRoutine*> */
 	DaoType *abtype;
 };
 

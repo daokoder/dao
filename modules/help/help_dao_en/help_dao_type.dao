@@ -48,15 +48,22 @@ variable : type = value
 @[code]
 The same form can also be used in function parameter list.
 
-Type basic type names are the following:
+Dao has the following basic types:
 @[list]
---@[green]int@[green] : 
---@[green]float@[green] : 
---@[green]double@[green] : 
---@[green]complex@[green] : 
---@[green]long@[green] : 
---@[green]string@[green] : 
---@[green]tuple@[green] : 
+--@[green]int@[green] : integer type;
+--@[green]float@[green] : single precision floating point number;
+--@[green]double@[green] : double precision floating point number;
+--@[green]complex@[green] : complex number (double precision for each part);
+--@[green]long@[green]   : arbitrary precision integer;
+--@[green]string@[green] : string type;
+--@[green]enum@[green] : enum type;
+@[list]
+The following is a list of builtin aggregated types in Dao:
+@[list]
+--@[green]array@[green] : multi-dimensional numeric array;
+--@[green]tuple@[green] : tuple type;
+--@[green]list@[green] : list container;
+--@[green]map@[green] : map or hash map container;
 @[list]
 
 @[text]

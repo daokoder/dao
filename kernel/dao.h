@@ -168,7 +168,7 @@ enum DaoExecOption
 
 	/* -- disable JIT;
 	 * -- disable function specialization;
-	 * -- insert NOP codes for conveniently setting up break points; */
+	 * -- insert NOP codes for convenient setting up of break points; */
 	DAO_EXEC_IDE = (1<<31)
 };
 enum DaoExceptionType
@@ -609,11 +609,9 @@ DAO_DLL void DaoList_Erase( DaoList *self, daoint pos );
 DAO_DLL void DaoList_Clear( DaoList *self );
 
 
+enum DaoHashSeeds{ DAO_HASH_NONE, DAO_HASH_DEFAULT, DAO_HASH_RANDOM };
 /*
 // DaoMap_New() creates a map or hash map:
-// hashing = 0: normal map, no hashing;
-// hashing = 1: hash map with a default hashing seed;
-// hashing > 1: hash map with specified hashing seed;
 */
 DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
 DAO_DLL int  DaoMap_Size( DaoMap *self );

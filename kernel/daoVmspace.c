@@ -1972,6 +1972,23 @@ DaoVmSpace* DaoInit( const char *command )
 	mbs = DString_New(1);
 	setlocale( LC_CTYPE, "" );
 
+	DaoConfigure();
+	DaoType_Init();
+	/*
+	   printf( "number of VM instructions: %i\n", DVM_NULL );
+	 */
+
+#ifdef DEBUG
+	for(i=0; i<100; i++) ObjectProfile[i] = 0;
+#endif
+
+#ifdef DAO_WITH_THREAD
+	DaoInitThread();
+#endif
+
+	DaoGC_Start();
+	DaoCGC_Start();
+
 	if( daodir == NULL && command ){
 		int absolute = command[0] == '/';
 		int relative = command[0] == '.';
@@ -1994,22 +2011,6 @@ DaoVmSpace* DaoInit( const char *command )
 		strncat( daodir, mbs->mbs, mbs->size );
 		putenv( daodir );
 	}
-
-	DaoConfigure();
-	DaoType_Init();
-	/*
-	   printf( "number of VM instructions: %i\n", DVM_NULL );
-	 */
-
-#ifdef DEBUG
-	for(i=0; i<100; i++) ObjectProfile[i] = 0;
-#endif
-
-#ifdef DAO_WITH_THREAD
-	DaoInitThread();
-#endif
-
-	DaoGC_Start();
 
 	dao_type_udf = DaoType_New( "?", DAO_UDT, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );

@@ -124,14 +124,8 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	GC_DecRC( self->routConsts );
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
-	if( self->overloads ){
-		GC_DecRCs( self->overloads->array );
-		DRoutines_Delete( self->overloads );
-	}
-	if( self->specialized ){
-		GC_DecRCs( self->specialized->array );
-		DRoutines_Delete( self->specialized );
-	}
+	if( self->overloads ) DRoutines_Delete( self->overloads );
+	if( self->specialized ) DRoutines_Delete( self->specialized );
 	if( self->body ) GC_DecRC( self->body );
 	dao_free( self );
 }
@@ -251,11 +245,11 @@ DaoRoutineBody* DaoRoutineBody_New()
 	DaoValue_Init( self, DAO_ROUTBODY );
 	self->source = NULL;
 	self->vmCodes = DaoVmcArray_New();
-	self->regType = DArray_New(0);
+	self->regType = DArray_New(D_VALUE);
 	self->defLocals = DArray_New(D_TOKEN);
 	self->annotCodes = DArray_New(D_VMCODE);
 	self->localVarType = DMap_New(0,0);
-	self->abstypes = DMap_New(D_STRING,0);
+	self->abstypes = DMap_New(D_STRING,D_VALUE);
 	self->routHelp = DString_New(1);
 	self->simpleVariables = DArray_New(0);
 	self->codeStart = self->codeEnd = 0;
@@ -264,12 +258,8 @@ DaoRoutineBody* DaoRoutineBody_New()
 }
 void DaoRoutineBody_Delete( DaoRoutineBody *self )
 {
-	DNode *n;
-	n = DMap_First( self->abstypes );
-	for( ; n != NULL; n = DMap_Next( self->abstypes, n ) ) GC_DecRC( n->value.pValue );
 	if( self->upRoutine ) GC_DecRC( self->upRoutine );
 	if( self->upProcess ) GC_DecRC( self->upProcess );
-	GC_DecRCs( self->regType );
 	DaoVmcArray_Delete( self->vmCodes );
 	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );
@@ -344,8 +334,6 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	self->annotCodes = DArray_Copy( other->annotCodes );
 	self->localVarType = DMap_Copy( other->localVarType );
 	DaoVmcArray_Assign( self->vmCodes, other->vmCodes );
-	DaoGC_IncRCs( other->regType );
-	DaoGC_DecRCs( self->regType );
 	DArray_Assign( self->regType, other->regType );
 	DArray_Assign( self->simpleVariables, other->simpleVariables );
 	DString_Assign( self->routHelp, other->routHelp );
@@ -493,7 +481,7 @@ DRoutines* DRoutines_New()
 	self->tree = NULL;
 	self->mtree = NULL;
 	self->routines = DArray_New(0);
-	self->array = DArray_New(0);
+	self->array = DArray_New(D_VALUE);
 	self->array2 = DArray_New(0);
 	return self;
 }
@@ -571,7 +559,6 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	 * To avoid memory leaking, the one not added to the tree should also
 	 * be appended to "array", so that it can be properly garbage collected. */
 	DArray_Append( self->array, routine );
-	GC_IncRC( routine );
 	if( routine != param->routine && routine->routHost && param->routine->routHost ){
 		DaoType *t1 = routine->routHost;
 		DaoType *t2 = param->routine->routHost;
