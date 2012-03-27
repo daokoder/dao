@@ -350,10 +350,10 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	node = DMap_Find( self->defClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
-	pm = LOOKUP_PM( node->value.pSize );
-	st = LOOKUP_ST( node->value.pSize );
-	up = LOOKUP_UP( node->value.pSize );
-	id = LOOKUP_ID( node->value.pSize );
+	pm = LOOKUP_PM( node->value.pInt );
+	st = LOOKUP_ST( node->value.pInt );
+	up = LOOKUP_UP( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
 	if( self == dft && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
 	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
@@ -385,10 +385,10 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	node = DMap_Find( self->defClass->lookupTable, name );
 	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
 
-	pm = LOOKUP_PM( node->value.pSize );
-	st = LOOKUP_ST( node->value.pSize );
-	up = LOOKUP_UP( node->value.pSize );
-	id = LOOKUP_ID( node->value.pSize );
+	pm = LOOKUP_PM( node->value.pInt );
+	st = LOOKUP_ST( node->value.pInt );
+	up = LOOKUP_UP( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
 	if( self == dft && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
 	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;

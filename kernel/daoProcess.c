@@ -303,7 +303,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	DaoValue **values = self->stackValues + frame->stackBase;
 	DaoType *routHost = routine->routHost;
 	DaoType **types = routine->body->regType->items.pType;
-	daoint *id = routine->body->simpleVariables->items.pSize;
+	daoint *id = routine->body->simpleVariables->items.pInt;
 	daoint *end = id + routine->body->simpleVariables->size;
 	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	complex16 com = {0.0,0.0};
@@ -4554,11 +4554,11 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 				if( p->type == DAO_PAR_NAMED ){
 					DaoNameValue *nameva = & p->xNameValue;
 					node = DMap_Find( klass->lookupTable, nameva->name );
-					if( node == NULL || LOOKUP_ST( node->value.pSize ) != DAO_OBJECT_VARIABLE ){
+					if( node == NULL || LOOKUP_ST( node->value.pInt ) != DAO_OBJECT_VARIABLE ){
 						DaoProcess_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, "" );
 						break;
 					}
-					k = LOOKUP_ID( node->value.pSize );
+					k = LOOKUP_ID( node->value.pInt );
 					p = nameva->value;
 				}
 				if( DaoValue_Move( p, object->objValues + k, mtype[k] ) ==0 ){
@@ -6379,10 +6379,10 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 				if( strcmp( newRout->routName->mbs, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
-					st = LOOKUP_ST( node->value.pSize );
-					up = LOOKUP_UP( node->value.pSize );
+					st = LOOKUP_ST( node->value.pInt );
+					up = LOOKUP_UP( node->value.pInt );
 					if( st == DAO_CLASS_CONSTANT && up ==0 ){
-						id = LOOKUP_ID( node->value.pSize );
+						id = LOOKUP_ID( node->value.pInt );
 						dest2 = klass->constants->items.pConst[id];
 					}
 					DRoutines_Add( klass->classRoutines->overloads, newRout );
@@ -6505,9 +6505,9 @@ InvalidField:
 				DaoClass_AddConst( klass, name, method, pm, 0 );
 				continue;
 			}
-			if( LOOKUP_UP( node->value.pSize ) ) continue;
-			if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
-			id = LOOKUP_ID( node->value.pSize );
+			if( LOOKUP_UP( node->value.pInt ) ) continue;
+			if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
+			id = LOOKUP_ID( node->value.pInt );
 			dest = klass->constants->items.pConst[id]->value;
 			if( dest->type == DAO_ROUTINE && dest->xRoutine.overloads ){
 				DRoutines_Add( dest->xRoutine.overloads, newRout );

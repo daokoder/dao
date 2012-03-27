@@ -22,7 +22,6 @@ struct DArray
 {
 	union{
 		daoint        *pInt;
-		daoint        *pSize;
 		void         **pVoid;
 
 		DaoValue     **pValue;

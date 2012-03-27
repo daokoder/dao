@@ -1689,7 +1689,7 @@ static void Array_MultIndex2Flat( daoint *accum, int N, daoint *sd, daoint *md )
 static int DaoArray_Permute( DaoArray *self, DArray *perm )
 {
 	daoint i, j, k, m, N = self->size, D = perm->size;
-	daoint *dm, *ac, *mdo, *mdn, *pm = perm->items.pSize;
+	daoint *dm, *ac, *mdo, *mdn, *pm = perm->items.pInt;
 	DArray *dim = DArray_New(0); /* new dimension vector */
 	DArray *acc = DArray_New(0); /* new accumulate vector */
 	DArray *mido = DArray_New(0); /* old multiple indices */
@@ -1704,10 +1704,10 @@ static int DaoArray_Permute( DaoArray *self, DArray *perm )
 	DArray_Resize( acc, D, (void*)1 );
 	DArray_Resize( mido, D, 0 );
 	DArray_Resize( midn, D, 0 );
-	dm = dim->items.pSize;
-	ac = acc->items.pSize;
-	mdo = mido->items.pSize;
-	mdn = midn->items.pSize;
+	dm = dim->items.pInt;
+	ac = acc->items.pInt;
+	mdo = mido->items.pInt;
+	mdn = midn->items.pInt;
 	for(i=0; i<D; i++) dm[ pm[i] ] = 0;
 	for(i=0; i<D; i++){
 		if( dm[i] ){
@@ -1779,27 +1779,27 @@ void DaoArray_FinalizeDimData( DaoArray *self )
 static int SliceRange( DArray *slice, daoint N, daoint first, daoint last )
 {
 	DArray_Resize( slice, 3, 0 );
-	slice->items.pSize[0] = SLICE_RANGE;
-	slice->items.pSize[1] = 0;
-	slice->items.pSize[2] = 0;
+	slice->items.pInt[0] = SLICE_RANGE;
+	slice->items.pInt[1] = 0;
+	slice->items.pInt[2] = 0;
 	if( first <0 ) first += N;
 	if( last <0 ) last += N;
 	if( first <0 || first >= N || last <0 || last >= N ) return 0;
-	slice->items.pSize[2] = first;
-	if( first <= last ) slice->items.pSize[1] = last - first + 1;
+	slice->items.pInt[2] = first;
+	if( first <= last ) slice->items.pInt[1] = last - first + 1;
 	return 1;
 }
 static int SliceRange2( DArray *slice, daoint N, daoint first, daoint count )
 {
 	DArray_Resize( slice, 3, 0 );
-	slice->items.pSize[0] = SLICE_RANGE;
-	slice->items.pSize[1] = 0;
-	slice->items.pSize[2] = 0;
+	slice->items.pInt[0] = SLICE_RANGE;
+	slice->items.pInt[1] = 0;
+	slice->items.pInt[2] = 0;
 	if( first <0 ) first += N;
 	if( first <0 || first >= N ) return 0;
-	slice->items.pSize[2] = first;
+	slice->items.pInt[2] = first;
 	if( first + count > N ) return 0;
-	slice->items.pSize[1] = count;
+	slice->items.pInt[1] = count;
 	return 1;
 }
 static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice )
@@ -1850,8 +1850,8 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 			DaoList *list = & pid->xList;
 			DaoValue **v = list->items.items.pValue;
 			DArray_Resize( slice, list->items.size + 2, 0 );
-			slice->items.pSize[0] = SLICE_ENUM;
-			slice->items.pSize[1] = list->items.size;
+			slice->items.pInt[0] = SLICE_ENUM;
+			slice->items.pInt[1] = list->items.size;
 			for( j=0; j<list->items.size; j++){
 				if( v[j]->type < DAO_INTEGER || v[j]->type > DAO_DOUBLE )
 					DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
@@ -1861,7 +1861,7 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 					rc = id = 0;
 					break;
 				}
-				slice->items.pSize[j+2] = id;
+				slice->items.pInt[j+2] = id;
 			}
 			break;
 		}
@@ -1876,9 +1876,9 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 				break;
 			}
 			DArray_Resize( slice, na->size + 2, 0 );
-			slice->items.pSize[0] = SLICE_ENUM;
-			slice->items.pSize[1] = na->size;
-			p = slice->items.pSize + 2;
+			slice->items.pInt[0] = SLICE_ENUM;
+			slice->items.pInt[1] = na->size;
+			p = slice->items.pInt + 2;
 			for( j=0; j<na->size; j++){
 				id = DaoArray_GetInteger( na, j );
 				if( id <0 ) id += N;
@@ -1904,10 +1904,10 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 	/* slices: DArray<DArray<int> > */
 	DArray_Clear( slices );
 	DArray_Resize( tmp, 3, 0 );
-	tmp->items.pSize[0] = SLICE_RANGE;
-	tmp->items.pSize[2] = 0;
+	tmp->items.pInt[0] = SLICE_RANGE;
+	tmp->items.pInt[2] = 0;
 	for(i=0; i<D; i ++){
-		tmp->items.pSize[1] = dims[i];
+		tmp->items.pInt[1] = dims[i];
 		DArray_Append( slices, tmp );
 	}
 	DArray_Delete( tmp );
@@ -1923,7 +1923,7 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 		const int n = N > D ? D : N;
 		for( i=0; i<n; i++ ) MakeSlice( proc, idx[i], (int)dims[i], slices->items.pArray[i] );
 	}
-	for(i=0; i<D; i ++) S *= slices->items.pArray[i]->items.pSize[1];
+	for(i=0; i<D; i ++) S *= slices->items.pArray[i]->items.pInt[1];
 	return S;
 }
 int DaoArray_AlignShape( DaoArray *self, DArray *sidx, daoint *dims, int ndim )
@@ -1948,8 +1948,8 @@ static daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 		if( self->slices->size != other->slices->size ) return -1;
 		m = self->slices->size != 0;
 		for(i=0; i<self->slices->size; i++){
-			daoint n1 = self->slices->items.pArray[i]->items.pSize[1];
-			daoint n2 = other->slices->items.pArray[i]->items.pSize[1];
+			daoint n1 = self->slices->items.pArray[i]->items.pInt[1];
+			daoint n2 = other->slices->items.pArray[i]->items.pInt[1];
 			if( n1 != n2 ) return -1;
 			m *= n1;
 		}
@@ -1957,7 +1957,7 @@ static daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 		if( self->slices->size != other->ndim ) return -1;
 		m = self->slices->size != 0;
 		for(i=0; i<self->slices->size; i++){
-			daoint n1 = self->slices->items.pArray[i]->items.pSize[1];
+			daoint n1 = self->slices->items.pArray[i]->items.pInt[1];
 			daoint n2 = other->dims[i];
 			if( n1 != n2 ) return -1;
 			m *= n1;
@@ -1967,7 +1967,7 @@ static daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 		m = self->ndim != 0;
 		for(i=0; i<self->ndim; i++){
 			daoint n1 = self->dims[i];
-			daoint n2 = other->slices->items.pArray[i]->items.pSize[1];
+			daoint n2 = other->slices->items.pArray[i]->items.pInt[1];
 			if( n1 != n2 ) return -1;
 			m *= n1;
 		}
@@ -1990,7 +1990,7 @@ daoint DaoArray_SliceSize( DaoArray *self )
 	if( self->original == NULL || self->slices == NULL ) return self->size;
 	arrays = self->slices->items.pArray;
 	n = self->slices->size;
-	for(i=0,m=(n!=0); i<n; i++) m *= arrays[i]->items.pSize[1];
+	for(i=0,m=(n!=0); i<n; i++) m *= arrays[i]->items.pInt[1];
 	return m;
 }
 daoint DaoArray_GetInteger( DaoArray *na, daoint i )
@@ -2432,7 +2432,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 	}else{
 		DArray *tmpArray = DArray_New(0);
 		DArray_Resize( tmpArray, self->ndim, 0 );
-		tmp = tmpArray->items.pSize;
+		tmp = tmpArray->items.pInt;
 		for(i=0; i<self->size; i++){
 			daoint mod = i;
 			for(j=self->ndim-1; j>=0; j--){
@@ -2483,7 +2483,7 @@ static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 			DaoArray_ResizeVector( na, self->slices->size );
 			v = na->data.i;
 			for(i=0; i<self->slices->size; i++ )
-				v[i] = self->slices->items.pArray[i]->items.pSize[1];
+				v[i] = self->slices->items.pArray[i]->items.pInt[1];
 		}else{
 			DaoArray_ResizeVector( na, self->ndim );
 			v = na->data.i;
@@ -2496,7 +2496,7 @@ static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 			*num = -1;
 			DaoProcess_RaiseException( proc, DAO_WARNING, "no such dimension" );
 		}else{
-			*num = self->slices->items.pArray[i]->items.pSize[1];
+			*num = self->slices->items.pArray[i]->items.pInt[1];
 		}
 	}else{
 		daoint *num = DaoProcess_PutInteger( proc, 0 );
@@ -2531,7 +2531,7 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 	}
 	ad = DArray_New(0);
 	DArray_Resize( ad, nad->size, 0 );
-	dims = ad->items.pSize;
+	dims = ad->items.pInt;
 
 	for(i=0; i<nad->size; i++){
 		dims[i] = DaoArray_GetInteger( nad, i );
@@ -2563,7 +2563,7 @@ static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 	}
 	ad = DArray_New(0);
 	DArray_Resize( ad, nad->size, 0 );
-	dims = ad->items.pSize;
+	dims = ad->items.pInt;
 	size = 1;
 	for(i=0; i<nad->size; i++){
 		dims[i] = DaoArray_GetInteger( nad, i );
@@ -2946,7 +2946,7 @@ static void DaoARRAY_Permute( DaoProcess *proc, DaoValue *par[], int npar )
 
 	perm = DArray_New(0);
 	DArray_Resize( perm, D, 0 );
-	for(i=0; i<D; i++) perm->items.pSize[i] = DaoArray_GetInteger( pm, i );
+	for(i=0; i<D; i++) perm->items.pInt[i] = DaoArray_GetInteger( pm, i );
 	res = DaoArray_Permute( self, perm );
 	DArray_Delete( perm );
 	if( res ==0 ) goto RaiseException;
@@ -2960,7 +2960,7 @@ static void DaoARRAY_Transpose( DaoProcess *proc, DaoValue *par[], int npar )
 	DArray *perm = DArray_New(0);
 	int i, D = self->ndim;
 	DArray_Resize( perm, D, 0 );
-	for(i=0; i<D; i++) perm->items.pSize[i] = D-1-i;
+	for(i=0; i<D; i++) perm->items.pInt[i] = D-1-i;
 	DaoArray_Permute( self, perm );
 	DArray_Delete( perm );
 }
@@ -3390,7 +3390,7 @@ daoint DaoArray_IndexFromSlice( DaoArray *self, DArray *slices, daoint sid )
 	daoint j, index = 0; 
 	for( j=(int)slices->size; j>0; j-- ){
 		DArray *sub = slices->items.pArray[j-1];
-		daoint *ids = sub->items.pSize; /* { type, count, ... } */
+		daoint *ids = sub->items.pInt; /* { type, count, ... } */
 		daoint count = ids[1];
 		daoint res = sid % count;
 		if( ids[0] == SLICE_RANGE ){
@@ -3416,20 +3416,20 @@ void DaoArray_GetSliceShape( DaoArray *self, daoint **dims, short *ndim )
 	*ndim = 0;
 	if( slices->size != self->original->ndim ) return;
 	for(i=0; i<slices->size; i++){
-		k = slices->items.pArray[i]->items.pSize[1];
+		k = slices->items.pArray[i]->items.pInt[1];
 		if( k ==0 ) return; /* skip empty dimension */
 		S += k > 1;
 	}
 	shape = DArray_New(0);
 	for(i=0; i<slices->size; i++){
-		k = slices->items.pArray[i]->items.pSize[1];
+		k = slices->items.pArray[i]->items.pInt[1];
 		/* skip size one dimension if the final slice has at least two dimensions */
 		if( k == 1 && (S > 1 || shape->size > 1) ) continue;
 		DArray_Append( shape, k );
 	}
 	*ndim = shape->size;
 	*dims = (daoint*) dao_realloc( *dims, shape->size * sizeof(daoint) );
-	memmove( *dims, shape->items.pSize, shape->size * sizeof(daoint) );
+	memmove( *dims, shape->items.pInt, shape->size * sizeof(daoint) );
 	DArray_Delete( shape );
 }
 int DaoArray_SliceFrom( DaoArray *self, DaoArray *original, DArray *slices )
@@ -3443,7 +3443,7 @@ int DaoArray_SliceFrom( DaoArray *self, DaoArray *original, DArray *slices )
 	}
 	if( slices->size != original->ndim ) return 0;
 	for(i=0; i<slices->size; i++){
-		k = slices->items.pArray[i]->items.pSize[1];
+		k = slices->items.pArray[i]->items.pInt[1];
 		S += k > 1;
 		if( k ==0 ){ /* skip empty dimension */
 			DaoArray_ResizeVector( self, 0 );
@@ -3452,7 +3452,7 @@ int DaoArray_SliceFrom( DaoArray *self, DaoArray *original, DArray *slices )
 	}
 	DaoArray_SetDimCount( self, slices->size );
 	for(i=0; i<slices->size; i++){
-		k = slices->items.pArray[i]->items.pSize[1];
+		k = slices->items.pArray[i]->items.pInt[1];
 		/* skip size one dimension if the final slice has at least two dimensions */
 		if( k == 1 && (S > 1 || D > 1) ) continue;
 		self->dims[D++] = k;

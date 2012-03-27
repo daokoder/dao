@@ -47,9 +47,9 @@ static void DaoClass_SetField( DaoValue *self0, DaoProcess *proc, DString *name,
 {
 	DaoClass *self = & self0->xClass;
 	DNode *node = DMap_Find( self->lookupTable, name );
-	if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_VARIABLE ){
-		int up = LOOKUP_UP( node->value.pSize );
-		int id = LOOKUP_ID( node->value.pSize );
+	if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
+		int up = LOOKUP_UP( node->value.pInt );
+		int id = LOOKUP_ID( node->value.pInt );
 		DaoVariable *dt = self->variables->items.pVar[id];
 		if( DaoValue_Move( value, & dt->value, dt->dtype ) ==0 )
 			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
@@ -217,9 +217,9 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 
 	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine, 1, 1 );
 	for(it=DMap_First(other->lookupTable);it;it=DMap_Next(other->lookupTable,it)){
-		st = LOOKUP_ST( it->value.pSize );
-		up = LOOKUP_UP( it->value.pSize );
-		id = LOOKUP_ID( it->value.pSize );
+		st = LOOKUP_ST( it->value.pInt );
+		up = LOOKUP_UP( it->value.pInt );
+		id = LOOKUP_ID( it->value.pInt );
 		if( up ==0 ){
 			if( st == DAO_CLASS_CONSTANT && id <self->constants->size ) continue;
 			if( st == DAO_CLASS_VARIABLE && id <self->variables->size ) continue;
@@ -264,9 +264,9 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DRoutines_Add( self->classRoutines->overloads, rout );
 			}else if( (it = DMap_Find( other->lookupTable, name )) ){
-				st = LOOKUP_ST( it->value.pSize );
-				up = LOOKUP_UP( it->value.pSize );
-				id = LOOKUP_ID( it->value.pSize );
+				st = LOOKUP_ST( it->value.pInt );
+				up = LOOKUP_UP( it->value.pInt );
+				id = LOOKUP_ID( it->value.pInt );
 				if( st == DAO_CLASS_CONSTANT && up ==0 && id < i ){
 					DaoValue *v = self->constants->items.pConst[id]->value;
 					if( v->type == DAO_ROUTINE && v->xRoutine.overloads )
@@ -512,7 +512,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				value = klass->constants->items.pConst[ id ]->value;
 				search = MAP_Find( klass->lookupTable, name );
 				if( search == NULL ) continue;
-				perm = LOOKUP_PM( search->value.pSize );
+				perm = LOOKUP_PM( search->value.pInt );
 				/* NO deriving private member: */
 				if( perm <= DAO_DATA_PRIVATE ) continue;
 				if( value->type == DAO_ROUTINE ){
@@ -551,7 +551,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				DString *name = klass->glbDataName->items.pString[id];
 				DaoVariable *var = klass->variables->items.pVar[id];
 				search = MAP_Find( klass->lookupTable, name );
-				perm = LOOKUP_PM( search->value.pSize );
+				perm = LOOKUP_PM( search->value.pInt );
 				/* NO deriving private member: */
 				if( perm <= DAO_DATA_PRIVATE ) continue;
 				search = MAP_Find( self->lookupTable, name );
@@ -645,7 +645,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 			for( id=0; id<klass->objDataName->size; id ++ ){
 				DString *name = klass->objDataName->items.pString[id];
 				search = MAP_Find( klass->lookupTable, name );
-				perm = LOOKUP_PM( search->value.pSize );
+				perm = LOOKUP_PM( search->value.pInt );
 				/* NO deriving private member: */
 				if( perm <= DAO_DATA_PRIVATE ) continue;
 				search = MAP_Find( self->lookupTable, name );
@@ -698,8 +698,8 @@ void DaoClass_ResetAttributes( DaoClass *self )
 		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
 		node = DMap_Find( self->lookupTable, mbs );
 		if( node == NULL ) continue;
-		if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
-		id = LOOKUP_ID( node->value.pSize );
+		if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
+		id = LOOKUP_ID( node->value.pInt );
 		k = self->constants->items.pConst[id]->value->type;
 		if( k != DAO_ROUTINE ) continue;
 		self->attribs |= DAO_OPER_OVERLOADED | (DAO_OPER_OVERLOADED<<(i-DVM_NOT+1));
@@ -777,8 +777,8 @@ void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super, DString *alias )
 int  DaoClass_FindConst( DaoClass *self, DString *name )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
-	if( node == NULL || LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) return -1;
-	return node->value.pSize;
+	if( node == NULL || LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) return -1;
+	return node->value.pInt;
 }
 DaoValue* DaoClass_GetConst( DaoClass *self, int id )
 {
@@ -802,10 +802,10 @@ int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass 
 
 	*value = NULL;
 	if( ! node ) return DAO_ERROR_FIELD_NOTEXIST;
-	perm = LOOKUP_PM( node->value.pSize );
-	sto = LOOKUP_ST( node->value.pSize );
-	up = LOOKUP_UP( node->value.pSize );
-	id = LOOKUP_ID( node->value.pSize );
+	perm = LOOKUP_PM( node->value.pInt );
+	sto = LOOKUP_ST( node->value.pInt );
+	up = LOOKUP_UP( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
 	if( self == thisClass || perm == DAO_DATA_PUBLIC || (child && perm >= DAO_DATA_PROTECTED) ){
 		switch( sto ){
 		case DAO_CLASS_VARIABLE : p = self->variables->items.pVar[id]->value; break;
@@ -828,10 +828,10 @@ DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClas
 	if( ! node ) return NULL;
 
 	*res = 0;
-	perm = LOOKUP_PM( node->value.pSize );
-	sto = LOOKUP_ST( node->value.pSize );
-	up = LOOKUP_UP( node->value.pSize );
-	id = LOOKUP_ID( node->value.pSize );
+	perm = LOOKUP_PM( node->value.pInt );
+	sto = LOOKUP_ST( node->value.pInt );
+	up = LOOKUP_UP( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
 	if( self == thisClass || perm == DAO_DATA_PUBLIC || (child && perm >=DAO_DATA_PROTECTED) ){
 		switch( sto ){
 		case DAO_OBJECT_VARIABLE : return self->objDataType->items.pType + id;
@@ -847,7 +847,7 @@ int DaoClass_GetDataIndex( DaoClass *self, DString *name )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
 	if( ! node ) return -1;
-	return node->value.pSize;
+	return node->value.pInt;
 }
 int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoType *t, int s, int ln )
 {
@@ -902,15 +902,15 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s, int
 	DaoValue *value;
 
 	assert( data != NULL );
-	if( node && LOOKUP_UP( node->value.pSize ) ){ /* inherited field: */
-		sto = LOOKUP_ST( node->value.pSize );
-		pm = LOOKUP_PM( node->value.pSize );
-		id = LOOKUP_ID( node->value.pSize );
+	if( node && LOOKUP_UP( node->value.pInt ) ){ /* inherited field: */
+		sto = LOOKUP_ST( node->value.pInt );
+		pm = LOOKUP_PM( node->value.pInt );
+		id = LOOKUP_ID( node->value.pInt );
 		if( sto != DAO_CLASS_CONSTANT ){ /* override inherited variable: */
 			DMap_EraseNode( self->lookupTable, node );
 			return DaoClass_AddConst( self, name, data, s, ln );
 		}
-		node->value.pSize = LOOKUP_BIND( sto, pm, 0, id );
+		node->value.pInt = LOOKUP_BIND( sto, pm, 0, id );
 		dest = self->constants->items.pConst[id];
 		if( dest->value->type == DAO_ROUTINE && data->type == DAO_ROUTINE ){
 			/* Add the inherited routine(s) for overloading: */
@@ -927,14 +927,14 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s, int
 			return 0;
 		}
 	}else if( node ){
-		sto = LOOKUP_ST( node->value.pSize );
-		pm = LOOKUP_PM( node->value.pSize );
-		id = LOOKUP_ID( node->value.pSize );
+		sto = LOOKUP_ST( node->value.pInt );
+		pm = LOOKUP_PM( node->value.pInt );
+		id = LOOKUP_ID( node->value.pInt );
 		if( sto != DAO_CLASS_CONSTANT ) return DAO_CTW_WAS_DEFINED;
 		dest = self->constants->items.pConst[id];
 		value = dest->value;
 		if( value->type != DAO_ROUTINE || data->type != DAO_ROUTINE ) return DAO_CTW_WAS_DEFINED;
-		if( s > pm ) node->value.pSize = LOOKUP_BIND( sto, s, 0, id );
+		if( s > pm ) node->value.pInt = LOOKUP_BIND( sto, s, 0, id );
 		if( value->xRoutine.overloads == NULL || value->xRoutine.routHost != self->objType ){
 			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, (DaoRoutine*) value );
 			routs->trait |= DAO_VALUE_CONST;
@@ -997,8 +997,8 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 	DaoStream_WriteMBS( stream, ":\n" );
 	for( ; node != NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DaoValue *val;
-		if( LOOKUP_ST( node->value.pSize ) != DAO_CLASS_CONSTANT ) continue;
-		val = self->constants->items.pConst[ LOOKUP_ID( node->value.pSize ) ]->value;
+		if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
+		val = self->constants->items.pConst[ LOOKUP_ID( node->value.pInt ) ]->value;
 		if( val->type == DAO_ROUTINE && val->xRoutine.body )
 			DaoRoutine_PrintCode( & val->xRoutine, stream );
 	}

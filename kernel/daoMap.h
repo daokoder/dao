@@ -23,7 +23,6 @@ typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 typedef union
 {
 	daoint       pInt;
-	daoint       pSize;
 	void        *pVoid;
 	DString     *pString;
 	DArray      *pArray;

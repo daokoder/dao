@@ -49,9 +49,9 @@ static void DNS_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	int st, pm, id;
 	node = MAP_Find( self->lookupTable, name );
 	if( node == NULL ) goto FieldNotExist;
-	st = LOOKUP_ST( node->value.pSize );
-	pm = LOOKUP_PM( node->value.pSize );
-	id = LOOKUP_ID( node->value.pSize );
+	st = LOOKUP_ST( node->value.pInt );
+	pm = LOOKUP_PM( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
 	if( pm == DAO_DATA_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
 	if( st == DAO_GLOBAL_CONSTANT ){
 		DaoProcess_PutValue( proc, self->constants->items.pConst[id]->value );
@@ -76,9 +76,9 @@ static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoV
 	int st, pm, id;
 	node = MAP_Find( self->lookupTable, name );
 	if( node == NULL ) goto FieldNotExist;
-	st = LOOKUP_ST( node->value.pSize );
-	pm = LOOKUP_PM( node->value.pSize );
-	id = LOOKUP_ID( node->value.pSize );
+	st = LOOKUP_ST( node->value.pInt );
+	pm = LOOKUP_PM( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
 	if( pm == DAO_DATA_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
 	if( st == DAO_GLOBAL_CONSTANT ) goto FieldNoPermit;
 	dest = self->variables->items.pVar[id];
@@ -848,8 +848,8 @@ int DaoNamespace_FindConst( DaoNamespace *self, DString *name )
 {
 	DNode *node = DMap_Find( self->lookupTable, name );
 	if( node == NULL ) return -1;
-	if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_CONSTANT ) return -1;
-	return node->value.pSize;
+	if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_CONSTANT ) return -1;
+	return node->value.pInt;
 }
 int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, int pm )
 {
@@ -860,15 +860,15 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 	int isrout2, isrout = value->type == DAO_ROUTINE;
 	daoint sto, pm2, up, id = 0;
 
-	if( node && LOOKUP_UP( node->value.pSize ) ){ /* inherited data: */
-		sto = LOOKUP_ST( node->value.pSize );
-		pm2 = LOOKUP_PM( node->value.pSize );
-		id = LOOKUP_ID( node->value.pSize );
+	if( node && LOOKUP_UP( node->value.pInt ) ){ /* inherited data: */
+		sto = LOOKUP_ST( node->value.pInt );
+		pm2 = LOOKUP_PM( node->value.pInt );
+		id = LOOKUP_ID( node->value.pInt );
 		if( sto != DAO_GLOBAL_CONSTANT ){ /* override inherited variable: */
 			DMap_EraseNode( self->lookupTable, node );
 			return DaoNamespace_AddConst( self, name, value, pm );
 		}
-		node->value.pSize = LOOKUP_BIND( sto, pm2, 0, id );
+		node->value.pInt = LOOKUP_BIND( sto, pm2, 0, id );
 		dest = self->constants->items.pConst[id];
 		if( dest->value->type == DAO_ROUTINE && value->type == DAO_ROUTINE ){
 			/* Add the inherited routine(s) for overloading: */
@@ -882,17 +882,17 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			DaoConstant *cst = DaoConstant_New( value );
 			GC_ShiftRC( cst, dest );
 			self->constants->items.pConst[id] = cst;
-			return node->value.pSize;
+			return node->value.pInt;
 		}
 	}else if( node ){
-		sto = LOOKUP_ST( node->value.pSize );
-		pm2 = LOOKUP_PM( node->value.pSize );
-		id = LOOKUP_ID( node->value.pSize );
+		sto = LOOKUP_ST( node->value.pInt );
+		pm2 = LOOKUP_PM( node->value.pInt );
+		id = LOOKUP_ID( node->value.pInt );
 		if( sto != DAO_GLOBAL_CONSTANT ) return -1;
 		dest = self->constants->items.pConst[id];
 		vdest = dest->value;
 		if( vdest->type != DAO_ROUTINE || value->type != DAO_ROUTINE ) return -1;
-		if( pm > pm2 ) node->value.pSize = LOOKUP_BIND( sto, pm, 0, id );
+		if( pm > pm2 ) node->value.pInt = LOOKUP_BIND( sto, pm, 0, id );
 		if( vdest->xRoutine.overloads == NULL || vdest->xRoutine.nameSpace != self ){
 			/* Add individual entry for the existing function: */
 			if( vdest->xRoutine.nameSpace == self ) DArray_Append( self->constants, dest );
@@ -911,7 +911,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			DArray_Append( self->constants, DaoConstant_New( value ) );
 			value->xNone.trait |= DAO_VALUE_CONST;
 		}
-		return node->value.pSize;
+		return node->value.pInt;
 	}else{
 		DaoRoutine *rout = (DaoRoutine*) value;
 		if( value->type == DAO_ROUTINE && rout->overloads && rout->nameSpace != self ){
@@ -948,8 +948,8 @@ int DaoNamespace_FindVariable( DaoNamespace *self, DString *name )
 {
 	DNode *node = DMap_Find( self->lookupTable, name );
 	if( node == NULL ) return -1;
-	if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_VARIABLE ) return -1;
-	return node->value.pSize;
+	if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_VARIABLE ) return -1;
+	return node->value.pInt;
 }
 int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value, DaoType *tp, int pm )
 {
@@ -962,14 +962,14 @@ int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value
 	if( tp && value && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
 	if( value == NULL && tp ) value = tp->value;
-	if( node && LOOKUP_UP( node->value.pSize ) ){ /* overriding */
+	if( node && LOOKUP_UP( node->value.pInt ) ){ /* overriding */
 		DMap_EraseNode( self->lookupTable, node );
 		DaoNamespace_AddVariable( self, name, value, tp, pm );
 		node = MAP_Find( self->lookupTable, name );
-		return node->value.pSize;
+		return node->value.pInt;
 	}else if( node ){
-		id = LOOKUP_ID( node->value.pSize );
-		if( LOOKUP_ST( node->value.pSize ) != DAO_GLOBAL_VARIABLE ) return -1;
+		id = LOOKUP_ID( node->value.pInt );
+		if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_VARIABLE ) return -1;
 		assert( id < self->variables->size );
 		dest = self->variables->items.pVar[id];
 		if( tp ){
@@ -977,7 +977,7 @@ int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value
 			dest->dtype = tp;
 		}
 		if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) return -1;
-		id = node->value.pSize;
+		id = node->value.pInt;
 	}else{
 		id = LOOKUP_BIND( DAO_GLOBAL_VARIABLE, pm, 0, self->variables->size );
 		MAP_Insert( self->lookupTable, name, id ) ;
@@ -1014,7 +1014,7 @@ void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value )
 {
 	DNode *node = MAP_Find( self->lookupTable, name );
 	if( node ){
-		daoint id = node->value.pSize;
+		daoint id = node->value.pInt;
 		daoint st = LOOKUP_ST( id );
 		if( st == DAO_GLOBAL_CONSTANT ) DaoNamespace_SetConst( self, id, value );
 		if( st == DAO_GLOBAL_VARIABLE ) DaoNamespace_SetVariable( self, id, value );
@@ -1083,8 +1083,8 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 	DNode *search = MAP_Find( self->lookupTable, name );
 	if( search == NULL ){
 		DaoNamespace_AddConst( self, name, (DaoValue*)routine, pm );
-	}else if( LOOKUP_ST( search->value.pSize ) == DAO_GLOBAL_CONSTANT ){
-		DaoRoutine *routine2 = (DaoRoutine*) DaoNamespace_GetConst( self, search->value.pSize );
+	}else if( LOOKUP_ST( search->value.pInt ) == DAO_GLOBAL_CONSTANT ){
+		DaoRoutine *routine2 = (DaoRoutine*) DaoNamespace_GetConst( self, search->value.pInt );
 		if( routine2->type != DAO_ROUTINE ) return;
 		if( routine2->overloads ){
 			DRoutines_Add( routine2->overloads, routine );
@@ -1094,7 +1094,7 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 			DaoValue_MarkConst( (DaoValue*) routine2 );
 			/* Add individual entry for the existing function: */
 			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) routine2 ) );
-			DaoNamespace_SetConst( self, search->value.pSize, (DaoValue*) routs );
+			DaoNamespace_SetConst( self, search->value.pInt, (DaoValue*) routs );
 		}
 	}
 }
@@ -1109,10 +1109,10 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 		for(it=DMap_First( ns->lookupTable ); it; it=DMap_Next(ns->lookupTable,it) ){
 			DaoValue *value = DaoNamespace_GetValue( ns, it->value.pInt );
 			DString *name = it->key.pString;
-			up = LOOKUP_UP( it->value.pSize );
-			pm = LOOKUP_PM( it->value.pSize );
-			st = LOOKUP_ST( it->value.pSize );
-			id = LOOKUP_ID( it->value.pSize );
+			up = LOOKUP_UP( it->value.pInt );
+			pm = LOOKUP_PM( it->value.pInt );
+			st = LOOKUP_ST( it->value.pInt );
+			id = LOOKUP_ID( it->value.pInt );
 			if( up || pm != DAO_DATA_PUBLIC || value == NULL ) continue;
 
 			search = MAP_Find( self->lookupTable, name );

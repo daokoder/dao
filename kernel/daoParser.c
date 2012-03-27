@@ -3184,8 +3184,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		it1 = MAP_Find( klass->lookupTable, value->xRoutine.routName );
 		it2 = MAP_Find( klass->lookupTable, mbs );
 		if( it1 == NULL || it2 == NULL ) continue;
-		pm1 = LOOKUP_PM( it1->value.pSize );
-		pm2 = LOOKUP_PM( it2->value.pSize );
+		pm1 = LOOKUP_PM( it1->value.pInt );
+		pm2 = LOOKUP_PM( it2->value.pInt );
 		if( pm1 <= pm2 || pm2 != DAO_DATA_PRIVATE ){
 			self->curLine = value->xRoutine.defLine;
 			DaoParser_Warn( self, DAO_WARN_GET_SETTER, mbs );
@@ -4565,9 +4565,9 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 	if( self->isClassBody ){ /* a=1; b=class('t'){ var a = 2 }; */
 		/* Look for variable in class: */
 		if( self->hostClass && (node = MAP_Find( self->hostClass->lookupTable, name )) ){
-			int st = LOOKUP_ST( node->value.pSize );
+			int st = LOOKUP_ST( node->value.pInt );
 			if( st == DAO_OBJECT_VARIABLE ) routine->attribs |= DAO_ROUT_NEEDSELF;
-			return node->value.pSize;
+			return node->value.pInt;
 		}
 	}
 
@@ -4584,9 +4584,9 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 
 	/* Look for variable in class: */
 	if( self->hostClass && (node = MAP_Find( self->hostClass->lookupTable, name )) ){
-		int st = LOOKUP_ST( node->value.pSize );
+		int st = LOOKUP_ST( node->value.pInt );
 		if( st == DAO_OBJECT_VARIABLE ) routine->attribs |= DAO_ROUT_NEEDSELF;
-		return node->value.pSize;
+		return node->value.pInt;
 	}
 
 	if( (i = DaoNamespace_FindVariable( ns, name )) >= 0 ) return i;
@@ -4946,7 +4946,7 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		}
 		L = tokens[rb]->line;
 		fromCode = self->vmcCount;
-		for(k=0, t=tuples->items.pSize; k<tuples->size; k+=5, t+=5){
+		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
 			daoint first = t[3], last = t[4];
 			DaoParser_AddCode( self, DVM_ITER, t[0], 0, t[1], first, first+1,last );
 		}
@@ -4956,11 +4956,11 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		/* When all items have been looped,
 		 * set the value of the data at regItemt in a way so that TEST on it will fail.
 		 */
-		regItemt = tuples->items.pSize[1]; /* the first iterator for testing */
+		regItemt = tuples->items.pInt[1]; /* the first iterator for testing */
 		DaoParser_AddCode( self, DVM_TEST, regItemt, fromCode, 0, start, in, rb );
 		opening->jumpTrue = self->vmcLast;
 		self->vmcLast->jumpFalse = closing;
-		for(k=0, t=tuples->items.pSize; k<tuples->size; k+=5, t+=5){
+		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
 			daoint first = t[3], last = t[4];
 			DaoParser_AddCode( self, DVM_GETI, t[0], t[1], self->regCount, first, first+1, last );
 			DaoParser_AddCode( self, DVM_MOVE, self->regCount, regItemt, t[2], first, 0, first );
@@ -5494,9 +5494,9 @@ static int DaoParser_ClassExpression( DaoParser *self, int start )
 		k = DaoParser_PushRegisters( self, 1+3*self->protoValues->size );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, reg2, k++, start, 0, rb );
 		for(it=DMap_First(self->protoValues); it; it=DMap_Next(self->protoValues,it)){
-			int st = LOOKUP_ST( it->value.pSize );
-			int up = LOOKUP_UP( it->value.pSize );
-			int id = LOOKUP_ID( it->value.pSize );
+			int st = LOOKUP_ST( it->value.pInt );
+			int up = LOOKUP_UP( it->value.pInt );
+			int id = LOOKUP_ID( it->value.pInt );
 			if( up ) continue; /* should be never true */
 			DaoParser_AddCode( self, DVM_LOAD, it->key.pInt, 0, k++, mid, 0, 0 );
 			DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, st, k++, mid, 0, 0 );
