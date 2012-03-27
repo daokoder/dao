@@ -1987,7 +1987,11 @@ DaoVmSpace* DaoInit( const char *command )
 #endif
 
 	DaoGC_Start();
+
+#if 0
+#warning"-------------using concurrent GC by default!"
 	DaoCGC_Start();
+#endif
 
 	if( daodir == NULL && command ){
 		int absolute = command[0] == '/';

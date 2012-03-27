@@ -82,11 +82,9 @@ union DaoValue
 		uchar_t  type;
 		uchar_t  subtype;
 		uchar_t  trait;
-		uchar_t  delay : 4; /* used to avoid frequent scanning of persistent objects; */
-		uchar_t  idle  : 1; /* used to mark objects in the idle buffer; */
+		uchar_t  delay : 6; /* used to avoid frequent scanning of persistent objects; */
 		uchar_t  work  : 1; /* used to mark objects in the work buffer; */
 		uchar_t  alive : 1; /* mark alive objects (scanned for reachable objects); */
-		uchar_t  dummy : 1;
 		int  refCount;
 		int  cycRefCount;
 	} xGC;

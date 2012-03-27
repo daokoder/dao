@@ -51,10 +51,11 @@ struct DArray
 
 	} items;
 
-	daoint  size;
-	daoint  bufsize;
-	size_t  offset : CHAR_BIT*sizeof(size_t) - 4;
-	size_t  type   : 4; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
+	daoint    size;
+	daoint    bufsize;
+	ushort_t  offset;
+	uchar_t   type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
+	uchar_t   mutating;
 };
 
 DAO_DLL DArray* DArray_New( short type );
