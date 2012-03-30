@@ -1488,8 +1488,8 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	p[0] = pid;
-	p[1] = value;
+	p[0] = value;
+	p[1] = pid;
 	DaoProcess_PushCallable( proc, func, self0, p, 2 );
 }
 static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
@@ -1529,8 +1529,8 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
 	}
-	memcpy( p, ids, N*sizeof(DaoValue*) );
-	p[N] = value;
+	memcpy( p+1, ids, N*sizeof(DaoValue*) );
+	p[0] = value;
 	DaoProcess_PushCallable( proc, func, self, p, N+1 );
 }
 static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )

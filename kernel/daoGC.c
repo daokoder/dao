@@ -889,6 +889,15 @@ void DaoIGC_Continue()
 		break;
 	case GC_DEC_RC :
 		DaoIGC_CycRefCountDecScan();
+#if 0
+		if( gcWorker.finalizing && gcWorker.workType == GC_INC_RC ){
+			daoint i;
+			for( i=0; i<gcWorker.workList->size; i++ ){
+				DaoValue *value = gcWorker.workList->items.pValue[i];
+				if( value->xGC.cycRefCount >0 ) DaoGC_PrintValueInfo( value );
+			}
+		}
+#endif
 		break;
 	case GC_INC_RC :
 	case GC_INC_RC2 :

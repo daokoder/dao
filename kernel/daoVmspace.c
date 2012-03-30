@@ -683,10 +683,13 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 		DString_Assign( ns->name, array->items.pString[0] );
 	}
 	DString_Assign( val, array->items.pString[0] );
-	DaoList_Append( argv, sval );
 	DaoMap_Insert( cmdarg, nkey, sval );
 	DaoVmSpace_MakePath( self, ns->name );
 	DaoNamespace_SetName( ns, ns->name->mbs ); /* to update ns->path and ns->file; */
+	for(i=0; i<array->size; i++){
+		DString_Assign( val, array->items.pString[i] );
+		DaoList_Append( argv, sval );
+	}
 	i = 1;
 	while( i < array->size ){
 		DString *s = array->items.pString[i];
@@ -704,7 +707,6 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, val );
 
-			DaoList_Append( argv, sval );
 			DaoMap_Insert( cmdarg, skey, sval );
 			DString_SubString( s, key, 0, eq );
 			DaoMap_Insert( cmdarg, skey, sval );
@@ -715,7 +717,6 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, val );
 
-			DaoList_Append( argv, sval );
 			DaoMap_Insert( cmdarg, skey, sval );
 			DString_Assign( key, s );
 			DaoMap_Insert( cmdarg, skey, sval );
@@ -726,8 +727,6 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 			DString_Assign( val, s );
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, s );
-
-			DaoList_Append( argv, sval );
 			DaoMap_Insert( cmdarg, nkey, sval );
 		}
 	}
@@ -815,7 +814,12 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 			}
 		}
 		if( argNames->items.pString[i]->size ){
+			DString *S = argNames->items.pString[i];
 			DaoNameValue *nameva = DaoNameValue_New( argNames->items.pString[i], nkey );
+			DaoValue *tp = (DaoValue*) DaoNamespace_GetType( ns, nkey );
+			DaoType *type = DaoNamespace_MakeType( ns, S->mbs, DAO_PAR_NAMED, tp, NULL, 0 );
+			nameva->unitype = type;
+			GC_IncRC( nameva->unitype );
 			DaoList_Append( ns->argParams, (DaoValue*) nameva );
 			nameva->trait |= DAO_VALUE_CONST;
 		}else{
@@ -1821,7 +1825,7 @@ static DaoFuncItem dao_FakeList_Meths[] =
 	{ dao_FakeList_FakeList, FakeListName "( size=0 )" },
 	{ dao_FakeList_Size, "size( self :FakeList )=>int" },
 	{ dao_FakeList_GetItem, "[]( self :FakeList<@T<short|int|float>>, index :int )=>int" },
-	{ dao_FakeList_SetItem, "[]=( self :FakeList<@T<short|int|float>>, index :int, value :int )=>int" },
+	{ dao_FakeList_SetItem, "[]=( self :FakeList<@T<short|int|float>>, value :int, index :int )=>int" },
 	{ NULL, NULL }
 };
 static void Dao_FakeList_Delete( void *self ){}

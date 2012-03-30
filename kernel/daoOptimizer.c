@@ -2961,8 +2961,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_GETI :
 		case DVM_GETDI :
 			value = consts[opa] ? dao_none_value : NULL;
-			GC_ShiftRC( value, consts[opc] );
-			consts[opc] = value;
 
 			integer.value = opb;
 			value = (DaoValue*)(DaoInteger*)&integer;
@@ -3171,8 +3169,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_GETMI :
 			{
 				value = consts[opa] ? dao_none_value : NULL;;
-				GC_ShiftRC( value, consts[opc] );
-				consts[opc] = value;
 				ct = at;
 				meth = NULL;
 				DString_SetMBS( mbs, "[]" );
@@ -3244,8 +3240,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			{
 				int ak = 0;
 				value = consts[opa] ? dao_none_value : NULL;;
-				GC_ShiftRC( value, consts[opc] );
-				consts[opc] = value;
 				ct = NULL;
 				value = routConsts->items.pValue[opb];
 				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
@@ -3561,13 +3555,13 @@ NotExist_TryAux:
 				case DAO_OBJECT :
 					if( (meth=DaoClass_FindOperator( & ct->aux->xClass, "[]=", hostClass )) == NULL)
 						goto InvIndex;
-					ts[0] = bt;
-					ts[1] = at;
+					ts[0] = at;
+					ts[1] = bt;
 					k = 2;
 					if( bt->tid == DAO_TUPLE ){
 						if( bt->nested->size + 2 > DAO_MAX_PARAM ) goto InvIndex;
-						for(k=0,K=bt->nested->size; k<K; k++) ts[k] = bt->nested->items.pType[k];
-						ts[bt->nested->size] = at;
+						ts[0] = at;
+						for(k=0,K=bt->nested->size; k<K; k++) ts[k+1] = bt->nested->items.pType[k];
 						k = bt->nested->size + 1;
 					}
 					rout = DaoValue_Check( meth, ct, ts, k, DVM_CALL, errors );
@@ -3577,13 +3571,13 @@ NotExist_TryAux:
 					DString_SetMBS( mbs, "[]=" );
 					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto InvIndex;
-					ts[0] = bt;
-					ts[1] = at;
+					ts[0] = at;
+					ts[1] = bt;
 					k = 2;
 					if( bt->tid == DAO_TUPLE ){
 						if( bt->nested->size + 2 > DAO_MAX_PARAM ) goto InvIndex;
-						for(k=0,K=bt->nested->size; k<K; k++) ts[k] = bt->nested->items.pType[k];
-						ts[bt->nested->size] = at;
+						ts[0] = at;
+						for(k=0,K=bt->nested->size; k<K; k++) ts[k+1] = bt->nested->items.pType[k];
 						k = bt->nested->size + 1;
 					}
 					rout = DaoValue_Check( meth, ct, ts, k, DVM_CALL, errors );
@@ -3651,9 +3645,8 @@ NotExist_TryAux:
 					if( meth == NULL ) goto WrongContainer;
 				}
 				if( meth ){
-					memcpy( ts, types+opc+1, opb*sizeof(DaoType*) );
-					ts[opb] = at;
-					/* TODO, self type for class? */
+					ts[0] = at;
+					memcpy( ts + 1, types+opc+1, opb*sizeof(DaoType*) );
 					rout = DaoValue_Check( meth, ct, ts, opb+1, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
 				}
@@ -3667,8 +3660,6 @@ NotExist_TryAux:
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				value = consts[opa] ? dao_none_value : NULL;;
-				GC_ShiftRC( value, consts[opc] );
-				consts[opc] = value;
 				break;
 			}
 		case DVM_SETF :
@@ -4518,7 +4509,7 @@ NotExist_TryAux:
 			{
 				/* if( inited[opa] ==0 ) goto NotInit;  allow none value for testing! */
 				if( types[opa] ==NULL ) goto NotMatch;
-				if( consts[opa] ){
+				if( consts[opa] && consts[opa]->type <= DAO_LONG ){
 					vmc->code =  DaoValue_IsZero( consts[opa] ) ? DVM_GOTO : DVM_UNUSED;
 					continue;
 				}

@@ -711,8 +711,8 @@ void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N,
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	DaoRoutine *func = DaoType_FindFunctionMBS( type, "[]=" );
 	DaoValue *p[ DAO_MAX_PARAM ];
-	memcpy( p, pid, N*sizeof(DaoValue*) );
-	p[N+1] = value;
+	memcpy( p+1, pid, N*sizeof(DaoValue*) );
+	p[0] = value;
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "[]=" );
 		return;

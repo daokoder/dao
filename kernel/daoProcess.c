@@ -1097,15 +1097,12 @@ CallEntry:
 			uchar_t priv = routine->attribs & DAO_ROUT_PRIVATE;
 			if( routine->routHost ){
 				DaoObject *obj = topFrame->prev ? topFrame->prev->object : NULL;
-				if( priv == 0 && obj == NULL ) goto CallNotPermitted;
+				//XXX fltk/demo/table.dao:
+				//if( priv == 0 && obj == NULL ) goto CallNotPermitted;
 				if( priv && obj->defClass->objType != routine->routHost ) goto CallNotPermitted;
 			}else if( priv && routine->nameSpace != topFrame->prev->routine->nameSpace ){
 				goto CallNotPermitted;
 			}
-CallNotPermitted:
-			/* DaoProcess_PopFrame( self ); cannot popframe, it may be tail-call optimized! */
-			DaoProcess_RaiseException( self, DAO_ERROR, "CallNotPermitted" );
-			goto FinishProc;
 		}
 	}
 
@@ -2322,6 +2319,10 @@ FinishCall:
 	DaoProcess_PopFrame( self );
 	DaoGC_TryInvoke();
 	goto CallEntry;
+
+CallNotPermitted:
+	/* DaoProcess_PopFrame( self ); cannot popframe, it may be tail-call optimized! */
+	DaoProcess_RaiseException( self, DAO_ERROR, "CallNotPermitted" );
 
 FinishProc:
 
@@ -4822,7 +4823,7 @@ TryAgain:
 		func = DaoType_FindFunction( cdata->ctype, name );
 	}
 	if( func == NULL ){
-		if( bothobj && boolres ) return 0;
+		if( bothobj && boolres ) goto Default;
 		goto ArithError;
 	}
 	if( compo ==0 ){
@@ -4844,6 +4845,11 @@ ArithError:
 	if( nopac == 0 ){
 		nopac = 1;
 		goto TryAgain;
+	}
+Default:
+	if( code == DVM_NOT && A->type == DAO_CDATA ){
+		DaoProcess_PutInteger( self, A->xCdata.data == NULL );
+		return 1;
 	}
 	DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 	return 0;

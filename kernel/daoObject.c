@@ -110,8 +110,8 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	DaoObject *self = & self0->xObject;
 	DaoValue *ps[ DAO_MAX_PARAM ];
 	int rc;
-	memcpy( ps, ids, N*sizeof(DaoValue*) );
-	ps[N] = value;
+	memcpy( ps+1, ids, N*sizeof(DaoValue*) );
+	ps[0] = value;
 	DString_SetMBS( proc->mbstring, "[]=" );
 	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1,1,0 );
 	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( proc->mbstring ) );

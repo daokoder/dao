@@ -459,6 +459,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 {
 	DaoType *type;
 	DaoValue *value;
+	DArray *parents, *offsets;
 	DString *mbs;
 	DNode *search;
 	daoint i, k, id, perm, index;
@@ -502,9 +503,12 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 		}
 	}
-	for(i=0; i<self->superClass->size; i++){
-		DaoClass *klass = self->superClass->items.pClass[i];
-		DaoCdata *cdata = self->superClass->items.pCdata[i];
+	parents = DArray_New(0);
+	offsets = DArray_New(0);
+	DaoClass_Parents( self, parents, offsets );
+	for(i=1; i<parents->size; i++){
+		DaoClass *klass = parents->items.pClass[i];
+		DaoCdata *cdata = parents->items.pCdata[i];
 		if( klass->type == DAO_CLASS ){
 			/* For class data: */
 			for( id=0; id<klass->cstDataName->size; id++ ){
@@ -601,6 +605,8 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 		}
 	}
+	DArray_Delete( parents );
+	DArray_Delete( offsets );
 	DString_Delete( mbs );
 }
 /* assumed to be called after parsing class body */

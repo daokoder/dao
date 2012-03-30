@@ -748,6 +748,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->constEvalProcess = NULL;
 	self->constEvalRoutine = NULL;
 
+	DArray_Append( self->auxData, self->argParams );
+
 	DString_SetMBS( self->lang, "dao" );
 	DArray_Append( self->namespaces, self );
 
@@ -788,7 +790,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
 
-	DaoList_Delete( self->argParams );
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->constants );
 	DArray_Delete( self->variables );
