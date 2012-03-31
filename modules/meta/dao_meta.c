@@ -105,7 +105,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 	if( index == NULL ) return;
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
-		size_t id = node->value.pSize;
+		size_t id = node->value.pInt;
 		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
 		if( lookup ) id = LOOKUP_ID( id );
 		tuple = DaoTuple_New( 2 );
@@ -154,7 +154,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 	if( index == NULL ) return;
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
-		size_t st = 0, id = node->value.pSize;
+		size_t st = 0, id = node->value.pInt;
 		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
 		if( lookup ){
 			st = LOOKUP_ST( id );
@@ -201,8 +201,8 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 		klass = & p[0]->xClass;
 		if( p[0]->type == DAO_OBJECT ) klass = p[0]->xObject.defClass;
 		node = DMap_Find( klass->lookupTable, name );
-		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_CONSTANT ){
-			value = klass->constants->items.pValue + LOOKUP_ID( node->value.pSize );
+		if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_CONSTANT ){
+			value = klass->constants->items.pValue + LOOKUP_ID( node->value.pInt );
 			type = (DaoValue*) DaoNamespace_GetType( ns, *value );
 		}
 	}else if( p[0]->type == DAO_NAMESPACE ){
@@ -246,13 +246,13 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 			klass = p[0]->xObject.defClass;
 		}
 		node = DMap_Find( klass->lookupTable, name );
-		if( node && LOOKUP_ST( node->value.pSize ) == DAO_CLASS_VARIABLE ){
-			DaoVariable *var = klass->variables->items.pVar[LOOKUP_ID( node->value.pSize )];
+		if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
+			DaoVariable *var = klass->variables->items.pVar[LOOKUP_ID( node->value.pInt )];
 			value = & var->value;
 			type = (DaoValue*) var->dtype;
-		}else if( object && node && LOOKUP_ST( node->value.pSize ) == DAO_OBJECT_VARIABLE ){
-			value = object->objValues + LOOKUP_ID( node->value.pSize );
-			type = klass->objDataType->items.pValue[ LOOKUP_ID( node->value.pSize ) ];
+		}else if( object && node && LOOKUP_ST( node->value.pInt ) == DAO_OBJECT_VARIABLE ){
+			value = object->objValues + LOOKUP_ID( node->value.pInt );
+			type = klass->objDataType->items.pValue[ LOOKUP_ID( node->value.pInt ) ];
 		}else{
 			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid field" );
 			return;

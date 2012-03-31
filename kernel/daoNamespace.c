@@ -1555,6 +1555,9 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		DString_AppendMBS( mbs, "<any,any>" );
 		DArray_Append( nstd, any );
 		DArray_Append( nstd, any );
+	}else if( tid == DAO_TUPLE ){
+		DString_AppendMBS( mbs, "<...>" );
+		attrib |= DAO_TYPE_VARIADIC;
 	}else if( tid == DAO_CLASS && pb ){
 		/* do not save the abstract type for class and object in namespace,
 		 * because the class may be nested in another class, and different

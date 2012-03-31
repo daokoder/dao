@@ -174,6 +174,7 @@ struct DaoGarbageCollector
 	DMutex    mutex_block_mutator;
 
 	DMutex    data_lock;
+	DMutex    generic_lock;
 
 	DCondVar  condv_start_gc;
 	DCondVar  condv_block_mutator;
@@ -253,6 +254,8 @@ void DaoCGC_Start()
 	if( gcWorker.concurrent ) return;
 #ifdef DAO_WITH_THREAD
 	DThread_Init( & gcWorker.thread );
+	DMutex_Init( & gcWorker.data_lock );
+	DMutex_Init( & gcWorker.generic_lock );
 	DMutex_Init( & gcWorker.mutex_idle_list );
 	DMutex_Init( & gcWorker.mutex_start_gc );
 	DMutex_Init( & gcWorker.mutex_block_mutator );
@@ -631,11 +634,11 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 
 void GC_Lock()
 {
-	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
 }
 void GC_Unlock()
 {
-	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
 }
 
 /* Concurrent Garbage Collector */
@@ -648,6 +651,8 @@ void DaoCGC_Finish()
 	DThread_Join( & gcWorker.thread );
 
 	DThread_Destroy( & gcWorker.thread );
+	DMutex_Destroy( & gcWorker.data_lock );
+	DMutex_Destroy( & gcWorker.generic_lock );
 	DMutex_Destroy( & gcWorker.mutex_idle_list );
 	DMutex_Destroy( & gcWorker.mutex_start_gc );
 	DMutex_Destroy( & gcWorker.mutex_block_mutator );

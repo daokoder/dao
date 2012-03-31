@@ -556,8 +556,10 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			DArray_Append( nodes[vmc->c]->ins, node );
 			break;
 		case DVM_RETURN : DMap_Insert( self->finals, node, NULL ); break;
-		// GETVH, GETVL etc. need to be linked with the outer codes:
-		//case DVM_SECT   : DMap_Insert( self->inits, node, NULL ); break;
+		/*
+		// case DVM_SECT : DMap_Insert( self->inits, node, NULL ); break;
+		// not for DVM_SECT:  GETVH, GETVL etc. need to be linked with the outer codes:
+		*/
 		default : break;
 		}
 	}
@@ -1085,8 +1087,10 @@ static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine 
 	do{
 		DaoType **types = routine->body->regType->items.pType;
 		DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
-		//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
-		//DaoOptimizer_Print( self );
+#if 0
+		DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
+		DaoOptimizer_Print( self );
+#endif
 		M = routine->body->regCount;
 		DArray_Resize( array, M, 0 );
 		regmap = array->items.pInt;
@@ -1130,7 +1134,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 
 	nodes = self->nodes->items.pCnode;
 	while( 1 ){
-		//DaoOptimizer_Print( self );
+		/* DaoOptimizer_Print( self ); */
 		for(i=0; i<N; i++){
 			node = nodes[i];
 			vmc = codes[i];
@@ -1194,7 +1198,7 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 	DArray_Resize( unused2, N, 0 );
 	unused = unused2->items.pInt;
 	while( 1 ){
-		//DaoOptimizer_Print( self );
+		/* DaoOptimizer_Print( self ); */
 		array->size = 0;
 		for(i=0; i<N; i++){
 			node = nodes[i];
@@ -1356,12 +1360,12 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	DaoOptimizer_RemapRegister( self, routine );
 	regmap = self->array->items.pInt;
 
-	//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
+	/* DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream ); */
 
 	/* Now use the linear scan algorithm (Poletto and Sarkar) to reallocation the registers: */
 	DaoOptimizer_DoLVA( self, routine );
 
-	//DaoOptimizer_Print( self );
+	/* DaoOptimizer_Print( self ); */
 
 	DArray_Resize( array, 2*M, 0 );
 	intervals = array->items.pInt;
@@ -1414,7 +1418,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	}
 	for(i=0; i<M; i++){
 		type = types[i];
-		//printf( "%3i: %3i %3i\n", i, intervals[2*i], intervals[2*i+1] );
+		/* printf( "%3i: %3i %3i\n", i, intervals[2*i], intervals[2*i+1] ); */
 		if( regmap[i] >= 0 ) continue;
 		/* count the number of registers with the same types: */
 		if( (it = MAP_Find( sets, type )) == NULL ) it = MAP_Insert( sets, type, one );
@@ -1497,7 +1501,7 @@ static void DaoRoutine_Optimize( DaoRoutine *self )
 	DaoOptimizer_DCE( optimizer, self );
 	DaoOptimizer_ReduceRegister( optimizer, self );
 
-	//DaoOptimizer_LinkDU( optimizer, self );
+	/* DaoOptimizer_LinkDU( optimizer, self ); */
 
 	if( notide && daoConfig.jit && dao_jit.Compile ){
 		/* LLVMContext provides no locking guarantees: */
@@ -2026,7 +2030,7 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts
 		if( DaoType_MatchTo( selftype, abtp, defs ) )
 			DaoType_RenewTypes( selftype, self->nameSpace, defs );
 	}
-	// XXX match the specialize routine type to the original routine type to setup type defs!
+	/* XXX match the specialize routine type to the original routine type to setup type defs! */
 #if 0
 	if( self->body ){
 		DaoRoutine *rout = self;
@@ -2429,7 +2433,6 @@ void DaoPrintCallError( DArray *errors, DaoStream *stream )
 			DString_Append( mbs, rout->routType->aux->xType.name );
 		}
 		DString_AppendMBS( mbs, ";\n" );
-		//DaoStream_WritePointer( stream, rout );
 		DaoStream_WriteString( stream, mbs );
 		DaoStream_WriteMBS( stream, "     Reference : " );
 		if( rout->body ){
@@ -2511,7 +2514,7 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 	DaoVmcArray_Clear( body->vmCodes );
 	DArray_Clear( body->annotCodes );
 	for(it=first,count=0; it; it=it->next){
-		//DaoInode_Print( it );
+		/* DaoInode_Print( it ); */
 		switch( it->code ){
 		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D : 
@@ -2646,7 +2649,6 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 	DaoStream_WriteString( stream, mbs );
 	DaoStream_WriteMBS( stream, " \";\n" );
 	DString_Delete( mbs );
-	//DaoPrintCallError( self->errors, stream );
 }
 static int DaoInferencer_Error( DaoInferencer *self, int error )
 {
@@ -2755,7 +2757,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	int TT1, TT2, TT3, TT4, TT5, TT6;
 
 	if( self->inodes->size == 0 ) return 1;
-	//DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
+	/* DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream ); */
 
 	catype = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 
@@ -2775,7 +2777,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		}
 		if( typeVH[0] == NULL ){
 			printf( "ERROR: invalid up-function for the closure proto-function\n" );
-			return 0; // XXX error message;
+			return 0; /* XXX error message; */
 		}
 	}
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
@@ -4100,7 +4102,7 @@ NotExist_TryAux:
 				if( ct != dao_type_int ) DaoInferencer_InsertMove2( self, inode, ct, dao_type_int );
 				continue;
 			}
-			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue; // XXX enum
+			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue; /* XXX enum */
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
@@ -4625,7 +4627,7 @@ NotExist_TryAux:
 				rout = NULL;
 				if( at->tid == DAO_CLASS ){
 					if( at->aux->xClass.classRoutines->overloads->routines->size ){
-						rout = (DaoRoutine*) at->aux->xClass.classRoutines; // XXX
+						rout = (DaoRoutine*) at->aux->xClass.classRoutines; /* XXX */
 					}else{
 						rout = at->aux->xClass.classRoutine;
 					}
@@ -4826,7 +4828,7 @@ TryPushBlockReturnType:
 						if( j >= (int)cbtype->nested->size ){
 							if( j < sect->c ) printf( "Unsupported code section parameter!\n" );
 							break;
-						}// XXX better warning
+						}/* XXX better warning */
 						tt = cbtype->nested->items.pType[j];
 						if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = (DaoType*)tt->aux;
 						tt = DaoType_DefineTypes( tt, NS, defs2 );
@@ -5501,11 +5503,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoInferencer_Init( inferencer, self, silent );
 	retc = DaoInferencer_DoInference( inferencer );
 	DaoInferencer_Delete( inferencer );
-	//if( retc ) DaoRoutine_Optimize( self );
-	//DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream );
-	int i;
-	//for(i=0; i<self->body->regType->size; i++)
-	//	if( self->body->regType->items.pType[i] ) printf( "%2i: %s\n", i, self->body->regType->items.pType[i]->name->mbs );
+	if( retc ) DaoRoutine_Optimize( self );
+	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
 	return retc;
 }
 
@@ -5586,7 +5585,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
 		GC_ShiftRC( T, T2 );
 		newfn->body->regType->items.pType[i + newfn->body->regCount] = T;
-		//DArray_Append( newfn->body->defLocals, oldfn->body->defLocals->items.pToken[i] );
+		/* DArray_Append( newfn->body->defLocals, oldfn->body->defLocals->items.pToken[i] ); */
 	}
 	newfn->body->regCount += oldfn->parCount;
 	annotCodes = newfn->body->annotCodes;
@@ -5628,7 +5627,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		vmc->b = DaoRoutine_AddConstant( newfn, decorator->routConsts->items.items.pValue[i] );
 		vmc->c = i;
 	}
-	DArray_PushBack( added, annotCodes->items.pVoid[0] ); // XXX
+	DArray_PushBack( added, annotCodes->items.pVoid[0] ); /* XXX */
 	vmc = added->items.pVmc[added->size-1];
 	vmc->code = DVM_TUPLE;
 	vmc->a = decorator->body->regCount;
