@@ -2735,7 +2735,7 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *dC = self->activeValues[ vmc->c ];
 	DaoArray *array = (DaoArray*) dC;
 	int type = DAO_NONE;
-	if( array && array->type == DAO_ARRAY && array->etype == tp->tid ){
+	if( tp && array && array->type == DAO_ARRAY && array->etype == tp->tid ){
 		DaoVmCode *vmc2 = vmc + 1;
 		if( array->refCount == 1 ) return array;
 		if( array->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){

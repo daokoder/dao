@@ -413,7 +413,10 @@ void DaoParser_PrintInformation( DaoParser *self, DArray *infolist, const char *
 	if( infolist->size ==0 ) return;
 	DaoStream_WriteMBS( stream, header );
 	DaoStream_WriteMBS( stream, " in file \"" );
-	DaoStream_WriteString( stream, self->fileName );
+	if( self->fileName->size )
+		DaoStream_WriteString( stream, self->fileName );
+	else
+		DaoStream_WriteString( stream, self->nameSpace->name );
 	DaoStream_WriteMBS( stream, "\":\n" );
 
 	for(i=infolist->size-1; i>=0; i--){

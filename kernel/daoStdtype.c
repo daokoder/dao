@@ -3868,11 +3868,25 @@ DaoTypeBase* DaoCdata_GetTyper(DaoCdata *self )
 {
 	return self->ctype->typer;
 }
+static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
+{
+	void *p;
+	daoint i, n;
+	if( self == totype || totype == NULL || data == NULL ) return data;
+	for(i=0,n=self->bases->size; i<n; i++){
+		if( self->bases->items.pType[i] == totype ){
+			if( self->typer->casts[i] ) return (*self->typer->casts[i])( data );
+			return data;
+		}
+		p = DaoType_CastCxxData( self->bases->items.pType[i], totype, data );
+		if( p ) return p;
+	}
+	return NULL;
+}
 void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 {
-	DaoValue *value = DaoType_CastToParent( (DaoValue*) self, totype );
-	if( value && (value->type == DAO_CDATA || value->type == DAO_CTYPE) ) return value->xCdata.data;
-	return NULL;
+	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
+	return DaoType_CastCxxData( self->ctype, totype, self->data );
 }
 
 

@@ -516,6 +516,10 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	/* printf( "DaoNamespace_TypeDefine: %s %s\n", old, type ); */
 	tp = DaoNamespace_FindType( self, & name );
 	if( tp == NULL ) tp = DaoParser_ParseTypeName( old, self, NULL );
+	if( tp == NULL ){
+		printf( "type aliasing failed: %s to %s, source type is not found!\n", old, type );
+		return NULL;
+	}
 	tp2 = DaoNamespace_FindType( self, & alias );
 	if( tp2 == NULL ) tp2 = DaoParser_ParseTypeName( type, self, NULL );
 	if( tp == tp2 ) return tp;
@@ -523,7 +527,10 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 
 	/* Only allow overiding types defined in parent namespaces: */
 	node = MAP_Find( self->abstypes, & alias );
-	if( tp == NULL || node != NULL ) return NULL;
+	if( node != NULL ){
+		printf( "type aliasing failed: %s to %s, target type was defined!\n", old, type );
+		return NULL;
+	}
 
 	/*
 	// Copy primitive types, so that it can be treated differently when necessary.
@@ -548,6 +555,8 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	}
 	if( DaoNS_ParseType( self, type, tp, tp, tp != tp2 ) == DAO_DT_FAILED ){
 		printf( "type aliasing failed: %s to %s\n", old, type );
+		GC_IncRC( tp );
+		GC_DecRC( tp );
 		return NULL;
 	}
 	return tp;
@@ -1286,7 +1295,7 @@ DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name )
 		DaoNamespace *ns = self->namespaces->items.pNS[i];
 		DaoType *type = DaoNamespace_FindType( ns, name );
 		if( type == NULL ) continue;
-		return DaoNamespace_AddType( self, name, type );
+		return type;
 	}
 	return NULL;
 }
