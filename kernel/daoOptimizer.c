@@ -3283,7 +3283,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						ct = & rout->routType->aux->xType;
 					}
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
-					int getter = 0;
+					int j, getter = 0;
 					klass = & at->aux->xClass;
 					type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
 					if( j ){
@@ -3696,7 +3696,7 @@ NotExist_TryAux:
 				case DAO_CLASS :
 				case DAO_OBJECT :
 					{
-						int setter = 0;
+						int j, setter = 0;
 						ck = ct->tid ==DAO_CLASS;
 						klass = & types[opc]->aux->xClass;
 						type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
@@ -4464,6 +4464,7 @@ NotExist_TryAux:
 			break;
 		case DVM_ITER :
 			{
+				int j;
 				DString_SetMBS( mbs, "__for_iterator__" );
 				ts[0] = dao_type_for_iterator;
 				meth = NULL;

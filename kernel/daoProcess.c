@@ -2535,7 +2535,7 @@ DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, daoint *array, daoint N 
 	if( N ){
 		DaoArray_ResizeVector( res, N );
 		if( array ) memcpy( res->data.i, array, N*sizeof(daoint) );
-	}else{
+	}else if( array ){
 		DaoArray_UseData( res, array );
 	}
 	return res;
@@ -2547,7 +2547,7 @@ DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, daoint N )
 	if( N ){
 		DaoArray_ResizeVector( res, N );
 		if( array ) memcpy( res->data.f, array, N*sizeof(float) );
-	}else{
+	}else if( array ){
 		DaoArray_UseData( res, array );
 	}
 	return res;
@@ -2559,7 +2559,7 @@ DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, daoint N )
 	if( N ){
 		DaoArray_ResizeVector( res, N );
 		if( array ) memcpy( res->data.d, array, N*sizeof(double) );
-	}else{
+	}else if( array ){
 		DaoArray_UseData( res, array );
 	}
 	return res;
@@ -2568,8 +2568,12 @@ DaoArray* DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, daoint
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
 	res->etype = DAO_COMPLEX;
-	DaoArray_ResizeVector( res, N );
-	if( N >0 && array ) memcpy( res->data.c, array, N*sizeof(complex16) );
+	if( N ){
+		DaoArray_ResizeVector( res, N );
+		if( array ) memcpy( res->data.c, array, N*sizeof(complex16) );
+	}else if( array ){
+		DaoArray_UseData( res, array );
+	}
 	return res;
 }
 #else
