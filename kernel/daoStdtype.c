@@ -361,10 +361,8 @@ DaoTypeBase baseTyper =
 {
 	"none", & baseCore, NULL, NULL, {0}, {0}, dao_free, NULL
 };
-static DaoNone none0 = {0,DAO_NONE,DAO_VALUE_CONST,0,1};
-static DaoNone any0  = {0,DAO_ANY,DAO_VALUE_CONST,0,1};
-DaoValue *dao_none_value = (DaoValue*) (void*) & none0;
-DaoValue *dao_any_value = (DaoValue*) (void*) & any0;
+static DaoNone none = {0,DAO_NONE,DAO_VALUE_CONST,0,1};
+DaoValue *dao_none_value = (DaoValue*) (void*) & none;
 
 
 extern DaoTypeBase numberTyper;

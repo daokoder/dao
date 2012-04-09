@@ -2735,7 +2735,11 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *dC = self->activeValues[ vmc->c ];
 	DaoArray *array = (DaoArray*) dC;
 	int type = DAO_NONE;
-	if( tp && array && array->type == DAO_ARRAY && array->etype == tp->tid ){
+	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
+		type = tp->nested->items.pType[0]->tid;
+		if( type > DAO_COMPLEX ) type = DAO_NONE;
+	}
+	if( type && array && array->type == DAO_ARRAY && array->etype == type ){
 		DaoVmCode *vmc2 = vmc + 1;
 		if( array->refCount == 1 ) return array;
 		if( array->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
@@ -2743,10 +2747,6 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 				return array;
 			}
 		}
-	}
-	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-		type = tp->nested->items.pType[0]->tid;
-		if( type == 0 || type > DAO_COMPLEX ) type = DAO_FLOAT;
 	}
 	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 ){
 		if( dC->xArray.etype < type ) DaoArray_ResizeVector( & dC->xArray, 0 );
@@ -4055,28 +4055,31 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 	}
 	for( j=0; j<count; j++){
 		DaoValue *p = self->activeValues[ opA + j ];
-		if( p == NULL || p->type != DAO_ARRAY ) continue;
+		if( p == NULL || p->type == DAO_NONE ) goto InvalidItem;
+		if( p->type > DAO_COMPLEX && p->type != DAO_ARRAY ) goto InvalidItem;
+		if( p->type == DAO_ARRAY ){
+			if( j && dims == NULL ) goto InvalidItem;
+		}else{
+			if( j && dims ) goto InvalidItem;
+			continue;
+		}
 		if( dims == NULL ){
 			ndim = p->xArray.ndim;
 			dims = p->xArray.dims;
 		}
 		if( dims == p->xArray.dims ) continue;
-		if( ndim != p->xArray.ndim ){
-			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
-			return;
-		}
-		for(m=0; m<ndim; m++){
-			if( dims[m] != p->xArray.dims[m] ){
-				dims = NULL;
-				break;
-			}
-		}
+		if( ndim != p->xArray.ndim ) goto InvalidItem;
+		for(m=0; m<ndim; m++) if( dims[m] != p->xArray.dims[m] ) goto InvalidItem;
+		continue;
+InvalidItem:
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "array item type or shape not matching" );
+		return;
 	}
 	if( dims ){
 		DaoArray_SetDimCount( array, ndim + 1 );
 		array->dims[0] = count;
 		memmove( array->dims + 1, dims, ndim*sizeof(daoint) );
-		DaoArray_ResizeArray( array, array->dims, ndim );
+		DaoArray_ResizeArray( array, array->dims, ndim + 1 );
 	}else{
 		DaoArray_ResizeVector( array, count );
 	}
@@ -5046,23 +5049,31 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	}else if( B->type >=DAO_INTEGER && B->type <=DAO_COMPLEX && A->type ==DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
 		DaoArray *nc = na;
-		if( vmc->a != vmc->c ) nc = DaoProcess_GetArray( self, vmc );
+		if( vmc->a != vmc->c ){
+			nc = DaoProcess_GetArray( self, vmc );
+			if( nc->etype == DAO_NONE ) nc->etype = na->etype;
+		}
 		DaoArray_array_op_number( nc, na, B, vmc->code, self );
 	}else if( A->type >=DAO_INTEGER && A->type <=DAO_COMPLEX && B->type ==DAO_ARRAY ){
 		DaoArray *nb = & B->xArray;
 		DaoArray *nc = nb;
-		if( vmc->b != vmc->c ) nc = DaoProcess_GetArray( self, vmc );
+		if( vmc->b != vmc->c ){
+			nc = DaoProcess_GetArray( self, vmc );
+			if( nc->etype == DAO_NONE ) nc->etype = nb->etype;
+		}
 		DaoArray_number_op_array( nc, A, nb, vmc->code, self );
 	}else if( A->type ==DAO_ARRAY && B->type ==DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
 		DaoArray *nb = & B->xArray;
 		DaoArray *nc;
-		if( vmc->a == vmc->c )
+		if( vmc->a == vmc->c ){
 			nc = na;
-		else if( vmc->b == vmc->c )
+		}else if( vmc->b == vmc->c ){
 			nc = nb;
-		else
+		}else{
 			nc = DaoProcess_GetArray( self, vmc );
+			if( nc->etype == DAO_NONE ) nc->etype = na->etype > nb->etype ? na->etype : nb->etype;
+		}
 		DaoArray_ArrayArith( nc, na, nb, vmc->code, self );
 #endif
 	}else if( A->type ==DAO_STRING && B->type ==DAO_INTEGER && vmc->code ==DVM_ADD

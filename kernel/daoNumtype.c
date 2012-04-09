@@ -3125,6 +3125,7 @@ double* DaoArray_ToDouble( DaoArray *self )
 {
 	daoint i, tsize = sizeof(double);
 	double *buf;
+	DaoArray_Sliced( self );
 	if( self->owner ==0 ) return self->data.d;
 	if( self->etype == DAO_DOUBLE || self->etype == DAO_COMPLEX ) return self->data.d;
 	self->data.p = dao_realloc( self->data.p, (self->size+1) * tsize );
@@ -3151,6 +3152,7 @@ float* DaoArray_ToFloat( DaoArray *self )
 {
 	daoint i;
 	float *buf = self->data.f;
+	DaoArray_Sliced( self );
 	if( self->etype == DAO_FLOAT ) return self->data.f;
 	if( self->etype == DAO_INTEGER ){
 		for(i=0; i<self->size; i++) buf[i] = (float)self->data.i[i];
@@ -3184,6 +3186,7 @@ daoint* DaoArray_ToInteger( DaoArray *self )
 {
 	daoint i;
 	daoint *buf = self->data.i;
+	DaoArray_Sliced( self );
 	if( self->etype == DAO_INTEGER ) return self->data.i;
 	switch( self->etype ){
 	case DAO_FLOAT  : for(i=0; i<self->size; i++) buf[i] = (daoint)self->data.f[i]; break;
@@ -3220,6 +3223,7 @@ type* name( DaoArray *self ) \
 { \
 	daoint i, size = self->size; \
 	type *buf = (type*) self->data.p; \
+	DaoArray_Sliced( self ); \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<size; i++) buf[i] = (cast)self->data.i[i]; break; \
 	case DAO_FLOAT   : for(i=0; i<size; i++) buf[i] = (cast)self->data.f[i]; break; \
@@ -3568,7 +3572,7 @@ void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D )
 		self->ndim += 1;
 		self->dims = (daoint*) dao_realloc( self->dims, 2*(k+1)*sizeof(daoint) );
 		if( dims[0] == 1 ){
-			memmove( self->dims + 1, self->dims, k*sizeof(daoint) );
+			self->dims[1] = self->dims[0];
 			self->dims[0] = 1;
 		}else{
 			self->dims[k] = 1;

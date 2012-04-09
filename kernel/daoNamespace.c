@@ -767,8 +767,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DString_SetMBS( name, "none" ); 
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_DATA_PUBLIC );
-	DString_SetMBS( name, "any" ); 
-	DaoNamespace_AddConst( self, name, dao_any_value, DAO_DATA_PUBLIC );
 
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
 
