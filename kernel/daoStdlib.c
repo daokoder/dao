@@ -227,7 +227,7 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 		frame = frame->prev;
 	}
 }
-void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output );
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoUserHandler *handler = proc->vmSpace->userHandler;
@@ -331,7 +331,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 			DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
 			DaoStream_WriteMBS( stream, sep );
 			for( i=start; i<=end; i++ ){
-				DaoRoutine_FormatCode( routine, i, mbs );
+				DaoRoutine_FormatCode( routine, i, *routine->body->annotCodes->items.pVmc[i], mbs );
 				DaoStream_WriteString( stream, mbs );
 			}
 			DString_Delete( mbs );

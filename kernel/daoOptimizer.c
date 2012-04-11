@@ -2545,7 +2545,7 @@ static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoType **types = self->types->items.pType;
 	DMap *defs = self->defs;
-	if( types[id] == NULL || (types[id]->attrib & DAO_TYPE_UNDEF) ){
+	if( types[id] == NULL || (types[id]->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 		if( types[id] == NULL || DaoType_MatchTo( type, types[id], NULL ) ){
 			if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
 			GC_ShiftRC( type, types[id] ); 
@@ -4747,7 +4747,7 @@ NotExist_TryAux:
 
 					tt = rout->routType;
 					cbtype = tt->cbtype;
-					if( tt->aux == NULL || (tt->attrib & DAO_TYPE_UNDEF) ){
+					if( tt->aux == NULL || (tt->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 					}
 
@@ -4836,7 +4836,7 @@ TryPushBlockReturnType:
 						DaoInferencer_UpdateType( self, k, tt );
 					}
 					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );
-					DArray_Append( rettypes, opc );
+					DArray_Append( rettypes, opc ); /* type at "opc" to be redefined; */
 					DArray_Append( rettypes, tt );
 					DArray_Append( rettypes, tt );
 					DArray_PushBack( self->typeMaps, defs2 );
@@ -4988,7 +4988,7 @@ TryPushBlockReturnType:
 								if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
 							}
 						}
-					}else if( ct && !( ct->attrib & DAO_TYPE_UNDEF) ){
+					}else if( ct && !( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 						if( notide && DaoType_MatchTo( at, ct, defs2 ) == DAO_MT_SUB ){
 							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs2 ) ){
 								/* typedef tuple<x:float,y:float> Point2D
