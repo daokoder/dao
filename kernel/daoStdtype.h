@@ -151,7 +151,7 @@ struct DaoTuple
 	DaoValue   *items[DAO_TUPLE_ITEMS]; /* the actual number of items is in ::size; */
 };
 
-DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int init );
+DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );
 DAO_DLL void DaoTuple_Delete( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );

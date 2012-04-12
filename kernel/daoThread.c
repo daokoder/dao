@@ -1109,7 +1109,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		status |= task->status;
 	}
 	if( F == DVM_FUNCT_FIND ){
-		DaoTuple *tuple = DaoProcess_PutTuple( proc );
+		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 		if( param->type == DAO_LIST && index != -1 ){
 			DaoValue **items = param->xList.items.items.pValue;
 			GC_ShiftRC( items[index], tuple->items[1] );

@@ -1462,7 +1462,7 @@ static void DaoSTR_Match0( DaoProcess *proc, DaoValue *p[], int N, int subm )
 	daoint p1=start, p2=end;
 	int capt = p[4]->xInteger.value;
 	int gid = p[2]->xInteger.value;
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
 	DaoValue **items = tuple->items;
 	if( start <0 ) start += self->size;
@@ -2082,7 +2082,7 @@ static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
 }
 static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoList *self = & p[0]->xList;
 	DaoValue *res, **data = self->items.items.pValue;
 	daoint i, imax, type, size = self->items.size;
@@ -2106,7 +2106,7 @@ static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoList *self = & p[0]->xList;
 	DaoValue *res, **data = self->items.items.pValue;
 	daoint i, imin, type, size = self->items.size;
@@ -2512,7 +2512,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			DaoProcess_PopFrame( proc );
 			DaoProcess_SetActiveFrame( proc, proc->topFrame );
-			tuple = DaoProcess_PutTuple( proc );
+			tuple = DaoProcess_PutTuple( proc, 0 );
 			GC_ShiftRC( items[i], tuple->items[1] );
 			tuple->items[1] = items[i];
 			tuple->items[0]->xInteger.value = j;
@@ -2855,7 +2855,7 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 	DaoMap *self = & self0->xMap;
 	if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
 		DaoTuple *iter = & pid->xTuple;
-		DaoTuple *tuple = DaoProcess_PutTuple( proc );
+		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 		DNode *node = (DNode*) iter->items[1]->xCdata.data;
 		if( node == NULL || tuple->size != 2 ) return;
 		DaoValue_Copy( node->key.pValue, tuple->items );
@@ -3057,21 +3057,21 @@ static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
 	case 0 :
 		node = MAP_FindLE( self->items, p[1] );
 		if( node == NULL ) break;
-		res = DaoProcess_PutTuple( proc );
+		res = DaoProcess_PutTuple( proc, 0 );
 		DaoValue_Copy( node->key.pValue, res->items );
 		DaoValue_Copy( node->value.pValue, res->items + 1 );
 		break;
 	case 1  :
 		node = MAP_Find( self->items, p[1] );
 		if( node == NULL ) break;
-		res = DaoProcess_PutTuple( proc );
+		res = DaoProcess_PutTuple( proc, 0 );
 		DaoValue_Copy( node->key.pValue, res->items );
 		DaoValue_Copy( node->value.pValue, res->items + 1 );
 		break;
 	case 2  :
 		node = MAP_FindGE( self->items, p[1] );
 		if( node == NULL ) break;
-		res = DaoProcess_PutTuple( proc );
+		res = DaoProcess_PutTuple( proc, 0 );
 		DaoValue_Copy( node->key.pValue, res->items );
 		DaoValue_Copy( node->value.pValue, res->items + 1 );
 		break;
@@ -3210,7 +3210,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			DaoProcess_PopFrame( proc );
 			DaoProcess_SetActiveFrame( proc, proc->topFrame );
-			tuple = DaoProcess_PutTuple( proc );
+			tuple = DaoProcess_PutTuple( proc, 0 );
 			GC_ShiftRC( node->key.pValue, tuple->items[0] );
 			GC_ShiftRC( node->value.pValue, tuple->items[1] );
 			tuple->items[0] = node->key.pValue;
@@ -3611,16 +3611,17 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 	return self;
 }
 #else
-DaoTuple* DaoTuple_Create( DaoType *type, int init )
+DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
-	int i, size = type->nested->size;
+	int M = type->nested->size;
+	int i, size = N > M ? N : M;
 	int extit = size > DAO_TUPLE_ITEMS ? size - DAO_TUPLE_ITEMS : 0;
 	int extra = extit*sizeof(DaoValue*) + type->rntcount*sizeof(DaoDouble);
 	DaoType **types = type->nested->items.pType;
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra );
 	DaoDouble *buffer = (DaoDouble*)(self->items + size);
 	self->type = DAO_TUPLE;
-	for(i=0; i<size; i++){
+	for(i=0; i<M; i++){
 		DaoType *it = types[i];
 		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
 		if( it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE ){

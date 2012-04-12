@@ -223,7 +223,6 @@ typedef struct DLong       DLong;
 typedef struct DNode       DNode;
 typedef struct DMap        DMap;
 
-typedef struct DArray          DaoFactory;
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
 typedef struct DaoUserStream   DaoUserStream;
@@ -315,7 +314,7 @@ struct DaoTypeBase
 	// it is called on the data field (DaoCdata::data), if the type is a opaque C type;
 	// otherwise, it is called on the type itself.
 	// For opaque C type, it is only called for DaoCdata created by DaoCdata_New(),
-	// DaoProcess_PutCdata(), or DaoFactory_NewCdata() with nonzero "own" parameter.
+	// DaoProcess_PutCdata(), or DaoProcess_NewCdata() with nonzero "own" parameter.
 	*/
 	void  (*Delete)( void *self );
 
@@ -488,7 +487,7 @@ DAO_DLL void DString_SetWCS( DString *self, const wchar_t *chs );
 /*
 // DString_SetDataMBS() and DString_SetDataWCS() replace the data of string
 // with data specified by (wide) character array with "n" characters.
-// If "n" is zero, the character array is assumed to be null-terminated.
+// If "n" is negative, the character array is assumed to be null-terminated.
 */
 DAO_DLL void DString_SetDataMBS( DString *self, const char *data, daoint n );
 DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, daoint n );
@@ -836,9 +835,7 @@ DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
-DAO_DLL DaoFactory* DaoProcess_GetFactory( DaoProcess *self );
-
-DAO_DLL DaoType*   DaoProcess_GetReturnType( DaoProcess *self );
+DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
 
 /*
 // The following functions can be called within a wrapped C function to create
@@ -853,7 +850,7 @@ DAO_DLL DaoType*   DaoProcess_GetReturnType( DaoProcess *self );
 // a tuple that can only accept DaoInteger as its first item, and DaoString as its
 // second item.
 //
-// All these functions return NULL when failed. This happens when the intended
+// All these functions return NULL when failed. This happens when the requested
 // returning value does not match to the returning type that is specified by the
 // function prototype of the wrapped C function.
 */
@@ -873,9 +870,35 @@ DAO_DLL DaoArray*  DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *arra
 DAO_DLL DaoList*   DaoProcess_PutList( DaoProcess *self );
 DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self, unsigned int hashing );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
-DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self );
 DAO_DLL DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
 DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
+
+/*
+// DaoProcess_PutTuple() creates a tuple as the returned value.
+//
+// The tuple size can be specified in the following ways:
+// 1. size==0: implicit size, to be determined by the destination type;
+// 2. size!=0: explicit size, the absolute value of this parameter;
+//
+// The destination type has to be compatible with the to-be-created tuple,
+// otherwise, a null pointer is returned to indicate an error.
+//
+// If the destination type is a variadic tuple (with variable size) type,
+// an explicit size must be at least as great as the minimum size of the
+// tuple type. And if the destination type is a fixed-size tuple type,
+// the explicit size must be the same as the size of the tuple type.
+//
+// If size is negative, the size number of latest values created or pushed into
+// the process's value cache will be used to created the tuple, and these values
+// are subsequently removed from the cache.
+//
+// Example:
+//   DaoProcess_NewInteger( proc, 123 );
+//   DaoProcess_NewMBString( proc, "abc", -1 );
+//   DaoProcess_PutTuple( proc, -2 );
+// This will put a tuple of (123, 'abc').
+*/
+DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self, int size );
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
@@ -931,9 +954,7 @@ DAO_DLL DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *nam
 DAO_DLL DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
-DAO_DLL DaoFactory* DaoVmSpace_AcquireFactory( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
-DAO_DLL void DaoVmSpace_ReleaseFactory( DaoVmSpace *self, DaoFactory *factory );
 
 DAO_DLL void DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream );
 DAO_DLL void DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream );
@@ -961,56 +982,59 @@ DAO_DLL int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module );
 
 
 /*
-// DaoFactory_CacheValue() caches the value in the value factory.
+// DaoProcess_CacheValue() caches the value in the process.
 */
-DAO_DLL void DaoFactory_CacheValue( DaoFactory *self, DaoValue *value );
+DAO_DLL void DaoProcess_CacheValue( DaoProcess *self, DaoValue *value );
 
 /*
-// DaoFactory_GetLastValues() returns the last "N" created or cached
+// DaoProcess_GetLastValues() returns the last "N" created or cached
 // values as an array.
 */
-DAO_DLL DaoValue** DaoFactory_GetLastValues( DaoFactory *self, int N );
+DAO_DLL DaoValue** DaoProcess_GetLastValues( DaoProcess *self, int N );
 
 /*
 // The following methods create values of the requested type with data
 // specified by the parameter(s). Values created in this way have references
-// stored in the value factory, so that user does not need to handle the
+// stored in the process's cache, so that user does not need to handle the
 // reference counting of the created value.
 */
-DAO_DLL DaoNone*    DaoFactory_NewNone( DaoFactory *self );
-DAO_DLL DaoInteger* DaoFactory_NewInteger( DaoFactory *self, daoint v );
-DAO_DLL DaoFloat*   DaoFactory_NewFloat( DaoFactory *self, float v );
-DAO_DLL DaoDouble*  DaoFactory_NewDouble( DaoFactory *self, double v );
-DAO_DLL DaoComplex* DaoFactory_NewComplex( DaoFactory *self, complex16 v );
-DAO_DLL DaoLong*    DaoFactory_NewLong( DaoFactory *self );
-DAO_DLL DaoString*  DaoFactory_NewString( DaoFactory *self, int mbs );
-DAO_DLL DaoString*  DaoFactory_NewMBString( DaoFactory *self, const char *s, daoint n );
-DAO_DLL DaoString*  DaoFactory_NewWCString( DaoFactory *self, const wchar_t *s, daoint n );
-DAO_DLL DaoEnum*    DaoFactory_NewEnum( DaoFactory *self, DaoType *type, int value );
-DAO_DLL DaoTuple*   DaoFactory_NewTuple( DaoFactory *self, int count );
-DAO_DLL DaoList*    DaoFactory_NewList( DaoFactory *self );
-
+DAO_DLL DaoNone*    DaoProcess_NewNone( DaoProcess *self );
+DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, daoint v );
+DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, float v );
+DAO_DLL DaoDouble*  DaoProcess_NewDouble( DaoProcess *self, double v );
+DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, complex16 v );
+DAO_DLL DaoLong*    DaoProcess_NewLong( DaoProcess *self );
+DAO_DLL DaoString*  DaoProcess_NewString( DaoProcess *self, int mbs );
 /*
-// DaoFactory_NewMap() creates a (hash) map.
+// Negative "n" indicates a null-terminated string:
 */
-DAO_DLL DaoMap*   DaoFactory_NewMap( DaoFactory *self, unsigned int hashing );
+DAO_DLL DaoString*  DaoProcess_NewMBString( DaoProcess *self, const char *s, daoint n );
+DAO_DLL DaoString*  DaoProcess_NewWCString( DaoProcess *self, const wchar_t *s, daoint n );
+DAO_DLL DaoEnum*    DaoProcess_NewEnum( DaoProcess *self, DaoType *type, int value );
+DAO_DLL DaoTuple*   DaoProcess_NewTuple( DaoProcess *self, int count );
+DAO_DLL DaoList*    DaoProcess_NewList( DaoProcess *self );
 
 /*
-// DaoFactory_NewArray() creates a numeric array with element type
+// DaoProcess_NewMap() creates a (hash) map.
+*/
+DAO_DLL DaoMap*   DaoProcess_NewMap( DaoProcess *self, unsigned int hashing );
+
+/*
+// DaoProcess_NewArray() creates a numeric array with element type
 // specified by the parameter "type".
 */
-DAO_DLL DaoArray* DaoFactory_NewArray( DaoFactory *self, int type );
+DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
 
 /*
-// DaoFactory_NewVectorSB() creates an integer vector from an array of signed byte;
-// DaoFactory_NewVectorUB() creates an integer vector from an array of unsigned byte;
-// DaoFactory_NewVectorSS() creates an integer vector from an array of signed short;
-// DaoFactory_NewVectorUS() creates an integer vector from an array of unsigned short;
-// DaoFactory_NewVectorSI() creates an integer vector from an array of signed int;
-// DaoFactory_NewVectorUI() creates an integer vector from an array of unsigned int;
-// DaoFactory_NewVectorI()  creates an integer vector from an array of daoint;
-// DaoFactory_NewVectorF()  creates an float vector from an array of float;
-// DaoFactory_NewVectorD()  creates an double vector from an array of double;
+// DaoProcess_NewVectorSB() creates an integer vector from an array of signed byte;
+// DaoProcess_NewVectorUB() creates an integer vector from an array of unsigned byte;
+// DaoProcess_NewVectorSS() creates an integer vector from an array of signed short;
+// DaoProcess_NewVectorUS() creates an integer vector from an array of unsigned short;
+// DaoProcess_NewVectorSI() creates an integer vector from an array of signed int;
+// DaoProcess_NewVectorUI() creates an integer vector from an array of unsigned int;
+// DaoProcess_NewVectorI()  creates an integer vector from an array of daoint;
+// DaoProcess_NewVectorF()  creates an float vector from an array of float;
+// DaoProcess_NewVectorD()  creates an double vector from an array of double;
 //
 // If "n" is not zero, the created array will allocate a new buffer, and copy
 // the data from the C array passed as parameter to the new buffer; otherwise,
@@ -1022,52 +1046,59 @@ DAO_DLL DaoArray* DaoFactory_NewArray( DaoFactory *self, int type );
 // the owner of the C array. A typical scenario of using array in this way is to call
 // a Dao function from C, and pass a C array to the Dao function.
 */
-DAO_DLL DaoArray* DaoFactory_NewVectorSB( DaoFactory *self, signed char *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorUB( DaoFactory *self, unsigned char *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorSS( DaoFactory *self, signed short *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorUS( DaoFactory *self, unsigned short *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorSI( DaoFactory *self, signed int *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorUI( DaoFactory *self, unsigned int *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorI( DaoFactory *self, daoint *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorF( DaoFactory *self, float *s, daoint n ); 
-DAO_DLL DaoArray* DaoFactory_NewVectorD( DaoFactory *self, double *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorSB( DaoProcess *self, signed char *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorUB( DaoProcess *self, unsigned char *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorSS( DaoProcess *self, signed short *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorUS( DaoProcess *self, unsigned short *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorSI( DaoProcess *self, signed int *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorUI( DaoProcess *self, unsigned int *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorI( DaoProcess *self, daoint *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorF( DaoProcess *self, float *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorD( DaoProcess *self, double *s, daoint n ); 
 
 /*
-// DaoFactory_NewMatrixSB() creates an integer matrix from a [n x m] matrix of signed byte;
-// DaoFactory_NewMatrixUB() creates an integer matrix from a [n x m] matrix of unsigned byte;
-// DaoFactory_NewMatrixSS() creates an integer matrix from a [n x m] matrix of signed short;
-// DaoFactory_NewMatrixUS() creates an integer matrix from a [n x m] matrix of unsigned short;
-// DaoFactory_NewMatrixSI() creates an integer matrix from a [n x m] matrix of signed int;
-// DaoFactory_NewMatrixUI() creates an integer matrix from a [n x m] matrix of unsigned int;
-// DaoFactory_NewMatrixI() creates an integer matrix from a [n x m] matrix of daoint;
-// DaoFactory_NewMatrixF() creates an float matrix from a [n x m] matrix of float;
-// DaoFactory_NewMatrixD() creates an double matrix from a [n x m] matrix of double;
+// DaoProcess_NewMatrixSB() creates an integer matrix from a [n x m] matrix of signed byte;
+// DaoProcess_NewMatrixUB() creates an integer matrix from a [n x m] matrix of unsigned byte;
+// DaoProcess_NewMatrixSS() creates an integer matrix from a [n x m] matrix of signed short;
+// DaoProcess_NewMatrixUS() creates an integer matrix from a [n x m] matrix of unsigned short;
+// DaoProcess_NewMatrixSI() creates an integer matrix from a [n x m] matrix of signed int;
+// DaoProcess_NewMatrixUI() creates an integer matrix from a [n x m] matrix of unsigned int;
+// DaoProcess_NewMatrixI() creates an integer matrix from a [n x m] matrix of daoint;
+// DaoProcess_NewMatrixF() creates an float matrix from a [n x m] matrix of float;
+// DaoProcess_NewMatrixD() creates an double matrix from a [n x m] matrix of double;
 */
-DAO_DLL DaoArray* DaoFactory_NewMatrixSB( DaoFactory *self, signed char **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixUB( DaoFactory *self, unsigned char **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixSS( DaoFactory *self, signed short **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixUS( DaoFactory *self, unsigned short **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixSI( DaoFactory *self, signed int **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixUI( DaoFactory *self, unsigned int **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixI( DaoFactory *self, daoint **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixF( DaoFactory *self, float **s, daoint n, daoint m );
-DAO_DLL DaoArray* DaoFactory_NewMatrixD( DaoFactory *self, double **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixSB( DaoProcess *self, signed char **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixUB( DaoProcess *self, unsigned char **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixSS( DaoProcess *self, signed short **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixUS( DaoProcess *self, unsigned short **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixSI( DaoProcess *self, signed int **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixUI( DaoProcess *self, unsigned int **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixI( DaoProcess *self, daoint **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixF( DaoProcess *self, float **s, daoint n, daoint m );
+DAO_DLL DaoArray* DaoProcess_NewMatrixD( DaoProcess *self, double **s, daoint n, daoint m );
 
 /*
-// DaoFactory_NewStream() creates a new stream with specified file.
+// DaoProcess_NewStream() creates a new stream with specified file.
 */
-DAO_DLL DaoStream* DaoFactory_NewStream( DaoFactory *self, FILE *file );
+DAO_DLL DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *file );
 
 /*
-// DaoFactory_NewCdata() creates a new cdata object with specified type and data.
+// DaoProcess_NewCdata() creates a new cdata object with specified type and data.
 // If and only if "owned" is not zero, the created cdata will be responsible to
 // deallocated "data".
 */
-DAO_DLL DaoCdata* DaoFactory_NewCdata( DaoFactory *self, DaoType *type, void *data, int owned );
+DAO_DLL DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned );
 
 
 DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );
+/*
+// DaoGC_TryDelete() will register the object for collection.
+// It is the same as:
+//   DaoGC_IncRC( p );
+//   DaoGC_DecRC( p );
+*/
+DAO_DLL void DaoGC_TryDelete( DaoValue *p );
 
 DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
 

@@ -152,7 +152,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->stackSize = 1+DAO_MAX_PARAM;
 	self->stackTop = 1;
 	self->freeValues = self->stackValues + 1;
-	self->factory = NULL;
+	self->factory = DArray_New(D_VALUE);
 
 	self->mbstring = DString_New(1);
 	self->mbsRegex = NULL;
@@ -194,11 +194,6 @@ void DaoProcess_Delete( DaoProcess *self )
 	dao_free( self );
 }
 
-DaoFactory* DaoProcess_GetFactory( DaoProcess *self )
-{
-	if( self->factory == NULL )self->factory = DArray_New(D_VALUE);
-	return self->factory;
-}
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 {
 #ifdef DAO_WITH_REGEX
@@ -733,9 +728,11 @@ int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[]
 }
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
 {
+	daoint m = self->factory->size;
 	DaoValue *params[ DAO_MAX_PARAM ];
 	memcpy( params, p, func->parCount*sizeof(DaoValue*) );
 	func->pFunc( self, params, n );
+	if( self->factory->size > m ) DArray_Erase( self->factory, m, -1 );
 }
 void DaoProcess_Stop( DaoProcess *self )
 {
@@ -2774,15 +2771,16 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
 	
 	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
-	if( tup && tup->unitype == type ){
+	if( tup && tup->unitype == type && tup->size == size ){
 		DaoVmCode *vmc = self->activeCode + 1;
+		int code = vmc->code;
 		if( tup->refCount == 1 ) return tup;
-		if( tup->refCount == 2 && (vmc->code == DVM_MOVE || vmc->code == DVM_MOVE_PP) && vmc->a != vmc->c ){
+		if( tup->refCount == 2 && (code == DVM_MOVE || code == DVM_MOVE_PP) && vmc->a != vmc->c ){
 			if( self->activeValues[vmc->c] == (DaoValue*) tup ) return tup;
 		}
 	}
 	if( type ){
-		tup = DaoTuple_Create( type, init );
+		tup = DaoTuple_Create( type, size, init );
 	}else{
 		tup = DaoTuple_New( size );
 	}
@@ -2790,12 +2788,24 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 	self->activeValues[ self->activeCode->c ] = (DaoValue*) tup;
 	return tup;
 }
-DaoTuple* DaoProcess_PutTuple( DaoProcess *self )
+DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 {
+	int i, N = abs(size);
+	int M = self->factory->size;
+	DaoValue **values = self->factory->items.pValue;
 	DaoType *type = self->activeTypes[ self->activeCode->c ];
+	DaoTuple *tuple;
+
 	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
-	return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
+	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
+	if( type->variadic == 0 && N != type->nested->size ) return NULL;
+	if( N < type->nested->size ) return NULL;
+	tuple = DaoProcess_GetTuple( self, type, N, size > 0 );
+	if( size > 0 ) return tuple;
+	if( M < size ) return NULL;
+	for(i=0; i<N; i++) DaoTuple_SetItem( tuple, values[M-N+i], i );
+	return tuple;
 }
 DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 {
@@ -3281,7 +3291,7 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 			tuple = tup;
 		}else if( type && type->tid == DAO_TUPLE ){
 			if( type->nested->size > vmc->b ) goto InvalidReturn;
-			tuple = DaoTuple_Create( type, 0 );
+			tuple = DaoTuple_Create( type, vmc->b, 0 );
 		}else{
 			tuple = DaoTuple_New( vmc->b );
 		}
@@ -3417,19 +3427,19 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	}
 	return 1;
 }
-int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC );
 DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC );
-void DaoFactory_PopValues( DaoFactory *self, int N );
+int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC );
+void DaoProcess_PopValues( DaoProcess *self, int N );
 void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoFactory *factory = DaoProcess_GetFactory( self );
+	int i, n, mt, mt2;
+	int top = self->factory->size;
 	DaoType *at, *ct = self->activeTypes[ vmc->c ];
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoValue **vc2 = self->activeValues + vmc->c;
 	DaoRoutine *meth;
 	DNode *node;
-	int i, n, mt, mt2, top = factory->size;
 
 	if( va == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on none object" );
@@ -3520,7 +3530,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 NormalCasting:
 	va = DaoTypeCast( self, ct, va, vc );
-	DaoFactory_PopValues( factory, factory->size - top );
+	DaoProcess_PopValues( self, self->factory->size - top );
 	if( va == NULL || va->type == 0 ) goto FailConversion;
 	DaoValue_Copy( va, vc2 );
 	return;
@@ -3992,7 +4002,7 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 	if( va == NULL || va->type == 0 ) return;
 	
 	if( vc == NULL || vc->type != DAO_TUPLE || vc->xTuple.unitype != dao_type_for_iterator ){
-		vc = (DaoValue*) DaoProcess_PutTuple( self );
+		vc = (DaoValue*) DaoProcess_PutTuple( self, 0 );
 	}
 	
 	iter = & vc->xTuple;
@@ -5781,25 +5791,25 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	return toklen == (int)mbs->size;
 }
 #ifdef DAO_WITH_NUMARRAY
-static DaoArray* DaoTypeCast_MakeArray( DaoFactory *factory, DaoValue *dC, int etype )
+static DaoArray* DaoProcess_PrepareArray( DaoProcess *self, DaoValue *dC, int etype )
 {
 	DaoArray *array = NULL;
 	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 && array->original == NULL ){
 		array = (DaoArray*) dC;
 		DaoArray_SetNumType( array, etype );
 	}else{
-		array = DaoFactory_NewArray( factory, etype );
+		array = DaoProcess_NewArray( self, etype );
 	}
 	return array;
 }
 #endif
-static DaoTuple* DaoTypeCast_MakeTuple( DaoFactory *factory, DaoValue *dC, DaoType *ct, int size )
+static DaoTuple* DaoProcess_PrepareTuple( DaoProcess *self, DaoValue *dC, DaoType *ct, int size )
 {
 	DaoTuple *tuple = NULL;
 	if( dC && dC->type == DAO_TUPLE && dC->xTuple.refCount == 1 && dC->xTuple.unitype == ct ){
 		tuple = (DaoTuple*) dC;
 	}else{
-		tuple = DaoFactory_NewTuple( factory, size );
+		tuple = DaoProcess_NewTuple( self, size );
 		tuple->unitype = ct;
 		GC_IncRC( ct );
 	}
@@ -5807,7 +5817,6 @@ static DaoTuple* DaoTypeCast_MakeTuple( DaoFactory *factory, DaoValue *dC, DaoTy
 }
 DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC )
 {
-	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoTuple *tuple = NULL, *tuple2 = NULL;
 	DaoList *list = NULL, *list2 = NULL;
@@ -5825,7 +5834,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
 	if( ct->tid > DAO_NONE && ct->tid <= DAO_LONG && (dC == NULL || dC->type != ct->tid) ){
 		dC = DaoValue_SimpleCopy( ct->value );
-		DaoFactory_CacheValue( factory, dC );
+		DaoProcess_CacheValue( proc, dC );
 	}
 	if( dA->type == DAO_STRING && ct->tid > DAO_NONE && ct->tid <= DAO_LONG ){
 		if( ConvertStringToNumber( proc, dA, dC ) ==0 ) goto FailConversion;
@@ -5901,7 +5910,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( dA->type == DAO_STRING ){
 			str = dA->xString.data;
 			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
-			array = DaoTypeCast_MakeArray( factory, dC, tp->tid );
+			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
 			DaoArray_ResizeVector( array, str->size );
 			for(i=0,n=str->size; i<n; i++){
 				wchar_t ch = str->mbs ? str->mbs[i] : str->wcs[i];
@@ -5920,7 +5929,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			array2 = & dA->xArray;
 			if( array2->original && DaoArray_Sliced( array2 ) == 0 ) goto FailConversion; 
 
-			array = DaoTypeCast_MakeArray( factory, dC, tp->tid );
+			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
 			DaoArray_ResizeArray( array, array2->dims, array2->ndim );
 			for(i=0,size=array2->size; i<size; i++){
 				switch( array->etype ){
@@ -5935,7 +5944,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			size = list->items.size;
 			if( tp == NULL ) goto FailConversion;
 			if( tp->tid == DAO_NONE || tp->tid > DAO_COMPLEX ) goto FailConversion;
-			array = DaoTypeCast_MakeArray( factory, dC, tp->tid );
+			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
 			DaoArray_ResizeVector( array, size );
 			for(i=0; i<size; i++){
 				itvalue = list->items.items.pValue[i];
@@ -5959,7 +5968,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( dC && dC->type == DAO_LIST && dC->xList.refCount == 1 && dC->xList.unitype == ct ){
 			list = (DaoList*) dC;
 		}else{
-			list = DaoFactory_NewList( factory );
+			list = DaoProcess_NewList( proc );
 			list->unitype = ct;
 			GC_IncRC( ct );
 			dC = (DaoValue*) list;
@@ -6015,7 +6024,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			map = (DaoMap*) dC;
 			DMap_Reset( map->items );
 		}else{
-			map = DaoFactory_NewMap( factory, map2->items->hashing );
+			map = DaoProcess_NewMap( proc, map2->items->hashing );
 			map->unitype = ct;
 			GC_IncRC( ct );
 			dC = (DaoValue*) map;
@@ -6036,7 +6045,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			tuple2 = (DaoTuple*) dA;
 			if( tuple2->unitype == ct || ct->nested->size ==0 ) goto Rebind;
 			if( tuple2->size < ct->nested->size ) goto FailConversion;
-			tuple = DaoTypeCast_MakeTuple( factory, dC, ct, ct->nested->size );
+			tuple = DaoProcess_PrepareTuple( proc, dC, ct, ct->nested->size );
 			for(i=0; i<tuple->size; i++){
 				DaoValue *V = tuple2->items[i];
 				tp2 = ct->nested->items.pType[i];
@@ -6048,7 +6057,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}else if( dA->type == DAO_LIST ){
 			list = (DaoList*) dA;
 			if( list->items.size < ct->nested->size ) goto FailConversion;
-			tuple = DaoTypeCast_MakeTuple( factory, dC, ct, list->items.size );
+			tuple = DaoProcess_PrepareTuple( proc, dC, ct, list->items.size );
 			for(i=0; i<tuple->size; i++){
 				DaoValue *V = list->items.items.pValue[i];
 				if( i < ct->nested->size ){
@@ -6062,7 +6071,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}else if( dA->type == DAO_MAP ){
 			map = (DaoMap*) dA;
 			if( map->items->size < ct->nested->size ) goto FailConversion;
-			tuple = DaoTypeCast_MakeTuple( factory, dC, ct, map->items->size );
+			tuple = DaoProcess_PrepareTuple( proc, dC, ct, map->items->size );
 			node = DMap_First( map->items );
 			for(i=0; node!=NULL; i++, node=DMap_Next(map->items,node) ){
 				if( i >= ct->nested->size ){

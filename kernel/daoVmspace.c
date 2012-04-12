@@ -290,37 +290,6 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Unlock( & self->mutexProc );
 #endif
 }
-DaoFactory* DaoVmSpace_AcquireFactory( DaoVmSpace *self )
-{
-	DaoFactory *fac = NULL;
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexProc );
-#endif
-	if( self->factories->size ){
-		fac = (DaoFactory*) DArray_Back( self->factories );
-		DArray_PopBack( self->factories );
-	}else{
-		fac = DArray_New(D_VALUE);
-		DMap_Insert( self->allFactories, fac, 0 );
-	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexProc );
-#endif
-	return fac;
-}
-void DaoVmSpace_ReleaseFactory( DaoVmSpace *self, DaoFactory *fac )
-{
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexProc );
-#endif
-	if( DMap_Find( self->allFactories, fac ) ){
-		DArray_Clear( fac );
-		DArray_PushBack( self->factories, fac );
-	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexProc );
-#endif
-}
 void DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream )
 {
 	GC_ShiftRC( stream, self->stdioStream );
@@ -388,9 +357,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->pathLoading = DArray_New(D_STRING);
 	self->pathSearching = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
-	self->factories = DArray_New(0);
 	self->allProcesses = DMap_New(D_VALUE,0);
-	self->allFactories = DMap_New(0,0);
 
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
@@ -423,10 +390,6 @@ DaoVmSpace* DaoVmSpace_New()
 }
 void DaoVmSpace_DeleteData( DaoVmSpace *self )
 {
-	DNode *it;
-	for(it=DMap_First(self->allFactories); it!=NULL; it=DMap_Next(self->allFactories,it) ){
-		DArray_Delete( it->key.pArray );
-	}
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -437,12 +400,10 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->pathLoading );
 	DArray_Delete( self->pathSearching );
 	DArray_Delete( self->processes );
-	DArray_Delete( self->factories );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allTokens );
 	DMap_Delete( self->allProcesses );
-	DMap_Delete( self->allFactories );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
 }
@@ -1938,7 +1899,6 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 	return dao_jit.Compile != NULL;
 }
 
-static DaoFactory *factory = NULL;
 
 DaoVmSpace* DaoInit( const char *command )
 {
@@ -1952,8 +1912,6 @@ DaoVmSpace* DaoInit( const char *command )
 	daoint i, n;
 
 	if( mainVmSpace ) return mainVmSpace;
-
-	factory = DArray_New(D_VALUE);
 
 	dao_cdata_bindings = DHash_New(0,0);
 	dao_meta_tables = DHash_New(0,0);
@@ -2028,15 +1986,16 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_udf );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_any );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_int );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_float );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_double );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_type_complex );
-	DaoFactory_CacheValue( factory, (DaoValue*) dao_routine );
-
 	mainVmSpace = vms = DaoVmSpace_New();
+
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_any );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_int );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_float );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_double );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_complex );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_routine );
+
 	vms->safeTag = 0;
 	ns = vms->nsInternal;
 
@@ -2168,7 +2127,6 @@ void DaoQuit()
 	dao_default_cdata.ctype = NULL;
 
 	DaoVmSpace_DeleteData( mainVmSpace );
-	DArray_Delete( factory );
 	for(i=0; i<DAO_ARRAY; i++){
 		GC_DecRC( simpleTypes[i] );
 		simpleTypes[i] = NULL;

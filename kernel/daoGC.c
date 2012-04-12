@@ -479,6 +479,12 @@ void DaoGC_TryInvoke()
 }
 #endif
 
+void DaoGC_TryDelete( DaoValue *value )
+{
+	GC_IncRC( value );
+	GC_DecRC( value );
+}
+
 static void DaoGC_FreeSimple()
 {
 	DaoValue *value;

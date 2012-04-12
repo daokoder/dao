@@ -107,7 +107,8 @@ struct DaoProcess
 
 	DaoFuture  *future;
 	DaoStream  *stdioStream;
-	DaoFactory *factory;
+
+	DArray *factory;
 
 #ifdef DAO_WITH_THREAD
 	daoint     depth;

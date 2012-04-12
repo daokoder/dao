@@ -1423,6 +1423,7 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 		return;
 	}
 	if( p == NULL ){
+		daoint n = proc->factory->size;
 		DaoRoutine *func = NULL;
 		DString_SetMBS( proc->mbstring, "." );
 		DString_Append( proc->mbstring, name );
@@ -1433,6 +1434,7 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 			return;
 		}
 		func->pFunc( proc, & self, 1 );
+		if( proc->factory->size > n ) DArray_Erase( proc->factory, n, -1 );
 	}else{
 		DaoProcess_PutValue( proc, p );
 	}

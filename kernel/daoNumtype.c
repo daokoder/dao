@@ -1635,7 +1635,7 @@ static void DaoLong_Size( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoLong_Sqrt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DLong *z = p[0]->xLong.value;
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoValue **items = tuple->items;
 	if( z->sign <0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "need positive long integer" );
@@ -2603,7 +2603,7 @@ static void DaoARRAY_Index( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoArray *self = & par[0]->xArray;
 	daoint i, k, size, cmp=0, imax = -1;
 
@@ -2646,7 +2646,7 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoArray *self = & par[0]->xArray;
 	daoint i, k, size, cmp=0, imax = -1;
 

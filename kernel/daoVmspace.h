@@ -48,9 +48,7 @@ struct DaoVmSpace
     DaoStream  *errorStream;
 
     DMap    *allProcesses;
-    DMap    *allFactories;
     DArray  *processes;
-	DArray  *factories;
 
 	DString *mainSource;
     DString *pathWorking;
