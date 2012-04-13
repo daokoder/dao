@@ -854,6 +854,7 @@ DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
 // returning value does not match to the returning type that is specified by the
 // function prototype of the wrapped C function.
 */
+DAO_DLL DaoNone*   DaoProcess_PutNone( DaoProcess *self );
 DAO_DLL daoint*    DaoProcess_PutInteger( DaoProcess *self, daoint value );
 DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );

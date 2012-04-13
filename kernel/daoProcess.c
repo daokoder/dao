@@ -2452,6 +2452,11 @@ TypeNotMatching:
 	DaoProcess_RaiseTypeError( self, tp2, tp, "referencing" );
 	return 0;
 }
+DaoNone* DaoProcess_PutNone( DaoProcess *self )
+{
+	DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) dao_none_value );
+	return (DaoNone*) dao_none_value;
+}
 daoint* DaoProcess_PutInteger( DaoProcess *self, daoint value )
 {
 	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0};

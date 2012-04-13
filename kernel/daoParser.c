@@ -1256,7 +1256,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	*newpos = k + 1;
 	switch( value ? value->type : 0 ){
 	case DAO_CLASS : type = value->xClass.objType; break;
-	case DAO_CTYPE : type = value->xCdata.ctype->kernel->abtype; break; /* get its cdata type */
+	case DAO_CTYPE : type = value->xCtype.cdtype; break; /* get its cdata type */
 	case DAO_TYPE  : type = & value->xType; break;
 	case DAO_INTERFACE : type = value->xInterface.abtype; break;
 	default : break;
