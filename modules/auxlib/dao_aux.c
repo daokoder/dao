@@ -342,9 +342,8 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, 
 
 static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProcess *proc )
 {
-	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoObject *object = DaoObject_New( self );
-	DaoFactory_CacheValue( factory, (DaoValue*) object );
+	DaoProcess_CacheValue( proc, (DaoValue*) object );
 	if( DaoProcess_PushCallable( proc, self->classRoutines, (DaoValue*)object, & param, 1 ) ==0 ){
 		proc->topFrame->returning = -1;
 		if( DaoProcess_Execute( proc ) ) return object;
@@ -354,7 +353,6 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProce
 static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProcess *proc )
 {
 	DaoValue *value;
-	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoRoutine *routine = DaoType_FindFunction( self->ctype, self->ctype->name );
 	if( DaoProcess_PushCallable( proc, routine, NULL, & param, 1 ) ) return NULL;
 	proc->topFrame->active = proc->firstFrame;
@@ -523,7 +521,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			DArray_Append( dims, (size_t) j );
 		}
 		n = dims->size;
-		DaoArray_ResizeArray( array, dims->items.pSize, n );
+		DaoArray_ResizeArray( array, dims->items.pInt, n );
 		DArray_PushFront( types, it1 );
 		DArray_Delete( dims );
 		n = 0;
@@ -621,11 +619,10 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 }
 /*
 // Note: reference count is not handled for "self"!
-// But it is cached in a DaoFactory object, so no need to handle it by user!
+// But it is cached in the DaoProcess object, so no need to handle it by user!
 */
 int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc )
 {
-	DaoFactory *factory = DaoProcess_GetFactory( proc );
 	DaoParser *parser = DaoParser_New();
 	DArray *types = DArray_New(0);
 	int rc;
@@ -638,7 +635,7 @@ int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, Da
 
 	DArray_PushFront( types, NULL );
 	rc = DaoParser_Deserialize( parser, 0, parser->tokens->size-1, self, types, ns, proc );
-	if( *self ) DaoFactory_CacheValue( factory, *self );
+	if( *self ) DaoProcess_CacheValue( proc, *self );
 	DaoParser_Delete( parser );
 	DArray_Delete( types );
 	return rc;
@@ -660,7 +657,7 @@ static void NS_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int lim
 
 	for( ; node !=NULL; node = DMap_Next( self->lookupTable, node ) ){
 		DString *name = node->key.pString;
-		id = node->value.pSize;
+		id = node->value.pInt;
 		up = LOOKUP_UP( id );
 		st = LOOKUP_ST( id );
 		pm = LOOKUP_PM( id );

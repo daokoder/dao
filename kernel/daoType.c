@@ -370,15 +370,18 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 }
 static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs )
 {
+	DaoType *template1 = self->typer->core->kernel->abtype;
+	DaoType *template2 = type->typer->core->kernel->abtype;
 	daoint i, k, n, mt = DAO_MT_NOT;
-	if( self->kernel && self->kernel == type->kernel && type->kernel->sptree ){
-		if( self->nested->size != type->nested->size ) return 0; // TODO: default types
+	if( self->kernel && type->kernel->sptree && template1 == template2 ){
 		DaoType **ts1 = self->nested->items.pType;
 		DaoType **ts2 = type->nested->items.pType;
+		if( self->nested->size != type->nested->size ) return 0;
 		mt = DAO_MT_SUB;
 		for(i=0,n=self->nested->size; i<n; i++){
 			k = DaoType_MatchTo( ts1[i], ts2[i], defs );
-			if( k == 0 || k == DAO_MT_SIM ) return DAO_MT_NOT;
+			if( k == 0 || k == DAO_MT_SUB || k == DAO_MT_SIM ) return DAO_MT_NOT;
+			if( (ts1[i]->tid & DAO_ANY) && !(ts2[i]->tid & DAO_ANY) ) return DAO_MT_NOT;
 			if( k < mt ) mt = k;
 		}
 	}
@@ -1561,7 +1564,8 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 
 void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
-	if( self->core ) self->core->kernel = NULL;
+	/* self->core may no longer be valid, but self->typer->core always is: */
+	if( self->typer->core ) self->typer->core->kernel = NULL;
 	if( self->core == (DaoTypeCore*)(self + 1) ){
 		self->typer->core = NULL;
 	}
@@ -1765,8 +1769,8 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	sptype = DaoCdata_NewType( self->typer );
 	sptype2 = sptype->aux->xCdata.ctype;
 	sptype->cdatatype = self->aux->xCtype.cdtype->cdatatype;
-	GC_ShiftRC( kernel, sptype->kernel );
-	GC_ShiftRC( kernel, sptype2->kernel );
+	GC_ShiftRC( self->kernel, sptype->kernel );
+	GC_ShiftRC( self->kernel, sptype2->kernel );
 	sptype->kernel = self->kernel;
 	sptype2->kernel = self->kernel;
 	sptype->nested = DArray_New(D_VALUE);

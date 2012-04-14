@@ -790,6 +790,7 @@ DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
 
 DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
 DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_Cast( DaoCdata *self, DaoType *totype );
 DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
 DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
 DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );

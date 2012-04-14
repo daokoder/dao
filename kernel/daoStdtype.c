@@ -3806,6 +3806,15 @@ DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
 	self->subtype = DAO_CDATA_PTR;
 	return self;
 }
+DaoCdata* DaoCdata_Cast( DaoCdata *self, DaoType *totype )
+{
+	if( self == NULL ) return NULL;
+	if( self->subtype == DAO_CDATA_DAO ){
+		if( totype == NULL || self->ctype == NULL ) return self;
+		if( DaoType_MatchTo( self->ctype, totype, NULL ) ) return self;
+	}
+	return NULL;
+}
 static void DaoCdata_DeleteData( DaoCdata *self );
 void DaoCdata_Delete( DaoCdata *self )
 {

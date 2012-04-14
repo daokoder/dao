@@ -35,18 +35,17 @@ static void SYS_Ctime( DaoProcess *proc, DaoValue *p[], int N )
 {
 	struct tm *ctime;
 	time_t t = (time_t)p[0]->xInteger.value;
-	DaoFactory *fac = DaoProcess_GetFactory( proc );
 	DaoTuple *tuple = DaoTuple_New( 7 );
 	DaoValue **items = tuple->items;
 	if( t == 0 ) t = time(NULL);
 	ctime = gmtime( & t );
-	items[0] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_year + 1900 );
-	items[1] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_mon + 1 );
-	items[2] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_mday );
-	items[3] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_wday + 1 );
-	items[4] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_hour );
-	items[5] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_min );
-	items[6] = (DaoValue*) DaoFactory_NewInteger( fac, ctime->tm_sec );
+	items[0] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_year + 1900 );
+	items[1] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_mon + 1 );
+	items[2] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_mday );
+	items[3] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_wday + 1 );
+	items[4] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_hour );
+	items[5] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_min );
+	items[6] = (DaoValue*) DaoProcess_NewInteger( proc, ctime->tm_sec );
 	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 }
 static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char *key, int id )
