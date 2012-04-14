@@ -53,7 +53,6 @@ struct DaoRoutine
 	uchar_t          attribs;
 	uchar_t          parCount; /* number of parameters that can be accepted; */
 	ushort_t         defLine;  /* definition line number in the source file; */
-	uint_t           refParams; /* bit flags for reference parameters; */
 	DString         *routName; /* routine name; */
 	DaoType         *routType; /* routine type; */
 	DaoType         *routHost; /* host type, for routine that is a method; */

@@ -677,7 +677,6 @@ static int DaoRoutine_IsVolatileParameter( DaoRoutine *self, int id )
 	T = self->routType->nested->items.pType[id];
 	if( T && (T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT) ) T = (DaoType*) T->aux;
 	if( T == NULL || T->tid == DAO_UDT || T->tid >= DAO_ARRAY  ) return 1;
-	if( self->refParams & (1<<id) ) return 1;
 	return 0;
 }
 static void DaoOptimizer_AddKill( DaoOptimizer *self, DMap *out, int kill )
@@ -5649,7 +5648,6 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	GC_ShiftRC( oldfn->routType, newfn->routType );
 	newfn->routType = oldfn->routType;
 	newfn->parCount = oldfn->parCount;
-	newfn->refParams = oldfn->refParams;
 	newfn->attribs = oldfn->attribs;
 	DString_Assign( newfn->routName, oldfn->routName );
 	/* Decorator should have reserved spaces for up to DAO_MAX_PARAM default parameters: */

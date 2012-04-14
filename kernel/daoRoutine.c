@@ -85,7 +85,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 	self->attribs = from->attribs;
 	self->parCount = from->parCount;
 	self->defLine = from->defLine;
-	self->refParams = from->refParams;
 	self->pFunc = from->pFunc;
 	GC_ShiftRC( from->routHost, self->routHost );
 	GC_ShiftRC( from->routType, self->routType );

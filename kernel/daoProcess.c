@@ -464,6 +464,7 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 	/* pass from p[ifrom] to dest[ito], with type checking by types[ito] */
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DaoValue *val = p[ifrom];
+		int mt = 0;
 		ito = ifrom + selfChecked;
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
 			for(; ifrom<npar; ifrom++){
@@ -485,27 +486,22 @@ static int DaoRoutine_PassParams( DaoRoutine **routine2, DaoValue *dest[], DaoTy
 		tp = & types[ito]->aux->xType;
 		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
 			DaoType *type = DaoNamespace_GetType( routine->nameSpace, val );
-			int mt = DaoType_MatchTo( type, tp, defs ); /* Init type specialization mapping; */
+			mt = DaoType_MatchTo( type, tp, defs ); /* Init type specialization mapping; */
 			/* Specialize types: */
 			if( defs->size ) tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
-			if( (routine->refParams & (1<<ito)) && mt == DAO_MT_EQ ){
+		}else if( need_self && ito ==0 ){
+			mt = DaoType_MatchValue( tp, val, defs );
+		}
+		if( need_self && ito ==0 ){
+			if( val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
+				/* for virtual method call */
+				val = (DaoValue*) DaoObject_CastToBase( val->xObject.rootObject, tp );
+				if( val == NULL ) goto ReturnZero;
+			}else if( mt == DAO_MT_EQ ){
 				GC_ShiftRC( val, dest[ito] );
 				dest[ito] = val;
 				continue;
 			}
-		}else{
-			if( routine->refParams & (1<<ito) ){
-				if( DaoType_MatchValue( tp, val, defs ) == DAO_MT_EQ ){
-					GC_ShiftRC( val, dest[ito] );
-					dest[ito] = val;
-					continue;
-				}
-			}
-		}
-		if( need_self && ifrom ==0 && val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
-			/* for virtual method call */
-			val = (DaoValue*) DaoObject_CastToBase( val->xObject.rootObject, tp );
-			if( val == NULL ) goto ReturnZero;
 		}
 		if( DaoValue_Move2( val, & dest[ito], tp ) ==0 ) goto ReturnZero;
 	}

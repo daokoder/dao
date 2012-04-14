@@ -904,7 +904,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	routine->parCount = 0;
 	if( tokens[start+1]->name == DKEY_SELF ){
 		routine->attribs |= DAO_ROUT_PARSELF;
-		routine->refParams = 1;
 		selfpar = 1;
 	}
 
@@ -931,7 +930,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		MAP_Insert( DArray_Top( module->localVarMap ), mbs, module->regCount );
 		DaoParser_PushRegister( module );
 		routine->parCount ++;
-		routine->refParams = 1;
 		selfpar = 1;
 	}
 	type = NULL;
@@ -943,10 +941,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		DaoValue *dft = NULL;
 		DString *tks = NULL;
 
-		if( tokens[i]->type == DTOK_AMAND && tokens[i+1]->type == DTOK_IDENTIFIER ){
-			routine->refParams |= 1<<routine->parCount;
-			i += 1;
-		}
 		e1 = i;
 		e2 = right;
 		module->curLine = self->curLine = tokens[i]->line;
@@ -6475,17 +6469,16 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 	case DAO_OPER_DECR : code = DVM_SUB; break;
 	case DAO_OPER_SUB : code = DVM_UNMS; break;
 	case DAO_OPER_TILDE : code = DVM_BITREV; break;
-	case DAO_OPER_BIT_AND : code = DVM_LOAD; break;
 	default : ec = DAO_CTW_EXPR_INVALID; goto ErrorParsing;
 	}
-	if( result.konst && (code == DVM_ADD || code == DVM_SUB || oper == DVM_LOAD) ){
+	if( result.konst && (code == DVM_ADD || code == DVM_SUB) ){
 		ec = DAO_CTW_MODIFY_CONST;
 		goto ErrorParsing;
 	}
 
 	opa = result.reg;
 	end = self->curToken - 1;
-	if( result.konst && code != DVM_ADD && code != DVM_SUB && code != DVM_LOAD ){
+	if( result.konst && code != DVM_ADD && code != DVM_SUB ){
 		DaoValue *value = DaoParser_GetVariable( self, result.konst );
 		result.reg = DaoParser_MakeArithConst( self, code, value, dao_none_value, & result.konst, back, oldcount );
 		if( result.reg < 0 ){
@@ -6516,16 +6509,6 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 		result.update = self->vmcLast;
 		/* to prevent the previous instruction from beeing updated by ParseExpressionList(s) */
 		DaoParser_AddCode( self, DVM_UNUSED, 0,0,0, 0,0,0 );
-	}else if( code == DVM_LOAD ){
-		if( result.konst || result.last ){
-			int p0 = result.last->first;
-			int p1 = result.last->first + result.last->last;
-			DaoParser_Error2( self, DAO_INVALID_REFERENCE, p0, p1, 0 );
-			result.reg = -1;
-			return result;
-		}
-		result.reg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_LOAD, opa, 0, result.reg, start, 0, end );
 	}else{
 		result.reg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, code, opa, opb, result.reg, start, 0, end );

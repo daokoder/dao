@@ -370,10 +370,12 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 }
 static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs )
 {
-	DaoType *template1 = self->typer->core->kernel->abtype;
-	DaoType *template2 = type->typer->core->kernel->abtype;
+	DaoTypeCore *core1 = self->typer->core;
+	DaoTypeCore *core2 = type->typer->core;
+	DaoType *template1 = core1 && core1->kernel ? core1->kernel->abtype : NULL;
+	DaoType *template2 = core2 && core2->kernel ? core2->kernel->abtype : NULL;
 	daoint i, k, n, mt = DAO_MT_NOT;
-	if( self->kernel && type->kernel->sptree && template1 == template2 ){
+	if( self->kernel && type->kernel && type->kernel->sptree && template1 == template2 ){
 		DaoType **ts1 = self->nested->items.pType;
 		DaoType **ts2 = type->nested->items.pType;
 		if( self->nested->size != type->nested->size ) return 0;
