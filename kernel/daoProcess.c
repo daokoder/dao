@@ -2526,52 +2526,74 @@ DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, daoint N )
 	return res->xString.data;
 }
 #ifdef DAO_WITH_NUMARRAY
-DaoArray* DaoProcess_PutArrayInteger( DaoProcess *self, daoint *array, daoint N )
+DaoArray* DaoProcess_PutVectorSB( DaoProcess *self, signed  char *array, daoint N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->etype = DAO_INTEGER;
-	if( N ){
-		DaoArray_ResizeVector( res, N );
-		if( array ) memcpy( res->data.i, array, N*sizeof(daoint) );
-	}else if( array ){
-		DaoArray_UseData( res, array );
-	}
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorSB( res, array, N );
 	return res;
 }
-DaoArray* DaoProcess_PutArrayFloat( DaoProcess *self, float *array, daoint N )
+DaoArray* DaoProcess_PutVectorUB( DaoProcess *self, unsigned char *array, daoint N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->etype = DAO_FLOAT;
-	if( N ){
-		DaoArray_ResizeVector( res, N );
-		if( array ) memcpy( res->data.f, array, N*sizeof(float) );
-	}else if( array ){
-		DaoArray_UseData( res, array );
-	}
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorUB( res, array, N );
 	return res;
 }
-DaoArray* DaoProcess_PutArrayDouble( DaoProcess *self, double *array, daoint N )
+DaoArray* DaoProcess_PutVectorSS( DaoProcess *self, signed  short *array, daoint N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->etype = DAO_DOUBLE;
-	if( N ){
-		DaoArray_ResizeVector( res, N );
-		if( array ) memcpy( res->data.d, array, N*sizeof(double) );
-	}else if( array ){
-		DaoArray_UseData( res, array );
-	}
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorSS( res, array, N );
 	return res;
 }
-DaoArray* DaoProcess_PutArrayComplex( DaoProcess *self, complex16 *array, daoint N )
+DaoArray* DaoProcess_PutVectorUS( DaoProcess *self, unsigned short *array, daoint N )
 {
 	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
-	res->etype = DAO_COMPLEX;
-	if( N ){
-		DaoArray_ResizeVector( res, N );
-		if( array ) memcpy( res->data.c, array, N*sizeof(complex16) );
-	}else if( array ){
-		DaoArray_UseData( res, array );
-	}
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorUS( res, array, N );
+	return res;
+}
+DaoArray* DaoProcess_PutVectorSI( DaoProcess *self, signed  int *array, daoint N )
+{
+	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorSI( res, array, N );
+	return res;
+}
+DaoArray* DaoProcess_PutVectorUI( DaoProcess *self, unsigned int *array, daoint N )
+{
+	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorUI( res, array, N );
+	return res;
+}
+DaoArray* DaoProcess_PutVectorI( DaoProcess *self, daoint *array, daoint N )
+{
+	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
+	DaoArray_SetNumType( res, DAO_INTEGER );
+	if( array ) DaoArray_SetVectorI( res, array, N );
+	return res;
+}
+DaoArray* DaoProcess_PutVectorF( DaoProcess *self, float *array, daoint N )
+{
+	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
+	DaoArray_SetNumType( res, DAO_FLOAT );
+	if( array ) DaoArray_SetVectorF( res, array, N );
+	return res;
+}
+DaoArray* DaoProcess_PutVectorD( DaoProcess *self, double *array, daoint N )
+{
+	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
+	DaoArray_SetNumType( res, DAO_DOUBLE );
+	if( array ) DaoArray_SetVectorD( res, array, N );
+	return res;
+}
+DaoArray* DaoProcess_PutVectorC( DaoProcess *self, complex16 *array, daoint N )
+{
+	DaoArray *res = DaoProcess_GetArray( self, self->activeCode );
+	DaoArray_SetNumType( res, DAO_COMPLEX );
+	if( array ) DaoArray_SetVectorD( res, (double*)array, N );
 	return res;
 }
 #else
@@ -2580,10 +2602,16 @@ static DaoArray* NullArray( DaoProcess *self )
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 	return NULL;
 }
-DaoArray* DaoProcess_PutArrayInteger( DaoProcess *s, daoint *v, daoint n ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayFloat( DaoProcess *s, float *v, daoint n ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayDouble( DaoProcess *s, double *v, daoint n ){ return NullArray( s ); }
-DaoArray* DaoProcess_PutArrayComplex( DaoProcess *s, complex16 *v, daoint n ){ return NullArray( s ); }
+DaoArray* DaoProcess_PutVectorSB( DaoProcess *s, signed  char *v, daoint N ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorUB( DaoProcess *s, unsigned char *v, daoint N ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorSS( DaoProcess *s, signed  short *v, daoint N ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorUS( DaoProcess *s, unsigned short *v, daoint N ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorSI( DaoProcess *s, signed  int *v, daoint N ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorUI( DaoProcess *s, unsigned int *v, daoint N ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorI( DaoProcess *s, daoint *v, daoint n ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorF( DaoProcess *s, float *v, daoint n ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorD( DaoProcess *s, double *v, daoint n ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorC( DaoProcess *s, complex16 *v, daoint n ){ return NullArray(s); }
 #endif
 DaoList* DaoProcess_PutList( DaoProcess *self )
 {
@@ -2806,6 +2834,7 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	if( size > 0 ) return tuple;
 	if( M < size ) return NULL;
 	for(i=0; i<N; i++) DaoTuple_SetItem( tuple, values[M-N+i], i );
+	DArray_Erase( self->factory, M - size, -1 );
 	return tuple;
 }
 DaoType* DaoProcess_GetReturnType( DaoProcess *self )
