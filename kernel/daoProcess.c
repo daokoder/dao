@@ -1358,13 +1358,7 @@ CallEntry:
 				vmc = vA->xEnum.value ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_STRING  :
-				vmc = vA->xString.data->size ? vmc+1 : vmcBase + vmc->b; break;
-			case DAO_TUPLE :
-				if( vA->xTuple.unitype == dao_type_for_iterator && vA->xTuple.items[0]->xInteger.value ){
-					vmc = vmc + 1;
-				}else{
-					vmc = vmcBase + vmc->b;
-				}
+				vmc = vA->xString.data->size ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_LIST  :
 				vmc = vA->xList.items.size ? vmc+1 : vmcBase + vmc->b;

@@ -4468,12 +4468,10 @@ NotExist_TryAux:
 				ts[0] = dao_type_for_iterator;
 				meth = NULL;
 				self->type_source = at;
-				if( NoCheckingType( at ) ){
-					ct = dao_type_for_iterator;
-					DaoInferencer_UpdateType( self, opc, ct );
-					AssertTypeMatching( ct, types[opc], defs );
-					break;
-				}
+				ct = dao_type_for_iterator;
+				DaoInferencer_UpdateType( self, opc, ct );
+				AssertTypeMatching( ct, types[opc], defs );
+				if( NoCheckingType( at ) ) break;
 				switch( at->tid ){
 				case DAO_CLASS :
 				case DAO_OBJECT :

@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 
 if( "${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}" )
 	MESSAGE(FATAL_ERROR "\nDirectory ${CMAKE_SOURCE_DIR} already contains other Makefiles.\n"
-			"Please choose a different one!")
+			"Please remove CMakeCache.txt and CMakeFiles, and use a different folder to make "
+			"an out-of-source build!")
 endif()
 
 project(dao)
@@ -33,6 +34,7 @@ set(DAO_KERNEL_HEADERS "${PROJECT_SOURCE_DIR}/kernel/dao.h"
                        "${PROJECT_SOURCE_DIR}/kernel/daoNumtype.h"
                        "${PROJECT_SOURCE_DIR}/kernel/daoObject.h"
                        "${PROJECT_SOURCE_DIR}/kernel/daoParser.h"
+                       "${PROJECT_SOURCE_DIR}/kernel/daoOptimizer.h"
                        "${PROJECT_SOURCE_DIR}/kernel/daoProcess.h"
                        "${PROJECT_SOURCE_DIR}/kernel/daoRegex.h"
                        "${PROJECT_SOURCE_DIR}/kernel/daoRoutine.h"
@@ -58,6 +60,7 @@ set(DAO_KERNEL_SOURCES "${PROJECT_SOURCE_DIR}/kernel/daoArray.c"
                        "${PROJECT_SOURCE_DIR}/kernel/daoNumtype.c"
                        "${PROJECT_SOURCE_DIR}/kernel/daoObject.c"
                        "${PROJECT_SOURCE_DIR}/kernel/daoParser.c"
+                       "${PROJECT_SOURCE_DIR}/kernel/daoOptimizer.c"
                        "${PROJECT_SOURCE_DIR}/kernel/daoProcess.c"
                        "${PROJECT_SOURCE_DIR}/kernel/daoRegex.c"
                        "${PROJECT_SOURCE_DIR}/kernel/daoRoutine.c"

@@ -4954,13 +4954,18 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		 * set the value of the data at regItemt in a way so that TEST on it will fail.
 		 */
 		regItemt = tuples->items.pInt[1]; /* the first iterator for testing */
-		DaoParser_AddCode( self, DVM_TEST, regItemt, fromCode, 0, start, in, rb );
+		reg = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_GETDI, regItemt, 0, reg, start, in, rb );
+		DaoParser_AddCode( self, DVM_TEST, reg, fromCode, 0, start, in, rb );
 		opening->jumpTrue = self->vmcLast;
 		self->vmcLast->jumpFalse = closing;
+		reg = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 0, reg, start, in, rb );
 		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
 			daoint first = t[3], last = t[4];
+			DaoParser_AddCode( self, DVM_SETDI, reg, 0, t[1], start, in, rb );
 			DaoParser_AddCode( self, DVM_GETI, t[0], t[1], self->regCount, first, first+1, last );
-			DaoParser_AddCode( self, DVM_MOVE, self->regCount, regItemt, t[2], first, 0, first );
+			DaoParser_AddCode( self, DVM_MOVE, self->regCount, 0, t[2], first, 0, first );
 			DaoParser_PushRegister( self );
 		}
 
