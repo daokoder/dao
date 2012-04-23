@@ -420,6 +420,11 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 			DaoClass_AddType( & scope->xClass, name, type );
 			break;
 		case DAO_NAMESPACE :
+			if( type->typer->core && type->typer->core->kernel ){
+				/* For properly parsing methods (scope of types and default values): */
+				GC_ShiftRC( scope, type->typer->core->kernel->nspace );
+				type->typer->core->kernel->nspace = (DaoNamespace*) scope;
+			}
 			DaoNamespace_AddType( & scope->xNamespace, name, type2 );
 			DaoNamespace_AddTypeConstant( & scope->xNamespace, name, type );
 			break;
@@ -770,15 +775,14 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
 
-	DString_SetMBS( name, "io" ); 
-	DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdioStream, DAO_DATA_PUBLIC );
+	if( vms == NULL || vms->nsInternal == NULL ){
+		DString_SetMBS( name, "io" ); 
+		DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdioStream, DAO_DATA_PUBLIC );
 
-	DString_SetMBS( name, "exceptions" );
-	value = (DaoValue*) DaoList_New();
-	DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
-
-	DString_Delete( name );
-	self->cstUser = self->constants->size;
+		DString_SetMBS( name, "exceptions" );
+		value = (DaoValue*) DaoList_New();
+		DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
+	}
 
 	if( vms && vms->nsInternal ){
 		DaoNamespace *ns = vms->nsInternal;
@@ -786,6 +790,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 		DArray_Append( self->namespaces, ns );
 		DaoNamespace_UpdateLookupTable( self );
 	}
+	DString_Delete( name );
+	self->cstUser = self->constants->size;
 	return self;
 }
 void DaoNamespace_Delete( DaoNamespace *self )
