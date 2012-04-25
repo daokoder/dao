@@ -665,7 +665,7 @@ static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, 
 		DaoCdata *cdata = (DaoCdata*) klass->superClass->items.pValue[i];
 		if( flags & (1<<i) ) continue;
 		if( cdata->type == DAO_CTYPE ){
-			DaoRoutine *func = DaoType_FindFunction( cdata->ctype, sup );
+			DaoRoutine *func = DaoType_FindFunction( cdata->ctype, cdata->ctype->name );
 			if( func ) func = DaoRoutine_ResolveX( func, NULL, NULL, 0, DVM_CALL );
 			if( func ) goto AppendInitSuper;
 			info = DaoTokens_AddRaiseStatement( self, "Error", "", line );

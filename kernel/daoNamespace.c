@@ -414,10 +414,11 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 			DaoNamespace_SetupValues( self, scope->xCdata.ctype->kernel->typer );
 			core = scope->xCdata.ctype->kernel->core;
 			if( core->kernel->values == NULL ) core->kernel->values = DHash_New( D_STRING, D_VALUE );
-			DMap_Insert( core->kernel->values, name, type );
+			DMap_Insert( core->kernel->values, name, type->aux );
 			break;
 		case DAO_CLASS :
 			DaoClass_AddType( & scope->xClass, name, type );
+			DaoClass_AddConst( & scope->xClass, name, type->aux, DAO_DATA_PUBLIC, -1 );
 			break;
 		case DAO_NAMESPACE :
 			if( type->typer->core && type->typer->core->kernel ){

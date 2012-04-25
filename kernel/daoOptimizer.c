@@ -1361,11 +1361,12 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 
 	/* DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream ); */
 
-	/* Now use the linear scan algorithm (Poletto and Sarkar) to reallocation the registers: */
+	/* Live Variable Analysis for register reallocation: */
 	DaoOptimizer_DoLVA( self, routine );
 
 	/* DaoOptimizer_Print( self ); */
 
+	/* Now use the linear scan algorithm (Poletto and Sarkar) to reallocate registers: */
 	DArray_Resize( array, 2*M, 0 );
 	intervals = array->items.pInt;
 	regCount = routine->parCount;
@@ -1395,6 +1396,23 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 			if( intervals[2*j] < 0 ) intervals[2*j] = i;
 			intervals[2*j+1] = i;
 			k += 1;
+		}
+		if( vmc->code == DVM_LOAD || vmc->code == DVM_CAST ){
+			/* These opcodes may create a reference (alias) of ::a at the result register (::c),
+			// the liveness interval of ::a must be expanded to the point where ::c is used: */
+			for(j=i+1; j<N; ++j){
+				node2 = nodes[j];
+				k = 0;
+				switch( node2->type ){
+				case DAO_OP_TRIPLE : k = node2->third == vmc->c;   /* fall through; */
+				case DAO_OP_PAIR   : k |= node2->second == vmc->c; /* fall through; */
+				case DAO_OP_SINGLE : k |= node2->first == vmc->c; break;
+				case DAO_OP_RANGE :
+				case DAO_OP_RANGE2 : k = node2->first <= vmc->c && vmc->c <= node2->second; break;
+				}
+				if( k ) break;
+			}
+			if( j < N && j > intervals[2*vmc->a+1] ) intervals[2*vmc->a+1] = j;
 		}
 		if( node->lvalue != 0xffff && intervals[2*node->lvalue] < 0 ){
 			/* For some DVM_CALL, the lvalue is not alive, but it is needed: */
