@@ -263,6 +263,12 @@ void DaoType_MapNames( DaoType *self )
 		if( tp->fname ) MAP_Insert( self->mapNames, tp->fname, i );
 	}
 }
+DaoType* DaoType_GetItemType( DaoType *self, int i )
+{
+	if( self->nested == NULL ) return NULL;
+	if( i < 0 || i >= self->nested->size ) return NULL;
+	return self->nested->items.pType[i];
+}
 DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 {
 	if( self->tid == DAO_VARIANT && self->nested ){

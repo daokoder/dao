@@ -2773,10 +2773,9 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}
 	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 ){
-		if( dC->xArray.etype < type ) DaoArray_ResizeVector( & dC->xArray, 0 );
 		GC_DecRC( dC->xArray.original );
 		dC->xArray.original = NULL;
-		dC->xArray.etype = type;
+		DaoArray_SetNumType( (DaoArray*) dC, type );
 	}else{
 		dC = (DaoValue*) DaoArray_New( type );
 		DaoValue_Copy( dC, & self->activeValues[ vmc->c ] );
@@ -4382,7 +4381,7 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 		}
 		case DAO_ARRAY :
 			a0 = & regValues[ opA ]->xArray;
-			array->etype = a0->etype;
+			DaoArray_SetNumType( array, a0->etype );
 			if( a0->ndim == 2 && (a0->dims[0] == 1 || a0->dims[1] == 1) ){
 				DaoArray_SetDimCount( array, 2 );
 				memmove( array->dims, a0->dims, 2*sizeof(daoint) );
@@ -5454,7 +5453,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		C = A;
 		if( array->etype == DAO_FLOAT ){
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
-			res->etype = array->etype;
+			DaoArray_SetNumType( res, array->etype );
 			DaoArray_ResizeArray( res, array->dims, array->ndim );
 			if( array->etype == DAO_FLOAT ){
 				float *va = array->data.f;
@@ -5476,7 +5475,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		}else if( vmc->code == DVM_UNMS ){
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
 			complex16 *va, *vc;
-			res->etype = array->etype;
+			DaoArray_SetNumType( res, array->etype );
 			DaoArray_ResizeArray( res, array->dims, array->ndim );
 			va = array->data.c;
 			vc = res->data.c;

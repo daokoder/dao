@@ -589,7 +589,10 @@ DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
 
 
 DAO_DLL DaoList* DaoList_New();
+DAO_DLL DaoType* DaoList_GetType( DaoList *self );
+DAO_DLL int DaoList_SetType( DaoList *self, DaoType *type );
 DAO_DLL int DaoList_Size( DaoList *self );
+
 DAO_DLL DaoValue* DaoList_Front( DaoList *self );
 DAO_DLL DaoValue* DaoList_Back( DaoList *self );
 DAO_DLL DaoValue* DaoList_GetItem( DaoList *self, daoint pos );
@@ -613,7 +616,9 @@ enum DaoHashSeeds{ DAO_HASH_NONE, DAO_HASH_DEFAULT, DAO_HASH_RANDOM };
 // DaoMap_New() creates a map or hash map:
 */
 DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
-DAO_DLL int  DaoMap_Size( DaoMap *self );
+DAO_DLL DaoType* DaoMap_GetType( DaoMap *self );
+DAO_DLL int DaoMap_SetType( DaoMap *self, DaoType *type );
+DAO_DLL int DaoMap_Size( DaoMap *self );
 
 /*
 // The following functions return 0 on success;
@@ -641,6 +646,8 @@ DAO_DLL DaoValue* DNode_Value( DNode *self );
 
 
 DAO_DLL DaoTuple* DaoTuple_New( int size );
+DAO_DLL DaoType* DaoTuple_GetType( DaoTuple *self );
+DAO_DLL int  DaoTuple_SetType( DaoTuple *self, DaoType *type );
 DAO_DLL int  DaoTuple_Size( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos );
@@ -1097,6 +1104,8 @@ DAO_DLL DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *file );
 // deallocated "data".
 */
 DAO_DLL DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned );
+
+DAO_DLL DaoType* DaoType_GetItemType( DaoType *self, int i );
 
 
 DAO_DLL void DaoGC_IncRC( DaoValue *p );

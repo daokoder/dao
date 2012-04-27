@@ -1252,7 +1252,8 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 						break;
 					}
 				}
-				if( node2->uses->size == 0 ){
+				if( node2->uses->size == 0 && node2->exprid != 0xffff ){
+					/* Eliminate unused and side effect free code: */
 					codes[node2->index]->code = DVM_UNUSED;
 					DArray_PushBack( array, node2 );
 					SET_BIT0( node2->bits->mbs, node2->lvalue );

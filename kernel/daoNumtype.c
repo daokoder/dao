@@ -2084,8 +2084,8 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 		return;
 	}
 	na = DaoProcess_PutArray( proc );
+	DaoArray_SetNumType( na, self->etype );
 	GC_ShiftRC( self, na->original );
-	na->etype = self->etype;
 	na->original = self;
 	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
 	DaoArray_MakeSlice( self, proc, & pid, 1, na->slices );
@@ -2339,8 +2339,8 @@ static void DaoArray_GetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 		}
 	}
 	na = DaoProcess_PutArray( proc );
+	DaoArray_SetNumType( na, self->etype );
 	GC_ShiftRC( self, na->original );
-	na->etype = self->etype;
 	na->original = self;
 	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
 	DaoArray_MakeSlice( self, proc, ids, N, na->slices );
@@ -2478,7 +2478,7 @@ static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 
 	if( N == 1 ){
 		DaoArray *na = DaoProcess_PutArray( proc );
-		na->etype = DAO_INTEGER;
+		DaoArray_SetNumType( na, DAO_INTEGER );
 		if( self->original ){
 			DaoArray_ResizeVector( na, self->slices->size );
 			v = na->data.i;
@@ -2593,7 +2593,7 @@ static void DaoARRAY_Index( DaoProcess *proc, DaoValue *par[], int N )
 	dim = self->dims;
 	D = self->ndim;
 
-	na->etype = DAO_INTEGER;
+	DaoArray_SetNumType( na, DAO_INTEGER );
 	DaoArray_ResizeVector( na, self->ndim );
 	v = na->data.i;
 	for(i=D-1; i>=0; i--){
@@ -2900,7 +2900,7 @@ static void DaoARRAY_rank( DaoProcess *proc, DaoValue *par[], int npar )
 
 	if( res == NULL ) return;
 	if( N == 0 ) return;
-	res->etype = DAO_INTEGER;
+	DaoArray_SetNumType( res, DAO_INTEGER );
 	DaoArray_GetSliceShape( array, & res->dims, & res->ndim );
 	DaoArray_ResizeArray( res, res->dims, res->ndim );
 	ids = res->data.i;
@@ -3068,15 +3068,20 @@ static DaoFuncItem numarMeths[] =
 	{ NULL, NULL }
 };
 
+static int DaoArray_DataTypeSize( DaoArray *self );
+static void DaoArray_ResizeData( DaoArray *self, daoint size, daoint oldSize );
+
 int DaoArray_NumType( DaoArray *self )
 {
 	return self->etype;
 }
 void DaoArray_SetNumType( DaoArray *self, short numtype )
 {
+	int n, m = DaoArray_DataTypeSize( self );
 	if( self->etype == numtype ) return;
 	self->etype = numtype;
-	DaoArray_ResizeVector( self, self->size );
+	n = self->size * m / DaoArray_DataTypeSize( self );
+	DaoArray_ResizeData( self, self->size, n );
 }
 int DaoArray_Size( DaoArray *self )
 {
@@ -3272,8 +3277,6 @@ DefineFunction_DaoArray_From( DaoArray_FromUShort, unsigned short );
 DefineFunction_DaoArray_From( DaoArray_FromUInt, unsigned int );
 
 
-static void DaoArray_ResizeData( DaoArray *self, daoint size, daoint oldSize );
-
 #define DefineFunction_DaoArray_SetVector( name, type ) \
 void name( DaoArray *self, type *vec, daoint N ) \
 { \
@@ -3282,7 +3285,7 @@ void name( DaoArray *self, type *vec, daoint N ) \
 		DaoArray_UseData( self, vec ); \
 		return; \
 	} \
-	if( N < self->size ) DaoArray_ResizeData( self, self->size, N ); \
+	if( N != self->size ) DaoArray_ResizeData( self, N, self->size ); \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (daoint) vec[i]; break; \
 	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break; \
@@ -3313,7 +3316,7 @@ void name( DaoArray *self, type **mat, daoint R, daoint C ) \
 	daoint dm[2]; \
 	daoint i, j, N = R * C; \
 	dm[0] = R; dm[1] = C; \
-	if( N != self->size ) DaoArray_ResizeData( self, self->size, N ); \
+	if( N != self->size ) DaoArray_ResizeData( self, N, self->size ); \
 	DaoArray_Reshape( self, dm, 2 ); \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (daoint)mat[i/R][i%R]; break; \
@@ -3532,6 +3535,7 @@ static void DaoArray_ResizeData( DaoArray *self, daoint size, daoint old )
 		self->size = size;
 		return;
 	}
+	self->size = size;
 	self->data.p = dao_realloc( self->data.p, size * item_size );
 	if( size <= old ) return;
 	memset( ((char*)self->data.p) + old * item_size, 0, diff * item_size );
