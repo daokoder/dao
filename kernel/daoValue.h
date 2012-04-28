@@ -51,6 +51,7 @@ DAO_DLL void DaoVariable_Delete( DaoVariable *self );
 union DaoValue
 {
 	uchar_t        type;
+	DaoNone        xBase;
 	DaoNone        xNone;
 	DaoInteger     xInteger;
 	DaoFloat       xFloat;
@@ -77,14 +78,14 @@ union DaoValue
 	DaoVariable    xVar;
 	DaoType        xType;
 
-	struct { DAO_DATA_CORE; } xCore;
 	struct {
 		uchar_t  type;
 		uchar_t  subtype;
 		uchar_t  trait;
-		uchar_t  delay : 6; /* used to avoid frequent scanning of persistent objects; */
-		uchar_t  work  : 1; /* used to mark objects in the work buffer; */
+		uchar_t  work  : 1; /* mark objects in the work buffer; */
 		uchar_t  alive : 1; /* mark alive objects (scanned for reachable objects); */
+		uchar_t  delay : 1; /* mark objects in the delayed list; */
+		uchar_t  dummy : 5;
 		int  refCount;
 		int  cycRefCount;
 	} xGC;

@@ -140,6 +140,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	DaoTypeBase *typer = DaoVmSpace_GetTyper( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
 	self->name = DString_New(1);
 	self->cdatatype = tid == DAO_CDATA ? DAO_CDATA_PTR : 0;
@@ -227,7 +228,7 @@ void DaoType_InitDefault( DaoType *self )
 	}
 	GC_ShiftRC( value, self->value );
 	self->value = value;
-	if( value ) value->xNone.trait |= DAO_VALUE_CONST;
+	if( value ) value->xBase.trait |= DAO_VALUE_CONST;
 }
 DaoType* DaoType_Copy( DaoType *other )
 {
@@ -235,6 +236,7 @@ DaoType* DaoType_Copy( DaoType *other )
 	DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
 	memcpy( self, other, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->nested = NULL;
 	self->bases = NULL;
 	self->name = DString_Copy( other->name );
@@ -938,6 +940,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->attrib = self->attrib;
 	copy->cdatatype = self->cdatatype;
 	copy->overloads = self->overloads;
+	copy->trait |= DAO_VALUE_DELAYGC;
 	DArray_Append( ns->auxData, copy );
 	DMap_Insert( defs, self, copy );
 	if( self->mapNames ){
@@ -1180,6 +1183,7 @@ DaoInterface* DaoInterface_New( const char *name )
 {
 	DaoInterface *self = (DaoInterface*) dao_malloc( sizeof(DaoInterface) );
 	DaoValue_Init( self, DAO_INTERFACE );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->bindany = 0;
 	self->derived = 0;
 	self->supers = DArray_New(D_VALUE);
@@ -1594,6 +1598,7 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 	int extra = typer && typer->core ? 0 : sizeof(DaoTypeCore);
 	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) + extra );
 	DaoValue_Init( self, DAO_TYPEKERNEL );
+	self->trait |= DAO_VALUE_DELAYGC;
 	if( typer ) self->typer = typer;
 	if( typer && typer->core ) self->core = typer->core;
 	if( self->core == NULL ){

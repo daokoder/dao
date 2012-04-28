@@ -36,6 +36,7 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 {
 	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof(DaoRoutine) );
 	DaoValue_Init( self, DAO_ROUTINE );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->routName = DString_New(1);
 	self->routConsts = DaoList_New();
 	self->nameSpace = nspace;
@@ -242,6 +243,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 {
 	DaoRoutineBody *self = (DaoRoutineBody*) dao_calloc( 1, sizeof( DaoRoutineBody ) );
 	DaoValue_Init( self, DAO_ROUTBODY );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
 	self->vmCodes = DaoVmcArray_New();
 	self->regType = DArray_New(D_VALUE);

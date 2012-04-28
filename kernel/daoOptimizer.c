@@ -4399,7 +4399,7 @@ NotExist_TryAux:
 				if( at->name->mbs[0] == '$' && bt->name->mbs[0] == '$' ) continue;
 				if( DaoType_MatchValue( at, cc, defs ) ==0 ){
 					int matched = 0;
-					if( cc->type == DAO_TUPLE && cc->xNone.subtype == DAO_PAIR ){
+					if( cc->type == DAO_TUPLE && cc->xBase.subtype == DAO_PAIR ){
 						matched = DaoType_MatchValue( at, cc->xTuple.items[0], defs );
 						matched &= DaoType_MatchValue( at, cc->xTuple.items[1], defs );
 					}

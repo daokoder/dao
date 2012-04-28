@@ -90,6 +90,7 @@ DaoClass* DaoClass_New()
 {
 	DaoClass *self = (DaoClass*) dao_malloc( sizeof(DaoClass) );
 	DaoValue_Init( self, DAO_CLASS );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->vtable = NULL;
 	self->classRoutine = NULL;
 	self->classRoutines = NULL;

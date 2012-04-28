@@ -735,6 +735,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DString *name = DString_New(1);
 	DaoNamespace *self = (DaoNamespace*) dao_malloc( sizeof(DaoNamespace) );
 	DaoValue_Init( self, DAO_NAMESPACE );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
 	self->cstUser = 0;
 	self->options = 0;
@@ -914,7 +915,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 
 			mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) dest->value );
 			dest = DaoConstant_New( (DaoValue*) mroutine );
-			dest->value->xNone.trait |= DAO_VALUE_CONST;
+			dest->value->xBase.trait |= DAO_VALUE_CONST;
 			GC_ShiftRC( dest, self->constants->items.pConst[id] );
 			self->constants->items.pConst[id] = dest;
 		}
@@ -924,7 +925,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			DRoutines_Add( dest->value->xRoutine.overloads, (DaoRoutine*) value );
 			/* Add individual entry for the new function: */
 			DArray_Append( self->constants, DaoConstant_New( value ) );
-			value->xNone.trait |= DAO_VALUE_CONST;
+			value->xBase.trait |= DAO_VALUE_CONST;
 		}
 		return node->value.pInt;
 	}else{
@@ -1355,7 +1356,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 
 	switch( p->type ){
 	case DAO_NONE :
-		if( p->xNone.subtype == DAO_ANY ){
+		if( p->xBase.subtype == DAO_ANY ){
 			abtp = dao_type_any;
 		}else{
 			abtp = DaoNamespace_MakeValueType( self, dao_none_value );

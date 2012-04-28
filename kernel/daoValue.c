@@ -373,8 +373,8 @@ void DaoValue_MarkConst( DaoValue *self )
 	DMap *map;
 	DNode *it;
 	daoint i, n;
-	if( self == NULL || (self->xNone.trait & DAO_VALUE_CONST) ) return;
-	self->xNone.trait |= DAO_VALUE_CONST;
+	if( self == NULL || (self->xBase.trait & DAO_VALUE_CONST) ) return;
+	self->xBase.trait |= DAO_VALUE_CONST;
 	switch( self->type ){
 	case DAO_LIST :
 		for(i=0,n=self->xList.items.size; i<n; i++)
@@ -425,7 +425,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		return self;
 	}
 #endif
-	if( self->xNone.trait & DAO_VALUE_NOCOPY ) return self;
+	if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
 	if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
 		double value = DaoValue_GetDouble( self );
 		switch( tp->tid ){
@@ -444,7 +444,7 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
 	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
 	}
-	if( (self->xNone.trait & DAO_VALUE_CONST) == 0 ) return self;
+	if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
 	switch( self->type ){
 	case DAO_LIST :
 		{
@@ -514,7 +514,7 @@ void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 {
 	DaoValue *dest2 = *dest;
 	if( src == dest2 ) return;
-	if( dest2 && dest2->xNone.refCount >1 ){
+	if( dest2 && dest2->xBase.refCount >1 ){
 		GC_DecRC( dest2 );
 		*dest = dest2 = NULL;
 	}
@@ -745,7 +745,7 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		return DaoValue_MoveVariant( S, D, T );
 	default : break;
 	}
-	if( D2 && D2->xNone.refCount >1 ){
+	if( D2 && D2->xBase.refCount >1 ){
 		GC_DecRC( D2 );
 		*D = D2 = NULL;
 	}

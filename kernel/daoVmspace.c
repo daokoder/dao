@@ -2135,7 +2135,7 @@ void DaoQuit()
 #ifdef DEBUG
 	for(it=DMap_First(mainVmSpace->nsModules); it; it=DMap_Next(mainVmSpace->nsModules,it) ){
 		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
-				((DaoNamespace*)it->value.pValue)->name->mbs, it->value.pValue->xNone.refCount );
+				((DaoNamespace*)it->value.pValue)->name->mbs, it->value.pValue->xBase.refCount );
 	}
 #endif
 	DaoVmSpace_Delete( mainVmSpace );

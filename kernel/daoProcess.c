@@ -139,6 +139,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	int i;
 	DaoProcess *self = (DaoProcess*)dao_calloc( 1, sizeof( DaoProcess ) );
 	DaoValue_Init( self, DAO_PROCESS );
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
 	self->status = DAO_VMPROC_SUSPENDED;
 	self->exceptions = DArray_New(D_VALUE);
@@ -1247,7 +1248,7 @@ CallEntry:
 				/* mt.run(3)::{ mt.critical::{} }: the inner functional will be compiled
 				 * as a LOAD and RETURN, but the inner functional will not return anything,
 				 * so the first operand of LOAD will be NULL! */
-				if( (vA->xNone.trait & DAO_VALUE_CONST) == 0 ){
+				if( (vA->xBase.trait & DAO_VALUE_CONST) == 0 ){
 					GC_ShiftRC( vA, locVars[ vmc->c ] );
 					locVars[ vmc->c ] = vA;
 				}else{
@@ -2422,7 +2423,7 @@ int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
 	DaoType *tp2, *tp = self->activeTypes[reg];
 
 	if( *value == refer ) return 1;
-	if( !(refer->xNone.trait & DAO_VALUE_CONST) ){
+	if( !(refer->xBase.trait & DAO_VALUE_CONST) ){
 		if( tp == NULL ){
 			GC_ShiftRC( refer, *value );
 			*value = refer;
@@ -3122,12 +3123,12 @@ DaoMap* DaoMetaTables_Get( DaoValue *object, int insert )
 	DaoMap *table = NULL;
 	DNode *node = NULL;
 	GC_Lock();
-	if( object->xNone.trait & DAO_VALUE_WIMETA ) node = DMap_Find( dao_meta_tables, object );
+	if( object->xBase.trait & DAO_VALUE_WIMETA ) node = DMap_Find( dao_meta_tables, object );
 	if( node ){
 		table = (DaoMap*) node->value.pValue;
 	}else if( insert ){
 		table = DaoMap_New(1);
-		object->xNone.trait |= DAO_VALUE_WIMETA;
+		object->xBase.trait |= DAO_VALUE_WIMETA;
 		GC_IncRC( table );
 		DMap_Insert( dao_meta_tables, object, table );
 	}
@@ -3141,7 +3142,7 @@ static void DaoMetaTables_Set( DaoValue *object, DaoMap *table )
 	node = DMap_Find( dao_meta_tables, object );
 	GC_IncRC( table );
 	if( node ) GC_DecRC( node->value.pValue );
-	object->xNone.trait |= DAO_VALUE_WIMETA;
+	object->xBase.trait |= DAO_VALUE_WIMETA;
 	DMap_Insert( dao_meta_tables, object, table );
 	GC_Unlock();
 }
@@ -3151,7 +3152,7 @@ DaoMap* DaoMetaTables_Remove( DaoValue *object )
 	DNode *node;
 	GC_Lock();
 	node = DMap_Find( dao_meta_tables, object );
-	object->xNone.trait &= ~DAO_VALUE_WIMETA;
+	object->xBase.trait &= ~DAO_VALUE_WIMETA;
 	if( node ){
 		table = (DaoMap*) node->value.pValue;
 		DMap_EraseNode( dao_meta_tables, node );
@@ -4754,7 +4755,7 @@ int DaoProcess_TryObjectArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVa
 		par[1] = A;
 		npar = 2;
 	}
-	nopac = C == NULL || C->xNone.refCount > 1;
+	nopac = C == NULL || C->xBase.refCount > 1;
 	p = par;
 	n = npar;
 	
@@ -4839,7 +4840,7 @@ int DaoProcess_TryCdataArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoVal
 		par[1] = A;
 		npar = 2;
 	}
-	nopac = C == NULL || C->xNone.refCount > 1;
+	nopac = C == NULL || C->xBase.refCount > 1;
 	p = par;
 	n = npar;
 	

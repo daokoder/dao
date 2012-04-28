@@ -159,8 +159,8 @@ struct DaoGarbageCollector
 
 	daoint    gcMin, gcMax;
 	daoint    ii, jj, kk;
-	int       finalizing; /* set at any time; */
-	int       delayMask; /* set at cycle boundary; */
+	daoint    cycle;
+	daoint    finalizing;
 	short     busy;
 	short     locked;
 	short     workType;
@@ -182,12 +182,6 @@ struct DaoGarbageCollector
 };
 static DaoGarbageCollector gcWorker = { NULL, NULL, NULL };
 
-static DaoEnum dummyEnum = {0,0,DAO_VALUE_CONST,0,1,1,0,NULL};
-static DaoEnum *dummyEnum2 = & dummyEnum;
-static DaoValue *dummyValue = NULL;
-
-static uchar_t type_gc_delay[ END_NOT_TYPES ];
-
 
 int DaoGC_Min( int n /*=-1*/ )
 {
@@ -206,8 +200,6 @@ void DaoGC_Init()
 {
 	if( gcWorker.idleList != NULL ) return;
 
-	dummyValue = (DaoValue*) dummyEnum2;
-
 	gcWorker.idleList = DArray_New(0);
 	gcWorker.workList = DArray_New(0);
 	gcWorker.idleList2 = DArray_New(0);
@@ -223,7 +215,7 @@ void DaoGC_Init()
 	gcWorker.scanning = NULL;
 
 	gcWorker.finalizing = 0;
-	gcWorker.delayMask = 0xf;
+	gcWorker.cycle = 0;
 
 	gcWorker.gcMin = 1000;
 	gcWorker.gcMax = 100 * gcWorker.gcMin;
@@ -234,16 +226,6 @@ void DaoGC_Init()
 	gcWorker.busy = 0;
 	gcWorker.locked = 0;
 	gcWorker.concurrent = 0;
-
-	memset( type_gc_delay, 0, END_NOT_TYPES*sizeof(uchar_t) );
-	type_gc_delay[ DAO_CLASS ] = 1;
-	type_gc_delay[ DAO_CTYPE ] = 1;
-	type_gc_delay[ DAO_INTERFACE ] = 1;
-	type_gc_delay[ DAO_ROUTINE ] = 1;
-	type_gc_delay[ DAO_PROCESS ] = 1;
-	type_gc_delay[ DAO_NAMESPACE ] = 1;
-	type_gc_delay[ DAO_TYPE ] = 1;
-	type_gc_delay[ DAO_TYPEKERNEL ] = 1;
 }
 void DaoGC_Start()
 {
@@ -264,7 +246,7 @@ void DaoCGC_Start()
 	DaoIGC_Finish();
 	gcWorker.concurrent = 1;
 	gcWorker.finalizing = 0;
-	gcWorker.delayMask = 0xf;
+	gcWorker.cycle = 0;
 	DThread_Start( & gcWorker.thread, DaoCGC_Recycle, NULL );
 #endif
 }
@@ -363,6 +345,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 	/* never push simple data types into GC queue,
 	 * because they cannot form cyclic referencing structure: */
 	if( p->type < DAO_ENUM ) return 0;
+	if( p->xGC.delay ) return 0;
 	DArray_Append( gcWorker.idleList, p );
 	return 1;
 }
@@ -499,6 +482,9 @@ static void DaoGC_FreeSimple()
 	for(i=0; i<k; i++) DaoGC_DeleteSimpleData( workList2->items.pValue[i] );
 	workList2->size = 0;
 }
+
+#define DAO_FULL_GC_SCAN_CYCLE 8
+
 /* The implementation makes sure the GC fields are modified only by the GC thread! */
 void DaoGC_PrepareCandidates()
 {
@@ -506,23 +492,43 @@ void DaoGC_PrepareCandidates()
 	DArray *workList = gcWorker.workList;
 	DArray *freeList = gcWorker.freeList;
 	DArray *delayList = gcWorker.delayList;
+	uchar_t cycle = (++gcWorker.cycle) % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k = 0;
-	for(i=0; i<freeList->size; i++) freeList->items.pValue[i]->xGC.work = 1;
-	for(i=0; i<delayList->size; i++) DArray_Append( workList, delayList->items.pValue[i] );
+	for(i=0; i<freeList->size; ++i) freeList->items.pValue[i]->xGC.work = 1;
+	if( delay ){
+		for(i=0; i<delayList->size; ++i) delayList->items.pValue[i]->xGC.work = 1;
+	}else{
+		/* push delayed objects into the working list for full GC scan: */
+		for(i=0; i<delayList->size; ++i){
+			value = delayList->items.pValue[i];
+			value->xGC.delay = 0;
+			DArray_Append( workList, value );
+		}
+		delayList->size = 0;
+	}
 	/* Remove possible redundant items: */
-	for(i=0; i<workList->size; i++){
+	for(i=0; i<workList->size; ++i){
 		value = workList->items.pValue[i];
-		if( value->xGC.work ) continue;
+		if( value->xGC.work | value->xGC.delay ) continue;
+		if( value->xBase.trait & delay ){
+			/* for non full scan cycles, delay GC on objects with DAO_VALUE_DELAYGC trait: */
+			if( value->xGC.delay ) continue;
+			value->xGC.delay = 1;
+			DArray_Append( delayList, value );
+			continue;
+		}
 		workList->items.pValue[k++] = value;
+		value->xGC.cycRefCount = value->xGC.refCount;
 		value->xGC.work = 1;
 		value->xGC.alive = 0;
-		value->xGC.delay += type_gc_delay[value->type];
-		value->xGC.cycRefCount = value->xGC.refCount;
 	}
+#if 0
+	printf( "%9i %6i %9i %9i\n", gcWorker.cycle, delay, workList->size, k );
+#endif
 	workList->size = k;
 	for(i=0; i<freeList->size; i++) DaoValue_Delete( freeList->items.pValue[i] );
 	freeList->size = 0;
-	delayList->size = 0;
 }
 
 enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };
@@ -714,7 +720,6 @@ void DaoCGC_Recycle( void *p )
 		DaoGC_FreeSimple();
 
 		gcWorker.kk = 0;
-		gcWorker.delayMask = gcWorker.finalizing ? 0 : 0xf;
 		DaoGC_PrepareCandidates();
 		DaoCGC_CycRefCountDecScan();
 		DaoCGC_CycRefCountIncScan();
@@ -726,13 +731,14 @@ void DaoCGC_Recycle( void *p )
 void DaoCGC_CycRefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t delayMask = gcWorker.delayMask;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k;
 
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
-		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_VALUE_WIMETA ){
+		if( value->xBase.trait & delay ) continue;
+		if( value->xBase.trait & DAO_VALUE_WIMETA ){
 			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		DaoGC_CycRefCountDecScan( value );
@@ -773,14 +779,15 @@ void DaoCGC_CycRefCountIncScan()
 }
 int DaoCGC_AliveObjectScan()
 {
-	daoint i, k;
-	uchar_t delayMask = gcWorker.delayMask;
 	DArray *auxList = gcWorker.auxList;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	daoint i, k;
 
 	for( i=0; i<auxList->size; i++){
 		DaoValue *value = auxList->items.pValue[i];
-		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_VALUE_WIMETA ){
+		if( value->xBase.trait & delay ) continue;
+		if( value->xBase.trait & DAO_VALUE_WIMETA ){
 			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		DaoGC_CycRefCountIncScan( value );
@@ -791,14 +798,15 @@ int DaoCGC_AliveObjectScan()
 void DaoCGC_RefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t delayMask = gcWorker.delayMask;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k;
 
 	for( i=0; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
-		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_VALUE_WIMETA ){
+		if( value->xBase.trait & delay ) continue;
+		if( value->xBase.trait & DAO_VALUE_WIMETA ){
 			DaoMap *table = DaoMetaTables_Remove( value );
 			if( table ) table->refCount --;
 		}
@@ -812,7 +820,8 @@ static void DaoCGC_FreeGarbage()
 {
 	DArray *idleList = gcWorker.idleList;
 	DArray *workList = gcWorker.workList;
-	uchar_t delayMask = gcWorker.delayMask;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	daoint i, n = 0;
 
 	for(i=0; i<gcWorker.auxList2->size; i++) gcWorker.auxList2->items.pValue[i]->xGC.alive = 0;
@@ -821,14 +830,12 @@ static void DaoCGC_FreeGarbage()
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
 		value->xGC.work = value->xGC.alive = 0;
-		if( value->xGC.cycRefCount && value->xGC.refCount ){
-			if( value->xGC.delay & delayMask ) DArray_Append( gcWorker.delayList, value );
-			continue;
-		}
+		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.refCount !=0 ){
 			printf(" refCount not zero %i: %i\n", value->type, value->xGC.refCount );
 			DaoGC_PrintValueInfo( value );
 
+			value->xGC.delay = 1;
 			DArray_Append( gcWorker.delayList, value );
 			continue;
 		}
@@ -885,7 +892,6 @@ void DaoIGC_Switch()
 	gcWorker.ii = 0;
 	gcWorker.jj = 0;
 	gcWorker.kk = 0;
-	gcWorker.delayMask = gcWorker.finalizing ? 0 : 0xf;
 	DaoIGC_Continue();
 }
 void DaoIGC_Continue()
@@ -941,7 +947,8 @@ void DaoIGC_Finish()
 void DaoIGC_CycRefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t delayMask = gcWorker.delayMask;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0, k;
@@ -949,8 +956,8 @@ void DaoIGC_CycRefCountDecScan()
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
-		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_VALUE_WIMETA ){
+		if( value->xBase.trait & delay ) continue;
+		if( value->xBase.trait & DAO_VALUE_WIMETA ){
 			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		j += DaoGC_CycRefCountDecScan( value );
@@ -1007,14 +1014,15 @@ int DaoIGC_AliveObjectScan()
 	daoint i, k = 9;
 	daoint j = gcWorker.jj;
 	daoint min = gcWorker.workList->size >> 2;
-	uchar_t delayMask = gcWorker.delayMask;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	DArray *auxList = gcWorker.auxList;
 
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for( ; j<auxList->size; j++){
 		DaoValue *value = auxList->items.pValue[j];
-		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_VALUE_WIMETA ){
+		if( value->xBase.trait & delay ) continue;
+		if( value->xBase.trait & DAO_VALUE_WIMETA ){
 			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
 		}
 		k += DaoGC_CycRefCountIncScan( value );
@@ -1030,7 +1038,8 @@ int DaoIGC_AliveObjectScan()
 void DaoIGC_RefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t delayMask = gcWorker.delayMask;
+	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
+	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0, k;
@@ -1039,8 +1048,8 @@ void DaoIGC_RefCountDecScan()
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
-		if( value->xGC.delay & delayMask ) continue;
-		if( value->xNone.trait & DAO_VALUE_WIMETA ){
+		if( value->xBase.trait & delay ) continue;
+		if( value->xBase.trait & DAO_VALUE_WIMETA ){
 			DaoMap *table = DaoMetaTables_Remove( value );
 			if( table ) table->refCount --;
 		}
@@ -1059,7 +1068,6 @@ void DaoIGC_FreeGarbage()
 {
 	DArray *idleList = gcWorker.idleList;
 	DArray *workList = gcWorker.workList;
-	uchar_t delayMask = gcWorker.delayMask;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0;
@@ -1068,10 +1076,7 @@ void DaoIGC_FreeGarbage()
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
 		value->xGC.work = value->xGC.alive = 0;
-		if( value->xGC.cycRefCount && value->xGC.refCount ){
-			if( value->xGC.delay & delayMask ) DArray_Append( gcWorker.idleList, value );
-			continue;
-		}
+		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.refCount !=0 ){
 			printf(" refCount not zero %p %i: %i\n", value, value->type, value->xGC.refCount);
 			DaoGC_PrintValueInfo( value );
@@ -1103,7 +1108,6 @@ void cycRefCountDecrement( DaoValue *value )
 		DArray_Append( gcWorker.workList, value );
 		value->xGC.cycRefCount = value->xGC.refCount;
 		value->xGC.work = 1;
-		value->xGC.delay += type_gc_delay[value->type];
 	}
 	value->xGC.cycRefCount --;
 

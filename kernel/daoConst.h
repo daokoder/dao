@@ -118,7 +118,8 @@ enum DaoValueTrait
 {
 	DAO_VALUE_CONST   = (1<<1), /* constant data object */
 	DAO_VALUE_NOCOPY  = (1<<2), /* data object not for copying */
-	DAO_VALUE_WIMETA  = (1<<3) /* data object with meta field */
+	DAO_VALUE_WIMETA  = (1<<3), /* data object with meta field */
+	DAO_VALUE_DELAYGC = (1<<4)  /* objects with this trait are scanned less frequently by GC */
 };
 enum DaoTypeAttribs
 {
