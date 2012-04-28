@@ -157,10 +157,11 @@ struct DaoGarbageCollector
 	DArray   *cdataMaps;
 	void     *scanning;
 
+	uchar_t   finalizing;
+	uchar_t   delayMask;
 	daoint    gcMin, gcMax;
 	daoint    ii, jj, kk;
 	daoint    cycle;
-	daoint    finalizing;
 	short     busy;
 	short     locked;
 	short     workType;
@@ -214,6 +215,7 @@ void DaoGC_Init()
 	gcWorker.cdataMaps = DArray_New(0);
 	gcWorker.scanning = NULL;
 
+	gcWorker.delayMask = DAO_VALUE_DELAYGC;
 	gcWorker.finalizing = 0;
 	gcWorker.cycle = 0;
 
@@ -493,15 +495,15 @@ void DaoGC_PrepareCandidates()
 	DArray *freeList = gcWorker.freeList;
 	DArray *delayList = gcWorker.delayList;
 	uchar_t cycle = (++gcWorker.cycle) % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = cycle && gcWorker.finalizing == 0 ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k = 0;
 	for(i=0; i<freeList->size; ++i) freeList->items.pValue[i]->xGC.work = 1;
-	if( delay ){
-		for(i=0; i<delayList->size; ++i) delayList->items.pValue[i]->xGC.work = 1;
-	}else{
+	gcWorker.delayMask = delay;
+	if( delay == 0 ){
 		/* push delayed objects into the working list for full GC scan: */
 		for(i=0; i<delayList->size; ++i){
 			value = delayList->items.pValue[i];
+			value->xGC.work = 0;
 			value->xGC.delay = 0;
 			DArray_Append( workList, value );
 		}
@@ -513,7 +515,6 @@ void DaoGC_PrepareCandidates()
 		if( value->xGC.work | value->xGC.delay ) continue;
 		if( value->xBase.trait & delay ){
 			/* for non full scan cycles, delay GC on objects with DAO_VALUE_DELAYGC trait: */
-			if( value->xGC.delay ) continue;
 			value->xGC.delay = 1;
 			DArray_Append( delayList, value );
 			continue;
@@ -731,8 +732,7 @@ void DaoCGC_Recycle( void *p )
 void DaoCGC_CycRefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	daoint i, k;
 
 	for(i=0; i<workList->size; i++){
@@ -780,8 +780,7 @@ void DaoCGC_CycRefCountIncScan()
 int DaoCGC_AliveObjectScan()
 {
 	DArray *auxList = gcWorker.auxList;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	daoint i, k;
 
 	for( i=0; i<auxList->size; i++){
@@ -798,8 +797,7 @@ int DaoCGC_AliveObjectScan()
 void DaoCGC_RefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	daoint i, k;
 
 	for( i=0; i<workList->size; i++ ){
@@ -820,8 +818,7 @@ static void DaoCGC_FreeGarbage()
 {
 	DArray *idleList = gcWorker.idleList;
 	DArray *workList = gcWorker.workList;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	daoint i, n = 0;
 
 	for(i=0; i<gcWorker.auxList2->size; i++) gcWorker.auxList2->items.pValue[i]->xGC.alive = 0;
@@ -947,8 +944,7 @@ void DaoIGC_Finish()
 void DaoIGC_CycRefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0, k;
@@ -1014,8 +1010,7 @@ int DaoIGC_AliveObjectScan()
 	daoint i, k = 9;
 	daoint j = gcWorker.jj;
 	daoint min = gcWorker.workList->size >> 2;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	DArray *auxList = gcWorker.auxList;
 
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
@@ -1038,8 +1033,7 @@ int DaoIGC_AliveObjectScan()
 void DaoIGC_RefCountDecScan()
 {
 	DArray *workList = gcWorker.workList;
-	uchar_t cycle = gcWorker.cycle % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = gcWorker.delayMask;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint j = 0, k;
