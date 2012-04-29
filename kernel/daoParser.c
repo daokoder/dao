@@ -3411,6 +3411,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 			start ++;
 			if( start > to ) break;
 			tki = tokens[start]->name;
+			continue;
 		}
 
 		storeType = 0;
@@ -6472,8 +6473,8 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 	case DAO_OPER_NOT : code = DVM_NOT; break;
 	case DAO_OPER_INCR : code = DVM_ADD; break;
 	case DAO_OPER_DECR : code = DVM_SUB; break;
-	case DAO_OPER_SUB : code = DVM_UNMS; break;
-	case DAO_OPER_TILDE : code = DVM_BITREV; break;
+	case DAO_OPER_SUB : code = DVM_MINUS; break;
+	case DAO_OPER_TILDE : code = DVM_TILDE; break;
 	default : ec = DAO_CTW_EXPR_INVALID; goto ErrorParsing;
 	}
 	if( result.konst && (code == DVM_ADD || code == DVM_SUB) ){

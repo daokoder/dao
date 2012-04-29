@@ -850,7 +850,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_SETVH , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
 		&& LAB_SETI  , && LAB_SETDI , && LAB_SETMI , && LAB_SETF  , && LAB_SETMF ,
 		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
-		&& LAB_NOT , && LAB_UNMS , && LAB_BITREV ,
+		&& LAB_NOT , && LAB_MINUS , && LAB_TILDE ,
 		&& LAB_ADD , && LAB_SUB ,
 		&& LAB_MUL , && LAB_DIV ,
 		&& LAB_MOD , && LAB_POW ,
@@ -897,8 +897,8 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MOVE_CI , && LAB_MOVE_CF , && LAB_MOVE_CD ,
 		&& LAB_MOVE_CC , && LAB_MOVE_SS , && LAB_MOVE_PP , && LAB_MOVE_XX ,
 		&& LAB_NOT_I , && LAB_NOT_F , && LAB_NOT_D ,
-		&& LAB_UNMS_I , && LAB_UNMS_F , && LAB_UNMS_D , && LAB_UNMS_C ,
-		&& LAB_BITREV_I ,
+		&& LAB_MINUS_I , && LAB_MINUS_F , && LAB_MINUS_D , && LAB_MINUS_C ,
+		&& LAB_TILDE_I , && LAB_TILDE_C ,
 
 		&& LAB_ADD_III , && LAB_SUB_III , && LAB_MUL_III , && LAB_DIV_III ,
 		&& LAB_MOD_III , && LAB_POW_III , && LAB_AND_III , && LAB_OR_III ,
@@ -1287,7 +1287,7 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_DoInTest( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( NOT ) OPCASE( UNMS ){
+		}OPNEXT() OPCASE( NOT ) OPCASE( MINUS ){
 			self->activeCode = vmc;
 			DaoProcess_DoUnaArith( self, vmc );
 			goto CheckException;
@@ -1299,7 +1299,7 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_DoBitShift( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( BITREV ){
+		}OPNEXT() OPCASE( TILDE ){
 			self->activeCode = vmc;
 			DaoProcess_DoBitFlip( self, vmc );
 			goto CheckException;
@@ -1612,7 +1612,7 @@ CallEntry:
 				? IntegerOperand( vmc->a ) : IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( NOT_I ){
 			IntegerOperand( vmc->c ) = ! IntegerOperand( vmc->a );
-		}OPNEXT() OPCASE( UNMS_I ){
+		}OPNEXT() OPCASE( MINUS_I ){
 			IntegerOperand( vmc->c ) = - IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( LT_III ){
 			IntegerOperand( vmc->c ) = IntegerOperand( vmc->a ) < IntegerOperand( vmc->b );
@@ -1632,8 +1632,13 @@ CallEntry:
 			IntegerOperand( vmc->c ) = (daoint)IntegerOperand( vmc->a ) << (daoint)IntegerOperand( vmc->b );
 		}OPNEXT() OPCASE( BITRIT_III ){
 			IntegerOperand( vmc->c ) = (daoint)IntegerOperand( vmc->a ) >> (daoint)IntegerOperand( vmc->b );
-		}OPNEXT() OPCASE( BITREV_I ){
+		}OPNEXT() OPCASE( TILDE_I ){
 			IntegerOperand( vmc->c ) = ~ (daoint) IntegerOperand( vmc->a );
+		}OPNEXT() OPCASE( TILDE_C ){
+			vA = locVars[ vmc->a ];
+			vC = locVars[ vmc->c ];
+			vC->xComplex.value.real =   vA->xComplex.value.real;
+			vC->xComplex.value.imag = - vA->xComplex.value.imag;
 		}OPNEXT() OPCASE( MOVE_FF ){
 			FloatOperand( vmc->c ) = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( ADD_FFF ){
@@ -1659,7 +1664,7 @@ CallEntry:
 			FloatOperand( vmc->c ) = fnum ? fnum : FloatOperand( vmc->b );
 		}OPNEXT() OPCASE( NOT_F ){
 			FloatOperand( vmc->c ) = ! FloatOperand( vmc->a );
-		}OPNEXT() OPCASE( UNMS_F ){
+		}OPNEXT() OPCASE( MINUS_F ){
 			FloatOperand( vmc->c ) = - FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( LT_IFF ){
 			IntegerOperand( vmc->c ) = FloatOperand( vmc->a ) < FloatOperand( vmc->b );
@@ -1694,7 +1699,7 @@ CallEntry:
 			DoubleOperand( vmc->c ) = dnum ? dnum : DoubleOperand( vmc->b );
 		}OPNEXT() OPCASE( NOT_D ){
 			DoubleOperand( vmc->c ) = ! DoubleOperand( vmc->a );
-		}OPNEXT() OPCASE( UNMS_D ){
+		}OPNEXT() OPCASE( MINUS_D ){
 			DoubleOperand( vmc->c ) = - DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( LT_IDD ){
 			IntegerOperand( vmc->c ) = DoubleOperand( vmc->a ) < DoubleOperand( vmc->b );
@@ -1760,7 +1765,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MOVE_XX ){
 			if( locVars[ vmc->a ] == NULL ) goto RaiseErrorNullObject;
 			DaoValue_Copy( locVars[ vmc->a ], locVars + vmc->c );
-		}OPNEXT() OPCASE( UNMS_C ){
+		}OPNEXT() OPCASE( MINUS_C ){
 			acom = ComplexOperand( vmc->a );
 			vC = locVars[ vmc->c ];
 			vC->xComplex.value.real = - acom.real;
@@ -5412,25 +5417,25 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		C = DaoProcess_SetValue( self, vmc->c, A );
 		switch( vmc->code ){
 			case DVM_NOT :  C->xInteger.value = ! C->xInteger.value; break;
-			case DVM_UNMS : C->xInteger.value = - C->xInteger.value; break;
+			case DVM_MINUS : C->xInteger.value = - C->xInteger.value; break;
 			default: break;
 		}
 	}else if( ta == DAO_FLOAT ){
 		C = DaoProcess_SetValue( self, vmc->c, A ); // XXX integer result?
 		switch( vmc->code ){
 			case DVM_NOT :  C->xFloat.value = ! C->xFloat.value; break;
-			case DVM_UNMS : C->xFloat.value = - C->xFloat.value; break;
+			case DVM_MINUS : C->xFloat.value = - C->xFloat.value; break;
 			default: break;
 		}
 	}else if( ta == DAO_DOUBLE ){
 		C = DaoProcess_SetValue( self, vmc->c, A );
 		switch( vmc->code ){
 			case DVM_NOT :  C->xDouble.value = ! C->xDouble.value; break;
-			case DVM_UNMS : C->xDouble.value = - C->xDouble.value; break;
+			case DVM_MINUS : C->xDouble.value = - C->xDouble.value; break;
 			default: break;
 		}
 	}else if( ta == DAO_COMPLEX ){
-		if( vmc->code == DVM_UNMS ){
+		if( vmc->code == DVM_MINUS ){
 			C = DaoProcess_SetValue( self, vmc->c, A );
 			C->xComplex.value.real = - C->xComplex.value.real;
 			C->xComplex.value.imag = - C->xComplex.value.imag;
@@ -5443,7 +5448,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 				ta = DLong_CompareToZero( C->xLong.value ) == 0;
 				DLong_FromInteger( C->xLong.value, ta );
 				break;
-			case DVM_UNMS : C->xLong.value->sign = - C->xLong.value->sign; break;
+			case DVM_MINUS : C->xLong.value->sign = - C->xLong.value->sign; break;
 			default: break;
 		}
 #endif
@@ -5473,7 +5478,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 					for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
 				}
 			}
-		}else if( vmc->code == DVM_UNMS ){
+		}else if( vmc->code == DVM_MINUS ){
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
 			complex16 *va, *vc;
 			DaoArray_SetNumType( res, array->etype );
@@ -5698,6 +5703,9 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 			case DAO_FLOAT   : DaoProcess_PutFloat( self, ~(daoint)A->xFloat.value ); break;
 			case DAO_DOUBLE  : DaoProcess_PutDouble( self, ~(daoint)A->xDouble.value ); break;
 		}
+	}else if( A->type == DAO_COMPLEX ){
+		complex16 *C = DaoProcess_PutComplex( self, A->xComplex.value );
+		C->imag = - C->imag;
 #ifdef DAO_WITH_LONGINT
 	}else if( A->type == DAO_LONG ){
 		DLong *bigint = DaoProcess_PutLong( self );
@@ -6929,13 +6937,13 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	case DVM_IN :
 		DaoProcess_DoInTest( self, vmc );
 		break;
-	case DVM_NOT : case DVM_UNMS :
+	case DVM_NOT : case DVM_MINUS :
 		DaoProcess_DoUnaArith( self, vmc ); break;
 	case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
 		DaoProcess_DoBitLogic( self, vmc ); break;
 	case DVM_BITLFT : case DVM_BITRIT :
 		DaoProcess_DoBitShift( self, vmc ); break;
-	case DVM_BITREV :
+	case DVM_TILDE :
 		DaoProcess_DoBitFlip( self, vmc ); break;
 	case DVM_CHECK :
 		DaoProcess_DoCheck( self, vmc ); break;

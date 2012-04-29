@@ -68,7 +68,7 @@
 	(self).imag = ( L.imag*R.real - L.real*R.imag ) / ( R.real*R.real + R.imag*R.imag ); }
 
 #define \
-	COM_UNMS( self, com ) \
+	COM_MINUS( self, com ) \
 { (self).real = - com.real; (self).imag = - com.imag;  }
 
 DAO_DLL double abs_c( const complex16 com );

@@ -45,8 +45,8 @@ enum DaoOpcode
 	DVM_CAST , /* convert A to C if they have different types; */
 	DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */
 	DVM_NOT ,  /* C = ! A; not */
-	DVM_UNMS , /* C = - A; unary minus; */
-	DVM_BITREV , /* C = ~ A */
+	DVM_MINUS , /* C = - A; unary minus; */
+	DVM_TILDE , /* C = ~ A */
 	DVM_ADD ,  /* C = A + B;  */
 	DVM_SUB ,  /* C = A - B;  */
 	DVM_MUL ,  /* C = A * B;  */
@@ -169,11 +169,12 @@ enum DaoOpcode
 	DVM_NOT_I ,
 	DVM_NOT_F ,
 	DVM_NOT_D ,
-	DVM_UNMS_I ,
-	DVM_UNMS_F ,
-	DVM_UNMS_D ,
-	DVM_UNMS_C ,
-	DVM_BITREV_I ,
+	DVM_MINUS_I ,
+	DVM_MINUS_F ,
+	DVM_MINUS_D ,
+	DVM_MINUS_C ,
+	DVM_TILDE_I ,
+	DVM_TILDE_C ,
 	/* C = A + B: will be compiled into: ADD, MOVE,
 	 * and the C operand of ADD is always an intermediate data with type to be inferred,
 	 * so it is only necessary to add specialized opcode according the A,B operands. */

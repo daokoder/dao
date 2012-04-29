@@ -4124,14 +4124,14 @@ NotExist_TryAux:
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
-		case DVM_UNMS :
+		case DVM_MINUS :
 			ct = DaoInferencer_UpdateType( self, opc, at );
 			if( NoCheckingType( at ) ) continue;
 			AssertTypeMatching( at, ct, defs );
 			if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 				if( typed_code ){
 					if( at != ct ) DaoInferencer_InsertMove( self, inode, & inode->a, at, ct );
-					inode->code = DVM_UNMS_I + (ct->tid - DAO_INTEGER);
+					inode->code = DVM_MINUS_I + (ct->tid - DAO_INTEGER);
 				}
 				continue;
 			}
@@ -4139,7 +4139,7 @@ NotExist_TryAux:
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
-		case DVM_BITREV :
+		case DVM_TILDE :
 			{
 				ct = DaoInferencer_UpdateType( self, opc, at );
 				if( NoCheckingType( at ) ) continue;
@@ -4147,9 +4147,11 @@ NotExist_TryAux:
 				if( typed_code && at->realnum && ct->realnum ){
 					if( at->tid != DAO_INTEGER )
 						DaoInferencer_InsertMove( self, inode, & inode->a, at, dao_type_int );
-					vmc->code = DVM_BITREV_I;
+					vmc->code = DVM_TILDE_I;
 					if( ct->tid != DAO_INTEGER )
 						DaoInferencer_InsertMove2( self, inode, dao_type_int, ct );
+				}else if( typed_code && at->tid == DAO_COMPLEX && ct->tid == DAO_COMPLEX ){
+					vmc->code = DVM_TILDE_C;
 				}
 				break;
 			}
@@ -5163,18 +5165,23 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( types[opc], TT3 );
 			break;
 		case DVM_NOT_I : case DVM_NOT_F : case DVM_NOT_D : 
-		case DVM_UNMS_I : case DVM_UNMS_F : case DVM_UNMS_D : 
+		case DVM_MINUS_I : case DVM_MINUS_F : case DVM_MINUS_D : 
 			DaoInferencer_UpdateType( self, opc, at );
 			TT1 = TT3 = DAO_INTEGER + (code - DVM_MOVE_II) % 3;
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( types[opc], TT3 );
 			break;
-		case DVM_BITREV_I : 
+		case DVM_TILDE_I : 
 			DaoInferencer_UpdateType( self, opc, at );
 			AssertTypeIdMatching( at, DAO_INTEGER );
 			AssertTypeIdMatching( types[opc], DAO_INTEGER );
 			break;
-		case DVM_UNMS_C :
+		case DVM_TILDE_C : 
+			DaoInferencer_UpdateType( self, opc, at );
+			AssertTypeIdMatching( at, DAO_COMPLEX );
+			AssertTypeIdMatching( types[opc], DAO_COMPLEX );
+			break;
+		case DVM_MINUS_C :
 		case DVM_MOVE_CC :
 		case DVM_MOVE_SS :
 			DaoInferencer_UpdateType( self, opc, at );

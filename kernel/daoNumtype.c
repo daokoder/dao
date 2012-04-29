@@ -3651,7 +3651,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_SUB : dC->data.i[c] = af - bf; break;
 			case DVM_MUL : dC->data.i[c] = af * bf; break;
 			case DVM_DIV : dC->data.i[c] = af / bf; break;
-			case DVM_MOD : dC->data.i[c] = (daoint)af % (daoint)bf; break;
+			case DVM_MOD : dC->data.i[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.i[c] = powf( af, bf );break;
 			case DVM_AND : dC->data.i[c] = af && bf; break;
 			case DVM_OR  : dC->data.i[c] = af || bf; break;
@@ -3666,7 +3666,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_SUB : dC->data.f[c] = af - bf; break;
 			case DVM_MUL : dC->data.f[c] = af * bf; break;
 			case DVM_DIV : dC->data.f[c] = af / bf; break;
-			case DVM_MOD : dC->data.f[c] = (daoint)af % (daoint)bf; break;
+			case DVM_MOD : dC->data.f[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.f[c] = powf( af, bf );break;
 			case DVM_AND : dC->data.f[c] = af && bf; break;
 			case DVM_OR  : dC->data.f[c] = af || bf; break;
@@ -3681,7 +3681,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_SUB : dC->data.d[c] = af - bf; break;
 			case DVM_MUL : dC->data.d[c] = af * bf; break;
 			case DVM_DIV : dC->data.d[c] = af / bf; break;
-			case DVM_MOD : dC->data.d[c] = (daoint)af % (daoint)bf; break;
+			case DVM_MOD : dC->data.d[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.d[c] = powf( af, bf );break;
 			case DVM_AND : dC->data.d[c] = af && bf; break;
 			case DVM_OR  : dC->data.d[c] = af || bf; break;
@@ -3758,7 +3758,7 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_SUB : dC->data.i[c] = af - bf; break;
 			case DVM_MUL : dC->data.i[c] = af * bf; break;
 			case DVM_DIV : dC->data.i[c] = af / bf; break;
-			case DVM_MOD : dC->data.i[c] = (daoint)af % (daoint)bf; break;
+			case DVM_MOD : dC->data.i[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.i[c] = pow( af, bf );break;
 			case DVM_AND : dC->data.i[c] = af && bf; break;
 			case DVM_OR  : dC->data.i[c] = af || bf; break;
@@ -3773,7 +3773,7 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_SUB : dC->data.f[c] = af - bf; break;
 			case DVM_MUL : dC->data.f[c] = af * bf; break;
 			case DVM_DIV : dC->data.f[c] = af / bf; break;
-			case DVM_MOD : dC->data.f[c] = (daoint)af % (daoint)bf; break;
+			case DVM_MOD : dC->data.f[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.f[c] = powf( af, bf );break;
 			case DVM_AND : dC->data.f[c] = af && bf; break;
 			case DVM_OR  : dC->data.f[c] = af || bf; break;
@@ -3788,7 +3788,7 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_SUB : dC->data.d[c] = af - bf; break;
 			case DVM_MUL : dC->data.d[c] = af * bf; break;
 			case DVM_DIV : dC->data.d[c] = af / bf; break;
-			case DVM_MOD : dC->data.d[c] = (daoint)af % (daoint)bf; break;
+			case DVM_MOD : dC->data.d[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.d[c] = pow( af, bf );break;
 			case DVM_AND : dC->data.d[c] = af && bf; break;
 			case DVM_OR  : dC->data.d[c] = af || bf; break;
@@ -3822,6 +3822,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 	daoint N = DaoArray_MatchShape( A, B );
 	daoint M = C == A ? N : DaoArray_MatchShape( C, A );
 	daoint i, a, b, c;
+	double va, vb;
 	if( N < 0 || (C->original && M != N) ){
 		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
 		return 0;
@@ -3851,30 +3852,32 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 				}
 				break;
 			case DAO_FLOAT :
+				vb = dB->data.f[b];
 				switch( op ){
-				case DVM_MOVE : dC->data.f[c] = dB->data.f[b]; break;
-				case DVM_ADD : dC->data.f[c] = dA->data.f[a] + dB->data.f[b]; break;
-				case DVM_SUB : dC->data.f[c] = dA->data.f[a] - dB->data.f[b]; break;
-				case DVM_MUL : dC->data.f[c] = dA->data.f[a] * dB->data.f[b]; break;
-				case DVM_DIV : dC->data.f[c] = dA->data.f[a] / dB->data.f[b]; break;
-				case DVM_MOD : dC->data.f[c] = (daoint)dA->data.f[a]%(daoint)dB->data.f[b]; break;
-				case DVM_POW : dC->data.f[c] = powf( dA->data.f[a], dB->data.f[b] );break;
-				case DVM_AND : dC->data.f[c] = dA->data.f[a] && dB->data.f[b]; break;
-				case DVM_OR  : dC->data.f[c] = dA->data.f[a] || dB->data.f[b]; break;
+				case DVM_MOVE : dC->data.f[c] = vb; break;
+				case DVM_ADD : dC->data.f[c] = dA->data.f[a] + vb; break;
+				case DVM_SUB : dC->data.f[c] = dA->data.f[a] - vb; break;
+				case DVM_MUL : dC->data.f[c] = dA->data.f[a] * vb; break;
+				case DVM_DIV : dC->data.f[c] = dA->data.f[a] / vb; break;
+				case DVM_MOD : va = dA->data.f[a]; dC->data.f[c] = va - vb*(daoint)(va/vb); break;
+				case DVM_POW : dC->data.f[c] = powf( dA->data.f[a], vb );break;
+				case DVM_AND : dC->data.f[c] = dA->data.f[a] && vb; break;
+				case DVM_OR  : dC->data.f[c] = dA->data.f[a] || vb; break;
 				default : break;
 				}
 				break;
 			case DAO_DOUBLE :
+				vb = dB->data.d[b];
 				switch( op ){
-				case DVM_MOVE : dC->data.d[c] = dB->data.d[b]; break;
-				case DVM_ADD : dC->data.d[c] = dA->data.d[a] + dB->data.d[b]; break;
-				case DVM_SUB : dC->data.d[c] = dA->data.d[a] - dB->data.d[b]; break;
-				case DVM_MUL : dC->data.d[c] = dA->data.d[a] * dB->data.d[b]; break;
-				case DVM_DIV : dC->data.d[c] = dA->data.d[a] / dB->data.d[b]; break;
-				case DVM_MOD : dC->data.d[c] = (daoint)dA->data.d[a]%(daoint)dB->data.d[b]; break;
-				case DVM_POW : dC->data.d[c] = powf( dA->data.d[a], dB->data.d[b] );break;
-				case DVM_AND : dC->data.d[c] = dA->data.d[a] && dB->data.d[b]; break;
-				case DVM_OR  : dC->data.d[c] = dA->data.d[a] || dB->data.d[b]; break;
+				case DVM_MOVE : dC->data.d[c] = vb; break;
+				case DVM_ADD : dC->data.d[c] = dA->data.d[a] + vb; break;
+				case DVM_SUB : dC->data.d[c] = dA->data.d[a] - vb; break;
+				case DVM_MUL : dC->data.d[c] = dA->data.d[a] * vb; break;
+				case DVM_DIV : dC->data.d[c] = dA->data.d[a] / vb; break;
+				case DVM_MOD : va = dA->data.d[a]; dC->data.d[c] = va - vb*(daoint)(va/vb); break;
+				case DVM_POW : dC->data.d[c] = powf( dA->data.d[a], vb );break;
+				case DVM_AND : dC->data.d[c] = dA->data.d[a] && vb; break;
+				case DVM_OR  : dC->data.d[c] = dA->data.d[a] || vb; break;
 				default : break;
 				}
 				break;
@@ -3935,7 +3938,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_SUB : dC->data.i[c] = ad - bd; break;
 			case DVM_MUL : dC->data.i[c] = ad * bd; break;
 			case DVM_DIV : dC->data.i[c] = ad / bd; break;
-			case DVM_MOD : dC->data.i[c] = (daoint)ad % (daoint)bd; break;
+			case DVM_MOD : dC->data.i[c] = ad - bd*(daoint)(ad/bd); break;
 			case DVM_POW : dC->data.i[c] = powf( ad, bd );break;
 			case DVM_AND : dC->data.i[c] = ad && bd; break;
 			case DVM_OR  : dC->data.i[c] = ad || bd; break;
@@ -3951,7 +3954,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_SUB : dC->data.f[c] = ad - bd; break;
 			case DVM_MUL : dC->data.f[c] = ad * bd; break;
 			case DVM_DIV : dC->data.f[c] = ad / bd; break;
-			case DVM_MOD : dC->data.f[c] = (daoint)ad%(daoint)bd; break;
+			case DVM_MOD : dC->data.f[c] = ad - bd*(daoint)(ad/bd); break;
 			case DVM_POW : dC->data.f[c] = powf( ad, bd );break;
 			case DVM_AND : dC->data.f[c] = ad && bd; break;
 			case DVM_OR  : dC->data.f[c] = ad || bd; break;
@@ -3967,7 +3970,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_SUB : dC->data.d[c] = ad - bd; break;
 			case DVM_MUL : dC->data.d[c] = ad * bd; break;
 			case DVM_DIV : dC->data.d[c] = ad / bd; break;
-			case DVM_MOD : dC->data.d[c] = (daoint)ad%(daoint)bd; break;
+			case DVM_MOD : dC->data.d[c] = ad - bd*(daoint)(ad/bd); break;
 			case DVM_POW : dC->data.d[c] = powf( ad, bd );break;
 			case DVM_AND : dC->data.d[c] = ad && bd; break;
 			case DVM_OR  : dC->data.d[c] = ad || bd; break;
