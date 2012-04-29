@@ -1676,13 +1676,14 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		if( routype->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( abtp->name, ']' );
 	}
 	DString_AppendMBS( abtp->name, ">" );
+	GC_ShiftRC( tp, abtp->aux );
 	abtp->aux = (DaoValue*) tp;
-	GC_IncRC( abtp->aux );
 	if( routype->cbtype ){
 		DMap *defs = DHash_New(0,0);
 		DaoType_MatchTo( abtp, routype, defs );
-		abtp->cbtype = DaoType_DefineTypes( routype->cbtype, self, defs );
-		GC_IncRC( abtp->cbtype );
+		tp = DaoType_DefineTypes( routype->cbtype, self, defs );
+		GC_ShiftRC( tp, abtp->cbtype );
+		abtp->cbtype = tp;
 		DMap_Delete( defs );
 		DString_Append( abtp->name, abtp->cbtype->name );
 	}

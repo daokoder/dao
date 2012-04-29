@@ -40,6 +40,7 @@ void DaoType_Delete( DaoType *self )
 	GC_DecRC( self->aux );
 	GC_DecRC( self->value );
 	GC_DecRC( self->kernel );
+	GC_DecRC( self->cbtype );
 	DString_Delete( self->name );
 	if( self->fname ) DString_Delete( self->fname );
 	if( self->nested ) DArray_Delete( self->nested );
