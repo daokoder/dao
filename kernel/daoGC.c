@@ -521,14 +521,7 @@ void DaoGC_PrepareCandidates()
 	gcWorker.mdelete = 0.5*gcWorker.mdelete + 0.5*freeList->size;
 	delay2 = gcWorker.cycle % (1 + 100 / (1 + gcWorker.mdelete));
 	if( gcWorker.finalizing ) delay2 = 0;
-	if( delay ){
-		for(i=0,k=0; i<delayList->size; ++i){
-			value = delayList->items.pValue[i];
-			if( value->xGC.work ) continue;
-			delayList->items.pValue[k++] = value;
-		}
-		delayList->size = k;
-	}else{
+	if( delay == 0 ){
 		/* push delayed objects into the working list for full GC scan: */
 		for(i=0; i<delayList->size; ++i){
 			value = delayList->items.pValue[i];
@@ -537,6 +530,13 @@ void DaoGC_PrepareCandidates()
 			DArray_Append( workList, value );
 		}
 		delayList->size = 0;
+	}else if( freeList->size ){
+		for(i=0,k=0; i<delayList->size; ++i){
+			value = delayList->items.pValue[i];
+			if( value->xGC.work ) continue;
+			delayList->items.pValue[k++] = value;
+		}
+		delayList->size = k;
 	}
 	/* Remove possible redundant items: */
 	for(i=0,k=0; i<workList->size; ++i){
