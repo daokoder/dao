@@ -10,7 +10,6 @@
 // without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 // See the GNU Lesser General Public License for more details.
 */
-
 /*
  * This file is distributed under GPL to use readline library.
  */
