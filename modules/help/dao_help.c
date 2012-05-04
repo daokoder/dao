@@ -587,9 +587,6 @@ static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 }
 static void DaoxHelpEntry_Delete( DaoxHelpEntry *self )
 {
-	daoint i;
-	DArray *array = self->nested2;
-	for(i=0; i<array->size; i++) DaoxHelpEntry_Delete( (DaoxHelpEntry*) array->items.pVoid[i] );
 	if( self->first ) DaoxHelpBlock_Delete( self->first );
 	if( self->title ) DString_Delete( self->title );
 	if( self->author ) DString_Delete( self->author );
@@ -1162,7 +1159,10 @@ static DaoFuncItem helpMeths[]=
 };
 
 static DaoTypeBase helpTyper =
-{ "help", NULL, NULL, helpMeths, {0}, {0}, (FuncPtrDel) DaoxHelper_Delete, NULL };
+{
+	"help", NULL, NULL, helpMeths, {0}, {0},
+	(FuncPtrDel) DaoxHelper_Delete, DaoxHelper_GetGCFields
+};
 
 static DString* dao_verbatim_content( DString *VT )
 {
