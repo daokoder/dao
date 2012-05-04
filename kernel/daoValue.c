@@ -599,7 +599,7 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 	default : break;
 	}
 }
-static int DaoValye_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
+static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	DaoTuple *tuple;
 	DaoType **item_types = tp->nested->items.pType;
@@ -723,7 +723,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 	GC_ShiftRC( S, *D );
 	*D = S;
 	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm >= DAO_MT_SIM ){
-		return DaoValye_TryCastTuple( S, D, T );
+		return DaoValue_TryCastTuple( S, D, T );
 	}else if( T && T->tid == S->type ){
 		DaoValue_SetType( S, T );
 	}

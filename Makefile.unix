@@ -1,8 +1,13 @@
 
-USE_READLINE = -DDAO_USE_READLINE
-LIB_READLINE = -lreadline -lncurses
-
 include Makefile.common
+
+USE_READLINE =
+LIB_READLINE =
+
+ifeq ($(readline),yes)
+	USE_READLINE = -DDAO_USE_READLINE
+	LIB_READLINE = -lreadline
+endif
 
 DAO_LFLAGS += -rdynamic
 DAO_LIBS += -ldl -lpthread -lm $(LIB_READLINE)

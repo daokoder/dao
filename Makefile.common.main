@@ -121,7 +121,7 @@ first: all
 .c.o:
 	$(DAO_CC) -c $(DAO_CFLAGS) $(DAO_INCS) -o $@ $<
 
-kernel/daoMaindl.o: kernel/daoMaindl.c
+kernel/daoMain.o: kernel/daoMain.c
 	$(DAO_CC) -c $(DAO_CFLAGS) $(USE_READLINE) $(DAO_INCS) -o $@ $<
 
 ####### Build rules
@@ -133,8 +133,8 @@ lib: $(DAO_DLL) modules
 $(DAO_DLL): $(DAO_OBJECTS)
 	$(DAO_CC) $(DAO_DLLFLAGS) -o $(DAO_DLL) $(DAO_OBJECTS) $(DAO_LIBS)
 
-$(DAO_EXE): $(DAO_DLL) kernel/daoMaindl.o
-	$(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) kernel/daoMaindl.o $(DAO_LIBS) $(DAO_LFLAGS_DAO)
+$(DAO_EXE): $(DAO_DLL) kernel/daoMain.o
+	$(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) kernel/daoMain.o $(DAO_LIBS) $(DAO_LFLAGS_DAO)
 
 static: $(DAO_OBJECTS) kernel/daoMain.o
 	$(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) $(DAO_OBJECTS) kernel/daoMain.o $(DAO_LIBS)

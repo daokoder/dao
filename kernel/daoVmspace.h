@@ -87,7 +87,7 @@ struct DaoVmSpace
     DaoUserHandler *userHandler;
 
     char* (*ReadLine)( const char *prompt );
-    void  (*AddHistory)( const char *cmd );
+    int   (*AddHistory)( const char *cmd );
 
 #ifdef DAO_WITH_THREAD
     DMutex  mutexLoad;

@@ -368,7 +368,7 @@ struct DaoUserHandler
 	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *process );
 };
 typedef char* (*ReadLine)( const char *prompt );
-typedef void  (*AddHistory)( const char *cmd );
+typedef int   (*AddHistory)( const char *cmd );
 
 
 

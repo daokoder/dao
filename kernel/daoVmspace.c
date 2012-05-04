@@ -119,7 +119,7 @@ const char *const dao_copy_notice =
 "  Built date: " __DATE__ "\n"
 "  Changeset ID: " CHANGESET_ID "\n\n"
 "  Copyright(C) 2006-2012, Fu Limin\n"
-"  Dao is released under the terms of the MIT License\n"
+"  Dao is released under the terms of the Simplified BSD License\n"
 "  Dao Language website: http://www.daovm.net\n"
 ;
 
