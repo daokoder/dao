@@ -1147,14 +1147,8 @@ void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcol
 		if( fg >= 0 && (fgcolor == NULL || fgcolor[0] == 0) ) SetCharForeground( self, fg );
 		if( bg >= 0 && (bgcolor == NULL || bgcolor[0] == 0) ) SetCharBackground( self, bg );
 
-		if( fgcolor && fgcolor[0] ){
-			int fg2 = SetCharForeground( self, MapColor( fgcolor ) );
-			if( fg < 0 ) fg = fg2;
-		}
-		if( bgcolor && bgcolor[0] ){
-			int bg2 = SetCharBackground( self, MapColor( bgcolor ) );
-			if( bg < 0 ) bg = bg2;
-		}
+		if( fgcolor && fgcolor[0] ) fg = SetCharForeground( self, MapColor( fgcolor ) );
+		if( bgcolor && bgcolor[0] ) bg = SetCharBackground( self, MapColor( bgcolor ) );
 		return;
 	}
 	if( self->redirect == NULL || self->redirect->SetColor == NULL ) return;

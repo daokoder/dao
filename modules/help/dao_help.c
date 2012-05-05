@@ -1095,9 +1095,11 @@ static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
 		if( newproc ) DaoVmSpace_ReleaseProcess( proc->vmSpace, newproc );
 	}
 	if( entry->nested->size ){
+		DaoStream_WriteMBS( stdio, "\n" );
 		DaoStream_SetColor( stdio, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
-		DaoStream_WriteMBS( stdio, "\n[STRUCTURE]\n\n" );
+		DaoStream_WriteMBS( stdio, "[STRUCTURE]" );
 		DaoStream_SetColor( stdio, NULL, NULL );
+		DaoStream_WriteMBS( stdio, "\n\n" );
 		DaoxHelpEntry_PrintTree( entry, stdio, NULL, 0, entry->name->size, 1, 1 );
 	}
 }

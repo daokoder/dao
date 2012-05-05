@@ -6,6 +6,7 @@ all:
 	-cd syslib && $(MAKE)
 	-cd math && $(MAKE)
 	-cd meta && $(MAKE)
+	-cd help && $(MAKE)
 	-$(HAS_FILE) Makefile2 && $(MAKE) -f Makefile2
 
 clean:
@@ -13,6 +14,7 @@ clean:
 	-cd syslib && $(MAKE) clean
 	-cd math && $(MAKE) clean
 	-cd meta && $(MAKE) clean
+	-cd help && $(MAKE) clean
 	-$(HAS_FILE) Makefile2 && $(MAKE) -f Makefile2 clean
 
 install:

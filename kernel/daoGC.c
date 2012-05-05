@@ -567,12 +567,14 @@ enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };
 
 static void DaoGC_LockData()
 {
+	if( gcWorker.concurrent == 0 ) return;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & gcWorker.data_lock );
 #endif
 }
 static void DaoGC_UnlockData()
 {
+	if( gcWorker.concurrent == 0 ) return;
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & gcWorker.data_lock );
 #endif
