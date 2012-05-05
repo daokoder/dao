@@ -1383,7 +1383,7 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 	self->derived = 1;
 }
 
-void DMap_SortMethods( DMap *hash, DArray *methods )
+DAO_DLL void DMap_SortMethods( DMap *hash, DArray *methods )
 {
 	DMap *map = DMap_New(D_STRING,0);
 	DString *name = DString_New(1);

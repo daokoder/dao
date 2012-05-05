@@ -550,7 +550,7 @@ DaoTypeBase metaTyper = {
 	"meta", NULL, NULL, metaMeths, {NULL}, {0}, NULL, NULL
 };
 
-int DaoMeta_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+DAO_DLL int DaoMeta_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace_WrapType( ns, & metaTyper, 1 );
 	return 0;

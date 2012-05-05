@@ -2103,32 +2103,34 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoVmSpace_InitPath( vms );
 
 #ifdef DAO_WITH_MODULES
-	mbs2 = DString_New(1);
-	DString_Clear( mbs );
-	handle = DaoOpenDLL( NULL );
-	for(i=0,n=strlen(DAO_WITH_MODULES); i<n; i++){
-		char ch = DAO_WITH_MODULES[i];
-		if( ch == ',' || i == (n-1) ){
-			if( ch != ',' ) DString_AppendChar( mbs, ch );
-			if( mbs->size == 0 || mbs2->size == 0 ) continue;
-			DString_InsertMBS( mbs2, "Dao", 0, 0, 3 );
-			DString_AppendMBS( mbs2, "_OnLoad" );
-			fpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, mbs2->mbs );
-			if( fpter ){
-				DString_AppendMBS( mbs, DAO_DLL_SUFFIX );
-				DaoVmSpace_AddVirtualModule( vms, mbs->mbs, fpter );
+	if( (n = strlen(DAO_WITH_MODULES)) ){
+		mbs2 = DString_New(1);
+		DString_Clear( mbs );
+		handle = DaoOpenDLL( NULL );
+		for(i=0; i<n; i++){
+			char ch = DAO_WITH_MODULES[i];
+			if( ch == ',' || i == (n-1) ){
+				if( ch != ',' ) DString_AppendChar( mbs, ch );
+				if( mbs->size == 0 || mbs2->size == 0 ) continue;
+				DString_InsertMBS( mbs2, "Dao", 0, 0, 3 );
+				DString_AppendMBS( mbs2, "_OnLoad" );
+				fpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, mbs2->mbs );
+				if( fpter ){
+					DString_AppendMBS( mbs, DAO_DLL_SUFFIX );
+					DaoVmSpace_AddVirtualModule( vms, mbs->mbs, fpter );
+				}else{
+					fprintf( stderr, "WARNING: failed to embed module \"%s\"!\n", mbs->mbs );
+				}
+				DString_Clear( mbs );
+				DString_Clear( mbs2 );
+			}else if( ch == ':' ){
+				DString_Assign( mbs2, mbs );
 			}else{
-				fprintf( stderr, "WARNING: failed to embed module \"%s\"!\n", mbs->mbs );
+				DString_AppendChar( mbs, ch );
 			}
-			DString_Clear( mbs );
-			DString_Clear( mbs2 );
-		}else if( ch == ':' ){
-			DString_Assign( mbs2, mbs );
-		}else{
-			DString_AppendChar( mbs, ch );
 		}
+		DString_Delete( mbs2 );
 	}
-	DString_Delete( mbs2 );
 #endif
 
 	/*

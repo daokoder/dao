@@ -673,8 +673,9 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProc
 		}
 		DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
 		DaoxStream_WriteText( & xstream, notice, 0, DAOX_TEXT_WIDTH );
-		DaoxStream_WriteNewLine( & xstream, "" );
 		DaoStream_SetColor( stream, NULL, NULL );
+		DaoxStream_WriteNewLine( & xstream, "" );
+		DString_Delete( notice );
 	}
 
 	xstream.offset = 0;
@@ -1275,7 +1276,7 @@ static int dao_help_license( DaoNamespace *NS, DString *mode, DString *verbatim,
 	return dao_string_delete( code, 0 );
 }
 
-int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DString help_help = DString_WrapMBS( "help_help" );
 	DaoType *type;

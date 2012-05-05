@@ -1056,8 +1056,10 @@ static int SetCharColor( DaoStream *stream, int color, int RGB[3] )
 {
 	int res = 0;
 	struct _CONSOLE_SCREEN_BUFFER_INFO info;
-	HANDLE fd = (HANDLE)_get_osfhandle( _fileno( DaoStream_GetFile( stream ) ) );
+	FILE *file = DaoStream_GetFile( stream );
+	HANDLE fd = INVALID_HANDLE_VALUE;
 	WORD attr;
+	if( file ) fd = (HANDLE)_get_osfhandle( _fileno( file ) );
 	if( fd == INVALID_HANDLE_VALUE ) fd = GetStdHandle( STD_OUTPUT_HANDLE );
 	if( !GetConsoleScreenBufferInfo( fd, &info ) ) return 255;
 	attr = info.wAttributes;

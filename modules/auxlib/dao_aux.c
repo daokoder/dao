@@ -855,7 +855,7 @@ static DaoFuncItem auxMeths[]=
 
 static DaoTypeBase auxTyper = { "aux", NULL, NULL, auxMeths, {0}, {0}, NULL, NULL };
 
-int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+DAO_DLL int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace_WrapType( ns, & auxTyper, 1 );
 	return 0;
