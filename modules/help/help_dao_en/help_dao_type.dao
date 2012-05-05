@@ -1,3 +1,6 @@
+# Copyright (c) 2012, Limin Fu
+# This document is released under the GNU Free Documentation License.
+
 load help;
 
 load help_dao_type_number;
@@ -117,10 +120,50 @@ Dao also supports a number of other types such as:
 @[subsection]Special Types@[subsection]
 
 @[list]
---@[green]any@[green];
---@[green]?@[green];
---Type holder;
---Value type;
-@[list]
+--@[green]any@[green]:
+
+As its name suggests, it represents any type, so any value can match to this type.
+
+
+--@[green]?@[green]:
+
+This special type name represents undefined types. Function parameters that 
+have neither type annotations nor default values are automatically assigned with
+this type. Some variables whose types cannot be successfully inferred are also
+assigned with this type. This type can be specialized to a more specific type
+when more type information is available, for example, at runtime, parameters
+passed to a function call can provide concrete types to specialize the function
+(namely, specializing parameter types, local variable types and virtual machine instructions).
+
+
+--Type holder:
+
+Type holders are type names with a @[green]@@[green] prefix.
+It also represents to-be-defined types, the same type holder represents the same type
+in a local context (a single composite type or a function prototype etc).
+For example,
+
+@[code]
+tuple<@T,@T>
+@[code]
+represents a tuple type whose two items must have the same type.
+
+@[code]
+routine Func( a :@T, b :@T )
+@[code]
+declares a function that can only accept two parameters of the same type.
+
+
+--Value type:
+
+Constant values of basic types can also be used as types in a composite type.
+For example,
+
+@[code]
+tuple<1,2>
+@[code]
+represents a tuple type whose first item must be @[green]1@[green] and its second
+must be @[green]2@[green]!
+Such types are mainly useful when dealing with C++ template types.
 
 @[text]

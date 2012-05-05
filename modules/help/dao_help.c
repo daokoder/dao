@@ -491,8 +491,8 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 				DaoxStream_WriteMBS( self, " " );
 				DaoxStream_WriteText( self, part, 0, width );
 				DaoxStream_WriteMBS( self, " " );
-				DaoxStream_WriteNewLine( self, "" );
 				DaoStream_SetColor( self->stream, NULL, NULL );
+				DaoxStream_WriteNewLine( self, "" );
 			}else if( mtype == DAOX_HELP_LIST ){
 				DaoxStream_WriteList( self, part, offset, width, 1, listdep+1 );
 			}else if( mtype == DAOX_HELP_COMMENT ){
@@ -679,21 +679,26 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProc
 
 	xstream.offset = 0;
 	DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
-	DaoStream_WriteMBS( stream, "[NAME]\n" );
+	DaoStream_WriteMBS( stream, "[NAME]" );
 	DaoStream_SetColor( stream, NULL, NULL );
+	DaoStream_WriteMBS( stream, "\n" );
 
 	DaoStream_WriteString( stream, self->name );
 
+	DaoStream_WriteMBS( stream, "\n\n" );
 	DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
-	DaoStream_WriteMBS( stream, "\n\n[TITLE]\n" );
+	DaoStream_WriteMBS( stream, "[TITLE]" );
 	DaoStream_SetColor( stream, NULL, NULL );
+	DaoStream_WriteMBS( stream, "\n" );
 
 	xstream.offset = 0;
 	if( self->title ) DaoxStream_WriteText( & xstream, self->title, 0, DAOX_TEXT_WIDTH );
 
+	DaoStream_WriteMBS( stream, "\n\n" );
 	DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
-	DaoStream_WriteMBS( stream, "\n\n[DESCRIPTION]\n" );
+	DaoStream_WriteMBS( stream, "[DESCRIPTION]" );
 	DaoStream_SetColor( stream, NULL, NULL );
+	DaoStream_WriteMBS( stream, "\n" );
 
 	xstream.offset = 0;
 	if( self->first ) DaoxHelpBlock_Print( self->first, stream, proc );

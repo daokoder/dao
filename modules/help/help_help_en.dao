@@ -1,3 +1,6 @@
+# Copyright (c) 2012, Limin Fu
+# This document is released under the GNU Free Documentation License.
+
 load help;
 load help_dao_en.help_dao;
 
@@ -14,6 +17,15 @@ help
 @[title]
 The Online Help Module
 @[title]
+
+@[author]
+Limin Fu
+@[author]
+
+@[license]
+GNU Free Documentation License
+@[license]
+
 
 @[text]
 Module @[green]help@[green] is an integrate help system to provide convenient online help for Dao.
