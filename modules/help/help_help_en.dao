@@ -2,9 +2,11 @@ load help;
 load help_dao_en.help_dao;
 
 
-####################################################################################
-####################################################################################
-####################################################################################
+################################################################################
+################################################################################
+#### HELP
+################################################################################
+################################################################################
 @[name]
 help
 @[name]
@@ -22,24 +24,33 @@ The type @[green]help@[green] provides several of initializers and static method
 to access the help system:
 @[list]
 ==@[green]help()@[green]: see @[blue]help.method.help@[blue] for details;
-
+@[comment]
 There are three versions of initializers:
-@[code(dao)]
+@[code()]
 help()
-help( keyword :string, run = 0 )
-help( object :any, keyword :string, run = 0 )
-@[code(dao)]
+help( keywords :string, run = 0 )
+help( object :any, keywords :string, run = 0 )
+@[code()]
 The first initializer @[code]help()@[code].
+@[comment]
 
 ==@[green]help.search()@[green]: see @[blue]help.method.search@[blue] for details;
 ==@[green]help.load()@[green]: see @[blue]help.method.load@[blue] for details;
 ==@[green]help.list()@[green]: see @[blue]help.method.list@[blue] for details;
 @[list]
+
+To understand how to write help files for this help system, 
+please see @[blue]help.format@[blue].
 @[text]
 
-####################################################################################
-####################################################################################
-####################################################################################
+
+
+
+################################################################################
+################################################################################
+#### HELP.FORMAT
+################################################################################
+################################################################################
 @[name]
 help.format
 @[name]
@@ -57,9 +68,12 @@ Such files must have the following loading statement before any use of verbatims
 load help;
 @[code(dao)]
 
+
 Then the captions of the verbatims determine how they will be interpreted by the 
 help system.
-Each verbatim that is captioned with "name" contains an ID string of a help entry,
+
+
+Each verbatim that is captioned with "name" contains an ID string of the help entry,
 example:
 
 @[code(dao)]
@@ -73,6 +87,7 @@ and how it will be located.
 Each ID string is composed of multiple parts which are delimited by dots.
 There is one node in the help system that is corresponding to each part of the ID string.
 
+
 Each help entry may have a title which is represented by a verbatim text captioned
 by "title":
 
@@ -82,12 +97,60 @@ Format of The Help Files
 @[title]
 @[code(dao)]
 
+
 The main text of the help must be placed in verbatim strings captioned with "text".
+Inside the text, several tags are supported for formatting the text:
+@[list(formats)]
+==Text coloring:
+
+@[code]
+@[foreground]text@[foreground]
+@[:background]text@[:background]
+@[foreground:background]text@[foreground:background]
+@[code]
+
+==Item listing:
+
+@[code]
+@[list]
+--Item 1;
+--Item 2;
+@[list]
+@[code]
+Use @[green]==@[green] for ordered list and @[green]--@[green] for unordered list.
+
+==Code highlighting:
+
+@[code(example)]
+@[code(lang)]
+io.writeln( 'hello world!' );
+sum = 0
+for( i = 1 : 5 )  sum += i
+@[code(lang)]
+@[code(example)]
+Where @[green]lang@[green] can be anything, but currently they will all be highlighted
+in the same way. @[green](lang)@[green] can also be omitted.
+
+
+The above example produces:
+
+@[code(lang)]
+io.writeln( 'hello world!' );
+sum = 0
+for( i = 1 : 5 ) sum += i
+@[code(lang)]
+
+@[list(formats)]
 @[text]
 
-####################################################################################
-####################################################################################
-####################################################################################
+
+
+
+################################################################################
+################################################################################
+#### HELP.METHOD.HELP
+################################################################################
+################################################################################
 @[name]
 help.method.help
 @[name]
@@ -97,8 +160,61 @@ help()
 @[title]
 
 @[text]
+@[list]
+==@[green]help()@[green]
+
+Display loaded help entried as a tree structure.
+
+==@[green]help( keywords :string, run = 0 )@[green]
+
+Display the help entry for @[green]keywords@[green].
+
+
+The @[green]keywords@[green] can contain single or multiple dot delimited keywords,
+which tells the help system how to find the help file for these keywords.
+For example, with @[green]AA.BB.CC@[green], the help system will first search
+a module file named @[green]help_AA_BB_CC.dao@[green], if failed, it will search
+@[green]help_AA_BB.dao@[green], and then @[green]help_AA.dao@[green].
+If such file is found, it will be loaded as a normal module,
+and the content of the help will be extracted via the callbacks for the verbatim strings.
+On successful loading, the help entries from the module will be added to the tree
+in the help system.
+
+
+Then the help entry with id @[green]AA.BB.CC@[green] will be searched in the help system,
+and printed to the standard output if found.
+If @[green]run=1@[green], the codes in @[green]@[code(dao)]...@[code(dao)]@[green] will be executed.
+
+
+Loading a help file as a normal module will guarantee that it is loaded only once,
+if it hasn't been modified since the last loading, otherwise, it will be reloaded
+to update the relevant help entries in the help system.
+
+
+==@[green]help( object :any, keywords :string, run = 0 )@[green]
+
+Display the help entry for @[green]keywords@[green] that is associated with the type of
+@[green]object@[green].
+
+
+This method adds a prefix that is built from the type name of @[green]object@[green]
+to the @[green]keywords@[green], 
+then hehave identically to @[green]help( keywords :string, run = 0 )@[green].
+The prefix consts of the non template-like part of the type name,
+with double colons being replaced by single dots.
+An additional dot is appended to the end of the prefix.
+
+@[list]
 @[text]
 
+
+
+
+################################################################################
+################################################################################
+#### HELP.METHOD.SEARCH
+################################################################################
+################################################################################
 @[name]
 help.method.search
 @[name]
@@ -107,6 +223,14 @@ help.method.search
 help.search()
 @[title]
 
+
+
+
+################################################################################
+################################################################################
+#### HELP.METHOD.LOAD
+################################################################################
+################################################################################
 @[name]
 help.method.load
 @[name]
@@ -115,6 +239,14 @@ help.method.load
 help.load()
 @[title]
 
+
+
+
+################################################################################
+################################################################################
+#### HELP.METHOD.LIST
+################################################################################
+################################################################################
 @[name]
 help.method.list
 @[name]
@@ -122,3 +254,12 @@ help.method.list
 @[title]
 help.list()
 @[title]
+
+@[text]
+@[code]
+help.list( object :any, type :enum<values,methods,auxmeths>=$methods )
+@[code]
+
+List the values, methods or auxiliary methods that are associated with the type
+of the @[green]object@[green].
+@[text]

@@ -86,6 +86,7 @@ struct DaoxHelpBlock
 };
 struct DaoxHelpEntry
 {
+	DaoNamespace   *nspace;
 	DaoxHelp       *help;
 	DaoxHelpEntry  *parent;
 	DArray         *nested2;
@@ -238,16 +239,18 @@ static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, i
 	DString *paragraph = DString_New(1);
 	daoint pos, last = 0;
 	DString_ChangeMBS( text, "(^|[^\n])[\n]([^\n]|$)", "%1 %2", 0 );
-	DString_ChangeMBS( text, "[\n]%s*[\n]", "\n\n", 0 );
+	DString_ChangeMBS( text, "[\n][ \t]*[\n]", "\n\n", 0 );
 	DString_ChangeMBS( text, "[ \t]+", " ", 0 );
-	pos = DString_FindMBS( text, "\n\n", 0 );
+	pos = DString_FindChar( text, '\n', 0 );
 	while( last < text->size ){
-		DString_SubString( text, paragraph, last, pos - last + 1 );
-		if( last ) DaoxStream_WriteNewLine( self, "\n" );
+		if( pos == MAXSIZE ) pos = text->size;
+		DString_SubString( text, paragraph, last, pos - last );
 		DaoxStream_WriteParagraph( self, paragraph, offset, width );
 		last = pos + 1;
-		pos = DString_FindMBS( text, "\n\n", last );
-		if( pos == MAXSIZE ) pos = text->size;
+		while( last < text->size && text->mbs[last] == '\n' ) last += 1;
+		if( last > (pos + 1) ) DaoxStream_WriteNewLine( self, "" );
+		if( last > (pos + 2) ) DaoxStream_WriteNewLine( self, "" );
+		pos = DString_FindChar( text, '\n', last );
 	}
 	DString_Delete( paragraph );
 }
@@ -384,10 +387,9 @@ static void DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, i
 		DString_ChangeMBS( delim, "^[\n][\n]+", "\n", 1 );
 		while( last < text->size ){
 			DString_SubString( text, item, last, start - last );
-			DString_Trim( item );
+			DString_ChangeMBS( item, "^%s+", "", 0 );
 			if( item->size ){
 				DString_Erase( item, 0, 2 );
-				DString_Trim( item );
 				for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
 				i = DaoxStream_WriteItemID( self, delim->mbs[delim->size-1], itemid ++ );
 				DaoxStream_WriteBlock( self, item, offset+i, width, 0, listdep );
@@ -419,7 +421,7 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 		end = text->size-1;
 		if( DaoRegex_Match( self->regex, text, & start, & end ) ){
 			DString_SubString( text, part, last, start - last );
-			if( islist ) DString_Trim( part );
+			//if( islist ) DString_Trim( part );
 			DaoxStream_WriteText( self, part, offset, width );
 
 			DString_SubString( text, delim, start, end - start + 1 );
@@ -488,7 +490,8 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 				DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
 				DaoxStream_WriteMBS( self, " " );
 				DaoxStream_WriteText( self, part, 0, width );
-				DaoxStream_WriteMBS( self, " \n" );
+				DaoxStream_WriteMBS( self, " " );
+				DaoxStream_WriteNewLine( self, "" );
 				DaoStream_SetColor( self->stream, NULL, NULL );
 			}else if( mtype == DAOX_HELP_LIST ){
 				DaoxStream_WriteList( self, part, offset, width, 1, listdep+1 );
@@ -506,7 +509,7 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 				}
 				DString_Trim( fgcolor );
 				DString_Trim( bgcolor );
-				if( islist ) DString_Trim( part );
+				//if( islist ) DString_Trim( part );
 				if( self->offset && isspace( self->last ) == 0 ) DaoxStream_WriteChar( self, ' ' );
 				DaoStream_SetColor( self->stream, fgcolor->mbs, bgcolor->mbs );
 				DaoxStream_WriteText( self, part, offset, width );
@@ -514,7 +517,7 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 			}
 		}else{
 			DString_SubString( text, part, last, text->size - last );
-			if( islist ) DString_Trim( part );
+			//if( islist ) DString_Trim( part );
 			DaoxStream_WriteText( self, part, offset, width );
 			break;
 		}
@@ -533,6 +536,7 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 	DString spat = DString_WrapMBS( pat );
 	DString scode = DString_WrapMBS( "code" );
 	DString slist = DString_WrapMBS( "list" );
+	DString comment = DString_WrapMBS( "comment" );
 	DString ssection = DString_WrapMBS( "section" );
 	DString ssubsect = DString_WrapMBS( "subsection" );
 	DString ssubsect2 = DString_WrapMBS( "subsubsection" );
@@ -550,6 +554,7 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 	xstream.last = 0;
 	DMap_Insert( xstream.mtypes, & scode, (void*)(size_t)DAOX_HELP_CODE );
 	DMap_Insert( xstream.mtypes, & slist, (void*)(size_t)DAOX_HELP_LIST );
+	DMap_Insert( xstream.mtypes, & comment, (void*)(size_t)DAOX_HELP_COMMENT );
 	DMap_Insert( xstream.mtypes, & ssection, (void*)(size_t)DAOX_HELP_SECTION );
 	DMap_Insert( xstream.mtypes, & ssubsect, (void*)(size_t)DAOX_HELP_SUBSECT );
 	DMap_Insert( xstream.mtypes, & ssubsect2, (void*)(size_t)DAOX_HELP_SUBSECT2 );
@@ -575,6 +580,7 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 {
 	DaoxHelpEntry *self = (DaoxHelpEntry*) dao_malloc( sizeof(DaoxHelpEntry) );
+	self->nspace = NULL;
 	self->title = NULL;
 	self->author = NULL;
 	self->license = NULL;
@@ -596,9 +602,22 @@ static void DaoxHelpEntry_Delete( DaoxHelpEntry *self )
 	DMap_Delete( self->nested );
 	dao_free( self );
 }
-static void DaoxHelpEntry_AppendText( DaoxHelpEntry *self, DString *text )
+static void DaoxHelpEntry_TryReset( DaoxHelpEntry *self, DaoNamespace *NS )
+{
+	/* No reset if the help file is not changed: */
+	if( self->nspace == NS ) return;
+	/*
+	// No reset if the entry content is from different help files.
+	// This will allow other help files to add additional content the same help entry.
+	*/
+	if( ! DString_EQ( self->nspace->name, NS->name ) ) return;
+	if( self->first ) DaoxHelpBlock_Delete( self->first );
+	self->first = self->last = NULL;
+}
+static void DaoxHelpEntry_AppendText( DaoxHelpEntry *self, DaoNamespace *NS, DString *text )
 {
 	DaoxHelpBlock *block = DaoxHelpBlock_New();
+	DaoxHelpEntry_TryReset( self, NS );
 	block->entry = self;
 	block->type = DAOX_HELP_TEXT;
 	DString_Assign( block->text, text );
@@ -609,9 +628,10 @@ static void DaoxHelpEntry_AppendText( DaoxHelpEntry *self, DString *text )
 		self->first = self->last = block;
 	}
 }
-static void DaoxHelpEntry_AppendCode( DaoxHelpEntry *self, DString *code, DString *lang )
+static void DaoxHelpEntry_AppendCode( DaoxHelpEntry *self, DaoNamespace *NS, DString *code, DString *lang )
 {
 	DaoxHelpBlock *block = DaoxHelpBlock_New();
+	DaoxHelpEntry_TryReset( self, NS );
 	block->entry = self;
 	block->type = DAOX_HELP_CODE;
 	block->lang = lang ? DString_Copy( lang ) : NULL;
@@ -1150,8 +1170,8 @@ static DaoFuncItem helpMeths[]=
 	{ HELP_Help1,     "help()" },
 	{ HELP_Help2,     "help( keyword :string, run = 0 )" },
 	{ HELP_Help3,     "help( object :any, keyword :string, run = 0 )" },
-	{ HELP_Search,    "search( keyword :string )" },
-	{ HELP_Search2,   "search( object :any, keyword :string )" },
+	{ HELP_Search,    "search( keywords :string )" },
+	{ HELP_Search2,   "search( object :any, keywords :string )" },
 	{ HELP_Load,      "load( help_file :string )" },
 	{ HELP_List,      "list( object :any, type :enum<values,methods,auxmeths>=$methods )" },
 	{ HELP_SetTempl,  "set_template( tpl :string, ttype :enum<notice> )" },
@@ -1189,6 +1209,7 @@ static int dao_help_name( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	it = DMap_Find( help->entries, name );
 	if( it == NULL ){
 		DaoxHelpEntry *entry = DaoxHelper_GetEntry( daox_helper, name );
+		if( entry->nspace == NULL ) entry->nspace = NS;
 		entry->help = help;
 		it = DMap_Insert( help->entries, name, entry );
 	}
@@ -1212,7 +1233,8 @@ static int dao_help_text( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
 	//printf( "%s\n", text->mbs );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( text, 1 );
-	DaoxHelpEntry_AppendText( help->current, text );
+	//printf( "%s %p %p\n", text->mbs, help->nspace, NS );
+	DaoxHelpEntry_AppendText( help->current, NS, text );
 	return dao_string_delete( text, 0 );
 }
 static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
@@ -1221,7 +1243,7 @@ static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
 	//printf( "%s\n", code->mbs );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( code, 1 );
-	DaoxHelpEntry_AppendCode( help->current, code, NULL );
+	DaoxHelpEntry_AppendCode( help->current, NS, code, NULL );
 	return dao_string_delete( code, 0 );
 }
 static int dao_help_author( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )

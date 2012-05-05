@@ -628,30 +628,59 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 		DString *file, DArray *args, DArray *argNames, DArray *argValues )
 {
+	DaoList *argv;
+	DaoMap *cmdarg;
+	DaoType *nested[2];
 	DaoInteger ival = {DAO_INTEGER,0,0,0,0,0};
 	DaoString sval1 = {DAO_STRING,0,0,0,0,NULL};
 	DaoString sval2 = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *nkey = (DaoValue*) & ival;
 	DaoValue *skey = (DaoValue*) & sval1;
 	DaoValue *sval = (DaoValue*) & sval2;
-	DaoType *nested[2];
-	DaoList *argv = DaoList_New();
-	DaoMap *cmdarg = DaoMap_New(0);
-	DArray *array = args;
 	DString *str = DString_New(1);
 	DString *key = DString_New(1);
 	DString *val = DString_New(1);
-	daoint i;
-	int tk, offset=0, eq=0;
+	DArray *array = args;
+	daoint i, tk, offset=0, eq=0;
 
 	skey->xString.data = key;
 	sval->xString.data = val;
+
+	argv = DaoList_New();
+	cmdarg = DaoMap_New(0);
 	nested[0] = dao_type_any;
 	nested[1] = DaoNamespace_MakeType( ns, "string",DAO_STRING, NULL,NULL,0 );
 	cmdarg->unitype = DaoNamespace_MakeType( ns, "map",DAO_MAP,NULL,nested,2);
 	argv->unitype = DaoNamespace_MakeType( ns, "list",DAO_LIST,NULL,nested+1,1);
 	GC_IncRC( cmdarg->unitype );
 	GC_IncRC( argv->unitype );
+	DString_SetMBS( str, "ARGV" );
+	if( DaoNamespace_AddConst( ns, str, (DaoValue*) argv, DAO_DATA_PUBLIC ) < 0 ){
+		DaoList_Delete( argv );
+		i = DaoNamespace_FindConst( ns, str );
+		argv = (DaoList*) DaoNamespace_GetConst( ns, i );
+		if( argv == NULL || argv->type != DAO_LIST ) return;
+		DaoList_Clear( argv );
+	}
+	if( ns == self->mainNamespace ){
+		DaoVmSpace_Lock( self );
+		DaoNamespace_AddConst( self->nsInternal, str, (DaoValue*) argv, DAO_DATA_PUBLIC );
+		DaoVmSpace_Unlock( self );
+	}
+	DString_SetMBS( str, "CMDARG" );
+	if( DaoNamespace_AddConst( ns, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC ) < 0 ){
+		DaoMap_Delete( cmdarg );
+		i = DaoNamespace_FindConst( ns, str );
+		cmdarg = (DaoMap*) DaoNamespace_GetConst( ns, i );
+		if( cmdarg == NULL || cmdarg->type != DAO_MAP ) return;
+		DaoMap_Clear( cmdarg );
+	}
+	if( ns == self->mainNamespace ){
+		DaoVmSpace_Lock( self );
+		DaoNamespace_AddConst( self->nsInternal, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC );
+		DaoVmSpace_Unlock( self );
+	}
+
 	if( array == NULL && file ){
 		array = DArray_New(D_STRING);
 		SplitByWhiteSpaces( file, array );
@@ -704,20 +733,6 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 			DArray_Append( argValues, s );
 			DaoMap_Insert( cmdarg, nkey, sval );
 		}
-	}
-	DString_SetMBS( str, "ARGV" );
-	DaoNamespace_AddConst( ns, str, (DaoValue*) argv, DAO_DATA_PUBLIC );
-	if( ns == self->mainNamespace ){
-		DaoVmSpace_Lock( self );
-		DaoNamespace_AddConst( self->nsInternal, str, nkey, DAO_DATA_PUBLIC );
-		DaoVmSpace_Unlock( self );
-	}
-	DString_SetMBS( str, "CMDARG" );
-	DaoNamespace_AddConst( ns, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC );
-	if( ns == self->mainNamespace ){
-		DaoVmSpace_Lock( self );
-		DaoNamespace_AddConst( self->nsInternal, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC );
-		DaoVmSpace_Unlock( self );
 	}
 	if( args == NULL ) DArray_Delete( array );
 	DString_Delete( key );

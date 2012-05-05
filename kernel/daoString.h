@@ -120,9 +120,6 @@ DAO_DLL void DString_Add( DString *self, DString *left, DString *right );
 DAO_DLL void DString_Chop( DString *self );
 DAO_DLL void DString_Trim( DString *self );
 
-DAO_DLL int DString_Encrypt( DString *self, DString *key, int hex );
-DAO_DLL int DString_Decrypt( DString *self, DString *key, int hex );
-
 DAO_DLL daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
 		uint_t esc0, daoint start, daoint end, int countonly );
 

@@ -33,22 +33,42 @@ If a variable has an explicitly declared type or a successfully inferred type,
 static type checking will be carried out on this variable at compiling time,
 otherwise, it will be checked at running time.
 
+
 The most basic inference is based on assignment,
 so the simplest way to declare a variable to have certain type without explicitly
 specifying it is by assigning a value of the desired type to the variable at 
 the declaration, for example @[code]id = 0@[code] will decalare @[code]id@[code]
 as an integer, which is equivalent to @[code]id :int = 0@[code].
 
+
 @[section]Explicit Type Declaration@[section]
 
-The type of a variable can be declared explicitly in the following form,
+The type of a variable can be declared explicitly in the following form:
 @[code]
 variable : type
 variable : type = value
 @[code]
-The same form can also be used in function parameter list.
+The same form can also be used in function parameter list:
 
-Dao has the following basic types:
+@[code]
+routine MyFunction( name : string, index : int = 1 ) { ... }
+@[code]
+
+
+Multiple variables can be declared once with the same type and initial value:
+@[code]
+variable1, variable2 : type
+variable1, variable2 : type = value
+@[code]
+
+
+@[section]Outline of Dao Types@[section]
+
+Dao supports a rich set of types to allow writing expressive codes.
+
+
+@[subsection]Basic Types@[subsection]
+The basic types are the following:
 @[list]
 --@[green]int@[green] : integer type;
 --@[green]float@[green] : single precision floating point number;
@@ -58,12 +78,49 @@ Dao has the following basic types:
 --@[green]string@[green] : string type;
 --@[green]enum@[green] : enum type;
 @[list]
-The following is a list of builtin aggregated types in Dao:
+Please see @[green]dao.type.typename@[green] for details.
+
+
+@[subsection]Builtin Aggregated Types@[subsection]
+Dao has builtin support for some essential aggregated types including:
 @[list]
 --@[green]array@[green] : multi-dimensional numeric array;
 --@[green]tuple@[green] : tuple type;
 --@[green]list@[green] : list container;
 --@[green]map@[green] : map or hash map container;
+@[list]
+Please see @[green]dao.type.typename@[green] for details.
+
+
+@[subsection]Other Types@[subsection]
+Dao also supports a number of other types such as:
+@[list]
+--Routine or function types (see @[green]dao.routine@[green] for details);
+
+--Wrapped C/C++ types (see @[green]dao.c-interface@[green] for details);
+
+--User defined Dao class types (see @[green]dao.class@[green] for details);
+
+--Abstract interface types (see @[green]dao.???@[green] for details);
+
+--@[green]stream@[green] type for standard Input/Output and file Input/Output
+(see @[green]dao.type.stream@[green] for details);
+
+--Types for concurrent programming such @[green]future@[green], @[green]mutex@[green],
+@[green]condition@[green] and @[green]semaphore@[green] 
+(see @[green]dao.concurrent@[green] for details);
+
+--Exception types (essentially wrapped C types).
+@[list]
+
+
+@[subsection]Special Types@[subsection]
+
+@[list]
+--@[green]any@[green];
+--@[green]?@[green];
+--Type holder;
+--Value type;
 @[list]
 
 @[text]

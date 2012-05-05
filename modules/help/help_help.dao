@@ -1,12 +1,14 @@
 load help;
 load sys;
 
-ctype = sys.getenv( 'LANG' );
+global ctype = sys.getenv( 'LANG' );
 if( ctype == '' ) ctype = sys.setlocale( $ctype );
 
-lang = '_en';
+global lang = '_en';
 
 if( ctype.find( 'zh' ) == 0 or ctype.find( 'Zh' ) == 0 or ctype.find( 'ZH' ) == 0 ) lang = '_zh';
 
-std.load( 'help_help' + lang );
-
+routine main()
+{
+	std.load( 'help_help' + lang );
+}
