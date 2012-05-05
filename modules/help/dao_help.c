@@ -36,8 +36,8 @@
 #include"daoVmspace.h"
 #include"daoGC.h"
 
-#define DAOX_TEXT_WIDTH 80
-#define DAOX_TREE_WIDTH 100
+#define DAOX_TEXT_WIDTH 79
+#define DAOX_TREE_WIDTH 99
 
 enum DaoxHelpBlockType
 {
@@ -219,14 +219,15 @@ static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offs
 	daoint start, next;
 	int i;
 	for(start=next=0; start<text->size; start=next){
+		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
 		start = DString_Break( text, start );
 		next = DString_Break( text, start + width - self->offset );
 		if( (next - start) <= 0 ){
 			DaoxStream_WriteNewLine( self, "" );
+			while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
 			next = DString_Break( text, start + width - self->offset );
 		}
 		DString_SubString( text, line, start, next - start );
-		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
 		if( self->offset == offset ) DString_Trim( line );
 		//DString_Chop( line );
 		DaoxStream_WriteString( self, line );
@@ -265,7 +266,7 @@ static void DaoxStream_PrintLineNumber( DaoxStream *self, int line, int offset )
 	DaoStream_SetColor( self->stream, NULL, NULL );
 	DaoStream_WriteChar( self->stream, ' ' );
 }
-static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset )
+static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset, int width )
 {
 	DString *string = DString_New(1);
 	DArray *tokens = DArray_New(D_TOKEN);
@@ -316,6 +317,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset )
 				DaoStream_SetColor( self->stream, dao_colors[fgcolor], bgcolor );
 				DaoStream_WriteString( self->stream, string );
 				DaoStream_SetColor( self->stream, NULL, NULL );
+				self->offset += string->size;
 				last = pos + 1;
 				pos = DString_FindChar( tok->string, '\n', pos + 1 );
 			}
@@ -356,18 +358,22 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset )
 		default: break;
 		}
 		if( fgcolor < -10 ) continue;
+		if( println == 0 && (self->offset + tok->string->size) > width ){
+			DaoxStream_WriteNewLine( self, "" );
+		}
 		if( fgcolor < 0 ){
 			DaoStream_SetColor( self->stream, NULL, bgcolor );
 			DaoStream_WriteString( self->stream, tok->string );
 			DaoStream_SetColor( self->stream, NULL, NULL );
+			self->offset += tok->string->size;
 			continue;
 		}
 		DaoStream_SetColor( self->stream, dao_colors[fgcolor], bgcolor );
 		DaoStream_WriteString( self->stream, tok->string );
 		DaoStream_SetColor( self->stream, NULL, NULL );
+		self->offset += tok->string->size;
 	}
-	if( println ) self->offset = 1000;
-	else self->offset += code->size;
+	if( println ) DaoxStream_WriteNewLine( self, "" );
 	DArray_Delete( tokens );
 	DString_Delete( string );
 }
@@ -451,7 +457,7 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 			if( it ) mtype = it->value.pInt;
 			if( mtype == DAOX_HELP_CODE ){
 				DString_Trim( part );
-				DaoxStream_PrintCode( self, part, offset );
+				DaoxStream_PrintCode( self, part, offset, width );
 				if( self->process && strcmp( mode->mbs, "dao" ) == 0 ){
 					DaoxStream_WriteNewLine( self, "" );
 					DaoStream_SetColor( self->stream, NULL, dao_colors[DAOX_YELLOW] );
@@ -561,7 +567,7 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 	if( self->type == DAOX_HELP_TEXT ){
 		DaoxStream_WriteBlock( & xstream, self->text, 0, DAOX_TEXT_WIDTH, 0, 0 );
 	}else if( self->type == DAOX_HELP_CODE ){
-		DaoxStream_PrintCode( & xstream, self->text, 0 );
+		DaoxStream_PrintCode( & xstream, self->text, 0, DAOX_TEXT_WIDTH );
 		if( proc && (self->lang == NULL || strcmp( self->lang->mbs, "dao" ) == 0) ){
 			DaoStream_WriteMBS( stream, "\n" );
 			DaoStream_SetColor( stream, NULL, dao_colors[DAOX_YELLOW] );
