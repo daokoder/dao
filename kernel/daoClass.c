@@ -129,10 +129,12 @@ DaoClass* DaoClass_New()
 	self->superClass   = DArray_New(D_VALUE);
 	self->objDataDefault = DArray_New(D_VALUE);
 	self->protoValues = NULL;
+#ifdef DAO_WITH_DYNCLASS
 	self->typeHolders = NULL;
 	self->typeDefaults = NULL;
 	self->instanceClasses = NULL;
 	self->templateClass = NULL;
+#endif
 	self->references = DArray_New(D_VALUE);
 	return self;
 }
@@ -155,11 +157,13 @@ void DaoClass_Delete( DaoClass *self )
 	DArray_Delete( self->objDataDefault );
 	if( self->vtable ) DMap_Delete( self->vtable );
 	if( self->protoValues ) DMap_Delete( self->protoValues );
+#ifdef DAO_WITH_DYNCLASS
 	if( self->typeHolders ){
 		DArray_Delete( self->typeHolders );
 		DArray_Delete( self->typeDefaults );
 		DMap_Delete( self->instanceClasses );
 	}
+#endif
 
 	DString_Delete( self->className );
 	DString_Delete( self->classHelp );

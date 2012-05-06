@@ -80,11 +80,13 @@ struct DaoClass
 	 * this proto-class. */
 	DMap     *protoValues; /* <int,DString*> */
 
+#ifdef DAO_WITH_DYNCLASS
 	/* for template class: class name<@S,@T=some_type> */
 	DArray   *typeHolders; /* @S, @T */
 	DArray   *typeDefaults; /* some_type */
 	DMap     *instanceClasses; /* instantiated classes */
 	DaoClass *templateClass; /* for incomplete instantiation */
+#endif
 
 	/* for GC */
 	DArray *references;

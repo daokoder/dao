@@ -1,9 +1,5 @@
 
-CHANGESET_ID = $(shell hg id -i)
-
-ifneq ($(CHANGESET_ID),)
-  DAO_CFLAGS += -DCHANGESET_ID=\"HG.$(CHANGESET_ID)\"
-endif
+DAO_CFLAGS += -DCHANGESET_ID=\"FOS.3CFC28749B\"
 
 DAO_INCS += -Ikernel
 

@@ -1,3 +1,14 @@
+# Template class example
+#
+# WARNING:
+# Template class is NOT an official feature of Dao,
+# and probably NEVER going to be an official feature.
+#
+# This example is mainly used for testing purpose!
+# It can test type, class and function specializations.
+#
+# This example and the relevant codes should be removed
+# from the branches for official releases!
 
 class Item<@V>
 {

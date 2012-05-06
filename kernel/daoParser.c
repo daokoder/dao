@@ -1711,9 +1711,19 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DArray *types = DArray_New(0);
 	int i;
 	if( tpl == NULL || (tpl->type != DAO_CLASS && tpl->type != DAO_CTYPE) ) goto FailedInstantiation;
-	if( tpl->type == DAO_CLASS && klass->typeHolders == NULL ) goto FailedInstantiation;
 	DaoParser_ParseTypeItems( self, start, end, types, NULL );
 	if( self->errors->size ) goto FailedInstantiation;
+	if( tpl->type == DAO_CLASS ){
+#ifdef DAO_WITH_DYNCLASS
+		if( klass->typeHolders == NULL ) goto FailedInstantiation;
+		klass = DaoClass_Instantiate( klass, types );
+		inst = (DaoValue*) klass;
+		if( klass == NULL ) goto FailedInstantiation;
+		if( klass && fullname ) DString_Assign( fullname, klass->objType->name );
+#else
+		goto FailedInstantiation;
+#endif
+	}
 	if( tpl->type == DAO_CTYPE ){
 		DaoType *sptype = DaoCdataType_Specialize( ctype->cdtype, types );
 		if( sptype ){
@@ -1723,14 +1733,6 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		}
 		goto FailedInstantiation;
 	}
-#ifdef DAO_WITH_DYNCLASS
-	if( tpl->type == DAO_CLASS ){
-		klass = DaoClass_Instantiate( klass, types );
-		inst = (DaoValue*) klass;
-		if( klass == NULL ) goto FailedInstantiation;
-		if( klass && fullname ) DString_Assign( fullname, klass->objType->name );
-	}
-#endif
 
 DoneInstantiation:
 	DArray_Delete( types );
@@ -3109,6 +3111,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( tokens[start]->name == DTOK_COLON ){
 		/* class AA : NS::BB, CC{ } */
 		unsigned char sep = DTOK_COLON;
+#ifdef DAO_WITH_DYNCLASS
 		if( klass->typeHolders ){
 			for(k=0; k<klass->typeHolders->size; k++){
 				DaoType *tp = klass->typeHolders->items.pType[k];
@@ -3116,6 +3119,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 				DMap_Insert( self->initTypes, tp, tp );
 			}
 		}
+#endif
 		while( tokens[start]->name == sep ){
 			DaoClass *super = 0;
 			start = DaoParser_FindScopedConstant( self, & value, start+1, mbs );
@@ -3146,6 +3150,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoClass_AddSuperClass( klass, (DaoValue*) super, mbs );
 			sep = DTOK_COMMA;
 		}
+#ifdef DAO_WITH_DYNCLASS
 		if( klass->typeHolders ){
 			for(k=0; k<klass->typeHolders->size; k++){
 				DaoType *tp = klass->typeHolders->items.pType[k];
@@ -3154,6 +3159,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 					DMap_EraseNode( self->initTypes, node );
 			}
 		}
+#endif
 	}/* end parsing super classes */
 	begin = start;
 	right = tokens[start]->name == DTOK_LCB ?
