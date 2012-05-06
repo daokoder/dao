@@ -2,7 +2,55 @@
 ChangeLog for the Dao language and virtual machine:
 
 ================================
-release dao-1.1
+release dao-1.2, 2012-XX-XX
+================================
+ADDED:
+-- DaoJIT, LLVM-based JIT compiler;
+-- DaoCXX, Clang-based module to support embedding C/C++ codes;
+-- ClangDao, Clang-based automatic binding tool;
+-- Code section methods (similar to Ruby code blocks);
+-- Parallelized code section methods in mt;
+-- Asynchronous class and future value;
+-- Abstract interface type: interface Name{ methods };
+-- Meta fields, access by object->field;
+-- Typed function decorators;
+-- Runtime class creation;
+-- Enum/flag/symbol type;
+-- Variant or disjoint union type: type1|type2;
+-- Hash map type (colliding keys as red-black tree);
+-- Explicit enumeration with keywords: array/list/map/tuple{};
+-- Verbatim string syntax;
+-- Customized for-in iteration;
+-- Indentation-aware syntax macro;
+-- Improve operator overloading (added support for type casting);
+-- New technique for more efficient lookup of overloaded functions;
+-- Access control on syntax macros and global consts and variables;
+-- Data serialization (in aux module);
+-- Support for template-like C data type;
+-- Support for auxiliary methods;
+-- Standard help system;
+-- Basic data flow analysis and optimizations (CSE, DCE, register reallocation etc.);
+CHANGED:
+-- Internal data storage structures;
+-- Better parsing with a combination of top-down and bottom-up parsing;
+-- Better handling of control branching;
+-- Better handling of overloaded functions;
+-- Better support for function specialization;
+-- Better implementation of call stack;
+-- Various improvements to the basic data types;
+-- Various improvements to the garbage collector;
+-- Coroutine from library support to syntax support;
+-- Re-implementation of exception types as C data type;
+-- Moved aux, sys, math, meta and network modules from kernel to standard modules;
+-- Replaced builtin functional methods with various builtin code section methods;
+REMOVED:
+-- Posix like multi-threading methods;
+-- Parameter passing by reference for basic data types;
+FIX:
+-- Many bugs;
+
+================================
+release dao-1.1, 2009-09-19
 ================================
 ADDED:
  -- do{}while() statement;
