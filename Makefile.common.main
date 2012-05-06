@@ -1,5 +1,12 @@
 
-DAO_CFLAGS += -DCHANGESET_ID=\"FOS.3CFC28749B\"
+CHANGESET_ID = $(shell head -c 12 manifest.uuid)
+ifeq ($(CHANGESET_ID),)
+  CHANGESET_ID = $(shell type manifest.uuid)
+endif
+
+ifneq ($(CHANGESET_ID),)
+  DAO_CFLAGS += -DCHANGESET_ID=\"FOS.$(CHANGESET_ID)\"
+endif
 
 DAO_INCS += -Ikernel
 
