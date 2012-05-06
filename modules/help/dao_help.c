@@ -27,6 +27,7 @@
 
 #include<stdlib.h>
 #include<string.h>
+#include<ctype.h>
 #include<math.h>
 #include"daoString.h"
 #include"daoValue.h"
@@ -63,7 +64,14 @@ enum DaoxCodeColor
 	DAOX_CYAN
 };
 
-const char* const dao_colors[8]
+/*
+// "dao_colors" must be declared as static, because the name "dao_colors"
+// is used in daoStream.c to declare a color array with colors in a different
+// order. In Linux, these two arrays will be linked as one, and the one from
+// daoStream.c is used, so color ids from DaoxCodeColor will not identify
+// the correct color!
+*/
+static char* dao_colors[8]
 = { "black", "white", "red", "green", "blue", "yellow", "magenta", "cyan" };
 
 
