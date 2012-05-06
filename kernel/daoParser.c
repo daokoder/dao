@@ -2050,8 +2050,8 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 		}
 	}
 	if( count == map->size && count > 0.75 * (max - min) ){
-		DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0};
-		key = (DaoValue*) & tmp;
+		DaoValue temp = {DAO_INTEGER};
+		key = (DaoValue*) & temp;
 		for(i=min+1; i<max; i++){
 			key->xInteger.value = i;
 			if( DMap_Find( map, key ) ==NULL ) DMap_Insert( map, key, NULL );
@@ -5177,10 +5177,9 @@ static void DaoParser_PushItemType( DaoParser *self, DaoType *type, int id, ucha
 		DArray_PushFront( self->enumTypes, NULL );
 	}
 }
-static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buffer )
+static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value )
 {
 	char *str = tok->string->mbs;
-	DaoValue *value = (DaoValue*) buffer;
 	daoint pl = 0;
 	if( tok->name == DTOK_NUMBER_SCI ){
 		if( DString_FindChar( tok->string, 'e', 0 ) != MAXSIZE ){
@@ -5233,7 +5232,7 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoComplex *buf
 }
 static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst )
 {
-	DaoComplex buffer = {0,0,0,0,0,{0.0,0.0}};
+	DaoValue buffer = {0};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNamespace *ns = self->nameSpace;
 	DaoRoutine *routine = self->routine;

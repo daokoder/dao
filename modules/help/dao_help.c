@@ -406,6 +406,8 @@ static void DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, i
 			start = DString_Find( text, delim, last + delim->size );
 			if( start == MAXSIZE ) start = text->size;
 		}
+		DString_Delete( delim );
+		DString_Delete( item );
 	}else{
 		DaoxStream_WriteBlock( self, text, offset, width, 0, listdep );
 	}

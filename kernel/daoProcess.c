@@ -3078,8 +3078,8 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		}
 #ifdef DAO_WITH_NUMARRAY
 	}else if( A->type == DAO_ARRAY && (B->type >=DAO_INTEGER && B->type <=DAO_DOUBLE )){
-		DaoDouble tmp = {0,0,0,0,0,0.0};
-		DaoValue *C = (DaoValue*) & tmp;
+		DaoValue temp = {0};
+		DaoValue *C = (DaoValue*) & temp;
 		DaoArray *na = & A->xArray;
 		id = DaoValue_GetInteger( B );
 		if( na->original && DaoArray_Sliced( na ) == 0 ){
@@ -3367,8 +3367,8 @@ InvalidReturn:
 }
 int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 {
-	DaoComplex tmp = {0};
-	DaoValue *value = (DaoValue*) (DaoComplex*) & tmp;
+	DaoValue temp = {0};
+	DaoValue *value = (DaoValue*) & temp;
 	DaoNamespace *ns = self->activeRoutine->nameSpace;
 	DaoType *type = self->activeTypes[vmc->c];
 	int func = vmc->a;
@@ -4963,7 +4963,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	
 	if( A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
 		DaoValue *val;
-		DaoDouble buf = {DAO_DOUBLE,0,0,0,0,0.0};
+		DaoValue temp = {0};
 		int type = A->type > B->type ? A->type : B->type;
 		double va, vb, res = 0;
 		switch( vmc->code ){
@@ -4983,7 +4983,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			case DVM_POW: res = powf( DaoValue_GetDouble( A ), DaoValue_GetDouble( B ) ); break;
 			default : break;
 		}
-		val = (DaoValue*) & buf;
+		val = (DaoValue*) & temp;
 		val->type = type;
 		switch( type ){
 			case DAO_INTEGER: val->xInteger.value = res; break;

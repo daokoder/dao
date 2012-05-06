@@ -986,8 +986,8 @@ DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
-DAO_DLL void DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream );
-DAO_DLL void DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream );
+DAO_DLL void DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream );
+DAO_DLL void DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream );
 DAO_DLL void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );

@@ -970,8 +970,8 @@ static void DaoMT_RunArrayFunctional( void *p )
 {
 	DaoValue **idval;
 	DaoValue *elem, *res = NULL;
-	DaoInteger tidint = {DAO_INTEGER,0,0,0,0,0};
-	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
+	DaoValue tidint = {DAO_INTEGER};
+	DaoValue com = {DAO_COMPLEX};
 	DaoValue *threadid = (DaoValue*)(void*)&tidint;
 	DaoTaskData *self = (DaoTaskData*)p;
 	DaoProcess *clone = self->clone;
@@ -988,7 +988,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 	int stackBase, vdim = sect->b - 1;
 
 	DaoMT_InitProcess( self->proto, clone );
-	tidint.value = self->first;
+	tidint.xInteger.value = self->first;
 
 	stackBase = clone->topFrame->active->stackBase;
 	idval = clone->activeValues + sect->a + 1;
@@ -1008,7 +1008,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 		}
 		elem = clone->stackValues[ stackBase + sect->a ];
 		if( elem == NULL || elem->type != array->etype ){
-			elem = (DaoValue*)(void*) &com;
+			elem = (DaoValue*)&com;
 			elem->type = array->etype;
 			elem = DaoProcess_SetValue( clone, sect->a, elem );
 		}

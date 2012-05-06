@@ -304,15 +304,17 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Unlock( & self->mutexProc );
 #endif
 }
-void DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream )
+void DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream )
 {
-	GC_ShiftRC( stream, self->stdioStream );
-	self->stdioStream = stream;
+	DaoStream_SetUserStream( self->stdioStream, stream );
 }
-void DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream )
+void DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream )
 {
-	GC_ShiftRC( stream, self->errorStream );
-	self->errorStream = stream;
+	if( self->errorStream == self->stdioStream ){
+		self->errorStream = DaoStream_New();
+		GC_ShiftRC( self->errorStream, self->stdioStream );
+	}
+	DaoStream_SetUserStream( self->errorStream, stream );
 }
 void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
 {
@@ -631,9 +633,9 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DaoList *argv;
 	DaoMap *cmdarg;
 	DaoType *nested[2];
-	DaoInteger ival = {DAO_INTEGER,0,0,0,0,0};
-	DaoString sval1 = {DAO_STRING,0,0,0,0,NULL};
-	DaoString sval2 = {DAO_STRING,0,0,0,0,NULL};
+	DaoValue ival = {DAO_INTEGER};
+	DaoValue sval1 = {DAO_STRING};
+	DaoValue sval2 = {DAO_STRING};
 	DaoValue *nkey = (DaoValue*) & ival;
 	DaoValue *skey = (DaoValue*) & sval1;
 	DaoValue *sval = (DaoValue*) & sval2;
@@ -741,9 +743,9 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 }
 static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DArray *argValues )
 {
-	DaoInteger ival = {DAO_INTEGER,0,0,0,0,0};
-	DaoString sval1 = {DAO_STRING,0,0,0,0,NULL};
-	DaoString sval2 = {DAO_STRING,0,0,0,0,NULL};
+	DaoValue ival = {DAO_INTEGER};
+	DaoValue sval1 = {DAO_STRING};
+	DaoValue sval2 = {DAO_STRING};
 	DaoValue *nkey = (DaoValue*) & ival;
 	DaoValue *skey = (DaoValue*) & sval1;
 	DaoValue *sval = (DaoValue*) & sval2;
@@ -798,8 +800,8 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 					}
 				}
 				if( k >0 && k <= DAO_DOUBLE && DaoToken_IsNumber( chars, 0 ) ){
-					DaoDouble tmp = {0,0,0,0,0,0.0};
-					nkey = DaoParseNumber( chars, (DaoValue*) & tmp );
+					DaoValue temp = {0};
+					nkey = DaoParseNumber( chars, (DaoValue*) & temp );
 				}
 			}
 		}

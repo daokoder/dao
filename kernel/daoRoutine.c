@@ -461,7 +461,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 		DaoVmCode vmc = self->body->vmCodes->codes[j];
 		if( vmc.code == DVM_JITC ){
 			DaoVmCodeX vmcx = *vmCodes[j];
-			*(DaoVmCode*) & vmcx = vmc;
+			memcpy( &vmcx, &vmc, sizeof(DaoVmCode) );
 			DaoRoutine_FormatCode( self, j, vmcx, annot );
 			DaoStream_WriteString( stream, annot );
 		}

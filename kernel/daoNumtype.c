@@ -4033,7 +4033,7 @@ void DaoArray_SetValue( DaoArray *self, daoint i, DaoValue *value )
 }
 static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
-	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
+	DaoValue com = {DAO_COMPLEX};
 	DaoList *list = NULL;
 	DaoArray *array = NULL;
 	DaoArray *indices = NULL;
@@ -4070,7 +4070,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 			res = p[1];
 		}else if( N ){
 			id = original ? DaoArray_IndexFromSlice( original, slices, 0 ) : 0;
-			res = (DaoValue*)(void*) &com;
+			res = (DaoValue*) &com;
 			DaoArray_GetValue( self, id, res );
 			first = 1;
 		}
