@@ -13,3 +13,5 @@ Special thanks to the following contributors:
   Testing, bug reports and patches etc.
 * Zhao, Zhiguo George (zhaozg [at] gmail.com)
   Testing, bug reports and patches etc.
+
+-- Limin Fu
