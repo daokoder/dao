@@ -15,6 +15,7 @@ else
     let dao_syntax_loaded2 = 1
 endif
 
+inoremap # X#
 
 syn case match
 

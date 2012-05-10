@@ -2217,6 +2217,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	ts[1] = at;
 	ts[2] = bt;
 	if( setname && opa == opc && daoBitBoolArithOpers2[code-DVM_NOT] ){
+		/* Check composite assignment operator first: */
 		DString_SetMBS( mbs, daoBitBoolArithOpers2[code-DVM_NOT] );
 		if( at->tid == DAO_INTERFACE ){
 			node = DMap_Find( at->aux->xInterface.methods, mbs );
@@ -2227,9 +2228,11 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 			rout = DaoType_FindFunction( at, mbs );
 		}
 		if( rout ){
-			rout = DaoRoutine_ResolveByType( rout, NULL, ts+1, 2, DVM_CALL );
-			/* if the operation is used in the overloaded operator,
-			   do operation by address */
+			rout2 = rout;
+			/* Check the method with self parameter first, then other methods: */
+			rout = DaoRoutine_ResolveByType( rout, ts[1], ts+2, 1, DVM_CALL );
+			if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout, NULL, ts+1, 2, DVM_CALL );
+			/* if the operation is used in the overloaded operator, do operation by address */
 			if( boolop && rout == self ) return dao_type_int;
 			if( rout ) return ct;
 		}
@@ -2243,33 +2246,20 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	}else if( at->tid == DAO_CDATA ){
 		rout = DaoType_FindFunction( at, mbs );
 	}
-	if( rout ){
-		rout2 = rout;
-		rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 2, DVM_CALL );
-		/* if the operation is used in the overloaded operator,
-		   do operation by address */
-		if( boolop && rout == self ) return dao_type_int;
-		if( rout ) ct = & rout->routType->aux->xType;
-		if( rout == NULL && ct ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 3, DVM_CALL );
-	}else{
-		if( bt->tid == DAO_INTERFACE ){
-			node = DMap_Find( bt->aux->xInterface.methods, mbs );
-			rout = node->value.pRoutine;
-		}else if( bt->tid == DAO_OBJECT ){
-			rout = DaoClass_FindOperator( & bt->aux->xClass, mbs->mbs, hostClass );
-		}else if( bt->tid == DAO_CDATA ){
-			rout = DaoType_FindFunction( bt, mbs );
-		}
-		if( rout == NULL ) return NULL;
-		rout2 = rout;
-		rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 2, DVM_CALL );
-		/* if the operation is used in the overloaded operator,
-		   do operation by address */
-		if( boolop && rout == self ) return dao_type_int;
-		if( rout ) ct = & rout->routType->aux->xType;
-		if( rout == NULL && ct ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 3, DVM_CALL );
-		if( rout == NULL ) return NULL;
+	if( rout == NULL ) return ct;
+	rout2 = rout;
+	rout = NULL;
+	if( ct ){ /* Check methods that can take all three parameters: */
+		/* Check the method with self parameter first, then other methods: */
+		rout = DaoRoutine_ResolveByType( rout2, ts[0], ts+1, 2, DVM_CALL );
+		if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 3, DVM_CALL );
 	}
+	/* Check the method with self parameter first, then other methods: */
+	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, ts[1], ts+2, 1, DVM_CALL );
+	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 2, DVM_CALL );
+	/* if the operation is used in the overloaded operator, do operation by address */
+	if( boolop && rout == self ) return dao_type_int;
+	if( rout ) ct = & rout->routType->aux->xType;
 	return ct;
 }
 static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc,
@@ -4135,6 +4125,7 @@ NotExist_TryAux:
 				continue;
 			}
 			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue; /* XXX enum */
+			/* TODO: check overloading? */
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
@@ -4150,6 +4141,7 @@ NotExist_TryAux:
 				continue;
 			}
 			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue;
+			/* TODO: check overloading? */
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;

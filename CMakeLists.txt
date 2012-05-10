@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
-if( "${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}" )
-	MESSAGE(FATAL_ERROR "\nDirectory ${CMAKE_SOURCE_DIR} already contains other Makefiles.\n"
+if( "${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}" )
+	MESSAGE(FATAL_ERROR "\nDirectory ${CMAKE_CURRENT_SOURCE_DIR} already contains other Makefiles.\n"
 			"Please remove CMakeCache.txt and CMakeFiles, and use a different folder to make "
 			"an out-of-source build!")
 endif()
@@ -136,6 +136,9 @@ endif(UNIX)
 
 IF(APPLE)
 	SET( CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup" )
+	if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+		add_definitions(-DMAC_OSX)
+	endif()
 ENDIF()
 
 include_directories("${PROJECT_SOURCE_DIR}/kernel")
@@ -159,12 +162,11 @@ target_link_libraries(daolib ${DAO_SYSTEM_LIBS})
 
 # Setup either static or dynamic compiling of the dao executable.
 # Note: the variable DAOLIB_TO_LINK is what MODULES link against.
+add_executable(daoexe "${PROJECT_SOURCE_DIR}/kernel/daoMain.c")
 if(DAO_STATIC_INTERPRETER)
-    add_executable(daoexe "${PROJECT_SOURCE_DIR}/kernel/daoMain.c")
     set(DAOLIB_TO_LINK "")
     target_link_libraries(daoexe ${DAO_SYSTEM_LIBS} daolibs)
 else(DAO_STATIC_INTERPRETER)
-    add_executable(daoexe "${PROJECT_SOURCE_DIR}/kernel/daoMaindl.c")
     set(DAOLIB_TO_LINK daolib)
     target_link_libraries(daoexe ${DAOLIB_TO_LINK})
 endif(DAO_STATIC_INTERPRETER)

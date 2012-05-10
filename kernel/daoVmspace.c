@@ -905,6 +905,10 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 		DaoValue_Clear( self->mainProcess->stackValues );
 		if( self->ReadLine ){
 			chs = self->ReadLine( "(dao) " );
+			if( chs == NULL ){
+				printf( "\n" );
+				break;
+			}
 			while( chs ){
 				DString_AppendMBS( input, chs );
 				DString_AppendChar( input, '\n' );

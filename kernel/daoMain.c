@@ -90,7 +90,6 @@ int main( int argc, char **argv )
 {
 	int i, k, idsrc;
 	DString *opts, *args;
-	DaoVmSpace *vmSpace;
 
 	/*mtrace(); */
 
