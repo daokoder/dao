@@ -3470,6 +3470,19 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC );
 int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC );
 void DaoProcess_PopValues( DaoProcess *self, int N );
+static void* DaoType_DownCastCxxData( DaoType *self, DaoType *totype, void *data )
+{
+	daoint i, n;
+	if( self == totype || totype == NULL || data == NULL ) return data;
+	for(i=0,n=totype->bases->size; i<n; i++){
+		void *p = DaoType_DownCastCxxData( self, totype->bases->items.pType[i], data );
+		if( p ){
+			if( totype->typer->casts[i] ) return (*totype->typer->casts[i])( p, 1 );;
+			return p;
+		}
+	}
+	return NULL;
+}
 void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, n, mt, mt2;
@@ -3565,6 +3578,13 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}else if( va->type == DAO_CDATA ){
 		DaoValue *tpar = (DaoValue*) ct;
+		if( DaoType_MatchTo( ct, va->xCdata.ctype, NULL ) ){ /* down casting: */
+			void *data = DaoType_DownCastCxxData( va->xCdata.ctype, ct, va->xCdata.data );
+			if( data ){
+				va = (DaoValue*) DaoCdata_Wrap( ct, data );
+				goto FastCasting;
+			}
+		}
 		meth = DaoType_FindFunctionMBS( va->xCdata.ctype, "cast" );
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}

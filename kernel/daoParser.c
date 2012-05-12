@@ -2490,6 +2490,24 @@ static int DaoParser_CheckNameToken( DaoParser *self, int start, int to, int eco
 	}
 	return 1;
 }
+static int DaoParser_AddConstant( DaoParser *self, DString *name, DaoValue *value, DaoToken *tok )
+{
+	DaoNamespace *myNS = self->nameSpace;
+	DaoRoutine *routine = self->routine;
+	int perm = self->permission;
+	int line = tok->line;
+	if( self->isClassBody ){
+		DaoClass_AddConst( self->hostClass, name, value, perm, line );
+	}else if( self->levelBase + self->lexLevel == 0 ){
+		DaoNamespace_AddConst( myNS, name, value, perm );
+	}else{
+		daoint id = routine->routConsts->items.size;
+		MAP_Insert( DArray_Top( self->localCstMap ), name, id );
+		DaoRoutine_AddConstant( routine, value );
+	}
+	/* TODO was defined warning: */
+	return 0;
+}
 static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -2499,6 +2517,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	DaoParser *tmpParser;
 	DaoType *type;
 	DString *str;
+	DNode *node;
 	int estart = start;
 	int use = start;
 	start ++;
@@ -2507,6 +2526,24 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
 		DaoNamespace_ImportMacro( myNS, tokens[start+1]->string );
 		return start + 2;
+	}else if( /*tokens[start]->name == DKEY_NAMESPACE ||*/ tokens[start]->name == DKEY_ENUM ){
+		DaoValue *scope = NULL;
+		DaoValue *value = NULL;
+		start = DaoParser_ParseScopedName( self, & scope, & value, start + 1, 1 );
+		if( start > 0 && value && value->type == DAO_TYPE && value->xType.tid == DAO_ENUM ){
+			DaoValue item = {DAO_INTEGER};
+			type = (DaoType*) value;
+			if( type->mapNames == NULL ) goto InvalidUse;
+			for(node=DMap_First(type->mapNames);node;node=DMap_Next(type->mapNames,node)){
+				item.xInteger.value = node->value.pInt;
+				DaoParser_AddConstant( self, node->key.pString, & item, tokens[start] );
+			}
+		}else if( start > 0 && value && value->type == DAO_NAMESPACE ){
+			DaoNamespace_AddParent( myNS, (DaoNamespace*) value );
+		}else{
+			goto InvalidUse;
+		}
+		return start + 1;
 	}
 	str = tokens[start]->string;
 	if( self->isClassBody && (start+1 > to || tokens[start+1]->type != DTOK_ASSN ) ){
@@ -2592,19 +2629,12 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		return start;
 	}
 	start += 2;
-	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
-		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
-		return -1;
-	}
+	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidUse;
 	type = DaoParser_ParseType( self, start, to, & start, NULL );
-	if( type == NULL ){
-		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
-		return 0;
-	}
+	if( type == NULL ) goto InvalidUse;
 	if( DaoType_FindType( str, myNS, self->hostCdata, self->hostClass, routine ) ){
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
-		DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
-		return 0;
+		goto InvalidUse;
 	}
 	type = DaoType_Copy( type );
 	DString_Assign( type->name, str );
@@ -2612,6 +2642,9 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	DaoNamespace_AddType( myNS, str, type );
 	DaoNamespace_AddTypeConstant( myNS, str, type );
 	return start;
+InvalidUse:
+	DaoParser_Error3( self, DAO_INVALID_USE_STMT, estart );
+	return -1;
 }
 #ifdef DAO_WITH_DECORATOR
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
@@ -3236,6 +3269,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	int global = storeType & (DAO_DECL_GLOBAL|DAO_DECL_STATIC);
 	int sep = DTOK_COMMA, value = 0;
 	int id, rb, comma, semco, explicitdef=0;
+	int enumkey = start + 1;
 	int reg, cst = 0;
 	char buf[32];
 	rb = -1;
@@ -3323,14 +3357,13 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		DaoType_Delete( abtp );
 	}else{
 		DaoNamespace_AddType( self->nameSpace, abtp->name, abtp );
-		DaoNamespace_AddTypeConstant( self->nameSpace, abtp->name, abtp );
 		abtp2 = abtp;
 	}
 	if( alias ){
 		abtp2 = DaoType_Copy( abtp2 );
 		DString_Assign( abtp2->name, alias );
 		DaoNamespace_AddType( self->nameSpace, abtp2->name, abtp2 );
-		DaoNamespace_AddTypeConstant( self->nameSpace, abtp2->name, abtp2 );
+		DaoParser_AddConstant( self, abtp2->name, (DaoValue*) abtp2, tokens[enumkey] );
 	}
 	return rb + 1;
 ErrorEnumDefinition:

@@ -277,7 +277,7 @@ typedef struct complex16 { double real, imag; } complex16;
 typedef void (*CallbackOnString)( const char *str );
 typedef void (*FuncDaoInit)();
 typedef void  (*DThreadTask)( void *arg );
-typedef void* (*FuncPtrCast)( void* );
+typedef void* (*FuncPtrCast)( void*, int );
 typedef void  (*FuncPtrDel)( void* );
 typedef void  (*DaoCFunction) ( DaoProcess *process, DaoValue *params[], int npar );
 
@@ -319,7 +319,10 @@ struct DaoTypeBase
 	// usually they should be set to NULL, but for wrapping C++ class
 	// with virtual methods, it is necessary to provide casting function(s)
 	// in the following form:
-	//   void* cast_Sub_to_Base( void *data ) { return (Base*)(Sub*)data; }
+	//   void* cast_Sub_to_Base( void *data, int down ) {
+	//       if( down ) return (Sub*)(Base*)data;
+	//       return (Base*)(Sub*)data;
+	//   }
 	*/
 	FuncPtrCast    casts[ DAO_MAX_CDATA_SUPER ];
 

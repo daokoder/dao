@@ -136,6 +136,10 @@ static void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 		DString_Append( str, abtp->name );
 		sprintf( buf, "[%p]", var );
 		DString_AppendMBS( str, buf );
+		if( var->type == DAO_CDATA ){
+			sprintf( buf, "(%p)", var->xCdata.data );
+			DString_AppendMBS( str, buf );
+		}
 	}else{
 		DString_AppendMBS( str, "NULL" );
 	}
