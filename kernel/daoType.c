@@ -417,7 +417,7 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs )
 	daoint i, k, n, mt = DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 	if( self->tid == type->tid && (self->tid >= DAO_OBJECT && self->tid <= DAO_CTYPE) )
-		if( self->aux == type->aux ) return; /* for aliased type; */
+		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 	if( (mt = DaoType_MatchTemplateParams( self, type, defs )) ) return mt;
 	if( self->bases == NULL || self->bases->size == 0 ) return DAO_MT_NOT;
 	for(i=0,n=self->bases->size; i<n; i++){
@@ -613,7 +613,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return DaoType_MatchToParent( self, type, defs );
 	case DAO_CTYPE :
 	case DAO_CDATA :
-		if( self->aux == type->aux ) return; /* for aliased type; */
+		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 		if( type->tid == DAO_INTERFACE ){
 			if( DaoType_HasInterface( self, & type->aux->xInterface ) ) return DAO_MT_SUB;
 			if( DaoInterface_TryBindTo( & type->aux->xInterface, self, binds, NULL ) ) return DAO_MT_SUB;

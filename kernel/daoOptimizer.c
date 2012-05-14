@@ -1409,7 +1409,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 		for(j=0,k=0; j<M && k<node->ones; j++){
 			if( GET_BIT( node->bits->mbs, j ) == 0 ) continue;
 			if( intervals[2*j] < 0 ) intervals[2*j] = i;
-			intervals[2*j+1] = i;
+			intervals[2*j+1] = i + 1; /* plus one because it is alive at the exit; */
 			k += 1;
 		}
 		if( vmc->code == DVM_LOAD || vmc->code == DVM_CAST ){

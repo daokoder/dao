@@ -3648,8 +3648,15 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		return;
 	}
 	if( need_self && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
-		if( O == NULL && P[0]->type == DAO_OBJECT ) O = P[0];
+		if( O == NULL && N && P[0]->type == DAO_OBJECT ) O = P[0];
 		if( O ) O = DaoObject_CastToBase( O->xObject.rootObject, rout->routHost );
+		if( O == NULL && N && P[0]->type == DAO_PAR_NAMED ){ /* Check explicit self parameter: */
+			DaoNameValue *nameva = (DaoNameValue*)P[0];
+			if( nameva->value && nameva->value->type == DAO_OBJECT )
+				if( nameva->unitype->attrib & DAO_TYPE_SELFNAMED ){
+					O = DaoObject_CastToBase( nameva->value->xObject.rootObject, rout->routHost );
+				}
+		}
 		if( O == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "self object is null" );
 			return;
