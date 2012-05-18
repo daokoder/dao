@@ -317,12 +317,18 @@ struct DaoTypeBase
 	/*
 	// function(s) to cast a C/C++ type to one of its parent type:
 	// usually they should be set to NULL, but for wrapping C++ class
-	// with virtual methods, it is necessary to provide casting function(s)
+	// with virtual method(s), it is necessary to provide casting function(s)
 	// in the following form:
-	//   void* cast_Sub_to_Base( void *data, int down ) {
-	//       if( down ) return (Sub*)(Base*)data;
-	//       return (Base*)(Sub*)data;
+	//   void* cast_Sub_Base( void *data, int down_casting ) {
+	//       if( down_casting ) return static_cast<Sub*>( (Base*)data );
+	//       return dynamic_cast<Base*>( (Sub*)data );
 	//   }
+	// or:
+	//   void* cast_Sub_Base( void *data, int down_casting ) {
+	//       if( down_casting ) return dynamic_cast<Sub*>( (Base*)data );
+	//       return dynamic_cast<Base*>( (Sub*)data );
+	//   }
+	// for class with virtual base(s).
 	*/
 	FuncPtrCast    casts[ DAO_MAX_CDATA_SUPER ];
 
@@ -1127,6 +1133,8 @@ DAO_DLL DaoType* DaoType_GetItemType( DaoType *self, int i );
 
 DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );
+DAO_DLL void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
+
 /*
 // DaoGC_TryDelete() will register the object for collection.
 // It is the same as:

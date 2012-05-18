@@ -70,13 +70,13 @@ syn match   daoMethDecl		"\w\+\(::\w\+\)\+"
 
 syn region  daoTableBlock       transparent matchgroup=daoTable start="{" end="}" contains=ALLBUT,daoTodo,daoSpecial,daoCond,daoCondElseif,daoCondEnd,daoCondStart,daoBlock,daoRepeatBlock
 
-syn match   daoFunc	/io\./
-syn match   daoFunc	/mt\./
-syn match   daoFunc	/std\./
-syn match   daoFunc	/aux\./
-syn match   daoFunc	/sys\./
-syn match   daoFunc	/math\./
-syn match   daoFunc	/meta\./
+syn keyword   daoFunc	io
+syn keyword   daoFunc	mt
+syn keyword   daoFunc	std
+syn keyword   daoFunc	aux
+syn keyword   daoFunc	sys
+syn keyword   daoFunc	math
+syn keyword   daoFunc	meta
 
 "syncing method
 syn sync minlines=100

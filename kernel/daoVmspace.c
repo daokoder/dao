@@ -374,6 +374,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->pathSearching = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
 	self->allProcesses = DMap_New(D_VALUE,0);
+	self->preloadModules = NULL;
 
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
@@ -422,6 +423,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DMap_Delete( self->allProcesses );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
+	if( self->preloadModules ) DArray_Delete( self->preloadModules );
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
@@ -505,6 +507,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 {
 	DString *str = DString_New(1);
 	DArray *array = DArray_New(D_STRING);
+	DaoNamespace *ns;
 	daoint i, j;
 
 	SplitByWhiteSpaces( options, array );
@@ -534,6 +537,19 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options )
 			}else if( strcmp( token->mbs, "--jit" ) ==0 ){
 				self->options |= DAO_EXEC_JIT;
 				daoConfig.jit = 1;
+			}else if( strstr( token->mbs, "--module=" ) == token->mbs ){
+				DString_Assign( str, array->items.pString[i] );
+				DString_Erase( str, 0, 9 );
+				if( self->preloadModules == NULL ) self->preloadModules = DArray_New(D_VALUE);
+				if( (ns = DaoVmSpace_Load( self, str, 1 )) ){
+					DArray_Append( self->preloadModules, ns );
+					DArray_Append( self->mainNamespace->namespaces, ns );
+					DaoNamespace_UpdateLookupTable( self->mainNamespace );
+				}else{
+					DaoStream_WriteMBS( self->errorStream, "Preloading failed for module: " );
+					DaoStream_WriteMBS( self->errorStream, token->mbs );
+					DaoStream_WriteMBS( self->errorStream, ";\n" );
+				}
 			}else if( token->size ){
 				DaoStream_WriteMBS( self->errorStream, "Unknown option: " );
 				DaoStream_WriteMBS( self->errorStream, token->mbs );

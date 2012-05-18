@@ -594,6 +594,8 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	cdata_type = typer->core->kernel->abtype;
 	typer->core->kernel->attribs |= DAO_TYPER_PRIV_FREE;
 	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
+		GC_IncRC( ctype_type );
+		GC_DecRC( ctype_type );
 		printf( "type wrapping failed: %s\n", typer->name );
 		return NULL;
 	}
@@ -804,6 +806,12 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 		DaoNamespace *ns = vms->nsInternal;
 		DaoNamespace_AddConst( self, ns->name, (DaoValue*)ns, DAO_DATA_PUBLIC );
 		DArray_Append( self->namespaces, ns );
+		DaoNamespace_UpdateLookupTable( self );
+	}else if( vms && vms->preloadModules ){
+		daoint i;
+		for(i=0; i<vms->preloadModules->size; i++){
+			DArray_Append( self->namespaces, vms->preloadModules->items.pNS[i] );
+		}
 		DaoNamespace_UpdateLookupTable( self );
 	}
 	DString_Delete( name );

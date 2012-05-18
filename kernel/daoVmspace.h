@@ -46,52 +46,54 @@ extern const char *const dao_copy_notice;
  */
 struct DaoVmSpace
 {
-    DAO_DATA_COMMON;
+	DAO_DATA_COMMON;
 
-    /* To run the main script specified in the commad line (or the first loaded one),
-     * or scripts from an interactive console. */
-    DaoProcess  *mainProcess;
-    /* To store globals in the main script,
-     * or scripts from an interactive console. */
-    DaoNamespace  *mainNamespace;
+	/* To run the main script specified in the commad line (or the first loaded one),
+	 * or scripts from an interactive console. */
+	DaoProcess  *mainProcess;
+	/* To store globals in the main script,
+	 * or scripts from an interactive console. */
+	DaoNamespace  *mainNamespace;
 
-    /* for some internal scripts and predefined objects or types */
-    DaoNamespace  *nsInternal;
+	/* for some internal scripts and predefined objects or types */
+	DaoNamespace  *nsInternal;
 
-    DaoStream  *stdioStream;
-    DaoStream  *errorStream;
+	DaoStream  *stdioStream;
+	DaoStream  *errorStream;
 
-    DMap    *allProcesses;
-    DArray  *processes;
+	DMap    *allProcesses;
+	DArray  *processes;
 
 	DString *mainSource;
-    DString *pathWorking;
-    DArray  *nameLoading;
-    DArray  *pathLoading;
-    DArray  *pathSearching; /* <DString*> */
+	DString *pathWorking;
+	DArray  *nameLoading;
+	DArray  *pathLoading;
+	DArray  *pathSearching; /* <DString*> */
 
-    int options;
-    char stopit;
-    char safeTag;
-    char evalCmdline;
+	DArray  *preloadModules;
+
+	int options;
+	char stopit;
+	char safeTag;
+	char evalCmdline;
 	char hasAuxlibPath;
 	char hasSyslibPath;
 
-    DMap  *vfiles;
+	DMap  *vfiles;
 	DMap  *vmodules;
 
-    /* map full file name (including path and suffix) to module namespace */
-    DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
-    DMap  *allTokens;
+	/* map full file name (including path and suffix) to module namespace */
+	DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
+	DMap  *allTokens;
 
-    DaoUserHandler *userHandler;
+	DaoUserHandler *userHandler;
 
-    char* (*ReadLine)( const char *prompt );
-    int   (*AddHistory)( const char *cmd );
+	char* (*ReadLine)( const char *prompt );
+	int   (*AddHistory)( const char *cmd );
 
 #ifdef DAO_WITH_THREAD
-    DMutex  mutexLoad;
-    DMutex  mutexProc;
+	DMutex  mutexLoad;
+	DMutex  mutexProc;
 #endif
 };
 

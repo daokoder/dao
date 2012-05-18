@@ -49,7 +49,7 @@ struct DaoNamespace
 	DArray  *auxData;   /* mainly for GC */
 
 	DaoRoutine *mainRoutine;
-    DaoList    *argParams;
+	DaoList    *argParams;
 
 	DArray *mainRoutines; /* stdlib.eval() */
 	DArray *definedRoutines; /* for DaoStudio IDE */
