@@ -37,6 +37,11 @@
 #include"daoVmspace.h"
 #include"daoGC.h"
 
+#ifdef UNIX
+#include <sys/ioctl.h>
+#include <unistd.h>
+#endif
+
 #define DAOX_TEXT_WIDTH 79
 #define DAOX_TREE_WIDTH 99
 
@@ -557,6 +562,14 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 	DString ssubsect = DString_WrapMBS( "subsection" );
 	DString ssubsect2 = DString_WrapMBS( "subsubsection" );
 	DaoxStream xstream;
+	int screen = DAOX_TEXT_WIDTH;
+
+#ifdef UNIX
+	struct winsize ws;
+	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
+	if( ws.ws_col <= DAOX_TEXT_WIDTH ) screen = ws.ws_col - 1;
+#endif
+
 	xstream.mtypes = DHash_New(D_STRING,0);
 	xstream.regex = DaoRegex_New( & spat );
 	xstream.nspace = self->entry->help->nspace;
@@ -575,9 +588,9 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoStream *stream, DaoProc
 	DMap_Insert( xstream.mtypes, & ssubsect, (void*)(size_t)DAOX_HELP_SUBSECT );
 	DMap_Insert( xstream.mtypes, & ssubsect2, (void*)(size_t)DAOX_HELP_SUBSECT2 );
 	if( self->type == DAOX_HELP_TEXT ){
-		DaoxStream_WriteBlock( & xstream, self->text, 0, DAOX_TEXT_WIDTH, 0, 0 );
+		DaoxStream_WriteBlock( & xstream, self->text, 0, screen, 0, 0 );
 	}else if( self->type == DAOX_HELP_CODE ){
-		DaoxStream_PrintCode( & xstream, self->text, 0, DAOX_TEXT_WIDTH );
+		DaoxStream_PrintCode( & xstream, self->text, 0, screen );
 		if( proc && (self->lang == NULL || strcmp( self->lang->mbs, "dao" ) == 0) ){
 			DaoStream_WriteMBS( stream, "\n" );
 			DaoStream_SetColor( stream, NULL, dao_colors[DAOX_YELLOW] );
@@ -675,6 +688,14 @@ static void DaoxHelpEntry_AppendList( DaoxHelpEntry *self, DString *text )
 static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProcess *proc )
 {
 	DaoxStream xstream;
+	int screen = DAOX_TEXT_WIDTH;
+
+#ifdef UNIX
+	struct winsize ws;
+	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
+	if( ws.ws_col <= DAOX_TEXT_WIDTH ) screen = ws.ws_col - 1;
+#endif
+
 	xstream.nspace = self->help->nspace;
 	xstream.stream = stream;
 
@@ -688,7 +709,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProc
 			DString_ChangeMBS( notice, "%$%( %s* license %s* %)", "Unspecified License", 0 );
 		}
 		DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
-		DaoxStream_WriteText( & xstream, notice, 0, DAOX_TEXT_WIDTH );
+		DaoxStream_WriteText( & xstream, notice, 0, screen );
 		DaoStream_SetColor( stream, NULL, NULL );
 		DaoxStream_WriteNewLine( & xstream, "" );
 		DString_Delete( notice );
@@ -709,7 +730,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoStream *stream, DaoProc
 	DaoStream_WriteMBS( stream, "\n" );
 
 	xstream.offset = 0;
-	if( self->title ) DaoxStream_WriteText( & xstream, self->title, 0, DAOX_TEXT_WIDTH );
+	if( self->title ) DaoxStream_WriteText( & xstream, self->title, 0, screen );
 
 	DaoStream_WriteMBS( stream, "\n\n" );
 	DaoStream_SetColor( stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
@@ -735,6 +756,12 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 	int extra = root ? 2 : 5;
 	int color, count = 0;
 	int screen = DAOX_TREE_WIDTH;
+
+#ifdef UNIX
+	struct winsize ws;
+	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
+	screen = ws.ws_col - 1;
+#endif
 
 	if( offsets == NULL ){
 		offsets = DArray_New(0);
@@ -774,9 +801,13 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoStream *stream, DAr
 			}else{
 				int next = 0;
 				int start = DString_Break( self->title, TW - (self->name->size + 2) );
-				DString_SubString( self->title, chunk, 0, start );
-				DString_Trim( chunk );
-				DaoStream_WriteString( stream, chunk );
+				if( start >= 0 ){
+					DString_SubString( self->title, chunk, 0, start );
+					DString_Trim( chunk );
+					DaoStream_WriteString( stream, chunk );
+				}else{
+					start = 0;
+				}
 				if( last )
 					memset( line->mbs + offset, ' ', (width + extra)*sizeof(char) );
 				else
