@@ -1,0 +1,57 @@
+load help;
+
+################################################################################
+################################################################################
+#### Dao Grammar Notations
+################################################################################
+################################################################################
+@[name]
+dao.grammar.notation
+@[name]
+
+@[title]
+Dao Grammar Notations
+@[title]
+
+@[text]
+Syntax definition: @[green]A ::= B@[green], @[green]A@[green] is defined
+as @[green]B@[green] , which can be a descriptive sentence or a combination 
+of the following definition items,
+@[list]
+== Descriptive: @[green]"description"@[green]
+== Alternative: @[green]S | Y@[green]
+== Optional: @[green][ S ]@[green]
+== Grouping: @[green]( S )@[green]
+== Repeating: @[green]S *@[green] or @[green]S +@[green]
+   @[list(sub)]
+   -- @[green]*@[green] : zero or more times;
+   -- @[green]+@[green] : once or more times;
+   @[list(sub)]
+@[list]
+Examples,
+@[list]
+-- @[cyan]( S | Y )+@[cyan] represents all the possible sequences composed 
+   of @[cyan]S@[cyan] and @[cyan]Y@[cyan], such as: @[cyan]S@[cyan]; 
+   @[cyan]Y@[cyan]; @[cyan]SY@[cyan]; @[cyan]YS@[cyan]; @[cyan]SSY@[cyan] ...
+-- @[cyan]S ( Y | N ) T@[cyan] represents: @[cyan]S Y T@[cyan] 
+   or @[cyan]S N T@[cyan]
+@[list]
+
+@[text]
+
+
+################################################################################
+################################################################################
+#### Dao Grammar Specification
+################################################################################
+################################################################################
+@[name]
+dao.grammar.specification
+@[name]
+
+@[title]
+Dao Grammar Specification
+@[title]
+
+@[text]
+@[text]

@@ -5,6 +5,16 @@ load help;
 load help_dao_zh.help_dao;
 
 
+message =
+@[]
+帮助模块已载入。
+您可以使用"help()"来列出所有可用的帮助项；
+或者运行"help('help')"来获得此帮助系统的详细信息。
+@[]
+
+io.writeln( message );
+
+
 @[name]
 help
 @[name]

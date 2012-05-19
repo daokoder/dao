@@ -4,6 +4,15 @@
 load help;
 load help_dao_en.help_dao;
 
+message =
+@[]
+Module Help is loaded.
+You may run "help()" to list all the available help entries;
+or run "help('help')" for detailed information about the help syetm.
+@[]
+
+io.writeln( message );
+
 
 ################################################################################
 ################################################################################
@@ -72,7 +81,7 @@ Format of The Help Files
 @[title]
 
 @[text]
-Help files are regular Dao source files which contains mostly verbatim texts,
+Help files are regular Dao source files which contain mostly verbatim texts,
 and can be loaded as regular Dao modules.
 Such files must have the following loading statement before any use of verbatims:
 
@@ -94,10 +103,11 @@ help.format
 @[name]
 @[code(dao)]
 
-Such ID string instructs how this entry will be organized in the help system,
+All the help entries in the help system are organized as a tree.
+Such ID string instructs how this entry will be stored in the tree,
 and how it will be located.
 Each ID string is composed of multiple parts which are delimited by dots.
-There is one node in the help system that is corresponding to each part of the ID string.
+There is one node in the tree that is corresponding to each part of the ID string.
 
 
 Each help entry may have a title which is represented by a verbatim text captioned
@@ -120,6 +130,16 @@ Inside the text, several tags are supported for formatting the text:
 @[:background]text@[:background]
 @[foreground:background]text@[foreground:background]
 @[code]
+For exmample:
+@[code]
+@[blue]text@[blue]
+@[:green]text@[:green]
+@[blue:green]text@[blue:green]
+@[code]
+produce:
+@[blue]text@[blue]
+@[:green]text@[:green]
+@[blue:green]text@[blue:green].
 
 ==Item listing:
 
