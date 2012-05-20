@@ -130,7 +130,7 @@ Inside the text, several tags are supported for formatting the text:
 @[:background]text@[:background]
 @[foreground:background]text@[foreground:background]
 @[code]
-For exmample:
+For example:
 @[code]
 @[blue]text@[blue]
 @[:green]text@[:green]

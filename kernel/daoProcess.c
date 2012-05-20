@@ -694,24 +694,21 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	DaoProcess_SetActiveFrame( self, frame );
 	return frame;
 }
-int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl )
+int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl )
 {
 	DaoParser *p;
 	int res;
 
-	src = DString_Copy( src );
-	DString_ToMBS( src );
 	p = DaoParser_New();
 	p->vmSpace = self->vmSpace;
 	p->nameSpace = ns;
 	DString_Assign( p->fileName, ns->name );
-	res = DaoParser_LexCode( p, src->mbs, rpl ) && DaoParser_ParseScript( p );
+	res = DaoParser_LexCode( p, src, rpl ) && DaoParser_ParseScript( p );
 	p->routine->body->parser = NULL;
 	DaoParser_Delete( p );
-	DString_Delete( src );
 	return res;
 }
-int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *source, int rpl )
+int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source, int rpl )
 {
 	DaoRoutine *rout;
 	DString_SetMBS( ns->name, "code string" );

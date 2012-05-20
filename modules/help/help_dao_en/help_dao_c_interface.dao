@@ -5,5 +5,101 @@ dao.c-interface
 @[name]
 
 @[title]
-Programming with the C Interfaces
+Programming with The C Interfaces
+@[title]
+
+
+################################################################################
+################################################################################
+#### Embedding Dao Interpreter
+################################################################################
+################################################################################
+@[name]
+dao.c-interface.embedding
+@[name]
+
+@[title]
+Embedding Dao Interpreter
+@[title]
+
+@[text]
+
+@[section]A Simple Example@[section]
+
+@[subsection]Initializing Dao Runtime@[subsection]
+Before doing anything with Dao as a library, one must call
+@[green]DaoInit()@[green] to initialize it first:
+
+@[code]
+# Initialize Dao:
+DaoVmSpace *vmspace = DaoInit( NULL );
+@[code]
+This function will return a @[green]DaoVmSpace@[green] object,
+which can be used to load Dao scripts or modules.
+It can optionally take @[cyan]char*@[cyan] parameter,
+which is assumed to be the path and name of the application,
+and is used to add additional searching paths.
+
+@[comment]
+Before you start to use the @[green]DaoVmSpace@[green] object
+to run Dao scripts or load Dao modules, you may set some options
+in the object, e.g:
+@[code]
+DaoVmSpace_SetOptions( vmspace,  );
+@[code]
+@[comment]
+
+@[subsection]Load A Script File@[subsection]
+Once you have a @[green]DaoVmSpace@[green] object, you can start
+to run Dao scripts or load Dao modules using this object.
+If you have a main script file and all you need to do is to run the file,
+you can simply call:
+
+@[code]
+# Load "myscript.dao":
+DaoVmSpace_Load( vmspace, "myscript.dao" );
+@[code]
+
+@[subsection]Finalize Dao Runtime@[subsection]
+
+@[code]
+# Finalize (or Quit) Dao:
+DaoQuit();
+@[code]
+
+@[section]A Slightly More Advanced Example@[section]
+Note this function returns a namespace object that represents the loaded script.
+If you want to do extra things such calling a Dao function defined in the script,
+you will need this namespace object:
+
+@[code]
+# Load "myscript.dao" and obtain the namespace object:
+DaoNamespace *nspace = DaoVmSpace_Load( vmspace, "myscript.dao" );
+@[code]
+To find the function you want to call,
+
+@[code]
+# Find an object named "myfunction":
+DaoValue *value = DaoNamespace_FindData( nspace, "myfunction" );
+# Try to cast it to a function object:
+DaoRoutine *myfunc = DaoValue_CastRoutine( value );
+@[code]
+If "myfunction" is indeed a function, @[cyan]myfunc@[cyan] will not be NULL.
+
+Then you can call it in the following way,
+
+@[text]
+
+
+################################################################################
+################################################################################
+#### Extending Dao Interpreter
+################################################################################
+################################################################################
+@[name]
+dao.c-interface.extending
+@[name]
+
+@[title]
+Extending Dao Interpreter
 @[title]

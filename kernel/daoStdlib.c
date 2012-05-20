@@ -61,8 +61,9 @@ static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
+	char *source = DaoValue_TryGetMBString( p[0] );
 	DaoNamespace *ns = proc->activeNamespace;
-	if( DaoProcess_Compile( proc, ns, p[0]->xString.data, p[1]->xInteger.value ) ==0 ){
+	if( DaoProcess_Compile( proc, ns, source, p[1]->xInteger.value ) ==0 ){
 		DaoProcess_PutValue( proc, dao_none_value );
 		return;
 	}
@@ -74,6 +75,7 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[2];
+	char *source = DaoValue_TryGetMBString( p[0] );
 	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	int safe = p[3]->xInteger.value;
 	int wasProt = 0;
@@ -84,7 +86,7 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
-	*num = DaoProcess_Eval( proc, ns, p[0]->xString.data, p[1]->xInteger.value );
+	*num = DaoProcess_Eval( proc, ns, source, p[1]->xInteger.value );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 	if( redirect != prevStream ){
 		GC_ShiftRC( prevStream, proc->stdioStream );
@@ -105,7 +107,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
 	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
-	ns = DaoVmSpace_Load( vms, name, runim );
+	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 #if 0

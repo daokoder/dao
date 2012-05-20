@@ -109,12 +109,13 @@ DAO_DLL void DaoVmSpace_Delete( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_Lock( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_Unlock( DaoVmSpace *self );
 
-DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
+DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 
-DAO_DLL int DaoVmSpace_Compile( DaoVmSpace *self, DaoNamespace *ns, DString *src, int rpl );
-DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
+DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
 
-DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
+DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
+DAO_DLL DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run );
+
 DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name );

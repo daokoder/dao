@@ -137,6 +137,18 @@ DString* DString_New( int mbs )
 	DString_Init( self, mbs );
 	return self;
 }
+DString* DString_NewMBS( const char *mbs )
+{
+	DString *self = DString_New(1);
+	DString_SetMBS( self, mbs );
+	return self;
+}
+DString* DString_NewWCS( const wchar_t *wcs )
+{
+	DString *self = DString_New(0);
+	DString_SetWCS( self, wcs );
+	return self;
+}
 
 void DString_DeleteData( DString *self )
 {

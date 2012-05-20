@@ -481,6 +481,8 @@ DAO_DLL void DaoValue_ClearAll( DaoValue *v[], int n );
 // DString_New() creates a new multi-byte string (MBS) or wide-character string;
 */
 DAO_DLL DString* DString_New( int mbs );
+DAO_DLL DString* DString_NewMBS( const char *mbs );
+DAO_DLL DString* DString_NewWCS( const wchar_t *wcs );
 
 DAO_DLL DString* DString_Copy( DString *self );
 DAO_DLL void DString_Delete( DString *self );
@@ -858,8 +860,8 @@ DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 
 
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
-DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
-DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
+DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl );
+DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL void DaoProcess_Stop( DaoProcess *self );
 DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
@@ -982,12 +984,12 @@ DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, 
 
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
-DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, DString *options );
+DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
-DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
-DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file, int run );
+DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
+DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const char *mod );
 DAO_DLL DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name );
 DAO_DLL DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self );
