@@ -5370,16 +5370,16 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 			default: break;
 		}
 	}else if( ta == DAO_FLOAT ){
-		C = DaoProcess_SetValue( self, vmc->c, A ); // XXX integer result?
+		C = DaoProcess_SetValue( self, vmc->c, A );
 		switch( vmc->code ){
-			case DVM_NOT :  C->xFloat.value = ! C->xFloat.value; break;
+			case DVM_NOT :  C->xInteger.value = ! C->xFloat.value; break;
 			case DVM_MINUS : C->xFloat.value = - C->xFloat.value; break;
 			default: break;
 		}
 	}else if( ta == DAO_DOUBLE ){
 		C = DaoProcess_SetValue( self, vmc->c, A );
 		switch( vmc->code ){
-			case DVM_NOT :  C->xDouble.value = ! C->xDouble.value; break;
+			case DVM_NOT :  C->xInteger.value = ! C->xDouble.value; break;
 			case DVM_MINUS : C->xDouble.value = - C->xDouble.value; break;
 			default: break;
 		}
@@ -5442,8 +5442,18 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 #endif
 	}else if( ta == DAO_OBJECT || ta == DAO_CDATA ){
 		C = self->activeValues[ vmc->c ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 )
+		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
+			if( vmc->code == DVM_NOT ){
+				if( ta == DAO_OBJECT ){
+					DaoValue *deft = A->xObject.defClass->objType->value;
+					DaoProcess_PutInteger( self, A == deft );
+				}else{
+					DaoProcess_PutInteger( self, A->xCdata.data == NULL );
+				}
+				return;
+			}
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
+		}
 		return;
 	}
 	if( C ==0 ) DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );

@@ -3278,6 +3278,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					ct = DaoInferencer_UpdateType( self, opc, dao_type_double );
 					if( ct->realnum ){
 						inode->code = DVM_GETF_CX;
+						inode->b = strcmp( str->mbs, "imag" ) == 0;
 						if( ct->tid != DAO_DOUBLE )
 							DaoInferencer_InsertMove2( self, inode, dao_type_double, ct );
 					}

@@ -8,13 +8,12 @@ dao.concurrent
 Concurrent Programming
 @[title]
 
-@[name]
-dao.concurrent.asynchronous-class
-@[name]
-@[title]
-Asynchronous Class
-@[title]
 
+################################################################################
+################################################################################
+#### Multi-threading
+################################################################################
+################################################################################
 @[name]
 dao.concurrent.multi-threading
 @[name]
@@ -22,3 +21,82 @@ dao.concurrent.multi-threading
 Multi-threading
 @[title]
 
+@[text]
+Dao has built-in support for multi-threaded programming.
+The threading functionalities are accessible through the multi-threading module
+object named @[green]mt@[green], which can be used to create thread,
+mutex, condition variable and semaphore etc, and can be used to
+perform other thread related operations.
+
+
+The simplest way to start a thread is to use the functional method
+@[green]mt.start@[green], which can start a new thread or reuse an idle
+thread from a thread pool to run an expression or a block of codes:
+@[code]
+a = 123
+fut = mt.start::{ a*a }
+fut2 = mt.start::{
+	for( i = 1 : 1000 ) b = a*a
+}
+@[code]
+This functional method is implemented as a code section (code block as in Ruby)
+method, and can take a block of code as an additional implicit parameter.
+@[green]mt.start@[green] returns the created or reused thread as a
+@[green]future@[green] value, which can be used to perform simple scheduling
+such as blocking the current thread indefinitely or a finite amount of time
+to wait for the thread to finish. For example,
+@[code]
+fut.wait()
+fut2.wait( 0.1 )
+@[code]
+
+
+However, the simplest way to do threaded programming is to use the
+parallelized functional methods of @[green]mt@[green], which provides
+the following parallelized functional methods,
+@[list]
+-- @[green]iterate()@[green]:
+
+   Iterate a predefined number of times, or iterate over a list, map or array,
+   and execute the code block on each of the items;
+
+-- @[green]map()@[green]
+
+   Map a list, map or array to another list, map or array, using the values
+   returned by the code block;
+
+-- @[green]apply()@[green]
+
+   Apply the values returned by the code block to a list, map or array;
+
+-- @[green]find()@[green]
+
+   Find the first item in a list or map the satisfy the condition as
+   tested by the code block.
+@[list]
+
+Examples,
+@[code]
+mt.iterate( 10 )::{ io.writeln( X ) }
+mt.iterate( {1,2,3,4,5,6}, 3 )::{ io.writeln( X ) }
+@[code]
+@[text]
+
+
+################################################################################
+################################################################################
+#### Asynchronous Class
+################################################################################
+################################################################################
+@[name]
+dao.concurrent.asynchronous-class
+@[name]
+
+@[title]
+Asynchronous Class
+@[title]
+
+@[text]
+In addtion to the threading functionalities provided by @[green]mt@[green],
+Dao allows user 
+@[text]

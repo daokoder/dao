@@ -400,7 +400,8 @@ enum
 	TOK_DIGITS_0X ,
 	TOK_DIGITS_DEC ,
 	TOK_DIGITS_HEX ,
-	TOK_NUMBER_DEC_D , /* 12. */
+	TOK_DOT_DIGITS , /* .12 */
+	TOK_DIGITS_DOT , /* 12. */
 	TOK_NUMBER_DEC ,
 	TOK_DOUBLE_DEC ,
 	TOK_NUMBER_IMG ,
@@ -507,6 +508,7 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_DIGITS_HEX ,
 	DTOK_DIGITS_DEC ,
 	DTOK_DIGITS_HEX ,
+	DTOK_NUMBER_DEC , /* .12 */
 	DTOK_NUMBER_DEC , /* 12. */
 	DTOK_NUMBER_DEC ,
 	DTOK_DOUBLE_DEC ,
@@ -653,10 +655,11 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_START ][ j ] = TOK_DIGITS_DEC;
 			daoLexTable[ TOK_DIGITS_DEC ][ j ] = TOK_DIGITS_DEC;
 			daoLexTable[ TOK_DIGITS_HEX ][ j ] = TOK_DIGITS_HEX;
-			daoLexTable[ TOK_OP_DOT ][ j ] = TOK_DIGITS_DEC;
+			daoLexTable[ TOK_OP_DOT ][ j ] = TOK_DOT_DIGITS;
 			daoLexTable[ TOK_DIGITS_0 ][ j ] = TOK_DIGITS_DEC;
 			daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_NUMBER_HEX;
-			daoLexTable[ TOK_NUMBER_DEC_D ][ j ] = TOK_NUMBER_DEC;
+			daoLexTable[ TOK_DOT_DIGITS ][ j ] = TOK_DOT_DIGITS;
+			daoLexTable[ TOK_DIGITS_DOT ][ j ] = TOK_NUMBER_DEC;
 			daoLexTable[ TOK_NUMBER_DEC ][ j ] = TOK_NUMBER_DEC;
 			daoLexTable[ TOK_NUMBER_HEX ][ j ] = TOK_NUMBER_HEX;
 			daoLexTable[ TOK_NUMBER_SCI_E ][ j ] = TOK_NUMBER_SCI;
@@ -700,15 +703,16 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_START ][ (unsigned) '.' ] = TOK_OP_DOT;
 	daoLexTable[ TOK_OP_DOT ][ (unsigned) '.' ] = TOK_OP_DOT2;
 	daoLexTable[ TOK_OP_DOT2 ][ (unsigned) '.' ] = TOK_END_DOTS; /* ... */
-	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '.' ] = TOK_NUMBER_DEC_D;
-	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '.' ] = TOK_NUMBER_DEC_D;
+	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '.' ] = TOK_DIGITS_DOT;
+	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '.' ] = TOK_DIGITS_DOT;
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'L' ] = TOK_DIGITS_DEC;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'L' ] = TOK_DIGITS_DEC;
 	daoLexTable[ TOK_DIGITS_HEX ][ (unsigned) 'L' ] = TOK_DIGITS_HEX;
 	daoLexTable[ TOK_NUMBER_HEX ][ (unsigned) 'L' ] = TOK_NUMBER_HEX;
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_NUMBER_DEC_D ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
+	daoLexTable[ TOK_DOT_DIGITS ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
+	daoLexTable[ TOK_DIGITS_DOT ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
@@ -783,8 +787,8 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_DEC_D ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
-	daoLexTable[ TOK_NUMBER_DEC_D ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_DIGITS_DOT ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
+	daoLexTable[ TOK_DIGITS_DOT ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'e' ] = TOK_NUMBER_SCI_E;
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
 	daoLexTable[ TOK_NUMBER_SCI_E ][ (unsigned) '+' ] = TOK_NUMBER_SCI_ES;
@@ -814,7 +818,6 @@ void DaoInitLexTable()
 	daoArithOper[ DKEY_NOT ]    = doper( DAO_OPER_NOT,      1, 0, 0 );
 	daoArithOper[ DTOK_TILDE ]  = doper( DAO_OPER_TILDE,    1, 0, 0 );
 	daoArithOper[ DTOK_AMAND ]  = doper( DAO_OPER_BIT_AND,  1, 0, 1 );
-	daoArithOper[ DTOK_DOLLAR ] = doper( DAO_OPER_IMAGIN,   0, 1, 0 );
 	daoArithOper[ DTOK_ASSERT ] = doper( DAO_OPER_ASSERT,   0, 0, 9 );
 	daoArithOper[ DTOK_FIELD ]  = doper( DAO_OPER_FIELD,    0, 0, 11 );
 	daoArithOper[ DTOK_ASSN ]   = doper( DAO_OPER_ASSN,     0, 0, 12 );

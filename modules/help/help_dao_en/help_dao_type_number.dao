@@ -14,6 +14,27 @@ Integer Type
 @[title]
 
 @[text]
+
+@[green]int@[green] is the built-in primitive data type for integers.
+By default, its size is the same as the pointer size on the platform.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+DecDigit ::= '0' ... '9'
+HexDigit ::= DecDigit | 'a' ... 'f' | 'A' ... 'F'
+
+DecInteger ::= DecDigit +
+HexInteger ::= ('0x' | '0X') DecDigit +
+Integer    ::= DecInteger | HexInteger
+@[code]
+
+@[subsection]Examples@[subsection]
+@[code]
+A = 123
+B = 0x123a
+C :int = 789
+@[code]
 @[text]
 
 
@@ -31,6 +52,33 @@ Single Precision Floating Point Number Type
 @[title]
 
 @[text]
+
+@[green]float@[green] is the built-in primitive data type for single precision
+floating point numbers.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+DotDec ::= DecDigit * '.' DecDigit +
+DecDot ::= DecDigit + '.' DecDigit *
+
+DecSinglePrecision ::= DotDec | DecDot
+DecNumber ::= DecInteger | DecSinglePrecision
+
+SciSinglePrecision ::= DecNumber 'e' [ '+' | '-' ] DecInteger
+
+Float ::= DecSinglePrecision | SciSinglePrecision
+@[code]
+where @[green]DecInteger@[green] is defined @[blue]dao.type.int@[blue].
+
+
+@[subsection]Examples@[subsection]
+@[code]
+A = .12
+B = 12.
+C = 12.5
+D = 2e-3
+@[code]
 @[text]
 
 
@@ -48,6 +96,29 @@ Double Precision Floating Point Number Type
 @[title]
 
 @[text]
+
+@[green]double@[green] is the built-in primitive data type for double precision
+floating point numbers.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+SciDoublePrecision ::= DecNumber 'E' [ '+' | '-' ] DecInteger
+Double ::= (DecInteger | DecSinglePrecision) 'D' | SciDoublePrecision
+@[code]
+where @[green]DecInteger@[green] is defined @[blue]dao.type.int@[blue],
+and @[green]DecNumber@[green] and @[green]DecSinglePrecision@[green]
+are defined in @[blue]dao.type.float@[blue].
+
+
+@[subsection]Examples@[subsection]
+@[code]
+A = .12D
+B = 12.D
+C = 12.5D
+D = 123D
+E = 2E-3
+@[code]
 @[text]
 
 
@@ -65,6 +136,29 @@ Complex Number Type
 @[title]
 
 @[text]
+
+@[green]complex@[green] is the built-in primitive data type for complex numbers.
+Both the real and imaginary part of a complex number are stored as double
+precision floating point numbers.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+Complex ::= [ DecInteger ['.' DecInteger] ] '$'
+@[code]
+
+@[green]complex@[green] has two fields @[green]real@[green] and @[green]imag@[green],
+which can be used to set and get the real and imaginary part of the complex.
+
+
+@[subsection]Examples@[subsection]
+@[code]
+A = $
+B = 123$
+C = 12.3$
+R = C.real;
+I = C.imag;
+@[code]
 @[text]
 
 
@@ -82,4 +176,31 @@ Arbitrary Precision Integer Type
 @[title]
 
 @[text]
+
+@[green]long@[green] is the built-in type for arbitrary precision integers
+(or big integers).
+
+
+@[subsection]Definition@[subsection]
+@[code]
+LongBase ::= '2' ... '16'
+Long ::= Integer 'L' [ LongBase ]
+@[code]
+By default the long integer is 10 based. If @[green]LongBase@[green]
+is explicitly specified, the @[green]Integer@[green] part
+will be interpreted as @[green]LongBase@[green] base integer, and invalid
+digits for the base will be detected as error.
+But if @[green]Integer@[green] is in hexadecimal format, it will still be
+interpreted as hexadecimal number, regardless what is specified as
+@[green]LongBase@[green].
+
+
+
+@[subsection]Examples@[subsection]
+@[code]
+A = 123L
+B = 0xa2fe3L
+C = 100111001L2
+D = 0xa2fe3L8
+@[code]
 @[text]

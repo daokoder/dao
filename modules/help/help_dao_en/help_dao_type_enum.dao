@@ -8,6 +8,12 @@ dao.type.enum
 Enum or Symbol Type
 @[title]
 
+@[text]
+
+@[green]enum@[green] 
+
+@[text]
+
 @[name]
 dao.type.enum.init
 @[name]
