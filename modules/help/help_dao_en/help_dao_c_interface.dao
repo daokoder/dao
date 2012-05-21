@@ -24,9 +24,14 @@ Embedding Dao Interpreter
 
 @[text]
 
-@[section]A Simple Example@[section]
+@[section]
+A Simple Example
+@[section]
 
-@[subsection]Initializing Dao Runtime@[subsection]
+@[subsection]
+Initializing Dao Runtime
+@[subsection]
+
 Before doing anything with Dao as a library, one must call
 @[green]DaoInit()@[green] to initialize it first:
 
@@ -49,7 +54,10 @@ DaoVmSpace_SetOptions( vmspace,  );
 @[code]
 @[comment]
 
-@[subsection]Load A Script File@[subsection]
+@[subsection]
+Load A Script File
+@[subsection]
+
 Once you have a @[green]DaoVmSpace@[green] object, you can start
 to run Dao scripts or load Dao modules using this object.
 If you have a main script file and all you need to do is to run the file,
@@ -60,24 +68,61 @@ you can simply call:
 DaoVmSpace_Load( vmspace, "myscript.dao" );
 @[code]
 
-@[subsection]Finalize Dao Runtime@[subsection]
+@[subsection]
+Finalize Dao Runtime
+@[subsection]
 
+After you are done with Dao, you may call the following function
+to make sure, Dao is properly finalized (waiting for unjoined threads
+to finish, or waiting for garbage to finish, and some internal data structures
+are deallocated etc.).
 @[code]
 # Finalize (or Quit) Dao:
 DaoQuit();
 @[code]
 
-@[section]A Slightly More Advanced Example@[section]
-Note this function returns a namespace object that represents the loaded script.
-If you want to do extra things such calling a Dao function defined in the script,
-you will need this namespace object:
+@[subsection]
+Putting These Codes Together
+@[subsection]
 
+@[code]
+# Initialize Dao:
+DaoVmSpace *vmspace = DaoInit( NULL );
+# Load "myscript.dao":
+DaoVmSpace_Load( vmspace, "myscript.dao" );
+# Finalize (or Quit) Dao:
+DaoQuit();
+@[code]
+
+@[section]
+A Slightly More Advanced Example
+@[section]
+
+In Dao, each single script file is represented by one namespace object.
+And each namespace object has access to the public global constants and 
+variables defined in the files that this file has loaded.
+To do any thing interesting, one must obtain the namespace object
+for the file of interest.
+
+
+@[subsection]
+Obtaining The Namespace Object
+@[subsection]
+
+Following the above example, if you want to call a function defined
+in "myscript.dao" (or in the files it has loaded), you can simple
+store the returned namespace object in a variable,
 @[code]
 # Load "myscript.dao" and obtain the namespace object:
 DaoNamespace *nspace = DaoVmSpace_Load( vmspace, "myscript.dao" );
 @[code]
-To find the function you want to call,
 
+
+@[subsection]
+Obtaining The Function Object
+@[subsection]
+
+To find the function you want to call,
 @[code]
 # Find an object named "myfunction":
 DaoValue *value = DaoNamespace_FindData( nspace, "myfunction" );
@@ -86,7 +131,145 @@ DaoRoutine *myfunc = DaoValue_CastRoutine( value );
 @[code]
 If "myfunction" is indeed a function, @[cyan]myfunc@[cyan] will not be NULL.
 
-Then you can call it in the following way,
+
+@[subsection]
+Obtaining A Process Object
+@[subsection]
+
+Now to call the function, you will need another type of object:
+@[green]DaoProcess@[green], which represents a virtual machine process
+and is responsible to execute scripts.
+You can directly call @[green]DaoProcess_New()@[green] to create a new
+process object, but normally the better to get a process object is to
+acquire it from a @[green]DaoVmSpace@[green] object:
+@[code]
+# Acquire a process object:
+DaoProcess *proc = DaoVmSpace_AcquireProcess( vmspace );
+@[code]
+
+@[subsection]
+Prepare Parameter Values
+@[subsection]
+
+Now suppose the function "myfunction" needs to take an integer as its first
+parameter and a string as the second. To call it, we will need to prepare
+parameters that can be passed to this function.
+The simplest way to do this is to use the data "factory" methods that
+are associated with the process type @[green]DaoProcess@[green].
+Such methods are normally begin with @[green]DaoProcess_New@[green].
+For example, to prepare an integer value and a string value, one can do,
+
+@[code]
+# Prepare an integer and a string:
+DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
+DaoString  *svalue = DaoProcess_NewMBString( proc, "abc", -1 );
+@[code]
+The third parameter of @[green]DaoProcess_NewMBString()@[green]
+is the number of bytes in the C string, and a negative value can be
+used to indicate the C string is NULL terminated.
+
+
+To use these two new values in the parameter list to call "myfunction",
+you can do,
+@[code]
+DaoValue *params[2];
+params[0] = (DaoValue*) ivalue;
+params[1] = (DaoValue*) svalue;
+@[code]
+Or you can simply do,
+
+@[code]
+# Get the last two values:
+DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
+@[code]
+which will return last created two values in an array.
+
+
+@[subsection]
+Call The Function
+@[subsection]
+
+Now we are ready to call the function we obtained before with
+the prepared values,
+@[code]
+# Call the function:
+DaoProcess_Call( proc, myfunc, NULL, params, 2 );
+@[code]
+For class methods, a class instance object can be passed to this function
+as the third parameter, or it can be passed as the first value of 
+@[cyan]params@[cyan].
+Please note that, this function can handle overloaded functions automatically!
+So you do not need to do anything for that.
+This function will return zero on success, or other values with errors.
+
+
+@[subsection]
+Retrieve The Returned Value
+@[subsection]
+
+If the function returns a value, you can obtain it by,
+@[code]
+# Obtain the returned value:
+DaoValue *retvalue = DaoProcess_GetReturned( proc );
+@[code]
+If the returned value is supposed to be of certain type,
+you can cast it to that type by using one of the 
+@[green]DaoValue_CastXXX()@[green] functions,
+or directly convert it to a proper C type by using one of the
+@[green]DaoValue_TryGetXXX()@[green] functions.
+For example, if "myfunction" returns an integer,
+you can get it by,
+@[code]
+# Get the integer return value
+daoint retint = DaoValue_TryGetInteger( retvalue );
+@[code]
+
+@[subsection]
+Release The Process Object
+@[subsection]
+
+After you have done with the process object, you can release it
+back the @[green]DaoVmSpace@[green] object,
+@[code]
+# Release the process:
+DaoVmSpace_ReleaseProcess( vmspace, proc );
+@[code]
+But if you want to use a process object frequently,
+you may simply retain it until you no longer need it.
+
+
+@[subsection]
+Putting These Codes Together
+@[subsection]
+
+@[code]
+# Load "myscript.dao" and obtain the namespace object:
+DaoNamespace *nspace = DaoVmSpace_Load( vmspace, "myscript.dao" );
+# Find an object named "myfunction":
+DaoValue *value = DaoNamespace_FindData( nspace, "myfunction" );
+# Try to cast it to a function object:
+DaoRoutine *myfunc = DaoValue_CastRoutine( value );
+
+# Acquire a process object:
+DaoProcess *proc = DaoVmSpace_AcquireProcess( vmspace );
+
+# Prepare an integer and a string:
+DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
+DaoString  *svalue = DaoProcess_NewMBString( proc, "abc", -1 );
+# Get the last two values:
+DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
+
+# Call the function:
+DaoProcess_Call( proc, myfunc, NULL, params, 2 );
+
+# Obtain the returned value:
+DaoValue *retvalue = DaoProcess_GetReturned( proc );
+# Get the integer return value
+daoint retint = DaoValue_TryGetInteger( retvalue );
+
+# Release the process:
+DaoVmSpace_ReleaseProcess( vmspace, proc );
+@[code]
 
 @[text]
 

@@ -522,7 +522,7 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 					self->section += 1;
 					self->subsect = 0;
 					self->subsect2 = 0;
-					bgcolorid = DAOX_BLUE;
+					bgcolorid = DAOX_GREEN;
 					break;
 				case DAOX_HELP_SUBSECT :
 					self->subsect += 1;
@@ -535,7 +535,13 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 					break;
 				}
 				if( self->offset ) DaoxStream_WriteNewLine( self, "" );
-				DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[bgcolorid] );
+				if( mtype == DAOX_HELP_SECTION ){
+					DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
+					while( self->offset < (8 + part->size) ) DaoxStream_WriteMBS( self, " " );
+					DaoStream_SetColor( self->stream, NULL, NULL );
+					DaoxStream_WriteNewLine( self, "" );
+				}
+				DaoStream_SetColor( self->stream, dao_colors[DAOX_RED], dao_colors[bgcolorid] );
 				DaoxStream_WriteMBS( self, " " );
 				DaoxStream_WriteInteger( self, self->section );
 				if( self->subsect ){
@@ -548,12 +554,22 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 				}
 				DaoxStream_WriteMBS( self, " " );
 				DaoStream_SetColor( self->stream, NULL, NULL );
-				DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
+				DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_BLUE] );
 				DaoxStream_WriteMBS( self, " " );
 				DaoxStream_WriteText( self, part, 0, width );
 				DaoxStream_WriteMBS( self, " " );
+				if( mtype == DAOX_HELP_SECTION ){
+					DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
+					DaoxStream_WriteMBS( self, "   " );
+				}
 				DaoStream_SetColor( self->stream, NULL, NULL );
 				DaoxStream_WriteNewLine( self, "" );
+				if( mtype == DAOX_HELP_SECTION ){
+					DaoStream_SetColor( self->stream, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
+					while( self->offset < (8 + part->size) ) DaoxStream_WriteMBS( self, " " );
+					DaoStream_SetColor( self->stream, NULL, NULL );
+					DaoxStream_WriteNewLine( self, "" );
+				}
 			}else if( mtype == DAOX_HELP_LIST ){
 				DaoxStream_WriteList( self, part, offset, width, 1, listdep+1 );
 			}else if( mtype == DAOX_HELP_COMMENT ){
