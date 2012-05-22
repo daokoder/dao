@@ -335,6 +335,7 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 
 static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
+	char *homedir = getenv( "HOME" );
 	char *daodir = getenv( "DAO_DIR" );
 	char pwd[512];
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
@@ -344,7 +345,13 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	DaoVmSpace_AddPath( self, DAO_DIR );
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
-	DaoVmSpace_AddPath( self, "~/dao" );
+	if( homedir ){
+		DString *home = DString_NewMBS( homedir );
+		if( homedir[home->size-1] != '/' ) DString_AppendChar( home, '/' );
+		DString_AppendMBS( home, "dao" );
+		DaoVmSpace_AddPath( self, home->mbs );
+		DString_Delete( home );
+	}
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 }
@@ -1211,6 +1218,13 @@ static DaoNamespace* DaoVmSpace_LoadDaoAssembly( DaoVmSpace *self, DString *fnam
 	DaoStream_WriteMBS( self->errorStream, "ERROR: assembly loader is not implemented.\n" );
 	return NULL;
 }
+static void DaoVmSpace_PopLoadingNamePath( DaoVmSpace *self, int path )
+{
+	DaoVmSpace_Lock( self );
+	if( path ) DArray_PopFront( self->pathLoading );
+	DArray_PopFront( self->nameLoading );
+	DaoVmSpace_Unlock( self );
+}
 /* Loading module in Dao source file.
  * The first time the module is loaded:
  * (1) its implicit main (codes outside of any class and function) is executed;
@@ -1230,7 +1244,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	size_t tm = 0;
 	daoint i = DString_FindMBS( libpath, "/addpath.dao", 0 );
 	daoint j = DString_FindMBS( libpath, "/delpath.dao", 0 );
-	int bl, m;
+	int bl, m, poppath = 0;
 	int cfgpath = i != MAXSIZE && i == libpath->size - 12;
 	cfgpath = cfgpath || (j != MAXSIZE && j == libpath->size - 12);
 	/*  XXX if cfgpath == true, only parsing? */
@@ -1293,10 +1307,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	parser->nameSpace = ns;
 	bl = DaoParser_ParseScript( parser );
 
-	DaoVmSpace_Lock( self );
-	if( ns->path->size ) DArray_PopFront( self->pathLoading );
-	DArray_PopFront( self->nameLoading );
-	DaoVmSpace_Unlock( self );
+	poppath = ns->path->size;
 
 	if( ! bl ) goto LaodingFailed;
 	if( ns->mainRoutine == NULL ) goto LaodingFailed;
@@ -1359,11 +1370,13 @@ ExecuteExplicitMain :
 			if( ret ) goto LaodingFailed;
 		}
 	}
+	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( source ) DString_Delete( source );
 	if( argNames ) DArray_Delete( argNames );
 	if( argValues ) DArray_Delete( argValues );
 	return ns;
 LaodingFailed :
+	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( source ) DString_Delete( source );
 	if( argNames ) DArray_Delete( argNames );
 	if( argValues ) DArray_Delete( argValues );
@@ -1508,6 +1521,7 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, const char *file, DaoModuleO
 /* base is assumed to be absolute, and path is assumed to be relative: */
 void Dao_MakePath( DString *base, DString *path )
 {
+	base = DString_Copy( base );
 #ifdef WIN32
 	DString_ChangeMBS( base, "\\", "/", 0 );
 	DString_ChangeMBS( path, "\\", "/", 0 );
@@ -1516,14 +1530,26 @@ void Dao_MakePath( DString *base, DString *path )
 		if( DString_MatchMBS( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
 			DString_ChangeMBS( path, " ^ %.%. / ", "", 1 );
 			DString_ChangeMBS( base, " [^/] + ( / |) $ ", "", 0 );
-		}else return;
+		}else{
+			DString_Delete( base );
+			return;
+		}
+	}
+	if( DString_MatchMBS( path, " ^ %.%. $ ", NULL, NULL ) ){
+		if( DString_MatchMBS( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
+			DString_Clear( path );
+			DString_ChangeMBS( base, " [^/] + ( / |) $ ", "", 0 );
+		}
 	}
 	if( base->size && path->size ){
 		if( base->mbs[ base->size-1 ] != '/' && path->mbs[0] != '/' )
 			DString_InsertChar( path, '/', 0 );
 		DString_Insert( path, base, 0, 0, 0 );
+	}else if( base->size && path->size == 0 ){
+		DString_Assign( path, base );
 	}
 	DString_ChangeMBS( path, "/ %. /", "/", 0 );
+	DString_Delete( base );
 }
 void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check )
 {
