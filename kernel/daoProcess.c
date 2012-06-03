@@ -5334,9 +5334,13 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 			case DAO_LIST : C = A->xList.items.size ? BB : AA; break;
 			case DAO_MAP  : C = A->xMap.items->size ? BB : AA; break;
 			case DAO_ARRAY : C = A->xArray.size ? BB : AA; break;
-			default : C = A->type ? BB : AA; break;
+			default : break;
 		}
-	}else{
+		if( C == NULL ){
+			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
+			return;
+		}
+	}else if( A->type == B->type && (A->type == DAO_LIST || A->type == DAO_ARRAY) ){
 		switch( vmc->code ){
 			case DVM_LT: D = DaoValue_Compare( A, B )< 0; break;
 			case DVM_LE: D = DaoValue_Compare( A, B )<=0; break;
@@ -5344,6 +5348,9 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 			case DVM_NE: D = DaoValue_Compare( A, B )!=0; break;
 			default: break;
 		}
+	}else{
+		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
+		return;
 	}
 	if( C ) DaoProcess_PutValue( self, C );
 	else DaoProcess_PutInteger( self, D );

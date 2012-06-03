@@ -1,7 +1,7 @@
 load help;
 
 @[name]
-dao.c-interface
+daovm.interface
 @[name]
 
 @[title]
@@ -15,7 +15,7 @@ Programming with The C Interfaces
 ################################################################################
 ################################################################################
 @[name]
-dao.c-interface.embedding
+daovm.interface.embedding
 @[name]
 
 @[title]
@@ -280,7 +280,7 @@ DaoVmSpace_ReleaseProcess( vmspace, proc );
 ################################################################################
 ################################################################################
 @[name]
-dao.c-interface.extending
+daovm.interface.extending
 @[name]
 
 @[title]
@@ -289,14 +289,14 @@ Extending Dao Interpreter
 
 @[text]
 
-In the help entry @[blue]dao.c-interface.embedding@[blue], it has been 
+In the help entry @[blue]daovm.interface.embedding@[blue], it has been 
 demonstrated that embedding Dao is extremely simple.
 Here we will demonstrate that extending Dao is also extremely simple.
-Since Dao support type annotation in function parameter list,
-you will not need to write a lot of boilerplate codes check and 
+Since Dao supports explicit type specification in function parameter lists,
+you will not need to write a lot of boilerplate codes to check and 
 convert function parameters from Dao data types to C/C++ data types.
 This means writing wrapping functions (Dao-callable C functions) 
-is significantly simpler than writing simpler wrapping functions
+is significantly simpler than writing wrapping functions
 for other languages such as Python or even Lua.
 
 
