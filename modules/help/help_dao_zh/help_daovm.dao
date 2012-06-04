@@ -1,0 +1,25 @@
+# Copyright (c) 2012, Limin Fu
+# This document is released under the GNU Free Documentation License.
+
+load help;
+
+load help_daovm_interface;
+#load help_daovm_architecture;
+
+
+@[name]
+daovm
+@[name]
+
+@[title]
+道虚拟机(版本1.2)
+@[title]
+
+@[author]
+傅利民
+@[author]
+
+@[license]
+GNU Free Documentation License
+@[license]
+

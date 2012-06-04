@@ -1,7 +1,7 @@
 load help;
 
 @[name]
-dao.c-interface
+daovm.interface
 @[name]
 
 @[title]

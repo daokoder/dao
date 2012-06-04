@@ -1,3 +1,6 @@
+# Copyright (c) 2012, Limin Fu
+# This document is released under the GNU Free Documentation License.
+
 load help;
 
 load help_dao_grammar;
@@ -8,8 +11,8 @@ load help_dao_routine;
 load help_dao_class;
 load help_dao_concurrent;
 load help_dao_macro;
-load help_dao_c_interface;
 load help_dao_module;
+load help_daovm;
 
 
 @[name]
@@ -19,3 +22,12 @@ dao
 @[title]
 道(Dao)程序设计语言(版本1.2)
 @[title]
+
+@[author]
+傅利民
+@[author]
+
+@[license]
+GNU Free Documentation License
+@[license]
+

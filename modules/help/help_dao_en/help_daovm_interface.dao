@@ -11,7 +11,7 @@ Programming with The C Interfaces
 
 ################################################################################
 ################################################################################
-#### Embedding Dao Interpreter
+#### Embedding Dao Virtual Machine
 ################################################################################
 ################################################################################
 @[name]
@@ -19,7 +19,7 @@ daovm.interface.embedding
 @[name]
 
 @[title]
-Embedding Dao Interpreter
+Embedding Dao Virtual Machine
 @[title]
 
 @[text]
@@ -41,7 +41,7 @@ DaoVmSpace *vmspace = DaoInit( NULL );
 @[code]
 This function will return a @[green]DaoVmSpace@[green] object,
 which can be used to load Dao scripts or modules.
-It can optionally take @[cyan]char*@[cyan] parameter,
+It can optionally take a @[cyan]char*@[cyan] parameter,
 which is assumed to be the path and name of the application,
 and is used to add additional searching paths.
 
@@ -50,7 +50,7 @@ Before you start to use the @[green]DaoVmSpace@[green] object
 to run Dao scripts or load Dao modules, you may set some options
 in the object, e.g:
 @[code]
-DaoVmSpace_SetOptions( vmspace,  );
+DaoVmSpace_SetOptions( vmspace, DAO_EXEC_DEBUG );
 @[code]
 @[comment]
 
@@ -74,8 +74,8 @@ Finalize Dao Runtime
 
 After you are done with Dao, you may call the following function
 to make sure, Dao is properly finalized (waiting for unjoined threads
-to finish, or waiting for garbage to finish, and some internal data structures
-are deallocated etc.).
+to finish and the garbage collector to finish, and deallocating
+some internal data structures etc.).
 @[code]
 # Finalize (or Quit) Dao:
 DaoQuit();
@@ -85,6 +85,7 @@ DaoQuit();
 Putting These Codes Together
 @[subsection]
 
+Putting these codes together, embedding Dao can be as simple as,
 @[code]
 # Initialize Dao:
 DaoVmSpace *vmspace = DaoInit( NULL );
@@ -94,6 +95,7 @@ DaoVmSpace_Load( vmspace, "myscript.dao" );
 DaoQuit();
 @[code]
 
+
 @[section]
 A Slightly More Advanced Example
 @[section]
@@ -101,7 +103,7 @@ A Slightly More Advanced Example
 In Dao, each single script file is represented by one namespace object.
 And each namespace object has access to the public global constants and 
 variables defined in the files that this file has loaded.
-To do any thing interesting, one must obtain the namespace object
+To do anything interesting, one must obtain the namespace object
 for the file of interest.
 
 
@@ -138,7 +140,7 @@ Obtaining A Process Object
 
 Now to call the function, you will need another type of object:
 @[green]DaoProcess@[green], which represents a virtual machine process
-and is responsible to execute scripts.
+and is responsible for executing scripts.
 You can directly call @[green]DaoProcess_New()@[green] to create a new
 process object, but normally the better to get a process object is to
 acquire it from a @[green]DaoVmSpace@[green] object:
@@ -276,7 +278,7 @@ DaoVmSpace_ReleaseProcess( vmspace, proc );
 
 ################################################################################
 ################################################################################
-#### Extending Dao Interpreter
+#### Extending Dao Virtual Machine
 ################################################################################
 ################################################################################
 @[name]
@@ -284,7 +286,7 @@ daovm.interface.extending
 @[name]
 
 @[title]
-Extending Dao Interpreter
+Extending Dao Virtual Machine
 @[title]
 
 @[text]
@@ -327,7 +329,7 @@ represent this module, so all the functions and types etc.
 should be registered to this namespace.
 
 
-This function can also be name as @[cyan]DaoXXX_OnLoad@[cyan],
+This function can also be named as @[cyan]DaoXXX_OnLoad@[cyan],
 where @[cyan]XXX@[cyan] is the module name that will appear
 in a load statement such as @[code]load XXX@[code]
 or @[code]load path.XXX@[code].
@@ -341,7 +343,7 @@ DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self,
                                        DaoCFunction fp, 
                                        const char *proto );
 
-# Functions to register multiple functions:
+# Function to register multiple functions:
 int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
 @[code]
 We will come to the second function later.
@@ -378,7 +380,7 @@ option. And you will also need to add the following preprocessor definitions:
 @[list]
 -- On Win32: @[green]WIN32@[green];
 -- On Unix: @[green]UNIX@[green];
--- On Mac OSX: @[green]UNIX@[green] plus @[green]MAC_OSX@[green];
+-- On Mac OSX: @[green]MAC_OSX@[green];
 @[list]
 For linking, on Windows you will need to link the module against the Dao library.
 But on the other platforms, you can simply use the following flags,
@@ -417,15 +419,15 @@ void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
 }
 @[code]
 As you can see, there are no boilerplate codes to check the number of parameters
-and the type of parameters.
-If the execution reaches the function body of @[cyan]MyTestInC()@[cyan],
+or the type of parameters.
+When the execution reaches the function body of @[cyan]MyTestInC()@[cyan],
 it is guaranteed that all the parameter values are available with correct types.
 
 
 Actually the @[cyan]DaoValue_TryGetXXX()@[cyan] methods did check the value type,
 but in this case, they will always succeed. So if you include the header file
 @[green]daoValue.h@[green] in your source file, you can simple write the 
-function as the following to completely (safely) remove the type checking,
+function as the following to completely (and safely) remove the type checking,
 @[code]
 void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
 {
@@ -447,11 +449,24 @@ as the returned value of the C function.
 Please see the following section(s) for more details.
 
 
+Now this function can be registered as:
+@[code]
+# Register a function with parameters and returned value:
+DaoNamespace_WrapFunction( nspace, MyTestInC, "MyTest(id:int,name:string,extra=0)=>float" );
+@[code]
+
+
+@[section]
+Wrapping a C type
+@[section]
+
+
+
 @[section]
 Data Conversion between Dao and C/C++
 @[section]
 
-Dao provide various C interface functions to make data conversion between Dao
+Dao provides various C interface functions to make data conversion between Dao
 and C/C++ simple. For simple data types, one can use the one of the following
 functions to convert Dao values to C values,
 @[code]
@@ -478,7 +493,7 @@ For other data types, you may need to cast @[green]DaoValue@[green] objects
 to proper types, and then use proper methods to retrieve C data values.
 There are two ways to cast from @[green]DaoValue@[green] to other types,
 one is to use @[green]DaoValue_Type()@[green] to check its type and than do C casting,
-the other is to use one of the @[green]DaoValue_CastXXX()@[green] series methods.
+the other is to use one of the @[green]DaoValue_CastXXX()@[green] series of methods.
 For example, the following are the two ways to cast @[cyan]value@[cyan] 
 from @[green]DaoValue@[green] to @[green]DaoTuple@[green],
 @[code]
