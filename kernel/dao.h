@@ -296,17 +296,17 @@ struct DaoNumItem
 };
 struct DaoFuncItem
 {
-	DaoCFunction  fpter;    /* C function pointer; */
-	const char   *proto;    /* function prototype: name( parlist ) => return_type */
+	DaoCFunction  fpter;  /* C function pointer; */
+	const char   *proto;  /* function prototype: name( parlist ) => return_type */
 };
 
-/* Typer structure, contains type information of each Dao type: */
+/* Type information structure for creating Dao types for C/C++ types: */
 struct DaoTypeBase
 {
-	const char    *name; /* type name; */
-	DaoTypeCore   *core; /* data used internally; */
-	DaoNumItem    *numItems; /* constant number list */
-	DaoFuncItem   *funcItems; /* method list: should end with a null item */
+	const char    *name;      /* type name; */
+	DaoTypeCore   *core;      /* data used internally; */
+	DaoNumItem    *numItems;  /* constant number list: should end with a null item; */
+	DaoFuncItem   *funcItems; /* method list: should end with a null item; */
 
 	/*
 	// typers for super types, to create c type hierarchy;
@@ -315,7 +315,7 @@ struct DaoTypeBase
 	DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
 
 	/*
-	// function(s) to cast a C/C++ type to one of its parent type:
+	// function(s) to cast a C/C++ type to and from one of its parent type:
 	// usually they should be set to NULL, but for wrapping C++ class
 	// with virtual method(s), it is necessary to provide casting function(s)
 	// in the following form:

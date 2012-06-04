@@ -456,9 +456,136 @@ DaoNamespace_WrapFunction( nspace, MyTestInC, "MyTest(id:int,name:string,extra=0
 @[code]
 
 
+
+
+
 @[section]
-Wrapping a C type
+Basic wrapping C/C++ type
 @[section]
+
+
+@[subsection]
+Type information structure
+@[subsection]
+
+A C/C++ type can be used in Dao if only if it is registered in a Dao namespace
+with a type information structure through,
+@[code]
+DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
+int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
+@[code]
+If it is a C type with the same header fields as @[green]DaoCdata@[green],
+the @[cyan]opaque@[cyan] parameter can be set to 1; otherwise, it must set to 0 
+to indicate it is an opaque wrapping.
+The @[green]DaoNamespace_WrapTypes()@[green] only supports opaque wrapping.
+A C type the same header fields as @[green]DaoCdata@[green] is considered as
+a customized Dao data type, and will be introduce later.
+
+
+Here @[green]DaoTypeBase@[green] is defined as the following,
+@[code]
+/* Type information structure for creating Dao types for C/C++ types: */
+struct DaoTypeBase
+{
+	const char    *name;      /* type name; */
+	DaoTypeCore   *core;      /* data used internally; */
+	DaoNumItem    *numItems;  /* constant number list: should end with a null item; */
+	DaoFuncItem   *funcItems; /* method list: should end with a null item; */
+
+	/* typers for super types, to create c type hierarchy: */
+	DaoTypeBase   *supers[ DAO_MAX_CDATA_SUPER ];
+
+	/* function(s) to cast a C/C++ type to and from one of its parent type: */
+	FuncPtrCast    casts[ DAO_MAX_CDATA_SUPER ];
+
+	/* function to free data: */
+	void  (*Delete)( void *self );
+
+	/* Get garbage collectable fields (Dao data types with refCount by the type): */
+	void  (*GetGCFields)( void *self, DArray *values, DArray *arrays, DArray *maps, int remove );
+};
+@[code]
+This structure defines the set of type information needed to create a corresponding Dao type.
+Obviously each type needs a name, which can be set in the first field of this structure.
+The second field is reserved for internal use for storing wrapped member constants and methods.
+
+
+The third field @[green]numItems@[green] can be used to specify a list of member constant numbers,
+which are defined in an array of the following structure:
+@[code]
+struct DaoNumItem
+{
+	const char *name;   /* contant name; */
+	int         type;   /* number type; */
+	double      value;  /* number value; */
+};
+@[code]
+The number type should be one of @[green]DAO_INTEGER@[green], @[green]DAO_FLOAT@[green]
+and @[green]DAO_DOUBLE@[green]. The array should be terminated with a item with null name:
+@[code]
+static DaoNumItem myTypeNumbers[] =
+{
+	{ "MODE_ONE", DAO_INTEGER, MODE_ONE },
+	{ "MODE_TWO", DAO_INTEGER, MODE_TWO },
+	{ NULL, 0, 0 }
+};
+@[code]
+If the type has no member constant numbers, it can be simply set to NULL.
+
+
+The fourth field @[green]funcItems@[green] can be used to specify a list of member methods,
+which are defined in an array of the following structure:
+@[code]
+struct DaoFuncItem
+{
+	DaoCFunction  fpter;  /* C function pointer; */
+	const char   *proto;  /* function prototype: name( parlist ) => return_type */
+};
+@[code]
+where the two fields @[cyan]fpter@[cyan] and @[cyan]proto@[cyan]
+should be the same as they would in the parameter list of:
+@[code]
+DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self,
+                                       DaoCFunction fp, 
+                                       const char *proto );
+@[code]
+
+
+The fifth field @[green]supers@[green] can be use to expose the inheritance structure
+of C/C++ types to Dao. To do this, one just need to set the @[green]supers@[green]
+array to the type information structures of the parent types, and terminate the array
+with a NULL pointer.
+
+
+If the wrapped type is a C++ class with virtual method(s) or
+virtual base(s), Dao will need to know how to cast this type to and from its parent
+type properly. This can be done by specifying a list of cast functions in the sixth
+field @[green]casts@[green] of the type structure.
+
+
+If the C++ class has virtual method(s) but no virtual base(s), the cast function should
+be provided in the following form,
+@[code]
+void* cast_Sub_Base( void *data, int down_casting )
+{
+	if( down_casting ) return static_cast<Sub*>( (Base*)data );
+	return dynamic_cast<Base*>( (Sub*)data );
+}
+@[code]
+And if the C++ class has virtual base(s), the cast function should be like,
+@[code]
+void* cast_Sub_Base( void *data, int down_casting )
+{
+	if( down_casting ) return dynamic_cast<Sub*>( (Base*)data );
+	return dynamic_cast<Base*>( (Sub*)data );
+}
+@[code]
+
+
+If the C/C++ type should not be deallocated by the standard C function
+@[green]free()@[green], a deallocation function must be specified for the
+type structure. If 
+
 
 
 
