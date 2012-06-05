@@ -463,6 +463,18 @@ DaoNamespace_WrapFunction( nspace, MyTestInC, "MyTest(id:int,name:string,extra=0
 Basic wrapping C/C++ type
 @[section]
 
+There are two ways to extend Dao with user defined C/C++ types.
+One is to wrap it around by a @[green]DaoCdata@[green] object,
+and access it as an opaque pointer.
+This is the standard way to wrap existing C/C++ types.
+The other is to define a customized C type, and use it in the same way as the first.
+A customized C type is a C structure sharing the same header fields as
+@[green]DaoCdata@[green], which can make sharing types between Dao and C simpler
+(especially for garbage collection).
+Wrapped C/C++ types and customized C types can be added to Dao in almost the identical way,
+so I will introduce the wrapped types first, and then the customized types should be very
+easy to understand.
+
 
 @[subsection]
 Type information structure
@@ -474,13 +486,11 @@ with a type information structure through,
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
 int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
 @[code]
-If it is a C type with the same header fields as @[green]DaoCdata@[green],
-the @[cyan]opaque@[cyan] parameter can be set to 1; otherwise, it must set to 0 
-to indicate it is an opaque wrapping.
-The @[green]DaoNamespace_WrapTypes()@[green] only supports opaque wrapping.
-A C type the same header fields as @[green]DaoCdata@[green] is considered as
-a customized Dao data type, and will be introduce later.
+The @[cyan]opaque@[cyan] parameter must be set to 1 for wrapped types,
+and 0 for customized types.
 
+
+@[subsubsection]Structure definition@[subsubsection]
 
 Here @[green]DaoTypeBase@[green] is defined as the following,
 @[code]
@@ -509,6 +519,8 @@ This structure defines the set of type information needed to create a correspond
 Obviously each type needs a name, which can be set in the first field of this structure.
 The second field is reserved for internal use for storing wrapped member constants and methods.
 
+
+@[subsubsection]Member constant numbers and methods@[subsubsection]
 
 The third field @[green]numItems@[green] can be used to specify a list of member constant numbers,
 which are defined in an array of the following structure:
@@ -551,6 +563,8 @@ DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self,
 @[code]
 
 
+@[subsubsection]Base types and casting functions@[subsubsection]
+
 The fifth field @[green]supers@[green] can be use to expose the inheritance structure
 of C/C++ types to Dao. To do this, one just need to set the @[green]supers@[green]
 array to the type information structures of the parent types, and terminate the array
@@ -582,10 +596,80 @@ void* cast_Sub_Base( void *data, int down_casting )
 @[code]
 
 
-If the C/C++ type should not be deallocated by the standard C function
-@[green]free()@[green], a deallocation function must be specified for the
-type structure. If 
+@[subsubsection]Deallocation and GC handling@[subsubsection]
 
+If the C/C++ type should not be deallocated by the standard C function
+@[green]free()@[green], a customized deallocation function must be specified for the
+type structure. For wrapped C/C++ types, the @[cyan]self@[cyan] parameter passed
+to the deallocation function will be the opaque C/C++ pointer,
+and for customized C types, it will be the whole objects that have the same header fields
+as @[green]DaoCdata@[green].
+
+
+The last field @[green]GetGCFields@[green] can be normally set to NULL.
+But if the C/C++ type may retain reference(s) to Dao data structures that
+can form potentially cyclic referencing relationships, this field must be set
+to a proper function.
+The main purpose of this function is to expose the references retained by the C/C++
+type to Dao garbage collector.
+In this function, the pointers of Dao data that are directly referenced by the C/C++ type
+should be pushed to the @[cyan]values@[cyan] parameters; and for Dao data that are
+referenced through @[green]DArray@[green] structures, these @[green]DArray@[green] structures
+should be pushed into the @[cyan]arrays@[cyan]; and for those that are referenced
+through @[green]DMap@[green] structures, these @[green]DMap@[green] structures
+should be pushed into the @[cyan]maps@[cyan].
+
+
+This function is called with a zero @[cyan]remove@[cyan] parameter automatically by 
+the garbage collector (GC) when an object of the C/C++ type needs to be scanned to determine 
+if it is no longer reachable from the program.
+It is also called before the object is deallocated by the GC,
+this time the @[cyan]remove@[cyan] parameter is set to one,
+and in this case, the @[green]GetGCFields@[green] must break the references that
+are pushed into the @[cyan]values@[cyan], @[cyan]arrays@[cyan] and @[cyan]maps@[cyan] arrays.
+This is necessary, because some of the objects referenced by the C/C++ object
+can be deallocated by the GC, breaking references to them will avoid posible double deletion.
+
+
+@[subsubsection]A simple example@[subsubsection]
+
+Given the following C++ class,
+@[code]
+class ClassOne
+{
+	public:
+	int  value;
+
+	enum{ CLASSONE_AA, CLASSONE_BB };
+
+	ClassOne( int v );
+
+	int Method( const char *s );
+};
+@[code]
+It can be wrapped in the following way,
+@[code]
+static void dao_ClassOne_ClassOne( DaoProcess *proc, DaoValue *p[], int n );
+static void dao_ClassOne_Method( DaoProcess *proc, DaoValue *p[], int n );
+static DaoNumItem ClassOneNumbers[] =
+{
+	{ "CLASSONE_AA", DAO_INTEGER, CLASSONE_AA },
+	{ "CLASSONE_BB", DAO_INTEGER, CLASSONE_BB },
+	{ NULL, 0, 0 }
+};
+static DaoFuncItem ClassOneMethods[] =
+{
+	{ dao_ClassOne_ClassOne,  "ClassOne( v :int )" },
+	{ dao_ClassOne_Method,    "Method( s :string ) => int" },
+	{ NULL, NULL }
+};
+static void dao_ClassOne_ClassOne( DaoProcess *proc, DaoValue *p[], int n )
+{
+}
+static void dao_ClassOne_Method( DaoProcess *proc, DaoValue *p[], int n )
+{
+}
+@[code]
 
 
 

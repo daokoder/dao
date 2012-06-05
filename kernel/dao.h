@@ -45,11 +45,8 @@
 #define UNIX
 #endif /* MAC_OSX */
 
-#ifdef WIN32
 
-#if defined( _MSC_VER ) && defined( _M_X64 ) || defined( __x86_64__ )
-#define DAO_USE_INT64
-#endif /* defined() */
+#ifdef WIN32
 
 /* Get rid of the effects of UNICODE: */
 #ifdef UNICODE
@@ -69,6 +66,7 @@
 #define DaoLoadLibrary( name ) LoadLibrary( name )
 #define DaoFindSymbol( handle, name ) GetProcAddress( (HMODULE)handle, name )
 
+
 #elif defined(UNIX) /* UNIX */
 
 #include<dlfcn.h>
@@ -80,10 +78,6 @@
 #define DaoLoadLibrary( name ) dlopen( name, RTLD_NOW | RTLD_GLOBAL )
 #define DaoFindSymbol( handle, name ) dlsym( handle, name )
 #define DaoCloseLibrary( handle ) dlclose( handle )
-
-#ifdef __x86_64__
-#define DAO_USE_INT64
-#endif
 
 #ifdef MAC_OSX
 
@@ -103,15 +97,16 @@
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
-#ifdef __x86_64__
-#define DAO_USE_INT64
-#endif
-
 #endif /* WIN32 */
 
-#if defined(__STRICT_ANSI__) && defined(DAO_USE_INT64)
-#undef DAO_USE_INT64
-#endif
+
+#ifndef DAO_INT_FORMAT
+#ifdef WIN32
+#define DAO_INT_FORMAT  "%Ii"
+#else
+#define DAO_INT_FORMAT  "%ti"
+#endif /* WIN32 */
+#endif /* DAO_INT_FORMAT */
 
 
 #define DAO_MAX_CDATA_SUPER 10
@@ -216,13 +211,6 @@ enum DaoExceptionType
 	ENDOF_BASIC_EXCEPT
 };
 
-#ifndef DAO_INT_FORMAT
-#ifdef WIN32
-#define DAO_INT_FORMAT  "%Ii"
-#else
-#define DAO_INT_FORMAT  "%ti"
-#endif /* WIN32 */
-#endif /* DAO_INT_FORMAT */
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
