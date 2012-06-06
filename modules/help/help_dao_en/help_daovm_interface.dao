@@ -649,24 +649,123 @@ class ClassOne
 @[code]
 It can be wrapped in the following way,
 @[code]
+// Declare the wrapper functions first:
 static void dao_ClassOne_ClassOne( DaoProcess *proc, DaoValue *p[], int n );
 static void dao_ClassOne_Method( DaoProcess *proc, DaoValue *p[], int n );
+// List of constant member numbers for the enums:
 static DaoNumItem ClassOneNumbers[] =
 {
 	{ "CLASSONE_AA", DAO_INTEGER, CLASSONE_AA },
 	{ "CLASSONE_BB", DAO_INTEGER, CLASSONE_BB },
 	{ NULL, 0, 0 }
 };
+// List of member constructors or methods of ClassOne:
 static DaoFuncItem ClassOneMethods[] =
 {
+	// Methods with the same name as the type name are constructors:
 	{ dao_ClassOne_ClassOne,  "ClassOne( v :int )" },
-	{ dao_ClassOne_Method,    "Method( s :string ) => int" },
+	{ dao_ClassOne_Method,    "Method( self :ClassOne, s :string ) => int" },
 	{ NULL, NULL }
 };
+static void ClassOne_Delete( void *self )
+{
+	delete (ClassOne*) self;
+}
+// The type information structure for ClassOne:
+static DaoTypeBase ClassOne_Typer = 
+{
+	"ClassOne", NULL, ClassOneNumbers, ClassOneMethods,
+	{NULL}, {NULL}, ClassOne_Delete, NULL
+};
+// The Dao type structure for ClassOne:
+DaoType *dao_type_ClassOne = NULL;
+
 static void dao_ClassOne_ClassOne( DaoProcess *proc, DaoValue *p[], int n )
 {
+	// Get the integer parameter;
+	daoint v = DaoValue_TryGetInteger( p[0] );
+	// Create a ClassOne instance:
+	ClassOne *self = new ClassOne( v );
+	// Wrap the instance with Dao type structure:
+	DaoProcess_PutCdata( proc, self, dao_type_ClassOne );
 }
 static void dao_ClassOne_Method( DaoProcess *proc, DaoValue *p[], int n )
+{
+	// Get the ClassOne instance:
+	ClassOne *self = (ClassOne*) DaoValue_TryCastCdata( p[0], dao_type_ClassOne );
+	// Get the string parameter:
+	char *s = DaoValue_TryGetMBString( p[1] );
+	int res = self->Method( s );
+	// Return the integer result:
+	DaoProcess_PutInteger( proc, res );
+}
+int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *nspace )
+{
+	// Wrap ClassOne as an opaque C/C++ type:
+	dao_type_ClassOne = DaoNamespace_WrapType( nspace, & ClassOne_Typer, 1 );
+}
+@[code]
+
+
+Since the @[cyan]value@[cyan] member of ClassOne is a public member,
+it is reasonable to add a getter and a setter method to wrapped ClassOne type.
+To add a getter, one only needs to register a method with name @[green].field@[green]
+and no extra parameter.
+And for a setter, the method name must be @[green].field=@[green],
+and it must also accept a parameter with type the same as the value 
+that can be assigned.
+For example, for the @[cyan]value@[cyan] member,
+one can added the following to the @[cyan]ClassOneMethods@[cyan] list,
+@[code]
+// the getter and setter:
+	{ dao_ClassOne_GETF_value,  ".value( self :ClassOne ) => int" },
+	{ dao_ClassOne_SETF_value,  ".value=( self :ClassOne, value :int )" },
+@[code]
+Here the name @[cyan]dao_ClassOne_GETF_value@[cyan] 
+and @[cyan]dao_ClassOne_GETF_value@[cyan] are completely arbitrary.
+They can be implemented in the following way,
+@[code]
+static void dao_ClassOne_GETF_value( DaoProcess *proc, DaoValue *p[], int n )
+{
+	ClassOne *self = (ClassOne*) DaoValue_TryCastCdata( p[0], dao_type_ClassOne );
+	DaoProcess_PutInteger( proc, self->value );
+}
+static void dao_ClassOne_SETF_value( DaoProcess *proc, DaoValue *p[], int n )
+{
+	ClassOne *self = (ClassOne*) DaoValue_TryCastCdata( p[0], dao_type_ClassOne );
+	self->value = DaoValue_TryGetInteger( p[1] );
+}
+@[code]
+
+
+@[subsubsection]An advanced example@[subsubsection]
+
+Now given the following class that is derived from @[cyan]ClassTwo@[cyan],
+@[code]
+class ClassTwo : public ClassOne
+{
+	public:
+	virtual void VirtualMethod( float p );
+};
+@[code]
+Because this class has a virtual method, if we want Dao classes can be
+derived from @[cyan]ClassTwo@[cyan] and reimplement its virtual functions,
+the wrapping will be a bit more sophisticated.
+First, we will need to define a "proxy" class that is derived from
+@[cyan]ClassTwo@[cyan] and reimplements its virtual function 
+such that this reimplemented function can check for
+a Dao reimplementation of the function and invoke it if it exists.
+Here is an example of such proxy class,
+@[code]
+class Dao_ClassTwo : public ClassTwo
+{
+	public:
+	void VirtualMethod( float p );
+};
+@[code]
+The @[cyan]VirtualMethod()@[cyan] could be implemented in the following way,
+@[code]
+void Dao_ClassTwo::VirtualMethod( float p )
 {
 }
 @[code]
