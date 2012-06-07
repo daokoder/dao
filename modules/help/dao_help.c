@@ -335,6 +335,10 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset, i
 		case DTOK_NEWLN :
 			line += 1;
 			break;
+		case DTOK_TAB :
+			fgcolor = -100;
+			DaoxStream_WriteMBS( self, "    " );
+			break;
 		case DTOK_DIGITS_HEX : case DTOK_DIGITS_DEC :
 		case DTOK_NUMBER_HEX : case DTOK_NUMBER_DEC :
 		case DTOK_DOUBLE_DEC : case DTOK_NUMBER_IMG :

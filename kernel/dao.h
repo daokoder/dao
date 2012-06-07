@@ -972,6 +972,7 @@ DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, 
 
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
+DAO_DLL DaoVmSpace* DaoVmSpace_MainVmSpace();
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );

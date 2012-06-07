@@ -631,7 +631,7 @@ This is necessary, because some of the objects referenced by the C/C++ object
 can be deallocated by the GC, breaking references to them will avoid posible double deletion.
 
 
-@[subsubsection]A simple example@[subsubsection]
+@[subsection]A simple example@[subsection]
 
 Given the following C++ class,
 @[code]
@@ -738,14 +738,14 @@ static void dao_ClassOne_SETF_value( DaoProcess *proc, DaoValue *p[], int n )
 @[code]
 
 
-@[subsubsection]An advanced example@[subsubsection]
+@[subsection]An advanced example@[subsection]
 
 Now given the following class that is derived from @[cyan]ClassTwo@[cyan],
 @[code]
 class ClassTwo : public ClassOne
 {
 	public:
-	virtual void VirtualMethod( float p );
+	virtual void VirtualMethod( int i, float f );
 };
 @[code]
 Because this class has a virtual method, if we want Dao classes can be
@@ -755,20 +755,178 @@ First, we will need to define a "proxy" class that is derived from
 @[cyan]ClassTwo@[cyan] and reimplements its virtual function 
 such that this reimplemented function can check for
 a Dao reimplementation of the function and invoke it if it exists.
+When an instance of @[cyan]ClassTwo@[cyan] needs to be created,
+an instance of this proxy class will be created and returned
+instead of the original @[cyan]ClassTwo@[cyan].
+
+
 Here is an example of such proxy class,
 @[code]
 class Dao_ClassTwo : public ClassTwo
 {
 	public:
-	void VirtualMethod( float p );
+
+	DaoCdata *dao_cdata;
+
+	Dao_ClassTwo();
+	~Dao_ClassTwo();
+
+	int VirtualMethod( int i, float f );
 };
 @[code]
-The @[cyan]VirtualMethod()@[cyan] could be implemented in the following way,
+This proxy class will need to maintain a reference to the wrapper object,
+so an extra field @[cyan]dao_cdata@[cyan] is declared in the class.
+This wrapper object can be pre-allocated in the constructor of @[cyan]Dao_ClassTwo@[cyan],
 @[code]
-void Dao_ClassTwo::VirtualMethod( float p )
+Dao_ClassTwo::Dao_ClassTwo()
 {
+	dao_cdata = DaoCdata_New( dao_type_ClassTwo, this );
+	DaoGC_IncRC( (DaoValue*)dao_cdata );
 }
 @[code]
+Here the @[cyan]dao_type_ClassTwo@[cyan] is the Dao type object for @[cyan]ClassTwo@[cyan],
+and can be obtained in the same way as @[cyan]dao_type_ClassOne@[cyan].
+Now that @[cyan]Dao_ClassTwo@[cyan] has a reference to a @[green]DaoCdata@[green]
+object, the @[green]GetGCFields@[green] field of the type information structure
+for @[cyan]ClassTwo@[cyan] should be set to a proper function, which will be provided later.
+The destructor should also be handled this reference properly by,
+@[code]
+Dao_ClassTwo::~Dao_ClassTwo()
+{
+	if( dao_cdata ){ // Could have been set to NULL by the GC:
+		// Set the opaque pointer of dao_cdata to NULL, so that the deallocator
+		// of DaoCdata will not attempt to call the deallocator of the opaque pointer:
+		DaoCdata_SetData( dao_cdata, NULL );
+		DaoGC_DecRC( (DaoValue*) dao_cdata );
+	}
+}
+@[code]
+
+
+Then the @[cyan]VirtualMethod()@[cyan] could be implemented in the following way,
+@[code]
+int Dao_ClassTwo::VirtualMethod( int i, float f )
+{
+	DaoVmSpace *vmspace = DaoVmSpace_MainVmSpace();
+	DaoProcess *proc = NULL;
+
+	// Try to get the instance of a derived Dao class:
+	DaoObject *object = DaoCdata_GetObject( dao_cdata );
+	if( object == NULL ) goto CallDefault;
+
+	// Try to get a method named "VirtualMethod":
+	DaoRoutine *method = DaoObject_GetMethod( object, "VirtualMethod" );
+	if( method == NULL ) goto CallDefault;
+
+	// Check if the method is a C/C++ wrapper function:
+	if( DaoRoutine_IsWrapper( method ) ) goto CallDefault;
+
+	// Acquire a process object to execute the re-implemented virtual function:
+	proc = DaoVmSpace_AcquireProcess( vmspace );
+	
+	// Prepare function call parameters:
+	DaoProcess_NewInteger( proc, i );
+	DaoProcess_NewFloat( proc, f );
+	DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
+
+	// Resolve possible overloading using the parameters:
+	// This can be merged with DaoProcess_Call(), if the error code returned
+	// by DaoProcess_Call() is checked an properly handled.
+	method = DaoRoutine_Resolve( method, object, params, 2 );
+	if( method == NULL ) goto CallDefault;
+
+	// Run the re-implemented function:
+	if( DaoProcess_Call( proc, method, object, params, 2 ) ) goto ErrorCall;
+
+	// Check the returned value:
+	DaoValue *res = DaoProcess_GetReturned( proc );
+	if( DaoValue_CastInteger( res ) ) goto ErrorCall;
+
+	int ires = DaoValue_TryGetInteger( res );
+
+	// Release the process object:
+	if( proc ) DaoProcess_Release( vmspace, proc );
+
+	return ires;
+
+CallDefault:
+	if( proc ) DaoProcess_Release( vmspace, proc );
+	return ClassTwo::VirtualMethod( i, f );
+ErrorCall:
+	if( proc ) DaoProcess_Release( vmspace, proc );
+	// Do something;
+	return 0;
+}
+@[code]
+
+
+Now we will define a function that can be set to the @[cyan]GetGCFields@[cyan]
+field of the type information structure of @[cyan]ClassTwo@[cyan].
+@[code]
+static void Dao_ClassTwo_GetGCFields( void *self0,
+		DArray *values, DArray *arrays, DArray *maps, int remove )
+{
+	Dao_ClassTwo *self = (Dao_ClassTwo*) self0;
+	if( self->dao_cdata == NULL ) return;
+	DArray_Append( values, self->dao_cdata );
+	if( remove ){
+		// If this object cannot be deallocated because some other C/C++ objects
+		// are using it, here is the right place to set the wrapped pointer (namely
+		// this object) of dao_cdata to NULL, so that no deallocation will be
+		// invoked for this object.
+		//
+		// For example, in some GUI library, if a widget has a parent, the parent
+		// will be responsible for deleting the widget, so something like the
+		// following can be used to support this:
+		// if( self->parent() ) DaoCdata_SetData( self->dao_cdata, NULL );
+		 
+		// To avoid the deallocator of Dao_ClassTwo being called by the GC:
+		self->dao_cdata = NULL;
+	}
+}
+@[code]
+
+
+The remaining part for wrapping @[cyan]ClassTwo@[cyan] should be something like,
+@[code]
+static void dao_ClassTwo_ClassTwo( DaoProcess *proc, DaoValue *p[], int n )
+{
+	Dao_ClassTwo *self = new Dao_ClassTwo();
+	DaoProcess_PutValue( proc, (DaoValue*) self->dao_cdata );
+}
+static DaoFuncItem ClassTwoMethods[] =
+{
+	{ dao_ClassTwo_ClassTwo,  "ClassTwo()" },
+	{ NULL, NULL }
+};
+static void Dao_ClassTwo_Delete( void *self )
+{
+	delete (Dao_ClassTwo*) self;
+}
+static void* Dao_ClassTwo_Cast_ClassOne( void *data, int down )
+{
+	if( down ) return static_cast<ClassTwo*>((ClassOne*)data);
+	return dynamic_cast<ClassOne*>((ClassTwo*)data);
+}
+// The type information structure for ClassTwo:
+static DaoTypeBase ClassTwo_Typer = 
+{
+	"ClassTwo", NULL, NULL, ClassTwoMethods,
+	{ & ClassOne_Typer, NULL },
+	{ Dao_ClassTwo_Cast_ClassOne, NULL },
+	Dao_ClassTwo_Delete, NULL
+};
+// The Dao type structure for ClassTwo:
+DaoType *dao_type_ClassTwo = NULL;
+
+int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *nspace )
+{
+	...
+	// Wrap ClassTwo as an opaque C/C++ type:
+	dao_type_ClassTwo = DaoNamespace_WrapType( nspace, & ClassTwo_Typer, 1 );
+}
+@[code]
+
 
 
 

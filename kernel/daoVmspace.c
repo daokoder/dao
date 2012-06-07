@@ -1979,6 +1979,10 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 }
 
 
+DaoVmSpace* DaoVmSpace_MainVmSpace()
+{
+	return mainVmSpace;
+}
 DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs, *mbs2;
