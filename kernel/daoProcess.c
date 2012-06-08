@@ -5582,7 +5582,7 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 			case DVM_BITXOR : DLong_BitXOR( bigint, B->xLong.value, bigint ); break;
 			default : break;
 		}
-	}else if( A->type ==DAO_LONG && B->type == DAO_LONG ){
+	}else if( A->type == DAO_LONG && B->type == DAO_LONG ){
 		DLong *bigint = DaoProcess_PutLong( self );
 		switch( vmc->code ){
 			case DVM_BITAND : DLong_BitAND( bigint, A->xLong.value, B->xLong.value ); break;
@@ -5591,7 +5591,17 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 			default : break;
 		}
 #endif
+	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM ){
+		DaoEnum *en = DaoProcess_GetEnum( self, vmc );
+		if( A->xEnum.etype != B->xEnum.etype ) goto InvalidOperation;
+		if( en == NULL || en->etype != A->xEnum.etype ) goto InvalidOperation;
+		switch( vmc->code ){
+		case DVM_BITAND : en->value = A->xEnum.value & B->xEnum.value; break;
+		case DVM_BITOR  : en->value = A->xEnum.value | B->xEnum.value; break;
+		default : goto InvalidOperation;
+		}
 	}else{
+InvalidOperation:
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid operands" );
 	}
 }

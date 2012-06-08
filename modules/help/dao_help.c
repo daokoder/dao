@@ -315,6 +315,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset, i
 	println = self->offset <= offset;
 	if( println ){
 		bgcolor = NULL;
+		for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
 		DaoStream_SetColor( self->stream, "white", "black" );
 		DaoStream_WriteMBS( self->stream, "     " );
 		DaoStream_SetColor( self->stream, NULL, NULL );
@@ -422,6 +423,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset, i
 	}
 	if( println ){
 		DaoxStream_WriteNewLine( self, "" );
+		for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
 		DaoStream_SetColor( self->stream, "white", "black" );
 		DaoStream_WriteMBS( self->stream, "     " );
 		DaoStream_SetColor( self->stream, NULL, NULL );

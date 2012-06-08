@@ -131,9 +131,10 @@ This special type name represents undefined types. Function parameters that
 have neither type annotations nor default values are automatically assigned with
 this type. Some variables whose types cannot be successfully inferred are also
 assigned with this type. This type can be specialized to a more specific type
-when more type information is available, for example, at runtime, parameters
-passed to a function call can provide concrete types to specialize the function
-(namely, specializing parameter types, local variable types and virtual machine instructions).
+when more type information is available, for example, at function call point 
+(compile time or runtime), parameters passed to a function call can provide 
+concrete types to specialize the function (namely, specializing parameter types, 
+local variable types and virtual machine instructions).
 
 
 --Type holder:

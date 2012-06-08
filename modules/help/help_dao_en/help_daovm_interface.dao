@@ -238,6 +238,11 @@ DaoVmSpace_ReleaseProcess( vmspace, proc );
 @[code]
 But if you want to use a process object frequently,
 you may simply retain it until you no longer need it.
+Then you may also need to the follow function to release the cached values
+@[code]
+# Pop the cached values:
+DaoProcess_PopValues( proc, 2 );
+@[code]
 
 
 @[subsection]
@@ -845,7 +850,7 @@ int Dao_ClassTwo::VirtualMethod( int i, float f )
 	int ires = DaoValue_TryGetInteger( res );
 
 	// Release the process object:
-	if( proc ) DaoProcess_Release( vmspace, proc );
+	DaoProcess_Release( vmspace, proc );
 
 	return ires;
 
@@ -853,7 +858,7 @@ CallDefault:
 	if( proc ) DaoProcess_Release( vmspace, proc );
 	return ClassTwo::VirtualMethod( i, f );
 ErrorCall:
-	if( proc ) DaoProcess_Release( vmspace, proc );
+	DaoProcess_Release( vmspace, proc );
 	// Do something;
 	return 0;
 }

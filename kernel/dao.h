@@ -1023,6 +1023,13 @@ DAO_DLL void DaoProcess_CacheValue( DaoProcess *self, DaoValue *value );
 DAO_DLL DaoValue** DaoProcess_GetLastValues( DaoProcess *self, int N );
 
 /*
+// DaoProcess_PopValues() return the last N value cached by the
+// above DaoProcess_CacheValue() or the following DaoProcess_NewXXX()
+// methods.
+*/
+DAO_DLL void DaoProcess_PopValues( DaoProcess *self, int N );
+
+/*
 // The following methods create values of the requested type with data
 // specified by the parameter(s). Values created in this way have references
 // stored in the process's cache, so that user does not need to handle the

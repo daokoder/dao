@@ -4182,6 +4182,10 @@ NotExist_TryAux:
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, ct, hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
+				}else if( at->tid == bt->tid && at->tid == DAO_ENUM ){
+					if( code != DVM_BITAND && code != DVM_BITOR ) goto InvOper;
+					if( at != bt ) goto InvOper;
+					ct = at;
 				}else if( at->tid == bt->tid ){
 					ct = at;
 					if( at->tid > DAO_DOUBLE && at->tid != DAO_LONG ) goto InvOper;
