@@ -5690,7 +5690,7 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	if( A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE ){
 		switch( A->type ){
-			case DAO_INTEGER : DaoProcess_PutInteger( self, A->xInteger.value ); break;
+			case DAO_INTEGER : DaoProcess_PutInteger( self, ~A->xInteger.value ); break;
 			case DAO_FLOAT   : DaoProcess_PutFloat( self, ~(daoint)A->xFloat.value ); break;
 			case DAO_DOUBLE  : DaoProcess_PutDouble( self, ~(daoint)A->xDouble.value ); break;
 		}
