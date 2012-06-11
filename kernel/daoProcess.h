@@ -51,6 +51,7 @@ struct DaoStackFrame
 	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
 
 	ushort_t      parCount;
+	ushort_t      varCount;
 	daoint        stackBase;
 	DaoVmCode    *codes; /* = routine->vmCodes->codes */
 	DaoType     **types;

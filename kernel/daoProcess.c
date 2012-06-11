@@ -252,7 +252,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
 	daoint i, N = self->stackTop + size + DAO_MAX_PARAM;
-	DaoStackFrame *frame = self->topFrame->next;
+	DaoStackFrame *f, *frame = self->topFrame->next;
 	if( N > self->stackSize ){
 		daoint offset = self->activeValues - self->stackValues;
 		self->stackValues = (DaoValue**)dao_realloc( self->stackValues, N*sizeof(DaoValue*) );
@@ -265,8 +265,22 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 		self->topFrame->next = frame;
 		frame->prev = self->topFrame;
 	}
+	if( frame->routine && (frame->stackBase != self->stackTop || frame->varCount != size) ){
+		/*
+		// DaoProcess_InitTopFrame() may check if the routine to be called is
+		// the same as the previous one called on this frame, if yes, it will
+		// assume the basic stack values are already initialized, and do no more
+		// initialization.
+		//
+		// Due to code section execution, the previous stack start or frame size
+		// may be invalidated, as a result, such optimization can no long be used.
+		*/
+		GC_DecRC( frame->routine );
+		frame->routine = NULL;
+	}
 	frame->sect = NULL;
 	frame->stackBase = self->stackTop;
+	frame->varCount = size;
 	frame->entry = 0;
 	frame->state = 0;
 	frame->returning = -1;
@@ -277,6 +291,12 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	self->topFrame = frame;
 	self->stackTop += size;
 	self->freeValues = self->stackValues + self->stackTop;
+	f = frame->next;
+	while( f && f->stackBase < self->stackTop ){
+		f->stackBase = self->stackTop;
+		f->varCount = 0; /* To make sure this frame is re-initialized; */
+		f = f->next;
+	}
 	return frame;
 }
 void DaoProcess_PopFrame( DaoProcess *self )
@@ -1098,10 +1118,11 @@ CallEntry:
 		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
 			uchar_t priv = routine->attribs & DAO_ROUT_PRIVATE;
 			if( routine->routHost ){
-				DaoObject *obj = topFrame->prev ? topFrame->prev->object : NULL;
+				DaoObject *obj = topFrame->prev->object;
+				//TODO: permission check before tail call optimization!
 				//XXX fltk/demo/table.dao:
 				//if( priv == 0 && obj == NULL ) goto CallNotPermitted;
-				if( priv && obj->defClass->objType != routine->routHost ) goto CallNotPermitted;
+				if( priv && obj && obj->defClass->objType != routine->routHost ) goto CallNotPermitted;
 			}else if( priv && routine->nameSpace != topFrame->prev->routine->nameSpace ){
 				goto CallNotPermitted;
 			}

@@ -953,6 +953,11 @@ DString* DaoValue_TryGetString( DaoValue *self )
 	if( self->type != DAO_STRING ) return NULL;
 	return self->xString.data;
 }
+void* DaoValue_TryGetArray( DaoValue *self )
+{
+	if( self->type != DAO_ARRAY ) return NULL;
+	return self->xArray.data.p;
+}
 void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 {
 	if( self->type != DAO_CDATA ) return NULL;

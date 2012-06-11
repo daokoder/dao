@@ -3334,7 +3334,7 @@ int DaoMap_Size( DaoMap *self )
 }
 DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  )
 {
-	DNode *node = MAP_Find( self->items, & key );
+	DNode *node = MAP_Find( self->items, key );
 	if( node ) return node->value.pValue;
 	return NULL;
 }

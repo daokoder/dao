@@ -429,6 +429,7 @@ DAO_DLL char*     DaoValue_TryGetMBString( DaoValue *self );
 DAO_DLL wchar_t*  DaoValue_TryGetWCString( DaoValue *self );
 DAO_DLL DString*  DaoValue_TryGetString( DaoValue *self );
 DAO_DLL int       DaoValue_TryGetEnum( DaoValue *self );
+DAO_DLL void*     DaoValue_TryGetArray( DaoValue *self );
 DAO_DLL void*     DaoValue_TryGetCdata( DaoValue *self );
 DAO_DLL void**    DaoValue_TryGetCdata2( DaoValue *self );
 
