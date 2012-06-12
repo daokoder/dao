@@ -134,6 +134,10 @@ static void MATH_pow( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutDouble( proc, pow( p[0]->xDouble.value, p[1]->xDouble.value ) );
 }
+static void MATH_atan2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutDouble( proc, atan2( p[0]->xDouble.value, p[1]->xDouble.value ) );
+}
 
 /**/
 static void MATH_abs_c( DaoProcess *proc, DaoValue *p[], int N )
@@ -308,6 +312,7 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_max,       "max( p1 :double, p2 :double )=>double" },
 	{ MATH_min,       "min( p1 :double, p2 :double )=>double" },
 	{ MATH_pow,       "pow( p1 :double, p2 :double )=>double" },
+	{ MATH_atan2,     "atan2( p1 :double, p2 :double )=>double" },
 
 #if 0
 	{ MATH_abs_c,     "abs( p :complex )=>double" },

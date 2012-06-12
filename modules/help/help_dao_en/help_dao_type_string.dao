@@ -4,6 +4,24 @@ load help;
 dao.type.string
 @[name]
 
+@[title]
+String Type
+@[title]
+
+@[text]
+@[green]string@[green] is a primitive data type representing a sequence of characters.
+It is upported in two forms in Dao: Multi-Bytes String (MBS) and Wide Character String (WCS).
+@[subsection]Definition@[subsection]
+@[code]
+LeftSingleQuotationMark = '\'' 
+@[code]
+@[subsection]Definition@[subsection]
+
+MBS in Dao is effectively a byte array that can be used to store any sequence
+of bytes. But it is also UTF-8 aware when it comes to chopping and splitting etc.
+operations. WCS 
+@[text]
+
 @[name]
 dao.type.string.init
 @[name]

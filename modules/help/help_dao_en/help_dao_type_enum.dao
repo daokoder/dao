@@ -11,7 +11,7 @@ Enum or Symbol Type
 @[text]
 
 
-@[green]enum@[green] is type hybriding C++ enum and Ruby symbol types
+@[green]enum@[green] is a type hybriding C++ enum and Ruby symbol types
 to offer the advantages of both types.
 It can be used as enumerated constant in C++ or as symbol in Ruby.
 

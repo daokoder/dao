@@ -3785,6 +3785,8 @@ static DaoCdata* DaoCdataBindings_Find( DaoType *type, void *data )
 	DNode *node;
 	DaoCdata *cdata = NULL;
 
+	if( data == NULL ) return NULL;
+
 	DMutex_Lock( & dao_cdata_mutex );
 	node = DMap_Find( dao_cdata_bindings, data );
 	if( node ) cdata = (DaoCdata*) node->value.pVoid;
@@ -3942,6 +3944,7 @@ static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
 {
 	daoint i, n;
 	if( self == totype || totype == NULL || data == NULL ) return data;
+	if( self->bases == NULL ) return NULL;
 	for(i=0,n=self->bases->size; i<n; i++){
 		void *p = self->typer->casts[i] ? (*self->typer->casts[i])( data, 0 ) : data;
 		p = DaoType_CastCxxData( self->bases->items.pType[i], totype, p );

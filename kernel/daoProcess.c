@@ -265,16 +265,22 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 		self->topFrame->next = frame;
 		frame->prev = self->topFrame;
 	}
+
+	/*
+	// Each stack frame uses ::varCount number of local variables that are allocated
+	// on the stack starting from ::stackBase. DaoProcess_InitTopFrame() may check
+	// if the routine to be called is the same as the previous one called on this
+	// frame, if yes, it will assume these variables initialized and used by the
+	// previous call can be reused without re-initialization.
+	//
+	// Here it checks if the frame has the right stack offset and variable count,
+	// if no, unset ::routine to force DaoProcess_InitTopFrame() redo the
+	// initialization.
+	//
+	// A frame that is invalidated by previous frames will have its ::varCount set
+	// to zero, so that this checking will always be sucessful (if size!=0).
+	*/
 	if( frame->routine && (frame->stackBase != self->stackTop || frame->varCount != size) ){
-		/*
-		// DaoProcess_InitTopFrame() may check if the routine to be called is
-		// the same as the previous one called on this frame, if yes, it will
-		// assume the basic stack values are already initialized, and do no more
-		// initialization.
-		//
-		// Due to code section execution, the previous stack start or frame size
-		// may be invalidated, as a result, such optimization can no long be used.
-		*/
 		GC_DecRC( frame->routine );
 		frame->routine = NULL;
 	}
@@ -291,6 +297,12 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	self->topFrame = frame;
 	self->stackTop += size;
 	self->freeValues = self->stackValues + self->stackTop;
+
+	/*
+	// Check and reset frames that have the stack values invalidated for reusing.
+	// A frame is invalidated if the range of its stack values is partially covered
+	// by this frame.
+	*/
 	f = frame->next;
 	while( f && f->stackBase < self->stackTop ){
 		f->stackBase = self->stackTop;
@@ -4841,8 +4853,7 @@ TryAgain:
 	if( rc == 0 && value && value->type == DAO_ROUTINE ){
 		rout = (DaoRoutine*) value;
 		if( C && C->xBase.refCount == 1 ){ /* Check methods that can take three parameters: */
-			/* Check the method with self parameter first, then other methods: */
-			if( DaoProcess_PushCallable( self, rout, A, par+1, 1+(B!=NULL) ) == 0 ) return 1;
+			/* Check only static method that takes parameters: C, A, B: */
 			if( DaoProcess_PushCallable( self, rout, NULL, par, 2+(B!=NULL) ) == 0 ) return 1;
 		}
 		/* Check the method with self parameter first, then other methods: */
