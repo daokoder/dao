@@ -821,6 +821,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 void DaoNamespace_Delete( DaoNamespace *self )
 {
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->mbs ); */
+	printf( "DaoNamespace_Delete  %s\n", self->name->mbs );
 	daoint i, j;
 	for(i=0; i<self->sources->size; i++){
 		DArray *array = self->sources->items.pArray[i];

@@ -795,12 +795,6 @@ void DaoCGC_CycRefCountIncScan()
 		for( i=0; i<workList->size; i++ ){
 			DaoValue *value = workList->items.pValue[i];
 			if( value->xGC.alive ) continue;
-			if( j && value->type == DAO_NAMESPACE ){
-				DaoNamespace *NS= (DaoNamespace*) value;
-				DaoVmSpace_Lock( NS->vmSpace );
-				DMap_Erase( NS->vmSpace->nsModules, NS->name );
-				DaoVmSpace_Unlock( NS->vmSpace );
-			}
 			if( value->xGC.cycRefCount >0 ){
 				auxList->size = 0;
 				value->xGC.alive = 1;
@@ -1017,12 +1011,6 @@ void DaoIGC_CycRefCountIncScan()
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
-		if( second && value->type == DAO_NAMESPACE ){
-			DaoNamespace *NS= (DaoNamespace*) value;
-			DaoVmSpace_Lock( NS->vmSpace );
-			DMap_Erase( NS->vmSpace->nsModules, NS->name );
-			DaoVmSpace_Unlock( NS->vmSpace );
-		}
 		if( value->xGC.cycRefCount >0 ){
 			auxList->size = 0;
 			value->xGC.alive = 1;
