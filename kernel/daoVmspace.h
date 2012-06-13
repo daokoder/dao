@@ -82,6 +82,9 @@ struct DaoVmSpace
 
 	DMap  *vfiles;
 	DMap  *vmodules;
+
+	/* map full file name (including path and suffix) to module namespace */
+	DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
 	DMap  *allTokens;
 
 	DaoUserHandler *userHandler;

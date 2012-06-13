@@ -3785,9 +3785,6 @@ static DaoCdata* DaoCdataBindings_Find( DaoType *type, void *data )
 	DNode *node;
 	DaoCdata *cdata = NULL;
 
-	return NULL;
-	if( data == NULL ) return NULL;
-
 	DMutex_Lock( & dao_cdata_mutex );
 	node = DMap_Find( dao_cdata_bindings, data );
 	if( node ) cdata = (DaoCdata*) node->value.pVoid;
@@ -3797,7 +3794,6 @@ static DaoCdata* DaoCdataBindings_Find( DaoType *type, void *data )
 }
 static void DaoCdataBindings_Insert( void *data, DaoCdata *wrap )
 {
-	return;
 	if( data == NULL ) return;
 	DMutex_Lock( & dao_cdata_mutex );
 	DMap_Insert( dao_cdata_bindings, data, wrap );
@@ -3805,7 +3801,6 @@ static void DaoCdataBindings_Insert( void *data, DaoCdata *wrap )
 }
 static void DaoCdataBindings_Erase( void *data )
 {
-	return;
 	if( data == NULL ) return;
 	DMutex_Lock( & dao_cdata_mutex );
 	DMap_Erase( dao_cdata_bindings, data );
