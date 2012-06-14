@@ -131,12 +131,14 @@ static void DaoGC_PrepareCandidates();
 static void DaoCGC_FreeGarbage();
 static void DaoCGC_CycRefCountDecScan();
 static void DaoCGC_CycRefCountIncScan();
+static void DaoCGC_DeregisterModules();
 static int  DaoCGC_AliveObjectScan();
 static void DaoCGC_RefCountDecScan();
 static void DaoCGC_Finish();
 
 static void DaoIGC_FreeGarbage();
 static void DaoIGC_CycRefCountDecScan();
+static void DaoIGC_DeregisterModules();
 static void DaoIGC_CycRefCountIncScan();
 static int  DaoIGC_AliveObjectScan();
 static void DaoIGC_RefCountDecScan();
@@ -757,6 +759,8 @@ void DaoCGC_Recycle( void *p )
 		DaoGC_PrepareCandidates();
 		DaoCGC_CycRefCountDecScan();
 		DaoCGC_CycRefCountIncScan();
+		DaoCGC_DeregisterModules();
+		DaoCGC_CycRefCountIncScan();
 		DaoCGC_RefCountDecScan();
 		DaoCGC_FreeGarbage();
 	}
@@ -777,9 +781,25 @@ void DaoCGC_CycRefCountDecScan()
 		DaoGC_CycRefCountDecScan( value );
 	}
 }
+void DaoCGC_DeregisterModules()
+{
+	daoint i;
+	DArray *workList = gcWorker.workList;
+
+	for( i=0; i<workList->size; i++ ){
+		DaoValue *value = workList->items.pValue[i];
+		if( value->xGC.alive ) continue;
+		if( value->type == DAO_NAMESPACE ){
+			DaoNamespace *NS= (DaoNamespace*) value;
+			DaoVmSpace_Lock( NS->vmSpace );
+			if( NS->cycRefCount == 0 ) DMap_Erase( NS->vmSpace->nsModules, NS->name );
+			DaoVmSpace_Unlock( NS->vmSpace );
+		}
+	}
+}
 void DaoCGC_CycRefCountIncScan()
 {
-	daoint i, j;
+	daoint i;
 	DArray *workList = gcWorker.workList;
 	DArray *auxList = gcWorker.auxList;
 
@@ -791,16 +811,14 @@ void DaoCGC_CycRefCountIncScan()
 		}
 	}
 #endif
-	for(j=0; j<2; j++){
-		for( i=0; i<workList->size; i++ ){
-			DaoValue *value = workList->items.pValue[i];
-			if( value->xGC.alive ) continue;
-			if( value->xGC.cycRefCount >0 ){
-				auxList->size = 0;
-				value->xGC.alive = 1;
-				DArray_Append( auxList, value );
-				DaoCGC_AliveObjectScan();
-			}
+	for( i=0; i<workList->size; i++ ){
+		DaoValue *value = workList->items.pValue[i];
+		if( value->xGC.alive ) continue;
+		if( value->xGC.cycRefCount >0 ){
+			auxList->size = 0;
+			value->xGC.alive = 1;
+			DArray_Append( auxList, value );
+			DaoCGC_AliveObjectScan();
 		}
 	}
 }
@@ -882,6 +900,7 @@ enum DaoGCWorkType
 	GC_RESET_RC ,
 	GC_DEC_RC ,
 	GC_INC_RC ,
+	GC_DEREG ,
 	GC_INC_RC2 ,
 	GC_DIR_DEC_RC ,
 	GC_FREE
@@ -940,6 +959,9 @@ void DaoIGC_Continue()
 		}
 #endif
 		break;
+	case GC_DEREG :
+		DaoIGC_DeregisterModules();
+		break;
 	case GC_INC_RC :
 	case GC_INC_RC2 :
 		DaoIGC_CycRefCountIncScan();
@@ -993,11 +1015,36 @@ void DaoIGC_CycRefCountDecScan()
 		gcWorker.ii = i+1;
 	}
 }
+void DaoIGC_DeregisterModules()
+{
+	DArray *workList = gcWorker.workList;
+	daoint min = workList->size >> 2;
+	daoint i = gcWorker.ii;
+	daoint k = 0;
+
+	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
+
+	for( ; i<workList->size; i++ ){
+		DaoValue *value = workList->items.pValue[i];
+		if( value->xGC.alive ) continue;
+		if( value->type == DAO_NAMESPACE ){
+			DaoNamespace *NS= (DaoNamespace*) value;
+			DaoVmSpace_Lock( NS->vmSpace );
+			if( NS->cycRefCount == 0 ) DMap_Erase( NS->vmSpace->nsModules, NS->name );
+			DaoVmSpace_Unlock( NS->vmSpace );
+		}
+	}
+	if( i >= workList->size ){
+		gcWorker.ii = 0;
+		gcWorker.workType ++;
+	}else{
+		gcWorker.ii = i+1;
+	}
+}
 void DaoIGC_CycRefCountIncScan()
 {
 	DArray *workList = gcWorker.workList;
 	DArray *auxList = gcWorker.auxList;
-	daoint second = gcWorker.workType == GC_INC_RC2;
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint k = 0;

@@ -832,6 +832,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		*vmcs[K++] = *vmc;
 	}
 	DArray_Erase( annotCodes, K, -1 );
+	vmcs = annotCodes->items.pVmc;
 	vmCodes->size = K;
 	N = 0;
 	for(i=0; i<K; i++){

@@ -823,19 +823,11 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 void DaoNamespace_Delete( DaoNamespace *self )
 {
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->mbs ); */
-	DNode *it;
 	daoint i, j;
 	for(i=0; i<self->sources->size; i++){
 		DArray *array = self->sources->items.pArray[i];
 		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
 	}
-	DaoVmSpace_Lock( self->vmSpace );
-	for(it=DMap_First(self->vmSpace->nsModules); it; it=DMap_Next(self->vmSpace->nsModules,it) ){
-		if( it->value.pVoid == (void*) self ){
-			DMap_EraseNode( self->vmSpace->nsModules, it );
-		}
-	}
-	DaoVmSpace_Unlock( self->vmSpace );
 
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->constants );
