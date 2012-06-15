@@ -398,7 +398,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 				GC_IncRC( future->process );
 			}
 			proc = future->process;
-			for(i=0; i<n; i++) DaoValue_Copy( future->params[i], & proc->freeValues[i] );
+			for(i=0; i<n; i++) DaoValue_Copy( future->params[i], & proc->paramValues[i] );
 			future->parCount = 0;
 			DaoValue_ClearAll( future->params, n );
 			DaoProcess_PushRoutine( proc, future->routine, future->object );

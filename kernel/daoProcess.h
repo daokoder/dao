@@ -95,45 +95,43 @@ struct DaoProcess
 {
 	DAO_DATA_COMMON;
 
-	DaoVmSpace *vmSpace;
+	DaoVmSpace     *vmSpace;
 
-	DaoStackFrame *firstFrame; /* the first frame */
-	DaoStackFrame *topFrame;   /* top call frame */
+	DaoStackFrame  *firstFrame; /* the first frame */
+	DaoStackFrame  *topFrame;   /* top call frame */
 
-	DaoVmCode     *activeCode;
-	DaoRoutine    *activeRoutine;
-	DaoObject     *activeObject;
-	DaoNamespace  *activeNamespace;
+	DaoVmCode      *activeCode;
+	DaoRoutine     *activeRoutine;
+	DaoObject      *activeObject;
+	DaoNamespace   *activeNamespace;
+	DaoType       **activeTypes;
+	DaoValue      **activeValues;
+	DaoValue      **paramValues;
+	DaoValue      **stackValues;
+	daoint          stackSize; /* capacity of stackValues; */
+	daoint          stackTop; /* one past the last active stack value; */
 
-	DaoType   **activeTypes;
-	DaoValue  **activeValues;
+	uchar_t         parCount;
+	uchar_t         pauseType;
+	uchar_t         status;
+	uchar_t         stopit;
 
-	DaoValue  **freeValues; /* = stackValues + stackTop */
-	DaoValue  **stackValues;
-	daoint      stackSize; /* maximum number of values that can be hold by stackValues; */
-	daoint      stackTop; /* one past the last active stack value; */
+	DaoType        *abtype; /* for coroutine */
+	DaoFuture      *future;
+	DaoStream      *stdioStream;
 
-	uchar_t  pauseType;
-	uchar_t  status;
-	uchar_t  stopit;
-
-	DaoType  *abtype; /* for coroutine */
-	DArray   *exceptions;
-
-	DaoFuture  *future;
-	DaoStream  *stdioStream;
-
-	DArray *factory;
+	DArray         *exceptions;
+	DArray         *factory;
 
 #ifdef DAO_WITH_THREAD
-	daoint     depth;
-	DCondVar  *condv; /* condition variable for resuming suspended process; */
-	DMutex    *mutex; /* mutex for mt.critical::{} */
+	daoint          depth;
+	DCondVar       *condv; /* condition variable for resuming suspended process; */
+	DMutex         *mutex; /* mutex for mt.critical::{} */
 #endif
 
-	DString *mbstring;
-	DMap    *mbsRegex; /* <DString*,DString*> */
-	DMap    *wcsRegex; /* <DString*,DString*> */
+	DString        *mbstring;
+	DMap           *mbsRegex; /* <DString*,DString*> */
+	DMap           *wcsRegex; /* <DString*,DString*> */
 };
 
 /* Create a new virtual machine process */
