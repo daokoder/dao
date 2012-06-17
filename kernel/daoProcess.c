@@ -250,7 +250,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
-	daoint i, N = self->stackTop + size + DAO_MAX_PARAM;
+	daoint i, N = self->stackTop + size;
 	DaoStackFrame *f, *frame = self->topFrame->next;
 	if( N > self->stackSize ){
 		daoint offset = self->activeValues - self->stackValues;
@@ -2688,14 +2688,14 @@ DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata *cdata = DaoCdata_New( type, data );
 	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
-	DaoCdata_Delete( cdata );
+	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata *cdata = DaoCdata_Wrap( type, data );
 	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
-	DaoCdata_Delete( cdata );
+	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
 DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t )
@@ -3617,7 +3617,13 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
 	}else if( va->type == DAO_CDATA ){
 		DaoValue *tpar = (DaoValue*) ct;
-		if( DaoType_MatchTo( ct, va->xCdata.ctype, NULL ) ){ /* down casting: */
+		if( DaoType_MatchTo( va->xCdata.ctype, ct, NULL ) ){ /* up casting: */
+			/*
+			// No real casting here. C codes should use DaoValue_TryCastCdata(),
+			// or DaoCdata_CastData() to do the real casting on the C data pointer.
+			*/
+			goto FastCasting;
+		}else if( DaoType_MatchTo( ct, va->xCdata.ctype, NULL ) ){ /* down casting: */
 			void *data = DaoType_DownCastCxxData( va->xCdata.ctype, ct, va->xCdata.data );
 			if( data ){
 				va = (DaoValue*) DaoCdata_Wrap( ct, data );

@@ -987,6 +987,7 @@ void DaoProcess_CacheValue( DaoProcess *self, DaoValue *value )
 }
 void DaoProcess_PopValues( DaoProcess *self, int N )
 {
+	if( N < 0 ) return;
 	if( N >= (int)self->factory->size ){
 		DArray_Clear( self->factory );
 	}else{

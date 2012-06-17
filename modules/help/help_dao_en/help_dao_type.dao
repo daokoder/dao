@@ -167,4 +167,19 @@ represents a tuple type whose first item must be @[green]1@[green] and its secon
 must be @[green]2@[green]!
 Such types are mainly useful when dealing with C++ template types.
 
+
+@[subsection]Type Aliasing@[subsection]
+
+Type alias can be defined using the following syntax:
+
+@[code]
+#TypeAliasing ::= 'type' Identifier '=' Type
+type alias = another_type
+@[code]
+For example,
+@[code]
+type StringList = list<string>
+type Point3D    = tuple<x:float,y:float,z:float>
+@[code]
+
 @[text]

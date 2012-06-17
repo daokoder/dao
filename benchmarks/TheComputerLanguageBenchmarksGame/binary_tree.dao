@@ -1,5 +1,5 @@
 
-use Node = tuple<int,any,any>;
+type Node = tuple<int,any,any>;
 
 routine BottomUpTree(item:int, depth:int) => int|Node
 {

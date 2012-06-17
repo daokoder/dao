@@ -1803,8 +1803,8 @@ static DaoFuncItem stringMeths[] =
 #ifdef DAO_WITH_REGEX
 	{ DaoSTR_PFind, "pfind( self :string, pt :string, index=0, start=0, end=0 )=>list<tuple<start:int,end:int>>" },
 	{ DaoSTR_Match, "match( self :string, pt :string, start=0, end=0, substring=1 )=>tuple<start:int,end:int,substring:string>" },
-	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group:int, start=0, end=0 )=>tuple<start:int,end:int,substring:string>" },
-	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype: enum<both,matched,unmatched>=$matched, mask :tuple<pattern:string,reversed:enum<false,true>> = ('', $false) )=>list<string>" },
+	{ DaoSTR_SubMatch, "submatch( self :string, pt :string, group :int, start=0, end=0 )=>tuple<start:int,end:int,substring:string>" },
+	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype :enum<both,matched,unmatched>=$matched, mask :tuple<pattern:string,reversed:enum<false,true>> = ('', $false) )=>list<string>" },
 	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )=>list<string>" },
 	{ DaoSTR_Change,  "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
 	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s :string, index=0 )=>string" },

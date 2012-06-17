@@ -1,5 +1,5 @@
 
-use QuadLong = tuple<long,long,long,long>;
+type QuadLong = tuple<long,long,long,long>;
 
 routine gen_x()=>[?]
 {

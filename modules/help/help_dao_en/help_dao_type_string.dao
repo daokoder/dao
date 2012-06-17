@@ -144,10 +144,10 @@ Dao string methods
 @[text]
 @[code]
 chop(  )
-erase( start=0, n=-1 )
-find( str : string, from=0, reverse=0 ) => int
-insert( str : string, index=0 )
-replace( str1 : string, str2 : string, index=0 )
+erase( start = 0, n = -1 )
+find( str : string, from = 0, reverse = 0 ) => int
+insert( str : string, index = 0 )
+replace( str1 : string, str2 : string, index = 0 )
 replace( str1 : string, table : map<string,string>, max=0 )
 expand( keys :map<string,string>, spec='$', keep=1 )
 expand( keys : tuple, spec='$', keep=1 )
@@ -174,10 +174,13 @@ string.chop()
 
 @[text]
 @[code]
-string.chop( utf=0 )
+string.chop()
 @[code]
-Chop off new line symbol from the end of a string.
-If utf=1, chop off the characters that do not form a valid UTF-8 encoding.
+Chop off @[cyan]EOF@[cyan], @[cyan]\n@[cyan] and @[cyan]\r@[cyan]
+from the end of a string.
+If the string is a MBS and contains at least 95% bytes with valid UTF-8 encodings,
+the string is assume to be a UTF-8 string, and any bytes at the end with
+invalid UTF-8 encodings are chopped off as well.
 @[text]
 
 @[name]
@@ -190,10 +193,10 @@ string.erase()
 
 @[text]
 @[code]
-string.erase( start=0, n=-1 )
+string.erase( start = 0, n = -1 )
 @[code]
-Erase <%>n</%> characters starting from index <%>start</%>.
-If n=-1, erase all the rest.
+Erase @[cyan]n@[cyan] characters starting from index @[cyan]start@[cyan].
+If @[cyan]n=-1@[cyan], erase all the rest.
 
 @[text]
 
@@ -207,10 +210,12 @@ string.find()
 
 @[text]
 @[code]
-string.find( str : string, from=0, reverse=0 ) => int
+string.find( str : string, from = 0, reverse = 0 ) => int
 @[code]
-Find substring <%>str</%>, starting from <%>from</%>; search backward if <%>reverse</%> is true.
-Return the index of the occurrence of <%>str</%>, return -1 if not found.
+Find substring @[cyan]str@[cyan], starting from @[cyan]from@[cyan];
+search backward if @[cyan]reverse@[cyan] is true.
+Return the index of the first occurrence of @[cyan]str@[cyan] if found,
+otherwise return -1.
 
 @[text]
 
@@ -224,9 +229,12 @@ string.insert()
 
 @[text]
 @[code]
-string.insert( str : string, index=0 )
+string.insert( str : string, index = 0, remove = 0, copy = 0 )
 @[code]
-Insert substring <%>str</%> at <%>index</%>
+Insert substring @[cyan]str@[cyan] at @[cyan]index@[cyan].
+If @[cyan]remove@[cyan] is greater than zero, @[cyan]remove@[cyan] characters
+are removed from the insertion point. And if @[cyan]copy@[cyan] is greater
+than zero, only @[cyan]copy@[cyan] characters are copied to the insertion point.
 
 @[text]
 
@@ -240,16 +248,17 @@ string.replace()
 
 @[text]
 @[code]
-string.replace( str1 : string, str2 : string, index=0 )
+string.replace( str1 :string, str2 :string, index = 0 )
 @[code]
-Replace the <%>index</%>-th occurrence of substring <%>str1</%> to substring <%>str2</%>;
+Replace the @[cyan]index@[cyan]-th occurrence of substring @[cyan]str1@[cyan] 
+to substring @[cyan]str2@[cyan];
 the index starts from 1, which means the first, and 0 means all.
 
 @[code]
-string.replace( table : map<string,string>, max=0 )
+string.replace( table :map<string,string>, max = 0 )
 @[code]
-Replace the occurrence of the keys of <it>table</it> by the corresponding values.
-If <it>max</it> is zero, replace the shorter key first, otherwise,
+Replace the occurrence of the keys of @[cyan]table@[cyan] by the corresponding values.
+If @[cyan]max@[cyan] is zero, replace the shorter key first, otherwise,
 replace the longer first.
 
 @[text]
@@ -264,23 +273,23 @@ string.expand()
 
 @[text]
 @[code]
-string.expand( keys : map<string,string>, spec='$', keep=1 ) => string
+string.expand( keys :map<string,string>, spec = '$', keep = 1 ) => string
 @[code]
-If the string contains place holders in form of <it>$(name)</it>,
-where <it>$</it> is the special character passed in by <it>spec</it>,
+If the string contains place holders in form of @[cyan]$(name)@[cyan],
+where @[cyan]$@[cyan] is the special character passed in by @[cyan]spec@[cyan],
 this method will expand or fill at each place holder by the value string
-from <it>keys</it> with key equal to the name of the place holder.
+from @[cyan]keys@[cyan] with key equal to the name of the place holder.
 
 
-If <it>keep</it> is zero, place holders with names not found in <it>keys</it>
+If @[cyan]keep@[cyan] is zero, place holders with names not found in @[cyan]keys@[cyan]
 will be replaced by empty string, namely, removing the place holders;
 otherwise the are kept.
 
-<demo dao>
+@[code(dao)]
 tpl = 'The quick brown $(A) jumps over the lazy $(B)';
 str = tpl.expand( { 'A' => 'fox', 'B' => 'dog' } );
-stdio.println( str );
-</demo>
+io.writeln( str );
+@[code(dao)]
 
 @[text]
 
@@ -294,22 +303,22 @@ string.expand()
 
 @[text]
 @[code]
-string.expand( keys : tuple, spec='$', keep=1 ) => string
+string.expand( keys :tuple, spec = '$', keep = 1 ) => string
 @[code]
-If the string contains place holders in form of <it>$(name)</it>,
-where <it>$</it> is the special character passed in by <it>spec</it>,
+If the string contains place holders in form of @[cyan]$(name)@[cyan],
+where @[cyan]$@[cyan] is the special character passed in by @[cyan]spec@[cyan],
 this method will expand or fill at each place holder by the item value string
-from <it>keys</it> with item field name equal to the name of the place holder.
+from @[cyan]keys@[cyan] with item field name equal to the name of the place holder.
 
-If <it>keep</it> is zero, place holders with names not found in <it>keys</it>
+If @[cyan]keep@[cyan] is zero, place holders with names not found in @[cyan]keys@[cyan]
 will be replaced by empty string, namely, removing the place holders;
 otherwise the are kept.
 
-<demo dao>
+@[code(dao)]
 tpl = 'The quick brown $(A) jumps over the lazy $(B)';
 str = tpl.expand( ( A => 'fox', B => 'dog' ) );
-stdio.println( str );
-</demo>
+io.writeln( str );
+@[code(dao)]
 
 @[text]
 
@@ -323,9 +332,9 @@ string.resize()
 
 @[text]
 @[code]
-string.resize( size : int )
+string.resize( size :int )
 @[code]
-Resize the string to have length <%></%>, and the extended part are filled with blank space.
+Resize the string to length @[cyan]@[cyan], and the extended part are filled with blank space.
 
 @[text]
 
@@ -339,7 +348,7 @@ string.size()
 
 @[text]
 @[code]
-string.size(  ) => int
+string.size() => int
 @[code]
 Return the length of a string.
 
@@ -355,16 +364,18 @@ string.split()
 
 @[text]
 @[code]
-string.split( sep : string, quote="", rm=1 ) => list<string>
+string.split( sep :string, quote = '', quote = '', rm = 1 ) => list<string>
 @[code]
-Split the string by seperator <%>sep</%>, and return the tokens as a list. 
-Quotation symbols may also be specified to avoid breaking the string inside 
-a pair of quotes. If the quotations symbols appear in the
-begin and end of a token and <%>rm</%> is true, they are removed.
+Split the string by seperator @[cyan]sep@[cyan], and return the tokens as a list. 
+Quotation symbols may also be specified by @[cyan]quote@[cyan]
+to avoid breaking the string inside a pair of quotes. 
+If the quotations symbols appear in the
+begin and end of a token and @[cyan]rm@[cyan] is true, they are removed.
 The seperators are not included in the result list.
 
 @[text]
 
+#{
 @[name]
 dao.type.string.method.tokenize
 @[name]
@@ -378,14 +389,15 @@ string.tokenize()
 string.tokenize( seps : string, quotes="", backslash=0 ) => list<string>
 @[code]
 Tokenize the string by a set of separators. 
-Each character in <%>seps</%> is treated as a separator.
+Each character in @[cyan]seps@[cyan] is treated as a separator.
 Quotation symbols may also be specified to avoid breaking the string inside a pair of quotes.
-If <%>backslash</%> is true, the separators and quotes preceded by a backslash are considered as normal characters.
+If @[cyan]backslash@[cyan] is true, the separators and quotes preceded by a backslash are considered as normal characters.
 The separators, quotes and backslashes are not removed from the result tokens.
-If <%>simplify</%> is true, the blank spaces are removed from the beginning and end of
+If @[cyan]simplify@[cyan] is true, the blank spaces are removed from the beginning and end of
 each token, and then empty tokens are remove from the resulting list.
 
 @[text]
+
 
 @[name]
 dao.type.string.method.tonumber
@@ -399,9 +411,11 @@ string.tonumber()
 @[code]
 string.tonumber( base=10 ) => double
 @[code]
-Convert the string to a number with base equal to <%>base</%>.
+Convert the string to a number with base equal to @[cyan]base@[cyan].
 
 @[text]
+#}
+
 
 @[name]
 dao.type.string.method.tolower
@@ -413,10 +427,10 @@ string.tolower()
 
 @[text]
 @[code]
-string.tolower(  ) => string
+string.tolower() => string
 @[code]
 Convert the string to lower case.
-Return <%>self</%> string.
+Return @[cyan]self@[cyan] string.
 
 @[text]
 
@@ -430,8 +444,136 @@ string.toupper()
 
 @[text]
 @[code]
-string.toupper(  ) => string
+string.toupper() => string
 @[code]
 Convert the string to upper case.
-Return <%>self</%> string.
+Return @[cyan]self@[cyan] string.
 @[text]
+
+
+
+################################################################################
+################################################################################
+########
+######## Functional Methods
+########
+################################################################################
+################################################################################
+
+@[name]
+dao.type.string.functional
+@[name]
+
+@[title]
+Dao String Functional Methods
+@[title]
+
+@[text]
+@[text]
+
+
+
+@[name]
+dao.type.string.functional.iterate
+@[name]
+
+@[title]
+string.iterate()
+@[title]
+
+@[text]
+@[code]
+string.iterate() => string
+@[code]
+Convert the string to upper case.
+Return @[cyan]self@[cyan] string.
+@[text]
+
+
+@[name]
+dao.type.string.functional.count
+@[name]
+
+@[title]
+string.count()
+@[title]
+
+@[text]
+@[code]
+string.count() => string
+@[code]
+Convert the string to upper case.
+Return @[cyan]self@[cyan] string.
+@[text]
+
+
+@[name]
+dao.type.string.functional.map
+@[name]
+
+@[title]
+string.map()
+@[title]
+
+@[text]
+@[code]
+string.map() => string
+@[code]
+Convert the string to upper case.
+Return @[cyan]self@[cyan] string.
+@[text]
+
+
+@[name]
+dao.type.string.functional.select
+@[name]
+
+@[title]
+string.select()
+@[title]
+
+@[text]
+@[code]
+string.select() => string
+@[code]
+Convert the string to upper case.
+Return @[cyan]self@[cyan] string.
+@[text]
+
+
+@[name]
+dao.type.string.functional.index
+@[name]
+
+@[title]
+string.index()
+@[title]
+
+@[text]
+@[code]
+string.index() => string
+@[code]
+Convert the string to upper case.
+Return @[cyan]self@[cyan] string.
+@[text]
+
+
+@[name]
+dao.type.string.functional.apply
+@[name]
+
+@[title]
+string.apply()
+@[title]
+
+@[text]
+@[code]
+string.apply() => string
+@[code]
+Convert the string to upper case.
+Return @[cyan]self@[cyan] string.
+@[text]
+
+
+
+load help_dao_type_string_pattern;

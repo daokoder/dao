@@ -3757,19 +3757,21 @@ NotExist_TryAux:
 						j = DaoClass_GetDataIndex( klass, str );
 						if( typed_code ){
 							k = LOOKUP_ST( j );
-							vmc->b = LOOKUP_ID( j );
 							if( *type2 && (*type2)->realnum && at->realnum ){
 								vmc->code = ck ? DVM_SETF_KGII : DVM_SETF_OGII;
 								if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVII;
 								if( at->tid != (*type2)->tid )
 									DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
 								vmc->code += at->tid - DAO_INTEGER;
+								vmc->b = LOOKUP_ID( j );
 							}else if( *type2 && (*type2)->tid == DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
+								vmc->b = LOOKUP_ID( j );
 								vmc->code = ck ? DVM_SETF_KGCC : DVM_SETF_OGCC;
 								if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVCC;
 								if( at->tid != (*type2)->tid )
 									DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
 							}else if( at == *type2 || (*type2)->tid == DAO_ANY ){
+								vmc->b = LOOKUP_ID( j );
 								vmc->code = ck ? DVM_SETF_KG : DVM_SETF_OG;
 								if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OV;
 							}

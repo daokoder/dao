@@ -390,6 +390,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, int offset, i
 		case DKEY_SWITCH : case DKEY_CASE : case DKEY_DEFAULT :
 			fgcolor = DAOX_MAGENTA;
 			break;
+		case DKEY_TYPE :
 		case DKEY_ANY : case DKEY_NONE : case DKEY_ENUM :
 		case DKEY_INT : case DKEY_LONG :
 		case DKEY_FLOAT : case DKEY_DOUBLE :
