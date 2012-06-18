@@ -1,0 +1,7 @@
+Dao Programming Language
+http://www.daovm.net
+
+Dao is a lightweight and optionally typed programming language
+with many interesting features. It includes features that can
+make concurrent programming much simpler. It has well designed
+interfaces for easy embedding and extending.
