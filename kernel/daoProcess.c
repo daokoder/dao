@@ -4148,10 +4148,7 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 	DaoArray *array = DaoProcess_GetArray( self, vmc );
 
 	if( count && array->etype == DAO_NONE ){
-		DaoNamespace *ns = self->activeNamespace;
 		DaoValue *p = self->activeValues[opA];
-		DaoType *it = DaoNamespace_GetType( ns, p );
-		DaoType *type = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & it, 1 );
 		switch( p->type ){
 			case DAO_INTEGER :
 			case DAO_FLOAT :
@@ -4160,6 +4157,8 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 			case DAO_ARRAY : array->etype = p->xArray.etype; break;
 			default : DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" ); return;
 		}
+	}else if( array->etype == DAO_NONE ){
+		array->etype = DAO_FLOAT;
 	}
 	for( j=0; j<count; j++){
 		DaoValue *p = self->activeValues[ opA + j ];

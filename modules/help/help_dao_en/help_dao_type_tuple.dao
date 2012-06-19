@@ -4,6 +4,50 @@ load help;
 dao.type.tuple
 @[name]
 
+@[text]
+A @[green]tuple@[green] is an ordered list of a fixed number of items
+with the same type or different types. Each item in a tuple can optionally
+have a field name.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+TupleEnum ::= '(' [ Identifier '=>' ] Expression { ',' [ Identifier '=>' ] Expression } ')'
+TupleEnum2 ::= 'tuple' '{' [ Identifier '=>' ] Expression { ',' [ Identifier '=>' ] Expression } '}'
+
+Tuple ::= TupleEnum | TupleEnum2
+@[code]
+
+
+@[subsection]Examples@[subsection]
+@[code]
+tup1 = ( 123, 'abc' )  # tuple with unnamed items;
+tup2 = ( index => 123, 'abc' )  # first item is named as "index";
+tup3 = tuple{ 123, name => 'abc' }
+@[code]
+
+
+@[subsection]Tuple Type Name@[subsection]
+
+The type names of tuples are slightly more sophisticated than type names of array, list or map.
+@[code]
+AnyTuple ::= 'tuple' [ '<' [ '...' ] '>' ]
+TupleItemType ::= [ Identifier ':' ] Type
+NonEmptyTupleType ::= 'tuple' '<' TupleItemType ( ',' TupleItemType )* [ '...' ] '>'
+TupleType ::= AnyTuple | NonEmptyTupleType
+@[code]
+A tuple type with '...' at the end of item type list is a variadic tuple type, which indicates that a tuple matching to this type may contain more items than the listed item types.
+
+
+@[subsection]Example Types@[subsection]
+@[code]
+tup1 :tuple<int,int> = (1, 2)
+tup2 :tuple<index:int,name:string> = (123, 'abc')
+tup3 :tuple<int,int,...> = (1, 2, 3, 'abc')
+@[code]
+@[text]
+
+
 @[title]
 Tuple Type
 @[title]

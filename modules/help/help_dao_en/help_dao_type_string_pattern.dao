@@ -1,0 +1,340 @@
+load help;
+
+
+################################################################################
+################################################################################
+########
+######## String Pattern Matching
+########
+################################################################################
+################################################################################
+
+@[name]
+dao.type.string.pattern
+@[name]
+
+@[title]
+String Pattern Matching
+@[title]
+
+@[text]
+
+
+@[subsection]Introduction@[subsection]
+
+Dao has built-in support for regular expression based string pattern matching.
+A regular expression (@[cyan]regex@[cyan]) is a string representing a pattern (rules),
+from which a set of strings can be constructed.
+The pattern represented by a regular expression is used to search
+in a string for sub-strings that can be constructed from that pattern,
+namely sub-strings that match that pattern.
+A number of operations can be performed on the resulting sub-strings,
+including extraction, replacing and splitting etc.
+
+@[comment]
+The internal representation (the patterns and searching algorithm) of a
+regex uses both MulitBytes Strings and Wide Charactor Strings,
+when a regex is applied to a MBS or a WCS, the corresponding representation
+is used to match the string. So to improve the regex matching efficiency,
+it\'s better to represent text in MBS with single quotation if most of the
+symbols can be encoded in single byte, and represent text in WCS with
+double quotation if most of the symbols require more than one byte to encode.
+@[comment]
+
+Starting from the latest release, the functionalities of regex
+can be accessed by string methods.
+The previous perl-style regex has been removed 
+(as a way to simplify the language and implementation).
+The syntax of the new regex is similar to that of Lua,
+but most of the character class names are different.
+
+
+@[subsection]Character Class@[subsection]
+
+A character class is used to identify a set of characters.
+@[list]
+--@[green]x@[green] : ordinary characters represent themselves, excluding magic characters @[green]^$()%.[]*+-?{}\<\>@[green];
+--@[green].@[green] : a dot represents any characters;
+--@[green]%a@[green] : all alphabetic characters;
+--@[green]%s@[green] : all white space characters;
+--@[green]%k@[green] : all control characters;
+--@[green]%p@[green] : all punctuation characters;
+--@[green]%d@[green] : all digits;
+--@[green]%x@[green] : all hexadecimal digits;
+--@[green]%c@[green] : all lower case characters;
+--@[green]%w@[green] : all alphabetic characters, digists and character @[green]_@[green];
+--@[green]%A@[green] : non alphabetic characters, complement of @[green]%a@[green];
+--@[green]%S@[green] : non white space characters, complement of @[green]%s@[green];
+--@[green]%K@[green] : non control characters, complement of @[green]%k@[green];
+--@[green]%P@[green] : non punctuation characters, complement of @[green]%p@[green];
+--@[green]%D@[green] : non digits, complement of @[green]%d@[green];
+--@[green]%X@[green] : non hexadecimal digits, complement of @[green]%x@[green];
+--@[green]%C@[green] : upper case characters;
+--@[green]%W@[green] : complement of @[green]%w@[green];
+--@[green]%x@[green] : represents character @[green]x@[green], where @[green]x@[green] is
+any non-alphanumeric character; @[green]x@[green] may also be an alphabetic 
+character if it is not one of the character class symbols or @[green]b@[green]
+or @[green]B@[green].
+--@[green][set]@[green] : represents the union of all characters in @[green]set@[green];
+a range of characters starting from a character @[green]x@[green] 
+up to another character @[green]y@[green] can be included in @[green]set@[green] 
+as @[green]x-y@[green]; the above character classes can also be included in @[green]set@[green];
+--@[green][^set]@[green] : complement of @[green][set]@[green];
+@[list]
+
+
+@[subsection]Pattern Item@[subsection]
+
+A pattern item can be
+@[list]
+-- a single character class;
+--@[green]^@[green] : match at the begin of a string;
+--@[green]$@[green] : match at the end of a string;
+--@[green]%n@[green] : match @[green]n@[green]-th captured sub string; @[green]n@[green] can be one or more digits;
+--@[green]%bxy@[green] : match a balanced pair of characters @[green]x@[green] and @[green]y@[green];
+here balance means, starting from the same matched position, 
+the mached sub string should contain 
+the same number and minimum number of @[green]x@[green] and @[green]y@[green];
+the same as that in Lua;
+--@[green]%B{pattern1}{pattern2}@[green] : match a balanced pair of patterns
+@[green]pattern1@[green] and @[green]pattern2@[green]; here balance has the same meaning as in
+@[green]%bxy@[green];
+@[list]
+
+A pattern item @[green]e@[green] can be optional skiped or matched repeatedly as indicated by:
+@[list]
+--@[green]e?@[green] : match zero time or once;
+--@[green]e*@[green] : match zero time or any number of times;
+--@[green]e+@[green] : match once or more;
+--@[green]e{n}@[green] : match exactly @[green]n@[green] times;
+--@[green]e{n,}@[green] : match at least @[green]n@[green] times;
+--@[green]e{,n}@[green] : match at most @[green]n@[green] times;
+--@[green]e{n,m}@[green] : match at least @[green]n@[green] times and at most @[green]m@[green] times;
+@[list]
+
+
+@[subsection]Grouping and Captures@[subsection]
+
+In a pattern, one or more pattern items can be grouped together 
+by parenthesis to form sub patterns (group). 
+Alternative patterns in a group can be separated by @[green]|@[green],
+and the group could be optionally skipped if an empty alternative pattern is
+specified as @[cyan](|pattern)@[cyan] or @[cyan](pattern|)@[cyan].
+When a string is matched to
+a pattern, the sub strings that match the groups of sub patterns
+can be captured for other use. Captures are numbered according to their
+left parenthesis. For example, in pattern @[cyan](%a+)%s*(%d+(%a+))@[cyan],
+the first @[cyan](%a+)@[cyan] will have group number 1, and @[cyan](%d+(%a+))@[cyan]
+will have group number 2, and the second @[cyan](%a+)@[cyan] will have group number 3.
+For convenience, the whole pattern has group number 0.
+
+
+In case there are multiple possible ways of matching a substring starting
+from the same position, the matching length is calculated as the sum
+of the lengths of the sub-matches of all groups (including number 0 group) 
+in the pattern, and the matching giving maximum matching length is 
+returned as the result. In this way, one can put a deeper nesting of parenthesis
+around a group, if one want that group has high priority to be matched.
+For example, when @[cyan]1a2@[cyan] is matched to patterh @[cyan](%d%w*)(%w*%d)@[cyan],
+there are two possible ways of macthing, namely, @[cyan]1a@[cyan] matching to @[cyan](%d%w*)@[cyan]
+and @[cyan]2@[cyan] matching to @[cyan](%w*%d)@[cyan], or @[cyan]1@[cyan] matching to @[cyan](%d%w*)@[cyan]
+and @[cyan]a2@[cyan] matching to @[cyan](%w*%d)@[cyan],
+but if an extra parenthesis is added to one of the group, for example, as
+@[cyan](%d%w*)((%w*%d))@[cyan], then the matching becomes unique, which is
+the second way of matching where letter @[cyan]a@[cyan] is matched in the last group.
+
+
+
+@[subsection]
+String Matching Methods
+@[subsection]
+
+Like in Lua, the regular expression matching functionalities are accessed
+through various string methods. The regular expression patterns are stored 
+in strings, and passed to these string methods. 
+Each pattern string corresponds to an internal representation of a regular expression,
+which are compiled from the pattern string at the first time it is used.
+Though the strings that represent the same pattern can be passed multiple times 
+to these methods, they are compiled once in one process (virtual machine process).
+So the overhead of compiling a regular expression can be normally ignored.
+
+
+The following methods are provided:
+@[list]
+--@[green]string.pfind()@[green]: see @[blue]dao.type.string.pattern.pfind@[blue];
+--@[green]string.match()@[green]: see @[blue]dao.type.string.pattern.match@[blue];
+--@[green]string.submatch()@[green]: see @[blue]dao.type.string.pattern.submatch@[blue];
+--@[green]string.extract()@[green]: see @[blue]dao.type.string.pattern.extract@[blue];
+--@[green]string.capture()@[green]: see @[blue]dao.type.string.pattern.capture@[blue];
+--@[green]string.change()@[green]: see @[blue]dao.type.string.pattern.change@[blue];
+--@[green]string.mpack()@[green]: see @[blue]dao.type.string.pattern.mpack@[blue];
+@[list]
+@[text]
+
+
+
+
+################################################################################
+################################################################################
+########
+######## Pattern Matching Methods
+########
+################################################################################
+################################################################################
+
+
+
+@[name]
+dao.type.string.pattern.pfind
+@[name]
+
+@[title]
+string.pfind()
+@[title]
+
+@[text]
+
+@[code]
+string.pfind( pt :string, index = 0, start = 0, end = 0 )=>list<tuple<start:int,end:int> >
+@[code]
+
+This method searches for the position(s) of substring(s) that match(es) to
+the pattern represented by @[cyan]pt@[cyan]. If @[cyan]index@[cyan] is greater than zero,
+search for the @[cyan]index@[cyan]-th occurrence of the matched substring,
+otherwise, search for all. The searching starts from position @[cyan]start@[cyan],
+and ends at @[cyan]end@[cyan] if it is greater than zero. Zero value for @[cyan]end@[cyan]
+indicates searching until the end of the string.
+@[text]
+
+
+@[name]
+dao.type.string.pattern.match
+@[name]
+
+@[title]
+string.match()
+@[title]
+
+@[text]
+@[code]
+string.match( pt :string, start=0, end=0, substring=1 ) => tuple<start:int,end:int,substring:string>
+@[code]
+Find a substring that matches to @[cyan]pt@[cyan], between starting position @[cyan]start@[cyan] 
+and ending position @[cyan]end@[cyan]. Also extract the matched subtring if parmeter
+@[cyan]substring@[cyan] is not zero.
+@[text]
+
+
+@[name]
+dao.type.string.pattern.submatch
+@[name]
+
+@[title]
+string.submatch()
+@[title]
+
+@[text]
+@[code]
+string.submatch( pt :string, group :int, start=0, end=0 ) => tuple<start:int,end:int,substring:string>
+@[code]
+Find a substring that matches to @[cyan]pt@[cyan], between starting position @[cyan]start@[cyan] 
+and ending position @[cyan]end@[cyan], and extract the location of substring that matches 
+the pattern group as specified by @[cyan]group@[cyan].
+@[text]
+
+
+@[name]
+dao.type.string.pattern.extract
+@[name]
+
+@[title]
+string.extract()
+@[title]
+
+@[text]
+@[code]
+string.extract( 
+		pattern :string, 
+		mtype   :enum<both,matched,unmatched> = $matched,
+		mask    :tuple<pattern:string,reversed:enum<false,true>> = ('', $false)
+		) => list<string>
+@[code]
+
+Depending on the value of @[cyan]mtype@[cyan], string.extract() returns all the subtrings
+that match to @[cyan]pattern@[cyan] if @[cyan]mtype@[cyan] is set to @[cyan]$matched@[cyan];
+or all the substrings of the unmatched parts if @[cyan]mtype@[cyan] is @[cyan]$unmatched@[cyan];
+or all the substrings of both the matched and unmatched parts
+if @[cyan]mtype@[cyan] is @[cyan]$all@[cyan].
+
+
+An additional parameter @[cyan]mask@[cyan] can be used to restrict the seaching
+of @[cyan]pattern@[cyan] within the substrings that match to @[cyan]mask.pattern@[cyan],
+if @[cyan]mask.reversed@[cyan] is set to @[cyan]$false@[cyan];
+otherwise, the searching will be restricted outside of @[cyan]mask.pattern@[cyan]-matched regions.
+@[text]
+
+
+@[name]
+dao.type.string.pattern.capture
+@[name]
+
+@[title]
+string.capture()
+@[title]
+
+@[text]
+@[code]
+string.capture( pt : string, start=0, end=0 )=>list<string>
+@[code]
+
+Search for a substring that matches to @[cyan]pt@[cyan],
+and capture the substrings that match to pattern groups.
+The captured substrings are returned as a list,
+where the i-th item is substring that matches to the i-th group.
+@[text]
+
+
+@[name]
+dao.type.string.pattern.change
+@[name]
+
+@[title]
+string.change()
+@[title]
+
+@[text]
+@[code]
+string.change( pt :string, s :string, index=0, start=0, end=0 ) => int
+@[code]
+
+Replace the substrings that match to @[cyan]pt@[cyan] with string @[cyan]s@[cyan],
+which may contain reference to captured subtrings for groups,
+for example, if @[cyan]s = 'abc%1'@[cyan], it means replacing with a string
+	which is a concatenation of @[cyan]abc@[cyan] and the substring
+	that match to the first group of @[cyan]pt@[cyan].
+
+
+If @[cyan]index@[cyan] is positive, replace the @[cyan]index@[cyan]-th occurrence
+of the substring matching to @[cyan]pt@[cyan]. The substitution can also
+be restricted within a region starting from position @[cyan]start@[cyan]
+until position @[cyan]end@[cyan].
+
+
+The number of occurrence of substitution is returned.
+@[text]
+
+
+@[name]
+dao.type.string.pattern.mpack
+@[name]
+
+@[title]
+string.mpack()
+@[title]
+
+@[text]
+@[code]
+string.mpack( pt :string, s :string, index=0 ) => string
+string.mpack( pt :string, s :string, index :int, count :int ) => list<string>
+@[code]
+@[text]

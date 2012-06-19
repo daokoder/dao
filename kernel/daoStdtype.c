@@ -2073,7 +2073,8 @@ static void DaoLIST_Resize( DaoProcess *proc, DaoValue *p[], int N )
 				"not permitted to create large list in safe running mode" );
 		return;
 	}
-	if( self->unitype && self->unitype->value ) fill = self->unitype->value;
+	if( self->unitype && self->unitype->nested->size )
+		fill = self->unitype->nested->items.pType[0]->value;
 	DArray_Resize( & self->items, size, fill );
 }
 static int DaoList_CheckType( DaoList *self, DaoProcess *proc )

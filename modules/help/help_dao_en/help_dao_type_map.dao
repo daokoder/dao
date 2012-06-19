@@ -8,6 +8,30 @@ dao.type.map
 Map or Hash Map Container Type
 @[title]
 
+@[text]
+Dao supports map and hash map as a  single type @[green]map@[green].
+A map contains ordered keys, while a hash map contains unordered keys.
+They can be created by enumeration in almost the identical way, except that
+@[green]=>@[green] is used for map and @[green]:@[green] is used for hash map.
+
+@[subsection]Definition@[subsection]
+@[code]
+MapKeyValueList ::= Expression => Expression { ',' Expression => Expression }
+HashKeyValueList ::= Expression : Expression { ',' Expression : Expression }
+
+MapEnumeration ::= '{' MapKeyValueList '}'
+HashEnumeration ::= '{' HashKeyValueList '}'
+
+MapEnumeration2 ::= 'map' '{' MapKeyValueList '}'
+HashEnumeration2 ::= 'map' '{' HashKeyValueList '}'
+
+Map ::= MapEnumeration | MapEnumeration2 | HashEnumeration | HashEnumeration2
+@[code]
+
+
+@[text]
+
+
 @[name]
 dao.type.map.init
 @[name]

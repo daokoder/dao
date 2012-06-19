@@ -1,5 +1,6 @@
 load help;
 
+
 @[name]
 dao.type.array
 @[name]
@@ -7,6 +8,52 @@ dao.type.array
 @[title]
 Multi-dimensional Numeric Array
 @[title]
+
+@[text]
+Multi-dimentional numeric array is supported by Dao as @[green]array@[green] type.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+VectorEnumeration ::= '[' ExpressionList ']'
+MatrixEnumeration ::= '[' ExpressionList { ';' ExpressionList } ']'
+ArrayByRange ::= '[' Expression [ ':' Expression ] : Expression ']'
+
+VectorEnumeration2 ::= 'array' '{' ExpressionList '}'
+MatrixEnumeration2 ::= 'array' '{' ExpressionList { ';' ExpressionList } '}'
+ArrayByRange2 ::= 'array' '{' Expression [ ':' Expression ] : Expression '}'
+
+Array ::= VectorEnumeration | MatrixEnumeration | ArrayByRange
+          | VectorEnumeration2 | MatrixEnumeration2 | ArrayByRange2
+@[code]
+Please note that @[green]VectorEnumeration@[green] or @[green]VectorEnumeration2@[green]
+can still create a matrix or a multi-dimensional array, 
+if the @[green]ExpressionList@[green] produces a list of arrays.
+
+
+Four numeric types are supported by the @[green]array@[green] type:
+@[green]int@[green], @[green]float@[green], @[green]double@[green]
+and @[green]complex@[green]. When an array is created by enumeration without 
+explicit type declaration, its numeric type is inferred from the first expression 
+of the expression list, if the enumeration is not empty; otherwise, 
+@[green]float@[green] will be used as the numeric type.
+
+
+Dao supports a number of built-in operations for array. For arithmetic operations, 
+they are always supported element-wise operations. 
+
+
+@[subsection]Examples@[subsection]
+@[code]
+vec1 = [1, 2, 3]  # array<int> vector, or 1x3 matrix;
+vec2 = [1.0; 2; 3]  # array<float> 3x1 matrix, or transposed vector;
+mat1 = [1D, 2; 3, 4]  # array<double> 2x2 matrix;
+mat2 = [ [1, 2], [3, 4] ]  # 2x2 matrix
+mat3 = [ [1, 2, 3] : 5 ]  # 5x3 matrix;
+mat4 = array{ 1, 2; 3, 4 }  # 2x2 matrix
+@[code]
+
+@[text]
 
 @[name]
 dao.type.array.init

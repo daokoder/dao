@@ -8,6 +8,36 @@ dao.type.list
 List Container Type
 @[title]
 
+@[text]
+In Dao, @[green]list@[green] is supported as a generic container type
+which can contain any data type. Internally it is implemented as a dynamic array.
+
+
+@[subsection]Definition@[subsection]
+@[code]
+ListEnumeration ::= '{' ExpressionList '}'
+
+ListEnumeration2 ::= 'list' '{' ExpressionList '}'
+ListByRange ::= 'list' '{' Expression [ ':' Expression ] : Expression '}'
+
+List ::= ListEnumeration | ListEnumeration2 | ListByRange
+@[code]
+When a list is created by enumeration without explicit type declaration, 
+its type is inferred from the first expression of the expression list, 
+if the enumeration is not empty; otherwise, @[green]list<any>@[green] 
+will be used as its type.
+
+
+@[subsection]Examples@[subsection]
+@[code]
+list1 = { 1, 2, 3 }  # list<int>
+list2 = { 1.0, 2, 3 }  # list<float>
+list3 = list{ 1 : 2 : 5 } # list<int>
+@[code]
+
+@[text]
+
+
 @[name]
 dao.type.list.init
 @[name]
