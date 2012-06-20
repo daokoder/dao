@@ -1,0 +1,37 @@
+
+load help;
+
+@[name]
+module.core.sys
+@[name]
+
+@[title]
+System Dependent Core Functions
+@[title]
+
+
+@[name]
+module.core.aux
+@[name]
+
+@[title]
+System Dependent Core Functions
+@[title]
+
+
+@[name]
+module.core.math
+@[name]
+
+@[title]
+System Dependent Core Functions
+@[title]
+
+
+@[name]
+module.core.meta
+@[name]
+
+@[title]
+System Dependent Core Functions
+@[title]

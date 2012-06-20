@@ -1816,8 +1816,8 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	const char *evname = "DAO_HELP_LANG";
 	char *lang = getenv( evname );
-	char fname[20] = "help_help_";
 	int len = strlen( evname );
+	DString *fname = DString_New(1);
 	DaoType *type;
 
 	if( lang == NULL ){
@@ -1833,7 +1833,6 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 		putenv( lang );
 		lang += len + 1;
 	}
-	strcat( fname, lang );
 
 	dao_vmspace = vmSpace;
 	DaoNamespace_AddCodeInliner( ns, "name", dao_help_name );
@@ -1846,7 +1845,33 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	daox_helper = DaoxHelper_New();
 	daox_cdata_helper = (DaoValue*) DaoCdata_New( type, daox_helper );
 	DaoNamespace_AddConstValue( ns, "__helper__", daox_cdata_helper );
-	DaoVmSpace_Load( vmSpace, fname );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_dao" );
+	DaoVmSpace_Load( vmSpace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_daovm" );
+	DaoVmSpace_Load( vmSpace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_help" );
+	DaoVmSpace_Load( vmSpace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_tool" );
+	DaoVmSpace_Load( vmSpace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_module" );
+	DaoVmSpace_Load( vmSpace, fname->mbs );
+
+	DString_Delete( fname );
 	return 0;
 }
 
