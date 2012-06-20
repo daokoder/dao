@@ -18,7 +18,7 @@ It can be used as enumerated constant in C++ or as symbol in Ruby.
 
 @[subsection]Definition@[subsection]
 @[code]
-EnumEntry = Identifier [ = ConstExpr ]
+EnumEntry ::= Identifier [ = ConstExpr ]
 
 Enum1 ::= 'enum' Identifier '{' EnumEntry { ',' EnumEntry } '}'
 Enum2 ::= 'enum' Identifier '{' EnumEntry { ';' EnumEntry } '}'

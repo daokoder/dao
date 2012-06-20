@@ -161,13 +161,13 @@ So the overhead of compiling a regular expression can be normally ignored.
 
 The following methods are provided:
 @[list]
---@[green]string.pfind()@[green]: see @[blue]dao.type.string.pattern.pfind@[blue];
---@[green]string.match()@[green]: see @[blue]dao.type.string.pattern.match@[blue];
---@[green]string.submatch()@[green]: see @[blue]dao.type.string.pattern.submatch@[blue];
---@[green]string.extract()@[green]: see @[blue]dao.type.string.pattern.extract@[blue];
---@[green]string.capture()@[green]: see @[blue]dao.type.string.pattern.capture@[blue];
---@[green]string.change()@[green]: see @[blue]dao.type.string.pattern.change@[blue];
---@[green]string.mpack()@[green]: see @[blue]dao.type.string.pattern.mpack@[blue];
+--@[green]string.pfind()@[green]: see @[node]dao.type.string.pattern.pfind@[node];
+--@[green]string.match()@[green]: see @[node]dao.type.string.pattern.match@[node];
+--@[green]string.submatch()@[green]: see @[node]dao.type.string.pattern.submatch@[node];
+--@[green]string.extract()@[green]: see @[node]dao.type.string.pattern.extract@[node];
+--@[green]string.capture()@[green]: see @[node]dao.type.string.pattern.capture@[node];
+--@[green]string.change()@[green]: see @[node]dao.type.string.pattern.change@[node];
+--@[green]string.mpack()@[green]: see @[node]dao.type.string.pattern.mpack@[node];
 @[list]
 @[text]
 

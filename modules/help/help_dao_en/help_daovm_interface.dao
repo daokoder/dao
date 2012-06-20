@@ -296,7 +296,7 @@ Extending Dao Virtual Machine
 
 @[text]
 
-In the help entry @[blue]daovm.interface.embedding@[blue], it has been 
+In the help entry @[node]daovm.interface.embedding@[node], it has been 
 demonstrated that embedding Dao is extremely simple.
 Here we will demonstrate that extending Dao is also extremely simple.
 Since Dao supports explicit type specification in function parameter lists,

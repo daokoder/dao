@@ -51,6 +51,7 @@
 enum DaoxHelpBlockType
 {
 	DAOX_HELP_NONE ,
+	DAOX_HELP_NODE ,
 	DAOX_HELP_TEXT ,
 	DAOX_HELP_CODE ,
 	DAOX_HELP_LIST ,
@@ -189,6 +190,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 {
 	const char *pat = "@ %[ %s* (| : | %w+%s*:) %s* %w+ %s* ( %( %s* (|%w+) %s* %) | ) [^%]]* %]";
 	DString spat = DString_WrapMBS( pat );
+	DString snode = DString_WrapMBS( "node" );
 	DString scode = DString_WrapMBS( "code" );
 	DString slist = DString_WrapMBS( "list" );
 	DString comment = DString_WrapMBS( "comment" );
@@ -209,6 +211,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	self->process = proc;
 	self->stream = stream;
 	self->output = NULL;
+	DMap_Insert( self->mtypes, & snode, (void*)(size_t)DAOX_HELP_NODE );
 	DMap_Insert( self->mtypes, & scode, (void*)(size_t)DAOX_HELP_CODE );
 	DMap_Insert( self->mtypes, & slist, (void*)(size_t)DAOX_HELP_LIST );
 	DMap_Insert( self->mtypes, & comment, (void*)(size_t)DAOX_HELP_COMMENT );
@@ -382,6 +385,7 @@ static void DaoxStream_PrintLineNumber( DaoxStream *self, int line, int offset )
 }
 static void DaoxStream_WriteEntryName( DaoxStream *self, DString *name )
 {
+	if( self->offset && isalnum( self->last ) ) DaoxStream_WriteChar( self, ' ' );
 	if( self->output ){
 		if( self->fmtHTML ){
 			DString_AppendMBS( self->output, "<a href=\"" );
@@ -406,6 +410,8 @@ static void DaoxStream_WriteEntryName2( DaoxStream *self, DString *name )
 		DaoxStream_WriteEntryName( self, name );
 		return;
 	}
+	DString_AppendMBS( self->output, "<a href=\"index.html\">ALL</a>" );
+	DString_AppendMBS( self->output, "." );
 	mbs = DString_New(1);
 	while( start < name->size ){
 		daoint end = DString_FindChar( name, '.', start );
@@ -420,7 +426,7 @@ static void DaoxStream_WriteEntryName2( DaoxStream *self, DString *name )
 		DString_AppendMBS( self->output, "</a>" );
 		start = end + 1;
 	}
-	self->offset += name->size;
+	self->offset += 4 + name->size;
 	self->last = name->mbs[name->size-1];
 }
 
@@ -704,6 +710,16 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 			}
 			fgcolor = -100;
 			break;
+		case DTOK_LT :
+			if( self->output && self->fmtHTML ){
+				if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, bgcolor );
+				DString_AppendMBS( self->output, "&lt;" );
+				self->offset += 1;
+				self->last = '<';
+				if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, NULL );
+				fgcolor = -100;
+			}
+			break;
 		case DKEY_USE : case DKEY_LOAD : case DKEY_BIND :
 		case DKEY_AS : 
 		case DKEY_AND : case DKEY_OR : case DKEY_NOT :
@@ -912,6 +928,8 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 				}
 			}else if( mtype == DAOX_HELP_LIST ){
 				DaoxStream_WriteList( self, part, offset, width, 1, listdep+1 );
+			}else if( mtype == DAOX_HELP_NODE ){
+				DaoxStream_WriteEntryName( self, part );
 			}else if( mtype == DAOX_HELP_COMMENT ){
 				/* skip comments; */
 			}else{

@@ -44,7 +44,7 @@ it will be the only instance object to be returned by the initializer of @[green
 The type @[green]help@[green] provides several of initializers and static methods
 to access the help system:
 @[list]
-==@[green]help()@[green]: see @[blue]help.method.help@[blue] for details;
+==@[green]help()@[green]: see @[node]help.method.help@[node] for details;
 @[comment]
 There are three versions of initializers:
 @[code()]
@@ -55,13 +55,13 @@ help( object :any, keywords :string, run = 0 )
 The first initializer @[code]help()@[code].
 @[comment]
 
-==@[green]help.search()@[green]: see @[blue]help.method.search@[blue] for details;
-==@[green]help.load()@[green]: see @[blue]help.method.load@[blue] for details;
-==@[green]help.list()@[green]: see @[blue]help.method.list@[blue] for details;
+==@[green]help.search()@[green]: see @[node]help.method.search@[node] for details;
+==@[green]help.load()@[green]: see @[node]help.method.load@[node] for details;
+==@[green]help.list()@[green]: see @[node]help.method.list@[node] for details;
 @[list]
 
 To understand how to write help files for this help system, 
-please see @[blue]help.format@[blue].
+please see @[node]help.format@[node].
 @[text]
 
 

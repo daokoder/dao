@@ -69,7 +69,7 @@ SciSinglePrecision ::= DecNumber 'e' [ '+' | '-' ] DecInteger
 
 Float ::= DecSinglePrecision | SciSinglePrecision
 @[code]
-where @[green]DecInteger@[green] is defined @[blue]dao.type.int@[blue].
+where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node].
 
 
 @[subsection]Examples@[subsection]
@@ -106,9 +106,9 @@ floating point numbers.
 SciDoublePrecision ::= DecNumber 'E' [ '+' | '-' ] DecInteger
 Double ::= (DecInteger | DecSinglePrecision) 'D' | SciDoublePrecision
 @[code]
-where @[green]DecInteger@[green] is defined @[blue]dao.type.int@[blue],
+where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node],
 and @[green]DecNumber@[green] and @[green]DecSinglePrecision@[green]
-are defined in @[blue]dao.type.float@[blue].
+are defined in @[node]dao.type.float@[node].
 
 
 @[subsection]Examples@[subsection]
