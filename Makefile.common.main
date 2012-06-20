@@ -129,7 +129,7 @@ kernel/daoMain.o: kernel/daoMain.c
 
 ####### Build rules
 
-all: $(DAO_DLL) $(DAO_EXE) modules
+all: $(DAO_DLL) $(DAO_EXE) modules doc
 
 lib: $(DAO_DLL) modules
 
@@ -151,9 +151,17 @@ modules:
 	-cd modules && $(MAKE)
 
 
+DAO_HELP_LANG ?= en
+
+doc:
+	@$(HAS_DIR) doc/html || $(MKDIR) doc/html
+	@$(HAS_DIR) doc/html/$(DAO_HELP_LANG) || $(MKDIR) doc/html/$(DAO_HELP_LANG)
+	LANG=$(DAO_HELP_LANG) ./dao -e "load help; help.export('','doc/html/$(DAO_HELP_LANG)')"
+
+
 checkout:
 	-$(HAS_FILE) modules/Makefile2 || (cd modules && fossil clone http://daovm.net/projects/dao-modules dao-modules.fossil && fossil open --nested dao-modules.fossil)
 	-$(HAS_DIR) tools/clangdao || (cd tools && fossil clone http://daovm.net/projects/dao-tools dao-tools.fossil && fossil open --nested dao-tools.fossil)
 
 
-.PHONY: modules clean
+.PHONY: modules doc clean
