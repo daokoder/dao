@@ -2,7 +2,7 @@
 # This document is released under the GNU Free Documentation License.
 
 load help;
-load help_dao_zh.help_dao;
+load help_zh.help_dao;
 
 
 message =
