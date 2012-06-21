@@ -597,7 +597,8 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
-static DaoFuncItem stdMeths[]=
+
+DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
@@ -625,6 +626,5 @@ static DaoFuncItem stdMeths[]=
 	{ NULL, NULL }
 };
 
-DaoTypeBase libStandardTyper = { "std", NULL, NULL, stdMeths, {0}, {0}, NULL, NULL };
 
 

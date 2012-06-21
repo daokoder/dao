@@ -796,9 +796,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
 
 	if( vms == NULL || vms->nsInternal == NULL ){
-		DString_SetMBS( name, "io" ); 
-		DaoNamespace_AddConst( self, name, (DaoValue*) vms->stdioStream, DAO_DATA_PUBLIC );
-
 		DString_SetMBS( name, "exceptions" );
 		value = (DaoValue*) DaoList_New();
 		DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );

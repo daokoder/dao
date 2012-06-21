@@ -168,7 +168,6 @@ extern DaoTypeBase  futureTyper;
 extern DaoTypeBase mutexTyper;
 extern DaoTypeBase condvTyper;
 extern DaoTypeBase semaTyper;
-extern DaoTypeBase thdMasterTyper;
 
 extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
@@ -216,9 +215,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_MACRO     :  return & macroTyper;
 #endif
 #ifdef DAO_WITH_CONCURRENT
-	case DAO_MUTEX     :  return & mutexTyper;
-	case DAO_CONDVAR   :  return & condvTyper;
-	case DAO_SEMA      :  return & semaTyper;
 	case DAO_FUTURE    :  return & futureTyper;
 #endif
 	default : break;
@@ -1762,8 +1758,6 @@ const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self )
 	return self->pathLoading->items.pString[0]->mbs;
 }
 
-extern DaoTypeBase libStandardTyper;
-extern DaoTypeBase thdMasterTyper;
 extern DaoTypeBase vmpTyper;
 
 extern DaoTypeBase DaoFdSet_Typer;
@@ -1957,6 +1951,10 @@ const char *method_typename =
 
 
 #ifdef DAO_WITH_THREAD
+DaoType *dao_type_mutex = NULL;
+DaoType *dao_type_condvar = NULL;
+DaoType *dao_type_sema = NULL;
+
 extern DMutex mutex_long_sharing;
 extern DMutex mutex_string_sharing;
 extern DMutex mutex_type_map;
@@ -1966,7 +1964,11 @@ extern DMutex mutex_routines_update;
 extern DMutex mutex_routine_specialize;
 extern DMutex mutex_routine_specialize2;
 extern DMutex dao_cdata_mutex;
+extern DaoFuncItem dao_mt_methods[];
 #endif
+
+extern DaoFuncItem dao_std_methods[];
+extern DaoFuncItem dao_io_methods[];
 
 #include<signal.h>
 void print_trace();
@@ -2014,7 +2016,7 @@ DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs, *mbs2;
 	DaoVmSpace *vms;
-	DaoNamespace *ns;
+	DaoNamespace *ns, *ns2;
 	DaoType *type, *type1, *type2, *type3, *type4;
 	DaoModuleOnLoad fpter;
 	char *daodir = getenv( "DAO_DIR" );
@@ -2149,10 +2151,14 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_SetupType( vms->nsInternal, & listTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & mapTyper );
 
-	DaoNamespace_SetupType( vms->nsInternal, & streamTyper );
-	type = DaoNamespace_MakeType( ns, "stream", DAO_STREAM, NULL, NULL, 0 );
+	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "io" );
+
+	type = DaoNamespace_MakeType( ns2, "stream", DAO_STREAM, NULL, NULL, 0 );
 	type->value = (DaoValue*) vms->stdioStream;
 	GC_IncRC( vms->stdioStream );
+
+	DaoNamespace_SetupType( ns2, & streamTyper );
+	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
 
 	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 0 );
 	dao_default_cdata.ctype->cdatatype = DAO_CDATA_PTR;
@@ -2161,23 +2167,16 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoException_Setup( vms->nsInternal );
 
 #ifdef DAO_WITH_CONCURRENT
-	type2 = DaoNamespace_MakeType( ns, "mutex", DAO_MUTEX, NULL, NULL, 0 );
-	type3 = DaoNamespace_MakeType( ns, "condition", DAO_CONDVAR, NULL, NULL, 0 );
-	type4 = DaoNamespace_MakeType( ns, "semaphore", DAO_SEMA, NULL, NULL, 0 );
-	type2->value = (DaoValue*) DaoMutex_New();
-	type3->value = (DaoValue*) DaoCondVar_New();
-	type4->value = (DaoValue*) DaoSema_New( 0 );
-	GC_IncRC( type2->value );
-	GC_IncRC( type3->value );
-	GC_IncRC( type4->value );
-	DaoNamespace_WrapType( ns, & thdMasterTyper, 1 );
-	DaoNamespace_SetupType( ns, & mutexTyper );
-	DaoNamespace_SetupType( ns, & condvTyper );
-	DaoNamespace_SetupType( ns, & semaTyper );
-	DaoNamespace_SetupType( ns, & futureTyper );
+	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "mt" );
+	dao_type_mutex = DaoNamespace_WrapType( ns2, & mutexTyper, 0 );
+	dao_type_condvar = DaoNamespace_WrapType( ns2, & condvTyper, 0 );
+	dao_type_sema = DaoNamespace_WrapType( ns2, & semaTyper, 0 );
+	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
 	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );
-	DaoNamespace_WrapType( vms->nsInternal, & libStandardTyper, 1 );
+
+	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "std" );
+	DaoNamespace_WrapFunctions( ns2, dao_std_methods );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );
 

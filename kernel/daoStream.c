@@ -625,22 +625,28 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PopFrame( proc );
 }
 
-static DaoFuncItem streamMeths[] =
+DaoFuncItem dao_io_methods[] =
 {
-	{ DaoIO_Write,     "write( self :stream, ... )" },
 	{ DaoIO_Write2,    "write( ... )" },
-	{ DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
 	{ DaoIO_Writef2,   "writef( format : string, ... )" },
-	{ DaoIO_Writeln,   "writeln( self :stream, ... )" },
 	{ DaoIO_Writeln2,  "writeln( ... )" },
-	{ DaoIO_Flush,     "flush( self :stream )" },
-	{ DaoIO_Read,      "read( self :stream, count=0 )=>string" },
-	{ DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },
 	{ DaoIO_Read,      "read( )=>string" },
 	{ DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{ DaoIO_Open,      "open( )=>stream" },
 	{ DaoIO_Open,      "open( file :string, mode :string )=>stream" },
 	{ DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
+
+	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>" },
+};
+
+static DaoFuncItem streamMeths[] =
+{
+	{ DaoIO_Write,     "write( self :stream, ... )" },
+	{ DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
+	{ DaoIO_Writeln,   "writeln( self :stream, ... )" },
+	{ DaoIO_Flush,     "flush( self :stream )" },
+	{ DaoIO_Read,      "read( self :stream, count=0 )=>string" },
+	{ DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },
 	{ DaoIO_GetString, "getstring( self :stream )=>string" },
 	{ DaoIO_Close,     "close( self :stream )" },
 	{ DaoIO_Eof,       "eof( self :stream )=>int" },
@@ -653,7 +659,6 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Iter,      "__for_iterator__( self :stream, iter : for_iterator )" },
 	{ DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
 
-	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>" },
 	{ DaoIO_ReadLines2, "readlines( self :stream, numline=0, chop=0 )[line:string=>none|@T]=>list<@T>" },
 	// Not particularly useful, may be removed! 
 	{ DaoIO_WriteLines, "writelines( self :stream, lines :int)[line:int =>string]" },

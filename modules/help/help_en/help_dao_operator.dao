@@ -4,7 +4,170 @@ load help;
 @[name]
 dao.operator
 @[name]
+
 @[title]
 Operators
 @[title]
 
+
+@[text]
+Dao Language supports a set of abundant operators to facilitate
+the writing of more expressive scripts. Many of these operators
+can be used for different data types.
+
+
+Please note, in the following operators that involve one or more arrays,
+those operators are done in element-wise.
+
+@[subsection]Arithmetic Operators@[subsection]
+@[code]
+# Binary operators:
+(int|float|double|complex|array) +  (int|float|double|complex|array) # Addtion;
+(int|float|double|complex|array) -  (int|float|double|complex|array) # Subtraction;
+(int|float|double|complex|array) *  (int|float|double|complex|array) # Multiplication;
+(int|float|double|complex|array) /  (int|float|double|complex|array) # Division;
+(int|float|double|complex|array) %  (int|float|double|complex|array) # Modulo;
+(int|float|double|complex|array) ** (int|float|double|complex|array) # Power;
+
+#Unary operators:
++  (int|float|double|complex|array) # Unary plus;
+-  (int|float|double|complex|array) # Unary minus;
+++ (int|float|double|complex|array) # Increment;
+-- (int|float|double|complex|array) # Decrement;
+@[code]
+
+
+@[subsection]Comparison Operators@[subsection]
+@[code]
+(int|float|double) == (int|float|double) # Equal to;
+(int|float|double) != (int|float|double) # Not equal to;
+(int|float|double) <  (int|float|double) # Less than;
+(int|float|double) >  (int|float|double) # Greater than;
+(int|float|double) <= (int|float|double) # No greater than;
+(int|float|double) >= (int|float|double) # No less than;
+
+complex == complex # Equal to;
+complex != complex # Not equal to;
+
+array == array # Equal to;
+array != array # Not equal to;
+array <  array # Less than;
+array >  array # Greater than;
+array <= array # No greater than;
+array >= array # No less than;
+
+string == string # Equal to;
+string != string # Not equal to;
+string <  string # Less than;
+string >  string # Greater than;
+string <= string # No greater than;
+string >= string # No less than;
+@[code]
+
+
+@[subsection]Comparison Operators@[subsection]
+@[code]
+!   (int|float|double|array) # Logic negation (NOT);
+not (int|float|double|array) # Logic negation (NOT);
+
+(int|float|double|array) &&  (int|float|double|array) # Logic AND;
+(int|float|double|array) and (int|float|double|array) # Logic AND;
+(int|float|double|array) ||  (int|float|double|array) # Logic OR;
+(int|float|double|array) or  (int|float|double|array) # Logic OR;
+@[code]
+
+@[subsection]Bitwise Operators@[subsection]
+@[code]
+~ (int|float|double|array) # Bitwise NOT;
+
+(int|float|double|array) & (int|float|double|array) # Bitwise AND;
+(int|float|double|array) | (int|float|double|array) # Bitwise OR;
+(int|float|double|array) ^ (int|float|double|array) # Bitwise XOR;
+
+(int|float|double) << (int|float|double) # Bitwise left shift;
+(int|float|double) >> (int|float|double) # Bitwise right shift;
+@[code]
+Please note, non-integer operands are converted to integers.
+
+
+@[subsection]
+Compound assignment operators
+@[subsection]
+@[code]
+(int|float|double) += (int|float|double) # Addition assignment;
+(int|float|double) -= (int|float|double) # Subtraction assignment;
+(int|float|double) *= (int|float|double) # Multiplication assignment;
+(int|float|double) /= (int|float|double) # Division assignment;
+
+(int|float|double) &= (int|float|double) # Bitwise AND assignment;
+(int|float|double) |= (int|float|double) # Bitwise OR assignment;
+@[code]
+
+
+
+@[subsection]Boolean Logic:@[subsection]
+<table>
+^Operator ^Name ^Supported Types ^
+| &&    | and | number |
+| \|\|  | or  | number |
+| !     | not | number |
+</table>
+Note, to make code more readable, <%>and</%>, <%>or</%> and <%>not</%>
+are also supported as equivalent operators.
+And the <%>and</%> and <%>or</%> operator behave in the same way as the Lua
+<%>and</%> <%>or</%> operators,
+namely, the last evaluated operand is returned as the result.
+This means, when the first operand can determine the result,
+return the first operand, otherwise return the second.
+When the operands have values of 0 or 1, this behaviour is exactly
+the same as normal boolean logic. The following lists some examples
+for other cases,
+@[code]
+10 && 0 => 0
+0 && 10 => 0
+10 && 20 => 20
+20 && 10 => 10
+
+10 || 0 => 10
+ 0 || 10 => 10
+10 || 20 => 10
+20 || 10 => 20
+@[code]
+Properly exploiting the behaviour of the <%>and</%> <%>or</%> operators 
+can simplify coding for some cases.
+
+@[subsection]Type Operator@[subsection]
+
+<table>
+^Operator ^Name ^Usage ^
+| ?=  | type equal | value1 ?= value2 |
+| ?<  | is type of | value ?< type    |
+</table>
+
+@[subsection]Assertion Operator@[subsection]
+
+Operator <bf>??</bf> can be used to assert if the last
+operation is executed successfully,
+and return 1 on success, and 0 otherwise.
+In the case that the last operation can produce a value,
+this operator can also be used to specify an alternative 
+value if that operation failed.
+
+@[code]
+a = alist[i] ??   # check if item accessing by index is successful;
+b = amap[key] ??  # check if a map has a particular key;
+val = amap[key] ?? another  # if amap has the key, assign its value, otherwise assign another;
+@[code]
+
+@[subsection]Multiple Assignment:@[subsection]
+
+@[code]
+( C, A, B, ... ) = ( A, B, C, ... )
+( A, B ) = func();
+@[code]
+the expression in the right side should yield a list or tuple,
+and each of the elements in the tuple/list is assigned accordingly to
+each of the variables in the left side.
+Extra elements are ignored.
+
+@[text]

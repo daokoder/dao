@@ -473,6 +473,11 @@ static int DaoMT_PushSectionFrame( DaoProcess *proc )
 	return 1;
 }
 
+static void DaoMutex_Lib_Mutex( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoMutex *mutex = DaoMutex_New();
+	DaoProcess_PutValue( proc, (DaoValue*) mutex );
+}
 static void DaoMutex_Lib_Lock( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoMutex *self = (DaoMutex*) par[0];
@@ -500,6 +505,7 @@ static void DaoMutex_Lib_Protect( DaoProcess *proc, DaoValue *p[], int n )
 }
 static DaoFuncItem mutexMeths[] =
 {
+	{ DaoMutex_Lib_Mutex,     "mutex()=>mutex" },
 	{ DaoMutex_Lib_Lock,      "lock( self : mutex )" }, /* XXX remove??? */
 	{ DaoMutex_Lib_Unlock,    "unlock( self : mutex )" },
 	{ DaoMutex_Lib_TryLock,   "trylock( self : mutex )=>int" },
@@ -513,26 +519,16 @@ static void DaoMutex_Delete( DaoMutex *self )
 	dao_free( self );
 }
 
-static DaoTypeCore mutexCore =
-{
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
-};
 DaoTypeBase mutexTyper =
 {
-	"mutex", & mutexCore, NULL, (DaoFuncItem*) mutexMeths, {0}, {0},
+	"mutex", NULL, NULL, (DaoFuncItem*) mutexMeths, {0}, {0},
 	(FuncPtrDel) DaoMutex_Delete, NULL
 };
 
 DaoMutex* DaoMutex_New()
 {
 	DaoMutex* self = (DaoMutex*) dao_calloc( 1, sizeof(DaoMutex) );
-	DaoValue_Init( self, DAO_MUTEX );
+	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_mutex );
 	DMutex_Init( & self->myMutex );
 	return self;
 }
@@ -549,24 +545,20 @@ int DaoMutex_TryLock( DaoMutex *self )
 	return DMutex_TryLock( & self->myMutex );
 }
 /* Condition variable */
+static void DaoCondV_Lib_CondVar( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoProcess_PutValue( proc, (DaoValue*)DaoCondVar_New() );
+}
 static void DaoCondV_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoCondVar *self = (DaoCondVar*) par[0];
 	DaoMutex *mutex = (DaoMutex*) par[1];
-	if( mutex->type != DAO_MUTEX ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "need mutex" );
-		return;
-	}
 	DCondVar_Wait( & self->myCondVar, & mutex->myMutex );
 }
 static void DaoCondV_Lib_TimedWait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoCondVar *self = (DaoCondVar*) par[0];
 	DaoMutex *mutex = (DaoMutex*) par[1];
-	if( mutex->type != DAO_MUTEX ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "need mutex" );
-		return;
-	}
 	DaoProcess_PutInteger( proc, 
 			DCondVar_TimedWait( & self->myCondVar, & mutex->myMutex, par[2]->xFloat.value ) );
 }
@@ -582,6 +574,7 @@ static void DaoCondV_Lib_BroadCast( DaoProcess *proc, DaoValue *par[], int N )
 }
 static DaoFuncItem condvMeths[] =
 {
+	{ DaoCondV_Lib_CondVar,   "condition()=>condition" },
 	{ DaoCondV_Lib_Wait,      "wait( self : condition, mtx : mutex )" },
 	{ DaoCondV_Lib_TimedWait, "timedwait( self : condition, mtx : mutex, seconds :float )=>int" },
 	{ DaoCondV_Lib_Signal,    "signal( self : condition )" },
@@ -589,25 +582,15 @@ static DaoFuncItem condvMeths[] =
 	{ NULL, NULL }
 };
 
-static DaoTypeCore condvCore =
-{
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
-};
 DaoTypeBase condvTyper =
 {
-	"condition", & condvCore, NULL, (DaoFuncItem*) condvMeths, {0}, {0},
+	"condition", NULL, NULL, (DaoFuncItem*) condvMeths, {0}, {0},
 	(FuncPtrDel) DaoCondVar_Delete, NULL
 };
 DaoCondVar* DaoCondVar_New()
 {
 	DaoCondVar* self = (DaoCondVar*) dao_calloc( 1, sizeof(DaoCondVar) );
-	DaoValue_Init( self, DAO_CONDVAR );
+	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_condvar );
 	DCondVar_Init( & self->myCondVar );
 	return self;
 }
@@ -635,6 +618,10 @@ void DaoCondVar_BroadCast( DaoCondVar *self )
 	DCondVar_BroadCast( & self->myCondVar );
 }
 /* Semaphore */
+static void DaoSema_Lib_Sema( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoProcess_PutValue( proc, (DaoValue*)DaoSema_New( par[0]->xInteger.value ) );
+}
 static void DaoSema_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoSema *self = (DaoSema*) par[0];
@@ -667,6 +654,7 @@ static void DaoSema_Lib_Protect( DaoProcess *proc, DaoValue *p[], int n )
 }
 static DaoFuncItem semaMeths[] =
 {
+	{ DaoSema_Lib_Sema,      "semaphore( value = 0 )=>semaphore" },
 	{ DaoSema_Lib_Wait,      "wait( self : semaphore )" },
 	{ DaoSema_Lib_Post,      "post( self : semaphore )" },
 	{ DaoSema_Lib_SetValue,  "setvalue( self : semaphore, n :int )" },
@@ -674,25 +662,15 @@ static DaoFuncItem semaMeths[] =
 	{ DaoSema_Lib_Protect,   "protect( self : semaphore )[]" },
 	{ NULL, NULL }
 };
-static DaoTypeCore semaCore =
-{
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
-};
 DaoTypeBase semaTyper =
 {
-	"semaphore", & semaCore, NULL, (DaoFuncItem*) semaMeths, {0}, {0},
+	"semaphore", NULL, NULL, (DaoFuncItem*) semaMeths, {0}, {0},
 	(FuncPtrDel) DaoSema_Delete, NULL
 };
 DaoSema* DaoSema_New( int n )
 {
 	DaoSema* self = (DaoSema*) dao_calloc( 1, sizeof(DaoSema) );
-	DaoValue_Init( self, DAO_SEMA );
+	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_sema );
 	DSema_Init( & self->mySema, ( n < 0 )? 0 : n );
 	return self;
 }
@@ -788,20 +766,6 @@ DaoFuture* DaoFuture_New()
 }
 
 
-/* thread master */
-static void DaoThdMaster_Lib_Mutex( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoMutex *mutex = DaoMutex_New();
-	DaoProcess_PutValue( proc, (DaoValue*) mutex );
-}
-static void DaoThdMaster_Lib_CondVar( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoProcess_PutValue( proc, (DaoValue*)DaoCondVar_New() );
-}
-static void DaoThdMaster_Lib_Sema( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoProcess_PutValue( proc, (DaoValue*)DaoSema_New( par[0]->xInteger.value ) );
-}
 
 typedef struct DaoTaskData DaoTaskData;
 struct DaoTaskData
@@ -1250,12 +1214,8 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 	DaoProcess_PopFrame( proc );
 }
 
-static DaoFuncItem thdMasterMeths[] =
+DaoFuncItem dao_mt_methods[] =
 {
-	{ DaoThdMaster_Lib_Mutex,       "mutex()=>mutex" },
-	{ DaoThdMaster_Lib_CondVar,     "condition()=>condition" },
-	{ DaoThdMaster_Lib_Sema,        "semaphore( value = 0 )=>semaphore" },
-
 	{ DaoMT_Critical, "critical()[]" },
 	{ DaoMT_Start, "start()[=>@V] =>future<@V>" },
 	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
@@ -1276,10 +1236,6 @@ static DaoFuncItem thdMasterMeths[] =
 	{ NULL, NULL }
 };
 
-DaoTypeBase thdMasterTyper =
-{
-	"mt", NULL, NULL, (DaoFuncItem*) thdMasterMeths, {0}, {0}, NULL, NULL
-};
 
 #endif /* DAO_WITH_CONCURRENT */
 

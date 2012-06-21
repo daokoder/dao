@@ -123,6 +123,16 @@ Format of The Help Files
 The main text of the help must be placed in verbatim strings captioned with "text".
 Inside the text, several tags are supported for formatting the text:
 @[list(formats)]
+==Referencing help entry:
+@[code]
+@[node]entry_id@[node]
+@[code]
+For example:
+@[code]
+@[node]help.format@[node]
+@[code]
+produces this @[node]help.format@[node].
+
 ==Text coloring:
 
 @[code]
