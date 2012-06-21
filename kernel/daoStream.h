@@ -44,26 +44,22 @@ enum
 	DAO_IO_WRITE = 2
 };
 
-typedef struct DFile
-{
-	FILE   *fd;
-	int     rc;
-} DFile;
 
 struct DaoStream
 {
-	DAO_DATA_COMMON;
+	DAO_CDATA_COMMON;
 
 	char        attribs;
 	int         mode;
 	int         useQuote;
 	char       *format;
-	DFile      *file;
+	FILE       *file;
 	DString    *streamString;
 	DString    *fname;
 
 	DaoUserStream *redirect;
 };
+DAO_DLL extern DaoType *dao_type_stream;
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_Delete( DaoStream *self );

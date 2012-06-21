@@ -52,6 +52,7 @@ struct Dao_Buffer
 };
 
 DAO_DLL Dao_Buffer* Dao_Buffer_New( size_t size );
+DAO_DLL Dao_Buffer* Dao_Buffer_CastFromValue( DaoValue *value );
 DAO_DLL void Dao_Buffer_Resize( Dao_Buffer *self, size_t size );
 DAO_DLL void Dao_Buffer_Delete( Dao_Buffer *self );
 

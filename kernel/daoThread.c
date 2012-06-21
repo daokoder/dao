@@ -515,6 +515,7 @@ static DaoFuncItem mutexMeths[] =
 };
 static void DaoMutex_Delete( DaoMutex *self )
 {
+	DaoCdata_FreeCommon( (DaoCdata*) self );
 	DMutex_Destroy( & self->myMutex );
 	dao_free( self );
 }
@@ -596,6 +597,7 @@ DaoCondVar* DaoCondVar_New()
 }
 void DaoCondVar_Delete( DaoCondVar *self )
 {
+	DaoCdata_FreeCommon( (DaoCdata*) self );
 	DCondVar_Destroy( & self->myCondVar );
 	dao_free( self );
 }
@@ -676,6 +678,7 @@ DaoSema* DaoSema_New( int n )
 }
 void DaoSema_Delete( DaoSema *self )
 {
+	DaoCdata_FreeCommon( (DaoCdata*) self );
 	DSema_Destroy( & self->mySema );
 	dao_free( self );
 }

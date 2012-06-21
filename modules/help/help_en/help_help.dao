@@ -4,14 +4,13 @@
 load help;
 
 
-message =
+const help_message =
 @[]
-Module Help is loaded.
-You may run "help()" to list all the available help entries;
-or run "help('help')" for detailed information about the help syetm.
+  Module Help is loaded.
+  Now you may run "help()" to list all the available help entries;
+  or run "help('help')" for detailed information about the help system.
 @[]
 
-io.writeln( message );
 
 
 ################################################################################

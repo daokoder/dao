@@ -865,7 +865,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs )
 {
 	int m = DaoType_MatchValue( self, value, defs );
-	if( m == 0 || value->type <= DAO_STREAM || value->type != self->tid ) return m;
+	if( m == 0 || value->type <= DAO_TUPLE || value->type != self->tid ) return m;
 	if( value->type == DAO_CDATA ){
 		if( value->xCdata.data == NULL ) m = 0;
 	}else{

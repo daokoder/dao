@@ -161,7 +161,7 @@ DIntStringPair dao_keywords[] =
 	{ DAO_MAP, "map" } ,
 	{ DAO_LIST, "list" } ,
 	{ DAO_CDATA, "cdata" } ,
-	{ DAO_STREAM, "stream" } ,
+	{ /*DAO_STREAM*/0, "stream" } ,
 	{ DAO_FUTURE, "future" } ,
 	{   0, "and" } ,
 	{   0, "or" } ,

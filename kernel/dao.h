@@ -131,7 +131,6 @@ enum DaoTypes
 	DAO_LIST  ,
 	DAO_MAP   ,
 	DAO_TUPLE ,
-	DAO_STREAM ,
 	DAO_OBJECT ,
 	DAO_CDATA  ,
 	DAO_CLASS  ,
@@ -406,7 +405,7 @@ DAO_DLL DaoMap*       DaoValue_CastMap( DaoValue *self );
 DAO_DLL DaoTuple*     DaoValue_CastTuple( DaoValue *self );
 DAO_DLL DaoStream*    DaoValue_CastStream( DaoValue *self );
 DAO_DLL DaoObject*    DaoValue_CastObject( DaoValue *self );
-DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self );
+DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self, DaoType *totype );
 DAO_DLL DaoClass*     DaoValue_CastClass( DaoValue *self );
 DAO_DLL DaoInterface* DaoValue_CastInterface( DaoValue *self );
 DAO_DLL DaoRoutine*   DaoValue_CastRoutine( DaoValue *self );

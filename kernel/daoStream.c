@@ -50,7 +50,7 @@
 void DaoStream_Flush( DaoStream *self )
 {
 	if( self->file ){
-		fflush( self->file->fd );
+		fflush( self->file );
 	}else if( self->redirect && self->redirect->StdioFlush ){
 		self->redirect->StdioFlush( self->redirect );
 	}else{
@@ -306,7 +306,7 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 	}else if( count ){
 		FILE *fd = stdin;
 		DString_Clear( ds );
-		if( self->file ) fd = self->file->fd;
+		if( self->file ) fd = self->file;
 		if( count >0 ){
 			DString_Resize( ds, count );
 			DString_Resize( ds, fread( ds->mbs, 1, count, fd ) );
@@ -387,12 +387,10 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	stream = DaoStream_New();
-	stream->file = (DFile*)dao_malloc( sizeof(DFile) );
-	stream->file->rc = 1;
 	stream->attribs |= DAO_IO_FILE;
 	if( N==0 ){
-		stream->file->fd = tmpfile();
-		if( stream->file->fd <= 0 ){
+		stream->file = tmpfile();
+		if( stream->file <= 0 ){
 			DaoProcess_RaiseException( proc, DAO_ERROR, "failed to create temporary file" );
 			return;
 		}
@@ -400,11 +398,8 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Assign( stream->fname, p[0]->xString.data );
 		DString_ToMBS( stream->fname );
 		mode = DString_GetMBS( p[1]->xString.data );
-		stream->file->fd = DaoIO_OpenFile( proc, stream->fname, mode, 0 );
-		if( stream->file->fd == NULL ){
-			dao_free( stream->file );
-			stream->file = NULL;
-		}
+		stream->file = DaoIO_OpenFile( proc, stream->fname, mode, 0 );
+		/* XXX Error handling? */
 		stream->mode = 0;
 		if( strstr( mode, "+" ) )
 			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
@@ -427,7 +422,7 @@ static void DaoIO_Eof( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *self = & p[0]->xStream;
 	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	*num = 1;
-	if( self->file ) *num = feof( self->file->fd );
+	if( self->file ) *num = feof( self->file );
 }
 static void DaoIO_Isopen( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -440,21 +435,21 @@ static void DaoIO_Seek( DaoProcess *proc, DaoValue *p[], int N )
 	int options[] = { SEEK_SET, SEEK_CUR, SEEK_END };
 	int where = options[ p[2]->xEnum.value ];
 	if( self->file == NULL ) return;
-	fseek( self->file->fd, p[1]->xInteger.value, where );
+	fseek( self->file, p[1]->xInteger.value, where );
 }
 static void DaoIO_Tell( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	if( self->file == NULL ) return;
-	*num = ftell( self->file->fd );
+	*num = ftell( self->file );
 }
 static void DaoIO_FileNO( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	if( self->file == NULL ) return;
-	*num = fileno( self->file->fd );
+	*num = fileno( self->file );
 }
 static void DaoIO_Name( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -481,9 +476,9 @@ static void DaoIO_Iter( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *self = & p[0]->xStream;
 	DaoValue **tuple = p[1]->xTuple.items;
 	tuple[0]->xInteger.value = 1;
-	if( self->file && self->file->fd ){
-		fseek( self->file->fd, 0, SEEK_SET );
-		tuple[0]->xInteger.value = ! feof( self->file->fd );
+	if( self->file ){
+		fseek( self->file, 0, SEEK_SET );
+		tuple[0]->xInteger.value = ! feof( self->file );
 	}
 }
 static void DaoIO_GetItem( DaoProcess *proc, DaoValue *p[], int N )
@@ -492,7 +487,7 @@ static void DaoIO_GetItem( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue **tuple = p[1]->xTuple.items;
 	DaoIO_Read( proc, p, 1 );
 	tuple[0]->xInteger.value = 0;
-	if( self->file && self->file->fd ) tuple[0]->xInteger.value = ! feof( self->file->fd );
+	if( self->file ) tuple[0]->xInteger.value = ! feof( self->file );
 }
 
 static void DaoIO_Read2( DaoProcess *proc, DaoValue *p[], int N )
@@ -601,11 +596,11 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 	daoint i, entry, lines = p[1]->xInteger.value;
 	FILE *fout = stdout;
 
-	if( p[0]->type == DAO_STREAM ){
-		if( p[0]->xStream.file && p[0]->xStream.file->fd ) fout = p[0]->xStream.file->fd;
-	}else{
+	if( p[0]->type == DAO_STRING ){
 		fout = DaoIO_OpenFile( proc, p[0]->xString.data, "w+", 0 );
 		if( fout == NULL ) return;
+	}else{
+		if( p[0]->xStream.file ) fout = p[0]->xStream.file;
 	}
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
@@ -641,6 +636,9 @@ DaoFuncItem dao_io_methods[] =
 
 static DaoFuncItem streamMeths[] =
 {
+	{ DaoIO_Open,      "stream( )=>stream" },
+	{ DaoIO_SStream,   "stream( type :enum<mbs, wcs> )=>stream" },
+	{ DaoIO_Open,      "stream( file :string, mode :string )=>stream" },
 	{ DaoIO_Write,     "write( self :stream, ... )" },
 	{ DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
 	{ DaoIO_Writeln,   "writeln( self :stream, ... )" },
@@ -666,53 +664,28 @@ static DaoFuncItem streamMeths[] =
 	{ NULL, NULL }
 };
 
-// XXX
-static DaoValue* DaoStream_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
-{
-	DaoStream *self = & self0->xStream;
-	DaoStream *stream = DaoStream_New();
-	if( self->file ){
-		stream->file = self->file;
-		self->file->rc ++; // XXX
-	}
-	stream->attribs = self->attribs;
-	return (DaoValue*) stream;
-}
-static DaoTypeCore streamCore =
-{
-	NULL,
-	DaoValue_GetField,
-	DaoValue_SetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoStream_Copy,
-};
 
 void DaoStream_SetFile( DaoStream *self, FILE *fd )
 {
 	DaoValue *p = (DaoValue*) self;
-	DaoIO_Close( NULL, & p, 1 );
-	self->file = (DFile*)dao_malloc( sizeof(DFile) );
-	self->file->rc = 1;
-	self->file->fd = fd;
+	self->file = fd;
 }
 FILE* DaoStream_GetFile( DaoStream *self )
 {
-	if( self->file && self->file->fd ) return self->file->fd;
+	if( self->file ) return self->file;
 	return NULL;
 }
 
 DaoTypeBase streamTyper =
 {
-	"stream", & streamCore, NULL, (DaoFuncItem*) streamMeths, {0}, {0},
+	"stream", NULL, NULL, (DaoFuncItem*) streamMeths, {0}, {0},
 	(FuncPtrDel) DaoStream_Delete, NULL
 };
 
 DaoStream* DaoStream_New()
 {
 	DaoStream *self = (DaoStream*) dao_calloc( 1, sizeof(DaoStream) );
-	DaoValue_Init( self, DAO_STREAM );
+	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_stream );
 	self->streamString = DString_New(1);
 	self->fname = DString_New(1);
 	self->mode = DAO_IO_READ | DAO_IO_WRITE;
@@ -720,16 +693,13 @@ DaoStream* DaoStream_New()
 }
 void DaoStream_Close( DaoStream *self )
 {
+	DaoCdata_FreeCommon( (DaoCdata*) self );
 	if( self->file ){
-		self->file->rc --;
-		if( self->file->rc == 0 ){
-			fflush( self->file->fd );
-			if( self->attribs & DAO_IO_PIPE )
-				pclose( self->file->fd );
-			else
-				fclose( self->file->fd );
-			dao_free( self->file );
-		}
+		fflush( self->file );
+		if( self->attribs & DAO_IO_PIPE )
+			pclose( self->file );
+		else
+			fclose( self->file );
 		self->file = NULL;
 	}
 	self->mode = DAO_IO_WRITE | DAO_IO_READ;
@@ -750,7 +720,7 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 {
 	const char *format = "%c";
 	if( self->file ){
-		fprintf( self->file->fd, format, val );
+		fprintf( self->file, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		DString_AppendChar( mbs, val );
@@ -766,7 +736,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 {
 	char buffer[100];
 	if( self->file ){
-		fprintf( self->file->fd, format, val );
+		fprintf( self->file, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
@@ -797,7 +767,7 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 	}
 	if( format == NULL ) format = "%f";
 	if( self->file ){
-		fprintf( self->file->fd, format, val );
+		fprintf( self->file, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
@@ -816,7 +786,7 @@ void DaoStream_WriteMBS( DaoStream *self, const char *val )
 	const char *format = self->format;
 	if( format == NULL ) format = "%s";
 	if( self->file ){
-		fprintf( self->file->fd, format, val );
+		fprintf( self->file, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		DString_SetMBS( mbs, val );
@@ -833,7 +803,7 @@ void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val )
 	const char *format = self->format;
 	if( format == NULL ) format = "%ls";
 	if( self->file ){
-		fprintf( self->file->fd, format, val );
+		fprintf( self->file, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		DString_SetWCS( mbs, val );
@@ -862,9 +832,9 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 		const char *data = val->mbs;
 		if( self->file ){
 			if( self->format ){
-				fprintf( self->file->fd, self->format, data );
+				fprintf( self->file, self->format, data );
 			}else{
-				DaoFile_WriteString( self->file->fd, val );
+				DaoFile_WriteString( self->file, val );
 			}
 		}else if( self->redirect && self->redirect->StdioWrite ){
 			DString *mbs = DString_New(1);
@@ -884,9 +854,9 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 		const wchar_t *data = val->wcs;
 		if( self->file ){
 			if( self->format ){
-				fprintf( self->file->fd, self->format, data );
+				fprintf( self->file, self->format, data );
 			}else{
-				DaoFile_WriteString( self->file->fd, val );
+				DaoFile_WriteString( self->file, val );
 			}
 		}else if( self->redirect && self->redirect->StdioWrite ){
 			DString *mbs = DString_New(1);
@@ -915,7 +885,7 @@ void DaoStream_WritePointer( DaoStream *self, void *val )
 	char buffer[100];
 	if( format == NULL ) format = "%p";
 	if( self->file ){
-		fprintf( self->file->fd, format, val );
+		fprintf( self->file, format, val );
 	}else if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
@@ -942,7 +912,7 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 	DString_Clear( line );
 	DString_ToMBS( line );
 	if( self->file ){
-		return DaoFile_ReadLine( self->file->fd, line );
+		return DaoFile_ReadLine( self->file, line );
 	}else if( self->attribs & DAO_IO_STRING ){
 		daoint pos = DString_FindWChar( self->streamString, delim, 0 );
 		if( pos == MAXSIZE ){
@@ -1109,7 +1079,7 @@ static int IsaTTY( DaoStream *stream )
 	static int checked = 0;
 	FILE *file = stdout;
 	if( checked ) return ist;
-	if( stream->file ) file = stream->file->fd;
+	if( stream->file ) file = stream->file;
 	ist = isatty( fileno( file ) );
 	checked = 1;
 	return ist;

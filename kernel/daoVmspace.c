@@ -205,7 +205,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_INTERFACE :  return & interTyper;
 	case DAO_CLASS     :  return & classTyper;
 	case DAO_OBJECT    :  return & objTyper;
-	case DAO_STREAM    :  return & streamTyper;
 	case DAO_NAMESPACE :  return & nsTyper;
 	case DAO_PROCESS   :  return & vmpTyper;
 	case DAO_VMSPACE   :  return & vmsTyper;
@@ -476,14 +475,14 @@ void SplitByWhiteSpaces( const char *chs, DArray *tokens )
 	DString *str = & temp;
 	daoint i, j, k=0, size = str->size;
 	DArray_Clear( tokens );
-	while( (j=DString_FindChar( str, '\1', k )) != MAXSIZE ){
-		if( j > k ){
-			DString_SubString( str, tok, k, j-k );
-			DArray_Append( tokens, tok );
+	if( (j=DString_FindChar( str, '\1', k )) != MAXSIZE ){
+		while( (j=DString_FindChar( str, '\1', k )) != MAXSIZE ){
+			if( j > k ){
+				DString_SubString( str, tok, k, j-k );
+				DArray_Append( tokens, tok );
+			}
+			k = j + 1;
 		}
-		k = j + 1;
-	}
-	if( tokens->size ){
 		if( k < str->size ){
 			DString_SubString( str, tok, k, str->size-k );
 			DArray_Append( tokens, tok );
@@ -916,6 +915,8 @@ static int CheckCodeCompletion( DString *source, DArray *tokens )
 }
 static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 {
+	DaoValue *value;
+	DaoNamespace *ns;
 	DArray *tokens = DArray_New( D_TOKEN );
 	DString *input = DString_New(1);
 	const char *varRegex = "^ %s* = %s* %S+";
@@ -925,6 +926,9 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	int ch, newline = 0;
 	DString_SetMBS( self->mainNamespace->name, "interactive codes" );
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
+	ns = DaoVmSpace_LinkModule( self, self->mainNamespace, "help" );
+	value = ns ? DaoNamespace_FindData( ns, "help_message" ) : NULL;
+	if( value && value->type == DAO_STRING ) printf( "%s\n", DaoValue_TryGetMBString( value ) );
 	while(1){
 		DString_Clear( input );
 		DaoValue_Clear( self->mainProcess->stackValues );
@@ -1967,6 +1971,7 @@ extern DMutex dao_cdata_mutex;
 extern DaoFuncItem dao_mt_methods[];
 #endif
 
+DaoType *dao_type_stream = NULL;
 extern DaoFuncItem dao_std_methods[];
 extern DaoFuncItem dao_io_methods[];
 
@@ -2152,12 +2157,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_SetupType( vms->nsInternal, & mapTyper );
 
 	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "io" );
-
-	type = DaoNamespace_MakeType( ns2, "stream", DAO_STREAM, NULL, NULL, 0 );
-	type->value = (DaoValue*) vms->stdioStream;
-	GC_IncRC( vms->stdioStream );
-
-	DaoNamespace_SetupType( ns2, & streamTyper );
+	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
 
 	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 0 );

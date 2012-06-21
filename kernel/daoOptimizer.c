@@ -2514,11 +2514,12 @@ static DaoInode* DaoInferencer_InsertCast( DaoInferencer *self, DaoInode *inode,
 }
 static void DaoInferencer_InsertMove2( DaoInferencer *self, DaoInode *inode, DaoType *at, DaoType *ct )
 {
-	int k;
+	unsigned short k = inode->c;
 	DaoVmCodeX vmc2 = *(DaoVmCodeX*)inode;
-	DaoInode *inode2 = DaoInferencer_InsertMove( self, inode, & inode->c, at, ct );
+	DaoInode *inode2 = DaoInferencer_InsertMove( self, inode, & k, at, ct );
 	*(DaoVmCodeX*)inode = *(DaoVmCodeX*)inode2;
 	*(DaoVmCodeX*)inode2 = vmc2;
+	inode2->c = inode->c;
 	k = inode->a;
 	inode->a = inode->c;
 	inode->c = k;
@@ -2662,7 +2663,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 		DString_AppendMBS( mbs, "' for '" );
 		if( self->type_target ){
 			DString_AppendMBS( mbs, self->type_target->name->mbs );
-		}else if( self->tid_target <= DAO_STREAM ){
+		}else if( self->tid_target <= DAO_TUPLE ){
 			DString_AppendMBS( mbs, coreTypeNames[self->tid_target] );
 		}
 		DString_AppendChar( mbs, '\'' );
@@ -4004,6 +4005,8 @@ NotExist_TryAux:
 					}
 				}else if( at->realnum && bt->realnum ){
 					ct = at->tid > bt->tid ? at : bt;
+				}else if( at->tid != bt->tid && (code == DVM_AND || code == DVM_OR) ){
+					goto InvOper;
 				}else if( at->realnum && (bt->tid ==DAO_COMPLEX || bt->tid == DAO_LONG
 							|| bt->tid ==DAO_ARRAY) ){
 					ct = bt;

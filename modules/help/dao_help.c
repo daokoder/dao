@@ -1820,6 +1820,7 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	char *lang = getenv( evname );
 	int len = strlen( evname );
 	DString *fname = DString_New(1);
+	DaoNamespace *mod;
 	DaoType *type;
 
 	if( lang == NULL ){
@@ -1861,7 +1862,11 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	DString_SetMBS( fname, "help_" );
 	DString_AppendMBS( fname, lang );
 	DString_AppendMBS( fname, "/help_help" );
-	DaoVmSpace_Load( vmSpace, fname->mbs );
+	mod = DaoVmSpace_Load( vmSpace, fname->mbs );
+	if( mod ){
+		DaoValue *value = DaoNamespace_FindData( mod, "help_message" );
+		if( value ) DaoNamespace_AddValue( ns, "help_message", value, NULL );
+	}
 
 	DString_SetMBS( fname, "help_" );
 	DString_AppendMBS( fname, lang );

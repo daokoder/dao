@@ -205,7 +205,7 @@ static void STD_Copy( DaoProcess *proc, DaoValue *p[], int N )
 	DMap_Delete( cycData );
 }
 
-extern void SplitByWhiteSpaces( DString *str, DArray *tokens );
+extern void SplitByWhiteSpaces( const char *str, DArray *tokens );
 
 static const char *const sep =
 "-------------------------------------------------------------------\n";
@@ -260,7 +260,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	int i;
 	if( ! (proc->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
 	input = DString_New(1);
-	if( N > 0 && p[0]->type == DAO_STREAM ){
+	if( N > 0 && DaoValue_CastCdata( p[0], dao_type_stream ) ){
 		stream = (DaoStream*)p[0];
 		p ++;
 		N --;
@@ -293,7 +293,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 			DaoStream_ReadLine( stream, input );
 		}
 		if( input->size == 0 ) continue;
-		SplitByWhiteSpaces( input, tokens );
+		SplitByWhiteSpaces( input->mbs, tokens );
 		if( tokens->size == 0 ) continue;
 		cmd = tokens->items.pString[0]->mbs;
 		if( strcmp( cmd, "q" ) == 0 || strcmp( cmd, "quit" ) == 0 ){

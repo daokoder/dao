@@ -267,7 +267,7 @@ int DaoValue_IsNumber( DaoValue *self )
 static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	if( self->type <= DAO_STREAM )
+	if( self->type <= DAO_TUPLE )
 		DaoStream_WriteMBS( stream, coreTypeNames[ self->type ] );
 	else
 		DaoStream_WriteMBS( stream, DaoValue_GetTyper( self )->name );
@@ -281,7 +281,7 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *st
 	DaoStream_WriteInt( stream, self->type );
 	DaoStream_WriteMBS( stream, "_" );
 	DaoStream_WritePointer( stream, self );
-	if( self->type < DAO_STREAM ) return;
+	if( self->type <= DAO_TUPLE ) return;
 	if( type && self == type->value ) DaoStream_WriteMBS( stream, "[default]" );
 }
 void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -796,7 +796,7 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T )
 {
 	int rc = DaoValue_Move( S, D, T );
 	if( rc == 0 || T == NULL ) return rc;
-	if( S->type <= DAO_STREAM || S->type != T->tid ) return rc;
+	if( S->type <= DAO_TUPLE || S->type != T->tid ) return rc;
 	if( S->type == DAO_CDATA && S->xCdata.subtype != DAO_CDATA_DAO ){
 		if( S->xCdata.data == NULL ) rc = 0;
 	}else{
@@ -868,18 +868,19 @@ DaoTuple* DaoValue_CastTuple( DaoValue *self )
 }
 DaoStream* DaoValue_CastStream( DaoValue *self )
 {
-	if( self == NULL || self->type != DAO_STREAM ) return NULL;
-	return (DaoStream*) self;
+	if( self == NULL || self->type != DAO_CDATA ) return NULL;
+	return (DaoStream*) DaoValue_CastCdata( self, dao_type_stream );
 }
 DaoObject* DaoValue_CastObject( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_OBJECT ) return NULL;
 	return (DaoObject*) self;
 }
-DaoCdata* DaoValue_CastCdata( DaoValue *self )
+DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
 	if( self == NULL || self->type != DAO_CDATA ) return NULL;
-	return (DaoCdata*) self;
+	if( type == NULL || ! DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
+	return NULL;
 }
 DaoClass* DaoValue_CastClass( DaoValue *self )
 {

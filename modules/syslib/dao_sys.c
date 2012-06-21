@@ -229,17 +229,13 @@ static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 	DString *fname;
 
 	stream = DaoStream_New();
-	stream->file = (DFile*)dao_malloc( sizeof(DFile) );
-	stream->file->rc = 1;
 	stream->attribs |= DAO_IO_PIPE;
 	fname = stream->fname;
 	DString_Assign( fname, p[0]->xString.data );
 	if( DString_Size( fname ) >0 ){
 		mode = DString_GetMBS( p[1]->xString.data );
-		stream->file->fd = popen( DString_GetMBS( fname ), mode );
-		if( stream->file->fd == NULL ){
-			dao_free( stream->file );
-			stream->file = NULL;
+		stream->file = popen( DString_GetMBS( fname ), mode );
+		if( stream->file == NULL ){
 			DaoProcess_RaiseException( proc, DAO_ERROR, "error opening pipe" );
 		}
 		stream->mode = 0;
@@ -521,6 +517,10 @@ Dao_Buffer* Dao_Buffer_New( size_t size )
 	self->buffer.pVoid = NULL;
 	Dao_Buffer_Resize( self, size );
 	return self;
+}
+Dao_Buffer* Dao_Buffer_CastFromValue( DaoValue *value )
+{
+	return (Dao_Buffer*) DaoValue_CastCdata( value, daox_type_buffer );
 }
 void Dao_Buffer_Resize( Dao_Buffer *self, size_t size )
 {

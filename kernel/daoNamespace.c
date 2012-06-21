@@ -1436,7 +1436,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	}
 
 	mbs = DString_New(1);
-	if( p->type <= DAO_STREAM ){
+	if( p->type <= DAO_TUPLE ){
 		DString_SetMBS( mbs, coreTypeNames[p->type] );
 		if( p->type == DAO_LIST ){
 			nested = DArray_New(0);
