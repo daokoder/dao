@@ -154,7 +154,6 @@ enum DaoKeyNames
 	DKEY_MAP ,
 	DKEY_LIST ,
 	DKEY_CDATA ,
-	DKEY_STREAM ,
 	DKEY_FUTURE ,
 	DKEY_AND ,
 	DKEY_OR ,

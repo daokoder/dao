@@ -6103,7 +6103,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.last = result.update = self->vmcLast;
 		start += 1;
 	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON 
-			|| (tki >= DKEY_ANY && tki <= DKEY_STREAM ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
+			|| (tki >= DKEY_ANY && tki <= DKEY_FUTURE ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
 		result.reg = regLast;
