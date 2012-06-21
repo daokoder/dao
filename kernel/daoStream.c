@@ -632,6 +632,7 @@ DaoFuncItem dao_io_methods[] =
 	{ DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
 
 	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>" },
+	{ NULL, NULL }
 };
 
 static DaoFuncItem streamMeths[] =
