@@ -640,30 +640,30 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 	for(i=0; i<N; i++){
 		node = nodes[i];
 		for(j=M; j<self->bitCount; j++){
-			int using = 0;
+			int uses = 0;
 			if( GET_BIT( node->bits->mbs, j ) == 0 ) continue;
 
 			node2 = self->enodes->items.pCnode[j-M];
 			switch( node->type ){
 			case DAO_OP_SINGLE :
-				using = node->first == node2->lvalue;
+				uses = node->first == node2->lvalue;
 				break;
 			case DAO_OP_PAIR   : 
-				using = node->first == node2->lvalue;
-				using |= node->second == node2->lvalue;
+				uses = node->first == node2->lvalue;
+				uses |= node->second == node2->lvalue;
 				break;
 			case DAO_OP_TRIPLE :
-				using = node->first == node2->lvalue;
-				using |= node->second == node2->lvalue;
-				using |= node->third == node2->lvalue;
+				uses = node->first == node2->lvalue;
+				uses |= node->second == node2->lvalue;
+				uses |= node->third == node2->lvalue;
 				break;
 			case DAO_OP_RANGE :
 			case DAO_OP_RANGE2 :
-				using = node->first <= node2->lvalue && node2->lvalue <= node->second;
-				if( node->type == DAO_OP_RANGE2 ) using |= node->third == node2->lvalue;
+				uses = node->first <= node2->lvalue && node2->lvalue <= node->second;
+				if( node->type == DAO_OP_RANGE2 ) uses |= node->third == node2->lvalue;
 				break;
 			}
-			if( using ){
+			if( uses ){
 				DArray_Append( node->defs, node2 );
 				DArray_Append( node2->uses, node );
 			}
@@ -3691,7 +3691,7 @@ NotExist_TryAux:
 			}
 		case DVM_SETF :
 			{
-				int ck;
+				int ck = 0;
 				/*
 				   printf( "a: %s\n", types[opa]->name->mbs );
 				   printf( "c: %s\n", types[opc]->name->mbs );
@@ -3710,7 +3710,7 @@ NotExist_TryAux:
 					/* allow less strict typing: */
 					break;
 				case DAO_COMPLEX :
-					if( strcmp( str->mbs, "real" ) && strcmp( str->mbs, "imag" ) ) goto NotExist_TryAux;
+					if( strcmp( str->mbs, "real" ) && strcmp( str->mbs, "imag" ) ) goto NotExist;
 					if( at->realnum == 0 && !(at->tid & DAO_ANY) ) goto NotMatch;
 					if( at->tid & DAO_ANY ) break;
 					if( at->tid != DAO_DOUBLE )
@@ -4548,7 +4548,7 @@ NotExist_TryAux:
 				/* if( inited[opa] ==0 ) goto NotInit;  allow none value for testing! */
 				if( types[opa] ==NULL ) goto NotMatch;
 				if( consts[opa] && consts[opa]->type <= DAO_LONG ){
-					vmc->code =  DaoValue_IsZero( consts[opa] ) ? DVM_GOTO : DVM_UNUSED;
+					vmc->code =  DaoValue_IsZero( consts[opa] ) ? (int)DVM_GOTO : (int)DVM_UNUSED;
 					continue;
 				}
 				if( typed_code ){

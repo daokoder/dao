@@ -135,6 +135,7 @@ DAO_DLL void DLong_Print( DLong *self, DString *s );
 DAO_DLL void DLong_FromInteger( DLong *self, daoint x );
 DAO_DLL void DLong_FromDouble( DLong *self, double x );
 DAO_DLL char DLong_FromString( DLong *self, DString *s );
+DAO_DLL void DLong_FromValue( DLong *self, DaoValue *value );
 DAO_DLL daoint DLong_ToInteger( DLong *self );
 DAO_DLL double DLong_ToDouble( DLong *self );
 DAO_DLL int DLong_CompareToZero( DLong *self );

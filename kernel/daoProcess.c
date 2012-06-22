@@ -5024,33 +5024,31 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		}    
 		DLong_Delete( b ); 
 	}else if( A->type == DAO_LONG && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
-		DLong *c = DaoProcess_GetLong( self, vmc );
+		DLong *c = vmc->a == vmc->c ? C->xLong.value : DaoProcess_GetLong( self, vmc );
 		DLong *b = DLong_New();
 		DLong *b2 = DLong_New();
-		daoint i = DaoValue_GetInteger( B );
-		DLong_FromInteger( b, i );
+		DLong_FromValue( b, B );
 		switch( vmc->code ){
 			case DVM_ADD : DLong_Add( c, A->xLong.value, b ); break;
 			case DVM_SUB : DLong_Sub( c, A->xLong.value, b ); break;
 			case DVM_MUL : DLong_Mul( c, A->xLong.value, b ); break;
 			case DVM_DIV : DaoProcess_LongDiv( self, A->xLong.value, b, c, b2 ); break;
 			case DVM_MOD : DaoProcess_LongDiv( self, A->xLong.value, b, b2, c ); break;
-			case DVM_POW : DLong_Pow( c, A->xLong.value, i ); break;
+			case DVM_POW : DLong_Pow( c, A->xLong.value, DaoValue_GetInteger( B ) ); break;
 			default: break;
 		}
 		DLong_Delete( b );
 		DLong_Delete( b2 );
 	}else if( B->type == DAO_LONG && A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE ){
 		DLong *a, *b2, *c = DaoProcess_GetLong( self, vmc );
-		daoint i = DaoValue_GetInteger( A );
 		if( vmc->code == DVM_POW && DaoProcess_CheckLong2Integer( self, B->xLong.value ) == 0 ) return;
 		a = DLong_New();
 		b2 = DLong_New();
-		DLong_FromInteger( a, i );
+		DLong_FromValue( a, A );
 		switch( vmc->code ){
 			case DVM_ADD : DLong_Add( c, a, B->xLong.value ); break;
 			case DVM_SUB : DLong_Sub( c, a, B->xLong.value ); break;
-			case DVM_MUL : DLong_MulInt( c, B->xLong.value, i ); break;
+			case DVM_MUL : DLong_Mul( c, B->xLong.value, a ); break;
 			case DVM_DIV : DaoProcess_LongDiv( self, a, B->xLong.value, c, b2 ); break;
 			case DVM_MOD : DaoProcess_LongDiv( self, a, B->xLong.value, b2, c ); break;
 			case DVM_POW : DLong_Pow( c, a, DLong_ToInteger( B->xLong.value ) ); break;
@@ -5369,14 +5367,17 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 	}else if( A->type == B->type && (A->type == DAO_LIST || A->type == DAO_ARRAY) ){
+		D = DaoValue_Compare( A, B );
+		if( abs( D ) > 1 ) goto InvalidOperation;
 		switch( vmc->code ){
-			case DVM_LT: D = DaoValue_Compare( A, B )< 0; break;
-			case DVM_LE: D = DaoValue_Compare( A, B )<=0; break;
-			case DVM_EQ: D = DaoValue_Compare( A, B )==0; break; /*XXX numarray*/
-			case DVM_NE: D = DaoValue_Compare( A, B )!=0; break;
+			case DVM_LT: D = D <  0; break;
+			case DVM_LE: D = D <= 0; break;
+			case DVM_EQ: D = D == 0; break;
+			case DVM_NE: D = D != 0; break;
 			default: break;
 		}
 	}else{
+InvalidOperation:
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 		return;
 	}
@@ -5594,7 +5595,7 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_LONGINT
 	}else if( A->type == DAO_LONG && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
 		DLong *bigint = DaoProcess_PutLong( self );
-		DLong_FromInteger( bigint, DaoValue_GetInteger( B ) );
+		DLong_FromValue( bigint, B );
 		switch( vmc->code ){
 			case DVM_BITAND : DLong_BitAND( bigint, A->xLong.value, bigint ); break;
 			case DVM_BITOR :  DLong_BitOR( bigint, A->xLong.value, bigint ); break;
@@ -5603,7 +5604,7 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( B->type == DAO_LONG && A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE ){
 		DLong *bigint = DaoProcess_PutLong( self );
-		DLong_FromInteger( bigint, DaoValue_GetInteger( A ) );
+		DLong_FromValue( bigint, A );
 		switch( vmc->code ){
 			case DVM_BITAND : DLong_BitAND( bigint, B->xLong.value, bigint ); break;
 			case DVM_BITOR :  DLong_BitOR( bigint, B->xLong.value, bigint ); break;
@@ -5889,19 +5890,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( dA->type == DAO_LONG ) goto Rebind;
 		if( dA->type >= DAO_ARRAY ) goto FailConversion;
 #ifdef DAO_WITH_LONGINT
-		switch( dA->type ){
-		case DAO_INTEGER :
-			DLong_FromInteger( dC->xLong.value, DaoValue_GetInteger( dA ) );
-			break;
-		case DAO_FLOAT :
-		case DAO_DOUBLE :
-			DLong_FromDouble( dC->xLong.value, DaoValue_GetDouble( dA ) );
-			break;
-		case DAO_STRING :
-			DLong_FromString( dC->xLong.value, dA->xString.data );
-			break;
-		default : break;
-		}
+		DLong_FromValue( dC->xLong.value, dA );
 		dC->type = DAO_LONG;
 #else
 		goto FailConversion;

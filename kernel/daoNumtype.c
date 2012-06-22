@@ -396,7 +396,7 @@ int DLong_CompareToZero( DLong *self )
 }
 int DLong_CompareToInteger( DLong *self, daoint x )
 {
-	daoint i, n = self->size - 1, m = (sizeof(daoint)*8) / LONG_BITS;
+	daoint i, n = self->size - 1, m = - 1 + (sizeof(daoint)*8) / LONG_BITS;
 	if( self->sign < 0 && x > 0 ) return -1;
 	if( self->sign > 0 && x < 0 ) return  1;
 	x = abs( x );
@@ -1501,6 +1501,16 @@ char DLong_FromString( DLong *self, DString *s )
 	DLong_Delete( tmp );
 	return 0;
 }
+void DLong_FromValue( DLong *self, DaoValue *value )
+{
+	switch( value->type ){
+	case DAO_INTEGER : DLong_FromInteger( self, value->xInteger.value ); break;
+	case DAO_FLOAT   : DLong_FromDouble ( self, value->xFloat.value   ); break;
+	case DAO_DOUBLE  : DLong_FromDouble ( self, value->xDouble.value  ); break;
+	case DAO_STRING  : DLong_FromString ( self, value->xString.data   ); break;
+	case DAO_LONG    : DLong_Move( self, value->xLong.value ); break;
+	}
+}
 
 const int base_bits[] = {0,0,1,0,2,0,0,0,3,0,0,0,0,0,0,0,4};
 const int base_masks[] = {0,0,1,0,3,0,0,0,7,0,0,0,0,0,0,0,15};
@@ -2052,6 +2062,28 @@ complex16 DaoArray_GetComplex( DaoArray *na, daoint i )
 	}
 	return com;
 }
+DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res )
+{
+	res->type = self->etype;
+	switch( self->etype ){
+	case DAO_INTEGER : res->xInteger.value = self->data.i[i]; break;
+	case DAO_FLOAT   : res->xFloat.value = self->data.f[i]; break;
+	case DAO_DOUBLE  : res->xDouble.value = self->data.d[i]; break;
+	case DAO_COMPLEX : res->xComplex.value = self->data.c[i]; break;
+	default : break;
+	}
+	return res;
+}
+void DaoArray_SetValue( DaoArray *self, daoint i, DaoValue *value )
+{
+	switch( self->etype ){
+	case DAO_INTEGER : self->data.i[i] = DaoValue_GetInteger( value ); break;
+	case DAO_FLOAT   : self->data.f[i] = DaoValue_GetFloat( value ); break;
+	case DAO_DOUBLE  : self->data.d[i] = DaoValue_GetDouble( value ); break;
+	case DAO_COMPLEX : self->data.c[i] = DaoValue_GetComplex( value ); break;
+	default : break;
+	}
+}
 
 daoint DaoArray_IndexFromSlice( DaoArray *self, DArray *slices, daoint sid );
 int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *proc );
@@ -2104,77 +2136,6 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
 	DaoArray_MakeSlice( self, proc, & pid, 1, na->slices );
 }
-static void DaoArray_SetOneItem( DaoArray *self, daoint id, DaoValue *value, int op )
-{
-	daoint ival;
-	double dval;
-	complex16 c16;
-	complex16 cval;
-
-	switch( self->etype ){
-	case DAO_INTEGER :
-		if( value->type == DAO_INTEGER ){
-			ival = value->xInteger.value;
-			switch( op ){
-			case DVM_ADD : self->data.i[ id ] += ival; break;
-			case DVM_SUB : self->data.i[ id ] -= ival; break;
-			case DVM_MUL : self->data.i[ id ] *= ival; break;
-			case DVM_DIV : self->data.i[ id ] /= ival; break;
-			case DVM_MOD : self->data.i[ id ] %= ival; break;
-			case DVM_AND : self->data.i[ id ] &= ival; break;
-			case DVM_OR  : self->data.i[ id ] |= ival; break;
-			default : self->data.i[ id ] = ival; break;
-			}
-			break;
-		}
-		dval = DaoValue_GetDouble( value );
-		ival = (daoint) dval;
-		switch( op ){
-		case DVM_ADD : self->data.i[ id ] += dval; break;
-		case DVM_SUB : self->data.i[ id ] -= dval; break;
-		case DVM_MUL : self->data.i[ id ] *= dval; break;
-		case DVM_DIV : self->data.i[ id ] /= dval; break;
-		case DVM_MOD : self->data.i[ id ] %= ival; break;
-		case DVM_AND : self->data.i[ id ] &= ival; break;
-		case DVM_OR  : self->data.i[ id ] |= ival; break;
-		default : self->data.i[ id ] = ival; break;
-		}
-		break;
-	case DAO_FLOAT :
-		dval = DaoValue_GetDouble( value );
-		switch( op ){
-		case DVM_ADD : self->data.f[ id ] += dval; break;
-		case DVM_SUB : self->data.f[ id ] -= dval; break;
-		case DVM_MUL : self->data.f[ id ] *= dval; break;
-		case DVM_DIV : self->data.f[ id ] /= dval; break;
-		default : self->data.f[ id ] = dval; break;
-		}
-		break;
-	case DAO_DOUBLE :
-		dval = DaoValue_GetDouble( value );
-		switch( op ){
-		case DVM_ADD : self->data.d[ id ] += dval; break;
-		case DVM_SUB : self->data.d[ id ] -= dval; break;
-		case DVM_MUL : self->data.d[ id ] *= dval; break;
-		case DVM_DIV : self->data.d[ id ] /= dval; break;
-		default : self->data.d[ id ] = dval; break;
-		}
-		break;
-	case DAO_COMPLEX :
-		cval = DaoValue_GetComplex( value );
-		c16 = self->data.c[ id ];
-		switch( op ){
-		case DVM_ADD : COM_IP_ADD( c16, cval ); break;
-		case DVM_SUB : COM_IP_SUB( c16, cval ); break;
-		case DVM_MUL : COM_IP_MUL( c16, cval ); break;
-		case DVM_DIV : COM_IP_DIV( c16, cval ); break;
-		default : COM_ASSN( c16, cval ); break;
-		}
-		self->data.c[ id ] = c16;
-		break;
-	default : break;
-	}
-}
 int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
 {
 	daoint i, N = self->size;
@@ -2216,6 +2177,7 @@ int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
 	}
 	return 1;
 }
+/* Invalid comparison returns either -100 or 100: */
 int DaoArray_Compare( DaoArray *x, DaoArray *y )
 {
 	daoint *xi = x->data.i, *yi = y->data.i;
@@ -2223,52 +2185,41 @@ int DaoArray_Compare( DaoArray *x, DaoArray *y )
 	double *xd = x->data.d, *yd = y->data.d;
 	complex16 *xc = x->data.c, *yc = y->data.c;
 	daoint min = x->size < y->size ? x->size : y->size;
+	daoint res = x->size == y->size ? 1 : 100;
 	daoint i = 0;
 	if( x->etype == DAO_INTEGER && y->etype == DAO_INTEGER ){
 		while( i < min && *xi == *yi ) i++, xi++, yi++;
-		if( i < min ) return *xi < *yi ? -1 : 1;
+		if( i < min ) return *xi < *yi ? -res : res;
 	}else if( x->etype == DAO_FLOAT && y->etype == DAO_FLOAT ){
 		while( i < min && *xf == *yf ) i++, xf++, yf++;
-		if( i < min ) return *xf < *yf ? -1 : 1;
+		if( i < min ) return *xf < *yf ? -res : res;
 	}else if( x->etype == DAO_DOUBLE && y->etype == DAO_DOUBLE ){
 		while( i < min && *xd == *yd ) i++, xd++, yd++;
-		if( i < min ) return *xd < *yd ? -1 : 1;
+		if( i < min ) return *xd < *yd ? -res : res;
 	}else if( x->etype == DAO_COMPLEX && y->etype == DAO_COMPLEX ){
 		while( i < min && xc->real == yc->real && xc->imag == yc->imag ) i++, xc++, yc++;
 		if( i < min ){
-			if( xc->real == yc->real && xc->imag == yc->imag ) return 0;
-			if( xc->real == yc->real ) return xc->imag < yc->imag ? -1 : 1;
-			if( xc->imag == yc->imag ) return xc->real < yc->real ? -1 : 1;
+			if( xc->real == yc->real ) return xc->imag < yc->imag ? -100 : 100;
+			if( xc->imag == yc->imag ) return xc->real < yc->real ? -100 : 100;
+			return (daoint)x < (daoint)y ? -100 : 100;
 		}
-	}else if( x->etype == DAO_COMPLEX ){
-		while( i < min && xc->real == DaoArray_GetDouble( y, i ) && xc->imag ==0 ) i++, xc++;
-		if( i < min ){
-			double v = DaoArray_GetDouble( y, i );
-			if( xc->real == v && xc->imag == 0 ) return 0;
-			if( xc->real == v ) return xc->imag < 0 ? -1 : 1;
-			if( xc->imag == 0 ) return xc->real < v ? -1 : 1;
-		}
-	}else if( y->etype == DAO_COMPLEX ){
-		while( i < min && yc->real == DaoArray_GetDouble( x, i ) && yc->imag ==0 ) i++, yc++;
-		if( i < min ){
-			double v = DaoArray_GetDouble( x, i );
-			if( v == yc->real && 0 == yc->imag ) return 0;
-			if( v == yc->real ) return 0 < yc->imag ? -1 : 1;
-			if( 0 == yc->imag ) return v < yc->real ? -1 : 1;
-		}
-	}else{
+		if( x->size == y->size  ) return 0;
+		return x->size < y->size ? -100 : 100;
+	}else if( x->etype != DAO_COMPLEX && y->etype != DAO_COMPLEX ){
 		while( i < min && DaoArray_GetDouble( x, i ) == DaoArray_GetDouble( y, i ) ) i++;
 		if( i < min ){
 			double xv = DaoArray_GetDouble( x, i );
 			double yv = DaoArray_GetDouble( y, i );
 			if( xv == yv ) return 0;
-			return xv < yv ? -1 : 1;
+			return xv < yv ? -res : res;
 		}
+	}else{ /* one is a complex array, the other is not: */
+		return (daoint) x < (daoint) y ? -100 : 100;
 	}
 	if( x->size == y->size  ) return 0;
-	return x->size > y->size ? 1 : -1;
+	return x->size < y->size ? -100 : 100;
 }
-void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue *value, int op )
+void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
 	DaoArray *self = & va->xArray;
 
@@ -2276,9 +2227,9 @@ void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue 
 	if( value->type ==0 ) return;
 	if( pid == NULL || pid->type == 0 ){
 		if( value->type >= DAO_INTEGER && value->type <= DAO_COMPLEX ){
-			DaoArray_array_op_number( self, self, value, op, proc );
+			DaoArray_array_op_number( self, self, value, DVM_MOVE, proc );
 		}else if( value->type == DAO_ARRAY ){
-			DaoArray_ArrayArith( self, self, & value->xArray, op, proc );
+			DaoArray_ArrayArith( self, self, & value->xArray, DVM_MOVE, proc );
 		}else{
 			DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "" );
 		}
@@ -2290,7 +2241,7 @@ void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue 
 			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
 			return;
 		}
-		DaoArray_SetOneItem( self, id, value, op );
+		DaoArray_SetValue( self, id, value );
 		return;
 	}
 	if( self->slices == NULL ) self->slices = DArray_New(D_ARRAY);
@@ -2298,9 +2249,9 @@ void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue 
 	self->original = self;
 	if( value->type == DAO_ARRAY ){
 		DaoArray *na = & value->xArray;
-		DaoArray_ArrayArith( self, self, na, op, proc );
+		DaoArray_ArrayArith( self, self, na, DVM_MOVE, proc );
 	}else{
-		DaoArray_array_op_number( self, self, value, op, proc );
+		DaoArray_array_op_number( self, self, value, DVM_MOVE, proc );
 	}
 	self->original = NULL;
 }
@@ -2364,10 +2315,10 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	DaoArray *self = & vself->xArray;
 	DaoArray_Sliced( self );
 	if( N == 0 ){
-		DaoArray_SetItem1( vself, proc, dao_none_value, value, DVM_MOVE );
+		DaoArray_SetItem1( vself, proc, dao_none_value, value );
 		return;
 	}else if( N == 1 ){
-		DaoArray_SetItem1( vself, proc, ids[0], value, DVM_MOVE );
+		DaoArray_SetItem1( vself, proc, ids[0], value );
 		return;
 	}else if( N <= self->ndim ){
 		daoint *dims = self->dims;
@@ -2391,7 +2342,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 			return;
 		}
 		if( allNumbers ){
-			DaoArray_SetOneItem( self, idFlat, value, DVM_MOVE );
+			DaoArray_SetValue( self, idFlat, value );
 			return;
 		}
 	}
@@ -3622,6 +3573,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 	complex16 bc, ac = {0.0, 0.0};
 
 	ac.real = af;
+	if( A->type == DAO_COMPLEX ) ac = A->xComplex.value;
 	if( N < 0 ){
 		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
 		return 0;
@@ -3640,8 +3592,6 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_DIV : ci = ai / bi; break;
 			case DVM_MOD : ci = ai % bi; break;
 			case DVM_POW : ci = powl( ai, bi );break;
-			case DVM_AND : ci = ai && bi; break;
-			case DVM_OR  : ci = ai || bi; break;
 			default : break;
 			}
 			switch( C->etype ){
@@ -3667,8 +3617,6 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_DIV : dC->data.i[c] = af / bf; break;
 			case DVM_MOD : dC->data.i[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.i[c] = powf( af, bf );break;
-			case DVM_AND : dC->data.i[c] = af && bf; break;
-			case DVM_OR  : dC->data.i[c] = af || bf; break;
 			default : break;
 			}
 			break;
@@ -3682,8 +3630,6 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_DIV : dC->data.f[c] = af / bf; break;
 			case DVM_MOD : dC->data.f[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.f[c] = powf( af, bf );break;
-			case DVM_AND : dC->data.f[c] = af && bf; break;
-			case DVM_OR  : dC->data.f[c] = af || bf; break;
 			default : break;
 			}
 			break;
@@ -3697,8 +3643,6 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_DIV : dC->data.d[c] = af / bf; break;
 			case DVM_MOD : dC->data.d[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.d[c] = powf( af, bf );break;
-			case DVM_AND : dC->data.d[c] = af && bf; break;
-			case DVM_OR  : dC->data.d[c] = af || bf; break;
 			default : break;
 			}
 			break;
@@ -3730,6 +3674,7 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 	complex16 ac, bc = {0.0, 0.0};
 
 	bc.real = bf;
+	if( B->type == DAO_COMPLEX ) bc = B->xComplex.value;
 	if( N < 0 ){
 		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
 		return 0;
@@ -3747,8 +3692,6 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_DIV : ci = ai / bi; break;
 			case DVM_MOD : ci = ai % bi; break;
 			case DVM_POW : ci = powl( ai, bi );break;
-			case DVM_AND : ci = ai && bi; break;
-			case DVM_OR  : ci = ai || bi; break;
 			default : break;
 			}
 			switch( C->etype ){
@@ -3774,8 +3717,6 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_DIV : dC->data.i[c] = af / bf; break;
 			case DVM_MOD : dC->data.i[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.i[c] = pow( af, bf );break;
-			case DVM_AND : dC->data.i[c] = af && bf; break;
-			case DVM_OR  : dC->data.i[c] = af || bf; break;
 			default : break;
 			}
 			break;
@@ -3789,8 +3730,6 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_DIV : dC->data.f[c] = af / bf; break;
 			case DVM_MOD : dC->data.f[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.f[c] = powf( af, bf );break;
-			case DVM_AND : dC->data.f[c] = af && bf; break;
-			case DVM_OR  : dC->data.f[c] = af || bf; break;
 			default : break;
 			}
 			break;
@@ -3804,8 +3743,6 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_DIV : dC->data.d[c] = af / bf; break;
 			case DVM_MOD : dC->data.d[c] = af - bf*(daoint)(af / bf); break;
 			case DVM_POW : dC->data.d[c] = pow( af, bf );break;
-			case DVM_AND : dC->data.d[c] = af && bf; break;
-			case DVM_OR  : dC->data.d[c] = af || bf; break;
 			default : break;
 			}
 			break;
@@ -3860,8 +3797,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 				case DVM_DIV : dC->data.i[c] = dA->data.i[a] / dB->data.i[b]; break;
 				case DVM_MOD : dC->data.i[c] = dA->data.i[a] % dB->data.i[b]; break;
 				case DVM_POW : dC->data.i[c] = powf( dA->data.i[a], dB->data.i[b] );break;
-				case DVM_AND : dC->data.i[c] = dA->data.i[a] && dB->data.i[b]; break;
-				case DVM_OR  : dC->data.i[c] = dA->data.i[a] || dB->data.i[b]; break;
 				default : break;
 				}
 				break;
@@ -3875,8 +3810,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 				case DVM_DIV : dC->data.f[c] = dA->data.f[a] / vb; break;
 				case DVM_MOD : va = dA->data.f[a]; dC->data.f[c] = va - vb*(daoint)(va/vb); break;
 				case DVM_POW : dC->data.f[c] = powf( dA->data.f[a], vb );break;
-				case DVM_AND : dC->data.f[c] = dA->data.f[a] && vb; break;
-				case DVM_OR  : dC->data.f[c] = dA->data.f[a] || vb; break;
 				default : break;
 				}
 				break;
@@ -3890,8 +3823,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 				case DVM_DIV : dC->data.d[c] = dA->data.d[a] / vb; break;
 				case DVM_MOD : va = dA->data.d[a]; dC->data.d[c] = va - vb*(daoint)(va/vb); break;
 				case DVM_POW : dC->data.d[c] = powf( dA->data.d[a], vb );break;
-				case DVM_AND : dC->data.d[c] = dA->data.d[a] && vb; break;
-				case DVM_OR  : dC->data.d[c] = dA->data.d[a] || vb; break;
 				default : break;
 				}
 				break;
@@ -3923,8 +3854,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_DIV : res = dA->data.i[a] / dB->data.i[b]; break;
 			case DVM_MOD : res = dA->data.i[a] % dB->data.i[b]; break;
 			case DVM_POW : res = powl( dA->data.i[a], dB->data.i[b] );break;
-			case DVM_AND : res = dA->data.i[a] && dB->data.i[b]; break;
-			case DVM_OR  : res = dA->data.i[a] || dB->data.i[b]; break;
 			default : break;
 			}
 			switch( C->etype ){
@@ -3954,8 +3883,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_DIV : dC->data.i[c] = ad / bd; break;
 			case DVM_MOD : dC->data.i[c] = ad - bd*(daoint)(ad/bd); break;
 			case DVM_POW : dC->data.i[c] = powf( ad, bd );break;
-			case DVM_AND : dC->data.i[c] = ad && bd; break;
-			case DVM_OR  : dC->data.i[c] = ad || bd; break;
 			default : break;
 			}
 			break;
@@ -3970,8 +3897,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_DIV : dC->data.f[c] = ad / bd; break;
 			case DVM_MOD : dC->data.f[c] = ad - bd*(daoint)(ad/bd); break;
 			case DVM_POW : dC->data.f[c] = powf( ad, bd );break;
-			case DVM_AND : dC->data.f[c] = ad && bd; break;
-			case DVM_OR  : dC->data.f[c] = ad || bd; break;
 			default : break;
 			}
 			break;
@@ -3986,8 +3911,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_DIV : dC->data.d[c] = ad / bd; break;
 			case DVM_MOD : dC->data.d[c] = ad - bd*(daoint)(ad/bd); break;
 			case DVM_POW : dC->data.d[c] = powf( ad, bd );break;
-			case DVM_AND : dC->data.d[c] = ad && bd; break;
-			case DVM_OR  : dC->data.d[c] = ad || bd; break;
 			default : break;
 			}
 			break;
@@ -4009,28 +3932,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 	return 1;
 }
 
-DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res )
-{
-	res->type = self->etype;
-	switch( self->etype ){
-	case DAO_INTEGER : res->xInteger.value = self->data.i[i]; break;
-	case DAO_FLOAT : res->xFloat.value = self->data.f[i]; break;
-	case DAO_DOUBLE : res->xDouble.value = self->data.d[i]; break;
-	case DAO_COMPLEX : res->xComplex.value = self->data.c[i]; break;
-	default : break;
-	}
-	return res;
-}
-void DaoArray_SetValue( DaoArray *self, daoint i, DaoValue *value )
-{
-	switch( self->etype ){
-	case DAO_INTEGER : self->data.i[i] = DaoValue_GetInteger( value ); break;
-	case DAO_FLOAT : self->data.f[i] = DaoValue_GetFloat( value ); break;
-	case DAO_DOUBLE : self->data.d[i] = DaoValue_GetDouble( value ); break;
-	case DAO_COMPLEX : self->data.c[i] = DaoValue_GetComplex( value ); break;
-	default : break;
-	}
-}
 static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
 	DaoValue com = {DAO_COMPLEX};

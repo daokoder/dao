@@ -76,7 +76,9 @@ void DaoVariable_Delete( DaoVariable *self )
 int DaoArray_Compare( DaoArray *x, DaoArray *y );
 #endif
 
-#define float_compare( x, y ) (x==y ? 0 : (x<y ? -1 : 1))
+#define number_compare( x, y ) ((x)==(y) ? 0 : ((x)<(y) ? -1 : 1))
+
+/* Invalid comparison returns either -100 or 100: */
 
 int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 {
@@ -94,7 +96,7 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 		return DString_Compare( L->etype->name, R->etype->name );
 	}else if( SL == '$' && SR == '$' ){
 		if( L->etype->mapNames->size != R->etype->mapNames->size ){
-			return (int)L->etype->mapNames->size - (int)R->etype->mapNames->size;
+			return number_compare( L->etype->mapNames->size, R->etype->mapNames->size );
 		}else{
 			for(N=DMap_First(ML);N;N=DMap_Next(ML,N)){
 				if( DMap_Find( MR, N->key.pVoid ) ==0 ) return -1;
@@ -118,8 +120,8 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 {
 	int i, lb, rb, res;
-	if( lt->size < rt->size ) return -1;
-	if( lt->size > rt->size ) return 1;
+	if( lt->size < rt->size ) return -100;
+	if( lt->size > rt->size ) return 100;
 
 	for(i=0; i<lt->size; i++){
 		DaoValue *lv = lt->items[i];
@@ -129,11 +131,11 @@ int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 		if( lb == rb && lb == DAO_TUPLE ){
 			res = DaoTuple_Compare( (DaoTuple*) lv, (DaoTuple*) rv );
 			if( res != 0 ) return res;
-		}else if( lb != rb || lb ==0 || lb >= DAO_ARRAY || lb == DAO_COMPLEX ){
+		}else if( lb != rb || lb ==0 || lb > DAO_ARRAY || lb == DAO_COMPLEX ){
 			if( lv < rv ){
-				return -1;
+				return -100;
 			}else if( lv > rv ){
-				return 1;
+				return 100;
 			}
 		}else{
 			res = DaoValue_Compare( lv, rv );
@@ -149,21 +151,25 @@ int DaoList_Compare( DaoList *list1, DaoList *list2 )
 	int size1 = list1->items.size;
 	int size2 = list2->items.size;
 	int min = size1 < size2 ? size1 : size2;
+	int res = size1 == size2 ? 1 : 100;
 	int i = 0, cmp = 0;
 	/* find the first unequal items */
 	while( i < min && (cmp = DaoValue_Compare(*d1, *d2)) ==0 ) i++, d1++, d2++;
-	if( i < min ) return cmp;
+	if( i < min ){
+		if( abs( cmp > 1 ) ) return cmp;
+		return cmp * res;
+	}
 	if( size1 == size2  ) return 0;
-	return size1 > size2 ? 1 : -1;
+	return size1 < size2 ? -100 : 100;
 }
 int DaoValue_Compare( DaoValue *left, DaoValue *right )
 {
 	double L, R;
 	int res = 0;
 	if( left == right ) return 0;
-	if( left == NULL || right == NULL ) return left < right ? -1 : 1;
+	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
 	if( left->type != right->type ){
-		res = left->type < right->type ? -1 : 1;
+		res = left->type < right->type ? -100 : 100;
 		if( right->type == DAO_TUPLE && right->xTuple.size == 2 ){
 			res = DaoValue_Compare( left, right->xTuple.items[0] );
 			if( res <= 0 ) return res;
@@ -175,13 +181,13 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 		if( right->type < DAO_INTEGER || right->type > DAO_DOUBLE ) return res;
 		L = DaoValue_GetDouble( left );
 		R = DaoValue_GetDouble( right );
-		return L==R ? 0 : ( L<R ? -1 : 1 );
+		return L == R ? 0 : (L < R ? -1 : 1);
 	}
 	switch( left->type ){
 	case DAO_NONE : return 0;
-	case DAO_INTEGER : return left->xInteger.value - right->xInteger.value;
-	case DAO_FLOAT   : return float_compare( left->xFloat.value, right->xFloat.value );
-	case DAO_DOUBLE  : return float_compare( left->xDouble.value, right->xDouble.value );
+	case DAO_INTEGER : return number_compare( left->xInteger.value, right->xInteger.value );
+	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
+	case DAO_DOUBLE  : return number_compare( left->xDouble.value, right->xDouble.value );
 #ifdef DAO_WITH_LONGINT
 	case DAO_LONG    : return DLong_Compare( left->xLong.value, right->xLong.value );
 #endif
@@ -190,12 +196,12 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
 	case DAO_CTYPE :
-	case DAO_CDATA : return (daoint)left->xCdata.data - (daoint)right->xCdata.data; 
+	case DAO_CDATA : return number_compare( (daoint)left->xCdata.data, (daoint)right->xCdata.data ); 
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
 	}
-	return left < right ? -1 : (left > right); /* needed for map */
+	return left < right ? -100 : 100; /* needed for map */
 }
 int DaoValue_IsZero( DaoValue *self )
 {

@@ -396,13 +396,13 @@ static void DaoxStream_WriteEntryName( DaoxStream *self, DString *name )
 		}else{
 			DString_AppendMBS( self->output, name->mbs );
 		}
+		self->offset += name->size;
+		self->last = name->mbs[name->size-1];
 	}else{
 		DaoxStream_SetColor( self, "blue", NULL );
 		DaoxStream_WriteMBS( self, name->mbs );
 		DaoxStream_SetColor( self, NULL, NULL );
 	}
-	self->offset += name->size;
-	self->last = name->mbs[name->size-1];
 }
 static void DaoxStream_WriteEntryName2( DaoxStream *self, DString *name )
 {

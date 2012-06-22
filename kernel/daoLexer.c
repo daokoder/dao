@@ -82,8 +82,8 @@ const char *const dao_oper_tokens[] =
 	"??" ,
 	"&" ,
 	"|" ,
-	"!" ,
 	"^" ,
+	"!" ,
 	"~" ,
 	"$" ,
 	"@" ,
@@ -100,6 +100,7 @@ const char *const dao_oper_tokens[] =
 	"%=" ,
 	"&=" ,
 	"|=" ,
+	"^=" ,
 	"==" ,
 	"!=" ,
 	"<" ,
@@ -406,11 +407,11 @@ enum
 	TOK_OP_MOD ,
 	TOK_OP_AND ,
 	TOK_OP_OR ,
+	TOK_OP_XOR ,
 	TOK_OP_NOT ,
 	TOK_OP_EQ ,
 	TOK_OP_LT ,
 	TOK_OP_GT ,
-	TOK_OP_XOR ,
 	TOK_OP_DOT ,
 	TOK_OP_AT , /* @ */
 	TOK_OP_AT2 , /* @@, obsolete */
@@ -460,7 +461,8 @@ enum
 	TOK_EQ_DIV ,  /* /= */
 	TOK_EQ_MOD ,  /* %= */
 	TOK_EQ_AND ,  /* &= */
-	TOK_EQ_OR ,  /* |= */
+	TOK_EQ_OR  ,  /* |= */
+	TOK_EQ_XOR ,  /* ^= */
 	TOK_EQ_NOT ,  /* != */
 	TOK_EQ_EQ ,  /* == */
 	TOK_EQ_LT ,  /* <= */
@@ -514,11 +516,11 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_MOD ,
 	DTOK_AMAND ,
 	DTOK_PIPE ,
+	DTOK_XOR ,
 	DTOK_NOT ,
 	DTOK_ASSN ,
 	DTOK_LT ,
 	DTOK_GT ,
-	DTOK_XOR ,
 	DTOK_DOT ,
 	DTOK_AT , /* @ */
 	DTOK_AT2 , /* @@ */
@@ -568,7 +570,8 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_DIVASN ,  /* /= */
 	DTOK_MODASN ,  /* %= */
 	DTOK_ANDASN ,  /* &= */
-	DTOK_ORASN ,  /* |= */
+	DTOK_ORASN  ,  /* |= */
+	DTOK_XORASN ,  /* ^= */
 	DTOK_NE ,  /* != */
 	DTOK_EQ ,  /* == */
 	DTOK_LE ,  /* <= */
@@ -723,8 +726,8 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_TILDE ][ (unsigned) '~' ] = TOK_OP_RGXA; /* ~~ */
 	daoLexTable[ TOK_START ][ (unsigned) '=' ] = TOK_OP_EQ;
 
-	/* :=  +=  -=  /=  *=  %=  &=  |=  !=*/
-	for(i=TOK_OP_COLON; i<TOK_OP_LT; i++)
+	/*  :=  +=  -=  /=  *=  %=  &=  |=  ^=  !=  ==  <=  >=  */
+	for(i=TOK_OP_COLON; i<TOK_OP_GT; i++)
 		daoLexTable[i][ (unsigned) '=' ] = i + (TOK_EQ_COLON - TOK_OP_COLON);
 	daoLexTable[ TOK_START ][ (unsigned) '>' ] = TOK_OP_GT;
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '?' ] = TOK_END_ASSERT; /* ?? */
@@ -811,6 +814,7 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_MODASN ] = doper( DAO_OPER_ASSN_MOD, 0, 0, 11 );
 	daoArithOper[ DTOK_ANDASN ] = doper( DAO_OPER_ASSN_AND, 0, 0, 11 );
 	daoArithOper[ DTOK_ORASN ]  = doper( DAO_OPER_ASSN_OR,  0, 0, 11 );
+	daoArithOper[ DTOK_XORASN ] = doper( DAO_OPER_ASSN_XOR, 0, 0, 11 );
 	daoArithOper[ DTOK_QUERY ]  = doper( DAO_OPER_IF,       0, 0, 9 );
 	daoArithOper[ DTOK_COLON ]  = doper( DAO_OPER_COLON,    0, 0, 10 );
 	daoArithOper[ DTOK_LSHIFT ] = doper( DAO_OPER_LLT,      0, 0, 1 );

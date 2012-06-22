@@ -11,7 +11,7 @@ Operators
 
 
 @[text]
-Dao Language supports a set of abundant operators to facilitate
+Dao Language supports a rich set of operators to facilitate
 the writing of more expressive scripts. Many of these operators
 can be used for different data types.
 
@@ -22,39 +22,39 @@ those operators are done in element-wise.
 @[subsection]Arithmetic Operators@[subsection]
 @[code]
 # Binary operators:
-(int|float|double|complex|array) +  (int|float|double|complex|array) # Addtion;
-(int|float|double|complex|array) -  (int|float|double|complex|array) # Subtraction;
-(int|float|double|complex|array) *  (int|float|double|complex|array) # Multiplication;
-(int|float|double|complex|array) /  (int|float|double|complex|array) # Division;
-(int|float|double|complex|array) %  (int|float|double|complex|array) # Modulo;
-(int|float|double|complex|array) ** (int|float|double|complex|array) # Power;
+(int|float|double|complex|long|array) +  (int|float|double|complex|long|array) # Addtion;
+(int|float|double|complex|long|array) -  (int|float|double|complex|long|array) # Subtraction;
+(int|float|double|complex|long|array) *  (int|float|double|complex|long|array) # Multiplication;
+(int|float|double|complex|long|array) /  (int|float|double|complex|long|array) # Division;
+(int|float|double|complex|long|array) %  (int|float|double|complex|long|array) # Modulo;
+(int|float|double|complex|long|array) ** (int|float|double|complex|long|array) # Power;
 
 #Unary operators:
-+  (int|float|double|complex|array) # Unary plus;
--  (int|float|double|complex|array) # Unary minus;
-++ (int|float|double|complex|array) # Increment;
--- (int|float|double|complex|array) # Decrement;
++  (int|float|double|complex|long|array) # Unary plus;
+-  (int|float|double|complex|long|array) # Unary minus;
+++ (int|float|double|complex|long|array) # Increment;
+-- (int|float|double|complex|long|array) # Decrement;
 @[code]
 
 
 @[subsection]Comparison Operators@[subsection]
 @[code]
-(int|float|double) == (int|float|double) # Equal to;
-(int|float|double) != (int|float|double) # Not equal to;
-(int|float|double) <  (int|float|double) # Less than;
-(int|float|double) >  (int|float|double) # Greater than;
-(int|float|double) <= (int|float|double) # No greater than;
-(int|float|double) >= (int|float|double) # No less than;
+(int|float|double|long) == (int|float|double|long) # Equal to;
+(int|float|double|long) != (int|float|double|long) # Not equal to;
+(int|float|double|long) <  (int|float|double|long) # Less than;
+(int|float|double|long) >  (int|float|double|long) # Greater than;
+(int|float|double|long) <= (int|float|double|long) # No greater than;
+(int|float|double|long) >= (int|float|double|long) # No less than;
 
 complex == complex # Equal to;
 complex != complex # Not equal to;
 
 array == array # Equal to;
 array != array # Not equal to;
-array <  array # Less than;
-array >  array # Greater than;
-array <= array # No greater than;
-array >= array # No less than;
+array(<int>|<float>|<double>) <  array(<int>|<float>|<double>) # Less than;
+array(<int>|<float>|<double>) >  array(<int>|<float>|<double>) # Greater than;
+array(<int>|<float>|<double>) <= array(<int>|<float>|<double>) # No greater than;
+array(<int>|<float>|<double>) >= array(<int>|<float>|<double>) # No less than;
 
 string == string # Equal to;
 string != string # Not equal to;
@@ -65,27 +65,52 @@ string >= string # No less than;
 @[code]
 
 
-@[subsection]Comparison Operators@[subsection]
+@[subsection]Logic Operators@[subsection]
 @[code]
-!   (int|float|double|array) # Logic negation (NOT);
-not (int|float|double|array) # Logic negation (NOT);
+!   (int|float|double|long) # Logic negation (NOT);
+not (int|float|double|long) # Logic negation (NOT);
 
-(int|float|double|array) &&  (int|float|double|array) # Logic AND;
-(int|float|double|array) and (int|float|double|array) # Logic AND;
-(int|float|double|array) ||  (int|float|double|array) # Logic OR;
-(int|float|double|array) or  (int|float|double|array) # Logic OR;
+(int|float|double|long) &&  (int|float|double|long) # Logic AND;
+(int|float|double|long) and (int|float|double|long) # Logic AND;
+(int|float|double|long) ||  (int|float|double|long) # Logic OR;
+(int|float|double|long) or  (int|float|double|long) # Logic OR;
 @[code]
+Note:
+And the @[green]and@[green] and @[green]or@[green] operator behave in the same way as
+the Lua @[green]and@[green] @[green]or@[green] operators,
+namely, the last evaluated operand is returned as the result.
+This means, when the first operand can determine the result,
+return the first operand, otherwise return the second.
+When the operands have values of 0 or 1, this behaviour is exactly
+the same as normal boolean logic. The following lists some examples
+for other cases,
+@[code]
+10 && 0  # gives 0
+0 && 10  # gives 0
+10 && 20 # gives 20
+20 && 10 # gives 10
+
+10 || 0  # gives 10
+ 0 || 10 # gives 10
+10 || 20 # gives 10
+20 || 10 # gives 20
+@[code]
+Properly exploiting the behaviour of the @[green]and@[green] @[green]or@[green] operators 
+can simplify coding for some cases.
+
+
+
 
 @[subsection]Bitwise Operators@[subsection]
 @[code]
-~ (int|float|double|array) # Bitwise NOT;
+~ (int|float|double|complex|long) # Bitwise NOT;
 
-(int|float|double|array) & (int|float|double|array) # Bitwise AND;
-(int|float|double|array) | (int|float|double|array) # Bitwise OR;
-(int|float|double|array) ^ (int|float|double|array) # Bitwise XOR;
+(int|float|double|long) & (int|float|double|long) # Bitwise AND;
+(int|float|double|long) | (int|float|double|long) # Bitwise OR;
+(int|float|double|long) ^ (int|float|double|long) # Bitwise XOR;
 
-(int|float|double) << (int|float|double) # Bitwise left shift;
-(int|float|double) >> (int|float|double) # Bitwise right shift;
+(int|float|double|long) << (int|float|double) # Bitwise left shift;
+(int|float|double|long) >> (int|float|double) # Bitwise right shift;
 @[code]
 Please note, non-integer operands are converted to integers.
 
@@ -98,45 +123,52 @@ Compound assignment operators
 (int|float|double) -= (int|float|double) # Subtraction assignment;
 (int|float|double) *= (int|float|double) # Multiplication assignment;
 (int|float|double) /= (int|float|double) # Division assignment;
+(int|float|double) %= (int|float|double) # Modulo assignment
 
 (int|float|double) &= (int|float|double) # Bitwise AND assignment;
 (int|float|double) |= (int|float|double) # Bitwise OR assignment;
+(int|float|double) ^= (int|float|double) # Bitwise XOR assignment;
+
+long += (int|float|double|long) # Addition assignment;
+long -= (int|float|double|long) # Subtraction assignment;
+long *= (int|float|double|long) # Multiplication assignment;
+long /= (int|float|double|long) # Division assignment;
+long %= (int|float|double|long) # Modulo assignment
+
+long &= (int|float|double|long) # Bitwise AND assignment;
+long |= (int|float|double|long) # Bitwise OR assignment;
+long ^= (int|float|double|long) # Bitwise XOR assignment;
+
+array(<int>|<float>|<double>) += (int|float|double) # Addition assignment;
+array(<int>|<float>|<double>) -= (int|float|double) # Subtraction assignment;
+array(<int>|<float>|<double>) *= (int|float|double) # Multiplication assignment;
+array(<int>|<float>|<double>) /= (int|float|double) # Division assignment;
+array(<int>|<float>|<double>) %= (int|float|double) # Modulo assignment
+
+array(<int>|<float>|<double>) += array(<int>|<float>|<double>) # Addition assignment;
+array(<int>|<float>|<double>) -= array(<int>|<float>|<double>) # Subtraction assignment;
+array(<int>|<float>|<double>) *= array(<int>|<float>|<double>) # Multiplication assignment;
+array(<int>|<float>|<double>) /= array(<int>|<float>|<double>) # Division assignment;
+array(<int>|<float>|<double>) %= array(<int>|<float>|<double>) # Modulo assignment
+
+array<complex> += (int|float|double|complex|array) # Addition assignment;
+array<complex> -= (int|float|double|complex|array) # Subtraction assignment;
+array<complex> *= (int|float|double|complex|array) # Multiplication assignment;
+array<complex> /= (int|float|double|complex|array) # Division assignment;
+array<complex> %= (int|float|double|complex|array) # Modulo assignment
 @[code]
 
 
 
-@[subsection]Boolean Logic:@[subsection]
-<table>
-^Operator ^Name ^Supported Types ^
-| &&    | and | number |
-| \|\|  | or  | number |
-| !     | not | number |
-</table>
-Note, to make code more readable, <%>and</%>, <%>or</%> and <%>not</%>
-are also supported as equivalent operators.
-And the <%>and</%> and <%>or</%> operator behave in the same way as the Lua
-<%>and</%> <%>or</%> operators,
-namely, the last evaluated operand is returned as the result.
-This means, when the first operand can determine the result,
-return the first operand, otherwise return the second.
-When the operands have values of 0 or 1, this behaviour is exactly
-the same as normal boolean logic. The following lists some examples
-for other cases,
-@[code]
-10 && 0 => 0
-0 && 10 => 0
-10 && 20 => 20
-20 && 10 => 10
 
-10 || 0 => 10
- 0 || 10 => 10
-10 || 20 => 10
-20 || 10 => 20
-@[code]
-Properly exploiting the behaviour of the <%>and</%> <%>or</%> operators 
-can simplify coding for some cases.
+@[subsection]
+Type Operators
+@[subsection]
 
-@[subsection]Type Operator@[subsection]
+@[code]
+?=
+?<
+@[code]
 
 <table>
 ^Operator ^Name ^Usage ^

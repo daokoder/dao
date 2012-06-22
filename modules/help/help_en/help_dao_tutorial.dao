@@ -19,13 +19,258 @@ Dao Programming Basics
 @[text]
 
 This tutorial will cover some of the basics of Dao programming.
-The first example will be the classic @[green]hello world@[green].
+We will start with the traditional @[green]hello world@[green] example.
+
 
 @[subsection]
 Hello World!
 @[subsection]
 
-In order to write "Hello world!" on to the screen, one will need to use the
-built-in @[green]io@[green] module. 
+To simply write "Hello world!" to the screen, one can use,
+@[code]
+io.write( 'Hello world!' )
+@[code]
+In this simple example, the built-in @[green]io@[green] module is used
+to access the IO functionalities of the module.
+@[green]write()@[green] is a method provided by the @[green]io@[green] module
+to write outputs on to the standard output (the screen in this case).
+In Dao, string can be quoted with a pair of single quotation marks
+or with a pair of double quotation marks.
+
+
+@[subsection]
+Running Scripts
+@[subsection]
+
+There are three ways to run codes in Dao.
+The most typical way is to create a script file (e.g. @[cyan]hello_world.dao@[cyan]),
+and put the codes into this file, and then run @[green]dao@[green] using this file
+as argument,
+@[code]
+$$ dao hello_world.dao
+@[code]
+
+But if you just want to run the codes once, you can simple run them from command line using,
+@[code]
+$$ dao -e "io.write( 'Hello world!' )"
+@[code]
+
+For learning Dao, it may be the best to run codes in interactive mode.
+Invoking @[green]dao@[green] without any argument will start an interactive shell,
+@[code]
+$$ dao
+
+  Dao Virtual Machine 1.2
+  Built date: Jun 20 2012
+  Changeset ID: FOS.a019d384dd7c
+
+  Copyright(C) 2006-2012, Fu Limin
+  Dao is released under the terms of the Simplified BSD License
+  Dao Language website: http://www.daovm.net
+
+(dao) 
+@[code]
+If you have the Dao @[green]help@[green] properly installed,
+starting @[green]dao@[green] in interactive mode will automatically load
+the help files and print out the following information,
+@[code]
+  Module Help is loaded.
+  Now you may run "help()" to list all the available help entries;
+  or run "help('help')" for detailed information about the help system.
+@[code] 
+If you are reading this tutorial from a webpage, and want to access it from
+the interactive command line, you can simple run,
+@[code]
+(dao) help( 'dao.tutorial.basics' )
+@[code]
+
+
+
+@[subsection]
+Commenting Codes
+@[subsection]
+
+It is always a good idea to comment your codes.
+Dao supports both single line comments and multiple line comments.
+A single comment starts at a @[green]#@[green] 
+(not followed by a left curly bracket @[green]{@[green]),
+and ends at the end of the current line.
+And a multiple line comment (or just part of a single line)
+opens by @[green]#{@[green] and closes by @[green]#}@[green].
+For example,
+@[code]
+# This is a simple demo:
+io.write( "Hello World!" #{ comment inside codes #} );
+#{
+Here are multi-lines comments.
+Here are multi-lines comments.
+#}
+@[code]
+
+@[text]
+
+
+
+
+                                                                                            
+@[name]
+dao.tutorial.types
+@[name]
+
+@[title]
+Tutorial on the basic types of Dao 
+@[title]
+
+@[text]
+
+
+
+@[subsection]
+Numbers
+@[subsection]
+Dao has native supports for the following types of numbers:
+@[green]int@[green], @[green]float@[green], @[green]double@[green],
+@[green]complex@[green] and @[green]long@[green].
+
+
+@[green]int@[green] and @[green]float@[green] numbers can be expressed
+in the same ways as most other languages. But a @[green]double@[green] number,
+need a @[green]D@[green] suffix to @[green]int@[green] or @[green]float@[green] number
+to be parsed as a double precision floating point number.
+For numbers written in scientific format,
+lower case @[green]e@[green] is used for @[green]float@[green];
+while upper case @[green]E@[green] is used for @[green]double@[green].
+A @[green]complex@[green] number can be expressed as an @[green]int@[green]
+or @[green]float@[green] number with a @[green]$@[green] suffix.
+
+
+@[green]long@[green] type represents arbitrary precision integers. They
+can be expressed as an @[green]int@[green] number with
+a @[green]L@[green] or a @[green]Lx@[green] suffix,
+where @[green]x@[green] is an integer between 2 and 16 (inclusive),
+representing the base of the number (used for parsing and printing only).
+
+
+Examples,
+@[code]
+I1 = 123
+I2 = 0xabc
+
+F1 = 456.7
+F2 = 123e4
+
+D1 = 123D
+D2 = 456.7D
+D3 = 123E4
+
+C1 = 123$
+C2 = 456.6$
+
+L1 = 123456789L
+L2 = 10001001110L2
+L3 = 0x123abc456L16
+@[code]
+
+
+These types support most of the common operators that are meaningful for them.
+For example, all the basic arithmetic operators such as:
+@[green]+@[green] (addition, unary plus), @[green]-@[green] (subtraction, unary minus),
+@[green]*@[green] (multiplication), @[green]/@[green] (division),
+@[green]%@[green] (modulo) and @[green]**@[green] (power)
+are supported.
+@[code]
+I1 = 123 + 456
+I2 = 789 % 123
+F1 = 123.5 ** 3
+D1 = 789.5D / 123
+L1 = 123456789L ** 123L
+@[code]
+
+Please see @[node]dao.type.int@[node], @[node]dao.type.float@[node],
+@[node]dao.type.double@[node], @[node]dao.type.complex@[node] and @[node]dao.type.long@[node]
+for more information.
+
+
+
+
+@[subsection]
+Strings
+@[subsection]
+
+In Dao, a string can be expressed as a sequence of characters enclosed by
+a pair of single qutotation marks or a pair of double quotation marks.
+The characters placed between the quotation marks must be formated according
+some rules (such as escaping quotation marks and other special characters
+and using numeric encodings of characters etc.).
+Please see @[node]dao.type.string@[node] for more information.
+@[code]
+mbs = 'hello'
+wcs = "道语言"
+mbs2 = 'It\'s green'
+wcs2 = "\u9053\u8bed\u8a00" # the same as wcs;
+@[code]
+
+
+To use strings as it is written without special treatment of the characters,
+they can be expressed as @[green]verbatim@[green] string, which are quoted with
+a pair of identical compound marks in the forms of @[green]@[]@[green]
+and @[green]@@[]@[green].
+Any number of letters, digits, underscores, blank spaces, dots, 
+colons, dashes and assignment marks can be placed in between the squared brackets
+to make sure the marks will not appear inside the string.
+The difference between using @[green]@[]@[green] and @[green]@@[]@[green]
+is the same as the difference between using single quotation marks and double quotation marks.
+Please see @[node]dao.type.string@[node] for more information.
+@[code]
+# C++ codes in MBS:
+cpp =
+@[cpp x]
+class AA
+{
+	int index;
+};
+struct BB{};
+@[cpp x]
+
+
+# Lua codes in MBS:
+lua =
+@[lua]
+local a = 1;
+function Test()
+	io.write( 'Hello' )
+end
+@[lua]
+
+# HTML codes in WCS:
+html =
+@@[html:123456]
+<body>
+<span name="test"></span>
+</body>
+@@[html:123456]
+@[code]
+
+
+
+
+@[subsection]
+Arrays
+@[subsection]
+
+
+@[subsection]
+Lists
+@[subsection]
+
+
+@[subsection]
+Maps and hash maps
+@[subsection]
+
+
+@[subsection]
+Tuples
+@[subsection]
 
 @[text]

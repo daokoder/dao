@@ -103,6 +103,7 @@ static const int mapAithOpcode[]=
 	DVM_MOD , /* DAO_OPER_ASSN_MOD */
 	DVM_BITAND , /* DAO_OPER_ASSN_AND */
 	DVM_BITOR  , /* DAO_OPER_ASSN_OR */
+	DVM_BITXOR , /* DAO_OPER_ASSN_XOR */
 
 	200,
 	DVM_PAIR , /* DAO_OPER_COLON */

@@ -75,8 +75,8 @@ enum DaoTokNames
 	DTOK_ASSERT , /* ?? */
 	DTOK_AMAND , /* & */
 	DTOK_PIPE , /* | */
-	DTOK_NOT , /* ! */
 	DTOK_XOR , /* ^ */
+	DTOK_NOT , /* ! */
 	DTOK_TILDE , /* ~ */
 	DTOK_DOLLAR , /* $ */
 	DTOK_AT , /* @ */
@@ -84,15 +84,16 @@ enum DaoTokNames
 	DTOK_POW , /* ** */
 	DTOK_AND , /* && */
 	DTOK_OR , /* || */
-	DTOK_NOTIN, /* not in */
-	DTOK_CASSN , /* := */
+	DTOK_NOTIN , /* not in */
+	DTOK_CASSN  , /* := */
 	DTOK_ADDASN , /* += */
 	DTOK_SUBASN , /* -= */
 	DTOK_MULASN , /* *= */
 	DTOK_DIVASN , /* /= */
 	DTOK_MODASN , /* %= */
 	DTOK_ANDASN , /* &= */
-	DTOK_ORASN , /* |= */
+	DTOK_ORASN  , /* |= */
+	DTOK_XORASN , /* ^= */
 	DTOK_EQ , /* == */
 	DTOK_NE , /* != */
 	DTOK_LT , /* < */
