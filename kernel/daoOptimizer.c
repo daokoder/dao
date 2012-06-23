@@ -4281,30 +4281,25 @@ NotExist_TryAux:
 							if( at->tid == DAO_NONE || at->tid > DAO_COMPLEX ) at = dao_type_float;
 					}
 				}else{
-					if( opb == 2 ){
-						int a = types[opa]->tid;
-						int b = types[opa+1]->tid;
-						at = types[opa];
-						/* only allow {[ number : number ]} */
-						if( ( a < DAO_INTEGER && a > DAO_DOUBLE ) ||
-								( b < DAO_INTEGER && b > DAO_DOUBLE ) )
-							goto ErrorTyping;
-					}else if( opb == 3 ){
-						at = types[opa];
-						if( at->realnum ){
-							if( types[opa+1]->realnum == 0 ) goto ErrorTyping;
-						}else if( at->tid ==DAO_COMPLEX ){
-							if( types[opa+1]->tid < DAO_INTEGER
-									|| types[opa+1]->tid > DAO_COMPLEX ) goto ErrorTyping;
-						}else if( at->tid == DAO_STRING ){
-							if( types[opa+1]->tid != DAO_STRING ) goto ErrorTyping;
-						}else if( at->tid == DAO_ARRAY ){
-							/* XXX */
+					int num = types[opa]->tid;
+					int init = types[opa+1]->tid;
+					at = types[opa+1];
+					if( num == 0 || (num > DAO_DOUBLE && (num & DAO_ANY) == 0) ) goto ErrorTyping;
+					if( opb == 3 && (init & DAO_ANY) == 0 && (types[opa+2]->tid & DAO_ANY) == 0 ){
+						int step = types[opa+2]->tid;
+						if( step == 0 ) goto ErrorTyping;
+						if( types[opa+1]->realnum ){
+							if( types[opa+2]->realnum == 0 ) goto ErrorTyping;
+						}else if( init == DAO_COMPLEX ){
+							if( step > DAO_COMPLEX ) goto ErrorTyping;
+						}else if( init == DAO_STRING ){
+							if( step != DAO_STRING ) goto ErrorTyping;
+						}else if( init == DAO_ARRAY ){
+							if( step > DAO_COMPLEX && step != DAO_ARRAY ) goto ErrorTyping;
 						}else{
 							goto ErrorTyping;
 						}
-						if( !types[opa+2]->realnum && !(types[opa+2]->tid & DAO_ANY) ) goto ErrorTyping;
-						if( vmc->code ==DVM_VECTOR && at->tid ==DAO_STRING ) goto ErrorTyping;
+						if( vmc->code == DVM_VECTOR && init == DAO_STRING ) goto ErrorTyping;
 					}
 				}
 				if( code == DVM_LIST || code == DVM_APLIST )
