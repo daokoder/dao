@@ -14,18 +14,20 @@ Multi-dimentional numeric array is supported by Dao as @[green]array@[green] typ
 
 
 @[subsection]Definition@[subsection]
-@[code]
-VectorEnumeration ::= '[' ExpressionList ']'
-MatrixEnumeration ::= '[' ExpressionList { ';' ExpressionList } ']'
-ArrayByRange ::= '[' Expression [ ':' Expression ] : Expression ']'
-
+@[code(syntax)]
+# Elements Enumeration:
+VectorEnumeration  ::= '[' ExpressionList ']'
+MatrixEnumeration  ::= '[' ExpressionList { ';' ExpressionList } ']'
 VectorEnumeration2 ::= 'array' '{' ExpressionList '}'
 MatrixEnumeration2 ::= 'array' '{' ExpressionList { ';' ExpressionList } '}'
-ArrayByRange2 ::= 'array' '{' Expression [ ':' Expression ] : Expression '}'
 
-Array ::= VectorEnumeration | MatrixEnumeration | ArrayByRange
-          | VectorEnumeration2 | MatrixEnumeration2 | ArrayByRange2
-@[code]
+# Elements of Arithmetic Progression sequence: start ++ [ step ++ ] count
+ArrayByArithProg  ::= '[' Expression '++' [ Expression '++' ] Expression ']'
+ArrayByArithProg2 ::= 'array' '{' Expression '++' [ Expression '++' ] Expression '}'
+
+Array ::= VectorEnumeration | MatrixEnumeration | ArrayByArithProg
+          | VectorEnumeration2 | MatrixEnumeration2 | ArrayByArithProg2
+@[code(syntax)]
 Please note that @[green]VectorEnumeration@[green] or @[green]VectorEnumeration2@[green]
 can still create a matrix or a multi-dimensional array, 
 if the @[green]ExpressionList@[green] produces a list of arrays.
@@ -49,7 +51,7 @@ vec1 = [1, 2, 3]  # array<int> vector, or 1x3 matrix;
 vec2 = [1.0; 2; 3]  # array<float> 3x1 matrix, or transposed vector;
 mat1 = [1D, 2; 3, 4]  # array<double> 2x2 matrix;
 mat2 = [ [1, 2], [3, 4] ]  # 2x2 matrix
-mat3 = [ [1, 2, 3] : 5 ]  # 5x3 matrix;
+mat3 = [ [1, 2, 3] ++ 5 ]  # 5x3 matrix;
 mat4 = array{ 1, 2; 3, 4 }  # 2x2 matrix
 @[code]
 

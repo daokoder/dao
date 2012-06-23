@@ -4,6 +4,12 @@ load help;
 dao.module
 @[name]
 
+@[title]
+Built-in Modules
+@[title]
+
+
+
 @[name]
 dao.module.std
 @[name]
@@ -12,13 +18,55 @@ dao.module.std
 Built-in Standard Module
 @[title]
 
+
+
+
+
+
+
+
+
 @[name]
 dao.module.io
 @[name]
 
 @[title]
-Built-in IO Module
+Built-in IO (Input/Output) Module
 @[title]
+
+
+@[name]
+dao.module.io.method
+@[name]
+
+@[title]
+IO Module Methods
+@[title]
+
+
+@[name]
+dao.module.io.stream
+@[name]
+
+@[title]
+IO Stream Type
+@[title]
+
+@[name]
+dao.module.io.stream.method
+@[name]
+
+@[title]
+IO Stream Methods
+@[title]
+
+
+
+
+
+
+
+
 
 
 @[name]

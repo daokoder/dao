@@ -15,18 +15,15 @@ They can be created by enumeration in almost the identical way, except that
 @[green]=>@[green] is used for map and @[green]:@[green] is used for hash map.
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 MapKeyValueList ::= Expression => Expression { ',' Expression => Expression }
 HashKeyValueList ::= Expression : Expression { ',' Expression : Expression }
 
-MapEnumeration ::= '{' MapKeyValueList '}'
-HashEnumeration ::= '{' HashKeyValueList '}'
+MapEnumeration  ::= [ 'map' ] '{' MapKeyValueList '}'
+HashEnumeration ::= [ 'map' ] '{' HashKeyValueList '}'
 
-MapEnumeration2 ::= 'map' '{' MapKeyValueList '}'
-HashEnumeration2 ::= 'map' '{' HashKeyValueList '}'
-
-Map ::= MapEnumeration | MapEnumeration2 | HashEnumeration | HashEnumeration2
-@[code]
+Map ::= MapEnumeration | HashEnumeration
+@[code(syntax)]
 
 
 @[text]

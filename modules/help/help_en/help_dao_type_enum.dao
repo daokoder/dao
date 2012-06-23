@@ -17,7 +17,7 @@ It can be used as enumerated constant in C++ or as symbol in Ruby.
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 EnumEntry ::= Identifier [ = ConstExpr ]
 
 Enum1 ::= 'enum' Identifier '{' EnumEntry { ',' EnumEntry } '}'
@@ -29,7 +29,7 @@ EnumType1 ::= 'enum' '<' EnumEntry { ',' EnumEntry } '>'
 EnumType2 ::= 'enum' '<' EnumEntry { ';' EnumEntry } '>'
 
 EnumType ::= EnumType1 | EnumType2
-@[code]
+@[code(syntax)]
 The only difference between @[cyan]Enum1@[cyan] and @[cyan]Enum2@[cyan],
 @[cyan]EnumType1@[cyan] and @[cyan]EnumType2@[cyan] is the comma and semicolon.
 When comma(s) are used, the enum items are not combinable; 

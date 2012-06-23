@@ -14,14 +14,14 @@ which can contain any data type. Internally it is implemented as a dynamic array
 
 
 @[subsection]Definition@[subsection]
-@[code]
-ListEnumeration ::= '{' ExpressionList '}'
+@[code(syntax)]
+ListEnumeration ::= [ 'list' ] '{' ExpressionList '}'
 
-ListEnumeration2 ::= 'list' '{' ExpressionList '}'
-ListByRange ::= 'list' '{' Expression [ ':' Expression ] : Expression '}'
+# Items of Arithmetic Progression sequence: start ++ [ step ++ ] count
+ListByArithProg ::= [ 'list' ] '{' Expression '++' [ Expression '++' ] Expression '}'
 
-List ::= ListEnumeration | ListEnumeration2 | ListByRange
-@[code]
+List ::= ListEnumeration | ListByArithProg
+@[code(syntax)]
 When a list is created by enumeration without explicit type declaration, 
 its type is inferred from the first expression of the expression list, 
 if the enumeration is not empty; otherwise, @[green]list<any>@[green] 
@@ -30,9 +30,10 @@ will be used as its type.
 
 @[subsection]Examples@[subsection]
 @[code]
-list1 = { 1, 2, 3 }  # list<int>
+list1 = { 1, 2, 3 }    # list<int>
 list2 = { 1.0, 2, 3 }  # list<float>
-list3 = list{ 1 : 2 : 5 } # list<int>
+list3 = { 1 ++ 5 }     # list<int>
+list4 = list{ 1 ++ 2 ++ 5 }  # list<int>
 @[code]
 
 @[text]

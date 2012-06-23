@@ -10,6 +10,54 @@ dao.module.std
 @[title]
 @[title]
 
+
+
+
+
+
+
+@[name]
+dao.module.io
+@[name]
+
+@[title]
+Built-in IO (Input/Output) Module
+@[title]
+
+
+@[name]
+dao.module.io.method
+@[name]
+
+@[title]
+IO Module Methods
+@[title]
+
+
+@[name]
+dao.module.io.stream
+@[name]
+
+@[title]
+IO Stream Type
+@[title]
+
+@[name]
+dao.module.io.stream.method
+@[name]
+
+@[title]
+IO Stream Methods
+@[title]
+
+
+
+
+
+
+
+
+
 @[name]
 dao.module.mt
 @[name]

@@ -86,12 +86,12 @@ the same as normal boolean logic. The following lists some examples
 for other cases,
 @[code]
 10 && 0  # gives 0
-0 && 10  # gives 0
+0  && 10 # gives 0
 10 && 20 # gives 20
 20 && 10 # gives 10
 
 10 || 0  # gives 10
- 0 || 10 # gives 10
+0  || 10 # gives 10
 10 || 20 # gives 10
 20 || 10 # gives 20
 @[code]

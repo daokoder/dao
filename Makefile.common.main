@@ -156,7 +156,7 @@ DAO_HELP_LANG ?= en
 doc:
 	@$(HAS_DIR) doc/html || $(MKDIR) doc/html
 	@$(HAS_DIR) doc/html/$(DAO_HELP_LANG) || $(MKDIR) doc/html/$(DAO_HELP_LANG)
-	LANG=$(DAO_HELP_LANG) ./dao -e "load help; help.export('','doc/html/$(DAO_HELP_LANG)')"
+	DAO_HELP_LANG=$(DAO_HELP_LANG) ./dao -e "load help; help.export('','doc/html/$(DAO_HELP_LANG)')"
 
 
 checkout:

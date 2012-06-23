@@ -19,10 +19,10 @@ with double qutotation marks.
 
 @[subsection]Basic Definition@[subsection]
 
-@[code]
+@[code(syntax)]
 ByteCharacterString ::= "'" Characters "'"
 WideCharacterString ::= '"' Characters '"'
-@[code]
+@[code(syntax)]
 where @[green]Characters@[green] can be anything but the quotation marks
 without backslash escapes. Any characters in a string can be preceded with
 a escape backslash to specify a charater represented by:
@@ -67,10 +67,10 @@ them consistently to avoid unnecesary conversions.
 
 A verbatim string is a string that can contain anything
 without interpreting escape characters.
-@[code]
+@[code(syntax)]
 VerbatimMBString ::= '@[' [Delimiter] ']' Characters '@[' [Delimiter] ']'
 VerbatimWCString ::= '@@[' [Delimiter] ']' Characters '@@[' [Delimiter] ']'
-@[code]
+@[code(syntax)]
 Where @[cyan]Delimiter@[cyan] can contain letters, digits, underscores, 
 blank spaces, dots, colons, dashes and assignment marks.
 It must be unique such that @[green]'@[' [Delimiter] ']'@[green]

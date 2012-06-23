@@ -554,12 +554,14 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoList *list = DaoProcess_PutList( proc );
 	daoint i, entry, size = p[0]->xInteger.value;
+	daoint fold = N == 2;
 
+	if( fold ) DaoList_Append( list, res );
 	if( sect == NULL || size < 0 ) return; // TODO exception
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
-	for(i=0; i<size; i++){
+	for(i=fold; i<size; i++){
 		idint.value = i;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		if( sect->b >1 && N ==2 ) DaoProcess_SetValue( proc, sect->a+1, res );

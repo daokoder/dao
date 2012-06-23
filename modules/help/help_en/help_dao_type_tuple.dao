@@ -11,12 +11,12 @@ have a field name.
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 TupleEnum ::= '(' [ Identifier '=>' ] Expression { ',' [ Identifier '=>' ] Expression } ')'
 TupleEnum2 ::= 'tuple' '{' [ Identifier '=>' ] Expression { ',' [ Identifier '=>' ] Expression } '}'
 
 Tuple ::= TupleEnum | TupleEnum2
-@[code]
+@[code(syntax)]
 
 
 @[subsection]Examples@[subsection]

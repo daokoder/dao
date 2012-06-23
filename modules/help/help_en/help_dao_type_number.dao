@@ -20,14 +20,14 @@ By default, its size is the same as the pointer size on the platform.
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 DecDigit ::= '0' ... '9'
 HexDigit ::= DecDigit | 'a' ... 'f' | 'A' ... 'F'
 
 DecInteger ::= DecDigit +
 HexInteger ::= ('0x' | '0X') DecDigit +
 Integer    ::= DecInteger | HexInteger
-@[code]
+@[code(syntax)]
 
 @[subsection]Examples@[subsection]
 @[code]
@@ -58,7 +58,7 @@ floating point numbers.
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 DotDec ::= DecDigit * '.' DecDigit +
 DecDot ::= DecDigit + '.' DecDigit *
 
@@ -68,7 +68,7 @@ DecNumber ::= DecInteger | DecSinglePrecision
 SciSinglePrecision ::= DecNumber 'e' [ '+' | '-' ] DecInteger
 
 Float ::= DecSinglePrecision | SciSinglePrecision
-@[code]
+@[code(syntax)]
 where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node].
 
 
@@ -102,10 +102,10 @@ floating point numbers.
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 SciDoublePrecision ::= DecNumber 'E' [ '+' | '-' ] DecInteger
 Double ::= (DecInteger | DecSinglePrecision) 'D' | SciDoublePrecision
-@[code]
+@[code(syntax)]
 where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node],
 and @[green]DecNumber@[green] and @[green]DecSinglePrecision@[green]
 are defined in @[node]dao.type.float@[node].
@@ -143,9 +143,9 @@ precision floating point numbers.
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 Complex ::= [ DecInteger ['.' DecInteger] ] '$'
-@[code]
+@[code(syntax)]
 
 @[green]complex@[green] has two fields @[green]real@[green] and @[green]imag@[green],
 which can be used to set and get the real and imaginary part of the complex.
@@ -182,10 +182,10 @@ Arbitrary Precision Integer Type
 
 
 @[subsection]Definition@[subsection]
-@[code]
+@[code(syntax)]
 LongBase ::= '2' ... '16'
 Long ::= Integer 'L' [ LongBase ]
-@[code]
+@[code(syntax)]
 By default the long integer is 10 based. If @[green]LongBase@[green]
 is explicitly specified, the @[green]Integer@[green] part
 will be interpreted as @[green]LongBase@[green] base integer, and invalid

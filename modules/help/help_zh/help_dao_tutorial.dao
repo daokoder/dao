@@ -345,6 +345,8 @@ Lists
 List can be created in similar ways as array, by enumerating elements or specifying
 an arithmetic progression, but using @[green]{}@[green] or @[green]list{}@[green]
 instead of @[green][]@[green] or @[green]array{}@[green].
+To use arithmetic progression, @[green]list{}@[green] must be used to avoid
+ambiguity with hash maps.
 
 @[code]
 list1 = { 1, 2, 3 }      # list<int>
@@ -354,8 +356,8 @@ list3 = { 1 ++ 2 ++ 5 }  # list<int>
 list4 = { 'abc', 'def' }  # list<string>
 list5 = { 123, 'abc' }    # list<any>
 
-list6 = list{ 'a' ++ 3 }     # { 'a', 'a', 'a' }
-list7 = { 'a' ++ 'b' ++ 3 }  # { 'a', 'ab', 'abb' }
+list6 = list{ 'a' ++ 3 }      # { 'a', 'a', 'a' }
+list7 = { 'a' ++ 'b' ++ 3 }   # { 'a', 'ab', 'abb' }
 @[code]
 
 List also supports sub-indexing, slicing and negative indices:
@@ -463,7 +465,7 @@ Dao Constrol Structures
 If-Else
 @[subsection]
 
-If a condition is true, execute a block of codes:
+当某条件表达式值为真时，执行一块代码：
 @[code]
 if( expr1 ){
    block1;
@@ -474,13 +476,13 @@ if( expr1 ){
 }
 @[code]
 
-If @[cyan]expr1@[cyan] is true, @[cyan]block1@[cyan] is executed;
-otherwise, if @[cyan]expr2@[cyan] is true, @[cyan]block2@[cyan] is executed;
-otherwise, @[cyan]block3@[cyan] is executed; zero or more @[green]elseif@[green]
-and zero or one @[green]else@[green] statement can be used.
+如果条件表达式@[cyan]expr1@[cyan]的值为真，@[cyan]block1@[cyan]将被执行；
+否则如条件@[cyan]expr2@[cyan]为真，@[cyan]block2@[cyan]被执行；
+否则执行@[cyan]block3@[cyan]。可使用零个或多个@[green]elseif / elif@[green],
+和零个或一个@[green]else@[green]。
 
 @[code]
-if( 2 > 1 ) io.writeln("2 is larger than 1.");
+if( 2 > 1 ) io.writeln("2 is larger than 1.") 
 @[code]
 
 
@@ -492,39 +494,36 @@ if( 2 > 1 ) io.writeln("2 is larger than 1.");
 For
 @[subsection]
 
-Dao supports different styles of for-looping, the most useful one is probably the following,
+道语言支持多种形式的for循环，最方便使用的是下面这种，
 @[code]
-for( var = init_value : step_value : max_value ){
-   block;
+for( 变量 = 初值 : 步长 : 终值 ){
+   代码;
 }
 @[code]
-The looping will be started with @[cyan]var = init_value@[cyan],
-then after each cycle, @[cyan]var@[cyan] is increased by @[cyan]step_value@[cyan],
-the looping will stop when the value of @[cyan]var@[cyan] exceed the @[cyan]max_value@[cyan].
-The @[cyan]step_value@[cyan] can be omit, in this case, value 1 is taken as the step.
-Please note, the initial, step and maximum values are always evaluated before the
-looping.
+循环将从@[cyan]变量=初值@[cyan]开始执行，然后每次循环后，@[cyan]变量@[cyan]的值按@[cyan]步长@[cyan]
+增加，直到@[cyan]变量@[cyan]的值变得大于@[cyan]终值@[cyan]时终止循环。
+这里@[cyan]步长@[cyan]可以省略，其缺省值是1。
+@[cyan]初值@[cyan]，@[cyan]步长@[cyan]和@[cyan]终值@[cyan]总是在循环开始前被计算。
 
 
-C/C++ style @[green]for@[green] looping is supported by Dao:
+C/C++类型@[green]for@[green]循环：
 @[code]
 for( init; condition; step ){
    block;
 }
 @[code]
-
-The execution sequence of @[green]for@[green] statement is the following:
+@[green]for@[green]语句块的执行顺序是这样的：
 
 @[list]
-== execute initial expression @[cyan]init@[cyan], and goto 3;
-== execute @[cyan]step@[cyan];
-== evaluate the condition expression @[cyan]condition@[cyan];
-== check the value of @[cyan]condition@[cyan]: if true, goto 5; otherwise, goto 6;
-== execute @[cyan]block@[cyan], and goto 2;
-== stop looping; and start to execute the statements after the loop body.
+==执行循环初始表达式@[cyan]init@[cyan]；转到3；
+==执行@[cyan]step@[cyan]；
+==执行条件表达式@[cyan]condition@[cyan]；
+==检查@[cyan]condition@[cyan]的值：如为真，转到5，否则转到6；
+==执行@[cyan]block@[cyan]；转到2；
+==终止循环，开始执行循环体后面的语句。
 @[list]
 
-Usually, the C/C++ style @[green]for@[green] loop is equivalent to,
+一般情况下，C/C++类型@[green]for@[green]循环等价于下面的@[green]while@[green]循环:
 @[code]
 init;
 while( condition ){
@@ -532,49 +531,46 @@ while( condition ){
    step;
 }
 @[code]
+但如果@[cyan]block@[cyan]包含一个不被其他循环语句包含的@[green]skip@[green]语句，那么上面这个@[green]while@[green]循环
+与C/C++类型@[green]for@[green]循环并不完全等价。因在@[green]for@[green]循环体中，@[green]skip@[green]只跳过@[cyan]block@[cyan]
+块余下的部分，而在上面的@[green]while@[green]循环中，@[green]skip@[green]将同时跳过@[cyan]step@[cyan]语句。
 
-Dao also supports Python style @[cyan]for-in-do@[cyan] loop,
+
+道语言也支持Python风格的@[green]for-in@[green]循环：
 @[code]
 for( item in list ){
-   block;
+	block;
 }
 @[code]
 
-Multiple @[cyan]in@[cyan] can appear in one loop, and the items of the same
-indices from multiple lists are taken in each cycle. These lists should
-contain the same number of items, otherwise an exception will be arose,
-as shown in the following example.
-@[code]
-for( item1 in list1; item2 in list2; ... ){
-   block;
-}
-@[code]
-
-@[cyan]for-in@[cyan] can also be used for maps,
+关联表也可用在for-in循环中，这里@[cyan]item@[cyan]将会是一对键与值，
 @[code]
 for( item in a_map ){
-   block;
+	block;
 }
 @[code]
 
-Examples,
-@[code(dao)]
+在一个for-in循环中可以使用多个in语句，但那些列表或关联表必须含有相同个数的元素，
+否则，程序将抛出例外，
+@[code]
+for( item1 in list1; item2 in list2; ... ){
+	block;
+}
+@[code]
+
+例子，
+@[code]
 for( i:=0; i<3; i++ ){
-   io.writeln( i );
+	io.writeln( i );
 }
 
 hash = { "b" => 11, "a" => 22, "e" => 33, "c" => 44 };
 for( a in hash.key(); b in hash.value(); c in {1 : 1 : hash.size()-1 } ){
-   #if a == "a" break
-   io.writeln( a, b, c );
+	#if a == "a" break
+	io.writeln( a, "\t", b, "\t", c );
 }
-@[code(dao)]
-This example raises an exception, because the last list @[cyan]c@[cyan] contains
-one less element.
-
-
-Note: if a single string is used in the condition expression in @[green]if,while,for@[green] statements,
-it returns true, if the string has length larger than zero, otherwise, returns false.
+@[code]
+这个例子抛出了一个例外，因为最后那个列表的元素数目比其他第一个列表少一。
 
 
 
@@ -584,15 +580,13 @@ it returns true, if the string has length larger than zero, otherwise, returns f
 While
 @[subsection]
 
-When a condition is true, @[green]repeatedly@[green] execute a block of codes:
+当某条件表达式值为真时，@[green]反复@[green]执行一块代码：
 @[code]
 while( expr ){
    block;
 }
 @[code]
-
-If @[cyan]expr@[cyan] is true, @[cyan]block@[cyan] is executed and repeated until @[cyan]expr@[cyan] becomes false,
-namely, while @[cyan]expr@[cyan] is true, execute @[cyan]block@[cyan].
+如果条件表达式@[cyan]expr@[cyan]值为真，反复执行@[cyan]block@[cyan]直到表达式@[cyan]expr@[cyan]值为假。
 
 @[code]
 i = 0;
@@ -601,6 +595,7 @@ while( i < 5 ){
    i ++;
 }
 @[code]
+
 
 
 
@@ -615,7 +610,9 @@ do{
 	block;
 } while ( condition )
 @[code]
-Execute @[cyan]block@[cyan], and then repeat executing it when the @[cyan]condition@[cyan] is true.
+执行代码块@[cyan]block@[cyan], 然后在条件表达式式@[cyan]condition@[cyan]为真
+的情况下重复执行@[cyan]block@[cyan]。
+
 
 
 
@@ -625,56 +622,51 @@ Execute @[cyan]block@[cyan], and then repeat executing it when the @[cyan]condit
 Switch-Case
 @[subsection]
 
-Switch-case control provides a convenient way to branch the code and choose a block of code to
-execute based on the value of a object.
+@[green]Switch-case@[green]开关控制可基于一个表达式的值选择相应的代码块执行。它可以用来方便地实现的分支控制。
 @[code]
-switch( value ){
-   case C_1 : block_1
-   case C_2 : block_2
-   case C_3 : block_3
+switch( exprs ){
+   case C1 : block1
+   case C2 : block2
+   case C3 : block3
    ...
    default: block0
 }
 @[code]
-If the @[cyan]value@[cyan] equals to @[cyan]C_i@[cyan], @[cyan]block_i@[cyan] will be executed. Here @[cyan]C_i@[cyan] must be a constant,
-but they can be of different types, that means, you can mix numbers and strings as case values.
-Unlike in C/C++, no @[green]break@[green] statement is required to get out of the @[green]switch@[green].
+如果表达式@[cyan]exprs@[cyan]的值等于某个@[green]case@[green]语句的@[cyan]Ci@[cyan]，代码块@[cyan]blocki@[cyan]将被执行。
+这里@[cyan]Ci@[cyan]必须是常量，可以是不同类型的值。与C/C++不同的是，代码块@[cyan]blocki@[cyan]被执行后，
+程序执行将跳到@[green]switch@[green]块外，因此这里不需要象C/C++里那样使用@[green]break@[green]语句来显示跳出
+@[green]switch@[green]块。
 
-
-If you want to execute the same block of codes for different case values, you just need to
-organize them together in the following way:
+如果你需要对不同的@[green]case@[green]值都执行同一块代码，你仅需将那些@[green]case@[green]值放在一起：
 @[code]
 switch( value ){
-   case C1, C2, C3 :
+   case C1, C2, C3 : 
       block3
    ...
    default: block0
 }
 @[code]
-Namely, Dao allows one case entry to have multiple values.
-In this way, @[cyan]block3@[cyan] will be executed for case values @[cyan]C1,C2@[cyan] and @[cyan]C3@[cyan].
-As a simple example,
-@[code(dao)]
+在这种情况下，@[green]case@[green]值@[cyan]C1,C2,C3@[cyan]将对应于同一代码块@[cyan]block3@[cyan]。
+@[code]
 a = "a";
 switch( a ){
-  case 1, "a" : io.write("case 1 or a");
-  default :  io.write("case default");
+	case 1, "a" : io.write("case 1 or a");
+	default :  io.write("case default");
 }
-@[code(dao)]
+@[code]
 
-
-Dao also allows the use of a value range represented as @[cyan]start ... end@[cyan] as case entry,
-so that the corresponding code block is executed if the value in switch
-falls inside the range. Please note that, the range includes the boundary values,
-and if the ranges of different case entries overlaps, the entry with the lowest @[cyan]start@[cyan]
-value is used when the switch value belongs to mulitple overlapping ranges.
-@[code(dao)]
+道语言的switch-case结构还允许使用值区间作为case，
+这样当switch值属于这个区间时，此case块将被执行。
+需要注意的是，如果switch值属于多个相互重叠的区间，
+那么对应下界最小的区间的case块将被执行。
+@[code]
 switch( 5 ){
 case 1 ... 5 : io.writeln( 'case 1-5' );
 case 5 ... 10 : io.writeln( 'case 5-10' );
 case 10 ... 11 : a = 1;
 }
-@[code(dao)]
+@[code]
+
 
 
 
@@ -712,18 +704,21 @@ Dao Routine (Function)
 
 @[text]
 
-Routine is a block of codes, once defined, can be used in different places
-at different time repeatedly. It can accept parameters to changes its
-behaviour. It may also return results to its callee.
+函数是一可反复使用的代码块，它由关键字@[green]routine@[green]定义。
+它可在被使用时接受参数，参数的名称，类型和缺省值需在定义时给定。
+它也可在使用结束时返回一个或多个结果。
+考虑到一些用户习惯，关键词@[green]function, sub@[green]也可用来定义函数，
+其作用跟@[green]routine@[green]完全等同。
 
+@[subsection]定义@[subsection]
+@[code]
+routine name( [ param1 [ : type | [:]= const_expr ] [, param2 [...], ... ] ] )
+{
+	[...]
+}
+@[code]
 
-
-@[subsection]Definition@[subsection]
-
-Dao routines are declared with keyword @[green]routine@[green]
-or @[green]function@[green] or @[green]sub@[green] (which is exactly equivalent to @[green]routine@[green]),
-
-@[code(dao)]
+@[code]
 routine func( a, b )
 {
    io.writeln( a, b );
@@ -731,29 +726,25 @@ routine func( a, b )
    b = "test";
    return a, b; # return more than one results.
 }
-
+	
 r1, r2;
 ( r1, r2 ) = func( 111, "AAA" );
 r3 = func( r1, r2 );
 io.writeln( "r1 = ", r1 );
 io.writeln( "r2 = ", r2 );
 io.writeln( "r3 = ", r3 );
-@[code(dao)]
+@[code]
 
+@[subsection]命名参数传递@[subsection]
 
-
-@[subsection]Named Parameter@[subsection]
-
-In Dao the function parameters are named, and parameter values can be passed in by name:
+道语言函数的参数可按参数名字传递：
 @[code]
 func( b => 123, a => "ABC" );
 @[code]
 
+@[subsection]参数类型与缺省值@[subsection]
 
-
-@[subsection]Parameter Type and Default Value@[subsection]
-
-It is also possible to specify the type or the default value of a parameter.
+正如道语言变量可声明为有类型的，道函数的参数也可声明为有类型，并还可声明为有缺省值。
 @[code]
 routine MyRout( name : string, index = 0 )
 {
@@ -761,42 +752,37 @@ routine MyRout( name : string, index = 0 )
    io.writeln( "INDEX = ", index )
 }
 @[code]
-Here @[cyan]name@[cyan] is specified as string, and @[cyan]index@[cyan] is specified as number with default value 0.
-If a routine is called with wrong type of parameters, or no value is passed to a parameter without a
-default value, an exception will be issued and the execution will abort.
+这里参数@[cyan]name@[cyan]被声明为字符串，参数@[cyan]index@[cyan]被声明为整数，并以零为缺省值。
+如果一个函数调用使用错误的参数，或没有数据传递给没有缺省值的参数，
+将导致报错，并终止运行。
 
 
-Default value can be defined for a parameter before another parameter which does not have default
-value. In this case, if you want to use the default value for that parameter with default value,
-you need to pass value by name to the parameter without default value:
+参数缺省值可指定给参数表中的任意参数，而不管指定缺省值的参数后面的参数是否有缺省值。如，
 @[code]
 routine MyRout2( i=0, j ){ io.writeln( i, " ", j ) }
 MyRout2( j => 10 )
 @[code]
+在这种情况下，如果你想用@[cyan]i@[cyan]的缺省值，那么你需要将数据按参数名字传给@[cyan]j@[cyan]。
 
+@[subsection]常量参数@[subsection]
 
-
-@[subsection]Constant Parameter@[subsection]
-
-Constant parameter can be specified by adding "const" in front
-of the parameter type:
+要申明不为函数所修改的常量参数，只需在参数类型前添加 const 即可：
 @[code]
 routine Test( a : const list<int> )
 {
-  a[1] = 100; # error !!!
+  a[1] = 100; # 错误!!!
   io.writeln( a );
 }
 a = { 1, 2, 3 }
 Test( a );
 @[code]
 
+@[subsection]按引用传递参数@[subsection]
 
-
-@[subsection]Parameter Passing by Reference@[subsection]
-
-Parameter passing by reference can be done by adding @[green]&@[green]
-in front of a parameter. Only local variables of primitive types 
-can be passed as references, and references can be only created in parameter list.
+在函数调用时，如果参数名前使用了@[green]&@[green]，
+那么该参数将作为引用被传递。
+只有基本数据类型的局部变量可作为引用被传递给函数调用，‘
+并且也只有在函数参数列表里创建引用。
 @[code]
 routine Test( p : int )
 {
@@ -807,17 +793,13 @@ Test( & i );
 io.writeln( i );
 @[code]
 
+@[subsection]参数聚组@[subsection]
 
-
-@[subsection]Parameter Grouping@[subsection]
-
-Dao also supports parameter grouping as in Python.
-Parameter grouping is defined by putting a pair of parenthesis
-around one or more parameters in a function prototype.
-When a tuple is passed as parameter to a function with parameter grouping
-in the corresponding position, and if the items of the tuple have types 
-compatible to those parameters in the grouping, the tuple will be expanded
-with items passed as corresponding parameters.
+类似于Python里，道语言也支持参数聚组（grouping），
+它由一对括号定义，将括号里的参数聚集为一组。
+当一个元组被作为参数传递给有参数聚组的函数时，
+如果与参数聚组对应的元组的元素类型与组里的参数类型相符合，
+那么该元组将被展开，并将其元素传递给组里相应的参数。
 
 @[code]
 routine Test( a : int, ( b : string, c = 0 ) )
@@ -828,13 +810,10 @@ t = ( 'abc', 123 )
 Test( 0, t )
 @[code]
 
+@[subsection]函数重载@[subsection]
 
-
-@[subsection]Routine Overloading@[subsection]
-
-Routine overloading by parameter types is also supported in Dao,
-which means that multiple routines can be defined with the same name,
-but different parameters.
+道语言里，函数可按参数类型进行重载。也就是可对于拥有不同参数类型的函数
+使用同样的名称，函数调用时，道虚拟机根据调用中的参数选择正确的函数来运行。
 @[code]
 routine MyRout( index : int, name = "ABC" )
 {
@@ -842,34 +821,29 @@ routine MyRout( index : int, name = "ABC" )
    io.writeln( "NAME  = ", name )
 }
 
-MyRout( "DAO", 123 ) # invoke the first MyRout()
-MyRout( 456, "script" ) # invoke the second MyRout()
+MyRout( "DAO", 123 ) # 调用上例中的MyRout()
+MyRout( 456, "script" ) # 调用此例中的MyRout()
 @[code]
 
+@[subsection]匿名函数@[subsection]
 
-
-@[subsection]Routine As First Class Object@[subsection]
-
-Dao also support first class functions / routines. They can be created in the following way:
+在道语言里有匿名函数，是基本类型（也就是first-class function），
+他们按如下方式定义：
 @[code]
 foo = routine( x, y : TYPE, z = DEFAULT )
 {
    codes;
 }
 @[code]
-The definition of such functions is identical to the normal function definition, except
-the following differences:
+除了以下三点不同外，这种函数的定义跟普通函数的定义完全一样：
 @[list]
-==there is no need for a function name, but the created function must be assigned to a variable;
-==the default value expressions for parameters do not necessary to be constant expressions,
-they are evaluated at running time when the function is created;
-==the function body may contain variables defined in the "upper" function that creates it;
-depending on the type of the "upper" variable, its copy (for simple types) 
-or reference will be used by the created function.
+==它不需要函数名，但当它被创建时，需要赋值给一个变量；
+==参数缺省值不必是常量，可以是任意表达式，该表达时将在函数被创建时求值；
+==函数体里可使用定义在外层函数的局部变量；根据变量的类型，他们的拷贝或
+引用将被输入到被创建的函数里。
 @[list]
 
-
-Here is an example,
+例子：
 @[code]
 a = "ABC";
 
@@ -883,23 +857,18 @@ rout = routine( x, y : string, z = a+a ){
 rout( 1, "XXX" );
 @[code]
 
+@[subsection]发生器(Generator)和协程(Coroutine)@[subsection]
 
-
-@[subsection]Generator and Coroutine@[subsection]
-
-If the function name is prefixed with @[green]@@[green] when it is called,
-this call will return a generator or coroutine body,
-so that it will yield a value or a tuple each time 
-the generator or coroutine is called.
-Inside the generator and coroutine, value(s) emitted by the
-@[green]yield@[green] statment.
-Their execution will be suspended after they @[green]yield@[green],
-and when they are reseumed, they will start to execute from where
-they are suspended.
-The data returned by the @[green]yield@[green] statment is the parameters
-passed to them when they are resumed.
-When a @[green]return@[green] statment is executed or the end of the function is reached, 
-the generator or coroutine will exit and become not resumable anymore.
+当一个函数被调用时，如果它函数名前有@[green]@@[green]符号，
+此调用将不执行该函数，而是返回一个发生器或协程。
+在这样的函数里，可使用@[green]yield@[green]语句来向调用者返回值。
+当@[green]yield@[green]语句被执行时，此函数的运行将被暂停，
+并将运行控制权转给其调用者，而当调用者再次重新执行
+此函数时，函数将从暂停处继续执行。
+@[green]yield@[green]语句执行完后，它将会象函数调用一样返回值，
+被返回的值就是其调用者作为参数传入的值。
+当函数运行至函数末尾或@[green]return@[green]语句后，
+函数将终止运行，并且不可续。
 
 @[code]
 # int => tuple<int,int>
@@ -914,10 +883,9 @@ routine gen2( a = 0 )
 	return gen1( a );
 }
 g = @gen2( 1 );
-# parameters can be omitted the first time it's called;
-# the first call may use the parameters 
-# that are used for creating the generator:
-io.writeln( 'main1: ', g() );
+# 第一次调用时，参数可省略，
+# 创建时用到的参数将被在第一次调用时使用：
+io.writeln( 'main1: ', g() ); 
 io.writeln( 'main2: ', g( 100 ) );
 io.writeln( 'main3: ', g( 200 ) );
 @[code]
@@ -943,22 +911,17 @@ co = @bar( 1, "a" );
 io.writeln( 'main: ', co() );
 io.writeln( 'main: ', co( 1, 'x' ) );
 io.writeln( 'main: ', co( 2, 'y' ) );
-# coroutine has been finished, the following will rise an exception.
+# 协程已运行完，再调用将产生异常：
 io.writeln( 'main: ', co( 3, 'z' ) );
 @[code]
 
-Generators and coroutines can also be created by the standard
-method @[green]stdlib.coroutine()@[green], but then the values
-must be yielded by the method @[green]stdlib.yield()@[green].
-Besides this, there is another important difference between these 
-two ways of using generators and coroutines regarding Dao typing system.
+发生器和协程也可由标准方法@[green]stdlib.coroutine()@[green]来创建，
+不过这种情况下，函数必须同时使用标准方法@[green]stdlib.yield()@[green]
+来返回值。
+另外，这两种方法创建的发生器或协程有个很重要的区别。
+使用前缀@[green]@@[green]创建的发生器或协程支持类型检查，
+而使用@[green]stdlib.coroutine()@[green]创建的不支持。
 
-
-The variables passed around by generators or coroutines created 
-by prefixing the function with @[green]@@[green]
-are @[green]type-checked@[green] by the typing system,
-while generators and coroutines created by the @[green]stdlib.coroutine()@[green]
-	method will not be type-checked.
 
 
 @[text]
@@ -984,27 +947,29 @@ Dao Class and Object-Oriented Programming
 
 @[text]
 
-Dao supports object-oriented programming (OOP) by allowing user to define
-classes using keyword @[green]class@[green] and create instances of them by calling them
-in the same way as calling routines. A class is simply a set
-of member variables and functions,
-which define the properties and possible behaviours of the class.
-An instance (which is often called object) is the realization of a class
-with some properties being initialized to certain values. The functions
-of a class are usually used to operate on the class or its instance.
-Permission modifiers @[green]private@[green], @[green]protected@[green] and @[green]public@[green] can be used to set permissions
-on the variables and functions. Optionally, permission modifiers can be followed by a colon.
-Class members are public by default.
+道语言对面向对象编程(object-oriented programming, OOP)有良好的支持。
+道语言类使用关键字@[green]class@[green]定义。
+一个类就是一组变量与函数的集合的抽象表示，这些变量和函数称为类的成员；
+成员变量的值将决定该类的特性，成员函数决定了该类的行为。
+类本身是程序员定义的抽象类型，它的值即实例就是一个具体的数据集合，此集合
+包含了类定义的成员变量。
+类实例可以以函数调用的方式调用类的构造函数创建，也可通过枚举类成员变量来创建。
+类成员的访问权限可由修饰词@[green]private@[green]（私有），@[green]protected@[green]（保护）
+和@[green]public@[green]（公开）来限定,缺省权限为公开。
+这些修饰词后可跟也可不跟冒号。
+
+
+类与类之间可存在继承和包含关系。一个类（子类）可定义为另一个类（基类）的引申。
+子类可从基类继承某些特性，在基类的基础上扩充或专门化某些功能。类也可以包含其他类
+的实例为成员。
+
+@[subsection]基类定义@[subsection]
 
 
 
-@[subsection]Class Definition@[subsection]
-
-<_>
-Starting from Dao v1.1, the syntax for class definition has been changed slightly.
-Now parameters and codes are not allowed in class body.
-</_>
-
+类的定义由关键字class开始申明类的名称，
+然后在由花括号所包围的类体里，申明类的成员常量，变量
+和方法等。
 @[code]
 class MyNumber
 {
@@ -1032,82 +997,94 @@ routine MyNumber::setValue( v : float )
 }
 @[code]
 
-Whenever an instance/object of a class is created, a specific routine
-is invoked to initialize the object.
-This kind of routine is called constructor for the class.
-Unlike other languages where a constructor should be explicitly defined
-as a member function of a class, the class body is the constructor
-for Dao class.
-Like in Python, the constructors are not used to create class instances,
-instead, an instance is created before, and then the constructor is called
-after to initialize the instance.
-
-
-In the class body, whenever a variable is specified
-with keyword @[green]var@[green], it is regarded as an instance variable.
-The data type of instance variable can be set by in the following way,
+类定义体里使用关键字@[green]var@[green]申明类的成员变量。
+同普通变量类似，类成员变量也可按下面方式申明为有固定类型，
 @[code]
 var variable : type;
 @[code]
-Where @[cyan]type@[cyan] must be a valid type name.
-And @[cyan]variable@[cyan] will have to have the same type as @[cyan]type@[cyan],
-or have to be an instance of @[cyan]type@[cyan] if it is a class.
+这里@[cyan]type@[cyan]必须是一类型名，这样@[cyan]variable@[cyan]的类型将固定为@[cyan]type@[cyan]的类型；
+或者@[cyan]variable@[cyan]必须是@[cyan]type@[cyan]的实例，如果@[cyan]type@[cyan]也是类的话。
 
-The default value of instance variable can also be specified,
+
+类的成员变量还可拥有缺省值。在类创建时，有缺省值的成员变量将被首先以缺省值填充。
+类的成员变量的缺省值可按以下方式指定，
 @[code]
 var variable = init_value;
+var variable : type = init_value;
 @[code]
-Where @[cyan]init_value@[cyan] must also be a constant.
+这里@[cyan]init_value@[cyan]也必须是一常量。
 
 
-Within class methods, the special variable @[green]self@[green] represents the current class
-instance. Class methods may be declared inside class body and defined outside
-in the same way as in C++, but in Dao, one should make sure that, the parameter list
-must be exactly the same in the places for declaration and definition.
-If no instance variable is used in a method, this method can be invoked with class
-by @[cyan]class.method(...)@[cyan].
+在道语言里，类的定义体也是类的构造函数。和其他某些脚本语言里的类构造函数类似，
+道语言里的类构造函数并不是真正用来构造类实例，而是用来初始化类的成员数据。
+道语言里，类可拥有多个重载的构造函数，用来根据不同的构造函数调用参数以不同的方式初始化类实例。
+
+例子，
+@[code]
+class MyNumber( value = 0, name = "NoName" )
+{
+	private
+   my Value = 0; # value类型为整形，缺省值为零
+   my Name : string; # name必须是字符串
+
+   Value = value;
+   self.Name = name;
+
+   public
+   routine setValue( value ){ Value = value }
+   routine getValue(){ return Value }
+
+   routine setValue( value : int );
+}
+
+routine MyNumber::setValue( value : int )
+{
+   Value = value;
+}
+@[code]
+
+在类的构造函数或成员函数里，可使用一特殊变量@[green]self@[green]，它表示类的当前实例。
 
 
-Like in C++, virtual method can be declared by adding keyword @[green]virtual@[green]
-before the @[green]routine@[green] or @[green]function@[green] keyword.
+与C++里的类成员函数定义类似，类的成员函数可在类定义体内申明，然后在类体外定义。
+不过在道语言里，类体外定义的成员函数的参数表必须和申明时的完全一致。
+Dao里，虚拟函数也可用关键词@[green]virtual@[green]来申明。
 
 
+如果一个类成员函数里没使用类成员变量，且没调用其他使用了类成员变量的成员函数，
+那么此成员函数可按如下方式调用，
+@[code]
+classname.method(...)
+@[code]
 
-@[subsection]Class Instance@[subsection]
+@[subsection]类实例@[subsection]
 
-Class instance can be created by invoking the constructor of the class in the same way as
-a function call,
+新的类实例可以由调用该类的构造函数得到，构造函数的调用方式跟普通函数调用完全一样。
 @[code]
 obj1 = MyNumber(1);
 @[code]
-Class instance may also be created by enumerating the members of a class,
+类实例也可通过枚举类的成员变量创建，这种实例创建方式主要适合于比较简单的类，因为这种不需要
+复杂操作进行初始化。
 @[code]
 obj2 = MyNumber{ 2, "enumerated" };
 @[code]
-The names of instance variables may also be specified in enumeration,
+在枚举成员变量时，可指定成员的名称，
 @[code]
 obj3 = MyNumber{
-   name  => "enumerated";
-   value => 3;
+   Name  => "enumerated";
+   Value => 3;
 };
 @[code]
 
-When you create a class instance using enumeration, the instance is created,
-and filled with the values in the enumeration.
-Instance creation by enumeration is much faster than creation by invoking class constructor,
-since no class constructor is called and there is no overhead associated with function call
-(parameter passing, running time context preparation for the call etc.).
-So such instance creation is very desirable for creating many instances for simple classes,
-in which there are no complicated initialization operations.
+当类实例由枚举创建时，类实例先被成员变量的缺省值填充，然后使用枚举中的数据初始化相应的
+成员变量。通过枚举创建类实例比通过调用类构造函数创建类实例要快得多，调用类构造函数有一系列
+额外开销，如参数传递，函数运行时数据的分配等。
+枚举创建实例很适合于创建大量简单类的实例。
 
+@[subsection]类成员数据@[subsection]
 
-
-@[subsection]Member Variable@[subsection]
-
-As mentioned above, instance variables are declared in class constructor
-using @[green]var@[green] keyword. 
-Class constant can be declared using @[green]const@[green] keyword,
-and static member can be declared using @[green]static@[green] keyword as in C++:
+正如上面提到，类的成员变量由关键字@[green]var@[green]在类体内申明。
+类的常量和静态成员可分别由@[green]const@[green]和@[green]static@[green]来申明。
 @[code]
 class Klass
 {
@@ -1115,19 +1092,17 @@ class Klass
    static aClassStatic;
 }
 @[code]
-Here @[cyan]aClassConst@[cyan] will be constant belonging to a @[cyan]Klass@[cyan].
-While @[cyan]aClassStatic@[cyan] will be a static variable in the class scope.
 
+@[subsection]Setters, Getters 和运算符重载@[subsection]
 
-
-@[subsection]Setters, Getters and Overloadable Operators@[subsection]
-
-Instead of defining @[cyan]setXyz()@[cyan] methods, one can define @[cyan].Xyz=()@[cyan] method
-as setter operator,
-so that modifying class member @[cyan]Xyz@[cyan] by @[cyan]obj.Xyz=abc@[cyan] will be allowed;
-similarly, if @[cyan].Xyz()@[cyan] is defined, get the value by @[cyan]obj.Xyz@[cyan] will also
-be allowed:
-@[code(dao)]
+相对于给私有或保护的成员变量定义@[cyan]setXyz()@[cyan]或@[cyan]getXyz()@[cyan]方法，
+更好的方式是定义所谓的Setters和Getters，定义这样的方法使得从外部环境可以直接
+对私有或保护的成员变量进行访问，就像访问公开成员一样。
+对于成员变量@[cyan]Xyz@[cyan]其Setters应被定义为@[green].Xyz=()@[green]，
+而其Getters应被定义为@[cyan].Xyz()@[cyan]。
+当Setters被定义后@[cyan]Xyz@[cyan]可由@[cyan]obj.Xyz=abc@[cyan]设定；
+而当Getters被定义后@[cyan]Xyz@[cyan]可由@[cyan]obj.Xyz@[cyan]获取。
+@[code]
 class MyNumber0
 {
 	private
@@ -1147,45 +1122,40 @@ class MyNumber0
 num = MyNumber0( 123 )
 num.value = 456
 io.writeln( num.value )
-@[code(dao)]
+@[code]
 
-@[cyan]As you may guess, accessing instance variable through getters and setters are much more expensive
-than using them as public variables!
-They should be used only when they make things more convenient
-(for example, when you want them to do extra work when a variable is accessed).
+@[cyan]
+你也许已经猜到，通过Setters和Getters对类成员变量的访问会有比较大的运算开销。
+因此为了效率起见，需要从外部访问的成员变量应被设为公开。
+只有在必要时才用Setters和Getters，比如当你需要在那些成员变量被访问时作些额外工作时。
 @[cyan]
 
-Other supported operators for overloaing include:
+
+被支持重载的运算符还包括：
 @[list]
-==[operator =(...)] for assignment;
-==[operator ()(...)] for function call;
-==[operator [](...)] for getting item(s);
-==[operator []=(...)] for setting item(s);
+==[operator =(...)] 用作赋值运算;
+==[operator ()(...)] 用作函数调用;
+==[operator [](...)] 用作取元素;
+==[operator []=(...)] 用作设定元素;
 @[list]
-Other operators will be supported in the future versions.
+其运算符的重载将载后续版本中支持。
 
+@[subsection]重载成员方法@[subsection]
 
-
-@[subsection]Method Overloading@[subsection]
-
-Class methods can be overloaded in the same way as normal functions.
-Class constructor may also be overloaded by simply adding a method with the same name
-as the class. 
-For example, class @[cyan]MyNumber@[cyan] can be modified to hold numeric value only:
-@[code(dao)]
+类的成员方法可以象普通函数那样被重载。类的构造函数也可被重载，给类定义于类同名的
+成员方法即可，不过在重载的类构造函数中不可使用关键词@[green]my@[green]来定义成员变量。
+如类@[cyan]MyNumber@[cyan]可作如下修改使得它只可从数字或该类的实例构造和赋值，
+@[code]
 class MyNumber
 {
 	private
+   var value : int;
 
-   var value : int = 0;
-
-	public
-
-  routine MyNumber( value = 0 ){ # accept integer as parameter
-    self.value = value;
-  }
-
-   # overloaded constructor to accept MyNumber as parameter:
+   public
+   routine MyNumber( value = 0 ){ # accept builtin number as parameter
+      self.value = value;
+   }
+   # 接受MyNumber实例为参数的构造函数，类似于C++里的复制构造函数：
    routine MyNumber( value : MyNumber ){ self.value = value.value }
 
    operator .value=( v : int ){ value = v }
@@ -1205,11 +1175,9 @@ io.writeln( num2.value )
 
 num2.value = num1
 io.writeln( num2.value )
-@[code(dao)]
+@[code]
 
-
-
-@[subsection]Inheritance@[subsection]
+@[subsection]类继承@[subsection]
 @[code]
 class ColorRBG
 {
@@ -1222,11 +1190,11 @@ class ColorRBG
      Green = g;
      Blue = b;
    }
-
+   
    routine setRed( r ){ Red = r; }
    routine setGreen( g ){ Green = g; }
    routine setBlue( b ){ Blue = b; }
-
+   
    routine getRed(){ return Red; }
    routine getGreen(){ return Green; }
    routine getBlue(){ return Blue; }
@@ -1234,7 +1202,7 @@ class ColorRBG
 
 yellow = ColorRBG( 255, 255, 0 ); # create an instance.
 @[code]
-The following will define a derived class of @[cyan]ColorRBG@[cyan],
+下面将定义@[cyan]ColorRBG@[cyan]的一个派生类，
 @[code]
 class ColorQuad : ColorRBG
 {
@@ -1249,16 +1217,13 @@ yellow2 = ColorQuad( 255, 255, 0, 0 ); # not tranparent.
 yellow2.alpha = 127; # change to half tranparency.
 @[code]
 
-In the definition of derived class,
-the parent class @[cyan]ColorRBG@[cyan] should be put after the derived class 
-and be separated with @[green]:@[green]. If there are more than
-one parent classes, separate them with @[green],@[green]. The parameters for derived class
-can be passed to parent classes in the way as shown in the example.
+当从已有类派生新类时，基类必须放在派生类的参数列表后，并由@[green]:@[green]隔开。
+如果有多个基类，这基类都应被放在@[green]:@[green]后并被@[green],@[green]隔开。
+派生类构造函数的参数可按例子所显示的方式传递给基类的构造函数。
 
 
-Derived class will automatically inherit constructors from its parent class,
-if it has only one parent class, and there is no redefined constructors with
-signatures the same as those to be inherited.
+定义派生类时，如果只有一个父类，派生类将同时继承父类的构造函数。
+
 
 
 

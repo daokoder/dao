@@ -12,7 +12,7 @@ load help_dao_class;
 load help_dao_concurrent;
 load help_dao_macro;
 load help_dao_module;
-load help_daovm;
+load help_dao_tutorial;
 
 
 @[name]

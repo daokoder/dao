@@ -664,6 +664,23 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		}
 	}else{
 		DaoToken_Tokenize( tokens, code->mbs, 0, 1, 1 );
+		if( lang && strcmp( lang->mbs, "syntax" ) == 0 ){
+			for(i=0; i<tokens->size; i++){
+				DaoToken *tok = tokens->items.pToken[i];
+				switch( tok->type ){
+				case DTOK_LB : case DTOK_LCB : case DTOK_LSB :
+				case DTOK_RB : case DTOK_RCB : case DTOK_RSB :
+					tok->name = DKEY_SYNTAX;
+					break;
+				case DTOK_ADD : case DTOK_MUL : case DTOK_PIPE :
+					tok->name = DKEY_WHILE;
+					break;
+				case DTOK_COLON2 : case DTOK_ASSN :
+					tok->name = DKEY_AS;
+					break;
+				}
+			}
+		}
 	}
 	for(i=0; i<tokens->size; i++){
 		DaoToken *tok = tokens->items.pToken[i];
@@ -703,6 +720,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 				line += pos != MAXSIZE;
 				if( pos == MAXSIZE ) pos = tok->string->size - 1;
 				DString_SubString( tok->string, string, last, pos - last + 1 );
+				if( self->output && self->fmtHTML ) DString_ChangeMBS( string, "%<", "&lt;", 0 );
 				DaoxStream_SetColor( self, dao_colors[fgcolor], bgcolor );
 				DaoxStream_WriteString( self, string );
 				DaoxStream_SetColor( self, NULL, NULL );
@@ -1632,10 +1650,12 @@ static void HELP_SetTempl( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString_Assign( daox_helper->notice, p[0]->xString.data );
 }
+
 static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, DString *dir )
 {
 	daoint i;
 	FILE *fout;
+	const char *title = self->title ? self->title->mbs : "";
 	DString *fname = DString_Copy( dir );
 
 	if( dir->size ) DString_AppendChar( fname, '/' );
@@ -1646,7 +1666,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendMBS( fname, ".html" );
 	stream->output->size = 0;
-	DString_AppendMBS( stream->output, "\n<pre>\n" );
+	DString_AppendMBS( stream->output, "\n<pre style=\"font-weight:500\">\n" );
 	if( self->parent ){
 		DaoxHelpEntry_Print( self, stream, stream->process );
 	}else{
@@ -1654,7 +1674,8 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendMBS( stream->output, "\n</pre>\n" );
 	fout = fopen( fname->mbs, "w+" );
-	fprintf( fout, "%s", stream->output->mbs );
+	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
+	fprintf( fout, "<meta charset=\"utf-8\"/></head><body>%s</body></html>", stream->output->mbs );
 	fclose( fout );
 
 	for(i=0; i<self->nested2->size; i++){
