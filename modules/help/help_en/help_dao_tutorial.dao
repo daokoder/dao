@@ -442,6 +442,10 @@ tup2 = tup[:1]  # ( index => 123, 'abc' )
 
 
 
+
+
+
+
 ################################################################################
 ################################################################################
 ######## Controls
@@ -462,12 +466,17 @@ Dao Constrol Structures
 @[subsection]
 If-Else
 @[subsection]
+The @[green]if-else@[green] control allows the program to branch
+and execute different blocks of codes, based on the results
+of the condition expressions.
 
-If a condition is true, execute a block of codes:
+
+If a condition is true, the code block that is nested under the
+@[green]if@[green] or @[green]else if@[green] statement will be executed:
 @[code]
 if( expr1 ){
    block1;
-}elif( expr2 ){
+}else if( expr2 ){
    block2;
 }else{
    block3;
@@ -476,7 +485,7 @@ if( expr1 ){
 
 If @[cyan]expr1@[cyan] is true, @[cyan]block1@[cyan] is executed;
 otherwise, if @[cyan]expr2@[cyan] is true, @[cyan]block2@[cyan] is executed;
-otherwise, @[cyan]block3@[cyan] is executed; zero or more @[green]elseif@[green]
+otherwise, @[cyan]block3@[cyan] is executed; zero or more @[green]else if@[green]
 and zero or one @[green]else@[green] statement can be used.
 
 @[code]
@@ -492,18 +501,18 @@ if( 2 > 1 ) io.writeln("2 is larger than 1.");
 For
 @[subsection]
 
-Dao supports different styles of for-looping, the most useful one is probably the following,
+Dao supports different styles of for-looping, the simplest one is probably the following,
 @[code]
-for( var = init_value : step_value : max_value ){
+for( variable = init_value : step_value : max_value ){
    block;
 }
 @[code]
-The looping will be started with @[cyan]var = init_value@[cyan],
-then after each cycle, @[cyan]var@[cyan] is increased by @[cyan]step_value@[cyan],
-the looping will stop when the value of @[cyan]var@[cyan] exceed the @[cyan]max_value@[cyan].
-The @[cyan]step_value@[cyan] can be omit, in this case, value 1 is taken as the step.
-Please note, the initial, step and maximum values are always evaluated before the
-looping.
+For this loop, the @[cyan]init_value@[cyan] will be first assigned to @[cyan]variable@[cyan],
+and then compared to the @[cyan]max_value@[cyan] to test if it is smaller than 
+@[cyan]max_value@[cyan], if yes, the execution enters the loop.
+After each cycle of the loop, the @[cyan]step_value@[cyan] (or one if @[cyan]step_value@[cyan]
+is omitted) is added to @[cyan]variable@[cyan], then the comparison and testing is repeated
+to determine whether to enter the loop or exit the loop. 
 
 
 C/C++ style @[green]for@[green] looping is supported by Dao:
@@ -512,9 +521,7 @@ for( init; condition; step ){
    block;
 }
 @[code]
-
 The execution sequence of @[green]for@[green] statement is the following:
-
 @[list]
 == execute initial expression @[cyan]init@[cyan], and goto 3;
 == execute @[cyan]step@[cyan];
@@ -524,31 +531,23 @@ The execution sequence of @[green]for@[green] statement is the following:
 == stop looping; and start to execute the statements after the loop body.
 @[list]
 
-Usually, the C/C++ style @[green]for@[green] loop is equivalent to,
-@[code]
-init;
-while( condition ){
-   block;
-   step;
-}
-@[code]
 
-Dao also supports Python style @[cyan]for-in-do@[cyan] loop,
+Dao also supports @[cyan]for-in@[cyan] loop,
 @[code]
 for( item in list ){
    block;
 }
 @[code]
-
 Multiple @[cyan]in@[cyan] can appear in one loop, and the items of the same
-indices from multiple lists are taken in each cycle. These lists should
-contain the same number of items, otherwise an exception will be arose,
-as shown in the following example.
+indices from multiple lists are taken in each cycle. The loop is terminated
+after all the items in the first list have been iterated. So the other lists
+must be at least as long as the first, otherwise an exception will be arose.
 @[code]
 for( item1 in list1; item2 in list2; ... ){
    block;
 }
 @[code]
+
 
 @[cyan]for-in@[cyan] can also be used for maps,
 @[code]
@@ -557,9 +556,10 @@ for( item in a_map ){
 }
 @[code]
 
+
 Examples,
 @[code(dao)]
-for( i:=0; i<3; i++ ){
+for( i:=0; i<3; ++i ){
    io.writeln( i );
 }
 
@@ -598,7 +598,7 @@ namely, while @[cyan]expr@[cyan] is true, execute @[cyan]block@[cyan].
 i = 0;
 while( i < 5 ){
    io.writeln( i );
-   i ++;
+   i += 1;
 }
 @[code]
 
@@ -665,13 +665,11 @@ switch( a ){
 
 Dao also allows the use of a value range represented as @[cyan]start ... end@[cyan] as case entry,
 so that the corresponding code block is executed if the value in switch
-falls inside the range. Please note that, the range includes the boundary values,
-and if the ranges of different case entries overlaps, the entry with the lowest @[cyan]start@[cyan]
-value is used when the switch value belongs to mulitple overlapping ranges.
+falls inside the range. The ranges must not be overlapping.
 @[code(dao)]
 switch( 5 ){
-case 1 ... 5 : io.writeln( 'case 1-5' );
-case 5 ... 10 : io.writeln( 'case 5-10' );
+case 1 ... 4 : io.writeln( 'case 1-4' );
+case 5 ... 9 : io.writeln( 'case 5-9' );
 case 10 ... 11 : a = 1;
 }
 @[code(dao)]
@@ -683,6 +681,17 @@ case 10 ... 11 : a = 1;
 @[subsection]
 Break and Skip
 @[subsection]
+
+@[green]break@[green] can be used to exit a loop, and @[green]skip@[green] can be used 
+to skip the rest part of script and start the next cycle of a loop.
+@[green]skip@[green] is equivalent to @[green]continue@[green] in C/C++.
+
+@[code] 
+for( i=0; i<5; ++i ){
+	io.writeln( i ); 
+	if( i == 3 ) break;
+}
+@[code]
 
 
 
@@ -721,7 +730,8 @@ behaviour. It may also return results to its callee.
 @[subsection]Definition@[subsection]
 
 Dao routines are declared with keyword @[green]routine@[green]
-or @[green]function@[green] or @[green]sub@[green] (which is exactly equivalent to @[green]routine@[green]),
+or @[green]function@[green] or @[green]sub@[green] 
+(which are exactly equivalent to @[green]routine@[green]),
 
 @[code(dao)]
 routine func( a, b )
@@ -761,72 +771,12 @@ routine MyRout( name : string, index = 0 )
    io.writeln( "INDEX = ", index )
 }
 @[code]
-Here @[cyan]name@[cyan] is specified as string, and @[cyan]index@[cyan] is specified as number with default value 0.
-If a routine is called with wrong type of parameters, or no value is passed to a parameter without a
-default value, an exception will be issued and the execution will abort.
-
-
-Default value can be defined for a parameter before another parameter which does not have default
-value. In this case, if you want to use the default value for that parameter with default value,
-you need to pass value by name to the parameter without default value:
-@[code]
-routine MyRout2( i=0, j ){ io.writeln( i, " ", j ) }
-MyRout2( j => 10 )
-@[code]
-
-
-
-@[subsection]Constant Parameter@[subsection]
-
-Constant parameter can be specified by adding "const" in front
-of the parameter type:
-@[code]
-routine Test( a : const list<int> )
-{
-  a[1] = 100; # error !!!
-  io.writeln( a );
-}
-a = { 1, 2, 3 }
-Test( a );
-@[code]
-
-
-
-@[subsection]Parameter Passing by Reference@[subsection]
-
-Parameter passing by reference can be done by adding @[green]&@[green]
-in front of a parameter. Only local variables of primitive types 
-can be passed as references, and references can be only created in parameter list.
-@[code]
-routine Test( p : int )
-{
-	p += p;
-}
-i = 10;
-Test( & i );
-io.writeln( i );
-@[code]
-
-
-
-@[subsection]Parameter Grouping@[subsection]
-
-Dao also supports parameter grouping as in Python.
-Parameter grouping is defined by putting a pair of parenthesis
-around one or more parameters in a function prototype.
-When a tuple is passed as parameter to a function with parameter grouping
-in the corresponding position, and if the items of the tuple have types 
-compatible to those parameters in the grouping, the tuple will be expanded
-with items passed as corresponding parameters.
-
-@[code]
-routine Test( a : int, ( b : string, c = 0 ) )
-{
-  io.writeln( a, b, c );
-}
-t = ( 'abc', 123 )
-Test( 0, t )
-@[code]
+Here @[cyan]name@[cyan] is specified as string, and @[cyan]index@[cyan]
+is specified as an integer with default value 0.
+Any parameter after a parameter with default value must have default values as well.
+If a routine is called with wrong type of parameters,
+or no value is passed to a parameter without a
+default value, an exception will be raised and the execution will abort.
 
 
 
@@ -834,7 +784,7 @@ Test( 0, t )
 
 Routine overloading by parameter types is also supported in Dao,
 which means that multiple routines can be defined with the same name,
-but different parameters.
+but different parameter signatures.
 @[code]
 routine MyRout( index : int, name = "ABC" )
 {
@@ -885,60 +835,84 @@ rout( 1, "XXX" );
 
 
 
-@[subsection]Generator and Coroutine@[subsection]
+@[subsection]
+Coroutine and Generator
+@[subsection]
 
-If the function name is prefixed with @[green]@@[green] when it is called,
-this call will return a generator or coroutine body,
-so that it will yield a value or a tuple each time 
-the generator or coroutine is called.
-Inside the generator and coroutine, value(s) emitted by the
-@[green]yield@[green] statment.
-Their execution will be suspended after they @[green]yield@[green],
-and when they are reseumed, they will start to execute from where
-they are suspended.
-The data returned by the @[green]yield@[green] statment is the parameters
-passed to them when they are resumed.
+Coroutines and generator (a special form of coroutine) are special routines 
+that can suspend and yield their execution to other routines or coroutines, 
+and be resumed by them when needed.
+
+
+Definition of a coroutine is very similar to define a normal routine,
+with two minor differences:
+@[list]
+==Its return type must be placed in between a pair of squared brackets;
+==It can contain @[green]yield@[green] statement(s) in the routine body.
+@[list]
+@[green]yield@[green] statement(s) can be used to suspend the current coroutine,
+and the parameters passed to the @[green]yield@[green] statement(s) are passed out
+to the routine that has invoked or resumed this coroutine.
+After suspension, the coroutine can be resumed in the same way as function calls,
+and the parameters to such calls are passed into the coroutine, and become
+the returned values of the @[green]yield@[green] statement(s).
+
+
 When a @[green]return@[green] statment is executed or the end of the function is reached, 
-the generator or coroutine will exit and become not resumable anymore.
+the coroutine will exit and become not resumable anymore.
 
+
+The creation of a coroutine or generator is similar to a function call,
+but with @[green]::@[green] place before the brackets:
+@[code]
+corout = ACoroutine::( parameters )
+@[code]
+
+
+An example generator:
 @[code]
 # int => tuple<int,int>
-routine gen1( a = 0 )
+routine gen1( a = 0 ) => [?] # use ? for automatic inferring;
 {
-	k = 0;
-	while( k ++ < 3 ) a = yield( k, a );
-	return 0,0;
+    k = 0;
+    while( ++k < 3 ) a = yield( k, a );
+    return 0,0;
 }
-routine gen2( a = 0 )
+routine gen2( a = 0 ) => [?] 
 {
-	return gen1( a );
+    return gen1( a );
 }
-g = @gen2( 1 );
+g = gen2::( 1 );
 # parameters can be omitted the first time it's called;
 # the first call may use the parameters 
 # that are used for creating the generator:
 io.writeln( 'main1: ', g() );
 io.writeln( 'main2: ', g( 100 ) );
 io.writeln( 'main3: ', g( 200 ) );
+
+io.writeln( std.about(gen1) )
 @[code]
+
+
+An example coroutine:
 @[code]
-routine foo( a = 0, b = '' )
+routine foo( a = 0, b = '' )=>[?]
 {
-	io.writeln( 'foo:', a );
-	return yield( 2 * a, 'by foo()' );
+    io.writeln( 'foo:', a );
+    return yield( 2 * a, 'by foo()' );
 }
 
-routine bar( a = 0, b = '' )
+routine bar( a = 0, b = '' )=>[?]
 {
-	io.writeln( 'bar:', a, b );
-	( r, s ) = foo( a + 1, b );
-	io.writeln( 'bar:', r, s );
-	( r, s ) = yield( a + 100, b );
-	io.writeln( 'bar:', r, s );
-	return a, 'ended';
+    io.writeln( 'bar:', a, b );
+    ( r, s ) = foo( a + 1, b );
+    io.writeln( 'bar:', r, s );
+    ( r, s ) = yield( a + 100, b );
+    io.writeln( 'bar:', r, s );
+    return a, 'ended';
 }
 
-co = @bar( 1, "a" );
+co = bar::( 1, "a" );
    
 io.writeln( 'main: ', co() );
 io.writeln( 'main: ', co( 1, 'x' ) );
@@ -947,18 +921,110 @@ io.writeln( 'main: ', co( 2, 'y' ) );
 io.writeln( 'main: ', co( 3, 'z' ) );
 @[code]
 
-Generators and coroutines can also be created by the standard
-method @[green]stdlib.coroutine()@[green], but then the values
-must be yielded by the method @[green]stdlib.yield()@[green].
-Besides this, there is another important difference between these 
-two ways of using generators and coroutines regarding Dao typing system.
 
 
-The variables passed around by generators or coroutines created 
-by prefixing the function with @[green]@@[green]
-are @[green]type-checked@[green] by the typing system,
-while generators and coroutines created by the @[green]stdlib.coroutine()@[green]
-	method will not be type-checked.
+@[subsection]
+Code Section Methods
+@[subsection]
+
+Code section/block method is an alternative to functional methods
+in other languages such as Python. Dao code section is syntactically
+very similar to the code block in Ruby. Unlike Ruby code blocks 
+which are compiled as closure and passed as parameter
+(so it's essentially a syntax sugar), Dao code section is really
+a code section in its host function, no closure is created a runtime. 
+When needed, the method locate the code section in the host function 
+and run that section of codes.
+
+
+To define a code section method, it will be necessary to specify
+two set of parameters and return types: one for the normal routine,
+and the other for the code section.
+@[code]
+routine meth_name( meth_params ) [sect_params => sect_return] => meth_return
+{
+	...
+}
+@[code]
+The parameter list prototype @[cyan]sect_params@[cyan] for the code section specifies
+what kind of parameters this method will pass to the code section; and the section
+return type @[cyan]sect_return@[cyan] indicates what type of value this method expects
+the code section to return.
+
+
+Code section method can be called in the following way:
+@[code]
+returned = meth_name( meth_params )::{
+	code_block
+}
+@[code]
+If there is no method parameter, it can be simply written as:
+@[code]
+returned = meth_name::{
+	code_block
+}
+@[code]
+By default, the code section receives the parameters passed in by the method
+through implicitly defined variables named @[green]X@[green] and @[green]Y@[green].
+User can choose to use more meaningful names by,
+@[code]
+returned = meth_name::{ [index, item]
+	code_block
+}
+@[code]
+
+
+For example, list type has a code section method for sorting with 
+the following prototype,
+@[code]
+sort( self :list<@T>, k=0 ) [X :@T, Y :@T => int] => list<@T>
+@[code]
+Here the code section parameters @[cyan]X@[cyan] and @[cyan]Y@[cyan]
+are used to pass two items of the list for comparison.
+The code section return type @[green]int@[green] indicates that
+the code section is expected to return an integer as the comparison result.
+So this @[green]sort()@[green] can be use in the following ways,
+@[code]
+numlist = { 11, 44, 21, 32, 56, 67, 25 }
+
+# Sort all by ascend order:
+numlist.sort::{ X < Y }
+
+# Sort by descend order until the largest 3 items are sorted:
+numlist.sort( 3 )::{ X > Y }
+# Now the first 3 items of the list is the largest 3 items;
+
+tuplist = { ( 2, 'ghi' ), ( 1, 'def' ), ( 2, 'abc' ), ( 1, 'abc' ) }
+tuplist.sort::{
+	# First sort by the first items of the tuples;
+	if( X[0] != Y[0] ) return X[0] < Y[0];
+	# Then sort by the second items;
+	return X[1] < Y[1];
+}
+@[code]
+
+
+In a user defined code section method, the @[green]yield@[green] statement
+can be used to pass parameters and invoke the execution of the code section
+that is attached to the call.
+Here is an example for user defined code section method,
+@[code]
+# A function that can be called with a code section.
+# The code section is expected to take an integer as parameter,
+# and return a string.
+routine Test() [X :int => string] => string
+{
+	io.writeln( 'In functional method!' );
+	s = yield( 123 ); # execute the code section;
+	io.writeln( 'Yielded value:', s );
+	return s;
+}
+
+Test::{
+	io.writeln( 'In code section:', X );
+	return 'abc';
+}
+@[code]
 
 
 @[text]
@@ -1000,35 +1066,31 @@ Class members are public by default.
 
 @[subsection]Class Definition@[subsection]
 
-<_>
-Starting from Dao v1.1, the syntax for class definition has been changed slightly.
-Now parameters and codes are not allowed in class body.
-</_>
 
 @[code]
 class MyNumber
 {
 	private
 
-   var value = 0;
-   var name : string;
+	var value = 0;
+	var name : string;
 
 	public
 
-   routine MyNumber( value = 0, s = "NoName" ){
-     value = value;
-     name = s;
-   }
+	routine MyNumber( value = 0, s = "NoName" ){
+		value = value;
+		name = s;
+	}
 
-   routine setValue( v ){ value = v }
-   routine getValue(){ return value }
+	routine setValue( v ){ value = v }
+	routine getValue(){ return value }
 
-   routine setValue( v : float );
+	routine setValue( v : float );
 }
 
 routine MyNumber::setValue( v : float )
 {
-   value = v;
+	value = v;
 }
 @[code]
 
@@ -1087,8 +1149,8 @@ obj2 = MyNumber{ 2, "enumerated" };
 The names of instance variables may also be specified in enumeration,
 @[code]
 obj3 = MyNumber{
-   name  => "enumerated";
-   value => 3;
+	name  => "enumerated";
+	value => 3;
 };
 @[code]
 
@@ -1111,8 +1173,8 @@ and static member can be declared using @[green]static@[green] keyword as in C++
 @[code]
 class Klass
 {
-   const aClassConst = "KlassConst";
-   static aClassStatic;
+	const aClassConst = "KlassConst";
+	static aClassStatic;
 }
 @[code]
 Here @[cyan]aClassConst@[cyan] will be constant belonging to a @[cyan]Klass@[cyan].
@@ -1136,12 +1198,12 @@ class MyNumber0
 
 	public
 
-  routine MyNumber0( v = 0 ){
-    value = v;
-  }
+	routine MyNumber0( v = 0 ){
+		value = v;
+	}
 
-  operator .value=( v ){ value = v; io.writeln( "value is set" ) }
-  operator .value(){ return value }
+	operator .value=( v ){ value = v; io.writeln( "value is set" ) }
+	operator .value(){ return value }
 }
 
 num = MyNumber0( 123 )
@@ -1149,15 +1211,17 @@ num.value = 456
 io.writeln( num.value )
 @[code(dao)]
 
-@[cyan]As you may guess, accessing instance variable through getters and setters are much more expensive
-than using them as public variables!
+
+@[cyan]
+As you may guess, accessing instance variable through getters and setters are
+more expensive than using them as public variables!
 They should be used only when they make things more convenient
 (for example, when you want them to do extra work when a variable is accessed).
 @[cyan]
 
+
 Other supported operators for overloaing include:
 @[list]
-==[operator =(...)] for assignment;
 ==[operator ()(...)] for function call;
 ==[operator [](...)] for getting item(s);
 ==[operator []=(...)] for setting item(s);
@@ -1177,20 +1241,20 @@ class MyNumber
 {
 	private
 
-   var value : int = 0;
+	var value : int = 0;
 
 	public
 
-  routine MyNumber( value = 0 ){ # accept integer as parameter
-    self.value = value;
-  }
+	routine MyNumber( value = 0 ){ # accept integer as parameter
+		self.value = value;
+	}
 
-   # overloaded constructor to accept MyNumber as parameter:
-   routine MyNumber( value : MyNumber ){ self.value = value.value }
+	# overloaded constructor to accept MyNumber as parameter:
+	routine MyNumber( value : MyNumber ){ self.value = value.value }
 
-   operator .value=( v : int ){ value = v }
-   operator .value=( v : MyNumber ){ value = v.value }
-   operator .value(){ return value }
+	operator .value=( v : int ){ value = v }
+	operator .value=( v : MyNumber ){ value = v.value }
+	operator .value(){ return value }
 }
 
 num1 = MyNumber( 123 )
@@ -1213,23 +1277,23 @@ io.writeln( num2.value )
 @[code]
 class ColorRBG
 {
-   var Red = 0;
-   var Green = 0;
-   var Blue = 0;
+	var Red = 0;
+	var Green = 0;
+	var Blue = 0;
 
-   routine ColorRBG( r, g, b ){
-     Red = r;
-     Green = g;
-     Blue = b;
-   }
+	routine ColorRBG( r, g, b ){
+		Red = r;
+		Green = g;
+		Blue = b;
+	}
 
-   routine setRed( r ){ Red = r; }
-   routine setGreen( g ){ Green = g; }
-   routine setBlue( b ){ Blue = b; }
+	routine setRed( r ){ Red = r; }
+	routine setGreen( g ){ Green = g; }
+	routine setBlue( b ){ Blue = b; }
 
-   routine getRed(){ return Red; }
-   routine getGreen(){ return Green; }
-   routine getBlue(){ return Blue; }
+	routine getRed(){ return Red; }
+	routine getGreen(){ return Green; }
+	routine getBlue(){ return Blue; }
 }
 
 yellow = ColorRBG( 255, 255, 0 ); # create an instance.
@@ -1238,11 +1302,11 @@ The following will define a derived class of @[cyan]ColorRBG@[cyan],
 @[code]
 class ColorQuad : ColorRBG
 {
-   var alpha = 0; # alpha component for tranparency.
+	var alpha = 0; # alpha component for tranparency.
 
-   routine ColorQuad( r, g, b, a ) : ColorRBG( r, g, b ){
-     alpha = a;
-   }
+	routine ColorQuad( r, g, b, a ) : ColorRBG( r, g, b ){
+		alpha = a;
+	}
 }
 
 yellow2 = ColorQuad( 255, 255, 0, 0 ); # not tranparent.

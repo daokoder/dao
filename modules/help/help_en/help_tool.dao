@@ -25,3 +25,95 @@ tool.standard.clangdao
 @[title]
 ClangDao for Automatic Wrapping
 @[title]
+
+@[text]
+
+ClangDao uses the C/C++ frontend of Clang to parse C/C++ header files 
+and generate proper wrapping codes for Dao. It has been used successfully
+to generate a number of binding for Dao.
+
+
+@[subsection]
+Module Definition File
+@[subsection]
+
+A configuration or definition file is normally required to wrap a C/C++ library.
+This defintion file should have C source file suffix for C libraries, and
+C++ source file suffix for C++ libraries. In this file, the list of header
+files for wrapping should be included in the standard way.
+This file may also contain configuration settings and wrapping hints.
+All the configuration settings and wrapping hints should be defined as
+valid C macros.
+
+
+For example, the following should be used to set the module name,
+@[code(cxx)]
+#define module_name MyModule
+#undef module_name
+
+#include "myModule.h"
+@[code(cxx)]
+With this, four files will be generated with wrapping codes
+(where @[green]xxx@[green] is the suffix of the definition file):
+@[list]
+--@[green]dao_MyModule.h@[green]:
+
+This file contains mostly declarations, wrapper structs or classes in case that
+they are need to support function pointer field in struct, and virtual function
+in C++ class to allow re-implementation by derived Dao classes.
+
+--@[green]dao_MyModule.xxx@[green]
+
+This file constains mostly the wrappers for global constant numbers and global functions.
+The entry function for the module is also placed in this file.
+
+--@[green]dao_MyModule2.xxx@[green]
+
+This file contains mostly type information structures and the wrappers 
+for C++ class member functions.
+
+--@[green]dao_MyModule3.xxx@[green]
+
+This file contains mostly re-implemented C++ virtual functions in such a way that,
+when they are executed, they will first check and call Dao re-implementation of
+the virtual functions.
+@[list]
+
+
+For C++, proxy classes may be created for wrapping to allow Dao to access the
+protected member methods, to turn off this, the following macro can be defined:
+@[code(cxx)]
+#define CLANGDAO_SKIP_PROTECTED
+@[code(cxx)]
+
+Also by default, the functions and types declared in the header files that
+are not directly included the definition file will also be wrapped.
+To avoid this, the following macro can be defined:
+@[code(cxx)]
+#define CLANGDAO_SKIP_EXTERNAL
+@[code(cxx)]
+
+
+Such definition file can be passed to ClangDao as command line argument
+in the same way as passing C/C++ source file to a Clang or GCC compilers.
+And similarly, option @[green]-I@[green] can be used to specify searching
+paths for the header files. Example command line,
+@[code]
+$ clangdao -Iinclude module_def.cpp
+@[code]
+
+
+
+@[subsection]
+Wrapping Hints
+@[subsection]
+
+Sometimes C/C++ types are ambiguous from mere type name, for example, for a pointer
+parameter, it is impossible to know if it is a pointer or actually an array.
+There are also other situations where the proper wrapping cannot be inferred from
+the codes alone.
+To circumvent such problems, wrapping hints can be defined for any function
+or class that need special handling.
+
+
+@[text]

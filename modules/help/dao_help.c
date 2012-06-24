@@ -489,6 +489,11 @@ static DIntStringPair daox_help_cxx_keywords[] =
 	{ DKEY_PRIVATE,    "private" },
 
 	{ DKEY_FOR,    "include" },
+	{ DKEY_FOR,    "define" },
+	{ DKEY_FOR,    "undef" },
+	{ DKEY_FOR,    "elif" },
+	{ DKEY_FOR,    "endif" },
+
 	{ DKEY_FOR,    "for" },
 	{ DKEY_WHILE,  "while" },
 	{ DKEY_IF,     "if" },

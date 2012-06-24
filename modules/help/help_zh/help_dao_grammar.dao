@@ -26,6 +26,7 @@ Dao语言文法标记
    -- @[green]*@[green] : 零次或多次;
    -- @[green]+@[green] : 一次或多次;
    @[list(sub)]
+   为了方便，@[green]{ S }@[green]也被用来表示重复@[green]S@[green]零次或多次。
 @[list]
 例子：
 @[list]

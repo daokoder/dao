@@ -28,7 +28,7 @@ of the following definition items,
    -- @[green]+@[green] : once or more times;
    @[list(sub)]
    For convenience, @[green]{ S }@[green] is also used to represent repeating
-   of @[green]S@[green] for once or more times.
+   of @[green]S@[green] for zero or more times.
 @[list]
 
 

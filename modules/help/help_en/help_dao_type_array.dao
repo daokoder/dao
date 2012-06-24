@@ -21,9 +21,9 @@ MatrixEnumeration  ::= '[' ExpressionList { ';' ExpressionList } ']'
 VectorEnumeration2 ::= 'array' '{' ExpressionList '}'
 MatrixEnumeration2 ::= 'array' '{' ExpressionList { ';' ExpressionList } '}'
 
-# Elements of Arithmetic Progression sequence: start ~ [ step ~ ] count
+# Elements of Arithmetic Progression sequence: count ~ start [ ~ step ]
 ArrayByArithProg  ::= '[' Expression '~' [ Expression '~' ] Expression ']'
-ArrayByArithProg2 ::= 'array' '{' Expression '~' [ Expression '~' ] Expression '}'
+ArrayByArithProg2 ::= 'array' '{' Expression '~' Expression [ '~' Expression ] '}'
 
 Array ::= VectorEnumeration | MatrixEnumeration | ArrayByArithProg
           | VectorEnumeration2 | MatrixEnumeration2 | ArrayByArithProg2

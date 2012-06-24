@@ -297,8 +297,8 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 		if( index->xTuple.unitype == dao_type_for_iterator ){
 			DaoValue **data = index->xTuple.items;
 			if( data[0]->type == data[1]->type && data[0]->type == DAO_INTEGER ){
-				*idtype = IDX_SINGLE;
 				*start = data[1]->xInteger.value;
+				*idtype = *start < N ? IDX_SINGLE : IDX_OUTOFRANGE;
 				data[1]->xInteger.value += 1;
 				data[0]->xInteger.value = data[1]->xInteger.value < N;
 				break;
