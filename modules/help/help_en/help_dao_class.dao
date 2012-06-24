@@ -3,7 +3,40 @@ load help;
 @[name]
 dao.class
 @[name]
+
 @[title]
 Class for Object-Oriented Programming
+@[title]
+
+
+
+@[name]
+dao.class.inheritance
+@[name]
+
+@[title]
+Class Inheritance
+@[title]
+
+
+
+
+@[name]
+dao.class.operator
+@[name]
+
+@[title]
+Operator Overloading
+@[title]
+
+
+
+
+@[name]
+dao.class.dynamic
+@[name]
+
+@[title]
+Dynamic Class
 @[title]
 

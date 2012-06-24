@@ -403,6 +403,7 @@ enum DaoOpcodeExtra
 	DVM_DO ,
 	DVM_LBRA ,
 	DVM_RBRA ,
+	DVM_DEFAULT ,
 	DVM_UNUSED
 };
 

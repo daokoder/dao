@@ -346,6 +346,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "do",         DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "lbra",       DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "rbra",       DVM_UNUSED,     DAO_CODE_NOP, 0 },
+	{ "default",    DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "unused",     DVM_UNUSED,     DAO_CODE_NOP, 0 }
 };
 

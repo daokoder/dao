@@ -133,6 +133,7 @@ static const char* const daoCtInfo[] =
 	"Invalid case statement",
 	"Case value not constant",
 	"Case values not distinctive",
+	"Duplicated default case",
 	"Cyclic loading detected",
 	"String pattern matching is disabled",
 	"Long integer type is disabled",

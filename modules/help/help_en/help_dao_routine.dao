@@ -4,7 +4,362 @@ load help;
 @[name]
 dao.routine
 @[name]
+
 @[title]
 Routine
 @[title]
 
+
+@[text]
+
+Routine is a block of codes, once defined, can be used in different places
+at different time repeatedly. It can accept parameters to changes its
+behaviour. It may also return results to its callee.
+
+
+
+@[subsection]Definition@[subsection]
+
+Dao routines are declared with keyword @[green]routine@[green]
+or @[green]function@[green] or @[green]sub@[green] 
+(which are exactly equivalent to @[green]routine@[green]),
+
+@[code(dao)]
+routine func( a, b )
+{
+   io.writeln( a, b );
+   a = 10;
+   b = "test";
+   return a, b; # return more than one results.
+}
+
+r1, r2;
+( r1, r2 ) = func( 111, "AAA" );
+r3 = func( r1, r2 );
+io.writeln( "r1 = ", r1 );
+io.writeln( "r2 = ", r2 );
+io.writeln( "r3 = ", r3 );
+@[code(dao)]
+
+
+
+@[subsection]Named Parameter@[subsection]
+
+In Dao the function parameters are named, and parameter values can be passed in by name:
+@[code]
+func( b => 123, a => "ABC" );
+@[code]
+
+
+
+@[subsection]Parameter Type and Default Value@[subsection]
+
+It is also possible to specify the type or the default value of a parameter.
+@[code]
+routine MyRout( name : string, index = 0 )
+{
+   io.writeln( "NAME  = ", name )
+   io.writeln( "INDEX = ", index )
+}
+@[code]
+Here @[cyan]name@[cyan] is specified as string, and @[cyan]index@[cyan]
+is specified as an integer with default value 0.
+Any parameter after a parameter with default value must have default values as well.
+If a routine is called with wrong type of parameters,
+or no value is passed to a parameter without a
+default value, an exception will be raised and the execution will abort.
+
+
+
+@[subsection]Routine Overloading@[subsection]
+
+Routine overloading by parameter types is also supported in Dao,
+which means that multiple routines can be defined with the same name,
+but different parameter signatures.
+@[code]
+routine MyRout( index : int, name = "ABC" )
+{
+   io.writeln( "INDEX = ", index )
+   io.writeln( "NAME  = ", name )
+}
+
+MyRout( "DAO", 123 ) # invoke the first MyRout()
+MyRout( 456, "script" ) # invoke the second MyRout()
+@[code]
+
+@[text]
+
+
+
+
+
+@[name]
+dao.routine.anonymous
+@[name]
+
+@[title]
+Anonymous Routine
+@[title]
+
+
+@[text]
+
+@[subsection]Routine As First Class Object@[subsection]
+
+Dao also support first class functions / routines. They can be created in the following way:
+@[code]
+foo = routine( x, y : TYPE, z = DEFAULT )
+{
+   codes;
+}
+@[code]
+The definition of such functions is identical to the normal function definition, except
+the following differences:
+@[list]
+==there is no need for a function name, but the created function must be assigned to a variable;
+==the default value expressions for parameters do not necessary to be constant expressions,
+they are evaluated at running time when the function is created;
+==the function body may contain variables defined in the "upper" function that creates it;
+depending on the type of the "upper" variable, its copy (for simple types) 
+or reference will be used by the created function.
+@[list]
+
+
+Here is an example,
+@[code]
+a = "ABC";
+
+rout = routine( x, y : string, z = a+a ){
+    a += "_abc";
+    io.writeln( "lambda ", a )
+    io.writeln( "lambda ", y )
+    io.writeln( "lambda ", z )
+}
+
+rout( 1, "XXX" );
+@[code]
+
+@[text]
+
+
+
+
+
+@[name]
+dao.routine.coroutine
+@[name]
+
+@[title]
+Coroutine and Generator
+@[title]
+
+
+@[text]
+
+
+@[subsection]
+Coroutine and Generator
+@[subsection]
+
+Coroutines and generator (a special form of coroutine) are special routines 
+that can suspend and yield their execution to other routines or coroutines, 
+and be resumed by them when needed.
+
+
+Definition of a coroutine is very similar to define a normal routine,
+with two minor differences:
+@[list]
+==Its return type must be placed in between a pair of squared brackets;
+==It can contain @[green]yield@[green] statement(s) in the routine body.
+@[list]
+@[green]yield@[green] statement(s) can be used to suspend the current coroutine,
+and the parameters passed to the @[green]yield@[green] statement(s) are passed out
+to the routine that has invoked or resumed this coroutine.
+After suspension, the coroutine can be resumed in the same way as function calls,
+and the parameters to such calls are passed into the coroutine, and become
+the returned values of the @[green]yield@[green] statement(s).
+
+
+When a @[green]return@[green] statment is executed or the end of the function is reached, 
+the coroutine will exit and become not resumable anymore.
+
+
+The creation of a coroutine or generator is similar to a function call,
+but with @[green]::@[green] place before the brackets:
+@[code]
+corout = ACoroutine::( parameters )
+@[code]
+
+
+An example generator:
+@[code]
+# int => tuple<int,int>
+routine gen1( a = 0 ) => [?] # use ? for automatic inferring;
+{
+    k = 0;
+    while( ++k < 3 ) a = yield( k, a );
+    return 0,0;
+}
+routine gen2( a = 0 ) => [?] 
+{
+    return gen1( a );
+}
+g = gen2::( 1 );
+# parameters can be omitted the first time it's called;
+# the first call may use the parameters 
+# that are used for creating the generator:
+io.writeln( 'main1: ', g() );
+io.writeln( 'main2: ', g( 100 ) );
+io.writeln( 'main3: ', g( 200 ) );
+
+io.writeln( std.about(gen1) )
+@[code]
+
+
+An example coroutine:
+@[code]
+routine foo( a = 0, b = '' )=>[?]
+{
+    io.writeln( 'foo:', a );
+    return yield( 2 * a, 'by foo()' );
+}
+
+routine bar( a = 0, b = '' )=>[?]
+{
+    io.writeln( 'bar:', a, b );
+    ( r, s ) = foo( a + 1, b );
+    io.writeln( 'bar:', r, s );
+    ( r, s ) = yield( a + 100, b );
+    io.writeln( 'bar:', r, s );
+    return a, 'ended';
+}
+
+co = bar::( 1, "a" );
+   
+io.writeln( 'main: ', co() );
+io.writeln( 'main: ', co( 1, 'x' ) );
+io.writeln( 'main: ', co( 2, 'y' ) );
+# coroutine has been finished, the following will rise an exception.
+io.writeln( 'main: ', co( 3, 'z' ) );
+@[code]
+
+@[text]
+
+
+
+
+
+@[name]
+dao.routine.section
+@[name]
+
+@[title]
+Code Section Methods
+@[title]
+
+
+@[text]
+
+
+
+Code section/block method is an alternative to functional methods
+in other languages such as Python. Dao code section is syntactically
+very similar to the code block in Ruby. Unlike Ruby code blocks 
+which are compiled as closure and passed as parameter
+(so it's essentially a syntax sugar), Dao code section is really
+a code section in its host function, no closure is created a runtime. 
+When needed, the method locate the code section in the host function 
+and run that section of codes.
+
+
+To define a code section method, it will be necessary to specify
+two set of parameters and return types: one for the normal routine,
+and the other for the code section.
+@[code]
+routine meth_name( meth_params ) [sect_params => sect_return] => meth_return
+{
+	...
+}
+@[code]
+The parameter list prototype @[cyan]sect_params@[cyan] for the code section specifies
+what kind of parameters this method will pass to the code section; and the section
+return type @[cyan]sect_return@[cyan] indicates what type of value this method expects
+the code section to return.
+
+
+Code section method can be called in the following way:
+@[code]
+returned = meth_name( meth_params )::{
+	code_block
+}
+@[code]
+If there is no method parameter, it can be simply written as:
+@[code]
+returned = meth_name::{
+	code_block
+}
+@[code]
+By default, the code section receives the parameters passed in by the method
+through implicitly defined variables named @[green]X@[green] and @[green]Y@[green].
+User can choose to use more meaningful names by,
+@[code]
+returned = meth_name::{ [index, item]
+	code_block
+}
+@[code]
+
+
+For example, list type has a code section method for sorting with 
+the following prototype,
+@[code]
+sort( self :list<@T>, k=0 ) [X :@T, Y :@T => int] => list<@T>
+@[code]
+Here the code section parameters @[cyan]X@[cyan] and @[cyan]Y@[cyan]
+are used to pass two items of the list for comparison.
+The code section return type @[green]int@[green] indicates that
+the code section is expected to return an integer as the comparison result.
+So this @[green]sort()@[green] can be use in the following ways,
+@[code]
+numlist = { 11, 44, 21, 32, 56, 67, 25 }
+
+# Sort all by ascend order:
+numlist.sort::{ X < Y }
+
+# Sort by descend order until the largest 3 items are sorted:
+numlist.sort( 3 )::{ X > Y }
+# Now the first 3 items of the list is the largest 3 items;
+
+tuplist = { ( 2, 'ghi' ), ( 1, 'def' ), ( 2, 'abc' ), ( 1, 'abc' ) }
+tuplist.sort::{
+	# First sort by the first items of the tuples;
+	if( X[0] != Y[0] ) return X[0] < Y[0];
+	# Then sort by the second items;
+	return X[1] < Y[1];
+}
+@[code]
+
+
+In a user defined code section method, the @[green]yield@[green] statement
+can be used to pass parameters and invoke the execution of the code section
+that is attached to the call.
+Here is an example for user defined code section method,
+@[code]
+# A function that can be called with a code section.
+# The code section is expected to take an integer as parameter,
+# and return a string.
+routine Test() [X :int => string] => string
+{
+	io.writeln( 'In functional method!' );
+	s = yield( 123 ); # execute the code section;
+	io.writeln( 'Yielded value:', s );
+	return s;
+}
+
+Test::{
+	io.writeln( 'In code section:', X );
+	return 'abc';
+}
+@[code]
+
+
+@[text]

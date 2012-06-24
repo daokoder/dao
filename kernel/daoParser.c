@@ -2151,7 +2151,7 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 static int DaoParser_CompleteScope( DaoParser *self, int at )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
-	int token, next = at + 1;
+	int token, next = at + (at < self->tokens->size && tokens[at]->type != DTOK_IDENTIFIER);
 	while( next < self->tokens->size && tokens[next]->name == DTOK_SEMCO ) next += 1;
 	token = next < self->tokens->size ? tokens[next]->name : 0;
 	while( self->scopeOpenings->size >0 ){
@@ -3852,9 +3852,13 @@ DecoratorError:
 			inode = DaoParser_AddCode( self, DVM_GOTO, 0,0,0, start, 0, 0 );
 			inode->jumpTrue = closing;
 			if( tki == DKEY_DEFAULT ){
+				if( opening->jumpFalse && opening->jumpFalse->code == DVM_DEFAULT ){
+					DaoParser_Error2( self, DAO_DEFAULT_DUPLICATED, start, to, 1 );
+					return 0;
+				}
 				self->curToken = start + 1;
 				if( DaoParser_CheckTokenType( self, DTOK_COLON, ":" ) ==0 ) return 0;
-				DaoParser_AddCode( self, DVM_NOP, cst, 0, 0, start, 0, 0 );
+				DaoParser_AddCode( self, DVM_DEFAULT, 0, 0, 0, start, 0, 0 );
 				opening->jumpFalse = self->vmcLast;
 				start += 2;
 				continue;
@@ -4172,12 +4176,15 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			enode = DaoParser_ParseExpression2( self, 0, 0 );
 			if( enode.reg < 0 ) return -1;
 			if( self->curToken > to ) break;
-			if( tokens[self->curToken]->line != tokens[self->curToken-1]->line ) break;
-			if( tokens[self->curToken]->name == DTOK_SEMCO ) break;
-			if( tokens[self->curToken]->name == DTOK_RCB ) break;
-			if( tokens[self->curToken]->name != DTOK_COMMA ){
-				self->curLine = tokens[self->curToken]->line;
-				DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL );
+			ptok = tokens[self->curToken];
+			if( ptok->line != tokens[self->curToken-1]->line ) break;
+			if( ptok->name == DTOK_SEMCO ) break;
+			if( ptok->name == DTOK_RCB ) break;
+			if( ptok->name != DTOK_COMMA ){
+				if( ptok->name < DKEY_USE ){
+					self->curLine = ptok->line;
+					DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL );
+				}
 				break;
 			}
 			self->curToken += 1;
@@ -5173,8 +5180,21 @@ CleanUp:
 	closing = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, start, 0,0 );
 	opening = DaoParser_AddScope( self, DVM_LOOP, closing );
 	/* step arith */
-	reg2 = DaoParser_MakeArithTree( self, semic2+1, rb-1, & cst );
-	if( reg2 < 0 ) return -1;
+	if( semic2 + 1 == rb ){
+		DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, semic2+1, 0, rb-1 );
+	}else{
+		DaoEnode enode;
+		self->curToken = semic2 + 1;
+		enode = DaoParser_ParseExpression( self, DTOK_COMMA );
+		while( enode.reg >= 0 && self->curToken < rb ){
+			self->curToken += 1;
+			enode = DaoParser_ParseExpression( self, DTOK_COMMA );
+		}
+		if( enode.reg < 0 ){
+			DaoParser_Error2( self, DAO_INVALID_EXPRESSION, semic2+1, rb-1, 0 );
+			return -1;
+		}
+	}
 	/* cond airth */
 	DaoParser_AddCode( self, DVM_UNUSED, 0, 0, 0, start, 0, 0 );
 	inode->jumpTrue = self->vmcLast;
