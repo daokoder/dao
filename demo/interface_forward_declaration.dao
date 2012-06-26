@@ -23,8 +23,6 @@ class Another
 	routine TestBB( aa : InterAA ){ aa.Show() }
 	routine Show(){ io.writeln( 'Another::Show()' ) }
 }
-bind InterAA to One;
-bind InterBB to Another;
 
 o = One();
 a = Another();

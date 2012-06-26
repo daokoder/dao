@@ -1202,7 +1202,6 @@ DaoInterface* DaoInterface_New( const char *name )
 	DaoInterface *self = (DaoInterface*) dao_malloc( sizeof(DaoInterface) );
 	DaoValue_Init( self, DAO_INTERFACE );
 	self->trait |= DAO_VALUE_DELAYGC;
-	self->bindany = 0;
 	self->derived = 0;
 	self->supers = DArray_New(D_VALUE);
 	self->methods = DHash_New(D_STRING,D_VALUE);
@@ -1360,7 +1359,6 @@ static int DaoInterface_TryBindTo( DaoInterface *self, DaoType *type, DMap *bind
 		DaoInterface *iter = (DaoInterface*) it->key.pVoid;
 		if( DString_EQ( iter->abtype->name, self->abtype->name ) ) break;
 	}
-	if( self->bindany ==0 && it == NULL ) return 0;
 	return DaoInterface_BindTo( self, type, binds, fails );
 }
 void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );

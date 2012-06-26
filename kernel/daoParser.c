@@ -235,7 +235,6 @@ void DaoParser_Delete( DaoParser *self )
 	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
 	if( self->outers ) DArray_Delete( self->outers );
-	if( self->bindtos ) DArray_Delete( self->bindtos );
 	if( self->allConsts ) DMap_Delete( self->allConsts );
 	if( self->protoValues ) DMap_Delete( self->protoValues );
 	DMap_Delete( self->initTypes );
@@ -3649,49 +3648,6 @@ DecoratorError:
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;
-		}else if( tki == DKEY_BIND ){
-			DaoInterface *inter;
-			int old = start;
-			int ito = DaoParser_FindOpenToken( self, DKEY_TO, start, to, 1 );
-			if( ito <0 || ito >= to ){
-				DaoParser_Error3( self, DAO_INVALID_BINDING, old );
-				return 0;
-			}
-			start = DaoParser_FindScopedConstant( self, & value, start+1, NULL );
-			if( ito == old + 1 || ito != start + 1 || value->type != DAO_INTERFACE ){
-				DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, tokens[start]->string );
-				DaoParser_Error2( self, DAO_INVALID_BINDING, old, start, 1 );
-				return 0;
-			}
-			inter = & value->xInterface;
-			if( tokens[ito+1]->name == DKEY_ANY ){
-				if( cons && topll ) DaoParser_MakeCodes( self, start, ito+2, ns->inputs );
-				start = ito + 1;
-				inter->bindany = 1;
-				continue;
-			}
-			start = DaoParser_FindScopedConstant( self, & value, ito+1, NULL );
-			if( self->bindtos == NULL ) self->bindtos = DArray_New(0);
-			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start+1, ns->inputs );
-			if( value->type == DAO_CLASS ){
-				DArray_Append( self->bindtos, inter );
-				DArray_Append( self->bindtos, value->xClass.objType );
-				DArray_Append( self->bindtos, old );
-				DArray_Append( self->bindtos, start );
-				DArray_Append( self->bindtos, 0 );
-			}else if( value->type == DAO_CTYPE ){
-				DArray_Append( self->bindtos, inter );
-				DArray_Append( self->bindtos, value->xCdata.ctype );
-				DArray_Append( self->bindtos, old );
-				DArray_Append( self->bindtos, start );
-				DArray_Append( self->bindtos, 0 );
-			}else{
-				DaoParser_Error( self, DAO_SYMBOL_NEED_BINDABLE, tokens[start]->string );
-				DaoParser_Error2( self, DAO_INVALID_BINDING, old, start, 1 );
-				return 0;
-			}
-			start += 1;
-			continue;
 		}else if( tki == DKEY_ENUM && (tki2 == DTOK_LCB || tki2 == DTOK_IDENTIFIER) ){
 			start = DaoParser_ParseEnumDefinition( self, start, to, storeType );
 			if( start <0 ) return 0;
@@ -4804,41 +4760,6 @@ int DaoParser_PostParsing( DaoParser *self )
 
 	DaoRoutine_SetSource( routine, self->tokens, routine->nameSpace );
 	if( DaoParser_SetupBranching( self ) == 0 ) return 0;
-
-	if( self->bindtos ){
-		DArray *fails = DArray_New(0);
-		if( DaoInterface_Bind( self->bindtos, fails ) ==0 ){
-			k = 0;
-			for(i=0; i<self->bindtos->size; i+=5){
-				DaoInterface *inter = (DaoInterface*) self->bindtos->items.pValue[i];
-				DaoType *type = (DaoType*) self->bindtos->items.pValue[i+1];
-				int first = self->bindtos->items.pInt[i+2];
-				int last  = self->bindtos->items.pInt[i+3];
-				int count = self->bindtos->items.pInt[i+4];
-				for(j=0; j<count; j++){
-					DaoRoutine *fail = fails->items.pRoutine[j+k];
-					DString_Assign( self->mbs, fail->routName );
-					DString_AppendMBS( self->mbs, "() " );
-					DString_Append( self->mbs, fail->routType->name );
-					self->curLine = fail->defLine;
-					DaoParser_Error( self, DAO_MISSING_INTERFACE_METHOD, self->mbs );
-				}
-				k += count;
-				self->curLine = routine->body->source->items.pToken[ first ]->line;
-				DString_SetMBS( self->mbs, "type \'" );
-				DString_Append( self->mbs, type->name );
-				DString_AppendMBS( self->mbs, "\' for interface \'" );
-				DString_Append( self->mbs, inter->abtype->name );
-				DString_AppendMBS( self->mbs, "\'" );
-				DaoParser_Error( self, DAO_INTERFACE_NOT_COMPATIBLE, self->mbs );
-				DaoParser_Error2( self, DAO_FAILED_INTERFACE_BIND, first, last, 0 );
-			}
-			DArray_Delete( fails );
-			DaoParser_PrintError( self, 0, 0, NULL );
-			return 0;
-		}
-		DArray_Delete( fails );
-	}
 
 	routine->body->regCount = self->regCount;
 

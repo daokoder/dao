@@ -40,3 +40,21 @@ dao.class.dynamic
 Dynamic Class
 @[title]
 
+
+
+@[name]
+dao.interface
+@[name]
+
+@[title]
+Abstract Interface
+@[title]
+
+
+@[name]
+dao.metafield
+@[name]
+
+@[title]
+Meta Field
+@[title]

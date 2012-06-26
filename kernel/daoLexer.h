@@ -130,8 +130,6 @@ enum DaoKeyNames
 	DKEY_USE ,
 	DKEY_LOAD ,
 	DKEY_AS ,
-	DKEY_TO ,
-	DKEY_BIND ,
 	DKEY_SYNTAX ,
 	DKEY_CLASS ,
 	DKEY_SUB ,

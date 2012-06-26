@@ -182,3 +182,13 @@ type Point3D    = tuple<x:float,y:float,z:float>
 @[code]
 
 @[text]
+
+
+
+@[name]
+dao.type.variant
+@[name]
+
+@[title]
+Variant or Disjoint Union Type
+@[title]

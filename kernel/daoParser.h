@@ -121,7 +121,6 @@ struct DaoParser
 	DArray *scopeClosings; /* <DaoInode*> */
 	DArray *errors;
 	DArray *warnings;
-	DArray *bindtos;
 	DArray *uplocs;
 	DArray *outers;
 	DArray *decoFuncs;
