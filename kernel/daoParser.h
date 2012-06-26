@@ -80,7 +80,6 @@ struct DaoParser
 	DArray *routCompilable; /* list of defined routines with bodies */
 
 	int    regCount;
-	int    lastValue;
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
 	int noneValue;
@@ -117,7 +116,6 @@ struct DaoParser
 	int lineCount;
 	short indent;
 	short defined;
-	short error;
 	short parsed;
 	DArray *scopeOpenings; /* <DaoInode*> */
 	DArray *scopeClosings; /* <DaoInode*> */

@@ -115,6 +115,8 @@ struct DaoxHelpEntry
 	DString        *license;
 	DaoxHelpBlock  *first;
 	DaoxHelpBlock  *last;
+
+	int  failedTests;
 };
 struct DaoxHelp
 {
@@ -543,8 +545,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 		ds.mbs = (char*)src;
 		ds.size = n;
 		one.type = one.name = DTOK_COMMENT;
-		//DString_Clear( mbs );
-		mbs->size = 0;
+		DString_Reset( mbs, 0 );
 		cmtype = 0;
 		if( NL1 && strncmp( src, info->lineComment1, NL1 ) ==0 ) cmtype = 1;
 		if( NL2 && strncmp( src, info->lineComment2, NL2 ) ==0 ) cmtype = 2;
@@ -602,8 +603,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 				DArray_Append( tokens, & one );
 				continue;
 			}
-			//DString_Clear( mbs );
-			mbs->size = 0;
+			DString_Reset( mbs, 0 );
 		}
 		if( *src == '\'' && ! info->singleQuotation ){
 			one.type = DTOK_MBS_OPEN;
@@ -684,6 +684,16 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 					tok->name = DKEY_AS;
 					break;
 				}
+			}
+		}else if( lang && strcmp( lang->mbs, "test" ) == 0 ){
+			for(i=0; i<tokens->size; i++){
+				DaoToken *tok = tokens->items.pToken[i];
+				const char *ts = tok->string->mbs;
+				if( tok->type != DTOK_IDENTIFIER ) continue;
+				if( strcmp( ts, "__result__" ) == 0 ) tok->name = DTOK_COMMENT;
+				if( strcmp( ts, "__answer__" ) == 0 ) tok->name = DTOK_COMMENT;
+				if( strcmp( ts, "__stdout__" ) == 0 ) tok->name = DTOK_COMMENT;
+				if( strcmp( ts, "__stderr__" ) == 0 ) tok->name = DTOK_COMMENT;
 			}
 		}
 	}
@@ -808,13 +818,14 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	DString_Delete( string );
 }
 
-static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep );
+static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep );
 
-static void DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
+static int DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
 {
 	const char *pat = "^[\n]+[ \t]* (%-%-|==)";
 	daoint pos, lb, last = 0, start = 0, end = text->size-1;
 	int i, itemid = 1;
+	int fails = 0;
 
 	if( DString_MatchMBS( text, pat, & start, & end ) ){
 		DString *delim = DString_New(1);
@@ -828,7 +839,7 @@ static void DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, i
 				DString_Erase( item, 0, 2 );
 				for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
 				i = DaoxStream_WriteItemID( self, delim->mbs[delim->size-1], itemid ++ );
-				DaoxStream_WriteBlock( self, item, offset+i, width, 0, listdep );
+				fails += DaoxStream_WriteBlock( self, item, offset+i, width, 0, listdep );
 			}
 			/* print newline for items except the last one: */
 			if( start < text->size ) DaoxStream_WriteNewLine( self, "" );
@@ -839,12 +850,99 @@ static void DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, i
 		DString_Delete( delim );
 		DString_Delete( item );
 	}else{
-		DaoxStream_WriteBlock( self, text, offset, width, 0, listdep );
+		fails += DaoxStream_WriteBlock( self, text, offset, width, 0, listdep );
 	}
 	DaoxStream_WriteNewLine( self, "" );
+	return fails;
 }
-static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
+typedef struct DaoxTestStream DaoxTestStream;
+struct DaoxTestStream
 {
+	DaoStream *stream;
+	void (*StdioRead)( DaoxTestStream *self, DString *input, int count );
+	void (*StdioWrite)( DaoxTestStream *self, DString *output );
+	void (*StdioFlush)( DaoxTestStream *self );
+	void (*SetColor)( DaoxTestStream *self, const char *fg, const char *bg );
+
+	DString  *output;
+	DString  *output2;
+};
+void DaoxTestStream_StdioWrite( DaoxTestStream *self, DString *output )
+{
+	DString_Append( self->output, output );
+	DString_Append( self->output2, output );
+}
+static int DaoxStream_DoTest( DaoxStream *self, DString *code )
+{
+	int failed = 0;
+	DaoValue *result, *answer, *output, *error;
+	DaoVmSpace *vmspace = self->process->vmSpace;
+	DaoNamespace *nspace = DaoNamespace_New( vmspace, "test" );
+	DaoxTestStream stdoutStream = { NULL, NULL, NULL, NULL, NULL };
+	DaoxTestStream stderrStream = { NULL, NULL, NULL, NULL, NULL };
+	DaoUserStream *prevStdout, *prevStderr;
+	DString *output2 = DString_New(1);
+
+	stdoutStream.StdioWrite = DaoxTestStream_StdioWrite;
+	stderrStream.StdioWrite = DaoxTestStream_StdioWrite;
+
+	stdoutStream.output = DString_New(1);
+	stderrStream.output = DString_New(1);
+	stdoutStream.output2 = stderrStream.output2 = output2;
+
+	prevStdout = DaoVmSpace_SetUserStdio( vmspace, (DaoUserStream*) & stdoutStream );
+	prevStderr = DaoVmSpace_SetUserStdError( vmspace, (DaoUserStream*) & stderrStream  );
+
+	DaoProcess_Eval( self->process, nspace, code->mbs, 1 );
+
+	DaoVmSpace_SetUserStdio( vmspace, prevStdout );
+	DaoVmSpace_SetUserStdError( vmspace, prevStderr  );
+
+	DaoxStream_WriteNewLine( self, "Test output:" );
+	DaoxStream_SetColor( self, NULL, dao_colors[DAOX_YELLOW] );
+	DaoxStream_WriteString( self, output2 );
+	DaoxStream_SetColor( self, NULL, NULL );
+
+	result = DaoNamespace_FindData( nspace, "__result__" );
+	answer = DaoNamespace_FindData( nspace, "__answer__" );
+	output = DaoNamespace_FindData( nspace, "__stdout__" );
+	error  = DaoNamespace_FindData( nspace, "__stderr__" );
+
+	if( result && answer )
+		failed |= DaoValue_Compare( result, answer ) != 0;
+
+	if( output && output->type == DAO_STRING ){
+		DString *s = DaoValue_TryGetString( output );
+		failed |= DString_EQ( stdoutStream.output, s ) == 0;
+	}
+
+	if( error && error->type == DAO_STRING && DaoValue_TryGetString( error )->size ){
+		DString *s = DaoValue_TryGetString( error );
+		failed |= DString_Find( stderrStream.output, s, 0 ) == MAXSIZE;
+	}else if( stderrStream.output->size ){
+		failed |= 1;
+	}
+	DaoxStream_WriteNewLine( self, "Test status:" );
+	if( failed ){
+		DaoxStream_SetColor( self, "white", "red" );
+		DaoxStream_WriteMBS( self, "FAILED!" );
+	}else{
+		DaoxStream_SetColor( self, "white", "green" );
+		DaoxStream_WriteMBS( self, "PASSED!" );
+	}
+	DaoxStream_SetColor( self, NULL, NULL );
+	DaoxStream_WriteNewLine( self, "" );
+
+	DaoGC_TryDelete( (DaoValue*) nspace );
+	DString_Delete( stdoutStream.output );
+	DString_Delete( stderrStream.output );
+	DString_Delete( output2 );
+
+	return failed;
+}
+static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
+{
+	int fails = 0;
 	daoint mtype, pos, lb, start, end, last = 0;
 	DString *fgcolor = DString_New(1);
 	DString *bgcolor = DString_New(1);
@@ -889,11 +987,8 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 			if( it ) mtype = it->value.pInt;
 			if( mtype == DAOX_HELP_CODE ){
 				DaoxStream_PrintCode( self, part, mode, offset, width );
-				if( self->process && strcmp( mode->mbs, "dao" ) == 0 ){
-					DaoxStream_WriteNewLine( self, "" );
-					DaoxStream_SetColor( self, NULL, dao_colors[DAOX_YELLOW] );
-					DaoProcess_Eval( self->process, self->nspace, part->mbs, 1 );
-					DaoxStream_SetColor( self, NULL, NULL );
+				if( self->process && strcmp( mode->mbs, "test" ) == 0 ){
+					fails += DaoxStream_DoTest( self, part );
 				}
 			}else if( mtype >= DAOX_HELP_SECTION && mtype <= DAOX_HELP_SUBSECT2 ){
 				int bgcolorid = DAOX_BLACK;
@@ -988,6 +1083,7 @@ static void DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, 
 	DString_Delete( cap );
 	DString_Delete( mode );
 	DString_Delete( part );
+	return fails;
 }
 
 static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoProcess *proc )
@@ -1001,7 +1097,8 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoPro
 	stream->last = 0;
 	stream->nspace = self->entry->help->nspace;
 	if( self->type == DAOX_HELP_TEXT ){
-		DaoxStream_WriteBlock( stream, self->text, 0, screen, 0, 0 );
+		int fails = DaoxStream_WriteBlock( stream, self->text, 0, screen, 0, 0 );
+		self->entry->failedTests += fails;
 	}else if( self->type == DAOX_HELP_CODE ){
 		DaoxStream_PrintCode( stream, self->text, self->lang, 0, screen );
 		if( proc && (self->lang == NULL || strcmp( self->lang->mbs, "dao" ) == 0) ){
@@ -1030,6 +1127,7 @@ static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 	self->nested2 = DArray_New(0);
 	self->first = self->last = NULL;
 	self->parent = NULL;
+	self->failedTests = 0;
 	return self;
 }
 static void DaoxHelpEntry_Delete( DaoxHelpEntry *self )
@@ -1103,7 +1201,7 @@ static int DaoxHelpEntry_GetNameLength( DaoxHelpEntry *self )
 	if( pos == MAXSIZE ) return self->name->size;
 	return self->name->size - 1 - pos;
 }
-static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DArray *offsets, int offset, int width, int root, int last, int depth )
+static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DArray *offsets, int offset, int width, int root, int last, int depth, int hlerror )
 {
 	DArray *old = offsets;
 	DString *line = DString_New(1);
@@ -1118,7 +1216,8 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	screen = ws.ws_col - 1;
 #endif
 
-	if( depth > 4 ) return;
+	if( depth > 4 && hlerror == 0 ) return;
+	if( hlerror && self->failedTests == 0 ) return;
 
 	if( offsets == NULL ){
 		offsets = DArray_New(0);
@@ -1153,7 +1252,15 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		DaoxStream_WriteEntryName( stream, self->name );
 		DaoxStream_SetColor( stream, NULL, NULL );
 
-		if( count < (screen - 20) ){
+		if( hlerror ){
+			DaoxStream_SetColor( stream, dao_colors[DAOX_BLACK], NULL );
+			DaoxStream_WriteMBS( stream, ": " );
+			DaoxStream_SetColor( stream, NULL, NULL );
+			DaoxStream_SetColor( stream, dao_colors[DAOX_RED], NULL );
+			DaoxStream_WriteMBS( stream, "failed tests: " );
+			DaoxStream_WriteInteger( stream, self->failedTests );
+			DaoxStream_SetColor( stream, NULL, NULL );
+		}else if( count < (screen - 20) ){
 			DString *title = DString_Copy( self->title );
 			DString *chunk = DString_New(0);
 			int TW = screen - count;
@@ -1202,7 +1309,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	for(i=0; i<self->nested2->size; i++){
 		DaoxHelpEntry *entry = (DaoxHelpEntry*) self->nested2->items.pVoid[i];
 		int last = (i + 1) == self->nested2->size;
-		DaoxHelpEntry_PrintTree( entry, stream, offsets, offset+width+extra, len, 0, last, depth+1 );
+		DaoxHelpEntry_PrintTree( entry, stream, offsets, offset+width+extra, len, 0, last, depth+1, hlerror );
 	}
 	if( last ){
 		memset( line->mbs + offset, ' ', (width + extra + 1)*sizeof(char) );
@@ -1217,6 +1324,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoxStream *stream, DaoPro
 {
 	int screen = DAOX_TEXT_WIDTH;
 
+	self->failedTests = 0;
 	stream->offset = 0;
 	if( self->author ){
 		DString *notice = DString_Copy( daox_helper->notice );
@@ -1268,7 +1376,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoxStream *stream, DaoPro
 		DaoxStream_WriteMBS( stream, "[STRUCTURE]" );
 		DaoxStream_SetColor( stream, NULL, NULL );
 		DaoxStream_WriteMBS( stream, "\n\n" );
-		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1, 1, 1 );
+		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1, 1, 1, 0 );
 	}
 }
 
@@ -1548,7 +1656,7 @@ static void HELP_Help1( DaoProcess *proc, DaoValue *p[], int N )
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
 	DaoProcess_PutValue( proc, daox_cdata_helper );
 	stream = DaoxStream_New( stdio, NULL );
-	DaoxHelpEntry_PrintTree( daox_helper->tree, stream, NULL, 0, daox_helper->tree->name->size, 1,1,1 );
+	DaoxHelpEntry_PrintTree( daox_helper->tree, stream, NULL, 0, daox_helper->tree->name->size, 1,1,1, 0 );
 	DaoxStream_Delete( stream );
 }
 static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
@@ -1670,23 +1778,31 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 		DString_AppendMBS( fname, "index" );
 	}
 	DString_AppendMBS( fname, ".html" );
-	stream->output->size = 0;
+	DString_Reset( stream->output, 0 );
 	DString_AppendMBS( stream->output, "\n<pre style=\"font-weight:500\">\n" );
 	if( self->parent ){
 		DaoxHelpEntry_Print( self, stream, stream->process );
 	}else{
-		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1, 1, 1 );
+		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,0 );
 	}
 	DString_AppendMBS( stream->output, "\n</pre>\n" );
 	fout = fopen( fname->mbs, "w+" );
 	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
-	fprintf( fout, "<meta charset=\"utf-8\"/></head><body>%s</body></html>", stream->output->mbs );
+	fprintf( fout, "<meta charset=\"utf-8\"/></head><body>%s", stream->output->mbs );
 	fclose( fout );
 
 	for(i=0; i<self->nested2->size; i++){
 		DaoxHelpEntry *entry = (DaoxHelpEntry*) self->nested2->items.pVoid[i];
 		DaoxHelpEntry_ExportHTML( entry, stream, dir );
+		self->failedTests += entry->failedTests;
 	}
+	DString_Reset( stream->output, 0 );
+	if( self->failedTests ){
+		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,1 );
+	}
+	fout = fopen( fname->mbs, "a+" );
+	fprintf( fout, "\n<pre style=\"font-weight:500\">\n%s</pre></body></html>", stream->output->mbs );
+	fclose( fout );
 }
 static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )
 {

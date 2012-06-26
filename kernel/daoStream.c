@@ -712,10 +712,12 @@ void DaoStream_Delete( DaoStream *self )
 	DString_Delete( self->streamString );
 	dao_free( self );
 }
-void DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
+DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
 {
+	DaoUserStream *stream = self->redirect;
 	self->redirect = us;
 	if( us ) us->stream = self;
+	return stream;
 }
 void DaoStream_WriteChar( DaoStream *self, char val )
 {

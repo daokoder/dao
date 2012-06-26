@@ -301,21 +301,23 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Unlock( & self->mutexProc );
 #endif
 }
-void DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream )
+DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream )
 {
-	DaoStream_SetUserStream( self->stdioStream, stream );
+	return DaoStream_SetUserStream( self->stdioStream, stream );
 }
-void DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream )
+DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream )
 {
 	if( self->errorStream == self->stdioStream ){
 		self->errorStream = DaoStream_New();
 		GC_ShiftRC( self->errorStream, self->stdioStream );
 	}
-	DaoStream_SetUserStream( self->errorStream, stream );
+	return DaoStream_SetUserStream( self->errorStream, stream );
 }
-void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
+DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
 {
+	DaoUserHandler *hd = self->userHandler;
 	self->userHandler = handler;
+	return hd;
 }
 void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr )
 {

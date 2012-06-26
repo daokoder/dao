@@ -53,9 +53,9 @@ help( object :any, keywords :string, run = 0 )
 @[code()]
 The first initializer @[code]help()@[code].
 @[comment]
-
 ==@[green]help.search()@[green]: see @[node]help.method.search@[node] for details;
 ==@[green]help.load()@[green]: see @[node]help.method.load@[node] for details;
+==@[green]help.export()@[green]: see @[node]help.method.export@[node] for details;
 ==@[green]help.list()@[green]: see @[node]help.method.list@[node] for details;
 @[list]
 
@@ -166,7 +166,7 @@ Use @[green]==@[green] for ordered list and @[green]--@[green] for unordered lis
 @[code(lang)]
 io.writeln( 'hello world!' );
 sum = 0
-for( i = 1 : 5 )  sum += i
+for( i = 1 : 5 ) sum += i
 @[code(lang)]
 @[code(example)]
 Where @[green]lang@[green] can be anything, but currently they will all be highlighted
@@ -182,6 +182,46 @@ for( i = 1 : 5 ) sum += i
 @[code(lang)]
 
 @[list(formats)]
+
+
+Tests of Dao scripts can be embedded into the help file by using a pair of
+@[green]@[code(test)]@[green]. The scripts embedded by this may declare
+the following global variables and constants for checking the status of
+the testing result:
+@[list(test)]
+--@[green]global __result__@[green]: this variable should be used to 
+  hold the object that needs checking;
+--@[green]global __answer__@[green]: this variable should contain the
+  expected value of @[green]__result__@[green];
+--@[green]cosnt __stdout__@[green]: this constant can be defined to
+  hold the expected standard output;
+--@[green]cosnt __stderr__@[green]: this constant can be defined for
+  negative tests which must fail; it should contain a phrase that is
+  expected to be found in the error message.
+@[list(test)]
+
+An example to check a result object:
+@[code(test)]
+tup = ( index => 123, 'abc' )
+tup.index = 456
+
+global __result__ = tup
+global __answer__ = ( 456, 'abc' )
+@[code(test)]
+An example to check the standard output:
+@[code(test)]
+io.writeln( 'hello!' )
+
+const __stdout__ = 'hello!\n'
+@[code(test)]
+An example to check the error:
+@[code(test)]
+tup = ( 123, 'abc' )
+idx = tup.non_existing_field
+
+const __stderr__ = 'Member not exist'
+@[code(test)]
+
 @[text]
 
 
@@ -224,7 +264,8 @@ in the help system.
 
 Then the help entry with id @[green]AA.BB.CC@[green] will be searched in the help system,
 and printed to the standard output if found.
-If @[green]run=1@[green], the codes in @[green]@[code(dao)]...@[code(dao)]@[green] will be executed.
+If @[green]run@[green] in non-zero, all the embedded tests will be executed
+and checked.
 
 
 Loading a help file as a normal module will guarantee that it is loaded only once,
@@ -279,6 +320,38 @@ help.method.load
 @[title]
 help.load()
 @[title]
+
+@[text]
+@[code]
+load( help_file :string )
+@[code]
+@[text]
+
+
+
+
+################################################################################
+################################################################################
+#### HELP.METHOD.EXPORT
+################################################################################
+################################################################################
+@[name]
+help.method.export
+@[name]
+
+@[title]
+help.export()
+@[title]
+
+@[text]
+@[code]
+export( root = '', dir = '', format :enum<html> = $html, run = 0 )
+@[code]
+This method exports all the help entries under the entry @[green]root@[green]
+to files in folder @[green]dir@[green] in format @[green]format@[green].
+If @[green]run@[green] in non-zero, all the embedded tests will be executed
+and checked.
+@[text]
 
 
 

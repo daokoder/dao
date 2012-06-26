@@ -480,6 +480,14 @@ enum DaoCodeType
 	DAO_CODE_JUMP
 };
 
+enum DaoOperandType
+{
+	DAO_OPERAND_N , /* None; */
+	DAO_OPERAND_A ,
+	DAO_OPERAND_B ,
+	DAO_OPERAND_C
+};
+
 struct DaoVmCode
 {
 	unsigned short  code; /* opcode */
@@ -489,6 +497,7 @@ struct DaoVmCode
 DAO_DLL const char* DaoVmCode_GetOpcodeName( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeBase( int code );
+DAO_DLL uchar_t     DaoVmCode_GetResultOperand( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
 
 struct DaoVmCodeX

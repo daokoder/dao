@@ -315,7 +315,6 @@ void DaoRoutine_Compile( DaoRoutine *self )
 				DaoType *retp = NULL;
 				int i = 0, k = self->body->parser->curLine;
 				DArray_Clear( self->body->parser->errors );
-				self->body->parser->error = 0;
 				DaoTokens_AddRaiseStatement( tokens, "Error", "'Compiling failed'", k );
 				if( routp ){ /* XXX */
 					/* to avoid type checking for RETURN */

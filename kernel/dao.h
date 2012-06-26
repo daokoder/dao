@@ -796,12 +796,12 @@ DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
 DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
-DAO_DLL void DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us );
 DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *line );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
+DAO_DLL DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us );
 
 
 
@@ -983,9 +983,9 @@ DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
-DAO_DLL void DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream );
-DAO_DLL void DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream );
-DAO_DLL void DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
+DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream );
+DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream );
+DAO_DLL DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );
 

@@ -318,7 +318,7 @@ static void SYS_PutEnv( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem sysMeths[]=
 {
 	{ SYS_Shell,     "shell( command :string )" },
-	{ SYS_Popen,     "popen( cmd :string, mode :string )=>stream" },
+	{ SYS_Popen,     "popen( cmd :string, mode :string )=>io::stream" },
 	{ SYS_Sleep,     "sleep( seconds :float )" },
 	{ SYS_Exit,      "exit( code=0 )" },
 	{ SYS_Clock,     "clock()=>float" },
