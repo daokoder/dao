@@ -1341,7 +1341,163 @@ signatures the same as those to be inherited.
 
 ################################################################################
 ################################################################################
-######## Class
+######## Interface
 ################################################################################
 ################################################################################
 
+@[name]
+dao.tutorial.interface
+@[name]
+
+@[title]
+Abstract Interface
+@[title]
+
+@[text]
+Abstract interface is a type that describes how an object can be used,
+by specifying what methods and overloaded operators can be applied to the object.
+An object is compatible (matching) to an interface type,
+if only if the object supports all the methods and operators that are specified by the interface.
+Interface is an abstract type, since no instance can be created from an interface,
+also all the methods of an interface are abstract without implementation.
+
+
+Here is a simple interface that contains a size checking method,
+@[code]
+interface HasSize
+{
+	routine size()=>int
+}
+@[code]
+Now we can define a function that can take a parameter of any object that is
+compatible to this interface,
+@[code]
+routine PrintSize( object: HasSize )
+{
+	io.writeln( object.size() )
+}
+@[code]
+Then this function can be called upon types such as @[green]string@[green], @[green]list@[green]
+or @[green]map@[green] etc.
+@[code]
+PrintSize( 'hello world' )
+PrintSize( { 1, 2, 3 } );
+@[code]
+
+
+Interface supports inheritance in the same way as class does,
+@[code]
+interface Resizable : HasSize
+{
+	routine resize( size :int )
+}
+@[code]
+Similarly,
+@[code]
+routine Resize( object: Resizable, size: int )
+{
+	io.writeln( 'old size:', object.size() )
+	io.writeln( 'new size:', size )
+	object.resize( size )
+}
+
+ls = {}
+Resize( ls, 5 )
+io.writeln( ls )
+@[code]
+
+
+Interface also supports operator overloading, however, built-in operators
+for built-in types cannot be checked against an interface, because they
+are not implemented as methods. So interfaces are normally more useful
+with class instances and wrapped C/C++ types.
+
+
+Interfaces with the same set of abstract methods are interchangeable,
+@[code]
+interface HasSize2
+{
+	routine size()=>int
+}
+routine PrintSize2( object: HasSize2 )
+{
+	o :HasSize = object; # assign an object of "HasSize2" to a variable of "HasSize";
+	io.writeln( object.size() )
+}
+PrintSize2( {} );
+@[code]
+
+
+Just for testing,
+@[code(test)]
+interface HasSize
+{
+	routine size()=>int
+}
+routine PrintSize( object: HasSize )
+{
+	io.writeln( object.size() )
+}
+PrintSize( 'hello world' )
+PrintSize( { 1, 2, 3 } );
+
+interface Resizable : HasSize
+{
+	routine resize( size :int )
+}
+routine Resize( object: Resizable, size: int )
+{
+	io.writeln( 'old size:', object.size() )
+	io.writeln( 'new size:', size )
+	object.resize( size )
+}
+
+ls = {}
+Resize( ls, 5 )
+io.writeln( ls )
+
+
+
+interface HasSize2
+{
+	routine size()=>int
+}
+routine PrintSize2( object: HasSize2 )
+{
+	o :HasSize = object;
+	io.writeln( object.size() )
+}
+PrintSize2( {} );
+@[code(test)]
+
+
+
+@[text]
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+######## Tips
+################################################################################
+################################################################################
+
+@[name]
+dao.tutorial.tips
+@[name]
+
+@[title]
+Dao Programming Tips
+@[title]
+
+@[text]
+@[text]

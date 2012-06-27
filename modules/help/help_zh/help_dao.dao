@@ -3,6 +3,7 @@
 
 load help;
 
+load help_dao_tutorial;
 load help_dao_grammar;
 load help_dao_type;
 load help_dao_operator;
@@ -12,7 +13,6 @@ load help_dao_class;
 load help_dao_concurrent;
 load help_dao_macro;
 load help_dao_module;
-load help_dao_tutorial;
 
 
 @[name]

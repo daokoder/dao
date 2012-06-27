@@ -20,6 +20,27 @@ behaviour. It may also return results to its callee.
 
 @[subsection]Definition@[subsection]
 
+@[code(syntax)]
+Id ::= Identifier
+Expr ::= Epxression
+
+RoutParams1 ::= Id [ ':' Type ] { ',' Id [ ':' Type ] }
+RoutParams2 ::= Id [ ':' Type ] { ',' Id [ ':' Type ] [ '=' Expr ] }
+RoutParams3 ::= Id [ ':' Type ] '=' Expr { ',' Id [ ':' Type ] '=' Expr }
+
+RoutineParams  ::= RoutParams1 | RoutParams2 | RoutParams2
+
+RoutReturn     ::= '=>' Type
+CoroutReturn   ::= '=>' '[' Type ']'
+CodeSectReturn ::= '[' [ RoutParams1 ] [ RoutReturn ] ']' [ RoutReturn ]
+
+RoutineReturn ::= RoutReturn | CoroutReturn | CodeSectReturn
+
+RoutineProto ::= 'routine' { Id:: } Id '(' [ RoutineParams ] ')' [ RoutineReturn ]
+
+#OverloadableOpers ::= 
+@[code(syntax)]
+
 Dao routines are declared with keyword @[green]routine@[green]
 or @[green]function@[green] or @[green]sub@[green] 
 (which are exactly equivalent to @[green]routine@[green]),

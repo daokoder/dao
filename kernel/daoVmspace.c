@@ -1933,6 +1933,8 @@ DaoType *dao_type_int = NULL;
 DaoType *dao_type_float = NULL;
 DaoType *dao_type_double = NULL;
 DaoType *dao_type_complex = NULL;
+DaoType *dao_type_long = NULL;
+DaoType *dao_type_string = NULL;
 DaoType *dao_type_tuple = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_list_any = NULL;
@@ -2103,6 +2105,8 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
 	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
+	dao_type_long = DaoType_New( "long", DAO_LONG, NULL, NULL );
+	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
@@ -2113,6 +2117,8 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_float );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_double );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_complex );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_long );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_string );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_routine );
 
 	vms->safeTag = 0;
@@ -2157,6 +2163,13 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_SetupType( vms->nsInternal, & comTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & listTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & mapTyper );
+
+	GC_ShiftRC( dao_type_complex, comTyper.core->kernel->abtype );
+	GC_ShiftRC( dao_type_long, longTyper.core->kernel->abtype );
+	GC_ShiftRC( dao_type_string, stringTyper.core->kernel->abtype );
+	comTyper.core->kernel->abtype = dao_type_complex;
+	longTyper.core->kernel->abtype = dao_type_long;
+	stringTyper.core->kernel->abtype = dao_type_string;
 
 	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "io" );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );

@@ -755,7 +755,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 				fgcolor = -100;
 			}
 			break;
-		case DKEY_USE : case DKEY_LOAD : case DKEY_BIND :
+		case DKEY_USE : case DKEY_LOAD :
 		case DKEY_AS : 
 		case DKEY_AND : case DKEY_OR : case DKEY_NOT :
 		case DKEY_VIRTUAL :
@@ -780,7 +780,8 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_FLOAT : case DKEY_DOUBLE :
 		case DKEY_STRING : case DKEY_COMPLEX :
 		case DKEY_LIST : case DKEY_MAP : case DKEY_TUPLE : case DKEY_ARRAY :
-		case DKEY_CLASS : case DKEY_FUNCTION : case DKEY_ROUTINE : case DKEY_SUB :
+		case DKEY_CLASS : case DKEY_INTERFACE :
+		case DKEY_FUNCTION : case DKEY_ROUTINE : case DKEY_SUB :
 		case DKEY_SYNTAX : 
 		case DKEY_OPERATOR :
 		case DKEY_SELF :

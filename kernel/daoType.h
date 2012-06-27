@@ -117,6 +117,8 @@ extern DaoType *dao_type_int;
 extern DaoType *dao_type_float;
 extern DaoType *dao_type_double;
 extern DaoType *dao_type_complex;
+extern DaoType *dao_type_long;
+extern DaoType *dao_type_string;
 extern DaoType *dao_type_tuple;
 extern DaoType *dao_array_any;
 extern DaoType *dao_list_any;
@@ -176,12 +178,12 @@ struct DaoInterface
 DaoInterface* DaoInterface_New( const char *name );
 
 int DaoInterface_Bind( DArray *pairs, DArray *fails );
-int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds, DArray *fails );
+int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
 void DaoInterface_DeriveMethods( DaoInterface *self );
 
 void DMap_SortMethods( DMap *hash, DArray *methods );
 
-int DaoType_HasInterface( DaoType *self, DaoInterface *inter );
+int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 
 
 

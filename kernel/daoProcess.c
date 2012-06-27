@@ -3602,7 +3602,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	if( ct->tid == DAO_INTERFACE ){
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		/* automatic binding when casted to an interface: */
-		mt = DaoInterface_BindTo( & ct->aux->xInterface, at, NULL, NULL );
+		mt = DaoInterface_BindTo( & ct->aux->xInterface, at, NULL );
 	}
 	mt = DaoType_MatchValue( ct, va, NULL );
 	/* printf( "mt = %i, ct = %s\n", mt, ct->name->mbs ); */
@@ -3685,11 +3685,12 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout, 
 		DaoValue *O, DaoValue *P[], int N, DaoVmCode *vmc )
 {
+	DaoRoutine *rout2 = rout;
 	int need_self = rout->routType->attrib & DAO_TYPE_SELF;
 	rout = DaoProcess_PassParams( self, rout, NULL, O, P, N, vmc->code );
 	if( rout == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
-		DaoProcess_ShowCallError( self, rout, O, P, N, vmc->code );
+		DaoProcess_ShowCallError( self, rout2, O, P, N, vmc->code );
 		return;
 	}
 	if( need_self && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
