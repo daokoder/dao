@@ -25,55 +25,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include<stdlib.h>
-#include<string.h>
-#include<math.h>
-#include"daoString.h"
-#include"daoValue.h"
-#include"daoParser.h"
-#include"daoNamespace.h"
-#include"daoGC.h"
-#include"dao_aux.h"
+#include"dao.h"
 
+DAO_DLL int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
+DAO_DLL int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
 
-static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *source = p[0]->xString.data;
-	DaoList *list = DaoProcess_PutList( proc );
-	DArray *tokens = DArray_New(D_TOKEN);
-	int i, rc = 0;
-	DString_ToMBS( source );
-	rc = DaoToken_Tokenize( tokens, source->mbs, 0, 1, 1 );
-	if( rc ){
-		DaoString *str = DaoString_New(1);
-		for(i=0; i<tokens->size; i++){
-			DString_Assign( str->data, tokens->items.pToken[i]->string );
-			DArray_Append( & list->items, (DaoValue*) str );
-		}
-		DaoString_Delete( str );
-	}
-	DArray_Delete( tokens );
-}
-static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *info = p[0]->xString.data;
-	FILE *fout = fopen( "dao.log", "a" );
-	DString_ToMBS( info );
-	fprintf( fout, "%s\n", info->mbs );
-	fclose( fout );
-}
-
-static DaoFuncItem auxMeths[]=
-{
-	{ AUX_Tokenize,    "tokenize( source :string )=>list<string>" },
-	{ AUX_Log,         "log( info='' )" },
-	{ NULL, NULL }
-};
-
-DAO_DLL int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
-{
-	ns = DaoVmSpace_GetNamespace( vmSpace, "std" );
-	DaoNamespace_WrapFunctions( ns, auxMeths );
-	return 0;
-}
-
+DAO_DLL void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int limit );
+DAO_DLL void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin );

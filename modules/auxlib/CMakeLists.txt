@@ -1,4 +1,4 @@
-option(DAO_MODULES_AUXLIB "Build the \"aux\" module which adds serialization, hibernation and logging to Dao." ON)
+option(DAO_MODULES_AUXLIB "Build the \"aux\" module which adds some auxiliary functionalities to Dao." ON)
 
 if(DAO_MODULES_AUXLIB)
     add_library(dao_aux SHARED dao_aux.c dao_aux.h)

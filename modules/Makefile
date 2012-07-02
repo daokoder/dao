@@ -7,6 +7,7 @@ all:
 	-cd math && $(MAKE)
 	-cd meta && $(MAKE)
 	-cd help && $(MAKE)
+	-cd serializer && $(MAKE)
 	-$(HAS_FILE) Makefile2 && $(MAKE) -f Makefile2
 
 clean:
@@ -15,6 +16,7 @@ clean:
 	-cd math && $(MAKE) clean
 	-cd meta && $(MAKE) clean
 	-cd help && $(MAKE) clean
+	-cd serializer && $(MAKE) clean
 	-$(HAS_FILE) Makefile2 && $(MAKE) -f Makefile2 clean
 
 install:
@@ -23,5 +25,6 @@ install:
 	-$(COPY) syslib/libdao_sys.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) math/math.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(COPY) meta/meta.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
+	-$(COPY) serializer/libdao_aux.$(DAO_DLL_EXT) $(DAO_MOD_DIR)
 	-$(HAS_FILE) Makefile2 && $(MAKE) -f Makefile2 install
 

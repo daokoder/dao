@@ -1448,7 +1448,6 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 			const char *prefixes[4] = { "dao_", "dao", "libdao_", "libdao" };
 			int size = strlen( DAO_DLL_SUFFIX );
 			DString_Erase( name, name->size - size, size );
-			DString_ToLower( name );
 			for(i=0; i<4; i++){
 				if( DString_FindMBS( name, prefixes[i], 0 ) != 0 ) continue;
 				DString_Erase( name, 0, strlen( prefixes[i] ) );
@@ -1456,6 +1455,10 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 			DString_InsertMBS( name, "Dao", 0, 0, 3 );
 			DString_AppendMBS( name, "_OnLoad" );
 			funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+			if( funpter == NULL ){
+				for(i=3; i<name->size-7; i++) name->mbs[i] = tolower( name->mbs[i] );
+				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+			}
 			if( funpter == NULL ){
 				name->mbs[3] = toupper( name->mbs[3] );
 				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
@@ -2171,7 +2174,8 @@ DaoVmSpace* DaoInit( const char *command )
 	longTyper.core->kernel->abtype = dao_type_long;
 	stringTyper.core->kernel->abtype = dao_type_string;
 
-	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "io" );
+	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
+	DaoNamespace_AddConstValue( ns, "io", (DaoValue*) ns2 );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
 
@@ -2182,15 +2186,18 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoException_Setup( vms->nsInternal );
 
 #ifdef DAO_WITH_CONCURRENT
-	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "mt" );
+	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
+	DaoNamespace_AddConstValue( ns, "mt", (DaoValue*) ns2 );
 	dao_type_mutex = DaoNamespace_WrapType( ns2, & mutexTyper, 0 );
 	dao_type_condvar = DaoNamespace_WrapType( ns2, & condvTyper, 0 );
 	dao_type_sema = DaoNamespace_WrapType( ns2, & semaTyper, 0 );
+	DaoNamespace_SetupType( ns2, & futureTyper );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
 	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );
 
-	ns2 = DaoNamespace_GetNamespace( vms->nsInternal, "std" );
+	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
+	DaoNamespace_AddConstValue( ns, "std", (DaoValue*) ns2 );
 	DaoNamespace_WrapFunctions( ns2, dao_std_methods );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );

@@ -1,0 +1,146 @@
+load help;
+
+
+@[name]
+dao.feature
+@[name]
+
+@[title]
+Dao Feature Summary
+@[title]
+
+@[author]
+Limin Fu
+@[author]
+
+@[license]
+GNU Free Documentation License
+@[license]
+
+@[text]
+
+
+Key features:
+@[list]
+--@[green]Optional typing with type inference and static type checking:@[green]
+
+  Optional typing allows variables to be declared with or without
+  explicit types. Types will be inferred and checked whenever
+  necessary and possible to allow early detection of bugs.
+  Also explicit and inferred type information could be used
+  do code and function specialization to make programs more efficient.
+
+--@[green]Just-In-Time (JIT) compiling:@[green]
+
+  A standard module based on the Low Level Virtual Machine (LLVM)
+  compiler infrastructure is provided to support JIT compiling.
+  Currently this JIT compiler module is mainly developed for supporting
+  numeric compuations.
+
+--@[green]Built-in support for concurrent programming:@[green]
+
+  Concurrent programming is made simple by a number of concurrent
+  code section methods and asynchronous classes.
+  The basic concurrent computational unit is a virtual machine process
+  which is mapped to a native thread only when it becomes active.
+  Concurrent garbage collection is supported by the virtual machine
+  to make concurrent program safe.
+
+--@[green]Transparent C programming interfaces:@[green]
+
+  The C programming interfaces of the virtual machine are specifically
+  designed for easy embedding and extending. With the support of explicit
+  type specification in function parameter list, boilerplate codes for
+  checking and converting parameter values from Dao data types to C/C++
+  data types can be easily avoided.
+  This means writing Dao wrapper functions is significantly simpler than
+  writing wrapper functions for other languages without explict typing
+  in parameter list.
+
+--@[green]ClangDao for automatic wrapping of C/C++ libraries:@[green]
+
+  ClangDao uses the C/C++ frontend of Clang to parse C/C++ header files
+  and generates proper wrapping codes for Dao. It has been used successfully
+  to generate a number of bindings for Dao.
+@[list]
+
+Other interesting features:
+@[list]
+--@[green]Syntax macro:@[green]
+
+  Dao supports user-defined syntax by syntax macros, which can be expressed
+  in a form similar to Backus-Naur Form (BNF). Dao allows syntax macros to be
+  attached with "language" names, and provides a mechanism to avoid unexpected
+  interference with the standard syntax.
+
+--@[green]Object-Oriented Programming (OOP):@[green]
+
+  Object-Oriented Programming support in Dao is class based. Dao classes are
+  similar to C++ classes in several ways with a few new features.
+
+--@[green]Abstract interface:@[green]
+
+  An abstract interface is type that defines a set of abstract methods for
+  static type checking. A combination of interfaces and classes could support
+  more flexible software design by both compositions and inheritances.
+
+--@[green]Code section methods:@[green]
+
+  Code section/block method is an alternative to functional methods in other
+  languages such as Python. It is syntactically similar to Ruby Code Block.
+
+--@[green]Typed function decorator:@[green]
+
+  Function decorators are functions that modify the behavior of other functions.
+  Dao function decorators support static type checking.
+
+--@[green]Coroutine and generator:@[green]
+
+  Syntax support for coroutine makes collaborative multithreading simple,
+  and allows static type checking across the yielding and resuming boundary.
+--@[green]Anonymous function:@[green]
+
+  Anonymous functions and closures can be created anywhere in a program.
+  Their definition is very similar to the normal functions.
+
+--@[green]Anonymous class:@[green]
+
+  Anonymous class can now be created at runtime in a similar way as
+  creating anonymous function.
+
+--@[green]Enum/flag/symbol type:@[green]
+
+  The enum type in Dao is more or less a combination C++ enum and Ruby symbol.
+  It has the advantage of both, and can be used in situations where C++ enum
+  or Ruby symbol are typically used.
+
+--@[green]Variant or disjoint union type:@[green]
+
+  Variant type is a combination of two or more types. A variant variable
+  can hold a value of any of the combined types.
+
+--@[green]Meta fields and prototype based programming:@[green]
+
+  Any value can be associated to another object as a meta field.
+  It can be used to do prototype based programming. Or simply, it can be used 
+  to ensure an object is garbage collected after another.
+--@[green]Auxiliary methods:@[green]
+
+  Any type can be attached with auxiliary methods that do not actually belong
+  to the type, but can be invoked as its member methods.
+@[comment]
+  --@[green]Customized for-in iteration;@[green]
+@[comment]
+--@[green]Built-in multi-dimensional numeric array;@[green]
+--@[green]Built-in support for string pattern matching;@[green]
+--@[green]Built-in hash map type;@[green]
+--@[green]Template-like C data type;@[green]
+--@[green]Standard help system;@[green]
+--@[green]Data serialization;@[green]
+--@[green]Mixed programming with embedded C/C++ codes;@[green]
+@[list]
+
+@[text]
+
+#Last but not least, Dao virtual machine is programmed in standard C,
+#and released under the Simplified BSD License.

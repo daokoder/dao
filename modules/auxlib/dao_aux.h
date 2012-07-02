@@ -27,8 +27,3 @@
 
 #include"dao.h"
 
-DAO_DLL int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
-DAO_DLL int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc );
-
-DAO_DLL void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int limit );
-DAO_DLL void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin );
