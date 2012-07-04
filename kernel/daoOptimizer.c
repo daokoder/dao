@@ -569,10 +569,22 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			DArray_Append( node->outs, nodes[vmc->c] );
 			DArray_Append( nodes[vmc->c]->ins, node );
 			break;
+		case DVM_SECT :
+			/*
+			// Expressions outside should NOT be available inside code sections.
+			// Otherwise, due to Common Sub-expression Elimination, values from
+			// outside maybe access by instructions other than GETVH and SETVH.
+			// This will break the basic assumption that code sections always
+			// accesss outside values through GETVH and SETVH, as a result some
+			// code section methods may not work, for example, mt.start::{} in
+			// parallel quicksort.
+			*/
+			DMap_Insert( self->inits, node, NULL );
+			break;
 		case DVM_RETURN : DMap_Insert( self->finals, node, NULL ); break;
 		/*
 		// case DVM_SECT : DMap_Insert( self->inits, node, NULL ); break;
-		// not for DVM_SECT:  GETVH, GETVL etc. need to be linked with the outer codes:
+		// not for DVM_SECT:  GETVH etc. need to be linked with the outer codes ???
 		*/
 		default : break;
 		}

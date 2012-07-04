@@ -28,6 +28,7 @@
 
 #include"stdio.h"
 #include"time.h"
+#include"math.h"
 #include"daoType.h"
 #include"daoValue.h"
 #include"daoThread.h"
@@ -47,9 +48,12 @@ struct DaoCallThread
 {
 	DThread       thread;
 	DThreadData  *thdData;
+
+	DThreadTask   taskFunc;  /* first task; */
+	void         *taskParam;
 };
 
-static DaoCallThread* DaoCallThread_New();
+static DaoCallThread* DaoCallThread_New( DThreadTask func, void *param );
 static void DaoCallThread_Run( DaoCallThread *self );
 
 struct DaoCallServer
@@ -80,10 +84,12 @@ struct DaoCallServer
 };
 static DaoCallServer *daoCallServer = NULL;
 
-static DaoCallThread* DaoCallThread_New()
+static DaoCallThread* DaoCallThread_New( DThreadTask func, void *param )
 {
 	DaoCallThread *self = (DaoCallThread*)dao_malloc( sizeof(DaoCallThread) );
 	self->thdData = NULL;
+	self->taskFunc = func;
+	self->taskParam = param;
 	DThread_Init( & self->thread );
 	return self;
 }
@@ -142,14 +148,24 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 	DThread_Destroy( & self->timer );
 	dao_free( self );
 }
-static void DaoCallServer_AddThread()
+static void DaoCallServer_Init( DaoVmSpace *vms );
+
+void DaoCallServer_AddThread( DThreadTask func, void *param )
 {
-	DaoCallThread *calth = DaoCallThread_New();
+	DaoCallThread *calth;
+	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
+	calth = DaoCallThread_New( func, param );
 	DMutex_Lock( & daoCallServer->mutex );
 	daoCallServer->total += 1;
 	DArray_Append( daoCallServer->threads, calth );
 	DMutex_Unlock( & daoCallServer->mutex );
 	DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth );
+}
+static void DaoCallServer_TryAddThread( DThreadTask func, void *param, int todo )
+{
+	int max = daoConfig.cpu > 2 ? daoConfig.cpu : 2;
+	int total = daoCallServer->total;
+	if( total < max || todo > exp( 2*total + 2 ) ) DaoCallServer_AddThread( NULL, NULL );
 }
 static double DaoGetCurrentTime()
 {
@@ -189,7 +205,7 @@ static void DaoCallServer_Timer( void *p )
 		if( server->finishing && server->stopped == server->total ) break;
 
 		/* create new thread for unhandled timeout: */
-		if( server->timeouts->size ) DaoCallServer_AddThread();
+		if( server->timeouts->size ) DaoCallServer_AddThread( NULL, NULL );
 
 		DMutex_Lock( & server->mutex );
 		if( server->waitings->size ){ /* a new wait timed out: */
@@ -207,11 +223,9 @@ static void DaoCallServer_Timer( void *p )
 }
 static void DaoCallServer_Init( DaoVmSpace *vms )
 {
-	int i;
 	DaoCGC_Start();
 	daoCallServer = DaoCallServer_New( vms );
 	DThread_Start( & daoCallServer->timer, (DThreadTask) DaoCallServer_Timer, NULL );
-	for(i=0; i<2; i++) DaoCallServer_AddThread(); // TODO: set minimumal number of threads
 }
 
 void DaoCallServer_AddTask( DThreadTask func, void *param )
@@ -225,14 +239,14 @@ void DaoCallServer_AddTask( DThreadTask func, void *param )
 	DMap_Insert( server->pending, param, NULL );
 	DCondVar_Signal( & server->condv );
 	DMutex_Unlock( & server->mutex );
-	if( server->parameters->size ) DaoCallServer_AddThread();
+	DaoCallServer_TryAddThread( NULL, NULL, server->parameters->size );
 }
 static void DaoCallServer_Add( DaoFuture *future )
 {
 	DaoCallServer *server;
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 	server = daoCallServer;
-	if( server->pending->size > server->total * server->total ) DaoCallServer_AddThread();
+	DaoCallServer_TryAddThread( NULL, NULL, server->pending->size );
 	DMutex_Lock( & server->mutex );
 	DArray_Append( server->futures, future );
 	DMap_Insert( server->pending, future, NULL );
@@ -358,6 +372,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 	int i, timeout;
 
 	self->thdData = DThread_GetSpecific();
+	if( self->taskFunc ) self->taskFunc( self->taskParam );
 	while(1){
 		DaoProcess *proc = NULL;
 		DaoProcess *proc2 = NULL;
@@ -372,23 +387,28 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			if( server->finishing && server->idle == server->total ) break;
 			timeout = DCondVar_TimedWait( & server->condv, & server->mutex, wt );
 		}
-		DMutex_Unlock( & server->mutex );
-		if( server->pending->size == 0 && server->finishing && server->idle == server->total ) break;
-
-		DMutex_Lock( & server->mutex );
-		server->idle -= 1;
 		if( server->parameters->size ){
 			function = (DThreadTask) DArray_Front( server->functions );
 			parameter = DArray_Front( server->parameters );
 			DArray_PopFront( server->functions );
 			DArray_PopFront( server->parameters );
 			DMap_Erase( server->pending, parameter );
-		}else{
-			future = DaoCallServer_GetNextFuture();
+			server->idle -= 1;
 		}
 		DMutex_Unlock( & server->mutex );
 
-		if( parameter ) (*function)( parameter );
+		if( function ){
+			(*function)( parameter );
+			continue;
+		}
+
+		if( server->pending->size == 0 && server->finishing && server->idle == server->total ) break;
+
+		DMutex_Lock( & server->mutex );
+		server->idle -= 1;
+		future = DaoCallServer_GetNextFuture();
+		DMutex_Unlock( & server->mutex );
+
 		if( future == NULL ) continue;
 
 		if( future->state == DAO_CALL_QUEUED ){
