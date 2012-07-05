@@ -33,8 +33,7 @@
 #ifdef DAO_WITH_CONCURRENT
 DAO_DLL void DaoCallServer_Join();
 DAO_DLL void DaoCallServer_Stop();
-DAO_DLL void DaoCallServer_AddThread( DThreadTask func, void *param );
-DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param );
+DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, int now );
 DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout, short state );
 DAO_DLL DaoFuture* DaoCallServer_AddCall( DaoProcess *call );
 #endif

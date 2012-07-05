@@ -737,6 +737,7 @@ static void DaoFuture_Delete( DaoFuture *self )
 	GC_DecRC( self->routine );
 	GC_DecRC( self->process );
 	GC_DecRC( self->precondition );
+	GC_DecRC( self->previous );
 	DaoValue_ClearAll( self->params, self->parCount );
 	dao_free( self );
 }
@@ -787,7 +788,6 @@ struct DaoTaskData
 	uint_t   first; /* first index; */
 	uint_t   step; /* index step; */
 	uint_t   status; /* execution status; */
-	daoint  *started; /* number of started threads; */
 	daoint  *joined; /* number of joined threads; */
 	daoint  *index; /* smallest index found by all threads; */
 	DNode  **node; /* smallest key found by all threads; */
@@ -998,9 +998,6 @@ static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
 	DaoProcess *clone = self->clone;
-	DMutex_Lock( self->mutex );
-	*self->started += 1;
-	DMutex_Unlock( self->mutex );
 	DaoProcess_AcquireCV( clone );
 	switch( self->param->type ){
 	case DAO_INTEGER : DaoMT_RunIterateFunctional( p ); break;
@@ -1029,7 +1026,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	DaoArray *array = NULL;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	int i, entry, threads = P[1]->xInteger.value;
-	daoint index = -1, status = 0, started = 0, joined = 0;
+	daoint index = -1, status = 0, joined = 0;
 	DNode *node = NULL;
 
 	switch( F ){
@@ -1075,21 +1072,17 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->step = threads;
 		task->index = & index;
 		task->node = & node;
-		task->started = & started;
 		task->joined = & joined;
 		task->condv = & condv;
 		task->mutex = & mutex;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 		task->clone->mutex = & mutex;
-		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task );
+		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task, 1 );
 	}
 	DaoMT_RunFunctional( tasks );
 
 	DMutex_Lock( & mutex );
-	while( joined < threads ){
-		DCondVar_TimedWait( & condv, & mutex, 0.01 );
-		if( started < threads ) DaoCallServer_AddThread( NULL, NULL );
-	}
+	while( joined < threads ) DCondVar_TimedWait( & condv, & mutex, 0.01 );
 	DMutex_Unlock( & mutex );
 
 	for(i=0; i<threads; i++){
@@ -1171,11 +1164,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 			clone->activeValues[i] = proc->activeValues[i];
 		}
 	}
-	if( p[0]->xEnum.value ){
-		DaoCallServer_AddThread( DaoMT_Start0, clone );
-	}else{
-		DaoCallServer_AddTask( DaoMT_Start0, clone );
-	}
+	DaoCallServer_AddTask( DaoMT_Start0, clone, p[0]->xEnum.value );
 }
 static void DaoMT_Iterate( DaoProcess *proc, DaoValue *p[], int n )
 {

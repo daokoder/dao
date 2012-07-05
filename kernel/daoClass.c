@@ -419,7 +419,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	self->classRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
-	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, NULL, NULL );
+	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, self->objType, NULL );
 	DString_Append( rout->routType->name, name );
 	DString_AppendMBS( rout->routType->name, ">" );
 	GC_IncRC( rout->routType );

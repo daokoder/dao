@@ -3663,6 +3663,7 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 			future->unitype = type;
 			DaoProcess_PopFrame( self );
 			DaoProcess_PutValue( self, (DaoValue*) future );
+			GC_DecRC( future ); /* It was increased by DaoCallServer_AddCall(); */
 			self->status = DAO_VMPROC_RUNNING;
 			return 1;
 		}
@@ -3868,9 +3869,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 #ifdef DAO_WITH_DECORATOR
 				DaoRoutine *drout = (DaoRoutine*) rout;
 				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params, npar, 0 );
-				printf( "%p\n", drout );
 				DaoProcess_PutValue( self, (DaoValue*) drout );
-				printf( "%p\n", drout );
 #else
 				DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_DECORATOR ) );
 #endif

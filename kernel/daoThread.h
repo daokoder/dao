@@ -232,7 +232,11 @@ struct DaoFuture
 	DaoObject   *object;
 	DaoRoutine  *routine;
 	DaoProcess  *process;
-	DaoFuture   *precondition;
+	DaoFuture   *precondition; /* the future value on which this one waits; */
+	DaoFuture   *sorting; /* the future value of the previous task on the same object; */
+
+	DaoFuture   *prev;
+	DaoFuture   *next;
 };
 
 #endif
