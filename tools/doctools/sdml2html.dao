@@ -16,7 +16,7 @@ class Sdml2Html : SdmlParser
 	routine Error( info : string );
 	routine AddPrefix();
 	routine Replace( src = '' )=>string;
-	routine OpenHeader( type = '' );
+	routine OpenHeader( dtype = '' );
 	#routine CloseHeader(){ output += '</a>\n'; }
 	routine MakeTitle( title = '' );
 	routine MakeAuthor( name = '' );
@@ -66,7 +66,7 @@ routine Sdml2Html::Error( info : string )
 {
 	output += '<div><font color=\"#f00\">ERROR: ' + info + '!</font></div>\n';
 }
-routine Sdml2Html::OpenHeader( type = '' )
+routine Sdml2Html::OpenHeader( dtype = '' )
 {
 #	output += '<a name="start">\n';
 }
@@ -176,7 +176,7 @@ routine Sdml2Html::CloseSection( level=0, numbering='' )
 	output += "<a href=\"#start\">@(top_" + suffix + ")</a></td></tr></table>\n";
 #io.println( subsect.numbering, subsect.sectname );
 }
-routine Sdml2Html::Replace( src = '' ) #=> string
+routine Sdml2Html::Replace( src = '' ) => string
 {
 	src.replace( '<', '&lt;' );
 	src.replace( '>', '&gt;' );

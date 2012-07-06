@@ -5,7 +5,7 @@ Email: phoolimin@gmail.com
 Date: 2008-12-20
 #}
 
-@@ON( MBS );
+load string.tokenize;
 
 class SdmlCodeHL
 {
@@ -16,7 +16,7 @@ routine random_string( n=1 )
 {
 	const alnum = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 	s = '';
-	for( i = 1 : n ) s += alnum[ 62 * math.rand() ];
+	for( i = 1 : n ) s += alnum[ 62 * rand() ];
 	return s;
 }
 
@@ -236,7 +236,7 @@ routine SdmlParser::Parse( src : string )
 		'$'=>'$ ', '%'=>'% ', '^'=>'^ ', '&'=>'& ', '='=>'= ' };
 	plain.replace( repl );
 	brief = plain[:145];
-	brief.utf8();
+	#brief.utf8();
 	brief.chop();
 	if( brief.size() < plain.size() ) brief += " ...";
 	AddPrefix();
@@ -246,7 +246,7 @@ routine SdmlParser::Parse( src : string )
 	#if( source.size() > 1000 ) io.println( preface.size() );
 	return output;
 }
-routine SdmlParser::Replace( src = '' ) #=> string
+routine SdmlParser::Replace( src = '' ) => string
 {
 	#src.replace( '\'\'', '\'' );
 	return src;
@@ -268,7 +268,7 @@ routine SdmlParser::ParseSection( sect : TextSection, start : int, end : int )
 	if( sectonly && section.size() ) return;
 	sectsym = '';
 	sectpos = {};
-	while( start <= end && tokens[start] == '\n' ) start ++;
+	while( start <= end && tokens[start] == '\n' ) start += 1;
 	for( i = start : end ){
 		tk = tokens[i];
 		if( tk.pfind( '^ %< =+ %> $' ) ){
@@ -306,7 +306,7 @@ routine SdmlParser::ParseSection( sect : TextSection, start : int, end : int )
 		if( k < sectpos[i+1] ){
 			if( not sectonly )
 				subsect.sectname = ParseBlock( subsect, sectpos[i]+1, k-1, 0, 1 );
-			k ++;
+			k += 1;
 		}else{
 			k = sectpos[i] + 1;
 		}
@@ -347,14 +347,14 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 			if( tk == '\\' && j+1 <= n ){
 				tk = tks[j+1];
 				src += tk;
-				j ++;
+				j += 1;
 			}else{
 				src += tk;
 			}
 		}
 		plain += src + ' ';
 		hlcode += Replace2( tokens[start] );
-		tks2 = src.extract( '([%w%p]+ | %s | %n+)', 0 );
+		tks2 = src.extract( '([%w%p]+ | %s | %n+)', $both );
 		tks = {};
 		for( tk in tks2 ){
 			if( tk.size() > 40 ){
@@ -425,7 +425,7 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 				hlcode += code;
 				i += 2;
 			}else if( tokens[i+1] == "</link>" ){
-				i ++;
+				i += 1;
 			}else{
 				Warn( 'invalid link tag' );
 			}
@@ -439,7 +439,7 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 				i += 2;
 			}else if( tokens[i+1] == "</image>" ){
 				hlcode += Replace2( tk + tokens[i+1] );
-				i ++;
+				i += 1;
 			}else{
 				Warn( 'invalid image tag' );
 			}
@@ -505,7 +505,7 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 				precount += c;
 			}
 		}
-		i ++;
+		i += 1;
 	}
 	return output[ old : ];
 }
@@ -529,11 +529,11 @@ routine SdmlParser::ParseList( src : string )
 		items = {''}; # for typing
 		tagend = '';
 		if( tk == '--' ){
-			items = src.extract( '%-%-', -1, pt, 1 );
+			items = src.extract( '%-%-', $unmatched, (pt, $true) );
 			output += unorderlist[0];
 			tagend = unorderlist[1];
 		}else{
-			items = src.extract( '==', -1, pt, 1 );
+			items = src.extract( '==', $unmatched, (pt, $true) );
 			output += orderlist[0];
 			tagend = orderlist[1];
 		}
@@ -564,7 +564,7 @@ routine SdmlParser::ParseTable( src : string )
 		output += empty_table;
 		return;
 	}
-	if( lines[0].size() == 0 ){ lines.popfront(); }
+	if( lines[0].size() == 0 ){ lines.pop( $front ); }
 	if( size == 0 ){
 		output += empty_table;
 		return;
@@ -590,14 +590,14 @@ routine SdmlParser::ParseTable( src : string )
 				headers.append( toks[j] );
 			}
 		}
-		i ++;
+		i += 1;
 	}
 	while( i< size ){
 		line = lines[i];
 		line.change( '^ %s+', '' );
 		if( line[:2] == "===" ){
 			cells.append( (list<string>){} );
-			i ++;
+			i += 1;
 			skip;
 		}
 		tkns = line.tokenize( "|", "\"", 1 );
@@ -619,7 +619,7 @@ routine SdmlParser::ParseTable( src : string )
 			for( j = 0 : toks.size()-1 ) row.append( toks[j] );
 			cells.append( (list<string>)row );
 		}
-		i ++;
+		i += 1;
 	}
 	MakeTable( headers, cells, param );
 }

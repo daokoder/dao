@@ -1597,6 +1597,13 @@ WrongType:
 			if( type == NULL ) type = DaoNamespace_MakeValueType( ns, dao_none_value );
 			retype = (DaoValue*) type;
 			break;
+		case DKEY_CLASS :
+			if( count2 != 1 ) goto InvalidTypeForm;
+			type = types->items.pType[ count ];
+			DArray_Erase( types, count, count2 );
+			if( type && type->tid == DAO_OBJECT ) return type->aux->xClass.clsType;
+			if( type && type->tid == DAO_CDATA ) return type->aux->xCtype.ctype;
+			goto InvalidTypeForm;
 		case DKEY_FUTURE :
 			tid = DAO_FUTURE;
 			if( count2 != 1 ) goto InvalidTypeForm;
@@ -1937,11 +1944,16 @@ int DaoParser_ParseScript( DaoParser *self )
 	self->nameSpace = ns;
 
 	bl = DaoParser_Preprocess( self ) && DaoParser_ParseRoutine( self );
+	if( bl == 0 ) goto Error;
 #ifndef DAO_WITH_THREAD
 	/* incremental compiling only when no threading is enabled: */
-	if( daoConfig.incompile ) return 1;
+	if( daoConfig.incompile ) goto Success;
 #endif
-	if( DaoParser_CompileRoutines( self ) == 0 ) return 0;
+	if( DaoParser_CompileRoutines( self ) == 0 ) goto Error;
+Success:
+	routMain->body->parser = NULL;
+	return 1;
+Error:
 	routMain->body->parser = NULL;
 	if( bl ==0 ) DaoParser_PrintError( self, 0, 0, NULL );
 	return bl;

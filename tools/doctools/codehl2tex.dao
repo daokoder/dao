@@ -6,8 +6,7 @@ Date: 2007-01-22
 License: GPL
 #}
 
-@@ON( MBS );
-
+load aux;
 load sdml_parser;
 
 
@@ -17,13 +16,13 @@ class CodeHL : SdmlCodeHL
 	static routine StartCode( name="" );
 	static routine FinishCode( name="" );
 }
-routine CodeHL::StartCode( name="" )
+static routine CodeHL::StartCode( name="" )
 {
 	const begin = '\\begin{Verbatim}[fontsize=\\footnotesize,fontfamily=courier,fontseries=b,
 tabsize=4,showtabs=true,commandchars=\\\\\\{\\}]\n';
 	return begin;
 }
-routine CodeHL::FinishCode( name="" )
+static routine CodeHL::FinishCode( name="" )
 {
 	return '\n\\end{Verbatim}';
 }
@@ -122,7 +121,7 @@ routine replace( tok : string )
 	}
 	return output;
 }
-routine DaoCodeHL::Highlight( source : string, name='' )
+static routine DaoCodeHL::Highlight( source : string, name='' ) => string
 {
 	tokens = std.tokenize( source );
 	output = StartCode( name );
@@ -168,7 +167,7 @@ routine DaoCodeHL::Highlight( source : string, name='' )
 		}else{
 			output += replace( tok );
 		}
-		i ++;
+		i += 1;
 	}
 	output += FinishCode( name );
 	return output;
@@ -231,7 +230,7 @@ class CppCodeHL : CodeHL
 	static routine Highlight( source : string, name='' )=>string;
 }
 
-routine CppCodeHL::Highlight( source : string, name='' )
+static routine CppCodeHL::Highlight( source : string, name='' )=> string
 {
 	tokens = source.tokenize( "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
@@ -255,7 +254,7 @@ routine CppCodeHL::Highlight( source : string, name='' )
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok == "#" ){
 			output += "\\SPECIAL{\\#" + tokens[i+1] + "}";
-			i ++;
+			i += 1;
 		}else if( tok == "/" && i+1<size && tokens[i+1]=="/" ){
 			output += "\\COMMENT{//";
 			i += 2;
@@ -263,7 +262,7 @@ routine CppCodeHL::Highlight( source : string, name='' )
 			tmp = "";
 			while( tok != "\n" ){
 				tmp += tok;
-				i ++;
+				i += 1;
 				if( i >= size ) break;
 				tok = tokens[i];
 			}
@@ -275,17 +274,17 @@ routine CppCodeHL::Highlight( source : string, name='' )
 			while( i < size ){
 				if( tokens[i] == "*" && i+1<size && tokens[i+1]=="/" ) break;
 				tmp += tokens[i];
-				i ++;
+				i += 1;
 			}
 			tmp += "*/";
 			tok = replace( tmp );
 			tok.replace( '\n', '}\n\\COMMENT{' );
 			output += "\\COMMENT{" + tok + "}";
-			i ++;
+			i += 1;
 		}else{
 			output += replace( tok );
 		}
-		i ++;
+		i += 1;
 	}
 	output += FinishCode( name );
 	return output;
@@ -310,7 +309,7 @@ class BnfCodeHL : CodeHL
 	static routine Highlight( source : string, name = '' )=>string;
 }
 
-routine BnfCodeHL::Highlight( source : string, name = '' )
+static routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 {
 	tokens = source.tokenize( "|+*(){}[] \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
@@ -338,7 +337,7 @@ routine BnfCodeHL::Highlight( source : string, name = '' )
 		}else{
 			output += replace( tok );
 		}
-		i ++;
+		i += 1;
 	}
 	output += FinishCode( name );
 	return output;
