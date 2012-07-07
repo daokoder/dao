@@ -1564,6 +1564,10 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	int i, n = strlen( name );
 	int attrib = tid >> 16;
 
+	if( (tid & DAO_ANY) && self != self->vmSpace->nsInternal ){
+		return DaoNamespace_MakeType( self->vmSpace->nsInternal, name, tid, pb, nest, N );
+	}
+
 	tid = tid & 0xffff;
 	if( tid != DAO_ANY ) any = dao_type_any;
 
