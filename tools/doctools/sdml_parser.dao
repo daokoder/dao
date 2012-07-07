@@ -9,7 +9,7 @@ load string.tokenize;
 
 class SdmlCodeHL
 {
-	virtual static routine Highlight( source : string, name='' )=>string{ return '??????'; }
+	virtual routine Highlight( source : string, name='' )=>string{ return '??????'; }
 }
 
 routine random_string( n=1 )
@@ -58,7 +58,8 @@ class SdmlParser
 	var listitem = ( '', '' );
 	var empty_table = '';
 	var BasicTagMap : map<string,tuple<string,string,string> > = {=>};
-	var codeparser : map<string,class<SdmlCodeHL> > = {=>};
+	var codeparser : map<string,SdmlCodeHL> = {=>};
+	#var codeparser : map<string,class<SdmlCodeHL> > = {=>};
 
 	routine Tokenize2( src : string, last=0, end=0 );
 	routine Tokenize();
@@ -94,7 +95,7 @@ routine SdmlParser::Tokenize2( src : string, last=0, end=0 )
 {
 	const search = '%<%s* ([%w=]+ |%* |%% |_) (%s* | %s [%s%w]*) %>';
 	m = src.match( search );
-	#io.println( m );
+	#io.writeln( m );
 	while( m.start >= 0 ){
 		start = m.start;
 		tags = m.substring.capture( search );
@@ -103,7 +104,7 @@ routine SdmlParser::Tokenize2( src : string, last=0, end=0 )
 		p = '%B{ %<%s* (' + tag + ') (%s* | %s [%s%w]*) %> }{ %< %s* / %s* %1 %s*%> }';
 		p2 = '%<%s* (' + tag + ') (%s* | %s [%s%w]*) %> (.*) ( %< %s* / %s* %1 %s*%> )';
 		m2 = src.match( p, start );
-		#io.println( tag, start, p, m2, src.extract( p2 ) );
+		#io.writeln( tag, start, p, m2, src.extract( p2 ) );
 		if( tag == 'comment' && m2.start >=0 ){
 			last = m2.end + 1;
 		}else if( m2.start >=0 ){
@@ -124,16 +125,16 @@ routine SdmlParser::Tokenize2( src : string, last=0, end=0 )
 			last = end + 1;
 		}
 		m = src.match( search, last, end );
-		#io.println( m, last );
+		#io.writeln( m, last );
 	}
 	if( end >= last ) tokens.append( src[ last : end ] );
 }
 routine SdmlParser::Tokenize()
 {
-	#io.println( source );
+#io.writeln( source );
 	tokens = {};
 	Tokenize2( source, 0, source.size()-1 );
-  #io.println( tokens.size(), tokens );
+	#io.writeln( tokens.size(), tokens );
 	return 1;
 }
 
@@ -240,10 +241,10 @@ routine SdmlParser::Parse( src : string )
 	brief.chop();
 	if( brief.size() < plain.size() ) brief += " ...";
 	AddPrefix();
-	#io.println( brief );
-	#io.println( plain[:199] );
-	#io.println( suffix );
-	#if( source.size() > 1000 ) io.println( preface.size() );
+	#io.writeln( brief );
+	#io.writeln( plain[:199] );
+	#io.writeln( suffix );
+	#if( source.size() > 1000 ) io.writeln( preface.size() );
 	return output;
 }
 routine SdmlParser::Replace( src = '' ) => string
@@ -335,10 +336,10 @@ routine SdmlParser::ParseSection( sect : TextSection, start : int, end : int )
 
 routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=0, nopreface=0 )
 {
-	#io.println( start, end );
+	#io.writeln( start, end );
 	if( start > end ) return '';
 	if( start == end ){
-		#io.println( tokens[start] );
+		#io.writeln( tokens[start] );
 		tks = tokens[start].tokenize( '\\' );
 		n = tks.size() - 1;
 		src = '';
@@ -368,15 +369,15 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 				tks.append( tk );
 			}
 		}
-		#io.println( tks );
+		#io.writeln( tks );
 		n = tks.size() - 1;
 		output += ' ';
 		for( j = 0 : n ){
 			tk = tks[j];
 			output += Replace( tk );
-			#io.println( "<p>", tk.size(), preface.size(), precount );
+			#io.writeln( "<p>", tk.size(), preface.size(), precount );
 			if( nopreface==0 && precount < 1000 && output.size() < 1500 ){
-				c =  output[preface.size():].split().size();
+				c = output[preface.size():].split().size();
 				if( precount + c < 1000 ){
 					preface = output;
 					precount += c;
@@ -631,7 +632,7 @@ global src =
 <code  dao>
 class Foo{}
 as = 123;
-io.println( "abc" );
+io.writeln( "abc" );
 </ code>
 <=>xyz1</=>asfa
 <table>
@@ -692,8 +693,8 @@ src = '<list>
 </list>';
 src = '<image>FirstImage</image>';
 parser = SdmlParser();
-io.println( parser.Parse( src ) );
-io.println( parser.codeparser );
-io.println( parser.brief );
+io.writeln( parser.Parse( src ) );
+io.writeln( parser.codeparser );
+io.writeln( parser.brief );
 parser = SdmlParser();
 #}

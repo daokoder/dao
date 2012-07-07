@@ -674,7 +674,7 @@ static DaoRoutine* DParamNode_LookupByName2( DParamNode *self, DaoType *ts[], in
 	for(i=0; i<n; i++){
 		DaoType *ptype = ts[i];
 		DaoType *vtype = & ptype->aux->xType;
-		if( ptype->tid != DAO_PAR_NAMED ) return NULL;
+		if( ptype->tid != DAO_PAR_NAMED && ptype->tid != DAO_PAR_DEFAULT ) return NULL;
 		ts[i] = ts[0];
 		for(param=self->first; param; param=param->next){
 			if( param->type2 == NULL ) continue;
@@ -735,7 +735,7 @@ static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], 
 
 	*ms = 1;
 	if( n == 0 ) return DParamNode_GetLeaf( self, ms );
-	if( types[0]->tid == DAO_PAR_NAMED )
+	if( types[0]->tid == DAO_PAR_NAMED && types[0]->tid != DAO_PAR_DEFAULT )
 		return DParamNode_LookupByName2( self, types, n, strict, ms, defs );
 	partype = types[0];
 	for(param=self->first; param; param=param->next){

@@ -12,7 +12,7 @@ load sdml_parser;
 
 class CodeHL : SdmlCodeHL
 {
-	virtual static routine Highlight( source : string, name='' )=>string{ return '+++'; }
+	virtual routine Highlight( source : string, name='' )=>string{ return '+++'; }
 	static routine StartCode( name="" );
 	static routine FinishCode( name="" );
 }
@@ -30,8 +30,8 @@ static routine CodeHL::FinishCode( name="" )
 class DaoCodeHL : CodeHL
 {
 
-	const Library = { "io"=>1, "std"=>1, "reflect"=>1,
-		"math"=>1, "coroutine"=>1, "mpi"=>1, "thread"=>1, "network"=>1 };
+	const Library = { "io"=>1, "std"=>1, "mt"=>1,
+		"math"=>1, "meta"=>1, "net"=>1 };
 
 	const HilitMap = {
 		"class" => "\\STRUCT{",
@@ -40,6 +40,8 @@ class DaoCodeHL : CodeHL
 		"syntax" => "\\STRUCT{",
 		"as" => "\\STRUCT{",
 		"self" => "\\CONST{",
+		"none" => "\\CONST{",
+		"any" => "\\CONST{",
 		"var" => "\\STORAGE{",
 		"const" => "\\STORAGE{",
 		"global" => "\\STORAGE{",
@@ -64,7 +66,6 @@ class DaoCodeHL : CodeHL
 		"else"    => "\\STMTKEY{",
 		"while"   => "\\STMTKEY{",
 		"for"     => "\\STMTKEY{",
-		"until"     => "\\STMTKEY{",
 		"in"      => "\\STMTKEY{",
 		"switch"  => "\\STMTKEY{",
 		"case"    => "\\STMTKEY{",
@@ -73,12 +74,6 @@ class DaoCodeHL : CodeHL
 		"break"  => "\\STMTKEY{",
 		"return"  => "\\STMTKEY{",
 		"load"    => "\\STMTKEY{",
-		"require"    => "\\STMTKEY{",
-		"require"    => "\\STMTKEY{",
-		"import"    => "\\STMTKEY{",
-		"async"   => "\\STMTKEY{",
-		"join"    => "\\STMTKEY{",
-		"hurry"   => "\\STMTKEY{",
 		"raise"    => "\\STMTKEY{",
 		"try"    => "\\STMTKEY{",
 		"retry"    => "\\STMTKEY{",
@@ -99,7 +94,7 @@ class DaoCodeHL : CodeHL
 
 	public
 
-	static routine Highlight( source : string, name='' )=>string;
+	routine Highlight( source : string, name='' )=>string;
 
 }
 
@@ -121,7 +116,7 @@ routine replace( tok : string )
 	}
 	return output;
 }
-static routine DaoCodeHL::Highlight( source : string, name='' ) => string
+routine DaoCodeHL::Highlight( source : string, name='' ) => string
 {
 	tokens = std.tokenize( source );
 	output = StartCode( name );
@@ -181,7 +176,7 @@ code = "class Foo{
 # comments
 
 if( a == 123 ){
-	io.println( \"hello world!\" );
+	io.writeln( \"hello world!\" );
 }else if( b ){
 	c = [ 1, 2, 3 ]
 }
@@ -227,10 +222,10 @@ class CppCodeHL : CodeHL
 		"typeid"   => "\\METHOD{"
 	};
 
-	static routine Highlight( source : string, name='' )=>string;
+	routine Highlight( source : string, name='' )=>string;
 }
 
-static routine CppCodeHL::Highlight( source : string, name='' )=> string
+routine CppCodeHL::Highlight( source : string, name='' )=> string
 {
 	tokens = source.tokenize( "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
@@ -306,10 +301,10 @@ class BnfCodeHL : CodeHL
 		"*"  => "\\SPECIAL{"
 	};
 
-	static routine Highlight( source : string, name = '' )=>string;
+	routine Highlight( source : string, name = '' )=>string;
 }
 
-static routine BnfCodeHL::Highlight( source : string, name = '' ) => string
+routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 {
 	tokens = source.tokenize( "|+*(){}[] \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
@@ -343,4 +338,4 @@ static routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 	return output;
 }
 
-#io.println( CppCodeHL.Highlight( code, "test" ) );
+#io.writeln( CppCodeHL.Highlight( code, "test" ) );

@@ -3716,10 +3716,12 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ){
 		int async = rout->routHost && rout->routHost->tid == DAO_OBJECT;
 		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
-		/* No tail call for possible asynchronous calls: */
-		/* No tail call in constructors etc.: */
+		/* No tail call optimization for possible asynchronous calls: */
+		/* No tail call optimization in constructors etc.: */
 		if( async == 0 && self->topFrame->state == 0 && daoConfig.optimize ){
-			DaoProcess_PopFrame( self );
+			/* No optimization if the tail call has a return type different from the current: */
+			if( rout->routType->aux == self->activeRoutine->routType->aux )
+				DaoProcess_PopFrame( self );
 		}
 	}
 	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );//, code );
@@ -6093,20 +6095,32 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}
 		dC = (DaoValue*) tuple;
 		break;
+	case DAO_CLASS :
+		if( dA == NULL || dA->type != DAO_CLASS ) goto FailConversion;
+		dC = DaoClass_CastToBase( (DaoClass*)dA, ct );
+		if( dC == NULL ) goto FailConversion;
+		break;
 	case DAO_OBJECT :
 		if( dA->type == DAO_CDATA ) dA = (DaoValue*) dA->xCdata.object;
-		/* XXX compiling time checking */
+		/* XXX compiling time checking??? */
 		if( dA == NULL || dA->type != DAO_OBJECT ) goto FailConversion;
 		dC = DaoObject_CastToBase( & dA->xObject, ct );
 		if( dC == NULL ) goto FailConversion;
 		break;
 	case DAO_CTYPE :
+		if( dA->type == DAO_CLASS ){
+			dC = DaoClass_CastToBase( (DaoClass*)dA, ct );
+		}else if( dA->type == DAO_CTYPE ){
+			if( DaoType_ChildOf( dA->xCtype.ctype, ct ) ) dC = dA;
+		}
+		if( dC == NULL ) goto FailConversion;
+		break;
 	case DAO_CDATA :
 		dC = NULL;
 		if( dA->type == DAO_CDATA ){
 			if( DaoType_ChildOf( dA->xCdata.ctype, ct ) ) dC = dA;
 		}else if( dA->type == DAO_OBJECT ){
-			dC = (DaoValue*) DaoObject_CastToBase( & dA->xObject, ct );
+			dC = DaoObject_CastToBase( & dA->xObject, ct );
 		}
 		if( dC == NULL ) goto FailConversion;
 		break;
@@ -6701,7 +6715,7 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 		if( val->type == DAO_CLASS || val->type == DAO_CTYPE ){
 			cdata = & val->xCdata;
 			if( val->type == DAO_CLASS ){
-				cdata = (DaoCdata*) DaoClass_MapToParent( & val->xClass, ext );
+				cdata = (DaoCdata*) DaoClass_CastToBase( & val->xClass, ext );
 			}
 			if( cdata && DaoType_ChildOf( cdata->ctype, any ) ){
 				DArray_Swap( self->exceptions, & list->items );

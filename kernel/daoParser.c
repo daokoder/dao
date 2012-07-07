@@ -2155,7 +2155,7 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 static int DaoParser_CompleteScope( DaoParser *self, int at )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
-	int token, next = at + (at < self->tokens->size && tokens[at]->type != DTOK_IDENTIFIER);
+	int token, next = at + 1;
 	while( next < self->tokens->size && tokens[next]->name == DTOK_SEMCO ) next += 1;
 	token = next < self->tokens->size ? tokens[next]->name : 0;
 	while( self->scopeOpenings->size >0 ){

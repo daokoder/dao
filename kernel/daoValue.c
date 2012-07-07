@@ -693,7 +693,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 			return 1;
 		}
 	}
-	if( (T->tid == DAO_OBJECT || T->tid == DAO_CDATA) && S->type == DAO_OBJECT){
+	if( (T->tid == DAO_OBJECT || T->tid == DAO_CDATA) && S->type == DAO_OBJECT ){
 		if( S->xObject.defClass != & T->aux->xClass ){
 			S = DaoObject_CastToBase( S->xObject.rootObject, T );
 			tm = (S != NULL);
@@ -705,6 +705,16 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 			tm = DAO_MT_SUB;
 		}
 #endif
+	}else if( (T->tid == DAO_CLASS || T->tid == DAO_CTYPE) && S->type == DAO_CLASS ){
+		if( S->xClass.clsType != T ){
+			S = DaoClass_CastToBase( (DaoClass*)S, T );
+			tm = (S != NULL);
+		}
+	}else if( T->tid == DAO_CTYPE && S->type == DAO_CTYPE ){
+		if( S->xCtype.ctype != T ){
+			S = DaoType_CastToParent( S, T );
+			tm = (S != NULL);
+		}
 	}else{
 		tm = DaoType_MatchValue( T, S, NULL );
 	}

@@ -63,8 +63,8 @@ class DaoCodeHL : SdmlCodeHL
 		"stream"   => "<span class=DataType>",
 		"array" => "<span class=DataType>",
 		"read"    => "<span class=Method>",
-		"print"   => "<span class=Method>",
-		"println" => "<span class=Method>",
+		"write"   => "<span class=Method>",
+		"writeln" => "<span class=Method>",
 		"size"    => "<span class=Method>",
 		"clear"    => "<span class=Method>",
 		"key"     => "<span class=Method>",
@@ -94,7 +94,7 @@ class DaoCodeHL : SdmlCodeHL
 
 	public
 
-	static routine Highlight( source : string, name = '' )=>string;
+	routine Highlight( source : string, name = '' )=>string;
 
 }
 
@@ -192,7 +192,7 @@ class CppCodeHL : SdmlCodeHL
 	};
 	public
 
-	static routine Highlight( source : string, name = '' )=>string;
+	routine Highlight( source : string, name = '' )=>string;
 }
 
 routine CppCodeHL::Highlight( source : string, name = '' )
@@ -285,7 +285,7 @@ class BnfCodeHL : SdmlCodeHL
 	};
 	public
 
-	static routine Highlight( source : string, name = '' )=>string;
+	routine Highlight( source : string, name = '' )=>string;
 }
 
 routine BnfCodeHL::Highlight( source : string, name = '' )
@@ -340,7 +340,7 @@ class SdmlCodeHL2 : SdmlCodeHL
 	public
 
 	routine HL( source : string )=>string;
-	static routine Highlight( source : string, name = '' )=>string;
+	routine Highlight( source : string, name = '' )=>string;
 }
 
 routine SdmlCodeHL2::HL( source : string )

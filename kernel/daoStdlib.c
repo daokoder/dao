@@ -604,7 +604,7 @@ DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
-	{ STD_Eval,      "eval( source :string, replace=0, stream=io, safe=0 )" },
+	{ STD_Eval,      "eval( source :string, replace=0, st=io::stdio, safe=0 )" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
 	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... )=>string" },

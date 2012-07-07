@@ -2177,7 +2177,10 @@ DaoVmSpace* DaoInit( const char *command )
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( ns, "io", (DaoValue*) ns2 );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
+	GC_ShiftRC( dao_type_stream, vms->stdioStream->ctype );
+	vms->stdioStream->ctype = dao_type_stream;
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
+	DaoNamespace_AddConstValue( ns2, "stdio", (DaoValue*) vms->stdioStream );
 
 	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 0 );
 	dao_default_cdata.ctype->cdatatype = DAO_CDATA_PTR;

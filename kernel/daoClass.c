@@ -419,7 +419,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	self->classRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
-	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, self->objType, NULL );
+	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
 	DString_Append( rout->routType->name, name );
 	DString_AppendMBS( rout->routType->name, ">" );
 	GC_IncRC( rout->routType );
@@ -480,7 +480,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	DaoValue *value;
 	DArray *parents, *offsets;
 	DString *mbs;
-	DNode *search;
+	DNode *it, *search;
 	daoint i, k, id, perm, index;
 
 	mbs = DString_New(1);
@@ -529,6 +529,12 @@ void DaoClass_DeriveClassData( DaoClass *self )
 		DaoClass *klass = parents->items.pClass[i];
 		DaoCdata *cdata = parents->items.pCdata[i];
 		if( klass->type == DAO_CLASS ){
+			if( klass->vtable ){
+				if( self->vtable == NULL ) self->vtable = DHash_New(0,0);
+				for(it=DMap_First(klass->vtable); it; it=DMap_Next(klass->vtable,it)){
+					DMap_Insert( self->vtable, it->key.pVoid, it->value.pVoid );
+				}
+			}
 			/* For class data: */
 			for( id=0; id<klass->cstDataName->size; id++ ){
 				DString *name = klass->cstDataName->items.pString[id];
@@ -549,6 +555,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 					index = LOOKUP_BIND( DAO_CLASS_CONSTANT, perm, i+1, self->constants->size );
 					MAP_Insert( self->lookupTable, name, index );
 					DArray_Append( self->constants, klass->constants->items.pConst[id] );
+					DArray_Append( self->cstDataName, (void*)name );
 					if( value->type == DAO_ROUTINE && (value->xRoutine.attribs & DAO_ROUT_VIRTUAL) ){
 						if( self->vtable == NULL ) self->vtable = DHash_New(0,0);
 						MAP_Insert( self->vtable, value, value );
@@ -582,7 +589,8 @@ void DaoClass_DeriveClassData( DaoClass *self )
 				if( search == NULL ){
 					index = LOOKUP_BIND( DAO_CLASS_VARIABLE, perm, i+1, self->variables->size );
 					MAP_Insert( self->lookupTable, name, index );
-					DArray_Append( self->constants, var );
+					DArray_Append( self->variables, var );
+					DArray_Append( self->glbDataName, (void*)name );
 				}
 			}
 		}else if( cdata->type == DAO_CTYPE ){
@@ -770,20 +778,19 @@ int  DaoClass_ChildOf( DaoClass *self, DaoValue *klass )
 	}
 	return 0;
 }
-DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent )
+DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent )
 {
 	int i;
 	if( parent == NULL ) return NULL;
-	if( self->objType == parent ) return (DaoValue*) self;
+	if( self->clsType == parent ) return (DaoValue*) self;
 	if( self->superClass ==NULL ) return NULL;
 	for( i=0; i<self->superClass->size; i++ ){
 		DaoValue *sup = self->superClass->items.pValue[i];
 		if( sup == NULL ) return NULL;
 		if( sup->type == DAO_CLASS ){
-			if( (sup = DaoClass_MapToParent( (DaoClass*)sup, parent ) ) ) return sup;
-		}else if( sup->type == DAO_CTYPE && parent->tid == DAO_CDATA ){
-			/* cdata is accessible as cdata type, not ctype type. */
-			if( DaoCdata_ChildOf( sup->xCdata.ctype->kernel->typer, parent->kernel->typer ) ) return sup;
+			if( (sup = DaoClass_CastToBase( (DaoClass*)sup, parent ) ) ) return sup;
+		}else if( sup->type == DAO_CTYPE && parent->tid == DAO_CTYPE ){
+			if( (sup = DaoType_CastToParent( sup, parent ) ) ) return sup;
 		}
 	}
 	return NULL;

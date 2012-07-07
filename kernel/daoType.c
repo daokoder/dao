@@ -832,7 +832,8 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_CTYPE :
 	case DAO_CDATA :
 		tp = value->xCdata.ctype;
-		if( self == tp || self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
+		if( self == tp ) return DAO_MT_EQ;
+		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
 		if( interface && value->type == DAO_CDATA ) return DaoType_MatchInterface( tp, interface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_TYPE :
@@ -1502,15 +1503,13 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 	}
 	DaoValue_Clear( & proc->stackValues[0] );
 	meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
-	if( meth && (ec = DaoProcess_Call( proc, meth, NULL, &self0, 1 )) ){
-		DaoProcess_RaiseException( proc, ec, DString_GetMBS( proc->mbstring ) );
-	}else if( meth == NULL || proc->stackValues[0] == NULL ){
+	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ){
+		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
+	}else{
 		char buf[50];
 		sprintf( buf, "[%p]", self );
 		DaoStream_WriteString( stream, self->ctype->name );
 		DaoStream_WriteMBS( stream, buf );
-	}else{
-		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}
 }
 

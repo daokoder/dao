@@ -237,6 +237,7 @@ void DaoString_SetBytes( DaoString *self, const char *bytes, daoint n )
 
 enum{
 	IDX_NULL,
+	IDX_EMPTY,
 	IDX_SINGLE,
 	IDX_FROM,
 	IDX_TO,
@@ -325,8 +326,13 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 			*idtype = IDX_FROM;
 		}
 		/* when specify an index range, allow out of range: (eg, str[:5]=='abcde') */
-		if( n1 <0 || n1 >= N ) *idtype = IDX_OUTOFRANGE;
-		if( n2 <0 || n2 >= N ) *idtype = IDX_OUTOFRANGE;
+		if( n1 >= N || n2 < 0 ){
+			*idtype = IDX_EMPTY;
+		}else if( n1 < 0 ){
+			*idtype = IDX_TO;
+		}else if( n2 >= N ){
+			*idtype = IDX_FROM;
+		}
 		break;
 	case DAO_LIST:
 		*idtype = IDX_MULTIPLE;
@@ -750,6 +756,7 @@ static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid 
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
 	daoint *res = DaoProcess_PutInteger( proc, 0 );
 	switch( idtype ){
+	case IDX_EMPTY : break;
 	case IDX_NULL : *res = bits; break;
 	case IDX_SINGLE : *res = ( bits >> start ) & 0x1; break;
 	case IDX_MULTIPLE : DArray_Delete( ids ); /* fall through */
@@ -765,6 +772,7 @@ static void DaoNumber_SetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid,
 	int idtype;
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
 	switch( idtype ){
+	case IDX_EMPTY : break;
 	case IDX_NULL : bits = val; break;
 	case IDX_SINGLE : bits |= ( ( val != 0 ) & 0x1 ) << start; break;
 	case IDX_MULTIPLE : DArray_Delete( ids ); /* fall through */
@@ -822,6 +830,8 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	DString *res = NULL;
 	if( idtype != IDX_SINGLE ) res = DaoProcess_PutMBString( proc, "" );
 	switch( idtype ){
+	case IDX_EMPTY :
+		break;
 	case IDX_NULL :
 		DString_Assign( res, self );
 		break;
@@ -889,6 +899,8 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	}else if( value->type == DAO_STRING ){
 		DString *str = value->xString.data;
 		switch( idtype ){
+		case IDX_EMPTY :
+			break;
 		case IDX_NULL :
 			DString_Assign( self, str );
 			break;
@@ -1879,6 +1891,8 @@ static void DaoListCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 	if( proc->exceptions->size > e ) return;
 
 	switch( idtype ){
+	case IDX_EMPTY :
+		break;
 	case IDX_NULL :
 		res = DaoList_Copy( self, NULL );
 		DaoProcess_PutValue( proc, (DaoValue*) res );
@@ -1931,6 +1945,8 @@ static void DaoListCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 		GC_IncRC( self->unitype );
 	}
 	switch( idtype ){
+	case IDX_EMPTY :
+		break;
 	case IDX_NULL :
 		for( i=0; i<size; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;

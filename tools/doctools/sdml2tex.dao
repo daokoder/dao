@@ -147,9 +147,9 @@ class Sdml2Tex : SdmlParser
 
 routine Sdml2Tex::Sdml2Tex()
 {
-	codeparser[ 'dao' ] = DaoCodeHL;
-	codeparser[ 'cpp' ] = CppCodeHL;
-	codeparser[ 'bnf' ] = BnfCodeHL;
+	codeparser[ 'dao' ] = DaoCodeHL();
+	codeparser[ 'cpp' ] = CppCodeHL();
+	codeparser[ 'bnf' ] = BnfCodeHL();
 	orderlist = ('\\begin{enumerate}','\n\\end{enumerate}\n');
 	unorderlist = ('\\begin{itemize}','\n\\end{itemize}\n');
 	listitem = ( '\n\\item ', '' );
@@ -365,7 +365,7 @@ routine Sdml2Tex::CloseSection( level=0, numbering='' )
 #{
 parser = Sdml2Tex();
 fout = io.open( 'test.tex', 'w' );
-fout.println( parser.Parse( src ) );
+fout.writeln( parser.Parse( src ) );
 fout.close();
 #}
 
@@ -384,6 +384,6 @@ routine main( input : string, cjk="", output = "" )
 	}
 	fout = io.open( output, "w" );
 	parser = Sdml2Tex();
-	fout.println( parser.Parse( src ) );
+	fout.writeln( parser.Parse( src ) );
 	fout.close();
 }

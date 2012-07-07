@@ -31,10 +31,10 @@ class Sdml2Html : SdmlParser
 
 routine Sdml2Html::Sdml2Html()
 {
-	codeparser[ 'dao' ] = DaoCodeHL;
-	codeparser[ 'cpp' ] = CppCodeHL;
-	codeparser[ 'bnf' ] = BnfCodeHL;
-	codeparser[ 'sdml' ] = SdmlCodeHL2;
+	codeparser[ 'dao' ] = DaoCodeHL();
+	codeparser[ 'cpp' ] = CppCodeHL();
+	codeparser[ 'bnf' ] = BnfCodeHL();
+	codeparser[ 'sdml' ] = SdmlCodeHL2();
 	makesuffix = 1;
 	linebreak = '<br/>';
 	orderlist = ( '<ol>', '\n</ol>\n' );
@@ -56,7 +56,7 @@ routine Sdml2Html::Sdml2Html()
     "<green>" => ( "</green>", "<span style=\"color:#080\">", "</span>" ) , 
     "<blue>" => ( "</blue>", "<span style=\"color:#00d\">", "</span>" )
 	};
-	#io.println( codeparser );
+	#io.writeln( codeparser );
 }
 routine Sdml2Html::Warn( info : string )
 {
@@ -174,7 +174,7 @@ routine Sdml2Html::CloseSection( level=0, numbering='' )
 	output += "</td><td align=\"right\"><a href=\"@(url_edit_" + suffix;
 	output += ")&section=" + numbering + "\">@(edit_" + suffix + ")</a>&nbsp;";
 	output += "<a href=\"#start\">@(top_" + suffix + ")</a></td></tr></table>\n";
-#io.println( subsect.numbering, subsect.sectname );
+#io.writeln( subsect.numbering, subsect.sectname );
 }
 routine Sdml2Html::Replace( src = '' ) => string
 {
@@ -188,7 +188,7 @@ routine Sdml2Html::Replace( src = '' ) => string
 #{
 parser = Sdml2Html();
 fout = io.open( 'test.html', 'w' );
-fout.println( parser.Parse( src ) );
+fout.writeln( parser.Parse( src ) );
 fout.close();
 #}
 
@@ -205,6 +205,6 @@ routine main( input : string, output = "" )
 	}
 	fout = io.open( output, "w" );
 	parser = Sdml2Html();
-	fout.println( parser.Parse( src ) );
+	fout.writeln( parser.Parse( src ) );
 	fout.close();
 }

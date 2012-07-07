@@ -113,7 +113,7 @@ DAO_DLL DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 DAO_DLL int  DaoClass_FindSuper( DaoClass *self, DaoValue *super );
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
 DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super, DString *alias );
-DAO_DLL DaoValue* DaoClass_MapToParent( DaoClass *self, DaoType *parent );
+DAO_DLL DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent );
 
 DAO_DLL int  DaoClass_FindConst( DaoClass *self, DString *name );
 DAO_DLL DaoValue* DaoClass_GetConst( DaoClass *self, int id );

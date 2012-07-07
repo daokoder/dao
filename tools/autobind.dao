@@ -253,7 +253,7 @@ class Variable
 		get_item.clear();
 		set_item.clear();
 	}
-	routine _PRINT( s : stream ){ io.writeln( name, typeid, typename ); }
+	routine _PRINT( s : io::stream ){ io.writeln( name, typeid, typename ); }
 }
 
 global enum FunctionTrait
@@ -4424,7 +4424,7 @@ global usertype_code_struct = methlist_code + delete_struct + usertype_code;
 global usertype_code_class = methlist_code + delete_class + usertype_code;
 global usertype_code_class2 = methlist_code + delete_class + delete_test + usertype_code;
 
-routine WriteUserTypeDecl( utp : UserType, fout : stream )
+routine WriteUserTypeDecl( utp : UserType, fout : io::stream )
 {
 }
 routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
@@ -4756,7 +4756,7 @@ onload='DaoOnLoad' )
 	fout_header.write( '#include<string.h>\n' );
 	fout_header.write( '#include<dao.h>\n' );
 	if( lib_name == LibType.LIB_QT ) fout_header.write( '#include<QVector>\n#include<QList>\n' );
-	for( file in file_names ; idx in [0:file_names.size()]){
+	for( file in file_names ; idx in [file_names.size() ~ 0]){
 		if( not extfiles.has( files[idx] ) ){
 			if( dir_input ){
 				fout_header.write( '#include<' + dir_inc + files[idx] + '>\n' );
