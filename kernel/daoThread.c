@@ -737,7 +737,7 @@ static void DaoFuture_Delete( DaoFuture *self )
 	GC_DecRC( self->routine );
 	GC_DecRC( self->process );
 	GC_DecRC( self->precondition );
-	GC_DecRC( self->previous );
+	GC_DecRC( self->sorting );
 	DaoValue_ClearAll( self->params, self->parCount );
 	dao_free( self );
 }

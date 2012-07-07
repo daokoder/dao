@@ -258,7 +258,7 @@ void DaoCallServer_AddTask( DThreadTask func, void *param, int now )
 		DaoCallServer_AddThread( func, param );
 	}
 }
-static void DaoCallServer_SetPrevious( DaoFuture *future )
+static void DaoCallServer_SetSorting( DaoFuture *future )
 {
 	daoint i;
 	DaoCallServer *server = daoCallServer;
@@ -298,7 +298,7 @@ static void DaoCallServer_Add( DaoFuture *future )
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 	server = daoCallServer;
 	DMutex_Lock( & server->mutex );
-	DaoCallServer_SetPrevious( future );
+	DaoCallServer_SetSorting( future );
 	DaoCallServer_AddFuture( future );
 	DCondVar_Signal( & server->condv );
 	DMutex_Unlock( & server->mutex );
@@ -415,6 +415,8 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		if( future->process && DMap_Find( active, future->process ) ) continue;
 		DArray_Erase( futures, i, 1 );
 		DMap_Erase( pending, future );
+		GC_DecRC( future->sorting );
+		future->sorting = NULL;
 		if( future->object ) DMap_Insert( active, future->object->rootObject, NULL );
 		if( future->process ) DMap_Insert( active, future->process, NULL );
 		return future;

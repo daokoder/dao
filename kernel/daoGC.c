@@ -1434,7 +1434,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) future->routine );
 			cycRefCountDecrement( (DaoValue*) future->process );
 			cycRefCountDecrement( (DaoValue*) future->precondition );
-			cycRefCountDecrement( (DaoValue*) future->previous );
+			cycRefCountDecrement( (DaoValue*) future->sorting );
 			DaoGC_CycRefCountDecrements( future->params, future->parCount );
 			break;
 		}
@@ -1644,7 +1644,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) future->routine );
 			cycRefCountIncrement( (DaoValue*) future->process );
 			cycRefCountIncrement( (DaoValue*) future->precondition );
-			cycRefCountIncrement( (DaoValue*) future->previous );
+			cycRefCountIncrement( (DaoValue*) future->sorting );
 			DaoGC_CycRefCountIncrements( future->params, future->parCount );
 			break;
 		}
@@ -1857,7 +1857,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & future->routine );
 			directRefCountDecrement( (DaoValue**) & future->process );
 			directRefCountDecrement( (DaoValue**) & future->precondition );
-			directRefCountDecrement( (DaoValue**) & future->previous );
+			directRefCountDecrement( (DaoValue**) & future->sorting );
 			DaoGC_RefCountDecrements( future->params, future->parCount );
 			future->parCount = 0;
 			break;

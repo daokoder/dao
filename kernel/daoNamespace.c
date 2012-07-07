@@ -1343,7 +1343,7 @@ DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *type 
 void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *tp )
 {
 	int id = DaoNamespace_FindConst( self, name );
-	if( id >=0 ) return;
+	if( id >=0 && LOOKUP_UP(id) ) return;
 	if( tp->aux && (tp->tid >= DAO_OBJECT && tp->tid <= DAO_CTYPE) ){
 		DaoNamespace_AddConst( self, name, tp->aux, DAO_DATA_PUBLIC );
 	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_THT ){
