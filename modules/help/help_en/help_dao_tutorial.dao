@@ -18,8 +18,8 @@ Dao Programming Basics
 
 @[text]
 
-This tutorial will cover some of the basics of Dao programming.
-We will start with the traditional @[green]str world@[green] example.
+This tutorial will cover some basics of Dao programming.
+We will start with the traditional @[green]hello world@[green] example.
 
 
 @[subsection]
@@ -36,6 +36,7 @@ to access the IO functionalities of the module.
 to write outputs on to the standard output (the screen in this case).
 In Dao, string can be quoted with a pair of single quotation marks
 or with a pair of double quotation marks.
+Semicolons are optional at the end of statements.
 
 
 @[subsection]
@@ -43,11 +44,11 @@ Running Scripts
 @[subsection]
 
 There are three ways to run codes in Dao.
-The most typical way is to create a script file (e.g. @[cyan]str_world.dao@[cyan]),
+The most typical way is to create a script file (e.g. @[cyan]hello_world.dao@[cyan]),
 and put the codes into this file, and then run @[green]dao@[green] using this file
 as argument,
 @[code]
-$$ dao str_world.dao
+$$ dao hello_world.dao
 @[code]
 
 But if you just want to run the codes once, you can simple run them from command line using,
@@ -70,6 +71,12 @@ $$ dao
 
 (dao) 
 @[code]
+
+
+@[subsection]
+Accessing Online Help
+@[subsection]
+
 If you have the Dao @[green]help@[green] properly installed,
 starting @[green]dao@[green] in interactive mode will automatically load
 the help files and print out the following information,
@@ -84,6 +91,17 @@ the interactive command line, you can simple run,
 (dao) help( 'dao.tutorial.basics' )
 @[code]
 
+Such online helps come in two languages: English and Chinese.
+Currently the English version is more complete.
+To choose the language, one can define an environment variable:
+@[code]
+DAO_HELP_LANG = EN  # for English;
+DAO_HELP_LANG = ZH  # for Chinese;
+@[code]
+Or simply run Dao with,
+@[code]
+DAO_HELP_LANG=EN/ZH dao ...
+@[code]
 
 
 @[subsection]
@@ -107,6 +125,42 @@ Here are multi-lines comments.
 #}
 @[code]
 
+
+@[subsection]
+Declaring Constant and Variables
+@[subsection]
+
+Dao supports the explicit declaration of constants, local variables and global variables.
+Constants are declared with keyword @[green]const@[green],
+@[code]
+const DEFAULT_INDEX = 123
+const DEFAULT_NAME  = 'abc'
+@[code]
+Constants can only be initialized with constant expression.
+Constants that are declared at the top lexical scope are global constants.
+Global constants can also be declared inside nested lexical scopes by
+preceeding the @[green]const@[green] keyword with @[green]global@[green].
+
+
+Keyword @[green]global@[green] will declare global variables,
+@[code]
+global current_index = 456
+global current_name  = 'def'
+@[code]
+
+By default, in Dao all variables are implicitly declared as local variables.
+When a variable need to be explicitly declared as local, to avoid messing with
+global variables or local variables in the upper lexical scopes,
+one can use keyword @[green]var@[green],
+@[code]
+var temp_index = 789
+var temp_name  = 'ghi'
+@[code]
+
+@[red]
+Note: in interactve mode, all variables are automatically declared as global variables.
+@[red]
+
 @[text]
 
 
@@ -124,17 +178,21 @@ dao.tutorial.types
 @[name]
 
 @[title]
-Dao Basic Types
+Dao Essential Types
 @[title]
 
 @[text]
 
+Dao supports a number of essential types as built-in types to allow
+flexible use of them.
+These types include several number types, enum symbol, string, numeric array,
+list and map etc. 
 
 
 @[subsection]
 Numbers
 @[subsection]
-Dao has native supports for the following types of numbers:
+Dao has native supports for the following number types:
 @[green]int@[green], @[green]float@[green], @[green]double@[green],
 @[green]complex@[green] and @[green]long@[green].
 
@@ -203,6 +261,63 @@ for more information.
 
 
 
+
+@[subsection]
+Enum Symbols
+@[subsection]
+
+@[green]enum@[green] is a type hybriding C++ enum and Ruby symbol types
+to offer the advantages of both types.
+It can be used as enumerated constant in C++ or as symbol in Ruby.
+
+
+Enum types can be declared in the same way as C++ enum:
+@[code]
+enum MyEnum
+{
+	AA,
+	BB,
+	CC
+}
+@[code]
+Then it can be used in the following way:
+@[code]
+e1 = MyEnum::BB   # with constant folding;
+e2 = MyEnum.BB    # without constant folding;
+e3 : MyEnum = $BB # with auto conversion;
+@[code]
+All @[cyan]e1@[cyan], @[cyan]e2@[cyan] and @[cyan]e3@[cyan] will be 
+an enum value with integer value equal to 1 and string symbol equal to "BB".
+The last is equivalent to:
+@[code]
+# Use enum type on the fly:
+e3 : enum<AA,BB,CC> = $BB
+@[code]
+
+Enum values can be used in switch-case statements, which can be optimized
+to table lookup, if the enums are explicitly typed or can be inferred.
+For example,
+@[code]
+switch( (any)e1 ){
+case MyEnum::AA : ...
+case MyEnum::BB : ...
+case MyEnum::CC : ...
+}
+
+switch( e1 ){
+case $AA : ...
+case $BB : ...
+case $CC : ...
+}
+@[code]
+Both will be optimized into table lookup, because the case values have
+well defined types (the cases in the second example have types inferred from
+the expression in @[cyan]switch()@[cyan] ).
+
+
+
+
+
 @[subsection]
 Strings
 @[subsection]
@@ -217,7 +332,7 @@ Please see @[node]dao.type.string@[node] for more information.
 mbs = 'str'
 wcs = "道语言"
 mbs2 = 'It\'s green'
-wcs2 = "\u9053\u8bed\u8a00" # the same as wcs;
+wcs2 = "\u9053\u8bed\u8a00" # the same as wcs: "道语言";
 @[code]
 
 
@@ -376,7 +491,7 @@ alist[4] += 10
 
 
 @[subsection]
-Maps and hash maps
+Maps and Hash Maps
 @[subsection]
 
 A map or hash map organize a set of key/value pairs into a structure
@@ -384,7 +499,7 @@ for efficient lookup. The keys in a map are ordered, while the keys
 in a hash map is unordered.
 A map can be created using @[green]{key=>value...}@[green] or
 @[green]map{key=>value...}@[green]. Replacing the @[green]=>@[green]
-will create hash maps.
+with colon @[green]:@[green] will create hash maps.
 Map and hash map can be used in identical ways.
 @[code]
 amap = { 'abc' => 123, 'def' => 456 }
@@ -461,6 +576,12 @@ Dao Constrol Structures
 @[title]
 
 @[text]
+
+Control structures are essential for a program to do complex work.
+Dao supports the common controls such as:
+@[green]if-else@[green], @[green]for@[green], @[green]while@[green],
+@[green]do-while@[green], @[green]switch-case@[green], 
+@[green]break@[green] and @[green]skip@[green] (continue) etc.
 
 
 @[subsection]
@@ -721,34 +842,34 @@ Dao Routine (Function)
 
 @[text]
 
-Routine is a block of codes, once defined, can be used in different places
-at different time repeatedly. It can accept parameters to changes its
-behaviour. It may also return results to its callee.
+Routine is a relative independent block of codes that can be reused
+by invoking it at places where it is needed. 
+It can accept parameters to changes its behaviour.
+It may also return results to its callee.
 
 
 
-@[subsection]Definition@[subsection]
+@[subsection]
+Definition
+@[subsection]
 
 Dao routines are declared with keyword @[green]routine@[green]
-or @[green]function@[green] or @[green]sub@[green] 
-(which are exactly equivalent to @[green]routine@[green]),
-
+(or @[green]function@[green] or @[green]sub@[green],
+which are exactly equivalent to @[green]routine@[green]).
+For example,
 @[code(dao)]
 routine func( a, b )
 {
-   io.writeln( a, b );
-   a = 10;
-   b = "test";
+   a += 10;
+   b += "test";
    return a, b; # return more than one results.
 }
 
-r1, r2;
 ( r1, r2 ) = func( 111, "AAA" );
 r3 = func( r1, r2 );
-io.writeln( "r1 = ", r1 );
-io.writeln( "r2 = ", r2 );
-io.writeln( "r3 = ", r3 );
 @[code(dao)]
+defines a function that can take two parameters as input,
+and return two values as output.
 
 
 
@@ -763,7 +884,7 @@ func( b => 123, a => "ABC" );
 
 @[subsection]Parameter Type and Default Value@[subsection]
 
-It is also possible to specify the type or the default value of a parameter.
+It is also possible to specify the type and/or the default value of a parameter.
 @[code]
 routine MyRout( name : string, index = 0 )
 {
@@ -800,26 +921,31 @@ MyRout( 456, "script" ) # invoke the second MyRout()
 
 @[subsection]Routine As First Class Object@[subsection]
 
-Dao also support first class functions / routines. They can be created in the following way:
+Dao also support first class functions / routines.
+They can be created as anonymous function or closure,
+in the following way:
 @[code]
 foo = routine( x, y : TYPE, z = DEFAULT )
 {
    codes;
 }
 @[code]
-The definition of such functions is identical to the normal function definition, except
-the following differences:
+The syntax is nearly identical to the definition of a normal function,
+except the following differences:
 @[list]
 ==there is no need for a function name, but the created function must be assigned to a variable;
 ==the default value expressions for parameters do not necessary to be constant expressions,
-they are evaluated at running time when the function is created;
+they are evaluated at running time when the function/closure is created;
 ==the function body may contain variables defined in the "upper" function that creates it;
 depending on the type of the "upper" variable, its copy (for simple types) 
 or reference will be used by the created function.
 @[list]
 
+When such function accesses local variables from its outer/upper scope,
+it is created as a closure, otherwise as an anonymous function.
 
-Here is an example,
+
+Here is a simple example,
 @[code]
 a = "ABC";
 
@@ -1050,84 +1176,65 @@ Dao Class and Object-Oriented Programming
 
 @[text]
 
-Dao supports object-oriented programming (OOP) by allowing user to define
-classes using keyword @[green]class@[green] and create instances of them by calling them
-in the same way as calling routines. A class is simply a set
-of member variables and functions,
-which define the properties and possible behaviours of the class.
-An instance (which is often called object) is the realization of a class
-with some properties being initialized to certain values. The functions
-of a class are usually used to operate on the class or its instance.
-Permission modifiers @[green]private@[green], @[green]protected@[green] and @[green]public@[green] can be used to set permissions
-on the variables and functions. Optionally, permission modifiers can be followed by a colon.
-Class members are public by default.
-
+Object-Oriented Programming (OOP) is supported in Dao by offering
+class-based features such as data abstraction, encapsulation,
+polymorphism and inheritance etc. And such support for OOP 
+is further enhanced by interface.
 
 
 @[subsection]Class Definition@[subsection]
 
-
+A @[green]class@[green] is a user-defined data structure consisting data fields and
+member methods, which define the states and behaviours the instances of the class.
+Class supports three types of fields:
+@[list]
+--@[green]constant@[green]: declared with keyword @[green]const@[green];
+--@[green]static variable@[green]: declared with keyword @[green]static@[green];
+--@[green]instance variable@[green]: declared with keyword @[green]var@[green];
+@[list]
+Such fields can be declared with or without explicit types,
+and with or without default or initialization values,
+in the same way as specifying types and/or default values for function parameters.
+For example, the following can be used for instance variables,
 @[code]
-class MyNumber
-{
-	private
-
-	var value = 0;
-	var name : string;
-
-	public
-
-	routine MyNumber( value = 0, s = "NoName" ){
-		value = value;
-		name = s;
-	}
-
-	routine setValue( v ){ value = v }
-	routine getValue(){ return value }
-
-	routine setValue( v : float );
-}
-
-routine MyNumber::setValue( v : float )
-{
-	value = v;
-}
-@[code]
-
-Whenever an instance/object of a class is created, a specific routine
-is invoked to initialize the object.
-This kind of routine is called constructor for the class.
-Unlike other languages where a constructor should be explicitly defined
-as a member function of a class, the class body is the constructor
-for Dao class.
-Like in Python, the constructors are not used to create class instances,
-instead, an instance is created before, and then the constructor is called
-after to initialize the instance.
-
-
-In the class body, whenever a variable is specified
-with keyword @[green]var@[green], it is regarded as an instance variable.
-The data type of instance variable can be set by in the following way,
-@[code]
-var variable : type;
-@[code]
-Where @[cyan]type@[cyan] must be a valid type name.
-And @[cyan]variable@[cyan] will have to have the same type as @[cyan]type@[cyan],
-or have to be an instance of @[cyan]type@[cyan] if it is a class.
-
-The default value of instance variable can also be specified,
-@[code]
+var variable;
 var variable = init_value;
+var variable : typename;
+var variable : typename = init_value;
 @[code]
-Where @[cyan]init_value@[cyan] must also be a constant.
 
+Class methods must be declared with keyword @[green]routine@[green] 
+(or its alias keywords @[green]function@[green] or @[green]sub@[green])
+for constructors and normal methods, or keyword @[green]operator@[green]
+	for operator overloading.
+
+
+The access of class fields and methods can be restricted by three permission keywords:
+@[list]
+--@[green]public@[green]: publically accessible without restriction;
+--@[green]protected@[green]: accessible from the class and its derived classes;
+--@[green]private@[green]: only accessible from the class;
+@[list]
+
+Here is a simple class,
+@[code]
+class ClassOne
+{
+	var index = 0;
+	var name  : string
+	var words : list<string> = {}
+
+	routine ClassOne( name :string, index = 0 ){
+		self.name = name;
+		self.index = index;
+	}
+}
+@[code]
 
 Within class methods, the special variable @[green]self@[green] represents the current class
 instance. Class methods may be declared inside class body and defined outside
 in the same way as in C++, but in Dao, one should make sure that, the parameter list
 must be exactly the same in the places for declaration and definition.
-If no instance variable is used in a method, this method can be invoked with class
-by @[cyan]class.method(...)@[cyan].
 
 
 Like in C++, virtual method can be declared by adding keyword @[green]virtual@[green]
@@ -1137,20 +1244,34 @@ before the @[green]routine@[green] or @[green]function@[green] keyword.
 
 @[subsection]Class Instance@[subsection]
 
-Class instance can be created by invoking the constructor of the class in the same way as
-a function call,
+Class constructors are the methods that have name the same as the class name.
+A class instance can be created by invoking a constructor of the class 
+in the same way as a function call,
 @[code]
-obj1 = MyNumber(1);
+object = ClassOne( 'abc' )
 @[code]
-Class instance may also be created by enumerating the members of a class,
+Like in Python, the constructors are not used to create class instances,
+instead, an instance is created before, and then the constructor is called
+after to initialize the instance.
+
+
+For a class without parent classes and without constructors, 
+its instances may also be created by enumerating the members of the class,
 @[code]
-obj2 = MyNumber{ 2, "enumerated" };
+class Point3D
+{
+	var x = 0D;
+	var y = 0D;
+	var z = 0D;
+}
+point = Point3D{ 1, 2, 3 };
 @[code]
 The names of instance variables may also be specified in enumeration,
 @[code]
-obj3 = MyNumber{
-	name  => "enumerated";
-	value => 3;
+point = Point3D{
+	y => 2,
+	x => 1,
+	z => 3,
 };
 @[code]
 
@@ -1190,7 +1311,7 @@ so that modifying class member @[cyan]Xyz@[cyan] by @[cyan]obj.Xyz=abc@[cyan] wi
 similarly, if @[cyan].Xyz()@[cyan] is defined, get the value by @[cyan]obj.Xyz@[cyan] will also
 be allowed:
 @[code(dao)]
-class MyNumber0
+class MyNumber
 {
 	private
    
@@ -1198,7 +1319,7 @@ class MyNumber0
 
 	public
 
-	routine MyNumber0( v = 0 ){
+	routine MyNumber( v = 0 ){
 		value = v;
 	}
 
@@ -1206,7 +1327,7 @@ class MyNumber0
 	operator .value(){ return value }
 }
 
-num = MyNumber0( 123 )
+num = MyNumber( 123 )
 num.value = 456
 io.writeln( num.value )
 @[code(dao)]
@@ -1226,7 +1347,7 @@ Other supported operators for overloaing include:
 ==[operator [](...)] for getting item(s);
 ==[operator []=(...)] for setting item(s);
 @[list]
-Other operators will be supported in the future versions.
+Basic arithmetic operators are also supported for overloading.
 
 
 
@@ -1277,14 +1398,26 @@ io.writeln( num2.value )
 @[code]
 class ColorRBG
 {
-	var Red = 0;
-	var Green = 0;
-	var Blue = 0;
+	var Red = 0.0;
+	var Green = 0.0;
+	var Blue = 0.0;
 
-	routine ColorRBG( r, g, b ){
+	routine ColorRBG( r = 0.0, g = 0.0, b = 0.0 ){
 		Red = r;
 		Green = g;
 		Blue = b;
+	}
+	routine ColorRGB( name : enum<white,black,red,green,blue,yellow,magenta,cyan> ){
+		switch( name ){
+		case $white:   Red = Green = Blue = 1.0
+		case $black:
+		case $red:     Red = 1.0
+		case $green:   Green = 1.0 
+		case $blue:    Blue = 1.0
+		case $yellow:  Red = Green = 1.0
+		case $magenta: Red = Blue = 1.0
+		case $cyan:    Green = Blue = 1.0
+		}
 	}
 
 	routine setRed( r ){ Red = r; }
@@ -1296,21 +1429,25 @@ class ColorRBG
 	routine getBlue(){ return Blue; }
 }
 
-yellow = ColorRBG( 255, 255, 0 ); # create an instance.
+yellow = ColorRBG( 1, 1, 0 ); # create an instance.
 @[code]
 The following will define a derived class of @[cyan]ColorRBG@[cyan],
 @[code]
-class ColorQuad : ColorRBG
+class ColorRGBA : ColorRBG
 {
-	var alpha = 0; # alpha component for tranparency.
+	var alpha = 0.0; # alpha component for tranparency.
 
-	routine ColorQuad( r, g, b, a ) : ColorRBG( r, g, b ){
+	routine ColorRGBA( r = 0.0, g = 0.0, b = 0.0, a = 0.0 ) : ColorRBG( r, g, b ){
 		alpha = a;
 	}
+	# Inherit the constructor from ColorRGB that accepts color names:
+	use routine ColorRGB( name : enum<white,black,red,green,blue,yellow,magenta,cyan> );
 }
 
-yellow2 = ColorQuad( 255, 255, 0, 0 ); # not tranparent.
-yellow2.alpha = 127; # change to half tranparency.
+yellow2 = ColorRGBA( 1, 1, 0, 0 ); # not tranparent.
+yellow2.alpha = 0.5; # change to half tranparency.
+
+magenta = ColorRGBA( $magenta )
 @[code]
 
 In the definition of derived class,
@@ -1320,9 +1457,8 @@ one parent classes, separate them with @[green],@[green]. The parameters for der
 can be passed to parent classes in the way as shown in the example.
 
 
-Derived class will automatically inherit constructors from its parent class,
-if it has only one parent class, and there is no redefined constructors with
-signatures the same as those to be inherited.
+Constructors from parent classes can be inherited by using the @[green]use@[green]
+statement, in which the full function signature of the constructor should be specified.
 
 
 
@@ -1472,6 +1608,34 @@ PrintSize2( {} );
 
 
 
+@[text]
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+######## Concurrent
+################################################################################
+################################################################################
+
+@[name]
+dao.tutorial.concurrent
+@[name]
+
+@[title]
+Concurrent Programming
+@[title]
+
+@[text]
 @[text]
 
 

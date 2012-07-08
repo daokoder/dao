@@ -2380,8 +2380,9 @@ ReturnTrue :
 	if( self->topFrame == self->firstFrame && self->topFrame->next && self->topFrame->next->routine ){
 		print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] && self == vmSpace->mainProcess ){
-			DaoProcess_PushRoutine( self, self->topFrame->next->routine, NULL );
-			DaoProcess_SetActiveFrame( self, self->topFrame );
+			/* Need one extra frame to ensure this part is not executed again,
+			// in case that DaoValue_Print() will invoke some methods: */
+			DaoProcess_PushFrame( self, 0 );
 			DaoStream_WriteMBS( vmSpace->stdioStream, "= " );
 			DaoValue_Print( self->stackValues[0], self, vmSpace->stdioStream, NULL );
 			DaoStream_WriteNewLine( vmSpace->stdioStream );
@@ -4639,10 +4640,14 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_CLASS :
 		{
 			DaoClass *klass = & p->xClass;
+			DArray *routines = klass->classRoutines->overloads->routines;
 			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
 			mtype = klass->objDataType->items.pType;
-			if( opb >= object->valueCount ){
+			if( klass->superClass->size || (routines && routines->size) ){
+				DaoProcess_RaiseException( self, DAO_ERROR, "cannot initialize instance" );
+				break;
+			}else if( opb >= object->valueCount ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "enumerating too many members" );
 				break;
 			}

@@ -4383,8 +4383,11 @@ NotExist_TryAux:
 					if( mc > 1 ) return DaoInferencer_Error( self, DTE_TYPE_AMBIGIOUS_PFA );
 					if( ct == NULL ) goto InvOper;
 				}else if( at->tid == DAO_CLASS ){
+					DArray *routines;
 					if( consts[opa] == NULL ) goto NotInit;
 					klass = & at->aux->xClass;
+					routines = klass->classRoutines->overloads->routines;
+					if( klass->superClass->size || (routines && routines->size) ) goto InvOper;
 					str = klass->className;
 					ct = klass->objType;
 					/* XXX: check field names */

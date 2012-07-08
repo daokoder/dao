@@ -2368,10 +2368,9 @@ static int DaoParser_Preprocess( DaoParser *self )
 #endif
 			}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
 				/* only for top level "load", for macros in the module  */
-				end = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, -1, 1 );
+				end = DaoParser_ParseLoadStatement( self, start, self->tokens->size );
 				if( end < 0 ) return 0;
-				if( cons ) DaoParser_MakeCodes( self, start, end+1, ns->inputs );
-				if( ! DaoParser_ParseLoadStatement( self, start, end ) ) return 0;
+				if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
 				DArray_Erase( self->tokens, start, end-start+1 );
 				tokens = self->tokens->items.pToken;
 			}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
@@ -3644,11 +3643,10 @@ DecoratorError:
 				return 0;
 			}
 		}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
-			end = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, -1, 1 );
+			end = DaoParser_ParseLoadStatement( self, start, to+1 );
 			if( end < 0 ) return 0;
-			if( cons && topll ) DaoParser_MakeCodes( self, start, end+1, ns->inputs );
-			if( ! DaoParser_ParseLoadStatement( self, start, end ) ) return 0;
-			start = end + 1;
+			if( cons && topll ) DaoParser_MakeCodes( self, start, end, ns->inputs );
+			start = end;
 			continue;
 		}else if( tki == DKEY_USE ){
 			start = DaoParser_ParseUseStatement( self, start, to );
@@ -4828,27 +4826,17 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		code = DAO_CTW_LOAD_INVALID;
 		goto ErrorLoad;
 	}else{
-		while( i < end ){
-			if( tokens[i]->type != DTOK_IDENTIFIER ){
-				code = DAO_CTW_PATH_INVALID;
-				goto ErrorLoad;
-			}
+		while( i < end && tokens[i]->type == DTOK_IDENTIFIER ){
 			DString_Append( self->mbs, tokens[i]->string );
 			i ++;
-			tki = tokens[i]->name;
-			if( tki == DTOK_COLON2 || tki == DTOK_DOT ){
+			if( i < end && (tokens[i]->type == DTOK_COLON2 || tokens[i]->type == DTOK_DOT) ){
 				i ++;
 				DString_AppendMBS( self->mbs, "/" );
 			}else break;
 		}
 	}
-	tki = tokens[i]->name;
-	if( tki != DTOK_LCB && tki != DTOK_LSB && tki != DTOK_SEMCO && tki != DKEY_AS ){
-		code = DAO_CTW_LOAD_INVALID;
-		goto ErrorLoad;
-	}
-	if( tokens[i]->name == DKEY_AS ){
-		if( tokens[i+1]->type != DTOK_IDENTIFIER ){
+	if( i < end && tokens[i]->name == DKEY_AS ){
+		if( (i+1) >= end || tokens[i+1]->type != DTOK_IDENTIFIER ){
 			code = DAO_CTW_LOAD_INVA_MOD_NAME;
 			goto ErrorLoad;
 		}
@@ -4911,13 +4899,13 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	/*
 	   printf("ns=%p; mod=%p; myns=%p\n", ns, mod, nameSpace);
 	 */
+	DaoParser_CheckStatementSeparation( self, i-1, end );
 
-	if( i != end ) DaoParser_Warn( self, DAO_CTW_LOAD_REDUNDANT, NULL );
-	return 1;
+	return i;
 ErrorLoad:
 	DaoParser_Error( self, code, NULL );
 	if( code != DAO_CTW_LOAD_FAILED ) DaoParser_Error( self, DAO_CTW_LOAD_FAILED, NULL );
-	return 0;
+	return -1;
 }
 
 int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
