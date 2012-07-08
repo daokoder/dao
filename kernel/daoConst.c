@@ -50,6 +50,7 @@ static const char* const daoCtInfo[] =
 	"Need symbol of constant",
 	"Need symbol of class",
 	"Need symbol of class or C type",
+	"Need symbol of non-asynchronous class",
 	"Need symbol of asynchronous class",
 	"Need symbol of interface",
 	"Need bindable type (Dao class or C type)",

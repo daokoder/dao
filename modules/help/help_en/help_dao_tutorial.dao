@@ -1636,6 +1636,165 @@ Concurrent Programming
 @[title]
 
 @[text]
+
+Dao has several features that support concurrent programming.
+The first is a concurrent Garbage Collector (GC), which works behind
+the scene. The other features come in two main forms:
+multi-threading module and asynchronous class, which are built 
+around a lightweight thread pool with a simple scheduler
+to map thread tasks to native threads.
+
+
+@[subsection]
+Multi-threading Module
+@[subsection]
+
+The Multi-threading Module (@[green]mt@[green]) offers the traditional
+multi-threading based on threads with mutexes, condition variables and semaphores.
+The main functionalities of @[green]mt@[green] are provided as code section methods
+for maximum flexibility and expressiveness. For example, a thread task can
+be started with the @[green]mt.start()@[green] method,
+@[code]
+fut1 = mt.start::{
+	sum = 0;
+	for( i = 1 : 10000 ) sum += i * i
+	return sum
+}
+fut2 = mt.start( $now )::{
+	sum = 0;
+	for( i = 1 : 10000 ) sum += i * i
+	return sum
+}
+io.writeln( fut1.value(), fut2.value() )
+@[code]
+@[green]mt.start()@[green] can execute any expression or block of codes as a thread task,
+which may be scheduled to run when a native thread become available to it.
+If the thread task needs to be started immediately, the additional parameter @[cyan]$now@[cyan]
+can be passed to @[green]mt.start()@[green], so that a new native thread may be created
+if there is no other native thread available for the task.
+
+
+@[green]mt.start()@[green] returns a future value which will be used to store the value
+returned by the thread task. Accessing its value by @[green]future.value()@[green]
+will cause the current thread to block until the value becomes available after the task finishs.
+If one want to wait for the task for only a limited amount of time, the method
+@[green]future.value()@[green] can be used with a timeout parameter (a float value
+for seconds or fraction seconds, negative for infinite waiting).
+
+
+
+@[subsection]
+Parallelized Code Section Methods
+@[subsection]
+
+However, the simplest way to do threaded programming is to use the following
+parallelized code section methods of @[green]mt@[green], 
+@[list]
+-- @[green]iterate()@[green]:
+
+   Iterate a predefined number of times, or iterate over a list, map or array,
+   and execute the code block on each of the items;
+
+-- @[green]map()@[green]
+
+   Map a list, map or array to another list, map or array, using the values
+   returned by the code block;
+
+-- @[green]apply()@[green]
+
+   Apply the values returned by the code block to a list, map or array;
+
+-- @[green]find()@[green]
+
+   Find the first item in a list or map the satisfy the condition as
+   tested by the code block.
+@[list]
+
+Examples,
+@[code]
+ls = {1,2,3,4,5,6}
+
+mt.iterate( 10 )::{ io.writeln( X ) }
+mt.iterate( ls, 2 )::{ io.writeln( X ) }
+
+mt.map( ls, 2 )::{ X*X } # produces new list: {1,4,9,16,25,36}
+mt.apply( ls, 2 )::{ X*X } # ls becomes: {1,4,9,16,25,36}
+@[code]
+
+
+@[subsection]
+Asynchronous Class
+@[subsection]
+
+Asynchronous class is a class whose instance methods will be executed asynchronously, 
+namely, calling a method on an instance object of such class will return a future value 
+immediately, and the execution will be started in different thread. 
+Such executions are scheduled such that only one method is actively executed 
+for any single object at any time, namely, multiple executions on the same object 
+are mutually exclusive.
+
+
+So each instance of an asynchronous class act just like a monitor,
+but it also acts like an actor in the actor model considering that calling methods
+of such instance is just like sending messages to the instance with function parameters
+being the message contents. For each instance, these messages are processed one by one
+in the order of receiving.
+
+
+Defining an asynchronous class is very much like defining a normal class,
+but with the following restrictions:
+@[list]
+--It cannot contain public data field;
+--It cannot derive from normal class (and vice versa);
+@[list]
+Preceeding the class name with @[green]@@[green] defines an asynchronous class.
+In other places, the class name should be used without the @[green]@@[green] prefix.
+Here is an simple example,
+@[code]
+class @Account
+{
+	private
+
+	var balance = 0
+
+	public
+
+	routine Account( init = 0 ){
+		balance = init
+	}
+	routine Withdraw( amount : int ) => enum<false,true>
+	{
+		if ( balance < amount ) return $false
+		balance -= amount
+		return $true
+	}
+	routine Deposit( amount : int ) => int
+	{
+		balance += amount
+		return balance
+	}
+	routine Balance() => int
+	{
+		return balance
+	}
+}
+
+acount1 = Account( 100 )
+acount2 = Account( 100 )
+
+future1 = acount1.Withdraw( 10 )
+if( future1.value() == $true ) future2 = acount2.Deposit( 10 )
+
+future3 = acount1.Deposit( 20 )
+
+io.writeln( 'Balance in account1:', acount1.Balance().value() )
+io.writeln( 'Balance in account2:', acount2.Balance().value() )
+@[code]
+
+Like calling @[green]mt.start()@[green], calling a method on an asynchronous
+class instance will return a future value, which can be used to check the
+status of the asynchronous call.
+
 @[text]
 
 

@@ -3191,9 +3191,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 #endif
 		while( tokens[start]->name == sep ){
-			DaoClass *super = 0;
+			DaoClass *super = NULL;
 			start = DaoParser_FindScopedConstant( self, & value, start+1, mbs );
-			super = NULL;
 			if( start <0 ) goto ErrorClassDefinition;
 			ename = tokens[start]->string;
 			if( value == NULL || (value->type != DAO_CLASS && value->type != DAO_CTYPE) ){
@@ -3207,6 +3206,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 					DaoParser_Error3( self, DAO_SYMBOL_NEED_ASYNCLASS, start );
 					goto ErrorClassDefinition;
 				}
+			}else if( value->type == DAO_CLASS && (value->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
+				DaoParser_Error3( self, DAO_SYMBOL_NEED_NON_ASYNCLASS, start );
+				goto ErrorClassDefinition;
 			}
 			super = & value->xClass;
 			start ++;
