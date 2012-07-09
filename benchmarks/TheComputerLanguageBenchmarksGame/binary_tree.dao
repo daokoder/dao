@@ -1,18 +1,18 @@
 
 type Node = tuple<int,any,any>;
 
-routine BottomUpTree(item:int, depth:int) => int|Node
+routine BottomUpTree(item:int, depth:int) => any
 {
 	if( not depth ) return item;
 	i = item + item;
 	depth = depth - 1;
-	return Node{ item, BottomUpTree(i-1, depth), BottomUpTree(i, depth) };
+	return ( item, BottomUpTree(i-1, depth), BottomUpTree(i, depth) );
 }
 
-routine ItemCheck( node : int|Node ) =>int
+routine ItemCheck( node : any ) =>int
 {
 	if( node ?< type(int) ) return (int)node;
-	(item, left, right) = (Node)node;
+	(item, left, right) = node;
 	return item + ItemCheck(left) - ItemCheck(right);
 }
 
@@ -32,8 +32,9 @@ routine main( N = 10 )
 	for( depth = mindepth : 2 : maxdepth ){
 		iterations = 2 ** (maxdepth - depth + mindepth);
 		check = 0;
-		for( i = 1 : iterations )
+		for( i = 1 : iterations ){
 			check = check + ItemCheck(BottomUpTree(1, depth)) + ItemCheck(BottomUpTree(-1, depth));
+		}
 
 		io.writef("%d\t trees of depth %d\t check: %d\n", iterations*2, depth, check);
 	}
