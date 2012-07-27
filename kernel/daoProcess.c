@@ -5002,9 +5002,14 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) & res );
 #ifdef DAO_WITH_LONGINT
 	}else if( A->type == DAO_LONG && B->type == DAO_LONG ){
-		DLong *b, *c = DaoProcess_GetLong( self, vmc );
+		DLong *b, *c;
 		if( vmc->code == DVM_POW && DaoProcess_CheckLong2Integer( self, B->xLong.value ) == 0 ) return;
 		b = DLong_New();
+		if( vmc->c == vmc->a || vmc->c == vmc->b ){
+			c = b;
+		}else{
+			c = DaoProcess_GetLong( self, vmc );
+		}
 		switch( vmc->code ){
 			case DVM_ADD : DLong_Add( c, A->xLong.value, B->xLong.value ); break;
 			case DVM_SUB : DLong_Sub( c, A->xLong.value, B->xLong.value ); break;
@@ -5013,7 +5018,11 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			case DVM_MOD : DaoProcess_LongDiv( self, A->xLong.value, B->xLong.value, b, c ); break;
 			case DVM_POW : DLong_Pow( c, A->xLong.value, DLong_ToInteger( B->xLong.value ) ); break;
 			default : break;
-		}    
+		}
+		if( vmc->c == vmc->a || vmc->c == vmc->b ){
+			c = DaoProcess_GetLong( self, vmc );
+			DLong_Move( c, b );
+		}
 		DLong_Delete( b ); 
 	}else if( A->type == DAO_LONG && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
 		DLong *c = vmc->a == vmc->c ? C->xLong.value : DaoProcess_GetLong( self, vmc );

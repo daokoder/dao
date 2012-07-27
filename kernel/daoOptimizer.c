@@ -1518,45 +1518,39 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	DaoRoutine_UpdateCodes( routine );
 }
 
-static void DaoRoutine_Optimize( DaoRoutine *self )
+static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 {
-	DaoOptimizer *optimizer = DaoOptimizer_New();
-	DaoVmSpace *vms = self->nameSpace->vmSpace;
+	DaoVmSpace *vms = routine->nameSpace->vmSpace;
 	daoint i, k, notide = ! (vms->options & DAO_EXEC_IDE);
 
-	if( daoConfig.optimize == 0 ) goto Done;
-
-	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+	if( daoConfig.optimize == 0 ) return;
 
 	/* Do not perform optimization if it may take too much memory (1M): */
-	if( (self->body->vmCodes->size * self->body->regCount) > 8000000 ) goto Done;
-	if( self->body->vmCodes->size > 400 && self->body->regCount > 200 ){
-		DaoType *type, **types = self->body->regType->items.pType;
-		if( self->body->simpleVariables->size < self->body->regCount / 2 ) goto Done;
-		for(i=0,k=0; i<self->body->simpleVariables->size; i++){
-			type = types[ self->body->simpleVariables->items.pInt[i] ];
+	if( (routine->body->vmCodes->size * routine->body->regCount) > 8000000 ) return;
+	if( routine->body->vmCodes->size > 400 && routine->body->regCount > 200 ){
+		DaoType *type, **types = routine->body->regType->items.pType;
+		if( routine->body->simpleVariables->size < routine->body->regCount / 2 ) return;
+		for(i=0,k=0; i<routine->body->simpleVariables->size; i++){
+			type = types[ routine->body->simpleVariables->items.pInt[i] ];
 			k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_LONG : 0;
 		}
 		/* Optimize only if there are sufficient amount of numeric calculations: */
-		if( k < self->body->regCount / 2 ) goto Done;
+		if( k < routine->body->regCount / 2 ) return;
 	}
 
-	DaoOptimizer_MergeRegister( optimizer, self );
-	DaoOptimizer_CSE( optimizer, self );
-	DaoOptimizer_DCE( optimizer, self );
-	DaoOptimizer_ReduceRegister( optimizer, self );
+	DaoOptimizer_MergeRegister( self, routine );
+	DaoOptimizer_CSE( self, routine );
+	DaoOptimizer_DCE( self, routine );
+	DaoOptimizer_ReduceRegister( self, routine );
 
-	/* DaoOptimizer_LinkDU( optimizer, self ); */
+	/* DaoOptimizer_LinkDU( self, routine ); */
 
 	if( notide && daoConfig.jit && dao_jit.Compile ){
 		/* LLVMContext provides no locking guarantees: */
 		DMutex_Lock( & mutex_routine_specialize );
-		dao_jit.Compile( self, optimizer );
+		dao_jit.Compile( routine, self );
 		DMutex_Unlock( & mutex_routine_specialize );
 	}
-
-Done:
-	DaoOptimizer_Delete( optimizer );
 }
 
 
@@ -5549,13 +5543,21 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 {
 	int retc;
 	DaoInferencer *inferencer;
+	DaoOptimizer *optimizer;
+
 	if( self->body->vmCodes->size == 0 ) return 1;
+
+	optimizer = DaoOptimizer_New();
+	DArray_Resize( self->body->regType, self->body->regCount, NULL );
+	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+
 	inferencer = DaoInferencer_New();
 	DaoInferencer_Init( inferencer, self, silent );
 	retc = DaoInferencer_DoInference( inferencer );
 	DaoInferencer_Delete( inferencer );
-	if( retc ) DaoRoutine_Optimize( self );
+	if( retc ) DaoOptimizer_Optimize( optimizer, self );
 	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
+	DaoOptimizer_Delete( optimizer );
 	return retc;
 }
 
