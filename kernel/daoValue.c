@@ -673,7 +673,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 	if( itp == NULL ) return 0;
 	return DaoValue_Move( src, dest, itp );
 }
-int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
+int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 {
 	int tm = 1;
 	if( !(S->xTuple.trait & DAO_VALUE_CONST) ){
@@ -716,7 +716,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 			tm = (S != NULL);
 		}
 	}else{
-		tm = DaoType_MatchValue( T, S, NULL );
+		tm = DaoType_MatchValue( T, S, defs );
 	}
 #if 0
 	if( tm ==0 ){
@@ -747,7 +747,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T )
 	}
 	return 1;
 }
-int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
+int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 {
 	DaoValue *D2 = *D;
 	if( S == D2 ) return 1;
@@ -781,7 +781,7 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 		GC_DecRC( D2 );
 		*D = D2 = NULL;
 	}
-	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T );
+	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T, defs );
 
 	switch( (S->type << 8) | T->tid ){
 	case (DAO_STRING<<8)|DAO_STRING :
@@ -804,13 +804,17 @@ int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 #ifdef DAO_WITH_LONGINT
 	case (DAO_LONG   <<8)|DAO_LONG    : DLong_Move( D2->xLong.value, S->xLong.value ); break;
 #endif
-	default : return DaoValue_Move4( S, D, T );
+	default : return DaoValue_Move4( S, D, T, defs );
 	}
 	return 1;
 }
-int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T )
+int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 {
-	int rc = DaoValue_Move( S, D, T );
+	return DaoValue_Move5( S, D, T, NULL );
+}
+int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
+{
+	int rc = DaoValue_Move5( S, D, T, defs );
 	if( rc == 0 || T == NULL ) return rc;
 	if( S->type <= DAO_TUPLE || S->type != T->tid ) return rc;
 	if( S->type == DAO_CDATA && S->xCdata.subtype != DAO_CDATA_DAO ){

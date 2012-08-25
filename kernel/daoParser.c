@@ -6085,6 +6085,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				DaoInode *inode;
 				rb = rb2 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 				if( rb < 0 ) return error;
+				if( (rb+1) <= end && tokens[rb+1]->name == DTOK_ASSN ) return result;
 
 				if( (rb+1) <= end && tokens[rb+1]->name == DKEY__INIT ){
 					mode |= DAO_CALL_INIT;
@@ -6149,6 +6150,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				int code = DVM_CURRY;
 				int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 				if( rb < 0 ) return error;
+				if( (rb+1) <= end && tokens[rb+1]->name == DTOK_ASSN ) return result;
 
 				if( result.last && back->code == DVM_LOAD2 ){ /* X.Y or X->Y */
 					DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */

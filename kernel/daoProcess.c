@@ -430,11 +430,13 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 		if( passed & (1<<i) ) continue;
 		if( m != DAO_PAR_DEFAULT ) return 0;
 		tp = & types[i]->aux->xType;
-		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
-			tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
-			//XXX printf( "tp = %s\n", tp->name->mbs );
+		if( DaoValue_Move2( consts[i], & dest[i], tp, defs ) == 0 ) return 0;
+		if( defs && (tp->tid == DAO_UDT || tp->tid == DAO_THT) ){
+			DaoType *type = DaoNamespace_GetType( routine->nameSpace, consts[i] );
+			if( !(type->attrib & DAO_TYPE_SPEC) ){
+				if( DMap_Find( defs, tp ) == NULL ) DMap_Insert( defs, tp, type );
+			}
 		}
-		if( DaoValue_Move2( consts[i], & dest[i], tp ) ==0 ) return 0;
 	}
 	return 1;
 }
@@ -488,12 +490,6 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 	}else if( obj && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		tp = & types[0]->aux->xType;
-		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
-			DaoType *type = DaoNamespace_GetType( routine->nameSpace, obj );
-			DaoType_MatchTo( type, tp, defs ); /* Init type specialization mapping; */
-			/* Specialize types: */
-			if( defs->size ) tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
-		}
 		if( obj->type < DAO_ARRAY ){
 			if( tp == NULL || DaoType_MatchValue( tp, obj, defs ) == DAO_MT_EQ ){
 				GC_ShiftRC( obj, dest[0] );
@@ -506,9 +502,15 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 				/* for virtual method call, or calling C function on Dao object: */
 				obj = DaoObject_CastToBase( obj->xObject.rootObject, tp );
 			}
-			if( DaoValue_Move2( obj, & dest[0], tp ) ){
+			if( DaoValue_Move2( obj, & dest[0], tp, defs ) ){
 				selfChecked = 1;
 				passed = 1;
+				if( defs && (tp->tid == DAO_UDT || tp->tid == DAO_THT) ){
+					DaoType *type = DaoNamespace_GetType( routine->nameSpace, obj );
+					if( !(type->attrib & DAO_TYPE_SPEC) ){
+						if( DMap_Find( defs, tp ) == NULL ) DMap_Insert( defs, tp, type );
+					}
+				}
 			}
 		}
 	}
@@ -523,12 +525,11 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 	/* pass from p[ifrom] to dest[ito], with type checking by types[ito] */
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DaoValue *val = p[ifrom];
-		int mt = 0;
 		ito = ifrom + selfChecked;
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
 			for(; ifrom<npar; ifrom++){
 				ito = ifrom + selfChecked;
-				DaoValue_Move2( p[ifrom], & dest[ito], NULL );
+				DaoValue_Move2( p[ifrom], & dest[ito], NULL, NULL );
 				passed |= (size_t)1<<ito;
 			}
 			break;
@@ -543,26 +544,24 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 		if( ito >= ndef ) goto ReturnZero;
 		passed |= (size_t)1<<ito;
 		tp = & types[ito]->aux->xType;
-		if( defs && tp && (tp->attrib & DAO_TYPE_SPEC) ){
-			DaoType *type = DaoNamespace_GetType( routine->nameSpace, val );
-			mt = DaoType_MatchTo( type, tp, defs ); /* Init type specialization mapping; */
-			/* Specialize types: */
-			if( defs->size ) tp = DaoType_DefineTypes( tp, routine->nameSpace, defs );
-		}else if( need_self && ito ==0 ){
-			mt = DaoType_MatchValue( tp, val, defs );
-		}
 		if( need_self && ito ==0 ){
 			if( val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA ) ){
 				/* for virtual method call */
 				val = (DaoValue*) DaoObject_CastToBase( val->xObject.rootObject, tp );
 				if( val == NULL ) goto ReturnZero;
-			}else if( mt == DAO_MT_EQ ){
+			}else if( DaoType_MatchValue( tp, val, defs ) == DAO_MT_EQ ){
 				GC_ShiftRC( val, dest[ito] );
 				dest[ito] = val;
 				continue;
 			}
 		}
-		if( DaoValue_Move2( val, & dest[ito], tp ) ==0 ) goto ReturnZero;
+		if( DaoValue_Move2( val, & dest[ito], tp, defs ) == 0 ) goto ReturnZero;
+		if( defs && (tp->tid == DAO_UDT || tp->tid == DAO_THT) ){
+			DaoType *type = DaoNamespace_GetType( routine->nameSpace, val );
+			if( !(type->attrib & DAO_TYPE_SPEC) ){
+				if( DMap_Find( defs, tp ) == NULL ) DMap_Insert( defs, tp, type );
+			}
+		}
 	}
 	if( (selfChecked + npar) < ndef ){
 		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnZero;
@@ -594,10 +593,12 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 			DaoRoutine_MapTypes( routine, defs2 );
 			DMap_Delete( defs2 );
 			if( DaoRoutine_DoTypeInference( routine, 1 ) == 0 ){
-				/* Specialization may fail at unreachable parts for certain parameters.
-				 * Example: binary tree benchmark using list (binary_tree2.dao). */
-				GC_ShiftRC( routine->original->body, routine->body );
-				routine->body = routine->original->body;
+				/*
+				// Specialization may fail at unreachable parts for certain parameters.
+				// Example: binary tree benchmark using list (binary_tree2.dao).
+				// But DO NOT revert back to the original function body,
+				// to avoid repeatly invoking of this specialization!
+				*/
 			}
 		}
 		DMutex_Unlock( & mutex_routine_specialize2 );
@@ -4135,6 +4136,7 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 	}
 	for( i=0; i<bval; i++){
 		if( DaoList_SetItem( list, regValues[opA+i], i ) ){
+			printf( "%s %i\n", list->unitype->name->mbs, i );
 			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
 			return;
 		}

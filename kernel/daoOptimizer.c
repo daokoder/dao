@@ -2574,7 +2574,7 @@ static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *
 {
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoType **types = self->types->items.pType;
-	DMap *defs = self->defs;
+	DMap *defs = (DMap*)DArray_Back( self->typeMaps );
 	if( types[id] == NULL || (types[id]->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 		if( types[id] == NULL || DaoType_MatchTo( type, types[id], NULL ) ){
 			if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );

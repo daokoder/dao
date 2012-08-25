@@ -679,13 +679,12 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 	switch( self->tid ){
 	case DAO_UDT :
-		return DAO_MT_UDF;
 	case DAO_THT :
 		if( defs ){
 			node = MAP_Find( defs, self );
 			if( node ) return DaoType_MatchValue( node->value.pType, value, defs );
 		}
-		return DAO_MT_INIT;
+		return self->tid == DAO_UDT ? DAO_MT_UDF : DAO_MT_INIT;
 	case DAO_VARIANT :
 		mt = DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){

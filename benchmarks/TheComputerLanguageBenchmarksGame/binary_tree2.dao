@@ -1,6 +1,6 @@
 
 
-routine BottomUpTree(item, depth)
+routine BottomUpTree(item, depth )
 {
 	if( depth > 0 ){
 		i = item + item;
@@ -14,7 +14,6 @@ routine BottomUpTree(item, depth)
 
 routine ItemCheck(tree)
 {
-	#io.writeln( stdlib.about(tree) );
 	if( tree.size() == 3 ){
 		return tree[0] + ItemCheck(tree[1]) - ItemCheck(tree[2]);
 	}
