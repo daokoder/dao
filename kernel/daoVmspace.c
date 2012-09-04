@@ -799,34 +799,13 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 		return;
 	}
 	for( i=0; i<argNames->size; i++ ){
+		char *chars = argValues->items.pString[i]->mbs;
+		if( chars[0] == '+' || chars[0] == '-' ) chars ++;
 		nkey = sval;
-		/*
-		   printf( "argname = %s; argval = %s\n", argNames->items.pString[i]->mbs,
-		   argValues->items.pString[i]->mbs );
-		 */
 		DString_Assign( val, argValues->items.pString[i] );
-		if( abtp->nested->size > i ){
-			if( abtp->nested->items.pValue[i] ){
-				int k = abtp->nested->items.pType[i]->tid;
-				char *chars = argValues->items.pString[i]->mbs;
-				if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
-					k = abtp->nested->items.pType[i]->aux->xType.tid;
-				if( chars[0] == '+' || chars[0] == '-' ) chars ++;
-				str = argNames->items.pString[i];
-				if( str->size && abtp->mapNames ){
-					DNode *node = MAP_Find( abtp->mapNames, str );
-					if( node ){
-						int id = node->value.pInt;
-						k = abtp->nested->items.pType[id]->tid;
-						if( k == DAO_PAR_NAMED || k == DAO_PAR_DEFAULT )
-							k = abtp->nested->items.pType[id]->aux->xType.tid;
-					}
-				}
-				if( k >0 && k <= DAO_DOUBLE && DaoToken_IsNumber( chars, 0 ) ){
-					DaoValue temp = {0};
-					nkey = DaoParseNumber( chars, (DaoValue*) & temp );
-				}
-			}
+		if( DaoToken_IsNumber( chars, 0 ) ){
+			DaoValue temp = {0};
+			nkey = DaoParseNumber( chars, (DaoValue*) & temp );
 		}
 		if( argNames->items.pString[i]->size ){
 			DString *S = argNames->items.pString[i];
@@ -1108,8 +1087,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}
 		if( rout == NULL && value->type == DAO_ROUTINE ){
 			DaoRoutineBody *body = value->xRoutine.body;
+			DString *routHelp = body ? body->routHelp : NULL;
 			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
-			if( body->routHelp ) DaoStream_WriteString( io, body->routHelp );
+			if( routHelp ) DaoStream_WriteString( io, routHelp );
 			return 0;
 		}
 	}

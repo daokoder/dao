@@ -2371,7 +2371,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 				end = DaoParser_ParseLoadStatement( self, start, self->tokens->size );
 				if( end < 0 ) return 0;
 				if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
-				DArray_Erase( self->tokens, start, end-start+1 );
+				DArray_Erase( self->tokens, start, end-start );
 				tokens = self->tokens->items.pToken;
 			}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
 				end = DaoParser_ParseUseStatement( self, start, self->tokens->size-1 );

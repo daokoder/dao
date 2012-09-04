@@ -1677,7 +1677,7 @@ if there is no other native thread available for the task.
 @[green]mt.start()@[green] returns a future value which will be used to store the value
 returned by the thread task. Accessing its value by @[green]future.value()@[green]
 will cause the current thread to block until the value becomes available after the task finishs.
-If one want to wait for the task for only a limited amount of time, the method
+If one wants to wait for the task for only a limited amount of time, the method
 @[green]future.value()@[green] can be used with a timeout parameter (a float value
 for seconds or fraction seconds, negative for infinite waiting).
 
