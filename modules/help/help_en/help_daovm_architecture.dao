@@ -63,3 +63,252 @@ daovm.architecture.instruction
 @[title]
 Virtual Machine Instructions
 @[title]
+
+
+
+
+
+@[name]
+daovm.architecture.bytecode
+@[name]
+
+@[title]
+Binary Bytecode Format
+@[title]
+
+@[text]
+
+
+This document contains specifications of the bytecode format for Dao virtual machine.
+In this bytecode format, integers are always stored in big endian.
+
+
+In the following specifications or examples, each byte is represented by
+two hexadecimal digits, unless it is quoted by quotation marks.
+
+
+Data type used in the specification:
+@[list]
+--@[green]uint8@[green]: one byte unsigned integer;
+--@[green]uint16@[green]: two byte unsigned integer;
+--@[green]uint32@[green]: four byte unsigned integer;
+--@[green]int@[green]: four or eight byte integer;
+--@[green]double@[green]: IEEE 754 double;
+@[list]
+
+
+@[subsection]
+Header
+@[subsection]
+
+Dao binary bytecode file begins with a header of 16 bytes consisting 
+of the following parts:
+@[list]
+==@[green]0144616F01020D0A@[green]: a signature of 8 bytes, composed of
+  @[list(sub)]
+  --One byte Start of Header (SOH) @[green]01@[green];
+  --Three bytes @[green]44616F@[green] for name @[green]Dao@[green];
+  --One byte of Carriage Return (CR) @[green]0D@[green];
+  --One byte of Line Feed (LF) @[green]0A@[green];
+  @[list(sub)]
+==@[green]00@[green]: one byte, format version, zero for the official one;
+==@[green]04@[green]: one byte, size of integer type, default 4;
+==@[green]000000000000@[green]: six reserved bytes;
+@[list]
+@[code(dao)]
+01 44 61 6F 01 02 0D 0A    # 8 bytes, signature;
+00                         # uint8, format version: zero for official;
+04                         # uint8, size of int: default 4;
+00 00 00 00 00 00          # 6 byte, reserved;
+@[code(dao)]
+
+
+@[subsection]
+Source
+@[subsection]
+
+The source file name (possibly including the path) is stored immediately after
+the header, with two bytes for the name length followed by a null-terminated
+string for the name:
+@[code(dao)]
+00 09            # uint16, source name length in bytes;
+"test.dao\0"     # variable number of bytes;
+@[code(dao)]
+
+
+@[subsection]
+Modules
+@[subsection]
+
+This section lists the modules that are needed for the current codes.
+They will be loaded in order to properly decode the rest of the bytecode file.
+@[code(dao)]
+00 02            # uint16, number of loaded modules;
+00 0C            # uint16, length of the first module name/path;
+"module1.dao\0"  # variable number of bytes;
+00 0C            # uint16, length of the second module name/path;
+"module2.dao\0"  # variable number of bytes;
+@[code(dao)]
+
+
+@[subsection]
+Types
+@[subsection]
+
+All the types are referenced by unsigned short integer (uint16).
+The numbers smaller than 256 are all reserved for direct referencing.
+Zero is used to indicate unspecified type.
+Primitive types and some special types are directly referenced by 
+the following reserved numbers:
+@[list]
+--@[red]0x1@[red]: @[green]integer@[green];
+--@[red]0x2@[red]: @[green]float@[green];
+--@[red]0x3@[red]: @[green]double@[green];
+--@[red]0x4@[red]: @[green]complex@[green];
+--@[red]0x5@[red]: @[green]long@[green];
+--@[red]0x6@[red]: @[green]string@[green];
+--@[red]0x10@[red]: @[green]none@[green];
+--@[red]0x11@[red]: @[green]any@[green];
+--@[red]0x12@[red]: @[green]?@[green], undefined type;
+--@[red]0x20@[red]: @[green]...@[green], variadic parameter;
+@[list]
+
+
+The type section will declare a list of types
+which will be referenced by 0xFF plus its 1-based index in this section.
+Each type is declared with one byte for its internal type ID,
+followed by addition information.
+For convenience, identifier and type alias are also declared in the 
+same way with type ID 0xF0 and 0xF1.
+
+
+Type declaration formats:
+@[list]
+-- Core types: none, integer, float, ..., string:
+
+   @[green]uint8@[green]: type id;
+
+   Example: \2 for float;
+-- Identifer that can be used in a part of other types:
+
+   @[green]uint8@[green]: type id for identifer, 0xf0;
+
+   @[green]uint8@[green]s: identifier length plus 1;
+
+   Variable number of bytes: null-terminated identfier string;
+
+   Example: F0 00 05 "true\0" for "true";
+-- Enum type:
+
+   @[green]uint8@[green]: type id;
+
+   @[green]uint8@[green]: enum sub type, 0 for normal enums, 1 for flags;
+
+   @[green]uint16@[green]: number of symbols;
+
+   List of symbols: type reference numbers to the identifiers decalred in the type section;
+
+   Example: 07 00 00 02 01 01 01 02 for enum<true,false>;
+-- Collection, Variant type:
+
+   @[green]uint8@[green]: type id;
+
+   @[green]uint16@[green]: number of item types;
+
+   List of item types: type reference numbers;
+
+   Example: 08 00 01 00 02 for array<float>;
+-- Value types:
+
+   @[green]uint8@[green]: type id;
+
+   Variable number of bytes: value (See below for formats of primitive type values);
+-- Named parameter: name:type or name=type
+
+   @[green]uint8@[green]: type id;
+
+   @[green]uint16@[green]: type reference number to the declared identifier;
+
+   @[green]uint16@[green]: type reference number;
+-- Type holder type:
+
+   @[green]uint8@[green]: type id;
+
+   @[green]uint16@[green]: type reference number to the declared identifier;
+-- Routine types:
+
+   @[green]uint8@[green]: type id;
+
+   @[green]uint16@[green]: type reference number to the return type;
+
+   @[green]uint16@[green]: number of item types;
+
+   List of item types: type reference numbers;
+-- Class type:
+
+   @[green]uint8@[green]: type id;
+@[list]
+
+
+Example,
+@[code(dao)]
+00 06          # uint16, number of types: 0x6;
+02             # uint8, float type;
+06             # uint8, string type;
+F0             # uint8, identifier: true;
+00 05          # uint16, identifier length;
+"true\0"       # variable number of bytes;
+F0             # uint8, identifier: false;
+00 06          # uint16, identifier length;
+"false\0"      # variable number of bytes;
+07 00          # uint16, enum type, non-flag type: enum<true,false>;
+00 02          # uint16, number of items: 2;
+01 01          # uint16, type reference number for "true";
+01 02          # uint16, type reference number for "false";
+08             # uint8, array type; array<float>;
+00 01          # uint16, number of items: 1;
+00 02          # uint16, type reference number for float;
+@[code(dao)]
+
+
+@[subsection]
+Constants
+@[subsection]
+
+All values are stored with one byte of type ID followed by additional data.
+
+Value formats for primitive types:
+@[list]
+--@[green]none@[green]    :  00
+--@[green]integer@[green] :  01 + int;
+--@[green]float@[green]   :  02 + double;
+--@[green]double@[green]  :  03 + double;
+--@[green]complex@[green] :  04 + double + double;
+--@[green]long@[green]    :  05 + int + data;
+--@[green]string@[green]  :  06 + uint8 + int + data;
+@[list]
+
+Example,
+@[code(dao)]
+00 23          # uint16, number of global constants: 0x23;
+01             # uint8, value type id: integer;
+00 1F 22 12    # int, value: 0x1f2212;
+02             # uint8, value type id: float;
+00 00 00...    # double;
+03             # uint8, value type id: double;
+00 00 00...    # double;
+04             # uint8, value type id: complex;
+00 00 00...    # double;
+00 00 00...    # double;
+05             # uint8, value type id: long;
+00 00 00 30    # int, length: 0x30;
+...            # 0x30 bytes;
+06             # uint8, value type id: string;
+01             # uint8, string type: 0, WCS; 1, MBS;
+00 00 00 30    # int, length: 0x30;
+...            # 0x30 bytes;
+07             # uint8, value type id: enum;
+00 00 00 02    # uint32, value: 0x2;
+@[code(dao)]
+
+@[text]

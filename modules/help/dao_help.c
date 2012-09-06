@@ -797,12 +797,14 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		}
 		if( fgcolor < 0 ){
 			if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, bgcolor );
+			self->last = '\0'; /* no space between two string output; */
 			DaoxStream_WriteString( self, tok->string );
 			if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, NULL );
 			self->offset += tok->string->size;
 			continue;
 		}
 		DaoxStream_SetColor( self, dao_colors[fgcolor], bgcolor );
+		self->last = '\0';
 		DaoxStream_WriteString( self, tok->string );
 		DaoxStream_SetColor( self, NULL, NULL );
 		self->offset += tok->string->size;
