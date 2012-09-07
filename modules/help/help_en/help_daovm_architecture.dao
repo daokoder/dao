@@ -73,7 +73,7 @@ daovm.architecture.bytecode
 @[name]
 
 @[title]
-Binary Bytecode Format
+Binary Bytecode Format (Draft)
 @[title]
 
 @[text]
@@ -97,6 +97,24 @@ Data type used in the specification:
 @[list]
 
 
+A Dao binary bytecode file will contain the following sections:
+@[list]
+==@[green]Header@[green]: basic information for the format;
+==@[green]Source@[green]: path and file name of the source;
+==@[green]Modules@[green]: modules need to be loaded;
+==@[green]Identifiers@[green]: identifiers used in the file;
+==@[green]Scoping Objects@[green]: forward declaration of routines and classes etc.;
+==@[green]Types@[green]: declaration of types;
+==@[green]Type Aliases@[green]: declaration of type aliasing;
+==@[green]Values@[green]: all the values used in the file;
+==@[green]Global Constants@[green]:
+==@[green]Global Variables@[green]:
+==@[green]Interfaces@[green]:
+==@[green]Classes@[green]:
+==@[green]Routines@[green]:
+@[list]
+
+
 @[subsection]
 Header
 @[subsection]
@@ -108,6 +126,8 @@ of the following parts:
   @[list(sub)]
   --One byte Start of Header (SOH) @[green]01@[green];
   --Three bytes @[green]44616F@[green] for name @[green]Dao@[green];
+  --One byte for major version number (e.g. 01);
+  --One byte for minor version number (e.g. 02);
   --One byte of Carriage Return (CR) @[green]0D@[green];
   --One byte of Line Feed (LF) @[green]0A@[green];
   @[list(sub)]
@@ -116,11 +136,15 @@ of the following parts:
 ==@[green]000000000000@[green]: six reserved bytes;
 @[list]
 @[code(dao)]
-01 44 61 6F 01 02 0D 0A    # 8 bytes, signature;
+01 44 61 6F 01 02 0D 0A    # 8 bytes, signature for Dao 1.2;
 00                         # uint8, format version: zero for official;
 04                         # uint8, size of int: default 4;
 00 00 00 00 00 00          # 6 byte, reserved;
 @[code(dao)]
+Regardless the size of integer, the bytecode should be loadable on both
+32-bit and 64-bit Dao Virtual Machines, as long as the integers used
+in the bytecode file do not overflow.
+
 
 
 @[subsection]
@@ -136,6 +160,7 @@ string for the name:
 @[code(dao)]
 
 
+
 @[subsection]
 Modules
 @[subsection]
@@ -148,6 +173,78 @@ They will be loaded in order to properly decode the rest of the bytecode file.
 "module1.dao\0"  # variable number of bytes;
 00 0C            # uint16, length of the second module name/path;
 "module2.dao\0"  # variable number of bytes;
+@[code(dao)]
+
+
+
+@[subsection]
+Identifiers
+@[subsection]
+
+Identifiers are referenced by 1-base indices in this section,
+such reference numbers are encoded in 16-bit unsigned integers.
+Zero 0x0000 is used to indicate non-existing identifier,
+which can be used to declare constants or variables which
+occupy slots in the constant or variable arrays without names.
+
+@[code(dao)]
+00 05           # uint16, number of identifiers;
+00 05           # uint16, identifier length + 1;
+"true\0"        # variable number of bytes;
+00 06           # uint16, identifier length + 1;
+"false\0"       # variable number of bytes;
+00 06           # uint16, identifier length + 1;
+"short\0"       # variable number of bytes;
+00 09           # uint16, identifier length + 1;
+"Drawable\0"    # variable number of bytes;
+00 09           # uint16, identifier length + 1;
+"DrawLine\0"    # variable number of bytes;
+00 06           # uint16, identifier length + 1;
+"Klass\0"       # variable number of bytes;
+00 05           # uint16, identifier length + 1;
+"Test\0"        # variable number of bytes;
+...
+@[code(dao)]
+
+
+@[subsection]
+Scoping Objects
+@[subsection]
+
+
+Forward declarations of scoping objects such as classes, interfaces, routines,
+ctype and namespace, and their scoping relationships.
+Each scope object is referenced by an unsigned 16-bit integer,
+with 0x0000 reserved for the current top level scope object (namely, the current namespace).
+Scope objects listed in this section should be referenced by the 1-base
+index of their declaration in this section.
+
+
+Each scope object is declared with the following fields:
+@[list]
+--@[green]uint8@[green]: scope object type (internal type ID);
+--@[green]uint8@[green]: flag (0x0 for creating, or 0x1 for searching);
+--@[green]uint16@[green]: identifier reference number for the scope name;
+--@[green]uint16@[green]: scope object reference number to the host;
+
+  For example, for nested classes, this field can be used to store
+  the scope object reference number to outer classes.
+@[list]
+
+@[code(dao)]
+00 03           # uint16, number of scopes;
+0E              # uint8, scope object type (internal type ID for class);
+00              # uint8, new class to be created;
+00 06           # uint16, identifier reference number for the class name;
+00 00           # uint16, scope object reference number to the host;
+0E              # uint8, scope object type (internal type ID for class);
+00              # uint8, new nested class to be created;
+00 07           # uint16, identifier reference number for the class name;
+00 01           # uint16, scope object reference number to the host;
+0F              # uint8, scope object type (internal type ID for ctype);
+01              # uint8, ctype to be found in loaded modules;
+00 08           # uint16, identifier reference number for the ctype name;
+00 00           # uint16, scope object reference number to the host;
 @[code(dao)]
 
 
@@ -167,148 +264,483 @@ the following reserved numbers:
 --@[red]0x4@[red]: @[green]complex@[green];
 --@[red]0x5@[red]: @[green]long@[green];
 --@[red]0x6@[red]: @[green]string@[green];
---@[red]0x10@[red]: @[green]none@[green];
---@[red]0x11@[red]: @[green]any@[green];
---@[red]0x12@[red]: @[green]?@[green], undefined type;
---@[red]0x20@[red]: @[green]...@[green], variadic parameter;
+--@[red]0x10@[red]: @[green]process@[green];
+--@[red]0x11@[red]: @[green]namespace@[green];
+--@[red]0x20@[red]: @[green]none@[green];
+--@[red]0x21@[red]: @[green]any@[green];
+--@[red]0x22@[red]: @[green]?@[green], undefined type;
+--@[red]0x40@[red]: @[green]...@[green], variadic parameter;
 @[list]
 
 
 The type section will declare a list of types
 which will be referenced by 0xFF plus its 1-based index in this section.
 Each type is declared with one byte for its internal type ID,
+and two bytes for its declaration scope,
 followed by addition information.
-For convenience, identifier and type alias are also declared in the 
-same way with type ID 0xF0 and 0xF1.
 
 
 Type declaration formats:
 @[list]
 -- Core types: none, integer, float, ..., string:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_NONE, DAO_INTEGER, ...);
 
-   Example: \2 for float;
--- Identifer that can be used in a part of other types:
+   @[green]uint16@[green]: scope object reference number;
 
-   @[green]uint8@[green]: type id for identifer, 0xf0;
 
-   @[green]uint8@[green]s: identifier length plus 1;
+   Example: 02 0000 for float;
 
-   Variable number of bytes: null-terminated identfier string;
 
-   Example: F0 00 05 "true\0" for "true";
 -- Enum type:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_ENUM);
 
    @[green]uint8@[green]: enum sub type, 0 for normal enums, 1 for flags;
 
+   @[green]uint16@[green]: scope object reference number;
+
    @[green]uint16@[green]: number of symbols;
 
-   List of symbols: type reference numbers to the identifiers decalred in the type section;
+   List of symbols: identifier reference numbers;
 
-   Example: 07 00 00 02 01 01 01 02 for enum<true,false>;
+
+   Example:
+   
+
+   07 00 0000 0002 0001 0002 for enum<true,false>;
+
+   07 01 0000 0002 0001 0002 for enum<true;false>;
+
+
 -- Collection, Variant type:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_ARRAY, DAO_LIST, ...);
+
+   @[green]uint16@[green]: scope object reference number;
 
    @[green]uint16@[green]: number of item types;
 
    List of item types: type reference numbers;
 
-   Example: 08 00 01 00 02 for array<float>;
+
+   Example: 08 0000 0001 0002 for array<float>;
+
+
 -- Value types:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_VALTYPE);
 
    Variable number of bytes: value (See below for formats of primitive type values);
 -- Named parameter: name:type or name=type
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_PAR_NAMED or DAO_PAR_DEFAULT);
 
-   @[green]uint16@[green]: type reference number to the declared identifier;
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: identifier reference number;
 
    @[green]uint16@[green]: type reference number;
+
+
 -- Type holder type:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_THT);
 
-   @[green]uint16@[green]: type reference number to the declared identifier;
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: identifier reference number;
+
+
 -- Routine types:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_ROUTINE);
+
+   @[green]uint16@[green]: scope object reference number;
 
    @[green]uint16@[green]: type reference number to the return type;
 
    @[green]uint16@[green]: number of item types;
 
    List of item types: type reference numbers;
+
+
+-- Interface type:
+
+   @[green]uint8@[green]: type id (DAO_CLASS);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: identifier reference number for the interface name;
+
+
 -- Class type:
 
-   @[green]uint8@[green]: type id;
+   @[green]uint8@[green]: type id (DAO_CLASS);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: identifier reference number for the class name;
+
+
+-- Class instance type:
+
+   @[green]uint8@[green]: type id (DAO_OBJECT);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: type reference number to the class type;
+
+
+-- Ctype type:
+
+   @[green]uint8@[green]: type id (DAO_CTYPE);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: identifier reference number for the ctype name;
+
+
+-- Cdata type:
+
+   @[green]uint8@[green]: type id (DAO_CDATA);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: type reference number to the ctype type;
+
+
+-- Type type:
+
+   @[green]uint8@[green]: type id (DAO_TYPE);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: type reference number to the type;
+
+
+-- Future value type:
+
+   @[green]uint8@[green]: type id (DAO_FUTURE);
+
+   @[green]uint16@[green]: scope object reference number;
+
+   @[green]uint16@[green]: type reference number to the value type;
 @[list]
 
 
 Example,
 @[code(dao)]
-00 06          # uint16, number of types: 0x6;
-02             # uint8, float type;
-06             # uint8, string type;
-F0             # uint8, identifier: true;
-00 05          # uint16, identifier length;
-"true\0"       # variable number of bytes;
-F0             # uint8, identifier: false;
-00 06          # uint16, identifier length;
-"false\0"      # variable number of bytes;
-07 00          # uint16, enum type, non-flag type: enum<true,false>;
-00 02          # uint16, number of items: 2;
-01 01          # uint16, type reference number for "true";
-01 02          # uint16, type reference number for "false";
-08             # uint8, array type; array<float>;
-00 01          # uint16, number of items: 1;
-00 02          # uint16, type reference number for float;
+00 06           # uint16, number of types: 0x6;
+02 00 00        # uint8 + uint16, float type in the default scope;
+06 00 00        # uint8 + uint16, string type in the default scope;
+07 00           # uint8 + uint8, enum type, non-flag type: enum<true,false>;
+00 00           # uint16, scope object reference number;
+00 02           # uint16, number of items: 2;
+00 01           # uint16, identifier reference number for "true";
+00 02           # uint16, identifier reference number for "false";
+08              # uint8, array type; array<float>;
+00 00           # uint16, scope object reference number;
+00 01           # uint16, number of items: 1;
+00 02           # uint16, type reference number for float;
+@[code(dao)]
+
+
+
+@[subsection]
+Type Aliases
+@[subsection]
+
+@[code(dao)]
+00 01           # uint16, number of type aliases;
+00 02           # uint16, identifier reference number for "short";
+00 01           # uint16, type reference number of "int";
 @[code(dao)]
 
 
 @[subsection]
-Constants
+Values
 @[subsection]
 
 All values are stored with one byte of type ID followed by additional data.
+Values are referenced by their 1-base indices in this section.
+Value reference numbers are 32-bit unsigned integer.
+Zero is reserved for a NULL value.
 
-Value formats for primitive types:
+
+Value formats:
 @[list]
---@[green]none@[green]    :  00
---@[green]integer@[green] :  01 + int;
---@[green]float@[green]   :  02 + double;
---@[green]double@[green]  :  03 + double;
---@[green]complex@[green] :  04 + double + double;
---@[green]long@[green]    :  05 + int + data;
---@[green]string@[green]  :  06 + uint8 + int + data;
+-- @[green]none@[green]:
+
+   @[green]uint8@[green]: type ID (0x00, DAO_NONE);
+
+
+-- @[green]int@[green]:
+   
+   @[green]uint8@[green]: type ID (0x01, DAO_INTEGER);
+
+   @[green]int@[green]: integer value;
+
+
+-- @[green]float@[green]:
+   
+   @[green]uint8@[green]: type ID (0x02, DAO_FLOAT);
+
+   @[green]double@[green]: double value;
+
+
+-- @[green]double@[green]:
+   
+   @[green]uint8@[green]: type ID (0x03, DAO_DOUBLE);
+
+   @[green]double@[green]: double value;
+
+
+-- @[green]complex@[green]:
+   
+   @[green]uint8@[green]: type ID (0x04, DAO_COMPLEX);
+
+   @[green]double@[green]: double value, real part;
+
+   @[green]double@[green]: double value, imaginary part;
+
+
+-- @[green]long@[green]:
+   
+   @[green]uint8@[green]: type ID (0x05, DAO_LONG);
+
+   @[green]int@[green]: number of 256-base digits;
+
+   Variable number of bytes: list of digits (uint8);
+
+
+-- @[green]string@[green]:
+   
+   @[green]uint8@[green]: type ID (0x06, DAO_STRING);
+
+   @[green]uint8@[green]: char type (0 for WCS, 1 for MBS);
+
+   Variable number of bytes: list of characters (uint8 or uint32);
+
+
+-- @[green]enum@[green]:
+
+   @[green]uint8@[green]: type ID (0x07, DAO_ENUM);
+
+   @[green]uint16@[green]: type reference number;
+
+   @[green]uint32@[green]: value;
+
+
+-- @[green]array@[green]:
+
+   @[green]uint8@[green]: type ID (0x08, DAO_ARRAY);
+
+   @[green]uint8@[green]: numeric type ID (for int, float, double or complex);
+
+   @[green]int@[green]: total number of elements;
+
+   @[green]uint16@[green]: number of dimensions;
+
+   Variable number of bytes: list of dimension sizes (int);
+
+   Variable number of bytes: list of elements (int, float, double or complex);
+
+
+-- @[green]list@[green]:
+
+   @[green]uint8@[green]: type ID (0x09, DAO_LIST);
+
+   @[green]uint16@[green]: type reference number;
+
+   @[green]int@[green]: number of items;
+
+   Variable number of bytes: list of value reference numbers;
+
+
+-- @[green]map@[green]:
+
+   @[green]uint8@[green]: type ID (0x0A, DAO_MAP);
+
+   @[green]uint8@[green]: subtype (0x0 for map; 0x1 for hash);
+
+   @[green]uint16@[green]: type reference number;
+
+   @[green]int@[green]: number of items;
+
+   Variable number of bytes: list of value reference numbers;
+
+
+-- @[green]tuple@[green]:
+
+   @[green]uint8@[green]: type ID (0x0B, DAO_ARRAY);
+
+   @[green]uint16@[green]: type reference number;
+
+   @[green]int@[green]: number of items;
+
+   Variable number of bytes: list of value reference numbers;
+
+
+-- Class instance:
+
+   @[green]uint8@[green]: type ID (0x0C, DAO_OBJECT);
+
+   @[green]uint8@[green]: partial or complete (0x0 for complete and 0x1 for partial);
+
+   @[green]uint16@[green]: type reference number;
+
+
+   For partial instance (which is embedded in another instance),
+   it has only two more fields:
+
+   @[green]uint16@[green]: value offset;
+
+   @[green]uint16@[green]: value reference number for its host object;
+
+
+   For complete instance, it has the following additional fields:
+
+   @[green]uint16@[green]: number of values;
+
+   Variable number of bytes: list of value reference numbers;
+
+
+-- Routine:
+
+   @[green]uint8@[green]: type ID (0x11, DAO_ROUTINE);
+
+   @[green]uint16@[green]: scope object reference number for the routine;
+
+   @[green]uint16@[green]: type reference number for the routine type;
+
+
+-- Routine, class, ctype, interface and namespace:
+
+   @[green]uint8@[green]: type ID (DAO_ROUTINE, DAO_CLASS, ...);
+
+   @[green]uint16@[green]: scope object reference number;
+
+
+-- Imported value from loaded module:
+
+	@[green]uint8@[green]: 0xFF;
+
+	@[green]uint32@[green]: lookup index for values from loaded modules;
+
 @[list]
+
+
+
 
 Example,
 @[code(dao)]
-00 23          # uint16, number of global constants: 0x23;
-01             # uint8, value type id: integer;
-00 1F 22 12    # int, value: 0x1f2212;
-02             # uint8, value type id: float;
-00 00 00...    # double;
-03             # uint8, value type id: double;
-00 00 00...    # double;
-04             # uint8, value type id: complex;
-00 00 00...    # double;
-00 00 00...    # double;
-05             # uint8, value type id: long;
-00 00 00 30    # int, length: 0x30;
-...            # 0x30 bytes;
-06             # uint8, value type id: string;
-01             # uint8, string type: 0, WCS; 1, MBS;
-00 00 00 30    # int, length: 0x30;
-...            # 0x30 bytes;
-07             # uint8, value type id: enum;
-00 00 00 02    # uint32, value: 0x2;
+00 00 00 23     # uint32, number of values: 0x23;
+01              # uint8, value type id: integer;
+00 15 23 12     # int, value: 0x152312;
+02              # uint8, value type id: float;
+00 00 00...     # double;
+03              # uint8, value type id: double;
+00 00 00...     # double;
+04              # uint8, value type id: complex;
+00 00 00...     # double;
+00 00 00...     # double;
+05              # uint8, value type id: long;
+00 00 00 30     # int, length: 0x30;
+...             # 0x30 bytes;
+06              # uint8, value type id: string;
+01              # uint8, string type: 0, WCS; 1, MBS;
+00 00 00 30     # int, length: 0x30;
+...             # 0x30 bytes;
+07              # uint8, value type id: enum;
+01 02           # uint16, type reference number for enum<true,false>;
+00 00 00 02     # uint32, value: 0x2;
 @[code(dao)]
+
+
+
+
+@[subsection]
+Global Constants
+@[subsection]
+
+
+@[code(dao)]
+00 12           # uint16, number of global constants: 0x12;
+00 10           # uint16, identifier reference number for the constant name;
+00 01           # uint16, value reference number for the constant;
+00 15           # uint16, identifier reference number for the constant name;
+00 03           # uint16, value reference number for the constant;
+...
+@[code(dao)]
+
+
+@[subsection]
+Global Variables
+@[subsection]
+
+Example,
+@[code(dao)]
+00 23           # uint16, number of global variables: 0x23;
+00 11           # uint16, identifier reference number for the constant name;
+00 02           # uint16, value reference number for the variable;
+00 14           # uint16, identifier reference number for the constant name;
+00 05           # uint16, value reference number for the variable;
+...
+@[code(dao)]
+
+
+
+
+@[subsection]
+Interfaces
+@[subsection]
+
+Example,
+@[code(dao)]
+00 01           # uint16: number of interfaces;
+00 09           # uint16: scope object reference number to the interface;
+00 01           # uint16: number of parent interfaces;
+00 08           # uint16: scope object reference number to the parent interface;
+00 02           # uint16: number of abstract methods;
+00 05           # uint16: identifier reference number to the method name;
+00 0A           # uint16: type reference number to the routine type;
+00 05           # uint16: identifier reference number to the method name;
+00 0B           # uint16: type reference number to the routine type;
+@[code(dao)]
+
+
+@[subsection]
+Classes
+@[subsection]
+
+Example,
+@[code(dao)]
+00 01           # uint16, number of classes: 0x1;
+00 09           # uint16: scope object reference number to the class;
+00 01           # uint16: number of parent classs;
+00 08           # uint16: scope object reference number to the parent class;
+00 02           # uint16: number of methods;
+00 05           # uint16: identifier reference number to the method name;
+00 0A           # uint16: type reference number to the routine type;
+00 03           # uint16: scope object reference number to the routine;
+00 05           # uint16: identifier reference number to the method name;
+00 0B           # uint16: type reference number to the routine type;
+00 04           # uint16: scope object reference number to the routine;
+@[code(dao)]
+
+
+
+
+@[subsection]
+Routines
+@[subsection]
+
+Example,
+@[code(dao)]
+00 01           # uint16, number of routines: 0x1;
+@[code(dao)]
+
+
 
 @[text]

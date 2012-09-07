@@ -357,8 +357,9 @@ static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, i
 	daoint pos, last = 0;
 	text = DString_Copy( text );
 	DString_ToWCS( text );
+	DString_ChangeWCS( text, L"[\n][ \t]+[\n]", L"\n\n", 0 );
+	DString_ChangeWCS( text, L"[\n][ \t]+[\n]", L"\n\n", 0 );
 	DString_ChangeWCS( text, L"(^|[^\n])[\n]([^\n]|$)", L"%1 %2", 0 );
-	DString_ChangeWCS( text, L"[\n][ \t]*[\n]", L"\n\n", 0 );
 	DString_ChangeWCS( text, L"[ \t]+", L" ", 0 );
 	pos = DString_FindWChar( text, L'\n', 0 );
 	while( last < text->size ){
