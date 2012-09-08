@@ -1021,7 +1021,7 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 					DaoxStream_WriteNewLine( self, "" );
 				}
 				DaoxStream_SetColor( self, dao_colors[DAOX_RED], dao_colors[bgcolorid] );
-				DaoxStream_WriteMBS( self, " " );
+				if( self->section < 10 ) DaoxStream_WriteMBS( self, " " );
 				DaoxStream_WriteInteger( self, self->section );
 				if( self->subsect ){
 					DaoxStream_WriteMBS( self, "." );
