@@ -35,6 +35,8 @@ typedef struct DaoByteDecoder  DaoByteDecoder;
 
 struct DaoByteEncoder
 {
+	DaoNamespace  *nspace;
+
 	daoint    valueCount;
 
 	DString  *header;
@@ -52,7 +54,9 @@ struct DaoByteEncoder
 
 	DString  *valueBytes;
 	DArray   *lookups;      /* <daoint> */
+	DArray   *lookups2;     /* <daoint> */
 	DArray   *names;        /* <DString*> (not managed); */
+	DArray   *names2;       /* <DString*> (not managed); */
 
 	DMap  *mapIdentifiers;  /* <DString*,daoint> */
 	DMap  *mapScobjects;    /* <DaoValue*,daoint> */
