@@ -4808,7 +4808,7 @@ static DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DStri
 }
 int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 {
-	DaoNamespace *ns, *mod, *nameSpace = self->nameSpace;
+	DaoNamespace *mod = NULL, *nameSpace = self->nameSpace;
 	DaoRoutine *mainRout = nameSpace->mainRoutine;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoClass *hostClass = self->hostClass;
@@ -4846,20 +4846,8 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		i += 2;
 	}
 
-	ns = nameSpace;
-	if( modname != NULL ){
-		ns = DaoNamespace_New( vmSpace, DString_GetMBS( modname ) );
-		value = (DaoValue*) ns;
-		if( hostClass && self->isClassBody ){
-			DaoClass_AddConst( hostClass, modname, value, perm, tokens[i-1]->line );
-		}else{
-			DaoNamespace_AddConst( nameSpace, modname, value, perm );
-		}
-	}
-	mod = NULL;
-
-	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) ==NULL ){
-		DaoModuleLoader loader = DaoNamespace_FindModuleLoader2( ns, self->mbs );
+	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) == NULL ){
+		DaoModuleLoader loader = DaoNamespace_FindModuleLoader2( nameSpace, self->mbs );
 		/* self->mbs could be changed during loading */
 		DString_Assign( self->str, self->mbs );
 		if( loader ){
@@ -4886,15 +4874,19 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 
 	nameSpace->mainRoutine = mainRout;
 	DaoNamespace_SetConst( nameSpace, DVR_NSC_MAIN, (DaoValue*) mainRout );
-	if( mod == 0 ){
+	if( mod == NULL ){
 		code = DAO_CTW_LOAD_FAILED;
 		if( vmSpace->stopit ) code = DAO_CTW_LOAD_CANCELLED;
 		goto ErrorLoad;
 	}
 	if( modname == NULL ){
 		cyclic = (DaoNamespace_AddParent( nameSpace, mod ) == 0);
-	}else if( ns != mod ){
-		cyclic = (DaoNamespace_AddParent( ns, mod ) == 0);
+	}else if( hostClass && self->isClassBody ){
+		value = (DaoValue*) mod;
+		DaoClass_AddConst( hostClass, modname, value, perm, tokens[i-1]->line );
+	}else{
+		value = (DaoValue*) mod;
+		DaoNamespace_AddConst( nameSpace, modname, value, perm );
 	}
 	if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
 

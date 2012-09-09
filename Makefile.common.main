@@ -24,6 +24,7 @@ DAO_OBJECTS = kernel/daoArray.o \
               kernel/daoMacro.o \
               kernel/daoLexer.o \
               kernel/daoParser.o \
+              kernel/daoBytecode.o \
               kernel/daoOptimizer.o \
               kernel/daoThread.o \
               kernel/daoNumtype.o \

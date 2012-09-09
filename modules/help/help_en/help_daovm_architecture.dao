@@ -98,8 +98,8 @@ type double     # IEEE 754 double;
 
 def short_string
 {
-	uint16      # string length (including the null char at the end);
-	int8[]      # array characters terminated by a null charater 0x0;
+	uint16      # string length;
+	int8[]      # character array;
 }
 @[code(dao)]
 
@@ -112,7 +112,6 @@ A Dao binary bytecode file will contain the following sections:
 ==@[green]Identifiers@[green]: identifiers used in the file;
 ==@[green]Scoping Objects@[green]: forward declaration of routines and classes etc.;
 ==@[green]Types@[green]: declaration of types;
-==@[green]Type Aliases@[green]: declaration of type aliasing;
 ==@[green]Values@[green]: all the values used in the file;
 ==@[green]Global Constants@[green]:
 ==@[green]Global Variables@[green]:
@@ -172,7 +171,7 @@ def Source
 Example,
 @[code(dao)]
 00 09            # uint16, source name length in bytes;
-"test.dao\0"     # variable number of bytes;
+"test.dao"       # variable number of bytes;
 @[code(dao)]
 
 
@@ -195,10 +194,10 @@ Example,
 00 02            # uint16, number of loaded modules;
 
 00 0C            # uint16, length of the first module name/path;
-"module1.dao\0"  # variable number of bytes;
+"module1.dao"    # variable number of bytes;
 
 00 0C            # uint16, length of the second module name/path;
-"module2.dao\0"  # variable number of bytes;
+"module2.dao"    # variable number of bytes;
 @[code(dao)]
 
 
@@ -224,26 +223,26 @@ Example,
 @[code(dao)]
 00 05           # uint16, number of identifiers;
 
-00 05           # uint16, identifier length + 1;
-"true\0"        # variable number of bytes;
+00 05           # uint16, identifier length;
+"true"        # variable number of bytes;
 
-00 06           # uint16, identifier length + 1;
-"false\0"       # variable number of bytes;
+00 06           # uint16, identifier length;
+"false"       # variable number of bytes;
 
-00 06           # uint16, identifier length + 1;
-"short\0"       # variable number of bytes;
+00 06           # uint16, identifier length;
+"short"       # variable number of bytes;
 
-00 09           # uint16, identifier length + 1;
-"Drawable\0"    # variable number of bytes;
+00 09           # uint16, identifier length;
+"Drawable"    # variable number of bytes;
 
-00 09           # uint16, identifier length + 1;
-"DrawLine\0"    # variable number of bytes;
+00 09           # uint16, identifier length;
+"DrawLine"    # variable number of bytes;
 
-00 06           # uint16, identifier length + 1;
-"Klass\0"       # variable number of bytes;
+00 06           # uint16, identifier length;
+"Klass"       # variable number of bytes;
 
-00 05           # uint16, identifier length + 1;
-"Test\0"        # variable number of bytes;
+00 05           # uint16, identifier length;
+"Test"        # variable number of bytes;
 ...
 @[code(dao)]
 
@@ -304,36 +303,16 @@ Example,
 Types
 @[section]
 
-All the types are referenced by unsigned short integer (uint16).
-The numbers smaller than 256 are all reserved for direct referencing.
-Zero is used to indicate unspecified type.
-Primitive types and some special types are directly referenced by 
-the following reserved numbers:
-@[list]
---@[red]0x1@[red]: @[green]integer@[green];
---@[red]0x2@[red]: @[green]float@[green];
---@[red]0x3@[red]: @[green]double@[green];
---@[red]0x4@[red]: @[green]complex@[green];
---@[red]0x5@[red]: @[green]long@[green];
---@[red]0x6@[red]: @[green]string@[green];
---@[red]0x10@[red]: @[green]process@[green];
---@[red]0x11@[red]: @[green]namespace@[green];
---@[red]0x20@[red]: @[green]none@[green];
---@[red]0x21@[red]: @[green]any@[green];
---@[red]0x22@[red]: @[green]?@[green], undefined type;
---@[red]0x40@[red]: @[green]...@[green], variadic parameter;
-@[list]
-
 
 The type section will declare a list of types
-which will be referenced by 0xFF plus its 1-based index in this section.
+which can be referenced by their 1-based 16-bit integer indices in this section.
+Zero is used to indicate a unspecified type.
 Each type is declared with one byte for its internal type ID,
 and two bytes for its declaration scope,
 followed by addition information.
 
 
 Type declaration formats:
-
 @[code(dao)]
 # Core types: none, integer, float, ..., string:
 def CoreType 
@@ -349,7 +328,10 @@ def EnumType
 	uint16      # scoping object reference number;
 	uint8       # sub type, 0 for normal enums, 1 for flags;
 	uint16      # number of symbols;
-	uint16[]    # list of symbols: identifier reference numbers;
+	{
+		uint16  # identifier reference number to the symbol;
+		uint32  # values associated with the symbol;
+	}[]         # list of symbols;
 }
 
 # Array, List, Map, Tuple, Variant type:
@@ -401,7 +383,7 @@ def InterfaceType
 {
 	uint8       # type id (DAO_CLASS);
 	uint16      # scoping object reference number;
-	uint16      # identifier reference number for the interface name;
+	uint16      # scoping object reference number for the interface;
 }
 
 # Class type:
@@ -409,7 +391,7 @@ def ClassType
 {
 	uint8       # type id (DAO_CLASS);
 	uint16      # scoping object reference number;
-	uint16      # identifier reference number for the class name;
+	uint16      # scoping object reference number for the class;
 }
 
 # Class instance type:
@@ -417,7 +399,7 @@ def ClassInstanceType
 {
 	uint8       # type id (DAO_OBJECT);
 	uint16      # scoping object reference number;
-	uint16      # type reference number to the class type;
+	uint16      # scoping object reference number for the class;
 }
 
 # Ctype type:
@@ -425,7 +407,7 @@ def CtypeType
 {
 	uint8       # type id (DAO_CTYPE);
 	uint16      # scoping object reference number;
-	uint16      # identifier reference number for the ctype name;
+	uint16      # scoping object  reference number for the ctype;
 }
 
 # Cdata type:
@@ -433,7 +415,7 @@ def CdataType
 {
 	uint8       # type id (DAO_CDATA);
 	uint16      # scoping object reference number;
-	uint16      # type reference number to the ctype type;
+	uint16      # scoping object  reference number for the ctype;
 }
 
 # Type type:
@@ -450,6 +432,15 @@ def FutureValueType
 	uint8       # type id (DAO_FUTURE);
 	uint16      # scoping object reference number;
 	uint16      # type reference number to the value type;
+}
+
+# Aliased type:
+def AliasedType
+{
+	uint8       # pseudo type id for aliasing: 0xFF;
+	uint16      # scoping object reference number;
+	uint16      # identifier reference number;
+	uint16      # type reference number to the type;
 }
 @[code(dao)]
 
@@ -473,31 +464,6 @@ Example,
 
 
 @[section]
-Type Aliases
-@[section]
-
-@[code(dao)]
-def TypeAlias
-{
-	uint16      # identifier reference number for the alias name;
-	uint16      # type reference number;
-}
-
-def TypeAliases 
-{
-	uint16       # number of type aliases;
-	TypeAlias[]  # list of type aliases;
-}
-@[code(dao)]
-
-@[code(dao)]
-00 01           # uint16, number of type aliases;
-00 02           # uint16, identifier reference number for "short";
-00 01           # uint16, type reference number of "int";
-@[code(dao)]
-
-
-@[section]
 Values
 @[section]
 
@@ -518,8 +484,8 @@ def NoneValue
 # int:
 def IntValue 
 {   
-   uint8      # type ID (0x01, DAO_INTEGER);
-   int      # integer value;
+   uint8        # type ID (0x01, DAO_INTEGER);
+   int          # integer value;
 }
 
 # float:
@@ -548,6 +514,7 @@ def ComplexValue
 def LongValue
 {   
    uint8        # type ID (0x05, DAO_LONG);
+   uint8        # sign, 0 for positive, 1 for negative;
    int          # number of 256-base digits;
    uint8[]      # list of digits;
 }
@@ -585,7 +552,7 @@ def ListValue
    uint8        # type ID (0x09, DAO_LIST);
    uint16       # type reference number;
    int          # number of items;
-   uint32       # list of value reference numbers;
+   uint32[]     # list of value reference numbers;
 }
 
 # map:
@@ -595,7 +562,7 @@ def MapValue
    uint8        # subtype (0x0 for map; 0x1 for hash);
    uint16       # type reference number;
    int          # number of items;
-   uint32       # list of value reference numbers;
+   uint32[]     # list of value reference numbers;
 }
 
 # tuple:
@@ -604,7 +571,7 @@ def TupleValue
    uint8        # type ID (0x0B, DAO_ARRAY);
    uint16       # type reference number;
    int          # number of items;
-   uint32       # list of value reference numbers;
+   uint32[]     # list of value reference numbers;
 }
 
 # Class instance:
@@ -894,6 +861,7 @@ def Routine
 	uint16      # scoping object reference number to the host of the routine;
 	uint16      # identifier reference number to the routine name;
 	uint16      # type reference number to the routine type;
+	uint16      # attributes;
 	uint16      # line of definition;
 	uint16      # number of local constants;
 	uint32[]    # list of value reference numbers for the constants;
