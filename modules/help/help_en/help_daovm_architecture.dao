@@ -110,14 +110,15 @@ A Dao binary bytecode file will contain the following sections:
 ==@[green]Source@[green]: path and file name of the source;
 ==@[green]Modules@[green]: modules need to be loaded;
 ==@[green]Identifiers@[green]: identifiers used in the file;
-==@[green]Scoping Objects@[green]: forward declaration of routines and classes etc.;
+==@[green]Declarations@[green]: forward declaration of routines and classes etc.;
 ==@[green]Types@[green]: declaration of types;
 ==@[green]Values@[green]: all the values used in the file;
-==@[green]Global Constants@[green]:
-==@[green]Global Variables@[green]:
-==@[green]Interfaces@[green]:
-==@[green]Classes@[green]:
-==@[green]Routines@[green]:
+==@[green]Global Constants@[green]: global constants;
+==@[green]Global Variables@[green]: global variables;
+==@[green]Global Types@[green]: global types;
+==@[green]Interfaces@[green]: interface definitions;
+==@[green]Classes@[green]: class definitions;
+==@[green]Routines@[green]: routine definitions;
 @[list]
 
 
@@ -248,54 +249,46 @@ Example,
 
 
 @[section]
-Scoping Objects
+Declarations
 @[section]
 
 
-Forward declarations of scoping objects such as classes, interfaces, routines,
-ctype and namespace, and their scoping relationships.
-Each scoping object is referenced by an unsigned 16-bit integer,
-with 0x0000 reserved for the current top level scoping object (namely, the current namespace).
-Scope objects listed in this section should be referenced by the 1-base
-index of their declaration in this section.
+Forward declarations of classes, interfaces, routines, ctype and namespace etc.
+Each declaration is referenced by an unsigned 16-bit integer,
+with 0x0000 reserved for the current namespace.
+Scope objects listed in this section should be referenced by the 1-base index in this section.
 
 
-Each scoping object is declared with the following fields:
+Each declaration entry has the following fields:
 @[code(dao)]
 def ScopingObject
 {
-	uint8       # scoping object type (internal type ID);
+	uint8       # object type (internal type ID);
 	uint8       # flag (0x0 for creating, or 0x1 for searching);
 	uint16      # identifier reference number for the scope name;
-	uint16      # scoping object reference number to the host;
-	            # For example, for nested classes, this field can be used to
-	            # store the scoping object reference number to outer classes.
 }
 def ScopingObjects 
 {
-	uint16           # number of scoping objects;
-	ScopingObject[]  # list of scoping objects;
+	uint16           # number of declarations;
+	ScopingObject[]  # list of declarations;
 }
 @[code(dao)]
 
 Example,
 @[code(dao)]
-00 03           # uint16, number of scoping objects;
+00 03           # uint16, number of declarations;
 
-0E              # uint8, scoping object type (internal type ID for class);
+0E              # uint8, object type (internal type ID for class);
 00              # uint8, new class to be created;
 00 06           # uint16, identifier reference number for the class name;
-00 00           # uint16, scoping object reference number to the host;
 
-0E              # uint8, scoping object type (internal type ID for class);
+0E              # uint8, object type (internal type ID for class);
 00              # uint8, new nested class to be created;
 00 07           # uint16, identifier reference number for the class name;
-00 01           # uint16, scoping object reference number to the host;
 
-0F              # uint8, scoping object type (internal type ID for ctype);
+0F              # uint8, object type (internal type ID for ctype);
 01              # uint8, ctype to be found in loaded modules;
 00 08           # uint16, identifier reference number for the ctype name;
-00 00           # uint16, scoping object reference number to the host;
 @[code(dao)]
 
 
@@ -308,8 +301,10 @@ The type section will declare a list of types
 which can be referenced by their 1-based 16-bit integer indices in this section.
 Zero is used to indicate a unspecified type.
 Each type is declared with one byte for its internal type ID,
-and two bytes for its declaration scope,
+and two bytes of identifier reference number for its type name, 
 followed by addition information.
+A zero identifier reference number indicates the type has default
+name that will be constructed from the type information.
 
 
 Type declaration formats:
@@ -318,14 +313,14 @@ Type declaration formats:
 def CoreType 
 {
 	uint8       # type id (DAO_NONE, DAO_INTEGER, ...);
-	uint16      # scoping object reference number;
+	uint16      # identifier reference number to the type name;
 }
 
 # Enum type:
 def EnumType 
 {
 	uint8       # type id (DAO_ENUM);
-	uint16      # scoping object reference number;
+	uint16      # identifier reference number to the type name;
 	uint8       # sub type, 0 for normal enums, 1 for flags;
 	uint16      # number of symbols;
 	{
@@ -337,17 +332,17 @@ def EnumType
 # Array, List, Map, Tuple, Variant type:
 def CollectionOrVariantType
 {
-   uint8        # type id (DAO_ARRAY, DAO_LIST, ...);
-   uint16       # scoping object reference number;
-   uint16       # number of item types;
-   uint16[]     # list of item types: type reference numbers;
+	uint8       # type id (DAO_ARRAY, DAO_LIST, ...);
+	uint16      # identifier reference number to the type name;
+	uint16      # number of item types;
+	uint16[]    # list of item types: type reference numbers;
 }
 
 # Value type:
 def ValueType
 {
 	uint8       # type id (DAO_VALTYPE);
-	uint16      # scoping object reference number;
+	uint16      # identifier reference number to the type name;
 	uint32      # value reference number for the value;
 }
 
@@ -355,8 +350,8 @@ def ValueType
 def NameParamType
 {
 	uint8       # type id (DAO_PAR_NAMED or DAO_PAR_DEFAULT);
-	uint16      # scoping object reference number;
-	uint16      # identifier reference number;
+	uint16      # identifier reference number to the type name;
+	uint16      # identifier reference number to the parameter name;
 	uint16      # type reference number;
 }
 
@@ -364,15 +359,14 @@ def NameParamType
 def TypeHolderType
 {
 	uint8       # type id (DAO_THT);
-	uint16      # scoping object reference number;
-	uint16      # identifier reference number;
+	uint16      # identifier reference number to the type name;
 }
 
 # Routine types:
 def RoutineType
 {
 	uint8       # type id (DAO_ROUTINE);
-	uint16      # scoping object reference number;
+	uint16      # identifier reference number to the type name;
 	uint16      # type reference number to the return type;
 	uint16      # number of item types;
 	uint16[]    # list of item types: type reference numbers;
@@ -382,47 +376,47 @@ def RoutineType
 def InterfaceType
 {
 	uint8       # type id (DAO_CLASS);
-	uint16      # scoping object reference number;
-	uint16      # scoping object reference number for the interface;
+	uint16      # identifier reference number to the type name;
+	uint16      # declaration reference number for the interface;
 }
 
 # Class type:
 def ClassType
 {
 	uint8       # type id (DAO_CLASS);
-	uint16      # scoping object reference number;
-	uint16      # scoping object reference number for the class;
+	uint16      # identifier reference number to the type name;
+	uint16      # declaration reference number for the class;
 }
 
 # Class instance type:
 def ClassInstanceType
 {
 	uint8       # type id (DAO_OBJECT);
-	uint16      # scoping object reference number;
-	uint16      # scoping object reference number for the class;
+	uint16      # identifier reference number to the type name;
+	uint16      # declaration reference number for the class;
 }
 
 # Ctype type:
 def CtypeType
 {
 	uint8       # type id (DAO_CTYPE);
-	uint16      # scoping object reference number;
-	uint16      # scoping object  reference number for the ctype;
+	uint16      # identifier reference number to the type name;
+	uint16      # declaration reference number for the ctype;
 }
 
 # Cdata type:
 def CdataType
 {
 	uint8       # type id (DAO_CDATA);
-	uint16      # scoping object reference number;
-	uint16      # scoping object  reference number for the ctype;
+	uint16      # identifier reference number to the type name;
+	uint16      # declaration reference number for the ctype;
 }
 
 # Type type:
 def TypeType
 {
 	uint8       # type id (DAO_TYPE);
-	uint16      # scoping object reference number;
+	uint16      # identifier reference number to the type name;
 	uint16      # type reference number to the type;
 }
 
@@ -430,17 +424,8 @@ def TypeType
 def FutureValueType 
 {
 	uint8       # type id (DAO_FUTURE);
-	uint16      # scoping object reference number;
+	uint16      # identifier reference number to the type name;
 	uint16      # type reference number to the value type;
-}
-
-# Aliased type:
-def AliasedType
-{
-	uint8       # pseudo type id for aliasing: 0xFF;
-	uint16      # scoping object reference number;
-	uint16      # identifier reference number;
-	uint16      # type reference number to the type;
 }
 @[code(dao)]
 
@@ -448,15 +433,16 @@ def AliasedType
 Example,
 @[code(dao)]
 00 06           # uint16, number of types: 0x6;
-02 00 00        # uint8 + uint16, float type in the default scope;
-06 00 00        # uint8 + uint16, string type in the default scope;
-07 00           # uint8 + uint8, enum type, non-flag type: enum<true,false>;
-00 00           # uint16, scoping object reference number;
+02 00 00        # uint8 + uint16, float type with default name;
+06 00 00        # uint8 + uint16, string type with default name;
+07              # uint8, enum type
+00 02           # uint16, type name;
+00              # uint8, non-flag type: enum<true,false>;
 00 02           # uint16, number of items: 2;
 00 01           # uint16, identifier reference number for "true";
 00 02           # uint16, identifier reference number for "false";
 08              # uint8, array type; array<float>;
-00 00           # uint16, scoping object reference number;
+00 03           # uint16, type name;
 00 01           # uint16, number of items: 1;
 00 02           # uint16, type reference number for float;
 @[code(dao)]
@@ -600,7 +586,7 @@ def PartialClassInstanceValue
 def RoutineValue
 {
    uint8        # type ID (0x11, DAO_ROUTINE);
-   uint16       # scoping object reference number for the routine;
+   uint16       # declaration reference number for the routine;
    uint16       # type reference number for the routine type;
 }
 
@@ -608,7 +594,7 @@ def RoutineValue
 def ClassCtypeInterfaceNamespaceValue
 {
    uint8        # type ID (DAO_ROUTINE, DAO_CLASS, ...);
-   uint16       # scoping object reference number;
+   uint16       # declaration reference number;
 }
 
 # Type value:
@@ -679,7 +665,7 @@ def Constant
 
 def GlobalConstants
 {
-	uint16      # number of global constants: 0x12;
+	uint16      # number of global constants;
 	Constant[]  # list of constants;
 }
 @[code(dao)]
@@ -720,7 +706,7 @@ def Variable
 
 def GlobalVariables
 {
-	uint16      # number of global variables: 0x12;
+	uint16      # number of global variables;
 	Variable[]  # list of variables;
 }
 @[code(dao)]
@@ -744,6 +730,29 @@ Example,
 
 
 @[section]
+Global Types
+@[section]
+
+Each global type declaration is encoded in the following format,
+@[code(dao)]
+def Type
+{
+	uint16      # identifier reference number for the type name;
+	uint16      # type reference number for the type;
+}
+
+def GlobalTypes
+{
+	uint16      # number of global types;
+	Type[]      # list of types;
+}
+@[code(dao)]
+
+
+
+
+
+@[section]
 Interfaces
 @[section]
 
@@ -752,11 +761,11 @@ Each interface is declared with the following fields:
 @[code(dao)]
 def Interface 
 {
-	uint16      # scoping object reference number to the interface;
+	uint16      # declaration reference number to the interface;
 	uint16      # number of parent interfaces;
-	uint16      # list of scoping object reference numbers to parents;
+	uint16[]    # list of declaration reference numbers to parents;
 	uint16      # number of abstract methods;
-	uint32      # list of value reference numbers to the methods;
+	uint32[]    # list of value reference numbers to the methods;
 }
 
 def Interfaces 
@@ -770,9 +779,9 @@ def Interfaces
 Example,
 @[code(dao)]
 00 01           # uint16: number of interfaces;
-00 09           # uint16: scoping object reference number to the interface;
+00 09           # uint16: declaration reference number to the interface;
 00 01           # uint16: number of parent interfaces;
-00 08           # uint16: scoping object reference number to the parent interface;
+00 08           # uint16: declaration reference number to the parent interface;
 00 02           # uint16: number of abstract methods;
 00 00 00 09     # uint32: value reference number to the abstract method;
 00 00 00 11     # uint32: value reference number to the abstract method;
@@ -788,15 +797,17 @@ Each class is declared in the following format:
 @[code(dao)]
 def Class 
 {
-	uint16      # scoping object reference number to the class;
+	uint16      # declaration reference number to the class;
 	uint16      # number of parent classs;
-	uint16[]    # list of scoping object reference numbers to the parents;
+	uint16[]    # list of declaration reference numbers to the parents;
 	uint16      # number of constants (including methods);
-	Constant[]  # list of constants in the same foramt as global constants;
+	Constant[]  # list of constants in the same format as global constants;
 	uint16      # number of static varaibles;
-	Variable[]  # list of variables in the same foramt as global variables;
+	Variable[]  # list of variables in the same format as global variables;
 	uint16      # number of instance varaibles;
-	Variable[]  # list of variables in the same foramt as global variables;
+	Variable[]  # list of variables in the same format as global variables;
+	uint16      # number of types in the class scope;
+	Type[]      # list of types;
 }
 
 def Classes 
@@ -810,9 +821,9 @@ def Classes
 Example,
 @[code(dao)]
 00 01           # uint16, number of classes: 0x1;
-00 09           # uint16: scoping object reference number to the class;
+00 09           # uint16: declaration reference number to the class;
 00 01           # uint16: number of parent classs;
-00 08           # uint16: scoping object reference number to the parent class;
+00 08           # uint16: declaration reference number to the parent class;
 00 02           # uint16: number of constants;
 00 10           # uint16, identifier reference number for the constant name;
 00              # uint8, public;
@@ -857,8 +868,8 @@ def Instruction
 
 def Routine 
 {
-	uint16      # scoping object reference number to the routine;
-	uint16      # scoping object reference number to the host of the routine;
+	uint16      # declaration reference number to the routine;
+	uint16      # declaration reference number to the host of the routine;
 	uint16      # identifier reference number to the routine name;
 	uint16      # type reference number to the routine type;
 	uint16      # attributes;

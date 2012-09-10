@@ -38,28 +38,32 @@ struct DaoByteEncoder
 	DaoNamespace  *nspace;
 
 	daoint    valueCount;
+	daoint    constCount;
+	daoint    varCount;
 
 	DString  *header;
 	DString  *source;
 	DString  *modules;
 	DString  *identifiers;
-	DString  *scobjects;
+	DString  *declarations;
 	DString  *types;
 	DString  *values;
 	DString  *constants;
 	DString  *variables;
+	DString  *glbtypes;
 	DString  *interfaces;
 	DString  *classes;
 	DString  *routines;
 
+	DString  *tmpBytes;
 	DString  *valueBytes;
 	DArray   *lookups;      /* <daoint> */
-	DArray   *lookups2;     /* <daoint> */
 	DArray   *names;        /* <DString*> (not managed); */
-	DArray   *names2;       /* <DString*> (not managed); */
+
+	DArray   *objects;      /* <DaoValue*> */
 
 	DMap  *mapIdentifiers;  /* <DString*,daoint> */
-	DMap  *mapScobjects;    /* <DaoValue*,daoint> */
+	DMap  *mapDeclarations; /* <DaoValue*,daoint> */
 	DMap  *mapTypes;        /* <DaoType*,daoint> */
 	DMap  *mapValues;       /* <DaoValue*,daoint> */
 	DMap  *mapValueBytes;   /* <DString*,daoint> */
@@ -81,7 +85,7 @@ struct DaoByteDecoder
 	DaoVmSpace  *vmspace;
 
 	DArray   *identifiers;  /* <DString*> */
-	DArray   *scobjects;    /* <DaoValue*> */
+	DArray   *declarations; /* <DaoValue*> */
 	DArray   *types;        /* <DaoType*> */
 	DArray   *values;       /* <DString*>: encoded values; */
 	DArray   *interfaces;   /* <DaoInterface*> */
