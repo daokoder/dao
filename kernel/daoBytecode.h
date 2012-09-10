@@ -74,7 +74,6 @@ struct DaoByteEncoder
 
 DaoByteEncoder* DaoByteEncoder_New();
 void DaoByteEncoder_Delete( DaoByteEncoder *self );
-void DaoByteEncoder_Reset( DaoByteEncoder *self );
 
 void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString *output );
 
@@ -82,7 +81,8 @@ void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString 
 
 struct DaoByteDecoder
 {
-	DaoVmSpace  *vmspace;
+	DaoVmSpace    *vmspace;
+	DaoNamespace  *nspace;
 
 	DArray   *identifiers;  /* <DString*> */
 	DArray   *declarations; /* <DaoValue*> */
@@ -91,13 +91,16 @@ struct DaoByteDecoder
 	DArray   *interfaces;   /* <DaoInterface*> */
 	DArray   *classes;      /* <DaoClass*> */
 	DArray   *routines;     /* <DaoRoutine*> */
+
+	DString  *string;
+
+	uchar_t  *codes;
 };
 
 
 DaoByteDecoder* DaoByteDecoder_New( DaoVmSpace *vmspace );
 void DaoByteDecoder_Delete( DaoByteDecoder *self );
-void DaoByteDecoder_Reset( DaoByteDecoder *self );
 
-DaoNamespace* DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input );
+int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *nspace );
 
 #endif

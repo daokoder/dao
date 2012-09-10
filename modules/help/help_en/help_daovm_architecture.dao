@@ -375,7 +375,7 @@ def RoutineType
 # Interface type:
 def InterfaceType
 {
-	uint8       # type id (DAO_CLASS);
+	uint8       # type id (DAO_INTERFACE);
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number for the interface;
 }
@@ -556,7 +556,7 @@ def TupleValue
 {
    uint8        # type ID (0x0B, DAO_ARRAY);
    uint16       # type reference number;
-   int          # number of items;
+   uint32       # number of items;
    uint32[]     # list of value reference numbers;
 }
 
