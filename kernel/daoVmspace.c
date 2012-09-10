@@ -39,6 +39,7 @@
 #include"daoNamespace.h"
 #include"daoVmspace.h"
 #include"daoParser.h"
+#include"daoBytecode.h"
 #include"daoStream.h"
 #include"daoRoutine.h"
 #include"daoNumtype.h"
@@ -131,15 +132,11 @@ static const char *const cmd_help =
 "   -e, --eval:           evaluate command line codes;\n"
 "   -d, --debug:          run in debug mode;\n"
 "   -i, --interactive:    run in interactive mode;\n"
+"   -c, --compile:        compile to bytecodes;\n"
 "   -l, --list-code:      print compiled bytecodes;\n"
 "   -j, --jit:            enable just-in-time compiling;\n"
 "   -Ox:                  optimization level (x=0 or 1);\n"
 ;
-/*
-   "   -s, --assembly:    generate assembly file;\n"
-   "   -b, --bytecode:    generate bytecode file;\n"
-   "   -c, --compile:     compile to bytecodes; (TODO)\n"
- */
 
 
 extern DaoTypeBase  baseTyper;
@@ -1071,6 +1068,23 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	DArray_Delete( argValues );
 
 	if( res == 0 ) return 0;
+
+	if( self->options & DAO_EXEC_COMP_BC ){
+		FILE *fout;
+		DString *bytecodes = DString_New(1);
+		DaoByteEncoder *encoder = DaoByteEncoder_New();
+
+		DString_Append( bytecodes, ns->name );
+		DString_AppendMBS( bytecodes, ".o" );
+		fout = fopen( bytecodes->mbs, "w+" );
+		bytecodes->size = 0;
+		DaoByteEncoder_Encode( encoder, ns, bytecodes );
+		DaoFile_WriteString( fout, bytecodes );
+		DaoByteEncoder_Delete( encoder );
+		DString_Delete( bytecodes );
+		fclose( fout );
+		return 1;
+	}
 
 	name = DString_New(1);
 	mainRoutine = ns->mainRoutine;

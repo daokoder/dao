@@ -139,34 +139,61 @@ void DaoByteEncoder_Reset( DaoByteEncoder *self )
 	DMap_Reset( self->mapRoutines );
 }
 
-void DString_AppendUInt8( DString *bytecodes, int value )
+#if 0
+#endif
+#define DEBUG_BC
+
+static void DString_AppendString( DString *bytecodes, DString *string )
+{
+	DString_Append( bytecodes, string );
+#ifdef DEBUG_BC
+	DString_AppendChar( bytecodes, '\n' );
+#endif
+}
+static void DString_AppendBytes( DString *bytecodes, const uchar_t *bytes, int n )
+{
+#ifdef DEBUG_BC
+	const char* hexdigits = "0123456789ABCDEF";
+	int i;
+	for(i=0; i<n; ++i){
+		DString_AppendChar( bytecodes, hexdigits[ bytes[i] >> 4 ] );
+		DString_AppendChar( bytecodes, hexdigits[ bytes[i] & 0xF ] );
+		DString_AppendChar( bytecodes, ' ' );
+	}
+	DString_AppendChar( bytecodes, '\n' );
+	return;
+#endif
+
+	DString_AppendDataMBS( bytecodes, (char*) bytes, n );
+}
+static void DString_AppendUInt8( DString *bytecodes, int value )
 {
 	uchar_t bytes[2];
-	bytes[0] = value && 0xFF;
-	DString_AppendDataMBS( bytecodes, (char*) bytes, 1 );
+	bytes[0] = value & 0xFF;
+	DString_AppendBytes( bytecodes, bytes, 1 );
 }
-void DString_AppendUInt16( DString *bytecodes, int value )
+static void DString_AppendUInt16( DString *bytecodes, int value )
 {
 	uchar_t bytes[2];
-	bytes[0] = (value >> 8) && 0xFF;
-	bytes[1] = value && 0xFF;
-	DString_AppendDataMBS( bytecodes, (char*) bytes, 2 );
+	bytes[0] = (value >> 8) & 0xFF;
+	bytes[1] = value & 0xFF;
+	DString_AppendBytes( bytecodes, bytes, 2 );
 }
-void DString_AppendUInt32( DString *bytecodes, uint_t value )
+static void DString_AppendUInt32( DString *bytecodes, uint_t value )
 {
 	uchar_t bytes[4];
-	bytes[0] = (value >> 24) && 0xFF;
-	bytes[1] = (value >> 16) && 0xFF;
-	bytes[2] = (value >>  8) && 0xFF;
-	bytes[3] = value && 0xFF;
-	DString_AppendDataMBS( bytecodes, (char*) bytes, 4 );
+	bytes[0] = (value >> 24) & 0xFF;
+	bytes[1] = (value >> 16) & 0xFF;
+	bytes[2] = (value >>  8) & 0xFF;
+	bytes[3] = value & 0xFF;
+	DString_AppendBytes( bytecodes, bytes, 4 );
 }
-void DString_AppendDaoInt( DString *bytecodes, daoint value )
+static void DString_AppendDaoInt( DString *bytecodes, daoint value )
 {
 	uchar_t i, bytes[8];
 	uchar_t m = sizeof(daoint);
-	for(i=0; i<m; ++i) bytes[i] = (value >> 8*(m-1-i)) && 0xFF;
-	DString_AppendDataMBS( bytecodes, (char*) bytes, m );
+	for(i=0; i<m; ++i) bytes[i] = (value >> 8*(m-1-i)) & 0xFF;
+	DString_AppendBytes( bytecodes, bytes, m );
 }
 /*
 // IEEE 754 double-precision binary floating-point format:
@@ -180,17 +207,17 @@ void DString_AppendDaoInt( DString *bytecodes, daoint value )
 // Exponents 0x7FF is used to represent inf (if F=0) and NaNs (if F!=0);
 // Where F is the fraction mantissa.
 */
-void DString_AppendNaN( DString *bytecodes )
+static void DString_AppendNaN( DString *bytecodes )
 {
 	DString_AppendUInt32( bytecodes, 0x7FF << 20 );
 	DString_AppendUInt32( bytecodes, 1 );
 }
-void DString_AppendInf( DString *bytecodes )
+static void DString_AppendInf( DString *bytecodes )
 {
 	DString_AppendUInt32( bytecodes, 0x7FF << 20 );
 	DString_AppendUInt32( bytecodes, 0 );
 }
-void DString_AppendDouble( DString *bytecodes, double value )
+static void DString_AppendDouble( DString *bytecodes, double value )
 {
 	uint_t i = 20, m1 = 0, m2 = 0;
 	int first = 1;
@@ -228,7 +255,7 @@ void DString_AppendDouble( DString *bytecodes, double value )
 	DString_AppendUInt32( bytecodes, m1 );
 	DString_AppendUInt32( bytecodes, m2 );
 }
-void DString_AppendComplex( DString *bytecodes, complex16 value )
+static void DString_AppendComplex( DString *bytecodes, complex16 value )
 {
 	DString_AppendDouble( bytecodes, value.real );
 	DString_AppendDouble( bytecodes, value.imag );
@@ -241,7 +268,7 @@ int DaoByteEncoder_EncodeIdentifier( DaoByteEncoder *self, DString *name )
 	if( node ) return (int) node->value.pInt;
 	DMap_Insert( self->mapIdentifiers, name, IntToPointer( self->mapIdentifiers->size + 1 ) );
 	DString_AppendUInt16( self->identifiers, name->size );
-	DString_Append( self->identifiers, name );
+	DString_AppendString( self->identifiers, name );
 	return self->mapIdentifiers->size;
 }
 
@@ -454,7 +481,7 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 		DString_AppendUInt8( valueBytes, value->xString.data->mbs != NULL );
 		DString_AppendDaoInt( valueBytes, value->xString.data->size );
 		if( value->xString.data->mbs ){
-			DString_Append( valueBytes, value->xString.data );
+			DString_AppendString( valueBytes, value->xString.data );
 		}else{
 			for(i=0; i<value->xString.data->size; ++i){
 				DString_AppendUInt32( valueBytes, value->xString.data->wcs[i] );
@@ -621,7 +648,7 @@ void DaoByteEncoder_EncodeVariable( DaoByteEncoder *self, DString *name, DaoType
 	DString_AppendUInt32( self->valueBytes, valueid );
 }
 
-void DaoByteEncoder_GetLookupName( int size, DMap *lookupTable, DArray *lookups, DArray *names )
+void DaoByteEncoder_GetLookupName( int size, DMap *lookupTable, DArray *lookups, DArray *names, int st )
 {
 	DNode *it;
 
@@ -630,9 +657,8 @@ void DaoByteEncoder_GetLookupName( int size, DMap *lookupTable, DArray *lookups,
 	DArray_Resize( lookups, size, IntToPointer(-1) );
 	DArray_Resize( names, size, NULL );
 	for(it=DMap_First(lookupTable); it; it=DMap_Next(lookupTable,it)){
-		int st = LOOKUP_ST( it->value.pInt );
 		int id = LOOKUP_ID( it->value.pInt );
-		if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ) continue;
+		if( LOOKUP_ST( it->value.pInt ) != st ) continue;
 		lookups->items.pInt[id] = it->value.pInt;
 		lookups->items.pString[id] = it->value.pString;
 	}
@@ -757,6 +783,11 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 	id = DaoByteEncoder_FindDeclaration( self, (DaoValue*)routine );
 	assert( id > 0 );
 
+#ifdef DEBUG_BC
+	DString_Append( self->routines, routine->routName );
+	DString_AppendMBS( self->routines, "()====\n" );
+#endif
+
 	DString_AppendUInt16( self->routines, id );
 	if( routine->routHost ){
 		id = DaoByteEncoder_FindDeclaration( self, routine->routHost->aux );
@@ -785,6 +816,11 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 		id = DaoByteEncoder_EncodeType( self, type );
 		DString_AppendUInt16( self->routines, id );
 	}
+
+#ifdef DEBUG_BC
+	DString_AppendMBS( self->routines, "Codes----\n" );
+#endif
+
 	DString_AppendUInt16( self->routines, routine->body->annotCodes->size );
 	for(i=0; i<routine->body->annotCodes->size; ++i){
 		DaoVmCodeX *vmc = routine->body->annotCodes->items.pVmc[i];
@@ -805,7 +841,7 @@ void DaoByteEncoder_EncodeNamespace( DaoByteEncoder *self, DaoNamespace *nspace 
 	DMap *lookupTable = nspace->lookupTable;
 	daoint i, n, st, pm, up, id;
 
-	DaoByteEncoder_GetLookupName( constants->size, lookupTable, self->lookups, self->names );
+	DaoByteEncoder_GetLookupName( constants->size, lookupTable, self->lookups, self->names, DAO_GLOBAL_CONSTANT );
 	for(i=0, n=constants->size; i<n; ++i){
 		DaoValue *value = constants->items.pConst[i]->value;
 		DString *name = self->names->items.pString[i];
@@ -817,7 +853,7 @@ void DaoByteEncoder_EncodeNamespace( DaoByteEncoder *self, DaoNamespace *nspace 
 		DString_Append( self->constants, self->valueBytes );
 		self->constCount += 1;
 	}
-	DaoByteEncoder_GetLookupName( variables->size, lookupTable, self->lookups, self->names );
+	DaoByteEncoder_GetLookupName( variables->size, lookupTable, self->lookups, self->names, DAO_GLOBAL_VARIABLE );
 	for(i=0, n=variables->size; i<n; ++i){
 		DaoVariable *var = variables->items.pVar[i];
 		DString *name = self->names->items.pString[i];
@@ -849,7 +885,44 @@ void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString 
 
 	/* Source: */
 	DString_AppendUInt16( output, nspace->name->size );
-	DString_Append( output, nspace->name );
+	DString_AppendString( output, nspace->name );
+
+
+#ifdef DEBUG_BC
+	DString_AppendMBS( output, "Modules:\n" );
+	DString_AppendUInt16( output, 0 );
+	DString_AppendMBS( output, "Identifier:\n" );
+	DString_AppendUInt16( output, self->mapIdentifiers->size );
+	DString_Append( output, self->identifiers );
+	DString_AppendMBS( output, "Declarations:\n" );
+	DString_AppendUInt16( output, self->mapDeclarations->size );
+	DString_Append( output, self->declarations );
+	DString_AppendMBS( output, "Types:\n" );
+	DString_AppendUInt16( output, self->mapTypes->size );
+	DString_Append( output, self->types );
+	DString_AppendMBS( output, "Values:\n" );
+	DString_AppendUInt16( output, self->valueCount );
+	DString_Append( output, self->values );
+	DString_AppendMBS( output, "Global Constants:\n" );
+	DString_AppendUInt16( output, self->constCount );
+	DString_Append( output, self->constants );
+	DString_AppendMBS( output, "Global Variables:\n" );
+	DString_AppendUInt16( output, self->varCount );
+	DString_Append( output, self->variables );
+	DString_AppendMBS( output, "Global Types:\n" );
+	DString_AppendUInt16( output, nspace->abstypes->size );
+	DString_Append( output, self->glbtypes );
+	DString_AppendMBS( output, "Interfaces:\n" );
+	DString_AppendUInt16( output, self->mapInterfaces->size );
+	DString_Append( output, self->interfaces );
+	DString_AppendMBS( output, "Classes:\n" );
+	DString_AppendUInt16( output, self->mapClasses->size );
+	DString_Append( output, self->classes );
+	DString_AppendMBS( output, "Routines:\n" );
+	DString_AppendUInt16( output, self->mapRoutines->size );
+	DString_Append( output, self->routines );
+	return;
+#endif
 
 	/* Modules: */
 	DString_AppendUInt16( output, 0 );
