@@ -146,11 +146,10 @@ typedef struct DaoConfig  DaoConfig;
 struct DaoConfig
 {
 	short cpu;  /* number of CPU */
-	short jit;  /* enable JIT compiling, TODO fix */
+	short jit;  /* enable JIT compiling */
 	short safe; /* enable safe running mode */
 	short typedcode; /* enable typed VM codes */
 	short optimize;  /* enable optimization */
-	short incompile; /* enable incremental compiling */
 	short iscgi;     /* is CGI script */
 	short tabspace;  /* number of spaces counted for a tab */
 	short chindent;  /* check indentation */

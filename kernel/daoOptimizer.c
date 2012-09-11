@@ -2793,7 +2793,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 	if( hostClass ) typeVO[0] = hostClass->objDataType;
 	if( body->upRoutine ){
-		if( body->upRoutine->body->parser ) DaoRoutine_Compile( body->upRoutine );
 		for(i=0,n=body->upRoutine->body->annotCodes->size; i<n; i++){
 			vmc = body->upRoutine->body->annotCodes->items.pVmc[i];
 			if( i == 0 || vmc->code != DVM_ROUTINE ) continue;
@@ -4635,8 +4634,6 @@ NotExist_TryAux:
 					tt = DaoType_DefineTypes( tp[k], NS, defs );
 					GC_ShiftRC( tt, tp[k] );
 					tp[k] = tt;
-					if( pp[k] && pp[k]->type == DAO_ROUTINE ) DaoRoutine_Compile( & pp[k]->xRoutine );
-					assert( i >= (k+1) );
 				}
 				m = 1; /* tail call; */
 				for(k=i+1; k<N; k++){
@@ -4786,9 +4783,6 @@ NotExist_TryAux:
 
 					tt = rout->routType;
 					cbtype = tt->cbtype;
-					if( tt->aux == NULL || (tt->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
-						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
-					}
 
 					if( at->tid == DAO_CTYPE && at->kernel->sptree ){
 						/* For type holder specialization: */
@@ -4800,7 +4794,6 @@ NotExist_TryAux:
 					if( notide && rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) ){
 						DaoRoutine *orig, *drout;
 						if( rout->original ) rout = rout->original;
-						if( rout->body && rout->body->parser ) DaoRoutine_Compile( rout );
 						/* rout may has only been declared */
 						orig = rout;
 						drout = DaoRoutine_Copy( rout, 0, 0 );

@@ -175,8 +175,6 @@ DaoParser* DaoParser_New()
 	self->integerOne = -1;
 	self->imaginaryOne = -1;
 
-	self->routCompilable = DArray_New(0);
-
 	self->routName = DString_New(1);
 	self->mbs = DString_New(1);
 	self->mbs2 = DString_New(1);
@@ -220,7 +218,6 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->localVarMap );
 	DArray_Delete( self->localCstMap );
 	DArray_Delete( self->localDecMap );
-	DArray_Delete( self->routCompilable );
 	DArray_Delete( self->switchMaps );
 	DArray_Delete( self->enumTypes );
 	DArray_Delete( self->scopeOpenings );
@@ -1896,22 +1893,6 @@ int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start, 
 }
 
 static int DaoParser_Preprocess( DaoParser *self );
-static int DaoParser_CompileRoutines( DaoParser *self )
-{
-	daoint i;
-	for(i=0; i<self->routCompilable->size; i++){
-		DaoRoutine* rout = (DaoRoutine*) self->routCompilable->items.pValue[i];
-		/* could be set to null in DaoRoutine_Compile() for recursive routines */
-		if( rout->body->parser == NULL ) continue;
-		if( rout->type != DAO_ROUTINE ) continue;
-		if( DaoParser_ParseRoutine( rout->body->parser ) ==0 ) return 0;
-		/* could be set to null in DaoRoutine_Compile() for recursive routines */
-		if( rout->body->parser == NULL ) continue;
-		DaoParser_Delete( rout->body->parser );
-		rout->body->parser = NULL;
-	}
-	return 1;
-}
 int DaoParser_ParseScript( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
@@ -1938,25 +1919,15 @@ int DaoParser_ParseScript( DaoParser *self )
 
 	routMain->body->codeStart = 1;
 	routMain->body->codeEnd = self->lineCount;
-	routMain->body->parser = self;
 	self->routine = routMain;
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
 
-	bl = DaoParser_Preprocess( self ) && DaoParser_ParseRoutine( self );
-	if( bl == 0 ) goto Error;
-#ifndef DAO_WITH_THREAD
-	/* incremental compiling only when no threading is enabled: */
-	if( daoConfig.incompile ) goto Success;
-#endif
-	if( DaoParser_CompileRoutines( self ) == 0 ) goto Error;
-Success:
-	routMain->body->parser = NULL;
+	if( DaoParser_Preprocess( self ) == 0 || DaoParser_ParseRoutine( self ) == 0 ){
+		DaoParser_PrintError( self, 0, 0, NULL );
+		return 0;
+	}
 	return 1;
-Error:
-	routMain->body->parser = NULL;
-	if( bl ==0 ) DaoParser_PrintError( self, 0, 0, NULL );
-	return bl;
 }
 
 static void DaoVmCode_Set( DaoVmCodeX *self, ushort_t code, ushort_t a, ushort_t b,
@@ -2821,10 +2792,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		DaoRoutine_CopyFields( rout, tmpRoutine, 0, 0 );
 		rout->attribs = k;
 		parser = tmpParser;
-		tmpParser = rout->body->parser;
-		rout->body->parser = parser;
 		parser->routine = rout;
-		tmpRoutine->body->parser = tmpParser;
 		DaoRoutine_Delete( tmpRoutine );
 	}else if( start < to ){
 		rout = NULL;
@@ -2846,7 +2814,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			rout = DaoClass_GetOverloadedRoutine( klass, mbs );
 			if( rout && rout->body == NULL ) rout = NULL;
 			if( rout && rout->routHost != klass->objType ) rout = NULL;
-			if( rout && rout->body->parser == NULL ) rout = NULL;
 		}else{
 			/* XXX support: seperation of declaration and definition */
 		}
@@ -2858,10 +2825,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		}else{
 			DaoRoutine_CopyFields( rout, tmpRoutine, 0, 0 );
 			parser = tmpParser;
-			tmpParser = rout->body->parser;
-			rout->body->parser = parser;
 			parser->routine = rout;
-			tmpRoutine->body->parser = tmpParser;
 			DaoRoutine_Delete( tmpRoutine );
 		}
 
@@ -2918,7 +2882,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		/* DVM_ROUTINE rout_proto, upv1, upv2, ..., regFix */
 		DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/2, k, start, parser->parEnd, right );
 		MAP_Insert( self->protoValues, k, DaoClass_FindConst( klass, rout->routName ) );
-		rout->body->parser = NULL;
 		DaoParser_Delete( parser );
 		return right + 1;
 	}
@@ -2926,31 +2889,27 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
 #ifdef DAO_WITH_DECORATOR
 		DaoParser_DecorateRoutine( self, rout );
-		rout->body->parser = NULL;
-		DaoParser_Delete( parser );
 #else
 		DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
-		return 0;
+		goto Failed;
 #endif
 	}else if( k && rout->routName->mbs[0] == '@' ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
-		rout->body->parser = NULL;
-		DaoParser_Delete( parser );
 	}else if( k ){ /* with body */
 		if( rout->body == NULL ){
 			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, k, 0 );
 			goto InvalidDefinition;
 		}
-		DArray_Append( self->nameSpace->mainRoutine->body->parser->routCompilable, rout );
-		rout->body->parser = parser;
-	}else if( rout->body ){
-		rout->body->parser = parser;
-	}else{
-		DaoParser_Delete( parser );
+		if( DaoParser_ParseRoutine( parser ) == 0 ) goto Failed;
 	}
+	if( parser ) DaoParser_Delete( parser );
 	return right+1;
 InvalidDefinition:
+	if( parser ) DaoParser_Delete( parser );
 	DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
+	return -1;
+Failed:
+	if( parser ) DaoParser_Delete( parser );
 	return -1;
 }
 static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to );
@@ -3286,8 +3245,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
 		DaoParser_ParseRoutine( parser );
 	}
-	if( DaoParser_CompileRoutines( parser ) == 0 ) return -1;
-	rout->body->parser = NULL;
 	DaoParser_Delete( parser );
 
 	return right + 1;

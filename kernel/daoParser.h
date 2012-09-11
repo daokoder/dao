@@ -77,8 +77,6 @@ struct DaoParser
 
 	DMap  *allConsts; /* <DString*,int>: implicit and explict constants; */
 
-	DArray *routCompilable; /* list of defined routines with bodies */
-
 	int    regCount;
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 

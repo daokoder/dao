@@ -261,16 +261,18 @@ Scope objects listed in this section should be referenced by the 1-base index in
 
 Each declaration entry has the following fields:
 @[code(dao)]
-def ScopingObject
+def Declaration
 {
 	uint8       # object type (internal type ID);
-	uint8       # flag (0x0 for creating, or 0x1 for searching);
-	uint16      # identifier reference number for the scope name;
+	uint8       # external declaration (0x0 for not; 0x1 for yes);
+	uint16      # identifier reference number for the declaration name;
+	uint16      # declaration reference number for the host object;
+	uint16      # identifier reference number for the field name in the host;
 }
-def ScopingObjects 
+def Declarations 
 {
-	uint16           # number of declarations;
-	ScopingObject[]  # list of declarations;
+	uint16         # number of declarations;
+	Declaration[]  # list of declarations;
 }
 @[code(dao)]
 
@@ -565,8 +567,8 @@ def TupleValue
 def CompleteClassInstanceValue 
 {
    uint8        # type ID (0x0C, DAO_OBJECT);
-   uint8        # partial or complete (0x0 for complete and 0x1 for partial);
-   uint16       # type reference number;
+   uint8        # flag (0x0 for complete);
+   uint16       # declaration reference number for the class;
 
    uint16       # number of values;
    uint16[]     # list of value reference numbers;
@@ -575,11 +577,18 @@ def CompleteClassInstanceValue
 def PartialClassInstanceValue 
 {
    uint8        # type ID (0x0C, DAO_OBJECT);
-   uint8        # partial or complete (0x0 for complete and 0x1 for partial);
-   uint16       # type reference number;
+   uint8        # flag (0x1 for partial);
+   uint16       # declaration reference number for the class;
 
    uint16       # value offset;
    uint16       # value reference number for its host object;
+}
+# The default instance for the class:
+def DefaultClassInstanceValue 
+{
+   uint8        # type ID (0x0C, DAO_OBJECT);
+   uint8        # flag (0x2 for default);
+   uint16       # declaration reference number for the class;
 }
 
 # Routine:

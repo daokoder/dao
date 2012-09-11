@@ -748,7 +748,6 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int
 	p->nameSpace = ns;
 	DString_Assign( p->fileName, ns->name );
 	res = DaoParser_LexCode( p, src, rpl ) && DaoParser_ParseScript( p );
-	p->routine->body->parser = NULL;
 	DaoParser_Delete( p );
 	return res;
 }

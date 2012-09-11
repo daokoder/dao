@@ -102,23 +102,16 @@ DaoTypeBase classTyper =
 
 DaoClass* DaoClass_New()
 {
-	DaoClass *self = (DaoClass*) dao_malloc( sizeof(DaoClass) );
+	DaoClass *self = (DaoClass*) dao_calloc( 1, sizeof(DaoClass) );
 	DaoValue_Init( self, DAO_CLASS );
 	self->trait |= DAO_VALUE_DELAYGC;
-	self->vtable = NULL;
-	self->classRoutine = NULL;
-	self->classRoutines = NULL;
 	self->className = DString_New(1);
 	self->classHelp = DString_New(1);
 
-	self->derived = 0;
-	self->attribs = 0;
-	self->objDefCount = 0;
-
 	self->lookupTable  = DHash_New(D_STRING,0);
 	self->ovldRoutMap  = DHash_New(D_STRING,0);
-	self->abstypes = DMap_New(D_STRING,D_VALUE);
-	self->deflines = DMap_New(D_STRING,0);
+	self->abstypes     = DMap_New(D_STRING,D_VALUE);
+	self->deflines     = DMap_New(D_STRING,0);
 	self->constants    = DArray_New(D_VALUE);
 	self->variables    = DArray_New(D_VALUE);
 	self->objDataType  = DArray_New(D_VALUE);
@@ -128,13 +121,6 @@ DaoClass* DaoClass_New()
 	self->superAlias   = DArray_New(D_STRING);
 	self->superClass   = DArray_New(D_VALUE);
 	self->objDataDefault = DArray_New(D_VALUE);
-	self->protoValues = NULL;
-#ifdef DAO_WITH_DYNCLASS
-	self->typeHolders = NULL;
-	self->typeDefaults = NULL;
-	self->instanceClasses = NULL;
-	self->templateClass = NULL;
-#endif
 	self->references = DArray_New(D_VALUE);
 	return self;
 }

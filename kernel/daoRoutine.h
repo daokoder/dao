@@ -88,7 +88,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy_body, i
 void DaoRoutine_Delete( DaoRoutine *self );
 int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
-void DaoRoutine_Compile( DaoRoutine *self );
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
 void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
@@ -129,7 +128,6 @@ struct DaoRoutineBody
 
 	DaoRoutine  *upRoutine;
 	DaoProcess  *upProcess;
-	DaoParser   *parser;
 	DaoRoutine  *revised; /* to support edit & continue */
 
 	void *jitData;

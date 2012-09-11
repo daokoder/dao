@@ -127,7 +127,6 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body )
 {
 	DaoRoutine *copy = DaoRoutine_New( self->nameSpace, self->routHost, 0 );
-	DaoRoutine_Compile( self );
 	DaoRoutine_CopyFields( copy, self, cst, body );
 	return copy;
 }
@@ -284,7 +283,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DMap_Delete( self->localVarType );
 	DMap_Delete( self->abstypes );
 	if( self->revised ) GC_DecRC( self->revised );
-	if( self->parser ) DaoParser_Delete( self->parser );
 	if( dao_jit.Free && self->jitData ){
 		/* LLVMContext provides no locking guarantees: */
 		DMutex_Lock( & mutex_routine_specialize );
@@ -292,52 +290,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 		DMutex_Unlock( & mutex_routine_specialize );
 	}
 	dao_free( self );
-}
-void DaoParser_ClearCodes( DaoParser *self );
-void DaoRoutine_Compile( DaoRoutine *self )
-{
-	if( self->body == NULL ) return;
-	/* XXX thread safety? */
-	if( self->body->parser && self->body->parser->defined ){
-		if( self->body->parser->parsed == 0 ){
-			if( ! DaoParser_ParseRoutine( self->body->parser ) ){
-				/* This function is used by DaoContext_Init() and DaoContext_InitWithParams(),
-				 * which are used in many places, rendering it very tedious and error-prone
-				 * to handle the compiling fails by returned values.
-				 *
-				 * By substituting the routine body of the failed ones with the following scripts:
-				 *     raise Exception.Error( "Compiling failed." );
-				 * it become un-neccessary to handle the compiling fails in places where
-				 * DaoContext_Init() and DaoContext_InitWithParams() are used!
-				 */
-				DArray *tokens = DArray_New(D_TOKEN);
-				DaoType *routp = self->routType;
-				DaoType *retp = NULL;
-				int i = 0, k = self->body->parser->curLine;
-				DArray_Clear( self->body->parser->errors );
-				DaoTokens_AddRaiseStatement( tokens, "Error", "'Compiling failed'", k );
-				if( routp ){ /* XXX */
-					/* to avoid type checking for RETURN */
-					retp = & routp->aux->xType;
-					routp->aux = NULL;
-				}
-				DArray_Swap( self->body->parser->tokens, tokens );
-				DArray_Clear( self->body->parser->vmCodes );
-				DArray_Clear( self->body->parser->scopeOpenings );
-				DArray_Clear( self->body->parser->scopeClosings );
-				DaoParser_ClearCodes( self->body->parser );
-				self->body->parser->lexLevel = 0;
-				self->body->parser->parsed = 0;
-				i = DaoParser_ParseRoutine( self->body->parser );
-				routp->aux = (DaoValue*) retp;
-				DArray_Swap( self->body->parser->tokens, tokens );
-				DArray_Delete( tokens );
-			}
-		}
-		/* this function may be called recursively */
-		if( self->body->parser ) DaoParser_Delete( self->body->parser );
-		self->body->parser = NULL;
-	}
 }
 void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 {
@@ -435,7 +387,6 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DString *annot;
 	int j, n;
 
-	DaoRoutine_Compile( self );
 	DaoStream_WriteMBS( stream, sep1 );
 	DaoStream_WriteMBS( stream, "routine " );
 	DaoStream_WriteString( stream, self->routName );

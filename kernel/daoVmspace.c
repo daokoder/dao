@@ -66,7 +66,6 @@ DaoConfig daoConfig =
 	0, /*safe*/
 	1, /*typedcode*/
 	1, /*optimize*/
-	0, /*incompile*/
 	0, /*iscgi*/
 	8, /*tabspace*/
 	0, /*chindent*/
@@ -578,9 +577,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				case 's' : self->options |= DAO_EXEC_SAFE;
 						   daoConfig.safe = 1;
 						   break;
-				case 'n' : self->options |= DAO_EXEC_INCR_COMP;
-						   daoConfig.incompile = 0;
-						   break;
 				case 'j' : self->options |= DAO_EXEC_JIT;
 						   daoConfig.jit = 1;
 						   break;
@@ -780,9 +776,7 @@ static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DAr
 	i = ns ? DaoNamespace_FindConst( ns, key ) : -1;
 	if( i >=0 ){
 		nkey = DaoNamespace_GetConst( ns, i );
-		/* It may has not been compiled if it is not called explicitly. */
-		if( nkey->type == DAO_ROUTINE ){ // TODO: better handling
-			DaoRoutine_Compile( & nkey->xRoutine );
+		if( nkey->type == DAO_ROUTINE ){
 			rout = & nkey->xRoutine;
 			abtp = rout->routType;
 		}
@@ -997,7 +991,6 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 		for(i=ns->cstUser; i<ns->constants->size; i++){
 			DaoValue *p = ns->constants->items.pConst[i]->value;
 			if( p->type == DAO_ROUTINE && & p->xRoutine != ns->mainRoutine ){
-				DaoRoutine_Compile( & p->xRoutine );
 				DaoRoutine_PrintCode( & p->xRoutine, self->stdioStream );
 			}else if( p->type == DAO_CLASS ){
 				DaoClass_PrintCode( & p->xClass, self->stdioStream );
@@ -1794,9 +1787,6 @@ static void DaoConfigure_FromFile( const char *name )
 			}else if( TOKCMP( tk1, "optimize" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.optimize = yes;
-			}else if( TOKCMP( tk1, "incompile" )==0 ){
-				if( yes <0 ) goto InvalidConfigValue;
-				daoConfig.incompile = yes;
 			}else if( TOKCMP( tk1, "mbs" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.mbs = yes;

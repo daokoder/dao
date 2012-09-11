@@ -62,6 +62,12 @@ struct DaoByteEncoder
 
 	DArray   *objects;      /* <DaoValue*> */
 
+	DArray   *hosts;
+	DMap     *handled;
+
+	DMap  *mapLookupHost;   /* <DaoValue*,DaoValue*> */
+	DMap  *mapLookupName;   /* <DaoValue*,DString*> */
+
 	DMap  *mapIdentifiers;  /* <DString*,daoint> */
 	DMap  *mapDeclarations; /* <DaoValue*,daoint> */
 	DMap  *mapTypes;        /* <DaoType*,daoint> */
