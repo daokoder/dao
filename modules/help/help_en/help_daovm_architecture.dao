@@ -264,6 +264,7 @@ Each declaration entry has the following fields:
 def Declaration
 {
 	uint8       # object type (internal type ID);
+	uint8       # object subtype;
 	uint8       # external declaration (0x0 for not; 0x1 for yes);
 	uint16      # identifier reference number for the declaration name;
 	uint16      # declaration reference number for the host object;
@@ -369,6 +370,7 @@ def RoutineType
 {
 	uint8       # type id (DAO_ROUTINE);
 	uint16      # identifier reference number to the type name;
+	uint16      # declaration reference number (for overloaded routine type);
 	uint16      # type reference number to the return type;
 	uint16      # number of item types;
 	uint16[]    # list of item types: type reference numbers;
@@ -878,9 +880,9 @@ def Instruction
 def Routine 
 {
 	uint16      # declaration reference number to the routine;
-	uint16      # declaration reference number to the host of the routine;
 	uint16      # identifier reference number to the routine name;
-	uint16      # type reference number to the routine type;
+	uint16      # type reference number for the routine type;
+	uint16      # type reference number for the host type;
 	uint16      # attributes;
 	uint16      # line of definition;
 	uint16      # number of local constants;

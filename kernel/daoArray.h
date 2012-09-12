@@ -47,8 +47,10 @@ struct DArray
 		DaoTuple     **pTuple;
 		DaoClass     **pClass;
 		DaoObject    **pObject;
+		DaoInterface **pInter;
 		DaoRoutine   **pRoutine;
 		DaoCdata     **pCdata;
+		DaoCtype     **pCtype;
 		DaoType      **pType;
 		DaoConstant  **pConst;
 		DaoVariable  **pVar;

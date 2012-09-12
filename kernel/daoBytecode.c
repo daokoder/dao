@@ -28,10 +28,12 @@
 #include <math.h>
 #include <string.h>
 #include <assert.h>
+
 #include "daoBytecode.h"
 #include "daoNamespace.h"
 #include "daoVmspace.h"
 #include "daoValue.h"
+#include "daoGC.h"
 
 
 #define IntToPointer( x ) ((void*)(size_t)x)
@@ -42,6 +44,14 @@
 #if 0
 #define DEBUG_BC
 #endif
+
+
+enum DaoRoutineSubTypes
+{
+	DAO_ROUTINE_NORMAL ,
+	DAO_ROUTINE_ABSTRACT ,
+	DAO_ROUTINE_OVERLOADED 
+};
 
 
 
@@ -344,10 +354,12 @@ int DaoByteEncoder_FindDeclaration( DaoByteEncoder *self, DaoValue *object )
 int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 {
 	DaoClass *klass;
+	DaoRoutine *routine;
 	DaoType *type = NULL;
 	DString *name = NULL;
 	DNode *node, *node2;
-	int nameid, nameid2 = 0, hostid = 0, external = 0x1;
+	int nameid, nameid2 = 0, hostid = 0;
+	int subtype = 0, external = 0x1;
 
 	if( object == NULL || object == (DaoValue*) self->nspace ) return 0;
 
@@ -380,10 +392,17 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 		name = type->name;
 		break;
 	case DAO_ROUTINE :
-		name = object->xRoutine.routName;
-		if( object->xRoutine.nameSpace == self->nspace ){
+		routine = (DaoRoutine*) object;
+		name = routine->routName;
+		subtype = DAO_ROUTINE_NORMAL;
+		if( routine->nameSpace == self->nspace && routine->pFunc == NULL ){
 			DArray_Append( self->objects, object );
 			external = 0;
+			if( routine->overloads ){
+				subtype = DAO_ROUTINE_OVERLOADED;
+			}else if( routine->body == NULL ){
+				subtype = DAO_ROUTINE_ABSTRACT;
+			}
 		}
 		break;
 	case DAO_NAMESPACE :
@@ -393,6 +412,7 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 	DMap_Insert( self->mapDeclarations, object, IntToPointer( self->mapDeclarations->size+1 ) );
 	nameid = DaoByteEncoder_EncodeIdentifier( self, name );
 	DString_AppendUInt8( self->declarations, object->type );
+	DString_AppendUInt8( self->declarations, subtype );
 	DString_AppendUInt8( self->declarations, external );
 	DString_AppendUInt16( self->declarations, nameid );
 	DString_AppendUInt16( self->declarations, hostid );
@@ -424,7 +444,7 @@ int DaoByteEncoder_EncodeValue( DaoByteEncoder *self, DaoValue *value );
 int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 {
 	DNode *node;
-	int i, k, n, tpid;
+	int i, k, n, tpid, dec;
 	int nameid = 0;
 	int typeid = 0;
 	int valueid = 0;
@@ -466,7 +486,8 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		break;
 	case DAO_VALTYPE :
 		typeid = DaoByteEncoder_EncodeSimpleType( self, type );
-		valueid = DaoByteEncoder_EncodeValue( self, type->value );
+		valueid = DaoByteEncoder_EncodeValue( self, type->aux );
+		DString_AppendUInt32( self->types, valueid );
 		break;
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
@@ -476,17 +497,26 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		DString_AppendUInt16( self->types, nameid );
 		DString_AppendUInt16( self->types, tpid );
 		break;
+	case DAO_PAR_VALIST :
+		typeid = DaoByteEncoder_EncodeSimpleType( self, type );
+		break;
 	case DAO_THT :
 		typeid = DaoByteEncoder_EncodeSimpleType( self, type );
 		nameid = DaoByteEncoder_EncodeIdentifier( self, type->name );
 		DString_AppendUInt16( self->types, nameid );
 		break;
 	case DAO_ROUTINE :
-		tpid = DaoByteEncoder_EncodeType( self, (DaoType*) type->aux );
+		dec = tpid = 0;
+		if( type->aux->type == DAO_ROUTINE ){
+			dec = DaoByteEncoder_EncodeDeclaration( self, type->aux );
+		}else{
+			tpid = DaoByteEncoder_EncodeType( self, (DaoType*) type->aux );
+		}
 		for(i=0,n=type->nested->size; i<n; ++i){
 			int id = DaoByteEncoder_EncodeType( self, type->nested->items.pType[i] );
 		}
 		typeid = DaoByteEncoder_EncodeSimpleType( self, type );
+		DString_AppendUInt16( self->types, dec );
 		DString_AppendUInt16( self->types, tpid );
 		DString_AppendUInt16( self->types, type->nested->size );
 		for(i=0,n=type->nested->size; i<n; ++i){
@@ -862,10 +892,10 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 
 void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 {
-	DaoType *type;
-	DMap *abstypes;
 	DNode *it;
-	int i, id;
+	DMap *abstypes;
+	DaoType *type;
+	int i, id, id2, id3;
 
 	if( routine->body == NULL ) return;
 	if( DMap_Find( self->mapRoutines, routine ) ) return;
@@ -880,14 +910,12 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 #endif
 
 	DString_AppendUInt16( self->routines, id );
-	if( routine->routHost ){
-		id = DaoByteEncoder_FindDeclaration( self, routine->routHost->aux );
-		DString_AppendUInt16( self->routines, id );
-	}else{
-		DString_AppendUInt16( self->routines, 0 );
-	}
 	id = DaoByteEncoder_EncodeIdentifier( self, routine->routName );
+	id2 = DaoByteEncoder_EncodeType( self, routine->routType );
+	id3 = DaoByteEncoder_EncodeType( self, routine->routHost );
 	DString_AppendUInt16( self->routines, id );
+	DString_AppendUInt16( self->routines, id2 );
+	DString_AppendUInt16( self->routines, id3 );
 	DString_AppendUInt16( self->routines, routine->attribs );
 	DString_AppendUInt16( self->routines, routine->defLine );
 
@@ -899,7 +927,7 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 	for(i=0; i<routine->routConsts->items.size; ++i){
 		DaoValue *value = routine->routConsts->items.items.pValue[i];
 		id = DaoByteEncoder_EncodeValue( self, value );
-		DString_AppendUInt16( self->routines, id );
+		DString_AppendUInt32( self->routines, id );
 	}
 	DString_AppendUInt16( self->routines, routine->body->regType->size );
 	for(i=0; i<routine->body->regType->size; ++i){
@@ -932,6 +960,8 @@ void DaoByteEncoder_EncodeNamespace( DaoByteEncoder *self, DaoNamespace *nspace 
 	DArray *variables = nspace->variables;
 	DMap *lookupTable = nspace->lookupTable;
 	daoint i, n, st, pm, up, id;
+
+	DaoByteEncoder_SetupLookupData( self );
 
 	abstypes = nspace->abstypes;
 	for(it=DMap_First(abstypes); it; it=DMap_Next(abstypes,it)){
@@ -1084,8 +1114,10 @@ DaoByteDecoder* DaoByteDecoder_New( DaoVmSpace *vmspace )
 	self->interfaces = DArray_New(D_VALUE);
 	self->classes = DArray_New(D_VALUE);
 	self->routines = DArray_New(D_VALUE);
+	self->valueTypes = DArray_New(0);
+	self->array = DArray_New(0);
 	self->string = DString_New(1);
-
+	self->map = DMap_New(D_STRING,0);
 	return self;
 }
 void DaoByteDecoder_Delete( DaoByteDecoder *self )
@@ -1097,7 +1129,10 @@ void DaoByteDecoder_Delete( DaoByteDecoder *self )
 	DArray_Delete( self->interfaces );
 	DArray_Delete( self->classes );
 	DArray_Delete( self->routines );
+	DArray_Delete( self->valueTypes );
+	DArray_Delete( self->array );
 	DString_Delete( self->string );
+	DMap_Delete( self->map );
 	dao_free( self );
 }
 
@@ -1165,51 +1200,128 @@ void DaoByteDecoder_DecodeIdentifiers( DaoByteDecoder *self )
 	for(i=0; i<count; ++i){
 		DaoByteDecoder_DecodeShortString( self, self->string );
 		DArray_Append( self->identifiers, self->string );
-		//printf( "%3i : %s\n", i, self->string->mbs );
 	}
 }
 void DaoByteDecoder_DecodeDeclarations( DaoByteDecoder *self )
 {
-	int i, count = DaoByteDecoder_DecodeUInt16( self );
+	int i, id, count = DaoByteDecoder_DecodeUInt16( self );
 	for(i=0; i<count; ++i){
 		int type = DaoByteDecoder_DecodeUInt8( self );
-		int flag = DaoByteDecoder_DecodeUInt8( self );
-		int name = DaoByteDecoder_DecodeUInt16( self );
-		int host = DaoByteDecoder_DecodeUInt16( self );
-		int field = DaoByteDecoder_DecodeUInt16( self );
-		printf( "%3i : %s\n", i, self->identifiers->items.pString[name-1]->mbs );
-		if( field ) printf( "%3i : %s\n", i, self->identifiers->items.pString[field-1]->mbs );
-		if( flag ){
+		int subtype = DaoByteDecoder_DecodeUInt8( self );
+		int external = DaoByteDecoder_DecodeUInt8( self );
+		int nameid = DaoByteDecoder_DecodeUInt16( self );
+		int hostid = DaoByteDecoder_DecodeUInt16( self );
+		int fieldid = DaoByteDecoder_DecodeUInt16( self );
+		DString *name = NULL, *field = NULL;
+		DaoType *hostype = NULL;
+		DaoValue *host = (DaoValue*) self->nspace;
+		DaoValue *value = NULL;
+		DaoRoutine *routine;
+		DaoClass *klass;
+		if( nameid ) name = self->identifiers->items.pString[nameid-1];
+		if( fieldid ) field = self->identifiers->items.pString[fieldid-1];
+		if( hostid ){
+			host = self->declarations->items.pValue[hostid-1];
+			switch( host->type ){
+			case DAO_CLASS : hostype = host->xClass.objType; break;
+			case DAO_INTERFACE : hostype = host->xInterface.abtype; break;
+			}
 		}
-		//DArray_Append( self->identifiers, self->string );
+		if( external == 0 ){
+			int body = hostype == NULL || hostype->tid != DAO_INTERFACE;
+			switch( type ){
+			case DAO_ROUTINE :
+				if( subtype == DAO_ROUTINE_OVERLOADED ){
+					routine = DaoRoutines_New( self->nspace, hostype, NULL );
+				}else{
+					routine = DaoRoutine_New( self->nspace, hostype, body );
+				}
+				DString_Assign( routine->routName, name );
+				value = (DaoValue*) routine;
+				break;
+			case DAO_CLASS :
+				klass = DaoClass_New();
+				value = (DaoValue*) klass;
+				DaoClass_SetName( klass, name, self->nspace );
+				break;
+			}
+		}else if( field ){
+			switch( host->type ){
+			case DAO_NAMESPACE :
+				value = DaoNamespace_GetData( (DaoNamespace*) host, field );
+				break;
+			case DAO_CLASS :
+				id = DaoClass_FindConst( (DaoClass*)host, field );
+				if( id >= 0 ) value = DaoClass_GetConst( (DaoClass*)host, id );
+				break;
+			case DAO_CTYPE :
+				value = DaoType_FindValue( host->xCtype.ctype, field );
+				break;
+			case DAO_INTERFACE :
+				break;
+			}
+		}
+		printf( "%3i: %3i  %20s  %20s  %p\n", i, type, name->mbs, field?field->mbs:"", value );
+		DArray_Append( self->declarations, value );
 	}
 }
 void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 {
+	DaoValue *value;
+	DaoType **types;
+	DaoType *type2, *type = NULL;
 	int i, j, flag, count, numtypes = DaoByteDecoder_DecodeUInt16( self );
 	int id, id2, id3;
 	printf( "DaoByteDecoder_DecodeTypes: %3i\n", numtypes );
 	for(i=0; i<numtypes; ++i){
 		int tid = DaoByteDecoder_DecodeUInt8( self );
-		int name = DaoByteDecoder_DecodeUInt16( self );
-		printf( "%3i: %3i -----------\n", i, tid );
-		if( name ) printf( "%3i : %s\n", i, self->identifiers->items.pString[name-1]->mbs );
+		int nameid = DaoByteDecoder_DecodeUInt16( self );
+		DString *name = nameid ? self->identifiers->items.pString[nameid-1] : NULL;
+		DString *name2;
+
+		printf( "%3i : %i %i %s\n", i, tid, nameid, "NULL" );
+		printf( "%3i : %i %i %s\n", i, tid, nameid, name?name->mbs:"NULL" );
 		switch( tid ){
 		case DAO_NONE :
+			type = dao_type_none;
+			break;
 		case DAO_INTEGER :
+			type = dao_type_int;
+			break;
 		case DAO_FLOAT :
+			type = dao_type_float;
+			break;
 		case DAO_DOUBLE :
+			type = dao_type_double;
+			break;
 		case DAO_COMPLEX :
+			type = dao_type_complex;
+			break;
 		case DAO_LONG :
+			type = dao_type_long;
+			break;
 		case DAO_STRING :
+			type = dao_type_string;
 			break;
 		case DAO_ENUM :
 			flag = DaoByteDecoder_DecodeUInt8( self );
 			count = DaoByteDecoder_DecodeUInt16( self );
-			printf( "%3i: %3i\n", i, count );
+			DString_SetMBS( self->string, "enum<" );
+			DMap_Reset( self->map );
 			for(j=0; j<count; ++j){
-				int sym = DaoByteDecoder_DecodeUInt16( self );
-				int val = DaoByteDecoder_DecodeUInt32( self );
+				int symID = DaoByteDecoder_DecodeUInt16( self );
+				int value = DaoByteDecoder_DecodeUInt32( self );
+				DString *sym = self->identifiers->items.pString[symID-1];
+				if( j ) DString_AppendChar( self->string, flag ? ';' : ',' );
+				DString_Append( self->string, sym );
+				DMap_Insert( self->map, sym, IntToPointer( value ) );
+				// XXX: append =value?
+			}
+			type = DaoNamespace_FindType( self->nspace, self->string );
+			if( type == NULL ){
+				type = DaoType_New( self->string->mbs, DAO_ENUM, NULL, NULL );
+				type->mapNames = self->map;
+				self->map = DMap_New(D_STRING,0);
 			}
 			break;
 		case DAO_ARRAY :
@@ -1217,57 +1329,121 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 		case DAO_MAP :
 		case DAO_TUPLE :
 		case DAO_VARIANT :
+			self->array->size = 0;
 			count = DaoByteDecoder_DecodeUInt16( self );
 			for(j=0; j<count; ++j){
 				id = DaoByteDecoder_DecodeUInt16( self );
+				DArray_Append( self->array, self->types->items.pType[id-1] );
 			}
+			types = self->array->items.pType;
+			type = DaoNamespace_MakeType( self->nspace, name->mbs, tid, NULL, types, count );
 			break;
 		case DAO_VALTYPE :
 			id = DaoByteDecoder_DecodeUInt32( self );
+			type = DaoType_New( name->mbs, DAO_VALTYPE, NULL, NULL );
+			DArray_Append( self->valueTypes, type );
+			DArray_Append( self->valueTypes, IntToPointer( id - 1 ) );
 			break;
 		case DAO_PAR_NAMED :
 		case DAO_PAR_DEFAULT :
 			id = DaoByteDecoder_DecodeUInt16( self );
 			id2 = DaoByteDecoder_DecodeUInt16( self );
+			name2 = self->identifiers->items.pString[id-1];
+			value = self->types->items.pValue[id2-1];
+			type = DaoNamespace_MakeType( self->nspace, name2->mbs, tid, value, NULL, 0 );
+			break;
+		case DAO_PAR_VALIST :
+			type = DaoNamespace_MakeType( self->nspace, "...", DAO_PAR_VALIST, 0,0,0 );
 			break;
 		case DAO_THT :
 			break;
 		case DAO_ROUTINE :
 			id = DaoByteDecoder_DecodeUInt16( self );
+			id2 = DaoByteDecoder_DecodeUInt16( self );
 			count = DaoByteDecoder_DecodeUInt16( self );
-			printf( "count = %i\n", count );
+			self->array->size = 0;
+			printf( "%i\n", count );
 			for(j=0; j<count; ++j){
-				id = DaoByteDecoder_DecodeUInt16( self );
+				id3 = DaoByteDecoder_DecodeUInt16( self );
+				printf( "%3i %p\n", id3, self->types->items.pType[id3-1] );
+				DArray_Append( self->array, self->types->items.pType[id3-1] );
 			}
+			types = self->array->items.pType;
+			if( id ){
+				value = self->declarations->items.pValue[id-1];
+				// XXX error:
+				//if( value == NULL || value->type != DAO_ROUTINE ) return;
+				type = DaoType_New( "routine", DAO_ROUTINE, value, NULL );
+			}else{
+				value = id2 ? self->types->items.pValue[id2-1] : NULL;
+				//if( value == NULL || value->type != DAO_TYPE ) return;
+				type = DaoNamespace_MakeType( self->nspace, "routine", tid, value, types, count );
+			}
+			printf( "%s\n", type->name->mbs );
 			break;
 		case DAO_INTERFACE :
+			id = DaoByteDecoder_DecodeUInt16( self );
+			type = self->declarations->items.pInter[id-1]->abtype;
+			break;
 		case DAO_CLASS :
+			id = DaoByteDecoder_DecodeUInt16( self );
+			type = self->declarations->items.pClass[id-1]->clsType;
+			break;
 		case DAO_OBJECT :
+			id = DaoByteDecoder_DecodeUInt16( self );
+			type = self->declarations->items.pClass[id-1]->objType;
+			break;
 		case DAO_CTYPE :
+			id = DaoByteDecoder_DecodeUInt16( self );
+			type = self->declarations->items.pCtype[id-1]->ctype;
+			break;
 		case DAO_CDATA :
 			id = DaoByteDecoder_DecodeUInt16( self );
+			type = self->declarations->items.pCtype[id-1]->cdtype;
 			break;
 		case DAO_TYPE :
 			id = DaoByteDecoder_DecodeUInt16( self );
+			types = id ? self->types->items.pType + (id-1) : NULL;
+			type = DaoNamespace_MakeType( self->nspace, "type", tid, NULL, types, id!=0 );
 			break;
 		case DAO_FUTURE :
 			id = DaoByteDecoder_DecodeUInt16( self );
+			types = id ? self->types->items.pType + (id-1) : NULL;
+			type = DaoNamespace_MakeType( self->nspace, "future", tid, NULL, types, id!=0 );
 			break;
 		}
+		printf( "-------------- %3i %3i %15p %s\n", i, tid, type, name? name->mbs:"NULL" );
+		DArray_Append( self->types, type );
+		// XXX if name != type->name, alias;
 	}
 }
 void DaoByteDecoder_DecodeValues( DaoByteDecoder *self )
 {
+	DaoCtype *ctype;
+	DaoCdata *cdata;
+	DaoClass *klass;
+	DaoObject *object;
+	DaoRoutine *routine;
+	DaoInterface *inter;
+	DaoString *stringValue;
+	DaoLong *longValue;
+	DaoArray *array;
+	DaoList *list;
+	DaoMap *map;
+	DaoTuple *tuple;
+	DaoType *type;
 	double fvalue;
 	complex16 cvalue;
 	daoint k, ivalue, ivalue2;
 	int numvalues = DaoByteDecoder_DecodeUInt32( self );
 	int i, j, flag, count;
 	int id, id2, id3;
+
 	printf( "DaoByteDecoder_DecodeValues: %3i\n", numvalues );
 	for(i=0; i<numvalues; ++i){
-		DaoValue *value = NULL;
 		int tid = DaoByteDecoder_DecodeUInt8( self );
+		DaoValue *value = NULL;
+
 		printf( "%3i: %3i\n", i, tid );
 		switch( tid ){
 		case DAO_NONE :
@@ -1275,93 +1451,144 @@ void DaoByteDecoder_DecodeValues( DaoByteDecoder *self )
 			break;
 		case DAO_INTEGER :
 			ivalue = DaoByteDecoder_DecodeDaoInt( self );
+			value = (DaoValue*) DaoInteger_New( ivalue );
 			break;
 		case DAO_FLOAT :
 			fvalue = DaoByteDecoder_DecodeDouble( self );
+			value = (DaoValue*) DaoFloat_New( fvalue );
 			break;
 		case DAO_DOUBLE :
 			fvalue = DaoByteDecoder_DecodeDouble( self );
+			value = (DaoValue*) DaoDouble_New( fvalue );
 			break;
 		case DAO_COMPLEX :
 			cvalue = DaoByteDecoder_DecodeComplex( self );
+			value = (DaoValue*) DaoComplex_New( cvalue );
 			break;
 		case DAO_LONG :
+			flag = DaoByteDecoder_DecodeUInt8( self );
+			ivalue = DaoByteDecoder_DecodeDaoInt( self );
+			longValue = DaoLong_New();
+			longValue->value->sign = flag ? -1 : 1;
+			value = (DaoValue*) longValue;
+			for(j =0; j<ivalue; ++j){
+				uchar_t d = DaoByteDecoder_DecodeUInt8( self );
+				DLong_PushBack( longValue->value, d );
+			}
 			break;
 		case DAO_STRING :
 			flag = DaoByteDecoder_DecodeUInt8( self );
 			ivalue = DaoByteDecoder_DecodeDaoInt( self );
+			stringValue = DaoString_New( flag != 0 );
+			value = (DaoValue*) stringValue;
 			if( flag ){
+				DString_AppendDataMBS( stringValue->data, (char*)self->codes, ivalue );
 				self->codes += ivalue;
 			}else{
+				DString_Resize( stringValue->data, ivalue );
 				for(j =0; j<ivalue; ++j){
 					wchar_t ch = DaoByteDecoder_DecodeUInt32( self );
+					stringValue->data->wcs[j] = ch;
 				}
 			}
 			break;
 		case DAO_ENUM :
 			id = DaoByteDecoder_DecodeUInt16( self );
 			id2 = DaoByteDecoder_DecodeUInt32( self );
+			type = id ? self->types->items.pType[id-1] : NULL;
+			value = (DaoValue*) DaoEnum_New( type, id2 );
 			break;
 		case DAO_ARRAY :
 			flag = DaoByteDecoder_DecodeUInt8( self );
 			ivalue = DaoByteDecoder_DecodeDaoInt( self );
 			count = DaoByteDecoder_DecodeUInt16( self );
-			for(j=0; j<count; ++j){
-				daoint dim = DaoByteDecoder_DecodeDaoInt( self );
-			}
+			array = DaoArray_New( flag );
+			value = (DaoValue*) array;
+			DaoArray_SetDimCount( array, count );
+			for(j=0; j<count; ++j) array->dims[j] = DaoByteDecoder_DecodeDaoInt( self );
+			DaoArray_FinalizeDimData( array );
+			assert( array->size == ivalue );
 			for(k=0; k<ivalue; ++k){
 				switch( flag ){
-				case DAO_INTEGER :
-					ivalue2 = DaoByteDecoder_DecodeDaoInt( self );
-					break;
-				case DAO_FLOAT :
-					fvalue = DaoByteDecoder_DecodeDouble( self );
-					break;
-				case DAO_DOUBLE :
-					fvalue = DaoByteDecoder_DecodeDouble( self );
-					break;
-				case DAO_COMPLEX :
-					cvalue = DaoByteDecoder_DecodeComplex( self );
-					break;
+				case DAO_INTEGER: array->data.i[k] = DaoByteDecoder_DecodeDaoInt(self); break;
+				case DAO_FLOAT  : array->data.f[k] = DaoByteDecoder_DecodeDouble(self); break;
+				case DAO_DOUBLE : array->data.d[k] = DaoByteDecoder_DecodeDouble(self); break;
+				case DAO_COMPLEX: array->data.c[k] = DaoByteDecoder_DecodeComplex(self);break;
 				}
 			}
 			break;
 		case DAO_LIST :
 			id = DaoByteDecoder_DecodeUInt16( self );
 			ivalue = DaoByteDecoder_DecodeDaoInt( self );
+			type = id ? self->types->items.pType[id-1] : NULL;
+			list = DaoList_New();
+			value = (DaoValue*) list;
+			GC_ShiftRC( type, list->unitype );
+			list->unitype = type;
 			for(k=0; k<ivalue; ++k){
 				uint_t it = DaoByteDecoder_DecodeUInt32( self );
+				DaoList_PushBack( list, self->values->items.pValue[it-1] );
 			}
 			break;
 		case DAO_MAP :
 			flag = DaoByteDecoder_DecodeUInt8( self );
 			id = DaoByteDecoder_DecodeUInt16( self );
 			ivalue = DaoByteDecoder_DecodeDaoInt( self );
-			for(k=0; k<ivalue; ++k){
-				uint_t it = DaoByteDecoder_DecodeUInt32( self );
+			type = id ? self->types->items.pType[id-1] : NULL;
+			map = DaoMap_New( flag );
+			GC_ShiftRC( type, map->unitype );
+			map->unitype = type;
+			value = (DaoValue*) map;
+			for(k=0; k<ivalue; k+=2){
+				uint_t key = DaoByteDecoder_DecodeUInt32( self );
+				uint_t val = DaoByteDecoder_DecodeUInt32( self );
+				DaoValue *key2 = self->values->items.pValue[key-1];
+				DaoValue *val2 = self->values->items.pValue[val-1];
+				DaoMap_Insert( map, key2, val2 );
 			}
 			break;
 		case DAO_TUPLE :
 			id = DaoByteDecoder_DecodeUInt16( self );
 			ivalue = DaoByteDecoder_DecodeUInt32( self );
+			type = id ? self->types->items.pType[id-1] : NULL;
+			tuple = type ? DaoTuple_Create( type, ivalue, 0 ) : DaoTuple_New( ivalue );
+			value = (DaoValue*) tuple;
 			for(k=0; k<ivalue; ++k){
 				uint_t it = DaoByteDecoder_DecodeUInt32( self );
+				DaoValue *val = self->values->items.pValue[it-1];
+				DaoTuple_SetItem( tuple, val, k );
 			}
 			break;
 		case DAO_ROUTINE :
 			id = DaoByteDecoder_DecodeUInt16( self );
 			id2 = DaoByteDecoder_DecodeUInt16( self );
+			routine = self->declarations->items.pRoutine[id-1];
+			type = self->types->items.pType[id2-1];
+			GC_ShiftRC( type, routine->routType );
+			routine->routType = type;
+			value = (DaoValue*) routine;
+			printf( ">>>>>>>>>%p %p\n", routine, routine->routType );
 			break;
 		case DAO_OBJECT :
 			flag = DaoByteDecoder_DecodeUInt8( self );
 			id = DaoByteDecoder_DecodeUInt16( self );
+			klass = self->declarations->items.pClass[id-1];
 			if( flag == 0x2 ){
-				break;
+				value = klass->objType->value;
+			}else if( flag == 0x1 ){
+				//XXX
+			}else{
 			}
 			break;
 		case DAO_INTERFACE :
+			id = DaoByteDecoder_DecodeUInt16( self );
+			inter = self->declarations->items.pInter[id-1];
+			break;
 		case DAO_CLASS :
 		case DAO_CTYPE :
+			id = DaoByteDecoder_DecodeUInt16( self );
+			value = self->declarations->items.pValue[id-1];
+			break;
 		case DAO_CDATA :
 			id = DaoByteDecoder_DecodeUInt16( self );
 			break;
@@ -1375,6 +1602,15 @@ void DaoByteDecoder_DecodeValues( DaoByteDecoder *self )
 			id = DaoByteDecoder_DecodeUInt16( self );
 			break;
 		}
+		DArray_Append( self->values, NULL );
+		GC_IncRC( value );
+		self->values->items.pValue[ self->values->size - 1 ] = value;
+	}
+	for(i=0,count=self->valueTypes->size; i<count; i+=2){
+		int id = self->valueTypes->items.pInt[i+1];
+		DaoType *valtype = self->valueTypes->items.pType[i];
+		DaoValue *value = self->values->items.pValue[id];
+		DaoValue_Move( value, & valtype->aux, NULL );
 	}
 }
 void DaoByteDecoder_DecodeConstants( DaoByteDecoder *self )
@@ -1463,6 +1699,11 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 			int typeid = DaoByteDecoder_DecodeUInt16( self );
 			int valueid = DaoByteDecoder_DecodeUInt32( self );
 		}
+		count = DaoByteDecoder_DecodeUInt16( self );
+		for(j=0; j<count; ++j){
+			int name = DaoByteDecoder_DecodeUInt16( self );
+			int typeid = DaoByteDecoder_DecodeUInt16( self );
+		}
 	}
 }
 void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
@@ -1471,7 +1712,52 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 	int id, id2, id3;
 	printf( "DaoByteDecoder_DecodeRoutines: %3i\n", num );
 	for(i=0; i<num; ++i){
-		int name = DaoByteDecoder_DecodeUInt16( self );
+		int routid = DaoByteDecoder_DecodeUInt16( self );
+		int nameid = DaoByteDecoder_DecodeUInt16( self );
+		int typeid = DaoByteDecoder_DecodeUInt16( self );
+		int hostid = DaoByteDecoder_DecodeUInt16( self );
+		int attribs = DaoByteDecoder_DecodeUInt16( self );
+		int line = DaoByteDecoder_DecodeUInt16( self );
+		int count = DaoByteDecoder_DecodeUInt16( self );
+		DaoRoutine *routine = self->declarations->items.pRoutine[routid-1];
+		DaoType *hostype = self->types->items.pType[hostid-1];
+		if( nameid ) printf( "%3i : %s\n", i, self->identifiers->items.pString[nameid-1]->mbs );
+		GC_ShiftRC( hostype, routine->routHost );
+		routine->routHost = hostype;
+		routine->attribs = attribs;
+		routine->defLine = line;
+		printf( "codes %3i %p\n", count, routine->routType );
+		for(j=0; j<count; ++j){
+			int valueid = DaoByteDecoder_DecodeUInt32( self );
+			DaoValue *value = valueid ? self->values->items.pValue[valueid-1] : NULL;
+			DaoRoutine_AddConstant( routine, value );
+		}
+		count = DaoByteDecoder_DecodeUInt16( self );
+		routine->body->regCount = count;
+		DArray_Resize( routine->body->regType, count, 0 );
+		printf( "codes %3i\n", count );
+		for(j=0; j<count; ++j){
+			int vatypeid = DaoByteDecoder_DecodeUInt16( self );
+			DaoType *type = vatypeid ? self->types->items.pType[vatypeid-1] : NULL;
+			GC_ShiftRC( type, routine->body->regType->items.pType[j] );
+			routine->body->regType->items.pType[j] = type;
+		}
+		count = DaoByteDecoder_DecodeUInt16( self );
+		printf( "codes %3i\n", count );
+		for(j=0; j<count; ++j){
+			DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0};
+			vmc.code = DaoByteDecoder_DecodeUInt16( self );
+			vmc.a = DaoByteDecoder_DecodeUInt16( self );
+			vmc.b = DaoByteDecoder_DecodeUInt16( self );
+			vmc.c = DaoByteDecoder_DecodeUInt16( self );
+			vmc.level = DaoByteDecoder_DecodeUInt16( self );
+			vmc.line = DaoByteDecoder_DecodeUInt16( self );
+			DArray_Append( routine->body->annotCodes, & vmc );
+			DaoVmcArray_PushBack( routine->body->vmCodes, * (DaoVmCode*) & vmc );
+			DaoVmCodeX_Print( vmc, NULL );
+		}
+		printf( "<<<<<<%p %p\n", routine, routine->routType );
+		if( routine->routType ) DaoRoutine_PrintCode( routine, self->vmspace->stdioStream );
 	}
 }
 
