@@ -1194,7 +1194,7 @@ CallEntry:
 		jitCallData.classConsts = host->constants->items.pConst;
 		if( !(routine->attribs & DAO_ROUT_STATIC) ){
 			dataVO = othis->objValues;
-			typeVO = host->objDataType;
+			typeVO = host->instvars;
 			jitCallData.objectValues = dataVO;
 		}
 	}
@@ -1274,7 +1274,7 @@ CallEntry:
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVO ){
-			abtp = typeVO->items.pType[ vmc->b ];
+			abtp = typeVO->items.pVar[ vmc->b ]->dtype;
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVK ){
@@ -4624,7 +4624,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	int opa = vmc->a;
 	int opb = vmc->b;
 	DaoObject *object;
-	DaoType **mtype;
+	DaoVariable **mtype;
 	DaoValue **values = self->activeValues + opa + 1;
 	DaoValue *p = self->activeValues[opa];
 	DaoValue *selfobj = NULL;
@@ -4644,7 +4644,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 			DArray *routines = klass->classRoutines->overloads->routines;
 			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
-			mtype = klass->objDataType->items.pType;
+			mtype = klass->instvars->items.pVar;
 			if( klass->superClass->size || (routines && routines->size) ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "cannot initialize instance" );
 				break;
@@ -4665,9 +4665,9 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 					k = LOOKUP_ID( node->value.pInt );
 					p = nameva->value;
 				}
-				if( DaoValue_Move( p, object->objValues + k, mtype[k] ) ==0 ){
+				if( DaoValue_Move( p, object->objValues + k, mtype[k]->dtype ) ==0 ){
 					DaoType *type = DaoNamespace_GetType( self->activeNamespace, p );
-					DaoProcess_RaiseTypeError( self, type, mtype[k], "moving" );
+					DaoProcess_RaiseTypeError( self, type, mtype[k]->dtype, "moving" );
 					break;
 				}
 			}
@@ -6465,26 +6465,21 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			DaoVariable *var = klass->variables->items.pVar[id];
 			DaoValue_Move( value, & var->value, var->dtype );
 		}else if( st == DAO_OBJECT_VARIABLE ){
-			tp = klass->objDataType->items.pType[id];
-			DaoValue_Move( value, klass->objDataDefault->items.pValue + id, tp );
+			DaoVariable *var = klass->instvars->items.pVar[id];
+			DaoValue_Move( value, & var->value, var->dtype );
 		}
 	}
 	
 	/* add parents from parameters */
 	if( parents ){
 		for(i=0,n=parents->items.size; i<n; i++){
-			DaoValue *item = parents->items.items.pValue[i];
-			if( item->type == DAO_CLASS ){
-				DaoClass_AddSuperClass( klass, item, item->xClass.className );
-			}else if( item->type == DAO_CTYPE ){
-				DaoClass_AddSuperClass( klass, item, item->xCdata.ctype->name );
-			}
+			DaoClass_AddSuperClass( klass, parents->items.items.pValue[i] );
 		}
 	}else if( parents2 ){
 		for(it=DMap_First(parents2->items);it;it=DMap_Next(parents2->items,it)){
 			int type = it->value.pValue->type;
 			if( it->key.pValue->type == DAO_STRING && (type == DAO_CLASS || type == DAO_CTYPE) ){
-				DaoClass_AddSuperClass( klass, it->value.pValue, it->key.pValue->xString.data );
+				DaoClass_AddSuperClass( klass, it->value.pValue );
 			}//XXX error handling
 		}
 	}
@@ -6520,9 +6515,9 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			}
 			/* printf( "%s %i %i\n", name->mbs, st, pm ); */
 			switch( st ){
-			case DAO_OBJECT_VARIABLE: DaoClass_AddObjectVar( klass, name, value, type, pm, 0 ); break;
-			case DAO_CLASS_VARIABLE : DaoClass_AddGlobalVar( klass, name, value, type, pm, 0 ); break;
-			case DAO_CLASS_CONSTANT : DaoClass_AddConst( klass, name, value, pm, 0 ); break;
+			case DAO_OBJECT_VARIABLE: DaoClass_AddObjectVar( klass, name, value, type, pm ); break;
+			case DAO_CLASS_VARIABLE : DaoClass_AddGlobalVar( klass, name, value, type, pm ); break;
+			case DAO_CLASS_CONSTANT : DaoClass_AddConst( klass, name, value, pm ); break;
 			default : break;
 			}
 			continue;
@@ -6565,7 +6560,7 @@ InvalidField:
 			
 			node = DMap_Find( proto->lookupTable, name );
 			if( node == NULL ){
-				DaoClass_AddConst( klass, name, method, pm, 0 );
+				DaoClass_AddConst( klass, name, method, pm );
 				continue;
 			}
 			if( LOOKUP_UP( node->value.pInt ) ) continue;

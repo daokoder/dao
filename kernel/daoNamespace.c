@@ -434,7 +434,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 			break;
 		case DAO_CLASS :
 			DaoClass_AddType( & scope->xClass, name, type );
-			DaoClass_AddConst( & scope->xClass, name, type->aux, DAO_DATA_PUBLIC, -1 );
+			DaoClass_AddConst( & scope->xClass, name, type->aux, DAO_DATA_PUBLIC );
 			break;
 		case DAO_NAMESPACE :
 			if( type->typer->core && type->typer->core->kernel ){

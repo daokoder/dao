@@ -670,6 +670,7 @@ def Constant
 	uint16      # identifier reference number for the constant name;
                 # 0x0000 declares a constant without name;
 
+	uint16      # lookup index;
 	uint8       # permission (0: public; 1: protected: 2: private);
 	uint32      # value reference number for the constant;
 }
@@ -707,6 +708,7 @@ def Variable
 	uint16      # identifier reference number for the variable name;
 	            # 0x0000 will declare a variable without name;
 
+	uint16      # lookup index;
 	uint8       # permission (0: public; 1: protected: 2: private);
 	uint16      # type reference number for the variable;
 	            # 0x0000 can be used for variables without explicit types;

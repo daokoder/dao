@@ -60,6 +60,9 @@ DAO_DLL DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type );
 DAO_DLL void DaoConstant_Delete( DaoConstant *self );
 DAO_DLL void DaoVariable_Delete( DaoVariable *self );
 
+DAO_DLL void DaoConstant_Set( DaoConstant *self, DaoValue *value );
+DAO_DLL void DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type );
+
 
 
 union DaoValue

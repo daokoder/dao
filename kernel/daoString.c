@@ -444,6 +444,12 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint n )
 	}
 	self->wcs[ self->size ] = 0;
 }
+void DString_AppendInteger( DString *self, int i )
+{
+	char buf[50];
+	sprintf( buf, "%i", i );
+	DString_AppendMBS( self, buf );
+}
 void DString_ToWCS( DString *self )
 {
 	DString tmp = *self;

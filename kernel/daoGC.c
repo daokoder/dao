@@ -1369,12 +1369,10 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) klass->classRoutine );
 			cycRefCountDecrements( klass->constants );
 			cycRefCountDecrements( klass->variables );
-			cycRefCountDecrements( klass->objDataDefault );
+			cycRefCountDecrements( klass->instvars );
 			cycRefCountDecrements( klass->superClass );
-			cycRefCountDecrements( klass->objDataType );
 			cycRefCountDecrements( klass->references );
-			count += klass->constants->size + klass->variables->size;
-			count += klass->objDataDefault->size + klass->objDataType->size;
+			count += klass->constants->size + klass->variables->size + klass->instvars->size;
 			count += klass->superClass->size + klass->abstypes->size;
 			count += klass->references->size + klass->abstypes->size;
 			break;
@@ -1579,12 +1577,10 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) klass->classRoutine );
 			cycRefCountIncrements( klass->constants );
 			cycRefCountIncrements( klass->variables );
-			cycRefCountIncrements( klass->objDataDefault );
+			cycRefCountIncrements( klass->instvars );
 			cycRefCountIncrements( klass->superClass );
-			cycRefCountIncrements( klass->objDataType );
 			cycRefCountIncrements( klass->references );
-			count += klass->constants->size + klass->variables->size;
-			count += klass->objDataDefault->size + klass->objDataType->size;
+			count += klass->constants->size + klass->variables->size + klass->instvars->size;
 			count += klass->superClass->size + klass->abstypes->size;
 			count += klass->references->size + klass->abstypes->size;
 			break;
@@ -1787,8 +1783,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_CLASS :
 		{
 			DaoClass *klass = (DaoClass*)value;
-			count += klass->constants->size + klass->variables->size;
-			count += klass->objDataDefault->size + klass->objDataType->size;
+			count += klass->constants->size + klass->variables->size + klass->instvars->size;
 			count += klass->superClass->size + klass->abstypes->size;
 			count += klass->references->size + klass->abstypes->size;
 			count += DaoGC_ScanMap( klass->abstypes, DAO_GC_BREAK, 0, 1 );
@@ -1796,9 +1791,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & klass->classRoutine );
 			directRefCountDecrements( klass->constants );
 			directRefCountDecrements( klass->variables );
-			directRefCountDecrements( klass->objDataDefault );
+			directRefCountDecrements( klass->instvars );
 			directRefCountDecrements( klass->superClass );
-			directRefCountDecrements( klass->objDataType );
 			directRefCountDecrements( klass->references );
 			break;
 		}

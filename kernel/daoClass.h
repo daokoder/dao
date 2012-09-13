@@ -44,16 +44,13 @@ struct DaoClass
 	/* For both this class and its parents: */
 	DArray  *constants; /* <DaoConstant*>, constants; */
 	DArray  *variables; /* <DaoVariable*>, static variables; */
+	DArray  *instvars;  /* <DaoVariable*>, instance variable types and default values; */
 
 	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
 
-	DArray  *objDataType;  /* <DaoType*> */
-	DArray  *objDataDefault; /* <DaoValue*>, NULL: no default, not for parent classes */
-
 	DArray  *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
-	DArray  *superAlias;
 
 	/* Routines with overloading signatures: */
 	/* They are inserted into constants, no refCount updating for this. */
@@ -71,7 +68,6 @@ struct DaoClass
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */
 	DMap     *abstypes;
-	DMap     *deflines;
 
 	/* When DaoClass is used as a proto-class structure,
 	 * protoValues map upvalue register ids to member names.
@@ -112,7 +108,7 @@ DAO_DLL DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 
 DAO_DLL int  DaoClass_FindSuper( DaoClass *self, DaoValue *super );
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
-DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super, DString *alias );
+DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super );
 DAO_DLL DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent );
 
 DAO_DLL int  DaoClass_FindConst( DaoClass *self, DString *name );
@@ -123,9 +119,9 @@ DAO_DLL int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, D
 DAO_DLL DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClass *thisClass );
 DAO_DLL int DaoClass_GetDataIndex( DaoClass *self, DString *name );
 
-DAO_DLL int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int s, int l );
-DAO_DLL int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *value, DaoType *t, int s, int l );
-DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoType *t, int s, int l );
+DAO_DLL int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int pm );
+DAO_DLL int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *val, DaoType *tp, int pm );
+DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *val, DaoType *tp, int pm );
 
 DAO_DLL int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 

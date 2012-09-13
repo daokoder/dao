@@ -123,18 +123,20 @@ typedef struct DaoStackFrame    DaoStackFrame;
 #define STRCMP( x, y ) strcmp( (x)->mbs, y )
 #define TOKCMP( x, y ) strcmp( (x)->string->mbs, y )
 
-/* bit structure of lookup index:
- * S4P2U12I16 = SSSSPPUUUUUUUUUUUUIIIIIIIIIIIIIIII
- * S: storage; P: permission; U: up/parent; I: index*/
-#define LOOKUP_BIND( st, pm, up, id )  (((st)<<28)|((pm)<<26)|((up)<<16)|id)
+/*
+// Bit structure of the lookup index:
+// E2P2S4U8I16 = EEPPSSSSUUUUUUUUIIIIIIIIIIIIIIII
+// E: Error; P: Permission; S: Storage; U: Up/parent; I: Index
+*/
+#define LOOKUP_BIND( st, pm, up, id )  (((pm)<<28)|((st)<<24)|((up)<<16)|id)
 
-#define LOOKUP_BIND_LC( id ) ((DAO_LOCAL_CONSTANT<<28)|id)
-#define LOOKUP_BIND_GC( id ) ((DAO_GLOBAL_CONSTANT<<28)|id)
-#define LOOKUP_BIND_GV( id ) ((DAO_GLOBAL_VARIABLE<<28)|id)
+#define LOOKUP_BIND_LC( id ) ((DAO_LOCAL_CONSTANT<<24)|id)
+#define LOOKUP_BIND_GC( id ) ((DAO_GLOBAL_CONSTANT<<24)|id)
+#define LOOKUP_BIND_GV( id ) ((DAO_GLOBAL_VARIABLE<<24)|id)
 
-#define LOOKUP_ST( one )  ((one)>>28)
-#define LOOKUP_PM( one )  (((one)>>26)&0x3)
-#define LOOKUP_UP( one )  (((one)>>16)&0x3ff)
+#define LOOKUP_PM( one )  (((one)>>28)&3)
+#define LOOKUP_ST( one )  (((one)>>24)&0xf)
+#define LOOKUP_UP( one )  (((one)>>16)&0xff)
 #define LOOKUP_ID( one )  ((unsigned short)((one)&0xffff))
 
 DAO_DLL void* dao_malloc( size_t size );

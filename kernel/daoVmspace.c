@@ -1280,11 +1280,11 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		if( ! DaoParser_LexCode( parser, DString_GetMBS( source ), 1 ) ) goto LoadingFailed;
 		if( ! DaoParser_ParseScript( parser ) ) goto LoadingFailed;
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
+		DString_SetMBS( ns->mainRoutine->routName, "::main" );
 		DaoParser_Delete( parser );
 		if( self->options & DAO_EXEC_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
 	}
 
-	DString_SetMBS( ns->mainRoutine->routName, "::main" );
 	if( args ){
 		DaoVmSpace_ConvertArguments( ns, argNames, argValues );
 		DArray_Delete( argNames );

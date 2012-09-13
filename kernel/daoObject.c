@@ -244,16 +244,16 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	self->objValues[0] = (DaoValue*) self;
 	GC_IncRC( self );
 	if( self->isRoot == 0 ) return;
-	for(i=1; i<klass->objDataDefault->size; i++){
-		DaoType *type = klass->objDataType->items.pType[i];
+	for(i=1; i<klass->instvars->size; i++){
+		DaoVariable *var = klass->instvars->items.pVar[i];
 		DaoValue **value = self->objValues + i;
 		/* for data type such as list/map/array, 
 		 * its .unitype may need to be set properaly */
-		if( klass->objDataDefault->items.pValue[i] ){
-			DaoValue_Move( klass->objDataDefault->items.pValue[i], value, type );
+		if( var->value ){
+			DaoValue_Move( var->value, value, var->dtype );
 			continue;
-		}else if( *value == NULL && type && type->value ){
-			DaoValue_Copy( type->value, value );
+		}else if( *value == NULL && var->dtype && var->dtype->value ){
+			DaoValue_Copy( var->dtype->value, value );
 		}
 	}
 }
@@ -373,7 +373,7 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	if( st == DAO_OBJECT_VARIABLE ){
 		if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
-		type = klass->objDataType->items.pType[ id ];
+		type = klass->instvars->items.pVar[ id ]->dtype;
 		value = self->objValues + id;
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
 	}else if( st == DAO_CLASS_VARIABLE ){

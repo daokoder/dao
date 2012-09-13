@@ -71,6 +71,18 @@ void DaoVariable_Delete( DaoVariable *self )
 	GC_DecRC( self->dtype );
 	dao_free( self );
 }
+void DaoConstant_Set( DaoConstant *self, DaoValue *value )
+{
+	DaoValue_Copy( value, & self->value );
+}
+void DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type )
+{
+	if( type ){
+		GC_ShiftRC( type, self->dtype );
+		self->dtype = type;
+	}
+	DaoValue_Move( value, & self->value, self->dtype );
+}
 
 #ifdef DAO_WITH_NUMARRAY
 int DaoArray_Compare( DaoArray *x, DaoArray *y );
@@ -412,7 +424,7 @@ void DaoValue_MarkConst( DaoValue *self )
 		}
 		break;
 	case DAO_OBJECT :
-		n = self->xObject.defClass->objDataDefault->size;
+		n = self->xObject.defClass->instvars->size;
 		for(i=1; i<n; i++) DaoValue_MarkConst( self->xObject.objValues[i] );
 		for(i=0; i<self->xObject.baseCount; i++){
 			DaoValue *obj = (DaoValue*) self->xObject.parents[i];

@@ -104,6 +104,8 @@ struct DaoByteDecoder
 	DMap     *map;
 
 	uchar_t  *codes;
+	uchar_t  *end;
+	uchar_t  *error;
 };
 
 

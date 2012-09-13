@@ -91,6 +91,7 @@ DAO_DLL void DString_AppendDataMBS( DString *self, const char *chs, daoint n );
 DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *chs,daoint n );
 DAO_DLL void DString_SetDataMBS( DString *self, const char *bytes, daoint count );
 DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, daoint count );
+DAO_DLL void DString_AppendInteger( DString *self, int i );
 
 DAO_DLL void DString_Replace( DString *self, DString *chs, daoint start, daoint rm );
 DAO_DLL void DString_ReplaceMBS( DString *self, const char *chs, daoint start, daoint rm );
