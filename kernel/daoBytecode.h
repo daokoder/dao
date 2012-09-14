@@ -30,6 +30,10 @@
 
 #include "daoStdtype.h"
 
+
+#define DAO_BC_SIGNATURE  "\1Dao\1\2\r\n"
+
+
 typedef struct DaoByteEncoder  DaoByteEncoder;
 typedef struct DaoByteDecoder  DaoByteDecoder;
 
@@ -91,6 +95,7 @@ struct DaoByteDecoder
 	DaoNamespace  *nspace;
 
 	DArray   *identifiers;  /* <DString*> */
+	DArray   *namespaces;   /* <DaoNamespace*> */
 	DArray   *declarations; /* <DaoValue*> */
 	DArray   *types;        /* <DaoType*> */
 	DArray   *values;       /* <DString*>: encoded values; */

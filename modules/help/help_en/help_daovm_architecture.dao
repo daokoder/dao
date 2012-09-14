@@ -108,8 +108,8 @@ A Dao binary bytecode file will contain the following sections:
 @[list]
 ==@[green]Header@[green]: basic information for the format;
 ==@[green]Source@[green]: path and file name of the source;
-==@[green]Modules@[green]: modules need to be loaded;
 ==@[green]Identifiers@[green]: identifiers used in the file;
+==@[green]Modules@[green]: modules need to be loaded;
 ==@[green]Declarations@[green]: forward declaration of routines and classes etc.;
 ==@[green]Types@[green]: declaration of types;
 ==@[green]Values@[green]: all the values used in the file;
@@ -177,31 +177,6 @@ Example,
 
 
 
-@[section]
-Modules
-@[section]
-
-This section lists the modules that are needed for the current codes.
-They will be loaded in order to properly decode the rest of the bytecode file.
-@[code(dao)]
-def Modules
-{
-	uint16          # number of modules;
-	short_string[]  # list of module file names;
-}
-@[code(dao)]
-Example,
-@[code(dao)]
-00 02            # uint16, number of loaded modules;
-
-00 0C            # uint16, length of the first module name/path;
-"module1.dao"    # variable number of bytes;
-
-00 0C            # uint16, length of the second module name/path;
-"module2.dao"    # variable number of bytes;
-@[code(dao)]
-
-
 
 @[section]
 Identifiers
@@ -248,6 +223,37 @@ Example,
 @[code(dao)]
 
 
+
+@[section]
+Modules
+@[section]
+
+This section lists the modules that are needed for the current codes.
+They will be loaded in order to properly decode the rest of the bytecode file.
+@[code(dao)]
+def Modules
+{
+	uint16          # number of modules;
+	{
+		uint16      # identifier reference number for the module file name;
+		uint16      # identifier reference number for the module alias;
+	}[]
+}
+@[code(dao)]
+Example,
+@[code(dao)]
+00 02            # uint16, number of loaded modules;
+
+00 01            # uint16, length of the first module name/path;
+00 00            # no alias;
+
+00 02            # uint16, length of the second module name/path;
+00 00            # no alias;
+@[code(dao)]
+
+
+
+
 @[section]
 Declarations
 @[section]
@@ -265,8 +271,9 @@ def Declaration
 {
 	uint8       # object type (internal type ID);
 	uint8       # object subtype;
-	uint8       # external declaration (0x0 for not; 0x1 for yes);
+	uint8       # declaration type (0x0 for CREATE; 0x1 for SEARCH; 0x2 for LOADAS);
 	uint16      # identifier reference number for the declaration name;
+	            # declaration reference number for the namespace (for LOADAS);
 	uint16      # declaration reference number for the host object;
 	uint16      # identifier reference number for the field name in the host;
 }
@@ -549,7 +556,7 @@ def ListValue
 def MapValue
 {
    uint8        # type ID (0x0A, DAO_MAP);
-   uint8        # subtype (0x0 for map; 0x1 for hash);
+   uint32       # hashing seed;
    uint16       # type reference number;
    int          # number of items;
    uint32[]     # list of value reference numbers;
@@ -811,6 +818,7 @@ Each class is declared in the following format:
 def Class 
 {
 	uint16      # declaration reference number to the class;
+	uint16      # declaration reference number to the default constructor;
 	uint16      # number of parent classs;
 	uint16[]    # list of declaration reference numbers to the parents;
 	uint16      # number of constants (including methods);

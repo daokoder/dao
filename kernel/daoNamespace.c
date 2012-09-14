@@ -777,6 +777,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->name = DString_New(1);
 	self->lang = DString_New(1);
 	self->inputs = DString_New(1);
+	self->loadings = DArray_New(D_STRING);
 	self->sources = DArray_New(D_ARRAY);
 	self->tokens = DHash_New(D_STRING,0);
 	self->constEvalProcess = NULL;
@@ -847,6 +848,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DString_Delete( self->name );
 	DString_Delete( self->lang );
 	DString_Delete( self->inputs );
+	DArray_Delete( self->loadings );
 	DArray_Delete( self->sources );
 	DMap_Delete( self->tokens );
 	dao_free( self );
@@ -1962,3 +1964,30 @@ DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nsp
 	return NULL;
 }
 
+
+DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DString *file );
+
+DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
+{
+	DaoModuleLoader loader;
+	DaoNamespace *mod = DaoNamespace_FindNamespace( self, name );
+	if( mod ) return mod;
+
+	loader = DaoNamespace_FindModuleLoader2( self, name );
+	if( loader ){
+		DaoVmSpace_SearchPath( self->vmSpace, name, DAO_FILE_PATH, 1 );
+		if( Dao_IsFile( name->mbs ) ){
+			DString *error = DString_New(1);
+			mod = DaoNamespace_New( self->vmSpace, name->mbs );
+			if( (*loader)( mod, name, error ) ){
+				GC_IncRC( mod );
+				GC_DecRC( mod );
+				mod = NULL;
+			}
+			DString_Delete( error );
+		}
+	}else{
+		mod = DaoVmSpace_LoadModule( self->vmSpace, name );
+	}
+	return mod;
+}

@@ -2917,7 +2917,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			at = DaoNamespace_GetType( NS, value );
 			DaoInferencer_UpdateType( self, opc, at );
 			/*
-			   printf( "at %i %i %p, %p\n", at->tid, type[opc]->tid, at, type[opc] );
+			   printf( "at %i %i %p, %p\n", at->tid, types[opc]->tid, at, types[opc] );
 			 */
 			AssertTypeMatching( at, types[opc], defs );
 			GC_ShiftRC( value, consts[opc] );

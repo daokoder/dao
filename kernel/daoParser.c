@@ -2288,7 +2288,6 @@ static int DaoParser_Preprocess( DaoParser *self )
 	DaoMacro *macro, *macro2, *reapply;
 
 	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
-	int bropen1 = 0, bropen2 = 0, bropen3 = 0;
 	int i, end, tag = 0;
 	int k, right, start = 0;
 	unsigned char tki, tki2;
@@ -2306,58 +2305,43 @@ static int DaoParser_Preprocess( DaoParser *self )
 		 */
 
 		tki = tokens[start]->name;
-		if( tki >= DTOK_LB && tki <= DTOK_RSB ){
-			switch( tki ){
-			case DTOK_LCB :  bropen1 ++;  break;
-			case DTOK_RCB :  bropen1 --;  break;
-			case DTOK_LB :   bropen2 ++;  break;
-			case DTOK_RB :   bropen2 --;  break;
-			case DTOK_LSB :  bropen3 ++;  break;
-			case DTOK_RSB :  bropen3 --;  break;
-			default : break;
-			}
-			start ++;
-			continue;
-		}else if( bropen1 ==0 && bropen2 ==0 && bropen3 ==0 ){
-			tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
-			if( tki == DKEY_SYNTAX && (start == 0 || tokens[start-1]->name != DKEY_USE) ){
+		tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
+		if( tki == DKEY_SYNTAX && (start == 0 || tokens[start-1]->name != DKEY_USE) ){
 #ifdef DAO_WITH_MACRO
-				right = DaoParser_ParseMacro( self, start );
-				/*
-				   printf( "macro : %s %i\n", tokens[start+2]->string->mbs, right );
-				 */
-				if( right <0 ){
-					DaoParser_Error3( self, DAO_CTW_INV_MAC_DEFINE, start );
-					return 0;
-				}
-				if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );
-				DArray_Erase( self->tokens, start, right - start + 1 );
-				tokens = self->tokens->items.pToken;
-#else
-				DaoStream_WriteMBS( vmSpace->errorStream, "macro is not enabled.\n" );
+			right = DaoParser_ParseMacro( self, start );
+			/*
+			   printf( "macro : %s %i\n", tokens[start+2]->string->mbs, right );
+			 */
+			if( right <0 ){
+				DaoParser_Error3( self, DAO_CTW_INV_MAC_DEFINE, start );
 				return 0;
-#endif
-			}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
-				/* only for top level "load", for macros in the module  */
-				end = DaoParser_ParseLoadStatement( self, start, self->tokens->size );
-				if( end < 0 ) return 0;
-				if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
-				DArray_Erase( self->tokens, start, end-start );
-				tokens = self->tokens->items.pToken;
-			}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
-				end = DaoParser_ParseUseStatement( self, start, self->tokens->size-1 );
-				DArray_Erase( self->tokens, start, end-start+1 );
-				tokens = self->tokens->items.pToken;
-			}else if( tki == DTOK_VERBATIM ){
-				start = DaoParser_HandleVerbatim( self, start );
-				if( start < 0 ) return 0;
-				tokens = self->tokens->items.pToken;
-			}else{
-				start ++;
 			}
+			if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );
+			DArray_Erase( self->tokens, start, right - start + 1 );
+			tokens = self->tokens->items.pToken;
+#else
+			DaoStream_WriteMBS( vmSpace->errorStream, "macro is not enabled.\n" );
+			return 0;
+#endif
+		}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
+			/* only for top level "load", for macros in the module  */
+			end = DaoParser_ParseLoadStatement( self, start, self->tokens->size );
+			if( end < 0 ) return 0;
+			if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
+			DArray_Erase( self->tokens, start, end-start );
+			tokens = self->tokens->items.pToken;
+		}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
+			end = DaoParser_ParseUseStatement( self, start, self->tokens->size-1 );
+			DArray_Erase( self->tokens, start, end-start+1 );
+			tokens = self->tokens->items.pToken;
+		}else if( tki == DTOK_VERBATIM ){
+			start = DaoParser_HandleVerbatim( self, start );
+			if( start < 0 ) return 0;
+			tokens = self->tokens->items.pToken;
 		}else{
 			start ++;
 		}
+		start ++;
 	}
 #ifdef DAO_WITH_MACRO
 	for(start = self->tokens->size-1; start >=0 && start < self->tokens->size; start--){
@@ -2972,7 +2956,6 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			}
 			/* Add a reference to its super interfaces: */
 			DArray_Append( inter->supers, value );
-			GC_IncRC( value );
 			sep = DTOK_COMMA;
 		}
 	}
@@ -3600,12 +3583,6 @@ DecoratorError:
 				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
 				return 0;
 			}
-		}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
-			end = DaoParser_ParseLoadStatement( self, start, to+1 );
-			if( end < 0 ) return 0;
-			if( cons && topll ) DaoParser_MakeCodes( self, start, end, ns->inputs );
-			start = end;
-			continue;
 		}else if( tki == DKEY_USE ){
 			start = DaoParser_ParseUseStatement( self, start, to );
 			if( start <0 ) return 0;
@@ -4755,7 +4732,7 @@ int DaoParser_PostParsing( DaoParser *self )
 	return 1;
 }
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent );
-static DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DString *file )
+DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DString *file )
 {
 	DString suffix;
 	daoint i = DString_RFindChar( file, '.', file->size - 1 );
@@ -4801,6 +4778,13 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}
 		modname = tokens[i+1]->string;
 		i += 2;
+	}
+	DArray_Append( nameSpace->loadings, self->mbs );
+	if( modname ){
+		DArray_Append( nameSpace->loadings, modname );
+	}else{
+		DString empty = DString_WrapMBS( "" );
+		DArray_Append( nameSpace->loadings, & empty );
 	}
 
 	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) == NULL ){

@@ -97,7 +97,7 @@ static const char* const daoDllPrefix[] =
 };
 static const char* const daoFileSuffix[] =
 {
-	".dao.o", ".dao", DAO_DLL_SUFFIX,
+	".dac", ".dao", DAO_DLL_SUFFIX,
 	DAO_DLL_SUFFIX, DAO_DLL_SUFFIX, DAO_DLL_SUFFIX
 	/* duplicated for automatically adding "dao/libdao_/lib" prefix; */
 };
@@ -1009,7 +1009,8 @@ void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoNamespace *ns )
 	DaoByteEncoder *encoder = DaoByteEncoder_New();
 
 	DString_Append( bytecodes, ns->name );
-	DString_AppendMBS( bytecodes, ".o" );
+	if( bytecodes->size > ns->lang->size ) bytecodes->size -= ns->lang->size;
+	DString_AppendMBS( bytecodes, "dac" );
 	fout = fopen( bytecodes->mbs, "w+" );
 	bytecodes->size = 0;
 	DaoByteEncoder_Encode( encoder, ns, bytecodes );
@@ -1067,17 +1068,22 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 
 	/* self->fileName may has been changed */
 	res = DaoVmSpace_ReadSource( self, ns->name, self->mainSource );
-	res = res && DaoProcess_Compile( vmp, ns, self->mainSource->mbs, 1 );
+	if( self->mainSource->mbs[0] == DAO_BC_SIGNATURE[0] ){
+		DaoByteDecoder *decoder = DaoByteDecoder_New( self );
+		res = DaoByteDecoder_Decode( decoder, self->mainSource, ns );
+		DaoByteDecoder_Delete( decoder );
+	}else{
+		res = res && DaoProcess_Compile( vmp, ns, self->mainSource->mbs, 1 );
+		if( res && (self->options & DAO_EXEC_COMP_BC) ){
+			DaoVmSpace_SaveByteCodes( self, ns );
+		}
+	}
 	if( res ) DaoVmSpace_ConvertArguments( ns, argNames, argValues );
 	DArray_Delete( argNames );
 	DArray_Delete( argValues );
 
 	if( res == 0 ) return 0;
-
-	if( self->options & DAO_EXEC_COMP_BC ){
-		DaoVmSpace_SaveByteCodes( self, ns );
-		return 1;
-	}
+	if( self->options & DAO_EXEC_COMP_BC ) return 1;
 
 	name = DString_New(1);
 	mainRoutine = ns->mainRoutine;
@@ -1127,7 +1133,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 	daoint size;
 	DString_ToMBS( fname );
 	size = fname->size;
-	if( size >6 && DString_FindMBS( fname, ".dao.o", 0 ) == size-6 ){
+	if( size >4 && DString_FindMBS( fname, ".dac", 0 ) == size-4 ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO_O;
 	}else if( size >4 && ( DString_FindMBS( fname, ".dao", 0 ) == size-4
